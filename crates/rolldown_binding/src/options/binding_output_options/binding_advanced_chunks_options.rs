@@ -6,6 +6,9 @@ pub struct BindingAdvancedChunksOptions {
   pub min_size: Option<f64>,
   pub min_share_count: Option<u32>,
   pub groups: Option<Vec<BindingMatchGroup>>,
+  pub max_size: Option<f64>,
+  pub min_module_size: Option<f64>,
+  pub max_module_size: Option<f64>,
 }
 
 #[napi_derive::napi(object, object_to_js = false)]
@@ -17,4 +20,7 @@ pub struct BindingMatchGroup {
   pub priority: Option<u32>,
   pub min_size: Option<f64>,
   pub min_share_count: Option<u32>,
+  pub min_module_size: Option<f64>,
+  pub max_module_size: Option<f64>,
+  pub max_size: Option<f64>,
 }

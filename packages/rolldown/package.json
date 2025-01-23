@@ -1,6 +1,6 @@
 {
   "name": "rolldown",
-  "version": "1.0.0-beta.1",
+  "version": "1.0.0-beta.2",
   "description": "Fast JavaScript/TypeScript bundler in Rust with Rollup-compatible API.",
   "homepage": "https://rolldown.rs/",
   "repository": {
@@ -73,7 +73,9 @@
     "build-native:debug": "run-s build-binding build-types build-node",
     "build-native:release": "run-s build-binding:release build-types build-node",
     "build-wasi:debug": "run-s build-binding build-binding:wasi build-node",
-    "build-wasi:release": "run-s build-binding build-binding:wasi:release build-node"
+    "build-wasi:release": "run-s build-binding build-binding:wasi:release build-node",
+    "# Scrips for docs #": "_",
+    "extract-options-doc": "typedoc"
   },
   "napi": {
     "binaryName": "rolldown-binding",
@@ -101,9 +103,9 @@
     "dtsHeader": "type MaybePromise<T> = T | Promise<T>\ntype Nullable<T> = T | null | undefined\ntype VoidNullable<T = void> = T | null | undefined | void\nexport type BindingStringOrRegex = string | RegExp\n\n"
   },
   "dependencies": {
+    "@oxc-project/types": "0.46.0",
     "@valibot/to-json-schema": "1.0.0-beta.4",
-    "valibot": "1.0.0-beta.12",
-    "@oxc-project/types": "0.46.0"
+    "valibot": "1.0.0-beta.12"
   },
   "peerDependencies": {
     "@babel/runtime": ">=7"
@@ -136,6 +138,7 @@
     "source-map": "^0.7.4",
     "tsx": "^4.19.2",
     "type-fest": "^4.20.0",
+    "typedoc": "^0.27.6",
     "typescript": "^5.7.3",
     "unbuild": "^3.0.0",
     "why-is-node-running": "^3.0.0"

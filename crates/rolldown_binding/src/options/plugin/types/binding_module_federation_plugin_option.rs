@@ -52,6 +52,7 @@ pub struct BindingModuleFederationPluginOption {
   pub exposes: Option<HashMap<String, String, FxBuildHasher>>,
   pub remotes: Option<Vec<BindingRemote>>,
   pub shared: Option<HashMap<String, BindingShared, FxBuildHasher>>,
+  pub runtime_plugins: Option<Vec<String>>,
 }
 
 impl From<BindingModuleFederationPluginOption>
@@ -64,6 +65,7 @@ impl From<BindingModuleFederationPluginOption>
       exposes: value.exposes,
       remotes: value.remotes.map(|r| r.into_iter().map(Into::into).collect()),
       shared: value.shared.map(|r| r.into_iter().map(|(k, v)| (k, v.into())).collect()),
+      runtime_plugins: value.runtime_plugins,
     }
   }
 }

@@ -17,7 +17,6 @@ var init_something = __esm({ "something.js"() {} });
 var require_c = __commonJS({ "c.js"() {
 	await 0;
 } });
-var import_c = __toESM(require_c());
 
 //#endregion
 //#region b.js

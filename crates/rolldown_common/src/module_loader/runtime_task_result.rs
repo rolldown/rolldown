@@ -1,7 +1,9 @@
 use oxc_index::IndexVec;
 use rolldown_ecmascript::EcmaAst;
 
-use crate::{ImportRecordIdx, NormalModule, RawImportRecord, ResolvedId, SymbolRefDbForModule};
+use crate::{
+  AstScopes, ImportRecordIdx, NormalModule, RawImportRecord, ResolvedId, SymbolRefDbForModule,
+};
 
 use super::runtime_module_brief::RuntimeModuleBrief;
 
@@ -9,6 +11,7 @@ pub struct RuntimeModuleTaskResult {
   pub runtime: RuntimeModuleBrief,
   pub local_symbol_ref_db: SymbolRefDbForModule,
   pub ast: EcmaAst,
+  pub ast_scope: AstScopes,
   // pub warnings: Vec<BuildError>,
   pub module: NormalModule,
   pub resolved_deps: IndexVec<ImportRecordIdx, ResolvedId>,

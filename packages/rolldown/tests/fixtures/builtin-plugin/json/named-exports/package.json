@@ -3,5 +3,6 @@
   "const": true,
   "devDependencies": {
     "rolldown-tests": "workspace:*"
-  }
+  },
+  "version": "1.0.0-beta.2"
 }

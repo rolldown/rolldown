@@ -163,7 +163,7 @@ pub fn create_wrapper(
         } else {
           runtime.resolve_symbol("__commonJSMin").into()
         }],
-        side_effect: false,
+        side_effect: true,
         is_included: false,
         import_records: Vec::new(),
         debug_label: None,

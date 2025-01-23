@@ -158,6 +158,7 @@ impl ModuleTask {
       symbols,
       raw_import_records: ecma_raw_import_records,
       dynamic_import_rec_exports_usage,
+      ast_scope,
     } = ret;
 
     if !matches!(module_type, ModuleType::Css) {
@@ -217,7 +218,12 @@ impl ModuleTask {
         resolved_deps,
         module_idx: self.module_idx,
         warnings,
-        ecma_related: Some(EcmaRelated { ast, symbols, dynamic_import_rec_exports_usage }),
+        ecma_related: Some(EcmaRelated {
+          ast,
+          symbols,
+          dynamic_import_rec_exports_usage,
+          ast_scope,
+        }),
         module: module.into(),
         raw_import_records,
       }))

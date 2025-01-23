@@ -59,6 +59,7 @@ pub struct CreateEcmaViewReturn {
   pub ast: EcmaAst,
   pub symbols: SymbolRefDbForModule,
   pub dynamic_import_rec_exports_usage: FxHashMap<ImportRecordIdx, DynamicImportExportsUsage>,
+  pub ast_scope: AstScopes,
 }
 
 #[allow(clippy::too_many_lines)]
@@ -85,7 +86,7 @@ pub async fn create_ecma_view(
 
   ctx.warnings.extend(warning);
 
-  let (scope, scan_result, namespace_object_ref) = scan_ast(
+  let (ast_scope, scan_result, namespace_object_ref) = scan_ast(
     ctx.module_index,
     &ctx.resolved_id.id,
     &mut ast,
@@ -187,7 +188,7 @@ pub async fn create_ecma_view(
     stmt_infos,
     imports,
     default_export_ref,
-    scope,
+    ast_scope_idx: None,
     exports_kind,
     namespace_object_ref,
     def_format: ctx.resolved_id.module_def_format,
@@ -222,5 +223,6 @@ pub async fn create_ecma_view(
     ast,
     symbols: symbol_ref_db,
     dynamic_import_rec_exports_usage: dynamic_import_exports_usage,
+    ast_scope,
   })
 }

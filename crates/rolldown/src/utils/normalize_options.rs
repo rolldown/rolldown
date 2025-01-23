@@ -171,8 +171,7 @@ pub fn normalize_options(mut raw_options: crate::BundlerOptions) -> NormalizeOpt
       .unwrap_or_else(|| "[name]-[hash].js".to_string().into()),
     asset_filenames: raw_options
       .asset_filenames
-      .unwrap_or_else(|| "assets/[name]-[hash][extname]".to_string())
-      .into(),
+      .unwrap_or_else(|| "assets/[name]-[hash][extname]".to_string().into()),
     css_entry_filenames: raw_options
       .css_entry_filenames
       .unwrap_or_else(|| "[name].css".to_string().into()),

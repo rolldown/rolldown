@@ -173,8 +173,22 @@ impl PluginContextImpl {
     self.file_emitter.emit_chunk(Arc::new(chunk)).await
   }
 
-  pub fn emit_file(&self, file: rolldown_common::EmittedAsset) -> ArcStr {
-    self.file_emitter.emit_file(file)
+  pub fn emit_file(
+    &self,
+    file: rolldown_common::EmittedAsset,
+    fn_asset_filename: Option<String>,
+  ) -> ArcStr {
+    self
+      .file_emitter
+      .emit_file(file, Some(self.options.asset_filenames.value(fn_asset_filename).into()))
+  }
+
+  pub async fn emit_file_async(
+    &self,
+    file: rolldown_common::EmittedAsset,
+  ) -> anyhow::Result<ArcStr> {
+    let asset_filename = self.options.asset_filename_with_file(&file).await?;
+    Ok(self.file_emitter.emit_file(file, asset_filename.map(Into::into)))
   }
 
   pub fn try_get_file_name(&self, reference_id: &str) -> Result<ArcStr, String> {

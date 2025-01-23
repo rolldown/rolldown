@@ -51,6 +51,7 @@ export function bindingifyBuildStart(
     plugin: async (ctx, opts) => {
       await handler.call(
         new PluginContext(
+          args.outputOptions,
           ctx,
           args.plugin,
           args.pluginContextData,
@@ -76,6 +77,7 @@ export function bindingifyBuildEnd(
     plugin: async (ctx, err) => {
       await handler.call(
         new PluginContext(
+          args.outputOptions,
           ctx,
           args.plugin,
           args.pluginContextData,
@@ -119,6 +121,7 @@ export function bindingifyResolveId(
 
       const ret = await handler.call(
         new PluginContext(
+          args.outputOptions,
           ctx,
           args.plugin,
           args.pluginContextData,
@@ -173,6 +176,7 @@ export function bindingifyResolveDynamicImport(
     plugin: async (ctx, specifier, importer) => {
       const ret = await handler.call(
         new PluginContext(
+          args.outputOptions,
           ctx,
           args.plugin,
           args.pluginContextData,
@@ -233,6 +237,7 @@ export function bindingifyTransform(
     plugin: async (ctx, code, id, meta) => {
       const ret = await handler.call(
         new TransformPluginContext(
+          args.outputOptions,
           ctx.inner(),
           args.plugin,
           args.pluginContextData,
@@ -290,6 +295,7 @@ export function bindingifyLoad(
     plugin: async (ctx, id) => {
       const ret = await handler.call(
         new PluginContext(
+          args.outputOptions,
           ctx,
           args.plugin,
           args.pluginContextData,
@@ -363,6 +369,7 @@ export function bindingifyModuleParsed(
     plugin: async (ctx, moduleInfo) => {
       await handler.call(
         new PluginContext(
+          args.outputOptions,
           ctx,
           args.plugin,
           args.pluginContextData,

@@ -31,7 +31,8 @@ pub mod bundler_options {
       output_exports::OutputExports,
       output_format::OutputFormat,
       output_option::{
-        AddonFunction, AddonOutputOption, ChunkFilenamesOutputOption, GlobalsOutputOption,
+        AddonFunction, AddonOutputOption, AssetFilenamesOutputOption, ChunkFilenamesOutputOption,
+        GlobalsOutputOption,
       },
       platform::Platform,
       resolve_options::ResolveOptions,
@@ -118,6 +119,7 @@ pub use crate::{
   types::rendered_module::RenderedModule,
   types::resolved_export::ResolvedExport,
   types::resolved_request_info::ResolvedId,
+  types::rollup_pre_rendered_asset::RollupPreRenderedAsset,
   types::rollup_pre_rendered_chunk::RollupPreRenderedChunk,
   types::rollup_rendered_chunk::RollupRenderedChunk,
   types::side_effects,

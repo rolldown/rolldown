@@ -46,7 +46,7 @@ export declare class BindingNormalizedOptions {
   get cssChunkFilenames(): string | undefined
   get entryFilenames(): string | undefined
   get chunkFilenames(): string | undefined
-  get assetFilenames(): string
+  get assetFilenames(): string | undefined
   get dir(): string | null
   get file(): string | null
   get format(): 'es' | 'cjs' | 'app' | 'iife' | 'umd'
@@ -103,7 +103,7 @@ export declare class BindingOutputs {
 export declare class BindingPluginContext {
   load(specifier: string, sideEffects: BindingHookSideEffects | undefined, fn: () => void): Promise<void>
   resolve(specifier: string, importer?: string | undefined | null, extraOptions?: BindingPluginContextResolveOptions | undefined | null): Promise<BindingPluginContextResolvedId | null>
-  emitFile(file: BindingEmittedAsset): string
+  emitFile(file: BindingEmittedAsset, assetFilename?: string | undefined | null): string
   emitChunk(file: BindingEmittedChunk): string
   getFileName(referenceId: string): string
   getModuleInfo(moduleId: string): BindingModuleInfo | null
@@ -493,7 +493,7 @@ export interface BindingNotifyOption {
 
 export interface BindingOutputOptions {
   name?: string
-  assetFileNames?: string
+  assetFileNames?: string | ((chunk: BindingPreRenderedAsset) => string)
   entryFileNames?: string | ((chunk: PreRenderedChunk) => string)
   chunkFileNames?: string | ((chunk: PreRenderedChunk) => string)
   cssEntryFileNames?: string | ((chunk: PreRenderedChunk) => string)
@@ -594,6 +594,12 @@ export declare enum BindingPluginOrder {
 export interface BindingPluginWithIndex {
   index: number
   plugin: BindingPluginOptions
+}
+
+export interface BindingPreRenderedAsset {
+  names: Array<string>
+  originalFileNames: Array<string>
+  source: BindingAssetSource
 }
 
 export interface BindingRemote {

@@ -21,6 +21,7 @@ export function bindingifyWatchChange(
     plugin: async (ctx, id, event) => {
       await handler.call(
         new PluginContext(
+          args.outputOptions,
           ctx,
           args.plugin,
           args.pluginContextData,
@@ -48,6 +49,7 @@ export function bindingifyCloseWatcher(
     plugin: async (ctx) => {
       await handler.call(
         new PluginContext(
+          args.outputOptions,
           ctx,
           args.plugin,
           args.pluginContextData,

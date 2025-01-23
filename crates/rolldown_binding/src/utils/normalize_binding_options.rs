@@ -1,4 +1,4 @@
-use crate::options::ChunkFileNamesOutputOption;
+use crate::options::{AssetFileNamesOutputOption, ChunkFileNamesOutputOption};
 use crate::{
   options::binding_inject_import::normalize_binding_inject_import,
   types::js_callback::JsCallbackExt,
@@ -10,9 +10,9 @@ use crate::{
 };
 use napi::bindgen_prelude::Either;
 use rolldown::{
-  AddonOutputOption, AdvancedChunksOptions, BundlerOptions, ChunkFilenamesOutputOption,
-  ExperimentalOptions, HashCharacters, IsExternal, MatchGroup, ModuleType, OutputExports,
-  OutputFormat, Platform,
+  AddonOutputOption, AdvancedChunksOptions, AssetFilenamesOutputOption, BundlerOptions,
+  ChunkFilenamesOutputOption, ExperimentalOptions, HashCharacters, IsExternal, MatchGroup,
+  ModuleType, OutputExports, OutputFormat, Platform,
 };
 use rolldown_plugin::__inner::SharedPluginable;
 use rolldown_utils::indexmap::FxIndexMap;
@@ -54,6 +54,21 @@ fn normalize_chunk_file_names_option(
         let func = Arc::clone(&func);
         let chunk = chunk.clone();
         Box::pin(async move { func.invoke_async(chunk.into()).await.map_err(anyhow::Error::from) })
+      }))),
+    })
+    .transpose()
+}
+
+fn normalize_asset_file_names_option(
+  option: Option<AssetFileNamesOutputOption>,
+) -> napi::Result<Option<AssetFilenamesOutputOption>> {
+  option
+    .map(move |value| match value {
+      Either::A(str) => Ok(AssetFilenamesOutputOption::String(str)),
+      Either::B(func) => Ok(AssetFilenamesOutputOption::Fn(Arc::new(move |asset| {
+        let func = Arc::clone(&func);
+        let asset = asset.clone();
+        Box::pin(async move { func.invoke_async(asset.into()).await.map_err(anyhow::Error::from) })
       }))),
     })
     .transpose()
@@ -151,7 +166,7 @@ pub fn normalize_binding_options(
       .map_err(|err| napi::Error::new(napi::Status::GenericFailure, err))?,
     shim_missing_exports: input_options.shim_missing_exports,
     name: output_options.name,
-    asset_filenames: output_options.asset_file_names,
+    asset_filenames: normalize_asset_file_names_option(output_options.asset_file_names)?,
     entry_filenames: normalize_chunk_file_names_option(output_options.entry_file_names)?,
     chunk_filenames: normalize_chunk_file_names_option(output_options.chunk_file_names)?,
     css_entry_filenames: normalize_chunk_file_names_option(output_options.css_entry_file_names)?,

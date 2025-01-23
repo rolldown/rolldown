@@ -16,6 +16,7 @@ import { bindingifySideEffects } from '../utils/transform-side-effects'
 import type { LogHandler, LogLevelOption } from '../types/misc'
 import { LOG_LEVEL_WARN } from '../log/logging'
 import { logCycleLoading } from '../log/logs'
+import { OutputOptions } from '../options/output-options'
 
 export interface EmittedAsset {
   type: 'asset'
@@ -47,6 +48,7 @@ export interface PrivatePluginContextResolveOptions
 
 export class PluginContext extends MinimalPluginContext {
   constructor(
+    private outputOptions: OutputOptions,
     private context: BindingPluginContext,
     plugin: Plugin,
     private data: PluginContextData,
@@ -142,11 +144,26 @@ export class PluginContext extends MinimalPluginContext {
     if (file.type === 'chunk') {
       return this.context.emitChunk(file)
     }
-    return this.context.emitFile({
-      ...file,
-      originalFileName: file.originalFileName || undefined,
-      source: bindingAssetSource(file.source),
-    })
+    const filename = file.fileName ? undefined : this.getAssetFileNames(file)
+    return this.context.emitFile(
+      {
+        ...file,
+        originalFileName: file.originalFileName || undefined,
+        source: bindingAssetSource(file.source),
+      },
+      filename,
+    )
+  }
+
+  private getAssetFileNames(file: EmittedAsset): string | undefined {
+    if (typeof this.outputOptions.assetFileNames === 'function') {
+      return this.outputOptions.assetFileNames({
+        names: file.name ? [file.name] : [],
+        originalFileNames: file.originalFileName ? [file.originalFileName] : [],
+        source: file.source,
+        type: 'asset',
+      })
+    }
   }
 
   public getFileName(referenceId: string): string {

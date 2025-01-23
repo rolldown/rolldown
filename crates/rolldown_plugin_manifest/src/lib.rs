@@ -4,7 +4,12 @@ use rolldown_plugin::{HookNoopReturn, Plugin, PluginContext};
 use rolldown_utils::rustc_hash::FxHashSetExt;
 use rustc_hash::FxHashSet;
 use serde::Serialize;
-use std::{borrow::Cow, collections::BTreeMap, path::Path, rc::Rc, sync::LazyLock};
+use std::{
+  borrow::Cow,
+  collections::BTreeMap,
+  path::Path,
+  sync::{Arc, LazyLock},
+};
 
 #[derive(Debug)]
 pub struct ManifestPlugin {
@@ -49,7 +54,7 @@ impl Plugin for ManifestPlugin {
       match file {
         Output::Chunk(chunk) => {
           let name = self.get_chunk_name(chunk);
-          let chunk_manifest = Rc::new(self.create_chunk(args.bundle, chunk, name.clone()));
+          let chunk_manifest = Arc::new(self.create_chunk(args.bundle, chunk, name.clone()));
           manifest.insert(name.clone(), chunk_manifest);
         }
         Output::Asset(asset) => {
@@ -67,14 +72,14 @@ impl Plugin for ManifestPlugin {
               ToOwned::to_owned,
             );
             let is_entry = entry_css_asset_file_names.contains(asset.filename.as_str());
-            let asset_manifest = Rc::new(Self::create_asset(asset, src.clone(), is_entry));
+            let asset_manifest = Arc::new(Self::create_asset(asset, src.clone(), is_entry));
 
             // If JS chunk and asset chunk are both generated from the same source file,
             // prioritize JS chunk as it contains more information
             if !manifest.get(&src).is_some_and(|m| {
               m.file.ends_with(".js") || m.file.ends_with(".cjs") || m.file.ends_with(".mjs")
             }) {
-              manifest.insert(src.clone(), Rc::<ManifestChunk>::clone(&asset_manifest));
+              manifest.insert(src.clone(), Arc::<ManifestChunk>::clone(&asset_manifest));
             }
 
             for original_file_name in &asset.original_file_names {
@@ -82,7 +87,7 @@ impl Plugin for ManifestPlugin {
                 m.file.ends_with(".js") || m.file.ends_with(".cjs") || m.file.ends_with(".mjs")
               }) {
                 manifest
-                  .insert(original_file_name.clone(), Rc::<ManifestChunk>::clone(&asset_manifest));
+                  .insert(original_file_name.clone(), Arc::<ManifestChunk>::clone(&asset_manifest));
               }
             }
           }
@@ -95,12 +100,14 @@ impl Plugin for ManifestPlugin {
     // let output = config.build.rollupOptions?.output
     // let outputLength = Array.isArray(output) ? output.length : 1
     // if output_count >= outputLength {
-    ctx.emit_file(EmittedAsset {
-      file_name: Some(self.config.out_path.as_str().into()),
-      name: None,
-      original_file_name: None,
-      source: (serde_json::to_string_pretty(&manifest).unwrap()).into(),
-    });
+    ctx
+      .emit_file_async(EmittedAsset {
+        file_name: Some(self.config.out_path.as_str().into()),
+        name: None,
+        original_file_name: None,
+        source: (serde_json::to_string_pretty(&manifest).unwrap()).into(),
+      })
+      .await?;
     // }
 
     Ok(())

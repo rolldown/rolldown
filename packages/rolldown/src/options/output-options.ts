@@ -21,6 +21,15 @@ export type AddonFunction = (chunk: RenderedChunk) => string | Promise<string>
 
 export type ChunkFileNamesFunction = (chunkInfo: PreRenderedChunk) => string
 
+export interface PreRenderedAsset {
+  names: string[]
+  originalFileNames: string[]
+  source: string | Uint8Array
+  type: 'asset'
+}
+
+export type AssetFileNamesFunction = (chunkInfo: PreRenderedAsset) => string
+
 export type GlobalsFunction = (name: string) => string
 
 export type ESTarget =
@@ -61,7 +70,7 @@ export interface OutputOptions {
   outro?: string | AddonFunction
   extend?: boolean
   esModule?: boolean | 'if-default-prop'
-  assetFileNames?: string
+  assetFileNames?: string | AssetFileNamesFunction
   entryFileNames?: string | ChunkFileNamesFunction
   chunkFileNames?: string | ChunkFileNamesFunction
   cssEntryFileNames?: string | ChunkFileNamesFunction

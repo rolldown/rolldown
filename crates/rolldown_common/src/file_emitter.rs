@@ -1,5 +1,6 @@
 use crate::{
-  FileNameRenderOptions, ModuleLoaderMsg, NormalizedBundlerOptions, Output, OutputAsset, StrOrBytes,
+  FileNameRenderOptions, FilenameTemplate, ModuleLoaderMsg, NormalizedBundlerOptions, Output,
+  OutputAsset, StrOrBytes,
 };
 use anyhow::Context;
 use arcstr::ArcStr;
@@ -39,6 +40,7 @@ pub struct FileEmitter {
   files: FxDashMap<ArcStr, OutputAsset>,
   chunks: FxDashMap<ArcStr, Arc<EmittedChunk>>,
   base_reference_id: AtomicUsize,
+  #[allow(dead_code)]
   options: Arc<NormalizedBundlerOptions>,
   /// Mark the files that have been emitted to bundle.
   emitted_files: FxDashSet<ArcStr>,
@@ -74,7 +76,11 @@ impl FileEmitter {
     Ok(reference_id)
   }
 
-  pub fn emit_file(&self, mut file: EmittedAsset) -> ArcStr {
+  pub fn emit_file(
+    &self,
+    mut file: EmittedAsset,
+    asset_filename_template: Option<FilenameTemplate>,
+  ) -> ArcStr {
     let hash: ArcStr = xxhash_base64_url(file.source.as_bytes()).into();
     // Deduplicate assets if an explicit fileName is not provided
     if file.file_name.is_none() {
@@ -96,7 +102,7 @@ impl FileEmitter {
       self.source_hash_to_reference_id.insert(hash.clone(), reference_id.clone());
     }
 
-    self.generate_file_name(&mut file, &hash);
+    self.generate_file_name(&mut file, &hash, asset_filename_template);
     self.files.insert(
       reference_id.clone(),
       OutputAsset {
@@ -138,17 +144,22 @@ impl FileEmitter {
     .into()
   }
 
-  pub fn generate_file_name(&self, file: &mut EmittedAsset, hash: &ArcStr) {
+  pub fn generate_file_name(
+    &self,
+    file: &mut EmittedAsset,
+    hash: &ArcStr,
+    asset_filename_template: Option<FilenameTemplate>,
+  ) {
     if file.file_name.is_none() {
       let path = file.name.as_deref().map(Path::new);
       let extension = path.and_then(|x| x.extension().and_then(OsStr::to_str));
       let name = path
         .and_then(|x| x.file_stem().and_then(OsStr::to_str))
         .map(|x| sanitize_file_name(x.into()));
-      let extract_hash_pattern = extract_hash_pattern(self.options.asset_filenames.template());
-      let mut file_name: ArcStr = self
-        .options
-        .asset_filenames
+      let asset_filename_template =
+        asset_filename_template.expect("should has filename template without filename");
+      let extract_hash_pattern = extract_hash_pattern(asset_filename_template.template());
+      let mut file_name: ArcStr = asset_filename_template
         .render(&FileNameRenderOptions {
           name: name.as_deref(),
           hash: extract_hash_pattern

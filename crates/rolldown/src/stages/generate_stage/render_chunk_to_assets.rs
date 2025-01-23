@@ -1,4 +1,4 @@
-use std::path::Path;
+use std::path::{Path, PathBuf};
 
 use futures::future::try_join_all;
 use oxc_index::{index_vec, IndexVec};
@@ -7,6 +7,7 @@ use rolldown_common::{
   SourceMapType,
 };
 use rolldown_error::{BuildDiagnostic, BuildResult};
+use rolldown_sourcemap::SourceMap;
 use rolldown_utils::{
   concat_string,
   indexmap::FxIndexSet,
@@ -66,110 +67,129 @@ impl GenerateStage<'_> {
       ..
     } in assets
     {
-      if let InstantiationKind::Ecma(ecma_meta) = rendered_chunk {
-        let mut code = code.try_into_string()?;
-        let rendered_chunk = ecma_meta.rendered_chunk;
-        if let Some(map) = map.as_mut() {
-          let file_base_name =
-            Path::new(rendered_chunk.filename.as_str()).file_name().expect("should have file name");
-          map.set_file(file_base_name.to_string_lossy().as_ref());
+      match rendered_chunk {
+        InstantiationKind::Ecma(ecma_meta) => {
+          let mut code = code.try_into_string()?;
+          let rendered_chunk = ecma_meta.rendered_chunk;
+          if let Some(map) = map.as_mut() {
+            let file_base_name = Path::new(rendered_chunk.filename.as_str())
+              .file_name()
+              .expect("should have file name");
+            map.set_file(file_base_name.to_string_lossy().as_ref());
 
-          let map_filename = format!("{}.map", rendered_chunk.filename.as_str());
-          let map_path = file_dir.join(&map_filename);
+            let map_filename = format!("{}.map", rendered_chunk.filename.as_str());
+            let map_path = file_dir.join(&map_filename);
 
-          if let Some(source_map_ignore_list) = &self.options.sourcemap_ignore_list {
-            let mut x_google_ignore_list = vec![];
-            for (index, source) in map.get_sources().enumerate() {
-              if source_map_ignore_list.call(source, map_path.to_string_lossy().as_ref()).await? {
-                #[allow(clippy::cast_possible_truncation)]
-                x_google_ignore_list.push(index as u32);
-              }
-            }
-            if !x_google_ignore_list.is_empty() {
-              map.set_x_google_ignore_list(x_google_ignore_list);
-            }
-          }
+            self
+              .process_code_and_sourcemap(&mut code, map, &map_path, rendered_chunk.debug_id)
+              .await?;
 
-          if let Some(sourcemap_path_transform) = &self.options.sourcemap_path_transform {
-            let mut sources = Vec::with_capacity(map.get_sources().count());
-            for source in map.get_sources() {
-              sources.push(
-                sourcemap_path_transform.call(source, map_path.to_string_lossy().as_ref()).await?,
-              );
-            }
-            map.set_sources(sources.iter().map(std::convert::AsRef::as_ref).collect::<Vec<_>>());
-          }
-
-          if self.options.sourcemap_debug_ids && self.options.sourcemap.is_some() {
-            let debug_id_str = uuid_v4_string_from_u128(rendered_chunk.debug_id);
-            map.set_debug_id(&debug_id_str);
-            code.push_str("\n//# debugId=");
-            code.push_str(debug_id_str.as_str());
-          }
-
-          // Normalize the windows path at final.
-          let sources =
-            map.get_sources().map(|x| x.to_slash_lossy().to_string()).collect::<Vec<_>>();
-          map.set_sources(sources.iter().map(std::convert::AsRef::as_ref).collect::<Vec<_>>());
-
-          if let Some(sourcemap) = &self.options.sourcemap {
-            match sourcemap {
-              SourceMapType::File | SourceMapType::Hidden => {
-                let source = map.to_json_string();
-                output_assets.push(Output::Asset(Box::new(OutputAsset {
-                  filename: map_filename.as_str().into(),
-                  source: source.into(),
-                  original_file_names: vec![],
-                  names: vec![],
-                })));
-                if matches!(sourcemap, SourceMapType::File) {
+            if let Some(sourcemap) = &self.options.sourcemap {
+              match sourcemap {
+                SourceMapType::File | SourceMapType::Hidden => {
+                  let source = map.to_json_string();
+                  output_assets.push(Output::Asset(Box::new(OutputAsset {
+                    filename: map_filename.as_str().into(),
+                    source: source.into(),
+                    original_file_names: vec![],
+                    names: vec![],
+                  })));
+                  if matches!(sourcemap, SourceMapType::File) {
+                    code.push_str("\n//# sourceMappingURL=");
+                    code.push_str(
+                      &Path::new(&map_filename)
+                        .file_name()
+                        .expect("should have filename")
+                        .to_string_lossy(),
+                    );
+                  }
+                }
+                SourceMapType::Inline => {
+                  let data_url = map.to_data_url();
                   code.push_str("\n//# sourceMappingURL=");
-                  code.push_str(
-                    &Path::new(&map_filename)
-                      .file_name()
-                      .expect("should have filename")
-                      .to_string_lossy(),
-                  );
+                  code.push_str(&data_url);
                 }
               }
-              SourceMapType::Inline => {
-                let data_url = map.to_data_url();
-                code.push_str("\n//# sourceMappingURL=");
-                code.push_str(&data_url);
+            }
+          }
+
+          let sourcemap_filename =
+            if matches!(self.options.sourcemap, Some(SourceMapType::Inline) | None) {
+              None
+            } else {
+              Some(concat_string!(rendered_chunk.filename, ".map"))
+            };
+          output.push(Output::Chunk(Box::new(OutputChunk {
+            name: rendered_chunk.name,
+            filename: rendered_chunk.filename,
+            code,
+            is_entry: rendered_chunk.is_entry,
+            is_dynamic_entry: rendered_chunk.is_dynamic_entry,
+            facade_module_id: rendered_chunk.facade_module_id,
+            modules: rendered_chunk.modules,
+            exports: rendered_chunk.exports,
+            module_ids: rendered_chunk.module_ids,
+            imports: rendered_chunk.imports,
+            dynamic_imports: rendered_chunk.dynamic_imports,
+            map,
+            sourcemap_filename,
+            preliminary_filename: preliminary_filename.to_string(),
+          })));
+        }
+        InstantiationKind::Css(css_meta) => {
+          let mut code = code.try_into_string()?;
+          if let Some(map) = map.as_mut() {
+            let file_base_name =
+              Path::new(css_meta.filename.as_str()).file_name().expect("should have file name");
+            map.set_file(file_base_name.to_string_lossy().as_ref());
+
+            let map_filename = format!("{}.map", css_meta.filename.as_str());
+            let map_path = file_dir.join(&map_filename);
+
+            self.process_code_and_sourcemap(&mut code, map, &map_path, css_meta.debug_id).await?;
+
+            if let Some(sourcemap) = &self.options.sourcemap {
+              match sourcemap {
+                SourceMapType::File | SourceMapType::Hidden => {
+                  let source = map.to_json_string();
+                  output_assets.push(Output::Asset(Box::new(OutputAsset {
+                    filename: map_filename.as_str().into(),
+                    source: source.into(),
+                    original_file_names: vec![],
+                    names: vec![],
+                  })));
+                  if matches!(sourcemap, SourceMapType::File) {
+                    let source_mapping_url = Path::new(&map_filename)
+                      .file_name()
+                      .expect("should have filename")
+                      .to_string_lossy();
+                    code.push_str(&format!("\n/*# sourceMappingURL={source_mapping_url} */"));
+                  }
+                }
+                SourceMapType::Inline => {
+                  let data_url = map.to_data_url();
+                  code.push_str("\n//# sourceMappingURL=");
+                  code.push_str(&data_url);
+                }
               }
             }
           }
-        }
 
-        let sourcemap_filename =
-          if matches!(self.options.sourcemap, Some(SourceMapType::Inline) | None) {
-            None
-          } else {
-            Some(concat_string!(rendered_chunk.filename, ".map"))
-          };
-        output.push(Output::Chunk(Box::new(OutputChunk {
-          name: rendered_chunk.name,
-          filename: rendered_chunk.filename,
-          code,
-          is_entry: rendered_chunk.is_entry,
-          is_dynamic_entry: rendered_chunk.is_dynamic_entry,
-          facade_module_id: rendered_chunk.facade_module_id,
-          modules: rendered_chunk.modules,
-          exports: rendered_chunk.exports,
-          module_ids: rendered_chunk.module_ids,
-          imports: rendered_chunk.imports,
-          dynamic_imports: rendered_chunk.dynamic_imports,
-          map,
-          sourcemap_filename,
-          preliminary_filename: preliminary_filename.to_string(),
-        })));
-      } else {
-        output.push(Output::Asset(Box::new(OutputAsset {
-          filename: filename.clone().into(),
-          source: code,
-          original_file_names: vec![],
-          names: vec![],
-        })));
+          output.push(Output::Asset(Box::new(OutputAsset {
+            filename: filename.clone().into(),
+            source: code.into(),
+            original_file_names: vec![],
+            names: vec![],
+          })));
+        }
+        InstantiationKind::None => {
+          output.push(Output::Asset(Box::new(OutputAsset {
+            filename: filename.clone().into(),
+            source: code,
+            original_file_names: vec![],
+            names: vec![],
+          })));
+        }
       }
     }
 
@@ -316,6 +336,49 @@ impl GenerateStage<'_> {
       })
       .collect::<Vec<_>>();
     chunk_to_codegen_ret
+  }
+
+  async fn process_code_and_sourcemap<'b>(
+    &self,
+    code: &'b mut String,
+    map: &'b mut SourceMap,
+    map_path: &'b PathBuf,
+    debug_id: u128,
+  ) -> BuildResult<()> {
+    if let Some(source_map_ignore_list) = &self.options.sourcemap_ignore_list {
+      let mut x_google_ignore_list = vec![];
+      for (index, source) in map.get_sources().enumerate() {
+        if source_map_ignore_list.call(source, map_path.to_string_lossy().as_ref()).await? {
+          #[allow(clippy::cast_possible_truncation)]
+          x_google_ignore_list.push(index as u32);
+        }
+      }
+      if !x_google_ignore_list.is_empty() {
+        map.set_x_google_ignore_list(x_google_ignore_list);
+      }
+    }
+
+    if let Some(sourcemap_path_transform) = &self.options.sourcemap_path_transform {
+      let mut sources = Vec::with_capacity(map.get_sources().count());
+      for source in map.get_sources() {
+        sources
+          .push(sourcemap_path_transform.call(source, map_path.to_string_lossy().as_ref()).await?);
+      }
+      map.set_sources(sources.iter().map(std::convert::AsRef::as_ref).collect::<Vec<_>>());
+    }
+
+    if self.options.sourcemap_debug_ids && self.options.sourcemap.is_some() {
+      let debug_id_str = uuid_v4_string_from_u128(debug_id);
+      map.set_debug_id(&debug_id_str);
+      code.push_str("\n//# debugId=");
+      code.push_str(debug_id_str.as_str());
+    }
+
+    // Normalize the windows path at final.
+    let sources = map.get_sources().map(|x| x.to_slash_lossy().to_string()).collect::<Vec<_>>();
+    map.set_sources(sources.iter().map(std::convert::AsRef::as_ref).collect::<Vec<_>>());
+
+    Ok(())
   }
 }
 

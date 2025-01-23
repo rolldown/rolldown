@@ -1,43 +1,72 @@
 // cSpell:disable
 import { defineTest } from 'rolldown-tests'
-import { getOutputFileNames } from 'rolldown-tests/utils'
 import { expect } from 'vitest'
+
+let mainWithNameChunkReferenceId: string,
+  mainWithFileNameChunkReferenceId: string,
+  runOnceRenderChunk = false
+const emittedChunkPreliminaryFilenames: string[] = [],
+  emittedChunkFilenames: string[] = []
 
 export default defineTest({
   skipComposingJsPlugin: true,
   config: {
     output: {
-      entryFileNames: '[name].js',
-      chunkFileNames: '[name]-[hash].js',
+      entryFileNames: '[name].[hash].js',
     },
     plugins: [
       {
         name: 'test-plugin-context',
         buildStart() {
-          this.emitFile({
+          mainWithNameChunkReferenceId = this.emitFile({
             type: 'chunk',
             name: 'main-with-name',
             id: './main.js',
           })
-          this.emitFile({
+          mainWithFileNameChunkReferenceId = this.emitFile({
             type: 'chunk',
             fileName: 'main-with-fileName.js',
             id: './main.js',
           })
+          expect(this.getFileName(mainWithFileNameChunkReferenceId)).toBe(
+            'main-with-fileName.js',
+          )
+        },
+        renderChunk() {
+          if (runOnceRenderChunk) {
+            return
+          }
+          runOnceRenderChunk = true
+          emittedChunkPreliminaryFilenames.push(
+            this.getFileName(mainWithNameChunkReferenceId),
+          )
+          emittedChunkPreliminaryFilenames.push(
+            this.getFileName(mainWithFileNameChunkReferenceId),
+          )
+        },
+        generateBundle() {
+          emittedChunkFilenames.push(
+            this.getFileName(mainWithNameChunkReferenceId),
+          )
+          emittedChunkFilenames.push(
+            this.getFileName(mainWithFileNameChunkReferenceId),
+          )
         },
       },
     ],
   },
   afterTest: (output) => {
-    expect(getOutputFileNames(output)).toMatchInlineSnapshot(
-      `
+    expect(emittedChunkPreliminaryFilenames).toMatchInlineSnapshot(`
       [
-        "main-Fv4vYntb.js",
+        "main-with-name.!~{001}~.js",
         "main-with-fileName.js",
-        "main-with-name.js",
-        "main.js",
       ]
-    `,
-    )
+    `)
+    expect(emittedChunkFilenames).toMatchInlineSnapshot(`
+      [
+        "main-with-name.gM07keqn.js",
+        "main-with-fileName.js",
+      ]
+    `)
   },
 })

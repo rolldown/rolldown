@@ -86,8 +86,8 @@ impl BindingPluginContext {
   }
 
   #[napi]
-  pub fn get_file_name(&self, reference_id: String) -> String {
-    self.inner.get_file_name(reference_id.as_str()).to_string()
+  pub fn get_file_name(&self, reference_id: String) -> anyhow::Result<String> {
+    self.inner.get_file_name(reference_id.as_str()).map(|id| id.to_string())
   }
 
   #[napi]

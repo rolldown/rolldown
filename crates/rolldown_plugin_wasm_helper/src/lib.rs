@@ -55,7 +55,7 @@ impl Plugin for WasmHelperPlugin {
           file_name: None,
         })
         .await?;
-      let url = ctx.get_file_name(&reference_id);
+      let url = ctx.get_file_name(&reference_id)?;
       return Ok(Some(HookLoadOutput {
         code: format!(
           r#"import initWasm from "{WASM_HELPER_ID}"; 

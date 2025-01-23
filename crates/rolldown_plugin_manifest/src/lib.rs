@@ -42,7 +42,6 @@ impl Plugin for ManifestPlugin {
     let entry_css_reference_ids: &FxHashSet<String> = &CSS_ENTRIES_MAP;
     let mut entry_css_asset_file_names = FxHashSet::with_capacity(entry_css_reference_ids.len());
     for reference_id in entry_css_reference_ids {
-      // TODO: The logic look like is wired, need to check
       if let Ok(file_name) = ctx.get_file_name(reference_id.as_str()) {
         entry_css_asset_file_names.insert(file_name);
       } else {

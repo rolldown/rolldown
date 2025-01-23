@@ -1,3 +1,23 @@
+# [1.0.0-beta.3](https://github.com/rolldown/rolldown/compare/v1.0.0-beta.2...v1.0.0-beta.3) (2025-01-23)
+
+
+### Bug Fixes
+
+* dynamic tree shaking more await syntax ([#3399](https://github.com/rolldown/rolldown/issues/3399)) ([f11bf03](https://github.com/rolldown/rolldown/commit/f11bf037fc427abe939431d960fb32d8ce5fad29)), closes [#3396](https://github.com/rolldown/rolldown/issues/3396)
+* force cjs wrapper to be included in the output ([#3400](https://github.com/rolldown/rolldown/issues/3400)) ([8a5eba0](https://github.com/rolldown/rolldown/commit/8a5eba040b5be2b446b50f9f28d054607e95954b))
+* should not set default value for treeshake in cli normalization ([#3398](https://github.com/rolldown/rolldown/issues/3398)) ([72ddc66](https://github.com/rolldown/rolldown/commit/72ddc66261fc660acbeeb658e8290850909147fd)), closes [#3392](https://github.com/rolldown/rolldown/issues/3392)
+* shouldn't generate unused `__toESM` calls ([#3401](https://github.com/rolldown/rolldown/issues/3401)) ([5deb279](https://github.com/rolldown/rolldown/commit/5deb2793fc9176d31796f224645dccd3890fa1dc))
+* sort function panic due to user-provided comparison function does not correctly implement a total order  ([#3384](https://github.com/rolldown/rolldown/issues/3384)) ([4986046](https://github.com/rolldown/rolldown/commit/4986046f594c5fb6663ca7b5bf31663d4e35903e))
+
+
+### Features
+
+* **mf:** support runtime plugin ([#3377](https://github.com/rolldown/rolldown/issues/3377)) ([83cd091](https://github.com/rolldown/rolldown/commit/83cd091b5ab95b4d949564330e8b59fc3260c89c))
+* PluginContext.getFileName using emitted chunk reference id ([#3409](https://github.com/rolldown/rolldown/issues/3409)) ([9db3240](https://github.com/rolldown/rolldown/commit/9db3240ead7d63651b38ac3ec7495e83c07e1c8f))
+* support function for assetFilenames ([#3397](https://github.com/rolldown/rolldown/issues/3397)) ([242f007](https://github.com/rolldown/rolldown/commit/242f007a5582a620fe54cba0c3ab200649f325ce))
+
+
+
 # [1.0.0-beta.2](https://github.com/rolldown/rolldown/compare/v1.0.0-beta.1...v1.0.0-beta.2) (2025-01-20)
 
 

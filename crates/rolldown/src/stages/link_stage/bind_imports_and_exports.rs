@@ -554,7 +554,14 @@ impl BindImportsAndExportsContext<'_> {
 
       let rec = &module.import_records[named_import.record_id];
       let is_external = matches!(self.index_modules[rec.resolved_module], Module::External(_));
-      if is_esm && is_external {
+
+      if is_esm
+        && is_external
+        && self.metas[module_id]
+          .resolved_exports
+          .iter()
+          .all(|(_, resolved_export)| resolved_export.symbol_ref != *imported_as_ref)
+      {
         if let Specifier::Literal(ref name) = named_import.imported {
           self
             .external_import_binding_merger

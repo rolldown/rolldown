@@ -62,8 +62,7 @@ impl WatcherTask {
       bundler.cache.invalidate(file);
     }
     let result = {
-      let scan = bundler.scan(ScanMode::Full);
-      let result = scan.await;
+      let result = bundler.scan(ScanMode::Full).await;
       // FIXME(hyf0): probably should have a more official API/better way to get watch files
       self.watch_files(&bundler.plugin_driver.watch_files, &bundler.options).await?;
       match result {

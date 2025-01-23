@@ -38,11 +38,17 @@ pub struct ScanStageOutput {
   pub dynamic_import_exports_usage_map: FxHashMap<ModuleIdx, DynamicImportExportsUsage>,
 }
 
-impl Clone for ScanStageOutput {
-  fn clone(&self) -> Self {
+impl ScanStageOutput {
+  /// Make a copy of the current ScanStage, skipping clone some fields that is immutable in
+  /// following stage
+  pub fn make_copy(&self) -> Self {
     Self {
       module_table: self.module_table.clone(),
-      index_ecma_ast: self.index_ecma_ast.clone(),
+      index_ecma_ast: self
+        .index_ecma_ast
+        .iter()
+        .map(|(ast, module_idx)| (ast.clone_with_another_arena(), *module_idx))
+        .collect(),
       entry_points: self.entry_points.clone(),
       symbol_ref_db: self.symbol_ref_db.clone(),
       runtime: self.runtime.clone(),
@@ -52,6 +58,7 @@ impl Clone for ScanStageOutput {
     }
   }
 }
+
 impl ScanStage {
   pub fn new(
     options: SharedOptions,
@@ -64,7 +71,7 @@ impl ScanStage {
   }
 
   #[tracing::instrument(level = "debug", skip_all)]
-  pub async fn scan(&mut self, mode: ScanMode) -> BuildResult<ScanStageOutput> {
+  pub async fn scan(&mut self, _mode: ScanMode) -> BuildResult<ScanStageOutput> {
     if self.options.input.is_empty() {
       Err(anyhow::anyhow!("You must supply options.input to rolldown"))?;
     }

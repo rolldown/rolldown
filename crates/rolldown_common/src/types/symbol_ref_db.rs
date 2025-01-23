@@ -42,6 +42,7 @@ pub struct SymbolRefDbForModule {
   pub flags: FxHashMap<SymbolId, SymbolRefFlags>,
   pub classic_data: IndexVec<SymbolId, SymbolRefDataClassic>,
 }
+
 impl Clone for SymbolRefDbForModule {
   fn clone(&self) -> Self {
     Self {

@@ -23,12 +23,6 @@ pub struct EcmaAst {
   pub contains_use_strict: bool,
 }
 
-impl Clone for EcmaAst {
-  fn clone(&self) -> Self {
-    self.clone_with_another_arena()
-  }
-}
-
 impl EcmaAst {
   pub fn source(&self) -> &ArcStr {
     &self.program.borrow_owner().source

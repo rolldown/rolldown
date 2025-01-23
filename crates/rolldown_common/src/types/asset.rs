@@ -1,5 +1,6 @@
 use std::path::PathBuf;
 
+use arcstr::ArcStr;
 use rolldown_sourcemap::SourceMap;
 
 use crate::{ChunkIdx, InstantiationKind, PreliminaryFilename, StrOrBytes};
@@ -14,5 +15,5 @@ pub struct Asset {
   pub augment_chunk_hash: Option<String>,
   pub file_dir: PathBuf,
   pub preliminary_filename: PreliminaryFilename,
-  pub filename: String,
+  pub filename: ArcStr,
 }

@@ -29,8 +29,10 @@ pub struct Chunk {
   pub kind: ChunkKind,
   pub modules: Vec<ModuleIdx>,
   pub name: Option<ArcStr>,
-  // emit_chunk specifed filename
+  // emitted chunk specified filename, used to generate chunk filename
   pub file_name: Option<ArcStr>,
+  // emitted chunk corresponding reference_id, used to `PluginContext#getFileName` to search the emitted chunk name
+  pub reference_id: Option<ArcStr>,
   pub pre_rendered_chunk: Option<RollupPreRenderedChunk>,
   pub preliminary_filename: Option<PreliminaryFilename>,
   pub absolute_preliminary_filename: Option<String>,
@@ -55,12 +57,22 @@ pub struct Chunk {
 impl Chunk {
   pub fn new(
     name: Option<ArcStr>,
+    reference_id: Option<ArcStr>,
     file_name: Option<ArcStr>,
     bits: BitSet,
     modules: Vec<ModuleIdx>,
     kind: ChunkKind,
   ) -> Self {
-    Self { exec_order: u32::MAX, modules, name, file_name, bits, kind, ..Self::default() }
+    Self {
+      exec_order: u32::MAX,
+      modules,
+      name,
+      file_name,
+      reference_id,
+      bits,
+      kind,
+      ..Self::default()
+    }
   }
 
   pub fn has_side_effect(&self, runtime_id: ModuleIdx) -> bool {

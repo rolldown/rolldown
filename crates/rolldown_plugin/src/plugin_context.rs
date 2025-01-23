@@ -170,7 +170,7 @@ impl PluginContextImpl {
   }
 
   pub async fn emit_chunk(&self, chunk: rolldown_common::EmittedChunk) -> anyhow::Result<ArcStr> {
-    self.file_emitter.emit_chunk(Arc::new(chunk)).await
+    self.file_emitter.emit_chunk(chunk).await
   }
 
   pub fn emit_file(

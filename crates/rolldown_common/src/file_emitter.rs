@@ -1,6 +1,6 @@
 use crate::{
-  FileNameRenderOptions, FilenameTemplate, ModuleLoaderMsg, NormalizedBundlerOptions, Output,
-  OutputAsset, StrOrBytes,
+  AddEntryModuleMsg, FileNameRenderOptions, FilenameTemplate, ModuleLoaderMsg,
+  NormalizedBundlerOptions, Output, OutputAsset, StrOrBytes,
 };
 use anyhow::Context;
 use arcstr::ArcStr;
@@ -32,18 +32,23 @@ pub struct EmittedChunk {
   pub importer: Option<String>,
 }
 
+pub struct EmittedChunkInfo {
+  pub reference_id: ArcStr,
+  pub filename: ArcStr,
+}
+
 #[derive(Debug)]
 pub struct FileEmitter {
   tx: Arc<Mutex<Option<tokio::sync::mpsc::Sender<ModuleLoaderMsg>>>>,
   source_hash_to_reference_id: FxDashMap<ArcStr, ArcStr>,
   names: FxDashMap<ArcStr, u32>,
   files: FxDashMap<ArcStr, OutputAsset>,
-  chunks: FxDashMap<ArcStr, Arc<EmittedChunk>>,
   base_reference_id: AtomicUsize,
   #[allow(dead_code)]
   options: Arc<NormalizedBundlerOptions>,
   /// Mark the files that have been emitted to bundle.
   emitted_files: FxDashSet<ArcStr>,
+  emitted_chunks: FxDashMap<ArcStr, ArcStr>,
 }
 
 impl FileEmitter {
@@ -53,15 +58,21 @@ impl FileEmitter {
       source_hash_to_reference_id: DashMap::default(),
       names: DashMap::default(),
       files: DashMap::default(),
-      chunks: DashMap::default(),
+      emitted_chunks: DashMap::default(),
       base_reference_id: AtomicUsize::new(0),
       options,
       emitted_files: DashSet::default(),
     }
   }
 
-  pub async fn emit_chunk(&self, chunk: Arc<EmittedChunk>) -> anyhow::Result<ArcStr> {
-    let reference_id = self.assign_reference_id(Some(chunk.id.as_str().into()));
+  pub fn set_emitted_chunk_info(&self, emitted_chunk_info: impl Iterator<Item = EmittedChunkInfo>) {
+    for info in emitted_chunk_info {
+      self.emitted_chunks.insert(info.reference_id, info.filename);
+    }
+  }
+
+  pub async fn emit_chunk(&self, chunk: EmittedChunk) -> anyhow::Result<ArcStr> {
+    let reference_id = self.assign_reference_id(chunk.name.clone());
     self
     .tx
     .lock()
@@ -70,9 +81,8 @@ impl FileEmitter {
     .context(
       "The `PluginContext.emitFile` with `type: 'chunk'` only work at `buildStart/resolveId/load/transform/moduleParsed` hooks.",
     )?
-    .send(ModuleLoaderMsg::AddEntryModule(Arc::clone(&chunk)))
+    .send(ModuleLoaderMsg::AddEntryModule(AddEntryModuleMsg { chunk, reference_id: reference_id.clone() }))
     .await?;
-    self.chunks.insert(reference_id.clone(), chunk);
     Ok(reference_id)
   }
 
@@ -116,10 +126,12 @@ impl FileEmitter {
     reference_id
   }
 
-  // TODO support EmittedChunk
   pub fn get_file_name(&self, reference_id: &str) -> anyhow::Result<ArcStr> {
     if let Some(file) = self.files.get(reference_id) {
       return Ok(file.filename.clone());
+    }
+    if let Some(filename) = self.emitted_chunks.get(reference_id) {
+      return Ok(filename.clone());
     }
     Err(anyhow::anyhow!("Unable to get file name for unknown file: {reference_id}"))
   }
@@ -213,6 +225,7 @@ impl FileEmitter {
     self.source_hash_to_reference_id.clear();
     self.base_reference_id.store(0, Ordering::Relaxed);
     self.emitted_files.clear();
+    self.emitted_chunks.clear();
   }
 }
 

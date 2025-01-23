@@ -240,6 +240,7 @@ impl ModuleLoader {
         id: self.try_spawn_new_task(info, None, true, None),
         kind: EntryPointKind::UserDefined,
         file_name: None,
+        reference_id: None,
       })
       .inspect(|e| {
         user_defined_entry_ids.insert(e.id);
@@ -360,7 +361,8 @@ impl ModuleLoader {
         ModuleLoaderMsg::FetchModule(resolve_id) => {
           self.try_spawn_new_task(resolve_id, None, false, None);
         }
-        ModuleLoaderMsg::AddEntryModule(data) => {
+        ModuleLoaderMsg::AddEntryModule(msg) => {
+          let data = msg.chunk;
           let result = load_entry_module(
             &self.shared_context.resolver,
             &self.shared_context.plugin_driver,
@@ -376,10 +378,11 @@ impl ModuleLoader {
             }
           };
           extra_entry_points.push(EntryPoint {
-            name: data.name.clone(),
+            name: data.name,
             id: self.try_spawn_new_task(resolved_id, None, true, None),
             kind: EntryPointKind::UserDefined,
-            file_name: data.file_name.clone(),
+            file_name: data.file_name,
+            reference_id: Some(msg.reference_id),
           });
         }
         ModuleLoaderMsg::BuildErrors(e) => {
@@ -458,6 +461,7 @@ impl ModuleLoader {
         id,
         kind: EntryPointKind::DynamicImport,
         file_name: None,
+        reference_id: None,
       }));
     }
 

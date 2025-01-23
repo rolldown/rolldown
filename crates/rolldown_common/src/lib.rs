@@ -69,7 +69,7 @@ pub use crate::{
     module_idx::ModuleIdx,
     node_builtin_modules::is_existing_node_builtin_modules,
   },
-  file_emitter::{EmittedAsset, EmittedChunk, FileEmitter, SharedFileEmitter},
+  file_emitter::{EmittedAsset, EmittedChunk, EmittedChunkInfo, FileEmitter, SharedFileEmitter},
   module::{
     external_module::ExternalModule,
     normal_module::{ModuleRenderArgs, NormalModule},
@@ -79,7 +79,7 @@ pub use crate::{
     runtime_module_brief::{RuntimeModuleBrief, RUNTIME_MODULE_ID},
     runtime_task_result::RuntimeModuleTaskResult,
     task_result::{EcmaRelated, NormalModuleTaskResult},
-    ModuleLoaderMsg,
+    AddEntryModuleMsg, ModuleLoaderMsg,
   },
   types::asset::Asset,
   types::asset_idx::AssetIdx,

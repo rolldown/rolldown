@@ -52,6 +52,7 @@ impl GenerateStage<'_> {
       };
       let chunk = chunk_graph.add_chunk(Chunk::new(
         entry_point.name.clone(),
+        entry_point.reference_id.clone(),
         entry_point.file_name.clone(),
         bits.clone(),
         vec![],
@@ -102,7 +103,7 @@ impl GenerateStage<'_> {
       if let Some(chunk_id) = bits_to_chunk.get(bits).copied() {
         chunk_graph.add_module_to_chunk(normal_module.idx, chunk_id);
       } else {
-        let chunk = Chunk::new(None, None, bits.clone(), vec![], ChunkKind::Common);
+        let chunk = Chunk::new(None, None, None, bits.clone(), vec![], ChunkKind::Common);
         let chunk_id = chunk_graph.add_chunk(chunk);
         chunk_graph.add_module_to_chunk(normal_module.idx, chunk_id);
         bits_to_chunk.insert(bits.clone(), chunk_id);
@@ -493,6 +494,7 @@ impl GenerateStage<'_> {
 
       let chunk = Chunk::new(
         Some(this_module_group.name.clone()),
+        None,
         None,
         index_splitting_info
           [this_module_group.modules.iter().next().copied().expect("must have one")]

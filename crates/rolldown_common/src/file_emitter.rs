@@ -116,19 +116,12 @@ impl FileEmitter {
     reference_id
   }
 
-  pub fn try_get_file_name(&self, reference_id: &str) -> Result<ArcStr, String> {
-    let file = self
-      .files
-      .get(reference_id)
-      .ok_or(format!("Unable to get file name for unknown file: {reference_id}"))?;
-    Ok(file.filename.clone())
-  }
-
   // TODO support EmittedChunk
-  pub fn get_file_name(&self, reference_id: &str) -> ArcStr {
-    self
-      .try_get_file_name(reference_id)
-      .unwrap_or_else(|_| panic!("{reference_id} should have file name"))
+  pub fn get_file_name(&self, reference_id: &str) -> anyhow::Result<ArcStr> {
+    if let Some(file) = self.files.get(reference_id) {
+      return Ok(file.filename.clone());
+    }
+    Err(anyhow::anyhow!("Unable to get file name for unknown file: {reference_id}"))
   }
 
   pub fn assign_reference_id(&self, filename: Option<ArcStr>) -> ArcStr {

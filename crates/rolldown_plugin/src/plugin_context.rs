@@ -191,11 +191,7 @@ impl PluginContextImpl {
     Ok(self.file_emitter.emit_file(file, asset_filename.map(Into::into)))
   }
 
-  pub fn try_get_file_name(&self, reference_id: &str) -> Result<ArcStr, String> {
-    self.file_emitter.try_get_file_name(reference_id)
-  }
-
-  pub fn get_file_name(&self, reference_id: &str) -> ArcStr {
+  pub fn get_file_name(&self, reference_id: &str) -> anyhow::Result<ArcStr> {
     self.file_emitter.get_file_name(reference_id)
   }
 

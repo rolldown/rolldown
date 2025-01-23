@@ -7,7 +7,7 @@ use crate::{
 };
 use anyhow::Result;
 
-use rolldown_common::{Cache, NormalizedBundlerOptions, SharedFileEmitter};
+use rolldown_common::{Cache, NormalizedBundlerOptions, ScanMode, SharedFileEmitter};
 use rolldown_error::{BuildDiagnostic, BuildResult};
 use rolldown_fs::{FileSystem, OsFileSystem};
 use rolldown_plugin::{
@@ -43,14 +43,14 @@ impl Bundler {
 impl Bundler {
   #[tracing::instrument(level = "debug", skip_all)]
   pub async fn write(&mut self) -> BuildResult<BundleOutput> {
-    let scan_stage_output = self.scan().await?;
+    let scan_stage_output = self.scan(ScanMode::Full).await?;
 
     self.bundle_write(scan_stage_output).await
   }
 
   #[tracing::instrument(level = "debug", skip_all)]
   pub async fn generate(&mut self) -> BuildResult<BundleOutput> {
-    let scan_stage_output = self.scan().await?;
+    let scan_stage_output = self.scan(ScanMode::Full).await?;
 
     self.bundle_up(scan_stage_output, /* is_write */ false).await.map(|mut output| {
       output.warnings.append(&mut self.warnings);
@@ -70,7 +70,7 @@ impl Bundler {
     Ok(())
   }
 
-  pub async fn scan(&mut self) -> BuildResult<ScanStageOutput> {
+  pub async fn scan(&mut self, mode: ScanMode) -> BuildResult<ScanStageOutput> {
     let scan_stage_output = match ScanStage::new(
       Arc::clone(&self.options),
       Arc::clone(&self.plugin_driver),
@@ -78,7 +78,7 @@ impl Bundler {
       Arc::clone(&self.resolver),
       Arc::clone(&self.cache),
     )
-    .scan()
+    .scan(mode)
     .await
     {
       Ok(v) => v,
@@ -94,7 +94,7 @@ impl Bundler {
 
     self.plugin_driver.build_end(None).await?;
     let start = Instant::now();
-    scan_stage_output.clone();
+    _ = scan_stage_output.clone();
     dbg!(&start.elapsed());
     Ok(scan_stage_output)
   }

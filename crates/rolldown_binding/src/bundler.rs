@@ -16,6 +16,7 @@ use crate::{
 use napi::{tokio::sync::Mutex, Env};
 use napi_derive::napi;
 use rolldown::Bundler as NativeBundler;
+use rolldown_common::ScanMode;
 use rolldown_error::{BuildDiagnostic, BuildResult, DiagnosticOptions};
 
 #[napi(object, object_to_js = false)]
@@ -113,7 +114,7 @@ impl Bundler {
   #[allow(clippy::significant_drop_tightening)]
   pub async fn scan_impl(&self) -> napi::Result<BindingOutputs> {
     let mut bundler_core = self.inner.lock().await;
-    let output = self.handle_result(bundler_core.scan().await);
+    let output = self.handle_result(bundler_core.scan(ScanMode::Full).await);
 
     match output {
       Ok(output) => {

@@ -13,7 +13,7 @@ use super::emitter::SharedWatcherEmitter;
 use arcstr::ArcStr;
 use notify::{RecommendedWatcher, RecursiveMode, Watcher};
 use rolldown_common::{
-  BundleEndEventData, BundleEvent, OutputsDiagnostics, WatcherChangeKind, WatcherEvent,
+  BundleEndEventData, BundleEvent, OutputsDiagnostics, ScanMode, WatcherChangeKind, WatcherEvent,
 };
 use rolldown_error::{BuildDiagnostic, BuildResult, ResultExt};
 use rolldown_utils::{dashmap::FxDashSet, pattern_filter};
@@ -62,7 +62,8 @@ impl WatcherTask {
       bundler.cache.invalidate(file);
     }
     let result = {
-      let result = bundler.scan().await;
+      let scan = bundler.scan(ScanMode::Full);
+      let result = scan.await;
       // FIXME(hyf0): probably should have a more official API/better way to get watch files
       self.watch_files(&bundler.plugin_driver.watch_files, &bundler.options).await?;
       match result {

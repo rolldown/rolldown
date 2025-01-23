@@ -37,6 +37,7 @@ pub mod resolved_export;
 pub mod resolved_request_info;
 pub mod rollup_pre_rendered_chunk;
 pub mod rollup_rendered_chunk;
+pub mod scan_stage;
 pub mod side_effects;
 pub mod source_mutation;
 pub mod stmt_info;

@@ -4,7 +4,7 @@ use arcstr::ArcStr;
 use futures::future::join_all;
 use rolldown_common::{
   dynamic_import_usage::DynamicImportExportsUsage, Cache, EntryPoint, ModuleIdx, ModuleTable,
-  ResolvedId, RuntimeModuleBrief, SymbolRefDb,
+  ResolvedId, RuntimeModuleBrief, ScanMode, SymbolRefDb,
 };
 use rolldown_error::{BuildDiagnostic, BuildResult};
 use rolldown_fs::OsFileSystem;
@@ -47,11 +47,11 @@ impl Clone for ScanStageOutput {
       symbol_ref_db: self.symbol_ref_db.clone(),
       runtime: self.runtime.clone(),
       warnings: vec![],
+      index_ast_scope: IndexAstScope::default(),
       dynamic_import_exports_usage_map: self.dynamic_import_exports_usage_map.clone(),
     }
   }
 }
-
 impl ScanStage {
   pub fn new(
     options: SharedOptions,
@@ -64,7 +64,7 @@ impl ScanStage {
   }
 
   #[tracing::instrument(level = "debug", skip_all)]
-  pub async fn scan(&mut self) -> BuildResult<ScanStageOutput> {
+  pub async fn scan(&mut self, mode: ScanMode) -> BuildResult<ScanStageOutput> {
     if self.options.input.is_empty() {
       Err(anyhow::anyhow!("You must supply options.input to rolldown"))?;
     }

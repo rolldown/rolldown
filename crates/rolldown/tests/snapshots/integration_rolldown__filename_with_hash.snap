@@ -4131,7 +4131,7 @@ snapshot_kind: text
 
 # tests/rolldown/function/external/splitting_indirect_external_symbol
 
-- main-!~{002}~.js => main-o2wyWrFD.js
+- main-!~{002}~.js => main-DN6hqTye.js
 - indirect-!~{003}~.js => indirect-C8E1UGaS.js
 - indirect-!~{000}~.js => indirect-DRby1-0L.js
 

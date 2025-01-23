@@ -122,6 +122,7 @@ pub use crate::{
   types::rollup_pre_rendered_asset::RollupPreRenderedAsset,
   types::rollup_pre_rendered_chunk::RollupPreRenderedChunk,
   types::rollup_rendered_chunk::RollupRenderedChunk,
+  types::scan_stage::ScanMode,
   types::side_effects,
   types::source_mutation::SourceMutation,
   types::stmt_info::{DebugStmtInfoForTreeShaking, StmtInfo, StmtInfoIdx, StmtInfoMeta, StmtInfos},

@@ -13,7 +13,7 @@ use crate::{
 };
 
 bitflags! {
-    #[derive(Debug, Default)]
+    #[derive(Debug, Default, Clone)]
     pub struct EcmaViewMeta: u8 {
         const EVAL = 1;
         const INCLUDED = 1 << 1;
@@ -89,7 +89,7 @@ impl EcmaViewMeta {
   }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct EcmaView {
   pub source: ArcStr,
   pub ecma_ast_idx: Option<EcmaAstIdx>,
@@ -161,7 +161,7 @@ impl SourceMutation for ImportMetaRolldownAssetReplacer {
   }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct EsmNamespaceInCjs {
   pub namespace_ref: SymbolRef,
   pub stmt_info_idx: StmtInfoIdx,

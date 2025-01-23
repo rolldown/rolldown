@@ -2,7 +2,7 @@ use crate::{AstScopes, ModuleIdx, SymbolRef};
 use oxc::{semantic::SymbolId, span::CompactStr as CompactString};
 use rustc_hash::FxHashMap;
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct RuntimeModuleBrief {
   id: ModuleIdx,
   name_to_symbol: FxHashMap<CompactString, SymbolId>,

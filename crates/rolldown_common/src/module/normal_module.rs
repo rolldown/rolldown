@@ -23,7 +23,7 @@ use rolldown_utils::ecmascript::legitimize_identifier_name;
 use rustc_hash::FxHashSet;
 use string_wizard::SourceMapOptions;
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct NormalModule {
   pub exec_order: u32,
   pub idx: ModuleIdx,

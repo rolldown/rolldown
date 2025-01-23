@@ -169,9 +169,9 @@ xxhash-rust         = "0.8.10"
 
 
 # oxc crates with the same version
-oxc                = { version = "0.47.1", features = ["transformer", "minifier", "semantic", "codegen", "serialize"] }
-oxc_parser_napi    = { version = "0.47.1" }
-oxc_transform_napi = { version = "0.47.1" }
+oxc                = { git = "https://github.com/oxc-project/oxc", rev = "ad3ef33ada8044718a6082b318e23721d62a2729", version = "0.47.1", features = ["transformer", "minifier", "semantic", "codegen", "serialize"] }
+oxc_parser_napi    = { git = "https://github.com/oxc-project/oxc", rev = "ad3ef33ada8044718a6082b318e23721d62a2729",version = "0.47.1" }
+oxc_transform_napi = { git = "https://github.com/oxc-project/oxc", rev = "ad3ef33ada8044718a6082b318e23721d62a2729", version = "0.47.1" }
 
 # oxc crates in their own repos
 # Versions must be relaxed for usage in oxc.

@@ -98,7 +98,7 @@ impl<'ast> BindingPatternExt<'ast> for ast::BindingPattern<'ast> {
                 ast::AssignmentTargetProperty::AssignmentTargetPropertyIdentifier(
                   ast::AssignmentTargetPropertyIdentifier {
                     binding: ast::IdentifierReference {
-                      name: id.name.clone(),
+                      name: id.name,
                       ..TakeIn::dummy(alloc)
                     },
                     init: None,

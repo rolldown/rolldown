@@ -9,7 +9,7 @@ use crate::{
   ResolvedImportRecord,
 };
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub enum Module {
   Normal(Box<NormalModule>),
   External(Box<ExternalModule>),

@@ -1,5 +1,6 @@
 use std::fmt::Debug;
 
+#[derive(Clone)]
 pub struct AssetView {
   pub source: Box<[u8]>,
 }

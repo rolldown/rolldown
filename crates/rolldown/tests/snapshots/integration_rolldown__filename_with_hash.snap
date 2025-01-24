@@ -3796,9 +3796,9 @@ snapshot_kind: text
 
 # tests/rolldown/code_splitting/ensure_safe_identifier
 
-- main1-!~{000}~.js => main1-xM8JUegD.js
-- main2-!~{001}~.js => main2-DpJiuJHb.js
-- 0shared-file_-!~{002}~.js => 0shared-file_-CJwdPY_T.js
+- main1-!~{000}~.js => main1-CswwmISF.js
+- main2-!~{001}~.js => main2-BFSfCkOJ.js
+- 0shared-file!-!~{002}~.js => 0shared-file!-DcnwU6w6.js
 
 # tests/rolldown/code_splitting/ensure_side_effect_executed
 

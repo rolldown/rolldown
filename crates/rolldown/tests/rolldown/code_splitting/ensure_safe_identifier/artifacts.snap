@@ -4,7 +4,7 @@ snapshot_kind: text
 ---
 # Assets
 
-## 0shared-file_.js
+## 0shared-file!.js
 
 ```js
 "use strict";
@@ -24,7 +24,7 @@ Object.defineProperty(exports, '_0shared_file__default', {
 
 ```js
 "use strict";
-const require_0shared_file_ = require('./0shared-file_.js');
+const require_0shared_file_ = require('./0shared-file!.js');
 
 //#region main1.js
 console.log(require_0shared_file_._0shared_file__default);
@@ -35,7 +35,7 @@ console.log(require_0shared_file_._0shared_file__default);
 
 ```js
 "use strict";
-const require_0shared_file_ = require('./0shared-file_.js');
+const require_0shared_file_ = require('./0shared-file!.js');
 
 //#region main2.js
 console.log(require_0shared_file_._0shared_file__default);

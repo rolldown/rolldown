@@ -5,7 +5,7 @@ import { expect } from 'vitest'
 
 export default defineTest({
   config: {
-    input: ['<main.js'],
+    input: ['main.js'],
     output: {
       sanitizeFileName: false,
     },
@@ -25,8 +25,6 @@ export default defineTest({
   afterTest: (output) => {
     expect(getOutputFileNames(output)).toMatchInlineSnapshot(`
       [
-        "<dynamic-TxlS41KQ.js",
-        "<share-B0ebWhiS.js",
         "assets/<emitted-umwR9Fta.txt",
         "main.js",
       ]

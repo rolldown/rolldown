@@ -5,7 +5,7 @@ import { expect } from 'vitest'
 
 export default defineTest({
   config: {
-    input: ['<main.js'],
+    input: ['main.js'],
     output: {
       sanitizeFileName: (name) => {
         return `sanitized-${name}`
@@ -29,8 +29,8 @@ export default defineTest({
       [
         "assets/sanitized-<emitted-umwR9Fta.txt",
         "main.js",
-        "sanitized-<dynamic-DyCDX-rK.js",
-        "sanitized-<share-DPV8exuF.js",
+        "sanitized-dynamic-B6fOdZ2e.js",
+        "sanitized-share-QidOADL2.js",
       ]
     `)
   },

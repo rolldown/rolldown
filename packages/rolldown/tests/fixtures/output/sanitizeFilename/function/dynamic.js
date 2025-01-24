@@ -1,2 +1,2 @@
-import './<share';
+import './share';
 console.log('dynamic')

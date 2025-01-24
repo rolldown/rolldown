@@ -33,7 +33,7 @@ fn criterion_benchmark(c: &mut Criterion) {
       b.iter(|| {
         tokio::runtime::Runtime::new().unwrap().block_on(async {
           let mut rolldown_bundler = rolldown::Bundler::new((item.options)());
-          let _output = rolldown_bundler.scan().await.expect("should not failed in scan");
+          let _output = rolldown_bundler.scan(vec![]).await.expect("should not failed in scan");
         })
       });
     });

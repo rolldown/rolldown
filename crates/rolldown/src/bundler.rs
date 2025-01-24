@@ -2,17 +2,19 @@ use super::stages::{link_stage::LinkStage, scan_stage::ScanStageOutput};
 use crate::{
   bundler_builder::BundlerBuilder,
   stages::{generate_stage::GenerateStage, scan_stage::ScanStage},
-  types::bundle_output::BundleOutput,
+  types::{bundle_output::BundleOutput, scan_stage_cache::ScanStageCache},
   BundlerOptions, SharedOptions, SharedResolver,
 };
 use anyhow::Result;
 
-use rolldown_common::{Cache, NormalizedBundlerOptions, ScanMode, SharedFileEmitter};
+use arcstr::ArcStr;
+use rolldown_common::{ModuleIdx, NormalizedBundlerOptions, ScanMode, SharedFileEmitter};
 use rolldown_error::{BuildDiagnostic, BuildResult};
 use rolldown_fs::{FileSystem, OsFileSystem};
 use rolldown_plugin::{
   HookBuildEndArgs, HookRenderErrorArgs, SharedPluginDriver, __inner::SharedPluginable,
 };
+use rustc_hash::FxHashMap;
 use std::sync::Arc;
 use tracing_chrome::FlushGuard;
 
@@ -25,8 +27,7 @@ pub struct Bundler {
   pub(crate) plugin_driver: SharedPluginDriver,
   pub(crate) warnings: Vec<BuildDiagnostic>,
   pub(crate) _log_guard: Option<FlushGuard>,
-  #[allow(unused)]
-  pub(crate) cache: Arc<Cache>,
+  pub(crate) scan_stage_cache: Arc<ScanStageCache>,
 }
 
 impl Bundler {
@@ -42,14 +43,14 @@ impl Bundler {
 impl Bundler {
   #[tracing::instrument(level = "debug", skip_all)]
   pub async fn write(&mut self) -> BuildResult<BundleOutput> {
-    let scan_stage_output = self.scan(ScanMode::Full).await?;
+    let scan_stage_output = self.scan(vec![]).await?;
 
     self.bundle_write(scan_stage_output).await
   }
 
   #[tracing::instrument(level = "debug", skip_all)]
   pub async fn generate(&mut self) -> BuildResult<BundleOutput> {
-    let scan_stage_output = self.scan(ScanMode::Full).await?;
+    let scan_stage_output = self.scan(vec![]).await?;
 
     self.bundle_up(scan_stage_output, /* is_write */ false).await.map(|mut output| {
       output.warnings.append(&mut self.warnings);
@@ -69,13 +70,20 @@ impl Bundler {
     Ok(())
   }
 
-  pub async fn scan(&mut self, mode: ScanMode) -> BuildResult<ScanStageOutput> {
-    let scan_stage_output = match ScanStage::new(
+  pub async fn scan(&mut self, changed_ids: Vec<ArcStr>) -> BuildResult<ScanStageOutput> {
+    let mode =
+      if !self.options.experimental.is_incremental_build_enabled() || changed_ids.is_empty() {
+        ScanMode::Full
+      } else {
+        ScanMode::Partial(changed_ids)
+      };
+    let is_full_scan_mode = mode.is_full();
+    let (scan_stage_output, module_id_to_idx) = match ScanStage::new(
       Arc::clone(&self.options),
       Arc::clone(&self.plugin_driver),
       self.fs,
       Arc::clone(&self.resolver),
-      Arc::clone(&self.cache),
+      Arc::clone(&self.scan_stage_cache),
     )
     .scan(mode)
     .await
@@ -91,8 +99,35 @@ impl Bundler {
       }
     };
 
+    let scan_stage_output =
+      self.update_scan_stage_cache(scan_stage_output, module_id_to_idx, is_full_scan_mode);
+
     self.plugin_driver.build_end(None).await?;
     Ok(scan_stage_output)
+  }
+
+  pub fn update_scan_stage_cache(
+    &mut self,
+    output: ScanStageOutput,
+    module_id_to_idx: FxHashMap<ArcStr, ModuleIdx>,
+    is_full_scan_mode: bool,
+  ) -> ScanStageOutput {
+    if !self.options.experimental.is_incremental_build_enabled() {
+      return output;
+    }
+
+    let scan_stage_cache = Arc::get_mut(&mut self.scan_stage_cache).unwrap();
+
+    scan_stage_cache.set_module_id_to_idx(module_id_to_idx);
+
+    if is_full_scan_mode {
+      let copy = output.make_copy();
+      scan_stage_cache.set_cache(copy);
+      output
+    } else {
+      scan_stage_cache.merge(output);
+      scan_stage_cache.create_output()
+    }
   }
 
   pub async fn bundle_write(
@@ -148,6 +183,11 @@ impl Bundler {
       GenerateStage::new(&mut link_stage_output, &self.options, &self.plugin_driver)
         .generate()
         .await; // Notice we don't use `?` to break the control flow here.
+
+    if self.options.experimental.is_incremental_build_enabled() {
+      let scan_stage_cache = Arc::get_mut(&mut self.scan_stage_cache).unwrap();
+      scan_stage_cache.set_ast_scopes(link_stage_output.ast_scope_table);
+    }
 
     if let Err(errs) = &bundle_output {
       self

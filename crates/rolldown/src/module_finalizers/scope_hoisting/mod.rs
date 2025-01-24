@@ -245,7 +245,7 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
         let mut seq_expr = ast::SequenceExpression::dummy(self.alloc);
         var_decl.declarations.iter_mut().for_each(|var_decl| {
           var_decl.id.binding_identifiers().iter().for_each(|id| {
-            hoisted_names.push(id.name.clone());
+            hoisted_names.push(id.name);
           });
           // Turn `var ... = ...` to `... = ...`
           if let Some(init_expr) = &mut var_decl.init {

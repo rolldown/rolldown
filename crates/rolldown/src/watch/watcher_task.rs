@@ -13,7 +13,7 @@ use super::emitter::SharedWatcherEmitter;
 use arcstr::ArcStr;
 use notify::{RecommendedWatcher, RecursiveMode, Watcher};
 use rolldown_common::{
-  BundleEndEventData, BundleEvent, OutputsDiagnostics, ScanMode, WatcherChangeKind, WatcherEvent,
+  BundleEndEventData, BundleEvent, OutputsDiagnostics, WatcherChangeKind, WatcherEvent,
 };
 use rolldown_error::{BuildDiagnostic, BuildResult, ResultExt};
 use rolldown_utils::{dashmap::FxDashSet, pattern_filter};
@@ -56,13 +56,9 @@ impl WatcherTask {
     let start_time = Instant::now();
 
     self.emitter.emit(WatcherEvent::Event(BundleEvent::BundleStart))?;
-
     bundler.plugin_driver.clear();
-    for file in changed_files {
-      bundler.cache.invalidate(file);
-    }
     let result = {
-      let result = bundler.scan(ScanMode::Full).await;
+      let result = bundler.scan(changed_files.to_owned()).await;
       // FIXME(hyf0): probably should have a more official API/better way to get watch files
       self.watch_files(&bundler.plugin_driver.watch_files, &bundler.options).await?;
       match result {

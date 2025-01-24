@@ -3,7 +3,7 @@ use std::sync::Arc;
 use arcstr::ArcStr;
 use futures::future::join_all;
 use rolldown_common::{
-  dynamic_import_usage::DynamicImportExportsUsage, Cache, EntryPoint, ModuleIdx, ModuleTable,
+  dynamic_import_usage::DynamicImportExportsUsage, EntryPoint, ModuleIdx, ModuleTable,
   ResolvedId, RuntimeModuleBrief, ScanMode, SymbolRefDb,
 };
 use rolldown_error::{BuildDiagnostic, BuildResult};
@@ -14,6 +14,7 @@ use rustc_hash::FxHashMap;
 use crate::{
   module_loader::{module_loader::ModuleLoaderOutput, ModuleLoader},
   type_alias::{IndexAstScope, IndexEcmaAst},
+  types::scan_stage_cache::ScanStageCache,
   utils::load_entry_module::load_entry_module,
   SharedOptions, SharedResolver,
 };
@@ -23,7 +24,7 @@ pub struct ScanStage {
   plugin_driver: SharedPluginDriver,
   fs: OsFileSystem,
   resolver: SharedResolver,
-  cache: Arc<Cache>,
+  cache: Arc<ScanStageCache>,
 }
 
 #[derive(Debug)]
@@ -65,23 +66,37 @@ impl ScanStage {
     plugin_driver: SharedPluginDriver,
     fs: OsFileSystem,
     resolver: SharedResolver,
-    cache: Arc<Cache>,
+    scan_stage_cache: Arc<ScanStageCache>,
   ) -> Self {
-    Self { options, plugin_driver, fs, resolver, cache }
+    Self { options, plugin_driver, fs, resolver, cache: scan_stage_cache }
   }
 
   #[tracing::instrument(level = "debug", skip_all)]
-  pub async fn scan(&mut self, _mode: ScanMode) -> BuildResult<ScanStageOutput> {
+  pub async fn scan(
+    &mut self,
+    mode: ScanMode,
+  ) -> BuildResult<(ScanStageOutput, FxHashMap<ArcStr, ModuleIdx>)> {
     if self.options.input.is_empty() {
       Err(anyhow::anyhow!("You must supply options.input to rolldown"))?;
     }
+
+    let visited = match mode {
+      ScanMode::Full => FxHashMap::default(),
+      ScanMode::Partial(ref changed) => {
+        let mut visited = self.cache.module_id_to_idx().clone();
+        for item in changed {
+          visited.remove(item);
+        }
+        visited
+      }
+    };
 
     let module_loader = ModuleLoader::new(
       self.fs,
       Arc::clone(&self.options),
       Arc::clone(&self.resolver),
       Arc::clone(&self.plugin_driver),
-      Arc::clone(&self.cache),
+      visited,
     )?;
 
     // For `pluginContext.emitFile` with `type: chunk`, support it at buildStart hook.
@@ -93,7 +108,15 @@ impl ScanStage {
 
     self.plugin_driver.build_start(&self.options).await?;
 
-    let user_entries = self.resolve_user_defined_entries().await?;
+    let user_entries = match mode {
+      ScanMode::Full => self.resolve_user_defined_entries().await?,
+      ScanMode::Partial(_) => vec![],
+    };
+
+    let changed_resolved_ids = match mode {
+      ScanMode::Full => vec![],
+      ScanMode::Partial(changed_ids) => self.resolve_absolute_path(&changed_ids).await?,
+    };
 
     // For `await pluginContext.load`, if support it at buildStart hook, it could be caused stuck.
     self.plugin_driver.set_context_load_modules_tx(Some(module_loader.tx.clone())).await;
@@ -107,22 +130,26 @@ impl ScanStage {
       index_ecma_ast,
       dynamic_import_exports_usage_map,
       index_ast_scope,
-    } = module_loader.fetch_all_modules(user_entries).await?;
+      visited,
+    } = module_loader.fetch_modules(user_entries, changed_resolved_ids).await?;
 
     self.plugin_driver.file_emitter.set_context_load_modules_tx(None).await;
 
     self.plugin_driver.set_context_load_modules_tx(None).await;
-
-    Ok(ScanStageOutput {
-      index_ast_scope,
-      module_table,
-      entry_points,
-      symbol_ref_db,
-      runtime,
-      warnings,
-      index_ecma_ast,
-      dynamic_import_exports_usage_map,
-    })
+    let ret = (
+      ScanStageOutput {
+        index_ast_scope,
+        module_table,
+        entry_points,
+        symbol_ref_db,
+        runtime,
+        warnings,
+        index_ecma_ast,
+        dynamic_import_exports_usage_map,
+      },
+      visited,
+    );
+    Ok(ret)
   }
 
   /// Resolve `InputOptions.input`
@@ -141,6 +168,39 @@ impl ScanStage {
     .await;
 
     let mut ret = Vec::with_capacity(self.options.input.len());
+
+    let mut errors = vec![];
+
+    for resolve_id in resolved_ids {
+      match resolve_id {
+        Ok(item) => {
+          ret.push(item);
+        }
+        Err(e) => errors.push(e),
+      }
+    }
+
+    if !errors.is_empty() {
+      Err(errors)?;
+    }
+
+    Ok(ret)
+  }
+
+  /// Make sure the passed `ids` is all absolute path
+  async fn resolve_absolute_path(&mut self, ids: &Vec<ArcStr>) -> BuildResult<Vec<ResolvedId>> {
+    let resolver = &self.resolver;
+    let plugin_driver = &self.plugin_driver;
+
+    let resolved_ids = join_all(ids.iter().map(|input_item| async move {
+      // The importer is useless, since all path is absolute path
+      
+
+      load_entry_module(resolver, plugin_driver, input_item, None).await
+    }))
+    .await;
+
+    let mut ret = Vec::with_capacity(ids.len());
 
     let mut errors = vec![];
 

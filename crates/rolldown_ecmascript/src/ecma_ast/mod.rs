@@ -48,7 +48,7 @@ impl EcmaAst {
     let program = ProgramCell::new(
       ProgramCellOwner { source: self.source().clone(), allocator: Allocator::default() },
       |owner| {
-        let program = self.program().clone_in(&owner.allocator);
+        let program = self.program().clone_in_with_semantic_ids(&owner.allocator);
         ProgramCellDependent { program }
       },
     );

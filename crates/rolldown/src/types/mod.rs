@@ -7,3 +7,4 @@ pub mod generator;
 pub mod linking_metadata;
 pub mod module_factory;
 pub mod oxc_parse_type;
+pub mod scan_stage_cache;

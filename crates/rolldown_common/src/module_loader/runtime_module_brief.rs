@@ -8,6 +8,12 @@ pub struct RuntimeModuleBrief {
   name_to_symbol: FxHashMap<CompactString, SymbolId>,
 }
 
+impl Default for RuntimeModuleBrief {
+  fn default() -> Self {
+    Self { id: ModuleIdx::new(0), name_to_symbol: Default::default() }
+  }
+}
+
 impl RuntimeModuleBrief {
   pub fn new(id: ModuleIdx, scope: &AstScopes) -> Self {
     Self {

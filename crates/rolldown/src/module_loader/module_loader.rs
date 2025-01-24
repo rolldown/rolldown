@@ -11,10 +11,11 @@ use oxc_index::IndexVec;
 use rolldown_common::dynamic_import_usage::DynamicImportExportsUsage;
 use rolldown_common::side_effects::{DeterminedSideEffects, HookSideEffects};
 use rolldown_common::{
-  Cache, EcmaRelated, EntryPoint, EntryPointKind, ExternalModule, ImportKind, ImportRecordIdx,
+  EcmaRelated, EntryPoint, EntryPointKind, ExternalModule, ImportKind, ImportRecordIdx,
   ImporterRecord, Module, ModuleId, ModuleIdx, ModuleInfo, ModuleLoaderMsg, ModuleSideEffects,
   ModuleTable, ModuleType, NormalModuleTaskResult, ResolvedId, RuntimeModuleBrief,
-  RuntimeModuleTaskResult, SymbolRefDb, SymbolRefDbForModule, TreeshakeOptions, RUNTIME_MODULE_ID,
+  RuntimeModuleTaskResult, SymbolRefDb, SymbolRefDbForModule, TreeshakeOptions,
+  RUNTIME_MODULE_ID,
 };
 use rolldown_error::{BuildDiagnostic, BuildResult};
 use rolldown_fs::OsFileSystem;
@@ -50,6 +51,11 @@ impl IntermediateNormalModules {
     self.importers.push(Vec::new());
     id
   }
+
+  pub fn reset_ecma_module_idx(&mut self) {
+    self.modules.clear();
+    self.importers.clear();
+  }
 }
 
 pub struct ModuleLoader {
@@ -75,6 +81,7 @@ pub struct ModuleLoaderOutput {
   pub runtime: RuntimeModuleBrief,
   pub warnings: Vec<BuildDiagnostic>,
   pub dynamic_import_exports_usage_map: FxHashMap<ModuleIdx, DynamicImportExportsUsage>,
+  pub visited: FxHashMap<ArcStr, ModuleIdx>,
 }
 
 impl ModuleLoader {
@@ -83,7 +90,7 @@ impl ModuleLoader {
     options: SharedOptions,
     resolver: SharedResolver,
     plugin_driver: SharedPluginDriver,
-    cache: Arc<Cache>,
+    mut visited: FxHashMap<ArcStr, ModuleIdx>,
   ) -> BuildResult<Self> {
     // 1024 should be enough for most cases
     // over 1024 pending tasks are insane
@@ -109,27 +116,33 @@ impl ModuleLoader {
       fs,
       plugin_driver,
       meta,
-      cache,
     });
 
     let mut intermediate_normal_modules = IntermediateNormalModules::new();
     let runtime_id = intermediate_normal_modules.alloc_ecma_module_idx();
+    let remaining = if !visited.contains_key(RUNTIME_MODULE_ID) {
+      // runtime module is always there
+      let task = RuntimeModuleTask::new(runtime_id, tx.clone(), Arc::clone(&options));
 
-    let task = RuntimeModuleTask::new(runtime_id, tx.clone(), Arc::clone(&options));
-
-    tokio::spawn(async { task.run() });
+      tokio::spawn(async { task.run() });
+      visited.insert(RUNTIME_MODULE_ID.into(), runtime_id);
+      1
+    } else {
+      // the first alloc just want to allocate the runtime module id
+      intermediate_normal_modules.reset_ecma_module_idx();
+      0
+    };
 
     Ok(Self {
       tx,
       rx,
       options,
       runtime_id,
-      // runtime module is always there
-      remaining: 1,
+      remaining,
       shared_context,
       intermediate_normal_modules,
       symbol_ref_db: SymbolRefDb::default(),
-      visited: FxHashMap::from_iter([(RUNTIME_MODULE_ID.into(), runtime_id)]),
+      visited,
     })
   }
 
@@ -218,12 +231,14 @@ impl ModuleLoader {
   }
 
   #[tracing::instrument(level = "debug", skip_all)]
-  pub async fn fetch_all_modules(
+  pub async fn fetch_modules(
     mut self,
     user_defined_entries: Vec<(Option<ArcStr>, ResolvedId)>,
+    changed_resolved_ids: Vec<ResolvedId>,
   ) -> BuildResult<ModuleLoaderOutput> {
     let mut errors = vec![];
     let mut all_warnings: Vec<BuildDiagnostic> = vec![];
+    let is_partial_scan_mode = !changed_resolved_ids.is_empty();
 
     let entries_count = user_defined_entries.len() + /* runtime */ 1;
     self.intermediate_normal_modules.modules.reserve(entries_count);
@@ -245,6 +260,14 @@ impl ModuleLoader {
         user_defined_entry_ids.insert(e.id);
       })
       .collect::<Vec<_>>();
+
+    // spawn task for changed module in incmrental mode
+    for resolved_id in changed_resolved_ids {
+      // set `Owner` to `None` is safe, since it is used to emit `Unloadable` diagnostic, we know this is
+      // exists in fs system, which is loadable.
+      // TODO: copy assert_module_type
+      // self.try_spawn_new_task(resolved_id, None, false, None);
+    }
 
     let mut dynamic_import_entry_ids = FxHashSet::default();
     let mut dynamic_import_exports_usage_pairs = vec![];
@@ -464,15 +487,23 @@ impl ModuleLoader {
     extra_entry_points.sort_unstable_by_key(|entry| modules[entry.id].stable_id());
     entry_points.extend(extra_entry_points);
 
+     
     Ok(ModuleLoaderOutput {
       module_table: ModuleTable { modules },
       symbol_ref_db: self.symbol_ref_db,
       index_ecma_ast: self.intermediate_normal_modules.index_ecma_ast,
       index_ast_scope: self.intermediate_normal_modules.index_ast_scope,
       entry_points,
-      runtime: runtime_brief.expect("Failed to find runtime module. This should not happen"),
+      // if it is in incremental mode, we skip the runtime module, since it is always there
+      // so use a dummy runtime_brief as a placeholder
+      runtime: if !is_partial_scan_mode {
+        runtime_brief.expect("Failed to find runtime module. This should not happen")
+      } else {
+        RuntimeModuleBrief::default()
+      },
       warnings: all_warnings,
       dynamic_import_exports_usage_map,
+      visited: self.visited,
     })
   }
 }

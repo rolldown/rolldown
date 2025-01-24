@@ -1,11 +1,12 @@
 use std::sync::Arc;
 
-use rolldown_common::{Cache, FileEmitter};
+use rolldown_common::FileEmitter;
 use rolldown_fs::OsFileSystem;
 use rolldown_plugin::{PluginDriver, __inner::SharedPluginable};
 use rolldown_resolver::Resolver;
 
 use crate::{
+  types::scan_stage_cache::ScanStageCache,
   utils::{
     apply_inner_plugins::apply_inner_plugins,
     normalize_options::{normalize_options, NormalizeOptionsReturn},
@@ -44,7 +45,7 @@ impl BundlerBuilder {
       fs: OsFileSystem,
       warnings,
       _log_guard: maybe_guard,
-      cache: Arc::new(Cache::default()),
+      scan_stage_cache: Arc::new(ScanStageCache::default()),
     }
   }
 

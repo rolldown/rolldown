@@ -287,13 +287,13 @@ pub fn extract_member_expr_chain<'a>(
       let Expression::StringLiteral(ref str) = computed_expr.expression else {
         return None;
       };
-      chain.push(str.value.clone());
+      chain.push(str.value);
       let mut cur = &computed_expr.object;
       extract_rest_member_expr_chain(&mut cur, &mut chain, max_len).map(|ref_id| (ref_id, chain))
     }
     MemberExpression::StaticMemberExpression(static_expr) => {
       let mut cur = &static_expr.object;
-      chain.push(static_expr.property.name.clone());
+      chain.push(static_expr.property.name);
       extract_rest_member_expr_chain(&mut cur, &mut chain, max_len).map(|ref_id| (ref_id, chain))
     }
     MemberExpression::PrivateFieldExpression(_) => None,
@@ -309,17 +309,17 @@ fn extract_rest_member_expr_chain<'a>(
     match &cur {
       Expression::StaticMemberExpression(expr) => {
         *cur = &expr.object;
-        chain.push(expr.property.name.clone());
+        chain.push(expr.property.name);
       }
       Expression::ComputedMemberExpression(expr) => {
         let Expression::StringLiteral(ref str) = expr.expression else {
           break;
         };
-        chain.push(str.value.clone());
+        chain.push(str.value);
         *cur = &expr.object;
       }
       Expression::Identifier(ident) => {
-        chain.push(ident.name.clone());
+        chain.push(ident.name);
         let ref_id = ident.reference_id.get().expect("should have reference_id");
         chain.reverse();
         return Some(ref_id);

@@ -145,9 +145,9 @@ export class PluginContext extends MinimalPluginContext {
       return this.context.emitChunk(file)
     }
     const fnSanitizedFileName =
-      file.name && typeof this.outputOptions.sanitizeFileName === 'function'
-        ? this.outputOptions.sanitizeFileName!(file.name)
-        : undefined
+      file.fileName || typeof this.outputOptions.sanitizeFileName !== 'function'
+        ? undefined
+        : this.outputOptions.sanitizeFileName!(file.name || 'asset')
     const filename = file.fileName ? undefined : this.getAssetFileNames(file)
     return this.context.emitFile(
       {

@@ -22,6 +22,12 @@ pub struct EmittedAsset {
   pub source: StrOrBytes,
 }
 
+impl EmittedAsset {
+  pub fn name_for_sanitize(&self) -> &str {
+    self.name.as_deref().unwrap_or("asset")
+  }
+}
+
 #[derive(Debug, Default)]
 pub struct EmittedChunk {
   pub name: Option<ArcStr>,

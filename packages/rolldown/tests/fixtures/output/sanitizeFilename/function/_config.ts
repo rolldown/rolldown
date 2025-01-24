@@ -20,6 +20,10 @@ export default defineTest({
             name: '<emitted.txt',
             source: 'emitted',
           })
+          this.emitFile({
+            type: 'asset',
+            source: 'without-name-and-file-name',
+          })
         },
       },
     ],
@@ -28,6 +32,7 @@ export default defineTest({
     expect(getOutputFileNames(output)).toMatchInlineSnapshot(`
       [
         "assets/sanitized-<emitted-umwR9Fta.txt",
+        "assets/sanitized-asset-SEdMaUC2[extname]",
         "main.js",
         "sanitized-dynamic-B6fOdZ2e.js",
         "sanitized-share-QidOADL2.js",

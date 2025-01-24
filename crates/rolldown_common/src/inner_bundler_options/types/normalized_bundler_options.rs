@@ -138,9 +138,9 @@ impl NormalizedBundlerOptions {
     &self,
     file: &EmittedAsset,
   ) -> anyhow::Result<Option<ArcStr>> {
-    if let Some(name) = file.name.as_ref() {
-      return Ok(Some(self.sanitize_filename.call(name).await?));
+    match file.file_name {
+      Some(_) => Ok(None),
+      None => Ok(Some(self.sanitize_filename.call(file.name_for_sanitize()).await?)),
     }
-    Ok(None)
   }
 }

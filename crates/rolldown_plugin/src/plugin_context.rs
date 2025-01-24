@@ -179,10 +179,12 @@ impl PluginContextImpl {
     fn_asset_filename: Option<String>,
     fn_sanitized_file_name: Option<String>,
   ) -> ArcStr {
-    let sanitized_file_name = file
-      .name
-      .as_ref()
-      .map(|name| self.options.sanitize_filename.value(name, fn_sanitized_file_name));
+    let sanitized_file_name = match file.file_name {
+      Some(_) => None,
+      None => {
+        Some(self.options.sanitize_filename.value(file.name_for_sanitize(), fn_sanitized_file_name))
+      }
+    };
     self.file_emitter.emit_file(
       file,
       Some(self.options.asset_filenames.value(fn_asset_filename).into()),

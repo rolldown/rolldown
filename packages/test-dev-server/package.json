@@ -1,5 +1,5 @@
 {
-  "name": "test-dev-server",
+  "name": "@rolldown/test-dev-server",
   "version": "0.0.0",
   "description": "A implementation of a dev server for demonstrating",
   "type": "module",

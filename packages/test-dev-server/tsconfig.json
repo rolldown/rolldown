@@ -1,4 +1,5 @@
 {
+  "extends": "../../tsconfig.json",
   // This config file is used to satisfy the TypeScript on traeating rolldown as a runnable project without building it.
   // We will run rolldown directly from the source code using the `tsx`. It's mainly for building rolldown with itself.
   // So you will see the though `build.ts` won't be published, it's still included in the `include` field.
@@ -32,9 +33,9 @@
     // "moduleDetection": "auto",                        /* Control what method is used to detect module-format JS files. */
 
     /* Modules */
-    "module": "NodeNext" /* Specify what module code is generated. */,
+    // "module": "NodeNext" /* Specify what module code is generated. */,
     // "rootDir": "./" /* Specify the root folder within your source files. */,
-    "moduleResolution": "nodenext" /* Specify how TypeScript looks up a file from a given module specifier. */,
+    // "moduleResolution": "nodenext" /* Specify how TypeScript looks up a file from a given module specifier. */,
     // "baseUrl": "./" /* Specify the base directory to resolve non-relative module names. */,
     // "paths": {} /* Specify a set of entries that re-map imports to additional lookup locations. */,
     // "rootDirs": [],                                   /* Allow multiple folders to be treated as one when resolving modules. */
@@ -66,7 +67,7 @@
     // "outFile": "./",                                  /* Specify a file that bundles all outputs into one JavaScript file. If 'declaration' is true, also designates a file that bundles all .d.ts output. */
     "outDir": "./dist" /* Specify an output folder for all emitted files. */,
     // "removeComments": true,                           /* Disable emitting comments. */
-    // "noEmit": true /* Disable emitting files from a compilation. */,
+    "noEmit": false /* Disable emitting files from a compilation. */,
     // "importHelpers": true,                            /* Allow importing helper functions from tslib once per project, instead of including them per-file. */
     // "importsNotUsedAsValues": "remove",               /* Specify emit/checking behavior for imports that are only used for types. */
     // "downlevelIteration": true,                       /* Emit more compliant, but verbose and less performant JavaScript for iteration. */
@@ -83,8 +84,8 @@
     // "preserveValueImports": true,                     /* Preserve unused imported values in the JavaScript output that would otherwise be removed. */
 
     /* Interop Constraints */
-    "isolatedModules": true /* Ensure that each file can be safely transpiled without relying on other imports. */,
-    "isolatedDeclarations": true,
+    // "isolatedModules": true /* Ensure that each file can be safely transpiled without relying on other imports. */,
+    // "isolatedDeclarations": true,
     // "verbatimModuleSyntax": true,                     /* Do not transform or elide any imports or exports not marked as type-only, ensuring they are written in the output file's format based on the 'module' setting. */
     // "allowSyntheticDefaultImports": true,             /* Allow 'import x from y' when a module doesn't have a default export. */
     "esModuleInterop": true /* Emit additional JavaScript to ease support for importing CommonJS modules. This enables 'allowSyntheticDefaultImports' for type compatibility. */,
@@ -92,7 +93,7 @@
     "forceConsistentCasingInFileNames": true /* Ensure that casing is correct in imports. */,
 
     /* Type Checking */
-    "strict": true /* Enable all strict type-checking options. */,
+    "strict": true /* Enable all strict type-checking options. */
     // "noImplicitAny": true,                            /* Enable error reporting for expressions and declarations with an implied 'any' type. */
     // "strictNullChecks": true,                         /* When type checking, take into account 'null' and 'undefined'. */
     // "strictFunctionTypes": true,                      /* When assigning functions, check to ensure parameters and the return values are subtype-compatible. */
@@ -114,6 +115,6 @@
 
     /* Completeness */
     // "skipDefaultLibCheck": true,                      /* Skip type checking .d.ts files that are included with TypeScript. */
-    "skipLibCheck": true /* Skip type checking all .d.ts files. */
+    // "skipLibCheck": true /* Skip type checking all .d.ts files. */
   }
 }

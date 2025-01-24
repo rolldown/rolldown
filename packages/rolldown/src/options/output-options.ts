@@ -75,6 +75,7 @@ export interface OutputOptions {
   chunkFileNames?: string | ChunkFileNamesFunction
   cssEntryFileNames?: string | ChunkFileNamesFunction
   cssChunkFileNames?: string | ChunkFileNamesFunction
+  sanitizeFileName?: boolean | ((name: string) => string)
   minify?: boolean
   name?: string
   globals?: Record<string, string> | GlobalsFunction

@@ -74,8 +74,13 @@ impl BindingPluginContext {
   }
 
   #[napi]
-  pub fn emit_file(&self, file: BindingEmittedAsset, asset_filename: Option<String>) -> String {
-    self.inner.emit_file(file.into(), asset_filename).to_string()
+  pub fn emit_file(
+    &self,
+    file: BindingEmittedAsset,
+    asset_filename: Option<String>,
+    fn_sanitized_file_name: Option<String>,
+  ) -> String {
+    self.inner.emit_file(file.into(), asset_filename, fn_sanitized_file_name).to_string()
   }
 
   #[napi]

@@ -7,7 +7,6 @@ use arcstr::ArcStr;
 use dashmap::{DashMap, DashSet};
 use rolldown_utils::dashmap::{FxDashMap, FxDashSet};
 use rolldown_utils::extract_hash_pattern::extract_hash_pattern;
-use rolldown_utils::sanitize_file_name::sanitize_file_name;
 use rolldown_utils::xxhash::xxhash_base64_url;
 use std::ffi::OsStr;
 use std::path::Path;
@@ -21,6 +20,12 @@ pub struct EmittedAsset {
   pub original_file_name: Option<String>,
   pub file_name: Option<ArcStr>,
   pub source: StrOrBytes,
+}
+
+impl EmittedAsset {
+  pub fn name_for_sanitize(&self) -> &str {
+    self.name.as_deref().unwrap_or("asset")
+  }
 }
 
 #[derive(Debug, Default)]
@@ -93,6 +98,7 @@ impl FileEmitter {
     &self,
     mut file: EmittedAsset,
     asset_filename_template: Option<FilenameTemplate>,
+    sanitized_file_name: Option<ArcStr>,
   ) -> ArcStr {
     let hash: ArcStr = xxhash_base64_url(file.source.as_bytes()).into();
     // Deduplicate assets if an explicit fileName is not provided
@@ -115,7 +121,7 @@ impl FileEmitter {
       self.source_hash_to_reference_id.insert(hash.clone(), reference_id.clone());
     }
 
-    self.generate_file_name(&mut file, &hash, asset_filename_template);
+    self.generate_file_name(&mut file, &hash, asset_filename_template, sanitized_file_name);
     self.files.insert(
       reference_id.clone(),
       OutputAsset {
@@ -165,22 +171,22 @@ impl FileEmitter {
     file: &mut EmittedAsset,
     hash: &ArcStr,
     asset_filename_template: Option<FilenameTemplate>,
+    sanitized_file_name: Option<ArcStr>,
   ) {
     if file.file_name.is_none() {
-      let path = file.name.as_deref().map(Path::new);
-      let extension = path.and_then(|x| x.extension().and_then(OsStr::to_str));
-      let name = path
-        .and_then(|x| x.file_stem().and_then(OsStr::to_str))
-        .map(|x| sanitize_file_name(x.into()));
+      let sanitized_file_name = sanitized_file_name.expect("should has sanitized file name");
+      let path = Path::new(sanitized_file_name.as_str());
+      let extension = path.extension().and_then(OsStr::to_str);
+      let name = path.file_stem().and_then(OsStr::to_str);
       let asset_filename_template =
         asset_filename_template.expect("should has filename template without filename");
       let extract_hash_pattern = extract_hash_pattern(asset_filename_template.template());
       let mut file_name: ArcStr = asset_filename_template
         .render(&FileNameRenderOptions {
-          name: name.as_deref(),
+          name,
           hash: extract_hash_pattern
             .map(|p| &hash.as_str()[..p.len.map_or(8, |hash_len| hash_len.max(6))]),
-          ext: extension,
+          ext: Some(extension.unwrap_or_default()),
         })
         .into();
       // deconflict file name

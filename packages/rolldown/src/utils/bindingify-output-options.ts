@@ -28,6 +28,7 @@ export function bindingifyOutputOptions(
     esModule,
     globals,
     file,
+    sanitizeFileName,
   } = outputOptions
 
   return {
@@ -61,6 +62,7 @@ export function bindingifyOutputOptions(
     advancedChunks: outputOptions.advancedChunks,
     polyfillRequire: outputOptions.polyfillRequire,
     target: outputOptions.target,
+    sanitizeFileName,
   }
 }
 

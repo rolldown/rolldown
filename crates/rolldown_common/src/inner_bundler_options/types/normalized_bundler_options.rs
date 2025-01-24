@@ -4,6 +4,7 @@
 use std::path::PathBuf;
 use std::sync::Arc;
 
+use arcstr::ArcStr;
 use oxc::transformer::InjectGlobalVariablesConfig;
 use rustc_hash::{FxHashMap, FxHashSet};
 
@@ -13,6 +14,7 @@ use super::comments::Comments;
 use super::experimental_options::ExperimentalOptions;
 use super::jsx::Jsx;
 use super::output_option::{AssetFilenamesOutputOption, ChunkFilenamesOutputOption};
+use super::sanitize_filename::SanitizeFilename;
 use super::target::ESTarget;
 use super::treeshake::TreeshakeOptions;
 use super::watch_option::WatchOption;
@@ -46,6 +48,7 @@ pub struct NormalizedBundlerOptions {
   pub entry_filenames: ChunkFilenamesOutputOption,
   pub chunk_filenames: ChunkFilenamesOutputOption,
   pub asset_filenames: AssetFilenamesOutputOption,
+  pub sanitize_filename: SanitizeFilename,
   // The user specified output directory config
   pub dir: Option<String>,
   // The rolldown resolved output directory from `dir` or `file`.
@@ -129,5 +132,15 @@ impl NormalizedBundlerOptions {
     };
     let asset_filename = self.asset_filenames.call(&rollup_pre_rendered_asset).await?;
     Ok(Some(asset_filename))
+  }
+
+  pub async fn sanitize_file_name_with_file(
+    &self,
+    file: &EmittedAsset,
+  ) -> anyhow::Result<Option<ArcStr>> {
+    match file.file_name {
+      Some(_) => Ok(None),
+      None => Ok(Some(self.sanitize_filename.call(file.name_for_sanitize()).await?)),
+    }
   }
 }

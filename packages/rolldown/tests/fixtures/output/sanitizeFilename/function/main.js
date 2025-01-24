@@ -1,0 +1,2 @@
+import './share';
+import('./dynamic')

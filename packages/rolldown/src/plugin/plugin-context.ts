@@ -144,6 +144,10 @@ export class PluginContext extends MinimalPluginContext {
     if (file.type === 'chunk') {
       return this.context.emitChunk(file)
     }
+    const fnSanitizedFileName =
+      file.fileName || typeof this.outputOptions.sanitizeFileName !== 'function'
+        ? undefined
+        : this.outputOptions.sanitizeFileName!(file.name || 'asset')
     const filename = file.fileName ? undefined : this.getAssetFileNames(file)
     return this.context.emitFile(
       {
@@ -152,6 +156,7 @@ export class PluginContext extends MinimalPluginContext {
         source: bindingAssetSource(file.source),
       },
       filename,
+      fnSanitizedFileName,
     )
   }
 

@@ -1,4 +1,4 @@
-use crate::options::{AssetFileNamesOutputOption, ChunkFileNamesOutputOption};
+use crate::options::{AssetFileNamesOutputOption, ChunkFileNamesOutputOption, SanitizeFileName};
 use crate::{
   options::binding_inject_import::normalize_binding_inject_import,
   types::js_callback::JsCallbackExt,
@@ -12,7 +12,7 @@ use napi::bindgen_prelude::Either;
 use rolldown::{
   AddonOutputOption, AdvancedChunksOptions, AssetFilenamesOutputOption, BundlerOptions,
   ChunkFilenamesOutputOption, ExperimentalOptions, HashCharacters, IsExternal, MatchGroup,
-  ModuleType, OutputExports, OutputFormat, Platform,
+  ModuleType, OutputExports, OutputFormat, Platform, SanitizeFilename,
 };
 use rolldown_plugin::__inner::SharedPluginable;
 use rolldown_utils::indexmap::FxIndexMap;
@@ -54,6 +54,21 @@ fn normalize_chunk_file_names_option(
         let func = Arc::clone(&func);
         let chunk = chunk.clone();
         Box::pin(async move { func.invoke_async(chunk.into()).await.map_err(anyhow::Error::from) })
+      }))),
+    })
+    .transpose()
+}
+
+fn normalize_sanitize_filename(
+  option: Option<SanitizeFileName>,
+) -> napi::Result<Option<SanitizeFilename>> {
+  option
+    .map(move |value| match value {
+      Either::A(value) => Ok(SanitizeFilename::Boolean(value)),
+      Either::B(func) => Ok(SanitizeFilename::Fn(Arc::new(move |name| {
+        let func = Arc::clone(&func);
+        let name = name.to_string();
+        Box::pin(async move { func.invoke_async(name).await.map_err(anyhow::Error::from) })
       }))),
     })
     .transpose()
@@ -171,6 +186,7 @@ pub fn normalize_binding_options(
     chunk_filenames: normalize_chunk_file_names_option(output_options.chunk_file_names)?,
     css_entry_filenames: normalize_chunk_file_names_option(output_options.css_entry_file_names)?,
     css_chunk_filenames: normalize_chunk_file_names_option(output_options.css_chunk_file_names)?,
+    sanitize_filename: normalize_sanitize_filename(output_options.sanitize_file_name)?,
     dir: output_options.dir,
     file: output_options.file,
     sourcemap: output_options.sourcemap.map(Into::into),

@@ -1,6 +1,7 @@
 use std::collections::hash_map::Entry;
 
 use arcstr::ArcStr;
+use futures::future::try_join_all;
 use oxc::ast::VisitMut;
 use oxc_index::IndexVec;
 use rolldown_ecmascript_utils::AstSnippet;
@@ -18,8 +19,7 @@ use rolldown_utils::{
   concat_string,
   extract_hash_pattern::extract_hash_pattern,
   hash_placeholder::HashPlaceholderGenerator,
-  rayon::{IntoParallelRefIterator, IntoParallelRefMutIterator, ParallelIterator},
-  sanitize_file_name::sanitize_file_name,
+  rayon::{IntoParallelRefMutIterator, ParallelIterator},
 };
 use sugar_path::SugarPath;
 
@@ -155,12 +155,12 @@ impl<'a> GenerateStage<'a> {
     let modules = &self.link_output.module_table.modules;
 
     let mut index_chunk_id_to_name = FxHashMap::default();
-    let mut index_pre_generated_names: IndexVec<ChunkIdx, ArcStr> = chunk_graph
-      .chunk_table
-      .par_iter()
-      .map(|chunk| {
+
+    let index_pre_generated_names_futures = chunk_graph.chunk_table.iter().map(|chunk| {
+      let sanitize_filename = self.options.sanitize_filename.clone();
+      async move {
         if let Some(name) = &chunk.name {
-          return name.clone();
+          return anyhow::Ok(name.clone());
         }
         match chunk.kind {
           ChunkKind::EntryPoint { module: entry_module_id, is_user_defined, .. } => {
@@ -170,27 +170,28 @@ impl<'a> GenerateStage<'a> {
                 .map(ArcStr::from)
                 .unwrap_or(arcstr::literal!("input"))
             } else {
-              ArcStr::from(sanitize_file_name(module.id().as_path().representative_file_name()))
+              sanitize_filename.call(&module.id().as_path().representative_file_name()).await?
             };
-            generated
+            Ok(generated)
           }
           ChunkKind::Common => {
             // - rollup use the first entered/last executed module as the `[name]` of common chunks.
             // - esbuild always use 'chunk' as the `[name]`. However we try to make the name more meaningful here.
-            let first_executed_non_runtime_module =
-              chunk.modules.iter().rev().find(|each| **each != self.link_output.runtime.id());
-            first_executed_non_runtime_module.map_or_else(
-              || arcstr::literal!("chunk"),
-              |module_id| {
-                let module = &modules[*module_id];
-                ArcStr::from(sanitize_file_name(module.id().as_path().representative_file_name()))
-              },
-            )
+            if let Some(module_id) =
+              chunk.modules.iter().rev().find(|each| **each != self.link_output.runtime.id())
+            {
+              let module = &modules[*module_id];
+              Ok(sanitize_filename.call(&module.id().as_path().representative_file_name()).await?)
+            } else {
+              Ok(arcstr::literal!("chunk"))
+            }
           }
         }
-      })
-      .collect::<Vec<_>>()
-      .into();
+      }
+    });
+
+    let mut index_pre_generated_names: IndexVec<ChunkIdx, ArcStr> =
+      try_join_all(index_pre_generated_names_futures).await?.into();
 
     let mut hash_placeholder_generator = HashPlaceholderGenerator::default();
 
@@ -254,11 +255,15 @@ impl<'a> GenerateStage<'a> {
 
       for module in chunk.modules.iter().copied().filter_map(|idx| modules[idx].as_normal()) {
         if let Some(asset_view) = module.asset_view.as_ref() {
-          let name = module.id.as_path().file_stem().and_then(|s| s.to_str()).unpack();
+          let name = self
+            .options
+            .sanitize_filename
+            .call(module.id.as_path().file_stem().and_then(|s| s.to_str()).unpack())
+            .await?;
           let asset_filename_template = &self
             .options
             .asset_filename_template(&RollupPreRenderedAsset {
-              names: vec![name.into()],
+              names: vec![name.clone()],
               original_file_names: vec![],
               // TODO: avoid source clone
               source: asset_view.source.clone().to_vec().into(),
@@ -273,7 +278,7 @@ impl<'a> GenerateStage<'a> {
 
           let preliminary = PreliminaryFilename::new(
             asset_filename_template.render(&FileNameRenderOptions {
-              name: Some(name),
+              name: Some(&name),
               hash: hash_placeholder.as_deref(),
               ext: module.id.as_path().extension().and_then(|s| s.to_str()),
             }),

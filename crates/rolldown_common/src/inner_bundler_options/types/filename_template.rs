@@ -40,7 +40,8 @@ impl FilenameTemplate {
       }
     }
     if let Some(ext) = options.ext {
-      tmp = tmp.replace("[ext]", ext).replace("[extname]", &format!(".{ext}"));
+      let extname = if ext.is_empty() { "" } else { &format!(".{ext}") };
+      tmp = tmp.replace("[ext]", ext).replace("[extname]", extname);
     }
     tmp
   }

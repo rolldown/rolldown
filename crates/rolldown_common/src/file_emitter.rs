@@ -186,7 +186,7 @@ impl FileEmitter {
           name,
           hash: extract_hash_pattern
             .map(|p| &hash.as_str()[..p.len.map_or(8, |hash_len| hash_len.max(6))]),
-          ext: extension,
+          ext: Some(extension.unwrap_or_default()),
         })
         .into();
       // deconflict file name

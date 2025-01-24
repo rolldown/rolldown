@@ -32,7 +32,7 @@ export default defineTest({
     expect(getOutputFileNames(output)).toMatchInlineSnapshot(`
       [
         "assets/sanitized-<emitted-umwR9Fta.txt",
-        "assets/sanitized-asset-SEdMaUC2[extname]",
+        "assets/sanitized-asset-SEdMaUC2",
         "main.js",
         "sanitized-dynamic-B6fOdZ2e.js",
         "sanitized-share-QidOADL2.js",

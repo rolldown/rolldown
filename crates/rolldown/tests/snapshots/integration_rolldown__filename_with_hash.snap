@@ -1743,11 +1743,11 @@ snapshot_kind: text
 
 # tests/esbuild/default/top_level_return_forbidden_export
 
-- entry-!~{000}~.js => entry-CMXZovLt.js
+- entry-!~{000}~.js => entry-DSGNK_K4.js
 
 # tests/esbuild/default/top_level_return_forbidden_import
 
-- entry-!~{000}~.js => entry-CMXZovLt.js
+- entry-!~{000}~.js => entry-BD1soJCO.js
 
 # tests/esbuild/default/top_level_return_forbidden_tla
 

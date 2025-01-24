@@ -7,6 +7,7 @@ use types::comments::Comments;
 use types::inject_import::InjectImport;
 use types::jsx::Jsx;
 use types::output_option::{AssetFilenamesOutputOption, GlobalsOutputOption};
+use types::sanitize_filename::SanitizeFilename;
 use types::target::ESTarget;
 use types::watch_option::WatchOption;
 
@@ -79,6 +80,12 @@ pub struct BundlerOptions {
     schemars(with = "Option<String>")
   )]
   pub asset_filenames: Option<AssetFilenamesOutputOption>,
+  #[cfg_attr(
+    feature = "deserialize_bundler_options",
+    serde(default, deserialize_with = "deserialize_sanitize_filename"),
+    schemars(with = "Option<bool>")
+  )]
+  pub sanitize_filename: Option<SanitizeFilename>,
   pub dir: Option<String>,
   pub file: Option<String>,
   pub format: Option<OutputFormat>,
@@ -204,6 +211,17 @@ where
   D: Deserializer<'de>,
 {
   let deserialized = Option::<String>::deserialize(deserializer)?;
+  Ok(deserialized.map(From::from))
+}
+
+#[cfg(feature = "deserialize_bundler_options")]
+fn deserialize_sanitize_filename<'de, D>(
+  deserializer: D,
+) -> Result<Option<SanitizeFilename>, D::Error>
+where
+  D: Deserializer<'de>,
+{
+  let deserialized = Option::<bool>::deserialize(deserializer)?;
   Ok(deserialized.map(From::from))
 }
 

@@ -103,7 +103,7 @@ export declare class BindingOutputs {
 export declare class BindingPluginContext {
   load(specifier: string, sideEffects: BindingHookSideEffects | undefined, fn: () => void): Promise<void>
   resolve(specifier: string, importer?: string | undefined | null, extraOptions?: BindingPluginContextResolveOptions | undefined | null): Promise<BindingPluginContextResolvedId | null>
-  emitFile(file: BindingEmittedAsset, assetFilename?: string | undefined | null): string
+  emitFile(file: BindingEmittedAsset, assetFilename?: string | undefined | null, fnSanitizedFileName?: string | undefined | null): string
   emitChunk(file: BindingEmittedChunk): string
   getFileName(referenceId: string): string
   getModuleInfo(moduleId: string): BindingModuleInfo | null
@@ -498,6 +498,7 @@ export interface BindingOutputOptions {
   chunkFileNames?: string | ((chunk: PreRenderedChunk) => string)
   cssEntryFileNames?: string | ((chunk: PreRenderedChunk) => string)
   cssChunkFileNames?: string | ((chunk: PreRenderedChunk) => string)
+  sanitizeFileName?: boolean | ((name: string) => string)
   banner?: (chunk: RenderedChunk) => MaybePromise<VoidNullable<string>>
   dir?: string
   file?: string

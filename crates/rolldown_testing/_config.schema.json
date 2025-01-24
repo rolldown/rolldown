@@ -407,6 +407,12 @@
             }
           ]
         },
+        "sanitizeFilename": {
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
         "shimMissingExports": {
           "type": [
             "boolean",

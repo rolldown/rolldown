@@ -36,6 +36,7 @@ pub mod bundler_options {
       },
       platform::Platform,
       resolve_options::ResolveOptions,
+      sanitize_filename::SanitizeFilename,
       source_map_type::SourceMapType,
       sourcemap_ignore_list::SourceMapIgnoreList,
       sourcemap_path_transform::SourceMapPathTransform,

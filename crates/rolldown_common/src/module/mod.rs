@@ -1,6 +1,7 @@
 pub mod external_module;
 pub mod normal_module;
 
+use anyhow::Result;
 use arcstr::ArcStr;
 use oxc_index::IndexVec;
 use rolldown_std_utils::OptionExt;
@@ -78,6 +79,13 @@ impl Module {
     match self {
       Module::External(v) => Some(v),
       Module::Normal(_) => None,
+    }
+  }
+
+  pub fn try_into_normal(self) -> Result<Box<NormalModule>> {
+    match self {
+      Module::Normal(v) => Ok(v),
+      Module::External(_) => Err(anyhow::anyhow!("try_into_normal failed")),
     }
   }
 

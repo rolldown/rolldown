@@ -11,10 +11,10 @@ use oxc_index::IndexVec;
 use rolldown_common::dynamic_import_usage::DynamicImportExportsUsage;
 use rolldown_common::side_effects::{DeterminedSideEffects, HookSideEffects};
 use rolldown_common::{
-  EcmaRelated, EntryPoint, EntryPointKind, ExternalModule, ImportKind, ImportRecordIdx,
-  ImporterRecord, Module, ModuleId, ModuleIdx, ModuleInfo, ModuleLoaderMsg, ModuleSideEffects,
-  ModuleTable, ModuleType, NormalModuleTaskResult, ResolvedId, RuntimeModuleBrief,
-  RuntimeModuleTaskResult, SymbolRefDb, SymbolRefDbForModule, TreeshakeOptions,
+  EcmaRelated, EntryPoint, EntryPointKind, ExternalModule, HybridIndexVec, ImportKind,
+  ImportRecordIdx, ImporterRecord, Module, ModuleId, ModuleIdx, ModuleInfo, ModuleLoaderMsg,
+  ModuleSideEffects, ModuleTable, ModuleType, NormalModuleTaskResult, ResolvedId,
+  RuntimeModuleBrief, RuntimeModuleTaskResult, SymbolRef, SymbolRefDbForModule, TreeshakeOptions,
   RUNTIME_MODULE_ID,
 };
 use rolldown_error::{BuildDiagnostic, BuildResult};
@@ -31,30 +31,53 @@ use crate::{SharedOptions, SharedResolver};
 
 pub struct IntermediateNormalModules {
   pub modules: IndexVec<ModuleIdx, Option<Module>>,
-  pub importers: IndexVec<ModuleIdx, Vec<ImporterRecord>>,
+  // TODO: merge importers
+  pub importers: HybridIndexVec<ModuleIdx, Vec<ImporterRecord>>,
   pub index_ecma_ast: IndexEcmaAst,
   pub index_ast_scope: IndexAstScope,
+  pub symbol_ref_db: HybridIndexVec<ModuleIdx, Option<SymbolRefDbForModule>>,
 }
 
 impl IntermediateNormalModules {
-  pub fn new() -> Self {
+  pub fn new(is_full_rebuild: bool) -> Self {
     Self {
       modules: IndexVec::new(),
-      importers: IndexVec::new(),
+      importers: if is_full_rebuild {
+        HybridIndexVec::IndexVec(IndexVec::default())
+      } else {
+        HybridIndexVec::Map(FxHashMap::default())
+      },
       index_ecma_ast: IndexVec::default(),
       index_ast_scope: IndexVec::default(),
+      symbol_ref_db: if is_full_rebuild {
+        HybridIndexVec::IndexVec(IndexVec::default())
+      } else {
+        HybridIndexVec::Map(FxHashMap::default())
+      },
     }
   }
 
   pub fn alloc_ecma_module_idx(&mut self) -> ModuleIdx {
     let id = self.modules.push(None);
     self.importers.push(Vec::new());
+    self.symbol_ref_db.push(None);
     id
   }
 
   pub fn reset_ecma_module_idx(&mut self) {
     self.modules.clear();
     self.importers.clear();
+    self.symbol_ref_db.clear();
+  }
+
+  pub fn store_local_db(&mut self, module_idx: ModuleIdx, local_db: SymbolRefDbForModule) {
+    *self.symbol_ref_db.get_mut(module_idx) = Some(local_db);
+  }
+
+  /// # Panic
+  /// - It will panic if th `owner` is unset
+  pub fn create_facade_root_symbol_ref(&mut self, owner: ModuleIdx, name: &str) -> SymbolRef {
+    self.symbol_ref_db.get_mut(owner).as_mut().unwrap().create_facade_root_symbol_ref(name)
   }
 }
 
@@ -67,7 +90,6 @@ pub struct ModuleLoader {
   runtime_id: ModuleIdx,
   remaining: u32,
   intermediate_normal_modules: IntermediateNormalModules,
-  symbol_ref_db: SymbolRefDb,
 }
 
 pub struct ModuleLoaderOutput {
@@ -75,7 +97,7 @@ pub struct ModuleLoaderOutput {
   pub module_table: ModuleTable,
   pub index_ecma_ast: IndexEcmaAst,
   pub index_ast_scope: IndexAstScope,
-  pub symbol_ref_db: SymbolRefDb,
+  pub symbol_ref_db: HybridIndexVec<ModuleIdx, Option<SymbolRefDbForModule>>,
   // Entries that user defined + dynamic import entries
   pub entry_points: Vec<EntryPoint>,
   pub runtime: RuntimeModuleBrief,
@@ -117,8 +139,8 @@ impl ModuleLoader {
       plugin_driver,
       meta,
     });
-
-    let mut intermediate_normal_modules = IntermediateNormalModules::new();
+    let is_full_rebuild = visited.is_empty();
+    let mut intermediate_normal_modules = IntermediateNormalModules::new(is_full_rebuild);
     let runtime_id = intermediate_normal_modules.alloc_ecma_module_idx();
     let remaining = if !visited.contains_key(RUNTIME_MODULE_ID) {
       // runtime module is always there
@@ -141,7 +163,6 @@ impl ModuleLoader {
       remaining,
       shared_context,
       intermediate_normal_modules,
-      symbol_ref_db: SymbolRefDb::default(),
       visited,
     })
   }
@@ -198,11 +219,11 @@ impl ModuleLoader {
             }),
           );
 
-          self.symbol_ref_db.store_local_db(
+          self.intermediate_normal_modules.store_local_db(
             idx,
             SymbolRefDbForModule::new(SymbolTable::default(), idx, ScopeId::new(0)),
           );
-          let symbol_ref = self.symbol_ref_db.create_facade_root_symbol_ref(
+          let symbol_ref = self.intermediate_normal_modules.create_facade_root_symbol_ref(
             idx,
             legitimize_identifier_name(resolved_id.id.as_str()).as_ref(),
           );
@@ -266,7 +287,7 @@ impl ModuleLoader {
       // set `Owner` to `None` is safe, since it is used to emit `Unloadable` diagnostic, we know this is
       // exists in fs system, which is loadable.
       // TODO: copy assert_module_type
-      // self.try_spawn_new_task(resolved_id, None, false, None);
+      self.try_spawn_new_task(resolved_id, None, false, None);
     }
 
     let mut dynamic_import_entry_ids = FxHashSet::default();
@@ -311,7 +332,7 @@ impl ModuleLoader {
                   raw_rec.asserted_module_type.clone(),
                 );
                 // Dynamic imported module will be considered as an entry
-                self.intermediate_normal_modules.importers[id].push(ImporterRecord {
+                self.intermediate_normal_modules.importers.get_mut(id).push(ImporterRecord {
                   kind: raw_rec.kind,
                   importer_path: ModuleId::new(module.id()),
                 });
@@ -335,7 +356,7 @@ impl ModuleLoader {
             let ast_scope_idx = self.intermediate_normal_modules.index_ast_scope.push(ast_scope);
             module.set_ecma_ast_idx(ast_idx);
             module.set_ast_scope_idx(ast_scope_idx);
-            self.symbol_ref_db.store_local_db(module_idx, symbols);
+            self.intermediate_normal_modules.store_local_db(module_idx, symbols);
           }
           self.intermediate_normal_modules.modules[module_idx] = Some(module);
           self.remaining -= 1;
@@ -358,7 +379,10 @@ impl ModuleLoader {
                 let id =
                   self.try_spawn_new_task(info, None, false, raw_rec.asserted_module_type.clone());
                 // Dynamic imported module will be considered as an entry
-                self.intermediate_normal_modules.importers[id]
+                self
+                  .intermediate_normal_modules
+                  .importers
+                  .get_mut(id)
                   .push(ImporterRecord { kind: raw_rec.kind, importer_path: module.id.clone() });
 
                 if matches!(raw_rec.kind, ImportKind::DynamicImport)
@@ -376,7 +400,7 @@ impl ModuleLoader {
           module.import_records = import_records;
           self.intermediate_normal_modules.modules[self.runtime_id] = Some(module.into());
 
-          self.symbol_ref_db.store_local_db(self.runtime_id, local_symbol_ref_db);
+          self.intermediate_normal_modules.store_local_db(self.runtime_id, local_symbol_ref_db);
           runtime_brief = Some(runtime);
           self.remaining -= 1;
         }
@@ -444,7 +468,7 @@ impl ModuleLoader {
           let idx = ModuleIdx::from(id);
           // Note: (Compat to rollup)
           // The `dynamic_importers/importers` should be added after `module_parsed` hook.
-          let importers = std::mem::take(&mut self.intermediate_normal_modules.importers[idx]);
+          let importers = std::mem::take(self.intermediate_normal_modules.importers.get_mut(idx));
           for importer in &importers {
             if importer.kind.is_static() {
               module.importers.insert(importer.importer_path.clone());
@@ -487,10 +511,9 @@ impl ModuleLoader {
     extra_entry_points.sort_unstable_by_key(|entry| modules[entry.id].stable_id());
     entry_points.extend(extra_entry_points);
 
-     
     Ok(ModuleLoaderOutput {
       module_table: ModuleTable { modules },
-      symbol_ref_db: self.symbol_ref_db,
+      symbol_ref_db: self.intermediate_normal_modules.symbol_ref_db,
       index_ecma_ast: self.intermediate_normal_modules.index_ecma_ast,
       index_ast_scope: self.intermediate_normal_modules.index_ast_scope,
       entry_points,

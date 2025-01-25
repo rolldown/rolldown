@@ -1,7 +1,10 @@
-use super::stages::{link_stage::LinkStage, scan_stage::ScanStageOutput};
+use super::stages::{link_stage::LinkStage, scan_stage::NormalizedScanStageOutput};
 use crate::{
   bundler_builder::BundlerBuilder,
-  stages::{generate_stage::GenerateStage, scan_stage::ScanStage},
+  stages::{
+    generate_stage::GenerateStage,
+    scan_stage::{ScanStage, ScanStageOutput},
+  },
   types::{bundle_output::BundleOutput, scan_stage_cache::ScanStageCache},
   BundlerOptions, SharedOptions, SharedResolver,
 };
@@ -70,7 +73,8 @@ impl Bundler {
     Ok(())
   }
 
-  pub async fn scan(&mut self, changed_ids: Vec<ArcStr>) -> BuildResult<ScanStageOutput> {
+  pub async fn scan(&mut self, changed_ids: Vec<ArcStr>) -> BuildResult<NormalizedScanStageOutput> {
+    let start = std::time::Instant::now();
     let mode =
       if !self.options.experimental.is_incremental_build_enabled() || changed_ids.is_empty() {
         ScanMode::Full
@@ -78,7 +82,7 @@ impl Bundler {
         ScanMode::Partial(changed_ids)
       };
     let is_full_scan_mode = mode.is_full();
-    let (scan_stage_output, module_id_to_idx) = match ScanStage::new(
+    let (scan_stage_output, module_id_to_idx, changed_module_ids_remapping) = match ScanStage::new(
       Arc::clone(&self.options),
       Arc::clone(&self.plugin_driver),
       self.fs,
@@ -99,9 +103,13 @@ impl Bundler {
       }
     };
 
-    let scan_stage_output =
-      self.update_scan_stage_cache(scan_stage_output, module_id_to_idx, is_full_scan_mode);
-
+    let scan_stage_output = self.update_scan_stage_cache(
+      scan_stage_output,
+      module_id_to_idx,
+      changed_module_ids_remapping,
+      is_full_scan_mode,
+    );
+    dbg!(&start.elapsed());
     self.plugin_driver.build_end(None).await?;
     Ok(scan_stage_output)
   }
@@ -110,10 +118,13 @@ impl Bundler {
     &mut self,
     output: ScanStageOutput,
     module_id_to_idx: FxHashMap<ArcStr, ModuleIdx>,
+    changed_module_ids_remapping: FxHashMap<ModuleIdx, ModuleIdx>,
     is_full_scan_mode: bool,
-  ) -> ScanStageOutput {
+  ) -> NormalizedScanStageOutput {
     if !self.options.experimental.is_incremental_build_enabled() {
-      return output;
+      // it is safe to convert ScanStageOutput to NormalizedScanStageOutput
+      // if incremental build is disabled, the scan stage should be a full scan
+      return output.into();
     }
 
     let scan_stage_cache = Arc::get_mut(&mut self.scan_stage_cache).unwrap();
@@ -121,18 +132,19 @@ impl Bundler {
     scan_stage_cache.set_module_id_to_idx(module_id_to_idx);
 
     if is_full_scan_mode {
+      let output: NormalizedScanStageOutput = output.into();
       let copy = output.make_copy();
       scan_stage_cache.set_cache(copy);
       output
     } else {
-      scan_stage_cache.merge(output);
+      scan_stage_cache.merge(output, changed_module_ids_remapping);
       scan_stage_cache.create_output()
     }
   }
 
   pub async fn bundle_write(
     &mut self,
-    scan_stage_output: ScanStageOutput,
+    scan_stage_output: NormalizedScanStageOutput,
   ) -> BuildResult<BundleOutput> {
     let mut output = self.bundle_up(scan_stage_output, /* is_write */ true).await?;
 
@@ -165,7 +177,7 @@ impl Bundler {
   #[allow(clippy::missing_transmute_annotations)]
   async fn bundle_up(
     &mut self,
-    scan_stage_output: ScanStageOutput,
+    scan_stage_output: NormalizedScanStageOutput,
     is_write: bool,
   ) -> BuildResult<BundleOutput> {
     if self.closed {

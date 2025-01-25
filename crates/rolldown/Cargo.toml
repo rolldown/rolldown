@@ -57,6 +57,13 @@ tracing                   = { workspace = true }
 tracing-chrome            = { workspace = true }
 xxhash-rust               = { workspace = true, features = ["xxh3"] }
 
+
+[target.'cfg(all(not(target_os = "linux"), not(target_os = "freebsd"), not(target_family = "wasm")))'.dependencies]
+mimalloc = { workspace = true }
+
+[target.'cfg(any(target_os = "linux", target_os = "freebsd"))'.dependencies]
+mimalloc = { workspace = true, features = ["local_dynamic_tls"] }
+
 [dev-dependencies]
 glob             = { workspace = true }
 insta            = { workspace = true }

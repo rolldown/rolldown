@@ -35,9 +35,9 @@ bitflags::bitflags! {
 
 #[derive(Debug)]
 pub struct SymbolRefDbForModule {
-  owner_idx: ModuleIdx,
+  pub owner_idx: ModuleIdx,
   root_scope_id: ScopeId,
-  pub(crate) symbol_table: SymbolTable,
+  pub symbol_table: SymbolTable,
   // Only some symbols would be cared about, so we use a hashmap to store the flags.
   pub flags: FxHashMap<SymbolId, SymbolRefFlags>,
   pub classic_data: IndexVec<SymbolId, SymbolRefDataClassic>,
@@ -112,10 +112,19 @@ impl DerefMut for SymbolRefDbForModule {
 // Information about symbols for all modules
 #[derive(Debug, Default, Clone)]
 pub struct SymbolRefDb {
-  pub(crate) inner: IndexVec<ModuleIdx, Option<SymbolRefDbForModule>>,
+  pub inner: IndexVec<ModuleIdx, Option<SymbolRefDbForModule>>,
 }
 
 impl SymbolRefDb {
+  pub fn from_inner(inner: IndexVec<ModuleIdx, Option<SymbolRefDbForModule>>) -> Self {
+    Self { inner }
+  }
+
+  pub fn parallel_clone(&self) -> Self {
+    let vec = self.inner.iter().map(|item| item.clone()).collect();
+    Self { inner: IndexVec::from_vec(vec) }
+  }
+
   fn ensure_exact_capacity(&mut self, module_idx: ModuleIdx) {
     let new_len = module_idx.index() + 1;
     if self.inner.len() < new_len {

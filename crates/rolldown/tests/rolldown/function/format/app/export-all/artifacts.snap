@@ -11,7 +11,7 @@ snapshot_kind: text
 __toCommonJS(exports);
 __export(exports, { external: () => external });
 var external = require("external");
-__reExport(exports, external);
+__reExport(exports, namespace_object_ref);
 
 //#endregion
 ```

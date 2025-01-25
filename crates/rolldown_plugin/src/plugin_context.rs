@@ -185,11 +185,11 @@ impl PluginContextImpl {
         Some(self.options.sanitize_filename.value(file.name_for_sanitize(), fn_sanitized_file_name))
       }
     };
-    self.file_emitter.emit_file(
-      file,
-      Some(self.options.asset_filenames.value(fn_asset_filename).into()),
-      sanitized_file_name,
-    )
+    let asset_filename_template = match file.file_name {
+      Some(_) => None,
+      None => Some(self.options.asset_filenames.value(fn_asset_filename).into()),
+    };
+    self.file_emitter.emit_file(file, asset_filename_template, sanitized_file_name)
   }
 
   pub async fn emit_file_async(

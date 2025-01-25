@@ -30,6 +30,11 @@ export default defineTest({
             name: 'foo.txt',
             source: 'foo',
           })
+          this.emitFile({
+            type: 'asset',
+            fileName: 'with-name.txt',
+            source: 'file-name',
+          })
         },
       },
     ],
@@ -38,6 +43,7 @@ export default defineTest({
     expect(getOutputAssetNames(output)).toStrictEqual([
       '1-emitted.txt',
       'foo.txt',
+      'with-name.txt',
     ])
   },
 })

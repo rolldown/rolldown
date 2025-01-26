@@ -17,6 +17,7 @@ pub struct ExperimentalOptions {
   pub vite_mode: Option<bool>,
   pub resolve_new_url_to_asset: Option<bool>,
   pub incremental_build: Option<bool>,
+  pub development_mode: Option<bool>,
 }
 
 impl ExperimentalOptions {

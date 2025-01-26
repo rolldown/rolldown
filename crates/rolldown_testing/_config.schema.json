@@ -582,6 +582,12 @@
     "ExperimentalOptions": {
       "type": "object",
       "properties": {
+        "developmentMode": {
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
         "disableLiveBindings": {
           "type": [
             "boolean",

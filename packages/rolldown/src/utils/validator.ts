@@ -222,6 +222,7 @@ const InputOptionsSchema = v.strictObject({
       enableComposingJsPlugins: v.optional(v.boolean()),
       resolveNewUrlToAsset: v.optional(v.boolean()),
       strictExecutionOrder: v.optional(v.boolean()),
+      developmentMode: v.optional(v.boolean()),
     }),
   ),
   define: v.pipe(

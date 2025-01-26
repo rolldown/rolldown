@@ -60,6 +60,13 @@ impl RuntimeModuleTask {
         include_str!("../runtime/runtime-base.js"),
         include_str!("../runtime/runtime-tail-node.js"),
       ))
+    } else if self.options.is_esm_dev() {
+      arcstr::literal!(concat!(
+        include_str!("../runtime/runtime-head-node.js"),
+        include_str!("../runtime/runtime-base.js"),
+        include_str!("../runtime/runtime-tail-node.js"),
+        include_str!("../runtime/runtime-extra-dev.js"),
+      ))
     } else {
       arcstr::literal!(concat!(
         include_str!("../runtime/runtime-base.js"),

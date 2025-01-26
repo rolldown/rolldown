@@ -14,10 +14,12 @@ use oxc::{
 use rolldown_common::EmittedChunk;
 use rolldown_plugin::{HookResolveIdReturn, Plugin};
 use rolldown_utils::concat_string;
+use rustc_hash::FxHashSet;
 use utils::is_remote_module;
 
 const REMOTE_ENTRY: &str = "mf:remote-entry.js";
 const INIT_HOST: &str = "mf:init-host.js";
+const REMOTE_MODULE_REGISTRY: &str = "remote-module-registry.js";
 
 #[derive(Debug)]
 pub struct ModuleFederationPlugin {
@@ -128,6 +130,7 @@ impl Plugin for ModuleFederationPlugin {
   ) -> HookResolveIdReturn {
     if args.specifier == REMOTE_ENTRY
       || args.specifier == INIT_HOST
+      || args.specifier == REMOTE_MODULE_REGISTRY
       || is_remote_module(args.specifier, &self.options)
     {
       return Ok(Some(rolldown_plugin::HookResolveIdOutput {
@@ -159,6 +162,12 @@ impl Plugin for ModuleFederationPlugin {
     if args.id == INIT_HOST && self.options.filename.is_none() {
       return Ok(Some(rolldown_plugin::HookLoadOutput {
         code: self.generate_init_host_code(),
+        ..Default::default()
+      }));
+    }
+    if args.id == REMOTE_MODULE_REGISTRY {
+      return Ok(Some(rolldown_plugin::HookLoadOutput {
+        code: include_str!("remote-module-registry.js").to_string(),
         ..Default::default()
       }));
     }
@@ -201,6 +210,8 @@ impl Plugin for ModuleFederationPlugin {
         ast_builder,
         options: &self.options,
         statements: vec![],
+        insert_init_remote_modules: FxHashSet::default(),
+        insert_registry: false,
       };
       init_modules_visitor.visit_program(fields.program);
       let old_body = fields.program.body.drain(..).collect::<Vec<_>>();

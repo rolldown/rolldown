@@ -231,7 +231,7 @@ pub fn normalize_binding_options(
       resolve_new_url_to_asset: inner.resolve_new_url_to_asset,
       // TODO: binding
       incremental_build: None,
-      development_mode: None,
+      development_mode: inner.development_mode,
     }),
     minify: output_options.minify,
     extend: output_options.extend,

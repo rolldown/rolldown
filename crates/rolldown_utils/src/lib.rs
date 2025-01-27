@@ -14,6 +14,7 @@ pub mod mime;
 pub mod percent_encoding;
 pub mod rayon;
 pub mod rustc_hash;
+pub mod sanitize_filename;
 pub mod xxhash;
 pub use bitset::BitSet;
 pub mod clean_url;

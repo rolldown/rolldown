@@ -29,7 +29,7 @@ export default defineTest({
     expect(getOutputChunkNames(output)).toStrictEqual([
       'entry.js',
       'main.js',
-      '_module-Br9N4WKJ.js',
+      '_module-gUXl6Us6.js',
     ])
   },
 })

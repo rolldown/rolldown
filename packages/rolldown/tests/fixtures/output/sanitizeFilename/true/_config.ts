@@ -15,7 +15,7 @@ export default defineTest({
         async buildStart() {
           this.emitFile({
             type: 'asset',
-            name: '<emitted.txt',
+            name: '+emitted.txt',
             source: 'emitted',
           })
         },

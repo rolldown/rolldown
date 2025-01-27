@@ -4,10 +4,12 @@ const registry = {}
 const loading = {}
 
 export async function loadRemoteToRegistry(id) {
-    if (!registry[id] && !loading[id]) {
-        loading[id] = true
-        registry[id] = await loadRemote(id)
-        delete loading[id]
+    const promise = loading[id]
+    if (promise) {
+        await promise
+    } else {
+        loading[id] = loadRemote(id)
+        registry[id] = await loading[id]
     }
 }
 

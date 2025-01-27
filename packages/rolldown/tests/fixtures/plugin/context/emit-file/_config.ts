@@ -29,7 +29,7 @@ export default defineTest({
         },
         generateBundle() {
           expect(this.getFileName(referenceId)).toMatchInlineSnapshot(
-            `"+emitted-umwR9Fta.txt"`,
+            `"_emitted-umwR9Fta.txt"`,
           )
           // emit asset buffer source
           this.emitFile({
@@ -48,7 +48,7 @@ export default defineTest({
         case '+emitted.txt':
           expect(asset.names).toStrictEqual(['+emitted.txt'])
           expect(asset.fileName).toMatchInlineSnapshot(
-            `"+emitted-umwR9Fta.txt"`,
+            `"_emitted-umwR9Fta.txt"`,
           )
           expect(asset.originalFileName).toBe(ORIGINAL_FILE_NAME)
           expect(asset.originalFileNames).toStrictEqual([ORIGINAL_FILE_NAME])

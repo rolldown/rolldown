@@ -35,7 +35,6 @@ rolldown_sourcemap  = { workspace = true }
 rolldown_std_utils  = { workspace = true }
 rolldown_utils      = { workspace = true }
 rustc-hash          = { workspace = true }
-sanitize-filename   = { workspace = true }
 schemars            = { workspace = true, optional = true }
 serde               = { workspace = true, features = ["derive"], optional = true }
 serde_json          = { workspace = true }

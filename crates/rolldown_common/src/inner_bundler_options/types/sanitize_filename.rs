@@ -1,6 +1,7 @@
 use std::{fmt::Debug, future::Future, pin::Pin, sync::Arc};
 
 use arcstr::ArcStr;
+use rolldown_utils::sanitize_filename::default_sanitize_file_name;
 
 type SanitizeFileNameFunction = dyn Fn(&str) -> Pin<Box<(dyn Future<Output = anyhow::Result<String>> + Send + 'static)>>
   + Send
@@ -32,7 +33,7 @@ impl SanitizeFilename {
     match self {
       Self::Boolean(value) => {
         if *value {
-          Ok(sanitize_filename::sanitize(name).into())
+          Ok(default_sanitize_file_name(name).into())
         } else {
           Ok(name.into())
         }
@@ -45,7 +46,7 @@ impl SanitizeFilename {
     match self {
       Self::Boolean(value) => {
         if *value {
-          sanitize_filename::sanitize(name).into()
+          default_sanitize_file_name(name).into()
         } else {
           name.into()
         }

@@ -165,6 +165,7 @@ impl GenerateStage<'_> {
           module
             .import_records
             .iter()
+            .filter(|rec| !rec.is_dummy())
             .inspect(|rec| {
               if let Module::Normal(importee_module) =
                 &self.link_output.module_table.modules[rec.resolved_module]

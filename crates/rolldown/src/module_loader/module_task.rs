@@ -15,9 +15,9 @@ use std::sync::Arc;
 use sugar_path::SugarPath;
 
 use rolldown_common::{
-  EcmaRelated, ImportKind, ImportRecordIdx, ModuleDefFormat, ModuleId, ModuleIdx, ModuleInfo,
-  ModuleLoaderMsg, ModuleType, NormalModule, NormalModuleTaskResult, RawImportRecord, ResolvedId,
-  StrOrBytes, RUNTIME_MODULE_ID,
+  EcmaRelated, ImportKind, ImportRecordIdx, ImportRecordMeta, ModuleDefFormat, ModuleId, ModuleIdx,
+  ModuleInfo, ModuleLoaderMsg, ModuleType, NormalModule, NormalModuleTaskResult, RawImportRecord,
+  ResolvedId, StrOrBytes, RUNTIME_MODULE_ID,
 };
 use rolldown_error::{
   BuildDiagnostic, BuildResult, DiagnosableArcstr, UnloadableDependencyContext,
@@ -372,6 +372,11 @@ impl ModuleTask {
       let importer = &self.resolved_id.id;
       let kind = item.kind;
       async move {
+        // TODO: We should early return when `async closure is stable`
+        // Can't use `module_request.is_empty()` to check, see https://github.com/rolldown/rolldown/actions/runs/12980744296/job/36198187669?pr=3428
+        if item.meta.contains(ImportRecordMeta::IS_DUMMY) {
+          return Ok((item.module_request.clone(), idx, Ok(ResolvedId::make_dummy())));
+        }
         Self::resolve_id(&bundle_options, &resolver, &plugin_driver, importer, &specifier, kind)
           .await
           .map(|id| (specifier, idx, id))

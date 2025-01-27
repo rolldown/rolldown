@@ -67,7 +67,7 @@ pub use crate::{
       generate_replace_this_expr_map, EcmaModuleAstUsage, EcmaView, EcmaViewMeta,
       ImportMetaRolldownAssetReplacer, ThisExprReplaceKind,
     },
-    module_idx::ModuleIdx,
+    module_idx::{ModuleIdx, DUMMY_MODULE_IDX},
     node_builtin_modules::is_existing_node_builtin_modules,
   },
   file_emitter::{EmittedAsset, EmittedChunk, EmittedChunkInfo, FileEmitter, SharedFileEmitter},

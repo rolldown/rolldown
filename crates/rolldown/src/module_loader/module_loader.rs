@@ -12,9 +12,10 @@ use rolldown_common::dynamic_import_usage::DynamicImportExportsUsage;
 use rolldown_common::side_effects::{DeterminedSideEffects, HookSideEffects};
 use rolldown_common::{
   Cache, EcmaRelated, EntryPoint, EntryPointKind, ExternalModule, ImportKind, ImportRecordIdx,
-  ImporterRecord, Module, ModuleId, ModuleIdx, ModuleInfo, ModuleLoaderMsg, ModuleSideEffects,
-  ModuleTable, ModuleType, NormalModuleTaskResult, ResolvedId, RuntimeModuleBrief,
-  RuntimeModuleTaskResult, SymbolRefDb, SymbolRefDbForModule, TreeshakeOptions, RUNTIME_MODULE_ID,
+  ImportRecordMeta, ImporterRecord, Module, ModuleId, ModuleIdx, ModuleInfo, ModuleLoaderMsg,
+  ModuleSideEffects, ModuleTable, ModuleType, NormalModuleTaskResult, ResolvedId,
+  RuntimeModuleBrief, RuntimeModuleTaskResult, SymbolRefDb, SymbolRefDbForModule, TreeshakeOptions,
+  DUMMY_MODULE_IDX, RUNTIME_MODULE_ID,
 };
 use rolldown_error::{BuildDiagnostic, BuildResult};
 use rolldown_fs::OsFileSystem;
@@ -276,6 +277,9 @@ impl ModuleLoader {
               .into_iter_enumerated()
               .zip(resolved_deps)
               .map(|((rec_idx, raw_rec), info)| {
+                if raw_rec.meta.contains(ImportRecordMeta::IS_DUMMY) {
+                  return raw_rec.into_resolved(DUMMY_MODULE_IDX);
+                }
                 let normal_module = module.as_normal().unwrap();
                 let owner = ModuleTaskOwner::new(
                   normal_module.source.clone(),

@@ -111,7 +111,7 @@ impl LinkStage<'_> {
         visited_modules_for_wrapping[module_id] = true;
       }
 
-      module.import_records.iter().for_each(|rec| {
+      module.import_records.iter().filter(|rec| !rec.is_dummy()).for_each(|rec| {
         let Module::Normal(importee) = &self.module_table.modules[rec.resolved_module] else {
           return;
         };

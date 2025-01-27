@@ -44,6 +44,11 @@ impl<'a> VisitMut<'a> for EnsureSpanUniqueness {
     self.ensure_uniqueness(it.span_mut());
     walk_mut::walk_new_expression(self, it);
   }
+  fn visit_identifier_reference(&mut self, it: &mut oxc::ast::ast::IdentifierReference<'a>) {
+    if it.name == "require" {
+      self.ensure_uniqueness(it.span_mut());
+    }
+  }
 }
 
 impl EnsureSpanUniqueness {

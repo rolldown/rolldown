@@ -15,7 +15,7 @@ export default defineTest({
         async buildStart() {
           this.emitFile({
             type: 'asset',
-            name: '<emitted.txt',
+            name: '+emitted.txt',
             source: 'emitted',
           })
         },
@@ -25,7 +25,7 @@ export default defineTest({
   afterTest: (output) => {
     expect(getOutputFileNames(output)).toMatchInlineSnapshot(`
       [
-        "assets/<emitted-umwR9Fta.txt",
+        "assets/+emitted-umwR9Fta.txt",
         "main.js",
       ]
     `)

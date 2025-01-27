@@ -875,15 +875,15 @@ snapshot_kind: text
 
 # tests/esbuild/default/forbid_string_export_names_no_bundle
 
-- entry-!~{000}~.js => entry-DL-6Pfck.js
+- entry-!~{000}~.js => entry-tCArwM3B.js
 
 # tests/esbuild/default/forbid_string_import_names_bundle
 
-- entry-!~{000}~.js => entry-BxM_7lX3.js
+- entry-!~{000}~.js => entry-D-RVKiCJ.js
 
 # tests/esbuild/default/forbid_string_import_names_no_bundle
 
-- entry-!~{000}~.js => entry-Dnm4H9T8.js
+- entry-!~{000}~.js => entry-Dx4EArSC.js
 
 # tests/esbuild/default/hashbang_banner_use_strict_order
 
@@ -4115,7 +4115,7 @@ snapshot_kind: text
 
 # tests/rolldown/function/external/export_external
 
-- main-!~{000}~.js => main-CxwuX0jJ.js
+- main-!~{000}~.js => main-bboG_iKl.js
 
 # tests/rolldown/function/external/implicit_import_external
 
@@ -4128,6 +4128,12 @@ snapshot_kind: text
 # tests/rolldown/function/external/keep_import_external_order
 
 - main-!~{000}~.js => main-DOm1fgFc.js
+
+# tests/rolldown/function/external/splitting_indirect_external_symbol
+
+- main-!~{002}~.js => main-DN6hqTye.js
+- indirect-!~{003}~.js => indirect-C8E1UGaS.js
+- indirect-!~{000}~.js => indirect-DRby1-0L.js
 
 # tests/rolldown/function/external/splitting_with_external_module
 

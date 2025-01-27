@@ -26,9 +26,7 @@ describe('module-federation', () => {
                 path.join(import.meta.dirname, './dist/remote-entry.js'),
             },
           },
-          runtimePlugins: [
-            path.join(import.meta.dirname, './mf-runtime-plugin.js'),
-          ],
+          runtimePlugins: ['./mf-runtime-plugin.js'],
         }),
       ],
     })

@@ -19,6 +19,20 @@ pub struct ResolvedId {
 }
 
 impl ResolvedId {
+  /// Create a dummy ResolvedId, which is not exists in the file system
+  /// note: A dummy `ResolvedId` usually used with `DUMMY_MODULE_IDX`
+  pub fn make_dummy() -> Self {
+    Self {
+      id: ArcStr::from(""),
+      ignored: false,
+      module_def_format: ModuleDefFormat::Unknown,
+      is_external: false,
+      package_json: None,
+      side_effects: None,
+      is_external_without_side_effects: false,
+    }
+  }
+
   /// Created a pretty string representation of the path. The path
   /// 1. doesn't guarantee to be unique
   /// 2. relative to the cwd, so it could show stable path across different machines

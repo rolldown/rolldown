@@ -143,7 +143,7 @@ impl<'a> LinkStage<'a> {
     let entry_ids_set = self.entries.iter().map(|e| e.id).collect::<FxHashSet<_>>();
     self.module_table.modules.iter().filter_map(Module::as_normal).for_each(|importer| {
       // TODO(hyf0): should check if importer is a js module
-      importer.import_records.iter().for_each(|rec| {
+      importer.import_records.iter().filter(|rec| !rec.is_dummy()).for_each(|rec| {
         let importee_id = rec.resolved_module;
         let Module::Normal(importee) = &self.module_table.modules[importee_id] else {
           return;
@@ -246,6 +246,19 @@ impl<'a> LinkStage<'a> {
         stmt_infos.infos.iter_mut_enumerated().for_each(|(_stmt_idx, stmt_info)| {
           stmt_info.import_records.iter().for_each(|rec_id| {
             let rec = &importer.import_records[*rec_id];
+            if rec.is_dummy() {
+              if matches!(rec.kind, ImportKind::Require) {
+                if self.options.format.should_call_runtime_require()
+                  && self.options.polyfill_require_for_esm_format_with_node_platform()
+                {
+                  stmt_info
+                    .referenced_symbols
+                    .push(self.runtime.resolve_symbol("__require").into());
+                  record_meta_pairs.push((*rec_id, ImportRecordMeta::CALL_RUNTIME_REQUIRE));
+                }
+              }
+              return;
+            }
             let rec_resolved_module = &self.module_table.modules[rec.resolved_module];
             if !rec_resolved_module.is_normal()
               || is_external_dynamic_import(&self.module_table, rec, importer_idx)

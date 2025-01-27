@@ -289,6 +289,21 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
           "exports" => {
             self.cjs_ast_analyzer(&CjsGlobalAssignmentType::ExportsAssignment);
           }
+          "require" => {
+            match self.visit_path.last() {
+              Some(AstKind::ExpressionStatement(_)) => {
+                let import_rec_idx = self.add_import_record(
+                  "",
+                  ImportKind::Require,
+                  ident_ref.span,
+                  ImportRecordMeta::IS_DUMMY,
+                );
+
+                self.result.imports.insert(ident_ref.span, import_rec_idx);
+              }
+              _ => {}
+            };
+          }
           _ => {}
         }
         self.process_global_identifier_ref_by_ancestor(ident_ref);

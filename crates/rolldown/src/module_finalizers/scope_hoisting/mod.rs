@@ -475,6 +475,8 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
     &self,
     expr: &mut ast::NewExpression<'ast>,
   ) -> Option<()> {
+    let &rec_idx = self.ctx.module.new_url_references.get(&expr.span())?;
+    let rec = &self.ctx.module.import_records[rec_idx];
     let is_callee_global_url = matches!(expr.callee.as_identifier(), Some(ident) if ident.name == "URL" && self.is_global_identifier_reference(ident));
 
     if !is_callee_global_url {
@@ -490,17 +492,10 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
       return None;
     }
 
-    let span = expr.span();
-    let first_arg_string_literal =
-      expr.arguments.first_mut().and_then(|arg| arg.as_expression_mut()).and_then(
-        |item| match item {
-          ast::Expression::StringLiteral(lit) => Some(lit),
-          _ => None,
-        },
-      )?;
-
-    let &rec_idx = self.ctx.module.new_url_references.get(&span)?;
-    let rec = &self.ctx.module.import_records[rec_idx];
+    let first_arg_string_literal = expr.arguments.first_mut().and_then(|arg| match arg {
+      ast::Argument::StringLiteral(string_literal) => Some(string_literal),
+      _ => None,
+    })?;
 
     let importee = &self.ctx.modules[rec.resolved_module].as_normal()?;
     let chunk_idx = &self.ctx.chunk_graph.module_to_chunk[importee.idx]?;

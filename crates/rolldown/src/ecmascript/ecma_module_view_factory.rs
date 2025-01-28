@@ -67,7 +67,7 @@ pub async fn create_ecma_view(
   ctx: &mut CreateModuleContext<'_>,
   args: CreateModuleViewArgs,
 ) -> BuildResult<CreateEcmaViewReturn> {
-  let id = ModuleId::new(ArcStr::clone(&ctx.resolved_id.id));
+  let id = ModuleId::new(&ctx.resolved_id.id);
   let stable_id = id.stabilize(&ctx.options.cwd);
 
   let parse_result = parse_to_ecma_ast(

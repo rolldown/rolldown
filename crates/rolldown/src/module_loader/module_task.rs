@@ -88,7 +88,7 @@ impl ModuleTask {
 
   #[expect(clippy::too_many_lines)]
   async fn run_inner(&mut self) -> BuildResult<()> {
-    let id = ModuleId::new(ArcStr::clone(&self.resolved_id.id));
+    let id = ModuleId::new(&self.resolved_id.id);
 
     // Add watch files for watcher recover if build errors occurred.
     self.ctx.plugin_driver.watch_files.insert(self.resolved_id.id.clone());

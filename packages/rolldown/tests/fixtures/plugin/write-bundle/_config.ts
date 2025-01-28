@@ -40,8 +40,20 @@ export default defineTest({
       },
       {
         name: 'test-plugin-2',
-        writeBundle: () => {
-          calls.push('test-plugin-2')
+        writeBundle: {
+          sequential: true,
+          async handler() {
+            calls.push('test-plugin-2')
+          },
+        },
+      },
+      {
+        name: 'test-plugin-3',
+        writeBundle: {
+          sequential: false,
+          async handler() {
+            calls.push('test-plugin-3')
+          },
         },
       },
     ],
@@ -50,6 +62,10 @@ export default defineTest({
     calls.length = 0
   },
   afterTest: () => {
-    expect(calls).toStrictEqual(['test-plugin', 'test-plugin-2'])
+    expect(calls).toStrictEqual([
+      'test-plugin',
+      'test-plugin-2',
+      'test-plugin-3',
+    ])
   },
 })

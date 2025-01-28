@@ -125,5 +125,6 @@ pub fn update_output_chunk(
   chunk.map = js_chunk.map.map(TryInto::try_into).transpose()?;
   chunk.imports = js_chunk.imports.into_iter().map(Into::into).collect();
   chunk.dynamic_imports = js_chunk.dynamic_imports.into_iter().map(Into::into).collect();
+  chunk.is_entry = js_chunk.is_entry; // used by nuxt
   Ok(())
 }

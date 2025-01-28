@@ -273,14 +273,16 @@ export type PluginHooks = {
       ? MakeAsync<FunctionPluginHooks[K]>
       : FunctionPluginHooks[K],
     HookFilterExtension<K> &
-      (K extends ParallelPluginHooks ? {
-        /**
-         * @deprecated
-         * this is only for rollup Plugin type compatibility.
-         * hooks always work as `sequential: true`.
-         */
-        sequential?: boolean
-      } : {})
+      (K extends ParallelPluginHooks
+        ? {
+            /**
+             * @deprecated
+             * this is only for rollup Plugin type compatibility.
+             * hooks always work as `sequential: true`.
+             */
+            sequential?: boolean
+          }
+        : {})
   >
 }
 

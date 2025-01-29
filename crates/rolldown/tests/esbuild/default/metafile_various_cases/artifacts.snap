@@ -42,14 +42,14 @@ snapshot_kind: text
 ```
 # Assets
 
-## assets/file-kQXAkSQM.file
+## assets/file-CLC8VbDV.file
 
 ## copy.js
 
 ```js
 
 //#region file.file
-var file_default = "assets/file-kQXAkSQM.file";
+var file_default = "assets/file-CLC8VbDV.file";
 
 //#endregion
 //#region copy.copy

@@ -7,6 +7,7 @@ use oxc::{
   semantic::SymbolId,
   span::{GetSpan, Span},
 };
+use oxc_ecmascript::ToJsString;
 use rolldown_common::{
   dynamic_import_usage::DynamicImportExportsUsage, generate_replace_this_expr_map,
   EcmaModuleAstUsage, ImportKind, ImportRecordMeta, StmtInfoMeta, ThisExprReplaceKind,
@@ -367,51 +368,60 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
   }
 
   fn process_global_require_call(&mut self, expr: &ast::CallExpression<'ast>) {
-    if let Some(ast::Argument::StringLiteral(request)) = &expr.arguments.first() {
-      let id = self.add_import_record(
-        request.value.as_str(),
-        ImportKind::Require,
-        request.span(),
-        if request.span().is_empty() {
-          ImportRecordMeta::IS_UNSPANNED_IMPORT
-        } else {
-          let mut is_require_used = true;
-          let mut meta = ImportRecordMeta::empty();
-          // traverse nearest ExpressionStatement and check if there are potential used
-          // skip one for CallExpression it self
-          for ancestor in self.visit_path.iter().rev().skip(1) {
-            match ancestor {
-              AstKind::ParenthesizedExpression(_) => {}
-              AstKind::ExpressionStatement(_) => {
-                meta.insert(ImportRecordMeta::IS_REQUIRE_UNUSED);
-                break;
-              }
-              AstKind::SequenceExpression(seq_expr) => {
-                // the child node has require and it is potential used
-                // the state may changed according to the child node position
-                // 1. `1, 2, (1, require('a'))` => since the last child contains `require`, and
-                //    in the last position, it is still used if it meant any other astKind
-                // 2. `1, 2, (1, require('a')), 1` => since the last child contains `require`, but it is
-                //    not in the last position, the state should change to unused
-                let last = seq_expr.expressions.last().expect("should have at least one child");
+    let (value, span) = match expr.arguments.first() {
+      Some(ast::Argument::StringLiteral(request)) => {
+        (std::borrow::Cow::Borrowed(request.value.as_str()), request.span)
+      }
+      Some(ast::Argument::TemplateLiteral(request)) => match request.to_js_string() {
+        Some(value) => (value, request.span),
+        None => return,
+      },
+      _ => return,
+    };
 
-                if !last.span().is_empty() && !expr.span.is_empty() {
-                  is_require_used = last.span().contains_inclusive(expr.span);
-                } else {
-                  is_require_used = true;
-                }
+    let id = self.add_import_record(
+      value.as_ref(),
+      ImportKind::Require,
+      span,
+      if span.is_empty() {
+        ImportRecordMeta::IS_UNSPANNED_IMPORT
+      } else {
+        let mut is_require_used = true;
+        let mut meta = ImportRecordMeta::empty();
+        // traverse nearest ExpressionStatement and check if there are potential used
+        // skip one for CallExpression it self
+        for ancestor in self.visit_path.iter().rev().skip(1) {
+          match ancestor {
+            AstKind::ParenthesizedExpression(_) => {}
+            AstKind::ExpressionStatement(_) => {
+              meta.insert(ImportRecordMeta::IS_REQUIRE_UNUSED);
+              break;
+            }
+            AstKind::SequenceExpression(seq_expr) => {
+              // the child node has require and it is potential used
+              // the state may changed according to the child node position
+              // 1. `1, 2, (1, require('a'))` => since the last child contains `require`, and
+              //    in the last position, it is still used if it meant any other astKind
+              // 2. `1, 2, (1, require('a')), 1` => since the last child contains `require`, but it is
+              //    not in the last position, the state should change to unused
+              let last = seq_expr.expressions.last().expect("should have at least one child");
+
+              if !last.span().is_empty() && !expr.span.is_empty() {
+                is_require_used = last.span().contains_inclusive(expr.span);
+              } else {
+                is_require_used = true;
               }
-              _ => {
-                if is_require_used {
-                  break;
-                }
+            }
+            _ => {
+              if is_require_used {
+                break;
               }
             }
           }
-          meta
-        },
-      );
-      self.result.imports.insert(expr.span, id);
-    }
+        }
+        meta
+      },
+    );
+    self.result.imports.insert(expr.span, id);
   }
 }

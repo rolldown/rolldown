@@ -179,38 +179,9 @@ impl GenerateStage<'_> {
     let sorted_chunk_idx_vec = chunk_graph
       .chunk_table
       .iter_enumerated()
-      .sorted_by(|(index_a, a), (index_b, b)| {
-        let a_should_be_first = Ordering::Less;
-        let b_should_be_first = Ordering::Greater;
-
-        match (&a.kind, &b.kind) {
-          // user-defined entries first
-          (
-            ChunkKind::EntryPoint { is_user_defined: a_is_user_defined, .. },
-            ChunkKind::EntryPoint { is_user_defined: b_is_user_defined, .. },
-          ) if *a_is_user_defined && !*b_is_user_defined => a_should_be_first,
-          (
-            ChunkKind::EntryPoint { is_user_defined: a_is_user_defined, .. },
-            ChunkKind::EntryPoint { is_user_defined: b_is_user_defined, .. },
-          ) if !*a_is_user_defined && *b_is_user_defined => b_should_be_first,
-          (ChunkKind::EntryPoint { is_user_defined, .. }, ChunkKind::Common)
-            if *is_user_defined =>
-          {
-            a_should_be_first
-          }
-          (ChunkKind::Common, ChunkKind::EntryPoint { is_user_defined, .. })
-            if *is_user_defined =>
-          {
-            b_should_be_first
-          }
-          // compare user-defined entries by index
-          (
-            ChunkKind::EntryPoint { is_user_defined: a_is_user_defined, .. },
-            ChunkKind::EntryPoint { is_user_defined: b_is_user_defined, .. },
-          ) if *a_is_user_defined && *b_is_user_defined => index_a.cmp(index_b),
-          // compare others by exec order
-          _ => a.exec_order.cmp(&b.exec_order),
-        }
+      .sorted_by_key(|(index, a)| match &a.kind {
+        ChunkKind::EntryPoint { is_user_defined, .. } if *is_user_defined => (0, index.raw()),
+        _ => (1, a.exec_order),
       })
       .map(|(idx, _)| idx)
       .collect::<Vec<_>>();

@@ -179,9 +179,9 @@ impl GenerateStage<'_> {
     let sorted_chunk_idx_vec = chunk_graph
       .chunk_table
       .iter_enumerated()
-      .sorted_by_key(|(index, a)| match &a.kind {
+      .sorted_by_key(|(index, chunk)| match &chunk.kind {
         ChunkKind::EntryPoint { is_user_defined, .. } if *is_user_defined => (0, index.raw()),
-        _ => (1, a.exec_order),
+        _ => (1, chunk.exec_order),
       })
       .map(|(idx, _)| idx)
       .collect::<Vec<_>>();

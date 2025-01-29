@@ -199,8 +199,8 @@ impl GenerateStage<'_> {
               a.exec_order.cmp(&b.exec_order)
             }
           }
-          (ChunkKind::EntryPoint { .. }, ChunkKind::Common) => Ordering::Less,
-          (ChunkKind::Common, ChunkKind::EntryPoint { .. }) => Ordering::Greater,
+          (ChunkKind::EntryPoint { .. }, ChunkKind::Common) => a_should_be_first,
+          (ChunkKind::Common, ChunkKind::EntryPoint { .. }) => b_should_be_first,
           _ => a.exec_order.cmp(&b.exec_order),
         }
       })

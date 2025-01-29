@@ -170,8 +170,12 @@ impl GenerateStage<'_> {
     // Consider the compare `Chunk#exec_order` should be faster than `Chunk#bits`, we use `Chunk#exec_order` to sort chunks.
     // Note Here could be make sure the order of chunks.
     // - entry chunks are always before other chunks
-    // - static chunks are always before dynamic chunks
+    // - static chunks (aka user-defined entry chunk) are always before dynamic chunks
     // - other chunks has stable order at per entry chunk level
+    // i.e.
+    // EntryPoint (is_user_defined: true) < EntryPoint (is_user_defined: false) < Common
+    // [order by chunk index]               [order by exec order]                 [order by exec order]
+
     let sorted_chunk_idx_vec = chunk_graph
       .chunk_table
       .iter_enumerated()
@@ -180,20 +184,6 @@ impl GenerateStage<'_> {
         let b_should_be_first = Ordering::Greater;
 
         match (&a.kind, &b.kind) {
-          (ChunkKind::EntryPoint { is_user_defined, .. }, ChunkKind::Common) => {
-            if *is_user_defined {
-              a_should_be_first
-            } else {
-              b_should_be_first
-            }
-          }
-          (ChunkKind::Common, ChunkKind::EntryPoint { is_user_defined, .. }) => {
-            if *is_user_defined {
-              b_should_be_first
-            } else {
-              a_should_be_first
-            }
-          }
           (
             ChunkKind::EntryPoint { is_user_defined: a_is_user_defined, .. },
             ChunkKind::EntryPoint { is_user_defined: b_is_user_defined, .. },
@@ -201,10 +191,16 @@ impl GenerateStage<'_> {
             if *a_is_user_defined && *b_is_user_defined {
               // Using user specific order of entry
               index_a.cmp(index_b)
+            } else if *a_is_user_defined {
+              a_should_be_first
+            } else if *b_is_user_defined {
+              b_should_be_first
             } else {
               a.exec_order.cmp(&b.exec_order)
             }
           }
+          (ChunkKind::EntryPoint { .. }, ChunkKind::Common) => Ordering::Less,
+          (ChunkKind::Common, ChunkKind::EntryPoint { .. }) => Ordering::Greater,
           _ => a.exec_order.cmp(&b.exec_order),
         }
       })

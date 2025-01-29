@@ -215,17 +215,16 @@ impl ModuleTask {
       .ctx
       .tx
       .send(ModuleLoaderMsg::NormalModuleDone(NormalModuleTaskResult {
-        resolved_deps,
-        module_idx: self.module_idx,
-        warnings,
+        module: module.into(),
         ecma_related: Some(EcmaRelated {
           ast,
           symbols,
           dynamic_import_rec_exports_usage,
           ast_scope,
         }),
-        module: module.into(),
+        resolved_deps,
         raw_import_records,
+        warnings,
       }))
       .await
       .is_err()

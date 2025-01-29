@@ -260,12 +260,11 @@ impl ModuleLoader {
       match msg {
         ModuleLoaderMsg::NormalModuleDone(task_result) => {
           let NormalModuleTaskResult {
-            module_idx,
-            resolved_deps,
             mut module,
+            mut ecma_related,
+            resolved_deps,
             raw_import_records,
             warnings,
-            mut ecma_related,
           } = task_result;
           all_warnings.extend(warnings);
           let mut dynamic_import_rec_exports_usage = ecma_related
@@ -312,13 +311,16 @@ impl ModuleLoader {
               .collect::<IndexVec<ImportRecordIdx, _>>();
 
           module.set_import_records(import_records);
+
+          let module_idx = module.idx();
           if let Some(EcmaRelated { ast, symbols, ast_scope, .. }) = ecma_related {
-            let ast_idx = self.intermediate_normal_modules.index_ecma_ast.push((ast, module.idx()));
+            let ast_idx = self.intermediate_normal_modules.index_ecma_ast.push((ast, module_idx));
             let ast_scope_idx = self.intermediate_normal_modules.index_ast_scope.push(ast_scope);
             module.set_ecma_ast_idx(ast_idx);
             module.set_ast_scope_idx(ast_scope_idx);
             self.symbol_ref_db.store_local_db(module_idx, symbols);
           }
+
           self.intermediate_normal_modules.modules[module_idx] = Some(module);
           self.remaining -= 1;
         }

@@ -170,7 +170,7 @@ impl GenerateStage<'_> {
     // Consider the compare `Chunk#exec_order` should be faster than `Chunk#bits`, we use `Chunk#exec_order` to sort chunks.
     // Note Here could be make sure the order of chunks.
     // - entry chunks are always before other chunks
-    // - static chunks (aka user-defined entry chunk) are always before dynamic chunks
+    // - static chunks are always before dynamic chunks
     // - other chunks has stable order at per entry chunk level
     // i.e.
     // EntryPoint (is_user_defined: true) < EntryPoint (is_user_defined: false) < Common

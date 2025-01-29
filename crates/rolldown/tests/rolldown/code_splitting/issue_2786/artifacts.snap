@@ -7,31 +7,24 @@ snapshot_kind: text
 ## main.js
 
 ```js
-import { share_default } from "./share3.js";
+import { share_default } from "./share2.js";
 import { share_default$1 } from "./share4.js";
 
 //#region main.js
 console.log(share_default, share_default$1);
 import("./share.js");
-import("./share2.js");
+import("./share3.js");
 
 //#endregion
 ```
 ## share.js
 
 ```js
-import { share_default } from "./share3.js";
+import { share_default } from "./share2.js";
 
 export { share_default as default };
 ```
 ## share2.js
-
-```js
-import { share_default$1 as share_default } from "./share4.js";
-
-export { share_default as default };
-```
-## share3.js
 
 ```js
 
@@ -40,6 +33,13 @@ var share_default = "shared";
 
 //#endregion
 export { share_default };
+```
+## share3.js
+
+```js
+import { share_default$1 as share_default } from "./share4.js";
+
+export { share_default as default };
 ```
 ## share4.js
 

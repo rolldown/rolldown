@@ -7,10 +7,19 @@ snapshot_kind: text
 ## file.js
 
 ```js
-import "./file9.js";
+import "./file2.js";
 
 ```
 ## file2.js
+
+```js
+
+//#region file.js
+console.log("file");
+
+//#endregion
+```
+## file3.js
 
 ```js
 
@@ -20,7 +29,7 @@ const value = "a";
 //#endregion
 export { value };
 ```
-## file3.js
+## file4.js
 
 ```js
 
@@ -30,7 +39,7 @@ const value = "b";
 //#endregion
 export { value };
 ```
-## file4.js
+## file5.js
 
 ```js
 
@@ -40,7 +49,7 @@ const value = "c";
 //#endregion
 export { value };
 ```
-## file5.js
+## file6.js
 
 ```js
 
@@ -50,7 +59,7 @@ const value = "d";
 //#endregion
 export { value };
 ```
-## file6.js
+## file7.js
 
 ```js
 
@@ -60,7 +69,7 @@ const value = "e";
 //#endregion
 export { value };
 ```
-## file7.js
+## file8.js
 
 ```js
 
@@ -70,7 +79,7 @@ const value = "f";
 //#endregion
 export { value };
 ```
-## file8.js
+## file9.js
 
 ```js
 
@@ -80,28 +89,19 @@ const value = "g";
 //#endregion
 export { value };
 ```
-## file9.js
-
-```js
-
-//#region file.js
-console.log("file");
-
-//#endregion
-```
 ## main.js
 
 ```js
-import "./file9.js";
+import "./file2.js";
 
 //#region main.js
-import("./file2.js");
 import("./file3.js");
 import("./file4.js");
 import("./file5.js");
 import("./file6.js");
 import("./file7.js");
 import("./file8.js");
+import("./file9.js");
 
 //#endregion
 ```

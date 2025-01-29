@@ -7,7 +7,7 @@ snapshot_kind: text
 ## a.js
 
 ```js
-import { import_c } from "./b2.js";
+import { import_c } from "./b.js";
 
 //#region a.js
 let a = import_c.test;
@@ -16,14 +16,6 @@ let a = import_c.test;
 export { a };
 ```
 ## b.js
-
-```js
-import { import_c } from "./b2.js";
-
-var test = import_c.test;
-export { test };
-```
-## b2.js
 
 ```js
 
@@ -38,6 +30,14 @@ var import_c = __toESM(require_c());
 //#endregion
 export { import_c };
 ```
+## b2.js
+
+```js
+import { import_c } from "./b.js";
+
+var test = import_c.test;
+export { test };
+```
 ## main.js
 
 ```js
@@ -47,7 +47,7 @@ import assert from "node:assert";
 import("./a.js").then((mod) => {
 	assert.strictEqual(mod.a, 1e3);
 });
-import("./b.js").then((mod) => {
+import("./b2.js").then((mod) => {
 	assert.strictEqual(mod.test, 1e3);
 });
 

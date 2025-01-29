@@ -7,14 +7,6 @@ snapshot_kind: text
 ## a.js
 
 ```js
-import { import_b } from "./a2.js";
-
-var b_default = import_b._default;
-export { b_default as default };
-```
-## a2.js
-
-```js
 
 
 //#region b.js
@@ -28,10 +20,18 @@ var import_b = __toESM(require_b());
 //#endregion
 export { import_b };
 ```
+## a2.js
+
+```js
+import { import_b } from "./a.js";
+
+var b_default = import_b._default;
+export { b_default as default };
+```
 ## c.js
 
 ```js
-import { import_b } from "./a2.js";
+import { import_b } from "./a.js";
 
 //#region c.js
 function c_default(tag, options) {
@@ -50,7 +50,7 @@ import assert from "node:assert";
 import("./c.js").then((mod) => {
 	assert.strictEqual(mod.default()(), "f");
 });
-import("./a.js").then((mod) => {
+import("./a2.js").then((mod) => {
 	assert.strictEqual(mod.default(), "f");
 });
 

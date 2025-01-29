@@ -208,7 +208,7 @@ impl GenerateStage<'_> {
             ChunkKind::EntryPoint { is_user_defined: a_is_user_defined, .. },
             ChunkKind::EntryPoint { is_user_defined: b_is_user_defined, .. },
           ) if *a_is_user_defined && *b_is_user_defined => index_a.cmp(index_b),
-          // comapre others by exec order
+          // compare others by exec order
           _ => a.exec_order.cmp(&b.exec_order),
         }
       })

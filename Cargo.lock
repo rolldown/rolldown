@@ -2571,6 +2571,7 @@ dependencies = [
  "regress",
  "rolldown_std_utils",
  "rustc-hash",
+ "serde_json",
  "simdutf8",
  "xxhash-rust",
 ]

@@ -1,0 +1,83 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+snapshot_kind: text
+---
+# Assets
+
+## main.js
+
+```js
+import { clear } from "./repro12.js";
+import { clear$1, clear$2 } from "./repro22.js";
+import { clear$1$3, clear$2$1, clear$3 } from "./repro32.js";
+
+//#region main.js
+var main_default = [
+	clear,
+	clear$2,
+	clear$1,
+	clear$3,
+	clear$1$3,
+	clear$2$1,
+	() => import("./repro1.js"),
+	() => import("./repro2.js"),
+	() => import("./repro3.js")
+];
+
+//#endregion
+export { main_default as default };
+```
+## repro1.js
+
+```js
+import { clear } from "./repro12.js";
+
+export { clear };
+```
+## repro12.js
+
+```js
+
+//#region repro1.js
+const clear = "repro1_clear";
+
+//#endregion
+export { clear };
+```
+## repro2.js
+
+```js
+import { clear$1, clear$2 as clear } from "./repro22.js";
+
+export { clear, clear$1 };
+```
+## repro22.js
+
+```js
+
+//#region repro2.js
+const clear$1 = "repro2_clear$1";
+const clear = "repro2_clear";
+
+//#endregion
+export { clear$1, clear as clear$2 };
+```
+## repro3.js
+
+```js
+import { clear$1$3 as clear$1, clear$2$1 as clear$2, clear$3 as clear } from "./repro32.js";
+
+export { clear, clear$1, clear$2 };
+```
+## repro32.js
+
+```js
+
+//#region repro3.js
+const clear$2 = "repro3_clear$2";
+const clear$1 = "repro3_clear$1";
+const clear = "repro3_clear";
+
+//#endregion
+export { clear$1 as clear$1$3, clear$2 as clear$2$1, clear as clear$3 };
+```

@@ -1,0 +1,28 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+snapshot_kind: text
+---
+# Assets
+
+## main.js
+
+```js
+import { "\n\"\\'" as test } from "external";
+
+export { test as "\n\"\\'" };
+```
+---
+
+Variant: (format: Cjs)
+
+# Assets
+
+## main.js
+
+```js
+"use strict";
+
+const external = __toESM(require("external"));
+
+exports["\n\"\\'"] = external["\n\"\\'"]
+```

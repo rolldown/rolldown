@@ -871,19 +871,19 @@ snapshot_kind: text
 
 # tests/esbuild/default/forbid_string_export_names_bundle
 
-- entry-!~{000}~.js => entry-CMZr_HEV.js
+- entry-!~{000}~.js => entry-xenruwju.js
 
 # tests/esbuild/default/forbid_string_export_names_no_bundle
 
-- entry-!~{000}~.js => entry-tCArwM3B.js
+- entry-!~{000}~.js => entry-CCWu6yUA.js
 
 # tests/esbuild/default/forbid_string_import_names_bundle
 
-- entry-!~{000}~.js => entry-D-RVKiCJ.js
+- entry-!~{000}~.js => entry-BmYDzIrY.js
 
 # tests/esbuild/default/forbid_string_import_names_no_bundle
 
-- entry-!~{000}~.js => entry-Dx4EArSC.js
+- entry-!~{000}~.js => entry-2T1_HIPi.js
 
 # tests/esbuild/default/hashbang_banner_use_strict_order
 
@@ -1033,7 +1033,7 @@ snapshot_kind: text
 
 # tests/esbuild/default/inject_no_bundle
 
-- entry-!~{000}~.js => entry-BN8j3IUf.js
+- entry-!~{000}~.js => entry-Chg1A5I8.js
 
 # tests/esbuild/default/inject_with_define
 
@@ -2466,7 +2466,7 @@ snapshot_kind: text
 
 # tests/esbuild/loader/loader_json_no_bundle
 
-- test-!~{000}~.js => test-mfbKE_YL.js
+- test-!~{000}~.js => test-Bt4Vb5HE.js
 
 # tests/esbuild/loader/loader_json_no_bundle_common_js
 
@@ -2474,11 +2474,11 @@ snapshot_kind: text
 
 # tests/esbuild/loader/loader_json_no_bundle_es6
 
-- test-!~{000}~.js => test-mfbKE_YL.js
+- test-!~{000}~.js => test-Bt4Vb5HE.js
 
 # tests/esbuild/loader/loader_json_no_bundle_es6_arbitrary_module_namespace_names
 
-- test-!~{000}~.js => test-mfbKE_YL.js
+- test-!~{000}~.js => test-Bt4Vb5HE.js
 
 # tests/esbuild/loader/loader_json_no_bundle_iife
 
@@ -2821,7 +2821,7 @@ snapshot_kind: text
 - hoist-directive-!~{001}~.js => hoist-directive-D20EwXjo.js
 - hoist-export-class-direct-!~{008}~.js => hoist-export-class-direct-ZgxNDOd6.js
 - hoist-export-class-indirect-!~{009}~.js => hoist-export-class-indirect-NiqQ3_v5.js
-- hoist-export-clause-!~{005}~.js => hoist-export-clause-D9RIr8j7.js
+- hoist-export-clause-!~{005}~.js => hoist-export-clause-ChQM08Ab.js
 - hoist-export-default-class-anonymous-!~{00e}~.js => hoist-export-default-class-anonymous-DMpm5ETB.js
 - hoist-export-default-class-name-unused-!~{00c}~.js => hoist-export-default-class-name-unused-CWl4NkHN.js
 - hoist-export-default-class-name-used-!~{00d}~.js => hoist-export-default-class-name-used-BfAOBOVO.js
@@ -3826,9 +3826,9 @@ snapshot_kind: text
 
 # tests/rolldown/code_splitting/import_export_unicode
 
-- main-!~{002}~.js => main-LUITzlAe.js
+- main-!~{002}~.js => main-CV2uHBN7.js
+- foo-!~{000}~.js => foo--N3vBpKn.js
 - foo-!~{003}~.js => foo-CU-7PMni.js
-- foo-!~{000}~.js => foo-eksDMHqn.js
 
 # tests/rolldown/code_splitting/issue_2786
 
@@ -4223,7 +4223,7 @@ snapshot_kind: text
 
 # tests/rolldown/function/format/esm/import_export_unicode
 
-- main-!~{000}~.js => main-YBf93sJ8.js
+- main-!~{000}~.js => main-Exy3bpt6.js
 
 # tests/rolldown/function/format/iife/conflict_exports_key
 
@@ -4577,6 +4577,10 @@ snapshot_kind: text
 # tests/rolldown/issues/3395
 
 - main-!~{000}~.js => main-BIyVlF5M.js
+
+# tests/rolldown/issues/3456
+
+- main-!~{000}~.js => main-B6ElbDiT.js
 
 # tests/rolldown/issues/376
 

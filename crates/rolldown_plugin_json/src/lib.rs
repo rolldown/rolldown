@@ -215,7 +215,6 @@ mod test {
   #[test]
   fn to_esm_named_exports_forbidden_ident() {
     let data = serde_json::json!({"true": true, "\\\"\n": 1234});
-    println!("{}", to_esm(&data, true));
     assert_eq!(
       r#"
 export default {

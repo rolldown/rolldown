@@ -57,7 +57,7 @@ pub fn property_access_str(obj: &str, prop: &str) -> String {
 }
 
 pub fn to_module_import_export_name(name: &str) -> String {
-  if is_validate_identifier_name(&name) {
+  if is_validate_identifier_name(name) {
     name.into()
   } else {
     serde_json::to_string(name).unwrap()

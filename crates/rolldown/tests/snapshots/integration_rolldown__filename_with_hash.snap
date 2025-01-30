@@ -4578,6 +4578,16 @@ snapshot_kind: text
 
 - main-!~{000}~.js => main-BIyVlF5M.js
 
+# tests/rolldown/issues/3438
+
+- main-!~{006}~.js => main-wJYlTcNT.js
+- repro1-!~{007}~.js => repro1-BKdSHZG0.js
+- repro1-!~{000}~.js => repro1-BMOe3HZY.js
+- repro2-!~{002}~.js => repro2-BSAS-PUl.js
+- repro2-!~{009}~.js => repro2-Bnzlnm9X.js
+- repro3-!~{00b}~.js => repro3-BQ08GX7m.js
+- repro3-!~{004}~.js => repro3-qSe7JEtT.js
+
 # tests/rolldown/issues/376
 
 - main-!~{000}~.js => main-CfuHZZW7.js

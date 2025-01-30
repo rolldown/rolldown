@@ -7,7 +7,7 @@
     "node": ">=18.20.3"
   },
   "scripts": {
-    "lint-code": "oxlint -c .oxlintrc.json --deny-warnings",
+    "lint-code": "oxlint -c .oxlintrc.json --ignore-path=.oxlintignore --deny-warnings",
     "lint-filename": "echo 'TODO: ls-lint is too slow now'",
     "lint-filename:bak": "ls-lint",
     "lint-spell": "cspell \"**\" --no-progress  --gitignore",

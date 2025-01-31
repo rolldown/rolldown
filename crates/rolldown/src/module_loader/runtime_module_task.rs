@@ -162,19 +162,18 @@ impl RuntimeModuleTask {
       })
       .collect();
 
-    if let Err(_err) =
-      self.tx.try_send(ModuleLoaderMsg::RuntimeNormalModuleDone(RuntimeModuleTaskResult {
-        ast,
-        module,
-        runtime,
-        resolved_deps,
-        raw_import_records,
-        ast_scope,
-        local_symbol_ref_db: symbol_ref_db,
-      }))
-    {
-      // hyf0: If main thread is dead, we should handle errors of main thread. So we just ignore the error here.
-    };
+    let result = ModuleLoaderMsg::RuntimeNormalModuleDone(RuntimeModuleTaskResult {
+      ast,
+      module,
+      runtime,
+      resolved_deps,
+      raw_import_records,
+      ast_scope,
+      local_symbol_ref_db: symbol_ref_db,
+    });
+
+    // If the main thread is dead, nothing we can do to handle these send failures.
+    let _ = self.tx.try_send(result);
 
     Ok(())
   }

@@ -1,5 +1,5 @@
 {
   "config": {
-    "external": ["test-dep"]
+    "external": ["test-dep", "test-dep666"]
   }
 }

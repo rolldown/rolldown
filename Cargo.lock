@@ -2114,6 +2114,7 @@ dependencies = [
  "memchr",
  "notify",
  "oxc",
+ "oxc_ecmascript",
  "oxc_index",
  "rolldown_common",
  "rolldown_ecmascript",

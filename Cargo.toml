@@ -170,6 +170,7 @@ xxhash-rust         = "0.8.10"
 
 # oxc crates with the same version
 oxc                = { version = "0.48.0", features = ["transformer", "minifier", "semantic", "codegen", "serialize"] }
+oxc_ecmascript     = { version = "0.48.0" }
 oxc_parser_napi    = { version = "0.48.0" }
 oxc_transform_napi = { version = "0.48.0" }
 

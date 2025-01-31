@@ -4683,7 +4683,7 @@ snapshot_kind: text
 
 # tests/rolldown/misc/require_deconflict
 
-- main-!~{000}~.js => main-DGPYeOoA.js
+- main-!~{000}~.js => main-jIhBklo0.js
 
 # tests/rolldown/misc/use_strict/allow_parse_non_strict_code_in_cjs_format
 

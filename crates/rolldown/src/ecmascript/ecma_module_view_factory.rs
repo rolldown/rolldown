@@ -2,16 +2,14 @@ use arcstr::ArcStr;
 use oxc::semantic::{ScopeTree, SymbolTable};
 use oxc_index::IndexVec;
 use rolldown_common::{
-  dynamic_import_usage::DynamicImportExportsUsage,
   side_effects::{DeterminedSideEffects, HookSideEffects},
-  AstScopes, EcmaView, EcmaViewMeta, ImportRecordIdx, ModuleDefFormat, ModuleId, ModuleIdx,
-  ModuleType, RawImportRecord, SymbolRef, SymbolRefDbForModule, TreeshakeOptions,
+  AstScopes, EcmaRelated, EcmaView, EcmaViewMeta, ImportRecordIdx, ModuleDefFormat, ModuleId,
+  ModuleIdx, ModuleType, RawImportRecord, SymbolRef, TreeshakeOptions,
 };
 use rolldown_ecmascript::EcmaAst;
 use rolldown_error::BuildResult;
 use rolldown_std_utils::PathExt;
 use rolldown_utils::{ecmascript::legitimize_identifier_name, indexmap::FxIndexSet};
-use rustc_hash::FxHashMap;
 use sugar_path::SugarPath;
 
 use crate::{
@@ -54,12 +52,9 @@ fn scan_ast(
   Ok((ast_scopes, scan_result, namespace_object_ref))
 }
 pub struct CreateEcmaViewReturn {
-  pub view: EcmaView,
+  pub ecma_view: EcmaView,
+  pub ecma_related: EcmaRelated,
   pub raw_import_records: IndexVec<ImportRecordIdx, RawImportRecord>,
-  pub ast: EcmaAst,
-  pub symbols: SymbolRefDbForModule,
-  pub dynamic_import_rec_exports_usage: FxHashMap<ImportRecordIdx, DynamicImportExportsUsage>,
-  pub ast_scope: AstScopes,
 }
 
 #[allow(clippy::too_many_lines)]
@@ -99,7 +94,7 @@ pub async fn create_ecma_view(
     named_imports,
     named_exports,
     stmt_infos,
-    import_records,
+    import_records: raw_import_records,
     default_export_ref,
     imports,
     exports_kind,
@@ -107,11 +102,11 @@ pub async fn create_ecma_view(
     has_eval,
     errors,
     ast_usage,
-    symbol_ref_db,
+    symbol_ref_db: symbols,
     self_referenced_class_decl_symbol_ids,
     hashbang_range,
     has_star_exports,
-    dynamic_import_rec_exports_usage: dynamic_import_exports_usage,
+    dynamic_import_rec_exports_usage,
     new_url_references: new_url_imports,
     this_expr_replace_map,
   } = scan_result;
@@ -180,7 +175,7 @@ pub async fn create_ecma_view(
   };
 
   // TODO: Should we check if there are `check_side_effects_for` returns false but there are side effects in the module?
-  let view = EcmaView {
+  let ecma_view = EcmaView {
     source: ast.source().clone(),
     ecma_ast_idx: None,
     named_imports,
@@ -217,12 +212,6 @@ pub async fn create_ecma_view(
     esm_namespace_in_cjs_node_mode: None,
   };
 
-  Ok(CreateEcmaViewReturn {
-    view,
-    raw_import_records: import_records,
-    ast,
-    symbols: symbol_ref_db,
-    dynamic_import_rec_exports_usage: dynamic_import_exports_usage,
-    ast_scope,
-  })
+  let ecma_related = EcmaRelated { ast, symbols, ast_scope, dynamic_import_rec_exports_usage };
+  Ok(CreateEcmaViewReturn { ecma_view, ecma_related, raw_import_records })
 }

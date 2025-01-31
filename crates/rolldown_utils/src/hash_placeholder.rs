@@ -28,15 +28,14 @@ fn to_base64(mut value: u32) -> String {
 
   loop {
     let current_digit = value % BASE;
-    let right = std::mem::replace(&mut buffer, vec![CHARS[current_digit as usize]]);
-    buffer.extend(right);
+    buffer.push(CHARS[current_digit as usize]);
     value /= BASE;
 
     if value == 0 {
       break;
     }
   }
-
+  buffer.reverse();
   // SAFETY: `buffer` is base64 characters, it is valid utf8 characters
   unsafe { String::from_utf8_unchecked(buffer) }
 }

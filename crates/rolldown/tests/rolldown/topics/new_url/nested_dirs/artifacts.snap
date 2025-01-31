@@ -4,36 +4,36 @@ snapshot_kind: text
 ---
 # Assets
 
-## assets/foo-DX_UVeUe.txt
+## assets/foo-gTZMu9ze.txt
 
-## chunks/dep-CndvSuO3.js
+## chunks/dep-CyU4Hv6x.js
 
 ```js
-import "./foo-BKpPs9oN.js";
+import "./foo-Cxwkl5cC.js";
 
 //#region dep.js
-const url = new URL("../assets/foo-DX_UVeUe.txt", import.meta.url);
+const url = new URL("../assets/foo-gTZMu9ze.txt", import.meta.url);
 
 //#endregion
 export { url };
 ```
-## chunks/foo-BKpPs9oN.js
+## chunks/foo-Cxwkl5cC.js
 
 ```js
 
 //#region foo.txt
-var foo_default = "assets/foo-DX_UVeUe.txt";
+var foo_default = "assets/foo-gTZMu9ze.txt";
 
 //#endregion
 ```
 ## main.js
 
 ```js
-import "./chunks/foo-BKpPs9oN.js";
+import "./chunks/foo-Cxwkl5cC.js";
 
 //#region main.js
-const url = new URL("assets/foo-DX_UVeUe.txt", import.meta.url);
-const dep = import("./chunks/dep-CndvSuO3.js");
+const url = new URL("assets/foo-gTZMu9ze.txt", import.meta.url);
+const dep = import("./chunks/dep-CyU4Hv6x.js");
 
 //#endregion
 export { dep, url };

@@ -4580,13 +4580,13 @@ snapshot_kind: text
 
 # tests/rolldown/issues/3438
 
-- main-!~{006}~.js => main-wJYlTcNT.js
-- repro1-!~{007}~.js => repro1-BKdSHZG0.js
-- repro1-!~{000}~.js => repro1-BMOe3HZY.js
-- repro2-!~{002}~.js => repro2-BSAS-PUl.js
-- repro2-!~{009}~.js => repro2-Bnzlnm9X.js
+- main-!~{000}~.js => main-DhIKmDIu.js
+- repro1-!~{001}~.js => repro1-DCPAzhcM.js
+- repro1-!~{003}~.js => repro1-DGsIRehE.js
+- repro2-!~{007}~.js => repro2-B9dvGMIB.js
+- repro2-!~{005}~.js => repro2-f1y_nnQO.js
 - repro3-!~{00b}~.js => repro3-BQ08GX7m.js
-- repro3-!~{004}~.js => repro3-qSe7JEtT.js
+- repro3-!~{009}~.js => repro3-o0-vxebC.js
 
 # tests/rolldown/issues/376
 

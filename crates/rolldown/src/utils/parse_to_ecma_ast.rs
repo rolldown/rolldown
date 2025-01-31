@@ -4,18 +4,18 @@ use arcstr::ArcStr;
 use oxc::{
   semantic::{ScopeTree, SymbolTable},
   span::SourceType as OxcSourceType,
-  transformer::ReplaceGlobalDefinesConfig,
 };
 use rolldown_common::{ModuleType, NormalizedBundlerOptions, StrOrBytes, RUNTIME_MODULE_ID};
 use rolldown_ecmascript::{EcmaAst, EcmaCompiler};
 use rolldown_error::{BuildDiagnostic, BuildResult};
 use rolldown_loader_utils::{binary_to_esm, text_to_string_literal};
-use rolldown_plugin::{HookTransformAstArgs, PluginDriver};
+use rolldown_plugin::HookTransformAstArgs;
 use rolldown_utils::mime::guess_mime;
+use sugar_path::SugarPath;
 
 use super::pre_process_ecma_ast::PreProcessEcmaAst;
 
-use crate::types::oxc_parse_type::OxcParseType;
+use crate::types::{module_factory::CreateModuleContext, oxc_parse_type::OxcParseType};
 
 fn pure_esm_js_oxc_source_type() -> OxcSourceType {
   let pure_esm_js = OxcSourceType::default().with_module(true);
@@ -37,15 +37,22 @@ pub struct ParseToEcmaAstResult {
 
 #[allow(clippy::too_many_arguments)]
 pub fn parse_to_ecma_ast(
-  plugin_driver: &PluginDriver,
-  path: &Path,
-  stable_id: &str,
-  options: &NormalizedBundlerOptions,
-  module_type: &ModuleType,
+  ctx: &CreateModuleContext<'_>,
   source: StrOrBytes,
-  replace_global_define_config: Option<&ReplaceGlobalDefinesConfig>,
-  is_user_defined_entry: bool,
 ) -> BuildResult<ParseToEcmaAstResult> {
+  let CreateModuleContext {
+    options,
+    stable_id,
+    resolved_id,
+    module_type,
+    plugin_driver,
+    replace_global_define_config,
+    ..
+  } = ctx;
+
+  let path = resolved_id.id.as_path();
+  let is_user_defined_entry = ctx.is_user_defined_entry;
+
   let (has_lazy_export, source, parsed_type) =
     pre_process_source(module_type, source, is_user_defined_entry, path, options)?;
 
@@ -91,7 +98,7 @@ pub fn parse_to_ecma_ast(
     ecma_ast,
     &parsed_type,
     stable_id,
-    replace_global_define_config,
+    replace_global_define_config.as_ref(),
     options,
     has_lazy_export,
   )

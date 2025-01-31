@@ -62,19 +62,7 @@ pub async fn create_ecma_view(
   ctx: &mut CreateModuleContext<'_>,
   args: CreateModuleViewArgs,
 ) -> BuildResult<CreateEcmaViewReturn> {
-  let id = ModuleId::new(&ctx.resolved_id.id);
-  let stable_id = id.stabilize(&ctx.options.cwd);
-
-  let parse_result = parse_to_ecma_ast(
-    ctx.plugin_driver,
-    ctx.resolved_id.id.as_path(),
-    &stable_id,
-    ctx.options,
-    &ctx.module_type,
-    args.source.clone(),
-    ctx.replace_global_define_config.as_ref(),
-    ctx.is_user_defined_entry,
-  )?;
+  let parse_result = parse_to_ecma_ast(ctx, args.source.clone())?;
 
   let ParseToEcmaAstResult { mut ast, symbol_table, scope_tree, has_lazy_export, warning } =
     parse_result;
@@ -132,7 +120,8 @@ pub async fn create_ecma_view(
       .and_then(|p| {
         // the glob expr is based on parent path of package.json, which is package path
         // so we should use the relative path of the module to package path
-        let module_path_relative_to_package = id.as_path().relative(p.path.parent()?);
+        let module_path_relative_to_package =
+          ctx.resolved_id.id.as_path().relative(p.path.parent()?);
         p.check_side_effects_for(&module_path_relative_to_package.to_string_lossy())
           .map(DeterminedSideEffects::UserDefined)
       })
@@ -156,7 +145,7 @@ pub async fn create_ecma_view(
         if opt.module_side_effects.is_fn() {
           if opt
             .module_side_effects
-            .ffi_resolve(&stable_id, ctx.resolved_id.is_external)
+            .ffi_resolve(ctx.stable_id, ctx.resolved_id.is_external)
             .await?
             .unwrap_or_default()
           {
@@ -165,7 +154,7 @@ pub async fn create_ecma_view(
             DeterminedSideEffects::UserDefined(false)
           }
         } else {
-          match opt.module_side_effects.native_resolve(&stable_id, ctx.resolved_id.is_external) {
+          match opt.module_side_effects.native_resolve(ctx.stable_id, ctx.resolved_id.is_external) {
             Some(value) => DeterminedSideEffects::UserDefined(value),
             None => lazy_check_side_effects(),
           }

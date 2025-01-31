@@ -62,10 +62,9 @@ pub async fn create_ecma_view(
   ctx: &mut CreateModuleContext<'_>,
   args: CreateModuleViewArgs,
 ) -> BuildResult<CreateEcmaViewReturn> {
-  let parse_result = parse_to_ecma_ast(ctx, args.source.clone())?;
-
+  let CreateModuleViewArgs { source, sourcemap_chain, hook_side_effects } = args;
   let ParseToEcmaAstResult { mut ast, symbol_table, scope_tree, has_lazy_export, warning } =
-    parse_result;
+    parse_to_ecma_ast(ctx, source)?;
 
   ctx.warnings.extend(warning);
 
@@ -130,7 +129,7 @@ pub async fn create_ecma_view(
         DeterminedSideEffects::Analyzed(analyzed_side_effects)
       })
   };
-  let side_effects = match args.hook_side_effects {
+  let side_effects = match hook_side_effects {
     Some(side_effects) => match side_effects {
       HookSideEffects::True => lazy_check_side_effects(),
       HookSideEffects::False => DeterminedSideEffects::UserDefined(false),
@@ -176,7 +175,7 @@ pub async fn create_ecma_view(
     exports_kind,
     namespace_object_ref,
     def_format: ctx.resolved_id.module_def_format,
-    sourcemap_chain: args.sourcemap_chain,
+    sourcemap_chain,
     import_records: IndexVec::default(),
     importers: FxIndexSet::default(),
     dynamic_importers: FxIndexSet::default(),

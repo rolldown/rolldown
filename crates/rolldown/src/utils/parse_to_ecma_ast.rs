@@ -47,7 +47,7 @@ pub fn parse_to_ecma_ast(
   is_user_defined_entry: bool,
 ) -> BuildResult<ParseToEcmaAstResult> {
   let (has_lazy_export, source, parsed_type) =
-    pre_process_source(module_type, source, is_user_defined_entry, path, options)?;
+    pre_process_source(path, source, module_type, is_user_defined_entry, options)?;
 
   let oxc_source_type = {
     let default = pure_esm_js_oxc_source_type();
@@ -71,13 +71,11 @@ pub fn parse_to_ecma_ast(
     }
   };
 
-  let source = ArcStr::from(source);
-
   let mut ecma_ast = match module_type {
     ModuleType::Json | ModuleType::Dataurl | ModuleType::Base64 | ModuleType::Text => {
-      EcmaCompiler::parse_expr_as_program(stable_id, &source, oxc_source_type)?
+      EcmaCompiler::parse_expr_as_program(stable_id, source, oxc_source_type)?
     }
-    _ => EcmaCompiler::parse(stable_id, &source, oxc_source_type)?,
+    _ => EcmaCompiler::parse(stable_id, source, oxc_source_type)?,
   };
 
   ecma_ast = plugin_driver.transform_ast(HookTransformAstArgs {
@@ -98,65 +96,58 @@ pub fn parse_to_ecma_ast(
 }
 
 fn pre_process_source(
-  module_type: &ModuleType,
-  source: StrOrBytes,
-  is_user_defined_entry: bool,
   path: &Path,
+  source: StrOrBytes,
+  module_type: &ModuleType,
+  is_user_defined_entry: bool,
   options: &NormalizedBundlerOptions,
-) -> BuildResult<(bool, String, OxcParseType)> {
-  let mut has_lazy_export = false;
-  let (source, parsed_type) = match module_type {
-    ModuleType::Js => (source.try_into_string()?, OxcParseType::Js),
-    ModuleType::Jsx => (source.try_into_string()?, OxcParseType::Jsx),
-    ModuleType::Ts => (source.try_into_string()?, OxcParseType::Ts),
-    ModuleType::Tsx => (source.try_into_string()?, OxcParseType::Tsx),
+) -> BuildResult<(bool, ArcStr, OxcParseType)> {
+  let mut has_lazy_export = matches!(
+    module_type,
+    ModuleType::Json
+      | ModuleType::Text
+      | ModuleType::Base64
+      | ModuleType::Dataurl
+      | ModuleType::Asset
+  );
+
+  let source = match module_type {
+    ModuleType::Js | ModuleType::Jsx | ModuleType::Ts | ModuleType::Tsx | ModuleType::Json => {
+      source.try_into_string()?
+    }
     ModuleType::Css => {
       if is_user_defined_entry {
-        ("export {}".to_owned(), OxcParseType::Js)
+        "export {}".to_owned()
       } else {
         has_lazy_export = true;
-        ("({})".to_owned(), OxcParseType::Js)
+        "({})".to_owned()
       }
     }
-    ModuleType::Json => {
-      has_lazy_export = true;
-      let content = source.try_into_string()?;
-      (content, OxcParseType::Js)
-    }
-    ModuleType::Text => {
-      let content = text_to_string_literal(&source.try_into_string()?)?;
-      has_lazy_export = true;
-      (content, OxcParseType::Js)
-    }
+    ModuleType::Text => text_to_string_literal(&source.try_into_string()?)?,
+    ModuleType::Asset => "import.meta.__ROLLDOWN_ASSET_FILENAME".to_string(),
     ModuleType::Base64 => {
       let source = source.into_bytes();
       let encoded = rolldown_utils::base64::to_standard_base64(source);
-      has_lazy_export = true;
-      (text_to_string_literal(&encoded)?, OxcParseType::Js)
+      text_to_string_literal(&encoded)?
     }
     ModuleType::Dataurl => {
       let data = source.into_bytes();
       let guessed_mime = guess_mime(path, &data)?;
       let dataurl = rolldown_utils::dataurl::encode_as_shortest_dataurl(&guessed_mime, &data);
-      has_lazy_export = true;
-      (text_to_string_literal(&dataurl)?, OxcParseType::Js)
+      text_to_string_literal(&dataurl)?
     }
     ModuleType::Binary => {
       let source = source.into_bytes();
       let encoded = rolldown_utils::base64::to_standard_base64(source);
-      (binary_to_esm(&encoded, options.platform, RUNTIME_MODULE_ID), OxcParseType::Js)
+      binary_to_esm(&encoded, options.platform, RUNTIME_MODULE_ID)
     }
-    ModuleType::Asset => {
-      let content = "import.meta.__ROLLDOWN_ASSET_FILENAME".to_string();
-      has_lazy_export = true;
-      (content, OxcParseType::Js)
-    }
-    ModuleType::Empty => (String::new(), OxcParseType::Js),
+    ModuleType::Empty => String::new(),
     ModuleType::Custom(custom_type) => {
       // TODO: should provide friendly error message to say that this type is not supported by rolldown.
       // Users should handle this type in load/transform hooks
       return Err(anyhow::format_err!("Unknown module type: {custom_type}"))?;
     }
   };
-  Ok((has_lazy_export, source, parsed_type))
+
+  Ok((has_lazy_export, source.into(), module_type.into()))
 }

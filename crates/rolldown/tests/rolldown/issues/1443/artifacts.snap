@@ -8,8 +8,13 @@ snapshot_kind: text
 
 ```js
 
+
 //#region main.js
-module.exports = (mod) => require(mod);
+var require_main = __commonJS({ "main.js"(exports, module) {
+	module.exports = (mod) => __require(mod);
+} });
 
 //#endregion
+export default require_main();
+
 ```

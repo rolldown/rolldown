@@ -42,15 +42,16 @@ console.log({
 ### rolldown
 ```js
 
+
 //#region entry.ts
 const ab = Math.random() < .5 ? "a.ts" : "b.ts";
 console.log({
 	concat: {
-		require: require("./src/" + ab),
+		require: __require("./src/" + ab),
 		import: import("./src/" + ab)
 	},
 	template: {
-		require: require(`./src/${ab}`),
+		require: __require(`./src/${ab}`),
 		import: import(`./src/${ab}`)
 	}
 });
@@ -80,13 +81,13 @@ console.log({
      concat: {
 -        require: globRequire_src("./src/" + ab),
 -        import: globImport_src("./src/" + ab)
-+        require: require("./src/" + ab),
++        require: __require("./src/" + ab),
 +        import: import("./src/" + ab)
      },
      template: {
 -        require: globRequire_src(`./src/${ab}`),
 -        import: globImport_src(`./src/${ab}`)
-+        require: require(`./src/${ab}`),
++        require: __require(`./src/${ab}`),
 +        import: import(`./src/${ab}`)
      }
  });

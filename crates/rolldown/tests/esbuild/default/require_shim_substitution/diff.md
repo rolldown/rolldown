@@ -41,16 +41,16 @@ var require_example = __commonJS({ "example.json"(exports, module) {
 //#region entry.js
 var require_entry = __commonJS({ "entry.js"(exports, module) {
 	console.log([
-		require,
-		typeof require,
+		__require,
+		typeof __require,
 		require_example(),
 		require_example(),
-		require(window.SOME_PATH),
+		__require(window.SOME_PATH),
 		module.require("./example.json"),
 		module.require("./example.json", { type: "json" }),
 		module.require(window.SOME_PATH),
-		require.resolve("some-path"),
-		require.resolve(window.SOME_PATH),
+		__require.resolve("some-path"),
+		__require.resolve(window.SOME_PATH),
 		import("some-path"),
 		import(window.SOME_PATH)
 	]);
@@ -81,9 +81,9 @@ export default require_entry();
 -}), __require(window.SOME_PATH), __require.resolve("some-path"), __require.resolve(window.SOME_PATH), Promise.resolve().then(() => __toESM(__require("some-path"))), Promise.resolve().then(() => __toESM(__require(window.SOME_PATH)))]);
 +var require_entry = __commonJS({
 +    "entry.js"(exports, module) {
-+        console.log([require, typeof require, require_example(), require_example(), require(window.SOME_PATH), module.require("./example.json"), module.require("./example.json", {
++        console.log([__require, typeof __require, require_example(), require_example(), __require(window.SOME_PATH), module.require("./example.json"), module.require("./example.json", {
 +            type: "json"
-+        }), module.require(window.SOME_PATH), require.resolve("some-path"), require.resolve(window.SOME_PATH), import("some-path"), import(window.SOME_PATH)]);
++        }), module.require(window.SOME_PATH), __require.resolve("some-path"), __require.resolve(window.SOME_PATH), import("some-path"), import(window.SOME_PATH)]);
 +    }
 +});
 +export default require_entry();

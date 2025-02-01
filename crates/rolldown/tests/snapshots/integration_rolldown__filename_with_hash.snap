@@ -662,7 +662,7 @@ snapshot_kind: text
 
 # tests/esbuild/default/comment_preservation
 
-- entry-!~{000}~.js => entry-CHabtxwx.js
+- entry-!~{000}~.js => entry-BLYKYpG0.js
 
 # tests/esbuild/default/comment_preservation_import_assertions
 
@@ -688,7 +688,7 @@ snapshot_kind: text
 
 # tests/esbuild/default/conditional_require
 
-- a-!~{000}~.js => a-B5Im-XCp.js
+- a-!~{000}~.js => a-B3Vgs8Jd.js
 
 # tests/esbuild/default/conditional_require_resolve
 
@@ -989,11 +989,12 @@ snapshot_kind: text
 
 # tests/esbuild/default/indirect_require_message
 
-- array-!~{000}~.js => array-PRA5m8cP.js
-- assign-!~{001}~.js => assign-DkKJUPx0.js
-- dot-!~{002}~.js => dot-CZAelQ5U.js
-- ident-!~{003}~.js => ident-DMZMus6O.js
-- index-!~{004}~.js => index-BSWyiIvG.js
+- array-!~{000}~.js => array-LoiudQWf.js
+- assign-!~{001}~.js => assign-eOrMrnVP.js
+- dot-!~{002}~.js => dot-Br42va6J.js
+- ident-!~{003}~.js => ident-B1HJLpL8.js
+- index-!~{004}~.js => index-DJbzzyRN.js
+- chunk-!~{005}~.js => chunk-B5lYRaq2.js
 
 # tests/esbuild/default/inject
 
@@ -1221,7 +1222,7 @@ snapshot_kind: text
 
 # tests/esbuild/default/mangle_props_import_export
 
-- cjs-!~{001}~.js => cjs-BKOWxals.js
+- cjs-!~{001}~.js => cjs-BG8cXPKz.js
 - esm-!~{000}~.js => esm-C-hv133d.js
 
 # tests/esbuild/default/mangle_props_import_export_bundled
@@ -1339,13 +1340,13 @@ snapshot_kind: text
 
 # tests/esbuild/default/metafile_no_bundle
 
-- entry-!~{000}~.js => entry-BZAAYL7y.js
 - entry-!~{001}~.js => entry-DC4KoLXg.js
+- entry-!~{000}~.js => entry-f3dAB3Ay.js
 - entry2.css
 
 # tests/esbuild/default/metafile_various_cases
 
-- entry-!~{000}~.js => entry-BSgrZkE_.js
+- entry-!~{000}~.js => entry-BZesd-ZX.js
 - entry-!~{001}~.js => entry-DXek17jk.js
 - copy-!~{002}~.js => copy-BVWTGkKt.js
 - dynamic-!~{005}~.js => dynamic-CZVXMYjb.js
@@ -1424,7 +1425,7 @@ snapshot_kind: text
 
 # tests/esbuild/default/nested_require_without_call
 
-- entry-!~{000}~.js => entry-BQShblgX.js
+- entry-!~{000}~.js => entry-BOKTK1vg.js
 
 # tests/esbuild/default/nested_scope_bug
 
@@ -1542,11 +1543,11 @@ snapshot_kind: text
 
 # tests/esbuild/default/require_and_dynamic_import_invalid_template
 
-- entry-!~{000}~.js => entry-ZzOxb9wG.js
+- entry-!~{000}~.js => entry-DgC8eIlN.js
 
 # tests/esbuild/default/require_bad_argument_count
 
-- entry-!~{000}~.js => entry-6PgEATvh.js
+- entry-!~{000}~.js => entry-BFJkwjfl.js
 
 # tests/esbuild/default/require_child_dir_common_js
 
@@ -1558,7 +1559,7 @@ snapshot_kind: text
 
 # tests/esbuild/default/require_fs_browser
 
-- entry-!~{000}~.js => entry-DS_BkQpo.js
+- entry-!~{000}~.js => entry-Fn6YYR1E.js
 
 # tests/esbuild/default/require_fs_node
 
@@ -1594,7 +1595,7 @@ snapshot_kind: text
 
 # tests/esbuild/default/require_shim_substitution
 
-- entry-!~{000}~.js => entry-CEQ3L27e.js
+- entry-!~{000}~.js => entry-q2vj5Na2.js
 
 # tests/esbuild/default/require_txt
 
@@ -1602,7 +1603,7 @@ snapshot_kind: text
 
 # tests/esbuild/default/require_with_call_inside_try
 
-- entry-!~{000}~.js => entry-D4Fjss_B.js
+- entry-!~{000}~.js => entry-Cy-iUYLJ.js
 
 # tests/esbuild/default/require_with_template
 
@@ -1610,11 +1611,11 @@ snapshot_kind: text
 
 # tests/esbuild/default/require_without_call
 
-- entry-!~{000}~.js => entry-BGq7YCO2.js
+- entry-!~{000}~.js => entry-DhuqZScY.js
 
 # tests/esbuild/default/require_without_call_inside_try
 
-- entry-!~{000}~.js => entry-DiITcSSM.js
+- entry-!~{000}~.js => entry-BOnyC4JG.js
 
 # tests/esbuild/default/reserve_props
 
@@ -1832,15 +1833,15 @@ snapshot_kind: text
 
 # tests/esbuild/glob/glob_wildcard_slash
 
-- entry-!~{000}~.js => entry-DiE9Vlt6.js
+- entry-!~{000}~.js => entry-OxuffewU.js
 
 # tests/esbuild/glob/ts_glob_basic_no_splitting
 
-- entry-!~{000}~.js => entry-muPYu2iY.js
+- entry-!~{000}~.js => entry-sPdn8rCt.js
 
 # tests/esbuild/glob/ts_glob_basic_splitting
 
-- entry-!~{000}~.js => entry-muPYu2iY.js
+- entry-!~{000}~.js => entry-sPdn8rCt.js
 
 # tests/esbuild/importstar/export_other_as_namespace_common_js
 
@@ -2912,7 +2913,7 @@ snapshot_kind: text
 
 # tests/esbuild/packagejson/package_json_browser_issue2002_b
 
-- entry-!~{000}~.js => entry-CsXjuZaE.js
+- entry-!~{000}~.js => entry-CzCCcpuD.js
 
 # tests/esbuild/packagejson/package_json_browser_issue2002_c
 
@@ -4486,7 +4487,7 @@ snapshot_kind: text
 
 # tests/rolldown/issues/1443
 
-- main-!~{000}~.js => main-ajr17aug.js
+- main-!~{000}~.js => main-BA5Kmp3r.js
 
 # tests/rolldown/issues/1722/1
 
@@ -4683,7 +4684,7 @@ snapshot_kind: text
 
 # tests/rolldown/misc/require_deconflict
 
-- main-!~{000}~.js => main-jIhBklo0.js
+- main-!~{000}~.js => main-ssQUVTO5.js
 
 # tests/rolldown/misc/use_strict/allow_parse_non_strict_code_in_cjs_format
 

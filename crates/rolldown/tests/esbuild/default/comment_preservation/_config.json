@@ -1,6 +1,7 @@
 {
   "expectExecuted": false,
   "config": {
+    "format": "cjs",
     "input": [
       {
         "name": "entry",

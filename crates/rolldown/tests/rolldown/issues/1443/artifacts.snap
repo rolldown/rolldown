@@ -1,5 +1,6 @@
 ---
 source: crates/rolldown_testing/src/integration_test.rs
+snapshot_kind: text
 ---
 # Assets
 
@@ -7,13 +8,8 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```js
 
-
 //#region main.js
-var require_main = __commonJS({ "main.js"(exports, module) {
-	module.exports = (mod) => require(mod);
-} });
+module.exports = (mod) => require(mod);
 
 //#endregion
-export default require_main();
-
 ```

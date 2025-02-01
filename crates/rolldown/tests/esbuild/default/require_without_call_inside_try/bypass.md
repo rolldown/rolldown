@@ -1,5 +1,5 @@
 # Reason
-1. should rewrite `require`
+1. esbuild will extract var decl, rolldown will not, this is trivial diff
 # Diff
 ## /out.js
 ### esbuild
@@ -17,10 +17,11 @@ var aliasedRequire;
 ### rolldown
 ```js
 
+
 //#region entry.js
 try {
 	oldLocale = globalLocale._abbr;
-	var aliasedRequire = require;
+	var aliasedRequire = __require;
 	aliasedRequire("./locale/" + name);
 	getSetGlobalLocale(oldLocale);
 } catch (e) {}
@@ -36,7 +37,7 @@ try {
  try {
      oldLocale = globalLocale._abbr;
 -    aliasedRequire = __require;
-+    var aliasedRequire = require;
++    var aliasedRequire = __require;
      aliasedRequire("./locale/" + name);
      getSetGlobalLocale(oldLocale);
  } catch (e) {}

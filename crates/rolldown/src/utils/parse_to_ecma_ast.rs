@@ -35,7 +35,6 @@ pub struct ParseToEcmaAstResult {
   pub warning: Vec<BuildDiagnostic>,
 }
 
-#[allow(clippy::too_many_arguments)]
 pub fn parse_to_ecma_ast(
   ctx: &CreateModuleContext<'_>,
   source: StrOrBytes,
@@ -94,8 +93,8 @@ pub fn parse_to_ecma_ast(
 
   PreProcessEcmaAst::default().build(
     ecma_ast,
-    &parsed_type,
     stable_id,
+    &parsed_type,
     replace_global_define_config.as_ref(),
     options,
     has_lazy_export,

@@ -11,6 +11,7 @@ use oxc_ecmascript::ToJsString;
 use rolldown_common::{
   dynamic_import_usage::DynamicImportExportsUsage, generate_replace_this_expr_map,
   EcmaModuleAstUsage, ImportKind, ImportRecordMeta, StmtInfoMeta, ThisExprReplaceKind,
+  RUNTIME_MODULE_ID,
 };
 use rolldown_ecmascript::ToSourceString;
 use rolldown_error::BuildDiagnostic;
@@ -298,9 +299,8 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
               Some(_) => true,
               _ => false,
             };
-            // TODO: the id should be `rolldown:runtime`
             // should not replace require in `runtime` code
-            if is_dummy_record && self.id.as_ref() != "runtime" {
+            if is_dummy_record && self.id.as_ref() != RUNTIME_MODULE_ID {
               let import_rec_idx = self.add_import_record(
                 "",
                 ImportKind::Require,

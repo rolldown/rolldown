@@ -119,7 +119,6 @@ pub fn finalize_assets(
         asset.preliminary_filename.as_str(),
         &final_hashes_by_placeholder,
       )
-      .into_owned()
       .into();
 
       if let InstantiationKind::Ecma(ecma_meta) = &mut asset.kind {

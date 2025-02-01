@@ -186,11 +186,11 @@ impl ModuleTask {
       }
     }
 
-    let repr_name = self.resolved_id.id.as_path().representative_file_name().into_owned();
-    let repr_name = legitimize_identifier_name(&repr_name);
+    let repr_name = self.resolved_id.id.as_path().representative_file_name();
+    let repr_name = legitimize_identifier_name(&repr_name).into_owned();
 
     let module = NormalModule {
-      repr_name: repr_name.into_owned(),
+      repr_name,
       stable_id,
       id,
       debug_id: self.resolved_id.debug_id(&self.ctx.options.cwd),

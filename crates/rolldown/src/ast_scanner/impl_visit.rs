@@ -298,7 +298,9 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
               Some(_) => true,
               _ => false,
             };
-            if is_dummy_record {
+            // TODO: the id should be `rolldown:runtime`
+            // should not replace require in `runtime` code
+            if is_dummy_record && self.id.as_ref() != "runtime" {
               let import_rec_idx = self.add_import_record(
                 "",
                 ImportKind::Require,

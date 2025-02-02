@@ -463,7 +463,7 @@ for (a in b);
 for (a in b);
 for (a of b);
 for (a of b);
-a;
+if (a);
 with(a);
 while (a);
 do;
@@ -926,7 +926,7 @@ switch (a) {}
 +for (a in b);
 +for (a of b);
 +for (a of b);
-+a;
++if (a);
 +with(a);
 +while (a);
 +do;

@@ -66,7 +66,7 @@ impl<'ast> BindingPatternExt<'ast> for ast::BindingPattern<'ast> {
                 ast::AssignmentTargetProperty::AssignmentTargetPropertyIdentifier(
                   ast::AssignmentTargetPropertyIdentifier {
                     binding: ast::IdentifierReference {
-                      name: assign_pat.left.get_identifier().unwrap(),
+                      name: assign_pat.left.get_identifier_name().unwrap(),
                       ..TakeIn::dummy(alloc)
                     },
                     init: Some(assign_pat.right),

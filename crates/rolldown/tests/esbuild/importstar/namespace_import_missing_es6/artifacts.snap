@@ -1,5 +1,6 @@
 ---
 source: crates/rolldown_testing/src/integration_test.rs
+snapshot_kind: text
 ---
 # warnings
 
@@ -31,7 +32,7 @@ const x = 123;
 //#endregion
 //#region entry.js
 assert.deepEqual(foo_exports, { x: 123 });
-assert.equal(void 0, undefined);
+assert.equal(void 0, void 0);
 
 //#endregion
 ```

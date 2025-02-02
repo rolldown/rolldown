@@ -4,7 +4,7 @@ import assert from "node:assert";
 console.log("production");
 assert.strictEqual("production", "production");
 (function(process) {
-	assert.strictEqual(process.env.NODE_ENV, undefined);
+	assert.strictEqual(process.env.NODE_ENV, void 0);
 })({ env: {} });
 
 //#endregion

@@ -9,7 +9,7 @@ snapshot_kind: text
 ```js
 
 //#region entry.js
-console.log(require("url").pathToFileURL(__filename).href, undefined);
+console.log(require("url").pathToFileURL(__filename).href, void 0);
 
 //#endregion
 ```

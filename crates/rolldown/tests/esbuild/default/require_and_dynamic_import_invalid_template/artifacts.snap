@@ -1,5 +1,6 @@
 ---
 source: crates/rolldown_testing/src/integration_test.rs
+snapshot_kind: text
 ---
 # Assets
 
@@ -7,12 +8,13 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```js
 
+
 //#region entry.js
-require(tag`./b`);
-require(`./${b}`);
+__require(tag`./b`);
+__require(`./${b}`);
 try {
-	require(tag`./b`);
-	require(`./${b}`);
+	__require(tag`./b`);
+	__require(`./${b}`);
 } catch {}
 (async () => {
 	import(tag`./b`);

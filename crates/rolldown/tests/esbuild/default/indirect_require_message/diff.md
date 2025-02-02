@@ -8,9 +8,10 @@
 ```
 ### rolldown
 ```js
+import { __require } from "./chunk.js";
 
 //#region array.js
-let x = [require];
+let x = [__require];
 
 //#endregion
 ```
@@ -19,8 +20,9 @@ let x = [require];
 ===================================================================
 --- esbuild	/out/array.js
 +++ rolldown	array.js
-@@ -0,0 +1,1 @@
-+var x = [require];
+@@ -0,0 +1,2 @@
++import {__require} from "./chunk.js";
++var x = [__require];
 
 ```
 ## /out/assign.js
@@ -31,6 +33,7 @@ __require = x;
 ```
 ### rolldown
 ```js
+import { __require } from "./chunk.js";
 
 //#region assign.js
 require = x;
@@ -42,8 +45,9 @@ require = x;
 ===================================================================
 --- esbuild	/out/assign.js
 +++ rolldown	assign.js
-@@ -1,1 +1,1 @@
+@@ -1,1 +1,2 @@
 -__require = x;
++import {__require} from "./chunk.js";
 +require = x;
 
 ```
@@ -55,9 +59,10 @@ var x = __require.cache;
 ```
 ### rolldown
 ```js
+import { __require } from "./chunk.js";
 
 //#region dot.js
-let x = require.cache;
+let x = __require.cache;
 
 //#endregion
 ```
@@ -66,9 +71,9 @@ let x = require.cache;
 ===================================================================
 --- esbuild	/out/dot.js
 +++ rolldown	dot.js
-@@ -1,1 +1,1 @@
--var x = __require.cache;
-+var x = require.cache;
+@@ -1,1 +1,2 @@
++import {__require} from "./chunk.js";
+ var x = __require.cache;
 
 ```
 ## /out/ident.js
@@ -78,9 +83,10 @@ let x = require.cache;
 ```
 ### rolldown
 ```js
+import { __require } from "./chunk.js";
 
 //#region ident.js
-let x = require;
+let x = __require;
 
 //#endregion
 ```
@@ -89,8 +95,9 @@ let x = require;
 ===================================================================
 --- esbuild	/out/ident.js
 +++ rolldown	ident.js
-@@ -0,0 +1,1 @@
-+var x = require;
+@@ -0,0 +1,2 @@
++import {__require} from "./chunk.js";
++var x = __require;
 
 ```
 ## /out/index.js
@@ -101,9 +108,10 @@ var x = __require[cache];
 ```
 ### rolldown
 ```js
+import { __require } from "./chunk.js";
 
 //#region index.js
-let x = require[cache];
+let x = __require[cache];
 
 //#endregion
 ```
@@ -112,8 +120,8 @@ let x = require[cache];
 ===================================================================
 --- esbuild	/out/index.js
 +++ rolldown	index.js
-@@ -1,1 +1,1 @@
--var x = __require[cache];
-+var x = require[cache];
+@@ -1,1 +1,2 @@
++import {__require} from "./chunk.js";
+ var x = __require[cache];
 
 ```

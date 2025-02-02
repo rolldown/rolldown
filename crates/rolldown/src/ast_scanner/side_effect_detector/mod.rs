@@ -4,7 +4,7 @@ use crate::ast_scanner::side_effect_detector::utils::{
 use oxc::ast::ast::{
   self, Argument, ArrayExpressionElement, AssignmentTarget, AssignmentTargetPattern,
   BindingPatternKind, CallExpression, ChainElement, Comment, Expression, IdentifierReference,
-  PropertyKey, VariableDeclarationKind,
+  PropertyKey, UnaryOperator, VariableDeclarationKind,
 };
 use oxc::ast::{match_expression, match_member_expression};
 use oxc::semantic::SymbolTable;
@@ -74,7 +74,7 @@ impl<'a> SideEffectDetector<'a> {
   }
 
   /// ref: https://github.com/evanw/esbuild/blob/360d47230813e67d0312ad754cad2b6ee09b151b/internal/js_ast/js_ast_helpers.go#L2298-L2393
-  fn detect_side_effect_of_class(&mut self, cls: &ast::Class) -> bool {
+  fn detect_side_effect_of_class(&self, cls: &ast::Class) -> bool {
     use oxc::ast::ast::ClassElement;
     if !cls.decorators.is_empty() {
       return true;
@@ -149,7 +149,7 @@ impl<'a> SideEffectDetector<'a> {
     }
   }
 
-  fn detect_side_effect_of_call_expr(&mut self, expr: &CallExpression) -> bool {
+  fn detect_side_effect_of_call_expr(&self, expr: &CallExpression) -> bool {
     let is_pure = !self.ignore_annotations && self.is_pure_function_or_constructor_call(expr.span);
     if is_pure {
       expr.arguments.iter().any(|arg| match arg {
@@ -162,7 +162,7 @@ impl<'a> SideEffectDetector<'a> {
   }
 
   #[allow(clippy::too_many_lines)]
-  fn detect_side_effect_of_expr(&mut self, expr: &Expression) -> bool {
+  fn detect_side_effect_of_expr(&self, expr: &Expression) -> bool {
     match expr {
       Expression::BooleanLiteral(_)
       | Expression::NullLiteral(_)
@@ -363,7 +363,7 @@ impl<'a> SideEffectDetector<'a> {
     }
   }
 
-  fn detect_side_effect_of_array_expr(&mut self, expr: &ast::ArrayExpression<'_>) -> bool {
+  fn detect_side_effect_of_array_expr(&self, expr: &ast::ArrayExpression<'_>) -> bool {
     expr.elements.iter().any(|elem| match elem {
       ArrayExpressionElement::SpreadElement(ele) => {
         // https://github.com/evanw/esbuild/blob/d34e79e2a998c21bb71d57b92b0017ca11756912/internal/js_ast/js_ast_helpers.go#L2466-L2477
@@ -380,7 +380,7 @@ impl<'a> SideEffectDetector<'a> {
     })
   }
 
-  fn detect_side_effect_of_var_decl(&mut self, var_decl: &ast::VariableDeclaration) -> bool {
+  fn detect_side_effect_of_var_decl(&self, var_decl: &ast::VariableDeclaration) -> bool {
     match var_decl.kind {
       VariableDeclarationKind::AwaitUsing => true,
       VariableDeclarationKind::Using => {
@@ -424,7 +424,7 @@ impl<'a> SideEffectDetector<'a> {
     }
   }
 
-  fn detect_side_effect_of_decl(&mut self, decl: &ast::Declaration) -> bool {
+  fn detect_side_effect_of_decl(&self, decl: &ast::Declaration) -> bool {
     use oxc::ast::ast::Declaration;
     match decl {
       Declaration::VariableDeclaration(var_decl) => self.detect_side_effect_of_var_decl(var_decl),
@@ -446,8 +446,11 @@ impl<'a> SideEffectDetector<'a> {
       decl.init.as_ref().is_some_and(|init| match init {
         Expression::NullLiteral(_) => false,
         // Side effect detection of identifier is different with other position when as initialization of using declaration.
-        // Only global variable `undefined` is considered as side effect free.
+        // Global variable `undefined` is considered as side effect free.
         Expression::Identifier(id) => !(id.name == "undefined" && self.is_unresolved_reference(id)),
+        Expression::UnaryExpression(expr) if matches!(expr.operator, UnaryOperator::Void) => {
+          self.detect_side_effect_of_expr(&expr.argument)
+        }
         _ => true,
       })
     })
@@ -459,7 +462,7 @@ impl<'a> SideEffectDetector<'a> {
   }
 
   #[allow(clippy::too_many_lines)]
-  pub fn detect_side_effect_of_stmt(&mut self, stmt: &ast::Statement) -> bool {
+  pub fn detect_side_effect_of_stmt(&self, stmt: &ast::Statement) -> bool {
     use oxc::ast::ast::Statement;
     match stmt {
       oxc::ast::match_declaration!(Statement) => {
@@ -556,7 +559,7 @@ impl<'a> SideEffectDetector<'a> {
     }
   }
 
-  fn detect_side_effect_of_block(&mut self, block: &ast::BlockStatement) -> bool {
+  fn detect_side_effect_of_block(&self, block: &ast::BlockStatement) -> bool {
     block.body.iter().any(|stmt| self.detect_side_effect_of_stmt(stmt))
   }
 }
@@ -870,6 +873,9 @@ mod test {
   #[test]
   fn test_side_effects_free_global_variable_ref() {
     assert!(!get_statements_side_effect("let a = undefined"));
+    assert!(!get_statements_side_effect("let a = void 0"));
+    assert!(!get_statements_side_effect("using undef_remove = void 0;"));
+    assert!(get_statements_side_effect("using undef_keep = void test();"));
     assert!(!get_statements_side_effect("let a = NaN"));
     assert!(!get_statements_side_effect("let a = String"));
     assert!(!get_statements_side_effect("let a = Object.assign"));
@@ -891,6 +897,27 @@ mod test {
     assert!(!get_statements_side_effect("const of = { [1]: 'hi'}"));
     assert!(!get_statements_side_effect("const of = { [-1]: 'hi'}"));
     assert!(!get_statements_side_effect("const of = { [+1]: 'hi'}"));
+    assert!(!get_statements_side_effect("let remove = { [void 0]: 'x' };"));
+    assert!(get_statements_side_effect("let keep = { [void test()]: 'x' };"));
     assert!(get_statements_side_effect("const of = { [{}]: 'hi'}"));
+  }
+
+  #[test]
+  fn test_class_expr() {
+    assert!(!get_statements_side_effect(
+      r"
+let remove14 = class {
+	static [undefined] = 'x';
+}
+
+let remove15 = class {
+	static [void 0] = 'x';
+}
+
+let remove15 = class {
+	[void 0] = 'x';
+}
+    "
+    ));
   }
 }

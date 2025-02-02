@@ -21,7 +21,7 @@ impl BindingTransformPluginContext {
   }
 
   #[napi]
-  pub fn inner(&self) -> BindingPluginContext {
+  pub fn inner_ctx(&self) -> BindingPluginContext {
     self.inner.inner.clone().into()
   }
 }

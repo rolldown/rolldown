@@ -1,4 +1,5 @@
 import { defineConfig } from 'rolldown'
+import * as fs from 'fs'
 
 export default defineConfig({
   input: './index.js',
@@ -8,18 +9,34 @@ export default defineConfig({
     // aligns with Vite in the future.
     conditionNames: ['import'],
   },
+  // plugins: [
+  //   {
+  //     name: "test-plugin1",
+  //     load: function (id) {
+  //       throw new Error('load error')
+  //     },
+  //   },
+  //   {
+  //     name: "test-plugin",
+  //     outputOptions: function (options) {
+  //       options.banner = "/* banner */";
+  //       return options;
+  //     },
+  //   },
+  //   {
+  //     name: "test-plugin2",
+  //     outputOptions: function (options) {
+  //       options.banner = "/* banner */";
+  //       return options;
+  //     },
+  //   },
+  // ],
   output: {
-    plugins: [
-      {
-        name: 'test-plugin',
-        outputOptions: function (options) {
-          options.banner = '/* banner */'
-          return options
-        },
-      },
-    ],
+    exports: 'named',
+    format: 'iife',
+    esModule: 'if-default-prop',
   },
-  experimental: {
-    enableComposingJsPlugins: true,
-  },
+  // experimental: {
+  //   enableComposingJsPlugins: true,
+  // },
 })

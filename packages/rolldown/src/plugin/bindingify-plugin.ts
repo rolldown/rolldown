@@ -203,7 +203,7 @@ function wrapHandlers(plugin: BindingPluginOptions): BindingPluginOptions {
     if (handler) {
       plugin[hookName] = async (...args: any[]) => {
         try {
-          return await handler(...args)
+          return await handler(...args.flat())
         } catch (e: any) {
           return error(
             logPluginError(e, plugin.name, {

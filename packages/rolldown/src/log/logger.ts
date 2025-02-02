@@ -28,11 +28,9 @@ export function getLogger(
   logLevel: LogLevelOption,
 ): LogHandler {
   const minimalPriority = logLevelPriority[logLevel]
-  const logger = (
-    level: LogLevel,
-    log: RollupLog,
-    skipped: ReadonlySet<Plugin> = new Set(),
-  ) => {
+  const logger = (...args: any) => {
+    const [level, log, skipped]: [LogLevel, RollupLog, ReadonlySet<Plugin>] =
+      args[0]
     const logPriority = logLevelPriority[level]
     if (logPriority < minimalPriority) {
       return
@@ -150,7 +148,9 @@ const getExtendedLogMessage = (log: RollupLog): string => {
     prefix += `(${log.plugin} plugin) `
   }
   if (log.loc) {
-    prefix += `${relativeId(log.loc.file!)} (${log.loc.line}:${log.loc.column}) `
+    prefix += `${relativeId(log.loc.file!)} (${log.loc.line}:${
+      log.loc.column
+    }) `
   }
 
   return prefix + log.message

@@ -238,7 +238,7 @@ export function bindingifyTransform(
       const ret = await handler.call(
         new TransformPluginContext(
           args.outputOptions,
-          ctx.inner(),
+          ctx.innerCtx(),
           args.plugin,
           args.pluginContextData,
           ctx,

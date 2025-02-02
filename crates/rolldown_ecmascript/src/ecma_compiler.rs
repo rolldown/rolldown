@@ -121,7 +121,7 @@ impl EcmaCompiler {
         minify: true,
         ..CodegenOptions::default()
       })
-      .with_mangler(ret.mangler)
+      .with_symbol_table(ret.symbol_table)
       .build(program);
     (ret.code, ret.map)
   }

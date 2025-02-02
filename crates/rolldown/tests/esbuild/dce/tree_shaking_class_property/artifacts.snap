@@ -1,5 +1,6 @@
 ---
 source: crates/rolldown_testing/src/integration_test.rs
+snapshot_kind: text
 ---
 # Assets
 
@@ -8,6 +9,9 @@ source: crates/rolldown_testing/src/integration_test.rs
 ```js
 
 //#region entry.js
+let remove14 = class {
+	[void 0] = "x";
+};
 let keep1 = class {
 	[x] = "x";
 };

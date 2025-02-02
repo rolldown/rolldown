@@ -22,7 +22,7 @@ Object.defineProperty(exports, '__esModule', { value: true });
 
 
 //#region a.js
-const abc = undefined;
+const abc = void 0;
 
 //#endregion
 //#region b.js

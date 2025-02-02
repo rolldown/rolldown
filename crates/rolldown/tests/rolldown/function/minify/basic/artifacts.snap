@@ -14,8 +14,9 @@ import assert from"node:assert";const a$1="shared.js",a="index.js";assert.equal(
 # Sourcemap Visualizer
 
 ```
+- ../main.js
+(2:0) "const a = 'index.js'\n" --> (0:32) "const "
 - ../shared.js
-(0:0) "const " --> (0:32) "const "
 (0:6) "a = " --> (0:38) "a$1="
 (0:10) "'shared.js'\n" --> (0:42) "\"shared.js\","
 - ../main.js

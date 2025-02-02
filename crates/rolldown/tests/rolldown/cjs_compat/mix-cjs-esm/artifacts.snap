@@ -54,7 +54,7 @@ var import_cjs = __toESM(require_cjs());
 //#endregion
 //#region esm-import-cjs-require.js
 require_foo();
-assert.equal(import_cjs.a, undefined);
+assert.equal(import_cjs.a, void 0);
 
 //#endregion
 //# sourceMappingURL=main.js.map
@@ -81,7 +81,6 @@ assert.equal(import_cjs.a, undefined);
 (2:0) "require('./foo')\n" --> (54:0) "require_foo();\n"
 (3:0) "assert." --> (55:0) "assert."
 (3:7) "equal(" --> (55:7) "equal("
-(3:13) "a, " --> (55:13) "import_cjs.a, "
-(3:16) "undefined)" --> (55:27) "undefined)"
-(3:26) "\n" --> (55:37) ";\n"
+(3:13) "a, undefined)" --> (55:13) "import_cjs.a, void 0)"
+(3:26) "\n" --> (55:34) ";\n"
 ```

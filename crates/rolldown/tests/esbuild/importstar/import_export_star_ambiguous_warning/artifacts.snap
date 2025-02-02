@@ -1,5 +1,6 @@
 ---
 source: crates/rolldown_testing/src/integration_test.rs
+snapshot_kind: text
 ---
 # Assets
 
@@ -18,7 +19,7 @@ const z = 4;
 //#endregion
 //#region entry.js
 assert.equal(x, 1);
-assert.equal(void 0, undefined);
+assert.equal(void 0, void 0);
 assert.equal(z, 4);
 
 //#endregion

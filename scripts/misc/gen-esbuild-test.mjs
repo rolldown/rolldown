@@ -1,4 +1,4 @@
-import Parser from 'web-tree-sitter'
+import {Parser} from 'web-tree-sitter'
 // import Go from 'tree-sitter-go'
 import fs from 'fs-extra'
 import fsp from 'node:fs/promises'

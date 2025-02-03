@@ -2653,7 +2653,7 @@ snapshot_kind: text
 
 # tests/esbuild/lower/lower_nullish_coalescing_assignment_issue1493
 
-- entry-!~{000}~.js => entry-BCTeR0yx.js
+- entry-!~{000}~.js => entry-BRHcv4Ql.js
 
 # tests/esbuild/lower/lower_object_spread_no_bundle
 

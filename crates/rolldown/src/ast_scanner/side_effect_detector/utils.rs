@@ -258,15 +258,15 @@ pub fn is_primitive_literal(
     | Expression::StringLiteral(_)
     | Expression::BigIntLiteral(_) => true,
     // Include `+1` / `-1`.
-    Expression::UnaryExpression(e)
-      if matches!(e.operator, |UnaryOperator::UnaryNegation| UnaryOperator::UnaryPlus)
-        && matches!(e.argument, Expression::NumericLiteral(_)) =>
-    {
-      true
-    }
+    Expression::UnaryExpression(e) => match e.operator {
+      UnaryOperator::Void => is_primitive_literal(scope, &e.argument, symbol_table),
+      UnaryOperator::UnaryNegation | UnaryOperator::UnaryPlus => {
+        matches!(e.argument, Expression::NumericLiteral(_))
+      }
+      _ => false,
+    },
     Expression::Identifier(id)
-      if id.name == "undefined"
-        && scope.is_unresolved(id.reference_id.get().unwrap(), symbol_table) =>
+      if id.name == "undefined" && scope.is_unresolved(id.reference_id(), symbol_table) =>
     {
       true
     }

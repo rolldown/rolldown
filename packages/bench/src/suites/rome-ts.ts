@@ -5,6 +5,7 @@ import { REPO_ROOT, defineSuite } from '../utils'
 import { default as parallelBabelPlugin } from '../parallel-babel-plugin/index'
 import { babelPlugin } from '../parallel-babel-plugin/impl'
 import type { BenchSuite } from '../types'
+import { ExternalOption } from 'rolldown'
 
 const inputs = [nodePath.join(REPO_ROOT, './tmp/bench/rome/src/entry.ts')]
 
@@ -17,7 +18,7 @@ const rolldownOptionsForParallelism: BenchSuite['rolldownOptions'] = [
     name: 'js-single',
     options: {
       logLevel: 'silent',
-      external: builtinModules,
+      external: builtinModules as ExternalOption,
       // Need this due rome is not written with `isolatedModules: true`
       shimMissingExports: true,
       plugins: [babelPlugin()],
@@ -34,7 +35,7 @@ const rolldownOptionsForParallelism: BenchSuite['rolldownOptions'] = [
     name: 'js-parallel-babel',
     options: {
       logLevel: 'silent',
-      external: builtinModules,
+      external: builtinModules as ExternalOption,
       // Need this due rome is not written with `isolatedModules: true`
       shimMissingExports: true,
       plugins: [parallelBabelPlugin({})],
@@ -62,7 +63,7 @@ export const suiteRomeTs = defineSuite({
   esbuildOptions,
   rolldownOptions: {
     logLevel: 'silent',
-    external: builtinModules,
+    external: builtinModules as ExternalOption,
     // Need this due rome is not written with `isolatedModules: true`
     shimMissingExports: true,
     resolve: {

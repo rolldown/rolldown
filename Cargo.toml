@@ -138,9 +138,9 @@ jsonschema          = { version = "0.28.0", default-features = false }
 memchr              = "2.7.2"
 mimalloc            = "0.1.42"
 mime                = "0.3.17"
-napi                = { version = "3.0.0-alpha.24", features = ["async", "anyhow"] }
+napi                = { version = "3.0.0-alpha.27", features = ["async", "anyhow"] }
 napi-build          = { version = "2.1.4" }
-napi-derive         = { version = "3.0.0-alpha.22", default-features = false, features = ["type-def"] }
+napi-derive         = { version = "3.0.0-alpha.25", default-features = false, features = ["type-def"] }
 notify              = { version = "8.0.0" }
 phf                 = "0.11.2"
 rayon               = "1.10.0"

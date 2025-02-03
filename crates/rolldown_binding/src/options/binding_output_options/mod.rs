@@ -3,6 +3,7 @@ mod binding_pre_rendered_asset;
 mod binding_pre_rendered_chunk;
 use binding_pre_rendered_asset::BindingPreRenderedAsset;
 use derive_more::Debug;
+use napi::bindgen_prelude::FnArgs;
 use napi::Either;
 use napi_derive::napi;
 use rustc_hash::FxHashMap;
@@ -16,11 +17,14 @@ use crate::types::{
   js_callback::{JsCallback, MaybeAsyncJsCallback},
 };
 
-pub type AddonOutputOption = MaybeAsyncJsCallback<RenderedChunk, Option<String>>;
-pub type ChunkFileNamesOutputOption = Either<String, JsCallback<PreRenderedChunk, String>>;
-pub type AssetFileNamesOutputOption = Either<String, JsCallback<BindingPreRenderedAsset, String>>;
-pub type GlobalsOutputOption = Either<FxHashMap<String, String>, JsCallback<String, String>>;
-pub type SanitizeFileName = Either<bool, JsCallback<String, String>>;
+pub type AddonOutputOption = MaybeAsyncJsCallback<FnArgs<(RenderedChunk,)>, Option<String>>;
+pub type ChunkFileNamesOutputOption =
+  Either<String, JsCallback<FnArgs<(PreRenderedChunk,)>, String>>;
+pub type AssetFileNamesOutputOption =
+  Either<String, JsCallback<FnArgs<(BindingPreRenderedAsset,)>, String>>;
+pub type GlobalsOutputOption =
+  Either<FxHashMap<String, String>, JsCallback<FnArgs<(String,)>, String>>;
+pub type SanitizeFileName = Either<bool, JsCallback<FnArgs<(String,)>, String>>;
 
 #[napi(object, object_to_js = false)]
 #[derive(Debug)]
@@ -102,11 +106,11 @@ pub struct BindingOutputOptions {
   pub sourcemap: Option<String>,
   #[debug(skip)]
   #[napi(ts_type = "(source: string, sourcemapPath: string) => boolean")]
-  pub sourcemap_ignore_list: Option<JsCallback<(String, String), bool>>,
+  pub sourcemap_ignore_list: Option<JsCallback<FnArgs<(String, String)>, bool>>,
   pub sourcemap_debug_ids: Option<bool>,
   #[debug(skip)]
   #[napi(ts_type = "(source: string, sourcemapPath: string) => string")]
-  pub sourcemap_path_transform: Option<JsCallback<(String, String), String>>,
+  pub sourcemap_path_transform: Option<JsCallback<FnArgs<(String, String)>, String>>,
   // sourcemapExcludeSources: boolean;
   // sourcemapFile: string | undefined;
   // strict: boolean;

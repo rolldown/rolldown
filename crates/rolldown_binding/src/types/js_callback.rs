@@ -20,7 +20,7 @@ use rolldown_utils::debug::pretty_type_name;
 ///
 /// ### Sync
 ///
-/// - Rust: `JsCallback<(String, i32), i32>`
+/// - Rust: `JsCallback<FnArgs<(String, i32)>, i32>`
 /// - Js: `(a: string, b: number) => number`
 ///
 /// For `Option<T>` in params position, when you pass `None` in Rust, it will be `null` in Js. However, NAPI-RS generates
@@ -30,7 +30,7 @@ use rolldown_utils::debug::pretty_type_name;
 /// Ts compiler force you to write `return` statement explicitly. To avoid this, we introduce `VoidNullable<T>` in Js. It will
 /// expand to `T | null | undefined | void`.
 ///
-/// - Rust: `JsCallback<(Option<String>, i32), Option<i32>>`
+/// - Rust: `JsCallback<FnArgs<(Option<String>, i32)>, Option<i32>>`
 /// - Js: `(a: string | null | undefined, b: number) => number | null | undefined | void`
 /// - Js(Simplified): `(a: Nullable<string>, b: number) => VoidNullable<number>`
 ///
@@ -40,12 +40,12 @@ use rolldown_utils::debug::pretty_type_name;
 /// Ts compiler force you to add `Promise<T>` in the return type when you write async functions. So, you could consider they are
 /// just sync functions that return `Promise<T>`.
 ///
-/// - Rust: `JsCallback<(String, i32), Promise<i32>>`
+/// - Rust: `JsCallback<FnArgs<(String, i32)>, Promise<i32>>`
 /// - Js: `(a: string, b: number) => Promise<number>`
 ///
 /// ---
 ///
-/// - Rust: `JsCallback<(Option<String>, i32), Promise<Option<i32>>>`
+/// - Rust: `JsCallback<FnArgs<(Option<String>, i32)>, Promise<Option<i32>>>`
 /// - Js: `(a: string | null | undefined, b: number) => Promise<number | null | undefined | void>`
 /// - Js(Simplified): `(a: Nullable<string>, b: number) => Promise<VoidNullable<number>>`
 ///
@@ -56,21 +56,21 @@ use rolldown_utils::debug::pretty_type_name;
 ///
 /// Notice the order matters for rust types `Either<Promise<T>, T>` and `Either<T, Promise<T>>`. Always use `Either<Promise<T>, T>`.
 ///
-/// - Rust: `JsCallback<(String, i32), Either<Promise<i32>, i32>>`
-/// - Rust(Simplified): `MaybeAsyncJsCallback<(String, i32), i32>`
+/// - Rust: `JsCallback<FnArgs<(String, i32), Either<Promise<i32>>, i32>>`
+/// - Rust(Simplified): `MaybeAsyncJsCallback<FnArgs<(String, i32)>, i32>`
 /// - Js: `(a: string, b: number) => Promise<number> | number`
 /// - Js(Simplified): `(a: string, b: number) => MaybePromise<number>`
 ///
 /// ---
 ///
-/// - Rust: `JsCallback<(Option<String>, i32), Either<Promise<Option<i32>>, Option<i32>>`
-/// - Rust(Simplified): `MaybeAsyncJsCallback<(Option<String>, i32), Option<i32>>`
+/// - Rust: `JsCallback<FnArgs<(Option<String>, i32), Either<Promise<Option<i32>>>, Option<i32>>`
+/// - Rust(Simplified): `MaybeAsyncJsCallback<FnArgs<(Option<String>, i32)>, Option<i32>>`
 /// - Js: `(a: string | null | undefined, b: number) => Promise<number | null | undefined | void> | number | null | undefined | void`
 /// - Js(Simplified): `(a: Nullable<string>, b: number) => MaybePromise<VoidNullable<number>>`
 pub type JsCallback<Args, Ret> =
   Arc<ThreadsafeFunction<Args, Either<Ret, UnknownReturnValue>, Args, false, true>>;
 
-/// Shortcut for `JsCallback<..., Either<Promise<Ret>, Ret>>`, which could be simplified to `MaybeAsyncJsCallback<..., Ret>`.
+/// Shortcut for `JsCallback<FnArgs<..., Either<Promise<Ret>, Ret>>`, which could be simplified to `MaybeAsyncJsCallback<...>, Ret>`.
 pub type MaybeAsyncJsCallback<Args, Ret> = Arc<
   ThreadsafeFunction<
     Args,

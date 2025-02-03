@@ -242,7 +242,7 @@ impl<'ast> IsolatingModuleFinalizer<'_, 'ast> {
           match decl {
             ast::Declaration::VariableDeclaration(var_decl) => {
               self.generated_exports.extend(var_decl.declarations.iter().filter_map(|decl| {
-                decl.id.get_identifier().map(|ident| {
+                decl.id.get_identifier_name().map(|ident| {
                   self.snippet.object_property_kind_object_property(
                     ident.as_str(),
                     self.snippet.id_ref_expr(ident.as_str(), SPAN),

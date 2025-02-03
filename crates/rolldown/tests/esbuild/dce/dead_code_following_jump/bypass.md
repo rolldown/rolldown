@@ -90,14 +90,10 @@ function testBreak() {
 			y + z();
 			break;
 		}
-		if (FAIL) return FAIL;
-		if (x) {
-			var y;
-		}
 		function z() {
 			KEEP_ME();
 		}
-		return FAIL;
+		var y;
 	}
 }
 function testContinue() {
@@ -106,14 +102,10 @@ function testContinue() {
 			y + z();
 			continue;
 		}
-		if (FAIL) return FAIL;
-		if (x) {
-			var y;
-		}
 		function z() {
 			KEEP_ME();
 		}
-		return FAIL;
+		var y;
 	}
 }
 function testStmts() {
@@ -143,7 +135,7 @@ testStmts();
 ===================================================================
 --- esbuild	/out.js
 +++ rolldown	entry.js
-@@ -1,50 +1,53 @@
+@@ -1,50 +1,45 @@
  function testReturn() {
      return y + z();
 -    if (x) var y;
@@ -168,10 +160,6 @@ testStmts();
 +            y + z();
 +            break;
 +        }
-+        if (FAIL) return FAIL;
-+        if (x) {
-+            var y;
-+        }
 +        function z() {
              KEEP_ME();
 -        };
@@ -180,7 +168,7 @@ testStmts();
 -        break;
 -        if (x) var y;
 +        }
-+        return FAIL;
++        var y;
      }
  }
  function testContinue() {
@@ -191,10 +179,6 @@ testStmts();
 +            y + z();
 +            continue;
 +        }
-+        if (FAIL) return FAIL;
-+        if (x) {
-+            var y;
-+        }
 +        function z() {
              KEEP_ME();
 -        };
@@ -203,7 +187,7 @@ testStmts();
 -        continue;
 -        if (x) var y;
 +        }
-+        return FAIL;
++        var y;
      }
  }
  function testStmts() {

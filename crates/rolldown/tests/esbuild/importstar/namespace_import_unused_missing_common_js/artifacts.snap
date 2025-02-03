@@ -18,7 +18,7 @@ var import_foo = __toESM(require_foo());
 
 //#endregion
 //#region entry.js
-assert.equal(import_foo.foo, undefined);
+assert.equal(import_foo.foo, void 0);
 
 //#endregion
 ```

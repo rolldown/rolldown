@@ -33,7 +33,7 @@ assert.deepEqual(import_foo, {
 	default: { x: 123 },
 	x: 123
 });
-assert.equal(import_foo.foo, undefined);
+assert.equal(import_foo.foo, void 0);
 
 //#endregion
 ```

@@ -14,7 +14,7 @@ function foo() {
 	const y = 1;
 	console.log(x, x, y, y);
 }
-assert(foo() !== undefined);
+assert(foo() !== void 0);
 
 //#endregion
 ```
@@ -65,7 +65,7 @@ function nested() {
 	const REMOVE = 1;
 	x = [REMOVE, REMOVE];
 }
-assert(nested() !== undefined);
+assert(nested() !== void 0);
 
 //#endregion
 ```
@@ -102,7 +102,7 @@ function nested() {
 		return y_REMOVE;
 	}
 }
-assert(nested() !== undefined);
+assert(nested() !== void 0);
 
 //#endregion
 ```
@@ -116,7 +116,7 @@ function foo() {
 	const x = 0;
 	return f();
 }
-assert(foo() !== undefined);
+assert(foo() !== void 0);
 
 //#endregion
 ```
@@ -141,7 +141,7 @@ let ns;
 //#region nested-block.js
 {
 	const REMOVE_n = null;
-	const REMOVE_u = undefined;
+	const REMOVE_u = void 0;
 	const REMOVE_i = 1234567;
 	const REMOVE_f = 123.456;
 	const s_keep = "";
@@ -169,7 +169,7 @@ let ns;
 //#region nested-function.js
 function nested() {
 	const REMOVE_n = null;
-	const REMOVE_u = undefined;
+	const REMOVE_u = void 0;
 	const REMOVE_i = 1234567;
 	const REMOVE_f = 123.456;
 	const s_keep = "";
@@ -187,7 +187,7 @@ function nested() {
 		s_keep
 );
 }
-assert(nested() !== undefined);
+assert(nested() !== void 0);
 
 //#endregion
 ```
@@ -209,7 +209,7 @@ assert(nested() !== undefined);
 
 //#region top-level.js
 const n_keep = null;
-const u_keep = undefined;
+const u_keep = void 0;
 const i_keep = 1234567;
 const f_keep = 123.456;
 const s_keep = "";

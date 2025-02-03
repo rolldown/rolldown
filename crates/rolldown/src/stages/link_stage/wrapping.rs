@@ -32,7 +32,7 @@ fn wrap_module_recursively(ctx: &mut Context, target: ModuleIdx) {
     }
   }
 
-  module.import_records.iter().for_each(|importee| {
+  module.import_records.iter().filter(|item| !item.is_dummy()).for_each(|importee| {
     wrap_module_recursively(ctx, importee.resolved_module);
   });
 }

@@ -1,50 +1,63 @@
 ---
 source: crates/rolldown_testing/src/integration_test.rs
+snapshot_kind: text
 ---
 # Assets
 
 ## array.js
 
 ```js
+import { __require } from "./chunk.js";
 
 //#region array.js
-let x = [require];
+let x = [__require];
 
 //#endregion
 ```
 ## assign.js
 
 ```js
+import { __require } from "./chunk.js";
 
 //#region assign.js
 require = x;
 
 //#endregion
 ```
-## dot.js
+## chunk.js
 
 ```js
 
+
+export { __require };
+```
+## dot.js
+
+```js
+import { __require } from "./chunk.js";
+
 //#region dot.js
-let x = require.cache;
+let x = __require.cache;
 
 //#endregion
 ```
 ## ident.js
 
 ```js
+import { __require } from "./chunk.js";
 
 //#region ident.js
-let x = require;
+let x = __require;
 
 //#endregion
 ```
 ## index.js
 
 ```js
+import { __require } from "./chunk.js";
 
 //#region index.js
-let x = require[cache];
+let x = __require[cache];
 
 //#endregion
 ```

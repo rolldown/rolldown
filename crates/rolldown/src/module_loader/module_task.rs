@@ -15,9 +15,9 @@ use std::sync::Arc;
 use sugar_path::SugarPath;
 
 use rolldown_common::{
-  EcmaRelated, ImportKind, ImportRecordIdx, ImportRecordMeta, ModuleDefFormat, ModuleId, ModuleIdx,
-  ModuleInfo, ModuleLoaderMsg, ModuleType, NormalModule, NormalModuleTaskResult, RawImportRecord,
-  ResolvedId, StrOrBytes, RUNTIME_MODULE_ID,
+  ImportKind, ImportRecordIdx, ImportRecordMeta, ModuleDefFormat, ModuleId, ModuleIdx, ModuleInfo,
+  ModuleLoaderMsg, ModuleType, NormalModule, NormalModuleTaskResult, RawImportRecord, ResolvedId,
+  StrOrBytes, RUNTIME_MODULE_ID,
 };
 use rolldown_error::{
   BuildDiagnostic, BuildResult, DiagnosableArcstr, UnloadableDependencyContext,
@@ -113,32 +113,32 @@ impl ModuleTask {
     let (mut source, module_type) =
       self.load_source_phase(&mut sourcemap_chain, &mut hook_side_effects).await?;
 
-    let asset_view = if matches!(module_type, ModuleType::Asset) {
-      let asset_source = source.into_bytes();
-      source = StrOrBytes::Str(String::new());
-      Some(create_asset_view(asset_source.into()))
-    } else {
-      None
-    };
-
     let stable_id = id.stabilize(&self.ctx.options.cwd);
     let mut raw_import_records = IndexVec::default();
 
-    let css_view = if matches!(module_type, ModuleType::Css) {
-      let css_source: ArcStr = source.try_into_string()?.into();
-      // FIXME: This makes creating `EcmaView` rely on creating `CssView` first, while they should be done in parallel.
-      source = StrOrBytes::Str(String::new());
-      let create_ret = create_css_view(&stable_id, &css_source);
-      raw_import_records = create_ret.1;
-      Some(create_ret.0)
-    } else {
-      None
+    let (asset_view, css_view) = match module_type {
+      ModuleType::Asset => {
+        let asset_source = source.into_bytes();
+        let asset_view = create_asset_view(asset_source.into());
+        source = StrOrBytes::Str(String::new());
+        (Some(asset_view), None)
+      }
+      ModuleType::Css => {
+        let css_source: ArcStr = source.try_into_string()?.into();
+        // FIXME: This makes creating `EcmaView` rely on creating `CssView` first, while they should be done in parallel.
+        let (css_view, css_raw_import_records) = create_css_view(&stable_id, &css_source);
+        raw_import_records = css_raw_import_records;
+        source = StrOrBytes::Str(String::new());
+        (None, Some(css_view))
+      }
+      _ => (None, None),
     };
 
     let mut warnings = vec![];
 
     let ret = create_ecma_view(
       &mut CreateModuleContext {
+        stable_id: &stable_id,
         module_index: self.module_idx,
         plugin_driver: &self.ctx.plugin_driver,
         resolved_id: &self.resolved_id,
@@ -153,15 +153,12 @@ impl ModuleTask {
     .await?;
 
     let CreateEcmaViewReturn {
-      view: mut ecma_view,
-      ast,
-      symbols,
+      mut ecma_view,
+      ecma_related,
       raw_import_records: ecma_raw_import_records,
-      dynamic_import_rec_exports_usage,
-      ast_scope,
     } = ret;
 
-    if !matches!(module_type, ModuleType::Css) {
+    if css_view.is_none() {
       raw_import_records = ecma_raw_import_records;
     }
 
@@ -174,7 +171,7 @@ impl ModuleTask {
       )
       .await?;
 
-    if !matches!(module_type, ModuleType::Css) {
+    if css_view.is_none() {
       for (record, info) in raw_import_records.iter().zip(&resolved_deps) {
         match record.kind {
           ImportKind::Import | ImportKind::Require | ImportKind::NewUrl => {
@@ -189,11 +186,11 @@ impl ModuleTask {
       }
     }
 
-    let repr_name = self.resolved_id.id.as_path().representative_file_name().into_owned();
-    let repr_name = legitimize_identifier_name(&repr_name);
+    let repr_name = self.resolved_id.id.as_path().representative_file_name();
+    let repr_name = legitimize_identifier_name(&repr_name).into_owned();
 
     let module = NormalModule {
-      repr_name: repr_name.into_owned(),
+      repr_name,
       stable_id,
       id,
       debug_id: self.resolved_id.debug_id(&self.ctx.options.cwd),
@@ -211,26 +208,16 @@ impl ModuleTask {
     self.ctx.plugin_driver.module_parsed(Arc::clone(&module_info)).await?;
     self.ctx.plugin_driver.mark_context_load_modules_loaded(&module.id).await?;
 
-    if self
-      .ctx
-      .tx
-      .send(ModuleLoaderMsg::NormalModuleDone(NormalModuleTaskResult {
-        module: module.into(),
-        ecma_related: Some(EcmaRelated {
-          ast,
-          symbols,
-          dynamic_import_rec_exports_usage,
-          ast_scope,
-        }),
-        resolved_deps,
-        raw_import_records,
-        warnings,
-      }))
-      .await
-      .is_err()
-    {
-      // The main thread is dead, nothing we can do to handle these send failures.
-    }
+    let result = ModuleLoaderMsg::NormalModuleDone(NormalModuleTaskResult {
+      module: module.into(),
+      ecma_related: Some(ecma_related),
+      resolved_deps,
+      raw_import_records,
+      warnings,
+    });
+
+    // If the main thread is dead, nothing we can do to handle these send failures.
+    let _ = self.ctx.tx.send(result).await;
 
     Ok(())
   }

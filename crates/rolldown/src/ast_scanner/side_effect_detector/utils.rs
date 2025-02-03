@@ -281,34 +281,28 @@ pub fn extract_member_expr_chain<'a>(
   if max_len == 0 {
     return None;
   }
+
   let mut chain = vec![];
-  match expr {
+  let mut cur = match expr {
     MemberExpression::ComputedMemberExpression(computed_expr) => {
       let Expression::StringLiteral(ref str) = computed_expr.expression else {
         return None;
       };
       chain.push(str.value);
-      let mut cur = &computed_expr.object;
-      extract_rest_member_expr_chain(&mut cur, &mut chain, max_len).map(|ref_id| (ref_id, chain))
+      &computed_expr.object
     }
     MemberExpression::StaticMemberExpression(static_expr) => {
-      let mut cur = &static_expr.object;
       chain.push(static_expr.property.name);
-      extract_rest_member_expr_chain(&mut cur, &mut chain, max_len).map(|ref_id| (ref_id, chain))
+      &static_expr.object
     }
-    MemberExpression::PrivateFieldExpression(_) => None,
-  }
-}
+    MemberExpression::PrivateFieldExpression(_) => return None,
+  };
 
-fn extract_rest_member_expr_chain<'a>(
-  cur: &mut &'a Expression,
-  chain: &mut Vec<Atom<'a>>,
-  max_len: usize,
-) -> Option<ReferenceId> {
+  // extract_rest_member_expr_chain
   loop {
-    match &cur {
+    match cur {
       Expression::StaticMemberExpression(expr) => {
-        *cur = &expr.object;
+        cur = &expr.object;
         chain.push(expr.property.name);
       }
       Expression::ComputedMemberExpression(expr) => {
@@ -316,13 +310,13 @@ fn extract_rest_member_expr_chain<'a>(
           break;
         };
         chain.push(str.value);
-        *cur = &expr.object;
+        cur = &expr.object;
       }
       Expression::Identifier(ident) => {
         chain.push(ident.name);
         let ref_id = ident.reference_id.get().expect("should have reference_id");
         chain.reverse();
-        return Some(ref_id);
+        return Some((ref_id, chain));
       }
       _ => break,
     }

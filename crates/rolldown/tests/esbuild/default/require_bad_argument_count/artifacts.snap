@@ -36,10 +36,10 @@ snapshot_kind: text
 
 
 //#region entry.js
-require();
+__require();
 __require("a", "b");
 try {
-	require();
+	__require();
 	__require("a", "b");
 } catch {}
 

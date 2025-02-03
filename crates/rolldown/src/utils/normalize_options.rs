@@ -65,6 +65,27 @@ pub fn normalize_options(mut raw_options: crate::BundlerOptions) -> NormalizeOpt
     }
   }
 
+  // replace all `import.meta.*` with `undefined` for none `esm` format
+  // note: Any definition more specific than `import.meta.*` will be replace first
+  if !matches!(format, OutputFormat::Esm) {
+    match raw_define.entry("import.meta.*".to_string()) {
+      indexmap::map::Entry::Occupied(_occupied_entry) => {}
+      indexmap::map::Entry::Vacant(vacant_entry) => {
+        vacant_entry.insert("undefined".to_string());
+        // comment out when https://github.com/rolldown/rolldown/issues/3301 is finished
+        raw_define
+          .entry("import.meta.url".to_string())
+          .or_insert_with(|| "import.meta.url".to_string());
+        raw_define
+          .entry("import.meta.dirname".to_string())
+          .or_insert_with(|| "import.meta.dirname".to_string());
+        raw_define
+          .entry("import.meta.filename".to_string())
+          .or_insert_with(|| "import.meta.filename".to_string());
+      }
+    };
+  };
+
   let define = raw_define.into_iter().collect();
 
   // Take out resolve options
@@ -208,7 +229,7 @@ pub fn normalize_options(mut raw_options: crate::BundlerOptions) -> NormalizeOpt
     advanced_chunks: raw_options.advanced_chunks,
     checks: raw_options.checks.unwrap_or_default(),
     // https://github.com/evanw/esbuild/blob/d34e79e2a998c21bb71d57b92b0017ca11756912/internal/bundler/bundler.go#L2767
-    profiler_names: raw_options.profiler_names.unwrap_or(!raw_options.minify.unwrap_or(false)),
+    profiler_names: raw_options.profiler_names.unwrap_or(!minify),
     jsx: raw_options.jsx.unwrap_or_default(),
     watch: raw_options.watch.unwrap_or_default(),
     comments: raw_options.comments.unwrap_or(Comments::Preserve),

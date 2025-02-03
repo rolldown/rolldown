@@ -21,10 +21,6 @@
 - crates/rolldown/tests/esbuild/importstar/import_namespace_undefined_property_side_effect_free_file
 - crates/rolldown/tests/esbuild/loader/loader_json_no_bundle_common_js
 - crates/rolldown/tests/esbuild/loader/loader_json_no_bundle_iife
-## should rewrite `require`
-- crates/rolldown/tests/esbuild/default/nested_require_without_call
-- crates/rolldown/tests/esbuild/default/require_without_call
-- crates/rolldown/tests/esbuild/default/require_without_call_inside_try
 ## double module initialization
 - crates/rolldown/tests/esbuild/dce/package_json_side_effects_array_keep_main_implicit_main
 - crates/rolldown/tests/esbuild/dce/package_json_side_effects_array_keep_module_implicit_main
@@ -73,8 +69,6 @@
 - crates/rolldown/tests/esbuild/dce/tree_shaking_unary_operators
 ## esbuild will wrap `Promise.resolve().then() for original specifier`
 - crates/rolldown/tests/esbuild/default/conditional_import
-## We don't consider `require($expr)` as a import record
-- crates/rolldown/tests/esbuild/default/conditional_require
 ## oxc define
 - crates/rolldown/tests/esbuild/default/define_import_meta
 ## redundant `__toCommonJS`
@@ -111,8 +105,6 @@
 - crates/rolldown/tests/esbuild/default/package_alias_match_longest
 ## rename private identifier
 - crates/rolldown/tests/esbuild/default/rename_private_identifiers_no_bundle
-## `__require` rewrite
-- crates/rolldown/tests/esbuild/default/require_bad_argument_count
 ## wrong `export default require_entry()`;
 - crates/rolldown/tests/esbuild/default/require_shim_substitution
 ## should not reuse `__toESM(require('./foo'))`

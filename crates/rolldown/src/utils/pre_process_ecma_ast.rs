@@ -30,13 +30,11 @@ pub struct PreProcessEcmaAst {
 }
 
 impl PreProcessEcmaAst {
-  // #[allow(clippy::match_same_arms)]: `OxcParseType::Tsx` will have special logic to deal with ts compared to `OxcParseType::Jsx`
-  #[allow(clippy::match_same_arms, clippy::too_many_lines)]
   pub fn build(
     &mut self,
     mut ast: EcmaAst,
-    parse_type: &OxcParseType,
     path: &str,
+    parsed_type: &OxcParseType,
     replace_global_define_config: Option<&ReplaceGlobalDefinesConfig>,
     bundle_options: &NormalizedBundlerOptions,
     has_lazy_export: bool,
@@ -72,13 +70,14 @@ impl PreProcessEcmaAst {
     });
     // Transform TypeScript and jsx.
     // Transform es syntax.
-    if !matches!(parse_type, OxcParseType::Js) || !matches!(bundle_options.target, ESTarget::EsNext)
+    if !matches!(parsed_type, OxcParseType::Js)
+      || !matches!(bundle_options.target, ESTarget::EsNext)
     {
       let ret = ast.program.with_mut(|fields| {
         let target: OxcESTarget = bundle_options.target.into();
         let mut transformer_options = TransformOptions::from(target);
 
-        if !matches!(parse_type, OxcParseType::Js) {
+        if !matches!(parsed_type, OxcParseType::Js) {
           // The oxc jsx_plugin is enabled by default, we need to disable it.
           transformer_options.jsx.jsx_plugin = false;
 
@@ -87,7 +86,7 @@ impl PreProcessEcmaAst {
             Jsx::Preserve => {}
             Jsx::Enable(jsx) => {
               transformer_options.jsx = jsx.clone();
-              if matches!(parse_type, OxcParseType::Tsx | OxcParseType::Jsx) {
+              if matches!(parsed_type, OxcParseType::Tsx | OxcParseType::Jsx) {
                 transformer_options.jsx.jsx_plugin = true;
               }
             }
@@ -106,9 +105,7 @@ impl PreProcessEcmaAst {
         .filter(|item| matches!(item.severity, OxcSeverity::Error))
         .collect_vec();
       if !errors.is_empty() {
-        return Err(
-          BuildDiagnostic::from_oxc_diagnostics(errors, &source, path, &Severity::Error).into(),
-        );
+        Err(BuildDiagnostic::from_oxc_diagnostics(errors, &source, path, &Severity::Error))?;
       }
 
       symbols = ret.symbols;
@@ -116,13 +113,13 @@ impl PreProcessEcmaAst {
       self.ast_changed = true;
     }
 
-    ast.program.with_mut(|fields| -> BuildResult<()> {
+    ast.program.with_mut(|fields| {
       let WithMutFields { allocator, program, .. } = fields;
       if !bundle_options.inject.is_empty() {
         // if the define replace something, we need to recreate the semantic data.
         // to correct the `root_unresolved_references`
         // https://github.com/oxc-project/oxc/blob/0136431b31a1d4cc20147eb085d9314b224cc092/crates/oxc_transformer/src/plugins/inject_global_variables.rs#L184-L184
-        // TODO: real ast_changed hint https://github.com/oxc-project/oxc/pull/7205
+        // TODO: real ast_changed hint
         let semantic_ret = SemanticBuilder::new().with_stats(self.stats).build(program);
         (symbols, scopes) = semantic_ret.semantic.into_symbol_table_and_scope_tree();
         let ret = InjectGlobalVariables::new(
@@ -146,9 +143,7 @@ impl PreProcessEcmaAst {
         }
         compressor.dead_code_elimination_with_symbols_and_scopes(symbols, scopes, program);
       }
-
-      Ok(())
-    })?;
+    });
 
     ast.program.with_mut(|fields| {
       let mut pre_processor = PreProcessor::new(fields.allocator, bundle_options.keep_names);

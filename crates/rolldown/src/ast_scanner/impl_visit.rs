@@ -11,6 +11,7 @@ use oxc_ecmascript::ToJsString;
 use rolldown_common::{
   dynamic_import_usage::DynamicImportExportsUsage, generate_replace_this_expr_map,
   EcmaModuleAstUsage, ImportKind, ImportRecordMeta, StmtInfoMeta, ThisExprReplaceKind,
+  RUNTIME_MODULE_ID,
 };
 use rolldown_ecmascript::ToSourceString;
 use rolldown_error::BuildDiagnostic;
@@ -291,19 +292,24 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
             self.cjs_ast_analyzer(&CjsGlobalAssignmentType::ExportsAssignment);
           }
           "require" => {
-            match self.visit_path.last() {
-              Some(AstKind::ExpressionStatement(_)) => {
-                let import_rec_idx = self.add_import_record(
-                  "",
-                  ImportKind::Require,
-                  ident_ref.span,
-                  ImportRecordMeta::IS_DUMMY,
-                );
-
-                self.result.imports.insert(ident_ref.span, import_rec_idx);
+            let is_dummy_record = match self.visit_path.last() {
+              Some(AstKind::CallExpression(call_expr)) => {
+                !self.process_global_require_call(call_expr)
               }
-              _ => {}
+              Some(_) => true,
+              _ => false,
             };
+            // should not replace require in `runtime` code
+            if is_dummy_record && self.id.as_ref() != RUNTIME_MODULE_ID {
+              let import_rec_idx = self.add_import_record(
+                "",
+                ImportKind::Require,
+                ident_ref.span,
+                ImportRecordMeta::IS_DUMMY,
+              );
+
+              self.result.imports.insert(ident_ref.span, import_rec_idx);
+            }
           }
           _ => {}
         }
@@ -344,41 +350,32 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
     ident_ref: &IdentifierReference,
   ) -> Option<()> {
     let parent = self.visit_path.last()?;
-    match parent {
-      AstKind::CallExpression(call_expr) => {
-        match ident_ref.name.as_str() {
-          "eval" => {
-            // TODO: esbuild track has_eval for each scope, this could reduce bailout range, and may
-            // improve treeshaking performance. https://github.com/evanw/esbuild/blob/360d47230813e67d0312ad754cad2b6ee09b151b/internal/js_ast/js_ast.go#L1288-L1291
-            self.result.has_eval = true;
-            self.result.warnings.push(
-              BuildDiagnostic::eval(self.id.to_string(), self.source.clone(), ident_ref.span)
-                .with_severity_warning(),
-            );
-          }
-          "require" => {
-            self.process_global_require_call(call_expr);
-          }
-          _ => {}
-        }
+    if let AstKind::CallExpression(_) = parent {
+      if ident_ref.name == "eval" {
+        // TODO: esbuild track has_eval for each scope, this could reduce bailout range, and may
+        // improve treeshaking performance. https://github.com/evanw/esbuild/blob/360d47230813e67d0312ad754cad2b6ee09b151b/internal/js_ast/js_ast.go#L1288-L1291
+        self.result.has_eval = true;
+        self.result.warnings.push(
+          BuildDiagnostic::eval(self.id.to_string(), self.source.clone(), ident_ref.span)
+            .with_severity_warning(),
+        );
       }
-      _ => {}
     }
     None
   }
 
-  fn process_global_require_call(&mut self, expr: &ast::CallExpression<'ast>) {
+  /// return `bool` represent if it is a global require call
+  fn process_global_require_call(&mut self, expr: &ast::CallExpression<'ast>) -> bool {
     let (value, span) = match expr.arguments.first() {
       Some(ast::Argument::StringLiteral(request)) => {
         (std::borrow::Cow::Borrowed(request.value.as_str()), request.span)
       }
       Some(ast::Argument::TemplateLiteral(request)) => match request.to_js_string() {
         Some(value) => (value, request.span),
-        None => return,
+        None => return false,
       },
-      _ => return,
+      _ => return false,
     };
-
     let id = self.add_import_record(
       value.as_ref(),
       ImportKind::Require,
@@ -423,5 +420,6 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
       },
     );
     self.result.imports.insert(expr.span, id);
+    true
   }
 }

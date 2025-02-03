@@ -154,7 +154,6 @@ snapshot_kind: text
 
 ```js
 
-
 //#region entry.js
 console.log(import(
 	/* before */
@@ -180,13 +179,13 @@ console.log(import(
 console.log(require(
 	/* before */
 	foo
-), __require(
+), require(
 	/* before */
 	"foo"
 ), require(
 	foo
 	/* after */
-), __require(
+), require(
 	"foo"
 	/* after */
 ));

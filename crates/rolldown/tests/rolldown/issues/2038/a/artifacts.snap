@@ -7,7 +7,7 @@ snapshot_kind: text
 ## a.js
 
 ```js
-import { result } from "./b.js";
+import { result } from "./b2.js";
 
 //#region a.js
 var a_default = result();
@@ -16,6 +16,13 @@ var a_default = result();
 export { a_default as default };
 ```
 ## b.js
+
+```js
+import { result } from "./b2.js";
+
+export { result };
+```
+## b2.js
 
 ```js
 
@@ -27,20 +34,13 @@ function result() {
 //#endregion
 export { result };
 ```
-## b2.js
-
-```js
-import { result } from "./b.js";
-
-export { result };
-```
 ## main.js
 
 ```js
 import assert from "node:assert";
 
 //#region main.js
-import("./b2.js").then((mod) => {
+import("./b.js").then((mod) => {
 	assert.strictEqual(mod.result(), "result");
 });
 import("./a.js").then((mod) => {

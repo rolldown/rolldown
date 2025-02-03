@@ -52,7 +52,15 @@ pub fn property_access_str(obj: &str, prop: &str) -> String {
   if is_validate_identifier_name(prop) {
     concat_string!(obj, ".", prop)
   } else {
-    concat_string!(obj, "[", "\"", prop, "\"]")
+    concat_string!(obj, "[", serde_json::to_string(prop).unwrap(), "]")
+  }
+}
+
+pub fn to_module_import_export_name(name: &str) -> String {
+  if is_validate_identifier_name(name) {
+    name.into()
+  } else {
+    serde_json::to_string(name).unwrap()
   }
 }
 

@@ -1,0 +1,11 @@
+{
+  "config": {
+    "external": ["external"]
+  },
+  "configVariants": [
+    {
+      "format": "cjs"
+    }
+  ],
+  "expectExecuted": false
+}

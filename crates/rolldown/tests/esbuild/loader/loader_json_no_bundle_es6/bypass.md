@@ -24,7 +24,7 @@ var test_default = {
 };
 
 //#endregion
-export { test_default as default, invalid_identifier as 'invalid-identifier', test };
+export { test_default as default, invalid_identifier as "invalid-identifier", test };
 ```
 ### diff
 ```diff

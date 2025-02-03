@@ -32,7 +32,7 @@ console.log(reexpo_rt);
 ### rolldown
 ```js
 import { re_export } from "external-pkg";
-import { 'reexpo.rt' as reexpo_rt } from "external-pkg2";
+import { "reexpo.rt" as reexpo_rt } from "external-pkg2";
 
 //#region replacement.js
 let replace = { test() {} };

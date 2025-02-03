@@ -65,7 +65,7 @@ using a = b;
 using c = d;
 
 //#endregion
-export { a, c as 'c!' };
+export { a, c as "c!" };
 ```
 ## hoist-export-default-class-anonymous.js
 

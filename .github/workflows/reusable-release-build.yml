@@ -127,7 +127,7 @@ jobs:
       - uses: actions/checkout@v4
       - name: Build
         id: build
-        uses: cross-platform-actions/action@v0.26.0
+        uses: cross-platform-actions/action@v0.27.0
         env:
           DEBUG: napi:*
           RUSTUP_IO_THREADS: 1

@@ -8,6 +8,7 @@ mod binding_treeshake;
 mod binding_watch_option;
 
 use derive_more::Debug;
+use napi::bindgen_prelude::FnArgs;
 use napi_derive::napi;
 use rustc_hash::FxBuildHasher;
 use std::collections::HashMap;
@@ -23,7 +24,7 @@ use crate::types::{
   binding_log::BindingLog, binding_log_level::BindingLogLevel, js_callback::JsCallback,
 };
 
-pub type BindingOnLog = Option<JsCallback<(String, BindingLog), ()>>;
+pub type BindingOnLog = Option<JsCallback<FnArgs<(String, BindingLog)>, ()>>;
 
 #[napi(object, object_to_js = false)]
 #[derive(Default, Debug)]
@@ -41,7 +42,7 @@ pub struct BindingInputOptions {
   #[napi(
     ts_type = "undefined | ((source: string, importer: string | undefined, isResolved: boolean) => boolean)"
   )]
-  pub external: Option<JsCallback<(String, Option<String>, bool), bool>>,
+  pub external: Option<JsCallback<FnArgs<(String, Option<String>, bool)>, bool>>,
   pub input: Vec<BindingInputItem>,
   // makeAbsoluteExternalsRelative?: boolean | 'ifRelativeSource';
   // /** @deprecated Use the "manualChunks" output option instead. */

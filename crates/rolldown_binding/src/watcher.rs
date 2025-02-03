@@ -1,6 +1,7 @@
 use std::sync::Arc;
 use std::time::Duration;
 
+use napi::bindgen_prelude::FnArgs;
 use napi_derive::napi;
 
 use crate::bundler::{BindingBundlerOptions, Bundler};
@@ -60,7 +61,7 @@ impl BindingWatcher {
   #[napi(ts_args_type = "listener: (data: BindingWatcherEvent) => void")]
   pub async fn start(
     &self,
-    listener: MaybeAsyncJsCallback<BindingWatcherEvent, ()>,
+    listener: MaybeAsyncJsCallback<FnArgs<(BindingWatcherEvent,)>, ()>,
   ) -> napi::Result<()> {
     let rx = Arc::clone(&self.inner.emitter().rx);
     let future = async move {
@@ -73,7 +74,9 @@ impl BindingWatcher {
               run = false;
             }
             tracing::debug!(name= "send event to js side", event = ?event);
-            if let Err(e) = listener.await_call(BindingWatcherEvent::new(event)).await {
+            if let Err(e) =
+              listener.await_call(FnArgs { data: (BindingWatcherEvent::new(event),) }).await
+            {
               eprintln!("watcher listener error: {e:?}");
             }
           }

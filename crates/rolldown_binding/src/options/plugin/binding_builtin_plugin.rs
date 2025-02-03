@@ -1,4 +1,5 @@
 use derive_more::Debug;
+use napi::bindgen_prelude::FnArgs;
 use napi::bindgen_prelude::FromNapiValue;
 use napi::JsUnknown;
 use napi_derive::napi;
@@ -164,10 +165,11 @@ pub struct BindingViteResolvePluginConfig {
   #[napi(
     ts_type = "(resolvedId: string, rawId: string, importer: string | null | undefined) => VoidNullable<string>"
   )]
-  pub finalize_bare_specifier: Option<JsCallback<(String, String, Option<String>), Option<String>>>,
+  pub finalize_bare_specifier:
+    Option<JsCallback<FnArgs<(String, String, Option<String>)>, Option<String>>>,
   #[debug("{}", if finalize_bare_specifier.is_some() { "Some(<finalize_other_specifiers>)" } else { "None" })]
   #[napi(ts_type = "(resolvedId: string, rawId: string) => VoidNullable<string>")]
-  pub finalize_other_specifiers: Option<JsCallback<(String, String), Option<String>>>,
+  pub finalize_other_specifiers: Option<JsCallback<FnArgs<(String, String)>, Option<String>>>,
 
   pub runtime: String,
 }
@@ -201,7 +203,7 @@ impl From<BindingViteResolvePluginConfig> for ViteResolveOptions {
             let importer = importer.map(ToString::to_string);
             Box::pin(async move {
               finalizer_fn
-                .invoke_async((resolved_id, raw_id, importer))
+                .invoke_async((resolved_id, raw_id, importer).into())
                 .await
                 .map_err(anyhow::Error::from)
             })
@@ -215,7 +217,10 @@ impl From<BindingViteResolvePluginConfig> for ViteResolveOptions {
             let resolved_id = resolved_id.to_owned();
             let raw_id = raw_id.to_owned();
             Box::pin(async move {
-              finalizer_fn.invoke_async((resolved_id, raw_id)).await.map_err(anyhow::Error::from)
+              finalizer_fn
+                .invoke_async((resolved_id, raw_id).into())
+                .await
+                .map_err(anyhow::Error::from)
             })
           })
         },

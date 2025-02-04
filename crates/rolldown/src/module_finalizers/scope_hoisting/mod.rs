@@ -467,6 +467,47 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
         }
         _ => {}
       }
+      // rewrite `import.meta.ROLLUP_FILE_URL_referenceId`
+      if let Some(reference_id) = property_name.strip_prefix("ROLLUP_FILE_URL_") {
+        // compute relative path from chunk to asset
+        let Ok(asset_file_name) = self.ctx.file_emitter.get_file_name(reference_id) else {
+          return None;
+        };
+        let absolute_asset_file_name = asset_file_name.absolutize_with(&self.ctx.options.out_dir);
+        let importer_chunk_id = self.ctx.chunk_graph.module_to_chunk[self.ctx.module.idx].unwrap();
+        let importer_chunk = &self.ctx.chunk_graph.chunk_table[importer_chunk_id];
+        let importer_dir = importer_chunk
+          .absolute_preliminary_filename
+          .as_ref()
+          .unwrap()
+          .as_path()
+          .parent()
+          .unwrap();
+        let relative_asset_path =
+          absolute_asset_file_name.relative(importer_dir).as_path().expect_to_slash();
+
+        // new URL({relative_asset_path}, import.meta.url).href
+        let new_expr = ast::Expression::StaticMemberExpression(
+          self.snippet.builder.alloc_static_member_expression(
+            original_expr_span,
+            self.snippet.builder.expression_new(
+              original_expr_span,
+              self.snippet.builder.expression_identifier_reference(original_expr_span, "URL"),
+              self.snippet.builder.vec1(ast::Argument::StringLiteral(
+                self.snippet.builder.alloc_string_literal(
+                  original_expr_span,
+                  relative_asset_path,
+                  None,
+                ),
+              )),
+              NONE,
+            ),
+            self.snippet.builder.identifier_name(original_expr_span, "href"),
+            false,
+          ),
+        );
+        return Some(new_expr);
+      }
     }
     None
   }

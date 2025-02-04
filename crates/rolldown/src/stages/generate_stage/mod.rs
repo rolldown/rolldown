@@ -116,6 +116,7 @@ impl<'a> GenerateStage<'a> {
               options: self.options,
               cur_stmt_index: 0,
               keep_name_statement_to_insert: Vec::new(),
+              file_emitter: &self.plugin_driver.file_emitter,
             },
             ast,
             ast_scope,

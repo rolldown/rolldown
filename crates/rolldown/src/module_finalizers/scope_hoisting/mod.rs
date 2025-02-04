@@ -474,7 +474,8 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
         let Ok(asset_file_name) = self.ctx.file_emitter.get_file_name(reference_id) else {
           return None;
         };
-        let absolute_asset_file_name = asset_file_name.absolutize_with(&self.ctx.options.out_dir);
+        let absolute_asset_file_name = asset_file_name
+          .absolutize_with(self.ctx.options.cwd.as_path().join(&self.ctx.options.out_dir));
         let importer_chunk_id = self.ctx.chunk_graph.module_to_chunk[self.ctx.module.idx].unwrap();
         let importer_chunk = &self.ctx.chunk_graph.chunk_table[importer_chunk_id];
         let importer_dir = importer_chunk
@@ -488,6 +489,7 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
           absolute_asset_file_name.relative(importer_dir).as_path().expect_to_slash();
 
         // new URL({relative_asset_path}, import.meta.url).href
+        // TODO: needs import.meta.url polyfill for non esm
         let new_expr = ast::Expression::StaticMemberExpression(
           self.snippet.builder.alloc_static_member_expression(
             SPAN,

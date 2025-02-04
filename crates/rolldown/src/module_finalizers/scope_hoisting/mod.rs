@@ -396,6 +396,7 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
   }
 
   // Handle `import.meta.xxx` expression
+  #[allow(clippy::too_many_lines)]
   pub fn try_rewrite_import_meta_prop_expr(
     &self,
     member_expr: &ast::StaticMemberExpression<'ast>,
@@ -489,17 +490,29 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
         // new URL({relative_asset_path}, import.meta.url).href
         let new_expr = ast::Expression::StaticMemberExpression(
           self.snippet.builder.alloc_static_member_expression(
-            original_expr_span,
+            SPAN,
             self.snippet.builder.expression_new(
-              original_expr_span,
-              self.snippet.builder.expression_identifier_reference(original_expr_span, "URL"),
-              self.snippet.builder.vec1(ast::Argument::StringLiteral(
-                self.snippet.builder.alloc_string_literal(
-                  original_expr_span,
+              SPAN,
+              self.snippet.builder.expression_identifier_reference(SPAN, "URL"),
+              self.snippet.builder.vec_from_array([
+                ast::Argument::StringLiteral(self.snippet.builder.alloc_string_literal(
+                  SPAN,
                   relative_asset_path,
                   None,
+                )),
+                ast::Argument::StaticMemberExpression(
+                  self.snippet.builder.alloc_static_member_expression(
+                    SPAN,
+                    self.snippet.builder.expression_meta_property(
+                      SPAN,
+                      self.snippet.builder.identifier_name(SPAN, "import"),
+                      self.snippet.builder.identifier_name(SPAN, "meta"),
+                    ),
+                    self.snippet.builder.identifier_name(SPAN, "url"),
+                    false,
+                  ),
                 ),
-              )),
+              ]),
               NONE,
             ),
             self.snippet.builder.identifier_name(original_expr_span, "href"),

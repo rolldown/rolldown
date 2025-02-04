@@ -15,7 +15,7 @@ export function get(moduleName) {
 
 const initTokens = {}
 const shareScopeName = "default"
-const name = "mf-remote"
+const name = __NAME__
 
 export async function init(shared={}, initScope=[]) {
     const initRes = runtimeInit({

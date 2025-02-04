@@ -5,7 +5,7 @@ __PLUGINS__
 const usedRemotes = __REMOTES__;
 const usedShared = {};
 const initRes = init({
-    name: "mf-host",
+    name: __NAME__,
     remotes: usedRemotes, 
     shared: usedShared,
     plugins,

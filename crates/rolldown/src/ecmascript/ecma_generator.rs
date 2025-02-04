@@ -60,13 +60,10 @@ impl Generator for EcmaGenerator {
       ctx.chunk_graph,
     );
     let hashbang = match ctx.chunk.user_defined_entry_module(&ctx.link_output.module_table) {
-      Some(normal_module) => {
-        let source = &normal_module.source;
-        normal_module
-          .ecma_view
-          .hashbang_range
-          .map(|range| &source.as_str()[range.start as usize..range.end as usize])
-      }
+      Some(normal_module) => normal_module
+        .ecma_view
+        .hashbang_range
+        .map(|range| &normal_module.source[range.start as usize..range.end as usize]),
       None => None,
     };
 

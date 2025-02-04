@@ -3,8 +3,8 @@ use oxc::ast::VisitMut;
 use oxc::span::SourceType;
 use oxc_index::IndexVec;
 use rolldown_common::{
-  side_effects::DeterminedSideEffects, AstScopes, EcmaView, EcmaViewMeta, ExportsKind,
-  ModuleDefFormat, ModuleId, ModuleIdx, ModuleType, NormalModule, SymbolRef,
+  side_effects::DeterminedSideEffects, EcmaView, EcmaViewMeta, ExportsKind, ModuleDefFormat,
+  ModuleId, ModuleIdx, ModuleType, NormalModule,
 };
 use rolldown_common::{
   ModuleLoaderMsg, ResolvedId, RuntimeModuleBrief, RuntimeModuleTaskResult,
@@ -24,13 +24,6 @@ pub struct RuntimeModuleTask {
   tx: tokio::sync::mpsc::Sender<ModuleLoaderMsg>,
   module_idx: ModuleIdx,
   options: SharedNormalizedBundlerOptions,
-}
-
-pub struct MakeEcmaAstResult {
-  ast: EcmaAst,
-  ast_scope: AstScopes,
-  scan_result: ScanResult,
-  namespace_object_ref: SymbolRef,
 }
 
 impl RuntimeModuleTask {
@@ -74,31 +67,23 @@ impl RuntimeModuleTask {
       ))
     };
 
-    let ecma_ast_result = self.make_ecma_ast(RUNTIME_MODULE_ID, &source)?;
-
-    let MakeEcmaAstResult { ast, ast_scope, scan_result, namespace_object_ref } = ecma_ast_result;
-
-    let runtime = RuntimeModuleBrief::new(self.module_idx, &ast_scope);
+    let (ast, scan_result) = self.make_ecma_ast(RUNTIME_MODULE_ID, &source)?;
 
     let ScanResult {
       named_imports,
       named_exports,
       stmt_infos,
       default_export_ref,
+      namespace_object_ref,
       imports,
       import_records: raw_import_records,
-      exports_kind: _,
-      warnings: _,
       has_eval,
-      errors: _,
       ast_usage,
+      ast_scope,
       symbol_ref_db,
-      self_referenced_class_decl_symbol_ids: _,
-      hashbang_range: _,
       has_star_exports,
-      dynamic_import_rec_exports_usage: _,
       new_url_references,
-      this_expr_replace_map: _,
+      ..
     } = scan_result;
 
     let module = NormalModule {
@@ -162,6 +147,7 @@ impl RuntimeModuleTask {
       })
       .collect();
 
+    let runtime = RuntimeModuleBrief::new(self.module_idx, &ast_scope);
     let result = ModuleLoaderMsg::RuntimeNormalModuleDone(RuntimeModuleTaskResult {
       ast,
       module,
@@ -178,7 +164,11 @@ impl RuntimeModuleTask {
     Ok(())
   }
 
-  fn make_ecma_ast(&mut self, filename: &str, source: &ArcStr) -> BuildResult<MakeEcmaAstResult> {
+  fn make_ecma_ast(
+    &mut self,
+    filename: &str,
+    source: &ArcStr,
+  ) -> BuildResult<(EcmaAst, ScanResult)> {
     let source_type = SourceType::default();
 
     let mut ast = EcmaCompiler::parse(filename, source, source_type)?;
@@ -189,12 +179,11 @@ impl RuntimeModuleTask {
       ast.contains_use_strict = pre_processor.contains_use_strict;
     });
 
-    let (symbol_table, scope) = ast.make_symbol_table_and_scope_tree();
-    let ast_scope = AstScopes::new(scope);
+    let (symbol_table, scope_tree) = ast.make_symbol_table_and_scope_tree();
     let facade_path = ModuleId::new(RUNTIME_MODULE_ID);
     let scanner = AstScanner::new(
       self.module_idx,
-      &ast_scope,
+      scope_tree,
       symbol_table,
       "rolldown_runtime",
       ModuleDefFormat::EsmMjs,
@@ -203,9 +192,8 @@ impl RuntimeModuleTask {
       ast.comments(),
       &self.options,
     );
-    let namespace_object_ref = scanner.namespace_object_ref;
     let scan_result = scanner.scan(ast.program())?;
 
-    Ok(MakeEcmaAstResult { ast, ast_scope, scan_result, namespace_object_ref })
+    Ok((ast, scan_result))
   }
 }

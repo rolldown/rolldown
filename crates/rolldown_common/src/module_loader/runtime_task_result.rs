@@ -12,7 +12,6 @@ pub struct RuntimeModuleTaskResult {
   pub local_symbol_ref_db: SymbolRefDbForModule,
   pub ast: EcmaAst,
   pub ast_scope: AstScopes,
-  // pub warnings: Vec<BuildError>,
   pub module: NormalModule,
   pub resolved_deps: IndexVec<ImportRecordIdx, ResolvedId>,
   pub raw_import_records: IndexVec<ImportRecordIdx, RawImportRecord>,

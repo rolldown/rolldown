@@ -25,7 +25,7 @@ export default defineTest({
   afterTest: (output) => {
     expect(getOutputFileNames(output)).toMatchInlineSnapshot(`
       [
-        "assets/_emitted-umwR9Fta.txt",
+        "assets/_emitted-C6bBH0W1.txt",
         "main.js",
       ]
     `)

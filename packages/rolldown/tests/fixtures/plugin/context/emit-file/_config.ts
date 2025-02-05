@@ -29,7 +29,7 @@ export default defineTest({
         },
         generateBundle() {
           expect(this.getFileName(referenceId)).toMatchInlineSnapshot(
-            `"_emitted-umwR9Fta.txt"`,
+            `"_emitted-C6bBH0W1.txt"`,
           )
           // emit asset buffer source
           this.emitFile({
@@ -48,14 +48,14 @@ export default defineTest({
         case '+emitted.txt':
           expect(asset.names).toStrictEqual(['+emitted.txt'])
           expect(asset.fileName).toMatchInlineSnapshot(
-            `"_emitted-umwR9Fta.txt"`,
+            `"_emitted-C6bBH0W1.txt"`,
           )
           expect(asset.originalFileName).toBe(ORIGINAL_FILE_NAME)
           expect(asset.originalFileNames).toStrictEqual([ORIGINAL_FILE_NAME])
           break
 
         case 'icon.png':
-          expect(asset.fileName).toMatchInlineSnapshot(`"icon-eUkSwvpV.png"`)
+          expect(asset.fileName).toMatchInlineSnapshot(`"icon-B5SRLC-l.png"`)
           break
 
         default:

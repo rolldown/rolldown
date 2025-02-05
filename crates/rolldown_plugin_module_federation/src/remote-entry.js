@@ -3,7 +3,7 @@ import { init as runtimeInit } from '@module-federation/runtime';
 __PLUGINS__
 
 const usedRemotes = []
-const usedShared = {}
+const usedShared = __SHARED__
 
 const exposesMap = __EXPOSES_MAP__
 

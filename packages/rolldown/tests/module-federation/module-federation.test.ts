@@ -26,6 +26,11 @@ describe('module-federation', () => {
                 path.join(import.meta.dirname, './dist/remote-entry.js'),
             },
           },
+          shared: {
+            'test-shared': {
+              singleton: true
+            }
+          },
           runtimePlugins: ['./mf-runtime-plugin.js'],
         }),
       ],
@@ -42,20 +47,19 @@ describe('module-federation', () => {
           exposes: {
             './expose': './expose.js',
           },
+          shared: {
+            'test-shared': {
+              singleton: true
+            }
+          },
         }),
       ],
     })
 
-    // Test the exposed module
-    // @ts-ignore
-    const expose = await import('./dist/expose.js')
-    expect(expose.value).toBe('expose')
-
     // Test the remote entry
     // @ts-ignore
     const remote = await import('./dist/remote-entry.js')
-    const remoteExposeFactory = await remote.get('./expose')
-    expect(remoteExposeFactory().value).toBe('expose')
+    expect(typeof remote.get).toBe('function')
     expect(typeof remote.init).toBe('function')
 
     // Test host

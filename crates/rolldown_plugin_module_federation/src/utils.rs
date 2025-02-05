@@ -1,10 +1,24 @@
 use crate::ModuleFederationPluginOption;
 
-pub fn is_remote_module(request: &str, options: &ModuleFederationPluginOption) -> bool {
+#[derive(Debug, PartialEq, Eq, Hash)]
+pub enum RemoteModuleType {
+  Shared,
+  Remote,
+}
+
+pub fn detect_remote_module_type(
+  request: &str,
+  options: &ModuleFederationPluginOption,
+) -> Option<RemoteModuleType> {
   if let Some(remotes) = options.remotes.as_ref() {
     if remotes.iter().any(|remote| request.starts_with(&remote.name)) {
-      return true;
+      return Some(RemoteModuleType::Remote);
     }
   }
-  false
+  if let Some(shared) = options.shared.as_ref() {
+    if shared.iter().any(|(key, _)| request == key) {
+      return Some(RemoteModuleType::Shared);
+    }
+  }
+  None
 }

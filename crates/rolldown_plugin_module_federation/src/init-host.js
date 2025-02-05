@@ -3,7 +3,7 @@ import { init } from '@module-federation/runtime';
 __PLUGINS__
 
 const usedRemotes = __REMOTES__;
-const usedShared = {};
+const usedShared = __SHARED__;
 const initRes = init({
     name: __NAME__,
     remotes: usedRemotes, 

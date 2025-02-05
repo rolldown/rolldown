@@ -1,14 +1,14 @@
-import { loadRemote } from "@module-federation/runtime";
+import { loadRemote, loadShare } from "@module-federation/runtime";
 
 const registry = {}
 const loading = {}
 
-export async function loadRemoteToRegistry(id) {
+export async function loadRemoteToRegistry(id, shared) {
     const promise = loading[id]
     if (promise) {
         await promise
     } else {
-        loading[id] = loadRemote(id)
+        loading[id] = shared ? loadShare(id) : loadRemote(id)
         registry[id] = await loading[id]
     }
 }

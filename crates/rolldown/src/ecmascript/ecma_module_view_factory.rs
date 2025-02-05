@@ -3,8 +3,8 @@ use oxc::semantic::{ScopeTree, SymbolTable};
 use oxc_index::IndexVec;
 use rolldown_common::{
   side_effects::{DeterminedSideEffects, HookSideEffects},
-  AstScopes, EcmaRelated, EcmaView, EcmaViewMeta, ImportRecordIdx, ModuleDefFormat, ModuleId,
-  ModuleIdx, ModuleType, RawImportRecord, SymbolRef, TreeshakeOptions,
+  EcmaRelated, EcmaView, EcmaViewMeta, ImportRecordIdx, ModuleDefFormat, ModuleId, ModuleIdx,
+  ModuleType, RawImportRecord, TreeshakeOptions,
 };
 use rolldown_ecmascript::EcmaAst;
 use rolldown_error::BuildResult;
@@ -23,20 +23,19 @@ fn scan_ast(
   module_idx: ModuleIdx,
   id: &ArcStr,
   ast: &mut EcmaAst,
+  scope_tree: ScopeTree,
   symbol_table: SymbolTable,
-  scopes: ScopeTree,
   module_def_format: ModuleDefFormat,
   options: &SharedOptions,
-) -> BuildResult<(AstScopes, ScanResult, SymbolRef)> {
+) -> BuildResult<ScanResult> {
   let module_id = ModuleId::new(id);
-  let ast_scopes = AstScopes::new(scopes);
 
   let repr_name = module_id.as_path().representative_file_name();
   let repr_name = legitimize_identifier_name(&repr_name);
 
   let scanner = AstScanner::new(
     module_idx,
-    &ast_scopes,
+    scope_tree,
     symbol_table,
     &repr_name,
     module_def_format,
@@ -46,11 +45,9 @@ fn scan_ast(
     options,
   );
 
-  let namespace_object_ref = scanner.namespace_object_ref;
-  let scan_result = scanner.scan(ast.program())?;
-
-  Ok((ast_scopes, scan_result, namespace_object_ref))
+  scanner.scan(ast.program())
 }
+
 pub struct CreateEcmaViewReturn {
   pub ecma_view: EcmaView,
   pub ecma_related: EcmaRelated,
@@ -68,27 +65,30 @@ pub async fn create_ecma_view(
 
   ctx.warnings.extend(warning);
 
-  let (ast_scope, scan_result, namespace_object_ref) = scan_ast(
+  let scan_result = scan_ast(
     ctx.module_index,
     &ctx.resolved_id.id,
     &mut ast,
-    symbol_table,
     scope_tree,
+    symbol_table,
     ctx.resolved_id.module_def_format,
     ctx.options,
   )?;
+
   let ScanResult {
     named_imports,
     named_exports,
     stmt_infos,
     import_records: raw_import_records,
     default_export_ref,
+    namespace_object_ref,
     imports,
     exports_kind,
     warnings: scan_warnings,
     has_eval,
     errors,
     ast_usage,
+    ast_scope,
     symbol_ref_db: symbols,
     self_referenced_class_decl_symbol_ids,
     hashbang_range,
@@ -97,9 +97,11 @@ pub async fn create_ecma_view(
     new_url_references: new_url_imports,
     this_expr_replace_map,
   } = scan_result;
+
   if !errors.is_empty() {
     return Err(errors.into());
   }
+
   ctx.warnings.extend(scan_warnings);
 
   // The side effects priority is:

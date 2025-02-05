@@ -46,7 +46,7 @@ impl<'me, 'ast: 'me> Visit<'ast> for AstScanner<'me, 'ast> {
     for (idx, stmt) in program.body.iter().enumerate() {
       self.current_stmt_info.stmt_idx = Some(idx);
       self.current_stmt_info.side_effect = SideEffectDetector::new(
-        self.scopes,
+        &self.result.ast_scope,
         self.source,
         self.comments,
         // In `NormalModule` the options is always `Some`, for `RuntimeModule` always enable annotations

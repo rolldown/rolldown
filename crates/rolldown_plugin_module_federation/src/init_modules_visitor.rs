@@ -1,14 +1,20 @@
 use std::sync::Arc;
 
-use oxc::ast::{
-  ast::{ExportAllDeclaration, ExportNamedDeclaration, ImportDeclaration},
-  AstBuilder, VisitMut,
+use oxc::{
+  allocator::CloneIn,
+  ast::{
+    ast::{Argument, ExportAllDeclaration, ExportNamedDeclaration, Expression, ImportDeclaration},
+    visit::walk_mut::walk_expression,
+    AstBuilder, VisitMut, NONE,
+  },
+  span::SPAN,
 };
+use rolldown_utils::concat_string;
 use rustc_hash::FxHashSet;
 
 use crate::{
   utils::{detect_remote_module_type, RemoteModuleType},
-  ModuleFederationPluginOption,
+  ModuleFederationPluginOption, INIT_MODULE_PREFIX,
 };
 
 #[derive(Debug, PartialEq, Eq, Hash)]
@@ -22,6 +28,7 @@ pub struct InitModuleVisitor<'ast, 'a> {
   pub ast_builder: AstBuilder<'ast>,
   pub options: &'a ModuleFederationPluginOption,
   pub init_remote_modules: &'a mut FxHashSet<RemoteModule>,
+  pub dynamic_import_remote_modules: &'a mut FxHashSet<RemoteModule>,
 }
 
 impl InitModuleVisitor<'_, '_> {
@@ -33,7 +40,7 @@ impl InitModuleVisitor<'_, '_> {
   }
 }
 
-// TODO require/ import()
+// TODO require
 impl<'ast> VisitMut<'ast> for InitModuleVisitor<'ast, '_> {
   fn visit_import_declaration(&mut self, decl: &mut ImportDeclaration<'ast>) {
     self.detect_static_module_decl(&decl.source.value);
@@ -47,5 +54,66 @@ impl<'ast> VisitMut<'ast> for InitModuleVisitor<'ast, '_> {
     if let Some(source) = &decl.source {
       self.detect_static_module_decl(&source.value);
     }
+  }
+
+  fn visit_expression(&mut self, expr: &mut Expression<'ast>) {
+    // import('module') => import('init_module_module').then(() => import('module'))
+    if let Expression::ImportExpression(import_expr) = expr {
+      if let Expression::StringLiteral(lit) = &import_expr.source {
+        if let Some(remote_type) = detect_remote_module_type(&lit.value, self.options) {
+          self
+            .dynamic_import_remote_modules
+            .insert(RemoteModule { id: lit.value.as_str().into(), r#type: remote_type });
+          *expr = self.ast_builder.expression_call(
+            SPAN,
+            self
+              .ast_builder
+              .member_expression_static(
+                SPAN,
+                self.ast_builder.expression_import(
+                  SPAN,
+                  self.ast_builder.expression_string_literal(
+                    SPAN,
+                    self.ast_builder.atom(&concat_string!(INIT_MODULE_PREFIX, lit.value.as_str())),
+                    None,
+                  ),
+                  self.ast_builder.vec(),
+                  None,
+                ),
+                self.ast_builder.identifier_name(SPAN, self.ast_builder.atom("then")),
+                false,
+              )
+              .into(),
+            NONE,
+            self.ast_builder.vec1(Argument::ArrowFunctionExpression(
+              self.ast_builder.alloc_arrow_function_expression(
+                SPAN,
+                true,
+                false,
+                NONE,
+                self.ast_builder.formal_parameters(
+                  SPAN,
+                  oxc::ast::ast::FormalParameterKind::Signature,
+                  self.ast_builder.vec(),
+                  NONE,
+                ),
+                NONE,
+                self.ast_builder.function_body(
+                  SPAN,
+                  self.ast_builder.vec(),
+                  self.ast_builder.vec1(self.ast_builder.statement_expression(
+                    SPAN,
+                    Expression::ImportExpression(import_expr.clone_in(self.ast_builder.allocator)),
+                  )),
+                ),
+              ),
+            )),
+            false,
+          );
+          return;
+        }
+      }
+    }
+    walk_expression(self, expr);
   }
 }

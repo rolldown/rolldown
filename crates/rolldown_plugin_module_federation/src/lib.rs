@@ -1,4 +1,4 @@
-use std::{borrow::Cow, sync::Arc};
+use std::{borrow::Cow, sync::Arc, vec};
 
 mod init_modules_visitor;
 mod option;
@@ -22,6 +22,7 @@ const REMOTE_ENTRY: &str = "mf:remote-entry.js";
 const INIT_HOST: &str = "mf:init-host.js";
 const REMOTE_MODULE_REGISTRY: &str = "mf:remote-module-registry.js";
 const INIT_MODULE_PREFIX: &str = "mf:init-module:";
+const SHARED_MODULE_PREFIX: &str = "mf:shared-module:";
 
 #[derive(Debug)]
 pub struct ModuleFederationPlugin {
@@ -50,7 +51,7 @@ impl ModuleFederationPlugin {
     include_str!("remote-entry.js")
       .replace("__EXPOSES_MAP__", &concat_string!("{", expose, "}"))
       .replace("__PLUGINS__", &self.generate_runtime_plugins())
-      .replace("__SHARED__", &&self.generate_shared_modules())
+      .replace("__SHARED__", &self.generate_shared_modules())
       .replace("__NAME__", &concat_string!("'", &self.options.name, "'"))
       .to_string()
   }
@@ -84,7 +85,7 @@ impl ModuleFederationPlugin {
       .replace("__REMOTES__", &concat_string!("[", remotes, "]"))
       .replace("__PLUGINS__", &self.generate_runtime_plugins())
       .replace("__NAME__", &concat_string!("'", &self.options.name, "'"))
-      .replace("__SHARED__", &&self.generate_shared_modules())
+      .replace("__SHARED__", &self.generate_shared_modules())
       .to_string()
   }
 
@@ -126,10 +127,10 @@ impl ModuleFederationPlugin {
               "'], from: '",
               self.options.name.as_str(),
               "', async get() {",
-              "const module = await import('",
+              "return await import('",
+              SHARED_MODULE_PREFIX,
               key,
               "');",
-              "return () => module",
               "}, shareConfig: {",
               value.singleton.map(|v| if v { "singleton: true," } else { "" }).unwrap_or_default(),
               value
@@ -192,6 +193,14 @@ impl Plugin for ModuleFederationPlugin {
     }
     if args.specifier == "@module-federation/runtime" {
       let resolve_id = ctx.resolve(args.specifier, None, None).await??;
+      return Ok(Some(rolldown_plugin::HookResolveIdOutput {
+        id: resolve_id.id.to_string(),
+        ..Default::default()
+      }));
+    }
+    if args.specifier.starts_with(SHARED_MODULE_PREFIX) {
+      let resolve_id =
+        ctx.resolve(&args.specifier[SHARED_MODULE_PREFIX.len()..], None, None).await??;
       return Ok(Some(rolldown_plugin::HookResolveIdOutput {
         id: resolve_id.id.to_string(),
         ..Default::default()
@@ -269,12 +278,15 @@ impl Plugin for ModuleFederationPlugin {
     args.ast.program.with_mut(|fields| {
       let ast_builder = AstBuilder::new(fields.allocator);
       let mut init_remote_modules = FxHashSet::default();
+      let mut dynamic_import_remote_modules = FxHashSet::default();
       let mut init_modules_visitor = init_modules_visitor::InitModuleVisitor {
         ast_builder,
         options: &self.options,
         init_remote_modules: &mut init_remote_modules,
+        dynamic_import_remote_modules: &mut dynamic_import_remote_modules,
       };
       init_modules_visitor.visit_program(fields.program);
+
       if !init_remote_modules.is_empty() {
         let id = concat_string!(INIT_MODULE_PREFIX, args.id);
         fields.program.body.insert(
@@ -288,7 +300,14 @@ impl Plugin for ModuleFederationPlugin {
             ImportOrExportKind::Value,
           )),
         );
+        // TODO find a way to make sure it execute at before shared splitting modules.
         self.module_init_remote_modules.insert(id.into(), init_remote_modules);
+      }
+      for dynamic_import_remote_module in dynamic_import_remote_modules {
+        self.module_init_remote_modules.insert(
+          concat_string!(INIT_MODULE_PREFIX, dynamic_import_remote_module.id).into(),
+          FxHashSet::from_iter(vec![dynamic_import_remote_module]),
+        );
       }
     });
 

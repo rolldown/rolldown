@@ -1,8 +1,7 @@
-import { test, expect } from 'vitest'
+import { test, expect, describe } from 'vitest'
 import { build } from 'rolldown'
 import { moduleFederationPlugin } from 'rolldown/experimental'
 import path from 'node:path'
-import { describe } from 'node:test'
 
 describe('module-federation', () => {
   test('module-federation', async () => {
@@ -28,12 +27,15 @@ describe('module-federation', () => {
           },
           shared: {
             'test-shared': {
-              singleton: true
-            }
+              singleton: true,
+            },
           },
           runtimePlugins: ['./mf-runtime-plugin.js'],
         }),
       ],
+      output: {
+        dir: 'dist/host',
+      },
     })
 
     // build remote
@@ -49,16 +51,19 @@ describe('module-federation', () => {
           },
           shared: {
             'test-shared': {
-              singleton: true
-            }
+              singleton: true,
+            },
           },
         }),
       ],
+      output: {
+        dir: 'dist/remote',
+      },
     })
 
     // Test the remote entry
     // @ts-ignore
-    const remote = await import('./dist/remote-entry.js')
+    const remote = await import('./dist/remote/remote-entry.js')
     expect(typeof remote.get).toBe('function')
     expect(typeof remote.init).toBe('function')
 
@@ -69,6 +74,11 @@ describe('module-federation', () => {
     // @ts-ignore
     globalThis.remote = remote
     // @ts-ignore
-    await import('./dist/main.js')
+    globalThis.mfShared = 0
+    // @ts-ignore
+    await import('./dist/host/main.js')
+    // Make sure only one instance of shared module is loaded
+    // @ts-ignore
+    expect(globalThis.mfShared).toBe(1)
   })
 })

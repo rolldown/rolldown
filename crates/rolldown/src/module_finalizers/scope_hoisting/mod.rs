@@ -481,12 +481,10 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
       };
       let absolute_asset_file_name = asset_file_name
         .absolutize_with(self.ctx.options.cwd.as_path().join(&self.ctx.options.out_dir));
-      let importer_chunk_id = self.ctx.chunk_graph.module_to_chunk[self.ctx.module.idx].unwrap();
+      let importer_chunk_id = self.ctx.chunk_graph.module_to_chunk[self.ctx.id]
+        .expect("This module should be in a chunk");
       let importer_chunk = &self.ctx.chunk_graph.chunk_table[importer_chunk_id];
-      let importer_dir =
-        importer_chunk.absolute_preliminary_filename.as_ref().unwrap().as_path().parent().unwrap();
-      let relative_asset_path =
-        absolute_asset_file_name.relative(importer_dir).as_path().expect_to_slash();
+      let relative_asset_path = importer_chunk.relative_path_to(&absolute_asset_file_name);
 
       // new URL({relative_asset_path}, import.meta.url).href
       // TODO: needs import.meta.url polyfill for non esm

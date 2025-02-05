@@ -86,15 +86,19 @@ impl Chunk {
   }
 
   pub fn import_path_for(&self, importee: &Chunk) -> String {
+    let importee_filename = importee.absolute_preliminary_filename.as_ref().unwrap();
+    self.relative_path_to(importee_filename.as_path())
+  }
+
+  pub fn relative_path_to(&self, target: &std::path::Path) -> String {
     let importer_dir =
       self.absolute_preliminary_filename.as_ref().unwrap().as_path().parent().unwrap();
-    let importee_filename = importee.absolute_preliminary_filename.as_ref().unwrap();
-    let import_path = importee_filename.relative(importer_dir).as_path().expect_to_slash();
+    let relative_path = target.relative(importer_dir).as_path().expect_to_slash();
 
-    if import_path.starts_with('.') {
-      import_path
+    if relative_path.starts_with('.') {
+      relative_path
     } else {
-      format!("./{import_path}")
+      format!("./{relative_path}")
     }
   }
 

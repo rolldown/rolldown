@@ -60,7 +60,7 @@ impl RuntimeModuleTask {
         include_str!("../runtime/runtime-base.js"),
         include_str!("../runtime/runtime-tail-node.js"),
       ))
-    } else if self.options.is_esm_dev() {
+    } else if self.options.is_hmr_enabled() {
       arcstr::literal!(concat!(
         include_str!("../runtime/runtime-head-node.js"),
         include_str!("../runtime/runtime-base.js"),

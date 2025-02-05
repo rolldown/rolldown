@@ -216,7 +216,8 @@
     "voidzero",
     "minifiers",
     "esmodule",
-    "mapref"
+    "mapref",
+    "ropey"
   ],
   "ignoreWords": ["Jeqs", "Gwetwem", "bpwli", "mxrh"]
 }

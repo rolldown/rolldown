@@ -49,6 +49,7 @@ impl ModuleFederationPlugin {
     include_str!("remote-entry.js")
       .replace("__EXPOSES_MAP__", &concat_string!("{", expose, "}"))
       .replace("__PLUGINS__", &self.generate_runtime_plugins())
+      .replace("__NAME__", &concat_string!("'", &self.options.name, "'"))
       .to_string()
   }
 
@@ -80,6 +81,7 @@ impl ModuleFederationPlugin {
     include_str!("init-host.js")
       .replace("__REMOTES__", &concat_string!("[", remotes, "]"))
       .replace("__PLUGINS__", &self.generate_runtime_plugins())
+      .replace("__NAME__", &concat_string!("'", &self.options.name, "'"))
       .to_string()
   }
 

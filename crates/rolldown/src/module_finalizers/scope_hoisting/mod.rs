@@ -467,6 +467,67 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
         }
         _ => {}
       }
+      return self.rewrite_rollup_file_url(property_name);
+    }
+    None
+  }
+
+  fn rewrite_rollup_file_url(&self, property_name: &str) -> Option<Expression<'ast>> {
+    // rewrite `import.meta.ROLLUP_FILE_URL_<referenceId>`
+    if let Some(reference_id) = property_name.strip_prefix("ROLLUP_FILE_URL_") {
+      // compute relative path from chunk to asset
+      let Ok(asset_file_name) = self.ctx.file_emitter.get_file_name(reference_id) else {
+        return None;
+      };
+      let absolute_asset_file_name = asset_file_name
+        .absolutize_with(self.ctx.options.cwd.as_path().join(&self.ctx.options.out_dir));
+      let importer_chunk_id = self.ctx.chunk_graph.module_to_chunk[self.ctx.module.idx]
+        .expect("This module should be in a chunk");
+      let importer_chunk = &self.ctx.chunk_graph.chunk_table[importer_chunk_id];
+      let importer_dir = importer_chunk
+        .absolute_preliminary_filename
+        .as_ref()
+        .expect("This chunk should have a filename")
+        .as_path()
+        .parent()
+        .expect("This chunk filename should have a parent directory");
+      let relative_asset_path =
+        absolute_asset_file_name.relative(importer_dir).as_path().expect_to_slash();
+
+      // new URL({relative_asset_path}, import.meta.url).href
+      // TODO: needs import.meta.url polyfill for non esm
+      let new_expr = ast::Expression::StaticMemberExpression(
+        self.snippet.builder.alloc_static_member_expression(
+          SPAN,
+          self.snippet.builder.expression_new(
+            SPAN,
+            self.snippet.builder.expression_identifier_reference(SPAN, "URL"),
+            self.snippet.builder.vec_from_array([
+              ast::Argument::StringLiteral(self.snippet.builder.alloc_string_literal(
+                SPAN,
+                relative_asset_path,
+                None,
+              )),
+              ast::Argument::StaticMemberExpression(
+                self.snippet.builder.alloc_static_member_expression(
+                  SPAN,
+                  self.snippet.builder.expression_meta_property(
+                    SPAN,
+                    self.snippet.builder.identifier_name(SPAN, "import"),
+                    self.snippet.builder.identifier_name(SPAN, "meta"),
+                  ),
+                  self.snippet.builder.identifier_name(SPAN, "url"),
+                  false,
+                ),
+              ),
+            ]),
+            NONE,
+          ),
+          self.snippet.builder.identifier_name(SPAN, "href"),
+          false,
+        ),
+      );
+      return Some(new_expr);
     }
     None
   }

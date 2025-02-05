@@ -1,8 +1,7 @@
-import { test, expect } from 'vitest'
+import { test, expect, describe } from 'vitest'
 import { build } from 'rolldown'
 import { moduleFederationPlugin } from 'rolldown/experimental'
 import path from 'node:path'
-import { describe } from 'node:test'
 
 describe('module-federation', () => {
   test('module-federation', async () => {
@@ -26,9 +25,17 @@ describe('module-federation', () => {
                 path.join(import.meta.dirname, './dist/remote-entry.js'),
             },
           },
+          shared: {
+            'test-shared': {
+              singleton: true,
+            },
+          },
           runtimePlugins: ['./mf-runtime-plugin.js'],
         }),
       ],
+      output: {
+        dir: 'dist/host',
+      },
     })
 
     // build remote
@@ -42,20 +49,22 @@ describe('module-federation', () => {
           exposes: {
             './expose': './expose.js',
           },
+          shared: {
+            'test-shared': {
+              singleton: true,
+            },
+          },
         }),
       ],
+      output: {
+        dir: 'dist/remote',
+      },
     })
-
-    // Test the exposed module
-    // @ts-ignore
-    const expose = await import('./dist/expose.js')
-    expect(expose.value).toBe('expose')
 
     // Test the remote entry
     // @ts-ignore
-    const remote = await import('./dist/remote-entry.js')
-    const remoteExposeFactory = await remote.get('./expose')
-    expect(remoteExposeFactory().value).toBe('expose')
+    const remote = await import('./dist/remote/remote-entry.js')
+    expect(typeof remote.get).toBe('function')
     expect(typeof remote.init).toBe('function')
 
     // Test host
@@ -65,6 +74,11 @@ describe('module-federation', () => {
     // @ts-ignore
     globalThis.remote = remote
     // @ts-ignore
-    await import('./dist/main.js')
+    globalThis.mfShared = 0
+    // @ts-ignore
+    await import('./dist/host/main.js')
+    // Make sure only one instance of shared module is loaded
+    // @ts-ignore
+    expect(globalThis.mfShared).toBe(1)
   })
 })

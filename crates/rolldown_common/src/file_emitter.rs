@@ -7,7 +7,7 @@ use arcstr::ArcStr;
 use dashmap::{DashMap, DashSet};
 use rolldown_utils::dashmap::{FxDashMap, FxDashSet};
 use rolldown_utils::extract_hash_pattern::extract_hash_pattern;
-use rolldown_utils::xxhash::xxhash_base64_url;
+use rolldown_utils::xxhash::{xxhash_base64_url, xxhash_with_base};
 use std::ffi::OsStr;
 use std::path::Path;
 use std::sync::atomic::{AtomicUsize, Ordering};
@@ -100,7 +100,8 @@ impl FileEmitter {
     asset_filename_template: Option<FilenameTemplate>,
     sanitized_file_name: Option<ArcStr>,
   ) -> ArcStr {
-    let hash: ArcStr = xxhash_base64_url(file.source.as_bytes()).into();
+    let hash: ArcStr =
+      xxhash_with_base(file.source.as_bytes(), self.options.hash_characters.base()).into();
     // Deduplicate assets if an explicit fileName is not provided
     if file.file_name.is_none() {
       if let Some(reference_id) = self.source_hash_to_reference_id.get(&hash) {

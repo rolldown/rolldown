@@ -8,7 +8,7 @@ snapshot_kind: text
 
 ```text
 [RESOLVE_ERROR] Error: Could not resolve "pkg/bar/baz" in entry.js
-   ╭─[entry.js:5:8]
+   ╭─[ entry.js:5:8 ]
    │
  5 │ import "pkg/bar/baz"
    │        ──────┬──────  
@@ -20,7 +20,7 @@ snapshot_kind: text
 
 ```text
 [RESOLVE_ERROR] Error: Could not resolve "pkg/baz" in entry.js
-   ╭─[entry.js:6:8]
+   ╭─[ entry.js:6:8 ]
    │
  6 │ import "pkg/baz"
    │        ────┬────  
@@ -32,7 +32,7 @@ snapshot_kind: text
 
 ```text
 [RESOLVE_ERROR] Error: Could not resolve "pkg/foo/bar/baz" in entry.js
-   ╭─[entry.js:4:8]
+   ╭─[ entry.js:4:8 ]
    │
  4 │ import "pkg/foo/bar/baz"
    │        ────────┬────────  

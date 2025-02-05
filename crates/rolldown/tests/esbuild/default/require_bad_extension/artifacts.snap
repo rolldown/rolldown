@@ -1,5 +1,6 @@
 ---
 source: crates/rolldown_testing/src/integration_test.rs
+snapshot_kind: text
 ---
 # Errors
 
@@ -7,7 +8,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```text
 [PARSE_ERROR] Error: Expected a semicolon or an implicit semicolon after a statement, but found none
-   ╭─[test.bad:1:5]
+   ╭─[ test.bad:1:5 ]
    │
  1 │ This is a test.
    │     │ 

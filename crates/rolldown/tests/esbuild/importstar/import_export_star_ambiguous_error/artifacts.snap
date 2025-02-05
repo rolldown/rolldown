@@ -8,19 +8,19 @@ snapshot_kind: text
 
 ```text
 [AMBIGUOUS_EXTERNAL_NAMESPACES] Error: Found ambiguous export.
-   ╭─[entry.js:1:12]
+   ╭─[ entry.js:1:12 ]
    │
  1 │ import {x, y, z} from './common'
    │            ┬  
    │            ╰── "common.js" re-exports "y"
    │
-   ├─[foo.js:2:14]
+   ├─[ foo.js:2:14 ]
    │
  2 │ export const y = 2
    │              ┬  
    │              ╰── One matching export is here.
    │
-   ├─[bar.js:1:14]
+   ├─[ bar.js:1:14 ]
    │
  1 │ export const y = 3
    │              ┬  

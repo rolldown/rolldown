@@ -8,7 +8,7 @@ snapshot_kind: text
 
 ```text
 [UNRESOLVED_IMPORT] Warning: Could not resolve 'fs' in entry.js
-   ╭─[entry.js:1:21]
+   ╭─[ entry.js:1:21 ]
    │
  1 │ console.log(require('fs'))
    │                     ──┬─  

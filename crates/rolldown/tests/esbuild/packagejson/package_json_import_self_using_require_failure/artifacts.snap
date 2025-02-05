@@ -1,5 +1,6 @@
 ---
 source: crates/rolldown_testing/src/integration_test.rs
+snapshot_kind: text
 ---
 # Errors
 
@@ -7,7 +8,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```text
 [RESOLVE_ERROR] Error: Could not resolve 'xyz/src/foo.js' in src/index.js
-   ╭─[src/index.js:1:9]
+   ╭─[ src/index.js:1:9 ]
    │
  1 │ require('xyz/src/foo.js')
    │         ────────┬───────  

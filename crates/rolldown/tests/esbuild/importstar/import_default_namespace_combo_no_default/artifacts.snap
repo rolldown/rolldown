@@ -8,7 +8,7 @@ snapshot_kind: text
 
 ```text
 [MISSING_EXPORT] Error: "default" is not exported by "foo.js".
-   ╭─[entry-default-ns-prop.js:1:8]
+   ╭─[ entry-default-ns-prop.js:1:8 ]
    │
  1 │ import def, * as ns from './foo'; console.log(def, ns, ns.default)
    │        ─┬─  
@@ -20,7 +20,7 @@ snapshot_kind: text
 
 ```text
 [MISSING_EXPORT] Error: "default" is not exported by "foo.js".
-   ╭─[entry-default-ns.js:1:8]
+   ╭─[ entry-default-ns.js:1:8 ]
    │
  1 │ import def, * as ns from './foo'; console.log(def, ns)
    │        ─┬─  
@@ -32,7 +32,7 @@ snapshot_kind: text
 
 ```text
 [MISSING_EXPORT] Error: "default" is not exported by "foo.js".
-   ╭─[entry-default-prop.js:1:8]
+   ╭─[ entry-default-prop.js:1:8 ]
    │
  1 │ import def, * as ns from './foo'; console.log(def, ns.default)
    │        ─┬─  
@@ -44,7 +44,7 @@ snapshot_kind: text
 
 ```text
 [MISSING_EXPORT] Error: "default" is not exported by "foo.js".
-   ╭─[entry-default.js:1:8]
+   ╭─[ entry-default.js:1:8 ]
    │
  1 │ import def from './foo'; console.log(def)
    │        ─┬─  

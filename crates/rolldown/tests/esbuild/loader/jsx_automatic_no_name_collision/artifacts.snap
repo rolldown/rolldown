@@ -8,7 +8,7 @@ snapshot_kind: text
 
 ```text
 [UNRESOLVED_IMPORT] Warning: Could not resolve "@remix-run/react" in entry.jsx
-   ╭─[entry.jsx:1:22]
+   ╭─[ entry.jsx:1:22 ]
    │
  1 │ import { Link } from "@remix-run/react"
    │                      ─────────┬────────  

@@ -8,7 +8,7 @@ snapshot_kind: text
 
 ```text
 [UNRESOLVED_IMPORT] Warning: Could not resolve 'foo' in entry.js
-    ╭─[entry.js:10:29]
+    ╭─[ entry.js:10:29 ]
     │
  10 │     function() { return import('foo') },
     │                                ──┬──  
@@ -20,7 +20,7 @@ snapshot_kind: text
 
 ```text
 [UNRESOLVED_IMPORT] Warning: Could not resolve 'foo' in entry.js
-   ╭─[entry.js:1:8]
+   ╭─[ entry.js:1:8 ]
    │
  1 │ import 'foo'
    │        ──┬──  
@@ -32,7 +32,7 @@ snapshot_kind: text
 
 ```text
 [UNRESOLVED_IMPORT] Warning: Could not resolve 'foo' in entry.js
-   ╭─[entry.js:2:16]
+   ╭─[ entry.js:2:16 ]
    │
  2 │ import {} from 'foo'
    │                ──┬──  
@@ -44,7 +44,7 @@ snapshot_kind: text
 
 ```text
 [UNRESOLVED_IMPORT] Warning: Could not resolve 'foo' in entry.js
-   ╭─[entry.js:3:21]
+   ╭─[ entry.js:3:21 ]
    │
  3 │ import * as ns from 'foo'
    │                     ──┬──  
@@ -56,7 +56,7 @@ snapshot_kind: text
 
 ```text
 [UNRESOLVED_IMPORT] Warning: Could not resolve 'foo' in entry.js
-   ╭─[entry.js:4:25]
+   ╭─[ entry.js:4:25 ]
    │
  4 │ import {a, b as c} from 'foo'
    │                         ──┬──  
@@ -68,7 +68,7 @@ snapshot_kind: text
 
 ```text
 [UNRESOLVED_IMPORT] Warning: Could not resolve 'foo' in entry.js
-   ╭─[entry.js:5:17]
+   ╭─[ entry.js:5:17 ]
    │
  5 │ import def from 'foo'
    │                 ──┬──  
@@ -80,7 +80,7 @@ snapshot_kind: text
 
 ```text
 [UNRESOLVED_IMPORT] Warning: Could not resolve 'foo' in entry.js
-   ╭─[entry.js:6:28]
+   ╭─[ entry.js:6:28 ]
    │
  6 │ import def2, * as ns2 from 'foo'
    │                            ──┬──  
@@ -92,7 +92,7 @@ snapshot_kind: text
 
 ```text
 [UNRESOLVED_IMPORT] Warning: Could not resolve 'foo' in entry.js
-   ╭─[entry.js:7:33]
+   ╭─[ entry.js:7:33 ]
    │
  7 │ import def3, {a2, b as c3} from 'foo'
    │                                 ──┬──  
@@ -104,7 +104,7 @@ snapshot_kind: text
 
 ```text
 [UNRESOLVED_IMPORT] Warning: Could not resolve 'foo' in entry.js
-   ╭─[entry.js:9:9]
+   ╭─[ entry.js:9:9 ]
    │
  9 │     import('foo'),
    │            ──┬──  

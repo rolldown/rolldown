@@ -8,7 +8,7 @@ snapshot_kind: text
 
 ```text
 [UNRESOLVED_IMPORT] Warning: Could not resolve 'test' in main.js
-   ╭─[main.js:2:14]
+   ╭─[ main.js:2:14 ]
    │
  2 │ import test from 'test';
    │                  ───┬──  

@@ -1,5 +1,6 @@
 ---
 source: crates/rolldown_testing/src/integration_test.rs
+snapshot_kind: text
 ---
 # warnings
 
@@ -7,7 +8,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```text
 [UNRESOLVED_IMPORT] Warning: Could not resolve 'fs' in entry.js
-   ╭─[entry.js:1:8]
+   ╭─[ entry.js:1:8 ]
    │
  1 │ import 'fs'
    │        ──┬─  
@@ -19,7 +20,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```text
 [UNRESOLVED_IMPORT] Warning: Could not resolve 'fs' in entry.js
-   ╭─[entry.js:2:21]
+   ╭─[ entry.js:2:21 ]
    │
  2 │ import * as fs from 'fs'
    │                     ──┬─  
@@ -31,7 +32,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```text
 [UNRESOLVED_IMPORT] Warning: Could not resolve 'fs' in entry.js
-   ╭─[entry.js:3:26]
+   ╭─[ entry.js:3:26 ]
    │
  3 │ import defaultValue from 'fs'
    │                          ──┬─  
@@ -43,7 +44,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```text
 [UNRESOLVED_IMPORT] Warning: Could not resolve 'fs' in entry.js
-   ╭─[entry.js:4:28]
+   ╭─[ entry.js:4:28 ]
    │
  4 │ import {readFileSync} from 'fs'
    │                            ──┬─  

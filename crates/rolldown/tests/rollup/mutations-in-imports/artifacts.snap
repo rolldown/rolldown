@@ -8,7 +8,7 @@ snapshot_kind: text
 
 ```text
 [IMPORT_IS_UNDEFINED] Warning: Import `value` will always be undefined because there is no matching export in 'foo.js'
-   ╭─[main.js:4:1]
+   ╭─[ main.js:4:1 ]
    │
  4 │ foo.value.a = 1;
    │ ─────┬─────  

@@ -8,7 +8,7 @@ snapshot_kind: text
 
 ```text
 [PARSE_ERROR] Error: Expected a semicolon or an implicit semicolon after a statement, but found none
-   ╭─[main.js:1:5]
+   ╭─[ main.js:1:5 ]
    │
  1 │ cons a = 1;
    │     │ 

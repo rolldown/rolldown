@@ -1,5 +1,6 @@
 ---
 source: crates/rolldown_testing/src/integration_test.rs
+snapshot_kind: text
 ---
 # warnings
 
@@ -7,7 +8,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```text
 [PARSE_ERROR] Warning: Identifier `x` has already been declared
-   ╭─[function2.js:1:10]
+   ╭─[ function2.js:1:10 ]
    │
  1 │ function x() { return 1 }
    │          ┬  
@@ -23,7 +24,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```text
 [PARSE_ERROR] Warning: Identifier `x` has already been declared
-   ╭─[function3.js:1:10]
+   ╭─[ function3.js:1:10 ]
    │
  1 │ function x() { return 1 }
    │          ┬  
@@ -39,7 +40,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```text
 [PARSE_ERROR] Warning: Identifier `x` has already been declared
-   ╭─[function3.js:1:10]
+   ╭─[ function3.js:1:10 ]
    │
  1 │ function x() { return 1 }
    │          ┬  

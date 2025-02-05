@@ -8,7 +8,7 @@ snapshot_kind: text
 
 ```text
 [IMPORT_IS_UNDEFINED] Warning: Import `__esModule` will always be undefined because there is no matching export in 'foo.js'
-   ╭─[entry.js:3:3]
+   ╭─[ entry.js:3:3 ]
    │
  3 │   foo.__esModule === void 0 && foo.bar === 123
    │   ───────┬──────  
@@ -41,7 +41,7 @@ Variant: (format: Cjs)
 
 ```text
 [IMPORT_IS_UNDEFINED] Warning: Import `__esModule` will always be undefined because there is no matching export in 'foo.js'
-   ╭─[entry.js:3:3]
+   ╭─[ entry.js:3:3 ]
    │
  3 │   foo.__esModule === void 0 && foo.bar === 123
    │   ───────┬──────  
@@ -75,7 +75,7 @@ Variant: (format: Iife)
 
 ```text
 [IMPORT_IS_UNDEFINED] Warning: Import `__esModule` will always be undefined because there is no matching export in 'foo.js'
-   ╭─[entry.js:3:3]
+   ╭─[ entry.js:3:3 ]
    │
  3 │   foo.__esModule === void 0 && foo.bar === 123
    │   ───────┬──────  
@@ -112,7 +112,7 @@ Variant: (format: Umd)
 
 ```text
 [IMPORT_IS_UNDEFINED] Warning: Import `__esModule` will always be undefined because there is no matching export in 'foo.js'
-   ╭─[entry.js:3:3]
+   ╭─[ entry.js:3:3 ]
    │
  3 │   foo.__esModule === void 0 && foo.bar === 123
    │   ───────┬──────  

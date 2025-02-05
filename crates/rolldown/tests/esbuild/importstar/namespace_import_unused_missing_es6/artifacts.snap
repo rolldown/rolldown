@@ -8,7 +8,7 @@ snapshot_kind: text
 
 ```text
 [IMPORT_IS_UNDEFINED] Warning: Import `foo` will always be undefined because there is no matching export in 'foo.js'
-   ╭─[entry.js:3:14]
+   ╭─[ entry.js:3:14 ]
    │
  3 │ assert.equal(ns.foo, undefined)
    │              ───┬──  

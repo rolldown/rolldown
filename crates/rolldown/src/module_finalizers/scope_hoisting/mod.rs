@@ -396,7 +396,6 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
   }
 
   // Handle `import.meta.xxx` expression
-  #[allow(clippy::too_many_lines)]
   pub fn try_rewrite_import_meta_prop_expr(
     &self,
     member_expr: &ast::StaticMemberExpression<'ast>,

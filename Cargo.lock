@@ -73,7 +73,7 @@ checksum = "03918c3dbd7701a85c6b9887732e2921175f26c350b4563841d0958c21d57e6d"
 [[package]]
 name = "ariadne"
 version = "0.5.0"
-source = "git+https://github.com/zesterer/ariadne?rev=c9f858f18d30983f48ef8c726d36ec439b6000eb#c9f858f18d30983f48ef8c726d36ec439b6000eb"
+source = "git+https://github.com/zesterer/ariadne?rev=5caec6c2f9065406e5cec271cd11107102897efd#5caec6c2f9065406e5cec271cd11107102897efd"
 dependencies = [
  "unicode-width 0.1.13",
  "yansi",
@@ -2243,6 +2243,7 @@ dependencies = [
  "oxc",
  "oxc_resolver",
  "oxc_sourcemap",
+ "ropey",
  "rustc-hash",
  "sugar_path",
 ]

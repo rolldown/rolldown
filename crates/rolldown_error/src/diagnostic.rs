@@ -1,6 +1,6 @@
-use crate::build_error::severity::Severity;
+use crate::{build_error::severity::Severity, utils::is_context_too_long};
 use arcstr::ArcStr;
-use ariadne::{sources, Config, Label, Report, ReportBuilder, ReportKind};
+use ariadne::{sources, Config, Label, Report, ReportBuilder, ReportKind, Span};
 use rustc_hash::FxHashMap;
 use std::{fmt::Display, ops::Range};
 
@@ -19,7 +19,14 @@ impl From<ArcStr> for DiagnosticFileId {
   }
 }
 
+#[derive(Debug, Clone)]
 pub struct RolldownLabelSpan(DiagnosticFileId, Range<usize>);
+
+impl From<(DiagnosticFileId, Range<usize>)> for RolldownLabelSpan {
+  fn from((id, range): (DiagnosticFileId, Range<usize>)) -> Self {
+    Self(id, range)
+  }
+}
 
 impl ariadne::Span for RolldownLabelSpan {
   type SourceId = DiagnosticFileId;
@@ -42,13 +49,13 @@ pub struct Diagnostic {
   pub(crate) kind: String,
   pub(crate) title: String,
   pub(crate) files: FxHashMap</* filename */ DiagnosticFileId, /* file content */ ArcStr>,
-  pub(crate) labels: Vec<Label<(/* filename */ DiagnosticFileId, Range<usize>)>>,
+  pub(crate) labels: Vec<Label<RolldownLabelSpan>>,
   pub(crate) help: Option<String>,
   pub(crate) severity: Severity,
 }
 
-type AriadneReportBuilder = ReportBuilder<'static, (DiagnosticFileId, Range<usize>)>;
-type AriadneReport = Report<'static, (DiagnosticFileId, Range<usize>)>;
+type AriadneReportBuilder = ReportBuilder<'static, RolldownLabelSpan>;
+type AriadneReport = Report<'static, RolldownLabelSpan>;
 
 impl Diagnostic {
   pub(crate) fn new(kind: String, summary: String, severity: Severity) -> Self {
@@ -87,24 +94,35 @@ impl Diagnostic {
   ) -> &mut Self {
     let range = range.into();
     let range = range.start as usize..range.end as usize;
-    let label = Label::new((file_id.0.clone().into(), range)).with_message(message);
+    let label =
+      Label::new(RolldownLabelSpan(file_id.0.clone().into(), range)).with_message(message);
     self.labels.push(label);
     self
   }
 
   fn init_report_builder(&self) -> AriadneReportBuilder {
-    let message = self.title.clone();
+    let mut message = self.title.clone();
     let mut builder = AriadneReport::build(
       match self.severity {
         Severity::Error => ReportKind::Error,
         Severity::Warning => ReportKind::Warning,
       },
-      (ArcStr::default().into(), 0..0),
+      RolldownLabelSpan(ArcStr::default().into(), 0..0),
     )
     .with_code(self.kind.clone());
 
     for label in self.labels.clone() {
-      builder = builder.with_label(label);
+      if is_context_too_long(&label, &self.files) {
+        let span = label.span();
+        message += &format!(
+          "\n - {} in {} at {:?}",
+          label.display_info().msg().unwrap_or_default(),
+          span.source(),
+          span.start()..span.end()
+        );
+      } else {
+        builder = builder.with_label(label);
+      }
     }
 
     if let Some(help) = &self.help {

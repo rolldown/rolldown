@@ -2,7 +2,7 @@ import type { RolldownPluginOption } from '../plugin'
 import type {
   LogLevel,
   LogLevelOption,
-  LogLevelWithError,
+  LogOrStringHandler,
   RollupLog,
   RollupLogWithString,
 } from '../log/logging'
@@ -102,10 +102,7 @@ export interface InputOptions {
   onLog?: (
     level: LogLevel,
     log: RollupLog,
-    defaultHandler: (
-      level: LogLevelWithError,
-      log: RollupLogWithString,
-    ) => void,
+    defaultHandler: LogOrStringHandler,
   ) => void
   onwarn?: (
     warning: RollupLog,

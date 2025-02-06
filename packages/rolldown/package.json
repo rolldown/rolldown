@@ -70,10 +70,11 @@
     "bak_build-node": "unbuild",
     "build-node": "node --import @oxc-node/core/register ./build.ts",
     "build-types": "tsc -p ./tsconfig.json",
-    "build-native:debug": "run-s build-binding build-types build-node",
-    "build-native:release": "run-s build-binding:release build-types build-node",
+    "build-native:debug": "run-s build-binding build-types build-node build-type-check",
+    "build-native:release": "run-s build-binding:release build-types build-node build-type-check",
     "build-wasi:debug": "run-s build-binding build-binding:wasi build-node",
     "build-wasi:release": "run-s build-binding build-binding:wasi:release build-node",
+    "build-type-check": "tsc -p ./tsconfig.check.json",
     "# Scrips for docs #": "_",
     "extract-options-doc": "typedoc"
   },

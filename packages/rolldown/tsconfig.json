@@ -3,12 +3,12 @@
   "include": ["./src/**/*"],
   "exclude": ["*.js", "*.mjs", "*.cjs", "dist", "lib"],
   "compilerOptions": {
-    "composite": true,
     "rootDir": "./src",
     "outDir": "./dist/types",
     "resolveJsonModule": true,
     "noEmit": false,
-    "tsBuildInfoFile": ".tsbuildinfo",
-    "emitDeclarationOnly": true
+    "emitDeclarationOnly": true,
+    "isolatedModules": true,
+    "isolatedDeclarations": true
   }
 }

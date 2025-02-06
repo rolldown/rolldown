@@ -8,6 +8,7 @@
     "outDir": "./dist/types",
     "resolveJsonModule": true,
     "noEmit": false,
-    "tsBuildInfoFile": ".tsbuildinfo"
+    "tsBuildInfoFile": ".tsbuildinfo",
+    "emitDeclarationOnly": true
   }
 }

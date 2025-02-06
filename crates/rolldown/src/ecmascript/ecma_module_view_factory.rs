@@ -1,12 +1,9 @@
-use arcstr::ArcStr;
-use oxc::semantic::{ScopeTree, SymbolTable};
 use oxc_index::IndexVec;
 use rolldown_common::{
   side_effects::{DeterminedSideEffects, HookSideEffects},
-  EcmaRelated, EcmaView, EcmaViewMeta, ImportRecordIdx, ModuleDefFormat, ModuleId, ModuleIdx,
-  ModuleType, RawImportRecord, TreeshakeOptions,
+  EcmaRelated, EcmaView, EcmaViewMeta, ImportRecordIdx, ModuleId, ModuleType, RawImportRecord,
+  TreeshakeOptions,
 };
-use rolldown_ecmascript::EcmaAst;
 use rolldown_error::BuildResult;
 use rolldown_std_utils::PathExt;
 use rolldown_utils::{ecmascript::legitimize_identifier_name, indexmap::FxIndexSet};
@@ -16,37 +13,7 @@ use crate::{
   ast_scanner::{AstScanner, ScanResult},
   types::module_factory::{CreateModuleContext, CreateModuleViewArgs},
   utils::parse_to_ecma_ast::{parse_to_ecma_ast, ParseToEcmaAstResult},
-  SharedOptions,
 };
-
-fn scan_ast(
-  module_idx: ModuleIdx,
-  id: &ArcStr,
-  ast: &mut EcmaAst,
-  scope_tree: ScopeTree,
-  symbol_table: SymbolTable,
-  module_def_format: ModuleDefFormat,
-  options: &SharedOptions,
-) -> BuildResult<ScanResult> {
-  let module_id = ModuleId::new(id);
-
-  let repr_name = module_id.as_path().representative_file_name();
-  let repr_name = legitimize_identifier_name(&repr_name);
-
-  let scanner = AstScanner::new(
-    module_idx,
-    scope_tree,
-    symbol_table,
-    &repr_name,
-    module_def_format,
-    ast.source(),
-    &module_id,
-    ast.comments(),
-    options,
-  );
-
-  scanner.scan(ast.program())
-}
 
 pub struct CreateEcmaViewReturn {
   pub ecma_view: EcmaView,
@@ -60,20 +27,27 @@ pub async fn create_ecma_view(
   args: CreateModuleViewArgs,
 ) -> BuildResult<CreateEcmaViewReturn> {
   let CreateModuleViewArgs { source, sourcemap_chain, hook_side_effects } = args;
-  let ParseToEcmaAstResult { mut ast, symbol_table, scope_tree, has_lazy_export, warning } =
+  let ParseToEcmaAstResult { ast, symbol_table, scope_tree, has_lazy_export, warning } =
     parse_to_ecma_ast(ctx, source)?;
 
   ctx.warnings.extend(warning);
 
-  let scan_result = scan_ast(
+  let module_id = ModuleId::new(&ctx.resolved_id.id);
+
+  let repr_name = module_id.as_path().representative_file_name();
+  let repr_name = legitimize_identifier_name(&repr_name);
+
+  let scanner = AstScanner::new(
     ctx.module_index,
-    &ctx.resolved_id.id,
-    &mut ast,
     scope_tree,
     symbol_table,
+    &repr_name,
     ctx.resolved_id.module_def_format,
+    ast.source(),
+    &module_id,
+    ast.comments(),
     ctx.options,
-  )?;
+  );
 
   let ScanResult {
     named_imports,
@@ -96,7 +70,7 @@ pub async fn create_ecma_view(
     dynamic_import_rec_exports_usage,
     new_url_references: new_url_imports,
     this_expr_replace_map,
-  } = scan_result;
+  } = scanner.scan(ast.program())?;
 
   if !errors.is_empty() {
     return Err(errors.into());

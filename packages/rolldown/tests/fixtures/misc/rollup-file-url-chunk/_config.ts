@@ -16,10 +16,9 @@ export default defineTest({
         transform(_code, id) {
           // replace `?chunk-url` module with a reference to the chunk
           if (id.endsWith('?chunk-url')) {
-            const entry = id.replace('?chunk-url', '')
             const referenceId = this.emitFile({
               type: 'chunk',
-              id: entry,
+              id: id.replace('?chunk-url', ''),
             })
             return `export default import.meta.ROLLUP_FILE_URL_${referenceId}`
           }

@@ -9,6 +9,7 @@ use oxc_resolver::ResolveError;
 
 use crate::events::assign_to_import::AssignToImport;
 use crate::events::export_undefined_variable::ExportUndefinedVariable;
+use crate::events::filename_conflict::FilenameConflict;
 use crate::events::illegal_identifier_as_name::IllegalIdentifierAsName;
 use crate::events::import_is_undefined::ImportIsUndefined;
 use crate::events::invalid_define_config::InvalidDefineConfig;
@@ -159,6 +160,11 @@ impl BuildDiagnostic {
   ) -> Self {
     Self::new_inner(InvalidExportOption { export_mode, export_keys, entry_module })
   }
+
+  pub fn filename_conflict(filename: ArcStr) -> Self {
+    Self::new_inner(FilenameConflict { filename })
+  }
+
   // Esbuild
   pub fn commonjs_variable_in_esm(
     filename: String,

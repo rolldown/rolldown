@@ -448,6 +448,7 @@ impl<'ast> AstSnippet<'ast> {
     statements: allocator::Vec<'ast, Statement<'ast>>,
     profiler_names: bool,
     stable_id: &str,
+    is_async: bool,
   ) -> ast::Statement<'ast> {
     // () => { ... }
     let params = self.builder.formal_parameters(
@@ -474,7 +475,7 @@ impl<'ast> AstSnippet<'ast> {
             FunctionType::FunctionExpression,
             None,
             false,
-            false,
+            is_async,
             false,
             NONE,
             NONE,

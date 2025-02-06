@@ -111,7 +111,8 @@ impl<'me, 'ast: 'me> Visit<'ast> for AstScanner<'me, 'ast> {
   }
 
   fn visit_for_of_statement(&mut self, it: &ast::ForOfStatement<'ast>) {
-    if it.r#await && self.is_top_level() && !self.options.format.keep_esm_import_export_syntax() {
+    let is_top_level_await = it.r#await && self.is_top_level();
+    if is_top_level_await && !self.options.format.keep_esm_import_export_syntax() {
       self.result.errors.push(BuildDiagnostic::unsupported_feature(
         self.id.resource_id().clone(),
         self.source.clone(),
@@ -122,12 +123,16 @@ impl<'me, 'ast: 'me> Visit<'ast> for AstScanner<'me, 'ast> {
         ),
       ));
     }
+    if is_top_level_await {
+      self.ast_usage.insert(EcmaModuleAstUsage::TopLevelAwait);
+    }
 
     walk::walk_for_of_statement(self, it);
   }
 
   fn visit_await_expression(&mut self, it: &ast::AwaitExpression<'ast>) {
-    if !self.options.format.keep_esm_import_export_syntax() && self.is_top_level() {
+    let is_top_level_await = self.is_top_level();
+    if !self.options.format.keep_esm_import_export_syntax() && is_top_level_await {
       self.result.errors.push(BuildDiagnostic::unsupported_feature(
         self.id.resource_id().clone(),
         self.source.clone(),
@@ -137,6 +142,9 @@ impl<'me, 'ast: 'me> Visit<'ast> for AstScanner<'me, 'ast> {
           format = self.options.format
         ),
       ));
+    }
+    if is_top_level_await {
+      self.ast_usage.insert(EcmaModuleAstUsage::TopLevelAwait);
     }
     walk::walk_await_expression(self, it);
   }

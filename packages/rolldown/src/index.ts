@@ -56,7 +56,10 @@ import { PreRenderedChunk } from './binding'
 import { PartialNull } from './types/utils'
 import { NormalizedInputOptions } from './options/normalized-input-options'
 import { ModuleInfo } from './types/module-info'
-import { MinimalPluginContext } from './plugin/minimal-plugin-context'
+import {
+  PluginContextMeta,
+  MinimalPluginContext,
+} from './plugin/minimal-plugin-context'
 import { ExistingRawSourceMap, SourceMapInput } from './types/sourcemap'
 import { OutputBundle } from './types/output-bundle'
 import { version } from '../package.json'
@@ -103,6 +106,7 @@ export type {
   ResolvedId,
   ModuleOptions,
   ModuleInfo,
+  PluginContextMeta,
   MinimalPluginContext,
   EmittedFile,
   EmittedAsset,

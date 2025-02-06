@@ -145,6 +145,7 @@ bitflags! {
         const AllStaticExportPropertyAccess = 1 << 3;
         /// module.exports = require('mod');
         const IsCjsReexport = 1 << 4;
+        const TopLevelAwait = 1 << 5;
         const ModuleOrExports = Self::ModuleRef.bits() | Self::ExportsRef.bits();
     }
 }

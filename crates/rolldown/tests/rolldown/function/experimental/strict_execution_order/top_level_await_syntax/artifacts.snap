@@ -1,0 +1,28 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+snapshot_kind: text
+---
+# Assets
+
+## main.js
+
+```js
+
+
+//#region foo.js
+var foo;
+var init_foo = __esm({ async "foo.js"() {
+	await 1e3;
+	foo = 123;
+} });
+
+//#endregion
+//#region main.js
+var init_main = __esm({ "main.js"() {
+	init_foo();
+	console.log(foo);
+} });
+
+//#endregion
+init_main();
+```

@@ -4006,6 +4006,10 @@ snapshot_kind: text
 - entry2-!~{001}~.js => entry2-B5XU3PE7.js
 - run-dep-!~{002}~.js => run-dep-NL2vqItl.js
 
+# tests/rolldown/function/experimental/strict_execution_order/top_level_await_syntax
+
+- main-!~{000}~.js => main-C044ThMY.js
+
 # tests/rolldown/function/export_mode/cjs/auto/default
 
 - main-!~{000}~.js => main-BV29ae5y.js

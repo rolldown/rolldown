@@ -48,7 +48,7 @@ impl ModuleFederationPlugin {
           .join(", ")
       })
       .unwrap_or_default();
-    include_str!("remote-entry.js")
+    include_str!("runtime/remote-entry.js")
       .replace("__EXPOSES_MAP__", &concat_string!("{", expose, "}"))
       .replace("__PLUGINS__", &self.generate_runtime_plugins())
       .replace("__SHARED__", &self.generate_shared_modules())
@@ -81,7 +81,7 @@ impl ModuleFederationPlugin {
           .join(", ")
       })
       .unwrap_or_default();
-    include_str!("init-host.js")
+    include_str!("runtime/init-host.js")
       .replace("__REMOTES__", &concat_string!("[", remotes, "]"))
       .replace("__PLUGINS__", &self.generate_runtime_plugins())
       .replace("__NAME__", &concat_string!("'", &self.options.name, "'"))
@@ -228,7 +228,7 @@ impl Plugin for ModuleFederationPlugin {
     }
     if args.id == REMOTE_MODULE_REGISTRY {
       return Ok(Some(rolldown_plugin::HookLoadOutput {
-        code: include_str!("remote-module-registry.js").to_string(),
+        code: include_str!("runtime/remote-module-registry.js").to_string(),
         ..Default::default()
       }));
     }
@@ -253,7 +253,7 @@ impl Plugin for ModuleFederationPlugin {
         "]"
       );
       return Ok(Some(rolldown_plugin::HookLoadOutput {
-        code: include_str!("init-module-import-remote-module.js")
+        code: include_str!("runtime/init-module-import-remote-module.js")
           .replace("__REMOTE__MODULES__", &modules_string)
           .to_string(),
         ..Default::default()
@@ -261,7 +261,7 @@ impl Plugin for ModuleFederationPlugin {
     }
     if detect_remote_module_type(args.id, &self.options).is_some() {
       return Ok(Some(rolldown_plugin::HookLoadOutput {
-        code: include_str!("remote-module.js")
+        code: include_str!("runtime/remote-module.js")
           .replace("__REMOTE__MODULE__ID__", args.id)
           .to_string(),
         ..Default::default()

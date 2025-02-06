@@ -147,15 +147,16 @@ export function bindingifyResolveId(
         }
       }
 
-      args.pluginContextData.updateModuleOption(ret.id, {
+      // Make sure the `moduleSideEffects` is update to date
+      let exist = args.pluginContextData.updateModuleOption(ret.id, {
         meta: ret.meta || {},
-        moduleSideEffects: ret.moduleSideEffects || null,
+        moduleSideEffects: ret.moduleSideEffects ?? null,
       })
 
       return {
         id: ret.id,
         external: ret.external,
-        sideEffects: bindingifySideEffects(ret.moduleSideEffects),
+        sideEffects: bindingifySideEffects(exist.moduleSideEffects),
       }
     },
     meta: bindingifyPluginHookMeta(meta),
@@ -260,9 +261,9 @@ export function bindingifyTransform(
         return { code: ret }
       }
 
-      args.pluginContextData.updateModuleOption(id, {
-        meta: ret.meta || {},
-        moduleSideEffects: ret.moduleSideEffects || null,
+      let moduleOption = args.pluginContextData.updateModuleOption(id, {
+        meta: ret.meta ?? {},
+        moduleSideEffects: ret.moduleSideEffects ?? null,
       })
 
       return {
@@ -270,7 +271,7 @@ export function bindingifyTransform(
         map: bindingifySourcemap(
           normalizeTransformHookSourcemap(id, code, ret.map),
         ),
-        sideEffects: bindingifySideEffects(ret.moduleSideEffects),
+        sideEffects: bindingifySideEffects(moduleOption.moduleSideEffects),
         moduleType: ret.moduleType,
       }
     },
@@ -314,9 +315,9 @@ export function bindingifyLoad(
         return { code: ret }
       }
 
-      args.pluginContextData.updateModuleOption(id, {
+      let moduleOption = args.pluginContextData.updateModuleOption(id, {
         meta: ret.meta || {},
-        moduleSideEffects: ret.moduleSideEffects || null,
+        moduleSideEffects: ret.moduleSideEffects ?? null,
       })
 
       let map = preProcessSourceMap(ret, id)
@@ -325,7 +326,7 @@ export function bindingifyLoad(
         code: ret.code,
         map: bindingifySourcemap(map),
         moduleType: ret.moduleType,
-        sideEffects: bindingifySideEffects(ret.moduleSideEffects),
+        sideEffects: bindingifySideEffects(moduleOption.moduleSideEffects),
       }
     },
     meta: bindingifyPluginHookMeta(meta),

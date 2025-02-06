@@ -41,13 +41,6 @@ impl GenerateStage<'_> {
     let (mut instantiated_chunks, index_chunk_to_assets) =
       self.instantiate_chunks(chunk_graph, &mut errors, &mut warnings).await?;
 
-    // Set emitted chunk info for file emitter, it should be set before call render_chunks hook
-    set_emitted_chunk_preliminary_filenames(
-      &self.plugin_driver.file_emitter,
-      &instantiated_chunks,
-      chunk_graph,
-    );
-
     render_chunks(self.plugin_driver, &mut instantiated_chunks, self.options).await?;
 
     augment_chunk_hash(self.plugin_driver, &mut instantiated_chunks).await?;
@@ -349,29 +342,19 @@ fn get_sorting_file_type(output: &Output) -> SortingFileType {
   }
 }
 
-pub fn set_emitted_chunk_preliminary_filenames2(
+pub fn set_emitted_chunk_preliminary_filenames(
   file_emitter: &SharedFileEmitter,
   chunk_graph: &ChunkGraph,
 ) {
   let emitted_chunk_info = chunk_graph.chunk_table.chunks.iter().filter_map(|chunk| {
     chunk.reference_id.as_ref().map(|reference_id| EmittedChunkInfo {
       reference_id: reference_id.clone(),
-      filename: chunk.preliminary_filename.as_ref().unwrap().deref().clone(),
-    })
-  });
-  file_emitter.set_emitted_chunk_info(emitted_chunk_info);
-}
-
-fn set_emitted_chunk_preliminary_filenames(
-  file_emitter: &SharedFileEmitter,
-  instantiated_chunks: &IndexInstantiatedChunks,
-  chunk_graph: &ChunkGraph,
-) {
-  let emitted_chunk_info = instantiated_chunks.iter().filter_map(|instantiated_chunk| {
-    let chunk = &chunk_graph.chunk_table.chunks[instantiated_chunk.origin_chunk];
-    chunk.reference_id.as_ref().map(|reference_id| EmittedChunkInfo {
-      reference_id: reference_id.clone(),
-      filename: instantiated_chunk.preliminary_filename.deref().clone(),
+      filename: chunk
+        .preliminary_filename
+        .as_ref()
+        .expect("Emitted chunk should have filename")
+        .deref()
+        .clone(),
     })
   });
   file_emitter.set_emitted_chunk_info(emitted_chunk_info);

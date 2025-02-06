@@ -5,6 +5,7 @@ use crate::{
 use anyhow::Context;
 use arcstr::ArcStr;
 use dashmap::{DashMap, DashSet};
+use rolldown_error::BuildDiagnostic;
 use rolldown_utils::dashmap::{FxDashMap, FxDashSet};
 use rolldown_utils::extract_hash_pattern::extract_hash_pattern;
 use rolldown_utils::xxhash::{xxhash_base64_url, xxhash_with_base};
@@ -55,6 +56,7 @@ pub struct FileEmitter {
   /// Mark the files that have been emitted to bundle.
   emitted_files: FxDashSet<ArcStr>,
   emitted_chunks: FxDashMap<ArcStr, ArcStr>,
+  emitted_filenames: FxDashSet<ArcStr>,
 }
 
 impl FileEmitter {
@@ -69,6 +71,7 @@ impl FileEmitter {
       base_reference_id: AtomicUsize::new(0),
       options,
       emitted_files: DashSet::default(),
+      emitted_filenames: FxDashSet::default(),
     }
   }
 
@@ -207,13 +210,25 @@ impl FileEmitter {
     }
   }
 
-  pub fn add_additional_files(&self, bundle: &mut Vec<Output>) {
+  pub fn add_additional_files(
+    &self,
+    bundle: &mut Vec<Output>,
+    warnings: &mut Vec<BuildDiagnostic>,
+  ) {
     self.files.iter_mut().for_each(|mut file| {
       let (key, value) = file.pair_mut();
       if self.emitted_files.contains(key) {
         return;
       }
       self.emitted_files.insert(key.clone());
+
+      // Follow rollup using lowercase filename to check conflicts
+      let lowercase_filename = value.filename.as_str().to_lowercase().into();
+      if self.emitted_filenames.contains(&lowercase_filename) {
+        warnings
+          .push(BuildDiagnostic::filename_conflict(value.filename.clone()).with_severity_warning());
+      }
+      self.emitted_filenames.insert(lowercase_filename);
 
       let mut names = std::mem::take(&mut value.names);
       sort_names(&mut names);

@@ -17,6 +17,7 @@ pub enum EventKind {
   SourcemapError,
   UnresolvedEntry,
   UnresolvedImport,
+  FilenameConflict,
   // !! Only add new kind if it's not covered by the kinds from rollup !!
 
   // --- These kinds are derived from esbuild
@@ -58,6 +59,7 @@ impl Display for EventKind {
       EventKind::SourcemapError => write!(f, "SOURCEMAP_ERROR"),
       EventKind::UnresolvedEntry => write!(f, "UNRESOLVED_ENTRY"),
       EventKind::UnresolvedImport => write!(f, "UNRESOLVED_IMPORT"),
+      EventKind::FilenameConflict => write!(f, "FILE_NAME_CONFLICT"),
 
       // --- Derived from esbuild
       EventKind::AssignToImport => write!(f, "ASSIGN_TO_IMPORT"),

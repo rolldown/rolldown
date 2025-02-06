@@ -2243,6 +2243,7 @@ dependencies = [
  "oxc",
  "oxc_resolver",
  "oxc_sourcemap",
+ "rolldown_utils",
  "ropey",
  "rustc-hash",
  "sugar_path",

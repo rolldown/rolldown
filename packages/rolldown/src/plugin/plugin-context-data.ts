@@ -9,7 +9,7 @@ export class PluginContextData {
   resolveOptionsMap: Map<number, PluginContextResolveOptions> = new Map()
   loadModulePromiseMap: Map<string, Promise<void>> = new Map()
 
-  updateModuleOption(id: string, option: ModuleOptions): void {
+  updateModuleOption(id: string, option: ModuleOptions): ModuleOptions {
     const existing = this.moduleOptionMap.get(id)
     if (existing) {
       if (option.moduleSideEffects != null) {
@@ -20,7 +20,9 @@ export class PluginContextData {
       }
     } else {
       this.moduleOptionMap.set(id, option)
+      return option
     }
+    return existing
   }
 
   getModuleOption(id: string): ModuleOptions {
@@ -40,9 +42,23 @@ export class PluginContextData {
     const bindingInfo = context.getModuleInfo(id)
     if (bindingInfo) {
       const info = transformModuleInfo(bindingInfo, this.getModuleOption(id))
-      return info
+      return this.proxyModuleInfo(id, info)
     }
     return null
+  }
+
+  proxyModuleInfo(id: string, info: ModuleInfo): ModuleInfo {
+    let moduleSideEffects = info.moduleSideEffects
+    Object.defineProperty(info, 'moduleSideEffects', {
+      get() {
+        return moduleSideEffects
+      },
+      set: (v: any) => {
+        this.updateModuleOption(id, { moduleSideEffects: v, meta: info.meta })
+        moduleSideEffects = v
+      },
+    })
+    return info
   }
 
   getModuleIds(context: BindingPluginContext): ArrayIterator<string> {

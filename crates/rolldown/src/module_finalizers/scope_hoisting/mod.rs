@@ -475,10 +475,6 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
   fn rewrite_rollup_file_url(&self, property_name: &str) -> Option<Expression<'ast>> {
     // rewrite `import.meta.ROLLUP_FILE_URL_<referenceId>`
     if let Some(reference_id) = property_name.strip_prefix("ROLLUP_FILE_URL_") {
-      // compute relative path from chunk to asset
-      // TODO:
-      // preliminary_filename for chunk is not available from file_emitter.get_file_name
-      // but we can probably get it from Chunk.reference_id and Chunk.preliminary_filename
       let asset_file_name = match self.ctx.file_emitter.get_file_name(reference_id) {
         Ok(asset_file_name) => asset_file_name,
         Err(_error) => {

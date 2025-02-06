@@ -1,7 +1,6 @@
 import { defineTest } from 'rolldown-tests'
 import { expect } from 'vitest'
 import fs from 'node:fs'
-import path from 'node:path'
 
 export default defineTest({
   config: {

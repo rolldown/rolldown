@@ -349,6 +349,19 @@ fn get_sorting_file_type(output: &Output) -> SortingFileType {
   }
 }
 
+pub fn set_emitted_chunk_preliminary_filenames2(
+  file_emitter: &SharedFileEmitter,
+  chunk_graph: &ChunkGraph,
+) {
+  let emitted_chunk_info = chunk_graph.chunk_table.chunks.iter().filter_map(|chunk| {
+    chunk.reference_id.as_ref().map(|reference_id| EmittedChunkInfo {
+      reference_id: reference_id.clone(),
+      filename: chunk.preliminary_filename.as_ref().unwrap().deref().clone(),
+    })
+  });
+  file_emitter.set_emitted_chunk_info(emitted_chunk_info);
+}
+
 fn set_emitted_chunk_preliminary_filenames(
   file_emitter: &SharedFileEmitter,
   instantiated_chunks: &IndexInstantiatedChunks,

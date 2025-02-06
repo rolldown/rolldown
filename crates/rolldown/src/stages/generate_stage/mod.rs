@@ -4,6 +4,7 @@ use arcstr::ArcStr;
 use futures::future::try_join_all;
 use oxc::ast::VisitMut;
 use oxc_index::IndexVec;
+use render_chunk_to_assets::set_emitted_chunk_preliminary_filenames2;
 use rolldown_ecmascript_utils::AstSnippet;
 use rolldown_error::BuildResult;
 use rolldown_std_utils::OptionExt;
@@ -75,6 +76,7 @@ impl<'a> GenerateStage<'a> {
     let index_chunk_id_to_name =
       self.generate_chunk_name_and_preliminary_filenames(&mut chunk_graph).await?;
     self.patch_asset_modules(&chunk_graph);
+    set_emitted_chunk_preliminary_filenames2(&self.plugin_driver.file_emitter, &chunk_graph);
 
     chunk_graph.chunk_table.par_iter_mut().for_each(|chunk| {
       deconflict_chunk_symbols(

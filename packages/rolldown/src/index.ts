@@ -124,4 +124,10 @@ export type {
   RenderedChunk,
 }
 
-export type { RollupError, RollupLog, LoggingFunction } from './types/misc'
+export type {
+  RollupError,
+  RollupLog,
+  LoggingFunction,
+  LogLevel,
+  WarningHandlerWithDefault,
+} from './types/misc'

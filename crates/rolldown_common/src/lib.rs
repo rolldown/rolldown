@@ -91,6 +91,7 @@ pub use crate::{
   types::cache::Cache,
   types::chunk_idx::ChunkIdx,
   types::chunk_kind::ChunkKind,
+  types::defer_sync_scan_data::DeferSyncScanData,
   types::ecma_ast_idx::EcmaAstIdx,
   types::entry_point::{EntryPoint, EntryPointKind},
   types::exports_kind::ExportsKind,

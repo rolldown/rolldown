@@ -19,6 +19,13 @@ impl<T> UniqueArc<T> {
     })
   }
 
+  pub fn get_mut(&mut self) -> &mut T {
+    Arc::get_mut(&mut self.0).unwrap_or_else(|| {
+      let t_name = pretty_type_name::<T>();
+      panic!("UniqueArc<{t_name}> has multiple references")
+    })
+  }
+
   pub fn weak_ref(&self) -> WeakRef<T> {
     WeakRef(Arc::downgrade(&self.0))
   }

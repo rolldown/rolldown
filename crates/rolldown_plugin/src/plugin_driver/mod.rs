@@ -10,7 +10,10 @@ use rolldown_common::{
   ModuleId, ModuleInfo, ModuleLoaderMsg, SharedFileEmitter, SharedNormalizedBundlerOptions,
 };
 use rolldown_resolver::Resolver;
-use rolldown_utils::dashmap::{FxDashMap, FxDashSet};
+use rolldown_utils::{
+  dashmap::{FxDashMap, FxDashSet},
+  unique_arc::UniqueArc,
+};
 use tokio::sync::Mutex;
 
 use crate::{
@@ -49,6 +52,7 @@ impl PluginDriver {
     let modules = Arc::new(DashMap::default());
     let context_load_modules = Arc::new(DashMap::default());
     let tx = Arc::new(Mutex::new(None));
+    let defer_sync_scan_data = UniqueArc::new(vec![]);
 
     Arc::new_cyclic(|plugin_driver| {
       let mut index_plugins = IndexPluginable::with_capacity(plugins.len());
@@ -68,6 +72,7 @@ impl PluginDriver {
             watch_files: Arc::clone(&watch_files),
             context_load_modules: Arc::clone(&context_load_modules),
             tx: Arc::clone(&tx),
+            defer_sync_scan_data: UniqueArc::weak_ref(&defer_sync_scan_data),
           }
           .into(),
         );

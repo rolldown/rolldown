@@ -1,4 +1,5 @@
 use std::{
+  borrow::BorrowMut,
   fmt::Debug,
   future::Future,
   ops::Deref,
@@ -10,11 +11,14 @@ use std::{
 use anyhow::Context;
 use arcstr::ArcStr;
 use rolldown_common::{
-  side_effects::HookSideEffects, ModuleDefFormat, ModuleInfo, ModuleLoaderMsg, ResolvedId,
-  SharedFileEmitter, SharedNormalizedBundlerOptions,
+  side_effects::HookSideEffects, DeferSyncScanData, ModuleDefFormat, ModuleInfo, ModuleLoaderMsg,
+  ResolvedId, SharedFileEmitter, SharedNormalizedBundlerOptions,
 };
 use rolldown_resolver::{ResolveError, Resolver};
-use rolldown_utils::dashmap::{FxDashMap, FxDashSet};
+use rolldown_utils::{
+  dashmap::{FxDashMap, FxDashSet},
+  unique_arc::UniqueArc,
+};
 use tokio::sync::Mutex;
 
 use crate::{
@@ -91,6 +95,7 @@ pub struct PluginContextImpl {
   pub(crate) modules: Arc<FxDashMap<ArcStr, Arc<ModuleInfo>>>,
   pub(crate) context_load_modules: Arc<FxDashMap<ArcStr, LoadCallback>>,
   pub(crate) tx: Arc<Mutex<Option<tokio::sync::mpsc::Sender<ModuleLoaderMsg>>>>,
+  pub(crate) defer_sync_scan_data: UniqueArc<Vec<DeferSyncScanData>>,
 }
 
 impl From<PluginContextImpl> for PluginContext {
@@ -207,6 +212,10 @@ impl PluginContextImpl {
 
   pub fn get_module_info(&self, module_id: &str) -> Option<Arc<rolldown_common::ModuleInfo>> {
     self.modules.get(module_id).map(|v| Arc::<rolldown_common::ModuleInfo>::clone(v.value()))
+  }
+
+  pub fn set_defer_sync_scan_data(&mut self, defer_sync_scan_data: Vec<DeferSyncScanData>) {
+    *self.defer_sync_scan_data.get_mut() = defer_sync_scan_data;
   }
 
   pub fn get_module_ids(&self) -> Vec<String> {

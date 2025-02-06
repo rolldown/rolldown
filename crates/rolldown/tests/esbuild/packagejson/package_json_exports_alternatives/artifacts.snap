@@ -1,5 +1,6 @@
 ---
 source: crates/rolldown_testing/src/integration_test.rs
+snapshot_kind: text
 ---
 # warnings
 
@@ -7,7 +8,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```text
 [UNRESOLVED_IMPORT] Warning: Could not resolve 'pkg/apples/red.js' in src/entry.js
-   ╭─[src/entry.js:1:22]
+   ╭─[ src/entry.js:1:22 ]
    │
  1 │ import redApple from 'pkg/apples/red.js'
    │                      ─────────┬─────────  
@@ -19,7 +20,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```text
 [UNRESOLVED_IMPORT] Warning: Could not resolve 'pkg/books/red' in src/entry.js
-   ╭─[src/entry.js:3:21]
+   ╭─[ src/entry.js:3:21 ]
    │
  3 │ import redBook from 'pkg/books/red'
    │                     ───────┬───────  

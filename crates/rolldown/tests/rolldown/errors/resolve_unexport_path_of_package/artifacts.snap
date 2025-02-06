@@ -8,7 +8,7 @@ snapshot_kind: text
 
 ```text
 [RESOLVE_ERROR] Error: Could not resolve "test/abc" in main.js
-   ╭─[main.js:1:22]
+   ╭─[ main.js:1:22 ]
    │
  1 │ import { test } from "test/abc"
    │                      ─────┬────  

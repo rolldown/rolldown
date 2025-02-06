@@ -8,25 +8,25 @@ snapshot_kind: text
 
 ```text
 [AMBIGUOUS_EXTERNAL_NAMESPACES] Error: Found ambiguous export.
-   ╭─[main.js:1:10]
+   ╭─[ main.js:1:10 ]
    │
  1 │ import { value } from "./foo";
    │          ──┬──  
    │            ╰──── "foo.js" re-exports "value"
    │
-   ├─[a.js:1:14]
+   ├─[ a.js:1:14 ]
    │
  1 │ export const value = 1
    │              ──┬──  
    │                ╰──── One matching export is here.
    │
-   ├─[b.js:1:14]
+   ├─[ b.js:1:14 ]
    │
  1 │ export const value = 1
    │              ──┬──  
    │                ╰──── One matching export is here.
    │
-   ├─[c.js:1:14]
+   ├─[ c.js:1:14 ]
    │
  1 │ export const value = 1
    │              ──┬──  

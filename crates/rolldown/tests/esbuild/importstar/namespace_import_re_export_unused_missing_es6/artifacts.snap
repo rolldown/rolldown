@@ -8,7 +8,7 @@ snapshot_kind: text
 
 ```text
 [MISSING_EXPORT] Error: "foo" is not exported by "bar.js".
-   ╭─[foo.js:1:9]
+   ╭─[ foo.js:1:9 ]
    │
  1 │ export {foo} from './bar'
    │         ─┬─  

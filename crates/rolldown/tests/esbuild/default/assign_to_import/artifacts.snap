@@ -8,7 +8,7 @@ snapshot_kind: text
 
 ```text
 [ASSIGN_TO_IMPORT] Error: Cannot assign to import 'x'
-   ╭─[bad0.js:1:22]
+   ╭─[ bad0.js:1:22 ]
    │
  1 │ import x from "foo"; x = 1
    │                      ┬  
@@ -20,7 +20,7 @@ snapshot_kind: text
 
 ```text
 [ASSIGN_TO_IMPORT] Error: Cannot assign to import 'x'
-   ╭─[bad1.js:1:22]
+   ╭─[ bad1.js:1:22 ]
    │
  1 │ import x from "foo"; x++
    │                      ┬  
@@ -32,7 +32,7 @@ snapshot_kind: text
 
 ```text
 [ASSIGN_TO_IMPORT] Error: Cannot assign to import 'x'
-   ╭─[bad2.js:1:24]
+   ╭─[ bad2.js:1:24 ]
    │
  1 │ import x from "foo"; ([x] = 1)
    │                        ┬  
@@ -44,7 +44,7 @@ snapshot_kind: text
 
 ```text
 [ASSIGN_TO_IMPORT] Error: Cannot assign to import 'x'
-   ╭─[bad3.js:1:24]
+   ╭─[ bad3.js:1:24 ]
    │
  1 │ import x from "foo"; ({x} = 1)
    │                        ┬  
@@ -56,7 +56,7 @@ snapshot_kind: text
 
 ```text
 [ASSIGN_TO_IMPORT] Error: Cannot assign to import 'x'
-   ╭─[bad4.js:1:27]
+   ╭─[ bad4.js:1:27 ]
    │
  1 │ import x from "foo"; ({y: x} = 1)
    │                           ┬  
@@ -68,7 +68,7 @@ snapshot_kind: text
 
 ```text
 [ASSIGN_TO_IMPORT] Error: Cannot assign to import 'x'
-   ╭─[bad5.js:1:24]
+   ╭─[ bad5.js:1:24 ]
    │
  1 │ import {x} from "foo"; x++
    │                        ┬  
@@ -80,7 +80,7 @@ snapshot_kind: text
 
 ```text
 [ASSIGN_TO_IMPORT] Error: Cannot assign to import 'x'
-   ╭─[bad6.js:1:27]
+   ╭─[ bad6.js:1:27 ]
    │
  1 │ import * as x from "foo"; x++
    │                           ┬  
@@ -92,7 +92,7 @@ snapshot_kind: text
 
 ```text
 [ASSIGN_TO_IMPORT] Error: Cannot assign to import 'y z'
-   ╭─[bad10.js:1:29]
+   ╭─[ bad10.js:1:29 ]
    │
  1 │ import * as x from "foo"; x['y z'] = 1
    │                             ──┬──  
@@ -104,7 +104,7 @@ snapshot_kind: text
 
 ```text
 [ASSIGN_TO_IMPORT] Error: Cannot assign to import 'y'
-   ╭─[bad13.js:1:36]
+   ╭─[ bad13.js:1:36 ]
    │
  1 │ import * as x from "foo"; delete x.y
    │                                    ┬  
@@ -116,7 +116,7 @@ snapshot_kind: text
 
 ```text
 [ASSIGN_TO_IMPORT] Error: Cannot assign to import 'y'
-   ╭─[bad14.js:1:36]
+   ╭─[ bad14.js:1:36 ]
    │
  1 │ import * as x from "foo"; delete x['y']
    │                                    ─┬─  
@@ -128,7 +128,7 @@ snapshot_kind: text
 
 ```text
 [ASSIGN_TO_IMPORT] Error: Cannot assign to import 'y'
-   ╭─[bad7.js:1:29]
+   ╭─[ bad7.js:1:29 ]
    │
  1 │ import * as x from "foo"; x.y = 1
    │                             ┬  
@@ -140,7 +140,7 @@ snapshot_kind: text
 
 ```text
 [ASSIGN_TO_IMPORT] Error: Cannot assign to import 'y'
-   ╭─[bad9.js:1:29]
+   ╭─[ bad9.js:1:29 ]
    │
  1 │ import * as x from "foo"; x['y'] = 1
    │                             ─┬─  

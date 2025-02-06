@@ -8,7 +8,7 @@ snapshot_kind: text
 
 ```text
 [ILLEGAL_REASSIGNMENT] Error: Unexpected re-assignment of const variable `a`
-   ╭─[main.js:3:1]
+   ╭─[ main.js:3:1 ]
    │
  1 │ const a = 10;
    │       ┬  
@@ -24,7 +24,7 @@ snapshot_kind: text
 
 ```text
 [ILLEGAL_REASSIGNMENT] Error: Unexpected re-assignment of const variable `a`
-   ╭─[main.js:5:1]
+   ╭─[ main.js:5:1 ]
    │
  1 │ const a = 10;
    │       ┬  
@@ -40,7 +40,7 @@ snapshot_kind: text
 
 ```text
 [ILLEGAL_REASSIGNMENT] Error: Unexpected re-assignment of const variable `a`
-   ╭─[main.js:7:1]
+   ╭─[ main.js:7:1 ]
    │
  1 │ const a = 10;
    │       ┬  

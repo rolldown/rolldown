@@ -8,7 +8,7 @@ snapshot_kind: text
 
 ```text
 [UNRESOLVED_IMPORT] Warning: Could not resolve 'foo' in entry.js
-    ╭─[entry.js:10:9]
+    ╭─[ entry.js:10:9 ]
     │
  10 │     import('foo', { /* before */ assert: { type: 'json' } }),
     │            ──┬──  
@@ -20,7 +20,7 @@ snapshot_kind: text
 
 ```text
 [UNRESOLVED_IMPORT] Warning: Could not resolve 'foo' in entry.js
-    ╭─[entry.js:11:9]
+    ╭─[ entry.js:11:9 ]
     │
  11 │     import('foo', { assert: /* before */ { type: 'json' } }),
     │            ──┬──  
@@ -32,7 +32,7 @@ snapshot_kind: text
 
 ```text
 [UNRESOLVED_IMPORT] Warning: Could not resolve 'foo' in entry.js
-    ╭─[entry.js:12:9]
+    ╭─[ entry.js:12:9 ]
     │
  12 │     import('foo', { assert: { /* before */ type: 'json' } }),
     │            ──┬──  
@@ -44,7 +44,7 @@ snapshot_kind: text
 
 ```text
 [UNRESOLVED_IMPORT] Warning: Could not resolve 'foo' in entry.js
-    ╭─[entry.js:13:9]
+    ╭─[ entry.js:13:9 ]
     │
  13 │     import('foo', { assert: { type: /* before */ 'json' } }),
     │            ──┬──  
@@ -56,7 +56,7 @@ snapshot_kind: text
 
 ```text
 [UNRESOLVED_IMPORT] Warning: Could not resolve 'foo' in entry.js
-    ╭─[entry.js:14:9]
+    ╭─[ entry.js:14:9 ]
     │
  14 │     import('foo', { assert: { type: 'json' /* before */ } }),
     │            ──┬──  
@@ -68,7 +68,7 @@ snapshot_kind: text
 
 ```text
 [UNRESOLVED_IMPORT] Warning: Could not resolve 'foo' in entry.js
-    ╭─[entry.js:15:9]
+    ╭─[ entry.js:15:9 ]
     │
  15 │     import('foo', { assert: { type: 'json' } /* before */ }),
     │            ──┬──  
@@ -80,7 +80,7 @@ snapshot_kind: text
 
 ```text
 [UNRESOLVED_IMPORT] Warning: Could not resolve 'foo' in entry.js
-    ╭─[entry.js:16:9]
+    ╭─[ entry.js:16:9 ]
     │
  16 │     import('foo', { assert: { type: 'json' } } /* before */),
     │            ──┬──  
@@ -92,7 +92,7 @@ snapshot_kind: text
 
 ```text
 [UNRESOLVED_IMPORT] Warning: Could not resolve 'foo' in entry.js
-    ╭─[entry.js:21:23]
+    ╭─[ entry.js:21:23 ]
     │
  21 │     require(/* before */ 'foo'),
     │                          ──┬──  
@@ -104,7 +104,7 @@ snapshot_kind: text
 
 ```text
 [UNRESOLVED_IMPORT] Warning: Could not resolve 'foo' in entry.js
-    ╭─[entry.js:23:10]
+    ╭─[ entry.js:23:10 ]
     │
  23 │     require('foo' /* after */),
     │             ──┬──  
@@ -116,7 +116,7 @@ snapshot_kind: text
 
 ```text
 [UNRESOLVED_IMPORT] Warning: Could not resolve 'foo' in entry.js
-   ╭─[entry.js:3:22]
+   ╭─[ entry.js:3:22 ]
    │
  3 │     import(/* before */ 'foo'),
    │                         ──┬──  
@@ -128,7 +128,7 @@ snapshot_kind: text
 
 ```text
 [UNRESOLVED_IMPORT] Warning: Could not resolve 'foo' in entry.js
-   ╭─[entry.js:5:9]
+   ╭─[ entry.js:5:9 ]
    │
  5 │     import('foo' /* after */),
    │            ──┬──  
@@ -140,7 +140,7 @@ snapshot_kind: text
 
 ```text
 [UNRESOLVED_IMPORT] Warning: Could not resolve 'foo' in entry.js
-   ╭─[entry.js:9:9]
+   ╭─[ entry.js:9:9 ]
    │
  9 │     import('foo', /* before */ { assert: { type: 'json' } }),
    │            ──┬──  

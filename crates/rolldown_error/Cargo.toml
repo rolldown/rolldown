@@ -17,12 +17,14 @@ doctest = false
 workspace = true
 
 [dependencies]
-anyhow        = { workspace = true }
-arcstr        = { workspace = true }
-ariadne       = { workspace = true }
-heck          = { workspace = true }
+anyhow  = { workspace = true }
+arcstr  = { workspace = true }
+ariadne = { workspace = true }
+heck    = { workspace = true }
+# memchr        = { workspace = true }
 napi          = { workspace = true, optional = true }
 oxc           = { workspace = true }
 oxc_resolver  = { workspace = true }
 oxc_sourcemap = { workspace = true }
+rustc-hash    = { workspace = true }
 sugar_path    = { workspace = true }

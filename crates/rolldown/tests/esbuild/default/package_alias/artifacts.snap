@@ -8,7 +8,7 @@ snapshot_kind: text
 
 ```text
 [RESOLVE_ERROR] Error: Could not resolve "@abs-path/pkg7/foo" in entry.js
-   ╭─[entry.js:7:8]
+   ╭─[ entry.js:7:8 ]
    │
  7 │ import "@abs-path/pkg7/foo"
    │        ──────────┬─────────  
@@ -20,7 +20,7 @@ snapshot_kind: text
 
 ```text
 [RESOLVE_ERROR] Error: Could not resolve "@scope-only/pkg8" in entry.js
-   ╭─[entry.js:8:8]
+   ╭─[ entry.js:8:8 ]
    │
  8 │ import "@scope-only/pkg8"
    │        ─────────┬────────  

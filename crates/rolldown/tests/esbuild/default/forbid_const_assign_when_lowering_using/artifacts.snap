@@ -8,7 +8,7 @@ snapshot_kind: text
 
 ```text
 [ILLEGAL_REASSIGNMENT] Error: Unexpected re-assignment of const variable `x`
-   ╭─[entry.js:3:1]
+   ╭─[ entry.js:3:1 ]
    │
  1 │ const x = 1
    │       ┬  
@@ -24,7 +24,7 @@ snapshot_kind: text
 
 ```text
 [ILLEGAL_REASSIGNMENT] Error: Unexpected re-assignment of const variable `y`
-   ╭─[entry.js:7:2]
+   ╭─[ entry.js:7:2 ]
    │
  5 │     const y = 1
    │           ┬  

@@ -8,7 +8,7 @@ snapshot_kind: text
 
 ```text
 [ASSIGN_TO_IMPORT] Error: Cannot assign to import 'b'
-   ╭─[main.js:6:1]
+   ╭─[ main.js:6:1 ]
    │
  6 │ b -= 1;
    │ ┬  
@@ -20,7 +20,7 @@ snapshot_kind: text
 
 ```text
 [ASSIGN_TO_IMPORT] Error: Cannot assign to import 'importedA'
-   ╭─[main.js:4:1]
+   ╭─[ main.js:4:1 ]
    │
  4 │ importedA = 1;
    │ ────┬────  
@@ -32,7 +32,7 @@ snapshot_kind: text
 
 ```text
 [ASSIGN_TO_IMPORT] Error: Cannot assign to import 'test'
-   ╭─[main.js:8:4]
+   ╭─[ main.js:8:4 ]
    │
  8 │ ns.test += 1;
    │    ──┬─  
@@ -44,7 +44,7 @@ snapshot_kind: text
 
 ```text
 [ASSIGN_TO_IMPORT] Error: Cannot assign to import 'test'
-   ╭─[main.js:9:11]
+   ╭─[ main.js:9:11 ]
    │
  9 │ delete ns.test;
    │           ──┬─  

@@ -8,7 +8,7 @@ snapshot_kind: text
 
 ```text
 [IMPORT_IS_UNDEFINED] Warning: Import `default` will always be undefined because there is no matching export in 'foo.js'
-   ╭─[star.js:2:13]
+   ╭─[ star.js:2:13 ]
    │
  2 │ console.log(ns.default(ns.x, ns.y))
    │             ─────┬────  
@@ -20,7 +20,7 @@ snapshot_kind: text
 
 ```text
 [IMPORT_IS_UNDEFINED] Warning: Import `x` will always be undefined because there is no matching export in 'foo.js'
-   ╭─[star.js:2:24]
+   ╭─[ star.js:2:24 ]
    │
  2 │ console.log(ns.default(ns.x, ns.y))
    │                        ──┬─  
@@ -32,7 +32,7 @@ snapshot_kind: text
 
 ```text
 [IMPORT_IS_UNDEFINED] Warning: Import `y` will always be undefined because there is no matching export in 'foo.js'
-   ╭─[star.js:2:30]
+   ╭─[ star.js:2:30 ]
    │
  2 │ console.log(ns.default(ns.x, ns.y))
    │                              ──┬─  

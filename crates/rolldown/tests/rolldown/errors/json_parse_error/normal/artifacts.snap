@@ -8,7 +8,7 @@ snapshot_kind: text
 
 ```text
 [PARSE_ERROR] Error: Unexpected token
-   ╭─[test.json:3:1]
+   ╭─[ test.json:3:1 ]
    │
  3 │ }
    │ ┬  

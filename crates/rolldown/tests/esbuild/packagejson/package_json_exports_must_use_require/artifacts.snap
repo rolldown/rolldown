@@ -1,5 +1,6 @@
 ---
 source: crates/rolldown_testing/src/integration_test.rs
+snapshot_kind: text
 ---
 # Errors
 
@@ -7,7 +8,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```text
 [RESOLVE_ERROR] Error: Could not resolve 'pkg1' in src/entry.js
-   ╭─[src/entry.js:1:8]
+   ╭─[ src/entry.js:1:8 ]
    │
  1 │ import 'pkg1'
    │        ───┬──  
@@ -19,7 +20,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```text
 [RESOLVE_ERROR] Error: Could not resolve 'pkg1/foo.js' in src/entry.js
-   ╭─[src/entry.js:2:8]
+   ╭─[ src/entry.js:2:8 ]
    │
  2 │ import 'pkg1/foo.js'
    │        ──────┬──────  

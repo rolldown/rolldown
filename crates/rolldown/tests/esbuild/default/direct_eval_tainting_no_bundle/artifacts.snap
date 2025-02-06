@@ -8,7 +8,7 @@ snapshot_kind: text
 
 ```text
 [EVAL] Warning: Use of eval is strongly discouraged as it poses security risks and may cause issues with minification.
-    ╭─[entry.js:29:34]
+    ╭─[ entry.js:29:34 ]
     │
  29 │     function containsDirectEval() { eval() }
     │                                     ──┬─  
@@ -20,7 +20,7 @@ snapshot_kind: text
 
 ```text
 [EVAL] Warning: Use of eval is strongly discouraged as it poses security risks and may cause issues with minification.
-   ╭─[entry.js:5:2]
+   ╭─[ entry.js:5:2 ]
    │
  5 │     eval('add(1, 2)')
    │     ──┬─  

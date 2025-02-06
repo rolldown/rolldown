@@ -8,7 +8,7 @@ snapshot_kind: text
 
 ```text
 [EXPORT_UNDEFINED_VARIABLE] Error: `bar` is not declared in this file
-   ╭─[main.js:4:3]
+   ╭─[ main.js:4:3 ]
    │
  4 │   bar
    │   ─┬─  

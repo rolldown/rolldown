@@ -1,5 +1,6 @@
 ---
 source: crates/rolldown_testing/src/integration_test.rs
+snapshot_kind: text
 ---
 # warnings
 
@@ -7,7 +8,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```text
 [PARSE_ERROR] Warning: Identifier `fn` has already been declared
-    ╭─[keep.js:2:10]
+    ╭─[ keep.js:2:10 ]
     │
   2 │ function fn() {}
     │          ─┬  
@@ -23,7 +24,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```text
 [PARSE_ERROR] Warning: Identifier `fn` has already been declared
-    ╭─[keep.js:2:10]
+    ╭─[ keep.js:2:10 ]
     │
   2 │ function fn() {}
     │          ─┬  
@@ -39,7 +40,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```text
 [PARSE_ERROR] Warning: Identifier `fn` has already been declared
-    ╭─[keep.js:2:10]
+    ╭─[ keep.js:2:10 ]
     │
   2 │ function fn() {}
     │          ─┬  
@@ -55,7 +56,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```text
 [PARSE_ERROR] Warning: Identifier `fn` has already been declared
-    ╭─[keep.js:2:10]
+    ╭─[ keep.js:2:10 ]
     │
   2 │ function fn() {}
     │          ─┬  
@@ -71,7 +72,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```text
 [PARSE_ERROR] Warning: Identifier `fn` has already been declared
-    ╭─[keep.js:2:10]
+    ╭─[ keep.js:2:10 ]
     │
   2 │ function fn() {}
     │          ─┬  
@@ -87,7 +88,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```text
 [PARSE_ERROR] Warning: Identifier `fn` has already been declared
-    ╭─[keep.js:2:10]
+    ╭─[ keep.js:2:10 ]
     │
   2 │ function fn() {}
     │          ─┬  
@@ -103,7 +104,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```text
 [PARSE_ERROR] Warning: Identifier `fn` has already been declared
-    ╭─[keep.js:2:10]
+    ╭─[ keep.js:2:10 ]
     │
   2 │ function fn() {}
     │          ─┬  
@@ -119,7 +120,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```text
 [PARSE_ERROR] Warning: Identifier `fn` has already been declared
-    ╭─[keep.js:2:10]
+    ╭─[ keep.js:2:10 ]
     │
   2 │ function fn() {}
     │          ─┬  
@@ -135,7 +136,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```text
 [PARSE_ERROR] Warning: Identifier `fn` has already been declared
-   ╭─[keep.js:2:10]
+   ╭─[ keep.js:2:10 ]
    │
  2 │ function fn() {}
    │          ─┬  
@@ -151,7 +152,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```text
 [PARSE_ERROR] Warning: Identifier `foo` has already been declared
-    ╭─[keep.js:3:10]
+    ╭─[ keep.js:3:10 ]
     │
   3 │ function foo(fn = function() {}) {}
     │          ─┬─  
@@ -167,7 +168,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```text
 [PARSE_ERROR] Warning: Identifier `foo` has already been declared
-    ╭─[keep.js:3:10]
+    ╭─[ keep.js:3:10 ]
     │
   3 │ function foo(fn = function() {}) {}
     │          ─┬─  

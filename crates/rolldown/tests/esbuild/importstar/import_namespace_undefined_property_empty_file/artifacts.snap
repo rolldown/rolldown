@@ -8,7 +8,7 @@ snapshot_kind: text
 
 ```text
 [IMPORT_IS_UNDEFINED] Warning: Import `default` will always be undefined because there is no matching export in 'empty.js'
-   ╭─[entry-default.js:5:2]
+   ╭─[ entry-default.js:5:2 ]
    │
  5 │     js.default,
    │     ─────┬────  
@@ -20,7 +20,7 @@ snapshot_kind: text
 
 ```text
 [IMPORT_IS_UNDEFINED] Warning: Import `default` will always be undefined because there is no matching export in 'empty.mjs'
-   ╭─[entry-default.js:6:2]
+   ╭─[ entry-default.js:6:2 ]
    │
  6 │     mjs.default,
    │     ─────┬─────  
@@ -32,7 +32,7 @@ snapshot_kind: text
 
 ```text
 [IMPORT_IS_UNDEFINED] Warning: Import `nope` will always be undefined because there is no matching export in 'empty.js'
-   ╭─[entry-nope.js:5:2]
+   ╭─[ entry-nope.js:5:2 ]
    │
  5 │     js.nope,
    │     ───┬───  
@@ -44,7 +44,7 @@ snapshot_kind: text
 
 ```text
 [IMPORT_IS_UNDEFINED] Warning: Import `nope` will always be undefined because there is no matching export in 'empty.mjs'
-   ╭─[entry-nope.js:6:2]
+   ╭─[ entry-nope.js:6:2 ]
    │
  6 │     mjs.nope,
    │     ────┬───  

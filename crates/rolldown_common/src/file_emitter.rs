@@ -224,11 +224,10 @@ impl FileEmitter {
 
       // Follow rollup using lowercase filename to check conflicts
       let lowercase_filename = value.filename.as_str().to_lowercase().into();
-      if self.emitted_filenames.contains(&lowercase_filename) {
+      if !self.emitted_filenames.insert(lowercase_filename) {
         warnings
           .push(BuildDiagnostic::filename_conflict(value.filename.clone()).with_severity_warning());
       }
-      self.emitted_filenames.insert(lowercase_filename);
 
       let mut names = std::mem::take(&mut value.names);
       sort_names(&mut names);

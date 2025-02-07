@@ -178,9 +178,9 @@ oxc_transform_napi = { version = "0.48.2" }
 # oxc crates in their own repos
 # Versions must be relaxed for usage in oxc.
 # Please update with `cargo update oxc_resolver oxc_sourcemap oxc_index`
-oxc_index     = { version = "2", features = ["rayon", "serde"] } # https://github.com/oxc-project/oxc-index-vec
-oxc_resolver  = { version = "4" }                                # https://github.com/oxc-project/oxc-resolver
-oxc_sourcemap = { version = "1" }                                # https://github.com/oxc-project/oxc-sourcemap
+oxc_index     = { version = "2", features = ["rayon", "serde"] }            # https://github.com/oxc-project/oxc-index-vec
+oxc_resolver  = { version = "4", features = ["package_json_raw_json_api"] } # https://github.com/oxc-project/oxc-resolver
+oxc_sourcemap = { version = "1" }                                           # https://github.com/oxc-project/oxc-sourcemap
 
 [profile.release]
 codegen-units = 1

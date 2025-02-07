@@ -76,9 +76,10 @@ export class PluginContext extends MinimalPluginContext {
     if (moduleInfo && moduleInfo.code !== null /* module already parsed */) {
       return moduleInfo
     }
-    const rawOptions = {
+    const rawOptions: ModuleOptions = {
       meta: options.meta || {},
       moduleSideEffects: options.moduleSideEffects || null,
+      invalidate: false,
     }
     this.data.updateModuleOption(id, rawOptions)
 

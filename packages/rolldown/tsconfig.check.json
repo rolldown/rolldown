@@ -12,6 +12,5 @@
     "exactOptionalPropertyTypes": true,
     "resolveJsonModule": true
   },
-  "include": ["dist/types/**/*.d.ts"],
-  "exclude": []
+  "include": ["dist/types/**/*.d.ts"]
 }

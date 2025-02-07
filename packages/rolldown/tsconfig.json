@@ -7,7 +7,7 @@
     "*.cjs",
     "dist",
     "lib",
-    "./src/log/locate-character"
+    "./src/log/locate-character" // the extracted .d.ts from js files has typing error.
   ],
   "compilerOptions": {
     "rootDir": "./src",

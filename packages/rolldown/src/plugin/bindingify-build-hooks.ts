@@ -151,6 +151,7 @@ export function bindingifyResolveId(
       let exist = args.pluginContextData.updateModuleOption(ret.id, {
         meta: ret.meta || {},
         moduleSideEffects: ret.moduleSideEffects ?? null,
+        invalidate: false,
       })
 
       return {
@@ -214,6 +215,7 @@ export function bindingifyResolveDynamicImport(
       args.pluginContextData.updateModuleOption(ret.id, {
         meta: ret.meta || {},
         moduleSideEffects: ret.moduleSideEffects || null,
+        invalidate: false,
       })
 
       return result
@@ -264,6 +266,7 @@ export function bindingifyTransform(
       let moduleOption = args.pluginContextData.updateModuleOption(id, {
         meta: ret.meta ?? {},
         moduleSideEffects: ret.moduleSideEffects ?? null,
+        invalidate: false,
       })
 
       return {
@@ -318,6 +321,7 @@ export function bindingifyLoad(
       let moduleOption = args.pluginContextData.updateModuleOption(id, {
         meta: ret.meta || {},
         moduleSideEffects: ret.moduleSideEffects ?? null,
+        invalidate: false,
       })
 
       let map = preProcessSourceMap(ret, id)

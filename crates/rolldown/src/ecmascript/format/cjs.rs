@@ -102,9 +102,9 @@ fn render_cjs_chunk_imports(ctx: &GenerateContext<'_>) -> String {
 
   // render imports from other chunks
   ctx.chunk.imports_from_other_chunks.iter().for_each(|(exporter_id, items)| {
-    let importee_chunk = &ctx.chunk_graph.chunk_table[*exporter_id];
+    let exporter_chunk = &ctx.chunk_graph.chunk_table[*exporter_id];
     let require_path_str =
-      concat_string!("require('", ctx.chunk.import_path_for(importee_chunk), "');\n");
+      concat_string!("require('", ctx.chunk.import_path_for(exporter_chunk), "');\n");
     if items.is_empty() {
       s.push_str(&require_path_str);
     } else {

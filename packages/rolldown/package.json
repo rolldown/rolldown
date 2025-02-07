@@ -26,7 +26,6 @@
   "bin": {
     "rolldown": "./bin/cli.js"
   },
-  "type": "module",
   "main": "./dist/cjs/index.cjs",
   "types": "./dist/types/index.d.ts",
   "exports": {
@@ -62,19 +61,19 @@
   "scripts": {
     "# Scrips for binding #": "_",
     "artifacts": "napi artifacts --cwd ./src --package-json-path ../package.json -o=../artifacts --npm-dir ../npm",
-    "build-binding": "napi build -o=./src --manifest-path ../../crates/rolldown_binding/Cargo.toml --platform -p rolldown_binding --js binding.cjs --dts binding.d.ts --no-const-enum",
+    "build-binding": "napi build -o=./src --manifest-path ../../crates/rolldown_binding/Cargo.toml --platform -p rolldown_binding --js binding.js --dts binding.d.ts --no-const-enum",
     "build-binding:release": "pnpm build-binding --release",
     "build-binding:wasi": "pnpm build-binding --target wasm32-wasip1-threads",
     "build-binding:wasi:release": "pnpm build-binding --profile release-wasi --target wasm32-wasip1-threads",
     "# Scrips for node #": "_",
     "bak_build-node": "unbuild",
-    "build-node": "node --import @oxc-node/core/register ./build.ts",
+    "build-node": "tsx ./build.ts",
     "build-types": "tsc -p ./tsconfig.json",
-    "build-native:debug": "run-s build-binding build-types build-node build-type-check",
-    "build-native:release": "run-s build-binding:release build-types build-node build-type-check",
+    "build-native:debug": "run-s build-binding build-types build-node build-types-check",
+    "build-native:release": "run-s build-binding:release build-types build-node build-types-check",
     "build-wasi:debug": "run-s build-binding build-binding:wasi build-node",
     "build-wasi:release": "run-s build-binding build-binding:wasi:release build-node",
-    "build-type-check": "tsc -p ./tsconfig.check.json",
+    "build-types-check": "tsc -p ./tsconfig.check.json",
     "# Scrips for docs #": "_",
     "extract-options-doc": "typedoc"
   },

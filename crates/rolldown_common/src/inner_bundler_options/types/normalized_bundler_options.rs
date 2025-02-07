@@ -24,8 +24,8 @@ use super::{
   sourcemap_ignore_list::SourceMapIgnoreList, sourcemap_path_transform::SourceMapPathTransform,
 };
 use crate::{
-  EmittedAsset, EsModuleFlag, FilenameTemplate, GlobalsOutputOption, HashCharacters, InjectImport,
-  InputItem, ModuleType, RollupPreRenderedAsset,
+  DeferSyncScanDataOption, EmittedAsset, EsModuleFlag, FilenameTemplate, GlobalsOutputOption,
+  HashCharacters, InjectImport, InputItem, ModuleType, RollupPreRenderedAsset,
 };
 
 #[allow(clippy::struct_excessive_bools)] // Using raw booleans is more clear in this case
@@ -85,6 +85,7 @@ pub struct NormalizedBundlerOptions {
   pub drop_labels: FxHashSet<String>,
   pub target: ESTarget,
   pub polyfill_require: bool,
+  pub defer_sync_scan_data: Option<DeferSyncScanDataOption>,
 }
 
 pub type SharedNormalizedBundlerOptions = Arc<NormalizedBundlerOptions>;

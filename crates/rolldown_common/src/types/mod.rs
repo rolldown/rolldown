@@ -7,6 +7,7 @@ pub mod bundler_file_system;
 pub mod cache;
 pub mod chunk_idx;
 pub mod chunk_kind;
+pub mod defer_sync_scan_data;
 pub mod ecma_ast_idx;
 pub mod entry_point;
 pub mod exports_kind;

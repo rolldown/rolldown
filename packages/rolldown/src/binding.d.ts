@@ -287,6 +287,12 @@ export interface BindingChecksOptions {
   circularDependency?: boolean
 }
 
+export interface BindingDeferSyncScanData {
+  /** ModuleId */
+  id: string
+  sideEffects?: BindingHookSideEffects
+}
+
 export interface BindingEmittedAsset {
   name?: string
   fileName?: string
@@ -411,6 +417,7 @@ export interface BindingInputOptions {
   watch?: BindingWatchOption
   keepNames?: boolean
   checks?: BindingChecksOptions
+  deferSyncScanData?: undefined | (() => BindingDeferSyncScanData[])
 }
 
 export interface BindingJsonPluginConfig {

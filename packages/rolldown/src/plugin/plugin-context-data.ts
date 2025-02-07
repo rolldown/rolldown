@@ -18,6 +18,9 @@ export class PluginContextData {
       if (option.meta != null) {
         Object.assign(existing.meta, option.meta)
       }
+      if (option.invalidate != null) {
+        existing.invalidate = option.invalidate
+      }
     } else {
       this.moduleOptionMap.set(id, option)
       return option
@@ -54,7 +57,11 @@ export class PluginContextData {
         return moduleSideEffects
       },
       set: (v: any) => {
-        this.updateModuleOption(id, { moduleSideEffects: v, meta: info.meta })
+        this.updateModuleOption(id, {
+          moduleSideEffects: v,
+          meta: info.meta,
+          invalidate: true,
+        })
         moduleSideEffects = v
       },
     })

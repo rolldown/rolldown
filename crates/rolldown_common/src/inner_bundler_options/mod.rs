@@ -21,10 +21,11 @@ use types::experimental_options::ExperimentalOptions;
 
 use self::types::treeshake::TreeshakeOptions;
 use self::types::{
-  es_module_flag::EsModuleFlag, hash_characters::HashCharacters, input_item::InputItem,
-  is_external::IsExternal, output_exports::OutputExports, output_format::OutputFormat,
-  output_option::AddonOutputOption, platform::Platform, resolve_options::ResolveOptions,
-  source_map_type::SourceMapType, sourcemap_path_transform::SourceMapPathTransform,
+  defer_sync_scan_data_option::DeferSyncScanDataOption, es_module_flag::EsModuleFlag,
+  hash_characters::HashCharacters, input_item::InputItem, is_external::IsExternal,
+  output_exports::OutputExports, output_format::OutputFormat, output_option::AddonOutputOption,
+  platform::Platform, resolve_options::ResolveOptions, source_map_type::SourceMapType,
+  sourcemap_path_transform::SourceMapPathTransform,
 };
 use crate::{ChunkFilenamesOutputOption, ModuleType, SourceMapIgnoreList};
 
@@ -172,6 +173,13 @@ pub struct BundlerOptions {
   pub comments: Option<Comments>,
   pub target: Option<ESTarget>,
   pub polyfill_require: Option<bool>,
+
+  #[cfg_attr(
+    feature = "deserialize_bundler_options",
+    serde(default, skip_deserializing),
+    schemars(skip)
+  )]
+  pub defer_sync_scan_data: Option<DeferSyncScanDataOption>,
 }
 
 #[cfg(feature = "deserialize_bundler_options")]

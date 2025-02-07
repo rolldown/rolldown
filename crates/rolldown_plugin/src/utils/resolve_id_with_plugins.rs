@@ -180,15 +180,7 @@ fn resolve_id(
     resolver.resolve(importer.map(Path::new), request, import_kind, is_user_defined_entry);
 
   match resolved {
-    Ok(resolved) => Ok(ResolvedId {
-      id: resolved.path,
-      ignored: false,
-      module_def_format: resolved.module_def_format,
-      is_external: false,
-      package_json: resolved.package_json,
-      side_effects: None,
-      is_external_without_side_effects: false,
-    }),
+    Ok(resolved) => Ok(ResolvedId::from(resolved)),
     Err(err) => match err {
       ResolveError::Builtin { resolved, is_runtime_module } => Ok(ResolvedId {
         // `resolved` is always prefixed with "node:" in compliance with the ESM specification.

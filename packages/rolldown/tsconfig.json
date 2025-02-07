@@ -10,10 +10,12 @@
     "./src/log/locate-character" // the extracted .d.ts from js files has typing error.
   ],
   "compilerOptions": {
+    "composite": true,
     "rootDir": "./src",
     "outDir": "./dist/types",
     "resolveJsonModule": true,
     "noEmit": false,
+    "tsBuildInfoFile": ".tsbuildinfo",
     "emitDeclarationOnly": true
   }
 }

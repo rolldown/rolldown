@@ -98,10 +98,10 @@ impl Chunk {
     }
   }
 
-  pub fn relative_path_for(&self, path: &Path) -> String {
-    let importer_dir =
+  pub fn relative_path_for(&self, target: &Path) -> String {
+    let sorurce_dir =
       self.absolute_preliminary_filename.as_ref().unwrap().as_path().parent().unwrap();
-    path.relative(importer_dir).as_path().expect_to_slash()
+    target.relative(sorurce_dir).as_path().expect_to_slash()
   }
 
   pub async fn filename_template(

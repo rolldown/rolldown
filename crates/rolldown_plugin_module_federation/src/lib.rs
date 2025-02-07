@@ -1,8 +1,9 @@
-use std::{borrow::Cow, sync::Arc, vec};
+use std::{borrow::Cow, vec};
 
 mod init_modules_visitor;
 mod option;
 mod utils;
+use arcstr::ArcStr;
 use init_modules_visitor::RemoteModule;
 pub use option::{ModuleFederationPluginOption, Remote, Shared};
 use oxc::{
@@ -27,12 +28,17 @@ const SHARED_MODULE_PREFIX: &str = "mf:shared-module:";
 #[derive(Debug)]
 pub struct ModuleFederationPlugin {
   options: ModuleFederationPluginOption,
-  module_init_remote_modules: FxDashMap<Arc<str>, FxHashSet<RemoteModule>>,
+  module_init_remote_modules: FxDashMap<ArcStr, FxHashSet<RemoteModule>>,
+  shared_module_versions: FxDashMap<ArcStr, ArcStr>,
 }
 
 impl ModuleFederationPlugin {
   pub fn new(options: ModuleFederationPluginOption) -> Self {
-    Self { options, module_init_remote_modules: FxDashMap::default() }
+    Self {
+      options,
+      module_init_remote_modules: FxDashMap::default(),
+      shared_module_versions: FxDashMap::default(),
+    }
   }
 
   pub fn generate_remote_entry_code(&self) -> String {
@@ -121,7 +127,10 @@ impl ModuleFederationPlugin {
               "'",
               key,
               "': { version: '",
-              value.version.as_deref().unwrap_or("1.0.0"),
+              self.shared_module_versions.get(key.as_str()).map_or_else(
+                || { value.version.as_deref().unwrap_or_default().into() },
+                |v| v.value().clone()
+              ),
               "', scope: ['",
               value.share_scope.as_deref().unwrap_or("default"),
               "'], from: '",
@@ -172,6 +181,18 @@ impl Plugin for ModuleFederationPlugin {
         })
         .await?;
     }
+
+    if let Some(shared) = self.options.shared.as_ref() {
+      for (key, item) in shared {
+        if item.version.is_none() {
+          let resolve_id = ctx.resolve(key.as_str(), None, None).await??;
+          if let Some(version) = resolve_id.package_json.as_ref().and_then(|j| j.version.as_ref()) {
+            self.shared_module_versions.insert(key.as_str().into(), version.clone());
+          }
+        }
+      }
+    }
+
     Ok(())
   }
 
@@ -233,10 +254,8 @@ impl Plugin for ModuleFederationPlugin {
       }));
     }
     if args.id.starts_with(INIT_MODULE_PREFIX) {
-      let init_remote_modules = self
-        .module_init_remote_modules
-        .get(&Arc::from(args.id))
-        .expect("should have init remote modules");
+      let init_remote_modules =
+        self.module_init_remote_modules.get(args.id).expect("should have init remote modules");
       let modules_string = concat_string!(
         "[",
         init_remote_modules

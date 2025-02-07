@@ -240,7 +240,8 @@ impl<F: FileSystem + Default> Resolver<F> {
             PackageType::CommonJs => "commonjs",
             PackageType::Module => "module",
           }))
-          .with_side_effects(oxc_pkg_json.side_effects.as_ref()),
+          .with_side_effects(oxc_pkg_json.side_effects.as_ref())
+          .with_version(oxc_pkg_json.raw_json().get("version").and_then(|v| v.as_str())),
       );
       self.package_json_cache.insert(oxc_pkg_json.realpath.clone(), Arc::clone(&pkg_json));
       pkg_json

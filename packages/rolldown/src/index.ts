@@ -36,6 +36,7 @@ import type {
   SourceDescription,
   TransformResult,
 } from './plugin'
+import type { LogOrStringHandler } from './log/logging'
 import { DefineParallelPluginResult } from './plugin/parallel-plugin'
 import { defineConfig } from './utils/define-config'
 import { rolldown } from './api/rolldown'
@@ -122,6 +123,7 @@ export type {
   RolldownWatcher,
   BuildOptions,
   RenderedChunk,
+  LogOrStringHandler,
 }
 
 export type {

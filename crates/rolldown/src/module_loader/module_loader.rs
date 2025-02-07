@@ -1,6 +1,7 @@
 use super::module_task::{ModuleTask, ModuleTaskOwner};
 use super::runtime_module_task::RuntimeModuleTask;
 use super::task_context::TaskContextMeta;
+use crate::ecmascript::ecma_module_view_factory::normalize_side_effects;
 use crate::module_loader::task_context::TaskContext;
 use crate::type_alias::{IndexAstScope, IndexEcmaAst};
 use crate::utils::load_entry_module::load_entry_module;
@@ -406,8 +407,8 @@ impl ModuleLoader {
     if let Some(ref func) = self.options.defer_sync_scan_data {
       let data = func.exec().await?;
       for d in data {
-        let id = ArcStr::from(d.id);
-        let Some(idx) = self.visited.get(&id) else {
+        let source_id = ArcStr::from(d.id);
+        let Some(idx) = self.visited.get(&source_id) else {
           continue;
         };
         let Some(normal) = self.intermediate_normal_modules.modules[*idx]
@@ -416,11 +417,31 @@ impl ModuleLoader {
         else {
           continue;
         };
+        // TODO: Document this and recommend user to return `moduleSideEffects` in hook return
+        // value rather than mutate the `ModuleInfo`
         normal.ecma_view.side_effects = match d.side_effects {
           Some(HookSideEffects::False) => DeterminedSideEffects::UserDefined(false),
           Some(HookSideEffects::NoTreeshake) => DeterminedSideEffects::NoTreeshake,
           _ => {
-            todo!()
+            // for Some(HookSideEffects::True) and None, we need to re resolve module source_id,
+            // get package_json and re analyze the side effects
+            let resolved_id: ResolvedId = self
+              .shared_context
+              .resolver
+              // other params except `source_id` is not important, since we need `package_json`
+              // from `resolved_id` to re analyze the side effects
+              .resolve(None, source_id.as_str(), ImportKind::Import, normal.is_user_defined_entry)
+              .expect("Should have resolved id")
+              .into();
+            normalize_side_effects(
+              d.side_effects,
+              &self.options,
+              &normal.module_type,
+              &resolved_id,
+              &normal.stable_id,
+              &normal.stmt_infos,
+            )
+            .await?
           }
         };
       }

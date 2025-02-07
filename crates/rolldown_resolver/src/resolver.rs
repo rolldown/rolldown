@@ -1,7 +1,9 @@
 use arcstr::ArcStr;
 use dashmap::DashMap;
 use itertools::Itertools;
-use rolldown_common::{ImportKind, ModuleDefFormat, PackageJson, Platform, ResolveOptions};
+use rolldown_common::{
+  ImportKind, ModuleDefFormat, PackageJson, Platform, ResolveOptions, ResolvedId,
+};
 use rolldown_fs::{FileSystem, OsFileSystem};
 use rolldown_utils::{dashmap::FxDashMap, indexmap::FxIndexMap};
 use std::{
@@ -170,6 +172,20 @@ pub struct ResolveReturn {
   pub path: ArcStr,
   pub module_def_format: ModuleDefFormat,
   pub package_json: Option<Arc<PackageJson>>,
+}
+
+impl From<ResolveReturn> for ResolvedId {
+  fn from(resolved_return: ResolveReturn) -> Self {
+    ResolvedId {
+      id: resolved_return.path,
+      ignored: false,
+      module_def_format: resolved_return.module_def_format,
+      is_external: false,
+      package_json: resolved_return.package_json,
+      side_effects: None,
+      is_external_without_side_effects: false,
+    }
+  }
 }
 
 impl<F: FileSystem + Default> Resolver<F> {

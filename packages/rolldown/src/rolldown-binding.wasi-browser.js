@@ -202,9 +202,10 @@ function __napi_rs_initialize_modules(__napiInstance) {
   __napiInstance.exports['__napi_register__BindingWatcherEvent_impl_183']?.()
   __napiInstance.exports['__napi_register__BindingWatcherChangeData_struct_184']?.()
   __napiInstance.exports['__napi_register__BindingBundleEndEventData_struct_185']?.()
-  __napiInstance.exports['__napi_register__BindingNotifyOption_struct_186']?.()
-  __napiInstance.exports['__napi_register__BindingWatcher_struct_187']?.()
-  __napiInstance.exports['__napi_register__BindingWatcher_impl_191']?.()
+  __napiInstance.exports['__napi_register__BindingDeferSyncScanData_struct_186']?.()
+  __napiInstance.exports['__napi_register__BindingNotifyOption_struct_187']?.()
+  __napiInstance.exports['__napi_register__BindingWatcher_struct_188']?.()
+  __napiInstance.exports['__napi_register__BindingWatcher_impl_192']?.()
 }
 export const BindingBundleEndEventData = __napiModule.exports.BindingBundleEndEventData
 export const BindingCallableBuiltinPlugin = __napiModule.exports.BindingCallableBuiltinPlugin

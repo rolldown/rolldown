@@ -11,9 +11,10 @@ use crate::{
 use napi::bindgen_prelude::{Either, FnArgs};
 use rolldown::{
   AddonOutputOption, AdvancedChunksOptions, AssetFilenamesOutputOption, BundlerOptions,
-  ChunkFilenamesOutputOption, ExperimentalOptions, HashCharacters, IsExternal, MatchGroup,
-  ModuleType, OutputExports, OutputFormat, Platform, SanitizeFilename,
+  ChunkFilenamesOutputOption, DeferSyncScanDataOption, ExperimentalOptions, HashCharacters,
+  IsExternal, MatchGroup, ModuleType, OutputExports, OutputFormat, Platform, SanitizeFilename,
 };
+use rolldown_common::DeferSyncScanData;
 use rolldown_plugin::__inner::SharedPluginable;
 use rolldown_utils::indexmap::FxIndexMap;
 use rolldown_utils::rustc_hash::FxHashMapExt;
@@ -134,6 +135,19 @@ pub fn normalize_binding_options(
           .invoke_async((source.to_string(), importer.map(|v| v.to_string()), is_resolved).into())
           .await
           .map_err(anyhow::Error::from)
+      })
+    })
+  });
+
+  let get_defer_sync_scan_data = input_options.defer_sync_scan_data.map(|ts_fn| {
+    DeferSyncScanDataOption::new(move || {
+      let ts_fn = Arc::clone(&ts_fn);
+      Box::pin(async move {
+        ts_fn
+          .invoke_async(())
+          .await
+          .map_err(anyhow::Error::from)
+          .map(|ret| ret.into_iter().map(Into::into).collect::<Vec<DeferSyncScanData>>())
       })
     })
   });
@@ -291,6 +305,7 @@ pub fn normalize_binding_options(
     target: output_options.target.as_deref().map(std::str::FromStr::from_str).transpose()?,
     keep_names: input_options.keep_names,
     polyfill_require: output_options.polyfill_require,
+    defer_sync_scan_data: get_defer_sync_scan_data,
   };
 
   #[cfg(not(target_family = "wasm"))]

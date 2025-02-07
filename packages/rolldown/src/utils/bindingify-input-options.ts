@@ -13,9 +13,11 @@ import type {
   BindingInputOptions,
   BindingInjectImportNamed,
   BindingInjectImportNamespace,
+  BindingDeferSyncScanData,
 } from '../binding'
 import { LogHandler } from '../types/misc'
 import { LogLevelOption } from '../log/logging'
+import { bindingifySideEffects } from './transform-side-effects'
 
 export function bindingifyInputOptions(
   rawPlugins: RolldownPlugin[],
@@ -75,6 +77,18 @@ export function bindingifyInputOptions(
     dropLabels: inputOptions.dropLabels,
     keepNames: inputOptions.keepNames,
     checks: inputOptions.checks,
+    deferSyncScanData: () => {
+      let ret: BindingDeferSyncScanData[] = []
+      pluginContextData.moduleOptionMap.forEach((value, key) => {
+        if (value.invalidate) {
+          ret.push({
+            id: key,
+            sideEffects: bindingifySideEffects(value.moduleSideEffects),
+          })
+        }
+      })
+      return ret
+    },
   }
 }
 

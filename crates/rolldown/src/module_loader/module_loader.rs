@@ -402,6 +402,30 @@ impl ModuleLoader {
       return Err(errors.into());
     }
 
+    // defer sync user modified data in js side
+    if let Some(ref func) = self.options.defer_sync_scan_data {
+      let data = func.exec().await?;
+      for d in data {
+        let id = ArcStr::from(d.id);
+        let Some(idx) = self.visited.get(&id) else {
+          continue;
+        };
+        let Some(normal) = self.intermediate_normal_modules.modules[*idx]
+          .as_mut()
+          .and_then(|item| item.as_normal_mut())
+        else {
+          continue;
+        };
+        normal.ecma_view.side_effects = match d.side_effects {
+          Some(HookSideEffects::False) => DeterminedSideEffects::UserDefined(false),
+          Some(HookSideEffects::NoTreeshake) => DeterminedSideEffects::NoTreeshake,
+          _ => {
+            todo!()
+          }
+        };
+      }
+    }
+
     let dynamic_import_exports_usage_map = dynamic_import_exports_usage_pairs.into_iter().fold(
       FxHashMap::default(),
       |mut acc, (idx, usage)| {

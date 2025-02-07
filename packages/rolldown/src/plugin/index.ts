@@ -52,6 +52,9 @@ export interface CustomPluginOptions {
 export interface ModuleOptions {
   moduleSideEffects: ModuleSideEffects
   meta: CustomPluginOptions
+  // flag used to check if user directly modified the `ModuleInfo`
+  // this is used to sync state between rust and js
+  invalidate?: boolean
 }
 
 export interface ResolvedId extends ModuleOptions {

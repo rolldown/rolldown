@@ -108,6 +108,7 @@ impl<'a> GenerateStage<'a> {
             ScopeHoistingFinalizerContext {
               canonical_names: &chunk.canonical_names,
               id: module.idx,
+              chunk_id,
               symbol_db: &self.link_output.symbol_db,
               linking_info,
               module,

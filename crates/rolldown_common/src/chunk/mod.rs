@@ -1,4 +1,7 @@
-use std::{borrow::Cow, path::PathBuf};
+use std::{
+  borrow::Cow,
+  path::{Path, PathBuf},
+};
 
 // cSpell:disable
 use crate::{
@@ -86,16 +89,27 @@ impl Chunk {
   }
 
   pub fn import_path_for(&self, importee: &Chunk) -> String {
-    let importer_dir =
-      self.absolute_preliminary_filename.as_ref().unwrap().as_path().parent().unwrap();
-    let importee_filename = importee.absolute_preliminary_filename.as_ref().unwrap();
-    let import_path = importee_filename.relative(importer_dir).as_path().expect_to_slash();
-
+    let importee_filename = importee
+      .absolute_preliminary_filename
+      .as_ref()
+      .expect("importee chunk should have absolute_preliminary_filename");
+    let import_path = self.relative_path_for(importee_filename.as_path());
     if import_path.starts_with('.') {
       import_path
     } else {
       format!("./{import_path}")
     }
+  }
+
+  pub fn relative_path_for(&self, target: &Path) -> String {
+    let sorurce_dir = self
+      .absolute_preliminary_filename
+      .as_ref()
+      .expect("chunk should have absolute_preliminary_filename")
+      .as_path()
+      .parent()
+      .expect("absolute_preliminary_filename should have a parent directory");
+    target.relative(sorurce_dir).as_path().expect_to_slash()
   }
 
   pub async fn filename_template(

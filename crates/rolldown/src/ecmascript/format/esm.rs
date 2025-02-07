@@ -110,7 +110,6 @@ fn render_esm_chunk_imports(ctx: &GenerateContext<'_>) -> String {
     s.push_str(&create_import_declaration(
       specifiers,
       &default_alias,
-      // TODO: filename relative to importee
       &ctx.chunk.import_path_for(importee_chunk).into(),
     ));
   });

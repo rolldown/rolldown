@@ -7,7 +7,7 @@
     "*.cjs",
     "dist",
     "lib",
-    "./src/log/locate-character" // the extracted .d.ts from js files has typing error.
+    "./src/log/locate-character" // the extracted .d.ts from js files has typing error, ignore it because it's not used
   ],
   "compilerOptions": {
     "composite": true,

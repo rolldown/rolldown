@@ -532,6 +532,12 @@
             "string",
             "null"
           ]
+        },
+        "strictExecutionOrder": {
+          "type": [
+            "boolean",
+            "null"
+          ]
         }
       },
       "additionalProperties": false

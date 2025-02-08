@@ -498,10 +498,16 @@ impl<'ast> AstSnippet<'ast> {
 
     // var init_foo = ...
 
-    self.var_decl_stmt(
-      binding_name,
-      ast::Expression::CallExpression(esm_call_expr.into_in(self.alloc())),
-    )
+    // ... = await __esm(...) or ... = __esm(...)
+    let init = if is_async {
+      ast::Expression::AwaitExpression(self.builder.alloc_await_expression(
+        SPAN,
+        ast::Expression::CallExpression(esm_call_expr.into_in(self.alloc())),
+      ))
+    } else {
+      ast::Expression::CallExpression(esm_call_expr.into_in(self.alloc()))
+    };
+    self.var_decl_stmt(binding_name, init)
   }
 
   /// ```js

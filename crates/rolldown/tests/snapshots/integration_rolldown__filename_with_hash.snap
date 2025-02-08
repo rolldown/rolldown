@@ -4008,7 +4008,7 @@ snapshot_kind: text
 
 # tests/rolldown/function/experimental/strict_execution_order/top_level_await_syntax
 
-- main-!~{000}~.js => main-C044ThMY.js
+- main-!~{000}~.js => main-DZSs7q3i.js
 
 # tests/rolldown/function/export_mode/cjs/auto/default
 

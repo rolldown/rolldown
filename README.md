@@ -42,6 +42,12 @@ Rolldown is a JavaScript/TypeScript bundler written in Rust intended to serve as
 
 For more information, please check out the documentation at [rolldown.rs](https://rolldown.rs/about).
 
+## VoidZero Inc.
+
+Rolldown is a project of [VoidZero](https://voidzero.dev/), see our announcement [Announcing VoidZero - Next Generation Toolchain for JavaScript](https://voidzero.dev/blog).
+
+If you have requirements for JavaScript tools at scale, please [get in touch](https://forms.gle/WQgjyzYJpwurpxWKA)!
+
 ## Contributing
 
 We would love to have more contributors involved!

@@ -56,7 +56,7 @@ export default defineTest({
           expect(chunk.preliminaryFileName).toMatchInlineSnapshot(
             `"main-!~{000}~.js"`,
           )
-          expect(chunk.fileName).toMatchInlineSnapshot(`"main-CIMaPVEE.js"`)
+          expect(chunk.fileName).toMatchInlineSnapshot(`"main-DPeINwoC.js"`)
           expect(chunk.imports).toMatchInlineSnapshot(
             `
             [

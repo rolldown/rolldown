@@ -105,12 +105,8 @@ pub fn replace_placeholder_with_hash<'a>(
 }
 
 pub fn extract_hash_placeholders(source: &str) -> FxIndexSet<ArcStr> {
-  let captures = REPLACER_REGEX.captures(source);
-  if let Some(captures) = captures {
-    captures.iter().map(|capture| capture.unwrap().as_str().into()).collect()
-  } else {
-    FxIndexSet::default()
-  }
+  let captures = REPLACER_REGEX.find_iter(source);
+  captures.into_iter().map(|c| c.as_str().into()).collect()
 }
 
 #[test]

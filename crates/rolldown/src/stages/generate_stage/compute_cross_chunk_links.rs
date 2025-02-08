@@ -17,7 +17,7 @@ use rolldown_utils::rayon::{ParallelBridge, ParallelIterator};
 use rolldown_utils::rustc_hash::FxHashMapExt;
 use rustc_hash::{FxHashMap, FxHashSet};
 
-type IndexChunkDependedSymbols = IndexVec<ChunkIdx, FxHashSet<SymbolRef>>;
+type IndexChunkDependedSymbols = IndexVec<ChunkIdx, FxIndexSet<SymbolRef>>;
 type IndexChunkImportsFromExternalModules =
   IndexVec<ChunkIdx, FxHashMap<ModuleIdx, Vec<NamedImport>>>;
 type IndexChunkExportedSymbols = IndexVec<ChunkIdx, FxHashSet<SymbolRef>>;
@@ -31,7 +31,7 @@ impl GenerateStage<'_> {
   #[tracing::instrument(level = "debug", skip_all)]
   pub fn compute_cross_chunk_links(&mut self, chunk_graph: &mut ChunkGraph) {
     let mut index_chunk_depended_symbols: IndexChunkDependedSymbols =
-      index_vec![FxHashSet::<SymbolRef>::default(); chunk_graph.chunk_table.len()];
+      index_vec![FxIndexSet::<SymbolRef>::default(); chunk_graph.chunk_table.len()];
     let mut index_chunk_exported_symbols: IndexChunkExportedSymbols =
       index_vec![FxHashSet::<SymbolRef>::default(); chunk_graph.chunk_table.len()];
     let mut index_chunk_imports_from_external_modules: IndexChunkImportsFromExternalModules = index_vec![FxHashMap::<ModuleIdx, Vec<NamedImport>>::default(); chunk_graph.chunk_table.len()];

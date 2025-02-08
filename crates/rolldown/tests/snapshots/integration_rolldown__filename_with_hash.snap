@@ -5248,6 +5248,10 @@ snapshot_kind: text
 
 - main-!~{000}~.js => main-BfW_etaZ.js
 
+# tests/rolldown/topics/tla/basic
+
+- main-!~{000}~.js => main-B6eGyuY-.js
+
 # tests/rolldown/tree_shaking/advanced_barrel_exports
 
 - main-!~{000}~.js => main-BdBlLzB5.js

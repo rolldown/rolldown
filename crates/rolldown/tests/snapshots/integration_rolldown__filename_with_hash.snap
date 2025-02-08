@@ -1346,7 +1346,7 @@ snapshot_kind: text
 
 # tests/esbuild/default/metafile_various_cases
 
-- entry-!~{000}~.js => entry-BSgrZkE_.js
+- entry-!~{000}~.js => entry-B6ezG8z2.js
 - entry-!~{001}~.js => entry-DXek17jk.js
 - copy-!~{002}~.js => copy-BVWTGkKt.js
 - dynamic-!~{005}~.js => dynamic-CZVXMYjb.js
@@ -1675,9 +1675,9 @@ snapshot_kind: text
 
 # tests/esbuild/default/top_level_await_allowed_import_with_splitting
 
-- entry-!~{000}~.js => entry-MjbluOig.js
-- a-!~{009}~.js => a-Bxhw8tXk.js
-- b-!~{005}~.js => b-BKl1OFVO.js
+- entry-!~{000}~.js => entry-BLp99yI4.js
+- a-!~{009}~.js => a-CxQ7jCOu.js
+- b-!~{005}~.js => b-CdLY5E7-.js
 - b-!~{007}~.js => b-Dutt_QGh.js
 - c-!~{001}~.js => c-CbHCbjlR.js
 - c-!~{003}~.js => c-DEdK0TSb.js
@@ -2380,19 +2380,19 @@ snapshot_kind: text
 
 # tests/esbuild/loader/loader_file_common_js_and_es6
 
-- entry-!~{000}~.js => entry-BYe4pew7.js
+- entry-!~{000}~.js => entry-WhICAR3x.js
 - assets/x-D1oTQX23.txt
 - assets/y-B1Y75Q9P.txt
 
 # tests/esbuild/loader/loader_file_ext_path_asset_names_js
 
-- entries_entry-!~{000}~.js => entries_entry-BG1rR2dl.js
+- entries_entry-!~{000}~.js => entries_entry-Dv7-djED.js
 - assets/file-Db4OibBB.txt
 - assets/image-7R51b9Yh.png
 
 # tests/esbuild/loader/loader_file_multiple_no_collision
 
-- entry-!~{000}~.js => entry-gBV7hwcB.js
+- entry-!~{000}~.js => entry-D1Xx-q8S.js
 - assets/test-1P-S1VxP.txt
 - assets/test-BknXfcJ_.txt
 
@@ -3217,8 +3217,8 @@ snapshot_kind: text
 # tests/esbuild/splitting/splitting_cross_chunk_assignment_dependencies_recursive
 
 - a-!~{000}~.js => a-C8WWN-m4.js
-- b-!~{001}~.js => b-BpEBv_Vy.js
-- c-!~{002}~.js => c-CeMiGmZs.js
+- b-!~{001}~.js => b-CAbtBfIX.js
+- c-!~{002}~.js => c-CU1rTHjv.js
 - x-!~{003}~.js => x-CoiZTC9A.js
 - z-!~{005}~.js => z-BgCu0Zv1.js
 
@@ -3233,13 +3233,13 @@ snapshot_kind: text
 
 # tests/esbuild/splitting/splitting_dynamic_and_not_dynamic_common_js_into_es6
 
-- entry-!~{000}~.js => entry-BadePkbD.js
+- entry-!~{000}~.js => entry-D-WMYGxa.js
 - foo-!~{001}~.js => foo-BbnfAdaH.js
 - foo-!~{003}~.js => foo-ClLNKPvI.js
 
 # tests/esbuild/splitting/splitting_dynamic_and_not_dynamic_es6_into_es6
 
-- entry-!~{000}~.js => entry-B-0EmDrz.js
+- entry-!~{000}~.js => entry-C5BaNblb.js
 - foo-!~{003}~.js => foo-CYcYbcBa.js
 - foo-!~{001}~.js => foo-iJV0l95u.js
 
@@ -3784,14 +3784,14 @@ snapshot_kind: text
 
 # tests/rolldown/code_splitting/basic
 
-- main1-!~{000}~.js => main1-CHIdXZDI.js
+- main1-!~{000}~.js => main1-B15suk8U.js
 - main2-!~{001}~.js => main2-Czk_-Ixe.js
 - dynamic-!~{004}~.js => dynamic-0KHDmDpA.js
 - share-!~{002}~.js => share-Bwta10eV.js
 
 # tests/rolldown/code_splitting/dynamic_import_and_static_import_one_file
 
-- main-!~{000}~.js => main-D2l6o7cQ.js
+- main-!~{000}~.js => main-BEP68sZF.js
 - foo-!~{001}~.js => foo-BtlRgO2s.js
 - foo-!~{003}~.js => foo-ZkVjFIQV.js
 
@@ -3827,13 +3827,13 @@ snapshot_kind: text
 
 # tests/rolldown/code_splitting/import_export_unicode
 
-- main-!~{000}~.js => main-CU_lFBk7.js
+- main-!~{000}~.js => main-CHTEqOY1.js
 - foo-!~{003}~.js => foo-CU-7PMni.js
 - foo-!~{001}~.js => foo-D63IW0mB.js
 
 # tests/rolldown/code_splitting/issue_2786
 
-- main-!~{000}~.js => main-CjB8FE93.js
+- main-!~{000}~.js => main-iIAdYKTo.js
 - share-!~{003}~.js => share-Bw8MTP9m.js
 - share-!~{005}~.js => share-BzXzODsQ.js
 - share-!~{007}~.js => share-C1AbB3vH.js
@@ -3870,7 +3870,7 @@ snapshot_kind: text
 
 # tests/rolldown/function/advanced_chunks/max_size
 
-- main-!~{000}~.js => main-DUJ0kPnw.js
+- main-!~{000}~.js => main-BRC9vDCn.js
 - 40max-size-!~{001}~.js => 40max-size-8HxCqiQ9.js
 - 40max-size-!~{003}~.js => 40max-size-CPuw6kxJ.js
 
@@ -3900,19 +3900,19 @@ snapshot_kind: text
 
 # tests/rolldown/function/advanced_chunks/min_size
 
-- main-!~{000}~.js => main-BQIu5Xvu.js
+- main-!~{000}~.js => main-CHBm8I9U.js
 - common_a-!~{001}~.js => common_a-BBEzGp1R.js
 - common_b-!~{003}~.js => common_b-B_jWaHFf.js
 
 # tests/rolldown/function/advanced_chunks/min_size_fallback
 
-- main-!~{000}~.js => main-BQIu5Xvu.js
+- main-!~{000}~.js => main-CHBm8I9U.js
 - common_a-!~{001}~.js => common_a-BBEzGp1R.js
 - common_b-!~{003}~.js => common_b-B_jWaHFf.js
 
 # tests/rolldown/function/advanced_chunks/split_node_modules
 
-- main-!~{000}~.js => main-BPmqkJhD.js
+- main-!~{000}~.js => main-DoDO2Q4v.js
 - other-libs-!~{003}~.js => other-libs-8Y0P74jF.js
 - ui-!~{001}~.js => ui-D6CpSPJw.js
 
@@ -4136,7 +4136,7 @@ snapshot_kind: text
 
 # tests/rolldown/function/external/splitting_indirect_external_symbol
 
-- main-!~{000}~.js => main-B_xPL-Mv.js
+- main-!~{000}~.js => main-B9vzhbaH.js
 - indirect-!~{003}~.js => indirect-C8E1UGaS.js
 - indirect-!~{001}~.js => indirect-CtAS5Xvj.js
 
@@ -4476,15 +4476,15 @@ snapshot_kind: text
 # tests/rolldown/issues/122/a
 
 - entry1-!~{000}~.js => entry1-7LhFuExZ.js
-- entry2-!~{001}~.js => entry2-sRTP5M6a.js
-- entry3-!~{002}~.js => entry3-DoG4NTC7.js
+- entry2-!~{001}~.js => entry2-BQ7brKXQ.js
+- entry3-!~{002}~.js => entry3-iKs268Xb.js
 - b-!~{005}~.js => b-D3qa_rYF.js
 - c-!~{003}~.js => c-B5jLbUMv.js
 
 # tests/rolldown/issues/122/b
 
-- a-!~{000}~.js => a-B2GAXTYa.js
-- b-!~{001}~.js => b-kx5WHO8c.js
+- a-!~{000}~.js => a-DznQflML.js
+- b-!~{001}~.js => b-C2l--NvI.js
 - c-!~{002}~.js => c-BbD44Mqp.js
 - 1-!~{003}~.js => 1-ByzxCQYs.js
 - 2-!~{005}~.js => 2-BGzSqg6y.js
@@ -4511,21 +4511,21 @@ snapshot_kind: text
 
 # tests/rolldown/issues/2038/a
 
-- main-!~{000}~.js => main-DoS7D5Xv.js
+- main-!~{000}~.js => main-Ck3_pbG9.js
 - a-!~{005}~.js => a-CWV-ww1b.js
 - b-!~{001}~.js => b-5RKHpjlc.js
 - b-!~{003}~.js => b-B1Vy1mBD.js
 
 # tests/rolldown/issues/2038/b
 
-- main-!~{000}~.js => main-S6czJoF-.js
+- main-!~{000}~.js => main-BvxoVkC5.js
 - a-!~{005}~.js => a-B8Py3ia_.js
 - b-!~{003}~.js => b-C-qVn9bJ.js
 - b-!~{001}~.js => b-D-QK_KAT.js
 
 # tests/rolldown/issues/2085
 
-- main-!~{000}~.js => main-C6bCTg0H.js
+- main-!~{000}~.js => main-srySwZcw.js
 - a-!~{001}~.js => a-C8Wl0yqT.js
 - a-!~{003}~.js => a-DiZf_biC.js
 - c-!~{005}~.js => c-rqT14Lm8.js
@@ -4585,7 +4585,7 @@ snapshot_kind: text
 
 # tests/rolldown/issues/3438
 
-- main-!~{000}~.js => main-DhIKmDIu.js
+- main-!~{000}~.js => main-_xq94Ftn.js
 - repro1-!~{001}~.js => repro1-DCPAzhcM.js
 - repro1-!~{003}~.js => repro1-DGsIRehE.js
 - repro2-!~{007}~.js => repro2-B9dvGMIB.js
@@ -4608,7 +4608,7 @@ snapshot_kind: text
 # tests/rolldown/misc/assign_chunk_name_order
 
 - file-!~{001}~.js => file-BABv0Biq.js
-- main-!~{000}~.js => main-B8uaiB5V.js
+- main-!~{000}~.js => main-DDO9xTOR.js
 - file-!~{004}~.js => file-BnKCpr9P.js
 - file-!~{00a}~.js => file-BxJ9uWda.js
 - file-!~{00e}~.js => file-CA_EEob0.js
@@ -4779,13 +4779,13 @@ snapshot_kind: text
 
 # tests/rolldown/topics/bundler_esm_cjs_tests/12
 
-- entry-!~{000}~.js => entry-BQayrcee.js
+- entry-!~{000}~.js => entry-QsP1hFQM.js
 - foo-!~{003}~.js => foo-ChdjAEIy.js
 - foo-!~{001}~.js => foo-CydxuUR-.js
 
 # tests/rolldown/topics/bundler_esm_cjs_tests/13
 
-- entry-!~{000}~.js => entry-BXAUemUM.js
+- entry-!~{000}~.js => entry-C68tVmVv.js
 - foo-!~{003}~.js => foo-ChdjAEIy.js
 - foo-!~{001}~.js => foo-CydxuUR-.js
 
@@ -5033,7 +5033,7 @@ snapshot_kind: text
 
 # tests/rolldown/topics/css/align_vite
 
-- main-!~{000}~.js => main-B2R3unQl.js
+- main-!~{000}~.js => main-bElKuTCp.js
 - common-imported-by-js-!~{001}~.js => common-imported-by-js-DsZiLHqL.js
 - entry-a-!~{003}~.js => entry-a-Dbwzc532.js
 - entry-b-!~{005}~.js => entry-b-Des6Dhm7.js
@@ -5168,13 +5168,13 @@ snapshot_kind: text
 
 # tests/rolldown/topics/live_bindings/named_exports_in_common_chunks
 
-- main-!~{000}~.js => main-CJTGdMUl.js
+- main-!~{000}~.js => main-BJIV6c3P.js
 - async-entry-!~{003}~.js => async-entry-tvhFbjtQ.js
 - shared-!~{001}~.js => shared-CVDYJWGP.js
 
 # tests/rolldown/topics/live_bindings/named_exports_in_common_chunks_cjs
 
-- main-!~{000}~.js => main-BjIYVEi3.js
+- main-!~{000}~.js => main-DhFN2HFI.js
 - async-entry-!~{003}~.js => async-entry-BnjgiQak.js
 - shared-!~{001}~.js => shared-DTDWOKER.js
 
@@ -5188,7 +5188,7 @@ snapshot_kind: text
 
 # tests/rolldown/topics/new_url/nested_dirs
 
-- main-!~{000}~.js => main-DFSG6sxR.js
+- main-!~{000}~.js => main-DYCl0fXv.js
 - chunks/dep-!~{001}~.js => chunks/dep-FwL67o1z.js
 - chunks/foo-!~{003}~.js => chunks/foo-D4IIM6zT.js
 - assets/foo-CKjbHaRM.txt
@@ -5281,7 +5281,7 @@ snapshot_kind: text
 
 # tests/rolldown/tree_shaking/dynamic_import_eval
 
-- main-!~{000}~.js => main-C6arPjYg.js
+- main-!~{000}~.js => main-CU8887lu.js
 - lib-!~{001}~.js => lib-ppoa65lg.js
 - lib2-!~{003}~.js => lib2-ol3_aPb8.js
 

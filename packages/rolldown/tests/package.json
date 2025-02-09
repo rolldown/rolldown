@@ -6,6 +6,7 @@
   "scripts": {
     "test:main": "cross-env RUST_BACKTRACE=1 ROLLDOWN_TEST=1 vitest run --exclude '**/watch.test.ts' --reporter verbose --hideSkippedTests",
     "test:watcher": "cross-env RUST_BACKTRACE=1 ROLLDOWN_TEST=1 vitest run watch.test.ts --reporter verbose --hideSkippedTests",
+    "test:stability": "node ./stability/issue-3453/src/build.mjs && node ./stability/issue-3453/verify.mjs",
     "type-check": "tsc --noEmit"
   },
   "dependencies": {

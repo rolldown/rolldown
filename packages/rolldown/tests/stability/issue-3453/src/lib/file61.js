@@ -1,0 +1,5 @@
+// Fake example data used for when the search component is in preview mode.
+// Note that the `url` value is used as a key in React, so it needs to be unique.
+export const fakeResults={"/":{version:1,title:"Example Search Result",description:"Description of search result.",keywords:"",h1:[],h2:[],h3:[],h4:[],h5:[],h6:[],p:[],url:"/example-url/",codeblock:[]},"/example-1":{version:1,title:"Publish your Site to Search",description:"Try Site Search to instantly search your Framer site content.",keywords:"",h1:[],h2:[],h3:[],h4:[],h5:[],h6:[],p:[],url:"/example-url/1/",codeblock:[]},"/example-2":{version:1,title:"Customise your Site Search",description:"Personalize everything from corner radius, to icon weight.",keywords:"",h1:[],h2:[],h3:[],h4:[],h5:[],h6:[],p:[],url:"/example-url/2/",codeblock:[]}};
+export const __FramerMetadata__ = {"exports":{"fakeResults":{"type":"variable","annotations":{"framerContractVersion":"1"}},"__FramerMetadata__":{"type":"variable"}}}
+//# sourceMappingURL=./fakeResults.map

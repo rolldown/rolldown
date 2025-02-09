@@ -15,6 +15,7 @@
     "/rollup",
     "/packages/rollup-tests/test",
     "packages/rolldown/tests/fixtures/",
+    "packages/rolldown/tests/stability/",
     "/target",
     "/temp",
     "/tmp",

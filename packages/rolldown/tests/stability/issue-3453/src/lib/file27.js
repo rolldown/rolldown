@@ -1,0 +1,2 @@
+const toString=value=>{return typeof value==="string"?value:String(value);};export const v0=({V9mfHhbUA})=>`${V9mfHhbUA!==undefined?toString(V9mfHhbUA):"{{V9mfHhbUA}}"} - Moja strona internetowa`;
+export const __FramerMetadata__ = {"exports":{"v0":{"type":"variable","annotations":{"framerContractVersion":"1"}},"__FramerMetadata__":{"type":"variable"}}}

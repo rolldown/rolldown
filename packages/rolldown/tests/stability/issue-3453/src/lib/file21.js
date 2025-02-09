@@ -1,0 +1,2 @@
+import{jsx as _jsx}from"react/jsx-runtime";import*as React from"react";export const v0=/*#__PURE__*/_jsx(React.Fragment,{children:/*#__PURE__*/_jsx("h1",{className:"framer-styles-preset-1sbrej4","data-styles-preset":"gDa8VqCZz",children:"Blog"})});
+export const __FramerMetadata__ = {"exports":{"v0":{"type":"variable","annotations":{"framerContractVersion":"1"}},"__FramerMetadata__":{"type":"variable"}}}

@@ -45,7 +45,7 @@ jobs:
 
       - name: Node Test For Node18
         run: |
-          pnpm run --filter rolldown-tests test:main && pnpm run --filter rolldown-tests test:watcher
+          pnpm run --filter rolldown-tests test:main && pnpm run --filter rolldown-tests test:watcher && pnpm run --filter rolldown-tests test:stability
 
       - name: Rollup Test Node18
         run: pnpm run --filter rollup-tests test
@@ -60,7 +60,7 @@ jobs:
 
       - name: Node Test For Node20
         run: |
-          pnpm run --filter rolldown-tests test:main && pnpm run --filter rolldown-tests test:watcher
+          pnpm run --filter rolldown-tests test:main && pnpm run --filter rolldown-tests test:watcher && pnpm run --filter rolldown-tests test:stability
 
       - name: Rollup Test Node20
         run: pnpm run --filter rollup-tests test
@@ -75,7 +75,7 @@ jobs:
 
       - name: Node Test For Node22
         run: |
-          pnpm run --filter rolldown-tests test:main && pnpm run --filter rolldown-tests test:watcher
+          pnpm run --filter rolldown-tests test:main && pnpm run --filter rolldown-tests test:watcher && pnpm run --filter rolldown-tests test:stability
 
       - name: Rollup Test Node22
         run: pnpm run --filter rollup-tests test

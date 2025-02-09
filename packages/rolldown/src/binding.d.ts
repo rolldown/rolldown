@@ -483,10 +483,10 @@ export interface BindingModulePreloadPolyfillPluginConfig {
   skip?: boolean
 }
 
-export interface BindingModules {
-  value: Array<BindingRenderedModule>
-  idToIndex: Record<string, number>
-}
+export interface BindingModules { 
+  values: Array<BindingRenderedModule>
+  keys: Array<string> 
+};
 
 export interface BindingModuleSideEffectsRule {
   test?: RegExp | undefined

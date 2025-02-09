@@ -30,21 +30,20 @@ pub struct OutputChunk {
 
 #[derive(Debug, Clone)]
 pub struct Modules {
-  pub key_to_index: FxHashMap<ModuleId, usize>,
-  pub value: Vec<RenderedModule>,
+  pub keys: Vec<ModuleId>,
+  pub values: Vec<RenderedModule>,
 }
 
 impl From<FxHashMap<ModuleId, RenderedModule>> for Modules {
   fn from(value: FxHashMap<ModuleId, RenderedModule>) -> Self {
-    let mut key_to_index = FxHashMap::default();
-    let value = value
-      .into_iter()
-      .enumerate()
-      .map(|(index, (key, value))| {
-        key_to_index.insert(key, index);
-        value
-      })
-      .collect();
-    Self { key_to_index, value }
+    let mut kvs = value.into_iter().collect::<Vec<_>>();
+    kvs.sort_by(|a, b| a.0.cmp(&b.0));
+    let mut keys = Vec::with_capacity(kvs.len());
+    let mut values = Vec::with_capacity(kvs.len());
+    for (k, v) in kvs {
+      keys.push(k);
+      values.push(v);
+    }
+    Self { keys, values }
   }
 }

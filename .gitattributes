@@ -8,6 +8,8 @@ crates/rolldown/tests/**/*.jsx -linguist-detectable
 crates/rolldown/tests/**/*.ts -linguist-detectable
 crates/rolldown/tests/**/*.tsx -linguist-detectable
 
+packages/rolldown/tests/stability/**/*.js -linguist-detectable 
+
 # https://github.com/rolldown/rolldown/issues/1354
 * text eol=lf
 *.png -text

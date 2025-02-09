@@ -1,4 +1,4 @@
-use std::borrow::Cow;
+use std::{borrow::Cow, collections::hash_map::Entry};
 
 use arcstr::ArcStr;
 use indexmap::IndexSet;
@@ -282,15 +282,28 @@ impl LinkStage<'_> {
   /// exports.something = 1
   /// ```
   fn update_cjs_module_meta(&mut self) {
+    enum CacheStatus {
+      Seen,
+      Value(bool),
+    }
     /// caller should guarantee that the idx of module belongs to a normal module
     fn recursive_update_cjs_module_interop_default_removable(
       module_tables: &IndexModules,
       module_idx: ModuleIdx,
-      cache: &mut FxHashMap<ModuleIdx, bool>,
+      cache: &mut FxHashMap<ModuleIdx, CacheStatus>,
     ) -> bool {
-      if let Some(&result) = cache.get(&module_idx) {
-        return result;
-      }
+      match cache.entry(module_idx) {
+        Entry::Occupied(mut occ) => {
+          match occ.get_mut() {
+            // Find a cycle
+            CacheStatus::Seen => return false,
+            CacheStatus::Value(v) => return *v,
+          }
+        }
+        Entry::Vacant(vac) => {
+          vac.insert(CacheStatus::Seen);
+        }
+      };
       let module = module_tables[module_idx].as_normal().unwrap();
       let v = if module.ast_usage.contains(EcmaModuleAstUsage::IsCjsReexport) {
         module.import_records.iter().filter(|item| !item.is_dummy()).all(|item| {
@@ -310,7 +323,7 @@ impl LinkStage<'_> {
       } else {
         module.ast_usage.contains(EcmaModuleAstUsage::AllStaticExportPropertyAccess)
       };
-      cache.insert(module_idx, v);
+      cache.insert(module_idx, CacheStatus::Value(v));
       v
     }
 

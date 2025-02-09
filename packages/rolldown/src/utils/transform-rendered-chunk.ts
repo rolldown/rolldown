@@ -43,9 +43,10 @@ export function transformChunkModules(
   modules: BindingRenderedChunk['modules'],
 ): RenderedChunk['modules'] {
   const result: RenderedChunk['modules'] = {}
-  for (const [id, index] of Object.entries(modules.idToIndex)) {
-    let mod = modules.value[index]
-    result[id] = transformToRenderedModule(mod)
+  for (let i = 0; i < modules.values.length; i++) {
+    let key = modules.keys[i]
+    const mod = modules.values[i]
+    result[key] = transformToRenderedModule(mod)
   }
   return result
 }

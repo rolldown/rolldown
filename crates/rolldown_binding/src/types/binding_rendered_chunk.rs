@@ -1,8 +1,5 @@
-use std::collections::HashMap;
-
 use arcstr::ArcStr;
-use rolldown_utils::rayon::{IntoParallelIterator, IntoParallelRefIterator, ParallelIterator};
-use rustc_hash::FxBuildHasher;
+use rolldown_utils::rayon::{IntoParallelIterator, ParallelIterator};
 
 use crate::types::binding_rendered_module::BindingRenderedModule;
 
@@ -79,8 +76,8 @@ impl RenderedChunk {
 #[napi_derive::napi(object)]
 #[derive(Default, Debug, Clone)]
 pub struct BindingModules {
-  pub value: Vec<BindingRenderedModule>,
-  pub id_to_index: HashMap<String, u32, FxBuildHasher>,
+  pub values: Vec<BindingRenderedModule>,
+  pub keys: Vec<String>,
 }
 
 impl From<rolldown_common::RollupRenderedChunk> for RenderedChunk {
@@ -99,25 +96,12 @@ impl From<rolldown_common::RollupRenderedChunk> for RenderedChunk {
     }
   }
 }
-#[allow(clippy::cast_possible_truncation)]
-impl From<&rolldown_common::Modules> for BindingModules {
-  fn from(modules: &rolldown_common::Modules) -> Self {
-    let value = modules.value.par_iter().map(|x| x.clone().into()).collect();
-    let id_to_index =
-      modules.key_to_index.iter().map(|(key, value)| (key.to_string(), *value as u32)).collect();
-    Self { value, id_to_index }
-  }
-}
 
 #[allow(clippy::cast_possible_truncation)]
 impl From<rolldown_common::Modules> for BindingModules {
   fn from(modules: rolldown_common::Modules) -> Self {
-    let value = modules.value.into_par_iter().map(std::convert::Into::into).collect();
-    let id_to_index = modules
-      .key_to_index
-      .into_iter()
-      .map(|(key, value)| (key.to_string(), value as u32))
-      .collect();
-    Self { value, id_to_index }
+    let values = modules.values.into_par_iter().map(std::convert::Into::into).collect();
+    let keys = modules.keys.into_par_iter().map(|x| x.to_string()).collect();
+    Self { values, keys }
   }
 }

@@ -98,9 +98,6 @@ impl<'me, 'ast: 'me> Visit<'ast> for AstScanner<'me, 'ast> {
     {
       self.ast_usage.remove(EcmaModuleAstUsage::AllStaticExportPropertyAccess);
     }
-    if !self.ast_usage.contains(EcmaModuleAstUsage::ModuleRef) {
-      self.ast_usage.remove(EcmaModuleAstUsage::IsCjsReexport);
-    }
   }
 
   fn visit_binding_identifier(&mut self, ident: &ast::BindingIdentifier) {

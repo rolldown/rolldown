@@ -40,8 +40,8 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
             }
             AstKind::Argument(arg) => self.check_object_define_property(arg, cursor - 1),
             AstKind::SimpleAssignmentTarget(target) => {
-              if !self.check_assignment_is_cjs_reexport(target, cursor - 1).unwrap_or_default() {
-                self.ast_usage.remove(EcmaModuleAstUsage::IsCjsReexport);
+              if self.check_assignment_is_cjs_reexport(target, cursor - 1).unwrap_or_default() {
+                self.ast_usage.insert(EcmaModuleAstUsage::IsCjsReexport);
               }
               None
             }

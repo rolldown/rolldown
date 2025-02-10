@@ -11,14 +11,14 @@ snapshot_kind: text
 
 //#region foo.js
 var foo;
-var init_foo = await __esm({ async "foo.js"() {
+var init_foo = __esm({ async "foo.js"() {
 	await 1e3;
 	foo = 123;
 } });
 
 //#endregion
 //#region main.js
-var init_main = await __esm({ async "main.js"() {
+var init_main = __esm({ async "main.js"() {
 	await init_foo();
 	console.log(foo);
 } });

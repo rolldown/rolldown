@@ -2389,6 +2389,7 @@ dependencies = [
  "rolldown_plugin",
  "rolldown_utils",
  "rustc-hash",
+ "sugar_path",
 ]
 
 [[package]]

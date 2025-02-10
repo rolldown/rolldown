@@ -1,10 +1,9 @@
-use std::{borrow::Cow, vec};
+use std::borrow::Cow;
 
 mod init_modules_visitor;
 mod option;
 mod utils;
 use arcstr::ArcStr;
-use init_modules_visitor::RemoteModule;
 pub use option::{ModuleFederationPluginOption, Remote, Shared};
 use oxc::{
   ast::{
@@ -17,28 +16,26 @@ use rolldown_common::EmittedChunk;
 use rolldown_plugin::{HookResolveIdReturn, Plugin};
 use rolldown_utils::{concat_string, dashmap::FxDashMap};
 use rustc_hash::FxHashSet;
-use utils::{detect_remote_module_type, RemoteModuleType};
+use sugar_path::SugarPath;
+use utils::{detect_remote_module_type, get_remote_module_prefix};
 
 const REMOTE_ENTRY: &str = "mf:remote-entry.js";
 const INIT_HOST: &str = "mf:init-host.js";
 const REMOTE_MODULE_REGISTRY: &str = "mf:remote-module-registry.js";
-const INIT_MODULE_PREFIX: &str = "mf:init-module:";
+const INIT_REMOTE_MODULE_PREFIX: &str = "mf:init-remote-module:";
+const INIT_SHARED_MODULE_PREFIX: &str = "mf:init-shared-module:";
 const SHARED_MODULE_PREFIX: &str = "mf:shared-module:";
+const HOST_ENTRY_PREFIX: &str = "mf:host-entry:";
 
 #[derive(Debug)]
 pub struct ModuleFederationPlugin {
   options: ModuleFederationPluginOption,
-  module_init_remote_modules: FxDashMap<ArcStr, FxHashSet<RemoteModule>>,
   shared_module_versions: FxDashMap<ArcStr, ArcStr>,
 }
 
 impl ModuleFederationPlugin {
   pub fn new(options: ModuleFederationPluginOption) -> Self {
-    Self {
-      options,
-      module_init_remote_modules: FxDashMap::default(),
-      shared_module_versions: FxDashMap::default(),
-    }
+    Self { options, shared_module_versions: FxDashMap::default() }
   }
 
   pub fn generate_remote_entry_code(&self) -> String {
@@ -205,7 +202,8 @@ impl Plugin for ModuleFederationPlugin {
       || args.specifier == INIT_HOST
       || args.specifier == REMOTE_MODULE_REGISTRY
       || detect_remote_module_type(args.specifier, &self.options).is_some()
-      || args.specifier.starts_with(INIT_MODULE_PREFIX)
+      || args.specifier.starts_with(INIT_REMOTE_MODULE_PREFIX)
+      || args.specifier.starts_with(INIT_SHARED_MODULE_PREFIX)
     {
       return Ok(Some(rolldown_plugin::HookResolveIdOutput {
         id: args.specifier.to_string(),
@@ -227,6 +225,14 @@ impl Plugin for ModuleFederationPlugin {
         ..Default::default()
       }));
     }
+    if args.is_entry && self.options.filename.is_none() && args.specifier != REMOTE_ENTRY {
+      let resolve_id = ctx.resolve(args.specifier, None, None).await??;
+      return Ok(Some(rolldown_plugin::HookResolveIdOutput {
+        id: concat_string!(HOST_ENTRY_PREFIX, resolve_id.id.to_slash_lossy()),
+        ..Default::default()
+      }));
+    }
+
     Ok(None)
   }
 
@@ -253,27 +259,29 @@ impl Plugin for ModuleFederationPlugin {
         ..Default::default()
       }));
     }
-    if args.id.starts_with(INIT_MODULE_PREFIX) {
-      let init_remote_modules =
-        self.module_init_remote_modules.get(args.id).expect("should have init remote modules");
-      let modules_string = concat_string!(
-        "[",
-        init_remote_modules
-          .iter()
-          .map(|m| concat_string!(
-            "{ id: '",
-            m.id.as_ref(),
-            "', shared: ",
-            if m.r#type == RemoteModuleType::Shared { "true" } else { "false" },
-            " }"
-          ))
-          .collect::<Vec<_>>()
-          .join(", "),
-        "]"
-      );
+    if args.id.starts_with(HOST_ENTRY_PREFIX) {
+      let id = &args.id[HOST_ENTRY_PREFIX.len()..];
       return Ok(Some(rolldown_plugin::HookLoadOutput {
-        code: include_str!("runtime/init-module-import-remote-module.js")
-          .replace("__REMOTE__MODULES__", &modules_string)
+        code: concat_string!("await import('", INIT_HOST, "').then(() => import('", id, "'));"),
+        ..Default::default()
+      }));
+    }
+    if args.id.starts_with(INIT_REMOTE_MODULE_PREFIX) {
+      let remote_module_id = &args.id[INIT_REMOTE_MODULE_PREFIX.len()..];
+      return Ok(Some(rolldown_plugin::HookLoadOutput {
+        code: include_str!("runtime/init-remote-module.js")
+          .replace("__MODULE_ID__", &concat_string!("'", remote_module_id, "'"))
+          .replace("__IS__SHARED__", "false")
+          .to_string(),
+        ..Default::default()
+      }));
+    }
+    if args.id.starts_with(INIT_SHARED_MODULE_PREFIX) {
+      let remote_module_id = &args.id[INIT_SHARED_MODULE_PREFIX.len()..];
+      return Ok(Some(rolldown_plugin::HookLoadOutput {
+        code: include_str!("runtime/init-remote-module.js")
+          .replace("__MODULE_ID__", &concat_string!("'", remote_module_id, "'"))
+          .replace("__IS__SHARED__", "true")
           .to_string(),
         ..Default::default()
       }));
@@ -297,19 +305,16 @@ impl Plugin for ModuleFederationPlugin {
     args.ast.program.with_mut(|fields| {
       let ast_builder = AstBuilder::new(fields.allocator);
       let mut init_remote_modules = FxHashSet::default();
-      let mut dynamic_import_remote_modules = FxHashSet::default();
       let mut init_modules_visitor = init_modules_visitor::InitModuleVisitor {
         ast_builder,
         options: &self.options,
         init_remote_modules: &mut init_remote_modules,
-        dynamic_import_remote_modules: &mut dynamic_import_remote_modules,
       };
       init_modules_visitor.visit_program(fields.program);
 
       if !init_remote_modules.is_empty() {
-        let id = concat_string!(INIT_MODULE_PREFIX, args.id);
-        fields.program.body.insert(
-          0,
+        let statements = init_remote_modules.iter().map(|remote_module| {
+          let id = concat_string!(get_remote_module_prefix(remote_module.r#type), remote_module.id);
           Statement::from(ast_builder.module_declaration_import_declaration(
             SPAN,
             None,
@@ -317,36 +322,13 @@ impl Plugin for ModuleFederationPlugin {
             None,
             NONE,
             ImportOrExportKind::Value,
-          )),
-        );
-        // TODO find a way to make sure it execute at before shared splitting modules.
-        self.module_init_remote_modules.insert(id.into(), init_remote_modules);
-      }
-      for dynamic_import_remote_module in dynamic_import_remote_modules {
-        self.module_init_remote_modules.insert(
-          concat_string!(INIT_MODULE_PREFIX, dynamic_import_remote_module.id).into(),
-          FxHashSet::from_iter(vec![dynamic_import_remote_module]),
-        );
+          ))
+        });
+        let old_body = fields.program.body.drain(..).collect::<Vec<_>>();
+        fields.program.body.extend(statements);
+        fields.program.body.extend(old_body);
       }
     });
-
-    // Init host should be added to the top of the entry file
-    if args.is_user_defined_entry && self.options.filename.is_none() && args.id != REMOTE_ENTRY {
-      args.ast.program.with_mut(|fields| {
-        let ast_builder = AstBuilder::new(fields.allocator);
-        fields.program.body.insert(
-          0,
-          Statement::from(ast_builder.module_declaration_import_declaration(
-            SPAN,
-            None,
-            ast_builder.string_literal(SPAN, ast_builder.atom(INIT_HOST), None),
-            None,
-            NONE,
-            ImportOrExportKind::Value,
-          )),
-        );
-      });
-    }
 
     Ok(args.ast)
   }

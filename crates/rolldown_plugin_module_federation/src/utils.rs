@@ -1,9 +1,15 @@
-use crate::ModuleFederationPluginOption;
+use crate::{ModuleFederationPluginOption, INIT_REMOTE_MODULE_PREFIX, INIT_SHARED_MODULE_PREFIX};
 
-#[derive(Debug, PartialEq, Eq, Hash)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
 pub enum RemoteModuleType {
   Shared,
   Remote,
+}
+
+impl RemoteModuleType {
+  pub fn is_shared(self) -> bool {
+    matches!(self, RemoteModuleType::Shared)
+  }
 }
 
 pub fn detect_remote_module_type(
@@ -21,4 +27,12 @@ pub fn detect_remote_module_type(
     }
   }
   None
+}
+
+pub fn get_remote_module_prefix(remote_module_type: RemoteModuleType) -> &'static str {
+  if remote_module_type.is_shared() {
+    INIT_SHARED_MODULE_PREFIX
+  } else {
+    INIT_REMOTE_MODULE_PREFIX
+  }
 }

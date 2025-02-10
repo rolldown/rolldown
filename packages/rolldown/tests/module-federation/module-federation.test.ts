@@ -9,7 +9,7 @@ describe('module-federation', () => {
 
     // build host
     await build({
-      input: './main.js',
+      input: './host-entry.js',
       cwd: import.meta.dirname,
       external: ['node:assert', '@module-federation/runtime'],
       plugins: [
@@ -40,14 +40,14 @@ describe('module-federation', () => {
 
     // build remote
     await build({
-      input: './expose.js',
+      input: './remote-expose.js',
       cwd: import.meta.dirname,
       plugins: [
         moduleFederationPlugin({
           name: 'mf-remote',
           filename: 'remote-entry.js',
           exposes: {
-            './expose': './expose.js',
+            './expose': './remote-expose.js',
           },
           shared: {
             'test-shared': {
@@ -76,7 +76,7 @@ describe('module-federation', () => {
     // @ts-ignore
     globalThis.mfShared = 0
     // @ts-ignore
-    await import('./dist/host/main.js')
+    await import('./dist/host/host-entry.js')
     // Make sure only one instance of shared module is loaded
     // @ts-ignore
     expect(globalThis.mfShared).toBe(1)

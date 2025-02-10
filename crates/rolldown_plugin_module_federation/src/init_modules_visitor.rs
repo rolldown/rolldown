@@ -13,8 +13,8 @@ use rolldown_utils::concat_string;
 use rustc_hash::FxHashSet;
 
 use crate::{
-  utils::{detect_remote_module_type, RemoteModuleType},
-  ModuleFederationPluginOption, INIT_MODULE_PREFIX,
+  utils::{detect_remote_module_type, get_remote_module_prefix, RemoteModuleType},
+  ModuleFederationPluginOption,
 };
 
 #[derive(Debug, PartialEq, Eq, Hash)]
@@ -28,7 +28,6 @@ pub struct InitModuleVisitor<'ast, 'a> {
   pub ast_builder: AstBuilder<'ast>,
   pub options: &'a ModuleFederationPluginOption,
   pub init_remote_modules: &'a mut FxHashSet<RemoteModule>,
-  pub dynamic_import_remote_modules: &'a mut FxHashSet<RemoteModule>,
 }
 
 impl InitModuleVisitor<'_, '_> {
@@ -61,9 +60,7 @@ impl<'ast> VisitMut<'ast> for InitModuleVisitor<'ast, '_> {
     if let Expression::ImportExpression(import_expr) = expr {
       if let Expression::StringLiteral(lit) = &import_expr.source {
         if let Some(remote_type) = detect_remote_module_type(&lit.value, self.options) {
-          self
-            .dynamic_import_remote_modules
-            .insert(RemoteModule { id: lit.value.as_str().into(), r#type: remote_type });
+          let id = concat_string!(get_remote_module_prefix(remote_type), lit.value.as_str());
           *expr = self.ast_builder.expression_call(
             SPAN,
             self
@@ -74,7 +71,7 @@ impl<'ast> VisitMut<'ast> for InitModuleVisitor<'ast, '_> {
                   SPAN,
                   self.ast_builder.expression_string_literal(
                     SPAN,
-                    self.ast_builder.atom(&concat_string!(INIT_MODULE_PREFIX, lit.value.as_str())),
+                    self.ast_builder.atom(&id),
                     None,
                   ),
                   self.ast_builder.vec(),

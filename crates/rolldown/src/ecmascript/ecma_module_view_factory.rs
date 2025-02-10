@@ -113,10 +113,9 @@ pub async fn create_ecma_view(
     hashbang_range,
     meta: {
       let mut meta = EcmaViewMeta::default();
-      meta.set_included(false);
-      meta.set_eval(has_eval);
-      meta.set_has_lazy_export(has_lazy_export);
-      meta.set_has_star_exports(has_star_exports);
+      meta.set(EcmaViewMeta::EVAL, has_eval);
+      meta.set(EcmaViewMeta::HAS_LAZY_EXPORT, has_lazy_export);
+      meta.set(EcmaViewMeta::HAS_STAR_EXPORT, has_star_exports);
       meta
     },
     mutations: vec![],

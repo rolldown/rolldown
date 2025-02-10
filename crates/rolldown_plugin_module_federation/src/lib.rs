@@ -16,6 +16,7 @@ use rolldown_common::EmittedChunk;
 use rolldown_plugin::{HookResolveIdReturn, Plugin};
 use rolldown_utils::{concat_string, dashmap::FxDashMap};
 use rustc_hash::FxHashSet;
+use sugar_path::SugarPath;
 use utils::{detect_remote_module_type, get_remote_module_prefix};
 
 const REMOTE_ENTRY: &str = "mf:remote-entry.js";
@@ -227,7 +228,7 @@ impl Plugin for ModuleFederationPlugin {
     if args.is_entry && self.options.filename.is_none() && args.specifier != REMOTE_ENTRY {
       let resolve_id = ctx.resolve(args.specifier, None, None).await??;
       return Ok(Some(rolldown_plugin::HookResolveIdOutput {
-        id: concat_string!(HOST_ENTRY_PREFIX, resolve_id.id),
+        id: concat_string!(HOST_ENTRY_PREFIX, resolve_id.id.to_slash_lossy()),
         ..Default::default()
       }));
     }

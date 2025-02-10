@@ -5,4 +5,4 @@ assert.strictEqual(value, 'expose')
 assert.strictEqual(shared, 'shared')
 assert.strictEqual(exposeShared, 'shared')
 
-import('./host-chunk'); // create a chunk to make the shared modules to chunk.
+await import('./host-chunk') // create a chunk to make the shared modules to chunk.

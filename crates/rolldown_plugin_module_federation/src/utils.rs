@@ -7,7 +7,7 @@ pub enum RemoteModuleType {
 }
 
 impl RemoteModuleType {
-  pub fn is_shared(&self) -> bool {
+  pub fn is_shared(self) -> bool {
     matches!(self, RemoteModuleType::Shared)
   }
 }

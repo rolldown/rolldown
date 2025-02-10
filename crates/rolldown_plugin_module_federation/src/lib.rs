@@ -261,7 +261,7 @@ impl Plugin for ModuleFederationPlugin {
     if args.id.starts_with(HOST_ENTRY_PREFIX) {
       let id = &args.id[HOST_ENTRY_PREFIX.len()..];
       return Ok(Some(rolldown_plugin::HookLoadOutput {
-        code: concat_string!("import('", INIT_HOST, "').then(() => import('", id, "'));"),
+        code: concat_string!("await import('", INIT_HOST, "').then(() => import('", id, "'));"),
         ..Default::default()
       }));
     }

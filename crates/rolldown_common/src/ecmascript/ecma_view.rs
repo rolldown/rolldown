@@ -54,39 +54,6 @@ impl EcmaViewMeta {
   pub fn has_star_export(&self) -> bool {
     self.contains(Self::HAS_STAR_EXPORT)
   }
-
-  #[inline]
-  pub fn set_eval(&mut self, value: bool) {
-    if value {
-      self.insert(Self::EVAL);
-    } else {
-      self.remove(Self::EVAL);
-    }
-  }
-  #[inline]
-  pub fn set_included(&mut self, value: bool) {
-    if value {
-      self.insert(Self::INCLUDED);
-    } else {
-      self.remove(Self::INCLUDED);
-    }
-  }
-  #[inline]
-  pub fn set_has_lazy_export(&mut self, value: bool) {
-    if value {
-      self.insert(Self::HAS_LAZY_EXPORT);
-    } else {
-      self.remove(Self::HAS_LAZY_EXPORT);
-    }
-  }
-  #[inline]
-  pub fn set_has_star_exports(&mut self, value: bool) {
-    if value {
-      self.insert(Self::HAS_STAR_EXPORT);
-    } else {
-      self.remove(Self::HAS_STAR_EXPORT);
-    }
-  }
 }
 
 #[derive(Debug)]

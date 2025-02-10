@@ -45,7 +45,6 @@ impl RuntimeModuleTask {
     }
   }
 
-  #[expect(clippy::too_many_lines)]
   fn run_inner(&mut self) -> BuildResult<()> {
     let source = if self.options.is_esm_format_with_node_platform() {
       arcstr::literal!(concat!(
@@ -123,10 +122,8 @@ impl RuntimeModuleTask {
         hashbang_range: None,
         meta: {
           let mut meta = EcmaViewMeta::default();
-          meta.set_included(false);
-          meta.set_eval(has_eval);
-          meta.set_has_lazy_export(false);
-          meta.set_has_star_exports(has_star_exports);
+          meta.set(self::EcmaViewMeta::EVAL, has_eval);
+          meta.set(self::EcmaViewMeta::HAS_STAR_EXPORT, has_star_exports);
           meta
         },
         mutations: vec![],

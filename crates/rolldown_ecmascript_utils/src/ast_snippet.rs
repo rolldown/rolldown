@@ -496,18 +496,11 @@ impl<'ast> AstSnippet<'ast> {
       esm_call_expr.arguments.push(ast::Argument::ArrowFunctionExpression(arrow_expr));
     };
 
-    // var init_foo = ...
-
-    // ... = await __esm(...) or ... = __esm(...)
-    let init = if is_async {
-      ast::Expression::AwaitExpression(self.builder.alloc_await_expression(
-        SPAN,
-        ast::Expression::CallExpression(esm_call_expr.into_in(self.alloc())),
-      ))
-    } else {
-      ast::Expression::CallExpression(esm_call_expr.into_in(self.alloc()))
-    };
-    self.var_decl_stmt(binding_name, init)
+    // var init_foo = __esm(...)
+    self.var_decl_stmt(
+      binding_name,
+      ast::Expression::CallExpression(esm_call_expr.into_in(self.alloc())),
+    )
   }
 
   /// ```js

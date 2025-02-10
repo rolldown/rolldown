@@ -1684,7 +1684,7 @@ snapshot_kind: text
 
 # tests/esbuild/default/top_level_await_allowed_import_without_splitting
 
-- entry-!~{000}~.js => entry-BVnJBQBz.js
+- entry-!~{000}~.js => entry-i5iVR-tf.js
 
 # tests/esbuild/default/top_level_await_cjs_dead_branch
 
@@ -1700,7 +1700,7 @@ snapshot_kind: text
 
 # tests/esbuild/default/top_level_await_forbidden_require
 
-- entry-!~{000}~.js => entry-BBxu8n-e.js
+- entry-!~{000}~.js => entry-BAYIUxoz.js
 
 # tests/esbuild/default/top_level_await_forbidden_require_dead_branch
 
@@ -4008,7 +4008,7 @@ snapshot_kind: text
 
 # tests/rolldown/function/experimental/strict_execution_order/top_level_await_syntax
 
-- main-!~{000}~.js => main-DlRywfq5.js
+- main-!~{000}~.js => main-GFznQ31-.js
 
 # tests/rolldown/function/export_mode/cjs/auto/default
 

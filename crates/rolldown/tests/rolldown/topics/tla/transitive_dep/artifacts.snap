@@ -31,21 +31,21 @@ Variant: (strict_execution_order: true)
 
 //#region tla.js
 var value$1;
-var init_tla = await __esm({ async "tla.js"() {
+var init_tla = __esm({ async "tla.js"() {
 	value$1 = await Promise.resolve("tla");
 } });
 
 //#endregion
 //#region lib.js
 var value;
-var init_lib = await __esm({ async "lib.js"() {
+var init_lib = __esm({ async "lib.js"() {
 	await init_tla();
 	value = value$1 + "+lib";
 } });
 
 //#endregion
 //#region main.js
-var init_main = await __esm({ async "main.js"() {
+var init_main = __esm({ async "main.js"() {
 	await init_lib();
 } });
 

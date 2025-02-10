@@ -65,14 +65,14 @@ var require_entry = __commonJS({ "entry.js"() {
 //#endregion
 //#region a.js
 var a_exports = {};
-var init_a = await __esm({ async "a.js"() {
+var init_a = __esm({ async "a.js"() {
 	await init_b();
 } });
 
 //#endregion
 //#region b.js
 var b_exports = {};
-var init_b = await __esm({ async "b.js"() {} });
+var init_b = __esm({ async "b.js"() {} });
 
 //#endregion
 //#region c.js
@@ -140,14 +140,14 @@ export default require_entry();
 -    }
 -});
 -await init_entry();
-+var init_a = await __esm({ async "a.js"() {
++var init_a = __esm({ async "a.js"() {
 +	await init_b();
 +} });
 +
 +//#endregion
 +//#region b.js
 +var b_exports = {};
-+var init_b = await __esm({ async "b.js"() {} });
++var init_b = __esm({ async "b.js"() {} });
 +
 +//#endregion
 +//#region c.js

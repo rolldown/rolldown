@@ -122,7 +122,7 @@ const ChecksOptionsSchema = v.strictObject({
   circularDependency: v.pipe(
     v.optional(v.boolean()),
     v.description(
-      'Wether to emit warnings when detecting circular dependencies',
+      'Whether to emit warnings when detecting circular dependencies',
     ),
   ),
 })

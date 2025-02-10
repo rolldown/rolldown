@@ -136,16 +136,28 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
         );
 
         // `init_foo()`
-        *stmt = self.snippet.builder.statement_expression(
-          SPAN,
+        let init_call =
           ast::Expression::CallExpression(self.snippet.builder.alloc_call_expression(
             stmt.span(),
             wrapper_ref_expr,
             NONE,
             self.snippet.builder.vec(),
             false,
-          )),
-        );
+          ));
+
+        if self.ctx.linking_info.is_tla_or_contains_tla_dependency {
+          // `await init_foo()`
+          *stmt = self.snippet.builder.statement_expression(
+            SPAN,
+            ast::Expression::AwaitExpression(
+              self.snippet.builder.alloc_await_expression(SPAN, init_call),
+            ),
+          );
+        } else {
+          // `init_foo()`
+          *stmt = self.snippet.builder.statement_expression(SPAN, init_call);
+        }
+
         return false;
       }
     }
@@ -903,7 +915,6 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
   #[allow(clippy::too_many_lines)]
   fn remove_unused_top_level_stmt(&mut self, program: &mut ast::Program<'ast>) {
     let old_body = self.alloc.take(&mut program.body);
-
     // the first statement info is the namespace variable declaration
     // skip first statement info to make sure `program.body` has same index as `stmt_infos`
     old_body.into_iter().enumerate().zip(self.ctx.module.stmt_infos.iter().skip(1)).for_each(

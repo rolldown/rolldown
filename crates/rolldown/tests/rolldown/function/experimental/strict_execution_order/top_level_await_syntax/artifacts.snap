@@ -18,11 +18,11 @@ var init_foo = await __esm({ async "foo.js"() {
 
 //#endregion
 //#region main.js
-var init_main = __esm({ "main.js"() {
-	init_foo();
+var init_main = await __esm({ async "main.js"() {
+	await init_foo();
 	console.log(foo);
 } });
 
 //#endregion
-init_main();
+await init_main();
 ```

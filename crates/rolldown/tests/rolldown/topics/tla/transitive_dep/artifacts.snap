@@ -8,11 +8,15 @@ snapshot_kind: text
 
 ```js
 
-//#region lib.js
-const foo = await Promise.resolve("foo");
+//#region tla.js
+const value$1 = await Promise.resolve("tla");
 
 //#endregion
-export { foo };
+//#region lib.js
+const value = value$1 + "+lib";
+
+//#endregion
+export { value };
 ```
 ---
 
@@ -25,10 +29,18 @@ Variant: (strict_execution_order: true)
 ```js
 
 
+//#region tla.js
+var value$1;
+var init_tla = await __esm({ async "tla.js"() {
+	value$1 = await Promise.resolve("tla");
+} });
+
+//#endregion
 //#region lib.js
-var foo;
+var value;
 var init_lib = await __esm({ async "lib.js"() {
-	foo = await Promise.resolve("foo");
+	await init_tla();
+	value = value$1 + "+lib";
 } });
 
 //#endregion
@@ -39,5 +51,5 @@ var init_main = await __esm({ async "main.js"() {
 
 //#endregion
 await init_main();
-export { foo };
+export { value };
 ```

@@ -12,7 +12,8 @@ use napi::bindgen_prelude::{Either, FnArgs};
 use rolldown::{
   AddonOutputOption, AdvancedChunksOptions, AssetFilenamesOutputOption, BundlerOptions,
   ChunkFilenamesOutputOption, DeferSyncScanDataOption, ExperimentalOptions, HashCharacters,
-  IsExternal, MatchGroup, ModuleType, OutputExports, OutputFormat, Platform, SanitizeFilename,
+  IsExternal, MatchGroup, ModuleType, OutputExports, OutputFormat, Platform,
+  PreserveEntrySignature, SanitizeFilename,
 };
 use rolldown_common::DeferSyncScanData;
 use rolldown_plugin::__inner::SharedPluginable;
@@ -203,6 +204,14 @@ pub fn normalize_binding_options(
       .transpose()
       .map_err(|err| napi::Error::new(napi::Status::GenericFailure, err))?,
     shim_missing_exports: input_options.shim_missing_exports,
+    preserve_entry_signatures: input_options
+      .preserve_entry_signatures
+      .map(|item| match item {
+        Either::A(item_bool) => PreserveEntrySignature::try_from(item_bool),
+        Either::B(item_string) => PreserveEntrySignature::try_from(item_string.as_str()),
+      })
+      .transpose()
+      .map_err(|err| napi::Error::new(napi::Status::GenericFailure, err))?,
     name: output_options.name,
     asset_filenames: normalize_asset_file_names_option(output_options.asset_file_names)?,
     entry_filenames: normalize_chunk_file_names_option(output_options.entry_file_names)?,

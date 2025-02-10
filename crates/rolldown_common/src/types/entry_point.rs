@@ -23,4 +23,8 @@ impl EntryPointKind {
   pub fn is_user_defined(&self) -> bool {
     matches!(self, EntryPointKind::UserDefined)
   }
+
+  pub fn is_dynamic_import(&self) -> bool {
+    matches!(self, EntryPointKind::DynamicImport)
+  }
 }

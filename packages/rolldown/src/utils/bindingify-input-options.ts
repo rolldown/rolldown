@@ -53,6 +53,7 @@ export function bindingifyInputOptions(
     resolve: bindingifyResolve(inputOptions.resolve),
     platform: inputOptions.platform,
     shimMissingExports: inputOptions.shimMissingExports,
+    preserveEntrySignatures: inputOptions.preserveEntrySignatures,
     logLevel: bindingifyLogLevel(logLevel),
     onLog,
     // After normalized, `false` will be converted to `undefined`, otherwise, default value will be assigned

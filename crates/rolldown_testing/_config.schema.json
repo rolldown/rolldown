@@ -391,6 +391,16 @@
             "null"
           ]
         },
+        "preserveEntrySignatures": {
+          "anyOf": [
+            {
+              "$ref": "#/definitions/PreserveEntrySignature"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
         "profilerNames": {
           "type": [
             "boolean",
@@ -852,6 +862,15 @@
             "node"
           ]
         }
+      ]
+    },
+    "PreserveEntrySignature": {
+      "type": "string",
+      "enum": [
+        "strict",
+        "allowExtension",
+        "exportsOnly",
+        "false"
       ]
     },
     "ResolveOptions": {

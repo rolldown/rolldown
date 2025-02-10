@@ -24,7 +24,8 @@ use self::types::{
   defer_sync_scan_data_option::DeferSyncScanDataOption, es_module_flag::EsModuleFlag,
   hash_characters::HashCharacters, input_item::InputItem, is_external::IsExternal,
   output_exports::OutputExports, output_format::OutputFormat, output_option::AddonOutputOption,
-  platform::Platform, resolve_options::ResolveOptions, source_map_type::SourceMapType,
+  platform::Platform, preserve_entry_signatures::PreserveEntrySignature,
+  resolve_options::ResolveOptions, source_map_type::SourceMapType,
   sourcemap_path_transform::SourceMapPathTransform,
 };
 use crate::{ChunkFilenamesOutputOption, ModuleType, SourceMapIgnoreList};
@@ -49,6 +50,7 @@ pub struct BundlerOptions {
   pub external: Option<IsExternal>,
   pub platform: Option<Platform>,
   pub shim_missing_exports: Option<bool>,
+  pub preserve_entry_signatures: Option<PreserveEntrySignature>,
   // --- options for output
   pub name: Option<String>,
   #[cfg_attr(

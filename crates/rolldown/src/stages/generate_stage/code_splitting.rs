@@ -4,7 +4,9 @@ use crate::{chunk_graph::ChunkGraph, types::linking_metadata::LinkingMetadataVec
 use arcstr::ArcStr;
 use itertools::Itertools;
 use oxc_index::IndexVec;
-use rolldown_common::{Chunk, ChunkIdx, ChunkKind, Module, ModuleIdx, ModuleTable, OutputFormat};
+use rolldown_common::{
+  Chunk, ChunkIdx, ChunkKind, ImportKind, Module, ModuleIdx, ModuleTable, OutputFormat,
+};
 use rolldown_utils::{rustc_hash::FxHashMapExt, BitSet};
 use rustc_hash::{FxHashMap, FxHashSet};
 
@@ -17,6 +19,13 @@ pub struct SplittingInfo {
 }
 
 pub type IndexSplittingInfo = IndexVec<ModuleIdx, SplittingInfo>;
+
+#[derive(Debug, Default)]
+pub struct LoadBeforeDynamic {
+  pub static_index: FxHashSet<ModuleIdx>,
+}
+
+pub type IndexLoadBeforeDynamic = FxHashMap<ModuleIdx, LoadBeforeDynamic>;
 
 impl GenerateStage<'_> {
   #[tracing::instrument(level = "debug", skip_all)]
@@ -38,6 +47,10 @@ impl GenerateStage<'_> {
         bits: BitSet::new(entries_len),
         share_count: 0
       }; self.link_output.module_table.modules.len()];
+
+    let mut index_load_before_dynamic: IndexLoadBeforeDynamic =
+      FxHashMap::with_capacity(self.link_output.module_table.modules.len());
+
     let mut bits_to_chunk = FxHashMap::with_capacity(self.link_output.entries.len());
 
     let mut entry_module_to_entry_chunk: FxHashMap<ModuleIdx, ChunkIdx> =
@@ -45,6 +58,7 @@ impl GenerateStage<'_> {
     // Create chunk for each static and dynamic entry
     for (entry_index, entry_point) in self.link_output.entries.iter().enumerate() {
       let count: u32 = entry_index.try_into().expect("Too many entries, u32 overflowed.");
+
       let mut bits = BitSet::new(entries_len);
       bits.set_bit(count);
       let Module::Normal(module) = &self.link_output.module_table.modules[entry_point.id] else {
@@ -65,7 +79,6 @@ impl GenerateStage<'_> {
       bits_to_chunk.insert(bits, chunk);
       entry_module_to_entry_chunk.insert(entry_point.id, chunk);
     }
-
     // Determine which modules belong to which chunk. A module could belong to multiple chunks.
     self.link_output.entries.iter().enumerate().for_each(|(i, entry_point)| {
       self.determine_reachable_modules_for_entry(
@@ -82,6 +95,14 @@ impl GenerateStage<'_> {
 
     // 1. Assign modules to corresponding chunks
     // 2. Create shared chunks to store modules that belong to multiple chunks.
+    self.chunk_assignments(
+      &mut index_load_before_dynamic,
+      &mut module_to_assigned,
+      &entry_module_to_entry_chunk,
+      &mut index_splitting_info,
+      &chunk_graph,
+    );
+
     for normal_module in self.link_output.module_table.modules.iter().filter_map(Module::as_normal)
     {
       if !normal_module.meta.is_included() {
@@ -95,6 +116,7 @@ impl GenerateStage<'_> {
       module_to_assigned[normal_module.idx] = true;
 
       let bits = &index_splitting_info[normal_module.idx].bits;
+
       debug_assert!(
         !bits.is_empty(),
         "Empty bits means the module is not reachable, so it should bail out with `is_included: false` {:?}", normal_module.stable_id
@@ -109,7 +131,6 @@ impl GenerateStage<'_> {
         bits_to_chunk.insert(bits.clone(), chunk_id);
       }
     }
-
     // Sort modules in each chunk by execution order
     chunk_graph.chunk_table.iter_mut().for_each(|chunk| {
       chunk.modules.sort_unstable_by_key(|module_id| {
@@ -489,6 +510,59 @@ impl GenerateStage<'_> {
         chunk_graph.add_module_to_chunk(module_idx, chunk_idx);
         module_to_assigned[module_idx] = true;
       });
+    }
+  }
+
+  fn chunk_assignments(
+    &mut self,
+    index_load_before_dynamic: &mut IndexLoadBeforeDynamic,
+    module_to_assigned: &mut IndexVec<ModuleIdx, bool>,
+    entry_module_to_entry_chunk: &FxHashMap<ModuleIdx, ChunkIdx>,
+    index_splitting_info: &mut IndexSplittingInfo,
+    chunk_graph: &ChunkGraph,
+  ) {
+    for normal_module in self.link_output.module_table.modules.iter().filter_map(Module::as_normal)
+    {
+      if !normal_module.meta.is_included() {
+        continue;
+      }
+
+      if module_to_assigned[normal_module.idx] {
+        continue;
+      }
+
+      let mut import_record_module_id = Vec::new();
+      normal_module.import_records.iter().enumerate().find(|(import_id, import_record)| {
+        import_record_module_id.push(import_record.get_state().resolved_module);
+        if import_record.get_kind() == ImportKind::DynamicImport && *import_id != 0 {
+          import_record_module_id.pop();
+          let mut static_module_set = FxHashSet::default();
+          for module_id in &import_record_module_id {
+            static_module_set.insert(*module_id);
+          }
+          index_load_before_dynamic
+            .insert(normal_module.idx, LoadBeforeDynamic { static_index: static_module_set });
+          true
+        } else {
+          false
+        }
+      });
+    }
+    let mut updated_module_to_assigned = FxHashMap::default();
+
+    for (key, values) in index_load_before_dynamic.iter() {
+      if entry_module_to_entry_chunk.contains_key(key) {
+        for static_id in &values.static_index {
+          updated_module_to_assigned.insert(
+            *static_id,
+            chunk_graph.chunk_table[entry_module_to_entry_chunk[key]].bits.clone(),
+          );
+        }
+      }
+    }
+
+    for (module_id, bit) in &updated_module_to_assigned {
+      index_splitting_info[*module_id].bits = bit.clone();
     }
   }
 }

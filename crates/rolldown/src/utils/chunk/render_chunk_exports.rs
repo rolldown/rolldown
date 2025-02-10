@@ -120,6 +120,7 @@ pub fn render_chunk_exports(
           }
         })
         .collect::<Vec<_>>();
+      println!("render_chunk_exports {:?}", &rendered_items);
       s.push_str(&concat_string!("export { ", rendered_items.join(", "), " };"));
       Some(s)
     }
@@ -266,16 +267,25 @@ pub fn render_object_define_property(key: &str, value: &str) -> String {
 
 pub fn get_export_items(chunk: &Chunk, graph: &LinkStageOutput) -> Vec<(Rstr, SymbolRef)> {
   match chunk.kind {
-    ChunkKind::EntryPoint { module, is_user_defined, .. } => {
-      let meta = &graph.metas[module];
-      meta
-        .referenced_canonical_exports_symbols(
-          module,
-          if is_user_defined { EntryPointKind::UserDefined } else { EntryPointKind::DynamicImport },
-          &graph.dynamic_import_exports_usage_map,
-        )
-        .map(|(name, export)| (name.clone(), export.symbol_ref))
-        .collect::<Vec<_>>()
+    ChunkKind::EntryPoint { is_user_defined, .. } => {
+      let mut export_vacc = Vec::new();
+      for module in &chunk.modules {
+        let meta = &graph.metas[*module];
+        let export_vac = meta
+          .referenced_canonical_exports_symbols(
+            *module,
+            if is_user_defined {
+              EntryPointKind::UserDefined
+            } else {
+              EntryPointKind::DynamicImport
+            },
+            &graph.dynamic_import_exports_usage_map,
+          )
+          .map(|(name, export)| (name.clone(), export.symbol_ref))
+          .collect::<Vec<_>>();
+        export_vacc.push(export_vac)
+      }
+      export_vacc.concat()
     }
     ChunkKind::Common => {
       let mut tmp = chunk
@@ -285,7 +295,6 @@ pub fn get_export_items(chunk: &Chunk, graph: &LinkStageOutput) -> Vec<(Rstr, Sy
         .collect::<Vec<_>>();
 
       tmp.sort_unstable_by(|a, b| a.0.as_str().cmp(b.0.as_str()));
-
       tmp
     }
   }

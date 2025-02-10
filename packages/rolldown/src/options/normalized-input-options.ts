@@ -7,6 +7,7 @@ export interface NormalizedInputOptions {
   cwd: string | undefined
   platform: InputOptions['platform']
   shimMissingExports: boolean
+  preserveEntrySignatures: InputOptions['preserveEntrySignatures']
 }
 
 // TODO: I guess we make these getters enumerable so it act more like a plain object
@@ -33,5 +34,13 @@ export class NormalizedInputOptionsImpl implements NormalizedInputOptions {
 
   get platform(): 'browser' | 'node' | 'neutral' {
     return this.inner.platform
+  }
+
+  get preserveEntrySignatures():
+    | 'strict'
+    | 'allow-extension'
+    | 'exports-only'
+    | false {
+    return this.inner.preserveEntrySignatures
   }
 }

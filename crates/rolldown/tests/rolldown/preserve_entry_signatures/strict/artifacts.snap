@@ -1,0 +1,32 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+snapshot_kind: text
+---
+# Assets
+
+## dynamic.js
+
+```js
+import { shared } from "./main.js";
+
+//#region dynamic.js
+globalThis.sharedDynamic = shared;
+
+//#endregion
+```
+## main.js
+
+```js
+
+//#region lib.js
+const shared = "shared";
+
+//#endregion
+//#region main.js
+const unused = "unused";
+const dynamic = import("./dynamic.js");
+globalThis.sharedStatic = shared;
+
+//#endregion
+export { shared, dynamic, unused };
+```

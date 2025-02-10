@@ -41,6 +41,7 @@ export declare class BindingNormalizedOptions {
   get cwd(): string | null
   get platform(): 'node' | 'browser' | 'neutral'
   get shimMissingExports(): boolean
+  get preserveEntrySignatures(): 'strict'| 'allow-extension' | 'exports-only'| false
   get name(): string | null
   get cssEntryFilenames(): string | undefined
   get cssChunkFilenames(): string | undefined
@@ -403,6 +404,7 @@ export interface BindingInputOptions {
   resolve?: BindingResolveOptions
   shimMissingExports?: boolean
   platform?: 'node' | 'browser' | 'neutral'
+  preserveEntrySignatures?: 'strict' | 'allow-extension'| 'exports-only'| false
   logLevel: BindingLogLevel
   onLog: (logLevel: 'debug' | 'warn' | 'info', log: BindingLog) => void
   cwd: string
@@ -1182,6 +1184,7 @@ export interface StaticImportEntry {
    * ```ts
    * import type { foo } from "mod";
    * import { type foo } from "mod";
+import { PreserveEntrySignaturesOption } from '../dist/types/rollup';
    * ```
    */
   isType: boolean

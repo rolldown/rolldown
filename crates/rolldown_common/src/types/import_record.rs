@@ -64,6 +64,12 @@ impl<State: Debug> ImportRecord<State> {
   pub fn is_unspanned(&self) -> bool {
     self.meta.contains(ImportRecordMeta::IS_UNSPANNED_IMPORT)
   }
+  pub fn get_kind(&self) -> ImportKind {
+    self.kind
+  }
+  pub fn get_state(&self) -> &State {
+    &self.state
+  }
 }
 
 impl<T: Debug> Deref for ImportRecord<T> {

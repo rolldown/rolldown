@@ -11,6 +11,7 @@ pub struct ConfigVariant {
   pub extend: Option<bool>,
   pub name: Option<String>,
   pub exports: Option<OutputExports>,
+  pub strict_execution_order: Option<bool>,
 }
 
 impl ConfigVariant {
@@ -27,6 +28,10 @@ impl ConfigVariant {
     }
     if let Some(name) = &self.name {
       config.name = Some(name.to_string());
+    }
+    if let Some(strict_execution_order) = &self.strict_execution_order {
+      config.experimental.get_or_insert_default().strict_execution_order =
+        Some(*strict_execution_order);
     }
     config
   }
@@ -46,6 +51,9 @@ impl Display for ConfigVariant {
     }
     if let Some(exports) = &self.exports {
       fields.push(format!("exports: {exports:?}"));
+    }
+    if let Some(strict_execution_order) = &self.strict_execution_order {
+      fields.push(format!("strict_execution_order: {strict_execution_order:?}"));
     }
     fields.sort();
     if fields.is_empty() {

@@ -59,6 +59,7 @@ pub struct LinkingMetadata {
   pub resolved_member_expr_refs: FxHashMap<Span, (Option<SymbolRef>, Vec<CompactStr>)>,
   pub star_exports_from_external_modules: Vec<ImportRecordIdx>,
   pub safe_cjs_to_eliminate_interop_default: bool,
+  pub is_tla_or_contains_tla_dependency: bool,
 }
 
 impl LinkingMetadata {

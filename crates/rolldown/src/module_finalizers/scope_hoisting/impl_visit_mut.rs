@@ -8,9 +8,7 @@ use oxc::{
   },
   span::{Span, SPAN},
 };
-use rolldown_common::{
-  EcmaModuleAstUsage, ExportsKind, Module, StmtInfoIdx, SymbolRef, ThisExprReplaceKind, WrapKind,
-};
+use rolldown_common::{ExportsKind, Module, StmtInfoIdx, SymbolRef, ThisExprReplaceKind, WrapKind};
 use rolldown_ecmascript_utils::{ExpressionExt, TakeIn};
 use rustc_hash::FxHashSet;
 
@@ -192,7 +190,7 @@ impl<'ast> VisitMut<'ast> for ScopeHoistingFinalizer<'_, 'ast> {
             stmts_inside_closure,
             self.ctx.options.profiler_names,
             &self.ctx.module.stable_id,
-            self.ctx.module.ast_usage.contains(EcmaModuleAstUsage::TopLevelAwait),
+            self.ctx.linking_info.is_tla_or_contains_tla_dependency,
           ));
         }
         WrapKind::None => {}

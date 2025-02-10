@@ -27,7 +27,11 @@ pub fn render_wrapped_entry_chunk(
           ctx.chunk_idx,
           &ctx.chunk.canonical_names,
         );
-        Some(concat_string!(wrapper_ref_name, "();"))
+        if entry_meta.is_tla_or_contains_tla_dependency {
+          Some(concat_string!("await ", wrapper_ref_name, "();"))
+        } else {
+          Some(concat_string!(wrapper_ref_name, "();"))
+        }
       }
       WrapKind::Cjs => {
         let wrapper_ref = entry_meta.wrapper_ref.as_ref().unwrap();

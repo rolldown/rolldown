@@ -21,13 +21,13 @@ var require_c = __commonJS({ "c.js"() {
 //#endregion
 //#region b.js
 var b_exports = {};
-var init_b = __esm({ "b.js"() {} });
+var init_b = await __esm({ async "b.js"() {} });
 
 //#endregion
 //#region a.js
 var a_exports = {};
-var init_a = __esm({ "a.js"() {
-	init_b();
+var init_a = await __esm({ async "a.js"() {
+	await init_b();
 } });
 
 //#endregion

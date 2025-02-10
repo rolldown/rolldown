@@ -13,6 +13,7 @@ use super::checks_options::ChecksOptions;
 use super::comments::Comments;
 use super::experimental_options::ExperimentalOptions;
 use super::jsx::Jsx;
+use super::minify_options::MinifyOptions;
 use super::output_option::{AssetFilenamesOutputOption, ChunkFilenamesOutputOption};
 use super::sanitize_filename::SanitizeFilename;
 use super::target::ESTarget;
@@ -68,7 +69,7 @@ pub struct NormalizedBundlerOptions {
   pub sourcemap_path_transform: Option<SourceMapPathTransform>,
   pub sourcemap_debug_ids: bool,
   pub experimental: ExperimentalOptions,
-  pub minify: bool,
+  pub minify: MinifyOptions,
   pub extend: bool,
   pub define: Vec<(/* Target to be replaced */ String, /* Replacement */ String)>,
   pub keep_names: bool,

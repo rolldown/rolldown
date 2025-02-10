@@ -2,8 +2,8 @@ use std::path::Path;
 
 use oxc::transformer::InjectGlobalVariablesConfig;
 use rolldown_common::{
-  Comments, GlobalsOutputOption, InjectImport, ModuleType, NormalizedBundlerOptions, OutputFormat,
-  Platform,
+  Comments, GlobalsOutputOption, InjectImport, MinifyOptions, ModuleType, NormalizedBundlerOptions,
+  OutputFormat, Platform,
 };
 use rolldown_error::{BuildDiagnostic, InvalidOptionType};
 use rustc_hash::{FxHashMap, FxHashSet};
@@ -54,11 +54,11 @@ pub fn normalize_options(mut raw_options: crate::BundlerOptions) -> NormalizeOpt
     }
   });
 
-  let minify = raw_options.minify.unwrap_or(false);
+  let minify: MinifyOptions = raw_options.minify.unwrap_or_default().into();
 
   let mut raw_define = raw_options.define.unwrap_or_default();
   if matches!(platform, Platform::Browser) && !raw_define.contains_key("process.env.NODE_ENV") {
-    if minify {
+    if minify.is_enabled() {
       raw_define.insert("process.env.NODE_ENV".to_string(), "'production'".to_string());
     } else {
       raw_define.insert("process.env.NODE_ENV".to_string(), "'development'".to_string());
@@ -219,6 +219,8 @@ pub fn normalize_options(mut raw_options: crate::BundlerOptions) -> NormalizeOpt
     shim_missing_exports: raw_options.shim_missing_exports.unwrap_or(false),
     module_types: loaders,
     experimental,
+    // https://github.com/evanw/esbuild/blob/d34e79e2a998c21bb71d57b92b0017ca11756912/internal/bundler/bundler.go#L2767
+    profiler_names: raw_options.profiler_names.unwrap_or(!minify.is_enabled()),
     minify,
     define,
     inject: raw_options.inject.unwrap_or_default(),
@@ -228,8 +230,6 @@ pub fn normalize_options(mut raw_options: crate::BundlerOptions) -> NormalizeOpt
     inline_dynamic_imports,
     advanced_chunks: raw_options.advanced_chunks,
     checks: raw_options.checks.unwrap_or_default(),
-    // https://github.com/evanw/esbuild/blob/d34e79e2a998c21bb71d57b92b0017ca11756912/internal/bundler/bundler.go#L2767
-    profiler_names: raw_options.profiler_names.unwrap_or(!minify),
     jsx: raw_options.jsx.unwrap_or_default(),
     watch: raw_options.watch.unwrap_or_default(),
     comments: raw_options.comments.unwrap_or(Comments::Preserve),

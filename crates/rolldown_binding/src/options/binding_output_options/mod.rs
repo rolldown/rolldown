@@ -3,7 +3,7 @@ mod binding_pre_rendered_asset;
 mod binding_pre_rendered_chunk;
 use binding_pre_rendered_asset::BindingPreRenderedAsset;
 use derive_more::Debug;
-use napi::bindgen_prelude::FnArgs;
+use napi::bindgen_prelude::{Either3, FnArgs};
 use napi::Either;
 use napi_derive::napi;
 use rustc_hash::FxHashMap;
@@ -12,6 +12,7 @@ use binding_advanced_chunks_options::BindingAdvancedChunksOptions;
 use binding_pre_rendered_chunk::PreRenderedChunk;
 
 use super::plugin::BindingPluginOrParallelJsPluginPlaceholder;
+use crate::types::binding_minify_options::BindingMinifyOptions;
 use crate::types::{
   binding_rendered_chunk::RenderedChunk,
   js_callback::{JsCallback, MaybeAsyncJsCallback},
@@ -118,7 +119,8 @@ pub struct BindingOutputOptions {
   // validate: boolean;
 
   // --- Enhanced options
-  pub minify: Option<bool>,
+  #[napi(ts_type = "boolean | 'dce-only' | BindingMinifyOptions")]
+  pub minify: Option<Either3<bool, String, BindingMinifyOptions>>,
   pub advanced_chunks: Option<BindingAdvancedChunksOptions>,
   #[napi(ts_type = "'none' | 'preserve-legal'")]
   pub comments: Option<String>,

@@ -127,6 +127,13 @@ const ChecksOptionsSchema = v.strictObject({
   ),
 })
 
+const MinifyOptionsSchema = v.strictObject({
+  mangle: v.boolean(),
+  compress: v.boolean(),
+  deadCodeElimination: v.boolean(),
+  removeWhitespace: v.boolean(),
+})
+
 const ResolveOptionsSchema = v.strictObject({
   alias: v.optional(
     v.record(v.string(), v.union([v.string(), v.array(v.string())])),
@@ -420,7 +427,7 @@ const OutputOptionsSchema = v.strictObject({
   cssEntryFileNames: v.optional(ChunkFileNamesSchema),
   cssChunkFileNames: v.optional(ChunkFileNamesSchema),
   minify: v.pipe(
-    v.optional(v.boolean()),
+    v.optional(v.union([v.boolean(), MinifyOptionsSchema])),
     v.description('Minify the bundled file'),
   ),
   name: v.pipe(
@@ -524,6 +531,10 @@ const OutputCliOverrideSchema = v.strictObject({
     v.description(
       'Global variable of UMD / IIFE dependencies (syntax: `key=value`)',
     ),
+  ),
+  minify: v.pipe(
+    v.optional(v.boolean()),
+    v.description('Minify the bundled file'),
   ),
 })
 

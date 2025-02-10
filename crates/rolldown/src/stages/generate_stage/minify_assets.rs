@@ -1,3 +1,5 @@
+use oxc::codegen::CodegenOptions;
+use rolldown_common::MinifyOptions;
 use rolldown_ecmascript::EcmaCompiler;
 use rolldown_error::BuildResult;
 use rolldown_sourcemap::collapse_sourcemaps;
@@ -9,7 +11,7 @@ use super::GenerateStage;
 
 impl GenerateStage<'_> {
   pub fn minify_assets(&mut self, assets: &mut IndexAssets) -> BuildResult<()> {
-    if self.options.minify {
+    if let MinifyOptions::Enabled(minify_options) = &self.options.minify {
       assets.par_iter_mut().try_for_each(|asset| -> anyhow::Result<()> {
         match asset.meta {
           rolldown_common::InstantiationKind::Ecma(_) => {
@@ -18,6 +20,9 @@ impl GenerateStage<'_> {
               asset.content.try_as_inner_str()?,
               asset.map.is_some(),
               &asset.filename,
+              minify_options.into(),
+              minify_options.compress,
+              CodegenOptions { minify: minify_options.remove_whitespace, ..Default::default() },
             );
             asset.content = minified_content.into();
             match (&asset.map, &new_map) {

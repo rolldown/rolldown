@@ -36,6 +36,7 @@ pub mod bundler_options {
         GlobalsOutputOption,
       },
       platform::Platform,
+      preserve_entry_signatures::PreserveEntrySignature,
       resolve_options::ResolveOptions,
       sanitize_filename::SanitizeFilename,
       source_map_type::SourceMapType,

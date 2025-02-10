@@ -7,7 +7,6 @@ mod binding_jsx;
 mod binding_resolve_options;
 mod binding_treeshake;
 mod binding_watch_option;
-
 use binding_defer_sync_scan_data::BindingDeferSyncScanDataOption;
 use derive_more::Debug;
 use napi::bindgen_prelude::FnArgs;
@@ -25,8 +24,10 @@ use super::plugin::BindingPluginOrParallelJsPluginPlaceholder;
 use crate::types::{
   binding_log::BindingLog, binding_log_level::BindingLogLevel, js_callback::JsCallback,
 };
+use napi::bindgen_prelude::Either;
 
 pub type BindingOnLog = Option<JsCallback<FnArgs<(String, BindingLog)>, ()>>;
+pub type BindingEntrySignatures = Either<bool, String>;
 
 #[napi(object, object_to_js = false)]
 #[derive(Default, Debug)]
@@ -63,6 +64,9 @@ pub struct BindingInputOptions {
   // preserveModules?: boolean;
   // pub preserve_symlinks: bool,
   pub shim_missing_exports: Option<bool>,
+
+  #[napi(ts_type = "'strict' | 'allow-extension' | 'exports-only' | false")]
+  pub preserve_entry_signatures: Option<BindingEntrySignatures>,
   // strictDeprecations?: boolean;
   // pub treeshake: Option<bool>,
   #[napi(ts_type = "'node' | 'browser' | 'neutral'")]

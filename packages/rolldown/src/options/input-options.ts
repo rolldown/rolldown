@@ -97,6 +97,11 @@ export interface InputOptions {
    */
   platform?: 'node' | 'browser' | 'neutral'
   shimMissingExports?: boolean
+  preserveEntrySignatures?:
+    | 'strict'
+    | 'allow-extension'
+    | 'exports-only'
+    | false
   treeshake?: boolean | TreeshakingOptions
   logLevel?: LogLevelOption
   onLog?: (

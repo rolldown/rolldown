@@ -2,8 +2,10 @@ use std::collections::HashMap;
 
 use napi::{bindgen_prelude::Undefined, Either};
 use napi_derive::napi;
-use rolldown::SharedNormalizedBundlerOptions;
+use rolldown::{MinifyOptions, SharedNormalizedBundlerOptions};
 use rustc_hash::FxBuildHasher;
+
+use super::binding_minify_options::BindingMinifyOptions;
 
 #[napi]
 pub struct BindingNormalizedOptions {
@@ -229,9 +231,12 @@ impl BindingNormalizedOptions {
     self.inner.sourcemap_debug_ids
   }
 
-  #[napi(getter)]
-  pub fn minify(&self) -> bool {
-    self.inner.minify
+  #[napi(getter, ts_return_type = "false | BindingMinifyOptions")]
+  pub fn minify(&self) -> Either<bool, BindingMinifyOptions> {
+    match &self.inner.minify {
+      MinifyOptions::Disabled => Either::A(false),
+      MinifyOptions::Enabled(minify_options) => Either::B(minify_options.into()),
+    }
   }
 
   #[napi(getter)]

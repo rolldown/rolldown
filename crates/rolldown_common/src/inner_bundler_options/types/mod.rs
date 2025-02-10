@@ -10,6 +10,7 @@ pub mod inject_import;
 pub mod input_item;
 pub mod is_external;
 pub mod jsx;
+pub mod minify_options;
 pub mod module_type;
 pub mod normalized_bundler_options;
 pub mod output_exports;

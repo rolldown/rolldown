@@ -6,6 +6,7 @@ use types::checks_options::ChecksOptions;
 use types::comments::Comments;
 use types::inject_import::InjectImport;
 use types::jsx::Jsx;
+use types::minify_options::RawMinifyOptions;
 use types::output_option::{AssetFilenamesOutputOption, GlobalsOutputOption};
 use types::sanitize_filename::SanitizeFilename;
 use types::target::ESTarget;
@@ -149,7 +150,7 @@ pub struct BundlerOptions {
   )]
   pub treeshake: TreeshakeOptions,
   pub experimental: Option<ExperimentalOptions>,
-  pub minify: Option<bool>,
+  pub minify: Option<RawMinifyOptions>,
   #[cfg_attr(
     feature = "deserialize_bundler_options",
     schemars(with = "Option<FxHashMap<String, String>>")

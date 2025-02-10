@@ -63,7 +63,7 @@ export declare class BindingNormalizedOptions {
   get globals(): Record<string, string> | undefined
   get hashCharacters(): 'base64' | 'base36' | 'hex'
   get sourcemapDebugIds(): boolean
-  get minify(): boolean
+  get minify(): false | BindingMinifyOptions
   get polyfillRequire(): boolean
   get comments(): 'none' | 'preserve-legal'
 }
@@ -470,6 +470,12 @@ export interface BindingMatchGroup {
   maxSize?: number
 }
 
+export interface BindingMinifyOptions {
+  mangle: boolean
+  compress: boolean
+  removeWhitespace: boolean
+}
+
 export interface BindingModuleFederationPluginOption {
   name: string
   filename?: string
@@ -483,10 +489,10 @@ export interface BindingModulePreloadPolyfillPluginConfig {
   skip?: boolean
 }
 
-export interface BindingModules { 
+export interface BindingModules {
   values: Array<BindingRenderedModule>
-  keys: Array<string> 
-};
+  keys: Array<string>
+}
 
 export interface BindingModuleSideEffectsRule {
   test?: RegExp | undefined
@@ -526,7 +532,7 @@ export interface BindingOutputOptions {
   sourcemapIgnoreList?: (source: string, sourcemapPath: string) => boolean
   sourcemapDebugIds?: boolean
   sourcemapPathTransform?: (source: string, sourcemapPath: string) => string
-  minify?: boolean
+  minify?: boolean | 'dce-only' | BindingMinifyOptions
   advancedChunks?: BindingAdvancedChunksOptions
   comments?: 'none' | 'preserve-legal'
   polyfillRequire?: boolean

@@ -1,6 +1,6 @@
 {
   "$schema": "https://docs.renovatebot.com/renovate-schema.json",
-  "extends": ["github>Boshen/renovate"],
+  "extends": ["github>Boshen/renovate", ":dependencyDashboard"],
   "ignorePaths": [
     "**/node_modules/**",
     "**/examples/**",
@@ -8,25 +8,19 @@
   ],
   "packageRules": [
     {
-      "groupName": "napi-rs",
-      "matchPackagePrefixes": ["napi"],
-      "schedule": ["at any time"]
+      "matchDepNames": ["oxlint"],
+      "rangeStrategy": "replace",
+      "groupName": "oxlint"
     },
     {
-      "groupName": "oxlint",
-      "matchManagers": ["npm"],
-      "matchPackageNames": ["oxlint"],
-      "schedule": ["at any time"]
-    },
-    {
-      "groupName": "oxc",
-      "matchManagers": ["cargo"],
-      "matchPackagePrefixes": ["oxc"],
-      "enabled": false
+      "groupName": "all non-major dependencies",
+      "groupSlug": "all-minor-patch",
+      "matchUpdateTypes": ["minor", "patch"]
     }
   ],
   "lockFileMaintenance": {
     "enabled": true,
+    "automerge": true,
     "extends": ["schedule:weekly"]
   }
 }

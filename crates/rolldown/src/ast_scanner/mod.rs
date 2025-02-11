@@ -187,13 +187,11 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
   }
 
   /// if current visit path is top level
-  pub fn is_top_level(&self) -> bool {
-    self
-      .scope_stack
-      .iter()
-      .filter_map(|item| *item)
-      .rev()
-      .all(|scope| self.result.ast_scope.get_flags(scope).is_top())
+  pub fn is_valid_tla_scope(&self) -> bool {
+    self.scope_stack.iter().rev().filter_map(|item| *item).all(|scope| {
+      let flag = self.result.ast_scope.get_flags(scope);
+      flag.is_block() || flag.is_top()
+    })
   }
 
   pub fn scan(mut self, program: &Program<'ast>) -> BuildResult<ScanResult> {

@@ -57,7 +57,7 @@ jobs:
           path: rolldown-version.txt
 
       - name: Canary/Nightly Versioning
-        run: node ./scripts/misc/bump-version.js ${{ steps.rolldown-version.outputs.content }}
+        run: node --import @oxc-node/core/register ./scripts/misc/bump-version.js ${{ steps.rolldown-version.outputs.content }}
 
       - name: Copy Licenses
         run: |

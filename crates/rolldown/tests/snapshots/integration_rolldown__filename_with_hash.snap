@@ -5256,6 +5256,10 @@ snapshot_kind: text
 
 - main-!~{000}~.js => main-B6eGyuY-.js
 
+# tests/rolldown/topics/tla/inside_try_block
+
+- main-!~{000}~.js => main-D8WLoKuG.js
+
 # tests/rolldown/topics/tla/transitive_dep
 
 - main-!~{000}~.js => main-9Che2qJ0.js

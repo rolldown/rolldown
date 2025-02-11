@@ -216,6 +216,7 @@ fn collect_remote_chunks_relation<'a>(
 }
 
 #[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
 struct Manifest {
   pub id: String,
   pub name: String,
@@ -226,6 +227,7 @@ struct Manifest {
 }
 
 #[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
 struct MetaData {
   pub name: String,
   pub r#type: String, // 'app'
@@ -239,6 +241,7 @@ struct MetaData {
 }
 
 #[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
 struct BuildInfo {
   pub build_version: String,
   pub build_name: String,
@@ -258,6 +261,7 @@ struct RemoteEntry {
 }
 
 #[derive(Default, Serialize)]
+#[serde(rename_all = "camelCase")]
 struct RemoteModuleItem {
   pub id: String,
   pub name: String,
@@ -268,6 +272,7 @@ struct RemoteModuleItem {
 }
 
 #[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
 struct ManifestRemoteItem {
   pub federation_container_name: String,
   pub module_name: String,

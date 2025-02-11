@@ -20,26 +20,26 @@ exports[`module-federation > module-federation 1`] = `
       "id": "mf-remote:expose",
       "name": "expose",
       "path": "./expose",
-      "required_version": "",
+      "requiredVersion": "",
       "version": "",
     },
   ],
   "id": "mf-remote",
-  "meta_data": {
-    "build_info": {
-      "build_name": "mf-remote",
-      "build_version": "1.0.0",
+  "metaData": {
+    "buildInfo": {
+      "buildName": "mf-remote",
+      "buildVersion": "1.0.0",
     },
-    "global_name": "mf-remote",
+    "globalName": "mf-remote",
     "name": "mf-remote",
-    "plugin_version": "",
-    "public_path": "",
-    "remote_entry": {
+    "pluginVersion": "",
+    "publicPath": "",
+    "remoteEntry": {
       "name": "remote-entry.js",
       "path": "",
       "type": "module",
     },
-    "ssr_remote_entry": {
+    "ssrRemoteEntry": {
       "name": "remote-entry.js",
       "path": "",
       "type": "module",
@@ -69,7 +69,7 @@ exports[`module-federation > module-federation 1`] = `
       "id": "mf-remote:test-shared",
       "name": "test-shared",
       "path": "",
-      "required_version": "",
+      "requiredVersion": "",
       "version": "1.0.0",
     },
   ],

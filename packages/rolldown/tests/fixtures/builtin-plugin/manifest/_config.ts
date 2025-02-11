@@ -30,6 +30,6 @@ export default defineTest({
   async afterTest() {
     // @ts-ignore
     const manifest = await import('./dist/manifest.json')
-    expect(manifest).toMatchSnapshot()
+    expect(manifest.default).toMatchSnapshot()
   },
 })

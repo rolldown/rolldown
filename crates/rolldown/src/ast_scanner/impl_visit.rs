@@ -4,7 +4,7 @@ use oxc::{
     visit::walk,
     AstKind, Visit,
   },
-  semantic::{ScopeFlags, SymbolId},
+  semantic::SymbolId,
   span::{GetSpan, Span},
 };
 use oxc_ecmascript::ToJsString;
@@ -43,19 +43,6 @@ impl<'me, 'ast: 'me> Visit<'ast> for AstScanner<'me, 'ast> {
   }
 
   fn visit_program(&mut self, program: &ast::Program<'ast>) {
-    let kind = AstKind::Program(self.alloc(program));
-    self.enter_node(kind);
-    self.enter_scope(
-      {
-        let mut flags = ScopeFlags::Top;
-        if program.source_type.is_strict() || program.has_use_strict_directive() {
-          flags |= ScopeFlags::StrictMode;
-        }
-        flags
-      },
-      &program.scope_id,
-    );
-
     // Custom visit
     for (idx, stmt) in program.body.iter().enumerate() {
       self.current_stmt_info.stmt_idx = Some(idx);
@@ -77,8 +64,6 @@ impl<'me, 'ast: 'me> Visit<'ast> for AstScanner<'me, 'ast> {
       self.visit_statement(stmt);
       self.result.stmt_infos.add_stmt_info(std::mem::take(&mut self.current_stmt_info));
     }
-    self.leave_scope();
-    self.leave_node(kind);
 
     self.result.hashbang_range = program.hashbang.as_ref().map(GetSpan::span);
     self.result.dynamic_import_rec_exports_usage =

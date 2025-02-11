@@ -1,4 +1,12 @@
+use arcstr::ArcStr;
+
 use crate::{ModuleFederationPluginOption, INIT_REMOTE_MODULE_PREFIX, INIT_SHARED_MODULE_PREFIX};
+
+#[derive(Debug)]
+pub struct ResolvedSharedModule {
+  pub id: ArcStr,
+  pub version: ArcStr,
+}
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
 pub enum RemoteModuleType {

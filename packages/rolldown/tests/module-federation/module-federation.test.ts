@@ -54,12 +54,19 @@ describe('module-federation', () => {
               singleton: true,
             },
           },
+          manifest: true,
         }),
       ],
       output: {
         dir: 'dist/remote',
+        chunkFileNames: '[name].js',
       },
     })
+
+    // Test the remote manifest json
+    // @ts-ignore
+    const remoteManifest = await import('./dist/remote/mf-manifest.json')
+    expect(remoteManifest.default).toMatchSnapshot()
 
     // Test the remote entry
     // @ts-ignore

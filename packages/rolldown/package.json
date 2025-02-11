@@ -61,7 +61,7 @@
   "scripts": {
     "# Scrips for binding #": "_",
     "artifacts": "napi artifacts --cwd ./src --package-json-path ../package.json -o=../artifacts --npm-dir ../npm",
-    "build-binding": "napi build -o=./src --manifest-path ../../crates/rolldown_binding/Cargo.toml --platform -p rolldown_binding --js binding.js --dts binding.d.ts --no-const-enum",
+    "build-binding": "napi build -o=./src --manifest-path ../../crates/rolldown_binding/Cargo.toml --platform -p rolldown_binding --js binding.js --dts binding.d.ts --no-const-enum --no-dts-cache",
     "build-binding:release": "pnpm build-binding --release",
     "build-binding:wasi": "pnpm build-binding --target wasm32-wasip1-threads",
     "build-binding:wasi:release": "pnpm build-binding --profile release-wasi --target wasm32-wasip1-threads",

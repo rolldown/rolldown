@@ -1,7 +1,7 @@
 // cSpell:disable
-import { defineTest } from '@tests'
+import { defineTest } from 'rolldown-tests'
 import { expect } from 'vitest'
-import { getOutputChunk } from '@tests/utils'
+import { getOutputChunk } from 'rolldown-tests/utils'
 import path from 'node:path'
 import { RenderedChunk } from 'rolldown'
 
@@ -56,7 +56,7 @@ export default defineTest({
           expect(chunk.preliminaryFileName).toMatchInlineSnapshot(
             `"main-!~{000}~.js"`,
           )
-          expect(chunk.fileName).toMatchInlineSnapshot(`"main-CIMaPVEE.js"`)
+          expect(chunk.fileName).toMatchInlineSnapshot(`"main-DPeINwoC.js"`)
           expect(chunk.imports).toMatchInlineSnapshot(
             `
             [

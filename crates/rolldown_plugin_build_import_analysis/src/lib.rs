@@ -137,17 +137,17 @@ impl<'a> BuildImportAnalysisVisitor<'a> {
     let Expression::ImportExpression(ref import_expr) = expr.argument else { return };
 
     let source = match &import_expr.source {
-      Expression::StringLiteral(lit) => lit.value.clone(),
+      Expression::StringLiteral(lit) => lit.value,
       Expression::TemplateLiteral(lit) if lit.quasis.len() == 1 && lit.expressions.is_empty() => {
         let Some(first) = lit.quasis.first() else {
           return;
         };
-        first.value.cooked.clone().unwrap_or(first.value.raw.clone())
+        first.value.cooked.unwrap_or(first.value.raw)
       }
       _ => return,
     };
 
-    let property = member_expr.property.name.clone();
+    let property = member_expr.property.name;
 
     let vite_preload_call = construct_snippet_for_expression(
       self.builder,
@@ -170,10 +170,10 @@ impl<'a> BuildImportAnalysisVisitor<'a> {
       return;
     };
     let source = match &import_expr.source {
-      Expression::StringLiteral(lit) => lit.value.clone(),
+      Expression::StringLiteral(lit) => lit.value,
       Expression::TemplateLiteral(lit) if lit.quasis.len() == 1 && lit.expressions.is_empty() => {
         let Some(first) = lit.quasis.first() else { return };
-        first.value.cooked.clone().unwrap_or(first.value.raw.clone())
+        first.value.cooked.unwrap_or(first.value.raw)
       }
       _ => return,
     };
@@ -195,7 +195,7 @@ impl<'a> BuildImportAnalysisVisitor<'a> {
       .properties
       .iter()
       .filter_map(|prop| match &prop.key {
-        PropertyKey::StaticIdentifier(id) => Some(id.name.clone()),
+        PropertyKey::StaticIdentifier(id) => Some(id.name),
         _ => None,
       })
       .collect::<Vec<_>>();
@@ -250,12 +250,12 @@ impl<'a> VisitMut<'a> for BuildImportAnalysisVisitor<'a> {
           return None;
         };
         let source = match &import.source {
-          Expression::StringLiteral(lit) => lit.value.clone(),
+          Expression::StringLiteral(lit) => lit.value,
           Expression::TemplateLiteral(lit)
             if lit.quasis.len() == 1 && lit.expressions.is_empty() =>
           {
             let first = lit.quasis.first()?;
-            first.value.cooked.clone().unwrap_or(first.value.raw.clone())
+            first.value.cooked.unwrap_or(first.value.raw)
           }
           _ => return None,
         };
@@ -265,7 +265,7 @@ impl<'a> VisitMut<'a> for BuildImportAnalysisVisitor<'a> {
           .properties
           .iter()
           .filter_map(|prop| match &prop.key {
-            PropertyKey::StaticIdentifier(id) => Some(id.name.clone()),
+            PropertyKey::StaticIdentifier(id) => Some(id.name),
             _ => None,
           })
           .collect::<Vec<_>>();

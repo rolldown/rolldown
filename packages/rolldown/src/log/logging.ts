@@ -6,6 +6,11 @@ export type LogLevelWithError = LogLevel | 'error'
 export type RollupLog = any
 export type RollupLogWithString = RollupLog | string
 
+export type LogOrStringHandler = (
+  level: LogLevelWithError,
+  log: RollupLogWithString,
+) => void
+
 export const LOG_LEVEL_SILENT: LogLevelOption = 'silent'
 export const LOG_LEVEL_ERROR = 'error'
 export const LOG_LEVEL_WARN: LogLevel = 'warn'

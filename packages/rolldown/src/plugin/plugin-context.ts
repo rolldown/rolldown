@@ -16,6 +16,7 @@ import { bindingifySideEffects } from '../utils/transform-side-effects'
 import type { LogHandler, LogLevelOption } from '../types/misc'
 import { LOG_LEVEL_WARN } from '../log/logging'
 import { logCycleLoading } from '../log/logs'
+import { OutputOptions } from '../options/output-options'
 
 export interface EmittedAsset {
   type: 'asset'
@@ -23,6 +24,14 @@ export interface EmittedAsset {
   fileName?: string
   originalFileName?: string | null
   source: AssetSource
+}
+
+export interface EmittedChunk {
+  type: 'chunk'
+  name?: string
+  fileName?: string
+  id: string
+  importer?: string
 }
 
 export type EmittedFile = EmittedAsset
@@ -39,6 +48,7 @@ export interface PrivatePluginContextResolveOptions
 
 export class PluginContext extends MinimalPluginContext {
   constructor(
+    private outputOptions: OutputOptions,
     private context: BindingPluginContext,
     plugin: Plugin,
     private data: PluginContextData,
@@ -66,9 +76,10 @@ export class PluginContext extends MinimalPluginContext {
     if (moduleInfo && moduleInfo.code !== null /* module already parsed */) {
       return moduleInfo
     }
-    const rawOptions = {
+    const rawOptions: ModuleOptions = {
       meta: options.meta || {},
       moduleSideEffects: options.moduleSideEffects || null,
+      invalidate: false,
     }
     this.data.updateModuleOption(id, rawOptions)
 
@@ -126,17 +137,39 @@ export class PluginContext extends MinimalPluginContext {
     return { ...res, ...info }
   }
 
-  public emitFile(file: EmittedAsset): string {
-    if (file.type !== 'asset') {
-      return unimplemented(
-        'PluginContext.emitFile: only asset type is supported',
-      )
+  public emitFile(file: EmittedAsset | EmittedChunk): string {
+    // @ts-expect-error
+    if (file.type === 'prebuilt-chunk') {
+      return unimplemented('PluginContext.emitFile with type prebuilt-chunk')
     }
-    return this.context.emitFile({
-      ...file,
-      originalFileName: file.originalFileName || undefined,
-      source: bindingAssetSource(file.source),
-    })
+    if (file.type === 'chunk') {
+      return this.context.emitChunk(file)
+    }
+    const fnSanitizedFileName =
+      file.fileName || typeof this.outputOptions.sanitizeFileName !== 'function'
+        ? undefined
+        : this.outputOptions.sanitizeFileName!(file.name || 'asset')
+    const filename = file.fileName ? undefined : this.getAssetFileNames(file)
+    return this.context.emitFile(
+      {
+        ...file,
+        originalFileName: file.originalFileName || undefined,
+        source: bindingAssetSource(file.source),
+      },
+      filename,
+      fnSanitizedFileName,
+    )
+  }
+
+  private getAssetFileNames(file: EmittedAsset): string | undefined {
+    if (typeof this.outputOptions.assetFileNames === 'function') {
+      return this.outputOptions.assetFileNames({
+        names: file.name ? [file.name] : [],
+        originalFileNames: file.originalFileName ? [file.originalFileName] : [],
+        source: file.source,
+        type: 'asset',
+      })
+    }
   }
 
   public getFileName(referenceId: string): string {

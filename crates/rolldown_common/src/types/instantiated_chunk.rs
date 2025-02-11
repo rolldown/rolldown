@@ -1,5 +1,6 @@
 use std::path::PathBuf;
 
+use arcstr::ArcStr;
 use rolldown_sourcemap::SourceMap;
 
 use crate::{Asset, ChunkIdx, InstantiationKind, PreliminaryFilename, StrOrBytes};
@@ -18,7 +19,7 @@ pub struct InstantiatedChunk {
 }
 
 impl InstantiatedChunk {
-  pub fn finalize(self, filename: String) -> Asset {
+  pub fn finalize(self, filename: ArcStr) -> Asset {
     Asset {
       origin_chunk: self.origin_chunk,
       content: self.content,

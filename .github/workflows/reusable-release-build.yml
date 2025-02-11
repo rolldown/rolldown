@@ -127,7 +127,7 @@ jobs:
       - uses: actions/checkout@v4
       - name: Build
         id: build
-        uses: cross-platform-actions/action@v0.26.0
+        uses: cross-platform-actions/action@v0.27.0
         env:
           DEBUG: napi:*
           RUSTUP_IO_THREADS: 1
@@ -152,6 +152,7 @@ jobs:
             whoami
             env
             sudo corepack enable
+            sudo npm i -g corepack@latest # use a newer corepack due to https://github.com/nodejs/corepack/issues/612
             pnpm install
             pnpm ci:build-release-binding --target x86_64-unknown-freebsd
             rm -rf node_modules
@@ -182,7 +183,7 @@ jobs:
 
       - name: Determine Version
         if: ${{ inputs.version != 'noop' }}
-        run: node ./scripts/misc/bump-version.js ${{ inputs.version }}
+        run: node --import @oxc-node/core/register ./scripts/misc/bump-version.js ${{ inputs.version }}
 
       - name: Build Node Packages
         # Binaries are built in the previous steps. Unlike in local development, we only need to build the node package itself.

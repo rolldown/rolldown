@@ -51,7 +51,7 @@ Object.defineProperty(exports, '__esModule', { value: true });
 
 
 //#region a.js
-const abc = undefined;
+const abc = void 0;
 
 //#endregion
 //#region b.js
@@ -109,7 +109,7 @@ return exports;
 +        value: true
      });
 -    var abc = void 0;
-+    const abc = undefined;
++    const abc = void 0;
      var b_exports = {};
      __export(b_exports, {
          xyz: () => xyz

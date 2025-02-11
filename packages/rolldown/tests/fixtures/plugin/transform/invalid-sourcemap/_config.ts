@@ -1,7 +1,11 @@
 import { expect } from 'vitest'
-import { defineTest } from '@tests'
+import { defineTest } from 'rolldown-tests'
 import { encode } from '@jridgewell/sourcemap-codec'
-import { getLocation, getOutputAsset, getOutputChunk } from '@tests/utils'
+import {
+  getLocation,
+  getOutputAsset,
+  getOutputChunk,
+} from 'rolldown-tests/utils'
 import { SourceMapConsumer } from 'source-map'
 
 // Copy from "rollup@sourcemaps@transform-low-resolution: handles combining low-resolution and high-resolution source-maps when transforming@generates es".

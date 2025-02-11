@@ -1,5 +1,6 @@
 ---
 source: crates/rolldown_testing/src/integration_test.rs
+snapshot_kind: text
 ---
 # Assets
 
@@ -34,46 +35,6 @@ source: crates/rolldown_testing/src/integration_test.rs
 		var arguments$1;
 		return arguments$1;
 	} });
-	(x) => arguments;
-	() => arguments;
-	async () => arguments;
-	(x = arguments) => arguments;
-	async (x = arguments) => arguments;
-	(x) => arguments;
-	() => arguments;
-	async () => arguments;
-	(x = arguments) => arguments;
-	async (x = arguments) => arguments;
-	(x) => {
-		return arguments;
-	};
-	() => {
-		return arguments;
-	};
-	async () => {
-		return arguments;
-	};
-	(x = arguments) => {
-		return arguments;
-	};
-	async (x = arguments) => {
-		return arguments;
-	};
-	(x) => {
-		return arguments;
-	};
-	() => {
-		return arguments;
-	};
-	async () => {
-		return arguments;
-	};
-	(x = arguments) => {
-		return arguments;
-	};
-	async (x = arguments) => {
-		return arguments;
-	};
 })();
 
 //#endregion

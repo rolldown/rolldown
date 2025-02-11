@@ -110,46 +110,6 @@
 		var arguments$1;
 		return arguments$1;
 	} });
-	(x) => arguments;
-	() => arguments;
-	async () => arguments;
-	(x = arguments) => arguments;
-	async (x = arguments) => arguments;
-	(x) => arguments;
-	() => arguments;
-	async () => arguments;
-	(x = arguments) => arguments;
-	async (x = arguments) => arguments;
-	(x) => {
-		return arguments;
-	};
-	() => {
-		return arguments;
-	};
-	async () => {
-		return arguments;
-	};
-	(x = arguments) => {
-		return arguments;
-	};
-	async (x = arguments) => {
-		return arguments;
-	};
-	(x) => {
-		return arguments;
-	};
-	() => {
-		return arguments;
-	};
-	async () => {
-		return arguments;
-	};
-	(x = arguments) => {
-		return arguments;
-	};
-	async (x = arguments) => {
-		return arguments;
-	};
 })();
 
 //#endregion
@@ -159,7 +119,7 @@
 ===================================================================
 --- esbuild	/out.js
 +++ rolldown	entry.js
-@@ -1,74 +1,71 @@
+@@ -1,74 +1,31 @@
 -/* @__PURE__ */ (() => {
 -  var r;
 -  function t(n = arguments) {
@@ -263,46 +223,6 @@
 +		var arguments$1;
 +		return arguments$1;
 +	} });
-+	(x) => arguments;
-+	() => arguments;
-+	async () => arguments;
-+	(x = arguments) => arguments;
-+	async (x = arguments) => arguments;
-+	(x) => arguments;
-+	() => arguments;
-+	async () => arguments;
-+	(x = arguments) => arguments;
-+	async (x = arguments) => arguments;
-+	(x) => {
-+		return arguments;
-+	};
-+	() => {
-+		return arguments;
-+	};
-+	async () => {
-+		return arguments;
-+	};
-+	(x = arguments) => {
-+		return arguments;
-+	};
-+	async (x = arguments) => {
-+		return arguments;
-+	};
-+	(x) => {
-+		return arguments;
-+	};
-+	() => {
-+		return arguments;
-+	};
-+	async () => {
-+		return arguments;
-+	};
-+	(x = arguments) => {
-+		return arguments;
-+	};
-+	async (x = arguments) => {
-+		return arguments;
-+	};
 +})();
 +
 +//#endregion

@@ -1,9 +1,9 @@
 import { describe, test, it, expect } from 'vitest'
 import { $, execa } from 'execa'
 import { stripAnsi } from 'consola/utils'
-import { testsDir, waitUtil } from '@tests/utils'
 import path from 'node:path'
 import fs from 'node:fs'
+import { testsDir, waitUtil } from 'rolldown-tests/utils'
 
 function cliFixturesDir(...joined: string[]) {
   return testsDir('cli/fixtures', ...joined)
@@ -173,6 +173,15 @@ describe('config', () => {
       expect(cleanStdout(status.stdout)).toMatchSnapshot()
     })
 
+    it('should allow multiply output + call options hook once', async () => {
+      const cwd = cliFixturesDir('config-multiply-output-with-options-hooks')
+      const status = await $({
+        cwd,
+      })`rolldown -c rolldown.config.ts`
+      expect(status.exitCode).toBe(0)
+      expect(cleanStdout(status.stdout)).toMatchSnapshot()
+    })
+
     it('should resolve rolldown.config.cjs', async () => {
       const cwd = cliFixturesDir('cli-with-config')
       const status = await $({ cwd })`rolldown -c`
@@ -250,5 +259,12 @@ describe('watch cli', () => {
       )
     })
     controller.abort()
+  })
+
+  it('should allow multiply output + + call options hook once', async () => {
+    const cwd = cliFixturesDir('config-multiply-output-with-options-hooks')
+    const status = await $({ cwd })`rolldown -c`
+    expect(cleanStdout(status.stdout)).toMatchSnapshot()
+    expect(status.exitCode).toBe(0)
   })
 })

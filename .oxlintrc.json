@@ -1,6 +1,14 @@
 {
   "$schema": "./node_modules/oxlint/configuration_schema.json",
   "plugins": ["import", "jsdoc", "unicorn", "typescript", "oxc"],
+  "ignorePatterns": [
+    "crates/**",
+    "packages/rollup-tests/**",
+    "packages/rolldown/tests/fixtures/**",
+    "packages/rolldown/tests/stability/**",
+    "packages/rolldown/src/binding.d.ts",
+    "rollup/**"
+  ],
   "rules": {
     "no-unused-vars": [
       "warn",

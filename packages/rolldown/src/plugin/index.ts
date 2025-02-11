@@ -52,6 +52,9 @@ export interface CustomPluginOptions {
 export interface ModuleOptions {
   moduleSideEffects: ModuleSideEffects
   meta: CustomPluginOptions
+  // flag used to check if user directly modified the `ModuleInfo`
+  // this is used to sync state between rust and js
+  invalidate?: boolean
 }
 
 export interface ResolvedId extends ModuleOptions {
@@ -272,10 +275,17 @@ export type PluginHooks = {
     K extends AsyncPluginHooks
       ? MakeAsync<FunctionPluginHooks[K]>
       : FunctionPluginHooks[K],
-    HookFilterExtension<K>
-    // eslint-disable-next-line @typescript-eslint/ban-types
-    // TODO
-    // K extends ParallelPluginHooks ? { sequential?: boolean } : {}
+    HookFilterExtension<K> &
+      (K extends ParallelPluginHooks
+        ? {
+            /**
+             * @deprecated
+             * this is only for rollup Plugin type compatibility.
+             * hooks always work as `sequential: true`.
+             */
+            sequential?: boolean
+          }
+        : {})
   >
 }
 

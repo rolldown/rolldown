@@ -8,7 +8,7 @@ snapshot_kind: text
 
 ```text
 [COMMONJS_VARIABLE_IN_ESM] Warning: The CommonJS `module` variable is treated as a global variable in an ECMAScript module and may not work as expected
-   ╭─[esm-export-cjs-export.js:1:1]
+   ╭─[ esm-export-cjs-export.js:1:1 ]
    │
  1 │ module.exports = 1;
    │ ───┬──  
@@ -49,16 +49,12 @@ var require_esm_import_cjs_export = __commonJS({ "esm-import-cjs-export.js"(expo
 var require_cjs = __commonJS({ "cjs.js"(exports, module) {
 	module.exports = 1;
 } });
+var import_cjs = __toESM(require_cjs());
 
 //#endregion
 //#region esm-import-cjs-require.js
-var import_cjs = __toESM(require_cjs());
 require_foo();
-assert.equal(import_cjs.a, undefined);
-
-//#endregion
-//#region main.js
-var import_esm_import_cjs_export = __toESM(require_esm_import_cjs_export());
+assert.equal(import_cjs.a, void 0);
 
 //#endregion
 //# sourceMappingURL=main.js.map
@@ -85,7 +81,6 @@ var import_esm_import_cjs_export = __toESM(require_esm_import_cjs_export());
 (2:0) "require('./foo')\n" --> (54:0) "require_foo();\n"
 (3:0) "assert." --> (55:0) "assert."
 (3:7) "equal(" --> (55:7) "equal("
-(3:13) "a, " --> (55:13) "import_cjs.a, "
-(3:16) "undefined)" --> (55:27) "undefined)"
-(3:26) "\n" --> (55:37) ";\n"
+(3:13) "a, undefined)" --> (55:13) "import_cjs.a, void 0)"
+(3:26) "\n" --> (55:34) ";\n"
 ```

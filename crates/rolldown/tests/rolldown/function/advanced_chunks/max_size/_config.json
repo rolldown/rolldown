@@ -1,0 +1,16 @@
+{
+  "config": {
+    "advancedChunks": {
+      "groups": [
+        {
+          // `size-15.js`, `size-20` and `size-41.js` will be captured
+          "test": "size-.*\\.js",
+          "name": "40max-size",
+          // `size-15.js` and `size-20.js` will be split into a chunk. And `size-41.js` will be split into another chunk because it's bigger than 40.
+          "maxSize": 40
+        }
+      ]
+    }
+  },
+  "hiddenRuntimeModule": false
+}

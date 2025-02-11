@@ -12,7 +12,7 @@ snapshot_kind: text
 //#region a.js
 var abc;
 var init_a = __esm({ "a.js"() {
-	abc = undefined;
+	abc = void 0;
 } });
 
 //#endregion

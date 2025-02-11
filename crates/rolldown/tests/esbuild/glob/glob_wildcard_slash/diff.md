@@ -64,15 +64,16 @@ console.log({
 ### rolldown
 ```js
 
+
 //#region entry.js
 const ab = Math.random() < .5 ? "a.js" : "b.js";
 console.log({
 	concat: {
-		require: require("./src/" + ab + ".js"),
+		require: __require("./src/" + ab + ".js"),
 		import: import("./src/" + ab + ".js")
 	},
 	template: {
-		require: require(`./src/${ab}.js`),
+		require: __require(`./src/${ab}.js`),
 		import: import(`./src/${ab}.js`)
 	}
 });
@@ -123,13 +124,13 @@ console.log({
      concat: {
 -        require: globRequire_src_js("./src/" + ab + ".js"),
 -        import: globImport_src_js("./src/" + ab + ".js")
-+        require: require("./src/" + ab + ".js"),
++        require: __require("./src/" + ab + ".js"),
 +        import: import("./src/" + ab + ".js")
      },
      template: {
 -        require: globRequire_src_js(`./src/${ab}.js`),
 -        import: globImport_src_js(`./src/${ab}.js`)
-+        require: require(`./src/${ab}.js`),
++        require: __require(`./src/${ab}.js`),
 +        import: import(`./src/${ab}.js`)
      }
  });

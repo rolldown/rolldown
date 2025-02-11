@@ -170,15 +170,13 @@ impl Plugin for ReplacePlugin {
     if self.try_replace(args.code, &mut magic_string) {
       return Ok(Some(HookTransformOutput {
         code: Some(magic_string.to_string()),
-        map: if self.sourcemap {
-          Some(magic_string.source_map(SourceMapOptions {
+        map: self.sourcemap.then(|| {
+          magic_string.source_map(SourceMapOptions {
             hires: string_wizard::Hires::True,
             include_content: false,
             source: Arc::from(args.id),
-          }))
-        } else {
-          None
-        },
+          })
+        }),
         ..Default::default()
       }));
     }
@@ -194,15 +192,13 @@ impl Plugin for ReplacePlugin {
     if self.try_replace(&args.code, &mut magic_string) {
       return Ok(Some(HookRenderChunkOutput {
         code: magic_string.to_string(),
-        map: if self.sourcemap {
-          Some(magic_string.source_map(SourceMapOptions {
+        map: self.sourcemap.then(|| {
+          magic_string.source_map(SourceMapOptions {
             hires: string_wizard::Hires::True,
             include_content: false,
             source: Arc::from(args.chunk.filename.as_str()),
-          }))
-        } else {
-          None
-        },
+          })
+        }),
       }));
     }
     Ok(None)

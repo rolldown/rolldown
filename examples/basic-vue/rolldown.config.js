@@ -14,7 +14,6 @@ export default defineConfig({
       {
         name: 'test-plugin',
         outputOptions: function (options) {
-          console.log(options.banner)
           options.banner = '/* banner */'
           return options
         },

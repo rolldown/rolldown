@@ -8,7 +8,7 @@ snapshot_kind: text
 
 ```text
 [PARSE_ERROR] Error: Expected `}` but found `EOF`
-   ╭─[test.json:1:3]
+   ╭─[ test.json:1:3 ]
    │
  1 │ {
    │   │ 

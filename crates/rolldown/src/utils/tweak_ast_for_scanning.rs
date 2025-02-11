@@ -169,14 +169,14 @@ impl<'ast> VisitMut<'ast> for PreProcessor<'ast> {
             test,
             self.snippet.builder.expression_call(
               SPAN,
-              self.snippet.builder.expression_identifier_reference(SPAN, "require"),
+              self.snippet.builder.expression_identifier(SPAN, "require"),
               NONE,
               self.snippet.builder.vec1(ast::Argument::from(consequent)),
               false,
             ),
             self.snippet.builder.expression_call(
               SPAN,
-              self.snippet.builder.expression_identifier_reference(SPAN, "require"),
+              self.snippet.builder.expression_identifier(SPAN, "require"),
               NONE,
               self.snippet.builder.vec1(ast::Argument::from(alternative)),
               false,

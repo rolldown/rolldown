@@ -1,0 +1,15 @@
+{
+  "config": {
+    "advancedChunks": {
+      "groups": [
+        {
+          // `size-14.js` and `size-23.js` will be captured
+          "test": "size-.*\\.js",
+          "name": "bigger-than-20",
+          // Only `size-23.js` will be included in the chunk
+          "minModuleSize": 20
+        }
+      ]
+    }
+  }
+}

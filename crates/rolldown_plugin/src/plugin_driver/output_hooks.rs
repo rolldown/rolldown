@@ -3,6 +3,7 @@ use crate::{HookAddonArgs, PluginDriver};
 use crate::{HookAugmentChunkHashReturn, HookNoopReturn, HookRenderChunkArgs};
 use anyhow::{Ok, Result};
 use rolldown_common::{Output, RollupRenderedChunk, SharedNormalizedBundlerOptions};
+use rolldown_error::BuildDiagnostic;
 use rolldown_sourcemap::SourceMap;
 
 impl PluginDriver {
@@ -119,13 +120,14 @@ impl PluginDriver {
     bundle: &mut Vec<Output>,
     is_write: bool,
     opts: &SharedNormalizedBundlerOptions,
+    warnings: &mut Vec<BuildDiagnostic>,
   ) -> HookNoopReturn {
     for (_, plugin, ctx) in
       self.iter_plugin_with_context_by_order(&self.order_by_generate_bundle_meta)
     {
       let mut args = crate::HookGenerateBundleArgs { is_write, bundle, options: opts };
       plugin.call_generate_bundle(ctx, &mut args).await?;
-      ctx.file_emitter.add_additional_files(bundle);
+      ctx.file_emitter.add_additional_files(bundle, warnings);
     }
     Ok(())
   }
@@ -134,13 +136,14 @@ impl PluginDriver {
     &self,
     bundle: &mut Vec<Output>,
     opts: &SharedNormalizedBundlerOptions,
+    warnings: &mut Vec<BuildDiagnostic>,
   ) -> HookNoopReturn {
     for (_, plugin, ctx) in self.iter_plugin_with_context_by_order(&self.order_by_write_bundle_meta)
     {
       let mut args = crate::HookWriteBundleArgs { bundle, options: opts };
 
       plugin.call_write_bundle(ctx, &mut args).await?;
-      ctx.file_emitter.add_additional_files(bundle);
+      ctx.file_emitter.add_additional_files(bundle, warnings);
     }
     Ok(())
   }

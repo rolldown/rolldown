@@ -1,5 +1,6 @@
 ---
 source: crates/rolldown_testing/src/integration_test.rs
+snapshot_kind: text
 ---
 # Assets
 
@@ -39,7 +40,6 @@ use(isNotPure);
 ```js
 
 //#region remove-these.js
-(() => {})();
 (() => {})(keepThisButRemoveTheIIFE);
 (() => {
 	/* @__PURE__ */ removeMe();

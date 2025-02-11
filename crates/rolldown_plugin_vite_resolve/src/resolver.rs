@@ -232,7 +232,7 @@ impl Resolver {
     &self,
     directory: P,
     specifier: &str,
-  ) -> Result<oxc_resolver::Resolution, oxc_resolver::ResolveError> {
+  ) -> Result<oxc_resolver::FsResolution, oxc_resolver::ResolveError> {
     let Some(try_prefix) = &self.try_prefix else {
       return self.inner.resolve(directory, specifier);
     };
@@ -265,7 +265,7 @@ impl Resolver {
     &self,
     importer: Option<&str>,
     dedupe: &FxHashSet<String>,
-    result: &Result<oxc_resolver::Resolution, oxc_resolver::ResolveError>,
+    result: &Result<oxc_resolver::FsResolution, oxc_resolver::ResolveError>,
   ) -> Result<Option<HookResolveIdOutput>, oxc_resolver::ResolveError> {
     match result {
       Ok(result) => {

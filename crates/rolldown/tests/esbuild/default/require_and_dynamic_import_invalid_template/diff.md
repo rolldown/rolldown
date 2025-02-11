@@ -56,12 +56,13 @@ export default require_entry();
 ### rolldown
 ```js
 
+
 //#region entry.js
-require(tag`./b`);
-require(`./${b}`);
+__require(tag`./b`);
+__require(`./${b}`);
 try {
-	require(tag`./b`);
-	require(`./${b}`);
+	__require(tag`./b`);
+	__require(`./${b}`);
 } catch {}
 (async () => {
 	import(tag`./b`);
@@ -125,11 +126,11 @@ try {
 -    }
 -});
 -export default require_entry();
-+require(tag`./b`);
-+require(`./${b}`);
++__require(tag`./b`);
++__require(`./${b}`);
 +try {
-+    require(tag`./b`);
-+    require(`./${b}`);
++    __require(tag`./b`);
++    __require(`./${b}`);
 +} catch {}
 +(async () => {
 +    import(tag`./b`);

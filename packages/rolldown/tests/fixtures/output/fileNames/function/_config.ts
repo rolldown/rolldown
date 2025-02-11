@@ -2,7 +2,7 @@ import type {
   OutputChunk as RolldownOutputChunk,
   PreRenderedChunk,
 } from 'rolldown'
-import { defineTest } from '@tests'
+import { defineTest } from 'rolldown-tests'
 import { expect } from 'vitest'
 
 let preRenderedEntry: PreRenderedChunk

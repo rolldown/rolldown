@@ -1,5 +1,6 @@
 # Reason
 1. comments codegen related to `oxc`
+2. the original test case is `ModePassThrough`
 # Diff
 ## /out/entry.js
 ### esbuild
@@ -358,7 +359,6 @@ switch (
 ### rolldown
 ```js
 
-
 //#region entry.js
 console.log(import(
 	/* before */
@@ -384,13 +384,13 @@ console.log(import(
 console.log(require(
 	/* before */
 	foo
-), __require(
+), require(
 	/* before */
 	"foo"
 ), require(
 	foo
 	/* after */
-), __require(
+), require(
 	"foo"
 	/* after */
 ));
@@ -466,7 +466,8 @@ for (a of b);
 if (a);
 with(a);
 while (a);
-do {} while (a);
+do;
+while (a);
 switch (a) {}
 
 //#endregion
@@ -477,7 +478,6 @@ switch (a) {}
 --- esbuild	/out/entry.js
 +++ rolldown	entry.js
 @@ -1,350 +1,113 @@
-+
 +
 +//#region entry.js
 +console.log(import(
@@ -504,13 +504,13 @@ switch (a) {}
 +console.log(require(
 +	/* before */
 +	foo
-+), __require(
++), require(
 +	/* before */
 +	"foo"
 +), require(
 +	foo
 +	/* after */
-+), __require(
++), require(
 +	"foo"
 +	/* after */
 +));
@@ -929,7 +929,8 @@ switch (a) {}
 +if (a);
 +with(a);
 +while (a);
-+do {} while (a);
++do;
++while (a);
 +switch (a) {}
 +
 +//#endregion

@@ -1,6 +1,6 @@
 import { expect } from 'vitest'
 import path from 'node:path'
-import { defineTest } from '@tests'
+import { defineTest } from 'rolldown-tests'
 import { loadFallbackPlugin } from 'rolldown/experimental'
 import { RolldownPlugin } from 'rolldown'
 

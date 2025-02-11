@@ -15,22 +15,25 @@ pub trait BindingPatternExt<'ast> {
 
 impl<'ast> BindingPatternExt<'ast> for ast::BindingPattern<'ast> {
   fn binding_identifiers(&self) -> smallvec::SmallVec<[&Box<ast::BindingIdentifier<'ast>>; 1]> {
-    let mut queue = vec![&self.kind];
+    let mut stack = vec![&self.kind];
     let mut ret = SmallVec::default();
-    while let Some(binding_kind) = queue.pop() {
+    while let Some(binding_kind) = stack.pop() {
       match binding_kind {
         ast::BindingPatternKind::BindingIdentifier(id) => {
           ret.push(id);
         }
         ast::BindingPatternKind::ArrayPattern(arr_pat) => {
-          queue.extend(arr_pat.elements.iter().flatten().map(|pat| &pat.kind).rev());
+          stack.extend(arr_pat.elements.iter().flatten().map(|pat| &pat.kind).rev());
         }
         ast::BindingPatternKind::ObjectPattern(obj_pat) => {
-          queue.extend(obj_pat.properties.iter().map(|prop| &prop.value.kind).rev());
+          if let Some(obj_pat) = &obj_pat.rest {
+            stack.push(&obj_pat.argument.kind);
+          }
+          stack.extend(obj_pat.properties.iter().map(|prop| &prop.value.kind).rev());
         }
         //
         ast::BindingPatternKind::AssignmentPattern(assign_pat) => {
-          queue.push(&assign_pat.left.kind);
+          stack.push(&assign_pat.left.kind);
         }
       };
     }
@@ -63,7 +66,7 @@ impl<'ast> BindingPatternExt<'ast> for ast::BindingPattern<'ast> {
                 ast::AssignmentTargetProperty::AssignmentTargetPropertyIdentifier(
                   ast::AssignmentTargetPropertyIdentifier {
                     binding: ast::IdentifierReference {
-                      name: assign_pat.left.get_identifier().unwrap(),
+                      name: assign_pat.left.get_identifier_name().unwrap(),
                       ..TakeIn::dummy(alloc)
                     },
                     init: Some(assign_pat.right),
@@ -95,7 +98,7 @@ impl<'ast> BindingPatternExt<'ast> for ast::BindingPattern<'ast> {
                 ast::AssignmentTargetProperty::AssignmentTargetPropertyIdentifier(
                   ast::AssignmentTargetPropertyIdentifier {
                     binding: ast::IdentifierReference {
-                      name: id.name.clone(),
+                      name: id.name,
                       ..TakeIn::dummy(alloc)
                     },
                     init: None,

@@ -3,8 +3,7 @@
   "private": true,
   "scripts": {
     "test": "mocha --file ./src/intercept/check.js test/test.js",
-    "test--update": "mocha --jobs 1 --file ./src/intercept/update-test-status.js test/test.js",
-    "type-check": "tsc --noEmit"
+    "test--update": "mocha --jobs 1 --file ./src/intercept/update-test-status.js test/test.js"
   },
   "keywords": [],
   "author": "",
@@ -15,11 +14,11 @@
     "mocha": "^11.0.0",
     "rolldown": "workspace:*",
     "source-map-support": "^0.5.21",
-    "oxc-transform": "0.35.0"
+    "oxc-transform": "0.48.2"
   },
   "devDependencies": {
-    "@types/mocha": "10.0.9",
-    "@types/node": "22.8.7",
+    "@types/mocha": "10.0.10",
+    "@types/node": "22.13.0",
     "source-map": "^0.7.4",
     "buble": "^0.20.0",
     "terser": "^5.31.1"

@@ -1,0 +1,29 @@
+{
+  "name": "@rolldown/test-dev-server",
+  "version": "0.0.0",
+  "description": "A implementation of a dev server for demonstrating",
+  "type": "module",
+  "private": true,
+  "bin": {
+    "serve": "./bin/cli.js"
+  },
+  "exports": {
+    ".": {
+      "default": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    }
+  },
+  "scripts": {
+    "build": "tsc -b",
+    "build:watch": "tsc -b --watch"
+  },
+  "dependencies": {
+    "connect": "^3.7.0",
+    "rolldown": "workspace:*",
+    "serve-static": "^1.16.2"
+  },
+  "devDependencies": {
+    "@types/connect": "^3.4.38",
+    "@types/serve-static": "^1.15.7"
+  }
+}

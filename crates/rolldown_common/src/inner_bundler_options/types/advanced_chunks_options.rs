@@ -13,6 +13,9 @@ use serde::{Deserialize, Deserializer};
 pub struct AdvancedChunksOptions {
   pub min_share_count: Option<u32>,
   pub min_size: Option<f64>,
+  pub max_size: Option<f64>,
+  pub min_module_size: Option<f64>,
+  pub max_module_size: Option<f64>,
   pub groups: Option<Vec<MatchGroup>>,
 }
 
@@ -33,7 +36,10 @@ pub struct MatchGroup {
   // pub share_count: Option<u32>,
   pub priority: Option<u32>,
   pub min_size: Option<f64>,
+  pub max_size: Option<f64>,
   pub min_share_count: Option<u32>,
+  pub min_module_size: Option<f64>,
+  pub max_module_size: Option<f64>,
 }
 
 #[cfg(feature = "deserialize_bundler_options")]

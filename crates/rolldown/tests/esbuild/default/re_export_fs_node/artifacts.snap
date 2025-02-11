@@ -1,5 +1,6 @@
 ---
 source: crates/rolldown_testing/src/integration_test.rs
+snapshot_kind: text
 ---
 # warnings
 
@@ -7,7 +8,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```text
 [UNRESOLVED_IMPORT] Warning: Could not resolve 'fs' in foo.js
-   ╭─[foo.js:1:21]
+   ╭─[ foo.js:1:21 ]
    │
  1 │ export * as fs from 'fs'
    │                     ──┬─  
@@ -19,7 +20,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```text
 [UNRESOLVED_IMPORT] Warning: Could not resolve 'fs' in foo.js
-   ╭─[foo.js:2:28]
+   ╭─[ foo.js:2:28 ]
    │
  2 │ export {readFileSync} from 'fs'
    │                            ──┬─  

@@ -2,8 +2,8 @@ use std::path::Path;
 
 use oxc::transformer::InjectGlobalVariablesConfig;
 use rolldown_common::{
-  Comments, GlobalsOutputOption, InjectImport, ModuleType, NormalizedBundlerOptions, OutputFormat,
-  Platform,
+  Comments, GlobalsOutputOption, InjectImport, MinifyOptions, ModuleType, NormalizedBundlerOptions,
+  OutputFormat, Platform,
 };
 use rolldown_error::{BuildDiagnostic, InvalidOptionType};
 use rustc_hash::{FxHashMap, FxHashSet};
@@ -54,16 +54,37 @@ pub fn normalize_options(mut raw_options: crate::BundlerOptions) -> NormalizeOpt
     }
   });
 
-  let minify = raw_options.minify.unwrap_or(false);
+  let minify: MinifyOptions = raw_options.minify.unwrap_or_default().into();
 
   let mut raw_define = raw_options.define.unwrap_or_default();
   if matches!(platform, Platform::Browser) && !raw_define.contains_key("process.env.NODE_ENV") {
-    if minify {
+    if minify.is_enabled() {
       raw_define.insert("process.env.NODE_ENV".to_string(), "'production'".to_string());
     } else {
       raw_define.insert("process.env.NODE_ENV".to_string(), "'development'".to_string());
     }
   }
+
+  // replace all `import.meta.*` with `undefined` for none `esm` format
+  // note: Any definition more specific than `import.meta.*` will be replace first
+  if !matches!(format, OutputFormat::Esm) {
+    match raw_define.entry("import.meta.*".to_string()) {
+      indexmap::map::Entry::Occupied(_occupied_entry) => {}
+      indexmap::map::Entry::Vacant(vacant_entry) => {
+        vacant_entry.insert("undefined".to_string());
+        // comment out when https://github.com/rolldown/rolldown/issues/3301 is finished
+        raw_define
+          .entry("import.meta.url".to_string())
+          .or_insert_with(|| "import.meta.url".to_string());
+        raw_define
+          .entry("import.meta.dirname".to_string())
+          .or_insert_with(|| "import.meta.dirname".to_string());
+        raw_define
+          .entry("import.meta.filename".to_string())
+          .or_insert_with(|| "import.meta.filename".to_string());
+      }
+    };
+  };
 
   let define = raw_define.into_iter().collect();
 
@@ -171,14 +192,14 @@ pub fn normalize_options(mut raw_options: crate::BundlerOptions) -> NormalizeOpt
       .unwrap_or_else(|| "[name]-[hash].js".to_string().into()),
     asset_filenames: raw_options
       .asset_filenames
-      .unwrap_or_else(|| "assets/[name]-[hash][extname]".to_string())
-      .into(),
+      .unwrap_or_else(|| "assets/[name]-[hash][extname]".to_string().into()),
     css_entry_filenames: raw_options
       .css_entry_filenames
       .unwrap_or_else(|| "[name].css".to_string().into()),
     css_chunk_filenames: raw_options
       .css_chunk_filenames
       .unwrap_or_else(|| "[name]-[hash].css".to_string().into()),
+    sanitize_filename: raw_options.sanitize_filename.unwrap_or_default(),
     banner: raw_options.banner,
     footer: raw_options.footer,
     intro: raw_options.intro,
@@ -198,6 +219,8 @@ pub fn normalize_options(mut raw_options: crate::BundlerOptions) -> NormalizeOpt
     shim_missing_exports: raw_options.shim_missing_exports.unwrap_or(false),
     module_types: loaders,
     experimental,
+    // https://github.com/evanw/esbuild/blob/d34e79e2a998c21bb71d57b92b0017ca11756912/internal/bundler/bundler.go#L2767
+    profiler_names: raw_options.profiler_names.unwrap_or(!minify.is_enabled()),
     minify,
     define,
     inject: raw_options.inject.unwrap_or_default(),
@@ -207,8 +230,6 @@ pub fn normalize_options(mut raw_options: crate::BundlerOptions) -> NormalizeOpt
     inline_dynamic_imports,
     advanced_chunks: raw_options.advanced_chunks,
     checks: raw_options.checks.unwrap_or_default(),
-    // https://github.com/evanw/esbuild/blob/d34e79e2a998c21bb71d57b92b0017ca11756912/internal/bundler/bundler.go#L2767
-    profiler_names: raw_options.profiler_names.unwrap_or(!raw_options.minify.unwrap_or(false)),
     jsx: raw_options.jsx.unwrap_or_default(),
     watch: raw_options.watch.unwrap_or_default(),
     comments: raw_options.comments.unwrap_or(Comments::Preserve),
@@ -216,6 +237,7 @@ pub fn normalize_options(mut raw_options: crate::BundlerOptions) -> NormalizeOpt
     target: raw_options.target.unwrap_or_default(),
     keep_names: raw_options.keep_names.unwrap_or_default(),
     polyfill_require: raw_options.polyfill_require.unwrap_or(true),
+    defer_sync_scan_data: raw_options.defer_sync_scan_data,
   };
 
   NormalizeOptionsReturn { options: normalized, resolve_options: raw_resolve, warnings }

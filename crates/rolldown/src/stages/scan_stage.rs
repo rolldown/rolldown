@@ -3,19 +3,18 @@ use std::sync::Arc;
 use arcstr::ArcStr;
 use futures::future::join_all;
 use rolldown_common::{
-  dynamic_import_usage::DynamicImportExportsUsage, EntryPoint, ImportKind, ModuleIdx, ModuleTable,
+  dynamic_import_usage::DynamicImportExportsUsage, Cache, EntryPoint, ModuleIdx, ModuleTable,
   ResolvedId, RuntimeModuleBrief, SymbolRefDb,
 };
-use rolldown_error::{BuildDiagnostic, BuildResult, ResultExt};
+use rolldown_error::{BuildDiagnostic, BuildResult};
 use rolldown_fs::OsFileSystem;
 use rolldown_plugin::SharedPluginDriver;
-use rolldown_resolver::ResolveError;
 use rustc_hash::FxHashMap;
 
 use crate::{
   module_loader::{module_loader::ModuleLoaderOutput, ModuleLoader},
-  type_alias::IndexEcmaAst,
-  utils::resolve_id::resolve_id,
+  type_alias::{IndexAstScope, IndexEcmaAst},
+  utils::load_entry_module::load_entry_module,
   SharedOptions, SharedResolver,
 };
 
@@ -24,12 +23,14 @@ pub struct ScanStage {
   plugin_driver: SharedPluginDriver,
   fs: OsFileSystem,
   resolver: SharedResolver,
+  cache: Arc<Cache>,
 }
 
 #[derive(Debug)]
 pub struct ScanStageOutput {
   pub module_table: ModuleTable,
   pub index_ecma_ast: IndexEcmaAst,
+  pub index_ast_scope: IndexAstScope,
   pub entry_points: Vec<EntryPoint>,
   pub symbol_ref_db: SymbolRefDb,
   pub runtime: RuntimeModuleBrief,
@@ -43,8 +44,9 @@ impl ScanStage {
     plugin_driver: SharedPluginDriver,
     fs: OsFileSystem,
     resolver: SharedResolver,
+    cache: Arc<Cache>,
   ) -> Self {
-    Self { options, plugin_driver, fs, resolver }
+    Self { options, plugin_driver, fs, resolver, cache }
   }
 
   #[tracing::instrument(level = "debug", skip_all)]
@@ -53,16 +55,27 @@ impl ScanStage {
       Err(anyhow::anyhow!("You must supply options.input to rolldown"))?;
     }
 
-    self.plugin_driver.build_start(&self.options).await?;
-
     let module_loader = ModuleLoader::new(
       self.fs,
       Arc::clone(&self.options),
       Arc::clone(&self.resolver),
       Arc::clone(&self.plugin_driver),
+      Arc::clone(&self.cache),
     )?;
 
+    // For `pluginContext.emitFile` with `type: chunk`, support it at buildStart hook.
+    self
+      .plugin_driver
+      .file_emitter
+      .set_context_load_modules_tx(Some(module_loader.tx.clone()))
+      .await;
+
+    self.plugin_driver.build_start(&self.options).await?;
+
     let user_entries = self.resolve_user_defined_entries().await?;
+
+    // For `await pluginContext.load`, if support it at buildStart hook, it could be caused stuck.
+    self.plugin_driver.set_context_load_modules_tx(Some(module_loader.tx.clone())).await;
 
     let ModuleLoaderOutput {
       module_table,
@@ -72,9 +85,15 @@ impl ScanStage {
       warnings,
       index_ecma_ast,
       dynamic_import_exports_usage_map,
+      index_ast_scope,
     } = module_loader.fetch_all_modules(user_entries).await?;
 
+    self.plugin_driver.file_emitter.set_context_load_modules_tx(None).await;
+
+    self.plugin_driver.set_context_load_modules_tx(None).await;
+
     Ok(ScanStageOutput {
+      index_ast_scope,
       module_table,
       entry_points,
       symbol_ref_db,
@@ -94,26 +113,9 @@ impl ScanStage {
     let plugin_driver = &self.plugin_driver;
 
     let resolved_ids = join_all(self.options.input.iter().map(|input_item| async move {
-      struct Args<'a> {
-        specifier: &'a str,
-      }
+      let resolved = load_entry_module(resolver, plugin_driver, &input_item.import, None).await;
 
-      let args = Args { specifier: &input_item.import };
-      let resolved = resolve_id(
-        resolver,
-        plugin_driver,
-        args.specifier,
-        None,
-        true,
-        ImportKind::Import,
-        None,
-        Arc::default(),
-        true,
-      )
-      .await;
-
-      resolved
-        .map(|info| (args, info.map(|info| ((input_item.name.clone().map(ArcStr::from)), info))))
+      resolved.map(|info| (input_item.name.as_ref().map(Into::into), info))
     }))
     .await;
 
@@ -122,25 +124,11 @@ impl ScanStage {
     let mut errors = vec![];
 
     for resolve_id in resolved_ids {
-      let (args, resolve_id) = resolve_id?;
-
       match resolve_id {
         Ok(item) => {
-          if item.1.is_external {
-            errors.push(BuildDiagnostic::entry_cannot_be_external(item.1.id.to_string()));
-            continue;
-          }
           ret.push(item);
         }
-        Err(e) => match e {
-          ResolveError::NotFound(_) => {
-            errors.push(BuildDiagnostic::unresolved_entry(args.specifier, None));
-          }
-          ResolveError::PackagePathNotExported(..) => {
-            errors.push(BuildDiagnostic::unresolved_entry(args.specifier, Some(e)));
-          }
-          _ => return Err(e).map_err_to_unhandleable()?,
-        },
+        Err(e) => errors.push(e),
       }
     }
 

@@ -310,7 +310,7 @@ using a = b;
 using c = d;
 
 //#endregion
-export { a, c as 'c!' };
+export { a, c as "c!" };
 ```
 ### diff
 ```diff
@@ -334,7 +334,7 @@ export { a, c as 'c!' };
 +using c = d;
 +
 +//#endregion
-+export { a, c as 'c!' };
++export { a, c as "c!" };
 \ No newline at end of file
 
 ```

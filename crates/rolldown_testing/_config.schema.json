@@ -72,6 +72,27 @@
             "$ref": "#/definitions/MatchGroup"
           }
         },
+        "maxModuleSize": {
+          "type": [
+            "number",
+            "null"
+          ],
+          "format": "double"
+        },
+        "maxSize": {
+          "type": [
+            "number",
+            "null"
+          ],
+          "format": "double"
+        },
+        "minModuleSize": {
+          "type": [
+            "number",
+            "null"
+          ],
+          "format": "double"
+        },
         "minShareCount": {
           "type": [
             "integer",
@@ -327,9 +348,13 @@
           ]
         },
         "minify": {
-          "type": [
-            "boolean",
-            "null"
+          "anyOf": [
+            {
+              "$ref": "#/definitions/RawMinifyOptions"
+            },
+            {
+              "type": "null"
+            }
           ]
         },
         "moduleTypes": {
@@ -384,6 +409,12 @@
             {
               "type": "null"
             }
+          ]
+        },
+        "sanitizeFilename": {
+          "type": [
+            "boolean",
+            "null"
           ]
         },
         "shimMissingExports": {
@@ -505,6 +536,12 @@
             "string",
             "null"
           ]
+        },
+        "strictExecutionOrder": {
+          "type": [
+            "boolean",
+            "null"
+          ]
         }
       },
       "additionalProperties": false
@@ -556,6 +593,18 @@
       "type": "object",
       "properties": {
         "disableLiveBindings": {
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
+        "hmr": {
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
+        "incrementalBuild": {
           "type": [
             "boolean",
             "null"
@@ -689,6 +738,27 @@
         "name"
       ],
       "properties": {
+        "maxModuleSize": {
+          "type": [
+            "number",
+            "null"
+          ],
+          "format": "double"
+        },
+        "maxSize": {
+          "type": [
+            "number",
+            "null"
+          ],
+          "format": "double"
+        },
+        "minModuleSize": {
+          "type": [
+            "number",
+            "null"
+          ],
+          "format": "double"
+        },
         "minShareCount": {
           "type": [
             "integer",
@@ -720,6 +790,26 @@
             "string",
             "null"
           ]
+        }
+      },
+      "additionalProperties": false
+    },
+    "MinifyOptionsObject": {
+      "type": "object",
+      "required": [
+        "compress",
+        "mangle",
+        "removeWhitespace"
+      ],
+      "properties": {
+        "compress": {
+          "type": "boolean"
+        },
+        "mangle": {
+          "type": "boolean"
+        },
+        "removeWhitespace": {
+          "type": "boolean"
         }
       },
       "additionalProperties": false
@@ -791,6 +881,19 @@
           "enum": [
             "node"
           ]
+        }
+      ]
+    },
+    "RawMinifyOptions": {
+      "anyOf": [
+        {
+          "type": "boolean"
+        },
+        {
+          "type": "null"
+        },
+        {
+          "$ref": "#/definitions/MinifyOptionsObject"
         }
       ]
     },

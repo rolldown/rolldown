@@ -31,7 +31,7 @@ pub struct PluginDriver {
   plugins: IndexPluginable,
   contexts: IndexPluginContext,
   order_indicates: HookOrderIndicates,
-  file_emitter: SharedFileEmitter,
+  pub file_emitter: SharedFileEmitter,
   pub watch_files: Arc<FxDashSet<ArcStr>>,
   pub modules: Arc<FxDashMap<ArcStr, Arc<ModuleInfo>>>,
   pub context_load_modules: Arc<FxDashMap<ArcStr, LoadCallback>>,

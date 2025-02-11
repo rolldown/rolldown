@@ -1,5 +1,6 @@
 ---
 source: crates/rolldown_testing/src/integration_test.rs
+snapshot_kind: text
 ---
 # warnings
 
@@ -7,7 +8,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```text
 [UNRESOLVED_IMPORT] Warning: Could not resolve 'pkg1' in src/entry.js
-   ╭─[src/entry.js:1:8]
+   ╭─[ src/entry.js:1:8 ]
    │
  1 │ import 'pkg1'
    │        ───┬──  
@@ -19,7 +20,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```text
 [UNRESOLVED_IMPORT] Warning: Could not resolve 'pkg2' in src/entry.js
-   ╭─[src/entry.js:2:8]
+   ╭─[ src/entry.js:2:8 ]
    │
  2 │ import 'pkg2'
    │        ───┬──  
@@ -31,7 +32,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```text
 [UNRESOLVED_IMPORT] Warning: Could not resolve 'pkg3' in src/entry.js
-   ╭─[src/entry.js:3:8]
+   ╭─[ src/entry.js:3:8 ]
    │
  3 │ import 'pkg3'
    │        ───┬──  
@@ -43,7 +44,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```text
 [UNRESOLVED_IMPORT] Warning: Could not resolve 'pkg4' in src/entry.js
-   ╭─[src/entry.js:4:8]
+   ╭─[ src/entry.js:4:8 ]
    │
  4 │ import 'pkg4'
    │        ───┬──  
@@ -55,7 +56,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```text
 [UNRESOLVED_IMPORT] Warning: Could not resolve 'pkg5' in src/entry.js
-   ╭─[src/entry.js:5:8]
+   ╭─[ src/entry.js:5:8 ]
    │
  5 │ import 'pkg5'
    │        ───┬──  
@@ -67,7 +68,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```text
 [UNRESOLVED_IMPORT] Warning: Could not resolve 'pkg6' in src/entry.js
-   ╭─[src/entry.js:6:8]
+   ╭─[ src/entry.js:6:8 ]
    │
  6 │ import 'pkg6'
    │        ───┬──  

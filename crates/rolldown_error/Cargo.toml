@@ -17,12 +17,15 @@ doctest = false
 workspace = true
 
 [dependencies]
-anyhow        = { workspace = true }
-arcstr        = { workspace = true }
-ariadne       = { workspace = true }
-heck          = { workspace = true }
-napi          = { workspace = true, optional = true }
-oxc           = { workspace = true }
-oxc_resolver  = { workspace = true }
-oxc_sourcemap = { workspace = true }
-sugar_path    = { workspace = true }
+anyhow         = { workspace = true }
+arcstr         = { workspace = true }
+ariadne        = { workspace = true }
+heck           = { workspace = true }
+napi           = { workspace = true, optional = true }
+oxc            = { workspace = true }
+oxc_resolver   = { workspace = true }
+oxc_sourcemap  = { workspace = true }
+rolldown_utils = { workspace = true }
+ropey          = { workspace = true }
+rustc-hash     = { workspace = true }
+sugar_path     = { workspace = true }

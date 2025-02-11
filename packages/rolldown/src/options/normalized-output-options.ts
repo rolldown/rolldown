@@ -1,10 +1,11 @@
 import { unsupported } from '../utils/misc'
-import type { BindingNormalizedOptions } from '../binding'
+import type { BindingMinifyOptions, BindingNormalizedOptions } from '../binding'
 import type {
   SourcemapIgnoreListOption,
   SourcemapPathTransformOption,
 } from '../types/misc'
 import type {
+  AssetFileNamesFunction,
   ChunkFileNamesFunction,
   GlobalsFunction,
   OutputOptions,
@@ -18,7 +19,7 @@ export interface NormalizedOutputOptions {
   dir: string | undefined
   entryFileNames: string | ChunkFileNamesFunction
   chunkFileNames: string | ChunkFileNamesFunction
-  assetFileNames: string
+  assetFileNames: string | AssetFileNamesFunction
   format: InternalModuleFormat
   exports: NonNullable<OutputOptions['exports']>
   sourcemap: boolean | 'inline' | 'hidden'
@@ -37,7 +38,7 @@ export interface NormalizedOutputOptions {
   sourcemapDebugIds: boolean
   sourcemapIgnoreList: SourcemapIgnoreListOption | undefined
   sourcemapPathTransform: SourcemapPathTransformOption | undefined
-  minify: boolean
+  minify: false | BindingMinifyOptions
   comments: 'none' | 'preserve-legal'
   polyfillRequire: boolean
 }
@@ -77,8 +78,8 @@ export class NormalizedOutputOptionsImpl implements NormalizedOutputOptions {
     return mapFunctionOption(this.inner.chunkFilenames, 'chunkFileNames')
   }
 
-  get assetFileNames(): string {
-    return this.inner.assetFilenames
+  get assetFileNames(): string | UnsupportedFnRet {
+    return mapFunctionOption(this.inner.assetFilenames, 'assetFilenames')
   }
 
   get format(): 'es' | 'cjs' | 'app' | 'iife' | 'umd' {
@@ -165,7 +166,7 @@ export class NormalizedOutputOptionsImpl implements NormalizedOutputOptions {
     return mapFunctionOption(void 0, 'sourcemapPathTransform')
   }
 
-  get minify(): boolean {
+  get minify(): false | BindingMinifyOptions {
     return this.inner.minify
   }
 

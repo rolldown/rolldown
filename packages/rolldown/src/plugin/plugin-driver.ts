@@ -10,7 +10,7 @@ import { BuiltinPlugin } from '../builtin-plugin/constructors'
 import { normalizePluginOption } from '../utils/normalize-plugin-option'
 
 export class PluginDriver {
-  public async callOptionsHook(
+  public static async callOptionsHook(
     inputOptions: InputOptions,
   ): Promise<InputOptions> {
     const logLevel = inputOptions.logLevel || LOG_LEVEL_INFO
@@ -73,7 +73,7 @@ export class PluginDriver {
     return inputOptions
   }
 
-  public callOutputOptionsHook(
+  public static callOutputOptionsHook(
     rawPlugins: RolldownPlugin[],
     outputOptions: OutputOptions,
   ): OutputOptions {

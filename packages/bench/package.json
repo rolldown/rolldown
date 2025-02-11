@@ -3,9 +3,8 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "bench": "node ./benches/compare.js",
-    "bench-ci": "node ./benches/ci.js",
-    "type-check": "tsc"
+    "bench": "node --import @oxc-node/core/register ./benches/compare.js",
+    "bench-ci": "node --import @oxc-node/core/register ./benches/ci.js"
   },
   "dependencies": {
     "react": "^19.0.0",
@@ -17,15 +16,17 @@
     "@babel/core": "^7.24.7",
     "@babel/preset-env": "^7.24.7",
     "@babel/preset-typescript": "^7.24.7",
+    "@oxc-node/core": "^0.0.19",
     "@rollup/plugin-commonjs": "^28.0.0",
     "@rollup/plugin-node-resolve": "^16.0.0",
     "@types/babel__core": "7.20.5",
-    "@types/lodash": "^4.17.5",
+    "@types/lodash-es": "^4.17.12",
     "chalk": "^5.3.0",
-    "esbuild": "^0.24.0",
-    "lodash": "^4.17.21",
+    "esbuild": "^0.25.0",
+    "lodash-es": "^4.17.21",
     "rolldown": "workspace:*",
     "rollup": "^4.18.0",
-    "tinybench": "^3.0.0"
+    "tinybench": "^3.0.0",
+    "vitest": "^3.0.1"
   }
 }

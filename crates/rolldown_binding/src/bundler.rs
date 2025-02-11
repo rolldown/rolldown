@@ -192,15 +192,18 @@ impl Bundler {
     if let Some(on_log) = self.on_log.as_ref() {
       for warning in warnings {
         on_log
-          .call_async((
-            BindingLogLevel::Warn.to_string(),
-            BindingLog {
-              code: warning.kind().to_string(),
-              message: warning
-                .to_diagnostic_with(&DiagnosticOptions { cwd: self.cwd.clone() })
-                .to_color_string(),
-            },
-          ))
+          .call_async(
+            (
+              BindingLogLevel::Warn.to_string(),
+              BindingLog {
+                code: warning.kind().to_string(),
+                message: warning
+                  .to_diagnostic_with(&DiagnosticOptions { cwd: self.cwd.clone() })
+                  .to_color_string(),
+              },
+            )
+              .into(),
+          )
           .await;
       }
     }

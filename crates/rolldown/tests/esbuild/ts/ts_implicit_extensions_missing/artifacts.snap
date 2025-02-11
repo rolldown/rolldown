@@ -8,7 +8,7 @@ snapshot_kind: text
 
 ```text
 [UNRESOLVED_IMPORT] Error: Could not resolve './cjs.cjs' in entry.ts
-   ╭─[entry.ts:2:8]
+   ╭─[ entry.ts:2:8 ]
    │
  2 │ import './cjs.cjs'
    │        ─────┬─────  
@@ -20,7 +20,7 @@ snapshot_kind: text
 
 ```text
 [UNRESOLVED_IMPORT] Error: Could not resolve './js.js' in entry.ts
-   ╭─[entry.ts:3:8]
+   ╭─[ entry.ts:3:8 ]
    │
  3 │ import './js.js'
    │        ────┬────  
@@ -32,7 +32,7 @@ snapshot_kind: text
 
 ```text
 [UNRESOLVED_IMPORT] Error: Could not resolve './jsx.jsx' in entry.ts
-   ╭─[entry.ts:4:8]
+   ╭─[ entry.ts:4:8 ]
    │
  4 │ import './jsx.jsx'
    │        ─────┬─────  
@@ -44,7 +44,7 @@ snapshot_kind: text
 
 ```text
 [UNRESOLVED_IMPORT] Error: Could not resolve './mjs.mjs' in entry.ts
-   ╭─[entry.ts:1:8]
+   ╭─[ entry.ts:1:8 ]
    │
  1 │ import './mjs.mjs'
    │        ─────┬─────  

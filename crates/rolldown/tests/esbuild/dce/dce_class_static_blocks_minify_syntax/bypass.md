@@ -52,7 +52,7 @@ var C_keep = class {
 };
 var D_keep = class {
 	static {
-		try {} finally {
+		{
 			foo;
 		}
 	}
@@ -65,7 +65,7 @@ var D_keep = class {
 ===================================================================
 --- esbuild	/out.js
 +++ rolldown	entry.js
-@@ -1,19 +1,22 @@
+@@ -1,21 +1,24 @@
  var A_keep = class {
      static {
          foo;
@@ -88,8 +88,11 @@ var D_keep = class {
 +};
 +var D_keep = class {
      static {
-         try {} finally {
+-        try {} finally {
++        {
              foo;
          }
+     }
+ };
 
 ```

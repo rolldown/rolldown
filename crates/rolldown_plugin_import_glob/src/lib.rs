@@ -305,7 +305,7 @@ impl<'ast> GlobImportVisit<'ast, '_> {
           ),
         ));
 
-        self.ast_builder.expression_identifier_reference(SPAN, &name)
+        self.ast_builder.expression_identifier(SPAN, &name)
       } else {
         // import('./dir/bar.js')
         let mut import_expression = self.ast_builder.expression_import(
@@ -363,7 +363,7 @@ impl<'ast> GlobImportVisit<'ast, '_> {
                         SPAN,
                         Expression::from(self.ast_builder.member_expression_static(
                           SPAN,
-                          self.ast_builder.expression_identifier_reference(SPAN, "m"),
+                          self.ast_builder.expression_identifier(SPAN, "m"),
                           self.ast_builder.identifier_name(SPAN, import),
                           false,
                         )),

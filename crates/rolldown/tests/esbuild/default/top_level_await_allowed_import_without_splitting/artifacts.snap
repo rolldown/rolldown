@@ -1,5 +1,6 @@
 ---
 source: crates/rolldown_testing/src/integration_test.rs
+snapshot_kind: text
 ---
 # Assets
 
@@ -28,17 +29,14 @@ var require_entry = __commonJS({ "entry.js"() {
 //#endregion
 //#region a.js
 var a_exports = {};
-var init_a = __esm({ "a.js"() {
-	init_b();
+var init_a = __esm({ async "a.js"() {
+	await init_b();
 } });
 
 //#endregion
 //#region b.js
 var b_exports = {};
-var import_c;
-var init_b = __esm({ "b.js"() {
-	import_c = __toESM(require_c());
-} });
+var init_b = __esm({ async "b.js"() {} });
 
 //#endregion
 //#region c.js

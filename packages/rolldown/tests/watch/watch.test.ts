@@ -2,7 +2,7 @@ import { expect, test, vi } from 'vitest'
 import { watch, RolldownWatcher } from 'rolldown'
 import fs from 'node:fs'
 import path from 'node:path'
-import { sleep, waitUtil } from '@tests/utils'
+import { sleep, waitUtil } from 'rolldown-tests/utils'
 
 test.sequential('watch', async () => {
   const { input, output } = await createTestInputAndOutput('watch')

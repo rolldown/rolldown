@@ -1,4 +1,5 @@
 mod binding_checks_options;
+mod binding_defer_sync_scan_data;
 mod binding_experimental_options;
 pub mod binding_inject_import;
 mod binding_input_item;
@@ -7,7 +8,9 @@ mod binding_resolve_options;
 mod binding_treeshake;
 mod binding_watch_option;
 
+use binding_defer_sync_scan_data::BindingDeferSyncScanDataOption;
 use derive_more::Debug;
+use napi::bindgen_prelude::FnArgs;
 use napi_derive::napi;
 use rustc_hash::FxBuildHasher;
 use std::collections::HashMap;
@@ -23,7 +26,7 @@ use crate::types::{
   binding_log::BindingLog, binding_log_level::BindingLogLevel, js_callback::JsCallback,
 };
 
-pub type BindingOnLog = Option<JsCallback<(String, BindingLog), ()>>;
+pub type BindingOnLog = Option<JsCallback<FnArgs<(String, BindingLog)>, ()>>;
 
 #[napi(object, object_to_js = false)]
 #[derive(Default, Debug)]
@@ -41,7 +44,7 @@ pub struct BindingInputOptions {
   #[napi(
     ts_type = "undefined | ((source: string, importer: string | undefined, isResolved: boolean) => boolean)"
   )]
-  pub external: Option<JsCallback<(String, Option<String>, bool), bool>>,
+  pub external: Option<JsCallback<FnArgs<(String, Option<String>, bool)>, bool>>,
   pub input: Vec<BindingInputItem>,
   // makeAbsoluteExternalsRelative?: boolean | 'ifRelativeSource';
   // /** @deprecated Use the "manualChunks" output option instead. */
@@ -85,4 +88,7 @@ pub struct BindingInputOptions {
   pub watch: Option<BindingWatchOption>,
   pub keep_names: Option<bool>,
   pub checks: Option<binding_checks_options::BindingChecksOptions>,
+  #[debug(skip)]
+  #[napi(ts_type = "undefined | (() => BindingDeferSyncScanData[])")]
+  pub defer_sync_scan_data: Option<BindingDeferSyncScanDataOption>,
 }

@@ -13,11 +13,11 @@ snapshot_kind: text
 var require_foo = __commonJS({ "foo.js"(exports, module) {
 	module[Math.random() < 1 && "exports"] = { default: { bar: 123 } };
 } });
+var import_foo = __toESM(require_foo());
 
 //#endregion
 //#region entry.js
-var import_foo = __toESM(require_foo());
-input.works = import_foo.default[Math.random() < 1 && "default"].bar === 123 && import_foo.bar === void 0;
+input.works = import_foo.default[Math.random() < 1 && "default"].bar === 123 && import_foo.default.bar === void 0;
 
 //#endregion
 ```
@@ -36,11 +36,11 @@ Variant: (format: Cjs)
 var require_foo = __commonJS({ "foo.js"(exports, module) {
 	module[Math.random() < 1 && "exports"] = { default: { bar: 123 } };
 } });
+var import_foo = __toESM(require_foo());
 
 //#endregion
 //#region entry.js
-var import_foo = __toESM(require_foo());
-input.works = import_foo.default[Math.random() < 1 && "default"].bar === 123 && import_foo.bar === void 0;
+input.works = import_foo.default[Math.random() < 1 && "default"].bar === 123 && import_foo.default.bar === void 0;
 
 //#endregion
 ```
@@ -61,11 +61,11 @@ Variant: (format: Iife)
 var require_foo = __commonJS({ "foo.js"(exports, module) {
 	module[Math.random() < 1 && "exports"] = { default: { bar: 123 } };
 } });
+var import_foo = __toESM(require_foo());
 
 //#endregion
 //#region entry.js
-var import_foo = __toESM(require_foo());
-input.works = import_foo.default[Math.random() < 1 && "default"].bar === 123 && import_foo.bar === void 0;
+input.works = import_foo.default[Math.random() < 1 && "default"].bar === 123 && import_foo.default.bar === void 0;
 
 //#endregion
 })();
@@ -90,11 +90,11 @@ Variant: (format: Umd)
 var require_foo = __commonJS({ "foo.js"(exports, module) {
 	module[Math.random() < 1 && "exports"] = { default: { bar: 123 } };
 } });
+var import_foo = __toESM(require_foo());
 
 //#endregion
 //#region entry.js
-var import_foo = __toESM(require_foo());
-input.works = import_foo.default[Math.random() < 1 && "default"].bar === 123 && import_foo.bar === void 0;
+input.works = import_foo.default[Math.random() < 1 && "default"].bar === 123 && import_foo.default.bar === void 0;
 
 //#endregion
 });

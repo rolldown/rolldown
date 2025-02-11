@@ -5,7 +5,8 @@ use napi_derive::napi;
 use rolldown_plugin::PluginContext;
 
 use super::types::{
-  binding_emitted_asset::BindingEmittedAsset, binding_hook_side_effects::BindingHookSideEffects,
+  binding_emitted_asset::BindingEmittedAsset, binding_emitted_chunk::BindingEmittedChunk,
+  binding_hook_side_effects::BindingHookSideEffects,
   binding_plugin_context_resolve_options::BindingPluginContextResolveOptions,
 };
 
@@ -73,13 +74,25 @@ impl BindingPluginContext {
   }
 
   #[napi]
-  pub fn emit_file(&self, file: BindingEmittedAsset) -> String {
-    self.inner.emit_file(file.into()).to_string()
+  pub fn emit_file(
+    &self,
+    file: BindingEmittedAsset,
+    asset_filename: Option<String>,
+    fn_sanitized_file_name: Option<String>,
+  ) -> String {
+    self.inner.emit_file(file.into(), asset_filename, fn_sanitized_file_name).to_string()
   }
 
   #[napi]
-  pub fn get_file_name(&self, reference_id: String) -> String {
-    self.inner.get_file_name(reference_id.as_str()).to_string()
+  pub fn emit_chunk(&self, file: BindingEmittedChunk) -> anyhow::Result<String> {
+    futures::executor::block_on(async {
+      self.inner.emit_chunk(file.into()).await.map(|id| id.to_string())
+    })
+  }
+
+  #[napi]
+  pub fn get_file_name(&self, reference_id: String) -> anyhow::Result<String> {
+    self.inner.get_file_name(reference_id.as_str()).map(|id| id.to_string())
   }
 
   #[napi]

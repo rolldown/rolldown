@@ -47,13 +47,15 @@ impl Plugin for WasmHelperPlugin {
     if args.id.ends_with(".wasm?init") {
       let id = args.id.replace("?init", "");
       let file_path = Path::new(&id);
-      let reference_id = ctx.emit_file(EmittedAsset {
-        name: file_path.file_name().map(|x| x.to_string_lossy().to_string()),
-        original_file_name: None,
-        source: StrOrBytes::Bytes(fs::read(file_path)?),
-        file_name: None,
-      });
-      let url = ctx.get_file_name(&reference_id);
+      let reference_id = ctx
+        .emit_file_async(EmittedAsset {
+          name: file_path.file_name().map(|x| x.to_string_lossy().to_string()),
+          original_file_name: None,
+          source: StrOrBytes::Bytes(fs::read(file_path)?),
+          file_name: None,
+        })
+        .await?;
+      let url = ctx.get_file_name(&reference_id)?;
       return Ok(Some(HookLoadOutput {
         code: format!(
           r#"import initWasm from "{WASM_HELPER_ID}"; 

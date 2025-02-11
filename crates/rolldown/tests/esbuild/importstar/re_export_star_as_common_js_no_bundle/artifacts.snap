@@ -8,7 +8,7 @@ snapshot_kind: text
 
 ```text
 [UNRESOLVED_IMPORT] Warning: Could not resolve "foo" in entry.js
-   ╭─[entry.js:1:22]
+   ╭─[ entry.js:1:22 ]
    │
  1 │ export * as out from "foo"
    │                      ──┬──  

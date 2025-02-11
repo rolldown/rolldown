@@ -1,7 +1,11 @@
 // cSpell:disable
 import { expect } from 'vitest'
-import { defineTest } from '@tests'
-import { getLocation, getOutputAsset, getOutputChunk } from '@tests/utils'
+import { defineTest } from 'rolldown-tests'
+import {
+  getLocation,
+  getOutputAsset,
+  getOutputChunk,
+} from 'rolldown-tests/utils'
 import { SourceMapConsumer } from 'source-map'
 
 export default defineTest({

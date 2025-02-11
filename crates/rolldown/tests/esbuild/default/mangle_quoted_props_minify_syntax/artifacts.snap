@@ -1,5 +1,6 @@
 ---
 source: crates/rolldown_testing/src/integration_test.rs
+snapshot_kind: text
 ---
 # Assets
 
@@ -9,7 +10,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 //#region keep.js
 foo("_keepThisProperty");
-foo((x, "_keepThisProperty"));
+foo("_keepThisProperty");
 foo(x ? "_keepThisProperty" : "_keepThisPropertyToo");
 x[foo("_keepThisProperty")];
 x?.[foo("_keepThisProperty")];

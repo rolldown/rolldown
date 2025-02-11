@@ -15,7 +15,7 @@ foo("_keepThisProperty") in x;
 
 //#region keep.js
 foo("_keepThisProperty");
-foo((x, "_keepThisProperty"));
+foo("_keepThisProperty");
 foo(x ? "_keepThisProperty" : "_keepThisPropertyToo");
 x[foo("_keepThisProperty")];
 x?.[foo("_keepThisProperty")];
@@ -36,7 +36,7 @@ foo("_keepThisProperty") in x;
 @@ -1,5 +1,13 @@
 -(foo("_keepThisProperty"), foo("_keepThisProperty"), foo(x ? "_keepThisProperty" : "_keepThisPropertyToo"), x[foo("_keepThisProperty")], x?.[foo("_keepThisProperty")], foo("_keepThisProperty") + "", class {
 +foo("_keepThisProperty");
-+foo((x, "_keepThisProperty"));
++foo("_keepThisProperty");
 +foo(x ? "_keepThisProperty" : "_keepThisPropertyToo");
 +x[foo("_keepThisProperty")];
 +x?.[foo("_keepThisProperty")];

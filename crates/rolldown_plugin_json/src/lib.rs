@@ -48,8 +48,8 @@ impl Plugin for JsonPlugin {
             code += &format!("export const {key} = {};\n", &serialize_value(value)?);
             default_object_code += &format!("  {key},\n");
           } else {
-            // TODO: escape key
-            default_object_code += &format!("  \"{key}\": {},\n", &serialize_value(value)?);
+            let key = serde_json::to_string(key).unwrap();
+            default_object_code += &format!("  {key}: {},\n", &serialize_value(value)?);
           }
         }
         default_object_code += "}";
@@ -146,7 +146,7 @@ fn is_special_query(ext: &str) -> bool {
 fn serialize_value(value: &Value) -> Result<String, serde_json::Error> {
   let value_as_string = serde_json::to_string(value)?;
   if value.is_object() && !value.is_null() && value_as_string.len() > 10 * 1000 {
-    Ok(format!("JSON.parse({})", serde_json::to_string(&value_as_string)?))
+    Ok(format!("/*#__PURE__*/ JSON.parse({})", serde_json::to_string(&value_as_string)?))
   } else {
     Ok(value_as_string)
   }
@@ -164,8 +164,8 @@ fn to_esm(data: &Value, named_exports: bool) -> String {
       default_export_rows.push(Cow::Borrowed(key));
       named_export_code += &format!("export const {key} = {value};\n");
     } else {
-      // TODO: escape key
-      default_export_rows.push(Cow::Owned(format!("\"{key}\": {value}",)));
+      let key = serde_json::to_string(key).unwrap();
+      default_export_rows.push(Cow::Owned(format!("{key}: {value}",)));
     }
   }
   let default_export_code: String =
@@ -214,8 +214,17 @@ mod test {
 
   #[test]
   fn to_esm_named_exports_forbidden_ident() {
-    let data = serde_json::json!({"true": true});
-    assert_eq!("export default {\n\"true\": true\n};\n", to_esm(&data, true));
+    let data = serde_json::json!({"true": true, "\\\"\n": 1234});
+    assert_eq!(
+      r#"
+export default {
+"true": true,
+"\\\"\n": 1234
+};
+"#
+      .trim_start(),
+      to_esm(&data, true)
+    );
   }
 
   #[test]

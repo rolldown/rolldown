@@ -1,4 +1,4 @@
-use napi::bindgen_prelude::Either;
+use napi::bindgen_prelude::{Either, FnArgs};
 use std::fmt::Debug;
 
 use crate::types::{
@@ -38,7 +38,7 @@ pub struct BindingPluginOptions {
     ts_type = "(ctx: BindingPluginContext, opts: BindingNormalizedOptions) => MaybePromise<VoidNullable>"
   )]
   pub build_start:
-    Option<MaybeAsyncJsCallback<(BindingPluginContext, BindingNormalizedOptions), ()>>,
+    Option<MaybeAsyncJsCallback<FnArgs<(BindingPluginContext, BindingNormalizedOptions)>, ()>>,
   pub build_start_meta: Option<BindingPluginHookMeta>,
 
   #[napi(
@@ -46,7 +46,7 @@ pub struct BindingPluginOptions {
   )]
   pub resolve_id: Option<
     MaybeAsyncJsCallback<
-      (BindingPluginContext, String, Option<String>, BindingHookResolveIdExtraArgs),
+      FnArgs<(BindingPluginContext, String, Option<String>, BindingHookResolveIdExtraArgs)>,
       Option<BindingHookResolveIdOutput>,
     >,
   >,
@@ -58,7 +58,7 @@ pub struct BindingPluginOptions {
   )]
   pub resolve_dynamic_import: Option<
     MaybeAsyncJsCallback<
-      (BindingPluginContext, String, Option<String>),
+      FnArgs<(BindingPluginContext, String, Option<String>)>,
       Option<BindingHookResolveIdOutput>,
     >,
   >,
@@ -67,8 +67,9 @@ pub struct BindingPluginOptions {
   #[napi(
     ts_type = "(ctx: BindingPluginContext, id: string) => MaybePromise<VoidNullable<BindingHookLoadOutput>>"
   )]
-  pub load:
-    Option<MaybeAsyncJsCallback<(BindingPluginContext, String), Option<BindingHookLoadOutput>>>,
+  pub load: Option<
+    MaybeAsyncJsCallback<FnArgs<(BindingPluginContext, String)>, Option<BindingHookLoadOutput>>,
+  >,
   pub load_meta: Option<BindingPluginHookMeta>,
   pub load_filter: Option<BindingGeneralHookFilter>,
 
@@ -77,7 +78,7 @@ pub struct BindingPluginOptions {
   )]
   pub transform: Option<
     MaybeAsyncJsCallback<
-      (BindingTransformPluginContext, String, String, BindingTransformHookExtraArgs),
+      FnArgs<(BindingTransformPluginContext, String, String, BindingTransformHookExtraArgs)>,
       Option<BindingHookTransformOutput>,
     >,
   >,
@@ -87,7 +88,8 @@ pub struct BindingPluginOptions {
   #[napi(
     ts_type = "(ctx: BindingPluginContext, module: BindingModuleInfo) => MaybePromise<VoidNullable>"
   )]
-  pub module_parsed: Option<MaybeAsyncJsCallback<(BindingPluginContext, BindingModuleInfo), ()>>,
+  pub module_parsed:
+    Option<MaybeAsyncJsCallback<FnArgs<(BindingPluginContext, BindingModuleInfo)>, ()>>,
   pub module_parsed_meta: Option<BindingPluginHookMeta>,
 
   #[napi(
@@ -95,7 +97,7 @@ pub struct BindingPluginOptions {
   )]
   pub build_end: Option<
     MaybeAsyncJsCallback<
-      (BindingPluginContext, Option<Vec<napi::Either<napi::JsError, BindingError>>>),
+      FnArgs<(BindingPluginContext, Option<Vec<napi::Either<napi::JsError, BindingError>>>)>,
       (),
     >,
   >,
@@ -106,7 +108,7 @@ pub struct BindingPluginOptions {
   )]
   pub render_chunk: Option<
     MaybeAsyncJsCallback<
-      (BindingPluginContext, String, RenderedChunk, BindingNormalizedOptions),
+      FnArgs<(BindingPluginContext, String, RenderedChunk, BindingNormalizedOptions)>,
       Option<BindingHookRenderChunkOutput>,
     >,
   >,
@@ -116,18 +118,18 @@ pub struct BindingPluginOptions {
     ts_type = "(ctx: BindingPluginContext, chunk: RenderedChunk) => MaybePromise<void | string>"
   )]
   pub augment_chunk_hash:
-    Option<MaybeAsyncJsCallback<(BindingPluginContext, RenderedChunk), Option<String>>>,
+    Option<MaybeAsyncJsCallback<FnArgs<(BindingPluginContext, RenderedChunk)>, Option<String>>>,
   pub augment_chunk_hash_meta: Option<BindingPluginHookMeta>,
 
   #[napi(ts_type = "(ctx: BindingPluginContext, opts: BindingNormalizedOptions) => void")]
   pub render_start:
-    Option<MaybeAsyncJsCallback<(BindingPluginContext, BindingNormalizedOptions), ()>>,
+    Option<MaybeAsyncJsCallback<FnArgs<(BindingPluginContext, BindingNormalizedOptions)>, ()>>,
   pub render_start_meta: Option<BindingPluginHookMeta>,
 
   #[napi(ts_type = "(ctx: BindingPluginContext, error: (Error | BindingError)[]) => void")]
   pub render_error: Option<
     MaybeAsyncJsCallback<
-      (BindingPluginContext, Vec<napi::Either<napi::JsError, BindingError>>),
+      FnArgs<(BindingPluginContext, Vec<napi::Either<napi::JsError, BindingError>>)>,
       (),
     >,
   >,
@@ -138,7 +140,7 @@ pub struct BindingPluginOptions {
   )]
   pub generate_bundle: Option<
     MaybeAsyncJsCallback<
-      (BindingPluginContext, BindingOutputs, bool, BindingNormalizedOptions),
+      FnArgs<(BindingPluginContext, BindingOutputs, bool, BindingNormalizedOptions)>,
       JsChangedOutputs,
     >,
   >,
@@ -149,40 +151,45 @@ pub struct BindingPluginOptions {
   )]
   pub write_bundle: Option<
     MaybeAsyncJsCallback<
-      (BindingPluginContext, BindingOutputs, BindingNormalizedOptions),
+      FnArgs<(BindingPluginContext, BindingOutputs, BindingNormalizedOptions)>,
       JsChangedOutputs,
     >,
   >,
   pub write_bundle_meta: Option<BindingPluginHookMeta>,
 
   #[napi(ts_type = "(ctx: BindingPluginContext) => MaybePromise<VoidNullable>")]
-  pub close_bundle: Option<MaybeAsyncJsCallback<BindingPluginContext, ()>>,
+  pub close_bundle: Option<MaybeAsyncJsCallback<FnArgs<(BindingPluginContext,)>, ()>>,
   pub close_bundle_meta: Option<BindingPluginHookMeta>,
 
   #[napi(
     ts_type = "(ctx: BindingPluginContext, path: string, event: string) => MaybePromise<VoidNullable>"
   )]
-  pub watch_change: Option<MaybeAsyncJsCallback<(BindingPluginContext, String, String), ()>>,
+  pub watch_change:
+    Option<MaybeAsyncJsCallback<FnArgs<(BindingPluginContext, String, String)>, ()>>,
   pub watch_change_meta: Option<BindingPluginHookMeta>,
 
   #[napi(ts_type = "(ctx: BindingPluginContext) => MaybePromise<VoidNullable>")]
-  pub close_watcher: Option<MaybeAsyncJsCallback<BindingPluginContext, ()>>,
+  pub close_watcher: Option<MaybeAsyncJsCallback<FnArgs<(BindingPluginContext,)>, ()>>,
   pub close_watcher_meta: Option<BindingPluginHookMeta>,
 
   #[napi(ts_type = "(ctx: BindingPluginContext, chunk: RenderedChunk) => void")]
-  pub banner: Option<MaybeAsyncJsCallback<(BindingPluginContext, RenderedChunk), Option<String>>>,
+  pub banner:
+    Option<MaybeAsyncJsCallback<FnArgs<(BindingPluginContext, RenderedChunk)>, Option<String>>>,
   pub banner_meta: Option<BindingPluginHookMeta>,
 
   #[napi(ts_type = "(ctx: BindingPluginContext, chunk: RenderedChunk) => void")]
-  pub footer: Option<MaybeAsyncJsCallback<(BindingPluginContext, RenderedChunk), Option<String>>>,
+  pub footer:
+    Option<MaybeAsyncJsCallback<FnArgs<(BindingPluginContext, RenderedChunk)>, Option<String>>>,
   pub footer_meta: Option<BindingPluginHookMeta>,
 
   #[napi(ts_type = "(ctx: BindingPluginContext, chunk: RenderedChunk) => void")]
-  pub intro: Option<MaybeAsyncJsCallback<(BindingPluginContext, RenderedChunk), Option<String>>>,
+  pub intro:
+    Option<MaybeAsyncJsCallback<FnArgs<(BindingPluginContext, RenderedChunk)>, Option<String>>>,
   pub intro_meta: Option<BindingPluginHookMeta>,
 
   #[napi(ts_type = "(ctx: BindingPluginContext, chunk: RenderedChunk) => void")]
-  pub outro: Option<MaybeAsyncJsCallback<(BindingPluginContext, RenderedChunk), Option<String>>>,
+  pub outro:
+    Option<MaybeAsyncJsCallback<FnArgs<(BindingPluginContext, RenderedChunk)>, Option<String>>>,
   pub outro_meta: Option<BindingPluginHookMeta>,
 }
 

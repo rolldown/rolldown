@@ -14,7 +14,7 @@ snapshot_kind: text
 
 ```text
 [UNRESOLVED_IMPORT] Warning: Could not resolve 'pkg' in entry.js
-   ╭─[entry.js:1:15]
+   ╭─[ entry.js:1:15 ]
    │
  1 │ import a from 'pkg'
    │               ──┬──  
@@ -32,7 +32,7 @@ snapshot_kind: text
 
 ```text
 [UNRESOLVED_IMPORT] Warning: Could not resolve 'pkg2' in entry.js
-   ╭─[entry.js:6:10]
+   ╭─[ entry.js:6:10 ]
    │
  6 │     require('pkg2'),
    │             ───┬──  

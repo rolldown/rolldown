@@ -43,7 +43,7 @@ pub fn derive_benchmark_items(
       name: format!("{}-minify", name),
       options: Box::new(move || {
         let mut options = create_bundler_options();
-        options.minify = Some(true);
+        options.minify = Some(true.into());
         options
       }),
     });
@@ -55,7 +55,7 @@ pub fn derive_benchmark_items(
       options: Box::new(move || {
         let mut options = create_bundler_options();
         options.sourcemap = Some(rolldown::SourceMapType::File);
-        options.minify = Some(true);
+        options.minify = Some(true.into());
         options
       }),
     });

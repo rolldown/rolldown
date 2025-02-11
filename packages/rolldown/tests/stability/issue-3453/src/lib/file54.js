@@ -1,0 +1,3 @@
+export var Browser;(function(Browser){var isTouch=Browser.isTouch=()=>"ontouchstart"in window||navigator.maxTouchPoints>0;var isChrome=Browser.isChrome=()=>navigator.userAgent.toLowerCase().includes("chrome/");var isWebKit=Browser.isWebKit=()=>navigator.userAgent.toLowerCase().includes("applewebkit/");var isSafari=Browser.isSafari=()=>isWebKit()&&!isChrome();var isSafariDesktop=Browser.isSafariDesktop=()=>isSafari()&&!isTouch();var isWindows=Browser.isWindows=()=>/Win/.test(navigator.platform);var isMacOS=Browser.isMacOS=()=>/Mac/.test(navigator.platform);})(Browser||(Browser={}));
+export const __FramerMetadata__ = {"exports":{"__FramerMetadata__":{"type":"variable"}}}
+//# sourceMappingURL=./browser.map

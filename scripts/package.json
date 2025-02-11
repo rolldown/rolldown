@@ -1,9 +1,10 @@
 {
-  "name": "scripts",
+  "name": "@rolldown-internal/scripts",
   "private": true,
   "type": "module",
   "scripts": {
     "type-check": "tsc -b",
+    "setup-bench": "node --import @oxc-node/core/register ./misc/setup-benchmark-input/index.js",
     "esbuild-snap-diff": "node --import @oxc-node/core/register ./snap-diff/index.ts"
   },
   "dependencies": {
@@ -28,13 +29,13 @@
     "unified": "^11.0.5"
   },
   "devDependencies": {
-    "@oxc-node/core": "^0.0.15",
-    "@types/diff": "^6.0.0",
+    "@oxc-node/core": "^0.0.19",
+    "@types/diff": "^7.0.0",
     "@types/lodash-es": "^4.17.12",
     "acorn": "^8.12.1",
     "astring": "^1.9.0",
     "diff": "^7.0.0",
     "estree-toolkit": "^1.7.8",
-    "web-tree-sitter": "^0.24.0"
+    "web-tree-sitter": "^0.25.0"
   }
 }

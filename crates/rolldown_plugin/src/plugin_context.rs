@@ -169,15 +169,39 @@ impl PluginContextImpl {
     .await
   }
 
-  pub fn emit_file(&self, file: rolldown_common::EmittedAsset) -> ArcStr {
-    self.file_emitter.emit_file(file)
+  pub async fn emit_chunk(&self, chunk: rolldown_common::EmittedChunk) -> anyhow::Result<ArcStr> {
+    self.file_emitter.emit_chunk(Arc::new(chunk)).await
   }
 
-  pub fn try_get_file_name(&self, reference_id: &str) -> Result<ArcStr, String> {
-    self.file_emitter.try_get_file_name(reference_id)
+  pub fn emit_file(
+    &self,
+    file: rolldown_common::EmittedAsset,
+    fn_asset_filename: Option<String>,
+    fn_sanitized_file_name: Option<String>,
+  ) -> ArcStr {
+    let sanitized_file_name = match file.file_name {
+      Some(_) => None,
+      None => {
+        Some(self.options.sanitize_filename.value(file.name_for_sanitize(), fn_sanitized_file_name))
+      }
+    };
+    let asset_filename_template = match file.file_name {
+      Some(_) => None,
+      None => Some(self.options.asset_filenames.value(fn_asset_filename).into()),
+    };
+    self.file_emitter.emit_file(file, asset_filename_template, sanitized_file_name)
   }
 
-  pub fn get_file_name(&self, reference_id: &str) -> ArcStr {
+  pub async fn emit_file_async(
+    &self,
+    file: rolldown_common::EmittedAsset,
+  ) -> anyhow::Result<ArcStr> {
+    let asset_filename = self.options.asset_filename_with_file(&file).await?;
+    let sanitized_file_name = self.options.sanitize_file_name_with_file(&file).await?;
+    Ok(self.file_emitter.emit_file(file, asset_filename.map(Into::into), sanitized_file_name))
+  }
+
+  pub fn get_file_name(&self, reference_id: &str) -> anyhow::Result<ArcStr> {
     self.file_emitter.get_file_name(reference_id)
   }
 

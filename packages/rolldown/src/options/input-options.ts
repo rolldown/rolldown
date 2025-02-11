@@ -2,7 +2,7 @@ import type { RolldownPluginOption } from '../plugin'
 import type {
   LogLevel,
   LogLevelOption,
-  LogLevelWithError,
+  LogOrStringHandler,
   RollupLog,
   RollupLogWithString,
 } from '../log/logging'
@@ -58,7 +58,7 @@ export interface WatchOptions {
 
 export interface ChecksOptions {
   /**
-   * Wether to emit warnings when detecting circular dependencies.
+   * Whether to emit warnings when detecting circular dependencies.
    * @default false
    */
   circularDependency?: boolean
@@ -102,10 +102,7 @@ export interface InputOptions {
   onLog?: (
     level: LogLevel,
     log: RollupLog,
-    defaultHandler: (
-      level: LogLevelWithError,
-      log: RollupLogWithString,
-    ) => void,
+    defaultHandler: LogOrStringHandler,
   ) => void
   onwarn?: (
     warning: RollupLog,
@@ -120,7 +117,54 @@ export interface InputOptions {
     disableLiveBindings?: boolean
     viteMode?: boolean
     resolveNewUrlToAsset?: boolean
+    hmr?: boolean
   }
+  /**
+   * Replace global variables or [property accessors](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Operators/Property_accessors) with the provided values.
+   *
+   * # Examples
+   *
+   * - Replace the global variable `IS_PROD` with `true`
+   *
+   * ```js rolldown.config.js
+   * export default defineConfig({ define: { IS_PROD: 'true' // or JSON.stringify(true) } })
+   * ```
+   *
+   * Result:
+   *
+   * ```js
+   * // Input
+   * if (IS_PROD) {
+   *   console.log('Production mode')
+   * }
+   *
+   * // After bundling
+   * if (true) {
+   *   console.log('Production mode')
+   * }
+   *```
+   *
+   * - Replace the property accessor `process.env.NODE_ENV` with `'production'`
+   *
+   * ```js rolldown.config.js
+   * export default defineConfig({ define: { 'process.env.NODE_ENV': "'production'" } })
+   * ```
+   *
+   * Result:
+   *
+   * ```js
+   * // Input
+   * if (process.env.NODE_ENV === 'production') {
+   *  console.log('Production mode')
+   * }
+   *
+   * // After bundling
+   * if ('production' === 'production') {
+   * console.log('Production mode')
+   * }
+   *
+   * ```
+   */
   define?: Record<string, string>
   /**
    * Inject import statements on demand.
@@ -148,7 +192,6 @@ export interface InputOptions {
   inject?: Record<string, string | [string, string]>
   profilerNames?: boolean
   /**
-   * JSX options.
    * The `false` is disabled jsx parser, it will give you a syntax error if you use jsx syntax
    * The `mode: preserve` is disabled jsx transformer, it perverse original jsx syntax in the output.
    * The `mode: classic` is enabled jsx `classic` transformer.

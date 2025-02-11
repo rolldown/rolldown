@@ -3,8 +3,8 @@ use oxc::ast::VisitMut;
 use oxc::span::SourceType;
 use oxc_index::IndexVec;
 use rolldown_common::{
-  side_effects::DeterminedSideEffects, AstScopes, EcmaView, EcmaViewMeta, ExportsKind,
-  ModuleDefFormat, ModuleId, ModuleIdx, ModuleType, NormalModule, SymbolRef,
+  side_effects::DeterminedSideEffects, EcmaView, EcmaViewMeta, ExportsKind, ModuleDefFormat,
+  ModuleId, ModuleIdx, ModuleType, NormalModule,
 };
 use rolldown_common::{
   ModuleLoaderMsg, ResolvedId, RuntimeModuleBrief, RuntimeModuleTaskResult,
@@ -24,13 +24,6 @@ pub struct RuntimeModuleTask {
   tx: tokio::sync::mpsc::Sender<ModuleLoaderMsg>,
   module_idx: ModuleIdx,
   options: SharedNormalizedBundlerOptions,
-}
-
-pub struct MakeEcmaAstResult {
-  ast: EcmaAst,
-  ast_scope: AstScopes,
-  scan_result: ScanResult,
-  namespace_object_ref: SymbolRef,
 }
 
 impl RuntimeModuleTask {
@@ -59,6 +52,13 @@ impl RuntimeModuleTask {
         include_str!("../runtime/runtime-base.js"),
         include_str!("../runtime/runtime-tail-node.js"),
       ))
+    } else if self.options.is_hmr_enabled() {
+      arcstr::literal!(concat!(
+        include_str!("../runtime/runtime-head-node.js"),
+        include_str!("../runtime/runtime-base.js"),
+        include_str!("../runtime/runtime-tail-node.js"),
+        include_str!("../runtime/runtime-extra-dev.js"),
+      ))
     } else {
       arcstr::literal!(concat!(
         include_str!("../runtime/runtime-base.js"),
@@ -66,31 +66,23 @@ impl RuntimeModuleTask {
       ))
     };
 
-    let ecma_ast_result = self.make_ecma_ast(RUNTIME_MODULE_ID, &source)?;
-
-    let MakeEcmaAstResult { ast, ast_scope, scan_result, namespace_object_ref } = ecma_ast_result;
-
-    let runtime = RuntimeModuleBrief::new(self.module_idx, &ast_scope);
+    let (ast, scan_result) = self.make_ecma_ast(RUNTIME_MODULE_ID, &source)?;
 
     let ScanResult {
       named_imports,
       named_exports,
       stmt_infos,
       default_export_ref,
+      namespace_object_ref,
       imports,
       import_records: raw_import_records,
-      exports_kind: _,
-      warnings: _,
       has_eval,
-      errors: _,
       ast_usage,
+      ast_scope,
       symbol_ref_db,
-      self_referenced_class_decl_symbol_ids: _,
-      hashbang_range: _,
       has_star_exports,
-      dynamic_import_rec_exports_usage: _,
       new_url_references,
-      this_expr_replace_map: _,
+      ..
     } = scan_result;
 
     let module = NormalModule {
@@ -121,7 +113,7 @@ impl RuntimeModuleTask {
         stmt_infos,
         imports,
         default_export_ref,
-        scope: ast_scope,
+        ast_scope_idx: None,
         exports_kind: ExportsKind::Esm,
         namespace_object_ref,
         def_format: ModuleDefFormat::EsmMjs,
@@ -130,15 +122,15 @@ impl RuntimeModuleTask {
         hashbang_range: None,
         meta: {
           let mut meta = EcmaViewMeta::default();
-          meta.set_included(false);
-          meta.set_eval(has_eval);
-          meta.set_has_lazy_export(false);
-          meta.set_has_star_exports(has_star_exports);
+          meta.set(self::EcmaViewMeta::EVAL, has_eval);
+          meta.set(self::EcmaViewMeta::HAS_STAR_EXPORT, has_star_exports);
           meta
         },
         mutations: vec![],
         new_url_references,
         this_expr_replace_map: FxHashMap::default(),
+        esm_namespace_in_cjs: None,
+        esm_namespace_in_cjs_node_mode: None,
       },
       css_view: None,
       asset_view: None,
@@ -152,23 +144,28 @@ impl RuntimeModuleTask {
       })
       .collect();
 
-    if let Err(_err) =
-      self.tx.try_send(ModuleLoaderMsg::RuntimeNormalModuleDone(RuntimeModuleTaskResult {
-        ast,
-        module,
-        runtime,
-        resolved_deps,
-        raw_import_records,
-        local_symbol_ref_db: symbol_ref_db,
-      }))
-    {
-      // hyf0: If main thread is dead, we should handle errors of main thread. So we just ignore the error here.
-    };
+    let runtime = RuntimeModuleBrief::new(self.module_idx, &ast_scope);
+    let result = ModuleLoaderMsg::RuntimeNormalModuleDone(RuntimeModuleTaskResult {
+      ast,
+      module,
+      runtime,
+      resolved_deps,
+      raw_import_records,
+      ast_scope,
+      local_symbol_ref_db: symbol_ref_db,
+    });
+
+    // If the main thread is dead, nothing we can do to handle these send failures.
+    let _ = self.tx.try_send(result);
 
     Ok(())
   }
 
-  fn make_ecma_ast(&mut self, filename: &str, source: &ArcStr) -> BuildResult<MakeEcmaAstResult> {
+  fn make_ecma_ast(
+    &mut self,
+    filename: &str,
+    source: &ArcStr,
+  ) -> BuildResult<(EcmaAst, ScanResult)> {
     let source_type = SourceType::default();
 
     let mut ast = EcmaCompiler::parse(filename, source, source_type)?;
@@ -179,12 +176,11 @@ impl RuntimeModuleTask {
       ast.contains_use_strict = pre_processor.contains_use_strict;
     });
 
-    let (symbol_table, scope) = ast.make_symbol_table_and_scope_tree();
-    let ast_scope = AstScopes::new(scope);
-    let facade_path = ModuleId::new("runtime");
+    let (symbol_table, scope_tree) = ast.make_symbol_table_and_scope_tree();
+    let facade_path = ModuleId::new(RUNTIME_MODULE_ID);
     let scanner = AstScanner::new(
       self.module_idx,
-      &ast_scope,
+      scope_tree,
       symbol_table,
       "rolldown_runtime",
       ModuleDefFormat::EsmMjs,
@@ -193,9 +189,8 @@ impl RuntimeModuleTask {
       ast.comments(),
       &self.options,
     );
-    let namespace_object_ref = scanner.namespace_object_ref;
     let scan_result = scanner.scan(ast.program())?;
 
-    Ok(MakeEcmaAstResult { ast, ast_scope, scan_result, namespace_object_ref })
+    Ok((ast, scan_result))
   }
 }

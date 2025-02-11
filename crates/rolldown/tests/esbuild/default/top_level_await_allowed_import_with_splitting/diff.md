@@ -17,8 +17,8 @@ await 0;
 
 //#region entry.js
 import("./a.js");
-import("./b2.js");
-import("./c2.js");
+import("./b.js");
+import("./c.js");
 import("./entry.js");
 await 0;
 
@@ -35,8 +35,8 @@ await 0;
 -import("./c-DMBKURS2.js");
 -require_entry();
 +import("./a.js");
-+import("./b2.js");
-+import("./c2.js");
++import("./b.js");
++import("./c.js");
 +import("./entry.js");
  await 0;
 

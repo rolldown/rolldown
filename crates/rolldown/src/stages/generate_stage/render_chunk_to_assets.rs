@@ -1,10 +1,10 @@
-use std::path::Path;
+use std::{ops::Deref, path::Path};
 
 use futures::future::try_join_all;
 use oxc_index::{index_vec, IndexVec};
 use rolldown_common::{
-  Asset, InstantiationKind, ModuleRenderArgs, ModuleRenderOutput, Output, OutputAsset, OutputChunk,
-  SourceMapType,
+  Asset, EmittedChunkInfo, InstantiationKind, ModuleRenderArgs, ModuleRenderOutput, Output,
+  OutputAsset, OutputChunk, SharedFileEmitter, SourceMapType,
 };
 use rolldown_error::{BuildDiagnostic, BuildResult};
 use rolldown_utils::{
@@ -19,7 +19,7 @@ use crate::{
   chunk_graph::ChunkGraph,
   css::css_generator::CssGenerator,
   ecmascript::ecma_generator::EcmaGenerator,
-  type_alias::{IndexChunkToAssets, IndexInstantiatedChunks},
+  type_alias::{IndexAssets, IndexChunkToAssets, IndexInstantiatedChunks},
   types::generator::{GenerateContext, Generator},
   utils::{
     augment_chunk_hash::augment_chunk_hash, chunk::finalize_chunks::finalize_assets,
@@ -53,6 +53,9 @@ impl GenerateStage<'_> {
     );
 
     self.minify_assets(&mut assets)?;
+
+    // Set emitted chunk info for file emitter, it should be set before call generate_bundle hook
+    set_emitted_chunk_filenames(&self.plugin_driver.file_emitter, &assets, chunk_graph);
 
     let mut output = Vec::with_capacity(assets.len());
     let mut output_assets = vec![];
@@ -165,7 +168,7 @@ impl GenerateStage<'_> {
         })));
       } else {
         output.push(Output::Asset(Box::new(OutputAsset {
-          filename: filename.clone().into(),
+          filename: filename.clone(),
           source: code,
           original_file_names: vec![],
           names: vec![],
@@ -337,4 +340,37 @@ fn get_sorting_file_type(output: &Output) -> SortingFileType {
       }
     }
   }
+}
+
+pub fn set_emitted_chunk_preliminary_filenames(
+  file_emitter: &SharedFileEmitter,
+  chunk_graph: &ChunkGraph,
+) {
+  let emitted_chunk_info = chunk_graph.chunk_table.chunks.iter().filter_map(|chunk| {
+    chunk.reference_id.as_ref().map(|reference_id| EmittedChunkInfo {
+      reference_id: reference_id.clone(),
+      filename: chunk
+        .preliminary_filename
+        .as_ref()
+        .expect("Emitted chunk should have filename")
+        .deref()
+        .clone(),
+    })
+  });
+  file_emitter.set_emitted_chunk_info(emitted_chunk_info);
+}
+
+fn set_emitted_chunk_filenames(
+  file_emitter: &SharedFileEmitter,
+  assets: &IndexAssets,
+  chunk_graph: &ChunkGraph,
+) {
+  let emitted_chunk_info = assets.iter().filter_map(|assets| {
+    let chunk = &chunk_graph.chunk_table.chunks[assets.origin_chunk];
+    chunk.reference_id.as_ref().map(|reference_id| EmittedChunkInfo {
+      reference_id: reference_id.clone(),
+      filename: assets.filename.clone(),
+    })
+  });
+  file_emitter.set_emitted_chunk_info(emitted_chunk_info);
 }

@@ -6,7 +6,7 @@ use std::{
 use oxc::span::Span;
 use rolldown_rstr::Rstr;
 
-use crate::{ImportKind, ModuleIdx, ModuleType, SymbolRef};
+use crate::{ImportKind, ModuleIdx, ModuleType, SymbolRef, DUMMY_MODULE_IDX};
 
 oxc_index::define_index_type! {
   pub struct ImportRecordIdx = u32;
@@ -41,6 +41,10 @@ bitflags::bitflags! {
     const CALL_RUNTIME_REQUIRE = 1 << 5;
     ///  `require('mod')` is used to load the module only
     const IS_REQUIRE_UNUSED = 1 << 6;
+    /// If the import is a dummy import, it should be ignored during linking, e.g.
+    /// `require` ExpressionIdentifier should be considering as a import record,
+    /// but it did not import any module.
+    const IS_DUMMY = 1 << 7;
   }
 }
 
@@ -112,3 +116,9 @@ impl RawImportRecord {
 }
 
 pub type ResolvedImportRecord = ImportRecord<ImportRecordStateResolved>;
+
+impl ResolvedImportRecord {
+  pub fn is_dummy(&self) -> bool {
+    self.state.resolved_module == DUMMY_MODULE_IDX
+  }
+}

@@ -3,6 +3,8 @@
   diff
 ## [cross_module_constant_folding_string](../../../crates/rolldown/tests/esbuild/dce/cross_module_constant_folding_string/diff.md)
   diff
+## [dce_class_static_blocks](../../../crates/rolldown/tests/esbuild/dce/dce_class_static_blocks/diff.md)
+  diff
 ## [dce_of_decorators](../../../crates/rolldown/tests/esbuild/dce/dce_of_decorators/diff.md)
   diff
 ## [dce_of_experimental_decorators](../../../crates/rolldown/tests/esbuild/dce/dce_of_experimental_decorators/diff.md)
@@ -42,7 +44,6 @@
 # Passed Cases
 ## [base64_loader_remove_unused](../../../crates/rolldown/tests/esbuild/dce/base64_loader_remove_unused)
 ## [data_url_loader_remove_unused](../../../crates/rolldown/tests/esbuild/dce/data_url_loader_remove_unused)
-## [dce_class_static_blocks](../../../crates/rolldown/tests/esbuild/dce/dce_class_static_blocks)
 ## [dce_of_destructuring](../../../crates/rolldown/tests/esbuild/dce/dce_of_destructuring)
 ## [dce_of_symbol_instances](../../../crates/rolldown/tests/esbuild/dce/dce_of_symbol_instances)
 ## [dce_template_literal](../../../crates/rolldown/tests/esbuild/dce/dce_template_literal)

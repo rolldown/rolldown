@@ -51,6 +51,7 @@ export function bindingifyBuildStart(
     plugin: async (ctx, opts) => {
       await handler.call(
         new PluginContext(
+          args.outputOptions,
           ctx,
           args.plugin,
           args.pluginContextData,
@@ -76,6 +77,7 @@ export function bindingifyBuildEnd(
     plugin: async (ctx, err) => {
       await handler.call(
         new PluginContext(
+          args.outputOptions,
           ctx,
           args.plugin,
           args.pluginContextData,
@@ -119,6 +121,7 @@ export function bindingifyResolveId(
 
       const ret = await handler.call(
         new PluginContext(
+          args.outputOptions,
           ctx,
           args.plugin,
           args.pluginContextData,
@@ -144,15 +147,17 @@ export function bindingifyResolveId(
         }
       }
 
-      args.pluginContextData.updateModuleOption(ret.id, {
+      // Make sure the `moduleSideEffects` is update to date
+      let exist = args.pluginContextData.updateModuleOption(ret.id, {
         meta: ret.meta || {},
-        moduleSideEffects: ret.moduleSideEffects || null,
+        moduleSideEffects: ret.moduleSideEffects ?? null,
+        invalidate: false,
       })
 
       return {
         id: ret.id,
         external: ret.external,
-        sideEffects: bindingifySideEffects(ret.moduleSideEffects),
+        sideEffects: bindingifySideEffects(exist.moduleSideEffects),
       }
     },
     meta: bindingifyPluginHookMeta(meta),
@@ -173,6 +178,7 @@ export function bindingifyResolveDynamicImport(
     plugin: async (ctx, specifier, importer) => {
       const ret = await handler.call(
         new PluginContext(
+          args.outputOptions,
           ctx,
           args.plugin,
           args.pluginContextData,
@@ -209,6 +215,7 @@ export function bindingifyResolveDynamicImport(
       args.pluginContextData.updateModuleOption(ret.id, {
         meta: ret.meta || {},
         moduleSideEffects: ret.moduleSideEffects || null,
+        invalidate: false,
       })
 
       return result
@@ -233,6 +240,7 @@ export function bindingifyTransform(
     plugin: async (ctx, code, id, meta) => {
       const ret = await handler.call(
         new TransformPluginContext(
+          args.outputOptions,
           ctx.inner(),
           args.plugin,
           args.pluginContextData,
@@ -255,9 +263,10 @@ export function bindingifyTransform(
         return { code: ret }
       }
 
-      args.pluginContextData.updateModuleOption(id, {
-        meta: ret.meta || {},
-        moduleSideEffects: ret.moduleSideEffects || null,
+      let moduleOption = args.pluginContextData.updateModuleOption(id, {
+        meta: ret.meta ?? {},
+        moduleSideEffects: ret.moduleSideEffects ?? null,
+        invalidate: false,
       })
 
       return {
@@ -265,7 +274,7 @@ export function bindingifyTransform(
         map: bindingifySourcemap(
           normalizeTransformHookSourcemap(id, code, ret.map),
         ),
-        sideEffects: bindingifySideEffects(ret.moduleSideEffects),
+        sideEffects: bindingifySideEffects(moduleOption.moduleSideEffects),
         moduleType: ret.moduleType,
       }
     },
@@ -290,6 +299,7 @@ export function bindingifyLoad(
     plugin: async (ctx, id) => {
       const ret = await handler.call(
         new PluginContext(
+          args.outputOptions,
           ctx,
           args.plugin,
           args.pluginContextData,
@@ -308,9 +318,10 @@ export function bindingifyLoad(
         return { code: ret }
       }
 
-      args.pluginContextData.updateModuleOption(id, {
+      let moduleOption = args.pluginContextData.updateModuleOption(id, {
         meta: ret.meta || {},
-        moduleSideEffects: ret.moduleSideEffects || null,
+        moduleSideEffects: ret.moduleSideEffects ?? null,
+        invalidate: false,
       })
 
       let map = preProcessSourceMap(ret, id)
@@ -319,7 +330,7 @@ export function bindingifyLoad(
         code: ret.code,
         map: bindingifySourcemap(map),
         moduleType: ret.moduleType,
-        sideEffects: bindingifySideEffects(ret.moduleSideEffects),
+        sideEffects: bindingifySideEffects(moduleOption.moduleSideEffects),
       }
     },
     meta: bindingifyPluginHookMeta(meta),
@@ -363,6 +374,7 @@ export function bindingifyModuleParsed(
     plugin: async (ctx, moduleInfo) => {
       await handler.call(
         new PluginContext(
+          args.outputOptions,
           ctx,
           args.plugin,
           args.pluginContextData,

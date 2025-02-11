@@ -11,9 +11,10 @@ snapshot_kind: text
 //#region lib.js
 var foo = "foo";
 var bar = "bar";
+var baz = "baz";
 
 //#endregion
-export { bar, foo };
+export { bar, baz, foo };
 ```
 ## main.js
 
@@ -24,6 +25,8 @@ const lib = await import("./lib.js");
 lib.foo;
 const lib2 = await import("./lib.js");
 lib.bar;
+(await import("./lib.js"))["baz"];
+await import("./lib.js");
 
 //#endregion
 ```

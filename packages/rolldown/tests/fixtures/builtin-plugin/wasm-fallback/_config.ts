@@ -1,5 +1,5 @@
 import { wasmFallbackPlugin } from 'rolldown/experimental'
-import { defineTest } from '@tests'
+import { defineTest } from 'rolldown-tests'
 
 export default defineTest({
   config: {

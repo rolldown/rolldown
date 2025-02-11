@@ -1,6 +1,6 @@
 import { importGlobPlugin } from 'rolldown/experimental'
 import { RolldownOutput } from 'rolldown'
-import { defineTest } from '@tests'
+import { defineTest } from 'rolldown-tests'
 import { expect } from 'vitest'
 import * as fs from 'node:fs'
 import * as path from 'path'

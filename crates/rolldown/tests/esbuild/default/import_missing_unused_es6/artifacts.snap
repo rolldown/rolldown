@@ -8,7 +8,7 @@ snapshot_kind: text
 
 ```text
 [MISSING_EXPORT] Error: "default" is not exported by "foo.js".
-   ╭─[entry.js:1:8]
+   ╭─[ entry.js:1:8 ]
    │
  1 │ import fn, {x as a, y as b} from './foo'
    │        ─┬  
@@ -20,7 +20,7 @@ snapshot_kind: text
 
 ```text
 [MISSING_EXPORT] Error: "y" is not exported by "foo.js".
-   ╭─[entry.js:1:21]
+   ╭─[ entry.js:1:21 ]
    │
  1 │ import fn, {x as a, y as b} from './foo'
    │                     ┬  

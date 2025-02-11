@@ -1,0 +1,16 @@
+{
+  "name": "@example/module-federation-host",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "rolldown --config ./rolldown.config.js"
+  },
+  "devDependencies": {
+    "rolldown": "workspace:*"
+  },
+  "dependencies": {
+    "@module-federation/runtime": "^0.8.8",
+    "react": "^17.0.2",
+    "react-dom": "^17.0.2"
+  }
+}

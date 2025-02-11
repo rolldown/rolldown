@@ -1,4 +1,5 @@
 use derive_more::Debug;
+use napi::bindgen_prelude::FnArgs;
 use napi::bindgen_prelude::FromNapiValue;
 use napi::JsUnknown;
 use napi_derive::napi;
@@ -27,6 +28,7 @@ use std::sync::Arc;
 use super::types::binding_builtin_plugin_name::BindingBuiltinPluginName;
 use super::types::binding_js_or_regex::{bindingify_string_or_regex_array, BindingStringOrRegex};
 use super::types::binding_limited_boolean::BindingTrueValue;
+use super::types::binding_module_federation_plugin_option::BindingModuleFederationPluginOption;
 use crate::types::js_callback::{JsCallback, JsCallbackExt};
 
 #[allow(clippy::pub_underscore_fields)]
@@ -163,10 +165,11 @@ pub struct BindingViteResolvePluginConfig {
   #[napi(
     ts_type = "(resolvedId: string, rawId: string, importer: string | null | undefined) => VoidNullable<string>"
   )]
-  pub finalize_bare_specifier: Option<JsCallback<(String, String, Option<String>), Option<String>>>,
+  pub finalize_bare_specifier:
+    Option<JsCallback<FnArgs<(String, String, Option<String>)>, Option<String>>>,
   #[debug("{}", if finalize_bare_specifier.is_some() { "Some(<finalize_other_specifiers>)" } else { "None" })]
   #[napi(ts_type = "(resolvedId: string, rawId: string) => VoidNullable<string>")]
-  pub finalize_other_specifiers: Option<JsCallback<(String, String), Option<String>>>,
+  pub finalize_other_specifiers: Option<JsCallback<FnArgs<(String, String)>, Option<String>>>,
 
   pub runtime: String,
 }
@@ -200,7 +203,7 @@ impl From<BindingViteResolvePluginConfig> for ViteResolveOptions {
             let importer = importer.map(ToString::to_string);
             Box::pin(async move {
               finalizer_fn
-                .invoke_async((resolved_id, raw_id, importer))
+                .invoke_async((resolved_id, raw_id, importer).into())
                 .await
                 .map_err(anyhow::Error::from)
             })
@@ -214,7 +217,10 @@ impl From<BindingViteResolvePluginConfig> for ViteResolveOptions {
             let resolved_id = resolved_id.to_owned();
             let raw_id = raw_id.to_owned();
             Box::pin(async move {
-              finalizer_fn.invoke_async((resolved_id, raw_id)).await.map_err(anyhow::Error::from)
+              finalizer_fn
+                .invoke_async((resolved_id, raw_id).into())
+                .await
+                .map_err(anyhow::Error::from)
             })
           })
         },
@@ -310,6 +316,7 @@ impl From<BindingTransformPluginConfig> for TransformPlugin {
 impl TryFrom<BindingBuiltinPlugin> for Arc<dyn Pluginable> {
   type Error = napi::Error;
 
+  #[allow(clippy::too_many_lines)]
   fn try_from(plugin: BindingBuiltinPlugin) -> Result<Self, Self::Error> {
     Ok(match plugin.__name {
       BindingBuiltinPluginName::WasmHelper => Arc::new(WasmHelperPlugin {}),
@@ -410,7 +417,17 @@ impl TryFrom<BindingBuiltinPlugin> for Arc<dyn Pluginable> {
 
         Arc::new(ViteResolvePlugin::new(config.into()))
       }
-      BindingBuiltinPluginName::ModuleFederation => Arc::new(ModuleFederationPlugin::new()),
+      BindingBuiltinPluginName::ModuleFederation => {
+        let config = if let Some(options) = plugin.options {
+          BindingModuleFederationPluginOption::from_unknown(options)?
+        } else {
+          return Err(napi::Error::new(
+            napi::Status::InvalidArg,
+            "Missing options for ViteResolvePlugin",
+          ));
+        };
+        Arc::new(ModuleFederationPlugin::new(config.into()))
+      }
     })
   }
 }

@@ -14,6 +14,7 @@ pub mod commonjs_variable_in_esm;
 pub mod eval;
 pub mod export_undefined_variable;
 pub mod external_entry;
+pub mod filename_conflict;
 pub mod forbid_const_assign;
 pub mod illegal_identifier_as_name;
 pub mod import_is_undefined;

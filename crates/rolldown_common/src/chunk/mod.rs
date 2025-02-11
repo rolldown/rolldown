@@ -1,4 +1,7 @@
-use std::{borrow::Cow, path::PathBuf};
+use std::{
+  borrow::Cow,
+  path::{Path, PathBuf},
+};
 
 // cSpell:disable
 use crate::{
@@ -29,6 +32,10 @@ pub struct Chunk {
   pub kind: ChunkKind,
   pub modules: Vec<ModuleIdx>,
   pub name: Option<ArcStr>,
+  // emitted chunk specified filename, used to generate chunk filename
+  pub file_name: Option<ArcStr>,
+  // emitted chunk corresponding reference_id, used to `PluginContext#getFileName` to search the emitted chunk name
+  pub reference_id: Option<ArcStr>,
   pub pre_rendered_chunk: Option<RollupPreRenderedChunk>,
   pub preliminary_filename: Option<PreliminaryFilename>,
   pub absolute_preliminary_filename: Option<String>,
@@ -51,11 +58,20 @@ pub struct Chunk {
 }
 
 impl Chunk {
-  pub fn new(name: Option<ArcStr>, bits: BitSet, modules: Vec<ModuleIdx>, kind: ChunkKind) -> Self {
+  pub fn new(
+    name: Option<ArcStr>,
+    reference_id: Option<ArcStr>,
+    file_name: Option<ArcStr>,
+    bits: BitSet,
+    modules: Vec<ModuleIdx>,
+    kind: ChunkKind,
+  ) -> Self {
     Self {
       exec_order: u32::MAX,
       modules,
-      name: name.map(Into::into),
+      name,
+      file_name,
+      reference_id,
       bits,
       kind,
       ..Self::default()
@@ -73,16 +89,27 @@ impl Chunk {
   }
 
   pub fn import_path_for(&self, importee: &Chunk) -> String {
-    let importer_dir =
-      self.absolute_preliminary_filename.as_ref().unwrap().as_path().parent().unwrap();
-    let importee_filename = importee.absolute_preliminary_filename.as_ref().unwrap();
-    let import_path = importee_filename.relative(importer_dir).as_path().expect_to_slash();
-
+    let importee_filename = importee
+      .absolute_preliminary_filename
+      .as_ref()
+      .expect("importee chunk should have absolute_preliminary_filename");
+    let import_path = self.relative_path_for(importee_filename.as_path());
     if import_path.starts_with('.') {
       import_path
     } else {
       format!("./{import_path}")
     }
+  }
+
+  pub fn relative_path_for(&self, target: &Path) -> String {
+    let sorurce_dir = self
+      .absolute_preliminary_filename
+      .as_ref()
+      .expect("chunk should have absolute_preliminary_filename")
+      .as_path()
+      .parent()
+      .expect("absolute_preliminary_filename should have a parent directory");
+    target.relative(sorurce_dir).as_path().expect_to_slash()
   }
 
   pub async fn filename_template(
@@ -130,6 +157,9 @@ impl Chunk {
         .to_string_lossy()
         .to_string();
       return Ok(PreliminaryFilename::new(basename, None));
+    }
+    if let Some(file_name) = &self.file_name {
+      return Ok(PreliminaryFilename::new(file_name.to_string(), None));
     }
     let filename_template = self.filename_template(options, rollup_pre_rendered_chunk).await?;
     let extracted_hash_pattern = extract_hash_patterns(filename_template.template());

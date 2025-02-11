@@ -1,5 +1,6 @@
 ---
 source: crates/rolldown_testing/src/integration_test.rs
+snapshot_kind: text
 ---
 # warnings
 
@@ -7,7 +8,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```text
 [IMPORT_IS_UNDEFINED] Warning: Import `foo` will always be undefined because there is no matching export in 'bar.js'
-   ╭─[entry.js:6:14]
+   ╭─[ entry.js:6:14 ]
    │
  6 │ assert.equal(ns.foo, undefined)
    │              ───┬──  
@@ -31,7 +32,7 @@ const x = 123;
 //#endregion
 //#region entry.js
 assert.deepEqual(bar_exports, { x: 123 });
-assert.equal(void 0, undefined);
+assert.equal(void 0, void 0);
 
 //#endregion
 ```

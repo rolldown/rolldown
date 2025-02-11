@@ -1,6 +1,6 @@
 use std::{fmt::Debug, sync::Arc};
 
-use napi::bindgen_prelude::Either3;
+use napi::bindgen_prelude::{Either3, FnArgs};
 use rolldown::{InnerOptions, ModuleSideEffects, ModuleSideEffectsRule};
 use rolldown_utils::js_regex::HybridRegex;
 
@@ -9,8 +9,11 @@ use crate::{
   types::js_callback::{JsCallback, JsCallbackExt},
 };
 
-pub(crate) type BindingModuleSideEffects =
-  Either3<bool, Vec<BindingModuleSideEffectsRule>, JsCallback<(String, bool), Option<bool>>>;
+pub(crate) type BindingModuleSideEffects = Either3<
+  bool,
+  Vec<BindingModuleSideEffectsRule>,
+  JsCallback<FnArgs<(String, bool)>, Option<bool>>,
+>;
 
 #[napi_derive::napi(object, object_to_js = false)]
 pub struct BindingTreeshake {
@@ -64,7 +67,7 @@ impl TryFrom<BindingTreeshake> for rolldown::TreeshakeOptions {
           let id = id.to_string();
           let ts_fn = Arc::clone(&ts_fn);
           Box::pin(async move {
-            ts_fn.invoke_async((id.clone(), is_external)).await.map_err(anyhow::Error::from)
+            ts_fn.invoke_async((id.clone(), is_external).into()).await.map_err(anyhow::Error::from)
           })
         }))
       }

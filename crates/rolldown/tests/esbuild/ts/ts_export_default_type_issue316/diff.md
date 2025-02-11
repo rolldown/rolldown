@@ -108,10 +108,10 @@ let bar$11 = 123;
 
 //#endregion
 //#region keep/interface-merged.ts
-var foo$3 = class foo$3 {
-	static x = new foo$3();
+var foo$2 = class foo$2 {
+	static x = new foo$2();
 };
-var interface_merged_default = foo$3;
+var interface_merged_default = foo$2;
 let bar$10 = 123;
 
 //#endregion
@@ -126,20 +126,19 @@ let bar$8 = 123;
 
 //#endregion
 //#region keep/value-namespace.ts
-let foo$2;
+let foo$1;
 (function(_foo) {
 	let num = _foo.num = 0;
-})(foo$2 || (foo$2 = {}));
-var value_namespace_default = foo$2;
+})(foo$1 || (foo$1 = {}));
+var value_namespace_default = foo$1;
 let bar$7 = 123;
 
 //#endregion
 //#region keep/value-namespace-merged.ts
-let foo$1;
 (function(_foo2) {
 	let num = _foo2.num = 0;
-})(foo$1 || (foo$1 = {}));
-var value_namespace_merged_default = foo$1;
+})(foo || (foo = {}));
+var value_namespace_merged_default = foo;
 let bar$6 = 123;
 
 //#endregion
@@ -205,7 +204,7 @@ export { entry_default as default };
 ===================================================================
 --- esbuild	/out.js
 +++ rolldown	entry.js
-@@ -1,37 +1,39 @@
+@@ -1,37 +1,38 @@
  var declare_class_default = foo;
 -var bar = 123;
 +var bar$12 = 123;
@@ -216,13 +215,13 @@ export { entry_default as default };
 -        this.x = new _foo();
 -    }
 +var bar$11 = 123;
-+var foo$3 = class foo$3 {
-+    static x = new foo$3();
++var foo$2 = class foo$2 {
++    static x = new foo$2();
  };
 -var interface_merged_default = foo2;
 -var bar3 = 123;
 -if (true) {}
-+var interface_merged_default = foo$3;
++var interface_merged_default = foo$2;
 +var bar$10 = 123;
  var interface_nested_default = foo;
 -var bar4 = 123;
@@ -250,17 +249,16 @@ export { entry_default as default };
 -var bar13 = 123;
 -var entry_default = [declare_class_default, bar, declare_let_default, bar2, interface_merged_default, bar3, interface_nested_default, bar4, type_nested_default, bar5, value_namespace_default, bar6, value_namespace_merged_default, bar7, bar8, bar9, bar10, bar11, bar12, bar13];
 +var bar$8 = 123;
-+var foo$2;
++var foo$1;
 +(function (_foo) {
 +    let num = _foo.num = 0;
-+})(foo$2 || (foo$2 = {}));
-+var value_namespace_default = foo$2;
++})(foo$1 || (foo$1 = {}));
++var value_namespace_default = foo$1;
 +var bar$7 = 123;
-+var foo$1;
 +(function (_foo2) {
 +    let num = _foo2.num = 0;
-+})(foo$1 || (foo$1 = {}));
-+var value_namespace_merged_default = foo$1;
++})(foo || (foo = {}));
++var value_namespace_merged_default = foo;
 +var bar$6 = 123;
 +var interface_default = foo;
 +var bar$5 = 123;

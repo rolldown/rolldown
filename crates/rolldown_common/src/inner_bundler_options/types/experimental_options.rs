@@ -16,6 +16,8 @@ pub struct ExperimentalOptions {
   pub disable_live_bindings: Option<bool>,
   pub vite_mode: Option<bool>,
   pub resolve_new_url_to_asset: Option<bool>,
+  pub incremental_build: Option<bool>,
+  pub hmr: Option<bool>,
 }
 
 impl ExperimentalOptions {
@@ -38,5 +40,10 @@ impl ExperimentalOptions {
 
   pub fn is_resolve_new_url_to_asset_enabled(&self) -> bool {
     self.resolve_new_url_to_asset.unwrap_or(false)
+  }
+
+  #[inline]
+  pub fn is_incremental_build_enabled(&self) -> bool {
+    self.incremental_build.unwrap_or(false)
   }
 }

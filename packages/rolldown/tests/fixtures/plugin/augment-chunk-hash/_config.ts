@@ -1,7 +1,7 @@
 // cSpell:disable
 import { expect, vi } from 'vitest'
-import { defineTest } from '@tests'
-import { getOutputChunk } from '@tests/utils'
+import { defineTest } from 'rolldown-tests'
+import { getOutputChunk } from 'rolldown-tests/utils'
 import path from 'node:path'
 
 const fn = vi.fn()

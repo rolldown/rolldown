@@ -1,6 +1,6 @@
 import { expect } from 'vitest'
-import { defineTest } from '@tests'
-import { Plugin } from '@tests/types'
+import { defineTest } from 'rolldown-tests'
+import { Plugin } from 'rolldown-tests/types'
 
 const plugins: Plugin[] = []
 const hooks = [

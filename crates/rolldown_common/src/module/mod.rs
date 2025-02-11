@@ -5,7 +5,8 @@ use oxc_index::IndexVec;
 use rolldown_std_utils::OptionExt;
 
 use crate::{
-  EcmaAstIdx, ExternalModule, ImportRecordIdx, ModuleIdx, NormalModule, ResolvedImportRecord,
+  AstScopeIdx, EcmaAstIdx, ExternalModule, ImportRecordIdx, ModuleIdx, NormalModule,
+  ResolvedImportRecord,
 };
 
 #[derive(Debug)]
@@ -110,6 +111,13 @@ impl Module {
     match self {
       Module::Normal(v) => v.ecma_ast_idx = Some(idx),
       Module::External(_) => panic!("set_ecma_ast_idx should be called on EcmaModule"),
+    }
+  }
+
+  pub fn set_ast_scope_idx(&mut self, idx: AstScopeIdx) {
+    match self {
+      Module::Normal(v) => v.ast_scope_idx = Some(idx),
+      Module::External(_) => panic!("set_ast_scope_idx should be called on EcmaModule"),
     }
   }
 

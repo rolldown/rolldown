@@ -1,5 +1,6 @@
 pub mod binding_log;
 pub mod binding_log_level;
+pub mod binding_minify_options;
 pub mod binding_module_info;
 pub mod binding_normalized_options;
 pub mod binding_output_asset;
@@ -11,4 +12,5 @@ pub mod binding_resolve_alias_item;
 pub mod binding_resolve_extension_alias;
 pub mod binding_sourcemap;
 pub mod binding_watcher_event;
+pub mod defer_sync_scan_data;
 pub mod js_callback;

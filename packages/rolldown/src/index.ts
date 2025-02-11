@@ -11,7 +11,11 @@ import type {
   ExternalOption,
   JsxOptions,
 } from './options/input-options'
-import type { ModuleFormat, OutputOptions } from './options/output-options'
+import type {
+  ModuleFormat,
+  OutputOptions,
+  PreRenderedAsset,
+} from './options/output-options'
 import type { RolldownOptions } from './types/rolldown-options'
 import type {
   AsyncPluginHooks,
@@ -26,11 +30,13 @@ import type {
   PartialResolvedId,
   Plugin,
   RolldownPlugin,
+  RolldownPluginOption,
   ResolveIdResult,
   ResolvedId,
   SourceDescription,
   TransformResult,
 } from './plugin'
+import type { LogOrStringHandler } from './log/logging'
 import { DefineParallelPluginResult } from './plugin/parallel-plugin'
 import { defineConfig } from './utils/define-config'
 import { rolldown } from './api/rolldown'
@@ -51,7 +57,10 @@ import { PreRenderedChunk } from './binding'
 import { PartialNull } from './types/utils'
 import { NormalizedInputOptions } from './options/normalized-input-options'
 import { ModuleInfo } from './types/module-info'
-import { MinimalPluginContext } from './plugin/minimal-plugin-context'
+import {
+  PluginContextMeta,
+  MinimalPluginContext,
+} from './plugin/minimal-plugin-context'
 import { ExistingRawSourceMap, SourceMapInput } from './types/sourcemap'
 import { OutputBundle } from './types/output-bundle'
 import { version } from '../package.json'
@@ -74,6 +83,7 @@ export type {
   NormalizedOutputOptions,
   Plugin,
   RolldownPlugin,
+  RolldownPluginOption,
   DefineParallelPluginResult,
   ConfigExport,
   ImportKind,
@@ -89,6 +99,7 @@ export type {
   TransformPluginContext,
   ObjectHook,
   PreRenderedChunk,
+  PreRenderedAsset,
   SourceMap,
   SourceDescription,
   PartialNull,
@@ -96,6 +107,7 @@ export type {
   ResolvedId,
   ModuleOptions,
   ModuleInfo,
+  PluginContextMeta,
   MinimalPluginContext,
   EmittedFile,
   EmittedAsset,
@@ -111,6 +123,13 @@ export type {
   RolldownWatcher,
   BuildOptions,
   RenderedChunk,
+  LogOrStringHandler,
 }
 
-export type { RollupError, RollupLog, LoggingFunction } from './types/misc'
+export type {
+  RollupError,
+  RollupLog,
+  LoggingFunction,
+  LogLevel,
+  WarningHandlerWithDefault,
+} from './types/misc'

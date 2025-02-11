@@ -4,10 +4,10 @@ use oxc_index::IndexVec;
 #[cfg(debug_assertions)]
 use rolldown_common::common_debug_symbol_ref;
 use rolldown_common::{
-  dynamic_import_usage::DynamicImportExportsUsage, EntryPoint, ExportsKind, ImportKind,
-  ImportRecordIdx, ImportRecordMeta, Module, ModuleIdx, ModuleTable, OutputFormat,
-  ResolvedImportRecord, RuntimeModuleBrief, StmtInfo, StmtInfoMeta, SymbolRef, SymbolRefDb,
-  WrapKind,
+  dynamic_import_usage::DynamicImportExportsUsage, side_effects::DeterminedSideEffects,
+  EcmaModuleAstUsage, EntryPoint, ExportsKind, ImportKind, ImportRecordIdx, ImportRecordMeta,
+  Module, ModuleIdx, ModuleTable, OutputFormat, ResolvedImportRecord, RuntimeModuleBrief, StmtInfo,
+  StmtInfoMeta, SymbolRef, SymbolRefDb, WrapKind,
 };
 use rolldown_error::BuildDiagnostic;
 use rolldown_utils::{
@@ -19,12 +19,10 @@ use rolldown_utils::{
 use rustc_hash::{FxHashMap, FxHashSet};
 
 use crate::{
-  type_alias::IndexEcmaAst,
+  type_alias::{IndexAstScope, IndexEcmaAst},
   types::linking_metadata::{LinkingMetadata, LinkingMetadataVec},
   SharedOptions,
 };
-
-use self::wrapping::create_wrapper;
 
 use super::scan_stage::ScanStageOutput;
 
@@ -45,6 +43,7 @@ pub struct LinkStageOutput {
   pub runtime: RuntimeModuleBrief,
   pub warnings: Vec<BuildDiagnostic>,
   pub errors: Vec<BuildDiagnostic>,
+  pub ast_scope_table: IndexAstScope,
   pub used_symbol_refs: FxHashSet<SymbolRef>,
   pub dynamic_import_exports_usage_map: FxHashMap<ModuleIdx, DynamicImportExportsUsage>,
 }
@@ -60,6 +59,7 @@ pub struct LinkStage<'a> {
   pub warnings: Vec<BuildDiagnostic>,
   pub errors: Vec<BuildDiagnostic>,
   pub ast_table: IndexEcmaAst,
+  pub ast_scope_table: IndexAstScope,
   pub options: &'a SharedOptions,
   pub used_symbol_refs: FxHashSet<SymbolRef>,
   pub dynamic_import_exports_usage_map: FxHashMap<ModuleIdx, DynamicImportExportsUsage>,
@@ -79,11 +79,7 @@ impl<'a> LinkStage<'a> {
             .iter()
             .filter_map(|rec| match rec.kind {
               ImportKind::DynamicImport => {
-                if options.inline_dynamic_imports {
-                  Some(rec.resolved_module)
-                } else {
-                  None
-                }
+                options.inline_dynamic_imports.then_some(rec.resolved_module)
               }
               ImportKind::Require => None,
               _ => Some(rec.resolved_module),
@@ -98,6 +94,7 @@ impl<'a> LinkStage<'a> {
         })
         .collect::<IndexVec<ModuleIdx, _>>(),
       module_table: scan_stage_output.module_table,
+      ast_scope_table: scan_stage_output.index_ast_scope,
       entries: scan_stage_output.entry_points,
       symbols: scan_stage_output.symbol_ref_db,
       runtime: scan_stage_output.runtime,
@@ -113,7 +110,7 @@ impl<'a> LinkStage<'a> {
   #[tracing::instrument(level = "debug", skip_all)]
   pub fn link(mut self) -> LinkStageOutput {
     self.sort_modules();
-
+    self.compute_tla();
     self.determine_module_exports_kind();
     self.wrap_modules();
     self.generate_lazy_export();
@@ -137,6 +134,7 @@ impl<'a> LinkStage<'a> {
       ast_table: self.ast_table,
       used_symbol_refs: self.used_symbol_refs,
       dynamic_import_exports_usage_map: self.dynamic_import_exports_usage_map,
+      ast_scope_table: self.ast_scope_table,
     }
   }
 
@@ -145,7 +143,7 @@ impl<'a> LinkStage<'a> {
     let entry_ids_set = self.entries.iter().map(|e| e.id).collect::<FxHashSet<_>>();
     self.module_table.modules.iter().filter_map(Module::as_normal).for_each(|importer| {
       // TODO(hyf0): should check if importer is a js module
-      importer.import_records.iter().for_each(|rec| {
+      importer.import_records.iter().filter(|rec| !rec.is_dummy()).for_each(|rec| {
         let importee_id = rec.resolved_module;
         let Module::Normal(importee) = &self.module_table.modules[importee_id] else {
           return;
@@ -241,11 +239,26 @@ impl<'a> LinkStage<'a> {
         // - Mutating on `stmt_infos` doesn't rely on other mutating operations of other modules
         // - Mutating and parallel reading is in different memory locations
         let stmt_infos = unsafe { &mut *(addr_of!(importer.stmt_infos).cast_mut()) };
+        let importer_side_effect = unsafe { &mut *(addr_of!(importer.side_effects).cast_mut()) };
+
         // store the symbol reference to the declared statement index
-        let mut declared_symbol_for_stmt_pairs = vec![];
-        stmt_infos.infos.iter_mut_enumerated().for_each(|(stmt_idx, stmt_info)| {
+        let declared_symbol_for_stmt_pairs = vec![];
+        stmt_infos.infos.iter_mut_enumerated().for_each(|(_stmt_idx, stmt_info)| {
           stmt_info.import_records.iter().for_each(|rec_id| {
             let rec = &importer.import_records[*rec_id];
+            if rec.is_dummy() {
+              if matches!(rec.kind, ImportKind::Require) {
+                if self.options.format.should_call_runtime_require()
+                  && self.options.polyfill_require_for_esm_format_with_node_platform()
+                {
+                  stmt_info
+                    .referenced_symbols
+                    .push(self.runtime.resolve_symbol("__require").into());
+                  record_meta_pairs.push((*rec_id, ImportRecordMeta::CALL_RUNTIME_REQUIRE));
+                }
+              }
+              return;
+            }
             let rec_resolved_module = &self.module_table.modules[rec.resolved_module];
             if !rec_resolved_module.is_normal()
               || is_external_dynamic_import(&self.module_table, rec, importer_idx)
@@ -314,6 +327,7 @@ impl<'a> LinkStage<'a> {
                         if is_reexport_all {
                           let meta = &self.metas[importee.idx];
                           if meta.has_dynamic_exports {
+                            *importer_side_effect = DeterminedSideEffects::Analyzed(true);
                             stmt_info.side_effect = true;
                             stmt_info
                               .referenced_symbols
@@ -325,6 +339,7 @@ impl<'a> LinkStage<'a> {
                       }
                       WrapKind::Cjs => {
                         if is_reexport_all {
+                          *importer_side_effect = DeterminedSideEffects::Analyzed(true);
                           stmt_info.side_effect = true;
                           // Turn `export * from 'bar_cjs'` into `__reExport(foo_exports, __toESM(require_bar_cjs()))`
                           // Reference to `require_bar_cjs`
@@ -339,24 +354,19 @@ impl<'a> LinkStage<'a> {
                             .push(self.runtime.resolve_symbol("__reExport").into());
                           stmt_info.referenced_symbols.push(importer.namespace_object_ref.into());
                         } else {
-                          stmt_info.side_effect = importee.side_effects.has_side_effects();
-                          // Turn `import * as bar from 'bar_cjs'` into `var import_bar_cjs = __toESM(require_bar_cjs())`
-                          // Turn `import { prop } from 'bar_cjs'; prop;` into `var import_bar_cjs = __toESM(require_bar_cjs()); import_bar_cjs.prop;`
-                          // Reference to `require_bar_cjs`
-                          stmt_info
-                            .referenced_symbols
-                            .push(importee_linking_info.wrapper_ref.unwrap().into());
-                          stmt_info
-                            .referenced_symbols
-                            .push(self.runtime.resolve_symbol("__toESM").into());
-                          declared_symbol_for_stmt_pairs.push((stmt_idx, rec.namespace_ref));
-                          rec.namespace_ref.set_name(
-                            &mut symbols.lock().unwrap(),
-                            &concat_string!("import_", importee.repr_name),
-                          );
+                          // - import * as bar from 'bar_cjs'
+                          // - import { prop } from 'bar_cjs'
+                          // will be removed in the final bundler. Nothing need to do here.
+                          // stmt_info.side_effect = importee.side_effects.has_side_effects();
+
+                          // `require_bar_cjs`
+                          // stmt_info
+                          //   .referenced_symbols
+                          //   .push(importee_linking_info.wrapper_ref.unwrap().into());
                         }
                       }
                       WrapKind::Esm => {
+                        *importer_side_effect = DeterminedSideEffects::Analyzed(true);
                         stmt_info.side_effect = true;
                         // Turn `import ... from 'bar_esm'` into `init_bar_esm()`
                         // Reference to `init_foo`
@@ -460,7 +470,7 @@ impl<'a> LinkStage<'a> {
       |ecma_module| {
         let linking_info = &mut self.metas[ecma_module.idx];
 
-        create_wrapper(ecma_module, linking_info, &mut self.symbols, &self.runtime, self.options);
+        // create_wrapper(ecma_module, linking_info, &mut self.symbols, &self.runtime, self.options);
         if let Some(entry) = self.entries.iter().find(|entry| entry.id == ecma_module.idx) {
           init_entry_point_stmt_info(linking_info, entry, &self.dynamic_import_exports_usage_map);
         }
@@ -547,6 +557,10 @@ impl<'a> LinkStage<'a> {
             rolldown_common::SymbolOrMemberExprRef::Symbol(sym_ref) => {
               let canonical_ref = self.symbols.canonical_ref_for(*sym_ref);
               meta.dependencies.insert(canonical_ref.owner);
+              let symbol = self.symbols.get(canonical_ref);
+              if let Some(ns) = &symbol.namespace_alias {
+                meta.dependencies.insert(ns.namespace_ref.owner);
+              }
             }
             rolldown_common::SymbolOrMemberExprRef::MemberExpr(member_expr) => {
               if let Some(sym_ref) =
@@ -554,6 +568,10 @@ impl<'a> LinkStage<'a> {
               {
                 let canonical_ref = self.symbols.canonical_ref_for(sym_ref);
                 meta.dependencies.insert(canonical_ref.owner);
+                let symbol = self.symbols.get(canonical_ref);
+                if let Some(ns) = &symbol.namespace_alias {
+                  meta.dependencies.insert(ns.namespace_ref.owner);
+                }
               } else {
                 // `None` means the member expression resolve to a ambiguous export, which means it actually resolve to nothing.
                 // It would be rewrite to `undefined` in the final code, so we don't need to include anything to make `undefined` work.
@@ -562,6 +580,50 @@ impl<'a> LinkStage<'a> {
           };
         });
       });
+    });
+  }
+
+  fn compute_tla(&mut self) {
+    fn is_tla(
+      module_idx: ModuleIdx,
+      module_table: &ModuleTable,
+      // `None` means the module is in visiting
+      visited_map: &mut FxHashMap<ModuleIdx, Option<bool>>,
+    ) -> bool {
+      if let Some(memorized) = visited_map.get(&module_idx) {
+        memorized.unwrap_or(false)
+      } else {
+        visited_map.insert(module_idx, None);
+        let module = &module_table.modules[module_idx];
+        let is_self_tla = module
+          .as_normal()
+          .is_some_and(|module| module.ast_usage.contains(EcmaModuleAstUsage::TopLevelAwait));
+        if is_self_tla {
+          // If the module itself contains top-level await, then it is TLA.
+          visited_map.insert(module_idx, Some(true));
+          return true;
+        }
+
+        let contains_tla_dependency = module
+          .import_records()
+          .iter()
+          // TODO: require TLA module should give a error
+          .filter(|rec| matches!(rec.kind, ImportKind::Import))
+          .any(|rec| {
+            let importee = &module_table.modules[rec.resolved_module];
+            is_tla(importee.idx(), module_table, visited_map)
+          });
+
+        visited_map.insert(module_idx, Some(contains_tla_dependency));
+        contains_tla_dependency
+      }
+    }
+
+    let mut visited_map = FxHashMap::default();
+
+    self.module_table.modules.iter().filter_map(|m| m.as_normal()).for_each(|module| {
+      self.metas[module.idx].is_tla_or_contains_tla_dependency =
+        is_tla(module.idx, &self.module_table, &mut visited_map);
     });
   }
 

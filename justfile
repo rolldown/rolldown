@@ -22,7 +22,7 @@ setup-submodule:
     git submodule update --init
 
 setup-bench:
-    node ./scripts/misc/setup-benchmark-input/index.js
+    node --import @oxc-node/core/register ./scripts/misc/setup-benchmark-input/index.js
 
 # Update the submodule to the latest commit
 update-submodule:
@@ -30,24 +30,13 @@ update-submodule:
 
 # `roll` command almost run all ci checks locally. It's useful to run this before pushing your changes.
 
-roll:
-    just roll-rust
-    just roll-node
-    just roll-repo
-    just ued
+roll: roll-rust roll-node roll-repo update-esbuild-diff
 
-roll-rust:
-    just check-rust
-    just test-rust
-    just lint-rust
+roll-rust: check-rust test-rust lint-rust
 
-roll-node:
-    just test-node
-    just check-node
-    just lint-node
+roll-node: test-node check-node lint-node
 
-roll-repo:
-    just lint-repo
+roll-repo: lint-repo
 
 # CHECKING
 
@@ -153,7 +142,7 @@ bench-node-par:
 # RELEASING
 
 bump-packages *args:
-    node ./scripts/misc/bump-version.js {{ args }}
+    node --import @oxc-node/core/register ./scripts/misc/bump-version.js {{ args }}
 
 changelog:
     pnpm conventional-changelog --preset angular --i CHANGELOG.md --same-file --pkg=./packages/rolldown/package.json

@@ -2,7 +2,7 @@
   "name": "monorepo",
   "description": "Rollup in Rust",
   "private": true,
-  "packageManager": "pnpm@9.12.3",
+  "packageManager": "pnpm@9.15.4",
   "engines": {
     "node": ">=18.20.3"
   },
@@ -20,27 +20,28 @@
     "build:release": "echo \"Use just build native release\"",
     "test": "echo \"Use just test-node\"",
     "ci:build-release-binding": "pnpm --filter rolldown run build-binding:release",
-    "type-check": "pnpm --recursive run type-check",
+    "type-check": "tsc -b tsconfig.json",
     "docs": "pnpm --filter rolldown-docs run dev",
     "docs:build": "pnpm --filter rolldown-docs run build",
     "docs:preview": "pnpm --filter rolldown-docs run preview",
     "changelog": "conventional-changelog -p angular -i CHANGELOG.md -s",
-    "prepare": "husky install"
+    "prepare": "husky prepare"
   },
   "license": "MIT",
   "devDependencies": {
     "@actions/core": "^1.11.1",
-    "@babel/runtime": "7.26.0",
+    "@babel/runtime": "7.26.7",
     "@ls-lint/ls-lint": "^2.2.3",
+    "@oxc-node/core": "^0.0.19",
     "@taplo/cli": "^0.7.0",
-    "@types/node": "22.8.7",
-    "cjs-module-lexer": "^1.3.1",
+    "@types/node": "22.13.0",
+    "cjs-module-lexer": "^2.0.0",
     "conventional-changelog-cli": "^5.0.0",
     "cspell": "^8.8.4",
     "husky": "^9.0.0",
     "lint-staged": "^15.2.5",
     "npm-run-all": "^4.1.5",
-    "oxlint": "0.15.3",
+    "oxlint": "0.15.9",
     "prettier": "^3.3.1",
     "rolldown": "workspace:*",
     "typescript": "^5.6.3"

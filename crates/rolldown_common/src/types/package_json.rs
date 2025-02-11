@@ -1,5 +1,7 @@
 use std::path::PathBuf;
 
+use arcstr::ArcStr;
+
 use crate::side_effects::{glob_match_with_normalized_pattern, SideEffects};
 
 #[derive(Debug, Clone)]
@@ -8,17 +10,23 @@ pub struct PackageJson {
   pub path: PathBuf,
   pub r#type: Option<String>,
   pub side_effects: Option<SideEffects>,
+  pub version: Option<ArcStr>,
 }
 
 impl PackageJson {
   pub fn new(path: PathBuf) -> Self {
-    Self { path, r#type: None, side_effects: None }
+    Self { path, r#type: None, side_effects: None, version: None }
   }
 
   #[must_use]
-  pub fn with_type(mut self, value: Option<&serde_json::Value>) -> Self {
-    self.r#type =
-      value.and_then(|v| v.get("type").and_then(|v| v.as_str()).map(ToString::to_string));
+  pub fn with_version(mut self, value: Option<&str>) -> Self {
+    self.version = value.map(Into::into);
+    self
+  }
+
+  #[must_use]
+  pub fn with_type(mut self, value: Option<&str>) -> Self {
+    self.r#type = value.map(ToString::to_string);
     self
   }
 

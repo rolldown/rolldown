@@ -8,7 +8,7 @@ use rolldown_common::{
 use rolldown_rstr::Rstr;
 use rolldown_utils::{
   concat_string,
-  ecmascript::{is_validate_identifier_name, property_access_str},
+  ecmascript::{property_access_str, to_module_import_export_name},
   indexmap::FxIndexSet,
 };
 
@@ -27,7 +27,11 @@ pub fn render_wrapped_entry_chunk(
           ctx.chunk_idx,
           &ctx.chunk.canonical_names,
         );
-        Some(concat_string!(wrapper_ref_name, "();"))
+        if entry_meta.is_tla_or_contains_tla_dependency {
+          Some(concat_string!("await ", wrapper_ref_name, "();"))
+        } else {
+          Some(concat_string!(wrapper_ref_name, "();"))
+        }
       }
       WrapKind::Cjs => {
         let wrapper_ref = entry_meta.wrapper_ref.as_ref().unwrap();
@@ -111,10 +115,12 @@ pub fn render_chunk_exports(
 
           if canonical_name == &exported_name {
             Cow::Borrowed(canonical_name.as_str())
-          } else if is_validate_identifier_name(&exported_name) {
-            Cow::Owned(concat_string!(canonical_name, " as ", exported_name))
           } else {
-            Cow::Owned(concat_string!(canonical_name, " as '", exported_name, "'"))
+            Cow::Owned(concat_string!(
+              canonical_name,
+              " as ",
+              to_module_import_export_name(&exported_name)
+            ))
           }
         })
         .collect::<Vec<_>>();

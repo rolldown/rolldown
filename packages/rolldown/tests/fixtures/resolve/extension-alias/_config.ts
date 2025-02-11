@@ -1,4 +1,4 @@
-import { defineTest } from '@tests'
+import { defineTest } from 'rolldown-tests'
 import path from 'node:path'
 const entry = path.join(__dirname, './main.ts')
 

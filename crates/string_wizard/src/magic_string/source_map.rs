@@ -42,12 +42,8 @@ impl MagicString<'_> {
       chunk.intro.iter().for_each(|frag| {
         source_builder.advance(frag);
       });
-
-      let name = if chunk.keep_in_mappings && chunk.is_edited() {
-        Some(chunk.span.text(&self.source))
-      } else {
-        None
-      };
+      let name =
+        (chunk.keep_in_mappings && chunk.is_edited()).then(|| chunk.span.text(&self.source));
 
       source_builder.add_chunk(
         chunk,

@@ -8,7 +8,7 @@ snapshot_kind: text
 
 ```text
 [UNRESOLVED_IMPORT] Warning: Could not resolve 'external' in a.js
-   ╭─[a.js:1:26]
+   ╭─[ a.js:1:26 ]
    │
  1 │ import def, * as ns from 'external'
    │                          ─────┬────  
@@ -20,7 +20,7 @@ snapshot_kind: text
 
 ```text
 [UNRESOLVED_IMPORT] Warning: Could not resolve 'external' in b.js
-   ╭─[b.js:1:26]
+   ╭─[ b.js:1:26 ]
    │
  1 │ import def, * as ns from 'external'
    │                          ─────┬────  
@@ -32,7 +32,7 @@ snapshot_kind: text
 
 ```text
 [UNRESOLVED_IMPORT] Warning: Could not resolve 'external' in c.js
-   ╭─[c.js:1:24]
+   ╭─[ c.js:1:24 ]
    │
  1 │ import def, {foo} from 'external'
    │                        ─────┬────  

@@ -2,6 +2,7 @@ import { unimplemented } from './misc'
 import { transformRenderedChunk } from './transform-rendered-chunk'
 import type { BindingOutputOptions } from '../binding'
 import type { OutputOptions } from '../options/output-options'
+import { transformAssetSource } from './asset-source'
 
 export function bindingifyOutputOptions(
   outputOptions: OutputOptions,
@@ -27,6 +28,7 @@ export function bindingifyOutputOptions(
     esModule,
     globals,
     file,
+    sanitizeFileName,
   } = outputOptions
 
   return {
@@ -47,7 +49,7 @@ export function bindingifyOutputOptions(
     globals,
     esModule,
     name,
-    assetFileNames,
+    assetFileNames: bindingifyAssetFilenames(assetFileNames),
     entryFileNames,
     chunkFileNames,
     cssEntryFileNames,
@@ -60,6 +62,7 @@ export function bindingifyOutputOptions(
     advancedChunks: outputOptions.advancedChunks,
     polyfillRequire: outputOptions.polyfillRequire,
     target: outputOptions.target,
+    sanitizeFileName,
   }
 }
 
@@ -131,4 +134,20 @@ function bindingifySourcemapIgnoreList(
       ? () => false
       : (relativeSourcePath: string, _sourcemapPath: string) =>
           relativeSourcePath.includes('node_modules')
+}
+
+function bindingifyAssetFilenames(
+  assetFileNames: OutputOptions['assetFileNames'],
+): BindingOutputOptions['assetFileNames'] {
+  if (typeof assetFileNames === 'function') {
+    return (asset) => {
+      return assetFileNames({
+        names: asset.names,
+        originalFileNames: asset.originalFileNames,
+        source: transformAssetSource(asset.source),
+        type: 'asset',
+      })
+    }
+  }
+  return assetFileNames
 }

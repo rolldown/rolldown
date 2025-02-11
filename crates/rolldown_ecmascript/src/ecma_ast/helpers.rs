@@ -10,7 +10,7 @@ impl EcmaAst {
     self.program().is_empty()
   }
 
-  pub fn make_semantic<'ast>(program: &'_ Program<'ast>) -> Semantic<'ast> {
+  pub fn make_semantic<'ast>(program: &'ast Program<'ast>) -> Semantic<'ast> {
     let semantic = SemanticBuilder::new().with_scope_tree_child_ids(true).build(program).semantic;
     semantic
   }

@@ -6,7 +6,9 @@ use types::checks_options::ChecksOptions;
 use types::comments::Comments;
 use types::inject_import::InjectImport;
 use types::jsx::Jsx;
-use types::output_option::GlobalsOutputOption;
+use types::minify_options::RawMinifyOptions;
+use types::output_option::{AssetFilenamesOutputOption, GlobalsOutputOption};
+use types::sanitize_filename::SanitizeFilename;
 use types::target::ESTarget;
 use types::watch_option::WatchOption;
 
@@ -20,10 +22,11 @@ use types::experimental_options::ExperimentalOptions;
 
 use self::types::treeshake::TreeshakeOptions;
 use self::types::{
-  es_module_flag::EsModuleFlag, hash_characters::HashCharacters, input_item::InputItem,
-  is_external::IsExternal, output_exports::OutputExports, output_format::OutputFormat,
-  output_option::AddonOutputOption, platform::Platform, resolve_options::ResolveOptions,
-  source_map_type::SourceMapType, sourcemap_path_transform::SourceMapPathTransform,
+  defer_sync_scan_data_option::DeferSyncScanDataOption, es_module_flag::EsModuleFlag,
+  hash_characters::HashCharacters, input_item::InputItem, is_external::IsExternal,
+  output_exports::OutputExports, output_format::OutputFormat, output_option::AddonOutputOption,
+  platform::Platform, resolve_options::ResolveOptions, source_map_type::SourceMapType,
+  sourcemap_path_transform::SourceMapPathTransform,
 };
 use crate::{ChunkFilenamesOutputOption, ModuleType, SourceMapIgnoreList};
 
@@ -73,7 +76,18 @@ pub struct BundlerOptions {
     schemars(with = "Option<String>")
   )]
   pub css_chunk_filenames: Option<ChunkFilenamesOutputOption>,
-  pub asset_filenames: Option<String>,
+  #[cfg_attr(
+    feature = "deserialize_bundler_options",
+    serde(default, deserialize_with = "deserialize_asset_filenames"),
+    schemars(with = "Option<String>")
+  )]
+  pub asset_filenames: Option<AssetFilenamesOutputOption>,
+  #[cfg_attr(
+    feature = "deserialize_bundler_options",
+    serde(default, deserialize_with = "deserialize_sanitize_filename"),
+    schemars(with = "Option<bool>")
+  )]
+  pub sanitize_filename: Option<SanitizeFilename>,
   pub dir: Option<String>,
   pub file: Option<String>,
   pub format: Option<OutputFormat>,
@@ -136,7 +150,7 @@ pub struct BundlerOptions {
   )]
   pub treeshake: TreeshakeOptions,
   pub experimental: Option<ExperimentalOptions>,
-  pub minify: Option<bool>,
+  pub minify: Option<RawMinifyOptions>,
   #[cfg_attr(
     feature = "deserialize_bundler_options",
     schemars(with = "Option<FxHashMap<String, String>>")
@@ -160,6 +174,13 @@ pub struct BundlerOptions {
   pub comments: Option<Comments>,
   pub target: Option<ESTarget>,
   pub polyfill_require: Option<bool>,
+
+  #[cfg_attr(
+    feature = "deserialize_bundler_options",
+    serde(default, skip_deserializing),
+    schemars(skip)
+  )]
+  pub defer_sync_scan_data: Option<DeferSyncScanDataOption>,
 }
 
 #[cfg(feature = "deserialize_bundler_options")]
@@ -188,6 +209,28 @@ where
   D: Deserializer<'de>,
 {
   let deserialized = Option::<String>::deserialize(deserializer)?;
+  Ok(deserialized.map(From::from))
+}
+
+#[cfg(feature = "deserialize_bundler_options")]
+fn deserialize_asset_filenames<'de, D>(
+  deserializer: D,
+) -> Result<Option<AssetFilenamesOutputOption>, D::Error>
+where
+  D: Deserializer<'de>,
+{
+  let deserialized = Option::<String>::deserialize(deserializer)?;
+  Ok(deserialized.map(From::from))
+}
+
+#[cfg(feature = "deserialize_bundler_options")]
+fn deserialize_sanitize_filename<'de, D>(
+  deserializer: D,
+) -> Result<Option<SanitizeFilename>, D::Error>
+where
+  D: Deserializer<'de>,
+{
+  let deserialized = Option::<bool>::deserialize(deserializer)?;
   Ok(deserialized.map(From::from))
 }
 

@@ -10,13 +10,14 @@ use rolldown_common::{
   ModuleIdx, NamedImport, OutputFormat, SymbolRef, WrapKind,
 };
 use rolldown_rstr::{Rstr, ToRstr};
+use rolldown_utils::concat_string;
 use rolldown_utils::indexmap::FxIndexSet;
 use rolldown_utils::rayon::IntoParallelIterator;
 use rolldown_utils::rayon::{ParallelBridge, ParallelIterator};
 use rolldown_utils::rustc_hash::FxHashMapExt;
 use rustc_hash::{FxHashMap, FxHashSet};
 
-type IndexChunkDependedSymbols = IndexVec<ChunkIdx, FxHashSet<SymbolRef>>;
+type IndexChunkDependedSymbols = IndexVec<ChunkIdx, FxIndexSet<SymbolRef>>;
 type IndexChunkImportsFromExternalModules =
   IndexVec<ChunkIdx, FxHashMap<ModuleIdx, Vec<NamedImport>>>;
 type IndexChunkExportedSymbols = IndexVec<ChunkIdx, FxHashSet<SymbolRef>>;
@@ -30,7 +31,7 @@ impl GenerateStage<'_> {
   #[tracing::instrument(level = "debug", skip_all)]
   pub fn compute_cross_chunk_links(&mut self, chunk_graph: &mut ChunkGraph) {
     let mut index_chunk_depended_symbols: IndexChunkDependedSymbols =
-      index_vec![FxHashSet::<SymbolRef>::default(); chunk_graph.chunk_table.len()];
+      index_vec![FxIndexSet::<SymbolRef>::default(); chunk_graph.chunk_table.len()];
     let mut index_chunk_exported_symbols: IndexChunkExportedSymbols =
       index_vec![FxHashSet::<SymbolRef>::default(); chunk_graph.chunk_table.len()];
     let mut index_chunk_imports_from_external_modules: IndexChunkImportsFromExternalModules = index_vec![FxHashMap::<ModuleIdx, Vec<NamedImport>>::default(); chunk_graph.chunk_table.len()];
@@ -165,6 +166,7 @@ impl GenerateStage<'_> {
           module
             .import_records
             .iter()
+            .filter(|rec| !rec.is_dummy())
             .inspect(|rec| {
               if let Module::Normal(importee_module) =
                 &self.link_output.module_table.modules[rec.resolved_module]
@@ -372,15 +374,24 @@ impl GenerateStage<'_> {
       {
         let original_name: rolldown_rstr::Rstr =
           chunk_export.name(&self.link_output.symbol_db).to_rstr();
-        let key: Cow<'_, Rstr> = Cow::Owned(original_name.clone());
-        let count = name_count.entry(key).or_insert(0u32);
-        let alias = if *count == 0 {
-          original_name.clone()
-        } else {
-          format!("{original_name}${}", itoa::Buffer::new().format(*count)).into()
-        };
-        chunk.exports_to_other_chunks.insert(chunk_export, alias.clone());
-        *count += 1;
+        let mut candidate_name = original_name.clone();
+        loop {
+          let key: Cow<'_, Rstr> = Cow::Owned(candidate_name.clone());
+          match name_count.entry(key) {
+            std::collections::hash_map::Entry::Occupied(mut occ) => {
+              let next_conflict_index = *occ.get() + 1;
+              *occ.get_mut() = next_conflict_index;
+              candidate_name =
+                concat_string!(original_name, "$", itoa::Buffer::new().format(next_conflict_index))
+                  .into();
+            }
+            std::collections::hash_map::Entry::Vacant(vac) => {
+              vac.insert(0);
+              break;
+            }
+          }
+        }
+        chunk.exports_to_other_chunks.insert(chunk_export, candidate_name.clone());
       }
     }
 

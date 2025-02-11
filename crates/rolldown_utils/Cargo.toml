@@ -39,9 +39,9 @@ regex              = { workspace = true }
 regress            = { workspace = true }
 rolldown_std_utils = { workspace = true }
 rustc-hash         = { workspace = true }
+serde_json         = { workspace = true }
 simdutf8           = { workspace = true }
 xxhash-rust        = { workspace = true, features = ["xxh3"] }
-
 
 [target.'cfg(not(target_family = "wasm"))'.dependencies]
 async-scoped = { workspace = true, features = ["use-tokio"] }

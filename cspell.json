@@ -14,11 +14,14 @@
     "*.d.ts",
     "/rollup",
     "/packages/rollup-tests/test",
+    "packages/rolldown/tests/fixtures/",
+    "packages/rolldown/tests/stability/",
     "/target",
     "/temp",
     "/tmp",
     "/packages/rolldown/npm",
     "scripts/snap-diff/**/*.{txt,md}",
+    "packages/rolldown/src/binding.cjs",
     "packages/rolldown/src/binding.js",
     "/CHANGELOG.md",
     "/crates/rolldown/tests/esbuild/splitting/ignore-test.md",
@@ -132,6 +135,8 @@
     "nocheck",
     "nodenext",
     "notjson",
+    "NTFS",
+    "nuxt",
     "onwarn",
     "outdir",
     "outro",
@@ -213,7 +218,9 @@
     "bluesky",
     "voidzero",
     "minifiers",
-    "esmodule"
+    "esmodule",
+    "mapref",
+    "ropey"
   ],
   "ignoreWords": ["Jeqs", "Gwetwem", "bpwli", "mxrh"]
 }

@@ -5,6 +5,7 @@ use crate::types::{
   js_callback::MaybeAsyncJsCallbackExt,
 };
 use anyhow::Ok;
+use napi::bindgen_prelude::FnArgs;
 use rolldown::ModuleType;
 use rolldown_plugin::{Plugin, __inner::SharedPluginable, typedmap::TypedMapKey};
 use rolldown_utils::pattern_filter::{self, FilterResult};
@@ -70,8 +71,10 @@ impl Plugin for JsPlugin {
     args: &rolldown_plugin::HookBuildStartArgs<'_>,
   ) -> rolldown_plugin::HookNoopReturn {
     if let Some(cb) = &self.build_start {
-      cb.await_call((ctx.clone().into(), BindingNormalizedOptions::new(Arc::clone(args.options))))
-        .await?;
+      cb.await_call(
+        (ctx.clone().into(), BindingNormalizedOptions::new(Arc::clone(args.options))).into(),
+      )
+      .await?;
     }
     Ok(())
   }
@@ -114,12 +117,15 @@ impl Plugin for JsPlugin {
     };
 
     Ok(
-      cb.await_call((
-        ctx.clone().into(),
-        args.specifier.to_string(),
-        args.importer.map(str::to_string),
-        extra_args,
-      ))
+      cb.await_call(
+        (
+          ctx.clone().into(),
+          args.specifier.to_string(),
+          args.importer.map(str::to_string),
+          extra_args,
+        )
+          .into(),
+      )
       .await?
       .map(Into::into),
     )
@@ -136,11 +142,10 @@ impl Plugin for JsPlugin {
   ) -> rolldown_plugin::HookResolveIdReturn {
     if let Some(cb) = &self.resolve_dynamic_import {
       Ok(
-        cb.await_call((
-          ctx.clone().into(),
-          args.specifier.to_string(),
-          args.importer.map(str::to_string),
-        ))
+        cb.await_call(
+          (ctx.clone().into(), args.specifier.to_string(), args.importer.map(str::to_string))
+            .into(),
+        )
         .await?
         .map(Into::into),
       )
@@ -177,7 +182,7 @@ impl Plugin for JsPlugin {
       }
     }
 
-    cb.await_call((ctx.clone().into(), args.id.to_string()))
+    cb.await_call((ctx.clone().into(), args.id.to_string()).into())
       .await?
       .map(TryInto::try_into)
       .transpose()
@@ -206,12 +211,15 @@ impl Plugin for JsPlugin {
 
     let extra_args = BindingTransformHookExtraArgs { module_type: args.module_type.to_string() };
 
-    cb.await_call((
-      BindingTransformPluginContext::new(Arc::clone(&ctx)),
-      args.code.to_string(),
-      args.id.to_string(),
-      extra_args,
-    ))
+    cb.await_call(
+      (
+        BindingTransformPluginContext::new(Arc::clone(&ctx)),
+        args.code.to_string(),
+        args.id.to_string(),
+        extra_args,
+      )
+        .into(),
+    )
     .await?
     .map(TryInto::try_into)
     .transpose()
@@ -227,7 +235,7 @@ impl Plugin for JsPlugin {
     module_info: Arc<rolldown_common::ModuleInfo>,
   ) -> rolldown_plugin::HookNoopReturn {
     if let Some(cb) = &self.module_parsed {
-      cb.await_call((ctx.clone().into(), BindingModuleInfo::new(module_info))).await?;
+      cb.await_call((ctx.clone().into(), BindingModuleInfo::new(module_info)).into()).await?;
     }
     Ok(())
   }
@@ -242,16 +250,19 @@ impl Plugin for JsPlugin {
     args: Option<&rolldown_plugin::HookBuildEndArgs<'_>>,
   ) -> rolldown_plugin::HookNoopReturn {
     if let Some(cb) = &self.build_end {
-      cb.await_call((
-        ctx.clone().into(),
-        args.map(|args| {
-          args
-            .errors
-            .iter()
-            .map(|diagnostic| to_js_diagnostic(diagnostic, args.cwd.clone()))
-            .collect()
-        }),
-      ))
+      cb.await_call(
+        (
+          ctx.clone().into(),
+          args.map(|args| {
+            args
+              .errors
+              .iter()
+              .map(|diagnostic| to_js_diagnostic(diagnostic, args.cwd.clone()))
+              .collect()
+          }),
+        )
+          .into(),
+      )
       .await?;
     }
     Ok(())
@@ -269,8 +280,10 @@ impl Plugin for JsPlugin {
     args: &rolldown_plugin::HookRenderStartArgs<'_>,
   ) -> rolldown_plugin::HookNoopReturn {
     if let Some(cb) = &self.render_start {
-      cb.await_call((ctx.clone().into(), BindingNormalizedOptions::new(Arc::clone(args.options))))
-        .await?;
+      cb.await_call(
+        (ctx.clone().into(), BindingNormalizedOptions::new(Arc::clone(args.options))).into(),
+      )
+      .await?;
     }
     Ok(())
   }
@@ -286,7 +299,7 @@ impl Plugin for JsPlugin {
   ) -> rolldown_plugin::HookInjectionOutputReturn {
     if let Some(cb) = &self.banner {
       Ok(
-        cb.await_call((ctx.clone().into(), args.chunk.clone().into()))
+        cb.await_call((ctx.clone().into(), args.chunk.clone().into()).into())
           .await?
           .map(TryInto::try_into)
           .transpose()?,
@@ -307,7 +320,7 @@ impl Plugin for JsPlugin {
   ) -> rolldown_plugin::HookInjectionOutputReturn {
     if let Some(cb) = &self.intro {
       Ok(
-        cb.await_call((ctx.clone().into(), args.chunk.clone().into()))
+        cb.await_call((ctx.clone().into(), args.chunk.clone().into()).into())
           .await?
           .map(TryInto::try_into)
           .transpose()?,
@@ -328,7 +341,7 @@ impl Plugin for JsPlugin {
   ) -> rolldown_plugin::HookInjectionOutputReturn {
     if let Some(cb) = &self.outro {
       Ok(
-        cb.await_call((ctx.clone().into(), args.chunk.clone().into()))
+        cb.await_call((ctx.clone().into(), args.chunk.clone().into()).into())
           .await?
           .map(TryInto::try_into)
           .transpose()?,
@@ -349,7 +362,7 @@ impl Plugin for JsPlugin {
   ) -> rolldown_plugin::HookInjectionOutputReturn {
     if let Some(cb) = &self.footer {
       Ok(
-        cb.await_call((ctx.clone().into(), args.chunk.clone().into()))
+        cb.await_call((ctx.clone().into(), args.chunk.clone().into()).into())
           .await?
           .map(TryInto::try_into)
           .transpose()?,
@@ -370,12 +383,15 @@ impl Plugin for JsPlugin {
   ) -> rolldown_plugin::HookRenderChunkReturn {
     if let Some(cb) = &self.render_chunk {
       Ok(
-        cb.await_call((
-          ctx.clone().into(),
-          args.code.to_string(),
-          args.chunk.clone().into(),
-          BindingNormalizedOptions::new(Arc::clone(args.options)),
-        ))
+        cb.await_call(
+          (
+            ctx.clone().into(),
+            args.code.to_string(),
+            args.chunk.clone().into(),
+            BindingNormalizedOptions::new(Arc::clone(args.options)),
+          )
+            .into(),
+        )
         .await?
         .map(TryInto::try_into)
         .transpose()?,
@@ -395,7 +411,7 @@ impl Plugin for JsPlugin {
     chunk: &rolldown_common::RollupRenderedChunk,
   ) -> rolldown_plugin::HookAugmentChunkHashReturn {
     if let Some(cb) = &self.augment_chunk_hash {
-      Ok(cb.await_call((ctx.clone().into(), chunk.clone().into())).await?)
+      Ok(cb.await_call((ctx.clone().into(), chunk.clone().into()).into()).await?)
     } else {
       Ok(None)
     }
@@ -411,14 +427,17 @@ impl Plugin for JsPlugin {
     args: &rolldown_plugin::HookRenderErrorArgs<'_>,
   ) -> rolldown_plugin::HookNoopReturn {
     if let Some(cb) = &self.render_error {
-      cb.await_call((
-        ctx.clone().into(),
-        args
-          .errors
-          .iter()
-          .map(|diagnostic| to_js_diagnostic(diagnostic, args.cwd.clone()))
-          .collect(),
-      ))
+      cb.await_call(
+        (
+          ctx.clone().into(),
+          args
+            .errors
+            .iter()
+            .map(|diagnostic| to_js_diagnostic(diagnostic, args.cwd.clone()))
+            .collect(),
+        )
+          .into(),
+      )
       .await?;
     }
     Ok(())
@@ -435,12 +454,15 @@ impl Plugin for JsPlugin {
   ) -> rolldown_plugin::HookNoopReturn {
     if let Some(cb) = &self.generate_bundle {
       let changed = cb
-        .await_call((
-          ctx.clone().into(),
-          args.bundle.clone().into(),
-          args.is_write,
-          BindingNormalizedOptions::new(Arc::clone(args.options)),
-        ))
+        .await_call(
+          (
+            ctx.clone().into(),
+            args.bundle.clone().into(),
+            args.is_write,
+            BindingNormalizedOptions::new(Arc::clone(args.options)),
+          )
+            .into(),
+        )
         .await?;
       update_outputs(args.bundle, changed)?;
     }
@@ -458,11 +480,14 @@ impl Plugin for JsPlugin {
   ) -> rolldown_plugin::HookNoopReturn {
     if let Some(cb) = &self.write_bundle {
       let changed = cb
-        .await_call((
-          ctx.clone().into(),
-          args.bundle.clone().into(),
-          BindingNormalizedOptions::new(Arc::clone(args.options)),
-        ))
+        .await_call(
+          (
+            ctx.clone().into(),
+            args.bundle.clone().into(),
+            BindingNormalizedOptions::new(Arc::clone(args.options)),
+          )
+            .into(),
+        )
         .await?;
       update_outputs(args.bundle, changed)?;
     }
@@ -478,7 +503,7 @@ impl Plugin for JsPlugin {
     ctx: &rolldown_plugin::PluginContext,
   ) -> rolldown_plugin::HookNoopReturn {
     if let Some(cb) = &self.close_bundle {
-      cb.await_call(ctx.clone().into()).await?;
+      cb.await_call(FnArgs { data: (ctx.clone().into(),) }).await?;
     }
     Ok(())
   }
@@ -494,7 +519,7 @@ impl Plugin for JsPlugin {
     event: rolldown_common::WatcherChangeKind,
   ) -> rolldown_plugin::HookNoopReturn {
     if let Some(cb) = &self.watch_change {
-      cb.await_call((ctx.clone().into(), path.to_string(), event.to_string())).await?;
+      cb.await_call((ctx.clone().into(), path.to_string(), event.to_string()).into()).await?;
     }
     Ok(())
   }
@@ -508,7 +533,7 @@ impl Plugin for JsPlugin {
     ctx: &rolldown_plugin::PluginContext,
   ) -> rolldown_plugin::HookNoopReturn {
     if let Some(cb) = &self.close_watcher {
-      cb.await_call(ctx.clone().into()).await?;
+      cb.await_call(FnArgs { data: (ctx.clone().into(),) }).await?;
     }
     Ok(())
   }

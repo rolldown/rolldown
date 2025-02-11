@@ -1,5 +1,5 @@
 import { jsonPlugin } from 'rolldown/experimental'
-import { defineTest } from '@tests'
+import { defineTest } from 'rolldown-tests'
 import { expect } from 'vitest'
 
 export default defineTest({
@@ -9,7 +9,9 @@ export default defineTest({
     ],
   },
   async afterTest(output) {
-    expect(output.output[0].code).toContain(`const name = "stringify";`)
+    expect(output.output[0].code).toContain(
+      `const name = "@test-fixture/named-exports";`,
+    )
     await import('./assert.mjs')
   },
 })

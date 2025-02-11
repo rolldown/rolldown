@@ -24,7 +24,7 @@ console.log(
 
 //#region top-level.js
 const n_keep = null;
-const u_keep = undefined;
+const u_keep = void 0;
 const i_keep = 1234567;
 const f_keep = 123.456;
 const s_keep = "";
@@ -53,7 +53,7 @@ console.log(
 -const n_keep = null, u_keep = void 0, i_keep = 1234567, f_keep = 123.456, s_keep = "";
 -console.log(null, null, void 0, void 0, 1234567, 1234567, 123.456, 123.456, s_keep, s_keep);
 +var n_keep = null;
-+var u_keep = undefined;
++var u_keep = void 0;
 +var i_keep = 1234567;
 +var f_keep = 123.456;
 +var s_keep = "";
@@ -86,7 +86,7 @@ console.log(
 //#region nested-block.js
 {
 	const REMOVE_n = null;
-	const REMOVE_u = undefined;
+	const REMOVE_u = void 0;
 	const REMOVE_i = 1234567;
 	const REMOVE_f = 123.456;
 	const s_keep = "";
@@ -115,7 +115,7 @@ console.log(
 @@ -1,4 +1,8 @@
  {
 +    const REMOVE_n = null;
-+    const REMOVE_u = undefined;
++    const REMOVE_u = void 0;
 +    const REMOVE_i = 1234567;
 +    const REMOVE_f = 123.456;
      const s_keep = "";
@@ -150,7 +150,7 @@ function nested() {
 //#region nested-function.js
 function nested() {
 	const REMOVE_n = null;
-	const REMOVE_u = undefined;
+	const REMOVE_u = void 0;
 	const REMOVE_i = 1234567;
 	const REMOVE_f = 123.456;
 	const s_keep = "";
@@ -168,7 +168,7 @@ function nested() {
 		s_keep
 );
 }
-assert(nested() !== undefined);
+assert(nested() !== void 0);
 
 //#endregion
 ```
@@ -180,14 +180,14 @@ assert(nested() !== undefined);
 @@ -1,4 +1,9 @@
  function nested() {
 +    const REMOVE_n = null;
-+    const REMOVE_u = undefined;
++    const REMOVE_u = void 0;
 +    const REMOVE_i = 1234567;
 +    const REMOVE_f = 123.456;
      const s_keep = "";
 -    console.log(null, null, void 0, void 0, 1234567, 1234567, 123.456, 123.456, s_keep, s_keep);
 +    console.log(REMOVE_n, REMOVE_n, REMOVE_u, REMOVE_u, REMOVE_i, REMOVE_i, REMOVE_f, REMOVE_f, s_keep, s_keep);
  }
-+assert(nested() !== undefined);
++assert(nested() !== void 0);
 
 ```
 ## /out/namespace-export.js
@@ -279,7 +279,7 @@ function nested() {
 	const REMOVE = 1;
 	x = [REMOVE, REMOVE];
 }
-assert(nested() !== undefined);
+assert(nested() !== void 0);
 
 //#endregion
 ```
@@ -295,7 +295,7 @@ assert(nested() !== undefined);
 +    const REMOVE = 1;
 +    x = [REMOVE, REMOVE];
  }
-+assert(nested() !== undefined);
++assert(nested() !== void 0);
 
 ```
 ## /out/semicolon-before.js
@@ -421,7 +421,7 @@ function nested() {
 		return y_REMOVE;
 	}
 }
-assert(nested() !== undefined);
+assert(nested() !== void 0);
 
 //#endregion
 ```
@@ -439,7 +439,7 @@ assert(nested() !== undefined);
 +        return y_REMOVE;
      }
  }
-+assert(nested() !== undefined);
++assert(nested() !== void 0);
 
 ```
 ## /out/disabled-tdz.js
@@ -532,7 +532,7 @@ function foo() {
 	const y = 1;
 	console.log(x, x, y, y);
 }
-assert(foo() !== undefined);
+assert(foo() !== void 0);
 
 //#endregion
 ```
@@ -548,7 +548,7 @@ assert(foo() !== undefined);
 +    const y = 1;
      console.log(x, x, y, y);
  }
-+assert(foo() !== undefined);
++assert(foo() !== void 0);
 
 ```
 ## /out/issue-3125.js
@@ -568,7 +568,7 @@ function foo() {
 	const x = 0;
 	return f();
 }
-assert(foo() !== undefined);
+assert(foo() !== void 0);
 
 //#endregion
 ```
@@ -584,6 +584,6 @@ assert(foo() !== undefined);
 +    const x = 0;
      return f();
  }
-+assert(foo() !== undefined);
++assert(foo() !== void 0);
 
 ```

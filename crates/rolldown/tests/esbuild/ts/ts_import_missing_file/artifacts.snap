@@ -8,7 +8,7 @@ snapshot_kind: text
 
 ```text
 [UNRESOLVED_IMPORT] Error: Could not resolve './doesNotExist.ts' in entry.ts
-   ╭─[entry.ts:1:25]
+   ╭─[ entry.ts:1:25 ]
    │
  1 │ import {Something} from './doesNotExist.ts'
    │                         ─────────┬─────────  

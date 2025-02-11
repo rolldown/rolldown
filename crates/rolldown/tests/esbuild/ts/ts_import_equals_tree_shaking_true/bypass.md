@@ -15,7 +15,6 @@ import { foo } from "pkg";
 
 //#region entry.ts
 var used = foo.used;
-var unused = foo.unused;
 
 //#endregion
 export { used };
@@ -25,11 +24,10 @@ export { used };
 ===================================================================
 --- esbuild	/out.js
 +++ rolldown	entry.js
-@@ -1,3 +1,4 @@
+@@ -1,3 +1,3 @@
  import {foo} from "pkg";
 -const used = foo.used;
 +var used = foo.used;
-+var unused = foo.unused;
  export {used};
 
 ```

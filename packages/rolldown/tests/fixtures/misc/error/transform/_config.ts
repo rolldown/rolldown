@@ -1,4 +1,4 @@
-import { defineTest } from '@tests'
+import { defineTest } from 'rolldown-tests'
 import { join } from 'node:path'
 import { expect } from 'vitest'
 

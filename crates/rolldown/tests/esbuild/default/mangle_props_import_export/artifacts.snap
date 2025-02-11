@@ -8,7 +8,7 @@ snapshot_kind: text
 
 ```text
 [UNRESOLVED_IMPORT] Warning: Could not resolve 'xyz' in cjs.js
-   ╭─[cjs.js:2:20]
+   ╭─[ cjs.js:2:20 ]
    │
  2 │ let bar_ = require('xyz').bar_
    │                    ──┬──  
@@ -20,7 +20,7 @@ snapshot_kind: text
 
 ```text
 [UNRESOLVED_IMPORT] Warning: Could not resolve 'xyz' in esm.js
-   ╭─[esm.js:2:22]
+   ╭─[ esm.js:2:22 ]
    │
  2 │ import { bar_ } from 'xyz'
    │                      ──┬──  

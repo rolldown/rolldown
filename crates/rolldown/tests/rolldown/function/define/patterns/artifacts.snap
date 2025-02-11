@@ -1,5 +1,6 @@
 ---
 source: crates/rolldown_testing/src/integration_test.rs
+snapshot_kind: text
 ---
 # Assets
 
@@ -14,9 +15,9 @@ const objProp = "ok";
 assert.strictEqual(id, "ok");
 assert.strictEqual(objProp, "ok");
 (function(Id, Obj) {
-	assert.strictEqual(Id, undefined);
-	assert.strictEqual(Obj.prop, undefined);
-})(undefined, {});
+	assert.strictEqual(Id, void 0);
+	assert.strictEqual(Obj.prop, void 0);
+})(void 0, {});
 
 //#endregion
 ```

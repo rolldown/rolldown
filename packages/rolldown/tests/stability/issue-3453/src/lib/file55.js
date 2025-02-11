@@ -1,0 +1,3 @@
+import{useEffect,useState}from"react";function getViewportSize(){if(typeof window==="undefined"){return{width:0,height:0};}return{width:window.innerWidth,height:window.innerHeight};}export function useViewportSizeState(getState){const[state,setState]=useState(()=>getState(getViewportSize()));useEffect(()=>{const handleWindowResize=()=>setState(getState(getViewportSize()));window.addEventListener("resize",handleWindowResize);return()=>{window.removeEventListener("resize",handleWindowResize);};},[]);return state;}
+export const __FramerMetadata__ = {"exports":{"useViewportSizeState":{"type":"function","annotations":{"framerContractVersion":"1"}},"__FramerMetadata__":{"type":"variable"}}}
+//# sourceMappingURL=./useViewportSizeState.map

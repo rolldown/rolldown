@@ -5,6 +5,7 @@ mod events;
 mod locator;
 mod type_aliases;
 mod types;
+mod utils;
 
 pub use types::result_ext::ResultExt;
 

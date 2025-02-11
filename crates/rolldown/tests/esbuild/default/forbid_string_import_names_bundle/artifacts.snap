@@ -8,7 +8,7 @@ snapshot_kind: text
 
 ```text
 [UNRESOLVED_IMPORT] Warning: Could not resolve "external" in nested.js
-   ╭─[nested.js:1:41]
+   ╭─[ nested.js:1:41 ]
    │
  1 │ import { "some import" as nested } from "external"
    │                                         ─────┬────  
@@ -21,7 +21,7 @@ snapshot_kind: text
 ## entry.js
 
 ```js
-import { 'some import' as some_import } from "external";
+import { "some import" as nested } from "external";
 
-export { some_import as nested };
+export { nested };
 ```

@@ -1,5 +1,6 @@
 ---
 source: crates/rolldown_testing/src/integration_test.rs
+snapshot_kind: text
 ---
 # Assets
 
@@ -16,7 +17,6 @@ var require_foo = __commonJS({ "foo.js"(exports) {
 
 //#endregion
 //#region entry.js
-var import_foo = __toESM(require_foo());
 let foo = 234;
 assert.equal(foo, 234);
 

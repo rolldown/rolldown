@@ -1,7 +1,7 @@
 // Rolldown should able to recognize kind of return types of the `resolveId` plugin hook.
 
 import type { Plugin } from 'rolldown'
-import { defineTest } from '@tests'
+import { defineTest } from 'rolldown-tests'
 import { expect, vi } from 'vitest'
 import path from 'node:path'
 

@@ -146,7 +146,7 @@ init_h();
 //#region a.js
 var abc;
 var init_a = __esm({ "a.js"() {
-	abc = undefined;
+	abc = void 0;
 } });
 
 //#endregion
@@ -252,16 +252,6 @@ init_h();
 ===================================================================
 --- esbuild	/out.js
 +++ rolldown	entry.js
-@@ -1,8 +1,8 @@
- var abc;
- var init_a = __esm({
-     "a.js"() {
--        abc = void 0;
-+        abc = undefined;
-     }
- });
- var b_exports = {};
- __export(b_exports, {
 @@ -69,14 +69,14 @@
      "e.js"() {}
  });

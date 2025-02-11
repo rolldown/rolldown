@@ -2,4 +2,4 @@
 import assert from 'node:assert'
 import { name } from './dist/main'
 
-assert(name === 'stringify')
+assert(name === '@test-fixture/stringify')

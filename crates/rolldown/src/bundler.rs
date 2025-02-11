@@ -7,7 +7,7 @@ use crate::{
 };
 use anyhow::Result;
 
-use rolldown_common::{NormalizedBundlerOptions, SharedFileEmitter};
+use rolldown_common::{Cache, NormalizedBundlerOptions, SharedFileEmitter};
 use rolldown_error::{BuildDiagnostic, BuildResult};
 use rolldown_fs::{FileSystem, OsFileSystem};
 use rolldown_plugin::{
@@ -25,6 +25,8 @@ pub struct Bundler {
   pub(crate) plugin_driver: SharedPluginDriver,
   pub(crate) warnings: Vec<BuildDiagnostic>,
   pub(crate) _log_guard: Option<FlushGuard>,
+  #[allow(unused)]
+  pub(crate) cache: Arc<Cache>,
 }
 
 impl Bundler {
@@ -73,6 +75,7 @@ impl Bundler {
       Arc::clone(&self.plugin_driver),
       self.fs,
       Arc::clone(&self.resolver),
+      Arc::clone(&self.cache),
     )
     .scan()
     .await
@@ -118,7 +121,10 @@ impl Bundler {
         .map_err(|err| anyhow::anyhow!("Failed to write file in {:?}", dest).context(err))?;
     }
 
-    self.plugin_driver.write_bundle(&mut output.assets, &self.options).await?;
+    self
+      .plugin_driver
+      .write_bundle(&mut output.assets, &self.options, &mut output.warnings)
+      .await?;
 
     output.warnings.append(&mut self.warnings);
 
@@ -157,9 +163,12 @@ impl Bundler {
     let mut output = bundle_output?;
 
     // Add additional files from build plugins.
-    self.file_emitter.add_additional_files(&mut output.assets);
+    self.file_emitter.add_additional_files(&mut output.assets, &mut output.warnings);
 
-    self.plugin_driver.generate_bundle(&mut output.assets, is_write, &self.options).await?;
+    self
+      .plugin_driver
+      .generate_bundle(&mut output.assets, is_write, &self.options, &mut output.warnings)
+      .await?;
 
     output.watch_files = self.plugin_driver.watch_files.iter().map(|f| f.clone()).collect();
 

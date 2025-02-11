@@ -8,7 +8,7 @@ snapshot_kind: text
 
 ```text
 [IMPORT_IS_UNDEFINED] Warning: Import `def` will always be undefined because there is no matching export in 'internal.js'
-   ╭─[internal-def.js:2:18]
+   ╭─[ internal-def.js:2:18 ]
    │
  2 │ console.log(def, ns.def)
    │                  ───┬──  
@@ -20,7 +20,7 @@ snapshot_kind: text
 
 ```text
 [IMPORT_IS_UNDEFINED] Warning: Import `def` will always be undefined because there is no matching export in 'internal.js'
-   ╭─[internal-ns-def.js:2:22]
+   ╭─[ internal-ns-def.js:2:22 ]
    │
  2 │ console.log(def, ns, ns.def)
    │                      ───┬──  
@@ -32,7 +32,7 @@ snapshot_kind: text
 
 ```text
 [UNRESOLVED_IMPORT] Warning: Could not resolve 'external' in external-def.js
-   ╭─[external-def.js:1:26]
+   ╭─[ external-def.js:1:26 ]
    │
  1 │ import def, * as ns from 'external'
    │                          ─────┬────  
@@ -44,7 +44,7 @@ snapshot_kind: text
 
 ```text
 [UNRESOLVED_IMPORT] Warning: Could not resolve 'external' in external-default.js
-   ╭─[external-default.js:1:26]
+   ╭─[ external-default.js:1:26 ]
    │
  1 │ import def, * as ns from 'external'
    │                          ─────┬────  
@@ -56,7 +56,7 @@ snapshot_kind: text
 
 ```text
 [UNRESOLVED_IMPORT] Warning: Could not resolve 'external' in external-default2.js
-   ╭─[external-default2.js:1:40]
+   ╭─[ external-default2.js:1:40 ]
    │
  1 │ import def, {default as default2} from 'external'
    │                                        ─────┬────  
@@ -68,7 +68,7 @@ snapshot_kind: text
 
 ```text
 [UNRESOLVED_IMPORT] Warning: Could not resolve 'external' in external-ns-def.js
-   ╭─[external-ns-def.js:1:26]
+   ╭─[ external-ns-def.js:1:26 ]
    │
  1 │ import def, * as ns from 'external'
    │                          ─────┬────  
@@ -80,7 +80,7 @@ snapshot_kind: text
 
 ```text
 [UNRESOLVED_IMPORT] Warning: Could not resolve 'external' in external-ns-default.js
-   ╭─[external-ns-default.js:1:26]
+   ╭─[ external-ns-default.js:1:26 ]
    │
  1 │ import def, * as ns from 'external'
    │                          ─────┬────  
@@ -92,7 +92,7 @@ snapshot_kind: text
 
 ```text
 [UNRESOLVED_IMPORT] Warning: Could not resolve 'external' in external-ns.js
-   ╭─[external-ns.js:1:26]
+   ╭─[ external-ns.js:1:26 ]
    │
  1 │ import def, * as ns from 'external'
    │                          ─────┬────  

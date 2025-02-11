@@ -14,10 +14,10 @@ var require_foo = __commonJS({ "foo.js"(exports) {
 	exports.__esModule = true;
 	Object.defineProperty(exports, "default", { value: 123 });
 } });
+var import_foo = __toESM(require_foo());
 
 //#endregion
 //#region entry.js
-var import_foo = __toESM(require_foo());
 let keys = Object.keys(import_foo);
 input.works = import_foo.default === 123 && !keys.includes("default");
 
@@ -39,10 +39,10 @@ var require_foo = __commonJS({ "foo.js"(exports) {
 	exports.__esModule = true;
 	Object.defineProperty(exports, "default", { value: 123 });
 } });
+var import_foo = __toESM(require_foo());
 
 //#endregion
 //#region entry.js
-var import_foo = __toESM(require_foo());
 let keys = Object.keys(import_foo);
 input.works = import_foo.default === 123 && !keys.includes("default");
 
@@ -66,10 +66,10 @@ var require_foo = __commonJS({ "foo.js"(exports) {
 	exports.__esModule = true;
 	Object.defineProperty(exports, "default", { value: 123 });
 } });
+var import_foo = __toESM(require_foo());
 
 //#endregion
 //#region entry.js
-var import_foo = __toESM(require_foo());
 let keys = Object.keys(import_foo);
 input.works = import_foo.default === 123 && !keys.includes("default");
 
@@ -97,10 +97,10 @@ var require_foo = __commonJS({ "foo.js"(exports) {
 	exports.__esModule = true;
 	Object.defineProperty(exports, "default", { value: 123 });
 } });
+var import_foo = __toESM(require_foo());
 
 //#endregion
 //#region entry.js
-var import_foo = __toESM(require_foo());
 let keys = Object.keys(import_foo);
 input.works = import_foo.default === 123 && !keys.includes("default");
 

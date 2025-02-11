@@ -15,7 +15,7 @@ use std::sync::Arc;
 use sugar_path::SugarPath;
 
 use rolldown_common::{
-  EcmaRelated, ImportKind, ImportRecordIdx, ModuleDefFormat, ModuleId, ModuleIdx, ModuleInfo,
+  ImportKind, ImportRecordIdx, ImportRecordMeta, ModuleDefFormat, ModuleId, ModuleIdx, ModuleInfo,
   ModuleLoaderMsg, ModuleType, NormalModule, NormalModuleTaskResult, RawImportRecord, ResolvedId,
   StrOrBytes, RUNTIME_MODULE_ID,
 };
@@ -88,7 +88,7 @@ impl ModuleTask {
 
   #[expect(clippy::too_many_lines)]
   async fn run_inner(&mut self) -> BuildResult<()> {
-    let id = ModuleId::new(ArcStr::clone(&self.resolved_id.id));
+    let id = ModuleId::new(&self.resolved_id.id);
 
     // Add watch files for watcher recover if build errors occurred.
     self.ctx.plugin_driver.watch_files.insert(self.resolved_id.id.clone());
@@ -110,88 +110,35 @@ impl ModuleTask {
     let mut sourcemap_chain = vec![];
     let mut hook_side_effects = self.resolved_id.side_effects.take();
 
-    // Run plugin load to get content first, if it is None using read fs as fallback.
-    let result = load_source(
-      &self.ctx.plugin_driver,
-      &self.resolved_id,
-      &self.ctx.fs,
-      &mut sourcemap_chain,
-      &mut hook_side_effects,
-      &self.ctx.options,
-      self.asserted_module_type.as_ref(),
-    )
-    .await;
-
-    let (source, mut module_type) = result.map_err(|err| {
-      BuildDiagnostic::unloadable_dependency(
-        self.resolved_id.debug_id(self.ctx.options.cwd.as_path()).into(),
-        self.owner.as_ref().map(|owner| UnloadableDependencyContext {
-          importer_id: owner.importer_id.as_str().into(),
-          importee_span: owner.importee_span,
-          source: owner.source.clone(),
-        }),
-        err,
-      )
-    })?;
-
-    if let Some(asserted) = &self.asserted_module_type {
-      module_type = asserted.clone();
-    }
-
-    let mut source = match source {
-      StrOrBytes::Str(source) => {
-        // Run plugin transform.
-        let source = transform_source(
-          &self.ctx.plugin_driver,
-          &self.resolved_id,
-          source,
-          &mut sourcemap_chain,
-          &mut hook_side_effects,
-          &mut module_type,
-        )
-        .await?;
-        source.into()
-      }
-      StrOrBytes::Bytes(_) => source,
-    };
-
-    // TODO: module type should be able to updated by transform hook, for now we don't impl it.
-    if let ModuleType::Custom(_) = module_type {
-      // TODO: should provide some diagnostics for user how they should handle the module type.
-      // e.g.
-      // sass -> recommended npm install `sass` etc
-      Err(anyhow::anyhow!(
-        "`{:?}` is not specified module type,  rolldown can't handle this asset correctly. Please use the load/transform hook to transform the resource",
-        self.resolved_id.id
-      ))?;
-    };
-
-    let asset_view = if matches!(module_type, ModuleType::Asset) {
-      let asset_source = source.into_bytes();
-      source = StrOrBytes::Str(String::new());
-      Some(create_asset_view(asset_source.into()))
-    } else {
-      None
-    };
+    let (mut source, module_type) =
+      self.load_source_phase(&mut sourcemap_chain, &mut hook_side_effects).await?;
 
     let stable_id = id.stabilize(&self.ctx.options.cwd);
     let mut raw_import_records = IndexVec::default();
 
-    let css_view = if matches!(module_type, ModuleType::Css) {
-      let css_source: ArcStr = source.try_into_string()?.into();
-      // FIXME: This makes creating `EcmaView` rely on creating `CssView` first, while they should be done in parallel.
-      source = StrOrBytes::Str(String::new());
-      let create_ret = create_css_view(&stable_id, &css_source);
-      raw_import_records = create_ret.1;
-      Some(create_ret.0)
-    } else {
-      None
+    let (asset_view, css_view) = match module_type {
+      ModuleType::Asset => {
+        let asset_source = source.into_bytes();
+        let asset_view = create_asset_view(asset_source.into());
+        source = StrOrBytes::Str(String::new());
+        (Some(asset_view), None)
+      }
+      ModuleType::Css => {
+        let css_source: ArcStr = source.try_into_string()?.into();
+        // FIXME: This makes creating `EcmaView` rely on creating `CssView` first, while they should be done in parallel.
+        let (css_view, css_raw_import_records) = create_css_view(&stable_id, &css_source);
+        raw_import_records = css_raw_import_records;
+        source = StrOrBytes::Str(String::new());
+        (None, Some(css_view))
+      }
+      _ => (None, None),
     };
 
     let mut warnings = vec![];
 
     let ret = create_ecma_view(
       &mut CreateModuleContext {
+        stable_id: &stable_id,
         module_index: self.module_idx,
         plugin_driver: &self.ctx.plugin_driver,
         resolved_id: &self.resolved_id,
@@ -206,14 +153,12 @@ impl ModuleTask {
     .await?;
 
     let CreateEcmaViewReturn {
-      view: mut ecma_view,
-      ast,
-      symbols,
+      mut ecma_view,
+      ecma_related,
       raw_import_records: ecma_raw_import_records,
-      dynamic_import_rec_exports_usage,
     } = ret;
 
-    if !matches!(module_type, ModuleType::Css) {
+    if css_view.is_none() {
       raw_import_records = ecma_raw_import_records;
     }
 
@@ -226,7 +171,7 @@ impl ModuleTask {
       )
       .await?;
 
-    if !matches!(module_type, ModuleType::Css) {
+    if css_view.is_none() {
       for (record, info) in raw_import_records.iter().zip(&resolved_deps) {
         match record.kind {
           ImportKind::Import | ImportKind::Require | ImportKind::NewUrl => {
@@ -241,11 +186,11 @@ impl ModuleTask {
       }
     }
 
-    let repr_name = self.resolved_id.id.as_path().representative_file_name().into_owned();
-    let repr_name = legitimize_identifier_name(&repr_name);
+    let repr_name = self.resolved_id.id.as_path().representative_file_name();
+    let repr_name = legitimize_identifier_name(&repr_name).into_owned();
 
     let module = NormalModule {
-      repr_name: repr_name.into_owned(),
+      repr_name,
       stable_id,
       id,
       debug_id: self.resolved_id.debug_id(&self.ctx.options.cwd),
@@ -263,24 +208,102 @@ impl ModuleTask {
     self.ctx.plugin_driver.module_parsed(Arc::clone(&module_info)).await?;
     self.ctx.plugin_driver.mark_context_load_modules_loaded(&module.id).await?;
 
-    if self
-      .ctx
-      .tx
-      .send(ModuleLoaderMsg::NormalModuleDone(NormalModuleTaskResult {
-        resolved_deps,
-        module_idx: self.module_idx,
-        warnings,
-        ecma_related: Some(EcmaRelated { ast, symbols, dynamic_import_rec_exports_usage }),
-        module: module.into(),
-        raw_import_records,
-      }))
-      .await
-      .is_err()
-    {
-      // The main thread is dead, nothing we can do to handle these send failures.
-    }
+    let result = ModuleLoaderMsg::NormalModuleDone(NormalModuleTaskResult {
+      module: module.into(),
+      ecma_related: Some(ecma_related),
+      resolved_deps,
+      raw_import_records,
+      warnings,
+    });
+
+    // If the main thread is dead, nothing we can do to handle these send failures.
+    let _ = self.ctx.tx.send(result).await;
 
     Ok(())
+  }
+
+  async fn load_source_without_cache(
+    &self,
+    sourcemap_chain: &mut Vec<rolldown_sourcemap::SourceMap>,
+    hook_side_effects: &mut Option<rolldown_common::side_effects::HookSideEffects>,
+  ) -> BuildResult<(StrOrBytes, ModuleType)> {
+    let result = load_source(
+      &self.ctx.plugin_driver,
+      &self.resolved_id,
+      &self.ctx.fs,
+      sourcemap_chain,
+      hook_side_effects,
+      &self.ctx.options,
+      self.asserted_module_type.as_ref(),
+    )
+    .await;
+    let (source, mut module_type) = result.map_err(|err| {
+      BuildDiagnostic::unloadable_dependency(
+        self.resolved_id.debug_id(self.ctx.options.cwd.as_path()).into(),
+        self.owner.as_ref().map(|owner| UnloadableDependencyContext {
+          importer_id: owner.importer_id.as_str().into(),
+          importee_span: owner.importee_span,
+          source: owner.source.clone(),
+        }),
+        err,
+      )
+    })?;
+    if let Some(asserted) = &self.asserted_module_type {
+      module_type = asserted.clone();
+    }
+    let source = match source {
+      StrOrBytes::Str(source) => {
+        // Run plugin transform.
+        let source = transform_source(
+          &self.ctx.plugin_driver,
+          &self.resolved_id,
+          source,
+          sourcemap_chain,
+          hook_side_effects,
+          &mut module_type,
+        )
+        .await?;
+        source.into()
+      }
+      StrOrBytes::Bytes(_) => source,
+    };
+    if let ModuleType::Custom(_) = module_type {
+      // TODO: should provide some diagnostics for user how they should handle the module type.
+      // e.g.
+      // sass -> recommended npm install `sass` etc
+      Err(anyhow::anyhow!(
+        "`{:?}` is not specified module type,  rolldown can't handle this asset correctly. Please use the load/transform hook to transform the resource",
+        self.resolved_id.id
+      ))?;
+    };
+    Ok((source, module_type))
+  }
+
+  // TODO: cache source_map_chain and hook_side_effects
+  fn load_source_with_cache(&self) -> Option<(StrOrBytes, ModuleType)> {
+    self
+      .ctx
+      .cache
+      .get_raw_source_and_module_type(&self.resolved_id.id)
+      .map(|item| item.value().clone())
+  }
+
+  async fn load_source_phase(
+    &mut self,
+    sourcemap_chain: &mut Vec<rolldown_sourcemap::SourceMap>,
+    hook_side_effects: &mut Option<rolldown_common::side_effects::HookSideEffects>,
+  ) -> BuildResult<(StrOrBytes, ModuleType)> {
+    let incremental_build_enabled = self.ctx.options.experimental.is_incremental_build_enabled();
+    if incremental_build_enabled {
+      if let Some(value) = self.load_source_with_cache() {
+        return Ok(value);
+      }
+    }
+    let value = self.load_source_without_cache(sourcemap_chain, hook_side_effects).await?;
+    if incremental_build_enabled {
+      self.ctx.cache.insert_raw_source_and_module_type(self.resolved_id.id.clone(), value.clone());
+    }
+    Ok(value)
   }
 
   pub(crate) async fn resolve_id(
@@ -335,6 +358,11 @@ impl ModuleTask {
       let importer = &self.resolved_id.id;
       let kind = item.kind;
       async move {
+        // TODO: We should early return when `async closure is stable`
+        // Can't use `module_request.is_empty()` to check, see https://github.com/rolldown/rolldown/actions/runs/12980744296/job/36198187669?pr=3428
+        if item.meta.contains(ImportRecordMeta::IS_DUMMY) {
+          return Ok((item.module_request.clone(), idx, Ok(ResolvedId::make_dummy())));
+        }
         Self::resolve_id(&bundle_options, &resolver, &plugin_driver, importer, &specifier, kind)
           .await
           .map(|id| (specifier, idx, id))

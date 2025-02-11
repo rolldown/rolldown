@@ -1,5 +1,5 @@
 import { importGlobPlugin } from 'rolldown/experimental'
-import { defineTest } from '@tests'
+import { defineTest } from 'rolldown-tests'
 import * as path from 'node:path'
 
 export default defineTest({

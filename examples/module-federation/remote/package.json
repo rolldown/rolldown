@@ -1,0 +1,15 @@
+{
+  "name": "@example/module-federation-remote",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "rolldown --config ./rolldown.config.js"
+  },
+  "devDependencies": {
+    "rolldown": "workspace:*"
+  },
+  "dependencies": {
+    "@module-federation/runtime": "^0.8.8",
+    "react": "^19.0.0"
+  }
+}

@@ -17,10 +17,10 @@ var require_foo = __commonJS({ "foo.js"(exports) {
 		enumerable: true
 	});
 } });
+var import_foo = __toESM(require_foo());
 
 //#endregion
 //#region entry.js
-var import_foo = __toESM(require_foo());
 let keys = Object.keys(import_foo);
 input.works = import_foo.default === 123 && keys.includes("default");
 
@@ -45,10 +45,10 @@ var require_foo = __commonJS({ "foo.js"(exports) {
 		enumerable: true
 	});
 } });
+var import_foo = __toESM(require_foo());
 
 //#endregion
 //#region entry.js
-var import_foo = __toESM(require_foo());
 let keys = Object.keys(import_foo);
 input.works = import_foo.default === 123 && keys.includes("default");
 
@@ -75,10 +75,10 @@ var require_foo = __commonJS({ "foo.js"(exports) {
 		enumerable: true
 	});
 } });
+var import_foo = __toESM(require_foo());
 
 //#endregion
 //#region entry.js
-var import_foo = __toESM(require_foo());
 let keys = Object.keys(import_foo);
 input.works = import_foo.default === 123 && keys.includes("default");
 
@@ -109,10 +109,10 @@ var require_foo = __commonJS({ "foo.js"(exports) {
 		enumerable: true
 	});
 } });
+var import_foo = __toESM(require_foo());
 
 //#endregion
 //#region entry.js
-var import_foo = __toESM(require_foo());
 let keys = Object.keys(import_foo);
 input.works = import_foo.default === 123 && keys.includes("default");
 

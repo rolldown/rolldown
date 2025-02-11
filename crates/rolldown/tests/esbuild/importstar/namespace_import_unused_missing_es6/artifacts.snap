@@ -1,5 +1,6 @@
 ---
 source: crates/rolldown_testing/src/integration_test.rs
+snapshot_kind: text
 ---
 # warnings
 
@@ -7,7 +8,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```text
 [IMPORT_IS_UNDEFINED] Warning: Import `foo` will always be undefined because there is no matching export in 'foo.js'
-   ╭─[entry.js:3:14]
+   ╭─[ entry.js:3:14 ]
    │
  3 │ assert.equal(ns.foo, undefined)
    │              ───┬──  
@@ -23,7 +24,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 import assert from "node:assert";
 
 //#region entry.js
-assert.equal(void 0, undefined);
+assert.equal(void 0, void 0);
 
 //#endregion
 ```

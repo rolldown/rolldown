@@ -68,7 +68,6 @@ db-path = "~/.cargo/advisory-db"
 # The url(s) of the advisory databases to use
 db-urls = ["https://github.com/rustsec/advisory-db"]
 # The lint level for crates that have been yanked from their source registry
-ignore = ["RUSTSEC-2024-0384"]
 yanked = "warn"
 
 # This section is considered when running `cargo deny check licenses`

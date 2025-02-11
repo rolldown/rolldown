@@ -4,10 +4,12 @@ use arcstr::ArcStr;
 use either::Either;
 use oxc::{
   allocator::Allocator,
-  ast::AstBuilder,
+  ast::{ast::Program, AstBuilder},
   codegen::{CodeGenerator, Codegen, CodegenOptions, CodegenReturn, LegalComment},
-  minifier::{Minifier, MinifierOptions},
+  mangler::Mangler,
+  minifier::{CompressOptions, Compressor, MinifierOptions, MinifierReturn},
   parser::{ParseOptions, Parser},
+  semantic::SemanticBuilder,
   span::{SourceType, SPAN},
 };
 use oxc_sourcemap::SourceMap;
@@ -109,21 +111,52 @@ impl EcmaCompiler {
     source_text: &str,
     enable_sourcemap: bool,
     filename: &str,
+    minifier_options: MinifierOptions,
+    run_compress: bool,
+    codegen_options: CodegenOptions,
   ) -> (String, Option<SourceMap>) {
     let allocator = Allocator::default();
     let program = Parser::new(&allocator, source_text, SourceType::default()).parse().program;
     let program = allocator.alloc(program);
-    let options = MinifierOptions::default();
-    let ret = Minifier::new(options).build(&allocator, program);
+    let ret = Self::minify_impl(minifier_options, run_compress, &allocator, program);
     let ret = Codegen::new()
       .with_options(CodegenOptions {
         source_map_path: enable_sourcemap.then(|| PathBuf::from(filename)),
-        minify: true,
-        ..CodegenOptions::default()
+        ..codegen_options
       })
-      .with_mangler(ret.mangler)
+      .with_symbol_table(ret.symbol_table)
       .build(program);
     (ret.code, ret.map)
+  }
+
+  /// Copy from `oxc::minifier`, aiming to support `dce-only`
+  pub fn minify_impl<'a>(
+    options: MinifierOptions,
+    run_compress: bool,
+    allocator: &'a Allocator,
+    program: &mut Program<'a>,
+  ) -> MinifierReturn {
+    let compress_options = options.compress.unwrap_or_default();
+
+    let semantic = SemanticBuilder::new().build(program).semantic;
+    let stats = semantic.stats();
+
+    let (symbols, scopes) = semantic.into_symbol_table_and_scope_tree();
+    if run_compress {
+      Compressor::new(allocator, compress_options)
+        .build_with_symbols_and_scopes(symbols, scopes, program);
+    } else {
+      Compressor::new(allocator, CompressOptions::all_false()).dead_code_elimination(program);
+    }
+    let symbol_table = options.mangle.map(|options| {
+      let semantic = SemanticBuilder::new()
+        .with_stats(stats)
+        .with_scope_tree_child_ids(true)
+        .build(program)
+        .semantic;
+      Mangler::default().with_options(options).build_with_semantic(semantic, program)
+    });
+    MinifierReturn { symbol_table }
   }
 }
 

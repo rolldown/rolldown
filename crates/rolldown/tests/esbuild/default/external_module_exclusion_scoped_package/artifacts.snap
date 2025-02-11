@@ -1,5 +1,6 @@
 ---
 source: crates/rolldown_testing/src/integration_test.rs
+snapshot_kind: text
 ---
 # warnings
 
@@ -7,7 +8,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```text
 [UNRESOLVED_IMPORT] Warning: Could not resolve '@a1' in index.js
-   ╭─[index.js:1:8]
+   ╭─[ index.js:1:8 ]
    │
  1 │ import '@a1'
    │        ──┬──  
@@ -19,7 +20,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```text
 [UNRESOLVED_IMPORT] Warning: Could not resolve '@a1-a2' in index.js
-   ╭─[index.js:3:8]
+   ╭─[ index.js:3:8 ]
    │
  3 │ import '@a1-a2'
    │        ────┬───  
@@ -31,7 +32,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```text
 [UNRESOLVED_IMPORT] Warning: Could not resolve '@a1/a2' in index.js
-   ╭─[index.js:2:8]
+   ╭─[ index.js:2:8 ]
    │
  2 │ import '@a1/a2'
    │        ────┬───  
@@ -43,7 +44,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```text
 [UNRESOLVED_IMPORT] Warning: Could not resolve '@b1' in index.js
-   ╭─[index.js:5:8]
+   ╭─[ index.js:5:8 ]
    │
  5 │ import '@b1'
    │        ──┬──  
@@ -55,7 +56,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```text
 [UNRESOLVED_IMPORT] Warning: Could not resolve '@b1/b2' in index.js
-   ╭─[index.js:6:8]
+   ╭─[ index.js:6:8 ]
    │
  6 │ import '@b1/b2'
    │        ────┬───  
@@ -67,7 +68,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```text
 [UNRESOLVED_IMPORT] Warning: Could not resolve '@b1/b2-b3' in index.js
-   ╭─[index.js:8:8]
+   ╭─[ index.js:8:8 ]
    │
  8 │ import '@b1/b2-b3'
    │        ─────┬─────  
@@ -79,7 +80,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```text
 [UNRESOLVED_IMPORT] Warning: Could not resolve '@b1/b2/b3' in index.js
-   ╭─[index.js:7:8]
+   ╭─[ index.js:7:8 ]
    │
  7 │ import '@b1/b2/b3'
    │        ─────┬─────  
@@ -91,7 +92,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```text
 [UNRESOLVED_IMPORT] Warning: Could not resolve '@c1' in index.js
-    ╭─[index.js:10:8]
+    ╭─[ index.js:10:8 ]
     │
  10 │ import '@c1'
     │        ──┬──  
@@ -103,7 +104,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```text
 [UNRESOLVED_IMPORT] Warning: Could not resolve '@c1/c2' in index.js
-    ╭─[index.js:11:8]
+    ╭─[ index.js:11:8 ]
     │
  11 │ import '@c1/c2'
     │        ────┬───  
@@ -115,7 +116,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```text
 [UNRESOLVED_IMPORT] Warning: Could not resolve '@c1/c2/c3' in index.js
-    ╭─[index.js:12:8]
+    ╭─[ index.js:12:8 ]
     │
  12 │ import '@c1/c2/c3'
     │        ─────┬─────  
@@ -127,7 +128,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```text
 [UNRESOLVED_IMPORT] Warning: Could not resolve '@c1/c2/c3-c4' in index.js
-    ╭─[index.js:14:8]
+    ╭─[ index.js:14:8 ]
     │
  14 │ import '@c1/c2/c3-c4'
     │        ───────┬──────  
@@ -139,7 +140,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```text
 [UNRESOLVED_IMPORT] Warning: Could not resolve '@c1/c2/c3/c4' in index.js
-    ╭─[index.js:13:8]
+    ╭─[ index.js:13:8 ]
     │
  13 │ import '@c1/c2/c3/c4'
     │        ───────┬──────  

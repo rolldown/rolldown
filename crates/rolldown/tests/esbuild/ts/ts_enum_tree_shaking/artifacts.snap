@@ -1,5 +1,6 @@
 ---
 source: crates/rolldown_testing/src/integration_test.rs
+snapshot_kind: text
 ---
 # Assets
 
@@ -23,7 +24,6 @@ var x = function(x$1) {
 ```js
 
 //#region namespace-before.ts
-let x;
 (function(_x) {
 	console.log(x, y);
 })(x || (x = {}));

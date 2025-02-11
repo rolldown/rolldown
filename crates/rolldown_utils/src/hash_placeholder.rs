@@ -24,21 +24,20 @@ const CHARS: &[u8] = b"0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTU
 const BASE: u32 = 64;
 
 fn to_base64(mut value: u32) -> String {
-  let mut buffer = [0u8; 6];
-  let mut index = 0;
+  let mut buffer = vec![];
 
   loop {
     let current_digit = value % BASE;
-    buffer[index] = CHARS[current_digit as usize];
+    buffer.push(CHARS[current_digit as usize]);
     value /= BASE;
-    index += 1;
 
     if value == 0 {
       break;
     }
   }
-
-  String::from_utf8_lossy(&buffer[..index]).into_owned()
+  buffer.reverse();
+  // SAFETY: `buffer` is base64 characters, it is valid utf8 characters
+  unsafe { String::from_utf8_unchecked(buffer) }
 }
 
 #[derive(Debug, Default)]
@@ -110,12 +109,8 @@ pub fn replace_placeholder_with_hash<'a>(
 }
 
 pub fn extract_hash_placeholders(source: &str) -> FxIndexSet<ArcStr> {
-  let captures = REPLACER_REGEX.captures(source);
-  if let Some(captures) = captures {
-    captures.iter().map(|capture| capture.unwrap().as_str().into()).collect()
-  } else {
-    FxIndexSet::default()
-  }
+  let captures = REPLACER_REGEX.find_iter(source);
+  captures.into_iter().map(|c| c.as_str().into()).collect()
 }
 
 #[test]
@@ -130,8 +125,8 @@ fn test_to_base64() {
   assert_eq!(to_base64(0), "0");
   assert_eq!(to_base64(1), "1");
   assert_eq!(to_base64(10), "a");
-  assert_eq!(to_base64(64), "01");
+  assert_eq!(to_base64(64), "10");
   assert_eq!(to_base64(65), "11");
-  assert_eq!(to_base64(128), "02");
-  assert_eq!(to_base64(100_000_000), "04uZ5");
+  assert_eq!(to_base64(128), "20");
+  assert_eq!(to_base64(100_000_000), "5Zu40");
 }

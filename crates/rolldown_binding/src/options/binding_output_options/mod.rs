@@ -1,7 +1,9 @@
 mod binding_advanced_chunks_options;
+mod binding_pre_rendered_asset;
 mod binding_pre_rendered_chunk;
-
+use binding_pre_rendered_asset::BindingPreRenderedAsset;
 use derive_more::Debug;
+use napi::bindgen_prelude::{Either3, FnArgs};
 use napi::Either;
 use napi_derive::napi;
 use rustc_hash::FxHashMap;
@@ -10,14 +12,20 @@ use binding_advanced_chunks_options::BindingAdvancedChunksOptions;
 use binding_pre_rendered_chunk::PreRenderedChunk;
 
 use super::plugin::BindingPluginOrParallelJsPluginPlaceholder;
+use crate::types::binding_minify_options::BindingMinifyOptions;
 use crate::types::{
   binding_rendered_chunk::RenderedChunk,
   js_callback::{JsCallback, MaybeAsyncJsCallback},
 };
 
-pub type AddonOutputOption = MaybeAsyncJsCallback<RenderedChunk, Option<String>>;
-pub type ChunkFileNamesOutputOption = Either<String, JsCallback<PreRenderedChunk, String>>;
-pub type GlobalsOutputOption = Either<FxHashMap<String, String>, JsCallback<String, String>>;
+pub type AddonOutputOption = MaybeAsyncJsCallback<FnArgs<(RenderedChunk,)>, Option<String>>;
+pub type ChunkFileNamesOutputOption =
+  Either<String, JsCallback<FnArgs<(PreRenderedChunk,)>, String>>;
+pub type AssetFileNamesOutputOption =
+  Either<String, JsCallback<FnArgs<(BindingPreRenderedAsset,)>, String>>;
+pub type GlobalsOutputOption =
+  Either<FxHashMap<String, String>, JsCallback<FnArgs<(String,)>, String>>;
+pub type SanitizeFileName = Either<bool, JsCallback<FnArgs<(String,)>, String>>;
 
 #[napi(object, object_to_js = false)]
 #[derive(Debug)]
@@ -26,7 +34,9 @@ pub struct BindingOutputOptions {
   // /** @deprecated Use the "renderDynamicImport" plugin hook instead. */
   // dynamicImportFunction: string | undefined;
   pub name: Option<String>,
-  pub asset_file_names: Option<String>,
+  #[debug(skip)]
+  #[napi(ts_type = "string | ((chunk: BindingPreRenderedAsset) => string)")]
+  pub asset_file_names: Option<AssetFileNamesOutputOption>,
 
   #[debug(skip)]
   #[napi(ts_type = "string | ((chunk: PreRenderedChunk) => string)")]
@@ -40,7 +50,9 @@ pub struct BindingOutputOptions {
   #[debug(skip)]
   #[napi(ts_type = "string | ((chunk: PreRenderedChunk) => string)")]
   pub css_chunk_file_names: Option<ChunkFileNamesOutputOption>,
-
+  #[debug(skip)]
+  #[napi(ts_type = "boolean | ((name: string) => string)")]
+  pub sanitize_file_name: Option<SanitizeFileName>,
   // amd: NormalizedAmdOptions;
   // assetFileNames: string | ((chunkInfo: PreRenderedAsset) => string);
   #[debug(skip)]
@@ -95,11 +107,11 @@ pub struct BindingOutputOptions {
   pub sourcemap: Option<String>,
   #[debug(skip)]
   #[napi(ts_type = "(source: string, sourcemapPath: string) => boolean")]
-  pub sourcemap_ignore_list: Option<JsCallback<(String, String), bool>>,
+  pub sourcemap_ignore_list: Option<JsCallback<FnArgs<(String, String)>, bool>>,
   pub sourcemap_debug_ids: Option<bool>,
   #[debug(skip)]
   #[napi(ts_type = "(source: string, sourcemapPath: string) => string")]
-  pub sourcemap_path_transform: Option<JsCallback<(String, String), String>>,
+  pub sourcemap_path_transform: Option<JsCallback<FnArgs<(String, String)>, String>>,
   // sourcemapExcludeSources: boolean;
   // sourcemapFile: string | undefined;
   // strict: boolean;
@@ -107,7 +119,8 @@ pub struct BindingOutputOptions {
   // validate: boolean;
 
   // --- Enhanced options
-  pub minify: Option<bool>,
+  #[napi(ts_type = "boolean | 'dce-only' | BindingMinifyOptions")]
+  pub minify: Option<Either3<bool, String, BindingMinifyOptions>>,
   pub advanced_chunks: Option<BindingAdvancedChunksOptions>,
   #[napi(ts_type = "'none' | 'preserve-legal'")]
   pub comments: Option<String>,

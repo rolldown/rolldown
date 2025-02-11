@@ -1,0 +1,77 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`module-federation > module-federation 1`] = `
+{
+  "exposes": [
+    {
+      "assets": {
+        "css": {
+          "async": [],
+          "sync": [],
+        },
+        "js": {
+          "async": [],
+          "sync": [
+            "remote-expose.js",
+            "index.esm.js",
+          ],
+        },
+      },
+      "id": "mf-remote:expose",
+      "name": "expose",
+      "path": "./expose",
+      "required_version": "",
+      "version": "",
+    },
+  ],
+  "id": "mf-remote",
+  "meta_data": {
+    "build_info": {
+      "build_name": "mf-remote",
+      "build_version": "1.0.0",
+    },
+    "global_name": "mf-remote",
+    "name": "mf-remote",
+    "plugin_version": "",
+    "public_path": "",
+    "remote_entry": {
+      "name": "remote-entry.js",
+      "path": "",
+      "type": "module",
+    },
+    "ssr_remote_entry": {
+      "name": "remote-entry.js",
+      "path": "",
+      "type": "module",
+    },
+    "type": "app",
+    "types": {
+      "name": "",
+      "path": "",
+    },
+  },
+  "name": "mf-remote",
+  "remotes": [],
+  "shared": [
+    {
+      "assets": {
+        "css": {
+          "async": [],
+          "sync": [],
+        },
+        "js": {
+          "async": [],
+          "sync": [
+            "test-shared.js",
+          ],
+        },
+      },
+      "id": "mf-remote:test-shared",
+      "name": "test-shared",
+      "path": "",
+      "required_version": "",
+      "version": "1.0.0",
+    },
+  ],
+}
+`;

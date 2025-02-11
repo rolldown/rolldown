@@ -1,9 +1,11 @@
 use std::borrow::Cow;
 
 mod init_modules_visitor;
+mod manifest;
 mod option;
 mod utils;
 use arcstr::ArcStr;
+use manifest::generate_manifest;
 pub use option::{Manifest, ModuleFederationPluginOption, Remote, Shared};
 use oxc::{
   ast::{
@@ -17,7 +19,7 @@ use rolldown_plugin::{HookResolveIdReturn, Plugin};
 use rolldown_utils::{concat_string, dashmap::FxDashMap};
 use rustc_hash::FxHashSet;
 use sugar_path::SugarPath;
-use utils::{detect_remote_module_type, get_remote_module_prefix};
+use utils::{detect_remote_module_type, get_remote_module_prefix, ResolvedSharedModule};
 
 const REMOTE_ENTRY: &str = "mf:remote-entry.js";
 const INIT_HOST: &str = "mf:init-host.js";
@@ -30,12 +32,12 @@ const HOST_ENTRY_PREFIX: &str = "mf:host-entry:";
 #[derive(Debug)]
 pub struct ModuleFederationPlugin {
   options: ModuleFederationPluginOption,
-  shared_module_versions: FxDashMap<ArcStr, ArcStr>,
+  resolved_shared_modules: FxDashMap<ArcStr, ResolvedSharedModule>,
 }
 
 impl ModuleFederationPlugin {
   pub fn new(options: ModuleFederationPluginOption) -> Self {
-    Self { options, shared_module_versions: FxDashMap::default() }
+    Self { options, resolved_shared_modules: FxDashMap::default() }
   }
 
   pub fn generate_remote_entry_code(&self) -> String {
@@ -124,9 +126,9 @@ impl ModuleFederationPlugin {
               "'",
               key,
               "': { version: '",
-              self.shared_module_versions.get(key.as_str()).map_or_else(
+              self.resolved_shared_modules.get(key.as_str()).map_or_else(
                 || { value.version.as_deref().unwrap_or_default().into() },
-                |v| v.value().clone()
+                |v| v.value().version.clone()
               ),
               "', scope: ['",
               value.share_scope.as_deref().unwrap_or("default"),
@@ -184,7 +186,10 @@ impl Plugin for ModuleFederationPlugin {
         if item.version.is_none() {
           let resolve_id = ctx.resolve(key.as_str(), None, None).await??;
           if let Some(version) = resolve_id.package_json.as_ref().and_then(|j| j.version.as_ref()) {
-            self.shared_module_versions.insert(key.as_str().into(), version.clone());
+            self.resolved_shared_modules.insert(
+              key.as_str().into(),
+              ResolvedSharedModule { id: resolve_id.id.clone(), version: version.clone() },
+            );
           }
         }
       }
@@ -331,5 +336,16 @@ impl Plugin for ModuleFederationPlugin {
     });
 
     Ok(args.ast)
+  }
+
+  async fn generate_bundle(
+    &self,
+    ctx: &rolldown_plugin::PluginContext,
+    args: &mut rolldown_plugin::HookGenerateBundleArgs<'_>,
+  ) -> rolldown_plugin::HookNoopReturn {
+    if self.options.manifest.is_some() && self.options.filename.is_some() {
+      generate_manifest(ctx, args, &self.options, &self.resolved_shared_modules).await?;
+    }
+    Ok(())
   }
 }

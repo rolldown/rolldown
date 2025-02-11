@@ -64,7 +64,7 @@ describe('module-federation', () => {
     })
 
     // Test the remote manifest json
-    const remoteManifest = require('./dist/remote/mf-manifest.json')
+    const remoteManifest = await import('./dist/remote/mf-manifest.json')
     expect(remoteManifest).toMatchSnapshot()
 
     // Test the remote entry

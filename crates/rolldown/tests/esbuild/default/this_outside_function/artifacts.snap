@@ -34,17 +34,13 @@ var require_entry = __commonJS({ "entry.js"(exports) {
 			foo = this;
 		});
 		console.log(class {
-			foo() {
-				this;
-			}
+			foo() {}
 		});
 		console.log(class {
 			static foo = this;
 		});
 		console.log(class {
-			static foo() {
-				this;
-			}
+			static foo() {}
 		});
 	}
 } });

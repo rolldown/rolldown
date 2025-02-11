@@ -778,6 +778,12 @@ export interface EcmaScriptModule {
   importMetas: Array<Span>
 }
 
+export interface ErrorLabel {
+  message?: string
+  start: number
+  end: number
+}
+
 export interface Es2015Options {
   /** Transform arrow functions into function expressions. */
   arrowFunction?: ArrowFunctionsOptions
@@ -1040,6 +1046,13 @@ export interface OverwriteOptions {
   contentOnly: boolean
 }
 
+export interface OxcError {
+  severity: Severity
+  message: string
+  labels: Array<ErrorLabel>
+  helpMessage?: string
+}
+
 /**
  * Parse asynchronously.
  *
@@ -1061,6 +1074,11 @@ export interface ParserOptions {
    * Default: true
    */
   preserveParens?: boolean
+  /**
+   * Default: false
+   * @experimental Only for internal usage on Rolldown and Vite.
+   */
+  convertSpanUtf16?: boolean
 }
 
 /** Parse synchronously. */
@@ -1099,6 +1117,21 @@ export interface ReactRefreshOptions {
 }
 
 export declare function registerPlugins(id: number, plugins: Array<BindingPluginWithIndex>): void
+
+export type Severity =  'Error'|
+'Warning'|
+'Advice';
+
+export interface SourceMap {
+  file?: string
+  mappings: string
+  names: Array<string>
+  sourceRoot?: string
+  sources: Array<string>
+  sourcesContent?: Array<string>
+  version: number
+  x_google_ignoreList?: Array<number>
+}
 
 export interface SourceMapOptions {
   includeContent?: boolean

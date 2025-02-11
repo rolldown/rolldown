@@ -2,26 +2,24 @@
 
 exports[`builtin-plugin/manifest 1`] = `
 {
-  "default": {
-    "asset.txt": {
-      "file": "asset.txt",
-      "src": "asset.txt",
-    },
-    "chunk.js": {
-      "file": "chunk.js",
-      "isDynamicEntry": true,
-      "name": "chunk",
-      "src": "chunk.js",
-    },
-    "main.js": {
-      "dynamicImports": [
-        "chunk.js",
-      ],
-      "file": "main.js",
-      "isEntry": true,
-      "name": "main",
-      "src": "main.js",
-    },
+  "asset.txt": {
+    "file": "asset.txt",
+    "src": "asset.txt",
+  },
+  "chunk.js": {
+    "file": "chunk.js",
+    "isDynamicEntry": true,
+    "name": "chunk",
+    "src": "chunk.js",
+  },
+  "main.js": {
+    "dynamicImports": [
+      "chunk.js",
+    ],
+    "file": "main.js",
+    "isEntry": true,
+    "name": "main",
+    "src": "main.js",
   },
 }
 `;

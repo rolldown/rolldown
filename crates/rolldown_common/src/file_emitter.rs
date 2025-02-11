@@ -192,7 +192,9 @@ impl FileEmitter {
           name,
           hashes: extract_hash_pattern
             .map(|p| {
-              p.iter().map(|p| hash.as_str()[..p.len.unwrap_or(8)].to_string()).collect_vec()
+              p.iter()
+                .map(|p| hash.as_str()[..p.len.map_or(8, |hash_len| hash_len.max(6))].to_string())
+                .collect_vec()
             })
             .as_deref(),
           ext: Some(extension.unwrap_or_default()),

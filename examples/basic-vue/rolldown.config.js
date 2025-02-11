@@ -9,7 +9,6 @@ export default defineConfig({
     conditionNames: ['import'],
   },
   output: {
-    entryFileNames: '[name]-[hash:8]-[hash:12]-[hash:6].js',
     plugins: [
       {
         name: 'test-plugin',

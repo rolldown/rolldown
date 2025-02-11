@@ -237,9 +237,6 @@ impl<'a> GenerateStage<'a> {
       index_chunk_id_to_name.insert(*chunk_id, pre_generated_chunk_name.clone());
       let pre_rendered_chunk = generate_pre_rendered_chunk(chunk, self.link_output);
 
-      let asset_filename_template = &self.options.asset_filenames;
-      let extracted_asset_hash_pattern = extract_hash_patterns(asset_filename_template.template());
-
       let preliminary_filename = chunk
         .generate_preliminary_filename(
           self.options,
@@ -276,11 +273,12 @@ impl<'a> GenerateStage<'a> {
               source: asset_view.source.clone().to_vec().into(),
             })
             .await?;
+
           let extracted_asset_hash_pattern =
-            extract_hash_pattern(asset_filename_template.template());
+            extract_hash_patterns(asset_filename_template.template());
 
           let hash_placeholder = extracted_asset_hash_pattern.as_ref().map(|p| {
-            hash_placeholder_generator.generate(p.iter().map(|p| p.len.unwrap_or(8)).collect())
+            p.iter().map(|p| hash_placeholder_generator.generate(p.len.unwrap_or(8))).collect()
           });
 
           let preliminary = PreliminaryFilename::new(

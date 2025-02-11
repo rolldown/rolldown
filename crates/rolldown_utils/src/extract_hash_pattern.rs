@@ -4,76 +4,49 @@ pub struct ExtractedHashPattern<'a> {
   pub len: Option<usize>,
 }
 
-/// Extract `[hash]` or `[hash:8]` in the template
-pub fn extract_hash_pattern(pattern: &str) -> Option<ExtractedHashPattern<'_>> {
-  let start = pattern.find("[hash")?;
-  let end = pattern[start + 5..].find(']')?;
-  let len = if let Some(n) = pattern[start + 5..start + 5 + end].strip_prefix(':') {
-    Some(n.parse::<usize>().ok()?)
-  } else {
-    None
-  };
-  let pattern = &pattern[start..=start + 5 + end];
-  Some(ExtractedHashPattern { pattern, len })
-}
-
-/// Extract all `[hash]` or `[hash:8]` patterns in the template
+/// Replace all `[hash]` or `[hash:8]` in the pattern
 pub fn extract_hash_patterns(pattern: &str) -> Option<Vec<ExtractedHashPattern<'_>>> {
-  let mut results = Vec::new();
-  let mut remaining = pattern;
+  let placeholder = "[hash]";
+  let offset = placeholder.len() - 1;
+  let mut iter = pattern.match_indices(&placeholder[..offset]).peekable();
 
-  while let Some(hash_pattern) = extract_hash_pattern(remaining) {
-    let len = hash_pattern.pattern.len();
-    results.push(hash_pattern);
-    remaining = &remaining[len..];
+  iter.peek()?;
+
+  let mut ending = 0;
+  let mut result = vec![];
+
+  for (start, _) in iter {
+    if start < ending {
+      continue;
+    }
+
+    let start_offset = start + offset;
+    if let Some(end) = pattern[start_offset..].find(']') {
+      let end = start_offset + end;
+      let len = pattern[start_offset..end].strip_prefix(':').and_then(|n| n.parse::<usize>().ok());
+
+      result.push(ExtractedHashPattern { pattern: &pattern[start..=end], len });
+
+      ending = end + 1;
+    }
   }
 
-  if results.is_empty() {
-    return None;
-  }
-
-  Some(results)
+  Some(result)
 }
 
 #[test]
-fn test_extract_hash_placeholder() {
-  let correct = [("[hash:8]", Some(8)), ("[hash:256]", Some(256)), ("[hash]", None)];
-  for (pattern, len) in correct {
-    assert_eq!(extract_hash_pattern(pattern), Some(ExtractedHashPattern { pattern, len }),);
-  }
-
-  let incorrect = ["[", "[hash", "[hash::8]", "[hash:x]", "hash"];
-  for pattern in incorrect {
-    assert_eq!(extract_hash_pattern(pattern), None);
-  }
-
-  assert_eq!(
-    extract_hash_pattern("[name]-[hash].mjs"),
-    Some(ExtractedHashPattern { pattern: "[hash]", len: None })
-  );
-
-  assert_eq!(
-    extract_hash_pattern("[name]-[hash:16].mjs"),
-    Some(ExtractedHashPattern { pattern: "[hash:16]", len: Some(16) })
-  );
-}
-
-#[test]
-fn test_extract_hash_placeholders() {
-  let pattern = "[name]-[hash:8]-[hash:16].mjs";
+fn test_extract_hash_patterns() {
+  let pattern = "[name]-[hash]-[hash:16].mjs";
   let extracted = extract_hash_patterns(pattern);
   assert_eq!(
     extracted,
     Some(vec![
-      ExtractedHashPattern { pattern: "[hash:8]", len: Some(8) },
+      ExtractedHashPattern { pattern: "[hash]", len: None },
       ExtractedHashPattern { pattern: "[hash:16]", len: Some(16) }
     ])
   );
-}
 
-#[test]
-fn test_extract_hash_placeholders_none() {
   let pattern = "[name].mjs";
   let extracted = extract_hash_patterns(pattern);
-  assert_eq!(extracted, None,);
+  assert!(extracted.is_none());
 }

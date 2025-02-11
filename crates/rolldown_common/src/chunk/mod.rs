@@ -164,8 +164,9 @@ impl Chunk {
     let filename_template = self.filename_template(options, rollup_pre_rendered_chunk).await?;
     let extracted_hash_pattern = extract_hash_patterns(filename_template.template());
 
-    let hash_placeholder = extracted_hash_pattern
-      .map(|p| hash_placeholder_generator.generate(p.iter().map(|p| p.len.unwrap_or(8)).collect()));
+    let hash_placeholder = extracted_hash_pattern.map(|p| {
+      p.into_iter().map(|p| hash_placeholder_generator.generate(p.len.unwrap_or(8))).collect()
+    });
 
     let name = if hash_placeholder.is_some() {
       make_unique_name(chunk_name);
@@ -201,8 +202,9 @@ impl Chunk {
 
     let extracted_hash_pattern = extract_hash_patterns(filename_template.template());
 
-    let hash_placeholder = extracted_hash_pattern
-      .map(|p| hash_placeholder_generator.generate(p.iter().map(|p| p.len.unwrap_or(8)).collect()));
+    let hash_placeholder = extracted_hash_pattern.map(|p| {
+      p.into_iter().map(|p| hash_placeholder_generator.generate(p.len.unwrap_or(8))).collect()
+    });
 
     let name = if hash_placeholder.is_some() {
       make_unique_name(chunk_name);

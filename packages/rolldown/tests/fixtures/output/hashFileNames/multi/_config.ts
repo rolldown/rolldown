@@ -1,13 +1,13 @@
 import type { OutputChunk as RolldownOutputChunk } from 'rolldown'
-import { defineTest } from '@tests'
+import { defineTest } from 'rolldown-tests'
 import { expect } from 'vitest'
 
 export default defineTest({
   config: {
     output: {
       hashCharacters: 'hex',
-      entryFileNames: '[name]-[hash:6]-[hash:8].js',
-      chunkFileNames: '[name]-[hash:7]-[hash:9].js',
+      entryFileNames: '[name]-[hash]-[hash:6].js',
+      chunkFileNames: '[name]-[hash]-[hash:7].js',
       cssEntryFileNames: '[name]-[hash:6]-[hash:8].css',
       cssChunkFileNames: '[name]-[hash:7]-[hash:9].css',
     },
@@ -37,10 +37,10 @@ export default defineTest({
         )
         ?.fileName.match(/-([a-f0-9]+)-([a-f0-9]+)\.css$/) || []
 
-    expect(hash_entry[1]).toHaveLength(6)
-    expect(hash_entry[2]).toHaveLength(8)
-    expect(hash_chunk[1]).toHaveLength(7)
-    expect(hash_chunk[2]).toHaveLength(9)
+    expect(hash_entry[1]).toHaveLength(8)
+    expect(hash_entry[2]).toHaveLength(6)
+    expect(hash_chunk[1]).toHaveLength(8)
+    expect(hash_chunk[2]).toHaveLength(7)
     expect(hash_css_entry[1]).toHaveLength(6)
     expect(hash_css_entry[2]).toHaveLength(8)
     expect(hash_css_chunk[1]).toHaveLength(7)

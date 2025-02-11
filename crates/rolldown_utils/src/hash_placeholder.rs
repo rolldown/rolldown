@@ -46,7 +46,7 @@ pub struct HashPlaceholderGenerator {
 }
 
 impl HashPlaceholderGenerator {
-  pub fn generate_one(&mut self, len: usize) -> String {
+  pub fn generate(&mut self, len: usize) -> String {
     debug_assert!((HASH_PLACEHOLDER_OVERHEAD..=MAX_HASH_SIZE).contains(&len));
 
     let allow_middle_len = len - HASH_PLACEHOLDER_OVERHEAD;
@@ -65,10 +65,6 @@ impl HashPlaceholderGenerator {
     self.seed += 1;
 
     placeholder
-  }
-
-  pub fn generate(&mut self, lens: Vec<usize>) -> Vec<String> {
-    lens.into_iter().map(|len| self.generate_one(len)).collect()
   }
 }
 
@@ -116,8 +112,8 @@ pub fn extract_hash_placeholders(source: &str) -> FxIndexSet<ArcStr> {
 #[test]
 fn test_facade_hash_generator() {
   let mut gen = HashPlaceholderGenerator::default();
-  assert_eq!(gen.generate(vec![8, 8]), vec!["!~{000}~", "!~{001}~"]);
-  assert_eq!(gen.generate(vec![8, 8]), vec!["!~{002}~", "!~{003}~"]);
+  assert_eq!(gen.generate(8), "!~{000}~");
+  assert_eq!(gen.generate(8), "!~{001}~");
 }
 
 #[test]

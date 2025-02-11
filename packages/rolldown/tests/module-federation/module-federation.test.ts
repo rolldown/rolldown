@@ -64,6 +64,7 @@ describe('module-federation', () => {
     })
 
     // Test the remote manifest json
+    // @ts-ignore
     const remoteManifest = await import('./dist/remote/mf-manifest.json')
     expect(remoteManifest).toMatchSnapshot()
 

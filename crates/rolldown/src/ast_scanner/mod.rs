@@ -188,19 +188,10 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
 
   /// if current visit path is top level
   pub fn is_valid_tla_scope(&self) -> bool {
-    for scope_id in self.scope_stack.iter().rev().filter_map(|item| *item) {
-      let flag = self.result.ast_scope.get_flags(scope_id);
-      if flag.is_top() {
-        return true;
-      }
-      if flag.is_block() {
-        // Keep searching up
-        continue;
-      }
-
-      return false;
-    }
-    unreachable!("should have at least one scope");
+    self.scope_stack.iter().rev().filter_map(|item| *item).all(|scope| {
+      let flag = self.result.ast_scope.get_flags(scope);
+      flag.is_block() || flag.is_top()
+    })
   }
 
   pub fn scan(mut self, program: &Program<'ast>) -> BuildResult<ScanResult> {

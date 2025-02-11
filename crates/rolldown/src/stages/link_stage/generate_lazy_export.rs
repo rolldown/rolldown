@@ -160,7 +160,7 @@ fn json_object_expr_to_esm(
 
           let value = std::mem::replace(
             &mut property.value,
-            snippet.builder.expression_identifier_reference(SPAN, legitimized_ident.as_str()),
+            snippet.builder.expression_identifier(SPAN, legitimized_ident.as_str()),
           );
           if key == "__proto__" && !matches!(target, ESTarget::Es5) {
             property.computed = true;

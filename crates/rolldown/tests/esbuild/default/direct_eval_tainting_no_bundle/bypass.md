@@ -68,9 +68,7 @@ function test5() {
 	function containsDirectEval() {
 		eval();
 	}
-	{
-		var shouldNotBeRenamed;
-	}
+	var shouldNotBeRenamed;
 }
 
 //#endregion
@@ -80,7 +78,7 @@ function test5() {
 ===================================================================
 --- esbuild	/out.js
 +++ rolldown	entry.js
-@@ -1,31 +1,35 @@
+@@ -1,31 +1,33 @@
 +
 +//#region entry.js
  function test1() {
@@ -134,9 +132,7 @@ function test5() {
 +	function containsDirectEval() {
 +		eval();
 +	}
-+	{
-+		var shouldNotBeRenamed;
-+	}
++	var shouldNotBeRenamed;
 +}
 +
 +//#endregion

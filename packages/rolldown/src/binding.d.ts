@@ -740,6 +740,19 @@ export interface CompilerAssumptions {
   setPublicClassFields?: boolean
 }
 
+export interface DecoratorOptions {
+  /**
+   * Enables experimental support for decorators, which is a version of decorators that predates the TC39 standardization process.
+   *
+   * Decorators are a language feature which hasn’t yet been fully ratified into the JavaScript specification.
+   * This means that the implementation version in TypeScript may differ from the implementation in JavaScript when it it decided by TC39.
+   *
+   * @see https://www.typescriptlang.org/tsconfig/#experimentalDecorators
+   * @default false
+   */
+  legacy?: boolean
+}
+
 export interface DynamicImport {
   start: number
   end: number
@@ -763,12 +776,6 @@ export interface EcmaScriptModule {
   dynamicImports: Array<DynamicImport>
   /** Span positions` of `import.meta` */
   importMetas: Array<Span>
-}
-
-export interface ErrorLabel {
-  message?: string
-  start: number
-  end: number
 }
 
 export interface Es2015Options {
@@ -1033,13 +1040,6 @@ export interface OverwriteOptions {
   contentOnly: boolean
 }
 
-export interface OxcError {
-  severity: Severity
-  message: string
-  labels: Array<ErrorLabel>
-  helpMessage?: string
-}
-
 /**
  * Parse asynchronously.
  *
@@ -1099,21 +1099,6 @@ export interface ReactRefreshOptions {
 }
 
 export declare function registerPlugins(id: number, plugins: Array<BindingPluginWithIndex>): void
-
-export type Severity =  'Error'|
-'Warning'|
-'Advice';
-
-export interface SourceMap {
-  file?: string
-  mappings: string
-  names: Array<string>
-  sourceRoot?: string
-  sources: Array<string>
-  sourcesContent?: Array<string>
-  version: number
-  x_google_ignoreList?: Array<number>
-}
 
 export interface SourceMapOptions {
   includeContent?: boolean
@@ -1265,6 +1250,8 @@ export interface TransformOptions {
   define?: Record<string, string>
   /** Inject Plugin */
   inject?: Record<string, string | [string, string]>
+  /** Decorator plugin */
+  decorator?: DecoratorOptions
 }
 
 export interface TransformResult {

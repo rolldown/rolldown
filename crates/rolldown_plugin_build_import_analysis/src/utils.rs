@@ -29,7 +29,7 @@ pub fn construct_snippet_from_await_decl<'a>(
         ast_builder.vec_from_iter(decls.iter().map(|name| {
           ast_builder.binding_property(
             SPAN,
-            ast_builder.property_key_identifier_name(SPAN, name),
+            ast_builder.property_key_static_identifier(SPAN, name),
             ast_builder.binding_pattern(
               ast_builder.binding_pattern_kind_binding_identifier(SPAN, name),
               NONE,
@@ -63,7 +63,7 @@ fn construct_vite_preload_call<'a>(
 ) -> Expression<'a> {
   ast_builder.expression_call(
     SPAN,
-    ast_builder.expression_identifier_reference(SPAN, "__vitePreload"),
+    ast_builder.expression_identifier(SPAN, "__vitePreload"),
     NONE,
     {
       let mut items = ast_builder.vec();
@@ -93,7 +93,7 @@ fn construct_vite_preload_call<'a>(
                   ast_builder.vec_from_iter(decls.iter().map(|name| {
                     ast_builder.binding_property(
                       SPAN,
-                      ast_builder.property_key_identifier_name(SPAN, name),
+                      ast_builder.property_key_static_identifier(SPAN, name),
                       ast_builder.binding_pattern(
                         ast_builder.binding_pattern_kind_binding_identifier(SPAN, name),
                         NONE,
@@ -129,8 +129,8 @@ fn construct_vite_preload_call<'a>(
                 ast_builder.object_property_kind_object_property(
                   SPAN,
                   PropertyKind::Init,
-                  ast_builder.property_key_identifier_name(SPAN, name),
-                  ast_builder.expression_identifier_reference(SPAN, name),
+                  ast_builder.property_key_static_identifier(SPAN, name),
+                  ast_builder.expression_identifier(SPAN, name),
                   false,
                   true,
                   false,
@@ -144,8 +144,8 @@ fn construct_vite_preload_call<'a>(
       )));
       items.push(Argument::from(ast_builder.expression_conditional(
         SPAN,
-        ast_builder.expression_identifier_reference(SPAN, IS_MODERN_FLAG),
-        ast_builder.expression_identifier_reference(SPAN, "__VITE_PRELOAD__"),
+        ast_builder.expression_identifier(SPAN, IS_MODERN_FLAG),
+        ast_builder.expression_identifier(SPAN, "__VITE_PRELOAD__"),
         ast_builder.void_0(SPAN),
       )));
       if append_import_meta_url {

@@ -114,9 +114,7 @@ impl<'ast> DynamicImportVarsVisit<'ast> {
     let segments = pattern.split('/').count();
     self.ast_builder.expression_call(
       span,
-      self
-        .ast_builder
-        .expression_identifier_reference(SPAN, "__variableDynamicImportRuntimeHelper"),
+      self.ast_builder.expression_identifier(SPAN, "__variableDynamicImportRuntimeHelper"),
       NONE,
       {
         let mut items = self.ast_builder.vec();
@@ -147,7 +145,7 @@ impl<'ast> DynamicImportVarsVisit<'ast> {
                       self.ast_builder.vec1(self.ast_builder.object_property_kind_object_property(
                         SPAN,
                         PropertyKind::Init,
-                        self.ast_builder.property_key_identifier_name(SPAN, "query"),
+                        self.ast_builder.property_key_static_identifier(SPAN, "query"),
                         self.ast_builder.expression_string_literal(SPAN, params.query, None),
                         false,
                         false,
@@ -157,7 +155,7 @@ impl<'ast> DynamicImportVarsVisit<'ast> {
                       items.push(self.ast_builder.object_property_kind_object_property(
                         SPAN,
                         PropertyKind::Init,
-                        self.ast_builder.property_key_identifier_name(SPAN, "import"),
+                        self.ast_builder.property_key_static_identifier(SPAN, "import"),
                         self.ast_builder.expression_string_literal(SPAN, "*", None),
                         false,
                         false,

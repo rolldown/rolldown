@@ -101,6 +101,8 @@
   diff
 ## minify_nested_labels_no_bundle
   missing
+## [nested_scope_bug](../../../crates/rolldown/tests/esbuild/default/nested_scope_bug/diff.md)
+  diff
 ## [non_determinism_issue2537](../../../crates/rolldown/tests/esbuild/default/non_determinism_issue2537/diff.md)
   diff
 ## [output_for_assert_type_json](../../../crates/rolldown/tests/esbuild/default/output_for_assert_type_json/diff.md)
@@ -171,7 +173,6 @@
 ## [jsx_this_property_esm](../../../crates/rolldown/tests/esbuild/default/jsx_this_property_esm)
 ## [jsx_this_value_esm](../../../crates/rolldown/tests/esbuild/default/jsx_this_value_esm)
 ## [nested_require_without_call](../../../crates/rolldown/tests/esbuild/default/nested_require_without_call)
-## [nested_scope_bug](../../../crates/rolldown/tests/esbuild/default/nested_scope_bug)
 ## [new_expression_common_js](../../../crates/rolldown/tests/esbuild/default/new_expression_common_js)
 ## [outbase](../../../crates/rolldown/tests/esbuild/default/outbase)
 ## [output_extension_remapping_dir](../../../crates/rolldown/tests/esbuild/default/output_extension_remapping_dir)

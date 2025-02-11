@@ -398,5 +398,4 @@ module.exports.parseAsync = nativeBinding.parseAsync
 module.exports.parseSync = nativeBinding.parseSync
 module.exports.parseWithoutReturn = nativeBinding.parseWithoutReturn
 module.exports.registerPlugins = nativeBinding.registerPlugins
-module.exports.Severity = nativeBinding.Severity
 module.exports.transform = nativeBinding.transform

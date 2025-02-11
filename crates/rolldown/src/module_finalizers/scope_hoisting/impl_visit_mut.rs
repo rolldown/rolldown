@@ -296,7 +296,7 @@ impl<'ast> VisitMut<'ast> for ScopeHoistingFinalizer<'_, 'ast> {
         if let Some(kind) = self.ctx.module.ecma_view.this_expr_replace_map.get(&this_expr.span) {
           match kind {
             ThisExprReplaceKind::Exports => {
-              *expr = self.snippet.builder.expression_identifier_reference(SPAN, "exports");
+              *expr = self.snippet.builder.expression_identifier(SPAN, "exports");
             }
             ThisExprReplaceKind::Undefined => {
               *expr = self.snippet.void_zero();

@@ -120,6 +120,7 @@ fn is_false(b: &bool) -> bool {
 }
 
 #[derive(Debug, Default, Serialize)]
+#[serde(rename_all = "camelCase")]
 pub struct ManifestChunk {
   pub file: String,
   #[serde(skip_serializing_if = "Option::is_none")]

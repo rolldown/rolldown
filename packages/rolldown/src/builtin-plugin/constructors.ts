@@ -8,6 +8,7 @@ import {
   type BindingViteResolvePluginConfig,
   BindingModuleFederationPluginOption,
   BindingRemote,
+  BindingMfManifest,
 } from '../binding'
 import { makeBuiltinPluginCallable } from './utils'
 
@@ -85,6 +86,7 @@ export type ModuleFederationPluginOption = Omit<
   'remotes'
 > & {
   remotes?: Record<string, string | BindingRemote>
+  manifest?: boolean | BindingMfManifest
 }
 
 export function moduleFederationPlugin(
@@ -105,5 +107,11 @@ export function moduleFederationPlugin(
           name: remote.name ?? name,
         }
       }),
+    manifest:
+      config.manifest === false
+        ? undefined
+        : config.manifest === true
+          ? {}
+          : config.manifest,
   })
 }

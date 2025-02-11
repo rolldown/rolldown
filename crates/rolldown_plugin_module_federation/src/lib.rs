@@ -4,7 +4,7 @@ mod init_modules_visitor;
 mod option;
 mod utils;
 use arcstr::ArcStr;
-pub use option::{ModuleFederationPluginOption, Remote, Shared};
+pub use option::{Manifest, ModuleFederationPluginOption, Remote, Shared};
 use oxc::{
   ast::{
     ast::{ImportOrExportKind, Statement},

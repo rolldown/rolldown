@@ -470,6 +470,12 @@ export interface BindingMatchGroup {
   maxSize?: number
 }
 
+export interface BindingMfManifest {
+  filePath?: string
+  disableAssetsAnalyze?: boolean
+  fileName?: string
+}
+
 export interface BindingMinifyOptions {
   mangle: boolean
   compress: boolean
@@ -483,6 +489,7 @@ export interface BindingModuleFederationPluginOption {
   remotes?: Array<BindingRemote>
   shared?: Record<string, BindingShared>
   runtimePlugins?: Array<string>
+  manifest?: BindingMfManifest
 }
 
 export interface BindingModulePreloadPolyfillPluginConfig {

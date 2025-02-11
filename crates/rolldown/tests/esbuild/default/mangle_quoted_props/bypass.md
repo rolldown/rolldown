@@ -1,6 +1,54 @@
 # Reason
 1. could be done in minifier
 # Diff
+## /out/keep.js
+### esbuild
+```js
+foo("_keepThisProperty");
+foo((x, "_keepThisProperty"));
+foo(x ? "_keepThisProperty" : "_keepThisPropertyToo");
+x[foo("_keepThisProperty")];
+x?.[foo("_keepThisProperty")];
+({ [foo("_keepThisProperty")]: x });
+(class {
+  [foo("_keepThisProperty")] = x;
+});
+var { [foo("_keepThisProperty")]: x } = y;
+foo("_keepThisProperty") in x;
+```
+### rolldown
+```js
+
+//#region keep.js
+foo("_keepThisProperty");
+foo("_keepThisProperty");
+foo(x ? "_keepThisProperty" : "_keepThisPropertyToo");
+x[foo("_keepThisProperty")];
+x?.[foo("_keepThisProperty")];
+({ [foo("_keepThisProperty")]: x });
+(class {
+	[foo("_keepThisProperty")] = x;
+});
+var { [foo("_keepThisProperty")]: x } = y;
+foo("_keepThisProperty") in x;
+
+//#endregion
+```
+### diff
+```diff
+===================================================================
+--- esbuild	/out/keep.js
++++ rolldown	keep.js
+@@ -1,6 +1,6 @@
+ foo("_keepThisProperty");
+-foo((x, "_keepThisProperty"));
++foo("_keepThisProperty");
+ foo(x ? "_keepThisProperty" : "_keepThisPropertyToo");
+ x[foo("_keepThisProperty")];
+ x?.[foo("_keepThisProperty")];
+ ({
+
+```
 ## /out/mangle.js
 ### esbuild
 ```js

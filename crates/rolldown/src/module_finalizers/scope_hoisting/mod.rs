@@ -429,7 +429,7 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
             // require('url')
             let require_call = self.snippet.builder.alloc_call_expression(
               SPAN,
-              self.snippet.builder.expression_identifier_reference(SPAN, "require"),
+              self.snippet.builder.expression_identifier(SPAN, "require"),
               oxc::ast::NONE,
               self.snippet.builder.vec1(ast::Argument::StringLiteral(
                 self.snippet.builder.alloc_string_literal(SPAN, "url", None),
@@ -503,7 +503,7 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
           SPAN,
           self.snippet.builder.expression_new(
             SPAN,
-            self.snippet.builder.expression_identifier_reference(SPAN, "URL"),
+            self.snippet.builder.expression_identifier(SPAN, "URL"),
             self.snippet.builder.vec_from_array([
               ast::Argument::StringLiteral(self.snippet.builder.alloc_string_literal(
                 SPAN,
@@ -840,23 +840,14 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
               let importee_wrapper_ref_name =
                 self.canonical_name_for(importee_linking_info.wrapper_ref.unwrap());
 
-              Some(
-                self.snippet.promise_resolve_then_call_expr(
-                  import_expr.span,
-                  self.snippet.builder.vec1(
-                    self.snippet.return_stmt(
-                      self.snippet.wrap_with_to_esm(
-                        self
-                          .snippet
-                          .builder
-                          .expression_identifier_reference(SPAN, to_esm_fn_name.as_str()),
-                        self.snippet.call_expr_expr(importee_wrapper_ref_name),
-                        self.ctx.module.should_consider_node_esm_spec(),
-                      ),
-                    ),
-                  ),
-                ),
-              )
+              Some(self.snippet.promise_resolve_then_call_expr(
+                import_expr.span,
+                self.snippet.builder.vec1(self.snippet.return_stmt(self.snippet.wrap_with_to_esm(
+                  self.snippet.builder.expression_identifier(SPAN, to_esm_fn_name.as_str()),
+                  self.snippet.call_expr_expr(importee_wrapper_ref_name),
+                  self.ctx.module.should_consider_node_esm_spec(),
+                ))),
+              ))
             }
             WrapKind::None => {
               // The nature of `import()` is to load the module dynamically/lazily, so imported modules would
@@ -892,7 +883,7 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
                 SPAN,
                 Some(ast::Expression::CallExpression(self.snippet.builder.alloc_call_expression(
                   SPAN,
-                  self.snippet.builder.expression_identifier_reference(SPAN, "require"),
+                  self.snippet.builder.expression_identifier(SPAN, "require"),
                   NONE,
                   self.snippet.builder.vec1(ast::Argument::StringLiteral(
                     self.snippet.alloc_string_literal(&import_path, import_expr.span),

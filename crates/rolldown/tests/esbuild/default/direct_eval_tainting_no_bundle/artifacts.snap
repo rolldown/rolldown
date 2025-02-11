@@ -62,9 +62,7 @@ function test5() {
 	function containsDirectEval() {
 		eval();
 	}
-	{
-		var shouldNotBeRenamed;
-	}
+	var shouldNotBeRenamed;
 }
 
 //#endregion

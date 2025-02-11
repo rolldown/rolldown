@@ -744,7 +744,7 @@ snapshot_kind: text
 
 # tests/esbuild/default/direct_eval_tainting_no_bundle
 
-- entry-!~{000}~.js => entry-iRIgqqEx.js
+- entry-!~{000}~.js => entry-_5-LtnFN.js
 
 # tests/esbuild/default/dot_import
 
@@ -1282,12 +1282,12 @@ snapshot_kind: text
 
 # tests/esbuild/default/mangle_quoted_props
 
-- keep-!~{000}~.js => keep-8ZBI9IoK.js
+- keep-!~{000}~.js => keep-a3yw9qnD.js
 - mangle-!~{001}~.js => mangle-Pw4rxKdd.js
 
 # tests/esbuild/default/mangle_quoted_props_minify_syntax
 
-- keep-!~{000}~.js => keep-8ZBI9IoK.js
+- keep-!~{000}~.js => keep-a3yw9qnD.js
 - mangle-!~{001}~.js => mangle-Pw4rxKdd.js
 
 # tests/esbuild/default/many_entry_points
@@ -1429,7 +1429,7 @@ snapshot_kind: text
 
 # tests/esbuild/default/nested_scope_bug
 
-- entry-!~{000}~.js => entry-BZEVmK0m.js
+- entry-!~{000}~.js => entry-DRq34Blt.js
 
 # tests/esbuild/default/new_expression_common_js
 

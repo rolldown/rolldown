@@ -123,8 +123,6 @@
   diff
 ## [this_inside_function](../../../crates/rolldown/tests/esbuild/default/this_inside_function/diff.md)
   diff
-## [this_outside_function](../../../crates/rolldown/tests/esbuild/default/this_outside_function/diff.md)
-  diff
 ## this_with_es6_syntax
   missing
 ## [top_level_await_allowed_import_with_splitting](../../../crates/rolldown/tests/esbuild/default/top_level_await_allowed_import_with_splitting/diff.md)

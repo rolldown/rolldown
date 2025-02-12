@@ -29,7 +29,9 @@ impl BundlerBuilder {
     let resolver: SharedResolver =
       Resolver::new(resolve_options, options.platform, options.cwd.clone(), OsFileSystem).into();
 
-    _ = Self::merge_transform_config_from_ts_config(&mut options, tsconfig_filename, &resolver);
+    // TODO: error handling
+    Self::merge_transform_config_from_ts_config(&mut options, tsconfig_filename, &resolver)
+      .unwrap();
 
     let options = Arc::new(options);
 
@@ -51,15 +53,30 @@ impl BundlerBuilder {
   }
 
   fn merge_transform_config_from_ts_config(
-    _options: &mut NormalizedBundlerOptions,
+    options: &mut NormalizedBundlerOptions,
     tsconfig_filename: Option<String>,
     resolver: &SharedResolver,
   ) -> Result<(), ResolveError> {
     let Some(tsconfig_filename) = tsconfig_filename else {
       return Ok(());
     };
-    resolver.resolve_tsconfig(&tsconfig_filename)?;
-    // TODO: Implement the rest of this function needs oxc_resolver new release
+    let ts_config = resolver.resolve_tsconfig(&tsconfig_filename)?;
+    if let Some(ref jsx_factory) = ts_config.compiler_options.jsx_factory {
+      options.base_transform_options.jsx.pragma = Some(jsx_factory.clone());
+    }
+
+    if let Some(ref jsx_fragment_factory) = ts_config.compiler_options.jsx_fragment_factory {
+      options.base_transform_options.jsx.pragma_frag = Some(jsx_fragment_factory.clone());
+    }
+
+    if let Some(ref jsx_import_source) = ts_config.compiler_options.jsx_import_source {
+      options.base_transform_options.jsx.import_source = Some(jsx_import_source.clone());
+    }
+
+    if let Some(ref experimental_decorator) = ts_config.compiler_options.experimental_decorators {
+      options.base_transform_options.decorator.legacy = *experimental_decorator;
+    }
+
     Ok(())
   }
 

@@ -183,6 +183,21 @@ pub struct BundlerOptions {
   pub defer_sync_scan_data: Option<DeferSyncScanDataOption>,
 }
 
+impl BundlerOptions {
+  /// # Panic
+  /// 1. If `cwd` is not set.
+  ///
+  /// This method is used to sync the path after the `cwd` is set,
+  /// so make sure to call this method after the cwd is canonicalized
+  pub fn canonicalize_option_path(&mut self) {
+    if let Some(resolve) = self.resolve.as_mut() {
+      resolve.tsconfig_filename = resolve.tsconfig_filename.as_ref().map(|tsconfig_filename| {
+        self.cwd.as_ref().unwrap().join(tsconfig_filename).to_string_lossy().to_string()
+      });
+    }
+  }
+}
+
 #[cfg(feature = "deserialize_bundler_options")]
 fn deserialize_external<'de, D>(deserializer: D) -> Result<Option<IsExternal>, D::Error>
 where

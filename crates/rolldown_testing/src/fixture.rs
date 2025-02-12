@@ -32,6 +32,8 @@ impl Fixture {
       options.cwd = Some(self.fixture_path.clone());
     }
 
+    options.canonicalize_option_path();
+
     let configs = [NamedBundlerOptions { options: options.clone(), name: None }]
       .into_iter()
       .chain(config_variants.into_iter().map(|variant| NamedBundlerOptions {

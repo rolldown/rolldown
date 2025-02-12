@@ -13,7 +13,7 @@ interface FormalModuleTypeFilter {
   include?: ModuleType[]
 }
 
-type ModuleTypeFilter = ModuleType[] | FormalModuleTypeFilter
+export type ModuleTypeFilter = ModuleType[] | FormalModuleTypeFilter
 
 export interface HookFilter {
   /**

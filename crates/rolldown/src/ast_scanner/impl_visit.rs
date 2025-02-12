@@ -242,7 +242,9 @@ impl<'me, 'ast: 'me> Visit<'ast> for AstScanner<'me, 'ast> {
 
   fn visit_property_key(&mut self, it: &ast::PropertyKey<'ast>) {
     let pre_is_nested_this_inside_class = self.is_nested_this_inside_class;
-    self.is_nested_this_inside_class = false;
+    if let Some(AstKind::ClassBody(_)) = self.visit_path.iter().rev().nth(1) {
+      self.is_nested_this_inside_class = false;
+    }
     walk::walk_property_key(self, it);
     self.is_nested_this_inside_class = pre_is_nested_this_inside_class;
   }

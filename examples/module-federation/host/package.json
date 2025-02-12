@@ -3,14 +3,15 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "build": "rolldown --config ./rolldown.config.js"
+    "build": "rolldown --config ./rolldown.config.js && http-server ./dist -p 8084"
   },
   "devDependencies": {
-    "rolldown": "workspace:*"
+    "rolldown": "workspace:*",
+    "http-server": "^14.0.1"
   },
   "dependencies": {
     "@module-federation/runtime": "^0.8.8",
-    "react": "^17.0.2",
-    "react-dom": "^17.0.2"
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0"
   }
 }

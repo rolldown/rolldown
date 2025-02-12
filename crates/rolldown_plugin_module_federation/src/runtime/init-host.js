@@ -12,7 +12,7 @@ const initRes = init({
     shareStrategy: 'version-first'
 });
 
-await Promise.all(await initRes.initializeSharing('default', {
+await Promise.all(initRes.initializeSharing('default', {
     strategy: 'version-first',
     from: "build",
     initScope: []

@@ -19,7 +19,10 @@ use rolldown_plugin::{HookResolveIdReturn, Plugin};
 use rolldown_utils::{concat_string, dashmap::FxDashMap};
 use rustc_hash::FxHashSet;
 use sugar_path::SugarPath;
-use utils::{detect_remote_module_type, get_remote_module_prefix, ResolvedSharedModule};
+use utils::{
+  detect_remote_module_type, generate_remote_module_is_cjs_placeholder, get_remote_module_prefix,
+  ResolvedSharedModule,
+};
 
 const REMOTE_ENTRY: &str = "mf:remote-entry.js";
 const INIT_HOST: &str = "mf:init-host.js";
@@ -33,11 +36,18 @@ const HOST_ENTRY_PREFIX: &str = "mf:host-entry:";
 pub struct ModuleFederationPlugin {
   options: ModuleFederationPluginOption,
   resolved_shared_modules: FxDashMap<ArcStr, ResolvedSharedModule>,
+  resolved_expose_modules: FxDashMap<ArcStr, ArcStr>,
+  remote_module_is_cjs_map: FxDashMap<ArcStr, bool>,
 }
 
 impl ModuleFederationPlugin {
   pub fn new(options: ModuleFederationPluginOption) -> Self {
-    Self { options, resolved_shared_modules: FxDashMap::default() }
+    Self {
+      options,
+      resolved_expose_modules: FxDashMap::default(),
+      resolved_shared_modules: FxDashMap::default(),
+      remote_module_is_cjs_map: FxDashMap::default(),
+    }
   }
 
   pub fn generate_remote_entry_code(&self) -> String {
@@ -48,7 +58,20 @@ impl ModuleFederationPlugin {
       .map(|exposes| {
         exposes
           .iter()
-          .map(|(key, value)| concat_string!("'", key, "': () => import('", value, "')"))
+          .map(|(key, value)| {
+            concat_string!(
+              "'",
+              key,
+              "': async () => {",
+              "const module = await import('",
+              value,
+              "');",
+              "return ",
+              generate_remote_module_is_cjs_placeholder(key),
+              " ? module.default : module",
+              "}"
+            )
+          })
           .collect::<Vec<_>>()
           .join(", ")
       })
@@ -195,6 +218,13 @@ impl Plugin for ModuleFederationPlugin {
       }
     }
 
+    if let Some(exposes) = self.options.exposes.as_ref() {
+      for (key, value) in exposes {
+        let resolve_id = ctx.resolve(value.as_str(), None, None).await??;
+        self.resolved_expose_modules.insert(key.as_str().into(), resolve_id.id.clone());
+      }
+    }
+
     Ok(())
   }
 
@@ -336,6 +366,42 @@ impl Plugin for ModuleFederationPlugin {
     });
 
     Ok(args.ast)
+  }
+
+  async fn module_parsed(
+    &self,
+    _ctx: &rolldown_plugin::PluginContext,
+    _module_info: std::sync::Arc<rolldown_common::ModuleInfo>,
+    normal_module: &rolldown_common::NormalModule,
+  ) -> rolldown_plugin::HookNoopReturn {
+    for expose in &self.resolved_expose_modules {
+      if expose.value().as_str() == normal_module.id.as_ref() {
+        self
+          .remote_module_is_cjs_map
+          .insert(expose.key().clone(), normal_module.ecma_view.exports_kind.is_commonjs());
+      }
+    }
+    Ok(())
+  }
+
+  async fn render_chunk(
+    &self,
+    _ctx: &rolldown_plugin::PluginContext,
+    args: &rolldown_plugin::HookRenderChunkArgs<'_>,
+  ) -> rolldown_plugin::HookRenderChunkReturn {
+    if let Some(facade_module_id) = &args.chunk.facade_module_id {
+      if facade_module_id.as_ref() == REMOTE_ENTRY {
+        let mut code = args.code.clone();
+        for remote_module in &self.remote_module_is_cjs_map {
+          code = code.replace(
+            &generate_remote_module_is_cjs_placeholder(remote_module.key()),
+            if *remote_module.value() { "true" } else { "false" },
+          );
+        }
+        return Ok(Some(rolldown_plugin::HookRenderChunkOutput { code, map: None }));
+      }
+    }
+    Ok(None)
   }
 
   async fn generate_bundle(

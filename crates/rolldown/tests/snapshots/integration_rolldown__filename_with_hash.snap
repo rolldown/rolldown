@@ -1663,7 +1663,7 @@ snapshot_kind: text
 
 # tests/esbuild/default/this_outside_function
 
-- entry-!~{000}~.js => entry-CH8pJGJT.js
+- entry-!~{000}~.js => entry-Ce-NJHbc.js
 
 # tests/esbuild/default/this_undefined_warning_esm
 
@@ -5287,8 +5287,8 @@ snapshot_kind: text
 
 # tests/rolldown/tree_shaking/dynamic_import_await_destruct
 
-- main-!~{000}~.js => main-bpwkiJWp.js
-- lib-!~{001}~.js => lib-azPbQopu.js
+- main-!~{000}~.js => main-CCNsV3co.js
+- lib-!~{001}~.js => lib-BDaXVMdd.js
 
 # tests/rolldown/tree_shaking/dynamic_import_bailout
 

@@ -10,10 +10,9 @@ snapshot_kind: text
 
 //#region lib.js
 var foo = "foo";
-var bar = "bar";
 
 //#endregion
-export { bar, foo };
+export { foo };
 ```
 ## main.js
 

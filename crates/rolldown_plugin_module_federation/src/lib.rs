@@ -68,9 +68,12 @@ impl ModuleFederationPlugin {
               "const module = await import('",
               value,
               "');",
-              "return ",
+              "if (",
               remote_module.value().placeholder,
-              " ? module.default : module",
+              ") return module.default;",
+              "const target = { ...module };",
+              "Object.defineProperty(target, '__esModule', { value: true, enumerable: false });",
+              "return target;",
               "}"
             )
           })
@@ -168,9 +171,12 @@ impl ModuleFederationPlugin {
               SHARED_MODULE_PREFIX,
               key,
               "');",
-              "return ",
+              "if (",
               remote_module.value().placeholder,
-              " ? module.default : module",
+              ") return module.default;",
+              "const target = { ...module };",
+              "Object.defineProperty(target, '__esModule', { value: true, enumerable: false });",
+              "return target;",
               "}, shareConfig: {",
               value.singleton.map(|v| if v { "singleton: true," } else { "" }).unwrap_or_default(),
               value

@@ -35,7 +35,13 @@ import type {
   ResolvedId,
   SourceDescription,
   TransformResult,
+  HookFilterExtension,
 } from './plugin'
+import type {
+  HookFilter,
+  StringFilter,
+  ModuleTypeFilter,
+} from './plugin/hook-filter'
 import type { LogOrStringHandler } from './log/logging'
 import { DefineParallelPluginResult } from './plugin/parallel-plugin'
 import { defineConfig } from './utils/define-config'
@@ -95,6 +101,10 @@ export type {
   LoadResult,
   TransformResult,
   ResolveIdResult,
+  HookFilterExtension,
+  HookFilter,
+  StringFilter,
+  ModuleTypeFilter,
   PluginContext,
   TransformPluginContext,
   ObjectHook,

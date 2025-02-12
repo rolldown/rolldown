@@ -21,7 +21,7 @@ export default defineConfig({
     }),
     {
       name: 'emit-html',
-      generateBundle(_, bundle) {
+      generateBundle() {
         const html = `
           <html>
             <body>

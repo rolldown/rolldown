@@ -147,23 +147,30 @@ impl ModuleFederationPlugin {
         shared
           .iter()
           .map(|(key, value)| {
+            let remote_module = self
+              .resolved_remote_modules
+              .get(key.as_str())
+              .expect("remote module should have resolved");
             concat_string!(
               "'",
               key,
               "': { version: '",
               self.resolved_remote_modules.get(key.as_str()).map_or_else(
                 || { value.version.as_deref().unwrap_or_default().into() },
-                |v| v.value().version.clone()
+                |v| v.value().version.as_deref().map(ToString::to_string).unwrap_or_default()
               ),
               "', scope: ['",
               value.share_scope.as_deref().unwrap_or("default"),
               "'], from: '",
               self.options.name.as_str(),
               "', async get() {",
-              "return await import('",
+              "const module = await import('",
               SHARED_MODULE_PREFIX,
               key,
               "');",
+              "return ",
+              remote_module.value().placeholder,
+              " ? module.default : module",
               "}, shareConfig: {",
               value.singleton.map(|v| if v { "singleton: true," } else { "" }).unwrap_or_default(),
               value
@@ -210,17 +217,16 @@ impl Plugin for ModuleFederationPlugin {
       for (key, item) in shared {
         if item.version.is_none() {
           let resolve_id = ctx.resolve(key.as_str(), None, None).await??;
-          if let Some(version) = resolve_id.package_json.as_ref().and_then(|j| j.version.as_ref()) {
-            self.resolved_remote_modules.insert(
-              key.as_str().into(),
-              ResolvedRemoteModule {
-                id: resolve_id.id.clone(),
-                version: version.clone(),
-                placeholder: generate_remote_module_is_cjs_placeholder(key.as_str()),
-                ..Default::default()
-              },
-            );
-          }
+          self.resolved_remote_modules.insert(
+            key.as_str().into(),
+            ResolvedRemoteModule {
+              id: resolve_id.id.clone(),
+              version: resolve_id.package_json.as_ref().and_then(|j| j.version.clone()),
+              placeholder: generate_remote_module_is_cjs_placeholder(key.as_str()),
+              ..Default::default()
+            },
+          );
+          self.resolved_id_to_remote_module_keys.insert(resolve_id.id.clone(), key.as_str().into());
         }
       }
     }
@@ -407,7 +413,7 @@ impl Plugin for ModuleFederationPlugin {
     args: &rolldown_plugin::HookRenderChunkArgs<'_>,
   ) -> rolldown_plugin::HookRenderChunkReturn {
     if let Some(facade_module_id) = &args.chunk.facade_module_id {
-      if facade_module_id.as_ref() == REMOTE_ENTRY {
+      if facade_module_id.as_ref() == REMOTE_ENTRY || facade_module_id.as_ref() == INIT_HOST {
         let mut code = args.code.clone();
         for remote_module_ref in &self.resolved_remote_modules {
           let remote_module = remote_module_ref.value();

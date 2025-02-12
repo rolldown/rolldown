@@ -106,7 +106,7 @@ pub async fn generate_manifest(
             name: key.to_string(),
             version: resolved_shared_modules.get(key.as_str()).map_or_else(
               || value.version.clone().unwrap_or_default(),
-              |v| v.value().version.to_string(),
+              |v| v.value().version.as_deref().map(ToString::to_string).unwrap_or_default(),
             ),
             required_version: value.required_version.clone().unwrap_or_default(),
             assets: Assets {

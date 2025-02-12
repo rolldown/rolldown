@@ -32,15 +32,13 @@ impl FilenameTemplate {
     if let Some(name) = options.name {
       tmp = tmp.replace("[name]", name);
     }
-    if let Some(hashes) = &options.hashes {
-      for hash in *hashes {
-        if let Some(start) = tmp.find("[hash") {
-          if let Some(end) = tmp[start + 5..].find(']') {
-            tmp.replace_range(start..=start + end + 5, hash.as_str());
-          }
+    options.hashes.into_iter().flatten().for_each(|hash| {
+      if let Some(start) = tmp.find("[hash") {
+        if let Some(end) = tmp[start + 5..].find(']') {
+          tmp.replace_range(start..=start + end + 5, hash.as_str());
         }
       }
-    }
+    });
     if let Some(ext) = options.ext {
       let extname = if ext.is_empty() { "" } else { &format!(".{ext}") };
       tmp = tmp.replace("[ext]", ext).replace("[extname]", extname);

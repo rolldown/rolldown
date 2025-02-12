@@ -12,7 +12,7 @@ use crate::{
   HookResolveIdArgs, HookTransformArgs, Plugin, SharedTransformPluginContext,
 };
 use anyhow::Ok;
-use rolldown_common::{ModuleInfo, RollupRenderedChunk, WatcherChangeKind};
+use rolldown_common::{ModuleInfo, NormalModule, RollupRenderedChunk, WatcherChangeKind};
 
 pub use crate::plugin::HookAugmentChunkHashReturn;
 pub use crate::plugin::HookLoadReturn;
@@ -89,6 +89,7 @@ pub trait Pluginable: Any + Debug + Send + Sync + 'static {
     &self,
     _ctx: &PluginContext,
     _module_info: Arc<ModuleInfo>,
+    _normal_module: &NormalModule,
   ) -> HookNoopReturn;
 
   fn call_module_parsed_meta(&self) -> Option<PluginHookMeta>;
@@ -276,8 +277,9 @@ impl<T: Plugin> Pluginable for T {
     &self,
     ctx: &PluginContext,
     module_info: Arc<ModuleInfo>,
+    normal_module: &NormalModule,
   ) -> HookNoopReturn {
-    Plugin::module_parsed(self, ctx, module_info).await
+    Plugin::module_parsed(self, ctx, module_info, normal_module).await
   }
 
   fn call_module_parsed_meta(&self) -> Option<PluginHookMeta> {

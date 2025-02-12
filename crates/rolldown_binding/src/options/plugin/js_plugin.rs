@@ -7,6 +7,7 @@ use crate::types::{
 use anyhow::Ok;
 use napi::bindgen_prelude::FnArgs;
 use rolldown::ModuleType;
+use rolldown_common::NormalModule;
 use rolldown_plugin::{Plugin, __inner::SharedPluginable, typedmap::TypedMapKey};
 use rolldown_utils::pattern_filter::{self, FilterResult};
 use std::{
@@ -233,6 +234,7 @@ impl Plugin for JsPlugin {
     &self,
     ctx: &rolldown_plugin::PluginContext,
     module_info: Arc<rolldown_common::ModuleInfo>,
+    _normal_module: &NormalModule,
   ) -> rolldown_plugin::HookNoopReturn {
     if let Some(cb) = &self.module_parsed {
       cb.await_call((ctx.clone().into(), BindingModuleInfo::new(module_info)).into()).await?;

@@ -11,7 +11,8 @@ use crate::{
 };
 use anyhow::Result;
 use rolldown_common::{
-  side_effects::HookSideEffects, ModuleInfo, ModuleType, SharedNormalizedBundlerOptions,
+  side_effects::HookSideEffects, ModuleInfo, ModuleType, NormalModule,
+  SharedNormalizedBundlerOptions,
 };
 use rolldown_sourcemap::SourceMap;
 use rolldown_utils::unique_arc::UniqueArc;
@@ -260,11 +261,15 @@ impl PluginDriver {
     Ok(args.ast)
   }
 
-  pub async fn module_parsed(&self, module_info: Arc<ModuleInfo>) -> HookNoopReturn {
+  pub async fn module_parsed(
+    &self,
+    module_info: Arc<ModuleInfo>,
+    normal_module: &NormalModule,
+  ) -> HookNoopReturn {
     for (_, plugin, ctx) in
       self.iter_plugin_with_context_by_order(&self.order_by_module_parsed_meta)
     {
-      plugin.call_module_parsed(ctx, Arc::clone(&module_info)).await?;
+      plugin.call_module_parsed(ctx, Arc::clone(&module_info), normal_module).await?;
     }
     Ok(())
   }

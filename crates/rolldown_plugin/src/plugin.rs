@@ -13,7 +13,7 @@ use crate::{
   HookTransformArgs, HookWriteBundleArgs, SharedTransformPluginContext,
 };
 use anyhow::Result;
-use rolldown_common::{ModuleInfo, RollupRenderedChunk, WatcherChangeKind};
+use rolldown_common::{ModuleInfo, NormalModule, RollupRenderedChunk, WatcherChangeKind};
 use rolldown_ecmascript::EcmaAst;
 
 pub type HookResolveIdReturn = Result<Option<HookResolveIdOutput>>;
@@ -99,6 +99,7 @@ pub trait Plugin: Any + Debug + Send + Sync + 'static {
     &self,
     _ctx: &PluginContext,
     _module_info: Arc<ModuleInfo>,
+    _normal_module: &NormalModule,
   ) -> impl std::future::Future<Output = HookNoopReturn> + Send {
     async { Ok(()) }
   }

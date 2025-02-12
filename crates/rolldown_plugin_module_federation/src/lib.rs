@@ -21,7 +21,7 @@ use rustc_hash::FxHashSet;
 use sugar_path::SugarPath;
 use utils::{
   detect_remote_module_type, generate_remote_module_is_cjs_placeholder, get_remote_module_prefix,
-  ResolvedSharedModule,
+  ResolvedRemoteModule,
 };
 
 const REMOTE_ENTRY: &str = "mf:remote-entry.js";
@@ -35,18 +35,16 @@ const HOST_ENTRY_PREFIX: &str = "mf:host-entry:";
 #[derive(Debug)]
 pub struct ModuleFederationPlugin {
   options: ModuleFederationPluginOption,
-  resolved_shared_modules: FxDashMap<ArcStr, ResolvedSharedModule>,
-  resolved_expose_modules: FxDashMap<ArcStr, ArcStr>,
-  remote_module_is_cjs_map: FxDashMap<ArcStr, bool>,
+  resolved_remote_modules: FxDashMap<ArcStr, ResolvedRemoteModule>,
+  resolved_id_to_remote_module_keys: FxDashMap<ArcStr, ArcStr>,
 }
 
 impl ModuleFederationPlugin {
   pub fn new(options: ModuleFederationPluginOption) -> Self {
     Self {
       options,
-      resolved_expose_modules: FxDashMap::default(),
-      resolved_shared_modules: FxDashMap::default(),
-      remote_module_is_cjs_map: FxDashMap::default(),
+      resolved_remote_modules: FxDashMap::default(),
+      resolved_id_to_remote_module_keys: FxDashMap::default(),
     }
   }
 
@@ -59,6 +57,10 @@ impl ModuleFederationPlugin {
         exposes
           .iter()
           .map(|(key, value)| {
+            let remote_module = self
+              .resolved_remote_modules
+              .get(key.as_str())
+              .expect("remote module should have resolved");
             concat_string!(
               "'",
               key,
@@ -67,7 +69,7 @@ impl ModuleFederationPlugin {
               value,
               "');",
               "return ",
-              generate_remote_module_is_cjs_placeholder(key),
+              remote_module.value().placeholder,
               " ? module.default : module",
               "}"
             )
@@ -149,7 +151,7 @@ impl ModuleFederationPlugin {
               "'",
               key,
               "': { version: '",
-              self.resolved_shared_modules.get(key.as_str()).map_or_else(
+              self.resolved_remote_modules.get(key.as_str()).map_or_else(
                 || { value.version.as_deref().unwrap_or_default().into() },
                 |v| v.value().version.clone()
               ),
@@ -209,9 +211,14 @@ impl Plugin for ModuleFederationPlugin {
         if item.version.is_none() {
           let resolve_id = ctx.resolve(key.as_str(), None, None).await??;
           if let Some(version) = resolve_id.package_json.as_ref().and_then(|j| j.version.as_ref()) {
-            self.resolved_shared_modules.insert(
+            self.resolved_remote_modules.insert(
               key.as_str().into(),
-              ResolvedSharedModule { id: resolve_id.id.clone(), version: version.clone() },
+              ResolvedRemoteModule {
+                id: resolve_id.id.clone(),
+                version: version.clone(),
+                placeholder: generate_remote_module_is_cjs_placeholder(key.as_str()),
+                ..Default::default()
+              },
             );
           }
         }
@@ -221,7 +228,15 @@ impl Plugin for ModuleFederationPlugin {
     if let Some(exposes) = self.options.exposes.as_ref() {
       for (key, value) in exposes {
         let resolve_id = ctx.resolve(value.as_str(), None, None).await??;
-        self.resolved_expose_modules.insert(key.as_str().into(), resolve_id.id.clone());
+        self.resolved_remote_modules.insert(
+          key.as_str().into(),
+          ResolvedRemoteModule {
+            id: resolve_id.id.clone(),
+            placeholder: generate_remote_module_is_cjs_placeholder(key.as_str()),
+            ..Default::default()
+          },
+        );
+        self.resolved_id_to_remote_module_keys.insert(resolve_id.id.clone(), key.as_str().into());
       }
     }
 
@@ -374,11 +389,13 @@ impl Plugin for ModuleFederationPlugin {
     _module_info: std::sync::Arc<rolldown_common::ModuleInfo>,
     normal_module: &rolldown_common::NormalModule,
   ) -> rolldown_plugin::HookNoopReturn {
-    for expose in &self.resolved_expose_modules {
-      if expose.value().as_str() == normal_module.id.as_ref() {
-        self
-          .remote_module_is_cjs_map
-          .insert(expose.key().clone(), normal_module.ecma_view.exports_kind.is_commonjs());
+    if let Some(resolved_id_to_remote_module_key) =
+      self.resolved_id_to_remote_module_keys.get(normal_module.id.as_ref())
+    {
+      if let Some(mut remote_module) =
+        self.resolved_remote_modules.get_mut(resolved_id_to_remote_module_key.value())
+      {
+        remote_module.value_mut().is_cjs = normal_module.ecma_view.exports_kind.is_commonjs();
       }
     }
     Ok(())
@@ -392,10 +409,11 @@ impl Plugin for ModuleFederationPlugin {
     if let Some(facade_module_id) = &args.chunk.facade_module_id {
       if facade_module_id.as_ref() == REMOTE_ENTRY {
         let mut code = args.code.clone();
-        for remote_module in &self.remote_module_is_cjs_map {
+        for remote_module_ref in &self.resolved_remote_modules {
+          let remote_module = remote_module_ref.value();
           code = code.replace(
-            &generate_remote_module_is_cjs_placeholder(remote_module.key()),
-            if *remote_module.value() { "true" } else { "false" },
+            &remote_module.placeholder,
+            if remote_module.is_cjs { "true" } else { "false" },
           );
         }
         return Ok(Some(rolldown_plugin::HookRenderChunkOutput { code, map: None }));
@@ -410,7 +428,7 @@ impl Plugin for ModuleFederationPlugin {
     args: &mut rolldown_plugin::HookGenerateBundleArgs<'_>,
   ) -> rolldown_plugin::HookNoopReturn {
     if self.options.manifest.is_some() && self.options.filename.is_some() {
-      generate_manifest(ctx, args, &self.options, &self.resolved_shared_modules).await?;
+      generate_manifest(ctx, args, &self.options, &self.resolved_remote_modules).await?;
     }
     Ok(())
   }

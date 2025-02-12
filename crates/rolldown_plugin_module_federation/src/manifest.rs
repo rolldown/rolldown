@@ -4,14 +4,14 @@ use rolldown_utils::{concat_string, dashmap::FxDashMap};
 use rustc_hash::{FxHashMap, FxHashSet};
 use serde::Serialize;
 
-use crate::{utils::ResolvedSharedModule, ModuleFederationPluginOption};
+use crate::{utils::ResolvedRemoteModule, ModuleFederationPluginOption};
 
 #[allow(clippy::too_many_lines)]
 pub async fn generate_manifest(
   ctx: &rolldown_plugin::PluginContext,
   args: &mut rolldown_plugin::HookGenerateBundleArgs<'_>,
   options: &ModuleFederationPluginOption,
-  resolved_shared_modules: &FxDashMap<ArcStr, ResolvedSharedModule>,
+  resolved_shared_modules: &FxDashMap<ArcStr, ResolvedRemoteModule>,
 ) -> anyhow::Result<()> {
   let chunks_map = args
     .bundle

@@ -3,9 +3,11 @@ use rolldown_utils::{concat_string, ecmascript::legitimize_identifier_name};
 
 use crate::{ModuleFederationPluginOption, INIT_REMOTE_MODULE_PREFIX, INIT_SHARED_MODULE_PREFIX};
 
-#[derive(Debug)]
-pub struct ResolvedSharedModule {
+#[derive(Debug, Default)]
+pub struct ResolvedRemoteModule {
   pub id: ArcStr,
+  pub is_cjs: bool,
+  pub placeholder: String,
   pub version: ArcStr,
 }
 

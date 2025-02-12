@@ -18,7 +18,7 @@ use rolldown_plugin::SharedPluginDriver;
 use rolldown_std_utils::{PathBufExt, PathExt};
 use rolldown_utils::{
   concat_string,
-  extract_hash_pattern::extract_hash_pattern,
+  extract_hash_pattern::extract_hash_patterns,
   hash_placeholder::HashPlaceholderGenerator,
   rayon::{IntoParallelRefMutIterator, ParallelIterator},
 };
@@ -273,17 +273,18 @@ impl<'a> GenerateStage<'a> {
               source: asset_view.source.clone().to_vec().into(),
             })
             .await?;
-          let extracted_asset_hash_pattern =
-            extract_hash_pattern(asset_filename_template.template());
 
-          let hash_placeholder = extracted_asset_hash_pattern
-            .as_ref()
-            .map(|p| hash_placeholder_generator.generate(p.len.unwrap_or(8)));
+          let extracted_asset_hash_pattern =
+            extract_hash_patterns(asset_filename_template.template());
+
+          let hash_placeholder = extracted_asset_hash_pattern.as_ref().map(|p| {
+            p.iter().map(|p| hash_placeholder_generator.generate(p.len.unwrap_or(8))).collect()
+          });
 
           let preliminary = PreliminaryFilename::new(
             asset_filename_template.render(&FileNameRenderOptions {
               name: Some(&name),
-              hash: hash_placeholder.as_deref(),
+              hashes: hash_placeholder.as_deref(),
               ext: module.id.as_path().extension().and_then(|s| s.to_str()),
             }),
             hash_placeholder,

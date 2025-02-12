@@ -5,9 +5,10 @@ use crate::{
 use anyhow::Context;
 use arcstr::ArcStr;
 use dashmap::{DashMap, DashSet};
+use itertools::Itertools;
 use rolldown_error::BuildDiagnostic;
 use rolldown_utils::dashmap::{FxDashMap, FxDashSet};
-use rolldown_utils::extract_hash_pattern::extract_hash_pattern;
+use rolldown_utils::extract_hash_pattern::extract_hash_patterns;
 use rolldown_utils::xxhash::{xxhash_base64_url, xxhash_with_base};
 use std::ffi::OsStr;
 use std::path::Path;
@@ -184,12 +185,18 @@ impl FileEmitter {
       let name = path.file_stem().and_then(OsStr::to_str);
       let asset_filename_template =
         asset_filename_template.expect("should has filename template without filename");
-      let extract_hash_pattern = extract_hash_pattern(asset_filename_template.template());
+      let extract_hash_pattern = extract_hash_patterns(asset_filename_template.template());
+
       let mut file_name: ArcStr = asset_filename_template
         .render(&FileNameRenderOptions {
           name,
-          hash: extract_hash_pattern
-            .map(|p| &hash.as_str()[..p.len.map_or(8, |hash_len| hash_len.max(6))]),
+          hashes: extract_hash_pattern
+            .map(|p| {
+              p.iter()
+                .map(|p| hash.as_str()[..p.len.map_or(8, |hash_len| hash_len.max(6))].to_string())
+                .collect_vec()
+            })
+            .as_deref(),
           ext: Some(extension.unwrap_or_default()),
         })
         .into();

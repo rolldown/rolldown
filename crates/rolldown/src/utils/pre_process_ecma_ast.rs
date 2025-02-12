@@ -86,9 +86,8 @@ impl PreProcessEcmaAst {
             Jsx::Preserve => {}
             Jsx::Enable(jsx) => {
               transformer_options.jsx = jsx.clone();
-              if matches!(parsed_type, OxcParseType::Tsx | OxcParseType::Jsx) {
-                transformer_options.jsx.jsx_plugin = true;
-              }
+              transformer_options.jsx.jsx_plugin =
+                matches!(parsed_type, OxcParseType::Tsx | OxcParseType::Jsx);
             }
           }
         }

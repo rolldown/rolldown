@@ -7,7 +7,11 @@ export default defineConfig({
     moduleFederationPlugin({
       name: 'mf-host',
       remotes: {
-        button: 'button@http://localhost:5176/dist/remote-entry.js',
+        button: {
+          name: 'button',
+          type: 'module',
+          entry: 'http://localhost:8085/remote-entry.js',
+        },
       },
       shared: {
         react: {
@@ -15,5 +19,23 @@ export default defineConfig({
         },
       },
     }),
+    {
+      name: 'emit-html',
+      generateBundle() {
+        const html = `
+          <html>
+            <body>
+              <div id="app"></div>
+              <script type="module" src="./index.js"></script>
+            </body>
+          </html>
+        `
+        this.emitFile({
+          type: 'asset',
+          fileName: 'index.html',
+          source: html,
+        })
+      },
+    },
   ],
 })

@@ -3,10 +3,12 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "build": "rolldown --config ./rolldown.config.js"
+    "build": "rolldown --config ./rolldown.config.js",
+    "dev": "npm run build && http-server ./dist -p 8085 --cors"
   },
   "devDependencies": {
-    "rolldown": "workspace:*"
+    "rolldown": "workspace:*",
+    "http-server": "^14.0.1"
   },
   "dependencies": {
     "@module-federation/runtime": "^0.8.8",

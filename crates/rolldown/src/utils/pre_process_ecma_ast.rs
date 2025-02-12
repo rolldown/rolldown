@@ -6,8 +6,7 @@ use oxc::diagnostics::Severity as OxcSeverity;
 use oxc::minifier::{CompressOptions, Compressor};
 use oxc::semantic::{SemanticBuilder, Stats};
 use oxc::transformer::{
-  ESTarget as OxcESTarget, InjectGlobalVariables, ReplaceGlobalDefines, ReplaceGlobalDefinesConfig,
-  TransformOptions, Transformer,
+  InjectGlobalVariables, ReplaceGlobalDefines, ReplaceGlobalDefinesConfig, Transformer,
 };
 
 use rolldown_common::{ESTarget, Jsx, NormalizedBundlerOptions};
@@ -74,8 +73,7 @@ impl PreProcessEcmaAst {
       || !matches!(bundle_options.target, ESTarget::EsNext)
     {
       let ret = ast.program.with_mut(|fields| {
-        let target: OxcESTarget = bundle_options.target.into();
-        let mut transformer_options = TransformOptions::from(target);
+        let mut transformer_options = bundle_options.base_transform_options.clone();
 
         if !matches!(parsed_type, OxcParseType::Js) {
           // The oxc jsx_plugin is enabled by default, we need to disable it.

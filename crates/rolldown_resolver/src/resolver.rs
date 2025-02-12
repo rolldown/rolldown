@@ -14,7 +14,8 @@ use sugar_path::SugarPath;
 
 use oxc_resolver::{
   EnforceExtension, FsCache, PackageJsonSerde as OxcPackageJson, PackageType, Resolution,
-  ResolveError, ResolveOptions as OxcResolverOptions, ResolverGeneric, TsconfigOptions,
+  ResolveError, ResolveOptions as OxcResolverOptions, ResolverGeneric, TsConfigSerde,
+  TsconfigOptions,
 };
 
 #[derive(Debug)]
@@ -150,7 +151,6 @@ impl<F: FileSystem + Default> Resolver<F> {
       default_resolver.clone_with_options(resolve_options_with_require_conditions);
     let css_resolver = default_resolver.clone_with_options(resolve_options_for_css);
     let new_url_resolver = default_resolver.clone_with_options(resolve_options_for_new_url);
-
     Self {
       cwd,
       default_resolver,
@@ -262,6 +262,13 @@ impl<F: FileSystem + Default> Resolver<F> {
       self.package_json_cache.insert(oxc_pkg_json.realpath.clone(), Arc::clone(&pkg_json));
       pkg_json
     }
+  }
+
+  pub fn resolve_tsconfig<T: AsRef<Path>>(
+    &self,
+    path: &T,
+  ) -> Result<Arc<TsConfigSerde>, ResolveError> {
+    self.default_resolver.resolve_tsconfig(path)
   }
 }
 

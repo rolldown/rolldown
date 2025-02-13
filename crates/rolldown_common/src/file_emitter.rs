@@ -1,6 +1,6 @@
 use crate::{
   AddEntryModuleMsg, FileNameRenderOptions, FilenameTemplate, ModuleLoaderMsg,
-  NormalizedBundlerOptions, Output, OutputAsset, StrOrBytes,
+  NormalizedBundlerOptions, Output, OutputAsset, PreserveEntrySignature, StrOrBytes,
 };
 use anyhow::Context;
 use arcstr::ArcStr;
@@ -36,6 +36,7 @@ pub struct EmittedChunk {
   pub id: String,
   // pub implicitly_loaded_after_one_of: Option<Vec<String>>,
   pub importer: Option<String>,
+  pub preserve_signature: Option<PreserveEntrySignature>,
 }
 
 pub struct EmittedChunkInfo {

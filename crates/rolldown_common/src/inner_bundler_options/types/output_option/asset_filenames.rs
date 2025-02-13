@@ -1,4 +1,5 @@
-use std::{fmt::Debug, future::Future, pin::Pin, sync::Arc};
+use derive_more::Debug;
+use std::{future::Future, pin::Pin, sync::Arc};
 
 use crate::RollupPreRenderedAsset;
 
@@ -8,19 +9,12 @@ type AssetFilenamesFunction = dyn Fn(
   + Send
   + Sync;
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub enum AssetFilenamesOutputOption {
+  #[debug("AssetFilenamesOutputOption::String({_0:?})")]
   String(String),
+  #[debug("AssetFilenamesOutputOption::Fn(...)")]
   Fn(Arc<AssetFilenamesFunction>),
-}
-
-impl Debug for AssetFilenamesOutputOption {
-  fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-    match self {
-      Self::String(value) => write!(f, "AssetFilenamesOutputOption::String({value:?})"),
-      Self::Fn(_) => write!(f, "AssetFilenamesOutputOption::Fn(...)"),
-    }
-  }
 }
 
 impl AssetFilenamesOutputOption {

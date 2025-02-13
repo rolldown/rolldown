@@ -1,4 +1,4 @@
-use std::fmt::Debug;
+use derive_more::Debug;
 use std::future::Future;
 use std::pin::Pin;
 use std::sync::Arc;
@@ -11,19 +11,12 @@ pub type AddonFunction = dyn Fn(
   + Send
   + Sync;
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub enum AddonOutputOption {
+  #[debug("AddonFunction::String({})", "{0:?}")]
   String(Option<String>),
+  #[debug("AddonFunction::Fn(...)")]
   Fn(Arc<AddonFunction>),
-}
-
-impl Debug for AddonOutputOption {
-  fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-    match self {
-      Self::String(value) => write!(f, "AddonFunction::String({value:?})"),
-      Self::Fn(_) => write!(f, "AddonFunction::Fn(...)"),
-    }
-  }
 }
 
 impl AddonOutputOption {

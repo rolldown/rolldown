@@ -1,4 +1,5 @@
-use std::{fmt::Debug, future::Future, pin::Pin, sync::Arc};
+use derive_more::Debug;
+use std::{future::Future, pin::Pin, sync::Arc};
 
 use rustc_hash::FxHashMap;
 
@@ -6,19 +7,12 @@ pub type GlobalsFunction = dyn Fn(&str) -> Pin<Box<(dyn Future<Output = anyhow::
   + Send
   + Sync;
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub enum GlobalsOutputOption {
+  #[debug("GlobalsOutputOption::FxHashMap({_0:?})")]
   FxHashMap(FxHashMap<String, String>),
+  #[debug("GlobalsOutputOption::Fn(...)")]
   Fn(Arc<GlobalsFunction>),
-}
-
-impl Debug for GlobalsOutputOption {
-  fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-    match self {
-      Self::FxHashMap(value) => write!(f, "GlobalsOutputOption::FxHashMap({value:?})"),
-      Self::Fn(_) => write!(f, "GlobalsOutputOption::Fn(...)"),
-    }
-  }
 }
 
 impl GlobalsOutputOption {

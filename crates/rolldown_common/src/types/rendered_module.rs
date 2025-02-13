@@ -1,16 +1,12 @@
-use std::{fmt::Debug, sync::Arc};
+use std::sync::Arc;
 
+use derive_more::derive::Debug;
 use rolldown_sourcemap::{Source, SourceJoiner};
 
-#[derive(Clone, Default)]
+#[derive(Clone, Default, Debug)]
+#[debug("RenderedModule")]
 pub struct RenderedModule {
   inner_code: Option<Arc<[Box<dyn Source + Send + Sync>]>>,
-}
-
-impl Debug for RenderedModule {
-  fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-    f.debug_struct("RenderedModule").finish()
-  }
 }
 
 impl RenderedModule {

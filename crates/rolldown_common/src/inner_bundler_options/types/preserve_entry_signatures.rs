@@ -2,7 +2,6 @@
 use schemars::JsonSchema;
 #[cfg(feature = "deserialize_bundler_options")]
 use serde::Deserialize;
-use std::fmt::Display;
 
 #[derive(Debug, Clone, Copy)]
 #[cfg_attr(
@@ -21,9 +20,10 @@ impl TryFrom<bool> for PreserveEntrySignature {
   type Error = String;
 
   fn try_from(value: bool) -> Result<Self, Self::Error> {
-    match value {
-      false => Ok(Self::False),
-      _ => Err(format!("Error preserveEntrySignature: {value:?}")),
+    if value {
+      Err(format!("Error preserveEntrySignature: {value:?}"))
+    } else {
+      Ok(Self::False)
     }
   }
 }

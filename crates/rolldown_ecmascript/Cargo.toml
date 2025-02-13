@@ -18,7 +18,7 @@ workspace = true
 
 [dependencies]
 arcstr         = { workspace = true }
-either         = { workspace = true }
+itertools      = { workspace = true }
 oxc            = { workspace = true }
 oxc_sourcemap  = { workspace = true }
 rolldown_error = { workspace = true }

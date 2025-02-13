@@ -12,7 +12,7 @@ use crate::{
 use crate::{EcmaAstIdx, EcmaView, IndexModules, Interop, Module, ModuleType};
 use std::ops::{Deref, DerefMut};
 
-use either::Either;
+use itertools::Either;
 use oxc::codegen::LegalComment;
 use oxc_index::IndexVec;
 use rolldown_ecmascript::{EcmaAst, EcmaCompiler, PrintOptions};

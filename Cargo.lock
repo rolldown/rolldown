@@ -2184,7 +2184,6 @@ dependencies = [
  "arcstr",
  "bitflags 2.8.0",
  "dashmap",
- "either",
  "glob-match",
  "itertools",
  "oxc",
@@ -2211,7 +2210,7 @@ name = "rolldown_ecmascript"
 version = "0.1.0"
 dependencies = [
  "arcstr",
- "either",
+ "itertools",
  "oxc",
  "oxc_sourcemap",
  "rolldown_error",

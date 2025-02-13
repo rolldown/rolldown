@@ -1,7 +1,7 @@
 use std::path::PathBuf;
 
 use arcstr::ArcStr;
-use either::Either;
+use itertools::Either;
 use oxc::{
   allocator::Allocator,
   ast::{ast::Program, AstBuilder},

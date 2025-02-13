@@ -4,6 +4,8 @@ use rolldown::{Bundler, BundlerOptions, ExperimentalOptions, InputItem, ResolveO
 use rolldown_testing::workspace::root_dir;
 use tokio::sync::Mutex;
 
+#[global_allocator]
+static ALLOC: mimalloc::MiMalloc = mimalloc::MiMalloc;
 // cargo run --example watch
 
 #[tokio::main]

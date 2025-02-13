@@ -1,7 +1,10 @@
 use super::stages::{link_stage::LinkStage, scan_stage::ScanStageOutput};
 use crate::{
   bundler_builder::BundlerBuilder,
-  stages::{generate_stage::GenerateStage, scan_stage::ScanStage},
+  stages::{
+    generate_stage::GenerateStage,
+    scan_stage::{NormalizedScanStageOutput, ScanStage},
+  },
   types::{bundle_output::BundleOutput, scan_stage_cache::ScanStageCache},
   BundlerOptions, SharedOptions, SharedResolver,
 };
@@ -70,7 +73,7 @@ impl Bundler {
     Ok(())
   }
 
-  pub async fn scan(&mut self, changed_ids: Vec<ArcStr>) -> BuildResult<ScanStageOutput> {
+  pub async fn scan(&mut self, changed_ids: Vec<ArcStr>) -> BuildResult<NormalizedScanStageOutput> {
     let mode =
       if !self.options.experimental.is_incremental_build_enabled() || changed_ids.is_empty() {
         ScanMode::Full
@@ -78,14 +81,15 @@ impl Bundler {
         ScanMode::Partial(changed_ids)
       };
     let is_full_scan_mode = mode.is_full();
+    let cache_mut = Arc::get_mut(&mut self.scan_stage_cache).unwrap();
+    let module_id_to_idx = std::mem::take(&mut cache_mut.module_id_to_idx);
     let (scan_stage_output, module_id_to_idx) = match ScanStage::new(
       Arc::clone(&self.options),
       Arc::clone(&self.plugin_driver),
       self.fs,
       Arc::clone(&self.resolver),
-      Arc::clone(&self.scan_stage_cache),
     )
-    .scan(mode)
+    .scan(mode, module_id_to_idx)
     .await
     {
       Ok(v) => v,
@@ -111,28 +115,31 @@ impl Bundler {
     output: ScanStageOutput,
     module_id_to_idx: FxHashMap<ArcStr, ModuleIdx>,
     is_full_scan_mode: bool,
-  ) -> ScanStageOutput {
+  ) -> NormalizedScanStageOutput {
     if !self.options.experimental.is_incremental_build_enabled() {
-      return output;
+      return output.into();
     }
-
     let scan_stage_cache = Arc::get_mut(&mut self.scan_stage_cache).unwrap();
 
     scan_stage_cache.set_module_id_to_idx(module_id_to_idx);
 
-    if is_full_scan_mode {
-      let copy = output.make_copy();
-      scan_stage_cache.set_cache(copy);
+    let output = if is_full_scan_mode {
+      let output: NormalizedScanStageOutput = output.into();
+      scan_stage_cache.set_cache(output.make_copy());
+      // for (id, idx) in scan_stage_cache.module_id_to_idx() {
+      //   dbg!(&id, idx);
+      // }
       output
     } else {
       scan_stage_cache.merge(output);
       scan_stage_cache.create_output()
-    }
+    };
+    output
   }
 
   pub async fn bundle_write(
     &mut self,
-    scan_stage_output: ScanStageOutput,
+    scan_stage_output: NormalizedScanStageOutput,
   ) -> BuildResult<BundleOutput> {
     let mut output = self.bundle_up(scan_stage_output, /* is_write */ true).await?;
 
@@ -165,7 +172,7 @@ impl Bundler {
   #[allow(clippy::missing_transmute_annotations)]
   async fn bundle_up(
     &mut self,
-    scan_stage_output: ScanStageOutput,
+    scan_stage_output: NormalizedScanStageOutput,
     is_write: bool,
   ) -> BuildResult<BundleOutput> {
     if self.closed {

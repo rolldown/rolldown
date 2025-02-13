@@ -1,7 +1,6 @@
 import  './hyper-cube.js';
 
-console.log(`a: `, a)
-
+console.log(`abcd: `, a)
 function test() {}
 test();
 

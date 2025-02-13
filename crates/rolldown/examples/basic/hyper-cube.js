@@ -1,2 +1,3 @@
-function test() {}
-test();
+function res() {}
+res();
+console.log("test test test ")

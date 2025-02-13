@@ -182,7 +182,7 @@ oxc_sourcemap = { version = "1" }                                # https://githu
 
 [profile.release]
 codegen-units = 1
-debug         = false     # Set to `true` for debug information
+debug         = true     # Set to `true` for debug information
 lto           = "fat"
 opt-level     = 3
-strip         = "symbols" # Set to `false` for debug information
+# strip         = "symbols" # Set to `false` for debug information

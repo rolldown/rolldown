@@ -24,7 +24,7 @@ use crate::{
   SharedOptions,
 };
 
-use super::scan_stage::ScanStageOutput;
+use super::scan_stage::{NormalizedScanStageOutput, ScanStageOutput};
 
 mod bind_imports_and_exports;
 mod generate_lazy_export;
@@ -66,7 +66,7 @@ pub struct LinkStage<'a> {
 }
 
 impl<'a> LinkStage<'a> {
-  pub fn new(scan_stage_output: ScanStageOutput, options: &'a SharedOptions) -> Self {
+  pub fn new(scan_stage_output: NormalizedScanStageOutput, options: &'a SharedOptions) -> Self {
     Self {
       sorted_modules: Vec::new(),
       metas: scan_stage_output

@@ -1,14 +1,16 @@
-use std::sync::Arc;
+use std::{rc::Rc, sync::Arc};
 
 use arcstr::ArcStr;
-use futures::future::join_all;
+use futures::{future::join_all, stream::Scan};
+use oxc_index::IndexVec;
 use rolldown_common::{
-  dynamic_import_usage::DynamicImportExportsUsage, EntryPoint, ModuleIdx, ModuleTable,
-  ResolvedId, RuntimeModuleBrief, ScanMode, SymbolRefDb,
+  dynamic_import_usage::DynamicImportExportsUsage, EntryPoint, HybridIndexVec, Module, ModuleIdx,
+  ModuleTable, ResolvedId, RuntimeModuleBrief, ScanMode, SymbolRefDb,
 };
 use rolldown_error::{BuildDiagnostic, BuildResult};
 use rolldown_fs::OsFileSystem;
 use rolldown_plugin::SharedPluginDriver;
+use rolldown_utils::rayon::{IndexedParallelIterator, IntoParallelRefIterator, ParallelIterator};
 use rustc_hash::FxHashMap;
 
 use crate::{
@@ -24,11 +26,10 @@ pub struct ScanStage {
   plugin_driver: SharedPluginDriver,
   fs: OsFileSystem,
   resolver: SharedResolver,
-  cache: Arc<ScanStageCache>,
 }
 
 #[derive(Debug)]
-pub struct ScanStageOutput {
+pub struct NormalizedScanStageOutput {
   pub module_table: ModuleTable,
   pub index_ecma_ast: IndexEcmaAst,
   pub index_ast_scope: IndexAstScope,
@@ -38,18 +39,21 @@ pub struct ScanStageOutput {
   pub warnings: Vec<BuildDiagnostic>,
   pub dynamic_import_exports_usage_map: FxHashMap<ModuleIdx, DynamicImportExportsUsage>,
 }
-
-impl ScanStageOutput {
+impl NormalizedScanStageOutput {
   /// Make a copy of the current ScanStage, skipping clone some fields that is immutable in
   /// following stage
   pub fn make_copy(&self) -> Self {
     Self {
       module_table: self.module_table.clone(),
-      index_ecma_ast: self
-        .index_ecma_ast
-        .iter()
-        .map(|(ast, module_idx)| (ast.clone_with_another_arena(), *module_idx))
-        .collect(),
+      index_ecma_ast: {
+        let item = self
+          .index_ecma_ast
+          .raw
+          .par_iter()
+          .map(|(ast, module_idx)| (ast.clone_with_another_arena(), *module_idx))
+          .collect::<Vec<_>>();
+        IndexVec::from_vec(item)
+      },
       entry_points: self.entry_points.clone(),
       symbol_ref_db: self.symbol_ref_db.clone(),
       runtime: self.runtime.clone(),
@@ -60,43 +64,64 @@ impl ScanStageOutput {
   }
 }
 
+impl From<ScanStageOutput> for NormalizedScanStageOutput {
+  fn from(value: ScanStageOutput) -> Self {
+    Self {
+      module_table: match value.module_table {
+        HybridIndexVec::IndexVec(modules) => ModuleTable { modules },
+        HybridIndexVec::Map(_) => unreachable!("Please normalized first"),
+      },
+      index_ecma_ast: value.index_ecma_ast,
+      index_ast_scope: value.index_ast_scope,
+      entry_points: value.entry_points,
+      symbol_ref_db: value.symbol_ref_db,
+      runtime: value.runtime,
+      warnings: value.warnings,
+      dynamic_import_exports_usage_map: value.dynamic_import_exports_usage_map,
+    }
+  }
+}
+
+#[derive(Debug)]
+pub struct ScanStageOutput {
+  pub module_table: HybridIndexVec<ModuleIdx, Module>,
+  pub index_ecma_ast: IndexEcmaAst,
+  pub index_ast_scope: IndexAstScope,
+  pub entry_points: Vec<EntryPoint>,
+  pub symbol_ref_db: SymbolRefDb,
+  pub runtime: RuntimeModuleBrief,
+  pub warnings: Vec<BuildDiagnostic>,
+  pub dynamic_import_exports_usage_map: FxHashMap<ModuleIdx, DynamicImportExportsUsage>,
+}
+
+impl ScanStageOutput {}
+
 impl ScanStage {
   pub fn new(
     options: SharedOptions,
     plugin_driver: SharedPluginDriver,
     fs: OsFileSystem,
     resolver: SharedResolver,
-    scan_stage_cache: Arc<ScanStageCache>,
   ) -> Self {
-    Self { options, plugin_driver, fs, resolver, cache: scan_stage_cache }
+    Self { options, plugin_driver, fs, resolver }
   }
 
   #[tracing::instrument(level = "debug", skip_all)]
   pub async fn scan(
     &mut self,
     mode: ScanMode,
+    module_id_to_idx: FxHashMap<ArcStr, ModuleIdx>,
   ) -> BuildResult<(ScanStageOutput, FxHashMap<ArcStr, ModuleIdx>)> {
     if self.options.input.is_empty() {
       Err(anyhow::anyhow!("You must supply options.input to rolldown"))?;
     }
-
-    let visited = match mode {
-      ScanMode::Full => FxHashMap::default(),
-      ScanMode::Partial(ref changed) => {
-        let mut visited = self.cache.module_id_to_idx().clone();
-        for item in changed {
-          visited.remove(item);
-        }
-        visited
-      }
-    };
 
     let module_loader = ModuleLoader::new(
       self.fs,
       Arc::clone(&self.options),
       Arc::clone(&self.resolver),
       Arc::clone(&self.plugin_driver),
-      visited,
+      module_id_to_idx,
     )?;
 
     // For `pluginContext.emitFile` with `type: chunk`, support it at buildStart hook.
@@ -194,7 +219,6 @@ impl ScanStage {
 
     let resolved_ids = join_all(ids.iter().map(|input_item| async move {
       // The importer is useless, since all path is absolute path
-      
 
       load_entry_module(resolver, plugin_driver, input_item, None).await
     }))

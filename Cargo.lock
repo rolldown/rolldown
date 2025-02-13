@@ -2230,6 +2230,7 @@ dependencies = [
  "itertools",
  "itoa",
  "memchr",
+ "mimalloc",
  "notify",
  "oxc",
  "oxc_index",

@@ -46,7 +46,10 @@ impl EcmaAst {
   #[must_use]
   pub fn clone_with_another_arena(&self) -> EcmaAst {
     let program = ProgramCell::new(
-      ProgramCellOwner { source: self.source().clone(), allocator: Allocator::default() },
+      ProgramCellOwner {
+        source: self.source().clone(),
+        allocator: Allocator::with_capacity(self.allocator().capacity()),
+      },
       |owner| {
         let program = self.program().clone_in_with_semantic_ids(&owner.allocator);
         ProgramCellDependent { program }

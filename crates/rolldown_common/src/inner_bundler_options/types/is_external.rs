@@ -1,4 +1,4 @@
-use std::fmt::Debug;
+use derive_more::Debug;
 use std::future::Future;
 use std::ops::Deref;
 use std::pin::Pin;
@@ -13,7 +13,8 @@ type Inner = dyn Fn(
   + Sync
   + 'static;
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
+#[debug("IsExternal(...)")]
 pub struct IsExternal(Arc<Inner>);
 
 impl Deref for IsExternal {
@@ -50,11 +51,5 @@ impl IsExternal {
 impl From<Vec<String>> for IsExternal {
   fn from(value: Vec<String>) -> Self {
     IsExternal::from_vec(value)
-  }
-}
-
-impl Debug for IsExternal {
-  fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-    write!(f, "IsExternal(...)")
   }
 }

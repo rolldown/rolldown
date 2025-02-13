@@ -1,4 +1,5 @@
-use std::{fmt::Debug, future::Future, pin::Pin, sync::Arc};
+use derive_more::Debug;
+use std::{future::Future, pin::Pin, sync::Arc};
 
 use arcstr::ArcStr;
 use rolldown_utils::sanitize_filename::default_sanitize_file_name;
@@ -7,19 +8,12 @@ type SanitizeFileNameFunction = dyn Fn(&str) -> Pin<Box<(dyn Future<Output = any
   + Send
   + Sync;
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub enum SanitizeFilename {
+  #[debug("SanitizeFileName::Boolean({})", "{0:?}")]
   Boolean(bool),
+  #[debug("SanitizeFileName::Fn(...)")]
   Fn(Arc<SanitizeFileNameFunction>),
-}
-
-impl Debug for SanitizeFilename {
-  fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-    match self {
-      Self::Boolean(value) => write!(f, "SanitizeFileName::Boolean({value:?})"),
-      Self::Fn(_) => write!(f, "SanitizeFileName::Fn(...)"),
-    }
-  }
 }
 
 impl Default for SanitizeFilename {

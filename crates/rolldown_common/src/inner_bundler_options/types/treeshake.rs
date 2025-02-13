@@ -1,5 +1,6 @@
-use std::{fmt::Debug, future::Future, pin::Pin, sync::Arc};
+use std::{future::Future, pin::Pin, sync::Arc};
 
+use derive_more::Debug;
 use rolldown_utils::js_regex::HybridRegex;
 #[cfg(feature = "deserialize_bundler_options")]
 use schemars::JsonSchema;
@@ -27,23 +28,14 @@ impl Default for TreeshakeOptions {
   }
 }
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub enum ModuleSideEffects {
+  #[debug("ModuleSideEffectsRules({_0:?})")]
   ModuleSideEffectsRules(Vec<ModuleSideEffectsRule>),
+  #[debug("Boolean({_0})")]
   Boolean(bool),
+  #[debug("Function")]
   Function(Arc<ModuleSideEffectsFn>),
-}
-
-impl Debug for ModuleSideEffects {
-  fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-    match self {
-      ModuleSideEffects::ModuleSideEffectsRules(rules) => {
-        f.debug_tuple("ModuleSideEffectsRules").field(rules).finish()
-      }
-      ModuleSideEffects::Boolean(v) => f.debug_tuple("Boolean").field(v).finish(),
-      ModuleSideEffects::Function(_) => f.write_str("Function"),
-    }
-  }
 }
 
 type ModuleSideEffectsFn = dyn Fn(

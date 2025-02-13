@@ -1,5 +1,4 @@
 use std::{
-  fmt::Debug,
   future::Future,
   ops::Deref,
   path::PathBuf,
@@ -9,6 +8,7 @@ use std::{
 
 use anyhow::Context;
 use arcstr::ArcStr;
+use derive_more::Debug;
 use rolldown_common::{
   side_effects::HookSideEffects, ModuleDefFormat, ModuleInfo, ModuleLoaderMsg, ResolvedId,
   SharedFileEmitter, SharedNormalizedBundlerOptions,
@@ -63,19 +63,14 @@ type LoadCallbackFn = dyn Fn() -> Pin<Box<(dyn Future<Output = anyhow::Result<()
   + Sync
   + 'static;
 
-pub struct LoadCallback(Box<LoadCallbackFn>);
+#[derive(Debug)]
+pub struct LoadCallback(#[debug("LoadCallback fn")] Box<LoadCallbackFn>);
 
 impl Deref for LoadCallback {
   type Target = LoadCallbackFn;
 
   fn deref(&self) -> &Self::Target {
     &*self.0
-  }
-}
-
-impl Debug for LoadCallback {
-  fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-    write!(f, "LoadCallback fn")
   }
 }
 

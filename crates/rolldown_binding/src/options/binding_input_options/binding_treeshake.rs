@@ -1,4 +1,5 @@
-use std::{fmt::Debug, sync::Arc};
+use derive_more::Debug;
+use std::sync::Arc;
 
 use napi::bindgen_prelude::{Either3, FnArgs};
 use rolldown::{InnerOptions, ModuleSideEffects, ModuleSideEffectsRule};
@@ -16,21 +17,14 @@ pub(crate) type BindingModuleSideEffects = Either3<
 >;
 
 #[napi_derive::napi(object, object_to_js = false)]
+#[derive(Debug)]
 pub struct BindingTreeshake {
   #[napi(
     ts_type = "boolean | BindingModuleSideEffectsRule[] | ((id: string, is_external: boolean) => boolean | undefined)"
   )]
+  #[debug("ModuleSideEffects(...)")]
   pub module_side_effects: BindingModuleSideEffects,
   pub annotations: Option<bool>,
-}
-
-impl Debug for BindingTreeshake {
-  fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-    f.debug_struct("BindingTreeshake")
-      .field("module_side_effects", &"ModuleSideEffects")
-      .field("annotations", &self.annotations)
-      .finish()
-  }
 }
 
 #[napi_derive::napi(object, object_to_js = false)]

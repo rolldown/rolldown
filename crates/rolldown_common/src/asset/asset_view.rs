@@ -1,11 +1,7 @@
-use std::fmt::Debug;
+use derive_more::Debug;
 
+#[derive(Debug)]
 pub struct AssetView {
+  #[debug("Box<u8>")]
   pub source: Box<[u8]>,
-}
-
-impl Debug for AssetView {
-  fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-    f.debug_struct("AssetView").field("source", &"Box<[u8]>").finish()
-  }
 }

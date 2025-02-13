@@ -575,6 +575,9 @@ importers:
       estree-toolkit:
         specifier: ^1.7.8
         version: 1.7.8
+      micromatch:
+        specifier: ^4.0.8
+        version: 4.0.8
       web-tree-sitter:
         specifier: ^0.25.0
         version: 0.25.1
@@ -2170,6 +2173,7 @@ packages:
 
   '@ls-lint/ls-lint@2.2.3':
     resolution: {integrity: sha512-ekM12jNm/7O2I/hsRv9HvYkRdfrHpiV1epVuI2NP+eTIcEgdIdKkKCs9KgQydu/8R5YXTov9aHdOgplmCHLupw==}
+    cpu: [x64, arm64, s390x]
     os: [darwin, linux, win32]
     hasBin: true
 

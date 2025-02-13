@@ -12,8 +12,29 @@ exports[`module-federation > module-federation 1`] = `
         "js": {
           "async": [],
           "sync": [
+            "chunk.js",
+            "remote-foo.js",
+          ],
+        },
+      },
+      "id": "mf-remote:expose-foo",
+      "name": "expose-foo",
+      "path": "./expose-foo",
+      "requiredVersion": "",
+      "version": "",
+    },
+    {
+      "assets": {
+        "css": {
+          "async": [],
+          "sync": [],
+        },
+        "js": {
+          "async": [],
+          "sync": [
             "remote-expose.js",
             "index.esm.js",
+            "chunk.js",
           ],
         },
       },

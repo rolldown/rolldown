@@ -48,6 +48,7 @@ describe('module-federation', () => {
           filename: 'remote-entry.js',
           exposes: {
             './expose': './remote-expose.js',
+            './expose-foo': './remote-foo.js',
           },
           shared: {
             'test-shared': {

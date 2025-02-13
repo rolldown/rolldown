@@ -1,10 +1,13 @@
 use arcstr::ArcStr;
+use rolldown_utils::{concat_string, ecmascript::legitimize_identifier_name};
 
 use crate::{ModuleFederationPluginOption, INIT_REMOTE_MODULE_PREFIX, INIT_SHARED_MODULE_PREFIX};
 
-#[derive(Debug)]
-pub struct ResolvedSharedModule {
+#[derive(Debug, Default)]
+pub struct ResolvedRemoteModule {
   pub id: ArcStr,
+  pub is_cjs: bool,
+  pub placeholder: String,
   pub version: ArcStr,
 }
 
@@ -43,4 +46,9 @@ pub fn get_remote_module_prefix(remote_module_type: RemoteModuleType) -> &'stati
   } else {
     INIT_REMOTE_MODULE_PREFIX
   }
+}
+
+#[inline]
+pub fn generate_remote_module_is_cjs_placeholder(key: &str) -> String {
+  concat_string!("_MF_", legitimize_identifier_name(key), "_IS_CJS_PLACEHOLDER_")
 }

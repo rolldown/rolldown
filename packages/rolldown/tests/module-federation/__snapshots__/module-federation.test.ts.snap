@@ -33,7 +33,7 @@ exports[`module-federation > module-federation 1`] = `
     "globalName": "mf-remote",
     "name": "mf-remote",
     "pluginVersion": "",
-    "publicPath": "",
+    "publicPath": "file://public_path",
     "remoteEntry": {
       "name": "remote-entry.js",
       "path": "",

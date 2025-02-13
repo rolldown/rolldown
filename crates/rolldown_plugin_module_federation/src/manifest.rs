@@ -79,7 +79,7 @@ pub async fn generate_manifest(
       types: MetaDataTypes::default(),
       global_name: options.name.clone(),
       plugin_version: String::new(),
-      public_path: String::new(), // TODO
+      public_path: options.get_public_path.clone().unwrap_or_default(),
     },
     remotes: options
       .remotes

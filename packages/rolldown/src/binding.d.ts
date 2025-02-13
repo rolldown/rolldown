@@ -490,6 +490,7 @@ export interface BindingModuleFederationPluginOption {
   shared?: Record<string, BindingShared>
   runtimePlugins?: Array<string>
   manifest?: BindingMfManifest
+  getPublicPath?: string
 }
 
 export interface BindingModulePreloadPolyfillPluginConfig {

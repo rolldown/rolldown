@@ -55,6 +55,7 @@ describe('module-federation', () => {
             },
           },
           manifest: true,
+          getPublicPath: 'file://public_path',
         }),
       ],
       output: {

@@ -48,6 +48,30 @@ impl ModuleFederationPlugin {
     }
   }
 
+  pub fn generate_load_remote_module_code(
+    &self,
+    remote_module_key: &str,
+    import_module: &str,
+  ) -> String {
+    let remote_module = self
+      .resolved_remote_modules
+      .get(remote_module_key)
+      .expect("remote module should have resolved");
+    // The remote module is commonjs, it will be generate `export default require_xx()`, here need to return imported default.
+    // The remote module is esm, need to add `__esModule` flag to make sure interop is correct.
+    concat_string!(
+      "const module = await import('",
+      import_module,
+      "');",
+      "if (",
+      remote_module.value().placeholder,
+      ") return module.default;",
+      "const target = { ...module };",
+      "Object.defineProperty(target, '__esModule', { value: true, enumerable: false });",
+      "return target;"
+    )
+  }
+
   pub fn generate_remote_entry_code(&self) -> String {
     let expose = self
       .options
@@ -57,23 +81,11 @@ impl ModuleFederationPlugin {
         exposes
           .iter()
           .map(|(key, value)| {
-            let remote_module = self
-              .resolved_remote_modules
-              .get(key.as_str())
-              .expect("remote module should have resolved");
             concat_string!(
               "'",
               key,
               "': async () => {",
-              "const module = await import('",
-              value,
-              "');",
-              "if (",
-              remote_module.value().placeholder,
-              ") return module.default;",
-              "const target = { ...module };",
-              "Object.defineProperty(target, '__esModule', { value: true, enumerable: false });",
-              "return target;",
+              self.generate_load_remote_module_code(key, value),
               "}"
             )
           })
@@ -150,10 +162,6 @@ impl ModuleFederationPlugin {
         shared
           .iter()
           .map(|(key, value)| {
-            let remote_module = self
-              .resolved_remote_modules
-              .get(key.as_str())
-              .expect("remote module should have resolved");
             concat_string!(
               "'",
               key,
@@ -167,16 +175,8 @@ impl ModuleFederationPlugin {
               "'], from: '",
               self.options.name.as_str(),
               "', async get() {",
-              "const module = await import('",
-              SHARED_MODULE_PREFIX,
-              key,
-              "');",
-              "if (",
-              remote_module.value().placeholder,
-              ") return module.default;",
-              "const target = { ...module };",
-              "Object.defineProperty(target, '__esModule', { value: true, enumerable: false });",
-              "return target;",
+              self
+                .generate_load_remote_module_code(key, &concat_string!(SHARED_MODULE_PREFIX, key)),
               "}, shareConfig: {",
               value.singleton.map(|v| if v { "singleton: true," } else { "" }).unwrap_or_default(),
               value

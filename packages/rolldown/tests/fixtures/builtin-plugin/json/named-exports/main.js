@@ -1,3 +1,3 @@
-import json, { name } from './package.json'
+import json, { name } from './data.json'
 
 export { name, json }

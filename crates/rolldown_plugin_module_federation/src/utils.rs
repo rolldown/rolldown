@@ -8,7 +8,7 @@ pub struct ResolvedRemoteModule {
   pub id: ArcStr,
   pub is_cjs: bool,
   pub placeholder: String,
-  pub version: ArcStr,
+  pub version: Option<ArcStr>,
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]

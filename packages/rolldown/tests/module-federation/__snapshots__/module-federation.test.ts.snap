@@ -83,6 +83,26 @@ exports[`module-federation > module-federation 1`] = `
         "js": {
           "async": [],
           "sync": [
+            "test-shared-cjs.js",
+            "chunk.js",
+          ],
+        },
+      },
+      "id": "mf-remote:test-shared-cjs",
+      "name": "test-shared-cjs",
+      "path": "",
+      "requiredVersion": "",
+      "version": "1.0.0",
+    },
+    {
+      "assets": {
+        "css": {
+          "async": [],
+          "sync": [],
+        },
+        "js": {
+          "async": [],
+          "sync": [
             "test-shared.js",
           ],
         },

@@ -29,6 +29,9 @@ describe('module-federation', () => {
             'test-shared': {
               singleton: true,
             },
+            'test-shared-cjs': {
+              singleton: true,
+            },
           },
           runtimePlugins: ['./mf-runtime-plugin.js'],
         }),
@@ -52,6 +55,9 @@ describe('module-federation', () => {
           },
           shared: {
             'test-shared': {
+              singleton: true,
+            },
+            'test-shared-cjs': {
               singleton: true,
             },
           },

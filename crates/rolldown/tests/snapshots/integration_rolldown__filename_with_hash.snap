@@ -4698,6 +4698,10 @@ snapshot_kind: text
 
 - main-!~{000}~.js => main-jIhBklo0.js
 
+# tests/rolldown/misc/top_level_this_substitution
+
+- main-!~{000}~.js => main-CNQqEHP_.js
+
 # tests/rolldown/misc/use_strict/allow_parse_non_strict_code_in_cjs_format
 
 - main-!~{000}~.js => main-Dcb_TlVd.js

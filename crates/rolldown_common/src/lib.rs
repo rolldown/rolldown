@@ -21,7 +21,7 @@ pub mod bundler_options {
       defer_sync_scan_data_option::DeferSyncScanDataOption,
       es_module_flag::EsModuleFlag,
       experimental_options::ExperimentalOptions,
-      filename_template::{FileNameRenderOptions, FilenameTemplate},
+      filename_template::FilenameTemplate,
       hash_characters::HashCharacters,
       inject_import::InjectImport,
       input_item::InputItem,

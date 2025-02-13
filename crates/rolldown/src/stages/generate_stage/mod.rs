@@ -11,14 +11,13 @@ use rolldown_std_utils::OptionExt;
 use rustc_hash::{FxHashMap, FxHashSet};
 
 use rolldown_common::{
-  ChunkIdx, ChunkKind, CssAssetNameReplacer, FileNameRenderOptions,
-  ImportMetaRolldownAssetReplacer, Module, PreliminaryFilename, RollupPreRenderedAsset,
+  ChunkIdx, ChunkKind, CssAssetNameReplacer, ImportMetaRolldownAssetReplacer, Module,
+  PreliminaryFilename, RollupPreRenderedAsset,
 };
 use rolldown_plugin::SharedPluginDriver;
 use rolldown_std_utils::{PathBufExt, PathExt};
 use rolldown_utils::{
   concat_string,
-  extract_hash_pattern::extract_hash_patterns,
   hash_placeholder::HashPlaceholderGenerator,
   rayon::{IntoParallelRefMutIterator, ParallelIterator},
 };
@@ -264,7 +263,7 @@ impl<'a> GenerateStage<'a> {
             .sanitize_filename
             .call(module.id.as_path().file_stem().and_then(|s| s.to_str()).unpack())
             .await?;
-          let asset_filename_template = &self
+          let asset_filename_template = self
             .options
             .asset_filename_template(&RollupPreRenderedAsset {
               names: vec![name.clone()],
@@ -274,21 +273,22 @@ impl<'a> GenerateStage<'a> {
             })
             .await?;
 
-          let extracted_asset_hash_pattern =
-            extract_hash_patterns(asset_filename_template.template());
+          let has_hash_pattern = asset_filename_template.has_hash_pattern();
+          let extension = module.id.as_path().extension().and_then(|s| s.to_str());
 
-          let hash_placeholder = extracted_asset_hash_pattern.as_ref().map(|p| {
-            p.iter().map(|p| hash_placeholder_generator.generate(p.len.unwrap_or(8))).collect()
+          let mut hash_placeholder = has_hash_pattern.then_some(vec![]);
+          let hash_replacer = has_hash_pattern.then_some({
+            |len: Option<usize>| {
+              let hash = hash_placeholder_generator.generate(len.unwrap_or(8));
+              if let Some(hash_placeholder) = hash_placeholder.as_mut() {
+                hash_placeholder.push(hash.clone());
+              }
+              hash
+            }
           });
 
-          let preliminary = PreliminaryFilename::new(
-            asset_filename_template.render(&FileNameRenderOptions {
-              name: Some(&name),
-              hashes: hash_placeholder.as_deref(),
-              ext: module.id.as_path().extension().and_then(|s| s.to_str()),
-            }),
-            hash_placeholder,
-          );
+          let filename = asset_filename_template.render(Some(&name), extension, hash_replacer);
+          let preliminary = PreliminaryFilename::new(filename, hash_placeholder);
 
           chunk.asset_absolute_preliminary_filenames.insert(
             module.idx,

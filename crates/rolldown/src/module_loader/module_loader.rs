@@ -466,13 +466,11 @@ impl ModuleLoader {
     let modules: IndexVec<ModuleIdx, Module> = self
       .intermediate_normal_modules
       .modules
-      .into_iter()
-      .enumerate()
-      .map(|(id, module)| {
+      .into_iter_enumerated()
+      .map(|(idx, module)| {
         let mut module = module.expect("Module tasks did't complete as expected");
 
         if let Some(module) = module.as_normal_mut() {
-          let idx = ModuleIdx::from(id);
           // Note: (Compat to rollup)
           // The `dynamic_importers/importers` should be added after `module_parsed` hook.
           let importers = std::mem::take(&mut self.intermediate_normal_modules.importers[idx]);

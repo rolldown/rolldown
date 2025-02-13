@@ -142,6 +142,9 @@ jobs:
       - name: Lint Code
         run: pnpm lint-code
 
+      - name: Validate workspace package
+        run: node scripts/misc/published-package-check.mjs
+
   repo-validation:
     name: Repo Validation
     runs-on: ubuntu-latest

@@ -71,6 +71,7 @@ pub struct BindingModuleFederationPluginOption {
   pub shared: Option<HashMap<String, BindingShared, FxBuildHasher>>,
   pub runtime_plugins: Option<Vec<String>>,
   pub manifest: Option<BindingMFManifest>,
+  pub get_public_path: Option<String>,
 }
 
 impl From<BindingModuleFederationPluginOption>
@@ -85,6 +86,7 @@ impl From<BindingModuleFederationPluginOption>
       shared: value.shared.map(|r| r.into_iter().map(|(k, v)| (k, v.into())).collect()),
       runtime_plugins: value.runtime_plugins,
       manifest: value.manifest.map(Into::into),
+      get_public_path: value.get_public_path,
     }
   }
 }

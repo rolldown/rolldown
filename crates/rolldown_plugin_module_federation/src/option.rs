@@ -39,6 +39,7 @@ impl Manifest {
   }
 }
 
+/// https://module-federation.io/configure/index.html
 #[derive(Debug)]
 pub struct ModuleFederationPluginOption {
   pub name: String,
@@ -48,4 +49,5 @@ pub struct ModuleFederationPluginOption {
   pub shared: Option<FxHashMap<String, Shared>>,
   pub runtime_plugins: Option<Vec<String>>,
   pub manifest: Option<Manifest>,
+  pub get_public_path: Option<String>,
 }

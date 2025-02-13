@@ -2,8 +2,7 @@ import { defineConfig } from 'rolldown'
 import { moduleFederationPlugin } from 'rolldown/experimental'
 
 export default defineConfig({
-  input: './Button.jsx',
-  cwd: import.meta.dirname,
+  input: './index.js',
   plugins: [
     moduleFederationPlugin({
       name: 'mf-remote',

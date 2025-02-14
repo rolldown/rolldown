@@ -35,6 +35,7 @@ const sharedSidebar = [
     items: [
       { text: 'Why Bundlers', link: '/guide/in-depth/why-bundlers.md' },
       { text: 'Module Types', link: '/guide/in-depth/module-types.md' },
+      { text: 'Top Level Await', link: '/guide/in-depth/tla-in-rolldown.md' },
       // { text: 'Use Strict', link: '/guide/in-depth/use-strict.md' },
     ],
   },

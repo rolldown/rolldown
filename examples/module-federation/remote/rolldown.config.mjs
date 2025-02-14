@@ -16,6 +16,8 @@ export default defineConfig({
           singleton: true,
         },
       },
+      manifest: true,
+      getPublicPath: 'http://localhost:8085/',
     }),
   ],
 })

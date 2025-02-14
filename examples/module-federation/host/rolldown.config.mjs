@@ -7,11 +7,7 @@ export default defineConfig({
     moduleFederationPlugin({
       name: 'mf-host',
       remotes: {
-        button: {
-          name: 'button',
-          type: 'module',
-          entry: 'http://localhost:8085/remote-entry.js',
-        },
+        button: 'http://localhost:8085/mf-manifest.json',
       },
       shared: {
         react: {

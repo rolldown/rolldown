@@ -3,11 +3,9 @@ use std::{
   path::{Path, PathBuf},
 };
 
-// cSpell:disable
 use crate::{
-  ChunkIdx, ChunkKind, FileNameRenderOptions, FilenameTemplate, ModuleIdx, ModuleTable,
-  NamedImport, NormalModule, NormalizedBundlerOptions, RollupPreRenderedChunk, SymbolNameRefToken,
-  SymbolRef,
+  ChunkIdx, ChunkKind, FilenameTemplate, ModuleIdx, ModuleTable, NamedImport, NormalModule,
+  NormalizedBundlerOptions, RollupPreRenderedChunk, SymbolNameRefToken, SymbolRef,
 };
 pub mod chunk_table;
 pub mod types;
@@ -15,10 +13,7 @@ pub mod types;
 use arcstr::ArcStr;
 use rolldown_rstr::Rstr;
 use rolldown_std_utils::PathExt;
-use rolldown_utils::{
-  extract_hash_pattern::extract_hash_patterns, hash_placeholder::HashPlaceholderGenerator,
-  indexmap::FxIndexMap, BitSet,
-};
+use rolldown_utils::{hash_placeholder::HashPlaceholderGenerator, indexmap::FxIndexMap, BitSet};
 use rustc_hash::FxHashMap;
 use sugar_path::SugarPath;
 
@@ -102,14 +97,14 @@ impl Chunk {
   }
 
   pub fn relative_path_for(&self, target: &Path) -> String {
-    let sorurce_dir = self
+    let source_dir = self
       .absolute_preliminary_filename
       .as_ref()
       .expect("chunk should have absolute_preliminary_filename")
       .as_path()
       .parent()
       .expect("absolute_preliminary_filename should have a parent directory");
-    target.relative(sorurce_dir).as_path().expect_to_slash()
+    target.relative(source_dir).as_path().expect_to_slash()
   }
 
   pub async fn filename_template(
@@ -161,14 +156,11 @@ impl Chunk {
     if let Some(file_name) = &self.file_name {
       return Ok(PreliminaryFilename::new(file_name.to_string(), None));
     }
+
     let filename_template = self.filename_template(options, rollup_pre_rendered_chunk).await?;
-    let extracted_hash_pattern = extract_hash_patterns(filename_template.template());
+    let has_hash_pattern = filename_template.has_hash_pattern();
 
-    let hash_placeholder = extracted_hash_pattern.map(|p| {
-      p.into_iter().map(|p| hash_placeholder_generator.generate(p.len.unwrap_or(8))).collect()
-    });
-
-    let name = if hash_placeholder.is_some() {
+    let name = if has_hash_pattern {
       make_unique_name(chunk_name);
       Cow::Borrowed(chunk_name)
     } else {
@@ -176,13 +168,20 @@ impl Chunk {
       Cow::Owned(unique)
     };
 
-    let rendered = filename_template.render(&FileNameRenderOptions {
-      name: Some(&name),
-      hashes: hash_placeholder.as_deref(),
-      ..Default::default()
+    let mut hash_placeholder = has_hash_pattern.then_some(vec![]);
+    let hash_replacer = has_hash_pattern.then_some({
+      |len: Option<usize>| {
+        let hash = hash_placeholder_generator.generate(len.unwrap_or(8));
+        if let Some(hash_placeholder) = hash_placeholder.as_mut() {
+          hash_placeholder.push(hash.clone());
+        }
+        hash
+      }
     });
 
-    Ok(PreliminaryFilename::new(rendered, hash_placeholder))
+    let filename = filename_template.render(Some(&name), None, hash_replacer);
+
+    Ok(PreliminaryFilename::new(filename, hash_placeholder))
   }
 
   pub async fn generate_css_preliminary_filename(
@@ -198,28 +197,32 @@ impl Chunk {
       file.set_extension("css");
       return Ok(PreliminaryFilename::new(file.into_os_string().into_string().unwrap(), None));
     }
+
     let filename_template = self.css_filename_template(options, rollup_pre_rendered_chunk).await?;
+    let has_hash_pattern = filename_template.has_hash_pattern();
 
-    let extracted_hash_pattern = extract_hash_patterns(filename_template.template());
-
-    let hash_placeholder = extracted_hash_pattern.map(|p| {
-      p.into_iter().map(|p| hash_placeholder_generator.generate(p.len.unwrap_or(8))).collect()
-    });
-
-    let name = if hash_placeholder.is_some() {
+    let name = if has_hash_pattern {
       make_unique_name(chunk_name);
       Cow::Borrowed(chunk_name)
     } else {
       let unique = make_unique_name(chunk_name);
       Cow::Owned(unique)
     };
-    let rendered = filename_template.render(&FileNameRenderOptions {
-      name: Some(&name),
-      hashes: hash_placeholder.as_deref(),
-      ..Default::default()
+
+    let mut hash_placeholder = has_hash_pattern.then_some(vec![]);
+    let hash_replacer = has_hash_pattern.then_some({
+      |len: Option<usize>| {
+        let hash = hash_placeholder_generator.generate(len.unwrap_or(8));
+        if let Some(hash_placeholder) = hash_placeholder.as_mut() {
+          hash_placeholder.push(hash.clone());
+        }
+        hash
+      }
     });
 
-    Ok(PreliminaryFilename::new(rendered, hash_placeholder))
+    let filename = filename_template.render(Some(&name), None, hash_replacer);
+
+    Ok(PreliminaryFilename::new(filename, hash_placeholder))
   }
 
   pub fn user_defined_entry_module_idx(&self) -> Option<ModuleIdx> {

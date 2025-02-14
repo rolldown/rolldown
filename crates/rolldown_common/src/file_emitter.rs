@@ -1,14 +1,12 @@
 use crate::{
-  AddEntryModuleMsg, FileNameRenderOptions, FilenameTemplate, ModuleLoaderMsg,
-  NormalizedBundlerOptions, Output, OutputAsset, StrOrBytes,
+  AddEntryModuleMsg, FilenameTemplate, ModuleLoaderMsg, NormalizedBundlerOptions, Output,
+  OutputAsset, StrOrBytes,
 };
 use anyhow::Context;
 use arcstr::ArcStr;
 use dashmap::{DashMap, DashSet};
-use itertools::Itertools;
 use rolldown_error::BuildDiagnostic;
 use rolldown_utils::dashmap::{FxDashMap, FxDashSet};
-use rolldown_utils::extract_hash_pattern::extract_hash_patterns;
 use rolldown_utils::xxhash::{xxhash_base64_url, xxhash_with_base};
 use std::ffi::OsStr;
 use std::path::Path;
@@ -175,45 +173,33 @@ impl FileEmitter {
     &self,
     file: &mut EmittedAsset,
     hash: &ArcStr,
-    asset_filename_template: Option<FilenameTemplate>,
+    filename_template: Option<FilenameTemplate>,
     sanitized_file_name: Option<ArcStr>,
   ) {
     if file.file_name.is_none() {
       let sanitized_file_name = sanitized_file_name.expect("should has sanitized file name");
       let path = Path::new(sanitized_file_name.as_str());
-      let extension = path.extension().and_then(OsStr::to_str);
       let name = path.file_stem().and_then(OsStr::to_str);
-      let asset_filename_template =
-        asset_filename_template.expect("should has filename template without filename");
-      let extract_hash_pattern = extract_hash_patterns(asset_filename_template.template());
+      let extension = path.extension().and_then(OsStr::to_str);
+      let filename_template =
+        filename_template.expect("should has filename template without filename");
 
-      let mut file_name: ArcStr = asset_filename_template
-        .render(&FileNameRenderOptions {
-          name,
-          hashes: extract_hash_pattern
-            .map(|p| {
-              p.iter()
-                .map(|p| hash.as_str()[..p.len.map_or(8, |hash_len| hash_len.max(6))].to_string())
-                .collect_vec()
-            })
-            .as_deref(),
-          ext: Some(extension.unwrap_or_default()),
-        })
-        .into();
+      let mut filename = filename_template.render(
+        name,
+        Some(extension.unwrap_or_default()),
+        Some(|len: Option<usize>| &hash[..len.map_or(8, |hash_len| hash_len.max(6))]),
+      );
+
       // deconflict file name
-      if let Some(count) = self.names.get_mut(file_name.as_str()).as_deref_mut() {
+      if let Some(count) = self.names.get_mut(filename.as_str()).as_deref_mut() {
         *count += 1;
         let extension = extension.map(|e| format!(".{e}")).unwrap_or_default();
-        file_name = format!(
-          "{}{count}{extension}",
-          &file_name.to_string()[..file_name.len() - extension.len()],
-        )
-        .into();
+        filename = format!("{}{count}{extension}", &filename[..filename.len() - extension.len()],);
       } else {
-        self.names.insert(file_name.clone(), 1);
+        self.names.insert(filename.clone().into(), 1);
       }
 
-      file.file_name = Some(file_name);
+      file.file_name = Some(filename.into());
     }
   }
 

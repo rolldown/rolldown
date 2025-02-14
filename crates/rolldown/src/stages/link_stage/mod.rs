@@ -241,8 +241,6 @@ impl<'a> LinkStage<'a> {
         let stmt_infos = unsafe { &mut *(addr_of!(importer.stmt_infos).cast_mut()) };
         let importer_side_effect = unsafe { &mut *(addr_of!(importer.side_effects).cast_mut()) };
 
-        // store the symbol reference to the declared statement index
-        let declared_symbol_for_stmt_pairs = vec![];
         stmt_infos.infos.iter_mut_enumerated().for_each(|(_stmt_idx, stmt_info)| {
           stmt_info.import_records.iter().for_each(|rec_id| {
             let rec = &importer.import_records[*rec_id];
@@ -447,9 +445,6 @@ impl<'a> LinkStage<'a> {
             stmt_info.referenced_symbols.push(self.runtime.resolve_symbol("__name").into());
           }
         });
-        for (stmt_idx, symbol_ref) in declared_symbol_for_stmt_pairs {
-          stmt_infos.declare_symbol_for_stmt(stmt_idx, symbol_ref);
-        }
         (importer_idx, record_meta_pairs)
       })
       .collect::<Vec<_>>();

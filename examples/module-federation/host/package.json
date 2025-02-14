@@ -1,5 +1,6 @@
 {
   "name": "@example/module-federation-host",
+  "private": true,
   "scripts": {
     "build": "rolldown --config ./rolldown.config.mjs",
     "dev": "npm run build && http-server ./dist -p 8084"

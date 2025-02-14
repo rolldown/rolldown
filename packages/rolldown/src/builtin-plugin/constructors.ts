@@ -100,7 +100,7 @@ export function moduleFederationPlugin(
         if (typeof remote === 'string') {
           const [entryGlobalName] = remote.split('@')
           const entry = remote.replace(entryGlobalName + '@', '')
-          return { entry, name }
+          return { entry, name, entryGlobalName }
         }
         return {
           ...remote,

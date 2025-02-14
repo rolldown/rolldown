@@ -48,13 +48,14 @@ export async function createBundlerOptions(
     onLog(LOG_LEVEL_WARN, logMinifyWarning())
   }
 
+  const normalizedOutputPlugins = await normalizePluginOption(
+    outputOptions.plugins,
+  )
+
   let plugins = [
     ...normalizePlugins(inputPlugins, ANONYMOUS_PLUGIN_PREFIX),
     ...checkOutputPluginOption(
-      normalizePlugins(
-        await normalizePluginOption(outputOptions.plugins),
-        ANONYMOUS_OUTPUT_PLUGIN_PREFIX,
-      ),
+      normalizePlugins(normalizedOutputPlugins, ANONYMOUS_OUTPUT_PLUGIN_PREFIX),
       onLog,
     ),
   ]
@@ -71,6 +72,7 @@ export async function createBundlerOptions(
       plugins,
       inputOptions,
       outputOptions,
+      normalizedOutputPlugins,
       onLog,
       logLevel,
     )

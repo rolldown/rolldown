@@ -8,6 +8,13 @@ const entry = path.join(__dirname, './main.js')
 const allInputOptions: NormalizedInputOptions[] = []
 const allOutputOptions: NormalizedOutputOptions[] = []
 
+const cssChunkFileNames = () => '[name]-[hash].css'
+const chunkFileNames = () => '[name]-[hash].js'
+const footer = () => '/* footer */'
+const outputPlugin = {
+  name: 'test-output-plugin',
+}
+
 export default defineTest({
   config: {
     input: entry,
@@ -16,13 +23,9 @@ export default defineTest({
     output: {
       name: 'test',
       cssEntryFileNames: '[name].css',
-      cssChunkFileNames: () => {
-        return '[name]-[hash].css'
-      },
+      cssChunkFileNames,
       entryFileNames: '[name].js',
-      chunkFileNames: () => {
-        return '[name]-[hash].js'
-      },
+      chunkFileNames,
       assetFileNames: 'assets/[name]-[hash][extname]',
       file: 'dist/[name].js',
       format: 'umd',
@@ -31,11 +34,10 @@ export default defineTest({
       inlineDynamicImports: true,
       sourcemap: 'inline',
       banner: '/* banner */',
-      footer: () => {
-        return '/* footer */'
-      },
+      footer,
       outro: '/* outro */',
       externalLiveBindings: true,
+      plugins: [outputPlugin],
     },
 
     plugins: [
@@ -74,12 +76,9 @@ export default defineTest({
     allOutputOptions.forEach((option) => {
       expect(option.name).toBe('test')
       expect(option.cssEntryFileNames).toBe('[name].css')
-      expect(option.cssChunkFileNames).toBeInstanceOf(Function)
-      expect(option.cssChunkFileNames).toThrow(
-        'You should not take `NormalizedOutputOptions#cssChunkFileNames` and call it directly',
-      )
+      expect(option.cssChunkFileNames).toStrictEqual(cssChunkFileNames)
       expect(option.entryFileNames).toBe('[name].js')
-      expect(option.chunkFileNames).toBeInstanceOf(Function)
+      expect(option.chunkFileNames).toStrictEqual(chunkFileNames)
       expect(option.assetFileNames).toBe('assets/[name]-[hash][extname]')
       expect(option.file).toBe('dist/[name].js')
       expect(option.dir).toBe(undefined)
@@ -89,23 +88,15 @@ export default defineTest({
       expect(option.inlineDynamicImports).toBe(true)
       expect(option.sourcemap).toBe('inline')
       // all of these addon options are Function in rust side currently
-      expect(option.banner).toBeInstanceOf(Function)
-      expect(option.banner).toThrow(
-        'You should not take `NormalizedOutputOptions#banner` and call it directly',
-      )
-      expect(option.footer).toBeInstanceOf(Function)
-      expect(option.footer).toThrow(
-        'You should not take `NormalizedOutputOptions#footer` and call it directly',
-      )
-      expect(option.intro).toBeInstanceOf(Function)
-      expect(option.intro).toThrow(
-        'You should not take `NormalizedOutputOptions#intro` and call it directly',
-      )
-      expect(option.outro).toBeInstanceOf(Function)
-      expect(option.outro).toThrow(
-        'You should not take `NormalizedOutputOptions#outro` and call it directly',
-      )
+      // @ts-expect-error need to RenderedChunk as argument
+      expect(option.banner()).toBe('/* banner */')
+      expect(option.footer).toStrictEqual(footer)
+      // @ts-expect-error need to RenderedChunk as argument
+      expect(option.intro()).toBe('')
+      // @ts-expect-error need to RenderedChunk as argument
+      expect(option.outro()).toBe('/* outro */')
       expect(option.externalLiveBindings).toBe(true)
+      expect(option.plugins[0]).toStrictEqual(outputPlugin)
     })
   },
 })

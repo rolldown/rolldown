@@ -18,8 +18,8 @@ export async function loadSharedToRegistry(id) {
     if (promise) {
         await promise
     } else {
-        loading[id] = loadShare(id) 
-        registry[id] = await loading[id]
+        loading[id] = loadShare(id)
+        registry[id] = (await loading[id])()
     }
 }
 

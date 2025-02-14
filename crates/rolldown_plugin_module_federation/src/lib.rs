@@ -52,6 +52,7 @@ impl ModuleFederationPlugin {
     &self,
     remote_module_key: &str,
     import_module: &str,
+    is_shared: bool,
   ) -> String {
     let remote_module = self
       .resolved_remote_modules
@@ -65,10 +66,14 @@ impl ModuleFederationPlugin {
       "');",
       "if (",
       remote_module.value().placeholder,
-      ") return module.default;",
+      ") return ",
+      if is_shared { "() => " } else { "" },
+      "module.default;",
       "const target = { ...module };",
       "Object.defineProperty(target, '__esModule', { value: true, enumerable: false });",
-      "return target;"
+      "return ",
+      if is_shared { "() => " } else { "" },
+      "target;"
     )
   }
 
@@ -85,7 +90,7 @@ impl ModuleFederationPlugin {
               "'",
               key,
               "': async () => {",
-              self.generate_load_remote_module_code(key, value),
+              self.generate_load_remote_module_code(key, value, false),
               "}"
             )
           })
@@ -175,14 +180,17 @@ impl ModuleFederationPlugin {
               "'], from: '",
               self.options.name.as_str(),
               "', async get() {",
-              self
-                .generate_load_remote_module_code(key, &concat_string!(SHARED_MODULE_PREFIX, key)),
+              self.generate_load_remote_module_code(
+                key,
+                &concat_string!(SHARED_MODULE_PREFIX, key),
+                true
+              ),
               "}, shareConfig: {",
               value.singleton.map(|v| if v { "singleton: true," } else { "" }).unwrap_or_default(),
               value
                 .required_version
                 .as_deref()
-                .map(|v| concat_string!("requiredVersion: '", v, ","))
+                .map(|v| concat_string!("requiredVersion: '", v, "',"))
                 .unwrap_or_default(),
               value
                 .strict_version

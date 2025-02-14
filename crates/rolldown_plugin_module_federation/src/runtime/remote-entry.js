@@ -35,7 +35,7 @@ export async function init(shared={}, initScope=[]) {
         return;
     initScope.push(initToken);
     initRes.initShareScopeMap('default', shared);
-    await Promise.all(await initRes.initializeSharing('default', {
+    await Promise.all(initRes.initializeSharing('default', {
         strategy: 'version-first',
         from: "build",
         initScope

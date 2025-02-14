@@ -6,3 +6,5 @@ export const value = 'expose'
 export const exposeShared = shared
 
 export const exposeSharedCjs = sharedCjs
+
+export default 'expose-default'

@@ -234,8 +234,9 @@ fn json_object_expr_to_esm(
   // update module stmts info
   // clear stmt info, since we need to split `ObjectExpression` into multiple decl, the original stmt info is invalid.
   // preserve the first one, which is `NamespaceRef`
-  module.stmt_infos.drain(1.into()..);
-  let mut all_declared_symbols = vec![];
+  let stmt_info = module.stmt_infos.drain(1.into()..);
+  let mut all_declared_symbols =
+    stmt_info.flat_map(|info| info.referenced_symbols).collect::<Vec<_>>();
   for (i, (local, exported, _)) in declaration_binding_names.iter().enumerate() {
     let symbol_id = ast_scope.get_root_binding(local.as_str()).expect("should have binding");
     let symbol_ref = (module_idx, symbol_id).into();

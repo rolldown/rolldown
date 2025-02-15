@@ -1,0 +1,15 @@
+{
+  "config": {
+    "format": "esm",
+    "platform": "node",
+    "advancedChunks": {
+      "groups": [
+        {
+          "name": "rolldown",
+          "test": "rolldown:runtime",
+          "priority": 100
+        }
+      ]
+    }
+  }
+}

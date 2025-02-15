@@ -4583,6 +4583,12 @@ snapshot_kind: text
 
 - main-!~{000}~.js => main-BIyVlF5M.js
 
+# tests/rolldown/issues/3437
+
+- main-!~{000}~.js => main-CbCVKMhq.js
+- rolldown-!~{001}~.js => rolldown-CDlmqcql.js
+- square-!~{003}~.js => square-DkQOo3Hc.js
+
 # tests/rolldown/issues/3438
 
 - main-!~{000}~.js => main-CvQmWIZr.js

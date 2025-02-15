@@ -7,7 +7,6 @@ use oxc::{
   semantic::SymbolId,
   span::{GetSpan, Span},
 };
-use oxc_ecmascript::ToJsString;
 use rolldown_common::{
   dynamic_import_usage::DynamicImportExportsUsage, generate_replace_this_expr_map,
   EcmaModuleAstUsage, ImportKind, ImportRecordMeta, StmtInfoMeta, ThisExprReplaceKind,
@@ -376,13 +375,13 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
   /// return `bool` represent if it is a global require call
   fn process_global_require_call(&mut self, expr: &ast::CallExpression<'ast>) -> bool {
     let (value, span) = match expr.arguments.first() {
-      Some(ast::Argument::StringLiteral(request)) => {
-        (std::borrow::Cow::Borrowed(request.value.as_str()), request.span)
+      Some(ast::Argument::StringLiteral(request)) => (request.value, request.span),
+      Some(ast::Argument::TemplateLiteral(request)) if request.is_no_substitution_template() => {
+        match request.quasi() {
+          Some(value) => (value, request.span),
+          None => return false,
+        }
       }
-      Some(ast::Argument::TemplateLiteral(request)) => match request.to_js_string() {
-        Some(value) => (value, request.span),
-        None => return false,
-      },
       _ => return false,
     };
     let id = self.add_import_record(

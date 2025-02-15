@@ -169,10 +169,9 @@ xxhash-rust         = "0.8.10"
 
 
 # oxc crates with the same version
-oxc                = { version = "0.50.0", features = ["transformer", "minifier", "mangler", "semantic", "codegen", "serialize"] }
-oxc_ecmascript     = { version = "0.50.0" }
-oxc_parser_napi    = { version = "0.50.0" }
-oxc_transform_napi = { version = "0.50.0" }
+oxc                = { version = "0.51.0", features = ["transformer", "minifier", "mangler", "semantic", "codegen", "serialize"] }
+oxc_parser_napi    = { version = "0.51.0" }
+oxc_transform_napi = { version = "0.51.0" }
 
 # oxc crates in their own repos
 # Versions must be relaxed for usage in oxc.

@@ -1,4 +1,4 @@
-import type { BindingPluginContext } from '../binding'
+import type { BindingPluginContext, ParserOptions } from '../binding'
 import type {
   CustomPluginOptions,
   ModuleOptions,
@@ -7,7 +7,7 @@ import type {
 } from './index'
 import { MinimalPluginContext } from '../plugin/minimal-plugin-context'
 import { AssetSource, bindingAssetSource } from '../utils/asset-source'
-import { unimplemented, unsupported } from '../utils/misc'
+import { unimplemented } from '../utils/misc'
 import { ModuleInfo } from '../types/module-info'
 import { PluginContextData } from './plugin-context-data'
 import { SYMBOL_FOR_RESOLVE_CALLER_THAT_SKIP_SELF } from '../constants/plugin-context'
@@ -17,6 +17,8 @@ import type { LogHandler, LogLevelOption } from '../types/misc'
 import { LOG_LEVEL_WARN } from '../log/logging'
 import { logCycleLoading } from '../log/logs'
 import { OutputOptions } from '../options/output-options'
+import { parseAst } from '../parse-ast-index'
+import { Program } from '@oxc-project/types'
 
 export interface EmittedAsset {
   type: 'asset'
@@ -188,10 +190,10 @@ export class PluginContext extends MinimalPluginContext {
     this.context.addWatchFile(id)
   }
 
-  /**
-   * @deprecated This rollup API won't be supported by rolldown. Using this API will cause runtime error.
-   */
-  public parse(_input: string, _options?: any): any {
-    unsupported('`PluginContext#parse` is not supported by rolldown.')
+  public parse(
+    input: string,
+    options?: ParserOptions | undefined | null,
+  ): Program {
+    return parseAst('test.js', input, options)
   }
 }

@@ -37,7 +37,11 @@ export function bindingifyRenderStart(
           args.onLog,
           args.logLevel,
         ),
-        new NormalizedOutputOptionsImpl(opts),
+        new NormalizedOutputOptionsImpl(
+          opts,
+          args.outputOptions,
+          args.normalizedOutputPlugins,
+        ),
         new NormalizedInputOptionsImpl(opts, args.onLog),
       )
     },
@@ -66,7 +70,11 @@ export function bindingifyRenderChunk(
         ),
         code,
         transformRenderedChunk(chunk),
-        new NormalizedOutputOptionsImpl(opts),
+        new NormalizedOutputOptionsImpl(
+          opts,
+          args.outputOptions,
+          args.normalizedOutputPlugins,
+        ),
       )
 
       if (ret == null) {
@@ -169,7 +177,11 @@ export function bindingifyGenerateBundle(
           args.onLog,
           args.logLevel,
         ),
-        new NormalizedOutputOptionsImpl(opts),
+        new NormalizedOutputOptionsImpl(
+          opts,
+          args.outputOptions,
+          args.normalizedOutputPlugins,
+        ),
         output,
         isWrite,
       )
@@ -204,7 +216,11 @@ export function bindingifyWriteBundle(
           args.onLog,
           args.logLevel,
         ),
-        new NormalizedOutputOptionsImpl(opts),
+        new NormalizedOutputOptionsImpl(
+          opts,
+          args.outputOptions,
+          args.normalizedOutputPlugins,
+        ),
         output,
       )
       return collectChangedBundle(changed, output)

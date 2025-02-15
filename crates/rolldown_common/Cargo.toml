@@ -22,7 +22,7 @@ arcstr              = { workspace = true }
 bitflags            = { workspace = true }
 dashmap             = { workspace = true }
 derive_more         = { workspace = true }
-glob-match          = { workspace = true }
+fast-glob           = { workspace = true }
 itertools           = { workspace = true }
 oxc                 = { workspace = true }
 oxc_index           = { workspace = true }

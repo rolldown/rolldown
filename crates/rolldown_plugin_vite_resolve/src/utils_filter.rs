@@ -1,4 +1,3 @@
-use glob_match::glob_match;
 use rolldown_utils::pattern_filter::StringOrRegex;
 
 use crate::utils::normalize_path;
@@ -47,7 +46,7 @@ impl UtilsSingleFilter {
 
   fn is_match(&self, input: &str) -> bool {
     self.0.iter().any(|filter| match filter {
-      StringOrRegex::String(s) => glob_match(s, input),
+      StringOrRegex::String(s) => fast_glob::glob_match(s, input),
       StringOrRegex::Regex(regex) => regex.matches(input),
     })
   }

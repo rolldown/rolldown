@@ -857,7 +857,7 @@ export type HelperMode = /**
  * Example:
  *
  * ```js
- * import helperName from "@babel/runtime/helpers/helperName";
+ * import helperName from "@oxc-project/runtime/helpers/helperName";
  * helperName(...arguments);
  * ```
  */
@@ -1326,7 +1326,7 @@ export interface TransformResult {
    * Example:
    *
    * ```text
-   * { "_objectSpread": "@babel/runtime/helpers/objectSpread2" }
+   * { "_objectSpread": "@oxc-project/runtime/helpers/objectSpread2" }
    * ```
    */
   helpersUsed: Record<string, string>

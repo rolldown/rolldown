@@ -80,6 +80,12 @@ dependencies = [
 ]
 
 [[package]]
+name = "arrayvec"
+version = "0.7.6"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "7c02d123df017efcdfbd739ef81735b36c5ba83ec3c59c80a9d7ecc718f92e50"
+
+[[package]]
 name = "assert-unchecked"
 version = "0.1.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -605,6 +611,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "fast-glob"
+version = "0.4.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "0eca69ef247d19faa15ac0156968637440824e5ff22baa5ee0cd35b2f7ea6a0f"
+dependencies = [
+ "arrayvec",
+]
+
+[[package]]
 name = "filetime"
 version = "0.2.23"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -788,12 +803,6 @@ name = "glob"
 version = "0.3.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "a8d1add55171497b4705a648c6b583acafb01d58050a51727785f0b2c8e0a2b2"
-
-[[package]]
-name = "glob-match"
-version = "0.2.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "9985c9503b412198aa4197559e9a318524ebc4519c229bfa05a535828c950b9d"
 
 [[package]]
 name = "half"
@@ -2185,7 +2194,7 @@ dependencies = [
  "bitflags 2.8.0",
  "dashmap",
  "derive_more",
- "glob-match",
+ "fast-glob",
  "itertools",
  "oxc",
  "oxc_index",
@@ -2436,7 +2445,7 @@ dependencies = [
  "cow-utils",
  "dashmap",
  "derive_more",
- "glob-match",
+ "fast-glob",
  "oxc_resolver",
  "rolldown_common",
  "rolldown_plugin",
@@ -2558,8 +2567,8 @@ dependencies = [
  "base64-simd",
  "criterion2",
  "dashmap",
+ "fast-glob",
  "futures",
- "glob-match",
  "indexmap",
  "infer",
  "memchr",

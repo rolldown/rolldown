@@ -1,3 +1,4 @@
+import { Program } from '@oxc-project/types'
 import { parseSync, parseAsync } from './binding'
 import type { ParseResult, ParserOptions } from './binding'
 import { locate } from './log/locate-character'
@@ -75,16 +76,17 @@ export function parseAst(
   filename: string,
   sourceText: string,
   options?: ParserOptions | undefined | null,
-): ParseResult {
-  return wrap(parseSync(filename, sourceText, options), sourceText)
+): Program {
+  return wrap(parseSync(filename, sourceText, options), sourceText).program
 }
 
 export async function parseAstAsync(
   filename: string,
   sourceText: string,
   options?: ParserOptions | undefined | null,
-): Promise<ParseResult> {
+): Promise<Program> {
   return wrap(await parseAsync(filename, sourceText, options), sourceText)
+    .program
 }
 
 export type { ParseResult, ParserOptions }

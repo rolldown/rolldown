@@ -5,11 +5,13 @@ import type {
   SourcemapPathTransformOption,
 } from '../types/misc'
 import type {
+  AddonFunction,
   AssetFileNamesFunction,
   ChunkFileNamesFunction,
   GlobalsFunction,
   OutputOptions,
 } from './output-options'
+import { RolldownPlugin } from '..'
 
 export type InternalModuleFormat = 'es' | 'cjs' | 'iife' | 'umd' | 'app'
 
@@ -27,10 +29,10 @@ export interface NormalizedOutputOptions {
   cssChunkFileNames: string | ChunkFileNamesFunction
   inlineDynamicImports: boolean
   externalLiveBindings: boolean
-  banner: OutputOptions['banner']
-  footer: OutputOptions['footer']
-  intro: OutputOptions['intro']
-  outro: OutputOptions['outro']
+  banner: AddonFunction
+  footer: AddonFunction
+  intro: AddonFunction
+  outro: AddonFunction
   esModule: boolean | 'if-default-prop'
   extend: boolean
   globals: Record<string, string> | GlobalsFunction
@@ -41,6 +43,7 @@ export interface NormalizedOutputOptions {
   minify: false | BindingMinifyOptions
   comments: 'none' | 'preserve-legal'
   polyfillRequire: boolean
+  plugins: RolldownPlugin[]
 }
 
 function mapFunctionOption<T>(
@@ -60,26 +63,26 @@ type UnsupportedFnRet = () => never
 
 // TODO: I guess we make these getters enumerable so it act more like a plain object
 export class NormalizedOutputOptionsImpl implements NormalizedOutputOptions {
-  inner: BindingNormalizedOptions
-
-  constructor(inner: BindingNormalizedOptions) {
-    this.inner = inner
-  }
+  constructor(
+    private inner: BindingNormalizedOptions,
+    private outputOptions: OutputOptions,
+    private normalizedOutputPlugins: RolldownPlugin[],
+  ) {}
 
   get dir(): string | undefined {
     return this.inner.dir ?? undefined
   }
 
-  get entryFileNames(): string | UnsupportedFnRet {
-    return mapFunctionOption(this.inner.entryFilenames, 'entryFileNames')
+  get entryFileNames(): string | ChunkFileNamesFunction {
+    return this.inner.entryFilenames || this.outputOptions.entryFileNames!
   }
 
-  get chunkFileNames(): string | UnsupportedFnRet {
-    return mapFunctionOption(this.inner.chunkFilenames, 'chunkFileNames')
+  get chunkFileNames(): string | ChunkFileNamesFunction {
+    return this.inner.chunkFilenames || this.outputOptions.chunkFileNames!
   }
 
-  get assetFileNames(): string | UnsupportedFnRet {
-    return mapFunctionOption(this.inner.assetFilenames, 'assetFilenames')
+  get assetFileNames(): string | AssetFileNamesFunction {
+    return this.inner.assetFilenames || this.outputOptions.assetFileNames!
   }
 
   get format(): 'es' | 'cjs' | 'app' | 'iife' | 'umd' {
@@ -94,12 +97,12 @@ export class NormalizedOutputOptionsImpl implements NormalizedOutputOptions {
     return this.inner.sourcemap
   }
 
-  get cssEntryFileNames(): string | UnsupportedFnRet {
-    return mapFunctionOption(this.inner.cssEntryFilenames, 'cssEntryFileNames')
+  get cssEntryFileNames(): string | ChunkFileNamesFunction {
+    return this.inner.cssEntryFilenames || this.outputOptions.cssEntryFileNames!
   }
 
-  get cssChunkFileNames(): string | UnsupportedFnRet {
-    return mapFunctionOption(this.inner.cssChunkFilenames, 'cssChunkFileNames')
+  get cssChunkFileNames(): string | ChunkFileNamesFunction {
+    return this.inner.cssChunkFilenames || this.outputOptions.cssChunkFileNames!
   }
 
   get shimMissingExports(): boolean {
@@ -122,20 +125,20 @@ export class NormalizedOutputOptionsImpl implements NormalizedOutputOptions {
     return this.inner.externalLiveBindings
   }
 
-  get banner(): string | UnsupportedFnRet | undefined {
-    return mapFunctionOption(this.inner.banner, 'banner') ?? undefined
+  get banner(): AddonFunction {
+    return normalizeAddon(this.outputOptions.banner)
   }
 
-  get footer(): string | UnsupportedFnRet | undefined {
-    return mapFunctionOption(this.inner.footer, 'footer') ?? undefined
+  get footer(): AddonFunction {
+    return normalizeAddon(this.outputOptions.footer)
   }
 
-  get intro(): string | UnsupportedFnRet | undefined {
-    return mapFunctionOption(this.inner.intro, 'intro') ?? undefined
+  get intro(): AddonFunction {
+    return normalizeAddon(this.outputOptions.intro)
   }
 
-  get outro(): string | UnsupportedFnRet | undefined {
-    return mapFunctionOption(this.inner.outro, 'outro') ?? undefined
+  get outro(): AddonFunction {
+    return normalizeAddon(this.outputOptions.outro)
   }
 
   get esModule(): boolean | 'if-default-prop' {
@@ -146,8 +149,8 @@ export class NormalizedOutputOptionsImpl implements NormalizedOutputOptions {
     return this.inner.extend
   }
 
-  get globals(): Record<string, string> | UnsupportedFnRet {
-    return mapFunctionOption(this.inner.globals, 'globals')
+  get globals(): Record<string, string> | GlobalsFunction {
+    return this.inner.globals || this.outputOptions.globals!
   }
 
   get hashCharacters(): 'base64' | 'base36' | 'hex' {
@@ -162,8 +165,8 @@ export class NormalizedOutputOptionsImpl implements NormalizedOutputOptions {
     return mapFunctionOption(void 0, 'sourcemapIgnoreList')
   }
 
-  get sourcemapPathTransform(): UnsupportedFnRet | undefined {
-    return mapFunctionOption(void 0, 'sourcemapPathTransform')
+  get sourcemapPathTransform(): SourcemapPathTransformOption | undefined {
+    return this.outputOptions.sourcemapPathTransform
   }
 
   get minify(): false | BindingMinifyOptions {
@@ -177,4 +180,15 @@ export class NormalizedOutputOptionsImpl implements NormalizedOutputOptions {
   get polyfillRequire(): boolean {
     return this.inner.polyfillRequire
   }
+
+  get plugins(): RolldownPlugin[] {
+    return this.normalizedOutputPlugins
+  }
+}
+
+function normalizeAddon(value?: string | AddonFunction) {
+  if (typeof value === 'function') {
+    return value
+  }
+  return () => value || ''
 }

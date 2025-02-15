@@ -23,7 +23,7 @@ import {
   bindingifyCloseBundle,
 } from './bindingify-output-hooks'
 
-import type { Plugin } from './index'
+import type { Plugin, RolldownPlugin } from './index'
 import type { OutputOptions } from '../options/output-options'
 import { PluginContextData } from './plugin-context-data'
 import {
@@ -41,6 +41,7 @@ export interface BindingifyPluginArgs {
   pluginContextData: PluginContextData
   onLog: LogHandler
   logLevel: LogLevelOption
+  normalizedOutputPlugins: RolldownPlugin[]
 }
 
 // Note: because napi not catch error, so we need to catch error and print error to debugger in adapter.
@@ -49,6 +50,7 @@ export function bindingifyPlugin(
   options: InputOptions,
   outputOptions: OutputOptions,
   pluginContextData: PluginContextData,
+  normalizedOutputPlugins: RolldownPlugin[],
   onLog: LogHandler,
   logLevel: LogLevelOption,
 ): BindingPluginOptions {
@@ -59,6 +61,7 @@ export function bindingifyPlugin(
     pluginContextData,
     onLog,
     logLevel,
+    normalizedOutputPlugins,
   }
 
   const { plugin: buildStart, meta: buildStartMeta } =

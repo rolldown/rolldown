@@ -23,6 +23,7 @@ export function bindingifyInputOptions(
   rawPlugins: RolldownPlugin[],
   inputOptions: InputOptions,
   outputOptions: OutputOptions,
+  normalizedOutputPlugins: RolldownPlugin[],
   onLog: LogHandler,
   logLevel: LogLevelOption,
 ): BindingInputOptions {
@@ -40,6 +41,7 @@ export function bindingifyInputOptions(
       inputOptions,
       outputOptions,
       pluginContextData,
+      normalizedOutputPlugins,
       onLog,
       logLevel,
     )

@@ -216,8 +216,12 @@ impl GenerateStage<'_> {
     let chunk_index_to_codegen_rets = self.create_chunk_to_codegen_ret_map(chunk_graph);
 
     try_join_all(
-      chunk_graph.chunk_table.iter_enumerated().zip(chunk_index_to_codegen_rets.into_iter()).map(
-        |((chunk_idx, chunk), module_id_to_codegen_ret)| async move {
+      chunk_graph
+        .chunk_table
+        .iter_enumerated()
+        .filter(|(_, chunk)| chunk.is_alive)
+        .zip(chunk_index_to_codegen_rets.into_iter())
+        .map(|((chunk_idx, chunk), module_id_to_codegen_ret)| async move {
           let mut ctx = GenerateContext {
             chunk_idx,
             chunk,
@@ -261,8 +265,7 @@ impl GenerateStage<'_> {
               asset_chunks.map(|asset_chunks| [ecma_chunks, css_chunks, asset_chunks])
             })
           })
-        },
-      ),
+        }),
     )
     .await?
     .into_iter()
@@ -303,6 +306,7 @@ impl GenerateStage<'_> {
     let chunk_to_codegen_ret = chunk_graph
       .chunk_table
       .par_iter()
+      .filter(|chunk| chunk.is_alive)
       .map(|item| {
         item
           .modules

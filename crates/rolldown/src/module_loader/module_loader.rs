@@ -15,8 +15,8 @@ use rolldown_common::{
   Cache, EcmaRelated, EntryPoint, EntryPointKind, ExternalModule, ImportKind, ImportRecordIdx,
   ImportRecordMeta, ImporterRecord, Module, ModuleId, ModuleIdx, ModuleInfo, ModuleLoaderMsg,
   ModuleSideEffects, ModuleTable, ModuleType, NormalModuleTaskResult, ResolvedId,
-  RuntimeModuleBrief, RuntimeModuleTaskResult, SymbolRefDb, SymbolRefDbForModule, TreeshakeOptions,
-  DUMMY_MODULE_IDX, RUNTIME_MODULE_ID,
+  RuntimeModuleBrief, RuntimeModuleTaskResult, StmtInfoIdx, SymbolRefDb, SymbolRefDbForModule,
+  TreeshakeOptions, DUMMY_MODULE_IDX, RUNTIME_MODULE_ID,
 };
 use rolldown_error::{BuildDiagnostic, BuildResult};
 use rolldown_fs::OsFileSystem;
@@ -26,6 +26,7 @@ use rolldown_utils::indexmap::FxIndexSet;
 use rolldown_utils::rayon::{IntoParallelIterator, ParallelIterator};
 use rolldown_utils::rustc_hash::FxHashSetExt;
 use rustc_hash::{FxHashMap, FxHashSet};
+use std::collections::hash_map::Entry;
 use std::sync::Arc;
 
 use crate::{SharedOptions, SharedResolver};
@@ -143,8 +144,8 @@ impl ModuleLoader {
     assert_module_type: Option<ModuleType>,
   ) -> ModuleIdx {
     match self.visited.entry(resolved_id.id.clone()) {
-      std::collections::hash_map::Entry::Occupied(visited) => *visited.get(),
-      std::collections::hash_map::Entry::Vacant(not_visited) => {
+      Entry::Occupied(visited) => *visited.get(),
+      Entry::Vacant(not_visited) => {
         let idx = self.intermediate_normal_modules.alloc_ecma_module_idx();
 
         if resolved_id.is_external {
@@ -243,13 +244,15 @@ impl ModuleLoader {
         kind: EntryPointKind::UserDefined,
         file_name: None,
         reference_id: None,
+        related_stmt_infos: vec![],
       })
       .inspect(|e| {
         user_defined_entry_ids.insert(e.id);
       })
       .collect::<Vec<_>>();
 
-    let mut dynamic_import_entry_ids = FxHashSet::default();
+    let mut dynamic_import_entry_ids: FxHashMap<ModuleIdx, Vec<(ModuleIdx, StmtInfoIdx)>> =
+      FxHashMap::default();
     let mut dynamic_import_exports_usage_pairs = vec![];
     let mut extra_entry_points = vec![];
 
@@ -305,7 +308,21 @@ impl ModuleLoader {
                 if matches!(raw_rec.kind, ImportKind::DynamicImport)
                   && !user_defined_entry_ids.contains(&id)
                 {
-                  dynamic_import_entry_ids.insert(id);
+                  match dynamic_import_entry_ids.entry(id) {
+                    Entry::Vacant(vac) => match raw_rec.related_stmt_info_idx {
+                      Some(stmt_info_idx) => {
+                        vac.insert(vec![(module.idx(), stmt_info_idx)]);
+                      }
+                      None => {
+                        vac.insert(vec![]);
+                      }
+                    },
+                    Entry::Occupied(mut occ) => {
+                      if let Some(stmt_info_idx) = raw_rec.related_stmt_info_idx {
+                        occ.get_mut().push((module.idx(), stmt_info_idx));
+                      }
+                    }
+                  }
                 }
                 raw_rec.into_resolved(id)
               })
@@ -349,7 +366,21 @@ impl ModuleLoader {
                 if matches!(raw_rec.kind, ImportKind::DynamicImport)
                   && !user_defined_entry_ids.contains(&id)
                 {
-                  dynamic_import_entry_ids.insert(id);
+                  match dynamic_import_entry_ids.entry(id) {
+                    Entry::Vacant(vac) => match raw_rec.related_stmt_info_idx {
+                      Some(stmt_info_idx) => {
+                        vac.insert(vec![(module.idx, stmt_info_idx)]);
+                      }
+                      None => {
+                        vac.insert(vec![]);
+                      }
+                    },
+                    Entry::Occupied(mut occ) => {
+                      if let Some(stmt_info_idx) = raw_rec.related_stmt_info_idx {
+                        occ.get_mut().push((module.idx, stmt_info_idx));
+                      }
+                    }
+                  }
                 }
                 raw_rec.into_resolved(id)
               })
@@ -390,6 +421,7 @@ impl ModuleLoader {
             kind: EntryPointKind::UserDefined,
             file_name: data.file_name.clone(),
             reference_id: Some(msg.reference_id),
+            related_stmt_infos: vec![],
           });
         }
         ModuleLoaderMsg::BuildErrors(e) => {
@@ -451,10 +483,10 @@ impl ModuleLoader {
       FxHashMap::default(),
       |mut acc, (idx, usage)| {
         match acc.entry(idx) {
-          std::collections::hash_map::Entry::Vacant(vac) => {
+          Entry::Vacant(vac) => {
             vac.insert(usage);
           }
-          std::collections::hash_map::Entry::Occupied(mut occ) => {
+          Entry::Occupied(mut occ) => {
             occ.get_mut().merge(usage);
           }
         };
@@ -503,14 +535,17 @@ impl ModuleLoader {
     // if `inline_dynamic_imports` is set to be true, here we should not put dynamic imports to entries
     if !self.options.inline_dynamic_imports {
       let mut dynamic_import_entry_ids = dynamic_import_entry_ids.into_iter().collect::<Vec<_>>();
-      dynamic_import_entry_ids.sort_unstable_by_key(|id| modules[*id].stable_id());
+      dynamic_import_entry_ids.sort_unstable_by_key(|(id, _)| modules[*id].stable_id());
 
-      entry_points.extend(dynamic_import_entry_ids.into_iter().map(|id| EntryPoint {
-        name: None,
-        id,
-        kind: EntryPointKind::DynamicImport,
-        file_name: None,
-        reference_id: None,
+      entry_points.extend(dynamic_import_entry_ids.into_iter().map(|(id, related_stmt_infos)| {
+        EntryPoint {
+          name: None,
+          id,
+          kind: EntryPointKind::DynamicImport,
+          file_name: None,
+          reference_id: None,
+          related_stmt_infos,
+        }
       }));
     }
 

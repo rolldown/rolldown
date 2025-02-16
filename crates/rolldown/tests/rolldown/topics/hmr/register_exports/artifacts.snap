@@ -1,0 +1,32 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+snapshot_kind: text
+---
+# Assets
+
+## main.js
+
+```js
+
+
+//#region cjs.js
+var require_cjs = __commonJS({ "cjs.js"(exports, module) {
+	module.exports.value = "cjs";
+	__rolldown_runtime__.registerModule("cjs.js", module.exports);
+} });
+var import_cjs = __toESM(require_cjs());
+
+//#endregion
+//#region esm.js
+var esm_exports = {};
+__export(esm_exports, { value: () => value });
+const value = "main";
+__rolldown_runtime__.registerModule("esm.js", {});
+
+//#endregion
+//#region main.js
+console.log(import_cjs, esm_exports);
+__rolldown_runtime__.registerModule("main.js", {});
+
+//#endregion
+```

@@ -28,6 +28,7 @@ use rolldown_utils::ecmascript::is_validate_identifier_name;
 use rustc_hash::FxHashSet;
 use sugar_path::SugarPath;
 
+mod hmr;
 mod rename;
 
 /// Finalizer for emitting output code with scope hoisting.

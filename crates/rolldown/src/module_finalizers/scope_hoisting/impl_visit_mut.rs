@@ -90,6 +90,7 @@ impl<'ast> VisitMut<'ast> for ScopeHoistingFinalizer<'_, 'ast> {
         program.body.push(self.snippet.var_decl_stmt(canonical_name, self.snippet.void_zero()));
       }
     });
+    program.body.extend(self.generate_runtime_module_register_for_hmr());
     walk_mut::walk_program(self, program);
 
     if needs_wrapper {

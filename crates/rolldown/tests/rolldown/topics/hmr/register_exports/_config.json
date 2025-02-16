@@ -3,7 +3,5 @@
     "experimental": {
       "hmr": true
     }
-  },
-  // TODO: should be executable
-  "expectExecuted": false
+  }
 }

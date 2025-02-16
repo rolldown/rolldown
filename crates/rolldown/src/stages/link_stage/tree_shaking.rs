@@ -167,6 +167,18 @@ impl LinkStage<'_> {
       include_module(context, module);
     });
 
+    if self.options.is_hmr_enabled() {
+      // HMR runtime contains statements with side effects, they are referenced by other modules via global variables.
+      // So we need to manually include them here.
+      if let Some(runtime_module) = self.module_table.modules[self.runtime.id()].as_normal() {
+        runtime_module.stmt_infos.iter_enumerated().for_each(|(stmt_info_id, stmt_info)| {
+          if stmt_info.side_effect {
+            include_statement(context, runtime_module, stmt_info_id);
+          }
+        });
+      }
+    }
+
     self.module_table.modules.par_iter_mut().filter_map(Module::as_normal_mut).for_each(|module| {
       let idx = module.idx;
       module.meta.set(EcmaViewMeta::INCLUDED, is_module_included_vec[idx]);

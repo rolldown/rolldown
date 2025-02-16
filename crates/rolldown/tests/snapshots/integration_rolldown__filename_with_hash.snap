@@ -5127,7 +5127,7 @@ snapshot_kind: text
 
 # tests/rolldown/topics/hmr/register_exports
 
-- main-!~{000}~.js => main-DCllgwrA.js
+- main-!~{000}~.js => main-DkU2Ozo9.js
 
 # tests/rolldown/topics/import_meta_url_dirname_filename_polyfill/node_cjs
 

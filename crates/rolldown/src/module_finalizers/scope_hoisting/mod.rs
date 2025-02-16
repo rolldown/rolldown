@@ -811,7 +811,7 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
 
     if let Some(module) = self.ctx.modules[importee_id].as_normal() {
       if !module.is_included() {
-        // Rewrite `import('./foo.mjs')` to `Promise.resolve().then(function () { return init_foo; });`
+        // Rewrite `import('./foo.mjs')` to `Promise.resolve().then(function () { return __dynamicEmptyModule; });`
         let dynamic_empty_expr = self.finalized_expr_for_runtime_symbol("__dynamicEmptyModule");
         return Some(self.snippet.promise_resolve_then_call_expr(
           import_expr.span,

@@ -26,7 +26,7 @@ use rolldown_common::dynamic_import_usage::{DynamicImportExportsUsage, DynamicIm
 use rolldown_common::{
   AstScopes, EcmaModuleAstUsage, ExportsKind, ImportKind, ImportRecordIdx, ImportRecordMeta,
   LocalExport, MemberExprRef, ModuleDefFormat, ModuleId, ModuleIdx, NamedImport, RawImportRecord,
-  Specifier, StmtInfo, StmtInfoIdx, StmtInfos, SymbolRef, SymbolRefDbForModule, SymbolRefFlags,
+  Specifier, StmtInfo, StmtInfos, SymbolRef, SymbolRefDbForModule, SymbolRefFlags,
   ThisExprReplaceKind,
 };
 use rolldown_ecmascript_utils::{BindingIdentifierExt, BindingPatternExt};
@@ -300,7 +300,7 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
     let namespace_ref: SymbolRef =
       self.result.symbol_ref_db.create_facade_root_symbol_ref(&concat_string!(
         "#LOCAL_NAMESPACE_IN_",
-        itoa::Buffer::new().format(self.current_stmt_info.stmt_idx.unwrap_or_default()),
+        itoa::Buffer::new().format(self.current_stmt_info.stmt_idx.unwrap_or_default().raw()),
         "#"
       ));
     let rec = RawImportRecord::new(
@@ -311,7 +311,7 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
       None,
       // The first index stmt is reserved for the facade statement that constructs Module Namespace
       // Object
-      self.current_stmt_info.stmt_idx.map(|idx| StmtInfoIdx::from(idx + 1)),
+      self.current_stmt_info.stmt_idx.map(|idx| idx + 1),
     )
     .with_meta(init_meta);
 
@@ -562,7 +562,7 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
     let ref_id = id_ref.reference_id.get().unwrap_or_else(|| {
       panic!(
         "{id_ref:#?} must have reference id in code```\n{}\n```\n",
-        self.current_stmt_info.debug_label.as_deref().unwrap_or("<None>")
+        self.current_stmt_info.unwrap_debug_label()
       )
     });
     self.result.ast_scope.symbol_id_for(ref_id, &self.result.symbol_ref_db)

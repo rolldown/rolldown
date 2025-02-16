@@ -281,6 +281,7 @@ impl NormalModule {
       stmt_idx: None,
       declared_symbols: vec![esm_namespace_ref_derived_from_module_exports],
       referenced_symbols: vec![wrap_ref.into(), runtime_module.resolve_symbol("__toESM").into()],
+      #[cfg(debug_assertions)]
       debug_label: Some("esm_namespace_ref_derived_from_module_exports".to_string()),
       ..Default::default()
     });
@@ -313,6 +314,7 @@ impl NormalModule {
       stmt_idx: None,
       declared_symbols: vec![esm_namespace_ref_derived_from_module_exports],
       referenced_symbols: vec![wrap_ref.into(), runtime_module.resolve_symbol("__toESM").into()],
+      #[cfg(debug_assertions)]
       debug_label: Some("esm_namespace_ref_derived_from_module_exports node".to_string()),
       ..Default::default()
     });

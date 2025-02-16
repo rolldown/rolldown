@@ -44,7 +44,7 @@ impl<'me, 'ast: 'me> Visit<'ast> for AstScanner<'me, 'ast> {
   fn visit_program(&mut self, program: &ast::Program<'ast>) {
     // Custom visit
     for (idx, stmt) in program.body.iter().enumerate() {
-      self.current_stmt_info.stmt_idx = Some(idx);
+      self.current_stmt_info.stmt_idx = Some(idx.into());
       self.current_stmt_info.side_effect = SideEffectDetector::new(
         &self.result.ast_scope,
         self.source,
@@ -56,7 +56,8 @@ impl<'me, 'ast: 'me> Visit<'ast> for AstScanner<'me, 'ast> {
       )
       .detect_side_effect_of_stmt(stmt);
 
-      if cfg!(debug_assertions) {
+      #[cfg(debug_assertions)]
+      {
         self.current_stmt_info.debug_label = Some(stmt.to_source_string());
       }
 

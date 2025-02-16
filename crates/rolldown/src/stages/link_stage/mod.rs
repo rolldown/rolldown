@@ -509,6 +509,7 @@ impl<'a> LinkStage<'a> {
             side_effect: false,
             is_included: false,
             import_records: Vec::new(),
+            #[cfg(debug_assertions)]
             debug_label: None,
             meta: StmtInfoMeta::default(),
           };
@@ -552,6 +553,7 @@ impl<'a> LinkStage<'a> {
             side_effect: false,
             is_included: false,
             import_records: Vec::new(),
+            #[cfg(debug_assertions)]
             debug_label: None,
             meta: StmtInfoMeta::default(),
           };

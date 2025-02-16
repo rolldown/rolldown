@@ -83,9 +83,11 @@ impl PreProcessEcmaAst {
             Jsx::Disable => unreachable!("Jsx::Disable should be failed at parser."),
             Jsx::Preserve => {}
             Jsx::Enable(jsx) => {
-              transformer_options.jsx = jsx.clone();
-              transformer_options.jsx.jsx_plugin =
-                matches!(parsed_type, OxcParseType::Tsx | OxcParseType::Jsx);
+              transformer_options.jsx =
+                NormalizedBundlerOptions::merge_jsx_options(jsx.clone(), transformer_options.jsx);
+              if matches!(parsed_type, OxcParseType::Tsx | OxcParseType::Jsx) {
+                transformer_options.jsx.jsx_plugin = true;
+              }
             }
           }
         }
@@ -112,6 +114,7 @@ impl PreProcessEcmaAst {
 
     ast.program.with_mut(|fields| {
       let WithMutFields { allocator, program, .. } = fields;
+
       if !bundle_options.inject.is_empty() {
         // if the define replace something, we need to recreate the semantic data.
         // to correct the `root_unresolved_references`

@@ -5,7 +5,7 @@ use std::path::PathBuf;
 use std::sync::Arc;
 
 use arcstr::ArcStr;
-use oxc::transformer::{InjectGlobalVariablesConfig, TransformOptions};
+use oxc::transformer::{InjectGlobalVariablesConfig, JsxOptions, TransformOptions};
 use rustc_hash::{FxHashMap, FxHashSet};
 
 use super::advanced_chunks_options::AdvancedChunksOptions;
@@ -149,6 +149,17 @@ impl NormalizedBundlerOptions {
     match file.file_name {
       Some(_) => Ok(None),
       None => Ok(Some(self.sanitize_filename.call(file.name_for_sanitize()).await?)),
+    }
+  }
+
+  /// This function only merge some common fields in oxc `JsxOptions` and tsconfig.json `compilerOptions`
+  /// only replace field if it is `None` in `dest`
+  pub fn merge_jsx_options(dest: JsxOptions, src: JsxOptions) -> JsxOptions {
+    JsxOptions {
+      pragma: dest.pragma.or(src.pragma),
+      pragma_frag: dest.pragma_frag.or(src.pragma_frag),
+      import_source: dest.import_source.or(src.import_source),
+      ..dest
     }
   }
 }

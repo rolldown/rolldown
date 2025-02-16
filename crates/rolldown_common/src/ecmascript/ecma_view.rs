@@ -113,6 +113,7 @@ bitflags! {
         /// module.exports = require('mod');
         const IsCjsReexport = 1 << 4;
         const TopLevelAwait = 1 << 5;
+        const HmrSelfAccept = 1 << 6;
         const ModuleOrExports = Self::ModuleRef.bits() | Self::ExportsRef.bits();
     }
 }

@@ -13,6 +13,8 @@ pub enum ImportKind {
   UrlImport,
   // `new URL('path', import.meta.url)`
   NewUrl,
+  // `import.meta.hot.accept(...)`
+  HotAccept,
 }
 
 impl ImportKind {
@@ -47,6 +49,7 @@ impl Display for ImportKind {
       Self::AtImport => write!(f, "import-rule"),
       ImportKind::UrlImport => write!(f, "url-import"),
       ImportKind::NewUrl => write!(f, "new-url"),
+      ImportKind::HotAccept => write!(f, "hot-accept"),
     }
   }
 }

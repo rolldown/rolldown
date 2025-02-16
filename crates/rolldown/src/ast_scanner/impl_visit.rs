@@ -279,6 +279,11 @@ impl<'me, 'ast: 'me> Visit<'ast> for AstScanner<'me, 'ast> {
     }
     walk::walk_declaration(self, it);
   }
+
+  fn visit_call_expression(&mut self, it: &ast::CallExpression<'ast>) {
+    self.try_extract_hmr_info_from_hot_accept_call(it);
+    walk::walk_call_expression(self, it);
+  }
 }
 
 impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {

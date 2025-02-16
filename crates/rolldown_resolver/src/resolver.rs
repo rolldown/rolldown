@@ -197,7 +197,9 @@ impl<F: FileSystem + Default> Resolver<F> {
     is_user_defined_entry: bool,
   ) -> Result<ResolveReturn, ResolveError> {
     let selected_resolver = match import_kind {
-      ImportKind::Import | ImportKind::DynamicImport => &self.import_resolver,
+      ImportKind::Import | ImportKind::DynamicImport | ImportKind::HotAccept => {
+        &self.import_resolver
+      }
       ImportKind::NewUrl => &self.new_url_resolver,
       ImportKind::Require => &self.require_resolver,
       ImportKind::AtImport | ImportKind::UrlImport => &self.css_resolver,

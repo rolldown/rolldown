@@ -64,6 +64,7 @@ impl std::ops::DerefMut for StmtInfos {
 }
 
 oxc_index::define_index_type! {
+  #[derive(Default)]
   pub struct StmtInfoIdx = u32;
 }
 
@@ -87,7 +88,7 @@ pub struct StmtInfo {
   /// We will create some facade statements while bundling, and the facade statements
   /// don't have a corresponding statement in the original module body, which means
   /// `stmt_idx` will be `None`.
-  pub stmt_idx: Option<usize>,
+  pub stmt_idx: Option<StmtInfoIdx>,
   // currently, we only store top level symbols
   pub declared_symbols: Vec<SymbolRef>,
   // We will add symbols of other modules to `referenced_symbols`, so we need `SymbolRef`
@@ -97,22 +98,30 @@ pub struct StmtInfo {
   pub side_effect: bool,
   pub is_included: bool,
   pub import_records: Vec<ImportRecordIdx>,
+  #[cfg(debug_assertions)]
   pub debug_label: Option<String>,
   pub meta: StmtInfoMeta,
 }
+
+#[cfg(target_pointer_width = "64")]
+const _: () = {
+  #[cfg(not(debug_assertions))]
+  assert!(size_of::<StmtInfo>() == 88usize);
+};
 
 impl StmtInfo {
   pub fn to_debug_stmt_info_for_tree_shaking(&self) -> DebugStmtInfoForTreeShaking {
     DebugStmtInfoForTreeShaking {
       is_included: self.is_included,
       side_effect: self.side_effect,
+      #[cfg(debug_assertions)]
       source: self.debug_label.clone().unwrap_or_else(|| "<Noop>".into()),
     }
   }
 
   #[must_use]
   pub fn with_stmt_idx(mut self, stmt_idx: usize) -> Self {
-    self.stmt_idx = Some(stmt_idx);
+    self.stmt_idx = Some(stmt_idx.into());
     self
   }
 
@@ -127,11 +136,24 @@ impl StmtInfo {
     self.referenced_symbols = referenced_symbols;
     self
   }
+
+  #[inline]
+  pub fn unwrap_debug_label(&self) -> &str {
+    #[cfg(debug_assertions)]
+    {
+      self.debug_label.as_deref().unwrap_or("<Noop>")
+    }
+    #[cfg(not(debug_assertions))]
+    {
+      "<Noop>"
+    }
+  }
 }
 
 #[derive(Debug)]
 pub struct DebugStmtInfoForTreeShaking {
   pub is_included: bool,
   pub side_effect: bool,
+  #[cfg(debug_assertions)]
   pub source: String,
 }

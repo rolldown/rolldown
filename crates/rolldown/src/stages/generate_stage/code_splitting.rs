@@ -61,7 +61,7 @@ impl GenerateStage<'_> {
           bit: count,
           module: entry_point.id,
         },
-        self.link_output.lived_entry_points.contains(&entry_point.id),
+        module.is_included(),
       ));
       bits_to_chunk.insert(bits, chunk);
       entry_module_to_entry_chunk.insert(entry_point.id, chunk);

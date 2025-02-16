@@ -805,10 +805,22 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
     &mut self,
     import_expr: &mut ImportExpression<'ast>,
   ) -> Option<Expression<'ast>> {
+    let rec_id = self.ctx.module.imports.get(&import_expr.span)?;
+    let rec = &self.ctx.module.import_records[*rec_id];
+    let importee_id = rec.resolved_module;
+
+    if let Some(module) = self.ctx.modules[importee_id].as_normal() {
+      if !module.is_included() {
+        // Rewrite `import('./foo.mjs')` to `Promise.resolve().then(function () { return init_foo; });`
+        let dynamic_empty_expr = self.finalized_expr_for_runtime_symbol("__dynamicEmptyModule");
+        return Some(self.snippet.promise_resolve_then_call_expr(
+          import_expr.span,
+          self.snippet.builder.vec1(self.snippet.return_stmt(dynamic_empty_expr)),
+        ));
+      }
+    }
+
     if self.ctx.options.inline_dynamic_imports {
-      let rec_id = self.ctx.module.imports.get(&import_expr.span)?;
-      let rec = &self.ctx.module.import_records[*rec_id];
-      let importee_id = rec.resolved_module;
       match &self.ctx.modules[importee_id] {
         Module::Normal(importee) => {
           let importee_linking_info = &self.ctx.linking_infos[importee_id];
@@ -868,9 +880,6 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
     }
     if matches!(self.ctx.options.format, OutputFormat::Cjs) {
       // Convert `import('./foo.mjs')` to `Promise.resolve().then(function() { return require('foo.mjs') })`
-      let rec_id = self.ctx.module.imports.get(&import_expr.span)?;
-      let rec = &self.ctx.module.import_records[*rec_id];
-      let importee_id = rec.resolved_module;
       match &self.ctx.modules[importee_id] {
         Module::Normal(_importee) => {
           let importer_chunk = &self.ctx.chunk_graph.chunk_table[self.ctx.chunk_id];

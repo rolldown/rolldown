@@ -4,17 +4,15 @@ snapshot_kind: text
 ---
 # Assets
 
-## lib.js
-
-```js
-
-```
 ## main.js
 
 ```js
 
+
 //#region main.js
-import("./lib.js").then(({ foo: x, thing: a }) => []);
+Promise.resolve().then(function() {
+	return __dynamicEmptyModule;
+}).then(({ foo: x, thing: a }) => []);
 
 //#endregion
 ```

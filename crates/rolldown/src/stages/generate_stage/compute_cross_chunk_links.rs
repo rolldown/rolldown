@@ -242,7 +242,7 @@ impl GenerateStage<'_> {
         });
 
         if let Some(entry_id) = &chunk.entry_module_idx() {
-          let entry = &self.link_output.module_table.modules[*entry_id].as_normal().unwrap();
+          let entry = self.link_output.module_table.modules[*entry_id].as_normal().unwrap();
           let entry_meta = &self.link_output.metas[entry.idx];
 
           if !matches!(entry_meta.wrap_kind, WrapKind::Cjs) {

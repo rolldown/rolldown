@@ -5,9 +5,9 @@ use oxc_index::IndexVec;
 use rolldown_common::common_debug_symbol_ref;
 use rolldown_common::{
   dynamic_import_usage::DynamicImportExportsUsage, side_effects::DeterminedSideEffects,
-  EcmaModuleAstUsage, EntryPoint, EntryPointKind, ExportsKind, ImportKind, ImportRecordIdx,
-  ImportRecordMeta, Module, ModuleIdx, ModuleTable, OutputFormat, ResolvedImportRecord,
-  RuntimeModuleBrief, StmtInfo, StmtInfoMeta, SymbolRef, SymbolRefDb, WrapKind,
+  EcmaModuleAstUsage, EntryPoint, ExportsKind, ImportKind, ImportRecordIdx, ImportRecordMeta,
+  Module, ModuleIdx, ModuleTable, OutputFormat, ResolvedImportRecord, RuntimeModuleBrief, StmtInfo,
+  StmtInfoMeta, SymbolRef, SymbolRefDb, WrapKind,
 };
 use rolldown_error::BuildDiagnostic;
 use rolldown_utils::{
@@ -46,7 +46,6 @@ pub struct LinkStageOutput {
   pub ast_scope_table: IndexAstScope,
   pub used_symbol_refs: FxHashSet<SymbolRef>,
   pub dynamic_import_exports_usage_map: FxHashMap<ModuleIdx, DynamicImportExportsUsage>,
-  pub lived_entry_points: FxHashSet<ModuleIdx>,
 }
 
 #[derive(Debug)]
@@ -125,7 +124,6 @@ impl<'a> LinkStage<'a> {
     tracing::trace!("meta {:#?}", self.metas.iter_enumerated().collect::<Vec<_>>());
 
     LinkStageOutput {
-      lived_entry_points: self.get_lived_entry(),
       module_table: self.module_table,
       entries: self.entries,
       // sorted_modules: self.sorted_modules,
@@ -139,33 +137,6 @@ impl<'a> LinkStage<'a> {
       dynamic_import_exports_usage_map: self.dynamic_import_exports_usage_map,
       ast_scope_table: self.ast_scope_table,
     }
-  }
-
-  #[inline]
-  fn get_lived_entry(&self) -> FxHashSet<ModuleIdx> {
-    self
-      .entries
-      .iter()
-      .filter_map(|item| match item.kind {
-        EntryPointKind::UserDefined => Some(item.id),
-        EntryPointKind::DynamicImport => {
-          // At least one statement that create this entry is included
-          let lived = item
-            .related_stmt_infos
-            .iter()
-            .filter(|(module_idx, stmt_idx)| {
-              let module = &self.module_table.modules[*module_idx]
-                .as_normal()
-                .expect("should be a normal module");
-              let stmt_info = &module.stmt_infos[*stmt_idx];
-              stmt_info.is_included
-            })
-            .count()
-            > 0;
-          lived.then_some(item.id)
-        }
-      })
-      .collect::<FxHashSet<ModuleIdx>>()
   }
 
   #[tracing::instrument(level = "debug", skip_all)]

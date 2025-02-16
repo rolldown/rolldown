@@ -89,6 +89,10 @@ pub fn deconflict_chunk_symbols(
       meta.referenced_symbols_by_entry_point_chunk.iter().for_each(|symbol_ref| {
         renamer.add_symbol_in_root_scope(*symbol_ref);
       });
+
+      if let Some(symbol_ref) = meta.dynamic_import_polyfill {
+        renamer.add_symbol_in_root_scope(symbol_ref);
+      }
     }
     ChunkKind::Common => {}
   }

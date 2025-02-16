@@ -1357,9 +1357,8 @@ snapshot_kind: text
 
 - bytesInOutput should be at least 99 (1)-!~{000}~.js => bytesInOutput should be at least 99 (1)-ZzcsnmC5.js
 - bytesInOutput should be at least 99 (2)-!~{002}~.js => bytesInOutput should be at least 99 (2)-Bi18rofi.js
-- bytesInOutput should be at least 99 (3)-!~{003}~.js => bytesInOutput should be at least 99 (3)-CZbPSatF.js
+- bytesInOutput should be at least 99 (3)-!~{003}~.js => bytesInOutput should be at least 99 (3)-B3bFxSL1.js
 - bytesInOutput should be at least 99-!~{004}~.js => bytesInOutput should be at least 99-TDxtK4FO.js
-- 333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333-!~{006}~.js => 333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333-BT4URTuB.js
 - assets/111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111-Dnygiwvn.file
 - assets/444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444-BDtJkR0u.file
 - bytesInOutput should be at least 99.css
@@ -4190,7 +4189,7 @@ snapshot_kind: text
 
 # tests/rolldown/function/format/app/import
 
-- main-!~{000}~.js => main-BO8f5rV_.js
+- main-!~{000}~.js => main-CcmbNgUD.js
 
 # tests/rolldown/function/format/app/multiple_entry_modules
 
@@ -4200,7 +4199,7 @@ snapshot_kind: text
 
 # tests/rolldown/function/format/app/require
 
-- main-!~{000}~.js => main-zshMOLla.js
+- main-!~{000}~.js => main-zHnBzjUJ.js
 
 # tests/rolldown/function/format/cjs/conflict_exports_key
 
@@ -5330,8 +5329,7 @@ snapshot_kind: text
 
 # tests/rolldown/tree_shaking/dynamic_import_then_destructur
 
-- main-!~{000}~.js => main-Hhp444RJ.js
-- lib-!~{001}~.js => lib-DGw6d5Pw.js
+- main-!~{000}~.js => main-CC6-xmAy.js
 
 # tests/rolldown/tree_shaking/dynamic_import_then_destructur_unused
 

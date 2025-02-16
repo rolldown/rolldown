@@ -29,6 +29,7 @@ pub fn create_css_view(
           SymbolRef::from((ModuleIdx::from_raw(0), SymbolId::from_usize(0))),
           Span::new(range.start, range.end),
           None,
+          None,
         ));
         record_idx_to_span.push(Span::new(range.start, range.end));
         let mut range_end = range.end as usize;
@@ -56,6 +57,7 @@ pub fn create_css_view(
           ImportKind::UrlImport,
           SymbolRef::from((ModuleIdx::from_raw(0), SymbolId::from_usize(0))),
           span,
+          None,
           None,
         ));
         record_idx_to_span.push(span);

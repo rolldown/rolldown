@@ -178,6 +178,11 @@ impl Bundler {
   pub fn options(&self) -> &NormalizedBundlerOptions {
     &self.options
   }
+
+  pub fn generate_hmr_patch(&self, _changed_files: Vec<String>) -> String {
+    // Compute out files that need to be updated based on given changed files.
+    todo!()
+  }
 }
 
 fn _test_bundler() {

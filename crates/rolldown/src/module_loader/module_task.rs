@@ -181,7 +181,7 @@ impl ModuleTask {
             ecma_view.dynamically_imported_ids.insert(ArcStr::clone(&info.id).into());
           }
           // for a none css module, we should not have `at-import` or `url-import`
-          ImportKind::AtImport | ImportKind::UrlImport => unreachable!(),
+          ImportKind::AtImport | ImportKind::UrlImport | ImportKind::HotAccept => unreachable!(),
         }
       }
     }

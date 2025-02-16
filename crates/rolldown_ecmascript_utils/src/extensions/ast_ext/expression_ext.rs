@@ -12,6 +12,8 @@ pub trait ExpressionExt<'ast> {
 
   fn is_import_meta(&self) -> bool;
   fn is_import_meta_url(&self) -> bool;
+  fn is_import_meta_hot(&self) -> bool;
+  fn is_import_meta_hot_accept(&self) -> bool;
 }
 
 impl<'ast> ExpressionExt<'ast> for ast::Expression<'ast> {
@@ -78,5 +80,17 @@ impl<'ast> ExpressionExt<'ast> for ast::Expression<'ast> {
   fn is_import_meta_url(&self) -> bool {
     matches!(self, ast::Expression::StaticMemberExpression(member_expr)
     if member_expr.object.is_import_meta() && member_expr.property.name == "url")
+  }
+
+  /// Check if the expression is `import.meta.hot`
+  fn is_import_meta_hot(&self) -> bool {
+    matches!(self, ast::Expression::StaticMemberExpression(member_expr)
+    if member_expr.object.is_import_meta() && member_expr.property.name == "hot")
+  }
+
+  /// Check if the expression is `import.meta.hot.accept`
+  fn is_import_meta_hot_accept(&self) -> bool {
+    matches!(self, ast::Expression::StaticMemberExpression(member_expr)
+    if member_expr.object.is_import_meta_hot() && member_expr.property.name == "accept")
   }
 }

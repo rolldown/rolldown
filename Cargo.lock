@@ -71,15 +71,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "03918c3dbd7701a85c6b9887732e2921175f26c350b4563841d0958c21d57e6d"
 
 [[package]]
-name = "ariadne"
-version = "0.5.0"
-source = "git+https://github.com/zesterer/ariadne?rev=5caec6c2f9065406e5cec271cd11107102897efd#5caec6c2f9065406e5cec271cd11107102897efd"
-dependencies = [
- "unicode-width 0.1.13",
- "yansi",
-]
-
-[[package]]
 name = "arrayvec"
 version = "0.7.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2144,6 +2135,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "rolldown-ariadne"
+version = "0.5.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "0dfc1754b008b592c36747e857cd46972e82f5c35250857b544924c0918285c4"
+dependencies = [
+ "unicode-width 0.1.13",
+ "yansi",
+]
+
+[[package]]
 name = "rolldown_binding"
 version = "0.1.0"
 dependencies = [
@@ -2242,12 +2243,12 @@ version = "0.1.0"
 dependencies = [
  "anyhow",
  "arcstr",
- "ariadne",
  "heck",
  "napi",
  "oxc",
  "oxc_resolver",
  "oxc_sourcemap",
+ "rolldown-ariadne",
  "rolldown_utils",
  "ropey",
  "rustc-hash",

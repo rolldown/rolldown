@@ -45,6 +45,7 @@ impl RuntimeModuleTask {
     }
   }
 
+  #[expect(clippy::too_many_lines)]
   fn run_inner(&mut self) -> BuildResult<()> {
     let source = if self.options.is_esm_format_with_node_platform() {
       arcstr::literal!(concat!(
@@ -131,6 +132,7 @@ impl RuntimeModuleTask {
         this_expr_replace_map: FxHashMap::default(),
         esm_namespace_in_cjs: None,
         esm_namespace_in_cjs_node_mode: None,
+        hmr_info: scan_result.hmr_info,
       },
       css_view: None,
       asset_view: None,

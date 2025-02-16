@@ -25,9 +25,9 @@ use oxc::{
 use oxc_index::IndexVec;
 use rolldown_common::dynamic_import_usage::{DynamicImportExportsUsage, DynamicImportUsageInfo};
 use rolldown_common::{
-  AstScopes, EcmaModuleAstUsage, ExportsKind, ImportKind, ImportRecordIdx, ImportRecordMeta,
-  LocalExport, MemberExprRef, ModuleDefFormat, ModuleId, ModuleIdx, NamedImport, RawImportRecord,
-  Specifier, StmtInfo, StmtInfos, SymbolRef, SymbolRefDbForModule, SymbolRefFlags,
+  AstScopes, EcmaModuleAstUsage, ExportsKind, HmrInfo, ImportKind, ImportRecordIdx,
+  ImportRecordMeta, LocalExport, MemberExprRef, ModuleDefFormat, ModuleId, ModuleIdx, NamedImport,
+  RawImportRecord, Specifier, StmtInfo, StmtInfos, SymbolRef, SymbolRefDbForModule, SymbolRefFlags,
   ThisExprReplaceKind,
 };
 use rolldown_ecmascript_utils::{BindingIdentifierExt, BindingPatternExt};
@@ -78,6 +78,7 @@ pub struct ScanResult {
   /// `new URL('...', import.meta.url)`
   pub new_url_references: FxHashMap<Span, ImportRecordIdx>,
   pub this_expr_replace_map: FxHashMap<Span, ThisExprReplaceKind>,
+  pub hmr_info: HmrInfo,
 }
 
 pub struct AstScanner<'me, 'ast> {
@@ -160,6 +161,7 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
       dynamic_import_rec_exports_usage: FxHashMap::default(),
       new_url_references: FxHashMap::default(),
       this_expr_replace_map: FxHashMap::default(),
+      hmr_info: HmrInfo::default(),
     };
 
     Self {

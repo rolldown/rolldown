@@ -66,5 +66,6 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
       _ => {}
     }
     self.ast_usage.insert(EcmaModuleAstUsage::HmrSelfAccept);
+    self.result.hmr_info.deps.extend(hmr_deps);
   }
 }

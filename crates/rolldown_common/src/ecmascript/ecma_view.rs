@@ -8,8 +8,8 @@ use rustc_hash::{FxHashMap, FxHashSet};
 
 use crate::{
   side_effects::DeterminedSideEffects, types::source_mutation::BoxedSourceMutation, AstScopeIdx,
-  EcmaAstIdx, ExportsKind, ImportRecordIdx, LocalExport, ModuleDefFormat, ModuleId, NamedImport,
-  ResolvedImportRecord, SourceMutation, StmtInfoIdx, StmtInfos, SymbolRef,
+  EcmaAstIdx, ExportsKind, HmrInfo, ImportRecordIdx, LocalExport, ModuleDefFormat, ModuleId,
+  NamedImport, ResolvedImportRecord, SourceMutation, StmtInfoIdx, StmtInfos, SymbolRef,
 };
 
 bitflags! {
@@ -101,6 +101,8 @@ pub struct EcmaView {
   /// - Represents the `import_xxx` in `const import_xxx = __toESM(require_xxx(), 1);`
   /// - Only exist when this module is a cjs module and get imported by static `import` statement.
   pub esm_namespace_in_cjs_node_mode: Option<EsmNamespaceInCjs>,
+
+  pub hmr_info: HmrInfo,
 }
 
 bitflags! {

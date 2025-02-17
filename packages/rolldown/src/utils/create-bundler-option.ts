@@ -23,6 +23,7 @@ import type { OutputOptions } from '../options/output-options'
 export async function createBundlerOptions(
   inputOptions: InputOptions,
   outputOptions: OutputOptions,
+  isClose?: boolean,
 ): Promise<BundlerOptionWithStopWorker> {
   if (inputOptions.treeshake !== undefined) {
     validateTreeShakingOptions(inputOptions.treeshake)
@@ -38,11 +39,13 @@ export async function createBundlerOptions(
     logLevel,
   )
 
-  // The `outputOptions` hook is called with the input plugins and the output plugins
-  outputOptions = PluginDriver.callOutputOptionsHook(
-    [...inputPlugins, ...outputPlugins],
-    outputOptions,
-  )
+  if (!isClose) {
+    // The `outputOptions` hook is called with the input plugins and the output plugins
+    outputOptions = PluginDriver.callOutputOptionsHook(
+      [...inputPlugins, ...outputPlugins],
+      outputOptions,
+    )
+  }
 
   if (outputOptions.minify === true) {
     onLog(LOG_LEVEL_WARN, logMinifyWarning())

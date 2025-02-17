@@ -197,8 +197,10 @@ exports[`config > no package.json > should allow multiply options 1`] = `
 "
 `;
 
-exports[`config > no package.json > should allow multiply output + call options hook once 1`] = `
+exports[`config > no package.json > should allow multiply output + call options hook once  + call outputOptions hook 1`] = `
 "called options hook
+called output options hook
+called output options hook
 <DIR>/esm.js  chunk │ size: 0.18 kB
 <DIR>/cjs.js  chunk │ size: 0.19 kB
 
@@ -224,8 +226,10 @@ exports[`config > no package.json > should resolve rolldown.config.cjs 1`] = `
 "
 `;
 
-exports[`watch cli > should allow multiply output + + call options hook once 1`] = `
+exports[`watch cli > should allow multiply output + call options hook once + call outputOptions hook 1`] = `
 "called options hook
+called output options hook
+called output options hook
 <DIR>/esm.js  chunk │ size: 0.18 kB
 <DIR>/cjs.js  chunk │ size: 0.19 kB
 

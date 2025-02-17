@@ -17,6 +17,9 @@ export default defineConfig({
       options: function () {
         console.log('called options hook')
       },
+      outputOptions: function () {
+        console.log('called output options hook')
+      },
     },
   ],
 })

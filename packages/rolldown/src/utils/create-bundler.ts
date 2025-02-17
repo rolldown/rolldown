@@ -6,8 +6,13 @@ import { createBundlerOptions } from './create-bundler-option'
 export async function createBundler(
   inputOptions: InputOptions,
   outputOptions: OutputOptions,
+  isClose?: boolean,
 ): Promise<BundlerWithStopWorker> {
-  const option = await createBundlerOptions(inputOptions, outputOptions)
+  const option = await createBundlerOptions(
+    inputOptions,
+    outputOptions,
+    isClose,
+  )
 
   try {
     return {

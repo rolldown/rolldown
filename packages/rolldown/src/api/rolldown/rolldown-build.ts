@@ -29,6 +29,7 @@ export class RolldownBuild {
   // Create bundler for each `bundle.write/generate`
   async #getBundlerWithStopWorker(
     outputOptions: OutputOptions,
+    isClose?: boolean,
   ): Promise<BundlerWithStopWorker> {
     if (this.#bundler) {
       this.#bundler.stopWorkers?.()
@@ -36,6 +37,7 @@ export class RolldownBuild {
     return (this.#bundler = await createBundler(
       this.#inputOptions,
       outputOptions,
+      isClose,
     ))
   }
 
@@ -52,7 +54,11 @@ export class RolldownBuild {
   }
 
   async close(): Promise<void> {
-    const { bundler, stopWorkers } = await this.#getBundlerWithStopWorker({})
+    // Create new one bundler to run `closeBundle` hook, here using `isClose` flag to avoid call `outputOptions` hook.
+    const { bundler, stopWorkers } = await this.#getBundlerWithStopWorker(
+      {},
+      true,
+    )
     await stopWorkers?.()
     await bundler.close()
   }

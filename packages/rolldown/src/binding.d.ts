@@ -1184,7 +1184,6 @@ export interface StaticImportEntry {
    * ```ts
    * import type { foo } from "mod";
    * import { type foo } from "mod";
-import { PreserveEntrySignaturesOption } from '../dist/types/rollup';
    * ```
    */
   isType: boolean

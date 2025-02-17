@@ -16,18 +16,6 @@ snapshot_kind: text
 ───╯
 
 ```
-## UNRESOLVED_IMPORT
-
-```text
-[UNRESOLVED_IMPORT] Warning: Could not resolve "a" in entry.js
-   ╭─[ entry.js:6:10 ]
-   │
- 6 │     require("a", "b")
-   │             ─┬─  
-   │              ╰─── Module not found, treating it as an external dependency
-───╯
-
-```
 # Assets
 
 ## entry.js

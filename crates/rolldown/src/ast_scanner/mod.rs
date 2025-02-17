@@ -755,6 +755,19 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
         })
       })
   }
+
+  pub fn in_side_try_catch_block(&self) -> bool {
+    for kind in self.visit_path.iter().rev() {
+      match kind {
+        AstKind::TryStatement(_) => return true,
+        AstKind::ArrowFunctionExpression(_) | AstKind::FunctionBody(_) | AstKind::Function(_) => {
+          return false
+        }
+        _ => {}
+      }
+    }
+    false
+  }
 }
 
 #[derive(Debug, Clone, Copy)]

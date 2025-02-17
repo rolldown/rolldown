@@ -173,7 +173,7 @@ describe('config', () => {
       expect(cleanStdout(status.stdout)).toMatchSnapshot()
     })
 
-    it('should allow multiply output + call options hook once', async () => {
+    it('should allow multiply output + call options hook once  + call outputOptions hook', async () => {
       const cwd = cliFixturesDir('config-multiply-output-with-options-hooks')
       const status = await $({
         cwd,
@@ -261,7 +261,7 @@ describe('watch cli', () => {
     controller.abort()
   })
 
-  it('should allow multiply output + + call options hook once', async () => {
+  it('should allow multiply output + call options hook once + call outputOptions hook', async () => {
     const cwd = cliFixturesDir('config-multiply-output-with-options-hooks')
     const status = await $({ cwd })`rolldown -c`
     expect(cleanStdout(status.stdout)).toMatchSnapshot()

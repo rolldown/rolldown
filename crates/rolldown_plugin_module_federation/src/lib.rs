@@ -215,8 +215,12 @@ impl Plugin for ModuleFederationPlugin {
   async fn build_start(
     &self,
     ctx: &rolldown_plugin::PluginContext,
-    _args: &rolldown_plugin::HookBuildStartArgs<'_>,
+    args: &rolldown_plugin::HookBuildStartArgs<'_>,
   ) -> rolldown_plugin::HookNoopReturn {
+    if !args.options.format.keep_esm_import_export_syntax() {
+      return Err(anyhow::anyhow!("Module federation only support esm output format"));
+    }
+
     if let Some(filename) = self.options.filename.as_deref() {
       ctx
         .emit_chunk(EmittedChunk {

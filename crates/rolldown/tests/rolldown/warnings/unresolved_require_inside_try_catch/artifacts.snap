@@ -1,0 +1,54 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+snapshot_kind: text
+---
+# Errors
+
+## UNRESOLVED_IMPORT
+
+```text
+[UNRESOLVED_IMPORT] Error: Could not resolve './unresolved1' in main.js
+   ╭─[ main.js:3:10 ]
+   │
+ 3 │   import('./unresolved1');
+   │          ───────┬───────  
+   │                 ╰───────── Module not found.
+───╯
+
+```
+## UNRESOLVED_IMPORT
+
+```text
+[UNRESOLVED_IMPORT] Error: Could not resolve './unresolved2' in main.js
+   ╭─[ main.js:8:13 ]
+   │
+ 8 │     require('./unresolved2')
+   │             ───────┬───────  
+   │                    ╰───────── Module not found.
+───╯
+
+```
+## UNRESOLVED_IMPORT
+
+```text
+[UNRESOLVED_IMPORT] Error: Could not resolve './unresolved3' in main.js
+    ╭─[ main.js:12:15 ]
+    │
+ 12 │       require('./unresolved3')
+    │               ───────┬───────  
+    │                      ╰───────── Module not found.
+────╯
+
+```
+## UNRESOLVED_IMPORT
+
+```text
+[UNRESOLVED_IMPORT] Error: Could not resolve './unresolved4' in main.js
+    ╭─[ main.js:20:15 ]
+    │
+ 20 │       require('./unresolved4')
+    │               ───────┬───────  
+    │                      ╰───────── Module not found.
+────╯
+
+```

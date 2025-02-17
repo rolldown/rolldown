@@ -26,7 +26,7 @@ pub struct ImportRecordStateResolved {
 
 bitflags::bitflags! {
   #[derive(Debug)]
-  pub struct ImportRecordMeta: u8 {
+  pub struct ImportRecordMeta: u16 {
     /// If it is `import * as ns from '...'` or `export * as ns from '...'`
     const CONTAINS_IMPORT_STAR = 1;
     /// If it is `import def from '...'`, `import { default as def }`, `export { default as def }` or `export { default } from '...'`
@@ -45,6 +45,8 @@ bitflags::bitflags! {
     /// `require` ExpressionIdentifier should be considering as a import record,
     /// but it did not import any module.
     const IS_DUMMY = 1 << 7;
+    /// if the import record is in a try-catch block
+    const IN_TRY_CATCH_BLOCK = 1 << 8;
   }
 }
 

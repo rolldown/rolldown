@@ -386,23 +386,13 @@ impl ModuleTask {
           let dep = &dependencies[idx];
           match &e {
             ResolveError::NotFound(..) => {
-              // https://github.com/rollup/rollup/blob/49b57c2b30d55178a7316f23cc9ccc457e1a2ee7/src/ModuleLoader.ts#L643-L646
-              if ecmascript::is_path_like_specifier(&specifier) {
-                // Unlike rollup, we also emit errors for absolute path
-                build_errors.push(BuildDiagnostic::resolve_error(
-                  source.clone(),
-                  self.resolved_id.id.clone(),
-                  if dep.is_unspanned() || is_css_module {
-                    DiagnosableArcstr::String(concat_string!("'", specifier.as_str(), "'").into())
-                  } else {
-                    DiagnosableArcstr::Span(dep.state.span)
-                  },
-                  "Module not found.".into(),
-                  Some("UNRESOLVED_IMPORT"),
-                ));
-              } else {
-                warnings.push(
-                  BuildDiagnostic::resolve_error(
+              // NOTE: IN_TRY_CATCH_BLOCK meta if it is a `require` import
+              // record
+              if !dep.meta.contains(ImportRecordMeta::IN_TRY_CATCH_BLOCK) {
+                // https://github.com/rollup/rollup/blob/49b57c2b30d55178a7316f23cc9ccc457e1a2ee7/src/ModuleLoader.ts#L643-L646
+                if ecmascript::is_path_like_specifier(&specifier) {
+                  // Unlike rollup, we also emit errors for absolute path
+                  build_errors.push(BuildDiagnostic::resolve_error(
                     source.clone(),
                     self.resolved_id.id.clone(),
                     if dep.is_unspanned() || is_css_module {
@@ -410,11 +400,27 @@ impl ModuleTask {
                     } else {
                       DiagnosableArcstr::Span(dep.state.span)
                     },
-                    "Module not found, treating it as an external dependency".into(),
+                    "Module not found.".into(),
                     Some("UNRESOLVED_IMPORT"),
-                  )
-                  .with_severity_warning(),
-                );
+                  ));
+                } else {
+                  warnings.push(
+                    BuildDiagnostic::resolve_error(
+                      source.clone(),
+                      self.resolved_id.id.clone(),
+                      if dep.is_unspanned() || is_css_module {
+                        DiagnosableArcstr::String(
+                          concat_string!("'", specifier.as_str(), "'").into(),
+                        )
+                      } else {
+                        DiagnosableArcstr::Span(dep.state.span)
+                      },
+                      "Module not found, treating it as an external dependency".into(),
+                      Some("UNRESOLVED_IMPORT"),
+                    )
+                    .with_severity_warning(),
+                  );
+                }
               }
               ret.push(ResolvedId {
                 id: specifier.to_string().into(),

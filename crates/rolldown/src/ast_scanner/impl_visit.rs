@@ -390,49 +390,47 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
       }
       _ => return false,
     };
-    let id = self.add_import_record(
-      value.as_ref(),
-      ImportKind::Require,
-      span,
-      if span.is_empty() {
-        ImportRecordMeta::IS_UNSPANNED_IMPORT
-      } else {
-        let mut is_require_used = true;
-        let mut meta = ImportRecordMeta::empty();
-        // traverse nearest ExpressionStatement and check if there are potential used
-        // skip one for CallExpression it self
-        for ancestor in self.visit_path.iter().rev().skip(1) {
-          match ancestor {
-            AstKind::ParenthesizedExpression(_) => {}
-            AstKind::ExpressionStatement(_) => {
-              meta.insert(ImportRecordMeta::IS_REQUIRE_UNUSED);
-              break;
-            }
-            AstKind::SequenceExpression(seq_expr) => {
-              // the child node has require and it is potential used
-              // the state may changed according to the child node position
-              // 1. `1, 2, (1, require('a'))` => since the last child contains `require`, and
-              //    in the last position, it is still used if it meant any other astKind
-              // 2. `1, 2, (1, require('a')), 1` => since the last child contains `require`, but it is
-              //    not in the last position, the state should change to unused
-              let last = seq_expr.expressions.last().expect("should have at least one child");
+    let mut init_meta = if span.is_empty() {
+      ImportRecordMeta::IS_UNSPANNED_IMPORT
+    } else {
+      let mut is_require_used = true;
+      let mut meta = ImportRecordMeta::empty();
+      // traverse nearest ExpressionStatement and check if there are potential used
+      // skip one for CallExpression it self
+      for ancestor in self.visit_path.iter().rev().skip(1) {
+        match ancestor {
+          AstKind::ParenthesizedExpression(_) => {}
+          AstKind::ExpressionStatement(_) => {
+            meta.insert(ImportRecordMeta::IS_REQUIRE_UNUSED);
+            break;
+          }
+          AstKind::SequenceExpression(seq_expr) => {
+            // the child node has require and it is potential used
+            // the state may changed according to the child node position
+            // 1. `1, 2, (1, require('a'))` => since the last child contains `require`, and
+            //    in the last position, it is still used if it meant any other astKind
+            // 2. `1, 2, (1, require('a')), 1` => since the last child contains `require`, but it is
+            //    not in the last position, the state should change to unused
+            let last = seq_expr.expressions.last().expect("should have at least one child");
 
-              if !last.span().is_empty() && !expr.span.is_empty() {
-                is_require_used = last.span().contains_inclusive(expr.span);
-              } else {
-                is_require_used = true;
-              }
+            if !last.span().is_empty() && !expr.span.is_empty() {
+              is_require_used = last.span().contains_inclusive(expr.span);
+            } else {
+              is_require_used = true;
             }
-            _ => {
-              if is_require_used {
-                break;
-              }
+          }
+          _ => {
+            if is_require_used {
+              break;
             }
           }
         }
-        meta
-      },
-    );
+      }
+      meta
+    };
+    let in_side_try_catch_block = self.in_side_try_catch_block();
+    init_meta.set(ImportRecordMeta::IN_TRY_CATCH_BLOCK, in_side_try_catch_block);
+    let id = self.add_import_record(value.as_ref(), ImportKind::Require, span, init_meta);
     self.result.imports.insert(expr.span, id);
     true
   }

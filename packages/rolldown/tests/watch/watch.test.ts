@@ -238,7 +238,7 @@ test.sequential('watch buildDelay', async () => {
     input,
     output: { file: output },
     watch: {
-      buildDelay: 100,
+      buildDelay: 150,
     },
   })
   await waitBuildFinished(watcher)

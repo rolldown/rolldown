@@ -81,6 +81,23 @@ NOTES
   * For more information, please visit https://rolldown.rs/."
 `;
 
+exports[`cli options for bundling > cli default options 1`] = `
+"input cli default options {
+  input: 'index.js',
+  plugins: [
+    {
+      name: 'test-input-plugin',
+      options: [Function: options],
+      outputOptions: [Function: outputOptions]
+    }
+  ]
+}
+output cli default options {}
+<DIR>/index.js  chunk │ size: 0.13 kB
+
+"
+`;
+
 exports[`cli options for bundling > should handle negative boolean options 1`] = `
 "(function(exports, node_fs) {
 

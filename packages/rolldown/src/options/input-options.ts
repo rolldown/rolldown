@@ -47,6 +47,7 @@ export interface JsxOptions {
 
 export interface WatchOptions {
   skipWrite?: boolean
+  buildDelay?: number
   notify?: {
     pollInterval?: number
     compareContents?: boolean

@@ -116,6 +116,10 @@ const WatchOptionsSchema = v.strictObject({
     v.optional(v.boolean()),
     v.description('Skip the bundle.write() step'),
   ),
+  buildDelay: v.pipe(
+    v.optional(v.number()),
+    v.description('Throttle watch rebuilds'),
+  ),
 })
 
 const ChecksOptionsSchema = v.strictObject({

@@ -724,6 +724,7 @@ export interface BindingWatchOption {
   skipWrite?: boolean
   include?: Array<BindingStringOrRegex>
   exclude?: Array<BindingStringOrRegex>
+  buildDelay?: number
 }
 
 export interface Comment {

@@ -9,7 +9,7 @@ use std::{
   ops::Deref,
   path::Path,
   sync::{
-    atomic::{AtomicBool, Ordering},
+    atomic::{AtomicBool, AtomicU32, Ordering},
     mpsc::{channel, Receiver, Sender},
     Arc,
   },
@@ -45,7 +45,10 @@ pub struct WatcherImpl {
   rx: Arc<Mutex<Receiver<WatcherChannelMsg>>>,
   exec_tx: Arc<Sender<ExecChannelMsg>>,
   exec_rx: Arc<Mutex<Receiver<ExecChannelMsg>>>,
+  // debounce invalidating
   invalidating: AtomicBool,
+  build_delay: AtomicU32,
+  bundlers: Vec<Arc<Mutex<Bundler>>>,
 }
 
 impl WatcherImpl {
@@ -80,10 +83,10 @@ impl WatcherImpl {
     let emitter = Arc::new(WatcherEmitter::new());
 
     let tasks = bundlers
-      .into_iter()
+      .iter()
       .map(|bundler| {
         WatcherTask::new(
-          bundler,
+          Arc::clone(bundler),
           Arc::clone(&emitter),
           Arc::clone(&notify_watcher),
           Arc::clone(&notify_watch_files),
@@ -103,9 +106,12 @@ impl WatcherImpl {
       exec_tx: Arc::new(exec_tx),
       exec_rx: Arc::new(Mutex::new(exec_rx)),
       invalidating: AtomicBool::default(),
+      build_delay: AtomicU32::default(),
+      bundlers,
     })
   }
 
+  #[allow(clippy::cast_lossless)]
   #[tracing::instrument(level = "debug", skip_all)]
   pub fn invalidate(&self, data: Option<WatcherChangeData>) {
     tracing::debug!(name= "watch invalidate", running = ?self.running.load(Ordering::Relaxed));
@@ -120,8 +126,9 @@ impl WatcherImpl {
 
     self.invalidating.store(true, Ordering::Relaxed);
     let exec_tx = Arc::clone(&self.exec_tx);
+    let build_delay = self.build_delay.load(Ordering::Relaxed);
     std::thread::spawn(move || {
-      std::thread::sleep(Duration::from_millis(20));
+      std::thread::sleep(Duration::from_millis(build_delay as u64));
       exec_tx.send(ExecChannelMsg::Exec).expect("send watcher exec cannel message error");
     })
     .join()
@@ -174,6 +181,19 @@ impl WatcherImpl {
   }
 
   pub async fn start(&self) {
+    {
+      let mut build_delay: u32 = 0;
+      for bundler in &self.bundlers {
+        let bundler = bundler.lock().await;
+        if let Some(delay) = bundler.options.watch.build_delay {
+          if delay > build_delay {
+            build_delay = delay;
+          }
+        }
+      }
+      self.build_delay.store(build_delay, Ordering::Relaxed);
+    }
+
     let _ = self.run(&[]).await;
     let future = async move {
       while let Ok(msg) = self.exec_rx.lock().await.recv() {

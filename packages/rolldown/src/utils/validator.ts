@@ -443,11 +443,11 @@ const OutputOptionsSchema = v.strictObject({
     ),
   ),
   externalLiveBindings: v.pipe(
-    v.optional(v.boolean(), true),
+    v.optional(v.boolean()),
     v.description('external live bindings'),
   ),
   inlineDynamicImports: v.pipe(
-    v.optional(v.boolean(), false),
+    v.optional(v.boolean()),
     v.description('Inline dynamic imports'),
   ),
   advancedChunks: v.optional(AdvancedChunksSchema),

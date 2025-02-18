@@ -96,6 +96,13 @@ describe('cli options for bundling', () => {
     expect(status.exitCode).toBe(0)
     expect(cleanStdout(status.stdout)).toMatchSnapshot()
   })
+
+  it('cli default options', async () => {
+    const cwd = cliFixturesDir('cli-default-option')
+    const status = await $({ cwd })`rolldown -c`
+    expect(status.exitCode).toBe(0)
+    expect(cleanStdout(status.stdout)).toMatchSnapshot()
+  })
 })
 
 describe('config', () => {

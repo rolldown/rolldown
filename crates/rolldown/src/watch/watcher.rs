@@ -12,6 +12,7 @@ use std::{
     mpsc::{channel, Receiver, Sender},
     Arc,
   },
+  time::Duration,
 };
 use tokio::sync::Mutex;
 
@@ -43,6 +44,7 @@ pub struct WatcherImpl {
   rx: Arc<Mutex<Receiver<WatcherChannelMsg>>>,
   exec_tx: Arc<Sender<ExecChannelMsg>>,
   exec_rx: Arc<Mutex<Receiver<ExecChannelMsg>>>,
+  invalidating: AtomicBool,
 }
 
 impl WatcherImpl {
@@ -99,6 +101,7 @@ impl WatcherImpl {
       tx: cloned_tx,
       exec_tx: Arc::new(exec_tx),
       exec_rx: Arc::new(Mutex::new(exec_rx)),
+      invalidating: AtomicBool::default(),
     })
   }
 
@@ -110,10 +113,18 @@ impl WatcherImpl {
       self.watch_changes.insert(data);
     }
 
-    if self.running.load(Ordering::Relaxed) {
+    if self.running.load(Ordering::Relaxed) || self.invalidating.load(Ordering::Relaxed) {
       return;
     }
-    self.exec_tx.send(ExecChannelMsg::Exec).unwrap();
+
+    self.invalidating.store(true, Ordering::Relaxed);
+    let exec_tx = Arc::clone(&self.exec_tx);
+    std::thread::spawn(move || {
+      std::thread::sleep(Duration::from_millis(20));
+      exec_tx.send(ExecChannelMsg::Exec).expect("send watcher exec cannel message error");
+    })
+    .join()
+    .expect("The invalidating thread has panicked");
   }
 
   #[tracing::instrument(level = "debug", skip_all)]
@@ -126,6 +137,7 @@ impl WatcherImpl {
       task.run(changed_files).await?;
     }
 
+    self.invalidating.store(false, Ordering::Relaxed);
     self.running.store(false, Ordering::Relaxed);
     self.emitter.emit(WatcherEvent::Event(BundleEvent::End))?;
 

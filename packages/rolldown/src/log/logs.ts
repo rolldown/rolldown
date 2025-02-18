@@ -46,11 +46,13 @@ export function logInputHookInOutputPlugin(
 
 export function logCycleLoading(
   pluginName: string,
-  moduleId: string,
+  moduleIds: string[],
 ): RollupLog {
   return {
     code: CYCLE_LOADING,
-    message: `Found the module "${moduleId}" cycle loading at ${pluginName} plugin, it maybe blocking fetching modules.`,
+    message: colors.yellow(
+      `Unexpected early exit. Found the modules "${moduleIds.join('->')}" cycle loading at ${pluginName} plugin, it maybe blocking fetching modules.`,
+    ),
   }
 }
 

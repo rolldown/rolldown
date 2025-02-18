@@ -267,4 +267,15 @@ describe('watch cli', () => {
     expect(cleanStdout(status.stdout)).toMatchSnapshot()
     expect(status.exitCode).toBe(0)
   })
+
+  it('should early exit and print circle load warning', async () => {
+    try {
+      const cwd = cliFixturesDir('circle-load-module')
+      await execa({ cwd, all: true })`rolldown -c`
+    } catch (err: any) {
+      expect(err.toString()).toContain(
+        'Unexpected early exit. Found the modules',
+      )
+    }
+  })
 })

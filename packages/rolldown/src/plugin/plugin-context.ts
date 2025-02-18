@@ -47,7 +47,7 @@ export interface PrivatePluginContextResolveOptions
   extends PluginContextResolveOptions {
   [SYMBOL_FOR_RESOLVE_CALLER_THAT_SKIP_SELF]?: symbol
 }
-
+let currentLoadingModules = new Set<string>()
 export class PluginContext extends MinimalPluginContext {
   constructor(
     private outputOptions: OutputOptions,
@@ -66,13 +66,18 @@ export class PluginContext extends MinimalPluginContext {
       PartialNull<ModuleOptions>
     >,
   ): Promise<ModuleInfo> {
+    // If some plugin called `this.load`, that means the context of the module is already loaded.
+    // So put it in the currentLoadingModules first
+    currentLoadingModules.add(this.currentLoadingModule ?? '')
     const id = options.id
-    if (id === this.currentLoadingModule) {
+    if (currentLoadingModules.has(id)) {
       this.onLog(
         LOG_LEVEL_WARN,
-        logCycleLoading(this.pluginName, this.currentLoadingModule),
+        logCycleLoading(this.pluginName, [...currentLoadingModules, id]),
       )
+      process.exit(1)
     }
+    currentLoadingModules.add(id)
     // resolveDependencies always true at rolldown
     const moduleInfo = this.data.getModuleInfo(id, this.context)
     if (moduleInfo && moduleInfo.code !== null /* module already parsed */) {
@@ -114,6 +119,8 @@ export class PluginContext extends MinimalPluginContext {
 
     // Here using one promise to avoid pass more callback to rust side, it only accept one callback, other will be ignored.
     await createLoadModulePromise(this.context, this.data)
+    currentLoadingModules.delete(id)
+    currentLoadingModules.delete(this.currentLoadingModule ?? '')
     return this.data.getModuleInfo(id, this.context)!
   }
 

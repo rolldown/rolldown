@@ -6,6 +6,7 @@ use rolldown_common::{
 use rolldown_error::BuildResult;
 use rolldown_utils::dashmap::FxDashSet;
 use std::{
+  ops::Deref,
   path::Path,
   sync::{
     atomic::{AtomicBool, Ordering},
@@ -178,15 +179,18 @@ impl WatcherImpl {
       while let Ok(msg) = self.exec_rx.lock().await.recv() {
         match msg {
           ExecChannelMsg::Exec => {
-            for change in self.watch_changes.iter() {
+            tracing::debug!(name= "watcher invalidate", watch_changes = ?self.watch_changes);
+            let watch_changes =
+              self.watch_changes.iter().map(|v| v.deref().clone()).collect::<Vec<_>>();
+            for change in &watch_changes {
               for task in &self.tasks {
                 task.on_change(change.path.as_str(), change.kind).await;
                 task.invalidate(change.path.as_str());
               }
+              self.watch_changes.remove(change);
             }
             let changed_files =
-              self.watch_changes.iter().map(|item| item.path.clone()).collect::<Vec<_>>();
-            self.watch_changes.clear();
+              watch_changes.iter().map(|item| item.path.clone()).collect::<Vec<_>>();
             let _ = self.run(&changed_files).await;
           }
           ExecChannelMsg::Close => break,

@@ -23,7 +23,7 @@ impl Display for WatcherEvent {
   }
 }
 
-#[derive(Debug, Hash, PartialEq, Eq)]
+#[derive(Clone, Debug, Hash, PartialEq, Eq)]
 pub struct WatcherChangeData {
   pub path: ArcStr,
   pub kind: WatcherChangeKind,

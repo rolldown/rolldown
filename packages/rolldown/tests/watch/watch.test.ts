@@ -413,7 +413,7 @@ test.sequential('watch multiply options', async () => {
   })
 
   // The macos emit create event when the file is changed, avoid the update event batched to next file change.
-  await sleep(60)
+  await sleep(100)
 
   events.length = 0
   fs.writeFileSync(foo, 'console.log(2)')

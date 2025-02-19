@@ -4741,6 +4741,10 @@ snapshot_kind: text
 
 - main-!~{000}~.js => main-BhZ6kefC.js
 
+# tests/rolldown/resolve/wildcard_alias
+
+- main-!~{000}~.js => main-DDThoLSp.js
+
 # tests/rolldown/semantic/export_star_from_external_as_shared_entries
 
 - entry-!~{000}~.js => entry-BwonpDjl.js

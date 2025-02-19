@@ -8,8 +8,8 @@ export default defineTest({
       'process.env.NODE_ENV': '"production"',
     },
   },
-  afterTest: function (output) {
-    expect(output.output[0].code).toMatchFileSnapshot(
+  async afterTest(output) {
+    await expect(output.output[0].code).toMatchFileSnapshot(
       nodePath.join(import.meta.dirname, 'output.snap'),
     )
   },

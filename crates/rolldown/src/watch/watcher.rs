@@ -9,7 +9,7 @@ use std::{
   ops::Deref,
   path::Path,
   sync::{
-    atomic::{AtomicBool, AtomicU32, Ordering},
+    atomic::{AtomicBool, Ordering},
     mpsc::{channel, Receiver, Sender},
     Arc,
   },
@@ -47,7 +47,6 @@ pub struct WatcherImpl {
   exec_rx: Arc<Mutex<Receiver<ExecChannelMsg>>>,
   // debounce invalidating
   invalidating: AtomicBool,
-  build_delay: AtomicU32,
   bundlers: Vec<Arc<Mutex<Bundler>>>,
 }
 
@@ -106,12 +105,10 @@ impl WatcherImpl {
       exec_tx: Arc::new(exec_tx),
       exec_rx: Arc::new(Mutex::new(exec_rx)),
       invalidating: AtomicBool::default(),
-      build_delay: AtomicU32::default(),
       bundlers,
     })
   }
 
-  #[allow(clippy::cast_lossless)]
   #[tracing::instrument(level = "debug", skip_all)]
   pub fn invalidate(&self, data: Option<WatcherChangeData>) {
     tracing::debug!(name= "watch invalidate", running = ?self.running.load(Ordering::Relaxed));
@@ -125,14 +122,7 @@ impl WatcherImpl {
     }
 
     self.invalidating.store(true, Ordering::Relaxed);
-    let exec_tx = Arc::clone(&self.exec_tx);
-    let build_delay = self.build_delay.load(Ordering::Relaxed);
-    std::thread::spawn(move || {
-      std::thread::sleep(Duration::from_millis(build_delay as u64));
-      exec_tx.send(ExecChannelMsg::Exec).expect("send watcher exec cannel message error");
-    })
-    .join()
-    .expect("The invalidating thread has panicked");
+    self.exec_tx.send(ExecChannelMsg::Exec).expect("send watcher exec cannel message error");
   }
 
   #[tracing::instrument(level = "debug", skip_all)]
@@ -181,7 +171,7 @@ impl WatcherImpl {
   }
 
   pub async fn start(&self) {
-    {
+    let build_delay = {
       let mut build_delay: u32 = 0;
       for bundler in &self.bundlers {
         let bundler = bundler.lock().await;
@@ -191,14 +181,15 @@ impl WatcherImpl {
           }
         }
       }
-      self.build_delay.store(build_delay, Ordering::Relaxed);
-    }
+      build_delay
+    };
 
     let _ = self.run(&[]).await;
     let future = async move {
       while let Ok(msg) = self.exec_rx.lock().await.recv() {
         match msg {
           ExecChannelMsg::Exec => {
+            tokio::time::sleep(Duration::from_millis(u64::from(build_delay))).await;
             tracing::debug!(name= "watcher invalidate", watch_changes = ?self.watch_changes);
             let watch_changes =
               self.watch_changes.iter().map(|v| v.deref().clone()).collect::<Vec<_>>();

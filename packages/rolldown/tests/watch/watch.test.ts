@@ -101,7 +101,7 @@ test.sequential('watch event', async () => {
     input,
     output: { dir: outputDir },
     watch: {
-      buildDelay: 100,
+      buildDelay: 50,
     },
   })
 
@@ -238,7 +238,7 @@ test.sequential('watch buildDelay', async () => {
     input,
     output: { file: output },
     watch: {
-      buildDelay: 150,
+      buildDelay: 50,
     },
   })
   await waitBuildFinished(watcher)
@@ -247,10 +247,11 @@ test.sequential('watch buildDelay', async () => {
   watcher.on('restart', restartFn)
 
   fs.writeFileSync(input, 'console.log(4)')
-  setTimeout(() => {
-    fs.writeFileSync(input, 'console.log(5)')
-  }, 20)
+  await sleep(20)
+  fs.writeFileSync(input, 'console.log(5)')
 
+  // sleep 200ms to wait the build finished, if the buildDelay is working, the restartFn should be called once
+  await sleep(200)
   await waitUtil(() => {
     expect(fs.readFileSync(output, 'utf-8').includes('console.log(5)')).toBe(
       true,

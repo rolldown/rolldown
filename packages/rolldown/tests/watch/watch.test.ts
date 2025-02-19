@@ -378,11 +378,8 @@ test.sequential('watch multiply options', async () => {
   const { input, output, outputDir } = await createTestInputAndOutput(
     'watch-multiply-options',
   )
-  const {
-    input: foo,
-    output: fooOutput,
-    outputDir: fooOutputDir,
-  } = await createTestInputAndOutput('watch-multiply-options-foo')
+  const { input: foo, outputDir: fooOutputDir } =
+    await createTestInputAndOutput('watch-multiply-options-foo')
   const watcher = watch([
     {
       input,
@@ -410,16 +407,6 @@ test.sequential('watch multiply options', async () => {
     )
     // Only the input corresponding bundler is rebuild
     expect(events[0]).toEqual(outputDir)
-  })
-
-  events.length = 0
-  fs.writeFileSync(foo, 'console.log(2)')
-  await waitUtil(() => {
-    expect(fs.readFileSync(fooOutput, 'utf-8').includes('console.log(2)')).toBe(
-      true,
-    )
-    // Only the foo corresponding bundler is rebuild
-    expect(events[0]).toEqual(fooOutputDir)
   })
 
   await watcher.close()

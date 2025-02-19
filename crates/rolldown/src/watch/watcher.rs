@@ -6,12 +6,14 @@ use rolldown_common::{
 use rolldown_error::BuildResult;
 use rolldown_utils::dashmap::FxDashSet;
 use std::{
+  ops::Deref,
   path::Path,
   sync::{
     atomic::{AtomicBool, Ordering},
     mpsc::{channel, Receiver, Sender},
     Arc,
   },
+  time::Duration,
 };
 use tokio::sync::Mutex;
 
@@ -43,6 +45,7 @@ pub struct WatcherImpl {
   rx: Arc<Mutex<Receiver<WatcherChannelMsg>>>,
   exec_tx: Arc<Sender<ExecChannelMsg>>,
   exec_rx: Arc<Mutex<Receiver<ExecChannelMsg>>>,
+  invalidating: AtomicBool,
 }
 
 impl WatcherImpl {
@@ -99,6 +102,7 @@ impl WatcherImpl {
       tx: cloned_tx,
       exec_tx: Arc::new(exec_tx),
       exec_rx: Arc::new(Mutex::new(exec_rx)),
+      invalidating: AtomicBool::default(),
     })
   }
 
@@ -110,10 +114,18 @@ impl WatcherImpl {
       self.watch_changes.insert(data);
     }
 
-    if self.running.load(Ordering::Relaxed) {
+    if self.running.load(Ordering::Relaxed) || self.invalidating.load(Ordering::Relaxed) {
       return;
     }
-    self.exec_tx.send(ExecChannelMsg::Exec).unwrap();
+
+    self.invalidating.store(true, Ordering::Relaxed);
+    let exec_tx = Arc::clone(&self.exec_tx);
+    std::thread::spawn(move || {
+      std::thread::sleep(Duration::from_millis(20));
+      exec_tx.send(ExecChannelMsg::Exec).expect("send watcher exec cannel message error");
+    })
+    .join()
+    .expect("The invalidating thread has panicked");
   }
 
   #[tracing::instrument(level = "debug", skip_all)]
@@ -126,6 +138,7 @@ impl WatcherImpl {
       task.run(changed_files).await?;
     }
 
+    self.invalidating.store(false, Ordering::Relaxed);
     self.running.store(false, Ordering::Relaxed);
     self.emitter.emit(WatcherEvent::Event(BundleEvent::End))?;
 
@@ -166,15 +179,18 @@ impl WatcherImpl {
       while let Ok(msg) = self.exec_rx.lock().await.recv() {
         match msg {
           ExecChannelMsg::Exec => {
-            for change in self.watch_changes.iter() {
+            tracing::debug!(name= "watcher invalidate", watch_changes = ?self.watch_changes);
+            let watch_changes =
+              self.watch_changes.iter().map(|v| v.deref().clone()).collect::<Vec<_>>();
+            for change in &watch_changes {
               for task in &self.tasks {
                 task.on_change(change.path.as_str(), change.kind).await;
                 task.invalidate(change.path.as_str());
               }
+              self.watch_changes.remove(change);
             }
             let changed_files =
-              self.watch_changes.iter().map(|item| item.path.clone()).collect::<Vec<_>>();
-            self.watch_changes.clear();
+              watch_changes.iter().map(|item| item.path.clone()).collect::<Vec<_>>();
             let _ = self.run(&changed_files).await;
           }
           ExecChannelMsg::Close => break,

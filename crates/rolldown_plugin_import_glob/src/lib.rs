@@ -233,7 +233,7 @@ impl<'ast> GlobImportVisit<'ast, '_> {
       // TODO handle error
       for file in glob(&absolute_glob).unwrap() {
         let file = file.unwrap().as_path().relative(dir.as_ref()).to_slash_lossy().to_string();
-        let prefix = if file.starts_with(".") { "" } else { "./" };
+        let prefix = if file.starts_with('.') { "" } else { "./" };
         files.push(format!("{prefix}{file}"));
       }
     }
@@ -446,7 +446,7 @@ fn to_absolute_glob<'a>(
 
   if let Some(glob) = glob.strip_prefix('/') {
     ret.push_str(&Path::new(root).join(glob).to_slash_lossy());
-  } else if glob.starts_with(".") {
+  } else if glob.starts_with('.') {
     ret.push_str(&dir.join(glob).to_slash_lossy());
   } else if glob.starts_with("**") {
     ret.push_str(glob);

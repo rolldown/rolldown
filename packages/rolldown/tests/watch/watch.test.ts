@@ -378,10 +378,8 @@ test.sequential('watch multiply options', async () => {
   const { input, output, outputDir } = await createTestInputAndOutput(
     'watch-multiply-options',
   )
-  const {
-    input: foo,
-    outputDir: fooOutputDir,
-  } = await createTestInputAndOutput('watch-multiply-options-foo')
+  const { input: foo, outputDir: fooOutputDir } =
+    await createTestInputAndOutput('watch-multiply-options-foo')
   const watcher = watch([
     {
       input,

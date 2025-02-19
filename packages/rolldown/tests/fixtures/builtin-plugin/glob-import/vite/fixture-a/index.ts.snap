@@ -1,0 +1,74 @@
+import { a_exports, name as name$1 } from "./a2.js";
+import { b_exports, name$1 as name$2 } from "./b2.js";
+import { modules_exports, name$2 as name$3 } from "./modules2.js";
+
+//#region fixture-a/index.ts
+const basic = {
+	"./modules/a.ts": () => import("./a.js"),
+	"./modules/b.ts": () => import("./b.js"),
+	"./modules/index.ts": () => import("./modules.js")
+};
+const basicWithObjectKeys = Object.keys({
+	"./modules/a.ts": () => import("./a.js"),
+	"./modules/b.ts": () => import("./b.js"),
+	"./modules/index.ts": () => import("./modules.js")
+});
+const basicWithObjectValues = Object.values({
+	"./modules/a.ts": () => import("./a.js"),
+	"./modules/b.ts": () => import("./b.js"),
+	"./modules/index.ts": () => import("./modules.js")
+});
+const basicEager = {
+	"./modules/a.ts": a_exports,
+	"./modules/b.ts": b_exports,
+	"./modules/index.ts": modules_exports
+};
+const basicEagerWithObjectKeys = Object.keys({
+	"./modules/a.ts": a_exports,
+	"./modules/b.ts": b_exports,
+	"./modules/index.ts": modules_exports
+});
+const basicEagerWithObjectValues = Object.values({
+	"./modules/a.ts": a_exports,
+	"./modules/b.ts": b_exports,
+	"./modules/index.ts": modules_exports
+});
+const namedEager = {
+	"./modules/a.ts": name$1,
+	"./modules/b.ts": name$2,
+	"./modules/index.ts": name$3
+};
+const namedEagerWithObjectKeys = Object.keys({
+	"./modules/a.ts": name$1,
+	"./modules/b.ts": name$2,
+	"./modules/index.ts": name$3
+});
+const namedEagerWithObjectValues = Object.values({
+	"./modules/a.ts": name$1,
+	"./modules/b.ts": name$2,
+	"./modules/index.ts": name$3
+});
+const namedDefault = {
+	"./modules/a.ts": () => import("./a.js").then((m) => m.default),
+	"./modules/b.ts": () => import("./b.js").then((m) => m.default),
+	"./modules/index.ts": () => import("./modules.js").then((m) => m.default)
+};
+const namedDefaultWithObjectKeys = Object.keys({
+	"./modules/a.ts": () => import("./a.js").then((m) => m.default),
+	"./modules/b.ts": () => import("./b.js").then((m) => m.default),
+	"./modules/index.ts": () => import("./modules.js").then((m) => m.default)
+});
+const namedDefaultWithObjectValues = Object.values({
+	"./modules/a.ts": () => import("./a.js").then((m) => m.default),
+	"./modules/b.ts": () => import("./b.js").then((m) => m.default),
+	"./modules/index.ts": () => import("./modules.js").then((m) => m.default)
+});
+const excludeSelf = {
+	"./index.ts": () => import("./index.js"),
+	"./sibling.ts": () => import("./sibling.js")
+};
+const parent = {};
+const cleverCwd1 = { "./node_modules/framework/pages/hello.page.js": () => import("./hello.page.js") };
+
+//#endregion
+export { basic, basicEager, basicEagerWithObjectKeys, basicEagerWithObjectValues, basicWithObjectKeys, basicWithObjectValues, cleverCwd1, excludeSelf, namedDefault, namedDefaultWithObjectKeys, namedDefaultWithObjectValues, namedEager, namedEagerWithObjectKeys, namedEagerWithObjectValues, parent };

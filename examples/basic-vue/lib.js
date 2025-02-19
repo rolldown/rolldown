@@ -5,4 +5,6 @@ const bundle = await rolldown({
 })
 await bundle.write({ format: 'esm', dir: './dist' })
 // Execute twice
+// test
 await bundle.write({ format: 'esm', dir: './dist' })
+

@@ -25,7 +25,8 @@ use super::{
 };
 use crate::{
   DeferSyncScanDataOption, EmittedAsset, EsModuleFlag, FilenameTemplate, GlobalsOutputOption,
-  HashCharacters, InjectImport, InputItem, ModuleType, RollupPreRenderedAsset,
+  HashCharacters, InjectImport, InputItem, ModuleType, PreserveEntrySignature,
+  RollupPreRenderedAsset,
 };
 
 #[allow(clippy::struct_excessive_bools)] // Using raw booleans is more clear in this case
@@ -41,6 +42,7 @@ pub struct NormalizedBundlerOptions {
   pub shim_missing_exports: bool,
   /// The key is the extension. Unlike `BundlerOptions`, the extension doesn't start with a dot.
   pub module_types: FxHashMap<String, ModuleType>,
+  pub preserve_entry_signatures: Option<PreserveEntrySignature>,
   // --- Output
   pub name: Option<String>,
   pub css_entry_filenames: ChunkFilenamesOutputOption,

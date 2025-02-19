@@ -185,6 +185,7 @@ pub fn normalize_options(mut raw_options: crate::BundlerOptions) -> NormalizeOpt
     external: raw_options.external,
     treeshake: raw_options.treeshake,
     platform,
+    preserve_entry_signatures: raw_options.preserve_entry_signatures,
     name: raw_options.name,
     entry_filenames: raw_options.entry_filenames.unwrap_or_else(|| "[name].js".to_string().into()),
     chunk_filenames: raw_options

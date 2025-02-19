@@ -48,7 +48,6 @@ rolldown_std_utils        = { workspace = true }
 rolldown_tracing          = { workspace = true }
 rolldown_utils            = { workspace = true }
 rustc-hash                = { workspace = true }
-sanitize-filename         = { workspace = true }
 serde                     = { workspace = true, optional = true }
 string_wizard             = { workspace = true }
 sugar_path                = { workspace = true }

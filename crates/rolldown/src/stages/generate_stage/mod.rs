@@ -35,7 +35,6 @@ use crate::{
       deconflict_chunk_symbols::deconflict_chunk_symbols, generate_pre_rendered_chunk,
       validate_options_for_multi_chunk_output::validate_options_for_multi_chunk_output,
     },
-    extract_meaningful_input_name_from_path::try_extract_meaningful_input_name_from_path,
     finalize_normal_module,
   },
   BundleOutput, SharedOptions,
@@ -169,9 +168,12 @@ impl<'a> GenerateStage<'a> {
           ChunkKind::EntryPoint { module: entry_module_id, is_user_defined, .. } => {
             let module = &modules[entry_module_id];
             let generated = if is_user_defined {
-              try_extract_meaningful_input_name_from_path(module.id())
-                .map(ArcStr::from)
-                .unwrap_or(arcstr::literal!("input"))
+              // try extract meaningful input name from path
+              if let Some(file_stem) = module.id().as_path().file_stem().and_then(|f| f.to_str()) {
+                sanitize_filename.call(file_stem).await?
+              } else {
+                arcstr::literal!("input")
+              }
             } else {
               sanitize_filename.call(&module.id().as_path().representative_file_name()).await?
             };

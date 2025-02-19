@@ -32,16 +32,15 @@ export const basicEagerWithObjectValues = Object.values(
   }),
 )
 
-// times out
-// export const ignore = import.meta.glob(['./modules/*.ts', '!**/index.ts'])
-// times out
-// export const ignoreWithObjectKeys = Object.keys(
-//   import.meta.glob(['./modules/*.ts', '!**/index.ts']),
-// )
-// times out
-// export const ignoreWithObjectValues = Object.values(
-//   import.meta.glob(['./modules/*.ts', '!**/index.ts']),
-// )
+export const ignore = import.meta.glob(['./modules/*.ts', '!**/index.ts'])
+// todo: omit values
+export const ignoreWithObjectKeys = Object.keys(
+  import.meta.glob(['./modules/*.ts', '!**/index.ts']),
+)
+// todo: omit keys
+export const ignoreWithObjectValues = Object.values(
+  import.meta.glob(['./modules/*.ts', '!**/index.ts']),
+)
 
 export const namedEager = import.meta.glob<string>('./modules/*.ts', {
   eager: true,
@@ -82,17 +81,15 @@ export const namedDefaultWithObjectValues = Object.values(
   }),
 )
 
-// times out
-// export const eagerAs = import.meta.glob<ModuleType>(
-//   ['./modules/*.ts', '!**/index.ts'],
-//   { eager: true, query: '?raw', import: 'default' },
-// )
+export const eagerAs = import.meta.glob<ModuleType>(
+  ['./modules/*.ts', '!**/index.ts'],
+  { eager: true, query: '?raw', import: 'default' },
+)
 
-// times out
-// export const rawImportModule = import.meta.glob(
-//   ['./modules/*.ts', '!**/index.ts'],
-//   { query: '?raw', import: '*' },
-// )
+export const rawImportModule = import.meta.glob(
+  ['./modules/*.ts', '!**/index.ts'],
+  { query: '?raw', import: '*' },
+)
 
 // todo: shouldn't contain './index.ts'
 export const excludeSelf = import.meta.glob(
@@ -129,9 +126,8 @@ export const cleverCwd1 = import.meta.glob(
   './node_modules/framework/**/*.page.js',
 )
 
-// times out
-// export const cleverCwd2 = import.meta.glob([
-//   './modules/*.ts',
-//   '../fixture-b/*.ts',
-//   '!**/index.ts',
-// ])
+export const cleverCwd2 = import.meta.glob([
+  './modules/*.ts',
+  '../fixture-b/*.ts',
+  '!**/index.ts',
+])

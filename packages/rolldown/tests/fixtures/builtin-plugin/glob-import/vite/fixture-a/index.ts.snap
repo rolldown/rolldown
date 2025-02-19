@@ -1,6 +1,8 @@
 import { a_exports, name as name$1 } from "./a-BC5Gs6Q0.js";
 import { b_exports, name$1 as name$2 } from "./b-Dm-pZRg9.js";
 import { modules_exports, name$2 as name$3 } from "./modules-BE22waBW.js";
+import { a_default } from "./a-sKOrv_7Z.js";
+import { b_default } from "./b-MA9aBSBT.js";
 
 //#region fixture-a/index.ts
 const basic = {
@@ -33,6 +35,18 @@ const basicEagerWithObjectValues = Object.values({
 	"./modules/b.ts": b_exports,
 	"./modules/index.ts": modules_exports
 });
+const ignore = {
+	"./modules/a.ts": () => import("./a-DAJhtQJU.js"),
+	"./modules/b.ts": () => import("./b-BQKRc37x.js")
+};
+const ignoreWithObjectKeys = Object.keys({
+	"./modules/a.ts": () => import("./a-DAJhtQJU.js"),
+	"./modules/b.ts": () => import("./b-BQKRc37x.js")
+});
+const ignoreWithObjectValues = Object.values({
+	"./modules/a.ts": () => import("./a-DAJhtQJU.js"),
+	"./modules/b.ts": () => import("./b-BQKRc37x.js")
+});
 const namedEager = {
 	"./modules/a.ts": name$1,
 	"./modules/b.ts": name$2,
@@ -63,12 +77,26 @@ const namedDefaultWithObjectValues = Object.values({
 	"./modules/b.ts": () => import("./b-BQKRc37x.js").then((m) => m.default),
 	"./modules/index.ts": () => import("./modules-Ietgo5aO.js").then((m) => m.default)
 });
+const eagerAs = {
+	"./modules/a.ts": a_default,
+	"./modules/b.ts": b_default
+};
+const rawImportModule = {
+	"./modules/a.ts": () => import("./a-D7d1k8xT.js"),
+	"./modules/b.ts": () => import("./b-rKjbxA-Y.js")
+};
 const excludeSelf = {
 	"./index.ts": () => import("./index.js"),
-	"./sibling.ts": () => import("./sibling-BGw5lCIn.js")
+	"./sibling.ts": () => import("./sibling-CWZdxLBk.js")
 };
 const parent = {};
-const cleverCwd1 = { "./node_modules/framework/pages/hello.page.js": () => import("./hello.page-DM96lszg.js") };
+const cleverCwd1 = { "./node_modules/framework/pages/hello.page.js": () => import("./hello.page-BW0ImBwe.js") };
+const cleverCwd2 = {
+	"./modules/a.ts": () => import("./a-DAJhtQJU.js"),
+	"./modules/b.ts": () => import("./b-BQKRc37x.js"),
+	"../fixture-b/a.ts": () => import("./a-DfuHLYE5.js"),
+	"../fixture-b/b.ts": () => import("./b-Q0ZwmI1-.js")
+};
 
 //#endregion
-export { basic, basicEager, basicEagerWithObjectKeys, basicEagerWithObjectValues, basicWithObjectKeys, basicWithObjectValues, cleverCwd1, excludeSelf, namedDefault, namedDefaultWithObjectKeys, namedDefaultWithObjectValues, namedEager, namedEagerWithObjectKeys, namedEagerWithObjectValues, parent };
+export { basic, basicEager, basicEagerWithObjectKeys, basicEagerWithObjectValues, basicWithObjectKeys, basicWithObjectValues, cleverCwd1, cleverCwd2, eagerAs, excludeSelf, ignore, ignoreWithObjectKeys, ignoreWithObjectValues, namedDefault, namedDefaultWithObjectKeys, namedDefaultWithObjectValues, namedEager, namedEagerWithObjectKeys, namedEagerWithObjectValues, parent, rawImportModule };

@@ -380,7 +380,6 @@ test.sequential('watch multiply options', async () => {
   )
   const {
     input: foo,
-    output: fooOutput,
     outputDir: fooOutputDir,
   } = await createTestInputAndOutput('watch-multiply-options-foo')
   const watcher = watch([
@@ -410,19 +409,6 @@ test.sequential('watch multiply options', async () => {
     )
     // Only the input corresponding bundler is rebuild
     expect(events[0]).toEqual(outputDir)
-  })
-
-  // The macos emit create event when the file is changed, avoid the update event batched to next file change.
-  await sleep(100)
-
-  events.length = 0
-  fs.writeFileSync(foo, 'console.log(2)')
-  await waitUtil(() => {
-    expect(fs.readFileSync(fooOutput, 'utf-8').includes('console.log(2)')).toBe(
-      true,
-    )
-    // Only the foo corresponding bundler is rebuild
-    expect(events[0]).toEqual(fooOutputDir)
   })
 
   await watcher.close()

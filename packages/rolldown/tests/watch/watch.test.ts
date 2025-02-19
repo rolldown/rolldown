@@ -101,7 +101,7 @@ test.sequential('watch event', async () => {
     input,
     output: { dir: outputDir },
     watch: {
-      buildDelay: 20,
+      buildDelay: 100,
     },
   })
 

@@ -23,7 +23,7 @@ export default defineTest({
   },
   async afterTest() {
     // @ts-ignore Ther will be a MODULE NOT FOUND error before the test is executed
-    const exports = await import('./dist/virtualtest.js')
+    const exports = await import('./dist/_virtualtest.js')
     expect(exports.default).toBe('test')
   },
 })

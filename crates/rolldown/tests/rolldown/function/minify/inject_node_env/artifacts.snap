@@ -7,5 +7,5 @@ snapshot_kind: text
 ## main.js
 
 ```js
-import assert from"node:assert";assert.equal(`production`,`production`);
+import e from"node:assert";e.equal(`production`,`production`);
 ```

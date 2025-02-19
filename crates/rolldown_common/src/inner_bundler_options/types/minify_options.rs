@@ -1,4 +1,4 @@
-use oxc::mangler::MangleOptions;
+use oxc::{mangler::MangleOptions, minifier::CompressOptions, transformer::ESTarget};
 #[cfg(feature = "deserialize_bundler_options")]
 use schemars::JsonSchema;
 #[cfg(feature = "deserialize_bundler_options")]
@@ -80,12 +80,12 @@ pub struct MinifyOptionsObject {
   pub compress: bool,
   pub remove_whitespace: bool,
 }
-
-impl From<&MinifyOptionsObject> for oxc::minifier::MinifierOptions {
-  fn from(value: &MinifyOptionsObject) -> Self {
-    Self {
-      mangle: value.mangle.then(MangleOptions::default),
-      compress: Some(oxc::minifier::CompressOptions::default()),
+impl MinifyOptionsObject {
+  pub fn to_oxc_minifier_options(&self, target: ESTarget) -> oxc::minifier::MinifierOptions {
+    oxc::minifier::MinifierOptions {
+      mangle: self.mangle.then_some(MangleOptions { top_level: true, debug: false }),
+      compress: Some(CompressOptions { target, drop_debugger: true, drop_console: true })
+        .filter(|_| self.compress),
     }
   }
 }

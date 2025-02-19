@@ -154,13 +154,13 @@ exports[`cli options for bundling > should handle single array options 1`] = `
 `;
 
 exports[`cli options for bundling > should handle single boolean option 1`] = `
-"<DIR>/index.js  chunk │ size: 0.09 kB
+"<DIR>/index.js  chunk │ size: 0.04 kB
 
 "
 `;
 
 exports[`cli options for bundling > should handle single boolean short options 1`] = `
-"<DIR>/index.js  chunk │ size: 0.10 kB
+"<DIR>/index.js  chunk │ size: 0.04 kB
 
 "
 `;

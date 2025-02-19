@@ -74,8 +74,11 @@ import("./3333333333333333333333333333333333333333333333333333333333333333333333
 ### rolldown
 ```js
 
+
 //#region bytesInOutput should be at least 99 (3).js
-import("./333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333.js").then(console.log);
+Promise.resolve().then(function() {
+	return __dynamicEmptyModule;
+}).then(console.log);
 
 //#endregion
 ```
@@ -84,9 +87,11 @@ import("./3333333333333333333333333333333333333333333333333333333333333333333333
 ===================================================================
 --- esbuild	/out/bytesInOutput should be at least 99 (3).js
 +++ rolldown	bytesInOutput should be at least 99 (3).js
-@@ -1,1 +1,1 @@
+@@ -1,1 +1,3 @@
 -import("./333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333-DH3FVEAA.js").then(console.log);
-+import("./333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333.js").then(console.log);
++Promise.resolve().then(function () {
++    return __dynamicEmptyModule;
++}).then(console.log);
 
 ```
 ## /out/bytesInOutput should be at least 99.css

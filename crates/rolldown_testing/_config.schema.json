@@ -1053,6 +1053,14 @@
         "skipWrite"
       ],
       "properties": {
+        "buildDelay": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "format": "uint32",
+          "minimum": 0.0
+        },
         "exclude": {
           "type": [
             "array",

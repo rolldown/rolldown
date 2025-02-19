@@ -14,6 +14,7 @@ use serde::{Deserialize, Deserializer};
 )]
 pub struct WatchOption {
   pub skip_write: bool,
+  pub build_delay: Option<u32>,
   #[cfg_attr(
     feature = "deserialize_bundler_options",
     serde(default, deserialize_with = "deserialize_string_or_regex"),

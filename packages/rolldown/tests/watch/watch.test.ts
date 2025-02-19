@@ -100,6 +100,9 @@ test.sequential('watch event', async () => {
   const watcher = watch({
     input,
     output: { dir: outputDir },
+    watch: {
+      buildDelay: 50,
+    },
   })
 
   const events: any[] = []
@@ -128,7 +131,7 @@ test.sequential('watch event', async () => {
 
   await waitUtil(() => {
     // test first build event
-    expect(events.slice(0, 4)).toEqual([
+    expect(events).toEqual([
       { code: 'START' },
       { code: 'BUNDLE_START' },
       { code: 'BUNDLE_END' },
@@ -140,8 +143,8 @@ test.sequential('watch event', async () => {
   events.length = 0
   fs.writeFileSync(input, 'console.log(3)')
   await waitUtil(() => {
-    // The different platform maybe emit multiple events, so here only check the first 4 events
-    expect(events.slice(0, 4)).toEqual([
+    // Note: The different platform maybe emit multiple events
+    expect(events).toEqual([
       { code: 'START' },
       { code: 'BUNDLE_START' },
       { code: 'BUNDLE_END' },
@@ -226,6 +229,36 @@ test.sequential('watch skipWrite', async () => {
   await waitBuildFinished(watcher)
 
   expect(fs.existsSync(output)).toBe(false)
+  await watcher.close()
+})
+
+test.sequential('watch buildDelay', async () => {
+  const { input, output } = await createTestInputAndOutput('watch-buildDelay')
+  const watcher = watch({
+    input,
+    output: { file: output },
+    watch: {
+      buildDelay: 50,
+    },
+  })
+  await waitBuildFinished(watcher)
+
+  const restartFn = vi.fn()
+  watcher.on('restart', restartFn)
+
+  fs.writeFileSync(input, 'console.log(4)')
+  await sleep(20)
+  fs.writeFileSync(input, 'console.log(5)')
+
+  // sleep 200ms to wait the build finished, if the buildDelay is working, the restartFn should be called once
+  await sleep(200)
+  await waitUtil(() => {
+    expect(fs.readFileSync(output, 'utf-8').includes('console.log(5)')).toBe(
+      true,
+    )
+    expect(restartFn).toBeCalledTimes(1)
+  })
+
   await watcher.close()
 })
 

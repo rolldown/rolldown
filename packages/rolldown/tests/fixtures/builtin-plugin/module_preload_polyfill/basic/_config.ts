@@ -8,9 +8,8 @@ export default defineTest({
   config: {
     plugins: [modulePreloadPolyfillPlugin()],
   },
-
-  afterTest(output: RolldownOutput) {
-    expect(output.output[0].code).toMatchFileSnapshot(
+  async afterTest(output: RolldownOutput) {
+    await expect(output.output[0].code).toMatchFileSnapshot(
       path.resolve(import.meta.dirname, 'main.js.snap'),
     )
   },

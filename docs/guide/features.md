@@ -160,9 +160,10 @@ import { minify } from 'rollup-plugin-swc3'
 export default defineConfig({
   plugins: [
     minify({
+      module: true,
       // swc's minify option here
-      // mangle: {}
-      // compress: {}
+      mangle: {},
+      compress: {},
     }),
   ],
 })

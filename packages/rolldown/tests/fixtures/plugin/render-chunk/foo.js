@@ -1,2 +1,2 @@
 export const foo = 1;
-export const unsed = 1;
+export const unused = 1;

@@ -35,7 +35,7 @@ export default defineTest({
                 break
 
               case foo:
-                expect(module.renderedExports).toStrictEqual(['foo']) // The `unsed` export is removed
+                expect(module.renderedExports).toStrictEqual(['foo']) // The `unused` export is removed
                 break
               default:
                 break

@@ -24,7 +24,7 @@ use super::format::{
 };
 
 pub type RenderedModuleSources =
-  Vec<(ModuleIdx, ModuleId, Option<Arc<[Box<dyn Source + Send + Sync>]>>)>;
+  Vec<(ModuleIdx, ModuleId, /*exec_order*/ u32, Option<Arc<[Box<dyn Source + Send + Sync>]>>)>;
 
 pub struct EcmaGenerator;
 
@@ -45,11 +45,11 @@ impl Generator for EcmaGenerator {
           .map(|m| (m, codegen_ret.expect("should have codegen_ret")))
       })
       .map(|(m, codegen_ret)| {
-        (m.idx, m.id.clone(), render_ecma_module(m, ctx.options, codegen_ret))
+        (m.idx, m.id.clone(), m.exec_order, render_ecma_module(m, ctx.options, codegen_ret))
       })
       .collect::<Vec<_>>();
 
-    rendered_module_sources.iter().for_each(|(module_idx, module_id, sources)| {
+    rendered_module_sources.iter().for_each(|(module_idx, module_id, exec_order, sources)| {
       let rendered_exports = ctx.link_output.metas[*module_idx]
         .resolved_exports
         .iter()
@@ -61,8 +61,10 @@ impl Generator for EcmaGenerator {
           }
         })
         .collect::<Vec<_>>();
-      rendered_modules
-        .insert(module_id.clone(), RenderedModule::new(sources.clone(), rendered_exports));
+      rendered_modules.insert(
+        module_id.clone(),
+        RenderedModule::new(sources.clone(), rendered_exports, *exec_order),
+      );
     });
 
     let rendered_chunk = generate_rendered_chunk(

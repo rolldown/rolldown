@@ -3,6 +3,7 @@ import path from 'node:path'
 import { defineTest } from 'rolldown-tests'
 
 const entry = path.join(__dirname, './main.js')
+const foo = path.join(__dirname, './foo.js')
 
 const renderChunkFn = vi.fn()
 
@@ -22,12 +23,25 @@ export default defineTest({
           expect(chunk.facadeModuleId).toBe(entry)
           expect(chunk.exports.length).toBe(0)
           expect(chunk.imports).toStrictEqual([])
-          expect(chunk.moduleIds).toStrictEqual([entry])
-          expect(Object.keys(chunk.modules).length).toBe(1)
-          expect(Object.values(chunk.modules)[0].code).toBe(
-            '//#region main.js\nconsole.log();\n\n//#endregion',
-          )
-          expect(Object.values(chunk.modules)[0].renderedLength).toBe(46)
+          expect(chunk.moduleIds).toStrictEqual([foo, entry])
+          expect(Object.keys(chunk.modules).length).toBe(2)
+          for (const [moduleId, module] of Object.entries(chunk.modules)) {
+            switch (moduleId) {
+              case entry:
+                expect(module.code).toBe(
+                  '//#region main.js\nconsole.log(foo);\n\n//#endregion',
+                )
+                expect(module.renderedLength).toBe(49)
+                break
+
+              case foo:
+                expect(module.renderedExports).toStrictEqual(['foo']) // The `unsed` export is removed
+                break
+              default:
+                break
+            }
+          }
+
           return 'render-chunk-code'
         },
       },

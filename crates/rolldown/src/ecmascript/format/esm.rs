@@ -5,7 +5,7 @@ use rolldown_sourcemap::SourceJoiner;
 use rolldown_utils::{concat_string, ecmascript::to_module_import_export_name};
 
 use crate::{
-  ecmascript::ecma_generator::RenderedModuleSources,
+  ecmascript::ecma_generator::{RenderedModuleSource, RenderedModuleSources},
   types::generator::GenerateContext,
   utils::chunk::render_chunk_exports::{render_chunk_exports, render_wrapped_entry_chunk},
 };
@@ -51,13 +51,15 @@ pub fn render_esm<'code>(
   }
 
   // chunk content
-  module_sources.iter().for_each(|(_, _, _, module_render_output)| {
-    if let Some(emitted_sources) = module_render_output {
-      for source in emitted_sources.as_ref() {
-        source_joiner.append_source(source);
+  module_sources.iter().for_each(
+    |RenderedModuleSource { sources: module_render_output, .. }| {
+      if let Some(emitted_sources) = module_render_output {
+        for source in emitted_sources.as_ref() {
+          source_joiner.append_source(source);
+        }
       }
-    }
-  });
+    },
+  );
 
   if let Some(source) = render_wrapped_entry_chunk(ctx, None) {
     source_joiner.append_source(source);

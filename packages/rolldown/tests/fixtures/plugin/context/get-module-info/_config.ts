@@ -1,6 +1,7 @@
 import { defineTest } from 'rolldown-tests'
 import { expect } from 'vitest'
 import path from 'node:path'
+import { GetModuleInfo } from 'rolldown'
 
 const meta = { value: 1 }
 export default defineTest({
@@ -28,6 +29,7 @@ export default defineTest({
           }
         },
         renderStart() {
+          testGetModuleInfoThis(this.getModuleInfo)
           let count = 0
           for (const id of this.getModuleIds()) {
             count++
@@ -74,3 +76,8 @@ export default defineTest({
     ],
   },
 })
+
+function testGetModuleInfoThis(getModuleInfo: GetModuleInfo) {
+  const moduleInfo = getModuleInfo(path.join(import.meta.dirname, 'main.js'))!
+  expect(moduleInfo.isEntry).toBe(true)
+}

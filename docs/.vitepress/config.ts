@@ -64,6 +64,14 @@ export default defineConfig({
   ],
 
   themeConfig: {
+    search: {
+      provider: 'algolia',
+      options: {
+        appId: process.env.ALGOLIA_APP_ID || '',
+        apiKey: process.env.ALGOLIA_API_KEY || '',
+        indexName: 'rolldown',
+      },
+    },
     logo: { src: '/lightning-down.svg', width: 24, height: 24 },
 
     // https://vitepress.dev/reference/default-theme-config

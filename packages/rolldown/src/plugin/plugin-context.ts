@@ -48,7 +48,10 @@ export interface PrivatePluginContextResolveOptions
   [SYMBOL_FOR_RESOLVE_CALLER_THAT_SKIP_SELF]?: symbol
 }
 
+export type GetModuleInfo = (moduleId: string) => ModuleInfo | null
+
 export class PluginContext extends MinimalPluginContext {
+  getModuleInfo: GetModuleInfo
   constructor(
     private outputOptions: OutputOptions,
     private context: BindingPluginContext,
@@ -59,6 +62,7 @@ export class PluginContext extends MinimalPluginContext {
     private currentLoadingModule?: string,
   ) {
     super(onLog, logLevel, plugin.name!)
+    this.getModuleInfo = (id: string) => this.data.getModuleInfo(id, context)
   }
 
   public async load(
@@ -176,10 +180,6 @@ export class PluginContext extends MinimalPluginContext {
 
   public getFileName(referenceId: string): string {
     return this.context.getFileName(referenceId)
-  }
-
-  public getModuleInfo(id: string): ModuleInfo | null {
-    return this.data.getModuleInfo(id, this.context)
   }
 
   public getModuleIds(): IterableIterator<string> {

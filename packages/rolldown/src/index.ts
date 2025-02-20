@@ -52,6 +52,7 @@ import { RolldownBuild } from './api/rolldown/rolldown-build'
 import {
   EmittedAsset,
   EmittedFile,
+  GetModuleInfo,
   PluginContext,
 } from './plugin/plugin-context'
 import { TransformPluginContext } from './plugin/transform-plugin-context'
@@ -134,6 +135,7 @@ export type {
   BuildOptions,
   RenderedChunk,
   LogOrStringHandler,
+  GetModuleInfo,
 }
 
 export type {

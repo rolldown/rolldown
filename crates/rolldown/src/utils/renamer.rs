@@ -5,6 +5,7 @@ use rolldown_common::{
   SymbolRefDb,
 };
 use rolldown_rstr::{Rstr, ToRstr};
+use rolldown_utils::rustc_hash::FxHashMapExt;
 use rolldown_utils::{
   concat_string,
   rayon::{IntoParallelIterator, IntoParallelRefIterator, ParallelIterator},
@@ -154,9 +155,9 @@ impl<'name> Renamer<'name> {
       ast_scope: &'name AstScopes,
     ) {
       let mut bindings = ast_scope.get_bindings(scope_id).iter().collect::<Vec<_>>();
+      let mut used_canonical_names_for_this_scope = FxHashMap::with_capacity(bindings.len());
+
       bindings.sort_unstable_by_key(|(_, symbol_id)| *symbol_id);
-      let mut used_canonical_names_for_this_scope = FxHashMap::default();
-      used_canonical_names_for_this_scope.shrink_to(bindings.len());
       bindings.iter().for_each(|(binding_name, &symbol_id)| {
         let binding_ref: SymbolRef = (module.idx, symbol_id).into();
 
@@ -179,11 +180,11 @@ impl<'name> Renamer<'name> {
               break;
             }
           },
-          Entry::Occupied(_) => {
+          Entry::Occupied(slot) => {
             // The symbol is already renamed
+            used_canonical_names_for_this_scope.insert(slot.get().clone(), 0);
           }
         }
-        used_canonical_names_for_this_scope.insert(binding_name.to_rstr(), 0);
       });
 
       stack.push(Cow::Owned(used_canonical_names_for_this_scope));

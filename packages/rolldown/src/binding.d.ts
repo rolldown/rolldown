@@ -113,6 +113,7 @@ export declare class BindingPluginContext {
 
 export declare class BindingRenderedModule {
   get code(): string | null
+  get renderedExports(): Array<string>
 }
 
 export declare class BindingTransformPluginContext {

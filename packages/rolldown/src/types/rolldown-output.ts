@@ -27,6 +27,7 @@ export interface SourceMap {
 export interface RenderedModule {
   readonly code: string | null
   renderedLength: number
+  renderedExports: string[]
 }
 
 export interface RenderedChunk extends Omit<BindingRenderedChunk, 'modules'> {

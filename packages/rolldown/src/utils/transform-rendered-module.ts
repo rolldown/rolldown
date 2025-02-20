@@ -11,5 +11,8 @@ export function transformToRenderedModule(
     get renderedLength() {
       return bindingRenderedModule.code?.length || 0
     },
+    get renderedExports() {
+      return bindingRenderedModule.renderedExports
+    },
   }
 }

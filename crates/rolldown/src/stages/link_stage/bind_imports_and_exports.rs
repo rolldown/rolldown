@@ -124,7 +124,7 @@ impl LinkStage<'_> {
   ///
   /// Unlike import from normal modules, the imported variable deosn't have a place that declared the variable. So we consider `import { a } from 'external'` in `foo.js` as the declaration statement of `a`.
   #[expect(clippy::too_many_lines)]
-  pub fn bind_imports_and_exports(&mut self) {
+  pub(super) fn bind_imports_and_exports(&mut self) {
     self.sorted_modules.iter().copied().for_each(|importer_idx| {
       let Some(importer) = self.module_table.modules[importer_idx].as_normal() else {
         return;

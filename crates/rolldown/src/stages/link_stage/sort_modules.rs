@@ -30,7 +30,7 @@ impl LinkStage<'_> {
   /// The execution order is `a -> b -> c`.
   /// - We only ensure execution order is relative correct, which means imported/required modules are executed before the module that imports/require them.
   #[tracing::instrument(level = "debug", skip_all)]
-  pub fn sort_modules(&mut self) {
+  pub(super) fn sort_modules(&mut self) {
     // The runtime module should always be the first module to be executed
     let mut execution_stack = self
       .entries

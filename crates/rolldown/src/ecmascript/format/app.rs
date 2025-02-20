@@ -1,6 +1,9 @@
 use rolldown_sourcemap::SourceJoiner;
 
-use crate::{ecmascript::ecma_generator::RenderedModuleSources, types::generator::GenerateContext};
+use crate::{
+  ecmascript::ecma_generator::{RenderedModuleSource, RenderedModuleSources},
+  types::generator::GenerateContext,
+};
 
 pub fn render_app<'code>(
   _ctx: &GenerateContext<'_>,
@@ -25,13 +28,15 @@ pub fn render_app<'code>(
   }
 
   // chunk content
-  module_sources.iter().for_each(|(_, _, _, module_render_output)| {
-    if let Some(emitted_sources) = module_render_output {
-      for source in emitted_sources.as_ref() {
-        source_joiner.append_source(source);
+  module_sources.iter().for_each(
+    |RenderedModuleSource { sources: module_render_output, .. }| {
+      if let Some(emitted_sources) = module_render_output {
+        for source in emitted_sources.as_ref() {
+          source_joiner.append_source(source);
+        }
       }
-    }
-  });
+    },
+  );
 
   if let Some(outro) = outro {
     source_joiner.append_source(outro);

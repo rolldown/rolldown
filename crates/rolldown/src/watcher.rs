@@ -5,7 +5,7 @@ use rolldown_common::NotifyOption;
 use tokio::sync::Mutex;
 
 use crate::{
-  watch::watcher::{wait_for_change, WatcherImpl},
+  watch::watcher::{wait_for_change, wait_for_invalidate_run, WatcherImpl},
   Bundler,
 };
 
@@ -22,6 +22,7 @@ impl Watcher {
   }
 
   pub async fn start(&self) {
+    wait_for_invalidate_run(Arc::clone(&self.0));
     wait_for_change(Arc::clone(&self.0));
     self.0.start().await;
   }

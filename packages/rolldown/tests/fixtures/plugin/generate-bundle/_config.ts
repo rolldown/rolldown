@@ -9,6 +9,10 @@ const entry = path.join(__dirname, './main.js')
 
 const calls: string[] = []
 
+type RolldownOutputChunkWithCustomProperty = RolldownOutputChunk & {
+  customProperty: string
+}
+
 export default defineTest({
   config: {
     input: [entry, path.join(__dirname, './index.js')],
@@ -37,6 +41,12 @@ export default defineTest({
           expect(isWrite).toBe(true)
           // Mutate chunk
           chunk.code = 'console.error()'
+          ;(chunk as RolldownOutputChunkWithCustomProperty).customProperty =
+            'customProperty'
+          expect(
+            (chunk as RolldownOutputChunkWithCustomProperty).customProperty,
+          ).toBe('customProperty')
+          expect('customProperty' in chunk).toBe(true)
           // Delete chunk
           delete bundle['index.js']
           delete bundle['share.js']

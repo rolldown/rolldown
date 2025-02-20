@@ -85,6 +85,10 @@ function transformToRollupOutputChunk(
       changed?.updated.add(bindingChunk.fileName)
       return true
     },
+    has(target, p): boolean {
+      if (p in cache) return true
+      return p in target
+    },
   })
 }
 

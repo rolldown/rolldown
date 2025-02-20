@@ -4,7 +4,7 @@ snapshot_kind: text
 ---
 # Assets
 
-## 40max-size.js
+## 42max-size.js
 
 ```js
 
@@ -17,10 +17,10 @@ var __esm = (fn, res) => function() {
 //#endregion
 export { __esm };
 ```
-## 40max-size2.js
+## 42max-size2.js
 
 ```js
-import { __esm } from "./40max-size.js";
+import { __esm } from "./42max-size.js";
 
 //#region size-15.js
 var init_size_15 = __esm({ "size-15.js"() {
@@ -46,8 +46,8 @@ export { init_size_15, init_size_20, init_size_41 };
 ## main.js
 
 ```js
-import { __esm } from "./40max-size.js";
-import { init_size_15, init_size_20, init_size_41 } from "./40max-size2.js";
+import { __esm } from "./42max-size.js";
+import { init_size_15, init_size_20, init_size_41 } from "./42max-size2.js";
 
 //#region main.js
 var init_main = __esm({ "main.js"() {

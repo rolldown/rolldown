@@ -3870,9 +3870,23 @@ snapshot_kind: text
 
 # tests/rolldown/function/advanced_chunks/max_size
 
-- main-!~{000}~.js => main-BRC9vDCn.js
-- 40max-size-!~{001}~.js => 40max-size-8HxCqiQ9.js
-- 40max-size-!~{003}~.js => 40max-size-CPuw6kxJ.js
+- main-!~{000}~.js => main-Bg4Wr2bd.js
+- 40max-size-!~{003}~.js => 40max-size-DR3iNVTI.js
+- 40max-size-!~{001}~.js => 40max-size-SvzlXYZ0.js
+
+# tests/rolldown/function/advanced_chunks/max_size2
+
+- main-!~{000}~.js => main-D_xzD22E.js
+- 14max-size-!~{001}~.js => 14max-size-Ba9LqZSA.js
+- 14max-size-!~{007}~.js => 14max-size-BdNERflA.js
+- 14max-size-!~{005}~.js => 14max-size-BfEOCHj7.js
+- 14max-size-!~{003}~.js => 14max-size-CeXzmKoJ.js
+
+# tests/rolldown/function/advanced_chunks/max_size3
+
+- main-!~{000}~.js => main-Cm96iq50.js
+- 42max-size-!~{003}~.js => 42max-size-omomf6C1.js
+- 42max-size-!~{001}~.js => 42max-size-v1W8SL54.js
 
 # tests/rolldown/function/advanced_chunks/min_module_size
 

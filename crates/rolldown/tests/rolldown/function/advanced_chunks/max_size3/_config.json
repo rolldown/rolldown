@@ -1,0 +1,17 @@
+{
+  // Unsplitable max size shouldn't make the group invalid/ignored
+  "config": {
+    "advancedChunks": {
+      "groups": [
+        {
+          // `size-15.js`, `size-20` and `size-41.js` will be captured
+          "test": "size-.*\\.js",
+          "name": "42max-size",
+          // Bigger than the smallest module `size-15.js`,
+          "maxSize": 42
+        }
+      ]
+    }
+  },
+  "hiddenRuntimeModule": false
+}

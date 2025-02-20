@@ -78,6 +78,6 @@ export default defineTest({
 })
 
 function testGetModuleInfoThis(getModuleInfo: GetModuleInfo) {
-  const moduleInfo = getModuleInfo(path.join(import.meta.dirname, 'main.js'))
+  const moduleInfo = getModuleInfo(path.join(import.meta.dirname, 'main.js'))!
   expect(moduleInfo.isEntry).toBe(true)
 }

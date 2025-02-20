@@ -84,7 +84,7 @@ impl MinifyOptionsObject {
   pub fn to_oxc_minifier_options(&self, target: ESTarget) -> oxc::minifier::MinifierOptions {
     oxc::minifier::MinifierOptions {
       mangle: self.mangle.then_some(MangleOptions { top_level: true, debug: false }),
-      compress: Some(CompressOptions { target, drop_debugger: true, drop_console: true })
+      compress: Some(CompressOptions { target, drop_debugger: false, drop_console: false })
         .filter(|_| self.compress),
     }
   }

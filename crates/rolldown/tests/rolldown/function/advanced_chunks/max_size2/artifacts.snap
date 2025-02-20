@@ -4,7 +4,7 @@ snapshot_kind: text
 ---
 # Assets
 
-## 40max-size.js
+## 14max-size.js
 
 ```js
 
@@ -17,10 +17,10 @@ var __esm = (fn, res) => function() {
 //#endregion
 export { __esm };
 ```
-## 40max-size2.js
+## 14max-size2.js
 
 ```js
-import { __esm } from "./40max-size.js";
+import { __esm } from "./14max-size.js";
 
 //#region size-15.js
 var init_size_15 = __esm({ "size-15.js"() {
@@ -28,12 +28,26 @@ var init_size_15 = __esm({ "size-15.js"() {
 } });
 
 //#endregion
+export { init_size_15 };
+```
+## 14max-size3.js
+
+```js
+import { __esm } from "./14max-size.js";
+
 //#region size-20.js
 var init_size_20 = __esm({ "size-20.js"() {
 	console.log(1e6);
 } });
 
 //#endregion
+export { init_size_20 };
+```
+## 14max-size4.js
+
+```js
+import { __esm } from "./14max-size.js";
+
 //#region size-41.js
 var init_size_41 = __esm({ "size-41.js"() {
 	console.log(1e6);
@@ -41,13 +55,15 @@ var init_size_41 = __esm({ "size-41.js"() {
 } });
 
 //#endregion
-export { init_size_15, init_size_20, init_size_41 };
+export { init_size_41 };
 ```
 ## main.js
 
 ```js
-import { __esm } from "./40max-size.js";
-import { init_size_15, init_size_20, init_size_41 } from "./40max-size2.js";
+import { __esm } from "./14max-size.js";
+import { init_size_15 } from "./14max-size2.js";
+import { init_size_20 } from "./14max-size3.js";
+import { init_size_41 } from "./14max-size4.js";
 
 //#region main.js
 var init_main = __esm({ "main.js"() {

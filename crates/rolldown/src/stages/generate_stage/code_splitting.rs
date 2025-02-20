@@ -220,7 +220,12 @@ impl GenerateStage<'_> {
     });
   }
 
-  #[allow(clippy::too_many_lines, clippy::cast_precision_loss)] // TODO(hyf0): refactor
+  #[allow(
+    clippy::too_many_lines,
+    clippy::cast_precision_loss,
+    clippy::cast_sign_loss,
+    clippy::cast_possible_wrap
+  )] // TODO(hyf0): refactor
   fn apply_advanced_chunks(
     &mut self,
     index_splitting_info: &IndexSplittingInfo,
@@ -413,58 +418,72 @@ impl GenerateStage<'_> {
           // module is at the most left, it may cause a split-able group can't be split.
 
           let mut left_size = 0f64;
-          let mut next_left_index = 0;
+          let mut next_left_index = 0isize;
           let mut right_size = 0f64;
-          let mut next_right_index = modules.len() - 1;
+          let mut next_right_index = (modules.len() - 1) as isize;
+          let modules_len = modules.len() as isize;
 
-          while left_size < allow_min_size && next_left_index < modules.len() {
-            left_size +=
-              self.link_output.module_table.modules[modules[next_left_index]].size() as f64;
+          while left_size < allow_min_size && next_left_index < modules_len {
+            left_size += self.link_output.module_table.modules[modules[next_left_index as usize]]
+              .size() as f64;
             next_left_index += 1;
           }
 
-          while right_size < allow_min_size && next_right_index > 0 {
-            right_size +=
-              self.link_output.module_table.modules[modules[next_right_index]].size() as f64;
+          while right_size < allow_min_size && next_right_index >= 0 {
+            right_size += self.link_output.module_table.modules[modules[next_right_index as usize]]
+              .size() as f64;
             next_right_index -= 1;
           }
-
-          if next_right_index < next_left_index {
-            // This branch means the group can't be split into two groups with the satisfied min size requirement.
+          if next_right_index + 1 < next_left_index {
+            // For example:
+            // [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]
+            //          r^    l^
+            // Left contains [0, 1, 2, 3, 4].
+            // Right contains [4, 5, 6, 7, 8, 9].
+            // There's a overlap [4] in both groups.
+            // That is the group can't be split into two groups with both satisfied the min size requirement.
             // In this case, we just ignore the max size requirement and keep the group as a whole.
           } else {
             // TODO: Though, [0..next_left_index] is a valid group, we want to find a best split index that makes files in left group are in the same disk location.
             let mut split_size = left_size;
             loop {
-              if next_left_index <= next_right_index {
-                let next_size = split_size
-                  + self.link_output.module_table.modules[modules[next_left_index]].size() as f64;
-                if next_size > allow_max_size {
-                  break;
-                }
-                split_size = next_size;
+              if next_left_index <= next_right_index && split_size < allow_max_size {
+                split_size += self.link_output.module_table.modules
+                  [modules[next_left_index as usize]]
+                  .size() as f64;
                 next_left_index += 1;
               } else {
                 break;
               }
             }
-            module_groups.push(ModuleGroup {
-              name: this_module_group.name.clone(),
-              match_group_index: this_module_group.match_group_index,
-              modules: modules[..next_left_index].iter().copied().collect(),
-              priority: this_module_group.priority,
-              sizes: split_size,
-            });
-            module_groups.push(ModuleGroup {
-              name: this_module_group.name.clone(),
-              match_group_index: this_module_group.match_group_index,
-              modules: modules[next_left_index..].iter().copied().collect(),
-              priority: this_module_group.priority,
-              sizes: right_size,
-            });
-          }
+            while next_left_index <= next_right_index && next_right_index >= 0 {
+              right_size += self.link_output.module_table.modules
+                [modules[next_right_index as usize]]
+                .size() as f64;
+              next_right_index -= 1;
+            }
 
-          continue;
+            if next_right_index != -1 && next_left_index != modules_len {
+              // - next_right_index == -1
+              // - next_left_index == modules.len()
+              // They mean that either left or right group is empty, which is not allowed.
+              module_groups.push(ModuleGroup {
+                name: this_module_group.name.clone(),
+                match_group_index: this_module_group.match_group_index,
+                modules: modules[..next_left_index as usize].iter().copied().collect(),
+                priority: this_module_group.priority,
+                sizes: split_size,
+              });
+              module_groups.push(ModuleGroup {
+                name: this_module_group.name.clone(),
+                match_group_index: this_module_group.match_group_index,
+                modules: modules[next_left_index as usize..].iter().copied().collect(),
+                priority: this_module_group.priority,
+                sizes: right_size,
+              });
+              continue;
+            }
+          }
         }
       }
 

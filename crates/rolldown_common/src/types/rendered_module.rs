@@ -9,14 +9,16 @@ use rolldown_sourcemap::{Source, SourceJoiner};
 pub struct RenderedModule {
   inner_code: Option<Arc<[Box<dyn Source + Send + Sync>]>>,
   pub rendered_exports: Vec<Rstr>,
+  pub exec_order: u32,
 }
 
 impl RenderedModule {
   pub fn new(
     sources: Option<Arc<[Box<dyn Source + Send + Sync>]>>,
     rendered_exports: Vec<Rstr>,
+    exec_order: u32,
   ) -> Self {
-    Self { inner_code: sources, rendered_exports }
+    Self { inner_code: sources, rendered_exports, exec_order }
   }
 
   pub fn code(&self) -> Option<String> {

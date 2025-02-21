@@ -46,6 +46,14 @@ describe('module-federation', () => {
       input: './remote-expose.js',
       cwd: import.meta.dirname,
       plugins: [
+        {
+          name: 'mock-vite-resolver-plugin',
+          resolveId(id) {
+            if (id === 'test-shared-cjs') {
+              return require.resolve('test-shared-cjs')
+            }
+          },
+        },
         moduleFederationPlugin({
           name: 'mf-remote',
           filename: 'remote-entry.js',

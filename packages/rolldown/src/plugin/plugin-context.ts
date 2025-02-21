@@ -194,6 +194,6 @@ export class PluginContext extends MinimalPluginContext {
     input: string,
     options?: ParserOptions | undefined | null,
   ): Program {
-    return parseAst('test.js', input, options)
+    return parseAst(input, options)
   }
 }

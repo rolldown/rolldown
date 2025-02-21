@@ -70,23 +70,40 @@ function normalizeParseError(
   return error(logParseError(message))
 }
 
+const defaultParserOptions: ParserOptions = {
+  lang: 'js',
+  preserveParens: false,
+  convertSpanUtf16: true,
+}
+
 // The api compat to rollup `parseAst` and `parseAstAsync`.
 
 export function parseAst(
-  filename: string,
   sourceText: string,
   options?: ParserOptions | undefined | null,
+  filename?: string,
 ): Program {
-  return wrap(parseSync(filename, sourceText, options), sourceText).program
+  return wrap(
+    parseSync(filename ?? 'file.js', sourceText, {
+      ...defaultParserOptions,
+      ...options,
+    }),
+    sourceText,
+  ).program
 }
 
 export async function parseAstAsync(
-  filename: string,
   sourceText: string,
   options?: ParserOptions | undefined | null,
+  filename?: string,
 ): Promise<Program> {
-  return wrap(await parseAsync(filename, sourceText, options), sourceText)
-    .program
+  return wrap(
+    await parseAsync(filename ?? 'file.js', sourceText, {
+      ...defaultParserOptions,
+      ...options,
+    }),
+    sourceText,
+  ).program
 }
 
 export type { ParseResult, ParserOptions }

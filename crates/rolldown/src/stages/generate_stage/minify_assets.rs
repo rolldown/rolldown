@@ -20,7 +20,7 @@ impl GenerateStage<'_> {
               asset.content.try_as_inner_str()?,
               asset.map.is_some(),
               &asset.filename,
-              minify_options.to_oxc_minifier_options(self.options.target.into()),
+              minify_options.to_oxc_minifier_options(self.options),
               minify_options.compress,
               CodegenOptions { minify: minify_options.remove_whitespace, ..Default::default() },
             );

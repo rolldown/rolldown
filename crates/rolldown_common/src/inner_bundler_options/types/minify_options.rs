@@ -1,8 +1,10 @@
-use oxc::{mangler::MangleOptions, minifier::CompressOptions, transformer::ESTarget};
+use oxc::{mangler::MangleOptions, minifier::CompressOptions};
 #[cfg(feature = "deserialize_bundler_options")]
 use schemars::JsonSchema;
 #[cfg(feature = "deserialize_bundler_options")]
 use serde::Deserialize;
+
+use crate::{OutputFormat, SharedNormalizedBundlerOptions};
 
 #[derive(Debug, Clone)]
 #[cfg_attr(
@@ -81,11 +83,22 @@ pub struct MinifyOptionsObject {
   pub remove_whitespace: bool,
 }
 impl MinifyOptionsObject {
-  pub fn to_oxc_minifier_options(&self, target: ESTarget) -> oxc::minifier::MinifierOptions {
+  pub fn to_oxc_minifier_options(
+    &self,
+    option: &SharedNormalizedBundlerOptions,
+  ) -> oxc::minifier::MinifierOptions {
     oxc::minifier::MinifierOptions {
-      mangle: self.mangle.then_some(MangleOptions { top_level: true, debug: false }),
-      compress: Some(CompressOptions { target, drop_debugger: false, drop_console: false })
-        .filter(|_| self.compress),
+      mangle: self.mangle.then_some(MangleOptions {
+        // IIFE need to preserve top level names
+        top_level: !matches!(option.format, OutputFormat::Iife),
+        debug: false,
+      }),
+      compress: Some(CompressOptions {
+        target: option.target.into(),
+        drop_debugger: false,
+        drop_console: false,
+      })
+      .filter(|_| self.compress),
     }
   }
 }

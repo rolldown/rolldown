@@ -4264,6 +4264,10 @@ snapshot_kind: text
 
 - main-!~{000}~.js => main-6SuR_DrM.js
 
+# tests/rolldown/function/format/iife/iife_with_name_with_minify
+
+- main-!~{000}~.js => main-vEas9FVp.js
+
 # tests/rolldown/function/format/iife/namespaced_name
 
 - main-!~{000}~.js => main-vvFOKudq.js

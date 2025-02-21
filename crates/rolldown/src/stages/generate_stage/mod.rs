@@ -40,6 +40,7 @@ use crate::{
   BundleOutput, SharedOptions,
 };
 
+mod advanced_chunks;
 mod code_splitting;
 mod compute_cross_chunk_links;
 mod minify_assets;

@@ -9,6 +9,36 @@ use crate::{chunk_graph::ChunkGraph, types::linking_metadata::LinkingMetadataVec
 
 use super::{code_splitting::IndexSplittingInfo, GenerateStage};
 
+// `ModuleGroup` is a temporary representation of `Chunk`. A valid `ModuleGroup` would be converted to a `Chunk` in the end.
+struct ModuleGroup {
+  name: ArcStr,
+  match_group_index: usize,
+  modules: FxHashSet<ModuleIdx>,
+  priority: u32,
+  sizes: f64,
+}
+
+oxc_index::define_index_type! {
+  pub struct ModuleGroupIdx = u32;
+}
+
+impl ModuleGroup {
+  #[allow(clippy::cast_precision_loss)] // We consider `usize` to `f64` is safe here
+  pub fn add_module(&mut self, module_idx: ModuleIdx, module_table: &ModuleTable) {
+    if self.modules.insert(module_idx) {
+      self.sizes += module_table.modules[module_idx].size() as f64;
+    }
+  }
+
+  #[allow(clippy::cast_precision_loss)] // We consider `usize` to `f64` is safe here
+  pub fn remove_module(&mut self, module_idx: ModuleIdx, module_table: &ModuleTable) {
+    if self.modules.remove(&module_idx) {
+      self.sizes -= module_table.modules[module_idx].size() as f64;
+      self.sizes = f64::max(self.sizes, 0.0);
+    }
+  }
+}
+
 impl GenerateStage<'_> {
   #[allow(
     clippy::too_many_lines,
@@ -22,71 +52,6 @@ impl GenerateStage<'_> {
     module_to_assigned: &mut IndexVec<ModuleIdx, bool>,
     chunk_graph: &mut ChunkGraph,
   ) {
-    fn add_module_and_dependencies_to_group_recursively(
-      module_group: &mut ModuleGroup,
-      module_idx: ModuleIdx,
-      module_metas: &LinkingMetadataVec,
-      module_table: &ModuleTable,
-      visited: &mut FxHashSet<ModuleIdx>,
-    ) {
-      let is_visited = !visited.insert(module_idx);
-
-      if is_visited {
-        return;
-      }
-
-      let Module::Normal(module) = &module_table.modules[module_idx] else {
-        return;
-      };
-
-      if !module.ecma_view.meta.is_included() {
-        return;
-      }
-
-      visited.insert(module_idx);
-
-      module_group.add_module(module_idx, module_table);
-
-      for dep in &module_metas[module_idx].dependencies {
-        add_module_and_dependencies_to_group_recursively(
-          module_group,
-          *dep,
-          module_metas,
-          module_table,
-          visited,
-        );
-      }
-    }
-    // `ModuleGroup` is a temporary representation of `Chunk`. A valid `ModuleGroup` would be converted to a `Chunk` in the end.
-    struct ModuleGroup {
-      name: ArcStr,
-      match_group_index: usize,
-      modules: FxHashSet<ModuleIdx>,
-      priority: u32,
-      sizes: f64,
-    }
-
-    oxc_index::define_index_type! {
-      pub struct ModuleGroupIdx = u32;
-    }
-
-    impl ModuleGroup {
-      #[allow(clippy::cast_precision_loss)] // We consider `usize` to `f64` is safe here
-      pub fn add_module(&mut self, module_idx: ModuleIdx, module_table: &ModuleTable) {
-        if self.modules.insert(module_idx) {
-          self.sizes += module_table.modules[module_idx].size() as f64;
-        }
-      }
-
-      #[allow(clippy::cast_precision_loss)] // We consider `usize` to `f64` is safe here
-      pub fn remove_module(&mut self, module_idx: ModuleIdx, module_table: &ModuleTable) {
-        if self.modules.remove(&module_idx) {
-          self.sizes -= module_table.modules[module_idx].size() as f64;
-          self.sizes = f64::max(self.sizes, 0.0);
-        }
-      }
-    }
-
     let Some(chunking_options) = &self.options.advanced_chunks else {
       return;
     };
@@ -301,5 +266,41 @@ impl GenerateStage<'_> {
         module_to_assigned[module_idx] = true;
       });
     }
+  }
+}
+
+fn add_module_and_dependencies_to_group_recursively(
+  module_group: &mut ModuleGroup,
+  module_idx: ModuleIdx,
+  module_metas: &LinkingMetadataVec,
+  module_table: &ModuleTable,
+  visited: &mut FxHashSet<ModuleIdx>,
+) {
+  let is_visited = !visited.insert(module_idx);
+
+  if is_visited {
+    return;
+  }
+
+  let Module::Normal(module) = &module_table.modules[module_idx] else {
+    return;
+  };
+
+  if !module.ecma_view.meta.is_included() {
+    return;
+  }
+
+  visited.insert(module_idx);
+
+  module_group.add_module(module_idx, module_table);
+
+  for dep in &module_metas[module_idx].dependencies {
+    add_module_and_dependencies_to_group_recursively(
+      module_group,
+      *dep,
+      module_metas,
+      module_table,
+      visited,
+    );
   }
 }

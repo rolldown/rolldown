@@ -1,0 +1,19 @@
+
+
+  {
+    "config":{
+      "input": [
+        {
+        "name": "index",
+        "import": "index.js"
+      }
+      ],
+  "resolve": {
+    "alias":[
+      [ "@vue/test-utils",["custom"]]
+    ]
+   
+  }
+ 
+    }
+  }

@@ -10,6 +10,7 @@ use crate::{chunk_graph::ChunkGraph, types::linking_metadata::LinkingMetadataVec
 use super::{code_splitting::IndexSplittingInfo, GenerateStage};
 
 // `ModuleGroup` is a temporary representation of `Chunk`. A valid `ModuleGroup` would be converted to a `Chunk` in the end.
+#[derive(Debug)]
 struct ModuleGroup {
   name: ArcStr,
   match_group_index: usize,
@@ -135,10 +136,9 @@ impl GenerateStage<'_> {
     }
 
     let mut module_groups = index_module_groups.raw;
-    module_groups.sort_unstable_by_key(|item| item.match_group_index);
-    module_groups.sort_by_key(|item| Reverse(item.priority));
-    module_groups.reverse();
-    // These two sort ensure higher priority group goes first. If two groups have the same priority, the one with the lower index goes first.
+    module_groups.sort_by_key(|item| Reverse((Reverse(item.priority), item.match_group_index)));
+    // Higher priority group goes first. If two groups have the same priority, the one with the lower index goes first.
+    // Outer `Reverse` is due to we're gonna use `pop` consume the vector.
 
     while let Some(this_module_group) = module_groups.pop() {
       if this_module_group.modules.is_empty() {
@@ -241,7 +241,6 @@ impl GenerateStage<'_> {
           }
         }
       }
-
       let chunk = Chunk::new(
         Some(this_module_group.name.clone()),
         None,

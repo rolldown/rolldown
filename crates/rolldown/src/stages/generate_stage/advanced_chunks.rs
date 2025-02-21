@@ -1,0 +1,305 @@
+use std::cmp::Reverse;
+
+use arcstr::ArcStr;
+use oxc_index::IndexVec;
+use rolldown_common::{Chunk, ChunkKind, Module, ModuleIdx, ModuleTable};
+use rustc_hash::{FxHashMap, FxHashSet};
+
+use crate::{chunk_graph::ChunkGraph, types::linking_metadata::LinkingMetadataVec};
+
+use super::{code_splitting::IndexSplittingInfo, GenerateStage};
+
+impl GenerateStage<'_> {
+  #[allow(
+    clippy::too_many_lines,
+    clippy::cast_precision_loss,
+    clippy::cast_sign_loss,
+    clippy::cast_possible_wrap
+  )] // TODO(hyf0): refactor
+  pub fn apply_advanced_chunks(
+    &mut self,
+    index_splitting_info: &IndexSplittingInfo,
+    module_to_assigned: &mut IndexVec<ModuleIdx, bool>,
+    chunk_graph: &mut ChunkGraph,
+  ) {
+    fn add_module_and_dependencies_to_group_recursively(
+      module_group: &mut ModuleGroup,
+      module_idx: ModuleIdx,
+      module_metas: &LinkingMetadataVec,
+      module_table: &ModuleTable,
+      visited: &mut FxHashSet<ModuleIdx>,
+    ) {
+      let is_visited = !visited.insert(module_idx);
+
+      if is_visited {
+        return;
+      }
+
+      let Module::Normal(module) = &module_table.modules[module_idx] else {
+        return;
+      };
+
+      if !module.ecma_view.meta.is_included() {
+        return;
+      }
+
+      visited.insert(module_idx);
+
+      module_group.add_module(module_idx, module_table);
+
+      for dep in &module_metas[module_idx].dependencies {
+        add_module_and_dependencies_to_group_recursively(
+          module_group,
+          *dep,
+          module_metas,
+          module_table,
+          visited,
+        );
+      }
+    }
+    // `ModuleGroup` is a temporary representation of `Chunk`. A valid `ModuleGroup` would be converted to a `Chunk` in the end.
+    struct ModuleGroup {
+      name: ArcStr,
+      match_group_index: usize,
+      modules: FxHashSet<ModuleIdx>,
+      priority: u32,
+      sizes: f64,
+    }
+
+    oxc_index::define_index_type! {
+      pub struct ModuleGroupIdx = u32;
+    }
+
+    impl ModuleGroup {
+      #[allow(clippy::cast_precision_loss)] // We consider `usize` to `f64` is safe here
+      pub fn add_module(&mut self, module_idx: ModuleIdx, module_table: &ModuleTable) {
+        if self.modules.insert(module_idx) {
+          self.sizes += module_table.modules[module_idx].size() as f64;
+        }
+      }
+
+      #[allow(clippy::cast_precision_loss)] // We consider `usize` to `f64` is safe here
+      pub fn remove_module(&mut self, module_idx: ModuleIdx, module_table: &ModuleTable) {
+        if self.modules.remove(&module_idx) {
+          self.sizes -= module_table.modules[module_idx].size() as f64;
+          self.sizes = f64::max(self.sizes, 0.0);
+        }
+      }
+    }
+
+    let Some(chunking_options) = &self.options.advanced_chunks else {
+      return;
+    };
+
+    let Some(match_groups) =
+      chunking_options.groups.as_ref().map(|inner| inner.iter().collect::<Vec<_>>())
+    else {
+      return;
+    };
+
+    if match_groups.is_empty() {
+      return;
+    }
+
+    let mut index_module_groups: IndexVec<ModuleGroupIdx, ModuleGroup> = IndexVec::new();
+    let mut name_to_module_group: FxHashMap<ArcStr, ModuleGroupIdx> = FxHashMap::default();
+
+    for normal_module in self.link_output.module_table.modules.iter().filter_map(Module::as_normal)
+    {
+      if !normal_module.meta.is_included() {
+        continue;
+      }
+
+      if module_to_assigned[normal_module.idx] {
+        continue;
+      }
+
+      let splitting_info = &index_splitting_info[normal_module.idx];
+
+      for (match_group_index, match_group) in match_groups.iter().copied().enumerate() {
+        let is_matched =
+          match_group.test.as_ref().map_or(true, |test| test.matches(&normal_module.id));
+
+        if !is_matched {
+          continue;
+        }
+
+        let allow_min_module_size =
+          match_group.min_module_size.map_or(chunking_options.min_module_size, Some);
+        let allow_max_module_size =
+          match_group.max_module_size.map_or(chunking_options.max_module_size, Some);
+
+        let is_min_module_size_satisfied = allow_min_module_size
+          .map_or(true, |min_module_size| normal_module.size() >= min_module_size);
+        let is_max_module_size_satisfied = allow_max_module_size
+          .map_or(true, |max_module_size| normal_module.size() <= max_module_size);
+
+        if !is_min_module_size_satisfied || !is_max_module_size_satisfied {
+          continue;
+        }
+
+        if let Some(allow_min_share_count) =
+          match_group.min_share_count.map_or(chunking_options.min_share_count, Some)
+        {
+          if splitting_info.share_count < allow_min_share_count {
+            continue;
+          }
+        }
+
+        let group_name = ArcStr::from(&match_group.name);
+
+        let module_group_idx =
+          name_to_module_group.entry(group_name.clone()).or_insert_with(|| {
+            index_module_groups.push(ModuleGroup {
+              modules: FxHashSet::default(),
+              match_group_index,
+              priority: match_group.priority.unwrap_or(0),
+              name: group_name.clone(),
+              sizes: 0.0,
+            })
+          });
+
+        add_module_and_dependencies_to_group_recursively(
+          &mut index_module_groups[*module_group_idx],
+          normal_module.idx,
+          &self.link_output.metas,
+          &self.link_output.module_table,
+          &mut FxHashSet::default(),
+        );
+      }
+    }
+
+    let mut module_groups = index_module_groups.raw;
+    module_groups.sort_unstable_by_key(|item| item.match_group_index);
+    module_groups.sort_by_key(|item| Reverse(item.priority));
+    module_groups.reverse();
+    // These two sort ensure higher priority group goes first. If two groups have the same priority, the one with the lower index goes first.
+
+    while let Some(this_module_group) = module_groups.pop() {
+      if this_module_group.modules.is_empty() {
+        continue;
+      }
+
+      let allow_min_size = match_groups[this_module_group.match_group_index]
+        .min_size
+        .map_or(chunking_options.min_size, Some)
+        .unwrap_or(0.0);
+
+      if this_module_group.sizes < allow_min_size {
+        continue;
+      }
+
+      if let Some(allow_max_size) = match_groups[this_module_group.match_group_index]
+        .max_size
+        .map_or(chunking_options.max_size, Some)
+      {
+        if this_module_group.sizes > allow_max_size {
+          // If the size of the group is larger than the max size, we should split the group into smaller groups.
+          let mut modules = this_module_group.modules.iter().copied().collect::<Vec<_>>();
+          modules.sort_by_key(|module_idx| {
+            (
+              // smaller size goes first
+              self.link_output.module_table.modules[*module_idx].size(),
+              self.link_output.module_table.modules[*module_idx].stable_id(),
+              self.link_output.module_table.modules[*module_idx].exec_order(),
+            )
+          });
+          // Make sure we sort the modules based on size in the end. Since we compute new group size from left to right, if a giant
+          // module is at the most left, it may cause a split-able group can't be split.
+
+          let mut left_size = 0f64;
+          let mut next_left_index = 0isize;
+          let mut right_size = 0f64;
+          let mut next_right_index = (modules.len() - 1) as isize;
+          let modules_len = modules.len() as isize;
+
+          while left_size < allow_min_size && next_left_index < modules_len {
+            left_size += self.link_output.module_table.modules[modules[next_left_index as usize]]
+              .size() as f64;
+            next_left_index += 1;
+          }
+
+          while right_size < allow_min_size && next_right_index >= 0 {
+            right_size += self.link_output.module_table.modules[modules[next_right_index as usize]]
+              .size() as f64;
+            next_right_index -= 1;
+          }
+          if next_right_index + 1 < next_left_index {
+            // For example:
+            // [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]
+            //          r^    l^
+            // Left contains [0, 1, 2, 3, 4].
+            // Right contains [4, 5, 6, 7, 8, 9].
+            // There's a overlap [4] in both groups.
+            // That is the group can't be split into two groups with both satisfied the min size requirement.
+            // In this case, we just ignore the max size requirement and keep the group as a whole.
+          } else {
+            // TODO: Though, [0..next_left_index] is a valid group, we want to find a best split index that makes files in left group are in the same disk location.
+            let mut split_size = left_size;
+            loop {
+              if next_left_index <= next_right_index && split_size < allow_max_size {
+                split_size += self.link_output.module_table.modules
+                  [modules[next_left_index as usize]]
+                  .size() as f64;
+                next_left_index += 1;
+              } else {
+                break;
+              }
+            }
+            while next_left_index <= next_right_index && next_right_index >= 0 {
+              right_size += self.link_output.module_table.modules
+                [modules[next_right_index as usize]]
+                .size() as f64;
+              next_right_index -= 1;
+            }
+
+            if next_right_index != -1 && next_left_index != modules_len {
+              // - next_right_index == -1
+              // - next_left_index == modules.len()
+              // They mean that either left or right group is empty, which is not allowed.
+              module_groups.push(ModuleGroup {
+                name: this_module_group.name.clone(),
+                match_group_index: this_module_group.match_group_index,
+                modules: modules[..next_left_index as usize].iter().copied().collect(),
+                priority: this_module_group.priority,
+                sizes: split_size,
+              });
+              module_groups.push(ModuleGroup {
+                name: this_module_group.name.clone(),
+                match_group_index: this_module_group.match_group_index,
+                modules: modules[next_left_index as usize..].iter().copied().collect(),
+                priority: this_module_group.priority,
+                sizes: right_size,
+              });
+              continue;
+            }
+          }
+        }
+      }
+
+      let chunk = Chunk::new(
+        Some(this_module_group.name.clone()),
+        None,
+        None,
+        index_splitting_info
+          [this_module_group.modules.iter().next().copied().expect("must have one")]
+        .bits
+        .clone(),
+        vec![],
+        ChunkKind::Common,
+        true,
+      );
+
+      let chunk_idx = chunk_graph.add_chunk(chunk);
+
+      this_module_group.modules.iter().copied().for_each(|module_idx| {
+        module_groups.iter_mut().for_each(|group| {
+          group.remove_module(module_idx, &self.link_output.module_table);
+        });
+        chunk_graph.chunk_table[chunk_idx].bits.union(&index_splitting_info[module_idx].bits);
+        chunk_graph.add_module_to_chunk(module_idx, chunk_idx);
+        module_to_assigned[module_idx] = true;
+      });
+    }
+  }
+}

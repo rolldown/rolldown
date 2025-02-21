@@ -17,10 +17,7 @@ export class BuiltinPlugin {
     public name: BindingBuiltinPluginName,
     // NOTE: has `_` to avoid conflict with `options` hook
     public _options?: unknown,
-  ) {
-    this.name = name
-    this._options = _options
-  }
+  ) {}
 }
 
 export function modulePreloadPolyfillPlugin(

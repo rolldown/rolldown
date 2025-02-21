@@ -5,27 +5,19 @@ export interface ModuleType {
 }
 
 export const basic = import.meta.glob<ModuleType>('./modules/*.ts')
-// todo: omit values
-// vite output: Object.keys({"./modules/a.ts": 0,"./modules/b.ts": 0,"./modules/index.ts": 0});
 // prettier-ignore
 export const basicWithObjectKeys = Object.keys(import.meta.glob<ModuleType>('./modules/*.ts'))
-// todo: omit keys
-// vite output: Object.values([() => import("./modules/a.ts"),() => import("./modules/b.ts"),() => import("./modules/index.ts")]
 // prettier-ignore
 export const basicWithObjectValues = Object.values(import.meta.glob<ModuleType>('./modules/*.ts'))
 
 export const basicEager = import.meta.glob<ModuleType>('./modules/*.ts', {
   eager: true,
 })
-// todo: omit values
-// vite output: Object.keys({"./modules/a.ts": 0,"./modules/b.ts": 0,"./modules/index.ts": 0});
 export const basicEagerWithObjectKeys = Object.keys(
   import.meta.glob<ModuleType>('./modules/*.ts', {
     eager: true,
   }),
 )
-// todo: omit keys
-// vite output: Object.values([__vite_glob_5_0,__vite_glob_5_1,__vite_glob_5_2]);
 export const basicEagerWithObjectValues = Object.values(
   import.meta.glob<ModuleType>('./modules/*.ts', {
     eager: true,
@@ -33,11 +25,9 @@ export const basicEagerWithObjectValues = Object.values(
 )
 
 export const ignore = import.meta.glob(['./modules/*.ts', '!**/index.ts'])
-// todo: omit values
 export const ignoreWithObjectKeys = Object.keys(
   import.meta.glob(['./modules/*.ts', '!**/index.ts']),
 )
-// todo: omit keys
 export const ignoreWithObjectValues = Object.values(
   import.meta.glob(['./modules/*.ts', '!**/index.ts']),
 )
@@ -46,16 +36,12 @@ export const namedEager = import.meta.glob<string>('./modules/*.ts', {
   eager: true,
   import: 'name',
 })
-// todo: omit values
-// vite output: Object.keys({"./modules/a.ts": 0,"./modules/b.ts": 0,"./modules/index.ts": 0});
 export const namedEagerWithObjectKeys = Object.keys(
   import.meta.glob<string>('./modules/*.ts', {
     eager: true,
     import: 'name',
   }),
 )
-// todo: omit keys
-// vite output: Object.values([__vite_glob_11_0,__vite_glob_11_1,__vite_glob_11_2]);
 export const namedEagerWithObjectValues = Object.values(
   import.meta.glob<string>('./modules/*.ts', {
     eager: true,
@@ -66,15 +52,11 @@ export const namedEagerWithObjectValues = Object.values(
 export const namedDefault = import.meta.glob<string>('./modules/*.ts', {
   import: 'default',
 })
-// todo: omit values
-// vite output: Object.keys({"./modules/a.ts": 0,"./modules/b.ts": 0,"./modules/index.ts": 0});
 export const namedDefaultWithObjectKeys = Object.keys(
   import.meta.glob<string>('./modules/*.ts', {
     import: 'default',
   }),
 )
-// todo: omit keys
-// vite output: Object.values([() => import("./modules/a.ts").then(m => m["default"]),() => import("./modules/b.ts").then(m => m["default"]),() => import("./modules/index.ts").then(m => m["default"])]);
 export const namedDefaultWithObjectValues = Object.values(
   import.meta.glob<string>('./modules/*.ts', {
     import: 'default',

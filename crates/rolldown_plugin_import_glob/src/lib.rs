@@ -5,7 +5,7 @@ use oxc::{
     AstBuilder, NONE, VisitMut,
     ast::{
       Argument, ArrayExpressionElement, Expression, FormalParameterKind, ImportOrExportKind,
-      ObjectPropertyKind, PropertyKey, PropertyKind, Statement,
+      NumberBase, ObjectPropertyKind, PropertyKey, PropertyKind, Statement,
     },
     visit::walk_mut,
   },
@@ -82,52 +82,74 @@ pub struct GlobImportVisit<'ast, 'a> {
 
 impl<'ast> VisitMut<'ast> for GlobImportVisit<'ast, '_> {
   fn visit_expression(&mut self, expr: &mut Expression<'ast>) {
-    if let Expression::CallExpression(call_expr) = expr {
-      match &call_expr.callee {
-        Expression::StaticMemberExpression(e) => {
-          if e.property.name == "glob" {
-            match &e.object {
-              Expression::MetaProperty(p) => {
-                if p.meta.name == "import" && p.property.name == "meta" {
-                  let mut files = vec![];
-                  // import.meta.glob('./dir/*.js')
-                  // import.meta.glob(['./dir/*.js', './dir2/*.js'])
+    self.maybe_visit_obj_call(expr);
+    self.maybe_visit_glob_import_call(expr, false, false);
+    walk_mut::walk_expression(self, expr);
+  }
+}
 
-                  let mut opts = ImportGlobOptions::default();
-                  match call_expr.arguments.as_slice() {
-                    [first] => self.eval_glob_expr(first, &mut files),
-                    // import.meta.glob('./dir/*.js', { import: 'setup' })
-                    [first, second] => {
-                      self.eval_glob_expr(first, &mut files);
-                      extract_import_glob_options(second, &mut opts);
-                    }
-                    [first, second, _rest @ ..] => {
-                      self.eval_glob_expr(first, &mut files);
-                      extract_import_glob_options(second, &mut opts);
-                    }
-                    [] => {}
-                  }
+impl<'ast> GlobImportVisit<'ast, '_> {
+  fn maybe_visit_obj_call(&mut self, expr: &mut Expression<'ast>) {
+    let Expression::CallExpression(expr) = expr else { return };
+    let Expression::StaticMemberExpression(callee) = &expr.callee else { return };
+    let property_name = callee.property.name;
+    if property_name != "keys" && property_name != "values" {
+      return;
+    }
+    let Expression::Identifier(i) = &callee.object else { return };
+    // TODO: check is_global_identifier_reference
+    if i.name != "Object" {
+      return;
+    }
+    let [arg] = expr.arguments.as_mut_slice() else { return };
+    let Some(arg_expr) = arg.as_expression_mut() else { return };
+    self.maybe_visit_glob_import_call(arg_expr, property_name != "keys", property_name == "keys");
+  }
 
-                  // generate:
-                  //
-                  // {
-                  //   './dir/ind.js': __glob__0_0_,
-                  //   './dir/foo.js': () => import('./dir/foo.js'),
-                  //   './dir/bar.js': () => import('./dir/bar.js').then((m) => m.setup),
-                  // }
-                  *expr = self.generate_glob_object_expression(&files, &opts, call_expr.span);
-                  self.current += 1;
-                }
-              }
-              _ => {}
-            }
-          }
-        }
-        _ => {}
+  fn maybe_visit_glob_import_call(
+    &mut self,
+    expr: &mut Expression<'ast>,
+    omit_keys: bool,
+    omit_values: bool,
+  ) {
+    let Expression::CallExpression(call_expr) = expr else { return };
+    let Expression::StaticMemberExpression(callee) = &call_expr.callee else { return };
+    if callee.property.name != "glob" {
+      return;
+    }
+    let Expression::MetaProperty(p) = &callee.object else { return };
+    if p.meta.name != "import" || p.property.name != "meta" {
+      return;
+    }
+    let mut files = vec![];
+    // import.meta.glob('./dir/*.js')
+    // import.meta.glob(['./dir/*.js', './dir2/*.js'])
+
+    let mut opts = ImportGlobOptions::default();
+    match call_expr.arguments.as_slice() {
+      [first] => self.eval_glob_expr(first, &mut files),
+      // import.meta.glob('./dir/*.js', { import: 'setup' })
+      [first, second] => {
+        self.eval_glob_expr(first, &mut files);
+        extract_import_glob_options(second, &mut opts);
       }
+      [first, second, _rest @ ..] => {
+        self.eval_glob_expr(first, &mut files);
+        extract_import_glob_options(second, &mut opts);
+      }
+      [] => {}
     }
 
-    walk_mut::walk_expression(self, expr);
+    // generate:
+    //
+    // {
+    //   './dir/ind.js': __glob__0_0_,
+    //   './dir/foo.js': () => import('./dir/foo.js'),
+    //   './dir/bar.js': () => import('./dir/bar.js').then((m) => m.setup),
+    // }
+    *expr =
+      self.generate_glob_object_expression(&files, &opts, call_expr.span, omit_keys, omit_values);
+    self.current += 1;
   }
 }
 
@@ -267,6 +289,8 @@ impl<'ast> GlobImportVisit<'ast, '_> {
     files: &[String],
     opts: &ImportGlobOptions,
     call_expr_span: Span,
+    omit_keys: bool,
+    omit_values: bool,
   ) -> Expression<'ast> {
     let properties = files.iter().enumerate().map(|(index, file)| {
       let formatted_file = if let Some(query) = &opts.query {
@@ -285,7 +309,10 @@ impl<'ast> GlobImportVisit<'ast, '_> {
       } else {
         Cow::Borrowed(file)
       };
-      let value = if opts.eager.unwrap_or_default() {
+
+      let value = if omit_values {
+        self.ast_builder.expression_numeric_literal(SPAN, 0.0, None, NumberBase::Decimal)
+      } else if opts.eager.unwrap_or_default() {
         // import * as __glob__0 from './dir/foo.js'
         // const modules = {
         //   './dir/foo.js': __glob__0,
@@ -421,19 +448,32 @@ impl<'ast> GlobImportVisit<'ast, '_> {
         )
       };
 
-      self.ast_builder.object_property_kind_object_property(
-        SPAN,
-        PropertyKind::Init,
-        PropertyKey::from(self.ast_builder.expression_string_literal(Span::default(), file, None)),
-        value,
-        false,
-        false,
-        false,
-      )
+      (file, value)
     });
 
-    let properties = self.ast_builder.vec_from_iter(properties);
-    self.ast_builder.expression_object(call_expr_span, properties, None)
+    if omit_keys {
+      let elements = properties.map(|(_, value)| ArrayExpressionElement::from(value));
+      let elements = self.ast_builder.vec_from_iter(elements);
+      self.ast_builder.expression_array(call_expr_span, elements, None)
+    } else {
+      let properties = properties.map(|(file, value)| {
+        self.ast_builder.object_property_kind_object_property(
+          SPAN,
+          PropertyKind::Init,
+          PropertyKey::from(self.ast_builder.expression_string_literal(
+            Span::default(),
+            file,
+            None,
+          )),
+          value,
+          false,
+          false,
+          false,
+        )
+      });
+      let properties = self.ast_builder.vec_from_iter(properties);
+      self.ast_builder.expression_object(call_expr_span, properties, None)
+    }
   }
 }
 

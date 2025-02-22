@@ -1,6 +1,7 @@
 use super::stages::{link_stage::LinkStage, scan_stage::ScanStageOutput};
 use crate::{
   bundler_builder::BundlerBuilder,
+  hmr::hmr_manager::HmrManager,
   stages::{generate_stage::GenerateStage, scan_stage::ScanStage},
   types::bundle_output::BundleOutput,
   BundlerOptions, SharedOptions, SharedResolver,
@@ -27,6 +28,7 @@ pub struct Bundler {
   pub(crate) _log_guard: Option<FlushGuard>,
   #[allow(unused)]
   pub(crate) cache: Arc<Cache>,
+  pub(crate) hmr_manager: Option<HmrManager>,
 }
 
 impl Bundler {
@@ -179,9 +181,12 @@ impl Bundler {
     &self.options
   }
 
-  pub fn generate_hmr_patch(&mut self, _changed_files: Vec<String>) -> String {
-    // Compute out files that need to be updated based on given changed files.
-    todo!()
+  pub fn generate_hmr_patch(&mut self, changed_files: Vec<String>) -> String {
+    self
+      .hmr_manager
+      .as_ref()
+      .expect("HMR manager is not initialized")
+      .generate_hmr_patch(changed_files)
   }
 }
 

@@ -7,5 +7,6 @@
           [ "@vue/test-utils",["custom"]]
         ]
       }
-    }
+    },
+  "expectError": true
   }

@@ -432,6 +432,19 @@ impl ModuleTask {
                 is_external_without_side_effects: false,
               });
             }
+            ResolveError::MatchedAliasNotFound(..) => {
+              build_errors.push(BuildDiagnostic::resolve_error(
+                source.clone(),
+                self.resolved_id.id.clone(),
+                if dep.is_unspanned() || is_css_module {
+                  DiagnosableArcstr::String(specifier.as_str().into())
+                } else {
+                  DiagnosableArcstr::Span(dep.state.span)
+                },
+                "Now the current version of rolldown don't support resolve.alias to call other plugins resolveId hook".into(),
+                Some("MATCH_ALIAS_NOT_FOUND")
+              ));
+            }
             e => {
               let reason = rolldown_resolver::error::oxc_resolve_error_to_reason(e);
               build_errors.push(BuildDiagnostic::resolve_error(

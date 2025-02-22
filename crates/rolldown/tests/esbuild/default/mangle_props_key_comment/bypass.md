@@ -41,7 +41,7 @@ x._mangleThisToo(
 	`_mangleThisToo`
 );
 x._someKey = "_someKey" in y;
-x([`foo.${"_mangleThis"} = bar.${"_mangleThisToo"}`, `foo.${"notMangled"} = bar.${"notMangledEither"}`]);
+x([`foo._mangleThis = bar._mangleThisToo`, `foo.notMangled = bar.notMangledEither`]);
 
 //#endregion
 ```
@@ -59,6 +59,6 @@ x([`foo.${"_mangleThis"} = bar.${"_mangleThisToo"}`, `foo.${"notMangled"} = bar.
 +x._mangleThis("_mangleThis", `_mangleThis`);
 +x._mangleThisToo("_mangleThisToo", `_mangleThisToo`);
 +x._someKey = ("_someKey" in y);
-+x([`foo.${"_mangleThis"} = bar.${"_mangleThisToo"}`, `foo.${"notMangled"} = bar.${"notMangledEither"}`]);
++x([`foo._mangleThis = bar._mangleThisToo`, `foo.notMangled = bar.notMangledEither`]);
 
 ```

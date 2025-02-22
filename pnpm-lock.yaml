@@ -21,8 +21,8 @@ importers:
         specifier: ^0.0.19
         version: 0.0.19
       '@oxc-project/runtime':
-        specifier: 0.51.0
-        version: 0.51.0
+        specifier: 0.52.0
+        version: 0.52.0
       '@taplo/cli':
         specifier: ^0.7.0
         version: 0.7.0
@@ -258,24 +258,61 @@ importers:
   packages/rolldown:
     dependencies:
       '@oxc-project/runtime':
-        specifier: 0.51.0
-        version: 0.51.0
+        specifier: 0.52.0
+        version: 0.52.0
       '@oxc-project/types':
-        specifier: 0.51.0
-        version: 0.51.0
+        specifier: 0.52.0
+        version: 0.52.0
       '@valibot/to-json-schema':
         specifier: 1.0.0-beta.5
         version: 1.0.0-beta.5(valibot@1.0.0-beta.14(typescript@5.7.3))
       valibot:
         specifier: 1.0.0-beta.14
         version: 1.0.0-beta.14(typescript@5.7.3)
+    optionalDependencies:
+      '@rolldown/binding-darwin-arm64':
+        specifier: workspace:*
+        version: link:npm/darwin-arm64
+      '@rolldown/binding-darwin-x64':
+        specifier: workspace:*
+        version: link:npm/darwin-x64
+      '@rolldown/binding-freebsd-x64':
+        specifier: workspace:*
+        version: link:npm/freebsd-x64
+      '@rolldown/binding-linux-arm-gnueabihf':
+        specifier: workspace:*
+        version: link:npm/linux-arm-gnueabihf
+      '@rolldown/binding-linux-arm64-gnu':
+        specifier: workspace:*
+        version: link:npm/linux-arm64-gnu
+      '@rolldown/binding-linux-arm64-musl':
+        specifier: workspace:*
+        version: link:npm/linux-arm64-musl
+      '@rolldown/binding-linux-x64-gnu':
+        specifier: workspace:*
+        version: link:npm/linux-x64-gnu
+      '@rolldown/binding-linux-x64-musl':
+        specifier: workspace:*
+        version: link:npm/linux-x64-musl
+      '@rolldown/binding-wasm32-wasi':
+        specifier: workspace:*
+        version: link:npm/wasm32-wasi
+      '@rolldown/binding-win32-arm64-msvc':
+        specifier: workspace:*
+        version: link:npm/win32-arm64-msvc
+      '@rolldown/binding-win32-ia32-msvc':
+        specifier: workspace:*
+        version: link:npm/win32-ia32-msvc
+      '@rolldown/binding-win32-x64-msvc':
+        specifier: workspace:*
+        version: link:npm/win32-x64-msvc
     devDependencies:
       '@jridgewell/sourcemap-codec':
         specifier: ^1.5.0
         version: 1.5.0
       '@napi-rs/cli':
-        specifier: ^3.0.0-alpha.70
-        version: 3.0.0-alpha.70(@emnapi/runtime@1.3.1)(@types/node@22.13.0)(emnapi@1.3.1(node-addon-api@8.3.0))
+        specifier: ^3.0.0-alpha.71
+        version: 3.0.0-alpha.71(@emnapi/runtime@1.3.1)(@types/node@22.13.0)(emnapi@1.3.1(node-addon-api@8.3.0))
       '@napi-rs/wasm-runtime':
         specifier: ^0.2.4
         version: 0.2.6
@@ -348,43 +385,6 @@ importers:
       why-is-node-running:
         specifier: ^3.0.0
         version: 3.2.2
-    optionalDependencies:
-      '@rolldown/binding-darwin-arm64':
-        specifier: workspace:*
-        version: link:npm/darwin-arm64
-      '@rolldown/binding-darwin-x64':
-        specifier: workspace:*
-        version: link:npm/darwin-x64
-      '@rolldown/binding-freebsd-x64':
-        specifier: workspace:*
-        version: link:npm/freebsd-x64
-      '@rolldown/binding-linux-arm-gnueabihf':
-        specifier: workspace:*
-        version: link:npm/linux-arm-gnueabihf
-      '@rolldown/binding-linux-arm64-gnu':
-        specifier: workspace:*
-        version: link:npm/linux-arm64-gnu
-      '@rolldown/binding-linux-arm64-musl':
-        specifier: workspace:*
-        version: link:npm/linux-arm64-musl
-      '@rolldown/binding-linux-x64-gnu':
-        specifier: workspace:*
-        version: link:npm/linux-x64-gnu
-      '@rolldown/binding-linux-x64-musl':
-        specifier: workspace:*
-        version: link:npm/linux-x64-musl
-      '@rolldown/binding-wasm32-wasi':
-        specifier: workspace:*
-        version: link:npm/wasm32-wasi
-      '@rolldown/binding-win32-arm64-msvc':
-        specifier: workspace:*
-        version: link:npm/win32-arm64-msvc
-      '@rolldown/binding-win32-ia32-msvc':
-        specifier: workspace:*
-        version: link:npm/win32-ia32-msvc
-      '@rolldown/binding-win32-x64-msvc':
-        specifier: workspace:*
-        version: link:npm/win32-x64-msvc
 
   packages/rolldown/npm/darwin-arm64: {}
 
@@ -2176,7 +2176,6 @@ packages:
 
   '@ls-lint/ls-lint@2.2.3':
     resolution: {integrity: sha512-ekM12jNm/7O2I/hsRv9HvYkRdfrHpiV1epVuI2NP+eTIcEgdIdKkKCs9KgQydu/8R5YXTov9aHdOgplmCHLupw==}
-    cpu: [x64, arm64, s390x]
     os: [darwin, linux, win32]
     hasBin: true
 
@@ -2192,8 +2191,8 @@ packages:
   '@module-federation/sdk@0.8.9':
     resolution: {integrity: sha512-QJ60itWC/SPjqduT7wDiF8UGwVU/yJ/Sz+QbnoxB9b7gNLzvI//swAXTo9eOtKsCy/V2BMwjt0F3eOcfnaqllA==}
 
-  '@napi-rs/cli@3.0.0-alpha.70':
-    resolution: {integrity: sha512-hYZuA1gXO7hx9sXzz4qCVBevh46unQMXRvgUhg2kHctnHJNOKKOjNcxM3OF7o60olzlNsjQ1SpzySWlYn/JLSg==}
+  '@napi-rs/cli@3.0.0-alpha.71':
+    resolution: {integrity: sha512-6wNn9TbEL5/3+uQRQTfeDW7qRq8U8cr13K4ePHLe1pkYYoiNNxRnV2HcEB77EXsh7XR+wz3Ehj5bulrf+9Pvcw==}
     engines: {node: '>= 16'}
     hasBin: true
     peerDependencies:
@@ -2703,15 +2702,15 @@ packages:
     cpu: [x64]
     os: [win32]
 
-  '@oxc-project/runtime@0.51.0':
-    resolution: {integrity: sha512-s/G0/yOpmcD9QY8O1wc4G7nb7BRV9m206PvfM/t3oPu6z+2vyZlfB2kTA9P6vMXO2fzquDMw3G22kCXx4qzfUQ==}
+  '@oxc-project/runtime@0.52.0':
+    resolution: {integrity: sha512-z1Ug+02ZoJwbc/R28n5f6x+5473yu0ADqn9XBAUnn85O6Q9F+BmI9snDR+CX4KglF7odiVOGtusC41KWWoxQJA==}
     engines: {node: '>=6.9.0'}
 
   '@oxc-project/types@0.37.0':
     resolution: {integrity: sha512-9shvIr/cpoNo5cX8nWdZmviHLJSidjZy4M0MyfR6ucREZBtABTNBIa1a4emWUJ3qAMwJW6G1v0zm8K2rj9Pf4A==}
 
-  '@oxc-project/types@0.51.0':
-    resolution: {integrity: sha512-rDHFQBU2lS0Fh1t1rgvSWK21OfgkzjIWqj+FKKRJueecgvdZ6hO+qqstwBy2v9lFhg2DPuaDdLyCXZNGwsKjMw==}
+  '@oxc-project/types@0.52.0':
+    resolution: {integrity: sha512-vR+SuiprVAlbUSkBnmL/h0DNVhwmecxfLWyssN5wGUsOTz4VL5OWrVtb/Q5D/Jb1V+iqcDYBRWrhtyuCaKBBqg==}
 
   '@oxc-transform/binding-darwin-arm64@0.48.2':
     resolution: {integrity: sha512-JzctV+H6IDl+vwTlY/7+2JMqb+94HUHfgHii+hMUM76XNaLAOyKxn3Be26t/FgrscoIR+bO6kMYL/T0sDkP7fA==}
@@ -8440,7 +8439,7 @@ snapshots:
     dependencies:
       isomorphic-rslog: 0.0.7
 
-  '@napi-rs/cli@3.0.0-alpha.70(@emnapi/runtime@1.3.1)(@types/node@22.13.0)(emnapi@1.3.1(node-addon-api@8.3.0))':
+  '@napi-rs/cli@3.0.0-alpha.71(@emnapi/runtime@1.3.1)(@types/node@22.13.0)(emnapi@1.3.1(node-addon-api@8.3.0))':
     dependencies:
       '@inquirer/prompts': 7.2.3(@types/node@22.13.0)
       '@napi-rs/cross-toolchain': 0.0.19
@@ -8848,11 +8847,11 @@ snapshots:
   '@oxc-parser/binding-win32-x64-msvc@0.37.0':
     optional: true
 
-  '@oxc-project/runtime@0.51.0': {}
+  '@oxc-project/runtime@0.52.0': {}
 
   '@oxc-project/types@0.37.0': {}
 
-  '@oxc-project/types@0.51.0': {}
+  '@oxc-project/types@0.52.0': {}
 
   '@oxc-transform/binding-darwin-arm64@0.48.2':
     optional: true

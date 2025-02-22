@@ -137,9 +137,9 @@ jsonschema          = { version = "0.28.0", default-features = false }
 memchr              = "2.7.2"
 mimalloc            = "0.1.42"
 mime                = "0.3.17"
-napi                = { version = "3.0.0-alpha.28", features = ["async", "anyhow"] }
-napi-build          = { version = "2.1.4" }
-napi-derive         = { version = "3.0.0-alpha.26", default-features = false, features = ["type-def"] }
+napi                = { version = "3.0.0-alpha.29", features = ["async", "anyhow"] }
+napi-build          = { version = "2.1.1" }
+napi-derive         = { version = "3.0.0-alpha.27", default-features = false, features = ["type-def"] }
 notify              = { version = "8.0.0" }
 phf                 = "0.11.3"
 rayon               = "1.10.0"
@@ -168,9 +168,9 @@ xxhash-rust         = "0.8.10"
 
 
 # oxc crates with the same version
-oxc                = { version = "0.51.0", features = ["transformer", "minifier", "mangler", "semantic", "codegen", "serialize"] }
-oxc_parser_napi    = { version = "0.51.0" }
-oxc_transform_napi = { version = "0.51.0" }
+oxc                = { version = "0.52.0", features = ["transformer", "minifier", "mangler", "semantic", "codegen", "serialize"] }
+oxc_parser_napi    = { version = "0.52.0" }
+oxc_transform_napi = { version = "0.52.0" }
 
 # oxc crates in their own repos
 # Versions must be relaxed for usage in oxc.

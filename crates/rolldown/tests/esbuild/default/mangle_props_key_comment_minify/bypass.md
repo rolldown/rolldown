@@ -34,7 +34,7 @@ x = {
 x._mangleThis = 1;
 x["_mangleThisToo"] = 2;
 x["_doNotMangleThis"] = 3;
-x([`${foo}.${"_mangleThis"} = bar.${"_mangleThisToo"}`, `${foo}.${"notMangled"} = bar.${"notMangledEither"}`]);
+x([`${foo}._mangleThis = bar._mangleThisToo`, `${foo}.notMangled = bar.notMangledEither`]);
 
 //#endregion
 ```
@@ -66,6 +66,6 @@ x([`${foo}.${"_mangleThis"} = bar.${"_mangleThisToo"}`, `${foo}.${"notMangled"} 
 +x._mangleThis = 1;
 +x["_mangleThisToo"] = 2;
 +x["_doNotMangleThis"] = 3;
-+x([`${foo}.${"_mangleThis"} = bar.${"_mangleThisToo"}`, `${foo}.${"notMangled"} = bar.${"notMangledEither"}`]);
++x([`${foo}._mangleThis = bar._mangleThisToo`, `${foo}.notMangled = bar.notMangledEither`]);
 
 ```

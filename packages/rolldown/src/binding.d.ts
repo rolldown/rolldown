@@ -147,6 +147,7 @@ export declare class Bundler {
   scan(): Promise<BindingOutputs>
   close(): Promise<void>
   get closed(): boolean
+  generateHmrPatch(changedFiles: Array<string>): Promise<string>
 }
 
 export declare class MagicString {

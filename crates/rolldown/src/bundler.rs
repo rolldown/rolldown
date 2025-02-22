@@ -179,7 +179,7 @@ impl Bundler {
     &self.options
   }
 
-  pub fn generate_hmr_patch(&self, _changed_files: Vec<String>) -> String {
+  pub fn generate_hmr_patch(&mut self, _changed_files: Vec<String>) -> String {
     // Compute out files that need to be updated based on given changed files.
     todo!()
   }

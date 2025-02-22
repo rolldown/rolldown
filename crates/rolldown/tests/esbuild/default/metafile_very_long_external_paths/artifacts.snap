@@ -38,11 +38,14 @@ console.log(default$1);
 
 ```js
 
-
 //#region bytesInOutput should be at least 99 (3).js
 Promise.resolve().then(function() {
-	return __dynamicEmptyModule;
+	return _333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333;
 }).then(console.log);
+var _333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333 = Object.freeze({
+	__proto__: null,
+	default: {}
+});
 
 //#endregion
 ```

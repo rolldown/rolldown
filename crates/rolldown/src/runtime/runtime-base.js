@@ -40,10 +40,6 @@ var __toESM = (mod, isNodeMode, target) => (
     mod)
 )
 var __toCommonJS = mod => __copyProps(__defProp({}, '__esModule', { value: true }), mod)
-var __dynamicEmptyModule = Object.freeze({
-	__proto__: null,
-  default: {}
-});
 export var __toBinaryNode = base64 => new Uint8Array(Buffer.from(base64, 'base64'))
 export var __toBinary = /* @__PURE__ */ (() => {
   var table = new Uint8Array(128)

@@ -58,9 +58,10 @@ impl<'ast> VisitMut<'ast> for ScopeHoistingFinalizer<'_, 'ast> {
 
     // the order should be
     // 1. module namespace object declaration
-    // 2. shimmed_exports
-    // 3. hoisted_names
-    // 4. wrapped module declaration
+    // 2. dead dynamic import ployfill
+    // 3. shimmed_exports
+    // 4. hoisted_names
+    // 5. wrapped module declaration
     let declaration_of_module_namespace_object = if is_namespace_referenced {
       let stmts = self.generate_declaration_of_module_namespace_object();
       if needs_wrapper {
@@ -72,6 +73,17 @@ impl<'ast> VisitMut<'ast> for ScopeHoistingFinalizer<'_, 'ast> {
     } else {
       vec![]
     };
+
+    if let Some(dynamic_import) = self.ctx.linking_info.dynamic_import_polyfill {
+      if dynamic_import.owner == self.ctx.module.idx {
+        let canonical_name = self.canonical_name_for(dynamic_import);
+        program.body.push(
+          self
+            .snippet
+            .var_decl_stmt(canonical_name, self.snippet.object_freeze_dynamic_import_polyfill()),
+        );
+      }
+    }
 
     let mut shimmed_exports =
       self.ctx.linking_info.shimmed_missing_exports.iter().collect::<Vec<_>>();

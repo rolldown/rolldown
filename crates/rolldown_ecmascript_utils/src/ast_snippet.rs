@@ -786,6 +786,42 @@ impl<'ast> AstSnippet<'ast> {
     )
   }
 
+  // empty dynamic import polyfill
+  pub fn object_freeze_dynamic_import_polyfill(&self) -> Expression<'ast> {
+    let proto = self.builder.object_property_kind_object_property(
+      SPAN,
+      PropertyKind::Init,
+      self.builder.property_key_static_identifier(SPAN, "__proto__"),
+      ast::Expression::NullLiteral(self.builder.alloc_null_literal(SPAN)),
+      false,
+      false,
+      false,
+    );
+
+    let default = self.builder.object_property_kind_object_property(
+      SPAN,
+      PropertyKind::Init,
+      self.builder.property_key_static_identifier(SPAN, "default"),
+      ast::Expression::ObjectExpression(self.builder.alloc_object_expression(
+        SPAN,
+        self.builder.vec(),
+        None,
+      )),
+      false,
+      false,
+      false,
+    );
+
+    self.call_expr_with_arg_expr(
+      self.literal_prop_access_member_expr_expr("Object", "freeze"),
+      ast::Expression::ObjectExpression(self.builder.alloc_object_expression(
+        SPAN,
+        self.builder.vec_from_iter([proto, default]),
+        None,
+      )),
+    )
+  }
+
   // If interop is None, using `require_foo()`
   // If interop is babel, using __toESM(require_foo())
   // If interop is node, using __toESM(require_foo(), 1)

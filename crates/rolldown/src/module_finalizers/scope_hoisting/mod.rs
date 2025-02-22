@@ -812,10 +812,13 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
     if let Some(module) = self.ctx.modules[importee_id].as_normal() {
       if !module.is_included() {
         // Rewrite `import('./foo.mjs')` to `Promise.resolve().then(function () { return __dynamicEmptyModule; });`
-        let dynamic_empty_expr = self.finalized_expr_for_runtime_symbol("__dynamicEmptyModule");
+        let symbol_ref = self.ctx.linking_info.dynamic_import_polyfill.unwrap();
+        let dynamic_import_polyfill_name = self.canonical_name_for(symbol_ref);
         return Some(self.snippet.promise_resolve_then_call_expr(
           import_expr.span,
-          self.snippet.builder.vec1(self.snippet.return_stmt(dynamic_empty_expr)),
+          self.snippet.builder.vec1(
+            self.snippet.return_stmt(self.snippet.id_ref_expr(dynamic_import_polyfill_name, SPAN)),
+          ),
         ));
       }
     }

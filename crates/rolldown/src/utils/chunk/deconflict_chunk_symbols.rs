@@ -89,10 +89,6 @@ pub fn deconflict_chunk_symbols(
       meta.referenced_symbols_by_entry_point_chunk.iter().for_each(|symbol_ref| {
         renamer.add_symbol_in_root_scope(*symbol_ref);
       });
-
-      if let Some(symbol_ref) = meta.dynamic_import_polyfill {
-        renamer.add_symbol_in_root_scope(symbol_ref);
-      }
     }
     ChunkKind::Common => {}
   }
@@ -113,6 +109,11 @@ pub fn deconflict_chunk_symbols(
     .rev()
     .filter_map(|id| link_output.module_table.modules[id].as_normal())
     .for_each(|module| {
+      let meta = &link_output.metas[module.idx];
+      if let Some(symbol_ref) = meta.dynamic_import_polyfill {
+        renamer.add_symbol_in_root_scope(symbol_ref);
+      }
+
       module
         .stmt_infos
         .iter()

@@ -74,11 +74,14 @@ import("./3333333333333333333333333333333333333333333333333333333333333333333333
 ### rolldown
 ```js
 
-
 //#region bytesInOutput should be at least 99 (3).js
 Promise.resolve().then(function() {
-	return __dynamicEmptyModule;
+	return _333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333;
 }).then(console.log);
+var _333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333 = Object.freeze({
+	__proto__: null,
+	default: {}
+});
 
 //#endregion
 ```
@@ -87,11 +90,15 @@ Promise.resolve().then(function() {
 ===================================================================
 --- esbuild	/out/bytesInOutput should be at least 99 (3).js
 +++ rolldown	bytesInOutput should be at least 99 (3).js
-@@ -1,1 +1,3 @@
+@@ -1,1 +1,7 @@
 -import("./333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333-DH3FVEAA.js").then(console.log);
 +Promise.resolve().then(function () {
-+    return __dynamicEmptyModule;
++    return _333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333;
 +}).then(console.log);
++var _333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333 = Object.freeze({
++    __proto__: null,
++    default: {}
++});
 
 ```
 ## /out/bytesInOutput should be at least 99.css

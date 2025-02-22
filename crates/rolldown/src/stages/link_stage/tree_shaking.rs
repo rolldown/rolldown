@@ -195,7 +195,7 @@ impl LinkStage<'_> {
 
     // A dynamic module can only be included if it has statements or symbols that are included,
     // or if it is included by another module.
-    let has_dynamic_empty_module = dynamic_import_entries.into_iter().any(|entry| {
+    dynamic_import_entries.into_iter().for_each(|entry| {
       let has_side_effect = entry.related_stmt_infos.iter().any(|(module_idx, stmt_idx)| {
         let module = self.module_table.modules[*module_idx].as_normal().unwrap();
         module.stmt_infos[*stmt_idx].is_included
@@ -207,38 +207,36 @@ impl LinkStage<'_> {
       let is_included = is_imported && has_side_effect;
       module.meta.set(EcmaViewMeta::INCLUDED, is_included);
 
-      let mut has_dynamic_empty_module = false;
       if !is_included {
+        let module_repr_name = module.repr_name.clone();
+        let mut dynamic_import_polyfill: Option<SymbolRef> = None;
+
         for (module_idx, stmt_info_id) in &entry.related_stmt_infos {
           let module = self.module_table.modules[*module_idx].as_normal_mut().unwrap();
+          let stmt_info = &mut module.stmt_infos[*stmt_info_id];
 
-          if module.stmt_infos[*stmt_info_id].is_included {
-            let symbol_ref = self.runtime.resolve_symbol("__dynamicEmptyModule");
+          if stmt_info.is_included {
+            let symbol_ref = match dynamic_import_polyfill {
+              Some(symbol_ref) => {
+                stmt_info.referenced_symbols.push(symbol_ref.into());
+                symbol_ref
+              }
+              None => {
+                let symbol_ref =
+                  self.symbols.create_facade_root_symbol_ref(*module_idx, &module_repr_name);
+
+                self.used_symbol_refs.insert(symbol_ref);
+                stmt_info.declared_symbols.push(symbol_ref);
+                dynamic_import_polyfill = Some(symbol_ref);
+                symbol_ref
+              }
+            };
 
             self.metas[*module_idx].dynamic_import_polyfill = Some(symbol_ref);
-            module.stmt_infos[*stmt_info_id].referenced_symbols.push(symbol_ref.into());
-
-            has_dynamic_empty_module = true;
           }
         }
       }
-      has_dynamic_empty_module
     });
-
-    if has_dynamic_empty_module {
-      let symbol_ref = self.runtime.resolve_symbol("__dynamicEmptyModule");
-
-      self.used_symbol_refs.insert(symbol_ref);
-
-      if let Some(module) = self.module_table.modules[symbol_ref.owner].as_normal_mut() {
-        module.meta.set(EcmaViewMeta::INCLUDED, true);
-
-        let stmt_infos = module.stmt_infos.declared_stmts_by_symbol(&symbol_ref).to_vec();
-        for stmt_info_id in stmt_infos {
-          module.stmt_infos.get_mut(stmt_info_id).is_included = true;
-        }
-      }
-    }
 
     tracing::trace!(
       "included statements {:#?}",

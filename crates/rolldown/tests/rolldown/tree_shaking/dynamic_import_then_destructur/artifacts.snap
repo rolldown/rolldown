@@ -8,11 +8,14 @@ snapshot_kind: text
 
 ```js
 
-
 //#region main.js
 Promise.resolve().then(function() {
-	return __dynamicEmptyModule;
+	return lib;
 }).then(({ foo: x, thing: a }) => []);
+var lib = Object.freeze({
+	__proto__: null,
+	default: {}
+});
 
 //#endregion
 ```

@@ -180,9 +180,8 @@ impl<'name> Renamer<'name> {
               break;
             }
           },
-          Entry::Occupied(slot) => {
+          Entry::Occupied(_) => {
             // The symbol is already renamed
-            used_canonical_names_for_this_scope.insert(slot.get().clone(), 0);
           }
         }
       });

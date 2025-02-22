@@ -69,7 +69,7 @@ pub fn generate_identifier(
   export_mode: OutputExports,
 ) -> BuildResult<(String, String)> {
   // Handle the diagnostic warning
-  if ctx.options.name.as_ref().map_or(true, String::is_empty)
+  if ctx.options.name.as_ref().is_none_or(String::is_empty)
     && !matches!(export_mode, OutputExports::None)
   {
     warnings.push(BuildDiagnostic::missing_name_option_for_iife_export().with_severity_warning());

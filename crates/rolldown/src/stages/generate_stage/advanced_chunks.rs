@@ -84,7 +84,7 @@ impl GenerateStage<'_> {
 
       for (match_group_index, match_group) in match_groups.iter().copied().enumerate() {
         let is_matched =
-          match_group.test.as_ref().map_or(true, |test| test.matches(&normal_module.id));
+          match_group.test.as_ref().is_none_or(|test| test.matches(&normal_module.id));
 
         if !is_matched {
           continue;
@@ -96,9 +96,9 @@ impl GenerateStage<'_> {
           match_group.max_module_size.map_or(chunking_options.max_module_size, Some);
 
         let is_min_module_size_satisfied = allow_min_module_size
-          .map_or(true, |min_module_size| normal_module.size() >= min_module_size);
+          .is_none_or(|min_module_size| normal_module.size() >= min_module_size);
         let is_max_module_size_satisfied = allow_max_module_size
-          .map_or(true, |max_module_size| normal_module.size() <= max_module_size);
+          .is_none_or(|max_module_size| normal_module.size() <= max_module_size);
 
         if !is_min_module_size_satisfied || !is_max_module_size_satisfied {
           continue;

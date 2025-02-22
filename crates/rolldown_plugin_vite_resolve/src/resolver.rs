@@ -204,7 +204,7 @@ fn bools_to_u8<const N: usize>(bools: [bool; N]) -> u8 {
 
 fn u8_to_bools<const N: usize>(n: u8) -> [bool; N] {
   let mut ret = [false; N];
-  ret.iter_mut().enumerate().for_each(|(i, v)| *v = n & 1 << i != 0);
+  ret.iter_mut().enumerate().for_each(|(i, v)| *v = n & (1 << i) != 0);
   ret
 }
 

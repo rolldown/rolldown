@@ -49,6 +49,7 @@ impl BundlerBuilder {
       warnings,
       _log_guard: maybe_guard,
       cache: Arc::new(Cache::default()),
+      hmr_manager: None,
     }
   }
 

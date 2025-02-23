@@ -5,6 +5,7 @@ mod bundler_builder;
 mod chunk_graph;
 mod css;
 mod ecmascript;
+mod hmr;
 mod module_finalizers;
 mod module_loader;
 mod stages;

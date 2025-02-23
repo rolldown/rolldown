@@ -145,18 +145,13 @@ impl<'a> LinkStage<'a> {
         EntryPointKind::UserDefined => Some(item.id),
         EntryPointKind::DynamicImport => {
           // At least one statement that create this entry is included
-          let lived = item
-            .related_stmt_infos
-            .iter()
-            .filter(|(module_idx, stmt_idx)| {
-              let module = &self.module_table.modules[*module_idx]
-                .as_normal()
-                .expect("should be a normal module");
-              let stmt_info = &module.stmt_infos[*stmt_idx];
-              stmt_info.is_included
-            })
-            .count()
-            > 0;
+          let lived = item.related_stmt_infos.iter().any(|(module_idx, stmt_idx)| {
+            let module = &self.module_table.modules[*module_idx]
+              .as_normal()
+              .expect("should be a normal module");
+            let stmt_info = &module.stmt_infos[*stmt_idx];
+            stmt_info.is_included
+          });
           lived.then_some(item.id)
         }
       })

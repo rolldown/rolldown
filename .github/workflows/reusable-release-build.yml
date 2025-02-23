@@ -69,11 +69,15 @@ jobs:
             build: |
               export CARGO_BUILD_TARGET=aarch64-unknown-linux-musl;
               pnpm ci:build-release-binding -x --target aarch64-unknown-linux-musl
+
           - os: ubuntu-latest
             target: wasm32-wasip1-threads
             build: |
+              # Downgrade Rust 1.85.0 https://github.com/toyobayashi/emnapi/issues/136
+              sed -i ${{ (runner.os == 'macOS' && '""') || '' }} -e 's/channel = ".*"/channel = "1.84.1"/g' rust-toolchain.toml
               export CARGO_BUILD_TARGET=wasm32-wasip1-threads;
               pnpm --filter rolldown build-binding:wasi:release
+
     name: Build ${{ matrix.target }}
     runs-on: ${{ matrix.os }}
     steps:

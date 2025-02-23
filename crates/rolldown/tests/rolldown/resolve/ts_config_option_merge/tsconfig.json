@@ -1,6 +1,9 @@
 {
   "compilerOptions": {
     "experimentalDecorators": true,
-    "jsxImportSource": "preact"
+    "jsxImportSource": "preact",
+    "paths": {
+      "@/*": ["./src/*"]
+    }
   }
 }

@@ -9,6 +9,12 @@ snapshot_kind: text
 ```js
 import { jsx } from "preact/jsx-runtime";
 
+//#region src/util.ts
+function add(a, b) {
+	return a + b;
+}
+
+//#endregion
 //#region ../../../../../../node_modules/.pnpm/@oxc-project+runtime@0.52.0/node_modules/@oxc-project/runtime/src/helpers/esm/decorateParam.js
 function __decorateParam(paramIndex, decorator) {
 	return function(target, key) {
@@ -37,6 +43,7 @@ var Foo = class {
 };
 __decorate([first(), __decorateParam(0, first())], Foo.prototype, "method", null);
 console.log(jsx(Div, {}));
+console.log(`add(1, 2): `, add(1, 2));
 
 //#endregion
 ```

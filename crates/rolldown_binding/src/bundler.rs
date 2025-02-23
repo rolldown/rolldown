@@ -107,6 +107,13 @@ impl Bundler {
   pub fn get_closed(&self) -> napi::Result<bool> {
     napi::bindgen_prelude::block_on(async { self.get_closed_impl().await })
   }
+
+  #[napi]
+  pub async fn generate_hmr_patch(&self, changed_files: Vec<String>) -> String {
+    // Compute out files that need to be updated based on given changed files.
+    let mut bundler_core = self.inner.lock().await;
+    bundler_core.generate_hmr_patch(changed_files)
+  }
 }
 
 impl Bundler {

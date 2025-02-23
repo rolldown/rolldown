@@ -184,7 +184,7 @@ fn extract_import_glob_options(arg: &Argument, opts: &mut ImportGlobOptions) {
                 Expression::NullLiteral(_) => "null".to_string(),
                 _ => return None,
               };
-              Some((key, value.to_string()))
+              Some((key, value))
             })
             .collect::<FxHashMap<String, String>>();
           if !map.is_empty() {

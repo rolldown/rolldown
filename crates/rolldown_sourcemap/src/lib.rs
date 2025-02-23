@@ -98,7 +98,7 @@ fn test_collapse_sourcemaps() {
       ..CodegenOptions::default()
     })
     .build(&ret1.program);
-  source_joiner.append_source(SourceMapSource::new(code.clone(), map.as_ref().unwrap().clone()));
+  source_joiner.append_source(SourceMapSource::new(code, map.as_ref().unwrap().clone()));
 
   let filename = "bar.js".to_string();
   let source_text = "const bar = 2; console.log(bar);\n".to_string();
@@ -109,7 +109,7 @@ fn test_collapse_sourcemaps() {
       ..CodegenOptions::default()
     })
     .build(&ret2.program);
-  source_joiner.append_source(SourceMapSource::new(code.clone(), map.as_ref().unwrap().clone()));
+  source_joiner.append_source(SourceMapSource::new(code, map.as_ref().unwrap().clone()));
 
   let (source_text, source_map) = source_joiner.join();
 

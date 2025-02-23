@@ -97,7 +97,7 @@ fn test_concat_sourcemaps() {
       ..CodegenOptions::default()
     })
     .build(&ret1.program);
-  source_joiner.append_source(SourceMapSource::new(code.clone(), map.as_ref().unwrap().clone()));
+  source_joiner.append_source(SourceMapSource::new(code, map.as_ref().unwrap().clone()));
 
   let (content, map) = source_joiner.join();
 

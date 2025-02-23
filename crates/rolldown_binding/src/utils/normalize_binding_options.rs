@@ -133,7 +133,7 @@ pub fn normalize_binding_options(
       let ts_fn = Arc::clone(&ts_fn);
       Box::pin(async move {
         ts_fn
-          .invoke_async((source.to_string(), importer.map(|v| v.to_string()), is_resolved).into())
+          .invoke_async((source.to_string(), importer, is_resolved).into())
           .await
           .map_err(anyhow::Error::from)
       })

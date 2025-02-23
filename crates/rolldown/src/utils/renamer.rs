@@ -98,8 +98,7 @@ impl<'name> Renamer<'name> {
   }
 
   pub fn create_conflictless_name(&mut self, hint: &str) -> String {
-    let hint = Rstr::new(hint);
-    let mut conflictless_name = hint.clone();
+    let mut conflictless_name = Rstr::new(hint);
     loop {
       match self.used_canonical_names.entry(conflictless_name.clone()) {
         Entry::Occupied(mut occ) => {
@@ -119,8 +118,8 @@ impl<'name> Renamer<'name> {
 
   #[allow(dead_code)]
   pub fn add_symbol_name_ref_token(&mut self, token: &SymbolNameRefToken) {
-    let hint = Rstr::new(token.value());
-    let mut conflictless_name = hint.clone();
+    let hint = token.value();
+    let mut conflictless_name = Rstr::new(hint);
     loop {
       match self.used_canonical_names.entry(conflictless_name.clone()) {
         Entry::Occupied(mut occ) => {
@@ -135,7 +134,7 @@ impl<'name> Renamer<'name> {
         }
       }
     }
-    self.canonical_token_to_name.insert(token.clone(), conflictless_name.clone());
+    self.canonical_token_to_name.insert(token.clone(), conflictless_name);
   }
 
   // non-top-level symbols won't be linked cross-module. So the canonical `SymbolRef` for them are themselves.

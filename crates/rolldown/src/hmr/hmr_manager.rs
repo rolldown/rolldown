@@ -1,5 +1,8 @@
 use arcstr::ArcStr;
+use oxc::span::SourceType;
 use rolldown_common::{EcmaModuleAstUsage, Module, ModuleIdx, ModuleTable};
+use rolldown_ecmascript::EcmaCompiler;
+use rolldown_error::{BuildResult, ResultExt};
 use rolldown_utils::indexmap::FxIndexMap;
 
 pub struct HmrManager {
@@ -8,8 +11,8 @@ pub struct HmrManager {
 }
 
 impl HmrManager {
-  #[allow(clippy::dbg_macro)] // FIXME: Remove dbg! macro once the feature is stable
-  pub fn generate_hmr_patch(&self, changed_file_paths: Vec<String>) -> String {
+  #[expect(clippy::dbg_macro)] // FIXME: Remove dbg! macro once the feature is stable
+  pub fn generate_hmr_patch(&self, changed_file_paths: Vec<String>) -> BuildResult<String> {
     let mut changed_modules = vec![];
     for changed_file_path in changed_file_paths {
       let changed_file_path = ArcStr::from(changed_file_path);
@@ -38,6 +41,25 @@ impl HmrManager {
       }
 
       // TODO(hyf0): If it's not a self-accept module, we should traverse its dependents recursively
+    }
+
+    let mut outputs = vec![];
+    for changed_module_idx in affected_modules {
+      let changed_module = &self.module_db.modules[changed_module_idx];
+      let Module::Normal(changed_module) = changed_module else {
+        unreachable!("HMR only supports normal module");
+      };
+
+      let filename = changed_module.id.resource_id();
+
+      // TODO: We should get newest source and ast directly from module, but now we just manually fetch them.
+      let source: String = std::fs::read_to_string(filename.as_str()).map_err_to_unhandleable()?;
+      let ast = EcmaCompiler::parse(filename, source, SourceType::default())?;
+
+      // TODO: modify the AST
+
+      let codegen = EcmaCompiler::print(&ast, filename, false);
+      outputs.push(codegen.code);
     }
 
     todo!()

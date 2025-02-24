@@ -24,7 +24,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "e89da841a80418a9b391ebaea17f5c112ffaaa96f621d2c285b5174da76b9011"
 dependencies = [
  "cfg-if",
- "getrandom",
+ "getrandom 0.2.15",
  "once_cell",
  "serde",
  "version_check",
@@ -218,9 +218,9 @@ checksum = "3eeab4423108c5d7c744f4d234de88d18d636100093ae04caf4825134b9c3a32"
 
 [[package]]
 name = "bpaf"
-version = "0.9.15"
+version = "0.9.16"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "50fd5174866dc2fa2ddc96e8fb800852d37f064f32a45c7b7c2f8fa2c64c77fa"
+checksum = "913d667d4716acd286a0dc58824a4c0ec8ce58eeca95cfb58172d17a9ec01035"
 
 [[package]]
 name = "bumpalo"
@@ -316,13 +316,15 @@ dependencies = [
 
 [[package]]
 name = "codspeed"
-version = "2.7.2"
+version = "2.8.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "450a0e9df9df1c154156f4344f99d8f6f6e69d0fc4de96ef6e2e68b2ec3bce97"
+checksum = "25d2f5a6570db487f5258e0bded6352fa2034c2aeb46bb5cc3ff060a0fcfba2f"
 dependencies = [
- "colored",
+ "colored 2.1.0",
  "libc",
+ "serde",
  "serde_json",
+ "uuid",
 ]
 
 [[package]]
@@ -333,6 +335,15 @@ checksum = "cbf2150cce219b664a8a70df7a1f933836724b503f8a413af9365b4dcc4d90b8"
 dependencies = [
  "lazy_static",
  "windows-sys 0.48.0",
+]
+
+[[package]]
+name = "colored"
+version = "3.0.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "fde0e0ec90c9dfb3b4b1a0891a7dcd0e2bffde2f7efed5fe7c9bb00e5bfb915e"
+dependencies = [
+ "windows-sys 0.59.0",
 ]
 
 [[package]]
@@ -397,16 +408,16 @@ dependencies = [
 
 [[package]]
 name = "criterion2"
-version = "2.0.0"
+version = "3.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "09db22066fd79bd628faf416dac96e44054deb00531601bcc20c6d12506b3701"
+checksum = "7b43b9cdbf592c78d882f2a3b9e6ebe8aedc749ef84915103a0248802ce2f6b3"
 dependencies = [
  "anes",
  "bpaf",
  "cast",
  "ciborium",
  "codspeed",
- "colored",
+ "colored 3.0.0",
  "num-traits",
  "oorandom",
  "serde",
@@ -789,7 +800,19 @@ checksum = "c4567c8db10ae91089c99af84c68c38da3ec2f087c3f82960bcdbf3656b6f4d7"
 dependencies = [
  "cfg-if",
  "libc",
- "wasi",
+ "wasi 0.11.0+wasi-snapshot-preview1",
+]
+
+[[package]]
+name = "getrandom"
+version = "0.3.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "43a49c392881ce6d5c3b8cb70f98717b7c07aabbdff06687b9030dbfbe2725f8"
+dependencies = [
+ "cfg-if",
+ "libc",
+ "wasi 0.13.3+wasi-0.2.2",
+ "windows-targets 0.52.6",
 ]
 
 [[package]]
@@ -1084,7 +1107,7 @@ dependencies = [
  "hermit-abi",
  "libc",
  "log",
- "wasi",
+ "wasi 0.11.0+wasi-snapshot-preview1",
  "windows-sys 0.52.0",
 ]
 
@@ -1430,7 +1453,7 @@ dependencies = [
  "bitflags 2.8.0",
  "itertools",
  "nonmax",
- "oxc_index",
+ "oxc_index 2.0.0",
  "oxc_syntax",
  "petgraph",
  "rustc-hash",
@@ -1449,9 +1472,9 @@ dependencies = [
  "oxc_allocator",
  "oxc_ast",
  "oxc_data_structures",
- "oxc_index",
+ "oxc_index 2.0.0",
  "oxc_semantic",
- "oxc_sourcemap",
+ "oxc_sourcemap 1.0.9",
  "oxc_span",
  "oxc_syntax",
  "rustc-hash",
@@ -1513,6 +1536,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "oxc_index"
+version = "3.0.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "2fa07b0cfa997730afed43705766ef27792873fdf5215b1391949fec678d2392"
+dependencies = [
+ "rayon",
+ "serde",
+]
+
+[[package]]
 name = "oxc_isolated_declarations"
 version = "0.52.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1538,7 +1571,7 @@ dependencies = [
  "itertools",
  "oxc_allocator",
  "oxc_ast",
- "oxc_index",
+ "oxc_index 2.0.0",
  "oxc_semantic",
  "oxc_span",
  "rustc-hash",
@@ -1613,7 +1646,7 @@ dependencies = [
  "oxc_ast",
  "oxc_data_structures",
  "oxc_napi",
- "oxc_sourcemap",
+ "oxc_sourcemap 1.0.9",
  "rustc-hash",
  "self_cell",
  "string_wizard 0.0.26 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -1669,7 +1702,7 @@ dependencies = [
  "oxc_data_structures",
  "oxc_diagnostics",
  "oxc_ecmascript",
- "oxc_index",
+ "oxc_index 2.0.0",
  "oxc_span",
  "oxc_syntax",
  "phf",
@@ -1689,6 +1722,21 @@ dependencies = [
  "napi",
  "napi-build",
  "napi-derive",
+ "rayon",
+ "rustc-hash",
+ "serde",
+ "serde_json",
+]
+
+[[package]]
+name = "oxc_sourcemap"
+version = "2.0.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "00b84540840cb31eaea9548f93a271da369d69792bd7149bff1a44b0af9eb7a1"
+dependencies = [
+ "base64-simd",
+ "cfg-if",
+ "cow-utils",
  "rayon",
  "rustc-hash",
  "serde",
@@ -1722,7 +1770,7 @@ dependencies = [
  "oxc_allocator",
  "oxc_ast_macros",
  "oxc_estree",
- "oxc_index",
+ "oxc_index 2.0.0",
  "oxc_span",
  "phf",
  "rustc-hash",
@@ -1743,7 +1791,7 @@ dependencies = [
  "napi-derive",
  "oxc",
  "oxc_napi",
- "oxc_sourcemap",
+ "oxc_sourcemap 1.0.9",
  "rustc-hash",
 ]
 
@@ -2113,7 +2161,7 @@ dependencies = [
  "memchr",
  "notify",
  "oxc",
- "oxc_index",
+ "oxc_index 3.0.0",
  "rolldown_common",
  "rolldown_ecmascript",
  "rolldown_ecmascript_utils",
@@ -2204,7 +2252,7 @@ dependencies = [
  "fast-glob",
  "itertools",
  "oxc",
- "oxc_index",
+ "oxc_index 3.0.0",
  "oxc_resolver",
  "rolldown_ecmascript",
  "rolldown_error",
@@ -2229,7 +2277,7 @@ dependencies = [
  "arcstr",
  "itertools",
  "oxc",
- "oxc_sourcemap",
+ "oxc_sourcemap 2.0.2",
  "rolldown_error",
  "self_cell",
 ]
@@ -2253,7 +2301,7 @@ dependencies = [
  "napi",
  "oxc",
  "oxc_resolver",
- "oxc_sourcemap",
+ "oxc_sourcemap 2.0.2",
  "rolldown-ariadne",
  "rolldown_utils",
  "ropey",
@@ -2289,7 +2337,7 @@ dependencies = [
  "async-trait",
  "dashmap",
  "derive_more",
- "oxc_index",
+ "oxc_index 3.0.0",
  "rolldown_common",
  "rolldown_ecmascript",
  "rolldown_error",
@@ -2510,7 +2558,7 @@ dependencies = [
  "criterion2",
  "memchr",
  "oxc",
- "oxc_sourcemap",
+ "oxc_sourcemap 2.0.2",
  "rolldown_utils",
  "rustc-hash",
 ]
@@ -2581,7 +2629,7 @@ dependencies = [
  "memchr",
  "mime",
  "oxc",
- "oxc_index",
+ "oxc_index 3.0.0",
  "phf",
  "rayon",
  "regex",
@@ -2733,9 +2781,9 @@ dependencies = [
 
 [[package]]
 name = "serde_json"
-version = "1.0.134"
+version = "1.0.139"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d00f4175c42ee48b15416f6193a959ba3a0d67fc699a0db9ad12df9f83991c7d"
+checksum = "44f86c3acccc9c65b153fe1b85a3be07fe5515274ec9f0653b4a0875731c72a6"
 dependencies = [
  "indexmap",
  "itoa",
@@ -2839,8 +2887,8 @@ name = "string_wizard"
 version = "0.0.26"
 dependencies = [
  "insta",
- "oxc_index",
- "oxc_sourcemap",
+ "oxc_index 3.0.0",
+ "oxc_sourcemap 2.0.2",
  "rustc-hash",
  "serde",
 ]
@@ -2851,8 +2899,8 @@ version = "0.0.26"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "baa2ddbd6b187e9467902cf1c0f90266969897659ec5e7cefb3433ff5ffcf97d"
 dependencies = [
- "oxc_index",
- "oxc_sourcemap",
+ "oxc_index 2.0.0",
+ "oxc_sourcemap 1.0.9",
  "rustc-hash",
  "serde",
 ]
@@ -3153,9 +3201,12 @@ checksum = "b6c140620e7ffbb22c2dee59cafe6084a59b5ffc27a8859a5f0d494b5d52b6be"
 
 [[package]]
 name = "uuid"
-version = "1.9.1"
+version = "1.14.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "5de17fd2f7da591098415cff336e12965a28061ddace43b59cb3c430179c9439"
+checksum = "93d59ca99a559661b96bf898d8fce28ed87935fd2bea9f05983c1464dd6c71b1"
+dependencies = [
+ "getrandom 0.3.1",
+]
 
 [[package]]
 name = "uuid-simd"
@@ -3210,6 +3261,15 @@ name = "wasi"
 version = "0.11.0+wasi-snapshot-preview1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "9c8d87e72b64a3b4db28d11ce29237c246188f4f51057d65a7eab63b7987e423"
+
+[[package]]
+name = "wasi"
+version = "0.13.3+wasi-0.2.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "26816d2e1a4a36a2940b96c5296ce403917633dff8f3440e9b236ed6f6bacad2"
+dependencies = [
+ "wit-bindgen-rt",
+]
 
 [[package]]
 name = "wasm-bindgen"
@@ -3447,6 +3507,15 @@ name = "windows_x86_64_msvc"
 version = "0.52.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "589f6da84c646204747d1270a2a5661ea66ed1cced2631d546fdfb155959f9ec"
+
+[[package]]
+name = "wit-bindgen-rt"
+version = "0.33.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "3268f3d866458b787f390cf61f4bbb563b922d091359f9608842999eaee3943c"
+dependencies = [
+ "bitflags 2.8.0",
+]
 
 [[package]]
 name = "xxhash-rust"

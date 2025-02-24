@@ -77,7 +77,7 @@ single_match_else = "allow"
 redundant_clone = "warn"
 
 [workspace.dependencies]
-criterion2                              = { version = "2.0.0", default-features = false }
+criterion2                              = { version = "3.0.0", default-features = false }
 css-module-lexer                        = "0.0.15"
 rolldown                                = { version = "0.1.0", path = "./crates/rolldown" }
 rolldown_common                         = { version = "0.1.0", path = "./crates/rolldown_common" }
@@ -178,9 +178,9 @@ oxc_transform_napi = { version = "0.52.0" }
 # oxc crates in their own repos
 # Versions must be relaxed for usage in oxc.
 # Please update with `cargo update oxc_resolver oxc_sourcemap oxc_index`
-oxc_index     = { version = "2", features = ["rayon", "serde"] }            # https://github.com/oxc-project/oxc-index-vec
+oxc_index     = { version = "3", features = ["rayon", "serde"] }            # https://github.com/oxc-project/oxc-index-vec
 oxc_resolver  = { version = "4", features = ["package_json_raw_json_api"] } # https://github.com/oxc-project/oxc-resolver
-oxc_sourcemap = { version = "1" }                                           # https://github.com/oxc-project/oxc-sourcemap
+oxc_sourcemap = { version = "2" }                                           # https://github.com/oxc-project/oxc-sourcemap
 
 [profile.release]
 codegen-units = 1

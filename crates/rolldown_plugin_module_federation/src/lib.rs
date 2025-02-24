@@ -103,7 +103,6 @@ impl ModuleFederationPlugin {
       .replace("__PLUGINS__", &self.generate_runtime_plugins())
       .replace("__SHARED__", &self.generate_shared_modules())
       .replace("__NAME__", &concat_string!("'", &self.options.name, "'"))
-      .to_string()
   }
 
   pub fn generate_init_host_code(&self) -> String {
@@ -136,7 +135,6 @@ impl ModuleFederationPlugin {
       .replace("__PLUGINS__", &self.generate_runtime_plugins())
       .replace("__NAME__", &concat_string!("'", &self.options.name, "'"))
       .replace("__SHARED__", &self.generate_shared_modules())
-      .to_string()
   }
 
   pub fn generate_runtime_plugins(&self) -> String {
@@ -346,8 +344,7 @@ impl Plugin for ModuleFederationPlugin {
       return Ok(Some(rolldown_plugin::HookLoadOutput {
         code: include_str!("runtime/init-remote-module.js")
           .replace("__MODULE_ID__", &concat_string!("'", remote_module_id, "'"))
-          .replace("__IS__SHARED__", "false")
-          .to_string(),
+          .replace("__IS__SHARED__", "false"),
         ..Default::default()
       }));
     }
@@ -356,16 +353,13 @@ impl Plugin for ModuleFederationPlugin {
       return Ok(Some(rolldown_plugin::HookLoadOutput {
         code: include_str!("runtime/init-remote-module.js")
           .replace("__MODULE_ID__", &concat_string!("'", remote_module_id, "'"))
-          .replace("__IS__SHARED__", "true")
-          .to_string(),
+          .replace("__IS__SHARED__", "true"),
         ..Default::default()
       }));
     }
     if detect_remote_module_type(args.id, &self.options).is_some() {
       return Ok(Some(rolldown_plugin::HookLoadOutput {
-        code: include_str!("runtime/remote-module.js")
-          .replace("__REMOTE__MODULE__ID__", args.id)
-          .to_string(),
+        code: include_str!("runtime/remote-module.js").replace("__REMOTE__MODULE__ID__", args.id),
         ..Default::default()
       }));
     }

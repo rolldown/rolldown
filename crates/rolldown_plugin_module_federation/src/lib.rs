@@ -14,11 +14,10 @@ use oxc::{
   },
   span::SPAN,
 };
-use rolldown_common::EmittedChunk;
+use rolldown_common::{EmittedChunk, Output};
 use rolldown_plugin::{HookResolveIdReturn, Plugin};
 use rolldown_utils::{concat_string, dashmap::FxDashMap};
 use rustc_hash::FxHashSet;
-use sugar_path::SugarPath;
 use utils::{
   detect_remote_module_type, generate_remote_module_is_cjs_placeholder, get_remote_module_prefix,
   ResolvedRemoteModule,
@@ -30,7 +29,6 @@ const REMOTE_MODULE_REGISTRY: &str = "mf:remote-module-registry.js";
 const INIT_REMOTE_MODULE_PREFIX: &str = "mf:init-remote-module:";
 const INIT_SHARED_MODULE_PREFIX: &str = "mf:init-shared-module:";
 const SHARED_MODULE_PREFIX: &str = "mf:shared-module:";
-const HOST_ENTRY_PREFIX: &str = "mf:host-entry:";
 
 #[derive(Debug)]
 pub struct ModuleFederationPlugin {
@@ -223,6 +221,8 @@ impl Plugin for ModuleFederationPlugin {
           ..Default::default()
         })
         .await?;
+    } else {
+      ctx.emit_chunk(EmittedChunk { id: INIT_HOST.to_string(), ..Default::default() }).await?;
     }
 
     if let Some(shared) = self.options.shared.as_ref() {
@@ -298,14 +298,6 @@ impl Plugin for ModuleFederationPlugin {
         ..Default::default()
       }));
     }
-    if args.is_entry && self.options.filename.is_none() && args.specifier != REMOTE_ENTRY {
-      let resolve_id = ctx.resolve(args.specifier, None, None).await??;
-      return Ok(Some(rolldown_plugin::HookResolveIdOutput {
-        id: concat_string!(HOST_ENTRY_PREFIX, resolve_id.id.to_slash_lossy()),
-        ..Default::default()
-      }));
-    }
-
     Ok(None)
   }
 
@@ -329,13 +321,6 @@ impl Plugin for ModuleFederationPlugin {
     if args.id == REMOTE_MODULE_REGISTRY {
       return Ok(Some(rolldown_plugin::HookLoadOutput {
         code: include_str!("runtime/remote-module-registry.js").to_string(),
-        ..Default::default()
-      }));
-    }
-    if args.id.starts_with(HOST_ENTRY_PREFIX) {
-      let id = &args.id[HOST_ENTRY_PREFIX.len()..];
-      return Ok(Some(rolldown_plugin::HookLoadOutput {
-        code: concat_string!("await import('", INIT_HOST, "').then(() => import('", id, "'));"),
         ..Default::default()
       }));
     }
@@ -397,6 +382,21 @@ impl Plugin for ModuleFederationPlugin {
         fields.program.body.extend(statements);
         fields.program.body.extend(old_body);
       }
+
+      if args.is_user_defined_entry && self.options.filename.is_none() {
+        let old_body = fields.program.body.drain(..).collect::<Vec<_>>();
+        fields.program.body.push(Statement::from(
+          ast_builder.module_declaration_import_declaration(
+            SPAN,
+            None,
+            ast_builder.string_literal(SPAN, ast_builder.atom(INIT_HOST), None),
+            None,
+            NONE,
+            ImportOrExportKind::Value,
+          ),
+        ));
+        fields.program.body.extend(old_body);
+      }
     });
 
     Ok(args.ast)
@@ -425,18 +425,16 @@ impl Plugin for ModuleFederationPlugin {
     _ctx: &rolldown_plugin::PluginContext,
     args: &rolldown_plugin::HookRenderChunkArgs<'_>,
   ) -> rolldown_plugin::HookRenderChunkReturn {
-    if let Some(facade_module_id) = &args.chunk.facade_module_id {
-      if facade_module_id.as_ref() == REMOTE_ENTRY || facade_module_id.as_ref() == INIT_HOST {
-        let mut code = args.code.clone();
-        for remote_module_ref in &self.resolved_remote_modules {
-          let remote_module = remote_module_ref.value();
-          code = code.replace(
-            &remote_module.placeholder,
-            if remote_module.is_cjs { "true" } else { "false" },
-          );
-        }
-        return Ok(Some(rolldown_plugin::HookRenderChunkOutput { code, map: None }));
+    if args.chunk.facade_module_id.as_deref() == Some(REMOTE_ENTRY)
+      || args.chunk.module_ids.iter().any(|module_id| module_id.as_ref() == INIT_HOST)
+    {
+      let mut code = args.code.clone();
+      for remote_module_ref in &self.resolved_remote_modules {
+        let remote_module = remote_module_ref.value();
+        code = code
+          .replace(&remote_module.placeholder, if remote_module.is_cjs { "true" } else { "false" });
       }
+      return Ok(Some(rolldown_plugin::HookRenderChunkOutput { code, map: None }));
     }
     Ok(None)
   }
@@ -446,6 +444,19 @@ impl Plugin for ModuleFederationPlugin {
     ctx: &rolldown_plugin::PluginContext,
     args: &mut rolldown_plugin::HookGenerateBundleArgs<'_>,
   ) -> rolldown_plugin::HookNoopReturn {
+    if self.options.filename.is_none() {
+      // Remove unused INIT HOST entry chunk.
+      if let Some(index) = args.bundle.iter().enumerate().find_map(|(index, chunk)| {
+        if let Output::Chunk(chunk) = chunk {
+          if chunk.is_entry && chunk.facade_module_id.as_deref() == Some(INIT_HOST) {
+            return Some(index);
+          }
+        }
+        None
+      }) {
+        args.bundle.remove(index);
+      }
+    }
     if self.options.manifest.is_some() && self.options.filename.is_some() {
       generate_manifest(ctx, args, &self.options, &self.resolved_remote_modules).await?;
     }

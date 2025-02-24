@@ -682,7 +682,7 @@ impl BindImportsAndExportsContext<'_> {
     // Is this an external file?
     let importee_id = importer.import_records[named_import.record_id].resolved_module;
     let importee = match &self.index_modules[importee_id] {
-      Module::Normal(importee) => importee.as_ref(),
+      Module::Normal(importee) => importee,
       Module::External(external) => return ImportStatus::External(external.namespace_ref),
     };
 

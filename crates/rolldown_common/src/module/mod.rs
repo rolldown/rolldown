@@ -11,8 +11,8 @@ use crate::{
 
 #[derive(Debug)]
 pub enum Module {
-  Normal(Box<NormalModule>),
-  External(Box<ExternalModule>),
+  Normal(NormalModule),
+  External(ExternalModule),
 }
 
 impl Module {
@@ -52,11 +52,11 @@ impl Module {
   }
 
   pub fn normal(v: NormalModule) -> Self {
-    Module::Normal(Box::new(v))
+    Module::Normal(v)
   }
 
   pub fn external(v: ExternalModule) -> Self {
-    Module::External(Box::new(v))
+    Module::External(v)
   }
 
   pub fn as_normal(&self) -> Option<&NormalModule> {
@@ -143,12 +143,12 @@ impl Module {
 
 impl From<NormalModule> for Module {
   fn from(module: NormalModule) -> Self {
-    Module::Normal(Box::new(module))
+    Module::Normal(module)
   }
 }
 
 impl From<ExternalModule> for Module {
   fn from(module: ExternalModule) -> Self {
-    Module::External(Box::new(module))
+    Module::External(module)
   }
 }

@@ -85,7 +85,7 @@ impl GenerateContext<'_> {
       if ast.is_body_empty() {
         return None;
       }
-      Some(&**module)
+      Some(module)
     })
   }
 }

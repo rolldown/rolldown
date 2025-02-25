@@ -73,7 +73,6 @@ export const rawImportModule = import.meta.glob(
   { query: '?raw', import: '*' },
 )
 
-// todo: shouldn't contain './index.ts'
 export const excludeSelf = import.meta.glob(
   './*.ts',
   // for test: annotation contain ")"
@@ -81,6 +80,7 @@ export const excludeSelf = import.meta.glob(
    * for test: annotation contain ")"
    * */
 )
+export const excludeSelfRaw = import.meta.glob('./*.ts', { query: '?raw' })
 
 // unresolved import
 // export const customQueryString = import.meta.glob('./*.ts', { query: 'custom' })

@@ -82,10 +82,8 @@ const rawImportModule = {
 	"./modules/a.ts": () => import("./a3.js"),
 	"./modules/b.ts": () => import("./b3.js")
 };
-const excludeSelf = {
-	"./index.ts": () => import("./index.js"),
-	"./sibling.ts": () => import("./sibling.js")
-};
+const excludeSelf = { "./sibling.ts": () => import("./sibling.js") };
+const excludeSelfRaw = { "./sibling.ts": () => import("./sibling2.js") };
 const parent = {};
 const cleverCwd1 = { "./node_modules/framework/pages/hello.page.js": () => import("./hello.page.js") };
 const cleverCwd2 = {
@@ -96,4 +94,4 @@ const cleverCwd2 = {
 };
 
 //#endregion
-export { basic, basicEager, basicEagerWithObjectKeys, basicEagerWithObjectValues, basicWithObjectKeys, basicWithObjectValues, cleverCwd1, cleverCwd2, eagerAs, excludeSelf, ignore, ignoreWithObjectKeys, ignoreWithObjectValues, namedDefault, namedDefaultWithObjectKeys, namedDefaultWithObjectValues, namedEager, namedEagerWithObjectKeys, namedEagerWithObjectValues, parent, rawImportModule };
+export { basic, basicEager, basicEagerWithObjectKeys, basicEagerWithObjectValues, basicWithObjectKeys, basicWithObjectValues, cleverCwd1, cleverCwd2, eagerAs, excludeSelf, excludeSelfRaw, ignore, ignoreWithObjectKeys, ignoreWithObjectValues, namedDefault, namedDefaultWithObjectKeys, namedDefaultWithObjectValues, namedEager, namedEagerWithObjectKeys, namedEagerWithObjectValues, parent, rawImportModule };

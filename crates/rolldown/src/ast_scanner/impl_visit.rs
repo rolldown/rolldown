@@ -12,6 +12,7 @@ use rolldown_common::{
   EcmaModuleAstUsage, ImportKind, ImportRecordMeta, StmtInfoMeta, ThisExprReplaceKind,
   RUNTIME_MODULE_ID,
 };
+#[cfg(debug_assertions)]
 use rolldown_ecmascript::ToSourceString;
 use rolldown_error::BuildDiagnostic;
 use rolldown_std_utils::OptionExt;

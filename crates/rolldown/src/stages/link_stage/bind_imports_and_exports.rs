@@ -672,7 +672,7 @@ impl BindImportsAndExportsContext<'_> {
     }
   }
 
-  fn advance_import_tracker(&self, ctx: &mut MatchingContext) -> ImportStatus {
+  fn advance_import_tracker(&self, ctx: &MatchingContext) -> ImportStatus {
     let tracker = ctx.current_tracker();
     let importer = &self.index_modules[tracker.importer]
       .as_normal()

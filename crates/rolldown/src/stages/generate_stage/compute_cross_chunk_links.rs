@@ -51,7 +51,7 @@ impl GenerateStage<'_> {
 
     self.compute_chunk_imports(
       chunk_graph,
-      &mut index_chunk_depended_symbols,
+      &index_chunk_depended_symbols,
       &mut index_chunk_exported_symbols,
       &mut index_cross_chunk_imports,
       &mut index_imports_from_other_chunks,
@@ -136,7 +136,7 @@ impl GenerateStage<'_> {
   #[allow(clippy::too_many_lines)]
   fn collect_depended_symbols(
     &mut self,
-    chunk_graph: &mut ChunkGraph,
+    chunk_graph: &ChunkGraph,
     index_chunk_depended_symbols: &mut IndexChunkDependedSymbols,
     index_chunk_imports_from_external_modules: &mut IndexChunkImportsFromExternalModules,
     index_cross_chunk_dynamic_imports: &mut IndexCrossChunkDynamicImports,
@@ -296,9 +296,9 @@ impl GenerateStage<'_> {
   /// - Filter out depended symbols to come from other chunks
   /// - Mark exports of importee chunks
   fn compute_chunk_imports(
-    &mut self,
-    chunk_graph: &mut ChunkGraph,
-    index_chunk_depended_symbols: &mut IndexChunkDependedSymbols,
+    &self,
+    chunk_graph: &ChunkGraph,
+    index_chunk_depended_symbols: &IndexChunkDependedSymbols,
     index_chunk_exported_symbols: &mut IndexChunkExportedSymbols,
     index_cross_chunk_imports: &mut IndexCrossChunkImports,
     index_imports_from_other_chunks: &mut IndexImportsFromOtherChunks,
@@ -351,7 +351,7 @@ impl GenerateStage<'_> {
   }
 
   fn deconflict_exported_names(
-    &mut self,
+    &self,
     chunk_graph: &mut ChunkGraph,
     index_chunk_exported_symbols: &IndexChunkExportedSymbols,
     index_imports_from_other_chunks: &mut IndexImportsFromOtherChunks,

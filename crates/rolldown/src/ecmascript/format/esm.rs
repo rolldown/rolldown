@@ -11,7 +11,7 @@ use crate::{
 };
 
 pub fn render_esm<'code>(
-  ctx: &mut GenerateContext<'_>,
+  ctx: &GenerateContext<'_>,
   hashbang: Option<&'code str>,
   banner: Option<&'code str>,
   intro: Option<&'code str>,

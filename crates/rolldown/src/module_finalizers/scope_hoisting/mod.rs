@@ -575,7 +575,7 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
   /// try rewrite `foo_exports.bar` or `foo_exports['bar']`  to `bar` directly
   /// try rewrite `import.meta`
   fn try_rewrite_member_expr(
-    &mut self,
+    &self,
     member_expr: &ast::MemberExpression<'ast>,
   ) -> Option<Expression<'ast>> {
     match member_expr {
@@ -637,7 +637,7 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
 
   /// rewrite toplevel `class ClassName {}` to `var ClassName = class {}`
   fn get_transformed_class_decl(
-    &mut self,
+    &self,
     class: &mut allocator::Box<'ast, ast::Class<'ast>>,
   ) -> Option<ast::Declaration<'ast>> {
     let scope_id = class.scope_id.get()?;
@@ -678,7 +678,7 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
 
   #[allow(clippy::too_many_lines, clippy::collapsible_else_if)]
   fn try_rewrite_global_require_call(
-    &mut self,
+    &self,
     call_expr: &mut ast::CallExpression<'ast>,
   ) -> Option<Expression<'ast>> {
     if call_expr.is_global_require_call(
@@ -802,8 +802,8 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
   }
 
   fn try_rewrite_inline_dynamic_import_expr(
-    &mut self,
-    import_expr: &mut ImportExpression<'ast>,
+    &self,
+    import_expr: &ImportExpression<'ast>,
   ) -> Option<Expression<'ast>> {
     if self.ctx.options.inline_dynamic_imports {
       let rec_id = self.ctx.module.imports.get(&import_expr.span)?;
@@ -905,7 +905,7 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
   }
 
   #[allow(clippy::too_many_lines)]
-  fn remove_unused_top_level_stmt(&mut self, program: &mut ast::Program<'ast>) {
+  fn remove_unused_top_level_stmt(&self, program: &mut ast::Program<'ast>) {
     let old_body = self.alloc.take(&mut program.body);
     // the first statement info is the namespace variable declaration
     // skip first statement info to make sure `program.body` has same index as `stmt_infos`
@@ -1118,7 +1118,7 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
   }
 
   fn keep_name_helper_for_class(
-    &mut self,
+    &self,
     id: Option<&BindingIdentifier<'ast>>,
   ) -> Option<ClassElement<'ast>> {
     if !self.ctx.options.keep_names {

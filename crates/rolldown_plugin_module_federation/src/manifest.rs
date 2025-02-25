@@ -9,7 +9,7 @@ use crate::{utils::ResolvedRemoteModule, ModuleFederationPluginOption};
 #[allow(clippy::too_many_lines)]
 pub async fn generate_manifest(
   ctx: &rolldown_plugin::PluginContext,
-  args: &mut rolldown_plugin::HookGenerateBundleArgs<'_>,
+  args: &rolldown_plugin::HookGenerateBundleArgs<'_>,
   options: &ModuleFederationPluginOption,
   resolved_shared_modules: &FxDashMap<ArcStr, ResolvedRemoteModule>,
 ) -> anyhow::Result<()> {

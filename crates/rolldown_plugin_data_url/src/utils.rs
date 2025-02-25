@@ -1,14 +1,15 @@
-use std::sync::LazyLock;
-
-use regex::Regex;
+use nom::{
+  bytes::complete::{tag, take_till, take_while},
+  character::complete::char,
+  combinator::{map, opt, recognize},
+  error::Error,
+  sequence::preceded,
+  IResult, Parser,
+};
 
 pub fn is_data_url(s: &str) -> bool {
   s.trim_start().starts_with("data:")
 }
-
-static DATA_URL_RE: LazyLock<Regex> = LazyLock::new(|| {
-  Regex::new("^data:([^/]+\\/[^;]+)(;charset=[^;]+)?(;base64)?,([\\s\\S]*)$").unwrap()
-});
 
 pub struct ParsedDataUrl<'a> {
   pub mime: &'a str,
@@ -16,12 +17,43 @@ pub struct ParsedDataUrl<'a> {
   pub data: &'a str,
 }
 
+#[inline]
+// Parse the data URL with a more flexible approach
+fn parse_data_url_nom(input: &str) -> IResult<&str, ParsedDataUrl> {
+  // Start with "data:" prefix
+  let (input, _) = tag("data:")(input)?;
+
+  // Parse the MIME type
+  let (input, mime) = recognize(take_till(|c| c == ';' || c == ',')).parse(input)?;
+
+  // Handle the case where there's no charset or base64 marker
+  if let Ok((remaining, data)) =
+    preceded(char::<_, Error<_>>(','), take_while(|_| true)).parse(input)
+  {
+    return Ok((
+      remaining,
+      ParsedDataUrl { mime: mime.trim(), is_base64: false, data: data.trim() },
+    ));
+  }
+
+  // Parse optional charset
+  let (input, _) =
+    opt(preceded(tag(";charset="), take_till(|c| c == ';' || c == ','))).parse(input)?;
+
+  // Check for base64 encoding
+  let (input, is_base64) = map(opt(tag(";base64")), |opt_tag| opt_tag.is_some()).parse(input)?;
+
+  // Parse the data part after the comma
+  let (remaining, data) = preceded(char(','), take_while(|_| true)).parse(input)?;
+
+  Ok((remaining, ParsedDataUrl { mime: mime.trim(), is_base64, data: data.trim() }))
+}
+
 pub fn parse_data_url(dataurl: &str) -> Option<ParsedDataUrl> {
-  let captures = DATA_URL_RE.captures(dataurl)?;
-  let mime = captures.get(1).map(|m| m.as_str())?;
-  let is_base64 = captures.get(3).is_some();
-  let data = captures.get(4).map(|m| m.as_str())?;
-  Some(ParsedDataUrl { mime: mime.trim(), is_base64, data: data.trim() })
+  match parse_data_url_nom(dataurl) {
+    Ok((_, parsed)) => Some(parsed),
+    Err(_) => None,
+  }
 }
 
 #[cfg(test)]

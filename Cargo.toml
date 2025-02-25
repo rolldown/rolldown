@@ -149,6 +149,7 @@ mime                = "0.3.17"
 napi                = { version = "3.0.0-alpha.31", features = ["async", "anyhow"] }
 napi-build          = { version = "2.1.5" }
 napi-derive         = { version = "3.0.0-alpha.28", default-features = false, features = ["type-def"] }
+nom                 = "8.0.0"
 notify              = { version = "8.0.0" }
 phf                 = "0.11.3"
 rayon               = "1.10.0"

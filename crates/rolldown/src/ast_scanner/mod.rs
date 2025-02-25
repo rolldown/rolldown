@@ -605,7 +605,7 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
     );
     self.result.imports.insert(decl.span, rec_id);
     // // `import '...'` or `import {} from '...'`
-    if decl.specifiers.as_ref().map_or(true, |s| s.is_empty()) {
+    if decl.specifiers.as_ref().is_none_or(|s| s.is_empty()) {
       self.result.import_records[rec_id].meta.insert(ImportRecordMeta::IS_PLAIN_IMPORT);
     }
 

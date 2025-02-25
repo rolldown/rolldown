@@ -131,12 +131,12 @@ futures             = "0.3.30"
 glob                = "0.3.1"
 heck                = { version = "0.5.0" }
 indexmap            = "2.2.6"
-infer               = "0.16.0"
+infer               = "0.19.0"
 insta               = "1.39.0"
 itertools           = "0.14.0"
 itoa                = "1.0.11"
 json-strip-comments = "1.0.4"
-jsonschema          = { version = "0.28.0", default-features = false }
+jsonschema          = { version = "0.29.0", default-features = false }
 memchr              = "2.7.2"
 mimalloc            = "0.1.42"
 mime                = "0.3.17"

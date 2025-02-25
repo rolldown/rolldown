@@ -1,4 +1,4 @@
-use glob::glob;
+use glob::{glob, Pattern};
 use oxc::{
   allocator::Vec,
   ast::{
@@ -208,31 +208,53 @@ fn extract_import_glob_options(arg: &Argument, opts: &mut ImportGlobOptions) {
 
 impl<'ast> GlobImportVisit<'ast, '_> {
   fn eval_glob_expr(&mut self, arg: &Argument, files: &mut std::vec::Vec<String>) {
-    let mut glob_exprs = vec![];
+    let mut positive_globs = vec![];
+    let mut negated_globs = vec![];
     match arg {
       Argument::StringLiteral(str) => {
-        glob_exprs.push(str.value.as_str());
+        if let Some(glob) = str.value.strip_prefix('!') {
+          negated_globs.push(glob);
+        } else {
+          positive_globs.push(str.value.as_str());
+        }
       }
       Argument::ArrayExpression(array_expr) => {
         for expr in &array_expr.elements {
           if let ArrayExpressionElement::StringLiteral(str) = expr {
-            glob_exprs.push(str.value.as_str());
+            if let Some(glob) = str.value.strip_prefix('!') {
+              negated_globs.push(glob);
+            } else {
+              positive_globs.push(str.value.as_str());
+            }
           }
         }
       }
       _ => {}
     }
 
-    for glob_expr in glob_exprs {
+    let root = &self.root;
+    let dir = Path::new(self.id).parent().unwrap_or_else(|| Path::new(root));
+    let dir = if dir.to_slash_lossy() == "" { Path::new(root) } else { dir };
+
+    let negated_globs = negated_globs
+      .iter()
+      .map(|g| {
+        let g = preprocess_glob_expr(g);
+        let g = to_absolute_glob(&g, dir, root).unwrap();
+        Pattern::new(&g).unwrap()
+      })
+      .collect::<std::vec::Vec<_>>();
+
+    for glob_expr in positive_globs {
       let processed_glob_expr = preprocess_glob_expr(glob_expr);
-      let root = &self.root.to_slash_lossy();
-      let (absolute_glob, mut dir) = to_absolute_glob(&processed_glob_expr, root, self.id).unwrap();
-      if dir == "" {
-        dir = Cow::Borrowed(root);
-      }
+      let absolute_glob = to_absolute_glob(&processed_glob_expr, dir, root).unwrap();
       // TODO handle error
       for file in glob(&absolute_glob).unwrap() {
-        let file = file.unwrap().as_path().relative(dir.as_ref()).to_slash_lossy().to_string();
+        let file = file.unwrap();
+        if negated_globs.iter().any(|g| g.matches_path(&file)) {
+          continue;
+        }
+        let file = file.relative(dir).to_slash_lossy().to_string();
         let prefix = if file.starts_with('.') { "" } else { "./" };
         files.push(format!("{prefix}{file}"));
       }
@@ -429,31 +451,19 @@ fn preprocess_glob_expr(glob_expr: &str) -> String {
   new_glob_expr
 }
 
-fn to_absolute_glob<'a>(
-  mut glob: &'a str,
-  root: &'a str,
-  importer: &'a str,
-) -> anyhow::Result<(String, Cow<'a, str>)> {
-  let mut pre: Option<char> = None;
-  if glob.starts_with('!') {
-    pre = Some('!');
-    glob = &glob[1..];
-  }
-
-  let dir = Path::new(importer).parent().unwrap_or_else(|| Path::new(root));
-
-  let mut ret = if let Some(pre) = pre { String::from(pre) } else { String::new() };
-
-  if let Some(glob) = glob.strip_prefix('/') {
-    ret.push_str(&Path::new(root).join(glob).to_slash_lossy());
+fn to_absolute_glob(glob: &str, dir: &Path, root: &Path) -> anyhow::Result<String> {
+  let absolute_glob = if let Some(glob) = glob.strip_prefix('/') {
+    root.join(glob)
   } else if glob.starts_with('.') {
-    ret.push_str(&dir.join(glob).to_slash_lossy());
+    dir.join(glob)
   } else if glob.starts_with("**") {
-    ret.push_str(glob);
+    // TODO allow this only when pattern is negated to avoid globbing entire fs
+    // or consider making it relative to root when it's not negated
+    return Ok(glob.to_string());
   } else {
     // https://github.com/rolldown/vite/blob/454c8fff9f7115ed29281c2d927366280508a0ab/packages/vite/src/node/plugins/importMetaGlob.ts#L563-L569
     // Needs to investigate if oxc resolver support this pattern
     return Err(anyhow::format_err!("Invalid glob pattern: {}", glob));
   };
-  Ok((ret, dir.to_slash_lossy()))
+  Ok(absolute_glob.to_slash_lossy().to_string())
 }

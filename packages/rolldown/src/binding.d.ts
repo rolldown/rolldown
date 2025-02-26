@@ -150,41 +150,6 @@ export declare class Bundler {
   generateHmrPatch(changedFiles: Array<string>): Promise<string>
 }
 
-export declare class MagicString {
-  /** Get source text from utf8 offset. */
-  getSourceText(start: number, end: number): string
-  /** Get 0-based line and column number from utf8 offset. */
-  getLineColumnNumber(offset: number): LineColumn
-  /** Get UTF16 byte offset from UTF8 byte offset. */
-  getUtf16ByteOffset(offset: number): number
-  length(): number
-  toString(): string
-  hasChanged(): boolean
-  append(input: string): this
-  appendLeft(index: number, input: string): this
-  appendRight(index: number, input: string): this
-  indent(): this
-  prepend(input: string): this
-  prependLeft(index: number, input: string): this
-  prependRight(index: number, input: string): this
-  relocate(start: number, end: number, to: number): this
-  remove(start: number, end: number): this
-  generateMap(options?: Partial<GenerateDecodedMapOptions>): {
-    toString: () => string;
-    toUrl: () => string;
-    toMap: () => {
-      file?: string
-      mappings: string
-      names: Array<string>
-      sourceRoot?: string
-      sources: Array<string>
-      sourcesContent?: Array<string>
-      version: number
-      x_google_ignoreList?: Array<number>
-    }
-  }
-}
-
 export declare class ParallelJsPluginRegistry {
   id: number
   workerCount: number
@@ -196,7 +161,6 @@ export declare class ParseResult {
   get module(): EcmaScriptModule
   get comments(): Array<Comment>
   get errors(): Array<OxcError>
-  get magicString(): MagicString
 }
 
 export declare class RenderedChunk {
@@ -855,15 +819,6 @@ export interface ExtensionAliasItem {
   replacements: Array<string>
 }
 
-export interface GenerateDecodedMapOptions {
-  /** The filename of the file containing the original source. */
-  source?: string
-  /** Whether to include the original content in the map's `sourcesContent` array. */
-  includeContent: boolean
-  /** Whether the mapping should be high-resolution. */
-  hires: boolean | 'boundary'
-}
-
 export type HelperMode = /**
  * Runtime mode (default): Helper functions are imported from a runtime package.
  *
@@ -1051,15 +1006,6 @@ export interface JsxOptions {
   refresh?: boolean | ReactRefreshOptions
 }
 
-export interface LineColumn {
-  line: number
-  column: number
-}
-
-export interface OverwriteOptions {
-  contentOnly: boolean
-}
-
 export interface OxcError {
   severity: Severity
   message: string
@@ -1088,11 +1034,6 @@ export interface ParserOptions {
    * Default: true
    */
   preserveParens?: boolean
-  /**
-   * Default: false
-   * @experimental Only for internal usage on Rolldown and Vite.
-   */
-  convertSpanUtf16?: boolean
 }
 
 /** Parse synchronously. */
@@ -1145,12 +1086,6 @@ export interface SourceMap {
   sourcesContent?: Array<string>
   version: number
   x_google_ignoreList?: Array<number>
-}
-
-export interface SourceMapOptions {
-  includeContent?: boolean
-  source?: string
-  hires?: boolean
 }
 
 export interface Span {

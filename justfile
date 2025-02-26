@@ -149,4 +149,3 @@ changelog:
 
 check-setup-prerequisites:
     node ./scripts/misc/setup-prerequisites/node.js
-

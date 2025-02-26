@@ -1,18 +1,61 @@
-use std::sync::LazyLock;
-
-use regex::Regex;
+use oxc::syntax::identifier;
 use rustc_hash::FxHashMap;
 
-static OBJECT_RE: LazyLock<Regex> = LazyLock::new(|| {
-  let pattern = r"^([_$a-zA-Z\xA0-\uFFFF][_$a-zA-Z0-9\xA0-\uFFFF]*)(\.([_$a-zA-Z\xA0-\uFFFF][_$a-zA-Z0-9\xA0-\uFFFF]*))+$";
-  Regex::new(pattern).expect("Should be valid regex")
-});
+/// Checks if a string matches the pattern of an object property access chain
+/// (e.g., "process.env.NODE_ENV").
+///
+/// The pattern requires:
+/// 1. A valid identifier at the start
+/// 2. One or more dot-separated valid identifiers following it
+///
+/// Valid identifiers follow JavaScript rules: they start with a letter, underscore,
+/// dollar sign, or Unicode character, and can contain numbers in subsequent positions.
+fn is_object_property_chain(s: &str) -> bool {
+  // Empty string is not a valid object property chain
+  if s.is_empty() {
+    return false;
+  }
+
+  // Split the string by dots
+  let parts: Vec<&str> = s.split('.').collect();
+
+  // Must have at least two parts (object.property)
+  if parts.len() < 2 {
+    return false;
+  }
+
+  // Check each part is a valid identifier
+  for part in parts {
+    // Empty part means there were consecutive dots or a trailing/leading dot
+    if part.is_empty() {
+      return false;
+    }
+
+    // Check first character is valid for identifier start
+    let mut chars = part.chars();
+    let Some(first) = chars.next() else {
+      return false;
+    };
+    if !identifier::is_identifier_start(first) {
+      return false;
+    }
+
+    // Check remaining characters are valid for identifier parts
+    for c in chars {
+      if !identifier::is_identifier_part(c) {
+        return false;
+      }
+    }
+  }
+
+  true
+}
 
 pub fn expand_typeof_replacements(values: &FxHashMap<String, String>) -> Vec<(String, String)> {
   let mut replacements: Vec<(String, String)> = Vec::new();
 
   for key in values.keys() {
-    if OBJECT_RE.is_match(key) {
+    if is_object_property_chain(key) {
       // Skip last part
       replacements.extend(key.match_indices('.').map(|(index, _)| {
         let match_str = &key[..index];

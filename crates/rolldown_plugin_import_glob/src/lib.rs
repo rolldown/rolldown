@@ -129,11 +129,7 @@ impl<'ast> GlobImportVisit<'ast, '_> {
     match call_expr.arguments.as_slice() {
       [first] => self.eval_glob_expr(first, &mut files),
       // import.meta.glob('./dir/*.js', { import: 'setup' })
-      [first, second] => {
-        self.eval_glob_expr(first, &mut files);
-        extract_import_glob_options(second, &mut opts);
-      }
-      [first, second, _rest @ ..] => {
+      [first, second, ..] => {
         self.eval_glob_expr(first, &mut files);
         extract_import_glob_options(second, &mut opts);
       }

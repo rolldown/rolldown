@@ -5156,6 +5156,10 @@ expression: output
 
 - main-!~{000}~.js => main-D-HGS_0P.js
 
+# tests/rolldown/topics/keep_names/declaration2
+
+- main-!~{000}~.js => main-CgMAi6lp.js
+
 # tests/rolldown/topics/keep_names/expression
 
 - main-!~{000}~.js => main-32o5VT06.js

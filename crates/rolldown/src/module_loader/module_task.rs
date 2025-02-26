@@ -342,6 +342,7 @@ impl ModuleTask {
     .await
   }
 
+  #[allow(clippy::too_many_lines)]
   pub async fn resolve_dependencies(
     &self,
     dependencies: &IndexVec<ImportRecordIdx, RawImportRecord>,

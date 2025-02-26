@@ -10,6 +10,7 @@ pub struct DiagnosableResolveError {
   pub importee: DiagnosableArcstr,
   pub reason: String,
   pub title: Option<&'static str>,
+  pub help: Option<String>,
 }
 
 impl BuildEvent for DiagnosableResolveError {
@@ -40,5 +41,6 @@ impl BuildEvent for DiagnosableResolveError {
       _ => {}
     };
     diagnostic.title = self.message(opts);
+    diagnostic.help.clone_from(&self.help);
   }
 }

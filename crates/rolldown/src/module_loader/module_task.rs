@@ -402,6 +402,7 @@ impl ModuleTask {
                     },
                     "Module not found.".into(),
                     Some("UNRESOLVED_IMPORT"),
+                    None,
                   ));
                 } else {
                   warnings.push(
@@ -417,6 +418,7 @@ impl ModuleTask {
                       },
                       "Module not found, treating it as an external dependency".into(),
                       Some("UNRESOLVED_IMPORT"),
+                      None,
                     )
                     .with_severity_warning(),
                   );
@@ -443,6 +445,7 @@ impl ModuleTask {
                   DiagnosableArcstr::Span(dep.state.span)
                 },
                 reason,
+                None,
                 None,
               ));
             }

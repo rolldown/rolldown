@@ -83,8 +83,9 @@ impl BuildDiagnostic {
     importee: DiagnosableArcstr,
     reason: String,
     title: Option<&'static str>,
+    help: Option<String>,
   ) -> Self {
-    Self::new_inner(DiagnosableResolveError { source, importer_id, importee, reason, title })
+    Self::new_inner(DiagnosableResolveError { source, importer_id, importee, reason, title, help })
   }
 
   pub fn unloadable_dependency(

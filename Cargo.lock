@@ -2484,7 +2484,6 @@ name = "rolldown_plugin_data_url"
 version = "0.1.0"
 dependencies = [
  "base64-simd",
- "nom",
  "rolldown_common",
  "rolldown_plugin",
  "rolldown_utils",
@@ -2531,7 +2530,6 @@ dependencies = [
 name = "rolldown_plugin_load_fallback"
 version = "0.1.0"
 dependencies = [
- "regex",
  "rolldown_plugin",
  "rolldown_utils",
 ]
@@ -2737,6 +2735,7 @@ dependencies = [
  "infer",
  "memchr",
  "mime",
+ "nom",
  "oxc",
  "oxc_index",
  "phf",

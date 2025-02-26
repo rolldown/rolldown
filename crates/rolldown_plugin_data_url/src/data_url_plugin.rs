@@ -5,9 +5,10 @@ use rolldown_plugin::{
   HookLoadArgs, HookLoadOutput, HookLoadReturn, HookResolveIdArgs, HookResolveIdOutput,
   HookResolveIdReturn, Plugin, PluginContext,
 };
-use rolldown_utils::dashmap::FxDashMap;
-
-use crate::utils::{is_data_url, parse_data_url};
+use rolldown_utils::{
+  dashmap::FxDashMap,
+  dataurl::{is_data_url, parse_data_url},
+};
 
 #[derive(Debug)]
 pub struct ResolvedDataUrl {

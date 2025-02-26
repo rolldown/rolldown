@@ -11,72 +11,69 @@ const basic = {
 	"./modules/index.ts": () => import("./modules.js")
 };
 const basicWithObjectKeys = Object.keys({
-	"./modules/a.ts": () => import("./a.js"),
-	"./modules/b.ts": () => import("./b.js"),
-	"./modules/index.ts": () => import("./modules.js")
+	"./modules/a.ts": 0,
+	"./modules/b.ts": 0,
+	"./modules/index.ts": 0
 });
-const basicWithObjectValues = Object.values({
-	"./modules/a.ts": () => import("./a.js"),
-	"./modules/b.ts": () => import("./b.js"),
-	"./modules/index.ts": () => import("./modules.js")
-});
+const basicWithObjectValues = Object.values([
+	() => import("./a.js"),
+	() => import("./b.js"),
+	() => import("./modules.js")
+]);
 const basicEager = {
 	"./modules/a.ts": a_exports,
 	"./modules/b.ts": b_exports,
 	"./modules/index.ts": modules_exports
 };
 const basicEagerWithObjectKeys = Object.keys({
-	"./modules/a.ts": a_exports,
-	"./modules/b.ts": b_exports,
-	"./modules/index.ts": modules_exports
+	"./modules/a.ts": 0,
+	"./modules/b.ts": 0,
+	"./modules/index.ts": 0
 });
-const basicEagerWithObjectValues = Object.values({
-	"./modules/a.ts": a_exports,
-	"./modules/b.ts": b_exports,
-	"./modules/index.ts": modules_exports
-});
+const basicEagerWithObjectValues = Object.values([
+	a_exports,
+	b_exports,
+	modules_exports
+]);
 const ignore = {
 	"./modules/a.ts": () => import("./a.js"),
 	"./modules/b.ts": () => import("./b.js")
 };
 const ignoreWithObjectKeys = Object.keys({
-	"./modules/a.ts": () => import("./a.js"),
-	"./modules/b.ts": () => import("./b.js")
+	"./modules/a.ts": 0,
+	"./modules/b.ts": 0
 });
-const ignoreWithObjectValues = Object.values({
-	"./modules/a.ts": () => import("./a.js"),
-	"./modules/b.ts": () => import("./b.js")
-});
+const ignoreWithObjectValues = Object.values([() => import("./a.js"), () => import("./b.js")]);
 const namedEager = {
 	"./modules/a.ts": name$1,
 	"./modules/b.ts": name$2,
 	"./modules/index.ts": name$3
 };
 const namedEagerWithObjectKeys = Object.keys({
-	"./modules/a.ts": name$1,
-	"./modules/b.ts": name$2,
-	"./modules/index.ts": name$3
+	"./modules/a.ts": 0,
+	"./modules/b.ts": 0,
+	"./modules/index.ts": 0
 });
-const namedEagerWithObjectValues = Object.values({
-	"./modules/a.ts": name$1,
-	"./modules/b.ts": name$2,
-	"./modules/index.ts": name$3
-});
+const namedEagerWithObjectValues = Object.values([
+	name$1,
+	name$2,
+	name$3
+]);
 const namedDefault = {
 	"./modules/a.ts": () => import("./a.js").then((m) => m.default),
 	"./modules/b.ts": () => import("./b.js").then((m) => m.default),
 	"./modules/index.ts": () => import("./modules.js").then((m) => m.default)
 };
 const namedDefaultWithObjectKeys = Object.keys({
-	"./modules/a.ts": () => import("./a.js").then((m) => m.default),
-	"./modules/b.ts": () => import("./b.js").then((m) => m.default),
-	"./modules/index.ts": () => import("./modules.js").then((m) => m.default)
+	"./modules/a.ts": 0,
+	"./modules/b.ts": 0,
+	"./modules/index.ts": 0
 });
-const namedDefaultWithObjectValues = Object.values({
-	"./modules/a.ts": () => import("./a.js").then((m) => m.default),
-	"./modules/b.ts": () => import("./b.js").then((m) => m.default),
-	"./modules/index.ts": () => import("./modules.js").then((m) => m.default)
-});
+const namedDefaultWithObjectValues = Object.values([
+	() => import("./a.js").then((m) => m.default),
+	() => import("./b.js").then((m) => m.default),
+	() => import("./modules.js").then((m) => m.default)
+]);
 const eagerAs = {
 	"./modules/a.ts": a_default,
 	"./modules/b.ts": b_default

@@ -101,7 +101,6 @@ module.exports.BindingWatcher = __napiModule.exports.BindingWatcher
 module.exports.BindingWatcherChangeData = __napiModule.exports.BindingWatcherChangeData
 module.exports.BindingWatcherEvent = __napiModule.exports.BindingWatcherEvent
 module.exports.Bundler = __napiModule.exports.Bundler
-module.exports.MagicString = __napiModule.exports.MagicString
 module.exports.ParallelJsPluginRegistry = __napiModule.exports.ParallelJsPluginRegistry
 module.exports.ParseResult = __napiModule.exports.ParseResult
 module.exports.RenderedChunk = __napiModule.exports.RenderedChunk

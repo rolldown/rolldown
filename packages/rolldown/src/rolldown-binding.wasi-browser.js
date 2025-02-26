@@ -76,7 +76,6 @@ export const BindingWatcher = __napiModule.exports.BindingWatcher
 export const BindingWatcherChangeData = __napiModule.exports.BindingWatcherChangeData
 export const BindingWatcherEvent = __napiModule.exports.BindingWatcherEvent
 export const Bundler = __napiModule.exports.Bundler
-export const MagicString = __napiModule.exports.MagicString
 export const ParallelJsPluginRegistry = __napiModule.exports.ParallelJsPluginRegistry
 export const ParseResult = __napiModule.exports.ParseResult
 export const RenderedChunk = __napiModule.exports.RenderedChunk

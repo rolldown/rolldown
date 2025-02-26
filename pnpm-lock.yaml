@@ -21,8 +21,8 @@ importers:
         specifier: ^0.0.19
         version: 0.0.19
       '@oxc-project/runtime':
-        specifier: 0.52.0
-        version: 0.52.0
+        specifier: 0.53.0
+        version: 0.53.0
       '@taplo/cli':
         specifier: ^0.7.0
         version: 0.7.0
@@ -258,11 +258,11 @@ importers:
   packages/rolldown:
     dependencies:
       '@oxc-project/runtime':
-        specifier: 0.52.0
-        version: 0.52.0
+        specifier: 0.53.0
+        version: 0.53.0
       '@oxc-project/types':
-        specifier: 0.52.0
-        version: 0.52.0
+        specifier: 0.53.0
+        version: 0.53.0
       '@valibot/to-json-schema':
         specifier: 1.0.0-beta.5
         version: 1.0.0-beta.5(valibot@1.0.0-beta.14(typescript@5.7.3))
@@ -2073,7 +2073,6 @@ packages:
 
   '@ls-lint/ls-lint@2.2.3':
     resolution: {integrity: sha512-ekM12jNm/7O2I/hsRv9HvYkRdfrHpiV1epVuI2NP+eTIcEgdIdKkKCs9KgQydu/8R5YXTov9aHdOgplmCHLupw==}
-    cpu: [x64, arm64, s390x]
     os: [darwin, linux, win32]
     hasBin: true
 
@@ -2600,15 +2599,15 @@ packages:
     cpu: [x64]
     os: [win32]
 
-  '@oxc-project/runtime@0.52.0':
-    resolution: {integrity: sha512-z1Ug+02ZoJwbc/R28n5f6x+5473yu0ADqn9XBAUnn85O6Q9F+BmI9snDR+CX4KglF7odiVOGtusC41KWWoxQJA==}
+  '@oxc-project/runtime@0.53.0':
+    resolution: {integrity: sha512-iyZ//fKb3glRZyV6kWo04QjNkXKSj9B61M74Y0Gpqfi+vWAv2nBHdUa5ZiN8fDIobzmPtOu8F4bTj/CdK3w5bg==}
     engines: {node: '>=6.9.0'}
 
   '@oxc-project/types@0.37.0':
     resolution: {integrity: sha512-9shvIr/cpoNo5cX8nWdZmviHLJSidjZy4M0MyfR6ucREZBtABTNBIa1a4emWUJ3qAMwJW6G1v0zm8K2rj9Pf4A==}
 
-  '@oxc-project/types@0.52.0':
-    resolution: {integrity: sha512-vR+SuiprVAlbUSkBnmL/h0DNVhwmecxfLWyssN5wGUsOTz4VL5OWrVtb/Q5D/Jb1V+iqcDYBRWrhtyuCaKBBqg==}
+  '@oxc-project/types@0.53.0':
+    resolution: {integrity: sha512-8JXXVoHnRLcl6kDBboSfAmAkKeb6PSvSc5qSJxiOFzFx0ZCLAbUDmuwR2hkBnY7kQS3LmNXaONq1BFAmwTyeZw==}
 
   '@oxc-transform/binding-darwin-arm64@0.51.0':
     resolution: {integrity: sha512-HYZzgm/lCUAJP7Ya9IXbqb5t5gNo33tR9rmMr2RslgmkcxsEku1nCWDuZezdhYEuvrhnzwGnwmqK25dvwSCN4g==}
@@ -8633,11 +8632,11 @@ snapshots:
   '@oxc-parser/binding-win32-x64-msvc@0.37.0':
     optional: true
 
-  '@oxc-project/runtime@0.52.0': {}
+  '@oxc-project/runtime@0.53.0': {}
 
   '@oxc-project/types@0.37.0': {}
 
-  '@oxc-project/types@0.52.0': {}
+  '@oxc-project/types@0.53.0': {}
 
   '@oxc-transform/binding-darwin-arm64@0.51.0':
     optional: true

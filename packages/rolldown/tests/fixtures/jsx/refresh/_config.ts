@@ -8,7 +8,7 @@ export default defineTest({
     jsx: {
       refresh: true,
     },
-    external: ['react'],
+    external: ['react', 'react/jsx-runtime'],
   },
   afterTest: (output) => {
     const chunk = getOutputChunk(output)[0]

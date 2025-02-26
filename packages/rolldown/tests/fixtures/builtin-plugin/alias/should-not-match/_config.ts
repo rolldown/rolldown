@@ -1,6 +1,8 @@
 import { aliasPlugin } from 'rolldown/experimental'
 import { defineTest } from 'rolldown-tests'
-import { expect } from 'vitest'
+import { expect, vi } from 'vitest'
+
+const onLogFn = vi.fn()
 
 export default defineTest({
   config: {
@@ -10,9 +12,19 @@ export default defineTest({
         entries: [{ find: 'rolldown', replacement: '.' }],
       }),
     ],
+    onLog(level, log) {
+      expect(level).toBe('warn')
+      expect(log.code).toBe('UNRESOLVED_IMPORT')
+      expect(log.message).toContain(
+        "Could not resolve 'rolldownlib.js' in main.js",
+      )
+      onLogFn()
+    },
   },
   // cspell:ignore rolldownlib
   async afterTest() {
+    expect(onLogFn).toHaveBeenCalledTimes(1)
+
     try {
       await import('./assert.mjs')
     } catch (err: any) {

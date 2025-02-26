@@ -32,6 +32,7 @@ export const __vitePreload = (v) => {
         isRelativeBase: false,
       }),
     ],
+    external: ['node:assert'],
   },
   async afterTest(output) {
     await import('./assert.mjs')

@@ -60,7 +60,7 @@ impl ModuleId {
   }
 }
 
-pub(crate) fn stabilize_module_id(module_id: &str, cwd: &Path) -> String {
+pub fn stabilize_module_id(module_id: &str, cwd: &Path) -> String {
   if module_id.as_path().is_absolute() {
     module_id.relative(cwd).as_path().expect_to_slash()
   } else if module_id.starts_with('\0') {

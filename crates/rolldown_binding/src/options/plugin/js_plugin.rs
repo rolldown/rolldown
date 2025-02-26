@@ -29,7 +29,7 @@ use super::{
 };
 
 #[derive(Hash, Debug, PartialEq, Eq)]
-pub(crate) struct JsPluginContextResolveCustomArgId;
+pub struct JsPluginContextResolveCustomArgId;
 
 impl TypedMapKey for JsPluginContextResolveCustomArgId {
   type Value = u32;

@@ -24,7 +24,7 @@ fn expr_to_str(expr: &Expression) -> String {
   codegen.into_source_text()
 }
 
-pub(crate) fn to_glob_pattern(expr: &Expression) -> anyhow::Result<Option<String>> {
+pub fn to_glob_pattern(expr: &Expression) -> anyhow::Result<Option<String>> {
   let glob = expr_to_glob(expr)?;
 
   if should_ignore(&glob) {

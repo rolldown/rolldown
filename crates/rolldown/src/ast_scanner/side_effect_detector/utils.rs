@@ -61,7 +61,7 @@ impl SideEffectDetector<'_> {
 }
 
 #[derive(PartialEq, Eq, Copy, Clone)]
-pub(crate) enum PrimitiveType {
+pub enum PrimitiveType {
   Null,
   Undefined,
   Boolean,
@@ -93,7 +93,7 @@ fn merged_known_primitive_types(
 }
 
 #[allow(clippy::too_many_lines)]
-pub(crate) fn known_primitive_type(
+pub fn known_primitive_type(
   scope: &AstScopes,
   expr: &Expression,
   symbol_table: &SymbolTable,

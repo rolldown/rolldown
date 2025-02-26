@@ -78,7 +78,7 @@ debug_assert_with_mut_call    = "warn"
 iter_on_single_items          = "allow"
 needless_pass_by_ref_mut      = "warn"
 redundant_clone               = "warn"
-redundant_pub_crate           = "allow"
+redundant_pub_crate           = "warn"
 significant_drop_in_scrutinee = "allow"
 unused_peekable               = "warn"
 

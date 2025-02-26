@@ -1,18 +1,19 @@
 ---
 source: crates/rolldown_testing/src/integration_test.rs
-snapshot_kind: text
 ---
 # Errors
 
-## MATCH_ALIAS_NOT_FOUND
+## RESOLVE_ERROR
 
 ```text
-[MATCH_ALIAS_NOT_FOUND] Error: Could not resolve '@vue/test-utils' in main.js
+[RESOLVE_ERROR] Error: Could not resolve '@vue/test-utils' in main.js
    ╭─[ main.js:1:8 ]
    │
  1 │ import '@vue/test-utils';
    │        ────────┬────────  
-   │                ╰────────── Now the current version of rolldown don't support resolve.alias to call other plugins resolveId hook
+   │                ╰────────── Matched alias not found for '@vue/test-utils'
+   │ 
+   │ Help: May be you expected `resolve.alias` to call other plugins resolveId hook? see the docs for more details
 ───╯
 
 ```

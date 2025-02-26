@@ -443,8 +443,9 @@ impl ModuleTask {
                 } else {
                   DiagnosableArcstr::Span(dep.state.span)
                 },
-                "Now the current version of rolldown don't support resolve.alias to call other plugins resolveId hook".into(),
-                Some("MATCH_ALIAS_NOT_FOUND")
+                format!("Matched alias not found for '{specifier}'"),
+                None,
+                Some("May be you expected `resolve.alias` to call other plugins resolveId hook? see the docs for more details".to_string()),
               ));
             }
             e => {

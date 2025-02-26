@@ -73,5 +73,5 @@ function testEmitFileThis(emitFile: PluginContext['emitFile']) {
     name: 'emitFileThis.txt',
     source: 'emitFileThis',
   })
-  expect(emitted).toBeTypeOf("string")
+  expect(emitted).toBeTypeOf('string')
 }

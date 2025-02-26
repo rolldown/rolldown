@@ -143,7 +143,7 @@ export class PluginContext extends MinimalPluginContext {
     return { ...res, ...info }
   }
 
-  public emitFile(file: EmittedAsset | EmittedChunk): string {
+  public emitFile = (file: EmittedAsset | EmittedChunk): string => {
     // @ts-expect-error
     if (file.type === 'prebuilt-chunk') {
       return unimplemented('PluginContext.emitFile with type prebuilt-chunk')

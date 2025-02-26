@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 
-use napi::{bindgen_prelude::Undefined, Either};
+use napi::{Either, bindgen_prelude::Undefined};
 use napi_derive::napi;
 use rolldown::{MinifyOptions, SharedNormalizedBundlerOptions};
 use rustc_hash::FxBuildHasher;

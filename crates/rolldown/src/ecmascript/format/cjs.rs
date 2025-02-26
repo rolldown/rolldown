@@ -48,24 +48,25 @@ pub fn render_cjs<'code>(
   // Note that the determined `export_mode` should be used in `render_chunk_exports` to render exports.
   // We also need to get the export mode for rendering the namespace markers.
   // So we determine the export mode (from auto) here and use it in the following code.
-  let export_mode = if let Some(entry_module) =
-    ctx.chunk.user_defined_entry_module(&ctx.link_output.module_table)
-  {
-    let export_names = get_chunk_export_names(ctx.chunk, ctx.link_output);
-    let has_default_export = export_names.iter().any(|name| name.as_str() == "default");
-    let export_mode = determine_export_mode(warnings, ctx, entry_module, &export_names)?;
-    // Only `named` export can we render the namespace markers.
-    if matches!(&export_mode, OutputExports::Named) && entry_module.exports_kind.is_esm() {
-      if let Some(marker) =
-        render_namespace_markers(ctx.options.es_module, has_default_export, false)
-      {
-        source_joiner.append_source(marker.to_string());
+  let export_mode = match ctx.chunk.user_defined_entry_module(&ctx.link_output.module_table) {
+    Some(entry_module) => {
+      let export_names = get_chunk_export_names(ctx.chunk, ctx.link_output);
+      let has_default_export = export_names.iter().any(|name| name.as_str() == "default");
+      let export_mode = determine_export_mode(warnings, ctx, entry_module, &export_names)?;
+      // Only `named` export can we render the namespace markers.
+      if matches!(&export_mode, OutputExports::Named) && entry_module.exports_kind.is_esm() {
+        if let Some(marker) =
+          render_namespace_markers(ctx.options.es_module, has_default_export, false)
+        {
+          source_joiner.append_source(marker.to_string());
+        }
       }
+      Some(export_mode)
     }
-    Some(export_mode)
-  } else {
-    // The common chunks should be `named`.
-    Some(OutputExports::Named)
+    _ => {
+      // The common chunks should be `named`.
+      Some(OutputExports::Named)
+    }
   };
 
   // Runtime module should be placed before the generated `requires` in CJS format.

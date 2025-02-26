@@ -7,9 +7,9 @@ use std::sync::Arc;
 #[cfg(not(target_family = "wasm"))]
 use futures::future::{self, BoxFuture};
 #[cfg(not(target_family = "wasm"))]
-use rolldown_plugin::Plugin;
-#[cfg(not(target_family = "wasm"))]
 use rolldown_plugin::__inner::Pluginable;
+#[cfg(not(target_family = "wasm"))]
+use rolldown_plugin::Plugin;
 
 use crate::worker_manager::WorkerManager;
 

@@ -2,7 +2,7 @@ use std::{path::Path, sync::Arc};
 
 use arcstr::ArcStr;
 
-use crate::{side_effects::HookSideEffects, ModuleDefFormat, PackageJson};
+use crate::{ModuleDefFormat, PackageJson, side_effects::HookSideEffects};
 
 use super::module_id::stabilize_module_id;
 
@@ -42,11 +42,7 @@ impl ResolvedId {
     }
 
     let stable = stabilize_module_id(&self.id, cwd.as_ref());
-    if self.ignored {
-      format!("(ignored) {stable}")
-    } else {
-      stable
-    }
+    if self.ignored { format!("(ignored) {stable}") } else { stable }
   }
 
   pub fn new_external_without_side_effects(id: ArcStr) -> Self {

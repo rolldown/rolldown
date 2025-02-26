@@ -1,8 +1,9 @@
 use std::fmt::Debug;
 
 use napi::{
+  Either, Env, Error, JsObject, JsUnknown, NapiValue, Status,
   bindgen_prelude::{FromNapiValue, Function, TypeName, ValidateNapiValue},
-  sys, Either, Env, Error, JsObject, JsUnknown, NapiValue, Status,
+  sys,
 };
 
 use rolldown_utils::js_regex::HybridRegex;
@@ -58,15 +59,17 @@ pub struct BindingStringOrRegex(StringOrRegex);
 
 impl FromNapiValue for BindingStringOrRegex {
   unsafe fn from_napi_value(env: sys::napi_env, napi_val: sys::napi_value) -> napi::Result<Self> {
-    let value = Either::<String, JsRegExp>::from_napi_value(env, napi_val)?;
-    let value = match value {
-      Either::A(inner) => StringOrRegex::String(inner),
-      Either::B(inner) => {
-        let reg = HybridRegex::with_flags(&inner.source, &inner.flags)?;
-        StringOrRegex::Regex(reg)
-      }
-    };
-    Ok(Self(value))
+    unsafe {
+      let value = Either::<String, JsRegExp>::from_napi_value(env, napi_val)?;
+      let value = match value {
+        Either::A(inner) => StringOrRegex::String(inner),
+        Either::B(inner) => {
+          let reg = HybridRegex::with_flags(&inner.source, &inner.flags)?;
+          StringOrRegex::Regex(reg)
+        }
+      };
+      Ok(Self(value))
+    }
   }
 }
 

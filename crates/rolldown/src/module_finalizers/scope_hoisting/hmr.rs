@@ -1,5 +1,5 @@
 use oxc::{
-  ast::{ast, NONE},
+  ast::{NONE, ast},
   span::SPAN,
 };
 

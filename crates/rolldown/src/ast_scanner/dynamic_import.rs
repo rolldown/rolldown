@@ -1,11 +1,11 @@
 use oxc::{
   ast::{
-    ast::{self, Argument, IdentifierReference},
     AstKind,
+    ast::{self, Argument, IdentifierReference},
   },
   span::CompactStr,
 };
-use rolldown_common::{dynamic_import_usage::DynamicImportExportsUsage, ImportRecordIdx};
+use rolldown_common::{ImportRecordIdx, dynamic_import_usage::DynamicImportExportsUsage};
 use rustc_hash::FxHashSet;
 
 use super::AstScanner;

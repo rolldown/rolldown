@@ -3,9 +3,9 @@ use std::sync::Arc;
 use oxc::{
   allocator::CloneIn,
   ast::{
+    AstBuilder, NONE, VisitMut,
     ast::{Argument, ExportAllDeclaration, ExportNamedDeclaration, Expression, ImportDeclaration},
     visit::walk_mut::walk_expression,
-    AstBuilder, VisitMut, NONE,
   },
   span::SPAN,
 };
@@ -13,8 +13,8 @@ use rolldown_utils::concat_string;
 use rustc_hash::FxHashSet;
 
 use crate::{
-  utils::{detect_remote_module_type, get_remote_module_prefix, RemoteModuleType},
   ModuleFederationPluginOption,
+  utils::{RemoteModuleType, detect_remote_module_type, get_remote_module_prefix},
 };
 
 #[derive(Debug, PartialEq, Eq, Hash)]

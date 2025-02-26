@@ -5,7 +5,7 @@ use oxc::{
   semantic::{ScopeTree, SymbolTable},
   span::SourceType as OxcSourceType,
 };
-use rolldown_common::{ModuleType, NormalizedBundlerOptions, StrOrBytes, RUNTIME_MODULE_ID};
+use rolldown_common::{ModuleType, NormalizedBundlerOptions, RUNTIME_MODULE_ID, StrOrBytes};
 use rolldown_ecmascript::{EcmaAst, EcmaCompiler};
 use rolldown_error::{BuildDiagnostic, BuildResult};
 use rolldown_loader_utils::{binary_to_esm, text_to_string_literal};

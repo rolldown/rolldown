@@ -9,8 +9,8 @@ use manifest::generate_manifest;
 pub use option::{Manifest, ModuleFederationPluginOption, Remote, Shared};
 use oxc::{
   ast::{
+    AstBuilder, NONE, VisitMut,
     ast::{ImportOrExportKind, Statement},
-    AstBuilder, VisitMut, NONE,
   },
   span::SPAN,
 };
@@ -19,8 +19,8 @@ use rolldown_plugin::{HookResolveIdReturn, Plugin};
 use rolldown_utils::{concat_string, dashmap::FxDashMap};
 use rustc_hash::FxHashSet;
 use utils::{
-  detect_remote_module_type, generate_remote_module_is_cjs_placeholder, get_remote_module_prefix,
-  ResolvedRemoteModule,
+  ResolvedRemoteModule, detect_remote_module_type, generate_remote_module_is_cjs_placeholder,
+  get_remote_module_prefix,
 };
 
 const REMOTE_ENTRY: &str = "mf:remote-entry.js";

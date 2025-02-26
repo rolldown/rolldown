@@ -1,5 +1,5 @@
 use arcstr::ArcStr;
-use notify::{event::ModifyKind, Config, RecommendedWatcher, Watcher as NotifyWatcher};
+use notify::{Config, RecommendedWatcher, Watcher as NotifyWatcher, event::ModifyKind};
 use rolldown_common::{
   BundleEvent, NotifyOption, WatcherChangeData, WatcherChangeKind, WatcherEvent,
 };
@@ -9,9 +9,9 @@ use std::{
   ops::Deref,
   path::Path,
   sync::{
-    atomic::{AtomicBool, Ordering},
-    mpsc::{channel, Receiver, Sender},
     Arc,
+    atomic::{AtomicBool, Ordering},
+    mpsc::{Receiver, Sender, channel},
   },
   time::Duration,
 };

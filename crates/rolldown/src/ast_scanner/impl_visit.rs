@@ -1,16 +1,16 @@
 use oxc::{
   ast::{
+    AstKind, Visit,
     ast::{self, BindingPatternKind, Expression, IdentifierReference},
     visit::walk,
-    AstKind, Visit,
   },
   semantic::SymbolId,
   span::{GetSpan, Span},
 };
 use rolldown_common::{
-  dynamic_import_usage::DynamicImportExportsUsage, generate_replace_this_expr_map,
-  EcmaModuleAstUsage, ImportKind, ImportRecordMeta, StmtInfoMeta, ThisExprReplaceKind,
-  RUNTIME_MODULE_ID,
+  EcmaModuleAstUsage, ImportKind, ImportRecordMeta, RUNTIME_MODULE_ID, StmtInfoMeta,
+  ThisExprReplaceKind, dynamic_import_usage::DynamicImportExportsUsage,
+  generate_replace_this_expr_map,
 };
 #[cfg(debug_assertions)]
 use rolldown_ecmascript::ToSourceString;
@@ -18,7 +18,7 @@ use rolldown_error::BuildDiagnostic;
 use rolldown_std_utils::OptionExt;
 
 use super::{
-  cjs_ast_analyzer::CjsGlobalAssignmentType, side_effect_detector::SideEffectDetector, AstScanner,
+  AstScanner, cjs_ast_analyzer::CjsGlobalAssignmentType, side_effect_detector::SideEffectDetector,
 };
 
 impl<'me, 'ast: 'me> Visit<'ast> for AstScanner<'me, 'ast> {

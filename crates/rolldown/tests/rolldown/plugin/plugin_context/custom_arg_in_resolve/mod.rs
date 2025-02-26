@@ -2,8 +2,8 @@ use std::{borrow::Cow, sync::Arc};
 
 use rolldown::{BundlerOptions, InputItem};
 use rolldown_plugin::{
-  typedmap::TypedMapKey, CustomField, HookResolveIdArgs, HookResolveIdOutput, HookResolveIdReturn,
-  Plugin, PluginContext, PluginContextResolveOptions,
+  CustomField, HookResolveIdArgs, HookResolveIdOutput, HookResolveIdReturn, Plugin, PluginContext,
+  PluginContextResolveOptions, typedmap::TypedMapKey,
 };
 use rolldown_testing::{abs_file_dir, integration_test::IntegrationTest, test_config::TestMeta};
 #[derive(Debug)]

@@ -15,10 +15,10 @@ use tokio::sync::Mutex;
 
 use crate::{
   __inner::SharedPluginable,
+  PluginContext, PluginHookMeta, PluginOrder,
   plugin_context::{LoadCallback, PluginContextImpl},
   type_aliases::{IndexPluginContext, IndexPluginable},
   types::plugin_idx::PluginIdx,
-  PluginContext, PluginHookMeta, PluginOrder,
 };
 
 mod build_hooks;

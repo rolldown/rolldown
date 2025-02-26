@@ -12,11 +12,11 @@ use oxc_index::IndexVec;
 use rolldown_common::dynamic_import_usage::DynamicImportExportsUsage;
 use rolldown_common::side_effects::{DeterminedSideEffects, HookSideEffects};
 use rolldown_common::{
-  Cache, EcmaRelated, EntryPoint, EntryPointKind, ExternalModule, ImportKind, ImportRecordIdx,
-  ImportRecordMeta, ImporterRecord, Module, ModuleId, ModuleIdx, ModuleInfo, ModuleLoaderMsg,
-  ModuleSideEffects, ModuleTable, ModuleType, NormalModuleTaskResult, ResolvedId,
-  RuntimeModuleBrief, RuntimeModuleTaskResult, StmtInfoIdx, SymbolRefDb, SymbolRefDbForModule,
-  TreeshakeOptions, DUMMY_MODULE_IDX, RUNTIME_MODULE_ID,
+  Cache, DUMMY_MODULE_IDX, EcmaRelated, EntryPoint, EntryPointKind, ExternalModule, ImportKind,
+  ImportRecordIdx, ImportRecordMeta, ImporterRecord, Module, ModuleId, ModuleIdx, ModuleInfo,
+  ModuleLoaderMsg, ModuleSideEffects, ModuleTable, ModuleType, NormalModuleTaskResult,
+  RUNTIME_MODULE_ID, ResolvedId, RuntimeModuleBrief, RuntimeModuleTaskResult, StmtInfoIdx,
+  SymbolRefDb, SymbolRefDbForModule, TreeshakeOptions,
 };
 use rolldown_error::{BuildDiagnostic, BuildResult};
 use rolldown_fs::OsFileSystem;
@@ -149,29 +149,27 @@ impl ModuleLoader {
         let idx = self.intermediate_normal_modules.alloc_ecma_module_idx();
 
         if resolved_id.is_external {
-          let external_module_side_effects =
-            if let Some(hook_side_effects) = resolved_id.side_effects {
-              match hook_side_effects {
-                HookSideEffects::True => DeterminedSideEffects::UserDefined(true),
-                HookSideEffects::False => DeterminedSideEffects::UserDefined(false),
-                HookSideEffects::NoTreeshake => DeterminedSideEffects::NoTreeshake,
-              }
-            } else {
-              match self.options.treeshake {
-                TreeshakeOptions::Boolean(false) => DeterminedSideEffects::NoTreeshake,
-                TreeshakeOptions::Boolean(true) => unreachable!(),
-                TreeshakeOptions::Option(ref opt) => match opt.module_side_effects {
-                  ModuleSideEffects::Boolean(false) => DeterminedSideEffects::UserDefined(false),
-                  _ => {
-                    if resolved_id.is_external_without_side_effects {
-                      DeterminedSideEffects::UserDefined(false)
-                    } else {
-                      DeterminedSideEffects::NoTreeshake
-                    }
+          let external_module_side_effects = match resolved_id.side_effects {
+            Some(hook_side_effects) => match hook_side_effects {
+              HookSideEffects::True => DeterminedSideEffects::UserDefined(true),
+              HookSideEffects::False => DeterminedSideEffects::UserDefined(false),
+              HookSideEffects::NoTreeshake => DeterminedSideEffects::NoTreeshake,
+            },
+            _ => match self.options.treeshake {
+              TreeshakeOptions::Boolean(false) => DeterminedSideEffects::NoTreeshake,
+              TreeshakeOptions::Boolean(true) => unreachable!(),
+              TreeshakeOptions::Option(ref opt) => match opt.module_side_effects {
+                ModuleSideEffects::Boolean(false) => DeterminedSideEffects::UserDefined(false),
+                _ => {
+                  if resolved_id.is_external_without_side_effects {
+                    DeterminedSideEffects::UserDefined(false)
+                  } else {
+                    DeterminedSideEffects::NoTreeshake
                   }
-                },
-              }
-            };
+                }
+              },
+            },
+          };
 
           let id = ModuleId::new(&resolved_id.id);
           self.shared_context.plugin_driver.set_module_info(

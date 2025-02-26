@@ -2,7 +2,7 @@ use std::{hash::Hash, mem};
 
 use arcstr::ArcStr;
 use itertools::Itertools;
-use oxc_index::{index_vec, IndexVec};
+use oxc_index::{IndexVec, index_vec};
 use rolldown_common::{AssetIdx, HashCharacters, InstantiationKind, StrOrBytes};
 #[cfg(not(target_family = "wasm"))]
 use rolldown_utils::rayon::IndexedParallelIterator;

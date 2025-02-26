@@ -1,5 +1,5 @@
 use crate::options::plugin::types::binding_js_or_regex::{
-  bindingify_string_or_regex_array, BindingStringOrRegex,
+  BindingStringOrRegex, bindingify_string_or_regex_array,
 };
 
 #[napi_derive::napi(object, object_to_js = false)]

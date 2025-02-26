@@ -14,6 +14,7 @@ mod types;
 /// the same code in `rolldown` crate again.
 pub mod bundler_options {
   pub use crate::inner_bundler_options::{
+    BundlerOptions,
     types::{
       advanced_chunks_options::{AdvancedChunksOptions, MatchGroup},
       checks_options::ChecksOptions,
@@ -46,7 +47,6 @@ pub mod bundler_options {
       treeshake::{InnerOptions, ModuleSideEffects, ModuleSideEffectsRule, TreeshakeOptions},
       watch_option::{NotifyOption, WatchOption},
     },
-    BundlerOptions,
   };
 }
 
@@ -54,35 +54,35 @@ pub mod bundler_options {
 pub use crate::{
   asset::asset_view::AssetView,
   chunk::{
+    Chunk,
     chunk_table::ChunkTable,
     types::{
       cross_chunk_import_item::CrossChunkImportItem, preliminary_filename::PreliminaryFilename,
     },
-    Chunk,
   },
   css::css_view::{CssAssetNameReplacer, CssRenderer, CssView},
   ecmascript::{
-    comment_annotation::{get_leading_comment, ROLLDOWN_IGNORE},
+    comment_annotation::{ROLLDOWN_IGNORE, get_leading_comment},
     dynamic_import_usage,
     ecma_asset_meta::EcmaAssetMeta,
     ecma_view::{
-      generate_replace_this_expr_map, EcmaModuleAstUsage, EcmaView, EcmaViewMeta,
-      ImportMetaRolldownAssetReplacer, ThisExprReplaceKind,
+      EcmaModuleAstUsage, EcmaView, EcmaViewMeta, ImportMetaRolldownAssetReplacer,
+      ThisExprReplaceKind, generate_replace_this_expr_map,
     },
-    module_idx::{ModuleIdx, DUMMY_MODULE_IDX},
+    module_idx::{DUMMY_MODULE_IDX, ModuleIdx},
     node_builtin_modules::is_existing_node_builtin_modules,
   },
   file_emitter::{EmittedAsset, EmittedChunk, EmittedChunkInfo, FileEmitter, SharedFileEmitter},
   module::{
+    Module,
     external_module::ExternalModule,
     normal_module::{ModuleRenderArgs, NormalModule},
-    Module,
   },
   module_loader::{
-    runtime_module_brief::{RuntimeModuleBrief, RUNTIME_MODULE_ID},
+    AddEntryModuleMsg, ModuleLoaderMsg,
+    runtime_module_brief::{RUNTIME_MODULE_ID, RuntimeModuleBrief},
     runtime_task_result::RuntimeModuleTaskResult,
     task_result::{EcmaRelated, NormalModuleTaskResult},
-    AddEntryModuleMsg, ModuleLoaderMsg,
   },
   types::asset::Asset,
   types::asset_idx::AssetIdx,
@@ -133,7 +133,7 @@ pub use crate::{
   types::str_or_bytes::StrOrBytes,
   types::symbol_name_ref_token::SymbolNameRefToken,
   types::symbol_or_member_expr_ref::SymbolOrMemberExprRef,
-  types::symbol_ref::{common_debug_symbol_ref, SymbolRef},
+  types::symbol_ref::{SymbolRef, common_debug_symbol_ref},
   types::symbol_ref_db::{GetLocalDb, SymbolRefDb, SymbolRefDbForModule, SymbolRefFlags},
   types::watch::{
     BundleEndEventData, BundleEvent, WatcherChangeData, WatcherChangeKind, WatcherEvent,

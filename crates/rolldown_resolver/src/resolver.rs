@@ -249,20 +249,21 @@ impl<F: FileSystem + Default> Resolver<F> {
   }
 
   fn cached_package_json(&self, oxc_pkg_json: &OxcPackageJson) -> Arc<PackageJson> {
-    if let Some(v) = self.package_json_cache.get(&oxc_pkg_json.realpath) {
-      Arc::clone(v.value())
-    } else {
-      let pkg_json = Arc::new(
-        PackageJson::new(oxc_pkg_json.path.clone())
-          .with_type(oxc_pkg_json.r#type.map(|t| match t {
-            PackageType::CommonJs => "commonjs",
-            PackageType::Module => "module",
-          }))
-          .with_side_effects(oxc_pkg_json.side_effects.as_ref())
-          .with_version(oxc_pkg_json.raw_json().get("version").and_then(|v| v.as_str())),
-      );
-      self.package_json_cache.insert(oxc_pkg_json.realpath.clone(), Arc::clone(&pkg_json));
-      pkg_json
+    match self.package_json_cache.get(&oxc_pkg_json.realpath) {
+      Some(v) => Arc::clone(v.value()),
+      _ => {
+        let pkg_json = Arc::new(
+          PackageJson::new(oxc_pkg_json.path.clone())
+            .with_type(oxc_pkg_json.r#type.map(|t| match t {
+              PackageType::CommonJs => "commonjs",
+              PackageType::Module => "module",
+            }))
+            .with_side_effects(oxc_pkg_json.side_effects.as_ref())
+            .with_version(oxc_pkg_json.raw_json().get("version").and_then(|v| v.as_str())),
+        );
+        self.package_json_cache.insert(oxc_pkg_json.realpath.clone(), Arc::clone(&pkg_json));
+        pkg_json
+      }
     }
   }
 

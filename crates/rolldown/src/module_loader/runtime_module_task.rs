@@ -3,12 +3,12 @@ use oxc::ast::VisitMut;
 use oxc::span::SourceType;
 use oxc_index::IndexVec;
 use rolldown_common::{
-  side_effects::DeterminedSideEffects, EcmaView, EcmaViewMeta, ExportsKind, ModuleDefFormat,
-  ModuleId, ModuleIdx, ModuleType, NormalModule,
+  EcmaView, EcmaViewMeta, ExportsKind, ModuleDefFormat, ModuleId, ModuleIdx, ModuleType,
+  NormalModule, side_effects::DeterminedSideEffects,
 };
 use rolldown_common::{
-  ModuleLoaderMsg, ResolvedId, RuntimeModuleBrief, RuntimeModuleTaskResult,
-  SharedNormalizedBundlerOptions, RUNTIME_MODULE_ID,
+  ModuleLoaderMsg, RUNTIME_MODULE_ID, ResolvedId, RuntimeModuleBrief, RuntimeModuleTaskResult,
+  SharedNormalizedBundlerOptions,
 };
 use rolldown_ecmascript::{EcmaAst, EcmaCompiler};
 use rolldown_error::BuildResult;

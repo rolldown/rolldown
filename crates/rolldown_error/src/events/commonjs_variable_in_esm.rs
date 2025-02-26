@@ -43,7 +43,9 @@ impl BuildEvent for CommonJsVariableInEsm {
       CjsExportSpan::Module(_) => "module",
       CjsExportSpan::Exports(_) => "exports",
     };
-    format!("The CommonJS `{variable}` variable is treated as a global variable in an ECMAScript module and may not work as expected")
+    format!(
+      "The CommonJS `{variable}` variable is treated as a global variable in an ECMAScript module and may not work as expected"
+    )
   }
 
   fn on_diagnostic(&self, diagnostic: &mut Diagnostic, opts: &DiagnosticOptions) {

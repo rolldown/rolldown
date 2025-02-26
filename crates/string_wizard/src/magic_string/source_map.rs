@@ -3,11 +3,11 @@ use std::sync::Arc;
 use rustc_hash::FxHashMap;
 
 use crate::{
+  MagicString,
   source_map::{
     locator::Locator,
     sourcemap_builder::{Hires, SourcemapBuilder},
   },
-  MagicString,
 };
 
 #[derive(Debug)]

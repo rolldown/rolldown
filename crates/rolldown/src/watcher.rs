@@ -5,8 +5,8 @@ use rolldown_common::NotifyOption;
 use tokio::sync::Mutex;
 
 use crate::{
-  watch::watcher::{wait_for_change, WatcherImpl},
   Bundler,
+  watch::watcher::{WatcherImpl, wait_for_change},
 };
 
 pub struct Watcher(Arc<WatcherImpl>);

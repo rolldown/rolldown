@@ -1,11 +1,11 @@
 use oxc::{
   allocator::{self, Allocator, CloneIn, IntoIn},
   ast::{
+    Comment, NONE,
     ast::{
       self, BindingIdentifier, ClassElement, Expression, IdentifierReference, ImportExpression,
       MemberExpression, Statement, VariableDeclarationKind,
     },
-    Comment, NONE,
   },
   semantic::{ReferenceId, SymbolId},
   span::{Atom, GetSpan, SPAN},
@@ -599,24 +599,29 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
         None
       }
       MemberExpression::StaticMemberExpression(inner_expr) => {
-        if let Some((object_ref, props)) =
-          self.ctx.linking_info.resolved_member_expr_refs.get(&inner_expr.span)
-        {
-          match object_ref {
-            Some(object_ref) => {
-              let object_ref_expr = self.finalized_expr_for_symbol_ref(*object_ref, false, None);
+        match self.ctx.linking_info.resolved_member_expr_refs.get(&inner_expr.span) {
+          Some((object_ref, props)) => {
+            match object_ref {
+              Some(object_ref) => {
+                let object_ref_expr = self.finalized_expr_for_symbol_ref(*object_ref, false, None);
 
-              let replaced_expr =
-                self.snippet.member_expr_or_ident_ref(object_ref_expr, props, inner_expr.span);
-              return Some(replaced_expr);
+                let replaced_expr =
+                  self.snippet.member_expr_or_ident_ref(object_ref_expr, props, inner_expr.span);
+                return Some(replaced_expr);
+              }
+              None => {
+                return Some(
+                  self.snippet.member_expr_with_void_zero_object(props, inner_expr.span),
+                );
+              }
             }
-            None => {
-              return Some(self.snippet.member_expr_with_void_zero_object(props, inner_expr.span));
+            // these two branch are exclusive since `import.meta` is a global member_expr
+          }
+          _ => {
+            if let Some(new_expr) = self.try_rewrite_import_meta_prop_expr(inner_expr) {
+              return Some(new_expr);
             }
           }
-          // these two branch are exclusive since `import.meta` is a global member_expr
-        } else if let Some(new_expr) = self.try_rewrite_import_meta_prop_expr(inner_expr) {
-          return Some(new_expr);
         }
         None
       }

@@ -3,7 +3,7 @@ use std::{fs, path::PathBuf, sync::Arc};
 use rolldown_common::PackageJson;
 use rolldown_utils::dashmap::FxDashMap;
 use rustc_hash::{FxHashMap, FxHashSet};
-use serde::{de::IgnoredAny, Deserialize};
+use serde::{Deserialize, de::IgnoredAny};
 
 #[derive(Debug, Default)]
 pub struct PackageJsonCache {
@@ -16,15 +16,16 @@ impl PackageJsonCache {
     &self,
     oxc_pkg_json: &oxc_resolver::PackageJsonSerde,
   ) -> Arc<PackageJson> {
-    if let Some(v) = self.side_effects_cache.get(&oxc_pkg_json.realpath) {
-      Arc::clone(v.value())
-    } else {
-      let pkg_json = Arc::new(
-        PackageJson::new(oxc_pkg_json.path.clone())
-          .with_side_effects(oxc_pkg_json.side_effects.as_ref()),
-      );
-      self.side_effects_cache.insert(oxc_pkg_json.realpath.clone(), Arc::clone(&pkg_json));
-      pkg_json
+    match self.side_effects_cache.get(&oxc_pkg_json.realpath) {
+      Some(v) => Arc::clone(v.value()),
+      _ => {
+        let pkg_json = Arc::new(
+          PackageJson::new(oxc_pkg_json.path.clone())
+            .with_side_effects(oxc_pkg_json.side_effects.as_ref()),
+        );
+        self.side_effects_cache.insert(oxc_pkg_json.realpath.clone(), Arc::clone(&pkg_json));
+        pkg_json
+      }
     }
   }
 
@@ -32,24 +33,25 @@ impl PackageJsonCache {
     &self,
     oxc_pkg_json: &oxc_resolver::PackageJsonSerde,
   ) -> Arc<PackageJsonWithOptionalPeerDependencies> {
-    if let Some(v) = self.optional_peer_dep_cache.get(&oxc_pkg_json.realpath) {
-      Arc::clone(v.value())
-    } else {
-      let package_json_with_optional_peer_deps = {
-        let Ok(package_json_string) = fs::read_to_string(&oxc_pkg_json.realpath) else {
-          return Default::default();
+    match self.optional_peer_dep_cache.get(&oxc_pkg_json.realpath) {
+      Some(v) => Arc::clone(v.value()),
+      _ => {
+        let package_json_with_optional_peer_deps = {
+          let Ok(package_json_string) = fs::read_to_string(&oxc_pkg_json.realpath) else {
+            return Default::default();
+          };
+          let Ok(package_json) =
+            serde_json::from_str::<PackageJsonWithPeerDependenciesRaw>(&package_json_string)
+          else {
+            return Default::default();
+          };
+          package_json.try_into().unwrap_or_default()
         };
-        let Ok(package_json) =
-          serde_json::from_str::<PackageJsonWithPeerDependenciesRaw>(&package_json_string)
-        else {
-          return Default::default();
-        };
-        package_json.try_into().unwrap_or_default()
-      };
 
-      let pkg_json = Arc::new(package_json_with_optional_peer_deps);
-      self.optional_peer_dep_cache.insert(oxc_pkg_json.realpath.clone(), Arc::clone(&pkg_json));
-      pkg_json
+        let pkg_json = Arc::new(package_json_with_optional_peer_deps);
+        self.optional_peer_dep_cache.insert(oxc_pkg_json.realpath.clone(), Arc::clone(&pkg_json));
+        pkg_json
+      }
     }
   }
 }

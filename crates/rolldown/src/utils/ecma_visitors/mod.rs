@@ -1,6 +1,6 @@
 use oxc::{
-  ast::{visit::walk_mut, VisitMut},
-  span::{GetSpanMut, Span, SPAN},
+  ast::{VisitMut, visit::walk_mut},
+  span::{GetSpanMut, SPAN, Span},
 };
 use rustc_hash::FxHashSet;
 

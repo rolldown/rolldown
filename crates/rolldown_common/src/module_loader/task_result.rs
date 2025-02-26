@@ -1,6 +1,6 @@
 use crate::{
-  dynamic_import_usage::DynamicImportExportsUsage, AstScopes, ImportRecordIdx, Module,
-  RawImportRecord, ResolvedId, SymbolRefDbForModule,
+  AstScopes, ImportRecordIdx, Module, RawImportRecord, ResolvedId, SymbolRefDbForModule,
+  dynamic_import_usage::DynamicImportExportsUsage,
 };
 use oxc_index::IndexVec;
 use rolldown_ecmascript::EcmaAst;

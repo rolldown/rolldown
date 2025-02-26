@@ -157,7 +157,7 @@ impl<'name> Renamer<'name> {
       let mut used_canonical_names_for_this_scope = FxHashMap::with_capacity(bindings.len());
 
       bindings.sort_unstable_by_key(|(_, symbol_id)| *symbol_id);
-      bindings.iter().for_each(|(binding_name, &symbol_id)| {
+      bindings.iter().for_each(|&(binding_name, &symbol_id)| {
         let binding_ref: SymbolRef = (module.idx, symbol_id).into();
 
         let mut count = 1;
@@ -171,7 +171,7 @@ impl<'name> Renamer<'name> {
 
             if is_shadowed {
               candidate_name =
-                concat_string!(binding_name, "$", itoa::Buffer::new().format(count)).into();
+                concat_string!(&binding_name, "$", itoa::Buffer::new().format(count)).into();
               count += 1;
             } else {
               used_canonical_names_for_this_scope.insert(candidate_name.clone(), 0);

@@ -7,7 +7,7 @@ use rustc_hash::{FxHashMap, FxHashSet};
 
 use crate::{chunk_graph::ChunkGraph, types::linking_metadata::LinkingMetadataVec};
 
-use super::{code_splitting::IndexSplittingInfo, GenerateStage};
+use super::{GenerateStage, code_splitting::IndexSplittingInfo};
 
 // `ModuleGroup` is a temporary representation of `Chunk`. A valid `ModuleGroup` would be converted to a `Chunk` in the end.
 #[derive(Debug)]

@@ -6,7 +6,7 @@ use oxc::ast::ast::{
   PropertyKey, Statement, StaticMemberExpression, VariableDeclaration, VariableDeclarationKind,
 };
 use oxc::ast::visit::walk_mut;
-use oxc::ast::{AstBuilder, VisitMut, NONE};
+use oxc::ast::{AstBuilder, NONE, VisitMut};
 use oxc::codegen::{self, CodeGenerator, Gen};
 use oxc::semantic::ScopeFlags;
 use oxc::span::{Atom, SPAN};
@@ -87,7 +87,7 @@ impl Plugin for BuildImportAnalysisPlugin {
     });
 
     let mut codegen = CodeGenerator::new();
-    ast.program().gen(&mut codegen, codegen::Context::default());
+    ast.program().r#gen(&mut codegen, codegen::Context::default());
     Ok(ast)
   }
 }

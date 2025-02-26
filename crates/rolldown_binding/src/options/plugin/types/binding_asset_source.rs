@@ -1,5 +1,5 @@
-use napi::bindgen_prelude::Buffer;
 use napi::Either;
+use napi::bindgen_prelude::Buffer;
 
 #[napi_derive::napi(object)]
 pub struct BindingAssetSource {

@@ -1,10 +1,10 @@
 use nom::{
+  IResult, Parser,
   bytes::complete::{tag, take_till, take_while},
   character::complete::char,
   combinator::{map, opt, recognize},
   error::Error,
   sequence::preceded,
-  IResult, Parser,
 };
 
 pub fn is_data_url(s: &str) -> bool {

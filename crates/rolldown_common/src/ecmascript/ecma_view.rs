@@ -7,9 +7,9 @@ use rolldown_utils::indexmap::{FxIndexMap, FxIndexSet};
 use rustc_hash::{FxHashMap, FxHashSet};
 
 use crate::{
-  side_effects::DeterminedSideEffects, types::source_mutation::BoxedSourceMutation, AstScopeIdx,
-  EcmaAstIdx, ExportsKind, HmrInfo, ImportRecordIdx, LocalExport, ModuleDefFormat, ModuleId,
-  NamedImport, ResolvedImportRecord, SourceMutation, StmtInfoIdx, StmtInfos, SymbolRef,
+  AstScopeIdx, EcmaAstIdx, ExportsKind, HmrInfo, ImportRecordIdx, LocalExport, ModuleDefFormat,
+  ModuleId, NamedImport, ResolvedImportRecord, SourceMutation, StmtInfoIdx, StmtInfos, SymbolRef,
+  side_effects::DeterminedSideEffects, types::source_mutation::BoxedSourceMutation,
 };
 
 bitflags! {

@@ -1,6 +1,6 @@
 use crate::{build_error::severity::Severity, utils::is_context_too_long};
 use arcstr::ArcStr;
-use ariadne::{sources, Config, Label, Report, ReportBuilder, ReportKind, Span};
+use ariadne::{Config, Label, Report, ReportBuilder, ReportKind, Span, sources};
 use rustc_hash::FxHashMap;
 use std::{fmt::Display, ops::Range};
 

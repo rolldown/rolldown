@@ -10,20 +10,20 @@ use anyhow::Context;
 use arcstr::ArcStr;
 use derive_more::Debug;
 use rolldown_common::{
-  side_effects::HookSideEffects, ModuleDefFormat, ModuleInfo, ModuleLoaderMsg, ResolvedId,
-  SharedFileEmitter, SharedNormalizedBundlerOptions,
+  ModuleDefFormat, ModuleInfo, ModuleLoaderMsg, ResolvedId, SharedFileEmitter,
+  SharedNormalizedBundlerOptions, side_effects::HookSideEffects,
 };
 use rolldown_resolver::{ResolveError, Resolver};
 use rolldown_utils::dashmap::{FxDashMap, FxDashSet};
 use tokio::sync::Mutex;
 
 use crate::{
+  PluginDriver,
   types::{
     hook_resolve_id_skipped::HookResolveIdSkipped,
     plugin_context_resolve_options::PluginContextResolveOptions, plugin_idx::PluginIdx,
   },
   utils::resolve_id_with_plugins::resolve_id_check_external,
-  PluginDriver,
 };
 
 #[derive(Debug, Clone)]

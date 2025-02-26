@@ -194,11 +194,7 @@ impl NormalModule {
   // , we need to consider to stimulate the Node.js ESM behavior for maximum compatibility.
   pub fn interop(&self, importee: &NormalModule) -> Option<Interop> {
     if matches!(importee.ecma_view.exports_kind, ExportsKind::CommonJs) {
-      if self.ecma_view.def_format.is_esm() {
-        Some(Interop::Node)
-      } else {
-        Some(Interop::Babel)
-      }
+      if self.ecma_view.def_format.is_esm() { Some(Interop::Node) } else { Some(Interop::Babel) }
     } else {
       None
     }

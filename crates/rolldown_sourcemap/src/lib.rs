@@ -75,7 +75,7 @@ pub fn collapse_sourcemaps(mut sourcemap_chain: Vec<&SourceMap>) -> SourceMap {
 
 #[test]
 fn test_collapse_sourcemaps() {
-  use crate::{collapse_sourcemaps, SourceJoiner, SourceMapSource};
+  use crate::{SourceJoiner, SourceMapSource, collapse_sourcemaps};
   use oxc::{
     allocator::Allocator,
     codegen::{CodeGenerator, CodegenOptions, CodegenReturn},

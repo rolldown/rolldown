@@ -1,4 +1,4 @@
-use oxc::span::{Span, SPAN};
+use oxc::span::{SPAN, Span};
 
 pub trait SpanExt {
   fn is_empty(&self) -> bool;

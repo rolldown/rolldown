@@ -1,15 +1,15 @@
-use glob::{glob, Pattern};
+use glob::{Pattern, glob};
 use oxc::{
   allocator::Vec,
   ast::{
+    AstBuilder, NONE, VisitMut,
     ast::{
       Argument, ArrayExpressionElement, Expression, FormalParameterKind, ImportOrExportKind,
       ObjectPropertyKind, PropertyKey, PropertyKind, Statement,
     },
     visit::walk_mut,
-    AstBuilder, VisitMut, NONE,
   },
-  span::{Span, SPAN},
+  span::{SPAN, Span},
 };
 use rolldown_plugin::{HookTransformAstArgs, HookTransformAstReturn, Plugin, PluginContext};
 use rustc_hash::FxHashMap;

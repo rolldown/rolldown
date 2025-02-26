@@ -13,7 +13,7 @@ pub mod types;
 use arcstr::ArcStr;
 use rolldown_rstr::Rstr;
 use rolldown_std_utils::PathExt;
-use rolldown_utils::{hash_placeholder::HashPlaceholderGenerator, indexmap::FxIndexMap, BitSet};
+use rolldown_utils::{BitSet, hash_placeholder::HashPlaceholderGenerator, indexmap::FxIndexMap};
 use rustc_hash::FxHashMap;
 use sugar_path::SugarPath;
 
@@ -92,11 +92,7 @@ impl Chunk {
       .as_ref()
       .expect("importee chunk should have absolute_preliminary_filename");
     let import_path = self.relative_path_for(importee_filename.as_path());
-    if import_path.starts_with('.') {
-      import_path
-    } else {
-      format!("./{import_path}")
-    }
+    if import_path.starts_with('.') { import_path } else { format!("./{import_path}") }
   }
 
   pub fn relative_path_for(&self, target: &Path) -> String {

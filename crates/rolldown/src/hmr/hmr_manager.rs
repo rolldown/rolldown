@@ -13,10 +13,13 @@ impl HmrManager {
     let mut changed_modules = vec![];
     for changed_file_path in changed_file_paths {
       let changed_file_path = ArcStr::from(changed_file_path);
-      if let Some(module_idx) = self.module_idx_by_abs_path.get(&changed_file_path) {
-        changed_modules.push(*module_idx);
-      } else {
-        dbg!("No corresponding module found for changed file path: {:?}", changed_file_path);
+      match self.module_idx_by_abs_path.get(&changed_file_path) {
+        Some(module_idx) => {
+          changed_modules.push(*module_idx);
+        }
+        _ => {
+          dbg!("No corresponding module found for changed file path: {:?}", changed_file_path);
+        }
       }
     }
 

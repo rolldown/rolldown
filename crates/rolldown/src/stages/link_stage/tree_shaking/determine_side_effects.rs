@@ -1,5 +1,5 @@
 use oxc_index::IndexVec;
-use rolldown_common::{side_effects::DeterminedSideEffects, IndexModules, Module, ModuleIdx};
+use rolldown_common::{IndexModules, Module, ModuleIdx, side_effects::DeterminedSideEffects};
 
 use crate::stages::link_stage::LinkStage;
 

@@ -3,7 +3,7 @@ use std::cell::Cell;
 use oxc::{
   allocator::{Allocator, Box},
   ast::ast,
-  span::{Atom, SourceType, SPAN},
+  span::{Atom, SPAN, SourceType},
 };
 
 use super::TakeIn;

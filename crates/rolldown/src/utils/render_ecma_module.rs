@@ -1,7 +1,7 @@
 use std::sync::Arc;
 
 use rolldown_common::{ModuleRenderOutput, NormalModule, NormalizedBundlerOptions};
-use rolldown_sourcemap::{collapse_sourcemaps, Source, SourceMapSource};
+use rolldown_sourcemap::{Source, SourceMapSource, collapse_sourcemaps};
 use rolldown_utils::concat_string;
 
 pub fn render_ecma_module(

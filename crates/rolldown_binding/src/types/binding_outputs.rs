@@ -1,6 +1,6 @@
 use super::{
   binding_output_asset::{BindingOutputAsset, JsOutputAsset},
-  binding_output_chunk::{update_output_chunk, BindingOutputChunk, JsOutputChunk},
+  binding_output_chunk::{BindingOutputChunk, JsOutputChunk, update_output_chunk},
 };
 use napi_derive::napi;
 use rolldown_error::{BuildDiagnostic, DiagnosticOptions};

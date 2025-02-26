@@ -8,9 +8,9 @@ use rolldown_rstr::Rstr;
 use rustc_hash::FxHashMap;
 
 use crate::{
+  SharedOptions,
   chunk_graph::ChunkGraph,
   types::linking_metadata::{LinkingMetadata, LinkingMetadataVec},
-  SharedOptions,
 };
 
 pub struct ScopeHoistingFinalizerContext<'me> {

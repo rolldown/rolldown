@@ -133,7 +133,7 @@ impl Bundler {
     Ok(output)
   }
 
-  #[allow(clippy::missing_transmute_annotations)]
+  #[allow(clippy::missing_transmute_annotations, clippy::needless_pass_by_ref_mut)]
   async fn bundle_up(
     &mut self,
     scan_stage_output: ScanStageOutput,
@@ -155,10 +155,10 @@ impl Bundler {
         .generate()
         .await; // Notice we don't use `?` to break the control flow here.
 
-    if let Err(errs) = &bundle_output {
+    if let Err(errors) = &bundle_output {
       self
         .plugin_driver
-        .render_error(&HookRenderErrorArgs { errors: errs, cwd: &self.options.cwd })
+        .render_error(&HookRenderErrorArgs { errors, cwd: &self.options.cwd })
         .await?;
     }
 

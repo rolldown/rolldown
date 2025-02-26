@@ -85,8 +85,8 @@ impl<'ast> ScopeHoistingFinalizer<'_, 'ast> {
   }
 
   pub fn try_rewrite_identifier_reference_expr(
-    &mut self,
-    ident_ref: &mut ast::IdentifierReference<'ast>,
+    &self,
+    ident_ref: &ast::IdentifierReference<'ast>,
     is_callee: bool,
   ) -> Option<Expression<'ast>> {
     if let Some(rec_id) = self.ctx.module.imports.get(&ident_ref.span) {
@@ -106,7 +106,7 @@ impl<'ast> ScopeHoistingFinalizer<'_, 'ast> {
   }
 
   pub fn rewrite_simple_assignment_target(
-    &mut self,
+    &self,
     simple_target: &mut ast::SimpleAssignmentTarget<'ast>,
   ) -> Option<()> {
     // Some `IdentifierReference`s constructed by bundler don't have `ReferenceId` and we just ignore them.
@@ -141,7 +141,7 @@ impl<'ast> ScopeHoistingFinalizer<'_, 'ast> {
     None
   }
 
-  pub fn rewrite_object_pat_shorthand(&mut self, pat: &mut ast::ObjectPattern<'ast>) {
+  pub fn rewrite_object_pat_shorthand(&self, pat: &mut ast::ObjectPattern<'ast>) {
     for prop in &mut pat.properties {
       match &mut prop.value.kind {
         // Ensure `const { a } = ...;` will be rewritten to `const { a: a } = ...` instead of `const { a } = ...`

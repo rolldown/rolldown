@@ -48,7 +48,7 @@ impl GenerateStage<'_> {
     clippy::cast_possible_wrap
   )] // TODO(hyf0): refactor
   pub fn apply_advanced_chunks(
-    &mut self,
+    &self,
     index_splitting_info: &IndexSplittingInfo,
     module_to_assigned: &mut IndexVec<ModuleIdx, bool>,
     chunk_graph: &mut ChunkGraph,

@@ -10,7 +10,7 @@ use crate::type_alias::IndexAssets;
 use super::GenerateStage;
 
 impl GenerateStage<'_> {
-  pub fn minify_assets(&mut self, assets: &mut IndexAssets) -> BuildResult<()> {
+  pub fn minify_assets(&self, assets: &mut IndexAssets) -> BuildResult<()> {
     if let MinifyOptions::Enabled(minify_options) = &self.options.minify {
       assets.par_iter_mut().try_for_each(|asset| -> anyhow::Result<()> {
         match asset.meta {

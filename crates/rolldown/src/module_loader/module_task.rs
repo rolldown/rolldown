@@ -289,7 +289,7 @@ impl ModuleTask {
   }
 
   async fn load_source_phase(
-    &mut self,
+    &self,
     sourcemap_chain: &mut Vec<rolldown_sourcemap::SourceMap>,
     hook_side_effects: &mut Option<rolldown_common::side_effects::HookSideEffects>,
   ) -> BuildResult<(StrOrBytes, ModuleType)> {
@@ -343,7 +343,7 @@ impl ModuleTask {
   }
 
   pub async fn resolve_dependencies(
-    &mut self,
+    &self,
     dependencies: &IndexVec<ImportRecordIdx, RawImportRecord>,
     source: ArcStr,
     warnings: &mut Vec<BuildDiagnostic>,

@@ -36,7 +36,7 @@ impl RuntimeModuleTask {
   }
 
   #[tracing::instrument(name = "RuntimeNormalModuleTaskResult::run", level = "debug", skip_all)]
-  pub fn run(mut self) {
+  pub fn run(self) {
     if let Err(errs) = self.run_inner() {
       self
         .tx
@@ -46,7 +46,7 @@ impl RuntimeModuleTask {
   }
 
   #[expect(clippy::too_many_lines)]
-  fn run_inner(&mut self) -> BuildResult<()> {
+  fn run_inner(&self) -> BuildResult<()> {
     let source = if self.options.is_hmr_enabled() {
       arcstr::literal!(concat!(
         include_str!("../runtime/runtime-head-node.js"),
@@ -163,11 +163,7 @@ impl RuntimeModuleTask {
     Ok(())
   }
 
-  fn make_ecma_ast(
-    &mut self,
-    filename: &str,
-    source: &ArcStr,
-  ) -> BuildResult<(EcmaAst, ScanResult)> {
+  fn make_ecma_ast(&self, filename: &str, source: &ArcStr) -> BuildResult<(EcmaAst, ScanResult)> {
     let source_type = SourceType::default();
 
     let mut ast = EcmaCompiler::parse(filename, source, source_type)?;

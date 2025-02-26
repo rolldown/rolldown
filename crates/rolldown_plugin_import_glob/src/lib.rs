@@ -207,7 +207,7 @@ fn extract_import_glob_options(arg: &Argument, opts: &mut ImportGlobOptions) {
 }
 
 impl<'ast> GlobImportVisit<'ast, '_> {
-  fn eval_glob_expr(&mut self, arg: &Argument, files: &mut std::vec::Vec<String>) {
+  fn eval_glob_expr(&self, arg: &Argument, files: &mut std::vec::Vec<String>) {
     let mut positive_globs = vec![];
     let mut negated_globs = vec![];
     match arg {

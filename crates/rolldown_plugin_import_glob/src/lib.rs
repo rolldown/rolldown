@@ -11,6 +11,7 @@ use oxc::{
   },
   span::{SPAN, Span},
 };
+use rolldown_ecmascript_utils::ExpressionExt;
 use rolldown_plugin::{HookTransformAstArgs, HookTransformAstReturn, Plugin, PluginContext};
 use rustc_hash::FxHashMap;
 use std::{
@@ -82,36 +83,50 @@ pub struct GlobImportVisit<'ast, 'a> {
 
 impl<'ast> VisitMut<'ast> for GlobImportVisit<'ast, '_> {
   fn visit_expression(&mut self, expr: &mut Expression<'ast>) {
-    self.maybe_visit_obj_call(expr);
-    self.maybe_visit_glob_import_call(expr, false, false);
+    if !self.maybe_visit_obj_call(expr).unwrap_or_default() {
+      self.maybe_visit_glob_import_call(expr, None);
+    };
     walk_mut::walk_expression(self, expr);
   }
 }
 
+#[derive(Debug, PartialEq, Eq)]
+enum OmitType {
+  Keys,
+  Values,
+}
+
 impl<'ast> GlobImportVisit<'ast, '_> {
-  fn maybe_visit_obj_call(&mut self, expr: &mut Expression<'ast>) {
-    let Expression::CallExpression(expr) = expr else { return };
-    let Expression::StaticMemberExpression(callee) = &expr.callee else { return };
-    let property_name = callee.property.name;
+  fn maybe_visit_obj_call(&mut self, expr: &mut Expression<'ast>) -> Option<bool> {
+    let call_expr = expr.as_call_expression_mut()?;
+    let member_expr = call_expr.callee.as_static_member_expr_mut()?;
+
+    let property_name = member_expr.property.name;
     if property_name != "keys" && property_name != "values" {
-      return;
+      return None;
     }
-    let Expression::Identifier(i) = &callee.object else { return };
+    let ident = member_expr.object.as_identifier()?;
     // TODO: check is_global_identifier_reference
-    if i.name != "Object" {
-      return;
+    if ident.name != "Object" {
+      return None;
     }
-    let [arg] = expr.arguments.as_mut_slice() else { return };
-    let Some(arg_expr) = arg.as_expression_mut() else { return };
-    self.maybe_visit_glob_import_call(arg_expr, property_name != "keys", property_name == "keys");
+    let [arg] = call_expr.arguments.as_mut_slice() else { return None };
+    let arg_expr = arg.as_expression_mut()?;
+    self.maybe_visit_glob_import_call(
+      arg_expr,
+      Some(if property_name == "keys" { OmitType::Values } else { OmitType::Keys }).as_ref(),
+    );
+    Some(true)
   }
 
   fn maybe_visit_glob_import_call(
     &mut self,
     expr: &mut Expression<'ast>,
-    omit_keys: bool,
-    omit_values: bool,
+    omit_type: Option<&OmitType>,
   ) {
+    let omit_keys = omit_type == Some(&OmitType::Keys);
+    let omit_values = omit_type == Some(&OmitType::Values);
+
     let Expression::CallExpression(call_expr) = expr else { return };
     let Expression::StaticMemberExpression(callee) = &call_expr.callee else { return };
     if callee.property.name != "glob" {

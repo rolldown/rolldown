@@ -9,6 +9,7 @@ pub trait ExpressionExt<'ast> {
   fn as_unary_expression(&self) -> Option<&ast::UnaryExpression<'ast>>;
   fn as_string_literal(&self) -> Option<&ast::StringLiteral<'ast>>;
   fn as_binary_expression(&self) -> Option<&ast::BinaryExpression<'ast>>;
+  fn as_static_member_expr_mut(&mut self) -> Option<&mut ast::StaticMemberExpression<'ast>>;
 
   fn is_import_meta(&self) -> bool;
   fn is_import_meta_url(&self) -> bool;
@@ -76,5 +77,13 @@ impl<'ast> ExpressionExt<'ast> for ast::Expression<'ast> {
   fn is_import_meta_hot_accept(&self) -> bool {
     matches!(self, ast::Expression::StaticMemberExpression(member_expr)
     if member_expr.object.is_import_meta_hot() && member_expr.property.name == "accept")
+  }
+
+  fn as_static_member_expr_mut(&mut self) -> Option<&mut ast::StaticMemberExpression<'ast>> {
+    if let ast::Expression::StaticMemberExpression(member_expr) = self {
+      Some(member_expr)
+    } else {
+      None
+    }
   }
 }

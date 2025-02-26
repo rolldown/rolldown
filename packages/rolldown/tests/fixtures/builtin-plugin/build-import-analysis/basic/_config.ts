@@ -1,8 +1,6 @@
 import { buildImportAnalysisPlugin } from 'rolldown/experimental'
 import { defineTest } from 'rolldown-tests'
-import { expect, vi } from 'vitest'
-
-const onLogFn = vi.fn()
+import { expect } from 'vitest'
 
 export default defineTest({
   skipComposingJsPlugin: true,
@@ -34,20 +32,10 @@ export const __vitePreload = (v) => {
         isRelativeBase: false,
       }),
     ],
-    onLog(level, log) {
-      expect(level).toBe('warn')
-      expect(log.code).toBe('UNRESOLVED_IMPORT')
-      expect(log.message).toContain(
-        "Could not resolve 'node:assert' in main.js",
-      )
-      onLogFn()
-    },
+    external: ['node:assert'],
   },
   async afterTest(output) {
-    expect(onLogFn).toHaveBeenCalledTimes(1)
-
     await import('./assert.mjs')
-
     output.output.forEach((item) => {
       if (item.type === 'chunk' && item.name === 'main') {
         expect(item.code).to.not.includes('import.meta.url')

@@ -1,14 +1,14 @@
 use crate::options::plugin::{BindingPluginOptions, BindingPluginWithIndex};
 use dashmap::DashMap;
 use napi::{
-  bindgen_prelude::{FromNapiValue, JavaScriptClassExt, Object, ObjectFinalize},
   Env, JsUnknown,
+  bindgen_prelude::{FromNapiValue, JavaScriptClassExt, Object, ObjectFinalize},
 };
 use napi_derive::napi;
 use rolldown_utils::{dashmap::FxDashMap, rustc_hash::FxHashMapExt};
 use rustc_hash::FxHashMap;
-use std::sync::atomic::{self, AtomicU16};
 use std::sync::LazyLock;
+use std::sync::atomic::{self, AtomicU16};
 
 type PluginsInSingleWorker = Vec<BindingPluginWithIndex>;
 type PluginsList = Vec<PluginsInSingleWorker>;
@@ -66,15 +66,17 @@ impl FromNapiValue for ParallelJsPluginRegistry {
     env: napi::sys::napi_env,
     napi_val: napi::sys::napi_value,
   ) -> napi::Result<Self> {
-    let unknown = JsUnknown::from_napi_value(env, napi_val)?;
-    if !ParallelJsPluginRegistry::instance_of(env.into(), &unknown)? {
-      return Err(napi::Error::from_status(napi::Status::GenericFailure));
-    }
+    unsafe {
+      let unknown = JsUnknown::from_napi_value(env, napi_val)?;
+      if !ParallelJsPluginRegistry::instance_of(env.into(), &unknown)? {
+        return Err(napi::Error::from_status(napi::Status::GenericFailure));
+      }
 
-    let object: Object = unknown.cast();
-    let id: u16 = object.get_named_property_unchecked("id")?;
-    let worker_count: u16 = object.get_named_property_unchecked("workerCount")?;
-    Ok(Self { id, worker_count })
+      let object: Object = unknown.cast();
+      let id: u16 = object.get_named_property_unchecked("id")?;
+      let worker_count: u16 = object.get_named_property_unchecked("workerCount")?;
+      Ok(Self { id, worker_count })
+    }
   }
 }
 

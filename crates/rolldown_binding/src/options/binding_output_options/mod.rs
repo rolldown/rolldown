@@ -3,8 +3,8 @@ mod binding_pre_rendered_asset;
 mod binding_pre_rendered_chunk;
 use binding_pre_rendered_asset::BindingPreRenderedAsset;
 use derive_more::Debug;
-use napi::bindgen_prelude::{Either3, FnArgs};
 use napi::Either;
+use napi::bindgen_prelude::{Either3, FnArgs};
 use napi_derive::napi;
 use rustc_hash::FxHashMap;
 

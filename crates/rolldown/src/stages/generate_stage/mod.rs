@@ -24,6 +24,7 @@ use rolldown_utils::{
 use sugar_path::SugarPath;
 
 use crate::{
+  BundleOutput, SharedOptions,
   chunk_graph::ChunkGraph,
   module_finalizers::{
     isolating::{IsolatingModuleFinalizer, IsolatingModuleFinalizerContext},
@@ -37,7 +38,6 @@ use crate::{
     },
     finalize_normal_module,
   },
-  BundleOutput, SharedOptions,
 };
 
 mod advanced_chunks;

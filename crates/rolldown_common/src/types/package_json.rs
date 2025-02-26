@@ -2,7 +2,7 @@ use std::path::PathBuf;
 
 use arcstr::ArcStr;
 
-use crate::side_effects::{glob_match_with_normalized_pattern, SideEffects};
+use crate::side_effects::{SideEffects, glob_match_with_normalized_pattern};
 
 #[derive(Debug, Clone)]
 pub struct PackageJson {

@@ -12,10 +12,10 @@ use std::{collections::VecDeque, sync::OnceLock};
 use rustc_hash::FxHashMap;
 
 use crate::{
+  CowStr,
   chunk::{Chunk, ChunkIdx},
   span::Span,
   type_aliases::IndexChunks,
-  CowStr,
 };
 
 #[derive(Debug, Default)]

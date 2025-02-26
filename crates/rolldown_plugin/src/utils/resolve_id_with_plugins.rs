@@ -1,10 +1,10 @@
 use crate::{
-  types::{custom_field::CustomField, hook_resolve_id_skipped::HookResolveIdSkipped},
   HookResolveIdArgs, PluginDriver,
+  types::{custom_field::CustomField, hook_resolve_id_skipped::HookResolveIdSkipped},
 };
 use rolldown_common::{
-  is_existing_node_builtin_modules, ImportKind, ModuleDefFormat, ResolvedId,
-  SharedNormalizedBundlerOptions,
+  ImportKind, ModuleDefFormat, ResolvedId, SharedNormalizedBundlerOptions,
+  is_existing_node_builtin_modules,
 };
 use rolldown_resolver::{ResolveError, Resolver};
 use std::{path::Path, sync::Arc};

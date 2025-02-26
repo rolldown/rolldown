@@ -1,7 +1,7 @@
 use derive_more::Debug;
+use napi::JsUnknown;
 use napi::bindgen_prelude::FnArgs;
 use napi::bindgen_prelude::FromNapiValue;
-use napi::JsUnknown;
 use napi_derive::napi;
 use rolldown_plugin::__inner::Pluginable;
 use rolldown_plugin_alias::{Alias, AliasPlugin};
@@ -26,7 +26,7 @@ use std::collections::HashMap;
 use std::sync::Arc;
 
 use super::types::binding_builtin_plugin_name::BindingBuiltinPluginName;
-use super::types::binding_js_or_regex::{bindingify_string_or_regex_array, BindingStringOrRegex};
+use super::types::binding_js_or_regex::{BindingStringOrRegex, bindingify_string_or_regex_array};
 use super::types::binding_limited_boolean::BindingTrueValue;
 use super::types::binding_module_federation_plugin_option::BindingModuleFederationPluginOption;
 use crate::types::js_callback::{JsCallback, JsCallbackExt};
@@ -109,7 +109,7 @@ impl TryFrom<BindingJsonPluginStringify> for JsonPluginStringify {
         return Err(napi::Error::new(
           napi::Status::InvalidArg,
           format!("Invalid stringify option: {s}"),
-        ))
+        ));
       }
     })
   }

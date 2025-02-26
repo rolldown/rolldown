@@ -69,7 +69,9 @@ pub async fn render_umd<'code>(
   let cjs_intro = if need_global {
     let cjs_export = if has_exports && !named_exports { "module.exports = " } else { "" };
     let cjs_dependencies = render_cjs_dependencies(&externals, has_exports && named_exports);
-    format!("typeof exports === 'object' && typeof module !== 'undefined' ? {cjs_export} factory({cjs_dependencies}) :",)
+    format!(
+      "typeof exports === 'object' && typeof module !== 'undefined' ? {cjs_export} factory({cjs_dependencies}) :",
+    )
   } else {
     String::new()
   };

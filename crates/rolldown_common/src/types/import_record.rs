@@ -6,7 +6,7 @@ use std::{
 use oxc::span::Span;
 use rolldown_rstr::Rstr;
 
-use crate::{ImportKind, ModuleIdx, ModuleType, StmtInfoIdx, SymbolRef, DUMMY_MODULE_IDX};
+use crate::{DUMMY_MODULE_IDX, ImportKind, ModuleIdx, ModuleType, StmtInfoIdx, SymbolRef};
 
 oxc_index::define_index_type! {
   pub struct ImportRecordIdx = u32;

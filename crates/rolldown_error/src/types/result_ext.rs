@@ -1,4 +1,4 @@
-use crate::{type_aliases::SingleBuildResult, BuildDiagnostic};
+use crate::{BuildDiagnostic, type_aliases::SingleBuildResult};
 use std::error::Error as StdError;
 
 pub trait ResultExt<Val> {

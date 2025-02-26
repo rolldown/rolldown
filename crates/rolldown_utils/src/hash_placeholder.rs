@@ -111,9 +111,9 @@ pub fn extract_hash_placeholders(source: &str) -> FxIndexSet<ArcStr> {
 
 #[test]
 fn test_facade_hash_generator() {
-  let mut gen = HashPlaceholderGenerator::default();
-  assert_eq!(gen.generate(8), "!~{000}~");
-  assert_eq!(gen.generate(8), "!~{001}~");
+  let mut r#gen = HashPlaceholderGenerator::default();
+  assert_eq!(r#gen.generate(8), "!~{000}~");
+  assert_eq!(r#gen.generate(8), "!~{001}~");
 }
 
 #[test]

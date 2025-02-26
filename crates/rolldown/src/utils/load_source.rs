@@ -1,7 +1,7 @@
 use std::path::Path;
 
 use rolldown_common::{
-  side_effects::HookSideEffects, ModuleType, NormalizedBundlerOptions, ResolvedId, StrOrBytes,
+  ModuleType, NormalizedBundlerOptions, ResolvedId, StrOrBytes, side_effects::HookSideEffects,
 };
 use rolldown_plugin::{HookLoadArgs, PluginDriver};
 use rolldown_sourcemap::SourceMap;
@@ -17,20 +17,24 @@ pub async fn load_source(
   options: &NormalizedBundlerOptions,
   asserted_module_type: Option<&ModuleType>,
 ) -> anyhow::Result<(StrOrBytes, ModuleType)> {
-  let (maybe_source, maybe_module_type) = if let Some(load_hook_output) =
-    plugin_driver.load(&HookLoadArgs { id: &resolved_id.id }).await?
-  {
-    sourcemap_chain.extend(load_hook_output.map);
-    if let Some(v) = load_hook_output.side_effects {
-      *side_effects = Some(v);
-    }
+  let (maybe_source, maybe_module_type) =
+    match plugin_driver.load(&HookLoadArgs { id: &resolved_id.id }).await? {
+      Some(load_hook_output) => {
+        sourcemap_chain.extend(load_hook_output.map);
+        if let Some(v) = load_hook_output.side_effects {
+          *side_effects = Some(v);
+        }
 
-    (Some(load_hook_output.code), load_hook_output.module_type)
-  } else if resolved_id.ignored {
-    (Some(String::new()), Some(ModuleType::Empty))
-  } else {
-    (None, None)
-  };
+        (Some(load_hook_output.code), load_hook_output.module_type)
+      }
+      _ => {
+        if resolved_id.ignored {
+          (Some(String::new()), Some(ModuleType::Empty))
+        } else {
+          (None, None)
+        }
+      }
+    };
 
   if let Some(asserted) = asserted_module_type {
     let is_type_conflicted = match &maybe_module_type {

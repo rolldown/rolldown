@@ -2,7 +2,7 @@ use super::BuildEvent;
 use arcstr::ArcStr;
 use oxc::span::Span;
 
-use crate::{diagnostic::Diagnostic, types::diagnostic_options::DiagnosticOptions, EventKind};
+use crate::{EventKind, diagnostic::Diagnostic, types::diagnostic_options::DiagnosticOptions};
 
 #[derive(Debug)]
 pub struct AmbiguousExternalNamespaceModule {

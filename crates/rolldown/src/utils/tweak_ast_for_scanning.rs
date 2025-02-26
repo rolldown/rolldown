@@ -2,8 +2,8 @@ use itertools::Itertools;
 use oxc::allocator::Allocator;
 use oxc::ast::ast::{self, BindingPatternKind, Declaration, ImportOrExportKind, Statement};
 use oxc::ast::visit::walk_mut;
-use oxc::ast::{VisitMut, NONE};
-use oxc::span::{Span, SPAN};
+use oxc::ast::{NONE, VisitMut};
+use oxc::span::{SPAN, Span};
 use rolldown_ecmascript_utils::{AstSnippet, StatementExt, TakeIn};
 
 /// Pre-process is a essential step to make rolldown generate correct and efficient code.

@@ -41,18 +41,22 @@ impl BuildEvent for UnloadableDependency {
     diagnostic: &mut crate::diagnostic::Diagnostic,
     opts: &DiagnosticOptions,
   ) {
-    if let Some(context) = &self.context {
-      let importer_file = diagnostic.add_file(context.importer_id.clone(), context.source.clone());
+    match &self.context {
+      Some(context) => {
+        let importer_file =
+          diagnostic.add_file(context.importer_id.clone(), context.source.clone());
 
-      diagnostic.title = format!("Could not load {}", self.resolved);
+        diagnostic.title = format!("Could not load {}", self.resolved);
 
-      diagnostic.add_label(
-        &importer_file,
-        context.importee_span.start..context.importee_span.end,
-        self.reason.to_string(),
-      );
-    } else {
-      diagnostic.title = self.message(opts);
+        diagnostic.add_label(
+          &importer_file,
+          context.importee_span.start..context.importee_span.end,
+          self.reason.to_string(),
+        );
+      }
+      _ => {
+        diagnostic.title = self.message(opts);
+      }
     }
   }
 }

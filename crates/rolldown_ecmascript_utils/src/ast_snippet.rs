@@ -1,14 +1,14 @@
 use oxc::{
   allocator::{self, Allocator, Box, IntoIn},
   ast::{
+    AstBuilder, NONE,
     ast::{
       self, Argument, BindingIdentifier, ClassElement, Declaration, Expression, FunctionType,
       ImportOrExportKind, NumberBase, ObjectPropertyKind, PropertyKind, Statement,
       VariableDeclarationKind,
     },
-    AstBuilder, NONE,
   },
-  span::{Atom, CompactStr, Span, SPAN},
+  span::{Atom, CompactStr, SPAN, Span},
 };
 use rolldown_common::{EcmaModuleAstUsage, Interop};
 

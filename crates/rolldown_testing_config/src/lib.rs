@@ -56,11 +56,7 @@ impl Display for ConfigVariant {
       fields.push(format!("strict_execution_order: {strict_execution_order:?}"));
     }
     fields.sort();
-    if fields.is_empty() {
-      write!(f, "()")
-    } else {
-      write!(f, "({})", fields.join(", "))
-    }
+    if fields.is_empty() { write!(f, "()") } else { write!(f, "({})", fields.join(", ")) }
   }
 }
 

@@ -131,17 +131,18 @@ impl ExternalDecider {
     }
 
     let result = self.resolver.resolve_bare_import(id, importer, false, &self.options.dedupe);
-    if let Ok(result) = result {
-      let resolved = match result {
-        Some(result) => result,
-        _ => return false,
-      };
-      if !configured_as_external && !is_in_node_modules(&resolved.id) {
-        return false;
+    match result {
+      Ok(result) => {
+        let resolved = match result {
+          Some(result) => result,
+          _ => return false,
+        };
+        if !configured_as_external && !is_in_node_modules(&resolved.id) {
+          return false;
+        }
+        can_externalize_file(&resolved.id)
       }
-      can_externalize_file(&resolved.id)
-    } else {
-      false
+      _ => false,
     }
   }
 }

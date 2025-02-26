@@ -1,5 +1,5 @@
 // Port from https://github.com/7086cmd/mime_more/blob/main/src/light_guess.rs
-use phf::{phf_map, Map};
+use phf::{Map, phf_map};
 
 use crate::mime::MimeExt;
 

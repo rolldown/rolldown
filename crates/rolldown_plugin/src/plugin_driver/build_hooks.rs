@@ -1,18 +1,18 @@
 use std::sync::Arc;
 
 use crate::{
+  HookBuildEndArgs, HookLoadArgs, HookLoadReturn, HookNoopReturn, HookResolveIdArgs,
+  HookResolveIdReturn, HookTransformArgs, PluginContext, PluginDriver, TransformPluginContext,
   pluginable::HookTransformAstReturn,
   types::{
     hook_resolve_id_skipped::HookResolveIdSkipped, hook_transform_ast_args::HookTransformAstArgs,
     plugin_idx::PluginIdx,
   },
-  HookBuildEndArgs, HookLoadArgs, HookLoadReturn, HookNoopReturn, HookResolveIdArgs,
-  HookResolveIdReturn, HookTransformArgs, PluginContext, PluginDriver, TransformPluginContext,
 };
 use anyhow::Result;
 use rolldown_common::{
-  side_effects::HookSideEffects, ModuleInfo, ModuleType, NormalModule,
-  SharedNormalizedBundlerOptions,
+  ModuleInfo, ModuleType, NormalModule, SharedNormalizedBundlerOptions,
+  side_effects::HookSideEffects,
 };
 use rolldown_sourcemap::SourceMap;
 use rolldown_utils::unique_arc::UniqueArc;

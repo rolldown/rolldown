@@ -1,8 +1,8 @@
 use oxc_index::IndexVec;
 use rolldown_common::{
-  side_effects::{DeterminedSideEffects, HookSideEffects},
   EcmaRelated, EcmaView, EcmaViewMeta, ImportRecordIdx, ModuleId, ModuleType, RawImportRecord,
   ResolvedId, SharedNormalizedBundlerOptions, TreeshakeOptions,
+  side_effects::{DeterminedSideEffects, HookSideEffects},
 };
 use rolldown_error::BuildResult;
 use rolldown_std_utils::PathExt;
@@ -12,7 +12,7 @@ use sugar_path::SugarPath;
 use crate::{
   ast_scanner::{AstScanner, ScanResult},
   types::module_factory::{CreateModuleContext, CreateModuleViewArgs},
-  utils::parse_to_ecma_ast::{parse_to_ecma_ast, ParseToEcmaAstResult},
+  utils::parse_to_ecma_ast::{ParseToEcmaAstResult, parse_to_ecma_ast},
 };
 
 pub struct CreateEcmaViewReturn {

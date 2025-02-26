@@ -2,7 +2,7 @@ use std::sync::Arc;
 
 use crate::PluginContext;
 use arcstr::ArcStr;
-use rolldown_sourcemap::{collapse_sourcemaps, SourceMap};
+use rolldown_sourcemap::{SourceMap, collapse_sourcemaps};
 use rolldown_utils::unique_arc::WeakRef;
 use string_wizard::{MagicString, SourceMapOptions};
 

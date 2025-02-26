@@ -31,11 +31,7 @@ impl ExperimentalOptions {
 
   #[inline]
   pub fn get_ignore_comment(&self) -> &'static str {
-    if self.vite_mode.unwrap_or_default() {
-      "@vite-ignore"
-    } else {
-      ROLLDOWN_IGNORE
-    }
+    if self.vite_mode.unwrap_or_default() { "@vite-ignore" } else { ROLLDOWN_IGNORE }
   }
 
   pub fn is_resolve_new_url_to_asset_enabled(&self) -> bool {

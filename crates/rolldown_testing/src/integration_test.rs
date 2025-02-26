@@ -9,8 +9,8 @@ use std::{
 
 use anyhow::Context;
 use rolldown::{
-  plugin::__inner::SharedPluginable, BundleOutput, Bundler, BundlerOptions, IsExternal,
-  OutputFormat, Platform, SourceMapType,
+  BundleOutput, Bundler, BundlerOptions, IsExternal, OutputFormat, Platform, SourceMapType,
+  plugin::__inner::SharedPluginable,
 };
 use rolldown_common::Output;
 use rolldown_error::{BuildDiagnostic, BuildResult, DiagnosticOptions};

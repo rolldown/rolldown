@@ -1,6 +1,6 @@
 use napi_derive::napi;
 
-use super::binding_outputs::{to_js_diagnostic, BindingError};
+use super::binding_outputs::{BindingError, to_js_diagnostic};
 
 #[napi]
 pub struct BindingWatcherEvent {
@@ -20,42 +20,49 @@ impl BindingWatcherEvent {
 
   #[napi]
   pub fn watch_change_data(&self) -> BindingWatcherChangeData {
-    if let rolldown_common::WatcherEvent::Change(data) = &self.inner {
-      BindingWatcherChangeData { path: data.path.to_string(), kind: data.kind.to_string() }
-    } else {
-      unreachable!("Expected WatcherEvent::Change")
+    match &self.inner {
+      rolldown_common::WatcherEvent::Change(data) => {
+        BindingWatcherChangeData { path: data.path.to_string(), kind: data.kind.to_string() }
+      }
+      _ => {
+        unreachable!("Expected WatcherEvent::Change")
+      }
     }
   }
 
   #[napi]
   pub fn bundle_end_data(&self) -> BindingBundleEndEventData {
-    if let rolldown_common::WatcherEvent::Event(rolldown_common::BundleEvent::BundleEnd(data)) =
-      &self.inner
-    {
-      BindingBundleEndEventData { output: data.output.to_string(), duration: data.duration }
-    } else {
-      unreachable!("Expected WatcherEvent::Event(BundleEventKind::BundleEnd)")
+    match &self.inner {
+      rolldown_common::WatcherEvent::Event(rolldown_common::BundleEvent::BundleEnd(data)) => {
+        BindingBundleEndEventData { output: data.output.to_string(), duration: data.duration }
+      }
+      _ => {
+        unreachable!("Expected WatcherEvent::Event(BundleEventKind::BundleEnd)")
+      }
     }
   }
 
   #[napi]
   pub fn bundle_event_kind(&self) -> String {
-    if let rolldown_common::WatcherEvent::Event(kind) = &self.inner {
-      kind.to_string()
-    } else {
-      unreachable!("Expected WatcherEvent::Event")
+    match &self.inner {
+      rolldown_common::WatcherEvent::Event(kind) => kind.to_string(),
+      _ => {
+        unreachable!("Expected WatcherEvent::Event")
+      }
     }
   }
 
   #[napi]
   pub fn errors(&mut self) -> Vec<napi::Either<napi::JsError, BindingError>> {
-    if let rolldown_common::WatcherEvent::Event(rolldown_common::BundleEvent::Error(
-      rolldown_common::OutputsDiagnostics { diagnostics, cwd },
-    )) = &mut self.inner
-    {
-      diagnostics.iter().map(|diagnostic| to_js_diagnostic(diagnostic, cwd.clone())).collect()
-    } else {
-      unreachable!("Expected WatcherEvent::Event(BundleEventKind::Error)")
+    match &mut self.inner {
+      rolldown_common::WatcherEvent::Event(rolldown_common::BundleEvent::Error(
+        rolldown_common::OutputsDiagnostics { diagnostics, cwd },
+      )) => {
+        diagnostics.iter().map(|diagnostic| to_js_diagnostic(diagnostic, cwd.clone())).collect()
+      }
+      _ => {
+        unreachable!("Expected WatcherEvent::Event(BundleEventKind::Error)")
+      }
     }
   }
 }

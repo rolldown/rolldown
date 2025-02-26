@@ -3,8 +3,8 @@ use std::cmp::Reverse;
 
 use super::GenerateStage;
 use crate::chunk_graph::ChunkGraph;
-use itertools::{multizip, Itertools};
-use oxc_index::{index_vec, IndexVec};
+use itertools::{Itertools, multizip};
+use oxc_index::{IndexVec, index_vec};
 use rolldown_common::{
   ChunkIdx, ChunkKind, CrossChunkImportItem, ExportsKind, ImportKind, ImportRecordMeta, Module,
   ModuleIdx, NamedImport, OutputFormat, SymbolRef, WrapKind,
@@ -222,18 +222,21 @@ impl GenerateStage<'_> {
                   depended_symbols.insert(canonical_ref);
                 }
                 rolldown_common::SymbolOrMemberExprRef::MemberExpr(member_expr) => {
-                  if let Some(sym_ref) = member_expr.resolved_symbol_ref(
+                  match member_expr.resolved_symbol_ref(
                     &self.link_output.metas[module.idx].resolved_member_expr_refs,
                   ) {
-                    let mut canonical_ref = self.link_output.symbol_db.canonical_ref_for(sym_ref);
-                    let symbol = symbols.get(canonical_ref);
-                    if let Some(ref ns_alias) = symbol.namespace_alias {
-                      canonical_ref = ns_alias.namespace_ref;
+                    Some(sym_ref) => {
+                      let mut canonical_ref = self.link_output.symbol_db.canonical_ref_for(sym_ref);
+                      let symbol = symbols.get(canonical_ref);
+                      if let Some(ref ns_alias) = symbol.namespace_alias {
+                        canonical_ref = ns_alias.namespace_ref;
+                      }
+                      depended_symbols.insert(canonical_ref);
                     }
-                    depended_symbols.insert(canonical_ref);
-                  } else {
-                    // `None` means the member expression resolve to a ambiguous export, which means it actually resolve to nothing.
-                    // It would be rewrite to `undefined` in the final code, so we don't need to include anything to make `undefined` work.
+                    _ => {
+                      // `None` means the member expression resolve to a ambiguous export, which means it actually resolve to nothing.
+                      // It would be rewrite to `undefined` in the final code, so we don't need to include anything to make `undefined` work.
+                    }
                   }
                 }
               };

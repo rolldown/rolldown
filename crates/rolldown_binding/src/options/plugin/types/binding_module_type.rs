@@ -1,4 +1,4 @@
-use napi::{bindgen_prelude::FromNapiValue, sys, JsString};
+use napi::{JsString, bindgen_prelude::FromNapiValue, sys};
 use rolldown::ModuleType;
 
 #[derive(Debug, Clone)]
@@ -12,7 +12,9 @@ impl AsRef<ModuleType> for BindingModuleType {
 
 impl FromNapiValue for BindingModuleType {
   unsafe fn from_napi_value(env: sys::napi_env, napi_val: sys::napi_value) -> napi::Result<Self> {
-    let value = JsString::from_napi_value(env, napi_val)?;
-    Ok(Self(ModuleType::from_str_with_fallback(value.into_utf8()?.as_str()?)))
+    unsafe {
+      let value = JsString::from_napi_value(env, napi_val)?;
+      Ok(Self(ModuleType::from_str_with_fallback(value.into_utf8()?.as_str()?)))
+    }
   }
 }

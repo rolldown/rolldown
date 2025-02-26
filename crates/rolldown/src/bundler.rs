@@ -1,10 +1,10 @@
 use super::stages::{link_stage::LinkStage, scan_stage::ScanStageOutput};
 use crate::{
+  BundlerOptions, SharedOptions, SharedResolver,
   bundler_builder::BundlerBuilder,
   hmr::hmr_manager::HmrManager,
   stages::{generate_stage::GenerateStage, scan_stage::ScanStage},
   types::bundle_output::BundleOutput,
-  BundlerOptions, SharedOptions, SharedResolver,
 };
 use anyhow::Result;
 
@@ -12,7 +12,7 @@ use rolldown_common::{Cache, NormalizedBundlerOptions, SharedFileEmitter};
 use rolldown_error::{BuildDiagnostic, BuildResult};
 use rolldown_fs::{FileSystem, OsFileSystem};
 use rolldown_plugin::{
-  HookBuildEndArgs, HookRenderErrorArgs, SharedPluginDriver, __inner::SharedPluginable,
+  __inner::SharedPluginable, HookBuildEndArgs, HookRenderErrorArgs, SharedPluginDriver,
 };
 use std::sync::Arc;
 use tracing_chrome::FlushGuard;

@@ -2,16 +2,16 @@ use oxc_index::IndexVec;
 #[cfg(debug_assertions)]
 use rolldown_common::common_debug_symbol_ref;
 use rolldown_common::{
-  dynamic_import_usage::DynamicImportExportsUsage, EntryPoint, EntryPointKind, ImportKind,
-  ModuleIdx, ModuleTable, RuntimeModuleBrief, SymbolRef, SymbolRefDb,
+  EntryPoint, EntryPointKind, ImportKind, ModuleIdx, ModuleTable, RuntimeModuleBrief, SymbolRef,
+  SymbolRefDb, dynamic_import_usage::DynamicImportExportsUsage,
 };
 use rolldown_error::BuildDiagnostic;
 use rustc_hash::{FxHashMap, FxHashSet};
 
 use crate::{
+  SharedOptions,
   type_alias::{IndexAstScope, IndexEcmaAst},
   types::linking_metadata::{LinkingMetadata, LinkingMetadataVec},
-  SharedOptions,
 };
 
 use super::scan_stage::ScanStageOutput;

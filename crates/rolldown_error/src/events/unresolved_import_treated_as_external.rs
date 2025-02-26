@@ -20,10 +20,11 @@ impl BuildEvent for UnresolvedImportTreatedAsExternal {
 
   fn message(&self, opts: &crate::DiagnosticOptions) -> String {
     // https://github.com/rollup/rollup/blob/fe6cb3a291df245408ef2bdc708fc64fa4ecb262/src/utils/logs.ts#L1031-L1041
-    let mut message=
-    vec![
-      format!("{importee:?} is imported by {importer:?}, but could not be resolved – treating it as an external dependency.", importee = self.specifier, importer = opts.stabilize_path(&self.importer)),
-    ];
+    let mut message = vec![format!(
+      "{importee:?} is imported by {importer:?}, but could not be resolved – treating it as an external dependency.",
+      importee = self.specifier,
+      importer = opts.stabilize_path(&self.importer)
+    )];
 
     match &self.resolve_error {
       Some(ResolveError::PackagePathNotExported(pkg_subpath, pkg_json_path)) => {

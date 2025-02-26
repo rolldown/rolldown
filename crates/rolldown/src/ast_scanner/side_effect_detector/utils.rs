@@ -1,7 +1,8 @@
 use oxc::{
   ast::{
+    Comment, CommentKind,
     ast::{self, Expression, MemberExpression},
-    comments_range, Comment, CommentKind,
+    comments_range,
   },
   semantic::{ReferenceId, SymbolTable},
   span::{Atom, Span},
@@ -427,7 +428,7 @@ pub fn maybe_side_effect_free_global_constructor(
             ast::Argument::Identifier(id)
               if id.name == "undefined" && scope.is_unresolved(id.reference_id(), symbol_table) =>
             {
-              return true
+              return true;
             }
             ast::Argument::ArrayExpression(arr) if arr.elements.is_empty() => return true,
             _ => {}
@@ -465,7 +466,7 @@ pub fn maybe_side_effect_free_global_constructor(
             ast::Argument::Identifier(id)
               if id.name == "undefined" && scope.is_unresolved(id.reference_id(), symbol_table) =>
             {
-              return true
+              return true;
             }
             _ => {}
           }
@@ -481,7 +482,7 @@ pub fn maybe_side_effect_free_global_constructor(
             ast::Argument::Identifier(id)
               if id.name == "undefined" && scope.is_unresolved(id.reference_id(), symbol_table) =>
             {
-              return true
+              return true;
             }
             ast::Argument::ArrayExpression(arr) => {
               let all_entries_are_arrays = arr.elements.iter().all(|item| {

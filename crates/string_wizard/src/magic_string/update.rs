@@ -1,4 +1,4 @@
-use crate::{chunk::EditOptions, CowStr, MagicString};
+use crate::{CowStr, MagicString, chunk::EditOptions};
 
 #[derive(Debug, Default, Clone)]
 pub struct UpdateOptions {

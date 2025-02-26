@@ -1,6 +1,6 @@
 use anyhow::Result;
 use rolldown_common::ModuleType;
-use rolldown_common::{side_effects::HookSideEffects, ResolvedId};
+use rolldown_common::{ResolvedId, side_effects::HookSideEffects};
 use rolldown_plugin::PluginDriver;
 use rolldown_sourcemap::SourceMap;
 

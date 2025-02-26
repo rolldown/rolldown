@@ -2,15 +2,15 @@ use std::sync::Arc;
 
 use rolldown_common::{Cache, FileEmitter, NormalizedBundlerOptions};
 use rolldown_fs::OsFileSystem;
-use rolldown_plugin::{PluginDriver, __inner::SharedPluginable};
+use rolldown_plugin::{__inner::SharedPluginable, PluginDriver};
 use rolldown_resolver::{ResolveError, Resolver};
 
 use crate::{
+  Bundler, BundlerOptions, SharedResolver,
   utils::{
     apply_inner_plugins::apply_inner_plugins,
-    normalize_options::{normalize_options, NormalizeOptionsReturn},
+    normalize_options::{NormalizeOptionsReturn, normalize_options},
   },
-  Bundler, BundlerOptions, SharedResolver,
 };
 
 #[derive(Debug, Default)]

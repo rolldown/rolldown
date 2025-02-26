@@ -1,7 +1,7 @@
 use oxc::allocator::GetAddress;
 use oxc::ast::{
-  ast::{self, Expression, PropertyKey},
   AstKind,
+  ast::{self, Expression, PropertyKey},
 };
 use rolldown_common::EcmaModuleAstUsage;
 use rolldown_ecmascript_utils::ExpressionExt;

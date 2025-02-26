@@ -318,7 +318,7 @@ where
               "classic" => default_jsx_option.runtime = JsxRuntime::Classic,
               "automatic" => default_jsx_option.runtime = JsxRuntime::Automatic,
               _ => {
-                return Err(serde::de::Error::custom(format!("unknown jsx runtime: {runtime}",)))
+                return Err(serde::de::Error::custom(format!("unknown jsx runtime: {runtime}",)));
               }
             }
           }

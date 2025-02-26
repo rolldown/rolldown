@@ -42,11 +42,14 @@ impl Plugin for ManifestPlugin {
     let entry_css_reference_ids: &FxHashSet<String> = &CSS_ENTRIES_MAP;
     let mut entry_css_asset_file_names = FxHashSet::with_capacity(entry_css_reference_ids.len());
     for reference_id in entry_css_reference_ids {
-      if let Ok(file_name) = ctx.get_file_name(reference_id.as_str()) {
-        entry_css_asset_file_names.insert(file_name);
-      } else {
-        // The asset was generated as part of a different output option.
-        // It was already handled during the previous run of this plugin.
+      match ctx.get_file_name(reference_id.as_str()) {
+        Ok(file_name) => {
+          entry_css_asset_file_names.insert(file_name);
+        }
+        _ => {
+          // The asset was generated as part of a different output option.
+          // It was already handled during the previous run of this plugin.
+        }
       }
     }
 
@@ -182,20 +185,23 @@ impl ManifestPlugin {
 }
 
 fn get_chunk_original_file_name(chunk: &OutputChunk, root: &str) -> String {
-  if let Some(facade_module_id) = &chunk.facade_module_id {
-    let name = facade_module_id.relative_path(root);
-    let name_str = name.to_string_lossy().to_string();
-    // TODO: Support System format
-    // if format == 'system' && !chunk.name.as_str().contains("-legacy") {
-    //   name_str = if let Some(ext) = name.extension() {
-    //     let end = name_str.len() - ext.len() - 1;
-    //     format!("{}-legacy.{}", &name_str[0..end], ext.to_string_lossy())
-    //   } else {
-    //     format!("{name_str}-legacy")
-    //   }
-    // }
-    name_str.replace('\0', "")
-  } else {
-    format!("_{}", Path::new(chunk.filename.as_str()).file_name().unwrap().to_string_lossy())
+  match &chunk.facade_module_id {
+    Some(facade_module_id) => {
+      let name = facade_module_id.relative_path(root);
+      let name_str = name.to_string_lossy().to_string();
+      // TODO: Support System format
+      // if format == 'system' && !chunk.name.as_str().contains("-legacy") {
+      //   name_str = if let Some(ext) = name.extension() {
+      //     let end = name_str.len() - ext.len() - 1;
+      //     format!("{}-legacy.{}", &name_str[0..end], ext.to_string_lossy())
+      //   } else {
+      //     format!("{name_str}-legacy")
+      //   }
+      // }
+      name_str.replace('\0', "")
+    }
+    _ => {
+      format!("_{}", Path::new(chunk.filename.as_str()).file_name().unwrap().to_string_lossy())
+    }
   }
 }

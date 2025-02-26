@@ -1,4 +1,4 @@
-use crate::{build_error::BatchedBuildDiagnostic, BuildDiagnostic};
+use crate::{BuildDiagnostic, build_error::BatchedBuildDiagnostic};
 
 pub type SingleBuildResult<T> = std::result::Result<T, BuildDiagnostic>;
 

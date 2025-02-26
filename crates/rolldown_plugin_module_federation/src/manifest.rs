@@ -4,7 +4,7 @@ use rolldown_utils::{concat_string, dashmap::FxDashMap};
 use rustc_hash::{FxHashMap, FxHashSet};
 use serde::Serialize;
 
-use crate::{utils::ResolvedRemoteModule, ModuleFederationPluginOption};
+use crate::{ModuleFederationPluginOption, utils::ResolvedRemoteModule};
 
 #[allow(clippy::too_many_lines)]
 pub async fn generate_manifest(

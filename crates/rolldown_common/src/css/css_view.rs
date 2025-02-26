@@ -3,8 +3,8 @@ use oxc::span::Span;
 use oxc_index::IndexVec;
 
 use crate::{
-  types::source_mutation::BoxedSourceMutation, ImportRecordIdx, ResolvedImportRecord,
-  SourceMutation,
+  ImportRecordIdx, ResolvedImportRecord, SourceMutation,
+  types::source_mutation::BoxedSourceMutation,
 };
 
 #[derive(Debug)]

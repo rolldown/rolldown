@@ -15,6 +15,5 @@ doctest = false
 workspace = true
 
 [dependencies]
-regex           = { workspace = true }
 rolldown_plugin = { workspace = true }
 rolldown_utils  = { workspace = true }

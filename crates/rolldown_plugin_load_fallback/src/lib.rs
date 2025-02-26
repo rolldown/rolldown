@@ -1,11 +1,7 @@
-use regex::Regex;
-use rolldown_plugin::{HookLoadArgs, HookLoadOutput, HookLoadReturn, Plugin, PluginContext};
-use rolldown_utils::clean_url::clean_url;
-use std::{borrow::Cow, sync::LazyLock};
+use std::borrow::Cow;
 
-static DATA_URL_RE: LazyLock<Regex> = LazyLock::new(|| {
-  Regex::new("^data:([^/]+\\/[^;]+)(;charset=[^;]+)?(;base64)?,([\\s\\S]*)$").unwrap()
-});
+use rolldown_plugin::{HookLoadArgs, HookLoadOutput, HookLoadReturn, Plugin, PluginContext};
+use rolldown_utils::{clean_url::clean_url, dataurl::parse_data_url};
 
 #[derive(Debug)]
 pub struct LoadFallbackPlugin {}
@@ -16,7 +12,7 @@ impl Plugin for LoadFallbackPlugin {
   }
 
   async fn load(&self, _ctx: &PluginContext, args: &HookLoadArgs<'_>) -> HookLoadReturn {
-    if DATA_URL_RE.is_match(args.id) {
+    if parse_data_url(args.id).is_some() {
       return Ok(None);
     }
     let normalized_id = clean_url(args.id);

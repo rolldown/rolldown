@@ -162,7 +162,7 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
   }
 }
 
-pub(crate) enum CjsGlobalAssignmentType {
+pub enum CjsGlobalAssignmentType {
   ModuleExportsAssignment,
   ExportsAssignment,
 }

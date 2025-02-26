@@ -8,9 +8,7 @@ static OBJECT_RE: LazyLock<Regex> = LazyLock::new(|| {
   Regex::new(pattern).expect("Should be valid regex")
 });
 
-pub(crate) fn expand_typeof_replacements(
-  values: &FxHashMap<String, String>,
-) -> Vec<(String, String)> {
+pub fn expand_typeof_replacements(values: &FxHashMap<String, String>) -> Vec<(String, String)> {
   let mut replacements: Vec<(String, String)> = Vec::new();
 
   for key in values.keys() {

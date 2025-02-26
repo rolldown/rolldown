@@ -19,19 +19,19 @@ static SPECIAL_QUERY_RE: LazyLock<Regex> = LazyLock::new(|| {
 });
 
 #[derive(Debug, PartialEq)]
-pub(crate) struct DynamicImportRequest {
+pub struct DynamicImportRequest {
   pub query: String,
   pub import: bool,
 }
 
 #[derive(Debug, PartialEq)]
-pub(crate) struct DynamicImportPattern {
+pub struct DynamicImportPattern {
   pub glob_params: Option<DynamicImportRequest>,
   pub user_pattern: String,
   pub raw_pattern: String,
 }
 
-pub(crate) fn parse_pattern(pattern: &str) -> DynamicImportPattern {
+pub fn parse_pattern(pattern: &str) -> DynamicImportPattern {
   let user_pattern_end =
     REQUEST_QUERY_MAYBE_ESCAPED_SPLIT_RE.find(pattern).map_or(pattern.len(), |m| m.start());
   let user_pattern = &pattern[..user_pattern_end];

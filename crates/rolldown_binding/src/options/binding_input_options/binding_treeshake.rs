@@ -10,7 +10,7 @@ use crate::{
   types::js_callback::{JsCallback, JsCallbackExt},
 };
 
-pub(crate) type BindingModuleSideEffects = Either3<
+pub type BindingModuleSideEffects = Either3<
   bool,
   Vec<BindingModuleSideEffectsRule>,
   JsCallback<FnArgs<(String, bool)>, Option<bool>>,

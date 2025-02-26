@@ -9,16 +9,6 @@ const onLogFn = vi.fn()
 export default defineTest({
   skipComposingJsPlugin: true, // Here mutate the test config at non-skipComposingJsPlugin test will be next skipComposingJsPlugin test failed.
   config: {
-    plugins: [
-      {
-        name: 'test-input-plugin',
-        onLog: (level, log) => {
-          expect(level).toBe('warn')
-          expect(log.code).toBe('INPUT_HOOK_IN_OUTPUT_PLUGIN')
-          onLogFn()
-        },
-      },
-    ],
     output: {
       plugins: [
         {
@@ -34,6 +24,11 @@ export default defineTest({
           renderStart: renderStartFn,
         },
       ],
+    },
+    onLog(level, log) {
+      expect(level).toBe('warn')
+      expect(log.code).toBe('INPUT_HOOK_IN_OUTPUT_PLUGIN')
+      onLogFn()
     },
   },
   afterTest: (output) => {

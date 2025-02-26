@@ -8,19 +8,19 @@ export default defineTest({
     plugins: [
       {
         name: 'test-plugin-context',
-        onLog: (level, log) => {
-          expect(level).toBe('warn')
-          expect(log.code).toBe('CYCLE_LOADING')
-          expect(log.message).toContain(
-            'cycle loading at test-plugin-context plugin',
-          )
-          onLogFn()
-        },
         async load(id) {
           this.load({ id })
         },
       },
     ],
+    onLog(level, log) {
+      expect(level).toBe('warn')
+      expect(log.code).toBe('CYCLE_LOADING')
+      expect(log.message).toContain(
+        'cycle loading at test-plugin-context plugin',
+      )
+      onLogFn()
+    },
   },
   afterTest: () => {
     expect(onLogFn).toHaveBeenCalledTimes(1)

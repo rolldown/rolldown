@@ -1,6 +1,8 @@
 import { defineTest } from 'rolldown-tests'
-import { expect } from 'vitest'
+import { expect, vi } from 'vitest'
 import { getOutputChunk } from 'rolldown-tests/utils'
+
+const onLogFn = vi.fn()
 
 export default defineTest({
   config: {
@@ -9,8 +11,18 @@ export default defineTest({
       refresh: true,
     },
     external: ['react'],
+    onLog(level, log) {
+      expect(level).toBe('warn')
+      expect(log.code).toBe('UNRESOLVED_IMPORT')
+      expect(log.message).toContain(
+        "Could not resolve 'react/jsx-runtime' in main.jsx",
+      )
+      onLogFn()
+    },
   },
   afterTest: (output) => {
+    expect(onLogFn).toHaveBeenCalledTimes(1)
+
     const chunk = getOutputChunk(output)[0]
     expect(chunk.code.includes('$RefreshReg$')).toBe(true)
   },

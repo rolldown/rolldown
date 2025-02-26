@@ -1,0 +1,12 @@
+
+
+  {
+    "config":{
+      "resolve": {
+        "alias":[
+          [ "@vue/test-utils",["custom"]]
+        ]
+      }
+    },
+  "expectError": true
+  }

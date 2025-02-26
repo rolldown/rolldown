@@ -1,6 +1,5 @@
 ---
 source: crates/rolldown_testing/src/integration_test.rs
-snapshot_kind: text
 ---
 # Errors
 
@@ -12,7 +11,9 @@ snapshot_kind: text
    │
  5 │ import "pkg/bar/baz"
    │        ──────┬──────  
-   │              ╰──────── Matched alias not found
+   │              ╰──────── Matched alias not found for 'pkg/bar/baz'
+   │ 
+   │ Help: May be you expected `resolve.alias` to call other plugins resolveId hook? see the docs for more details
 ───╯
 
 ```
@@ -24,7 +25,9 @@ snapshot_kind: text
    │
  6 │ import "pkg/baz"
    │        ────┬────  
-   │            ╰────── Matched alias not found
+   │            ╰────── Matched alias not found for 'pkg/baz'
+   │ 
+   │ Help: May be you expected `resolve.alias` to call other plugins resolveId hook? see the docs for more details
 ───╯
 
 ```
@@ -36,7 +39,9 @@ snapshot_kind: text
    │
  4 │ import "pkg/foo/bar/baz"
    │        ────────┬────────  
-   │                ╰────────── Matched alias not found
+   │                ╰────────── Matched alias not found for 'pkg/foo/bar/baz'
+   │ 
+   │ Help: May be you expected `resolve.alias` to call other plugins resolveId hook? see the docs for more details
 ───╯
 
 ```

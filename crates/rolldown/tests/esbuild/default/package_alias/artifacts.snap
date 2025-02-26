@@ -1,6 +1,5 @@
 ---
 source: crates/rolldown_testing/src/integration_test.rs
-snapshot_kind: text
 ---
 # Errors
 
@@ -12,7 +11,9 @@ snapshot_kind: text
    │
  7 │ import "@abs-path/pkg7/foo"
    │        ──────────┬─────────  
-   │                  ╰─────────── Matched alias not found
+   │                  ╰─────────── Matched alias not found for '@abs-path/pkg7/foo'
+   │ 
+   │ Help: May be you expected `resolve.alias` to call other plugins resolveId hook? see the docs for more details
 ───╯
 
 ```
@@ -24,7 +25,9 @@ snapshot_kind: text
    │
  8 │ import "@scope-only/pkg8"
    │        ─────────┬────────  
-   │                 ╰────────── Matched alias not found
+   │                 ╰────────── Matched alias not found for '@scope-only/pkg8'
+   │ 
+   │ Help: May be you expected `resolve.alias` to call other plugins resolveId hook? see the docs for more details
 ───╯
 
 ```

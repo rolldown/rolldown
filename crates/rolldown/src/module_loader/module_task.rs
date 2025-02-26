@@ -342,6 +342,7 @@ impl ModuleTask {
     .await
   }
 
+  #[allow(clippy::too_many_lines)]
   pub async fn resolve_dependencies(
     &self,
     dependencies: &IndexVec<ImportRecordIdx, RawImportRecord>,
@@ -433,6 +434,20 @@ impl ModuleTask {
                 side_effects: None,
                 is_external_without_side_effects: false,
               });
+            }
+            ResolveError::MatchedAliasNotFound(..) => {
+              build_errors.push(BuildDiagnostic::resolve_error(
+                source.clone(),
+                self.resolved_id.id.clone(),
+                if dep.is_unspanned() || is_css_module {
+                  DiagnosableArcstr::String(specifier.as_str().into())
+                } else {
+                  DiagnosableArcstr::Span(dep.state.span)
+                },
+                format!("Matched alias not found for '{specifier}'"),
+                None,
+                Some("May be you expected `resolve.alias` to call other plugins resolveId hook? see the docs for more details".to_string()),
+              ));
             }
             e => {
               let reason = rolldown_resolver::error::oxc_resolve_error_to_reason(e);

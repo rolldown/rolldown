@@ -1,8 +1,8 @@
 use oxc::span::{CompactStr, Span};
 use oxc_index::IndexVec;
 use rolldown_common::{
-  dynamic_import_usage::DynamicImportExportsUsage, EntryPointKind, ImportRecordIdx, ModuleIdx,
-  ResolvedExport, StmtInfoIdx, SymbolRef, WrapKind,
+  EntryPointKind, ImportRecordIdx, ModuleIdx, ResolvedExport, StmtInfoIdx, SymbolRef, WrapKind,
+  dynamic_import_usage::DynamicImportExportsUsage,
 };
 use rolldown_rstr::Rstr;
 use rolldown_utils::indexmap::FxIndexSet;

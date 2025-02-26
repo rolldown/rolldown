@@ -1,11 +1,6 @@
 use std::ops::Range;
-use std::{
-  cmp::Reverse,
-  sync::{Arc, LazyLock},
-};
+use std::{cmp::Reverse, sync::Arc};
 
-// use fancy_regex::Regex;
-use regex::Regex;
 use rolldown_plugin::{HookRenderChunkOutput, HookTransformOutput, Plugin};
 use rustc_hash::FxHashMap;
 use string_wizard::{MagicString, SourceMapOptions};
@@ -38,8 +33,25 @@ pub struct ReplacePlugin {
   sourcemap: bool,
 }
 
-static NON_ASSIGNMENT_MATCHER: LazyLock<Regex> =
-  LazyLock::new(|| Regex::new("\\b(?:const|let|var)\\s+$").expect("Should be valid regex"));
+// Checks if the given string ends with a variable declaration keyword (const, let, var)
+// followed by whitespace, which would indicate the start of a variable declaration.
+fn is_variable_declaration_prefix(s: &str) -> bool {
+  // First check if there's any whitespace at the end
+  if !s.ends_with(|c: char| c.is_whitespace()) {
+    return false;
+  }
+
+  // Trim the trailing whitespace
+  let s = s.trim_end();
+
+  // Check for word boundary before the keywords
+  (s.ends_with("const")
+    && (s.len() == 5 || !s.chars().nth(s.len() - 6).unwrap_or(' ').is_alphanumeric()))
+    || (s.ends_with("let")
+      && (s.len() == 3 || !s.chars().nth(s.len() - 4).unwrap_or(' ').is_alphanumeric()))
+    || (s.ends_with("var")
+      && (s.len() == 3 || !s.chars().nth(s.len() - 4).unwrap_or(' ').is_alphanumeric()))
+}
 
 impl ReplacePlugin {
   pub fn new(values: FxHashMap<String, String>) -> Self {
@@ -112,7 +124,7 @@ impl ReplacePlugin {
   fn look_around_assert(&self, code: &str, matched_range: Range<usize>) -> bool {
     if self.prevent_assignment {
       let before = &code[..matched_range.start];
-      if NON_ASSIGNMENT_MATCHER.is_match(before) {
+      if is_variable_declaration_prefix(before) {
         return true;
       }
     }
@@ -143,7 +155,7 @@ impl ReplacePlugin {
       let Some(Some(matched)) = captures.captures.first() else {
         break;
       };
-      if self.prevent_assignment && NON_ASSIGNMENT_MATCHER.is_match(&code[0..matched.start]) {
+      if self.prevent_assignment && is_variable_declaration_prefix(&code[0..matched.start]) {
         continue;
       }
       let Some(replacement) = self.values.get(&code[matched.clone()]) else {

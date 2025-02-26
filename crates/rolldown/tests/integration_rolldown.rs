@@ -4,7 +4,7 @@ use rolldown_common::Output;
 use rolldown_testing::{
   fixture::Fixture,
   integration_test::IntegrationTest,
-  test_config::{read_test_config, TestConfig, TestMeta},
+  test_config::{TestConfig, TestMeta, read_test_config},
 };
 use sugar_path::SugarPath;
 use testing_macros::fixture;

@@ -1,7 +1,7 @@
 use oxc_index::IndexVec;
 use rolldown_common::{
-  side_effects::DeterminedSideEffects, EcmaViewMeta, IndexModules, Module, ModuleIdx, ModuleType,
-  NormalModule, StmtInfoIdx, SymbolOrMemberExprRef, SymbolRef, SymbolRefDb,
+  EcmaViewMeta, IndexModules, Module, ModuleIdx, ModuleType, NormalModule, StmtInfoIdx,
+  SymbolOrMemberExprRef, SymbolRef, SymbolRefDb, side_effects::DeterminedSideEffects,
 };
 use rolldown_utils::rayon::{IntoParallelRefMutIterator, ParallelIterator};
 use rustc_hash::FxHashSet;

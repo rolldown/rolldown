@@ -13,8 +13,8 @@ use sugar_path::SugarPath;
 use crate::{
   package_json_cache::{PackageJsonCache, PackageJsonWithOptionalPeerDependencies},
   utils::{
-    can_externalize_file, clean_url, get_extension, get_npm_package_name, is_bare_import,
-    is_builtin, is_deep_import, normalize_path, BROWSER_EXTERNAL_ID, OPTIONAL_PEER_DEP_ID,
+    BROWSER_EXTERNAL_ID, OPTIONAL_PEER_DEP_ID, can_externalize_file, clean_url, get_extension,
+    get_npm_package_name, is_bare_import, is_builtin, is_deep_import, normalize_path,
   },
 };
 
@@ -177,11 +177,7 @@ fn get_conditions(
     .iter()
     .map(|c| {
       if c == DEV_PROD_CONDITION {
-        if base_options.is_production {
-          "production"
-        } else {
-          "development"
-        }
+        if base_options.is_production { "production" } else { "development" }
       } else {
         c
       }
@@ -204,7 +200,7 @@ fn bools_to_u8<const N: usize>(bools: [bool; N]) -> u8 {
 
 fn u8_to_bools<const N: usize>(n: u8) -> [bool; N] {
   let mut ret = [false; N];
-  ret.iter_mut().enumerate().for_each(|(i, v)| *v = n & 1 << i != 0);
+  ret.iter_mut().enumerate().for_each(|(i, v)| *v = n & (1 << i) != 0);
   ret
 }
 
@@ -283,11 +279,7 @@ impl Resolver {
           })
           .map(
             |side_effects| {
-              if side_effects {
-                HookSideEffects::True
-              } else {
-                HookSideEffects::False
-              }
+              if side_effects { HookSideEffects::True } else { HookSideEffects::False }
             },
           );
         Ok(Some(HookResolveIdOutput { id: path.into_owned(), side_effects, ..Default::default() }))

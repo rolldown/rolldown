@@ -1,8 +1,8 @@
 use std::{ptr::addr_of, sync::Mutex};
 
 use rolldown_common::{
-  side_effects::DeterminedSideEffects, ImportKind, ImportRecordIdx, ImportRecordMeta, Module,
-  ModuleIdx, ModuleTable, OutputFormat, ResolvedImportRecord, StmtInfoMeta, WrapKind,
+  ImportKind, ImportRecordIdx, ImportRecordMeta, Module, ModuleIdx, ModuleTable, OutputFormat,
+  ResolvedImportRecord, StmtInfoMeta, WrapKind, side_effects::DeterminedSideEffects,
 };
 use rolldown_utils::{
   concat_string,

@@ -1,12 +1,12 @@
 use oxc::{
   ast::{
+    AstBuilder, NONE, VisitMut,
     ast::{Argument, Expression, ImportOrExportKind, PropertyKind, Statement},
-    AstBuilder, VisitMut, NONE,
   },
-  span::{Span, SPAN},
+  span::{SPAN, Span},
   syntax::number::NumberBase,
 };
-use parse_pattern::{parse_pattern, DynamicImportPattern, DynamicImportRequest};
+use parse_pattern::{DynamicImportPattern, DynamicImportRequest, parse_pattern};
 use rolldown_plugin::{
   HookLoadArgs, HookLoadOutput, HookLoadReturn, HookResolveIdArgs, HookResolveIdOutput,
   HookResolveIdReturn, HookTransformAstArgs, HookTransformAstReturn, Plugin, PluginContext,

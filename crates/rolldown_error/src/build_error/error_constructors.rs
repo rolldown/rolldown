@@ -1,12 +1,15 @@
 use std::path::{Path, PathBuf};
 
-use super::severity::Severity;
 use super::BuildDiagnostic;
+use super::severity::Severity;
 use arcstr::ArcStr;
 use oxc::diagnostics::OxcDiagnostic;
 use oxc::{diagnostics::LabeledSpan, span::Span};
 use oxc_resolver::ResolveError;
 
+use crate::events::DiagnosableArcstr;
+#[cfg(feature = "napi")]
+use crate::events::NapiError;
 use crate::events::assign_to_import::AssignToImport;
 use crate::events::export_undefined_variable::ExportUndefinedVariable;
 use crate::events::filename_conflict::FilenameConflict;
@@ -22,9 +25,6 @@ use crate::events::resolve_error::DiagnosableResolveError;
 use crate::events::unhandleable_error::UnhandleableError;
 use crate::events::unloadable_dependency::{UnloadableDependency, UnloadableDependencyContext};
 use crate::events::unsupported_feature::UnsupportedFeature;
-use crate::events::DiagnosableArcstr;
-#[cfg(feature = "napi")]
-use crate::events::NapiError;
 use crate::events::{
   ambiguous_external_namespace::{AmbiguousExternalNamespace, AmbiguousExternalNamespaceModule},
   circular_dependency::CircularDependency,
@@ -83,8 +83,9 @@ impl BuildDiagnostic {
     importee: DiagnosableArcstr,
     reason: String,
     title: Option<&'static str>,
+    help: Option<String>,
   ) -> Self {
-    Self::new_inner(DiagnosableResolveError { source, importer_id, importee, reason, title })
+    Self::new_inner(DiagnosableResolveError { source, importer_id, importee, reason, title, help })
   }
 
   pub fn unloadable_dependency(

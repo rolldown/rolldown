@@ -1,7 +1,7 @@
 use oxc::allocator::GetAddress;
 use oxc::ast::{
-  ast::{self, Expression, PropertyKey},
   AstKind,
+  ast::{self, Expression, PropertyKey},
 };
 use rolldown_common::EcmaModuleAstUsage;
 use rolldown_ecmascript_utils::ExpressionExt;
@@ -69,7 +69,7 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
 
   /// Check if the argument is a valid `Object.defineProperty` call expression for `__esModule` flag.
   fn check_object_define_property(
-    &mut self,
+    &self,
     arg: &ast::Argument<'_>,
     base_cursor: usize,
   ) -> Option<bool> {
@@ -139,7 +139,7 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
 
   /// check if the `module` is used as : module.exports = require('mod');
   fn check_assignment_is_cjs_reexport(
-    &mut self,
+    &self,
     _target: &ast::SimpleAssignmentTarget<'_>,
     base_cursor: usize,
   ) -> Option<bool> {
@@ -162,7 +162,7 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
   }
 }
 
-pub(crate) enum CjsGlobalAssignmentType {
+pub enum CjsGlobalAssignmentType {
   ModuleExportsAssignment,
   ExportsAssignment,
 }

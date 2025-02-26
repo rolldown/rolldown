@@ -18,35 +18,19 @@ pub trait ExpressionExt<'ast> {
 
 impl<'ast> ExpressionExt<'ast> for ast::Expression<'ast> {
   fn as_call_expression(&self) -> Option<&ast::CallExpression<'ast>> {
-    if let ast::Expression::CallExpression(call_expr) = self {
-      Some(call_expr)
-    } else {
-      None
-    }
+    if let ast::Expression::CallExpression(call_expr) = self { Some(call_expr) } else { None }
   }
 
   fn as_call_expression_mut(&mut self) -> Option<&mut ast::CallExpression<'ast>> {
-    if let ast::Expression::CallExpression(call_expr) = self {
-      Some(call_expr)
-    } else {
-      None
-    }
+    if let ast::Expression::CallExpression(call_expr) = self { Some(call_expr) } else { None }
   }
 
   fn as_identifier(&self) -> Option<&ast::IdentifierReference<'ast>> {
-    if let ast::Expression::Identifier(ident) = self {
-      Some(ident)
-    } else {
-      None
-    }
+    if let ast::Expression::Identifier(ident) = self { Some(ident) } else { None }
   }
 
   fn as_identifier_mut(&mut self) -> Option<&mut ast::IdentifierReference<'ast>> {
-    if let ast::Expression::Identifier(ident) = self {
-      Some(ident)
-    } else {
-      None
-    }
+    if let ast::Expression::Identifier(ident) = self { Some(ident) } else { None }
   }
 
   fn as_unary_expression(&self) -> Option<&ast::UnaryExpression<'ast>> {

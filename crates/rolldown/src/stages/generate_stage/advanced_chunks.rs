@@ -7,7 +7,7 @@ use rustc_hash::{FxHashMap, FxHashSet};
 
 use crate::{chunk_graph::ChunkGraph, types::linking_metadata::LinkingMetadataVec};
 
-use super::{code_splitting::IndexSplittingInfo, GenerateStage};
+use super::{GenerateStage, code_splitting::IndexSplittingInfo};
 
 // `ModuleGroup` is a temporary representation of `Chunk`. A valid `ModuleGroup` would be converted to a `Chunk` in the end.
 #[derive(Debug)]
@@ -48,7 +48,7 @@ impl GenerateStage<'_> {
     clippy::cast_possible_wrap
   )] // TODO(hyf0): refactor
   pub fn apply_advanced_chunks(
-    &mut self,
+    &self,
     index_splitting_info: &IndexSplittingInfo,
     module_to_assigned: &mut IndexVec<ModuleIdx, bool>,
     chunk_graph: &mut ChunkGraph,
@@ -84,7 +84,7 @@ impl GenerateStage<'_> {
 
       for (match_group_index, match_group) in match_groups.iter().copied().enumerate() {
         let is_matched =
-          match_group.test.as_ref().map_or(true, |test| test.matches(&normal_module.id));
+          match_group.test.as_ref().is_none_or(|test| test.matches(&normal_module.id));
 
         if !is_matched {
           continue;
@@ -96,9 +96,9 @@ impl GenerateStage<'_> {
           match_group.max_module_size.map_or(chunking_options.max_module_size, Some);
 
         let is_min_module_size_satisfied = allow_min_module_size
-          .map_or(true, |min_module_size| normal_module.size() >= min_module_size);
+          .is_none_or(|min_module_size| normal_module.size() >= min_module_size);
         let is_max_module_size_satisfied = allow_max_module_size
-          .map_or(true, |max_module_size| normal_module.size() <= max_module_size);
+          .is_none_or(|max_module_size| normal_module.size() <= max_module_size);
 
         if !is_min_module_size_satisfied || !is_max_module_size_satisfied {
           continue;

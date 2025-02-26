@@ -1,10 +1,10 @@
 use oxc::{
   ast::{
+    AstBuilder, NONE,
     ast::{
       Argument, Atom, Expression, FormalParameterKind, PropertyKind, Statement,
       VariableDeclarationKind, VariableDeclarator,
     },
-    AstBuilder, NONE,
   },
   span::SPAN,
 };

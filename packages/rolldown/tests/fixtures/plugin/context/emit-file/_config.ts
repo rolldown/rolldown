@@ -4,6 +4,7 @@ import { getOutputAsset } from 'rolldown-tests/utils'
 import { expect } from 'vitest'
 import fs from 'node:fs'
 import path from 'node:path'
+import type { PluginContext } from 'rolldown'
 
 let referenceId: string
 
@@ -26,6 +27,7 @@ export default defineTest({
             source: 'emitted',
             originalFileName: ORIGINAL_FILE_NAME,
           })
+          testEmitFileThis(this.emitFile)
         },
         generateBundle() {
           expect(this.getFileName(referenceId)).toMatchInlineSnapshot(
@@ -64,3 +66,12 @@ export default defineTest({
     }
   },
 })
+
+function testEmitFileThis(emitFile: PluginContext['emitFile']) {
+  const emitted = emitFile({
+    type: 'asset',
+    name: 'emitFileThis.txt',
+    source: 'emitFileThis',
+  })
+  expect(emitted).toBeTypeOf('string')
+}

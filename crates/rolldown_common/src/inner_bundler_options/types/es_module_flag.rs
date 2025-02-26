@@ -55,11 +55,7 @@ pub enum EsModuleFlag {
 
 impl From<bool> for EsModuleFlag {
   fn from(value: bool) -> Self {
-    if value {
-      Self::Always
-    } else {
-      Self::Never
-    }
+    if value { Self::Always } else { Self::Never }
   }
 }
 

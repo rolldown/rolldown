@@ -1,4 +1,4 @@
-use oxc_index::{index_vec, IndexVec};
+use oxc_index::{IndexVec, index_vec};
 use rolldown_common::{Chunk, ChunkIdx, ChunkTable, ModuleIdx, ModuleTable};
 use rustc_hash::FxHashMap;
 

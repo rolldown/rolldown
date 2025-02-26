@@ -45,7 +45,7 @@
 /// ```
 macro_rules! concat_string {
     () => { String::with_capacity(0) };
-    ($($s:expr),+) => {{
+    ($($s:expr_2021),+) => {{
         use std::ops::AddAssign;
         let mut len = 0;
         $(len.add_assign(AsRef::<str>::as_ref(&$s).len());)+

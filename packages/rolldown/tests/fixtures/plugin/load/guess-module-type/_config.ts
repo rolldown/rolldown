@@ -1,6 +1,5 @@
 import { defineTest } from 'rolldown-tests'
 import * as fs from 'fs'
-import { vi } from 'vitest'
 
 export default defineTest({
   config: {
@@ -16,6 +15,6 @@ export default defineTest({
         },
       },
     ],
+    external: ['react/jsx-runtime'],
   },
-  afterTest: (output) => {},
 })

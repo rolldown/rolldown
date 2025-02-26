@@ -4,7 +4,7 @@ use crate::chunk_graph::ChunkGraph;
 use itertools::Itertools;
 use oxc_index::IndexVec;
 use rolldown_common::{Chunk, ChunkIdx, ChunkKind, Module, ModuleIdx, OutputFormat};
-use rolldown_utils::{rustc_hash::FxHashMapExt, BitSet};
+use rolldown_utils::{BitSet, rustc_hash::FxHashMapExt};
 use rustc_hash::FxHashMap;
 
 use super::GenerateStage;
@@ -97,7 +97,8 @@ impl GenerateStage<'_> {
       let bits = &index_splitting_info[normal_module.idx].bits;
       debug_assert!(
         !bits.is_empty(),
-        "Empty bits means the module is not reachable, so it should bail out with `is_included: false` {:?}", normal_module.stable_id
+        "Empty bits means the module is not reachable, so it should bail out with `is_included: false` {:?}",
+        normal_module.stable_id
       );
 
       if let Some(chunk_id) = bits_to_chunk.get(bits).copied() {

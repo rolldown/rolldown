@@ -14,11 +14,11 @@
     "mocha": "^11.0.0",
     "rolldown": "workspace:*",
     "source-map-support": "^0.5.21",
-    "oxc-transform": "0.48.2"
+    "oxc-transform": "0.51.0"
   },
   "devDependencies": {
     "@types/mocha": "10.0.10",
-    "@types/node": "22.13.0",
+    "@types/node": "22.13.4",
     "source-map": "^0.7.4",
     "buble": "^0.20.0",
     "terser": "^5.31.1"

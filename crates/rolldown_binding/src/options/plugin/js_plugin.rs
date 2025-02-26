@@ -8,7 +8,7 @@ use anyhow::Ok;
 use napi::bindgen_prelude::FnArgs;
 use rolldown::ModuleType;
 use rolldown_common::NormalModule;
-use rolldown_plugin::{Plugin, __inner::SharedPluginable, typedmap::TypedMapKey};
+use rolldown_plugin::{__inner::SharedPluginable, Plugin, typedmap::TypedMapKey};
 use rolldown_utils::pattern_filter::{self, FilterResult};
 use std::{
   borrow::Cow,
@@ -19,17 +19,17 @@ use std::{
 use sugar_path::SugarPath;
 
 use super::{
+  BindingPluginOptions,
   binding_transform_context::BindingTransformPluginContext,
   types::{
     binding_hook_filter::BindingTransformHookFilter,
     binding_hook_resolve_id_extra_args::BindingHookResolveIdExtraArgs,
     binding_plugin_transform_extra_args::BindingTransformHookExtraArgs,
   },
-  BindingPluginOptions,
 };
 
 #[derive(Hash, Debug, PartialEq, Eq)]
-pub(crate) struct JsPluginContextResolveCustomArgId;
+pub struct JsPluginContextResolveCustomArgId;
 
 impl TypedMapKey for JsPluginContextResolveCustomArgId {
   type Value = u32;
@@ -141,17 +141,16 @@ impl Plugin for JsPlugin {
     ctx: &rolldown_plugin::PluginContext,
     args: &rolldown_plugin::HookResolveIdArgs<'_>,
   ) -> rolldown_plugin::HookResolveIdReturn {
-    if let Some(cb) = &self.resolve_dynamic_import {
-      Ok(
+    match &self.resolve_dynamic_import {
+      Some(cb) => Ok(
         cb.await_call(
           (ctx.clone().into(), args.specifier.to_string(), args.importer.map(str::to_string))
             .into(),
         )
         .await?
         .map(Into::into),
-      )
-    } else {
-      Ok(None)
+      ),
+      _ => Ok(None),
     }
   }
 
@@ -299,15 +298,14 @@ impl Plugin for JsPlugin {
     ctx: &rolldown_plugin::PluginContext,
     args: &rolldown_plugin::HookAddonArgs<'_>,
   ) -> rolldown_plugin::HookInjectionOutputReturn {
-    if let Some(cb) = &self.banner {
-      Ok(
+    match &self.banner {
+      Some(cb) => Ok(
         cb.await_call((ctx.clone().into(), args.chunk.clone().into()).into())
           .await?
           .map(TryInto::try_into)
           .transpose()?,
-      )
-    } else {
-      Ok(None)
+      ),
+      _ => Ok(None),
     }
   }
 
@@ -320,15 +318,14 @@ impl Plugin for JsPlugin {
     ctx: &rolldown_plugin::PluginContext,
     args: &rolldown_plugin::HookAddonArgs<'_>,
   ) -> rolldown_plugin::HookInjectionOutputReturn {
-    if let Some(cb) = &self.intro {
-      Ok(
+    match &self.intro {
+      Some(cb) => Ok(
         cb.await_call((ctx.clone().into(), args.chunk.clone().into()).into())
           .await?
           .map(TryInto::try_into)
           .transpose()?,
-      )
-    } else {
-      Ok(None)
+      ),
+      _ => Ok(None),
     }
   }
 
@@ -341,15 +338,14 @@ impl Plugin for JsPlugin {
     ctx: &rolldown_plugin::PluginContext,
     args: &rolldown_plugin::HookAddonArgs<'_>,
   ) -> rolldown_plugin::HookInjectionOutputReturn {
-    if let Some(cb) = &self.outro {
-      Ok(
+    match &self.outro {
+      Some(cb) => Ok(
         cb.await_call((ctx.clone().into(), args.chunk.clone().into()).into())
           .await?
           .map(TryInto::try_into)
           .transpose()?,
-      )
-    } else {
-      Ok(None)
+      ),
+      _ => Ok(None),
     }
   }
 
@@ -362,15 +358,14 @@ impl Plugin for JsPlugin {
     ctx: &rolldown_plugin::PluginContext,
     args: &rolldown_plugin::HookAddonArgs<'_>,
   ) -> rolldown_plugin::HookInjectionOutputReturn {
-    if let Some(cb) = &self.footer {
-      Ok(
+    match &self.footer {
+      Some(cb) => Ok(
         cb.await_call((ctx.clone().into(), args.chunk.clone().into()).into())
           .await?
           .map(TryInto::try_into)
           .transpose()?,
-      )
-    } else {
-      Ok(None)
+      ),
+      _ => Ok(None),
     }
   }
 
@@ -383,8 +378,8 @@ impl Plugin for JsPlugin {
     ctx: &rolldown_plugin::PluginContext,
     args: &rolldown_plugin::HookRenderChunkArgs<'_>,
   ) -> rolldown_plugin::HookRenderChunkReturn {
-    if let Some(cb) = &self.render_chunk {
-      Ok(
+    match &self.render_chunk {
+      Some(cb) => Ok(
         cb.await_call(
           (
             ctx.clone().into(),
@@ -397,9 +392,8 @@ impl Plugin for JsPlugin {
         .await?
         .map(TryInto::try_into)
         .transpose()?,
-      )
-    } else {
-      Ok(None)
+      ),
+      _ => Ok(None),
     }
   }
 
@@ -412,10 +406,9 @@ impl Plugin for JsPlugin {
     ctx: &rolldown_plugin::PluginContext,
     chunk: &rolldown_common::RollupRenderedChunk,
   ) -> rolldown_plugin::HookAugmentChunkHashReturn {
-    if let Some(cb) = &self.augment_chunk_hash {
-      Ok(cb.await_call((ctx.clone().into(), chunk.clone().into()).into()).await?)
-    } else {
-      Ok(None)
+    match &self.augment_chunk_hash {
+      Some(cb) => Ok(cb.await_call((ctx.clone().into(), chunk.clone().into()).into()).await?),
+      _ => Ok(None),
     }
   }
 

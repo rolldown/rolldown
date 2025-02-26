@@ -11,8 +11,7 @@ function wrap(result: ParseResult, sourceText: string) {
   let program: ParseResult['program'],
     module: ParseResult['module'],
     comments: ParseResult['comments'],
-    errors: ParseResult['errors'],
-    magicString: ParseResult['magicString']
+    errors: ParseResult['errors']
   return {
     get program() {
       if (!errors) errors = result.errors
@@ -34,10 +33,6 @@ function wrap(result: ParseResult, sourceText: string) {
     get errors() {
       if (!errors) errors = result.errors
       return errors
-    },
-    get magicString() {
-      if (!magicString) magicString = result.magicString
-      return magicString
     },
   }
 }
@@ -73,7 +68,6 @@ function normalizeParseError(
 const defaultParserOptions: ParserOptions = {
   lang: 'js',
   preserveParens: false,
-  convertSpanUtf16: true,
 }
 
 // The api compat to rollup `parseAst` and `parseAstAsync`.

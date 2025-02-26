@@ -18,7 +18,7 @@ use utils::{
   maybe_side_effect_free_global_constructor,
 };
 
-use self::utils::{known_primitive_type, PrimitiveType};
+use self::utils::{PrimitiveType, known_primitive_type};
 
 mod annotation;
 mod utils;

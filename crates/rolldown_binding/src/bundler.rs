@@ -13,7 +13,7 @@ use crate::{
     try_init_custom_trace_subscriber,
   },
 };
-use napi::{tokio::sync::Mutex, Env};
+use napi::{Env, tokio::sync::Mutex};
 use napi_derive::napi;
 use rolldown::Bundler as NativeBundler;
 use rolldown_error::{BuildDiagnostic, BuildResult, DiagnosticOptions};
@@ -106,6 +106,13 @@ impl Bundler {
   #[tracing::instrument(level = "debug", skip_all)]
   pub fn get_closed(&self) -> napi::Result<bool> {
     napi::bindgen_prelude::block_on(async { self.get_closed_impl().await })
+  }
+
+  #[napi]
+  pub async fn generate_hmr_patch(&self, changed_files: Vec<String>) -> String {
+    // Compute out files that need to be updated based on given changed files.
+    let mut bundler_core = self.inner.lock().await;
+    bundler_core.generate_hmr_patch(changed_files)
   }
 }
 

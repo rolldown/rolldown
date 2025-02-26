@@ -1,7 +1,7 @@
 use std::{ops::Deref, path::Path};
 
 use futures::future::try_join_all;
-use oxc_index::{index_vec, IndexVec};
+use oxc_index::{IndexVec, index_vec};
 use rolldown_common::{
   Asset, EmittedChunkInfo, InstantiationKind, ModuleRenderArgs, ModuleRenderOutput, Output,
   OutputAsset, OutputChunk, SharedFileEmitter, SourceMapType,
@@ -15,6 +15,7 @@ use rolldown_utils::{
 use sugar_path::SugarPath;
 
 use crate::{
+  BundleOutput,
   asset::asset_generator::AssetGenerator,
   chunk_graph::ChunkGraph,
   css::css_generator::CssGenerator,
@@ -25,7 +26,6 @@ use crate::{
     augment_chunk_hash::augment_chunk_hash, chunk::finalize_chunks::finalize_assets,
     render_chunks::render_chunks, uuid::uuid_v4_string_from_u128,
   },
-  BundleOutput,
 };
 
 use super::GenerateStage;
@@ -69,110 +69,116 @@ impl GenerateStage<'_> {
       ..
     } in assets
     {
-      if let InstantiationKind::Ecma(ecma_meta) = rendered_chunk {
-        let mut code = code.try_into_string()?;
-        let rendered_chunk = ecma_meta.rendered_chunk;
-        if let Some(map) = map.as_mut() {
-          let file_base_name =
-            Path::new(rendered_chunk.filename.as_str()).file_name().expect("should have file name");
-          map.set_file(file_base_name.to_string_lossy().as_ref());
+      match rendered_chunk {
+        InstantiationKind::Ecma(ecma_meta) => {
+          let mut code = code.try_into_string()?;
+          let rendered_chunk = ecma_meta.rendered_chunk;
+          if let Some(map) = map.as_mut() {
+            let file_base_name = Path::new(rendered_chunk.filename.as_str())
+              .file_name()
+              .expect("should have file name");
+            map.set_file(file_base_name.to_string_lossy().as_ref());
 
-          let map_filename = format!("{}.map", rendered_chunk.filename.as_str());
-          let map_path = file_dir.join(&map_filename);
+            let map_filename = format!("{}.map", rendered_chunk.filename.as_str());
+            let map_path = file_dir.join(&map_filename);
 
-          if let Some(source_map_ignore_list) = &self.options.sourcemap_ignore_list {
-            let mut x_google_ignore_list = vec![];
-            for (index, source) in map.get_sources().enumerate() {
-              if source_map_ignore_list.call(source, map_path.to_string_lossy().as_ref()).await? {
-                #[allow(clippy::cast_possible_truncation)]
-                x_google_ignore_list.push(index as u32);
-              }
-            }
-            if !x_google_ignore_list.is_empty() {
-              map.set_x_google_ignore_list(x_google_ignore_list);
-            }
-          }
-
-          if let Some(sourcemap_path_transform) = &self.options.sourcemap_path_transform {
-            let mut sources = Vec::with_capacity(map.get_sources().count());
-            for source in map.get_sources() {
-              sources.push(
-                sourcemap_path_transform.call(source, map_path.to_string_lossy().as_ref()).await?,
-              );
-            }
-            map.set_sources(sources.iter().map(std::convert::AsRef::as_ref).collect::<Vec<_>>());
-          }
-
-          if self.options.sourcemap_debug_ids && self.options.sourcemap.is_some() {
-            let debug_id_str = uuid_v4_string_from_u128(rendered_chunk.debug_id);
-            map.set_debug_id(&debug_id_str);
-            code.push_str("\n//# debugId=");
-            code.push_str(debug_id_str.as_str());
-          }
-
-          // Normalize the windows path at final.
-          let sources =
-            map.get_sources().map(|x| x.to_slash_lossy().to_string()).collect::<Vec<_>>();
-          map.set_sources(sources.iter().map(std::convert::AsRef::as_ref).collect::<Vec<_>>());
-
-          if let Some(sourcemap) = &self.options.sourcemap {
-            match sourcemap {
-              SourceMapType::File | SourceMapType::Hidden => {
-                let source = map.to_json_string();
-                output_assets.push(Output::Asset(Box::new(OutputAsset {
-                  filename: map_filename.as_str().into(),
-                  source: source.into(),
-                  original_file_names: vec![],
-                  names: vec![],
-                })));
-                if matches!(sourcemap, SourceMapType::File) {
-                  code.push_str("\n//# sourceMappingURL=");
-                  code.push_str(
-                    &Path::new(&map_filename)
-                      .file_name()
-                      .expect("should have filename")
-                      .to_string_lossy(),
-                  );
+            if let Some(source_map_ignore_list) = &self.options.sourcemap_ignore_list {
+              let mut x_google_ignore_list = vec![];
+              for (index, source) in map.get_sources().enumerate() {
+                if source_map_ignore_list.call(source, map_path.to_string_lossy().as_ref()).await? {
+                  #[allow(clippy::cast_possible_truncation)]
+                  x_google_ignore_list.push(index as u32);
                 }
               }
-              SourceMapType::Inline => {
-                let data_url = map.to_data_url();
-                code.push_str("\n//# sourceMappingURL=");
-                code.push_str(&data_url);
+              if !x_google_ignore_list.is_empty() {
+                map.set_x_google_ignore_list(x_google_ignore_list);
+              }
+            }
+
+            if let Some(sourcemap_path_transform) = &self.options.sourcemap_path_transform {
+              let mut sources = Vec::with_capacity(map.get_sources().count());
+              for source in map.get_sources() {
+                sources.push(
+                  sourcemap_path_transform
+                    .call(source, map_path.to_string_lossy().as_ref())
+                    .await?,
+                );
+              }
+              map.set_sources(sources.iter().map(std::convert::AsRef::as_ref).collect::<Vec<_>>());
+            }
+
+            if self.options.sourcemap_debug_ids && self.options.sourcemap.is_some() {
+              let debug_id_str = uuid_v4_string_from_u128(rendered_chunk.debug_id);
+              map.set_debug_id(&debug_id_str);
+              code.push_str("\n//# debugId=");
+              code.push_str(debug_id_str.as_str());
+            }
+
+            // Normalize the windows path at final.
+            let sources =
+              map.get_sources().map(|x| x.to_slash_lossy().to_string()).collect::<Vec<_>>();
+            map.set_sources(sources.iter().map(std::convert::AsRef::as_ref).collect::<Vec<_>>());
+
+            if let Some(sourcemap) = &self.options.sourcemap {
+              match sourcemap {
+                SourceMapType::File | SourceMapType::Hidden => {
+                  let source = map.to_json_string();
+                  output_assets.push(Output::Asset(Box::new(OutputAsset {
+                    filename: map_filename.as_str().into(),
+                    source: source.into(),
+                    original_file_names: vec![],
+                    names: vec![],
+                  })));
+                  if matches!(sourcemap, SourceMapType::File) {
+                    code.push_str("\n//# sourceMappingURL=");
+                    code.push_str(
+                      &Path::new(&map_filename)
+                        .file_name()
+                        .expect("should have filename")
+                        .to_string_lossy(),
+                    );
+                  }
+                }
+                SourceMapType::Inline => {
+                  let data_url = map.to_data_url();
+                  code.push_str("\n//# sourceMappingURL=");
+                  code.push_str(&data_url);
+                }
               }
             }
           }
-        }
 
-        let sourcemap_filename =
-          if matches!(self.options.sourcemap, Some(SourceMapType::Inline) | None) {
-            None
-          } else {
-            Some(concat_string!(rendered_chunk.filename, ".map"))
-          };
-        output.push(Output::Chunk(Box::new(OutputChunk {
-          name: rendered_chunk.name,
-          filename: rendered_chunk.filename,
-          code,
-          is_entry: rendered_chunk.is_entry,
-          is_dynamic_entry: rendered_chunk.is_dynamic_entry,
-          facade_module_id: rendered_chunk.facade_module_id,
-          modules: rendered_chunk.modules,
-          exports: rendered_chunk.exports,
-          module_ids: rendered_chunk.module_ids,
-          imports: rendered_chunk.imports,
-          dynamic_imports: rendered_chunk.dynamic_imports,
-          map,
-          sourcemap_filename,
-          preliminary_filename: preliminary_filename.to_string(),
-        })));
-      } else {
-        output.push(Output::Asset(Box::new(OutputAsset {
-          filename: filename.clone(),
-          source: code,
-          original_file_names: vec![],
-          names: vec![],
-        })));
+          let sourcemap_filename =
+            if matches!(self.options.sourcemap, Some(SourceMapType::Inline) | None) {
+              None
+            } else {
+              Some(concat_string!(rendered_chunk.filename, ".map"))
+            };
+          output.push(Output::Chunk(Box::new(OutputChunk {
+            name: rendered_chunk.name,
+            filename: rendered_chunk.filename,
+            code,
+            is_entry: rendered_chunk.is_entry,
+            is_dynamic_entry: rendered_chunk.is_dynamic_entry,
+            facade_module_id: rendered_chunk.facade_module_id,
+            modules: rendered_chunk.modules,
+            exports: rendered_chunk.exports,
+            module_ids: rendered_chunk.module_ids,
+            imports: rendered_chunk.imports,
+            dynamic_imports: rendered_chunk.dynamic_imports,
+            map,
+            sourcemap_filename,
+            preliminary_filename: preliminary_filename.to_string(),
+          })));
+        }
+        InstantiationKind::None => {
+          output.push(Output::Asset(Box::new(OutputAsset {
+            filename: filename.clone(),
+            source: code,
+            original_file_names: vec![],
+            names: vec![],
+          })));
+        }
       }
     }
 
@@ -311,13 +317,12 @@ impl GenerateStage<'_> {
         item
           .modules
           .par_iter()
-          .map(|&module_idx| {
-            if let Some(module) = self.link_output.module_table.modules[module_idx].as_normal() {
+          .map(|&module_idx| match self.link_output.module_table.modules[module_idx].as_normal() {
+            Some(module) => {
               let ast = &self.link_output.ast_table[module.ecma_ast_idx()].0;
               module.render(self.options, &ModuleRenderArgs::Ecma { ast })
-            } else {
-              None
             }
+            _ => None,
           })
           .collect::<Vec<_>>()
       })

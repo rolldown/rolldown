@@ -1,9 +1,10 @@
 use super::stages::{link_stage::LinkStage, scan_stage::ScanStageOutput};
 use crate::{
+  BundlerOptions, SharedOptions, SharedResolver,
   bundler_builder::BundlerBuilder,
+  hmr::hmr_manager::HmrManager,
   stages::{generate_stage::GenerateStage, scan_stage::ScanStage},
   types::bundle_output::BundleOutput,
-  BundlerOptions, SharedOptions, SharedResolver,
 };
 use anyhow::Result;
 
@@ -11,7 +12,7 @@ use rolldown_common::{Cache, NormalizedBundlerOptions, SharedFileEmitter};
 use rolldown_error::{BuildDiagnostic, BuildResult};
 use rolldown_fs::{FileSystem, OsFileSystem};
 use rolldown_plugin::{
-  HookBuildEndArgs, HookRenderErrorArgs, SharedPluginDriver, __inner::SharedPluginable,
+  __inner::SharedPluginable, HookBuildEndArgs, HookRenderErrorArgs, SharedPluginDriver,
 };
 use std::sync::Arc;
 use tracing_chrome::FlushGuard;
@@ -27,6 +28,7 @@ pub struct Bundler {
   pub(crate) _log_guard: Option<FlushGuard>,
   #[allow(unused)]
   pub(crate) cache: Arc<Cache>,
+  pub(crate) hmr_manager: Option<HmrManager>,
 }
 
 impl Bundler {
@@ -131,7 +133,7 @@ impl Bundler {
     Ok(output)
   }
 
-  #[allow(clippy::missing_transmute_annotations)]
+  #[allow(clippy::missing_transmute_annotations, clippy::needless_pass_by_ref_mut)]
   async fn bundle_up(
     &mut self,
     scan_stage_output: ScanStageOutput,
@@ -153,10 +155,10 @@ impl Bundler {
         .generate()
         .await; // Notice we don't use `?` to break the control flow here.
 
-    if let Err(errs) = &bundle_output {
+    if let Err(errors) = &bundle_output {
       self
         .plugin_driver
-        .render_error(&HookRenderErrorArgs { errors: errs, cwd: &self.options.cwd })
+        .render_error(&HookRenderErrorArgs { errors, cwd: &self.options.cwd })
         .await?;
     }
 
@@ -179,9 +181,12 @@ impl Bundler {
     &self.options
   }
 
-  pub fn generate_hmr_patch(&self, _changed_files: Vec<String>) -> String {
-    // Compute out files that need to be updated based on given changed files.
-    todo!()
+  pub fn generate_hmr_patch(&mut self, changed_files: Vec<String>) -> String {
+    self
+      .hmr_manager
+      .as_ref()
+      .expect("HMR manager is not initialized")
+      .generate_hmr_patch(changed_files)
   }
 }
 

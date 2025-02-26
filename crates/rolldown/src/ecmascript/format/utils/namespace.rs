@@ -69,7 +69,7 @@ pub fn generate_identifier(
   export_mode: OutputExports,
 ) -> BuildResult<(String, String)> {
   // Handle the diagnostic warning
-  if ctx.options.name.as_ref().map_or(true, String::is_empty)
+  if ctx.options.name.as_ref().is_none_or(String::is_empty)
     && !matches!(export_mode, OutputExports::None)
   {
     warnings.push(BuildDiagnostic::missing_name_option_for_iife_export().with_severity_warning());
@@ -103,11 +103,7 @@ pub fn generate_identifier(
       // If there isn't a name in default export, we shouldn't assign the function to `this[""]`.
       // If there is, we should assign the function to `this["name"]`,
       // because there isn't an object that we can extend.
-      if name.is_empty() {
-        String::new()
-      } else {
-        format!("this{property}")
-      }
+      if name.is_empty() { String::new() } else { format!("this{property}") }
     };
 
     return Ok((String::new(), final_expr));
@@ -160,7 +156,10 @@ mod tests {
   /// It is related a bug in rollup. Check it out in [rollup/rollup#5603](https://github.com/rollup/rollup/issues/5603).
   fn test_invalid_identifier_as_name() {
     let result = generate_namespace_definition("toString.valueOf.constructor", "this", ";\n");
-    assert_eq!(result.0, "this.toString = this.toString || {};\nthis.toString.valueOf = this.toString.valueOf || {};\n");
+    assert_eq!(
+      result.0,
+      "this.toString = this.toString || {};\nthis.toString.valueOf = this.toString.valueOf || {};\n"
+    );
     assert_eq!(result.1, "this.toString.valueOf.constructor");
   }
 }

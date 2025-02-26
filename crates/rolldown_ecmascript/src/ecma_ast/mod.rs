@@ -11,10 +11,10 @@ use program_cell::{ProgramCellDependent, ProgramCellOwner};
 
 use self::program_cell::ProgramCell;
 
-mod gen;
+mod r#gen;
 mod helpers;
 pub mod program_cell;
-pub use gen::ToSourceString;
+pub use r#gen::ToSourceString;
 
 /// - To access `&mut ast::Program`, use `ast.program.with_mut(|fields| { fields.program; })`.
 pub struct EcmaAst {

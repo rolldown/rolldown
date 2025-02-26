@@ -2,7 +2,7 @@ use arcstr::ArcStr;
 use futures::future::join_all;
 use oxc::span::Span;
 use oxc_index::IndexVec;
-use rolldown_plugin::{SharedPluginDriver, __inner::resolve_id_check_external};
+use rolldown_plugin::{__inner::resolve_id_check_external, SharedPluginDriver};
 use rolldown_resolver::ResolveError;
 use rolldown_rstr::Rstr;
 use rolldown_std_utils::PathExt;
@@ -16,8 +16,8 @@ use sugar_path::SugarPath;
 
 use rolldown_common::{
   ImportKind, ImportRecordIdx, ImportRecordMeta, ModuleDefFormat, ModuleId, ModuleIdx, ModuleInfo,
-  ModuleLoaderMsg, ModuleType, NormalModule, NormalModuleTaskResult, RawImportRecord, ResolvedId,
-  StrOrBytes, RUNTIME_MODULE_ID,
+  ModuleLoaderMsg, ModuleType, NormalModule, NormalModuleTaskResult, RUNTIME_MODULE_ID,
+  RawImportRecord, ResolvedId, StrOrBytes,
 };
 use rolldown_error::{
   BuildDiagnostic, BuildResult, DiagnosableArcstr, UnloadableDependencyContext,
@@ -25,12 +25,12 @@ use rolldown_error::{
 
 use super::task_context::TaskContext;
 use crate::{
+  SharedOptions, SharedResolver,
   asset::create_asset_view,
   css::create_css_view,
-  ecmascript::ecma_module_view_factory::{create_ecma_view, CreateEcmaViewReturn},
+  ecmascript::ecma_module_view_factory::{CreateEcmaViewReturn, create_ecma_view},
   types::module_factory::{CreateModuleContext, CreateModuleViewArgs},
   utils::{load_source::load_source, transform_source::transform_source},
-  SharedOptions, SharedResolver,
 };
 
 pub struct ModuleTaskOwner {
@@ -289,7 +289,7 @@ impl ModuleTask {
   }
 
   async fn load_source_phase(
-    &mut self,
+    &self,
     sourcemap_chain: &mut Vec<rolldown_sourcemap::SourceMap>,
     hook_side_effects: &mut Option<rolldown_common::side_effects::HookSideEffects>,
   ) -> BuildResult<(StrOrBytes, ModuleType)> {
@@ -343,7 +343,7 @@ impl ModuleTask {
   }
 
   pub async fn resolve_dependencies(
-    &mut self,
+    &self,
     dependencies: &IndexVec<ImportRecordIdx, RawImportRecord>,
     source: ArcStr,
     warnings: &mut Vec<BuildDiagnostic>,
@@ -402,6 +402,7 @@ impl ModuleTask {
                     },
                     "Module not found.".into(),
                     Some("UNRESOLVED_IMPORT"),
+                    None,
                   ));
                 } else {
                   warnings.push(
@@ -417,6 +418,7 @@ impl ModuleTask {
                       },
                       "Module not found, treating it as an external dependency".into(),
                       Some("UNRESOLVED_IMPORT"),
+                      None,
                     )
                     .with_severity_warning(),
                   );
@@ -457,6 +459,7 @@ impl ModuleTask {
                 },
                 reason,
                 None,
+                None,
               ));
             }
           };
@@ -464,10 +467,6 @@ impl ModuleTask {
       }
     }
 
-    if build_errors.is_empty() {
-      Ok(ret)
-    } else {
-      Err(build_errors.into())
-    }
+    if build_errors.is_empty() { Ok(ret) } else { Err(build_errors.into()) }
   }
 }

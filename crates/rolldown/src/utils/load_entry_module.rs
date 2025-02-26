@@ -1,7 +1,7 @@
 use std::sync::Arc;
 
-use crate::utils::resolve_id::resolve_id;
 use crate::SharedResolver;
+use crate::utils::resolve_id::resolve_id;
 use rolldown_common::{ImportKind, ResolvedId};
 use rolldown_error::ResultExt;
 use rolldown_error::{BuildDiagnostic, SingleBuildResult};

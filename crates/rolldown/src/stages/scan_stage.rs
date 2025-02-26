@@ -3,8 +3,8 @@ use std::sync::Arc;
 use arcstr::ArcStr;
 use futures::future::join_all;
 use rolldown_common::{
-  dynamic_import_usage::DynamicImportExportsUsage, Cache, EntryPoint, ModuleIdx, ModuleTable,
-  ResolvedId, RuntimeModuleBrief, SymbolRefDb,
+  Cache, EntryPoint, ModuleIdx, ModuleTable, ResolvedId, RuntimeModuleBrief, SymbolRefDb,
+  dynamic_import_usage::DynamicImportExportsUsage,
 };
 use rolldown_error::{BuildDiagnostic, BuildResult};
 use rolldown_fs::OsFileSystem;
@@ -12,10 +12,10 @@ use rolldown_plugin::SharedPluginDriver;
 use rustc_hash::FxHashMap;
 
 use crate::{
-  module_loader::{module_loader::ModuleLoaderOutput, ModuleLoader},
+  SharedOptions, SharedResolver,
+  module_loader::{ModuleLoader, module_loader::ModuleLoaderOutput},
   type_alias::{IndexAstScope, IndexEcmaAst},
   utils::load_entry_module::load_entry_module,
-  SharedOptions, SharedResolver,
 };
 
 pub struct ScanStage {

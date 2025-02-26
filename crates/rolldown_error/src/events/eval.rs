@@ -18,7 +18,10 @@ impl BuildEvent for Eval {
   }
 
   fn message(&self, _opts: &DiagnosticOptions) -> String {
-    format!("Use of eval in '{}' is strongly discouraged as it poses security risks and may cause issues with minification.", self.filename)
+    format!(
+      "Use of eval in '{}' is strongly discouraged as it poses security risks and may cause issues with minification.",
+      self.filename
+    )
   }
 
   fn on_diagnostic(&self, diagnostic: &mut Diagnostic, opts: &DiagnosticOptions) {

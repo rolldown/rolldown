@@ -13,8 +13,8 @@ use std::borrow::Cow;
 pub use crate::{
   joiner::{Joiner, JoinerOptions},
   magic_string::{
-    indent::IndentOptions, replace::ReplaceOptions, update::UpdateOptions, MagicString,
-    MagicStringOptions,
+    MagicString, MagicStringOptions, indent::IndentOptions, replace::ReplaceOptions,
+    update::UpdateOptions,
   },
 };
 

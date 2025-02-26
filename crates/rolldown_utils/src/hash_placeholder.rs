@@ -1,9 +1,7 @@
 use std::borrow::Cow;
 
 use arcstr::ArcStr;
-use regex::{Captures, Regex};
 use rustc_hash::FxHashMap;
-use std::sync::LazyLock;
 
 use crate::indexmap::FxIndexSet;
 
@@ -15,10 +13,50 @@ const HASH_PLACEHOLDER_OVERHEAD: usize = HASH_PLACEHOLDER_LEFT.len() + HASH_PLAC
 const MAX_HASH_SIZE: usize = 21;
 // const DEFAULT_HASH_SIZE: usize = 8;
 
-static REPLACER_REGEX: LazyLock<Regex> = LazyLock::new(|| {
-  let pattern = "!~\\{[0-9a-zA-Z_$]{1,17}\\}~";
-  Regex::new(pattern).expect("failed to compile regex")
-});
+/// Checks if a string is a hash placeholder with the pattern "!~{...}~"
+/// where ... is 1-17 alphanumeric characters or _ or $
+fn is_hash_placeholder(s: &str) -> bool {
+  // Check if the string starts with the left placeholder and ends with the right placeholder
+  if !s.starts_with(HASH_PLACEHOLDER_LEFT) || !s.ends_with(HASH_PLACEHOLDER_RIGHT) {
+    return false;
+  }
+
+  // Extract the content between the placeholders
+  let content = &s[HASH_PLACEHOLDER_LEFT.len()..s.len() - HASH_PLACEHOLDER_RIGHT.len()];
+
+  // Content must be 1-17 characters long
+  if content.is_empty() || content.len() > 17 {
+    return false;
+  }
+
+  // All characters must be alphanumeric or _ or $
+  content.chars().all(|c| c.is_ascii_alphanumeric() || c == '_' || c == '$')
+}
+
+/// Finds all hash placeholders in a string and returns their positions and values
+fn find_hash_placeholders(s: &str) -> Vec<(usize, usize, &str)> {
+  // pre-allocate, the max number of placeholders is s.len() / 2
+  let mut results = Vec::with_capacity(s.len() / 2);
+  let mut start = 0;
+
+  while let Some(left_pos) = s[start..].find(HASH_PLACEHOLDER_LEFT) {
+    let left_pos = start + left_pos;
+    if let Some(right_pos) = s[left_pos..].find(HASH_PLACEHOLDER_RIGHT) {
+      let right_pos = left_pos + right_pos + HASH_PLACEHOLDER_RIGHT.len();
+      let placeholder = &s[left_pos..right_pos];
+
+      if is_hash_placeholder(placeholder) {
+        results.push((left_pos, right_pos, placeholder));
+      }
+
+      start = right_pos;
+    } else {
+      break;
+    }
+  }
+
+  results
+}
 
 const CHARS: &[u8] = b"0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ_$";
 const BASE: u32 = 64;
@@ -81,39 +119,52 @@ pub fn replace_placeholder_with_hash<'a>(
   source: impl Into<Cow<'a, str>>,
   final_hashes_by_placeholder: &FxHashMap<ArcStr, &'a str>,
 ) -> Cow<'a, str> {
-  let source = source.into();
-  let replaced = REPLACER_REGEX.replace_all(&source, |captures: &Captures<'_>| -> ArcStr {
-    debug_assert!(captures.len() == 1);
-    // Eg. `!~{000}~`
-    let captured_hash_placeholder = captures.get(0).unwrap().as_str();
-    // If this is a unknown hash placeholder, we just keep it as is as rollup did in
-    // https://github.com/rollup/rollup/blob/master/src/utils/hashPlaceholders.ts#L52
+  let source: Cow<'a, str> = source.into();
 
-    let replacement = final_hashes_by_placeholder
-      .get(captured_hash_placeholder)
-      .unwrap_or(&captured_hash_placeholder);
-    (*replacement).into()
-  });
-
-  if let Cow::Owned(owned) = replaced {
-    // Due to the rustc's borrow checker, we can't return `replaced` directly
-    owned.into()
-  } else {
-    // No replacement happened, return the original source
-    source
+  // Check for placeholders directly
+  let placeholders = find_hash_placeholders(&source);
+  if placeholders.is_empty() {
+    return source;
   }
+
+  // Create a new string with replacements
+  let mut result = String::with_capacity(source.len());
+  let mut last_end = 0;
+
+  for (start, end, placeholder) in placeholders {
+    // Add the text before this placeholder
+    result.push_str(&source[last_end..start]);
+
+    // Add the replacement or the original placeholder if not found
+    let replacement = final_hashes_by_placeholder.get(placeholder).unwrap_or(&placeholder);
+    result.push_str(replacement);
+
+    last_end = end;
+  }
+
+  // Add any remaining text
+  if last_end < source.len() {
+    result.push_str(&source[last_end..]);
+  }
+
+  Cow::Owned(result)
 }
 
 pub fn extract_hash_placeholders(source: &str) -> FxIndexSet<ArcStr> {
-  let captures = REPLACER_REGEX.find_iter(source);
-  captures.into_iter().map(|c| c.as_str().into()).collect()
+  let mut result = FxIndexSet::default();
+
+  for (_, _, placeholder) in find_hash_placeholders(source) {
+    result.insert(placeholder.into());
+  }
+
+  result
 }
 
 #[test]
 fn test_facade_hash_generator() {
-  let mut gen = HashPlaceholderGenerator::default();
-  assert_eq!(gen.generate(8), "!~{000}~");
-  assert_eq!(gen.generate(8), "!~{001}~");
+  let mut r#gen = HashPlaceholderGenerator::default();
+  assert_eq!(r#gen.generate(8), "!~{000}~");
+  assert_eq!(r#gen.generate(8), "!~{001}~");
 }
 
 #[test]
@@ -125,4 +176,38 @@ fn test_to_base64() {
   assert_eq!(to_base64(65), "11");
   assert_eq!(to_base64(128), "20");
   assert_eq!(to_base64(100_000_000), "5Zu40");
+}
+
+#[test]
+fn test_is_hash_placeholder() {
+  assert!(is_hash_placeholder("!~{000}~"));
+  assert!(is_hash_placeholder("!~{abc123}~"));
+  assert!(is_hash_placeholder("!~{_$ABC123}~"));
+  assert!(is_hash_placeholder("!~{12345678901234567}~")); // 17 chars
+
+  assert!(!is_hash_placeholder("!~{}~")); // Empty content
+  assert!(!is_hash_placeholder("!~{123456789012345678}~")); // 18 chars (too long)
+  assert!(!is_hash_placeholder("!~{abc-123}~")); // Invalid char
+  assert!(!is_hash_placeholder("{000}~")); // Missing left
+  assert!(!is_hash_placeholder("!~{000}")); // Missing right
+  assert!(!is_hash_placeholder("!~000}~")); // Missing {
+}
+
+#[test]
+fn test_find_hash_placeholders() {
+  let s = "prefix!~{000}~middle!~{abc}~suffix";
+  let placeholders = find_hash_placeholders(s);
+  assert_eq!(placeholders.len(), 2);
+  assert_eq!(placeholders[0], (6, 14, "!~{000}~"));
+  assert_eq!(placeholders[1], (20, 28, "!~{abc}~"));
+
+  let s = "no placeholders here";
+  let placeholders = find_hash_placeholders(s);
+  assert_eq!(placeholders.len(), 0);
+
+  let s = "!~{000}~!~{001}~";
+  let placeholders = find_hash_placeholders(s);
+  assert_eq!(placeholders.len(), 2);
+  assert_eq!(placeholders[0], (0, 8, "!~{000}~"));
+  assert_eq!(placeholders[1], (8, 16, "!~{001}~"));
 }

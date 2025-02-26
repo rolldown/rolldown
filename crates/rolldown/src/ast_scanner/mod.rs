@@ -8,16 +8,16 @@ pub mod side_effect_detector;
 
 use arcstr::ArcStr;
 use oxc::ast::ast::MemberExpression;
-use oxc::ast::{ast, AstKind};
+use oxc::ast::{AstKind, ast};
 use oxc::semantic::{Reference, ScopeFlags, ScopeId, ScopeTree, SymbolTable};
 use oxc::span::SPAN;
 use oxc::{
   ast::{
+    Comment, Visit,
     ast::{
       ExportAllDeclaration, ExportDefaultDeclaration, ExportNamedDeclaration, IdentifierReference,
       ImportDeclaration, ModuleDeclaration, Program,
     },
-    Comment, Visit,
   },
   semantic::SymbolId,
   span::{CompactStr, GetSpan, Span},
@@ -605,7 +605,7 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
     );
     self.result.imports.insert(decl.span, rec_id);
     // // `import '...'` or `import {} from '...'`
-    if decl.specifiers.as_ref().map_or(true, |s| s.is_empty()) {
+    if decl.specifiers.as_ref().is_none_or(|s| s.is_empty()) {
       self.result.import_records[rec_id].meta.insert(ImportRecordMeta::IS_PLAIN_IMPORT);
     }
 
@@ -761,7 +761,7 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
       match kind {
         AstKind::TryStatement(_) => return true,
         AstKind::ArrowFunctionExpression(_) | AstKind::FunctionBody(_) | AstKind::Function(_) => {
-          return false
+          return false;
         }
         _ => {}
       }

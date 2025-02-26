@@ -8,21 +8,21 @@ use std::{
 };
 
 use crate::{
+  CallablePlugin, ResolveOptionsExternal,
   external::{self, ExternalDecider, ExternalDeciderOptions},
   file_url::file_url_str_to_path,
   resolver::{self, AdditionalOptions, Resolvers},
   utils::{
-    clean_url, is_bare_import, is_builtin, is_in_node_modules, is_windows_drive_path,
-    normalize_path, BROWSER_EXTERNAL_ID, OPTIONAL_PEER_DEP_ID,
+    BROWSER_EXTERNAL_ID, OPTIONAL_PEER_DEP_ID, clean_url, is_bare_import, is_builtin,
+    is_in_node_modules, is_windows_drive_path, normalize_path,
   },
-  CallablePlugin, ResolveOptionsExternal,
 };
 use anyhow::anyhow;
 use derive_more::Debug;
-use rolldown_common::{side_effects::HookSideEffects, ImportKind, WatcherChangeKind};
+use rolldown_common::{ImportKind, WatcherChangeKind, side_effects::HookSideEffects};
 use rolldown_plugin::{
-  typedmap::TypedMapKey, HookLoadArgs, HookLoadOutput, HookLoadReturn, HookNoopReturn,
-  HookResolveIdArgs, HookResolveIdOutput, HookResolveIdReturn, Plugin, PluginContext,
+  HookLoadArgs, HookLoadOutput, HookLoadReturn, HookNoopReturn, HookResolveIdArgs,
+  HookResolveIdOutput, HookResolveIdReturn, Plugin, PluginContext, typedmap::TypedMapKey,
 };
 use rustc_hash::FxHashSet;
 use sugar_path::SugarPath;

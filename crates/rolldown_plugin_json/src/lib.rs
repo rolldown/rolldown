@@ -98,11 +98,7 @@ impl Plugin for JsonPlugin {
 
 // cSpell:disable
 fn strip_bom(code: &str) -> &str {
-  if let Some(stripped) = code.strip_prefix("\u{FEFF}") {
-    stripped
-  } else {
-    code
-  }
+  if let Some(stripped) = code.strip_prefix("\u{FEFF}") { stripped } else { code }
 }
 
 /// /\.json(?:$|\?)(?!commonjs-(?:proxy|external))/

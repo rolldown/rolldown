@@ -9,10 +9,10 @@ use std::sync::atomic::AtomicBool;
 use tracing_chrome::ChromeLayerBuilder;
 use tracing_chrome::FlushGuard;
 use tracing_chrome::TraceStyle;
+use tracing_subscriber::EnvFilter;
 use tracing_subscriber::fmt;
 use tracing_subscriber::fmt::format::FmtSpan;
 use tracing_subscriber::prelude::*;
-use tracing_subscriber::EnvFilter;
 
 static LOG_ENV_NAME: &str = "RD_LOG";
 static LOG_OUTPUT_ENV_NAME: &str = "RD_LOG_OUTPUT";

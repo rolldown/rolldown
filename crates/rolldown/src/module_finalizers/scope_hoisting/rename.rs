@@ -32,7 +32,7 @@ impl<'ast> ScopeHoistingFinalizer<'_, 'ast> {
       ast::Expression::Identifier(it) => {
         it.span = id_ref.span;
       }
-      ast::Expression::StaticMemberExpression(ref mut it) => {
+      ast::Expression::StaticMemberExpression(it) => {
         it.span = id_ref.span;
         it.property.span = id_ref.span;
         if let Some(object) = it.object.as_identifier_mut() {
@@ -85,8 +85,8 @@ impl<'ast> ScopeHoistingFinalizer<'_, 'ast> {
   }
 
   pub fn try_rewrite_identifier_reference_expr(
-    &mut self,
-    ident_ref: &mut ast::IdentifierReference<'ast>,
+    &self,
+    ident_ref: &ast::IdentifierReference<'ast>,
     is_callee: bool,
   ) -> Option<Expression<'ast>> {
     if let Some(rec_id) = self.ctx.module.imports.get(&ident_ref.span) {
@@ -106,7 +106,7 @@ impl<'ast> ScopeHoistingFinalizer<'_, 'ast> {
   }
 
   pub fn rewrite_simple_assignment_target(
-    &mut self,
+    &self,
     simple_target: &mut ast::SimpleAssignmentTarget<'ast>,
   ) -> Option<()> {
     // Some `IdentifierReference`s constructed by bundler don't have `ReferenceId` and we just ignore them.
@@ -126,22 +126,26 @@ impl<'ast> ScopeHoistingFinalizer<'_, 'ast> {
     let canonical_ref = self.ctx.symbol_db.canonical_ref_for(symbol_ref);
     let symbol = self.ctx.symbol_db.get(canonical_ref);
 
-    if let Some(ns_alias) = &symbol.namespace_alias {
-      let canonical_ns_name = self.canonical_name_for(ns_alias.namespace_ref);
-      let prop_name = &ns_alias.property_name;
-      let access_expr = self.snippet.literal_prop_access_member_expr(canonical_ns_name, prop_name);
-      *simple_target = ast::SimpleAssignmentTarget::from(access_expr);
-    } else {
-      let canonical_name = self.canonical_name_for(canonical_ref);
-      if target_id_ref.name != canonical_name.as_str() {
-        target_id_ref.name = self.snippet.atom(canonical_name);
+    match &symbol.namespace_alias {
+      Some(ns_alias) => {
+        let canonical_ns_name = self.canonical_name_for(ns_alias.namespace_ref);
+        let prop_name = &ns_alias.property_name;
+        let access_expr =
+          self.snippet.literal_prop_access_member_expr(canonical_ns_name, prop_name);
+        *simple_target = ast::SimpleAssignmentTarget::from(access_expr);
       }
-      *target_id_ref.reference_id.get_mut() = None;
+      _ => {
+        let canonical_name = self.canonical_name_for(canonical_ref);
+        if target_id_ref.name != canonical_name.as_str() {
+          target_id_ref.name = self.snippet.atom(canonical_name);
+        }
+        *target_id_ref.reference_id.get_mut() = None;
+      }
     }
     None
   }
 
-  pub fn rewrite_object_pat_shorthand(&mut self, pat: &mut ast::ObjectPattern<'ast>) {
+  pub fn rewrite_object_pat_shorthand(&self, pat: &mut ast::ObjectPattern<'ast>) {
     for prop in &mut pat.properties {
       match &mut prop.value.kind {
         // Ensure `const { a } = ...;` will be rewritten to `const { a: a } = ...` instead of `const { a } = ...`

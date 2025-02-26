@@ -1,11 +1,11 @@
-use criterion::{criterion_group, criterion_main, Criterion};
+use criterion::{Criterion, criterion_group, criterion_main};
 use oxc::{
   allocator::Allocator,
   codegen::{CodeGenerator, CodegenOptions, CodegenReturn},
   parser::Parser,
   span::SourceType,
 };
-use rolldown_sourcemap::{collapse_sourcemaps, SourceJoiner, SourceMapSource};
+use rolldown_sourcemap::{SourceJoiner, SourceMapSource, collapse_sourcemaps};
 use rolldown_testing::workspace::root_dir;
 
 fn criterion_benchmark(c: &mut Criterion) {

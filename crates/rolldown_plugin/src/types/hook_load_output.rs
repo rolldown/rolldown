@@ -1,4 +1,4 @@
-use rolldown_common::{side_effects::HookSideEffects, ModuleType};
+use rolldown_common::{ModuleType, side_effects::HookSideEffects};
 use rolldown_sourcemap::SourceMap;
 
 #[derive(Debug, Default)]

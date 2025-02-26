@@ -1,7 +1,7 @@
 use oxc::{
   ast::{
-    ast::{IdentifierReference, UnaryOperator},
     AstKind,
+    ast::{IdentifierReference, UnaryOperator},
   },
   semantic::{SymbolFlags, SymbolId},
   span::Span,
@@ -44,7 +44,7 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
     }
   }
 
-  pub fn get_span_if_namespace_specifier_updated(&mut self) -> Option<(Span, &'ast str)> {
+  pub fn get_span_if_namespace_specifier_updated(&self) -> Option<(Span, &'ast str)> {
     let ancestor_cursor = self.visit_path.len() - 1;
     let parent_node = self.visit_path.get(ancestor_cursor)?;
     if let AstKind::MemberExpression(expr) = parent_node {

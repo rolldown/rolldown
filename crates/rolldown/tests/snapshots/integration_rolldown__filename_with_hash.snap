@@ -1,7 +1,6 @@
 ---
 source: crates/rolldown/tests/integration_rolldown.rs
 expression: output
-snapshot_kind: text
 ---
 ```
 # tests/esbuild/dce/base64_loader_remove_unused
@@ -1241,11 +1240,11 @@ snapshot_kind: text
 
 # tests/esbuild/default/mangle_props_key_comment
 
-- entry-!~{000}~.js => entry-psQxRy1z.js
+- entry-!~{000}~.js => entry-B7qHw9FI.js
 
 # tests/esbuild/default/mangle_props_key_comment_minify
 
-- entry-!~{000}~.js => entry-mE2Vdxm_.js
+- entry-!~{000}~.js => entry-DyMAMNAl.js
 
 # tests/esbuild/default/mangle_props_keyword_property_minify
 
@@ -2653,7 +2652,7 @@ snapshot_kind: text
 
 # tests/esbuild/lower/lower_nullish_coalescing_assignment_issue1493
 
-- entry-!~{000}~.js => entry-BDgKBi3k.js
+- entry-!~{000}~.js => entry-WvSAv-QS.js
 
 # tests/esbuild/lower/lower_object_spread_no_bundle
 
@@ -4609,13 +4608,13 @@ snapshot_kind: text
 
 # tests/rolldown/issues/3438
 
-- main-!~{000}~.js => main-CvQmWIZr.js
+- main-!~{000}~.js => main-DsucGaKv.js
 - repro1-!~{001}~.js => repro1-DCPAzhcM.js
 - repro1-!~{003}~.js => repro1-DGsIRehE.js
 - repro2-!~{007}~.js => repro2-CZ2qXwfx.js
 - repro2-!~{005}~.js => repro2-_xRRyn69.js
-- repro3-!~{00b}~.js => repro3-CjYr56dI.js
-- repro3-!~{009}~.js => repro3-mGDdh6Z1.js
+- repro3-!~{00b}~.js => repro3-JKlEYtEF.js
+- repro3-!~{009}~.js => repro3-aWUtqEBt.js
 
 # tests/rolldown/issues/3456
 
@@ -4720,7 +4719,7 @@ snapshot_kind: text
 
 # tests/rolldown/misc/require_deconflict
 
-- main-!~{000}~.js => main-D1ISVu6n.js
+- main-!~{000}~.js => main-jIhBklo0.js
 
 # tests/rolldown/misc/top_level_this_substitution
 
@@ -4757,7 +4756,7 @@ snapshot_kind: text
 
 # tests/rolldown/resolve/ts_config_option_merge
 
-- main-!~{000}~.js => main-BhZ6kefC.js
+- main-!~{000}~.js => main-CjXB2Leq.js
 
 # tests/rolldown/resolve/wildcard_alias
 

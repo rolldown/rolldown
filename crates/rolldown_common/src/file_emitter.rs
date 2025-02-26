@@ -10,8 +10,8 @@ use rolldown_utils::dashmap::{FxDashMap, FxDashSet};
 use rolldown_utils::xxhash::{xxhash_base64_url, xxhash_with_base};
 use std::ffi::OsStr;
 use std::path::Path;
-use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::Arc;
+use std::sync::atomic::{AtomicUsize, Ordering};
 use tokio::sync::Mutex;
 
 #[derive(Debug)]
@@ -149,9 +149,9 @@ impl FileEmitter {
       if let Some(filename) = self.emitted_chunks.get(reference_id) {
         return Ok(filename.clone());
       }
-      return Err(
-        anyhow::anyhow!("Unable to get file name for emitted chunk: {reference_id}.You can only get file names once chunks have been generated after the 'renderStart' hook."),
-      );
+      return Err(anyhow::anyhow!(
+        "Unable to get file name for emitted chunk: {reference_id}.You can only get file names once chunks have been generated after the 'renderStart' hook."
+      ));
     }
     Err(anyhow::anyhow!("Unable to get file name for unknown file: {reference_id}"))
   }
@@ -191,12 +191,16 @@ impl FileEmitter {
       );
 
       // deconflict file name
-      if let Some(count) = self.names.get_mut(filename.as_str()).as_deref_mut() {
-        *count += 1;
-        let extension = extension.map(|e| format!(".{e}")).unwrap_or_default();
-        filename = format!("{}{count}{extension}", &filename[..filename.len() - extension.len()],);
-      } else {
-        self.names.insert(filename.clone().into(), 1);
+      match self.names.get_mut(filename.as_str()).as_deref_mut() {
+        Some(count) => {
+          *count += 1;
+          let extension = extension.map(|e| format!(".{e}")).unwrap_or_default();
+          filename =
+            format!("{}{count}{extension}", &filename[..filename.len() - extension.len()],);
+        }
+        _ => {
+          self.names.insert(filename.clone().into(), 1);
+        }
       }
 
       file.file_name = Some(filename.into());
@@ -258,11 +262,7 @@ impl FileEmitter {
 fn sort_names(names: &mut [String]) {
   names.sort_unstable_by(|a, b| {
     let len_ord = a.len().cmp(&b.len());
-    if len_ord == std::cmp::Ordering::Equal {
-      a.cmp(b)
-    } else {
-      len_ord
-    }
+    if len_ord == std::cmp::Ordering::Equal { a.cmp(b) } else { len_ord }
   });
 }
 

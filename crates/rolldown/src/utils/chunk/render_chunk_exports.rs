@@ -140,29 +140,34 @@ pub fn render_chunk_exports(
                 let canonical_ref = link_output.symbol_db.canonical_ref_for(export_ref);
                 let symbol = link_output.symbol_db.get(canonical_ref);
                 let mut canonical_name = Cow::Borrowed(&chunk.canonical_names[&canonical_ref]);
-                let exported_value = if let Some(ns_alias) = &symbol.namespace_alias {
-                  let canonical_ns_name = &chunk.canonical_names[&ns_alias.namespace_ref];
-                  let property_name = &ns_alias.property_name;
-                  Cow::Owned(property_access_str(canonical_ns_name, property_name).into())
-                } else if link_output.module_table.modules[canonical_ref.owner].is_external() {
-                  let namespace = &chunk.canonical_names[&canonical_ref];
-                  Cow::Owned(namespace.as_str().into())
-                } else {
-                  let cur_chunk_idx = ctx.chunk_idx;
-                  let canonical_ref_owner_chunk_idx =
-                    link_output.symbol_db.get(canonical_ref).chunk_id.unwrap();
-                  let is_this_symbol_point_to_other_chunk =
-                    cur_chunk_idx != canonical_ref_owner_chunk_idx;
-                  if is_this_symbol_point_to_other_chunk {
-                    let require_binding = &ctx.chunk.require_binding_names_for_other_chunks
-                      [&canonical_ref_owner_chunk_idx];
-                    canonical_name = Cow::Owned(Rstr::new(&concat_string!(
-                      require_binding,
-                      ".",
-                      canonical_name.as_str()
-                    )));
-                  };
-                  canonical_name.clone()
+                let exported_value = match &symbol.namespace_alias {
+                  Some(ns_alias) => {
+                    let canonical_ns_name = &chunk.canonical_names[&ns_alias.namespace_ref];
+                    let property_name = &ns_alias.property_name;
+                    Cow::Owned(property_access_str(canonical_ns_name, property_name).into())
+                  }
+                  _ => {
+                    if link_output.module_table.modules[canonical_ref.owner].is_external() {
+                      let namespace = &chunk.canonical_names[&canonical_ref];
+                      Cow::Owned(namespace.as_str().into())
+                    } else {
+                      let cur_chunk_idx = ctx.chunk_idx;
+                      let canonical_ref_owner_chunk_idx =
+                        link_output.symbol_db.get(canonical_ref).chunk_id.unwrap();
+                      let is_this_symbol_point_to_other_chunk =
+                        cur_chunk_idx != canonical_ref_owner_chunk_idx;
+                      if is_this_symbol_point_to_other_chunk {
+                        let require_binding = &ctx.chunk.require_binding_names_for_other_chunks
+                          [&canonical_ref_owner_chunk_idx];
+                        canonical_name = Cow::Owned(Rstr::new(&concat_string!(
+                          require_binding,
+                          ".",
+                          canonical_name.as_str()
+                        )));
+                      };
+                      canonical_name.clone()
+                    }
+                  }
                 };
 
                 match export_mode {
@@ -227,15 +232,16 @@ pub fn render_chunk_exports(
               let symbol = link_output.symbol_db.get(canonical_ref);
               let canonical_name = &chunk.canonical_names[&canonical_ref];
 
-              if let Some(ns_alias) = &symbol.namespace_alias {
-                let canonical_ns_name = &chunk.canonical_names[&ns_alias.namespace_ref];
-                let property_name = &ns_alias.property_name;
-                render_object_define_property(
-                  &exported_name,
-                  &concat_string!(canonical_ns_name, ".", property_name),
-                )
-              } else {
-                render_object_define_property(&exported_name, canonical_name)
+              match &symbol.namespace_alias {
+                Some(ns_alias) => {
+                  let canonical_ns_name = &chunk.canonical_names[&ns_alias.namespace_ref];
+                  let property_name = &ns_alias.property_name;
+                  render_object_define_property(
+                    &exported_name,
+                    &concat_string!(canonical_ns_name, ".", property_name),
+                  )
+                }
+                _ => render_object_define_property(&exported_name, canonical_name),
               }
             })
             .collect::<Vec<_>>();

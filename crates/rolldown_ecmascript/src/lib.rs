@@ -2,6 +2,6 @@ mod ecma_ast;
 mod ecma_compiler;
 
 pub use crate::{
-  ecma_ast::{program_cell::WithMutFields, EcmaAst, ToSourceString},
+  ecma_ast::{EcmaAst, ToSourceString, program_cell::WithMutFields},
   ecma_compiler::{EcmaCompiler, PrintOptions},
 };

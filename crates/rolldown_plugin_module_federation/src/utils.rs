@@ -1,7 +1,7 @@
 use arcstr::ArcStr;
 use rolldown_utils::{concat_string, ecmascript::legitimize_identifier_name};
 
-use crate::{ModuleFederationPluginOption, INIT_REMOTE_MODULE_PREFIX, INIT_SHARED_MODULE_PREFIX};
+use crate::{INIT_REMOTE_MODULE_PREFIX, INIT_SHARED_MODULE_PREFIX, ModuleFederationPluginOption};
 
 #[derive(Debug, Default)]
 pub struct ResolvedRemoteModule {
@@ -41,11 +41,7 @@ pub fn detect_remote_module_type(
 }
 
 pub fn get_remote_module_prefix(remote_module_type: RemoteModuleType) -> &'static str {
-  if remote_module_type.is_shared() {
-    INIT_SHARED_MODULE_PREFIX
-  } else {
-    INIT_REMOTE_MODULE_PREFIX
-  }
+  if remote_module_type.is_shared() { INIT_SHARED_MODULE_PREFIX } else { INIT_REMOTE_MODULE_PREFIX }
 }
 
 #[inline]

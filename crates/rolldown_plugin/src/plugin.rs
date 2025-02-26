@@ -2,15 +2,15 @@ use std::{any::Any, borrow::Cow, fmt::Debug, sync::Arc};
 
 use super::plugin_context::PluginContext;
 use crate::{
+  HookAddonArgs, HookBuildEndArgs, HookGenerateBundleArgs, HookLoadArgs, HookLoadOutput,
+  HookRenderChunkArgs, HookRenderChunkOutput, HookResolveIdArgs, HookResolveIdOutput,
+  HookTransformArgs, HookWriteBundleArgs, SharedTransformPluginContext,
   plugin_hook_meta::PluginHookMeta,
   types::{
     hook_build_start_args::HookBuildStartArgs, hook_render_error::HookRenderErrorArgs,
     hook_render_start_args::HookRenderStartArgs, hook_transform_ast_args::HookTransformAstArgs,
     hook_transform_output::HookTransformOutput,
   },
-  HookAddonArgs, HookBuildEndArgs, HookGenerateBundleArgs, HookLoadArgs, HookLoadOutput,
-  HookRenderChunkArgs, HookRenderChunkOutput, HookResolveIdArgs, HookResolveIdOutput,
-  HookTransformArgs, HookWriteBundleArgs, SharedTransformPluginContext,
 };
 use anyhow::Result;
 use rolldown_common::{ModuleInfo, NormalModule, RollupRenderedChunk, WatcherChangeKind};

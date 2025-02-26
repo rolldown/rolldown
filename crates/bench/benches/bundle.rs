@@ -1,5 +1,5 @@
-use bench::{derive_benchmark_items, DeriveOptions};
-use criterion::{criterion_group, criterion_main, Criterion};
+use bench::{DeriveOptions, derive_benchmark_items};
+use criterion::{Criterion, criterion_group, criterion_main};
 use rolldown_testing::utils::assert_bundled;
 
 fn criterion_benchmark(c: &mut Criterion) {

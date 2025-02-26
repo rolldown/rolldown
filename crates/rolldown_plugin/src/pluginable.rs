@@ -2,14 +2,14 @@ use std::{any::Any, borrow::Cow, fmt::Debug, sync::Arc};
 
 use super::plugin_context::PluginContext;
 use crate::{
+  HookAddonArgs, HookBuildEndArgs, HookBuildStartArgs, HookGenerateBundleArgs,
+  HookInjectionOutputReturn, HookLoadArgs, HookRenderChunkArgs, HookRenderStartArgs,
+  HookResolveIdArgs, HookTransformArgs, Plugin, SharedTransformPluginContext,
   plugin_hook_meta::PluginHookMeta,
   types::{
     hook_render_error::HookRenderErrorArgs, hook_transform_ast_args::HookTransformAstArgs,
     hook_write_bundle_args::HookWriteBundleArgs,
   },
-  HookAddonArgs, HookBuildEndArgs, HookBuildStartArgs, HookGenerateBundleArgs,
-  HookInjectionOutputReturn, HookLoadArgs, HookRenderChunkArgs, HookRenderStartArgs,
-  HookResolveIdArgs, HookTransformArgs, Plugin, SharedTransformPluginContext,
 };
 use anyhow::Ok;
 use rolldown_common::{ModuleInfo, NormalModule, RollupRenderedChunk, WatcherChangeKind};

@@ -1,4 +1,4 @@
-use criterion::{black_box, criterion_group, criterion_main, Criterion};
+use criterion::{Criterion, black_box, criterion_group, criterion_main};
 use rolldown_utils::{concat_string, mime::MimeExt};
 
 fn bench_concat_string(c: &mut Criterion) {

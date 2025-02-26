@@ -1,14 +1,14 @@
 use oxc::{
   allocator::{self, Allocator, Box, IntoIn},
   ast::{
+    AstBuilder, NONE,
     ast::{
       self, Argument, BindingIdentifier, ClassElement, Declaration, Expression, FunctionType,
       ImportOrExportKind, NumberBase, ObjectPropertyKind, PropertyKind, Statement,
       VariableDeclarationKind,
     },
-    AstBuilder, NONE,
   },
-  span::{Atom, CompactStr, Span, SPAN},
+  span::{Atom, CompactStr, SPAN, Span},
 };
 use rolldown_common::{EcmaModuleAstUsage, Interop};
 
@@ -844,8 +844,8 @@ impl<'ast> AstSnippet<'ast> {
     let ast_builder = &self.builder;
     Statement::from(ast_builder.module_declaration_export_default_declaration(
       SPAN,
-      ast::ExportDefaultDeclarationKind::from(expr),
       ast_builder.module_export_name_identifier_name(SPAN, "default"),
+      ast::ExportDefaultDeclarationKind::from(expr),
     ))
   }
 

@@ -5,6 +5,7 @@ use rolldown_common::{
   SymbolRefDb,
 };
 use rolldown_rstr::{Rstr, ToRstr};
+use rolldown_utils::rustc_hash::FxHashMapExt;
 use rolldown_utils::{
   concat_string,
   rayon::{IntoParallelIterator, IntoParallelRefIterator, ParallelIterator},
@@ -97,8 +98,7 @@ impl<'name> Renamer<'name> {
   }
 
   pub fn create_conflictless_name(&mut self, hint: &str) -> String {
-    let hint = Rstr::new(hint);
-    let mut conflictless_name = hint.clone();
+    let mut conflictless_name = Rstr::new(hint);
     loop {
       match self.used_canonical_names.entry(conflictless_name.clone()) {
         Entry::Occupied(mut occ) => {
@@ -118,8 +118,8 @@ impl<'name> Renamer<'name> {
 
   #[allow(dead_code)]
   pub fn add_symbol_name_ref_token(&mut self, token: &SymbolNameRefToken) {
-    let hint = Rstr::new(token.value());
-    let mut conflictless_name = hint.clone();
+    let hint = token.value();
+    let mut conflictless_name = Rstr::new(hint);
     loop {
       match self.used_canonical_names.entry(conflictless_name.clone()) {
         Entry::Occupied(mut occ) => {
@@ -134,7 +134,7 @@ impl<'name> Renamer<'name> {
         }
       }
     }
-    self.canonical_token_to_name.insert(token.clone(), conflictless_name.clone());
+    self.canonical_token_to_name.insert(token.clone(), conflictless_name);
   }
 
   // non-top-level symbols won't be linked cross-module. So the canonical `SymbolRef` for them are themselves.
@@ -154,10 +154,10 @@ impl<'name> Renamer<'name> {
       ast_scope: &'name AstScopes,
     ) {
       let mut bindings = ast_scope.get_bindings(scope_id).iter().collect::<Vec<_>>();
+      let mut used_canonical_names_for_this_scope = FxHashMap::with_capacity(bindings.len());
+
       bindings.sort_unstable_by_key(|(_, symbol_id)| *symbol_id);
-      let mut used_canonical_names_for_this_scope = FxHashMap::default();
-      used_canonical_names_for_this_scope.shrink_to(bindings.len());
-      bindings.iter().for_each(|(binding_name, &symbol_id)| {
+      bindings.iter().for_each(|&(binding_name, &symbol_id)| {
         let binding_ref: SymbolRef = (module.idx, symbol_id).into();
 
         let mut count = 1;
@@ -171,7 +171,7 @@ impl<'name> Renamer<'name> {
 
             if is_shadowed {
               candidate_name =
-                concat_string!(binding_name, "$", itoa::Buffer::new().format(count)).into();
+                concat_string!(&binding_name, "$", itoa::Buffer::new().format(count)).into();
               count += 1;
             } else {
               used_canonical_names_for_this_scope.insert(candidate_name.clone(), 0);
@@ -183,7 +183,6 @@ impl<'name> Renamer<'name> {
             // The symbol is already renamed
           }
         }
-        used_canonical_names_for_this_scope.insert(binding_name.to_rstr(), 0);
       });
 
       stack.push(Cow::Owned(used_canonical_names_for_this_scope));

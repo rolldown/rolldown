@@ -1,6 +1,8 @@
 import type { OutputChunk as RolldownOutputChunk } from 'rolldown'
 import { defineTest } from 'rolldown-tests'
-import { expect } from 'vitest'
+import { expect, vi } from 'vitest'
+
+const onLogFn = vi.fn()
 
 export default defineTest({
   config: {
@@ -9,8 +11,15 @@ export default defineTest({
       format: 'iife',
       esModule: 'if-default-prop',
     },
+    onLog(level, log) {
+      expect(level).toBe('warn')
+      expect(log.code).toBe('MISSING_NAME_OPTION_FOR_IIFE_EXPORT')
+      onLogFn()
+    },
   },
   afterTest: (output) => {
+    expect(onLogFn).toHaveBeenCalledTimes(1)
+
     expect(
       output.output
         .filter(({ type }) => type === 'chunk')

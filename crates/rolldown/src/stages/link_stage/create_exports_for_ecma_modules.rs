@@ -1,6 +1,6 @@
 use rolldown_common::{
-  dynamic_import_usage::DynamicImportExportsUsage, EntryPoint, ExportsKind, ModuleIdx,
-  OutputFormat, StmtInfo, StmtInfoMeta, WrapKind,
+  EntryPoint, ExportsKind, ModuleIdx, OutputFormat, StmtInfo, StmtInfoMeta, WrapKind,
+  dynamic_import_usage::DynamicImportExportsUsage,
 };
 use rustc_hash::FxHashMap;
 

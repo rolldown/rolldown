@@ -7,6 +7,7 @@ export default defineTest({
     define: {
       'process.env.NODE_ENV': '"production"',
     },
+    external: ['node:assert'],
   },
   async afterTest(output) {
     await expect(output.output[0].code).toMatchFileSnapshot(

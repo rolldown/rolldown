@@ -1,5 +1,5 @@
-use oxc::ast::{ast::NewExpression, Comment};
-use rolldown_common::{get_leading_comment, ImportKind, ImportRecordMeta, ModuleType};
+use oxc::ast::{Comment, ast::NewExpression};
+use rolldown_common::{ImportKind, ImportRecordMeta, ModuleType, get_leading_comment};
 use rolldown_ecmascript_utils::ExpressionExt;
 
 use super::AstScanner;

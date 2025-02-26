@@ -1,6 +1,6 @@
 use oxc::transformer::ReplaceGlobalDefinesConfig;
 use rolldown_common::{
-  side_effects::HookSideEffects, ModuleIdx, ModuleType, ResolvedId, StrOrBytes,
+  ModuleIdx, ModuleType, ResolvedId, StrOrBytes, side_effects::HookSideEffects,
 };
 use rolldown_error::BuildDiagnostic;
 use rolldown_plugin::SharedPluginDriver;

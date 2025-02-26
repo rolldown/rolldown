@@ -1,9 +1,9 @@
 [workspace]
 members  = ["./crates/*"]
-resolver = "2"
+resolver = "3"
 
 [workspace.package]
-edition    = "2021"
+edition    = "2024"
 homepage   = "https://rolldown.rs/"
 license    = "MIT"
 repository = "https://github.com/rolldown/rolldown"
@@ -73,6 +73,15 @@ inconsistent_struct_constructor = "allow"
 single_match      = "allow"
 single_match_else = "allow"
 
+# Though the following are nursery rules, they’re still useful.
+debug_assert_with_mut_call    = "warn"
+iter_on_single_items          = "allow"
+needless_pass_by_ref_mut      = "warn"
+redundant_clone               = "warn"
+redundant_pub_crate           = "warn"
+significant_drop_in_scrutinee = "allow"
+unused_peekable               = "warn"
+
 [workspace.dependencies]
 criterion2                              = { version = "2.0.0", default-features = false }
 css-module-lexer                        = "0.0.15"
@@ -123,23 +132,24 @@ daachorse           = "1.0.0"
 dashmap             = "6.0.0"
 derive_more         = { version = "2.0.1", features = ["debug"] }
 dunce               = "1.0.4"                                                                           # Normalize Windows paths to the most compatible format, avoiding UNC where possible
-fast-glob           = "0.4.3"
+fast-glob           = "0.4.4"
 futures             = "0.3.30"
 glob                = "0.3.1"
 heck                = { version = "0.5.0" }
 indexmap            = "2.2.6"
-infer               = "0.16.0"
+infer               = "0.19.0"
 insta               = "1.39.0"
 itertools           = "0.14.0"
 itoa                = "1.0.11"
 json-strip-comments = "1.0.4"
-jsonschema          = { version = "0.28.0", default-features = false }
+jsonschema          = { version = "0.29.0", default-features = false }
 memchr              = "2.7.2"
 mimalloc            = "0.1.42"
 mime                = "0.3.17"
-napi                = { version = "3.0.0-alpha.28", features = ["async", "anyhow"] }
-napi-build          = { version = "2.1.4" }
-napi-derive         = { version = "3.0.0-alpha.26", default-features = false, features = ["type-def"] }
+napi                = { version = "3.0.0-alpha.31", features = ["async", "anyhow"] }
+napi-build          = { version = "2.1.5" }
+napi-derive         = { version = "3.0.0-alpha.28", default-features = false, features = ["type-def"] }
+nom                 = "8.0.0"
 notify              = { version = "8.0.0" }
 phf                 = "0.11.3"
 rayon               = "1.10.0"
@@ -168,16 +178,16 @@ xxhash-rust         = "0.8.10"
 
 
 # oxc crates with the same version
-oxc                = { version = "0.51.0", features = ["transformer", "minifier", "mangler", "semantic", "codegen", "serialize"] }
-oxc_parser_napi    = { version = "0.51.0" }
-oxc_transform_napi = { version = "0.51.0" }
+oxc                = { version = "0.53.0", features = ["transformer", "minifier", "mangler", "semantic", "codegen", "serialize"] }
+oxc_parser_napi    = { version = "0.53.0" }
+oxc_transform_napi = { version = "0.53.0" }
 
 # oxc crates in their own repos
 # Versions must be relaxed for usage in oxc.
 # Please update with `cargo update oxc_resolver oxc_sourcemap oxc_index`
-oxc_index     = { version = "2", features = ["rayon", "serde"] }            # https://github.com/oxc-project/oxc-index-vec
+oxc_index     = { version = "3", features = ["rayon", "serde"] }            # https://github.com/oxc-project/oxc-index-vec
 oxc_resolver  = { version = "4", features = ["package_json_raw_json_api"] } # https://github.com/oxc-project/oxc-resolver
-oxc_sourcemap = { version = "1" }                                           # https://github.com/oxc-project/oxc-sourcemap
+oxc_sourcemap = { version = "2" }                                           # https://github.com/oxc-project/oxc-sourcemap
 
 [profile.release]
 codegen-units = 1

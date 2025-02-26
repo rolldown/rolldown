@@ -1,4 +1,4 @@
-import { test, expect, describe } from 'vitest'
+import { test, expect, describe, vi } from 'vitest'
 import { build } from 'rolldown'
 import { moduleFederationPlugin } from 'rolldown/experimental'
 import path from 'node:path'
@@ -41,6 +41,8 @@ describe('module-federation', () => {
       },
     })
 
+    const onLogFn = vi.fn()
+
     // build remote
     await build({
       input: './remote-expose.js',
@@ -77,7 +79,14 @@ describe('module-federation', () => {
         dir: 'dist/remote',
         chunkFileNames: '[name].js',
       },
+      onLog(level, log) {
+        expect(level).toBe('warn')
+        expect(log.code).toBe('EVAL')
+        onLogFn()
+      },
     })
+
+    expect(onLogFn).toHaveBeenCalledTimes(1)
 
     // Test the remote manifest json
     // @ts-ignore

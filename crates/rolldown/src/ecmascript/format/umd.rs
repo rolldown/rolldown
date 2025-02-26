@@ -69,7 +69,9 @@ pub async fn render_umd<'code>(
   let cjs_intro = if need_global {
     let cjs_export = if has_exports && !named_exports { "module.exports = " } else { "" };
     let cjs_dependencies = render_cjs_dependencies(&externals, has_exports && named_exports);
-    format!("typeof exports === 'object' && typeof module !== 'undefined' ? {cjs_export} factory({cjs_dependencies}) :",)
+    format!(
+      "typeof exports === 'object' && typeof module !== 'undefined' ? {cjs_export} factory({cjs_dependencies}) :",
+    )
   } else {
     String::new()
   };
@@ -165,7 +167,7 @@ async fn render_iife_export(
   has_exports: bool,
   named_exports: bool,
 ) -> BuildResult<String> {
-  if has_exports && ctx.options.name.as_ref().map_or(true, String::is_empty) {
+  if has_exports && ctx.options.name.as_ref().is_none_or(String::is_empty) {
     return Err(vec![BuildDiagnostic::missing_name_option_for_umd_export()].into());
   }
   let mut dependencies = Vec::with_capacity(externals.len());

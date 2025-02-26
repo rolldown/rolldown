@@ -19,6 +19,9 @@ impl BuildEvent for UnhandleableError {
   }
 
   fn message(&self, _opts: &DiagnosticOptions) -> String {
-    format!("Something wrong inside the rolldown, please report this at https://github.com/rolldown/rolldown/issues.\n{}", self.0)
+    format!(
+      "Something wrong inside the rolldown, please report this at https://github.com/rolldown/rolldown/issues.\n{}",
+      self.0
+    )
   }
 }

@@ -1,4 +1,4 @@
-use rolldown_utils::replace_all_placeholder::{replace_all_placeholder, Replacer};
+use rolldown_utils::replace_all_placeholder::{Replacer, replace_all_placeholder};
 
 #[derive(Debug)]
 pub struct FilenameTemplate {

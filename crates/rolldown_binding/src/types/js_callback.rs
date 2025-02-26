@@ -2,9 +2,9 @@ use std::sync::Arc;
 
 use futures::Future;
 use napi::{
+  Either,
   bindgen_prelude::{FromNapiValue, JsValuesTupleIntoVec, Promise},
   threadsafe_function::{ThreadsafeFunction, UnknownReturnValue},
-  Either,
 };
 use rolldown_utils::debug::pretty_type_name;
 

@@ -145,7 +145,7 @@ fn json_object_expr_to_esm(
     // and collect related info
     for property in &mut obj_expr.properties {
       match property {
-        ast::ObjectPropertyKind::ObjectProperty(ref mut property) => {
+        ast::ObjectPropertyKind::ObjectProperty(property) => {
           let key = property.key.static_name().expect("should be static name");
           if key.is_empty() {
             continue;

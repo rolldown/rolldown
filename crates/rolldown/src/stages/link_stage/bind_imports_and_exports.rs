@@ -21,7 +21,7 @@ use rolldown_utils::{
 
 use rustc_hash::{FxHashMap, FxHashSet};
 
-use crate::{types::linking_metadata::LinkingMetadataVec, SharedOptions};
+use crate::{SharedOptions, types::linking_metadata::LinkingMetadataVec};
 
 use super::LinkStage;
 
@@ -336,11 +336,7 @@ impl LinkStage<'_> {
         let Module::Normal(module) = module else {
           return None;
         };
-        if module.exports_kind.is_commonjs() {
-          Some(module.idx)
-        } else {
-          None
-        }
+        if module.exports_kind.is_commonjs() { Some(module.idx) } else { None }
       })
       .collect::<Vec<_>>();
     for module_idx in cjs_exports_type_modules {
@@ -672,7 +668,7 @@ impl BindImportsAndExportsContext<'_> {
     }
   }
 
-  fn advance_import_tracker(&self, ctx: &mut MatchingContext) -> ImportStatus {
+  fn advance_import_tracker(&self, ctx: &MatchingContext) -> ImportStatus {
     let tracker = ctx.current_tracker();
     let importer = &self.index_modules[tracker.importer]
       .as_normal()
@@ -705,19 +701,24 @@ impl BindImportsAndExportsContext<'_> {
         potentially_ambiguous_export_star_refs: vec![],
       },
       Specifier::Literal(literal_imported) => {
-        if let Some(export) = self.metas[importee_id].resolved_exports.get(literal_imported) {
-          ImportStatus::Found {
-            // owner: importee_id,
-            symbol: export.symbol_ref,
-            potentially_ambiguous_export_star_refs: export
-              .potentially_ambiguous_symbol_refs
-              .clone()
-              .unwrap_or_default(),
+        match self.metas[importee_id].resolved_exports.get(literal_imported) {
+          Some(export) => {
+            ImportStatus::Found {
+              // owner: importee_id,
+              symbol: export.symbol_ref,
+              potentially_ambiguous_export_star_refs: export
+                .potentially_ambiguous_symbol_refs
+                .clone()
+                .unwrap_or_default(),
+            }
           }
-        } else if self.metas[importee_id].has_dynamic_exports {
-          ImportStatus::DynamicFallback { namespace_ref: importee.namespace_object_ref }
-        } else {
-          ImportStatus::NoMatch {}
+          _ => {
+            if self.metas[importee_id].has_dynamic_exports {
+              ImportStatus::DynamicFallback { namespace_ref: importee.namespace_object_ref }
+            } else {
+              ImportStatus::NoMatch {}
+            }
+          }
         }
       }
     }
@@ -784,27 +785,28 @@ impl BindImportsAndExportsContext<'_> {
         ImportStatus::Found { symbol, potentially_ambiguous_export_star_refs, .. } => {
           for ambiguous_ref in &potentially_ambiguous_export_star_refs {
             let ambiguous_ref_owner = &index_modules[ambiguous_ref.owner];
-            if let Some(another_named_import) =
-              ambiguous_ref_owner.as_normal().unwrap().named_imports.get(ambiguous_ref)
-            {
-              let rec = &ambiguous_ref_owner.as_normal().unwrap().import_records
-                [another_named_import.record_id];
-              let ambiguous_result = self.match_import_with_export(
-                index_modules,
-                &mut MatchingContext { tracker_stack: ctx.tracker_stack.clone() },
-                ImportTracker {
-                  importer: ambiguous_ref_owner.idx(),
-                  importee: rec.resolved_module,
-                  imported: another_named_import.imported.clone(),
-                  imported_as: another_named_import.imported_as,
-                },
-              );
-              ambiguous_results.push(ambiguous_result);
-            } else {
-              ambiguous_results.push(MatchImportKind::Normal(MatchImportKindNormal {
-                symbol: *ambiguous_ref,
-                reexports: vec![],
-              }));
+            match ambiguous_ref_owner.as_normal().unwrap().named_imports.get(ambiguous_ref) {
+              Some(another_named_import) => {
+                let rec = &ambiguous_ref_owner.as_normal().unwrap().import_records
+                  [another_named_import.record_id];
+                let ambiguous_result = self.match_import_with_export(
+                  index_modules,
+                  &mut MatchingContext { tracker_stack: ctx.tracker_stack.clone() },
+                  ImportTracker {
+                    importer: ambiguous_ref_owner.idx(),
+                    importee: rec.resolved_module,
+                    imported: another_named_import.imported.clone(),
+                    imported_as: another_named_import.imported_as,
+                  },
+                );
+                ambiguous_results.push(ambiguous_result);
+              }
+              _ => {
+                ambiguous_results.push(MatchImportKind::Normal(MatchImportKindNormal {
+                  symbol: *ambiguous_ref,
+                  reexports: vec![],
+                }));
+              }
             }
           }
 

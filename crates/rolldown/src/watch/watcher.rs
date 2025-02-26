@@ -171,53 +171,7 @@ impl WatcherImpl {
   }
 
   pub async fn start(&self) {
-    let build_delay = {
-      let mut build_delay: u32 = 0;
-      for bundler in &self.bundlers {
-        let bundler = bundler.lock().await;
-        if let Some(delay) = bundler.options.watch.build_delay {
-          if delay > build_delay {
-            build_delay = delay;
-          }
-        }
-      }
-      build_delay
-    };
-
     let _ = self.run(&[]).await;
-    let future = async move {
-      while let Ok(msg) = self.exec_rx.lock().await.recv() {
-        match msg {
-          ExecChannelMsg::Exec => {
-            tokio::time::sleep(Duration::from_millis(u64::from(build_delay))).await;
-            tracing::debug!(name= "watcher invalidate", watch_changes = ?self.watch_changes);
-            let watch_changes =
-              self.watch_changes.iter().map(|v| v.deref().clone()).collect::<Vec<_>>();
-            for change in &watch_changes {
-              for task in &self.tasks {
-                task.on_change(change.path.as_str(), change.kind).await;
-                task.invalidate(change.path.as_str());
-              }
-              self.watch_changes.remove(change);
-            }
-            let changed_files =
-              watch_changes.iter().map(|item| item.path.clone()).collect::<Vec<_>>();
-            let _ = self.run(&changed_files).await;
-          }
-          ExecChannelMsg::Close => break,
-        }
-      }
-    };
-    #[cfg(target_family = "wasm")]
-    {
-      futures::executor::block_on(future);
-    }
-    #[cfg(not(target_family = "wasm"))]
-    {
-      tokio::task::block_in_place(move || {
-        tokio::runtime::Handle::current().block_on(future);
-      });
-    }
   }
 }
 
@@ -265,6 +219,47 @@ pub fn wait_for_change(watcher: Arc<WatcherImpl>) {
         Err(e) => {
           eprintln!("watcher receiver error: {e:?}");
         }
+      }
+    }
+  };
+  tokio::spawn(future);
+}
+
+pub fn wait_for_invalidate_run(watcher: Arc<WatcherImpl>) {
+  let future = async move {
+    let build_delay = {
+      let mut build_delay: u32 = 0;
+      for bundler in &watcher.bundlers {
+        let bundler = bundler.lock().await;
+        if let Some(delay) = bundler.options.watch.build_delay {
+          if delay > build_delay {
+            build_delay = delay;
+          }
+        }
+      }
+      build_delay
+    };
+
+    while let Ok(msg) = watcher.exec_rx.lock().await.recv() {
+      match msg {
+        ExecChannelMsg::Exec => {
+          tokio::time::sleep(Duration::from_millis(u64::from(build_delay))).await;
+
+          tracing::debug!(name= "watcher invalidate", watch_changes = ?watcher.watch_changes);
+          let watch_changes =
+            watcher.watch_changes.iter().map(|v| v.deref().clone()).collect::<Vec<_>>();
+          for change in &watch_changes {
+            for task in &watcher.tasks {
+              task.on_change(change.path.as_str(), change.kind).await;
+              task.invalidate(change.path.as_str());
+            }
+            watcher.watch_changes.remove(change);
+          }
+          let changed_files =
+            watch_changes.iter().map(|item| item.path.clone()).collect::<Vec<_>>();
+          let _ = watcher.run(&changed_files).await;
+        }
+        ExecChannelMsg::Close => break,
       }
     }
   };

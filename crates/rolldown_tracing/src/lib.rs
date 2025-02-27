@@ -36,7 +36,8 @@ pub fn try_init_tracing() -> Option<FlushGuard> {
     "chrome-json" | "chrome-json-threaded" => {
       let trace_style =
         if output_mode == "chrome-json" { TraceStyle::Async } else { TraceStyle::Threaded };
-      let (chrome_layer, guard) = ChromeLayerBuilder::new().trace_style(trace_style).build();
+      let (chrome_layer, guard) =
+        ChromeLayerBuilder::new().trace_style(trace_style).include_args(true).build();
       tracing_subscriber::registry().with(env_filter).with(chrome_layer).init();
       Some(guard)
     }

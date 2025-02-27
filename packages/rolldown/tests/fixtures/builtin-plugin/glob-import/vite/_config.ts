@@ -23,6 +23,9 @@ export default defineTest({
             const res = fs.readFileSync(id.slice(0, -4), 'utf-8')
             return `export default ${JSON.stringify(res)}`
           }
+          if (id.endsWith('?url')) {
+            return `export default '/path/to/module.js'`
+          }
           if (id.endsWith('?base64')) {
             const res = fs.readFileSync(id.slice(0, -7), 'utf-8')
             return `export default ${JSON.stringify(btoa(res))}`

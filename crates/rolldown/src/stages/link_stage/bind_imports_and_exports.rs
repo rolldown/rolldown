@@ -6,9 +6,9 @@ use oxc::span::CompactStr;
 // TODO: The current implementation for matching imports is enough so far but incomplete. It needs to be refactored
 // if we want more enhancements related to exports.
 use rolldown_common::{
-  EcmaModuleAstUsage, ExportsKind, ImportKind, IndexModules, Module, ModuleIdx, ModuleType,
-  NamespaceAlias, NormalModule, OutputFormat, ResolvedExport, Specifier, SymbolOrMemberExprRef,
-  SymbolRef, SymbolRefDb, WrapKind,
+  EcmaModuleAstUsage, ExportsKind, IndexModules, Module, ModuleIdx, ModuleType, NamespaceAlias,
+  NormalModule, OutputFormat, ResolvedExport, Specifier, SymbolOrMemberExprRef, SymbolRef,
+  SymbolRefDb,
 };
 use rolldown_error::{AmbiguousExternalNamespaceModule, BuildDiagnostic};
 use rolldown_rstr::{Rstr, ToRstr};
@@ -123,53 +123,7 @@ impl LinkStage<'_> {
   /// ```
   ///
   /// Unlike import from normal modules, the imported variable deosn't have a place that declared the variable. So we consider `import { a } from 'external'` in `foo.js` as the declaration statement of `a`.
-  #[expect(clippy::too_many_lines)]
   pub(super) fn bind_imports_and_exports(&mut self) {
-    self.sorted_modules.iter().copied().for_each(|importer_idx| {
-      let Some(importer) = self.module_table.modules[importer_idx].as_normal() else {
-        return;
-      };
-
-      let imported_wrapped_cjs_modules = importer
-        .ecma_view
-        .import_records
-        .iter()
-        .filter_map(|import_rec| {
-          if import_rec.is_dummy() {
-            return None;
-          }
-          let importee = &self.module_table.modules[import_rec.resolved_module];
-          let importee_meta = &self.metas[importee.idx()];
-          match (import_rec.kind, importee_meta.wrap_kind) {
-            (ImportKind::Import, WrapKind::Cjs) => {
-              Some((importer.should_consider_node_esm_spec(), import_rec.resolved_module))
-            }
-            _ => None,
-          }
-        })
-        .collect::<Vec<_>>();
-
-      imported_wrapped_cjs_modules.iter().for_each(
-        |(should_consider_node_esm_spec, cjs_module_idx)| {
-          let cjs_module = self.module_table.modules[*cjs_module_idx].as_normal_mut().unpack();
-          let meta = &self.metas[cjs_module.idx];
-          if *should_consider_node_esm_spec {
-            cjs_module.generate_esm_namespace_in_cjs_node_mode_stmt(
-              &mut self.symbols,
-              &self.runtime,
-              meta.wrapper_ref.unpack(),
-            );
-          } else {
-            cjs_module.generate_esm_namespace_in_cjs_stmt(
-              &mut self.symbols,
-              &self.runtime,
-              meta.wrapper_ref.unpack(),
-            );
-          }
-        },
-      );
-    });
-
     // Initialize `resolved_exports` to prepare for matching imports with exports
     self.metas.par_iter_mut_enumerated().for_each(|(module_id, meta)| {
       let Module::Normal(module) = &self.module_table.modules[module_id] else {

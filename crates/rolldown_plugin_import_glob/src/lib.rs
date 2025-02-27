@@ -288,6 +288,9 @@ impl<'ast> GlobImportVisit<'ast, '_> {
           continue;
         }
         let file = file.relative(dir).to_slash_lossy().to_string();
+        if file == self.id.relative(dir).to_slash_lossy() {
+          continue;
+        }
         let prefix = if file.starts_with('.') { "" } else { "./" };
         files.push(format!("{prefix}{file}"));
       }

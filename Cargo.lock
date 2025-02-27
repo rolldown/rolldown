@@ -2492,8 +2492,9 @@ version = "0.0.1"
 dependencies = [
  "anyhow",
  "glob",
+ "memchr",
  "oxc",
- "regex",
+ "phf",
  "rolldown_plugin",
 ]
 

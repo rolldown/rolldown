@@ -6,15 +6,31 @@ use oxc::{
   codegen::CodeGenerator,
   syntax::operator::BinaryOperator,
 };
-use regex::Regex;
 use std::path::Path;
-use std::sync::LazyLock;
 
 // Disallow ./*.ext
-static OWN_DIRECTORY_STAR_REGEX: LazyLock<Regex> = LazyLock::new(|| {
-  let pattern = r"^\./\*\.\w+$";
-  Regex::new(pattern).expect("failed to compile regex")
-});
+/// Checks if a string matches the pattern for own directory star imports (./*.ext)
+fn is_own_directory_star_import(s: &str) -> bool {
+  // Pattern: "./*.ext" where ext is one or more word characters
+
+  // Must start with "./"
+  if !s.starts_with("./") {
+    return false;
+  }
+
+  // Must be at least 5 characters long (./*.x)
+  if s.len() < 5 {
+    return false;
+  }
+
+  // Check for "*." at positions 2 and 3
+  if s.as_bytes()[2] != b'*' || s.as_bytes()[3] != b'.' {
+    return false;
+  }
+
+  // Check that all remaining characters are valid for a file extension (word characters)
+  s[4..].chars().all(|c| c.is_ascii_alphanumeric() || c == '_')
+}
 
 static EXAMPLE_CODE: &str = "For example: import(`./foo/${bar}.js`).";
 
@@ -54,7 +70,7 @@ pub fn to_glob_pattern(expr: &Expression) -> anyhow::Result<Option<String>> {
     ));
   }
 
-  if OWN_DIRECTORY_STAR_REGEX.is_match(&glob) {
+  if is_own_directory_star_import(&glob) {
     let expr = expr_to_str(expr);
     return Err(anyhow::format_err!(
       "invalid import \"{expr}\". Variable imports cannot import their own directory, place imports in a separate directory or make the import filename more specific. {EXAMPLE_CODE}"

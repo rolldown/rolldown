@@ -186,7 +186,8 @@ impl WatcherImpl {
 
     let _ = self.run(&[]).await;
     let future = async move {
-      while let Ok(msg) = self.exec_rx.lock().await.recv() {
+      let exec_rx = self.exec_rx.lock().await;
+      while let Ok(msg) = exec_rx.recv() {
         match msg {
           ExecChannelMsg::Exec => {
             tokio::time::sleep(Duration::from_millis(u64::from(build_delay))).await;

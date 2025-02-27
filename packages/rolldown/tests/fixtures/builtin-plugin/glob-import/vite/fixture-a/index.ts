@@ -85,14 +85,6 @@ export const excludeSelfRaw = import.meta.glob('./*.ts', { query: '?raw' })
 // unresolved import
 // export const customQueryString = import.meta.glob('./*.ts', { query: 'custom' })
 
-// unresolved import
-// export const customQueryObject = import.meta.glob('./*.ts', {
-//   query: {
-//     foo: 'bar',
-//     raw: true,
-//   },
-// })
-
 export const parent = import.meta.glob('../../playground/src/*.ts', {
   query: '?url',
   import: 'default',

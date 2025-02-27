@@ -19,8 +19,8 @@ export default defineTest({
               version: 3,
               names: [],
               sources: ['test.tsx'],
-              // @ts-expect-error -- intentionally passing null
-              sourceRoot: null,
+              // intentionally passing null
+              sourceRoot: null as unknown as string | undefined,
               sourcesContent: ["export const foo = 'foo';\n"],
               mappings: 'AAAA,OAAO,MAAM,MAAM',
             },

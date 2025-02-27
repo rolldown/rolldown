@@ -7,7 +7,6 @@ import {
 } from 'rolldown-tests/utils'
 import { SourceMapConsumer } from 'source-map'
 
-// Copy from "rollup@sourcemaps@transform-low-resolution: handles combining low-resolution and high-resolution source-maps when transforming@generates es".
 export default defineTest({
   config: {
     plugins: [
@@ -20,6 +19,7 @@ export default defineTest({
               version: 3,
               names: [],
               sources: ['test.tsx'],
+              // @ts-expect-error -- intentionally passing null
               sourceRoot: null,
               sourcesContent: ["export const foo = 'foo';\n"],
               mappings: 'AAAA,OAAO,MAAM,MAAM',

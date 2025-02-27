@@ -243,8 +243,13 @@ fn extract_import_glob_options(arg: &Argument, opts: &mut ImportGlobOptions) {
   }
 }
 
+struct FileData {
+  key: String,
+  import_path: String,
+}
+
 impl<'ast> GlobImportVisit<'ast, '_> {
-  fn eval_glob_expr(&self, arg: &Argument, files: &mut std::vec::Vec<(String, String)>) {
+  fn eval_glob_expr(&self, arg: &Argument, files: &mut std::vec::Vec<FileData>) {
     let mut positive_globs = vec![];
     let mut negated_globs = vec![];
     match arg {
@@ -299,9 +304,8 @@ impl<'ast> GlobImportVisit<'ast, '_> {
         if import_path == self_path {
           continue;
         }
-        let file_path =
-          if is_relative { import_path.clone() } else { self.format_path(&file, None) };
-        files.push((file_path, import_path));
+        let key = if is_relative { import_path.clone() } else { self.format_path(&file, None) };
+        files.push(FileData { key, import_path });
       }
     }
   }
@@ -322,13 +326,14 @@ impl<'ast> GlobImportVisit<'ast, '_> {
   #[allow(clippy::too_many_lines, clippy::cast_possible_truncation)]
   fn generate_glob_object_expression(
     &mut self,
-    files: &[(String, String)],
+    files: &[FileData],
     opts: &ImportGlobOptions,
     call_expr_span: Span,
     omit_keys: bool,
     omit_values: bool,
   ) -> Expression<'ast> {
-    let properties = files.iter().enumerate().map(|(index, (file_path, import_path))| {
+    let properties = files.iter().enumerate().map(|(index, file_data)| {
+      let import_path = &file_data.import_path;
       let formatted_file = if let Some(query) = &opts.query {
         let normalized_query = if query == "?raw" {
           query
@@ -484,7 +489,7 @@ impl<'ast> GlobImportVisit<'ast, '_> {
         )
       };
 
-      (file_path, value)
+      (&file_data.key, value)
     });
 
     if omit_keys {

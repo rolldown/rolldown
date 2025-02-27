@@ -47,7 +47,7 @@ async fn typescript_declare() {
     },
     vec![
       Arc::new(ReplacePlugin::with_options(ReplaceOptions {
-        values: [("NAME".to_string(), "replaced".to_string())].into_iter().collect(),
+        values: std::iter::once(("NAME".to_string(), "replaced".to_string())).collect(),
         prevent_assignment: true,
         sourcemap: true,
         ..Default::default()

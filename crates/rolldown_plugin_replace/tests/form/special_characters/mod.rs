@@ -22,7 +22,7 @@ async fn special_characters() {
       ..Default::default()
     },
     vec![Arc::new(ReplacePlugin::with_options(ReplaceOptions {
-      values: [("require('one')".to_string(), "1".to_string())].into_iter().collect(),
+      values: std::iter::once(("require('one')".to_string(), "1".to_string())).collect(),
       delimiters: Some((String::new(), String::new())),
       sourcemap: true,
       ..Default::default()

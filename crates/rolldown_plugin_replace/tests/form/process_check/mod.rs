@@ -23,8 +23,7 @@ async fn process_check() {
       ..Default::default()
     },
     vec![Arc::new(ReplacePlugin::with_options(ReplaceOptions {
-      values: [("process.env.NODE_ENV".to_string(), "\"production\"".to_string())]
-        .into_iter()
+      values: std::iter::once(("process.env.NODE_ENV".to_string(), "\"production\"".to_string()))
         .collect(),
       prevent_assignment: true,
       sourcemap: true,

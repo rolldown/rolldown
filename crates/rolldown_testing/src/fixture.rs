@@ -34,8 +34,7 @@ impl Fixture {
 
     options.canonicalize_option_path();
 
-    let configs = [NamedBundlerOptions { options: options.clone(), name: None }]
-      .into_iter()
+    let configs = std::iter::once(NamedBundlerOptions { options: options.clone(), name: None })
       .chain(config_variants.into_iter().map(|variant| NamedBundlerOptions {
         options: variant.apply(&options),
         name: Some(variant.to_string()),

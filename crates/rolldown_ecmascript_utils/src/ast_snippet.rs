@@ -491,8 +491,9 @@ impl<'ast> AstSnippet<'ast> {
       );
       esm_call_expr.arguments.push(ast::Argument::ObjectExpression(obj_expr));
     } else {
-      let arrow_expr =
-        self.builder.alloc_arrow_function_expression(SPAN, false, false, NONE, params, NONE, body);
+      let arrow_expr = self
+        .builder
+        .alloc_arrow_function_expression(SPAN, false, is_async, NONE, params, NONE, body);
       esm_call_expr.arguments.push(ast::Argument::ArrowFunctionExpression(arrow_expr));
     };
 

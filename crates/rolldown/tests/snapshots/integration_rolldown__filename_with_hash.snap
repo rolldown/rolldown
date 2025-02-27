@@ -4023,6 +4023,10 @@ expression: output
 
 - main-!~{000}~.js => main-GFznQ31-.js
 
+# tests/rolldown/function/experimental/strict_execution_order/top_level_await_syntax_minify
+
+- main-!~{000}~.js => main-BfR11wI6.js
+
 # tests/rolldown/function/export_mode/cjs/auto/default
 
 - main-!~{000}~.js => main-BV29ae5y.js

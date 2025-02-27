@@ -19,9 +19,14 @@ export default defineTest({
       {
         name: 'load-file-with-query',
         load(id: string) {
-          if (!id.endsWith('?raw')) return
-          const res = fs.readFileSync(id.slice(0, -4), 'utf-8')
-          return `export default ${JSON.stringify(res)}`
+          if (id.endsWith('?raw')) {
+            const res = fs.readFileSync(id.slice(0, -4), 'utf-8')
+            return `export default ${JSON.stringify(res)}`
+          }
+          if (id.endsWith('?base64')) {
+            const res = fs.readFileSync(id.slice(0, -7), 'utf-8')
+            return `export default ${JSON.stringify(btoa(res))}`
+          }
         },
       },
     ],

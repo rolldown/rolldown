@@ -82,8 +82,7 @@ export const excludeSelf = import.meta.glob(
 )
 export const excludeSelfRaw = import.meta.glob('./*.ts', { query: '?raw' })
 
-// unresolved import
-// export const customQueryString = import.meta.glob('./*.ts', { query: 'custom' })
+export const customQueryString = import.meta.glob('./*.ts', { query: 'base64' })
 
 export const parent = import.meta.glob('../../playground/src/*.ts', {
   query: '?url',

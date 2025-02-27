@@ -79,7 +79,7 @@ iter_on_single_items          = "allow"
 needless_pass_by_ref_mut      = "warn"
 redundant_clone               = "warn"
 redundant_pub_crate           = "warn"
-significant_drop_in_scrutinee = "allow"
+significant_drop_in_scrutinee = "warn"
 unused_peekable               = "warn"
 
 [workspace.dependencies]

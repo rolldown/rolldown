@@ -24,7 +24,14 @@ export function bindingifySourcemap(
         : {
             file: map.file ?? undefined,
             mappings: map.mappings,
-            sourceRoot: map.sourceRoot,
+            // according to the spec, `sourceRoot: null` is not valid,
+            // but some tools returns a sourcemap with it.
+            // in that case, napi-rs outputs an error which is difficult
+            // to understand by users ("Value is non of these types `String`, `BindingJsonSourcemap`").
+            // we convert it to undefined to skip that error.
+            // note that if `sourceRoot: null` is included in a string sourcemap,
+            // it will be converted to None by serde-json.
+            sourceRoot: map.sourceRoot ?? undefined,
             sources: map.sources?.map((s) => s ?? undefined),
             sourcesContent: map.sourcesContent?.map((s) => s ?? undefined),
             names: map.names,

@@ -13,17 +13,26 @@ pub struct DiagnosableResolveError {
   pub help: Option<String>,
 }
 
+impl DiagnosableResolveError {
+  fn importee_str(&self) -> &str {
+    match &self.importee {
+      DiagnosableArcstr::String(str) => str.as_str(),
+      DiagnosableArcstr::Span(span) => &self.source.as_str()[*span],
+    }
+  }
+}
+
 impl BuildEvent for DiagnosableResolveError {
   fn kind(&self) -> crate::event_kind::EventKind {
     crate::event_kind::EventKind::ResolveError(self.title)
   }
 
   fn message(&self, opts: &DiagnosticOptions) -> String {
-    let importee = match &self.importee {
-      DiagnosableArcstr::String(str) => str.as_str(),
-      DiagnosableArcstr::Span(span) => &self.source.as_str()[*span],
-    };
-    format!("Could not resolve {} in {}", importee, opts.stabilize_path(self.importer_id.as_str()))
+    format!(
+      "Could not resolve {} in {}",
+      self.importee_str(),
+      opts.stabilize_path(self.importer_id.as_str())
+    )
   }
 
   fn on_diagnostic(
@@ -42,5 +51,13 @@ impl BuildEvent for DiagnosableResolveError {
     };
     diagnostic.title = self.message(opts);
     diagnostic.help.clone_from(&self.help);
+  }
+
+  fn id(&self) -> Option<String> {
+    Some(self.importer_id.to_string())
+  }
+
+  fn exporter(&self) -> Option<String> {
+    Some(self.importee_str().to_string())
   }
 }

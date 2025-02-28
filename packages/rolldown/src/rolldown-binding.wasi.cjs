@@ -88,7 +88,6 @@ const { instance: __napiInstance, module: __wasiModule, napiModule: __napiModule
 module.exports.BindingBundleEndEventData = __napiModule.exports.BindingBundleEndEventData
 module.exports.BindingCallableBuiltinPlugin = __napiModule.exports.BindingCallableBuiltinPlugin
 module.exports.BindingError = __napiModule.exports.BindingError
-module.exports.BindingLog = __napiModule.exports.BindingLog
 module.exports.BindingModuleInfo = __napiModule.exports.BindingModuleInfo
 module.exports.BindingNormalizedOptions = __napiModule.exports.BindingNormalizedOptions
 module.exports.BindingOutputAsset = __napiModule.exports.BindingOutputAsset

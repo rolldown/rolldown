@@ -373,7 +373,6 @@ if (!nativeBinding) {
 module.exports.BindingBundleEndEventData = nativeBinding.BindingBundleEndEventData
 module.exports.BindingCallableBuiltinPlugin = nativeBinding.BindingCallableBuiltinPlugin
 module.exports.BindingError = nativeBinding.BindingError
-module.exports.BindingLog = nativeBinding.BindingLog
 module.exports.BindingModuleInfo = nativeBinding.BindingModuleInfo
 module.exports.BindingNormalizedOptions = nativeBinding.BindingNormalizedOptions
 module.exports.BindingOutputAsset = nativeBinding.BindingOutputAsset

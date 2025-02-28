@@ -243,8 +243,13 @@ fn extract_import_glob_options(arg: &Argument, opts: &mut ImportGlobOptions) {
   }
 }
 
+struct FileData {
+  key: String,
+  import_path: String,
+}
+
 impl<'ast> GlobImportVisit<'ast, '_> {
-  fn eval_glob_expr(&self, arg: &Argument, files: &mut std::vec::Vec<String>) {
+  fn eval_glob_expr(&self, arg: &Argument, files: &mut std::vec::Vec<FileData>) {
     let mut positive_globs = vec![];
     let mut negated_globs = vec![];
     match arg {
@@ -282,6 +287,10 @@ impl<'ast> GlobImportVisit<'ast, '_> {
       })
       .collect::<std::vec::Vec<_>>();
 
+    let is_relative = positive_globs.iter().all(|g| g.starts_with('.'));
+
+    let self_path = self.format_path(Path::new(self.id), Some(dir));
+
     for glob_expr in positive_globs {
       let processed_glob_expr = preprocess_glob_expr(glob_expr);
       let absolute_glob = to_absolute_glob(&processed_glob_expr, dir, root).unwrap();
@@ -291,41 +300,55 @@ impl<'ast> GlobImportVisit<'ast, '_> {
         if negated_globs.iter().any(|g| g.matches_path(&file)) {
           continue;
         }
-        let file = file.relative(dir).to_slash_lossy().to_string();
-        if file == self.id.relative(dir).to_slash_lossy() {
+        let import_path = self.format_path(&file, Some(dir));
+        if import_path == self_path {
           continue;
         }
-        let prefix = if file.starts_with('.') { "" } else { "./" };
-        files.push(format!("{prefix}{file}"));
+        let key = if is_relative { import_path.clone() } else { self.format_path(&file, None) };
+        files.push(FileData { key, import_path });
       }
     }
+  }
+
+  fn format_path(&self, path: &Path, relative_to: Option<&Path>) -> String {
+    let dir = relative_to.unwrap_or(self.root);
+    let path = path.relative(dir).to_slash_lossy().to_string();
+    let prefix = if path.starts_with('.') {
+      ""
+    } else if relative_to.is_some() {
+      "./"
+    } else {
+      "/"
+    };
+    format!("{prefix}{path}")
   }
 
   #[allow(clippy::too_many_lines, clippy::cast_possible_truncation)]
   fn generate_glob_object_expression(
     &mut self,
-    files: &[String],
+    files: &[FileData],
     opts: &ImportGlobOptions,
     call_expr_span: Span,
     omit_keys: bool,
     omit_values: bool,
   ) -> Expression<'ast> {
-    let properties = files.iter().enumerate().map(|(index, file)| {
+    let properties = files.iter().enumerate().map(|(index, file_data)| {
+      let import_path = &file_data.import_path;
       let formatted_file = if let Some(query) = &opts.query {
         let normalized_query = if query == "?raw" {
           query
         } else {
           let file_extension =
-            Path::new(&file).extension().unwrap_or_default().to_str().unwrap_or_default();
+            Path::new(&import_path).extension().unwrap_or_default().to_str().unwrap_or_default();
           if !file_extension.is_empty() && self.restore_query_extension {
             &format!("{query}&lang.{file_extension}")
           } else {
             query
           }
         };
-        Cow::Owned(format!("{file}{normalized_query}"))
+        Cow::Owned(format!("{import_path}{normalized_query}"))
       } else {
-        Cow::Borrowed(file)
+        Cow::Borrowed(import_path)
       };
 
       let value = if omit_values {
@@ -466,7 +489,7 @@ impl<'ast> GlobImportVisit<'ast, '_> {
         )
       };
 
-      (file, value)
+      (&file_data.key, value)
     });
 
     if omit_keys {

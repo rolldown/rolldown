@@ -89,11 +89,10 @@ export const parent = import.meta.glob('../../playground/src/*.ts', {
   import: 'default',
 })
 
-// unloadable dependency
-// export const rootMixedRelative = import.meta.glob(
-//   ['/*.ts', '../fixture-b/*.ts'],
-//   { query: '?url', import: 'default' },
-// )
+export const rootMixedRelative = import.meta.glob(
+  ['/*.ts', '../fixture-b/*.ts'],
+  { query: '?url', import: 'default' },
+)
 
 export const cleverCwd1 = import.meta.glob(
   './node_modules/framework/**/*.page.js',

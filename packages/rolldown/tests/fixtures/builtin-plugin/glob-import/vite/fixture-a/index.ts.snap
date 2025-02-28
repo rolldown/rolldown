@@ -86,6 +86,12 @@ const excludeSelf = { "./sibling.ts": () => import("./sibling.js") };
 const excludeSelfRaw = { "./sibling.ts": () => import("./sibling3.js") };
 const customQueryString = { "./sibling.ts": () => import("./sibling2.js") };
 const parent = {};
+const rootMixedRelative = {
+	"/_config.ts": () => import("./_config.js").then((m) => m.default),
+	"/fixture-b/a.ts": () => import("./a6.js").then((m) => m.default),
+	"/fixture-b/b.ts": () => import("./b6.js").then((m) => m.default),
+	"/fixture-b/index.ts": () => import("./fixture-b.js").then((m) => m.default)
+};
 const cleverCwd1 = { "./node_modules/framework/pages/hello.page.js": () => import("./hello.page.js") };
 const cleverCwd2 = {
 	"./modules/a.ts": () => import("./a.js"),
@@ -95,4 +101,4 @@ const cleverCwd2 = {
 };
 
 //#endregion
-export { basic, basicEager, basicEagerWithObjectKeys, basicEagerWithObjectValues, basicWithObjectKeys, basicWithObjectValues, cleverCwd1, cleverCwd2, customQueryString, eagerAs, excludeSelf, excludeSelfRaw, ignore, ignoreWithObjectKeys, ignoreWithObjectValues, namedDefault, namedDefaultWithObjectKeys, namedDefaultWithObjectValues, namedEager, namedEagerWithObjectKeys, namedEagerWithObjectValues, parent, rawImportModule };
+export { basic, basicEager, basicEagerWithObjectKeys, basicEagerWithObjectValues, basicWithObjectKeys, basicWithObjectValues, cleverCwd1, cleverCwd2, customQueryString, eagerAs, excludeSelf, excludeSelfRaw, ignore, ignoreWithObjectKeys, ignoreWithObjectValues, namedDefault, namedDefaultWithObjectKeys, namedDefaultWithObjectValues, namedEager, namedEagerWithObjectKeys, namedEagerWithObjectValues, parent, rawImportModule, rootMixedRelative };

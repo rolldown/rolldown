@@ -1,23 +1,17 @@
+use std::{borrow::Cow, collections::BTreeMap, path::Path, sync::Arc};
+
 use arcstr::ArcStr;
 use rolldown_common::{EmittedAsset, Output, OutputAsset, OutputChunk};
 use rolldown_plugin::{HookNoopReturn, Plugin, PluginContext};
 use rolldown_utils::rustc_hash::FxHashSetExt;
 use rustc_hash::FxHashSet;
 use serde::Serialize;
-use std::{
-  borrow::Cow,
-  collections::BTreeMap,
-  path::Path,
-  sync::{Arc, LazyLock},
-};
 
 #[derive(Debug)]
 pub struct ManifestPlugin {
   pub config: ManifestPluginConfig,
+  pub entry_css_asset_file_names: FxHashSet<String>,
 }
-
-// TODO: Link this with assets plugin
-static CSS_ENTRIES_MAP: LazyLock<FxHashSet<String>> = LazyLock::new(FxHashSet::default);
 
 #[derive(Debug, Default)]
 pub struct ManifestPluginConfig {
@@ -39,7 +33,7 @@ impl Plugin for ManifestPlugin {
     // Use BTreeMap to make the result sorted
     let mut manifest = BTreeMap::default();
 
-    let entry_css_reference_ids: &FxHashSet<String> = &CSS_ENTRIES_MAP;
+    let entry_css_reference_ids: &FxHashSet<String> = &self.entry_css_asset_file_names;
     let mut entry_css_asset_file_names = FxHashSet::with_capacity(entry_css_reference_ids.len());
     for reference_id in entry_css_reference_ids {
       match ctx.get_file_name(reference_id.as_str()) {
@@ -108,7 +102,7 @@ impl Plugin for ManifestPlugin {
         file_name: Some(self.config.out_path.as_str().into()),
         name: None,
         original_file_name: None,
-        source: (serde_json::to_string_pretty(&manifest).unwrap()).into(),
+        source: (serde_json::to_string_pretty(&manifest)?).into(),
       })
       .await?;
     // }

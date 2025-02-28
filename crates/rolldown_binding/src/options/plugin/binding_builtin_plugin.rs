@@ -21,7 +21,7 @@ use rolldown_plugin_vite_resolve::{
 };
 use rolldown_plugin_wasm_fallback::WasmFallbackPlugin;
 use rolldown_plugin_wasm_helper::WasmHelperPlugin;
-use rustc_hash::FxBuildHasher;
+use rustc_hash::{FxBuildHasher, FxHashSet};
 use std::collections::HashMap;
 use std::sync::Arc;
 
@@ -345,7 +345,7 @@ impl TryFrom<BindingBuiltinPlugin> for Arc<dyn Pluginable> {
         } else {
           ManifestPluginConfig::default()
         };
-        Arc::new(ManifestPlugin { config })
+        Arc::new(ManifestPlugin { config, entry_css_asset_file_names: FxHashSet::default() })
       }
       BindingBuiltinPluginName::LoadFallback => Arc::new(LoadFallbackPlugin {}),
       BindingBuiltinPluginName::Transform => {

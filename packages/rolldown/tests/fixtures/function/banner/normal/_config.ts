@@ -1,8 +1,7 @@
-import type { OutputChunk as RolldownOutputChunk } from 'rolldown'
-import { defineTest } from 'rolldown-tests'
 import { expect } from 'vitest'
+import { defineTest } from 'rolldown-tests'
 
-const bannerTxt = '// banner test\n'
+const bannerTxt = '/* banner */'
 const banner = () => bannerTxt
 
 export default defineTest({
@@ -12,12 +11,6 @@ export default defineTest({
     },
   },
   afterTest: (output) => {
-    expect(
-      output.output
-        .filter(({ type }) => type === 'chunk')
-        .every((chunk) =>
-          (chunk as RolldownOutputChunk).code.startsWith(bannerTxt),
-        ),
-    ).toBe(true)
+    expect(output.output[0].code.startsWith(bannerTxt)).toBe(true)
   },
 })

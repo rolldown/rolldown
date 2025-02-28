@@ -43,6 +43,16 @@ pub trait BuildEvent: Debug + Sync + Send {
   fn message(&self, opts: &DiagnosticOptions) -> String;
 
   fn on_diagnostic(&self, _diagnostic: &mut Diagnostic, _opts: &DiagnosticOptions) {}
+
+  // extra properties to match RollupLog interface
+  // https://rollupjs.org/configuration-options/#onlog
+  fn id(&self) -> Option<String> {
+    None
+  }
+
+  fn exporter(&self) -> Option<String> {
+    None
+  }
 }
 
 impl<T: BuildEvent + 'static> From<T> for Box<dyn BuildEvent>

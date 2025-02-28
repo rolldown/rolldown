@@ -20,11 +20,6 @@ export declare class BindingError {
   message: string
 }
 
-export declare class BindingLog {
-  code: string
-  message: string
-}
-
 export declare class BindingModuleInfo {
   id: string
   importers: Array<string>
@@ -412,6 +407,13 @@ export type BindingJsx =
   | { type: 'Disable' }
   | { type: 'Preserve' }
   | { type: 'Enable', field0: JsxOptions }
+
+export interface BindingLog {
+  code: string
+  message: string
+  id?: string
+  exporter?: string
+}
 
 export declare enum BindingLogLevel {
   Silent = 0,

@@ -6,7 +6,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## RESOLVE_ERROR
 
 ```text
-[RESOLVE_ERROR] Error: Could not resolve "@abs-path/pkg7/foo" in entry.js
+[RESOLVE_ERROR] Error: Could not resolve '@abs-path/pkg7/foo' in entry.js
    ╭─[ entry.js:7:8 ]
    │
  7 │ import "@abs-path/pkg7/foo"
@@ -20,7 +20,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## RESOLVE_ERROR
 
 ```text
-[RESOLVE_ERROR] Error: Could not resolve "@scope-only/pkg8" in entry.js
+[RESOLVE_ERROR] Error: Could not resolve '@scope-only/pkg8' in entry.js
    ╭─[ entry.js:8:8 ]
    │
  8 │ import "@scope-only/pkg8"

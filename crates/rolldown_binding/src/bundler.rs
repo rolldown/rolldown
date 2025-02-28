@@ -207,6 +207,8 @@ impl Bundler {
                 message: warning
                   .to_diagnostic_with(&DiagnosticOptions { cwd: self.cwd.clone() })
                   .to_color_string(),
+                id: warning.id(),
+                exporter: warning.exporter(),
               },
             )
               .into(),

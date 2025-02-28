@@ -70,6 +70,14 @@ impl BuildDiagnostic {
     }
   }
 
+  pub fn id(&self) -> Option<String> {
+    self.inner.id()
+  }
+
+  pub fn exporter(&self) -> Option<String> {
+    self.inner.exporter()
+  }
+
   // --- private
 
   fn new_inner(inner: impl Into<Box<dyn BuildEvent>>) -> Self {

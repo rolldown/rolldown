@@ -2650,7 +2650,7 @@ function useMonitorNextPaintAfterRender(label) {
       }
     },
     void 0,
-    // user-blocking ensures we get the correct timings here. Other priorites might delay this effect a little bit.
+    // user-blocking ensures we get the correct timings here. Other priorities might delay this effect a little bit.
     { priority: "user-blocking" }
   );
   return useCallback2(() => {
@@ -10484,9 +10484,9 @@ var implementation = {
 };
 var isRuntimeInjected = false;
 var runtimeProxy = {
-  get(target, key7, reciever) {
+  get(target, key7, receiver) {
     if (Reflect.has(target, key7)) {
-      return Reflect.get(target, key7, reciever);
+      return Reflect.get(target, key7, receiver);
     }
     if (["getLogger"].includes(String(key7))) {
       return mockWithoutWarning();
@@ -20084,7 +20084,7 @@ var DeprecatedContainerErrorBoundary = class extends Component13 {
     __publicField(this, "state", { hasError: false });
   }
   // We use `componentDidCatch` instead of `static getDerivedStateFromError()` because the latter could also catch hydration errors.
-  // Hydration errors are recoverable by React, so we don't want to hide the coponent in that case (since the tree will not unmount).
+  // Hydration errors are recoverable by React, so we don't want to hide the component in that case (since the tree will not unmount).
   componentDidCatch(error, errorInfo) {
     const componentStack = errorInfo == null ? void 0 : errorInfo.componentStack;
     console.error(
@@ -23228,7 +23228,7 @@ var RequestsObserver = class {
     __privateAdd(this, _subscriptions, /* @__PURE__ */ new Map());
     // A set of subscribers to requests of the observer
     __privateAdd(this, _subscribers2, /* @__PURE__ */ new Set());
-    // The results of the susbcribed requests
+    // The results of the subscribed requests
     __privateAdd(this, _results, void 0);
     // getServerSnapshot is also called on the Client while the tree is hydrating.
     // It is important to always return the same value or hydration warnings will occur.

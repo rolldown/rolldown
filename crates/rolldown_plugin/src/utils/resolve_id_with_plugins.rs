@@ -34,7 +34,7 @@ pub async fn resolve_id_check_external(
   if let Some(is_external) = bundle_options.external.as_ref() {
     if is_external(request, importer, false).await? {
       return Ok(Ok(ResolvedId {
-        id: request.to_string().into(),
+        id: request.into(),
         ignored: false,
         module_def_format: ModuleDefFormat::Unknown,
         is_external: true,
@@ -75,7 +75,7 @@ pub async fn resolve_id_check_external(
         if let Some(is_external) = bundle_options.external.as_ref() {
           if is_external(request, importer, true).await? {
             return Ok(Ok(ResolvedId {
-              id: request.to_string().into(),
+              id: request.into(),
               ignored: false,
               module_def_format: ModuleDefFormat::Unknown,
               is_external: true,
@@ -156,7 +156,7 @@ pub async fn resolve_id_with_plugins(
   // Auto external http url or data url
   if is_http_url(request) || is_data_url(request) {
     return Ok(Ok(ResolvedId {
-      id: request.to_string().into(),
+      id: request.into(),
       module_def_format: ModuleDefFormat::Unknown,
       ignored: false,
       is_external: true,
@@ -187,7 +187,7 @@ fn resolve_id(
         // we needs to use `is_runtime_module` to get the original specifier
         is_external_without_side_effects: is_existing_node_builtin_modules(&resolved),
         id: if resolved.starts_with("node:") && !is_runtime_module {
-          resolved[5..].to_string().into()
+          resolved[5..].into()
         } else {
           resolved.into()
         },

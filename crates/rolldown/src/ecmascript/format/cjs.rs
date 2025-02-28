@@ -58,7 +58,7 @@ pub fn render_cjs<'code>(
         if let Some(marker) =
           render_namespace_markers(ctx.options.es_module, has_default_export, false)
         {
-          source_joiner.append_source(marker.to_string());
+          source_joiner.append_source(marker);
         }
       }
       Some(export_mode)

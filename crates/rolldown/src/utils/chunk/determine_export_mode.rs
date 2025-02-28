@@ -49,7 +49,7 @@ pub fn determine_export_mode(
         let has_default_export = export_names.iter().any(|name| name.as_str() == "default");
         if has_default_export {
           let name = &ctx.chunk.name;
-          let chunk = ArcStr::from("chunk");
+          let chunk = arcstr::literal!("chunk");
           let name = name.as_ref().unwrap_or(&chunk);
           warnings.push(
             BuildDiagnostic::mixed_export(

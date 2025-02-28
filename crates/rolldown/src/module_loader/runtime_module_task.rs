@@ -142,7 +142,7 @@ impl RuntimeModuleTask {
       .iter()
       .map(|rec| {
         // We assume the runtime module only has external dependencies.
-        ResolvedId::new_external_without_side_effects(rec.module_request.to_string().into())
+        ResolvedId::new_external_without_side_effects(rec.module_request.as_str().into())
       })
       .collect();
 

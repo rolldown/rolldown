@@ -317,7 +317,7 @@ impl ModuleTask {
     // Check runtime module
     if specifier == RUNTIME_MODULE_ID {
       return Ok(Ok(ResolvedId {
-        id: specifier.to_string().into(),
+        id: specifier.into(),
         ignored: false,
         module_def_format: ModuleDefFormat::EsmMjs,
         is_external: false,
@@ -426,7 +426,7 @@ impl ModuleTask {
                 }
               }
               ret.push(ResolvedId {
-                id: specifier.to_string().into(),
+                id: specifier.as_str().into(),
                 ignored: false,
                 module_def_format: ModuleDefFormat::Unknown,
                 is_external: true,

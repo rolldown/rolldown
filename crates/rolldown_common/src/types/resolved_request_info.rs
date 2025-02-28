@@ -23,7 +23,7 @@ impl ResolvedId {
   /// note: A dummy `ResolvedId` usually used with `DUMMY_MODULE_IDX`
   pub fn make_dummy() -> Self {
     Self {
-      id: ArcStr::from(""),
+      id: arcstr::literal!(""),
       ignored: false,
       module_def_format: ModuleDefFormat::Unknown,
       is_external: false,

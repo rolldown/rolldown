@@ -18,7 +18,7 @@ async fn simple_object_guards() {
         ..Default::default()
       },
       vec![Arc::new(ReplacePlugin::with_options(ReplaceOptions {
-        values: [("foo".to_string(), "bar".to_string())].into_iter().collect(),
+        values: std::iter::once(("foo".to_string(), "bar".to_string())).collect(),
         object_guards: true,
         ..Default::default()
       }))],

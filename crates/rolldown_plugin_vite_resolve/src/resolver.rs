@@ -282,7 +282,7 @@ impl Resolver {
               if side_effects { HookSideEffects::True } else { HookSideEffects::False }
             },
           );
-        Ok(Some(HookResolveIdOutput { id: path.into_owned(), side_effects, ..Default::default() }))
+        Ok(Some(HookResolveIdOutput { id: path.into(), side_effects, ..Default::default() }))
       }
       Err(oxc_resolver::ResolveError::NotFound(id)) => {
         // if import can't be found, check if it's an optional peer dep.
@@ -296,7 +296,7 @@ impl Resolver {
               {
                 if package_json.optional_peer_dependencies.contains(pkg_name) {
                   return Ok(Some(HookResolveIdOutput {
-                    id: format!("{OPTIONAL_PEER_DEP_ID}:{id}:{}", package_json.name),
+                    id: format!("{OPTIONAL_PEER_DEP_ID}:{id}:{}", package_json.name).into(),
                     ..Default::default()
                   }));
                 }
@@ -306,9 +306,10 @@ impl Resolver {
         }
         Ok(None)
       }
-      Err(oxc_resolver::ResolveError::Ignored(_)) => {
-        Ok(Some(HookResolveIdOutput { id: BROWSER_EXTERNAL_ID.to_string(), ..Default::default() }))
-      }
+      Err(oxc_resolver::ResolveError::Ignored(_)) => Ok(Some(HookResolveIdOutput {
+        id: arcstr::literal!(BROWSER_EXTERNAL_ID),
+        ..Default::default()
+      })),
       Err(err) => Err(err.to_owned()),
     }
   }
@@ -361,7 +362,7 @@ impl Resolver {
           }
         }
       }
-      resolved.id = resolved_id.to_string();
+      resolved.id = resolved_id.into();
       resolved.external = Some(true);
 
       return Ok(Some(resolved));

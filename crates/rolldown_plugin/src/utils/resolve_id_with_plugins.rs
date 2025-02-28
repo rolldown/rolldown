@@ -118,9 +118,9 @@ pub async fn resolve_id_with_plugins(
       .await?
     {
       return Ok(Ok(ResolvedId {
-        module_def_format: ModuleDefFormat::from_path(&r.id),
+        module_def_format: ModuleDefFormat::from_path(r.id.as_str()),
         ignored: false,
-        id: r.id.into(),
+        id: r.id,
         is_external: matches!(r.external, Some(true)),
         package_json: None,
         side_effects: r.side_effects,
@@ -143,9 +143,9 @@ pub async fn resolve_id_with_plugins(
     .await?
   {
     return Ok(Ok(ResolvedId {
-      module_def_format: ModuleDefFormat::from_path(&r.id),
+      module_def_format: ModuleDefFormat::from_path(r.id.as_str()),
       ignored: false,
-      id: r.id.into(),
+      id: r.id,
       is_external: matches!(r.external, Some(true)),
       package_json: None,
       side_effects: r.side_effects,

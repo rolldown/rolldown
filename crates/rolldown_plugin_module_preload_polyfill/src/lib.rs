@@ -27,7 +27,7 @@ impl Plugin for ModulePreloadPolyfillPlugin {
     args: &HookResolveIdArgs<'_>,
   ) -> HookResolveIdReturn {
     Ok((args.specifier == MODULE_PRELOAD_POLYFILL).then(|| HookResolveIdOutput {
-      id: RESOLVED_MODULE_PRELOAD_POLYFILL_ID.to_string(),
+      id: arcstr::literal!(RESOLVED_MODULE_PRELOAD_POLYFILL_ID),
       ..Default::default()
     }))
   }

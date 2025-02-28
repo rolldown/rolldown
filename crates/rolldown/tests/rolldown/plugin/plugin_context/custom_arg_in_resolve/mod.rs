@@ -41,7 +41,7 @@ impl Plugin for TestPluginCaller {
 
       if custom_resolve_ret.id == "hello, world" {
         Ok(Some(HookResolveIdOutput {
-          id: "hello, world".to_string(),
+          id: arcstr::literal!("hello, world"),
           external: Some(true),
           ..Default::default()
         }))
@@ -69,7 +69,7 @@ impl Plugin for TestPluginReceiver {
   ) -> HookResolveIdReturn {
     if let Some(value) = args.custom.get::<MyArg>(&MyArg { id: 0 }) {
       assert_eq!(value.as_str(), "hello, world");
-      return Ok(Some(HookResolveIdOutput { id: value.to_string(), ..Default::default() }));
+      return Ok(Some(HookResolveIdOutput { id: value.as_str().into(), ..Default::default() }));
     }
     Ok(None)
   }

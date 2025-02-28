@@ -21,7 +21,7 @@ impl Plugin for UnresolvedImport {
   ) -> HookResolveIdReturn {
     if args.specifier == "test.js" {
       return Ok(Some(HookResolveIdOutput {
-        id: args.specifier.to_string(),
+        id: args.specifier.into(),
         external: Some(false),
         ..Default::default()
       }));

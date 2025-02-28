@@ -23,7 +23,7 @@ impl Plugin for ExternalCss {
     if args.specifier.as_path().extension().is_some_and(|ext| ext.eq_ignore_ascii_case("css")) {
       let path = format!("rewritten-{}", args.specifier);
       return Ok(Some(HookResolveIdOutput {
-        id: path,
+        id: path.into(),
         external: Some(true),
         ..Default::default()
       }));

@@ -56,10 +56,7 @@ impl Plugin for DataUrlPlugin {
 
         // Return the specifier as the id to tell rolldown that this data url is handled by the plugin. Don't fallback to
         // the default resolve behavior and mark it as external.
-        return Ok(Some(HookResolveIdOutput {
-          id: args.specifier.to_string(),
-          ..Default::default()
-        }));
+        return Ok(Some(HookResolveIdOutput { id: args.specifier.into(), ..Default::default() }));
       }
       Ok(None)
     }

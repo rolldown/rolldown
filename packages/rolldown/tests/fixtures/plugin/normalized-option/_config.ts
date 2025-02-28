@@ -14,6 +14,7 @@ const footer = () => '/* footer */'
 const outputPlugin = {
   name: 'test-output-plugin',
 }
+const sourcemapIgnoreList = () => false
 
 export default defineTest({
   config: {
@@ -38,6 +39,7 @@ export default defineTest({
       outro: '/* outro */',
       externalLiveBindings: true,
       plugins: [outputPlugin],
+      sourcemapIgnoreList,
     },
 
     plugins: [
@@ -97,6 +99,7 @@ export default defineTest({
       expect(option.outro()).toBe('/* outro */')
       expect(option.externalLiveBindings).toBe(true)
       expect(option.plugins[0]).toStrictEqual(outputPlugin)
+      expect(option.sourcemapIgnoreList).toStrictEqual(sourcemapIgnoreList)
     })
   },
 })

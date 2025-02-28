@@ -83,7 +83,8 @@ const rawImportModule = {
 	"./modules/b.ts": () => import("./b3.js")
 };
 const excludeSelf = { "./sibling.ts": () => import("./sibling.js") };
-const excludeSelfRaw = { "./sibling.ts": () => import("./sibling2.js") };
+const excludeSelfRaw = { "./sibling.ts": () => import("./sibling3.js") };
+const customQueryString = { "./sibling.ts": () => import("./sibling2.js") };
 const parent = {};
 const cleverCwd1 = { "./node_modules/framework/pages/hello.page.js": () => import("./hello.page.js") };
 const cleverCwd2 = {
@@ -94,4 +95,4 @@ const cleverCwd2 = {
 };
 
 //#endregion
-export { basic, basicEager, basicEagerWithObjectKeys, basicEagerWithObjectValues, basicWithObjectKeys, basicWithObjectValues, cleverCwd1, cleverCwd2, eagerAs, excludeSelf, excludeSelfRaw, ignore, ignoreWithObjectKeys, ignoreWithObjectValues, namedDefault, namedDefaultWithObjectKeys, namedDefaultWithObjectValues, namedEager, namedEagerWithObjectKeys, namedEagerWithObjectValues, parent, rawImportModule };
+export { basic, basicEager, basicEagerWithObjectKeys, basicEagerWithObjectValues, basicWithObjectKeys, basicWithObjectValues, cleverCwd1, cleverCwd2, customQueryString, eagerAs, excludeSelf, excludeSelfRaw, ignore, ignoreWithObjectKeys, ignoreWithObjectValues, namedDefault, namedDefaultWithObjectKeys, namedDefaultWithObjectValues, namedEager, namedEagerWithObjectKeys, namedEagerWithObjectValues, parent, rawImportModule };

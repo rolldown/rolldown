@@ -197,7 +197,11 @@ fn extract_import_glob_options(arg: &Argument, opts: &mut ImportGlobOptions) {
       }
       "query" => match &p.value {
         Expression::StringLiteral(str) => {
-          opts.query = Some(str.value.to_string());
+          opts.query = if str.value.starts_with('?') {
+            Some(str.value.to_string())
+          } else {
+            Some(format!("?{}", str.value))
+          }
         }
         Expression::ObjectExpression(expr) => {
           let map = expr

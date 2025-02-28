@@ -13,7 +13,6 @@ doctest = false
 
 [features]
 default = ["serde"]
-inner   = []
 serde   = ["dep:serde", "oxc_index/serde"]
 
 [lints]

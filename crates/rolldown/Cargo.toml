@@ -39,7 +39,7 @@ rolldown_ecmascript_utils = { workspace = true }
 rolldown_error            = { workspace = true }
 rolldown_fs               = { workspace = true, features = ["os"] }
 rolldown_loader_utils     = { workspace = true }
-rolldown_plugin           = { workspace = true, features = ["inner"] }
+rolldown_plugin           = { workspace = true }
 rolldown_plugin_data_url  = { workspace = true }
 rolldown_resolver         = { workspace = true }
 rolldown_rstr             = { workspace = true }

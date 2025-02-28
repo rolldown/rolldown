@@ -1227,7 +1227,7 @@ expression: output
 # tests/esbuild/default/mangle_props_import_export_bundled
 
 - entry-cjs-!~{001}~.js => entry-cjs-CRRaSnnk.js
-- entry-esm-!~{000}~.js => entry-esm-BCp5NTM1.js
+- entry-esm-!~{000}~.js => entry-esm-DP9ZRlN2.js
 - cjs-!~{002}~.js => cjs-Bdww2EDl.js
 
 # tests/esbuild/default/mangle_props_jsx_preserve

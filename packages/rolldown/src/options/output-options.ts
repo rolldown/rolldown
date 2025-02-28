@@ -68,6 +68,7 @@ export interface OutputOptions {
    */
   format?: ModuleFormat
   sourcemap?: boolean | 'inline' | 'hidden'
+  sourcemapDebugIds?: boolean
   sourcemapIgnoreList?: boolean | SourcemapIgnoreListOption
   sourcemapPathTransform?: SourcemapPathTransformOption
   banner?: string | AddonFunction

@@ -33,7 +33,10 @@ impl Plugin for DynamicImportVarsPlugin {
     args: &HookResolveIdArgs<'_>,
   ) -> HookResolveIdReturn {
     if args.specifier == DYNAMIC_IMPORT_HELPER {
-      Ok(Some(HookResolveIdOutput { id: DYNAMIC_IMPORT_HELPER.into(), ..Default::default() }))
+      Ok(Some(HookResolveIdOutput {
+        id: arcstr::literal!(DYNAMIC_IMPORT_HELPER),
+        ..Default::default()
+      }))
     } else {
       Ok(None)
     }

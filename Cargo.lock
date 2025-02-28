@@ -2491,6 +2491,7 @@ name = "rolldown_plugin_dynamic_import_vars"
 version = "0.0.1"
 dependencies = [
  "anyhow",
+ "arcstr",
  "glob",
  "memchr",
  "oxc",
@@ -2565,6 +2566,7 @@ dependencies = [
 name = "rolldown_plugin_module_preload_polyfill"
 version = "0.1.0"
 dependencies = [
+ "arcstr",
  "rolldown_common",
  "rolldown_plugin",
 ]
@@ -2602,6 +2604,7 @@ name = "rolldown_plugin_vite_resolve"
 version = "0.1.0"
 dependencies = [
  "anyhow",
+ "arcstr",
  "async-trait",
  "cow-utils",
  "dashmap",
@@ -2631,6 +2634,7 @@ dependencies = [
 name = "rolldown_plugin_wasm_helper"
 version = "0.1.0"
 dependencies = [
+ "arcstr",
  "rolldown_common",
  "rolldown_plugin",
  "rolldown_utils",

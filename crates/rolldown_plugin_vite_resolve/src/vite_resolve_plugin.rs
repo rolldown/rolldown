@@ -270,7 +270,7 @@ impl ViteResolvePlugin {
           }
           return Ok(Some(HookResolveIdOutput {
             id: if self.resolve_options.is_production {
-              BROWSER_EXTERNAL_ID.into()
+              arcstr::literal!(BROWSER_EXTERNAL_ID)
             } else {
               format!("{BROWSER_EXTERNAL_ID}:{}", args.specifier).into()
             },

@@ -21,7 +21,7 @@ impl Plugin for TestPlugin {
   ) -> HookResolveIdReturn {
     if args.specifier == "ext" {
       return Ok(Some(HookResolveIdOutput {
-        id: "ext".into(),
+        id: arcstr::literal!("ext"),
         external: Some(true),
         ..Default::default()
       }));

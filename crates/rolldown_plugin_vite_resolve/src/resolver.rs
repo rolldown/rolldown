@@ -306,9 +306,10 @@ impl Resolver {
         }
         Ok(None)
       }
-      Err(oxc_resolver::ResolveError::Ignored(_)) => {
-        Ok(Some(HookResolveIdOutput { id: BROWSER_EXTERNAL_ID.into(), ..Default::default() }))
-      }
+      Err(oxc_resolver::ResolveError::Ignored(_)) => Ok(Some(HookResolveIdOutput {
+        id: arcstr::literal!(BROWSER_EXTERNAL_ID),
+        ..Default::default()
+      })),
       Err(err) => Err(err.to_owned()),
     }
   }

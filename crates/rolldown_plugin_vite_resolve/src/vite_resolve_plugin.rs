@@ -164,10 +164,7 @@ impl ViteResolvePlugin {
     }
 
     if args.specifier.starts_with(BROWSER_EXTERNAL_ID) {
-      return Ok(Some(HookResolveIdOutput {
-        id: args.specifier.to_string(),
-        ..Default::default()
-      }));
+      return Ok(Some(HookResolveIdOutput { id: args.specifier.into(), ..Default::default() }));
     }
 
     // explicit fs paths that starts with /@fs/*
@@ -181,7 +178,7 @@ impl ViteResolvePlugin {
           res = finalized.into();
         }
       }
-      return Ok(Some(HookResolveIdOutput { id: res.to_string(), ..Default::default() }));
+      return Ok(Some(HookResolveIdOutput { id: res.into(), ..Default::default() }));
     }
 
     // file url as path
@@ -193,7 +190,7 @@ impl ViteResolvePlugin {
           res = finalized;
         }
       }
-      return Ok(Some(HookResolveIdOutput { id: res, ..Default::default() }));
+      return Ok(Some(HookResolveIdOutput { id: res.into(), ..Default::default() }));
     }
 
     // data uri: pass through (this only happens during build and will be handled by rolldown)
@@ -203,7 +200,7 @@ impl ViteResolvePlugin {
 
     if is_external_url(args.specifier) {
       return Ok(Some(HookResolveIdOutput {
-        id: args.specifier.to_string(),
+        id: args.specifier.into(),
         external: Some(true),
         ..Default::default()
       }));
@@ -227,6 +224,7 @@ impl ViteResolvePlugin {
           if !scan && is_in_node_modules(&result.id) {
             let finalized = finalize_bare_specifier(&result.id, args.specifier, args.importer)
               .await?
+              .map(Into::into)
               .unwrap_or(result.id);
             result.id = finalized;
           }
@@ -260,7 +258,7 @@ impl ViteResolvePlugin {
           }
 
           return Ok(Some(HookResolveIdOutput {
-            id: args.specifier.to_string(),
+            id: args.specifier.into(),
             external: Some(true),
             side_effects: Some(HookSideEffects::False),
           }));
@@ -272,9 +270,9 @@ impl ViteResolvePlugin {
           }
           return Ok(Some(HookResolveIdOutput {
             id: if self.resolve_options.is_production {
-              BROWSER_EXTERNAL_ID.to_string()
+              BROWSER_EXTERNAL_ID.into()
             } else {
-              format!("{BROWSER_EXTERNAL_ID}:{}", args.specifier)
+              format!("{BROWSER_EXTERNAL_ID}:{}", args.specifier).into()
             },
             ..Default::default()
           }));
@@ -300,7 +298,7 @@ impl ViteResolvePlugin {
       if !scan {
         if let Some(finalize_other_specifiers) = &self.finalize_other_specifiers {
           if let Some(finalized) = finalize_other_specifiers(&resolved.id, args.specifier).await? {
-            resolved.id = finalized;
+            resolved.id = finalized.into();
           }
         }
       }

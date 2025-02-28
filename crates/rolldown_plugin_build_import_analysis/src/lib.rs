@@ -51,10 +51,7 @@ impl Plugin for BuildImportAnalysisPlugin {
     args: &HookResolveIdArgs<'_>,
   ) -> HookResolveIdReturn {
     if args.specifier == PRELOAD_HELPER_ID {
-      return Ok(Some(HookResolveIdOutput {
-        id: args.specifier.to_string(),
-        ..Default::default()
-      }));
+      return Ok(Some(HookResolveIdOutput { id: args.specifier.into(), ..Default::default() }));
     }
     Ok(None)
   }

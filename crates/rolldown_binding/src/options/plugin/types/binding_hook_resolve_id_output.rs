@@ -11,7 +11,7 @@ pub struct BindingHookResolveIdOutput {
 impl From<BindingHookResolveIdOutput> for rolldown_plugin::HookResolveIdOutput {
   fn from(value: BindingHookResolveIdOutput) -> Self {
     Self {
-      id: value.id,
+      id: value.id.into(),
       external: value.external,
       side_effects: value.side_effects.map(Into::into),
     }

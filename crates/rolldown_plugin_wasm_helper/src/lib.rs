@@ -23,12 +23,12 @@ impl Plugin for WasmHelperPlugin {
     args: &HookResolveIdArgs<'_>,
   ) -> HookResolveIdReturn {
     if args.specifier == WASM_HELPER_ID {
-      Ok(Some(HookResolveIdOutput { id: WASM_HELPER_ID.to_string(), ..Default::default() }))
+      Ok(Some(HookResolveIdOutput { id: WASM_HELPER_ID.into(), ..Default::default() }))
     } else if args.specifier.ends_with(".wasm?init") {
       let id = args.specifier.replace("?init", "");
       let resolved_id = ctx.resolve(&id, args.importer, None).await??;
       Ok(Some(HookResolveIdOutput {
-        id: concat_string!(resolved_id.id, "?init"),
+        id: concat_string!(resolved_id.id, "?init").into(),
         ..Default::default()
       }))
     } else {

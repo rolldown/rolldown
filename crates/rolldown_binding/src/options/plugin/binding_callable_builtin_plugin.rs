@@ -114,7 +114,7 @@ pub struct BindingHookJsResolveIdOutput {
 impl From<HookResolveIdOutput> for BindingHookJsResolveIdOutput {
   fn from(value: HookResolveIdOutput) -> Self {
     Self {
-      id: value.id,
+      id: value.id.to_string(),
       external: value.external,
       side_effects: get_side_effects_binding(value.side_effects),
     }

@@ -68,7 +68,7 @@ impl Plugin for AliasPlugin {
         )
         .await?
         .map(|resolved_id| {
-          Some(HookResolveIdOutput { id: resolved_id.id.to_string(), ..Default::default() })
+          Some(HookResolveIdOutput { id: resolved_id.id, ..Default::default() })
         })?,
     )
   }

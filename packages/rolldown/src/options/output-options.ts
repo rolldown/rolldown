@@ -87,20 +87,92 @@ export interface OutputOptions {
   globals?: Record<string, string> | GlobalsFunction
   externalLiveBindings?: boolean
   inlineDynamicImports?: boolean
+  /**
+   * Allows you to do advanced chunking. Use it to reduce the number of common chunks or split out a chunk that hardly changes to obtain better caching.
+   */
   advancedChunks?: {
+    /**
+     * Global fallback of `{group}.minSize`, if it's not specified in the group.
+     */
     minSize?: number
+    /**
+     * Global fallback of `{group}.maxSize`, if it's not specified in the group.
+     */
     maxSize?: number
+    /**
+     * Global fallback of `{group}.maxModuleSize`, if it's not specified in the group.
+     */
     maxModuleSize?: number
+    /**
+     * Global fallback of `{group}.minModuleSize`, if it's not specified in the group.
+     */
     minModuleSize?: number
+    /**
+     * Global fallback of `{group}.minShareCount`, if it's not specified in the group.
+     */
     minShareCount?: number
+    /**
+     * Groups to be used for advanced chunking.
+     */
     groups?: {
+      /**
+       * - Type: `string`
+       *
+       * Name of the group. It will be also used as the name of the chunk and replaced the `[name]` placeholder in the `chunkFileNames` option.
+       */
       name: string
+      /**
+       * - Type: `string | RegExp`
+       *
+       * Controls which modules are captured in this group.
+       *
+       * If `test` is a string, the module whose id contains the string will be captured.
+       * If `test` is a regular expression, the module whose id matches the regular expression will be captured.
+       * if `test` is empty, any module will be considered as matched.
+       */
       test?: StringOrRegExp
+      /**
+       * - Type: `number`
+       *
+       * Priority of the group. Group with higher priority will be chosen first to match modules and create chunks. When converting the group to a chunk, modules of that group will be removed from other groups.
+       *
+       * If two groups have the same priority, the group whose index is smaller will be chosen.
+       */
       priority?: number
+      /**
+       * - Type: `number`
+       * - Default: `0`
+       *
+       * Minimum size of the desired chunk. If accumulated size of captured modules is smaller than this value, this group will be ignored.s
+       */
       minSize?: number
+      /**
+       * - Type: `number`
+       * - Default: `1`
+       *
+       * Controls if a module should be captured based on how many entry chunks reference it.
+       */
       minShareCount?: number
+      /**
+       * - Type: `number`
+       * - Default: `Infinity`
+       *
+       * If final size of this group is larger than this value, this group will be spit into multiple groups that each has size closed to this value.
+       */
       maxSize?: number
+      /**
+       * - Type: `number`
+       * - Default: `Infinity`
+       *
+       * Controls a module could only be captured if its size is smaller or equal than this value.
+       */
       maxModuleSize?: number
+      /**
+       * - Type: `number`
+       * - Default: `0`
+       *
+       * Controls a module could only be captured if its size is larger or equal than this value.
+       */
       minModuleSize?: number
     }[]
   }

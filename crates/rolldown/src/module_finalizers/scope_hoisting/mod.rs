@@ -1163,7 +1163,7 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
           self.snippet.builder.binding_pattern(
             self.snippet.builder.binding_pattern_kind_binding_identifier(
               SPAN,
-              self.canonical_name_for(esm_ns.namespace_ref).to_string(),
+              self.canonical_name_for(esm_ns.namespace_ref).as_str(),
             ),
             NONE,
             false,
@@ -1217,7 +1217,7 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
           self.snippet.builder.binding_pattern(
             self.snippet.builder.binding_pattern_kind_binding_identifier(
               SPAN,
-              self.canonical_name_for(esm_ns.namespace_ref).to_string(),
+              self.canonical_name_for(esm_ns.namespace_ref).as_str(),
             ),
             NONE,
             false,

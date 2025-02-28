@@ -41,6 +41,12 @@ impl std::ops::Deref for ModuleId {
   }
 }
 
+impl From<&str> for ModuleId {
+  fn from(value: &str) -> Self {
+    Self::new(value)
+  }
+}
+
 impl From<String> for ModuleId {
   fn from(value: String) -> Self {
     Self::new(value)

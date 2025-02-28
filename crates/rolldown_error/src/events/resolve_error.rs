@@ -15,10 +15,11 @@ pub struct DiagnosableResolveError {
 
 impl DiagnosableResolveError {
   fn importee_str(&self) -> &str {
-    match &self.importee {
+    let s = match &self.importee {
       DiagnosableArcstr::String(str) => str.as_str(),
       DiagnosableArcstr::Span(span) => &self.source.as_str()[*span],
-    }
+    };
+    &s[1..s.len() - 1]
   }
 }
 
@@ -29,7 +30,7 @@ impl BuildEvent for DiagnosableResolveError {
 
   fn message(&self, opts: &DiagnosticOptions) -> String {
     format!(
-      "Could not resolve {} in {}",
+      "Could not resolve '{}' in {}",
       self.importee_str(),
       opts.stabilize_path(self.importer_id.as_str())
     )

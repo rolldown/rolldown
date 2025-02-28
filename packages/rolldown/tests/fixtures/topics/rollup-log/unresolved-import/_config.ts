@@ -17,7 +17,7 @@ export default defineTest({
     // spread object to test enumerable properties
     expect({ ...log }).toEqual({
       code: 'UNRESOLVED_IMPORT',
-      exporter: '"@rolldown/test-unresolved-import"',
+      exporter: '@rolldown/test-unresolved-import',
       id: expect.stringContaining('main.js'),
       message: expect.any(String),
     })

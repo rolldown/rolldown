@@ -1,13 +1,12 @@
 ---
 source: crates/rolldown_testing/src/integration_test.rs
-snapshot_kind: text
 ---
 # warnings
 
 ## UNRESOLVED_IMPORT
 
 ```text
-[UNRESOLVED_IMPORT] Warning: Could not resolve "a" in entry.js
+[UNRESOLVED_IMPORT] Warning: Could not resolve 'a' in entry.js
    ╭─[ entry.js:2:9 ]
    │
  2 │ require("a", "b")

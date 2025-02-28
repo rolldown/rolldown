@@ -1,21 +1,8 @@
 ---
 source: crates/rolldown_testing/src/integration_test.rs
-snapshot_kind: text
 ---
 # warnings
 
-## UNRESOLVED_IMPORT
-
-```text
-[UNRESOLVED_IMPORT] Warning: Could not resolve "k_WRAP" in entry.js
-    ╭─[ entry.js:29:12 ]
-    │
- 29 │ x = import("k_WRAP")
-    │            ────┬───  
-    │                ╰───── Module not found, treating it as an external dependency
-────╯
-
-```
 ## UNRESOLVED_IMPORT
 
 ```text
@@ -133,6 +120,18 @@ snapshot_kind: text
  26 │ import * as j from 'j_WRAP'
     │                    ────┬───  
     │                        ╰───── Module not found, treating it as an external dependency
+────╯
+
+```
+## UNRESOLVED_IMPORT
+
+```text
+[UNRESOLVED_IMPORT] Warning: Could not resolve 'k_WRAP' in entry.js
+    ╭─[ entry.js:29:12 ]
+    │
+ 29 │ x = import("k_WRAP")
+    │            ────┬───  
+    │                ╰───── Module not found, treating it as an external dependency
 ────╯
 
 ```

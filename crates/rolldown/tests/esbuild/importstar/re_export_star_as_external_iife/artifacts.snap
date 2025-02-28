@@ -1,6 +1,5 @@
 ---
 source: crates/rolldown_testing/src/integration_test.rs
-snapshot_kind: text
 ---
 # warnings
 
@@ -13,7 +12,7 @@ snapshot_kind: text
 ## UNRESOLVED_IMPORT
 
 ```text
-[UNRESOLVED_IMPORT] Warning: Could not resolve "foo" in entry.js
+[UNRESOLVED_IMPORT] Warning: Could not resolve 'foo' in entry.js
    ╭─[ entry.js:1:22 ]
    │
  1 │ export * as out from "foo"

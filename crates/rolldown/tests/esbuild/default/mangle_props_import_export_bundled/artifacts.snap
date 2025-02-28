@@ -1,6 +1,5 @@
 ---
 source: crates/rolldown_testing/src/integration_test.rs
-snapshot_kind: text
 ---
 # Assets
 
@@ -49,7 +48,6 @@ export default require_entry_cjs();
 import { esm_foo_, import_cjs, init_esm } from "./cjs.js";
 
 //#region entry-esm.js
-init_esm();
 init_esm();
 let bar_ = [
 	esm_foo_,

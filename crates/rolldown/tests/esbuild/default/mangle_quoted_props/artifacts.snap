@@ -1,6 +1,5 @@
 ---
 source: crates/rolldown_testing/src/integration_test.rs
-snapshot_kind: text
 ---
 # Assets
 
@@ -14,7 +13,7 @@ foo("_keepThisProperty");
 foo(x ? "_keepThisProperty" : "_keepThisPropertyToo");
 x[foo("_keepThisProperty")];
 x?.[foo("_keepThisProperty")];
-({ [foo("_keepThisProperty")]: x });
+foo("_keepThisProperty");
 (class {
 	[foo("_keepThisProperty")] = x;
 });
@@ -36,7 +35,7 @@ x[y ? z : "_mangleThis"];
 x?.[y ? z : "_mangleThis"];
 x[y, "_mangleThis"];
 x?.[y, "_mangleThis"];
-({ [(y, "_mangleThis")]: x });
+y;
 (class {
 	[(y, "_mangleThis")] = x;
 });

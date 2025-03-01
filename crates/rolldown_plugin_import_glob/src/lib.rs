@@ -2,13 +2,13 @@ use glob::{Pattern, glob};
 use oxc::{
   allocator::Vec,
   ast::{
-    AstBuilder, NONE, VisitMut,
+    AstBuilder, NONE,
     ast::{
       Argument, ArrayExpressionElement, Expression, FormalParameterKind, ImportOrExportKind,
       NumberBase, ObjectPropertyKind, PropertyKey, PropertyKind, Statement,
     },
-    visit::walk_mut,
   },
+  ast_visit::{VisitMut, walk_mut},
   span::{SPAN, Span},
 };
 use rolldown_ecmascript_utils::ExpressionExt;

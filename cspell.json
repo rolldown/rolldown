@@ -42,7 +42,11 @@
       // Multiple locales can be specified like: "en, en-US" to match both English and English US.
       "locale": "*",
       // To exclude patterns, add them to "ignoreRegExpList"
-      "ignoreRegExpList": ["/import\\s.*/"],
+      "ignoreRegExpList": [
+        "/import\\s.*/",
+        // To ignore pattern like `](#some-anchor)`
+        "\\]\\(#[^)]*\\)"
+      ],
       // List of dictionaries to enable by name in `dictionaryDefinitions`
       "dictionaries": [],
       // Dictionary definitions can also be supplied here. They are only used if "languageId" and "locale" match.

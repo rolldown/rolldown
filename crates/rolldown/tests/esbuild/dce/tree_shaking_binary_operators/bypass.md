@@ -55,17 +55,11 @@ keep * keep2;
 keep / keep2;
 keep % keep2;
 keep ** keep2;
-keep < keep2;
-keep <= keep2;
-keep > keep2;
-keep >= keep2;
 keep in keep2;
 keep instanceof keep2;
 keep << keep2;
 keep >> keep2;
 keep >>> keep2;
-keep == keep2;
-keep != keep2;
 keep | keep2;
 keep & keep2;
 keep ^ keep2;
@@ -93,7 +87,7 @@ keep &&= keep2;
 ===================================================================
 --- esbuild	/out.js
 +++ rolldown	entry.js
-@@ -1,6 +1,5 @@
+@@ -1,23 +1,16 @@
 -var keep;
 -var keep2;
 +var keep, keep2;
@@ -101,5 +95,22 @@ keep &&= keep2;
  keep - keep2;
  keep * keep2;
  keep / keep2;
+ keep % keep2;
+ keep ** keep2;
+-keep < keep2;
+-keep <= keep2;
+-keep > keep2;
+-keep >= keep2;
+ (keep in keep2);
+ keep instanceof keep2;
+ keep << keep2;
+ keep >> keep2;
+ keep >>> keep2;
+-keep == keep2;
+-keep != keep2;
+ keep | keep2;
+ keep & keep2;
+ keep ^ keep2;
+ keep = keep2;
 
 ```

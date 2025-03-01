@@ -34,9 +34,7 @@ var import_foo = __toESM(require_foo());
 
 //#endregion
 //#region entry.js
-(() => {
-	assert.equal((0, import_foo.fn)(), 123);
-})();
+assert.equal((0, import_foo.fn)(), 123);
 
 //#endregion
 ```
@@ -45,13 +43,14 @@ var import_foo = __toESM(require_foo());
 ===================================================================
 --- esbuild	/out.js
 +++ rolldown	entry.js
-@@ -6,6 +6,6 @@
+@@ -5,7 +5,5 @@
+         };
      }
  });
  var import_foo = __toESM(require_foo());
- (() => {
+-(() => {
 -    console.log((0, import_foo.fn)());
-+    assert.equal((0, import_foo.fn)(), 123);
- })();
+-})();
++console.log((0, import_foo.fn)());
 
 ```

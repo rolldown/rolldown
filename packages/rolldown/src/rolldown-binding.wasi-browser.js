@@ -90,7 +90,6 @@ export const ImportNameKind = __napiModule.exports.ImportNameKind
 export const isolatedDeclaration = __napiModule.exports.isolatedDeclaration
 export const parseAsync = __napiModule.exports.parseAsync
 export const parseSync = __napiModule.exports.parseSync
-export const parseWithoutReturn = __napiModule.exports.parseWithoutReturn
 export const registerPlugins = __napiModule.exports.registerPlugins
 export const Severity = __napiModule.exports.Severity
 export const transform = __napiModule.exports.transform

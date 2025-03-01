@@ -17,6 +17,8 @@
   missing
 ## [define_import_meta](../../../crates/rolldown/tests/esbuild/default/define_import_meta/diff.md)
   diff
+## [define_this](../../../crates/rolldown/tests/esbuild/default/define_this/diff.md)
+  diff
 ## entry_names_no_slash_after_dir
   missing
 ## entry_names_non_portable_character
@@ -146,7 +148,6 @@
 ## [define_infinite_loop_issue2407](../../../crates/rolldown/tests/esbuild/default/define_infinite_loop_issue2407)
 ## [define_optional_chain](../../../crates/rolldown/tests/esbuild/default/define_optional_chain)
 ## [define_optional_chain_panic_issue3551](../../../crates/rolldown/tests/esbuild/default/define_optional_chain_panic_issue3551)
-## [define_this](../../../crates/rolldown/tests/esbuild/default/define_this)
 ## [duplicate_property_warning](../../../crates/rolldown/tests/esbuild/default/duplicate_property_warning)
 ## [dynamic_import_with_expression_cjs](../../../crates/rolldown/tests/esbuild/default/dynamic_import_with_expression_cjs)
 ## [empty_export_clause_bundle_as_common_js_issue910](../../../crates/rolldown/tests/esbuild/default/empty_export_clause_bundle_as_common_js_issue910)

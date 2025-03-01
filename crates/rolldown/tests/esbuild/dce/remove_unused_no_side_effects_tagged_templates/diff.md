@@ -16,14 +16,14 @@ keep, alsoKeep;
 ```js
 
 //#region entry.js
-// @__NO_SIDE_EFFECTS__
+/* @__NO_SIDE_EFFECTS__ */
 function foo() {}
 foo`remove`;
 foo`remove${null}`;
 foo`remove${123}`;
 use(foo`keep`);
 foo`remove this part ${keep} and this ${alsoKeep}`;
-`remove this part ${keep} and this ${alsoKeep}`;
+`${keep}${alsoKeep}`;
 
 //#endregion
 ```
@@ -39,8 +39,7 @@ foo`remove this part ${keep} and this ${alsoKeep}`;
 +foo`remove${123}`;
  use(foo`keep`);
 -(keep, alsoKeep);
--`${keep}${alsoKeep}`;
 +foo`remove this part ${keep} and this ${alsoKeep}`;
-+`remove this part ${keep} and this ${alsoKeep}`;
+ `${keep}${alsoKeep}`;
 
 ```

@@ -18,11 +18,7 @@ import { jsx } from "react/jsx-runtime";
 //#region entry.jsx
 x = () => {
 	class XYYYYY {}
-	return jsx(
-		XYYYYY,
-		// This should be named "Y" due to frequency analysis
-		{ "tag-must-start-with-capital-letter": true }
-);
+	return jsx(XYYYYY, { "tag-must-start-with-capital-letter": true });
 };
 
 //#endregion
@@ -32,7 +28,7 @@ x = () => {
 ===================================================================
 --- esbuild	/out.js
 +++ rolldown	entry.js
-@@ -1,6 +1,13 @@
+@@ -1,6 +1,9 @@
 -// entry.jsx
 +import { jsx } from "react/jsx-runtime";
 +
@@ -44,11 +40,7 @@ x = () => {
 -};
 \ No newline at end of file
 +	class XYYYYY {}
-+	return jsx(
-+		XYYYYY,
-+		// This should be named "Y" due to frequency analysis
-+		{ "tag-must-start-with-capital-letter": true }
-+);
++	return jsx(XYYYYY, { "tag-must-start-with-capital-letter": true });
 +};
 +
 +//#endregion

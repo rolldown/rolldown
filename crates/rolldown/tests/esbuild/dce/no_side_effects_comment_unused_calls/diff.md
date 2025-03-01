@@ -21,10 +21,12 @@ x(/* @__PURE__ */ g("keepThisCall"));
 ```js
 
 //#region stmt-fn.js
-/* @__NO_SIDE_EFFECTS__ */ function f(y) {
+/* @__NO_SIDE_EFFECTS__ */
+function f(y) {
 	sideEffect(y);
 }
-/* @__NO_SIDE_EFFECTS__ */ function* g(y) {
+/* @__NO_SIDE_EFFECTS__ */
+function* g(y) {
 	sideEffect(y);
 }
 f("removeThisCall");
@@ -182,6 +184,7 @@ x(/* @__PURE__ */ f("keepThisCall"));
 ```js
 
 //#region stmt-export-default-fn.js
+/* @__NO_SIDE_EFFECTS__ */
 function f(y) {
 	sideEffect(y);
 }

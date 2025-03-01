@@ -89,27 +89,15 @@
 	function foo(x = arguments) {
 		return arguments;
 	}
-	({ foo(x = arguments) {
-		return arguments;
-	} });
 	class Foo {
 		foo(x = arguments) {
 			return arguments;
 		}
 	}
-	(class {
-		foo(x = arguments) {
-			return arguments;
-		}
-	});
 	function foo(x = arguments) {
 		var arguments$1;
 		return arguments$1;
 	}
-	({ foo(x = arguments) {
-		var arguments$1;
-		return arguments$1;
-	} });
 })();
 
 //#endregion
@@ -119,7 +107,7 @@
 ===================================================================
 --- esbuild	/out.js
 +++ rolldown	entry.js
-@@ -1,74 +1,31 @@
+@@ -1,74 +1,19 @@
 -/* @__PURE__ */ (() => {
 -  var r;
 -  function t(n = arguments) {
@@ -202,27 +190,15 @@
 +	function foo(x = arguments) {
 +		return arguments;
 +	}
-+	({ foo(x = arguments) {
-+		return arguments;
-+	} });
 +	class Foo {
 +		foo(x = arguments) {
 +			return arguments;
 +		}
 +	}
-+	(class {
-+		foo(x = arguments) {
-+			return arguments;
-+		}
-+	});
 +	function foo(x = arguments) {
 +		var arguments$1;
 +		return arguments$1;
 +	}
-+	({ foo(x = arguments) {
-+		var arguments$1;
-+		return arguments$1;
-+	} });
 +})();
 +
 +//#endregion

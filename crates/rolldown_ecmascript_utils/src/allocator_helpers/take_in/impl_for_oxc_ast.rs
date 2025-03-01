@@ -104,6 +104,7 @@ impl<'ast> TakeIn<'ast> for ast::Function<'ast> {
       return_type: TakeIn::dummy(alloc),
       this_param: TakeIn::dummy(alloc),
       scope_id: Cell::default(),
+      pure: TakeIn::dummy(alloc),
     }
   }
 }
@@ -199,6 +200,7 @@ impl<'ast> TakeIn<'ast> for ast::CallExpression<'ast> {
       arguments: TakeIn::dummy(alloc),
       optional: TakeIn::dummy(alloc),
       type_parameters: TakeIn::dummy(alloc),
+      pure: TakeIn::dummy(alloc),
     }
   }
 }
@@ -214,6 +216,7 @@ impl<'ast> TakeIn<'ast> for ast::ArrowFunctionExpression<'ast> {
       type_parameters: TakeIn::dummy(alloc),
       return_type: TakeIn::dummy(alloc),
       scope_id: Cell::default(),
+      pure: TakeIn::dummy(alloc),
     }
   }
 }

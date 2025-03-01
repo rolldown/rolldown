@@ -20,7 +20,7 @@ var Foo = class {
 	keepThis;
 	[keepThisToo];
 };
-(() => new Foo())();
+new Foo();
 
 //#endregion
 ```
@@ -36,7 +36,8 @@ var Foo = class {
      keepThis;
      [keepThisToo];
 -}
+-(() => new Foo())();
 +};
- (() => new Foo())();
++new Foo();
 
 ```

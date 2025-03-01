@@ -1,5 +1,5 @@
 use arcstr::ArcStr;
-use oxc::ast::VisitMut;
+use oxc::ast_visit::VisitMut;
 use oxc::span::SourceType;
 use oxc_index::IndexVec;
 use rolldown_common::{

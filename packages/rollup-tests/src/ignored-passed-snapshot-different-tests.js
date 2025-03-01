@@ -1,6 +1,6 @@
 // cSpell:disable
 module.exports = [
-    // Passed, but the output snapshot is same as rollup
+    // Passed, but the output snapshot is different from rollup
     "rollup@function@transform-without-code: allows using the transform hook for annotations only without returning a code property and breaking sourcemaps",
     "rollup@form@catch-parameter-shadowing: the parameter of a catch block should correctly shadow an import (#1391)",// rollup not deconflict
     "rollup@form@body-less-for-loops: supports body-less for loops",// rollup not deconflict
@@ -11,7 +11,7 @@ module.exports = [
     "rollup@form@inline-with-reexport: handles inlining dynamic imports when the imported module contains reexports",
     "rollup@form@nested-inlined-dynamic-import: deconflicts variables when nested dynamic imports are inlined@generates es",
     "rollup@function@duplicate-input-entry: handles duplicate entry modules when using the object form",
-    "rollup@form@handles-empty-imports-iife: handles empty imports when generating IIFE output", 
+    "rollup@form@handles-empty-imports-iife: handles empty imports when generating IIFE output",
     "rollup@form@handles-empty-imports-umd: handles empty imports when generating IIFE output",
     "rollup@form@slash-in-function-parameters: handles slashes in function parameters and correctly inserts missing ids@generates es",
     "rollup@form@render-named-export-declarations: renders named export declarations@generates es",
@@ -99,7 +99,7 @@ module.exports = [
     "rollup@form@undefined-default-export: handles default exporting undefined",
     "rollup@form@unmodified-default-exports-function-argument: passing unbound default export to function cannot rebind it",
     "rollup@form@yield-expression@missing-space: Inserts space when simplifying yield expression without space",
-  
+
     // Test is passed. Class related, `class A` -> `var A = class`
     "rollup@form@use-class-name-in-static-block: use the original class name instead of renderName in class body@generates es",
     "rollup@form@static-method-deoptimization: avoids infinite recursions when deoptimizing \"this\" context",
@@ -115,8 +115,8 @@ module.exports = [
     "rollup@form@super-classes@super-class-prototype-assignment: correctly resolves the prototype of the super class when assigning properites",
 
     // Passed, but sourcemap/code is different from rollup
-    "rollup@function@sourcemap-true-generatebundle: emits sourcemaps before generateBundle hook", 
-    "rollup@function@sourcemap-inline-generatebundle: includes inline sourcemap comments in generateBundle hook",  
+    "rollup@function@sourcemap-true-generatebundle: emits sourcemaps before generateBundle hook",
+    "rollup@function@sourcemap-inline-generatebundle: includes inline sourcemap comments in generateBundle hook",
     "rollup@form@sourcemaps-external: correct sourcemaps are written (separate file)@generates es", // the mappping is not same as rollup
     "rollup@form@sourcemaps-hidden: correct sourcemaps are written (separate file) without comment@generates es", // the mappping is not same as rollup
     "rollup@sourcemaps@render-chunk-babili: generates valid sourcemap when source could not be determined@generates es", // The rolldown output chunk including `module comment` caused line offset, the rollup provider the fake sourcemap can't remapping.
@@ -129,4 +129,5 @@ module.exports = [
     "rollup@function@preload-loading-module: waits for pre-loaded modules that are currently loading",
     // passed, the rolldown using `__name` to keep the original name
     "rollup@form@assignment-to-exports-class-declaration: does not rewrite class expression IDs@generates es",
+    "rollup@form@simplify-expression-annotations: keeps correct annotations when simplifying expressinos"
 ]

@@ -115,7 +115,6 @@ module.exports.ImportNameKind = __napiModule.exports.ImportNameKind
 module.exports.isolatedDeclaration = __napiModule.exports.isolatedDeclaration
 module.exports.parseAsync = __napiModule.exports.parseAsync
 module.exports.parseSync = __napiModule.exports.parseSync
-module.exports.parseWithoutReturn = __napiModule.exports.parseWithoutReturn
 module.exports.registerPlugins = __napiModule.exports.registerPlugins
 module.exports.Severity = __napiModule.exports.Severity
 module.exports.transform = __napiModule.exports.transform

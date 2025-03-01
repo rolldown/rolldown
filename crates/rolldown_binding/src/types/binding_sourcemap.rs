@@ -46,6 +46,7 @@ impl TryFrom<BindingJsonSourcemap> for rolldown_sourcemap::SourceMap {
       sources_content: value.sources_content,
       names: value.names.unwrap_or_default(),
       debug_id: None,
+      x_google_ignore_list: None,
     })
     .map_err(|e| anyhow::format_err!("Convert json sourcemap error: {:?}", e))
   }

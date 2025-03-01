@@ -1,11 +1,10 @@
 use oxc::{
   allocator::{self, IntoIn},
   ast::{
-    VisitMut,
     ast::{self, BindingPatternKind, Expression, SimpleAssignmentTarget},
     match_member_expression,
-    visit::walk_mut,
   },
+  ast_visit::{VisitMut, walk_mut},
   span::{SPAN, Span},
 };
 use rolldown_common::{ExportsKind, Module, StmtInfoIdx, SymbolRef, ThisExprReplaceKind, WrapKind};

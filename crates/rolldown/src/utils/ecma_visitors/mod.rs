@@ -1,5 +1,5 @@
 use oxc::{
-  ast::{VisitMut, visit::walk_mut},
+  ast_visit::{VisitMut, walk_mut},
   span::{GetSpanMut, SPAN, Span},
 };
 use rustc_hash::FxHashSet;

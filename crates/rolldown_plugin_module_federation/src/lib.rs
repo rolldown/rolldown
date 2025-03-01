@@ -9,9 +9,10 @@ use manifest::generate_manifest;
 pub use option::{Manifest, ModuleFederationPluginOption, Remote, Shared};
 use oxc::{
   ast::{
-    AstBuilder, NONE, VisitMut,
+    AstBuilder, NONE,
     ast::{ImportOrExportKind, Statement},
   },
+  ast_visit::VisitMut,
   span::SPAN,
 };
 use rolldown_common::{EmittedChunk, Output};

@@ -23,7 +23,7 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
     // - `import.meta.hot.accept('./dep.js', ...)`
     // - `import.meta.hot.accept(['./dep1.js', './dep2.js'], ...)`
 
-    if call_expr.arguments.len() == 0 {
+    if call_expr.arguments.is_empty() {
       // `import.meta.hot.accept()`
       self.ast_usage.insert(EcmaModuleAstUsage::HmrSelfAccept);
       return;

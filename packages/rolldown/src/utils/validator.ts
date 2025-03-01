@@ -405,6 +405,10 @@ const OutputOptionsSchema = v.strictObject({
       `Generate sourcemap (\`-s inline\` for inline, or ${colors.bold('pass the `-s` on the last argument if you want to generate `.map` file')})`,
     ),
   ),
+  sourcemapDebugIds: v.pipe(
+    v.optional(v.boolean()),
+    v.description('Inject sourcemap debug IDs'),
+  ),
   sourcemapIgnoreList: v.optional(
     v.union([v.boolean(), v.custom<SourcemapIgnoreListOption>(() => true)]),
   ),

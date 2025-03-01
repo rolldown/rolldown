@@ -9,6 +9,7 @@ const INVALID_LOG_POSITION = 'INVALID_LOG_POSITION',
   CYCLE_LOADING = 'CYCLE_LOADING',
   MULTIPLY_NOTIFY_OPTION = 'MULTIPLY_NOTIFY_OPTION',
   MINIFY_WARNING = 'MINIFY_WARNING',
+  CHOKIDAR_WARNING = 'CHOKIDAR_WARNING',
   PARSE_ERROR = 'PARSE_ERROR'
 
 export function logParseError(message: string): RollupLog {
@@ -23,6 +24,15 @@ export function logMinifyWarning(): RollupLog {
     code: MINIFY_WARNING,
     message: colors.yellow(
       'The built-in minifier is still under development. Setting "minify: true" is not recommended for production use.',
+    ),
+  }
+}
+
+export function logChokidarWarning(): RollupLog {
+  return {
+    code: CHOKIDAR_WARNING,
+    message: colors.yellow(
+      'The watch.chokidar option is not supported, please use watch.notify instead.',
     ),
   }
 }

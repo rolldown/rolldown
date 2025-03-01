@@ -60,7 +60,10 @@ pub use crate::{
       cross_chunk_import_item::CrossChunkImportItem, preliminary_filename::PreliminaryFilename,
     },
   },
-  css::css_view::{CssAssetNameReplacer, CssRenderer, CssView},
+  css::{
+    css_asset_meta::CssAssetMeta,
+    css_view::{CssAssetNameReplacer, CssRenderer, CssView},
+  },
   ecmascript::{
     comment_annotation::{ROLLDOWN_IGNORE, get_leading_comment},
     dynamic_import_usage,

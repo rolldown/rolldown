@@ -113,6 +113,28 @@ impl GenerateStage<'_> {
             preliminary_filename: preliminary_filename.to_string(),
           })));
         }
+        InstantiationKind::Css(css_meta) => {
+          let mut code = code.try_into_string()?;
+          if let Some(map) = map.as_mut() {
+            self
+              .process_code_and_sourcemap(
+                &mut code,
+                map,
+                &mut output_assets,
+                &file_dir,
+                css_meta.filename.as_str(),
+                css_meta.debug_id,
+              )
+              .await?;
+          }
+
+          output.push(Output::Asset(Box::new(OutputAsset {
+            filename: filename.clone().into(),
+            source: code.into(),
+            original_file_names: vec![],
+            names: vec![],
+          })));
+        }
         InstantiationKind::None => {
           output.push(Output::Asset(Box::new(OutputAsset {
             filename: filename.clone(),

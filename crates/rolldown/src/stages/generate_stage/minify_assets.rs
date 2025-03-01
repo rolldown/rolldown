@@ -34,6 +34,9 @@ impl GenerateStage<'_> {
               }
             }
           }
+          rolldown_common::InstantiationKind::Css(_) => {
+            // TODO: minify CSS
+          }
           rolldown_common::InstantiationKind::None => {}
         }
         Ok(())

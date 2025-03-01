@@ -134,7 +134,7 @@ function renderOptionsDocToMarkdown(item: OptionsDoc): string {
   ].join('\n')
 }
 
-const titleMarkRegex = /(#+)/g
+const titleMarkRegex = /^(#+)/gm
 
 /**
  * This function replaces `#` marks in the content with the proper number of `#` marks for the given level.

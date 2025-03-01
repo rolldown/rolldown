@@ -93,23 +93,33 @@ export interface OutputOptions {
    */
   advancedChunks?: {
     /**
-     * Global fallback of `{group}.minSize`, if it's not specified in the group.
+     * - Type: `number`
+     *
+     * Global fallback of [`{group}.minSize`](#advancedchunks-groups-minsize), if it's not specified in the group.
      */
     minSize?: number
     /**
-     * Global fallback of `{group}.maxSize`, if it's not specified in the group.
+     * - Type: `number`
+     *
+     * Global fallback of [`{group}.maxSize`](#advancedchunks-groups-maxsize), if it's not specified in the group.
      */
     maxSize?: number
     /**
-     * Global fallback of `{group}.maxModuleSize`, if it's not specified in the group.
+     * - Type: `number`
+     *
+     * Global fallback of [`{group}.maxModuleSize`](#advancedchunks-groups-maxmodulesize), if it's not specified in the group.
      */
     maxModuleSize?: number
     /**
-     * Global fallback of `{group}.minModuleSize`, if it's not specified in the group.
+     * - Type: `number`
+     *
+     * Global fallback of [`{group}.minModuleSize`](#advancedchunks-groups-minmodulesize), if it's not specified in the group.
      */
     minModuleSize?: number
     /**
-     * Global fallback of `{group}.minShareCount`, if it's not specified in the group.
+     * - Type: `number`
+     *
+     * Global fallback of [`{group}.minShareCount`](#advancedchunks-groups-minsharecount), if it's not specified in the group.
      */
     minShareCount?: number
     /**

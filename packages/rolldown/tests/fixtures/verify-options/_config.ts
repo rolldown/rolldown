@@ -6,6 +6,7 @@ export default defineTest({
     output: {
       file: 'dist/main.js',
       target: 'es2015',
+      banner: '// banner',
     },
     plugins: [
       {
@@ -13,6 +14,7 @@ export default defineTest({
         outputOptions: function (options) {
           expect(options.file).toBe('dist/main.js')
           expect(options.target).toBe('es2015')
+          expect(options.banner).toBe('// banner')
         },
       },
     ],

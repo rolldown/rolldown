@@ -104,7 +104,7 @@
  - rollup@function@emit-file@invalid-set-asset-source-id: throws for invalid asset ids
  - rollup@hooks@keeps emitted ids stable between runs
 
-### The `PluginContext.error` accpet more arguments at `transform` hooks 
+### The `PluginContext.error` accept more arguments at `transform` hooks 
  - rollup@function@plugin-error-transform-pos: `this.error(...)` accepts number as second parameter (#5044)
  - rollup@function@plugin-error-loc-instead-pos: `this.error(...)` accepts { line, column } object as second parameter (#1265)
  
@@ -267,7 +267,7 @@
  - rollup@function@relative-external-include-once-two-external: includes a relative external module only once (two external deps)
  - rollup@function@relative-external-include-once-up: includes a relative external module only once (from upper directory too)
  - rollup@function@relative-external-include-once: includes a relative external module only once
- - rollup@function@external-directory-import: handles using ../ as external import (#4349) (makeAbsoluteExternalsRelative normlized the external id to absolute path, and renormalize to renderPath https://github.com/rollup/rollup/blob/master/src/ExternalChunk.ts#L51)
+ - rollup@function@external-directory-import: handles using ../ as external import (#4349) (makeAbsoluteExternalsRelative normalized the external id to absolute path, and renormalize to renderPath https://github.com/rollup/rollup/blob/master/src/ExternalChunk.ts#L51)
  - rollup@function@configure-relative-external-module: allows a nonexistent relative module to be configured as external
  - rollup@form@make-absolute-externals-relative@make-relative-false: does not normalize external paths when set to false
  - rollup@form@make-absolute-externals-relative@make-relative-relative: only normalizes external paths that were originally relative when set to "ifRelativeSource"
@@ -314,7 +314,7 @@
  - rollup@form@emit-uint8array-no-buffer: supports emitting assets as Uint8Arrays when Buffer is not available@generates es
  - rollup@hooks@caches asset emission in transform hook
 
-### The rollup treat non-js-extensions module as js module, but the rolldown wiill guess the module type by externsion
+### The rollup treat non-js-extensions module as js module, but the rolldown will guess the module type by externsion
  - rollup@function@non-js-extensions: non .js extensions are preserved
 
 ### The `syntheticNamedExports` is not supported
@@ -379,7 +379,7 @@
 
 ### comment related
  - rollup@form@comment-before-import: preserves comments before imports@generates es
- - rollup@form@comment-start-inside-comment: properly remove coments above import statements@generates es
+ - rollup@form@comment-start-inside-comment: properly remove comments above import statements@generates es
 
 ### The namespace object is not compatible with rollup
  - rollup@function@namespaces-have-null-prototype: creates namespaces with null prototypes

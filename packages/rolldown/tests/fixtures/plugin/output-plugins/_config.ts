@@ -13,7 +13,7 @@ export default defineTest({
       plugins: [
         {
           name: 'test-plugin',
-          // @ts-expect-error test waring
+          // @ts-expect-error test warning
           buildStart: () => {},
           outputOptions: function (options) {
             expect(options.banner).toBeUndefined()

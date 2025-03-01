@@ -50,6 +50,9 @@ impl Generator for CssGenerator {
         source_joiner.append_source(magic_string.to_string());
       }
     }
+    // source_joiner.join() will emit a '\n' for each source except the last one
+    // append an empty source here to ensure there is a '\n' after each real css source
+    source_joiner.append_source("");
 
     let (content, map) = source_joiner.join();
 

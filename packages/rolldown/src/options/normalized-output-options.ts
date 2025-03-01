@@ -1,4 +1,3 @@
-import { unsupported } from '../utils/misc'
 import type { BindingMinifyOptions, BindingNormalizedOptions } from '../binding'
 import type {
   SourcemapIgnoreListOption,
@@ -12,6 +11,7 @@ import type {
   OutputOptions,
 } from './output-options'
 import { RolldownPlugin } from '..'
+import { bindingifySourcemapIgnoreList } from '../utils/bindingify-output-options'
 
 export type InternalModuleFormat = 'es' | 'cjs' | 'iife' | 'umd' | 'app'
 
@@ -38,28 +38,13 @@ export interface NormalizedOutputOptions {
   globals: Record<string, string> | GlobalsFunction
   hashCharacters: 'base64' | 'base36' | 'hex'
   sourcemapDebugIds: boolean
-  sourcemapIgnoreList: SourcemapIgnoreListOption | undefined
+  sourcemapIgnoreList: SourcemapIgnoreListOption
   sourcemapPathTransform: SourcemapPathTransformOption | undefined
   minify: false | BindingMinifyOptions
   comments: 'none' | 'preserve-legal'
   polyfillRequire: boolean
   plugins: RolldownPlugin[]
 }
-
-function mapFunctionOption<T>(
-  option: T | undefined,
-  name: string,
-): T | (() => never) {
-  return typeof option === 'undefined'
-    ? () => {
-        unsupported(
-          `You should not take \`NormalizedOutputOptions#${name}\` and call it directly`,
-        )
-      }
-    : option
-}
-
-type UnsupportedFnRet = () => never
 
 // TODO: I guess we make these getters enumerable so it act more like a plain object
 export class NormalizedOutputOptionsImpl implements NormalizedOutputOptions {
@@ -161,8 +146,8 @@ export class NormalizedOutputOptionsImpl implements NormalizedOutputOptions {
     return this.inner.sourcemapDebugIds
   }
 
-  get sourcemapIgnoreList(): UnsupportedFnRet | undefined {
-    return mapFunctionOption(void 0, 'sourcemapIgnoreList')
+  get sourcemapIgnoreList(): SourcemapIgnoreListOption {
+    return bindingifySourcemapIgnoreList(this.outputOptions.sourcemapIgnoreList)
   }
 
   get sourcemapPathTransform(): SourcemapPathTransformOption | undefined {

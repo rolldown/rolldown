@@ -89,7 +89,7 @@ expression: output
 # tests/esbuild/dce/dce_of_iife
 
 - keep-these-!~{001}~.js => keep-these-BajvjPE6.js
-- remove-these-!~{000}~.js => remove-these-DIvwSOQb.js
+- remove-these-!~{000}~.js => remove-these--WjfXS26.js
 
 # tests/esbuild/dce/dce_of_symbol_instances
 
@@ -502,11 +502,11 @@ expression: output
 
 # tests/esbuild/dce/remove_unused_no_side_effects_tagged_templates
 
-- entry-!~{000}~.js => entry-Cy7ahr5W.js
+- entry-!~{000}~.js => entry-bKNx9jhe.js
 
 # tests/esbuild/dce/remove_unused_pure_comment_calls
 
-- entry-!~{000}~.js => entry-nQB1B54o.js
+- entry-!~{000}~.js => entry-BF0Lwn0d.js
 
 # tests/esbuild/dce/text_loader_remove_unused
 
@@ -519,7 +519,7 @@ expression: output
 
 # tests/esbuild/dce/tree_shaking_binary_operators
 
-- entry-!~{000}~.js => entry-C6T_OQ-P.js
+- entry-!~{000}~.js => entry-DfDfY7Iq.js
 
 # tests/esbuild/dce/tree_shaking_class_property
 
@@ -616,7 +616,7 @@ expression: output
 
 # tests/esbuild/default/arguments_special_case_no_bundle
 
-- entry-!~{000}~.js => entry-IPjX3xv3.js
+- entry-!~{000}~.js => entry-CzTcxP46.js
 
 # tests/esbuild/default/arrow_fn_scope
 
@@ -677,7 +677,7 @@ expression: output
 
 # tests/esbuild/default/common_js_from_es6
 
-- entry-!~{000}~.js => entry-DpeSuKIn.js
+- entry-!~{000}~.js => entry-DQRXd5He.js
 
 # tests/esbuild/default/conditional_import
 
@@ -1281,13 +1281,13 @@ expression: output
 
 # tests/esbuild/default/mangle_quoted_props
 
-- keep-!~{000}~.js => keep-a3yw9qnD.js
-- mangle-!~{001}~.js => mangle-Pw4rxKdd.js
+- keep-!~{000}~.js => keep-BdFER9ES.js
+- mangle-!~{001}~.js => mangle-BimyTp7o.js
 
 # tests/esbuild/default/mangle_quoted_props_minify_syntax
 
-- keep-!~{000}~.js => keep-a3yw9qnD.js
-- mangle-!~{001}~.js => mangle-Pw4rxKdd.js
+- keep-!~{000}~.js => keep-BdFER9ES.js
+- mangle-!~{001}~.js => mangle-BimyTp7o.js
 
 # tests/esbuild/default/many_entry_points
 
@@ -2652,7 +2652,7 @@ expression: output
 
 # tests/esbuild/lower/lower_nullish_coalescing_assignment_issue1493
 
-- entry-!~{000}~.js => entry-WvSAv-QS.js
+- entry-!~{000}~.js => entry-DEhnhGV5.js
 
 # tests/esbuild/lower/lower_object_spread_no_bundle
 
@@ -3775,7 +3775,7 @@ expression: output
 
 # tests/rolldown/cjs_compat/require_call_expr_unused
 
-- main-!~{000}~.js => main-Ch6LZeOP.js
+- main-!~{000}~.js => main-CJO55PeG.js
 
 # tests/rolldown/cjs_compat/unnecessary_compat_default_property_access
 

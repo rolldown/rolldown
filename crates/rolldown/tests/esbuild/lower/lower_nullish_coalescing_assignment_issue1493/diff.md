@@ -55,7 +55,7 @@ var A = class {
 	}
 	f() {
 		var _classPrivateFieldGet2$1;
-		(_classPrivateFieldGet2$1 = _classPrivateFieldGet2(_a, this)) !== null && _classPrivateFieldGet2$1 !== void 0 ? _classPrivateFieldGet2$1 : _classPrivateFieldSet2(_a, this, 1);
+		(_classPrivateFieldGet2$1 = _classPrivateFieldGet2(_a, this)) !== null && _classPrivateFieldGet2$1 !== void 0 || _classPrivateFieldSet2(_a, this, 1);
 	}
 };
 
@@ -93,7 +93,7 @@ export { A };
      f() {
 -        this.#a ?? (this.#a = 1);
 +        var _classPrivateFieldGet2$1;
-+        (_classPrivateFieldGet2$1 = _classPrivateFieldGet2(_a, this)) !== null && _classPrivateFieldGet2$1 !== void 0 ? _classPrivateFieldGet2$1 : _classPrivateFieldSet2(_a, this, 1);
++        (_classPrivateFieldGet2$1 = _classPrivateFieldGet2(_a, this)) !== null && _classPrivateFieldGet2$1 !== void 0 || _classPrivateFieldSet2(_a, this, 1);
      }
  };
  export {A};

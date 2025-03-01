@@ -1,8 +1,8 @@
 use itertools::Itertools;
 use oxc::allocator::{Address, Allocator};
+use oxc::ast::NONE;
 use oxc::ast::ast::{self, BindingPatternKind, Declaration, ImportOrExportKind, Statement};
-use oxc::ast::visit::walk_mut;
-use oxc::ast::{NONE, VisitMut};
+use oxc::ast_visit::{VisitMut, walk_mut};
 use oxc::span::{SPAN, Span};
 use rolldown_ecmascript_utils::{AstSnippet, StatementExt, TakeIn};
 use rustc_hash::FxHashMap;

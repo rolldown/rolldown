@@ -2,7 +2,7 @@ use std::collections::hash_map::Entry;
 
 use arcstr::ArcStr;
 use futures::future::try_join_all;
-use oxc::ast::VisitMut;
+use oxc::ast_visit::VisitMut;
 use oxc_index::IndexVec;
 use render_chunk_to_assets::set_emitted_chunk_preliminary_filenames;
 use rolldown_ecmascript_utils::AstSnippet;

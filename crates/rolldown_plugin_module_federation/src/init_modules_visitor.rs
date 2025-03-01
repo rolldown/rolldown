@@ -5,7 +5,7 @@ use oxc::{
   ast::{
     AstBuilder, NONE, VisitMut,
     ast::{Argument, ExportAllDeclaration, ExportNamedDeclaration, Expression, ImportDeclaration},
-    visit::walk_mut::walk_expression,
+    visit::walk_mut::{walk_call_expression, walk_expression},
   },
   span::SPAN,
 };
@@ -39,7 +39,6 @@ impl InitModuleVisitor<'_, '_> {
   }
 }
 
-// TODO require
 impl<'ast> VisitMut<'ast> for InitModuleVisitor<'ast, '_> {
   fn visit_import_declaration(&mut self, decl: &mut ImportDeclaration<'ast>) {
     self.detect_static_module_decl(&decl.source.value);
@@ -112,5 +111,17 @@ impl<'ast> VisitMut<'ast> for InitModuleVisitor<'ast, '_> {
       }
     }
     walk_expression(self, expr);
+  }
+
+  // TODO need to semantic analysis at transform_ast hook
+  fn visit_call_expression(&mut self, call_expr: &mut oxc::ast::ast::CallExpression<'ast>) {
+    if let Expression::Identifier(id) = &call_expr.callee {
+      if id.name == "require" && call_expr.arguments.len() == 1 {
+        if let Some(Expression::StringLiteral(lit)) = &call_expr.arguments[0].as_expression() {
+          self.detect_static_module_decl(&lit.value);
+        }
+      }
+    }
+    walk_call_expression(self, call_expr);
   }
 }

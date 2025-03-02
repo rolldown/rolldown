@@ -61,7 +61,7 @@ impl BundlerBuilder {
     let Some(tsconfig_filename) = tsconfig_filename else {
       return Ok(());
     };
-    let ts_config = resolver.resolve_tsconfig(&tsconfig_filename)?;
+    let ts_config = resolver.resolve_tsconfig(&options.cwd.join(tsconfig_filename))?;
     if let Some(ref jsx_factory) = ts_config.compiler_options.jsx_factory {
       options.base_transform_options.jsx.pragma = Some(jsx_factory.clone());
     }

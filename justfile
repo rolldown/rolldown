@@ -109,6 +109,7 @@ lint-node:
 
 lint-repo:
     pnpm lint-repo
+    cargo ls-lint
 
 # Fix formatting and some linting issues
 fix: fix-rust fix-repo

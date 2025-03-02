@@ -282,7 +282,7 @@ impl<'a> GenerateStage<'a> {
           let mut hash_placeholder = has_hash_pattern.then_some(vec![]);
           let hash_replacer = has_hash_pattern.then_some({
             |len: Option<usize>| {
-              let hash = hash_placeholder_generator.generate(len.map_or(8, |len| len.max(6)));
+              let hash = hash_placeholder_generator.generate(len.map_or(8, |len| len.clamp(6, 21)));
               if let Some(hash_placeholder) = hash_placeholder.as_mut() {
                 hash_placeholder.push(hash.clone());
               }

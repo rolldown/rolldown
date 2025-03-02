@@ -4,6 +4,7 @@ WORKSPACE_DIR = { value = "", relative = true }
 
 [alias]
 run-fixture = "run --bin run-fixture"
+ls-lint = "run --bin ls-lint"
 
 [target.'cfg(target_vendor = "apple")']
 rustflags = ["-C", "link-args=-Wl,-undefined,dynamic_lookup,-no_fixup_chains"]

@@ -1,5 +1,5 @@
 import { build } from "rolldown";
-import { parseImportMap, resolveModuleSpecifier } from "./importMaps.js";
+import { parseImportMap, resolveModuleSpecifier } from "./import-maps.js";
 import * as fs from "fs";
 import json from "./map.json" with { type: "json" };
 import * as path from "path";
@@ -19,7 +19,7 @@ function rolldownImportMapsPlugin() {
 	return {
 		name: "importMaps",
 		resolveId(source, importer) {
-			if (source.endsWith("mainScript.js")) return;
+			if (source.endsWith("main-script.js")) return;
 
 			let baseURL = null;
 			if (importer) {
@@ -33,7 +33,7 @@ function rolldownImportMapsPlugin() {
 			return resolvedURL.toString();
 		},
 		async load(id) {
-			if (id.endsWith("mainScript.js")) return;
+			if (id.endsWith("main-script.js")) return;
 			let number = json[id];
 			let filePath = path.resolve(
 				__dirname,
@@ -47,7 +47,7 @@ function rolldownImportMapsPlugin() {
 }
 for (let i = 0; i < 10; i++) {
 	build({
-		input: path.join(__dirname, "mainScript.js"),
+		input: path.join(__dirname, "main-script.js"),
 		cwd: path.resolve(__dirname, "../"),
 		output: {
 			dir: `dist${i}`,

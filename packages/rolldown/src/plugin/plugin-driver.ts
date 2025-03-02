@@ -1,4 +1,4 @@
-import { getLogHandler, normalizeLog } from '../log/logHandler'
+import { getLogHandler, normalizeLog } from '../log/log-handler'
 import { LOG_LEVEL_DEBUG, LOG_LEVEL_INFO, LOG_LEVEL_WARN } from '../log/logging'
 import { Plugin } from './'
 import { error, logPluginError } from '../log/logs'

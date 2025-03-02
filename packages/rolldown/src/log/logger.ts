@@ -16,7 +16,7 @@ import {
   type LogLevel,
 } from './logging'
 import { error } from './logs'
-import { normalizeLog } from './logHandler'
+import { normalizeLog } from './log-handler'
 import type { InputOptions } from '../options/input-options'
 import path from 'node:path'
 import { VERSION } from '..'

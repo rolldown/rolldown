@@ -1,0 +1,27 @@
+{
+  "ls": {
+    "*.ts": "kebab-case",
+    "*.js": "kebab-case",
+    "*.d.ts": "kebab-case"
+  },
+  "ignore": [
+    "**/node_modules/",
+    "**/dist/",
+    "crates/**",
+    "packages/rolldown/tests/fixtures/builtin-plugin/load-fallback/path-has-hashtag/**",
+    "**/*.config.{js,mjs,cjs,ts,cts,mts}",
+    "**/*.test.{js,mjs,cjs,ts,cts,mts}",
+    ".git/**",
+    ".github/**",
+    ".vscode/**",
+    "**/.pnpm/**",
+    "temp/**",
+    "tmp/**",
+    "rollup/**",
+    "target/**",
+    "packages/rollup-tests/test/**",
+    "packages/rolldown/npm/**",
+    "packages/rolldown/tests/fixtures/**/_config.ts",
+    "docs/**"
+  ]
+}

@@ -112,15 +112,15 @@ module.exports = [
     "rollup@form@exported-class-declaration-conflict: handles exporting class declarations with name conflicts in SystemJS@generates es",
     "rollup@form@external-empty-import-no-global: does not expect a global to be provided for empty imports (#1217)@generates es",
     "rollup@form@external-imports: prefixes global names with `global.` when creating UMD bundle (#57)@generates es",
-    "rollup@form@super-classes@super-class-prototype-assignment: correctly resolves the prototype of the super class when assigning properties",
+    "rollup@form@super-classes@super-class-prototype-assignment: correctly resolves the prototype of the super class when assigning properites",
 
     // Passed, but sourcemap/code is different from rollup
     "rollup@function@sourcemap-true-generatebundle: emits sourcemaps before generateBundle hook", 
     "rollup@function@sourcemap-inline-generatebundle: includes inline sourcemap comments in generateBundle hook",  
-    "rollup@form@sourcemaps-external: correct sourcemaps are written (separate file)@generates es", // the mapping is not same as rollup
-    "rollup@form@sourcemaps-hidden: correct sourcemaps are written (separate file) without comment@generates es", // the mapping is not same as rollup
+    "rollup@form@sourcemaps-external: correct sourcemaps are written (separate file)@generates es", // the mappping is not same as rollup
+    "rollup@form@sourcemaps-hidden: correct sourcemaps are written (separate file) without comment@generates es", // the mappping is not same as rollup
     "rollup@sourcemaps@render-chunk-babili: generates valid sourcemap when source could not be determined@generates es", // The rolldown output chunk including `module comment` caused line offset, the rollup provider the fake sourcemap can't remapping.
-    "rollup@form@render-chunk-plugin-sourcemaps: supports returning undefined source maps from render chunk hooks, when source maps are enabled@generates es", // the mapping is not same as rollup, the `sources/sourcesContent` perseved original sourcemap is correct
+    "rollup@form@render-chunk-plugin-sourcemaps: supports returning undefined source maps from render chunk hooks, when source maps are enabled@generates es", // the mappping is not same as rollup, the `sources/sourcesContent` perseved original sourcemap is correct
     "rollup@sourcemaps@transform-low-resolution: handles combining low-resolution and high-resolution source-maps when transforming@generates es",// the input string `'bar'`, the rolldown output `"bar"`, caused search original position failed
     "rollup@sourcemaps@names: names are recovered (https://github.com/rollup/rollup/issues/101)@generates es", // the inputs string `Object.create( Bar.prototype )`, the rolldown output `Object.create(Bar.prototype)`, caused search original position failed
     "rollup@sourcemaps@basic-support: basic sourcemap support@generates es",// the inputs string `console.log( 'hello from main.js' )`, the rolldown output `console.log("hello from main.js")`, caused search original position failed

@@ -157,7 +157,7 @@ runTestSuiteWithSamples(
 										).join('\n')}`
 									);
 								}
-								const dynamicImportInCjs =  config.options?.output?.dynamicImportInCjs ?? true /* the rollup default value*/;
+								const dynamicImportInCjs =  config.options?.output?.dynamicImportInCjs ?? true /* the rollup defalut value*/;
 								const { exports, error } = runCodeSplitTest(codeMap, entryId, config.context, dynamicImportInCjs);
 								if (config.runtimeError) {
 									if (error) {

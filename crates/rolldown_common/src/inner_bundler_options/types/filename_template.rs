@@ -1,4 +1,4 @@
-use rolldown_utils::replace_all_placeholder::{Replacer, replace_all_placeholder};
+use rolldown_utils::replace_all_placeholder::{ReplaceAllPlaceholder, Replacer};
 
 #[derive(Debug)]
 pub struct FilenameTemplate {
@@ -30,15 +30,15 @@ impl FilenameTemplate {
   ) -> String {
     let mut tmp = self.template;
     if let Some(name) = name {
-      tmp = replace_all_placeholder(tmp, "[name]", name);
+      tmp = tmp.replace_all("[name]", name);
     }
     if let Some(hash_replacer) = hash_replacer {
-      tmp = replace_all_placeholder(tmp, "[hash]", hash_replacer);
+      tmp = tmp.replace_all_with_len("[hash]", hash_replacer);
     }
     if let Some(ext) = extension {
       let extname = if ext.is_empty() { "" } else { &format!(".{ext}") };
-      tmp = replace_all_placeholder(tmp, "[ext]", ext);
-      tmp = replace_all_placeholder(tmp, "[extname]", extname);
+      tmp = tmp.replace_all("[ext]", ext);
+      tmp = tmp.replace_all("[extname]", extname);
     }
     tmp
   }

@@ -1,4 +1,4 @@
-use crate::{css::css_asset_meta::CssAssetMeta, EcmaAssetMeta};
+use crate::{EcmaAssetMeta, css::css_asset_meta::CssAssetMeta};
 
 #[derive(Debug)]
 

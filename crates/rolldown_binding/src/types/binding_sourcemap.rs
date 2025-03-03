@@ -27,13 +27,16 @@ pub struct BindingJsonSourcemap {
   pub sources: Option<Vec<Option<String>>>,
   pub sources_content: Option<Vec<Option<String>>>,
   pub names: Option<Vec<String>>,
+  pub debug_id: Option<String>,
+  #[napi(js_name = "x_google_ignoreList")]
+  pub x_google_ignore_list: Option<Vec<u32>>,
 }
 
 impl TryFrom<BindingJsonSourcemap> for rolldown_sourcemap::SourceMap {
   type Error = anyhow::Error;
 
   fn try_from(value: BindingJsonSourcemap) -> Result<Self, Self::Error> {
-    rolldown_sourcemap::SourceMap::from_json(rolldown_sourcemap::JSONSourceMap {
+    let mut map = rolldown_sourcemap::SourceMap::from_json(rolldown_sourcemap::JSONSourceMap {
       file: value.file,
       mappings: value.mappings.unwrap_or_default(),
       source_root: value.source_root,
@@ -45,8 +48,12 @@ impl TryFrom<BindingJsonSourcemap> for rolldown_sourcemap::SourceMap {
         .collect(),
       sources_content: value.sources_content,
       names: value.names.unwrap_or_default(),
-      debug_id: None,
+      debug_id: value.debug_id,
     })
-    .map_err(|e| anyhow::format_err!("Convert json sourcemap error: {:?}", e))
+    .map_err(|e| anyhow::format_err!("Convert json sourcemap error: {:?}", e))?;
+    if let Some(ignore_list) = value.x_google_ignore_list {
+      map.set_x_google_ignore_list(ignore_list);
+    }
+    Ok(map)
   }
 }

@@ -20,6 +20,8 @@ export interface SourceMap {
   sources: string[]
   sourcesContent: string[]
   version: number
+  debugId?: string
+  x_google_ignoreList?: number[]
   toString(): string
   toUrl(): string
 }

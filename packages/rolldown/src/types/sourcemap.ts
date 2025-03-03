@@ -1,4 +1,5 @@
 import { BindingSourcemap } from '../binding'
+import type { SourceMap } from './rolldown-output'
 
 export interface ExistingRawSourceMap {
   file?: string | null
@@ -14,7 +15,7 @@ export interface ExistingRawSourceMap {
 export type SourceMapInput = ExistingRawSourceMap | string | null
 
 export function bindingifySourcemap(
-  map?: SourceMapInput,
+  map?: SourceMapInput | SourceMap,
 ): undefined | BindingSourcemap {
   if (map == null) return
   return {
@@ -31,10 +32,13 @@ export function bindingifySourcemap(
             // we convert it to undefined to skip that error.
             // note that if `sourceRoot: null` is included in a string sourcemap,
             // it will be converted to None by serde-json.
-            sourceRoot: map.sourceRoot ?? undefined,
+            sourceRoot:
+              'sourceRoot' in map ? (map.sourceRoot ?? undefined) : undefined,
             sources: map.sources?.map((s) => s ?? undefined),
             sourcesContent: map.sourcesContent?.map((s) => s ?? undefined),
             names: map.names,
+            x_google_ignoreList: map.x_google_ignoreList,
+            debugId: 'debugId' in map ? map.debugId : undefined,
           },
   }
 }

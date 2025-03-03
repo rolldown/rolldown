@@ -397,6 +397,8 @@ export interface BindingJsonSourcemap {
   sources?: Array<string | undefined | null>
   sourcesContent?: Array<string | undefined | null>
   names?: Array<string>
+  debugId?: string
+  x_google_ignoreList?: Array<number>
 }
 
 export interface BindingJsWatchChangeEvent {

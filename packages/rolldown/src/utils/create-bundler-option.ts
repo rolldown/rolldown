@@ -13,7 +13,7 @@ import {
 import { initializeParallelPlugins } from './initialize-parallel-plugins'
 import { getObjectPlugins } from '../plugin/plugin-driver'
 import { LogHandler } from '../types/misc'
-import { logMinifyWarning } from '../log/logs'
+import { logMinifyWarning, logChokidarWarning } from '../log/logs'
 import { getLogger, getOnLog } from '../log/logger'
 import { validateTreeShakingOptions } from './validator'
 import { LOG_LEVEL_INFO, LOG_LEVEL_WARN } from '../log/logging'
@@ -49,6 +49,10 @@ export async function createBundlerOptions(
 
   if (outputOptions.minify === true) {
     onLog(LOG_LEVEL_WARN, logMinifyWarning())
+  }
+
+  if (inputOptions.watch && inputOptions.watch.chokidar) {
+    onLog(LOG_LEVEL_WARN, logChokidarWarning())
   }
 
   const normalizedOutputPlugins = await normalizePluginOption(

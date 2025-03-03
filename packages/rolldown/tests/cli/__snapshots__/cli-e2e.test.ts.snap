@@ -48,11 +48,13 @@ OPTIONS
   --jsx.jsx-import-source <jsx.jsx-import-source>Import the factory of element and fragment if mode is automatic.
   --jsx.mode <jsx.mode>       Jsx transformation mode.
   --jsx.refresh               React refresh transformation.
+  --keep-names                Keep function/class name.
   --log-level <log-level>     Log level (silent, info, debug, warn).
   --module-types <types>      Module types for customized extensions.
   --no-external-live-bindings Disable external live bindings.
   --no-treeshake              Disable treeshaking.
   --outro <outro>             Code to insert the bottom of the bundled file (inside the wrapper function).
+  --sanitize-file-name        Sanitize file name.
   --shim-missing-exports      Create shim variables for missing exports.
   --sourcemap-debug-ids       Inject sourcemap debug IDs.
   --target <target>           The JavaScript target environment.

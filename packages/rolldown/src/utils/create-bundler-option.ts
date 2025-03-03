@@ -15,7 +15,6 @@ import { getObjectPlugins } from '../plugin/plugin-driver'
 import { LogHandler } from '../types/misc'
 import { logMinifyWarning } from '../log/logs'
 import { getLogger, getOnLog } from '../log/logger'
-import { validateTreeShakingOptions } from './validator'
 import { LOG_LEVEL_INFO, LOG_LEVEL_WARN } from '../log/logging'
 import type { InputOptions } from '../options/input-options'
 import type { OutputOptions } from '../options/output-options'
@@ -25,10 +24,6 @@ export async function createBundlerOptions(
   outputOptions: OutputOptions,
   isClose?: boolean,
 ): Promise<BundlerOptionWithStopWorker> {
-  if (inputOptions.treeshake !== undefined) {
-    validateTreeShakingOptions(inputOptions.treeshake)
-  }
-
   const inputPlugins = await normalizePluginOption(inputOptions.plugins)
   const outputPlugins = await normalizePluginOption(outputOptions.plugins)
 

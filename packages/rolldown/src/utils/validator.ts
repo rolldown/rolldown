@@ -2,14 +2,17 @@ import * as v from 'valibot'
 import { colors } from '../cli/colors'
 import { toJsonSchema } from '@valibot/to-json-schema'
 import type { PreRenderedChunk } from '../binding'
-import type { RolldownPluginOption } from '../plugin'
+import type {
+  RolldownOutputPluginOption,
+  RolldownPluginOption,
+} from '../plugin'
 import type { ObjectSchema } from '../types/schema'
 import type { RenderedChunk } from '../types/rolldown-output'
-import type { TreeshakingOptions } from '../types/module-side-effects'
 import type {
   SourcemapIgnoreListOption,
   SourcemapPathTransformOption,
 } from '../types/misc'
+import { PreRenderedAsset } from '../options/output-options'
 
 const StringOrRegExpSchema = v.union([v.string(), v.instance(RegExp)])
 
@@ -86,7 +89,13 @@ const JsxOptionsSchema = v.strictObject({
     ),
   ),
   mode: v.pipe(
-    v.optional(v.union([v.literal('classic'), v.literal('automatic')])),
+    v.optional(
+      v.union([
+        v.literal('classic'),
+        v.literal('automatic'),
+        v.literal('preserve'),
+      ]),
+    ),
     v.description('Jsx transformation mode'),
   ),
   refresh: v.pipe(
@@ -247,13 +256,17 @@ const InputOptionsSchema = v.strictObject({
     ),
   ),
   profilerNames: v.optional(v.boolean()),
-  jsx: v.optional(JsxOptionsSchema),
+  jsx: v.optional(v.union([v.boolean(), JsxOptionsSchema])),
   watch: v.optional(v.union([WatchOptionsSchema, v.literal(false)])),
   dropLabels: v.pipe(
     v.optional(v.array(v.string())),
     v.description('Remove labeled statements with these label names'),
   ),
   checks: v.optional(ChecksOptionsSchema),
+  keepNames: v.pipe(
+    v.optional(v.boolean()),
+    v.description('Keep function/class name'),
+  ),
 })
 
 const InputCliOverrideSchema = v.strictObject({
@@ -271,6 +284,7 @@ const InputCliOverrideSchema = v.strictObject({
     v.optional(v.boolean()),
     v.description('enable treeshaking'),
   ),
+  jsx: v.pipe(v.optional(JsxOptionsSchema), v.description('enable jsx')),
 })
 
 const InputCliOptionsSchema = v.omit(
@@ -335,6 +349,20 @@ const ChunkFileNamesSchema = v.union([
     v.args(v.tuple([v.custom<PreRenderedChunk>(() => true)])),
     v.returns(v.string()),
   ),
+])
+
+const AssetFileNamesSchema = v.union([
+  v.string(),
+  v.pipe(
+    v.function(),
+    v.args(v.tuple([v.custom<PreRenderedAsset>(() => true)])),
+    v.returns(v.string()),
+  ),
+])
+
+const SanitizeFileNameSchema = v.union([
+  v.boolean(),
+  v.pipe(v.function(), v.args(v.tuple([v.string()])), v.returns(v.string())),
 ])
 
 const GlobalsFunctionSchema = v.pipe(
@@ -426,14 +454,12 @@ const OutputOptionsSchema = v.strictObject({
     ),
   ),
   esModule: v.optional(v.union([v.boolean(), v.literal('if-default-prop')])),
-  assetFileNames: v.pipe(
-    v.optional(v.string()),
-    v.description('Name pattern for asset files'),
-  ),
+  assetFileNames: v.optional(AssetFileNamesSchema),
   entryFileNames: v.optional(ChunkFileNamesSchema),
   chunkFileNames: v.optional(ChunkFileNamesSchema),
   cssEntryFileNames: v.optional(ChunkFileNamesSchema),
   cssChunkFileNames: v.optional(ChunkFileNamesSchema),
+  sanitizeFileName: v.optional(SanitizeFileNameSchema),
   minify: v.pipe(
     v.optional(v.union([v.boolean(), MinifyOptionsSchema])),
     v.description('Minify the bundled file'),
@@ -467,6 +493,7 @@ const OutputOptionsSchema = v.strictObject({
     v.optional(v.enum(ESTarget)),
     v.description('The JavaScript target environment'),
   ),
+  plugins: v.optional(v.custom<RolldownOutputPluginOption>(() => true)),
 })
 
 const getAddonDescription = (
@@ -478,6 +505,10 @@ const getAddonDescription = (
 
 const OutputCliOverrideSchema = v.strictObject({
   // Reject all functions in CLI
+  assetFileNames: v.pipe(
+    v.optional(v.string()),
+    v.description('Name pattern for asset files'),
+  ),
   entryFileNames: v.pipe(
     v.optional(v.string()),
     v.description('Name pattern for emitted entry chunks'),
@@ -493,6 +524,10 @@ const OutputCliOverrideSchema = v.strictObject({
   cssChunkFileNames: v.pipe(
     v.optional(v.string()),
     v.description('Name pattern for emitted css secondary chunks'),
+  ),
+  sanitizeFileName: v.pipe(
+    v.optional(v.boolean()),
+    v.description('Sanitize file name'),
   ),
   banner: v.pipe(
     v.optional(v.string()),
@@ -551,7 +586,7 @@ const OutputCliOptionsSchema = v.omit(
     ...OutputOptionsSchema.entries,
     ...OutputCliOverrideSchema.entries,
   }),
-  ['sourcemapIgnoreList', 'sourcemapPathTransform'],
+  ['sourcemapIgnoreList', 'sourcemapPathTransform', 'plugins'],
 )
 
 /// --- CliSchema ---
@@ -575,10 +610,6 @@ const CliOptionsSchema = v.strictObject({
   ...OutputCliOptionsSchema.entries,
 })
 
-export function validateTreeShakingOptions(options: TreeshakingOptions): void {
-  v.parse(TreeshakingOptionsSchema, options)
-}
-
 export function validateCliOptions<T>(options: T): [T, string[]?] {
   let parsed = v.safeParse(CliOptionsSchema, options)
 
@@ -588,6 +619,33 @@ export function validateCliOptions<T>(options: T): [T, string[]?] {
       ?.map((issue) => issue.path?.join(', '))
       .filter((v) => v !== undefined),
   ]
+}
+
+const helperMsgRecord: Record<string, { ignored?: boolean; msg?: string }> = {
+  output: { ignored: true }, // Ignore the output key
+}
+
+export function validateOption<T>(key: 'input' | 'output', options: T): void {
+  let parsed = v.safeParse(
+    key === 'input' ? InputOptionsSchema : OutputOptionsSchema,
+    options,
+  )
+
+  if (!parsed.success) {
+    const errors = parsed.issues
+      .map((issue) => {
+        const path = issue.path!.map((path) => path.key).join('.')
+        const helper = helperMsgRecord[path]
+        if (helper && helper.ignored) {
+          return ''
+        }
+        return `- For the "${path}". ${issue.message}. ${helper ? helper.msg : ''}`
+      })
+      .filter(Boolean)
+    if (errors.length) {
+      throw new Error(`Failed validate ${key} options.\n` + errors.join('\n'))
+    }
+  }
 }
 
 export function getInputCliKeys(): string[] {

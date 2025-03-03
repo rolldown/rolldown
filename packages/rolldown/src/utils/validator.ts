@@ -621,9 +621,12 @@ export function validateCliOptions<T>(options: T): [T, string[]?] {
   ]
 }
 
-const helperMsgRecord: Record<string, { ignored?: boolean; msg?: string }> = {
+type HelperMsgRecord = Record<string, { ignored?: boolean; msg?: string }>
+
+const inputHelperMsgRecord: HelperMsgRecord = {
   output: { ignored: true }, // Ignore the output key
 }
+const outputHelperMsgRecord: HelperMsgRecord = {}
 
 export function validateOption<T>(key: 'input' | 'output', options: T): void {
   let parsed = v.safeParse(
@@ -635,7 +638,10 @@ export function validateOption<T>(key: 'input' | 'output', options: T): void {
     const errors = parsed.issues
       .map((issue) => {
         const path = issue.path!.map((path) => path.key).join('.')
-        const helper = helperMsgRecord[path]
+        const helper =
+          key === 'input'
+            ? inputHelperMsgRecord[path]
+            : outputHelperMsgRecord[path]
         if (helper && helper.ignored) {
           return ''
         }

@@ -83,7 +83,7 @@ significant_drop_in_scrutinee = "warn"
 unused_peekable               = "warn"
 
 [workspace.dependencies]
-criterion2                              = { version = "2.0.0", default-features = false }
+criterion2                              = { version = "3.0.0", default-features = false }
 css-module-lexer                        = "0.0.15"
 rolldown                                = { version = "0.1.0", path = "./crates/rolldown" }
 rolldown_common                         = { version = "0.1.0", path = "./crates/rolldown_common" }

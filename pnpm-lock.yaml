@@ -49,7 +49,7 @@ importers:
         version: 0.15.12
       prettier:
         specifier: ^3.3.1
-        version: 3.5.2
+        version: 3.5.3
       rolldown:
         specifier: workspace:*
         version: link:packages/rolldown
@@ -5631,8 +5631,8 @@ packages:
   preact@10.26.2:
     resolution: {integrity: sha512-0gNmv4qpS9HaN3+40CLBAnKe0ZfyE4ZWo5xKlC1rVrr0ckkEvJvAQqKaHANdFKsGstoxrY4AItZ7kZSGVoVjgg==}
 
-  prettier@3.5.2:
-    resolution: {integrity: sha512-lc6npv5PH7hVqozBR7lkBNOGXV9vMwROAPlumdBkX0wTbbzPu/U1hk5yL8p2pt4Xoc+2mkT8t/sow2YrV/M5qg==}
+  prettier@3.5.3:
+    resolution: {integrity: sha512-QQtaxnoDJeAkDvDKWCLiwIXkTgRhwYDEQCghU9Z6q03iyek/rxRh/2lC3HB7P8sWT2xC/y5JDctPLBIGzHKbhw==}
     engines: {node: '>=14'}
     hasBin: true
 
@@ -12001,7 +12001,7 @@ snapshots:
 
   preact@10.26.2: {}
 
-  prettier@3.5.2: {}
+  prettier@3.5.3: {}
 
   pretty-bytes@5.6.0: {}
 

@@ -3963,6 +3963,10 @@ expression: output
 - ./chunks/async.mjs => ./chunks/async.mjs
 - ./chunks/shared.mjs => ./chunks/shared.mjs
 
+# tests/rolldown/function/entry_filenames/should_generate_specified_hash_length
+
+- ./entries/!~{000}~-!~{000001}~-!~{2}~-!~{0000000000000003}~.js => ./entries/ClqcCbMH-ClqcCbMH3vP-ClqcCb-ClqcCbMH3vPeisL87rygy.js
+
 # tests/rolldown/function/es-target
 
 - main-!~{000}~.js => main-DnkndBar.js

@@ -1,0 +1,13 @@
+{
+  "config": {
+    "input": [
+      {
+        "name": "entry",
+        "import": "./entry.js"
+      }
+    ],
+    "entryFilenames": "./entries/[hash]-[hash:11]-[hash:2]-[hash:22].js",
+    "chunkFilenames": "./chunks/[hash]-[hash:11]-[hash:2]-[hash:22].js"
+  },
+  "expectExecuted": false
+}

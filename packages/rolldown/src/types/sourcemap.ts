@@ -37,10 +37,7 @@ export function bindingifySourcemap(
             sources: map.sources?.map((s) => s ?? undefined),
             sourcesContent: map.sourcesContent?.map((s) => s ?? undefined),
             names: map.names,
-            x_google_ignoreList:
-              'x_google_ignoreList' in map
-                ? map.x_google_ignoreList
-                : undefined,
+            x_google_ignoreList: map.x_google_ignoreList,
             debugId: 'debugId' in map ? map.debugId : undefined,
           },
   }

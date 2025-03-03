@@ -9,6 +9,7 @@ export default defineTest({
       banner: '/* banner */',
       intro: '/* intro */',
       outro: '/* outro */',
+      comments: 'preserve-legal',
     },
     plugins: [
       {
@@ -19,6 +20,7 @@ export default defineTest({
           expect(options.banner).toBe('/* banner */')
           expect(options.intro).toBe('/* intro */')
           expect(options.outro).toBe('/* outro */')
+          expect(options.comments).toBe('preserve-legal')
         },
       },
     ],

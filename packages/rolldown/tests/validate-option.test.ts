@@ -4,11 +4,14 @@ import { rolldown } from 'rolldown'
 test('validate input option', async () => {
   try {
     await rolldown({
-      input: 1, // invalid value
+      // @ts-ignore invalid value
+      input: 1,
       cwd: import.meta.dirname,
-      foo: 'bar', // invalid key
+      // @ts-ignore invalid key
+      foo: 'bar',
       resolve: {
-        foo: 'bar', // nested invalid key
+        // @ts-ignore nested invalid key
+        foo: 'bar',
       },
     })
     expect.unreachable()
@@ -29,7 +32,8 @@ test('validate output option', async () => {
       cwd: import.meta.dirname,
     })
     await bundle.write({
-      foo: 'bar', // invalid key
+      // @ts-ignore  invalid key
+      foo: 'bar',
     })
     expect.unreachable()
   } catch (error: any) {

@@ -3,10 +3,10 @@ use std::sync::Arc;
 use oxc::{
   allocator::CloneIn,
   ast::{
-    AstBuilder, NONE, VisitMut,
+    AstBuilder, NONE,
     ast::{Argument, ExportAllDeclaration, ExportNamedDeclaration, Expression, ImportDeclaration},
-    visit::walk_mut::walk_expression,
   },
+  ast_visit::{VisitMut, walk_mut::walk_expression},
   span::SPAN,
 };
 use rolldown_utils::concat_string;

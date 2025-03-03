@@ -13,12 +13,13 @@ use oxc::semantic::{Reference, ScopeFlags, ScopeId, ScopeTree, SymbolTable};
 use oxc::span::SPAN;
 use oxc::{
   ast::{
-    Comment, Visit,
+    Comment,
     ast::{
       ExportAllDeclaration, ExportDefaultDeclaration, ExportNamedDeclaration, IdentifierReference,
       ImportDeclaration, ModuleDeclaration, Program,
     },
   },
+  ast_visit::Visit,
   semantic::SymbolId,
   span::{CompactStr, GetSpan, Span},
 };

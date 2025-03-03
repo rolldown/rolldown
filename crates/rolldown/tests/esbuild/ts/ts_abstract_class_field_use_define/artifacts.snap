@@ -13,7 +13,7 @@ var Foo = class {
 	keepThis;
 	[keepThisToo];
 };
-(() => new Foo())();
+new Foo();
 
 //#endregion
 ```

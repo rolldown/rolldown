@@ -155,7 +155,7 @@ jobs:
         uses: ./.github/actions/setup-node
 
       - name: Lint Filename
-        run: pnpm lint-filename
+        run: cargo ls-lint
 
       - name: Lint Spell
         run: pnpm lint-spell

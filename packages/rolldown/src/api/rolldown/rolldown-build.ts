@@ -8,6 +8,7 @@ import type { InputOptions } from '../../options/input-options'
 import type { OutputOptions } from '../../options/output-options'
 import type { RolldownOutput } from '../../types/rolldown-output'
 import type { HasProperty, TypeAssert } from '../../types/assert'
+import { validateOption } from '../../utils/validator'
 
 // @ts-expect-error TS2540: the polyfill of `asyncDispose`.
 Symbol.asyncDispose ??= Symbol('Symbol.asyncDispose')
@@ -42,12 +43,14 @@ export class RolldownBuild {
   }
 
   async generate(outputOptions: OutputOptions = {}): Promise<RolldownOutput> {
+    validateOption('output', outputOptions)
     const { bundler } = await this.#getBundlerWithStopWorker(outputOptions)
     const output = await bundler.generate()
     return transformToRollupOutput(output)
   }
 
   async write(outputOptions: OutputOptions = {}): Promise<RolldownOutput> {
+    validateOption('output', outputOptions)
     const { bundler } = await this.#getBundlerWithStopWorker(outputOptions)
     const output = await bundler.write()
     return transformToRollupOutput(output)

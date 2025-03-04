@@ -5,8 +5,8 @@ use oxc::ast::ast::{
   Argument, BindingPattern, BindingPatternKind, CallExpression, Expression, ImportOrExportKind,
   PropertyKey, Statement, StaticMemberExpression, VariableDeclaration, VariableDeclarationKind,
 };
-use oxc::ast::visit::walk_mut;
-use oxc::ast::{AstBuilder, NONE, VisitMut};
+use oxc::ast::{AstBuilder, NONE};
+use oxc::ast_visit::{VisitMut, walk_mut};
 use oxc::codegen::{self, CodeGenerator, Gen};
 use oxc::semantic::ScopeFlags;
 use oxc::span::{Atom, SPAN};

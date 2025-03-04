@@ -62,10 +62,40 @@ export default defineTest({
           calls.push('test-plugin-2')
         },
       },
+      {
+        name: 'test-update-sourcemap',
+        generateBundle(_options, bundle) {
+          const chunk = bundle['main.js'] as RolldownOutputChunk
+          const map = chunk.map!
+          map.file = 'updated-' + map.file
+          map.mappings = ';' + map.mappings
+          map.sources.push('updated-source.js')
+          map.sourcesContent.push('console.log("updated")')
+          map.names.push('updated-name')
+          map.x_google_ignoreList = [0]
+          map.debugId = 'updated-debugId'
+          chunk.map = map
+        },
+      },
+      {
+        name: 'test-read-updated-sourcemap',
+        generateBundle(_options, bundle) {
+          const chunk = bundle['main.js'] as RolldownOutputChunk
+          const map = chunk.map!
+          expect(map.file).toBe('updated-main.js')
+          expect(map.mappings).toMatch(/^;/)
+          expect(map.sources.at(-1)).toBe('updated-source.js')
+          expect(map.sourcesContent.at(-1)).toBe('console.log("updated")')
+          expect(map.names.at(-1)).toBe('updated-name')
+          expect(map.x_google_ignoreList).toStrictEqual([0])
+          expect(map.debugId).toBe('updated-debugId')
+        },
+      },
     ],
     output: {
       chunkFileNames: '[name].js',
       sourcemap: true,
+      sourcemapDebugIds: true,
     },
   },
   beforeTest: () => {

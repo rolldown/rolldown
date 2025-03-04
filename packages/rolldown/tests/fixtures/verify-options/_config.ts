@@ -6,7 +6,10 @@ export default defineTest({
     output: {
       file: 'dist/main.js',
       target: 'es2015',
-      banner: '// banner',
+      banner: '/* banner */',
+      intro: '/* intro */',
+      outro: '/* outro */',
+      comments: 'preserve-legal',
     },
     plugins: [
       {
@@ -14,7 +17,10 @@ export default defineTest({
         outputOptions: function (options) {
           expect(options.file).toBe('dist/main.js')
           expect(options.target).toBe('es2015')
-          expect(options.banner).toBe('// banner')
+          expect(options.banner).toBe('/* banner */')
+          expect(options.intro).toBe('/* intro */')
+          expect(options.outro).toBe('/* outro */')
+          expect(options.comments).toBe('preserve-legal')
         },
       },
     ],

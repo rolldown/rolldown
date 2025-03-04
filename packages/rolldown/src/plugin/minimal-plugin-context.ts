@@ -6,7 +6,7 @@ import type {
 } from '../types/misc'
 import { LOG_LEVEL_DEBUG, LOG_LEVEL_INFO, LOG_LEVEL_WARN } from '../log/logging'
 import { error, logPluginError } from '../log/logs'
-import { getLogHandler, normalizeLog } from '../log/logHandler'
+import { getLogHandler, normalizeLog } from '../log/log-handler'
 import { VERSION } from '..'
 
 export interface PluginContextMeta {

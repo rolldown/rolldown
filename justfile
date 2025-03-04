@@ -69,6 +69,10 @@ test-node preset="all" *args="": _build-native-debug
 test-node-only preset="all" *args="":
     just _test-node-{{ preset }} {{ args }}
 
+# alias for only run rolldown node tests without building
+test-node-rolldown *args="":
+    just _test-node-rolldown {{ args }}
+
 _test-node-all *args="":
     just _test-node-rolldown {{ args }}
     # We run rollup tests separately to have a clean output.
@@ -105,6 +109,7 @@ lint-node:
 
 lint-repo:
     pnpm lint-repo
+    cargo ls-lint
 
 # Fix formatting and some linting issues
 fix: fix-rust fix-repo

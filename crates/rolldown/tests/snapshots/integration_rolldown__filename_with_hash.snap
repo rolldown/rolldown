@@ -88,8 +88,8 @@ expression: output
 
 # tests/esbuild/dce/dce_of_iife
 
-- keep-these-!~{001}~.js => keep-these-BajvjPE6.js
-- remove-these-!~{000}~.js => remove-these-DIvwSOQb.js
+- keep-these-!~{001}~.js => keep-these-BH8z_Yg_.js
+- remove-these-!~{000}~.js => remove-these--WjfXS26.js
 
 # tests/esbuild/dce/dce_of_symbol_instances
 
@@ -226,80 +226,80 @@ expression: output
 
 # tests/esbuild/dce/no_side_effects_comment
 
-- expr-arrow-!~{001}~.js => expr-arrow-CsqhtnYX.js
-- expr-fn-!~{000}~.js => expr-fn-Cusshd3_.js
-- stmt-export-default-after-async-fn-anon-!~{00i}~.js => stmt-export-default-after-async-fn-anon-CimOVZoM.js
-- stmt-export-default-after-async-fn-name-!~{00j}~.js => stmt-export-default-after-async-fn-name-D8mzDuo9.js
-- stmt-export-default-after-async-gen-fn-anon-!~{00k}~.js => stmt-export-default-after-async-gen-fn-anon-e7ljdNZ1.js
-- stmt-export-default-after-async-gen-fn-name-!~{00l}~.js => stmt-export-default-after-async-gen-fn-name-CwGNhRuo.js
-- stmt-export-default-after-fn-anon-!~{00e}~.js => stmt-export-default-after-fn-anon-BaE8bUlx.js
-- stmt-export-default-after-fn-name-!~{00f}~.js => stmt-export-default-after-fn-name-CUKFW0sq.js
-- stmt-export-default-after-gen-fn-anon-!~{00g}~.js => stmt-export-default-after-gen-fn-anon-B0SmZsSP.js
-- stmt-export-default-after-gen-fn-name-!~{00h}~.js => stmt-export-default-after-gen-fn-name-DNb19nkj.js
-- stmt-export-default-before-async-fn-anon-!~{00a}~.js => stmt-export-default-before-async-fn-anon-B2Std12X.js
-- stmt-export-default-before-async-fn-name-!~{00b}~.js => stmt-export-default-before-async-fn-name-B5Gzdwgn.js
-- stmt-export-default-before-async-gen-fn-anon-!~{00c}~.js => stmt-export-default-before-async-gen-fn-anon-CwTBETqG.js
-- stmt-export-default-before-async-gen-fn-name-!~{00d}~.js => stmt-export-default-before-async-gen-fn-name-Brxr1gDM.js
-- stmt-export-default-before-fn-anon-!~{006}~.js => stmt-export-default-before-fn-anon-Dhb5vNBj.js
-- stmt-export-default-before-fn-name-!~{007}~.js => stmt-export-default-before-fn-name-BIf1wSsS.js
-- stmt-export-default-before-gen-fn-anon-!~{008}~.js => stmt-export-default-before-gen-fn-anon-Bmspav2O.js
-- stmt-export-default-before-gen-fn-name-!~{009}~.js => stmt-export-default-before-gen-fn-name-Cea52seq.js
-- stmt-export-fn-!~{003}~.js => stmt-export-fn-DK1Ulg-o.js
-- stmt-export-local-!~{005}~.js => stmt-export-local-B4YvRl_T.js
-- stmt-fn-!~{002}~.js => stmt-fn-DHLF62Oa.js
-- stmt-local-!~{004}~.js => stmt-local-_MdEL5k6.js
+- expr-arrow-!~{001}~.js => expr-arrow-ChwBp8XN.js
+- expr-fn-!~{000}~.js => expr-fn--0uV1tD7.js
+- stmt-export-default-after-async-fn-anon-!~{00i}~.js => stmt-export-default-after-async-fn-anon-1my8jb-k.js
+- stmt-export-default-after-async-fn-name-!~{00j}~.js => stmt-export-default-after-async-fn-name-Ctbe7HxT.js
+- stmt-export-default-after-async-gen-fn-anon-!~{00k}~.js => stmt-export-default-after-async-gen-fn-anon-BhollNpU.js
+- stmt-export-default-after-async-gen-fn-name-!~{00l}~.js => stmt-export-default-after-async-gen-fn-name-DtKj_2Ij.js
+- stmt-export-default-after-fn-anon-!~{00e}~.js => stmt-export-default-after-fn-anon-B30IZWou.js
+- stmt-export-default-after-fn-name-!~{00f}~.js => stmt-export-default-after-fn-name-D65nNCzI.js
+- stmt-export-default-after-gen-fn-anon-!~{00g}~.js => stmt-export-default-after-gen-fn-anon-Bf2CAPM1.js
+- stmt-export-default-after-gen-fn-name-!~{00h}~.js => stmt-export-default-after-gen-fn-name-DUQEb6UF.js
+- stmt-export-default-before-async-fn-anon-!~{00a}~.js => stmt-export-default-before-async-fn-anon-Y87SUOIB.js
+- stmt-export-default-before-async-fn-name-!~{00b}~.js => stmt-export-default-before-async-fn-name-Qb87qxl3.js
+- stmt-export-default-before-async-gen-fn-anon-!~{00c}~.js => stmt-export-default-before-async-gen-fn-anon-B6vymMjW.js
+- stmt-export-default-before-async-gen-fn-name-!~{00d}~.js => stmt-export-default-before-async-gen-fn-name-DRVUcac8.js
+- stmt-export-default-before-fn-anon-!~{006}~.js => stmt-export-default-before-fn-anon-Bbzq0wfr.js
+- stmt-export-default-before-fn-name-!~{007}~.js => stmt-export-default-before-fn-name-CErRHjMK.js
+- stmt-export-default-before-gen-fn-anon-!~{008}~.js => stmt-export-default-before-gen-fn-anon-CVS9bY-r.js
+- stmt-export-default-before-gen-fn-name-!~{009}~.js => stmt-export-default-before-gen-fn-name-_85mrrZT.js
+- stmt-export-fn-!~{003}~.js => stmt-export-fn-C_Qx486d.js
+- stmt-export-local-!~{005}~.js => stmt-export-local-DQaY3xf0.js
+- stmt-fn-!~{002}~.js => stmt-fn-Dz8OrZx8.js
+- stmt-local-!~{004}~.js => stmt-local-CaRhi00X.js
 
 # tests/esbuild/dce/no_side_effects_comment_ignore_annotations
 
-- expr-arrow-!~{001}~.js => expr-arrow-CJ-bhPyU.js
-- expr-fn-!~{000}~.js => expr-fn-BJfShldt.js
-- ns-export-fn-!~{006}~.js => ns-export-fn-D3dlcXCh.js
-- ns-export-local-!~{007}~.js => ns-export-local-BidtmSJ2.js
-- stmt-export-default-after-async-fn-anon-!~{00k}~.js => stmt-export-default-after-async-fn-anon-xBiScL8M.js
-- stmt-export-default-after-async-fn-name-!~{00l}~.js => stmt-export-default-after-async-fn-name-CAf3mXY7.js
-- stmt-export-default-after-async-gen-fn-anon-!~{00m}~.js => stmt-export-default-after-async-gen-fn-anon-CmNOh_1p.js
-- stmt-export-default-after-async-gen-fn-name-!~{00n}~.js => stmt-export-default-after-async-gen-fn-name-C2hHi0MJ.js
-- stmt-export-default-after-fn-anon-!~{00g}~.js => stmt-export-default-after-fn-anon-C48IjFn6.js
-- stmt-export-default-after-fn-name-!~{00h}~.js => stmt-export-default-after-fn-name-DHveE-xS.js
-- stmt-export-default-after-gen-fn-anon-!~{00i}~.js => stmt-export-default-after-gen-fn-anon-C3W3f_r9.js
-- stmt-export-default-after-gen-fn-name-!~{00j}~.js => stmt-export-default-after-gen-fn-name-CL9Ei7oG.js
-- stmt-export-default-before-async-fn-anon-!~{00c}~.js => stmt-export-default-before-async-fn-anon-BaosBVUT.js
-- stmt-export-default-before-async-fn-name-!~{00d}~.js => stmt-export-default-before-async-fn-name-Clk1aQ-A.js
-- stmt-export-default-before-async-gen-fn-anon-!~{00e}~.js => stmt-export-default-before-async-gen-fn-anon-AytgNA5k.js
-- stmt-export-default-before-async-gen-fn-name-!~{00f}~.js => stmt-export-default-before-async-gen-fn-name-CJe7Nh-q.js
-- stmt-export-default-before-fn-anon-!~{008}~.js => stmt-export-default-before-fn-anon-DhlxBFo_.js
-- stmt-export-default-before-fn-name-!~{009}~.js => stmt-export-default-before-fn-name-DycNjUpp.js
-- stmt-export-default-before-gen-fn-anon-!~{00a}~.js => stmt-export-default-before-gen-fn-anon-D6mHTftn.js
-- stmt-export-default-before-gen-fn-name-!~{00b}~.js => stmt-export-default-before-gen-fn-name-FQFZQPSf.js
-- stmt-export-fn-!~{003}~.js => stmt-export-fn-DK1Ulg-o.js
-- stmt-export-local-!~{005}~.js => stmt-export-local-B4YvRl_T.js
+- expr-arrow-!~{001}~.js => expr-arrow-Dc8OAWqf.js
+- expr-fn-!~{000}~.js => expr-fn-D6Ule6gp.js
+- ns-export-fn-!~{006}~.js => ns-export-fn-_jXGJ-1y.js
+- ns-export-local-!~{007}~.js => ns-export-local-DVxzyHnv.js
+- stmt-export-default-after-async-fn-anon-!~{00k}~.js => stmt-export-default-after-async-fn-anon-g4ucjhzU.js
+- stmt-export-default-after-async-fn-name-!~{00l}~.js => stmt-export-default-after-async-fn-name-B8N2_lIW.js
+- stmt-export-default-after-async-gen-fn-anon-!~{00m}~.js => stmt-export-default-after-async-gen-fn-anon-2eyZV199.js
+- stmt-export-default-after-async-gen-fn-name-!~{00n}~.js => stmt-export-default-after-async-gen-fn-name-CxPuf9vy.js
+- stmt-export-default-after-fn-anon-!~{00g}~.js => stmt-export-default-after-fn-anon-R9xTgu1k.js
+- stmt-export-default-after-fn-name-!~{00h}~.js => stmt-export-default-after-fn-name-CC29055C.js
+- stmt-export-default-after-gen-fn-anon-!~{00i}~.js => stmt-export-default-after-gen-fn-anon-zS18z1Df.js
+- stmt-export-default-after-gen-fn-name-!~{00j}~.js => stmt-export-default-after-gen-fn-name-DtMtTLHB.js
+- stmt-export-default-before-async-fn-anon-!~{00c}~.js => stmt-export-default-before-async-fn-anon-D1Jo2VWB.js
+- stmt-export-default-before-async-fn-name-!~{00d}~.js => stmt-export-default-before-async-fn-name-BwOkjERP.js
+- stmt-export-default-before-async-gen-fn-anon-!~{00e}~.js => stmt-export-default-before-async-gen-fn-anon-Bu_hnsKE.js
+- stmt-export-default-before-async-gen-fn-name-!~{00f}~.js => stmt-export-default-before-async-gen-fn-name-C2KhQDsY.js
+- stmt-export-default-before-fn-anon-!~{008}~.js => stmt-export-default-before-fn-anon-DZpwnoEQ.js
+- stmt-export-default-before-fn-name-!~{009}~.js => stmt-export-default-before-fn-name-D6IaUGnZ.js
+- stmt-export-default-before-gen-fn-anon-!~{00a}~.js => stmt-export-default-before-gen-fn-anon-DmPSYPAw.js
+- stmt-export-default-before-gen-fn-name-!~{00b}~.js => stmt-export-default-before-gen-fn-name-7rDorF7G.js
+- stmt-export-fn-!~{003}~.js => stmt-export-fn-C_Qx486d.js
+- stmt-export-local-!~{005}~.js => stmt-export-local-DQaY3xf0.js
 - stmt-fn-!~{002}~.js => stmt-fn-Dn-10V9-.js
 - stmt-local-!~{004}~.js => stmt-local-DLmNbk_M.js
 
 # tests/esbuild/dce/no_side_effects_comment_minify_whitespace
 
-- expr-arrow-!~{001}~.js => expr-arrow-CJ-bhPyU.js
-- expr-fn-!~{000}~.js => expr-fn-BJfShldt.js
-- ns-export-fn-!~{006}~.js => ns-export-fn-D3dlcXCh.js
-- ns-export-local-!~{007}~.js => ns-export-local-BidtmSJ2.js
-- stmt-export-default-after-async-fn-anon-!~{00k}~.js => stmt-export-default-after-async-fn-anon-xBiScL8M.js
-- stmt-export-default-after-async-fn-name-!~{00l}~.js => stmt-export-default-after-async-fn-name-CAf3mXY7.js
-- stmt-export-default-after-async-gen-fn-anon-!~{00m}~.js => stmt-export-default-after-async-gen-fn-anon-CmNOh_1p.js
-- stmt-export-default-after-async-gen-fn-name-!~{00n}~.js => stmt-export-default-after-async-gen-fn-name-C2hHi0MJ.js
-- stmt-export-default-after-fn-anon-!~{00g}~.js => stmt-export-default-after-fn-anon-C48IjFn6.js
-- stmt-export-default-after-fn-name-!~{00h}~.js => stmt-export-default-after-fn-name-DHveE-xS.js
-- stmt-export-default-after-gen-fn-anon-!~{00i}~.js => stmt-export-default-after-gen-fn-anon-C3W3f_r9.js
-- stmt-export-default-after-gen-fn-name-!~{00j}~.js => stmt-export-default-after-gen-fn-name-CL9Ei7oG.js
-- stmt-export-default-before-async-fn-anon-!~{00c}~.js => stmt-export-default-before-async-fn-anon-BaosBVUT.js
-- stmt-export-default-before-async-fn-name-!~{00d}~.js => stmt-export-default-before-async-fn-name-Clk1aQ-A.js
-- stmt-export-default-before-async-gen-fn-anon-!~{00e}~.js => stmt-export-default-before-async-gen-fn-anon-AytgNA5k.js
-- stmt-export-default-before-async-gen-fn-name-!~{00f}~.js => stmt-export-default-before-async-gen-fn-name-CJe7Nh-q.js
-- stmt-export-default-before-fn-anon-!~{008}~.js => stmt-export-default-before-fn-anon-DhlxBFo_.js
-- stmt-export-default-before-fn-name-!~{009}~.js => stmt-export-default-before-fn-name-DycNjUpp.js
-- stmt-export-default-before-gen-fn-anon-!~{00a}~.js => stmt-export-default-before-gen-fn-anon-D6mHTftn.js
-- stmt-export-default-before-gen-fn-name-!~{00b}~.js => stmt-export-default-before-gen-fn-name-FQFZQPSf.js
-- stmt-export-fn-!~{003}~.js => stmt-export-fn-DK1Ulg-o.js
-- stmt-export-local-!~{005}~.js => stmt-export-local-B4YvRl_T.js
+- expr-arrow-!~{001}~.js => expr-arrow-Dc8OAWqf.js
+- expr-fn-!~{000}~.js => expr-fn-D6Ule6gp.js
+- ns-export-fn-!~{006}~.js => ns-export-fn-_jXGJ-1y.js
+- ns-export-local-!~{007}~.js => ns-export-local-DVxzyHnv.js
+- stmt-export-default-after-async-fn-anon-!~{00k}~.js => stmt-export-default-after-async-fn-anon-g4ucjhzU.js
+- stmt-export-default-after-async-fn-name-!~{00l}~.js => stmt-export-default-after-async-fn-name-B8N2_lIW.js
+- stmt-export-default-after-async-gen-fn-anon-!~{00m}~.js => stmt-export-default-after-async-gen-fn-anon-2eyZV199.js
+- stmt-export-default-after-async-gen-fn-name-!~{00n}~.js => stmt-export-default-after-async-gen-fn-name-CxPuf9vy.js
+- stmt-export-default-after-fn-anon-!~{00g}~.js => stmt-export-default-after-fn-anon-R9xTgu1k.js
+- stmt-export-default-after-fn-name-!~{00h}~.js => stmt-export-default-after-fn-name-CC29055C.js
+- stmt-export-default-after-gen-fn-anon-!~{00i}~.js => stmt-export-default-after-gen-fn-anon-zS18z1Df.js
+- stmt-export-default-after-gen-fn-name-!~{00j}~.js => stmt-export-default-after-gen-fn-name-DtMtTLHB.js
+- stmt-export-default-before-async-fn-anon-!~{00c}~.js => stmt-export-default-before-async-fn-anon-D1Jo2VWB.js
+- stmt-export-default-before-async-fn-name-!~{00d}~.js => stmt-export-default-before-async-fn-name-BwOkjERP.js
+- stmt-export-default-before-async-gen-fn-anon-!~{00e}~.js => stmt-export-default-before-async-gen-fn-anon-Bu_hnsKE.js
+- stmt-export-default-before-async-gen-fn-name-!~{00f}~.js => stmt-export-default-before-async-gen-fn-name-C2KhQDsY.js
+- stmt-export-default-before-fn-anon-!~{008}~.js => stmt-export-default-before-fn-anon-DZpwnoEQ.js
+- stmt-export-default-before-fn-name-!~{009}~.js => stmt-export-default-before-fn-name-D6IaUGnZ.js
+- stmt-export-default-before-gen-fn-anon-!~{00a}~.js => stmt-export-default-before-gen-fn-anon-DmPSYPAw.js
+- stmt-export-default-before-gen-fn-name-!~{00b}~.js => stmt-export-default-before-gen-fn-name-7rDorF7G.js
+- stmt-export-fn-!~{003}~.js => stmt-export-fn-C_Qx486d.js
+- stmt-export-local-!~{005}~.js => stmt-export-local-DQaY3xf0.js
 - stmt-fn-!~{002}~.js => stmt-fn-Dn-10V9-.js
 - stmt-local-!~{004}~.js => stmt-local-DLmNbk_M.js
 
@@ -310,8 +310,8 @@ expression: output
 # tests/esbuild/dce/no_side_effects_comment_unused_calls
 
 - expr-fn-!~{002}~.js => expr-fn-BjCUVyXK.js
-- stmt-export-default-fn-!~{003}~.js => stmt-export-default-fn-B89Ei5LR.js
-- stmt-fn-!~{000}~.js => stmt-fn-D1BP3jWp.js
+- stmt-export-default-fn-!~{003}~.js => stmt-export-default-fn-TlCp48qi.js
+- stmt-fn-!~{000}~.js => stmt-fn-CkkjwoyO.js
 - stmt-local-!~{001}~.js => stmt-local-BeigE1fv.js
 
 # tests/esbuild/dce/package_json_side_effects_array_glob
@@ -474,7 +474,7 @@ expression: output
 
 # tests/esbuild/dce/pure_calls_with_spread
 
-- entry-!~{000}~.js => entry-CBXg9vkt.js
+- entry-!~{000}~.js => entry-CbmlS1ZW.js
 
 # tests/esbuild/dce/remove_code_after_label_with_return
 
@@ -502,11 +502,11 @@ expression: output
 
 # tests/esbuild/dce/remove_unused_no_side_effects_tagged_templates
 
-- entry-!~{000}~.js => entry-Cy7ahr5W.js
+- entry-!~{000}~.js => entry-CzO6oiOU.js
 
 # tests/esbuild/dce/remove_unused_pure_comment_calls
 
-- entry-!~{000}~.js => entry-nQB1B54o.js
+- entry-!~{000}~.js => entry-BF0Lwn0d.js
 
 # tests/esbuild/dce/text_loader_remove_unused
 
@@ -519,7 +519,7 @@ expression: output
 
 # tests/esbuild/dce/tree_shaking_binary_operators
 
-- entry-!~{000}~.js => entry-C6T_OQ-P.js
+- entry-!~{000}~.js => entry-DfDfY7Iq.js
 
 # tests/esbuild/dce/tree_shaking_class_property
 
@@ -616,7 +616,7 @@ expression: output
 
 # tests/esbuild/default/arguments_special_case_no_bundle
 
-- entry-!~{000}~.js => entry-IPjX3xv3.js
+- entry-!~{000}~.js => entry-CzTcxP46.js
 
 # tests/esbuild/default/arrow_fn_scope
 
@@ -677,7 +677,7 @@ expression: output
 
 # tests/esbuild/default/common_js_from_es6
 
-- entry-!~{000}~.js => entry-DpeSuKIn.js
+- entry-!~{000}~.js => entry-DQRXd5He.js
 
 # tests/esbuild/default/conditional_import
 
@@ -739,7 +739,7 @@ expression: output
 
 # tests/esbuild/default/define_this
 
-- entry-!~{000}~.js => entry-HoQ1SXNY.js
+- entry-!~{000}~.js => entry-DHAORM-d.js
 
 # tests/esbuild/default/direct_eval_tainting_no_bundle
 
@@ -1281,13 +1281,13 @@ expression: output
 
 # tests/esbuild/default/mangle_quoted_props
 
-- keep-!~{000}~.js => keep-a3yw9qnD.js
-- mangle-!~{001}~.js => mangle-Pw4rxKdd.js
+- keep-!~{000}~.js => keep-BdFER9ES.js
+- mangle-!~{001}~.js => mangle-BimyTp7o.js
 
 # tests/esbuild/default/mangle_quoted_props_minify_syntax
 
-- keep-!~{000}~.js => keep-a3yw9qnD.js
-- mangle-!~{001}~.js => mangle-Pw4rxKdd.js
+- keep-!~{000}~.js => keep-BdFER9ES.js
+- mangle-!~{001}~.js => mangle-BimyTp7o.js
 
 # tests/esbuild/default/many_entry_points
 
@@ -1420,7 +1420,7 @@ expression: output
 
 # tests/esbuild/default/nested_es6_from_common_js
 
-- entry-!~{000}~.js => entry-C8wsXX0y.js
+- entry-!~{000}~.js => entry-wr2OGv6C.js
 
 # tests/esbuild/default/nested_require_without_call
 
@@ -2285,7 +2285,7 @@ expression: output
 
 # tests/esbuild/loader/jsx_preserve_capital_letter_minify_nested
 
-- entry-!~{000}~.js => entry-CVhaGTu-.js
+- entry-!~{000}~.js => entry-BN4cPWga.js
 
 # tests/esbuild/loader/jsx_syntax_in_js_with_jsx_loader
 
@@ -2652,7 +2652,7 @@ expression: output
 
 # tests/esbuild/lower/lower_nullish_coalescing_assignment_issue1493
 
-- entry-!~{000}~.js => entry-WvSAv-QS.js
+- entry-!~{000}~.js => entry-DzLKapn_.js
 
 # tests/esbuild/lower/lower_object_spread_no_bundle
 
@@ -3348,7 +3348,7 @@ expression: output
 
 # tests/esbuild/ts/ts_abstract_class_field_use_define
 
-- entry-!~{000}~.js => entry-CqyJ5_Tb.js
+- entry-!~{000}~.js => entry-O7VcDvbQ.js
 
 # tests/esbuild/ts/ts_common_js_variable_in_esm_type_module
 
@@ -3376,7 +3376,7 @@ expression: output
 
 # tests/esbuild/ts/ts_declare_class_fields
 
-- entry-!~{000}~.js => entry-D-iTC7WH.js
+- entry-!~{000}~.js => entry-COGLfywf.js
 
 # tests/esbuild/ts/ts_declare_const
 
@@ -3962,6 +3962,10 @@ expression: output
 - ./entries/b.mjs => ./entries/b.mjs
 - ./chunks/async.mjs => ./chunks/async.mjs
 - ./chunks/shared.mjs => ./chunks/shared.mjs
+
+# tests/rolldown/function/entry_filenames/should_generate_specified_hash_length
+
+- ./entries/!~{000}~-!~{000001}~-!~{2}~-!~{0000000000000003}~.js => ./entries/ClqcCbMH-ClqcCbMH3vP-ClqcCb-ClqcCbMH3vPeisL87rygy.js
 
 # tests/rolldown/function/es-target
 
@@ -4760,7 +4764,7 @@ expression: output
 
 # tests/rolldown/resolve/ts_config_option_merge
 
-- main-!~{000}~.js => main-CjXB2Leq.js
+- main-!~{000}~.js => main-BvK5YGR6.js
 
 # tests/rolldown/resolve/wildcard_alias
 
@@ -5474,7 +5478,7 @@ expression: output
 
 # tests/rollup/catch-scope-shadowing
 
-- main-!~{000}~.js => main-BYN91UkG.js
+- main-!~{000}~.js => main-BiZz7EmM.js
 
 # tests/rollup/mutations-in-imports
 

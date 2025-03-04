@@ -32,7 +32,7 @@ var Foo = class {
 	static A;
 	static [C];
 };
-(() => new Foo())();
+new Foo();
 
 //#endregion
 //#region define-true/index.ts
@@ -42,7 +42,7 @@ var Bar = class {
 	static A;
 	static [C];
 };
-(() => new Bar())();
+new Bar();
 
 //#endregion
 ```
@@ -54,14 +54,15 @@ var Bar = class {
 @@ -1,13 +1,14 @@
 -(() => null, c, () => null, C);
 -var Foo = class {};
+-(() => new Foo())();
+-var _a;
 +var Foo = class {
 +    a;
 +    [c];
 +    static A;
 +    static [C];
 +};
- (() => new Foo())();
--var _a;
++new Foo();
  var Bar = class {
 -    constructor() {
 -        __publicField(this, "a");
@@ -73,6 +74,7 @@ var Bar = class {
 -    static [(_a = (() => null, c), () => null, C)];
 +    static [C];
  };
- (() => new Bar())();
+-(() => new Bar())();
++new Bar();
 
 ```

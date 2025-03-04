@@ -1,6 +1,5 @@
 ---
 source: crates/rolldown_testing/src/integration_test.rs
-snapshot_kind: text
 ---
 # Assets
 
@@ -13,7 +12,7 @@ import assert from "assert";
 var e = "failed1", x = "value";
 (function() {
 	try {} catch (e$1) {
-		var e$1 = "failed2";
+		var e$1;
 	}
 	assert.strictEqual(e$1, void 0);
 	assert.strictEqual(x$1, void 0);

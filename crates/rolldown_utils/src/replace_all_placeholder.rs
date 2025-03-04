@@ -23,58 +23,81 @@ where
 }
 
 /// Replace all `[placeholder]` or `[placeholder:8]` in the pattern
-pub fn replace_all_placeholder(
+pub trait ReplaceAllPlaceholder {
+  fn replace_all(self, placeholder: &str, replacer: impl Replacer) -> String;
+
+  fn replace_all_with_len(self, placeholder: &str, replacer: impl Replacer) -> String;
+}
+
+impl ReplaceAllPlaceholder for String {
+  #[inline]
+  fn replace_all(self, placeholder: &str, replacer: impl Replacer) -> String {
+    replace_all_placeholder_impl(self, false, placeholder, replacer)
+  }
+
+  #[inline]
+  fn replace_all_with_len(self, placeholder: &str, replacer: impl Replacer) -> String {
+    replace_all_placeholder_impl(self, true, placeholder, replacer)
+  }
+}
+
+fn replace_all_placeholder_impl(
   pattern: String,
-  placeholder: &str,
+  is_len_enabled: bool,
+  mut placeholder: &str,
   mut replacer: impl Replacer,
 ) -> String {
   let offset = placeholder.len() - 1;
-  let mut iter = pattern.match_indices(&placeholder[..offset]).peekable();
+
+  if is_len_enabled {
+    placeholder = &placeholder[..offset];
+  }
+
+  let mut iter = pattern.match_indices(placeholder).peekable();
 
   if iter.peek().is_none() {
     return pattern;
   }
 
-  let mut ending = 0;
+  let mut last_end = 0;
   let mut result = String::with_capacity(pattern.len());
 
   for (start, _) in iter {
-    if start < ending {
+    if start < last_end {
       continue;
     }
 
     let start_offset = start + offset;
-    let pat_temp = &pattern[start_offset..];
-
-    let (end, len) = match pat_temp.as_bytes().first() {
-      Some(b']') => (start_offset, None),
-      Some(b':') => {
-        if let Some(end) = pat_temp.find(']') {
-          let end = start_offset + end;
-          let len = pattern[start_offset + 1..end].parse::<usize>().ok();
-
-          if len.is_none() {
+    let (end, len) = if is_len_enabled {
+      let rest = &pattern[start_offset..];
+      match rest.as_bytes().first() {
+        Some(&b':') => {
+          if let Some(index) = rest.find(']') {
+            match rest[1..index].parse::<usize>() {
+              Ok(len) => (start_offset + index, Some(len)),
+              Err(_) => continue,
+            }
+          } else {
             continue;
           }
-
-          (end, len)
-        } else {
-          continue;
         }
+        Some(&b']') => (start_offset, None),
+        _ => continue,
       }
-      _ => continue,
+    } else {
+      (start_offset, None)
     };
 
     let replacer = replacer.get(len);
 
-    result.push_str(&pattern[ending..start]);
+    result.push_str(&pattern[last_end..start]);
     result.push_str(replacer.as_ref());
 
-    ending = end + 1;
+    last_end = end + 1;
   }
 
-  if ending < pattern.len() {
-    result.push_str(&pattern[ending..]);
+  if last_end < pattern.len() {
+    result.push_str(&pattern[last_end..]);
   }
 
   result
@@ -82,17 +105,16 @@ pub fn replace_all_placeholder(
 
 #[test]
 fn test_replace_all_placeholder() {
-  let result = replace_all_placeholder(
-    "hello-[hash]-[hash:-]-[hash_name]-[hash:1]-[hash:].js".to_string(),
-    "[hash]",
-    "abc",
-  );
+  let result = "hello-[hash]-[hash_name]-[hash:1].js".to_string().replace_all("[hash]", "abc");
+  assert_eq!(result, "hello-abc-[hash_name]-[hash:1].js");
+
+  let result = "hello-[hash]-[hash:-]-[hash_name]-[hash:1]-[hash:].js"
+    .to_string()
+    .replace_all_with_len("[hash]", "abc");
   assert_eq!(result, "hello-abc-[hash:-]-[hash_name]-abc-[hash:].js");
 
-  let result = replace_all_placeholder(
-    "hello-[hash]-[hash:5]-[hash_name]-[hash:o].js".to_string(),
-    "[hash]",
-    |n: Option<usize>| &"abcdefgh"[..n.unwrap_or(8)],
-  );
+  let result = "hello-[hash]-[hash:5]-[hash_name]-[hash:o].js"
+    .to_string()
+    .replace_all_with_len("[hash]", |n: Option<usize>| &"abcdefgh"[..n.unwrap_or(8)]);
   assert_eq!(result, "hello-abcdefgh-abcde-[hash_name]-[hash:o].js");
 }

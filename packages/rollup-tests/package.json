@@ -2,8 +2,8 @@
   "name": "rollup-tests",
   "private": true,
   "scripts": {
-    "test": "mocha --file ./src/intercept/check.js test/test.js",
-    "test--update": "mocha --jobs 1 --file ./src/intercept/update-test-status.js test/test.js"
+    "test": "cross-env ROLLDOWN_OPTIONS_VALIDATION=loose mocha --file ./src/intercept/check.js test/test.js",
+    "test--update": "cross-env ROLLDOWN_OPTIONS_VALIDATION=loose mocha --jobs 1 --file ./src/intercept/update-test-status.js test/test.js"
   },
   "keywords": [],
   "author": "",
@@ -14,11 +14,12 @@
     "mocha": "^11.0.0",
     "rolldown": "workspace:*",
     "source-map-support": "^0.5.21",
-    "oxc-transform": "0.51.0"
+    "oxc-transform": "0.54.0",
+    "cross-env": "^7.0.3"
   },
   "devDependencies": {
     "@types/mocha": "10.0.10",
-    "@types/node": "22.13.4",
+    "@types/node": "22.13.8",
     "source-map": "^0.7.4",
     "buble": "^0.20.0",
     "terser": "^5.31.1"

@@ -1,11 +1,10 @@
 use oxc::{
   allocator::{self, IntoIn},
   ast::{
-    VisitMut,
     ast::{self, BindingPatternKind, Expression, SimpleAssignmentTarget},
     match_member_expression,
-    visit::walk_mut,
   },
+  ast_visit::{VisitMut, walk_mut},
   span::{SPAN, Span},
 };
 use rolldown_common::{ExportsKind, Module, StmtInfoIdx, SymbolRef, ThisExprReplaceKind, WrapKind};
@@ -364,7 +363,7 @@ impl<'ast> VisitMut<'ast> for ScopeHoistingFinalizer<'_, 'ast> {
   fn visit_import_expression(&mut self, expr: &mut ast::ImportExpression<'ast>) {
     // Make sure the import expression is in correct form. If it's not, we should leave it as it is.
     match &mut expr.source {
-      ast::Expression::StringLiteral(str) if expr.arguments.len() == 0 => {
+      ast::Expression::StringLiteral(str) if expr.arguments.is_empty() => {
         let rec_id = self.ctx.module.imports[&expr.span];
         let rec = &self.ctx.module.import_records[rec_id];
         let importee_id = rec.resolved_module;

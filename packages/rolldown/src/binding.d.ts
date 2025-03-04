@@ -397,6 +397,8 @@ export interface BindingJsonSourcemap {
   sources?: Array<string | undefined | null>
   sourcesContent?: Array<string | undefined | null>
   names?: Array<string>
+  debugId?: string
+  x_google_ignoreList?: Array<number>
 }
 
 export interface BindingJsWatchChangeEvent {
@@ -1033,20 +1035,21 @@ export interface ParserOptions {
    * (non-standard) `ParenthesizedExpression` nodes that have a single `expression` property
    * containing the expression inside parentheses.
    *
-   * Default: true
+   * @default true
    */
   preserveParens?: boolean
+  /**
+   * Produce semantic errors with an additional AST pass.
+   * Semantic errors depend on symbols and scopes, where the parser does not construct.
+   * This adds a small performance overhead.
+   *
+   * @default false
+   */
+  showSemanticErrors?: boolean
 }
 
 /** Parse synchronously. */
 export declare function parseSync(filename: string, sourceText: string, options?: ParserOptions | undefined | null): ParseResult
-
-/**
- * Parse without returning anything.
- *
- * This is for benchmark purposes such as measuring napi communication overhead.
- */
-export declare function parseWithoutReturn(filename: string, sourceText: string, options?: ParserOptions | undefined | null): void
 
 export interface PreRenderedChunk {
   name: string

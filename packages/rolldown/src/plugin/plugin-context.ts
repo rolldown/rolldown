@@ -36,7 +36,7 @@ export interface EmittedChunk {
   importer?: string
 }
 
-export type EmittedFile = EmittedAsset
+export type EmittedFile = EmittedAsset | EmittedChunk
 
 export interface PluginContextResolveOptions {
   skipSelf?: boolean
@@ -143,7 +143,7 @@ export class PluginContext extends MinimalPluginContext {
     return { ...res, ...info }
   }
 
-  public emitFile = (file: EmittedAsset | EmittedChunk): string => {
+  public emitFile = (file: EmittedFile): string => {
     // @ts-expect-error
     if (file.type === 'prebuilt-chunk') {
       return unimplemented('PluginContext.emitFile with type prebuilt-chunk')

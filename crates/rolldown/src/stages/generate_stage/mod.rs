@@ -2,7 +2,7 @@ use std::collections::hash_map::Entry;
 
 use arcstr::ArcStr;
 use futures::future::try_join_all;
-use oxc::ast::VisitMut;
+use oxc::ast_visit::VisitMut;
 use oxc_index::IndexVec;
 use render_chunk_to_assets::set_emitted_chunk_preliminary_filenames;
 use rolldown_ecmascript_utils::AstSnippet;
@@ -282,7 +282,7 @@ impl<'a> GenerateStage<'a> {
           let mut hash_placeholder = has_hash_pattern.then_some(vec![]);
           let hash_replacer = has_hash_pattern.then_some({
             |len: Option<usize>| {
-              let hash = hash_placeholder_generator.generate(len.unwrap_or(8));
+              let hash = hash_placeholder_generator.generate(len);
               if let Some(hash_placeholder) = hash_placeholder.as_mut() {
                 hash_placeholder.push(hash.clone());
               }

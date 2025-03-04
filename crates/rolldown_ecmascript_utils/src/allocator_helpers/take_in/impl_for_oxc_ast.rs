@@ -188,7 +188,7 @@ impl<'ast> TakeIn<'ast> for ast::BindingIdentifier<'ast> {
 
 impl<'ast> TakeIn<'ast> for Atom<'ast> {
   fn dummy(_alloc: &'ast Allocator) -> Self {
-    Atom::from("")
+    Atom::new_const("")
   }
 }
 

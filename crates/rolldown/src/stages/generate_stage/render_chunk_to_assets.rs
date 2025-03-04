@@ -1,7 +1,4 @@
-use std::{
-  ops::Deref,
-  path::{Path, PathBuf},
-};
+use std::{ops::Deref, path::Path};
 
 use futures::future::try_join_all;
 use oxc_index::{IndexVec, index_vec};
@@ -129,7 +126,7 @@ impl GenerateStage<'_> {
           }
 
           output.push(Output::Asset(Box::new(OutputAsset {
-            filename: filename.clone().into(),
+            filename: filename.clone(),
             source: code.into(),
             original_file_names: vec![],
             names: vec![],
@@ -299,14 +296,14 @@ impl GenerateStage<'_> {
     code: &mut String,
     map: &mut SourceMap,
     output_assets: &mut Vec<Output>,
-    file_dir: &PathBuf,
+    file_dir: &Path,
     filename: &str,
     debug_id: u128,
   ) -> BuildResult<()> {
     let file_base_name = Path::new(filename).file_name().expect("should have file name");
     map.set_file(file_base_name.to_string_lossy().as_ref());
 
-    let map_filename = format!("{}.map", filename);
+    let map_filename = format!("{filename}.map");
     let map_path = file_dir.join(&map_filename);
 
     if let Some(source_map_ignore_list) = &self.options.sourcemap_ignore_list {

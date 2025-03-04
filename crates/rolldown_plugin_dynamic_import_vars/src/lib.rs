@@ -1,8 +1,9 @@
 use oxc::{
   ast::{
-    AstBuilder, NONE, VisitMut,
+    AstBuilder, NONE,
     ast::{Argument, Expression, ImportOrExportKind, PropertyKind, Statement},
   },
+  ast_visit::VisitMut,
   span::{SPAN, Span},
   syntax::number::NumberBase,
 };

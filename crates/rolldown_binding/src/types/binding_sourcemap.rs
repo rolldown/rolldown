@@ -36,7 +36,7 @@ impl TryFrom<BindingJsonSourcemap> for rolldown_sourcemap::SourceMap {
   type Error = anyhow::Error;
 
   fn try_from(value: BindingJsonSourcemap) -> Result<Self, Self::Error> {
-    let mut map = rolldown_sourcemap::SourceMap::from_json(rolldown_sourcemap::JSONSourceMap {
+    let map = rolldown_sourcemap::SourceMap::from_json(rolldown_sourcemap::JSONSourceMap {
       file: value.file,
       mappings: value.mappings.unwrap_or_default(),
       source_root: value.source_root,
@@ -49,11 +49,9 @@ impl TryFrom<BindingJsonSourcemap> for rolldown_sourcemap::SourceMap {
       sources_content: value.sources_content,
       names: value.names.unwrap_or_default(),
       debug_id: value.debug_id,
+      x_google_ignore_list: value.x_google_ignore_list,
     })
     .map_err(|e| anyhow::format_err!("Convert json sourcemap error: {:?}", e))?;
-    if let Some(ignore_list) = value.x_google_ignore_list {
-      map.set_x_google_ignore_list(ignore_list);
-    }
     Ok(map)
   }
 }

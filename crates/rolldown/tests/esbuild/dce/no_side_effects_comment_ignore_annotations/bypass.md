@@ -28,14 +28,14 @@ x([
 
 //#region expr-fn.js
 x([
-	/* #__NO_SIDE_EFFECTS__ */ function() {},
-	/* #__NO_SIDE_EFFECTS__ */ function y() {},
-	/* #__NO_SIDE_EFFECTS__ */ function* () {},
-	/* #__NO_SIDE_EFFECTS__ */ function* y() {},
-	/* #__NO_SIDE_EFFECTS__ */ async function() {},
-	/* #__NO_SIDE_EFFECTS__ */ async function y() {},
-	/* #__NO_SIDE_EFFECTS__ */ async function* () {},
-	/* #__NO_SIDE_EFFECTS__ */ async function* y() {}
+	/* @__NO_SIDE_EFFECTS__ */ function() {},
+	/* @__NO_SIDE_EFFECTS__ */ function y() {},
+	/* @__NO_SIDE_EFFECTS__ */ function* () {},
+	/* @__NO_SIDE_EFFECTS__ */ function* y() {},
+	/* @__NO_SIDE_EFFECTS__ */ async function() {},
+	/* @__NO_SIDE_EFFECTS__ */ async function y() {},
+	/* @__NO_SIDE_EFFECTS__ */ async function* () {},
+	/* @__NO_SIDE_EFFECTS__ */ async function* y() {}
 ]);
 
 //#endregion
@@ -94,9 +94,13 @@ export async function* d() {
 ```js
 
 //#region stmt-export-fn.js
+/* @__NO_SIDE_EFFECTS__ */
 function a() {}
+/* @__NO_SIDE_EFFECTS__ */
 function* b() {}
+/* @__NO_SIDE_EFFECTS__ */
 async function c() {}
+/* @__NO_SIDE_EFFECTS__ */
 async function* d() {}
 
 //#endregion
@@ -189,13 +193,13 @@ var v0 = function() {};
 var v1 = function() {};
 let l0 = function() {};
 let l1 = function() {};
-const c0 = function() {};
+const c0 = /* @__NO_SIDE_EFFECTS__ */ function() {};
 const c1 = function() {};
 var v2 = () => {};
 var v3 = () => {};
 let l2 = () => {};
 let l3 = () => {};
-const c2 = () => {};
+const c2 = /* @__NO_SIDE_EFFECTS__ */ () => {};
 const c3 = () => {};
 
 //#endregion
@@ -253,12 +257,16 @@ var ns;
 //#region ns-export-fn.ts
 let ns;
 (function(_ns) {
+	/* @__NO_SIDE_EFFECTS__ */
 	function a() {}
 	_ns.a = a;
+	/* @__NO_SIDE_EFFECTS__ */
 	function* b() {}
 	_ns.b = b;
+	/* @__NO_SIDE_EFFECTS__ */
 	async function c() {}
 	_ns.c = c;
+	/* @__NO_SIDE_EFFECTS__ */
 	async function* d() {}
 	_ns.d = d;
 })(ns || (ns = {}));
@@ -328,10 +336,10 @@ let ns;
 (function(_ns) {
 	var v0 = _ns.v0 = function() {}, v1 = _ns.v1 = function() {};
 	let l0 = _ns.l0 = function() {}, l1 = _ns.l1 = function() {};
-	const c0 = _ns.c0 = function() {}, c1 = _ns.c1 = function() {};
+	const c0 = _ns.c0 = /* @__NO_SIDE_EFFECTS__ */ function() {}, c1 = _ns.c1 = function() {};
 	var v2 = _ns.v2 = () => {}, v3 = _ns.v3 = () => {};
 	let l2 = _ns.l2 = () => {}, l3 = _ns.l3 = () => {};
-	const c2 = _ns.c2 = () => {}, c3 = _ns.c3 = () => {};
+	const c2 = _ns.c2 = /* @__NO_SIDE_EFFECTS__ */ () => {}, c3 = _ns.c3 = () => {};
 })(ns || (ns = {}));
 
 //#endregion
@@ -376,6 +384,7 @@ export default function() {
 ```js
 
 //#region stmt-export-default-before-fn-anon.js
+/* @__NO_SIDE_EFFECTS__ */
 function stmt_export_default_before_fn_anon_default() {}
 
 //#endregion
@@ -402,6 +411,7 @@ export default function f() {
 ```js
 
 //#region stmt-export-default-before-fn-name.js
+/* @__NO_SIDE_EFFECTS__ */
 function f() {}
 
 //#endregion
@@ -428,6 +438,7 @@ export default function* () {
 ```js
 
 //#region stmt-export-default-before-gen-fn-anon.js
+/* @__NO_SIDE_EFFECTS__ */
 function* stmt_export_default_before_gen_fn_anon_default() {}
 
 //#endregion
@@ -454,6 +465,7 @@ export default function* f() {
 ```js
 
 //#region stmt-export-default-before-gen-fn-name.js
+/* @__NO_SIDE_EFFECTS__ */
 function* f() {}
 
 //#endregion
@@ -480,6 +492,7 @@ export default async function() {
 ```js
 
 //#region stmt-export-default-before-async-fn-anon.js
+/* @__NO_SIDE_EFFECTS__ */
 async function stmt_export_default_before_async_fn_anon_default() {}
 
 //#endregion
@@ -506,6 +519,7 @@ export default async function f() {
 ```js
 
 //#region stmt-export-default-before-async-fn-name.js
+/* @__NO_SIDE_EFFECTS__ */
 async function f() {}
 
 //#endregion
@@ -532,6 +546,7 @@ export default async function* () {
 ```js
 
 //#region stmt-export-default-before-async-gen-fn-anon.js
+/* @__NO_SIDE_EFFECTS__ */
 async function* stmt_export_default_before_async_gen_fn_anon_default() {}
 
 //#endregion
@@ -558,6 +573,7 @@ export default async function* f() {
 ```js
 
 //#region stmt-export-default-before-async-gen-fn-name.js
+/* @__NO_SIDE_EFFECTS__ */
 async function* f() {}
 
 //#endregion
@@ -584,7 +600,8 @@ export default function() {
 ```js
 
 //#region stmt-export-default-after-fn-anon.js
-/* @__NO_SIDE_EFFECTS__ */ function stmt_export_default_after_fn_anon_default() {}
+/* @__NO_SIDE_EFFECTS__ */
+function stmt_export_default_after_fn_anon_default() {}
 
 //#endregion
 export { stmt_export_default_after_fn_anon_default as default };
@@ -610,7 +627,8 @@ export default function f() {
 ```js
 
 //#region stmt-export-default-after-fn-name.js
-/* @__NO_SIDE_EFFECTS__ */ function f() {}
+/* @__NO_SIDE_EFFECTS__ */
+function f() {}
 
 //#endregion
 export { f as default };
@@ -636,7 +654,8 @@ export default function* () {
 ```js
 
 //#region stmt-export-default-after-gen-fn-anon.js
-/* @__NO_SIDE_EFFECTS__ */ function* stmt_export_default_after_gen_fn_anon_default() {}
+/* @__NO_SIDE_EFFECTS__ */
+function* stmt_export_default_after_gen_fn_anon_default() {}
 
 //#endregion
 export { stmt_export_default_after_gen_fn_anon_default as default };
@@ -662,7 +681,8 @@ export default function* f() {
 ```js
 
 //#region stmt-export-default-after-gen-fn-name.js
-/* @__NO_SIDE_EFFECTS__ */ function* f() {}
+/* @__NO_SIDE_EFFECTS__ */
+function* f() {}
 
 //#endregion
 export { f as default };
@@ -688,7 +708,8 @@ export default async function() {
 ```js
 
 //#region stmt-export-default-after-async-fn-anon.js
-/* @__NO_SIDE_EFFECTS__ */ async function stmt_export_default_after_async_fn_anon_default() {}
+/* @__NO_SIDE_EFFECTS__ */
+async function stmt_export_default_after_async_fn_anon_default() {}
 
 //#endregion
 export { stmt_export_default_after_async_fn_anon_default as default };
@@ -714,7 +735,8 @@ export default async function f() {
 ```js
 
 //#region stmt-export-default-after-async-fn-name.js
-/* @__NO_SIDE_EFFECTS__ */ async function f() {}
+/* @__NO_SIDE_EFFECTS__ */
+async function f() {}
 
 //#endregion
 export { f as default };
@@ -740,7 +762,8 @@ export default async function* () {
 ```js
 
 //#region stmt-export-default-after-async-gen-fn-anon.js
-/* @__NO_SIDE_EFFECTS__ */ async function* stmt_export_default_after_async_gen_fn_anon_default() {}
+/* @__NO_SIDE_EFFECTS__ */
+async function* stmt_export_default_after_async_gen_fn_anon_default() {}
 
 //#endregion
 export { stmt_export_default_after_async_gen_fn_anon_default as default };
@@ -766,7 +789,8 @@ export default async function* f() {
 ```js
 
 //#region stmt-export-default-after-async-gen-fn-name.js
-/* @__NO_SIDE_EFFECTS__ */ async function* f() {}
+/* @__NO_SIDE_EFFECTS__ */
+async function* f() {}
 
 //#endregion
 export { f as default };

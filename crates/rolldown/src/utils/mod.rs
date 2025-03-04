@@ -1,4 +1,4 @@
-use oxc::ast::VisitMut;
+use oxc::ast_visit::VisitMut;
 use rolldown_common::AstScopes;
 use rolldown_ecmascript::EcmaAst;
 use rolldown_ecmascript_utils::{AstSnippet, TakeIn};

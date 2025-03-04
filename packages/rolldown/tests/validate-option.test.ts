@@ -13,15 +13,20 @@ test('validate input option', async () => {
         // @ts-ignore nested invalid key
         foo: 'bar',
       },
+      watch: {
+        // @ts-ignore
+        chokidar: {},
+      },
     })
     expect.unreachable()
   } catch (error: any) {
     expect(error.message).toMatchInlineSnapshot(`
-          "Failed validate input options.
-          - For the "input". Invalid type: Expected (string | Array | Object) but received 1. 
-          - For the "resolve.foo". Invalid key: Expected never but received "foo". 
-          - For the "foo". Invalid key: Expected never but received "foo". "
-        `)
+      "Failed validate input options.
+      - For the "input". Invalid type: Expected (string | Array | Object) but received 1. 
+      - For the "resolve.foo". Invalid key: Expected never but received "foo". 
+      - For the "watch.chokidar". The "watch.chokidar" option is deprecated, please use "watch.notify" instead of it. 
+      - For the "foo". Invalid key: Expected never but received "foo". "
+    `)
   }
 })
 

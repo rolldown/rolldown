@@ -105,7 +105,11 @@ const JsxOptionsSchema = v.strictObject({
 })
 
 const WatchOptionsSchema = v.strictObject({
-  chokidar: v.optional(v.any()),
+  chokidar: v.optional(
+    v.never(
+      `The "watch.chokidar" option is deprecated, please use "watch.notify" instead of it`,
+    ),
+  ),
   exclude: v.optional(
     v.union([StringOrRegExpSchema, v.array(StringOrRegExpSchema)]),
   ),
@@ -639,15 +643,31 @@ export function validateOption<T>(key: 'input' | 'output', options: T): void {
   if (!parsed.success) {
     const errors = parsed.issues
       .map((issue) => {
-        const path = issue.path!.map((path) => path.key).join('.')
+        const issuePaths = issue.path!.map((path) => path.key)
+        let issueMsg = issue.message
+        // For issue in union type, ref https://valibot.dev/guides/unions/
+        // - the received is not matched with the all the sub typing
+        // - one sub typing is matched, but it is has issue, we need to find the matched sub issue
+        if (issue.type === 'union') {
+          const subIssue = issue.issues?.find(
+            (i) => !(i.type !== issue.received && i.input === issue.input),
+          )
+          if (subIssue) {
+            if (subIssue.path) {
+              issuePaths.push(subIssue.path.map((path) => path.key))
+            }
+            issueMsg = subIssue.message
+          }
+        }
+        const stringPath = issuePaths.join('.')
         const helper =
           key === 'input'
-            ? inputHelperMsgRecord[path]
-            : outputHelperMsgRecord[path]
+            ? inputHelperMsgRecord[stringPath]
+            : outputHelperMsgRecord[stringPath]
         if (helper && helper.ignored) {
           return ''
         }
-        return `- For the "${path}". ${issue.message}. ${helper ? helper.msg : ''}`
+        return `- For the "${stringPath}". ${issueMsg}. ${helper ? helper.msg : ''}`
       })
       .filter(Boolean)
     if (errors.length) {

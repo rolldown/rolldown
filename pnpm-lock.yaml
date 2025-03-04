@@ -435,6 +435,9 @@ importers:
 
   packages/rollup-tests:
     dependencies:
+      cross-env:
+        specifier: ^7.0.3
+        version: 7.0.3
       fixturify:
         specifier: ^3.0.0
         version: 3.0.0

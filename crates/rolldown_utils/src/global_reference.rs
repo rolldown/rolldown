@@ -794,35 +794,31 @@ static OBJECT_PROTOTYPE_THIRD_PROP: phf::Set<&str> = phf::phf_set![
   "watch",
 ];
 
+#[inline]
 pub fn is_global_ident_ref(ident: &str) -> bool {
   GLOBAL_IDENT.contains(ident)
 }
 
 pub fn is_side_effect_free_member_expr_of_len_two(member_expr: &[Atom]) -> bool {
-  if member_expr.len() != 2 {
-    return false;
-  }
-  match member_expr[0].as_ref() {
-    "console" => CONSOLE_SECOND_PROP.contains(member_expr[1].as_ref()),
-    "Reflect" => REFLECT_SECOND_PROP.contains(member_expr[1].as_ref()),
-    "Math" => MATH_SECOND_PROP.contains(member_expr[1].as_ref()),
-    "Object" => OBJECT_SECOND_PROP.contains(member_expr[1].as_ref()),
-    "Symbol" => SYMBOL_SECOND_PROP.contains(member_expr[1].as_ref()),
-    "JSON" => member_expr[1] == "stringify" || member_expr[1] == "parse",
+  match member_expr {
+    [first, second] => match first.as_str() {
+      "console" => CONSOLE_SECOND_PROP.contains(second),
+      "Reflect" => REFLECT_SECOND_PROP.contains(second),
+      "Math" => MATH_SECOND_PROP.contains(second),
+      "Object" => OBJECT_SECOND_PROP.contains(second),
+      "Symbol" => SYMBOL_SECOND_PROP.contains(second),
+      "JSON" => second == "stringify" || second == "parse",
+      _ => false,
+    },
     _ => false,
   }
 }
 
 pub fn is_side_effect_free_member_expr_of_len_three(member_expr: &[Atom]) -> bool {
-  if member_expr.len() != 3 {
-    return false;
+  match member_expr {
+    [first, second, third] => {
+      first == "Object" && second == "prototype" && OBJECT_PROTOTYPE_THIRD_PROP.contains(third)
+    }
+    _ => false,
   }
-  if member_expr[0].as_ref() != "Object" {
-    return false;
-  }
-
-  if member_expr[1].as_ref() != "prototype" {
-    return false;
-  }
-  OBJECT_PROTOTYPE_THIRD_PROP.contains(member_expr[2].as_str())
 }

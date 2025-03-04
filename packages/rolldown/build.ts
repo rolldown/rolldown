@@ -112,9 +112,6 @@ const configs = defineConfig([
                 )
                 fsExtra.copyFileSync(file, nodePath.join(copyTo, fileName))
                 console.log(colors.green('[build:done]'), `Cleaning ${file}`)
-                try {
-                  fsExtra.rmSync(file)
-                } catch {}
               })
             }
 

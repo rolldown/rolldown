@@ -17,12 +17,12 @@ console.log(f);
 
 //#region entry.jsx
 function Foo() {}
-let a = React.createElement("div", null);
-let b = React.createElement(Foo, null, a);
-let c = React.createElement(React.Fragment, null, b);
-let d = React.createElement("div", null);
-let e = React.createElement(Foo, null, d);
-let f = React.createElement(React.Fragment, null, e);
+let a = /* @__PURE__ */ React.createElement("div", null);
+let b = /* @__PURE__ */ React.createElement(Foo, null, a);
+let c = /* @__PURE__ */ React.createElement(React.Fragment, null, b);
+let d = /* @__PURE__ */ React.createElement("div", null);
+let e = /* @__PURE__ */ React.createElement(Foo, null, d);
+let f = /* @__PURE__ */ React.createElement(React.Fragment, null, e);
 console.log(f);
 
 //#endregion

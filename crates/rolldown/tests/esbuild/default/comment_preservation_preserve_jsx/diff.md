@@ -57,19 +57,19 @@ import { Fragment, jsx, jsxs } from "react/jsx-runtime";
 
 //#region entry.jsx
 console.log(
-	jsx("div", { x }),
-	jsx("div", { x: "y" }),
-	jsx("div", { x: true }),
-	jsx("div", { ...x }),
-	jsx("div", { children: x }),
-	jsx(Fragment, { children: x }),
+	/* @__PURE__ */ jsx("div", { x }),
+	/* @__PURE__ */ jsx("div", { x: "y" }),
+	/* @__PURE__ */ jsx("div", { x: true }),
+	/* @__PURE__ */ jsx("div", { ...x }),
+	/* @__PURE__ */ jsx("div", { children: x }),
+	/* @__PURE__ */ jsx(Fragment, { children: x }),
 	// Comments on absent AST nodes
-	jsxs("div", { children: ["before", "after"] }),
-	jsxs("div", { children: ["before", "after"] }),
-	jsxs("div", { children: ["before", "after"] }),
-	jsxs(Fragment, { children: ["before", "after"] }),
-	jsxs(Fragment, { children: ["before", "after"] }),
-	jsxs(Fragment, { children: ["before", "after"] })
+	/* @__PURE__ */ jsxs("div", { children: ["before", "after"] }),
+	/* @__PURE__ */ jsxs("div", { children: ["before", "after"] }),
+	/* @__PURE__ */ jsxs("div", { children: ["before", "after"] }),
+	/* @__PURE__ */ jsxs(Fragment, { children: ["before", "after"] }),
+	/* @__PURE__ */ jsxs(Fragment, { children: ["before", "after"] }),
+	/* @__PURE__ */ jsxs(Fragment, { children: ["before", "after"] })
 );
 
 //#endregion
@@ -130,19 +130,19 @@ console.log(
 -  }after</>
 -);
 \ No newline at end of file
-+	jsx("div", { x }),
-+	jsx("div", { x: "y" }),
-+	jsx("div", { x: true }),
-+	jsx("div", { ...x }),
-+	jsx("div", { children: x }),
-+	jsx(Fragment, { children: x }),
++	/* @__PURE__ */ jsx("div", { x }),
++	/* @__PURE__ */ jsx("div", { x: "y" }),
++	/* @__PURE__ */ jsx("div", { x: true }),
++	/* @__PURE__ */ jsx("div", { ...x }),
++	/* @__PURE__ */ jsx("div", { children: x }),
++	/* @__PURE__ */ jsx(Fragment, { children: x }),
 +	// Comments on absent AST nodes
-+	jsxs("div", { children: ["before", "after"] }),
-+	jsxs("div", { children: ["before", "after"] }),
-+	jsxs("div", { children: ["before", "after"] }),
-+	jsxs(Fragment, { children: ["before", "after"] }),
-+	jsxs(Fragment, { children: ["before", "after"] }),
-+	jsxs(Fragment, { children: ["before", "after"] })
++	/* @__PURE__ */ jsxs("div", { children: ["before", "after"] }),
++	/* @__PURE__ */ jsxs("div", { children: ["before", "after"] }),
++	/* @__PURE__ */ jsxs("div", { children: ["before", "after"] }),
++	/* @__PURE__ */ jsxs(Fragment, { children: ["before", "after"] }),
++	/* @__PURE__ */ jsxs(Fragment, { children: ["before", "after"] }),
++	/* @__PURE__ */ jsxs(Fragment, { children: ["before", "after"] })
 +);
 +
 +//#endregion

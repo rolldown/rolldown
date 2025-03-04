@@ -25,7 +25,7 @@ import { Fragment, jsx } from "react/jsx-runtime";
 //#region entry.jsx
 let Foo = {
 	Bar_(props) {
-		return jsx(Fragment, { children: props.text_ });
+		return /* @__PURE__ */ jsx(Fragment, { children: props.text_ });
 	},
 	hello_: "hello, world",
 	createElement_(...args) {
@@ -35,7 +35,7 @@ let Foo = {
 		console.log("Fragment", ...args);
 	}
 };
-var entry_default = jsx(Foo.Bar_, { text_: Foo.hello_ });
+var entry_default = /* @__PURE__ */ jsx(Foo.Bar_, { text_: Foo.hello_ });
 
 //#endregion
 export { entry_default as default };

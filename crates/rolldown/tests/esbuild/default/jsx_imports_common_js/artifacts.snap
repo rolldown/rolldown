@@ -1,6 +1,5 @@
 ---
 source: crates/rolldown_testing/src/integration_test.rs
-snapshot_kind: text
 ---
 # Assets
 
@@ -17,7 +16,7 @@ var import_custom_react = __toESM(require_custom_react());
 
 //#endregion
 //#region entry.jsx
-console.log((0, import_custom_react.elem)("div", null), (0, import_custom_react.elem)(import_custom_react.frag, null, "fragment"));
+console.log(/* @__PURE__ */ (0, import_custom_react.elem)("div", null), /* @__PURE__ */ (0, import_custom_react.elem)(import_custom_react.frag, null, "fragment"));
 
 //#endregion
 ```

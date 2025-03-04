@@ -22,12 +22,12 @@ console.log(0 /* y */, 1 /* z */);
 ```js
 
 //#region number.ts
-let x = function(x$1) {
+let x = /* @__PURE__ */ function(x$1) {
 	x$1[x$1["y"] = 0] = "y";
 	x$1[x$1["yy"] = 0] = "yy";
 	return x$1;
 }({});
-x = function(x$1) {
+x = /* @__PURE__ */ function(x$1) {
 	x$1[x$1["z"] = 1] = "z";
 	return x$1;
 }(x || {});
@@ -92,12 +92,12 @@ console.log("a" /* y */, "a" /* z */);
 ```js
 
 //#region string.ts
-let x = function(x$1) {
+let x = /* @__PURE__ */ function(x$1) {
 	x$1["y"] = "a";
 	x$1["yy"] = "a";
 	return x$1;
 }({});
-x = function(x$1) {
+x = /* @__PURE__ */ function(x$1) {
 	x$1["z"] = "a";
 	return x$1;
 }(x || {});
@@ -165,18 +165,18 @@ console.log(100 /* b */, 100 /* b */, 625 /* g */, 625 /* g */);
 ```js
 
 //#region propagation.ts
-let a = function(a$1) {
+let a = /* @__PURE__ */ function(a$1) {
 	a$1[a$1["b"] = 100] = "b";
 	return a$1;
 }({});
-let x = function(x$1) {
+let x = /* @__PURE__ */ function(x$1) {
 	x$1[x$1["c"] = 100] = "c";
 	x$1[x$1["d"] = 200] = "d";
 	x$1[x$1["e"] = x$1.d ** 2] = "e";
 	x$1[x$1["f"] = x$1["e"] / 4] = "f";
 	return x$1;
 }({});
-x = function(x$1) {
+x = /* @__PURE__ */ function(x$1) {
 	x$1[x$1["g"] = x$1.f >> 4] = "g";
 	return x$1;
 }(x || {});
@@ -256,7 +256,7 @@ export var foo;
 //#region nested-number.ts
 let foo;
 (function(_foo) {
-	let x$1 = function(x$2) {
+	let x$1 = /* @__PURE__ */ function(x$2) {
 		x$2[x$2["y"] = 0] = "y";
 		x$2[x$2["yy"] = 0] = "yy";
 		return x$2;
@@ -264,7 +264,7 @@ let foo;
 	_foo.x = x$1;
 })(foo || (foo = {}));
 (function(_foo2) {
-	x = function(x$1) {
+	x = /* @__PURE__ */ function(x$1) {
 		x$1[x$1["z"] = 1] = "z";
 		return x$1;
 	}(x || {});
@@ -361,7 +361,7 @@ export var foo;
 //#region nested-string.ts
 let foo;
 (function(_foo) {
-	let x$1 = function(x$2) {
+	let x$1 = /* @__PURE__ */ function(x$2) {
 		x$2["y"] = "a";
 		x$2["yy"] = "a";
 		return x$2;
@@ -369,7 +369,7 @@ let foo;
 	_foo.x = x$1;
 })(foo || (foo = {}));
 (function(_foo2) {
-	x = function(x$1) {
+	x = /* @__PURE__ */ function(x$1) {
 		x$1["z"] = "a";
 		return x$1;
 	}(x || {});
@@ -468,14 +468,14 @@ export var n;
 //#region nested-propagation.ts
 let n;
 (function(_n) {
-	let a$1 = function(a$2) {
+	let a$1 = /* @__PURE__ */ function(a$2) {
 		a$2[a$2["b"] = 100] = "b";
 		return a$2;
 	}({});
 	_n.a = a$1;
 })(n || (n = {}));
 (function(_n2) {
-	let x$1 = function(x$2) {
+	let x$1 = /* @__PURE__ */ function(x$2) {
 		x$2[x$2["c"] = n.a.b] = "c";
 		x$2[x$2["d"] = x$2.c * 2] = "d";
 		x$2[x$2["e"] = x$2.d ** 2] = "e";
@@ -485,7 +485,7 @@ let n;
 	_n2.x = x$1;
 })(n || (n = {}));
 (function(_n3) {
-	x = function(x$1) {
+	x = /* @__PURE__ */ function(x$1) {
 		x$1[x$1["g"] = x$1.f >> 4] = "g";
 		return x$1;
 	}(x || {});

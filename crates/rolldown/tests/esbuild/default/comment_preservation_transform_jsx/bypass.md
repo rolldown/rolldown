@@ -48,29 +48,29 @@ console.log(
 
 //#region entry.jsx
 console.log(
-	React.createElement("div", { x }),
-	React.createElement("div", { x: "y" }),
-	React.createElement("div", { x: true }),
-	React.createElement("div", x),
-	React.createElement(
+	/* @__PURE__ */ React.createElement("div", { x }),
+	/* @__PURE__ */ React.createElement("div", { x: "y" }),
+	/* @__PURE__ */ React.createElement("div", { x: true }),
+	/* @__PURE__ */ React.createElement("div", x),
+	/* @__PURE__ */ React.createElement(
 		"div",
 		null,
 		/*before*/
 		x
 ),
-	React.createElement(
+	/* @__PURE__ */ React.createElement(
 		React.Fragment,
 		null,
 		/*before*/
 		x
 ),
 	// Comments on absent AST nodes
-	React.createElement("div", null, "before", "after"),
-	React.createElement("div", null, "before", "after"),
-	React.createElement("div", null, "before", "after"),
-	React.createElement(React.Fragment, null, "before", "after"),
-	React.createElement(React.Fragment, null, "before", "after"),
-	React.createElement(React.Fragment, null, "before", "after")
+	/* @__PURE__ */ React.createElement("div", null, "before", "after"),
+	/* @__PURE__ */ React.createElement("div", null, "before", "after"),
+	/* @__PURE__ */ React.createElement("div", null, "before", "after"),
+	/* @__PURE__ */ React.createElement(React.Fragment, null, "before", "after"),
+	/* @__PURE__ */ React.createElement(React.Fragment, null, "before", "after"),
+	/* @__PURE__ */ React.createElement(React.Fragment, null, "before", "after")
 );
 
 //#endregion

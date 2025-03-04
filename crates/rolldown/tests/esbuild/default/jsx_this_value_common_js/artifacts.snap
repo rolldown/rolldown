@@ -1,6 +1,5 @@
 ---
 source: crates/rolldown_testing/src/integration_test.rs
-snapshot_kind: text
 ---
 # Assets
 
@@ -18,9 +17,9 @@ import { __commonJS } from "./chunk.js";
 
 //#region factory.jsx
 var require_factory = __commonJS({ "factory.jsx"(exports) {
-	console.log([exports("x", null), /* @__PURE__ */ exports("x", null)]);
+	console.log([/* @__PURE__ */ exports("x", null), /* @__PURE__ */ exports("x", null)]);
 	f = function() {
-		console.log([this("y", null), /* @__PURE__ */ this("y", null)]);
+		console.log([/* @__PURE__ */ this("y", null), /* @__PURE__ */ this("y", null)]);
 	};
 } });
 
@@ -35,8 +34,8 @@ import { __commonJS } from "./chunk.js";
 
 //#region fragment.jsx
 var require_fragment = __commonJS({ "fragment.jsx"(exports) {
-	console.log([exports(exports, null, "x"), /* @__PURE__ */ exports(exports, null, "x")]), f = function() {
-		console.log([this(this, null, "y"), /* @__PURE__ */ this(this, null, "y")]);
+	console.log([/* @__PURE__ */ exports(exports, null, "x"), /* @__PURE__ */ exports(exports, null, "x")]), f = function() {
+		console.log([/* @__PURE__ */ this(this, null, "y"), /* @__PURE__ */ this(this, null, "y")]);
 	};
 } });
 

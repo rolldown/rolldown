@@ -1,6 +1,5 @@
 ---
 source: crates/rolldown_testing/src/integration_test.rs
-snapshot_kind: text
 ---
 # Assets
 
@@ -9,31 +8,31 @@ snapshot_kind: text
 ```js
 
 //#region enums.ts
-let a_DROP = function(a_DROP$1) {
+let a_DROP = /* @__PURE__ */ function(a_DROP$1) {
 	a_DROP$1[a_DROP$1["x"] = 1] = "x";
 	return a_DROP$1;
 }({});
-let b_DROP = function(b_DROP$1) {
+let b_DROP = /* @__PURE__ */ function(b_DROP$1) {
 	b_DROP$1[b_DROP$1["x"] = 2] = "x";
 	return b_DROP$1;
 }({});
-let c_DROP = function(c_DROP$1) {
+let c_DROP = /* @__PURE__ */ function(c_DROP$1) {
 	c_DROP$1["x"] = "";
 	return c_DROP$1;
 }({});
-let a_keep = function(a_keep$1) {
+let a_keep = /* @__PURE__ */ function(a_keep$1) {
 	a_keep$1[a_keep$1["x"] = false] = "x";
 	return a_keep$1;
 }({});
-let b_keep = function(b_keep$1) {
+let b_keep = /* @__PURE__ */ function(b_keep$1) {
 	b_keep$1[b_keep$1["x"] = foo] = "x";
 	return b_keep$1;
 }({});
-let c_keep = function(c_keep$1) {
+let c_keep = /* @__PURE__ */ function(c_keep$1) {
 	c_keep$1[c_keep$1["x"] = 3] = "x";
 	return c_keep$1;
 }({});
-let d_keep = function(d_keep$1) {
+let d_keep = /* @__PURE__ */ function(d_keep$1) {
 	d_keep$1[d_keep$1["x"] = 4] = "x";
 	return d_keep$1;
 }({});

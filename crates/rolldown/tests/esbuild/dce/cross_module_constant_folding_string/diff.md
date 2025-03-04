@@ -30,7 +30,7 @@ console.log([
 ```js
 
 //#region enum-constants.ts
-let x = function(x$1) {
+let x = /* @__PURE__ */ function(x$1) {
 	x$1["a"] = "foo";
 	x$1["b"] = "bar";
 	return x$1;
@@ -160,7 +160,7 @@ console.log({
 const a = "foo";
 const b = "bar";
 const c = "baz";
-let x = function(x$1) {
+let x = /* @__PURE__ */ function(x$1) {
 	x$1["a"] = "FOO";
 	x$1["b"] = "BAR";
 	x$1["c"] = "BAZ";

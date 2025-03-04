@@ -1,6 +1,5 @@
 ---
 source: crates/rolldown_testing/src/integration_test.rs
-snapshot_kind: text
 ---
 # Assets
 
@@ -9,11 +8,11 @@ snapshot_kind: text
 ```js
 
 //#region node_modules/pkg/button.jsx
-const Button = () => React.createElement("button", null);
+const Button = () => /* @__PURE__ */ React.createElement("button", null);
 
 //#endregion
 //#region test.jsx
-render(React.createElement(Button, null));
+render(/* @__PURE__ */ React.createElement(Button, null));
 
 //#endregion
 ```

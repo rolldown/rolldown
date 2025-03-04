@@ -21,9 +21,9 @@ f = function() {
 ```js
 
 //#region factory.jsx
-console.log([import.meta("x", null), /* @__PURE__ */ import.meta("x", null)]);
+console.log([/* @__PURE__ */ import.meta("x", null), /* @__PURE__ */ import.meta("x", null)]);
 f = function() {
-	console.log([import.meta("y", null), /* @__PURE__ */ import.meta("y", null)]);
+	console.log([/* @__PURE__ */ import.meta("y", null), /* @__PURE__ */ import.meta("y", null)]);
 };
 
 //#endregion
@@ -62,8 +62,8 @@ console.log([
 ```js
 
 //#region fragment.jsx
-console.log([import.meta(import.meta, null, "x"), /* @__PURE__ */ import.meta(import.meta, null, "x")]), f = function() {
-	console.log([import.meta(import.meta, null, "y"), /* @__PURE__ */ import.meta(import.meta, null, "y")]);
+console.log([/* @__PURE__ */ import.meta(import.meta, null, "x"), /* @__PURE__ */ import.meta(import.meta, null, "x")]), f = function() {
+	console.log([/* @__PURE__ */ import.meta(import.meta, null, "y"), /* @__PURE__ */ import.meta(import.meta, null, "y")]);
 };
 
 //#endregion

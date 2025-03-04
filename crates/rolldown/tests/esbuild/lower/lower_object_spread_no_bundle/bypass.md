@@ -58,26 +58,26 @@ let tests = [
 	}
 ];
 let jsx$1 = [
-	jsx("div", {
+	/* @__PURE__ */ jsx("div", {
 		...a,
 		...b
 	}),
-	jsx("div", {
+	/* @__PURE__ */ jsx("div", {
 		a: true,
 		b: true,
 		...c
 	}),
-	jsx("div", {
+	/* @__PURE__ */ jsx("div", {
 		...a,
 		b: true,
 		c: true
 	}),
-	jsx("div", {
+	/* @__PURE__ */ jsx("div", {
 		a: true,
 		...b,
 		c: true
 	}),
-	jsx("div", {
+	/* @__PURE__ */ jsx("div", {
 		a: true,
 		b: true,
 		...c,

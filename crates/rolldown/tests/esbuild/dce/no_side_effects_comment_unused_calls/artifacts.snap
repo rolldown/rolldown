@@ -14,12 +14,10 @@ const f = /* @__NO_SIDE_EFFECTS__ */ function(y) {
 const g = /* @__NO_SIDE_EFFECTS__ */ function* (y) {
 	sideEffect(y);
 };
-f("removeThisCall");
-g("removeThisCall");
-f(onlyKeepThisIdentifier);
-g(onlyKeepThisIdentifier);
-x(f("keepThisCall"));
-x(g("keepThisCall"));
+onlyKeepThisIdentifier;
+onlyKeepThisIdentifier;
+x(/* @__PURE__ */ f("keepThisCall"));
+x(/* @__PURE__ */ g("keepThisCall"));
 
 //#endregion
 ```
@@ -32,9 +30,8 @@ x(g("keepThisCall"));
 function f(y) {
 	sideEffect(y);
 }
-f("removeThisCall");
-f(onlyKeepThisIdentifier);
-x(f("keepThisCall"));
+onlyKeepThisIdentifier;
+x(/* @__PURE__ */ f("keepThisCall"));
 
 //#endregion
 export { f as default };
@@ -52,12 +49,10 @@ function f(y) {
 function* g(y) {
 	sideEffect(y);
 }
-f("removeThisCall");
-g("removeThisCall");
-f(onlyKeepThisIdentifier);
-g(onlyKeepThisIdentifier);
-x(f("keepThisCall"));
-x(g("keepThisCall"));
+onlyKeepThisIdentifier;
+onlyKeepThisIdentifier;
+x(/* @__PURE__ */ f("keepThisCall"));
+x(/* @__PURE__ */ g("keepThisCall"));
 
 //#endregion
 ```
@@ -72,12 +67,10 @@ const f = /* @__NO_SIDE_EFFECTS__ */ function(y) {
 const g = /* @__NO_SIDE_EFFECTS__ */ function* (y) {
 	sideEffect(y);
 };
-f("removeThisCall");
-g("removeThisCall");
-f(onlyKeepThisIdentifier);
-g(onlyKeepThisIdentifier);
-x(f("keepThisCall"));
-x(g("keepThisCall"));
+onlyKeepThisIdentifier;
+onlyKeepThisIdentifier;
+x(/* @__PURE__ */ f("keepThisCall"));
+x(/* @__PURE__ */ g("keepThisCall"));
 
 //#endregion
 ```

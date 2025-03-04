@@ -1,6 +1,5 @@
 ---
 source: crates/rolldown_testing/src/integration_test.rs
-snapshot_kind: text
 ---
 # warnings
 
@@ -28,12 +27,12 @@ const p = "p";
 
 //#endregion
 //#region in2.jsx
-const Internal = () => h(p, null, " Test 2 ");
+const Internal = () => /* @__PURE__ */ h(p, null, " Test 2 ");
 
 //#endregion
 //#region app.jsx
-const App = () => h(p, null, " ", h(Internal, null), " T ");
-render(h(App, null), document.getElementById("app"));
+const App = () => /* @__PURE__ */ h(p, null, " ", /* @__PURE__ */ h(Internal, null), " T ");
+render(/* @__PURE__ */ h(App, null), document.getElementById("app"));
 
 //#endregion
 ```

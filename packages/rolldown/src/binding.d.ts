@@ -823,6 +823,14 @@ export interface ExtensionAliasItem {
   replacements: Array<string>
 }
 
+/**
+ * Get offset within a `Uint8Array` which is aligned on 4 GiB.
+ *
+ * Does not check that the offset is within bounds of `buffer`.
+ * To ensure it always is, provide a `Uint8Array` of at least 4 GiB size.
+ */
+export declare function getBufferOffset(buffer: Uint8Array): number
+
 export type HelperMode = /**
  * Runtime mode (default): Helper functions are imported from a runtime package.
  *
@@ -1010,6 +1018,59 @@ export interface JsxOptions {
   refresh?: boolean | ReactRefreshOptions
 }
 
+/**
+ * Transform JavaScript code to a Vite Node runnable module.
+ *
+ * @param filename The name of the file being transformed.
+ * @param sourceText the source code itself
+ * @param options The options for the transformation. See {@link
+ * ModuleRunnerTransformOptions} for more information.
+ *
+ * @returns an object containing the transformed code, source maps, and any
+ * errors that occurred during parsing or transformation.
+ *
+ * @deprecated Only works for Vite.
+ */
+export declare function moduleRunnerTransform(filename: string, sourceText: string, options?: ModuleRunnerTransformOptions | undefined | null): ModuleRunnerTransformResult
+
+export interface ModuleRunnerTransformOptions {
+  /**
+   * Enable source map generation.
+   *
+   * When `true`, the `sourceMap` field of transform result objects will be populated.
+   *
+   * @default false
+   *
+   * @see {@link SourceMap}
+   */
+  sourcemap?: boolean
+}
+
+export interface ModuleRunnerTransformResult {
+  /**
+   * The transformed code.
+   *
+   * If parsing failed, this will be an empty string.
+   */
+  code: string
+  /**
+   * The source map for the transformed code.
+   *
+   * This will be set if {@link TransformOptions#sourcemap} is `true`.
+   */
+  map?: SourceMap
+  deps: Array<string>
+  dynamicDeps: Array<string>
+  /**
+   * Parse and transformation errors.
+   *
+   * Oxc's parser recovers from common syntax errors, meaning that
+   * transformed code may still be available even if there are errors in this
+   * list.
+   */
+  errors: Array<OxcError>
+}
+
 export interface OxcError {
   severity: Severity
   message: string
@@ -1028,6 +1089,14 @@ export interface ParserOptions {
   sourceType?: 'script' | 'module' | 'unambiguous' | undefined
   /** Treat the source text as `js`, `jsx`, `ts`, or `tsx`. */
   lang?: 'js' | 'jsx' | 'ts' | 'tsx'
+  /**
+   * Return an AST which includes TypeScript-related properties, or excludes them.
+   *
+   * `'js'` is default for JS / JSX files.
+   * `'ts'` is default for TS / TSX files.
+   * The type of the file is determined from `lang` option, or extension of provided `filename`.
+   */
+  astType?: 'js' | 'ts'
   /**
    * Emit `ParenthesizedExpression` in AST.
    *
@@ -1051,6 +1120,34 @@ export interface ParserOptions {
 /** Parse synchronously. */
 export declare function parseSync(filename: string, sourceText: string, options?: ParserOptions | undefined | null): ParseResult
 
+/**
+ * Parses AST into provided `Uint8Array` buffer.
+ *
+ * Source text must be written into the start of the buffer, and its length (in UTF-8 bytes)
+ * provided as `source_len`.
+ *
+ * This function will parse the source, and write the AST into the buffer, starting at the end.
+ *
+ * It also writes to the very end of the buffer the offset of `Program` within the buffer.
+ *
+ * Caller can deserialize data from the buffer on JS side.
+ *
+ * # SAFETY
+ *
+ * Caller must ensure:
+ * * Source text is written into start of the buffer.
+ * * Source text's UTF-8 byte length is `source_len`.
+ * * The 1st `source_len` bytes of the buffer comprises a valid UTF-8 string.
+ *
+ * If source text is originally a JS string on JS side, and converted to a buffer with
+ * `Buffer.from(str)` or `new TextEncoder().encode(str)`, this guarantees it's valid UTF-8.
+ *
+ * # Panics
+ *
+ * Panics if source text is too long, or AST takes more memory than is available in the buffer.
+ */
+export declare function parseSyncRaw(filename: string, buffer: Uint8Array, sourceLen: number, options?: ParserOptions | undefined | null): void
+
 export interface PreRenderedChunk {
   name: string
   isEntry: boolean
@@ -1059,6 +1156,9 @@ export interface PreRenderedChunk {
   moduleIds: Array<string>
   exports: Array<string>
 }
+
+/** Returns `true` if raw transfer is supported on this platform. */
+export declare function rawTransferSupported(): boolean
 
 export interface ReactRefreshOptions {
   /**

@@ -20,7 +20,7 @@ delete y;
 
 //#endregion
 //#region delete-3.js
-delete z;
+delete (0, z);
 
 //#endregion
 ```

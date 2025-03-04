@@ -20,7 +20,7 @@ var mustStartWithUpperCaseLetter = class {};
 
 //#endregion
 //#region entry.jsx
-console.log(jsx(mustStartWithUpperCaseLetter, { "tag-must-start-with-capital-letter": true }));
+console.log(/* @__PURE__ */ jsx(mustStartWithUpperCaseLetter, { "tag-must-start-with-capital-letter": true }));
 
 //#endregion
 ```
@@ -43,7 +43,7 @@ console.log(jsx(mustStartWithUpperCaseLetter, { "tag-must-start-with-capital-let
 +
 +//#endregion
 +//#region entry.jsx
-+console.log(jsx(mustStartWithUpperCaseLetter, { "tag-must-start-with-capital-letter": true }));
++console.log(/* @__PURE__ */ jsx(mustStartWithUpperCaseLetter, { "tag-must-start-with-capital-letter": true }));
 +
 +//#endregion
 \ No newline at end of file

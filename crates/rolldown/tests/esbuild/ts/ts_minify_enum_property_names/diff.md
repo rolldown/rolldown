@@ -59,12 +59,12 @@ mustBeComputed(
 ```js
 
 //#region cross-file.ts
-let CrossFileGood = function(CrossFileGood$1) {
+let CrossFileGood = /* @__PURE__ */ function(CrossFileGood$1) {
 	CrossFileGood$1["STR"] = "str 2";
 	CrossFileGood$1[CrossFileGood$1["NUM"] = 321] = "NUM";
 	return CrossFileGood$1;
 }({});
-let CrossFileBad = function(CrossFileBad$1) {
+let CrossFileBad = /* @__PURE__ */ function(CrossFileBad$1) {
 	CrossFileBad$1["PROTO"] = "__proto__";
 	CrossFileBad$1["CONSTRUCTOR"] = "constructor";
 	CrossFileBad$1["PROTOTYPE"] = "prototype";
@@ -73,12 +73,12 @@ let CrossFileBad = function(CrossFileBad$1) {
 
 //#endregion
 //#region entry.ts
-var SameFileGood = function(SameFileGood$1) {
+var SameFileGood = /* @__PURE__ */ function(SameFileGood$1) {
 	SameFileGood$1["STR"] = "str 1";
 	SameFileGood$1[SameFileGood$1["NUM"] = 123] = "NUM";
 	return SameFileGood$1;
 }(SameFileGood || {});
-var SameFileBad = function(SameFileBad$1) {
+var SameFileBad = /* @__PURE__ */ function(SameFileBad$1) {
 	SameFileBad$1["PROTO"] = "__proto__";
 	SameFileBad$1["CONSTRUCTOR"] = "constructor";
 	SameFileBad$1["PROTOTYPE"] = "prototype";

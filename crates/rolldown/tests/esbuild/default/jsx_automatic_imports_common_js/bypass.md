@@ -29,7 +29,7 @@ var import_custom_react = __toESM(require_custom_react());
 
 //#endregion
 //#region entry.jsx
-console.log(jsx("div", { jsx: import_custom_react.jsx }), jsx(Fragment, { children: jsx(import_custom_react.Fragment, {}) }));
+console.log(/* @__PURE__ */ jsx("div", { jsx: import_custom_react.jsx }), /* @__PURE__ */ jsx(Fragment, { children: /* @__PURE__ */ jsx(import_custom_react.Fragment, {}) }));
 
 //#endregion
 ```

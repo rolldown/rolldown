@@ -1,6 +1,5 @@
 ---
 source: crates/rolldown_testing/src/integration_test.rs
-snapshot_kind: text
 ---
 # warnings
 
@@ -23,7 +22,7 @@ function Fragment$1() {}
 
 //#endregion
 //#region entry.jsx
-console.log(jsx("div", { jsx: jsx$1 }), jsx(Fragment, { children: jsx(Fragment$1, {}) }));
+console.log(/* @__PURE__ */ jsx("div", { jsx: jsx$1 }), /* @__PURE__ */ jsx(Fragment, { children: /* @__PURE__ */ jsx(Fragment$1, {}) }));
 
 //#endregion
 ```

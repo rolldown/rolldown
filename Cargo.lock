@@ -2393,6 +2393,7 @@ dependencies = [
  "napi",
  "napi-build",
  "napi-derive",
+ "oxc",
  "oxc_parser_napi",
  "oxc_transform_napi",
  "rolldown",

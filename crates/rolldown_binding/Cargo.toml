@@ -23,6 +23,7 @@ derive_more                             = { workspace = true }
 futures                                 = { workspace = true }
 napi                                    = { workspace = true }
 napi-derive                             = { workspace = true }
+oxc                                     = { workspace = true }
 oxc_parser_napi                         = { workspace = true }
 oxc_transform_napi                      = { workspace = true }
 rolldown                                = { workspace = true }

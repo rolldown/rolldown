@@ -225,30 +225,37 @@ function bindingifyInput(
 
 // The `automatic` is most user usages, so it is different rollup's default value `false`
 function bindingifyJsx(input: InputOptions['jsx']): BindingInputOptions['jsx'] {
-  if (input === false) {
-    return { type: 'Disable' }
-  }
-  if (input) {
-    if (input.mode === 'preserve') {
+  switch (input) {
+    case false:
+      return { type: 'Disable' }
+    case 'react':
+      return { type: 'React' }
+    case 'react-jsx':
+      return { type: 'ReactJsx' }
+    case 'preserve':
       return { type: 'Preserve' }
-    }
-    const mode = input.mode ?? 'automatic'
-    return {
-      type: 'Enable',
-      field0: {
-        runtime: mode,
-        importSource:
-          mode === 'classic'
-            ? input.importSource
-            : mode === 'automatic'
-              ? input.jsxImportSource
-              : undefined,
-        pragma: input.factory,
-        pragmaFrag: input.fragment,
-        development: input.development,
-        refresh: input.refresh,
-      },
-    }
+    case undefined:
+      return undefined
+  }
+  if (input.mode === 'preserve') {
+    return { type: 'Preserve' }
+  }
+  const mode = input.mode ?? 'automatic'
+  return {
+    type: 'Enable',
+    field0: {
+      runtime: mode,
+      importSource:
+        mode === 'classic'
+          ? input.importSource
+          : mode === 'automatic'
+            ? input.jsxImportSource
+            : undefined,
+      pragma: input.factory,
+      pragmaFrag: input.fragment,
+      development: input.development,
+      refresh: input.refresh,
+    },
   }
 }
 

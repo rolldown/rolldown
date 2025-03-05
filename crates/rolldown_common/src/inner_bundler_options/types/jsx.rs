@@ -18,10 +18,12 @@ impl Default for Jsx {
 }
 
 impl Jsx {
+  #[inline]
   pub fn is_jsx_disabled(&self) -> bool {
     matches!(self, Jsx::Disable)
   }
 
+  #[inline]
   pub fn is_jsx_preserve(&self) -> bool {
     matches!(self, Jsx::Preserve)
   }

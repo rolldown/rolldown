@@ -1,30 +1,29 @@
 ---
 source: crates/rolldown_testing/src/integration_test.rs
-snapshot_kind: text
 ---
 # warnings
 
 ## EVAL
 
 ```text
-[EVAL] Warning: Use of eval is strongly discouraged as it poses security risks and may cause issues with minification.
+[EVAL] Warning: Use of `eval` function is strongly discouraged as it poses security risks and may cause issues with minification.
     ╭─[ entry.js:29:34 ]
     │
  29 │     function containsDirectEval() { eval() }
     │                                     ──┬─  
-    │                                       ╰─── Use `eval` function here.
+    │                                       ╰─── Use of `eval` function here.
 ────╯
 
 ```
 ## EVAL
 
 ```text
-[EVAL] Warning: Use of eval is strongly discouraged as it poses security risks and may cause issues with minification.
+[EVAL] Warning: Use of `eval` function is strongly discouraged as it poses security risks and may cause issues with minification.
    ╭─[ entry.js:5:2 ]
    │
  5 │     eval('add(1, 2)')
    │     ──┬─  
-   │       ╰─── Use `eval` function here.
+   │       ╰─── Use of `eval` function here.
 ───╯
 
 ```

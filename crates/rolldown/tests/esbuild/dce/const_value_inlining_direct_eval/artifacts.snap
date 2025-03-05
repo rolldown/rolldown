@@ -1,42 +1,41 @@
 ---
 source: crates/rolldown_testing/src/integration_test.rs
-snapshot_kind: text
 ---
 # warnings
 
 ## EVAL
 
 ```text
-[EVAL] Warning: Use of eval is strongly discouraged as it poses security risks and may cause issues with minification.
+[EVAL] Warning: Use of `eval` function is strongly discouraged as it poses security risks and may cause issues with minification.
    ╭─[ nested-eval.js:3:17 ]
    │
  3 │     console.log(x, eval('x'))
    │                    ──┬─  
-   │                      ╰─── Use `eval` function here.
+   │                      ╰─── Use of `eval` function here.
 ───╯
 
 ```
 ## EVAL
 
 ```text
-[EVAL] Warning: Use of eval is strongly discouraged as it poses security risks and may cause issues with minification.
+[EVAL] Warning: Use of `eval` function is strongly discouraged as it poses security risks and may cause issues with minification.
    ╭─[ top-level-eval.js:2:16 ]
    │
  2 │ console.log(x, eval('x'))
    │                ──┬─  
-   │                  ╰─── Use `eval` function here.
+   │                  ╰─── Use of `eval` function here.
 ───╯
 
 ```
 ## EVAL
 
 ```text
-[EVAL] Warning: Use of eval is strongly discouraged as it poses security risks and may cause issues with minification.
+[EVAL] Warning: Use of `eval` function is strongly discouraged as it poses security risks and may cause issues with minification.
    ╭─[ ts-namespace-eval.ts:3:17 ]
    │
  3 │     console.log(x, eval('x'))
    │                    ──┬─  
-   │                      ╰─── Use `eval` function here.
+   │                      ╰─── Use of `eval` function here.
 ───╯
 
 ```

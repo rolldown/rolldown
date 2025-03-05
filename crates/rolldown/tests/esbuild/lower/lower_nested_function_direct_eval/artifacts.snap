@@ -1,78 +1,77 @@
 ---
 source: crates/rolldown_testing/src/integration_test.rs
-snapshot_kind: text
 ---
 # warnings
 
 ## EVAL
 
 ```text
-[EVAL] Warning: Use of eval is strongly discouraged as it poses security risks and may cause issues with minification.
+[EVAL] Warning: Use of `eval` function is strongly discouraged as it poses security risks and may cause issues with minification.
    ╭─[ 2.js:1:28 ]
    │
  1 │ if (foo) { function x() {} eval('') }
    │                            ──┬─  
-   │                              ╰─── Use `eval` function here.
+   │                              ╰─── Use of `eval` function here.
 ───╯
 
 ```
 ## EVAL
 
 ```text
-[EVAL] Warning: Use of eval is strongly discouraged as it poses security risks and may cause issues with minification.
+[EVAL] Warning: Use of `eval` function is strongly discouraged as it poses security risks and may cause issues with minification.
    ╭─[ 3.js:1:39 ]
    │
  1 │ if (foo) { function x() {} if (bar) { eval('') } }
    │                                       ──┬─  
-   │                                         ╰─── Use `eval` function here.
+   │                                         ╰─── Use of `eval` function here.
 ───╯
 
 ```
 ## EVAL
 
 ```text
-[EVAL] Warning: Use of eval is strongly discouraged as it poses security risks and may cause issues with minification.
+[EVAL] Warning: Use of `eval` function is strongly discouraged as it poses security risks and may cause issues with minification.
    ╭─[ 4.js:1:12 ]
    │
  1 │ if (foo) { eval(''); function x() {} }
    │            ──┬─  
-   │              ╰─── Use `eval` function here.
+   │              ╰─── Use of `eval` function here.
 ───╯
 
 ```
 ## EVAL
 
 ```text
-[EVAL] Warning: Use of eval is strongly discouraged as it poses security risks and may cause issues with minification.
+[EVAL] Warning: Use of `eval` function is strongly discouraged as it poses security risks and may cause issues with minification.
    ╭─[ 6.js:1:42 ]
    │
  1 │ 'use strict'; if (foo) { function x() {} eval('') }
    │                                          ──┬─  
-   │                                            ╰─── Use `eval` function here.
+   │                                            ╰─── Use of `eval` function here.
 ───╯
 
 ```
 ## EVAL
 
 ```text
-[EVAL] Warning: Use of eval is strongly discouraged as it poses security risks and may cause issues with minification.
+[EVAL] Warning: Use of `eval` function is strongly discouraged as it poses security risks and may cause issues with minification.
    ╭─[ 7.js:1:53 ]
    │
  1 │ 'use strict'; if (foo) { function x() {} if (bar) { eval('') } }
    │                                                     ──┬─  
-   │                                                       ╰─── Use `eval` function here.
+   │                                                       ╰─── Use of `eval` function here.
 ───╯
 
 ```
 ## EVAL
 
 ```text
-[EVAL] Warning: Use of eval is strongly discouraged as it poses security risks and may cause issues with minification.
+[EVAL] Warning: Use of `eval` function is strongly discouraged as it poses security risks and may cause issues with minification.
    ╭─[ 8.js:1:26 ]
    │
  1 │ 'use strict'; if (foo) { eval(''); function x() {} }
    │                          ──┬─  
-   │                            ╰─── Use `eval` function here.
+   │                            ╰─── Use of `eval` function here.
 ───╯
 
 ```

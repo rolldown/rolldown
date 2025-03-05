@@ -1,9 +1,12 @@
 use arcstr::ArcStr;
-use oxc::span::SourceType;
+use oxc::{ast_visit::VisitMut, span::SourceType};
 use rolldown_common::{EcmaModuleAstUsage, Module, ModuleIdx, ModuleTable};
 use rolldown_ecmascript::EcmaCompiler;
+use rolldown_ecmascript_utils::AstSnippet;
 use rolldown_error::{BuildResult, ResultExt};
 use rolldown_utils::indexmap::FxIndexMap;
+
+use crate::hmr::hmr_ast_finalizer::HmrAstFinalizer;
 
 pub struct HmrManager {
   module_db: ModuleTable,
@@ -54,9 +57,17 @@ impl HmrManager {
 
       // TODO: We should get newest source and ast directly from module, but now we just manually fetch them.
       let source: String = std::fs::read_to_string(filename.as_str()).map_err_to_unhandleable()?;
-      let ast = EcmaCompiler::parse(filename, source, SourceType::default())?;
+      let mut ast = EcmaCompiler::parse(filename, source, SourceType::default())?;
 
-      // TODO: modify the AST
+      ast.program.with_mut(|fields| {
+        let mut finalizer = HmrAstFinalizer {
+          modules: &self.module_db.modules,
+          alloc: fields.allocator,
+          snippet: AstSnippet::new(fields.allocator),
+        };
+
+        finalizer.visit_program(fields.program);
+      });
 
       let codegen = EcmaCompiler::print(&ast, filename, false);
       outputs.push(codegen.code);

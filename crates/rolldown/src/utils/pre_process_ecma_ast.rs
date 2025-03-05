@@ -76,20 +76,18 @@ impl PreProcessEcmaAst {
         let mut transformer_options = bundle_options.base_transform_options.clone();
 
         if !matches!(parsed_type, OxcParseType::Js) {
-          // The oxc jsx_plugin is enabled by default, we need to disable it.
-          transformer_options.jsx.jsx_plugin = false;
-
-          match &bundle_options.jsx {
+          let jsx_plugin = match &bundle_options.jsx {
             Jsx::Disable => unreachable!("Jsx::Disable should be failed at parser."),
-            Jsx::Preserve => {}
+            // The oxc jsx_plugin is enabled by default, we need to disable it.
+            Jsx::Preserve => false,
             Jsx::Enable(jsx) => {
               transformer_options.jsx =
                 NormalizedBundlerOptions::merge_jsx_options(jsx.clone(), transformer_options.jsx);
-              if matches!(parsed_type, OxcParseType::Tsx | OxcParseType::Jsx) {
-                transformer_options.jsx.jsx_plugin = true;
-              }
+              matches!(parsed_type, OxcParseType::Tsx | OxcParseType::Jsx)
             }
-          }
+          };
+
+          transformer_options.jsx.jsx_plugin = jsx_plugin;
         }
 
         Transformer::new(fields.allocator, Path::new(path), &transformer_options)

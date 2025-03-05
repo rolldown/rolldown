@@ -17,7 +17,8 @@ enum Case {
 #[derive(Deserialize, Debug)]
 struct LsLintConfig {
   ignore: Vec<String>,
-  ls: HashMap<String, Case>,
+  file: HashMap<String, Case>,
+  directory: HashMap<String, Case>,
 }
 
 fn main() -> anyhow::Result<()> {
@@ -29,8 +30,17 @@ fn main() -> anyhow::Result<()> {
     globset_builder.add(Glob::new(ignore)?);
   }
   let globset_filter = globset_builder.build()?;
-  let ls_map = config
-    .ls
+  let file_matcher_map = config
+    .file
+    .iter()
+    .map(|(k, v)| {
+      let glob = Glob::new(k).unwrap().compile_matcher();
+      (glob, *v)
+    })
+    .collect::<Vec<(GlobMatcher, Case)>>();
+
+  let directory_matcher_map = config
+    .directory
     .iter()
     .map(|(k, v)| {
       let glob = Glob::new(k).unwrap().compile_matcher();
@@ -47,18 +57,32 @@ fn main() -> anyhow::Result<()> {
     if globset_filter.is_match(relative_path) {
       continue;
     }
-
-    let file_name = result.file_name().to_string_lossy();
-    for (pattern, case) in &ls_map {
-      if pattern.is_match(file_name.as_ref()) {
-        let file_stem = file_name.split('.').next().unwrap_or(&file_name);
-        match case {
-          Case::KebabCase if file_stem != file_stem.to_kebab_case() => {
-            has_error = true;
-            eprintln!("{} should be kebab-case", relative_path.display());
-          }
-          Case::KebabCase => {}
-        };
+    if relative_path.is_dir() {
+      for (pattern, case) in &directory_matcher_map {
+        if pattern.is_match(relative_path) {
+          let base_name = relative_path.file_name().unwrap().to_string_lossy();
+          match case {
+            Case::KebabCase if base_name != base_name.to_kebab_case() => {
+              has_error = true;
+              eprintln!("{} should be kebab-case", relative_path.display());
+            }
+            Case::KebabCase => {}
+          };
+        }
+      }
+    } else {
+      let file_name = result.file_name().to_string_lossy();
+      for (pattern, case) in &file_matcher_map {
+        if pattern.is_match(file_name.as_ref()) {
+          let file_stem = file_name.split('.').next().unwrap_or(&file_name);
+          match case {
+            Case::KebabCase if file_stem != file_stem.to_kebab_case() => {
+              has_error = true;
+              eprintln!("{} should be kebab-case", relative_path.display());
+            }
+            Case::KebabCase => {}
+          };
+        }
       }
     }
   }

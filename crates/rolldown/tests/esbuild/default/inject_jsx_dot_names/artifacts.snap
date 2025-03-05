@@ -1,6 +1,5 @@
 ---
 source: crates/rolldown_testing/src/integration_test.rs
-snapshot_kind: text
 ---
 # Assets
 
@@ -14,7 +13,7 @@ function frag() {}
 
 //#endregion
 //#region entry.jsx
-console.log(el(frag, null, el("div", null)));
+console.log(/* @__PURE__ */ el(frag, null, /* @__PURE__ */ el("div", null)));
 
 //#endregion
 ```

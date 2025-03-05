@@ -26,7 +26,7 @@ var obj = {
 ```
 ### rolldown
 ```js
-import { jsx } from "react/jsx-runtime";
+import "react/jsx-runtime";
 
 //#region entry.jsx
 const obj = {
@@ -35,18 +35,8 @@ const obj = {
 	...{ key: value },
 	after
 };
-jsx(Foo, {
-	before: true,
-	[key]: value,
-	key: value,
-	after: true
-});
-jsx(Bar, {
-	a,
-	[b]: c,
-	...d,
-	e
-});
+Foo, key, value, value;
+Bar, a, b, c, { ...d }, e;
 
 //#endregion
 ```
@@ -55,14 +45,14 @@ jsx(Bar, {
 ===================================================================
 --- esbuild	/out.js
 +++ rolldown	entry.js
-@@ -1,19 +1,23 @@
+@@ -1,19 +1,13 @@
 -// entry.jsx
 -var obj = {
 -  before,
 -  [key]: value,
 -  key: value,
 -  after
-+import { jsx } from "react/jsx-runtime";
++import "react/jsx-runtime";
 +
 +//#region entry.jsx
 +const obj = {
@@ -84,18 +74,8 @@ jsx(Bar, {
 -  e={e}
 -/>;
 \ No newline at end of file
-+jsx(Foo, {
-+	before: true,
-+	[key]: value,
-+	key: value,
-+	after: true
-+});
-+jsx(Bar, {
-+	a,
-+	[b]: c,
-+	...d,
-+	e
-+});
++Foo, key, value, value;
++Bar, a, b, c, { ...d }, e;
 +
 +//#endregion
 \ No newline at end of file

@@ -62,7 +62,7 @@ console.log(
 ```js
 
 //#region supported.ts
-var Foo = function(Foo$1) {
+var Foo = /* @__PURE__ */ function(Foo$1) {
 	Foo$1[Foo$1["X0"] = 123] = "X0";
 	Foo$1["X1"] = "x";
 	Foo$1[Foo$1["X2"] = 1] = "X2";
@@ -250,19 +250,19 @@ console.log(
 ```js
 
 //#region not-supported.ts
-var NonIntegerNumberToString = function(NonIntegerNumberToString$1) {
+var NonIntegerNumberToString = /* @__PURE__ */ function(NonIntegerNumberToString$1) {
 	NonIntegerNumberToString$1["SUPPORTED"] = "1";
 	NonIntegerNumberToString$1["UNSUPPORTED"] = "1.5";
 	return NonIntegerNumberToString$1;
 }(NonIntegerNumberToString || {});
 console.log(NonIntegerNumberToString.SUPPORTED, NonIntegerNumberToString.UNSUPPORTED);
-var OutOfBoundsNumberToString = function(OutOfBoundsNumberToString$1) {
+var OutOfBoundsNumberToString = /* @__PURE__ */ function(OutOfBoundsNumberToString$1) {
 	OutOfBoundsNumberToString$1["SUPPORTED"] = "1000000000";
 	OutOfBoundsNumberToString$1["UNSUPPORTED"] = "1000000000000";
 	return OutOfBoundsNumberToString$1;
 }(OutOfBoundsNumberToString || {});
 console.log(OutOfBoundsNumberToString.SUPPORTED, OutOfBoundsNumberToString.UNSUPPORTED);
-var TemplateExpressions = function(TemplateExpressions$1) {
+var TemplateExpressions = /* @__PURE__ */ function(TemplateExpressions$1) {
 	TemplateExpressions$1[TemplateExpressions$1["NULL"] = "null"] = "NULL";
 	TemplateExpressions$1[TemplateExpressions$1["TRUE"] = "true"] = "TRUE";
 	TemplateExpressions$1[TemplateExpressions$1["FALSE"] = "false"] = "FALSE";

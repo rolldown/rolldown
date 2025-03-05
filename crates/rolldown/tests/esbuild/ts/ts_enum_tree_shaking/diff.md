@@ -12,7 +12,7 @@ console.log(123 /* y */);
 ```js
 
 //#region simple-member.ts
-var x = function(x$1) {
+var x = /* @__PURE__ */ function(x$1) {
 	x$1[x$1["y"] = 123] = "y";
 	return x$1;
 }(x || {});
@@ -48,7 +48,7 @@ console.log(x);
 ```js
 
 //#region simple-enum.ts
-var x = function(x$1) {
+var x = /* @__PURE__ */ function(x$1) {
 	x$1[x$1["y"] = 123] = "y";
 	return x$1;
 }(x || {});
@@ -82,11 +82,11 @@ console.log(123 /* y */, 246 /* z */);
 ```js
 
 //#region sibling-member.ts
-var x = function(x$1) {
+var x = /* @__PURE__ */ function(x$1) {
 	x$1[x$1["y"] = 123] = "y";
 	return x$1;
 }(x || {});
-x = function(x$1) {
+x = /* @__PURE__ */ function(x$1) {
 	x$1[x$1["z"] = 246] = "z";
 	return x$1;
 }(x || {});
@@ -131,11 +131,11 @@ var x = /* @__PURE__ */ ((x2) => {
 
 //#region sibling-enum-before.ts
 console.log(x);
-var x = function(x$1) {
+var x = /* @__PURE__ */ function(x$1) {
 	x$1[x$1["y"] = 123] = "y";
 	return x$1;
 }(x || {});
-x = function(x$1) {
+x = /* @__PURE__ */ function(x$1) {
 	x$1[x$1["z"] = 246] = "z";
 	return x$1;
 }(x || {});
@@ -183,12 +183,12 @@ var x = /* @__PURE__ */ ((x2) => {
 ```js
 
 //#region sibling-enum-middle.ts
-var x = function(x$1) {
+var x = /* @__PURE__ */ function(x$1) {
 	x$1[x$1["y"] = 123] = "y";
 	return x$1;
 }(x || {});
 console.log(x);
-x = function(x$1) {
+x = /* @__PURE__ */ function(x$1) {
 	x$1[x$1["z"] = 246] = "z";
 	return x$1;
 }(x || {});
@@ -236,11 +236,11 @@ console.log(x);
 ```js
 
 //#region sibling-enum-after.ts
-var x = function(x$1) {
+var x = /* @__PURE__ */ function(x$1) {
 	x$1[x$1["y"] = 123] = "y";
 	return x$1;
 }(x || {});
-x = function(x$1) {
+x = /* @__PURE__ */ function(x$1) {
 	x$1[x$1["z"] = 246] = "z";
 	return x$1;
 }(x || {});
@@ -290,7 +290,7 @@ var x = /* @__PURE__ */ ((x2) => {
 (function(_x) {
 	console.log(x, y);
 })(x || (x = {}));
-var x = function(x$1) {
+var x = /* @__PURE__ */ function(x$1) {
 	x$1[x$1["y"] = 123] = "y";
 	return x$1;
 }(x || {});
@@ -333,7 +333,7 @@ var x = /* @__PURE__ */ ((x2) => {
 ```js
 
 //#region namespace-after.ts
-var x = function(x$1) {
+var x = /* @__PURE__ */ function(x$1) {
 	x$1[x$1["y"] = 123] = "y";
 	return x$1;
 }(x || {});

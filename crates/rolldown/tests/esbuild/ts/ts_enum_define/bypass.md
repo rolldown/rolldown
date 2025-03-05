@@ -14,7 +14,7 @@ var a = /* @__PURE__ */ ((a2) => {
 ```js
 
 //#region entry.ts
-var a = function(a$1) {
+var a = /* @__PURE__ */ function(a$1) {
 	a$1[a$1["b"] = 123] = "b";
 	a$1[a$1["c"] = 124] = "c";
 	return a$1;

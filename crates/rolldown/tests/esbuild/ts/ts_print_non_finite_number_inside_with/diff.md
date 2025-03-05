@@ -39,7 +39,7 @@ with (x) {
 ```js
 
 //#region entry.ts
-var Foo = function(Foo$1) {
+var Foo = /* @__PURE__ */ function(Foo$1) {
 	Foo$1[Foo$1["NAN"] = NaN] = "NAN";
 	Foo$1[Foo$1["POS_INF"] = Infinity] = "POS_INF";
 	Foo$1[Foo$1["NEG_INF"] = -Infinity] = "NEG_INF";
@@ -70,7 +70,7 @@ with(x) {
 -})(Foo || {});
 +
 +//#region entry.ts
-+var Foo = function(Foo$1) {
++var Foo = /* @__PURE__ */ function(Foo$1) {
 +	Foo$1[Foo$1["NAN"] = NaN] = "NAN";
 +	Foo$1[Foo$1["POS_INF"] = Infinity] = "POS_INF";
 +	Foo$1[Foo$1["NEG_INF"] = -Infinity] = "NEG_INF";

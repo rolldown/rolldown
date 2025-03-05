@@ -16,7 +16,7 @@ console.log(`
 ```js
 
 //#region cross-file.ts
-let CrossFile = function(CrossFile$1) {
+let CrossFile = /* @__PURE__ */ function(CrossFile$1) {
 	CrossFile$1["STR"] = "str 2";
 	CrossFile$1[CrossFile$1["NUM"] = 321] = "NUM";
 	return CrossFile$1;
@@ -24,7 +24,7 @@ let CrossFile = function(CrossFile$1) {
 
 //#endregion
 //#region entry.ts
-var SameFile = function(SameFile$1) {
+var SameFile = /* @__PURE__ */ function(SameFile$1) {
 	SameFile$1["STR"] = "str 1";
 	SameFile$1[SameFile$1["NUM"] = 123] = "NUM";
 	return SameFile$1;

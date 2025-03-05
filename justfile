@@ -130,6 +130,10 @@ build target="native" mode="debug":
 _build-native-debug:
     just build native debug
 
+# This command is used to build the js side code only.
+build-js-glue:
+    pnpm run --filter rolldown build-js-glue
+
 run *args:
     pnpm rolldown {{ args }}
 

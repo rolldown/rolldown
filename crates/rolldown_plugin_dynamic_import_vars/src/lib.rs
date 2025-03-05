@@ -46,7 +46,7 @@ impl Plugin for DynamicImportVarsPlugin {
   async fn load(&self, _ctx: &PluginContext, args: &HookLoadArgs<'_>) -> HookLoadReturn {
     if args.id == DYNAMIC_IMPORT_HELPER {
       Ok(Some(HookLoadOutput {
-        code: include_str!("dynamic_import_helper.js").to_string(),
+        code: include_str!("dynamic-import-helper.js").to_string(),
         ..Default::default()
       }))
     } else {

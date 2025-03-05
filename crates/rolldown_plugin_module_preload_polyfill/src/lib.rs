@@ -39,7 +39,7 @@ impl Plugin for ModulePreloadPolyfillPlugin {
       }
 
       Ok(Some(HookLoadOutput {
-        code: format!("{IS_MODERN_FLAG}&&{}", include_str!("module_preload_polyfill.js")),
+        code: format!("{IS_MODERN_FLAG}&&{}", include_str!("module-preload-polyfill.js")),
         side_effects: Some(HookSideEffects::True),
         ..Default::default()
       }))

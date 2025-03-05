@@ -40,5 +40,5 @@ serde_json              = { workspace = true }
 [[bin]]
 doctest = false
 name    = "run-fixture"
-path    = "./bin/run-fixture.rs"
+path    = "./bin/run_fixture.rs"
 test    = false

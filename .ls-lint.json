@@ -2,16 +2,19 @@
   "file": {
     "*.ts": "kebab-case",
     "*.js": "kebab-case",
-    "*.d.ts": "kebab-case"
+    "*.d.ts": "kebab-case",
+    "*.rs": "snake_case"
   },
   "directory": {
-    "*": "kebab-case"
+    "packages/**": "kebab-case",
+    "scripts/**": "kebab-case",
+    "crates/**": "snake_case"
   },
   "ignore": [
     "**/node_modules",
     "**/dist/",
+    "crates/rolldown/tests/**",
     "prepare/**",
-    "crates/**",
     "packages/rolldown/tests/fixtures/builtin-plugin/load-fallback/path-has-hashtag/**",
     "**/*.config.{js,mjs,cjs,ts,cts,mts}",
     "**/*.test.{js,mjs,cjs,ts,cts,mts}",

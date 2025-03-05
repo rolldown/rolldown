@@ -7,7 +7,7 @@ const footer = () => footerTxt
 export default defineTest({
   config: {
     output: {
-      footer
+      footer,
     },
   },
   afterTest: (output) => {

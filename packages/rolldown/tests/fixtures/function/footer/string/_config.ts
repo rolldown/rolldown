@@ -6,7 +6,7 @@ const footerTxt = '// footer test\n'
 export default defineTest({
   config: {
     output: {
-      footer:footerTxt
+      footer: footerTxt,
     },
   },
   afterTest: (output) => {

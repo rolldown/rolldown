@@ -260,7 +260,15 @@ const InputOptionsSchema = v.strictObject({
     ),
   ),
   profilerNames: v.optional(v.boolean()),
-  jsx: v.optional(v.union([v.boolean(), JsxOptionsSchema])),
+  jsx: v.optional(
+    v.union([
+      v.boolean(),
+      JsxOptionsSchema,
+      v.string('react'),
+      v.string('react-jsx'),
+      v.string('preserve'),
+    ]),
+  ),
   watch: v.optional(v.union([WatchOptionsSchema, v.literal(false)])),
   dropLabels: v.pipe(
     v.optional(v.array(v.string())),

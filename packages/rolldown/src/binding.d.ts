@@ -408,6 +408,8 @@ export interface BindingJsWatchChangeEvent {
 export type BindingJsx =
   | { type: 'Disable' }
   | { type: 'Preserve' }
+  | { type: 'React' }
+  | { type: 'ReactJsx' }
   | { type: 'Enable', field0: JsxOptions }
 
 export interface BindingLog {

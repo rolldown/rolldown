@@ -49,7 +49,7 @@ async function bundleTsConfig(configFile: string): Promise<string> {
     dir: outputDir,
     format: 'esm',
     sourcemap: 'inline',
-    entryFileNames: 'rolldown.config.[hash].js',
+    entryFileNames: `rolldown.config.[hash].${path.extname(configFile).replace('ts', 'js')}`,
   })
   const fileName = result.output.find(
     (chunk): chunk is OutputChunk => chunk.type === 'chunk' && chunk.isEntry,

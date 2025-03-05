@@ -9,7 +9,6 @@ import type { RolldownPlugin } from '../plugin'
 import type { InputOptions } from '../options/input-options'
 import type { OutputOptions } from '../options/output-options'
 import type {
-  BindingWatchOption,
   BindingInputOptions,
   BindingInjectImportNamed,
   BindingInjectImportNamespace,
@@ -219,8 +218,8 @@ function bindingifyInput(
     return input.map((src) => ({ import: src }))
   }
 
-  return Object.entries(input).map((value) => {
-    return { name: value[0], import: value[1] }
+  return Object.entries(input).map(([name, import_path]) => {
+    return { name, import: import_path }
   })
 }
 
@@ -262,7 +261,7 @@ function bindingifyWatch(
       skipWrite: watch.skipWrite,
       include: normalizedStringOrRegex(watch.include),
       exclude: normalizedStringOrRegex(watch.exclude),
-    } as BindingWatchOption
+    }
   }
 }
 

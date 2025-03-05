@@ -1,1 +1,1 @@
-pub mod asset_filenames;
+pub mod filenames;

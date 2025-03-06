@@ -97,12 +97,12 @@ export function isFilePathESM(filePath: string): boolean {
     return false
   } else {
     // check package.json for type: "module"
-    try {
-      const pkg = findNearestPackageData(path.dirname(filePath))
-      return pkg?.type === 'module'
-    } catch {
-      return false
+    const pkg = findNearestPackageData(path.dirname(filePath))
+    if (pkg) {
+      return pkg.type === 'module'
     }
+    // no package.json, default to cjs
+    return false
   }
 }
 

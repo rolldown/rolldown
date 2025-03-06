@@ -63,19 +63,19 @@ impl BundlerBuilder {
     };
     let ts_config = resolver.resolve_tsconfig(&options.cwd.join(tsconfig_filename))?;
     if let Some(ref jsx_factory) = ts_config.compiler_options.jsx_factory {
-      options.base_transform_options.jsx.pragma = Some(jsx_factory.clone());
+      options.transform_options.jsx.pragma = Some(jsx_factory.clone());
     }
 
     if let Some(ref jsx_fragment_factory) = ts_config.compiler_options.jsx_fragment_factory {
-      options.base_transform_options.jsx.pragma_frag = Some(jsx_fragment_factory.clone());
+      options.transform_options.jsx.pragma_frag = Some(jsx_fragment_factory.clone());
     }
 
     if let Some(ref jsx_import_source) = ts_config.compiler_options.jsx_import_source {
-      options.base_transform_options.jsx.import_source = Some(jsx_import_source.clone());
+      options.transform_options.jsx.import_source = Some(jsx_import_source.clone());
     }
 
     if let Some(ref experimental_decorator) = ts_config.compiler_options.experimental_decorators {
-      options.base_transform_options.decorator.legacy = *experimental_decorator;
+      options.transform_options.decorator.legacy = *experimental_decorator;
     }
 
     Ok(())

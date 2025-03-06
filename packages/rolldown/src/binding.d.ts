@@ -375,6 +375,7 @@ export interface BindingInputOptions {
   experimental?: BindingExperimentalOptions
   profilerNames?: boolean
   jsx?: BindingJsx
+  transform?: TransformOptions
   watch?: BindingWatchOption
   keepNames?: boolean
   checks?: BindingChecksOptions

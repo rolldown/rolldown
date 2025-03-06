@@ -170,6 +170,12 @@ pub struct BundlerOptions {
     schemars(with = "Option<FxHashMap<String, String>>")
   )]
   pub jsx: Option<Jsx>,
+  #[cfg_attr(
+    feature = "deserialize_bundler_options",
+    serde(default, skip_deserializing),
+    schemars(skip)
+  )]
+  pub transform: Option<oxc::transformer::TransformOptions>,
   pub watch: Option<WatchOption>,
   pub comments: Option<Comments>,
   pub target: Option<ESTarget>,

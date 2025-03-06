@@ -181,7 +181,7 @@ impl Bundler {
     &self.options
   }
 
-  pub fn generate_hmr_patch(&mut self, changed_files: Vec<String>) -> String {
+  pub fn generate_hmr_patch(&mut self, changed_files: Vec<String>) -> BuildResult<String> {
     self
       .hmr_manager
       .as_ref()

@@ -2,7 +2,7 @@ use std::collections::HashMap;
 
 use anyhow::Result;
 use globset::{Glob, GlobMatcher, GlobSetBuilder};
-use heck::ToKebabCase;
+use heck::{ToKebabCase, ToSnakeCase};
 use ignore::WalkBuilder;
 use rolldown_testing::workspace::root_dir;
 use serde::Deserialize;
@@ -11,6 +11,8 @@ use serde::Deserialize;
 enum Case {
   #[serde(rename(deserialize = "kebab-case"))]
   KebabCase,
+  #[serde(rename(deserialize = "snake_case"))]
+  SnakeCase,
 }
 
 #[allow(clippy::zero_sized_map_values)]
@@ -49,7 +51,7 @@ fn main() -> anyhow::Result<()> {
     .collect::<Vec<(GlobMatcher, Case)>>();
 
   let walk = builder.build();
-  let mut has_error = false;
+  let mut error_count = 0;
   for result in walk {
     let result = result?;
     let relative_path = result.path().strip_prefix(root_dir())?;
@@ -63,10 +65,14 @@ fn main() -> anyhow::Result<()> {
           let base_name = relative_path.file_name().unwrap().to_string_lossy();
           match case {
             Case::KebabCase if base_name != base_name.to_kebab_case() => {
-              has_error = true;
+              error_count += 1;
               eprintln!("{} should be kebab-case", relative_path.display());
             }
-            Case::KebabCase => {}
+            Case::SnakeCase if base_name != base_name.to_snake_case() => {
+              error_count += 1;
+              eprintln!("{} should be snake_case", relative_path.display());
+            }
+            _ => {}
           };
         }
       }
@@ -77,16 +83,20 @@ fn main() -> anyhow::Result<()> {
           let file_stem = file_name.split('.').next().unwrap_or(&file_name);
           match case {
             Case::KebabCase if file_stem != file_stem.to_kebab_case() => {
-              has_error = true;
+              error_count += 1;
               eprintln!("{} should be kebab-case", relative_path.display());
             }
-            Case::KebabCase => {}
+            Case::SnakeCase if file_stem != file_stem.to_snake_case() => {
+              error_count += 1;
+              eprintln!("{} should be snake_case", relative_path.display());
+            }
+            _ => {}
           };
         }
       }
     }
   }
-  assert!(!has_error, "ls-lint failed");
+  assert!(error_count == 0, "ls-lint failed with {error_count} errors");
 
   Ok(())
 }

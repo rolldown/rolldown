@@ -39,7 +39,7 @@ impl Plugin for WasmHelperPlugin {
   async fn load(&self, ctx: &PluginContext, args: &HookLoadArgs<'_>) -> HookLoadReturn {
     if args.id == WASM_HELPER_ID {
       return Ok(Some(HookLoadOutput {
-        code: include_str!("wasm_runtime.js").to_string(),
+        code: include_str!("wasm-runtime.js").to_string(),
         ..Default::default()
       }));
     }

@@ -30,11 +30,11 @@ var require_button = __commonJS({ "node_modules/pkg/button.css"(exports, module)
 //#endregion
 //#region node_modules/pkg/components.jsx
 require_button();
-const Button = () => React.createElement("button", null);
+const Button = () => /* @__PURE__ */ React.createElement("button", null);
 
 //#endregion
 //#region test.jsx
-render(React.createElement(Button, null));
+render(/* @__PURE__ */ React.createElement(Button, null));
 
 //#endregion
 ```

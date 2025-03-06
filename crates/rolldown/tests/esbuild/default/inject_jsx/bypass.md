@@ -17,7 +17,7 @@ console.log(/* @__PURE__ */ el(frag, null, /* @__PURE__ */ el("div", null)));
 ```js
 
 //#region entry.jsx
-console.log(React.createElement(React.Fragment, null, React.createElement("div", null)));
+console.log(/* @__PURE__ */ React.createElement(React.Fragment, null, /* @__PURE__ */ React.createElement("div", null)));
 
 //#endregion
 ```

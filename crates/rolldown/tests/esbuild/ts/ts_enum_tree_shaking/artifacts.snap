@@ -1,6 +1,5 @@
 ---
 source: crates/rolldown_testing/src/integration_test.rs
-snapshot_kind: text
 ---
 # Assets
 
@@ -9,7 +8,7 @@ snapshot_kind: text
 ```js
 
 //#region namespace-after.ts
-var x = function(x$1) {
+var x = /* @__PURE__ */ function(x$1) {
 	x$1[x$1["y"] = 123] = "y";
 	return x$1;
 }(x || {});
@@ -27,7 +26,7 @@ var x = function(x$1) {
 (function(_x) {
 	console.log(x, y);
 })(x || (x = {}));
-var x = function(x$1) {
+var x = /* @__PURE__ */ function(x$1) {
 	x$1[x$1["y"] = 123] = "y";
 	return x$1;
 }(x || {});
@@ -39,11 +38,11 @@ var x = function(x$1) {
 ```js
 
 //#region sibling-enum-after.ts
-var x = function(x$1) {
+var x = /* @__PURE__ */ function(x$1) {
 	x$1[x$1["y"] = 123] = "y";
 	return x$1;
 }(x || {});
-x = function(x$1) {
+x = /* @__PURE__ */ function(x$1) {
 	x$1[x$1["z"] = 246] = "z";
 	return x$1;
 }(x || {});
@@ -57,11 +56,11 @@ console.log(x);
 
 //#region sibling-enum-before.ts
 console.log(x);
-var x = function(x$1) {
+var x = /* @__PURE__ */ function(x$1) {
 	x$1[x$1["y"] = 123] = "y";
 	return x$1;
 }(x || {});
-x = function(x$1) {
+x = /* @__PURE__ */ function(x$1) {
 	x$1[x$1["z"] = 246] = "z";
 	return x$1;
 }(x || {});
@@ -73,12 +72,12 @@ x = function(x$1) {
 ```js
 
 //#region sibling-enum-middle.ts
-var x = function(x$1) {
+var x = /* @__PURE__ */ function(x$1) {
 	x$1[x$1["y"] = 123] = "y";
 	return x$1;
 }(x || {});
 console.log(x);
-x = function(x$1) {
+x = /* @__PURE__ */ function(x$1) {
 	x$1[x$1["z"] = 246] = "z";
 	return x$1;
 }(x || {});
@@ -90,11 +89,11 @@ x = function(x$1) {
 ```js
 
 //#region sibling-member.ts
-var x = function(x$1) {
+var x = /* @__PURE__ */ function(x$1) {
 	x$1[x$1["y"] = 123] = "y";
 	return x$1;
 }(x || {});
-x = function(x$1) {
+x = /* @__PURE__ */ function(x$1) {
 	x$1[x$1["z"] = 246] = "z";
 	return x$1;
 }(x || {});
@@ -107,7 +106,7 @@ console.log(x.y, x.z);
 ```js
 
 //#region simple-enum.ts
-var x = function(x$1) {
+var x = /* @__PURE__ */ function(x$1) {
 	x$1[x$1["y"] = 123] = "y";
 	return x$1;
 }(x || {});
@@ -120,7 +119,7 @@ console.log(x);
 ```js
 
 //#region simple-member.ts
-var x = function(x$1) {
+var x = /* @__PURE__ */ function(x$1) {
 	x$1[x$1["y"] = 123] = "y";
 	return x$1;
 }(x || {});

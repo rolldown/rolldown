@@ -1,6 +1,5 @@
 ---
 source: crates/rolldown_testing/src/integration_test.rs
-snapshot_kind: text
 ---
 # Assets
 
@@ -20,7 +19,7 @@ let Button;
 
 //#endregion
 //#region test.jsx
-render(React.createElement(Button, null));
+render(/* @__PURE__ */ React.createElement(Button, null));
 
 //#endregion
 ```

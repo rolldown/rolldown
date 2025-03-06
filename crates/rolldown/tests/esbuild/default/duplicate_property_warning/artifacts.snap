@@ -11,7 +11,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 console.log({
 	a: 1,
 	a: 2
-}, React.createElement("div", {
+}, /* @__PURE__ */ React.createElement("div", {
 	a2: true,
 	a2: 3
 }));
@@ -21,7 +21,7 @@ console.log({
 console.log({
 	c: 1,
 	c: 2
-}, React.createElement("div", {
+}, /* @__PURE__ */ React.createElement("div", {
 	c2: true,
 	c2: 3
 }));

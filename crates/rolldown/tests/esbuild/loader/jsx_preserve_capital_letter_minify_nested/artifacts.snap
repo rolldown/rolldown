@@ -19,7 +19,7 @@ import { jsx } from "react/jsx-runtime";
 //#region entry.jsx
 x = () => {
 	class XYYYYY {}
-	return jsx(XYYYYY, { "tag-must-start-with-capital-letter": true });
+	return /* @__PURE__ */ jsx(XYYYYY, { "tag-must-start-with-capital-letter": true });
 };
 
 //#endregion

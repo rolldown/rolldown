@@ -1,6 +1,5 @@
 ---
 source: crates/rolldown_testing/src/integration_test.rs
-snapshot_kind: text
 ---
 # Assets
 
@@ -9,9 +8,9 @@ snapshot_kind: text
 ```js
 
 //#region factory.jsx
-console.log([(void 0).factory("x", null), /* @__PURE__ */ (void 0).factory("x", null)]);
+console.log([/* @__PURE__ */ (void 0).factory("x", null), /* @__PURE__ */ (void 0).factory("x", null)]);
 f = function() {
-	console.log([this.factory("y", null), /* @__PURE__ */ this.factory("y", null)]);
+	console.log([/* @__PURE__ */ this.factory("y", null), /* @__PURE__ */ this.factory("y", null)]);
 };
 
 //#endregion
@@ -21,8 +20,8 @@ f = function() {
 ```js
 
 //#region fragment.jsx
-console.log([(void 0).factory((void 0).fragment, null, "x"), /* @__PURE__ */ (void 0).factory((void 0).fragment, null, "x")]), f = function() {
-	console.log([this.factory(this.fragment, null, "y"), /* @__PURE__ */ this.factory(this.fragment, null, "y")]);
+console.log([/* @__PURE__ */ (void 0).factory((void 0).fragment, null, "x"), /* @__PURE__ */ (void 0).factory((void 0).fragment, null, "x")]), f = function() {
+	console.log([/* @__PURE__ */ this.factory(this.fragment, null, "y"), /* @__PURE__ */ this.factory(this.fragment, null, "y")]);
 };
 
 //#endregion

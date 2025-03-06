@@ -26,7 +26,7 @@ notInlined = [
 ```js
 
 //#region lib.ts
-let Bar = function(Bar$1) {
+let Bar = /* @__PURE__ */ function(Bar$1) {
 	Bar$1["bar1"] = "xyz";
 	Bar$1["bar2"] = "x y z";
 	return Bar$1;
@@ -34,7 +34,7 @@ let Bar = function(Bar$1) {
 
 //#endregion
 //#region entry.ts
-var Foo = function(Foo$1) {
+var Foo = /* @__PURE__ */ function(Foo$1) {
 	Foo$1["foo1"] = "abc";
 	Foo$1["foo2"] = "a b c";
 	return Foo$1;

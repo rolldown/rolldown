@@ -25,7 +25,7 @@ console.log([
 ```js
 
 //#region enums.ts
-let a = function(a$1) {
+let a = /* @__PURE__ */ function(a$1) {
 	a$1[a$1["implicit_number"] = 0] = "implicit_number";
 	a$1[a$1["explicit_number"] = 123] = "explicit_number";
 	a$1["explicit_string"] = "xyz";

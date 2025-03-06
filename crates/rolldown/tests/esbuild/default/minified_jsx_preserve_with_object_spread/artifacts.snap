@@ -1,6 +1,5 @@
 ---
 source: crates/rolldown_testing/src/integration_test.rs
-snapshot_kind: text
 ---
 # warnings
 
@@ -15,7 +14,7 @@ snapshot_kind: text
 ## entry.js
 
 ```js
-import { jsx } from "react/jsx-runtime";
+import "react/jsx-runtime";
 
 //#region entry.jsx
 const obj = {
@@ -24,18 +23,8 @@ const obj = {
 	...{ key: value },
 	after
 };
-jsx(Foo, {
-	before: true,
-	[key]: value,
-	key: value,
-	after: true
-});
-jsx(Bar, {
-	a,
-	[b]: c,
-	...d,
-	e
-});
+Foo, key, value, value;
+Bar, a, b, c, { ...d }, e;
 
 //#endregion
 ```

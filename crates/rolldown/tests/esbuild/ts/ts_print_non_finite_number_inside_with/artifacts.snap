@@ -1,6 +1,5 @@
 ---
 source: crates/rolldown_testing/src/integration_test.rs
-snapshot_kind: text
 ---
 # Assets
 
@@ -9,7 +8,7 @@ snapshot_kind: text
 ```js
 
 //#region entry.ts
-var Foo = function(Foo$1) {
+var Foo = /* @__PURE__ */ function(Foo$1) {
 	Foo$1[Foo$1["NAN"] = NaN] = "NAN";
 	Foo$1[Foo$1["POS_INF"] = Infinity] = "POS_INF";
 	Foo$1[Foo$1["NEG_INF"] = -Infinity] = "NEG_INF";

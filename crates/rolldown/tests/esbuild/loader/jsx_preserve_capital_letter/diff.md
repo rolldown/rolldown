@@ -20,7 +20,7 @@ var mustStartWithUpperCaseLetter = class {};
 
 //#endregion
 //#region entry.jsx
-console.log(jsx(mustStartWithUpperCaseLetter, {}));
+console.log(/* @__PURE__ */ jsx(mustStartWithUpperCaseLetter, {}));
 
 //#endregion
 ```
@@ -43,7 +43,7 @@ console.log(jsx(mustStartWithUpperCaseLetter, {}));
 +
 +//#endregion
 +//#region entry.jsx
-+console.log(jsx(mustStartWithUpperCaseLetter, {}));
++console.log(/* @__PURE__ */ jsx(mustStartWithUpperCaseLetter, {}));
 +
 +//#endregion
 \ No newline at end of file

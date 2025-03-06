@@ -226,7 +226,7 @@ export var x;
 //#region enum.ts
 let x;
 (function(_x) {
-	let y$1 = function(y$2) {
+	let y$1 = /* @__PURE__ */ function(y$2) {
 		return y$2;
 	}({});
 	_x.y = y$1;

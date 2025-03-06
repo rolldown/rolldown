@@ -90,7 +90,6 @@ fmt: fmt-rust fmt-repo
 
 fmt-rust:
     cargo fmt --all -- --emit=files
-    taplo fmt
 
 fmt-repo:
     pnpm lint-prettier:fix

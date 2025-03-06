@@ -3,15 +3,8 @@ const fs = require('fs-extra')
 const glob = require('glob')
 const path = require('node:path')
 
-const nodeFiles = glob.globSync(
-  [path.resolve(__dirname, 'src/rolldown-binding.*.node')],
-  {
-    absolute: true,
-  },
-)
-nodeFiles.forEach((file) => {
-  fs.rmSync(file)
-})
+const args = process.argv.slice(2)
+console.log(`args: `, args)
 
 const cmd = spawn(
   'npx',
@@ -30,6 +23,7 @@ const cmd = spawn(
     'binding.d.ts',
     '--no-const-enum',
     '--no-dts-cache',
+    ...args,
   ],
   {
     stdio: 'inherit', // Directly inherit stdio (preserves colors)
@@ -41,6 +35,26 @@ const cmd = spawn(
 // Inspect exit code
 cmd.on('close', (code) => {
   if (code !== 0) {
+    const nodeFiles = glob.globSync(
+      [path.resolve(__dirname, 'src/rolldown-binding.*.node')],
+      {
+        absolute: true,
+      },
+    )
+    nodeFiles.forEach((file) => {
+      fs.rmSync(file)
+    })
+
+    const wasmFiles = glob.globSync(
+      [path.resolve(__dirname, './src/rolldown-binding.*.wasm')],
+      {
+        absolute: true,
+      },
+    )
+
+    wasmFiles.forEach((file) => {
+      fs.rmSync(file)
+    })
     console.error('Command failed!')
     process.exit(code)
   }

@@ -405,6 +405,7 @@ export interface BindingJsWatchChangeEvent {
   event: string
 }
 
+/** TODO: support `preserve-react` mode */
 export type BindingJsx =
   | { type: 'Disable' }
   | { type: 'Preserve' }

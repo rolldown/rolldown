@@ -7,7 +7,10 @@ import { rolldown } from '../api/rolldown'
 import type { ConfigExport } from '../types/config-export'
 import type { OutputChunk } from '../types/rolldown-output'
 
-async function bundleTsConfig(configFile: string): Promise<string> {
+async function bundleTsConfig(
+  configFile: string,
+  isEsm: boolean,
+): Promise<string> {
   const dirnameVarName = 'injected_original_dirname'
   const filenameVarName = 'injected_original_filename'
   const importMetaUrlVarName = 'injected_original_import_meta_url'
@@ -47,9 +50,11 @@ async function bundleTsConfig(configFile: string): Promise<string> {
   const outputDir = path.dirname(configFile)
   const result = await bundle.write({
     dir: outputDir,
-    format: 'esm',
+    format: isEsm ? 'esm' : 'cjs',
     sourcemap: 'inline',
-    entryFileNames: `rolldown.config.[hash].${path.extname(configFile).replace('ts', 'js')}`,
+    // respect the original file extension, mts -> mjs, cts -> cjs
+    // mts should be generate mjs, it avoid add `type: module` at package.json
+    entryFileNames: `rolldown.config.[hash]${path.extname(configFile).replace('ts', 'js')}`,
   })
   const fileName = result.output.find(
     (chunk): chunk is OutputChunk => chunk.type === 'chunk' && chunk.isEntry,
@@ -76,11 +81,54 @@ async function findConfigFileNameInCwd(): Promise<string> {
 }
 
 export async function loadTsConfig(configFile: string): Promise<ConfigExport> {
-  const file = await bundleTsConfig(configFile)
+  const isEsm = isFilePathESM(configFile)
+  const file = await bundleTsConfig(configFile, isEsm)
   try {
     return (await import(pathToFileURL(file).href)).default
   } finally {
     fs.unlink(file, () => {}) // Ignore errors
+  }
+}
+
+export function isFilePathESM(filePath: string): boolean {
+  if (/\.m[jt]s$/.test(filePath)) {
+    return true
+  } else if (/\.c[jt]s$/.test(filePath)) {
+    return false
+  } else {
+    // check package.json for type: "module"
+    try {
+      const pkg = findNearestPackageData(path.dirname(filePath))
+      return pkg?.type === 'module'
+    } catch {
+      return false
+    }
+  }
+}
+
+export function findNearestPackageData(basedir: string): any | null {
+  while (basedir) {
+    const pkgPath = path.join(basedir, 'package.json')
+    if (tryStatSync(pkgPath)?.isFile()) {
+      try {
+        return JSON.parse(fs.readFileSync(pkgPath, 'utf-8'))
+      } catch {}
+    }
+
+    const nextBasedir = path.dirname(basedir)
+    if (nextBasedir === basedir) break
+    basedir = nextBasedir
+  }
+
+  return null
+}
+
+function tryStatSync(file: string): fs.Stats | undefined {
+  try {
+    // The "throwIfNoEntry" is a performance optimization for cases where the file does not exist
+    return fs.statSync(file, { throwIfNoEntry: false })
+  } catch {
+    // Ignore errors
   }
 }
 

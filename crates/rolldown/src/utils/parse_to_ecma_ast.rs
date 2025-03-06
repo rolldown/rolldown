@@ -59,21 +59,9 @@ pub fn parse_to_ecma_ast(
     let default = pure_esm_js_oxc_source_type();
     match parsed_type {
       OxcParseType::Js => default,
-      OxcParseType::Jsx => {
-        if options.jsx.is_jsx_disabled() {
-          default
-        } else {
-          default.with_jsx(true)
-        }
-      }
+      OxcParseType::Jsx => default.with_jsx(!options.jsx.is_jsx_disabled()),
       OxcParseType::Ts => default.with_typescript(true),
-      OxcParseType::Tsx => {
-        if options.jsx.is_jsx_disabled() {
-          default.with_typescript(true)
-        } else {
-          default.with_typescript(true).with_jsx(true)
-        }
-      }
+      OxcParseType::Tsx => default.with_typescript(true).with_jsx(!options.jsx.is_jsx_disabled()),
     }
   };
 

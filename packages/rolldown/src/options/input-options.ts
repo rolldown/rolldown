@@ -198,13 +198,14 @@ export interface InputOptions {
   inject?: Record<string, string | [string, string]>
   profilerNames?: boolean
   /**
-   * The `false` is disabled jsx parser, it will give you a syntax error if you use jsx syntax
-   * The `mode: preserve` is disabled jsx transformer, it perverse original jsx syntax in the output.
-   * The `mode: classic` is enabled jsx `classic` transformer.
-   * The `mode: automatic` is enabled jsx `automatic` transformer.
-   * @default mode = 'automatic'
+   * - `false` disables the JSX parser, resulting in a syntax error if JSX syntax is used.
+   * - `"preserve"` disables the JSX transformer, preserving the original JSX syntax in the output.
+   * - `"react"` enables the `classic` JSX transformer.
+   * - `"react-jsx"` enables the `automatic` JSX transformer.
+   *
+   * @default mode = "automatic"
    */
-  jsx?: false | JsxOptions
+  jsx?: false | 'react' | 'react-jsx' | 'preserve' | JsxOptions
   watch?: WatchOptions | false
   dropLabels?: string[]
   keepNames?: boolean

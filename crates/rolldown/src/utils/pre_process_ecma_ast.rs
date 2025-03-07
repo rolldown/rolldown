@@ -1,3 +1,4 @@
+use std::borrow::Cow;
 use std::path::Path;
 
 use itertools::Itertools;
@@ -73,9 +74,10 @@ impl PreProcessEcmaAst {
       || !matches!(bundle_options.target, ESTarget::EsNext)
     {
       let ret = ast.program.with_mut(|fields| {
-        let mut transformer_options = bundle_options.transform_options.clone();
-
-        if !matches!(parsed_type, OxcParseType::Js) {
+        let transform_options = if matches!(parsed_type, OxcParseType::Js) {
+          Cow::Borrowed(&bundle_options.transform_options)
+        } else {
+          let mut transformer_options = bundle_options.transform_options.clone();
           let jsx_plugin = match &bundle_options.jsx {
             Jsx::Disable => unreachable!("Jsx::Disable should be failed at parser."),
             // The oxc jsx_plugin is enabled by default, we need to disable it.
@@ -88,9 +90,10 @@ impl PreProcessEcmaAst {
           };
 
           transformer_options.jsx.jsx_plugin = jsx_plugin;
-        }
+          Cow::Owned(transformer_options)
+        };
 
-        Transformer::new(fields.allocator, Path::new(path), &transformer_options)
+        Transformer::new(fields.allocator, Path::new(path), &transform_options)
           .build_with_symbols_and_scopes(symbols, scopes, fields.program)
       });
 

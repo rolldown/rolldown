@@ -87,7 +87,6 @@ pub struct NormalizedBundlerOptions {
   pub target: ESTarget,
   pub polyfill_require: bool,
   pub defer_sync_scan_data: Option<DeferSyncScanDataOption>,
-  /// TODO: expose to binding when `oxc-transform` is stable
   pub transform_options: TransformOptions,
 }
 

@@ -61,6 +61,8 @@ impl Plugin for ImportGlobPlugin {
         fields.program.body.extend(visitor.import_decls);
       }
     });
+    // TODO need to update the symbols and scopes instead of recreate the semantic data.
+    *args.ast_changed = true;
     Ok(args.ast)
   }
 }

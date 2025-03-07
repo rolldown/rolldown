@@ -255,6 +255,9 @@ impl PluginDriver {
           ast: args.ast,
           id: args.id,
           is_user_defined_entry: args.is_user_defined_entry,
+          symbols: args.symbols,
+          scopes: args.scopes,
+          ast_changed: args.ast_changed,
         },
       )?;
     }

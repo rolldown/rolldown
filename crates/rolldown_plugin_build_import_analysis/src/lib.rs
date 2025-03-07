@@ -82,6 +82,8 @@ impl Plugin for BuildImportAnalysisPlugin {
       );
       visitor.visit_program(fields.program);
     });
+    // TODO need to update the symbols and scopes instead of recreate the semantic data.
+    *args.ast_changed = true;
 
     let mut codegen = CodeGenerator::new();
     ast.program().r#gen(&mut codegen, codegen::Context::default());

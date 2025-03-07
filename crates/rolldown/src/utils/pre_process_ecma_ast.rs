@@ -5,14 +5,14 @@ use oxc::ast_visit::VisitMut;
 use oxc::diagnostics::Severity as OxcSeverity;
 use oxc::minifier::{CompressOptions, Compressor};
 use oxc::semantic::{SemanticBuilder, Stats};
-use oxc::transformer::{
-  InjectGlobalVariables, ReplaceGlobalDefines, ReplaceGlobalDefinesConfig, Transformer,
-};
+use oxc::transformer::{InjectGlobalVariables, ReplaceGlobalDefines, Transformer};
 
 use rolldown_common::{ESTarget, Jsx, NormalizedBundlerOptions};
 use rolldown_ecmascript::{EcmaAst, WithMutFields};
 use rolldown_error::{BuildDiagnostic, BuildResult, Severity};
+use rolldown_plugin::HookTransformAstArgs;
 
+use crate::types::module_factory::CreateModuleContext;
 use crate::types::oxc_parse_type::OxcParseType;
 
 use super::ecma_visitors::EnsureSpanUniqueness;
@@ -29,15 +29,22 @@ pub struct PreProcessEcmaAst {
 }
 
 impl PreProcessEcmaAst {
+  #[allow(clippy::too_many_lines)]
   pub fn build(
     &mut self,
     mut ast: EcmaAst,
-    path: &str,
     parsed_type: &OxcParseType,
-    replace_global_define_config: Option<&ReplaceGlobalDefinesConfig>,
-    bundle_options: &NormalizedBundlerOptions,
     has_lazy_export: bool,
+    ctx: &CreateModuleContext<'_>,
   ) -> BuildResult<ParseToEcmaAstResult> {
+    let CreateModuleContext {
+      options: bundle_options,
+      stable_id: path,
+      replace_global_define_config,
+      is_user_defined_entry,
+      ..
+    } = ctx;
+
     let mut warning = vec![];
     let source = ast.source().clone();
     // Build initial semantic data and check for semantic errors.
@@ -53,7 +60,32 @@ impl PreProcessEcmaAst {
     }
 
     self.stats = semantic_ret.semantic.stats();
-    let (symbols, scopes) = semantic_ret.semantic.into_symbol_table_and_scope_tree();
+    let (mut symbols, mut scopes) = semantic_ret.semantic.into_symbol_table_and_scope_tree();
+
+    ast = ctx.plugin_driver.transform_ast(HookTransformAstArgs {
+      cwd: &bundle_options.cwd,
+      ast,
+      id: path,
+      is_user_defined_entry: *is_user_defined_entry,
+      symbols: &mut symbols,
+      scopes: &mut scopes,
+      ast_changed: &mut self.ast_changed,
+    })?;
+
+    // TODO the builtin-plugins is not update the symbols and scopes, so here need to recreate the semantic data.
+    let (symbols, scopes) = if self.ast_changed {
+      let (symbols, scopes) = ast.program.with_dependent(|_owner, dep| {
+        SemanticBuilder::new()
+          .with_scope_tree_child_ids(true)
+          .with_stats(self.stats)
+          .build(&dep.program)
+          .semantic
+          .into_symbol_table_and_scope_tree()
+      });
+      (symbols, scopes)
+    } else {
+      (symbols, scopes)
+    };
 
     let (mut symbols, mut scopes) = ast.program.with_mut(|fields| {
       let WithMutFields { allocator, program, .. } = fields;

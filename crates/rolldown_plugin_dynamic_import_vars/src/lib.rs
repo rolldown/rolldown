@@ -68,6 +68,8 @@ impl Plugin for DynamicImportVarsPlugin {
         fields.program.body.push(visitor.import_helper());
       }
     });
+    // TODO need to update the symbols and scopes instead of recreate the semantic data.
+    *args.ast_changed = true;
     Ok(args.ast)
   }
 }

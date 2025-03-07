@@ -9,7 +9,6 @@ use rolldown_common::{ModuleType, NormalizedBundlerOptions, RUNTIME_MODULE_ID, S
 use rolldown_ecmascript::{EcmaAst, EcmaCompiler};
 use rolldown_error::{BuildDiagnostic, BuildResult};
 use rolldown_loader_utils::{binary_to_esm, text_to_string_literal};
-use rolldown_plugin::HookTransformAstArgs;
 use rolldown_utils::mime::guess_mime;
 use sugar_path::SugarPath;
 
@@ -44,16 +43,14 @@ pub fn parse_to_ecma_ast(
     stable_id,
     resolved_id,
     module_type,
-    plugin_driver,
-    replace_global_define_config,
+    is_user_defined_entry,
     ..
   } = ctx;
 
   let path = resolved_id.id.as_path();
-  let is_user_defined_entry = ctx.is_user_defined_entry;
 
   let (has_lazy_export, source, parsed_type) =
-    pre_process_source(path, source, module_type, is_user_defined_entry, options)?;
+    pre_process_source(path, source, module_type, *is_user_defined_entry, options)?;
 
   let oxc_source_type = {
     let default = pure_esm_js_oxc_source_type();
@@ -65,28 +62,14 @@ pub fn parse_to_ecma_ast(
     }
   };
 
-  let mut ecma_ast = match module_type {
+  let ecma_ast = match module_type {
     ModuleType::Json | ModuleType::Dataurl | ModuleType::Base64 | ModuleType::Text => {
       EcmaCompiler::parse_expr_as_program(stable_id, source, oxc_source_type)?
     }
     _ => EcmaCompiler::parse(stable_id, source, oxc_source_type)?,
   };
 
-  ecma_ast = plugin_driver.transform_ast(HookTransformAstArgs {
-    cwd: &options.cwd,
-    ast: ecma_ast,
-    id: stable_id,
-    is_user_defined_entry,
-  })?;
-
-  PreProcessEcmaAst::default().build(
-    ecma_ast,
-    stable_id,
-    &parsed_type,
-    replace_global_define_config.as_ref(),
-    options,
-    has_lazy_export,
-  )
+  PreProcessEcmaAst::default().build(ecma_ast, &parsed_type, has_lazy_export, ctx)
 }
 
 fn pre_process_source(

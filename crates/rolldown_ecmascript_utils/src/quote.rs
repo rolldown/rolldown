@@ -31,6 +31,12 @@ pub fn quote_stmts<'alloc>(
   p.program.body
 }
 
+pub fn quote_stmt<'alloc>(alloc: &'alloc Allocator, input: &str) -> ast::Statement<'alloc> {
+  let mut stmts = quote_stmts(alloc, input);
+  assert_eq!(stmts.len(), 1, "Expected exactly one statement, got {}", stmts.len());
+  stmts.pop().unwrap()
+}
+
 #[test]
 fn test_quote_expr() {
   let alloc = Allocator::new();

@@ -15,5 +15,5 @@ pub use crate::{
     },
     span_ext::SpanExt,
   },
-  quote::{quote_expr, quote_stmts},
+  quote::{quote_expr, quote_stmt, quote_stmts},
 };

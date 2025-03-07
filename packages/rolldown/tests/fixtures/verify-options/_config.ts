@@ -10,6 +10,11 @@ export default defineTest({
       intro: '/* intro */',
       outro: '/* outro */',
       comments: 'preserve-legal',
+      entryFileNames: '[name]-[hash].js',
+      chunkFileNames: '[name]-[hash].js',
+      cssEntryFileNames: '[name]-[hash].css',
+      cssChunkFileNames: '[name]-[hash].css',
+      assetFileNames: '[name]-[hash][extname]',
     },
     plugins: [
       {
@@ -21,6 +26,11 @@ export default defineTest({
           expect(options.intro).toBe('/* intro */')
           expect(options.outro).toBe('/* outro */')
           expect(options.comments).toBe('preserve-legal')
+          expect(options.entryFileNames).toBe('[name]-[hash].js')
+          expect(options.chunkFileNames).toBe('[name]-[hash].js')
+          expect(options.cssEntryFileNames).toBe('[name]-[hash].css')
+          expect(options.cssChunkFileNames).toBe('[name]-[hash].css')
+          expect(options.assetFileNames).toBe('[name]-[hash][extname]')
         },
       },
     ],

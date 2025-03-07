@@ -1,0 +1,47 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## emitted-C6bBH0W1-C-C6bBH0W1p5u-C6bBH0W1p5uitLZTUJf27P.txt
+
+```txt
+emitted
+```
+## main-BOdGxSd2-BOdGxS-BOdGxSd2UWS-BOdGxSd2UWSDJEDQKp_mV.css
+
+```css
+* {
+  margin: 0;
+  padding: 0;
+}
+
+
+```
+## main-BaZ7NyHu-BaZ7Ny-BaZ7NyHun-f-BaZ7NyHun-fi110h0PyHk.js
+
+```js
+
+//#region main.js
+console.log("1");
+const t = await import("./test-ZyyKKzVP-ZyyKKz-ZyyKKzVPMDh-ZyyKKzVPMDhYLOGNTn8QX.js");
+console.log(t);
+
+//#endregion
+```
+## test-B7RZxEyz-B7RZxE-B7RZxEyzk8d-B7RZxEyzk8dz1zEQdjF4S.css
+
+```css
+
+
+```
+## test-ZyyKKzVP-ZyyKKz-ZyyKKzVPMDh-ZyyKKzVPMDhYLOGNTn8QX.js
+
+```js
+
+//#region test.js
+const hello = "world";
+
+//#endregion
+export { hello };
+```

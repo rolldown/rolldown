@@ -3956,17 +3956,6 @@ expression: output
 - ./chunks/async.mjs => ./chunks/async.mjs
 - ./chunks/shared.mjs => ./chunks/shared.mjs
 
-# tests/rolldown/function/entry_filenames/should_generate_correct_relative_import_path
-
-- ./entries/a.mjs => ./entries/a.mjs
-- ./entries/b.mjs => ./entries/b.mjs
-- ./chunks/async.mjs => ./chunks/async.mjs
-- ./chunks/shared.mjs => ./chunks/shared.mjs
-
-# tests/rolldown/function/entry_filenames/should_generate_specified_hash_length
-
-- ./entries/!~{000}~-!~{000001}~-!~{2}~-!~{0000000000000003}~.js => ./entries/ClqcCbMH-ClqcCbMH3vP-ClqcCb-ClqcCbMH3vPeisL87rygy.js
-
 # tests/rolldown/function/es-target
 
 - main-!~{000}~.js => main-DnkndBar.js
@@ -4184,6 +4173,13 @@ expression: output
 
 - out.css => out.css
 - dist/out.css
+
+# tests/rolldown/function/filenames/should_generate_correct_relative_import_path
+
+- ./entries/a.mjs => ./entries/a.mjs
+- ./entries/b.mjs => ./entries/b.mjs
+- ./chunks/async.mjs => ./chunks/async.mjs
+- ./chunks/shared.mjs => ./chunks/shared.mjs
 
 # tests/rolldown/function/format/app/export-all
 

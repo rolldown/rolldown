@@ -104,6 +104,50 @@ const JsxOptionsSchema = v.strictObject({
   ),
 })
 
+const HelperModeSchema = v.union([v.literal('Runtime'), v.literal('External')])
+
+const DecoratorOptionSchema = v.object({
+  legacy: v.optional(v.boolean()),
+  emitDecoratorMetadata: v.optional(v.boolean()),
+})
+
+const HelpersSchema = v.object({
+  mode: v.optional(HelperModeSchema),
+})
+
+const RewriteImportExtensionsSchema = v.union([
+  v.literal('rewrite'),
+  v.literal('remove'),
+  v.boolean(),
+])
+const TypescriptSchema = v.object({
+  jsxPragma: v.optional(v.string()),
+  jsxPragmaFrag: v.optional(v.string()),
+  onlyRemoveTypeImports: v.optional(v.boolean()),
+  allowNamespaces: v.optional(v.boolean()),
+  allowDeclareFields: v.optional(v.boolean()),
+  declaration: v.optional(
+    v.object({
+      stripInternal: v.optional(v.boolean()),
+      sourcemap: v.optional(v.boolean()),
+    }),
+  ),
+  rewriteImportExtensions: v.optional(RewriteImportExtensionsSchema),
+})
+const AssumptionsSchema = v.object({
+  ignoreFunctionLength: v.optional(v.boolean()),
+  noDocumentAll: v.optional(v.boolean()),
+  objectRestNoSymbols: v.optional(v.boolean()),
+  pureGetters: v.optional(v.boolean()),
+  setPublicClassFields: v.optional(v.boolean()),
+})
+const TransformOptionsSchema = v.object({
+  assumptions: v.optional(AssumptionsSchema),
+  typescript: v.optional(TypescriptSchema),
+  helpers: v.optional(HelpersSchema),
+  decorators: v.optional(DecoratorOptionSchema),
+})
+
 const WatchOptionsSchema = v.strictObject({
   chokidar: v.optional(
     v.never(
@@ -269,6 +313,7 @@ const InputOptionsSchema = v.strictObject({
       v.string('preserve'),
     ]),
   ),
+  transform: v.optional(TransformOptionsSchema),
   watch: v.optional(v.union([WatchOptionsSchema, v.literal(false)])),
   dropLabels: v.pipe(
     v.optional(v.array(v.string())),

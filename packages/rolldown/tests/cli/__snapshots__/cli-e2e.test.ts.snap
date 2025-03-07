@@ -58,6 +58,22 @@ OPTIONS
   --shim-missing-exports      Create shim variables for missing exports.
   --sourcemap-debug-ids       Inject sourcemap debug IDs.
   --target <target>           The JavaScript target environment.
+  --transform.assumptions.ignore-function-length .
+  --transform.assumptions.no-document-all .
+  --transform.assumptions.object-rest-no-symbols .
+  --transform.assumptions.pure-getters .
+  --transform.assumptions.set-public-class-fields .
+  --transform.decorators.emit-decorator-metadata .
+  --transform.decorators.legacy .
+  --transform.helpers.mode <transform.helpers.mode>.
+  --transform.typescript.allow-declare-fields .
+  --transform.typescript.allow-namespaces .
+  --transform.typescript.declaration.sourcemap .
+  --transform.typescript.declaration.strip-internal .
+  --transform.typescript.jsx-pragma <transform.typescript.jsx-pragma>.
+  --transform.typescript.jsx-pragma-frag <transform.typescript.jsx-pragma-frag>.
+  --transform.typescript.only-remove-type-imports .
+  --transform.typescript.rewrite-import-extensions <transform.typescript.rewrite-import-extensions>.
 
 EXAMPLES
 

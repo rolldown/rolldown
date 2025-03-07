@@ -1,6 +1,7 @@
 mod allocator_helpers;
 mod ast_snippet;
 mod extensions;
+mod quote;
 
 pub use crate::{
   allocator_helpers::take_in::TakeIn,
@@ -14,4 +15,5 @@ pub use crate::{
     },
     span_ext::SpanExt,
   },
+  quote::{quote_expr, quote_stmts},
 };

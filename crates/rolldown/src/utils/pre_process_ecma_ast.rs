@@ -73,7 +73,7 @@ impl PreProcessEcmaAst {
       || !matches!(bundle_options.target, ESTarget::EsNext)
     {
       let ret = ast.program.with_mut(|fields| {
-        let mut transformer_options = bundle_options.base_transform_options.clone();
+        let mut transformer_options = bundle_options.transform_options.clone();
 
         if !matches!(parsed_type, OxcParseType::Js) {
           let jsx_plugin = match &bundle_options.jsx {

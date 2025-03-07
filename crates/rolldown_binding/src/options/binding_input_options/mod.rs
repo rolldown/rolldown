@@ -64,7 +64,6 @@ pub struct BindingInputOptions {
   // pub preserve_symlinks: bool,
   pub shim_missing_exports: Option<bool>,
   // strictDeprecations?: boolean;
-  // pub treeshake: Option<bool>,
   #[napi(ts_type = "'node' | 'browser' | 'neutral'")]
   pub platform: Option<String>,
   pub log_level: BindingLogLevel,
@@ -85,6 +84,8 @@ pub struct BindingInputOptions {
   pub profiler_names: Option<bool>,
   #[debug(skip)]
   pub jsx: Option<BindingJsx>,
+  #[debug(skip)]
+  pub transform: Option<oxc_transform_napi::TransformOptions>,
   pub watch: Option<BindingWatchOption>,
   pub keep_names: Option<bool>,
   pub checks: Option<binding_checks_options::BindingChecksOptions>,

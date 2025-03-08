@@ -78,6 +78,15 @@ impl BundlerBuilder {
       options.transform_options.decorator.legacy = *experimental_decorator;
     }
 
+    // FIXME:
+    // if user set `transform.typescript.only_remove_type_imports` to false in `rolldown.config.js`, but also set `verbatim_module_syntax` to true in `tsconfig.json`
+    // We will override the value either, but actually `rolldown.config.js` should have higher priority.
+    // This due to the type of `only_remove_type_imports` is `bool` we don't know if the `false` is set
+    // by user or by default value.
+    if let Some(ref verbatim_module_syntax) = ts_config.compiler_options.verbatim_module_syntax {
+      options.transform_options.typescript.only_remove_type_imports = *verbatim_module_syntax;
+    }
+
     Ok(())
   }
 

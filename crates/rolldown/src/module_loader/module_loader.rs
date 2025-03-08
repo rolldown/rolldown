@@ -28,7 +28,6 @@ use rolldown_utils::rustc_hash::FxHashSetExt;
 use rustc_hash::{FxHashMap, FxHashSet};
 use std::collections::hash_map::Entry;
 use std::sync::Arc;
-use tracing::info;
 
 use crate::{SharedOptions, SharedResolver};
 
@@ -291,12 +290,10 @@ impl ModuleLoader {
 
     let mut runtime_brief: Option<RuntimeModuleBrief> = None;
 
-    info!("block until all module tasks are done");
     while self.remaining > 0 {
       let Some(msg) = self.rx.recv().await else {
         break;
       };
-      info!("received module task result");
       match msg {
         ModuleLoaderMsg::NormalModuleDone(task_result) => {
           let NormalModuleTaskResult {
@@ -466,7 +463,7 @@ impl ModuleLoader {
         }
       }
     }
-    info!("all module tasks are done");
+
     if !errors.is_empty() {
       return Err(errors.into());
     }

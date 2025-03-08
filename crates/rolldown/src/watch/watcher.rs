@@ -185,24 +185,26 @@ impl WatcherImpl {
 
     let _ = self.run(&[]).await;
 
+    let self_clone = Arc::clone(&self);
     let future = async move {
-      while let Ok(msg) = self.exec_rx.lock().await.recv() {
+      let exec_rx = self_clone.exec_rx.lock().await;
+      while let Ok(msg) = exec_rx.recv() {
         match msg {
           ExecChannelMsg::Exec => {
             tokio::time::sleep(Duration::from_millis(u64::from(build_delay))).await;
             tracing::debug!(name= "watcher invalidate", watch_changes = ?self.watch_changes);
             let watch_changes =
-              self.watch_changes.iter().map(|v| v.deref().clone()).collect::<Vec<_>>();
+              self_clone.watch_changes.iter().map(|v| v.deref().clone()).collect::<Vec<_>>();
             for change in &watch_changes {
-              for task in &self.tasks {
+              for task in &self_clone.tasks {
                 task.on_change(change.path.as_str(), change.kind).await;
                 task.invalidate(change.path.as_str());
               }
-              self.watch_changes.remove(change);
+              self_clone.watch_changes.remove(change);
             }
             let changed_files =
               watch_changes.iter().map(|item| item.path.clone()).collect::<Vec<_>>();
-            let _ = self.run(&changed_files).await;
+            let _ = self_clone.run(&changed_files).await;
           }
           ExecChannelMsg::Close => break,
         }

@@ -3,7 +3,6 @@ use std::time::Duration;
 
 use napi::bindgen_prelude::FnArgs;
 use napi_derive::napi;
-use tracing::info;
 
 use crate::bundler::{BindingBundlerOptions, Bundler};
 use crate::types::binding_watcher_event::BindingWatcherEvent;
@@ -81,7 +80,6 @@ impl BindingWatcher {
             {
               eprintln!("watcher listener error: {e:?}");
             }
-            info!("send event to js side done");
           }
           Err(e) => {
             eprintln!("watcher receiver error: {e:?}");

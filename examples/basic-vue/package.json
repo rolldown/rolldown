@@ -3,7 +3,7 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "build": "RUST_BACKTRACE=full RD_LOG=rolldown_binding=trace,rolldown::watch=trace,rolldown::bundler=trace,rolldown::module_loader=trace  rolldown -w --config ./rolldown.config.js"
+    "build": "rolldown --config ./rolldown.config.js"
   },
   "devDependencies": {
     "rolldown": "workspace:*"

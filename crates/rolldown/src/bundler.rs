@@ -181,6 +181,7 @@ impl Bundler {
     Ok(output)
   }
 
+  #[inline]
   pub fn options(&self) -> &NormalizedBundlerOptions {
     &self.options
   }

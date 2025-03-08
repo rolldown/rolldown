@@ -721,6 +721,12 @@
             "boolean",
             "null"
           ]
+        },
+        "unknownGlobalSideEffects": {
+          "type": [
+            "boolean",
+            "null"
+          ]
         }
       },
       "additionalProperties": false

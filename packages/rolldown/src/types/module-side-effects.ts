@@ -15,5 +15,6 @@ export type TreeshakingOptions =
       moduleSideEffects?: ModuleSideEffectsOption
       annotations?: boolean
       manualPureFunctions?: string[]
+      unknownGlobalSideEffects?: boolean
     }
   | boolean

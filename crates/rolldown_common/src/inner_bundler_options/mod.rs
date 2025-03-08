@@ -269,6 +269,8 @@ fn deserialize_treeshake<'de, D>(deserializer: D) -> Result<TreeshakeOptions, D:
 where
   D: Deserializer<'de>,
 {
+  use rustc_hash::FxHashSet;
+
   let value = Option::<Value>::deserialize(deserializer)?;
   match value {
     Some(Value::Bool(false)) => Ok(TreeshakeOptions::Boolean(false)),
@@ -276,6 +278,7 @@ where
       Ok(TreeshakeOptions::Option(types::treeshake::InnerOptions {
         module_side_effects: types::treeshake::ModuleSideEffects::Boolean(true),
         annotations: Some(true),
+        manual_pure_functions: None,
       }))
     }
     Some(Value::Object(obj)) => {
@@ -293,9 +296,23 @@ where
           _ => Err(serde::de::Error::custom("annotations should be a `true` or `false`")),
         },
       )?;
+      let manual_pure_functions = obj.get("manualPureFunctions").map_or_else(
+        || Ok(FxHashSet::default()),
+        |v| match v {
+          Value::Array(v) => Ok(
+            v.iter()
+              .map(|item| {
+                item.as_str().expect("manualPureFunctions should be a `Vec<String>`").to_string()
+              })
+              .collect::<FxHashSet<_>>(),
+          ),
+          _ => Err(serde::de::Error::custom("manualPureFunctions should be a `Vec<String>`")),
+        },
+      )?;
       Ok(TreeshakeOptions::Option(types::treeshake::InnerOptions {
         module_side_effects,
         annotations,
+        manual_pure_functions: Some(manual_pure_functions),
       }))
     }
     _ => Err(serde::de::Error::custom("treeshake should be a boolean or an object")),

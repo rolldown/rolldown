@@ -14,5 +14,6 @@ export type TreeshakingOptions =
   | {
       moduleSideEffects?: ModuleSideEffectsOption
       annotations?: boolean
+      manualPureFunctions?: string[]
     }
   | boolean

@@ -1,4 +1,5 @@
 use derive_more::Debug;
+use rustc_hash::FxHashSet;
 use std::sync::Arc;
 
 use napi::bindgen_prelude::{Either3, FnArgs};
@@ -25,6 +26,7 @@ pub struct BindingTreeshake {
   #[debug("ModuleSideEffects(...)")]
   pub module_side_effects: BindingModuleSideEffects,
   pub annotations: Option<bool>,
+  pub manual_pure_functions: Option<Vec<String>>,
 }
 
 #[napi_derive::napi(object, object_to_js = false)]
@@ -67,7 +69,11 @@ impl TryFrom<BindingTreeshake> for rolldown::TreeshakeOptions {
       }
     };
 
-    Ok(Self::Option(InnerOptions { module_side_effects, annotations: value.annotations }))
+    Ok(Self::Option(InnerOptions {
+      module_side_effects,
+      annotations: value.annotations,
+      manual_pure_functions: value.manual_pure_functions.map(FxHashSet::from_iter),
+    }))
   }
 
   type Error = anyhow::Error;

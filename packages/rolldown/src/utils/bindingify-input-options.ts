@@ -287,6 +287,8 @@ function bindingifyTreeshakeOptions(
   }
   let normalizedConfig: BindingInputOptions['treeshake'] = {
     moduleSideEffects: true,
+    annotations: config.annotations ?? true,
+    manualPureFunctions: config.manualPureFunctions,
   }
   if (config.moduleSideEffects === undefined) {
     normalizedConfig.moduleSideEffects = true
@@ -299,6 +301,5 @@ function bindingifyTreeshakeOptions(
     normalizedConfig.moduleSideEffects = config.moduleSideEffects
   }
 
-  normalizedConfig.annotations = config.annotations ?? true
   return normalizedConfig
 }

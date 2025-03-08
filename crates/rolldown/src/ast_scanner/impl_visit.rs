@@ -52,8 +52,11 @@ impl<'me, 'ast: 'me> Visit<'ast> for AstScanner<'me, 'ast> {
         self.comments,
         // In `NormalModule` the options is always `Some`, for `RuntimeModule` always enable annotations
         !self.options.treeshake.annotations(),
+        // Use a static value instead of `options` property access to avoid function call
+        // overhead
         self.options.jsx.is_jsx_preserve(),
         &self.result.symbol_ref_db,
+        self.options,
       )
       .detect_side_effect_of_stmt(stmt);
 

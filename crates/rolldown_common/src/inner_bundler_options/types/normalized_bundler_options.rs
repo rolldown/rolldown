@@ -90,6 +90,65 @@ pub struct NormalizedBundlerOptions {
   pub transform_options: TransformOptions,
 }
 
+// This is only used for testing
+impl Default for NormalizedBundlerOptions {
+  #[allow(clippy::default_trait_access)]
+  fn default() -> Self {
+    Self {
+      input: Default::default(),
+      cwd: Default::default(),
+      external: Default::default(),
+      treeshake: Default::default(),
+      platform: Platform::Neutral,
+      shim_missing_exports: Default::default(),
+      module_types: Default::default(),
+      name: Default::default(),
+      css_entry_filenames: ChunkFilenamesOutputOption::String(String::new()),
+      css_chunk_filenames: ChunkFilenamesOutputOption::String(String::new()),
+      entry_filenames: ChunkFilenamesOutputOption::String(String::new()),
+      chunk_filenames: ChunkFilenamesOutputOption::String(String::new()),
+      asset_filenames: AssetFilenamesOutputOption::String(String::new()),
+      sanitize_filename: Default::default(),
+      dir: Default::default(),
+      out_dir: Default::default(),
+      file: Default::default(),
+      format: OutputFormat::Esm,
+      exports: Default::default(),
+      es_module: Default::default(),
+      hash_characters: Default::default(),
+      globals: GlobalsOutputOption::FxHashMap(FxHashMap::default()),
+      sourcemap: Default::default(),
+      banner: Default::default(),
+      footer: Default::default(),
+      intro: Default::default(),
+      outro: Default::default(),
+      sourcemap_ignore_list: Default::default(),
+      sourcemap_path_transform: Default::default(),
+      sourcemap_debug_ids: Default::default(),
+      experimental: Default::default(),
+      minify: MinifyOptions::Disabled,
+      extend: Default::default(),
+      define: Default::default(),
+      keep_names: Default::default(),
+      inject: Default::default(),
+      oxc_inject_global_variables_config: InjectGlobalVariablesConfig::new(vec![]),
+      external_live_bindings: Default::default(),
+      inline_dynamic_imports: Default::default(),
+      advanced_chunks: Default::default(),
+      checks: Default::default(),
+      profiler_names: Default::default(),
+      jsx: Default::default(),
+      watch: Default::default(),
+      comments: Comments::None,
+      drop_labels: Default::default(),
+      target: Default::default(),
+      polyfill_require: Default::default(),
+      defer_sync_scan_data: Default::default(),
+      transform_options: Default::default(),
+    }
+  }
+}
+
 pub type SharedNormalizedBundlerOptions = Arc<NormalizedBundlerOptions>;
 
 impl NormalizedBundlerOptions {

@@ -64,25 +64,16 @@ impl ModuleSideEffects {
     match self {
       ModuleSideEffects::ModuleSideEffectsRules(rules) => {
         for ModuleSideEffectsRule { test, external, side_effects } in rules {
-          match (test, external) {
-            (Some(test), Some(external)) => {
-              if test.matches(path) && *external == is_external {
-                return Some(*side_effects);
-              }
-            }
-            (None, Some(external)) => {
-              if *external == is_external {
-                return Some(*side_effects);
-              }
-            }
-            (Some(test), None) => {
-              if test.matches(path) {
-                return Some(*side_effects);
-              }
-            }
+          let is_match_rule = match (test, external) {
+            (Some(test), Some(external)) => test.matches(path) && *external == is_external,
+            (None, Some(external)) => *external == is_external,
+            (Some(test), None) => test.matches(path),
             // At least one of `test` or `external` should be defined
             (None, None) => unreachable!(),
           };
+          if is_match_rule {
+            return Some(*side_effects);
+          }
         }
         // analyze side effects from source code
         None

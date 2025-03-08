@@ -521,7 +521,9 @@ impl<'a> SideEffectDetector<'a> {
 
   #[inline]
   fn detect_side_effect_of_identifier(&self, ident_ref: &IdentifierReference) -> bool {
-    self.is_unresolved_reference(ident_ref) && !is_global_ident_ref(&ident_ref.name)
+    self.is_unresolved_reference(ident_ref)
+      && self.options.treeshake.unknown_global_side_effects()
+      && !is_global_ident_ref(&ident_ref.name)
   }
 
   #[allow(clippy::too_many_lines)]

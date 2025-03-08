@@ -4,17 +4,34 @@ use rolldown_common::{EcmaModuleAstUsage, Module, ModuleIdx, ModuleTable};
 use rolldown_ecmascript::EcmaCompiler;
 use rolldown_ecmascript_utils::AstSnippet;
 use rolldown_error::{BuildResult, ResultExt};
-use rolldown_utils::indexmap::FxIndexMap;
 use rustc_hash::FxHashMap;
 
 use crate::hmr::hmr_ast_finalizer::HmrAstFinalizer;
 
+pub struct HmrManagerInput {
+  pub module_db: ModuleTable,
+}
+
 pub struct HmrManager {
   module_db: ModuleTable,
-  pub module_idx_by_abs_path: FxIndexMap<ArcStr, ModuleIdx>,
+  module_idx_by_abs_path: FxHashMap<ArcStr, ModuleIdx>,
 }
 
 impl HmrManager {
+  pub fn new(input: HmrManagerInput) -> Self {
+    let module_idx_by_abs_path = input
+      .module_db
+      .modules
+      .iter()
+      .filter_map(|m| m.as_normal())
+      .map(|m| {
+        let filename = m.id.resource_id().clone();
+        let module_idx = m.idx;
+        (filename, module_idx)
+      })
+      .collect();
+    Self { module_db: input.module_db, module_idx_by_abs_path }
+  }
   #[expect(clippy::dbg_macro)] // FIXME: Remove dbg! macro once the feature is stable
   pub fn generate_hmr_patch(&self, changed_file_paths: Vec<String>) -> BuildResult<String> {
     let mut changed_modules = vec![];

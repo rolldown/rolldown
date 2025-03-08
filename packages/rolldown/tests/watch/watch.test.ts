@@ -431,7 +431,13 @@ test.sequential('watch multiply options', async () => {
     }
   })
 
-  await waitBuildFinished(watcher)
+  // here should using waitBuildFinished to wait the build finished, because the `input` could be finished before `foo`
+  // await waitBuildFinished(watcher)
+  await waitUtil(() => {
+    expect(fs.readFileSync(output, 'utf-8').includes('console.log(1)')).toBe(
+      true,
+    )
+  })
 
   fs.writeFileSync(input, 'console.log(2)')
   await waitUtil(() => {

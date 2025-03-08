@@ -15,7 +15,9 @@ use std::{
   },
   time::Duration,
 };
-use tokio::sync::Mutex;
+use tokio::{runtime, sync::Mutex, task::spawn_blocking};
+use tokio_with_wasm::alias as tokio;
+use tracing::info;
 
 use crate::Bundler;
 
@@ -209,9 +211,11 @@ impl WatcherImpl {
         }
       }
     };
+
+    info!("wasm");
     #[cfg(target_family = "wasm")]
     {
-      futures::executor::block_on(future);
+      // futures::executor::block_on(future);
     }
     #[cfg(not(target_family = "wasm"))]
     {
@@ -269,5 +273,9 @@ pub fn wait_for_change(watcher: Arc<WatcherImpl>) {
       }
     }
   };
-  tokio::spawn(future);
+
+  spawn_blocking(|| {
+    let rt = runtime::Builder::new_current_thread().build().unwrap();
+    rt.block_on(future);
+  });
 }

@@ -3,6 +3,7 @@ use std::time::Duration;
 
 use napi::bindgen_prelude::FnArgs;
 use napi_derive::napi;
+use tracing::info;
 
 use crate::bundler::{BindingBundlerOptions, Bundler};
 use crate::types::binding_watcher_event::BindingWatcherEvent;
@@ -35,6 +36,12 @@ pub struct BindingWatcher {
   inner: rolldown::Watcher,
 }
 
+use tokio::{
+  runtime,
+  task::{JoinSet, spawn, spawn_blocking, yield_now},
+};
+use tokio_with_wasm::alias as tokio;
+
 #[napi]
 impl BindingWatcher {
   #[napi(constructor)]
@@ -64,29 +71,33 @@ impl BindingWatcher {
     listener: MaybeAsyncJsCallback<FnArgs<(BindingWatcherEvent,)>, ()>,
   ) -> napi::Result<()> {
     let rx = Arc::clone(&self.inner.emitter().rx);
-    let future = async move {
-      let mut run = true;
-      let rx = rx.lock().await;
-      while run {
-        match rx.recv() {
-          Ok(event) => {
-            if let rolldown_common::WatcherEvent::Close = &event {
-              run = false;
+    spawn_blocking(|| {
+      let rt = runtime::Builder::new_current_thread().build().unwrap();
+      rt.block_on(async move {
+        let mut run = true;
+        let rx = rx.lock().await;
+        while run {
+          match rx.recv() {
+            Ok(event) => {
+              if let rolldown_common::WatcherEvent::Close = &event {
+                run = false;
+              }
+              tracing::debug!(name= "send event to js side", event = ?event);
+              if let Err(e) =
+                listener.await_call(FnArgs { data: (BindingWatcherEvent::new(event),) }).await
+              {
+                eprintln!("watcher listener error: {e:?}");
+              }
+              info!("send event to js side done");
             }
-            tracing::debug!(name= "send event to js side", event = ?event);
-            if let Err(e) =
-              listener.await_call(FnArgs { data: (BindingWatcherEvent::new(event),) }).await
-            {
-              eprintln!("watcher listener error: {e:?}");
+            Err(e) => {
+              eprintln!("watcher receiver error: {e:?}");
             }
-          }
-          Err(e) => {
-            eprintln!("watcher receiver error: {e:?}");
           }
         }
-      }
-    };
-    napi::tokio::spawn(future);
+      });
+    });
+
     self.inner.start().await;
     Ok(())
   }

@@ -28,6 +28,10 @@ use rolldown_utils::rustc_hash::FxHashSetExt;
 use rustc_hash::{FxHashMap, FxHashSet};
 use std::collections::hash_map::Entry;
 use std::sync::Arc;
+use tokio::runtime;
+use tokio::task::spawn_blocking;
+use tokio_with_wasm::alias as tokio;
+use tracing::info;
 
 use crate::{SharedOptions, SharedResolver};
 
@@ -120,7 +124,10 @@ impl ModuleLoader {
 
     let task = RuntimeModuleTask::new(runtime_id, tx.clone(), Arc::clone(&options));
 
-    tokio::spawn(async { task.run() });
+    spawn_blocking(|| {
+      let rt = runtime::Builder::new_current_thread().build().unwrap();
+      rt.block_on(async { task.run() });
+    });
 
     Ok(Self {
       tx,
@@ -210,7 +217,10 @@ impl ModuleLoader {
             assert_module_type,
           );
 
-          tokio::spawn(task.run());
+          spawn_blocking(|| {
+            let rt = runtime::Builder::new_current_thread().build().unwrap();
+            rt.block_on(task.run());
+          });
         }
 
         *not_visited.insert(idx)
@@ -255,10 +265,13 @@ impl ModuleLoader {
     let mut extra_entry_points = vec![];
 
     let mut runtime_brief: Option<RuntimeModuleBrief> = None;
+
+    info!("block until all module tasks are done");
     while self.remaining > 0 {
       let Some(msg) = self.rx.recv().await else {
         break;
       };
+      info!("received module task result {}", msg);
       match msg {
         ModuleLoaderMsg::NormalModuleDone(task_result) => {
           let NormalModuleTaskResult {
@@ -428,7 +441,7 @@ impl ModuleLoader {
         }
       }
     }
-
+    info!("all module tasks are done");
     if !errors.is_empty() {
       return Err(errors.into());
     }

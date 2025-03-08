@@ -23,7 +23,7 @@ impl Watcher {
 
   pub async fn start(&self) {
     wait_for_change(Arc::clone(&self.0));
-    self.0.start().await;
+    Arc::clone(&self.0).start().await;
   }
 
   pub async fn close(&self) -> Result<()> {

@@ -2,6 +2,7 @@ use std::{future::Future, pin::Pin, sync::Arc};
 
 use derive_more::Debug;
 use rolldown_utils::js_regex::HybridRegex;
+use rustc_hash::FxHashSet;
 #[cfg(feature = "deserialize_bundler_options")]
 use schemars::JsonSchema;
 #[cfg(feature = "deserialize_bundler_options")]
@@ -24,6 +25,7 @@ impl Default for TreeshakeOptions {
     TreeshakeOptions::Option(InnerOptions {
       module_side_effects: ModuleSideEffects::Boolean(true),
       annotations: Some(true),
+      manual_pure_functions: None,
     })
   }
 }
@@ -114,6 +116,14 @@ impl TreeshakeOptions {
       TreeshakeOptions::Option(inner) => inner.annotations.unwrap_or_default(),
     }
   }
+
+  // TODO: optimize this
+  pub fn manual_pure_functions(&self) -> Option<&FxHashSet<String>> {
+    match self {
+      TreeshakeOptions::Boolean(_) => None,
+      TreeshakeOptions::Option(inner) => inner.manual_pure_functions.as_ref(),
+    }
+  }
 }
 
 #[derive(Debug, Clone)]
@@ -130,6 +140,7 @@ pub struct InnerOptions {
   )]
   pub module_side_effects: ModuleSideEffects,
   pub annotations: Option<bool>,
+  pub manual_pure_functions: Option<FxHashSet<String>>,
 }
 
 #[cfg(feature = "deserialize_bundler_options")]

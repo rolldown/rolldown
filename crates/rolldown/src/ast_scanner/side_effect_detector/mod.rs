@@ -8,7 +8,7 @@ use oxc::ast::ast::{
 };
 use oxc::ast::{match_expression, match_member_expression};
 use oxc::semantic::SymbolTable;
-use rolldown_common::AstScopes;
+use rolldown_common::{AstScopes, SharedNormalizedBundlerOptions};
 use rolldown_utils::global_reference::{
   is_global_ident_ref, is_side_effect_free_member_expr_of_len_three,
   is_side_effect_free_member_expr_of_len_two,
@@ -31,6 +31,8 @@ pub struct SideEffectDetector<'a> {
   pub ignore_annotations: bool,
   pub jsx_preserve: bool,
   pub symbol_table: &'a SymbolTable,
+  options: &'a SharedNormalizedBundlerOptions,
+  is_manual_pure_functions_empty: bool,
 }
 
 impl<'a> SideEffectDetector<'a> {
@@ -41,8 +43,18 @@ impl<'a> SideEffectDetector<'a> {
     ignore_annotations: bool,
     jsx_preserve: bool,
     symbol_table: &'a SymbolTable,
+    options: &'a SharedNormalizedBundlerOptions,
   ) -> Self {
-    Self { scope, source, comments, ignore_annotations, jsx_preserve, symbol_table }
+    Self {
+      scope,
+      source,
+      comments,
+      ignore_annotations,
+      jsx_preserve,
+      symbol_table,
+      options,
+      is_manual_pure_functions_empty: options.treeshake.manual_pure_functions().is_none(),
+    }
   }
 
   fn is_unresolved_reference(&self, ident_ref: &IdentifierReference) -> bool {
@@ -118,6 +130,9 @@ impl<'a> SideEffectDetector<'a> {
   }
 
   fn detect_side_effect_of_member_expr(&self, expr: &ast::MemberExpression) -> bool {
+    if self.is_expr_manual_pure_functions(expr.object()) {
+      return false;
+    }
     // MemberExpression is considered having side effect by default, unless it's some builtin global variables.
     let Some((ref_id, chains)) = extract_member_expr_chain(expr, 3) else {
       return true;
@@ -150,6 +165,9 @@ impl<'a> SideEffectDetector<'a> {
   }
 
   fn detect_side_effect_of_call_expr(&self, expr: &CallExpression) -> bool {
+    if self.is_expr_manual_pure_functions(&expr.callee) {
+      return false;
+    }
     let is_pure = !self.ignore_annotations && self.is_pure_function_or_constructor_call(expr.span);
     if is_pure {
       expr.arguments.iter().any(|arg| match arg {
@@ -158,6 +176,50 @@ impl<'a> SideEffectDetector<'a> {
       })
     } else {
       true
+    }
+  }
+
+  fn is_expr_manual_pure_functions(&self, expr: &'a Expression) -> bool {
+    if self.is_manual_pure_functions_empty {
+      return false;
+    }
+    // `is_manual_pure_functions_empty` is false, so `manual_pure_functions` is `Some`.
+    let manual_pure_functions = self.options.treeshake.manual_pure_functions().unwrap();
+    let Some(first_part) = Self::extract_first_part_of_member_expr_like(expr) else {
+      return false;
+    };
+    manual_pure_functions.contains(first_part)
+  }
+
+  fn extract_first_part_of_member_expr_like(expr: &'a Expression) -> Option<&'a str> {
+    let mut cur = expr;
+    loop {
+      match cur {
+        Expression::Identifier(ident) => break Some(ident.name.as_str()),
+        Expression::ComputedMemberExpression(expr) => {
+          cur = &expr.object;
+        }
+        Expression::StaticMemberExpression(expr) => {
+          cur = &expr.object;
+        }
+        Expression::CallExpression(expr) => {
+          cur = &expr.callee;
+        }
+        Expression::ChainExpression(expr) => match expr.expression {
+          ChainElement::CallExpression(ref call_expression) => {
+            cur = &call_expression.callee;
+          }
+          ChainElement::ComputedMemberExpression(ref computed_member_expression) => {
+            cur = &computed_member_expression.object;
+          }
+          ChainElement::StaticMemberExpression(ref static_member_expression) => {
+            cur = &static_member_expression.object;
+          }
+          ChainElement::TSNonNullExpression(_) => unreachable!(),
+          ChainElement::PrivateFieldExpression(_) => break None,
+        },
+        _ => break None,
+      }
     }
   }
 
@@ -331,10 +393,10 @@ impl<'a> SideEffectDetector<'a> {
         }
       },
 
+      Expression::TaggedTemplateExpression(expr) => !self.is_expr_manual_pure_functions(&expr.tag),
       Expression::Super(_)
       | Expression::AwaitExpression(_)
       | Expression::ImportExpression(_)
-      | Expression::TaggedTemplateExpression(_)
       | Expression::UpdateExpression(_)
       | Expression::YieldExpression(_)
       | Expression::V8IntrinsicExpression(_) => true,
@@ -567,8 +629,10 @@ impl<'a> SideEffectDetector<'a> {
 
 #[cfg(test)]
 mod test {
-  use oxc::span::SourceType;
-  use rolldown_common::AstScopes;
+  use std::sync::Arc;
+
+  use oxc::{parser::Parser, span::SourceType};
+  use rolldown_common::{AstScopes, NormalizedBundlerOptions};
   use rolldown_ecmascript::{EcmaAst, EcmaCompiler};
 
   use crate::ast_scanner::side_effect_detector::SideEffectDetector;
@@ -583,8 +647,16 @@ mod test {
     };
 
     let has_side_effect = ast.program().body.iter().any(|stmt| {
-      SideEffectDetector::new(&ast_scope, ast.source(), ast.comments(), false, false, &symbol_table)
-        .detect_side_effect_of_stmt(stmt)
+      SideEffectDetector::new(
+        &ast_scope,
+        ast.source(),
+        ast.comments(),
+        false,
+        false,
+        &symbol_table,
+        &Arc::new(NormalizedBundlerOptions::default()),
+      )
+      .detect_side_effect_of_stmt(stmt)
     });
 
     has_side_effect
@@ -920,5 +992,21 @@ let remove15 = class {
 }
     "
     ));
+  }
+
+  #[test]
+  fn test_extract_first_part_of_member_expr_like() {
+    assert!(extract_first_part_of_member_expr_like_helper("a.b") == "a");
+    assert!(extract_first_part_of_member_expr_like_helper("styled?.div()") == "styled");
+    assert!(extract_first_part_of_member_expr_like_helper("styled()") == "styled");
+    assert!(extract_first_part_of_member_expr_like_helper("styled().div") == "styled");
+    assert!(extract_first_part_of_member_expr_like_helper("styled()()") == "styled");
+  }
+
+  fn extract_first_part_of_member_expr_like_helper(code: &str) -> String {
+    let allocator = oxc::allocator::Allocator::default();
+    let parser = Parser::new(&allocator, code, SourceType::ts());
+    let expr = parser.parse_expression().unwrap();
+    SideEffectDetector::extract_first_part_of_member_expr_like(&expr).unwrap().to_string()
   }
 }

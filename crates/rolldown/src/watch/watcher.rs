@@ -15,8 +15,7 @@ use std::{
   },
   time::Duration,
 };
-use tokio::{runtime, sync::Mutex, task::spawn_blocking, time};
-use tokio_with_wasm::alias as tokio;
+use tokio::sync::Mutex;
 use tracing::info;
 
 use crate::Bundler;
@@ -191,46 +190,50 @@ impl WatcherImpl {
     };
 
     let _ = self.run(&[]).await;
-    let self_clone = self.clone();
-    spawn_blocking(move || {
-      let rt = runtime::Builder::new_current_thread().enable_time().build().unwrap();
-      rt.block_on(async move {
-        let exec_rx = self_clone.exec_rx.lock().await;
-        while let Ok(msg) = exec_rx.recv() {
-          match msg {
-            ExecChannelMsg::Exec => {
-             time::sleep(Duration::from_millis(u64::from(build_delay))).await;
-              tracing::debug!(name= "watcher invalidate", watch_changes = ?self_clone.watch_changes);
-              let watch_changes =
-                self_clone.watch_changes.iter().map(|v| v.deref().clone()).collect::<Vec<_>>();
-              for change in &watch_changes {
-                for task in &self_clone.tasks {
-                  task.on_change(change.path.as_str(), change.kind).await;
-                  task.invalidate(change.path.as_str());
-                }
-                self_clone.watch_changes.remove(change);
+
+    let future = async move {
+      while let Ok(msg) = self.exec_rx.lock().await.recv() {
+        match msg {
+          ExecChannelMsg::Exec => {
+            tokio::time::sleep(Duration::from_millis(u64::from(build_delay))).await;
+            tracing::debug!(name= "watcher invalidate", watch_changes = ?self.watch_changes);
+            let watch_changes =
+              self.watch_changes.iter().map(|v| v.deref().clone()).collect::<Vec<_>>();
+            for change in &watch_changes {
+              for task in &self.tasks {
+                task.on_change(change.path.as_str(), change.kind).await;
+                task.invalidate(change.path.as_str());
               }
-              let changed_files =
-                watch_changes.iter().map(|item| item.path.clone()).collect::<Vec<_>>();
-              let _ = self_clone.run(&changed_files).await;
+              self.watch_changes.remove(change);
             }
-            ExecChannelMsg::Close => break,
+            let changed_files =
+              watch_changes.iter().map(|item| item.path.clone()).collect::<Vec<_>>();
+            let _ = self.run(&changed_files).await;
           }
+          ExecChannelMsg::Close => break,
+        }
+      }
+    };
+
+    #[cfg(target_family = "wasm")]
+    {
+      use tokio::runtime;
+      use tokio::task::spawn_blocking;
+      use tokio_with_wasm::alias as tokio;
+      spawn_blocking(|| {
+        let rt = runtime::Builder::new_current_thread().enable_time().build();
+        match rt {
+          Ok(rt) => rt.block_on(future),
+          Err(e) => tracing::error!("create runtime error: {e:?}"),
         }
       });
-    });
-
-    info!("wasm");
-    // #[cfg(target_family = "wasm")]
-    // {
-    //   // futures::executor::block_on(future);
-    // }
-    // #[cfg(not(target_family = "wasm"))]
-    // {
-    //   tokio::task::block_in_place(move || {
-    //     tokio::runtime::Handle::current().block_on(future);
-    //   });
-    // }
+    }
+    #[cfg(not(target_family = "wasm"))]
+    {
+      tokio::task::block_in_place(|| {
+        tokio::runtime::Handle::current().block_on(future);
+      });
+    }
   }
 }
 
@@ -282,8 +285,19 @@ pub fn wait_for_change(watcher: Arc<WatcherImpl>) {
     }
   };
 
-  spawn_blocking(|| {
-    let rt = runtime::Builder::new_current_thread().build().unwrap();
-    rt.block_on(future);
-  });
+  #[cfg(not(target_family = "wasm"))]
+  {
+    tokio::spawn(future);
+  }
+
+  #[cfg(target_family = "wasm")]
+  {
+    spawn_blocking(|| {
+      let rt = runtime::Builder::new_current_thread().enable_time().build();
+      match rt {
+        Ok(rt) => rt.block_on(future),
+        Err(e) => tracing::error!("create runtime error: {e:?}"),
+      }
+    });
+  }
 }

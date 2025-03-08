@@ -28,9 +28,6 @@ use rolldown_utils::rustc_hash::FxHashSetExt;
 use rustc_hash::{FxHashMap, FxHashSet};
 use std::collections::hash_map::Entry;
 use std::sync::Arc;
-use tokio::runtime;
-use tokio::task::spawn_blocking;
-use tokio_with_wasm::alias as tokio;
 use tracing::info;
 
 use crate::{SharedOptions, SharedResolver};
@@ -124,10 +121,25 @@ impl ModuleLoader {
 
     let task = RuntimeModuleTask::new(runtime_id, tx.clone(), Arc::clone(&options));
 
-    spawn_blocking(|| {
-      let rt = runtime::Builder::new_current_thread().build().unwrap();
-      rt.block_on(async { task.run() });
-    });
+    let future = async { task.run() };
+
+    #[cfg(target_family = "wasm")]
+    {
+      use tokio::runtime;
+      use tokio::task::spawn_blocking;
+      use tokio_with_wasm::alias as tokio;
+      spawn_blocking(|| {
+        let rt = runtime::Builder::new_current_thread().enable_time().build();
+        match rt {
+          Ok(rt) => rt.block_on(future),
+          Err(e) => tracing::error!("create runtime error: {e:?}"),
+        }
+      });
+    }
+    #[cfg(not(target_family = "wasm"))]
+    {
+      tokio::spawn(future);
+    }
 
     Ok(Self {
       tx,
@@ -217,10 +229,23 @@ impl ModuleLoader {
             assert_module_type,
           );
 
-          spawn_blocking(|| {
-            let rt = runtime::Builder::new_current_thread().build().unwrap();
-            rt.block_on(task.run());
-          });
+          #[cfg(target_family = "wasm")]
+          {
+            use tokio::runtime;
+            use tokio::task::spawn_blocking;
+            use tokio_with_wasm::alias as tokio;
+            spawn_blocking(|| {
+              let rt = runtime::Builder::new_current_thread().enable_time().build();
+              match rt {
+                Ok(rt) => rt.block_on(task.run()),
+                Err(e) => tracing::error!("create runtime error: {e:?}"),
+              }
+            });
+          }
+          #[cfg(not(target_family = "wasm"))]
+          {
+            tokio::spawn(task.run());
+          }
         }
 
         *not_visited.insert(idx)

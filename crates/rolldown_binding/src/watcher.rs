@@ -71,32 +71,45 @@ impl BindingWatcher {
     listener: MaybeAsyncJsCallback<FnArgs<(BindingWatcherEvent,)>, ()>,
   ) -> napi::Result<()> {
     let rx = Arc::clone(&self.inner.emitter().rx);
-    spawn_blocking(|| {
-      let rt = runtime::Builder::new_current_thread().build().unwrap();
-      rt.block_on(async move {
-        let mut run = true;
-        let rx = rx.lock().await;
-        while run {
-          match rx.recv() {
-            Ok(event) => {
-              if let rolldown_common::WatcherEvent::Close = &event {
-                run = false;
-              }
-              tracing::debug!(name= "send event to js side", event = ?event);
-              if let Err(e) =
-                listener.await_call(FnArgs { data: (BindingWatcherEvent::new(event),) }).await
-              {
-                eprintln!("watcher listener error: {e:?}");
-              }
-              info!("send event to js side done");
+
+    let future = async move {
+      let mut run = true;
+      let rx = rx.lock().await;
+      while run {
+        match rx.recv() {
+          Ok(event) => {
+            if let rolldown_common::WatcherEvent::Close = &event {
+              run = false;
             }
-            Err(e) => {
-              eprintln!("watcher receiver error: {e:?}");
+            tracing::debug!(name= "send event to js side", event = ?event);
+            if let Err(e) =
+              listener.await_call(FnArgs { data: (BindingWatcherEvent::new(event),) }).await
+            {
+              eprintln!("watcher listener error: {e:?}");
             }
+            info!("send event to js side done");
+          }
+          Err(e) => {
+            eprintln!("watcher receiver error: {e:?}");
           }
         }
+      }
+    };
+
+    #[cfg(target_family = "wasm")]
+    {
+      spawn_blocking(|| {
+        let rt = runtime::Builder::new_current_thread().enable_time().build();
+        match rt {
+          Ok(rt) => rt.block_on(future),
+          Err(e) => tracing::error!("create runtime error: {e:?}"),
+        }
       });
-    });
+    }
+    #[cfg(not(target_family = "wasm"))]
+    {
+      napi::tokio::spawn(future);
+    }
 
     self.inner.start().await;
     Ok(())

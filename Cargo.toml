@@ -17,7 +17,7 @@ codegen-units = 16
 debug         = 'full'
 inherits      = "release"
 lto           = "thin"
-opt-level     = 3
+opt-level     = "z"
 strip         = "none"
 
 [workspace.lints.clippy]

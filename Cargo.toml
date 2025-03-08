@@ -150,7 +150,7 @@ napi                = { version = "3.0.0-alpha.31", features = ["async", "anyhow
 napi-build          = { version = "2.1.5" }
 napi-derive         = { version = "3.0.0-alpha.28", default-features = false, features = ["type-def"] }
 nom                 = "8.0.0"
-notify              = { path = "../notify/notify" }
+notify              = "8.0.0"
 phf                 = "0.11.3"
 rayon               = "1.10.0"
 regex               = "1.10.5"
@@ -204,3 +204,6 @@ debug         = false     # Set to `true` for debug information
 lto           = "fat"
 opt-level     = 3
 strip         = "symbols" # Set to `false` for debug information
+
+[patch.crates-io]
+filetime = { git = "https://github.com/oligamiq/filetime.git" }

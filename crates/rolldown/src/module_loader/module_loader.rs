@@ -129,7 +129,7 @@ impl ModuleLoader {
       use tokio::task::spawn_blocking;
       use tokio_with_wasm::alias as tokio;
       spawn_blocking(|| {
-        let rt = runtime::Builder::new_current_thread().enable_time().build();
+        let rt = runtime::Builder::new_current_thread().build();
         match rt {
           Ok(rt) => rt.block_on(future),
           Err(e) => tracing::error!("create runtime error: {e:?}"),
@@ -235,7 +235,7 @@ impl ModuleLoader {
             use tokio::task::spawn_blocking;
             use tokio_with_wasm::alias as tokio;
             spawn_blocking(|| {
-              let rt = runtime::Builder::new_current_thread().enable_time().build();
+              let rt = runtime::Builder::new_current_thread().build();
               match rt {
                 Ok(rt) => rt.block_on(task.run()),
                 Err(e) => tracing::error!("create runtime error: {e:?}"),
@@ -296,7 +296,7 @@ impl ModuleLoader {
       let Some(msg) = self.rx.recv().await else {
         break;
       };
-      info!("received module task result {}", msg);
+      info!("received module task result");
       match msg {
         ModuleLoaderMsg::NormalModuleDone(task_result) => {
           let NormalModuleTaskResult {

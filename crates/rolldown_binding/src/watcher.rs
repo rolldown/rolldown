@@ -36,12 +36,6 @@ pub struct BindingWatcher {
   inner: rolldown::Watcher,
 }
 
-use tokio::{
-  runtime,
-  task::{JoinSet, spawn, spawn_blocking, yield_now},
-};
-use tokio_with_wasm::alias as tokio;
-
 #[napi]
 impl BindingWatcher {
   #[napi(constructor)]
@@ -98,8 +92,11 @@ impl BindingWatcher {
 
     #[cfg(target_family = "wasm")]
     {
+      use tokio::runtime;
+      use tokio::task::spawn_blocking;
+      use tokio_with_wasm::alias as tokio;
       spawn_blocking(|| {
-        let rt = runtime::Builder::new_current_thread().enable_time().build();
+        let rt = runtime::Builder::new_current_thread().build();
         match rt {
           Ok(rt) => rt.block_on(future),
           Err(e) => tracing::error!("create runtime error: {e:?}"),

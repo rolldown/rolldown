@@ -114,18 +114,13 @@ impl WatcherImpl {
   pub fn invalidate(&self, data: Option<WatcherChangeData>) {
     tracing::debug!(name= "watch invalidate", running = ?self.running.load(Ordering::Relaxed));
 
-    info!("invalidate1");
-
     if let Some(data) = data {
-      info!("invalidate2");
       self.watch_changes.insert(data);
     }
-    info!("invalidate3");
     if self.running.load(Ordering::Relaxed) || self.invalidating.load(Ordering::Relaxed) {
-      info!("invalidate4");
       return;
     }
-    info!("invalidate5");
+
     self.invalidating.store(true, Ordering::Relaxed);
     self.exec_tx.send(ExecChannelMsg::Exec).expect("send watcher exec cannel message error");
   }
@@ -292,8 +287,11 @@ pub fn wait_for_change(watcher: Arc<WatcherImpl>) {
 
   #[cfg(target_family = "wasm")]
   {
+    use tokio::runtime;
+    use tokio::task::spawn_blocking;
+    use tokio_with_wasm::alias as tokio;
     spawn_blocking(|| {
-      let rt = runtime::Builder::new_current_thread().enable_time().build();
+      let rt = runtime::Builder::new_current_thread().build();
       match rt {
         Ok(rt) => rt.block_on(future),
         Err(e) => tracing::error!("create runtime error: {e:?}"),

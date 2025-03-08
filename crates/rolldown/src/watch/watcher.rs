@@ -15,7 +15,7 @@ use std::{
   },
   time::Duration,
 };
-use tokio::{runtime, sync::Mutex, task::spawn_blocking};
+use tokio::{runtime, sync::Mutex, task::spawn_blocking, time};
 use tokio_with_wasm::alias as tokio;
 use tracing::info;
 
@@ -115,14 +115,18 @@ impl WatcherImpl {
   pub fn invalidate(&self, data: Option<WatcherChangeData>) {
     tracing::debug!(name= "watch invalidate", running = ?self.running.load(Ordering::Relaxed));
 
+    info!("invalidate1");
+
     if let Some(data) = data {
+      info!("invalidate2");
       self.watch_changes.insert(data);
     }
-
+    info!("invalidate3");
     if self.running.load(Ordering::Relaxed) || self.invalidating.load(Ordering::Relaxed) {
+      info!("invalidate4");
       return;
     }
-
+    info!("invalidate5");
     self.invalidating.store(true, Ordering::Relaxed);
     self.exec_tx.send(ExecChannelMsg::Exec).expect("send watcher exec cannel message error");
   }
@@ -172,7 +176,7 @@ impl WatcherImpl {
     Ok(())
   }
 
-  pub async fn start(&self) {
+  pub async fn start(self: Arc<Self>) {
     let build_delay = {
       let mut build_delay: u32 = 0;
       for bundler in &self.bundlers {
@@ -187,42 +191,46 @@ impl WatcherImpl {
     };
 
     let _ = self.run(&[]).await;
-    let future = async move {
-      let exec_rx = self.exec_rx.lock().await;
-      while let Ok(msg) = exec_rx.recv() {
-        match msg {
-          ExecChannelMsg::Exec => {
-            tokio::time::sleep(Duration::from_millis(u64::from(build_delay))).await;
-            tracing::debug!(name= "watcher invalidate", watch_changes = ?self.watch_changes);
-            let watch_changes =
-              self.watch_changes.iter().map(|v| v.deref().clone()).collect::<Vec<_>>();
-            for change in &watch_changes {
-              for task in &self.tasks {
-                task.on_change(change.path.as_str(), change.kind).await;
-                task.invalidate(change.path.as_str());
+    let self_clone = self.clone();
+    spawn_blocking(move || {
+      let rt = runtime::Builder::new_current_thread().enable_time().build().unwrap();
+      rt.block_on(async move {
+        let exec_rx = self_clone.exec_rx.lock().await;
+        while let Ok(msg) = exec_rx.recv() {
+          match msg {
+            ExecChannelMsg::Exec => {
+             time::sleep(Duration::from_millis(u64::from(build_delay))).await;
+              tracing::debug!(name= "watcher invalidate", watch_changes = ?self_clone.watch_changes);
+              let watch_changes =
+                self_clone.watch_changes.iter().map(|v| v.deref().clone()).collect::<Vec<_>>();
+              for change in &watch_changes {
+                for task in &self_clone.tasks {
+                  task.on_change(change.path.as_str(), change.kind).await;
+                  task.invalidate(change.path.as_str());
+                }
+                self_clone.watch_changes.remove(change);
               }
-              self.watch_changes.remove(change);
+              let changed_files =
+                watch_changes.iter().map(|item| item.path.clone()).collect::<Vec<_>>();
+              let _ = self_clone.run(&changed_files).await;
             }
-            let changed_files =
-              watch_changes.iter().map(|item| item.path.clone()).collect::<Vec<_>>();
-            let _ = self.run(&changed_files).await;
+            ExecChannelMsg::Close => break,
           }
-          ExecChannelMsg::Close => break,
         }
-      }
-    };
+      });
+    });
 
     info!("wasm");
-    #[cfg(target_family = "wasm")]
-    {
-      // futures::executor::block_on(future);
-    }
-    #[cfg(not(target_family = "wasm"))]
-    {
-      tokio::task::block_in_place(move || {
-        tokio::runtime::Handle::current().block_on(future);
-      });
-    }
+    // #[cfg(target_family = "wasm")]
+    // {
+    //   // futures::executor::block_on(future);
+    // }
+    // #[cfg(not(target_family = "wasm"))]
+    // {
+    //   tokio::task::block_in_place(move || {
+    //     tokio::runtime::Handle::current().block_on(future);
+    //   });
+    // }
   }
 }
 
@@ -250,7 +258,7 @@ pub fn wait_for_change(watcher: Arc<WatcherImpl>) {
                 if let Some(kind) = match event.kind {
                   notify::EventKind::Create(_) => Some(WatcherChangeKind::Create),
                   notify::EventKind::Modify(
-                    ModifyKind::Data(_) | ModifyKind::Any, /* windows*/
+                    ModifyKind::Data(_) | ModifyKind::Any | ModifyKind::Metadata(_), /* windows*/
                   ) => {
                     tracing::debug!(name= "notify updated content", path = ?id.as_ref(), content= ?std::fs::read_to_string(id.as_ref()).unwrap());
                     Some(WatcherChangeKind::Update)

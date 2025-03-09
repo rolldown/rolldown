@@ -76,15 +76,14 @@ impl HmrManager {
       // TODO: We should get newest source and ast directly from module, but now we just manually fetch them.
       let source: String = std::fs::read_to_string(filename.as_str()).map_err_to_unhandleable()?;
       let mut ast = EcmaCompiler::parse(&filename, source, SourceType::default())?;
-      let (symbol_table, scope_tree) = ast.make_symbol_table_and_scope_tree();
+      let scoping = ast.make_scoping();
 
       ast.program.with_mut(|fields| {
         let mut finalizer = HmrAstFinalizer {
           modules: &self.module_db.modules,
           alloc: fields.allocator,
           snippet: AstSnippet::new(fields.allocator),
-          scopes: &scope_tree,
-          symbols: &symbol_table,
+          scoping: &scoping,
           import_binding: FxHashMap::default(),
           module: changed_module,
           exports: FxHashMap::default(),

@@ -77,7 +77,6 @@ impl RuntimeModuleTask {
       import_records: raw_import_records,
       has_eval,
       ast_usage,
-      ast_scope,
       symbol_ref_db,
       has_star_exports,
       new_url_references,
@@ -112,7 +111,6 @@ impl RuntimeModuleTask {
         stmt_infos,
         imports,
         default_export_ref,
-        ast_scope_idx: None,
         exports_kind: ExportsKind::Esm,
         namespace_object_ref,
         def_format: ModuleDefFormat::EsmMjs,
@@ -144,14 +142,13 @@ impl RuntimeModuleTask {
       })
       .collect();
 
-    let runtime = RuntimeModuleBrief::new(self.module_idx, &ast_scope);
+    let runtime = RuntimeModuleBrief::new(self.module_idx, &symbol_ref_db.ast_scopes);
     let result = ModuleLoaderMsg::RuntimeNormalModuleDone(RuntimeModuleTaskResult {
       ast,
       module,
       runtime,
       resolved_deps,
       raw_import_records,
-      ast_scope,
       local_symbol_ref_db: symbol_ref_db,
     });
 
@@ -172,12 +169,11 @@ impl RuntimeModuleTask {
       ast.contains_use_strict = pre_processor.contains_use_strict;
     });
 
-    let (symbol_table, scope_tree) = ast.make_symbol_table_and_scope_tree();
+    let scoping = ast.make_scoping();
     let facade_path = ModuleId::new(RUNTIME_MODULE_ID);
     let scanner = AstScanner::new(
       self.module_idx,
-      scope_tree,
-      symbol_table,
+      scoping,
       "rolldown_runtime",
       ModuleDefFormat::EsmMjs,
       source,

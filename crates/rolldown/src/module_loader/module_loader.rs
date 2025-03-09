@@ -3,10 +3,10 @@ use super::runtime_module_task::RuntimeModuleTask;
 use super::task_context::TaskContextMeta;
 use crate::ecmascript::ecma_module_view_factory::normalize_side_effects;
 use crate::module_loader::task_context::TaskContext;
-use crate::type_alias::{IndexAstScope, IndexEcmaAst};
+use crate::type_alias::IndexEcmaAst;
 use crate::utils::load_entry_module::load_entry_module;
 use arcstr::ArcStr;
-use oxc::semantic::{ScopeId, SymbolTable};
+use oxc::semantic::{ScopeId, Scoping};
 use oxc::transformer::ReplaceGlobalDefinesConfig;
 use oxc_index::IndexVec;
 use rolldown_common::dynamic_import_usage::DynamicImportExportsUsage;
@@ -35,7 +35,6 @@ pub struct IntermediateNormalModules {
   pub modules: IndexVec<ModuleIdx, Option<Module>>,
   pub importers: IndexVec<ModuleIdx, Vec<ImporterRecord>>,
   pub index_ecma_ast: IndexEcmaAst,
-  pub index_ast_scope: IndexAstScope,
 }
 
 impl IntermediateNormalModules {
@@ -44,7 +43,6 @@ impl IntermediateNormalModules {
       modules: IndexVec::new(),
       importers: IndexVec::new(),
       index_ecma_ast: IndexVec::default(),
-      index_ast_scope: IndexVec::default(),
     }
   }
 
@@ -71,7 +69,6 @@ pub struct ModuleLoaderOutput {
   // Stored all modules
   pub module_table: ModuleTable,
   pub index_ecma_ast: IndexEcmaAst,
-  pub index_ast_scope: IndexAstScope,
   pub symbol_ref_db: SymbolRefDb,
   // Entries that user defined + dynamic import entries
   pub entry_points: Vec<EntryPoint>,
@@ -187,7 +184,7 @@ impl ModuleLoader {
 
           self.symbol_ref_db.store_local_db(
             idx,
-            SymbolRefDbForModule::new(SymbolTable::default(), idx, ScopeId::new(0)),
+            SymbolRefDbForModule::new(Scoping::default(), idx, ScopeId::new(0)),
           );
           let symbol_ref = self.symbol_ref_db.create_facade_root_symbol_ref(
             idx,
@@ -228,7 +225,6 @@ impl ModuleLoader {
     let entries_count = user_defined_entries.len() + /* runtime */ 1;
     self.intermediate_normal_modules.modules.reserve(entries_count);
     self.intermediate_normal_modules.index_ecma_ast.reserve(entries_count);
-    self.intermediate_normal_modules.index_ast_scope.reserve(entries_count);
 
     // Store the already consider as entry module
     let mut user_defined_entry_ids = FxHashSet::with_capacity(user_defined_entries.len());
@@ -328,11 +324,9 @@ impl ModuleLoader {
           module.set_import_records(import_records);
 
           let module_idx = module.idx();
-          if let Some(EcmaRelated { ast, symbols, ast_scope, .. }) = ecma_related {
+          if let Some(EcmaRelated { ast, symbols, .. }) = ecma_related {
             let ast_idx = self.intermediate_normal_modules.index_ecma_ast.push((ast, module_idx));
-            let ast_scope_idx = self.intermediate_normal_modules.index_ast_scope.push(ast_scope);
             module.set_ecma_ast_idx(ast_idx);
-            module.set_ast_scope_idx(ast_scope_idx);
             self.symbol_ref_db.store_local_db(module_idx, symbols);
           }
 
@@ -347,7 +341,6 @@ impl ModuleLoader {
             ast,
             raw_import_records,
             resolved_deps,
-            ast_scope,
           } = task_result;
           let import_records: IndexVec<ImportRecordIdx, rolldown_common::ResolvedImportRecord> =
             raw_import_records
@@ -383,9 +376,7 @@ impl ModuleLoader {
               })
               .collect::<IndexVec<ImportRecordIdx, _>>();
           let ast_idx = self.intermediate_normal_modules.index_ecma_ast.push((ast, module.idx));
-          let ast_scope_idx = self.intermediate_normal_modules.index_ast_scope.push(ast_scope);
           module.ecma_ast_idx = Some(ast_idx);
-          module.ast_scope_idx = Some(ast_scope_idx);
           module.import_records = import_records;
           self.intermediate_normal_modules.modules[self.runtime_id] = Some(module.into());
 
@@ -553,7 +544,6 @@ impl ModuleLoader {
       module_table: ModuleTable { modules },
       symbol_ref_db: self.symbol_ref_db,
       index_ecma_ast: self.intermediate_normal_modules.index_ecma_ast,
-      index_ast_scope: self.intermediate_normal_modules.index_ast_scope,
       entry_points,
       runtime: runtime_brief.expect("Failed to find runtime module. This should not happen"),
       warnings: all_warnings,

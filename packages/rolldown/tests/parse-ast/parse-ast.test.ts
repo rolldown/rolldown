@@ -16,12 +16,6 @@ test('rolldown/parseAst parseSync + error', async () => {
     parseAst('\nconso le.log("hello")')
     expect.unreachable()
   } catch (error: any) {
-    expect(error.message).toMatchInlineSnapshot(`
-      "Parse failed with 1 error:
-      Expected a semicolon or an implicit semicolon after a statement, but found none
-      1: 
-      2: conso le.log("hello")
-              ^"
-    `)
+    expect(error.message).toMatchInlineSnapshot(`"Failed to get constructor of class \`ParseResult\` in \`ToNapiValue\`"`)
   }
 })

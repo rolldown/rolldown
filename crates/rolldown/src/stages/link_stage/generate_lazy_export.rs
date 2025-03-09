@@ -5,7 +5,7 @@ use oxc::{
   span::SPAN,
 };
 use rolldown_common::{
-  AstScopes, ESTarget, EcmaAstIdx, EcmaModuleAstUsage, ExportsKind, LocalExport, Module, ModuleIdx,
+  ESTarget, EcmaAstIdx, EcmaModuleAstUsage, ExportsKind, LocalExport, Module, ModuleIdx,
   ModuleType, NormalModule, StmtInfo, StmtInfoIdx, SymbolOrMemberExprRef, SymbolRef,
   SymbolRefDbForModule,
 };
@@ -206,7 +206,7 @@ fn json_object_expr_to_esm(
 
   // recreate semantic data
   #[allow(clippy::cast_possible_truncation)]
-  let (symbol_table, scope) = ecma_ast.make_symbol_table_and_scope_tree_with_semantic_builder(
+  let scoping = ecma_ast.make_symbol_table_and_scope_tree_with_semantic_builder(
     SemanticBuilder::new().with_scope_tree_child_ids(true).with_stats(Stats {
       nodes: declaration_binding_names.len().next_power_of_two() as u32,
       scopes: 1,
@@ -218,9 +218,8 @@ fn json_object_expr_to_esm(
   // let default_symbol_ref = module.default_export_ref;
 
   // update semantic data of module
-  let root_scope_id = scope.root_scope_id();
-  let ast_scope = AstScopes::new(scope);
-  let mut symbol_ref_db = SymbolRefDbForModule::new(symbol_table, module_idx, root_scope_id);
+  let root_scope_id = scoping.root_scope_id();
+  let mut symbol_ref_db = SymbolRefDbForModule::new(scoping, module_idx, root_scope_id);
 
   let legitimized_repr_name = legitimize_identifier_name(&module.repr_name);
   let default_export_ref =
@@ -238,7 +237,7 @@ fn json_object_expr_to_esm(
   let mut all_declared_symbols =
     stmt_info.flat_map(|info| info.referenced_symbols).collect::<Vec<_>>();
   for (i, (local, exported, _)) in declaration_binding_names.iter().enumerate() {
-    let symbol_id = ast_scope.get_root_binding(local.as_str()).expect("should have binding");
+    let symbol_id = symbol_ref_db.get_root_binding(local.as_str()).expect("should have binding");
     let symbol_ref = (module_idx, symbol_id).into();
     all_declared_symbols.push(SymbolOrMemberExprRef::from(symbol_ref));
     let stmt_info = StmtInfo::default().with_stmt_idx(i).with_declared_symbols(vec![symbol_ref]);
@@ -265,8 +264,6 @@ fn json_object_expr_to_esm(
       .with_declared_symbols(vec![namespace_object_ref])
       .with_referenced_symbols(all_declared_symbols),
   );
-  let ast_scope_idx = module.ecma_view.ast_scope_idx.unwrap();
-  link_staged.ast_scope_table[ast_scope_idx] = ast_scope;
   link_staged.symbols.store_local_db(module_idx, symbol_ref_db);
   true
 }

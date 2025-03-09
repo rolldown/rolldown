@@ -45,13 +45,11 @@ impl RuntimeModuleTask {
     }
   }
 
-  #[expect(clippy::too_many_lines)]
   fn run_inner(&self) -> BuildResult<()> {
     let source = if self.options.is_hmr_enabled() {
       arcstr::literal!(concat!(
-        include_str!("../runtime/runtime-head-node.js"),
         include_str!("../runtime/runtime-base.js"),
-        include_str!("../runtime/runtime-tail-node.js"),
+        include_str!("../runtime/runtime-tail.js"),
         include_str!("../runtime/runtime-extra-dev.js"),
       ))
     } else if self.options.is_esm_format_with_node_platform() {

@@ -1,7 +1,10 @@
 use oxc::{
+  allocator::IntoIn,
   ast::{NONE, ast},
   span::SPAN,
 };
+use rolldown_ecmascript_utils::TakeIn;
+use rolldown_utils::ecmascript::is_validate_identifier_name;
 
 use super::ScopeHoistingFinalizer;
 
@@ -14,12 +17,33 @@ impl<'ast> ScopeHoistingFinalizer<'_, 'ast> {
 
     let module_exports = match self.ctx.module.exports_kind {
       rolldown_common::ExportsKind::Esm => {
-        // TODO: use namespace
-        ast::Argument::ObjectExpression(self.snippet.builder.alloc_object_expression(
-          SPAN,
-          self.snippet.builder.vec(),
-          None,
-        ))
+        // TODO: Still we could reuse use module namespace def
+
+        // Empty object `{}`
+        let mut arg_obj_expr =
+          self.snippet.builder.alloc_object_expression(SPAN, self.snippet.builder.vec(), None);
+
+        self.ctx.linking_info.canonical_exports().for_each(|(export, resolved_export)| {
+          // prop_name: () => returned
+          let prop_name = export;
+          let returned =
+            self.finalized_expr_for_symbol_ref(resolved_export.symbol_ref, false, None);
+          arg_obj_expr.properties.push(ast::ObjectPropertyKind::ObjectProperty(
+            ast::ObjectProperty {
+              key: if is_validate_identifier_name(prop_name) {
+                ast::PropertyKey::StaticIdentifier(
+                  self.snippet.id_name(prop_name, SPAN).into_in(self.alloc),
+                )
+              } else {
+                ast::PropertyKey::StringLiteral(self.snippet.alloc_string_literal(prop_name, SPAN))
+              },
+              value: self.snippet.only_return_arrow_expr(returned),
+              ..TakeIn::dummy(self.alloc)
+            }
+            .into_in(self.alloc),
+          ));
+        });
+        ast::Argument::ObjectExpression(arg_obj_expr)
       }
       rolldown_common::ExportsKind::CommonJs => {
         // `module.exports`

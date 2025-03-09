@@ -26,6 +26,7 @@ impl Default for TreeshakeOptions {
       module_side_effects: ModuleSideEffects::Boolean(true),
       annotations: Some(true),
       manual_pure_functions: None,
+      unknown_global_side_effects: None,
     })
   }
 }
@@ -101,10 +102,18 @@ impl TreeshakeOptions {
   pub fn enabled(&self) -> bool {
     matches!(self, TreeshakeOptions::Option(_))
   }
+
   pub fn annotations(&self) -> bool {
     match self {
       TreeshakeOptions::Boolean(v) => *v,
-      TreeshakeOptions::Option(inner) => inner.annotations.unwrap_or_default(),
+      TreeshakeOptions::Option(inner) => inner.annotations.unwrap_or(true),
+    }
+  }
+
+  pub fn unknown_global_side_effects(&self) -> bool {
+    match self {
+      TreeshakeOptions::Boolean(_) => true,
+      TreeshakeOptions::Option(inner) => inner.unknown_global_side_effects.unwrap_or(true),
     }
   }
 
@@ -132,6 +141,7 @@ pub struct InnerOptions {
   pub module_side_effects: ModuleSideEffects,
   pub annotations: Option<bool>,
   pub manual_pure_functions: Option<FxHashSet<String>>,
+  pub unknown_global_side_effects: Option<bool>,
 }
 
 #[cfg(feature = "deserialize_bundler_options")]

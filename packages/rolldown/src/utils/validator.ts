@@ -217,6 +217,7 @@ const TreeshakingOptionsSchema = v.union([
   v.looseObject({
     annotations: v.optional(v.boolean()),
     manualPureFunctions: v.optional(v.array(v.string())),
+    unknownGlobalSideEffects: v.optional(v.boolean()),
   }),
 ])
 

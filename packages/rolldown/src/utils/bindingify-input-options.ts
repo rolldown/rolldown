@@ -279,16 +279,18 @@ function bindingifyTreeshakeOptions(
   if (config === false) {
     return undefined
   }
+
   if (config === true || config === undefined) {
     return {
       moduleSideEffects: true,
-      annotations: true,
     }
   }
+
   let normalizedConfig: BindingInputOptions['treeshake'] = {
     moduleSideEffects: true,
-    annotations: config.annotations ?? true,
+    annotations: config.annotations,
     manualPureFunctions: config.manualPureFunctions,
+    unknownGlobalSideEffects: config.unknownGlobalSideEffects,
   }
   if (config.moduleSideEffects === undefined) {
     normalizedConfig.moduleSideEffects = true

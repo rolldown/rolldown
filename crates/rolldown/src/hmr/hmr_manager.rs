@@ -87,6 +87,7 @@ impl HmrManager {
           symbols: &symbol_table,
           import_binding: FxHashMap::default(),
           module: changed_module,
+          exports: FxHashMap::default(),
         };
 
         finalizer.visit_program(fields.program);
@@ -96,6 +97,6 @@ impl HmrManager {
       outputs.push(codegen.code);
     }
 
-    todo!()
+    Ok(outputs.concat())
   }
 }

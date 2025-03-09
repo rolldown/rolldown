@@ -94,6 +94,28 @@ importers:
         specifier: workspace:*
         version: link:../../packages/rolldown
 
+  examples/hmr-raw:
+    dependencies:
+      react:
+        specifier: ^19.0.0
+        version: 19.0.0
+      react-dom:
+        specifier: ^19.0.0
+        version: 19.0.0(react@19.0.0)
+    devDependencies:
+      '@rolldown/test-dev-server':
+        specifier: workspace:*
+        version: link:../../packages/test-dev-server
+      '@types/react':
+        specifier: ^19.0.8
+        version: 19.0.10
+      '@types/react-dom':
+        specifier: ^19.0.3
+        version: 19.0.4(@types/react@19.0.10)
+      rolldown:
+        specifier: workspace:*
+        version: link:../../packages/rolldown
+
   examples/isolated-decl:
     devDependencies:
       rolldown:
@@ -155,28 +177,6 @@ importers:
       '@babel/preset-typescript':
         specifier: ^7.24.1
         version: 7.26.0(@babel/core@7.26.9)
-      rolldown:
-        specifier: workspace:*
-        version: link:../../packages/rolldown
-
-  examples/react-hmr:
-    dependencies:
-      react:
-        specifier: ^19.0.0
-        version: 19.0.0
-      react-dom:
-        specifier: ^19.0.0
-        version: 19.0.0(react@19.0.0)
-    devDependencies:
-      '@rolldown/test-dev-server':
-        specifier: workspace:*
-        version: link:../../packages/test-dev-server
-      '@types/react':
-        specifier: ^19.0.8
-        version: 19.0.10
-      '@types/react-dom':
-        specifier: ^19.0.3
-        version: 19.0.4(@types/react@19.0.10)
       rolldown:
         specifier: workspace:*
         version: link:../../packages/rolldown

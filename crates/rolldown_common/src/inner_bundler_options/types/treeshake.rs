@@ -1,4 +1,4 @@
-use std::{future::Future, pin::Pin, sync::Arc};
+use std::{future::Future, ops::Deref, pin::Pin, sync::Arc};
 
 use derive_more::Debug;
 use rolldown_utils::js_regex::HybridRegex;
@@ -19,15 +19,44 @@ pub enum TreeshakeOptions {
   Option(InnerOptions),
 }
 
+#[derive(Default, Debug)]
+pub struct NormalizedTreeshakeOptions(Option<InnerOptions>);
+
+impl Deref for NormalizedTreeshakeOptions {
+  type Target = Option<InnerOptions>;
+  fn deref(&self) -> &Self::Target {
+    &self.0
+  }
+}
+impl From<InnerOptions> for NormalizedTreeshakeOptions {
+  fn from(inner: InnerOptions) -> Self {
+    NormalizedTreeshakeOptions(Some(inner))
+  }
+}
+
+impl NormalizedTreeshakeOptions {
+  pub fn new(inner: Option<InnerOptions>) -> Self {
+    NormalizedTreeshakeOptions(inner)
+  }
+
+  pub fn annotations(&self) -> bool {
+    self.as_ref().and_then(|item| item.annotations).unwrap_or(true)
+  }
+
+  pub fn unknown_global_side_effects(&self) -> bool {
+    self.as_ref().and_then(|item| item.unknown_global_side_effects).unwrap_or(true)
+  }
+
+  // TODO: optimize this
+  pub fn manual_pure_functions(&self) -> Option<&FxHashSet<String>> {
+    self.as_ref().and_then(|item| item.manual_pure_functions.as_ref())
+  }
+}
+
 impl Default for TreeshakeOptions {
   /// Used for snapshot testing
   fn default() -> Self {
-    TreeshakeOptions::Option(InnerOptions {
-      module_side_effects: ModuleSideEffects::Boolean(true),
-      annotations: Some(true),
-      manual_pure_functions: None,
-      unknown_global_side_effects: None,
-    })
+    TreeshakeOptions::Option(InnerOptions::default())
   }
 }
 
@@ -103,25 +132,11 @@ impl TreeshakeOptions {
     matches!(self, TreeshakeOptions::Option(_))
   }
 
-  pub fn annotations(&self) -> bool {
+  pub fn into_normalized_options(self) -> NormalizedTreeshakeOptions {
     match self {
-      TreeshakeOptions::Boolean(v) => *v,
-      TreeshakeOptions::Option(inner) => inner.annotations.unwrap_or(true),
-    }
-  }
-
-  pub fn unknown_global_side_effects(&self) -> bool {
-    match self {
-      TreeshakeOptions::Boolean(_) => true,
-      TreeshakeOptions::Option(inner) => inner.unknown_global_side_effects.unwrap_or(true),
-    }
-  }
-
-  // TODO: optimize this
-  pub fn manual_pure_functions(&self) -> Option<&FxHashSet<String>> {
-    match self {
-      TreeshakeOptions::Boolean(_) => None,
-      TreeshakeOptions::Option(inner) => inner.manual_pure_functions.as_ref(),
+      TreeshakeOptions::Boolean(true) => NormalizedTreeshakeOptions::default(),
+      TreeshakeOptions::Boolean(false) => NormalizedTreeshakeOptions::new(None),
+      TreeshakeOptions::Option(inner_options) => inner_options.into(),
     }
   }
 }
@@ -142,6 +157,17 @@ pub struct InnerOptions {
   pub annotations: Option<bool>,
   pub manual_pure_functions: Option<FxHashSet<String>>,
   pub unknown_global_side_effects: Option<bool>,
+}
+
+impl Default for InnerOptions {
+  fn default() -> Self {
+    InnerOptions {
+      module_side_effects: ModuleSideEffects::Boolean(true),
+      annotations: Some(true),
+      manual_pure_functions: None,
+      unknown_global_side_effects: None,
+    }
+  }
 }
 
 #[cfg(feature = "deserialize_bundler_options")]

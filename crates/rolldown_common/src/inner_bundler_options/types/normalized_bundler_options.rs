@@ -17,7 +17,7 @@ use super::minify_options::MinifyOptions;
 use super::output_option::{AssetFilenamesOutputOption, ChunkFilenamesOutputOption};
 use super::sanitize_filename::SanitizeFilename;
 use super::target::ESTarget;
-use super::treeshake::TreeshakeOptions;
+use super::treeshake::NormalizedTreeshakeOptions;
 use super::watch_option::WatchOption;
 use super::{
   is_external::IsExternal, output_exports::OutputExports, output_format::OutputFormat,
@@ -37,7 +37,7 @@ pub struct NormalizedBundlerOptions {
   pub cwd: PathBuf,
   pub external: Option<IsExternal>,
   /// corresponding to `false | NormalizedTreeshakeOption`
-  pub treeshake: TreeshakeOptions,
+  pub treeshake: NormalizedTreeshakeOptions,
   pub platform: Platform,
   pub shim_missing_exports: bool,
   /// The key is the extension. Unlike `BundlerOptions`, the extension doesn't start with a dot.

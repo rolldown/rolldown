@@ -1,7 +1,7 @@
 use oxc_index::IndexVec;
 use rolldown_common::{
   EcmaRelated, EcmaView, EcmaViewMeta, ImportRecordIdx, ModuleId, ModuleType, RawImportRecord,
-  ResolvedId, SharedNormalizedBundlerOptions, TreeshakeOptions,
+  ResolvedId, SharedNormalizedBundlerOptions,
   side_effects::{DeterminedSideEffects, HookSideEffects},
 };
 use rolldown_error::BuildResult;
@@ -152,11 +152,10 @@ pub async fn normalize_side_effects(
       HookSideEffects::NoTreeshake => DeterminedSideEffects::NoTreeshake,
     },
     // If user don't specify the side effects, we use fallback value from `option.treeshake.moduleSideEffects`;
-    None => match options.treeshake {
+    None => match options.treeshake.as_ref() {
       // Actually this convert is not necessary, just for passing type checking
-      TreeshakeOptions::Boolean(false) => DeterminedSideEffects::NoTreeshake,
-      TreeshakeOptions::Boolean(true) => unreachable!(),
-      TreeshakeOptions::Option(ref opt) => {
+      None => DeterminedSideEffects::NoTreeshake,
+      Some(opt) => {
         if opt.module_side_effects.is_fn() {
           if opt
             .module_side_effects

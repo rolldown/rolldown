@@ -14,7 +14,7 @@ use rustc_hash::FxHashMap;
 use crate::{
   SharedOptions, SharedResolver,
   module_loader::{ModuleLoader, module_loader::ModuleLoaderOutput},
-  type_alias::{IndexAstScope, IndexEcmaAst},
+  type_alias::IndexEcmaAst,
   utils::load_entry_module::load_entry_module,
 };
 
@@ -30,7 +30,6 @@ pub struct ScanStage {
 pub struct ScanStageOutput {
   pub module_table: ModuleTable,
   pub index_ecma_ast: IndexEcmaAst,
-  pub index_ast_scope: IndexAstScope,
   pub entry_points: Vec<EntryPoint>,
   pub symbol_ref_db: SymbolRefDb,
   pub runtime: RuntimeModuleBrief,
@@ -85,7 +84,6 @@ impl ScanStage {
       warnings,
       index_ecma_ast,
       dynamic_import_exports_usage_map,
-      index_ast_scope,
     } = module_loader.fetch_all_modules(user_entries).await?;
 
     self.plugin_driver.file_emitter.set_context_load_modules_tx(None).await;
@@ -93,7 +91,6 @@ impl ScanStage {
     self.plugin_driver.set_context_load_modules_tx(None).await;
 
     Ok(ScanStageOutput {
-      index_ast_scope,
       module_table,
       entry_points,
       symbol_ref_db,

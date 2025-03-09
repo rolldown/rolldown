@@ -18,9 +18,12 @@
     "build:watch": "tsc -b --watch"
   },
   "dependencies": {
+    "@types/ws": "^8.18.0",
+    "chokidar": "^4.0.3",
     "connect": "^3.7.0",
     "rolldown": "workspace:*",
-    "serve-static": "^1.16.2"
+    "serve-static": "^1.16.2",
+    "ws": "^8.18.1"
   },
   "devDependencies": {
     "@types/connect": "^3.4.38",

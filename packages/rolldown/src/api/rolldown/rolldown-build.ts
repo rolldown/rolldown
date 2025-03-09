@@ -69,6 +69,10 @@ export class RolldownBuild {
   async [Symbol.asyncDispose](): Promise<void> {
     await this.close()
   }
+
+  async generateHmrPatch(changedFiles: string[]): Promise<string | void> {
+    return this.#bundler?.bundler.generateHmrPatch(changedFiles)
+  }
 }
 
 function _assert() {

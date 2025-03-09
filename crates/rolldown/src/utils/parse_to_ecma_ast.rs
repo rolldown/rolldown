@@ -1,10 +1,7 @@
 use std::path::Path;
 
 use arcstr::ArcStr;
-use oxc::{
-  semantic::{ScopeTree, SymbolTable},
-  span::SourceType as OxcSourceType,
-};
+use oxc::{semantic::Scoping, span::SourceType as OxcSourceType};
 use rolldown_common::{ModuleType, NormalizedBundlerOptions, RUNTIME_MODULE_ID, StrOrBytes};
 use rolldown_ecmascript::{EcmaAst, EcmaCompiler};
 use rolldown_error::{BuildDiagnostic, BuildResult};
@@ -29,8 +26,7 @@ fn pure_esm_js_oxc_source_type() -> OxcSourceType {
 
 pub struct ParseToEcmaAstResult {
   pub ast: EcmaAst,
-  pub symbol_table: SymbolTable,
-  pub scope_tree: ScopeTree,
+  pub scoping: Scoping,
   pub has_lazy_export: bool,
   pub warning: Vec<BuildDiagnostic>,
 }

@@ -8,12 +8,10 @@ use rolldown_common::{IndexModules, Module, NormalModule};
 use rolldown_ecmascript_utils::{AstSnippet, BindingIdentifierExt, ExpressionExt, quote_stmt};
 use rustc_hash::FxHashMap;
 
-#[expect(unused)]
 pub struct HmrAstFinalizer<'me, 'ast> {
   pub alloc: &'ast Allocator,
   pub snippet: AstSnippet<'ast>,
-  pub symbols: &'me oxc::semantic::SymbolTable,
-  pub scopes: &'me oxc::semantic::ScopeTree,
+  pub scoping: &'me oxc::semantic::Scoping,
   pub modules: &'me IndexModules,
   pub module: &'me NormalModule,
   pub import_binding: FxHashMap<SymbolId, String>,
@@ -99,7 +97,7 @@ impl<'ast> VisitMut<'ast> for HmrAstFinalizer<'_, 'ast> {
 
   fn visit_expression(&mut self, it: &mut ast::Expression<'ast>) {
     if let Some(ident) = it.as_identifier() {
-      let reference = self.symbols.get_reference(ident.reference_id());
+      let reference = self.scoping.get_reference(ident.reference_id());
       if let Some(symbol_id) = reference.symbol_id() {
         if let Some(binding_name) = self.import_binding.get(&symbol_id) {
           *it = self.snippet.id_ref_expr(binding_name.as_str(), ident.span);

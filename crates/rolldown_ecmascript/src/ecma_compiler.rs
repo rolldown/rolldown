@@ -125,7 +125,7 @@ impl EcmaCompiler {
         source_map_path: enable_sourcemap.then(|| PathBuf::from(filename)),
         ..codegen_options
       })
-      .with_symbol_table(ret.symbol_table)
+      .with_scoping(ret.scoping)
       .build(program);
     (ret.code, ret.map)
   }
@@ -142,14 +142,13 @@ impl EcmaCompiler {
     let semantic = SemanticBuilder::new().build(program).semantic;
     let stats = semantic.stats();
 
-    let (symbols, scopes) = semantic.into_symbol_table_and_scope_tree();
+    let scoping = semantic.into_scoping();
     if run_compress {
-      Compressor::new(allocator, compress_options)
-        .build_with_symbols_and_scopes(symbols, scopes, program);
+      Compressor::new(allocator, compress_options).build_with_scoping(scoping, program);
     } else {
       Compressor::new(allocator, CompressOptions::all_false()).dead_code_elimination(program);
     }
-    let symbol_table = options.mangle.map(|options| {
+    let scoping = options.mangle.map(|options| {
       let semantic = SemanticBuilder::new()
         .with_stats(stats)
         .with_scope_tree_child_ids(true)
@@ -157,7 +156,7 @@ impl EcmaCompiler {
         .semantic;
       Mangler::default().with_options(options).build_with_semantic(semantic, program)
     });
-    MinifierReturn { symbol_table }
+    MinifierReturn { scoping }
   }
 }
 

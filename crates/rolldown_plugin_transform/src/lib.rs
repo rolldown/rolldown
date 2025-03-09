@@ -87,10 +87,9 @@ impl Plugin for TransformPlugin {
         }
       }
 
-      let (symbols, scopes) =
-        SemanticBuilder::new().build(fields.program).semantic.into_symbol_table_and_scope_tree();
+      let scoping = SemanticBuilder::new().build(fields.program).semantic.into_scoping();
       Transformer::new(fields.allocator, Path::new(args.id), &transformer_options)
-        .build_with_symbols_and_scopes(symbols, scopes, fields.program)
+        .build_with_scoping(scoping, fields.program)
     });
     if !ret.errors.is_empty() {
       // TODO: better error handling

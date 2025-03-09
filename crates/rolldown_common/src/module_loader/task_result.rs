@@ -1,5 +1,5 @@
 use crate::{
-  AstScopes, ImportRecordIdx, Module, RawImportRecord, ResolvedId, SymbolRefDbForModule,
+  ImportRecordIdx, Module, RawImportRecord, ResolvedId, SymbolRefDbForModule,
   dynamic_import_usage::DynamicImportExportsUsage,
 };
 use oxc_index::IndexVec;
@@ -18,6 +18,5 @@ pub struct NormalModuleTaskResult {
 pub struct EcmaRelated {
   pub ast: EcmaAst,
   pub symbols: SymbolRefDbForModule,
-  pub ast_scope: AstScopes,
   pub dynamic_import_rec_exports_usage: FxHashMap<ImportRecordIdx, DynamicImportExportsUsage>,
 }

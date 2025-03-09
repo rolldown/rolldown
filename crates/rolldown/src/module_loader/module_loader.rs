@@ -16,7 +16,7 @@ use rolldown_common::{
   ImportRecordIdx, ImportRecordMeta, ImporterRecord, Module, ModuleId, ModuleIdx, ModuleInfo,
   ModuleLoaderMsg, ModuleSideEffects, ModuleTable, ModuleType, NormalModuleTaskResult,
   RUNTIME_MODULE_ID, ResolvedId, RuntimeModuleBrief, RuntimeModuleTaskResult, StmtInfoIdx,
-  SymbolRefDb, SymbolRefDbForModule, TreeshakeOptions,
+  SymbolRefDb, SymbolRefDbForModule,
 };
 use rolldown_error::{BuildDiagnostic, BuildResult};
 use rolldown_fs::OsFileSystem;
@@ -155,10 +155,9 @@ impl ModuleLoader {
               HookSideEffects::False => DeterminedSideEffects::UserDefined(false),
               HookSideEffects::NoTreeshake => DeterminedSideEffects::NoTreeshake,
             },
-            _ => match self.options.treeshake {
-              TreeshakeOptions::Boolean(false) => DeterminedSideEffects::NoTreeshake,
-              TreeshakeOptions::Boolean(true) => unreachable!(),
-              TreeshakeOptions::Option(ref opt) => match opt.module_side_effects {
+            _ => match self.options.treeshake.as_ref() {
+              None => DeterminedSideEffects::NoTreeshake,
+              Some(opt) => match opt.module_side_effects {
                 ModuleSideEffects::Boolean(false) => DeterminedSideEffects::UserDefined(false),
                 _ => {
                   if resolved_id.is_external_without_side_effects {

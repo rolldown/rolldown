@@ -43,7 +43,7 @@ impl LinkStage<'_> {
       symbols: &self.symbols,
       is_included_vec: &mut is_included_vec,
       is_module_included_vec: &mut is_module_included_vec,
-      tree_shaking: self.options.treeshake.enabled(),
+      tree_shaking: self.options.treeshake.is_some(),
       runtime_id: self.runtime.id(),
       // used_exports_info_vec: &mut used_exports_info_vec,
       metas: &self.metas,

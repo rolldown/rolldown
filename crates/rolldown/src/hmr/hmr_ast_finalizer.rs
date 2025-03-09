@@ -3,7 +3,7 @@ use oxc::{
   ast::ast,
   ast_visit::{VisitMut, walk_mut},
   semantic::SymbolId,
-  span::Atom,
+  span::{Atom, GetSpan},
 };
 use rolldown_common::{IndexModules, Module, NormalModule};
 use rolldown_ecmascript_utils::{
@@ -197,6 +197,24 @@ impl<'ast> VisitMut<'ast> for HmrAstFinalizer<'_, 'ast> {
             }
           }
         }
+        ast::ModuleDeclaration::ExportDefaultDeclaration(decl) => match &decl.declaration {
+          ast::ExportDefaultDeclarationKind::FunctionDeclaration(function) => {
+            if let Some(id) = &function.id {
+              self.exports.insert("default".into(), id.name);
+            }
+          }
+          ast::ExportDefaultDeclarationKind::ClassDeclaration(class) => {
+            if let Some(id) = &class.id {
+              self.exports.insert("default".into(), id.name);
+            }
+          }
+          ast::ExportDefaultDeclarationKind::Identifier(ident) => {
+            self.exports.insert("default".into(), ident.name);
+          }
+          _ => {
+            unimplemented!("export default [Expression]")
+          }
+        },
         _ => {
           // TODO(hyf0): Handle other module declarations
           // e.g. reexport, export, etc.
@@ -233,13 +251,18 @@ impl<'ast> VisitMut<'ast> for HmrAstFinalizer<'_, 'ast> {
 
   fn visit_expression(&mut self, it: &mut ast::Expression<'ast>) {
     if let Some(ident) = it.as_identifier() {
-      let reference = self.symbols.get_reference(ident.reference_id());
-      if let Some(symbol_id) = reference.symbol_id() {
-        if let Some(binding_name) = self.import_binding.get(&symbol_id) {
-          *it = self.snippet.id_ref_expr(binding_name.as_str(), ident.span);
-          return;
+      if let Some(reference_id) = ident.reference_id.get() {
+        let reference = self.symbols.get_reference(reference_id);
+        if let Some(symbol_id) = reference.symbol_id() {
+          if let Some(binding_name) = self.import_binding.get(&symbol_id) {
+            *it = self.snippet.id_ref_expr(binding_name.as_str(), ident.span);
+            return;
+          }
         }
       }
+    }
+    if it.is_import_meta_hot() {
+      *it = self.snippet.id_ref_expr("__rolldown_runtime__.hot", it.span());
     }
 
     walk_mut::walk_expression(self, it);

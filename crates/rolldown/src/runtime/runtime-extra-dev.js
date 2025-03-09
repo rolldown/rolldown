@@ -1,14 +1,12 @@
 const __modules = globalThis.__modules || (globalThis.__modules = {});
 
 const hot = {
-  hot: {
     accept(...args) {
       if (args.length === 1) {
         const [cb] = args;
-        __modules['src/Component.ts'].acceptCallbacks.push(cb)
+        __modules['src/Draw.js'].acceptCallbacks.push(cb)
       }
     }
-  }
 };
 
 /**
@@ -27,16 +25,19 @@ export const __runtime = {
         });
       }
     })
+    console.debug('Registering module', id, realExports);
     if (__modules[id]) {
       const { acceptCallbacks } = __modules[id];
+      console.log('Module already registered', id, __modules[id]);
       acceptCallbacks.forEach((cb) => {
+
         Promise.resolve().then(() => {
           cb(realExports);
-        });
+        })
       });
       __modules[id] = {
         exports: realExports,
-        acceptCallbacks,
+        acceptCallbacks: [],
       }
     } else {
       // If the module is not in the cache, we need to register it.
@@ -44,6 +45,15 @@ export const __runtime = {
         exports: realExports,
         acceptCallbacks: [],
       };
+    }
+  },
+  loadExports(moduleId) {
+    const module = __modules[moduleId];
+    if (module) {
+      return module.exports;
+    } else {
+      console.warn(`Module ${moduleId} not found`);
+      return {};
     }
   },
   hot,
@@ -54,7 +64,9 @@ globalThis.__rolldown_runtime__ = __runtime;
 
 
 
-Object.assign(import.meta, hot)
+Object.assign(import.meta, {
+  hot,
+})
 
 function loadScript(url) {
   var script = document.createElement('script');

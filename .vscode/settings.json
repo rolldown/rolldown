@@ -45,8 +45,8 @@
     "tmp": true
   },
   "editor.wordWrap": "on",
+  "rust-analyzer.cargo.cfgs": ["tokio_unstable"],
   "rust-analyzer.procMacro.ignored": {
-    "napi-derive": ["napi"],
     "tracing": ["instrument"]
   }
 }

@@ -81,6 +81,7 @@
     "consola",
     "Corasick",
     "corepack",
+    "cpus",
     "daachorse",
     "dashmap",
     "dataurl",

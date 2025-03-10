@@ -523,7 +523,9 @@ const OutputOptionsSchema = v.strictObject({
   cssChunkFileNames: v.optional(ChunkFileNamesSchema),
   sanitizeFileName: v.optional(SanitizeFileNameSchema),
   minify: v.pipe(
-    v.optional(v.union([v.boolean(), MinifyOptionsSchema])),
+    v.optional(
+      v.union([v.boolean(), v.string('dce-only'), MinifyOptionsSchema]),
+    ),
     v.description('Minify the bundled file'),
   ),
   name: v.pipe(

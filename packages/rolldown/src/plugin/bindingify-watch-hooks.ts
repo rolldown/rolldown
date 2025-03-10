@@ -1,7 +1,7 @@
 import { normalizeHook } from '../utils/normalize-hook'
 import type { BindingPluginOptions } from '../binding'
 import type { ChangeEvent } from './index'
-import { PluginContext } from './plugin-context'
+import { PluginContextImpl } from './plugin-context'
 import {
   PluginHookWithBindingExt,
   bindingifyPluginHookMeta,
@@ -20,7 +20,7 @@ export function bindingifyWatchChange(
   return {
     plugin: async (ctx, id, event) => {
       await handler.call(
-        new PluginContext(
+        new PluginContextImpl(
           args.outputOptions,
           ctx,
           args.plugin,
@@ -48,7 +48,7 @@ export function bindingifyCloseWatcher(
   return {
     plugin: async (ctx) => {
       await handler.call(
-        new PluginContext(
+        new PluginContextImpl(
           args.outputOptions,
           ctx,
           args.plugin,

@@ -15,7 +15,16 @@ export interface PluginContextMeta {
   watchMode: boolean
 }
 
-export class MinimalPluginContext {
+export interface MinimalPluginContext {
+  readonly pluginName: string
+  error: (e: RollupError | string) => never
+  info: LoggingFunction
+  warn: LoggingFunction
+  debug: LoggingFunction
+  meta: PluginContextMeta
+}
+
+export class MinimalPluginContextImpl implements MinimalPluginContext {
   info: LoggingFunction
   warn: LoggingFunction
   debug: LoggingFunction

@@ -24,8 +24,25 @@ static ALLOC: mimalloc::MiMalloc = mimalloc::MiMalloc;
 #[cfg(not(target_family = "wasm"))]
 #[module_init]
 pub fn init() {
+  let max_blocking_threads = {
+    std::env::var("ROLLDOWN_MAX_BLOCKING_THREADS")
+      .ok()
+      .and_then(|v| v.parse::<usize>().ok())
+      .unwrap_or({
+        #[cfg(target_os = "macos")]
+        {
+          num_cpus::get_physical()
+        }
+        #[cfg(not(target_os = "macos"))]
+        {
+          // default value in tokio implementation
+          512
+        }
+      })
+  };
   let rt = tokio::runtime::Builder::new_multi_thread()
     .disable_lifo_slot()
+    .max_blocking_threads(max_blocking_threads)
     .enable_all()
     .build()
     .expect("Failed to create tokio runtime");

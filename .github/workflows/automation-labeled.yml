@@ -3,9 +3,11 @@ on:
   # https://github.com/actions/labeler?tab=readme-ov-file#permissions
   pull_request_target:
     types: [labeled]
+  issues:
+    types: [labeled]
 
 concurrency:
-  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.sha }}
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.sha || github.event.issue.number }}
   cancel-in-progress: ${{ github.ref_name != 'main' }}
 
 jobs:
@@ -24,3 +26,28 @@ jobs:
       - name: Convert Stale PR to Draft
         run: |
           gh pr ready ${{ github.event.pull_request.number }} --undo
+
+  needs-reproduction:
+    runs-on: ubuntu-latest
+    if: github.event.label.name == 'needs-reproduction'
+    permissions:
+      issues: write
+    steps:
+      - name: Find Comment
+        uses: peter-evans/find-comment@v3
+        id: find-comment
+        with:
+          issue-number: ${{ github.event.issue.number }}
+          comment-author: 'github-actions[bot]'
+          body-includes: 'Thanks for reporting this issue!'
+
+      - name: Write a new comment
+        uses: peter-evans/create-or-update-comment@v4.0.0
+        continue-on-error: true
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          comment-id: ${{ steps.find-comment.outputs.comment-id }}
+          issue-number: ${{ github.event.issue.number }}
+          body: 'Thanks for reporting this issue! To help us investigate and resolve it more efficiently, could you provide a minimal reproduction? You can either create a [StackBlitz project](https://stackblitz.com/github/rolldown/rolldown-starter-stackblitz?file=README.md) or a GitHub repository demonstrating the problem. This will make it easier for us to debug and find a solution. Thanks!'
+          reactions-edit-mode: 'replace'
+          edit-mode: replace

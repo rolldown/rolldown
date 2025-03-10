@@ -3,8 +3,8 @@ use crate::ast_scanner::side_effect_detector::utils::{
 };
 use oxc::ast::ast::{
   self, Argument, ArrayExpressionElement, AssignmentTarget, AssignmentTargetPattern,
-  BindingPatternKind, CallExpression, ChainElement, Comment, Expression, IdentifierReference,
-  PropertyKey, UnaryOperator, VariableDeclarationKind,
+  BindingPatternKind, CallExpression, ChainElement, Expression, IdentifierReference, PropertyKey,
+  UnaryOperator, VariableDeclarationKind,
 };
 use oxc::ast::{match_expression, match_member_expression};
 use oxc::semantic::SymbolTable;
@@ -20,14 +20,11 @@ use utils::{
 
 use self::utils::{PrimitiveType, known_primitive_type};
 
-mod annotation;
 mod utils;
 
 /// Detect if a statement "may" have side effect.
 pub struct SideEffectDetector<'a> {
   pub scope: &'a AstScopes,
-  pub source: &'a str,
-  pub comments: &'a oxc::allocator::Vec<'a, Comment>,
   pub ignore_annotations: bool,
   pub jsx_preserve: bool,
   pub symbol_table: &'a SymbolTable,
@@ -38,8 +35,6 @@ pub struct SideEffectDetector<'a> {
 impl<'a> SideEffectDetector<'a> {
   pub fn new(
     scope: &'a AstScopes,
-    source: &'a str,
-    comments: &'a oxc::allocator::Vec<'a, Comment>,
     ignore_annotations: bool,
     jsx_preserve: bool,
     symbol_table: &'a SymbolTable,
@@ -47,8 +42,6 @@ impl<'a> SideEffectDetector<'a> {
   ) -> Self {
     Self {
       scope,
-      source,
-      comments,
       ignore_annotations,
       jsx_preserve,
       symbol_table,
@@ -168,7 +161,7 @@ impl<'a> SideEffectDetector<'a> {
     if self.is_expr_manual_pure_functions(&expr.callee) {
       return false;
     }
-    let is_pure = !self.ignore_annotations && self.is_pure_function_or_constructor_call(expr.span);
+    let is_pure = !self.ignore_annotations && expr.pure;
     if is_pure {
       expr.arguments.iter().any(|arg| match arg {
         Argument::SpreadElement(_) => true,
@@ -412,7 +405,7 @@ impl<'a> SideEffectDetector<'a> {
       Expression::NewExpression(expr) => {
         let is_pure =
           maybe_side_effect_free_global_constructor(self.scope, expr, self.symbol_table)
-            || self.is_pure_function_or_constructor_call(expr.span);
+            || expr.pure;
         if is_pure {
           expr.arguments.iter().any(|arg| match arg {
             Argument::SpreadElement(_) => true,
@@ -651,8 +644,6 @@ mod test {
     let has_side_effect = ast.program().body.iter().any(|stmt| {
       SideEffectDetector::new(
         &ast_scope,
-        ast.source(),
-        ast.comments(),
         false,
         false,
         &symbol_table,

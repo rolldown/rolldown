@@ -3428,7 +3428,7 @@ expression: output
 
 # tests/esbuild/ts/ts_enum_define
 
-- entry-!~{000}~.js => entry-KC3TTHt_.js
+- entry-!~{000}~.js => entry-CMXZovLt.js
 
 # tests/esbuild/ts/ts_enum_export_clause
 
@@ -3583,7 +3583,7 @@ expression: output
 
 # tests/esbuild/ts/ts_minify_enum
 
-- a-!~{000}~.js => a-1Y2yygfr.js
+- a-!~{000}~.js => a-CAdl1r5_.js
 - b-!~{001}~.js => b-XyJ27NrR.js
 
 # tests/esbuild/ts/ts_minify_enum_cross_file_inline_strings_into_templates
@@ -4428,7 +4428,7 @@ expression: output
 
 # tests/rolldown/function/module_types/ts/enum_reference_id_not_exist_after_transform
 
-- main_ts-!~{000}~.js => main_ts-CO2or8QS.js
+- main_ts-!~{000}~.js => main_ts-KAjFEiCG.js
 
 # tests/rolldown/function/module_types/tsx
 

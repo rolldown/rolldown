@@ -7,13 +7,4 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```js
 
-//#region main.ts
-var LexerState = /* @__PURE__ */ function(LexerState$1) {
-	LexerState$1[LexerState$1["inParens"] = 0] = "inParens";
-	LexerState$1[LexerState$1["inSingleQuoteString"] = 1] = "inSingleQuoteString";
-	LexerState$1[LexerState$1["inDoubleQuoteString"] = 2] = "inDoubleQuoteString";
-	return LexerState$1;
-}(LexerState || {});
-
-//#endregion
 ```

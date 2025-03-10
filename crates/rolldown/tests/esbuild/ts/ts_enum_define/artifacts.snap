@@ -7,12 +7,4 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```js
 
-//#region entry.ts
-var a = /* @__PURE__ */ function(a$1) {
-	a$1[a$1["b"] = 123] = "b";
-	a$1[a$1["c"] = 124] = "c";
-	return a$1;
-}(a || {});
-
-//#endregion
 ```

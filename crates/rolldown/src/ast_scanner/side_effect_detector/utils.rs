@@ -1,65 +1,11 @@
 use oxc::{
-  ast::{
-    Comment, CommentKind,
-    ast::{self, Expression, MemberExpression},
-    comments_range,
-  },
+  ast::ast::{self, Expression, MemberExpression},
   semantic::{ReferenceId, SymbolTable},
-  span::{Atom, Span},
+  span::Atom,
   syntax::operator::{BinaryOperator, LogicalOperator, UnaryOperator, UpdateOperator},
 };
 use rolldown_common::AstScopes;
-use rolldown_ecmascript_utils::{ExpressionExt, SpanExt};
-
-use super::SideEffectDetector;
-
-impl SideEffectDetector<'_> {
-  /// Get the nearest comment before the `span`, return `None` if no leading comment is founded.
-  ///
-  ///  # Examples
-  /// ```javascript
-  /// /* valid comment for `a`  */ let a = 1;
-  ///
-  /// // valid comment for `b`
-  /// let b = 1;
-  ///
-  /// // valid comment for `c`
-  ///
-  ///
-  /// let c = 1;
-  ///
-  /// let d = 1; /* valid comment for `e` */
-  /// let e = 2
-  /// ```
-  /// Derived from https://github.com/oxc-project/oxc/blob/147864cfeb112df526bb83d5b8671b465c005066/crates/oxc_linter/src/utils/tree_shaking.rs#L204
-  pub fn leading_comment_for(&self, span: Span) -> Option<(&Comment, &str)> {
-    let comment = comments_range(self.comments, ..span.start).next_back()?;
-
-    let comment_span = comment.content_span();
-
-    let comment_text = comment_span.source_text(self.source);
-    // If there are non-whitespace characters between the `comment` and the `span`,
-    // we treat the `comment` not belongs to the `span`.
-    let leading_comment_span = Span::new(comment_span.end, span.start);
-    if !leading_comment_span.is_valid(self.source) {
-      return None;
-    }
-    let range_text = leading_comment_span.source_text(self.source);
-    let only_whitespace = match comment.kind {
-      CommentKind::Line => range_text.trim().is_empty(),
-      CommentKind::Block => {
-        range_text
-          .strip_prefix("*/") // for multi-line comment
-          .is_some_and(|s| s.trim().is_empty())
-      }
-    };
-    if !only_whitespace {
-      return None;
-    }
-
-    Some((comment, comment_text))
-  }
-}
+use rolldown_ecmascript_utils::ExpressionExt;
 
 #[derive(PartialEq, Eq, Copy, Clone)]
 pub enum PrimitiveType {

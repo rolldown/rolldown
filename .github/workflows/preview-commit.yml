@@ -4,22 +4,24 @@ name: Publish to pkg.pr.new
 on:
   workflow_call:
   workflow_dispatch:
+  pull_request:
+    types: [opened, synchronize, labeled]
 
 jobs:
-  build:
-    name: Build bindings and node packages
-    uses: ./.github/workflows/reusable-release-build.yml
-    with:
-      version: 'commit'
-
   publish:
-    if: github.repository == 'rolldown/rolldown'
+    if: >
+      github.repository == 'rolldown/rolldown' &&
+      (github.event_name == 'workflow_call' || github.event_name == 'workflow_dispatch' ||
+      (github.event_name == 'pull_request' && contains(github.event.pull_request.labels.*.name, 'trigger: preview')))
     name: Pkg Preview
     runs-on: ubuntu-latest
-    needs:
-      - build
     steps:
       - uses: actions/checkout@v4
+
+      - name: Build bindings and node packages
+        uses: ./.github/workflows/reusable-release-build.yml
+        with:
+          version: 'commit'
 
       - name: Setup Node
         uses: ./.github/actions/setup-node

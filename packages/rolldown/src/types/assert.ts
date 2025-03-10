@@ -24,4 +24,6 @@ export type IsPropertiesEqual<A, B> = IsValuesOfObjectAllTrue<
   ShowPropertiesEqualStatus<A, B>
 >
 
+export type Extends<A, B> = A extends B ? true : false
+
 export type AssertNever<T extends never> = T

@@ -22,6 +22,7 @@ import { logCycleLoading } from '../log/logs'
 import { OutputOptions } from '../options/output-options'
 import { parseAst } from '../parse-ast-index'
 import { Program } from '@oxc-project/types'
+import type { Extends, TypeAssert } from '../types/assert'
 
 export interface EmittedAsset {
   type: 'asset'
@@ -72,10 +73,7 @@ export interface PluginContext extends MinimalPluginContext {
   ): Promise<ResolvedId | null>
 }
 
-export class PluginContextImpl
-  extends MinimalPluginContextImpl
-  implements PluginContext
-{
+export class PluginContextImpl extends MinimalPluginContextImpl {
   getModuleInfo: GetModuleInfo
   constructor(
     private outputOptions: OutputOptions,
@@ -221,4 +219,10 @@ export class PluginContextImpl
   ): Program {
     return parseAst(input, options)
   }
+}
+
+function _assert() {
+  // adding implements to class disallows extending PluginContext by declaration merging
+  // instead check that PluginContextImpl is assignable to PluginContext here
+  type _ = TypeAssert<Extends<PluginContextImpl, PluginContext>>
 }

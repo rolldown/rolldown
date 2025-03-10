@@ -13,9 +13,24 @@
 // Looks redundant
 #![allow(clippy::missing_transmute_annotations)]
 
+use napi::{bindgen_prelude::create_custom_tokio_runtime, tokio};
+#[cfg(not(target_family = "wasm"))]
+use napi_derive::module_init;
+
 #[cfg(not(target_family = "wasm"))]
 #[global_allocator]
 static ALLOC: mimalloc::MiMalloc = mimalloc::MiMalloc;
+
+#[cfg(not(target_family = "wasm"))]
+#[module_init]
+pub fn init() {
+  let rt = tokio::runtime::Builder::new_multi_thread()
+    .disable_lifo_slot()
+    .enable_all()
+    .build()
+    .expect("Failed to create tokio runtime");
+  create_custom_tokio_runtime(rt);
+}
 
 pub mod bundler;
 pub mod options;

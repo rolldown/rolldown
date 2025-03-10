@@ -4,7 +4,7 @@ import {
   collectChangedBundle,
   transformToOutputBundle,
 } from '../utils/transform-to-rollup-output'
-import { PluginContext } from './plugin-context'
+import { PluginContextImpl } from './plugin-context'
 import { bindingifySourcemap } from '../types/sourcemap'
 import {
   PluginHookWithBindingExt,
@@ -29,7 +29,7 @@ export function bindingifyRenderStart(
   return {
     plugin: async (ctx, opts) => {
       handler.call(
-        new PluginContext(
+        new PluginContextImpl(
           args.outputOptions,
           ctx,
           args.plugin,
@@ -60,7 +60,7 @@ export function bindingifyRenderChunk(
   return {
     plugin: async (ctx, code, chunk, opts) => {
       const ret = await handler.call(
-        new PluginContext(
+        new PluginContextImpl(
           args.outputOptions,
           ctx,
           args.plugin,
@@ -110,7 +110,7 @@ export function bindingifyAugmentChunkHash(
   return {
     plugin: async (ctx, chunk) => {
       return await handler.call(
-        new PluginContext(
+        new PluginContextImpl(
           args.outputOptions,
           ctx,
           args.plugin,
@@ -137,7 +137,7 @@ export function bindingifyRenderError(
   return {
     plugin: async (ctx, err) => {
       handler.call(
-        new PluginContext(
+        new PluginContextImpl(
           args.outputOptions,
           ctx,
           args.plugin,
@@ -169,7 +169,7 @@ export function bindingifyGenerateBundle(
       } as ChangedOutputs
       const output = transformToOutputBundle(bundle, changed)
       await handler.call(
-        new PluginContext(
+        new PluginContextImpl(
           args.outputOptions,
           ctx,
           args.plugin,
@@ -208,7 +208,7 @@ export function bindingifyWriteBundle(
       } as ChangedOutputs
       const output = transformToOutputBundle(bundle, changed)
       await handler.call(
-        new PluginContext(
+        new PluginContextImpl(
           args.outputOptions,
           ctx,
           args.plugin,
@@ -241,7 +241,7 @@ export function bindingifyCloseBundle(
   return {
     plugin: async (ctx) => {
       await handler.call(
-        new PluginContext(
+        new PluginContextImpl(
           args.outputOptions,
           ctx,
           args.plugin,
@@ -271,7 +271,7 @@ export function bindingifyBanner(
       }
 
       return handler.call(
-        new PluginContext(
+        new PluginContextImpl(
           args.outputOptions,
           ctx,
           args.plugin,
@@ -303,7 +303,7 @@ export function bindingifyFooter(
       }
 
       return handler.call(
-        new PluginContext(
+        new PluginContextImpl(
           args.outputOptions,
           ctx,
           args.plugin,
@@ -335,7 +335,7 @@ export function bindingifyIntro(
       }
 
       return handler.call(
-        new PluginContext(
+        new PluginContextImpl(
           args.outputOptions,
           ctx,
           args.plugin,
@@ -367,7 +367,7 @@ export function bindingifyOutro(
       }
 
       return handler.call(
-        new PluginContext(
+        new PluginContextImpl(
           args.outputOptions,
           ctx,
           args.plugin,

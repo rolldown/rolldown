@@ -1,6 +1,6 @@
 export { defineParallelPlugin } from './plugin/parallel-plugin'
 export { experimental_scan as scan } from './api/experimental'
-export { transform } from './binding'
+export { transform, moduleRunnerTransform } from './binding'
 export type { TransformOptions, TransformResult } from './binding'
 export { composeJsPlugins as composePlugins } from './utils/compose-js-plugins'
 // Builtin plugin factory

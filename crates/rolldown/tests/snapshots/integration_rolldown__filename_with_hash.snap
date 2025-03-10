@@ -2652,7 +2652,7 @@ expression: output
 
 # tests/esbuild/lower/lower_nullish_coalescing_assignment_issue1493
 
-- entry-!~{000}~.js => entry-nZ-JtOUv.js
+- entry-!~{000}~.js => entry-C122K0Rw.js
 
 # tests/esbuild/lower/lower_object_spread_no_bundle
 
@@ -4764,7 +4764,7 @@ expression: output
 
 # tests/rolldown/resolve/ts_config_option_merge
 
-- main-!~{000}~.js => main-syFUUOHA.js
+- main-!~{000}~.js => main-2RmycSr1.js
 
 # tests/rolldown/resolve/wildcard_alias
 

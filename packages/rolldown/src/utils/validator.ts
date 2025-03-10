@@ -679,9 +679,10 @@ export function validateCliOptions<T>(options: T): [T, string[]?] {
 
   return [
     parsed.output as T,
-    parsed.issues
-      ?.map((issue) => issue.path?.join(', '))
-      .filter((v) => v !== undefined),
+    parsed.issues?.map((issue) => {
+      const option = issue.path?.map((pathItem) => pathItem.key).join(' ')
+      return `Invalid value for option ${option}: ${issue.message}`
+    }),
   ]
 }
 

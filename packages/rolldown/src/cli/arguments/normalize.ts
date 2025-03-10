@@ -29,9 +29,7 @@ export function normalizeCliOptions(
   const [data, errors] = validateCliOptions<CliOptions>(cliOptions)
   if (errors?.length) {
     errors.forEach((error) => {
-      logger.error(
-        `Invalid value for option ${error}. You can use \`rolldown -h\` to see the help.`,
-      )
+      logger.error(`${error}. You can use \`rolldown -h\` to see the help.`)
     })
     process.exit(1)
   }

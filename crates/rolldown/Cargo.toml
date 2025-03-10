@@ -23,7 +23,6 @@ anyhow                    = { workspace = true }
 append-only-vec           = { workspace = true }
 arcstr                    = { workspace = true }
 css-module-lexer          = { workspace = true }
-daachorse                 = { workspace = true }
 dunce                     = { workspace = true }
 futures                   = { workspace = true }
 indexmap                  = { workspace = true }

@@ -114,6 +114,14 @@ impl BindingWatcher {
         }
       });
     }
+
+    #[cfg(not(target_family = "wasm"))]
+    {
+      let inner = Arc::clone(&self.inner);
+      napi::tokio::spawn(async move {
+        inner.start().await;
+      });
+    }
     Ok(())
   }
 }

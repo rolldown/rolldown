@@ -1,4 +1,3 @@
-use oxc::semantic::SymbolId;
 use rolldown_common::{
   ChunkIdx, IndexModules, ModuleIdx, NormalModule, RuntimeModuleBrief, SharedFileEmitter,
   SymbolRef, SymbolRefDb,
@@ -26,6 +25,6 @@ pub struct ScopeHoistingFinalizerContext<'me> {
   pub chunk_graph: &'me ChunkGraph,
   pub options: &'me SharedOptions,
   pub cur_stmt_index: usize,
-  pub keep_name_statement_to_insert: Vec<(usize, SymbolId, Rstr, Rstr)>,
+  pub keep_name_statement_to_insert: Vec<(usize, Rstr, Rstr)>,
   pub file_emitter: &'me SharedFileEmitter,
 }

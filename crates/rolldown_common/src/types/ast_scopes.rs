@@ -10,20 +10,16 @@ impl AstScopes {
     Self { scoping: inner }
   }
 
-  pub fn is_unresolved(&self, reference_id: ReferenceId, scoping: &Scoping) -> bool {
-    scoping.get_reference(reference_id).symbol_id().is_none()
+  pub fn is_unresolved(&self, reference_id: ReferenceId) -> bool {
+    self.get_reference(reference_id).symbol_id().is_none()
   }
 
-  pub fn symbol_id_for(&self, reference_id: ReferenceId, scoping: &Scoping) -> Option<SymbolId> {
-    scoping.get_reference(reference_id).symbol_id()
+  pub fn symbol_id_for(&self, reference_id: ReferenceId) -> Option<SymbolId> {
+    self.scoping.get_reference(reference_id).symbol_id()
   }
 
-  pub fn get_resolved_references<'table>(
-    &self,
-    symbol_id: SymbolId,
-    scoping: &'table Scoping,
-  ) -> impl Iterator<Item = &'table Reference> + 'table + use<'table> {
-    scoping.get_resolved_references(symbol_id)
+  pub fn get_resolved_references(&self, symbol_id: SymbolId) -> impl Iterator<Item = &Reference> {
+    self.scoping.get_resolved_references(symbol_id)
   }
 }
 

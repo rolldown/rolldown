@@ -563,7 +563,7 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
         self.current_stmt_info.unwrap_debug_label()
       )
     });
-    self.result.symbol_ref_db.ast_scopes.symbol_id_for(ref_id, &self.result.symbol_ref_db)
+    self.result.symbol_ref_db.ast_scopes.symbol_id_for(ref_id)
   }
   fn scan_export_default_decl(&mut self, decl: &ExportDefaultDeclaration) {
     use oxc::ast::ast::ExportDefaultDeclarationKind;

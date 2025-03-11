@@ -27,7 +27,7 @@ pub async fn create_ecma_view(
   args: CreateModuleViewArgs,
 ) -> BuildResult<CreateEcmaViewReturn> {
   let CreateModuleViewArgs { source, sourcemap_chain, hook_side_effects } = args;
-  let ParseToEcmaAstResult { ast, symbol_table, scope_tree, has_lazy_export, warning } =
+  let ParseToEcmaAstResult { ast, scoping, has_lazy_export, warning } =
     parse_to_ecma_ast(ctx, source)?;
 
   ctx.warnings.extend(warning);
@@ -39,8 +39,7 @@ pub async fn create_ecma_view(
 
   let scanner = AstScanner::new(
     ctx.module_index,
-    scope_tree,
-    symbol_table,
+    scoping,
     &repr_name,
     ctx.resolved_id.module_def_format,
     ast.source(),
@@ -62,7 +61,6 @@ pub async fn create_ecma_view(
     has_eval,
     errors,
     ast_usage,
-    ast_scope,
     symbol_ref_db: symbols,
     self_referenced_class_decl_symbol_ids,
     hashbang_range,
@@ -98,7 +96,6 @@ pub async fn create_ecma_view(
     stmt_infos,
     imports,
     default_export_ref,
-    ast_scope_idx: None,
     exports_kind,
     namespace_object_ref,
     def_format: ctx.resolved_id.module_def_format,
@@ -127,7 +124,7 @@ pub async fn create_ecma_view(
     hmr_info,
   };
 
-  let ecma_related = EcmaRelated { ast, symbols, ast_scope, dynamic_import_rec_exports_usage };
+  let ecma_related = EcmaRelated { ast, symbols, dynamic_import_rec_exports_usage };
   Ok(CreateEcmaViewReturn { ecma_view, ecma_related, raw_import_records })
 }
 

@@ -1,6 +1,6 @@
 use oxc::{
   ast::ast::Program,
-  semantic::{ScopeTree, Semantic, SemanticBuilder, SymbolTable},
+  semantic::{Scoping, Semantic, SemanticBuilder},
 };
 
 use crate::EcmaAst;
@@ -15,20 +15,16 @@ impl EcmaAst {
     semantic
   }
 
-  pub fn make_symbol_table_and_scope_tree(&self) -> (SymbolTable, ScopeTree) {
-    self.program.with_dependent(|_owner, dep| {
-      let semantic = Self::make_semantic(&dep.program);
-      semantic.into_symbol_table_and_scope_tree()
-    })
+  pub fn make_scoping(&self) -> Scoping {
+    self.program.with_dependent(|_owner, dep| Self::make_semantic(&dep.program).into_scoping())
   }
 
   pub fn make_symbol_table_and_scope_tree_with_semantic_builder<'a>(
     &'a self,
     semantic_builder: SemanticBuilder<'a>,
-  ) -> (SymbolTable, ScopeTree) {
-    self.program.with_dependent::<'a, (SymbolTable, ScopeTree)>(|_owner, dep| {
-      let semantic = semantic_builder.build(&dep.program).semantic;
-      semantic.into_symbol_table_and_scope_tree()
+  ) -> Scoping {
+    self.program.with_dependent::<'a, Scoping>(|_owner, dep| {
+      semantic_builder.build(&dep.program).semantic.into_scoping()
     })
   }
 }

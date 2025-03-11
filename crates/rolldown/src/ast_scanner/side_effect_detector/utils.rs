@@ -1,6 +1,6 @@
 use oxc::{
   ast::ast::{self, Expression, MemberExpression},
-  semantic::{ReferenceId, SymbolTable},
+  semantic::{ReferenceId, Scoping},
   span::Atom,
   syntax::operator::{BinaryOperator, LogicalOperator, UnaryOperator, UpdateOperator},
 };
@@ -23,13 +23,13 @@ fn merged_known_primitive_types(
   scope: &AstScopes,
   left: &Expression,
   right: &Expression,
-  symbol_table: &SymbolTable,
+  scoping: &Scoping,
 ) -> PrimitiveType {
-  let left_type = known_primitive_type(scope, left, symbol_table);
+  let left_type = known_primitive_type(scope, left, scoping);
   if left_type == PrimitiveType::Unknown {
     return PrimitiveType::Unknown;
   }
-  let right_type = known_primitive_type(scope, right, symbol_table);
+  let right_type = known_primitive_type(scope, right, scoping);
   if right_type == PrimitiveType::Unknown {
     return PrimitiveType::Unknown;
   }
@@ -43,13 +43,12 @@ fn merged_known_primitive_types(
 pub fn known_primitive_type(
   scope: &AstScopes,
   expr: &Expression,
-  symbol_table: &SymbolTable,
+  scoping: &Scoping,
 ) -> PrimitiveType {
   match expr {
     Expression::NullLiteral(_) => PrimitiveType::Null,
     Expression::Identifier(id)
-      if id.name == "undefined"
-        && scope.is_unresolved(id.reference_id.get().unwrap(), symbol_table) =>
+      if id.name == "undefined" && scope.is_unresolved(id.reference_id.get().unwrap(), scoping) =>
     {
       PrimitiveType::Undefined
     }
@@ -77,7 +76,7 @@ pub fn known_primitive_type(
       UnaryOperator::LogicalNot | UnaryOperator::Delete => PrimitiveType::Boolean,
       UnaryOperator::UnaryPlus => PrimitiveType::Number, // Cannot be bigint because that throws an exception
       UnaryOperator::UnaryNegation | UnaryOperator::BitwiseNot => {
-        let value = known_primitive_type(scope, &e.argument, symbol_table);
+        let value = known_primitive_type(scope, &e.argument, scoping);
         if value == PrimitiveType::BigInt {
           return PrimitiveType::BigInt;
         }
@@ -89,11 +88,11 @@ pub fn known_primitive_type(
     },
     Expression::LogicalExpression(e) => match e.operator {
       LogicalOperator::Or | LogicalOperator::And => {
-        merged_known_primitive_types(scope, &e.left, &e.right, symbol_table)
+        merged_known_primitive_types(scope, &e.left, &e.right, scoping)
       }
       LogicalOperator::Coalesce => {
-        let left = known_primitive_type(scope, &e.left, symbol_table);
-        let right = known_primitive_type(scope, &e.right, symbol_table);
+        let left = known_primitive_type(scope, &e.left, scoping);
+        let right = known_primitive_type(scope, &e.right, scoping);
         if left == PrimitiveType::Null || left == PrimitiveType::Undefined {
           return right;
         }
@@ -120,8 +119,8 @@ pub fn known_primitive_type(
       | BinaryOperator::Instanceof
       | BinaryOperator::In => PrimitiveType::Boolean,
       BinaryOperator::Addition => {
-        let left = known_primitive_type(scope, &e.left, symbol_table);
-        let right = known_primitive_type(scope, &e.right, symbol_table);
+        let left = known_primitive_type(scope, &e.left, scoping);
+        let right = known_primitive_type(scope, &e.right, scoping);
         if left == PrimitiveType::String || right == PrimitiveType::String {
           PrimitiveType::String
         } else if left == PrimitiveType::BigInt && right == PrimitiveType::BigInt {
@@ -153,10 +152,10 @@ pub fn known_primitive_type(
 
     Expression::AssignmentExpression(e) => match e.operator {
       oxc::syntax::operator::AssignmentOperator::Assign => {
-        known_primitive_type(scope, &e.right, symbol_table)
+        known_primitive_type(scope, &e.right, scoping)
       }
       oxc::syntax::operator::AssignmentOperator::Addition => {
-        let right = known_primitive_type(scope, &e.right, symbol_table);
+        let right = known_primitive_type(scope, &e.right, scoping);
         if right == PrimitiveType::String {
           PrimitiveType::String
         } else {
@@ -186,18 +185,14 @@ pub fn can_change_strict_to_loose(
   scope: &AstScopes,
   a: &Expression,
   b: &Expression,
-  symbol_table: &SymbolTable,
+  scoping: &Scoping,
 ) -> bool {
-  let x = known_primitive_type(scope, a, symbol_table);
-  let y = known_primitive_type(scope, b, symbol_table);
+  let x = known_primitive_type(scope, a, scoping);
+  let y = known_primitive_type(scope, b, scoping);
   x == y && !matches!(x, PrimitiveType::Unknown | PrimitiveType::Mixed)
 }
 
-pub fn is_primitive_literal(
-  scope: &AstScopes,
-  expr: &Expression,
-  symbol_table: &SymbolTable,
-) -> bool {
+pub fn is_primitive_literal(scope: &AstScopes, expr: &Expression, scoping: &Scoping) -> bool {
   match expr {
     Expression::NullLiteral(_)
     | Expression::BooleanLiteral(_)
@@ -206,14 +201,14 @@ pub fn is_primitive_literal(
     | Expression::BigIntLiteral(_) => true,
     // Include `+1` / `-1`.
     Expression::UnaryExpression(e) => match e.operator {
-      UnaryOperator::Void => is_primitive_literal(scope, &e.argument, symbol_table),
+      UnaryOperator::Void => is_primitive_literal(scope, &e.argument, scoping),
       UnaryOperator::UnaryNegation | UnaryOperator::UnaryPlus => {
         matches!(e.argument, Expression::NumericLiteral(_))
       }
       _ => false,
     },
     Expression::Identifier(id)
-      if id.name == "undefined" && scope.is_unresolved(id.reference_id(), symbol_table) =>
+      if id.name == "undefined" && scope.is_unresolved(id.reference_id(), scoping) =>
     {
       true
     }
@@ -282,10 +277,10 @@ pub fn is_side_effect_free_unbound_identifier_ref(
   value: &Expression,
   guard_condition: &Expression,
   mut is_yes_branch: bool,
-  symbol_table: &SymbolTable,
+  scoping: &Scoping,
 ) -> Option<bool> {
   let ident = value.as_identifier()?;
-  let is_unresolved = scope.is_unresolved(ident.reference_id(), symbol_table);
+  let is_unresolved = scope.is_unresolved(ident.reference_id(), scoping);
   if !is_unresolved {
     return Some(false);
   }
@@ -357,7 +352,7 @@ pub fn is_side_effect_free_unbound_identifier_ref(
 pub fn maybe_side_effect_free_global_constructor(
   scope: &AstScopes,
   expr: &ast::NewExpression<'_>,
-  symbol_table: &oxc::semantic::SymbolTable,
+  symbol_table: &Scoping,
 ) -> bool {
   let Some(ident) = expr.callee.as_identifier() else {
     return false;

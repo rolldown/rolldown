@@ -54,18 +54,18 @@ impl PreProcessEcmaAst {
     }
 
     self.stats = semantic_ret.semantic.stats();
-    let (symbols, scopes) = semantic_ret.semantic.into_symbol_table_and_scope_tree();
+    let scoping = semantic_ret.semantic.into_scoping();
 
-    let (mut symbols, mut scopes) = ast.program.with_mut(|fields| {
+    let mut scoping = ast.program.with_mut(|fields| {
       let WithMutFields { allocator, program, .. } = fields;
       // Use built-in define plugin.
       if let Some(replace_global_define_config) = replace_global_define_config {
         let ret = ReplaceGlobalDefines::new(allocator, replace_global_define_config.clone())
-          .build(symbols, scopes, program);
+          .build(scoping, program);
         self.ast_changed = true;
-        (ret.symbols, ret.scopes)
+        ret.scoping
       } else {
-        (symbols, scopes)
+        scoping
       }
     });
     // Transform TypeScript and jsx.
@@ -94,7 +94,7 @@ impl PreProcessEcmaAst {
         };
 
         Transformer::new(fields.allocator, Path::new(path), &transform_options)
-          .build_with_symbols_and_scopes(symbols, scopes, fields.program)
+          .build_with_scoping(scoping, fields.program)
       });
 
       // TODO: emit diagnostic, aiming to pass more tests,
@@ -108,8 +108,7 @@ impl PreProcessEcmaAst {
         Err(BuildDiagnostic::from_oxc_diagnostics(errors, &source, path, &Severity::Error))?;
       }
 
-      symbols = ret.symbols;
-      scopes = ret.scopes;
+      scoping = ret.scoping;
       self.ast_changed = true;
     }
 
@@ -122,14 +121,13 @@ impl PreProcessEcmaAst {
         // https://github.com/oxc-project/oxc/blob/0136431b31a1d4cc20147eb085d9314b224cc092/crates/oxc_transformer/src/plugins/inject_global_variables.rs#L184-L184
         // TODO: real ast_changed hint
         let semantic_ret = SemanticBuilder::new().with_stats(self.stats).build(program);
-        (symbols, scopes) = semantic_ret.semantic.into_symbol_table_and_scope_tree();
+        scoping = semantic_ret.semantic.into_scoping();
         let ret = InjectGlobalVariables::new(
           allocator,
           bundle_options.oxc_inject_global_variables_config.clone(),
         )
-        .build(symbols, scopes, program);
-        symbols = ret.symbols;
-        scopes = ret.scopes;
+        .build(scoping, program);
+        scoping = ret.scoping;
         self.ast_changed = true;
       }
 
@@ -140,9 +138,9 @@ impl PreProcessEcmaAst {
         let compressor = Compressor::new(allocator, CompressOptions::all_false());
         if self.ast_changed {
           let semantic_ret = SemanticBuilder::new().with_stats(self.stats).build(program);
-          (symbols, scopes) = semantic_ret.semantic.into_symbol_table_and_scope_tree();
+          scoping = semantic_ret.semantic.into_scoping();
         }
-        compressor.dead_code_elimination_with_symbols_and_scopes(symbols, scopes, program);
+        compressor.dead_code_elimination_with_scoping(scoping, program);
       }
     });
 
@@ -157,7 +155,7 @@ impl PreProcessEcmaAst {
     });
 
     // NOTE: Recreate semantic data because AST is changed in the transformations above.
-    let (symbol_table, scope_tree) = ast.program.with_dependent(|_owner, dep| {
+    let scoping = ast.program.with_dependent(|_owner, dep| {
       SemanticBuilder::new()
         // Required by `module.scope.get_child_ids` in `crates/rolldown/src/utils/renamer.rs`.
         .with_scope_tree_child_ids(true)
@@ -165,9 +163,9 @@ impl PreProcessEcmaAst {
         .with_stats(self.stats)
         .build(&dep.program)
         .semantic
-        .into_symbol_table_and_scope_tree()
+        .into_scoping()
     });
 
-    Ok(ParseToEcmaAstResult { ast, symbol_table, scope_tree, has_lazy_export, warning })
+    Ok(ParseToEcmaAstResult { ast, scoping, has_lazy_export, warning })
   }
 }

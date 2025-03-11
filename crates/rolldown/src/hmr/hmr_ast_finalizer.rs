@@ -2,7 +2,7 @@ use oxc::{
   allocator::Allocator,
   ast::ast::{self, ExportDefaultDeclarationKind},
   ast_visit::{VisitMut, walk_mut},
-  semantic::SymbolId,
+  semantic::{Scoping, SymbolId},
   span::{Atom, GetSpan},
 };
 use rolldown_common::{IndexModules, Module, NormalModule};
@@ -11,13 +11,11 @@ use rolldown_ecmascript_utils::{
 };
 use rustc_hash::FxHashMap;
 
-#[expect(unused)]
 pub struct HmrAstFinalizer<'me, 'ast> {
   // Outside input
   pub alloc: &'ast Allocator,
   pub snippet: AstSnippet<'ast>,
-  pub symbols: &'me oxc::semantic::SymbolTable,
-  pub scopes: &'me oxc::semantic::ScopeTree,
+  pub scoping: &'me Scoping,
   pub modules: &'me IndexModules,
   pub module: &'me NormalModule,
   pub import_binding: FxHashMap<SymbolId, String>,
@@ -260,7 +258,7 @@ impl<'ast> VisitMut<'ast> for HmrAstFinalizer<'_, 'ast> {
   fn visit_expression(&mut self, it: &mut ast::Expression<'ast>) {
     if let Some(ident) = it.as_identifier() {
       if let Some(reference_id) = ident.reference_id.get() {
-        let reference = self.symbols.get_reference(reference_id);
+        let reference = self.scoping.get_reference(reference_id);
         if let Some(symbol_id) = reference.symbol_id() {
           if let Some(binding_name) = self.import_binding.get(&symbol_id) {
             *it = self.snippet.id_ref_expr(binding_name.as_str(), ident.span);

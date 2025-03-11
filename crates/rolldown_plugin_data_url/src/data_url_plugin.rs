@@ -37,7 +37,8 @@ impl Plugin for DataUrlPlugin {
           return Ok(None);
         };
         let decoded_data = if parsed.is_base64 {
-          String::from_utf8(base64_simd::STANDARD.decode_to_vec(parsed.data)?)?
+          String::from_utf8_lossy(base64_simd::STANDARD.decode_to_vec(parsed.data)?.as_ref())
+            .to_string()
         } else {
           urlencoding::decode(parsed.data)?.into_owned()
         };

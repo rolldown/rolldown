@@ -237,20 +237,19 @@ impl<'ast> VisitMut<'ast> for ScopeHoistingFinalizer<'_, 'ast> {
 
   fn visit_statements(&mut self, it: &mut allocator::Vec<'ast, ast::Statement<'ast>>) {
     let previous_stmt_index = self.ctx.cur_stmt_index;
-    let mut previous_keep_name_statement =
-      std::mem::take(&mut self.ctx.keep_name_statement_to_insert);
-
+    let previous_keep_name_statement = std::mem::take(&mut self.ctx.keep_name_statement_to_insert);
     for (i, stmt) in it.iter_mut().enumerate() {
       self.ctx.cur_stmt_index = i;
       self.visit_statement(stmt);
     }
 
     // TODO: perf it
-    std::mem::swap(&mut self.ctx.keep_name_statement_to_insert, &mut previous_keep_name_statement);
-    for (stmt_index, original_name, new_name) in previous_keep_name_statement.into_iter().rev() {
-      it.insert(stmt_index, self.snippet.keep_name_call_expr_stmt(&original_name, &new_name));
+    for (stmt_index, original_name, new_name) in self.ctx.keep_name_statement_to_insert.iter().rev()
+    {
+      it.insert(*stmt_index, self.snippet.keep_name_call_expr_stmt(original_name, new_name));
     }
     self.ctx.cur_stmt_index = previous_stmt_index;
+    self.ctx.keep_name_statement_to_insert = previous_keep_name_statement;
   }
 
   fn visit_identifier_reference(&mut self, ident: &mut ast::IdentifierReference) {

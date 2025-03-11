@@ -298,7 +298,7 @@ export interface BindingHookJsResolveIdOptions {
 
 export interface BindingHookJsResolveIdOutput {
   id: string
-  external?: boolean
+  external?: BindingResolvedExternal
   sideEffects: boolean | 'no-treeshake'
 }
 
@@ -322,7 +322,7 @@ export interface BindingHookResolveIdExtraArgs {
 
 export interface BindingHookResolveIdOutput {
   id: string
-  external?: boolean
+  external?: BindingResolvedExternal
   sideEffects?: BindingHookSideEffects
 }
 
@@ -523,7 +523,7 @@ export interface BindingOutputOptions {
 
 export interface BindingPluginContextResolvedId {
   id: string
-  external: boolean
+  external: BindingResolvedExternal
 }
 
 export interface BindingPluginContextResolveOptions {
@@ -614,6 +614,11 @@ export interface BindingReplacePluginConfig {
   objectGuards?: boolean
   sourcemap?: boolean
 }
+
+export type BindingResolvedExternal =
+  | { type: 'Bool', field0: boolean }
+  | { type: 'Absolute' }
+  | { type: 'Relative' }
 
 export interface BindingResolveOptions {
   alias?: Array<AliasItem>

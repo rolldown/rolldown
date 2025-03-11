@@ -22,7 +22,7 @@ impl Plugin for UnresolvedImport {
     if args.specifier == "test.js" {
       return Ok(Some(HookResolveIdOutput {
         id: args.specifier.into(),
-        external: Some(false),
+        external: Some(false.into()),
         ..Default::default()
       }));
     }

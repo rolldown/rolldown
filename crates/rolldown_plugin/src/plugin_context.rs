@@ -114,7 +114,7 @@ impl PluginContextImpl {
         id: specifier.into(),
         ignored: false,
         module_def_format: ModuleDefFormat::Unknown,
-        is_external: false,
+        external: false.into(),
         package_json: None,
         side_effects,
         is_external_without_side_effects: false,

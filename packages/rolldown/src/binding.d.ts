@@ -119,7 +119,7 @@ export declare class BindingTransformPluginContext {
 export declare class BindingWatcher {
   constructor(options: Array<BindingBundlerOptions>, notifyOption?: BindingNotifyOption | undefined | null)
   close(): Promise<void>
-  start(listener: (data: BindingWatcherEvent) => void): void
+  start(listener: (data: BindingWatcherEvent) => void): Promise<void>
 }
 
 export declare class BindingWatcherChangeData {
@@ -1394,35 +1394,6 @@ export interface TransformResult {
    * list.
    */
   errors: Array<OxcError>
-}
-
-export interface TypeScriptOptions {
-  jsxPragma?: string
-  jsxPragmaFrag?: string
-  onlyRemoveTypeImports?: boolean
-  allowNamespaces?: boolean
-  allowDeclareFields?: boolean
-  /**
-   * Also generate a `.d.ts` declaration file for TypeScript files.
-   *
-   * The source file must be compliant with all
-   * [`isolatedDeclarations`](https://www.typescriptlang.org/docs/handbook/release-notes/typescript-5-5.html#isolated-declarations)
-   * requirements.
-   *
-   * @default false
-   */
-  declaration?: IsolatedDeclarationsOptions
-  /**
-   * Rewrite or remove TypeScript import/export declaration extensions.
-   *
-   * - When set to `rewrite`, it will change `.ts`, `.mts`, `.cts` extensions to `.js`, `.mjs`, `.cjs` respectively.
-   * - When set to `remove`, it will remove `.ts`/`.mts`/`.cts`/`.tsx` extension entirely.
-   * - When set to `true`, it's equivalent to `rewrite`.
-   * - When set to `false` or omitted, no changes will be made to the extensions.
-   *
-   * @default false
-   */
-  rewriteImportExtensions?: 'rewrite' | 'remove' | boolean
 }
 
 export interface ValueSpan {

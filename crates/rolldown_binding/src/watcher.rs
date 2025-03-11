@@ -59,7 +59,7 @@ impl BindingWatcher {
 
   #[tracing::instrument(level = "debug", skip_all)]
   #[napi(ts_args_type = "listener: (data: BindingWatcherEvent) => void")]
-  pub fn start(
+  pub async fn start(
     &self,
     listener: MaybeAsyncJsCallback<FnArgs<(BindingWatcherEvent,)>, ()>,
   ) -> napi::Result<()> {
@@ -117,10 +117,7 @@ impl BindingWatcher {
 
     #[cfg(not(target_family = "wasm"))]
     {
-      let inner = Arc::clone(&self.inner);
-      napi::tokio::spawn(async move {
-        inner.start().await;
-      });
+      self.inner.start().await;
     }
     Ok(())
   }

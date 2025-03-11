@@ -271,8 +271,7 @@ impl<'a> GenerateStage<'a> {
             .asset_filename_template(&RollupPreRenderedAsset {
               names: vec![name.clone()],
               original_file_names: vec![],
-              // TODO: avoid source clone
-              source: asset_view.source.clone().to_vec().into(),
+              source: asset_view.source.to_vec().into(),
             })
             .await?;
 

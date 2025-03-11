@@ -103,6 +103,16 @@ describe('cli options for bundling', () => {
     expect(status.exitCode).toBe(0)
     expect(cleanStdout(status.stdout)).toMatchSnapshot()
   })
+
+  it('validate cli options', async () => {
+    const cwd = cliFixturesDir('cli-option-object')
+    try {
+      await $({ cwd })`rolldown index.ts --format INCORRECT`
+      expect.unreachable()
+    } catch (error: any) {
+      expect(error.message).matchSnapshot()
+    }
+  })
 })
 
 describe('config', () => {

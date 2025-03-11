@@ -37,6 +37,7 @@ import {
 import type { BindingifyPluginArgs } from './bindingify-plugin'
 import { NormalizedInputOptionsImpl } from '../options/normalized-input-options'
 import { normalizeErrors } from '../utils/error'
+import { bindingResolvedExternal } from '../utils/resolved-external'
 
 export function bindingifyBuildStart(
   args: BindingifyPluginArgs,
@@ -138,7 +139,7 @@ export function bindingifyResolveId(
       if (ret === false) {
         return {
           id: specifier,
-          external: true,
+          external: bindingResolvedExternal(true),
         }
       }
       if (typeof ret === 'string') {
@@ -156,7 +157,7 @@ export function bindingifyResolveId(
 
       return {
         id: ret.id,
-        external: ret.external,
+        external: bindingResolvedExternal(ret.external),
         sideEffects: bindingifySideEffects(exist.moduleSideEffects),
       }
     },
@@ -194,7 +195,7 @@ export function bindingifyResolveDynamicImport(
       if (ret === false) {
         return {
           id: specifier,
-          external: true,
+          external: bindingResolvedExternal(true),
         }
       }
       if (typeof ret === 'string') {
@@ -205,7 +206,7 @@ export function bindingifyResolveDynamicImport(
 
       const result: BindingHookResolveIdOutput = {
         id: ret.id,
-        external: ret.external,
+        external: bindingResolvedExternal(ret.external),
       }
 
       if (ret.moduleSideEffects !== null) {

@@ -145,7 +145,7 @@ impl ModuleLoader {
       Entry::Vacant(not_visited) => {
         let idx = self.intermediate_normal_modules.alloc_ecma_module_idx();
 
-        if resolved_id.is_external {
+        if resolved_id.external.is_external() {
           let external_module_side_effects = match resolved_id.side_effects {
             Some(hook_side_effects) => match hook_side_effects {
               HookSideEffects::True => DeterminedSideEffects::UserDefined(true),

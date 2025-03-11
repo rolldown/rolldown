@@ -7,12 +7,40 @@ use crate::{ModuleDefFormat, PackageJson, side_effects::HookSideEffects};
 use super::module_id::stabilize_module_id;
 
 #[derive(Debug)]
+pub enum ResolvedExternal {
+  Bool(bool),
+  Absolute,
+  Relative,
+}
+
+impl Default for ResolvedExternal {
+  fn default() -> Self {
+    ResolvedExternal::Bool(false)
+  }
+}
+
+impl ResolvedExternal {
+  pub fn is_external(&self) -> bool {
+    match self {
+      ResolvedExternal::Bool(b) => *b,
+      _ => true,
+    }
+  }
+}
+
+impl From<bool> for ResolvedExternal {
+  fn from(b: bool) -> Self {
+    ResolvedExternal::Bool(b)
+  }
+}
+
+#[derive(Debug)]
 pub struct ResolvedId {
   pub id: ArcStr,
   // https://github.com/defunctzombie/package-browser-field-spec/blob/8c4869f6a5cb0de26d208de804ad0a62473f5a03/README.md?plain=1#L62-L77
   pub ignored: bool,
   pub module_def_format: ModuleDefFormat,
-  pub is_external: bool,
+  pub external: ResolvedExternal,
   pub package_json: Option<Arc<PackageJson>>,
   pub side_effects: Option<HookSideEffects>,
   pub is_external_without_side_effects: bool,
@@ -26,7 +54,7 @@ impl ResolvedId {
       id: arcstr::literal!(""),
       ignored: false,
       module_def_format: ModuleDefFormat::Unknown,
-      is_external: false,
+      external: false.into(),
       package_json: None,
       side_effects: None,
       is_external_without_side_effects: false,
@@ -50,7 +78,7 @@ impl ResolvedId {
       id,
       ignored: false,
       module_def_format: ModuleDefFormat::Unknown,
-      is_external: true,
+      external: true.into(),
       package_json: None,
       side_effects: None,
       is_external_without_side_effects: true,

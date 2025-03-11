@@ -156,7 +156,7 @@ pub async fn normalize_side_effects(
         if opt.module_side_effects.is_fn() {
           if opt
             .module_side_effects
-            .ffi_resolve(stable_id, resolved_id.is_external)
+            .ffi_resolve(stable_id, resolved_id.external.is_external())
             .await?
             .unwrap_or_default()
           {
@@ -165,7 +165,10 @@ pub async fn normalize_side_effects(
             DeterminedSideEffects::UserDefined(false)
           }
         } else {
-          match opt.module_side_effects.native_resolve(stable_id, resolved_id.is_external) {
+          match opt
+            .module_side_effects
+            .native_resolve(stable_id, resolved_id.external.is_external())
+          {
             Some(value) => DeterminedSideEffects::UserDefined(value),
             None => lazy_check_side_effects(module_type, resolved_id, stmt_infos),
           }

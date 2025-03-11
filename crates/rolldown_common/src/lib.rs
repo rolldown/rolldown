@@ -126,7 +126,7 @@ pub use crate::{
   types::package_json::PackageJson,
   types::rendered_module::RenderedModule,
   types::resolved_export::ResolvedExport,
-  types::resolved_request_info::ResolvedId,
+  types::resolved_request_info::{ResolvedExternal, ResolvedId},
   types::rollup_pre_rendered_asset::RollupPreRenderedAsset,
   types::rollup_pre_rendered_chunk::RollupPreRenderedChunk,
   types::rollup_rendered_chunk::RollupRenderedChunk,

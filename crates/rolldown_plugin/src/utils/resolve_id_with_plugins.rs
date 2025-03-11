@@ -37,7 +37,7 @@ pub async fn resolve_id_check_external(
         id: request.into(),
         ignored: false,
         module_def_format: ModuleDefFormat::Unknown,
-        is_external: true,
+        external: true.into(),
         package_json: None,
         side_effects: None,
         is_external_without_side_effects: false,
@@ -60,10 +60,10 @@ pub async fn resolve_id_check_external(
 
   match resolved_id {
     Ok(mut resolved_id) => {
-      if !resolved_id.is_external {
+      if !resolved_id.external.is_external() {
         // Check external with resolved path
         if let Some(is_external) = bundle_options.external.as_ref() {
-          resolved_id.is_external = is_external(resolved_id.id.as_str(), importer, true).await?;
+          resolved_id.external = is_external(resolved_id.id.as_str(), importer, true).await?.into();
         }
       }
       Ok(Ok(resolved_id))
@@ -78,7 +78,7 @@ pub async fn resolve_id_check_external(
               id: request.into(),
               ignored: false,
               module_def_format: ModuleDefFormat::Unknown,
-              is_external: true,
+              external: true.into(),
               package_json: None,
               side_effects: None,
               is_external_without_side_effects: false,
@@ -121,7 +121,7 @@ pub async fn resolve_id_with_plugins(
         module_def_format: ModuleDefFormat::from_path(r.id.as_str()),
         ignored: false,
         id: r.id,
-        is_external: matches!(r.external, Some(true)),
+        external: r.external.unwrap_or_default(),
         package_json: None,
         side_effects: r.side_effects,
         is_external_without_side_effects: false,
@@ -146,7 +146,7 @@ pub async fn resolve_id_with_plugins(
       module_def_format: ModuleDefFormat::from_path(r.id.as_str()),
       ignored: false,
       id: r.id,
-      is_external: matches!(r.external, Some(true)),
+      external: r.external.unwrap_or_default(),
       package_json: None,
       side_effects: r.side_effects,
       is_external_without_side_effects: false,
@@ -159,7 +159,7 @@ pub async fn resolve_id_with_plugins(
       id: request.into(),
       module_def_format: ModuleDefFormat::Unknown,
       ignored: false,
-      is_external: true,
+      external: true.into(),
       package_json: None,
       side_effects: None,
       is_external_without_side_effects: false,
@@ -192,7 +192,7 @@ fn resolve_id(
           resolved.into()
         },
         ignored: false,
-        is_external: true,
+        external: true.into(),
         module_def_format: ModuleDefFormat::Unknown,
         package_json: None,
         side_effects: None,
@@ -201,7 +201,7 @@ fn resolve_id(
         //(hyf0) TODO: This `p` doesn't seem to contains `query` or `fragment` of the input. We need to make sure this is ok
         id: p.to_str().expect("Should be valid utf8").into(),
         ignored: true,
-        is_external: false,
+        external: false.into(),
         module_def_format: ModuleDefFormat::Unknown,
         package_json: None,
         side_effects: None,

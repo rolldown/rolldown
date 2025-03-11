@@ -22,7 +22,7 @@ impl Plugin for TestPlugin {
     if args.specifier == "ext" {
       return Ok(Some(HookResolveIdOutput {
         id: arcstr::literal!("ext"),
-        external: Some(true),
+        external: Some(true.into()),
         ..Default::default()
       }));
     }

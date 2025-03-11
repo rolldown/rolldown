@@ -196,6 +196,12 @@ exports[`cli options for bundling > should handle single string options 1`] = `
 "
 `;
 
+exports[`cli options for bundling > validate cli options 1`] = `
+"Command failed with exit code 1: rolldown index.ts --format INCORRECT
+
+Invalid value for option format: Invalid type: Expected ("es" | "cjs" | "esm" | "module" | "commonjs" | "iife" | "umd") but received "INCORRECT". You can use \`rolldown -h\` to see the help."
+`;
+
 exports[`config > should allow loading cts config 1`] = `
 "<DIR>/index.js  chunk │ size: 0.11 kB
 

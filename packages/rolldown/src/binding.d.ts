@@ -119,7 +119,7 @@ export declare class BindingTransformPluginContext {
 export declare class BindingWatcher {
   constructor(options: Array<BindingBundlerOptions>, notifyOption?: BindingNotifyOption | undefined | null)
   close(): Promise<void>
-  start(listener: (data: BindingWatcherEvent) => void): Promise<void>
+  start(listener: (data: BindingWatcherEvent) => void): void
 }
 
 export declare class BindingWatcherChangeData {

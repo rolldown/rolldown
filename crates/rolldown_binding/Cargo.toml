@@ -49,7 +49,6 @@ rolldown_tracing                        = { workspace = true }
 rolldown_utils                          = { workspace = true }
 rustc-hash                              = { workspace = true }
 sugar_path                              = { workspace = true }
-tokio_with_wasm                         = { workspace = true }
 tracing                                 = { workspace = true }
 
 [target.'cfg(all(not(target_os = "linux"), not(target_os = "freebsd"), not(target_family = "wasm")))'.dependencies]

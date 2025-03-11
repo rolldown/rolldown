@@ -124,11 +124,9 @@ impl ModuleLoader {
 
     #[cfg(target_family = "wasm")]
     {
-      use tokio::runtime;
-      use tokio::task::spawn_blocking;
-      use tokio_with_wasm::alias as tokio;
-      spawn_blocking(|| {
-        let rt = runtime::Builder::new_current_thread().build();
+      use tokio;
+      std::thread::spawn(|| {
+        let rt = tokio::runtime::Builder::new_current_thread().build();
         match rt {
           Ok(rt) => rt.block_on(future),
           Err(e) => tracing::error!("create runtime error: {e:?}"),
@@ -230,11 +228,9 @@ impl ModuleLoader {
 
           #[cfg(target_family = "wasm")]
           {
-            use tokio::runtime;
-            use tokio::task::spawn_blocking;
-            use tokio_with_wasm::alias as tokio;
-            spawn_blocking(|| {
-              let rt = runtime::Builder::new_current_thread().build();
+            use tokio;
+            std::thread::spawn(|| {
+              let rt = tokio::runtime::Builder::new_current_thread().build();
               match rt {
                 Ok(rt) => rt.block_on(task.run()),
                 Err(e) => tracing::error!("create runtime error: {e:?}"),

@@ -17,7 +17,7 @@ codegen-units = 16
 debug         = 'full'
 inherits      = "release"
 lto           = "thin"
-opt-level     = "z"
+opt-level     = 3
 strip         = "none"
 
 [workspace.lints.clippy]
@@ -167,7 +167,6 @@ string_wizard       = { path = "./crates/string_wizard", features = ["serde"] }
 sugar_path          = { version = "1.2.0", features = ["cached_current_dir"] }
 testing_macros      = "1.0.0"
 tokio               = { version = "1.38.0", default-features = false }
-tokio_with_wasm     = { version = "0.8.2", features = ["rt"] }
 tracing             = "0.1.40"
 tracing-chrome      = "0.7.2"
 tracing-subscriber  = { version = "0.3.18", default-features = false }

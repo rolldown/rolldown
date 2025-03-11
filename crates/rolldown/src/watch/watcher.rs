@@ -16,6 +16,7 @@ use std::{
   time::Duration,
 };
 use tokio::sync::Mutex;
+use tracing::info;
 
 use crate::Bundler;
 
@@ -213,11 +214,9 @@ impl WatcherImpl {
 
     #[cfg(target_family = "wasm")]
     {
-      use tokio::runtime;
-      use tokio::task::spawn_blocking;
-      use tokio_with_wasm::alias as tokio;
-      spawn_blocking(|| {
-        let rt = runtime::Builder::new_current_thread().enable_time().build();
+      use tokio;
+      std::thread::spawn(|| {
+        let rt = tokio::runtime::Builder::new_current_thread().enable_time().build();
         match rt {
           Ok(rt) => rt.block_on(future),
           Err(e) => tracing::error!("create runtime error: {e:?}"),
@@ -285,14 +284,11 @@ pub fn wait_for_change(watcher: Arc<WatcherImpl>) {
   {
     tokio::spawn(future);
   }
-
   #[cfg(target_family = "wasm")]
   {
-    use tokio::runtime;
-    use tokio::task::spawn_blocking;
-    use tokio_with_wasm::alias as tokio;
-    spawn_blocking(|| {
-      let rt = runtime::Builder::new_current_thread().build();
+    use tokio;
+    std::thread::spawn(|| {
+      let rt = tokio::runtime::Builder::new_current_thread().build();
       match rt {
         Ok(rt) => rt.block_on(future),
         Err(e) => tracing::error!("create runtime error: {e:?}"),

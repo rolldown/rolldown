@@ -1,6 +1,6 @@
 {
   "name": "@rolldown/binding-linux-x64-musl",
-  "version": "1.0.0-beta.3",
+  "version": "1.0.0-beta.4",
   "cpu": [
     "x64"
   ],

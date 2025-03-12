@@ -244,8 +244,7 @@ impl<'ast> VisitMut<'ast> for ScopeHoistingFinalizer<'_, 'ast> {
     }
 
     // TODO: perf it
-    for (stmt_index, _symbol_id, original_name, new_name) in
-      self.ctx.keep_name_statement_to_insert.iter().rev()
+    for (stmt_index, original_name, new_name) in self.ctx.keep_name_statement_to_insert.iter().rev()
     {
       it.insert(*stmt_index, self.snippet.keep_name_call_expr_stmt(original_name, new_name));
     }

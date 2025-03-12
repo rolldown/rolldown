@@ -629,12 +629,12 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
   fn get_conflicted_info(
     &self,
     id: &BindingIdentifier<'ast>,
-  ) -> Option<(SymbolId, &str, &rolldown_rstr::Rstr)> {
+  ) -> Option<(&str, &rolldown_rstr::Rstr)> {
     let symbol_id = id.symbol_id.get()?;
     let symbol_ref: SymbolRef = (self.ctx.id, symbol_id).into();
     let original_name = symbol_ref.name(self.ctx.symbol_db);
     let canonical_name = self.canonical_name_for(symbol_ref);
-    (original_name != canonical_name.as_str()).then_some((symbol_id, original_name, canonical_name))
+    (original_name != canonical_name.as_str()).then_some((original_name, canonical_name))
   }
 
   /// rewrite toplevel `class ClassName {}` to `var ClassName = class {}`
@@ -1101,17 +1101,12 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
     if !self.ctx.options.keep_names {
       return None;
     }
-    let (_, original_name, _) = self.get_conflicted_info(name_binding_id.as_ref()?)?;
-    let (symbol_id, _, canonical_name) = self.get_conflicted_info(symbol_binding_id.as_ref()?)?;
+    let (original_name, _) = self.get_conflicted_info(name_binding_id.as_ref()?)?;
+    let (_, canonical_name) = self.get_conflicted_info(symbol_binding_id.as_ref()?)?;
     let original_name: Rstr = original_name.into();
     let new_name = canonical_name.clone();
     let insert_position = self.ctx.cur_stmt_index + 1;
-    self.ctx.keep_name_statement_to_insert.push((
-      insert_position,
-      symbol_id,
-      original_name,
-      new_name,
-    ));
+    self.ctx.keep_name_statement_to_insert.push((insert_position, original_name, new_name));
     None
   }
 
@@ -1122,7 +1117,7 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
     if !self.ctx.options.keep_names {
       return None;
     }
-    let (_, original_name, _) = self.get_conflicted_info(id.as_ref()?)?;
+    let (original_name, _) = self.get_conflicted_info(id.as_ref()?)?;
     let original_name: Rstr = original_name.into();
     Some(self.snippet.static_block_keep_name_helper(&original_name))
   }

@@ -2,6 +2,7 @@
 //! - All kinds that will terminate the build process should be named with a postfix "Error".
 use std::fmt::Display;
 
+#[derive(Clone, Copy)]
 pub enum EventKind {
   // --- These kinds are copied from rollup: https://github.com/rollup/rollup/blob/0b665c31833525c923c0fc20f43ebfca748c6670/src/utils/logs.ts#L102-L179
   AmbiguousExternalNamespaceError,
@@ -33,7 +34,7 @@ pub enum EventKind {
   JsonParseError,
   IllegalReassignmentError,
   InvalidDefineConfigError,
-  ResolveError(Option<&'static str>),
+  ResolveError,
   UnhandleableError,
   UnloadableDependencyError,
 
@@ -76,10 +77,7 @@ impl Display for EventKind {
       EventKind::JsonParseError => write!(f, "JSON_PARSE"),
       EventKind::IllegalReassignmentError => write!(f, "ILLEGAL_REASSIGNMENT"),
       EventKind::InvalidDefineConfigError => write!(f, "INVALID_DEFINE_CONFIG"),
-      EventKind::ResolveError(title) => match title {
-        Some(title) => write!(f, "{title}"),
-        None => write!(f, "RESOLVE_ERROR"),
-      },
+      EventKind::ResolveError => write!(f, "RESOLVE_ERROR"),
       EventKind::UnhandleableError => write!(f, "UNHANDLEABLE_ERROR"),
       EventKind::UnloadableDependencyError => write!(f, "UNLOADABLE_DEPENDENCY"),
 

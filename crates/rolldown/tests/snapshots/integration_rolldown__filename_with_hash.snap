@@ -850,7 +850,7 @@ expression: output
 
 # tests/esbuild/default/external_module_exclusion_relative_path
 
-- index-!~{000}~.js => index-scdbiGyn.js
+- index-!~{000}~.js => index-nZ56Kd4L.js
 
 # tests/esbuild/default/external_module_exclusion_scoped_package
 

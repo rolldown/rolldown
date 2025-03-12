@@ -323,6 +323,7 @@ export interface BindingHookResolveIdExtraArgs {
 export interface BindingHookResolveIdOutput {
   id: string
   external?: BindingResolvedExternal
+  normalizeExternalId?: boolean
   sideEffects?: BindingHookSideEffects
 }
 
@@ -380,6 +381,7 @@ export interface BindingInputOptions {
   keepNames?: boolean
   checks?: BindingChecksOptions
   deferSyncScanData?: undefined | (() => BindingDeferSyncScanData[])
+  makeAbsoluteExternalsRelative?: BindingMakeAbsoluteExternalsRelative
 }
 
 export interface BindingJsonPluginConfig {
@@ -427,6 +429,10 @@ export declare enum BindingLogLevel {
   Info = 2,
   Debug = 3
 }
+
+export type BindingMakeAbsoluteExternalsRelative =
+  | { type: 'Bool', field0: boolean }
+  | { type: 'IfRelativeSource' }
 
 export interface BindingManifestPluginConfig {
   root: string

@@ -23,7 +23,7 @@ use crate::{
     hook_resolve_id_skipped::HookResolveIdSkipped,
     plugin_context_resolve_options::PluginContextResolveOptions, plugin_idx::PluginIdx,
   },
-  utils::resolve_id_with_plugins::resolve_id_check_external,
+  utils::resolve_id_check_external::resolve_id_check_external,
 };
 
 #[derive(Debug, Clone)]
@@ -115,6 +115,7 @@ impl PluginContextImpl {
         ignored: false,
         module_def_format: ModuleDefFormat::Unknown,
         external: false.into(),
+        normalize_external_id: None,
         package_json: None,
         side_effects,
         is_external_without_side_effects: false,

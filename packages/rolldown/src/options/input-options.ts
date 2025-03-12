@@ -72,6 +72,16 @@ export interface WatchOptions {
   exclude?: StringOrRegExp | StringOrRegExp[]
 }
 
+export interface ChecksOptions {
+  /**
+   * Whether to emit warnings when detecting circular dependencies.
+   * @default false
+   */
+  circularDependency?: boolean
+}
+
+export type MakeAbsoluteExternalsRelative = boolean | 'ifRelativeSource'
+
 export interface InputOptions {
   input?: InputOption
   plugins?: RolldownPluginOption
@@ -219,6 +229,7 @@ export interface InputOptions {
   dropLabels?: string[]
   keepNames?: boolean
   checks?: ChecksOptions
+  makeAbsoluteExternalsRelative?: MakeAbsoluteExternalsRelative
 }
 
 interface OverwriteInputOptionsForCli {

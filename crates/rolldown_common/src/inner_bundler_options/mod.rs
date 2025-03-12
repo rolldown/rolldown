@@ -6,6 +6,7 @@ use types::checks_options::ChecksOptions;
 use types::comments::Comments;
 use types::inject_import::InjectImport;
 use types::jsx::Jsx;
+use types::make_absolute_externals_relative::MakeAbsoluteExternalsRelative;
 use types::minify_options::RawMinifyOptions;
 use types::output_option::{AssetFilenamesOutputOption, GlobalsOutputOption};
 use types::sanitize_filename::SanitizeFilename;
@@ -187,6 +188,7 @@ pub struct BundlerOptions {
     schemars(skip)
   )]
   pub defer_sync_scan_data: Option<DeferSyncScanDataOption>,
+  pub make_absolute_externals_relative: Option<MakeAbsoluteExternalsRelative>,
 }
 
 impl BundlerOptions {

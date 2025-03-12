@@ -1,15 +1,14 @@
 ---
 source: crates/rolldown_testing/src/integration_test.rs
-snapshot_kind: text
 ---
 # Assets
 
 ## index.js
 
 ```js
-import foo from "./foo.js";
-import out from "../../../out/in-out-dir.js";
-import sha256 from "../../sha256.min.js";
+import foo from "./nested/folder/foo.js";
+import out from "../out/in-out-dir.js";
+import sha256 from "./sha256.min.js";
 import config from "/api/config?a=1&b=2";
 
 //#region nested/folder/test.js

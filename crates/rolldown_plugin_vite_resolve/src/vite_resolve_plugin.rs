@@ -261,6 +261,7 @@ impl ViteResolvePlugin {
             id: args.specifier.into(),
             external: Some(true.into()),
             side_effects: Some(HookSideEffects::False),
+            ..Default::default()
           }));
         } else {
           if !self.resolve_options.as_src {

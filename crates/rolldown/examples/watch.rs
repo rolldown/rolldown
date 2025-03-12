@@ -1,7 +1,7 @@
 use std::sync::Arc;
 
 use rolldown::{Bundler, BundlerOptions, ExperimentalOptions, InputItem, ResolveOptions, Watcher};
-use rolldown_testing::workspace::root_dir;
+use rolldown_workspace::root_dir;
 use tokio::sync::Mutex;
 
 // cargo run --example watch

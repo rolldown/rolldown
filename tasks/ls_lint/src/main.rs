@@ -4,7 +4,7 @@ use anyhow::Result;
 use globset::{Glob, GlobMatcher, GlobSetBuilder};
 use heck::{ToKebabCase, ToSnakeCase};
 use ignore::WalkBuilder;
-use rolldown_testing::workspace::root_dir;
+use rolldown_workspace::root_dir;
 use serde::Deserialize;
 
 #[derive(Deserialize, Debug, Copy, Clone)]

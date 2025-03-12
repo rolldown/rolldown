@@ -10,7 +10,7 @@ version              = "0.1.0"
 anyhow           = { workspace = true }
 cow-utils        = { workspace = true }
 heck             = { workspace = true }
-rolldown_testing = { workspace = true }
+rolldown_workspace = { workspace = true }
 regex            = { workspace = true }
 
 prettyplease = { workspace = true }

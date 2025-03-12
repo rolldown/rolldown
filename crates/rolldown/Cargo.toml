@@ -56,12 +56,13 @@ tracing-chrome            = { workspace = true }
 xxhash-rust               = { workspace = true, features = ["xxh3"] }
 
 [dev-dependencies]
-glob             = { workspace = true }
-insta            = { workspace = true }
-rolldown_testing = { workspace = true }
-sugar_path       = { workspace = true }
-testing_macros   = { workspace = true }
-tokio            = { workspace = true, features = ["rt", "macros", "sync", "rt-multi-thread"] }
+glob               = { workspace = true }
+insta              = { workspace = true }
+rolldown_testing   = { workspace = true }
+rolldown_workspace = { workspace = true }
+sugar_path         = { workspace = true }
+testing_macros     = { workspace = true }
+tokio              = { workspace = true, features = ["rt", "macros", "sync", "rt-multi-thread"] }
 
 [package.metadata.cargo-shear]
 ignored = ["serde"]

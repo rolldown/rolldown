@@ -57,5 +57,8 @@ mimalloc = { workspace = true }
 [target.'cfg(any(target_os = "linux", target_os = "freebsd"))'.dependencies]
 mimalloc = { workspace = true, features = ["local_dynamic_tls"] }
 
+[target.'cfg(target_os = "macos")'.dependencies]
+num_cpus = { workspace = true }
+
 [build-dependencies]
 napi-build = { workspace = true }

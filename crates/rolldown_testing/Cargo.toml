@@ -27,6 +27,7 @@ rolldown_common         = { workspace = true }
 rolldown_error          = { workspace = true }
 rolldown_sourcemap      = { workspace = true }
 rolldown_testing_config = { workspace = true }
+rolldown_workspace      = { workspace = true }
 rustc-hash              = { workspace = true }
 serde_json              = { workspace = true }
 sugar_path              = { workspace = true }

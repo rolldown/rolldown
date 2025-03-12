@@ -116,6 +116,7 @@ rolldown_testing                        = { version = "0.1.0", path = "./crates/
 rolldown_testing_config                 = { version = "0.1.0", path = "./crates/rolldown_testing_config" }
 rolldown_tracing                        = { version = "0.1.0", path = "./crates/rolldown_tracing" }
 rolldown_utils                          = { version = "0.1.0", path = "./crates/rolldown_utils" }
+rolldown_workspace                      = { version = "0.1.0", path = "./crates/rolldown_workspace" }
 
 anyhow              = "1.0.86"
 append-only-vec     = { version = "0.1.5" }

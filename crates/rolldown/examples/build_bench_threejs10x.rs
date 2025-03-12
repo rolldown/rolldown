@@ -1,5 +1,5 @@
 use rolldown::{Bundler, BundlerOptions, InputItem, SourceMapType};
-use rolldown_testing::workspace;
+use rolldown_workspace as workspace;
 
 // cargo run --example build_bench_threejs10x
 

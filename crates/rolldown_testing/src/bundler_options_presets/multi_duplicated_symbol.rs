@@ -2,7 +2,7 @@ use rolldown::ModuleType;
 use rolldown_common::{BundlerOptions, InputItem};
 use rustc_hash::FxHashMap;
 
-use crate::workspace::root_dir;
+use rolldown_workspace::root_dir;
 
 pub fn multi_duplicated_symbol() -> BundlerOptions {
   BundlerOptions {

@@ -168,6 +168,7 @@ dependencies = [
  "rolldown",
  "rolldown_sourcemap",
  "rolldown_testing",
+ "rolldown_workspace",
  "tokio",
 ]
 
@@ -816,7 +817,7 @@ dependencies = [
  "prettyplease",
  "proc-macro2",
  "regex",
- "rolldown_testing",
+ "rolldown_workspace",
  "syn",
 ]
 
@@ -1266,7 +1267,7 @@ dependencies = [
  "globset",
  "heck",
  "ignore",
- "rolldown_testing",
+ "rolldown_workspace",
  "serde",
  "serde_json",
 ]
@@ -2378,6 +2379,7 @@ dependencies = [
  "rolldown_testing",
  "rolldown_tracing",
  "rolldown_utils",
+ "rolldown_workspace",
  "rustc-hash",
  "serde",
  "string_wizard",
@@ -2794,6 +2796,7 @@ dependencies = [
  "rolldown_error",
  "rolldown_sourcemap",
  "rolldown_testing_config",
+ "rolldown_workspace",
  "rustc-hash",
  "schemars",
  "serde_json",
@@ -2850,6 +2853,10 @@ dependencies = [
  "simdutf8",
  "xxhash-rust",
 ]
+
+[[package]]
+name = "rolldown_workspace"
+version = "0.1.0"
 
 [[package]]
 name = "ropey"

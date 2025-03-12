@@ -1,6 +1,6 @@
 use gen_options::generators::{CheckOptionsGenerator, Context, Generator};
 fn main() -> anyhow::Result<()> {
-  let ctx = Context { workspace_root: rolldown_testing::workspace::root_dir() };
+  let ctx = Context { workspace_root: rolldown_workspace::root_dir() };
   let generators: Vec<Box<dyn Generator>> = vec![Box::new(CheckOptionsGenerator)];
   for generator in generators {
     let outputs = generator.run(&ctx)?;

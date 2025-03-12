@@ -12,7 +12,7 @@ pub struct InvalidExportOption {
 
 impl BuildEvent for InvalidExportOption {
   fn kind(&self) -> crate::event_kind::EventKind {
-    EventKind::InvalidExportOption
+    EventKind::InvalidExportOptionError
   }
 
   fn message(&self, _opts: &DiagnosticOptions) -> String {

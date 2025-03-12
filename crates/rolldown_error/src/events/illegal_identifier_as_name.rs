@@ -9,7 +9,7 @@ pub struct IllegalIdentifierAsName {
 
 impl BuildEvent for IllegalIdentifierAsName {
   fn kind(&self) -> EventKind {
-    EventKind::IllegalIdentifierAsName
+    EventKind::IllegalIdentifierAsNameError
   }
 
   fn message(&self, _opts: &DiagnosticOptions) -> String {

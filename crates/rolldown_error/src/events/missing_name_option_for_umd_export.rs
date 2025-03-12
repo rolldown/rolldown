@@ -6,7 +6,7 @@ pub struct MissingNameOptionForUmdExport {}
 
 impl BuildEvent for MissingNameOptionForUmdExport {
   fn kind(&self) -> EventKind {
-    EventKind::MissingNameOptionForUmdExport
+    EventKind::MissingNameOptionForUmdExportError
   }
 
   fn message(&self, _opts: &DiagnosticOptions) -> String {

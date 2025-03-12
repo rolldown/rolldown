@@ -20,7 +20,7 @@ pub struct UnloadableDependency {
 
 impl BuildEvent for UnloadableDependency {
   fn kind(&self) -> crate::event_kind::EventKind {
-    crate::event_kind::EventKind::UnloadableDependency
+    crate::event_kind::EventKind::UnloadableDependencyError
   }
 
   fn message(&self, _opts: &DiagnosticOptions) -> String {

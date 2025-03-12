@@ -22,7 +22,7 @@ pub struct AmbiguousExternalNamespace {
 
 impl BuildEvent for AmbiguousExternalNamespace {
   fn kind(&self) -> EventKind {
-    EventKind::AmbiguousExternalNamespace
+    EventKind::AmbiguousExternalNamespaceError
   }
 
   fn message(&self, _opts: &DiagnosticOptions) -> String {

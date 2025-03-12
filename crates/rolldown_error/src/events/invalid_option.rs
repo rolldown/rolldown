@@ -15,7 +15,7 @@ pub struct InvalidOption {
 
 impl BuildEvent for InvalidOption {
   fn kind(&self) -> EventKind {
-    EventKind::InvalidOption
+    EventKind::InvalidOptionError
   }
 
   fn message(&self, _opts: &DiagnosticOptions) -> String {

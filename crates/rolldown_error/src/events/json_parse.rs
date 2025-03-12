@@ -15,7 +15,7 @@ pub struct JsonParse {
 
 impl BuildEvent for JsonParse {
   fn kind(&self) -> crate::event_kind::EventKind {
-    crate::event_kind::EventKind::JsonParse
+    crate::event_kind::EventKind::JsonParseError
   }
 
   fn message(&self, _opts: &DiagnosticOptions) -> String {

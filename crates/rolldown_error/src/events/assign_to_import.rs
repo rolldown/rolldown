@@ -16,7 +16,7 @@ pub struct AssignToImport {
 
 impl BuildEvent for AssignToImport {
   fn kind(&self) -> crate::event_kind::EventKind {
-    crate::event_kind::EventKind::AssignToImport
+    crate::event_kind::EventKind::AssignToImportError
   }
 
   fn message(&self, _opts: &DiagnosticOptions) -> String {

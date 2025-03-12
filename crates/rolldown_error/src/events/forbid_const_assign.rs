@@ -16,7 +16,7 @@ pub struct ForbidConstAssign {
 
 impl BuildEvent for ForbidConstAssign {
   fn kind(&self) -> crate::event_kind::EventKind {
-    crate::event_kind::EventKind::IllegalReassignment
+    crate::event_kind::EventKind::IllegalReassignmentError
   }
 
   fn message(&self, _opts: &DiagnosticOptions) -> String {

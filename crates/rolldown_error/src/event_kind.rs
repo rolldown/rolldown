@@ -5,42 +5,42 @@ use std::fmt::Display;
 #[derive(Clone, Copy)]
 pub enum EventKind {
   // --- These kinds are copied from rollup: https://github.com/rollup/rollup/blob/0b665c31833525c923c0fc20f43ebfca748c6670/src/utils/logs.ts#L102-L179
-  AmbiguousExternalNamespaceError,
-  CircularDependency,
-  Eval,
-  IllegalIdentifierAsNameError,
-  InvalidExportOptionError,
-  InvalidOptionError,
-  MissingExportError,
-  MissingGlobalName,
-  MissingNameOptionForIifeExport,
-  MissingNameOptionForUmdExportError,
-  MixedExport,
-  ParseError,
-  SourcemapError,
-  UnresolvedEntry,
-  UnresolvedImport,
-  FilenameConflict,
+  AmbiguousExternalNamespaceError = 0,
+  CircularDependency = 1,
+  Eval = 2,
+  IllegalIdentifierAsNameError = 3,
+  InvalidExportOptionError = 4,
+  InvalidOptionError = 5,
+  MissingExportError = 6,
+  MissingGlobalName = 7,
+  MissingNameOptionForIifeExport = 8,
+  MissingNameOptionForUmdExportError = 9,
+  MixedExport = 10,
+  ParseError = 11,
+  SourcemapError = 12,
+  UnresolvedEntry = 13,
+  UnresolvedImport = 14,
+  FilenameConflict = 15,
   // !! Only add new kind if it's not covered by the kinds from rollup !!
 
   // --- These kinds are derived from esbuild
-  AssignToImportError,
-  CommonJsVariableInEsm,
-  ExportUndefinedVariableError,
-  ImportIsUndefined,
-  UnsupportedFeatureError,
+  AssignToImportError = 16,
+  CommonJsVariableInEsm = 17,
+  ExportUndefinedVariableError = 18,
+  ImportIsUndefined = 19,
+  UnsupportedFeatureError = 20,
 
   // --- These kinds are rolldown specific
-  JsonParseError,
-  IllegalReassignmentError,
-  InvalidDefineConfigError,
-  ResolveError,
-  UnhandleableError,
-  UnloadableDependencyError,
+  JsonParseError = 21,
+  IllegalReassignmentError = 22,
+  InvalidDefineConfigError = 23,
+  ResolveError = 24,
+  UnhandleableError = 25,
+  UnloadableDependencyError = 26,
 
   // TODO remove following kinds
-  IoError,
-  NapiError,
+  IoError = 27,
+  NapiError = 28,
 }
 
 impl Display for EventKind {

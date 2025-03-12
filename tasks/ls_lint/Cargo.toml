@@ -8,12 +8,12 @@ version              = "0.1.0"
 
 [dependencies]
 anyhow           = { workspace = true }
+globset          = "0.4"
+heck             = { workspace = true }
 ignore           = "0.4"
 rolldown_testing = { workspace = true }
+serde            = { workspace = true }
 serde_json       = { workspace = true }
-serde = { workspace = true }
-globset = "0.4"
-heck = {workspace = true}
 
 [lints]
 workspace = true

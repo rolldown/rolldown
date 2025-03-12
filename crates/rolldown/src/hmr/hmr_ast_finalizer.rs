@@ -106,8 +106,18 @@ impl<'ast> HmrAstFinalizer<'_, 'ast> {
 impl<'ast> VisitMut<'ast> for HmrAstFinalizer<'_, 'ast> {
   fn visit_program(&mut self, it: &mut ast::Program<'ast>) {
     walk_mut::walk_program(self, it);
+    // Move the original program body to a try catch block to unlock the ability to be error-tolerant
+    let mut try_block =
+      self.snippet.builder.alloc_block_statement(SPAN, self.snippet.builder.vec());
 
-    it.body.splice(0..0, self.generate_runtime_module_register_for_hmr());
+    let dev_runtime_head = self.generate_runtime_module_register_for_hmr();
+
+    try_block.body.reserve_exact(dev_runtime_head.len() + it.body.len());
+    try_block.body.extend(dev_runtime_head);
+    try_block.body.extend(it.body.take_in(self.alloc));
+    let try_stmt = self.snippet.builder.alloc_try_statement(SPAN, try_block, NONE, NONE);
+
+    it.body.push(ast::Statement::TryStatement(try_stmt));
   }
 
   fn visit_statement(&mut self, node: &mut ast::Statement<'ast>) {

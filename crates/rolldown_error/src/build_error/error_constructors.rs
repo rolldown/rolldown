@@ -38,7 +38,6 @@ use crate::events::{
   parse_error::ParseError,
   sourcemap_error::SourceMapError,
   unresolved_entry::UnresolvedEntry,
-  unresolved_import::UnresolvedImport,
   unresolved_import_treated_as_external::UnresolvedImportTreatedAsExternal,
 };
 use crate::line_column_to_byte_offset;
@@ -73,19 +72,22 @@ impl BuildDiagnostic {
     })
   }
 
-  pub fn unresolved_import(specifier: impl Into<String>, importer: impl Into<PathBuf>) -> Self {
-    Self::new_inner(UnresolvedImport { specifier: specifier.into(), importer: importer.into() })
-  }
-
   pub fn resolve_error(
     source: ArcStr,
     importer_id: ArcStr,
     importee: DiagnosableArcstr,
     reason: String,
-    title: Option<&'static str>,
+    diagnostic_kind: crate::event_kind::EventKind,
     help: Option<String>,
   ) -> Self {
-    Self::new_inner(DiagnosableResolveError { source, importer_id, importee, reason, title, help })
+    Self::new_inner(DiagnosableResolveError {
+      source,
+      importer_id,
+      importee,
+      reason,
+      help,
+      diagnostic_kind,
+    })
   }
 
   pub fn unloadable_dependency(

@@ -224,7 +224,10 @@
     "minifiers",
     "esmodule",
     "mapref",
-    "ropey"
+    "ropey",
+    "krate",
+    "prettyplease",
+    "unparse"
   ],
   "ignoreWords": ["Jeqs", "Gwetwem", "bpwli", "mxrh"]
 }

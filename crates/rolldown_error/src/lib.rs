@@ -2,6 +2,7 @@ mod build_error;
 mod diagnostic;
 mod event_kind;
 mod events;
+mod generated;
 mod locator;
 mod type_aliases;
 mod types;

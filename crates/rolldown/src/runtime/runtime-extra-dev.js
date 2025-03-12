@@ -1,17 +1,48 @@
 // @ts-check
 
-const hot = {
+class ModuleHotContext {
+  /**
+   * @type {{ deps: [string], fn: (moduleExports: Record<string, any>[]) => void }[]}
+   */
+  acceptCallbacks = []
+  /**
+   * 
+   * @param {string} moduleId 
+   * @param {DevRuntime} devRuntime 
+   */
+  constructor(moduleId, devRuntime) {
+    this.moduleId = moduleId;
+    this.devRuntime = devRuntime;
+  }
+
   accept(...args) {
     if (args.length === 1) {
       const [cb] = args;
-      DevRuntime.getInstance().modules['src/Draw.js'].acceptCallbacks.push(cb)
+      const acceptingPath = this.moduleId;
+      this.acceptCallbacks.push({
+        deps: [acceptingPath],
+        fn: cb,
+      })
+    } else {
+      throw new Error('Invalid arguments for `import.meta.hot.accept`');
     }
   }
-};
+}
 
 class DevRuntime {
-  hot = hot
+  /**
+   * @type {Map<string, Set<(...args: any[]) => void>>}
+   */
+  acceptPathToCallers = new Map()
   modules = {}
+  /**
+   * @type {Map<string, ModuleHotContext>}
+   */
+  moduleHotContexts = new Map()
+  /**
+   * @type {Map<string, ModuleHotContext>}
+   */
+  moduleHotContextsToBeUpdated = new Map()
   /**
    * 
    * @returns {DevRuntime}
@@ -27,6 +58,36 @@ class DevRuntime {
     }
     return instance
   }
+  createModuleHotContext(moduleId) {
+    const hotContext = new ModuleHotContext(moduleId, this);
+    if (this.moduleHotContexts.has(moduleId)) {
+      this.moduleHotContextsToBeUpdated.set(moduleId, hotContext);
+    } else {
+      this.moduleHotContexts.set(moduleId, hotContext);
+    }
+    return hotContext;
+  }
+  /**
+   * 
+   * @param {string[]} boundaries 
+   */
+  applyUpdates(boundaries) {
+    // trigger callbacks of accept() correctly
+    for (let moduleId of boundaries) {
+      const hotContext = this.moduleHotContexts.get(moduleId);
+      if (hotContext) {
+        const acceptCallbacks = hotContext.acceptCallbacks;
+        acceptCallbacks.filter((cb) => {
+          cb.fn(this.modules[moduleId].exports);
+        })
+      }
+    }
+    this.moduleHotContextsToBeUpdated.forEach((hotContext, moduleId) => {
+      this.moduleHotContexts[moduleId] = hotContext;
+    })
+    this.moduleHotContextsToBeUpdated.clear()
+    // swap new contexts
+  }
   registerModule(id, exportGetters) {
     const exports = {};
     Object.keys(exportGetters).forEach((key) => {
@@ -39,23 +100,13 @@ class DevRuntime {
     })
     console.debug('Registering module', id, exports);
     if (this.modules[id]) {
-      const { acceptCallbacks } = this.modules[id];
-      console.log('Module already registered', id, this.modules[id]);
-      acceptCallbacks.forEach((cb) => {
-
-        Promise.resolve().then(() => {
-          cb(exports);
-        })
-      });
       this.modules[id] = {
-        exports: exports,
-        acceptCallbacks: [],
+        exports,
       }
     } else {
       // If the module is not in the cache, we need to register it.
       this.modules[id] = {
-        exports: exports,
-        acceptCallbacks: [],
+        exports,
       };
     }
   }

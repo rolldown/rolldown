@@ -3,7 +3,7 @@ use oxc::{
   ast::ast::{self, ExportDefaultDeclarationKind},
   ast_visit::{VisitMut, walk_mut},
   semantic::{Scoping, SymbolId},
-  span::{Atom, GetSpan},
+  span::Atom,
 };
 use rolldown_common::{IndexModules, Module, NormalModule};
 use rolldown_ecmascript_utils::{
@@ -28,6 +28,29 @@ use rolldown_ecmascript_utils::TakeIn;
 use rolldown_utils::ecmascript::is_validate_identifier_name;
 
 impl<'ast> HmrAstFinalizer<'_, 'ast> {
+  pub fn generate_hmr_header(&self) -> Vec<ast::Statement<'ast>> {
+    let mut ret = vec![];
+
+    // `import.meta.hot = __rolldown_runtime__.createModuleHotContext(moduleId);`
+    ret.push(self.generate_stmt_of_init_module_hot_context());
+
+    ret.extend(self.generate_runtime_module_register_for_hmr());
+
+    ret
+  }
+
+  pub fn generate_stmt_of_init_module_hot_context(&self) -> ast::Statement<'ast> {
+    // import.meta.hot = __rolldown_runtime__.createModuleHotContext(moduleId);
+    let stmt = quote_stmt(
+      self.alloc,
+      &format!(
+        "import.meta.hot = __rolldown_runtime__.createModuleHotContext({:?});",
+        self.module.stable_id
+      ),
+    );
+    stmt
+  }
+
   pub fn generate_runtime_module_register_for_hmr(&self) -> Vec<ast::Statement<'ast>> {
     let mut ret = vec![];
 
@@ -110,12 +133,16 @@ impl<'ast> VisitMut<'ast> for HmrAstFinalizer<'_, 'ast> {
     let mut try_block =
       self.snippet.builder.alloc_block_statement(SPAN, self.snippet.builder.vec());
 
-    let dev_runtime_head = self.generate_runtime_module_register_for_hmr();
+    let dev_runtime_head = self.generate_hmr_header();
 
     try_block.body.reserve_exact(dev_runtime_head.len() + it.body.len());
     try_block.body.extend(dev_runtime_head);
     try_block.body.extend(it.body.take_in(self.alloc));
-    let try_stmt = self.snippet.builder.alloc_try_statement(SPAN, try_block, NONE, NONE);
+
+    let final_block = self.snippet.builder.alloc_block_statement(SPAN, self.snippet.builder.vec());
+
+    let try_stmt =
+      self.snippet.builder.alloc_try_statement(SPAN, try_block, NONE, Some(final_block));
 
     it.body.push(ast::Statement::TryStatement(try_stmt));
   }
@@ -276,9 +303,6 @@ impl<'ast> VisitMut<'ast> for HmrAstFinalizer<'_, 'ast> {
           }
         }
       }
-    }
-    if it.is_import_meta_hot() {
-      *it = self.snippet.id_ref_expr("__rolldown_runtime__.hot", it.span());
     }
 
     walk_mut::walk_expression(self, it);

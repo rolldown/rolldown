@@ -28,7 +28,7 @@
   "license": "MIT",
   "devDependencies": {
     "@actions/core": "^1.11.1",
-    "@babel/runtime": "7.26.9",
+    "@babel/runtime": "7.26.10",
     "@oxc-node/core": "^0.0.20",
     "@oxc-project/runtime": "0.57.0",
     "@taplo/cli": "^0.7.0",

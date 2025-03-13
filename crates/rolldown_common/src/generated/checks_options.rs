@@ -23,3 +23,43 @@ pub struct ChecksOptions {
   pub common_js_variable_in_esm: Option<bool>,
   pub import_is_undefined: Option<bool>,
 }
+impl From<ChecksOptions> for rolldown_error::EventKindSwitcher {
+  fn from(value: ChecksOptions) -> Self {
+    let mut flag = rolldown_error::EventKindSwitcher::all();
+    flag.set(
+      rolldown_error::EventKindSwitcher::CircularDependency,
+      value.circular_dependency.unwrap_or(false),
+    );
+    flag.set(rolldown_error::EventKindSwitcher::Eval, value.eval.unwrap_or(true));
+    flag.set(
+      rolldown_error::EventKindSwitcher::MissingGlobalName,
+      value.missing_global_name.unwrap_or(true),
+    );
+    flag.set(
+      rolldown_error::EventKindSwitcher::MissingNameOptionForIifeExport,
+      value.missing_name_option_for_iife_export.unwrap_or(true),
+    );
+    flag.set(rolldown_error::EventKindSwitcher::MixedExport, value.mixed_export.unwrap_or(true));
+    flag.set(
+      rolldown_error::EventKindSwitcher::UnresolvedEntry,
+      value.unresolved_entry.unwrap_or(true),
+    );
+    flag.set(
+      rolldown_error::EventKindSwitcher::UnresolvedImport,
+      value.unresolved_import.unwrap_or(true),
+    );
+    flag.set(
+      rolldown_error::EventKindSwitcher::FilenameConflict,
+      value.filename_conflict.unwrap_or(true),
+    );
+    flag.set(
+      rolldown_error::EventKindSwitcher::CommonJsVariableInEsm,
+      value.common_js_variable_in_esm.unwrap_or(true),
+    );
+    flag.set(
+      rolldown_error::EventKindSwitcher::ImportIsUndefined,
+      value.import_is_undefined.unwrap_or(true),
+    );
+    flag
+  }
+}

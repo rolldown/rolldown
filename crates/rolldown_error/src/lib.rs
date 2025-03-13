@@ -18,6 +18,7 @@ pub use crate::{
   events::commonjs_variable_in_esm::CjsExportSpan,
   events::invalid_option::InvalidOptionType,
   events::unloadable_dependency::UnloadableDependencyContext,
+  generated::event_kind_switcher::EventKindSwitcher,
   locator::line_column_to_byte_offset,
   type_aliases::{BuildResult, SingleBuildResult},
   types::diagnostic_options::DiagnosticOptions,

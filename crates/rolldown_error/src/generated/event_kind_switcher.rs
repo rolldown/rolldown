@@ -3,7 +3,7 @@
 
 use bitflags::bitflags;
 bitflags! {
-  #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+  #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Default)]
   pub struct EventKindSwitcher: u32 {
     const AmbiguousExternalNamespaceError = 1 << 0;
     const CircularDependency = 1 << 1;

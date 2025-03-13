@@ -231,7 +231,7 @@ pub fn normalize_options(mut raw_options: crate::BundlerOptions) -> NormalizeOpt
     external_live_bindings: raw_options.external_live_bindings.unwrap_or(true),
     inline_dynamic_imports,
     advanced_chunks: raw_options.advanced_chunks,
-    checks: raw_options.checks.unwrap_or_default(),
+    checks: raw_options.checks.unwrap_or_default().into(),
     jsx: raw_options.jsx.unwrap_or_default(),
     watch: raw_options.watch.unwrap_or_default(),
     comments: raw_options.comments.unwrap_or(Comments::Preserve),

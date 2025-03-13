@@ -36,6 +36,7 @@ jobs:
             rust-changes: &rust-changes
               - '.github/workflows/**'
               - 'crates/**'
+              - 'tasks/**'
               - 'Cargo.toml'
               - 'Cargo.lock'
               - 'rust-toolchain.toml'
@@ -165,3 +166,8 @@ jobs:
 
       - name: Lint Toml
         run: pnpm lint-toml
+
+      - name: update generated code
+        run: |
+          cargo run --bin generator
+          git diff --exit-code

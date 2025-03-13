@@ -129,7 +129,7 @@ describe('Error output format', () => {
       .split('\n')
       .map((line) => {
         return line.replace(
-          /at (.*?) \((?:(.*[\/\\])?([^\/\\]+):)?(\d+:\d+)\)/,
+          /at (.*?) \((?:(.*[/\\])?([^/\\]+):)?(\d+:\d+)\)/,
           'at $1 ($3:$4)',
         )
       })
@@ -164,11 +164,7 @@ describe('Error output format', () => {
       })
       await build.write()
     } catch (error: any) {
-      const message = error.message.replace(
-        /at (.*?) \((?:(.*[\/\\])?([^\/\\]+):)?(\d+:\d+)\)/,
-        'at $1 ($3:$4)',
-      )
-      expect(message).toMatchSnapshot()
+      expect(error.message).toMatchSnapshot()
     }
   })
 })

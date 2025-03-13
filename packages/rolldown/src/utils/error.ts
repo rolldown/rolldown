@@ -42,6 +42,12 @@ export function normalizeErrors(rawErrors: (BindingError | Error)[]): Error {
 }
 
 function getErrorMessage(e: RollupError): string {
+  // If the `kind` field is present, we assume it represents
+  // a custom error defined by rolldown on the rust side.
+  if (Object.hasOwn(e, 'kind')) {
+    return e.message
+  }
+
   let s = ''
   if (e.plugin) {
     s += `[plugin ${e.plugin}]`

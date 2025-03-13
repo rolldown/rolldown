@@ -2,7 +2,10 @@ use arcstr::ArcStr;
 use ariadne::{Label, Span};
 use rustc_hash::FxHashMap;
 
-use crate::diagnostic::{DiagnosticFileId, RolldownLabelSpan};
+use crate::{
+  BuildDiagnostic, EventKindSwitcher,
+  diagnostic::{DiagnosticFileId, RolldownLabelSpan},
+};
 
 pub fn is_context_too_long(
   label: &Label<RolldownLabelSpan>,
@@ -38,4 +41,14 @@ pub fn is_context_too_long(
     })
     .unwrap_or(false);
   !has_line_feed_after || !has_line_feed_before
+}
+
+pub fn filter_out_disabled_diagnostics(
+  diagnostics: Vec<BuildDiagnostic>,
+  switcher: &EventKindSwitcher,
+) -> Vec<BuildDiagnostic> {
+  diagnostics
+    .into_iter()
+    .filter(|d| switcher.contains(EventKindSwitcher::from_bits_truncate(1 << d.kind() as u32)))
+    .collect()
 }

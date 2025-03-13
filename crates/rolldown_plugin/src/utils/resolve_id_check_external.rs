@@ -59,7 +59,7 @@ pub async fn resolve_id_check_external(
 
       match resolved_id.external {
         ResolvedExternal::Bool(true) => {
-          if !Path::new(resolved_id.id.as_str()).is_absolute()
+          if !is_absolute(resolved_id.id.as_str())
             || is_not_absolute_external(
               resolved_id.id.as_str(),
               request,
@@ -79,7 +79,7 @@ pub async fn resolve_id_check_external(
           }
         }
         ResolvedExternal::Absolute => {
-          if Path::new(resolved_id.id.as_str()).is_absolute() {
+          if is_absolute(resolved_id.id.as_str()) {
             resolved_id.external = ResolvedExternal::Absolute;
           } else {
             resolved_id.external = true.into();
@@ -152,7 +152,7 @@ fn is_not_absolute_external(
   matches!(make_absolute_externals_relative, MakeAbsoluteExternalsRelative::Bool(true))
     || (matches!(make_absolute_externals_relative, MakeAbsoluteExternalsRelative::IfRelativeSource)
       && is_relative(source))
-    || !Path::new(id).is_absolute()
+    || !is_absolute(id)
 }
 
 fn normalize_relative_external_id(source: &str, importer: Option<&str>, root: &Path) -> ArcStr {
@@ -172,8 +172,13 @@ fn normalize_relative_external_id(source: &str, importer: Option<&str>, root: &P
 }
 
 #[inline]
-fn is_relative(source: &str) -> bool {
-  source.starts_with("./") || source.starts_with("../")
+fn is_absolute(id: &str) -> bool {
+  Path::new(id).is_absolute() || id.starts_with('/')
+}
+
+#[inline]
+fn is_relative(id: &str) -> bool {
+  id.starts_with("./") || id.starts_with("../")
 }
 
 #[cfg(test)]
@@ -185,5 +190,10 @@ mod tests {
     assert!(!is_relative("path"));
     assert!(is_relative("./a.js"));
     assert!(is_relative("../a.js"));
+  }
+
+  #[test]
+  fn test_is_absolute() {
+    assert!(is_absolute("/a.js")); // make sure it is true at windows
   }
 }

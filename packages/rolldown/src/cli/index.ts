@@ -27,8 +27,8 @@ async function main() {
   showHelp()
 }
 
-main().catch((err) => {
-  if (typeof err.stack === 'string') {
+main().catch((err: unknown) => {
+  if (err instanceof Error && typeof err.stack === 'string') {
     err.stack = err.stack.replace(err.message, '')
   }
   logger.error(err)

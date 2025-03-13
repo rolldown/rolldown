@@ -122,3 +122,35 @@ test('call transformContext error', async () => {
   })
   expect(error!.message).toContain('transform hook error')
 })
+
+test('should correctly output the custom error defined on the js side', async () => {
+  try {
+    const build = await rolldown({
+      input: './main.js',
+      cwd: import.meta.dirname,
+      plugins: [
+        {
+          name: 'test-plugin',
+          buildEnd() {
+            throw new Error('js side error')
+          },
+        },
+      ],
+    })
+    await build.write()
+  } catch (error: any) {
+    expect(error.message).toMatchSnapshot()
+  }
+})
+
+test('should correctly output the custom error defined on the rust side', async () => {
+  try {
+    const build = await rolldown({
+      input: './error.js',
+      cwd: import.meta.dirname,
+    })
+    await build.write()
+  } catch (error: any) {
+    expect(error.message).toMatchSnapshot()
+  }
+})

@@ -15,8 +15,10 @@ use crate::{
 };
 use napi::{Env, tokio::sync::Mutex};
 use napi_derive::napi;
-use rolldown::Bundler as NativeBundler;
-use rolldown_error::{BuildDiagnostic, BuildResult, DiagnosticOptions};
+use rolldown::{Bundler as NativeBundler, NormalizedBundlerOptions};
+use rolldown_error::{
+  BuildDiagnostic, BuildResult, DiagnosticOptions, filter_out_disabled_diagnostics,
+};
 
 #[napi(object, object_to_js = false)]
 pub struct BindingBundlerOptions {
@@ -123,7 +125,7 @@ impl Bundler {
 
     match output {
       Ok(output) => {
-        self.handle_warnings(output.warnings).await;
+        self.handle_warnings(output.warnings, bundler_core.options()).await;
       }
       Err(outputs) => {
         return Ok(outputs);
@@ -142,7 +144,7 @@ impl Bundler {
       Err(errs) => return Ok(self.handle_errors(errs.into_vec())),
     };
 
-    self.handle_warnings(outputs.warnings).await;
+    self.handle_warnings(outputs.warnings, bundler_core.options()).await;
 
     Ok(outputs.assets.into())
   }
@@ -156,7 +158,7 @@ impl Bundler {
       Err(errs) => return Ok(self.handle_errors(errs.into_vec())),
     };
 
-    self.handle_warnings(bundle_output.warnings).await;
+    self.handle_warnings(bundle_output.warnings, bundler_core.options()).await;
 
     Ok(bundle_output.assets.into())
   }
@@ -190,11 +192,15 @@ impl Bundler {
   }
 
   #[allow(clippy::print_stdout, unused_must_use)]
-  async fn handle_warnings(&self, warnings: Vec<BuildDiagnostic>) {
+  async fn handle_warnings(
+    &self,
+    mut warnings: Vec<BuildDiagnostic>,
+    options: &NormalizedBundlerOptions,
+  ) {
     if self.log_level == BindingLogLevel::Silent {
       return;
     }
-
+    warnings = filter_out_disabled_diagnostics(warnings, &options.checks);
     if let Some(on_log) = self.on_log.as_ref() {
       for warning in warnings {
         on_log

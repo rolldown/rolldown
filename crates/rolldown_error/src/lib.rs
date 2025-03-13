@@ -22,6 +22,7 @@ pub use crate::{
   locator::line_column_to_byte_offset,
   type_aliases::{BuildResult, SingleBuildResult},
   types::diagnostic_options::DiagnosticOptions,
+  utils::filter_out_disabled_diagnostics,
 };
 
 fn _usage_should_able_to_auto_convert_outside_errors() -> BuildResult<()> {

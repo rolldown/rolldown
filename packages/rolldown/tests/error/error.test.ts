@@ -123,34 +123,52 @@ test('call transformContext error', async () => {
   expect(error!.message).toContain('transform hook error')
 })
 
-test('should correctly output the custom error defined on the js side', async () => {
-  try {
-    const build = await rolldown({
-      input: './main.js',
-      cwd: import.meta.dirname,
-      plugins: [
-        {
-          name: 'test-plugin',
-          buildEnd() {
-            throw new Error('js side error')
-          },
-        },
-      ],
-    })
-    await build.write()
-  } catch (error: any) {
-    expect(error.message).toMatchSnapshot()
+describe('Error output format', () => {
+  function cleanStack(stack: string) {
+    return stack
+      .split('\n')
+      .map((line) => {
+        return line.replace(
+          /at (.*?) \((?:(.*[\/\\])?([^\/\\]+):)?(\d+:\d+)\)/,
+          'at $1 ($3:$4)',
+        )
+      })
+      .join('\n')
   }
-})
 
-test('should correctly output the custom error defined on the rust side', async () => {
-  try {
-    const build = await rolldown({
-      input: './error.js',
-      cwd: import.meta.dirname,
-    })
-    await build.write()
-  } catch (error: any) {
-    expect(error.message).toMatchSnapshot()
-  }
+  test('should correctly output the custom error defined on the js side', async () => {
+    try {
+      const build = await rolldown({
+        input: './main.js',
+        cwd: import.meta.dirname,
+        plugins: [
+          {
+            name: 'test-plugin',
+            buildEnd() {
+              throw new Error('js side error')
+            },
+          },
+        ],
+      })
+      await build.write()
+    } catch (error: any) {
+      expect(cleanStack(error.message)).toMatchSnapshot()
+    }
+  })
+
+  test('should correctly output the custom error defined on the rust side', async () => {
+    try {
+      const build = await rolldown({
+        input: './error.js',
+        cwd: import.meta.dirname,
+      })
+      await build.write()
+    } catch (error: any) {
+      const message = error.message.replace(
+        /at (.*?) \((?:(.*[\/\\])?([^\/\\]+):)?(\d+:\d+)\)/,
+        'at $1 ($3:$4)',
+      )
+      expect(message).toMatchSnapshot()
+    }
+  })
 })

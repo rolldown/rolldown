@@ -1,16 +1,16 @@
 // Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
 
-exports[`should correctly output the custom error defined on the js side 1`] = `
+exports[`Error output format > should correctly output the custom error defined on the js side 1`] = `
 "Build failed with 1 error:
 
 [plugin test-plugin]
 Error: js side error
-    at PluginContextImpl.buildEnd (D:\\shulaoda\\rolldown\\packages\\rolldown\\tests\\error\\error.test.ts:135:19)
-    at plugin (D:\\shulaoda\\rolldown\\packages\\rolldown\\dist\\shared\\src-DEf1-YJM.mjs:1357:18)
-    at plugin.<computed> (D:\\shulaoda\\rolldown\\packages\\rolldown\\dist\\shared\\src-DEf1-YJM.mjs:1963:18)"
+    at PluginContextImpl.buildEnd (error.test.ts:148:21)
+    at plugin (src-DEf1-YJM.mjs:1357:18)
+    at plugin.<computed> (src-DEf1-YJM.mjs:1963:18)"
 `;
 
-exports[`should correctly output the custom error defined on the rust side 1`] = `
+exports[`Error output format > should correctly output the custom error defined on the rust side 1`] = `
 "Build failed with 1 error:
 
 [31m[UNRESOLVED_IMPORT] Error:[0m Could not resolve './world' in error.js

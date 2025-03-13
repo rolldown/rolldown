@@ -317,6 +317,7 @@ impl ModuleLoader {
                 self.intermediate_normal_modules.importers[id].push(ImporterRecord {
                   kind: raw_rec.kind,
                   importer_path: ModuleId::new(module.id()),
+                  importer_idx: module.idx(),
                 });
                 // defer usage merging, since we only have one consumer, we should keep action during fetching as simple
                 // as possible
@@ -380,8 +381,11 @@ impl ModuleLoader {
                   &user_defined_entries,
                 );
                 // Dynamic imported module will be considered as an entry
-                self.intermediate_normal_modules.importers[id]
-                  .push(ImporterRecord { kind: raw_rec.kind, importer_path: module.id.clone() });
+                self.intermediate_normal_modules.importers[id].push(ImporterRecord {
+                  kind: raw_rec.kind,
+                  importer_path: module.id.clone(),
+                  importer_idx: module.idx,
+                });
 
                 if matches!(raw_rec.kind, ImportKind::DynamicImport)
                   && !user_defined_entry_ids.contains(&id)
@@ -527,6 +531,7 @@ impl ModuleLoader {
           for importer in &importers {
             if importer.kind.is_static() {
               module.importers.insert(importer.importer_path.clone());
+              module.importers_idx.insert(importer.importer_idx);
             } else {
               module.dynamic_importers.insert(importer.importer_path.clone());
             }

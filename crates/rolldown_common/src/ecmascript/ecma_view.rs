@@ -8,7 +8,7 @@ use rustc_hash::{FxHashMap, FxHashSet};
 
 use crate::{
   EcmaAstIdx, ExportsKind, HmrInfo, ImportRecordIdx, LocalExport, ModuleDefFormat, ModuleId,
-  NamedImport, ResolvedImportRecord, SourceMutation, StmtInfoIdx, StmtInfos, SymbolRef,
+  ModuleIdx, NamedImport, ResolvedImportRecord, SourceMutation, StmtInfoIdx, StmtInfos, SymbolRef,
   side_effects::DeterminedSideEffects, types::source_mutation::BoxedSourceMutation,
 };
 
@@ -76,6 +76,7 @@ pub struct EcmaView {
   pub sourcemap_chain: Vec<rolldown_sourcemap::SourceMap>,
   // the ids of all modules that statically import this module
   pub importers: FxIndexSet<ModuleId>,
+  pub importers_idx: FxIndexSet<ModuleIdx>,
   // the ids of all modules that import this module via dynamic import()
   pub dynamic_importers: FxIndexSet<ModuleId>,
   // the module ids statically imported by this module

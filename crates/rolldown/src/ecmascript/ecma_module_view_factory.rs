@@ -102,6 +102,7 @@ pub async fn create_ecma_view(
     sourcemap_chain,
     import_records: IndexVec::default(),
     importers: FxIndexSet::default(),
+    importers_idx: FxIndexSet::default(),
     dynamic_importers: FxIndexSet::default(),
     imported_ids: FxIndexSet::default(),
     dynamically_imported_ids: FxIndexSet::default(),

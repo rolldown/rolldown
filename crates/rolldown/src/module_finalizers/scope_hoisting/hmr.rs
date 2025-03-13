@@ -3,13 +3,26 @@ use oxc::{
   ast::{NONE, ast},
   span::SPAN,
 };
-use rolldown_ecmascript_utils::TakeIn;
+use rolldown_ecmascript_utils::{TakeIn, quote_stmt};
 use rolldown_utils::ecmascript::is_validate_identifier_name;
 
 use super::ScopeHoistingFinalizer;
 
 impl<'ast> ScopeHoistingFinalizer<'_, 'ast> {
-  pub fn generate_runtime_module_register_for_hmr(&self) -> Vec<ast::Statement<'ast>> {
+  pub fn generate_hmr_header(&self) -> Vec<ast::Statement<'ast>> {
+    let mut ret = vec![];
+    if !self.ctx.options.is_hmr_enabled() {
+      return ret;
+    }
+
+    // `import.meta.hot = __rolldown_runtime__.createModuleHotContext(moduleId);`
+    ret.push(self.generate_stmt_of_init_module_hot_context());
+
+    ret.extend(self.generate_runtime_module_register_for_hmr());
+
+    ret
+  }
+  fn generate_runtime_module_register_for_hmr(&self) -> Vec<ast::Statement<'ast>> {
     let mut ret = vec![];
     if !self.ctx.options.is_hmr_enabled() {
       return ret;
@@ -85,5 +98,17 @@ impl<'ast> ScopeHoistingFinalizer<'_, 'ast> {
     ));
 
     ret
+  }
+
+  pub fn generate_stmt_of_init_module_hot_context(&self) -> ast::Statement<'ast> {
+    // import.meta.hot = __rolldown_runtime__.createModuleHotContext(moduleId);
+    let stmt = quote_stmt(
+      self.alloc,
+      &format!(
+        "import.meta.hot = __rolldown_runtime__.createModuleHotContext({:?});",
+        self.ctx.module.stable_id
+      ),
+    );
+    stmt
   }
 }

@@ -4,6 +4,7 @@ use rolldown_common::{EcmaModuleAstUsage, Module, ModuleIdx, ModuleTable};
 use rolldown_ecmascript::EcmaCompiler;
 use rolldown_ecmascript_utils::AstSnippet;
 use rolldown_error::{BuildResult, ResultExt};
+use rolldown_utils::indexmap::FxIndexSet;
 use rustc_hash::FxHashMap;
 
 use crate::hmr::hmr_ast_finalizer::HmrAstFinalizer;
@@ -50,6 +51,7 @@ impl HmrManager {
     // Only changed modules might introduce new modules, we run a new module loader to fetch possible new modules and updated content of changed modules
     // TODO(hyf0): Run module loader
 
+    let mut hmr_boundary = FxIndexSet::default();
     let mut affected_modules = vec![];
     while let Some(changed_module_idx) = changed_modules.pop() {
       let Module::Normal(changed_module) = &self.module_db.modules[changed_module_idx] else {
@@ -58,6 +60,7 @@ impl HmrManager {
 
       if changed_module.ast_usage.contains(EcmaModuleAstUsage::HmrSelfAccept) {
         affected_modules.push(changed_module_idx);
+        hmr_boundary.insert(changed_module_idx);
         continue;
       }
 
@@ -95,7 +98,19 @@ impl HmrManager {
       let codegen = EcmaCompiler::print(&ast, &filename, false);
       outputs.push(codegen.code);
     }
+    let mut patch = outputs.concat();
+    patch.push_str(&format!(
+      "\n__rolldown_runtime__.applyUpdates([{}]);",
+      hmr_boundary
+        .iter()
+        .map(|idx| {
+          let module = &self.module_db.modules[*idx];
+          format!("'{}'", module.stable_id())
+        })
+        .collect::<Vec<_>>()
+        .join(",")
+    ));
 
-    Ok(outputs.concat())
+    Ok(patch)
   }
 }

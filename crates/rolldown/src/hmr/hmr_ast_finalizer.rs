@@ -7,7 +7,7 @@ use oxc::{
 };
 use rolldown_common::{IndexModules, Module, ModuleIdx, NormalModule};
 use rolldown_ecmascript_utils::{
-  AstSnippet, BindingIdentifierExt, BindingPatternExt, ExpressionExt, quote_stmt,
+  AstSnippet, BindingIdentifierExt, BindingPatternExt, ExpressionExt, quote_stmt, quote_stmts,
 };
 use rustc_hash::FxHashMap;
 
@@ -18,15 +18,16 @@ pub struct HmrAstFinalizer<'me, 'ast> {
   pub scoping: &'me Scoping,
   pub modules: &'me IndexModules,
   pub module: &'me NormalModule,
-  pub module_idx_to_init_fn_name: &'me FxHashMap<ModuleIdx, String>,
+  pub affected_module_idx_to_init_fn_name: &'me FxHashMap<ModuleIdx, String>,
   //Internal state
   pub import_binding: FxHashMap<SymbolId, String>,
   pub exports: FxHashMap<Atom<'ast>, Atom<'ast>>,
+  pub dependencies: FxIndexSet<ModuleIdx>,
 }
 
 use oxc::{allocator::IntoIn, ast::NONE, span::SPAN};
 use rolldown_ecmascript_utils::TakeIn;
-use rolldown_utils::ecmascript::is_validate_identifier_name;
+use rolldown_utils::{ecmascript::is_validate_identifier_name, indexmap::FxIndexSet};
 
 impl<'ast> HmrAstFinalizer<'_, 'ast> {
   pub fn generate_hmr_header(&self) -> Vec<ast::Statement<'ast>> {
@@ -134,10 +135,23 @@ impl<'ast> VisitMut<'ast> for HmrAstFinalizer<'_, 'ast> {
     let mut try_block =
       self.snippet.builder.alloc_block_statement(SPAN, self.snippet.builder.vec());
 
+    let dependencies_init_fns = self
+      .dependencies
+      .iter()
+      .filter_map(|dep| self.affected_module_idx_to_init_fn_name.get(dep))
+      .map(|fn_name| format!("{fn_name}();"))
+      .collect::<Vec<_>>()
+      .join("\n");
+
+    let dependencies_init_fn_stmts = quote_stmts(self.alloc, dependencies_init_fns.as_str());
+
     let dev_runtime_head = self.generate_hmr_header();
 
-    try_block.body.reserve_exact(dev_runtime_head.len() + it.body.len());
+    try_block
+      .body
+      .reserve_exact(dev_runtime_head.len() + it.body.len() + dependencies_init_fn_stmts.len());
     try_block.body.extend(dev_runtime_head);
+    try_block.body.extend(dependencies_init_fn_stmts);
     try_block.body.extend(it.body.take_in(self.alloc));
 
     let final_block = self.snippet.builder.alloc_block_statement(SPAN, self.snippet.builder.vec());
@@ -145,7 +159,7 @@ impl<'ast> VisitMut<'ast> for HmrAstFinalizer<'_, 'ast> {
     let try_stmt =
       self.snippet.builder.alloc_try_statement(SPAN, try_block, NONE, Some(final_block));
 
-    let init_fn_name = &self.module_idx_to_init_fn_name[&self.module.idx];
+    let init_fn_name = &self.affected_module_idx_to_init_fn_name[&self.module.idx];
 
     // function () { [user code] }
     let user_code_wrapper =
@@ -216,8 +230,10 @@ impl<'ast> VisitMut<'ast> for HmrAstFinalizer<'_, 'ast> {
           // console.log(import_foo.default, import_foo.bar);
           // ```
           let rec_id = self.module.imports[&import_decl.span];
-          match &self.modules[self.module.import_records[rec_id].resolved_module] {
+          let rec = &self.module.import_records[rec_id];
+          match &self.modules[rec.resolved_module] {
             Module::Normal(importee) => {
+              self.dependencies.insert(rec.resolved_module);
               let id = &importee.stable_id;
               let binding_name = format!("import_{}", importee.repr_name);
               let stmt = quote_stmt(

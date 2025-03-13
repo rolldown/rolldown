@@ -5,7 +5,7 @@ use rolldown_ecmascript::EcmaCompiler;
 use rolldown_ecmascript_utils::AstSnippet;
 use rolldown_error::{BuildResult, ResultExt};
 use rolldown_utils::indexmap::FxIndexSet;
-use rustc_hash::FxHashMap;
+use rustc_hash::{FxHashMap, FxHashSet};
 
 use crate::hmr::hmr_ast_finalizer::HmrAstFinalizer;
 
@@ -52,19 +52,29 @@ impl HmrManager {
     // TODO(hyf0): Run module loader
 
     let mut hmr_boundary = FxIndexSet::default();
-    let mut affected_modules = vec![];
+    let mut affected_modules = FxIndexSet::default();
+    let mut need_to_full_reload = false;
     while let Some(changed_module_idx) = changed_modules.pop() {
-      let Module::Normal(changed_module) = &self.module_db.modules[changed_module_idx] else {
-        continue;
-      };
+      if need_to_full_reload {
+        break;
+      }
+      let mut visited_modules = FxHashSet::default();
 
-      if changed_module.ast_usage.contains(EcmaModuleAstUsage::HmrSelfAccept) {
-        affected_modules.push(changed_module_idx);
-        hmr_boundary.insert(changed_module_idx);
-        continue;
+      let is_reach_to_hmr_boundary = self.propagate_update(
+        changed_module_idx,
+        &mut visited_modules,
+        &mut hmr_boundary,
+        &mut affected_modules,
+      );
+
+      if !is_reach_to_hmr_boundary {
+        need_to_full_reload = true;
       }
 
       // TODO(hyf0): If it's not a self-accept module, we should traverse its dependents recursively
+    }
+    if need_to_full_reload {
+      return Ok(String::new());
     }
 
     let module_idx_to_init_fn_name = affected_modules
@@ -102,7 +112,8 @@ impl HmrManager {
           import_binding: FxHashMap::default(),
           module: changed_module,
           exports: FxHashMap::default(),
-          module_idx_to_init_fn_name: &module_idx_to_init_fn_name,
+          affected_module_idx_to_init_fn_name: &module_idx_to_init_fn_name,
+          dependencies: FxIndexSet::default(),
         };
 
         finalizer.visit_program(fields.program);
@@ -129,5 +140,32 @@ impl HmrManager {
     ));
 
     Ok(patch)
+  }
+
+  fn propagate_update(
+    &self,
+    module_idx: ModuleIdx,
+    visited_modules: &mut FxHashSet<ModuleIdx>,
+    hmr_boundaries: &mut FxIndexSet<ModuleIdx>,
+    affected_modules: &mut FxIndexSet<ModuleIdx>,
+  ) -> bool /* is reached to hmr boundary  */ {
+    if visited_modules.contains(&module_idx) {
+      // At this point, we consider circular dependencies as a full reload. We can improve this later.
+      return false;
+    }
+
+    visited_modules.insert(module_idx);
+    let Module::Normal(module) = &self.module_db.modules[module_idx] else {
+      unreachable!("HMR only supports normal module");
+    };
+    affected_modules.insert(module_idx);
+
+    if module.ast_usage.contains(EcmaModuleAstUsage::HmrSelfAccept) {
+      hmr_boundaries.insert(module_idx);
+      return true;
+    }
+    module.importers_idx.iter().all(|importer_idx| {
+      self.propagate_update(*importer_idx, visited_modules, hmr_boundaries, affected_modules)
+    })
   }
 }

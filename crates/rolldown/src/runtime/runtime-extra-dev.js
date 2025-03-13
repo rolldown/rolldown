@@ -120,6 +120,11 @@ class DevRuntime {
       return {};
     }
   }
+
+  // __esmMin
+  createEsmInitializer = (fn, res) => () => (fn && (res = fn(fn = 0)), res)
+  // __commonJSMin
+  createCjsInitializer = (cb, mod) => () => (mod || cb((mod = { exports: {} }).exports, mod), mod.exports)
 }
 
 globalThis.__rolldown_runtime__ = DevRuntime.getInstance();

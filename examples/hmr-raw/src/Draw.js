@@ -1,4 +1,5 @@
 import { HMREventHandler } from './HotModuleReloadSetup.js'
+import { time } from './time.js'
 
 console.log('import.meta.hot', import.meta.hot)
 if (import.meta.hot) {
@@ -19,7 +20,7 @@ class Draw {
 
   draw() {
     const canvas = this.canvas
-    this.timer += 1
+    this.timer += time + 0
 
     const ctx = canvas.getContext('2d')
     ctx.clearRect(0, 0, canvas.width, canvas.height)

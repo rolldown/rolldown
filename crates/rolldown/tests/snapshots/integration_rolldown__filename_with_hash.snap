@@ -5158,7 +5158,7 @@ expression: output
 
 # tests/rolldown/topics/hmr/register_exports
 
-- main-!~{000}~.js => main-VkbxjU7N.js
+- main-!~{000}~.js => main-BJ9L-p0c.js
 
 # tests/rolldown/topics/import_meta_url_dirname_filename_polyfill/node_cjs
 

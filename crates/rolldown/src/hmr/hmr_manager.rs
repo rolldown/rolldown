@@ -67,6 +67,18 @@ impl HmrManager {
       // TODO(hyf0): If it's not a self-accept module, we should traverse its dependents recursively
     }
 
+    let module_idx_to_init_fn_name = affected_modules
+      .iter()
+      .enumerate()
+      .map(|(index, module_idx)| {
+        let Module::Normal(module) = &self.module_db.modules[*module_idx] else {
+          unreachable!("HMR only supports normal module");
+        };
+
+        (*module_idx, format!("init_{}_{}", module.repr_name, index))
+      })
+      .collect::<FxHashMap<_, _>>();
+
     let mut outputs = vec![];
     for changed_module_idx in affected_modules {
       let changed_module = &self.module_db.modules[changed_module_idx];
@@ -90,6 +102,7 @@ impl HmrManager {
           import_binding: FxHashMap::default(),
           module: changed_module,
           exports: FxHashMap::default(),
+          module_idx_to_init_fn_name: &module_idx_to_init_fn_name,
         };
 
         finalizer.visit_program(fields.program);
@@ -99,6 +112,10 @@ impl HmrManager {
       outputs.push(codegen.code);
     }
     let mut patch = outputs.concat();
+    hmr_boundary.iter().for_each(|idx| {
+      let init_fn_name = &module_idx_to_init_fn_name[idx];
+      patch.push_str(&format!("{init_fn_name}()\n"));
+    });
     patch.push_str(&format!(
       "\n__rolldown_runtime__.applyUpdates([{}]);",
       hmr_boundary

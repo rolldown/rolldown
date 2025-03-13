@@ -185,7 +185,7 @@ syn          = { version = "2", default-features = false }
 
 
 # oxc crates with the same version
-oxc = { version = "0.57.0", features = [
+oxc = { version = "0.58.1", features = [
   "ast_visit",
   "transformer",
   "minifier",
@@ -194,8 +194,8 @@ oxc = { version = "0.57.0", features = [
   "codegen",
   "serialize",
 ] }
-oxc_parser_napi = { version = "0.57.0" }
-oxc_transform_napi = { version = "0.57.0" }
+oxc_parser_napi = { version = "0.58.1" }
+oxc_transform_napi = { version = "0.58.1" }
 
 # oxc crates in their own repos
 # Versions must be relaxed for usage in oxc.

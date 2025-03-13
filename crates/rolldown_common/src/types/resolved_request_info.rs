@@ -6,7 +6,7 @@ use crate::{ModuleDefFormat, PackageJson, side_effects::HookSideEffects};
 
 use super::module_id::stabilize_module_id;
 
-#[derive(Debug)]
+#[derive(Debug, Clone, Copy)]
 pub enum ResolvedExternal {
   Bool(bool),
   Absolute,
@@ -34,13 +34,15 @@ impl From<bool> for ResolvedExternal {
   }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct ResolvedId {
   pub id: ArcStr,
   // https://github.com/defunctzombie/package-browser-field-spec/blob/8c4869f6a5cb0de26d208de804ad0a62473f5a03/README.md?plain=1#L62-L77
   pub ignored: bool,
   pub module_def_format: ModuleDefFormat,
   pub external: ResolvedExternal,
+  // If the js side is return object, the relative id is finally id, else it will be converted to an absolute id
+  pub normalize_external_id: Option<bool>,
   pub package_json: Option<Arc<PackageJson>>,
   pub side_effects: Option<HookSideEffects>,
   pub is_external_without_side_effects: bool,
@@ -55,6 +57,7 @@ impl ResolvedId {
       ignored: false,
       module_def_format: ModuleDefFormat::Unknown,
       external: false.into(),
+      normalize_external_id: None,
       package_json: None,
       side_effects: None,
       is_external_without_side_effects: false,
@@ -79,6 +82,7 @@ impl ResolvedId {
       ignored: false,
       module_def_format: ModuleDefFormat::Unknown,
       external: true.into(),
+      normalize_external_id: None,
       package_json: None,
       side_effects: None,
       is_external_without_side_effects: true,

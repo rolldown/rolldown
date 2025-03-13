@@ -22,6 +22,7 @@ serde   = ["dep:serde", "oxc_index/serde"]
 anyhow                    = { workspace = true }
 append-only-vec           = { workspace = true }
 arcstr                    = { workspace = true }
+commondir                 = { workspace = true }
 css-module-lexer          = { workspace = true }
 dunce                     = { workspace = true }
 futures                   = { workspace = true }

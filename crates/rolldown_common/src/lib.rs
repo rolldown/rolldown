@@ -28,6 +28,7 @@ pub mod bundler_options {
       input_item::InputItem,
       is_external::IsExternal,
       jsx::Jsx,
+      make_absolute_externals_relative::MakeAbsoluteExternalsRelative,
       minify_options::{MinifyOptions, MinifyOptionsObject, RawMinifyOptions},
       module_type::ModuleType,
       normalized_bundler_options::{NormalizedBundlerOptions, SharedNormalizedBundlerOptions},

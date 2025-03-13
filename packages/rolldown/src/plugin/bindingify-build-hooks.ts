@@ -140,11 +140,13 @@ export function bindingifyResolveId(
         return {
           id: specifier,
           external: bindingResolvedExternal(true),
+          normalizeExternalId: true,
         }
       }
       if (typeof ret === 'string') {
         return {
           id: ret,
+          normalizeExternalId: true,
         }
       }
 
@@ -158,6 +160,7 @@ export function bindingifyResolveId(
       return {
         id: ret.id,
         external: bindingResolvedExternal(ret.external),
+        normalizeExternalId: false,
         sideEffects: bindingifySideEffects(exist.moduleSideEffects),
       }
     },

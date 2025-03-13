@@ -330,6 +330,9 @@ pub fn normalize_binding_options(
     polyfill_require: output_options.polyfill_require,
     defer_sync_scan_data: get_defer_sync_scan_data,
     transform,
+    make_absolute_externals_relative: input_options
+      .make_absolute_externals_relative
+      .map(Into::into),
   };
 
   #[cfg(not(target_family = "wasm"))]

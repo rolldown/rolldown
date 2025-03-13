@@ -262,18 +262,7 @@
  - rollup@sourcemaps@sourcemap-base-url: adds a sourcemap base url@generates es
 
 ### The `makeAbsoluteExternalsRelative` is not supported
- - rollup@function@resolve-relative-external-id: resolves relative external ids
- - rollup@function@relative-external-include-once-nested: includes a relative external module only once (nested version)
- - rollup@function@relative-external-include-once-two-external: includes a relative external module only once (two external deps)
- - rollup@function@relative-external-include-once-up: includes a relative external module only once (from upper directory too)
- - rollup@function@relative-external-include-once: includes a relative external module only once
  - rollup@function@external-directory-import: handles using ../ as external import (#4349) (makeAbsoluteExternalsRelative normlized the external id to absolute path, and renormalize to renderPath https://github.com/rollup/rollup/blob/master/src/ExternalChunk.ts#L51)
- - rollup@function@configure-relative-external-module: allows a nonexistent relative module to be configured as external
- - rollup@form@make-absolute-externals-relative@make-relative-false: does not normalize external paths when set to false
- - rollup@form@make-absolute-externals-relative@make-relative-relative: only normalizes external paths that were originally relative when set to "ifRelativeSource"
- - rollup@form@make-absolute-externals-relative@make-relative-true: normalizes both relative and absolute external paths when set to true
- - rollup@form@relative-external-ids: relative external ids are absolutely resolved
- - rollup@form@guessed-global-names: guesses global names if necessary@generates es
 
 ### The `output.generatedCode.preset` is not supported 
  - rollup@function@unknown-generated-code-preset: throws for unknown presets for the generatedCode option
@@ -299,6 +288,7 @@
  - rollup@function@context-resolve: returns the correct results for the context resolve helper
  - rollup@function@check-exports-exportedBindings-as-a-supplementary-test: check exports and exportedBindings in moduleParsed as a supplementary test
  - rollup@function@load-resolve-dependencies: allows to wait for dependency resolution in this.load to scan dependency trees (`importedIdResolutions`) 
+ - rollup@function@resolve-relative-external-id: resolves relative external ids
 
 ### The chunk information is not compatible with rollup
  - rollup@form@addon-functions: provides module information when adding addons@generates es

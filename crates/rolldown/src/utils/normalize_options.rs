@@ -241,6 +241,9 @@ pub fn normalize_options(mut raw_options: crate::BundlerOptions) -> NormalizeOpt
     polyfill_require: raw_options.polyfill_require.unwrap_or(true),
     defer_sync_scan_data: raw_options.defer_sync_scan_data,
     transform_options,
+    make_absolute_externals_relative: raw_options
+      .make_absolute_externals_relative
+      .unwrap_or_default(),
   };
 
   NormalizeOptionsReturn { options: normalized, resolve_options: raw_resolve, warnings }

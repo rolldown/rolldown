@@ -8,6 +8,7 @@ use super::{
 pub struct BindingHookResolveIdOutput {
   pub id: String,
   pub external: Option<BindingResolvedExternal>,
+  pub normalize_external_id: Option<bool>,
   pub side_effects: Option<BindingHookSideEffects>,
 }
 
@@ -16,6 +17,7 @@ impl From<BindingHookResolveIdOutput> for rolldown_plugin::HookResolveIdOutput {
     Self {
       id: value.id.into(),
       external: value.external.map(Into::into),
+      normalize_external_id: value.normalize_external_id,
       side_effects: value.side_effects.map(Into::into),
     }
   }

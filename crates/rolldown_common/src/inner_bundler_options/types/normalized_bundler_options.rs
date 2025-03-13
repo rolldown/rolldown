@@ -26,7 +26,8 @@ use super::{
 };
 use crate::{
   DeferSyncScanDataOption, EmittedAsset, EsModuleFlag, FilenameTemplate, GlobalsOutputOption,
-  HashCharacters, InjectImport, InputItem, ModuleType, RollupPreRenderedAsset,
+  HashCharacters, InjectImport, InputItem, MakeAbsoluteExternalsRelative, ModuleType,
+  RollupPreRenderedAsset,
 };
 
 #[allow(clippy::struct_excessive_bools)] // Using raw booleans is more clear in this case
@@ -88,6 +89,7 @@ pub struct NormalizedBundlerOptions {
   pub polyfill_require: bool,
   pub defer_sync_scan_data: Option<DeferSyncScanDataOption>,
   pub transform_options: TransformOptions,
+  pub make_absolute_externals_relative: MakeAbsoluteExternalsRelative,
 }
 
 // This is only used for testing
@@ -145,6 +147,7 @@ impl Default for NormalizedBundlerOptions {
       polyfill_require: Default::default(),
       defer_sync_scan_data: Default::default(),
       transform_options: Default::default(),
+      make_absolute_externals_relative: Default::default(),
     }
   }
 }

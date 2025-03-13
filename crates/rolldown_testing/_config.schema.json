@@ -347,6 +347,16 @@
             "null"
           ]
         },
+        "makeAbsoluteExternalsRelative": {
+          "anyOf": [
+            {
+              "$ref": "#/definitions/MakeAbsoluteExternalsRelative"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
         "minify": {
           "anyOf": [
             {
@@ -747,6 +757,28 @@
           ]
         }
       }
+    },
+    "MakeAbsoluteExternalsRelative": {
+      "oneOf": [
+        {
+          "type": "string",
+          "enum": [
+            "IfRelativeSource"
+          ]
+        },
+        {
+          "type": "object",
+          "required": [
+            "Bool"
+          ],
+          "properties": {
+            "Bool": {
+              "type": "boolean"
+            }
+          },
+          "additionalProperties": false
+        }
+      ]
     },
     "MatchGroup": {
       "type": "object",

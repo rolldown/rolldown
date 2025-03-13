@@ -361,6 +361,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "commondir"
+version = "1.0.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "ab552acb7c0a751c75c3dd4f9b95d31ed85c985ce5c70232a2952ffbe7ecfda5"
+dependencies = [
+ "thiserror 1.0.69",
+]
+
+[[package]]
 name = "compact_str"
 version = "0.8.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2353,6 +2362,7 @@ dependencies = [
  "anyhow",
  "append-only-vec",
  "arcstr",
+ "commondir",
  "css-module-lexer",
  "dunce",
  "futures",
@@ -2554,6 +2564,7 @@ dependencies = [
  "rustc-hash",
  "serde",
  "string_wizard",
+ "sugar_path",
  "tokio",
  "tracing",
  "typedmap",

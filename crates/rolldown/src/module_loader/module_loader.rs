@@ -15,19 +15,22 @@ use rolldown_common::{
   Cache, DUMMY_MODULE_IDX, EcmaRelated, EntryPoint, EntryPointKind, ExternalModule, ImportKind,
   ImportRecordIdx, ImportRecordMeta, ImporterRecord, Module, ModuleId, ModuleIdx, ModuleInfo,
   ModuleLoaderMsg, ModuleSideEffects, ModuleTable, ModuleType, NormalModuleTaskResult,
-  RUNTIME_MODULE_ID, ResolvedId, RuntimeModuleBrief, RuntimeModuleTaskResult, StmtInfoIdx,
-  SymbolRefDb, SymbolRefDbForModule,
+  RUNTIME_MODULE_ID, ResolvedExternal, ResolvedId, RuntimeModuleBrief, RuntimeModuleTaskResult,
+  StmtInfoIdx, SymbolRefDb, SymbolRefDbForModule,
 };
 use rolldown_error::{BuildDiagnostic, BuildResult};
 use rolldown_fs::OsFileSystem;
 use rolldown_plugin::SharedPluginDriver;
+use rolldown_utils::concat_string;
 use rolldown_utils::ecmascript::legitimize_identifier_name;
 use rolldown_utils::indexmap::FxIndexSet;
 use rolldown_utils::rayon::{IntoParallelIterator, ParallelIterator};
 use rolldown_utils::rustc_hash::FxHashSetExt;
 use rustc_hash::{FxHashMap, FxHashSet};
 use std::collections::hash_map::Entry;
+use std::path::Path;
 use std::sync::Arc;
+use sugar_path::SugarPath;
 
 use crate::{SharedOptions, SharedResolver};
 
@@ -139,6 +142,7 @@ impl ModuleLoader {
     owner: Option<ModuleTaskOwner>,
     is_user_defined_entry: bool,
     assert_module_type: Option<ModuleType>,
+    user_defined_entries: &[(Option<ArcStr>, ResolvedId)],
   ) -> ModuleIdx {
     match self.visited.entry(resolved_id.id.clone()) {
       Entry::Occupied(visited) => *visited.get(),
@@ -186,13 +190,33 @@ impl ModuleLoader {
             idx,
             SymbolRefDbForModule::new(Scoping::default(), idx, ScopeId::new(0)),
           );
-          let symbol_ref = self.symbol_ref_db.create_facade_root_symbol_ref(
-            idx,
-            legitimize_identifier_name(resolved_id.id.as_str()).as_ref(),
-          );
 
-          let ext =
-            ExternalModule::new(idx, resolved_id.id, external_module_side_effects, symbol_ref);
+          let need_renormalize_render_path =
+            !matches!(resolved_id.external, ResolvedExternal::Absolute)
+              && Path::new(resolved_id.id.as_str()).is_absolute();
+
+          let name = if need_renormalize_render_path {
+            let entries_common_dir = commondir::CommonDir::try_new(
+              user_defined_entries.iter().map(|(_, resolved_id)| resolved_id.id.as_str()),
+            )
+            .expect("should have common dir for entries");
+            let relative_path = Path::new(resolved_id.id.as_str())
+              .relative(entries_common_dir.common_root())
+              .normalize();
+            if relative_path.starts_with("..") {
+              relative_path.to_slash_lossy().into()
+            } else {
+              concat_string!("./", relative_path.to_slash_lossy()).into()
+            }
+          } else {
+            resolved_id.id
+          };
+
+          let symbol_ref = self
+            .symbol_ref_db
+            .create_facade_root_symbol_ref(idx, legitimize_identifier_name(&name).as_ref());
+
+          let ext = ExternalModule::new(idx, name, external_module_side_effects, symbol_ref);
           self.intermediate_normal_modules.modules[idx] = Some(ext.into());
         } else {
           self.remaining += 1;
@@ -230,10 +254,10 @@ impl ModuleLoader {
     let mut user_defined_entry_ids = FxHashSet::with_capacity(user_defined_entries.len());
 
     let mut entry_points = user_defined_entries
-      .into_iter()
+      .iter()
       .map(|(name, info)| EntryPoint {
-        name,
-        id: self.try_spawn_new_task(info, None, true, None),
+        name: name.clone(),
+        id: self.try_spawn_new_task(info.clone(), None, true, None, &user_defined_entries),
         kind: EntryPointKind::UserDefined,
         file_name: None,
         reference_id: None,
@@ -287,6 +311,7 @@ impl ModuleLoader {
                   Some(owner),
                   false,
                   raw_rec.asserted_module_type.clone(),
+                  &user_defined_entries,
                 );
                 // Dynamic imported module will be considered as an entry
                 self.intermediate_normal_modules.importers[id].push(ImporterRecord {
@@ -347,8 +372,13 @@ impl ModuleLoader {
               .into_iter_enumerated()
               .zip(resolved_deps)
               .map(|((_rec_idx, raw_rec), info)| {
-                let id =
-                  self.try_spawn_new_task(info, None, false, raw_rec.asserted_module_type.clone());
+                let id = self.try_spawn_new_task(
+                  info,
+                  None,
+                  false,
+                  raw_rec.asserted_module_type.clone(),
+                  &user_defined_entries,
+                );
                 // Dynamic imported module will be considered as an entry
                 self.intermediate_normal_modules.importers[id]
                   .push(ImporterRecord { kind: raw_rec.kind, importer_path: module.id.clone() });
@@ -385,7 +415,7 @@ impl ModuleLoader {
           self.remaining -= 1;
         }
         ModuleLoaderMsg::FetchModule(resolve_id) => {
-          self.try_spawn_new_task(resolve_id, None, false, None);
+          self.try_spawn_new_task(resolve_id, None, false, None, &user_defined_entries);
         }
         ModuleLoaderMsg::AddEntryModule(msg) => {
           let data = msg.chunk;
@@ -405,7 +435,7 @@ impl ModuleLoader {
           };
           extra_entry_points.push(EntryPoint {
             name: data.name.clone(),
-            id: self.try_spawn_new_task(resolved_id, None, true, None),
+            id: self.try_spawn_new_task(resolved_id, None, true, None, &user_defined_entries),
             kind: EntryPointKind::UserDefined,
             file_name: data.file_name.clone(),
             reference_id: Some(msg.reference_id),

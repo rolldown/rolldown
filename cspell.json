@@ -227,7 +227,8 @@
     "ropey",
     "krate",
     "prettyplease",
-    "unparse"
+    "unparse",
+    "commondir"
   ],
   "ignoreWords": ["Jeqs", "Gwetwem", "bpwli", "mxrh"]
 }

@@ -1,9 +1,9 @@
-use heck::ToUpperCamelCase;
+use heck::{ToLowerCamelCase, ToUpperCamelCase};
 use syn::{File, parse_str};
 
 use crate::{
   define_generator,
-  output::{add_header, output_path},
+  output::{add_header, output_path, rust_output_path},
 };
 
 use super::{Context, Generator, Runner};
@@ -18,12 +18,33 @@ impl Generator for CheckOptionsGenerator {
     let source = std::fs::read_to_string(&source_path)?;
     let ast = parse_str::<File>(&source)?;
     let variant_and_number_pairs = extract_event_kind_enum(&ast);
-    let code = generate_event_kind_switch_config(&variant_and_number_pairs);
-
-    Ok(vec![crate::output::Output::RustString {
-      path: output_path("crates/rolldown_error", "event_kind_switcher.rs"),
-      code: add_header(&code, self.file_path(), "//"),
-    }])
+    Ok(vec![
+      crate::output::Output::RustString {
+        path: rust_output_path("crates/rolldown_error", "event_kind_switcher.rs"),
+        code: add_header(
+          &generate_event_kind_switch_config(&variant_and_number_pairs),
+          self.file_path(),
+          "//",
+        ),
+      },
+      crate::output::Output::EcmaString {
+        path: output_path("packages/rolldown/src/options", "checks-options.ts"),
+        code: add_header(
+          &generate_check_options(&variant_and_number_pairs),
+          self.file_path(),
+          "//",
+        ),
+      },
+      // TODO: should generate the option inline
+      // crate::output::Output::EcmaString {
+      //   path: output_path("packages/rolldown/src/utils", "validate-checks-options.ts"),
+      //   code: add_header(
+      //     &generate_validate_check_options(&variant_and_number_pairs),
+      //     self.file_path(),
+      //     "//",
+      //   ),
+      // },
+    ])
   }
 }
 /// Extract event *Variant* and *Number* pairs from the `EventKind` enum.
@@ -79,5 +100,51 @@ bitflags! {{
 }}
   ",
     fields.join("\n    "),
+  )
+}
+
+fn generate_check_options(variant_and_number_pairs: &[(String, usize)]) -> String {
+  let mut fields = vec![];
+  for (variant, _) in variant_and_number_pairs {
+    if variant.ends_with("Error") {
+      continue;
+    }
+    fields.push(format!("{}?: boolean", variant.to_lower_camel_case()));
+  }
+  format!(
+    r"
+  export interface ChecksOptions {{
+    {}
+  }}
+      ",
+    fields.join("\n    ")
+  )
+}
+#[allow(unused)]
+fn generate_validate_check_options(variant_and_number_pairs: &[(String, usize)]) -> String {
+  let mut fields = vec![];
+  for (variant, _) in variant_and_number_pairs {
+    if variant.ends_with("Error") {
+      continue;
+    }
+    // TODO: add real descriptions
+    // v.description
+    fields.push(format!(
+      r"
+  {}: v.pipe(
+    v.optional(v.boolean()),
+  ),
+    ",
+      variant.to_lower_camel_case()
+    ));
+  }
+  format!(
+    r"
+import * as v from 'valibot'
+export const ChecksOptionsSchema = v.strictObject({{
+  {}
+}})
+      ",
+    fields.join("\n    ")
   )
 }

@@ -4,11 +4,15 @@ use cow_utils::CowUtils;
 use proc_macro2::TokenStream;
 
 mod rust;
-use rust::{print_rust, rust_fmt};
+use rust::{ecma_fmt, print_rust, rust_fmt};
 
-/// Get path for an output.
-pub fn output_path(krate: &str, path: &str) -> String {
+/// Get path for an rust output.
+pub fn rust_output_path(krate: &str, path: &str) -> String {
   format!("{krate}/src/generated/{path}")
+}
+
+pub fn output_path(dir: &str, path: &str) -> String {
+  format!("{dir}/generated/{path}")
 }
 
 /// Add a generated file warning to top of file.
@@ -26,6 +30,7 @@ pub fn add_header(code: &str, generator_path: &str, comment_start: &str) -> Stri
 pub enum Output {
   Rust { path: String, tokens: TokenStream },
   RustString { path: String, code: String },
+  EcmaString { path: String, code: String },
 }
 
 impl Output {
@@ -42,6 +47,10 @@ impl Output {
       }
       Self::RustString { path, code } => {
         let code = rust_fmt(&code);
+        (path, code)
+      }
+      Self::EcmaString { path, code } => {
+        let code = ecma_fmt(&code, &path);
         (path, code)
       }
     };

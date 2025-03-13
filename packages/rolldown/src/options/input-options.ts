@@ -9,6 +9,7 @@ import type {
 import type { NullValue, StringOrRegExp } from '../types/utils'
 import type { TreeshakingOptions } from '../types/module-side-effects'
 import { TransformOptions } from '../binding'
+import type { ChecksOptions } from './generated/checks-options'
 
 export type InputOption = string | string[] | Record<string, string>
 
@@ -69,14 +70,6 @@ export interface WatchOptions {
   }
   include?: StringOrRegExp | StringOrRegExp[]
   exclude?: StringOrRegExp | StringOrRegExp[]
-}
-
-export interface ChecksOptions {
-  /**
-   * Whether to emit warnings when detecting circular dependencies.
-   * @default false
-   */
-  circularDependency?: boolean
 }
 
 export interface InputOptions {

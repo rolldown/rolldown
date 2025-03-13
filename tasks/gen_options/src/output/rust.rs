@@ -39,6 +39,22 @@ pub fn rust_fmt(source_text: &str) -> String {
   String::from_utf8(output.stdout).unwrap()
 }
 
+pub fn ecma_fmt(source_text: &str, path: &str) -> String {
+  let mut rustfmt = Command::new("npx")
+    .args(["prettier", "--stdin-filepath", path])
+    .stdin(Stdio::piped())
+    .stdout(Stdio::piped())
+    .spawn()
+    .expect("Failed to run rustfmt (is it installed?)");
+
+  let stdin = rustfmt.stdin.as_mut().unwrap();
+  stdin.write_all(source_text.as_bytes()).unwrap();
+  stdin.flush().unwrap();
+
+  let output = rustfmt.wait_with_output().unwrap();
+  String::from_utf8(output.stdout).unwrap()
+}
+
 /// Replace doc comments which start with `@` with plain comments or line breaks.
 ///
 /// Original comment can be either `///@` or `//!@`.

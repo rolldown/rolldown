@@ -1,4 +1,4 @@
-use heck::{ToLowerCamelCase, ToSnakeCase, ToUpperCamelCase};
+use heck::{ToLowerCamelCase, ToSnakeCase, ToTitleCase, ToUpperCamelCase};
 use oxc::span::Span;
 use proc_macro2::TokenStream;
 use quote::quote;
@@ -12,6 +12,13 @@ use crate::{
 
 use super::{Context, Generator, Runner};
 
+/// For now auto generate fallback diagnostic
+/// Because the limitation of `syn` crate, https://github.com/dtolnay/syn/issues/1745
+/// We need to put the custom `Variant` related comments here
+/// e.g.
+/// ("CircularDependency", "Some description")
+static VARIANT_RELATED_COMMENTS: [(&str, &str); 0] = [];
+
 pub struct CheckOptionsGenerator {
   pub disabled_event: Vec<&'static str>,
 }
@@ -20,9 +27,9 @@ define_generator!(CheckOptionsGenerator);
 
 impl Generator for CheckOptionsGenerator {
   fn generate_many(&self, ctx: &Context) -> anyhow::Result<Vec<crate::output::Output>> {
-    let source_path = ctx.workspace_root.join("crates/rolldown_error/src/event_kind.rs");
-    let source = std::fs::read_to_string(&source_path)?;
-    let ast = parse_str::<File>(&source)?;
+    let event_kind_source_path = ctx.workspace_root.join("crates/rolldown_error/src/event_kind.rs");
+    let event_kind_source = std::fs::read_to_string(&event_kind_source_path)?;
+    let ast = parse_str::<File>(&event_kind_source)?;
     let variant_and_number_pairs = extract_event_kind_enum(&ast);
 
     // generate inline check options in validator.ts
@@ -48,7 +55,7 @@ impl Generator for CheckOptionsGenerator {
       crate::output::Output::EcmaString {
         path: output_path("packages/rolldown/src/options", "checks-options.ts"),
         code: add_header(
-          &generate_check_options(&variant_and_number_pairs),
+          &generate_check_options(&variant_and_number_pairs, self),
           self.file_path(),
           "//",
         ),
@@ -200,13 +207,34 @@ fn generate_check_inner_options_and_binding(
   (binding_ts, inner_option_ts)
 }
 
-fn generate_check_options(variant_and_number_pairs: &[(String, usize)]) -> String {
+fn generate_check_options(
+  variant_and_number_pairs: &[(String, usize)],
+  generator: &CheckOptionsGenerator,
+) -> String {
   let mut fields = vec![];
   for (variant, _) in variant_and_number_pairs {
     if variant.ends_with("Error") {
       continue;
     }
-    fields.push(format!("{}?: boolean", variant.to_lower_camel_case()));
+    let camel_case = variant.to_lower_camel_case();
+    let related_comments = VARIANT_RELATED_COMMENTS
+      .iter()
+      .find_map(|(name, comment_content)| {
+        (name == &variant.as_str()).then_some((*comment_content).to_string())
+      })
+      .unwrap_or(format!(
+        "Whether to emit warning when detecting {}",
+        variant.to_title_case().to_lowercase()
+      ));
+    let default_value = !generator.disabled_event.contains(&variant.as_str());
+    fields.push(format!(
+      r"
+    /**  
+     * {related_comments}
+     * @default {default_value}
+     * */
+    {camel_case}?: boolean",
+    ));
   }
   format!(
     r"
@@ -218,7 +246,7 @@ fn generate_check_options(variant_and_number_pairs: &[(String, usize)]) -> Strin
   )
 }
 
-/// (replaced_code, range)
+/// (range_replaced_code, range)
 fn generate_validate_check_options(
   variant_and_number_pairs: &[(String, usize)],
   source: &str,
@@ -229,13 +257,24 @@ fn generate_validate_check_options(
     if variant.ends_with("Error") {
       continue;
     }
-    // TODO: add real descriptions
-    // v.description
+
+    let camel_case = variant.to_lower_camel_case();
+    let related_comments = VARIANT_RELATED_COMMENTS
+      .iter()
+      .find_map(|(name, comment_content)| {
+        (name == &variant.as_str()).then_some((*comment_content).to_string())
+      })
+      .unwrap_or(format!(
+        "Whether to emit warning when detecting {}",
+        variant.to_title_case().to_lowercase()
+      ));
     fields.push(format!(
-      r"{}: v.pipe(
+      r"{camel_case}: v.pipe(
     v.optional(v.boolean()),
+    v.description(
+      '{related_comments}',
+    ),
   ),",
-      variant.to_lower_camel_case()
     ));
   }
   let replaced_code = format!(

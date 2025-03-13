@@ -24,16 +24,16 @@ OPTIONS
   --advanced-chunks.min-size <advanced-chunks.min-size>Minimum size of the chunk.
   --asset-file-names <name>   Name pattern for asset files.
   --banner <banner>           Code to insert the top of the bundled file (outside the wrapper function).
-  --checks.circular-dependency .
-  --checks.common-js-variable-in-esm .
-  --checks.eval               .
-  --checks.filename-conflict  .
-  --checks.import-is-undefined .
-  --checks.missing-global-name .
-  --checks.missing-name-option-for-iife-export .
-  --checks.mixed-export       .
-  --checks.unresolved-entry   .
-  --checks.unresolved-import  .
+  --checks.circular-dependency Whether to emit warning when detecting circular dependency.
+  --checks.common-js-variable-in-esm Whether to emit warning when detecting common js variable in esm.
+  --checks.eval               Whether to emit warning when detecting eval.
+  --checks.filename-conflict  Whether to emit warning when detecting filename conflict.
+  --checks.import-is-undefined Whether to emit warning when detecting import is undefined.
+  --checks.missing-global-name Whether to emit warning when detecting missing global name.
+  --checks.missing-name-option-for-iife-export Whether to emit warning when detecting missing name option for iife export.
+  --checks.mixed-export       Whether to emit warning when detecting mixed export.
+  --checks.unresolved-entry   Whether to emit warning when detecting unresolved entry.
+  --checks.unresolved-import  Whether to emit warning when detecting unresolved import.
   --chunk-file-names <name>   Name pattern for emitted secondary chunks.
   --comments <comments>       Control comments in the output.
   --css-chunk-file-names <css-chunk-file-names>Name pattern for emitted css secondary chunks.

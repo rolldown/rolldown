@@ -1,4 +1,3 @@
-mod binding_checks_options;
 mod binding_defer_sync_scan_data;
 mod binding_experimental_options;
 pub mod binding_inject_import;
@@ -24,6 +23,7 @@ use binding_resolve_options::BindingResolveOptions;
 use binding_watch_option::BindingWatchOption;
 
 use super::plugin::BindingPluginOrParallelJsPluginPlaceholder;
+use crate::generated::binding_checks_options;
 use crate::types::{
   binding_log::BindingLog, binding_log_level::BindingLogLevel, js_callback::JsCallback,
 };

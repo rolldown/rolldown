@@ -3,6 +3,7 @@ mod chunk;
 mod css;
 mod ecmascript;
 mod file_emitter;
+mod generated;
 mod inner_bundler_options;
 mod module;
 mod module_loader;
@@ -13,11 +14,11 @@ mod types;
 /// `rolldown` crate could use `pub use rolldown_common::bundler_options::*;` to export all types, so we don't need write
 /// the same code in `rolldown` crate again.
 pub mod bundler_options {
+  pub use crate::generated::checks_options::ChecksOptions;
   pub use crate::inner_bundler_options::{
     BundlerOptions,
     types::{
       advanced_chunks_options::{AdvancedChunksOptions, MatchGroup},
-      checks_options::ChecksOptions,
       comments::Comments,
       defer_sync_scan_data_option::DeferSyncScanDataOption,
       es_module_flag::EsModuleFlag,

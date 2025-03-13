@@ -1,5 +1,7 @@
-use heck::{ToLowerCamelCase, ToUpperCamelCase};
+use heck::{ToLowerCamelCase, ToSnakeCase, ToUpperCamelCase};
 use oxc::span::Span;
+use proc_macro2::TokenStream;
+use quote::quote;
 use syn::{File, parse_str};
 
 use crate::{
@@ -21,7 +23,7 @@ impl Generator for CheckOptionsGenerator {
     let ast = parse_str::<File>(&source)?;
     let variant_and_number_pairs = extract_event_kind_enum(&ast);
 
-    // inline replace validator.ts
+    // generate inline check options in validator.ts
     let validator_path = ctx.workspace_root.join("packages/rolldown/src/utils/validator.ts");
     let validator_source = std::fs::read_to_string(&validator_path)?;
 
@@ -30,7 +32,8 @@ impl Generator for CheckOptionsGenerator {
       &validator_source,
       &validator_path.to_string_lossy(),
     );
-
+    let (checks_binding_option_ts, checks_inner_option_ts) =
+      generate_check_inner_options_and_binding(&variant_and_number_pairs);
     Ok(vec![
       crate::output::Output::RustString {
         path: rust_output_path("crates/rolldown_error", "event_kind_switcher.rs"),
@@ -48,11 +51,20 @@ impl Generator for CheckOptionsGenerator {
           "//",
         ),
       },
-      // TODO: should generate the option inline
       crate::output::Output::EcmaStringInline {
         path: validator_path.to_string_lossy().to_string(),
         code: replaced_validator_code,
         span,
+      },
+      // Generate binding checks options
+      crate::output::Output::Rust {
+        path: rust_output_path("crates/rolldown_binding/", "binding_checks_options.rs"),
+        tokens: checks_binding_option_ts,
+      },
+      // Generate rolldown_common checks options
+      crate::output::Output::Rust {
+        path: rust_output_path("crates/rolldown_common", "checks_options.rs"),
+        tokens: checks_inner_option_ts,
       },
     ])
   }
@@ -86,6 +98,7 @@ fn extract_event_kind_enum(ast: &File) -> Vec<(String, usize)> {
   ret
 }
 
+/// `quote!` can not generate bitflags properly(The format is mess)
 fn generate_event_kind_switch_config(variant_and_number_pairs: &Vec<(String, usize)>) -> String {
   let mut fields = vec![];
   let type_size = match variant_and_number_pairs.len() {
@@ -111,6 +124,64 @@ bitflags! {{
   ",
     fields.join("\n    "),
   )
+}
+
+fn generate_check_inner_options_and_binding(
+  variant_and_number_pairs: &Vec<(String, usize)>,
+) -> (TokenStream, TokenStream) {
+  let mut struct_fields = vec![];
+  let mut field_initializer_list = vec![];
+  for (variant, _) in variant_and_number_pairs {
+    if variant.ends_with("Error") {
+      continue;
+    }
+    let snake_case = quote::format_ident!("{}", variant.to_snake_case());
+    struct_fields.push(quote! {
+      pub #snake_case: Option<bool>,
+    });
+    field_initializer_list.push(quote! {
+      #snake_case: value.#snake_case,
+    });
+  }
+  let check_options_struct = quote! {
+    #[napi_derive::napi(object)]
+    #[derive(Debug, Default)]
+    pub struct BindingChecksOptions {
+      #(#struct_fields)*
+    }
+  };
+  let check_options_impl = quote! {
+    impl From<BindingChecksOptions> for rolldown_common::ChecksOptions {
+      fn from(value: BindingChecksOptions) -> Self {
+        Self {
+          #(#field_initializer_list)*
+        }
+      }
+    }
+  };
+  let binding_ts = quote! {
+    #check_options_struct
+    #check_options_impl
+  };
+
+  let inner_option_ts = quote! {
+    #[cfg(feature = "deserialize_bundler_options")]
+    use schemars::JsonSchema;
+    #[cfg(feature = "deserialize_bundler_options")]
+    use serde::Deserialize;
+
+    #[derive(Default, Debug, Clone)]
+    #[cfg_attr(
+      feature = "deserialize_bundler_options",
+      derive(Deserialize, JsonSchema),
+      serde(rename_all = "camelCase", deny_unknown_fields)
+    )]
+    pub struct ChecksOptions {
+      #(#struct_fields)*
+    }
+  };
+
+  (binding_ts, inner_option_ts)
 }
 
 fn generate_check_options(variant_and_number_pairs: &[(String, usize)]) -> String {

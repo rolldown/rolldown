@@ -9,7 +9,6 @@ use oxc::transformer::{InjectGlobalVariablesConfig, JsxOptions, TransformOptions
 use rustc_hash::{FxHashMap, FxHashSet};
 
 use super::advanced_chunks_options::AdvancedChunksOptions;
-use super::checks_options::ChecksOptions;
 use super::comments::Comments;
 use super::experimental_options::ExperimentalOptions;
 use super::jsx::Jsx;
@@ -25,9 +24,9 @@ use super::{
   sourcemap_ignore_list::SourceMapIgnoreList, sourcemap_path_transform::SourceMapPathTransform,
 };
 use crate::{
-  DeferSyncScanDataOption, EmittedAsset, EsModuleFlag, FilenameTemplate, GlobalsOutputOption,
-  HashCharacters, InjectImport, InputItem, MakeAbsoluteExternalsRelative, ModuleType,
-  RollupPreRenderedAsset,
+  ChecksOptions, DeferSyncScanDataOption, EmittedAsset, EsModuleFlag, FilenameTemplate,
+  GlobalsOutputOption, HashCharacters, InjectImport, InputItem, MakeAbsoluteExternalsRelative,
+  ModuleType, RollupPreRenderedAsset,
 };
 
 #[allow(clippy::struct_excessive_bools)] // Using raw booleans is more clear in this case

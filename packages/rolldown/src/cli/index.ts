@@ -29,7 +29,7 @@ async function main() {
 
 main().catch((err) => {
   if (typeof err.stack === 'string') {
-    err.stack = err.replace(err.message, '')
+    err.stack = err.stack.replace(err.message, '')
   }
   logger.error(err)
   process.exit(1)

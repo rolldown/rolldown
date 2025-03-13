@@ -191,10 +191,11 @@ impl ModuleLoader {
             SymbolRefDbForModule::new(Scoping::default(), idx, ScopeId::new(0)),
           );
 
-          let renormalize_render_path = !matches!(resolved_id.external, ResolvedExternal::Absolute)
-            && Path::new(resolved_id.id.as_str()).is_absolute();
+          let need_renormalize_render_path =
+            !matches!(resolved_id.external, ResolvedExternal::Absolute)
+              && Path::new(resolved_id.id.as_str()).is_absolute();
 
-          let name = if renormalize_render_path {
+          let name = if need_renormalize_render_path {
             let entries_common_dir = commondir::CommonDir::try_new(
               user_defined_entries.iter().map(|(_, resolved_id)| resolved_id.id.as_str()),
             )

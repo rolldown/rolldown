@@ -83,6 +83,7 @@ impl GenerateStage<'_> {
                 &file_dir,
                 rendered_chunk.filename.as_str(),
                 rendered_chunk.debug_id,
+                |comment| format!("\n//# {comment}"),
               )
               .await?;
           }
@@ -121,6 +122,7 @@ impl GenerateStage<'_> {
                 &file_dir,
                 css_meta.filename.as_str(),
                 css_meta.debug_id,
+                |comment| format!("\n/*# {comment} */"),
               )
               .await?;
           }
@@ -291,6 +293,7 @@ impl GenerateStage<'_> {
     chunk_to_codegen_ret
   }
 
+  #[allow(clippy::too_many_arguments)]
   async fn process_code_and_sourcemap(
     &self,
     code: &mut String,
@@ -299,6 +302,7 @@ impl GenerateStage<'_> {
     file_dir: &Path,
     filename: &str,
     debug_id: u128,
+    generate_trailing_comment: fn(&str) -> String,
   ) -> BuildResult<()> {
     let file_base_name = Path::new(filename).file_name().expect("should have file name");
     map.set_file(file_base_name.to_string_lossy().as_ref());
@@ -350,19 +354,18 @@ impl GenerateStage<'_> {
             names: vec![],
           })));
           if matches!(sourcemap, SourceMapType::File) {
-            code.push_str("\n//# sourceMappingURL=");
-            code.push_str(
+            code.push_str(&generate_trailing_comment(&format!(
+              "sourceMappingURL={}",
               &Path::new(&map_filename)
                 .file_name()
                 .expect("should have filename")
-                .to_string_lossy(),
-            );
+                .to_string_lossy()
+            )));
           }
         }
         SourceMapType::Inline => {
           let data_url = map.to_data_url();
-          code.push_str("\n//# sourceMappingURL=");
-          code.push_str(&data_url);
+          code.push_str(&generate_trailing_comment(&format!("sourceMappingURL={data_url}")));
         }
       }
     }

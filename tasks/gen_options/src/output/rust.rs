@@ -4,6 +4,7 @@ use std::{
   sync::LazyLock,
 };
 
+use oxc::span::Span;
 use proc_macro2::TokenStream;
 use regex::{Captures, Regex, Replacer};
 use syn::parse2;
@@ -53,6 +54,12 @@ pub fn ecma_fmt(source_text: &str, path: &str) -> String {
 
   let output = rustfmt.wait_with_output().unwrap();
   String::from_utf8(output.stdout).unwrap()
+}
+
+pub fn replace_range_string(original: &str, span: Span, replacement: &str) -> String {
+  let prefix = &original[..span.start as usize]; // Get the part before the span
+  let suffix = &original[span.end as usize..]; // Get the part after the span
+  format!("{prefix}{replacement}{suffix}") // Concatenate prefix, replacement, and suffix
 }
 
 /// Replace doc comments which start with `@` with plain comments or line breaks.

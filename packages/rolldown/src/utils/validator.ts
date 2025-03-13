@@ -180,12 +180,16 @@ const WatchOptionsSchema = v.strictObject({
 })
 
 const ChecksOptionsSchema = v.strictObject({
-  circularDependency: v.pipe(
-    v.optional(v.boolean()),
-    v.description(
-      'Whether to emit warnings when detecting circular dependencies',
-    ),
-  ),
+  circularDependency: v.pipe(v.optional(v.boolean())),
+  eval: v.pipe(v.optional(v.boolean())),
+  missingGlobalName: v.pipe(v.optional(v.boolean())),
+  missingNameOptionForIifeExport: v.pipe(v.optional(v.boolean())),
+  mixedExport: v.pipe(v.optional(v.boolean())),
+  unresolvedEntry: v.pipe(v.optional(v.boolean())),
+  unresolvedImport: v.pipe(v.optional(v.boolean())),
+  filenameConflict: v.pipe(v.optional(v.boolean())),
+  commonJsVariableInEsm: v.pipe(v.optional(v.boolean())),
+  importIsUndefined: v.pipe(v.optional(v.boolean())),
 })
 
 const MinifyOptionsSchema = v.strictObject({

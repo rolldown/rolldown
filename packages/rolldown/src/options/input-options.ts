@@ -72,14 +72,6 @@ export interface WatchOptions {
   exclude?: StringOrRegExp | StringOrRegExp[]
 }
 
-export interface ChecksOptions {
-  /**
-   * Whether to emit warnings when detecting circular dependencies.
-   * @default false
-   */
-  circularDependency?: boolean
-}
-
 export type MakeAbsoluteExternalsRelative = boolean | 'ifRelativeSource'
 
 export interface InputOptions {

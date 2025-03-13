@@ -12,7 +12,9 @@ use crate::{
 
 use super::{Context, Generator, Runner};
 
-pub struct CheckOptionsGenerator;
+pub struct CheckOptionsGenerator {
+  pub disabled_event: Vec<&'static str>,
+}
 
 define_generator!(CheckOptionsGenerator);
 
@@ -33,7 +35,7 @@ impl Generator for CheckOptionsGenerator {
       &validator_path.to_string_lossy(),
     );
     let (checks_binding_option_ts, checks_inner_option_ts) =
-      generate_check_inner_options_and_binding(&variant_and_number_pairs);
+      generate_check_inner_options_and_binding(&variant_and_number_pairs, self);
     Ok(vec![
       crate::output::Output::RustString {
         path: rust_output_path("crates/rolldown_error", "event_kind_switcher.rs"),
@@ -116,7 +118,7 @@ fn generate_event_kind_switch_config(variant_and_number_pairs: &Vec<(String, usi
     r"
 use bitflags::bitflags;
 bitflags! {{
-  #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+  #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Default)]
   pub struct EventKindSwitcher: u{type_size} {{
     {}
   }}
@@ -128,19 +130,26 @@ bitflags! {{
 
 fn generate_check_inner_options_and_binding(
   variant_and_number_pairs: &Vec<(String, usize)>,
+  generator: &CheckOptionsGenerator,
 ) -> (TokenStream, TokenStream) {
   let mut struct_fields = vec![];
   let mut field_initializer_list = vec![];
+  let mut event_kind_switcher_initializer = vec![];
   for (variant, _) in variant_and_number_pairs {
     if variant.ends_with("Error") {
       continue;
     }
     let snake_case = quote::format_ident!("{}", variant.to_snake_case());
+    let ident = quote::format_ident!("{}", variant);
+    let default_status = !generator.disabled_event.contains(&variant.as_str());
     struct_fields.push(quote! {
       pub #snake_case: Option<bool>,
     });
     field_initializer_list.push(quote! {
       #snake_case: value.#snake_case,
+    });
+    event_kind_switcher_initializer.push(quote! {
+        flag.set(rolldown_error::EventKindSwitcher::#ident, value.#snake_case.unwrap_or(#default_status));
     });
   }
   let check_options_struct = quote! {
@@ -178,6 +187,13 @@ fn generate_check_inner_options_and_binding(
     )]
     pub struct ChecksOptions {
       #(#struct_fields)*
+    }
+    impl From<ChecksOptions> for rolldown_error::EventKindSwitcher {
+      fn from(value: ChecksOptions) -> Self {
+        let mut flag = rolldown_error::EventKindSwitcher::all();
+        #(#event_kind_switcher_initializer)*
+        flag
+      }
     }
   };
 

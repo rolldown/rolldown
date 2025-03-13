@@ -6,6 +6,7 @@ use std::sync::Arc;
 
 use arcstr::ArcStr;
 use oxc::transformer::{InjectGlobalVariablesConfig, JsxOptions, TransformOptions};
+use rolldown_error::EventKindSwitcher;
 use rustc_hash::{FxHashMap, FxHashSet};
 
 use super::advanced_chunks_options::AdvancedChunksOptions;
@@ -24,9 +25,9 @@ use super::{
   sourcemap_ignore_list::SourceMapIgnoreList, sourcemap_path_transform::SourceMapPathTransform,
 };
 use crate::{
-  ChecksOptions, DeferSyncScanDataOption, EmittedAsset, EsModuleFlag, FilenameTemplate,
-  GlobalsOutputOption, HashCharacters, InjectImport, InputItem, MakeAbsoluteExternalsRelative,
-  ModuleType, RollupPreRenderedAsset,
+  DeferSyncScanDataOption, EmittedAsset, EsModuleFlag, FilenameTemplate, GlobalsOutputOption,
+  HashCharacters, InjectImport, InputItem, MakeAbsoluteExternalsRelative, ModuleType,
+  RollupPreRenderedAsset,
 };
 
 #[allow(clippy::struct_excessive_bools)] // Using raw booleans is more clear in this case
@@ -78,7 +79,7 @@ pub struct NormalizedBundlerOptions {
   pub external_live_bindings: bool,
   pub inline_dynamic_imports: bool,
   pub advanced_chunks: Option<AdvancedChunksOptions>,
-  pub checks: ChecksOptions,
+  pub checks: EventKindSwitcher,
   pub profiler_names: bool,
   pub jsx: Jsx,
   pub watch: WatchOption,

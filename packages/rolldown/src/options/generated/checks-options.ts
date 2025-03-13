@@ -1,5 +1,5 @@
 // Auto-generated code, DO NOT EDIT DIRECTLY!
-// To edit this generated file you have to edit `tasks/gen_options/src/generators/checks.rs`
+// To edit this generated file you have to edit `tasks/generator/src/generators/checks.rs`
 
 export interface ChecksOptions {
   circularDependency?: boolean

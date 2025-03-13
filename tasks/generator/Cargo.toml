@@ -2,7 +2,7 @@
 edition.workspace    = true
 homepage.workspace   = true
 license.workspace    = true
-name                 = "gen-options"
+name                 = "generator"
 repository.workspace = true
 version              = "0.1.0"
 

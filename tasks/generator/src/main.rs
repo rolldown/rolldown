@@ -1,4 +1,4 @@
-use gen_options::generators::{CheckOptionsGenerator, Context, Generator};
+use generator::generators::{CheckOptionsGenerator, Context, Generator};
 fn main() -> anyhow::Result<()> {
   let ctx = Context { workspace_root: rolldown_workspace::root_dir() };
   let generators: Vec<Box<dyn Generator>> =

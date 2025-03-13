@@ -4795,6 +4795,12 @@ expression: output
 
 - entry-!~{000}~.js => entry-CPodRrWV.js
 
+# tests/rolldown/sourcemap/css_sourcemap_reference
+
+- main-!~{000}~.js => main-Fv4vYntb.js
+- main.css
+- main.css.map
+
 # tests/rolldown/sourcemap/debug_ids
 
 - assets/main.js => assets/main.js

@@ -1,10 +1,11 @@
 use std::{fs, io, path::Path};
 
 use cow_utils::CowUtils;
+use oxc::span::Span;
 use proc_macro2::TokenStream;
 
 mod rust;
-use rust::{ecma_fmt, print_rust, rust_fmt};
+use rust::{ecma_fmt, print_rust, replace_range_string, rust_fmt};
 
 /// Get path for an rust output.
 pub fn rust_output_path(krate: &str, path: &str) -> String {
@@ -31,6 +32,7 @@ pub enum Output {
   Rust { path: String, tokens: TokenStream },
   RustString { path: String, code: String },
   EcmaString { path: String, code: String },
+  EcmaStringInline { path: String, code: String, span: Span },
 }
 
 impl Output {
@@ -50,6 +52,12 @@ impl Output {
         (path, code)
       }
       Self::EcmaString { path, code } => {
+        let code = ecma_fmt(&code, &path);
+        (path, code)
+      }
+      Self::EcmaStringInline { path, code, span } => {
+        let original = fs::read_to_string(&path).unwrap();
+        let code = replace_range_string(&original, span, &code);
         let code = ecma_fmt(&code, &path);
         (path, code)
       }

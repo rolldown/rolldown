@@ -814,6 +814,7 @@ dependencies = [
  "anyhow",
  "cow-utils",
  "heck",
+ "oxc",
  "prettyplease",
  "proc-macro2",
  "regex",

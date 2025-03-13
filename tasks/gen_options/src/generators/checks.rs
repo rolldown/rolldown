@@ -1,9 +1,11 @@
 use heck::{ToLowerCamelCase, ToUpperCamelCase};
+use oxc::span::Span;
 use syn::{File, parse_str};
 
 use crate::{
   define_generator,
   output::{add_header, output_path, rust_output_path},
+  utils::extract_toplevel_item_span,
 };
 
 use super::{Context, Generator, Runner};
@@ -18,6 +20,17 @@ impl Generator for CheckOptionsGenerator {
     let source = std::fs::read_to_string(&source_path)?;
     let ast = parse_str::<File>(&source)?;
     let variant_and_number_pairs = extract_event_kind_enum(&ast);
+
+    // inline replace validator.ts
+    let validator_path = ctx.workspace_root.join("packages/rolldown/src/utils/validator.ts");
+    let validator_source = std::fs::read_to_string(&validator_path)?;
+
+    let (replaced_validator_code, span) = generate_validate_check_options(
+      &variant_and_number_pairs,
+      &validator_source,
+      &validator_path.to_string_lossy(),
+    );
+
     Ok(vec![
       crate::output::Output::RustString {
         path: rust_output_path("crates/rolldown_error", "event_kind_switcher.rs"),
@@ -36,14 +49,11 @@ impl Generator for CheckOptionsGenerator {
         ),
       },
       // TODO: should generate the option inline
-      // crate::output::Output::EcmaString {
-      //   path: output_path("packages/rolldown/src/utils", "validate-checks-options.ts"),
-      //   code: add_header(
-      //     &generate_validate_check_options(&variant_and_number_pairs),
-      //     self.file_path(),
-      //     "//",
-      //   ),
-      // },
+      crate::output::Output::EcmaStringInline {
+        path: validator_path.to_string_lossy().to_string(),
+        code: replaced_validator_code,
+        span,
+      },
     ])
   }
 }
@@ -120,8 +130,13 @@ fn generate_check_options(variant_and_number_pairs: &[(String, usize)]) -> Strin
     fields.join("\n    ")
   )
 }
-#[allow(unused)]
-fn generate_validate_check_options(variant_and_number_pairs: &[(String, usize)]) -> String {
+
+/// (replaced_code, range)
+fn generate_validate_check_options(
+  variant_and_number_pairs: &[(String, usize)],
+  source: &str,
+  path: &str,
+) -> (String, Span) {
   let mut fields = vec![];
   for (variant, _) in variant_and_number_pairs {
     if variant.ends_with("Error") {
@@ -130,21 +145,23 @@ fn generate_validate_check_options(variant_and_number_pairs: &[(String, usize)])
     // TODO: add real descriptions
     // v.description
     fields.push(format!(
-      r"
-  {}: v.pipe(
+      r"{}: v.pipe(
     v.optional(v.boolean()),
-  ),
-    ",
+  ),",
       variant.to_lower_camel_case()
     ));
   }
-  format!(
+  let replaced_code = format!(
     r"
-import * as v from 'valibot'
-export const ChecksOptionsSchema = v.strictObject({{
+const ChecksOptionsSchema = v.strictObject({{
   {}
 }})
       ",
     fields.join("\n    ")
   )
+  .trim()
+  .to_string();
+
+  let span = extract_toplevel_item_span(source, path, "ChecksOptionsSchema").unwrap();
+  (replaced_code, span)
 }

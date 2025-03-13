@@ -21,7 +21,7 @@
         "allowComputed": true
       }
     ],
-    "import/named": "allow"
+    "import/named": "error"
   },
   "overrides": [
     {

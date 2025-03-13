@@ -483,6 +483,60 @@
             "boolean",
             "null"
           ]
+        },
+        "commonJsVariableInEsm": {
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
+        "eval": {
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
+        "filenameConflict": {
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
+        "importIsUndefined": {
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
+        "missingGlobalName": {
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
+        "missingNameOptionForIifeExport": {
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
+        "mixedExport": {
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
+        "unresolvedEntry": {
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
+        "unresolvedImport": {
+          "type": [
+            "boolean",
+            "null"
+          ]
         }
       },
       "additionalProperties": false

@@ -826,6 +826,7 @@ dependencies = [
  "oxc",
  "prettyplease",
  "proc-macro2",
+ "quote",
  "regex",
  "rolldown_workspace",
  "syn",

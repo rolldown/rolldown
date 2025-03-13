@@ -2,7 +2,6 @@ use rolldown_utils::indexmap::FxIndexMap;
 use rustc_hash::FxHashMap;
 use std::{fmt::Debug, path::PathBuf};
 use types::advanced_chunks_options::AdvancedChunksOptions;
-use types::checks_options::ChecksOptions;
 use types::comments::Comments;
 use types::inject_import::InjectImport;
 use types::jsx::Jsx;
@@ -29,7 +28,7 @@ use self::types::{
   platform::Platform, resolve_options::ResolveOptions, source_map_type::SourceMapType,
   sourcemap_path_transform::SourceMapPathTransform,
 };
-use crate::{ChunkFilenamesOutputOption, ModuleType, SourceMapIgnoreList};
+use crate::{ChecksOptions, ChunkFilenamesOutputOption, ModuleType, SourceMapIgnoreList};
 
 pub mod types;
 

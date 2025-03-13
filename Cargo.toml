@@ -180,8 +180,8 @@ xxhash-rust         = "0.8.10"
 
 prettyplease = "0.2.29"
 proc-macro2  = "1"
-# quote = "1" maybe used in the future
-syn = { version = "2", default-features = false }
+quote        = "1"
+syn          = { version = "2", default-features = false }
 
 
 # oxc crates with the same version

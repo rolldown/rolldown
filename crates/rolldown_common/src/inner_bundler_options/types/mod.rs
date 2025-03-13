@@ -1,5 +1,4 @@
 pub mod advanced_chunks_options;
-pub mod checks_options;
 pub mod comments;
 pub mod defer_sync_scan_data_option;
 pub mod es_module_flag;

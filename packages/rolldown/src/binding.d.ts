@@ -246,6 +246,15 @@ export interface BindingBundlerOptions {
 
 export interface BindingChecksOptions {
   circularDependency?: boolean
+  eval?: boolean
+  missingGlobalName?: boolean
+  missingNameOptionForIifeExport?: boolean
+  mixedExport?: boolean
+  unresolvedEntry?: boolean
+  unresolvedImport?: boolean
+  filenameConflict?: boolean
+  commonJsVariableInEsm?: boolean
+  importIsUndefined?: boolean
 }
 
 export interface BindingDeferSyncScanData {

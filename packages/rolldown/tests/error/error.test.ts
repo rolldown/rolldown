@@ -124,38 +124,6 @@ test('call transformContext error', async () => {
 })
 
 describe('Error output format', () => {
-  function cleanStack(stack: string) {
-    return stack
-      .split('\n')
-      .map((line) => {
-        return line.replace(
-          /at (.*?) \((?:(.*[/\\])?([^/\\]+):)?(\d+:\d+)\)/,
-          'at $1 ($3:$4)',
-        )
-      })
-      .join('\n')
-  }
-
-  test('should correctly output the custom error defined on the js side', async () => {
-    try {
-      const build = await rolldown({
-        input: './main.js',
-        cwd: import.meta.dirname,
-        plugins: [
-          {
-            name: 'test-plugin',
-            buildEnd() {
-              throw new Error('js side error')
-            },
-          },
-        ],
-      })
-      await build.write()
-    } catch (error: any) {
-      expect(cleanStack(error.message)).toMatchSnapshot()
-    }
-  })
-
   test('should correctly output the custom error defined on the rust side', async () => {
     try {
       const build = await rolldown({

@@ -1,13 +1,12 @@
 ---
 source: crates/rolldown_testing/src/integration_test.rs
-snapshot_kind: text
 ---
 # warnings
 
 ## MISSING_GLOBAL_NAME
 
 ```text
-[MISSING_GLOBAL_NAME] Warning: No name was provided for external module "./foo" in "output.globals" – guessing "___foo".
+[MISSING_GLOBAL_NAME] Warning: No name was provided for external module "foo" in "output.globals" – guessing "foo".
 
 ```
 ## MISSING_NAME_OPTION_FOR_IIFE_EXPORT
@@ -21,19 +20,19 @@ snapshot_kind: text
 ## entry.js
 
 ```js
-(function(exports, ___foo) {
+(function(exports, foo) {
 
 "use strict";
 
-___foo = __toESM(___foo);
+foo = __toESM(foo);
 
 Object.defineProperty(exports, 'all the stuff', {
   enumerable: true,
   get: function () {
-    return ___foo;
+    return foo;
   }
 });
-exports["some export"] = ___foo["some import"]
+exports["some export"] = foo["some import"]
 return exports;
-})({}, ___foo);
+})({}, foo);
 ```

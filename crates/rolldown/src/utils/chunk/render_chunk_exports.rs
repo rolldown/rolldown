@@ -220,7 +220,7 @@ pub fn render_chunk_exports(
   });
 });\n".replace("$NAME", binding_ref_name);
 
-          s.push_str(&format!("\nvar {} = require(\"{}\");\n", binding_ref_name, &external.name));
+          s.push_str(&format!("\nvar {} = require(\"{}\");\n", binding_ref_name, &external.get_import_path(chunk)));
           s.push_str(&import_stmt);
         });
         }

@@ -313,7 +313,8 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
             let Some(Module::External(module)) = m else {
               return vec![];
             };
-            let importee_name = &module.name;
+            let importer_chunk = &self.ctx.chunk_graph.chunk_table[self.ctx.chunk_id];
+            let importee_name = &module.get_import_path(importer_chunk);
             vec![
               // Insert `import * as ns from 'ext'`external module in esm format
               self.snippet.import_star_stmt(importee_name, importee_namespace_name),
@@ -785,11 +786,12 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
           Module::External(importee) => {
             let request_path =
               call_expr.arguments.get_mut(0).expect("require should have an argument");
-
+            let importer_chunk = &self.ctx.chunk_graph.chunk_table[self.ctx.chunk_id];
             // Rewrite `require('xxx')` to `require('fs')`, if there is an alias that maps 'xxx' to 'fs'
-            *request_path = ast::Argument::StringLiteral(
-              self.snippet.alloc_string_literal(&importee.name, request_path.span()),
-            );
+            *request_path = ast::Argument::StringLiteral(self.snippet.alloc_string_literal(
+              &importee.get_import_path(importer_chunk),
+              request_path.span(),
+            ));
             None
           }
         };

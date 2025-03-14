@@ -261,9 +261,6 @@
  - rollup@sourcemaps@sourcemap-base-url-without-trailing-slash: add a trailing slash automatically if it is missing@generates es
  - rollup@sourcemaps@sourcemap-base-url: adds a sourcemap base url@generates es
 
-### The `makeAbsoluteExternalsRelative` is not supported
- - rollup@function@external-directory-import: handles using ../ as external import (#4349) (makeAbsoluteExternalsRelative normlized the external id to absolute path, and renormalize to renderPath https://github.com/rollup/rollup/blob/master/src/ExternalChunk.ts#L51)
-
 ### The `output.generatedCode.preset` is not supported 
  - rollup@function@unknown-generated-code-preset: throws for unknown presets for the generatedCode option
 

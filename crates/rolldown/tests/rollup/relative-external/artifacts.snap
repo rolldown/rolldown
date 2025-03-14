@@ -1,0 +1,35 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## main.js
+
+```js
+import "./external";
+
+```
+---
+
+Variant: ()
+
+# Assets
+
+## main.js
+
+```js
+import "./external";
+
+```
+---
+
+Variant: ()
+
+# Assets
+
+## chunk/main.js
+
+```js
+import "../external";
+
+```

@@ -575,6 +575,12 @@
     "ConfigVariant": {
       "type": "object",
       "properties": {
+        "entryFilenames": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
         "exports": {
           "anyOf": [
             {

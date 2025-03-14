@@ -32,7 +32,7 @@ impl Module {
   pub fn id(&self) -> &str {
     match self {
       Module::Normal(v) => &v.id,
-      Module::External(v) => &v.name,
+      Module::External(v) => &v.id,
     }
   }
 

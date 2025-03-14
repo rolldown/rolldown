@@ -3,7 +3,6 @@ use oxc::ast_visit::{VisitMut, walk_mut};
 use oxc::span::{CompactStr, SPAN, Span};
 use rolldown_common::{Interop, Module, SymbolRef};
 use rolldown_ecmascript_utils::{CallExpressionExt, TakeIn};
-use rolldown_utils::ecmascript::legitimize_identifier_name;
 
 use super::IsolatingModuleFinalizer;
 
@@ -367,7 +366,7 @@ impl<'ast> IsolatingModuleFinalizer<'_, 'ast> {
       }
       Module::External(external_module) => {
         // TODO need to generate one symbol and deconflict it
-        legitimize_identifier_name(&external_module.name).into()
+        external_module.identifier_name.as_str().into()
       }
     }
   }

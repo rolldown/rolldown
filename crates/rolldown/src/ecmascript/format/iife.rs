@@ -35,7 +35,6 @@ use crate::{
     render_chunk_exports::render_chunk_exports,
   },
 };
-use arcstr::ArcStr;
 use rolldown_common::{ExternalModule, OutputExports};
 use rolldown_error::{BuildDiagnostic, BuildResult};
 use rolldown_sourcemap::SourceJoiner;
@@ -191,16 +190,19 @@ async fn render_iife_factory_arguments(
   };
   let globals = &ctx.options.globals;
   for external in externals {
-    let global = globals.call(external.name.as_str()).await;
+    let global = globals.call(external.id.as_str()).await;
     let target = match &global {
       Some(global_name) => legitimize_identifier_name(global_name).to_string(),
       None => {
-        let target = legitimize_identifier_name(&external.name).to_string();
         warnings.push(
-          BuildDiagnostic::missing_global_name(external.name.clone(), ArcStr::from(&target))
-            .with_severity_warning(),
+          BuildDiagnostic::missing_global_name(
+            // Here the rollup using external.id
+            external.name.clone(),
+            external.identifier_name.clone(),
+          )
+          .with_severity_warning(),
         );
-        target
+        external.identifier_name.to_string()
       }
     };
     factory_arguments.push(target);

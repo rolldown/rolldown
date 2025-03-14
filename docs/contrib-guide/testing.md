@@ -10,7 +10,7 @@ We have two groups of test suites: one for Rust, and one for Node.js.
 
 1. When adding new feature with options, always make sure adding related tests in javascript side if possible.
 
-Some test related skills maybe helpful [details](#test-skills)  
+Here is some details about how to choose test technique [details](#how-to-choose-test-technique)  
 :::
 
 ## Summary
@@ -117,7 +117,7 @@ In `/packages/rollup-tests`:
 - `just test-node rollup` will run rollup tests.
 - `just test-node rollup --update` will run and update the tests' status.
 
-### Test skills
+### How to choose test technique
 
 Our rust test infra is powerful enough to cover most of the case of javascript(plugin, passing function inside config).
 But since Javascript side user is still our first class user, try to put tests in javascript side if possible.

@@ -122,3 +122,22 @@ test('call transformContext error', async () => {
   })
   expect(error!.message).toContain('transform hook error')
 })
+
+describe('Error output format', () => {
+  test('should correctly output the custom error defined on the rust side', async () => {
+    try {
+      const build = await rolldown({
+        input: './error.js',
+        cwd: import.meta.dirname,
+      })
+      await build.write()
+    } catch (error: any) {
+      expect(removeAnsiColors(error.message)).toMatchSnapshot()
+    }
+  })
+})
+
+// oxlint-disable no-control-regex
+function removeAnsiColors(str: string) {
+  return str.replace(/\x1b\[[0-9;]*m/g, '')
+}

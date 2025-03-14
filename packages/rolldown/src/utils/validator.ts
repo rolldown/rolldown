@@ -180,16 +180,50 @@ const WatchOptionsSchema = v.strictObject({
 })
 
 const ChecksOptionsSchema = v.strictObject({
-  circularDependency: v.pipe(v.optional(v.boolean())),
-  eval: v.pipe(v.optional(v.boolean())),
-  missingGlobalName: v.pipe(v.optional(v.boolean())),
-  missingNameOptionForIifeExport: v.pipe(v.optional(v.boolean())),
-  mixedExport: v.pipe(v.optional(v.boolean())),
-  unresolvedEntry: v.pipe(v.optional(v.boolean())),
-  unresolvedImport: v.pipe(v.optional(v.boolean())),
-  filenameConflict: v.pipe(v.optional(v.boolean())),
-  commonJsVariableInEsm: v.pipe(v.optional(v.boolean())),
-  importIsUndefined: v.pipe(v.optional(v.boolean())),
+  circularDependency: v.pipe(
+    v.optional(v.boolean()),
+    v.description('Whether to emit warning when detecting circular dependency'),
+  ),
+  eval: v.pipe(
+    v.optional(v.boolean()),
+    v.description('Whether to emit warning when detecting eval'),
+  ),
+  missingGlobalName: v.pipe(
+    v.optional(v.boolean()),
+    v.description('Whether to emit warning when detecting missing global name'),
+  ),
+  missingNameOptionForIifeExport: v.pipe(
+    v.optional(v.boolean()),
+    v.description(
+      'Whether to emit warning when detecting missing name option for iife export',
+    ),
+  ),
+  mixedExport: v.pipe(
+    v.optional(v.boolean()),
+    v.description('Whether to emit warning when detecting mixed export'),
+  ),
+  unresolvedEntry: v.pipe(
+    v.optional(v.boolean()),
+    v.description('Whether to emit warning when detecting unresolved entry'),
+  ),
+  unresolvedImport: v.pipe(
+    v.optional(v.boolean()),
+    v.description('Whether to emit warning when detecting unresolved import'),
+  ),
+  filenameConflict: v.pipe(
+    v.optional(v.boolean()),
+    v.description('Whether to emit warning when detecting filename conflict'),
+  ),
+  commonJsVariableInEsm: v.pipe(
+    v.optional(v.boolean()),
+    v.description(
+      'Whether to emit warning when detecting common js variable in esm',
+    ),
+  ),
+  importIsUndefined: v.pipe(
+    v.optional(v.boolean()),
+    v.description('Whether to emit warning when detecting import is undefined'),
+  ),
 })
 
 const MinifyOptionsSchema = v.strictObject({

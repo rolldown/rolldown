@@ -13,12 +13,12 @@ Error: js side error
 exports[`Error output format > should correctly output the custom error defined on the rust side 1`] = `
 "Build failed with 1 error:
 
-[31m[UNRESOLVED_IMPORT] Error:[0m Could not resolve './world' in error.js
-   [38;5;246m╭[0m[38;5;246m─[0m[38;5;246m[[0m error.js:1:19 [38;5;246m][0m
-   [38;5;246m│[0m
- [38;5;246m1 │[0m [38;5;249mi[0m[38;5;249mm[0m[38;5;249mp[0m[38;5;249mo[0m[38;5;249mr[0m[38;5;249mt[0m[38;5;249m [0m[38;5;249mh[0m[38;5;249me[0m[38;5;249ml[0m[38;5;249ml[0m[38;5;249mo[0m[38;5;249m [0m[38;5;249mf[0m[38;5;249mr[0m[38;5;249mo[0m[38;5;249mm[0m[38;5;249m [0m'./world'
- [38;5;240m  │[0m                   ────┬────  
- [38;5;240m  │[0m                       ╰────── Module not found.
-[38;5;246m───╯[0m
+[UNRESOLVED_IMPORT] Error: Could not resolve './world' in error.js
+   ╭─[ error.js:1:19 ]
+   │
+ 1 │ import hello from './world'
+   │                   ────┬────  
+   │                       ╰────── Module not found.
+───╯
 "
 `;

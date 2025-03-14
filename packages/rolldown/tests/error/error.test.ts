@@ -164,7 +164,11 @@ describe('Error output format', () => {
       })
       await build.write()
     } catch (error: any) {
-      expect(error.message).toMatchSnapshot()
+      expect(removeAnsiColors(error.message)).toMatchSnapshot()
     }
   })
 })
+
+function removeAnsiColors(str: string) {
+    return str.replace(/\x1b\[[0-9;]*m/g, '');
+}

@@ -1,6 +1,5 @@
 ---
 source: crates/rolldown_testing/src/integration_test.rs
-snapshot_kind: text
 ---
 # Assets
 
@@ -9,13 +8,13 @@ snapshot_kind: text
 ```js
 "use strict";
 
-const ___foo = __toESM(require("./foo"));
+const foo = __toESM(require("./foo"));
 
 Object.defineProperty(exports, 'all the stuff', {
   enumerable: true,
   get: function () {
-    return ___foo;
+    return foo;
   }
 });
-exports["some export"] = ___foo["some import"]
+exports["some export"] = foo["some import"]
 ```

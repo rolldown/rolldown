@@ -830,7 +830,7 @@ expression: output
 
 # tests/esbuild/default/export_wildcard_fs_node_common_js
 
-- entry-!~{000}~.js => entry-nvIopULT.js
+- entry-!~{000}~.js => entry-L-m_XdA_.js
 
 # tests/esbuild/default/export_wildcard_fs_node_es6
 
@@ -1518,7 +1518,7 @@ expression: output
 
 # tests/esbuild/default/re_export_default_no_bundle_common_js
 
-- entry-!~{000}~.js => entry-U0Dd6NIF.js
+- entry-!~{000}~.js => entry-C__gWJgE.js
 
 # tests/esbuild/default/re_export_default_no_bundle_es6
 
@@ -1646,11 +1646,11 @@ expression: output
 
 # tests/esbuild/default/string_export_names_common_js
 
-- entry-!~{000}~.js => entry-CD14SP2G.js
+- entry-!~{000}~.js => entry-PZHLzRjn.js
 
 # tests/esbuild/default/string_export_names_iife
 
-- entry-!~{000}~.js => entry-FngsL3n8.js
+- entry-!~{000}~.js => entry-DmfAaEXA.js
 
 # tests/esbuild/default/switch_scope_no_bundle
 
@@ -5496,6 +5496,10 @@ expression: output
 # tests/rollup/preserve-for-of-iterable
 
 - main-!~{000}~.js => main-BmgKf-2J.js
+
+# tests/rollup/relative-external
+
+- main-!~{000}~.js => main-CPcH6wqg.js
 
 # tests/rollup/same-binding
 

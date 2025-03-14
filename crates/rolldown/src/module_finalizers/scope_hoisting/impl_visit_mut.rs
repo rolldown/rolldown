@@ -370,10 +370,9 @@ impl<'ast> VisitMut<'ast> for ScopeHoistingFinalizer<'_, 'ast> {
         let rec_id = self.ctx.module.imports[&expr.span];
         let rec = &self.ctx.module.import_records[rec_id];
         let importee_id = rec.resolved_module;
+        let importer_chunk = &self.ctx.chunk_graph.chunk_table[self.ctx.chunk_id];
         match &self.ctx.modules[importee_id] {
           Module::Normal(_importee) => {
-            let importer_chunk = &self.ctx.chunk_graph.chunk_table[self.ctx.chunk_id];
-
             let importee_chunk_id = self.ctx.chunk_graph.entry_module_to_entry_chunk[&importee_id];
             let importee_chunk = &self.ctx.chunk_graph.chunk_table[importee_chunk_id];
 
@@ -382,8 +381,9 @@ impl<'ast> VisitMut<'ast> for ScopeHoistingFinalizer<'_, 'ast> {
             str.value = self.snippet.atom(&import_path);
           }
           Module::External(importee) => {
-            if str.value != importee.name {
-              str.value = self.snippet.atom(&importee.name);
+            let import_path = importee.get_import_path(importer_chunk);
+            if str.value != import_path {
+              str.value = self.snippet.atom(&import_path);
             }
           }
         }

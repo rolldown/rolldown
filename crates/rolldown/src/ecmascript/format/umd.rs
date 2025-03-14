@@ -1,8 +1,7 @@
-use arcstr::ArcStr;
 use rolldown_common::{ExternalModule, OutputExports};
 use rolldown_error::{BuildDiagnostic, BuildResult};
 use rolldown_sourcemap::SourceJoiner;
-use rolldown_utils::ecmascript::legitimize_identifier_name;
+use rolldown_utils::concat_string;
 
 use crate::{
   ecmascript::{
@@ -63,12 +62,12 @@ pub async fn render_umd<'code>(
   // The function argument and the external imports are passed as arguments to the wrapper function.
   let need_global = has_exports || named_exports || !externals.is_empty();
   let wrapper_parameters = if need_global { "global, factory" } else { "factory" };
-  let amd_dependencies = render_amd_dependencies(&externals, has_exports && named_exports);
+  let amd_dependencies = render_amd_dependencies(ctx, &externals, has_exports && named_exports);
   let global_argument = if need_global { "this, " } else { "" };
   let factory_parameters = render_factory_parameters(ctx, &externals, has_exports && named_exports);
   let cjs_intro = if need_global {
     let cjs_export = if has_exports && !named_exports { "module.exports = " } else { "" };
-    let cjs_dependencies = render_cjs_dependencies(&externals, has_exports && named_exports);
+    let cjs_dependencies = render_cjs_dependencies(ctx, &externals, has_exports && named_exports);
     format!(
       "typeof exports === 'object' && typeof module !== 'undefined' ? {cjs_export} factory({cjs_dependencies}) :",
     )
@@ -136,26 +135,34 @@ pub async fn render_umd<'code>(
   Ok(source_joiner)
 }
 
-fn render_amd_dependencies(externals: &[&ExternalModule], has_exports: bool) -> String {
+fn render_amd_dependencies(
+  ctx: &GenerateContext<'_>,
+  externals: &[&ExternalModule],
+  has_exports: bool,
+) -> String {
   let mut dependencies = Vec::with_capacity(externals.len());
   if has_exports {
     dependencies.reserve(1);
     dependencies.push("'exports'".to_string());
   }
   externals.iter().for_each(|external| {
-    dependencies.push(format!("'{}'", external.name.as_str()));
+    dependencies.push(concat_string!("'", external.get_import_path(ctx.chunk), "'"));
   });
   dependencies.join(", ")
 }
 
-fn render_cjs_dependencies(externals: &[&ExternalModule], has_exports: bool) -> String {
+fn render_cjs_dependencies(
+  ctx: &GenerateContext<'_>,
+  externals: &[&ExternalModule],
+  has_exports: bool,
+) -> String {
   let mut dependencies = Vec::with_capacity(externals.len());
   if has_exports {
     dependencies.reserve(1);
     dependencies.push("exports".to_string());
   }
   externals.iter().for_each(|external| {
-    dependencies.push(format!("require('{}')", external.name.as_str()));
+    dependencies.push(concat_string!("require('", external.get_import_path(ctx.chunk), "')"));
   });
   dependencies.join(", ")
 }
@@ -173,16 +180,19 @@ async fn render_iife_export(
   let mut dependencies = Vec::with_capacity(externals.len());
 
   for external in externals {
-    let global = ctx.options.globals.call(external.name.as_str()).await;
+    let global = ctx.options.globals.call(external.id.as_str()).await;
     let target = match &global {
       Some(global_name) => global_name.split('.').map(render_property_access).collect::<String>(),
       None => {
-        let target = legitimize_identifier_name(external.name.as_str()).to_string();
         warnings.push(
-          BuildDiagnostic::missing_global_name(external.name.clone(), ArcStr::from(&target))
-            .with_severity_warning(),
+          BuildDiagnostic::missing_global_name(
+            // Here the rollup using external.id
+            external.name.clone(),
+            external.identifier_name.clone(),
+          )
+          .with_severity_warning(),
         );
-        render_property_access(&target)
+        render_property_access(&external.identifier_name)
       }
     };
     dependencies.push(format!("global{target}"));

@@ -17,15 +17,15 @@ var all_the_stuff = __toESM(require("./foo"));
 ```js
 "use strict";
 
-const ___foo = __toESM(require("./foo"));
+const foo = __toESM(require("./foo"));
 
 Object.defineProperty(exports, 'all the stuff', {
   enumerable: true,
   get: function () {
-    return ___foo;
+    return foo;
   }
 });
-exports["some export"] = ___foo["some import"]
+exports["some export"] = foo["some import"]
 ```
 ### diff
 ```diff
@@ -37,16 +37,16 @@ exports["some export"] = ___foo["some import"]
 -__export(entry_exports, {
 -    "all the stuff": () => all_the_stuff,
 -    "some export": () => import_foo["some import"]
-+var ___foo = __toESM(require("./foo"));
++var foo = __toESM(require("./foo"));
 +Object.defineProperty(exports, 'all the stuff', {
 +    enumerable: true,
 +    get: function () {
-+        return ___foo;
++        return foo;
 +    }
  });
 -module.exports = __toCommonJS(entry_exports);
 -var import_foo = require("./foo");
 -var all_the_stuff = __toESM(require("./foo"));
-+exports["some export"] = ___foo["some import"];
++exports["some export"] = foo["some import"];
 
 ```

@@ -21,7 +21,6 @@ use rolldown_common::{
 use rolldown_error::{BuildDiagnostic, BuildResult};
 use rolldown_fs::OsFileSystem;
 use rolldown_plugin::SharedPluginDriver;
-use rolldown_utils::concat_string;
 use rolldown_utils::ecmascript::legitimize_identifier_name;
 use rolldown_utils::indexmap::FxIndexSet;
 use rolldown_utils::rayon::{IntoParallelIterator, ParallelIterator};
@@ -200,23 +199,36 @@ impl ModuleLoader {
               user_defined_entries.iter().map(|(_, resolved_id)| resolved_id.id.as_str()),
             )
             .expect("should have common dir for entries");
-            let relative_path = Path::new(resolved_id.id.as_str())
-              .relative(entries_common_dir.common_root())
-              .normalize();
-            if relative_path.starts_with("..") {
-              relative_path.to_slash_lossy().into()
-            } else {
-              concat_string!("./", relative_path.to_slash_lossy()).into()
-            }
+            let relative_path =
+              Path::new(resolved_id.id.as_str()).relative(entries_common_dir.common_root());
+            relative_path.to_slash_lossy().into()
           } else {
-            resolved_id.id
+            resolved_id.id.clone()
           };
 
-          let symbol_ref = self
-            .symbol_ref_db
-            .create_facade_root_symbol_ref(idx, legitimize_identifier_name(&name).as_ref());
+          let identifier_name = if need_renormalize_render_path {
+            Path::new(resolved_id.id.as_str())
+              .relative(&self.options.cwd)
+              .normalize()
+              .to_slash_lossy()
+              .into()
+          } else {
+            resolved_id.id.clone()
+          };
+          let legitimized_identifier_name = legitimize_identifier_name(&identifier_name);
 
-          let ext = ExternalModule::new(idx, name, external_module_side_effects, symbol_ref);
+          let symbol_ref =
+            self.symbol_ref_db.create_facade_root_symbol_ref(idx, &legitimized_identifier_name);
+
+          let ext = ExternalModule::new(
+            idx,
+            resolved_id.id,
+            name,
+            legitimized_identifier_name.into(),
+            external_module_side_effects,
+            symbol_ref,
+            need_renormalize_render_path,
+          );
           self.intermediate_normal_modules.modules[idx] = Some(ext.into());
         } else {
           self.remaining += 1;

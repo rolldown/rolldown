@@ -6,7 +6,6 @@ use rolldown_common::{
 };
 use rolldown_utils::{
   concat_string,
-  ecmascript::legitimize_identifier_name,
   rayon::{IntoParallelRefIterator, ParallelIterator},
 };
 
@@ -86,7 +85,7 @@ impl LinkStage<'_> {
                       // export * from 'external' would be just removed. So it references nothing.
                       rec.namespace_ref.set_name(
                         &mut symbols.lock().unwrap(),
-                        &concat_string!("import_", legitimize_identifier_name(&importee.name)),
+                        &concat_string!("import_", &importee.identifier_name),
                       );
                     } else {
                       // import ... from 'external' or export ... from 'external'

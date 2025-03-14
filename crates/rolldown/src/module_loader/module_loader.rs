@@ -194,7 +194,7 @@ impl ModuleLoader {
             !matches!(resolved_id.external, ResolvedExternal::Absolute)
               && Path::new(resolved_id.id.as_str()).is_absolute();
 
-          let name = if need_renormalize_render_path {
+          let file_name = if need_renormalize_render_path {
             let entries_common_dir = commondir::CommonDir::try_new(
               user_defined_entries.iter().map(|(_, resolved_id)| resolved_id.id.as_str()),
             )
@@ -223,7 +223,7 @@ impl ModuleLoader {
           let ext = ExternalModule::new(
             idx,
             resolved_id.id,
-            name,
+            file_name,
             legitimized_identifier_name.into(),
             external_module_side_effects,
             symbol_ref,

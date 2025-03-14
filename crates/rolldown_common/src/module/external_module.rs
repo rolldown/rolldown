@@ -15,7 +15,10 @@ pub struct ExternalModule {
   /// - Used for iife format to inject symbol and deconflict.
   /// - Used for for rewrite `import { foo } from 'external';console.log(foo)` to `var external = require('external'); console.log(external.foo)` in cjs format.
   pub namespace_ref: SymbolRef,
+  // The resolved id of the external module. It could be a absolute path or a relative path.
+  // If resolved id `external` is `true`, the absolute ids will be converted to relative ids based on the `makeAbsoluteExternalsRelative` option
   pub id: ArcStr,
+  // Similar to the rollup `ExternalChunk#get_file_name`, It could be a absolute path or a normalized relative path.
   pub name: ArcStr,
   pub identifier_name: ArcStr,
   pub import_records: IndexVec<ImportRecordIdx, ResolvedImportRecord>,

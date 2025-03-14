@@ -34,5 +34,6 @@ bitflags! {
     const UnloadableDependencyError = 1 << 26;
     const IoError = 1 << 27;
     const NapiError = 1 << 28;
+    const ConfigurationFieldConflict = 1 << 29;
   }
 }

@@ -3,7 +3,7 @@ use std::path::Path;
 use oxc::transformer::{ESTarget, InjectGlobalVariablesConfig, TransformOptions};
 use rolldown_common::{
   Comments, GlobalsOutputOption, InjectImport, MinifyOptions, ModuleType, NormalizedBundlerOptions,
-  OutputFormat, Platform,
+  NormalizedJsxOptions, OutputFormat, Platform,
 };
 use rolldown_error::{BuildDiagnostic, InvalidOptionType};
 use rustc_hash::{FxHashMap, FxHashSet};
@@ -177,8 +177,19 @@ pub fn normalize_options(mut raw_options: crate::BundlerOptions) -> NormalizeOpt
     },
   );
   let target = raw_options.target.unwrap_or_default();
-  let transform_options =
+  let mut transform_options =
     raw_options.transform.unwrap_or_else(|| TransformOptions::from(ESTarget::from(target)));
+  let jsx = match raw_options.jsx.unwrap_or_default() {
+    rolldown_common::Jsx::Disable => NormalizedJsxOptions::Disable,
+    rolldown_common::Jsx::Preserve => NormalizedJsxOptions::Preserve,
+    rolldown_common::Jsx::Enable(jsx_options) => {
+      transform_options.jsx =
+        NormalizedBundlerOptions::merge_jsx_options(jsx_options, transform_options.jsx);
+      NormalizedJsxOptions::Enable
+    }
+  };
+  transform_options.jsx.jsx_plugin = matches!(jsx, NormalizedJsxOptions::Enable);
+
   let normalized = NormalizedBundlerOptions {
     input: raw_options.input.unwrap_or_default(),
     cwd: raw_options
@@ -232,7 +243,7 @@ pub fn normalize_options(mut raw_options: crate::BundlerOptions) -> NormalizeOpt
     inline_dynamic_imports,
     advanced_chunks: raw_options.advanced_chunks,
     checks: raw_options.checks.unwrap_or_default().into(),
-    jsx: raw_options.jsx.unwrap_or_default(),
+    jsx,
     watch: raw_options.watch.unwrap_or_default(),
     comments: raw_options.comments.unwrap_or(Comments::Preserve),
     drop_labels: FxHashSet::from_iter(raw_options.drop_labels.unwrap_or_default()),

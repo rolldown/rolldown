@@ -12,7 +12,7 @@ use rustc_hash::{FxHashMap, FxHashSet};
 use super::advanced_chunks_options::AdvancedChunksOptions;
 use super::comments::Comments;
 use super::experimental_options::ExperimentalOptions;
-use super::jsx::Jsx;
+use super::jsx::NormalizedJsxOptions;
 use super::minify_options::MinifyOptions;
 use super::output_option::{AssetFilenamesOutputOption, ChunkFilenamesOutputOption};
 use super::sanitize_filename::SanitizeFilename;
@@ -81,7 +81,7 @@ pub struct NormalizedBundlerOptions {
   pub advanced_chunks: Option<AdvancedChunksOptions>,
   pub checks: EventKindSwitcher,
   pub profiler_names: bool,
-  pub jsx: Jsx,
+  pub jsx: NormalizedJsxOptions,
   pub watch: WatchOption,
   pub comments: Comments,
   pub drop_labels: FxHashSet<String>,
@@ -139,7 +139,6 @@ impl Default for NormalizedBundlerOptions {
       advanced_chunks: Default::default(),
       checks: Default::default(),
       profiler_names: Default::default(),
-      jsx: Default::default(),
       watch: Default::default(),
       comments: Comments::None,
       drop_labels: Default::default(),
@@ -148,6 +147,7 @@ impl Default for NormalizedBundlerOptions {
       defer_sync_scan_data: Default::default(),
       transform_options: Default::default(),
       make_absolute_externals_relative: Default::default(),
+      jsx: Default::default(),
     }
   }
 }

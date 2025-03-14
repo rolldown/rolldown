@@ -255,6 +255,7 @@ export interface BindingChecksOptions {
   filenameConflict?: boolean
   commonJsVariableInEsm?: boolean
   importIsUndefined?: boolean
+  configurationFieldConflict?: boolean
 }
 
 export interface BindingDeferSyncScanData {

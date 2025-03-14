@@ -490,6 +490,12 @@
             "null"
           ]
         },
+        "configurationFieldConflict": {
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
         "eval": {
           "type": [
             "boolean",

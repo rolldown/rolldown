@@ -61,4 +61,10 @@ export interface ChecksOptions {
    * @default true
    * */
   importIsUndefined?: boolean
+
+  /**
+   * Whether to emit warning when detecting configuration field conflict
+   * @default true
+   * */
+  configurationFieldConflict?: boolean
 }

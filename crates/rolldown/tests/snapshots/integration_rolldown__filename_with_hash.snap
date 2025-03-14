@@ -5443,6 +5443,10 @@ expression: output
 
 - main-!~{000}~.js => main-B6XUK6l8.js
 
+# tests/rolldown/warnings/configuration_field_conflict
+
+- main-!~{000}~.js => main-ClxVg-BL.js
+
 # tests/rolldown/warnings/eval
 
 - main-!~{000}~.js => main-C19YJ4Pg.js

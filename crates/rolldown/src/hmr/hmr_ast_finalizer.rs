@@ -5,7 +5,7 @@ use oxc::{
   semantic::{Scoping, SymbolId},
   span::Atom,
 };
-use rolldown_common::{IndexModules, Module, NormalModule};
+use rolldown_common::{IndexModules, Module, ModuleIdx, NormalModule};
 use rolldown_ecmascript_utils::{
   AstSnippet, BindingIdentifierExt, BindingPatternExt, ExpressionExt, quote_stmt,
 };
@@ -18,8 +18,9 @@ pub struct HmrAstFinalizer<'me, 'ast> {
   pub scoping: &'me Scoping,
   pub modules: &'me IndexModules,
   pub module: &'me NormalModule,
-  pub import_binding: FxHashMap<SymbolId, String>,
+  pub module_idx_to_init_fn_name: &'me FxHashMap<ModuleIdx, String>,
   //Internal state
+  pub import_binding: FxHashMap<SymbolId, String>,
   pub exports: FxHashMap<Atom<'ast>, Atom<'ast>>,
 }
 
@@ -144,7 +145,60 @@ impl<'ast> VisitMut<'ast> for HmrAstFinalizer<'_, 'ast> {
     let try_stmt =
       self.snippet.builder.alloc_try_statement(SPAN, try_block, NONE, Some(final_block));
 
-    it.body.push(ast::Statement::TryStatement(try_stmt));
+    let init_fn_name = &self.module_idx_to_init_fn_name[&self.module.idx];
+
+    // function () { [user code] }
+    let user_code_wrapper =
+      ast::Expression::FunctionExpression(self.snippet.builder.alloc_function(
+        SPAN,
+        ast::FunctionType::FunctionExpression,
+        None,
+        false,
+        false,
+        false,
+        NONE,
+        NONE,
+        self.snippet.builder.formal_parameters(
+          SPAN,
+          ast::FormalParameterKind::Signature,
+          self.snippet.builder.vec_with_capacity(2),
+          NONE,
+        ),
+        NONE,
+        Some(self.snippet.builder.function_body(
+          SPAN,
+          self.snippet.builder.vec(),
+          self.snippet.builder.vec1(ast::Statement::TryStatement(try_stmt)),
+        )),
+      ));
+
+    // var init_foo = __rolldown__runtime.createEsmInitializer(function () { [user code] })
+    let var_decl = self.snippet.builder.alloc_variable_declaration(
+      SPAN,
+      ast::VariableDeclarationKind::Var,
+      self.snippet.builder.vec1(self.snippet.builder.variable_declarator(
+        SPAN,
+        ast::VariableDeclarationKind::Var,
+        self.snippet.builder.binding_pattern(
+          ast::BindingPatternKind::BindingIdentifier(
+            self.snippet.builder.alloc_binding_identifier(SPAN, init_fn_name),
+          ),
+          NONE,
+          false,
+        ),
+        Some(ast::Expression::CallExpression(self.snippet.builder.alloc_call_expression(
+          SPAN,
+          self.snippet.id_ref_expr("__rolldown_runtime__.createEsmInitializer", SPAN),
+          NONE,
+          self.snippet.builder.vec1(ast::Argument::from(user_code_wrapper)),
+          false,
+        ))),
+        false,
+      )),
+      false,
+    );
+
+    it.body.push(ast::Statement::VariableDeclaration(var_decl));
   }
 
   fn visit_statement(&mut self, node: &mut ast::Statement<'ast>) {

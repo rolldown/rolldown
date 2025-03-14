@@ -169,6 +169,7 @@ describe('Error output format', () => {
   })
 })
 
+// oxlint-disable no-control-regex
 function removeAnsiColors(str: string) {
-    return str.replace(/\x1b\[[0-9;]*m/g, '');
+  return str.replace(/\x1b\[[0-9;]*m/g, '')
 }

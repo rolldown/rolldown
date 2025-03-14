@@ -14,6 +14,7 @@ pub struct BindingChecksOptions {
   pub filename_conflict: Option<bool>,
   pub common_js_variable_in_esm: Option<bool>,
   pub import_is_undefined: Option<bool>,
+  pub configuration_field_conflict: Option<bool>,
 }
 impl From<BindingChecksOptions> for rolldown_common::ChecksOptions {
   fn from(value: BindingChecksOptions) -> Self {
@@ -28,6 +29,7 @@ impl From<BindingChecksOptions> for rolldown_common::ChecksOptions {
       filename_conflict: value.filename_conflict,
       common_js_variable_in_esm: value.common_js_variable_in_esm,
       import_is_undefined: value.import_is_undefined,
+      configuration_field_conflict: value.configuration_field_conflict,
     }
   }
 }

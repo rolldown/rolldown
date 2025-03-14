@@ -38,9 +38,9 @@ pub enum EventKind {
   UnhandleableError = 25,
   UnloadableDependencyError = 26,
 
-  // TODO remove following kinds
   IoError = 27,
   NapiError = 28,
+  ConfigurationFieldConflict = 29,
 }
 
 impl Display for EventKind {
@@ -81,9 +81,9 @@ impl Display for EventKind {
       EventKind::UnhandleableError => write!(f, "UNHANDLEABLE_ERROR"),
       EventKind::UnloadableDependencyError => write!(f, "UNLOADABLE_DEPENDENCY"),
 
-      // TODO remove following kinds
       EventKind::IoError => write!(f, "IO_ERROR"),
       EventKind::NapiError => write!(f, "NAPI_ERROR"),
+      EventKind::ConfigurationFieldConflict => write!(f, "CONFIGURATION_FIELD_CONFLICT"),
     }
   }
 }

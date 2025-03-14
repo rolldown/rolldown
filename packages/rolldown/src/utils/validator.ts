@@ -224,6 +224,12 @@ const ChecksOptionsSchema = v.strictObject({
     v.optional(v.boolean()),
     v.description('Whether to emit warning when detecting import is undefined'),
   ),
+  configurationFieldConflict: v.pipe(
+    v.optional(v.boolean()),
+    v.description(
+      'Whether to emit warning when detecting configuration field conflict',
+    ),
+  ),
 })
 
 const MinifyOptionsSchema = v.strictObject({

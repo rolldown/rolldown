@@ -26,6 +26,7 @@ OPTIONS
   --banner <banner>           Code to insert the top of the bundled file (outside the wrapper function).
   --checks.circular-dependency Whether to emit warning when detecting circular dependency.
   --checks.common-js-variable-in-esm Whether to emit warning when detecting common js variable in esm.
+  --checks.configuration-field-conflict Whether to emit warning when detecting configuration field conflict.
   --checks.eval               Whether to emit warning when detecting eval.
   --checks.filename-conflict  Whether to emit warning when detecting filename conflict.
   --checks.import-is-undefined Whether to emit warning when detecting import is undefined.

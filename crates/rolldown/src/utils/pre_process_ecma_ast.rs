@@ -1,4 +1,3 @@
-use std::borrow::Cow;
 use std::path::Path;
 
 use itertools::Itertools;
@@ -10,7 +9,7 @@ use oxc::transformer::{
   InjectGlobalVariables, ReplaceGlobalDefines, ReplaceGlobalDefinesConfig, Transformer,
 };
 
-use rolldown_common::{ESTarget, Jsx, NormalizedBundlerOptions};
+use rolldown_common::{ESTarget, NormalizedBundlerOptions};
 use rolldown_ecmascript::{EcmaAst, WithMutFields};
 use rolldown_error::{BuildDiagnostic, BuildResult, Severity};
 
@@ -74,26 +73,9 @@ impl PreProcessEcmaAst {
       || !matches!(bundle_options.target, ESTarget::EsNext)
     {
       let ret = ast.program.with_mut(|fields| {
-        let transform_options = if matches!(parsed_type, OxcParseType::Js) {
-          Cow::Borrowed(&bundle_options.transform_options)
-        } else {
-          let mut transformer_options = bundle_options.transform_options.clone();
-          let jsx_plugin = match &bundle_options.jsx {
-            Jsx::Disable => unreachable!("Jsx::Disable should be failed at parser."),
-            // The oxc jsx_plugin is enabled by default, we need to disable it.
-            Jsx::Preserve => false,
-            Jsx::Enable(jsx) => {
-              transformer_options.jsx =
-                NormalizedBundlerOptions::merge_jsx_options(jsx.clone(), transformer_options.jsx);
-              matches!(parsed_type, OxcParseType::Tsx | OxcParseType::Jsx)
-            }
-          };
+        let transform_options = &bundle_options.transform_options;
 
-          transformer_options.jsx.jsx_plugin = jsx_plugin;
-          Cow::Owned(transformer_options)
-        };
-
-        Transformer::new(fields.allocator, Path::new(path), &transform_options)
+        Transformer::new(fields.allocator, Path::new(path), transform_options)
           .build_with_scoping(scoping, fields.program)
       });
 

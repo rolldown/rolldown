@@ -11,6 +11,7 @@ use crate::events::DiagnosableArcstr;
 #[cfg(feature = "napi")]
 use crate::events::NapiError;
 use crate::events::assign_to_import::AssignToImport;
+use crate::events::configuration_field_conflict::ConfigurationFieldConflict;
 use crate::events::export_undefined_variable::ExportUndefinedVariable;
 use crate::events::filename_conflict::FilenameConflict;
 use crate::events::illegal_identifier_as_name::IllegalIdentifierAsName;
@@ -264,6 +265,20 @@ impl BuildDiagnostic {
 
   pub fn eval(filename: String, source: ArcStr, span: Span) -> Self {
     Self::new_inner(Eval { filename, span, source })
+  }
+
+  pub fn configuration_field_conflict(
+    a_config_name: &str,
+    a_field_name: &str,
+    b_config_name: &str,
+    b_field_name: &str,
+  ) -> Self {
+    Self::new_inner(ConfigurationFieldConflict {
+      a_field: a_field_name.to_string(),
+      a_config_name: a_config_name.to_string(),
+      b_field: b_field_name.to_string(),
+      b_config_name: b_config_name.to_string(),
+    })
   }
 
   pub fn export_undefined_variable(

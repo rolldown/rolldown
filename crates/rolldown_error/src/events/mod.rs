@@ -11,6 +11,7 @@ pub mod ambiguous_external_namespace;
 pub mod assign_to_import;
 pub mod circular_dependency;
 pub mod commonjs_variable_in_esm;
+pub mod configuration_field_conflict;
 pub mod eval;
 pub mod export_undefined_variable;
 pub mod external_entry;

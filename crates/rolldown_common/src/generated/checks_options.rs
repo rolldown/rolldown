@@ -22,6 +22,7 @@ pub struct ChecksOptions {
   pub filename_conflict: Option<bool>,
   pub common_js_variable_in_esm: Option<bool>,
   pub import_is_undefined: Option<bool>,
+  pub configuration_field_conflict: Option<bool>,
 }
 impl From<ChecksOptions> for rolldown_error::EventKindSwitcher {
   fn from(value: ChecksOptions) -> Self {
@@ -59,6 +60,10 @@ impl From<ChecksOptions> for rolldown_error::EventKindSwitcher {
     flag.set(
       rolldown_error::EventKindSwitcher::ImportIsUndefined,
       value.import_is_undefined.unwrap_or(true),
+    );
+    flag.set(
+      rolldown_error::EventKindSwitcher::ConfigurationFieldConflict,
+      value.configuration_field_conflict.unwrap_or(true),
     );
     flag
   }

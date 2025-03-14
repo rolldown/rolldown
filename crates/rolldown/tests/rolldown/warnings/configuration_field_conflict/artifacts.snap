@@ -1,0 +1,26 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# warnings
+
+## CONFIGURATION_FIELD_CONFLICT
+
+```text
+[CONFIGURATION_FIELD_CONFLICT] Warning: compilerOptions.jsxFactory in `tsconfig.json` will be override by jsx.factory in `rolldown.config.js` since `rolldown.config.js` has higher priority.
+Make sure this is what you expected
+
+```
+# Assets
+
+## main.js
+
+```js
+
+//#region main.tsx
+function Something() {
+	return /* @__PURE__ */ React.createElement("div", null, "Something");
+}
+console.log(`<Something/>: `, /* @__PURE__ */ React.createElement(Something, null));
+
+//#endregion
+```

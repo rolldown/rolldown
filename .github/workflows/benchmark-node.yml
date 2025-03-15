@@ -41,13 +41,13 @@ jobs:
       contents: write
     steps:
       - name: Checkout Branch
-        uses: actions/checkout@v4
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4
         with:
           # Whether Pull submodules for additional files
           submodules: false
 
       - name: Download previous benchmark data
-        uses: actions/checkout@v4
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4
         with:
           # https://github.com/rolldown/benchmark-results-storage
           repository: rolldown/benchmark-results-storage

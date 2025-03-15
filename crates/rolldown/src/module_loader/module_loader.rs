@@ -119,7 +119,23 @@ impl ModuleLoader {
 
     let task = RuntimeModuleTask::new(runtime_id, tx.clone(), Arc::clone(&options));
 
-    tokio::spawn(async { task.run() });
+    let future = async { task.run() };
+
+    #[cfg(target_family = "wasm")]
+    {
+      use tokio;
+      std::thread::spawn(|| {
+        let rt = tokio::runtime::Builder::new_current_thread().build();
+        match rt {
+          Ok(rt) => rt.block_on(future),
+          Err(e) => tracing::error!("create runtime error: {e:?}"),
+        }
+      });
+    }
+    #[cfg(not(target_family = "wasm"))]
+    {
+      tokio::spawn(future);
+    }
 
     Ok(Self {
       tx,
@@ -242,7 +258,21 @@ impl ModuleLoader {
             assert_module_type,
           );
 
-          tokio::spawn(task.run());
+          #[cfg(target_family = "wasm")]
+          {
+            use tokio;
+            std::thread::spawn(|| {
+              let rt = tokio::runtime::Builder::new_current_thread().build();
+              match rt {
+                Ok(rt) => rt.block_on(task.run()),
+                Err(e) => tracing::error!("create runtime error: {e:?}"),
+              }
+            });
+          }
+          #[cfg(not(target_family = "wasm"))]
+          {
+            tokio::spawn(task.run());
+          }
         }
 
         *not_visited.insert(idx)
@@ -286,6 +316,7 @@ impl ModuleLoader {
     let mut extra_entry_points = vec![];
 
     let mut runtime_brief: Option<RuntimeModuleBrief> = None;
+
     while self.remaining > 0 {
       let Some(msg) = self.rx.recv().await else {
         break;

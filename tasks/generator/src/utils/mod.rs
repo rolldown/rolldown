@@ -1,3 +1,4 @@
+pub(crate) mod syn_utils;
 use oxc::{
   allocator::Allocator,
   ast::{AstKind, ast::Program},

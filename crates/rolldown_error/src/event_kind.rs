@@ -6,6 +6,7 @@ use std::fmt::Display;
 pub enum EventKind {
   // --- These kinds are copied from rollup: https://github.com/rollup/rollup/blob/0b665c31833525c923c0fc20f43ebfca748c6670/src/utils/logs.ts#L102-L179
   AmbiguousExternalNamespaceError = 0,
+  /// Whether to emit warning when detecting circular dependency
   CircularDependency = 1,
   Eval = 2,
   IllegalIdentifierAsNameError = 3,

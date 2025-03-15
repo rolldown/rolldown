@@ -2,8 +2,7 @@
   "$schema": "https://docs.renovatebot.com/renovate-schema.json",
   "extends": [
     "github>Boshen/renovate",
-    "helpers:pinGitHubActionDigestsToSemver",
-    "dependencyDashboard"
+    "helpers:pinGitHubActionDigestsToSemver"
   ],
   "ignorePaths": [
     "**/node_modules/**",

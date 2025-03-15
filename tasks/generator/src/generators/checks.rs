@@ -7,17 +7,17 @@ use syn::{File, parse_str};
 use crate::{
   define_generator,
   output::{add_header, output_path, rust_output_path},
-  utils::extract_toplevel_item_span,
+  utils::{extract_toplevel_item_span, syn_utils::extract_doc_comments},
 };
 
 use super::{Context, Generator, Runner};
 
-/// For now auto generate fallback diagnostic
-/// Because the limitation of `syn` crate, https://github.com/dtolnay/syn/issues/1745
-/// We need to put the custom `Variant` related comments here
-/// e.g.
-/// ("CircularDependency", "Some description")
-static VARIANT_RELATED_COMMENTS: [(&str, &str); 0] = [];
+#[derive(Debug)]
+struct EventKindInfo {
+  variant: String,
+  index: usize,
+  doc_comments: Option<String>,
+}
 
 pub struct CheckOptionsGenerator {
   pub disabled_event: Vec<&'static str>,
@@ -79,7 +79,7 @@ impl Generator for CheckOptionsGenerator {
   }
 }
 /// Extract event *Variant* and *Number* pairs from the `EventKind` enum.
-fn extract_event_kind_enum(ast: &File) -> Vec<(String, usize)> {
+fn extract_event_kind_enum(ast: &File) -> Vec<EventKindInfo> {
   let event_kind_enum = ast
     .items
     .iter()
@@ -102,13 +102,17 @@ fn extract_event_kind_enum(ast: &File) -> Vec<(String, usize)> {
         _ => panic!("Unexpected discriminant type"),
       })
       .unwrap();
-    ret.push((name, number));
+    ret.push(EventKindInfo {
+      variant: name,
+      index: number,
+      doc_comments: extract_doc_comments(&variant.attrs).map(|item| item.trim().to_string()),
+    });
   }
   ret
 }
 
 /// `quote!` can not generate bitflags properly(The format is mess)
-fn generate_event_kind_switch_config(variant_and_number_pairs: &Vec<(String, usize)>) -> String {
+fn generate_event_kind_switch_config(variant_and_number_pairs: &Vec<EventKindInfo>) -> String {
   let mut fields = vec![];
   let type_size = match variant_and_number_pairs.len() {
     0..=8 => 8,
@@ -118,7 +122,7 @@ fn generate_event_kind_switch_config(variant_and_number_pairs: &Vec<(String, usi
     65..=128 => 128,
     _ => panic!("Too many variants"),
   };
-  for (variant, number) in variant_and_number_pairs {
+  for EventKindInfo { variant, index: number, .. } in variant_and_number_pairs {
     fields.push(format!("const {} = 1 << {};", variant.to_upper_camel_case(), number));
   }
   format!(
@@ -136,13 +140,13 @@ bitflags! {{
 }
 
 fn generate_check_inner_options_and_binding(
-  variant_and_number_pairs: &Vec<(String, usize)>,
+  variant_and_number_pairs: &Vec<EventKindInfo>,
   generator: &CheckOptionsGenerator,
 ) -> (TokenStream, TokenStream) {
   let mut struct_fields = vec![];
   let mut field_initializer_list = vec![];
   let mut event_kind_switcher_initializer = vec![];
-  for (variant, _) in variant_and_number_pairs {
+  for EventKindInfo { variant, .. } in variant_and_number_pairs {
     if variant.ends_with("Error") {
       continue;
     }
@@ -208,24 +212,19 @@ fn generate_check_inner_options_and_binding(
 }
 
 fn generate_check_options(
-  variant_and_number_pairs: &[(String, usize)],
+  variant_and_number_pairs: &[EventKindInfo],
   generator: &CheckOptionsGenerator,
 ) -> String {
   let mut fields = vec![];
-  for (variant, _) in variant_and_number_pairs {
+  for EventKindInfo { variant, doc_comments, .. } in variant_and_number_pairs {
     if variant.ends_with("Error") {
       continue;
     }
     let camel_case = variant.to_lower_camel_case();
-    let related_comments = VARIANT_RELATED_COMMENTS
-      .iter()
-      .find_map(|(name, comment_content)| {
-        (name == &variant.as_str()).then_some((*comment_content).to_string())
-      })
-      .unwrap_or(format!(
-        "Whether to emit warning when detecting {}",
-        variant.to_title_case().to_lowercase()
-      ));
+    let related_comments = doc_comments.clone().unwrap_or(format!(
+      "Whether to emit warning when detecting {}",
+      variant.to_title_case().to_lowercase()
+    ));
     let default_value = !generator.disabled_event.contains(&variant.as_str());
     fields.push(format!(
       r"
@@ -248,31 +247,27 @@ fn generate_check_options(
 
 /// (range_replaced_code, range)
 fn generate_validate_check_options(
-  variant_and_number_pairs: &[(String, usize)],
+  variant_and_number_pairs: &[EventKindInfo],
   source: &str,
   path: &str,
 ) -> (String, Span) {
   let mut fields = vec![];
-  for (variant, _) in variant_and_number_pairs {
+  for EventKindInfo { variant, doc_comments, .. } in variant_and_number_pairs {
     if variant.ends_with("Error") {
       continue;
     }
 
     let camel_case = variant.to_lower_camel_case();
-    let related_comments = VARIANT_RELATED_COMMENTS
-      .iter()
-      .find_map(|(name, comment_content)| {
-        (name == &variant.as_str()).then_some((*comment_content).to_string())
-      })
-      .unwrap_or(format!(
-        "Whether to emit warning when detecting {}",
-        variant.to_title_case().to_lowercase()
-      ));
+    let related_comments = doc_comments.clone().unwrap_or(format!(
+      "Whether to emit warning when detecting {}",
+      variant.to_title_case().to_lowercase()
+    ));
+    let quote_kind = if related_comments.contains('\n') { '`' } else { '"' };
     fields.push(format!(
       r"{camel_case}: v.pipe(
     v.optional(v.boolean()),
     v.description(
-      '{related_comments}',
+      {quote_kind}{related_comments}{quote_kind},
     ),
   ),",
     ));

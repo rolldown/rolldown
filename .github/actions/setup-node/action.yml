@@ -9,7 +9,7 @@ runs:
       uses: pnpm/action-setup@v4
 
     - name: Install Node.js
-      uses: actions/setup-node@v4
+      uses: actions/setup-node@1d0ff469b7ec7b3cb9d8673fde0c81c44821de2a # v4
       with:
         node-version-file: .node-version
         cache: 'pnpm'
@@ -19,7 +19,7 @@ runs:
       run: |
         echo "STORE_PATH=$(pnpm store path --silent)" >> $GITHUB_ENV
 
-    - uses: actions/cache@v4
+    - uses: actions/cache@d4323d4df104b026a6aa633fdb11d772146be0bf # v4
       name: Setup pnpm cache
       if: ${{ github.ref_name == 'main' }}
       with:
@@ -28,7 +28,7 @@ runs:
         restore-keys: |
           ${{ runner.os }}-pnpm-store-
 
-    - uses: actions/cache/restore@v4
+    - uses: actions/cache/restore@d4323d4df104b026a6aa633fdb11d772146be0bf # v4
       if: ${{ github.ref_name != 'main' }}
       with:
         path: ${{ env.STORE_PATH }}

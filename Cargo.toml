@@ -145,7 +145,7 @@ itoa                = "1.0.11"
 json-strip-comments = "1.0.4"
 jsonschema          = { version = "0.29.0", default-features = false }
 memchr              = "2.7.2"
-mimalloc            = "0.1.42"
+mimalloc-safe       = "0.1.49"
 mime                = "0.3.17"
 napi                = { version = "3.0.0-alpha.31", features = ["async", "anyhow"] }
 napi-build          = { version = "2.1.5" }

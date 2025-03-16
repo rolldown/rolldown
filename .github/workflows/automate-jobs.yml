@@ -19,7 +19,7 @@ jobs:
     if: github.event.action == 'assigned'
     runs-on: ubuntu-latest
     steps:
-      - uses: actions-cool/issues-helper@a610082f8ac0cf03e357eb8dd0d5e2ba075e017e # v3
+      - uses: actions-cool/issues-helper@a610082f8ac0cf03e357eb8dd0d5e2ba075e017e # v3.6.0
         with:
           actions: 'remove-labels'
           token: ${{ secrets.GITHUB_TOKEN }}

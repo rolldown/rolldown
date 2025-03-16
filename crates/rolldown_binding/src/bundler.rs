@@ -113,7 +113,7 @@ impl Bundler {
   #[napi]
   pub async fn generate_hmr_patch(&self, changed_files: Vec<String>) -> String {
     let mut bundler_core = self.inner.lock().await;
-    bundler_core.generate_hmr_patch(changed_files).expect("Failed to generate HMR patch")
+    bundler_core.generate_hmr_patch(changed_files).await.expect("Failed to generate HMR patch")
   }
 }
 

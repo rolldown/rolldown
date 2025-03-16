@@ -93,6 +93,7 @@ pub use crate::{
   types::entry_point::{EntryPoint, EntryPointKind},
   types::exports_kind::ExportsKind,
   types::external_module_idx::ExternalModuleIdx,
+  types::hybrid_index_vec::HybridIndexVec,
   types::import_kind::ImportKind,
   types::import_record::{
     ImportRecordIdx, ImportRecordMeta, RawImportRecord, ResolvedImportRecord,

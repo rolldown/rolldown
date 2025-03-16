@@ -11,10 +11,10 @@ use oxc_index::IndexVec;
 use rolldown_common::dynamic_import_usage::DynamicImportExportsUsage;
 use rolldown_common::side_effects::{DeterminedSideEffects, HookSideEffects};
 use rolldown_common::{
-  EcmaRelated, EntryPoint, EntryPointKind, ExternalModule, ImportKind, ImportRecordIdx,
-  ImporterRecord, Module, ModuleId, ModuleIdx, ModuleInfo, ModuleLoaderMsg, ModuleSideEffects,
-  ModuleTable, ModuleType, NormalModuleTaskResult, ResolvedId, RuntimeModuleBrief,
-  RuntimeModuleTaskResult, SymbolRefDb, SymbolRefDbForModule, TreeshakeOptions,
+  EcmaRelated, EntryPoint, EntryPointKind, ExternalModule, HybridIndexVec, ImportKind,
+  ImportRecordIdx, ImporterRecord, Module, ModuleId, ModuleIdx, ModuleInfo, ModuleLoaderMsg,
+  ModuleSideEffects, ModuleTable, ModuleType, NormalModuleTaskResult, ResolvedId,
+  RuntimeModuleBrief, RuntimeModuleTaskResult, SymbolRefDb, SymbolRefDbForModule, TreeshakeOptions,
   RUNTIME_MODULE_ID,
 };
 use rolldown_error::{BuildDiagnostic, BuildResult};
@@ -25,22 +25,32 @@ use rolldown_utils::indexmap::FxIndexSet;
 use rolldown_utils::rayon::{IntoParallelIterator, ParallelIterator};
 use rolldown_utils::rustc_hash::FxHashSetExt;
 use rustc_hash::{FxHashMap, FxHashSet};
+use std::collections::hash_map::Entry;
+use std::rc::Rc;
 use std::sync::Arc;
 
 use crate::{SharedOptions, SharedResolver};
 
 pub struct IntermediateNormalModules {
-  pub modules: IndexVec<ModuleIdx, Option<Module>>,
-  pub importers: IndexVec<ModuleIdx, Vec<ImporterRecord>>,
+  pub modules: HybridIndexVec<ModuleIdx, Option<Module>>,
+  pub importers: HybridIndexVec<ModuleIdx, Vec<ImporterRecord>>,
   pub index_ecma_ast: IndexEcmaAst,
   pub index_ast_scope: IndexAstScope,
 }
 
 impl IntermediateNormalModules {
-  pub fn new() -> Self {
+  pub fn new(is_full_scan_mode: bool) -> Self {
     Self {
-      modules: IndexVec::new(),
-      importers: IndexVec::new(),
+      modules: if is_full_scan_mode {
+        HybridIndexVec::IndexVec(Default::default())
+      } else {
+        HybridIndexVec::Map(Default::default())
+      },
+      importers: if is_full_scan_mode {
+        HybridIndexVec::IndexVec(Default::default())
+      } else {
+        HybridIndexVec::Map(Default::default())
+      },
       index_ecma_ast: IndexVec::default(),
       index_ast_scope: IndexVec::default(),
     }
@@ -50,6 +60,12 @@ impl IntermediateNormalModules {
     let id = self.modules.push(None);
     self.importers.push(Vec::new());
     id
+  }
+
+  pub fn alloc_ecma_module_idx_sparse(&mut self, i: ModuleIdx) -> ModuleIdx {
+    self.modules.insert(i, None);
+    self.importers.insert(i, Vec::new());
+    i
   }
 
   pub fn reset_ecma_module_idx(&mut self) {
@@ -64,15 +80,17 @@ pub struct ModuleLoader {
   pub tx: tokio::sync::mpsc::Sender<ModuleLoaderMsg>,
   rx: tokio::sync::mpsc::Receiver<ModuleLoaderMsg>,
   visited: FxHashMap<ArcStr, ModuleIdx>,
+  module_id_to_idx: FxHashMap<ArcStr, ModuleIdx>,
   runtime_id: ModuleIdx,
   remaining: u32,
   intermediate_normal_modules: IntermediateNormalModules,
   symbol_ref_db: SymbolRefDb,
+  is_incremental: bool,
 }
 
 pub struct ModuleLoaderOutput {
   // Stored all modules
-  pub module_table: ModuleTable,
+  pub module_table: HybridIndexVec<ModuleIdx, Module>,
   pub index_ecma_ast: IndexEcmaAst,
   pub index_ast_scope: IndexAstScope,
   pub symbol_ref_db: SymbolRefDb,
@@ -90,7 +108,7 @@ impl ModuleLoader {
     options: SharedOptions,
     resolver: SharedResolver,
     plugin_driver: SharedPluginDriver,
-    mut visited: FxHashMap<ArcStr, ModuleIdx>,
+    module_id_to_idx: FxHashMap<ArcStr, ModuleIdx>,
   ) -> BuildResult<Self> {
     // 1024 should be enough for most cases
     // over 1024 pending tasks are insane
@@ -118,9 +136,11 @@ impl ModuleLoader {
       meta,
     });
 
-    let mut intermediate_normal_modules = IntermediateNormalModules::new();
+    let mut intermediate_normal_modules =
+      IntermediateNormalModules::new(module_id_to_idx.is_empty());
     let runtime_id = intermediate_normal_modules.alloc_ecma_module_idx();
-    let remaining = if !visited.contains_key(RUNTIME_MODULE_ID) {
+    let mut visited = FxHashMap::default();
+    let remaining = if !module_id_to_idx.contains_key(RUNTIME_MODULE_ID) {
       // runtime module is always there
       let task = RuntimeModuleTask::new(runtime_id, tx.clone(), Arc::clone(&options));
 
@@ -143,7 +163,18 @@ impl ModuleLoader {
       intermediate_normal_modules,
       symbol_ref_db: SymbolRefDb::default(),
       visited,
+      is_incremental: !module_id_to_idx.is_empty(),
+      module_id_to_idx,
     })
+  }
+
+  #[inline]
+  pub fn get_idx_with_cache(&self, resolved_id: &ArcStr) -> Option<ModuleIdx> {
+    if !self.is_incremental {
+      None
+    } else {
+      self.module_id_to_idx.get(resolved_id).copied()
+    }
   }
 
   fn try_spawn_new_task(
@@ -153,10 +184,23 @@ impl ModuleLoader {
     is_user_defined_entry: bool,
     assert_module_type: Option<ModuleType>,
   ) -> ModuleIdx {
+    let idx_from_cache = self.get_idx_with_cache(&resolved_id.id);
     match self.visited.entry(resolved_id.id.clone()) {
       std::collections::hash_map::Entry::Occupied(visited) => *visited.get(),
       std::collections::hash_map::Entry::Vacant(not_visited) => {
-        let idx = self.intermediate_normal_modules.alloc_ecma_module_idx();
+        let idx = match idx_from_cache {
+          Some(idx) => self.intermediate_normal_modules.alloc_ecma_module_idx_sparse(idx),
+          None if !self.is_incremental => {
+            let idx = self.intermediate_normal_modules.alloc_ecma_module_idx();
+            idx
+          }
+          None => {
+            let len = self.module_id_to_idx.len();
+            let idx = self.intermediate_normal_modules.alloc_ecma_module_idx_sparse(len.into());
+            self.module_id_to_idx.insert(resolved_id.id.clone(), idx);
+            idx
+          }
+        };
 
         if resolved_id.is_external {
           let external_module_side_effects =
@@ -209,7 +253,7 @@ impl ModuleLoader {
 
           let ext =
             ExternalModule::new(idx, resolved_id.id, external_module_side_effects, symbol_ref);
-          self.intermediate_normal_modules.modules[idx] = Some(ext.into());
+          *self.intermediate_normal_modules.modules.get_mut(idx) = Some(ext.into());
         } else {
           self.remaining += 1;
 
@@ -266,7 +310,7 @@ impl ModuleLoader {
       // set `Owner` to `None` is safe, since it is used to emit `Unloadable` diagnostic, we know this is
       // exists in fs system, which is loadable.
       // TODO: copy assert_module_type
-      // self.try_spawn_new_task(resolved_id, None, false, None);
+      self.try_spawn_new_task(resolved_id, None, false, None);
     }
 
     let mut dynamic_import_entry_ids = FxHashSet::default();
@@ -311,7 +355,7 @@ impl ModuleLoader {
                   raw_rec.asserted_module_type.clone(),
                 );
                 // Dynamic imported module will be considered as an entry
-                self.intermediate_normal_modules.importers[id].push(ImporterRecord {
+                self.intermediate_normal_modules.importers.get_mut(id).push(ImporterRecord {
                   kind: raw_rec.kind,
                   importer_path: ModuleId::new(module.id()),
                 });
@@ -337,7 +381,7 @@ impl ModuleLoader {
             module.set_ast_scope_idx(ast_scope_idx);
             self.symbol_ref_db.store_local_db(module_idx, symbols);
           }
-          self.intermediate_normal_modules.modules[module_idx] = Some(module);
+          *self.intermediate_normal_modules.modules.get_mut(module_idx) = Some(module);
           self.remaining -= 1;
         }
         ModuleLoaderMsg::RuntimeNormalModuleDone(task_result) => {
@@ -358,7 +402,10 @@ impl ModuleLoader {
                 let id =
                   self.try_spawn_new_task(info, None, false, raw_rec.asserted_module_type.clone());
                 // Dynamic imported module will be considered as an entry
-                self.intermediate_normal_modules.importers[id]
+                self
+                  .intermediate_normal_modules
+                  .importers
+                  .get_mut(id)
                   .push(ImporterRecord { kind: raw_rec.kind, importer_path: module.id.clone() });
 
                 if matches!(raw_rec.kind, ImportKind::DynamicImport)
@@ -374,7 +421,7 @@ impl ModuleLoader {
           module.ecma_ast_idx = Some(ast_idx);
           module.ast_scope_idx = Some(ast_scope_idx);
           module.import_records = import_records;
-          self.intermediate_normal_modules.modules[self.runtime_id] = Some(module.into());
+          *self.intermediate_normal_modules.modules.get_mut(self.runtime_id) = Some(module.into());
 
           self.symbol_ref_db.store_local_db(self.runtime_id, local_symbol_ref_db);
           runtime_brief = Some(runtime);
@@ -432,37 +479,41 @@ impl ModuleLoader {
     );
 
     let mut none_empty_importer_module = vec![];
-    let modules: IndexVec<ModuleIdx, Module> = self
-      .intermediate_normal_modules
-      .modules
-      .into_iter()
-      .enumerate()
-      .map(|(id, module)| {
-        let mut module = module.expect("Module tasks did't complete as expected");
+    let modules_iter =
+      self.intermediate_normal_modules.modules.into_iter_enumerated().into_iter().map(
+        |(id, module)| {
+          let mut module = module.expect("Module tasks did't complete as expected");
 
-        if let Some(module) = module.as_normal_mut() {
-          let idx = ModuleIdx::from(id);
-          // Note: (Compat to rollup)
-          // The `dynamic_importers/importers` should be added after `module_parsed` hook.
-          let importers = std::mem::take(&mut self.intermediate_normal_modules.importers[idx]);
-          for importer in &importers {
-            if importer.kind.is_static() {
-              module.importers.insert(importer.importer_path.clone());
-            } else {
-              module.dynamic_importers.insert(importer.importer_path.clone());
+          if let Some(module) = module.as_normal_mut() {
+            let idx = ModuleIdx::from(id);
+            // Note: (Compat to rollup)
+            // The `dynamic_importers/importers` should be added after `module_parsed` hook.
+            let importers = std::mem::take(self.intermediate_normal_modules.importers.get_mut(idx));
+            for importer in &importers {
+              if importer.kind.is_static() {
+                module.importers.insert(importer.importer_path.clone());
+              } else {
+                module.dynamic_importers.insert(importer.importer_path.clone());
+              }
+            }
+            if !importers.is_empty() {
+              none_empty_importer_module.push(idx);
             }
           }
-          if !importers.is_empty() {
-            none_empty_importer_module.push(idx);
-          }
-        }
 
-        module
-      })
-      .collect();
+          (id, module)
+        },
+      );
+    let modules = if self.module_id_to_idx.is_empty() {
+      let vec = modules_iter.map(|(_, module)| module).collect();
+      HybridIndexVec::IndexVec(IndexVec::from_vec(vec))
+    } else {
+      let map = modules_iter.collect::<FxHashMap<_, _>>();
+      HybridIndexVec::Map(map)
+    };
 
     none_empty_importer_module.into_par_iter().for_each(|idx| {
-      let module = &modules[idx];
+      let module = modules.get(idx);
       let Some(module) = module.as_normal() else {
         return;
       };
@@ -474,7 +525,7 @@ impl ModuleLoader {
     // if `inline_dynamic_imports` is set to be true, here we should not put dynamic imports to entries
     if !self.options.inline_dynamic_imports {
       let mut dynamic_import_entry_ids = dynamic_import_entry_ids.into_iter().collect::<Vec<_>>();
-      dynamic_import_entry_ids.sort_unstable_by_key(|id| modules[*id].stable_id());
+      dynamic_import_entry_ids.sort_unstable_by_key(|id| modules.get(*id).stable_id());
 
       entry_points.extend(dynamic_import_entry_ids.into_iter().map(|id| EntryPoint {
         name: None,
@@ -484,12 +535,11 @@ impl ModuleLoader {
       }));
     }
 
-    extra_entry_points.sort_unstable_by_key(|entry| modules[entry.id].stable_id());
+    extra_entry_points.sort_unstable_by_key(|entry| modules.get(entry.id).stable_id());
     entry_points.extend(extra_entry_points);
 
-     
     Ok(ModuleLoaderOutput {
-      module_table: ModuleTable { modules },
+      module_table: modules,
       symbol_ref_db: self.symbol_ref_db,
       index_ecma_ast: self.intermediate_normal_modules.index_ecma_ast,
       index_ast_scope: self.intermediate_normal_modules.index_ast_scope,
@@ -503,7 +553,7 @@ impl ModuleLoader {
       },
       warnings: all_warnings,
       dynamic_import_exports_usage_map,
-      visited: self.visited,
+      visited: if !self.is_incremental { self.visited } else { self.module_id_to_idx },
     })
   }
 }

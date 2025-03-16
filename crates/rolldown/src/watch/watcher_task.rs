@@ -79,6 +79,7 @@ impl WatcherTask {
         Err(errs) => Err(errs),
       }
     };
+    dbg!(&start_time.elapsed());
 
     match result {
       Ok(()) => {

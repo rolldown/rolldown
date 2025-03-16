@@ -67,3 +67,12 @@ tokio            = { workspace = true, features = ["rt", "macros", "sync", "rt-m
 
 [package.metadata.cargo-shear]
 ignored = ["serde"]
+
+
+
+[target.'cfg(all(not(target_os = "linux"), not(target_os = "freebsd"), not(target_family = "wasm")))'.dependencies]
+mimalloc = { workspace = true }
+
+[target.'cfg(any(target_os = "linux", target_os = "freebsd"))'.dependencies]
+mimalloc = { workspace = true, features = ["local_dynamic_tls"] }
+

@@ -36,7 +36,7 @@ jobs:
         run: just setup-bench
 
       - name: Install cargo-llvm-cov
-        uses: taiki-e/install-action@b0dede94e8c623ccff37313309e79b38166901c5 # v2
+        uses: taiki-e/install-action@2c41309d51ede152b6f2ee6bf3b71e6dc9a8b7df # v2
         with:
           tool: cargo-llvm-cov
 

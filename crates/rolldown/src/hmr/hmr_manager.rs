@@ -1,21 +1,50 @@
+use std::{
+  ops::{Deref, DerefMut},
+  sync::Arc,
+};
+
 use arcstr::ArcStr;
 use oxc::{ast_visit::VisitMut, span::SourceType};
-use rolldown_common::{EcmaModuleAstUsage, Module, ModuleIdx, ModuleTable};
+use rolldown_common::{Cache, EcmaModuleAstUsage, Module, ModuleIdx, ModuleTable};
 use rolldown_ecmascript::EcmaCompiler;
 use rolldown_ecmascript_utils::AstSnippet;
 use rolldown_error::{BuildResult, ResultExt};
+use rolldown_fs::OsFileSystem;
+use rolldown_plugin::SharedPluginDriver;
 use rolldown_utils::indexmap::FxIndexSet;
 use rustc_hash::{FxHashMap, FxHashSet};
 
-use crate::hmr::hmr_ast_finalizer::HmrAstFinalizer;
+use crate::{
+  SharedOptions, SharedResolver, hmr::hmr_ast_finalizer::HmrAstFinalizer,
+  module_loader::ModuleLoader,
+};
 
 pub struct HmrManagerInput {
   pub module_db: ModuleTable,
+  pub options: SharedOptions,
+  pub fs: OsFileSystem,
+  pub resolver: SharedResolver,
+  pub plugin_driver: SharedPluginDriver,
+  pub cache: Arc<Cache>,
 }
 
 pub struct HmrManager {
-  module_db: ModuleTable,
+  input: HmrManagerInput,
   module_idx_by_abs_path: FxHashMap<ArcStr, ModuleIdx>,
+}
+
+impl Deref for HmrManager {
+  type Target = HmrManagerInput;
+
+  fn deref(&self) -> &Self::Target {
+    &self.input
+  }
+}
+
+impl DerefMut for HmrManager {
+  fn deref_mut(&mut self) -> &mut Self::Target {
+    &mut self.input
+  }
 }
 
 impl HmrManager {
@@ -31,7 +60,7 @@ impl HmrManager {
         (filename, module_idx)
       })
       .collect();
-    Self { module_db: input.module_db, module_idx_by_abs_path }
+    Self { input, module_idx_by_abs_path }
   }
   #[expect(clippy::dbg_macro)] // FIXME: Remove dbg! macro once the feature is stable
   pub fn generate_hmr_patch(&self, changed_file_paths: Vec<String>) -> BuildResult<String> {
@@ -50,6 +79,14 @@ impl HmrManager {
 
     // Only changed modules might introduce new modules, we run a new module loader to fetch possible new modules and updated content of changed modules
     // TODO(hyf0): Run module loader
+
+    let _module_loader = ModuleLoader::new(
+      self.fs,
+      Arc::clone(&self.options),
+      Arc::clone(&self.resolver),
+      Arc::clone(&self.plugin_driver),
+      Arc::clone(&self.cache),
+    );
 
     let mut hmr_boundary = FxIndexSet::default();
     let mut affected_modules = FxIndexSet::default();

@@ -175,8 +175,14 @@ impl Bundler {
     output.watch_files = self.plugin_driver.watch_files.iter().map(|f| f.clone()).collect();
 
     if self.options.is_hmr_enabled() {
-      self.hmr_manager =
-        Some(HmrManager::new(HmrManagerInput { module_db: link_stage_output.module_table }));
+      self.hmr_manager = Some(HmrManager::new(HmrManagerInput {
+        module_db: link_stage_output.module_table,
+        fs: self.fs,
+        options: Arc::clone(&self.options),
+        resolver: Arc::clone(&self.resolver),
+        plugin_driver: Arc::clone(&self.plugin_driver),
+        cache: Arc::clone(&self.cache),
+      }));
     }
     Ok(output)
   }

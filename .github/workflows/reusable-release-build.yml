@@ -92,7 +92,7 @@ jobs:
         with:
           version: 0.13.0
 
-      - uses: taiki-e/install-action@b0dede94e8c623ccff37313309e79b38166901c5 # v2
+      - uses: taiki-e/install-action@2c41309d51ede152b6f2ee6bf3b71e6dc9a8b7df # v2
         if: ${{ contains(matrix.target, 'musl') }}
         env:
           GITHUB_TOKEN: ${{ github.token }}

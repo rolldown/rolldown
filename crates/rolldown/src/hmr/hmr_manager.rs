@@ -62,8 +62,8 @@ impl HmrManager {
       .collect();
     Self { input, module_idx_by_abs_path }
   }
-  #[expect(clippy::dbg_macro)] // FIXME: Remove dbg! macro once the feature is stable
-  pub fn generate_hmr_patch(&self, changed_file_paths: Vec<String>) -> BuildResult<String> {
+  #[expect(clippy::dbg_macro, clippy::too_many_lines)] // FIXME: Remove dbg! macro once the feature is stable
+  pub async fn generate_hmr_patch(&self, changed_file_paths: Vec<String>) -> BuildResult<String> {
     let mut changed_modules = vec![];
     for changed_file_path in changed_file_paths {
       let changed_file_path = ArcStr::from(changed_file_path);
@@ -127,17 +127,42 @@ impl HmrManager {
       .collect::<FxHashMap<_, _>>();
 
     let mut outputs = vec![];
-    for changed_module_idx in affected_modules {
-      let changed_module = &self.module_db.modules[changed_module_idx];
-      let Module::Normal(changed_module) = changed_module else {
+    for affected_module_idx in affected_modules {
+      let affected_module = &self.module_db.modules[affected_module_idx];
+      let Module::Normal(affected_module) = affected_module else {
         unreachable!("HMR only supports normal module");
       };
 
-      let filename = changed_module.id.resource_id().clone();
+      let filename = affected_module.id.resource_id().clone();
 
       // TODO: We should get newest source and ast directly from module, but now we just manually fetch them.
       let source: String = std::fs::read_to_string(filename.as_str()).map_err_to_unhandleable()?;
-      let mut ast = EcmaCompiler::parse(&filename, source, SourceType::default())?;
+      let mut previous_module_type = affected_module.module_type.clone();
+      let transformed_source = self
+        .plugin_driver
+        .transform(&affected_module.id, source, &mut vec![], &mut None, &mut previous_module_type)
+        .await?;
+
+      // Only support hmr on js family for now
+      assert!(
+        matches!(
+          previous_module_type,
+          rolldown_common::ModuleType::Js
+            | rolldown_common::ModuleType::Jsx
+            | rolldown_common::ModuleType::Ts
+            | rolldown_common::ModuleType::Tsx
+        ),
+        "HMR only supports js family modules"
+      );
+      let source_type = match previous_module_type {
+        rolldown_common::ModuleType::Js => SourceType::mjs(),
+        rolldown_common::ModuleType::Jsx => SourceType::jsx(),
+        rolldown_common::ModuleType::Ts => SourceType::ts(),
+        rolldown_common::ModuleType::Tsx => SourceType::tsx(),
+        _ => unreachable!(),
+      };
+
+      let mut ast = EcmaCompiler::parse(&filename, transformed_source, source_type)?;
       let scoping = ast.make_scoping();
 
       ast.program.with_mut(|fields| {
@@ -147,7 +172,7 @@ impl HmrManager {
           snippet: AstSnippet::new(fields.allocator),
           scoping: &scoping,
           import_binding: FxHashMap::default(),
-          module: changed_module,
+          module: affected_module,
           exports: FxHashMap::default(),
           affected_module_idx_to_init_fn_name: &module_idx_to_init_fn_name,
           dependencies: FxIndexSet::default(),

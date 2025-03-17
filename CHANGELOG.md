@@ -1,3 +1,7 @@
+# [1.0.0-beta.6](https://github.com/rolldown/rolldown/compare/v1.0.0-beta.5...v1.0.0-beta.6) (2025-03-17)
+
+
+
 # [1.0.0-beta.5](https://github.com/rolldown/rolldown/compare/v1.0.0-beta.4...v1.0.0-beta.5) (2025-03-17)
 
 

@@ -1,4 +1,4 @@
-import { BindingWatcher } from '../../binding'
+import { BindingWatcher, shutdownAsyncRuntime } from '../../binding'
 import { LOG_LEVEL_WARN } from '../../log/logging'
 import { logMultiplyNotifyOption } from '../../log/logs'
 import { WatchOptions } from '../../options/watch-options'
@@ -39,6 +39,7 @@ export class Watcher {
       await stop?.()
     }
     await this.inner.close()
+    shutdownAsyncRuntime()
   }
 
   start(): void {

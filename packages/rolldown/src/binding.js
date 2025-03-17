@@ -406,4 +406,6 @@ module.exports.parseSyncRaw = nativeBinding.parseSyncRaw
 module.exports.rawTransferSupported = nativeBinding.rawTransferSupported
 module.exports.registerPlugins = nativeBinding.registerPlugins
 module.exports.Severity = nativeBinding.Severity
+module.exports.shutdownAsyncRuntime = nativeBinding.shutdownAsyncRuntime
+module.exports.startAsyncRuntime = nativeBinding.startAsyncRuntime
 module.exports.transform = nativeBinding.transform

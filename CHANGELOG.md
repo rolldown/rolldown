@@ -1,3 +1,36 @@
+# [1.0.0-beta.5](https://github.com/rolldown/rolldown/compare/v1.0.0-beta.4...v1.0.0-beta.5) (2025-03-17)
+
+
+### Bug Fixes
+
+* **cli:** fix and improve error message when validating cli options ([#3813](https://github.com/rolldown/rolldown/issues/3813)) ([64993bb](https://github.com/rolldown/rolldown/commit/64993bb64738f530539228201df1f3e98d2ca562))
+* **cli:** remove duplicate error message in stack trace ([#3828](https://github.com/rolldown/rolldown/issues/3828)) ([79fea00](https://github.com/rolldown/rolldown/commit/79fea00530f310ada3a880c8bb0840476d4d9848))
+* dataurl plugin resolve panic ([#3822](https://github.com/rolldown/rolldown/issues/3822)) ([251e281](https://github.com/rolldown/rolldown/commit/251e281cb707277a9eb4d51d8bdcce757a2c8fc6))
+* generate sourcemapMappingUrl reference properly ([#3849](https://github.com/rolldown/rolldown/issues/3849)) ([2b0f20f](https://github.com/rolldown/rolldown/commit/2b0f20f6a0c2bcc7350b0a22c10df7d0d4c528e4)), closes [#3845](https://github.com/rolldown/rolldown/issues/3845)
+* **renovate:** dependencyDashboard is not a preset ([#3862](https://github.com/rolldown/rolldown/issues/3862)) ([607e112](https://github.com/rolldown/rolldown/commit/607e1120df1b07736525f1a87470d7f81906ac7a))
+
+
+### Features
+
+* calculate relative external module rendered path ([#3855](https://github.com/rolldown/rolldown/issues/3855)) ([e0cd410](https://github.com/rolldown/rolldown/commit/e0cd410a91e78bb36aafa1ac26fc4d56cc02bcb5))
+* emit diagnostic when configuration field conflict ([#3854](https://github.com/rolldown/rolldown/issues/3854)) ([d0e0a63](https://github.com/rolldown/rolldown/commit/d0e0a6386d761fe3010606bd542293c46f3e4715))
+* filter out diagnostics disabled in checks options ([#3846](https://github.com/rolldown/rolldown/issues/3846)) ([4524a58](https://github.com/rolldown/rolldown/commit/4524a58057954b21535f21877a31386b7c83f39a))
+* **hmr/rust:** invoke `transform` hook on affected hmr module ([#3866](https://github.com/rolldown/rolldown/issues/3866)) ([296d605](https://github.com/rolldown/rolldown/commit/296d605c2fc3a037abf8cb2e81d735810704cdf8))
+* **hmr/rust:** reuse existing `ModuleLoader` ([#3865](https://github.com/rolldown/rolldown/issues/3865)) ([b4dd209](https://github.com/rolldown/rolldown/commit/b4dd2094ca211f844915dd5cf90a3c4fec87c448))
+* **hmr:** enhance error handling by wrapping program body in a try-catch block ([#3825](https://github.com/rolldown/rolldown/issues/3825)) ([007805a](https://github.com/rolldown/rolldown/commit/007805ae6942ea96578ff88bedb59f89f29e0c24))
+* **hmr:** inject `ModuleHotContext` for each module ([#3832](https://github.com/rolldown/rolldown/issues/3832)) ([30b9a0b](https://github.com/rolldown/rolldown/commit/30b9a0bf53b7fde22a94c43486880e9d1b1e933c))
+* **hmr:** support HMR on editing non-hmr-boundary module ([#3853](https://github.com/rolldown/rolldown/issues/3853)) ([568197a](https://github.com/rolldown/rolldown/commit/568197a06444809bf44642d88509313ee2735594))
+* **hmr:** wrap module code into a function ([#3851](https://github.com/rolldown/rolldown/issues/3851)) ([8a7b7d1](https://github.com/rolldown/rolldown/commit/8a7b7d11484c1f3d2d604ed8e1ff7ba4752ab26c))
+* memorize importer's idx for each moodule ([#3852](https://github.com/rolldown/rolldown/issues/3852)) ([3a7758f](https://github.com/rolldown/rolldown/commit/3a7758f043c0054f344ef781602eea965b421c29))
+* support absoulte/relative external ([#3834](https://github.com/rolldown/rolldown/issues/3834)) ([d8f0bcb](https://github.com/rolldown/rolldown/commit/d8f0bcbe3bde51cc49fbada75f32560c43f51f95))
+
+
+### Performance Improvements
+
+* use mimalloc-safe which is maintaining by us ([#3869](https://github.com/rolldown/rolldown/issues/3869)) ([6b9d148](https://github.com/rolldown/rolldown/commit/6b9d148d7b0d5b182cdba42fbc5bafeb80d7c9af))
+
+
+
 # [1.0.0-beta.4](https://github.com/rolldown/rolldown/compare/v1.0.0-beta.3...v1.0.0-beta.4) (2025-03-11)
 
 

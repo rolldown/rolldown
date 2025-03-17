@@ -75,7 +75,7 @@ export default defineLoader({
       // @ts-ignore - it doesn't exist in the first place, but it will be created by the above command
       '../../packages/rolldown/options-doc.json'.replace('', ''),
       // `.replace` is a workaround to disable compile-time loading done by vitepress
-      { assert: { type: 'json' } }
+      { with: { type: 'json' } }
     )
 
     const normalized = normalizeDocJson(docJson)

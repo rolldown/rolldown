@@ -48,10 +48,6 @@ impl Bundler {
     let log_level = input_options.log_level;
     let on_log = input_options.on_log.take();
 
-    #[cfg(target_family = "wasm")]
-    // if we don't perform this warmup, the following call to `std::fs` will stuck
-    if let Ok(_) = std::fs::metadata(std::env::current_dir()?) {};
-
     #[cfg(not(target_family = "wasm"))]
     let worker_count =
       parallel_plugins_registry.as_ref().map(|registry| registry.worker_count).unwrap_or_default();

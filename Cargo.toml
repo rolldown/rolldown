@@ -17,7 +17,7 @@ codegen-units = 16
 debug         = 'full'
 inherits      = "release"
 lto           = "thin"
-opt-level     = "z"
+opt-level     = "s"
 strip         = "none"
 
 [workspace.lints.clippy]
@@ -147,7 +147,7 @@ jsonschema          = { version = "0.29.0", default-features = false }
 memchr              = "2.7.2"
 mimalloc-safe       = "0.1.49"
 mime                = "0.3.17"
-napi                = { version = "3.0.0-alpha.31", features = ["async", "anyhow"] }
+napi                = { version = "3.0.0-alpha.33", features = ["async", "anyhow"] }
 napi-build          = { version = "2.1.5" }
 napi-derive         = { version = "3.0.0-alpha.28", default-features = false, features = ["type-def"] }
 nom                 = "8.0.0"

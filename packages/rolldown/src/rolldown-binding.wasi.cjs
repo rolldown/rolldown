@@ -121,4 +121,6 @@ module.exports.parseSyncRaw = __napiModule.exports.parseSyncRaw
 module.exports.rawTransferSupported = __napiModule.exports.rawTransferSupported
 module.exports.registerPlugins = __napiModule.exports.registerPlugins
 module.exports.Severity = __napiModule.exports.Severity
+module.exports.shutdownAsyncRuntime = __napiModule.exports.shutdownAsyncRuntime
+module.exports.startAsyncRuntime = __napiModule.exports.startAsyncRuntime
 module.exports.transform = __napiModule.exports.transform

@@ -31,7 +31,7 @@ pub struct ParseToEcmaAstResult {
   pub warning: Vec<BuildDiagnostic>,
 }
 
-pub fn parse_to_ecma_ast(
+pub async fn parse_to_ecma_ast(
   ctx: &CreateModuleContext<'_>,
   source: StrOrBytes,
 ) -> BuildResult<ParseToEcmaAstResult> {
@@ -68,12 +68,14 @@ pub fn parse_to_ecma_ast(
     _ => EcmaCompiler::parse(stable_id, source, oxc_source_type)?,
   };
 
-  ecma_ast = plugin_driver.transform_ast(HookTransformAstArgs {
-    cwd: &options.cwd,
-    ast: ecma_ast,
-    id: stable_id,
-    is_user_defined_entry,
-  })?;
+  ecma_ast = plugin_driver
+    .transform_ast(HookTransformAstArgs {
+      cwd: &options.cwd,
+      ast: ecma_ast,
+      id: stable_id,
+      is_user_defined_entry,
+    })
+    .await?;
 
   PreProcessEcmaAst::default().build(
     ecma_ast,

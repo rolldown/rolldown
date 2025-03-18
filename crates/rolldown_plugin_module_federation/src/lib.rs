@@ -352,10 +352,10 @@ impl Plugin for ModuleFederationPlugin {
     Ok(None)
   }
 
-  fn transform_ast(
+  async fn transform_ast(
     &self,
     _ctx: &rolldown_plugin::PluginContext,
-    mut args: rolldown_plugin::HookTransformAstArgs,
+    mut args: rolldown_plugin::HookTransformAstArgs<'_>,
   ) -> rolldown_plugin::HookTransformAstReturn {
     args.ast.program.with_mut(|fields| {
       let ast_builder = AstBuilder::new(fields.allocator);

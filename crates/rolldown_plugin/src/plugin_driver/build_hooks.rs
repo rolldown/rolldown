@@ -244,19 +244,21 @@ impl PluginDriver {
     }
   }
 
-  pub fn transform_ast(&self, mut args: HookTransformAstArgs) -> HookTransformAstReturn {
+  pub async fn transform_ast(&self, mut args: HookTransformAstArgs<'_>) -> HookTransformAstReturn {
     for (_, plugin, ctx) in
       self.iter_plugin_with_context_by_order(&self.order_by_transform_ast_meta)
     {
-      args.ast = plugin.call_transform_ast(
-        ctx,
-        HookTransformAstArgs {
-          cwd: args.cwd,
-          ast: args.ast,
-          id: args.id,
-          is_user_defined_entry: args.is_user_defined_entry,
-        },
-      )?;
+      args.ast = plugin
+        .call_transform_ast(
+          ctx,
+          HookTransformAstArgs {
+            cwd: args.cwd,
+            ast: args.ast,
+            id: args.id,
+            is_user_defined_entry: args.is_user_defined_entry,
+          },
+        )
+        .await?;
     }
     Ok(args.ast)
   }

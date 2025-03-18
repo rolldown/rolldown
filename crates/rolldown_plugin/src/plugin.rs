@@ -280,13 +280,12 @@ pub trait Plugin: Any + Debug + Send + Sync + 'static {
   }
 
   // --- experimental hooks ---
-
   fn transform_ast(
     &self,
     _ctx: &PluginContext,
-    args: HookTransformAstArgs,
-  ) -> HookTransformAstReturn {
-    Ok(args.ast)
+    args: HookTransformAstArgs<'_>,
+  ) -> impl std::future::Future<Output = HookTransformAstReturn> + Send {
+    async { Ok(args.ast) }
   }
 
   fn transform_ast_meta(&self) -> Option<PluginHookMeta> {

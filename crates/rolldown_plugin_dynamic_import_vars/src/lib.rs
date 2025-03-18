@@ -54,10 +54,10 @@ impl Plugin for DynamicImportVarsPlugin {
     }
   }
 
-  fn transform_ast(
+  async fn transform_ast(
     &self,
     _ctx: &PluginContext,
-    mut args: HookTransformAstArgs,
+    mut args: HookTransformAstArgs<'_>,
   ) -> HookTransformAstReturn {
     // TODO: Ignore if includes a marker like "/* @rolldown-ignore */"
     args.ast.program.with_mut(|fields| {

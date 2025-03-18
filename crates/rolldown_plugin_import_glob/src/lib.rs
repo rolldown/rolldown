@@ -38,10 +38,10 @@ impl Plugin for ImportGlobPlugin {
     Cow::Borrowed("builtin:import-glob-plugin")
   }
 
-  fn transform_ast(
+  async fn transform_ast(
     &self,
     _ctx: &PluginContext,
-    mut args: HookTransformAstArgs,
+    mut args: HookTransformAstArgs<'_>,
   ) -> HookTransformAstReturn {
     args.ast.program.with_mut(|fields| {
       let ast_builder = AstBuilder::new(fields.allocator);

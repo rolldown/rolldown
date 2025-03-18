@@ -28,7 +28,7 @@ pub async fn create_ecma_view(
 ) -> BuildResult<CreateEcmaViewReturn> {
   let CreateModuleViewArgs { source, sourcemap_chain, hook_side_effects } = args;
   let ParseToEcmaAstResult { ast, scoping, has_lazy_export, warning } =
-    parse_to_ecma_ast(ctx, source)?;
+    parse_to_ecma_ast(ctx, source).await?;
 
   ctx.warnings.extend(warning);
 

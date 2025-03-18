@@ -39,7 +39,7 @@ jobs:
         run: pnpm type-check
 
       - name: Setup Node18 For Testing
-        uses: actions/setup-node@1d0ff469b7ec7b3cb9d8673fde0c81c44821de2a # v4.2.0
+        uses: actions/setup-node@cdca7365b2dadb8aad0a33bc7601856ffabcc48e # v4.3.0
         with:
           node-version: 18
 
@@ -54,7 +54,7 @@ jobs:
         run: pnpm --filter '@example/**' build
 
       - name: Setup Node20 For Testing
-        uses: actions/setup-node@1d0ff469b7ec7b3cb9d8673fde0c81c44821de2a # v4.2.0
+        uses: actions/setup-node@cdca7365b2dadb8aad0a33bc7601856ffabcc48e # v4.3.0
         with:
           node-version: 20
 
@@ -69,7 +69,7 @@ jobs:
         run: pnpm --filter '@example/**' build
 
       - name: Setup Node22 For Testing
-        uses: actions/setup-node@1d0ff469b7ec7b3cb9d8673fde0c81c44821de2a # v4.2.0
+        uses: actions/setup-node@cdca7365b2dadb8aad0a33bc7601856ffabcc48e # v4.3.0
         with:
           node-version: 22
 

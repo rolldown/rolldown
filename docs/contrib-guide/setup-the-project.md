@@ -39,19 +39,7 @@ cargo install just
 
 - Install `cmake`
 
-You could install just quickly by running the following command or by following the official [Download](https://cmake.org/download/):
-
-::: code-group
-
-```sh [Mac]
-brew install cmake
-```
-
-```sh [Windows]
-choco install cmake
-```
-
-:::
+You could install it by following the official [Download](https://cmake.org/download/).
 
 - Install Node.js >= {{ data.nodeVersion }} / 21.2.0
 

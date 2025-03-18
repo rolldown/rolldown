@@ -125,7 +125,7 @@
     "@types/fs-extra": "^11.0.4",
     "@types/lodash-es": "^4.17.12",
     "colorette": "^2.0.20",
-    "consola": "^3.2.3",
+    "consola": "^3.4.2",
     "emnapi": "^1.2.0",
     "execa": "^9.2.0",
     "fs-extra": "^11.2.0",

@@ -431,7 +431,7 @@ impl TryFrom<BindingBuiltinPlugin> for Arc<dyn Pluginable> {
       }
       BindingBuiltinPluginName::IsolatedDeclaration => {
         let plugin = if let Some(options) = plugin.options {
-          BindingIsolatedDeclarationPluginConfig::from_unknown(options)?.try_into()?
+          BindingIsolatedDeclarationPluginConfig::from_unknown(options)?.into()
         } else {
           IsolatedDeclarationPlugin::default()
         };

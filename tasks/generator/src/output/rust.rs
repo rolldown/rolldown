@@ -30,7 +30,7 @@ pub fn rust_fmt(source_text: &str) -> String {
     .stdin(Stdio::piped())
     .stdout(Stdio::piped())
     .spawn()
-    .expect("Failed to run rustfmt (is it installed?)");
+    .expect("Failed to run `rustfmt` (is it installed?)");
 
   let stdin = rustfmt.stdin.as_mut().unwrap();
   stdin.write_all(source_text.as_bytes()).unwrap();
@@ -41,18 +41,19 @@ pub fn rust_fmt(source_text: &str) -> String {
 }
 
 pub fn ecma_fmt(source_text: &str, path: &str) -> String {
-  let mut rustfmt = Command::new("npx")
+  let npx = if cfg!(target_os = "windows") { "npx.cmd" } else { "npx" };
+  let mut npx = Command::new(npx)
     .args(["prettier", "--stdin-filepath", path])
     .stdin(Stdio::piped())
     .stdout(Stdio::piped())
     .spawn()
-    .expect("Failed to run rustfmt (is it installed?)");
+    .expect("Failed to run `npx prettier` (is it installed?)");
 
-  let stdin = rustfmt.stdin.as_mut().unwrap();
+  let stdin = npx.stdin.as_mut().unwrap();
   stdin.write_all(source_text.as_bytes()).unwrap();
   stdin.flush().unwrap();
 
-  let output = rustfmt.wait_with_output().unwrap();
+  let output = npx.wait_with_output().unwrap();
   String::from_utf8(output.stdout).unwrap()
 }
 

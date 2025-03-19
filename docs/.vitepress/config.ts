@@ -157,7 +157,7 @@ export default defineConfig({
         },
       ],
     },
-
+    outline: 'deep',
     socialLinks: [
       { icon: 'x', link: 'https://twitter.com/rolldown_rs' },
       {

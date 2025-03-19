@@ -1,5 +1,5 @@
 use napi::bindgen_prelude::{Either, FnArgs};
-use std::fmt::Debug;
+use std::{collections::HashMap, fmt::Debug};
 
 use crate::types::{
   binding_module_info::BindingModuleInfo,
@@ -104,11 +104,17 @@ pub struct BindingPluginOptions {
   pub build_end_meta: Option<BindingPluginHookMeta>,
 
   #[napi(
-    ts_type = "(ctx: BindingPluginContext, code: string, chunk: RenderedChunk, opts: BindingNormalizedOptions) => MaybePromise<VoidNullable<BindingHookRenderChunkOutput>>"
+    ts_type = "(ctx: BindingPluginContext, code: string, chunk: RenderedChunk, opts: BindingNormalizedOptions, chunks: Record<string, RenderedChunk>) => MaybePromise<VoidNullable<BindingHookRenderChunkOutput>>"
   )]
   pub render_chunk: Option<
     MaybeAsyncJsCallback<
-      FnArgs<(BindingPluginContext, String, RenderedChunk, BindingNormalizedOptions)>,
+      FnArgs<(
+        BindingPluginContext,
+        String,
+        RenderedChunk,
+        BindingNormalizedOptions,
+        HashMap<String, RenderedChunk>,
+      )>,
       Option<BindingHookRenderChunkOutput>,
     >,
   >,

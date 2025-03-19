@@ -58,7 +58,7 @@ export function bindingifyRenderChunk(
   const { handler, meta } = normalizeHook(hook)
 
   return {
-    plugin: async (ctx, code, chunk, opts) => {
+    plugin: async (ctx, code, chunk, opts, chunks) => {
       const ret = await handler.call(
         new PluginContextImpl(
           args.outputOptions,
@@ -75,6 +75,14 @@ export function bindingifyRenderChunk(
           args.outputOptions,
           args.normalizedOutputPlugins,
         ),
+        {
+          chunks: Object.fromEntries(
+            Object.entries(chunks).map(([key, value]) => [
+              key,
+              transformRenderedChunk(value),
+            ]),
+          ),
+        },
       )
 
       if (ret == null) {

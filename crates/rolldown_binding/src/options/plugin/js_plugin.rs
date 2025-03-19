@@ -384,8 +384,15 @@ impl Plugin for JsPlugin {
           (
             ctx.clone().into(),
             args.code.to_string(),
+            // TODO avid chunk clone
             args.chunk.clone().into(),
             BindingNormalizedOptions::new(Arc::clone(args.options)),
+            // TODO avid chunk clone
+            args
+              .chunks
+              .iter()
+              .map(|(filename, chunk)| (filename.to_string(), (*chunk).clone().into()))
+              .collect(),
           )
             .into(),
         )

@@ -163,6 +163,7 @@ export interface FunctionPluginHooks {
     code: string,
     chunk: RenderedChunk,
     outputOptions: NormalizedOutputOptions,
+    meta: { chunks: Record<string, RenderedChunk> },
   ) =>
     | NullValue
     | string

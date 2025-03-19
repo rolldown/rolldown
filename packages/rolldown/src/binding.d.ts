@@ -572,7 +572,7 @@ export interface BindingPluginOptions {
   moduleParsedMeta?: BindingPluginHookMeta
   buildEnd?: (ctx: BindingPluginContext, error?: (Error | BindingError)[]) => MaybePromise<VoidNullable>
   buildEndMeta?: BindingPluginHookMeta
-  renderChunk?: (ctx: BindingPluginContext, code: string, chunk: RenderedChunk, opts: BindingNormalizedOptions) => MaybePromise<VoidNullable<BindingHookRenderChunkOutput>>
+  renderChunk?: (ctx: BindingPluginContext, code: string, chunk: RenderedChunk, opts: BindingNormalizedOptions, chunks: Record<string, RenderedChunk>) => MaybePromise<VoidNullable<BindingHookRenderChunkOutput>>
   renderChunkMeta?: BindingPluginHookMeta
   augmentChunkHash?: (ctx: BindingPluginContext, chunk: RenderedChunk) => MaybePromise<void | string>
   augmentChunkHashMeta?: BindingPluginHookMeta

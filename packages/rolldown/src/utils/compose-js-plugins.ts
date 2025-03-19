@@ -359,7 +359,7 @@ function createComposedPlugin(plugins: Plugin[]): Plugin {
       case 'renderChunk': {
         if (batchedHooks.renderChunk) {
           const batchedHandlers = batchedHooks.renderChunk
-          composed.renderChunk = async function (code, chunk, options) {
+          composed.renderChunk = async function (code, chunk, options, meta) {
             for (const [handler, plugin] of batchedHandlers) {
               const { handler: handlerFn } = normalizeHook(handler)
               const result = await handlerFn.call(
@@ -367,6 +367,7 @@ function createComposedPlugin(plugins: Plugin[]): Plugin {
                 code,
                 chunk,
                 options,
+                meta,
               )
               if (!isNullish(result)) {
                 return result

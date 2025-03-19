@@ -1,0 +1,22 @@
+{
+  "config": {
+      "input": [
+          {
+              "name": "entryb",
+              "import": "./entryb.js"
+          },
+          {
+              "name": "entrya",
+              "import": "./entrya.js"
+          }
+      ],
+    "advancedChunks": {
+      "groups": [
+        {
+          // Should split failed
+          "name": "lib"
+        },
+      ]
+    }
+  }
+}

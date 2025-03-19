@@ -1,0 +1,56 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## entrya.js
+
+```js
+import { init_entrya } from "./lib.js";
+
+init_entrya();
+```
+## entryb.js
+
+```js
+import { init_entryb } from "./lib.js";
+
+init_entryb();
+```
+## lib.js
+
+```js
+
+
+//#region a.js
+var init_a = __esm({ "a.js"() {} });
+
+//#endregion
+//#region b.js
+var init_b = __esm({ "b.js"() {
+	console.log("b.js");
+} });
+
+//#endregion
+//#region barrel.js
+var init_barrel = __esm({ "barrel.js"() {
+	init_b();
+} });
+
+//#endregion
+//#region entryb.js
+var init_entryb = __esm({ "entryb.js"() {
+	init_barrel();
+	console.log(`b: `);
+} });
+
+//#endregion
+//#region entrya.js
+var init_entrya = __esm({ "entrya.js"() {
+	init_barrel();
+	console.log(`a: `);
+} });
+
+//#endregion
+export { init_entrya, init_entryb };
+```

@@ -1,0 +1,14 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`Error output format > should correctly output the custom error defined on the rust side 1`] = `
+"Build failed with 1 error:
+
+[UNRESOLVED_IMPORT] Error: Could not resolve './world' in error.js
+   ╭─[ error.js:1:19 ]
+   │
+ 1 │ import hello from './world'
+   │                   ────┬────  
+   │                       ╰────── Module not found.
+───╯
+"
+`;

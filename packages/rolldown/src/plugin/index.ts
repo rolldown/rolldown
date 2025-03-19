@@ -58,12 +58,12 @@ export interface ModuleOptions {
 }
 
 export interface ResolvedId extends ModuleOptions {
-  external: boolean
+  external: boolean | 'absolute'
   id: string
 }
 
 export interface PartialResolvedId extends Partial<PartialNull<ModuleOptions>> {
-  external?: boolean
+  external?: boolean | 'absolute' | 'relative'
   id: string
 }
 

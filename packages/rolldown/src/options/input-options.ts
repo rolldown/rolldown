@@ -8,8 +8,24 @@ import type {
 } from '../log/logging'
 import type { NullValue, StringOrRegExp } from '../types/utils'
 import type { TreeshakingOptions } from '../types/module-side-effects'
+import { TransformOptions } from '../binding'
+import type { ChecksOptions } from './generated/checks-options'
 
 export type InputOption = string | string[] | Record<string, string>
+
+// Omit those key that are part of rolldown option
+// Note: `target` should be omit either because it is also used in `minifier`
+type OxcTransformOption = Omit<
+  TransformOptions,
+  | 'sourceType'
+  | 'lang'
+  | 'cwd'
+  | 'sourcemap'
+  | 'jsx'
+  | 'define'
+  | 'inject'
+  | 'target'
+>
 
 export type ExternalOption =
   | StringOrRegExp
@@ -56,13 +72,7 @@ export interface WatchOptions {
   exclude?: StringOrRegExp | StringOrRegExp[]
 }
 
-export interface ChecksOptions {
-  /**
-   * Whether to emit warnings when detecting circular dependencies.
-   * @default false
-   */
-  circularDependency?: boolean
-}
+export type MakeAbsoluteExternalsRelative = boolean | 'ifRelativeSource'
 
 export interface InputOptions {
   input?: InputOption
@@ -206,10 +216,12 @@ export interface InputOptions {
    * @default mode = "automatic"
    */
   jsx?: false | 'react' | 'react-jsx' | 'preserve' | JsxOptions
+  transform?: OxcTransformOption
   watch?: WatchOptions | false
   dropLabels?: string[]
   keepNames?: boolean
   checks?: ChecksOptions
+  makeAbsoluteExternalsRelative?: MakeAbsoluteExternalsRelative
 }
 
 interface OverwriteInputOptionsForCli {

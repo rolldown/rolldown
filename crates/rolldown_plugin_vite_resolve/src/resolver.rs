@@ -363,7 +363,7 @@ impl Resolver {
         }
       }
       resolved.id = resolved_id.into();
-      resolved.external = Some(true);
+      resolved.external = Some(true.into());
 
       return Ok(Some(resolved));
     }

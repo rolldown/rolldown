@@ -1,7 +1,7 @@
 use std::iter;
 
 use rolldown_common::{Module, ModuleIdx};
-use rolldown_error::BuildDiagnostic;
+use rolldown_error::{BuildDiagnostic, EventKindSwitcher};
 use rolldown_utils::rustc_hash::FxHashSetExt;
 use rustc_hash::{FxHashMap, FxHashSet};
 
@@ -52,7 +52,7 @@ impl LinkStage<'_> {
       match status {
         Status::ToBeExecuted(id) => {
           if executed_ids.contains(&id) {
-            if self.options.checks.circular_dependency.unwrap_or(false) {
+            if self.options.checks.contains(EventKindSwitcher::CircularDependency) {
               // Try to check if there is a circular dependency
               if let Some(index) = stack_indexes_of_executing_id.get(&id).copied() {
                 // Executing

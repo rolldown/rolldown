@@ -24,7 +24,17 @@ OPTIONS
   --advanced-chunks.min-size <advanced-chunks.min-size>Minimum size of the chunk.
   --asset-file-names <name>   Name pattern for asset files.
   --banner <banner>           Code to insert the top of the bundled file (outside the wrapper function).
-  --checks.circular-dependency Whether to emit warnings when detecting circular dependencies.
+  --checks.circular-dependency Whether to emit warning when detecting circular dependency.
+  --checks.common-js-variable-in-esm Whether to emit warning when detecting common js variable in esm.
+  --checks.configuration-field-conflict Whether to emit warning when detecting configuration field conflict.
+  --checks.eval               Whether to emit warning when detecting eval.
+  --checks.filename-conflict  Whether to emit warning when detecting filename conflict.
+  --checks.import-is-undefined Whether to emit warning when detecting import is undefined.
+  --checks.missing-global-name Whether to emit warning when detecting missing global name.
+  --checks.missing-name-option-for-iife-export Whether to emit warning when detecting missing name option for iife export.
+  --checks.mixed-export       Whether to emit warning when detecting mixed export.
+  --checks.unresolved-entry   Whether to emit warning when detecting unresolved entry.
+  --checks.unresolved-import  Whether to emit warning when detecting unresolved import.
   --chunk-file-names <name>   Name pattern for emitted secondary chunks.
   --comments <comments>       Control comments in the output.
   --css-chunk-file-names <css-chunk-file-names>Name pattern for emitted css secondary chunks.
@@ -58,6 +68,22 @@ OPTIONS
   --shim-missing-exports      Create shim variables for missing exports.
   --sourcemap-debug-ids       Inject sourcemap debug IDs.
   --target <target>           The JavaScript target environment.
+  --transform.assumptions.ignore-function-length .
+  --transform.assumptions.no-document-all .
+  --transform.assumptions.object-rest-no-symbols .
+  --transform.assumptions.pure-getters .
+  --transform.assumptions.set-public-class-fields .
+  --transform.decorators.emit-decorator-metadata .
+  --transform.decorators.legacy .
+  --transform.helpers.mode <transform.helpers.mode>.
+  --transform.typescript.allow-declare-fields .
+  --transform.typescript.allow-namespaces .
+  --transform.typescript.declaration.sourcemap .
+  --transform.typescript.declaration.strip-internal .
+  --transform.typescript.jsx-pragma <transform.typescript.jsx-pragma>.
+  --transform.typescript.jsx-pragma-frag <transform.typescript.jsx-pragma-frag>.
+  --transform.typescript.only-remove-type-imports .
+  --transform.typescript.rewrite-import-extensions <transform.typescript.rewrite-import-extensions>.
 
 EXAMPLES
 
@@ -178,6 +204,12 @@ exports[`cli options for bundling > should handle single string options 1`] = `
 "<DIR>/index.js  chunk │ size: 0.14 kB
 
 "
+`;
+
+exports[`cli options for bundling > validate cli options 1`] = `
+"Command failed with exit code 1: rolldown index.ts --format INCORRECT
+
+Invalid value for option format: Invalid type: Expected ("es" | "cjs" | "esm" | "module" | "commonjs" | "iife" | "umd") but received "INCORRECT". You can use \`rolldown -h\` to see the help."
 `;
 
 exports[`config > should allow loading cts config 1`] = `

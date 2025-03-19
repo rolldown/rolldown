@@ -11,9 +11,8 @@ mod utils;
 /// Only for usage by the rolldown's crate. Do not use this directly.
 #[doc(hidden)]
 pub mod __inner {
-  pub use super::utils::resolve_id_with_plugins::{
-    resolve_id_check_external, resolve_id_with_plugins,
-  };
+  pub use super::utils::resolve_id_check_external::resolve_id_check_external;
+  pub use super::utils::resolve_id_with_plugins::resolve_id_with_plugins;
   pub use crate::pluginable::{BoxPluginable, Pluginable, SharedPluginable};
 }
 

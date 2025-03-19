@@ -104,6 +104,50 @@ const JsxOptionsSchema = v.strictObject({
   ),
 })
 
+const HelperModeSchema = v.union([v.literal('Runtime'), v.literal('External')])
+
+const DecoratorOptionSchema = v.object({
+  legacy: v.optional(v.boolean()),
+  emitDecoratorMetadata: v.optional(v.boolean()),
+})
+
+const HelpersSchema = v.object({
+  mode: v.optional(HelperModeSchema),
+})
+
+const RewriteImportExtensionsSchema = v.union([
+  v.literal('rewrite'),
+  v.literal('remove'),
+  v.boolean(),
+])
+const TypescriptSchema = v.object({
+  jsxPragma: v.optional(v.string()),
+  jsxPragmaFrag: v.optional(v.string()),
+  onlyRemoveTypeImports: v.optional(v.boolean()),
+  allowNamespaces: v.optional(v.boolean()),
+  allowDeclareFields: v.optional(v.boolean()),
+  declaration: v.optional(
+    v.object({
+      stripInternal: v.optional(v.boolean()),
+      sourcemap: v.optional(v.boolean()),
+    }),
+  ),
+  rewriteImportExtensions: v.optional(RewriteImportExtensionsSchema),
+})
+const AssumptionsSchema = v.object({
+  ignoreFunctionLength: v.optional(v.boolean()),
+  noDocumentAll: v.optional(v.boolean()),
+  objectRestNoSymbols: v.optional(v.boolean()),
+  pureGetters: v.optional(v.boolean()),
+  setPublicClassFields: v.optional(v.boolean()),
+})
+const TransformOptionsSchema = v.object({
+  assumptions: v.optional(AssumptionsSchema),
+  typescript: v.optional(TypescriptSchema),
+  helpers: v.optional(HelpersSchema),
+  decorators: v.optional(DecoratorOptionSchema),
+})
+
 const WatchOptionsSchema = v.strictObject({
   chokidar: v.optional(
     v.never(
@@ -138,8 +182,52 @@ const WatchOptionsSchema = v.strictObject({
 const ChecksOptionsSchema = v.strictObject({
   circularDependency: v.pipe(
     v.optional(v.boolean()),
+    v.description('Whether to emit warning when detecting circular dependency'),
+  ),
+  eval: v.pipe(
+    v.optional(v.boolean()),
+    v.description('Whether to emit warning when detecting eval'),
+  ),
+  missingGlobalName: v.pipe(
+    v.optional(v.boolean()),
+    v.description('Whether to emit warning when detecting missing global name'),
+  ),
+  missingNameOptionForIifeExport: v.pipe(
+    v.optional(v.boolean()),
     v.description(
-      'Whether to emit warnings when detecting circular dependencies',
+      'Whether to emit warning when detecting missing name option for iife export',
+    ),
+  ),
+  mixedExport: v.pipe(
+    v.optional(v.boolean()),
+    v.description('Whether to emit warning when detecting mixed export'),
+  ),
+  unresolvedEntry: v.pipe(
+    v.optional(v.boolean()),
+    v.description('Whether to emit warning when detecting unresolved entry'),
+  ),
+  unresolvedImport: v.pipe(
+    v.optional(v.boolean()),
+    v.description('Whether to emit warning when detecting unresolved import'),
+  ),
+  filenameConflict: v.pipe(
+    v.optional(v.boolean()),
+    v.description('Whether to emit warning when detecting filename conflict'),
+  ),
+  commonJsVariableInEsm: v.pipe(
+    v.optional(v.boolean()),
+    v.description(
+      'Whether to emit warning when detecting common js variable in esm',
+    ),
+  ),
+  importIsUndefined: v.pipe(
+    v.optional(v.boolean()),
+    v.description('Whether to emit warning when detecting import is undefined'),
+  ),
+  configurationFieldConflict: v.pipe(
+    v.optional(v.boolean()),
+    v.description(
+      'Whether to emit warning when detecting configuration field conflict',
     ),
   ),
 })
@@ -167,9 +255,14 @@ const ResolveOptionsSchema = v.strictObject({
   tsconfigFilename: v.optional(v.string()),
 })
 
+// TODO: moduleSideEffects
 const TreeshakingOptionsSchema = v.union([
   v.boolean(),
-  v.looseObject({ annotations: v.optional(v.boolean()) }),
+  v.looseObject({
+    annotations: v.optional(v.boolean()),
+    manualPureFunctions: v.optional(v.array(v.string())),
+    unknownGlobalSideEffects: v.optional(v.boolean()),
+  }),
 ])
 
 const OnLogSchema = v.pipe(
@@ -269,6 +362,7 @@ const InputOptionsSchema = v.strictObject({
       v.string('preserve'),
     ]),
   ),
+  transform: v.optional(TransformOptionsSchema),
   watch: v.optional(v.union([WatchOptionsSchema, v.literal(false)])),
   dropLabels: v.pipe(
     v.optional(v.array(v.string())),
@@ -473,7 +567,9 @@ const OutputOptionsSchema = v.strictObject({
   cssChunkFileNames: v.optional(ChunkFileNamesSchema),
   sanitizeFileName: v.optional(SanitizeFileNameSchema),
   minify: v.pipe(
-    v.optional(v.union([v.boolean(), MinifyOptionsSchema])),
+    v.optional(
+      v.union([v.boolean(), v.string('dce-only'), MinifyOptionsSchema]),
+    ),
     v.description('Minify the bundled file'),
   ),
   name: v.pipe(
@@ -627,9 +723,10 @@ export function validateCliOptions<T>(options: T): [T, string[]?] {
 
   return [
     parsed.output as T,
-    parsed.issues
-      ?.map((issue) => issue.path?.join(', '))
-      .filter((v) => v !== undefined),
+    parsed.issues?.map((issue) => {
+      const option = issue.path?.map((pathItem) => pathItem.key).join(' ')
+      return `Invalid value for option ${option}: ${issue.message}`
+    }),
   ]
 }
 

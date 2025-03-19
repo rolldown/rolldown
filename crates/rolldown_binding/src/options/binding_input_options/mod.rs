@@ -1,14 +1,15 @@
-mod binding_checks_options;
 mod binding_defer_sync_scan_data;
 mod binding_experimental_options;
 pub mod binding_inject_import;
 mod binding_input_item;
 mod binding_jsx;
+mod binding_make_absolute_externals_relative;
 mod binding_resolve_options;
 mod binding_treeshake;
 mod binding_watch_option;
 
 use binding_defer_sync_scan_data::BindingDeferSyncScanDataOption;
+use binding_make_absolute_externals_relative::BindingMakeAbsoluteExternalsRelative;
 use derive_more::Debug;
 use napi::bindgen_prelude::FnArgs;
 use napi_derive::napi;
@@ -22,6 +23,7 @@ use binding_resolve_options::BindingResolveOptions;
 use binding_watch_option::BindingWatchOption;
 
 use super::plugin::BindingPluginOrParallelJsPluginPlaceholder;
+use crate::generated::binding_checks_options;
 use crate::types::{
   binding_log::BindingLog, binding_log_level::BindingLogLevel, js_callback::JsCallback,
 };
@@ -64,7 +66,6 @@ pub struct BindingInputOptions {
   // pub preserve_symlinks: bool,
   pub shim_missing_exports: Option<bool>,
   // strictDeprecations?: boolean;
-  // pub treeshake: Option<bool>,
   #[napi(ts_type = "'node' | 'browser' | 'neutral'")]
   pub platform: Option<String>,
   pub log_level: BindingLogLevel,
@@ -85,10 +86,13 @@ pub struct BindingInputOptions {
   pub profiler_names: Option<bool>,
   #[debug(skip)]
   pub jsx: Option<BindingJsx>,
+  #[debug(skip)]
+  pub transform: Option<oxc_transform_napi::TransformOptions>,
   pub watch: Option<BindingWatchOption>,
   pub keep_names: Option<bool>,
   pub checks: Option<binding_checks_options::BindingChecksOptions>,
   #[debug(skip)]
   #[napi(ts_type = "undefined | (() => BindingDeferSyncScanData[])")]
   pub defer_sync_scan_data: Option<BindingDeferSyncScanDataOption>,
+  pub make_absolute_externals_relative: Option<BindingMakeAbsoluteExternalsRelative>,
 }

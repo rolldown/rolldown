@@ -201,7 +201,7 @@ impl ViteResolvePlugin {
     if is_external_url(args.specifier) {
       return Ok(Some(HookResolveIdOutput {
         id: args.specifier.into(),
-        external: Some(true),
+        external: Some(true.into()),
         ..Default::default()
       }));
     }
@@ -259,8 +259,9 @@ impl ViteResolvePlugin {
 
           return Ok(Some(HookResolveIdOutput {
             id: args.specifier.into(),
-            external: Some(true),
+            external: Some(true.into()),
             side_effects: Some(HookSideEffects::False),
+            ..Default::default()
           }));
         } else {
           if !self.resolve_options.as_src {

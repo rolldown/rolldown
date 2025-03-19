@@ -19,6 +19,7 @@ oxc                = { workspace = true }
 rolldown           = { workspace = true }
 rolldown_sourcemap = { workspace = true }
 rolldown_testing   = { workspace = true }
+rolldown_workspace = { workspace = true }
 tokio              = { workspace = true, features = ["full"] }
 
 [[bench]]

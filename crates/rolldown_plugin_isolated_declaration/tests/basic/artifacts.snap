@@ -1,0 +1,27 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## foo.d.ts
+
+```ts
+export declare const foo: string;
+
+```
+## main.d.ts
+
+```ts
+export { foo } from "./foo";
+
+```
+## main.js
+
+```js
+
+//#region foo.tsx
+const foo = "foo";
+
+//#endregion
+export { foo };
+```

@@ -77,10 +77,10 @@ pub trait Pluginable: Any + Debug + Send + Sync + 'static {
 
   fn call_transform_meta(&self) -> Option<PluginHookMeta>;
 
-  fn call_transform_ast(
+  async fn call_transform_ast(
     &self,
     _ctx: &PluginContext,
-    args: HookTransformAstArgs,
+    args: HookTransformAstArgs<'_>,
   ) -> HookTransformAstReturn;
 
   fn call_transform_ast_meta(&self) -> Option<PluginHookMeta>;
@@ -447,12 +447,12 @@ impl<T: Plugin> Pluginable for T {
     Plugin::close_watcher_meta(self)
   }
 
-  fn call_transform_ast(
+  async fn call_transform_ast(
     &self,
     ctx: &PluginContext,
-    args: HookTransformAstArgs,
+    args: HookTransformAstArgs<'_>,
   ) -> HookTransformAstReturn {
-    Plugin::transform_ast(self, ctx, args)
+    Plugin::transform_ast(self, ctx, args).await
   }
 
   fn call_transform_ast_meta(&self) -> Option<PluginHookMeta> {

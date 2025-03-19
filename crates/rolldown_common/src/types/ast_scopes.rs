@@ -1,40 +1,38 @@
-use oxc::semantic::{Reference, ReferenceId, ScopeTree, SymbolId, SymbolTable};
+use oxc::semantic::{Reference, ReferenceId, Scoping, SymbolId};
 
 #[derive(Debug)]
 pub struct AstScopes {
-  inner: ScopeTree,
+  scoping: Scoping,
 }
 
 impl AstScopes {
-  pub fn new(inner: ScopeTree) -> Self {
-    Self { inner }
+  pub fn new(inner: Scoping) -> Self {
+    Self { scoping: inner }
   }
 
-  pub fn is_unresolved(&self, reference_id: ReferenceId, symbol_table: &SymbolTable) -> bool {
-    symbol_table.references[reference_id].symbol_id().is_none()
+  pub fn is_unresolved(&self, reference_id: ReferenceId) -> bool {
+    self.get_reference(reference_id).symbol_id().is_none()
   }
 
-  pub fn symbol_id_for(
-    &self,
-    reference_id: ReferenceId,
-    symbol_table: &SymbolTable,
-  ) -> Option<SymbolId> {
-    symbol_table.references[reference_id].symbol_id()
+  pub fn symbol_id_for(&self, reference_id: ReferenceId) -> Option<SymbolId> {
+    self.scoping.get_reference(reference_id).symbol_id()
   }
 
-  pub fn get_resolved_references<'table>(
-    &self,
-    symbol_id: SymbolId,
-    symbol_table: &'table SymbolTable,
-  ) -> impl Iterator<Item = &'table Reference> + 'table + use<'table> {
-    symbol_table.get_resolved_references(symbol_id)
+  pub fn get_resolved_references(&self, symbol_id: SymbolId) -> impl Iterator<Item = &Reference> {
+    self.scoping.get_resolved_references(symbol_id)
   }
 }
 
 impl std::ops::Deref for AstScopes {
-  type Target = ScopeTree;
+  type Target = Scoping;
 
   fn deref(&self) -> &Self::Target {
-    &self.inner
+    &self.scoping
+  }
+}
+
+impl std::ops::DerefMut for AstScopes {
+  fn deref_mut(&mut self) -> &mut Self::Target {
+    &mut self.scoping
   }
 }

@@ -3,6 +3,7 @@ mod chunk;
 mod css;
 mod ecmascript;
 mod file_emitter;
+mod generated;
 mod inner_bundler_options;
 mod module;
 mod module_loader;
@@ -13,11 +14,11 @@ mod types;
 /// `rolldown` crate could use `pub use rolldown_common::bundler_options::*;` to export all types, so we don't need write
 /// the same code in `rolldown` crate again.
 pub mod bundler_options {
+  pub use crate::generated::checks_options::ChecksOptions;
   pub use crate::inner_bundler_options::{
     BundlerOptions,
     types::{
       advanced_chunks_options::{AdvancedChunksOptions, MatchGroup},
-      checks_options::ChecksOptions,
       comments::Comments,
       defer_sync_scan_data_option::DeferSyncScanDataOption,
       es_module_flag::EsModuleFlag,
@@ -27,7 +28,8 @@ pub mod bundler_options {
       inject_import::InjectImport,
       input_item::InputItem,
       is_external::IsExternal,
-      jsx::Jsx,
+      jsx::{Jsx, NormalizedJsxOptions},
+      make_absolute_externals_relative::MakeAbsoluteExternalsRelative,
       minify_options::{MinifyOptions, MinifyOptionsObject, RawMinifyOptions},
       module_type::ModuleType,
       normalized_bundler_options::{NormalizedBundlerOptions, SharedNormalizedBundlerOptions},
@@ -126,7 +128,7 @@ pub use crate::{
   types::package_json::PackageJson,
   types::rendered_module::RenderedModule,
   types::resolved_export::ResolvedExport,
-  types::resolved_request_info::ResolvedId,
+  types::resolved_request_info::{ResolvedExternal, ResolvedId},
   types::rollup_pre_rendered_asset::RollupPreRenderedAsset,
   types::rollup_pre_rendered_chunk::RollupPreRenderedChunk,
   types::rollup_rendered_chunk::RollupRenderedChunk,

@@ -3,7 +3,6 @@ use oxc::ast_visit::{VisitMut, walk_mut};
 use oxc::span::{CompactStr, SPAN, Span};
 use rolldown_common::{Interop, Module, SymbolRef};
 use rolldown_ecmascript_utils::{CallExpressionExt, TakeIn};
-use rolldown_utils::ecmascript::legitimize_identifier_name;
 
 use super::IsolatingModuleFinalizer;
 
@@ -74,12 +73,7 @@ impl<'ast> VisitMut<'ast> for IsolatingModuleFinalizer<'_, 'ast> {
       if let Some(named_import) = ident
         .reference_id
         .get()
-        .and_then(|reference_id| {
-          self.scope.symbol_id_for(
-            reference_id,
-            self.ctx.symbol_db.this_method_should_be_removed_get_symbol_table(self.ctx.module.idx),
-          )
-        })
+        .and_then(|reference_id| self.scope.symbol_id_for(reference_id))
         .map(|symbol_id| (self.ctx.module.idx, symbol_id).into())
         .and_then(|symbol_ref: SymbolRef| self.ctx.module.named_imports.get(&symbol_ref))
       {
@@ -109,10 +103,7 @@ impl<'ast> VisitMut<'ast> for IsolatingModuleFinalizer<'_, 'ast> {
   }
 
   fn visit_call_expression(&mut self, expr: &mut ast::CallExpression<'ast>) {
-    if expr.is_global_require_call(
-      self.scope,
-      self.ctx.symbol_db.this_method_should_be_removed_get_symbol_table(self.ctx.module.idx),
-    ) {
+    if expr.is_global_require_call(self.scope) {
       if let Some(ast::Argument::StringLiteral(request)) = expr.arguments.first_mut() {
         request.value = self.snippet.atom(self.get_importee_module(expr.span).stable_id());
       }
@@ -375,7 +366,7 @@ impl<'ast> IsolatingModuleFinalizer<'_, 'ast> {
       }
       Module::External(external_module) => {
         // TODO need to generate one symbol and deconflict it
-        legitimize_identifier_name(&external_module.name).into()
+        external_module.identifier_name.as_str().into()
       }
     }
   }

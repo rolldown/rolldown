@@ -9,6 +9,7 @@ use crate::{
   types::{binding_rendered_chunk::RenderedChunk, js_callback::MaybeAsyncJsCallbackExt},
 };
 use napi::bindgen_prelude::{Either, FnArgs};
+use oxc::transformer::TransformOptions;
 use rolldown::{
   AddonOutputOption, AdvancedChunksOptions, AssetFilenamesOutputOption, BundlerOptions,
   ChunkFilenamesOutputOption, DeferSyncScanDataOption, ExperimentalOptions, HashCharacters,
@@ -187,6 +188,14 @@ pub fn normalize_binding_options(
     }
     module_types = Some(tmp);
   }
+  let target = output_options.target.as_deref().map(std::str::FromStr::from_str).transpose()?;
+  let transform = input_options
+    .transform
+    .map(|transform_option| {
+      TransformOptions::try_from(transform_option)
+        .map_err(|err| napi::Error::new(napi::Status::GenericFailure, err))
+    })
+    .transpose()?;
 
   let bundler_options = BundlerOptions {
     input: Some(input_options.input.into_iter().map(Into::into).collect()),
@@ -316,10 +325,14 @@ pub fn normalize_binding_options(
       })
       .transpose()?,
     drop_labels: input_options.drop_labels,
-    target: output_options.target.as_deref().map(std::str::FromStr::from_str).transpose()?,
+    target,
     keep_names: input_options.keep_names,
     polyfill_require: output_options.polyfill_require,
     defer_sync_scan_data: get_defer_sync_scan_data,
+    transform,
+    make_absolute_externals_relative: input_options
+      .make_absolute_externals_relative
+      .map(Into::into),
   };
 
   #[cfg(not(target_family = "wasm"))]

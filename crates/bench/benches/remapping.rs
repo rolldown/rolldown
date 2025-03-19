@@ -6,7 +6,7 @@ use oxc::{
   span::SourceType,
 };
 use rolldown_sourcemap::{SourceJoiner, SourceMapSource, collapse_sourcemaps};
-use rolldown_testing::workspace::root_dir;
+use rolldown_workspace::root_dir;
 
 fn criterion_benchmark(c: &mut Criterion) {
   let mut group = c.benchmark_group("remapping");

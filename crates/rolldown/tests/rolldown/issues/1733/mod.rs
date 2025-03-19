@@ -24,7 +24,7 @@ impl Plugin for ExternalCss {
       let path = format!("rewritten-{}", args.specifier);
       return Ok(Some(HookResolveIdOutput {
         id: path.into(),
-        external: Some(true),
+        external: Some(true.into()),
         ..Default::default()
       }));
     }

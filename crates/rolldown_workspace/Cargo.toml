@@ -1,0 +1,12 @@
+[package]
+edition.workspace    = true
+homepage.workspace   = true
+license.workspace    = true
+name                 = "rolldown_workspace"
+repository.workspace = true
+version              = "0.1.0"
+
+[dependencies]
+
+[lints]
+workspace = true

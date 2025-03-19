@@ -2,7 +2,7 @@ use super::stages::{link_stage::LinkStage, scan_stage::ScanStageOutput};
 use crate::{
   BundlerOptions, SharedOptions, SharedResolver,
   bundler_builder::BundlerBuilder,
-  hmr::hmr_manager::HmrManager,
+  hmr::hmr_manager::{HmrManager, HmrManagerInput},
   stages::{generate_stage::GenerateStage, scan_stage::ScanStage},
   types::bundle_output::BundleOutput,
 };
@@ -174,19 +174,31 @@ impl Bundler {
 
     output.watch_files = self.plugin_driver.watch_files.iter().map(|f| f.clone()).collect();
 
+    if self.options.is_hmr_enabled() {
+      self.hmr_manager = Some(HmrManager::new(HmrManagerInput {
+        module_db: link_stage_output.module_table,
+        fs: self.fs,
+        options: Arc::clone(&self.options),
+        resolver: Arc::clone(&self.resolver),
+        plugin_driver: Arc::clone(&self.plugin_driver),
+        cache: Arc::clone(&self.cache),
+      }));
+    }
     Ok(output)
   }
 
+  #[inline]
   pub fn options(&self) -> &NormalizedBundlerOptions {
     &self.options
   }
 
-  pub fn generate_hmr_patch(&mut self, changed_files: Vec<String>) -> BuildResult<String> {
+  pub async fn generate_hmr_patch(&mut self, changed_files: Vec<String>) -> BuildResult<String> {
     self
       .hmr_manager
       .as_ref()
       .expect("HMR manager is not initialized")
       .generate_hmr_patch(changed_files)
+      .await
   }
 }
 

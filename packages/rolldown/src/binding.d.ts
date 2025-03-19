@@ -236,7 +236,8 @@ export type BindingBuiltinPluginName =  'builtin:wasm-helper'|
 'builtin:build-import-analysis'|
 'builtin:replace'|
 'builtin:vite-resolve'|
-'builtin:module-federation';
+'builtin:module-federation'|
+'builtin:isolated-declaration';
 
 export interface BindingBundlerOptions {
   inputOptions: BindingInputOptions
@@ -246,6 +247,16 @@ export interface BindingBundlerOptions {
 
 export interface BindingChecksOptions {
   circularDependency?: boolean
+  eval?: boolean
+  missingGlobalName?: boolean
+  missingNameOptionForIifeExport?: boolean
+  mixedExport?: boolean
+  unresolvedEntry?: boolean
+  unresolvedImport?: boolean
+  filenameConflict?: boolean
+  commonJsVariableInEsm?: boolean
+  importIsUndefined?: boolean
+  configurationFieldConflict?: boolean
 }
 
 export interface BindingDeferSyncScanData {
@@ -298,7 +309,7 @@ export interface BindingHookJsResolveIdOptions {
 
 export interface BindingHookJsResolveIdOutput {
   id: string
-  external?: boolean
+  external?: BindingResolvedExternal
   sideEffects: boolean | 'no-treeshake'
 }
 
@@ -322,7 +333,8 @@ export interface BindingHookResolveIdExtraArgs {
 
 export interface BindingHookResolveIdOutput {
   id: string
-  external?: boolean
+  external?: BindingResolvedExternal
+  normalizeExternalId?: boolean
   sideEffects?: BindingHookSideEffects
 }
 
@@ -375,10 +387,12 @@ export interface BindingInputOptions {
   experimental?: BindingExperimentalOptions
   profilerNames?: boolean
   jsx?: BindingJsx
+  transform?: TransformOptions
   watch?: BindingWatchOption
   keepNames?: boolean
   checks?: BindingChecksOptions
   deferSyncScanData?: undefined | (() => BindingDeferSyncScanData[])
+  makeAbsoluteExternalsRelative?: BindingMakeAbsoluteExternalsRelative
 }
 
 export interface BindingJsonPluginConfig {
@@ -426,6 +440,10 @@ export declare enum BindingLogLevel {
   Info = 2,
   Debug = 3
 }
+
+export type BindingMakeAbsoluteExternalsRelative =
+  | { type: 'Bool', field0: boolean }
+  | { type: 'IfRelativeSource' }
 
 export interface BindingManifestPluginConfig {
   root: string
@@ -522,7 +540,7 @@ export interface BindingOutputOptions {
 
 export interface BindingPluginContextResolvedId {
   id: string
-  external: boolean
+  external: BindingResolvedExternal
 }
 
 export interface BindingPluginContextResolveOptions {
@@ -614,6 +632,11 @@ export interface BindingReplacePluginConfig {
   sourcemap?: boolean
 }
 
+export type BindingResolvedExternal =
+  | { type: 'Bool', field0: boolean }
+  | { type: 'Absolute' }
+  | { type: 'Relative' }
+
 export interface BindingResolveOptions {
   alias?: Array<AliasItem>
   aliasFields?: Array<Array<string>>
@@ -662,6 +685,8 @@ export interface BindingTransformPluginConfig {
 export interface BindingTreeshake {
   moduleSideEffects: boolean | BindingModuleSideEffectsRule[] | ((id: string, is_external: boolean) => boolean | undefined)
   annotations?: boolean
+  manualPureFunctions?: Array<string>
+  unknownGlobalSideEffects?: boolean
 }
 
 export interface BindingViteResolvePluginConfig {
@@ -1101,11 +1126,11 @@ export interface ParserOptions {
    */
   astType?: 'js' | 'ts'
   /**
-   * Emit `ParenthesizedExpression` in AST.
+   * Emit `ParenthesizedExpression` and `TSParenthesizedType` in AST.
    *
    * If this option is true, parenthesized expressions are represented by
-   * (non-standard) `ParenthesizedExpression` nodes that have a single `expression` property
-   * containing the expression inside parentheses.
+   * (non-standard) `ParenthesizedExpression` and `TSParenthesizedType` nodes that
+   * have a single `expression` property containing the expression inside parentheses.
    *
    * @default true
    */
@@ -1185,6 +1210,14 @@ export type Severity =  'Error'|
 'Warning'|
 'Advice';
 
+/**
+ * Shutdown the tokio runtime manually.
+ *
+ * This is required for the wasm target with `tokio_unstable` cfg.
+ * In the wasm runtime, the `park` threads will hang there until the tokio::Runtime is shutdown.
+ */
+export declare function shutdownAsyncRuntime(): void
+
 export interface SourceMap {
   file?: string
   mappings: string
@@ -1200,6 +1233,14 @@ export interface Span {
   start: number
   end: number
 }
+
+/**
+ * Start the async runtime manually.
+ *
+ * This is required when the async runtime is shutdown manually.
+ * Usually it's used in test.
+ */
+export declare function startAsyncRuntime(): void
 
 export interface StaticExport {
   start: number

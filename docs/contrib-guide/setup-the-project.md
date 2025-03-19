@@ -37,6 +37,10 @@ cargo install just
 
 :::
 
+- Install `cmake`
+
+You could install it by following the official [Download](https://cmake.org/download/).
+
 - Install Node.js >= {{ data.nodeVersion }} / 21.2.0
 
 ## `just setup`

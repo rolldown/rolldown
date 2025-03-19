@@ -1,10 +1,7 @@
 use std::path::Path;
 
 use arcstr::ArcStr;
-use oxc::{
-  semantic::{ScopeTree, SymbolTable},
-  span::SourceType as OxcSourceType,
-};
+use oxc::{semantic::Scoping, span::SourceType as OxcSourceType};
 use rolldown_common::{ModuleType, NormalizedBundlerOptions, RUNTIME_MODULE_ID, StrOrBytes};
 use rolldown_ecmascript::{EcmaAst, EcmaCompiler};
 use rolldown_error::{BuildDiagnostic, BuildResult};
@@ -29,13 +26,12 @@ fn pure_esm_js_oxc_source_type() -> OxcSourceType {
 
 pub struct ParseToEcmaAstResult {
   pub ast: EcmaAst,
-  pub symbol_table: SymbolTable,
-  pub scope_tree: ScopeTree,
+  pub scoping: Scoping,
   pub has_lazy_export: bool,
   pub warning: Vec<BuildDiagnostic>,
 }
 
-pub fn parse_to_ecma_ast(
+pub async fn parse_to_ecma_ast(
   ctx: &CreateModuleContext<'_>,
   source: StrOrBytes,
 ) -> BuildResult<ParseToEcmaAstResult> {
@@ -72,12 +68,15 @@ pub fn parse_to_ecma_ast(
     _ => EcmaCompiler::parse(stable_id, source, oxc_source_type)?,
   };
 
-  ecma_ast = plugin_driver.transform_ast(HookTransformAstArgs {
-    cwd: &options.cwd,
-    ast: ecma_ast,
-    id: stable_id,
-    is_user_defined_entry,
-  })?;
+  ecma_ast = plugin_driver
+    .transform_ast(HookTransformAstArgs {
+      cwd: &options.cwd,
+      ast: ecma_ast,
+      id: stable_id,
+      is_user_defined_entry,
+      module_type,
+    })
+    .await?;
 
   PreProcessEcmaAst::default().build(
     ecma_ast,

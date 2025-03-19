@@ -1,7 +1,7 @@
 use oxc_index::IndexVec;
 use rolldown_common::{
   EcmaRelated, EcmaView, EcmaViewMeta, ImportRecordIdx, ModuleId, ModuleType, RawImportRecord,
-  ResolvedId, SharedNormalizedBundlerOptions, TreeshakeOptions,
+  ResolvedId, SharedNormalizedBundlerOptions,
   side_effects::{DeterminedSideEffects, HookSideEffects},
 };
 use rolldown_error::BuildResult;
@@ -27,8 +27,8 @@ pub async fn create_ecma_view(
   args: CreateModuleViewArgs,
 ) -> BuildResult<CreateEcmaViewReturn> {
   let CreateModuleViewArgs { source, sourcemap_chain, hook_side_effects } = args;
-  let ParseToEcmaAstResult { ast, symbol_table, scope_tree, has_lazy_export, warning } =
-    parse_to_ecma_ast(ctx, source)?;
+  let ParseToEcmaAstResult { ast, scoping, has_lazy_export, warning } =
+    parse_to_ecma_ast(ctx, source).await?;
 
   ctx.warnings.extend(warning);
 
@@ -39,8 +39,7 @@ pub async fn create_ecma_view(
 
   let scanner = AstScanner::new(
     ctx.module_index,
-    scope_tree,
-    symbol_table,
+    scoping,
     &repr_name,
     ctx.resolved_id.module_def_format,
     ast.source(),
@@ -62,7 +61,6 @@ pub async fn create_ecma_view(
     has_eval,
     errors,
     ast_usage,
-    ast_scope,
     symbol_ref_db: symbols,
     self_referenced_class_decl_symbol_ids,
     hashbang_range,
@@ -98,13 +96,13 @@ pub async fn create_ecma_view(
     stmt_infos,
     imports,
     default_export_ref,
-    ast_scope_idx: None,
     exports_kind,
     namespace_object_ref,
     def_format: ctx.resolved_id.module_def_format,
     sourcemap_chain,
     import_records: IndexVec::default(),
     importers: FxIndexSet::default(),
+    importers_idx: FxIndexSet::default(),
     dynamic_importers: FxIndexSet::default(),
     imported_ids: FxIndexSet::default(),
     dynamically_imported_ids: FxIndexSet::default(),
@@ -127,7 +125,7 @@ pub async fn create_ecma_view(
     hmr_info,
   };
 
-  let ecma_related = EcmaRelated { ast, symbols, ast_scope, dynamic_import_rec_exports_usage };
+  let ecma_related = EcmaRelated { ast, symbols, dynamic_import_rec_exports_usage };
   Ok(CreateEcmaViewReturn { ecma_view, ecma_related, raw_import_records })
 }
 
@@ -152,15 +150,14 @@ pub async fn normalize_side_effects(
       HookSideEffects::NoTreeshake => DeterminedSideEffects::NoTreeshake,
     },
     // If user don't specify the side effects, we use fallback value from `option.treeshake.moduleSideEffects`;
-    None => match options.treeshake {
+    None => match options.treeshake.as_ref() {
       // Actually this convert is not necessary, just for passing type checking
-      TreeshakeOptions::Boolean(false) => DeterminedSideEffects::NoTreeshake,
-      TreeshakeOptions::Boolean(true) => unreachable!(),
-      TreeshakeOptions::Option(ref opt) => {
+      None => DeterminedSideEffects::NoTreeshake,
+      Some(opt) => {
         if opt.module_side_effects.is_fn() {
           if opt
             .module_side_effects
-            .ffi_resolve(stable_id, resolved_id.is_external)
+            .ffi_resolve(stable_id, resolved_id.external.is_external())
             .await?
             .unwrap_or_default()
           {
@@ -169,7 +166,10 @@ pub async fn normalize_side_effects(
             DeterminedSideEffects::UserDefined(false)
           }
         } else {
-          match opt.module_side_effects.native_resolve(stable_id, resolved_id.is_external) {
+          match opt
+            .module_side_effects
+            .native_resolve(stable_id, resolved_id.external.is_external())
+          {
             Some(value) => DeterminedSideEffects::UserDefined(value),
             None => lazy_check_side_effects(module_type, resolved_id, stmt_infos),
           }

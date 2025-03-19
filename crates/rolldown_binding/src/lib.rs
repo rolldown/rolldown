@@ -13,9 +13,11 @@
 // Looks redundant
 #![allow(clippy::missing_transmute_annotations)]
 
+use napi_derive::napi;
+
 #[cfg(not(target_family = "wasm"))]
 #[global_allocator]
-static ALLOC: mimalloc::MiMalloc = mimalloc::MiMalloc;
+static ALLOC: mimalloc_safe::MiMalloc = mimalloc_safe::MiMalloc;
 
 pub mod bundler;
 pub mod options;
@@ -24,5 +26,26 @@ pub mod types;
 pub mod utils;
 pub use oxc_parser_napi;
 pub use oxc_transform_napi;
+mod generated;
 pub mod watcher;
 pub mod worker_manager;
+
+#[napi]
+/// Shutdown the tokio runtime manually.
+///
+/// This is required for the wasm target with `tokio_unstable` cfg.
+/// In the wasm runtime, the `park` threads will hang there until the tokio::Runtime is shutdown.
+pub fn shutdown_async_runtime() {
+  #[cfg(all(target_family = "wasm", tokio_unstable))]
+  napi::bindgen_prelude::shutdown_async_runtime();
+}
+
+#[napi]
+/// Start the async runtime manually.
+///
+/// This is required when the async runtime is shutdown manually.
+/// Usually it's used in test.
+pub fn start_async_runtime() {
+  #[cfg(all(target_family = "wasm", tokio_unstable))]
+  napi::bindgen_prelude::start_async_runtime();
+}

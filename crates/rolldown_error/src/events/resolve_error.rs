@@ -1,5 +1,6 @@
-use crate::types::diagnostic_options::DiagnosticOptions;
+use crate::{EventKind, types::diagnostic_options::DiagnosticOptions};
 use arcstr::ArcStr;
+use derive_more::Debug;
 
 use super::{BuildEvent, DiagnosableArcstr};
 
@@ -9,8 +10,9 @@ pub struct DiagnosableResolveError {
   pub importer_id: ArcStr,
   pub importee: DiagnosableArcstr,
   pub reason: String,
-  pub title: Option<&'static str>,
   pub help: Option<String>,
+  #[debug(skip)]
+  pub diagnostic_kind: EventKind,
 }
 
 impl DiagnosableResolveError {
@@ -25,7 +27,7 @@ impl DiagnosableResolveError {
 
 impl BuildEvent for DiagnosableResolveError {
   fn kind(&self) -> crate::event_kind::EventKind {
-    crate::event_kind::EventKind::ResolveError(self.title)
+    self.diagnostic_kind
   }
 
   fn message(&self, opts: &DiagnosticOptions) -> String {

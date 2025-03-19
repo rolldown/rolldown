@@ -18,10 +18,7 @@ impl<'ast> ScopeHoistingFinalizer<'_, 'ast> {
     let reference_id = id_ref.reference_id.get()?;
 
     // we will hit this branch if the reference points to a global variable
-    let symbol_id = self.scope.symbol_id_for(
-      reference_id,
-      self.ctx.symbol_db.this_method_should_be_removed_get_symbol_table(self.ctx.id),
-    )?;
+    let symbol_id = self.scope.symbol_id_for(reference_id)?;
 
     let symbol_ref: SymbolRef = (self.ctx.id, symbol_id).into();
     let mut expr = self.finalized_expr_for_symbol_ref(symbol_ref, is_callee, Some(reference_id));
@@ -57,10 +54,7 @@ impl<'ast> ScopeHoistingFinalizer<'_, 'ast> {
     let reference_id = id_ref.reference_id.get()?;
 
     // we will hit this branch if the reference points to a global variable
-    let symbol_id = self.scope.symbol_id_for(
-      reference_id,
-      self.ctx.symbol_db.this_method_should_be_removed_get_symbol_table(self.ctx.id),
-    )?;
+    let symbol_id = self.scope.symbol_id_for(reference_id)?;
 
     let symbol_ref: SymbolRef = (self.ctx.id, symbol_id).into();
     let canonical_ref = self.ctx.symbol_db.canonical_ref_for(symbol_ref);
@@ -117,10 +111,7 @@ impl<'ast> ScopeHoistingFinalizer<'_, 'ast> {
 
     let reference_id = target_id_ref.reference_id.get()?;
 
-    let symbol_id = self.scope.symbol_id_for(
-      reference_id,
-      self.ctx.symbol_db.this_method_should_be_removed_get_symbol_table(self.ctx.id),
-    )?;
+    let symbol_id = self.scope.symbol_id_for(reference_id)?;
 
     let symbol_ref: SymbolRef = (self.ctx.id, symbol_id).into();
     let canonical_ref = self.ctx.symbol_db.canonical_ref_for(symbol_ref);

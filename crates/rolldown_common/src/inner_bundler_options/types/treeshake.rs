@@ -1,7 +1,8 @@
-use std::{future::Future, pin::Pin, sync::Arc};
+use std::{future::Future, ops::Deref, pin::Pin, sync::Arc};
 
 use derive_more::Debug;
 use rolldown_utils::js_regex::HybridRegex;
+use rustc_hash::FxHashSet;
 #[cfg(feature = "deserialize_bundler_options")]
 use schemars::JsonSchema;
 #[cfg(feature = "deserialize_bundler_options")]
@@ -18,13 +19,44 @@ pub enum TreeshakeOptions {
   Option(InnerOptions),
 }
 
+#[derive(Default, Debug)]
+pub struct NormalizedTreeshakeOptions(Option<InnerOptions>);
+
+impl Deref for NormalizedTreeshakeOptions {
+  type Target = Option<InnerOptions>;
+  fn deref(&self) -> &Self::Target {
+    &self.0
+  }
+}
+impl From<InnerOptions> for NormalizedTreeshakeOptions {
+  fn from(inner: InnerOptions) -> Self {
+    NormalizedTreeshakeOptions(Some(inner))
+  }
+}
+
+impl NormalizedTreeshakeOptions {
+  pub fn new(inner: Option<InnerOptions>) -> Self {
+    NormalizedTreeshakeOptions(inner)
+  }
+
+  pub fn annotations(&self) -> bool {
+    self.as_ref().and_then(|item| item.annotations).unwrap_or(true)
+  }
+
+  pub fn unknown_global_side_effects(&self) -> bool {
+    self.as_ref().and_then(|item| item.unknown_global_side_effects).unwrap_or(true)
+  }
+
+  // TODO: optimize this
+  pub fn manual_pure_functions(&self) -> Option<&FxHashSet<String>> {
+    self.as_ref().and_then(|item| item.manual_pure_functions.as_ref())
+  }
+}
+
 impl Default for TreeshakeOptions {
   /// Used for snapshot testing
   fn default() -> Self {
-    TreeshakeOptions::Option(InnerOptions {
-      module_side_effects: ModuleSideEffects::Boolean(true),
-      annotations: Some(true),
-    })
+    TreeshakeOptions::Option(InnerOptions::default())
   }
 }
 
@@ -64,25 +96,16 @@ impl ModuleSideEffects {
     match self {
       ModuleSideEffects::ModuleSideEffectsRules(rules) => {
         for ModuleSideEffectsRule { test, external, side_effects } in rules {
-          match (test, external) {
-            (Some(test), Some(external)) => {
-              if test.matches(path) && *external == is_external {
-                return Some(*side_effects);
-              }
-            }
-            (None, Some(external)) => {
-              if *external == is_external {
-                return Some(*side_effects);
-              }
-            }
-            (Some(test), None) => {
-              if test.matches(path) {
-                return Some(*side_effects);
-              }
-            }
+          let is_match_rule = match (test, external) {
+            (Some(test), Some(external)) => test.matches(path) && *external == is_external,
+            (None, Some(external)) => *external == is_external,
+            (Some(test), None) => test.matches(path),
             // At least one of `test` or `external` should be defined
             (None, None) => unreachable!(),
           };
+          if is_match_rule {
+            return Some(*side_effects);
+          }
         }
         // analyze side effects from source code
         None
@@ -108,10 +131,12 @@ impl TreeshakeOptions {
   pub fn enabled(&self) -> bool {
     matches!(self, TreeshakeOptions::Option(_))
   }
-  pub fn annotations(&self) -> bool {
+
+  pub fn into_normalized_options(self) -> NormalizedTreeshakeOptions {
     match self {
-      TreeshakeOptions::Boolean(v) => *v,
-      TreeshakeOptions::Option(inner) => inner.annotations.unwrap_or_default(),
+      TreeshakeOptions::Boolean(true) => NormalizedTreeshakeOptions::default(),
+      TreeshakeOptions::Boolean(false) => NormalizedTreeshakeOptions::new(None),
+      TreeshakeOptions::Option(inner_options) => inner_options.into(),
     }
   }
 }
@@ -130,6 +155,19 @@ pub struct InnerOptions {
   )]
   pub module_side_effects: ModuleSideEffects,
   pub annotations: Option<bool>,
+  pub manual_pure_functions: Option<FxHashSet<String>>,
+  pub unknown_global_side_effects: Option<bool>,
+}
+
+impl Default for InnerOptions {
+  fn default() -> Self {
+    InnerOptions {
+      module_side_effects: ModuleSideEffects::Boolean(true),
+      annotations: Some(true),
+      manual_pure_functions: None,
+      unknown_global_side_effects: None,
+    }
+  }
 }
 
 #[cfg(feature = "deserialize_bundler_options")]

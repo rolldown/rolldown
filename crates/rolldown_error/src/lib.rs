@@ -2,6 +2,7 @@ mod build_error;
 mod diagnostic;
 mod event_kind;
 mod events;
+mod generated;
 mod locator;
 mod type_aliases;
 mod types;
@@ -17,9 +18,11 @@ pub use crate::{
   events::commonjs_variable_in_esm::CjsExportSpan,
   events::invalid_option::InvalidOptionType,
   events::unloadable_dependency::UnloadableDependencyContext,
+  generated::event_kind_switcher::EventKindSwitcher,
   locator::line_column_to_byte_offset,
   type_aliases::{BuildResult, SingleBuildResult},
   types::diagnostic_options::DiagnosticOptions,
+  utils::filter_out_disabled_diagnostics,
 };
 
 fn _usage_should_able_to_auto_convert_outside_errors() -> BuildResult<()> {

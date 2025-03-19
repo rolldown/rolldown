@@ -13,13 +13,13 @@ jobs:
       pull-requests: write
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/labeler@v5
+      - uses: actions/labeler@8558fd74291d67161a8a78ce36a881fa63b766a9 # v5
 
   remove-needs-triage-when-assigned:
     if: github.event.action == 'assigned'
     runs-on: ubuntu-latest
     steps:
-      - uses: actions-cool/issues-helper@v3
+      - uses: actions-cool/issues-helper@a610082f8ac0cf03e357eb8dd0d5e2ba075e017e # v3.6.0
         with:
           actions: 'remove-labels'
           token: ${{ secrets.GITHUB_TOKEN }}

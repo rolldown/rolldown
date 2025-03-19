@@ -20,11 +20,11 @@ impl From<(ModuleIdx, SymbolId)> for SymbolRef {
 
 impl SymbolRef {
   pub fn name<'db>(&self, db: &'db SymbolRefDb) -> &'db str {
-    db.inner[self.owner].unpack_ref().get_name(self.symbol)
+    db[self.owner].unpack_ref().symbol_name(self.symbol)
   }
 
   pub fn set_name(&self, db: &mut SymbolRefDb, name: &str) {
-    db.inner[self.owner].unpack_ref_mut().set_name(self.symbol, name);
+    db[self.owner].unpack_ref_mut().set_symbol_name(self.symbol, name);
   }
 
   /// Not all symbols have flags info, we only care about part of them.

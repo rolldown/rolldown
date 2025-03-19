@@ -38,7 +38,7 @@ jobs:
       - plan
       - build
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
 
       - name: Setup Node
         uses: ./.github/actions/setup-node
@@ -47,7 +47,7 @@ jobs:
         run: git reset --hard # fix pnpm install add new line for package.json
 
       - name: Download Binding Artifacts
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@cc203385981b70ca67e1cc392babf9cc229d5806 # v4.1.9
         with:
           path: packages/rolldown/artifacts
 
@@ -59,19 +59,19 @@ jobs:
         shell: bash
 
       - name: Download Node Artifacts
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@cc203385981b70ca67e1cc392babf9cc229d5806 # v4.1.9
         with:
           path: packages/rolldown/dist
           name: node-artifact
 
       - name: Download `rolldown-version.txt`
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@cc203385981b70ca67e1cc392babf9cc229d5806 # v4.1.9
         with:
           name: rolldown-version
 
       - name: Read `rolldown-version.txt`
         id: rolldown-version
-        uses: igorskyflyer/action-readfile@v1.0.0
+        uses: igorskyflyer/action-readfile@d38a0aef4a6ba5245f2a127705a8cdc8d5d5e702 # v1.0.0
         with:
           path: rolldown-version.txt
 

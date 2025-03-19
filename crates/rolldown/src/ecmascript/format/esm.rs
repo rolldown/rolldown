@@ -41,7 +41,7 @@ pub fn render_esm<'code>(
         .star_export_module_ids()
         .filter_map(|importee| {
           let importee = &ctx.link_output.module_table.modules[importee];
-          importee.as_external().map(|m| &m.name)
+          importee.as_external().map(|m| m.get_import_path(ctx.chunk))
         })
         .dedup()
         .for_each(|ext_name| {
@@ -112,7 +112,7 @@ fn render_esm_chunk_imports(ctx: &GenerateContext<'_>) -> String {
     s.push_str(&create_import_declaration(
       specifiers,
       &default_alias,
-      &ctx.chunk.import_path_for(importee_chunk).into(),
+      &ctx.chunk.import_path_for(importee_chunk),
     ));
   });
   // render external imports
@@ -136,7 +136,7 @@ fn render_esm_chunk_imports(ctx: &GenerateContext<'_>) -> String {
             s.push_str("import * as ");
             s.push_str(alias);
             s.push_str(" from \"");
-            s.push_str(&importee.name);
+            s.push_str(&importee.get_import_path(ctx.chunk));
             s.push_str("\";\n");
             None
           }
@@ -164,7 +164,11 @@ fn render_esm_chunk_imports(ctx: &GenerateContext<'_>) -> String {
       || !default_alias.is_empty()
       || (importee.side_effects.has_side_effects() && !has_importee_imported)
     {
-      s.push_str(&create_import_declaration(specifiers, &default_alias, &importee.name));
+      s.push_str(&create_import_declaration(
+        specifiers,
+        &default_alias,
+        &importee.get_import_path(ctx.chunk),
+      ));
     }
   });
 
@@ -174,7 +178,7 @@ fn render_esm_chunk_imports(ctx: &GenerateContext<'_>) -> String {
 fn create_import_declaration(
   mut specifiers: Vec<String>,
   default_alias: &[ArcStr],
-  path: &ArcStr,
+  path: &str,
 ) -> String {
   let mut ret = String::new();
   let first_default_alias = match &default_alias {

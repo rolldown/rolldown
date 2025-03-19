@@ -1,6 +1,6 @@
 use rolldown_common::{BundlerOptions, InputItem};
 
-use crate::workspace::root_dir;
+use rolldown_workspace::root_dir;
 
 pub fn threejs() -> BundlerOptions {
   BundlerOptions {

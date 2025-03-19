@@ -20,6 +20,8 @@ workspace = true
 anyhow         = { workspace = true }
 arcstr         = { workspace = true }
 ariadne        = { workspace = true }
+bitflags       = { workspace = true }
+derive_more    = { workspace = true }
 heck           = { workspace = true }
 napi           = { workspace = true, optional = true }
 oxc            = { workspace = true }

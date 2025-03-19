@@ -30,6 +30,7 @@
     "packages/rolldown/npm/**",
     "packages/rolldown/tests/fixtures/**/_config.ts",
     "packages/rolldown/**/__snapshots__",
-    "docs/**"
+    "docs/**",
+    "examples/hmr-raw/**"
   ]
 }

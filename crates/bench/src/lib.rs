@@ -1,10 +1,10 @@
 use std::path::PathBuf;
 
 use rolldown::BundlerOptions;
-use rolldown_testing::workspace;
+use rolldown_workspace::root_dir;
 
 pub fn join_by_workspace_root(path: &str) -> PathBuf {
-  workspace::root_dir().join(path)
+  root_dir().join(path)
 }
 
 pub struct BenchItem {

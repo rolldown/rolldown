@@ -9,14 +9,26 @@ import type {
   RollupError,
 } from '../types/misc'
 import { normalizeLog } from '../log/log-handler'
-import { PluginContext } from './plugin-context'
+import { PluginContextImpl, type PluginContext } from './plugin-context'
 import { augmentCodeLocation, error, logPluginError } from '../log/logs'
 import { PluginContextData } from './plugin-context-data'
 import type { Plugin } from './index'
 import { SourceMap } from '../types/rolldown-output'
 import { OutputOptions } from '../options/output-options'
+import type { Extends, TypeAssert } from '../types/assert'
 
-export class TransformPluginContext extends PluginContext {
+export interface TransformPluginContext extends PluginContext {
+  debug: LoggingFunctionWithPosition
+  info: LoggingFunctionWithPosition
+  warn: LoggingFunctionWithPosition
+  error(
+    e: RollupError | string,
+    pos?: number | { column: number; line: number },
+  ): never
+  getCombinedSourcemap(): SourceMap
+}
+
+export class TransformPluginContextImpl extends PluginContextImpl {
   constructor(
     outputOptions: OutputOptions,
     context: BindingPluginContext,
@@ -58,4 +70,12 @@ export class TransformPluginContext extends PluginContext {
   public getCombinedSourcemap(): SourceMap {
     return JSON.parse(this.inner.getCombinedSourcemap())
   }
+}
+
+function _assert() {
+  // adding implements to class disallows extending PluginContext by declaration merging
+  // instead check that TransformPluginContextImpl is assignable to TransformPluginContext here
+  type _ = TypeAssert<
+    Extends<TransformPluginContextImpl, TransformPluginContext>
+  >
 }

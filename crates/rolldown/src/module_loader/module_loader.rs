@@ -3,10 +3,10 @@ use super::runtime_module_task::RuntimeModuleTask;
 use super::task_context::TaskContextMeta;
 use crate::ecmascript::ecma_module_view_factory::normalize_side_effects;
 use crate::module_loader::task_context::TaskContext;
-use crate::type_alias::{IndexAstScope, IndexEcmaAst};
+use crate::type_alias::IndexEcmaAst;
 use crate::utils::load_entry_module::load_entry_module;
 use arcstr::ArcStr;
-use oxc::semantic::{ScopeId, SymbolTable};
+use oxc::semantic::{ScopeId, Scoping};
 use oxc::transformer::ReplaceGlobalDefinesConfig;
 use oxc_index::IndexVec;
 use rolldown_common::dynamic_import_usage::DynamicImportExportsUsage;
@@ -15,8 +15,8 @@ use rolldown_common::{
   Cache, DUMMY_MODULE_IDX, EcmaRelated, EntryPoint, EntryPointKind, ExternalModule, ImportKind,
   ImportRecordIdx, ImportRecordMeta, ImporterRecord, Module, ModuleId, ModuleIdx, ModuleInfo,
   ModuleLoaderMsg, ModuleSideEffects, ModuleTable, ModuleType, NormalModuleTaskResult,
-  RUNTIME_MODULE_ID, ResolvedId, RuntimeModuleBrief, RuntimeModuleTaskResult, StmtInfoIdx,
-  SymbolRefDb, SymbolRefDbForModule, TreeshakeOptions,
+  RUNTIME_MODULE_ID, ResolvedExternal, ResolvedId, RuntimeModuleBrief, RuntimeModuleTaskResult,
+  StmtInfoIdx, SymbolRefDb, SymbolRefDbForModule,
 };
 use rolldown_error::{BuildDiagnostic, BuildResult};
 use rolldown_fs::OsFileSystem;
@@ -27,7 +27,9 @@ use rolldown_utils::rayon::{IntoParallelIterator, ParallelIterator};
 use rolldown_utils::rustc_hash::FxHashSetExt;
 use rustc_hash::{FxHashMap, FxHashSet};
 use std::collections::hash_map::Entry;
+use std::path::Path;
 use std::sync::Arc;
+use sugar_path::SugarPath;
 
 use crate::{SharedOptions, SharedResolver};
 
@@ -35,7 +37,6 @@ pub struct IntermediateNormalModules {
   pub modules: IndexVec<ModuleIdx, Option<Module>>,
   pub importers: IndexVec<ModuleIdx, Vec<ImporterRecord>>,
   pub index_ecma_ast: IndexEcmaAst,
-  pub index_ast_scope: IndexAstScope,
 }
 
 impl IntermediateNormalModules {
@@ -44,7 +45,6 @@ impl IntermediateNormalModules {
       modules: IndexVec::new(),
       importers: IndexVec::new(),
       index_ecma_ast: IndexVec::default(),
-      index_ast_scope: IndexVec::default(),
     }
   }
 
@@ -71,7 +71,6 @@ pub struct ModuleLoaderOutput {
   // Stored all modules
   pub module_table: ModuleTable,
   pub index_ecma_ast: IndexEcmaAst,
-  pub index_ast_scope: IndexAstScope,
   pub symbol_ref_db: SymbolRefDb,
   // Entries that user defined + dynamic import entries
   pub entry_points: Vec<EntryPoint>,
@@ -158,23 +157,23 @@ impl ModuleLoader {
     owner: Option<ModuleTaskOwner>,
     is_user_defined_entry: bool,
     assert_module_type: Option<ModuleType>,
+    user_defined_entries: &[(Option<ArcStr>, ResolvedId)],
   ) -> ModuleIdx {
     match self.visited.entry(resolved_id.id.clone()) {
       Entry::Occupied(visited) => *visited.get(),
       Entry::Vacant(not_visited) => {
         let idx = self.intermediate_normal_modules.alloc_ecma_module_idx();
 
-        if resolved_id.is_external {
+        if resolved_id.external.is_external() {
           let external_module_side_effects = match resolved_id.side_effects {
             Some(hook_side_effects) => match hook_side_effects {
               HookSideEffects::True => DeterminedSideEffects::UserDefined(true),
               HookSideEffects::False => DeterminedSideEffects::UserDefined(false),
               HookSideEffects::NoTreeshake => DeterminedSideEffects::NoTreeshake,
             },
-            _ => match self.options.treeshake {
-              TreeshakeOptions::Boolean(false) => DeterminedSideEffects::NoTreeshake,
-              TreeshakeOptions::Boolean(true) => unreachable!(),
-              TreeshakeOptions::Option(ref opt) => match opt.module_side_effects {
+            _ => match self.options.treeshake.as_ref() {
+              None => DeterminedSideEffects::NoTreeshake,
+              Some(opt) => match opt.module_side_effects {
                 ModuleSideEffects::Boolean(false) => DeterminedSideEffects::UserDefined(false),
                 _ => {
                   if resolved_id.is_external_without_side_effects {
@@ -204,15 +203,48 @@ impl ModuleLoader {
 
           self.symbol_ref_db.store_local_db(
             idx,
-            SymbolRefDbForModule::new(SymbolTable::default(), idx, ScopeId::new(0)),
-          );
-          let symbol_ref = self.symbol_ref_db.create_facade_root_symbol_ref(
-            idx,
-            legitimize_identifier_name(resolved_id.id.as_str()).as_ref(),
+            SymbolRefDbForModule::new(Scoping::default(), idx, ScopeId::new(0)),
           );
 
-          let ext =
-            ExternalModule::new(idx, resolved_id.id, external_module_side_effects, symbol_ref);
+          let need_renormalize_render_path =
+            !matches!(resolved_id.external, ResolvedExternal::Absolute)
+              && Path::new(resolved_id.id.as_str()).is_absolute();
+
+          let file_name = if need_renormalize_render_path {
+            let entries_common_dir = commondir::CommonDir::try_new(
+              user_defined_entries.iter().map(|(_, resolved_id)| resolved_id.id.as_str()),
+            )
+            .expect("should have common dir for entries");
+            let relative_path =
+              Path::new(resolved_id.id.as_str()).relative(entries_common_dir.common_root());
+            relative_path.to_slash_lossy().into()
+          } else {
+            resolved_id.id.clone()
+          };
+
+          let identifier_name = if need_renormalize_render_path {
+            Path::new(resolved_id.id.as_str())
+              .relative(&self.options.cwd)
+              .normalize()
+              .to_slash_lossy()
+              .into()
+          } else {
+            resolved_id.id.clone()
+          };
+          let legitimized_identifier_name = legitimize_identifier_name(&identifier_name);
+
+          let symbol_ref =
+            self.symbol_ref_db.create_facade_root_symbol_ref(idx, &legitimized_identifier_name);
+
+          let ext = ExternalModule::new(
+            idx,
+            resolved_id.id,
+            file_name,
+            legitimized_identifier_name.into(),
+            external_module_side_effects,
+            symbol_ref,
+            need_renormalize_render_path,
+          );
           self.intermediate_normal_modules.modules[idx] = Some(ext.into());
         } else {
           self.remaining += 1;
@@ -259,16 +291,15 @@ impl ModuleLoader {
     let entries_count = user_defined_entries.len() + /* runtime */ 1;
     self.intermediate_normal_modules.modules.reserve(entries_count);
     self.intermediate_normal_modules.index_ecma_ast.reserve(entries_count);
-    self.intermediate_normal_modules.index_ast_scope.reserve(entries_count);
 
     // Store the already consider as entry module
     let mut user_defined_entry_ids = FxHashSet::with_capacity(user_defined_entries.len());
 
     let mut entry_points = user_defined_entries
-      .into_iter()
+      .iter()
       .map(|(name, info)| EntryPoint {
-        name,
-        id: self.try_spawn_new_task(info, None, true, None),
+        name: name.clone(),
+        id: self.try_spawn_new_task(info.clone(), None, true, None, &user_defined_entries),
         kind: EntryPointKind::UserDefined,
         file_name: None,
         reference_id: None,
@@ -323,11 +354,13 @@ impl ModuleLoader {
                   Some(owner),
                   false,
                   raw_rec.asserted_module_type.clone(),
+                  &user_defined_entries,
                 );
                 // Dynamic imported module will be considered as an entry
                 self.intermediate_normal_modules.importers[id].push(ImporterRecord {
                   kind: raw_rec.kind,
                   importer_path: ModuleId::new(module.id()),
+                  importer_idx: module.idx(),
                 });
                 // defer usage merging, since we only have one consumer, we should keep action during fetching as simple
                 // as possible
@@ -360,11 +393,9 @@ impl ModuleLoader {
           module.set_import_records(import_records);
 
           let module_idx = module.idx();
-          if let Some(EcmaRelated { ast, symbols, ast_scope, .. }) = ecma_related {
+          if let Some(EcmaRelated { ast, symbols, .. }) = ecma_related {
             let ast_idx = self.intermediate_normal_modules.index_ecma_ast.push((ast, module_idx));
-            let ast_scope_idx = self.intermediate_normal_modules.index_ast_scope.push(ast_scope);
             module.set_ecma_ast_idx(ast_idx);
-            module.set_ast_scope_idx(ast_scope_idx);
             self.symbol_ref_db.store_local_db(module_idx, symbols);
           }
 
@@ -379,18 +410,25 @@ impl ModuleLoader {
             ast,
             raw_import_records,
             resolved_deps,
-            ast_scope,
           } = task_result;
           let import_records: IndexVec<ImportRecordIdx, rolldown_common::ResolvedImportRecord> =
             raw_import_records
               .into_iter_enumerated()
               .zip(resolved_deps)
               .map(|((_rec_idx, raw_rec), info)| {
-                let id =
-                  self.try_spawn_new_task(info, None, false, raw_rec.asserted_module_type.clone());
+                let id = self.try_spawn_new_task(
+                  info,
+                  None,
+                  false,
+                  raw_rec.asserted_module_type.clone(),
+                  &user_defined_entries,
+                );
                 // Dynamic imported module will be considered as an entry
-                self.intermediate_normal_modules.importers[id]
-                  .push(ImporterRecord { kind: raw_rec.kind, importer_path: module.id.clone() });
+                self.intermediate_normal_modules.importers[id].push(ImporterRecord {
+                  kind: raw_rec.kind,
+                  importer_path: module.id.clone(),
+                  importer_idx: module.idx,
+                });
 
                 if matches!(raw_rec.kind, ImportKind::DynamicImport)
                   && !user_defined_entry_ids.contains(&id)
@@ -415,9 +453,7 @@ impl ModuleLoader {
               })
               .collect::<IndexVec<ImportRecordIdx, _>>();
           let ast_idx = self.intermediate_normal_modules.index_ecma_ast.push((ast, module.idx));
-          let ast_scope_idx = self.intermediate_normal_modules.index_ast_scope.push(ast_scope);
           module.ecma_ast_idx = Some(ast_idx);
-          module.ast_scope_idx = Some(ast_scope_idx);
           module.import_records = import_records;
           self.intermediate_normal_modules.modules[self.runtime_id] = Some(module.into());
 
@@ -426,7 +462,7 @@ impl ModuleLoader {
           self.remaining -= 1;
         }
         ModuleLoaderMsg::FetchModule(resolve_id) => {
-          self.try_spawn_new_task(resolve_id, None, false, None);
+          self.try_spawn_new_task(resolve_id, None, false, None, &user_defined_entries);
         }
         ModuleLoaderMsg::AddEntryModule(msg) => {
           let data = msg.chunk;
@@ -446,7 +482,7 @@ impl ModuleLoader {
           };
           extra_entry_points.push(EntryPoint {
             name: data.name.clone(),
-            id: self.try_spawn_new_task(resolved_id, None, true, None),
+            id: self.try_spawn_new_task(resolved_id, None, true, None, &user_defined_entries),
             kind: EntryPointKind::UserDefined,
             file_name: data.file_name.clone(),
             reference_id: Some(msg.reference_id),
@@ -538,6 +574,7 @@ impl ModuleLoader {
           for importer in &importers {
             if importer.kind.is_static() {
               module.importers.insert(importer.importer_path.clone());
+              module.importers_idx.insert(importer.importer_idx);
             } else {
               module.dynamic_importers.insert(importer.importer_path.clone());
             }
@@ -585,7 +622,6 @@ impl ModuleLoader {
       module_table: ModuleTable { modules },
       symbol_ref_db: self.symbol_ref_db,
       index_ecma_ast: self.intermediate_normal_modules.index_ecma_ast,
-      index_ast_scope: self.intermediate_normal_modules.index_ast_scope,
       entry_points,
       runtime: runtime_brief.expect("Failed to find runtime module. This should not happen"),
       warnings: all_warnings,

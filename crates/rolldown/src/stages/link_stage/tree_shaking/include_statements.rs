@@ -1,7 +1,8 @@
 use oxc_index::IndexVec;
 use rolldown_common::{
-  EcmaViewMeta, IndexModules, Module, ModuleIdx, ModuleType, NormalModule, StmtInfoIdx,
-  SymbolOrMemberExprRef, SymbolRef, SymbolRefDb, side_effects::DeterminedSideEffects,
+  EcmaViewMeta, IndexModules, Module, ModuleIdx, ModuleType, NormalModule,
+  NormalizedBundlerOptions, StmtInfoIdx, SymbolOrMemberExprRef, SymbolRef, SymbolRefDb,
+  side_effects::DeterminedSideEffects,
 };
 use rolldown_utils::rayon::{IntoParallelRefMutIterator, ParallelIterator};
 use rustc_hash::FxHashSet;
@@ -17,6 +18,7 @@ struct Context<'a> {
   runtime_id: ModuleIdx,
   metas: &'a LinkingMetadataVec,
   used_symbol_refs: &'a mut FxHashSet<SymbolRef>,
+  options: &'a NormalizedBundlerOptions,
 }
 
 impl LinkStage<'_> {
@@ -41,11 +43,12 @@ impl LinkStage<'_> {
       symbols: &self.symbols,
       is_included_vec: &mut is_included_vec,
       is_module_included_vec: &mut is_module_included_vec,
-      tree_shaking: self.options.treeshake.enabled(),
+      tree_shaking: self.options.treeshake.is_some(),
       runtime_id: self.runtime.id(),
       // used_exports_info_vec: &mut used_exports_info_vec,
       metas: &self.metas,
       used_symbol_refs: &mut self.used_symbol_refs,
+      options: self.options,
     };
 
     self.entries.iter().for_each(|entry| {
@@ -120,7 +123,7 @@ fn include_module(ctx: &mut Context, module: &NormalModule) {
   }
   ctx.is_module_included_vec[module.idx] = true;
 
-  if module.idx == ctx.runtime_id {
+  if module.idx == ctx.runtime_id && !ctx.options.is_hmr_enabled() {
     // runtime module has no side effects and it's statements should be included
     // by other modules's references.
     return;

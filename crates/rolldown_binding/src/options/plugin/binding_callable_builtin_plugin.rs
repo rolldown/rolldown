@@ -12,7 +12,10 @@ use rolldown_plugin_vite_resolve::{
 
 use super::{
   binding_builtin_plugin::{BindingBuiltinPlugin, BindingViteResolvePluginConfig},
-  types::binding_builtin_plugin_name::BindingBuiltinPluginName,
+  types::{
+    binding_builtin_plugin_name::BindingBuiltinPluginName,
+    binding_resolved_external::BindingResolvedExternal,
+  },
 };
 
 impl TryFrom<BindingBuiltinPlugin> for Arc<dyn CallablePluginAsyncTrait> {
@@ -106,7 +109,7 @@ impl From<BindingHookJsResolveIdOptions> for Arc<CustomField> {
 #[napi(object)]
 pub struct BindingHookJsResolveIdOutput {
   pub id: String,
-  pub external: Option<bool>,
+  pub external: Option<BindingResolvedExternal>,
   #[napi(ts_type = "boolean | 'no-treeshake'")]
   pub side_effects: BindingJsSideEffects,
 }
@@ -115,7 +118,7 @@ impl From<HookResolveIdOutput> for BindingHookJsResolveIdOutput {
   fn from(value: HookResolveIdOutput) -> Self {
     Self {
       id: value.id.to_string(),
-      external: value.external,
+      external: value.external.map(Into::into),
       side_effects: get_side_effects_binding(value.side_effects),
     }
   }

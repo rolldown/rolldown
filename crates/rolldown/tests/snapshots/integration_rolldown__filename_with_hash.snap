@@ -830,7 +830,7 @@ expression: output
 
 # tests/esbuild/default/export_wildcard_fs_node_common_js
 
-- entry-!~{000}~.js => entry-nvIopULT.js
+- entry-!~{000}~.js => entry-L-m_XdA_.js
 
 # tests/esbuild/default/export_wildcard_fs_node_es6
 
@@ -850,7 +850,7 @@ expression: output
 
 # tests/esbuild/default/external_module_exclusion_relative_path
 
-- index-!~{000}~.js => index-scdbiGyn.js
+- index-!~{000}~.js => index-nZ56Kd4L.js
 
 # tests/esbuild/default/external_module_exclusion_scoped_package
 
@@ -1518,7 +1518,7 @@ expression: output
 
 # tests/esbuild/default/re_export_default_no_bundle_common_js
 
-- entry-!~{000}~.js => entry-U0Dd6NIF.js
+- entry-!~{000}~.js => entry-C__gWJgE.js
 
 # tests/esbuild/default/re_export_default_no_bundle_es6
 
@@ -1646,11 +1646,11 @@ expression: output
 
 # tests/esbuild/default/string_export_names_common_js
 
-- entry-!~{000}~.js => entry-CD14SP2G.js
+- entry-!~{000}~.js => entry-PZHLzRjn.js
 
 # tests/esbuild/default/string_export_names_iife
 
-- entry-!~{000}~.js => entry-FngsL3n8.js
+- entry-!~{000}~.js => entry-DmfAaEXA.js
 
 # tests/esbuild/default/switch_scope_no_bundle
 
@@ -2652,7 +2652,7 @@ expression: output
 
 # tests/esbuild/lower/lower_nullish_coalescing_assignment_issue1493
 
-- entry-!~{000}~.js => entry-nZ-JtOUv.js
+- entry-!~{000}~.js => entry-BIvaX6aq.js
 
 # tests/esbuild/lower/lower_object_spread_no_bundle
 
@@ -3428,7 +3428,7 @@ expression: output
 
 # tests/esbuild/ts/ts_enum_define
 
-- entry-!~{000}~.js => entry-KC3TTHt_.js
+- entry-!~{000}~.js => entry-CMXZovLt.js
 
 # tests/esbuild/ts/ts_enum_export_clause
 
@@ -3583,7 +3583,7 @@ expression: output
 
 # tests/esbuild/ts/ts_minify_enum
 
-- a-!~{000}~.js => a-1Y2yygfr.js
+- a-!~{000}~.js => a-CAdl1r5_.js
 - b-!~{001}~.js => b-XyJ27NrR.js
 
 # tests/esbuild/ts/ts_minify_enum_cross_file_inline_strings_into_templates
@@ -4428,7 +4428,7 @@ expression: output
 
 # tests/rolldown/function/module_types/ts/enum_reference_id_not_exist_after_transform
 
-- main_ts-!~{000}~.js => main_ts-CO2or8QS.js
+- main_ts-!~{000}~.js => main_ts-KAjFEiCG.js
 
 # tests/rolldown/function/module_types/tsx
 
@@ -4636,6 +4636,11 @@ expression: output
 
 - main-!~{000}~.js => main-CfuHZZW7.js
 
+# tests/rolldown/issues/3821
+
+- main-!~{000}~.js => main-Fv4vYntb.js
+- main.css
+
 # tests/rolldown/misc/ambiguous_star_export
 
 - main-!~{000}~.js => main-C89Dg8dD.js
@@ -4764,7 +4769,7 @@ expression: output
 
 # tests/rolldown/resolve/ts_config_option_merge
 
-- main-!~{000}~.js => main-syFUUOHA.js
+- main-!~{000}~.js => main-Bxut8jCE.js
 
 # tests/rolldown/resolve/wildcard_alias
 
@@ -4789,6 +4794,12 @@ expression: output
 # tests/rolldown/semantic/export_star_from_external_as_wrapped_entry_cjs
 
 - entry-!~{000}~.js => entry-CPodRrWV.js
+
+# tests/rolldown/sourcemap/css_sourcemap_reference
+
+- main-!~{000}~.js => main-Fv4vYntb.js
+- main.css
+- main.css.map
 
 # tests/rolldown/sourcemap/debug_ids
 
@@ -5153,7 +5164,7 @@ expression: output
 
 # tests/rolldown/topics/hmr/register_exports
 
-- main-!~{000}~.js => main-DCllgwrA.js
+- main-!~{000}~.js => main-BJ9L-p0c.js
 
 # tests/rolldown/topics/import_meta_url_dirname_filename_polyfill/node_cjs
 
@@ -5432,6 +5443,10 @@ expression: output
 
 - main-!~{000}~.js => main-B6XUK6l8.js
 
+# tests/rolldown/warnings/configuration_field_conflict
+
+- main-!~{000}~.js => main-ClxVg-BL.js
+
 # tests/rolldown/warnings/eval
 
 - main-!~{000}~.js => main-C19YJ4Pg.js
@@ -5491,6 +5506,10 @@ expression: output
 # tests/rollup/preserve-for-of-iterable
 
 - main-!~{000}~.js => main-BmgKf-2J.js
+
+# tests/rollup/relative-external
+
+- main-!~{000}~.js => main-CPcH6wqg.js
 
 # tests/rollup/same-binding
 

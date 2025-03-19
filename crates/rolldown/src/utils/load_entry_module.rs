@@ -29,7 +29,7 @@ pub async fn load_entry_module(
 
   match result {
     Ok(result) => {
-      if result.is_external {
+      if result.external.is_external() {
         Err(BuildDiagnostic::entry_cannot_be_external(result.id.as_str()))
       } else {
         Ok(result)

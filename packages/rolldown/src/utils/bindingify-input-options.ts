@@ -74,6 +74,7 @@ export function bindingifyInputOptions(
     },
     profilerNames: inputOptions?.profilerNames,
     jsx: bindingifyJsx(inputOptions.jsx),
+    transform: inputOptions.transform,
     watch: bindingifyWatch(inputOptions.watch),
     dropLabels: inputOptions.dropLabels,
     keepNames: inputOptions.keepNames,
@@ -90,6 +91,9 @@ export function bindingifyInputOptions(
       })
       return ret
     },
+    makeAbsoluteExternalsRelative: bindingifyMakeAbsoluteExternalsRelative(
+      inputOptions.makeAbsoluteExternalsRelative,
+    ),
   }
 }
 
@@ -278,14 +282,18 @@ function bindingifyTreeshakeOptions(
   if (config === false) {
     return undefined
   }
+
   if (config === true || config === undefined) {
     return {
       moduleSideEffects: true,
-      annotations: true,
     }
   }
+
   let normalizedConfig: BindingInputOptions['treeshake'] = {
     moduleSideEffects: true,
+    annotations: config.annotations,
+    manualPureFunctions: config.manualPureFunctions,
+    unknownGlobalSideEffects: config.unknownGlobalSideEffects,
   }
   if (config.moduleSideEffects === undefined) {
     normalizedConfig.moduleSideEffects = true
@@ -298,6 +306,16 @@ function bindingifyTreeshakeOptions(
     normalizedConfig.moduleSideEffects = config.moduleSideEffects
   }
 
-  normalizedConfig.annotations = config.annotations ?? true
   return normalizedConfig
+}
+
+function bindingifyMakeAbsoluteExternalsRelative(
+  makeAbsoluteExternalsRelative: InputOptions['makeAbsoluteExternalsRelative'],
+): BindingInputOptions['makeAbsoluteExternalsRelative'] {
+  if (makeAbsoluteExternalsRelative === 'ifRelativeSource') {
+    return { type: 'IfRelativeSource' }
+  }
+  if (typeof makeAbsoluteExternalsRelative === 'boolean') {
+    return { type: 'Bool', field0: makeAbsoluteExternalsRelative }
+  }
 }

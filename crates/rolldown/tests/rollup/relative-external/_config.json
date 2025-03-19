@@ -1,0 +1,14 @@
+{
+    "expectExecuted": false,
+    "config": {
+        "external": ["./external"]
+    },
+    "configVariants": [
+        {
+            "entryFilenames": "[name].js"
+        },
+        {
+            "entryFilenames": "chunk/[name].js"
+        }
+    ]
+}

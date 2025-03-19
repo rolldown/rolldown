@@ -97,8 +97,7 @@ impl<'a> GenerateStage<'a> {
         let Module::Normal(module) = &self.link_output.module_table.modules[*owner] else {
           return;
         };
-        let ast_scope_idx = module.ecma_view.ast_scope_idx.expect("scope idx should be set");
-        let ast_scope = &self.link_output.ast_scope_table[ast_scope_idx];
+        let ast_scope = &self.link_output.symbol_db[module.idx].as_ref().unwrap().ast_scopes;
         let chunk_id = chunk_graph.module_to_chunk[module.idx].unwrap();
         let chunk = &chunk_graph.chunk_table[chunk_id];
         let linking_info = &self.link_output.metas[module.idx];
@@ -271,8 +270,7 @@ impl<'a> GenerateStage<'a> {
             .asset_filename_template(&RollupPreRenderedAsset {
               names: vec![name.clone()],
               original_file_names: vec![],
-              // TODO: avoid source clone
-              source: asset_view.source.clone().to_vec().into(),
+              source: asset_view.source.to_vec().into(),
             })
             .await?;
 

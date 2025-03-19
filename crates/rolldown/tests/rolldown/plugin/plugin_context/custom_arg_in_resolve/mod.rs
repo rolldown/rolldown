@@ -42,7 +42,7 @@ impl Plugin for TestPluginCaller {
       if custom_resolve_ret.id == "hello, world" {
         Ok(Some(HookResolveIdOutput {
           id: arcstr::literal!("hello, world"),
-          external: Some(true),
+          external: Some(true.into()),
           ..Default::default()
         }))
       } else {

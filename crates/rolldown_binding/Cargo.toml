@@ -34,6 +34,7 @@ rolldown_plugin_alias                   = { workspace = true }
 rolldown_plugin_build_import_analysis   = { workspace = true }
 rolldown_plugin_dynamic_import_vars     = { workspace = true }
 rolldown_plugin_import_glob             = { workspace = true }
+rolldown_plugin_isolated_declaration    = { workspace = true }
 rolldown_plugin_json                    = { workspace = true }
 rolldown_plugin_load_fallback           = { workspace = true }
 rolldown_plugin_manifest                = { workspace = true }
@@ -52,10 +53,10 @@ sugar_path                              = { workspace = true }
 tracing                                 = { workspace = true }
 
 [target.'cfg(all(not(target_os = "linux"), not(target_os = "freebsd"), not(target_family = "wasm")))'.dependencies]
-mimalloc = { workspace = true }
+mimalloc-safe = { workspace = true, features = ["skip_collect_on_exit"] }
 
 [target.'cfg(any(target_os = "linux", target_os = "freebsd"))'.dependencies]
-mimalloc = { workspace = true, features = ["local_dynamic_tls"] }
+mimalloc-safe = { workspace = true, features = ["skip_collect_on_exit", "local_dynamic_tls"] }
 
 [build-dependencies]
 napi-build = { workspace = true }

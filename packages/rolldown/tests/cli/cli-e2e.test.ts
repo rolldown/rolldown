@@ -12,7 +12,7 @@ function cliFixturesDir(...joined: string[]) {
 // remove `Finished in x ms` since it is not deterministic
 // remove Ansi colors for snapshot testing
 function cleanStdout(stdout: string) {
-  return stripAnsi(stdout).replace(/Finished in \d+(\.\d+)? ms/g, '')
+  return stripAnsi(stdout).replace(/Finished in \d+(\.\d+)? (s|ms|us|ns)/g, '')
 }
 
 describe('should not hang after running', () => {
@@ -102,6 +102,16 @@ describe('cli options for bundling', () => {
     const status = await $({ cwd })`rolldown -c`
     expect(status.exitCode).toBe(0)
     expect(cleanStdout(status.stdout)).toMatchSnapshot()
+  })
+
+  it('validate cli options', async () => {
+    const cwd = cliFixturesDir('cli-option-object')
+    try {
+      await $({ cwd })`rolldown index.ts --format INCORRECT`
+      expect.unreachable()
+    } catch (error: any) {
+      expect(error.message).matchSnapshot()
+    }
   })
 })
 

@@ -69,6 +69,7 @@
     "browserslist",
     "canonicalize",
     "cdylib",
+    "choco",
     "citty",
     "clippy",
     "codegen",
@@ -224,7 +225,11 @@
     "minifiers",
     "esmodule",
     "mapref",
-    "ropey"
+    "ropey",
+    "krate",
+    "prettyplease",
+    "unparse",
+    "commondir"
   ],
   "ignoreWords": ["Jeqs", "Gwetwem", "bpwli", "mxrh"]
 }

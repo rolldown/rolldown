@@ -19,10 +19,10 @@ import { transformModuleInfo } from '../utils/transform-module-info'
 import path from 'node:path'
 import { bindingifySourcemap, ExistingRawSourceMap } from '../types/sourcemap'
 import {
-  PluginContext,
+  PluginContextImpl,
   PrivatePluginContextResolveOptions,
 } from './plugin-context'
-import { TransformPluginContext } from './transform-plugin-context'
+import { TransformPluginContextImpl } from './transform-plugin-context'
 import { bindingifySideEffects } from '../utils/transform-side-effects'
 import {
   PluginHookWithBindingExt,
@@ -37,6 +37,7 @@ import {
 import type { BindingifyPluginArgs } from './bindingify-plugin'
 import { NormalizedInputOptionsImpl } from '../options/normalized-input-options'
 import { normalizeErrors } from '../utils/error'
+import { bindingResolvedExternal } from '../utils/resolved-external'
 
 export function bindingifyBuildStart(
   args: BindingifyPluginArgs,
@@ -50,7 +51,7 @@ export function bindingifyBuildStart(
   return {
     plugin: async (ctx, opts) => {
       await handler.call(
-        new PluginContext(
+        new PluginContextImpl(
           args.outputOptions,
           ctx,
           args.plugin,
@@ -76,7 +77,7 @@ export function bindingifyBuildEnd(
   return {
     plugin: async (ctx, err) => {
       await handler.call(
-        new PluginContext(
+        new PluginContextImpl(
           args.outputOptions,
           ctx,
           args.plugin,
@@ -120,7 +121,7 @@ export function bindingifyResolveId(
       }
 
       const ret = await handler.call(
-        new PluginContext(
+        new PluginContextImpl(
           args.outputOptions,
           ctx,
           args.plugin,
@@ -138,12 +139,14 @@ export function bindingifyResolveId(
       if (ret === false) {
         return {
           id: specifier,
-          external: true,
+          external: bindingResolvedExternal(true),
+          normalizeExternalId: true,
         }
       }
       if (typeof ret === 'string') {
         return {
           id: ret,
+          normalizeExternalId: true,
         }
       }
 
@@ -156,7 +159,8 @@ export function bindingifyResolveId(
 
       return {
         id: ret.id,
-        external: ret.external,
+        external: bindingResolvedExternal(ret.external),
+        normalizeExternalId: false,
         sideEffects: bindingifySideEffects(exist.moduleSideEffects),
       }
     },
@@ -177,7 +181,7 @@ export function bindingifyResolveDynamicImport(
   return {
     plugin: async (ctx, specifier, importer) => {
       const ret = await handler.call(
-        new PluginContext(
+        new PluginContextImpl(
           args.outputOptions,
           ctx,
           args.plugin,
@@ -194,7 +198,7 @@ export function bindingifyResolveDynamicImport(
       if (ret === false) {
         return {
           id: specifier,
-          external: true,
+          external: bindingResolvedExternal(true),
         }
       }
       if (typeof ret === 'string') {
@@ -205,7 +209,7 @@ export function bindingifyResolveDynamicImport(
 
       const result: BindingHookResolveIdOutput = {
         id: ret.id,
-        external: ret.external,
+        external: bindingResolvedExternal(ret.external),
       }
 
       if (ret.moduleSideEffects !== null) {
@@ -239,7 +243,7 @@ export function bindingifyTransform(
   return {
     plugin: async (ctx, code, id, meta) => {
       const ret = await handler.call(
-        new TransformPluginContext(
+        new TransformPluginContextImpl(
           args.outputOptions,
           ctx.inner(),
           args.plugin,
@@ -298,7 +302,7 @@ export function bindingifyLoad(
   return {
     plugin: async (ctx, id) => {
       const ret = await handler.call(
-        new PluginContext(
+        new PluginContextImpl(
           args.outputOptions,
           ctx,
           args.plugin,
@@ -373,7 +377,7 @@ export function bindingifyModuleParsed(
   return {
     plugin: async (ctx, moduleInfo) => {
       await handler.call(
-        new PluginContext(
+        new PluginContextImpl(
           args.outputOptions,
           ctx,
           args.plugin,

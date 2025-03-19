@@ -17,7 +17,7 @@ codegen-units = 16
 debug         = 'full'
 inherits      = "release"
 lto           = "thin"
-opt-level     = 3
+opt-level     = "s"
 strip         = "none"
 
 [workspace.lints.clippy]
@@ -98,6 +98,7 @@ rolldown_plugin_build_import_analysis   = { version = "0.1.0", path = "./crates/
 rolldown_plugin_data_url                = { version = "0.1.0", path = "./crates/rolldown_plugin_data_url" }
 rolldown_plugin_dynamic_import_vars     = { version = "0.0.1", path = "./crates/rolldown_plugin_dynamic_import_vars" }
 rolldown_plugin_import_glob             = { version = "0.1.0", path = "./crates/rolldown_plugin_import_glob" }
+rolldown_plugin_isolated_declaration    = { version = "0.1.0", path = "./crates/rolldown_plugin_isolated_declaration" }
 rolldown_plugin_json                    = { version = "0.1.0", path = "./crates/rolldown_plugin_json" }
 rolldown_plugin_load_fallback           = { version = "0.1.0", path = "./crates/rolldown_plugin_load_fallback" }
 rolldown_plugin_manifest                = { version = "0.1.0", path = "./crates/rolldown_plugin_manifest" }
@@ -116,6 +117,7 @@ rolldown_testing                        = { version = "0.1.0", path = "./crates/
 rolldown_testing_config                 = { version = "0.1.0", path = "./crates/rolldown_testing_config" }
 rolldown_tracing                        = { version = "0.1.0", path = "./crates/rolldown_tracing" }
 rolldown_utils                          = { version = "0.1.0", path = "./crates/rolldown_utils" }
+rolldown_workspace                      = { version = "0.1.0", path = "./crates/rolldown_workspace" }
 
 anyhow              = "1.0.86"
 append-only-vec     = { version = "0.1.5" }
@@ -127,8 +129,8 @@ async-trait         = "0.1.80"
 base-encode         = "0.3.1"
 base64-simd         = "0.8.0"
 bitflags            = { version = "2.6.0" }
+commondir           = "1.0.0"
 cow-utils           = "0.1.3"
-daachorse           = "1.0.0"
 dashmap             = "6.0.0"
 derive_more         = { version = "2.0.1", features = ["debug"] }
 dunce               = "1.0.4"                                                                           # Normalize Windows paths to the most compatible format, avoiding UNC where possible
@@ -144,9 +146,9 @@ itoa                = "1.0.11"
 json-strip-comments = "1.0.4"
 jsonschema          = { version = "0.29.0", default-features = false }
 memchr              = "2.7.2"
-mimalloc            = "0.1.42"
+mimalloc-safe       = "0.1.49"
 mime                = "0.3.17"
-napi                = { version = "3.0.0-alpha.31", features = ["async", "anyhow"] }
+napi                = { version = "3.0.0-alpha.33", features = ["async", "anyhow"] }
 napi-build          = { version = "2.1.5" }
 napi-derive         = { version = "3.0.0-alpha.28", default-features = false, features = ["type-def"] }
 nom                 = "8.0.0"
@@ -177,8 +179,13 @@ vfs                 = "0.12.0"
 xxhash-rust         = "0.8.10"
 
 
+prettyplease = "0.2.29"
+proc-macro2  = "1"
+quote        = "1"
+syn          = { version = "2", default-features = false }
+
 # oxc crates with the same version
-oxc = { version = "0.56.0", features = [
+oxc = { version = "0.58.1", features = [
   "ast_visit",
   "transformer",
   "minifier",
@@ -186,15 +193,16 @@ oxc = { version = "0.56.0", features = [
   "semantic",
   "codegen",
   "serialize",
+  "isolated_declarations",
 ] }
-oxc_parser_napi = { version = "0.56.0" }
-oxc_transform_napi = { version = "0.56.0" }
+oxc_parser_napi = { version = "0.58.1" }
+oxc_transform_napi = { version = "0.58.1" }
 
 # oxc crates in their own repos
 # Versions must be relaxed for usage in oxc.
 # Please update with `cargo update oxc_resolver oxc_sourcemap oxc_index`
 oxc_index     = { version = "3", features = ["rayon", "serde"] }            # https://github.com/oxc-project/oxc-index-vec
-oxc_resolver  = { version = "4", features = ["package_json_raw_json_api"] } # https://github.com/oxc-project/oxc-resolver
+oxc_resolver  = { version = "5", features = ["package_json_raw_json_api"] } # https://github.com/oxc-project/oxc-resolver
 oxc_sourcemap = { version = "3" }                                           # https://github.com/oxc-project/oxc-sourcemap
 
 [profile.release]

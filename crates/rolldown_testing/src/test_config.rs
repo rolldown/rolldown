@@ -5,10 +5,10 @@ use std::sync::LazyLock;
 
 pub use rolldown_testing_config::{TestConfig, TestMeta};
 
-use crate::workspace;
+use rolldown_workspace::crate_dir;
 
 static COMPILED_SCHEMA: LazyLock<Validator> = LazyLock::new(|| {
-  let schema_path = workspace::crate_dir("rolldown_testing").join("_config.schema.json");
+  let schema_path = crate_dir("rolldown_testing").join("_config.schema.json");
 
   let schema_str = fs::read_to_string(&schema_path)
     .unwrap_or_else(|e| panic!("Failed to read schema file {schema_path:?}. Got {e:?}"));

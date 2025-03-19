@@ -20,7 +20,7 @@ use rolldown_common::{
   RawImportRecord, ResolvedId, StrOrBytes,
 };
 use rolldown_error::{
-  BuildDiagnostic, BuildResult, DiagnosableArcstr, UnloadableDependencyContext,
+  BuildDiagnostic, BuildResult, DiagnosableArcstr, EventKind, UnloadableDependencyContext,
 };
 
 use super::task_context::TaskContext;
@@ -320,7 +320,8 @@ impl ModuleTask {
         id: specifier.into(),
         ignored: false,
         module_def_format: ModuleDefFormat::EsmMjs,
-        is_external: false,
+        external: false.into(),
+        normalize_external_id: None,
         package_json: None,
         side_effects: None,
         is_external_without_side_effects: false,
@@ -402,7 +403,7 @@ impl ModuleTask {
                       DiagnosableArcstr::Span(dep.state.span)
                     },
                     "Module not found.".into(),
-                    Some("UNRESOLVED_IMPORT"),
+                    EventKind::UnresolvedImport,
                     None,
                   ));
                 } else {
@@ -418,7 +419,7 @@ impl ModuleTask {
                         DiagnosableArcstr::Span(dep.state.span)
                       },
                       "Module not found, treating it as an external dependency".into(),
-                      Some("UNRESOLVED_IMPORT"),
+                      EventKind::UnresolvedImport,
                       None,
                     )
                     .with_severity_warning(),
@@ -429,7 +430,8 @@ impl ModuleTask {
                 id: specifier.as_str().into(),
                 ignored: false,
                 module_def_format: ModuleDefFormat::Unknown,
-                is_external: true,
+                external: true.into(),
+                normalize_external_id: None,
                 package_json: None,
                 side_effects: None,
                 is_external_without_side_effects: false,
@@ -445,7 +447,7 @@ impl ModuleTask {
                   DiagnosableArcstr::Span(dep.state.span)
                 },
                 format!("Matched alias not found for '{specifier}'"),
-                None,
+                    EventKind::ResolveError,
                 Some("May be you expected `resolve.alias` to call other plugins resolveId hook? see the docs https://rolldown.rs/reference/config-options#resolve-alias for more details".to_string()),
               ));
             }
@@ -460,7 +462,7 @@ impl ModuleTask {
                   DiagnosableArcstr::Span(dep.state.span)
                 },
                 reason,
-                None,
+                EventKind::ResolveError,
                 None,
               ));
             }

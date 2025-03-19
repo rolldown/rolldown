@@ -16,7 +16,7 @@ pub struct MissingExport {
 
 impl BuildEvent for MissingExport {
   fn kind(&self) -> crate::event_kind::EventKind {
-    EventKind::MissingExport
+    EventKind::MissingExportError
   }
 
   fn message(&self, _opts: &DiagnosticOptions) -> String {

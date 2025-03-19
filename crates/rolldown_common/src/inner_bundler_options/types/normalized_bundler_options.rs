@@ -6,18 +6,18 @@ use std::sync::Arc;
 
 use arcstr::ArcStr;
 use oxc::transformer::{InjectGlobalVariablesConfig, JsxOptions, TransformOptions};
+use rolldown_error::EventKindSwitcher;
 use rustc_hash::{FxHashMap, FxHashSet};
 
 use super::advanced_chunks_options::AdvancedChunksOptions;
-use super::checks_options::ChecksOptions;
 use super::comments::Comments;
 use super::experimental_options::ExperimentalOptions;
-use super::jsx::Jsx;
+use super::jsx::NormalizedJsxOptions;
 use super::minify_options::MinifyOptions;
 use super::output_option::{AssetFilenamesOutputOption, ChunkFilenamesOutputOption};
 use super::sanitize_filename::SanitizeFilename;
 use super::target::ESTarget;
-use super::treeshake::TreeshakeOptions;
+use super::treeshake::NormalizedTreeshakeOptions;
 use super::watch_option::WatchOption;
 use super::{
   is_external::IsExternal, output_exports::OutputExports, output_format::OutputFormat,
@@ -26,7 +26,8 @@ use super::{
 };
 use crate::{
   DeferSyncScanDataOption, EmittedAsset, EsModuleFlag, FilenameTemplate, GlobalsOutputOption,
-  HashCharacters, InjectImport, InputItem, ModuleType, RollupPreRenderedAsset,
+  HashCharacters, InjectImport, InputItem, MakeAbsoluteExternalsRelative, ModuleType,
+  RollupPreRenderedAsset,
 };
 
 #[allow(clippy::struct_excessive_bools)] // Using raw booleans is more clear in this case
@@ -37,7 +38,7 @@ pub struct NormalizedBundlerOptions {
   pub cwd: PathBuf,
   pub external: Option<IsExternal>,
   /// corresponding to `false | NormalizedTreeshakeOption`
-  pub treeshake: TreeshakeOptions,
+  pub treeshake: NormalizedTreeshakeOptions,
   pub platform: Platform,
   pub shim_missing_exports: bool,
   /// The key is the extension. Unlike `BundlerOptions`, the extension doesn't start with a dot.
@@ -78,17 +79,77 @@ pub struct NormalizedBundlerOptions {
   pub external_live_bindings: bool,
   pub inline_dynamic_imports: bool,
   pub advanced_chunks: Option<AdvancedChunksOptions>,
-  pub checks: ChecksOptions,
+  pub checks: EventKindSwitcher,
   pub profiler_names: bool,
-  pub jsx: Jsx,
+  pub jsx: NormalizedJsxOptions,
   pub watch: WatchOption,
   pub comments: Comments,
   pub drop_labels: FxHashSet<String>,
   pub target: ESTarget,
   pub polyfill_require: bool,
   pub defer_sync_scan_data: Option<DeferSyncScanDataOption>,
-  /// TODO: expose to binding when `oxc-transform` is stable
-  pub base_transform_options: TransformOptions,
+  pub transform_options: TransformOptions,
+  pub make_absolute_externals_relative: MakeAbsoluteExternalsRelative,
+}
+
+// This is only used for testing
+impl Default for NormalizedBundlerOptions {
+  #[allow(clippy::default_trait_access)]
+  fn default() -> Self {
+    Self {
+      input: Default::default(),
+      cwd: Default::default(),
+      external: Default::default(),
+      treeshake: Default::default(),
+      platform: Platform::Neutral,
+      shim_missing_exports: Default::default(),
+      module_types: Default::default(),
+      name: Default::default(),
+      css_entry_filenames: ChunkFilenamesOutputOption::String(String::new()),
+      css_chunk_filenames: ChunkFilenamesOutputOption::String(String::new()),
+      entry_filenames: ChunkFilenamesOutputOption::String(String::new()),
+      chunk_filenames: ChunkFilenamesOutputOption::String(String::new()),
+      asset_filenames: AssetFilenamesOutputOption::String(String::new()),
+      sanitize_filename: Default::default(),
+      dir: Default::default(),
+      out_dir: Default::default(),
+      file: Default::default(),
+      format: OutputFormat::Esm,
+      exports: Default::default(),
+      es_module: Default::default(),
+      hash_characters: Default::default(),
+      globals: GlobalsOutputOption::FxHashMap(FxHashMap::default()),
+      sourcemap: Default::default(),
+      banner: Default::default(),
+      footer: Default::default(),
+      intro: Default::default(),
+      outro: Default::default(),
+      sourcemap_ignore_list: Default::default(),
+      sourcemap_path_transform: Default::default(),
+      sourcemap_debug_ids: Default::default(),
+      experimental: Default::default(),
+      minify: MinifyOptions::Disabled,
+      extend: Default::default(),
+      define: Default::default(),
+      keep_names: Default::default(),
+      inject: Default::default(),
+      oxc_inject_global_variables_config: InjectGlobalVariablesConfig::new(vec![]),
+      external_live_bindings: Default::default(),
+      inline_dynamic_imports: Default::default(),
+      advanced_chunks: Default::default(),
+      checks: Default::default(),
+      profiler_names: Default::default(),
+      watch: Default::default(),
+      comments: Comments::None,
+      drop_labels: Default::default(),
+      target: Default::default(),
+      polyfill_require: Default::default(),
+      defer_sync_scan_data: Default::default(),
+      transform_options: Default::default(),
+      make_absolute_externals_relative: Default::default(),
+      jsx: Default::default(),
+    }
+  }
 }
 
 pub type SharedNormalizedBundlerOptions = Arc<NormalizedBundlerOptions>;

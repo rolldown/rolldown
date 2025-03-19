@@ -197,7 +197,7 @@ impl<'ast> VisitMut<'ast> for PreProcessor<'ast> {
         }
       }
       // transpose `import(test ? 'a' : 'b')` into `test ? import('a') : import('b')`
-      ast::Expression::ImportExpression(expr) if expr.arguments.is_empty() => {
+      ast::Expression::ImportExpression(expr) if expr.options.is_empty() => {
         let source = &mut expr.source;
         match source {
           ast::Expression::ConditionalExpression(cond_expr) => {

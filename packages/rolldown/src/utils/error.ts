@@ -16,11 +16,12 @@ export function normalizeErrors(rawErrors: (BindingError | Error)[]): Error {
   // combine error messages as a top level error
   let summary = `Build failed with ${errors.length} error${errors.length < 2 ? '' : 's'}:\n`
   for (let i = 0; i < errors.length; i++) {
+    summary += '\n'
     if (i >= 5) {
-      summary += '\n...'
+      summary += '...'
       break
     }
-    summary += getErrorMessage(errors[i]) + '\n'
+    summary += getErrorMessage(errors[i])
   }
   const wrapper = new Error(summary)
   // expose individual errors as getters so that
@@ -41,6 +42,12 @@ export function normalizeErrors(rawErrors: (BindingError | Error)[]): Error {
 }
 
 function getErrorMessage(e: RollupError): string {
+  // If the `kind` field is present, we assume it represents
+  // a custom error defined by rolldown on the rust side.
+  if (Object.hasOwn(e, 'kind')) {
+    return e.message
+  }
+
   let s = ''
   if (e.plugin) {
     s += `[plugin ${e.plugin}]`

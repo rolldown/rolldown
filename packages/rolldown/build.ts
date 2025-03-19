@@ -75,7 +75,7 @@ const configs = defineConfig([
             throw new Error('No binary files found')
           }
 
-          const copyTo = nodePath.resolve(outputDir, 'shared')
+          const copyTo = nodePath.resolve(outputDir)
           fsExtra.ensureDirSync(copyTo)
 
           if (!IS_RELEASING_CI) {

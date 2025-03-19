@@ -24,7 +24,7 @@ export class RolldownBuild {
 
   get closed(): boolean {
     // If the bundler has not yet been created, it is not closed.
-    return this.#bundler ? this.#bundler.bundler.closed : false
+    return this.#bundler?.bundler.closed ?? false
   }
 
   // Create bundler for each `bundle.write/generate`
@@ -33,7 +33,7 @@ export class RolldownBuild {
     isClose?: boolean,
   ): Promise<BundlerWithStopWorker> {
     if (this.#bundler) {
-      this.#bundler.stopWorkers?.()
+      await this.#bundler.stopWorkers?.()
     }
     return (this.#bundler = await createBundler(
       this.#inputOptions,
@@ -58,16 +58,19 @@ export class RolldownBuild {
 
   async close(): Promise<void> {
     // Create new one bundler to run `closeBundle` hook, here using `isClose` flag to avoid call `outputOptions` hook.
-    const { bundler, stopWorkers } = await this.#getBundlerWithStopWorker(
-      {},
-      true,
-    )
+    const { bundler, stopWorkers, shutdown } =
+      await this.#getBundlerWithStopWorker({}, true)
     await stopWorkers?.()
     await bundler.close()
+    shutdown()
   }
 
   async [Symbol.asyncDispose](): Promise<void> {
     await this.close()
+  }
+
+  async generateHmrPatch(changedFiles: string[]): Promise<string | void> {
+    return this.#bundler?.bundler.generateHmrPatch(changedFiles)
   }
 }
 

@@ -1,0 +1,30 @@
+[package]
+edition.workspace    = true
+homepage.workspace   = true
+license.workspace    = true
+name                 = "generator"
+repository.workspace = true
+version              = "0.1.0"
+
+[dependencies]
+anyhow             = { workspace = true }
+cow-utils          = { workspace = true }
+heck               = { workspace = true }
+oxc                = { workspace = true }
+regex              = { workspace = true }
+rolldown_workspace = { workspace = true }
+
+prettyplease = { workspace = true }
+proc-macro2 = { workspace = true }
+quote = { workspace = true }
+syn = { workspace = true, features = [
+  "clone-impls",
+  "derive",
+  "extra-traits",
+  "full",
+  "parsing",
+  "printing",
+  "proc-macro",
+] }
+[lints]
+workspace = true

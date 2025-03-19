@@ -3,12 +3,11 @@ use crate::ast_scanner::side_effect_detector::utils::{
 };
 use oxc::ast::ast::{
   self, Argument, ArrayExpressionElement, AssignmentTarget, AssignmentTargetPattern,
-  BindingPatternKind, CallExpression, ChainElement, Comment, Expression, IdentifierReference,
-  PropertyKey, UnaryOperator, VariableDeclarationKind,
+  BindingPatternKind, CallExpression, ChainElement, Expression, IdentifierReference, PropertyKey,
+  UnaryOperator, VariableDeclarationKind,
 };
 use oxc::ast::{match_expression, match_member_expression};
-use oxc::semantic::SymbolTable;
-use rolldown_common::AstScopes;
+use rolldown_common::{AstScopes, SharedNormalizedBundlerOptions};
 use rolldown_utils::global_reference::{
   is_global_ident_ref, is_side_effect_free_member_expr_of_len_three,
   is_side_effect_free_member_expr_of_len_two,
@@ -20,33 +19,35 @@ use utils::{
 
 use self::utils::{PrimitiveType, known_primitive_type};
 
-mod annotation;
 mod utils;
 
 /// Detect if a statement "may" have side effect.
 pub struct SideEffectDetector<'a> {
   pub scope: &'a AstScopes,
-  pub source: &'a str,
-  pub comments: &'a oxc::allocator::Vec<'a, Comment>,
   pub ignore_annotations: bool,
   pub jsx_preserve: bool,
-  pub symbol_table: &'a SymbolTable,
+  options: &'a SharedNormalizedBundlerOptions,
+  is_manual_pure_functions_empty: bool,
 }
 
 impl<'a> SideEffectDetector<'a> {
   pub fn new(
     scope: &'a AstScopes,
-    source: &'a str,
-    comments: &'a oxc::allocator::Vec<'a, Comment>,
     ignore_annotations: bool,
     jsx_preserve: bool,
-    symbol_table: &'a SymbolTable,
+    options: &'a SharedNormalizedBundlerOptions,
   ) -> Self {
-    Self { scope, source, comments, ignore_annotations, jsx_preserve, symbol_table }
+    Self {
+      scope,
+      ignore_annotations,
+      jsx_preserve,
+      options,
+      is_manual_pure_functions_empty: options.treeshake.manual_pure_functions().is_none(),
+    }
   }
 
   fn is_unresolved_reference(&self, ident_ref: &IdentifierReference) -> bool {
-    self.scope.is_unresolved(ident_ref.reference_id.get().unwrap(), self.symbol_table)
+    self.scope.is_unresolved(ident_ref.reference_id.get().unwrap())
   }
 
   fn detect_side_effect_of_property_key(&self, key: &PropertyKey, is_computed: bool) -> bool {
@@ -60,13 +61,12 @@ impl<'a> SideEffectDetector<'a> {
               if let Some((ref_id, chain)) =
                 extract_member_expr_chain(key_expr.to_member_expression(), 2)
               {
-                !(chain == ["Symbol", "iterator"]
-                  && self.scope.is_unresolved(ref_id, self.symbol_table))
+                !(chain == ["Symbol", "iterator"] && self.scope.is_unresolved(ref_id))
               } else {
                 true
               }
             }
-            _ => !is_primitive_literal(self.scope, key_expr, self.symbol_table),
+            _ => !is_primitive_literal(self.scope, key_expr),
           }
         }
       }
@@ -118,12 +118,15 @@ impl<'a> SideEffectDetector<'a> {
   }
 
   fn detect_side_effect_of_member_expr(&self, expr: &ast::MemberExpression) -> bool {
+    if self.is_expr_manual_pure_functions(expr.object()) {
+      return false;
+    }
     // MemberExpression is considered having side effect by default, unless it's some builtin global variables.
     let Some((ref_id, chains)) = extract_member_expr_chain(expr, 3) else {
       return true;
     };
     // If the global variable is override, we considered it has side effect.
-    if !self.scope.is_unresolved(ref_id, self.symbol_table) {
+    if !self.scope.is_unresolved(ref_id) {
       return true;
     }
     match chains.len() {
@@ -150,7 +153,10 @@ impl<'a> SideEffectDetector<'a> {
   }
 
   fn detect_side_effect_of_call_expr(&self, expr: &CallExpression) -> bool {
-    let is_pure = !self.ignore_annotations && self.is_pure_function_or_constructor_call(expr.span);
+    if self.is_expr_manual_pure_functions(&expr.callee) {
+      return false;
+    }
+    let is_pure = !self.ignore_annotations && expr.pure;
     if is_pure {
       expr.arguments.iter().any(|arg| match arg {
         Argument::SpreadElement(_) => true,
@@ -158,6 +164,50 @@ impl<'a> SideEffectDetector<'a> {
       })
     } else {
       true
+    }
+  }
+
+  fn is_expr_manual_pure_functions(&self, expr: &'a Expression) -> bool {
+    if self.is_manual_pure_functions_empty {
+      return false;
+    }
+    // `is_manual_pure_functions_empty` is false, so `manual_pure_functions` is `Some`.
+    let manual_pure_functions = self.options.treeshake.manual_pure_functions().unwrap();
+    let Some(first_part) = Self::extract_first_part_of_member_expr_like(expr) else {
+      return false;
+    };
+    manual_pure_functions.contains(first_part)
+  }
+
+  fn extract_first_part_of_member_expr_like(expr: &'a Expression) -> Option<&'a str> {
+    let mut cur = expr;
+    loop {
+      match cur {
+        Expression::Identifier(ident) => break Some(ident.name.as_str()),
+        Expression::ComputedMemberExpression(expr) => {
+          cur = &expr.object;
+        }
+        Expression::StaticMemberExpression(expr) => {
+          cur = &expr.object;
+        }
+        Expression::CallExpression(expr) => {
+          cur = &expr.callee;
+        }
+        Expression::ChainExpression(expr) => match expr.expression {
+          ChainElement::CallExpression(ref call_expression) => {
+            cur = &call_expression.callee;
+          }
+          ChainElement::ComputedMemberExpression(ref computed_member_expression) => {
+            cur = &computed_member_expression.object;
+          }
+          ChainElement::StaticMemberExpression(ref static_member_expression) => {
+            cur = &static_member_expression.object;
+          }
+          ChainElement::TSNonNullExpression(_) => unreachable!(),
+          ChainElement::PrivateFieldExpression(_) => break None,
+        },
+        _ => break None,
+      }
     }
   }
 
@@ -207,7 +257,7 @@ impl<'a> SideEffectDetector<'a> {
       Expression::TemplateLiteral(literal) => literal.expressions.iter().any(|expr| {
         // Primitive type detection is more strict and faster than side_effects detection of
         // `Expr`, put it first to fail fast.
-        known_primitive_type(self.scope, expr, self.symbol_table) == PrimitiveType::Unknown
+        known_primitive_type(self.scope, expr) == PrimitiveType::Unknown
           || self.detect_side_effect_of_expr(expr)
       }),
       Expression::LogicalExpression(logic_expr) => match logic_expr.operator {
@@ -218,7 +268,6 @@ impl<'a> SideEffectDetector<'a> {
               &logic_expr.right,
               &logic_expr.left,
               false,
-              self.symbol_table,
             )
             .unwrap_or_default()
               && self.detect_side_effect_of_expr(&logic_expr.right))
@@ -230,7 +279,6 @@ impl<'a> SideEffectDetector<'a> {
               &logic_expr.right,
               &logic_expr.left,
               true,
-              self.symbol_table,
             )
             .unwrap_or_default()
               && self.detect_side_effect_of_expr(&logic_expr.right))
@@ -254,7 +302,6 @@ impl<'a> SideEffectDetector<'a> {
             &cond_expr.consequent,
             &cond_expr.test,
             true,
-            self.symbol_table,
           )
           .unwrap_or_default()
             && self.detect_side_effect_of_expr(&cond_expr.consequent))
@@ -263,7 +310,6 @@ impl<'a> SideEffectDetector<'a> {
             &cond_expr.alternate,
             &cond_expr.test,
             false,
-            self.symbol_table,
           )
           .unwrap_or_default()
             && self.detect_side_effect_of_expr(&cond_expr.alternate))
@@ -284,10 +330,10 @@ impl<'a> SideEffectDetector<'a> {
         | ast::BinaryOperator::LessThan
         | ast::BinaryOperator::GreaterEqualThan
         | ast::BinaryOperator::LessEqualThan => {
-          let lt = known_primitive_type(self.scope, &binary_expr.left, self.symbol_table);
+          let lt = known_primitive_type(self.scope, &binary_expr.left);
           match lt {
             PrimitiveType::Number | PrimitiveType::String | PrimitiveType::BigInt => {
-              known_primitive_type(self.scope, &binary_expr.right, self.symbol_table) != lt
+              known_primitive_type(self.scope, &binary_expr.right) != lt
                 || self.detect_side_effect_of_expr(&binary_expr.left)
                 || self.detect_side_effect_of_expr(&binary_expr.right)
             }
@@ -302,12 +348,8 @@ impl<'a> SideEffectDetector<'a> {
         // and since "typeof x === 'object'" is considered to be side-effect free,
         // we must also consider "typeof x == 'object'" to be side-effect free.
         ast::BinaryOperator::Equality | ast::BinaryOperator::Inequality => {
-          !can_change_strict_to_loose(
-            self.scope,
-            &binary_expr.left,
-            &binary_expr.right,
-            self.symbol_table,
-          ) || self.detect_side_effect_of_expr(&binary_expr.left)
+          !can_change_strict_to_loose(self.scope, &binary_expr.left, &binary_expr.right)
+            || self.detect_side_effect_of_expr(&binary_expr.left)
             || self.detect_side_effect_of_expr(&binary_expr.right)
         }
 
@@ -331,10 +373,10 @@ impl<'a> SideEffectDetector<'a> {
         }
       },
 
+      Expression::TaggedTemplateExpression(expr) => !self.is_expr_manual_pure_functions(&expr.tag),
       Expression::Super(_)
       | Expression::AwaitExpression(_)
       | Expression::ImportExpression(_)
-      | Expression::TaggedTemplateExpression(_)
       | Expression::UpdateExpression(_)
       | Expression::YieldExpression(_)
       | Expression::V8IntrinsicExpression(_) => true,
@@ -348,9 +390,7 @@ impl<'a> SideEffectDetector<'a> {
 
       Expression::ArrayExpression(expr) => self.detect_side_effect_of_array_expr(expr),
       Expression::NewExpression(expr) => {
-        let is_pure =
-          maybe_side_effect_free_global_constructor(self.scope, expr, self.symbol_table)
-            || self.is_pure_function_or_constructor_call(expr.span);
+        let is_pure = maybe_side_effect_free_global_constructor(self.scope, expr) || expr.pure;
         if is_pure {
           expr.arguments.iter().any(|arg| match arg {
             Argument::SpreadElement(_) => true,
@@ -459,7 +499,9 @@ impl<'a> SideEffectDetector<'a> {
 
   #[inline]
   fn detect_side_effect_of_identifier(&self, ident_ref: &IdentifierReference) -> bool {
-    self.is_unresolved_reference(ident_ref) && !is_global_ident_ref(&ident_ref.name)
+    self.is_unresolved_reference(ident_ref)
+      && self.options.treeshake.unknown_global_side_effects()
+      && !is_global_ident_ref(&ident_ref.name)
   }
 
   #[allow(clippy::too_many_lines)]
@@ -567,8 +609,10 @@ impl<'a> SideEffectDetector<'a> {
 
 #[cfg(test)]
 mod test {
-  use oxc::span::SourceType;
-  use rolldown_common::AstScopes;
+  use std::sync::Arc;
+
+  use oxc::{parser::Parser, span::SourceType};
+  use rolldown_common::{AstScopes, NormalizedBundlerOptions};
   use rolldown_ecmascript::{EcmaAst, EcmaCompiler};
 
   use crate::ast_scanner::side_effect_detector::SideEffectDetector;
@@ -576,15 +620,18 @@ mod test {
   fn get_statements_side_effect(code: &str) -> bool {
     let source_type = SourceType::tsx();
     let ast = EcmaCompiler::parse("<Noop>", code, source_type).unwrap();
-    let (symbol_table, ast_scope) = {
-      let semantic = EcmaAst::make_semantic(ast.program());
-      let (symbol_table, scope) = semantic.into_symbol_table_and_scope_tree();
-      (symbol_table, AstScopes::new(scope))
-    };
+    let semantic = EcmaAst::make_semantic(ast.program());
+    let scoping = semantic.into_scoping();
+    let ast_scopes = AstScopes::new(scoping);
 
     let has_side_effect = ast.program().body.iter().any(|stmt| {
-      SideEffectDetector::new(&ast_scope, ast.source(), ast.comments(), false, false, &symbol_table)
-        .detect_side_effect_of_stmt(stmt)
+      SideEffectDetector::new(
+        &ast_scopes,
+        false,
+        false,
+        &Arc::new(NormalizedBundlerOptions::default()),
+      )
+      .detect_side_effect_of_stmt(stmt)
     });
 
     has_side_effect
@@ -920,5 +967,21 @@ let remove15 = class {
 }
     "
     ));
+  }
+
+  #[test]
+  fn test_extract_first_part_of_member_expr_like() {
+    assert!(extract_first_part_of_member_expr_like_helper("a.b") == "a");
+    assert!(extract_first_part_of_member_expr_like_helper("styled?.div()") == "styled");
+    assert!(extract_first_part_of_member_expr_like_helper("styled()") == "styled");
+    assert!(extract_first_part_of_member_expr_like_helper("styled().div") == "styled");
+    assert!(extract_first_part_of_member_expr_like_helper("styled()()") == "styled");
+  }
+
+  fn extract_first_part_of_member_expr_like_helper(code: &str) -> String {
+    let allocator = oxc::allocator::Allocator::default();
+    let parser = Parser::new(&allocator, code, SourceType::ts());
+    let expr = parser.parse_expression().unwrap();
+    SideEffectDetector::extract_first_part_of_member_expr_like(&expr).unwrap().to_string()
   }
 }

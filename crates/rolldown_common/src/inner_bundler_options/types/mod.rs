@@ -1,5 +1,4 @@
 pub mod advanced_chunks_options;
-pub mod checks_options;
 pub mod comments;
 pub mod defer_sync_scan_data_option;
 pub mod es_module_flag;
@@ -10,6 +9,7 @@ pub mod inject_import;
 pub mod input_item;
 pub mod is_external;
 pub mod jsx;
+pub mod make_absolute_externals_relative;
 pub mod minify_options;
 pub mod module_type;
 pub mod normalized_bundler_options;

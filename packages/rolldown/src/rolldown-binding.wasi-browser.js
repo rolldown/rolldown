@@ -96,4 +96,6 @@ export const parseSyncRaw = __napiModule.exports.parseSyncRaw
 export const rawTransferSupported = __napiModule.exports.rawTransferSupported
 export const registerPlugins = __napiModule.exports.registerPlugins
 export const Severity = __napiModule.exports.Severity
+export const shutdownAsyncRuntime = __napiModule.exports.shutdownAsyncRuntime
+export const startAsyncRuntime = __napiModule.exports.startAsyncRuntime
 export const transform = __napiModule.exports.transform

@@ -3,7 +3,7 @@ use std::path::Path;
 use oxc::transformer::{ESTarget, InjectGlobalVariablesConfig, TransformOptions};
 use rolldown_common::{
   Comments, GlobalsOutputOption, InjectImport, MinifyOptions, ModuleType, NormalizedBundlerOptions,
-  OutputFormat, Platform,
+  NormalizedJsxOptions, OutputFormat, Platform,
 };
 use rolldown_error::{BuildDiagnostic, InvalidOptionType};
 use rustc_hash::{FxHashMap, FxHashSet};
@@ -176,16 +176,27 @@ pub fn normalize_options(mut raw_options: crate::BundlerOptions) -> NormalizeOpt
         .unwrap_or_default()
     },
   );
-
   let target = raw_options.target.unwrap_or_default();
-  let base_transform_options = TransformOptions::from(ESTarget::from(target));
+  let mut transform_options =
+    raw_options.transform.unwrap_or_else(|| TransformOptions::from(ESTarget::from(target)));
+  let jsx = match raw_options.jsx.unwrap_or_default() {
+    rolldown_common::Jsx::Disable => NormalizedJsxOptions::Disable,
+    rolldown_common::Jsx::Preserve => NormalizedJsxOptions::Preserve,
+    rolldown_common::Jsx::Enable(jsx_options) => {
+      transform_options.jsx =
+        NormalizedBundlerOptions::merge_jsx_options(jsx_options, transform_options.jsx);
+      NormalizedJsxOptions::Enable
+    }
+  };
+  transform_options.jsx.jsx_plugin = matches!(jsx, NormalizedJsxOptions::Enable);
+
   let normalized = NormalizedBundlerOptions {
     input: raw_options.input.unwrap_or_default(),
     cwd: raw_options
       .cwd
       .unwrap_or_else(|| std::env::current_dir().expect("Failed to get current dir")),
     external: raw_options.external,
-    treeshake: raw_options.treeshake,
+    treeshake: raw_options.treeshake.into_normalized_options(),
     platform,
     name: raw_options.name,
     entry_filenames: raw_options.entry_filenames.unwrap_or_else(|| "[name].js".to_string().into()),
@@ -231,8 +242,8 @@ pub fn normalize_options(mut raw_options: crate::BundlerOptions) -> NormalizeOpt
     external_live_bindings: raw_options.external_live_bindings.unwrap_or(true),
     inline_dynamic_imports,
     advanced_chunks: raw_options.advanced_chunks,
-    checks: raw_options.checks.unwrap_or_default(),
-    jsx: raw_options.jsx.unwrap_or_default(),
+    checks: raw_options.checks.unwrap_or_default().into(),
+    jsx,
     watch: raw_options.watch.unwrap_or_default(),
     comments: raw_options.comments.unwrap_or(Comments::Preserve),
     drop_labels: FxHashSet::from_iter(raw_options.drop_labels.unwrap_or_default()),
@@ -240,7 +251,10 @@ pub fn normalize_options(mut raw_options: crate::BundlerOptions) -> NormalizeOpt
     keep_names: raw_options.keep_names.unwrap_or_default(),
     polyfill_require: raw_options.polyfill_require.unwrap_or(true),
     defer_sync_scan_data: raw_options.defer_sync_scan_data,
-    base_transform_options,
+    transform_options,
+    make_absolute_externals_relative: raw_options
+      .make_absolute_externals_relative
+      .unwrap_or_default(),
   };
 
   NormalizeOptionsReturn { options: normalized, resolve_options: raw_resolve, warnings }

@@ -1,5 +1,5 @@
 use rolldown::{Bundler, BundlerOptions, InputItem, SourceMapType};
-use rolldown_testing::workspace;
+use rolldown_workspace as workspace;
 use sugar_path::SugarPath;
 
 // cargo run --example basic

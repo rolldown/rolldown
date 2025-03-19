@@ -18,9 +18,9 @@ jobs:
       binary_size: ${{ steps.run.outputs.BINARY_SIZE }}
     steps:
       # cspell:disable-next-line
-      - uses: taiki-e/checkout-action@v1
+      - uses: taiki-e/checkout-action@b13d20b7cda4e2f325ef19895128f7ff735c0b3d # v1.3.1
       - name: Checkout repo
-        uses: actions/checkout@v4
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
       - uses: Boshen/setup-rust@main
       - run: |
           cargo fetch
@@ -46,19 +46,19 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout rolldown metric repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
         with:
           repository: 'rolldown/metric'
           ref: 'main'
           token: ${{ secrets.METRIC_SECRET_KEY }}
 
       - name: Setup Pnpm
-        uses: pnpm/action-setup@v4
+        uses: pnpm/action-setup@a7487c7e89a18df4991f7f222e4898a00d66ddda # v4.1.0
 
       - name: Set up Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@cdca7365b2dadb8aad0a33bc7601856ffabcc48e # v4.3.0
         with:
-          node-version: '20' # Specify the Node.js version you need
+          node-version: '22' # Specify the Node.js version you need
           cache: 'pnpm'
 
       - name: Install dependencies and push metric

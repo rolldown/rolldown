@@ -28,3 +28,24 @@ impl Jsx {
     matches!(self, Jsx::Preserve)
   }
 }
+
+/// After normalization jsx is already merge into the transform options
+#[derive(Debug, Clone, Default)]
+pub enum NormalizedJsxOptions {
+  Disable,
+  Preserve,
+  #[default]
+  Enable,
+}
+
+impl NormalizedJsxOptions {
+  #[inline]
+  pub fn is_jsx_disabled(&self) -> bool {
+    matches!(self, NormalizedJsxOptions::Disable)
+  }
+
+  #[inline]
+  pub fn is_jsx_preserve(&self) -> bool {
+    matches!(self, NormalizedJsxOptions::Preserve)
+  }
+}

@@ -89,7 +89,11 @@ impl<'ast> VisitMut<'ast> for ScopeHoistingFinalizer<'_, 'ast> {
         program.body.push(self.snippet.var_decl_stmt(canonical_name, self.snippet.void_zero()));
       }
     });
-    program.body.extend(self.generate_runtime_module_register_for_hmr());
+    if self.ctx.runtime.id() != self.ctx.module.idx {
+      // FIXME(hyf0): Module register relies on runtime module, this causes a runtime error for registering runtime module.
+      // Let's skip it for now.
+      program.body.splice(0..0, self.generate_hmr_header());
+    }
     walk_mut::walk_program(self, program);
 
     if needs_wrapper {
@@ -240,8 +244,7 @@ impl<'ast> VisitMut<'ast> for ScopeHoistingFinalizer<'_, 'ast> {
     }
 
     // TODO: perf it
-    for (stmt_index, _symbol_id, original_name, new_name) in
-      self.ctx.keep_name_statement_to_insert.iter().rev()
+    for (stmt_index, original_name, new_name) in self.ctx.keep_name_statement_to_insert.iter().rev()
     {
       it.insert(*stmt_index, self.snippet.keep_name_call_expr_stmt(original_name, new_name));
     }
@@ -363,14 +366,13 @@ impl<'ast> VisitMut<'ast> for ScopeHoistingFinalizer<'_, 'ast> {
   fn visit_import_expression(&mut self, expr: &mut ast::ImportExpression<'ast>) {
     // Make sure the import expression is in correct form. If it's not, we should leave it as it is.
     match &mut expr.source {
-      ast::Expression::StringLiteral(str) if expr.arguments.is_empty() => {
+      ast::Expression::StringLiteral(str) if expr.options.is_empty() => {
         let rec_id = self.ctx.module.imports[&expr.span];
         let rec = &self.ctx.module.import_records[rec_id];
         let importee_id = rec.resolved_module;
+        let importer_chunk = &self.ctx.chunk_graph.chunk_table[self.ctx.chunk_id];
         match &self.ctx.modules[importee_id] {
           Module::Normal(_importee) => {
-            let importer_chunk = &self.ctx.chunk_graph.chunk_table[self.ctx.chunk_id];
-
             let importee_chunk_id = self.ctx.chunk_graph.entry_module_to_entry_chunk[&importee_id];
             let importee_chunk = &self.ctx.chunk_graph.chunk_table[importee_chunk_id];
 
@@ -379,8 +381,9 @@ impl<'ast> VisitMut<'ast> for ScopeHoistingFinalizer<'_, 'ast> {
             str.value = self.snippet.atom(&import_path);
           }
           Module::External(importee) => {
-            if str.value != importee.name {
-              str.value = self.snippet.atom(&importee.name);
+            let import_path = importee.get_import_path(importer_chunk);
+            if str.value != import_path {
+              str.value = self.snippet.atom(&import_path);
             }
           }
         }

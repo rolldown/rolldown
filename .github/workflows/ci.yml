@@ -28,14 +28,15 @@ jobs:
       node-changes: ${{ (steps.filter.outputs.node-changes == 'true') || (github.ref_name == 'main') }}
     steps:
       # For pull requests it's not necessary to checkout the code
-      - uses: actions/checkout@v4 #Fix https://github.com/dorny/paths-filter/issues/212
-      - uses: dorny/paths-filter@v3
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2 #Fix https://github.com/dorny/paths-filter/issues/212
+      - uses: dorny/paths-filter@de90cc6fb38fc0963ad72b210f1f284cd68cea36 # v3.0.2
         id: filter
         with:
           filters: |
             rust-changes: &rust-changes
               - '.github/workflows/**'
               - 'crates/**'
+              - 'tasks/**'
               - 'Cargo.toml'
               - 'Cargo.lock'
               - 'rust-toolchain.toml'
@@ -60,8 +61,8 @@ jobs:
     if: ${{ needs.changes.outputs.rust-changes == 'true' }}
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: dorny/paths-filter@v3
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+      - uses: dorny/paths-filter@de90cc6fb38fc0963ad72b210f1f284cd68cea36 # v3.0.2
         id: filter
         with:
           filters: |
@@ -86,7 +87,7 @@ jobs:
     if: ${{ needs.changes.outputs.rust-changes == 'true' }}
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
 
       - name: Setup Rust
         uses: ./.github/actions/setup-rust
@@ -134,7 +135,7 @@ jobs:
     if: ${{ needs.changes.outputs.node-changes == 'true' }}
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
 
       - name: Setup Node
         uses: ./.github/actions/setup-node
@@ -149,7 +150,7 @@ jobs:
     name: Repo Validation
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
 
       - name: Setup Node
         uses: ./.github/actions/setup-node
@@ -165,3 +166,8 @@ jobs:
 
       - name: Lint Toml
         run: pnpm lint-toml
+
+      - name: update generated code
+        run: |
+          cargo run --bin generator
+          git diff --exit-code

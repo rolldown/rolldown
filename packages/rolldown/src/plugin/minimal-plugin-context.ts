@@ -8,6 +8,7 @@ import { LOG_LEVEL_DEBUG, LOG_LEVEL_INFO, LOG_LEVEL_WARN } from '../log/logging'
 import { error, logPluginError } from '../log/logs'
 import { getLogHandler, normalizeLog } from '../log/log-handler'
 import { VERSION } from '..'
+import type { Extends, TypeAssert } from '../types/assert'
 
 export interface PluginContextMeta {
   rollupVersion: string
@@ -15,7 +16,16 @@ export interface PluginContextMeta {
   watchMode: boolean
 }
 
-export class MinimalPluginContext {
+export interface MinimalPluginContext {
+  readonly pluginName: string
+  error: (e: RollupError | string) => never
+  info: LoggingFunction
+  warn: LoggingFunction
+  debug: LoggingFunction
+  meta: PluginContextMeta
+}
+
+export class MinimalPluginContextImpl {
   info: LoggingFunction
   warn: LoggingFunction
   debug: LoggingFunction
@@ -58,4 +68,10 @@ export class MinimalPluginContext {
   public error(e: RollupError | string): never {
     return error(logPluginError(normalizeLog(e), this.pluginName))
   }
+}
+
+function _assert() {
+  // adding implements to class disallows extending PluginContext by declaration merging
+  // instead check that MinimalPluginContextImpl is assignable to MinimalPluginContext here
+  type _ = TypeAssert<Extends<MinimalPluginContextImpl, MinimalPluginContext>>
 }

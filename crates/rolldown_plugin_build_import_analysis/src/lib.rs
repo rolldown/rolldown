@@ -63,10 +63,10 @@ impl Plugin for BuildImportAnalysisPlugin {
     Ok(None)
   }
 
-  fn transform_ast(
+  async fn transform_ast(
     &self,
     _ctx: &PluginContext,
-    args: HookTransformAstArgs,
+    args: HookTransformAstArgs<'_>,
   ) -> HookTransformAstReturn {
     if args.id.contains("node_modules") {
       return Ok(args.ast);

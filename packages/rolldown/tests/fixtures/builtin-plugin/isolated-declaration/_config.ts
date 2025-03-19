@@ -6,7 +6,7 @@ import { getOutputFileNames } from 'rolldown-tests/utils'
 export default defineTest({
   config: {
     input: 'main.ts',
-    plugins: [isolatedDeclarationPlugin()],
+    plugins: [isolatedDeclarationPlugin({})],
   },
   async afterTest(output) {
     expect(getOutputFileNames(output)).toMatchInlineSnapshot(`

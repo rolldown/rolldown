@@ -9,6 +9,7 @@ import {
   BindingModuleFederationPluginOption,
   BindingRemote,
   BindingMfManifest,
+  BindingIsolatedDeclarationPluginConfig,
 } from '../binding'
 import { makeBuiltinPluginCallable } from './utils'
 
@@ -113,6 +114,8 @@ export function moduleFederationPlugin(
   })
 }
 
-export function isolatedDeclarationPlugin(): BuiltinPlugin {
-  return new BuiltinPlugin('builtin:isolated-declaration')
+export function isolatedDeclarationPlugin(
+  config: BindingIsolatedDeclarationPluginConfig,
+): BuiltinPlugin {
+  return new BuiltinPlugin('builtin:isolated-declaration', config)
 }

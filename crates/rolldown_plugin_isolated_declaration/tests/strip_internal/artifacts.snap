@@ -1,0 +1,27 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## main.d.ts
+
+```ts
+export declare class A {
+	foo: number;
+}
+
+```
+## main.js
+
+```js
+
+//#region main.ts
+var A = class {
+	foo = 1;
+	/** @internal */
+	bar = 2;
+};
+
+//#endregion
+export { A };
+```

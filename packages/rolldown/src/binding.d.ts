@@ -395,6 +395,10 @@ export interface BindingInputOptions {
   makeAbsoluteExternalsRelative?: BindingMakeAbsoluteExternalsRelative
 }
 
+export interface BindingIsolatedDeclarationPluginConfig {
+  stripInternal?: boolean
+}
+
 export interface BindingJsonPluginConfig {
   stringify?: BindingJsonPluginStringify
   isBuild?: boolean

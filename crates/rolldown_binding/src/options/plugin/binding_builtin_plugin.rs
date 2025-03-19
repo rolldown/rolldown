@@ -429,8 +429,27 @@ impl TryFrom<BindingBuiltinPlugin> for Arc<dyn Pluginable> {
         };
         Arc::new(ModuleFederationPlugin::new(config.into()))
       }
-      BindingBuiltinPluginName::IsolatedDeclaration => Arc::new(IsolatedDeclarationPlugin {}),
+      BindingBuiltinPluginName::IsolatedDeclaration => {
+        let plugin = if let Some(options) = plugin.options {
+          BindingIsolatedDeclarationPluginConfig::from_unknown(options)?.try_into()?
+        } else {
+          IsolatedDeclarationPlugin::default()
+        };
+        Arc::new(plugin)
+      }
     })
+  }
+}
+
+#[napi_derive::napi(object)]
+#[derive(Debug, Default)]
+pub struct BindingIsolatedDeclarationPluginConfig {
+  pub strip_internal: Option<bool>,
+}
+
+impl From<BindingIsolatedDeclarationPluginConfig> for IsolatedDeclarationPlugin {
+  fn from(value: BindingIsolatedDeclarationPluginConfig) -> Self {
+    IsolatedDeclarationPlugin { strip_internal: value.strip_internal.unwrap_or_default() }
   }
 }
 

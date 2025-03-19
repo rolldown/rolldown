@@ -54,6 +54,7 @@ impl ExternalModule {
       return self.name.clone();
     }
     let mut target = self.name.as_str();
+    println!("target: {target:?}");
     let mut importer = chunk
       .preliminary_filename
       .as_deref()
@@ -63,16 +64,31 @@ impl ExternalModule {
       target = &target[3..];
       importer = concat_string!("_/", importer);
     }
-    let relative_path = Path::new(target).relative(
-      importer
-        .as_path()
-        .parent()
-        .expect("the importer chunk preliminary filename should have a parent directory"),
-    );
+    let dirname = Path::new(&importer)
+      .parent()
+      .expect("the importer chunk preliminary filename should have a parent directory");
+    println!("dirname: {dirname:?}");
+    let cwd = std::env::current_dir().unwrap();
+    println!("cwd: {cwd:?}");
+    let relative_path = target
+      .as_path()
+      .relative(
+        importer
+          .as_path()
+          .parent()
+          .expect("the importer chunk preliminary filename should have a parent directory"),
+      )
+      .normalize();
+    let relative_path = relative_path.to_slash_lossy();
+    println!("importer : {importer:?}");
+    println!("relative_path: {relative_path:?}");
+    if relative_path.is_empty() {
+      let target_basename = Path::new(target).file_name().and_then(|s| s.to_str()).unwrap_or("");
+      return concat_string!("../", target_basename).into();
+    }
+
     if relative_path.starts_with("..") {
       relative_path.to_slash_lossy().into()
-    } else if relative_path.to_string_lossy().is_empty() {
-      ".".into()
     } else {
       concat_string!("./", relative_path.to_slash_lossy()).into()
     }

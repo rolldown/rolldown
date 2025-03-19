@@ -1,0 +1,33 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## main.js
+
+```js
+import foo2 from "..";
+
+//#region main.js
+assert.strictEqual(foo2, "..");
+
+//#endregion
+```
+---
+
+Variant: (format: Cjs)
+
+# Assets
+
+## main.js
+
+```js
+"use strict";
+
+const ___ = __toESM(require(".."));
+
+//#region main.js
+assert.strictEqual(___.default, "..");
+
+//#endregion
+```

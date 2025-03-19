@@ -13,8 +13,10 @@ use type_import_visitor::TypeImportVisitor;
 
 mod type_import_visitor;
 
-#[derive(Debug)]
-pub struct IsolatedDeclarationPlugin {}
+#[derive(Debug, Default)]
+pub struct IsolatedDeclarationPlugin {
+  pub strip_internal: bool,
+}
 
 impl Plugin for IsolatedDeclarationPlugin {
   fn name(&self) -> Cow<'static, str> {
@@ -42,8 +44,11 @@ impl Plugin for IsolatedDeclarationPlugin {
       }
 
       let ret = args.ast.program.with_mut(|fields| {
-        IsolatedDeclarations::new(fields.allocator, IsolatedDeclarationsOptions::default())
-          .build(fields.program)
+        IsolatedDeclarations::new(
+          fields.allocator,
+          IsolatedDeclarationsOptions { strip_internal: self.strip_internal },
+        )
+        .build(fields.program)
       });
 
       // TODO BuildDiagnostic error

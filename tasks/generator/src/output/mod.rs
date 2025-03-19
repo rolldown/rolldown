@@ -18,6 +18,7 @@ pub fn output_path(dir: &str, path: &str) -> String {
 
 /// Add a generated file warning to top of file.
 pub fn add_header(code: &str, generator_path: &str, comment_start: &str) -> String {
+  let generator_path = generator_path.cow_replace('\\', "/");
   format!(
     "{comment_start} Auto-generated code, DO NOT EDIT DIRECTLY!\n\
         {comment_start} To edit this generated file you have to edit `{generator_path}`\n\n\

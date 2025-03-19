@@ -115,7 +115,7 @@ export function moduleFederationPlugin(
 }
 
 export function isolatedDeclarationPlugin(
-  config: BindingIsolatedDeclarationPluginConfig,
+  config?: BindingIsolatedDeclarationPluginConfig,
 ): BuiltinPlugin {
   return new BuiltinPlugin('builtin:isolated-declaration', config)
 }

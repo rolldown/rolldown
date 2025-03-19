@@ -2464,6 +2464,7 @@ dependencies = [
  "rolldown_plugin_build_import_analysis",
  "rolldown_plugin_dynamic_import_vars",
  "rolldown_plugin_import_glob",
+ "rolldown_plugin_isolated_declaration",
  "rolldown_plugin_json",
  "rolldown_plugin_load_fallback",
  "rolldown_plugin_manifest",
@@ -2651,6 +2652,19 @@ dependencies = [
  "rolldown_plugin",
  "rustc-hash",
  "sugar_path",
+]
+
+[[package]]
+name = "rolldown_plugin_isolated_declaration"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "oxc",
+ "rolldown_common",
+ "rolldown_plugin",
+ "rolldown_testing",
+ "sugar_path",
+ "testing_macros",
 ]
 
 [[package]]

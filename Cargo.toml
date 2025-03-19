@@ -98,6 +98,7 @@ rolldown_plugin_build_import_analysis   = { version = "0.1.0", path = "./crates/
 rolldown_plugin_data_url                = { version = "0.1.0", path = "./crates/rolldown_plugin_data_url" }
 rolldown_plugin_dynamic_import_vars     = { version = "0.0.1", path = "./crates/rolldown_plugin_dynamic_import_vars" }
 rolldown_plugin_import_glob             = { version = "0.1.0", path = "./crates/rolldown_plugin_import_glob" }
+rolldown_plugin_isolated_declaration    = { version = "0.1.0", path = "./crates/rolldown_plugin_isolated_declaration" }
 rolldown_plugin_json                    = { version = "0.1.0", path = "./crates/rolldown_plugin_json" }
 rolldown_plugin_load_fallback           = { version = "0.1.0", path = "./crates/rolldown_plugin_load_fallback" }
 rolldown_plugin_manifest                = { version = "0.1.0", path = "./crates/rolldown_plugin_manifest" }
@@ -183,7 +184,6 @@ proc-macro2  = "1"
 quote        = "1"
 syn          = { version = "2", default-features = false }
 
-
 # oxc crates with the same version
 oxc = { version = "0.58.1", features = [
   "ast_visit",
@@ -193,6 +193,7 @@ oxc = { version = "0.58.1", features = [
   "semantic",
   "codegen",
   "serialize",
+  "isolated_declarations",
 ] }
 oxc_parser_napi = { version = "0.58.1" }
 oxc_transform_napi = { version = "0.58.1" }

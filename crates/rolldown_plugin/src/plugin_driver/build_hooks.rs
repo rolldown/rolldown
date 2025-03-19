@@ -256,6 +256,7 @@ impl PluginDriver {
             ast: args.ast,
             id: args.id,
             is_user_defined_entry: args.is_user_defined_entry,
+            module_type: args.module_type,
           },
         )
         .await?;

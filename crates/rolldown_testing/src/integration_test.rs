@@ -116,12 +116,13 @@ impl IntegrationTest {
     &self,
     multiple_options: Vec<NamedBundlerOptions>,
     test_folder_path: &Path,
+    plugins: Vec<SharedPluginable>,
   ) {
     let mut snapshot_outputs = vec![];
     for mut named_options in multiple_options {
       self.apply_test_defaults(&mut named_options.options);
 
-      let mut bundler = Bundler::with_plugins(named_options.options, vec![]);
+      let mut bundler = Bundler::with_plugins(named_options.options, plugins.clone());
 
       let debug_title = named_options.name.clone().unwrap_or_else(String::new);
 

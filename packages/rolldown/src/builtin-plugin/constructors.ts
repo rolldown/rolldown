@@ -112,3 +112,7 @@ export function moduleFederationPlugin(
           : config.manifest,
   })
 }
+
+export function isolatedDeclarationPlugin(): BuiltinPlugin {
+  return new BuiltinPlugin('builtin:isolated-declaration')
+}

@@ -1,3 +1,4 @@
+use itertools::Itertools;
 use oxc_index::IndexVec;
 use rolldown_common::{
   EcmaViewMeta, IndexModules, Module, ModuleIdx, ModuleType, NormalModule,
@@ -157,6 +158,11 @@ fn include_module(ctx: &mut Context, module: &NormalModule) {
       Module::External(_) => {}
     }
   });
+  tracing::trace!(
+    "{}:\n module_meta dependencies: {:#?}",
+    module.stable_id,
+    module_meta.dependencies.iter().map(|idx| { ctx.modules[*idx].id().to_string() }).collect_vec()
+  );
   if module.meta.has_eval() && matches!(module.module_type, ModuleType::Js | ModuleType::Jsx) {
     module.named_imports.keys().for_each(|symbol| {
       include_symbol(ctx, *symbol);

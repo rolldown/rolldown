@@ -4543,10 +4543,10 @@ expression: output
 
 # tests/rolldown/issues/2038/b
 
-- main-!~{000}~.js => main-BvxoVkC5.js
-- a-!~{005}~.js => a-B8Py3ia_.js
-- b-!~{003}~.js => b-C-qVn9bJ.js
-- b-!~{001}~.js => b-D-QK_KAT.js
+- main-!~{000}~.js => main-BOgv8VMr.js
+- a-!~{005}~.js => a-BI0QnFA7.js
+- b-!~{001}~.js => b-CYReoXMq.js
+- b-!~{003}~.js => b-xFtuetjn.js
 
 # tests/rolldown/issues/2085
 
@@ -4631,6 +4631,11 @@ expression: output
 # tests/rolldown/issues/3529
 
 - main-!~{000}~.js => main-mCXsXS3f.js
+
+# tests/rolldown/issues/3746/a
+
+- entrya-!~{001}~.js => entrya-Dh8GLU2f.js
+- entryb-!~{000}~.js => entryb-QYt9ALqg.js
 
 # tests/rolldown/issues/376
 

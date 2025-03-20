@@ -2,8 +2,8 @@ use oxc_index::IndexVec;
 #[cfg(debug_assertions)]
 use rolldown_common::common_debug_symbol_ref;
 use rolldown_common::{
-  EntryPoint, EntryPointKind, ImportKind, ModuleIdx, ModuleTable, RuntimeModuleBrief, SymbolRef,
-  SymbolRefDb, dynamic_import_usage::DynamicImportExportsUsage,
+  EntryPoint, EntryPointKind, ImportKind, ImportRecordMeta, ModuleIdx, ModuleTable,
+  RuntimeModuleBrief, SymbolRef, SymbolRefDb, dynamic_import_usage::DynamicImportExportsUsage,
 };
 use rolldown_error::BuildDiagnostic;
 use rustc_hash::{FxHashMap, FxHashSet};
@@ -133,7 +133,7 @@ impl<'a> LinkStage<'a> {
   }
 
   #[inline]
-  fn get_lived_entry(&self) -> FxHashSet<ModuleIdx> {
+  fn get_lived_entry(&mut self) -> FxHashSet<ModuleIdx> {
     self
       .entries
       .iter()
@@ -146,7 +146,37 @@ impl<'a> LinkStage<'a> {
               .as_normal()
               .expect("should be a normal module");
             let stmt_info = &module.stmt_infos[*stmt_idx];
-            stmt_info.is_included
+            let mut dead_pure_dynamic_import_record_idx = vec![];
+            let all_dead_pure_dynamic_import =
+              stmt_info.import_records.iter().all(|import_record_idx| {
+                let import_record = &module.import_records[*import_record_idx];
+                if import_record.resolved_module.is_dummy() {
+                  return true;
+                }
+                let importee_side_effects = self.module_table.modules
+                  [import_record.resolved_module]
+                  .side_effects()
+                  .has_side_effects();
+                let ret =
+                  import_record.meta.contains(ImportRecordMeta::TOP_LEVEL_PURE_DYNAMIC_IMPORT)
+                    && !importee_side_effects;
+                if ret {
+                  dead_pure_dynamic_import_record_idx.push(*import_record_idx);
+                }
+                ret
+              });
+            let lived = stmt_info.is_included && !all_dead_pure_dynamic_import;
+            if !lived {
+              // satisfy rustc borrow checker
+              let module = self.module_table.modules[*module_idx]
+                .as_normal_mut()
+                .expect("should be a normal module");
+              for ele in dead_pure_dynamic_import_record_idx {
+                let rec = &mut module.import_records[ele];
+                rec.meta.insert(ImportRecordMeta::DEAD_DYNAMIC_IMPORT);
+              }
+            }
+            lived
           });
           lived.then_some(item.id)
         }

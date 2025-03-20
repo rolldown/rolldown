@@ -3790,7 +3790,7 @@ expression: output
 
 # tests/rolldown/code_splitting/dynamic_import_and_static_import_one_file
 
-- main-!~{000}~.js => main-BEP68sZF.js
+- main-!~{000}~.js => main-C7JKA4rp.js
 - foo-!~{001}~.js => foo-BtlRgO2s.js
 - foo-!~{003}~.js => foo-ZkVjFIQV.js
 
@@ -3832,7 +3832,7 @@ expression: output
 
 # tests/rolldown/code_splitting/issue_2786
 
-- main-!~{000}~.js => main-iIAdYKTo.js
+- main-!~{000}~.js => main-DO-KV-1V.js
 - share-!~{003}~.js => share-Bw8MTP9m.js
 - share-!~{005}~.js => share-BzXzODsQ.js
 - share-!~{007}~.js => share-C1AbB3vH.js
@@ -4157,7 +4157,7 @@ expression: output
 
 # tests/rolldown/function/external/splitting_indirect_external_symbol
 
-- main-!~{000}~.js => main-B9vzhbaH.js
+- main-!~{000}~.js => main-C-yKiiVb.js
 - indirect-!~{003}~.js => indirect-C8E1UGaS.js
 - indirect-!~{001}~.js => indirect-CtAS5Xvj.js
 
@@ -4610,13 +4610,13 @@ expression: output
 
 # tests/rolldown/issues/3437
 
-- main-!~{000}~.js => main-CbCVKMhq.js
+- main-!~{000}~.js => main-BeISEFGW.js
 - rolldown-!~{001}~.js => rolldown-CDlmqcql.js
 - square-!~{003}~.js => square-DkQOo3Hc.js
 
 # tests/rolldown/issues/3438
 
-- main-!~{000}~.js => main-DsucGaKv.js
+- main-!~{000}~.js => main-txwbDKFV.js
 - repro1-!~{001}~.js => repro1-DCPAzhcM.js
 - repro1-!~{003}~.js => repro1-DGsIRehE.js
 - repro2-!~{007}~.js => repro2-CZ2qXwfx.js
@@ -4653,7 +4653,7 @@ expression: output
 # tests/rolldown/misc/assign_chunk_name_order
 
 - file-!~{001}~.js => file-BABv0Biq.js
-- main-!~{000}~.js => main-DDO9xTOR.js
+- main-!~{000}~.js => main-DkqRzwF-.js
 - file-!~{004}~.js => file-BnKCpr9P.js
 - file-!~{00a}~.js => file-BxJ9uWda.js
 - file-!~{00e}~.js => file-CA_EEob0.js
@@ -5375,8 +5375,7 @@ expression: output
 
 # tests/rolldown/tree_shaking/dynamic_import_then_destructur
 
-- main-!~{000}~.js => main-Hhp444RJ.js
-- lib-!~{001}~.js => lib-DGw6d5Pw.js
+- main-!~{000}~.js => main-gKciLn-c.js
 
 # tests/rolldown/tree_shaking/dynamic_import_then_destructur_unused
 
@@ -5423,6 +5422,10 @@ expression: output
 # tests/rolldown/tree_shaking/pure_annotation
 
 - main-!~{000}~.js => main-DyDMaN-V.js
+
+# tests/rolldown/tree_shaking/side_effect_free_dynamic_importee
+
+- main-!~{000}~.js => main-B5Z-uFLq.js
 
 # tests/rolldown/tree_shaking/unused_dynamic_imported_chunk
 

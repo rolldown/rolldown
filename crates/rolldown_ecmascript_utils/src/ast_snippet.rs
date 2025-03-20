@@ -146,8 +146,10 @@ impl<'ast> AstSnippet<'ast> {
     &self,
     name: ast::Expression<'ast>,
     arg: ast::Expression<'ast>,
+    pure: bool,
   ) -> ast::Expression<'ast> {
     let mut call_expr = self.simple_call_expr(name);
+    call_expr.pure = pure;
     call_expr.arguments.push(arg.into());
     ast::Expression::CallExpression(call_expr.into_in(self.alloc()))
   }
@@ -961,5 +963,27 @@ impl<'ast> AstSnippet<'ast> {
     callee: Expression<'ast>,
   ) -> allocator::Box<'ast, ast::CallExpression<'ast>> {
     self.builder.alloc_call_expression(SPAN, callee, NONE, self.builder.vec(), false)
+  }
+
+  pub fn object_freeze_dynamic_import_polyfill(&self) -> Expression<'ast> {
+    let proto = self.builder.object_property_kind_object_property(
+      SPAN,
+      PropertyKind::Init,
+      self.builder.property_key_static_identifier(SPAN, "__proto__"),
+      ast::Expression::NullLiteral(self.builder.alloc_null_literal(SPAN)),
+      false,
+      false,
+      false,
+    );
+
+    self.call_expr_with_arg_expr(
+      self.literal_prop_access_member_expr_expr("Object", "freeze"),
+      ast::Expression::ObjectExpression(self.builder.alloc_object_expression(
+        SPAN,
+        self.builder.vec_from_iter([proto]),
+        None,
+      )),
+      true,
+    )
   }
 }

@@ -47,6 +47,19 @@ bitflags::bitflags! {
     const IS_DUMMY = 1 << 7;
     /// if the import record is in a try-catch block
     const IN_TRY_CATCH_BLOCK = 1 << 8;
+    /// Whether it is a pure dynamic import, aka a dynamic import only reference a module without using
+    /// its exports e.g.
+    /// ```js
+    /// import('mod');
+    /// import('mod').then(mod => {});
+    /// const a = await import('mod'); // the a is never be referenced
+    /// ```
+    const PURE_DYNAMIC_IMPORT = 1 << 9;
+    /// Whether it is a pure dynamic import referenced a side effect free module
+    const DEAD_DYNAMIC_IMPORT = 1 << 10;
+    /// Whether the import is a top level import
+    const IS_TOP_LEVEL = 1 << 11;
+    const TOP_LEVEL_PURE_DYNAMIC_IMPORT = Self::IS_TOP_LEVEL.bits() | Self::PURE_DYNAMIC_IMPORT.bits();
   }
 }
 

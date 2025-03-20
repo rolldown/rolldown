@@ -1,1 +1,1 @@
-import('./square.json');
+import('./square.json').then(console.log);

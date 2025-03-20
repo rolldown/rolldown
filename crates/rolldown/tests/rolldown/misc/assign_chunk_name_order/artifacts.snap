@@ -1,6 +1,5 @@
 ---
 source: crates/rolldown_testing/src/integration_test.rs
-snapshot_kind: text
 ---
 # Assets
 
@@ -95,13 +94,13 @@ export { value };
 import "./file2.js";
 
 //#region main.js
-import("./file3.js");
-import("./file4.js");
-import("./file5.js");
-import("./file6.js");
-import("./file7.js");
-import("./file8.js");
-import("./file9.js");
+import("./file3.js").then(console.log);
+import("./file4.js").then(console.log);
+import("./file5.js").then(console.log);
+import("./file6.js").then(console.log);
+import("./file7.js").then(console.log);
+import("./file8.js").then(console.log);
+import("./file9.js").then(console.log);
 
 //#endregion
 ```

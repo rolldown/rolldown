@@ -1,6 +1,5 @@
 ---
 source: crates/rolldown_testing/src/integration_test.rs
-snapshot_kind: text
 ---
 # Assets
 
@@ -12,8 +11,8 @@ import { share_default$1 } from "./share4.js";
 
 //#region main.js
 console.log(share_default, share_default$1);
-import("./share.js");
-import("./share3.js");
+import("./share.js").then(console.log);
+import("./share3.js").then(console.log);
 
 //#endregion
 ```

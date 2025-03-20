@@ -42,6 +42,7 @@ impl<'ast> VisitMut<'ast> for IsolatingModuleFinalizer<'_, 'ast> {
         self.snippet.call_expr_with_arg_expr(
           self.snippet.id_ref_expr("__toCommonJS", SPAN),
           self.snippet.id_ref_expr("exports", SPAN),
+          false,
         ),
       ));
     }

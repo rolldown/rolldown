@@ -1,9 +1,9 @@
+import path from 'node:path'
+import { defineTest } from 'rolldown-tests'
 import {
   dynamicImportVarsPlugin,
   importGlobPlugin,
 } from 'rolldown/experimental'
-import { defineTest } from 'rolldown-tests'
-import path from 'path'
 
 export default defineTest({
   config: {

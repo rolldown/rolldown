@@ -1,0 +1,42 @@
+
+//#region \0rolldown_dynamic_import_helper.js
+var __rolldown_dynamic_import_helper_default = (glob, path, segments) => {
+	const v = glob[path] ?? glob["./" + path];
+	if (v) return typeof v === "function" ? v() : Promise.resolve(v);
+	return new Promise((_, reject) => {
+		(typeof queueMicrotask === "function" ? queueMicrotask : setTimeout)(reject.bind(null, new Error("Unknown variable dynamic import: " + path + (path.split("/").length !== segments ? ". Note that variables only represent file names one level deep." : ""))));
+	});
+};
+
+//#endregion
+//#region main.js
+function basic(base) {
+	return __rolldown_dynamic_import_helper_default(import.meta.glob("./mods/*.js"), `./mods/${base}.js`, 3);
+}
+function withQuery(base) {
+	return __rolldown_dynamic_import_helper_default(import.meta.glob("./mods/*.js[", { query: "?]foo=bar" }), `./mods/${base}.js?foo=bar`, 3);
+}
+function withQueryRaw(base) {
+	return __rolldown_dynamic_import_helper_default(import.meta.glob("./mods/*.js[", { query: "?]raw" }), `./mods/${base}.js?raw`, 3);
+}
+function withQueryUrl(base) {
+	return __rolldown_dynamic_import_helper_default(import.meta.glob("./mods/*.js[", { query: "?]url" }), `./mods/${base}.js?url`, 3);
+}
+function wildcardInVariables(base) {
+	return __rolldown_dynamic_import_helper_default(import.meta.glob("./mods/*.js[", { query: "?]raw" }), `./mods/${base ?? foo}.js?raw`, 3);
+}
+function wildcardInUrl(base) {
+	return __rolldown_dynamic_import_helper_default(import.meta.glob("./mods/*.js[", { query: "?]raw" }), `./mods/${base ?? foo}.js?raw`, 3);
+}
+function wildcardInWorker(base) {
+	return __rolldown_dynamic_import_helper_default(import.meta.glob("./mo[", { query: "?]ds/*.js[?]worker" }), `./mo?ds/${base ?? foo}.js?worker`, 2);
+}
+function withParentDirAndItself(name) {
+	return __rolldown_dynamic_import_helper_default(import.meta.glob("../dynamicImportVar/*.js"), `../dynamicImportVar/${name}.js`, 3);
+}
+function withMultiParentDirAndItself(name) {
+	return __rolldown_dynamic_import_helper_default(import.meta.glob("../../plugins/dynamicImportVar/*.js"), `../../plugins/dynamicImportVar/${name}.js`, 5);
+}
+
+//#endregion
+export { basic, wildcardInUrl, wildcardInVariables, wildcardInWorker, withMultiParentDirAndItself, withParentDirAndItself, withQuery, withQueryRaw, withQueryUrl };

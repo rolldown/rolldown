@@ -84,6 +84,7 @@ impl ScanStage {
       warnings,
       index_ecma_ast,
       dynamic_import_exports_usage_map,
+      ..
     } = module_loader.fetch_all_modules(user_entries).await?;
 
     self.plugin_driver.file_emitter.set_context_load_modules_tx(None).await;

@@ -133,6 +133,8 @@ impl RuntimeModuleTask {
       },
       css_view: None,
       asset_view: None,
+      // FIXME(hyf0): We should use a better way represent the runtime module.
+      originative_id: ResolvedId::make_dummy(),
     };
 
     let resolved_deps = raw_import_records

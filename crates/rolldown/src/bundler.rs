@@ -182,6 +182,8 @@ impl Bundler {
         resolver: Arc::clone(&self.resolver),
         plugin_driver: Arc::clone(&self.plugin_driver),
         cache: Arc::clone(&self.cache),
+        index_ecma_ast: link_stage_output.ast_table,
+        runtime_module_idx: link_stage_output.runtime.id(),
       }));
     }
     Ok(output)
@@ -195,7 +197,7 @@ impl Bundler {
   pub async fn generate_hmr_patch(&mut self, changed_files: Vec<String>) -> BuildResult<String> {
     self
       .hmr_manager
-      .as_ref()
+      .as_mut()
       .expect("HMR manager is not initialized")
       .generate_hmr_patch(changed_files)
       .await

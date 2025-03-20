@@ -8,13 +8,13 @@ use crate::utils::load_entry_module::load_entry_module;
 use arcstr::ArcStr;
 use oxc::semantic::{ScopeId, Scoping};
 use oxc::transformer::ReplaceGlobalDefinesConfig;
-use oxc_index::IndexVec;
+use oxc_index::{IndexVec, index_vec};
 use rolldown_common::dynamic_import_usage::DynamicImportExportsUsage;
 use rolldown_common::side_effects::{DeterminedSideEffects, HookSideEffects};
 use rolldown_common::{
   Cache, DUMMY_MODULE_IDX, EcmaRelated, EntryPoint, EntryPointKind, ExternalModule, ImportKind,
-  ImportRecordIdx, ImportRecordMeta, ImporterRecord, Module, ModuleId, ModuleIdx, ModuleInfo,
-  ModuleLoaderMsg, ModuleSideEffects, ModuleTable, ModuleType, NormalModuleTaskResult,
+  ImportRecordIdx, ImportRecordMeta, ImporterRecord, IndexModules, Module, ModuleId, ModuleIdx,
+  ModuleInfo, ModuleLoaderMsg, ModuleSideEffects, ModuleTable, ModuleType, NormalModuleTaskResult,
   RUNTIME_MODULE_ID, ResolvedExternal, ResolvedId, RuntimeModuleBrief, RuntimeModuleTaskResult,
   StmtInfoIdx, SymbolRefDb, SymbolRefDbForModule,
 };
@@ -27,6 +27,7 @@ use rolldown_utils::rayon::{IntoParallelIterator, ParallelIterator};
 use rolldown_utils::rustc_hash::FxHashSetExt;
 use rustc_hash::{FxHashMap, FxHashSet};
 use std::collections::hash_map::Entry;
+use std::mem;
 use std::path::Path;
 use std::sync::Arc;
 use sugar_path::SugarPath;
@@ -55,7 +56,6 @@ impl IntermediateNormalModules {
   }
 }
 
-#[expect(unused)]
 #[derive(Debug, Clone, Copy)]
 enum VisitState {
   Seen(ModuleIdx),
@@ -80,6 +80,7 @@ pub struct ModuleLoader {
   remaining: u32,
   intermediate_normal_modules: IntermediateNormalModules,
   symbol_ref_db: SymbolRefDb,
+  new_added_modules: FxHashSet<ModuleIdx>,
 }
 
 pub struct ModuleLoaderOutput {
@@ -92,6 +93,7 @@ pub struct ModuleLoaderOutput {
   pub runtime: RuntimeModuleBrief,
   pub warnings: Vec<BuildDiagnostic>,
   pub dynamic_import_exports_usage_map: FxHashMap<ModuleIdx, DynamicImportExportsUsage>,
+  pub new_added_modules: FxHashSet<ModuleIdx>,
 }
 
 impl ModuleLoader {
@@ -147,10 +149,99 @@ impl ModuleLoader {
       intermediate_normal_modules,
       symbol_ref_db: SymbolRefDb::default(),
       visited: FxHashMap::from_iter([(RUNTIME_MODULE_ID.into(), VisitState::Seen(runtime_id))]),
+      new_added_modules: FxHashSet::default(),
     })
   }
 
-  fn try_spawn_new_task(
+  pub fn from_existing(
+    fs: OsFileSystem,
+    options: SharedOptions,
+    resolver: SharedResolver,
+    plugin_driver: SharedPluginDriver,
+    cache: Arc<Cache>,
+    modules: &mut IndexModules,
+    index_ast: &mut IndexEcmaAst,
+    runtime_module_idx: ModuleIdx,
+    changed_modules: &FxIndexSet<ModuleIdx>,
+  ) -> BuildResult<Self> {
+    // 1024 should be enough for most cases
+    // over 1024 pending tasks are insane
+    let (tx, rx) = tokio::sync::mpsc::channel(1024);
+
+    let meta = TaskContextMeta {
+      replace_global_define_config: if options.define.is_empty() {
+        None
+      } else {
+        ReplaceGlobalDefinesConfig::new(&options.define).map(Some).map_err(|errs| {
+          errs
+            .into_iter()
+            .map(|err| BuildDiagnostic::invalid_define_config(err.message.to_string()))
+            .collect::<Vec<BuildDiagnostic>>()
+        })?
+      },
+    };
+
+    let shared_context = Arc::new(TaskContext {
+      options: Arc::clone(&options),
+      tx: tx.clone(),
+      resolver,
+      fs,
+      plugin_driver,
+      meta,
+      cache,
+    });
+
+    // FIXME(hyf0): This operation should be optimized. Instead of reconstructing the whole, we should able to just "reuse".
+    let visited = modules
+      .iter_enumerated()
+      .map(|(idx, module)| {
+        if changed_modules.contains(&idx) {
+          (module.id().into(), VisitState::Invalidate(idx))
+        } else {
+          (module.id().into(), VisitState::Seen(idx))
+        }
+      })
+      .collect::<FxHashMap<ArcStr, VisitState>>();
+    let mut intermediate_normal_modules = IntermediateNormalModules::new();
+    intermediate_normal_modules.importers = index_vec![Vec::new(); modules.len()];
+    // FIXME(hyf0): This operation should be optimized. Instead of reconstructing the whole, we should able to just "reuse".
+    mem::take(modules).into_iter().zip(mem::take(index_ast)).for_each(|(module, ast)| {
+      let old_idx = module.idx();
+      if let Module::Normal(module) = &module {
+        module.import_records.iter().for_each(|rec| {
+          if rec.kind.is_static() {
+            intermediate_normal_modules.importers[rec.resolved_module].push(ImporterRecord {
+              kind: rec.kind,
+              importer_path: module.id.clone(),
+              importer_idx: module.idx,
+            });
+          }
+        });
+      }
+      let idx = intermediate_normal_modules.modules.push(Some(module));
+      intermediate_normal_modules.index_ecma_ast.push(ast);
+      assert_eq!(old_idx, idx, "Module index should be the same");
+    });
+
+    let task = RuntimeModuleTask::new(runtime_module_idx, tx.clone(), Arc::clone(&options));
+
+    tokio::spawn(async { task.run() });
+
+    Ok(Self {
+      tx,
+      rx,
+      options,
+      remaining: 1,
+      shared_context,
+      runtime_id: runtime_module_idx,
+      intermediate_normal_modules,
+      symbol_ref_db: SymbolRefDb::default(),
+      visited,
+      new_added_modules: FxHashSet::default(),
+    })
+  }
+
+  pub(crate) fn try_spawn_new_task(
     &mut self,
     resolved_id: ResolvedId,
     owner: Option<ModuleTaskOwner>,
@@ -158,113 +249,114 @@ impl ModuleLoader {
     assert_module_type: Option<ModuleType>,
     user_defined_entries: &[(Option<ArcStr>, ResolvedId)],
   ) -> ModuleIdx {
-    match self.visited.get(&resolved_id.id) {
-      Some(VisitState::Seen(idx)) => *idx,
-      Some(VisitState::Invalidate(_idx)) => unimplemented!("TODO: handle invalidation"),
+    let idx = match self.visited.get(&resolved_id.id) {
+      Some(VisitState::Seen(idx)) => return *idx,
+      Some(VisitState::Invalidate(idx)) => *idx,
       None => {
         let idx = self.intermediate_normal_modules.alloc_ecma_module_idx();
+        self.new_added_modules.insert(idx);
         self.visited.insert(resolved_id.id.clone(), VisitState::Seen(idx));
-
-        if resolved_id.external.is_external() {
-          let external_module_side_effects = match resolved_id.side_effects {
-            Some(hook_side_effects) => match hook_side_effects {
-              HookSideEffects::True => DeterminedSideEffects::UserDefined(true),
-              HookSideEffects::False => DeterminedSideEffects::UserDefined(false),
-              HookSideEffects::NoTreeshake => DeterminedSideEffects::NoTreeshake,
-            },
-            _ => match self.options.treeshake.as_ref() {
-              None => DeterminedSideEffects::NoTreeshake,
-              Some(opt) => match opt.module_side_effects {
-                ModuleSideEffects::Boolean(false) => DeterminedSideEffects::UserDefined(false),
-                _ => {
-                  if resolved_id.is_external_without_side_effects {
-                    DeterminedSideEffects::UserDefined(false)
-                  } else {
-                    DeterminedSideEffects::NoTreeshake
-                  }
-                }
-              },
-            },
-          };
-
-          let id = ModuleId::new(&resolved_id.id);
-          self.shared_context.plugin_driver.set_module_info(
-            &id.clone(),
-            Arc::new(ModuleInfo {
-              code: None,
-              id,
-              is_entry: false,
-              importers: FxIndexSet::default(),
-              dynamic_importers: FxIndexSet::default(),
-              imported_ids: FxIndexSet::default(),
-              dynamically_imported_ids: FxIndexSet::default(),
-              exports: vec![],
-            }),
-          );
-
-          self.symbol_ref_db.store_local_db(
-            idx,
-            SymbolRefDbForModule::new(Scoping::default(), idx, ScopeId::new(0)),
-          );
-
-          let need_renormalize_render_path =
-            !matches!(resolved_id.external, ResolvedExternal::Absolute)
-              && Path::new(resolved_id.id.as_str()).is_absolute();
-
-          let file_name = if need_renormalize_render_path {
-            let entries_common_dir = commondir::CommonDir::try_new(
-              user_defined_entries.iter().map(|(_, resolved_id)| resolved_id.id.as_str()),
-            )
-            .expect("should have common dir for entries");
-            let relative_path =
-              Path::new(resolved_id.id.as_str()).relative(entries_common_dir.common_root());
-            relative_path.to_slash_lossy().into()
-          } else {
-            resolved_id.id.clone()
-          };
-
-          let identifier_name = if need_renormalize_render_path {
-            Path::new(resolved_id.id.as_str())
-              .relative(&self.options.cwd)
-              .normalize()
-              .to_slash_lossy()
-              .into()
-          } else {
-            resolved_id.id.clone()
-          };
-          let legitimized_identifier_name = legitimize_identifier_name(&identifier_name);
-
-          let symbol_ref =
-            self.symbol_ref_db.create_facade_root_symbol_ref(idx, &legitimized_identifier_name);
-
-          let ext = ExternalModule::new(
-            idx,
-            resolved_id.id,
-            file_name,
-            legitimized_identifier_name.into(),
-            external_module_side_effects,
-            symbol_ref,
-            need_renormalize_render_path,
-          );
-          self.intermediate_normal_modules.modules[idx] = Some(ext.into());
-        } else {
-          self.remaining += 1;
-
-          let task = ModuleTask::new(
-            Arc::clone(&self.shared_context),
-            idx,
-            resolved_id,
-            owner,
-            is_user_defined_entry,
-            assert_module_type,
-          );
-
-          tokio::spawn(task.run());
-        }
-
         idx
       }
+    };
+
+    if resolved_id.external.is_external() {
+      let external_module_side_effects = match resolved_id.side_effects {
+        Some(hook_side_effects) => match hook_side_effects {
+          HookSideEffects::True => DeterminedSideEffects::UserDefined(true),
+          HookSideEffects::False => DeterminedSideEffects::UserDefined(false),
+          HookSideEffects::NoTreeshake => DeterminedSideEffects::NoTreeshake,
+        },
+        _ => match self.options.treeshake.as_ref() {
+          None => DeterminedSideEffects::NoTreeshake,
+          Some(opt) => match opt.module_side_effects {
+            ModuleSideEffects::Boolean(false) => DeterminedSideEffects::UserDefined(false),
+            _ => {
+              if resolved_id.is_external_without_side_effects {
+                DeterminedSideEffects::UserDefined(false)
+              } else {
+                DeterminedSideEffects::NoTreeshake
+              }
+            }
+          },
+        },
+      };
+
+      let id = ModuleId::new(&resolved_id.id);
+      self.shared_context.plugin_driver.set_module_info(
+        &id.clone(),
+        Arc::new(ModuleInfo {
+          code: None,
+          id,
+          is_entry: false,
+          importers: FxIndexSet::default(),
+          dynamic_importers: FxIndexSet::default(),
+          imported_ids: FxIndexSet::default(),
+          dynamically_imported_ids: FxIndexSet::default(),
+          exports: vec![],
+        }),
+      );
+
+      self
+        .symbol_ref_db
+        .store_local_db(idx, SymbolRefDbForModule::new(Scoping::default(), idx, ScopeId::new(0)));
+
+      let need_renormalize_render_path =
+        !matches!(resolved_id.external, ResolvedExternal::Absolute)
+          && Path::new(resolved_id.id.as_str()).is_absolute();
+
+      let file_name = if need_renormalize_render_path {
+        let entries_common_dir = commondir::CommonDir::try_new(
+          user_defined_entries.iter().map(|(_, resolved_id)| resolved_id.id.as_str()),
+        )
+        .expect("should have common dir for entries");
+        let relative_path =
+          Path::new(resolved_id.id.as_str()).relative(entries_common_dir.common_root());
+        relative_path.to_slash_lossy().into()
+      } else {
+        resolved_id.id.clone()
+      };
+
+      let identifier_name = if need_renormalize_render_path {
+        Path::new(resolved_id.id.as_str())
+          .relative(&self.options.cwd)
+          .normalize()
+          .to_slash_lossy()
+          .into()
+      } else {
+        resolved_id.id.clone()
+      };
+      let legitimized_identifier_name = legitimize_identifier_name(&identifier_name);
+
+      let symbol_ref =
+        self.symbol_ref_db.create_facade_root_symbol_ref(idx, &legitimized_identifier_name);
+
+      let ext = ExternalModule::new(
+        idx,
+        resolved_id.id,
+        file_name,
+        legitimized_identifier_name.into(),
+        external_module_side_effects,
+        symbol_ref,
+        need_renormalize_render_path,
+      );
+      self.intermediate_normal_modules.modules[idx] = Some(ext.into());
+    } else {
+      self.remaining += 1;
+
+      let task = ModuleTask::new(
+        Arc::clone(&self.shared_context),
+        idx,
+        resolved_id,
+        owner,
+        is_user_defined_entry,
+        assert_module_type,
+      );
+
+      tokio::spawn(task.run());
     }
+
+    idx
   }
 
   #[tracing::instrument(level = "debug", skip_all)]
@@ -612,6 +704,7 @@ impl ModuleLoader {
       runtime: runtime_brief.expect("Failed to find runtime module. This should not happen"),
       warnings: all_warnings,
       dynamic_import_exports_usage_map,
+      new_added_modules: self.new_added_modules.clone(),
     })
   }
 }

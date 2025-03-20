@@ -99,9 +99,11 @@ impl PluginContextImpl {
     &self,
     specifier: &str,
     side_effects: Option<HookSideEffects>,
-    load_callback_fn: Box<LoadCallbackFn>,
+    load_callback_fn: Option<Box<LoadCallbackFn>>,
   ) -> anyhow::Result<()> {
-    self.context_load_modules.insert(specifier.into(), LoadCallback(Box::new(load_callback_fn)));
+    if let Some(load_callback_fn) = load_callback_fn {
+      self.context_load_modules.insert(specifier.into(), LoadCallback(load_callback_fn));
+    }
     self
       .tx
       .lock()

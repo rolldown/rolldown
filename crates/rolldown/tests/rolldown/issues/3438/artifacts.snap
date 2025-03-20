@@ -18,9 +18,9 @@ var main_default = [
 	clear$2,
 	clear$1$2,
 	clear$2$1,
-	() => import("./repro1.js"),
-	() => import("./repro2.js"),
-	() => import("./repro3.js")
+	() => import("./repro1.js").then(console.log),
+	() => import("./repro2.js").then(console.log),
+	() => import("./repro3.js").then(console.log)
 ];
 
 //#endregion

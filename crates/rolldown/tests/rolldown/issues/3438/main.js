@@ -9,7 +9,7 @@ export default [
   repro3_clear,
   repro3_clear$1,
   repro3_clear$2,
-  () => import("./repro1.js"),
-  () => import("./repro2.js"),
-  () => import("./repro3.js"),
+  () => import("./repro1.js").then(console.log),
+  () => import("./repro2.js").then(console.log),
+  () => import("./repro3.js").then(console.log),
 ]

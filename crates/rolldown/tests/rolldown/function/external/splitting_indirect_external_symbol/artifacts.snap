@@ -1,6 +1,5 @@
 ---
 source: crates/rolldown_testing/src/integration_test.rs
-snapshot_kind: text
 ---
 # Assets
 
@@ -30,7 +29,7 @@ console.log(read$1);
 //#endregion
 //#region main.js
 console.log(read);
-import("./indirect.js");
+import("./indirect.js").then(console.log);
 
 //#endregion
 ```

@@ -3,4 +3,4 @@ import "./read";
 
 console.log(read)
 
-import('./indirect')
+import('./indirect').then(console.log)

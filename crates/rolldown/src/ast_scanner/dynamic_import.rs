@@ -73,6 +73,9 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
       AstKind::AwaitExpression(_) => {
         self.extract_init_set_from_await_expr_ancestor(import_record_idx)
       }
+      // e.g. `import('mod');`
+      // init_set is empty, importee would be included if it has side effects
+      AstKind::ExpressionStatement(_) if self.is_root_scope() => Some(FxHashSet::default()),
       _ => None,
     };
 

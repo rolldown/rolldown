@@ -76,6 +76,13 @@ impl<'me, 'ast: 'me> Visit<'ast> for AstScanner<'me, 'ast> {
       }
     }
 
+    // Check if dynamic import record is a pure dynamic import
+    for (rec_idx, usage) in &self.result.dynamic_import_rec_exports_usage {
+      if matches!(usage, DynamicImportExportsUsage::Partial(set) if set.is_empty()) {
+        self.result.import_records[*rec_idx].meta.insert(ImportRecordMeta::PURE_DYNAMIC_IMPORT);
+      }
+    }
+
     // https://github.com/evanw/esbuild/blob/d34e79e2a998c21bb71d57b92b0017ca11756912/internal/js_parser/js_parser.go#L12551-L12604
     // Since AstScan is immutable, we defer transformation in module finalizer
     if !self.top_level_this_expr_set.is_empty() {
@@ -168,10 +175,11 @@ impl<'me, 'ast: 'me> Visit<'ast> for AstScanner<'me, 'ast> {
         request.value.as_str(),
         ImportKind::DynamicImport,
         expr.source.span(),
-        if expr.source.span().is_empty() {
-          ImportRecordMeta::IS_UNSPANNED_IMPORT
-        } else {
-          ImportRecordMeta::empty()
+        {
+          let mut meta = ImportRecordMeta::empty();
+          meta.set(ImportRecordMeta::IS_TOP_LEVEL, self.is_root_scope());
+          meta.set(ImportRecordMeta::IS_UNSPANNED_IMPORT, expr.source.span().is_empty());
+          meta
         },
       );
       self.init_dynamic_import_binding_usage_info(import_rec_idx);

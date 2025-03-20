@@ -195,6 +195,13 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
     })
   }
 
+  pub fn is_root_scope(&self) -> bool {
+    self.scope_stack.iter().rev().filter_map(|item| *item).all(|scope| {
+      let flag = self.result.symbol_ref_db.scope_flags(scope);
+      flag.is_top()
+    })
+  }
+
   pub fn scan(mut self, program: &Program<'ast>) -> BuildResult<ScanResult> {
     self.visit_program(program);
     let mut exports_kind = ExportsKind::None;

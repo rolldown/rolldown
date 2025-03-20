@@ -723,9 +723,11 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
                       ),
                       ast::Expression::StaticMemberExpression(
                         ast::StaticMemberExpression {
-                          object: self
-                            .snippet
-                            .call_expr_with_arg_expr(to_commonjs_ref_name, ns_name),
+                          object: self.snippet.call_expr_with_arg_expr(
+                            to_commonjs_ref_name,
+                            ns_name,
+                            false,
+                          ),
                           property: self.snippet.id_name("default", SPAN),
                           ..TakeIn::dummy(self.alloc)
                         }
@@ -805,10 +807,22 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
     &self,
     import_expr: &ImportExpression<'ast>,
   ) -> Option<Expression<'ast>> {
+    let rec_id = self.ctx.module.imports.get(&import_expr.span)?;
+    let rec = &self.ctx.module.import_records[*rec_id];
+    let importee_id = rec.resolved_module;
+
+    if rec.meta.contains(ImportRecordMeta::DEAD_DYNAMIC_IMPORT) {
+      return Some(
+        self.snippet.promise_resolve_then_call_expr(
+          SPAN,
+          self
+            .snippet
+            .builder
+            .vec1(self.snippet.return_stmt(self.snippet.object_freeze_dynamic_import_polyfill())),
+        ),
+      );
+    }
     if self.ctx.options.inline_dynamic_imports {
-      let rec_id = self.ctx.module.imports.get(&import_expr.span)?;
-      let rec = &self.ctx.module.import_records[*rec_id];
-      let importee_id = rec.resolved_module;
       match &self.ctx.modules[importee_id] {
         Module::Normal(importee) => {
           let importee_linking_info = &self.ctx.linking_infos[importee_id];

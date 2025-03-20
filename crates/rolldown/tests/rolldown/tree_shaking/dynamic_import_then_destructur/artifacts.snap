@@ -1,20 +1,16 @@
 ---
 source: crates/rolldown_testing/src/integration_test.rs
-snapshot_kind: text
 ---
 # Assets
 
-## lib.js
-
-```js
-
-```
 ## main.js
 
 ```js
 
 //#region main.js
-import("./lib.js").then(({ foo: x, thing: a }) => []);
+Promise.resolve().then(function() {
+	return /* @__PURE__ */ Object.freeze({ __proto__: null });
+}).then(({ foo: x, thing: a }) => []);
 
 //#endregion
 ```

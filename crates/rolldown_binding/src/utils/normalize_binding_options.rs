@@ -39,10 +39,9 @@ fn normalize_addon_option(
   addon_option.map(move |value| {
     AddonOutputOption::Fn(Arc::new(move |chunk| {
       let fn_js = Arc::clone(&value);
-      let chunk = chunk.clone();
       Box::pin(async move {
         fn_js
-          .await_call(FnArgs { data: (RenderedChunk::from(chunk),) })
+          .await_call(FnArgs { data: (RenderedChunk::new(chunk),) })
           .await
           .map_err(anyhow::Error::from)
       })

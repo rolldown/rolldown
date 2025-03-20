@@ -91,12 +91,12 @@ impl Generator for EcmaGenerator {
       );
     });
 
-    let rendered_chunk = generate_rendered_chunk(
+    let rendered_chunk = Arc::new(generate_rendered_chunk(
       ctx.chunk,
       rendered_modules,
       ctx.chunk.pre_rendered_chunk.as_ref().expect("Should have pre-rendered chunk"),
       ctx.chunk_graph,
-    );
+    ));
     let hashbang = match ctx.chunk.user_defined_entry_module(&ctx.link_output.module_table) {
       Some(normal_module) => normal_module
         .ecma_view
@@ -107,45 +107,45 @@ impl Generator for EcmaGenerator {
 
     let banner = {
       let injection = match ctx.options.banner.as_ref() {
-        Some(hook) => hook.call(&rendered_chunk).await?,
+        Some(hook) => hook.call(Arc::clone(&rendered_chunk)).await?,
         None => None,
       };
       ctx
         .plugin_driver
-        .banner(HookAddonArgs { chunk: &rendered_chunk }, injection.unwrap_or_default())
+        .banner(HookAddonArgs { chunk: Arc::clone(&rendered_chunk) }, injection.unwrap_or_default())
         .await?
     };
 
     let intro = {
       let injection = match ctx.options.intro.as_ref() {
-        Some(hook) => hook.call(&rendered_chunk).await?,
+        Some(hook) => hook.call(Arc::clone(&rendered_chunk)).await?,
         None => None,
       };
       ctx
         .plugin_driver
-        .intro(HookAddonArgs { chunk: &rendered_chunk }, injection.unwrap_or_default())
+        .intro(HookAddonArgs { chunk: Arc::clone(&rendered_chunk) }, injection.unwrap_or_default())
         .await?
     };
 
     let outro = {
       let injection = match ctx.options.outro.as_ref() {
-        Some(hook) => hook.call(&rendered_chunk).await?,
+        Some(hook) => hook.call(Arc::clone(&rendered_chunk)).await?,
         None => None,
       };
       ctx
         .plugin_driver
-        .outro(HookAddonArgs { chunk: &rendered_chunk }, injection.unwrap_or_default())
+        .outro(HookAddonArgs { chunk: Arc::clone(&rendered_chunk) }, injection.unwrap_or_default())
         .await?
     };
 
     let footer = {
       let injection = match ctx.options.footer.as_ref() {
-        Some(hook) => hook.call(&rendered_chunk).await?,
+        Some(hook) => hook.call(Arc::clone(&rendered_chunk)).await?,
         None => None,
       };
       ctx
         .plugin_driver
-        .footer(HookAddonArgs { chunk: &rendered_chunk }, injection.unwrap_or_default())
+        .footer(HookAddonArgs { chunk: Arc::clone(&rendered_chunk) }, injection.unwrap_or_default())
         .await?
     };
 
@@ -249,7 +249,12 @@ impl Generator for EcmaGenerator {
         origin_chunk: ctx.chunk_idx,
         content: content.into(),
         map,
-        kind: InstantiationKind::from(EcmaAssetMeta { rendered_chunk }),
+        kind: InstantiationKind::from(EcmaAssetMeta {
+          rendered_chunk,
+          debug_id: 0,
+          imports: vec![],
+          dynamic_imports: vec![],
+        }),
         augment_chunk_hash: None,
         file_dir: file_dir.to_path_buf(),
         preliminary_filename: ctx

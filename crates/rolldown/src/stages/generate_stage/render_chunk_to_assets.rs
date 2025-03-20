@@ -82,8 +82,8 @@ impl GenerateStage<'_> {
                 map,
                 &mut output_assets,
                 &file_dir,
-                rendered_chunk.filename.as_str(),
-                rendered_chunk.debug_id,
+                filename.as_str(),
+                ecma_meta.debug_id,
                 /*is_css*/ false,
               )
               .await?;
@@ -93,20 +93,20 @@ impl GenerateStage<'_> {
             if matches!(self.options.sourcemap, Some(SourceMapType::Inline) | None) {
               None
             } else {
-              Some(concat_string!(rendered_chunk.filename, ".map"))
+              Some(concat_string!(filename, ".map"))
             };
           output.push(Output::Chunk(Box::new(OutputChunk {
-            name: rendered_chunk.name,
-            filename: rendered_chunk.filename,
+            name: rendered_chunk.name.clone(),
+            filename: filename.clone(),
             code,
             is_entry: rendered_chunk.is_entry,
             is_dynamic_entry: rendered_chunk.is_dynamic_entry,
-            facade_module_id: rendered_chunk.facade_module_id,
-            modules: rendered_chunk.modules,
-            exports: rendered_chunk.exports,
-            module_ids: rendered_chunk.module_ids,
-            imports: rendered_chunk.imports,
-            dynamic_imports: rendered_chunk.dynamic_imports,
+            facade_module_id: rendered_chunk.facade_module_id.clone(),
+            modules: rendered_chunk.modules.clone(),
+            exports: rendered_chunk.exports.clone(),
+            module_ids: rendered_chunk.module_ids.clone(),
+            imports: ecma_meta.imports,
+            dynamic_imports: ecma_meta.dynamic_imports,
             map,
             sourcemap_filename,
             preliminary_filename: preliminary_filename.to_string(),

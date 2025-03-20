@@ -17,7 +17,7 @@ codegen-units = 16
 debug         = 'full'
 inherits      = "release"
 lto           = "thin"
-opt-level     = "s"
+opt-level     = 2
 strip         = "none"
 
 [workspace.lints.clippy]
@@ -213,4 +213,5 @@ opt-level     = 3
 strip         = "symbols" # Set to `false` for debug information
 
 [patch.crates-io]
-filetime = { git = "https://github.com/oligamiq/filetime.git" }
+filetime         = { git = "https://github.com/oligamiq/filetime.git" }
+parking_lot_core = { git = "https://github.com/suxin2017/parking_lot", branch = "wasm-support" }

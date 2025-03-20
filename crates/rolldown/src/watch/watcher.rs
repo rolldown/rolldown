@@ -16,6 +16,7 @@ use std::{
   time::Duration,
 };
 use tokio::sync::Mutex;
+use tracing::info;
 
 use crate::Bundler;
 
@@ -70,13 +71,17 @@ impl WatcherImpl {
       }
       Config::default()
     };
+    let mut notify_option_config = Config::default();
+    notify_option_config = notify_option_config.with_poll_interval(Duration::from_millis(1000));
+
+    info!("notify option: {:?}", notify_option_config);
     let notify_watcher = Arc::new(Mutex::new(RecommendedWatcher::new(
       move |res| {
         if let Err(e) = tx.send(WatcherChannelMsg::NotifyEvent(res)) {
           eprintln!("send watch event error {e:?}");
         };
       },
-      watch_option,
+      notify_option_config,
     )?));
     let notify_watch_files = Arc::new(FxDashSet::default());
     let emitter = Arc::new(WatcherEmitter::new());

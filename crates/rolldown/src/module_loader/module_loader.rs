@@ -121,21 +121,7 @@ impl ModuleLoader {
 
     let future = async { task.run() };
 
-    #[cfg(target_family = "wasm")]
-    {
-      use tokio;
-      std::thread::spawn(|| {
-        let rt = tokio::runtime::Builder::new_current_thread().build();
-        match rt {
-          Ok(rt) => rt.block_on(future),
-          Err(e) => tracing::error!("create runtime error: {e:?}"),
-        }
-      });
-    }
-    #[cfg(not(target_family = "wasm"))]
-    {
-      tokio::spawn(future);
-    }
+    tokio::spawn(future);
 
     Ok(Self {
       tx,

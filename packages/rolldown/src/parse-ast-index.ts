@@ -4,37 +4,16 @@ import type { ParseResult, ParserOptions } from './binding'
 import { locate } from './log/locate-character'
 import { error, logParseError } from './log/logs'
 import { getCodeFrame } from './utils/code-frame'
+// @ts-ignore
+import * as oxcParserWrap from 'oxc-parser/wrap.mjs'
 
-// The oxc program is a string in the result, we need to parse it to a object.
-// Copy from https://github.com/oxc-project/oxc/blob/main/napi/parser/index.js#L12
 function wrap(result: ParseResult, sourceText: string) {
-  let program: ParseResult['program'],
-    module: ParseResult['module'],
-    comments: ParseResult['comments'],
-    errors: ParseResult['errors']
-  return {
-    get program() {
-      if (!errors) errors = result.errors
-      if (errors.length > 0) {
-        return normalizeParseError(sourceText, errors)
-      }
-      // @ts-expect-error the result.program typing is `Program`
-      if (!program) program = JSON.parse(result.program)
-      return program
-    },
-    get module() {
-      if (!module) module = result.module
-      return module
-    },
-    get comments() {
-      if (!comments) comments = result.comments
-      return comments
-    },
-    get errors() {
-      if (!errors) errors = result.errors
-      return errors
-    },
+  // reuse oxc-parser wrap and eagerly throw an error if any
+  result = oxcParserWrap.wrap(result)
+  if (result.errors.length > 0) {
+    return normalizeParseError(sourceText, result.errors)
   }
+  return result.program
 }
 
 function normalizeParseError(
@@ -83,7 +62,7 @@ export function parseAst(
       ...options,
     }),
     sourceText,
-  ).program
+  )
 }
 
 export async function parseAstAsync(
@@ -97,7 +76,7 @@ export async function parseAstAsync(
       ...options,
     }),
     sourceText,
-  ).program
+  )
 }
 
 export type { ParseResult, ParserOptions }

@@ -80,7 +80,7 @@ impl<'ast> TakeIn<'ast> for ast::Class<'ast> {
       super_class: TakeIn::dummy(alloc),
       body: TakeIn::dummy(alloc),
       type_parameters: TakeIn::dummy(alloc),
-      super_type_parameters: TakeIn::dummy(alloc),
+      super_type_arguments: TakeIn::dummy(alloc),
       implements: TakeIn::dummy(alloc),
       decorators: TakeIn::dummy(alloc),
       r#abstract: TakeIn::dummy(alloc),
@@ -199,7 +199,7 @@ impl<'ast> TakeIn<'ast> for ast::CallExpression<'ast> {
       callee: TakeIn::dummy(alloc),
       arguments: TakeIn::dummy(alloc),
       optional: TakeIn::dummy(alloc),
-      type_parameters: TakeIn::dummy(alloc),
+      type_arguments: TakeIn::dummy(alloc),
       pure: TakeIn::dummy(alloc),
     }
   }
@@ -383,7 +383,7 @@ impl<'ast> TakeIn<'ast> for ast::UnaryExpression<'ast> {
 
 impl<'ast> TakeIn<'ast> for ast::StringLiteral<'ast> {
   fn dummy(alloc: &'ast Allocator) -> Self {
-    Self { span: TakeIn::dummy(alloc), value: TakeIn::dummy(alloc), raw: None }
+    Self { span: TakeIn::dummy(alloc), value: TakeIn::dummy(alloc), raw: None, lossy: false }
   }
 }
 impl<'ast> TakeIn<'ast> for ast::ImportOrExportKind {

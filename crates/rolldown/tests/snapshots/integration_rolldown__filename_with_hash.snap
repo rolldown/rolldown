@@ -2581,11 +2581,11 @@ expression: output
 
 # tests/esbuild/lower/lower_async_generator
 
-- entry-!~{000}~.js => entry-D_ht40fP.js
+- entry-!~{000}~.js => entry-Bw_m2rUT.js
 
 # tests/esbuild/lower/lower_async_generator_no_await
 
-- entry-!~{000}~.js => entry-D_ht40fP.js
+- entry-!~{000}~.js => entry-Bw_m2rUT.js
 
 # tests/esbuild/lower/lower_async_super_es2016_no_bundle
 
@@ -2814,7 +2814,7 @@ expression: output
 
 - entry-!~{000}~.js => entry-CkYqniVe.js
 - loops-!~{001}~.js => loops-Cn33pgjM.js
-- switch-!~{002}~.js => switch-BqN3eBw4.js
+- switch-!~{002}~.js => switch-wf2XhF2t.js
 
 # tests/esbuild/lower/lower_using_hoisting
 
@@ -2846,13 +2846,13 @@ expression: output
 
 - entry-!~{000}~.js => entry-CMXZovLt.js
 - loops-!~{001}~.js => loops-IbdCd716.js
-- switch-!~{002}~.js => switch-rlpjEJme.js
+- switch-!~{002}~.js => switch-DucSTs1X.js
 
 # tests/esbuild/lower/lower_using_unsupported_using_and_async
 
 - entry-!~{000}~.js => entry-CMXZovLt.js
 - loops-!~{001}~.js => loops-IbdCd716.js
-- switch-!~{002}~.js => switch-rlpjEJme.js
+- switch-!~{002}~.js => switch-DucSTs1X.js
 
 # tests/esbuild/lower/static_class_block_es2021
 

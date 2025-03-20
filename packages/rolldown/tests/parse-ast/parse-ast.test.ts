@@ -11,6 +11,25 @@ test('rolldown/parseAst parseAstAsync', async () => {
   expect(result.type).toBe('Program')
 })
 
+test('rolldown/parseAst non json value', async () => {
+  const result = await parseAstAsync('1n')
+  expect(result.body[0]).toMatchInlineSnapshot(`
+    {
+      "end": 2,
+      "expression": {
+        "bigint": "1",
+        "end": 2,
+        "raw": "1n",
+        "start": 0,
+        "type": "Literal",
+        "value": 1n,
+      },
+      "start": 0,
+      "type": "ExpressionStatement",
+    }
+  `)
+})
+
 test('rolldown/parseAst parseSync + error', async () => {
   try {
     parseAst('\nconso le.log("hello")')

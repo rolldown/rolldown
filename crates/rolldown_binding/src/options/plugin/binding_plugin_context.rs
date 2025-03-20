@@ -40,12 +40,12 @@ impl BindingPluginContext {
       .load(
         &specifier,
         side_effects.map(Into::into),
-        Box::new(move || {
+        Some(Box::new(move || {
           let load_callback_fn = Arc::clone(&load_callback_fn);
           Box::pin(
             async move { load_callback_fn.invoke_async(()).await.map_err(anyhow::Error::from) },
           )
-        }),
+        })),
       )
       .await
       .map_err(|program_err| napi_error::load_error(&specifier, program_err))

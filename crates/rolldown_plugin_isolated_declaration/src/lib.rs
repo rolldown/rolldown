@@ -38,9 +38,8 @@ impl Plugin for IsolatedDeclarationPlugin {
       let importer_path = args.cwd.join(args.id);
       let importer = importer_path.to_string_lossy();
       for specifier in type_import_specifiers {
-        // TODO load typing importers module, because it will not load after strip typing.
-        let _ = ctx.resolve(&specifier, Some(&importer), None).await??;
-        // ctx.load(&resolved_id.id, None, load_callback_fn)
+        let resolved_id = ctx.resolve(&specifier, Some(&importer), None).await??;
+        ctx.load(&resolved_id.id, None, None).await?;
       }
 
       let ret = args.ast.program.with_mut(|fields| {

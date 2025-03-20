@@ -206,12 +206,12 @@ switch (foo) {
 async function foo() {
 	using x$1 = y;
 	switch (foo) {
-		case 0: using c$1 = d;
-		default: using e$1 = f;
+		case 0: using c = d;
+		default: using e = f;
 	}
 	switch (foo) {
-		case 0: await using c$1 = d;
-		default: using e$1 = f;
+		case 0: await using c = d;
+		default: using e = f;
 	}
 }
 
@@ -263,12 +263,12 @@ async function foo() {
 +async function foo() {
 +	using x$1 = y;
 +	switch (foo) {
-+		case 0: using c$1 = d;
-+		default: using e$1 = f;
++		case 0: using c = d;
++		default: using e = f;
 +	}
 +	switch (foo) {
-+		case 0: await using c$1 = d;
-+		default: using e$1 = f;
++		case 0: await using c = d;
++		default: using e = f;
 +	}
 +}
 +

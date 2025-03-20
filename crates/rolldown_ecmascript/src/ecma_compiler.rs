@@ -146,7 +146,7 @@ impl EcmaCompiler {
     if run_compress {
       Compressor::new(allocator, compress_options).build_with_scoping(scoping, program);
     } else {
-      Compressor::new(allocator, CompressOptions::all_false()).dead_code_elimination(program);
+      Compressor::new(allocator, CompressOptions::safest()).dead_code_elimination(program);
     }
     let scoping = options.mangle.map(|options| {
       let semantic = SemanticBuilder::new()

@@ -1,4 +1,7 @@
-use oxc::{mangler::MangleOptions, minifier::CompressOptions};
+use oxc::{
+  mangler::MangleOptions,
+  minifier::{CompressOptions, CompressOptionsKeepNames},
+};
 #[cfg(feature = "deserialize_bundler_options")]
 use schemars::JsonSchema;
 #[cfg(feature = "deserialize_bundler_options")]
@@ -97,6 +100,7 @@ impl MinifyOptionsObject {
         target: option.target.into(),
         drop_debugger: false,
         drop_console: false,
+        keep_names: CompressOptionsKeepNames { function: true, class: true },
       })
       .filter(|_| self.compress),
     }

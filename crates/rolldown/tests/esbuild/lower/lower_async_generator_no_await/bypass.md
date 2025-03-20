@@ -310,7 +310,7 @@ async function* foo() {
 	yield* x;
 	await using x = await y;
 	for await (let x$1 of y);
-	for await (await using x of y);
+	for await (await using x$1 of y);
 }
 foo = async function* () {
 	yield;
@@ -318,7 +318,7 @@ foo = async function* () {
 	yield* x;
 	await using x = await y;
 	for await (let x$1 of y);
-	for await (await using x of y);
+	for await (await using x$1 of y);
 };
 foo = { async *bar() {
 	yield;
@@ -326,7 +326,7 @@ foo = { async *bar() {
 	yield* x;
 	await using x = await y;
 	for await (let x$1 of y);
-	for await (await using x of y);
+	for await (await using x$1 of y);
 } };
 var Foo = class {
 	async *bar() {
@@ -335,7 +335,7 @@ var Foo = class {
 		yield* x;
 		await using x = await y;
 		for await (let x$1 of y);
-		for await (await using x of y);
+		for await (await using x$1 of y);
 	}
 };
 Foo = class {
@@ -345,7 +345,7 @@ Foo = class {
 		yield* x;
 		await using x = await y;
 		for await (let x$1 of y);
-		for await (await using x of y);
+		for await (await using x$1 of y);
 	}
 };
 
@@ -417,7 +417,7 @@ Foo = class {
 +	yield* x;
 +	await using x = await y;
 +	for await (let x$1 of y);
-+	for await (await using x of y);
++	for await (await using x$1 of y);
  }
 -foo = function() {
 -  return __asyncGenerator(this, null, function* () {
@@ -477,7 +477,7 @@ Foo = class {
 +	yield* x;
 +	await using x = await y;
 +	for await (let x$1 of y);
-+	for await (await using x of y);
++	for await (await using x$1 of y);
  };
 -foo = { bar() {
 -  return __asyncGenerator(this, null, function* () {
@@ -537,7 +537,7 @@ Foo = class {
 +	yield* x;
 +	await using x = await y;
 +	for await (let x$1 of y);
-+	for await (await using x of y);
++	for await (await using x$1 of y);
  } };
 -class Foo {
 -  bar() {
@@ -601,7 +601,7 @@ Foo = class {
 +		yield* x;
 +		await using x = await y;
 +		for await (let x$1 of y);
-+		for await (await using x of y);
++		for await (await using x$1 of y);
 +	}
 +};
  Foo = class {
@@ -664,7 +664,7 @@ Foo = class {
 +		yield* x;
 +		await using x = await y;
 +		for await (let x$1 of y);
-+		for await (await using x of y);
++		for await (await using x$1 of y);
 +	}
  };
 -function bar() {

@@ -1,6 +1,6 @@
 use crate::{ImportKind, ModuleId, ModuleIdx};
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct ImporterRecord {
   pub importer_path: ModuleId,
   pub importer_idx: ModuleIdx,

@@ -18,9 +18,14 @@ async function loadDevConfig(): Promise<DevConfig> {
 
 class DevServer {
   private config: DevConfig
+  private numberOfLiveConnections = 0
 
   constructor(config: DevConfig) {
     this.config = config
+  }
+
+  get hasLiveConnections() {
+    return this.numberOfLiveConnections > 0
   }
 
   async serve() {
@@ -55,42 +60,55 @@ class DevServer {
     const server = http.createServer(app)
     const wsServer = new WebSocketServer({ server })
     let socket: WebSocket
-    wsServer.on('connection', function connection(ws) {
+    wsServer.on('connection', (ws) => {
+      this.numberOfLiveConnections += 1
+      console.debug(
+        `Detected new Websocket connection. Current live connections: ${this.numberOfLiveConnections}`,
+      )
       socket = ws
-      console.log(`Ws connected`)
       ws.on('error', console.error)
+    })
+    wsServer.on('close', () => {
+      this.numberOfLiveConnections -= 1
+      console.debug(
+        `Detected Websocket disconnection. Current live connections: ${this.numberOfLiveConnections}`,
+      )
     })
     watcher.on('change', async (path) => {
       console.log(`File ${path} has been changed`)
-      const patch = await build.generateHmrPatch([path])
-      if (patch) {
-        console.log('Patching...')
-        if (socket) {
-          const path = `${seed}.js`
-          seed++
-          nodeFs.writeFileSync(
-            nodePath.join(process.cwd(), 'dist', path),
-            patch,
-          )
-          console.log(
-            'Patch:',
-            JSON.stringify({
-              type: 'update',
-              url: path,
-            }),
-          )
-          socket.send(
-            JSON.stringify({
-              type: 'update',
-              url: path,
-            }),
-          )
+      if (this.hasLiveConnections) {
+        const patch = await build.generateHmrPatch([path])
+        if (patch) {
+          console.log('Patching...')
+          if (socket) {
+            const path = `${seed}.js`
+            seed++
+            nodeFs.writeFileSync(
+              nodePath.join(process.cwd(), 'dist', path),
+              patch,
+            )
+            console.log(
+              'Patch:',
+              JSON.stringify({
+                type: 'update',
+                url: path,
+              }),
+            )
+            socket.send(
+              JSON.stringify({
+                type: 'update',
+                url: path,
+              }),
+            )
+          } else {
+            console.log('No socket connected')
+          }
         } else {
-          console.log('No socket connected')
+          console.log('No patch found')
         }
-      } else {
-        console.log('No patch found')
       }
+      // Invoke the build process again to ensure if users reload the page, they get the latest changes
+      await build.write(buildOptions.output)
     })
     server.listen(3000)
     console.log('Server listening on http://localhost:3000')

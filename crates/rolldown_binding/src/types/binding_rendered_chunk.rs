@@ -1,75 +1,70 @@
-use arcstr::ArcStr;
-use rolldown_utils::rayon::{IntoParallelIterator, ParallelIterator};
+use std::sync::Arc;
+
+use rolldown_common::RollupRenderedChunk;
+use rolldown_utils::rayon::{IntoParallelRefIterator, ParallelIterator};
 
 use crate::types::binding_rendered_module::BindingRenderedModule;
 
 #[napi_derive::napi]
-#[derive(Default, Debug)]
+#[derive(Debug)]
 pub struct RenderedChunk {
-  // PreRenderedChunk
-  name: String,
-  is_entry: bool,
-  is_dynamic_entry: bool,
-  facade_module_id: Option<String>,
-  module_ids: Vec<String>,
-  exports: Vec<String>,
-  // RenderedChunk
-  file_name: String,
-  modules: BindingModules,
-  imports: Vec<String>,
-  dynamic_imports: Vec<String>,
+  inner: Arc<RollupRenderedChunk>,
 }
 
 #[napi_derive::napi]
 impl RenderedChunk {
+  pub fn new(inner: Arc<RollupRenderedChunk>) -> Self {
+    Self { inner }
+  }
+
   #[napi(getter)]
   pub fn get_name(&self) -> String {
-    self.name.clone()
+    self.inner.name.to_string()
   }
 
   #[napi(getter)]
   pub fn get_is_entry(&self) -> bool {
-    self.is_entry
+    self.inner.is_entry
   }
 
   #[napi(getter)]
   pub fn get_is_dynamic_entry(&self) -> bool {
-    self.is_dynamic_entry
+    self.inner.is_dynamic_entry
   }
 
   #[napi(getter)]
   pub fn get_facade_module_id(&self) -> Option<String> {
-    self.facade_module_id.clone()
+    self.inner.facade_module_id.as_ref().map(|x| x.to_string())
   }
 
   #[napi(getter)]
   pub fn get_module_ids(&self) -> Vec<String> {
-    self.module_ids.clone()
+    self.inner.module_ids.iter().map(|x| x.to_string()).collect()
   }
 
   #[napi(getter)]
   pub fn get_exports(&self) -> Vec<String> {
-    self.exports.clone()
+    self.inner.exports.iter().map(std::string::ToString::to_string).collect()
   }
 
   #[napi(getter)]
   pub fn get_file_name(&self) -> String {
-    self.file_name.clone()
+    self.inner.filename.to_string()
   }
 
   #[napi(getter)]
   pub fn get_modules(&self) -> BindingModules {
-    self.modules.clone()
+    (&self.inner.modules).into()
   }
 
   #[napi(getter)]
   pub fn get_imports(&self) -> Vec<String> {
-    self.imports.clone()
+    self.inner.imports.iter().map(arcstr::ArcStr::to_string).collect()
   }
 
   #[napi(getter)]
   pub fn get_dynamic_imports(&self) -> Vec<String> {
-    self.dynamic_imports.clone()
+    self.inner.dynamic_imports.iter().map(arcstr::ArcStr::to_string).collect()
   }
 }
 
@@ -80,28 +75,12 @@ pub struct BindingModules {
   pub keys: Vec<String>,
 }
 
-impl From<rolldown_common::RollupRenderedChunk> for RenderedChunk {
-  fn from(value: rolldown_common::RollupRenderedChunk) -> Self {
-    Self {
-      name: value.name.to_string(),
-      is_entry: value.is_entry,
-      is_dynamic_entry: value.is_dynamic_entry,
-      facade_module_id: value.facade_module_id.map(|x| x.to_string()),
-      module_ids: value.module_ids.into_iter().map(|x| x.to_string()).collect(),
-      exports: value.exports.into_iter().map(|x| x.to_string()).collect(),
-      file_name: value.filename.to_string(),
-      modules: value.modules.into(),
-      imports: value.imports.iter().map(ArcStr::to_string).collect(),
-      dynamic_imports: value.dynamic_imports.iter().map(ArcStr::to_string).collect(),
-    }
-  }
-}
-
 #[allow(clippy::cast_possible_truncation)]
-impl From<rolldown_common::Modules> for BindingModules {
-  fn from(modules: rolldown_common::Modules) -> Self {
-    let values = modules.values.into_par_iter().map(std::convert::Into::into).collect();
-    let keys = modules.keys.into_par_iter().map(|x| x.to_string()).collect();
+impl From<&rolldown_common::Modules> for BindingModules {
+  fn from(modules: &rolldown_common::Modules) -> Self {
+    let values =
+      modules.values.par_iter().map(|x| BindingRenderedModule::new(Arc::clone(x))).collect();
+    let keys = modules.keys.par_iter().map(|x| x.to_string()).collect();
     Self { values, keys }
   }
 }

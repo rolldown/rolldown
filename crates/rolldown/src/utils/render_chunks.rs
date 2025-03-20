@@ -23,12 +23,12 @@ pub async fn render_chunks<'a>(
       .iter()
       .filter_map(|asset| {
         if let InstantiationKind::Ecma(ecma_meta) = &asset.kind {
-          Some((ecma_meta.rendered_chunk.filename.clone(), &ecma_meta.rendered_chunk))
+          Some((ecma_meta.rendered_chunk.filename.clone(), Arc::clone(&ecma_meta.rendered_chunk)))
         } else {
           None
         }
       })
-      .collect::<FxHashMap<ArcStr, &RollupRenderedChunk>>(),
+      .collect::<FxHashMap<ArcStr, Arc<RollupRenderedChunk>>>(),
   );
   let result = try_join_all(assets.iter().enumerate().map(|(index, asset)| {
     let chunks = Arc::clone(&chunks);
@@ -40,7 +40,9 @@ pub async fn render_chunks<'a>(
         let render_chunk_ret = plugin_driver
           .render_chunk(HookRenderChunkArgs {
             code: asset.content.clone().try_into_inner_string()?,
-            chunk: &ecma_meta.rendered_chunk,
+            chunk: Arc::clone(
+              chunks.get(&ecma_meta.rendered_chunk.filename).expect("should have chunk"),
+            ),
             options,
             chunks,
           })

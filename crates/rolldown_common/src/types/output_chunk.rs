@@ -1,3 +1,5 @@
+use std::sync::Arc;
+
 use arcstr::ArcStr;
 use rolldown_rstr::Rstr;
 use rolldown_sourcemap::SourceMap;
@@ -31,7 +33,7 @@ pub struct OutputChunk {
 #[derive(Debug, Clone)]
 pub struct Modules {
   pub keys: Vec<ModuleId>,
-  pub values: Vec<RenderedModule>,
+  pub values: Vec<Arc<RenderedModule>>,
 }
 
 impl From<FxHashMap<ModuleId, RenderedModule>> for Modules {
@@ -42,7 +44,7 @@ impl From<FxHashMap<ModuleId, RenderedModule>> for Modules {
     let mut values = Vec::with_capacity(kvs.len());
     for (k, v) in kvs {
       keys.push(k);
-      values.push(v);
+      values.push(Arc::new(v));
     }
     Self { keys, values }
   }

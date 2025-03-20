@@ -155,7 +155,7 @@ pub trait Pluginable: Any + Debug + Send + Sync + 'static {
   async fn call_augment_chunk_hash(
     &self,
     _ctx: &PluginContext,
-    _chunk: &RollupRenderedChunk,
+    _chunk: Arc<RollupRenderedChunk>,
   ) -> HookAugmentChunkHashReturn;
 
   fn call_augment_chunk_hash_meta(&self) -> Option<PluginHookMeta>;
@@ -373,7 +373,7 @@ impl<T: Plugin> Pluginable for T {
   async fn call_augment_chunk_hash(
     &self,
     ctx: &PluginContext,
-    chunk: &RollupRenderedChunk,
+    chunk: Arc<RollupRenderedChunk>,
   ) -> HookAugmentChunkHashReturn {
     Plugin::augment_chunk_hash(self, ctx, chunk).await
   }

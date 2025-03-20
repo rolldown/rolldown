@@ -127,9 +127,8 @@ pub fn finalize_assets(
       .into();
 
       if let InstantiationKind::Ecma(ecma_meta) = &mut asset.kind {
-        ecma_meta.rendered_chunk.filename = filename.clone();
         let (_, debug_id) = index_final_hashes[asset_idx];
-        ecma_meta.rendered_chunk.debug_id = debug_id;
+        ecma_meta.debug_id = debug_id;
       }
       if let InstantiationKind::Css(css_meta) = &mut asset.kind {
         css_meta.filename = filename.clone();
@@ -158,14 +157,14 @@ pub fn finalize_assets(
   assets.par_iter_mut().for_each(|asset| {
     if let InstantiationKind::Ecma(ecma_meta) = &mut asset.meta {
       let chunk = &chunk_graph.chunk_table[asset.origin_chunk];
-      ecma_meta.rendered_chunk.imports = chunk
+      ecma_meta.imports = chunk
         .cross_chunk_imports
         .iter()
         .flat_map(|importee_idx| &index_chunk_to_assets[*importee_idx])
         .map(|importee_asset_idx| index_asset_to_filename[*importee_asset_idx].clone())
         .collect();
 
-      ecma_meta.rendered_chunk.dynamic_imports = chunk
+      ecma_meta.dynamic_imports = chunk
         .cross_chunk_dynamic_imports
         .iter()
         .flat_map(|importee_idx| &index_chunk_to_assets[*importee_idx])

@@ -137,7 +137,7 @@ pub trait Plugin: Any + Debug + Send + Sync + 'static {
   fn banner(
     &self,
     _ctx: &PluginContext,
-    _args: &HookAddonArgs<'_>,
+    _args: &HookAddonArgs,
   ) -> impl std::future::Future<Output = HookInjectionOutputReturn> + Send {
     async { Ok(None) }
   }
@@ -149,7 +149,7 @@ pub trait Plugin: Any + Debug + Send + Sync + 'static {
   fn footer(
     &self,
     _ctx: &PluginContext,
-    _args: &HookAddonArgs<'_>,
+    _args: &HookAddonArgs,
   ) -> impl std::future::Future<Output = HookInjectionOutputReturn> + Send {
     async { Ok(None) }
   }
@@ -161,7 +161,7 @@ pub trait Plugin: Any + Debug + Send + Sync + 'static {
   fn intro(
     &self,
     _ctx: &PluginContext,
-    _args: &HookAddonArgs<'_>,
+    _args: &HookAddonArgs,
   ) -> impl std::future::Future<Output = HookInjectionOutputReturn> + Send {
     async { Ok(None) }
   }
@@ -173,7 +173,7 @@ pub trait Plugin: Any + Debug + Send + Sync + 'static {
   fn outro(
     &self,
     _ctx: &PluginContext,
-    _args: &HookAddonArgs<'_>,
+    _args: &HookAddonArgs,
   ) -> impl std::future::Future<Output = HookInjectionOutputReturn> + Send {
     async { Ok(None) }
   }
@@ -197,7 +197,7 @@ pub trait Plugin: Any + Debug + Send + Sync + 'static {
   fn augment_chunk_hash(
     &self,
     _ctx: &PluginContext,
-    _chunk: &RollupRenderedChunk,
+    _chunk: Arc<RollupRenderedChunk>,
   ) -> impl std::future::Future<Output = HookAugmentChunkHashReturn> + Send {
     async { Ok(None) }
   }

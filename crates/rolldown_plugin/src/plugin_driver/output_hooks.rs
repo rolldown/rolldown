@@ -1,3 +1,5 @@
+use std::sync::Arc;
+
 use crate::types::hook_render_error::HookRenderErrorArgs;
 use crate::{HookAddonArgs, PluginDriver};
 use crate::{HookAugmentChunkHashReturn, HookNoopReturn, HookRenderChunkArgs};
@@ -15,11 +17,7 @@ impl PluginDriver {
     Ok(())
   }
 
-  pub async fn banner(
-    &self,
-    args: HookAddonArgs<'_>,
-    mut banner: String,
-  ) -> Result<Option<String>> {
+  pub async fn banner(&self, args: HookAddonArgs, mut banner: String) -> Result<Option<String>> {
     for (_, plugin, ctx) in self.iter_plugin_with_context_by_order(&self.order_by_banner_meta) {
       if let Some(r) = plugin.call_banner(ctx, &args).await? {
         banner.push('\n');
@@ -32,11 +30,7 @@ impl PluginDriver {
     Ok(Some(banner))
   }
 
-  pub async fn footer(
-    &self,
-    args: HookAddonArgs<'_>,
-    mut footer: String,
-  ) -> Result<Option<String>> {
+  pub async fn footer(&self, args: HookAddonArgs, mut footer: String) -> Result<Option<String>> {
     for (_, plugin, ctx) in self.iter_plugin_with_context_by_order(&self.order_by_footer_meta) {
       if let Some(r) = plugin.call_footer(ctx, &args).await? {
         footer.push('\n');
@@ -49,7 +43,7 @@ impl PluginDriver {
     Ok(Some(footer))
   }
 
-  pub async fn intro(&self, args: HookAddonArgs<'_>, mut intro: String) -> Result<Option<String>> {
+  pub async fn intro(&self, args: HookAddonArgs, mut intro: String) -> Result<Option<String>> {
     for (_, plugin, ctx) in self.iter_plugin_with_context_by_order(&self.order_by_intro_meta) {
       if let Some(r) = plugin.call_intro(ctx, &args).await? {
         intro.push('\n');
@@ -62,7 +56,7 @@ impl PluginDriver {
     Ok(Some(intro))
   }
 
-  pub async fn outro(&self, args: HookAddonArgs<'_>, mut outro: String) -> Result<Option<String>> {
+  pub async fn outro(&self, args: HookAddonArgs, mut outro: String) -> Result<Option<String>> {
     for (_, plugin, ctx) in self.iter_plugin_with_context_by_order(&self.order_by_outro_meta) {
       if let Some(r) = plugin.call_outro(ctx, &args).await? {
         outro.push('\n');
@@ -94,13 +88,13 @@ impl PluginDriver {
 
   pub async fn augment_chunk_hash(
     &self,
-    chunk: &RollupRenderedChunk,
+    chunk: Arc<RollupRenderedChunk>,
   ) -> HookAugmentChunkHashReturn {
     let mut hash = None;
     for (_, plugin, ctx) in
       self.iter_plugin_with_context_by_order(&self.order_by_augment_chunk_hash_meta)
     {
-      if let Some(plugin_hash) = plugin.call_augment_chunk_hash(ctx, chunk).await? {
+      if let Some(plugin_hash) = plugin.call_augment_chunk_hash(ctx, Arc::clone(&chunk)).await? {
         hash.get_or_insert_with(String::default).push_str(&plugin_hash);
       }
     }

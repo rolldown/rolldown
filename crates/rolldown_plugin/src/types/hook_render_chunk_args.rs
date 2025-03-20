@@ -8,6 +8,6 @@ use rustc_hash::FxHashMap;
 pub struct HookRenderChunkArgs<'a> {
   pub options: &'a SharedNormalizedBundlerOptions,
   pub code: String,
-  pub chunk: &'a RollupRenderedChunk,
-  pub chunks: Arc<FxHashMap<ArcStr, &'a RollupRenderedChunk>>,
+  pub chunk: Arc<RollupRenderedChunk>,
+  pub chunks: Arc<FxHashMap<ArcStr, Arc<RollupRenderedChunk>>>,
 }

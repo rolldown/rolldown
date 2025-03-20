@@ -56,7 +56,7 @@ impl BindingOutputChunk {
 
   #[napi(getter)]
   pub fn modules(&self) -> BindingModules {
-    self.inner.modules.clone().into()
+    (&self.inner.modules).into()
   }
 
   #[napi(getter)]

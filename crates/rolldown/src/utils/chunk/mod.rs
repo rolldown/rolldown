@@ -77,6 +77,5 @@ pub fn generate_rendered_chunk(
           .clone()
       })
       .collect(),
-    debug_id: 0,
   }
 }

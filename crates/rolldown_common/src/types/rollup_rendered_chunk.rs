@@ -6,7 +6,7 @@ use crate::ModuleId;
 use super::output_chunk::Modules;
 
 // The prefix `Rollup` shows that this is struct is designed for compatibility with Rollup. Adding the `Rollup` prefix to show how much types are only used for compatibility with Rollup.
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct RollupRenderedChunk {
   // PreRenderedChunk
   pub name: ArcStr,
@@ -20,5 +20,4 @@ pub struct RollupRenderedChunk {
   pub modules: Modules,
   pub imports: Vec<ArcStr>,
   pub dynamic_imports: Vec<ArcStr>,
-  pub debug_id: u128,
 }

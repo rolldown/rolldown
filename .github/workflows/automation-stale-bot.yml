@@ -1,4 +1,7 @@
 name: 'Automation Stale Bot'
+
+permissions: {}
+
 on:
   schedule:
     - cron: '30 1 * * *'

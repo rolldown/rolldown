@@ -1,5 +1,7 @@
 name: Node Test
 
+permissions: {}
+
 on:
   workflow_call:
     inputs:
@@ -22,6 +24,7 @@ jobs:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
         with:
           submodules: true # Pull submodules for additional files
+          persist-credentials: false
 
       - name: Setup Rust
         uses: ./.github/actions/setup-rust

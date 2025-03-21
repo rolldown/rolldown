@@ -1,5 +1,5 @@
 import { AssetSource } from '../utils/asset-source'
-import type { RenderedChunk as BindingRenderedChunk } from '../binding'
+import type { BindingRenderedChunk } from '../binding'
 
 export interface OutputAsset {
   type: 'asset'

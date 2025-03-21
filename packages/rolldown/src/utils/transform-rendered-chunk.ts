@@ -1,4 +1,4 @@
-import { RenderedChunk as BindingRenderedChunk } from '../binding'
+import { BindingRenderedChunk } from '../binding'
 import { RenderedChunk } from '../types/rolldown-output'
 import { transformToRenderedModule } from './transform-rendered-module'
 

@@ -7,12 +7,12 @@ use crate::types::binding_rendered_module::BindingRenderedModule;
 
 #[napi_derive::napi]
 #[derive(Debug)]
-pub struct RenderedChunk {
+pub struct BindingRenderedChunk {
   inner: Arc<RollupRenderedChunk>,
 }
 
 #[napi_derive::napi]
-impl RenderedChunk {
+impl BindingRenderedChunk {
   pub fn new(inner: Arc<RollupRenderedChunk>) -> Self {
     Self { inner }
   }

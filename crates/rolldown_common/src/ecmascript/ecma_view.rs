@@ -9,11 +9,11 @@ use rustc_hash::{FxHashMap, FxHashSet};
 use crate::{
   EcmaAstIdx, ExportsKind, HmrInfo, ImportRecordIdx, LocalExport, ModuleDefFormat, ModuleId,
   ModuleIdx, NamedImport, ResolvedImportRecord, SourceMutation, StmtInfoIdx, StmtInfos, SymbolRef,
-  side_effects::DeterminedSideEffects, types::source_mutation::BoxedSourceMutation,
+  side_effects::DeterminedSideEffects, types::source_mutation::ArcSourceMutation,
 };
 
 bitflags! {
-    #[derive(Debug, Default)]
+    #[derive(Debug, Default, Clone, Copy)]
     pub struct EcmaViewMeta: u8 {
         const EVAL = 1;
         const INCLUDED = 1 << 1;
@@ -56,7 +56,7 @@ impl EcmaViewMeta {
   }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct EcmaView {
   pub source: ArcStr,
   pub ecma_ast_idx: Option<EcmaAstIdx>,
@@ -89,7 +89,7 @@ pub struct EcmaView {
   // the range of hashbang in source
   pub hashbang_range: Option<Span>,
   pub meta: EcmaViewMeta,
-  pub mutations: Vec<BoxedSourceMutation>,
+  pub mutations: Vec<ArcSourceMutation>,
   /// `Span` of `new URL('path', import.meta.url)` -> `ImportRecordIdx`
   pub new_url_references: FxHashMap<Span, ImportRecordIdx>,
   pub this_expr_replace_map: FxHashMap<Span, ThisExprReplaceKind>,
@@ -132,7 +132,7 @@ impl SourceMutation for ImportMetaRolldownAssetReplacer {
   }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone, Copy)]
 pub struct EsmNamespaceInCjs {
   pub namespace_ref: SymbolRef,
   pub stmt_info_idx: StmtInfoIdx,

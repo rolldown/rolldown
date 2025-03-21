@@ -1,17 +1,18 @@
 name: Metric and Commit Results
 
-permissions: {}
-
 on:
   workflow_dispatch: # Allows manual triggering of the workflow
-  push:
+  pull_request_target:
     branches:
       - main
     paths-ignore:
       - '**/*.md'
+    types:
+      - closed
 
 jobs:
   compile-time-and-binary-size:
+    if: github.event.pull_request.merged == true
     name: Compile Time and Binary Size
     runs-on: ubuntu-latest
     # if: ${{ github.ref_name == 'main' }}
@@ -40,6 +41,7 @@ jobs:
           cat $GITHUB_OUTPUT
 
   metric:
+    if: github.event.pull_request.merged == true
     name: Metric
     needs: [compile-time-and-binary-size]
     runs-on: ubuntu-latest

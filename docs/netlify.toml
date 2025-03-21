@@ -3,5 +3,5 @@
 ignore = "git diff --quiet 'HEAD^' HEAD ./docs ./packages/rolldown"
 
 [[redirects]]
-  from = "/about/"
-  to = "/guide/"
+from = "/about/"
+to   = "/guide/"

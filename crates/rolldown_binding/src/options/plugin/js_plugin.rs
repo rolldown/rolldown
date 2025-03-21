@@ -2,7 +2,7 @@ use crate::types::{
   binding_module_info::BindingModuleInfo,
   binding_normalized_options::BindingNormalizedOptions,
   binding_outputs::{to_js_diagnostic, update_outputs},
-  binding_rendered_chunk::RenderedChunk,
+  binding_rendered_chunk::BindingRenderedChunk,
   js_callback::MaybeAsyncJsCallbackExt,
 };
 use anyhow::Ok;
@@ -301,10 +301,12 @@ impl Plugin for JsPlugin {
   ) -> rolldown_plugin::HookInjectionOutputReturn {
     match &self.banner {
       Some(cb) => Ok(
-        cb.await_call((ctx.clone().into(), RenderedChunk::new(Arc::clone(&args.chunk))).into())
-          .await?
-          .map(TryInto::try_into)
-          .transpose()?,
+        cb.await_call(
+          (ctx.clone().into(), BindingRenderedChunk::new(Arc::clone(&args.chunk))).into(),
+        )
+        .await?
+        .map(TryInto::try_into)
+        .transpose()?,
       ),
       _ => Ok(None),
     }
@@ -321,10 +323,12 @@ impl Plugin for JsPlugin {
   ) -> rolldown_plugin::HookInjectionOutputReturn {
     match &self.intro {
       Some(cb) => Ok(
-        cb.await_call((ctx.clone().into(), RenderedChunk::new(Arc::clone(&args.chunk))).into())
-          .await?
-          .map(TryInto::try_into)
-          .transpose()?,
+        cb.await_call(
+          (ctx.clone().into(), BindingRenderedChunk::new(Arc::clone(&args.chunk))).into(),
+        )
+        .await?
+        .map(TryInto::try_into)
+        .transpose()?,
       ),
       _ => Ok(None),
     }
@@ -341,10 +345,12 @@ impl Plugin for JsPlugin {
   ) -> rolldown_plugin::HookInjectionOutputReturn {
     match &self.outro {
       Some(cb) => Ok(
-        cb.await_call((ctx.clone().into(), RenderedChunk::new(Arc::clone(&args.chunk))).into())
-          .await?
-          .map(TryInto::try_into)
-          .transpose()?,
+        cb.await_call(
+          (ctx.clone().into(), BindingRenderedChunk::new(Arc::clone(&args.chunk))).into(),
+        )
+        .await?
+        .map(TryInto::try_into)
+        .transpose()?,
       ),
       _ => Ok(None),
     }
@@ -361,10 +367,12 @@ impl Plugin for JsPlugin {
   ) -> rolldown_plugin::HookInjectionOutputReturn {
     match &self.footer {
       Some(cb) => Ok(
-        cb.await_call((ctx.clone().into(), RenderedChunk::new(Arc::clone(&args.chunk))).into())
-          .await?
-          .map(TryInto::try_into)
-          .transpose()?,
+        cb.await_call(
+          (ctx.clone().into(), BindingRenderedChunk::new(Arc::clone(&args.chunk))).into(),
+        )
+        .await?
+        .map(TryInto::try_into)
+        .transpose()?,
       ),
       _ => Ok(None),
     }
@@ -385,13 +393,13 @@ impl Plugin for JsPlugin {
           (
             ctx.clone().into(),
             args.code.to_string(),
-            RenderedChunk::new(Arc::clone(&args.chunk)),
+            BindingRenderedChunk::new(Arc::clone(&args.chunk)),
             BindingNormalizedOptions::new(Arc::clone(args.options)),
             args
               .chunks
               .iter()
               .map(|(filename, chunk)| {
-                (filename.to_string(), RenderedChunk::new(Arc::clone(chunk)))
+                (filename.to_string(), BindingRenderedChunk::new(Arc::clone(chunk)))
               })
               .collect(),
           )
@@ -415,7 +423,9 @@ impl Plugin for JsPlugin {
     chunk: Arc<rolldown_common::RollupRenderedChunk>,
   ) -> rolldown_plugin::HookAugmentChunkHashReturn {
     match &self.augment_chunk_hash {
-      Some(cb) => Ok(cb.await_call((ctx.clone().into(), RenderedChunk::new(chunk)).into()).await?),
+      Some(cb) => {
+        Ok(cb.await_call((ctx.clone().into(), BindingRenderedChunk::new(chunk)).into()).await?)
+      }
       _ => Ok(None),
     }
   }

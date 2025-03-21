@@ -32,6 +32,9 @@ importers:
       conventional-changelog-cli:
         specifier: ^5.0.0
         version: 5.0.0(conventional-commits-filter@5.0.0)
+      cross-env:
+        specifier: ^7.0.3
+        version: 7.0.3
       cspell:
         specifier: ^8.8.4
         version: 8.17.5
@@ -505,6 +508,21 @@ importers:
         version: 1.15.7
 
   packages/testing: {}
+
+  packages/wasi:
+    dependencies:
+      '@oxc-project/runtime':
+        specifier: 0.58.1
+        version: 0.58.1
+      '@oxc-project/types':
+        specifier: 0.58.1
+        version: 0.58.1
+      '@valibot/to-json-schema':
+        specifier: 1.0.0-rc.0
+        version: 1.0.0-rc.0(valibot@1.0.0-rc.4(typescript@5.8.2))
+      valibot:
+        specifier: 1.0.0-rc.4
+        version: 1.0.0-rc.4(typescript@5.8.2)
 
   scripts:
     dependencies:
@@ -2670,12 +2688,19 @@ packages:
     cpu: [x64]
     os: [win32]
 
+  '@oxc-project/runtime@0.58.1':
+    resolution: {integrity: sha512-xKuEaTrsaLSuYTItOBcEmTQRAsFKq9e30iiexIZQRSzDOJPi0oDbyNjKjIxasTZ/WuLduj8tkweXifX/i/7A/g==}
+    engines: {node: '>=6.9.0'}
+
   '@oxc-project/runtime@0.61.2':
     resolution: {integrity: sha512-UNv56Aa4pTtsnqapa2LC+gRxXbUZxA6j1WlSYV8+zan5sD+CvwOMSzUsMNdUUTebob6PafJfT+/TN83yWXWmSA==}
     engines: {node: '>=6.9.0'}
 
   '@oxc-project/types@0.37.0':
     resolution: {integrity: sha512-9shvIr/cpoNo5cX8nWdZmviHLJSidjZy4M0MyfR6ucREZBtABTNBIa1a4emWUJ3qAMwJW6G1v0zm8K2rj9Pf4A==}
+
+  '@oxc-project/types@0.58.1':
+    resolution: {integrity: sha512-/412rL5TIAsZJ428FvFsZCKYsnnKsABv9Z7xZmdtUylGT+qiN240wHU++HdHwYj2j1A5SeScB4O4t8EjjcPlUw==}
 
   '@oxc-project/types@0.61.2':
     resolution: {integrity: sha512-rfuwJwvwn9MRthHNXlSo9Eka/u7gC0MhnWAoX3BhE1+rwPOl22nq0K0Y997Hof0tHCOuD7H3/Z8HTfCVhB4c5Q==}
@@ -3334,6 +3359,11 @@ packages:
     resolution: {integrity: sha512-/9crJgPptVsGCL6X+JPDQyaJwkalSZ/52WuF8DiRUxJgcmpNdzYRfZ+gqMEP8W3CTVfuMWPqqvIgfwJ97f9Etw==}
     peerDependencies:
       valibot: ^1.0.0
+
+  '@valibot/to-json-schema@1.0.0-rc.0':
+    resolution: {integrity: sha512-F3WDgnPzcDs9Y8qZwU9qfPnEJBQ6lCMCFjI7VsMjAza6yAixGr4cZ50gOy6zniSCk49GkFvq2a6cBKfZjTpyOw==}
+    peerDependencies:
+      valibot: ^1.0.0 || ^1.0.0-beta.5 || ^1.0.0-rc
 
   '@vitejs/plugin-vue@5.2.3':
     resolution: {integrity: sha512-IYSLEQj4LgZZuoVpdSUCw3dIynTWQgPlaRP6iAvMle4My0HdYwr5g5wQAfwOeHQBmYwEkqF70nRpSilr6PoUDg==}
@@ -6553,6 +6583,14 @@ packages:
       typescript:
         optional: true
 
+  valibot@1.0.0-rc.4:
+    resolution: {integrity: sha512-VRaChgFv7Ab0P54AMLu7+GqoexdTPQ54Plj59X9qV0AFozI3j9CGH43skg+TqgMpXnrW8jxlJ2TTHAtAD3t4qA==}
+    peerDependencies:
+      typescript: '>=5'
+    peerDependenciesMeta:
+      typescript:
+        optional: true
+
   validate-npm-package-license@3.0.4:
     resolution: {integrity: sha512-DpKm2Ui/xN7/HQKCtpZxoRWBhZ9Z0kqtygG8XCgNQ8ZlDnxuQmWhj566j8fN4Cu3/JmbhsDo7fcAJq4s9h27Ew==}
 
@@ -8798,9 +8836,13 @@ snapshots:
   '@oxc-parser/binding-win32-x64-msvc@0.61.2':
     optional: true
 
+  '@oxc-project/runtime@0.58.1': {}
+
   '@oxc-project/runtime@0.61.2': {}
 
   '@oxc-project/types@0.37.0': {}
+
+  '@oxc-project/types@0.58.1': {}
 
   '@oxc-project/types@0.61.2': {}
 
@@ -9467,6 +9509,10 @@ snapshots:
   '@valibot/to-json-schema@1.0.0(valibot@1.0.0(typescript@5.8.2))':
     dependencies:
       valibot: 1.0.0(typescript@5.8.2)
+
+  '@valibot/to-json-schema@1.0.0-rc.0(valibot@1.0.0-rc.4(typescript@5.8.2))':
+    dependencies:
+      valibot: 1.0.0-rc.4(typescript@5.8.2)
 
   '@vitejs/plugin-vue@5.2.3(vite@5.4.14(@types/node@22.13.11)(terser@5.39.0))(vue@3.5.13(typescript@5.8.2))':
     dependencies:
@@ -13077,6 +13123,10 @@ snapshots:
   utils-merge@1.0.1: {}
 
   valibot@1.0.0(typescript@5.8.2):
+    optionalDependencies:
+      typescript: 5.8.2
+
+  valibot@1.0.0-rc.4(typescript@5.8.2):
     optionalDependencies:
       typescript: 5.8.2
 

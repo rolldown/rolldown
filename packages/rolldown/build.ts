@@ -7,9 +7,12 @@ import { defineConfig, OutputOptions, rolldown } from './src/index'
 import pkgJson from './package.json' with { type: 'json' }
 import { colors } from './src/cli/colors'
 
-const outputDir = 'dist'
-
 const IS_RELEASING_CI = !!process.env.RELEASING
+const IS_BUILD_WASI_PKG = !!process.env.WASI_PKG
+
+const outputDir = IS_BUILD_WASI_PKG
+  ? nodePath.resolve(__dirname, '../wasi/dist')
+  : nodePath.resolve(__dirname, 'dist')
 
 const shared = defineConfig({
   input: {

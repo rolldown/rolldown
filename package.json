@@ -35,6 +35,7 @@
     "@types/node": "22.13.11",
     "cjs-module-lexer": "^2.0.0",
     "conventional-changelog-cli": "^5.0.0",
+    "cross-env": "^7.0.3",
     "cspell": "^8.8.4",
     "husky": "^9.0.0",
     "lint-staged": "^15.2.5",

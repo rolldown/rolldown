@@ -1,5 +1,7 @@
 name: Codspeed Benchmarks
 
+permissions: {}
+
 on:
   push:
     branches:
@@ -35,11 +37,7 @@ jobs:
     name: Benchmark
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout Branch
-        uses: actions/checkout@v4
-        with:
-          # Whether Pull submodules for additional files
-          submodules: false
+      - uses: taiki-e/checkout-action@b13d20b7cda4e2f325ef19895128f7ff735c0b3d # v1.3.1
 
       - name: Install Rust
         uses: moonrepo/setup-rust@v1

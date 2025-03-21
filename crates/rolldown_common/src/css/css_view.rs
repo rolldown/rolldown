@@ -3,16 +3,15 @@ use oxc::span::Span;
 use oxc_index::IndexVec;
 
 use crate::{
-  ImportRecordIdx, ResolvedImportRecord, SourceMutation,
-  types::source_mutation::BoxedSourceMutation,
+  ImportRecordIdx, ResolvedImportRecord, SourceMutation, types::source_mutation::ArcSourceMutation,
 };
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct CssView {
   pub source: ArcStr,
   pub import_records: IndexVec<ImportRecordIdx, ResolvedImportRecord>,
   pub record_idx_to_span: IndexVec<ImportRecordIdx, Span>,
-  pub mutations: Vec<BoxedSourceMutation>,
+  pub mutations: Vec<ArcSourceMutation>,
 }
 
 #[derive(Debug, Default)]

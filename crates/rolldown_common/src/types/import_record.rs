@@ -12,20 +12,20 @@ oxc_index::define_index_type! {
   pub struct ImportRecordIdx = u32;
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct ImportRecordStateInit {
   pub span: Span,
   /// The importee of this import record is asserted to be this specific module type.
   pub asserted_module_type: Option<ModuleType>,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone, Copy)]
 pub struct ImportRecordStateResolved {
   pub resolved_module: ModuleIdx,
 }
 
 bitflags::bitflags! {
-  #[derive(Debug)]
+  #[derive(Debug, Clone, Copy)]
   pub struct ImportRecordMeta: u16 {
     /// If it is `import * as ns from '...'` or `export * as ns from '...'`
     const CONTAINS_IMPORT_STAR = 1;
@@ -63,8 +63,8 @@ bitflags::bitflags! {
   }
 }
 
-#[derive(Debug)]
-pub struct ImportRecord<State: Debug> {
+#[derive(Debug, Clone)]
+pub struct ImportRecord<State: Debug + Clone> {
   pub state: State,
   /// `./lib.js` in `import { foo } from './lib.js';`
   pub module_request: Rstr,
@@ -76,13 +76,13 @@ pub struct ImportRecord<State: Debug> {
   pub related_stmt_info_idx: Option<StmtInfoIdx>,
 }
 
-impl<State: Debug> ImportRecord<State> {
+impl<State: Debug + Clone> ImportRecord<State> {
   pub fn is_unspanned(&self) -> bool {
     self.meta.contains(ImportRecordMeta::IS_UNSPANNED_IMPORT)
   }
 }
 
-impl<T: Debug> Deref for ImportRecord<T> {
+impl<T: Debug + Clone> Deref for ImportRecord<T> {
   type Target = T;
 
   fn deref(&self) -> &Self::Target {
@@ -90,7 +90,7 @@ impl<T: Debug> Deref for ImportRecord<T> {
   }
 }
 
-impl<T: Debug> DerefMut for ImportRecord<T> {
+impl<T: Debug + Clone> DerefMut for ImportRecord<T> {
   fn deref_mut(&mut self) -> &mut Self::Target {
     &mut self.state
   }

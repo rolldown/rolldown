@@ -7,7 +7,7 @@ use oxc_index::IndexVec;
 use rolldown_utils::concat_string;
 use sugar_path::SugarPath;
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct ExternalModule {
   pub idx: ModuleIdx,
   pub exec_order: u32,

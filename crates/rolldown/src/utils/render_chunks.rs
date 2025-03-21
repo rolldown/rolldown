@@ -30,16 +30,13 @@ pub async fn render_chunks<'a>(
       })
       .collect::<FxHashMap<ArcStr, Arc<RollupRenderedChunk>>>(),
   );
-  let result = try_join_all(assets.iter().enumerate().map(|(index, asset)| {
+  let result = try_join_all(assets.iter_mut().enumerate().map(|(index, asset)| {
     let chunks = Arc::clone(&chunks);
     async move {
-      // TODO(hyf0): To be refactor:
-      // - content should use ArcStr
-      // - plugin_driver.render_chunk should return Option<...> to be able to see if there is a return value by the plugin
       if let InstantiationKind::Ecma(ecma_meta) = &asset.kind {
         let render_chunk_ret = plugin_driver
           .render_chunk(HookRenderChunkArgs {
-            code: asset.content.clone().try_into_inner_string()?,
+            code: std::mem::take(&mut asset.content).try_into_inner_string()?,
             chunk: Arc::clone(
               chunks.get(&ecma_meta.rendered_chunk.filename).expect("should have chunk"),
             ),

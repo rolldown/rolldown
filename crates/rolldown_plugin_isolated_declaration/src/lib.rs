@@ -35,10 +35,8 @@ impl Plugin for IsolatedDeclarationPlugin {
         visitor.imported
       });
 
-      let importer_path = args.cwd.join(args.id);
-      let importer = importer_path.to_string_lossy();
       for specifier in type_import_specifiers {
-        let resolved_id = ctx.resolve(&specifier, Some(&importer), None).await??;
+        let resolved_id = ctx.resolve(&specifier, Some(args.id), None).await??;
         ctx.load(&resolved_id.id, None, None).await?;
       }
 
@@ -58,7 +56,7 @@ impl Plugin for IsolatedDeclarationPlugin {
       let codegen_ret =
         CodeGenerator::new().with_options(CodegenOptions::default()).build(&ret.program);
 
-      let mut emit_dts_path = Path::new(args.id).to_path_buf();
+      let mut emit_dts_path = Path::new(args.stable_id).to_path_buf();
       emit_dts_path.set_extension("d.ts");
       ctx.emit_file(
         rolldown_common::EmittedAsset {

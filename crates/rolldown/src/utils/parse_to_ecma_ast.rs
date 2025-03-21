@@ -72,7 +72,8 @@ pub async fn parse_to_ecma_ast(
     .transform_ast(HookTransformAstArgs {
       cwd: &options.cwd,
       ast: ecma_ast,
-      id: stable_id,
+      id: resolved_id.id.as_str(),
+      stable_id,
       is_user_defined_entry,
       module_type,
     })

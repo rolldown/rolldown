@@ -104,6 +104,7 @@ pub use crate::{
   types::exports_kind::ExportsKind,
   types::external_module_idx::ExternalModuleIdx,
   types::hmr_info::HmrInfo,
+  types::hybrid_index_vec::HybridIndexVec,
   types::import_kind::ImportKind,
   types::import_record::{
     ImportRecordIdx, ImportRecordMeta, RawImportRecord, ResolvedImportRecord,
@@ -132,6 +133,7 @@ pub use crate::{
   types::rollup_pre_rendered_asset::RollupPreRenderedAsset,
   types::rollup_pre_rendered_chunk::RollupPreRenderedChunk,
   types::rollup_rendered_chunk::RollupRenderedChunk,
+  types::scan_mode::ScanMode,
   types::side_effects,
   types::source_mutation::SourceMutation,
   types::stmt_info::{DebugStmtInfoForTreeShaking, StmtInfo, StmtInfoIdx, StmtInfoMeta, StmtInfos},

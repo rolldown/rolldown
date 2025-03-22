@@ -3,7 +3,9 @@ use std::cmp::Ordering;
 use crate::chunk_graph::ChunkGraph;
 use itertools::Itertools;
 use oxc_index::IndexVec;
-use rolldown_common::{Chunk, ChunkIdx, ChunkKind, Module, ModuleIdx, OutputFormat};
+use rolldown_common::{
+  Chunk, ChunkIdx, ChunkKind, EntryPointKind, Module, ModuleIdx, OutputFormat,
+};
 use rolldown_utils::{BitSet, rustc_hash::FxHashMapExt};
 use rustc_hash::FxHashMap;
 
@@ -13,6 +15,8 @@ use super::GenerateStage;
 pub struct SplittingInfo {
   pub bits: BitSet,
   pub share_count: u32,
+  pub user_defined_entry_referenced_once: Option<u32>,
+  pub dynamic_import_entry_referenced: bool,
 }
 
 pub type IndexSplittingInfo = IndexVec<ModuleIdx, SplittingInfo>;
@@ -33,10 +37,7 @@ impl GenerateStage<'_> {
     let mut chunk_graph = ChunkGraph::new(&self.link_output.module_table);
     chunk_graph.chunk_table.chunks.reserve(self.link_output.entries.len());
 
-    let mut index_splitting_info: IndexSplittingInfo = oxc_index::index_vec![SplittingInfo {
-        bits: BitSet::new(entries_len),
-        share_count: 0
-      }; self.link_output.module_table.modules.len()];
+    let mut index_splitting_info: IndexSplittingInfo = oxc_index::index_vec![SplittingInfo {bits:BitSet::new(entries_len),share_count:0, user_defined_entry_referenced_once: None, dynamic_import_entry_referenced: false }; self.link_output.module_table.modules.len()];
     let mut bits_to_chunk = FxHashMap::with_capacity(self.link_output.entries.len());
 
     let mut entry_module_to_entry_chunk: FxHashMap<ModuleIdx, ChunkIdx> =
@@ -73,12 +74,14 @@ impl GenerateStage<'_> {
         self.determine_reachable_modules_for_entry(
           self.link_output.runtime.id(),
           i.try_into().expect("Too many entries, u32 overflowed."),
+          entry_point.kind,
           &mut index_splitting_info,
         );
       }
       self.determine_reachable_modules_for_entry(
         entry_point.id,
         i.try_into().expect("Too many entries, u32 overflowed."),
+        entry_point.kind,
         &mut index_splitting_info,
       );
     });
@@ -102,7 +105,23 @@ impl GenerateStage<'_> {
 
       module_to_assigned[normal_module.idx] = true;
 
-      let bits = &index_splitting_info[normal_module.idx].bits;
+      let module_index_splitting_info = &index_splitting_info[normal_module.idx];
+
+      // If a module is only referenced by a single user-defined entry and dynamic import entry, it could be included in the entry chunk to reduce chunk count.
+      if module_index_splitting_info.dynamic_import_entry_referenced {
+        if let Some(entry_index) =
+          index_splitting_info[normal_module.idx].user_defined_entry_referenced_once
+        {
+          let mut bits = BitSet::new(entries_len);
+          bits.set_bit(entry_index);
+          if let Some(chunk_id) = bits_to_chunk.get(&bits).copied() {
+            chunk_graph.add_module_to_chunk(normal_module.idx, chunk_id);
+            continue;
+          }
+        }
+      }
+
+      let bits = &module_index_splitting_info.bits;
       debug_assert!(
         !bits.is_empty(),
         "Empty bits means the module is not reachable, so it should bail out with `is_included: false` {:?}",
@@ -205,6 +224,7 @@ impl GenerateStage<'_> {
     &self,
     module_id: ModuleIdx,
     entry_index: u32,
+    entry_kind: EntryPointKind,
     index_splitting_info: &mut IndexSplittingInfo,
   ) {
     let Module::Normal(module) = &self.link_output.module_table.modules[module_id] else {
@@ -216,15 +236,34 @@ impl GenerateStage<'_> {
       return;
     }
 
-    if index_splitting_info[module_id].bits.has_bit(entry_index) {
+    let module_index_splitting_info = &mut index_splitting_info[module_id];
+
+    if module_index_splitting_info.bits.has_bit(entry_index) {
       return;
     }
 
-    index_splitting_info[module_id].bits.set_bit(entry_index);
-    index_splitting_info[module_id].share_count += 1;
+    module_index_splitting_info.bits.set_bit(entry_index);
+    // TODO update share_count
+    module_index_splitting_info.share_count += 1;
+
+    if entry_kind.is_user_defined() {
+      if module_index_splitting_info.user_defined_entry_referenced_once.is_none() {
+        module_index_splitting_info.user_defined_entry_referenced_once = Some(entry_index);
+      } else {
+        // If a module is referenced by multiple user-defined entries, it should be treated as a shared module.
+        module_index_splitting_info.user_defined_entry_referenced_once = None;
+      }
+    } else {
+      module_index_splitting_info.dynamic_import_entry_referenced = true;
+    }
 
     meta.dependencies.iter().copied().for_each(|dep_idx| {
-      self.determine_reachable_modules_for_entry(dep_idx, entry_index, index_splitting_info);
+      self.determine_reachable_modules_for_entry(
+        dep_idx,
+        entry_index,
+        entry_kind,
+        index_splitting_info,
+      );
     });
   }
 }

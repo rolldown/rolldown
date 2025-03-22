@@ -5423,6 +5423,10 @@ expression: output
 
 - main-!~{000}~.js => main-DyDMaN-V.js
 
+# tests/rolldown/tree_shaking/require_module_determined_in_runtime
+
+- main-!~{000}~.js => main-Bmpm1PVE.js
+
 # tests/rolldown/tree_shaking/side_effect_free_dynamic_importee
 
 - main-!~{000}~.js => main-B5Z-uFLq.js

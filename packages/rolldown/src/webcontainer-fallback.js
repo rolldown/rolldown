@@ -14,7 +14,7 @@ if (!fs.existsSync(bindingEntry)) {
   try {
     // check if pkg.pr.new
     const info = JSON.parse(
-      childProcess.execFileSync('npm', ['why', 'rolldown'], {
+      childProcess.execFileSync('npm', ['why', '--json', 'rolldown'], {
         encoding: 'utf-8',
       }),
     )
@@ -30,7 +30,7 @@ if (!fs.existsSync(bindingEntry)) {
   fs.rmSync(baseDir, { recursive: true, force: true })
   fs.mkdirSync(baseDir, { recursive: true })
   // eslint-disable-next-line: no-console
-  console.log('Downloading @rolldown/binding-wasm32-wasi on WebContainer...')
+  console.log(`Downloading ${bindingPkg} on WebContainer...`)
   childProcess.execFileSync('pnpm', ['i', bindingPkg], {
     cwd: baseDir,
     stdio: 'inherit',

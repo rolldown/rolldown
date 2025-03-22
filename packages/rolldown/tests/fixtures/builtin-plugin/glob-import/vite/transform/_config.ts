@@ -1,21 +1,22 @@
-import { importGlobPlugin } from 'rolldown/experimental'
-import { RolldownOutput } from 'rolldown'
-import { defineTest } from 'rolldown-tests'
-import { expect } from 'vitest'
 import * as fs from 'node:fs'
 import * as path from 'node:path'
+import { expect } from 'vitest'
+import { defineTest } from 'rolldown-tests'
+import { importGlobPlugin } from 'rolldown/experimental'
 
-// ported from https://github.com/vitejs/vite/tree/021443c5a11eedfb176f2c65d5fab65e9c21adfb/packages/vite/src/node/__tests__/plugins/importGlob
+const root = path.join(
+  path.dirname(path.resolve(import.meta.dirname)),
+  'fixtures',
+)
+
 export default defineTest({
   config: {
-    input: './fixture-a/index.ts',
+    input: '../fixtures/a/index.ts',
     output: {
       chunkFileNames: '[name].js',
     },
     plugins: [
-      importGlobPlugin({
-        root: path.resolve(import.meta.dirname),
-      }),
+      importGlobPlugin({ root }),
       {
         name: 'load-file-with-query',
         load(id: string) {
@@ -34,9 +35,9 @@ export default defineTest({
       },
     ],
   },
-  async afterTest(output: RolldownOutput) {
+  async afterTest(output) {
     await expect(output.output[0].code).toMatchFileSnapshot(
-      path.resolve(import.meta.dirname, 'fixture-a/index.ts.snap'),
+      path.resolve(import.meta.dirname, 'index.ts.snap'),
     )
   },
 })

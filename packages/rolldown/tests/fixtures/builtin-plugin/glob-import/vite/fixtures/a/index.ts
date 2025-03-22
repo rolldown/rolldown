@@ -89,10 +89,10 @@ export const parent = import.meta.glob('../../playground/src/*.ts', {
   import: 'default',
 })
 
-export const rootMixedRelative = import.meta.glob(
-  ['/*.ts', '../fixture-b/*.ts'],
-  { query: '?url', import: 'default' },
-)
+export const rootMixedRelative = import.meta.glob(['/*.ts', '../b/*.ts'], {
+  query: '?url',
+  import: 'default',
+})
 
 export const cleverCwd1 = import.meta.glob(
   './node_modules/framework/**/*.page.js',
@@ -100,6 +100,6 @@ export const cleverCwd1 = import.meta.glob(
 
 export const cleverCwd2 = import.meta.glob([
   './modules/*.ts',
-  '../fixture-b/*.ts',
+  '../b/*.ts',
   '!**/index.ts',
 ])

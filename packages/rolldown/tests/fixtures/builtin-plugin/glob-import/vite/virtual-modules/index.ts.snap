@@ -1,0 +1,10 @@
+
+//#region virtual:module
+const a = 1;
+const b = 0;
+
+//#endregion
+//#region index.ts
+console.log(a, b);
+
+//#endregion

@@ -19,7 +19,7 @@ if (!fs.existsSync(bindingEntry)) {
       }),
     )
     const spec = info[0].dependents[0].spec
-    if (spec.starts('https://pkg.pr.new/')) {
+    if (spec.startsWith('https://pkg.pr.new/')) {
       const commit = spec.split('@').at(-1)
       bindingPkg = `https://pkg.pr.new/@rolldown/binding-wasm32-wasi@${commit}`
     }

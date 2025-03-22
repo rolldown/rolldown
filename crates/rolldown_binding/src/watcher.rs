@@ -32,7 +32,7 @@ impl From<BindingNotifyOption> for rolldown_common::NotifyOption {
 
 #[napi]
 pub struct BindingWatcher {
-  inner: rolldown::Watcher,
+  inner: Arc<rolldown::Watcher>,
 }
 
 #[napi]
@@ -48,7 +48,7 @@ impl BindingWatcher {
       .map(|option| Bundler::new(env, option).map(Bundler::into_inner))
       .collect::<Result<Vec<_>, _>>()?;
 
-    Ok(Self { inner: rolldown::Watcher::new(bundlers, notify_option.map(Into::into))? })
+    Ok(Self { inner: Arc::new(rolldown::Watcher::new(bundlers, notify_option.map(Into::into))?) })
   }
 
   #[tracing::instrument(level = "debug", skip_all)]
@@ -64,6 +64,7 @@ impl BindingWatcher {
     listener: MaybeAsyncJsCallback<FnArgs<(BindingWatcherEvent,)>, ()>,
   ) -> napi::Result<()> {
     let rx = Arc::clone(&self.inner.emitter().rx);
+
     let future = async move {
       let mut run = true;
       let rx = rx.lock().await;
@@ -86,8 +87,38 @@ impl BindingWatcher {
         }
       }
     };
-    napi::tokio::spawn(future);
-    self.inner.start().await;
+
+    #[cfg(target_family = "wasm")]
+    {
+      std::thread::spawn(|| {
+        let rt = napi::tokio::runtime::Builder::new_current_thread().build();
+        match rt {
+          Ok(rt) => rt.block_on(future),
+          Err(e) => tracing::error!("create runtime error: {e:?}"),
+        }
+      });
+    }
+    #[cfg(not(target_family = "wasm"))]
+    {
+      napi::tokio::spawn(future);
+    }
+
+    #[cfg(target_family = "wasm")]
+    {
+      let inner = Arc::clone(&self.inner);
+      std::thread::spawn(move || {
+        let rt = napi::tokio::runtime::Builder::new_current_thread().build();
+        match rt {
+          Ok(rt) => rt.block_on(inner.start()),
+          Err(e) => tracing::error!("create runtime error: {e:?}"),
+        }
+      });
+    }
+
+    #[cfg(not(target_family = "wasm"))]
+    {
+      self.inner.start().await;
+    }
     Ok(())
   }
 }

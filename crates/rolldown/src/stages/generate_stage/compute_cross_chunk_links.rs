@@ -105,6 +105,9 @@ impl GenerateStage<'_> {
           .collect_vec()
       })
       .collect::<Vec<_>>();
+    println!(
+      "index_sorted_imports_from_external_modules: {index_sorted_imports_from_external_modules:#?}"
+    );
 
     multizip((
       chunk_graph.chunk_table.iter_mut(),

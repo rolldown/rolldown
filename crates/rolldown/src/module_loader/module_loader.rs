@@ -193,6 +193,7 @@ impl ModuleLoader {
           let need_renormalize_render_path =
             !matches!(resolved_id.external, ResolvedExternal::Absolute)
               && Path::new(resolved_id.id.as_str()).is_absolute();
+          println!("need_renormalize_render_path {need_renormalize_render_path:?}");
 
           let file_name = if need_renormalize_render_path {
             let entries_common_dir = commondir::CommonDir::try_new(
@@ -229,6 +230,7 @@ impl ModuleLoader {
             symbol_ref,
             need_renormalize_render_path,
           );
+          println!("Resolved external module: {:#?}", ext);
           self.intermediate_normal_modules.modules[idx] = Some(ext.into());
         } else {
           self.remaining += 1;

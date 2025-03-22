@@ -1,3 +1,7 @@
 [build]
 # only build on netlify if there are any change in docs
 ignore = "git diff --quiet 'HEAD^' HEAD ./docs ./packages/rolldown"
+
+[[redirects]]
+from = "/about/"
+to   = "/guide/"

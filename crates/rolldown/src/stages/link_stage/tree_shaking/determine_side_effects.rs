@@ -18,7 +18,15 @@ impl LinkStage<'_> {
       module_id: ModuleIdx,
       normal_modules: &IndexModules,
     ) -> DeterminedSideEffects {
-      let module = &normal_modules[module_id];
+      let Some(module) = normal_modules.get(module_id) else {
+        // It could be a module that could not be analyzed statically.
+        // ```js
+        // export default function() {
+        //   require(window.something);
+        // }
+        // ```
+        return DeterminedSideEffects::Analyzed(true);
+      };
 
       match &mut cache[module_id] {
         SideEffectCache::None => {

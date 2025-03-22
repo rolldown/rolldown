@@ -4,7 +4,7 @@ use rustc_hash::FxHashMap;
 
 use crate::{ImportRecordIdx, SymbolOrMemberExprRef, SymbolRef};
 
-#[derive(Debug, Default)]
+#[derive(Debug, Default, Clone)]
 pub struct StmtInfos {
   pub infos: IndexVec<StmtInfoIdx, StmtInfo>,
   // only for top level symbols
@@ -69,7 +69,7 @@ oxc_index::define_index_type! {
 }
 
 bitflags! {
-    #[derive(Debug, Default)]
+    #[derive(Debug, Default, Clone, Copy)]
     pub struct StmtInfoMeta: u8 {
         const FnDecl = 1;
         const ClassDecl = 1 << 1;
@@ -81,7 +81,7 @@ bitflags! {
     }
 }
 
-#[derive(Default, Debug)]
+#[derive(Default, Debug, Clone)]
 pub struct StmtInfo {
   /// The index of this statement in the module body.
   ///

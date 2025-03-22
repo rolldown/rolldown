@@ -1,4 +1,7 @@
 name: 'Mergeability check'
+
+permissions: {}
+
 on:
   # https://github.com/actions/labeler?tab=readme-ov-file#permissions
   pull_request:
@@ -12,12 +15,10 @@ jobs:
     permissions:
       contents: read
     steps:
-      - name: Checkout
-        id: checkout
-        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+      - uses: taiki-e/checkout-action@b13d20b7cda4e2f325ef19895128f7ff735c0b3d # v1.3.1
 
       - name: Check assignees' approval
-        uses: hyf0/action-require-assignee-approval@v1
+        uses: hyf0/action-require-assignee-approval@v1.0.0
         with:
           allow-no-assign: true # optional, default is `true`
           bypass-by: github-actions[bot]

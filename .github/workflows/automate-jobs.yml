@@ -1,7 +1,9 @@
 name: 'Automate Jobs'
+
+permissions: {}
+
 on:
-  # https://github.com/actions/labeler?tab=readme-ov-file#permissions
-  pull_request_target:
+  pull_request_target: # zizmor: ignore[dangerous-triggers]
     types: [opened, assigned]
 
 jobs:
@@ -36,4 +38,4 @@ jobs:
     permissions:
       pull-requests: write
     steps:
-      - uses: hmarr/auto-approve-action@v4
+      - uses: hmarr/auto-approve-action@v4.0.0

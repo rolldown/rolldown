@@ -11,7 +11,7 @@ use crate::{AstScopes, ChunkIdx, ModuleIdx, SymbolRef};
 
 use super::namespace_alias::NamespaceAlias;
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct SymbolRefDataClassic {
   /// For case `import {a} from 'foo.cjs';console.log(a)`, the symbol `a` reference to `module.exports.a` of `foo.cjs`.
   /// So we will transform the code into `console.log(foo_ns.a)`. `foo_ns` is the namespace symbol of `foo.cjs and `a` is the property name.
@@ -24,7 +24,7 @@ pub struct SymbolRefDataClassic {
 }
 
 bitflags::bitflags! {
-  #[derive(Debug, Default)]
+  #[derive(Debug, Default, Clone, Copy)]
   pub struct SymbolRefFlags: u8 {
     const IS_NOT_REASSIGNED = 1;
     /// If this symbol is declared by `const`. Eg. `const a = 1;`
@@ -32,7 +32,7 @@ bitflags::bitflags! {
   }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct SymbolRefDbForModule {
   owner_idx: ModuleIdx,
   root_scope_id: ScopeId,
@@ -97,7 +97,7 @@ impl DerefMut for SymbolRefDbForModule {
 }
 
 // Information about symbols for all modules
-#[derive(Debug, Default)]
+#[derive(Debug, Default, Clone)]
 pub struct SymbolRefDb {
   inner: IndexVec<ModuleIdx, Option<SymbolRefDbForModule>>,
 }

@@ -1,5 +1,7 @@
 pub mod css_generator;
 
+use std::sync::Arc;
+
 use arcstr::ArcStr;
 
 use oxc::{semantic::SymbolId, span::Span};
@@ -70,7 +72,7 @@ pub fn create_css_view(
     CssView {
       source: source.clone(),
       import_records: IndexVec::default(),
-      mutations: vec![Box::new(css_renderer)],
+      mutations: vec![Arc::new(css_renderer)],
       record_idx_to_span,
     },
     dependencies,

@@ -68,7 +68,7 @@ impl Plugin for BuildImportAnalysisPlugin {
     _ctx: &PluginContext,
     args: HookTransformAstArgs<'_>,
   ) -> HookTransformAstReturn {
-    if args.id.contains("node_modules") {
+    if args.stable_id.contains("node_modules") {
       return Ok(args.ast);
     }
     let mut ast = args.ast;

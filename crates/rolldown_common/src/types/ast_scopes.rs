@@ -4,6 +4,12 @@ use oxc::semantic::{Reference, ReferenceId, Scoping, SymbolId};
 pub struct AstScopes {
   scoping: Scoping,
 }
+impl Clone for AstScopes {
+  fn clone(&self) -> Self {
+    // FIXME: use real clone, need upstream support
+    Self { scoping: Scoping::default() }
+  }
+}
 
 impl AstScopes {
   pub fn new(inner: Scoping) -> Self {

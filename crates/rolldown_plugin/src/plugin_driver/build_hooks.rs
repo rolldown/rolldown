@@ -255,6 +255,7 @@ impl PluginDriver {
             cwd: args.cwd,
             ast: args.ast,
             id: args.id,
+            stable_id: args.stable_id,
             is_user_defined_entry: args.is_user_defined_entry,
             module_type: args.module_type,
           },

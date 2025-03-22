@@ -37,6 +37,26 @@ pub struct ScanStageOutput {
   pub dynamic_import_exports_usage_map: FxHashMap<ModuleIdx, DynamicImportExportsUsage>,
 }
 
+impl ScanStageOutput {
+  /// Make a copy of the current ScanStage, skipping clone some fields that is immutable in
+  /// following stage
+  pub fn make_copy(&self) -> Self {
+    Self {
+      module_table: self.module_table.clone(),
+      index_ecma_ast: self
+        .index_ecma_ast
+        .iter()
+        .map(|(ast, module_idx)| (ast.clone_with_another_arena(), *module_idx))
+        .collect(),
+      entry_points: self.entry_points.clone(),
+      symbol_ref_db: self.symbol_ref_db.clone(),
+      runtime: self.runtime.clone(),
+      warnings: vec![],
+      dynamic_import_exports_usage_map: self.dynamic_import_exports_usage_map.clone(),
+    }
+  }
+}
+
 impl ScanStage {
   pub fn new(
     options: SharedOptions,

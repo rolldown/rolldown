@@ -45,8 +45,7 @@ impl Plugin for ImportGlobPlugin {
   ) -> HookTransformAstReturn {
     args.ast.program.with_mut(|fields| {
       let ast_builder = AstBuilder::new(fields.allocator);
-      let normalized_path = args.cwd.join(args.id);
-      let normalized_id = normalized_path.to_slash_lossy();
+      let normalized_id = args.id.to_slash_lossy();
       let root = self.config.root.as_ref().map(PathBuf::from);
       let mut visitor = GlobImportVisit {
         root: root.as_ref().unwrap_or(args.cwd),

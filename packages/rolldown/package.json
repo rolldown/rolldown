@@ -104,12 +104,12 @@
     "dtsHeader": "type MaybePromise<T> = T | Promise<T>\ntype Nullable<T> = T | null | undefined\ntype VoidNullable<T = void> = T | null | undefined | void\nexport type BindingStringOrRegex = string | RegExp\n\n"
   },
   "dependencies": {
-    "@oxc-project/types": "0.58.1",
+    "@oxc-project/types": "0.61.2",
     "@valibot/to-json-schema": "1.0.0-rc.0",
     "valibot": "1.0.0-rc.4"
   },
   "peerDependencies": {
-    "@oxc-project/runtime": "0.58.1"
+    "@oxc-project/runtime": "0.61.2"
   },
   "peerDependenciesMeta": {
     "@oxc-project/runtime": {

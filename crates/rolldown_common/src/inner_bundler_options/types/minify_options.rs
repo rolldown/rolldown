@@ -1,5 +1,5 @@
 use oxc::{
-  mangler::MangleOptions,
+  mangler::{MangleOptions, MangleOptionsKeepNames},
   minifier::{CompressOptions, CompressOptionsKeepNames},
 };
 #[cfg(feature = "deserialize_bundler_options")]
@@ -94,6 +94,7 @@ impl MinifyOptionsObject {
       mangle: self.mangle.then_some(MangleOptions {
         // IIFE need to preserve top level names
         top_level: !matches!(option.format, OutputFormat::Iife),
+        keep_names: MangleOptionsKeepNames::all_false(),
         debug: false,
       }),
       compress: Some(CompressOptions {

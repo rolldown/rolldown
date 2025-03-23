@@ -55,12 +55,27 @@ impl IntermediateNormalModules {
   }
 }
 
+#[expect(unused)]
+#[derive(Debug, Clone, Copy)]
+enum VisitState {
+  Seen(ModuleIdx),
+  Invalidate(ModuleIdx),
+}
+
+impl VisitState {
+  fn idx(self) -> ModuleIdx {
+    match self {
+      VisitState::Seen(idx) | VisitState::Invalidate(idx) => idx,
+    }
+  }
+}
+
 pub struct ModuleLoader {
   options: SharedOptions,
   shared_context: Arc<TaskContext>,
   pub tx: tokio::sync::mpsc::Sender<ModuleLoaderMsg>,
   rx: tokio::sync::mpsc::Receiver<ModuleLoaderMsg>,
-  visited: FxHashMap<ArcStr, ModuleIdx>,
+  visited: FxHashMap<ArcStr, VisitState>,
   runtime_id: ModuleIdx,
   remaining: u32,
   intermediate_normal_modules: IntermediateNormalModules,
@@ -131,7 +146,7 @@ impl ModuleLoader {
       shared_context,
       intermediate_normal_modules,
       symbol_ref_db: SymbolRefDb::default(),
-      visited: FxHashMap::from_iter([(RUNTIME_MODULE_ID.into(), runtime_id)]),
+      visited: FxHashMap::from_iter([(RUNTIME_MODULE_ID.into(), VisitState::Seen(runtime_id))]),
     })
   }
 
@@ -143,10 +158,12 @@ impl ModuleLoader {
     assert_module_type: Option<ModuleType>,
     user_defined_entries: &[(Option<ArcStr>, ResolvedId)],
   ) -> ModuleIdx {
-    match self.visited.entry(resolved_id.id.clone()) {
-      Entry::Occupied(visited) => *visited.get(),
-      Entry::Vacant(not_visited) => {
+    match self.visited.get(&resolved_id.id) {
+      Some(VisitState::Seen(idx)) => *idx,
+      Some(VisitState::Invalidate(_idx)) => unimplemented!("TODO: handle invalidation"),
+      None => {
         let idx = self.intermediate_normal_modules.alloc_ecma_module_idx();
+        self.visited.insert(resolved_id.id.clone(), VisitState::Seen(idx));
 
         if resolved_id.external.is_external() {
           let external_module_side_effects = match resolved_id.side_effects {
@@ -245,7 +262,7 @@ impl ModuleLoader {
           tokio::spawn(task.run());
         }
 
-        *not_visited.insert(idx)
+        idx
       }
     }
   }
@@ -474,10 +491,10 @@ impl ModuleLoader {
       let data = func.exec().await?;
       for d in data {
         let source_id = ArcStr::from(d.id);
-        let Some(idx) = self.visited.get(&source_id) else {
+        let Some(state) = self.visited.get(&source_id) else {
           continue;
         };
-        let Some(normal) = self.intermediate_normal_modules.modules[*idx]
+        let Some(normal) = self.intermediate_normal_modules.modules[state.idx()]
           .as_mut()
           .and_then(|item| item.as_normal_mut())
         else {

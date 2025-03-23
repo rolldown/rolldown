@@ -14,7 +14,7 @@ use crate::{
   types::linking_metadata::{LinkingMetadata, LinkingMetadataVec},
 };
 
-use super::scan_stage::ScanStageOutput;
+use super::scan_stage::NormalizedScanStageOutput;
 
 mod bind_imports_and_exports;
 mod compute_tla;
@@ -60,7 +60,7 @@ pub struct LinkStage<'a> {
 }
 
 impl<'a> LinkStage<'a> {
-  pub fn new(scan_stage_output: ScanStageOutput, options: &'a SharedOptions) -> Self {
+  pub fn new(scan_stage_output: NormalizedScanStageOutput, options: &'a SharedOptions) -> Self {
     Self {
       sorted_modules: Vec::new(),
       metas: scan_stage_output

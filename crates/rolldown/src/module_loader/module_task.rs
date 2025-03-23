@@ -111,7 +111,7 @@ impl ModuleTask {
     let mut hook_side_effects = self.resolved_id.side_effects.take();
 
     let (mut source, module_type) =
-      self.load_source_phase(&mut sourcemap_chain, &mut hook_side_effects).await?;
+      self.load_source_without_cache(&mut sourcemap_chain, &mut hook_side_effects).await?;
 
     let stable_id = id.stabilize(&self.ctx.options.cwd);
     let mut raw_import_records = IndexVec::default();
@@ -281,33 +281,6 @@ impl ModuleTask {
       ))?;
     };
     Ok((source, module_type))
-  }
-
-  // TODO: cache source_map_chain and hook_side_effects
-  fn load_source_with_cache(&self) -> Option<(StrOrBytes, ModuleType)> {
-    self
-      .ctx
-      .cache
-      .get_raw_source_and_module_type(&self.resolved_id.id)
-      .map(|item| item.value().clone())
-  }
-
-  async fn load_source_phase(
-    &self,
-    sourcemap_chain: &mut Vec<rolldown_sourcemap::SourceMap>,
-    hook_side_effects: &mut Option<rolldown_common::side_effects::HookSideEffects>,
-  ) -> BuildResult<(StrOrBytes, ModuleType)> {
-    let incremental_build_enabled = self.ctx.options.experimental.is_incremental_build_enabled();
-    if incremental_build_enabled {
-      if let Some(value) = self.load_source_with_cache() {
-        return Ok(value);
-      }
-    }
-    let value = self.load_source_without_cache(sourcemap_chain, hook_side_effects).await?;
-    if incremental_build_enabled {
-      self.ctx.cache.insert_raw_source_and_module_type(self.resolved_id.id.clone(), value.clone());
-    }
-    Ok(value)
   }
 
   pub(crate) async fn resolve_id(

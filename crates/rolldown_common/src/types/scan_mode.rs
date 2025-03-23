@@ -1,4 +1,5 @@
 use arcstr::ArcStr;
+#[derive(Debug)]
 pub enum ScanMode {
   Full,
   //// vector of module id

@@ -1,7 +1,5 @@
-use std::sync::Arc;
-
 use oxc::transformer::ReplaceGlobalDefinesConfig;
-use rolldown_common::{Cache, ModuleLoaderMsg};
+use rolldown_common::ModuleLoaderMsg;
 use rolldown_fs::OsFileSystem;
 use rolldown_plugin::SharedPluginDriver;
 
@@ -15,7 +13,6 @@ pub struct TaskContext {
   pub fs: OsFileSystem,
   pub plugin_driver: SharedPluginDriver,
   pub meta: TaskContextMeta,
-  pub cache: Arc<Cache>,
 }
 
 pub struct TaskContextMeta {

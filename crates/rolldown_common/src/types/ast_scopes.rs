@@ -6,8 +6,7 @@ pub struct AstScopes {
 }
 impl Clone for AstScopes {
   fn clone(&self) -> Self {
-    // FIXME: use real clone, need upstream support
-    Self { scoping: Scoping::default() }
+    Self { scoping: self.clone_in_with_semantic_ids_with_another_arena() }
   }
 }
 

@@ -58,11 +58,9 @@ impl WatcherTask {
     self.emitter.emit(WatcherEvent::Event(BundleEvent::BundleStart))?;
 
     bundler.plugin_driver.clear();
-    for file in changed_files {
-      bundler.cache.invalidate(file);
-    }
+
     let result = {
-      let result = bundler.scan().await;
+      let result = bundler.scan(changed_files.to_owned()).await;
       // FIXME(hyf0): probably should have a more official API/better way to get watch files
       self.watch_files(&bundler.plugin_driver.watch_files, &bundler.options).await?;
       match result {

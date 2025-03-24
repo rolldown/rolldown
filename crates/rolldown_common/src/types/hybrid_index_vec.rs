@@ -18,6 +18,10 @@ impl<I: Idx, T> HybridIndexVec<I, T> {
     HybridIndexVec::IndexVec(IndexVec::new())
   }
 
+  pub fn is_index_vec(&self) -> bool {
+    matches!(self, HybridIndexVec::IndexVec(_))
+  }
+
   pub fn push(&mut self, item: T) -> I {
     match self {
       HybridIndexVec::IndexVec(v) => v.push(item),

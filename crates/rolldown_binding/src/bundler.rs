@@ -117,7 +117,7 @@ impl Bundler {
   #[allow(clippy::significant_drop_tightening)]
   pub async fn scan_impl(&self) -> napi::Result<BindingOutputs> {
     let mut bundler_core = self.inner.lock().await;
-    let output = self.handle_result(bundler_core.scan().await);
+    let output = self.handle_result(bundler_core.scan(vec![]).await);
 
     match output {
       Ok(output) => {

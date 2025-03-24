@@ -5,7 +5,7 @@ use std::{
 
 use arcstr::ArcStr;
 use oxc::{ast_visit::VisitMut, span::SourceType};
-use rolldown_common::{Cache, EcmaModuleAstUsage, Module, ModuleIdx, ModuleTable};
+use rolldown_common::{EcmaModuleAstUsage, Module, ModuleIdx, ModuleTable};
 use rolldown_ecmascript::EcmaCompiler;
 use rolldown_ecmascript_utils::AstSnippet;
 use rolldown_error::{BuildResult, ResultExt};
@@ -25,7 +25,6 @@ pub struct HmrManagerInput {
   pub fs: OsFileSystem,
   pub resolver: SharedResolver,
   pub plugin_driver: SharedPluginDriver,
-  pub cache: Arc<Cache>,
 }
 
 pub struct HmrManager {
@@ -85,7 +84,9 @@ impl HmrManager {
       Arc::clone(&self.options),
       Arc::clone(&self.resolver),
       Arc::clone(&self.plugin_driver),
-      Arc::clone(&self.cache),
+      // place holder, since this module loader is unused
+      FxHashMap::default(),
+      /*is_full_scan*/ true,
     );
 
     let mut hmr_boundary = FxIndexSet::default();

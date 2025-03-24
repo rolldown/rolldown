@@ -141,7 +141,9 @@ pub use crate::{
   types::symbol_name_ref_token::SymbolNameRefToken,
   types::symbol_or_member_expr_ref::SymbolOrMemberExprRef,
   types::symbol_ref::{SymbolRef, common_debug_symbol_ref},
-  types::symbol_ref_db::{GetLocalDb, SymbolRefDb, SymbolRefDbForModule, SymbolRefFlags},
+  types::symbol_ref_db::{
+    GetLocalDb, GetLocalDbMut, SymbolRefDb, SymbolRefDbForModule, SymbolRefFlags,
+  },
   types::watch::{
     BundleEndEventData, BundleEvent, WatcherChangeData, WatcherChangeKind, WatcherEvent,
   },

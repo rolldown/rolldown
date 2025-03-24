@@ -151,7 +151,7 @@ impl<'name> Renamer<'name> {
       canonical_names: &mut FxHashMap<SymbolRef, Rstr>,
       ast_scope: &'name AstScopes,
     ) {
-      let mut bindings = ast_scope.get_bindings(scope_id).iter().collect::<Vec<_>>();
+      let mut bindings = ast_scope.scoping().get_bindings(scope_id).iter().collect::<Vec<_>>();
       let mut used_canonical_names_for_this_scope = FxHashMap::with_capacity(bindings.len());
 
       bindings.sort_unstable_by_key(|(_, symbol_id)| *symbol_id);
@@ -184,7 +184,7 @@ impl<'name> Renamer<'name> {
       });
 
       stack.push(Cow::Owned(used_canonical_names_for_this_scope));
-      let child_scopes = ast_scope.get_scope_child_ids(scope_id);
+      let child_scopes = ast_scope.scoping().get_scope_child_ids(scope_id);
       child_scopes.iter().for_each(|scope_id| {
         rename_symbols_of_nested_scopes(module, *scope_id, stack, canonical_names, ast_scope);
       });
@@ -196,7 +196,8 @@ impl<'name> Renamer<'name> {
       modules_in_chunk.par_iter().copied().filter_map(|id| modules[id].as_normal()).flat_map(
         |module| {
           let ast_scope = &link_stage_output.symbol_db[module.idx].as_ref().unwrap().ast_scopes;
-          let child_scopes: &[ScopeId] = ast_scope.get_scope_child_ids(ast_scope.root_scope_id());
+          let child_scopes: &[ScopeId] =
+            ast_scope.scoping().get_scope_child_ids(ast_scope.scoping().root_scope_id());
 
           child_scopes.into_par_iter().map(|child_scope_id| {
             let mut stack = vec![Cow::Borrowed(&self.used_canonical_names)];

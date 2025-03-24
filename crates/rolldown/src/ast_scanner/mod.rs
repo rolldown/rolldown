@@ -190,14 +190,14 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
   /// if current visit path is top level
   pub fn is_valid_tla_scope(&self) -> bool {
     self.scope_stack.iter().rev().filter_map(|item| *item).all(|scope| {
-      let flag = self.result.symbol_ref_db.scope_flags(scope);
+      let flag = self.result.symbol_ref_db.scoping().scope_flags(scope);
       flag.is_block() || flag.is_top()
     })
   }
 
   pub fn is_root_scope(&self) -> bool {
     self.scope_stack.iter().rev().filter_map(|item| *item).all(|scope| {
-      let flag = self.result.symbol_ref_db.scope_flags(scope);
+      let flag = self.result.symbol_ref_db.scoping().scope_flags(scope);
       flag.is_top()
     })
   }
@@ -261,8 +261,11 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
         .iter()
         .flat_map(|stmt_info| stmt_info.declared_symbols.iter())
         .collect::<FxHashSet<_>>();
-      for (name, symbol_id) in
-        self.result.symbol_ref_db.get_bindings(self.result.symbol_ref_db.root_scope_id())
+      for (name, symbol_id) in self
+        .result
+        .symbol_ref_db
+        .scoping()
+        .get_bindings(self.result.symbol_ref_db.scoping().root_scope_id())
       {
         let symbol_ref: SymbolRef = (self.idx, *symbol_id).into();
         let scope_id = self.result.symbol_ref_db.symbol_scope_id(*symbol_id);
@@ -291,7 +294,7 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
   }
 
   fn get_root_binding(&self, name: &str) -> Option<SymbolId> {
-    self.result.symbol_ref_db.get_root_binding(name)
+    self.result.symbol_ref_db.scoping().get_root_binding(name)
   }
 
   /// `is_dummy` means if it the import record is created during ast transformation.
@@ -361,7 +364,7 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
   fn add_local_export(&mut self, export_name: &str, local: SymbolId, span: Span) {
     let symbol_ref: SymbolRef = (self.idx, local).into();
 
-    let is_const = self.result.symbol_ref_db.symbol_flags(local).is_const_variable();
+    let is_const = self.result.symbol_ref_db.scoping().symbol_flags(local).is_const_variable();
 
     // If there is any write reference to the local variable, it is reassigned.
     let is_reassigned =
@@ -679,21 +682,21 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
   }
 
   fn is_root_symbol(&self, symbol_id: SymbolId) -> bool {
-    self.result.symbol_ref_db.root_scope_id()
+    self.result.symbol_ref_db.scoping().root_scope_id()
       == self.result.symbol_ref_db.symbol_scope_id(symbol_id)
   }
 
   fn try_diagnostic_forbid_const_assign(&mut self, id_ref: &IdentifierReference) -> Option<()> {
     let ref_id = id_ref.reference_id.get()?;
-    let reference = &self.result.symbol_ref_db.get_reference(ref_id);
+    let reference = &self.result.symbol_ref_db.scoping().get_reference(ref_id);
     if reference.is_write() {
       let symbol_id = reference.symbol_id()?;
-      if self.result.symbol_ref_db.symbol_flags(symbol_id).is_const_variable() {
+      if self.result.symbol_ref_db.scoping().symbol_flags(symbol_id).is_const_variable() {
         self.result.errors.push(BuildDiagnostic::forbid_const_assign(
           self.id.to_string(),
           self.source.clone(),
           self.result.symbol_ref_db.symbol_name(symbol_id).into(),
-          self.result.symbol_ref_db.symbol_span(symbol_id),
+          self.result.symbol_ref_db.scoping().symbol_span(symbol_id),
           id_ref.span(),
         ));
       }
@@ -753,7 +756,7 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
     self.is_nested_this_inside_class
       || self.scope_stack.iter().any(|scope| {
         scope.is_some_and(|scope| {
-          let flags = self.result.symbol_ref_db.ast_scopes.scope_flags(scope);
+          let flags = self.result.symbol_ref_db.ast_scopes.scoping().scope_flags(scope);
           flags.contains(ScopeFlags::Function) && !flags.contains(ScopeFlags::Arrow)
         })
       })

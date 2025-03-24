@@ -4610,9 +4610,9 @@ expression: output
 
 # tests/rolldown/issues/3437
 
-- main-!~{000}~.js => main-BeISEFGW.js
-- rolldown-!~{001}~.js => rolldown-CDlmqcql.js
-- square-!~{003}~.js => square-DkQOo3Hc.js
+- main-!~{000}~.js => main-BDwgfFpv.js
+- rolldown-!~{001}~.js => rolldown-CD7pYoLS.js
+- square-!~{003}~.js => square-BK3qnkk5.js
 
 # tests/rolldown/issues/3438
 

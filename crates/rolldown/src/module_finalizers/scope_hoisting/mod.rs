@@ -645,7 +645,8 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
   ) -> Option<ast::Declaration<'ast>> {
     let scope_id = class.scope_id.get()?;
 
-    if self.scope.scope_parent_id(scope_id) != Some(self.scope.root_scope_id()) {
+    if self.scope.scoping().scope_parent_id(scope_id) != Some(self.scope.scoping().root_scope_id())
+    {
       return None;
     };
 

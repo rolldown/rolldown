@@ -52,6 +52,12 @@ jobs:
           path: packages/rolldown/dist
           name: node-artifact
 
+      - name: Download `@rolldown/wasi` Artifacts
+        uses: actions/download-artifact@95815c38cf2ff2164869cbab79da8d1f422bc89e # v4.2.1
+        with:
+          path: packages/wasi/dist
+          name: wasi-artifact
+
       - name: Copy Licenses
         run: |
           find ./packages/ -type d -maxdepth 1 -exec cp LICENSE {} \;

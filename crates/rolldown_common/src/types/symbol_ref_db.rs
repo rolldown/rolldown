@@ -41,6 +41,18 @@ pub struct SymbolRefDbForModule {
   pub classic_data: IndexVec<SymbolId, SymbolRefDataClassic>,
 }
 
+impl Default for SymbolRefDbForModule {
+  fn default() -> Self {
+    Self {
+      owner_idx: ModuleIdx::new(0),
+      root_scope_id: ScopeId::new(0),
+      ast_scopes: AstScopes::new(Scoping::default()),
+      flags: FxHashMap::default(),
+      classic_data: IndexVec::default(),
+    }
+  }
+}
+
 impl SymbolRefDbForModule {
   pub fn new(scoping: Scoping, owner_idx: ModuleIdx, top_level_scope_id: ScopeId) -> Self {
     Self {

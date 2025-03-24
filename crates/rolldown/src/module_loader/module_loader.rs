@@ -4,6 +4,7 @@ use super::task_context::TaskContextMeta;
 use crate::ecmascript::ecma_module_view_factory::normalize_side_effects;
 use crate::module_loader::task_context::TaskContext;
 use crate::type_alias::IndexEcmaAst;
+use crate::types::scan_stage_cache::ScanStageCache;
 use crate::utils::load_entry_module::load_entry_module;
 use arcstr::ArcStr;
 use oxc::semantic::{ScopeId, Scoping};
@@ -35,23 +36,19 @@ use crate::{SharedOptions, SharedResolver};
 
 pub struct IntermediateNormalModules {
   pub modules: HybridIndexVec<ModuleIdx, Option<Module>>,
-  pub importers: HybridIndexVec<ModuleIdx, Vec<ImporterRecord>>,
+  pub importers: IndexVec<ModuleIdx, Vec<ImporterRecord>>,
   pub index_ecma_ast: IndexEcmaAst,
 }
 
 impl IntermediateNormalModules {
-  pub fn new(is_full_scan: bool) -> Self {
+  pub fn new(is_full_scan: bool, importers: IndexVec<ModuleIdx, Vec<ImporterRecord>>) -> Self {
     Self {
       modules: if is_full_scan {
         HybridIndexVec::IndexVec(IndexVec::default())
       } else {
         HybridIndexVec::Map(FxHashMap::default())
       },
-      importers: if is_full_scan {
-        HybridIndexVec::IndexVec(IndexVec::default())
-      } else {
-        HybridIndexVec::Map(FxHashMap::default())
-      },
+      importers,
       index_ecma_ast: IndexVec::default(),
     }
   }
@@ -64,13 +61,14 @@ impl IntermediateNormalModules {
 
   pub fn alloc_ecma_module_idx_sparse(&mut self, i: ModuleIdx) -> ModuleIdx {
     self.modules.insert(i, None);
-    self.importers.insert(i, Vec::new());
+    if i >= self.importers.len() {
+      self.importers.push(Vec::new());
+    }
     i
   }
 
   pub fn reset_ecma_module_idx(&mut self) {
     self.modules.clear();
-    self.importers.clear();
   }
 }
 
@@ -93,13 +91,13 @@ pub struct ModuleLoader {
   shared_context: Arc<TaskContext>,
   pub tx: tokio::sync::mpsc::Sender<ModuleLoaderMsg>,
   rx: tokio::sync::mpsc::Receiver<ModuleLoaderMsg>,
-  visited: FxHashMap<ArcStr, VisitState>,
   runtime_id: ModuleIdx,
   remaining: u32,
   intermediate_normal_modules: IntermediateNormalModules,
   symbol_ref_db: SymbolRefDb,
   is_full_scan: bool,
   new_added_modules_from_partial_scan: FxIndexSet<ModuleIdx>,
+  cache: ScanStageCache,
 }
 
 pub struct ModuleLoaderOutput {
@@ -112,9 +110,9 @@ pub struct ModuleLoaderOutput {
   pub runtime: RuntimeModuleBrief,
   pub warnings: Vec<BuildDiagnostic>,
   pub dynamic_import_exports_usage_map: FxHashMap<ModuleIdx, DynamicImportExportsUsage>,
-  pub visited: FxHashMap<ArcStr, VisitState>,
   // Empty if it is a full scan
   pub new_added_modules_from_partial_scan: FxIndexSet<ModuleIdx>,
+  pub cache: ScanStageCache,
 }
 
 impl ModuleLoader {
@@ -123,7 +121,7 @@ impl ModuleLoader {
     options: SharedOptions,
     resolver: SharedResolver,
     plugin_driver: SharedPluginDriver,
-    mut module_id_to_idx: FxHashMap<ArcStr, VisitState>,
+    mut cache: ScanStageCache,
     is_full_scan: bool,
   ) -> BuildResult<Self> {
     // 1024 should be enough for most cases
@@ -152,10 +150,11 @@ impl ModuleLoader {
       meta,
     });
 
-    let mut intermediate_normal_modules = IntermediateNormalModules::new(is_full_scan);
+    let mut intermediate_normal_modules =
+      IntermediateNormalModules::new(is_full_scan, std::mem::take(&mut cache.importers));
     let runtime_id = intermediate_normal_modules.alloc_ecma_module_idx();
 
-    let remaining = if module_id_to_idx.contains_key(RUNTIME_MODULE_ID) {
+    let remaining = if cache.module_id_to_idx.contains_key(RUNTIME_MODULE_ID) {
       // the first alloc just want to allocate the runtime module id
       intermediate_normal_modules.reset_ecma_module_idx();
       0
@@ -163,7 +162,7 @@ impl ModuleLoader {
       let task = RuntimeModuleTask::new(runtime_id, tx.clone(), Arc::clone(&options));
 
       tokio::spawn(async { task.run() });
-      module_id_to_idx.insert(RUNTIME_MODULE_ID.into(), VisitState::Seen(runtime_id));
+      cache.module_id_to_idx.insert(RUNTIME_MODULE_ID.into(), VisitState::Seen(runtime_id));
       1
     };
 
@@ -176,9 +175,9 @@ impl ModuleLoader {
       shared_context,
       intermediate_normal_modules,
       symbol_ref_db: SymbolRefDb::default(),
-      visited: module_id_to_idx,
       is_full_scan,
       new_added_modules_from_partial_scan: FxIndexSet::default(),
+      cache,
     })
   }
 
@@ -191,26 +190,26 @@ impl ModuleLoader {
     assert_module_type: Option<ModuleType>,
     user_defined_entries: &[(Option<ArcStr>, ResolvedId)],
   ) -> ModuleIdx {
-    let idx = match self.visited.get(&resolved_id.id) {
+    let idx = match self.cache.module_id_to_idx.get(&resolved_id.id) {
       Some(VisitState::Seen(idx)) => return *idx,
       Some(VisitState::Invalidate(idx)) => {
         // Full scan mode the idx will never be invalidated right?
         let idx = *idx;
         self.intermediate_normal_modules.alloc_ecma_module_idx_sparse(idx);
-        self.visited.insert(resolved_id.id.clone(), VisitState::Seen(idx));
+        self.cache.module_id_to_idx.insert(resolved_id.id.clone(), VisitState::Seen(idx));
         idx
       }
       None if !self.is_full_scan => {
         // This means some new module has been added in partial scan mode
-        let len = self.visited.len();
+        let len = self.cache.module_id_to_idx.len();
         let idx = self.intermediate_normal_modules.alloc_ecma_module_idx_sparse(len.into());
         self.new_added_modules_from_partial_scan.insert(idx);
-        self.visited.insert(resolved_id.id.clone(), VisitState::Seen(idx));
+        self.cache.module_id_to_idx.insert(resolved_id.id.clone(), VisitState::Seen(idx));
         idx
       }
       None => {
         let idx = self.intermediate_normal_modules.alloc_ecma_module_idx();
-        self.visited.insert(resolved_id.id.clone(), VisitState::Seen(idx));
+        self.cache.module_id_to_idx.insert(resolved_id.id.clone(), VisitState::Seen(idx));
 
         idx
       }
@@ -346,7 +345,7 @@ impl ModuleLoader {
 
     // Incremental partial rebuild files
     for resolved_id in changed_resolved_ids {
-      if let Entry::Occupied(mut occ) = self.visited.entry(resolved_id.id.clone()) {
+      if let Entry::Occupied(mut occ) = self.cache.module_id_to_idx.entry(resolved_id.id.clone()) {
         let idx = occ.get().idx();
         occ.insert(VisitState::Invalidate(idx));
       };
@@ -380,7 +379,7 @@ impl ModuleLoader {
             .as_mut()
             .map(|item| std::mem::take(&mut item.dynamic_import_rec_exports_usage))
             .unwrap_or_default();
-          self.invalidate_deps(&resolved_deps);
+
           let import_records: IndexVec<ImportRecordIdx, rolldown_common::ResolvedImportRecord> =
             raw_import_records
               .into_iter_enumerated()
@@ -389,21 +388,25 @@ impl ModuleLoader {
                 if raw_rec.meta.contains(ImportRecordMeta::IS_DUMMY) {
                   return raw_rec.into_resolved(DUMMY_MODULE_IDX);
                 }
-                let normal_module = module.as_normal().unwrap();
-                let owner = ModuleTaskOwner::new(
-                  normal_module.source.clone(),
-                  normal_module.stable_id.as_str().into(),
-                  raw_rec.span,
-                );
-                let id = self.try_spawn_new_task(
-                  info,
-                  Some(owner),
-                  false,
-                  raw_rec.asserted_module_type.clone(),
-                  &user_defined_entries,
-                );
+                let idx = if let Some(idx) = self.try_spawn_with_cache(&info) {
+                  idx
+                } else {
+                  let normal_module = module.as_normal().unwrap();
+                  let owner = ModuleTaskOwner::new(
+                    normal_module.source.clone(),
+                    normal_module.stable_id.as_str().into(),
+                    raw_rec.span,
+                  );
+                  self.try_spawn_new_task(
+                    info,
+                    Some(owner),
+                    false,
+                    raw_rec.asserted_module_type.clone(),
+                    &user_defined_entries,
+                  )
+                };
                 // Dynamic imported module will be considered as an entry
-                self.intermediate_normal_modules.importers.get_mut(id).push(ImporterRecord {
+                self.intermediate_normal_modules.importers[idx].push(ImporterRecord {
                   kind: raw_rec.kind,
                   importer_path: ModuleId::new(module.id()),
                   importer_idx: module.idx(),
@@ -411,12 +414,12 @@ impl ModuleLoader {
                 // defer usage merging, since we only have one consumer, we should keep action during fetching as simple
                 // as possible
                 if let Some(usage) = dynamic_import_rec_exports_usage.remove(&rec_idx) {
-                  dynamic_import_exports_usage_pairs.push((id, usage));
+                  dynamic_import_exports_usage_pairs.push((idx, usage));
                 }
                 if matches!(raw_rec.kind, ImportKind::DynamicImport)
-                  && !user_defined_entry_ids.contains(&id)
+                  && !user_defined_entry_ids.contains(&idx)
                 {
-                  match dynamic_import_entry_ids.entry(id) {
+                  match dynamic_import_entry_ids.entry(idx) {
                     Entry::Vacant(vac) => match raw_rec.related_stmt_info_idx {
                       Some(stmt_info_idx) => {
                         vac.insert(vec![(module.idx(), stmt_info_idx)]);
@@ -432,7 +435,7 @@ impl ModuleLoader {
                     }
                   }
                 }
-                raw_rec.into_resolved(id)
+                raw_rec.into_resolved(idx)
               })
               .collect::<IndexVec<ImportRecordIdx, _>>();
 
@@ -470,7 +473,7 @@ impl ModuleLoader {
                   &user_defined_entries,
                 );
                 // Dynamic imported module will be considered as an entry
-                self.intermediate_normal_modules.importers.get_mut(id).push(ImporterRecord {
+                self.intermediate_normal_modules.importers[id].push(ImporterRecord {
                   kind: raw_rec.kind,
                   importer_path: module.id.clone(),
                   importer_idx: module.idx,
@@ -551,7 +554,7 @@ impl ModuleLoader {
       let data = func.exec().await?;
       for d in data {
         let source_id = ArcStr::from(d.id);
-        let Some(state) = self.visited.get(&source_id) else {
+        let Some(state) = self.cache.module_id_to_idx.get(&source_id) else {
           continue;
         };
         let Some(normal) = self
@@ -619,8 +622,8 @@ impl ModuleLoader {
           if let Some(module) = module.as_normal_mut() {
             // Note: (Compat to rollup)
             // The `dynamic_importers/importers` should be added after `module_parsed` hook.
-            let importers = std::mem::take(self.intermediate_normal_modules.importers.get_mut(idx));
-            for importer in &importers {
+            let importers = &self.intermediate_normal_modules.importers[idx];
+            for importer in importers {
               if importer.kind.is_static() {
                 module.importers.insert(importer.importer_path.clone());
                 module.importers_idx.insert(importer.importer_idx);
@@ -673,6 +676,8 @@ impl ModuleLoader {
     extra_entry_points.sort_unstable_by_key(|entry| modules.get(entry.id).stable_id());
     entry_points.extend(extra_entry_points);
 
+    self.cache.importers = self.intermediate_normal_modules.importers;
+
     Ok(ModuleLoaderOutput {
       module_table: modules,
       symbol_ref_db: self.symbol_ref_db,
@@ -687,21 +692,22 @@ impl ModuleLoader {
       },
       warnings: all_warnings,
       dynamic_import_exports_usage_map,
-      visited: self.visited,
       new_added_modules_from_partial_scan: self.new_added_modules_from_partial_scan,
+      cache: self.cache,
     })
   }
 
-  fn invalidate_deps(&mut self, resolved_deps: &IndexVec<ImportRecordIdx, ResolvedId>) {
+  /// If the module is already exists in module graph in partial scan mode, we could
+  /// return the module idx directly.
+  fn try_spawn_with_cache(&self, resolved_dep: &ResolvedId) -> Option<ModuleIdx> {
     if !self.options.experimental.is_incremental_build_enabled() {
-      return;
+      return None;
     }
-    // TODO: should skip if the deps is not changed
-    for resolved_id in resolved_deps {
-      if let Entry::Occupied(mut occ) = self.visited.entry(resolved_id.id.clone()) {
-        let idx = occ.get().idx();
-        occ.insert(VisitState::Invalidate(idx));
-      };
-    }
+    // We don't care about if it is invalidate, because
+    // - if it needs invalidate, which means one invalidate module depends on another invalidate
+    // module, but since all invalidate files is already processed in https://github.com/rolldown/rolldown/blob/88af0e2a29decd239b5555bff43e6499cae17ddc/crates/rolldown/src/module_loader/module_loader.rs?plain=1#L343
+    // we could just skip to invalidate it again.
+    // - if it does not need invalidate, we could just return the idx
+    self.cache.module_id_to_idx.get(&resolved_dep.id).map(|state| state.idx())
   }
 }

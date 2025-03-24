@@ -7,7 +7,7 @@ use sugar_path::SugarPath;
 /// `ModuleId` is the unique string identifier for each module.
 /// - It will be used to identify the module in the whole bundle.
 /// - Users could stored the `ModuleId` to track the module in different stages/hooks.
-#[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone)]
+#[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone, Default)]
 pub struct ModuleId {
   // Id that rolldown uses to call `read_to_string` or `read` to get the content of the module.
   resource_id: ArcStr,

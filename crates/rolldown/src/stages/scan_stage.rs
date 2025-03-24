@@ -13,11 +13,9 @@ use rustc_hash::FxHashMap;
 
 use crate::{
   SharedOptions, SharedResolver,
-  module_loader::{
-    ModuleLoader,
-    module_loader::{ModuleLoaderOutput, VisitState},
-  },
+  module_loader::{ModuleLoader, module_loader::ModuleLoaderOutput},
   type_alias::IndexEcmaAst,
+  types::scan_stage_cache::ScanStageCache,
   utils::load_entry_module::load_entry_module,
 };
 
@@ -85,7 +83,7 @@ pub struct ScanStageOutput {
   pub runtime: RuntimeModuleBrief,
   pub warnings: Vec<BuildDiagnostic>,
   pub dynamic_import_exports_usage_map: FxHashMap<ModuleIdx, DynamicImportExportsUsage>,
-  pub visited: FxHashMap<ArcStr, VisitState>,
+  pub cache: ScanStageCache,
 }
 
 impl ScanStage {
@@ -102,7 +100,7 @@ impl ScanStage {
   pub async fn scan(
     &mut self,
     mode: ScanMode,
-    module_id_to_idx: FxHashMap<ArcStr, VisitState>,
+    cache: ScanStageCache,
   ) -> BuildResult<ScanStageOutput> {
     if self.options.input.is_empty() {
       Err(anyhow::anyhow!("You must supply options.input to rolldown"))?;
@@ -113,7 +111,7 @@ impl ScanStage {
       Arc::clone(&self.options),
       Arc::clone(&self.resolver),
       Arc::clone(&self.plugin_driver),
-      module_id_to_idx,
+      cache,
       mode.is_full(),
     )?;
 
@@ -147,8 +145,8 @@ impl ScanStage {
       warnings,
       index_ecma_ast,
       dynamic_import_exports_usage_map,
-      visited,
       new_added_modules_from_partial_scan: _,
+      cache,
     } = module_loader.fetch_modules(user_entries, changed_resolved_ids).await?;
 
     self.plugin_driver.file_emitter.set_context_load_modules_tx(None).await;
@@ -163,7 +161,7 @@ impl ScanStage {
       index_ecma_ast,
       dynamic_import_exports_usage_map,
       module_table,
-      visited,
+      cache,
     })
   }
 

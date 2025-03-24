@@ -1,6 +1,7 @@
 use arcstr::ArcStr;
+use itertools::Itertools;
 use oxc_index::IndexVec;
-use rolldown_common::GetLocalDbMut;
+use rolldown_common::{GetLocalDbMut, ImporterRecord, ModuleIdx};
 use rolldown_utils::rayon::{IntoParallelRefIterator, ParallelIterator};
 use rustc_hash::FxHashMap;
 
@@ -9,46 +10,57 @@ use crate::{
   stages::scan_stage::{NormalizedScanStageOutput, ScanStageOutput},
 };
 
-#[derive(Default)]
+#[derive(Default, Debug)]
 pub struct ScanStageCache {
-  cache: Option<NormalizedScanStageOutput>,
-  module_id_to_idx: FxHashMap<ArcStr, VisitState>,
+  snapshot: Option<NormalizedScanStageOutput>,
+  pub module_id_to_idx: FxHashMap<ArcStr, VisitState>,
+  pub importers: IndexVec<ModuleIdx, Vec<ImporterRecord>>,
 }
 
 impl ScanStageCache {
   #[inline]
-  pub fn set_cache(&mut self, cache: NormalizedScanStageOutput) {
-    self.cache = Some(cache);
-  }
-
-  pub fn set_module_id_to_idx(&mut self, module_id_to_idx: FxHashMap<ArcStr, VisitState>) {
-    self.module_id_to_idx = module_id_to_idx;
-  }
-
-  pub fn take_module_id_to_idx(&mut self) -> FxHashMap<ArcStr, VisitState> {
-    std::mem::take(&mut self.module_id_to_idx)
+  pub fn set_snapshot(&mut self, cache: NormalizedScanStageOutput) {
+    self.snapshot = Some(cache);
   }
 
   pub fn merge(&mut self, mut scan_stage_output: ScanStageOutput) {
-    let Some(ref mut cache) = self.cache else {
-      self.cache = Some(scan_stage_output.into());
+    let Some(ref mut cache) = self.snapshot else {
+      self.snapshot = Some(scan_stage_output.into());
       return;
     };
     let modules = match scan_stage_output.module_table {
       rolldown_common::HybridIndexVec::IndexVec(_index_vec) => {
         unreachable!()
       }
-      rolldown_common::HybridIndexVec::Map(map) => map,
+      rolldown_common::HybridIndexVec::Map(map) => {
+        let mut modules = map.into_iter().collect_vec();
+        modules.sort_by_key(|(k, _)| *k);
+        modules
+      }
     };
-    // TODO: Considering newly Added module
-    //
     // merge module_table, index_ast_scope, index_ecma_ast
-    for (new_idx, new_module) in modules {
-      // dbg!(&new_idx);
-      // dbg!(&new_module.id());
+    for (new_idx, mut new_module) in modules {
       let idx = self.module_id_to_idx[new_module.id_clone()].idx();
 
-      let old_module = std::mem::replace(&mut cache.module_table.modules[idx], new_module);
+      let old_module = if new_idx.index() >= cache.module_table.modules.len() {
+        if let Some(module) = new_module.as_normal_mut() {
+          let new_module_idx = ModuleIdx::from_usize(cache.module_table.modules.len());
+          let ecma_ast_idx = module.ecma_ast_idx();
+          let new_ecma_ast_idx = cache
+            .index_ecma_ast
+            .push(std::mem::take(&mut scan_stage_output.index_ecma_ast[ecma_ast_idx]));
+          module.ecma_ast_idx = Some(new_ecma_ast_idx);
+
+          cache.symbol_ref_db.store_local_db(
+            new_module_idx,
+            std::mem::take(scan_stage_output.symbol_ref_db.local_db_mut(new_idx)),
+          );
+        }
+        cache.module_table.modules.push(new_module);
+        continue;
+      } else {
+        std::mem::replace(&mut cache.module_table.modules[idx], new_module)
+      };
       let Some(new_module) = cache.module_table.modules[idx].as_normal_mut() else {
         continue;
       };
@@ -73,7 +85,7 @@ impl ScanStageCache {
   /// # Panic
   /// the function will panic if cache is unset
   pub fn create_output(&mut self) -> NormalizedScanStageOutput {
-    let cache = self.cache.as_mut().unwrap();
+    let cache = self.snapshot.as_mut().unwrap();
     NormalizedScanStageOutput {
       module_table: cache.module_table.clone(),
       index_ecma_ast: {

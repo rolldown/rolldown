@@ -19,7 +19,7 @@ export {
 
 //#region entry.js
 const myFunc = () => {
-	;
+	debugger;
 	console.log("keep");
 };
 var entry_default = myFunc;
@@ -34,7 +34,7 @@ export { entry_default as default };
 +++ rolldown	entry.js
 @@ -1,5 +1,6 @@
  var myFunc = () => {
-+    ;
++    debugger;
      console.log("keep");
  };
  var entry_default = myFunc;

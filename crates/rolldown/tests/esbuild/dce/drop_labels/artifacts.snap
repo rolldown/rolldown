@@ -1,6 +1,5 @@
 ---
 source: crates/rolldown_testing/src/integration_test.rs
-snapshot_kind: text
 ---
 # warnings
 
@@ -60,9 +59,9 @@ snapshot_kind: text
 
 //#region entry.js
 keep_1: require("foo1");
-;
+debugger;
 exports.bar = function() {
-	if (x);
+	if (x) debugger;
 	if (y) keep_2: require("bar2");
 };
 

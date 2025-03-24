@@ -17,9 +17,9 @@ exports.bar = function() {
 
 //#region entry.js
 keep_1: require("foo1");
-;
+debugger;
 exports.bar = function() {
-	if (x);
+	if (x) debugger;
 	if (y) keep_2: require("bar2");
 };
 
@@ -32,9 +32,10 @@ exports.bar = function() {
 +++ rolldown	entry.js
 @@ -1,5 +1,6 @@
  keep_1: require("foo1");
-+;
++debugger;
  exports.bar = function () {
-     if (x) ;
+-    if (x) ;
++    if (x) debugger;
      if (y) keep_2: require("bar2");
  };
 

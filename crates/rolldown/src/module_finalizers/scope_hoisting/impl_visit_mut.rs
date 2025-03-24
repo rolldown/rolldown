@@ -1,5 +1,5 @@
 use oxc::{
-  allocator::{self, IntoIn},
+  allocator::{self, Dummy, IntoIn, TakeIn},
   ast::{
     ast::{self, BindingPatternKind, Expression, SimpleAssignmentTarget},
     match_member_expression,
@@ -8,7 +8,7 @@ use oxc::{
   span::{SPAN, Span},
 };
 use rolldown_common::{ExportsKind, Module, StmtInfoIdx, SymbolRef, ThisExprReplaceKind, WrapKind};
-use rolldown_ecmascript_utils::{ExpressionExt, TakeIn};
+use rolldown_ecmascript_utils::ExpressionExt;
 use rustc_hash::FxHashSet;
 
 use super::ScopeHoistingFinalizer;
@@ -173,17 +173,17 @@ impl<'ast> VisitMut<'ast> for ScopeHoistingFinalizer<'_, 'ast> {
                   kind: ast::BindingPatternKind::BindingIdentifier(
                     self.snippet.id(&var_name, SPAN).into_in(self.alloc),
                   ),
-                  ..TakeIn::dummy(self.alloc)
+                  ..ast::BindingPattern::dummy(self.alloc)
                 },
                 kind: ast::VariableDeclarationKind::Var,
-                ..TakeIn::dummy(self.alloc)
+                ..ast::VariableDeclarator::dummy(self.alloc)
               });
             });
             program.body.push(ast::Statement::VariableDeclaration(
               ast::VariableDeclaration {
                 declarations: declarators,
                 kind: ast::VariableDeclarationKind::Var,
-                ..TakeIn::dummy(self.alloc)
+                ..ast::VariableDeclaration::dummy(self.alloc)
               }
               .into_in(self.alloc),
             ));

@@ -1,9 +1,9 @@
 use oxc::{
-  allocator::IntoIn,
+  allocator::{Dummy, IntoIn},
   ast::{NONE, ast},
   span::SPAN,
 };
-use rolldown_ecmascript_utils::{TakeIn, quote_stmt};
+use rolldown_ecmascript_utils::quote_stmt;
 use rolldown_utils::ecmascript::is_validate_identifier_name;
 
 use super::ScopeHoistingFinalizer;
@@ -51,7 +51,7 @@ impl<'ast> ScopeHoistingFinalizer<'_, 'ast> {
                 ast::PropertyKey::StringLiteral(self.snippet.alloc_string_literal(prop_name, SPAN))
               },
               value: self.snippet.only_return_arrow_expr(returned),
-              ..TakeIn::dummy(self.alloc)
+              ..ast::ObjectProperty::dummy(self.alloc)
             }
             .into_in(self.alloc),
           ));

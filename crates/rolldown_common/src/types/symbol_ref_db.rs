@@ -47,10 +47,15 @@ impl SymbolRefDbForModule {
     Self {
       owner_idx,
       root_scope_id: top_level_scope_id,
-      classic_data: scoping
-        .symbol_names()
-        .map(|_name| SymbolRefDataClassic { link: None, chunk_id: None, namespace_alias: None })
-        .collect(),
+      classic_data: IndexVec::from_vec(vec![
+        SymbolRefDataClassic {
+          link: None,
+          chunk_id: None,
+          namespace_alias: None,
+        };
+        scoping.symbols_len()
+      ]),
+
       ast_scopes: AstScopes::new(scoping),
       flags: FxHashMap::default(),
     }

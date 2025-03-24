@@ -1,3 +1,46 @@
+# [1.0.0-beta.7](https://github.com/rolldown/rolldown/compare/v1.0.0-beta.6...v1.0.0-beta.7) (2025-03-24)
+
+
+### Bug Fixes
+
+* check dummy record in all import_records.iter ([#3930](https://github.com/rolldown/rolldown/issues/3930)) ([2519603](https://github.com/rolldown/rolldown/commit/25196034858e6be8ec769be230ead12474da89c5))
+* **ci:** fix broken metric workflow ([#3944](https://github.com/rolldown/rolldown/issues/3944)) ([1df6407](https://github.com/rolldown/rolldown/commit/1df64079216086d4bd96ba05bb91a553702a173c))
+* determine a module side effects for `require` a module that can't analyze statically ([#3928](https://github.com/rolldown/rolldown/issues/3928)) ([3909fcb](https://github.com/rolldown/rolldown/commit/3909fcb2f9c23a6b84ce59e4ae93801ca6801ea4)), closes [#3926](https://github.com/rolldown/rolldown/issues/3926)
+* mark export all stmt as side effects free ([#3897](https://github.com/rolldown/rolldown/issues/3897)) ([0f36c01](https://github.com/rolldown/rolldown/commit/0f36c017606efc6736a893cd5b3398a35a6c5066))
+* metrix ci broken ([#3924](https://github.com/rolldown/rolldown/issues/3924)) ([f115e7a](https://github.com/rolldown/rolldown/commit/f115e7a34b264fe83930d6127f833053bbb4ab83))
+* normalize oxc minify keep_names with keep_names option ([#3948](https://github.com/rolldown/rolldown/issues/3948)) ([126f3e0](https://github.com/rolldown/rolldown/commit/126f3e08ec67c6a6025537fac411d67628e06b2b))
+* reuse `JSON.parse` wrapper from `oxc-parser` ([#3904](https://github.com/rolldown/rolldown/issues/3904)) ([1726b6a](https://github.com/rolldown/rolldown/commit/1726b6ac303a0d0efc9b70822d38c5417df09764))
+* **tasks/generator:** ensure `just update-generated-code` runs correctly on `Windows` ([#3900](https://github.com/rolldown/rolldown/issues/3900)) ([ca73e82](https://github.com/rolldown/rolldown/commit/ca73e82817a536ea3c49e7f3641f52405e8b459c))
+* **tasks/generator:** ensure consistent path on `Windows` ([#3901](https://github.com/rolldown/rolldown/issues/3901)) ([df042b0](https://github.com/rolldown/rolldown/commit/df042b0b4034291e53763c3ee736479cfe6eb8ef))
+
+
+### Features
+
+* add data structure that used for incremental build ([#3932](https://github.com/rolldown/rolldown/issues/3932)) ([8c0b950](https://github.com/rolldown/rolldown/commit/8c0b95028333d0aade29592fc365f2163156e7d0))
+* add HookTransformAstArgs#stable_id ([#3920](https://github.com/rolldown/rolldown/issues/3920)) ([15cb25a](https://github.com/rolldown/rolldown/commit/15cb25af40d189531d3456ab70ffee0e3b7f82de))
+* add isolated_declaration plugin ([#3894](https://github.com/rolldown/rolldown/issues/3894)) ([529a7be](https://github.com/rolldown/rolldown/commit/529a7bee5585e37f5aabc541b23e3384913f91bc))
+* **hmr/poc:** change visited map to use `VisitState` enum for better state management ([#3908](https://github.com/rolldown/rolldown/issues/3908)) ([1fd3698](https://github.com/rolldown/rolldown/commit/1fd3698233f4b2fe960fb9aa1797604cda234471))
+* incremental rebuild ([#3934](https://github.com/rolldown/rolldown/issues/3934)) ([0b03e35](https://github.com/rolldown/rolldown/commit/0b03e352b1795132ec895bf369280e2648fd173b))
+* **isolated_declaration:** add `stripInternal` option ([#3902](https://github.com/rolldown/rolldown/issues/3902)) ([8f5f8f1](https://github.com/rolldown/rolldown/commit/8f5f8f11eb06c497eb50d907d7fd5258ad8fe4de))
+* **isolated-declaration:** emit typing for imported or exported typing module ([#3910](https://github.com/rolldown/rolldown/issues/3910)) ([458a62d](https://github.com/rolldown/rolldown/commit/458a62d78fef46776ca2e8b8990d41a31d69d998))
+* make ScanStageOutput cloneable ([#3923](https://github.com/rolldown/rolldown/issues/3923)) ([47fe675](https://github.com/rolldown/rolldown/commit/47fe67560573aa70544b27f8c763f5b8b96a8284))
+* make transform_ast hook to async ([#3891](https://github.com/rolldown/rolldown/issues/3891)) ([b150e1b](https://github.com/rolldown/rolldown/commit/b150e1b75b467e50836b89251056a92720357bea))
+* **node/hmr:** ensure only invoke hmr process if there are live connections ([#3907](https://github.com/rolldown/rolldown/issues/3907)) ([9cb523f](https://github.com/rolldown/rolldown/commit/9cb523f6195a68e822c7cf41ae7d0fa585e933d7))
+* **node/wasi:** add private `@rolldown/wasi` to prepare to distribute wasm binary in a friendly way ([#3925](https://github.com/rolldown/rolldown/issues/3925)) ([53faf0c](https://github.com/rolldown/rolldown/commit/53faf0c5d4c398d7d9f6c1bddf279ac5c4c071bc))
+* remove unused import(...) if importee doesn't have side-effects ([#3911](https://github.com/rolldown/rolldown/issues/3911)) ([0ac283b](https://github.com/rolldown/rolldown/commit/0ac283bfc0f408e4c4a2ae0579d64b1a397e4e5b)), closes [#2827](https://github.com/rolldown/rolldown/issues/2827)
+* support meta#chunks at render_chunk hook ([#3898](https://github.com/rolldown/rolldown/issues/3898)) ([8fd9481](https://github.com/rolldown/rolldown/commit/8fd94815d2714d90efdcc0c7f4100ed5007f14ae))
+
+
+### Performance Improvements
+
+* aovid RollupRenderedChunk clone ([#3909](https://github.com/rolldown/rolldown/issues/3909)) ([82749d8](https://github.com/rolldown/rolldown/commit/82749d8c2e7651b662912de0eef985d58cef9731))
+* avoid chunk content clone ([#3916](https://github.com/rolldown/rolldown/issues/3916)) ([c33ea77](https://github.com/rolldown/rolldown/commit/c33ea772dc6c286c53a72ccf18b36cad3866322f))
+* **rolldown_binding:** upgrade napi-build ([#3927](https://github.com/rolldown/rolldown/issues/3927)) ([5da7efb](https://github.com/rolldown/rolldown/commit/5da7efb1c26441859803337f06aa659537588e9a))
+* use `Vec::with_capacity` ([#3938](https://github.com/rolldown/rolldown/issues/3938)) ([113eb98](https://github.com/rolldown/rolldown/commit/113eb985ee6aeccc5a3af4cf31486fc96d11b49e))
+* use multi threaded Runtime on wasi target ([#3876](https://github.com/rolldown/rolldown/issues/3876)) ([fb9cbde](https://github.com/rolldown/rolldown/commit/fb9cbdeeb650e1a47b38e02f9be48e4e6ce8ae4a))
+
+
+
 # [1.0.0-beta.6](https://github.com/rolldown/rolldown/compare/v1.0.0-beta.5...v1.0.0-beta.6) (2025-03-17)
 
 

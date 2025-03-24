@@ -1,21 +1,19 @@
 name: Metric and Commit Results
 
+permissions: {}
+
 on:
   workflow_dispatch: # Allows manual triggering of the workflow
-  pull_request_target:
+  push:
     branches:
       - main
     paths-ignore:
       - '**/*.md'
-    types:
-      - closed
 
 jobs:
   compile-time-and-binary-size:
-    if: github.event.pull_request.merged == true
     name: Compile Time and Binary Size
     runs-on: ubuntu-latest
-    # if: ${{ github.ref_name == 'main' }}
     outputs:
       time: ${{ steps.run.outputs.COMPILE_TIME }}
       binary_size: ${{ steps.run.outputs.BINARY_SIZE }}
@@ -41,7 +39,6 @@ jobs:
           cat $GITHUB_OUTPUT
 
   metric:
-    if: github.event.pull_request.merged == true
     name: Metric
     needs: [compile-time-and-binary-size]
     runs-on: ubuntu-latest
@@ -52,7 +49,7 @@ jobs:
           repository: 'rolldown/metric'
           ref: 'main'
           token: ${{ secrets.METRIC_SECRET_KEY }}
-          persist-credentials: false
+          persist-credentials: true # required by `git push` below
 
       - name: Setup Pnpm
         uses: pnpm/action-setup@a7487c7e89a18df4991f7f222e4898a00d66ddda # v4.1.0

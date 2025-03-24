@@ -1,29 +1,43 @@
-name: Publish Packages
+name: Publish to NPM for Nightly/Canary
 
 permissions: {}
 
 on:
-  push:
-    tags:
-      - 'v*' # Push events to matching v*, i.e. v1.0, v20.15.10
+  # Manually released. This will publish under the canary npm tag.
+  workflow_dispatch:
+  # Every day at midnight. This will publish under the nightly npm tag.
+  schedule:
+    - cron: '0 0 * * *'
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
+  plan:
+    name: Plan release
+    if: github.repository == 'rolldown/rolldown'
+    runs-on: ubuntu-latest
+    outputs:
+      npm-tag: ${{ github.event_name == 'schedule' && 'nightly' || 'canary' }}
+    steps:
+      - run: 'echo "Planning release"'
+
   build:
     name: Build bindings and node packages
+    if: github.repository == 'rolldown/rolldown'
     uses: ./.github/workflows/reusable-release-build.yml
+    with:
+      version: 'commit'
 
   publish:
-    if: github.repository == 'rolldown/rolldown'
     name: Publish npm Packages
+    if: github.repository == 'rolldown/rolldown'
     runs-on: ubuntu-latest
     permissions:
-      contents: write # for softprops/action-gh-release@v1
       id-token: write # for `npm publish --provenance`
     needs:
+      - plan
       - build
     steps:
       - uses: taiki-e/checkout-action@b13d20b7cda4e2f325ef19895128f7ff735c0b3d # v1.3.1
@@ -58,6 +72,20 @@ jobs:
           path: packages/wasi/dist
           name: wasi-artifact
 
+      - name: Download `rolldown-version.txt`
+        uses: actions/download-artifact@95815c38cf2ff2164869cbab79da8d1f422bc89e # v4.2.1
+        with:
+          name: rolldown-version
+
+      - name: Read `rolldown-version.txt`
+        id: rolldown-version
+        uses: igorskyflyer/action-readfile@d38a0aef4a6ba5245f2a127705a8cdc8d5d5e702 # v1.0.0
+        with:
+          path: rolldown-version.txt
+
+      - name: Canary/Nightly Versioning
+        run: node --import @oxc-node/core/register ./scripts/misc/bump-version.js ${{ steps.rolldown-version.outputs.content }}
+
       - name: Copy Licenses
         run: |
           find ./packages/ -type d -maxdepth 1 -exec cp LICENSE {} \;
@@ -68,17 +96,7 @@ jobs:
         env:
           NPM_TOKEN: ${{ secrets.ROLLDOWN_NPM_TOKEN }}
 
-      - name: Publish(Dry Run)
-        run: |
-          pnpm publish -r --tag latest --dry-run --no-git-checks
-        env:
-          NPM_TOKEN: ${{ secrets.ROLLDOWN_NPM_TOKEN }}
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
       - name: Publish
-        run: |
-          pnpm publish -r --tag latest --no-git-checks
+        run: node --import @oxc-node/core/register ./scripts/ci/publish-rolldown-to-npm.js ${{ needs.plan.outputs.npm-tag }}
         env:
-          NPM_TOKEN: ${{ secrets.ROLLDOWN_NPM_TOKEN }}
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          NPM_CONFIG_PROVENANCE: true
+          NPM_CONFIG_PROVENANCE: true # https://github.com/pnpm/pnpm/issues/6435

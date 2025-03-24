@@ -242,9 +242,11 @@ The rolldown watcher api is compatible with rollup [watch](https://rollupjs.org/
 ```js
 import { watch } from 'rolldown'
 
-const watcher = watch({ /* option */}) // or watch([/* multiply option */] )
+const watcher = watch({
+  /* option */
+}) // or watch([/* multiply option */] )
 
-watcher.on('event', () => {});
+watcher.on('event', () => {})
 
-await watcher.close(); // Here is different with rollup, the rolldown returned the promise at here.
+await watcher.close() // Here is different with rollup, the rolldown returned the promise at here.
 ```

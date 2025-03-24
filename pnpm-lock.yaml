@@ -511,6 +511,9 @@ importers:
 
   packages/wasi:
     dependencies:
+      '@napi-rs/wasm-runtime':
+        specifier: ^0.2.4
+        version: 0.2.7
       '@oxc-project/runtime':
         specifier: 0.58.1
         version: 0.58.1

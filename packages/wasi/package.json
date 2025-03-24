@@ -1,7 +1,6 @@
 {
   "name": "@rolldown/wasi",
   "version": "1.0.0-beta.6",
-  "private": true,
   "description": "Fast JavaScript/TypeScript bundler in Rust with Rollup-compatible API.",
   "homepage": "https://rolldown.rs/",
   "repository": {
@@ -22,6 +21,7 @@
     "bin",
     "cli",
     "dist",
+    "!dist/rolldown-binding.debug.wasm32-wasi.wasm",
     "!dist/*.node"
   ],
   "bin": {
@@ -61,10 +61,14 @@
   },
   "scripts": {
     "build": "pnpm run build:debug",
-    "build:debug": "cross-env WASI_PKG=1 pnpm run --filter rolldown build-wasi:debug",
-    "build:release": "cross-env WASI_PKG=1 pnpm run --filter rolldown build-wasi:release"
+    "build:debug": "run-s build-types build-pkg:debug",
+    "build:release": "run-s build-types build-pkg:release",
+    "build-pkg:debug": "cross-env WASI_PKG=1 pnpm run --filter rolldown build-wasi:debug",
+    "build-pkg:release": "cross-env WASI_PKG=1 pnpm run --filter rolldown build-wasi:release",
+    "build-types": "tsc -p ../rolldown/tsconfig.json --outDir ../wasi/dist/types --tsBuildInfoFile ../wasi/dist/.tsbuildinfo"
   },
   "dependencies": {
+    "@napi-rs/wasm-runtime": "^0.2.4",
     "@oxc-project/types": "0.58.1",
     "@valibot/to-json-schema": "1.0.0-rc.0",
     "valibot": "1.0.0-rc.4"

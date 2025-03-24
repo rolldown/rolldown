@@ -84,4 +84,4 @@ jobs:
           find ./packages/ -type d -maxdepth 1 -exec cp THIRD-PARTY-LICENSE {} \;
 
       - name: Release
-        run: pnpx pkg-pr-new publish --compact --pnpm './packages/rolldown/npm/*' './packages/rolldown'
+        run: pnpx pkg-pr-new publish --compact --pnpm './packages/rolldown/npm/*' './packages/rolldown' './packages/wasi'

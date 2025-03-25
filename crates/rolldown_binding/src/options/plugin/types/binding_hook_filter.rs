@@ -8,7 +8,7 @@ pub struct BindingGeneralHookFilter {
 }
 
 #[napi_derive::napi(object, object_to_js = false)]
-#[derive(Default, Clone)]
+#[derive(Default, Clone, Debug)]
 pub struct BindingTransformHookFilter {
   pub code: Option<BindingGeneralHookFilter>,
   #[napi(ts_type = "Array<string>")]

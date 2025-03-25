@@ -190,18 +190,18 @@ function patchBindingJs(): Plugin {
     name: 'patch-binding-js',
     transform: {
       filter: {
-        id: 'src/binding.js'
+        id: 'src/binding.js',
       },
-      handler(code, id, meta) {
-        console.log({id})
-        return code
-          // strip off unneeded createRequire in cjs, which breaks mjs
-          .replace('require = createRequire(__filename)', '')
-          // inject binding auto download fallback for webcontainer
-          .replace(
-          '\nif (!nativeBinding) {',
-          (s) =>
-            `
+      handler(code) {
+        return (
+          code
+            // strip off unneeded createRequire in cjs, which breaks mjs
+            .replace('require = createRequire(__filename)', '')
+            // inject binding auto download fallback for webcontainer
+            .replace(
+              '\nif (!nativeBinding) {',
+              (s) =>
+                `
 if (!nativeBinding && globalThis.process?.versions?.["webcontainer"]) {
   try {
     nativeBinding = require('./webcontainer-fallback.js');
@@ -210,9 +210,10 @@ if (!nativeBinding && globalThis.process?.versions?.["webcontainer"]) {
   }
 }
 ` + s,
+            )
         )
       },
-    }
+    },
   }
 }
 

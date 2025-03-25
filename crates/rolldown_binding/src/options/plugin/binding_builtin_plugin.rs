@@ -470,7 +470,7 @@ pub struct BindingDtsPluginConfig {
 
 impl From<BindingDtsPluginConfig> for DtsPlugin {
   fn from(value: BindingDtsPluginConfig) -> Self {
-    DtsPlugin { strip_internal: value.strip_internal.unwrap_or_default() }
+    DtsPlugin::new(value.strip_internal.unwrap_or_default())
   }
 }
 

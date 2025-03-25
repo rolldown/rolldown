@@ -22,3 +22,4 @@ packages/rolldown/src/wasi-worker.mjs
 packages/rolldown/tests/fixtures/**/*.js
 packages/rolldown/tests/stability/**/*
 packages/rolldown/tests/cli/fixtures/**/*.js
+packages/rolldown/tests/fixtures/builtin-plugin/json/vite/*/*.json

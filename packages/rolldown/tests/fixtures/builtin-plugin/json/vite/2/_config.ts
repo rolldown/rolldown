@@ -11,7 +11,7 @@ export default defineTest({
       {
         name: 'test-plugin',
         async transform(code, id) {
-         if (id.endsWith('.json')) {
+          if (id.endsWith('.json')) {
             await expect(code).toMatchFileSnapshot(
               path.resolve(import.meta.dirname, `${path.basename(id)}.snap`),
             )

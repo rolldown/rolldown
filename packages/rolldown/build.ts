@@ -3,7 +3,7 @@ import nodePath from 'node:path'
 import fsExtra from 'fs-extra'
 import { globSync } from 'glob'
 
-import { defineConfig, OutputOptions, rolldown } from './src/index'
+import { defineConfig, OutputOptions, rolldown, type Plugin } from './src/index'
 import pkgJson from './package.json' with { type: 'json' }
 import { colors } from './src/cli/colors'
 
@@ -153,37 +153,7 @@ const configs = defineConfig([
           })
         },
       },
-
-      {
-        name: 'cleanup binding.js',
-        transform: {
-          filter: {
-            code: {
-              include: ['require = createRequire(__filename)'],
-            },
-          },
-          handler(code, id) {
-            if (id.endsWith('binding.js')) {
-              const ret = code
-                .replace('require = createRequire(__filename)', '')
-                .replace(
-                  '\nif (!nativeBinding) {',
-                  (s) =>
-                    `
-if (!nativeBinding && globalThis.process?.versions?.["webcontainer"]) {
-  try {
-    nativeBinding = require('./webcontainer-fallback.js');
-  } catch (err) {
-    loadErrors.push(err)
-  }
-}
-` + s,
-                )
-              return ret
-            }
-          },
-        },
-      },
+      patchBindingJs(),
     ],
   },
   {
@@ -204,6 +174,7 @@ if (!nativeBinding && globalThis.process?.versions?.["webcontainer"]) {
           },
         },
       },
+      patchBindingJs(),
     ],
     output: {
       dir: outputDir,
@@ -213,6 +184,38 @@ if (!nativeBinding && globalThis.process?.versions?.["webcontainer"]) {
     },
   },
 ])
+
+function patchBindingJs(): Plugin {
+  return {
+    name: 'patch-binding-js',
+    transform: {
+      filter: {
+        id: 'src/binding.js',
+      },
+      handler(code) {
+        return (
+          code
+            // strip off unneeded createRequire in cjs, which breaks mjs
+            .replace('require = createRequire(__filename)', '')
+            // inject binding auto download fallback for webcontainer
+            .replace(
+              '\nif (!nativeBinding) {',
+              (s) =>
+                `
+if (!nativeBinding && globalThis.process?.versions?.["webcontainer"]) {
+  try {
+    nativeBinding = require('./webcontainer-fallback.js');
+  } catch (err) {
+    loadErrors.push(err)
+  }
+}
+` + s,
+            )
+        )
+      },
+    },
+  }
+}
 
 ;(async () => {
   for (const config of configs) {

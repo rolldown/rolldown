@@ -13,6 +13,7 @@ if (!fs.existsSync(bindingEntry)) {
 
   try {
     // check if pkg.pr.new
+    // TODO: this works only when demo project uses npm
     const info = JSON.parse(
       childProcess.execFileSync('npm', ['why', '--json', 'rolldown'], {
         encoding: 'utf-8',
@@ -23,9 +24,7 @@ if (!fs.existsSync(bindingEntry)) {
       const commit = spec.split('@').at(-1)
       bindingPkg = `https://pkg.pr.new/@rolldown/binding-wasm32-wasi@${commit}`
     }
-  } catch (e) {
-    console.error(e)
-  }
+  } catch {}
 
   fs.rmSync(baseDir, { recursive: true, force: true })
   fs.mkdirSync(baseDir, { recursive: true })

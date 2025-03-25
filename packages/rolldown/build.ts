@@ -164,10 +164,21 @@ const configs = defineConfig([
           },
           handler(code, id) {
             if (id.endsWith('binding.js')) {
-              const ret = code.replace(
-                'require = createRequire(__filename)',
-                '',
-              )
+              const ret = code
+                .replace('require = createRequire(__filename)', '')
+                .replace(
+                  '\nif (!nativeBinding) {',
+                  (s) =>
+                    `
+if (!nativeBinding && globalThis.process?.versions?.["webcontainer"]) {
+  try {
+    nativeBinding = require('./webcontainer-fallback.js');
+  } catch (err) {
+    loadErrors.push(err)
+  }
+}
+` + s,
+                )
               return ret
             }
           },

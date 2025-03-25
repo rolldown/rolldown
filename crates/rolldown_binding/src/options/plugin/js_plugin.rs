@@ -618,3 +618,100 @@ fn filter_transform(
 
   Ok(fallback_ret)
 }
+
+#[cfg(test)]
+mod tests {
+  use rolldown_utils::pattern_filter::StringOrRegex;
+
+  use crate::options::plugin::types::{
+    binding_hook_filter::BindingGeneralHookFilter, binding_js_or_regex::BindingStringOrRegex,
+  };
+
+  use super::*;
+
+  #[test]
+  fn test_filter() {
+    #[derive(Debug)]
+    struct InputFilter {
+      exclude: Option<Vec<StringOrRegex>>,
+      include: Option<Vec<StringOrRegex>>,
+    }
+    /// id, code, expected
+    type TestCase<'a> = (&'a str, &'a str, bool);
+    struct TestCases<'a> {
+      input_id_filter: Option<InputFilter>,
+      input_code_filter: Option<InputFilter>,
+      cases: Vec<TestCase<'a>>,
+    }
+
+    #[expect(clippy::unnecessary_wraps)]
+    fn string_filter(value: &str) -> Option<Vec<StringOrRegex>> {
+      Some(vec![StringOrRegex::new(value.to_string(), &None).unwrap()])
+    }
+
+    let cases = [
+      TestCases {
+        input_id_filter: Some(InputFilter { exclude: None, include: string_filter("*.js") }),
+        input_code_filter: None,
+        cases: vec![("foo.js", "foo", true), ("foo.ts", "foo", false)],
+      },
+      TestCases {
+        input_id_filter: None,
+        input_code_filter: Some(InputFilter {
+          exclude: None,
+          include: string_filter("import.meta"),
+        }),
+        cases: vec![("foo.js", "import.meta", true), ("foo.js", "import_meta", false)],
+      },
+      TestCases {
+        input_id_filter: Some(InputFilter { exclude: string_filter("*.js"), include: None }),
+        input_code_filter: Some(InputFilter {
+          exclude: None,
+          include: string_filter("import.meta"),
+        }),
+        cases: vec![
+          ("foo.js", "import.meta", false),
+          ("foo.js", "import_meta", false),
+          ("foo.ts", "import.meta", true),
+          ("foo.ts", "import_meta", false),
+        ],
+      },
+      TestCases {
+        input_id_filter: Some(InputFilter {
+          exclude: string_filter("*.js"),
+          include: string_filter("foo.ts"),
+        }),
+        input_code_filter: Some(InputFilter {
+          exclude: None,
+          include: string_filter("import.meta"),
+        }),
+        cases: vec![
+          ("foo.js", "import.meta", false),
+          ("foo.js", "import_meta", false),
+          ("foo.ts", "import.meta", true),
+          ("foo.ts", "import_meta", true),
+        ],
+      },
+    ];
+
+    let cwd = std::env::current_dir().unwrap();
+    for test_case in cases {
+      let filter = BindingTransformHookFilter {
+        id: test_case.input_id_filter.map(|f| BindingGeneralHookFilter {
+          include: f.include.map(|f| f.into_iter().map(BindingStringOrRegex::new).collect()),
+          exclude: f.exclude.map(|f| f.into_iter().map(BindingStringOrRegex::new).collect()),
+        }),
+        code: test_case.input_code_filter.map(|f| BindingGeneralHookFilter {
+          include: f.include.map(|f| f.into_iter().map(BindingStringOrRegex::new).collect()),
+          exclude: f.exclude.map(|f| f.into_iter().map(BindingStringOrRegex::new).collect()),
+        }),
+        module_type: None,
+      };
+
+      for (id, code, expected) in test_case.cases {
+        let result = filter_transform(Some(&filter), id, &cwd, &ModuleType::Js, code);
+        assert_eq!(result.unwrap(), expected, "filter: {filter:?}, id: {id}, code: {code}",);
+      }
+    }
+  }
+}

@@ -66,6 +66,7 @@ pub fn filter(
   }
 }
 
+#[derive(Debug, PartialEq)]
 pub enum FilterResult {
   /// `Match(true)` means it is matched by `included`,
   /// `Match(false)` means it is matched by `excluded`
@@ -117,5 +118,219 @@ pub fn filter_code(
   match include {
     None => FilterResult::NoneMatch(true),
     Some(include) => FilterResult::NoneMatch(include.is_empty()),
+  }
+}
+
+#[cfg(test)]
+mod tests {
+  use std::path;
+
+  use super::*;
+
+  #[expect(clippy::too_many_lines)]
+  #[test]
+  fn test_filter() {
+    #[derive(Debug)]
+    struct InputFilter {
+      exclude: Option<[StringOrRegex; 1]>,
+      include: Option<[StringOrRegex; 1]>,
+    }
+    /// id, stable_id, expected
+    type TestCase<'a> = (&'a str, &'a str, FilterResult);
+    struct TestCases<'a> {
+      input_filter: InputFilter,
+      cases: Vec<TestCase<'a>>,
+    }
+
+    #[expect(clippy::unnecessary_wraps)]
+    fn glob_filter(value: &str) -> Option<[StringOrRegex; 1]> {
+      Some([StringOrRegex::new(value.to_string(), &None).unwrap()])
+    }
+    #[expect(clippy::unnecessary_wraps)]
+    fn regex_filter(value: &str) -> Option<[StringOrRegex; 1]> {
+      Some([StringOrRegex::new(value.to_string(), &Some(String::new())).unwrap()])
+    }
+
+    let foo_js = "foo.js";
+    let resolved_foo_js = path::absolute(foo_js).unwrap().to_string_lossy().into_owned();
+    let full_virtual_path = "\0".to_string() + &resolved_foo_js;
+
+    let cases = [
+      TestCases {
+        input_filter: InputFilter { exclude: None, include: glob_filter("foo.js") },
+        cases: vec![
+          ("foo.js", "foo.js", FilterResult::Match(true)),
+          ("foo.ts", "foo.ts", FilterResult::NoneMatch(false)),
+          (&resolved_foo_js, foo_js, FilterResult::Match(true)),
+          ("\0foo.js", "\0foo.js", FilterResult::NoneMatch(false)),
+          (&full_virtual_path, &full_virtual_path, FilterResult::NoneMatch(false)),
+        ],
+      },
+      TestCases {
+        input_filter: InputFilter { exclude: None, include: glob_filter("*.js") },
+        cases: vec![
+          ("foo.js", "foo.js", FilterResult::Match(true)),
+          ("foo.ts", "foo.ts", FilterResult::NoneMatch(false)),
+        ],
+      },
+      TestCases {
+        input_filter: InputFilter { exclude: None, include: regex_filter("\\.js$") },
+        cases: vec![
+          ("foo.js", "foo.js", FilterResult::Match(true)),
+          ("foo.ts", "foo.ts", FilterResult::NoneMatch(false)),
+        ],
+      },
+      TestCases {
+        input_filter: InputFilter { exclude: None, include: regex_filter("/foo\\.js$") },
+        cases: vec![
+          ("a/foo.js", "a/foo.js", FilterResult::Match(true)),
+          // FIXME
+          // #[cfg(windows)]
+          // ("a\\foo.js", "a\\foo.js", FilterResult::Match(true)),
+          ("a_foo.js", "a_foo.js", FilterResult::NoneMatch(false)),
+        ],
+      },
+      TestCases {
+        input_filter: InputFilter { exclude: glob_filter("foo.js"), include: None },
+        cases: vec![
+          ("foo.js", "foo.js", FilterResult::Match(false)),
+          ("foo.ts", "foo.ts", FilterResult::NoneMatch(true)),
+        ],
+      },
+      TestCases {
+        input_filter: InputFilter { exclude: glob_filter("*.js"), include: None },
+        cases: vec![
+          ("foo.js", "foo.js", FilterResult::Match(false)),
+          ("foo.ts", "foo.ts", FilterResult::NoneMatch(true)),
+        ],
+      },
+      TestCases {
+        input_filter: InputFilter { exclude: regex_filter("\\.js$"), include: None },
+        cases: vec![
+          ("foo.js", "foo.js", FilterResult::Match(false)),
+          ("foo.ts", "foo.ts", FilterResult::NoneMatch(true)),
+        ],
+      },
+      TestCases {
+        input_filter: InputFilter {
+          exclude: glob_filter("bar.js"),
+          include: glob_filter("foo.js"),
+        },
+        cases: vec![
+          ("foo.js", "foo.js", FilterResult::Match(true)),
+          ("bar.js", "bar.js", FilterResult::Match(false)),
+          ("baz.js", "baz.js", FilterResult::NoneMatch(false)),
+        ],
+      },
+      TestCases {
+        input_filter: InputFilter { exclude: glob_filter("foo.*"), include: glob_filter("*.js") },
+        cases: vec![
+          ("foo.js", "foo.js", FilterResult::Match(false)), // exclude has higher priority
+          ("bar.js", "bar.js", FilterResult::Match(true)),
+          ("foo.ts", "foo.ts", FilterResult::Match(false)),
+        ],
+      },
+    ];
+
+    for test_case in cases {
+      for (id, stable_id, expected) in test_case.cases {
+        let result = filter(
+          test_case.input_filter.exclude.as_ref().map(|v| &v[..]),
+          test_case.input_filter.include.as_ref().map(|v| &v[..]),
+          id,
+          stable_id,
+        );
+        assert_eq!(result, expected, "filter: {:?}, id: {id}", test_case.input_filter);
+      }
+    }
+  }
+
+  #[test]
+  fn test_code_filter() {
+    #[derive(Debug)]
+    struct InputFilter {
+      exclude: Option<[StringOrRegex; 1]>,
+      include: Option<[StringOrRegex; 1]>,
+    }
+    /// code, expected
+    type TestCase<'a> = (&'a str, FilterResult);
+    struct TestCases<'a> {
+      input_filter: InputFilter,
+      cases: Vec<TestCase<'a>>,
+    }
+
+    #[expect(clippy::unnecessary_wraps)]
+    fn string_filter(value: &str) -> Option<[StringOrRegex; 1]> {
+      Some([StringOrRegex::new(value.to_string(), &None).unwrap()])
+    }
+    #[expect(clippy::unnecessary_wraps)]
+    fn regex_filter(value: &str) -> Option<[StringOrRegex; 1]> {
+      Some([StringOrRegex::new(value.to_string(), &Some(String::new())).unwrap()])
+    }
+
+    let cases = [
+      TestCases {
+        input_filter: InputFilter { exclude: None, include: string_filter("import.meta") },
+        cases: vec![
+          ("import.meta", FilterResult::Match(true)),
+          ("import_meta", FilterResult::NoneMatch(false)),
+        ],
+      },
+      TestCases {
+        input_filter: InputFilter { exclude: None, include: regex_filter("import\\.\\w+") },
+        cases: vec![
+          ("import.meta", FilterResult::Match(true)),
+          ("import_meta", FilterResult::NoneMatch(false)),
+        ],
+      },
+      TestCases {
+        input_filter: InputFilter { exclude: string_filter("import.meta"), include: None },
+        cases: vec![
+          ("import.meta", FilterResult::Match(false)),
+          ("import_meta", FilterResult::NoneMatch(true)),
+        ],
+      },
+      TestCases {
+        input_filter: InputFilter { exclude: regex_filter("import\\.\\w+"), include: None },
+        cases: vec![
+          ("import.meta", FilterResult::Match(false)),
+          ("import_meta", FilterResult::NoneMatch(true)),
+        ],
+      },
+      TestCases {
+        input_filter: InputFilter {
+          exclude: string_filter("import_meta"),
+          include: string_filter("import.meta"),
+        },
+        cases: vec![
+          ("import.meta", FilterResult::Match(true)),
+          ("import_meta", FilterResult::Match(false)),
+          // cspell:ignore importmeta
+          ("importmeta", FilterResult::NoneMatch(false)),
+        ],
+      },
+      TestCases {
+        input_filter: InputFilter {
+          exclude: regex_filter("\\w+\\.meta"),
+          include: regex_filter("import\\.\\w+"),
+        },
+        cases: vec![
+          ("import.meta", FilterResult::Match(false)), // exclude has higher priority
+          ("import.foo", FilterResult::Match(true)),
+          ("foo.meta", FilterResult::Match(false)),
+        ],
+      },
+    ];
+
+    for test_case in cases {
+      for (code, expected) in test_case.cases {
+        let result = filter_code(
+          test_case.input_filter.exclude.as_ref().map(|v| &v[..]),
+          test_case.input_filter.include.as_ref().map(|v| &v[..]),
+          code,
+        );
+        assert_eq!(result, expected, "filter: {:?}, code: {code}", test_case.input_filter);
+      }
+    }
   }
 }

@@ -57,6 +57,13 @@ impl TryFrom<JsRegExp> for HybridRegex {
 #[derive(Debug, Clone)]
 pub struct BindingStringOrRegex(StringOrRegex);
 
+#[cfg(test)]
+impl BindingStringOrRegex {
+  pub fn new(value: StringOrRegex) -> Self {
+    Self(value)
+  }
+}
+
 impl FromNapiValue for BindingStringOrRegex {
   unsafe fn from_napi_value(env: sys::napi_env, napi_val: sys::napi_value) -> napi::Result<Self> {
     unsafe {

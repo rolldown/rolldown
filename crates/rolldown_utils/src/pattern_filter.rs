@@ -1,3 +1,5 @@
+use std::borrow::Cow;
+
 use crate::js_regex::HybridRegex;
 use fast_glob::glob_match;
 
@@ -36,11 +38,13 @@ pub fn filter(
   id: &str,
   stable_id: &str,
 ) -> FilterResult {
+  let id = normalize_path(id);
+  let stable_id = normalize_path(stable_id);
   if let Some(exclude) = exclude {
     for pattern in exclude {
       let v = match pattern.as_ref() {
-        StringOrRegex::String(glob) => glob_match(glob.as_str(), stable_id),
-        StringOrRegex::Regex(re) => re.matches(id),
+        StringOrRegex::String(glob) => glob_match(glob.as_str(), stable_id.as_bytes()),
+        StringOrRegex::Regex(re) => re.matches(&id),
       };
       if v {
         return FilterResult::Match(false);
@@ -50,8 +54,8 @@ pub fn filter(
   if let Some(include) = include {
     for pattern in include {
       let v = match pattern.as_ref() {
-        StringOrRegex::String(glob) => glob_match(glob.as_str(), stable_id),
-        StringOrRegex::Regex(re) => re.matches(id),
+        StringOrRegex::String(glob) => glob_match(glob.as_str(), stable_id.as_bytes()),
+        StringOrRegex::Regex(re) => re.matches(&id),
       };
       if v {
         return FilterResult::Match(true);
@@ -63,6 +67,18 @@ pub fn filter(
   match include {
     None => FilterResult::NoneMatch(true),
     Some(include) => FilterResult::NoneMatch(include.is_empty()),
+  }
+}
+
+pub fn normalize_path(path: &str) -> Cow<'_, str> {
+  #[cfg(windows)]
+  {
+    use cow_utils::CowUtils;
+    path.cow_replace('\\', "/")
+  }
+  #[cfg(not(windows))]
+  {
+    Cow::Borrowed(path)
   }
 }
 
@@ -184,9 +200,8 @@ mod tests {
         input_filter: InputFilter { exclude: None, include: regex_filter("/foo\\.js$") },
         cases: vec![
           ("a/foo.js", "a/foo.js", FilterResult::Match(true)),
-          // FIXME
-          // #[cfg(windows)]
-          // ("a\\foo.js", "a\\foo.js", FilterResult::Match(true)),
+          #[cfg(windows)]
+          ("a\\foo.js", "a\\foo.js", FilterResult::Match(true)),
           ("a_foo.js", "a_foo.js", FilterResult::NoneMatch(false)),
         ],
       },

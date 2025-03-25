@@ -7,9 +7,12 @@ import { defineConfig, OutputOptions, rolldown } from './src/index'
 import pkgJson from './package.json' with { type: 'json' }
 import { colors } from './src/cli/colors'
 
-const outputDir = 'dist'
-
 const IS_RELEASING_CI = !!process.env.RELEASING
+const IS_BUILD_WASI_PKG = !!process.env.WASI_PKG
+
+const outputDir = IS_BUILD_WASI_PKG
+  ? nodePath.resolve(__dirname, '../wasi/dist')
+  : nodePath.resolve(__dirname, 'dist')
 
 const shared = defineConfig({
   input: {
@@ -86,13 +89,18 @@ const configs = defineConfig([
               // Move the binary file to dist
               wasmFiles.forEach((file) => {
                 const fileName = nodePath.basename(file)
-                console.log(
-                  colors.green('[build:done]'),
-                  'Copying',
-                  file,
-                  `to ${copyTo}`,
-                )
-                fsExtra.copyFileSync(file, nodePath.join(copyTo, fileName))
+                if (IS_BUILD_WASI_PKG && fileName.includes('debug')) {
+                  // NAPI-RS now generates a debug wasm binary no matter how and we don't want to ship it to npm.
+                  console.log(colors.yellow('[build:done]'), 'Skipping', file)
+                } else {
+                  console.log(
+                    colors.green('[build:done]'),
+                    'Copying',
+                    file,
+                    `to ${copyTo}`,
+                  )
+                  fsExtra.copyFileSync(file, nodePath.join(copyTo, fileName))
+                }
                 console.log(colors.green('[build:done]'), `Cleaning ${file}`)
                 try {
                   // GitHub windows runner emits `operation not permitted` error, most likely because of the file is still in use.

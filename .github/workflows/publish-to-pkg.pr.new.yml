@@ -39,7 +39,7 @@ jobs:
         run: git reset --hard # fix pnpm install add new line for package.json
 
       - name: Download Binding Artifacts
-        uses: actions/download-artifact@cc203385981b70ca67e1cc392babf9cc229d5806 # v4.1.9
+        uses: actions/download-artifact@95815c38cf2ff2164869cbab79da8d1f422bc89e # v4.2.1
         with:
           path: packages/rolldown/artifacts
 
@@ -51,13 +51,19 @@ jobs:
         shell: bash
 
       - name: Download Node Artifacts
-        uses: actions/download-artifact@cc203385981b70ca67e1cc392babf9cc229d5806 # v4.1.9
+        uses: actions/download-artifact@95815c38cf2ff2164869cbab79da8d1f422bc89e # v4.2.1
         with:
           path: packages/rolldown/dist
           name: node-artifact
 
+      - name: Download `@rolldown/wasi` Artifacts
+        uses: actions/download-artifact@95815c38cf2ff2164869cbab79da8d1f422bc89e # v4.2.1
+        with:
+          path: packages/wasi/dist
+          name: wasi-artifact
+
       - name: Download `rolldown-version.txt`
-        uses: actions/download-artifact@cc203385981b70ca67e1cc392babf9cc229d5806 # v4.1.9
+        uses: actions/download-artifact@95815c38cf2ff2164869cbab79da8d1f422bc89e # v4.2.1
         with:
           name: rolldown-version
 
@@ -68,7 +74,9 @@ jobs:
           path: rolldown-version.txt
 
       - name: Canary/Nightly Versioning
-        run: node --import @oxc-node/core/register ./scripts/misc/bump-version.js ${{ steps.rolldown-version.outputs.content }}
+        run: node --import @oxc-node/core/register ./scripts/misc/bump-version.js ${ROLLDOWN_VERSION}
+        env:
+          ROLLDOWN_VERSION: ${{ steps.rolldown-version.outputs.content }}
 
       - name: Copy Licenses
         run: |
@@ -76,4 +84,4 @@ jobs:
           find ./packages/ -type d -maxdepth 1 -exec cp THIRD-PARTY-LICENSE {} \;
 
       - name: Release
-        run: pnpx pkg-pr-new publish --compact --pnpm './packages/rolldown/npm/*' './packages/rolldown'
+        run: pnpx pkg-pr-new publish --compact --pnpm './packages/rolldown/npm/*' './packages/rolldown' './packages/wasi'

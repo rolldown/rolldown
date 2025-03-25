@@ -15,14 +15,14 @@ impl LinkStage<'_> {
 
     fn determine_side_effects_for_module(
       cache: &mut IndexSideEffectsCache,
-      module_id: ModuleIdx,
-      normal_modules: &IndexModules,
+      module_idx: ModuleIdx,
+      modules: &IndexModules,
     ) -> DeterminedSideEffects {
-      let module = &normal_modules[module_id];
+      let module = &modules[module_idx];
 
-      match &mut cache[module_id] {
+      match &mut cache[module_idx] {
         SideEffectCache::None => {
-          cache[module_id] = SideEffectCache::Visited;
+          cache[module_idx] = SideEffectCache::Visited;
         }
         SideEffectCache::Visited => {
           return *module.side_effects();
@@ -41,21 +41,17 @@ impl LinkStage<'_> {
         DeterminedSideEffects::Analyzed(v) if v => *module.side_effects(),
         // this branch means the side effects of the module is analyzed `false`
         DeterminedSideEffects::Analyzed(_) => match module {
-          Module::Normal(module) => {
-            DeterminedSideEffects::Analyzed(module.import_records.iter().any(|import_record| {
-              determine_side_effects_for_module(
-                cache,
-                import_record.resolved_module,
-                normal_modules,
-              )
-              .has_side_effects()
-            }))
-          }
+          Module::Normal(module) => DeterminedSideEffects::Analyzed(
+            module.import_records.iter().filter(|rec| !rec.is_dummy()).any(|import_record| {
+              determine_side_effects_for_module(cache, import_record.resolved_module, modules)
+                .has_side_effects()
+            }),
+          ),
           Module::External(module) => module.side_effects,
         },
       };
 
-      cache[module_id] = SideEffectCache::Cache(ret);
+      cache[module_idx] = SideEffectCache::Cache(ret);
 
       ret
     }

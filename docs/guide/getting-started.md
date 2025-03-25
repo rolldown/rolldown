@@ -234,3 +234,19 @@ await build({
   },
 })
 ```
+
+## Using the Watcher
+
+The rolldown watcher api is compatible with rollup [watch](https://rollupjs.org/javascript-api/#rollup-watch).
+
+```js
+import { watch } from 'rolldown'
+
+const watcher = watch({
+  /* option */
+}) // or watch([/* multiply option */] )
+
+watcher.on('event', () => {})
+
+await watcher.close() // Here is different with rollup, the rolldown returned the promise at here.
+```

@@ -1,0 +1,84 @@
+{
+  "name": "@rolldown/wasi",
+  "version": "1.0.0-beta.7",
+  "description": "Fast JavaScript/TypeScript bundler in Rust with Rollup-compatible API.",
+  "homepage": "https://rolldown.rs/",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/rolldown/rolldown.git",
+    "directory": "packages/wasi"
+  },
+  "license": "MIT",
+  "keywords": [
+    "webpack",
+    "parcel",
+    "esbuild",
+    "rollup",
+    "bundler",
+    "rolldown"
+  ],
+  "files": [
+    "bin",
+    "cli",
+    "dist",
+    "!dist/rolldown-binding.debug.wasm32-wasi.wasm",
+    "!dist/*.node"
+  ],
+  "bin": {
+    "rolldown": "./bin/cli.js"
+  },
+  "main": "./dist/cjs/index.cjs",
+  "types": "./dist/types/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/types/index.d.ts",
+      "require": "./dist/cjs/index.cjs",
+      "import": "./dist/esm/index.mjs"
+    },
+    "./experimental": {
+      "types": "./dist/types/experimental-index.d.ts",
+      "require": "./dist/cjs/experimental-index.cjs",
+      "import": "./dist/esm/experimental-index.mjs"
+    },
+    "./parallel-plugin": {
+      "types": "./dist/types/parallel-plugin.d.ts",
+      "require": "./dist/cjs/parallel-plugin.cjs",
+      "import": "./dist/esm/parallel-plugin.mjs"
+    },
+    "./parseAst": {
+      "types": "./dist/types/parse-ast-index.d.ts",
+      "require": "./dist/cjs/parse-ast-index.cjs",
+      "import": "./dist/esm/parse-ast-index.mjs"
+    },
+    "./package.json": "./package.json"
+  },
+  "imports": {
+    "#parallel-plugin-worker": "./dist/esm/parallel-plugin-worker.mjs"
+  },
+  "publishConfig": {
+    "registry": "https://registry.npmjs.org/",
+    "access": "public"
+  },
+  "scripts": {
+    "build": "pnpm run build:debug",
+    "build:debug": "run-s build-types build-pkg:debug",
+    "build:release": "run-s build-types build-pkg:release",
+    "build-pkg:debug": "cross-env WASI_PKG=1 pnpm run --filter rolldown build-wasi:debug",
+    "build-pkg:release": "cross-env WASI_PKG=1 pnpm run --filter rolldown build-wasi:release",
+    "build-types": "tsc -p ../rolldown/tsconfig.json --outDir ../wasi/dist/types --tsBuildInfoFile ../wasi/dist/.tsbuildinfo"
+  },
+  "dependencies": {
+    "@napi-rs/wasm-runtime": "^0.2.4",
+    "@oxc-project/types": "0.58.1",
+    "@valibot/to-json-schema": "1.0.0-rc.0",
+    "valibot": "1.0.0-rc.4"
+  },
+  "peerDependencies": {
+    "@oxc-project/runtime": "0.58.1"
+  },
+  "peerDependenciesMeta": {
+    "@oxc-project/runtime": {
+      "optional": true
+    }
+  }
+}

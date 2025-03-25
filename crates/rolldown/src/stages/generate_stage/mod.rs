@@ -339,7 +339,9 @@ impl<'a> GenerateStage<'a> {
         if let Some(css_view) =
           module.as_normal_mut().and_then(|normal_module| normal_module.css_view.as_mut())
         {
-          for (idx, record) in css_view.import_records.iter_enumerated() {
+          for (idx, record) in
+            css_view.import_records.iter_enumerated().filter(|(_idx, rec)| !rec.is_dummy())
+          {
             if let Some(asset_filename) = module_idx_to_filenames.get(&record.resolved_module) {
               let span = css_view.record_idx_to_span[idx];
               css_view

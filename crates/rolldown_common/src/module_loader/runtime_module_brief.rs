@@ -29,6 +29,10 @@ impl RuntimeModuleBrief {
       self.name_to_symbol.get(name).unwrap_or_else(|| panic!("Failed to resolve symbol: {name}"));
     (self.id, *symbol_id).into()
   }
+
+  pub fn dummy() -> Self {
+    Self { id: ModuleIdx::new(0), name_to_symbol: FxHashMap::default() }
+  }
 }
 
 pub static RUNTIME_MODULE_ID: &str = "rolldown:runtime";

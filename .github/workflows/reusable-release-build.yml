@@ -94,7 +94,7 @@ jobs:
         with:
           version: 0.13.0
 
-      - uses: taiki-e/install-action@2c41309d51ede152b6f2ee6bf3b71e6dc9a8b7df # v2.49.27
+      - uses: taiki-e/install-action@a433d87f121760c7447ab86390794f9a2dce31cf # v2.49.33
         if: ${{ contains(matrix.target, 'musl') }}
         env:
           GITHUB_TOKEN: ${{ github.token }}
@@ -114,7 +114,7 @@ jobs:
         shell: bash
 
       - name: Upload Binding Artifact
-        uses: actions/upload-artifact@4cec3d8aa04e39d1a68397de0c4cd6fb9dce8ec1 # v4.6.1
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           if-no-files-found: error
           name: bindings-${{ matrix.target }}
@@ -161,7 +161,7 @@ jobs:
             rm -rf node_modules
             rm -rf target
       - name: Upload artifact
-        uses: actions/upload-artifact@4cec3d8aa04e39d1a68397de0c4cd6fb9dce8ec1 # v4.6.1
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           name: bindings-x86_64-unknown-freebsd
           path: ./packages/rolldown/src/rolldown-binding.*.node
@@ -186,7 +186,9 @@ jobs:
 
       - name: Determine Version
         if: ${{ inputs.version != 'noop' }}
-        run: node --import @oxc-node/core/register ./scripts/misc/bump-version.js ${{ inputs.version }}
+        run: node --import @oxc-node/core/register ./scripts/misc/bump-version.js ${ROLLDOWN_VERSION}
+        env:
+          ROLLDOWN_VERSION: ${{ inputs.version }}
 
       - name: Build Node Packages
         # Binaries are built in the previous steps. Unlike in local development, we only need to build the node package itself.
@@ -196,7 +198,7 @@ jobs:
         run: pnpm --filter rolldown build-types
 
       - name: Upload Node Artifact
-        uses: actions/upload-artifact@4cec3d8aa04e39d1a68397de0c4cd6fb9dce8ec1 # v4.6.1
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           if-no-files-found: error
           name: node-artifact
@@ -204,9 +206,54 @@ jobs:
             packages/rolldown/dist/**
 
       - name: Upload `rolldown-version.txt`
-        uses: actions/upload-artifact@4cec3d8aa04e39d1a68397de0c4cd6fb9dce8ec1 # v4.6.1
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           if-no-files-found: warn
           name: rolldown-version
           path: |
             rolldown-version.txt
+
+  build-rolldown-wasi:
+    strategy:
+      fail-fast: false
+    name: Build `@rolldown/wasi` Package
+    runs-on: ubuntu-latest
+    steps:
+      - uses: taiki-e/checkout-action@b13d20b7cda4e2f325ef19895128f7ff735c0b3d # v1.3.1
+
+      - name: Setup Rust
+        uses: ./.github/actions/setup-rust
+        with:
+          tools: just
+          cache-key: release-build-wasi
+
+      - name: Add WASI target
+        run: rustup target add wasm32-wasip1-threads
+
+      - name: Setup Node
+        uses: ./.github/actions/setup-node
+
+      - name: Build Node binding
+        # This binary is only used to build the node package itself. It's won't be published.
+        run: pnpm --filter rolldown build-binding
+
+      - name: Determine Version
+        if: ${{ inputs.version != 'noop' }}
+        run: node --import @oxc-node/core/register ./scripts/misc/bump-version.js ${ROLLDOWN_VERSION}
+        env:
+          ROLLDOWN_VERSION: ${{ inputs.version }}
+
+      - name: Build `@rolldown/wasi`
+        # Binaries are built in the previous steps. Unlike in local development, we only need to build the node package itself.
+        run: pnpm --filter "@rolldown/wasi" build:release
+
+      - name: Build Type Definitions
+        run: pnpm --filter "@rolldown/wasi" build-types
+
+      - name: Upload `@rolldown/wasi` Artifact
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          if-no-files-found: error
+          name: wasi-artifact
+          path: |
+            packages/wasi/dist/**

@@ -1,14 +1,18 @@
-use super::stages::{link_stage::LinkStage, scan_stage::ScanStageOutput};
+use super::stages::{link_stage::LinkStage, scan_stage::NormalizedScanStageOutput};
 use crate::{
   BundlerOptions, SharedOptions, SharedResolver,
   bundler_builder::BundlerBuilder,
   hmr::hmr_manager::{HmrManager, HmrManagerInput},
-  stages::{generate_stage::GenerateStage, scan_stage::ScanStage},
-  types::bundle_output::BundleOutput,
+  stages::{
+    generate_stage::GenerateStage,
+    scan_stage::{ScanStage, ScanStageOutput},
+  },
+  types::{bundle_output::BundleOutput, scan_stage_cache::ScanStageCache},
 };
 use anyhow::Result;
 
-use rolldown_common::{Cache, NormalizedBundlerOptions, SharedFileEmitter};
+use arcstr::ArcStr;
+use rolldown_common::{NormalizedBundlerOptions, ScanMode, SharedFileEmitter};
 use rolldown_error::{BuildDiagnostic, BuildResult};
 use rolldown_fs::{FileSystem, OsFileSystem};
 use rolldown_plugin::{
@@ -27,7 +31,7 @@ pub struct Bundler {
   pub(crate) warnings: Vec<BuildDiagnostic>,
   pub(crate) _log_guard: Option<FlushGuard>,
   #[allow(unused)]
-  pub(crate) cache: Arc<Cache>,
+  pub(crate) cache: ScanStageCache,
   pub(crate) hmr_manager: Option<HmrManager>,
 }
 
@@ -44,14 +48,14 @@ impl Bundler {
 impl Bundler {
   #[tracing::instrument(level = "debug", skip_all)]
   pub async fn write(&mut self) -> BuildResult<BundleOutput> {
-    let scan_stage_output = self.scan().await?;
+    let scan_stage_output = self.scan(vec![]).await?;
 
     self.bundle_write(scan_stage_output).await
   }
 
   #[tracing::instrument(level = "debug", skip_all)]
   pub async fn generate(&mut self) -> BuildResult<BundleOutput> {
-    let scan_stage_output = self.scan().await?;
+    let scan_stage_output = self.scan(vec![]).await?;
 
     self.bundle_up(scan_stage_output, /* is_write */ false).await.map(|mut output| {
       output.warnings.append(&mut self.warnings);
@@ -71,15 +75,23 @@ impl Bundler {
     Ok(())
   }
 
-  pub async fn scan(&mut self) -> BuildResult<ScanStageOutput> {
+  pub async fn scan(&mut self, changed_ids: Vec<ArcStr>) -> BuildResult<NormalizedScanStageOutput> {
+    let mode =
+      if !self.options.experimental.is_incremental_build_enabled() || changed_ids.is_empty() {
+        ScanMode::Full
+      } else {
+        ScanMode::Partial(changed_ids)
+      };
+    let is_full_scan_mode = mode.is_full();
+    let module_id_to_idx = self.cache.take_module_id_to_idx();
+
     let scan_stage_output = match ScanStage::new(
       Arc::clone(&self.options),
       Arc::clone(&self.plugin_driver),
       self.fs,
       Arc::clone(&self.resolver),
-      Arc::clone(&self.cache),
     )
-    .scan()
+    .scan(mode, module_id_to_idx)
     .await
     {
       Ok(v) => v,
@@ -93,14 +105,38 @@ impl Bundler {
       }
     };
 
+    let scan_stage_output =
+      self.normalize_scan_stage_output_and_update_cache(scan_stage_output, is_full_scan_mode);
+
     self.plugin_driver.build_end(None).await?;
 
     Ok(scan_stage_output)
   }
 
+  pub fn normalize_scan_stage_output_and_update_cache(
+    &mut self,
+    mut output: ScanStageOutput,
+    is_full_scan_mode: bool,
+  ) -> NormalizedScanStageOutput {
+    if !self.options.experimental.is_incremental_build_enabled() {
+      return output.into();
+    }
+
+    self.cache.set_module_id_to_idx(std::mem::take(&mut output.visited));
+
+    if is_full_scan_mode {
+      let output: NormalizedScanStageOutput = output.into();
+      self.cache.set_cache(output.make_copy());
+      output
+    } else {
+      self.cache.merge(output);
+      self.cache.create_output()
+    }
+  }
+
   pub async fn bundle_write(
     &mut self,
-    scan_stage_output: ScanStageOutput,
+    scan_stage_output: NormalizedScanStageOutput,
   ) -> BuildResult<BundleOutput> {
     let mut output = self.bundle_up(scan_stage_output, /* is_write */ true).await?;
 
@@ -136,7 +172,7 @@ impl Bundler {
   #[allow(clippy::missing_transmute_annotations, clippy::needless_pass_by_ref_mut)]
   async fn bundle_up(
     &mut self,
-    scan_stage_output: ScanStageOutput,
+    scan_stage_output: NormalizedScanStageOutput,
     is_write: bool,
   ) -> BuildResult<BundleOutput> {
     if self.closed {
@@ -181,7 +217,6 @@ impl Bundler {
         options: Arc::clone(&self.options),
         resolver: Arc::clone(&self.resolver),
         plugin_driver: Arc::clone(&self.plugin_driver),
-        cache: Arc::clone(&self.cache),
       }));
     }
     Ok(output)

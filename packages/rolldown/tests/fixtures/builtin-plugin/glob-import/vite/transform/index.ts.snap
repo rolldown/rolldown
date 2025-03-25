@@ -4,7 +4,7 @@ import { modules_exports, name$2 as name$3 } from "./modules2.js";
 import { a_default } from "./a4.js";
 import { b_default } from "./b4.js";
 
-//#region fixture-a/index.ts
+//#region ../fixtures/a/index.ts
 const basic = {
 	"./modules/a.ts": () => import("./a.js"),
 	"./modules/b.ts": () => import("./b.js"),
@@ -87,17 +87,16 @@ const excludeSelfRaw = { "./sibling.ts": () => import("./sibling3.js") };
 const customQueryString = { "./sibling.ts": () => import("./sibling2.js") };
 const parent = {};
 const rootMixedRelative = {
-	"/_config.ts": () => import("./_config.js").then((m) => m.default),
-	"/fixture-b/a.ts": () => import("./a6.js").then((m) => m.default),
-	"/fixture-b/b.ts": () => import("./b6.js").then((m) => m.default),
-	"/fixture-b/index.ts": () => import("./fixture-b.js").then((m) => m.default)
+	"/b/a.ts": () => import("./a6.js").then((m) => m.default),
+	"/b/b.ts": () => import("./b6.js").then((m) => m.default),
+	"/b/index.ts": () => import("./b7.js").then((m) => m.default)
 };
 const cleverCwd1 = { "./node_modules/framework/pages/hello.page.js": () => import("./hello.page.js") };
 const cleverCwd2 = {
 	"./modules/a.ts": () => import("./a.js"),
 	"./modules/b.ts": () => import("./b.js"),
-	"../fixture-b/a.ts": () => import("./a5.js"),
-	"../fixture-b/b.ts": () => import("./b5.js")
+	"../b/a.ts": () => import("./a5.js"),
+	"../b/b.ts": () => import("./b5.js")
 };
 
 //#endregion

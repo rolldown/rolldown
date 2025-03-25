@@ -33,4 +33,6 @@ pub enum BindingBuiltinPluginName {
   ModuleFederation,
   #[napi(value = "builtin:isolated-declaration")]
   IsolatedDeclaration,
+  #[napi(value = "builtin:dts")]
+  Dts,
 }

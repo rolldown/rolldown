@@ -2462,6 +2462,7 @@ dependencies = [
  "rolldown_plugin",
  "rolldown_plugin_alias",
  "rolldown_plugin_build_import_analysis",
+ "rolldown_plugin_dts",
  "rolldown_plugin_dynamic_import_vars",
  "rolldown_plugin_import_glob",
  "rolldown_plugin_isolated_declaration",
@@ -2625,6 +2626,16 @@ dependencies = [
  "rolldown_plugin",
  "rolldown_utils",
  "urlencoding",
+]
+
+[[package]]
+name = "rolldown_plugin_dts"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "oxc",
+ "rolldown_common",
+ "rolldown_plugin",
 ]
 
 [[package]]

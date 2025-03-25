@@ -6,6 +6,7 @@ use napi_derive::napi;
 use rolldown_plugin::__inner::Pluginable;
 use rolldown_plugin_alias::{Alias, AliasPlugin};
 use rolldown_plugin_build_import_analysis::BuildImportAnalysisPlugin;
+use rolldown_plugin_dts::DtsPlugin;
 use rolldown_plugin_dynamic_import_vars::DynamicImportVarsPlugin;
 use rolldown_plugin_import_glob::{ImportGlobPlugin, ImportGlobPluginConfig};
 use rolldown_plugin_isolated_declaration::IsolatedDeclarationPlugin;
@@ -437,6 +438,14 @@ impl TryFrom<BindingBuiltinPlugin> for Arc<dyn Pluginable> {
         };
         Arc::new(plugin)
       }
+      BindingBuiltinPluginName::Dts => {
+        let plugin = if let Some(options) = plugin.options {
+          BindingDtsPluginConfig::from_unknown(options)?.into()
+        } else {
+          DtsPlugin::default()
+        };
+        Arc::new(plugin)
+      }
     })
   }
 }
@@ -450,6 +459,18 @@ pub struct BindingIsolatedDeclarationPluginConfig {
 impl From<BindingIsolatedDeclarationPluginConfig> for IsolatedDeclarationPlugin {
   fn from(value: BindingIsolatedDeclarationPluginConfig) -> Self {
     IsolatedDeclarationPlugin { strip_internal: value.strip_internal.unwrap_or_default() }
+  }
+}
+
+#[napi_derive::napi(object)]
+#[derive(Debug, Default)]
+pub struct BindingDtsPluginConfig {
+  pub strip_internal: Option<bool>,
+}
+
+impl From<BindingDtsPluginConfig> for DtsPlugin {
+  fn from(value: BindingDtsPluginConfig) -> Self {
+    DtsPlugin { strip_internal: value.strip_internal.unwrap_or_default() }
   }
 }
 

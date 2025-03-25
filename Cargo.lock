@@ -2885,6 +2885,7 @@ dependencies = [
  "async-scoped",
  "base-encode",
  "base64-simd",
+ "cow-utils",
  "criterion2",
  "dashmap",
  "fast-glob",

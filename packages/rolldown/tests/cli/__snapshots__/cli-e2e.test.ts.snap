@@ -312,16 +312,3 @@ this.meta.watchMode true
 buildStart called:
 this.meta.watchMode true"
 `;
-
-exports[`watch cli > should require both ROLLDOWN_WATCH and this.meta.watchMode to be true in watch mode 1`] = `
-"Waiting for changes...
-options called:
-this.meta.watchMode true
-process.env.ROLLUP_WATCH true
-process.env.ROLLDOWN_WATCH true
-onLog called:
-this.meta.watchMode true
-(test plugin) trigger onLog
-buildStart called:
-this.meta.watchMode true"
-`;

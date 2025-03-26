@@ -282,4 +282,16 @@ describe('watch cli', () => {
     expect(cleanStdout(status.stdout)).toMatchSnapshot()
     expect(status.exitCode).toBe(0)
   })
+
+  it('should require both ROLLDOWN_WATCH and this.meta.watchMode to be false', async () => {
+    const cwd = cliFixturesDir('watch-mode')
+    const status = await $({ cwd })`rolldown -c`
+    expect(cleanStdout(status.stdout)).toMatchSnapshot()
+  })
+
+  it('should require both ROLLDOWN_WATCH and this.meta.watchMode to be true', async () => {
+    const cwd = cliFixturesDir('watch-mode')
+    const status = await $({ cwd })`rolldown -w -c`
+    expect(cleanStdout(status.stdout)).toMatchSnapshot()
+  })
 })

@@ -12,6 +12,7 @@ import { normalizePluginOption } from '../utils/normalize-plugin-option'
 export class PluginDriver {
   public static async callOptionsHook(
     inputOptions: InputOptions,
+    watchMode: boolean = false,
   ): Promise<InputOptions> {
     const logLevel = inputOptions.logLevel || LOG_LEVEL_INFO
     const plugins = getSortedPlugins(
@@ -22,6 +23,7 @@ export class PluginDriver {
       plugins,
       getOnLog(inputOptions, logLevel),
       logLevel,
+      watchMode,
     )
 
     for (const plugin of plugins) {
@@ -50,7 +52,7 @@ export class PluginDriver {
             meta: {
               rollupVersion: '4.23.0',
               rolldownVersion: VERSION,
-              watchMode: false,
+              watchMode,
             },
             warn: getLogHandler(
               LOG_LEVEL_WARN,

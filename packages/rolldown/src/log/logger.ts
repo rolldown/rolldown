@@ -26,6 +26,7 @@ export function getLogger(
   plugins: Plugin[],
   onLog: LogHandler,
   logLevel: LogLevelOption,
+  watchMode: boolean,
 ): LogHandler {
   const minimalPriority = logLevelPriority[logLevel]
   const logger = (
@@ -63,7 +64,7 @@ export function getLogger(
               meta: {
                 rollupVersion: '4.23.0',
                 rolldownVersion: VERSION,
-                watchMode: false,
+                watchMode,
               },
               warn: getLogHandler(LOG_LEVEL_WARN),
               pluginName: plugin.name || 'unknown',

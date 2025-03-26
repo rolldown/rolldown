@@ -2,6 +2,7 @@ import {
   RolldownOutput,
   OutputAsset,
   OutputChunk,
+  RenderedModule,
   RenderedChunk,
   SourceMap,
 } from './types/rolldown-output'
@@ -133,6 +134,7 @@ export type {
   WatchOptions,
   RolldownWatcher,
   BuildOptions,
+  RenderedModule,
   RenderedChunk,
   LogOrStringHandler,
   GetModuleInfo,

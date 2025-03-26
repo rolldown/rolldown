@@ -55,6 +55,7 @@ pub fn deconflict_chunk_symbols(
         .as_ref()
         .unwrap()
         .ast_scopes
+        .scoping()
         .root_unresolved_references()
         .keys()
         .map(Cow::Borrowed)
@@ -99,9 +100,18 @@ pub fn deconflict_chunk_symbols(
   if matches!(format, OutputFormat::Esm) {
     chunk.imports_from_external_modules.iter().for_each(|(module, _)| {
       let db = link_output.symbol_db.local_db(*module);
-      db.classic_data.iter_enumerated().skip(1).for_each(|(symbol, _)| {
-        renamer.add_symbol_in_root_scope((*module, symbol).into());
+      db.classic_data.iter_enumerated().for_each(|(symbol, _)| {
+        let symbol_ref = (*module, symbol).into();
+        if link_output.used_symbol_refs.contains(&symbol_ref) {
+          renamer.add_symbol_in_root_scope(symbol_ref);
+        }
       });
+      for symbol_id in db.ast_scopes.facade_symbol_classic_data().keys() {
+        let symbol_ref = (*module, *symbol_id).into();
+        if link_output.used_symbol_refs.contains(&symbol_ref) {
+          renamer.add_symbol_in_root_scope(symbol_ref);
+        }
+      }
     });
   }
 

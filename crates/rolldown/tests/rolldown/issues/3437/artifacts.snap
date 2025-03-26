@@ -21,26 +21,17 @@ init_main();
 ```js
 
 
-export { __esm, __export };
+export { __esm };
 ```
 ## square.js
 
 ```js
-import { __esm, __export } from "./rolldown.js";
+import { __esm } from "./rolldown.js";
 
 //#region square.json
-var square_exports = {};
-__export(square_exports, {
-	default: () => square_default,
-	hello: () => hello
-});
-var hello, square_default;
-var square_exports = __esm({ "square.json"() {
-	hello = "world";
-	square_default = { hello };
-} });
+var hello = "world";
+var square_default = { hello };
 
 //#endregion
-square_exports();
 export { square_default as default, hello };
 ```

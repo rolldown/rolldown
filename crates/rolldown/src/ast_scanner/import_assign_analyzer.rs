@@ -13,7 +13,7 @@ use super::AstScanner;
 
 impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
   pub fn check_import_assign(&mut self, ident: &IdentifierReference, symbol_id: SymbolId) {
-    let symbol_flag = self.result.symbol_ref_db.symbol_flags(symbol_id);
+    let symbol_flag = self.result.symbol_ref_db.scoping().symbol_flags(symbol_id);
     if symbol_flag.contains(SymbolFlags::Import) {
       let symbol_ref: SymbolRef = (self.idx, symbol_id).into();
       let is_namespace = self
@@ -32,7 +32,8 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
           return;
         }
       }
-      let reference_flag = self.result.symbol_ref_db.get_reference(ident.reference_id()).flags();
+      let reference_flag =
+        self.result.symbol_ref_db.scoping().get_reference(ident.reference_id()).flags();
       if reference_flag.is_write() {
         self.result.errors.push(BuildDiagnostic::assign_to_import(
           self.id.resource_id().clone(),

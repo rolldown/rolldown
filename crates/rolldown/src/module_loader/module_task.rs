@@ -205,6 +205,7 @@ impl ModuleTask {
       ecma_view,
       css_view,
       asset_view,
+      originative_resolved_id: self.resolved_id.clone(),
     };
 
     let module_info = Arc::new(module.to_module_info(Some(&raw_import_records)));

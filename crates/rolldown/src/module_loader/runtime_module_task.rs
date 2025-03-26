@@ -133,6 +133,8 @@ impl RuntimeModuleTask {
       },
       css_view: None,
       asset_view: None,
+      // TODO(hyf0/hmr): We might need to find a better way to handle this.
+      originative_resolved_id: ResolvedId::make_dummy(),
     };
 
     let resolved_deps = raw_import_records

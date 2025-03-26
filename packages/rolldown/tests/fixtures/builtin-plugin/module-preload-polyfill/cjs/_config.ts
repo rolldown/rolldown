@@ -4,13 +4,15 @@ import { modulePreloadPolyfillPlugin } from 'rolldown/experimental'
 
 export default defineTest({
   config: {
-    plugins: [
-      modulePreloadPolyfillPlugin({
-        skip: true,
-      }),
-    ],
+    output: {
+      format: 'cjs',
+    },
+    define: {
+      __VITE_IS_MODERN__: 'false',
+    },
+    plugins: [modulePreloadPolyfillPlugin()],
   },
-  afterTest(output) {
+  async afterTest(output) {
     expect(output.output[0].code.length).toBe(0)
   },
 })

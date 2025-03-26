@@ -1,5 +1,7 @@
 use std::borrow::Cow;
 
+use anyhow::Ok;
+use ast_visitors::TypeImportVisitor;
 use oxc::{
   allocator::IntoIn,
   ast_visit::VisitMut,
@@ -12,8 +14,9 @@ use rolldown_common::{ModuleId, ModuleType};
 use rolldown_ecmascript::{EcmaAst, EcmaCompiler};
 use rolldown_plugin::{Plugin, PluginHookMeta, PluginOrder};
 use rolldown_utils::dashmap::{FxDashMap, FxDashSet};
-use type_import_visitor::TypeImportVisitor;
-mod type_import_visitor;
+
+mod ast_visitors;
+mod types;
 
 #[derive(Debug, Default)]
 pub struct DtsPlugin {
@@ -88,4 +91,21 @@ impl Plugin for DtsPlugin {
   fn transform_ast_meta(&self) -> Option<PluginHookMeta> {
     Some(PluginHookMeta { order: Some(PluginOrder::Post) })
   }
+
+  // async fn generate_bundle(
+  //   &self,
+  //   _ctx: &rolldown_plugin::PluginContext,
+  //   args: &mut rolldown_plugin::HookGenerateBundleArgs<'_>,
+  // ) -> rolldown_plugin::HookNoopReturn {
+  //   for output in args.bundle.iter() {
+  //     if let Output::Chunk(chunk) = output {
+  //       for module in &chunk.modules.keys {
+  //         if let Some((ast, _)) = self.asts.get(module) {
+  //           args.bundle.push(Output::Dts(module.clone(), ast.clone()));
+  //         }
+  //       }
+  //     }
+  //   }
+  //   Ok(())
+  // }
 }

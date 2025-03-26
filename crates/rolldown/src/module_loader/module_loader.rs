@@ -99,6 +99,7 @@ pub struct ModuleLoader {
   intermediate_normal_modules: IntermediateNormalModules,
   symbol_ref_db: SymbolRefDb,
   is_full_scan: bool,
+  new_added_modules_from_partial_scan: FxIndexSet<ModuleIdx>,
 }
 
 pub struct ModuleLoaderOutput {
@@ -112,6 +113,8 @@ pub struct ModuleLoaderOutput {
   pub warnings: Vec<BuildDiagnostic>,
   pub dynamic_import_exports_usage_map: FxHashMap<ModuleIdx, DynamicImportExportsUsage>,
   pub visited: FxHashMap<ArcStr, VisitState>,
+  // Empty if it is a full scan
+  pub new_added_modules_from_partial_scan: FxIndexSet<ModuleIdx>,
 }
 
 impl ModuleLoader {
@@ -175,6 +178,7 @@ impl ModuleLoader {
       symbol_ref_db: SymbolRefDb::default(),
       visited: module_id_to_idx,
       is_full_scan,
+      new_added_modules_from_partial_scan: FxIndexSet::default(),
     })
   }
 
@@ -200,6 +204,7 @@ impl ModuleLoader {
         // This means some new module has been added in partial scan mode
         let len = self.visited.len();
         let idx = self.intermediate_normal_modules.alloc_ecma_module_idx_sparse(len.into());
+        self.new_added_modules_from_partial_scan.insert(idx);
         self.visited.insert(resolved_id.id.clone(), VisitState::Seen(idx));
         idx
       }
@@ -618,6 +623,7 @@ impl ModuleLoader {
             for importer in &importers {
               if importer.kind.is_static() {
                 module.importers.insert(importer.importer_path.clone());
+                module.importers_idx.insert(importer.importer_idx);
               } else {
                 module.dynamic_importers.insert(importer.importer_path.clone());
               }
@@ -682,6 +688,7 @@ impl ModuleLoader {
       warnings: all_warnings,
       dynamic_import_exports_usage_map,
       visited: self.visited,
+      new_added_modules_from_partial_scan: self.new_added_modules_from_partial_scan,
     })
   }
 

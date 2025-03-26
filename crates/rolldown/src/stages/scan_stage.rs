@@ -148,6 +148,7 @@ impl ScanStage {
       index_ecma_ast,
       dynamic_import_exports_usage_map,
       visited,
+      new_added_modules_from_partial_scan: _,
     } = module_loader.fetch_modules(user_entries, changed_resolved_ids).await?;
 
     self.plugin_driver.file_emitter.set_context_load_modules_tx(None).await;

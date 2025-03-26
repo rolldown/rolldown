@@ -4,19 +4,21 @@ use std::{
 };
 
 use arcstr::ArcStr;
-use oxc::{ast_visit::VisitMut, span::SourceType};
+use oxc::ast_visit::VisitMut;
 use rolldown_common::{EcmaModuleAstUsage, Module, ModuleIdx, ModuleTable};
-use rolldown_ecmascript::EcmaCompiler;
+use rolldown_ecmascript::{EcmaAst, EcmaCompiler};
 use rolldown_ecmascript_utils::AstSnippet;
-use rolldown_error::{BuildResult, ResultExt};
+use rolldown_error::BuildResult;
 use rolldown_fs::OsFileSystem;
 use rolldown_plugin::SharedPluginDriver;
 use rolldown_utils::indexmap::FxIndexSet;
 use rustc_hash::{FxHashMap, FxHashSet};
 
 use crate::{
-  SharedOptions, SharedResolver, hmr::hmr_ast_finalizer::HmrAstFinalizer,
-  module_loader::ModuleLoader,
+  SharedOptions, SharedResolver,
+  hmr::hmr_ast_finalizer::HmrAstFinalizer,
+  module_loader::{ModuleLoader, module_loader::VisitState},
+  type_alias::IndexEcmaAst,
 };
 
 pub struct HmrManagerInput {
@@ -25,6 +27,7 @@ pub struct HmrManagerInput {
   pub fs: OsFileSystem,
   pub resolver: SharedResolver,
   pub plugin_driver: SharedPluginDriver,
+  pub index_ecma_ast: IndexEcmaAst,
 }
 
 pub struct HmrManager {
@@ -62,13 +65,16 @@ impl HmrManager {
     Self { input, module_idx_by_abs_path }
   }
   #[expect(clippy::dbg_macro, clippy::too_many_lines)] // FIXME: Remove dbg! macro once the feature is stable
-  pub async fn generate_hmr_patch(&self, changed_file_paths: Vec<String>) -> BuildResult<String> {
-    let mut changed_modules = vec![];
+  pub async fn generate_hmr_patch(
+    &mut self,
+    changed_file_paths: Vec<String>,
+  ) -> BuildResult<String> {
+    let mut changed_modules = FxIndexSet::default();
     for changed_file_path in changed_file_paths {
       let changed_file_path = ArcStr::from(changed_file_path);
       match self.module_idx_by_abs_path.get(&changed_file_path) {
         Some(module_idx) => {
-          changed_modules.push(*module_idx);
+          changed_modules.insert(*module_idx);
         }
         _ => {
           dbg!("No corresponding module found for changed file path: {:?}", changed_file_path);
@@ -76,21 +82,8 @@ impl HmrManager {
       }
     }
 
-    // Only changed modules might introduce new modules, we run a new module loader to fetch possible new modules and updated content of changed modules
-    // TODO(hyf0): Run module loader
-
-    let _module_loader = ModuleLoader::new(
-      self.fs,
-      Arc::clone(&self.options),
-      Arc::clone(&self.resolver),
-      Arc::clone(&self.plugin_driver),
-      // place holder, since this module loader is unused
-      FxHashMap::default(),
-      /*is_full_scan*/ true,
-    );
-
-    let mut hmr_boundary = FxIndexSet::default();
     let mut affected_modules = FxIndexSet::default();
+    let mut hmr_boundary = FxIndexSet::default();
     let mut need_to_full_reload = false;
     while let Some(changed_module_idx) = changed_modules.pop() {
       if need_to_full_reload {
@@ -108,12 +101,72 @@ impl HmrManager {
       if !is_reach_to_hmr_boundary {
         need_to_full_reload = true;
       }
-
-      // TODO(hyf0): If it's not a self-accept module, we should traverse its dependents recursively
     }
     if need_to_full_reload {
       return Ok(String::new());
     }
+
+    let mut modules_to_invalidate = changed_modules.clone();
+    // FIXME(hyf0): In general, only modules got edited need to be invalidated, because we need to refetch their latest content.
+    // For those modules that are not edited, we should be able to reuse their AST. But currently we don't have a good way to do that
+    // due to architecture limitation.
+    modules_to_invalidate.extend(affected_modules.clone());
+
+    let module_infos_to_be_updated = modules_to_invalidate
+      .iter()
+      .map(|module_idx| {
+        let module = &self.module_db.modules[*module_idx];
+        let Module::Normal(module) = module else {
+          unreachable!("HMR only supports normal module");
+        };
+        module.originative_resolved_id.clone()
+      })
+      .collect::<Vec<_>>();
+
+    let visit_state = self
+      .module_db
+      .modules
+      .iter_enumerated()
+      .map(|(idx, module)| {
+        if modules_to_invalidate.contains(&idx) {
+          (module.id().into(), VisitState::Invalidate(idx))
+        } else {
+          (module.id().into(), VisitState::Seen(idx))
+        }
+      })
+      .collect::<FxHashMap<ArcStr, VisitState>>();
+
+    let module_loader = ModuleLoader::new(
+      self.fs,
+      Arc::clone(&self.options),
+      Arc::clone(&self.resolver),
+      Arc::clone(&self.plugin_driver),
+      visit_state,
+      false,
+    )?;
+
+    let module_loader_output =
+      module_loader.fetch_modules(vec![], module_infos_to_be_updated).await?;
+
+    affected_modules.extend(module_loader_output.new_added_modules_from_partial_scan);
+    // Update
+
+    let mut updated_modules =
+      module_loader_output.module_table.into_iter_enumerated().into_iter().collect::<Vec<_>>();
+    updated_modules.sort_by_key(|(idx, _)| *idx);
+
+    // TODO(hyf0): This is a temporary merging solution. We need to find a better way to handle this.
+    for (idx, module) in updated_modules {
+      if idx.index() >= self.module_db.modules.len() {
+        // This module is newly added, we need to insert it into the module db.
+        let generated_id = self.module_db.modules.push(module);
+        assert_eq!(generated_id, idx, "Module index mismatch");
+      } else {
+        // This module is already in the module db, we need to update it.
+        self.module_db.modules[idx] = module;
+      }
+    }
+    self.index_ecma_ast = module_loader_output.index_ecma_ast;
 
     let module_idx_to_init_fn_name = affected_modules
       .iter()
@@ -129,46 +182,20 @@ impl HmrManager {
 
     let mut outputs = vec![];
     for affected_module_idx in affected_modules {
-      let affected_module = &self.module_db.modules[affected_module_idx];
+      let affected_module = &self.input.module_db.modules[affected_module_idx];
       let Module::Normal(affected_module) = affected_module else {
         unreachable!("HMR only supports normal module");
       };
 
       let filename = affected_module.id.resource_id().clone();
-
-      // TODO: We should get newest source and ast directly from module, but now we just manually fetch them.
-      let source: String = std::fs::read_to_string(filename.as_str()).map_err_to_unhandleable()?;
-      let mut previous_module_type = affected_module.module_type.clone();
-      let transformed_source = self
-        .plugin_driver
-        .transform(&affected_module.id, source, &mut vec![], &mut None, &mut previous_module_type)
-        .await?;
-
-      // Only support hmr on js family for now
-      assert!(
-        matches!(
-          previous_module_type,
-          rolldown_common::ModuleType::Js
-            | rolldown_common::ModuleType::Jsx
-            | rolldown_common::ModuleType::Ts
-            | rolldown_common::ModuleType::Tsx
-        ),
-        "HMR only supports js family modules"
-      );
-      let source_type = match previous_module_type {
-        rolldown_common::ModuleType::Js => SourceType::mjs(),
-        rolldown_common::ModuleType::Jsx => SourceType::jsx(),
-        rolldown_common::ModuleType::Ts => SourceType::ts(),
-        rolldown_common::ModuleType::Tsx => SourceType::tsx(),
-        _ => unreachable!(),
-      };
-
-      let mut ast = EcmaCompiler::parse(&filename, transformed_source, source_type)?;
-      let scoping = ast.make_scoping();
+      let ecma_ast_idx = affected_module.ecma_ast_idx.unwrap();
+      let modules = &self.input.module_db.modules;
+      let ast = &mut self.input.index_ecma_ast[ecma_ast_idx].0;
 
       ast.program.with_mut(|fields| {
+        let scoping = EcmaAst::make_semantic(fields.program).into_scoping();
         let mut finalizer = HmrAstFinalizer {
-          modules: &self.module_db.modules,
+          modules,
           alloc: fields.allocator,
           snippet: AstSnippet::new(fields.allocator),
           scoping: &scoping,
@@ -182,7 +209,7 @@ impl HmrManager {
         finalizer.visit_program(fields.program);
       });
 
-      let codegen = EcmaCompiler::print(&ast, &filename, false);
+      let codegen = EcmaCompiler::print(ast, &filename, false);
       outputs.push(codegen.code);
     }
     let mut patch = outputs.concat();

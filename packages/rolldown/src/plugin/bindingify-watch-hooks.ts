@@ -27,6 +27,7 @@ export function bindingifyWatchChange(
           args.pluginContextData,
           args.onLog,
           args.logLevel,
+          args.watchMode,
         ),
         id,
         { event: event as ChangeEvent },
@@ -55,6 +56,7 @@ export function bindingifyCloseWatcher(
           args.pluginContextData,
           args.onLog,
           args.logLevel,
+          args.watchMode,
         ),
       )
     },

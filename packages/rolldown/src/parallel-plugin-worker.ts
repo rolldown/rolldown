@@ -32,6 +32,8 @@ const { registryId, pluginInfos, threadNumber } = workerData as WorkerData
             [],
             () => {},
             'info' as const,
+            // TODO: support this.meta.watchMode
+            false,
           ),
         }
       }),

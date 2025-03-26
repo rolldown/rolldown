@@ -13,6 +13,7 @@ export async function createBundler(
   const option = await createBundlerOptions(
     inputOptions,
     outputOptions,
+    false,
     isClose,
   )
 

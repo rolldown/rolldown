@@ -35,6 +35,7 @@ export class MinimalPluginContextImpl {
     onLog: LogHandler,
     logLevel: LogLevelOption,
     readonly pluginName: string,
+    watchMode: boolean,
   ) {
     this.debug = getLogHandler(
       LOG_LEVEL_DEBUG,
@@ -61,7 +62,7 @@ export class MinimalPluginContextImpl {
     this.meta = {
       rollupVersion: '4.23.0',
       rolldownVersion: VERSION,
-      watchMode: false,
+      watchMode,
     }
   }
 

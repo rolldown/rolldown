@@ -25,6 +25,7 @@ export function bindingifyInputOptions(
   normalizedOutputPlugins: RolldownPlugin[],
   onLog: LogHandler,
   logLevel: LogLevelOption,
+  watchMode: boolean,
 ): BindingInputOptions {
   const pluginContextData = new PluginContextData()
 
@@ -43,6 +44,7 @@ export function bindingifyInputOptions(
       normalizedOutputPlugins,
       onLog,
       logLevel,
+      watchMode,
     )
   })
 

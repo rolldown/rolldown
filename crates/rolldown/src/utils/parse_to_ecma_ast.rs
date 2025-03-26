@@ -42,6 +42,7 @@ pub async fn parse_to_ecma_ast(
     module_type,
     plugin_driver,
     replace_global_define_config,
+    module_index,
     ..
   } = ctx;
 
@@ -76,6 +77,7 @@ pub async fn parse_to_ecma_ast(
       stable_id,
       is_user_defined_entry,
       module_type,
+      module_index: *module_index,
     })
     .await?;
 

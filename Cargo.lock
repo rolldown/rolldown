@@ -2634,10 +2634,16 @@ version = "0.1.0"
 dependencies = [
  "anyhow",
  "oxc",
+ "oxc_index",
  "rolldown_common",
  "rolldown_ecmascript",
+ "rolldown_ecmascript_utils",
  "rolldown_plugin",
+ "rolldown_rstr",
+ "rolldown_std_utils",
  "rolldown_utils",
+ "rustc-hash",
+ "sugar_path",
 ]
 
 [[package]]

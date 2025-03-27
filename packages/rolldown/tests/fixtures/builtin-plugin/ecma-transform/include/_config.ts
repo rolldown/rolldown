@@ -11,7 +11,7 @@ export default defineTest({
     input: './main.ts',
     plugins: [
       transformPlugin({
-        include: ['node_modules/**'],
+        include: ['**/node_modules/**'],
       }),
       {
         name: 'test',

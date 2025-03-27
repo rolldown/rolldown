@@ -11,13 +11,7 @@ use rolldown::ModuleType;
 use rolldown_common::NormalModule;
 use rolldown_plugin::{__inner::SharedPluginable, Plugin, typedmap::TypedMapKey};
 use rolldown_utils::pattern_filter::{self, FilterResult};
-use std::{
-  borrow::Cow,
-  ops::Deref,
-  path::{Path, PathBuf},
-  sync::Arc,
-};
-use sugar_path::SugarPath;
+use std::{borrow::Cow, ops::Deref, path::Path, sync::Arc};
 
 use super::{
   BindingPluginOptions,
@@ -93,14 +87,11 @@ impl Plugin for JsPlugin {
     let Some(cb) = &self.resolve_id else { return Ok(None) };
 
     if let Some(resolve_id_filter) = &self.inner.resolve_id_filter {
-      let stabilized_path = Path::new(args.specifier).relative(ctx.cwd());
-      let normalized_id = stabilized_path.to_string_lossy();
-
       let matched = pattern_filter::filter(
         resolve_id_filter.exclude.as_deref(),
         resolve_id_filter.include.as_deref(),
         args.specifier,
-        &normalized_id,
+        ctx.cwd().to_string_lossy().as_ref(),
       )
       .inner();
 
@@ -167,14 +158,11 @@ impl Plugin for JsPlugin {
     let Some(cb) = &self.load else { return Ok(None) };
 
     if let Some(load_filter) = &self.load_filter {
-      let stabilized_path = Path::new(args.id).relative(ctx.cwd());
-      let normalized_id = stabilized_path.to_string_lossy();
-
       let matched = pattern_filter::filter(
         load_filter.exclude.as_deref(),
         load_filter.include.as_deref(),
         args.id,
-        &normalized_id,
+        ctx.cwd().to_string_lossy().as_ref(),
       )
       .inner();
 
@@ -565,7 +553,7 @@ impl Plugin for JsPlugin {
 fn filter_transform(
   transform_filter: Option<&BindingTransformHookFilter>,
   id: &str,
-  cwd: &PathBuf,
+  cwd: &Path,
   module_type: &ModuleType,
   code: &str,
 ) -> anyhow::Result<bool> {
@@ -583,14 +571,11 @@ fn filter_transform(
   };
 
   if let Some(ref id_filter) = transform_filter.id {
-    let stabilized_path = Path::new(id).relative(cwd);
-    let normalized_id = stabilized_path.to_string_lossy();
-
     let id_res = pattern_filter::filter(
       id_filter.exclude.as_deref(),
       id_filter.include.as_deref(),
       id,
-      &normalized_id,
+      cwd.to_string_lossy().as_ref(),
     );
 
     // it matched by `exclude` or `include`, early return

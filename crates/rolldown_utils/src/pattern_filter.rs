@@ -1,3 +1,4 @@
+use memchr::memmem;
 use std::borrow::Cow;
 
 use crate::js_regex::HybridRegex;
@@ -110,7 +111,9 @@ pub fn filter_code(
   if let Some(exclude) = exclude {
     for pattern in exclude {
       let v = match pattern.as_ref() {
-        StringOrRegex::String(pattern) => code.contains(pattern),
+        StringOrRegex::String(pattern) => {
+          memmem::find(code.as_bytes(), pattern.as_bytes()).is_some()
+        }
         StringOrRegex::Regex(re) => re.matches(code),
       };
       if v {
@@ -121,7 +124,9 @@ pub fn filter_code(
   if let Some(include) = include {
     for pattern in include {
       let v = match pattern.as_ref() {
-        StringOrRegex::String(pattern) => code.contains(pattern),
+        StringOrRegex::String(pattern) => {
+          memmem::find(code.as_bytes(), pattern.as_bytes()).is_some()
+        }
         StringOrRegex::Regex(re) => re.matches(code),
       };
       if v {
@@ -303,6 +308,14 @@ mod tests {
         cases: vec![
           ("import.meta", FilterResult::Match(false)),
           ("import_meta", FilterResult::NoneMatch(true)),
+        ],
+      },
+      // Test none ascii
+      TestCases {
+        input_filter: InputFilter { include: string_filter("你好"), exclude: None },
+        cases: vec![
+          ("世界你好 hello world", FilterResult::Match(true)),
+          ("import_meta", FilterResult::NoneMatch(false)),
         ],
       },
       TestCases {

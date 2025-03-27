@@ -83,7 +83,7 @@ impl Bundler {
         ScanMode::Partial(changed_ids)
       };
     let is_full_scan_mode = mode.is_full();
-    let module_id_to_idx = self.cache.take_module_id_to_idx();
+    let cache = std::mem::take(&mut self.cache);
 
     let scan_stage_output = match ScanStage::new(
       Arc::clone(&self.options),
@@ -91,7 +91,7 @@ impl Bundler {
       self.fs,
       Arc::clone(&self.resolver),
     )
-    .scan(mode, module_id_to_idx)
+    .scan(mode, cache)
     .await
     {
       Ok(v) => v,
@@ -122,11 +122,11 @@ impl Bundler {
       return output.into();
     }
 
-    self.cache.set_module_id_to_idx(std::mem::take(&mut output.visited));
+    self.cache = std::mem::take(&mut output.cache);
 
     if is_full_scan_mode {
       let output: NormalizedScanStageOutput = output.into();
-      self.cache.set_cache(output.make_copy());
+      self.cache.set_snapshot(output.make_copy());
       output
     } else {
       self.cache.merge(output);
@@ -218,6 +218,8 @@ impl Bundler {
         resolver: Arc::clone(&self.resolver),
         plugin_driver: Arc::clone(&self.plugin_driver),
         index_ecma_ast: link_stage_output.ast_table,
+        // Don't forget to reset the cache if you want to rebuild the bundle instead hmr.
+        cache: std::mem::take(&mut self.cache),
       }));
     }
     Ok(output)

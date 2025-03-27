@@ -15,10 +15,8 @@ use rolldown_utils::indexmap::FxIndexSet;
 use rustc_hash::{FxHashMap, FxHashSet};
 
 use crate::{
-  SharedOptions, SharedResolver,
-  hmr::hmr_ast_finalizer::HmrAstFinalizer,
-  module_loader::{ModuleLoader, module_loader::VisitState},
-  type_alias::IndexEcmaAst,
+  SharedOptions, SharedResolver, hmr::hmr_ast_finalizer::HmrAstFinalizer,
+  module_loader::ModuleLoader, type_alias::IndexEcmaAst, types::scan_stage_cache::ScanStageCache,
 };
 
 pub struct HmrManagerInput {
@@ -28,6 +26,7 @@ pub struct HmrManagerInput {
   pub resolver: SharedResolver,
   pub plugin_driver: SharedPluginDriver,
   pub index_ecma_ast: IndexEcmaAst,
+  pub cache: ScanStageCache,
 }
 
 pub struct HmrManager {
@@ -123,30 +122,19 @@ impl HmrManager {
       })
       .collect::<Vec<_>>();
 
-    let visit_state = self
-      .module_db
-      .modules
-      .iter_enumerated()
-      .map(|(idx, module)| {
-        if modules_to_invalidate.contains(&idx) {
-          (module.id().into(), VisitState::Invalidate(idx))
-        } else {
-          (module.id().into(), VisitState::Seen(idx))
-        }
-      })
-      .collect::<FxHashMap<ArcStr, VisitState>>();
-
     let module_loader = ModuleLoader::new(
       self.fs,
       Arc::clone(&self.options),
       Arc::clone(&self.resolver),
       Arc::clone(&self.plugin_driver),
-      visit_state,
+      std::mem::take(&mut self.cache),
       false,
     )?;
 
     let module_loader_output =
       module_loader.fetch_modules(vec![], module_infos_to_be_updated).await?;
+
+    self.cache = module_loader_output.cache;
 
     affected_modules.extend(module_loader_output.new_added_modules_from_partial_scan);
     // Update

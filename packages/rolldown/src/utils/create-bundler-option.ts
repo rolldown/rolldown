@@ -22,6 +22,7 @@ import type { OutputOptions } from '../options/output-options'
 export async function createBundlerOptions(
   inputOptions: InputOptions,
   outputOptions: OutputOptions,
+  watchMode: boolean,
   isClose?: boolean,
 ): Promise<BundlerOptionWithStopWorker> {
   const inputPlugins = await normalizePluginOption(inputOptions.plugins)
@@ -32,6 +33,7 @@ export async function createBundlerOptions(
     getObjectPlugins(inputPlugins),
     getOnLog(inputOptions, logLevel),
     logLevel,
+    watchMode,
   )
 
   if (!isClose) {
@@ -73,6 +75,7 @@ export async function createBundlerOptions(
       normalizedOutputPlugins,
       onLog,
       logLevel,
+      watchMode,
     )
 
     // Convert `OutputOptions` to `BindingInputOptions`

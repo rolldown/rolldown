@@ -1,8 +1,7 @@
-use std::ops::{Deref, DerefMut, Index, IndexMut};
+use std::ops::{Deref, DerefMut};
 
-use oxc::semantic::{NodeId, ScopeId, Scoping, SymbolFlags, SymbolId};
-use oxc::span::SPAN;
-use oxc_index::IndexVec;
+use oxc::semantic::{ScopeId, Scoping, SymbolId};
+use oxc_index::{Idx, IndexVec};
 use rolldown_rstr::Rstr;
 use rolldown_std_utils::OptionExt;
 use rustc_hash::FxHashMap;
@@ -61,20 +60,9 @@ impl SymbolRefDbForModule {
     }
   }
 
-  // The `facade` means the symbol is actually not exist in the AST.
+  /// The `facade` means the symbol is actually not exist in the AST.
   pub fn create_facade_root_symbol_ref(&mut self, name: &str) -> SymbolRef {
-    self.classic_data.push(SymbolRefDataClassic {
-      link: None,
-      chunk_id: None,
-      namespace_alias: None,
-    });
-    let symbol_id = self.ast_scopes.create_symbol(
-      SPAN,
-      name,
-      SymbolFlags::empty(),
-      self.root_scope_id,
-      NodeId::DUMMY,
-    );
+    let symbol_id = self.ast_scopes.create_facade_root_symbol_ref(name);
 
     SymbolRef::from((self.owner_idx, symbol_id))
   }
@@ -85,10 +73,31 @@ impl SymbolRefDbForModule {
   pub fn create_symbol(&mut self) {
     panic!("Use `create_facade_root_symbol_ref` instead");
   }
+
+  /// # Panics
+  /// - If the symbol is not declared in the module.
+  pub fn get_classic_data(&self, symbol_id: SymbolId) -> &SymbolRefDataClassic {
+    if symbol_id.index() < self.ast_scopes.real_symbol_length() {
+      return &self.classic_data[symbol_id];
+    }
+    self
+      .ast_scopes
+      .facade_scoping
+      .facade_symbol_classic_data
+      .get(&symbol_id)
+      .unwrap_or_else(|| panic!("No symbol found for {:?} -> {symbol_id:?}", self.owner_idx))
+  }
+
+  pub fn get_classic_data_mut(&mut self, symbol_id: SymbolId) -> &mut SymbolRefDataClassic {
+    if symbol_id.index() < self.ast_scopes.real_symbol_length() {
+      return &mut self.classic_data[symbol_id];
+    }
+    self.ast_scopes.facade_scoping.facade_symbol_classic_data.get_mut(&symbol_id).unwrap()
+  }
 }
 
 impl Deref for SymbolRefDbForModule {
-  type Target = Scoping;
+  type Target = AstScopes;
 
   fn deref(&self) -> &Self::Target {
     &self.ast_scopes
@@ -107,7 +116,7 @@ pub struct SymbolRefDb {
   inner: IndexVec<ModuleIdx, Option<SymbolRefDbForModule>>,
 }
 
-impl Index<ModuleIdx> for SymbolRefDb {
+impl std::ops::Index<ModuleIdx> for SymbolRefDb {
   type Output = Option<SymbolRefDbForModule>;
 
   fn index(&self, index: ModuleIdx) -> &Self::Output {
@@ -115,7 +124,7 @@ impl Index<ModuleIdx> for SymbolRefDb {
   }
 }
 
-impl IndexMut<ModuleIdx> for SymbolRefDb {
+impl std::ops::IndexMut<ModuleIdx> for SymbolRefDb {
   fn index_mut(&mut self, index: ModuleIdx) -> &mut Self::Output {
     self.inner.index_mut(index)
   }
@@ -166,11 +175,11 @@ impl SymbolRefDb {
   }
 
   pub fn get(&self, refer: SymbolRef) -> &SymbolRefDataClassic {
-    &self.inner[refer.owner].unpack_ref().classic_data[refer.symbol]
+    self.inner[refer.owner].unpack_ref().get_classic_data(refer.symbol)
   }
 
   pub fn get_mut(&mut self, refer: SymbolRef) -> &mut SymbolRefDataClassic {
-    &mut self.inner[refer.owner].unpack_ref_mut().classic_data[refer.symbol]
+    self.inner[refer.owner].unpack_ref_mut().get_classic_data_mut(refer.symbol)
   }
 
   /// https://en.wikipedia.org/wiki/Disjoint-set_data_structure
@@ -197,7 +206,7 @@ impl SymbolRefDb {
 
   pub fn is_declared_in_root_scope(&self, refer: SymbolRef) -> bool {
     let local_db = self.inner[refer.owner].unpack_ref();
-    local_db.symbol_scope_id(refer.symbol) == local_db.root_scope_id
+    local_db.ast_scopes.symbol_scope_id(refer.symbol) == local_db.root_scope_id
   }
 }
 

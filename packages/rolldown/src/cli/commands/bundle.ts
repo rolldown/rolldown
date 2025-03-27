@@ -73,6 +73,8 @@ async function watchInner(
 ) {
   // Only if watch is true in CLI can we use watch mode.
   // We should not make it `await`, as it never ends.
+  process.env.ROLLUP_WATCH = 'true'
+  process.env.ROLLDOWN_WATCH = 'true'
 
   let normalizedConfig = arraify(config).map((option) => {
     return {

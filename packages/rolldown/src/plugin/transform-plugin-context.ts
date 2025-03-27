@@ -39,8 +39,18 @@ export class TransformPluginContextImpl extends PluginContextImpl {
     private moduleSource: string,
     onLog: LogHandler,
     LogLevelOption: LogLevelOption,
+    watchMode: boolean,
   ) {
-    super(outputOptions, context, plugin, data, onLog, LogLevelOption, moduleId)
+    super(
+      outputOptions,
+      context,
+      plugin,
+      data,
+      onLog,
+      LogLevelOption,
+      watchMode,
+      moduleId,
+    )
     const getLogHandler =
       (handler: LoggingFunctionWithPosition): LoggingFunctionWithPosition =>
       (log, pos) => {

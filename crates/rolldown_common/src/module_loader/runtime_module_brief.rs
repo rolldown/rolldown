@@ -13,7 +13,8 @@ impl RuntimeModuleBrief {
     Self {
       id,
       name_to_symbol: scope
-        .get_bindings(scope.root_scope_id())
+        .scoping()
+        .get_bindings(scope.scoping().root_scope_id())
         .into_iter()
         .map(|(name, &symbol_id)| (CompactString::new(name), symbol_id))
         .collect(),

@@ -36,6 +36,7 @@ export function bindingifyRenderStart(
           args.pluginContextData,
           args.onLog,
           args.logLevel,
+          args.watchMode,
         ),
         new NormalizedOutputOptionsImpl(
           opts,
@@ -67,6 +68,7 @@ export function bindingifyRenderChunk(
           args.pluginContextData,
           args.onLog,
           args.logLevel,
+          args.watchMode,
         ),
         code,
         transformRenderedChunk(chunk),
@@ -125,6 +127,7 @@ export function bindingifyAugmentChunkHash(
           args.pluginContextData,
           args.onLog,
           args.logLevel,
+          args.watchMode,
         ),
         transformRenderedChunk(chunk),
       )
@@ -152,6 +155,7 @@ export function bindingifyRenderError(
           args.pluginContextData,
           args.onLog,
           args.logLevel,
+          args.watchMode,
         ),
         normalizeErrors(err),
       )
@@ -184,6 +188,7 @@ export function bindingifyGenerateBundle(
           args.pluginContextData,
           args.onLog,
           args.logLevel,
+          args.watchMode,
         ),
         new NormalizedOutputOptionsImpl(
           opts,
@@ -223,6 +228,7 @@ export function bindingifyWriteBundle(
           args.pluginContextData,
           args.onLog,
           args.logLevel,
+          args.watchMode,
         ),
         new NormalizedOutputOptionsImpl(
           opts,
@@ -256,6 +262,7 @@ export function bindingifyCloseBundle(
           args.pluginContextData,
           args.onLog,
           args.logLevel,
+          args.watchMode,
         ),
       )
     },
@@ -286,6 +293,7 @@ export function bindingifyBanner(
           args.pluginContextData,
           args.onLog,
           args.logLevel,
+          args.watchMode,
         ),
         transformRenderedChunk(chunk),
       )
@@ -318,6 +326,7 @@ export function bindingifyFooter(
           args.pluginContextData,
           args.onLog,
           args.logLevel,
+          args.watchMode,
         ),
         transformRenderedChunk(chunk),
       )
@@ -350,6 +359,7 @@ export function bindingifyIntro(
           args.pluginContextData,
           args.onLog,
           args.logLevel,
+          args.watchMode,
         ),
         transformRenderedChunk(chunk),
       )
@@ -382,6 +392,7 @@ export function bindingifyOutro(
           args.pluginContextData,
           args.onLog,
           args.logLevel,
+          args.watchMode,
         ),
         transformRenderedChunk(chunk),
       )

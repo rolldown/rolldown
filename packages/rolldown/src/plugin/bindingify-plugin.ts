@@ -41,6 +41,7 @@ export interface BindingifyPluginArgs {
   pluginContextData: PluginContextData
   onLog: LogHandler
   logLevel: LogLevelOption
+  watchMode: boolean
   normalizedOutputPlugins: RolldownPlugin[]
 }
 
@@ -53,6 +54,7 @@ export function bindingifyPlugin(
   normalizedOutputPlugins: RolldownPlugin[],
   onLog: LogHandler,
   logLevel: LogLevelOption,
+  watchMode: boolean,
 ): BindingPluginOptions {
   const args: BindingifyPluginArgs = {
     plugin,
@@ -61,6 +63,7 @@ export function bindingifyPlugin(
     pluginContextData,
     onLog,
     logLevel,
+    watchMode,
     normalizedOutputPlugins,
   }
 

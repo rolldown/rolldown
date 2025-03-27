@@ -59,8 +59,8 @@ export async function createWatcher(
     options
       .map((option) =>
         arraify(option.output || {}).map(async (output) => {
-          const inputOptions = await PluginDriver.callOptionsHook(option)
-          return createBundlerOptions(inputOptions, output)
+          const inputOptions = await PluginDriver.callOptionsHook(option, true)
+          return createBundlerOptions(inputOptions, output, true)
         }),
       )
       .flat(),

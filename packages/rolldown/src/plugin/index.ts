@@ -24,7 +24,7 @@ import type { ParallelPlugin } from './parallel-plugin'
 import type { DefinedHookNames } from '../constants/plugin'
 import type { DEFINED_HOOK_NAMES } from '../constants/plugin'
 import type { SYMBOL_FOR_RESOLVE_CALLER_THAT_SKIP_SELF } from '../constants/plugin-context'
-import type { HookFilter } from './hook-filter'
+import type { HookFilter, StringFilter } from './hook-filter'
 import { RenderedChunk } from '../types/rolldown-output'
 
 export type ModuleSideEffects = boolean | 'no-treeshake' | null
@@ -267,9 +267,11 @@ export type ParallelPluginHooks = Exclude<
 export type HookFilterExtension<K extends keyof FunctionPluginHooks> =
   K extends 'transform'
     ? { filter?: HookFilter }
-    : K extends 'load' | 'resolveId'
+    : K extends 'load'
       ? { filter?: Pick<HookFilter, 'id'> }
-      : {}
+      : K extends 'resolveId'
+        ? { filter?: { id: StringFilter<RegExp> } }
+        : {}
 
 export type PluginHooks = {
   [K in keyof FunctionPluginHooks]: ObjectHook<

@@ -2,11 +2,11 @@ import type { MaybeArray } from '../types/utils'
 import type { StringOrRegExp } from '../types/utils'
 import type { ModuleType } from '../index'
 
-export type StringFilter =
-  | MaybeArray<StringOrRegExp>
+export type StringFilter<Value = StringOrRegExp> =
+  | MaybeArray<Value>
   | {
-      include?: MaybeArray<StringOrRegExp>
-      exclude?: MaybeArray<StringOrRegExp>
+      include?: MaybeArray<Value>
+      exclude?: MaybeArray<Value>
     }
 
 interface FormalModuleTypeFilter {

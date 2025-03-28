@@ -91,3 +91,9 @@ interface HookFilter {
   code?: StringFilter
 }
 ````
+
+The following properties are supported by each hooks:
+
+- `resolveId` hook: `id` (only `RegExp`)
+- `load` hook: `id`
+- `transform` hook: `id`, `moduleType`, `code`

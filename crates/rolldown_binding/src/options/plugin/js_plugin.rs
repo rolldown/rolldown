@@ -1,3 +1,4 @@
+// @Cspell:ignore subcase
 use crate::types::{
   binding_module_info::BindingModuleInfo,
   binding_normalized_options::BindingNormalizedOptions,
@@ -679,8 +680,7 @@ mod tests {
       },
     ];
 
-    let cwd = std::env::current_dir().unwrap();
-    for test_case in cases {
+    for (i, test_case) in cases.into_iter().enumerate() {
       let filter = BindingTransformHookFilter {
         id: test_case.input_id_filter.map(|f| BindingGeneralHookFilter {
           include: f.include.map(|f| f.into_iter().map(BindingStringOrRegex::new).collect()),
@@ -693,9 +693,13 @@ mod tests {
         module_type: None,
       };
 
-      for (id, code, expected) in test_case.cases {
-        let result = filter_transform(Some(&filter), id, &cwd, &ModuleType::Js, code);
-        assert_eq!(result.unwrap(), expected, "filter: {filter:?}, id: {id}, code: {code}",);
+      for (si, (id, code, expected)) in test_case.cases.into_iter().enumerate() {
+        let result = filter_transform(Some(&filter), id, Path::new(""), &ModuleType::Js, code);
+        assert_eq!(
+          result.unwrap(),
+          expected,
+          r"Failed at Case {i}  subcase {si}.\n filter: {filter:?}, id: {id}, code: {code}",
+        );
       }
     }
   }

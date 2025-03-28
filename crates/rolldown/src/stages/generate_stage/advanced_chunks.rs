@@ -125,12 +125,16 @@ impl GenerateStage<'_> {
             })
           });
 
+        let include_dependencies_recursively =
+          chunking_options.include_dependencies_recursively.unwrap_or(true);
+
         add_module_and_dependencies_to_group_recursively(
           &mut index_module_groups[*module_group_idx],
           normal_module.idx,
           &self.link_output.metas,
           &self.link_output.module_table,
           &mut FxHashSet::default(),
+          include_dependencies_recursively,
         );
       }
     }
@@ -274,6 +278,7 @@ fn add_module_and_dependencies_to_group_recursively(
   module_metas: &LinkingMetadataVec,
   module_table: &ModuleTable,
   visited: &mut FxHashSet<ModuleIdx>,
+  recursively: bool,
 ) {
   let is_visited = !visited.insert(module_idx);
 
@@ -292,14 +297,16 @@ fn add_module_and_dependencies_to_group_recursively(
   visited.insert(module_idx);
 
   module_group.add_module(module_idx, module_table);
-
-  for dep in &module_metas[module_idx].dependencies {
-    add_module_and_dependencies_to_group_recursively(
-      module_group,
-      *dep,
-      module_metas,
-      module_table,
-      visited,
-    );
+  if recursively {
+    for dep in &module_metas[module_idx].dependencies {
+      add_module_and_dependencies_to_group_recursively(
+        module_group,
+        *dep,
+        module_metas,
+        module_table,
+        visited,
+        recursively,
+      );
+    }
   }
 }

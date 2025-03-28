@@ -115,6 +115,7 @@ fn render_esm_chunk_imports(ctx: &GenerateContext<'_>) -> String {
       &ctx.chunk.import_path_for(importee_chunk),
     ));
   });
+
   // render external imports
   ctx.chunk.imports_from_external_modules.iter().for_each(|(importee_id, named_imports)| {
     let importee = &ctx.link_output.module_table.modules[*importee_id]

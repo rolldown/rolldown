@@ -1,13 +1,13 @@
 ---
 source: crates/rolldown_testing/src/integration_test.rs
-snapshot_kind: text
 ---
 # Assets
 
 ## a.js
 
 ```js
-import { __esm, init_share_by_2, init_share_by_3 } from "./at_least_share_by_2.js";
+import { __esm } from "./rolldown-runtime.js";
+import { init_share_by_2, init_share_by_3 } from "./at_least_share_by_2.js";
 
 //#region share-by-1.js
 var init_share_by_1 = __esm({ "share-by-1.js"() {
@@ -28,7 +28,7 @@ init_a();
 ## at_least_share_by_2.js
 
 ```js
-
+import { __esm } from "./rolldown-runtime.js";
 
 //#region share-by-2.js
 var init_share_by_2 = __esm({ "share-by-2.js"() {
@@ -42,12 +42,13 @@ var init_share_by_3 = __esm({ "share-by-3.js"() {
 } });
 
 //#endregion
-export { __esm, init_share_by_2, init_share_by_3 };
+export { init_share_by_2, init_share_by_3 };
 ```
 ## b.js
 
 ```js
-import { __esm, init_share_by_2, init_share_by_3 } from "./at_least_share_by_2.js";
+import { __esm } from "./rolldown-runtime.js";
+import { init_share_by_2, init_share_by_3 } from "./at_least_share_by_2.js";
 
 //#region b.js
 var init_b = __esm({ "b.js"() {
@@ -61,7 +62,8 @@ init_b();
 ## c.js
 
 ```js
-import { __esm, init_share_by_3 } from "./at_least_share_by_2.js";
+import { __esm } from "./rolldown-runtime.js";
+import { init_share_by_3 } from "./at_least_share_by_2.js";
 
 //#region c.js
 var init_c = __esm({ "c.js"() {
@@ -70,4 +72,11 @@ var init_c = __esm({ "c.js"() {
 
 //#endregion
 init_c();
+```
+## rolldown-runtime.js
+
+```js
+
+
+export { __esm };
 ```

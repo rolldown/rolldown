@@ -125,12 +125,16 @@ impl GenerateStage<'_> {
             })
           });
 
+        let include_dependencies_recursively =
+          chunking_options.include_dependencies_recursively.unwrap_or(true);
+
         add_module_and_dependencies_to_group_recursively(
           &mut index_module_groups[*module_group_idx],
           normal_module.idx,
           &self.link_output.metas,
           &self.link_output.module_table,
           &mut FxHashSet::default(),
+          include_dependencies_recursively,
         );
       }
     }
@@ -139,6 +143,32 @@ impl GenerateStage<'_> {
     module_groups.sort_by_key(|item| Reverse((Reverse(item.priority), item.match_group_index)));
     // Higher priority group goes first. If two groups have the same priority, the one with the lower index goes first.
     // Outer `Reverse` is due to we're gonna use `pop` consume the vector.
+
+    // Manually pull out the module `rolldown:runtime` into a standalone chunk.
+    let runtime_module_idx = self.link_output.runtime.id();
+    let Module::Normal(runtime_module) = &self.link_output.module_table.modules[runtime_module_idx]
+    else {
+      unreachable!("`rolldown:runtime` is always a normal module");
+    };
+
+    if runtime_module.meta.is_included() {
+      let runtime_chunk = Chunk::new(
+        Some("rolldown-runtime".into()),
+        None,
+        None,
+        index_splitting_info[runtime_module_idx].bits.clone(),
+        vec![],
+        ChunkKind::Common,
+        true,
+      );
+      let chunk_idx = chunk_graph.add_chunk(runtime_chunk);
+      module_groups.iter_mut().for_each(|group| {
+        group.remove_module(runtime_module_idx, &self.link_output.module_table);
+      });
+      chunk_graph.chunk_table[chunk_idx].bits.union(&index_splitting_info[runtime_module_idx].bits);
+      chunk_graph.add_module_to_chunk(runtime_module_idx, chunk_idx);
+      module_to_assigned[runtime_module_idx] = true;
+    }
 
     while let Some(this_module_group) = module_groups.pop() {
       if this_module_group.modules.is_empty() {
@@ -274,6 +304,7 @@ fn add_module_and_dependencies_to_group_recursively(
   module_metas: &LinkingMetadataVec,
   module_table: &ModuleTable,
   visited: &mut FxHashSet<ModuleIdx>,
+  recursively: bool,
 ) {
   let is_visited = !visited.insert(module_idx);
 
@@ -292,14 +323,16 @@ fn add_module_and_dependencies_to_group_recursively(
   visited.insert(module_idx);
 
   module_group.add_module(module_idx, module_table);
-
-  for dep in &module_metas[module_idx].dependencies {
-    add_module_and_dependencies_to_group_recursively(
-      module_group,
-      *dep,
-      module_metas,
-      module_table,
-      visited,
-    );
+  if recursively {
+    for dep in &module_metas[module_idx].dependencies {
+      add_module_and_dependencies_to_group_recursively(
+        module_group,
+        *dep,
+        module_metas,
+        module_table,
+        visited,
+        recursively,
+      );
+    }
   }
 }

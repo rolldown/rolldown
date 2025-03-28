@@ -31,7 +31,7 @@ bitflags::bitflags! {
   }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct SymbolRefDbForModule {
   owner_idx: ModuleIdx,
   root_scope_id: ScopeId,
@@ -123,9 +123,26 @@ impl DerefMut for SymbolRefDbForModule {
 }
 
 // Information about symbols for all modules
-#[derive(Debug, Default, Clone)]
+#[derive(Debug, Default)]
 pub struct SymbolRefDb {
   inner: IndexVec<ModuleIdx, Option<SymbolRefDbForModule>>,
+}
+
+impl SymbolRefDb {
+  #[must_use]
+  pub fn clone_without_scoping(&self) -> SymbolRefDb {
+    let mut vec = IndexVec::with_capacity(self.inner.len());
+    for inner in &self.inner {
+      vec.push(inner.as_ref().map(|inner| SymbolRefDbForModule {
+        owner_idx: inner.owner_idx,
+        root_scope_id: inner.root_scope_id,
+        ast_scopes: inner.clone_facade_only(),
+        flags: inner.flags.clone(),
+        classic_data: inner.classic_data.clone(),
+      }));
+    }
+    Self { inner: vec }
+  }
 }
 
 impl std::ops::Index<ModuleIdx> for SymbolRefDb {
@@ -148,6 +165,10 @@ impl SymbolRefDb {
     if self.inner.len() < new_len {
       self.inner.resize_with(new_len, || None);
     }
+  }
+
+  pub fn inner(self) -> IndexVec<ModuleIdx, Option<SymbolRefDbForModule>> {
+    self.inner
   }
 
   pub fn store_local_db(&mut self, module_id: ModuleIdx, local_db: SymbolRefDbForModule) {

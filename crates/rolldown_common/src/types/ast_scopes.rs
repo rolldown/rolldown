@@ -29,15 +29,6 @@ pub struct AstScopes {
   pub(crate) facade_scoping: FacadeScoping,
 }
 
-impl Clone for AstScopes {
-  fn clone(&self) -> Self {
-    Self {
-      scoping: self.scoping.clone_in_with_semantic_ids_with_another_arena(),
-      facade_scoping: self.facade_scoping.clone(),
-    }
-  }
-}
-
 impl AstScopes {
   pub fn new(inner: Scoping) -> Self {
     let facade_scoping = FacadeScoping {
@@ -53,6 +44,15 @@ impl AstScopes {
   pub fn scoping(&self) -> &Scoping {
     &self.scoping
   }
+
+  pub fn into_inner(self) -> (Scoping, FacadeScoping) {
+    (self.scoping, self.facade_scoping)
+  }
+
+  pub fn set_scoping(&mut self, scoping: Scoping) {
+    self.scoping = scoping;
+  }
+
   pub fn is_unresolved(&self, reference_id: ReferenceId) -> bool {
     self.scoping.get_reference(reference_id).symbol_id().is_none()
   }
@@ -116,5 +116,10 @@ impl AstScopes {
 
   pub fn facade_symbol_classic_data(&self) -> &FxHashMap<SymbolId, SymbolRefDataClassic> {
     &self.facade_scoping.facade_symbol_classic_data
+  }
+
+  #[must_use]
+  pub fn clone_facade_only(&self) -> AstScopes {
+    AstScopes { scoping: Scoping::default(), facade_scoping: self.facade_scoping.clone() }
   }
 }

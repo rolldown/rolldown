@@ -122,6 +122,10 @@ impl IndexMut<ModuleIdx> for SymbolRefDb {
 }
 
 impl SymbolRefDb {
+  pub fn new(inner: IndexVec<ModuleIdx, Option<SymbolRefDbForModule>>) -> Self {
+    Self { inner }
+  }
+
   fn ensure_exact_capacity(&mut self, module_idx: ModuleIdx) {
     let new_len = module_idx.index() + 1;
     if self.inner.len() < new_len {

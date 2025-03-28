@@ -37,6 +37,7 @@ pub struct DtsAstScanner<'a> {
   pub namespace_object_ref: SymbolRef,
   pub current_stmt_info: StmtInfo,
   pub visit_path: Vec<AstKind<'a>>,
+  pub has_star_exports: bool,
 }
 
 impl DtsAstScanner<'_> {
@@ -65,6 +66,7 @@ impl DtsAstScanner<'_> {
       stmt_infos: StmtInfos::default(),
       default_export_ref,
       visit_path: vec![],
+      has_star_exports: false,
     }
   }
 
@@ -181,6 +183,7 @@ impl DtsAstScanner<'_> {
     } else {
       // export * from '...'
       self.import_records[id].meta.insert(ImportRecordMeta::IS_EXPORT_STAR);
+      self.has_star_exports = true;
     }
   }
 

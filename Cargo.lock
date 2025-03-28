@@ -2633,17 +2633,22 @@ name = "rolldown_plugin_dts"
 version = "0.1.0"
 dependencies = [
  "anyhow",
+ "append-only-vec",
+ "arcstr",
+ "itertools",
  "oxc",
  "oxc_index",
  "rolldown_common",
  "rolldown_ecmascript",
  "rolldown_ecmascript_utils",
+ "rolldown_error",
  "rolldown_plugin",
  "rolldown_rstr",
  "rolldown_std_utils",
  "rolldown_utils",
  "rustc-hash",
  "sugar_path",
+ "tracing",
 ]
 
 [[package]]

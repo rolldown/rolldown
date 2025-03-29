@@ -1,0 +1,53 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## main.js
+
+```js
+
+//#region rolldown:runtime
+var __defProp = Object.defineProperty;
+var __getOwnPropNames = Object.getOwnPropertyNames;
+var __esm = (fn, res) => function() {
+	return fn && (res = (0, fn[__getOwnPropNames(fn)[0]])(fn = 0)), res;
+};
+var __export = (target, all) => {
+	for (var name in all) __defProp(target, name, {
+		get: all[name],
+		enumerable: true
+	});
+};
+
+//#endregion
+//#region second.js
+var second_exports = {};
+__export(second_exports, { value: () => value });
+var value;
+var init_second = __esm({ "second.js"() {
+	init_first();
+	value = "second" + value$1;
+} });
+
+//#endregion
+//#region first.js
+var first_exports = {};
+__export(first_exports, { value: () => value$1 });
+var value$1;
+var init_first = __esm({ "first.js"() {
+	init_second();
+	value$1 = "first" + value;
+} });
+
+//#endregion
+//#region main.js
+var init_main = __esm({ "main.js"() {
+	init_first();
+	init_second();
+	console.log(first_exports, second_exports);
+} });
+
+//#endregion
+init_main();
+```

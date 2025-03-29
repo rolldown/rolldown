@@ -72,6 +72,12 @@
             "$ref": "#/definitions/MatchGroup"
           }
         },
+        "includeDependenciesRecursively": {
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
         "maxModuleSize": {
           "type": [
             "number",

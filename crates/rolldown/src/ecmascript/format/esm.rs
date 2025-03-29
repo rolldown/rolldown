@@ -115,6 +115,14 @@ fn render_esm_chunk_imports(ctx: &GenerateContext<'_>) -> String {
       &ctx.chunk.import_path_for(importee_chunk),
     ));
   });
+  if let Some(chunk_contains_runtime) =
+    ctx.chunk_graph.module_to_chunk[ctx.link_output.runtime.id()]
+  {
+    if ctx.options.experimental.is_strict_execution_order_enabled() {
+      let chunk = &ctx.chunk_graph.chunk_table[chunk_contains_runtime];
+      s.push_str(&create_import_declaration(vec![], &vec![], &ctx.chunk.import_path_for(chunk)));
+    }
+  }
   // render external imports
   ctx.chunk.imports_from_external_modules.iter().for_each(|(importee_id, named_imports)| {
     let importee = &ctx.link_output.module_table.modules[*importee_id]

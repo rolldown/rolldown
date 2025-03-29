@@ -1,7 +1,6 @@
 use std::sync::Arc;
 
 use rolldown_common::RollupRenderedChunk;
-use rolldown_utils::rayon::{IntoParallelRefIterator, ParallelIterator};
 
 use crate::types::binding_rendered_module::BindingRenderedModule;
 
@@ -78,9 +77,8 @@ pub struct BindingModules {
 #[allow(clippy::cast_possible_truncation)]
 impl From<&rolldown_common::Modules> for BindingModules {
   fn from(modules: &rolldown_common::Modules) -> Self {
-    let values =
-      modules.values.par_iter().map(|x| BindingRenderedModule::new(Arc::clone(x))).collect();
-    let keys = modules.keys.par_iter().map(|x| x.to_string()).collect();
+    let values = modules.values.iter().map(|x| BindingRenderedModule::new(Arc::clone(x))).collect();
+    let keys = modules.keys.iter().map(|x| x.to_string()).collect();
     Self { values, keys }
   }
 }

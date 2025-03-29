@@ -11,6 +11,7 @@
     "@iconify-json/vscode-icons": "^1.1.37",
     "vitepress": "^1.5.0",
     "vitepress-plugin-group-icons": "^1.0.0",
+    "vitepress-plugin-llms": "^0.0.16",
     "zx": "^8.1.2"
   }
 }

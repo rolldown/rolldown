@@ -5,3 +5,32 @@ ignore = "git diff --quiet 'HEAD^' HEAD ./docs ./packages/rolldown"
 [[redirects]]
 from = "/about/"
 to   = "/guide/"
+
+# https://github.com/okineadev/vitepress-plugin-llms#netlify
+[[redirects]]
+from   = "/*.txt"
+status = 301
+to     = "/:splat.md"
+
+[[redirects]]
+from   = "/llms.md"
+status = 301
+to     = "/llms.txt"
+
+[[redirects]]
+force  = true
+from   = "/llms.txt"
+status = 200
+to     = "/llms.txt"
+
+[[redirects]]
+force  = true
+from   = "/llms-full.md"
+status = 200
+to     = "/llms-full.txt"
+
+[[redirects]]
+force  = true
+from   = "/llms-full.txt"
+status = 200
+to     = "/llms-full.txt"

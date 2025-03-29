@@ -12,7 +12,9 @@ use crate::{
 use anyhow::Result;
 
 use arcstr::ArcStr;
-use rolldown_common::{NormalizedBundlerOptions, ScanMode, SharedFileEmitter};
+use rolldown_common::{
+  GetLocalDbMut, NormalizedBundlerOptions, ScanMode, SharedFileEmitter, SymbolRefDb,
+};
 use rolldown_error::{BuildDiagnostic, BuildResult};
 use rolldown_fs::{FileSystem, OsFileSystem};
 use rolldown_plugin::{
@@ -210,6 +212,8 @@ impl Bundler {
 
     output.watch_files = self.plugin_driver.watch_files.iter().map(|f| f.clone()).collect();
 
+    self.merge_immutable_fields_for_cache(link_stage_output.symbol_db);
+
     if self.options.is_hmr_enabled() {
       self.hmr_manager = Some(HmrManager::new(HmrManagerInput {
         module_db: link_stage_output.module_table,
@@ -237,6 +241,21 @@ impl Bundler {
       .expect("HMR manager is not initialized")
       .generate_hmr_patch(changed_files)
       .await
+  }
+
+  fn merge_immutable_fields_for_cache(&mut self, symbol_db: SymbolRefDb) {
+    if !self.options.experimental.is_incremental_build_enabled() {
+      return;
+    }
+    let snapshot = self.cache.get_snapshot_mut();
+    for (idx, symbol_ref_db) in symbol_db.inner().into_iter_enumerated() {
+      let Some(db_for_module) = symbol_ref_db else {
+        continue;
+      };
+      let cache_db = snapshot.symbol_ref_db.local_db_mut(idx);
+      let (scoping, _) = db_for_module.ast_scopes.into_inner();
+      cache_db.ast_scopes.set_scoping(scoping);
+    }
   }
 }
 

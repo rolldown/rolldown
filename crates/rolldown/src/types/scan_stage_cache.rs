@@ -23,6 +23,12 @@ impl ScanStageCache {
     self.snapshot = Some(cache);
   }
 
+  /// # Panic
+  /// - if the snapshot is unset
+  pub fn get_snapshot_mut(&mut self) -> &mut NormalizedScanStageOutput {
+    self.snapshot.as_mut().unwrap()
+  }
+
   pub fn merge(&mut self, mut scan_stage_output: ScanStageOutput) {
     let Some(ref mut cache) = self.snapshot else {
       self.snapshot = Some(scan_stage_output.into());
@@ -86,6 +92,11 @@ impl ScanStageCache {
   /// the function will panic if cache is unset
   pub fn create_output(&mut self) -> NormalizedScanStageOutput {
     let cache = self.snapshot.as_mut().unwrap();
+    // Only clone the mutated part of symbol_ref_db
+    let symbol_ref_db_partial = cache.symbol_ref_db.clone_without_scoping();
+    let symbol_ref_db = std::mem::take(&mut cache.symbol_ref_db);
+    cache.symbol_ref_db = symbol_ref_db_partial;
+
     NormalizedScanStageOutput {
       module_table: cache.module_table.clone(),
       index_ecma_ast: {
@@ -100,7 +111,7 @@ impl ScanStageCache {
 
       // Since `AstScope` is immutable in following phase, move it to avoid clone
       entry_points: cache.entry_points.clone(),
-      symbol_ref_db: cache.symbol_ref_db.clone(),
+      symbol_ref_db,
       runtime: cache.runtime.clone(),
       // TODO: cache warning
       warnings: vec![],

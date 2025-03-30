@@ -318,7 +318,7 @@ impl ModuleLoader {
     user_defined_entries: Vec<(Option<ArcStr>, ResolvedId)>,
     changed_resolved_ids: Vec<ResolvedId>,
   ) -> BuildResult<ModuleLoaderOutput> {
-    let mut errors = vec![];
+    let mut errors: Vec<BuildDiagnostic> = vec![];
     let mut all_warnings: Vec<BuildDiagnostic> = vec![];
 
     let entries_count = user_defined_entries.len() + /* runtime */ 1;

@@ -18,7 +18,7 @@ export type ModuleTypeFilter = ModuleType[] | FormalModuleTypeFilter
 export interface HookFilter {
   /**
    * This filter is used to do a pre-test to determine whether the hook should be called.
-   * 
+   *
    * @example
    * Include all `id`s that contain `node_modules` in the path.
    * ```js

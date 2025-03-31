@@ -57,7 +57,7 @@ In addition to `id`, you can also filter based on `moduleType` and the module's 
 interface HookFilter {
   /**
    * This filter is used to do a pre-test to determine whether the hook should be called.
-   * 
+   *
    * @example
    * Include all `id`s that contain `node_modules` in the path.
    * ```js

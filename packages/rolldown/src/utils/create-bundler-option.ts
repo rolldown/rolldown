@@ -41,6 +41,9 @@ export async function createBundlerOptions(
     outputOptions = PluginDriver.callOutputOptionsHook(
       [...inputPlugins, ...outputPlugins],
       outputOptions,
+      onLog,
+      logLevel,
+      watchMode,
     )
   }
 

@@ -1,4 +1,4 @@
-import { LOG_LEVEL_INFO } from '../log/logging'
+import { LOG_LEVEL_INFO, type LogLevelOption } from '../log/logging'
 import { Plugin } from './'
 import { normalizeHook } from '../utils/normalize-hook'
 import { InputOptions, OutputOptions, RolldownPlugin } from '..'
@@ -6,6 +6,7 @@ import { getLogger, getOnLog } from '../log/logger'
 import { BuiltinPlugin } from '../builtin-plugin/constructors'
 import { normalizePluginOption } from '../utils/normalize-plugin-option'
 import { MinimalPluginContextImpl } from './minimal-plugin-context'
+import type { LogHandler } from '../types/misc'
 
 export class PluginDriver {
   public static async callOptionsHook(
@@ -52,6 +53,9 @@ export class PluginDriver {
   public static callOutputOptionsHook(
     rawPlugins: RolldownPlugin[],
     outputOptions: OutputOptions,
+    onLog: LogHandler,
+    logLevel: LogLevelOption,
+    watchMode: boolean,
   ): OutputOptions {
     const sortedPlugins = getSortedPlugins(
       'outputOptions',
@@ -59,10 +63,14 @@ export class PluginDriver {
     )
 
     for (const plugin of sortedPlugins) {
+      const name = plugin.name || 'unknown'
       const options = plugin.outputOptions
       if (options) {
         const { handler } = normalizeHook(options)
-        const result = handler.call(null, outputOptions)
+        const result = handler.call(
+          new MinimalPluginContextImpl(onLog, logLevel, name, watchMode),
+          outputOptions,
+        )
 
         if (result) {
           outputOptions = result

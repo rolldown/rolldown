@@ -18,28 +18,29 @@ export type ModuleTypeFilter = ModuleType[] | FormalModuleTypeFilter
 export interface HookFilter {
   /**
    * This filter is used to do a pre-test to determine whether the hook should be called.
+   * 
    * @example
-   * // Filter out all `id`s that contain `node_modules` in the path.
+   * Include all `id`s that contain `node_modules` in the path.
    * ```js
    * { id: 'node_modules' }
    * ```
    * @example
-   * // Filter out all `id`s that contain `node_modules` or `src` in the path.
+   * Include all `id`s that contain `node_modules` or `src` in the path.
    * ```js
    * { id: ['node_modules', 'src'] }
    * ```
    * @example
-   * // Filter out all `id`s that start with `http`
+   * Include all `id`s that start with `http`
    * ```js
    * { id: /^http/ }
    * ```
    * @example
-   * // Exclude all `id`s that contain `node_modules` in the path.
+   * Exclude all `id`s that contain `node_modules` in the path.
    * ```js
    * { id: { exclude: 'node_modules' } }
    * ```
    * @example
-   * // Formal pattern
+   * Formal pattern to define includes and excludes.
    * ```
    * { id : {
    *   include: ["foo", /bar/],

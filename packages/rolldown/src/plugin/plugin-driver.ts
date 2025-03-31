@@ -1,13 +1,11 @@
-import { getLogHandler, normalizeLog } from '../log/log-handler'
-import { LOG_LEVEL_DEBUG, LOG_LEVEL_INFO, LOG_LEVEL_WARN } from '../log/logging'
+import { LOG_LEVEL_INFO } from '../log/logging'
 import { Plugin } from './'
-import { error, logPluginError } from '../log/logs'
-import { RollupError } from '../types/misc'
 import { normalizeHook } from '../utils/normalize-hook'
-import { InputOptions, OutputOptions, RolldownPlugin, VERSION } from '..'
+import { InputOptions, OutputOptions, RolldownPlugin } from '..'
 import { getLogger, getOnLog } from '../log/logger'
 import { BuiltinPlugin } from '../builtin-plugin/constructors'
 import { normalizePluginOption } from '../utils/normalize-plugin-option'
+import { MinimalPluginContextImpl } from './minimal-plugin-context'
 
 export class PluginDriver {
   public static async callOptionsHook(
@@ -32,37 +30,13 @@ export class PluginDriver {
       if (options) {
         const { handler } = normalizeHook(options)
         const result = await handler.call(
-          {
-            debug: getLogHandler(
-              LOG_LEVEL_DEBUG,
-              'PLUGIN_LOG',
-              logger,
-              name,
-              logLevel,
-            ),
-            error: (e: RollupError | string) =>
-              error(logPluginError(normalizeLog(e), name, { hook: 'onLog' })),
-            info: getLogHandler(
-              LOG_LEVEL_INFO,
-              'PLUGIN_LOG',
-              logger,
-              name,
-              logLevel,
-            ),
-            meta: {
-              rollupVersion: '4.23.0',
-              rolldownVersion: VERSION,
-              watchMode,
-            },
-            warn: getLogHandler(
-              LOG_LEVEL_WARN,
-              'PLUGIN_WARNING',
-              logger,
-              name,
-              logLevel,
-            ),
-            pluginName: name,
-          },
+          new MinimalPluginContextImpl(
+            logger,
+            logLevel,
+            name,
+            watchMode,
+            'onLog',
+          ),
           inputOptions,
         )
 

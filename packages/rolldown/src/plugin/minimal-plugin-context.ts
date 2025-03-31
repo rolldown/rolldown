@@ -36,6 +36,7 @@ export class MinimalPluginContextImpl {
     logLevel: LogLevelOption,
     readonly pluginName: string,
     watchMode: boolean,
+    private readonly hookName?: string,
   ) {
     this.debug = getLogHandler(
       LOG_LEVEL_DEBUG,
@@ -67,7 +68,9 @@ export class MinimalPluginContextImpl {
   }
 
   public error(e: RollupError | string): never {
-    return error(logPluginError(normalizeLog(e), this.pluginName))
+    return error(
+      logPluginError(normalizeLog(e), this.pluginName, { hook: this.hookName }),
+    )
   }
 }
 

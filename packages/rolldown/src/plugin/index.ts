@@ -103,7 +103,7 @@ export interface FunctionPluginHooks {
 
   // TODO find a way to make `this: PluginContext` work.
   [DEFINED_HOOK_NAMES.outputOptions]: (
-    this: null,
+    this: MinimalPluginContext,
     options: OutputOptions,
   ) => NullValue | OutputOptions
 

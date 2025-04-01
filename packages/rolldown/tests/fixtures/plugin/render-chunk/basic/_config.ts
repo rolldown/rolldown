@@ -34,9 +34,9 @@ export default defineTest({
               switch (moduleId) {
                 case entry:
                   expect(module.code).toBe(
-                    '//#region main.js\nconsole.log(foo);\n\n//#endregion',
+                    '//#region main.js\nconsole.log(foo);\n\n//#endregion\n',
                   )
-                  expect(module.renderedLength).toBe(49)
+                  expect(module.renderedLength).toBe(50)
                   break
 
                 case foo:

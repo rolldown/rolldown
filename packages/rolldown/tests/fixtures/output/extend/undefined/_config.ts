@@ -17,8 +17,8 @@ export default defineTest({
 
       //#region main.js
       const main = "main";
-
       //#endregion
+
       exports.main = main
       return exports;
       })({});"

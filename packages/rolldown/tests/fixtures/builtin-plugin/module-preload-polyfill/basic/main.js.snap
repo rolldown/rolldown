@@ -29,5 +29,4 @@ __VITE_IS_MODERN__ && function polyfill() {
 		fetch(link.href, fetchOpts);
 	}
 }();
-
 //#endregion

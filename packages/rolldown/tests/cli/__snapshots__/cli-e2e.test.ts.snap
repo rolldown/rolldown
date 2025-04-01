@@ -152,14 +152,14 @@ var __toESM = (mod, isNodeMode, target) => (target = mod != null ? __create(__ge
 	value: mod,
 	enumerable: true
 }) : target, mod));
-
 //#endregion
+
 node_fs = __toESM(node_fs);
 
 //#region index.ts
 const nonExternal = "nonExternal";
-
 //#endregion
+
 exports.nonExternal = nonExternal
 exports.read = node_fs.read
 exports.readFile = node_fs.readFile

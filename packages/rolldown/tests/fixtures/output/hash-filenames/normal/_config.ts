@@ -56,29 +56,29 @@ export default defineTest({
           expect(chunk.preliminaryFileName).toMatchInlineSnapshot(
             `"main-!~{000}~.js"`,
           )
-          expect(chunk.fileName).toMatchInlineSnapshot(`"main-DPeINwoC.js"`)
+          expect(chunk.fileName).toMatchInlineSnapshot(`"main-CgnO2UMt.js"`)
           expect(chunk.imports).toMatchInlineSnapshot(
             `
             [
-              "shared-auxDIuOO.js",
+              "shared-D8vuXW7i.js",
             ]
           `,
           )
           expect(chunk.dynamicImports).toMatchInlineSnapshot(
             `
             [
-              "dynamic-0KHDmDpA.js",
+              "dynamic-BrwgQX_L.js",
             ]
           `,
           )
           break
 
         case path.join(__dirname, 'entry.js'):
-          expect(chunk.fileName).toMatchInlineSnapshot(`"entry-D9cK72VL.js"`)
+          expect(chunk.fileName).toMatchInlineSnapshot(`"entry-rVpja5U3.js"`)
           expect(chunk.imports).toMatchInlineSnapshot(
             `
             [
-              "shared-auxDIuOO.js",
+              "shared-D8vuXW7i.js",
             ]
           `,
           )
@@ -86,7 +86,7 @@ export default defineTest({
           break
 
         case path.join(__dirname, 'dynamic.js'):
-          expect(chunk.fileName).toMatchInlineSnapshot(`"dynamic-0KHDmDpA.js"`)
+          expect(chunk.fileName).toMatchInlineSnapshot(`"dynamic-BrwgQX_L.js"`)
           break
 
         default:

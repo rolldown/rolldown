@@ -1,6 +1,6 @@
 
 //#region dir/b.js?raw
 const a = 1e3;
-
 //#endregion
+
 export { a };

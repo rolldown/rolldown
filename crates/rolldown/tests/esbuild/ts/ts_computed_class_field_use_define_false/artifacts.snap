@@ -15,6 +15,6 @@ var Foo = class {
 	@dec [y] = z;
 };
 new Foo();
-
 //#endregion
+
 ```

@@ -10,7 +10,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 //#region foo.js
 let foo = "foo";
-
 //#endregion
+
 exports.foo = foo
 ```

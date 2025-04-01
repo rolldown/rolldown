@@ -52,6 +52,6 @@ Foo = class {
 		for await (await using x$1 of y);
 	}
 };
-
 //#endregion
+
 ```

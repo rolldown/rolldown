@@ -1,6 +1,5 @@
 ---
 source: crates/rolldown_testing/src/integration_test.rs
-snapshot_kind: text
 ---
 # warnings
 
@@ -25,7 +24,7 @@ import { foo } from "pkg";
 
 //#region entry.ts
 var used = foo.used;
-
 //#endregion
+
 export { used };
 ```

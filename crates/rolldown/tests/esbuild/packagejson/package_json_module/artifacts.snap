@@ -12,10 +12,10 @@ import assert from "node:assert";
 function main_esm_default() {
 	return 123;
 }
-
 //#endregion
+
 //#region src/entry.js
 assert.equal(main_esm_default(), 123);
-
 //#endregion
+
 ```

@@ -16,8 +16,8 @@ var Foo = class {
 	static accessor #five = 5;
 	static accessor [six()] = 6;
 };
-
 //#endregion
+
 ```
 ## ts-assign_ts-assign.js
 
@@ -48,8 +48,8 @@ var StaticPrivate = class {
 	static accessor #a = b;
 	static c = d;
 };
-
 //#endregion
+
 ```
 ## ts-define_ts-define.js
 
@@ -80,6 +80,6 @@ var StaticPrivate = class {
 	static accessor #a = b;
 	static c = d;
 };
-
 //#endregion
+
 ```

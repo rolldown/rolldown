@@ -1,6 +1,5 @@
 ---
 source: crates/rolldown_testing/src/integration_test.rs
-snapshot_kind: text
 ---
 # warnings
 
@@ -66,8 +65,8 @@ console.log(x());
 function x() {
 	return 2;
 }
-
 //#endregion
+
 ```
 ## function3.js
 
@@ -85,8 +84,8 @@ console.log(x());
 function x() {
 	return 3;
 }
-
 //#endregion
+
 ```
 ## var2.js
 
@@ -96,8 +95,8 @@ function x() {
 var x = 1;
 console.log(x);
 var x = 2;
-
 //#endregion
+
 ```
 ## var3.js
 
@@ -109,6 +108,6 @@ console.log(x);
 var x = 2;
 console.log(x);
 var x = 3;
-
 //#endregion
+
 ```

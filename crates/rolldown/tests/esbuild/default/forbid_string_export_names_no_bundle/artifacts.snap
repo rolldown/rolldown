@@ -1,6 +1,5 @@
 ---
 source: crates/rolldown_testing/src/integration_test.rs
-snapshot_kind: text
 ---
 # Assets
 
@@ -12,7 +11,7 @@ import { "name 1" as name_2, "same name" as same_name } from "./foo";
 
 //#region entry.js
 let ok = true;
-
 //#endregion
+
 export { name_2 as "name 2", name_space as "name space", ok as "not ok", ok, same_name as "same name" };
 ```

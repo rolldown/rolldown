@@ -10,8 +10,8 @@ import { setValue } from "./shared.js";
 
 //#region a.js
 setValue(123);
-
 //#endregion
+
 ```
 ## b.js
 
@@ -34,7 +34,7 @@ function setValue(next) {
 	if (observer) observer();
 }
 sideEffects(getValue);
-
 //#endregion
+
 export { setValue };
 ```

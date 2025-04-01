@@ -1,6 +1,5 @@
 ---
 source: crates/rolldown_testing/src/integration_test.rs
-snapshot_kind: text
 ---
 # Assets
 
@@ -10,14 +9,14 @@ snapshot_kind: text
 
 //#region file1.js
 var file1_default = [void 0, void 0];
-
 //#endregion
+
 //#region node_modules/pkg/file2.js
 var file2_default = [void 0, void 0];
-
 //#endregion
+
 //#region entry.js
 console.log(file1_default, file2_default);
-
 //#endregion
+
 ```

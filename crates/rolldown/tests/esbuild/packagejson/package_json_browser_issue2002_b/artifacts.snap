@@ -1,6 +1,5 @@
 ---
 source: crates/rolldown_testing/src/integration_test.rs
-snapshot_kind: text
 ---
 # warnings
 
@@ -23,14 +22,15 @@ snapshot_kind: text
 ```js
 
 
+
 //#region src/node_modules/pkg/sub/foo.js
 var require_foo = __commonJS({ "src/node_modules/pkg/sub/foo.js"() {
 	__require("sub");
 } });
-
 //#endregion
+
 //#region src/entry.js
 require_foo();
-
 //#endregion
+
 ```

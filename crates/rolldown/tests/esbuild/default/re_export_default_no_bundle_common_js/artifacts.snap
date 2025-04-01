@@ -8,6 +8,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ```js
 "use strict";
 
+
 const foo = __toESM(require("./foo"));
 const bar = __toESM(require("./bar"));
 

@@ -1,6 +1,5 @@
 ---
 source: crates/rolldown_testing/src/integration_test.rs
-snapshot_kind: text
 ---
 # warnings
 
@@ -37,8 +36,8 @@ import { foo } from "./common.js";
 
 //#region a.js
 console.log(foo());
-
 //#endregion
+
 ```
 ## b.js
 
@@ -47,8 +46,8 @@ import { bar } from "./common.js";
 
 //#region b.js
 console.log(bar());
-
 //#endregion
+
 ```
 ## common.js
 
@@ -56,8 +55,8 @@ console.log(bar());
 
 //#region empty.js
 var empty_exports = {};
-
 //#endregion
+
 //#region common.js
 function foo() {
 	return [empty_exports, void 0];
@@ -65,7 +64,7 @@ function foo() {
 function bar() {
 	return [void 0];
 }
-
 //#endregion
+
 export { bar, foo };
 ```

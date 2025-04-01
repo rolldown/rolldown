@@ -12,6 +12,6 @@ var Foo = class {
 	method1(@dec(foo) foo = 2) {}
 	method2(@dec(() => foo) foo = 3) {}
 };
-
 //#endregion
+
 ```

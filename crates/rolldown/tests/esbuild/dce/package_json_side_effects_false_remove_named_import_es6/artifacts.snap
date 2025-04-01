@@ -9,6 +9,6 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 //#region src/entry.js
 console.log("unused import");
-
 //#endregion
+
 ```

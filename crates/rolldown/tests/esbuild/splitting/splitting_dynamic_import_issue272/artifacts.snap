@@ -9,8 +9,8 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 //#region a.js
 import("./b.js");
-
 //#endregion
+
 ```
 ## b.js
 
@@ -18,7 +18,7 @@ import("./b.js");
 
 //#region b.js
 var b_default = 1;
-
 //#endregion
+
 export { b_default as default };
 ```

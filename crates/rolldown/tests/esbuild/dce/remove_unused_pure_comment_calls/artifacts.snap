@@ -40,6 +40,6 @@ let parens_no = foo(bar);
 let new_parens_no = new foo(bar);
 let exp_no = /* @__PURE__ */ foo() ** foo();
 let new_exp_no = /* @__PURE__ */ new foo() ** foo();
-
 //#endregion
+
 ```

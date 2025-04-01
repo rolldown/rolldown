@@ -10,8 +10,8 @@ import { a } from "./shared.js";
 
 //#region a.js
 console.log(a);
-
 //#endregion
+
 ```
 ## b.js
 
@@ -20,8 +20,8 @@ import { b } from "./shared.js";
 
 //#region b.js
 console.log(b);
-
 //#endregion
+
 ```
 ## shared.js
 
@@ -31,7 +31,7 @@ console.log(b);
 let a = 1;
 let b = 2;
 console.log("side effect");
-
 //#endregion
+
 export { a, b };
 ```

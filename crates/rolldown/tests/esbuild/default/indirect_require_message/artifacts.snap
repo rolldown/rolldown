@@ -1,6 +1,5 @@
 ---
 source: crates/rolldown_testing/src/integration_test.rs
-snapshot_kind: text
 ---
 # Assets
 
@@ -11,8 +10,8 @@ import { __require } from "./chunk.js";
 
 //#region array.js
 let x = [__require];
-
 //#endregion
+
 ```
 ## assign.js
 
@@ -21,12 +20,13 @@ import { __require } from "./chunk.js";
 
 //#region assign.js
 require = x;
-
 //#endregion
+
 ```
 ## chunk.js
 
 ```js
+
 
 
 export { __require };
@@ -38,8 +38,8 @@ import { __require } from "./chunk.js";
 
 //#region dot.js
 let x = __require.cache;
-
 //#endregion
+
 ```
 ## ident.js
 
@@ -48,8 +48,8 @@ import { __require } from "./chunk.js";
 
 //#region ident.js
 let x = __require;
-
 //#endregion
+
 ```
 ## index.js
 
@@ -58,6 +58,6 @@ import { __require } from "./chunk.js";
 
 //#region index.js
 let x = __require[cache];
-
 //#endregion
+
 ```

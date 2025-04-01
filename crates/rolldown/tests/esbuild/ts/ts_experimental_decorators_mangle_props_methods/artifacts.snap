@@ -16,6 +16,6 @@ var Foo = class {
 	@dec(5) ["prop5"]() {}
 	@dec(6) ["prop6_"]() {}
 };
-
 //#endregion
+
 ```

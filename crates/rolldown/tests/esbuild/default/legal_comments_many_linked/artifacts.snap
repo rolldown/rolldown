@@ -1,6 +1,5 @@
 ---
 source: crates/rolldown_testing/src/integration_test.rs
-snapshot_kind: text
 ---
 # warnings
 
@@ -18,12 +17,12 @@ snapshot_kind: text
 
 //#region a.js
 console.log("in a");
-
 //#endregion
+
 //#region b.js
 console.log("in b");
-
 //#endregion
+
 //#region c.js
 function foo() {
 	/*
@@ -34,8 +33,8 @@ function foo() {
 	// @preserve This is another comment
 }
 foo();
-
 //#endregion
+
 //#region node_modules/some-other-pkg/js/index.js
 function bar() {
 	/*
@@ -45,8 +44,8 @@ function bar() {
 	console.log("some-other-pkg");
 }
 bar();
-
 //#endregion
+
 ```
 ## entry2.css
 

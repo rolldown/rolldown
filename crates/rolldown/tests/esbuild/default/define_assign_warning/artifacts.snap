@@ -1,6 +1,5 @@
 ---
 source: crates/rolldown_testing/src/integration_test.rs
-snapshot_kind: text
 ---
 # Assets
 
@@ -22,8 +21,8 @@ console.log([
 	dot.chain,
 	dot.chain
 ]);
-
 //#endregion
+
 ```
 ## write.js
 
@@ -43,6 +42,6 @@ console.log([
 	dot.chain = 0,
 	dot.chain = 0
 ]);
-
 //#endregion
+
 ```

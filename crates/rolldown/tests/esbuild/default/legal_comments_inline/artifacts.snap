@@ -9,16 +9,16 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 //#region a.js
 console.log("in a");
-
 //#endregion
+
 //#region b.js
 console.log("in b");
-
 //#endregion
+
 //#region c.js
 console.log("in c");
-
 //#endregion
+
 ```
 ## entry2.css
 

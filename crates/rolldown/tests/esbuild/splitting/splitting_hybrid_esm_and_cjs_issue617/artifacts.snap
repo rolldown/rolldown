@@ -16,13 +16,14 @@ export { foo };
 ```js
 
 
+
 //#region a.js
 var a_exports = {};
 __export(a_exports, { foo: () => foo });
 var foo;
 var init_a = __esm({ "a.js"() {} });
-
 //#endregion
+
 export { __toCommonJS, a_exports, foo, init_a };
 ```
 ## b.js
@@ -32,7 +33,7 @@ import { __toCommonJS, a_exports, init_a } from "./a2.js";
 
 //#region b.js
 let bar = (init_a(), __toCommonJS(a_exports));
-
 //#endregion
+
 export { bar };
 ```

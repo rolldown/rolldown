@@ -14,6 +14,6 @@ var Foo = class {
 	[keepThis];
 };
 (() => new Foo())();
-
 //#endregion
+
 ```

@@ -1,6 +1,5 @@
 ---
 source: crates/rolldown_testing/src/integration_test.rs
-snapshot_kind: text
 ---
 # warnings
 
@@ -25,7 +24,7 @@ import * as ns from "path";
 
 //#region entry.js
 let ns$1 = 123;
-
 //#endregion
+
 export { ns, ns$1 as sn };
 ```

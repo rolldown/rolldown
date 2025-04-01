@@ -32,6 +32,6 @@ console.log(
 	/* @__PURE__ */ jsxs(Fragment, { children: ["before", "after"] }),
 	/* @__PURE__ */ jsxs(Fragment, { children: ["before", "after"] })
 );
-
 //#endregion
+
 ```

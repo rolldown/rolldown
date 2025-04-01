@@ -9,15 +9,15 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 //#region a.js
 let a = 1;
-
 //#endregion
+
 //#region b.js
 let b = 3;
-
 //#endregion
+
 //#region c.js
 let c = 4;
-
 //#endregion
+
 export { a, b, c };
 ```

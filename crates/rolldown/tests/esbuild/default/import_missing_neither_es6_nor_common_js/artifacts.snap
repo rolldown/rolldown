@@ -1,6 +1,5 @@
 ---
 source: crates/rolldown_testing/src/integration_test.rs
-snapshot_kind: text
 ---
 # warnings
 
@@ -49,12 +48,13 @@ import { init_foo } from "./foo.js";
 
 //#region bare.js
 init_foo();
-
 //#endregion
+
 ```
 ## foo.js
 
 ```js
+
 
 
 //#region foo.js
@@ -66,8 +66,8 @@ var init_foo = __esm({ "foo.js"() {
 	x = void 0;
 	y = void 0;
 } });
-
 //#endregion
+
 export { __toCommonJS, default$1 as default, foo_exports, init_foo, x, y };
 ```
 ## foo2.js
@@ -83,8 +83,8 @@ init_foo();
 
 //#region import.js
 console.log(import("./foo2.js"));
-
 //#endregion
+
 ```
 ## named.js
 
@@ -94,8 +94,8 @@ import default$1, { init_foo, x, y } from "./foo.js";
 //#region named.js
 init_foo();
 console.log(default$1(x, y));
-
 //#endregion
+
 ```
 ## require.js
 
@@ -104,8 +104,8 @@ import { __toCommonJS, foo_exports, init_foo } from "./foo.js";
 
 //#region require.js
 console.log((init_foo(), __toCommonJS(foo_exports)));
-
 //#endregion
+
 ```
 ## star-capture.js
 
@@ -115,8 +115,8 @@ import { foo_exports, init_foo } from "./foo.js";
 //#region star-capture.js
 init_foo();
 console.log(foo_exports);
-
 //#endregion
+
 ```
 ## star.js
 
@@ -126,6 +126,6 @@ import { init_foo } from "./foo.js";
 //#region star.js
 init_foo();
 console.log((void 0)(void 0, void 0));
-
 //#endregion
+
 ```

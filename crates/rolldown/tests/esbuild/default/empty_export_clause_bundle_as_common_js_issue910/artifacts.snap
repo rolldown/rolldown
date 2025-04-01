@@ -9,13 +9,14 @@ source: crates/rolldown_testing/src/integration_test.rs
 import assert from "node:assert";
 
 
+
 //#region types.mjs
 var types_exports = {};
 var init_types = __esm({ "types.mjs"() {} });
-
 //#endregion
+
 //#region entry.js
 assert.deepEqual((init_types(), __toCommonJS(types_exports)), {});
-
 //#endregion
+
 ```

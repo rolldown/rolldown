@@ -16,8 +16,8 @@ export { a };
 
 //#region a.js
 const a = 1;
-
 //#endregion
+
 export { a };
 ```
 ## b.js

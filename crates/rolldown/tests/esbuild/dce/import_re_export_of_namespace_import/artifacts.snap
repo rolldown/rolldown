@@ -1,6 +1,5 @@
 ---
 source: crates/rolldown_testing/src/integration_test.rs
-snapshot_kind: text
 ---
 # Assets
 
@@ -10,19 +9,20 @@ snapshot_kind: text
 import assert from "node:assert";
 
 
+
 //#region node_modules/pkg/foo.js
 var require_foo = __commonJS({ "node_modules/pkg/foo.js"(exports, module) {
 	module.exports = 123;
 } });
 var import_foo = __toESM(require_foo());
-
 //#endregion
+
 //#region entry.js
 assert.equal(
 	// => const import_xxx = require_xxx
 	import_foo.default,
 	123
 );
-
 //#endregion
+
 ```

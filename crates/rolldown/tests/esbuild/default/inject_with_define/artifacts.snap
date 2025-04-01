@@ -1,6 +1,5 @@
 ---
 source: crates/rolldown_testing/src/integration_test.rs
-snapshot_kind: text
 ---
 # Assets
 
@@ -11,8 +10,8 @@ snapshot_kind: text
 //#region inject.js
 let second = "success (identifier)";
 let second2 = "success (dot name)";
-
 //#endregion
+
 //#region entry.js
 console.log(
 	// define wins over inject
@@ -22,6 +21,6 @@ console.log(
 	second === "success (identifier)",
 	second2 === "success (dot name)"
 );
-
 //#endregion
+
 ```

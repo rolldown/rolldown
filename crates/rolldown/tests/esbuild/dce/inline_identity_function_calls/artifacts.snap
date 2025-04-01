@@ -1,6 +1,5 @@
 ---
 source: crates/rolldown_testing/src/integration_test.rs
-snapshot_kind: text
 ---
 # warnings
 
@@ -47,8 +46,8 @@ async function keep(x) {
 console.log(keep(1));
 keep(foo());
 keep(1);
-
 //#endregion
+
 ```
 ## identity-cross-module.js
 
@@ -58,14 +57,14 @@ keep(1);
 function DROP(x) {
 	return x;
 }
-
 //#endregion
+
 //#region identity-cross-module.js
 console.log(DROP(1));
 DROP(foo());
 DROP(1);
-
 //#endregion
+
 ```
 ## identity-first.js
 
@@ -81,8 +80,8 @@ function keep(x) {
 console.log(keep(1));
 keep(foo());
 keep(1);
-
 //#endregion
+
 ```
 ## identity-generator.js
 
@@ -95,8 +94,8 @@ function* keep(x) {
 console.log(keep(1));
 keep(foo());
 keep(1);
-
 //#endregion
+
 ```
 ## identity-last.js
 
@@ -112,8 +111,8 @@ function DROP(x) {
 console.log(DROP(1));
 DROP(foo());
 DROP(1);
-
 //#endregion
+
 ```
 ## identity-no-args.js
 
@@ -125,8 +124,8 @@ function keep(x) {
 }
 console.log(keep());
 keep();
-
 //#endregion
+
 ```
 ## identity-two-args.js
 
@@ -138,8 +137,8 @@ function keep(x) {
 }
 console.log(keep(1, 2));
 keep(1, 2);
-
 //#endregion
+
 ```
 ## identity.js
 
@@ -152,8 +151,8 @@ function DROP(x) {
 console.log(DROP(1));
 DROP(foo());
 DROP(1);
-
 //#endregion
+
 ```
 ## not-identity-array.js
 
@@ -166,8 +165,8 @@ function keep([x]) {
 console.log(keep(1));
 keep(foo());
 keep(1);
-
 //#endregion
+
 ```
 ## not-identity-default.js
 
@@ -180,8 +179,8 @@ function keep(x = foo()) {
 console.log(keep(1));
 keep(foo());
 keep(1);
-
 //#endregion
+
 ```
 ## not-identity-object.js
 
@@ -194,8 +193,8 @@ function keep({ x }) {
 console.log(keep(1));
 keep(foo());
 keep(1);
-
 //#endregion
+
 ```
 ## not-identity-rest.js
 
@@ -208,8 +207,8 @@ function keep(...x) {
 console.log(keep(1));
 keep(foo());
 keep(1);
-
 //#endregion
+
 ```
 ## not-identity-return.js
 
@@ -222,8 +221,8 @@ function keep(x) {
 console.log(keep(1));
 keep(foo());
 keep(1);
-
 //#endregion
+
 ```
 ## not-identity-two-args.js
 
@@ -236,8 +235,8 @@ function keep(x, y) {
 console.log(keep(1));
 keep(foo());
 keep(1);
-
 //#endregion
+
 ```
 ## reassign-array.js
 
@@ -251,8 +250,8 @@ function keep(x) {
 console.log(keep(1));
 keep(foo());
 keep(1);
-
 //#endregion
+
 ```
 ## reassign-div.js
 
@@ -266,8 +265,8 @@ keep /= reassigned;
 console.log(keep(1));
 keep(foo());
 keep(1);
-
 //#endregion
+
 ```
 ## reassign-inc.js
 
@@ -281,8 +280,8 @@ keep++;
 console.log(keep(1));
 keep(foo());
 keep(1);
-
 //#endregion
+
 ```
 ## reassign-object.js
 
@@ -296,8 +295,8 @@ function keep(x) {
 console.log(keep(1));
 keep(foo());
 keep(1);
-
 //#endregion
+
 ```
 ## reassign.js
 
@@ -311,6 +310,6 @@ keep = reassigned;
 console.log(keep(1));
 keep(foo());
 keep(1);
-
 //#endregion
+
 ```

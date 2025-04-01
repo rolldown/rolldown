@@ -1,6 +1,5 @@
 ---
 source: crates/rolldown_testing/src/integration_test.rs
-snapshot_kind: text
 ---
 # Assets
 
@@ -10,15 +9,16 @@ snapshot_kind: text
 import assert from "node:assert";
 
 
+
 //#region node_modules/demo-pkg/index.js
 var demo_pkg_exports = {};
 __export(demo_pkg_exports, { foo: () => foo });
 const foo = 123;
 console.log("hello");
-
 //#endregion
+
 //#region src/entry.js
 assert.deepEqual(demo_pkg_exports, { foo: 123 });
-
 //#endregion
+
 ```

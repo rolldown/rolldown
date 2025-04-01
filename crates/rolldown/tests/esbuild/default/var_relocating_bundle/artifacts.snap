@@ -20,8 +20,8 @@ function x() {
 	}
 }
 x();
-
 //#endregion
+
 ```
 ## function.js
 
@@ -38,8 +38,8 @@ function x() {
 	function l() {}
 }
 x();
-
 //#endregion
+
 ```
 ## let.js
 
@@ -53,8 +53,8 @@ x();
 	for (let h in {});
 	for (let { j, x: [k] } in {});
 }
-
 //#endregion
+
 ```
 ## nested.js
 
@@ -70,8 +70,8 @@ x();
 	for (var { j, x: [k] } in {});
 	function l() {}
 }
-
 //#endregion
+
 ```
 ## top-level.js
 
@@ -82,6 +82,6 @@ for (var e of []);
 for (var { f, x: [g] } of []);
 for (var h in {});
 for (var { j, x: [k] } in {});
-
 //#endregion
+
 ```

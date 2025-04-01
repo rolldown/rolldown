@@ -9,6 +9,6 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 //#region node_modules/pkg/browser.js
 console.log("SUCCESS");
-
 //#endregion
+
 ```

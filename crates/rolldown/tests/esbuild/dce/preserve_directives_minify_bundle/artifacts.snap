@@ -1,6 +1,5 @@
 ---
 source: crates/rolldown_testing/src/integration_test.rs
-snapshot_kind: text
 ---
 # Assets
 
@@ -16,14 +15,14 @@ snapshot_kind: text
 "use B";
 "use C";
 nested();
-
 //#endregion
+
 //#region entry.js
 "use 1";
 "use 2";
 "use 3";
 entry();
-
 //#endregion
+
 })();
 ```

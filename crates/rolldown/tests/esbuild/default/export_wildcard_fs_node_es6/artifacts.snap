@@ -1,6 +1,5 @@
 ---
 source: crates/rolldown_testing/src/integration_test.rs
-snapshot_kind: text
 ---
 # Assets
 
@@ -14,7 +13,7 @@ export * from "./external"
 
 //#region internal.js
 let foo = 123;
-
 //#endregion
+
 export { foo };
 ```

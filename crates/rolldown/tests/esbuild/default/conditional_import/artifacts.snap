@@ -1,6 +1,5 @@
 ---
 source: crates/rolldown_testing/src/integration_test.rs
-snapshot_kind: text
 ---
 # Assets
 
@@ -10,8 +9,8 @@ snapshot_kind: text
 
 //#region a.js
 x ? import("a") : y ? import("./import.js") : import("c");
-
 //#endregion
+
 ```
 ## b.js
 
@@ -19,20 +18,21 @@ x ? import("a") : y ? import("./import.js") : import("c");
 
 //#region b.js
 x ? y ? import("a") : import("./import.js") : import(c);
-
 //#endregion
+
 ```
 ## import.js
 
 ```js
 
 
+
 //#region import.js
 var require_import = __commonJS({ "import.js"(exports) {
 	exports.foo = 213;
 } });
-
 //#endregion
+
 export default require_import();
 
 ```

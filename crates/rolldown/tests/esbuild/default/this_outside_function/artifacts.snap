@@ -1,12 +1,12 @@
 ---
 source: crates/rolldown_testing/src/integration_test.rs
-snapshot_kind: text
 ---
 # Assets
 
 ## entry.js
 
 ```js
+
 
 
 //#region entry.js
@@ -44,8 +44,8 @@ var require_entry = __commonJS({ "entry.js"(exports) {
 		});
 	}
 } });
-
 //#endregion
+
 export default require_entry();
 
 ```

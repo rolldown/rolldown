@@ -14,19 +14,20 @@ button { color: red }
 ```js
 
 
+
 //#region node_modules/pkg/button.css
 var require_button = __commonJS({ "node_modules/pkg/button.css"(exports, module) {
 	module.exports = {};
 } });
-
 //#endregion
+
 //#region node_modules/pkg/components.jsx
 require_button();
 const Button = () => /* @__PURE__ */ React.createElement("button", null);
-
 //#endregion
+
 //#region test.jsx
 render(/* @__PURE__ */ React.createElement(Button, null));
-
 //#endregion
+
 ```

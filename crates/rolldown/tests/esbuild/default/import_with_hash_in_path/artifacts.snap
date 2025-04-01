@@ -9,14 +9,14 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 //#region file#foo.txt
 var file_foo_default = "foo";
-
 //#endregion
+
 //#region file#bar.txt
 var file_bar_default = "bar";
-
 //#endregion
+
 //#region entry.js
 console.log(file_foo_default, file_bar_default);
-
 //#endregion
+
 ```

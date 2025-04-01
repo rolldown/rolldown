@@ -10,8 +10,8 @@ import { foo } from "./common.js";
 
 //#region a/entry.js
 console.log(foo);
-
 //#endregion
+
 ```
 ## b_entry.js
 
@@ -20,8 +20,8 @@ import { foo } from "./common.js";
 
 //#region b/entry.js
 console.log(foo);
-
 //#endregion
+
 ```
 ## common.js
 
@@ -29,7 +29,7 @@ console.log(foo);
 
 //#region common.js
 let foo = 123;
-
 //#endregion
+
 export { foo };
 ```

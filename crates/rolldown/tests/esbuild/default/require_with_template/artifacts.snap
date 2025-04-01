@@ -8,15 +8,16 @@ source: crates/rolldown_testing/src/integration_test.rs
 ```js
 
 
+
 //#region b.js
 var require_b = __commonJS({ "b.js"(exports) {
 	exports.x = 123;
 } });
-
 //#endregion
+
 //#region a.js
 console.log(require_b());
 console.log(require_b());
-
 //#endregion
+
 ```

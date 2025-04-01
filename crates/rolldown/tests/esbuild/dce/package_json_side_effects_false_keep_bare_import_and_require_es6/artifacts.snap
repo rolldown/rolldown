@@ -1,12 +1,12 @@
 ---
 source: crates/rolldown_testing/src/integration_test.rs
-snapshot_kind: text
 ---
 # Assets
 
 ## src_entry.js
 
 ```js
+
 
 
 //#region node_modules/demo-pkg/index.js
@@ -17,11 +17,11 @@ var init_demo_pkg = __esm({ "node_modules/demo-pkg/index.js"() {
 	foo = 123;
 	console.log("hello");
 } });
-
 //#endregion
+
 //#region src/entry.js
 init_demo_pkg();
 console.log("unused import");
-
 //#endregion
+
 ```

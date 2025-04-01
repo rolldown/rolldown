@@ -16,10 +16,10 @@ menu { color: red }
 
 //#region node_modules/pkg/button.js
 let Button;
-
 //#endregion
+
 //#region test.jsx
 render(/* @__PURE__ */ React.createElement(Button, null));
-
 //#endregion
+
 ```

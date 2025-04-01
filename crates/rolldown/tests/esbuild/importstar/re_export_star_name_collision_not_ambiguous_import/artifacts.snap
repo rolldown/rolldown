@@ -11,11 +11,11 @@ import assert from "node:assert";
 //#region c.js
 let x = 1;
 let y = 2;
-
 //#endregion
+
 //#region entry.js
 assert.equal(x, 1);
 assert.equal(y, 2);
-
 //#endregion
+
 ```

@@ -9,14 +9,14 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 //#region node_modules/pkg/dir/baz-foo.js
 console.log("works");
-
 //#endregion
+
 //#region node_modules/pkg2/public/abc.js
 console.log("abc");
-
 //#endregion
+
 //#region node_modules/pkg2/public/xyz.js
 console.log("xyz");
-
 //#endregion
+
 ```

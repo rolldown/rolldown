@@ -10,8 +10,8 @@ import { bar } from "./foo2.js";
 
 //#region entry.js
 import("./foo.js").then(({ bar: b }) => console.log(bar, b));
-
 //#endregion
+
 ```
 ## foo.js
 
@@ -26,7 +26,7 @@ export { bar };
 
 //#region foo.js
 let bar = 123;
-
 //#endregion
+
 export { bar };
 ```

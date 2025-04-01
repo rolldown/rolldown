@@ -9,6 +9,6 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 //#region <data:text/javascript,console.log(1+2)>
 console.log(3);
-
 //#endregion
+
 ```

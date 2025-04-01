@@ -9,10 +9,10 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 //#region node_modules/demo-pkg/foo.js
 console.log("foo");
-
 //#endregion
+
 //#region node_modules/demo-pkg/bar/index.js
 console.log("bar");
-
 //#endregion
+
 ```

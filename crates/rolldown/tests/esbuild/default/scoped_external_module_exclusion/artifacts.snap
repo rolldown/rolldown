@@ -1,6 +1,5 @@
 ---
 source: crates/rolldown_testing/src/integration_test.rs
-snapshot_kind: text
 ---
 # warnings
 
@@ -39,7 +38,7 @@ import { Bar } from "@scope/foo/bar";
 //#region index.js
 const foo = new Foo();
 const bar = new Bar();
-
 //#endregion
+
 export { bar, foo };
 ```

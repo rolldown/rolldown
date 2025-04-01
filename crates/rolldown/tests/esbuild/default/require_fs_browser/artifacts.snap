@@ -1,6 +1,5 @@
 ---
 source: crates/rolldown_testing/src/integration_test.rs
-snapshot_kind: text
 ---
 # warnings
 
@@ -23,8 +22,9 @@ snapshot_kind: text
 ```js
 
 
+
 //#region entry.js
 console.log(__require("fs"));
-
 //#endregion
+
 ```

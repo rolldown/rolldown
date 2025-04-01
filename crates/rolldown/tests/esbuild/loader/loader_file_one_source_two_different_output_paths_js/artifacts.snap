@@ -1,6 +1,5 @@
 ---
 source: crates/rolldown_testing/src/integration_test.rs
-snapshot_kind: text
 ---
 # Assets
 
@@ -12,12 +11,12 @@ snapshot_kind: text
 
 //#region shared/common.png
 var common_default = "assets/common-CHxUrMdU.png";
-
 //#endregion
+
 //#region shared/common.js
 console.log(common_default);
-
 //#endregion
+
 ```
 ## entries_entry.js
 

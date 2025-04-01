@@ -1,6 +1,5 @@
 ---
 source: crates/rolldown_testing/src/integration_test.rs
-snapshot_kind: text
 ---
 # Assets
 
@@ -9,10 +8,11 @@ snapshot_kind: text
 ```js
 "use strict";
 
+
 const ext = __toESM(require("ext"));
 
 //#region entry.js
 console.log(ext.mustBeUnquoted, ext["mustBeQuoted"]);
-
 //#endregion
+
 ```

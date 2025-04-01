@@ -1,6 +1,5 @@
 ---
 source: crates/rolldown_testing/src/integration_test.rs
-snapshot_kind: text
 ---
 # Assets
 
@@ -33,6 +32,6 @@ let keep7 = class {
 let keep8 = class {
 	static [{ toString() {} }] = "x";
 };
-
 //#endregion
+
 ```

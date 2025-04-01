@@ -9,11 +9,11 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 //#region foo.ts
 const foo$1 = 123;
-
 //#endregion
+
 //#region entry.ts
 let foo = 234;
 console.log(foo$1, foo$1, foo);
-
 //#endregion
+
 ```

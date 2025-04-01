@@ -10,8 +10,8 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 //#region internal.js
 let foo = 123;
-
 //#endregion
+
 exports.foo = foo
 var fs = require("fs");
 Object.keys(fs).forEach(function (k) {

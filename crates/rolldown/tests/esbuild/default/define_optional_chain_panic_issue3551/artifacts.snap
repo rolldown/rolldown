@@ -1,6 +1,5 @@
 ---
 source: crates/rolldown_testing/src/integration_test.rs
-snapshot_kind: text
 ---
 # Assets
 
@@ -23,8 +22,8 @@ delete 1 .c;
 delete 1 .c;
 delete 1["c"];
 delete 1["c"];
-
 //#endregion
+
 ```
 ## id-define.js
 
@@ -45,6 +44,6 @@ delete 1?.y.z;
 delete (1?.y).z;
 delete 1?.y["z"];
 delete (1?.y)["z"];
-
 //#endregion
+
 ```

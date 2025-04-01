@@ -1,12 +1,12 @@
 ---
 source: crates/rolldown_testing/src/integration_test.rs
-snapshot_kind: text
 ---
 # Assets
 
 ## entry.js
 
 ```js
+
 
 
 //#region test.json
@@ -17,10 +17,10 @@ var require_test = __commonJS({ "test.json"(exports, module) {
 		"c": [null]
 	};
 } });
-
 //#endregion
+
 //#region entry.js
 console.log(require_test());
-
 //#endregion
+
 ```

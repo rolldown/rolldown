@@ -1,6 +1,5 @@
 ---
 source: crates/rolldown_testing/src/integration_test.rs
-snapshot_kind: text
 ---
 # Assets
 
@@ -9,12 +8,13 @@ snapshot_kind: text
 ```js
 
 
+
 //#region entry.js
 var require_entry = __commonJS({ "entry.js"(exports) {
 	exports.foo = async () => exports;
 } });
-
 //#endregion
+
 export default require_entry();
 
 ```

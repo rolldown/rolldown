@@ -11,6 +11,6 @@ import b from "data:other/thing;stuff;base64,c29tZURhdGEyMzQ=";
 
 //#region entry.js
 console.log(a, b);
-
 //#endregion
+
 ```

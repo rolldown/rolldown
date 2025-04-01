@@ -22,6 +22,6 @@ with(x) {
 	console.log(Foo.NAN, Foo.POS_INF, Foo.NEG_INF);
 	checkPrecedence(1 / Foo.NAN, 1 / Foo.POS_INF, 1 / Foo.NEG_INF);
 }
-
 //#endregion
+
 ```

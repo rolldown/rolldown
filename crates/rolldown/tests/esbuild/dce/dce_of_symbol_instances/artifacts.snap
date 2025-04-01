@@ -19,8 +19,8 @@ var Keep2 = class {
 var Keep3 = class {
 	*[Symbol.wtf]() {}
 };
-
 //#endregion
+
 ```
 ## object.js
 
@@ -36,6 +36,6 @@ let keep2 = {
 	*[Symbol.iterator]() {}
 };
 let keep3 = { *[Symbol.wtf]() {} };
-
 //#endregion
+
 ```

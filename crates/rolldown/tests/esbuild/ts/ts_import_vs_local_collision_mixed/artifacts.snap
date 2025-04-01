@@ -9,8 +9,8 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 //#region other.ts
 let real = 123;
-
 //#endregion
+
 //#region entry.ts
 let a;
 const b = 0;
@@ -18,6 +18,6 @@ var c;
 function d() {}
 var e = class {};
 console.log(a, b, c, d, e, real);
-
 //#endregion
+
 ```

@@ -1,6 +1,5 @@
 ---
 source: crates/rolldown_testing/src/integration_test.rs
-snapshot_kind: text
 ---
 # Assets
 
@@ -9,28 +8,29 @@ snapshot_kind: text
 ```js
 
 
+
 //#region something.js
 var init_something = __esm({ "something.js"() {} });
-
 //#endregion
+
 //#region c.js
 var require_c = __commonJS({ "c.js"() {
 	await 0;
 } });
-
 //#endregion
+
 //#region b.js
 var b_exports = {};
 var init_b = __esm({ async "b.js"() {} });
-
 //#endregion
+
 //#region a.js
 var a_exports = {};
 var init_a = __esm({ async "a.js"() {
 	await init_b();
 } });
-
 //#endregion
+
 //#region entry.js
 var require_entry = __commonJS({ "entry.js"() {
 	init_a();
@@ -39,8 +39,8 @@ var require_entry = __commonJS({ "entry.js"() {
 	require_entry();
 	await 0;
 } });
-
 //#endregion
+
 export default require_entry();
 
 ```

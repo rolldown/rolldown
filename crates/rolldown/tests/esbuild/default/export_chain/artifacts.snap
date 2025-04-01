@@ -9,7 +9,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 //#region bar.js
 const c = 123;
-
 //#endregion
+
 export { c as a };
 ```

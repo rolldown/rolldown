@@ -10,17 +10,17 @@ import assert from "node:assert";
 
 //#region baz.js
 const value = 123;
-
 //#endregion
+
 //#region foo.js
 statement();
 statement();
 statement();
 statement();
-
 //#endregion
+
 //#region entry.js
 assert.equal(value, 123);
-
 //#endregion
+
 ```

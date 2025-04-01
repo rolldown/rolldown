@@ -1,6 +1,5 @@
 ---
 source: crates/rolldown_testing/src/integration_test.rs
-snapshot_kind: text
 ---
 # warnings
 
@@ -59,11 +58,12 @@ snapshot_kind: text
 ```js
 
 
+
 //#region empty.cjs
 var require_empty = __commonJS({ "empty.cjs"() {} });
 var import_empty = __toESM(require_empty());
-
 //#endregion
+
 export { import_empty };
 ```
 ## entry-default.js
@@ -73,8 +73,8 @@ import { import_empty } from "./empty.js";
 
 //#region entry-default.js
 console.log(void 0, void 0, import_empty.default);
-
 //#endregion
+
 ```
 ## entry-nope.js
 
@@ -83,6 +83,6 @@ import { import_empty } from "./empty.js";
 
 //#region entry-nope.js
 console.log(void 0, void 0, import_empty.nope);
-
 //#endregion
+
 ```

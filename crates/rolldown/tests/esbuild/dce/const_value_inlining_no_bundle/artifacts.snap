@@ -1,6 +1,5 @@
 ---
 source: crates/rolldown_testing/src/integration_test.rs
-snapshot_kind: text
 ---
 # Assets
 
@@ -15,8 +14,8 @@ function foo() {
 	console.log(x, x, y, y);
 }
 assert(foo() !== void 0);
-
 //#endregion
+
 ```
 ## backwards-reference-top-level.js
 
@@ -26,8 +25,8 @@ assert(foo() !== void 0);
 const x = y;
 const y = 1;
 console.log(x, x, y, y);
-
 //#endregion
+
 ```
 ## comment-before.js
 
@@ -39,8 +38,8 @@ console.log(x, x, y, y);
 	const REMOVE = 1;
 	x = [REMOVE, REMOVE];
 }
-
 //#endregion
+
 ```
 ## debugger-before.js
 
@@ -52,8 +51,8 @@ console.log(x, x, y, y);
 	const REMOVE = 1;
 	x = [REMOVE, REMOVE];
 }
-
 //#endregion
+
 ```
 ## directive-before.js
 
@@ -66,8 +65,8 @@ function nested() {
 	x = [REMOVE, REMOVE];
 }
 assert(nested() !== void 0);
-
 //#endregion
+
 ```
 ## disabled-tdz.js
 
@@ -79,8 +78,8 @@ const x_keep = 1;
 function foo() {
 	return x_keep;
 }
-
 //#endregion
+
 ```
 ## exprs-before.js
 
@@ -103,8 +102,8 @@ function nested() {
 	}
 }
 assert(nested() !== void 0);
-
 //#endregion
+
 ```
 ## issue-3125.js
 
@@ -117,8 +116,8 @@ function foo() {
 	return f();
 }
 assert(foo() !== void 0);
-
 //#endregion
+
 ```
 ## namespace-export.js
 
@@ -131,8 +130,8 @@ let ns;
 	const y_keep = _ns.y_keep = 2;
 	console.log(x_REMOVE, x_REMOVE, y_keep, y_keep);
 })(ns || (ns = {}));
-
 //#endregion
+
 ```
 ## nested-block.js
 
@@ -159,8 +158,8 @@ let ns;
 		s_keep
 );
 }
-
 //#endregion
+
 ```
 ## nested-function.js
 
@@ -188,8 +187,8 @@ function nested() {
 );
 }
 assert(nested() !== void 0);
-
 //#endregion
+
 ```
 ## semicolon-before.js
 
@@ -200,8 +199,8 @@ assert(nested() !== void 0);
 	const REMOVE = 1;
 	x = [REMOVE, REMOVE];
 }
-
 //#endregion
+
 ```
 ## top-level.js
 
@@ -226,8 +225,8 @@ console.log(
 	s_keep,
 	s_keep
 );
-
 //#endregion
+
 ```
 ## type-before.js
 
@@ -238,6 +237,6 @@ console.log(
 	const REMOVE = 1;
 	x = [REMOVE, REMOVE];
 }
-
 //#endregion
+
 ```

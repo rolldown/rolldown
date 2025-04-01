@@ -11,10 +11,10 @@ import assert from "node:assert";
 //#region node_modules/demo-pkg/index.js
 const foo = 123;
 console.log("hello");
-
 //#endregion
+
 //#region src/entry.js
 assert.equal(foo, 123);
-
 //#endregion
+
 ```

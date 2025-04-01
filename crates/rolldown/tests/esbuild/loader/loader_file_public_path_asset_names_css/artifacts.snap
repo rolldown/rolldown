@@ -1,6 +1,5 @@
 ---
 source: crates/rolldown_testing/src/integration_test.rs
-snapshot_kind: text
 ---
 # Assets
 
@@ -23,6 +22,6 @@ div {
 
 //#region images/image.png
 var image_default = "assets/image-Dq1zDy-k.png";
-
 //#endregion
+
 ```

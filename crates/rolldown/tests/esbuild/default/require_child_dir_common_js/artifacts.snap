@@ -1,6 +1,5 @@
 ---
 source: crates/rolldown_testing/src/integration_test.rs
-snapshot_kind: text
 ---
 # Assets
 
@@ -9,14 +8,15 @@ snapshot_kind: text
 ```js
 
 
+
 //#region dir/index.js
 var require_dir = __commonJS({ "dir/index.js"(exports, module) {
 	module.exports = 123;
 } });
-
 //#endregion
+
 //#region entry.js
 console.log(require_dir());
-
 //#endregion
+
 ```

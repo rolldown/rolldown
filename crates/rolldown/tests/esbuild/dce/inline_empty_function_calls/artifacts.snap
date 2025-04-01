@@ -1,6 +1,5 @@
 ---
 source: crates/rolldown_testing/src/integration_test.rs
-snapshot_kind: text
 ---
 # warnings
 
@@ -45,8 +44,8 @@ async function keep() {}
 console.log(keep());
 keep(foo());
 keep(1);
-
 //#endregion
+
 ```
 ## empty-comma.js
 
@@ -61,8 +60,8 @@ for (DROP(); DROP(); DROP()) DROP();
 DROP(), DROP(), foo();
 DROP(), foo(), DROP();
 foo(), DROP(), DROP();
-
 //#endregion
+
 ```
 ## empty-cross-module.js
 
@@ -70,13 +69,13 @@ foo(), DROP(), DROP();
 
 //#region empty-cross-module-def.js
 function DROP() {}
-
 //#endregion
+
 //#region empty-cross-module.js
 console.log(DROP());
 DROP();
-
 //#endregion
+
 ```
 ## empty-first.js
 
@@ -92,8 +91,8 @@ function keep() {
 console.log(keep());
 keep(foo());
 keep(1);
-
 //#endregion
+
 ```
 ## empty-generator.js
 
@@ -104,8 +103,8 @@ function* keep() {}
 console.log(keep());
 keep(foo());
 keep(1);
-
 //#endregion
+
 ```
 ## empty-if-else.js
 
@@ -118,8 +117,8 @@ if (foo) {
 	bar();
 	bar();
 } else DROP();
-
 //#endregion
+
 ```
 ## empty-last.js
 
@@ -134,8 +133,8 @@ function DROP() {
 }
 console.log(DROP());
 DROP();
-
 //#endregion
+
 ```
 ## empty.js
 
@@ -153,8 +152,8 @@ DROP(foo(), 1);
 DROP(1, foo());
 DROP(1);
 DROP();
-
 //#endregion
+
 ```
 ## reassign-array.js
 
@@ -166,8 +165,8 @@ function keep() {}
 console.log(keep(1));
 keep(foo());
 keep(1);
-
 //#endregion
+
 ```
 ## reassign-div.js
 
@@ -179,8 +178,8 @@ keep /= reassigned;
 console.log(keep(1));
 keep(foo());
 keep(1);
-
 //#endregion
+
 ```
 ## reassign-inc.js
 
@@ -192,8 +191,8 @@ keep++;
 console.log(keep(1));
 keep(foo());
 keep(1);
-
 //#endregion
+
 ```
 ## reassign-object.js
 
@@ -205,8 +204,8 @@ function keep() {}
 console.log(keep(1));
 keep(foo());
 keep(1);
-
 //#endregion
+
 ```
 ## reassign.js
 
@@ -218,6 +217,6 @@ keep = reassigned;
 console.log(keep());
 keep(foo());
 keep(1);
-
 //#endregion
+
 ```

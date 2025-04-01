@@ -1,6 +1,5 @@
 ---
 source: crates/rolldown_testing/src/integration_test.rs
-snapshot_kind: text
 ---
 # Assets
 
@@ -10,8 +9,8 @@ snapshot_kind: text
 
 //#region node_modules/c/index.js
 let foo = "foo";
-
 //#endregion
+
 export { foo };
 ```
 ## src_entry.js
@@ -20,6 +19,6 @@ export { foo };
 
 //#region src/entry.js
 import("./a.js").then((x) => assert(x.foo === "foo"));
-
 //#endregion
+
 ```

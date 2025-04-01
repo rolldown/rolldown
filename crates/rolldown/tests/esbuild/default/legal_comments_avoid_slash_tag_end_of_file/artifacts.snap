@@ -9,8 +9,8 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 //#region entry.js
 let x;
-
 //#endregion
+
 export { x };
 ```
 ## entry2.css

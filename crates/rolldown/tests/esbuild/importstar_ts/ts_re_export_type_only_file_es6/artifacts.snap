@@ -1,6 +1,5 @@
 ---
 source: crates/rolldown_testing/src/integration_test.rs
-snapshot_kind: text
 ---
 # Assets
 
@@ -10,22 +9,22 @@ snapshot_kind: text
 
 //#region types1.ts
 console.log("some code");
-
 //#endregion
+
 //#region types2.ts
 console.log("some code");
-
 //#endregion
+
 //#region types3.ts
 console.log("some code");
-
 //#endregion
+
 //#region values.ts
 let foo = 123;
-
 //#endregion
+
 //#region entry.ts
 console.log(foo);
-
 //#endregion
+
 ```

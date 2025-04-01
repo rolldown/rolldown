@@ -1,6 +1,5 @@
 ---
 source: crates/rolldown_testing/src/integration_test.rs
-snapshot_kind: text
 ---
 # Assets
 
@@ -11,7 +10,7 @@ import { "an import" as an_import, "another import" as an_export } from "./foo";
 
 //#region entry.js
 an_import();
-
 //#endregion
+
 export { an_export as "an export" };
 ```

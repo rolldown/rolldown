@@ -11,8 +11,8 @@ source: crates/rolldown_testing/src/integration_test.rs
 const fn = () => {
 	console.log("side effect");
 };
-
 //#endregion
+
 //#region keep-these.ts
 var Class = @fn class {};
 var Field = class {
@@ -33,6 +33,6 @@ var StaticMethod = class {
 var StaticParameter = class {
 	static foo(@fn bar) {}
 };
-
 //#endregion
+
 ```

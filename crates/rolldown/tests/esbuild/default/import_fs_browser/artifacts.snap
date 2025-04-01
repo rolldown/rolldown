@@ -1,6 +1,5 @@
 ---
 source: crates/rolldown_testing/src/integration_test.rs
-snapshot_kind: text
 ---
 # warnings
 
@@ -62,6 +61,6 @@ import defaultValue, { readFileSync } from "fs";
 
 //#region entry.js
 console.log(fs, readFileSync, defaultValue);
-
 //#endregion
+
 ```

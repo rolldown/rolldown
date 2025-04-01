@@ -1,6 +1,5 @@
 ---
 source: crates/rolldown_testing/src/integration_test.rs
-snapshot_kind: text
 ---
 # Assets
 
@@ -9,9 +8,10 @@ snapshot_kind: text
 ```js
 
 
+
 //#region entry.js
 const req = __require;
 req("./entry");
-
 //#endregion
+
 ```

@@ -1,6 +1,5 @@
 ---
 source: crates/rolldown_testing/src/integration_test.rs
-snapshot_kind: text
 ---
 # Assets
 
@@ -10,8 +9,8 @@ snapshot_kind: text
 
 //#region silent1.ts
 var foo = void 0 && (void 0).foo;
-
 //#endregion
+
 export { foo };
 ```
 ## silent2.js
@@ -20,8 +19,8 @@ export { foo };
 
 //#region silent2.ts
 var foo = void 0 && (() => (void 0).foo);
-
 //#endregion
+
 export { foo };
 ```
 ## warning1.js
@@ -30,8 +29,8 @@ export { foo };
 
 //#region warning1.ts
 var foo = void 0;
-
 //#endregion
+
 export { foo };
 ```
 ## warning2.js
@@ -40,8 +39,8 @@ export { foo };
 
 //#region warning2.ts
 var foo = void 0 || (void 0).foo;
-
 //#endregion
+
 export { foo };
 ```
 ## warning3.js
@@ -50,7 +49,7 @@ export { foo };
 
 //#region warning3.ts
 var foo = void 0 ? (void 0).foo : null;
-
 //#endregion
+
 export { foo };
 ```

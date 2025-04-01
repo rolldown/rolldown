@@ -1,6 +1,5 @@
 ---
 source: crates/rolldown_testing/src/integration_test.rs
-snapshot_kind: text
 ---
 # Assets
 
@@ -10,11 +9,12 @@ snapshot_kind: text
 "use strict";
 
 
+
 //#region inner.js
 var inner_exports = {};
 __reExport(inner_exports, require("b"));
-
 //#endregion
+
 Object.defineProperty(exports, 'inner', {
   enumerable: true,
   get: function () {

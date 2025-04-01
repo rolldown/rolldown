@@ -8,15 +8,16 @@ source: crates/rolldown_testing/src/integration_test.rs
 ```js
 
 
+
 //#region custom-react.js
 var require_custom_react = __commonJS({ "custom-react.js"(exports, module) {
 	module.exports = {};
 } });
 var import_custom_react = __toESM(require_custom_react());
-
 //#endregion
+
 //#region entry.jsx
 console.log(/* @__PURE__ */ (0, import_custom_react.elem)("div", null), /* @__PURE__ */ (0, import_custom_react.elem)(import_custom_react.frag, null, "fragment"));
-
 //#endregion
+
 ```

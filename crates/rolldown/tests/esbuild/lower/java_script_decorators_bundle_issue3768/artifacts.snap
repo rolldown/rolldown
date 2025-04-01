@@ -16,8 +16,8 @@ source: crates/rolldown_testing/src/integration_test.rs
 var Foo = class Foo {
 	@dec foo = Foo;
 };
-
 //#endregion
+
 ```
 ## base-instance-method.js
 
@@ -29,8 +29,8 @@ var Foo = class Foo {
 		return Foo;
 	}
 };
-
 //#endregion
+
 ```
 ## base-static-accessor.js
 
@@ -45,8 +45,8 @@ var Foo = class Foo {
 var Foo = class Foo {
 	@dec static foo = Foo;
 };
-
 //#endregion
+
 ```
 ## base-static-method.js
 
@@ -58,8 +58,8 @@ var Foo = class Foo {
 		return Foo;
 	}
 };
-
 //#endregion
+
 ```
 ## derived-instance-accessor.js
 
@@ -74,8 +74,8 @@ var Foo = class Foo {
 var Foo = class Foo extends Bar {
 	@dec foo = Foo;
 };
-
 //#endregion
+
 ```
 ## derived-instance-method.js
 
@@ -87,8 +87,8 @@ var Foo = class Foo extends Bar {
 		return Foo;
 	}
 };
-
 //#endregion
+
 ```
 ## derived-static-accessor.js
 
@@ -103,8 +103,8 @@ var Foo = class Foo extends Bar {
 var Foo = class Foo extends Bar {
 	@dec static foo = Foo;
 };
-
 //#endregion
+
 ```
 ## derived-static-method.js
 
@@ -116,6 +116,6 @@ var Foo = class Foo extends Bar {
 		return Foo;
 	}
 };
-
 //#endregion
+
 ```

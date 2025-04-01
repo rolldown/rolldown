@@ -1,6 +1,5 @@
 ---
 source: crates/rolldown_testing/src/integration_test.rs
-snapshot_kind: text
 ---
 # warnings
 
@@ -65,6 +64,6 @@ exports.bar = function() {
 	if (x);
 	if (y) keep_2: require("bar2");
 };
-
 //#endregion
+
 ```

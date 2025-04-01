@@ -1,6 +1,5 @@
 ---
 source: crates/rolldown_testing/src/integration_test.rs
-snapshot_kind: text
 ---
 # Assets
 
@@ -14,7 +13,7 @@ const myFunc = () => {
 	console.log("keep");
 };
 var entry_default = myFunc;
-
 //#endregion
+
 export { entry_default as default };
 ```

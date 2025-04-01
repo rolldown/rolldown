@@ -8,6 +8,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ```js
 
 
+
 //#region foo.ts
 var foo_exports = {};
 __export(foo_exports, { foo: () => foo });
@@ -15,12 +16,12 @@ var foo;
 var init_foo = __esm({ "foo.ts"() {
 	foo = 123;
 } });
-
 //#endregion
+
 //#region entry.js
 init_foo();
 const ns2 = (init_foo(), __toCommonJS(foo_exports));
 console.log(foo, ns2.foo);
-
 //#endregion
+
 ```

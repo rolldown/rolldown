@@ -1,6 +1,5 @@
 ---
 source: crates/rolldown_testing/src/integration_test.rs
-snapshot_kind: text
 ---
 # warnings
 
@@ -20,10 +19,12 @@ snapshot_kind: text
 x;
 /*! </script> */
 //#endregion
+
 //#region entry.js
 a;
 /*! </script> */
 //#endregion
+
 ```
 ## entry2.css
 

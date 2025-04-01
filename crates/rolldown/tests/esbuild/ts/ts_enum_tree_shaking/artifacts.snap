@@ -15,8 +15,8 @@ var x = /* @__PURE__ */ function(x$1) {
 (function(_x) {
 	console.log(x, y);
 })(x || (x = {}));
-
 //#endregion
+
 ```
 ## namespace-before.js
 
@@ -30,8 +30,8 @@ var x = /* @__PURE__ */ function(x$1) {
 	x$1[x$1["y"] = 123] = "y";
 	return x$1;
 }(x || {});
-
 //#endregion
+
 ```
 ## sibling-enum-after.js
 
@@ -47,8 +47,8 @@ x = /* @__PURE__ */ function(x$1) {
 	return x$1;
 }(x || {});
 console.log(x);
-
 //#endregion
+
 ```
 ## sibling-enum-before.js
 
@@ -64,8 +64,8 @@ x = /* @__PURE__ */ function(x$1) {
 	x$1[x$1["z"] = 246] = "z";
 	return x$1;
 }(x || {});
-
 //#endregion
+
 ```
 ## sibling-enum-middle.js
 
@@ -81,8 +81,8 @@ x = /* @__PURE__ */ function(x$1) {
 	x$1[x$1["z"] = 246] = "z";
 	return x$1;
 }(x || {});
-
 //#endregion
+
 ```
 ## sibling-member.js
 
@@ -98,8 +98,8 @@ x = /* @__PURE__ */ function(x$1) {
 	return x$1;
 }(x || {});
 console.log(x.y, x.z);
-
 //#endregion
+
 ```
 ## simple-enum.js
 
@@ -111,8 +111,8 @@ var x = /* @__PURE__ */ function(x$1) {
 	return x$1;
 }(x || {});
 console.log(x);
-
 //#endregion
+
 ```
 ## simple-member.js
 
@@ -124,6 +124,6 @@ var x = /* @__PURE__ */ function(x$1) {
 	return x$1;
 }(x || {});
 console.log(x.y);
-
 //#endregion
+
 ```

@@ -1,6 +1,5 @@
 ---
 source: crates/rolldown_testing/src/integration_test.rs
-snapshot_kind: text
 ---
 # warnings
 
@@ -61,8 +60,8 @@ import { import_no_side_effects } from "./no-side-effects.js";
 
 //#region entry-default.js
 console.log(void 0, void 0, import_no_side_effects.default);
-
 //#endregion
+
 ```
 ## entry-nope.js
 
@@ -71,12 +70,13 @@ import { import_no_side_effects } from "./no-side-effects.js";
 
 //#region entry-nope.js
 console.log(void 0, void 0, import_no_side_effects.nope);
-
 //#endregion
+
 ```
 ## no-side-effects.js
 
 ```js
+
 
 
 //#region foo/no-side-effects.cjs
@@ -84,7 +84,7 @@ var require_no_side_effects = __commonJS({ "foo/no-side-effects.cjs"() {
 	console.log("cjs");
 } });
 var import_no_side_effects = __toESM(require_no_side_effects());
-
 //#endregion
+
 export { import_no_side_effects };
 ```

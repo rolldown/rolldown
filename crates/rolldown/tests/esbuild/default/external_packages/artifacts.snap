@@ -1,6 +1,5 @@
 ---
 source: crates/rolldown_testing/src/integration_test.rs
-snapshot_kind: text
 ---
 # warnings
 
@@ -25,14 +24,14 @@ import "pkg1";
 
 //#region file.js
 console.log("file");
-
 //#endregion
+
 //#region node_modules/pkg2/index.js
 console.log("pkg2");
-
 //#endregion
+
 //#region libs/pkg3.js
 console.log("pkg3");
-
 //#endregion
+
 ```

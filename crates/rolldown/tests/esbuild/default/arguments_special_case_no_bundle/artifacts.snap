@@ -23,6 +23,6 @@ source: crates/rolldown_testing/src/integration_test.rs
 		return arguments$1;
 	}
 })();
-
 //#endregion
+
 ```

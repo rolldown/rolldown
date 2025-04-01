@@ -14,8 +14,8 @@ if (nested) {
 	using x = 1;
 	await using y = 2;
 }
-
 //#endregion
+
 ```
 ## loops.js
 
@@ -32,8 +32,8 @@ if (nested) {
 	for await (using g of h) i(() => g);
 	for await (await using j of k) l(() => j);
 }
-
 //#endregion
+
 ```
 ## switch.js
 
@@ -60,6 +60,6 @@ async function foo() {
 		default: using e = f;
 	}
 }
-
 //#endregion
+
 ```

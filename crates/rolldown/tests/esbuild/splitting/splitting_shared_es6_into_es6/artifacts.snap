@@ -10,8 +10,8 @@ import { foo } from "./shared.js";
 
 //#region a.js
 console.log(foo);
-
 //#endregion
+
 ```
 ## b.js
 
@@ -20,8 +20,8 @@ import { foo } from "./shared.js";
 
 //#region b.js
 console.log(foo);
-
 //#endregion
+
 ```
 ## shared.js
 
@@ -29,7 +29,7 @@ console.log(foo);
 
 //#region shared.js
 let foo = 123;
-
 //#endregion
+
 export { foo };
 ```

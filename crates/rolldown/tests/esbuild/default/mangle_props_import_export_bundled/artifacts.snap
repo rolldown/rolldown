@@ -8,6 +8,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ```js
 
 
+
 //#region esm.js
 var esm_exports = {};
 __export(esm_exports, { esm_foo_: () => esm_foo_ });
@@ -15,15 +16,15 @@ var esm_foo_;
 var init_esm = __esm({ "esm.js"() {
 	esm_foo_ = "foo";
 } });
-
 //#endregion
+
 //#region cjs.js
 var require_cjs = __commonJS({ "cjs.js"(exports) {
 	exports.cjs_foo_ = "foo";
 } });
 var import_cjs = __toESM(require_cjs());
-
 //#endregion
+
 export { __commonJS, __toCommonJS, esm_exports, esm_foo_, import_cjs, init_esm, require_cjs };
 ```
 ## entry-cjs.js
@@ -37,8 +38,8 @@ var require_entry_cjs = __commonJS({ "entry-cjs.js"(exports) {
 	let { cjs_foo_ } = require_cjs();
 	exports.bar_ = [esm_foo_, cjs_foo_];
 } });
-
 //#endregion
+
 export default require_entry_cjs();
 
 ```
@@ -55,7 +56,7 @@ let bar_ = [
 	esm_foo_,
 	import_cjs.cjs_foo_
 ];
-
 //#endregion
+
 export { bar_ };
 ```

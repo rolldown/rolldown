@@ -8,6 +8,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ```js
 
 
+
 //#region foo.js
 var foo_exports = {};
 __export(foo_exports, {
@@ -15,7 +16,7 @@ __export(foo_exports, {
 	ns: () => foo_exports
 });
 const foo = 123;
-
 //#endregion
+
 export { foo, foo_exports as ns };
 ```

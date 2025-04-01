@@ -15,8 +15,8 @@ let Foo;
 		foo(Foo, Bar);
 	})(Bar || (Bar = _Foo.Bar || (_Foo.Bar = {})));
 })(Foo || (Foo = {}));
-
 //#endregion
+
 ```
 ## b.js
 
@@ -30,7 +30,7 @@ let Foo;
 		foo(Foo, Bar);
 	})(Bar || (Bar = _Foo.Bar || (_Foo.Bar = {})));
 })(Foo || (Foo = {}));
-
 //#endregion
+
 export { Foo };
 ```

@@ -38,13 +38,13 @@ pub fn render_ecma_module(
             .with_pre_compute_sourcemap_data(options.is_sourcemap_enabled()),
         ));
       } else {
-        sources.push(Box::new(render_output.code));
+        sources.push(Box::new(render_output.code.trim_end().to_string()));
       }
     } else {
-      sources.push(Box::new(render_output.code));
+      sources.push(Box::new(render_output.code.trim_end().to_string()));
     }
 
-    sources.push(Box::new("//#endregion"));
+    sources.push(Box::new("//#endregion\n"));
 
     Some(Arc::from(sources.into_boxed_slice()))
   }

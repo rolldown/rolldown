@@ -1,6 +1,5 @@
 ---
 source: crates/rolldown_testing/src/integration_test.rs
-snapshot_kind: text
 ---
 # Assets
 
@@ -9,20 +8,21 @@ snapshot_kind: text
 ```js
 
 
+
 //#region test.txt
 var require_test = __commonJS({ "test.txt"(exports, module) {
 	module.exports = "test.txt";
 } });
-
 //#endregion
+
 //#region test.base64.txt
 var require_test_base64 = __commonJS({ "test.base64.txt"(exports, module) {
 	module.exports = "dGVzdC5iYXNlNjQudHh0";
 } });
-
 //#endregion
+
 //#region entry.js
 console.log(require_test(), require_test_base64());
-
 //#endregion
+
 ```

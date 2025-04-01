@@ -185,7 +185,10 @@ function collectOutputEntries(output: RolldownOutput['output']): OutputEntry[] {
   return output.map((chunk) => ({
     type: chunk.type,
     fileName: chunk.fileName,
-    size: chunk.type === 'chunk' ? chunk.code.length : chunk.source.length,
+    size:
+      chunk.type === 'chunk'
+        ? Buffer.byteLength(chunk.code)
+        : Buffer.byteLength(chunk.source),
   }))
 }
 

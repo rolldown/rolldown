@@ -17,8 +17,8 @@ var entry_default = {
 	foo_: 0,
 	_bar_: 1
 };
-
 //#endregion
+
 export { entry_default as default };
 ```
 ### diff

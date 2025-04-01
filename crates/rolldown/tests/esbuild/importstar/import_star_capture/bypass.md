@@ -20,19 +20,20 @@ console.log(foo_exports, foo, foo2);
 import assert from "node:assert";
 
 
+
 //#region foo.js
 var foo_exports = {};
 __export(foo_exports, { foo: () => foo$1 });
 const foo$1 = 123;
-
 //#endregion
+
 //#region entry.js
 let foo = 234;
 assert.deepEqual(foo_exports, { foo: 123 });
 assert.equal(foo$1, 123);
 assert.equal(foo, 234);
-
 //#endregion
+
 ```
 ### diff
 ```diff

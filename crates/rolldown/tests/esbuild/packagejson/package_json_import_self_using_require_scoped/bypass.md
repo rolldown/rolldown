@@ -27,19 +27,20 @@ export default require_src();
 ```js
 
 
+
 //#region src/foo-require.js
 var require_foo_require = __commonJS({ "src/foo-require.js"(exports, module) {
 	module.exports = "foo";
 } });
-
 //#endregion
+
 //#region src/index.js
 var require_src = __commonJS({ "src/index.js"(exports, module) {
 	module.exports = "index";
 	console.log(require_src(), require_foo_require());
 } });
-
 //#endregion
+
 export default require_src();
 
 ```

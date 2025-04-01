@@ -22,8 +22,8 @@ var require_a = __commonJS({ "a.js"(exports, module) {
 	var foo = { bar: 123 };
 	module.exports = foo;
 } });
-
 //#endregion
+
 export default require_a();
 
 ```
@@ -61,8 +61,8 @@ var require_b = __commonJS({ "b.js"(exports, module) {
 	var exports = { bar: 123 };
 	module.exports = exports;
 } });
-
 //#endregion
+
 export default require_b();
 
 ```
@@ -100,8 +100,8 @@ var require_c = __commonJS({ "c.js"(exports) {
 	var module = { bar: 123 };
 	exports.foo = module;
 } });
-
 //#endregion
+
 export default require_c();
 
 ```

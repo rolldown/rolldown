@@ -22,17 +22,18 @@ console.log(foo);
 import assert from "node:assert";
 
 
+
 //#region foo.js
 var require_foo = __commonJS({ "foo.js"(exports) {
 	exports.foo = 123;
 } });
-
 //#endregion
+
 //#region entry.js
 let foo = 234;
 assert.equal(foo, 234);
-
 //#endregion
+
 ```
 ### diff
 ```diff

@@ -23,8 +23,8 @@ const myFunc = () => {
 	console.log("keep");
 };
 var entry_default = myFunc;
-
 //#endregion
+
 export { entry_default as default };
 ```
 ### diff

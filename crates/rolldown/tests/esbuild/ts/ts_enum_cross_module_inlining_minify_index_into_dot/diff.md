@@ -31,8 +31,8 @@ let Bar = /* @__PURE__ */ function(Bar$1) {
 	Bar$1["bar2"] = "x y z";
 	return Bar$1;
 }({});
-
 //#endregion
+
 //#region entry.ts
 var Foo = /* @__PURE__ */ function(Foo$1) {
 	Foo$1["foo1"] = "abc";
@@ -55,8 +55,8 @@ notInlined = [
 	obj?.prop[Foo.foo2],
 	obj?.prop[Bar.bar2]
 ];
-
 //#endregion
+
 ```
 ### diff
 ```diff

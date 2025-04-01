@@ -39,8 +39,8 @@ x([
 	/* @__NO_SIDE_EFFECTS__ */ async function* () {},
 	/* @__NO_SIDE_EFFECTS__ */ async function* y() {}
 ]);
-
 //#endregion
+
 ```
 ### diff
 ```diff
@@ -81,8 +81,8 @@ function* b() {}
 async function c() {}
 /* @__NO_SIDE_EFFECTS__ */
 async function* d() {}
-
 //#endregion
+
 export { a, b, c, d };
 ```
 ### diff
@@ -136,8 +136,8 @@ const c0 = /* @__NO_SIDE_EFFECTS__ */ function() {}, c1 = function() {};
 var v2 = () => {}, v3 = () => {};
 let l2 = () => {}, l3 = () => {};
 const c2 = /* @__NO_SIDE_EFFECTS__ */ () => {}, c3 = () => {};
-
 //#endregion
+
 ```
 ### diff
 ```diff
@@ -196,8 +196,8 @@ let l2 = () => {};
 let l3 = () => {};
 const c2 = /* @__NO_SIDE_EFFECTS__ */ () => {};
 const c3 = () => {};
-
 //#endregion
+
 export { c0, c1, c2, c3, l0, l1, l2, l3, v0, v1, v2, v3 };
 ```
 ### diff
@@ -347,8 +347,8 @@ export default function() {
 //#region stmt-export-default-before-fn-anon.js
 /* @__NO_SIDE_EFFECTS__ */
 function stmt_export_default_before_fn_anon_default() {}
-
 //#endregion
+
 export { stmt_export_default_before_fn_anon_default as default };
 ```
 ### diff
@@ -376,8 +376,8 @@ export default function f() {
 //#region stmt-export-default-before-fn-name.js
 /* @__NO_SIDE_EFFECTS__ */
 function f() {}
-
 //#endregion
+
 export { f as default };
 ```
 ### diff
@@ -405,8 +405,8 @@ export default function* () {
 //#region stmt-export-default-before-gen-fn-anon.js
 /* @__NO_SIDE_EFFECTS__ */
 function* stmt_export_default_before_gen_fn_anon_default() {}
-
 //#endregion
+
 export { stmt_export_default_before_gen_fn_anon_default as default };
 ```
 ### diff
@@ -434,8 +434,8 @@ export default function* f() {
 //#region stmt-export-default-before-gen-fn-name.js
 /* @__NO_SIDE_EFFECTS__ */
 function* f() {}
-
 //#endregion
+
 export { f as default };
 ```
 ### diff
@@ -463,8 +463,8 @@ export default async function() {
 //#region stmt-export-default-before-async-fn-anon.js
 /* @__NO_SIDE_EFFECTS__ */
 async function stmt_export_default_before_async_fn_anon_default() {}
-
 //#endregion
+
 export { stmt_export_default_before_async_fn_anon_default as default };
 ```
 ### diff
@@ -492,8 +492,8 @@ export default async function f() {
 //#region stmt-export-default-before-async-fn-name.js
 /* @__NO_SIDE_EFFECTS__ */
 async function f() {}
-
 //#endregion
+
 export { f as default };
 ```
 ### diff
@@ -521,8 +521,8 @@ export default async function* () {
 //#region stmt-export-default-before-async-gen-fn-anon.js
 /* @__NO_SIDE_EFFECTS__ */
 async function* stmt_export_default_before_async_gen_fn_anon_default() {}
-
 //#endregion
+
 export { stmt_export_default_before_async_gen_fn_anon_default as default };
 ```
 ### diff
@@ -550,8 +550,8 @@ export default async function* f() {
 //#region stmt-export-default-before-async-gen-fn-name.js
 /* @__NO_SIDE_EFFECTS__ */
 async function* f() {}
-
 //#endregion
+
 export { f as default };
 ```
 ### diff
@@ -579,8 +579,8 @@ export default function() {
 //#region stmt-export-default-after-fn-anon.js
 /* @__NO_SIDE_EFFECTS__ */
 function stmt_export_default_after_fn_anon_default() {}
-
 //#endregion
+
 export { stmt_export_default_after_fn_anon_default as default };
 ```
 ### diff
@@ -608,8 +608,8 @@ export default function f() {
 //#region stmt-export-default-after-fn-name.js
 /* @__NO_SIDE_EFFECTS__ */
 function f() {}
-
 //#endregion
+
 export { f as default };
 ```
 ### diff
@@ -637,8 +637,8 @@ export default function* () {
 //#region stmt-export-default-after-gen-fn-anon.js
 /* @__NO_SIDE_EFFECTS__ */
 function* stmt_export_default_after_gen_fn_anon_default() {}
-
 //#endregion
+
 export { stmt_export_default_after_gen_fn_anon_default as default };
 ```
 ### diff
@@ -666,8 +666,8 @@ export default function* f() {
 //#region stmt-export-default-after-gen-fn-name.js
 /* @__NO_SIDE_EFFECTS__ */
 function* f() {}
-
 //#endregion
+
 export { f as default };
 ```
 ### diff
@@ -695,8 +695,8 @@ export default async function() {
 //#region stmt-export-default-after-async-fn-anon.js
 /* @__NO_SIDE_EFFECTS__ */
 async function stmt_export_default_after_async_fn_anon_default() {}
-
 //#endregion
+
 export { stmt_export_default_after_async_fn_anon_default as default };
 ```
 ### diff
@@ -724,8 +724,8 @@ export default async function f() {
 //#region stmt-export-default-after-async-fn-name.js
 /* @__NO_SIDE_EFFECTS__ */
 async function f() {}
-
 //#endregion
+
 export { f as default };
 ```
 ### diff
@@ -753,8 +753,8 @@ export default async function* () {
 //#region stmt-export-default-after-async-gen-fn-anon.js
 /* @__NO_SIDE_EFFECTS__ */
 async function* stmt_export_default_after_async_gen_fn_anon_default() {}
-
 //#endregion
+
 export { stmt_export_default_after_async_gen_fn_anon_default as default };
 ```
 ### diff
@@ -782,8 +782,8 @@ export default async function* f() {
 //#region stmt-export-default-after-async-gen-fn-name.js
 /* @__NO_SIDE_EFFECTS__ */
 async function* f() {}
-
 //#endregion
+
 export { f as default };
 ```
 ### diff

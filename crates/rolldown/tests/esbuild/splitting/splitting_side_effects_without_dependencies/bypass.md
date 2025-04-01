@@ -17,8 +17,8 @@ import { a } from "./shared.js";
 
 //#region a.js
 console.log(a);
-
 //#endregion
+
 ```
 ### diff
 ```diff
@@ -47,8 +47,8 @@ import { b } from "./shared.js";
 
 //#region b.js
 console.log(b);
-
 //#endregion
+
 ```
 ### diff
 ```diff

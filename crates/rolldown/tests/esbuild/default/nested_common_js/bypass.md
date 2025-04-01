@@ -25,22 +25,23 @@ nestedScope();
 import assert from "node:assert";
 
 
+
 //#region foo.js
 var require_foo = __commonJS({ "foo.js"(exports, module) {
 	module.exports = function() {
 		return 123;
 	};
 } });
-
 //#endregion
+
 //#region entry.js
 function nestedScope() {
 	const fn = require_foo();
 	assert.equal(fn(), 123);
 }
 nestedScope();
-
 //#endregion
+
 ```
 ### diff
 ```diff

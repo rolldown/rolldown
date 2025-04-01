@@ -35,8 +35,8 @@ x._mangleThis = 1;
 x["_mangleThisToo"] = 2;
 x["_doNotMangleThis"] = 3;
 x([`${foo}._mangleThis = bar._mangleThisToo`, `${foo}.notMangled = bar.notMangledEither`]);
-
 //#endregion
+
 ```
 ### diff
 ```diff

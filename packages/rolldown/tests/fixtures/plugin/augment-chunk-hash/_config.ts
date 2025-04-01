@@ -40,17 +40,17 @@ export default defineTest({
       switch (chunk.facadeModuleId) {
         case path.join(__dirname, 'main.js'):
           isComposingJs
-            ? expect(chunk.fileName).toMatchInlineSnapshot(`"main-z7Zg_USA.js"`)
-            : expect(chunk.fileName).toMatchInlineSnapshot(`"main-z7Zg_USA.js"`)
+            ? expect(chunk.fileName).toMatchInlineSnapshot(`"main-DYtD1NyU.js"`)
+            : expect(chunk.fileName).toMatchInlineSnapshot(`"main-DYtD1NyU.js"`)
           break
 
         case path.join(__dirname, 'entry.js'):
           isComposingJs
             ? expect(chunk.fileName).toMatchInlineSnapshot(
-                `"entry-DCDr1Iu-.js"`,
+                `"entry-DgkrJjof.js"`,
               )
             : expect(chunk.fileName).toMatchInlineSnapshot(
-                `"entry-DCDr1Iu-.js"`,
+                `"entry-DgkrJjof.js"`,
               )
           break
 

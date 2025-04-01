@@ -73,8 +73,8 @@ var Foo = @x.y() @(new y.x()) class Foo {
 	@x @y static accessor #asUndef;
 	@x @y static accessor #asDef = 1;
 };
-
 //#endregion
+
 export { Foo as default };
 ```
 ### diff
@@ -149,8 +149,8 @@ export { Foo as default };
 -  Foo as default
 -};
 \ No newline at end of file
-+
 +//#endregion
++
 +export { Foo as default };
 \ No newline at end of file
 

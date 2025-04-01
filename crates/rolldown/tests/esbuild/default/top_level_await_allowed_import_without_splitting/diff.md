@@ -45,6 +45,7 @@ await init_entry();
 ```js
 
 
+
 //#region entry.js
 var require_entry = __commonJS({ "entry.js"() {
 	Promise.resolve().then(function() {
@@ -61,26 +62,26 @@ var require_entry = __commonJS({ "entry.js"() {
 	});
 	await 0;
 } });
-
 //#endregion
+
 //#region a.js
 var a_exports = {};
 var init_a = __esm({ async "a.js"() {
 	await init_b();
 } });
-
 //#endregion
+
 //#region b.js
 var b_exports = {};
 var init_b = __esm({ async "b.js"() {} });
-
 //#endregion
+
 //#region c.js
 var require_c = __commonJS({ "c.js"() {
 	await 0;
 } });
-
 //#endregion
+
 export default require_entry();
 
 ```
@@ -89,7 +90,7 @@ export default require_entry();
 ===================================================================
 --- esbuild	/out.js
 +++ rolldown	entry.js
-@@ -1,29 +1,39 @@
+@@ -1,29 +1,40 @@
 -var c_exports = {};
 -var init_c = __esm({
 -    async "c.js"() {
@@ -102,6 +103,7 @@ export default require_entry();
 -        await init_c();
 -    }
 -});
++
 +
 +
 +//#region entry.js
@@ -120,8 +122,8 @@ export default require_entry();
 +	});
 +	await 0;
 +} });
-+
 +//#endregion
++
 +//#region a.js
  var a_exports = {};
 -var init_a = __esm({
@@ -143,19 +145,19 @@ export default require_entry();
 +var init_a = __esm({ async "a.js"() {
 +	await init_b();
 +} });
-+
 +//#endregion
++
 +//#region b.js
 +var b_exports = {};
 +var init_b = __esm({ async "b.js"() {} });
-+
 +//#endregion
++
 +//#region c.js
 +var require_c = __commonJS({ "c.js"() {
 +	await 0;
 +} });
-+
 +//#endregion
++
 +export default require_entry();
 
 ```

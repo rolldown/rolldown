@@ -15,13 +15,14 @@ module.exports = r();
 ```js
 
 
+
 //#region entry.js
 var require_entry = __commonJS({ "entry.js"(exports, module) {
 	module.exports = { foo: 123 };
 	console.log(require_entry());
 } });
-
 //#endregion
+
 module.exports = require_entry();
 
 ```

@@ -21,8 +21,8 @@ var Foo = class {
 	[keepThisToo];
 };
 new Foo();
-
 //#endregion
+
 ```
 ### diff
 ```diff

@@ -38,8 +38,8 @@ function c(x = arguments) {
 a();
 b();
 c();
-
 //#endregion
+
 })();
 ```
 ### diff

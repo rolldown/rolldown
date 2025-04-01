@@ -30,8 +30,8 @@ function outer() {
 	}
 }
 outer();
-
 //#endregion
+
 export { outer };
 ```
 ### diff

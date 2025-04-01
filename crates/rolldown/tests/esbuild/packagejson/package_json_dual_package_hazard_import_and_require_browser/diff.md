@@ -21,6 +21,7 @@ console.log(import_demo_pkg.default);
 import assert from "node:assert";
 
 
+
 //#region node_modules/demo-pkg/module.browser.js
 var module_browser_exports = {};
 __export(module_browser_exports, { default: () => module_browser_default });
@@ -28,17 +29,17 @@ var module_browser_default;
 var init_module_browser = __esm({ "node_modules/demo-pkg/module.browser.js"() {
 	module_browser_default = "browser module";
 } });
-
 //#endregion
+
 //#region src/test-main.js
 assert.deepEqual((init_module_browser(), __toCommonJS(module_browser_exports)), { default: "browser main" });
-
 //#endregion
+
 //#region src/test-module.js
 init_module_browser();
 assert.equal(module_browser_default, "browser module");
-
 //#endregion
+
 ```
 ### diff
 ```diff

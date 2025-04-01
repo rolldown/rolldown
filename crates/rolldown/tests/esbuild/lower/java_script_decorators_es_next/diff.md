@@ -33,8 +33,8 @@ var Foo = @x.y() @(new y.x()) class Foo {
 		return new Foo();
 	}
 };
-
 //#endregion
+
 export { Foo as default };
 ```
 ### diff
@@ -72,8 +72,8 @@ export { Foo as default };
 +		return new Foo();
 +	}
 +};
-+
 +//#endregion
++
 +export { Foo as default };
 \ No newline at end of file
 

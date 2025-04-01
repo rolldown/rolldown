@@ -21,17 +21,18 @@ console.log(import_demo_pkg.default);
 import assert from "node:assert";
 
 
+
 //#region node_modules/demo-pkg/a.js
 var require_a = __commonJS({ "node_modules/demo-pkg/a.js"(exports, module) {
 	module.exports = "a";
 } });
 var import_a = __toESM(require_a());
-
 //#endregion
+
 //#region src/entry.js
 assert.equal(import_a.default, "a");
-
 //#endregion
+
 ```
 ### diff
 ```diff

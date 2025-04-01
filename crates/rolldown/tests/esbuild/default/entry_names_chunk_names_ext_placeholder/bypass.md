@@ -16,8 +16,8 @@ import "./shared.js";
 
 //#region entries/entry1.js
 console.log("entry1");
-
 //#endregion
+
 ```
 ### diff
 ```diff
@@ -44,8 +44,8 @@ import "./shared.js";
 
 //#region entries/entry2.js
 console.log("entry2");
-
 //#endregion
+
 ```
 ### diff
 ```diff

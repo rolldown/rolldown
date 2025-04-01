@@ -21,8 +21,8 @@ var Foo = class {
 	static bar_ = 234;
 };
 Foo.bar_ = new Foo().foo_;
-
 //#endregion
+
 ```
 ### diff
 ```diff

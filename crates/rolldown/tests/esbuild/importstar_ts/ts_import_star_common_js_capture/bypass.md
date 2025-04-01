@@ -21,18 +21,19 @@ console.log(ns, ns.foo, foo2);
 ```js
 
 
+
 //#region foo.ts
 var require_foo = __commonJS({ "foo.ts"(exports) {
 	exports.foo = 123;
 } });
 var import_foo = __toESM(require_foo());
-
 //#endregion
+
 //#region entry.ts
 let foo = 234;
 console.log(import_foo, import_foo.foo, foo);
-
 //#endregion
+
 ```
 ### diff
 ```diff

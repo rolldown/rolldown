@@ -57,6 +57,7 @@ export default require_entry();
 ```js
 
 
+
 //#region entry.js
 __require(tag`./b`);
 __require(`./${b}`);
@@ -76,8 +77,8 @@ try {
 		await import(`./${b}`);
 	} catch {}
 })();
-
 //#endregion
+
 ```
 ### diff
 ```diff

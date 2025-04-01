@@ -17,8 +17,8 @@ import { foo } from "./shared.js";
 
 //#region a.js
 console.log(foo);
-
 //#endregion
+
 ```
 ### diff
 ```diff
@@ -48,8 +48,8 @@ import { foo } from "./shared.js";
 
 //#region b.js
 console.log(foo);
-
 //#endregion
+
 ```
 ### diff
 ```diff
@@ -99,8 +99,8 @@ export {
 
 //#region shared.js
 function foo(bar) {}
-
 //#endregion
+
 export { foo };
 ```
 ### diff

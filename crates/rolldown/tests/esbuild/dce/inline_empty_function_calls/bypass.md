@@ -29,8 +29,8 @@ DROP(foo(), 1);
 DROP(1, foo());
 DROP(1);
 DROP();
-
 //#endregion
+
 ```
 ### diff
 ```diff
@@ -83,8 +83,8 @@ for (DROP(); DROP(); DROP()) DROP();
 DROP(), DROP(), foo();
 DROP(), foo(), DROP();
 foo(), DROP(), DROP();
-
 //#endregion
+
 ```
 ### diff
 ```diff
@@ -128,8 +128,8 @@ if (foo) {
 	bar();
 	bar();
 } else DROP();
-
 //#endregion
+
 ```
 ### diff
 ```diff
@@ -165,15 +165,15 @@ function DROP() {
 }
 console.log(DROP());
 DROP();
-
 //#endregion
+
 ```
 ### diff
 ```diff
 ===================================================================
 --- esbuild	/out/empty-last.js
 +++ rolldown	empty-last.js
-@@ -1,1 +1,12 @@
+@@ -1,1 +1,11 @@
 -console.log(void 0);
 +
 +//#region empty-last.js
@@ -185,9 +185,7 @@ DROP();
 +}
 +console.log(DROP());
 +DROP();
-+
 +//#endregion
-\ No newline at end of file
 
 ```
 ## /out/empty-cross-module.js
@@ -201,13 +199,13 @@ console.log(void 0);
 
 //#region empty-cross-module-def.js
 function DROP() {}
-
 //#endregion
+
 //#region empty-cross-module.js
 console.log(DROP());
 DROP();
-
 //#endregion
+
 ```
 ### diff
 ```diff
@@ -245,15 +243,15 @@ function keep() {
 console.log(keep());
 keep(foo());
 keep(1);
-
 //#endregion
+
 ```
 ### diff
 ```diff
 ===================================================================
 --- esbuild	/out/empty-first.js
 +++ rolldown	empty-first.js
-@@ -1,6 +1,13 @@
+@@ -1,6 +1,12 @@
 +
 +//#region empty-first.js
  function keep() {
@@ -266,8 +264,6 @@ keep(1);
  console.log(keep());
  keep(foo());
  keep(1);
-+
 +//#endregion
-\ No newline at end of file
 
 ```

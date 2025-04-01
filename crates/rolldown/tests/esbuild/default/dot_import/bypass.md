@@ -20,17 +20,18 @@ console.log(import__.x);
 import assert from "node:assert";
 
 
+
 //#region index.js
 var require_dot_import = __commonJS({ "index.js"(exports) {
 	exports.x = 123;
 } });
 var import_dot_import = __toESM(require_dot_import());
-
 //#endregion
+
 //#region entry.js
 assert.equal(import_dot_import.x, 123);
-
 //#endregion
+
 ```
 ### diff
 ```diff

@@ -70,8 +70,8 @@ let CrossFileBad = /* @__PURE__ */ function(CrossFileBad$1) {
 	CrossFileBad$1["PROTOTYPE"] = "prototype";
 	return CrossFileBad$1;
 }({});
-
 //#endregion
+
 //#region entry.ts
 var SameFileGood = /* @__PURE__ */ function(SameFileGood$1) {
 	SameFileGood$1["STR"] = "str 1";
@@ -119,8 +119,8 @@ mustBeComputed({ [SameFileBad.PROTO]: null }, { [CrossFileBad.PROTO]: null }, cl
 }, class {
 	static [CrossFileBad.PROTOTYPE]() {}
 });
-
 //#endregion
+
 ```
 ### diff
 ```diff

@@ -42,8 +42,8 @@ var Foo = class {
 	static async #sa() {}
 	static async *#sag() {}
 };
-
 //#endregion
+
 export { Foo };
 ```
 ### diff

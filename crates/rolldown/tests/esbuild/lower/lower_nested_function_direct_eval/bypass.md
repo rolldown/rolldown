@@ -17,8 +17,8 @@ if (foo) {
 if (foo) {
 	function x() {}
 }
-
 //#endregion
+
 ```
 ### diff
 ```diff
@@ -52,8 +52,8 @@ if (foo) {
 	function x() {}
 	if (bar) eval("");
 }
-
 //#endregion
+
 ```
 ### diff
 ```diff
@@ -87,8 +87,8 @@ if (foo) {
 	eval("");
 	function x() {}
 }
-
 //#endregion
+
 ```
 ### diff
 ```diff
@@ -119,8 +119,8 @@ if (foo) {
 if (foo) {
 	function x() {}
 }
-
 //#endregion
+
 ```
 ### diff
 ```diff
@@ -153,8 +153,8 @@ if (foo) {
 	function x() {}
 	eval("");
 }
-
 //#endregion
+
 ```
 ### diff
 ```diff
@@ -189,8 +189,8 @@ if (foo) {
 	function x() {}
 	if (bar) eval("");
 }
-
 //#endregion
+
 ```
 ### diff
 ```diff
@@ -226,8 +226,8 @@ if (foo) {
 	eval("");
 	function x() {}
 }
-
 //#endregion
+
 ```
 ### diff
 ```diff

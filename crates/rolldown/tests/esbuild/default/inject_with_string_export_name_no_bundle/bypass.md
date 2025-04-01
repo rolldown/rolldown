@@ -14,12 +14,12 @@ fn(test);
 //#region inject.js
 const old = fn;
 const fn = (...args) => old.apply(console, ["log:"].concat(args));
-
 //#endregion
+
 //#region entry.js
 fn(test);
-
 //#endregion
+
 ```
 ### diff
 ```diff

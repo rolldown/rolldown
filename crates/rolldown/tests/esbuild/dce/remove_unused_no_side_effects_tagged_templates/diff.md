@@ -24,8 +24,8 @@ foo`remove${123}`;
 use(foo`keep`);
 foo`remove this part ${keep} and this ${alsoKeep}`;
 `${keep}${alsoKeep}`;
-
 //#endregion
+
 ```
 ### diff
 ```diff

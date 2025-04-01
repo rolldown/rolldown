@@ -22,21 +22,22 @@ console.log(ns);
 import assert from "node:assert";
 
 
+
 //#region node_modules/demo-pkg/index.js
 var require_demo_pkg = __commonJS({ "node_modules/demo-pkg/index.js"(exports) {
 	exports.foo = 123;
 	console.log("hello");
 } });
 var import_demo_pkg = __toESM(require_demo_pkg());
-
 //#endregion
+
 //#region src/entry.js
 assert.deepEqual(import_demo_pkg, {
 	default: { foo: 123 },
 	foo: 123
 });
-
 //#endregion
+
 ```
 ### diff
 ```diff

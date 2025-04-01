@@ -30,8 +30,8 @@ __reExport(entry_exports, require("./external"), module.exports);
 
 //#region internal.js
 let foo = 123;
-
 //#endregion
+
 exports.foo = foo
 var fs = require("fs");
 Object.keys(fs).forEach(function (k) {

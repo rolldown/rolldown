@@ -20,17 +20,18 @@ console.log("unused import");
 ```js
 
 
+
 //#region node_modules/demo-pkg/index.js
 var require_demo_pkg = __commonJS({ "node_modules/demo-pkg/index.js"(exports) {
 	exports.foo = 123;
 	console.log("hello");
 } });
-
 //#endregion
+
 //#region src/entry.js
 console.log("unused import");
-
 //#endregion
+
 ```
 ### diff
 ```diff

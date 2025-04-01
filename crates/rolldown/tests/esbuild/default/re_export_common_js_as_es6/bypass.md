@@ -22,13 +22,14 @@ export {
 ```js
 
 
+
 //#region foo.js
 var require_foo = __commonJS({ "foo.js"(exports) {
 	exports.bar = 123;
 } });
 var import_foo = __toESM(require_foo());
-
 //#endregion
+
 var bar = import_foo.bar;
 export { bar };
 ```

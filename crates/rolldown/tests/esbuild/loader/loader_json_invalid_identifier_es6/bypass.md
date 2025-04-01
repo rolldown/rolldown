@@ -23,10 +23,11 @@ console.log(invalid_identifier, test2_exports);
 ```js
 
 
+
 //#region test.json
 var invalid_identifier$1 = true;
-
 //#endregion
+
 //#region test2.json
 var test2_exports = {};
 __export(test2_exports, {
@@ -35,12 +36,12 @@ __export(test2_exports, {
 });
 var invalid_identifier = true;
 var test2_default = { "invalid-identifier": invalid_identifier };
-
 //#endregion
+
 //#region entry.js
 console.log(invalid_identifier$1, test2_exports);
-
 //#endregion
+
 ```
 ### diff
 ```diff

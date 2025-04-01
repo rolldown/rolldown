@@ -25,13 +25,14 @@ var import_foo = __toESM(require_foo());
 ```js
 
 
+
 //#region foo.js
 var require_foo = __commonJS({ "foo.js"(exports) {
 	exports.foo = 123;
 } });
 var import_foo = __toESM(require_foo());
-
 //#endregion
+
 Object.defineProperty(exports, 'y', {
   enumerable: true,
   get: function () {

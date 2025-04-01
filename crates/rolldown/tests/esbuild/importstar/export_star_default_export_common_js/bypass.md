@@ -20,8 +20,8 @@ var foo = "foo";
 
 //#region foo.js
 let foo = "foo";
-
 //#endregion
+
 exports.foo = foo
 ```
 ### diff

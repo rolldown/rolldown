@@ -25,8 +25,8 @@
 	var b = () => {};
 	a();
 })();
-
 //#endregion
+
 ```
 ### diff
 ```diff

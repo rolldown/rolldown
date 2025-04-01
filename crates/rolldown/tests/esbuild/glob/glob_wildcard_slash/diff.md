@@ -65,6 +65,7 @@ console.log({
 ```js
 
 
+
 //#region entry.js
 const ab = Math.random() < .5 ? "a.js" : "b.js";
 console.log({
@@ -77,8 +78,8 @@ console.log({
 		import: import(`./src/${ab}.js`)
 	}
 });
-
 //#endregion
+
 ```
 ### diff
 ```diff

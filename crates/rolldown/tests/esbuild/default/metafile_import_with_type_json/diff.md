@@ -19,16 +19,16 @@ x = [data_default, data_default, data_default2];
 //#region data.json
 var some = "data";
 var data_default = { some };
-
 //#endregion
+
 //#region entry.js
 x = [
 	data_default,
 	data_default,
 	data_default
 ];
-
 //#endregion
+
 ```
 ### diff
 ```diff

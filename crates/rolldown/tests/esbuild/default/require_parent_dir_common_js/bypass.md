@@ -20,16 +20,17 @@ console.log(require_src());
 import assert from "node:assert";
 
 
+
 //#region index.js
 var require_require_parent_dir_common_js = __commonJS({ "index.js"(exports, module) {
 	module.exports = 123;
 } });
-
 //#endregion
+
 //#region dir/entry.js
 assert.deepEqual(require_require_parent_dir_common_js(), 123);
-
 //#endregion
+
 ```
 ### diff
 ```diff

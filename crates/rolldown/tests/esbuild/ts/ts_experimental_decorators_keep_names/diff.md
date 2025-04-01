@@ -20,8 +20,8 @@ export {
 
 //#region entry.ts
 var Foo = @decoratorMustComeAfterName class {};
-
 //#endregion
+
 export { Foo };
 ```
 ### diff
@@ -37,8 +37,8 @@ export { Foo };
 +
 +//#region entry.ts
 +var Foo = @decoratorMustComeAfterName class {};
-+
 +//#endregion
++
 +export { Foo };
 \ No newline at end of file
 

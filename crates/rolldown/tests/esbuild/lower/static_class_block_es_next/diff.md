@@ -46,8 +46,8 @@ let B = class {
 		super.superField++;
 	}
 };
-
 //#endregion
+
 ```
 ### diff
 ```diff

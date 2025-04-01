@@ -22,21 +22,22 @@ console.log(import_foo.default);
 import assert from "node:assert";
 
 
+
 //#region node_modules/pkg/foo.js
 var require_foo = __commonJS({ "node_modules/pkg/foo.js"(exports, module) {
 	module.exports = 123;
 } });
 var import_foo = __toESM(require_foo());
-
 //#endregion
+
 //#region entry.js
 assert.equal(
 	// => const import_xxx = require_xxx
 	import_foo.default,
 	123
 );
-
 //#endregion
+
 ```
 ### diff
 ```diff

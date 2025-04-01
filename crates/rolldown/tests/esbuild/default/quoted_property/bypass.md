@@ -12,12 +12,13 @@ console.log(ns.mustBeUnquoted, ns["mustBeQuoted"]);
 ```js
 "use strict";
 
+
 const ext = __toESM(require("ext"));
 
 //#region entry.js
 console.log(ext.mustBeUnquoted, ext["mustBeQuoted"]);
-
 //#endregion
+
 ```
 ### diff
 ```diff

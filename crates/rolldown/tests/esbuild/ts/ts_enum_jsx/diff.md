@@ -19,8 +19,8 @@ let Foo = /* @__PURE__ */ function(Foo$1) {
 	return Foo$1;
 }({});
 console.log(/* @__PURE__ */ React.createElement(Foo.Div, null));
-
 //#endregion
+
 export { Foo };
 ```
 ### diff
@@ -60,8 +60,8 @@ let React = /* @__PURE__ */ function(React$1) {
 	return React$1;
 }({});
 console.log(/* @__PURE__ */ React.createElement(React.Fragment, null, "test"));
-
 //#endregion
+
 export { React };
 ```
 ### diff
@@ -124,8 +124,8 @@ let x;
 		console.log(/* @__PURE__ */ React.createElement(x.y.Foo.Div, null));
 	})(y || (y = _x2.y || (_x2.y = {})));
 })(x || (x = {}));
-
 //#endregion
+
 ```
 ### diff
 ```diff
@@ -204,8 +204,8 @@ let x;
 		console.log(/* @__PURE__ */ React.createElement(React.Fragment, null, "test"));
 	})(y || (y = _x2.y || (_x2.y = {})));
 })(x || (x = {}));
-
 //#endregion
+
 ```
 ### diff
 ```diff

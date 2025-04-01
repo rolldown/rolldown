@@ -15,8 +15,8 @@ import "./foo";
 //#region entry.js
 let foo = 234;
 console.log(foo);
-
 //#endregion
+
 ```
 ### diff
 ```diff

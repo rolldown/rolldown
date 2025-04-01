@@ -30,8 +30,8 @@ var Foo = /* @__PURE__ */ function(Foo$1) {
 function after() {
 	console.log(Foo.FOO);
 }
-
 //#endregion
+
 export { after, before };
 ```
 ### diff

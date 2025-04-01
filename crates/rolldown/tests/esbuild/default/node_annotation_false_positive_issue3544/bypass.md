@@ -29,8 +29,8 @@ function confuseNode(exports2) {
 function confuseNode(exports$1) {
 	exports$1.notAnExport = function() {};
 }
-
 //#endregion
+
 exports.confuseNode = confuseNode
 ```
 ### diff

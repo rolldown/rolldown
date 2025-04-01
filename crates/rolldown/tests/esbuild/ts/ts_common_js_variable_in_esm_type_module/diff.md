@@ -12,12 +12,13 @@ module.exports = null;
 ```js
 
 
+
 //#region entry.ts
 var require_entry = __commonJS({ "entry.ts"(exports, module) {
 	module.exports = null;
 } });
-
 //#endregion
+
 export default require_entry();
 
 ```

@@ -32,8 +32,8 @@ var require_factory = __commonJS({ "factory.jsx"(exports) {
 		console.log([/* @__PURE__ */ this.factory("y", null), /* @__PURE__ */ this.factory("y", null)]);
 	};
 } });
-
 //#endregion
+
 export default require_factory();
 
 ```
@@ -79,8 +79,8 @@ var require_fragment = __commonJS({ "fragment.jsx"(exports) {
 		console.log([/* @__PURE__ */ this.factory(this.fragment, null, "y"), /* @__PURE__ */ this.factory(this.fragment, null, "y")]);
 	};
 } });
-
 //#endregion
+
 export default require_fragment();
 
 ```

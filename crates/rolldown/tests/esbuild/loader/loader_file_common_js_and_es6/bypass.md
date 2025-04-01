@@ -22,21 +22,22 @@ console.log(x_url, y_default);
 ```js
 
 
+
 //#region y.txt
 var y_default = "assets/y-DBJZ7rtI.txt";
-
 //#endregion
+
 //#region x.txt
 var require_x = __commonJS({ "x.txt"(exports, module) {
 	module.exports = "assets/x-BA9VvU_1.txt";
 } });
-
 //#endregion
+
 //#region entry.js
 const x_url = require_x();
 console.log(x_url, y_default);
-
 //#endregion
+
 ```
 ### diff
 ```diff

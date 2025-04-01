@@ -43,6 +43,7 @@ console.log({
 ```js
 
 
+
 //#region entry.ts
 const ab = Math.random() < .5 ? "a.ts" : "b.ts";
 console.log({
@@ -55,8 +56,8 @@ console.log({
 		import: import(`./src/${ab}`)
 	}
 });
-
 //#endregion
+
 ```
 ### diff
 ```diff

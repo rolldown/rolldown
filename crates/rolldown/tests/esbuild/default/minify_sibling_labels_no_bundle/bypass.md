@@ -39,8 +39,8 @@ foo: bar: {
 	if (x) break bar;
 	break foo;
 }
-
 //#endregion
+
 ```
 ### diff
 ```diff

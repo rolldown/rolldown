@@ -22,6 +22,7 @@ var global;
 
 "use strict";
 
+
 foo = __toESM(foo);
 
 Object.defineProperty(exports, 'all the stuff', {

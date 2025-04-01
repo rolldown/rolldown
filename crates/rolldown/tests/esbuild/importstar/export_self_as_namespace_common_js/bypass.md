@@ -18,6 +18,7 @@ var foo = 123;
 "use strict";
 
 
+
 //#region entry.js
 var entry_exports = {};
 __export(entry_exports, {
@@ -25,8 +26,8 @@ __export(entry_exports, {
 	ns: () => entry_exports
 });
 const foo = 123;
-
 //#endregion
+
 exports.foo = foo
 Object.defineProperty(exports, 'ns', {
   enumerable: true,

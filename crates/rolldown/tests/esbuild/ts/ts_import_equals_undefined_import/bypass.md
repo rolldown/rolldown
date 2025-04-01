@@ -17,18 +17,19 @@ console.log(foo);
 ```js
 
 
+
 //#region import.ts
 var import_exports = {};
 __export(import_exports, { value: () => value });
 let value = 123;
-
 //#endregion
+
 //#region entry.ts
 var value_copy = import_exports.value;
 let foo = value_copy;
 console.log(foo);
-
 //#endregion
+
 ```
 ### diff
 ```diff

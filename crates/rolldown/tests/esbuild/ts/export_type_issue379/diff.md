@@ -39,22 +39,23 @@ console.log(a_exports, b_exports, c_exports, d_exports);
 ```js
 
 
+
 //#region a.ts
 var a_exports = {};
 __export(a_exports, { foo: () => foo$3 });
 let foo$3 = 123;
-
 //#endregion
+
 //#region b.ts
 var b_exports = {};
 __export(b_exports, { foo: () => foo$2 });
 let foo$2 = 123;
-
 //#endregion
+
 //#region test.ts
 var Test = void 0;
-
 //#endregion
+
 //#region c.ts
 var c_exports = {};
 __export(c_exports, {
@@ -62,8 +63,8 @@ __export(c_exports, {
 	foo: () => foo$1
 });
 let foo$1 = 123;
-
 //#endregion
+
 //#region d.ts
 var d_exports = {};
 __export(d_exports, {
@@ -71,12 +72,12 @@ __export(d_exports, {
 	foo: () => foo
 });
 let foo = 123;
-
 //#endregion
+
 //#region entry.ts
 console.log(a_exports, b_exports, c_exports, d_exports);
-
 //#endregion
+
 ```
 ### diff
 ```diff

@@ -12,8 +12,8 @@ import { __require } from "./chunk.js";
 
 //#region array.js
 let x = [__require];
-
 //#endregion
+
 ```
 ### diff
 ```diff
@@ -37,8 +37,8 @@ import { __require } from "./chunk.js";
 
 //#region assign.js
 require = x;
-
 //#endregion
+
 ```
 ### diff
 ```diff
@@ -63,8 +63,8 @@ import { __require } from "./chunk.js";
 
 //#region dot.js
 let x = __require.cache;
-
 //#endregion
+
 ```
 ### diff
 ```diff
@@ -87,8 +87,8 @@ import { __require } from "./chunk.js";
 
 //#region ident.js
 let x = __require;
-
 //#endregion
+
 ```
 ### diff
 ```diff
@@ -112,8 +112,8 @@ import { __require } from "./chunk.js";
 
 //#region index.js
 let x = __require[cache];
-
 //#endregion
+
 ```
 ### diff
 ```diff

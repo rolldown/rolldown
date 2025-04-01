@@ -25,8 +25,8 @@ var Foo = class {
 	bar = this.#foo;
 };
 assert.equal(new Foo().bar, 123);
-
 //#endregion
+
 ```
 ### diff
 ```diff

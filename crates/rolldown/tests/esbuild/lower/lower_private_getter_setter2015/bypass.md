@@ -107,8 +107,8 @@ var Foo = class {
 		fn().#prop ??= 1;
 	}
 };
-
 //#endregion
+
 export { Foo };
 ```
 ### diff

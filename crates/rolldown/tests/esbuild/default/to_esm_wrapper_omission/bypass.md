@@ -30,6 +30,7 @@ x = Promise.resolve().then(() => __toESM(require("k_WRAP")));
 ```js
 "use strict";
 
+
 require("a_nowrap");
 const b_nowrap = __toESM(require("b_nowrap"));
 const d_WRAP = __toESM(require("d_WRAP"));
@@ -50,8 +51,8 @@ x = h_WRAP;
 i_WRAP.x();
 j_WRAP.x``;
 x = import("k_WRAP");
-
 //#endregion
+
 
 var c_nowrap = require("c_nowrap");
 Object.keys(c_nowrap).forEach(function (k) {

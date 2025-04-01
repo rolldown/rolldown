@@ -22,11 +22,12 @@ import a from "pkg";
 import b from "./file";
 
 
+
 //#region entry.js
 console.log(a, b, __require("pkg2"), __require("./file2"), import("./dynamic"));
 let exported;
-
 //#endregion
+
 export { exported };
 ```
 ### diff

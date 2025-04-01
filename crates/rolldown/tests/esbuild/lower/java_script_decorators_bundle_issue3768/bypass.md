@@ -65,15 +65,15 @@ var Foo = _Foo;
 var Foo = class Foo {
 	@dec foo = Foo;
 };
-
 //#endregion
+
 ```
 ### diff
 ```diff
 ===================================================================
 --- esbuild	/out/base-instance-field.js
 +++ rolldown	base-instance-field.js
-@@ -1,11 +1,7 @@
+@@ -1,11 +1,6 @@
 -var _foo_dec, _init;
 -_foo_dec = [dec];
 -var _Foo = class _Foo {
@@ -89,9 +89,7 @@ var Foo = class Foo {
 -__decorateElement(_init, 5, "foo", _foo_dec, _Foo);
 -__decoratorMetadata(_init, _Foo);
 -var Foo = _Foo;
-+
 +//#endregion
-\ No newline at end of file
 
 ```
 ## /out/base-instance-method.js
@@ -122,15 +120,15 @@ var Foo = class Foo {
 		return Foo;
 	}
 };
-
 //#endregion
+
 ```
 ### diff
 ```diff
 ===================================================================
 --- esbuild	/out/base-instance-method.js
 +++ rolldown	base-instance-method.js
-@@ -1,14 +1,9 @@
+@@ -1,14 +1,8 @@
 -var _foo_dec, _init;
 -_foo_dec = [dec];
 -var _Foo = class _Foo {
@@ -151,9 +149,7 @@ var Foo = class Foo {
 -__decorateElement(_init, 1, "foo", _foo_dec, _Foo);
 -__decoratorMetadata(_init, _Foo);
 -var Foo = _Foo;
-+
 +//#endregion
-\ No newline at end of file
 
 ```
 ## /out/base-static-accessor.js
@@ -213,15 +209,15 @@ var Foo = _Foo;
 var Foo = class Foo {
 	@dec static foo = Foo;
 };
-
 //#endregion
+
 ```
 ### diff
 ```diff
 ===================================================================
 --- esbuild	/out/base-static-field.js
 +++ rolldown	base-static-field.js
-@@ -1,8 +1,7 @@
+@@ -1,8 +1,6 @@
 -var _foo_dec, _init;
 -_foo_dec = [dec];
 -var _Foo = class _Foo {};
@@ -235,9 +231,7 @@ var Foo = class Foo {
 +var Foo = class Foo {
 +	@dec static foo = Foo;
 +};
-+
 +//#endregion
-\ No newline at end of file
 
 ```
 ## /out/base-static-method.js
@@ -266,15 +260,15 @@ var Foo = class Foo {
 		return Foo;
 	}
 };
-
 //#endregion
+
 ```
 ### diff
 ```diff
 ===================================================================
 --- esbuild	/out/base-static-method.js
 +++ rolldown	base-static-method.js
-@@ -1,12 +1,9 @@
+@@ -1,12 +1,8 @@
 -var _foo_dec, _init;
 -_foo_dec = [dec];
 -var _Foo = class _Foo {
@@ -293,9 +287,7 @@ var Foo = class Foo {
 -__decoratorMetadata(_init, _Foo);
 -__runInitializers(_init, 3, _Foo);
 -var Foo = _Foo;
-+
 +//#endregion
-\ No newline at end of file
 
 ```
 ## /out/derived-instance-accessor.js
@@ -362,15 +354,15 @@ var Foo = _Foo;
 var Foo = class Foo extends Bar {
 	@dec foo = Foo;
 };
-
 //#endregion
+
 ```
 ### diff
 ```diff
 ===================================================================
 --- esbuild	/out/derived-instance-field.js
 +++ rolldown	derived-instance-field.js
-@@ -1,11 +1,7 @@
+@@ -1,11 +1,6 @@
 -var _foo_dec, _a, _init;
 -var _Foo = class _Foo extends (_a = Bar, _foo_dec = [dec], _a) {
 -    constructor() {
@@ -386,9 +378,7 @@ var Foo = class Foo extends Bar {
 -__decorateElement(_init, 5, "foo", _foo_dec, _Foo);
 -__decoratorMetadata(_init, _Foo);
 -var Foo = _Foo;
-+
 +//#endregion
-\ No newline at end of file
 
 ```
 ## /out/derived-instance-method.js
@@ -419,15 +409,15 @@ var Foo = class Foo extends Bar {
 		return Foo;
 	}
 };
-
 //#endregion
+
 ```
 ### diff
 ```diff
 ===================================================================
 --- esbuild	/out/derived-instance-method.js
 +++ rolldown	derived-instance-method.js
-@@ -1,14 +1,9 @@
+@@ -1,14 +1,8 @@
 -var _foo_dec, _a, _init;
 -var _Foo = class _Foo extends (_a = Bar, _foo_dec = [dec], _a) {
 -    constructor() {
@@ -448,9 +438,7 @@ var Foo = class Foo extends Bar {
 -__decorateElement(_init, 1, "foo", _foo_dec, _Foo);
 -__decoratorMetadata(_init, _Foo);
 -var Foo = _Foo;
-+
 +//#endregion
-\ No newline at end of file
 
 ```
 ## /out/derived-static-accessor.js
@@ -507,15 +495,15 @@ var Foo = _Foo;
 var Foo = class Foo extends Bar {
 	@dec static foo = Foo;
 };
-
 //#endregion
+
 ```
 ### diff
 ```diff
 ===================================================================
 --- esbuild	/out/derived-static-field.js
 +++ rolldown	derived-static-field.js
-@@ -1,7 +1,7 @@
+@@ -1,7 +1,6 @@
 -var _foo_dec, _a, _init;
 -var _Foo = class _Foo extends (_a = Bar, _foo_dec = [dec], _a) {};
 -_init = __decoratorStart(_a);
@@ -528,9 +516,7 @@ var Foo = class Foo extends Bar {
 +var Foo = class Foo extends Bar {
 +	@dec static foo = Foo;
 +};
-+
 +//#endregion
-\ No newline at end of file
 
 ```
 ## /out/derived-static-method.js
@@ -558,15 +544,15 @@ var Foo = class Foo extends Bar {
 		return Foo;
 	}
 };
-
 //#endregion
+
 ```
 ### diff
 ```diff
 ===================================================================
 --- esbuild	/out/derived-static-method.js
 +++ rolldown	derived-static-method.js
-@@ -1,11 +1,9 @@
+@@ -1,11 +1,8 @@
 -var _foo_dec, _a, _init;
 -var _Foo = class _Foo extends (_a = Bar, _foo_dec = [dec], _a) {
 -    static foo() {
@@ -584,8 +570,6 @@ var Foo = class Foo extends Bar {
 -__decoratorMetadata(_init, _Foo);
 -__runInitializers(_init, 3, _Foo);
 -var Foo = _Foo;
-+
 +//#endregion
-\ No newline at end of file
 
 ```

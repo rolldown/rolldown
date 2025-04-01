@@ -23,22 +23,23 @@ console.log(x_txt, y_default);
 import assert from "node:assert";
 
 
+
 //#region y.txt
 var y_default = "y";
-
 //#endregion
+
 //#region x.txt
 var require_x = __commonJS({ "x.txt"(exports, module) {
 	module.exports = "x";
 } });
-
 //#endregion
+
 //#region entry.js
 const x_txt = require_x();
 assert.equal(x_txt, "x");
 assert.equal(y_default, "y");
-
 //#endregion
+
 ```
 ### diff
 ```diff

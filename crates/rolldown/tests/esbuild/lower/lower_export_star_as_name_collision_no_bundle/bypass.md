@@ -15,8 +15,8 @@ import * as ns from "path";
 
 //#region entry.js
 let ns$1 = 123;
-
 //#endregion
+
 export { ns, ns$1 as sn };
 ```
 ### diff

@@ -35,8 +35,8 @@ x = /* @__PURE__ */ function(x$1) {
 	console.log(y, z);
 })(x || (x = {}));
 console.log(x.y, x.z);
-
 //#endregion
+
 export { x };
 ```
 ### diff
@@ -105,8 +105,8 @@ x = /* @__PURE__ */ function(x$1) {
 	console.log(y, z);
 })(x || (x = {}));
 console.log(x.y, x.z);
-
 //#endregion
+
 export { x };
 ```
 ### diff
@@ -181,8 +181,8 @@ x = /* @__PURE__ */ function(x$1) {
 	return x$1;
 }(x || {});
 console.log(a.b, a["b"], x.g, x["g"]);
-
 //#endregion
+
 export { a, x };
 ```
 ### diff
@@ -277,8 +277,8 @@ let foo;
 		console.log(x$1.y, x$1.z);
 	})(x$1 || (x$1 = _foo3.x || (_foo3.x = {})));
 })(foo || (foo = {}));
-
 //#endregion
+
 export { foo };
 ```
 ### diff
@@ -382,8 +382,8 @@ let foo;
 		console.log(x$1.y, x$1.z);
 	})(x$1 || (x$1 = _foo3.x || (_foo3.x = {})));
 })(foo || (foo = {}));
-
 //#endregion
+
 export { foo };
 ```
 ### diff
@@ -492,8 +492,8 @@ let n;
 	_n3.x = x;
 	console.log(a.b, n.a.b, n["a"]["b"], x.g, n.x.g, n["x"]["g"]);
 })(n || (n = {}));
-
 //#endregion
+
 export { n };
 ```
 ### diff

@@ -30,10 +30,11 @@ console.log((0, import_demo_pkg.default)());
 import assert from "node:assert";
 
 
+
 //#region (ignored) node_modules/demo-pkg/util-node.js
 var require_util_node = __commonJS({ "node_modules/demo-pkg/util-node.js"() {} });
-
 //#endregion
+
 //#region node_modules/demo-pkg/main.js
 var require_main = __commonJS({ "node_modules/demo-pkg/main.js"(exports, module) {
 	const util = require_util_node();
@@ -42,12 +43,12 @@ var require_main = __commonJS({ "node_modules/demo-pkg/main.js"(exports, module)
 	};
 } });
 var import_main = __toESM(require_main());
-
 //#endregion
+
 //#region src/entry.js
 assert.deepEqual((0, import_main.default)(), {});
-
 //#endregion
+
 ```
 ### diff
 ```diff

@@ -78,12 +78,12 @@ export {
 
 //#region b.js
 var q = 6;
-
 //#endregion
+
 //#region a.js
 var p = 5;
-
 //#endregion
+
 export { p, q };
 ```
 ### diff

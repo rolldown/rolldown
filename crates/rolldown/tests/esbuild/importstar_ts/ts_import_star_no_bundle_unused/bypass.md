@@ -13,8 +13,8 @@ console.log(foo);
 //#region entry.ts
 let foo = 234;
 console.log(foo);
-
 //#endregion
+
 ```
 ### diff
 ```diff

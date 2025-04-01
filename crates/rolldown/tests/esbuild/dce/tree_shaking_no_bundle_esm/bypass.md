@@ -16,8 +16,8 @@ keep();
 //#region entry.js
 function keep() {}
 keep();
-
 //#endregion
+
 ```
 ### diff
 ```diff

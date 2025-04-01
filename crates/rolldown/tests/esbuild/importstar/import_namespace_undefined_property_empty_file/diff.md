@@ -31,8 +31,8 @@ import { import_empty } from "./empty.js";
 
 //#region entry-nope.js
 console.log(void 0, void 0, import_empty.nope);
-
 //#endregion
+
 ```
 ### diff
 ```diff
@@ -83,8 +83,8 @@ import { import_empty } from "./empty.js";
 
 //#region entry-default.js
 console.log(void 0, void 0, import_empty.default);
-
 //#endregion
+
 ```
 ### diff
 ```diff

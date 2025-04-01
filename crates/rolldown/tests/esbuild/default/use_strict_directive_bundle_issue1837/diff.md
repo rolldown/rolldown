@@ -33,18 +33,19 @@
 
 "use strict";
 
+
 node_assert = __toESM(node_assert);
 
 //#region cjs.js
 var require_cjs = __commonJS({ "cjs.js"(exports) {
 	exports.foo = process;
 } });
-
 //#endregion
+
 //#region entry.js
 node_assert.default.deepEqual(require_cjs(), { foo: process });
-
 //#endregion
+
 })(node_assert);
 ```
 ### diff

@@ -10,8 +10,8 @@ import("./foo-R2VCCZUR.js").then(({ bar }) => console.log(bar));
 
 //#region entry.js
 import("./foo.js").then(({ bar }) => console.log(bar));
-
 //#endregion
+
 ```
 ### diff
 ```diff

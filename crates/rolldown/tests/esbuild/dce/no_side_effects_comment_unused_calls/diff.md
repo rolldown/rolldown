@@ -28,8 +28,8 @@ onlyKeepThisIdentifier;
 onlyKeepThisIdentifier;
 x(/* @__PURE__ */ f("keepThisCall"));
 x(/* @__PURE__ */ g("keepThisCall"));
-
 //#endregion
+
 ```
 ### diff
 ```diff
@@ -76,8 +76,8 @@ onlyKeepThisIdentifier;
 onlyKeepThisIdentifier;
 x(/* @__PURE__ */ f("keepThisCall"));
 x(/* @__PURE__ */ g("keepThisCall"));
-
 //#endregion
+
 ```
 ### diff
 ```diff
@@ -117,8 +117,8 @@ function f(y) {
 }
 onlyKeepThisIdentifier;
 x(/* @__PURE__ */ f("keepThisCall"));
-
 //#endregion
+
 export { f as default };
 ```
 ### diff

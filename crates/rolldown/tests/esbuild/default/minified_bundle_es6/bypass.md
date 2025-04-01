@@ -14,12 +14,12 @@ function foo() {
 	return 123;
 }
 foo();
-
 //#endregion
+
 //#region entry.js
 console.log(foo());
-
 //#endregion
+
 ```
 ### diff
 ```diff

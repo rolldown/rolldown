@@ -18,13 +18,14 @@ console.log(entry_exports);
 "use strict";
 
 
+
 //#region entry.js
 var entry_exports = {};
 __export(entry_exports, { foo: () => foo });
 const foo = 123;
 console.log(entry_exports);
-
 //#endregion
+
 exports.foo = foo
 ```
 ### diff

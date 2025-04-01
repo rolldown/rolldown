@@ -37,8 +37,8 @@ function identity3(x) {
 	return x;
 }
 check(empty1(), empty2(args), empty3(...args), identity1(), identity2(args), identity3(...args));
-
 //#endregion
+
 ```
 ### diff
 ```diff
@@ -99,12 +99,12 @@ function identity2(x) {
 function identity3(x) {
 	return x;
 }
-
 //#endregion
+
 //#region entry-outer.js
 check(empty1(), empty2(args), empty3(...args), identity1(), identity2(args), identity3(...args));
-
 //#endregion
+
 ```
 ### diff
 ```diff

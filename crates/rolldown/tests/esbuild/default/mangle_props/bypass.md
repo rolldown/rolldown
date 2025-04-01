@@ -81,8 +81,8 @@ function shouldNotMangle() {
 		"foo_": foo_
 	};
 }
-
 //#endregion
+
 export { shouldMangle, shouldNotMangle };
 ```
 ### diff
@@ -150,8 +150,8 @@ var entry2_default = {
 	bar_: 0,
 	"baz_": 1
 };
-
 //#endregion
+
 export { entry2_default as default };
 ```
 ### diff

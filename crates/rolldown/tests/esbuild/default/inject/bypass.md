@@ -42,19 +42,20 @@ console.log(re_export2);
 ```js
 "use strict";
 
+
 const external_pkg = __toESM(require("external-pkg"));
 const external_pkg2 = __toESM(require("external-pkg2"));
 
 //#region replacement.js
 let replace = { test() {} };
 let replace2 = { test() {} };
-
 //#endregion
+
 //#region inject.js
 let obj = {};
 let sideEffects$1 = console.log("side effects");
-
 //#endregion
+
 //#region entry.js
 let sideEffects = console.log("this should be renamed");
 let collide = 123;
@@ -67,8 +68,8 @@ console.log(replace2.test);
 console.log(collide);
 console.log(external_pkg.re_export);
 console.log(external_pkg2.re.export);
-
 //#endregion
+
 ```
 ### diff
 ```diff

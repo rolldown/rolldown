@@ -19,17 +19,18 @@ console.log(bar_exports, bar_exports.foo);
 import assert from "node:assert";
 
 
+
 //#region bar.js
 var bar_exports = {};
 __export(bar_exports, { x: () => x });
 const x = 123;
-
 //#endregion
+
 //#region entry.js
 assert.deepEqual(bar_exports, { x: 123 });
 assert.equal(void 0, void 0);
-
 //#endregion
+
 ```
 ### diff
 ```diff

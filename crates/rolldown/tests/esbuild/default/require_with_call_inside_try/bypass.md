@@ -22,6 +22,7 @@ export default require_entry();
 ```js
 
 
+
 //#region entry.js
 var require_entry = __commonJS({ "entry.js"(exports) {
 	try {
@@ -29,8 +30,8 @@ var require_entry = __commonJS({ "entry.js"(exports) {
 		if (supportsColor && (supportsColor.stderr || supportsColor).level >= 2) exports.colors = [];
 	} catch (error) {}
 } });
-
 //#endregion
+
 export default require_entry();
 
 ```

@@ -23,6 +23,7 @@ console.log((0, import_demo_pkg.default)());
 import assert from "node:assert";
 
 
+
 //#region node_modules/demo-pkg/main.js
 var require_main = __commonJS({ "node_modules/demo-pkg/main.js"(exports, module) {
 	module.exports = function() {
@@ -30,12 +31,12 @@ var require_main = __commonJS({ "node_modules/demo-pkg/main.js"(exports, module)
 	};
 } });
 var import_main = __toESM(require_main());
-
 //#endregion
+
 //#region src/entry.js
 assert.equal((0, import_main.default)(), 123);
-
 //#endregion
+
 ```
 ### diff
 ```diff

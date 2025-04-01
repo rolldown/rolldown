@@ -348,15 +348,15 @@ Foo = class {
 		for await (await using x$1 of y);
 	}
 };
-
 //#endregion
+
 ```
 ### diff
 ```diff
 ===================================================================
 --- esbuild	/out/entry.js
 +++ rolldown	entry.js
-@@ -1,295 +1,48 @@
+@@ -1,295 +1,47 @@
 -function foo() {
 -  return __asyncGenerator(this, null, function* () {
 -    var _stack2 = [];
@@ -694,8 +694,6 @@ Foo = class {
 -  });
 -}
 \ No newline at end of file
-+
 +//#endregion
-\ No newline at end of file
 
 ```

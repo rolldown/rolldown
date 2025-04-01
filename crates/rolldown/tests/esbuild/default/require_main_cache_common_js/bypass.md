@@ -20,18 +20,19 @@ console.log("cache:", require.cache);
 ```js
 
 
+
 //#region is-main.js
 var require_is_main = __commonJS({ "is-main.js"(exports, module) {
 	module.exports = require.main === module;
 } });
-
 //#endregion
+
 //#region entry.js
 console.log("is main:", require.main === module);
 console.log(require_is_main());
 console.log("cache:", require.cache);
-
 //#endregion
+
 ```
 ### diff
 ```diff

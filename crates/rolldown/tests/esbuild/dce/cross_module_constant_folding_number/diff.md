@@ -52,8 +52,8 @@ let x = /* @__PURE__ */ function(x$1) {
 	x$1[x$1["b"] = 6] = "b";
 	return x$1;
 }({});
-
 //#endregion
+
 //#region enum-entry.ts
 console.log([
 	+x.b,
@@ -92,8 +92,8 @@ console.log([
 	x.a ? "y" : "n",
 	!x.b ? "y" : "n"
 ]);
-
 //#endregion
+
 ```
 ### diff
 ```diff
@@ -158,8 +158,8 @@ console.log([
 //#region const-constants.js
 const a = 3;
 const b = 6;
-
 //#endregion
+
 //#region const-entry.js
 console.log([
 	+b,
@@ -198,8 +198,8 @@ console.log([
 	a ? "y" : "n",
 	!b ? "y" : "n"
 ]);
-
 //#endregion
+
 ```
 ### diff
 ```diff
@@ -235,15 +235,15 @@ let x = /* @__PURE__ */ function(x$1) {
 	x$1[x$1["c"] = 64] = "c";
 	return x$1;
 }({});
-
 //#endregion
+
 //#region nested-entry.ts
 console.log({
 	"should be 4": ~(~a & ~b) & (b | c),
 	"should be 32": ~(~x.a & ~x.b) & (x.b | x.c)
 });
-
 //#endregion
+
 ```
 ### diff
 ```diff

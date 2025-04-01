@@ -30,6 +30,7 @@ console.log("unused import");
 ```js
 
 
+
 //#region node_modules/demo-pkg/index-module.js
 var index_module_exports = {};
 __export(index_module_exports, { foo: () => foo });
@@ -38,17 +39,17 @@ var init_index_module = __esm({ "node_modules/demo-pkg/index-module.js"() {
 	foo = 123;
 	console.log("TEST FAILED");
 } });
-
 //#endregion
+
 //#region src/require-demo-pkg.js
 init_index_module();
-
 //#endregion
+
 //#region src/entry.js
 init_index_module();
 console.log("unused import");
-
 //#endregion
+
 ```
 ### diff
 ```diff

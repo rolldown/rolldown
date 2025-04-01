@@ -22,8 +22,8 @@ var someName = (function(exports) {
 
 //#region entry.js
 const foo = 123;
-
 //#endregion
+
 exports.foo = foo
 return exports;
 })({});

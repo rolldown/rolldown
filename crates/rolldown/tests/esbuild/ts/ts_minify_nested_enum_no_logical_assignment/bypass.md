@@ -40,8 +40,8 @@ function foo() {
 	}({});
 	return Foo;
 }
-
 //#endregion
+
 export { foo };
 ```
 ### diff

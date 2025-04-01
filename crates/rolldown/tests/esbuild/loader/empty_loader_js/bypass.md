@@ -60,20 +60,24 @@ import assert from "node:assert";
 var b_exports = {};
 
 //#endregion
+
 //#region c.empty
 var default$1 = void 0;
 
 //#endregion
+
 //#region d.empty
 var named = void 0;
 
 //#endregion
+
 //#region entry.js
 assert.deepEqual(b_exports, {});
 assert.deepEqual(default$1, void 0);
 assert.equal(named, void 0);
 
 //#endregion
+
 //# sourceMappingURL=entry.js.map
 ```
 ### diff

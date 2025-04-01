@@ -12,8 +12,8 @@ console.log(1 + 2);
 
 //#region <data:text/javascript,console.log(1+2)>
 console.log(3);
-
 //#endregion
+
 ```
 ### diff
 ```diff

@@ -28,12 +28,12 @@ var Foo = class {};
 (function(_Foo2) {
 	let bar = _Foo2.bar = 2;
 })(Foo || (Foo = {}));
-
 //#endregion
+
 //#region a.ts
 console.log(new Foo());
-
 //#endregion
+
 ```
 ### diff
 ```diff

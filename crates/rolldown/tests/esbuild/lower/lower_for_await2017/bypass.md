@@ -127,8 +127,8 @@ var entry_default = [
 		for await (const x$1 of y) z(x$1);
 	}
 ];
-
 //#endregion
+
 export { entry_default as default };
 ```
 ### diff

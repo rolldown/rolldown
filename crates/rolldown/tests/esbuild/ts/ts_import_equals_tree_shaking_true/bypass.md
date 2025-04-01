@@ -15,8 +15,8 @@ import { foo } from "pkg";
 
 //#region entry.ts
 var used = foo.used;
-
 //#endregion
+
 export { used };
 ```
 ### diff

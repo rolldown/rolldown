@@ -18,16 +18,17 @@ console.log(require_dir());
 ```js
 
 
+
 //#region dir/index.js
 var require_dir = __commonJS({ "dir/index.js"(exports, module) {
 	module.exports = 123;
 } });
-
 //#endregion
+
 //#region entry.js
 console.log(require_dir());
-
 //#endregion
+
 ```
 ### diff
 ```diff

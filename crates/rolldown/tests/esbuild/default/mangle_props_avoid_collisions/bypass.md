@@ -26,8 +26,8 @@ var entry_default = {
 	b: 3,
 	__proto__: {}
 };
-
 //#endregion
+
 export { entry_default as default };
 ```
 ### diff

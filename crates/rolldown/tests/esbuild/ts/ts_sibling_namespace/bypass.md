@@ -23,8 +23,8 @@ let x;
 (function(_x2) {
 	let z = _x2.z = y;
 })(x || (x = {}));
-
 //#endregion
+
 export { x };
 ```
 ### diff
@@ -73,8 +73,8 @@ let x;
 (function(_x2) {
 	let z = _x2.z = y;
 })(x || (x = {}));
-
 //#endregion
+
 export { x };
 ```
 ### diff
@@ -125,8 +125,8 @@ let x;
 (function(_x2) {
 	let z = _x2.z = y;
 })(x || (x = {}));
-
 //#endregion
+
 export { x };
 ```
 ### diff
@@ -178,8 +178,8 @@ let x;
 (function(_x2) {
 	let z = _x2.z = y;
 })(x || (x = {}));
-
 //#endregion
+
 export { x };
 ```
 ### diff
@@ -234,8 +234,8 @@ let x;
 (function(_x2) {
 	let z = _x2.z = y;
 })(x || (x = {}));
-
 //#endregion
+
 export { x };
 ```
 ### diff

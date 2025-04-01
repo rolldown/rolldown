@@ -135,8 +135,8 @@ let e2 = class {
 let f2 = class {
 	static ["name"] = 0;
 };
-
 //#endregion
+
 ```
 ### diff
 ```diff

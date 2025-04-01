@@ -14,8 +14,8 @@ console.log(import_meta.url, import_meta.path);
 
 //#region entry.js
 console.log(require("url").pathToFileURL(__filename).href, void 0);
-
 //#endregion
+
 ```
 ### diff
 ```diff

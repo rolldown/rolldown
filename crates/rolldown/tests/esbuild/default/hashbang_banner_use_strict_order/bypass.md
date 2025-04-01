@@ -22,8 +22,8 @@
 
 //#region entry.js
 foo();
-
 //#endregion
+
 })();
 ```
 ### diff
@@ -43,8 +43,8 @@ foo();
 +
 +//#region entry.js
 +foo();
-+
 +//#endregion
++
  })();
 \ No newline at end of file
 

@@ -13,8 +13,8 @@ console.log(1, evil("x"));
 //#region top-level-no-eval.js
 const x = 1;
 console.log(x, evil("x"));
-
 //#endregion
+
 ```
 ### diff
 ```diff
@@ -40,8 +40,8 @@ console.log(1, eval("x"));
 //#region top-level-eval.js
 const x = 1;
 console.log(x, eval("x"));
-
 //#endregion
+
 ```
 ### diff
 ```diff
@@ -68,8 +68,8 @@ console.log(1, evil("x"));
 	const x = 1;
 	console.log(x, evil("x"));
 })();
-
 //#endregion
+
 ```
 ### diff
 ```diff
@@ -100,8 +100,8 @@ console.log(1, evil("x"));
 	const x = 1;
 	console.log(x, eval("x"));
 })();
-
 //#endregion
+
 ```
 ### diff
 ```diff
@@ -131,8 +131,8 @@ let y;
 	const x = _y.x = 1;
 	console.log(x, evil("x"));
 })(y || (y = {}));
-
 //#endregion
+
 ```
 ### diff
 ```diff
@@ -163,8 +163,8 @@ let z;
 	const x = _z.x = 1;
 	console.log(x, eval("x"));
 })(z || (z = {}));
-
 //#endregion
+
 ```
 ### diff
 ```diff

@@ -28,15 +28,15 @@ for (var { f, x: [g] } of []);
 for (var h in {});
 for (var i = 1 in {});
 for (var { j, x: [k] } in {});
-
 //#endregion
+
 ```
 ### diff
 ```diff
 ===================================================================
 --- esbuild	/out/top-level.js
 +++ rolldown	top-level.js
-@@ -1,10 +1,10 @@
+@@ -1,10 +1,9 @@
 -var a;
 -for (var b; 0; ) ;
 -for (var {c, x: [d]} = {}; 0; ) ;
@@ -55,9 +55,7 @@ for (var { j, x: [k] } in {});
 +for (var h in {});
 +for (var i = 1 in {});
 +for (var { j, x: [k] } in {});
-+
 +//#endregion
-\ No newline at end of file
 
 ```
 ## /out/nested.js
@@ -93,15 +91,15 @@ if (true) {
 	for (var { j, x: [k] } in {});
 	function l() {}
 }
-
 //#endregion
+
 ```
 ### diff
 ```diff
 ===================================================================
 --- esbuild	/out/nested.js
 +++ rolldown	nested.js
-@@ -1,13 +1,15 @@
+@@ -1,13 +1,14 @@
 -if (true) {
 -    let l = function () {};
 -    var l2 = l;
@@ -127,9 +125,7 @@ if (true) {
 +	for (var { j, x: [k] } in {});
 +	function l() {}
  }
-+
 +//#endregion
-\ No newline at end of file
 
 ```
 ## /out/let.js
@@ -156,8 +152,8 @@ if (true) {
 	for (let h in {});
 	for (let { j, x: [k] } in {});
 }
-
 //#endregion
+
 ```
 ### diff
 ```diff
@@ -210,15 +206,15 @@ function x() {
 	function l() {}
 }
 x();
-
 //#endregion
+
 ```
 ### diff
 ```diff
 ===================================================================
 --- esbuild	/out/function.js
 +++ rolldown	function.js
-@@ -1,13 +1,16 @@
+@@ -1,13 +1,15 @@
 +
 +//#region function.js
  function x() {
@@ -243,9 +239,7 @@ x();
 +	function l() {}
  }
  x();
-+
 +//#endregion
-\ No newline at end of file
 
 ```
 ## /out/function-nested.js
@@ -287,15 +281,15 @@ function x() {
 	}
 }
 x();
-
 //#endregion
+
 ```
 ### diff
 ```diff
 ===================================================================
 --- esbuild	/out/function-nested.js
 +++ rolldown	function-nested.js
-@@ -1,16 +1,18 @@
+@@ -1,16 +1,17 @@
 +
 +//#region function-nested.js
  function x() {
@@ -325,8 +319,6 @@ x();
 +	}
  }
  x();
-+
 +//#endregion
-\ No newline at end of file
 
 ```

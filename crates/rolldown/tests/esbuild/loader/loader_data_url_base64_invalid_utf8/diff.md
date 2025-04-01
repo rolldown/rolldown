@@ -15,12 +15,12 @@ console.log(binary_default);
 
 //#region binary.txt
 var binary_default = "data:application/octet-stream;base64,/w==";
-
 //#endregion
+
 //#region entry.js
 console.log(binary_default);
-
 //#endregion
+
 ```
 ### diff
 ```diff

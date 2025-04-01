@@ -17,6 +17,7 @@ module.exports = require_entry();
 ### rolldown
 ```js
 
+
 const node_assert = __toESM(require("node:assert"));
 
 //#region entry.js
@@ -25,8 +26,8 @@ var require_entry = __commonJS({ "entry.js"(exports) {
 	node_assert.default.equal(import_entry.foo, void 0);
 } });
 var import_entry = __toESM(require_entry());
-
 //#endregion
+
 module.exports = require_entry();
 
 ```

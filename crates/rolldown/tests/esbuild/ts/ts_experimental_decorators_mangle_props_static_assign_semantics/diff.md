@@ -56,15 +56,15 @@ var Foo = class {
 	@dec(5) static ["prop5"] = null;
 	@dec(6) static ["prop6_"] = null;
 };
-
 //#endregion
+
 ```
 ### diff
 ```diff
 ===================================================================
 --- esbuild	/out.js
 +++ rolldown	entry.js
-@@ -1,26 +1,12 @@
+@@ -1,26 +1,11 @@
 +
 +//#region entry.ts
  var Foo = class {
@@ -99,8 +99,6 @@ var Foo = class {
 -__decorateClass([dec(4)], Foo, "prop4_", 2);
 -__decorateClass([dec(5)], Foo, "prop5", 2);
 -__decorateClass([dec(6)], Foo, "b", 2);
-+
 +//#endregion
-\ No newline at end of file
 
 ```

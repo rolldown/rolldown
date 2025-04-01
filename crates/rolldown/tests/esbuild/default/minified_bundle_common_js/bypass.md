@@ -11,25 +11,26 @@ var t=e(r=>{r.foo=function(){return 123}});var n=e((l,c)=>{c.exports={test:!0}})
 ```js
 
 
+
 //#region a.js
 var require_a = __commonJS({ "a.js"(exports) {
 	exports.foo = function() {
 		return 123;
 	};
 } });
-
 //#endregion
+
 //#region j.json
 var require_j = __commonJS({ "j.json"(exports, module) {
 	module.exports = { "test": true };
 } });
-
 //#endregion
+
 //#region entry.js
 const { foo } = require_a();
 console.log(foo(), require_j());
-
 //#endregion
+
 ```
 ### diff
 ```diff

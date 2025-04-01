@@ -30,6 +30,7 @@ console.log((0, import_foo.foo)(), (0, import_bar.bar)());
 import assert from "node:assert";
 
 
+
 //#region foo.js
 var require_foo = __commonJS({ "foo.js"(exports) {
 	exports.foo = function() {
@@ -37,8 +38,8 @@ var require_foo = __commonJS({ "foo.js"(exports) {
 	};
 } });
 var import_foo = __toESM(require_foo());
-
 //#endregion
+
 //#region bar.js
 var require_bar = __commonJS({ "bar.js"(exports) {
 	exports.bar = function() {
@@ -46,13 +47,13 @@ var require_bar = __commonJS({ "bar.js"(exports) {
 	};
 } });
 var import_bar = __toESM(require_bar());
-
 //#endregion
+
 //#region entry.js
 assert.equal((0, import_foo.foo)(), "foo");
 assert.equal((0, import_bar.bar)(), "bar");
-
 //#endregion
+
 ```
 ### diff
 ```diff

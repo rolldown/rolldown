@@ -33,8 +33,8 @@ let Foo = class {
 		Foo.#staticField = Foo.#staticMethod();
 	}
 };
-
 //#endregion
+
 export { Foo };
 ```
 ### diff

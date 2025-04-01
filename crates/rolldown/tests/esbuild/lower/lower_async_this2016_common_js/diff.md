@@ -16,12 +16,13 @@ export default require_entry();
 ```js
 
 
+
 //#region entry.js
 var require_entry = __commonJS({ "entry.js"(exports) {
 	exports.foo = async () => exports;
 } });
-
 //#endregion
+
 export default require_entry();
 
 ```

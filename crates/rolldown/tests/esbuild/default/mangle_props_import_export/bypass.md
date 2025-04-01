@@ -14,8 +14,8 @@ import "xyz";
 
 //#region esm.js
 let foo_ = 123;
-
 //#endregion
+
 export { foo_ };
 ```
 ### diff
@@ -41,13 +41,14 @@ let bar_ = require("xyz").b;
 ```js
 
 
+
 //#region cjs.js
 var require_cjs = __commonJS({ "cjs.js"(exports) {
 	exports.foo_ = 123;
 	let bar_ = __require("xyz").bar_;
 } });
-
 //#endregion
+
 export default require_cjs();
 
 ```

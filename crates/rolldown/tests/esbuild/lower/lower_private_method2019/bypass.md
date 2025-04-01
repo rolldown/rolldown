@@ -77,8 +77,8 @@ var Foo = class {
 		f()?.foo.#method(x).bar();
 	}
 };
-
 //#endregion
+
 export { Foo };
 ```
 ### diff

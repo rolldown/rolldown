@@ -22,22 +22,23 @@ console.log(bar_exports, foo, foo2);
 import assert from "node:assert";
 
 
+
 //#region foo.js
 const foo$1 = 123;
-
 //#endregion
+
 //#region bar.js
 var bar_exports = {};
 __export(bar_exports, { foo: () => foo$1 });
-
 //#endregion
+
 //#region entry.js
 let foo = 234;
 assert.deepEqual(bar_exports, { foo: 123 });
 assert.equal(foo$1, 123);
 assert.equal(foo, 234);
-
 //#endregion
+
 ```
 ### diff
 ```diff

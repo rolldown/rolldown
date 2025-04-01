@@ -28,15 +28,15 @@ let ns;
 	using c = d;
 	let e = _ns.e = f;
 })(ns || (ns = {}));
-
 //#endregion
+
 ```
 ### diff
 ```diff
 ===================================================================
 --- esbuild	/out/entry.js
 +++ rolldown	entry.js
-@@ -1,13 +1,10 @@
+@@ -1,13 +1,9 @@
 -var ns;
 -(ns2 => {
 -    var _stack = [];
@@ -57,8 +57,6 @@ let ns;
 +	using c = d;
 +	let e = _ns.e = f;
  })(ns || (ns = {}));
-+
 +//#endregion
-\ No newline at end of file
 
 ```

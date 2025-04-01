@@ -36,8 +36,8 @@ let Foo = {
 	}
 };
 var entry_default = /* @__PURE__ */ jsx(Foo.Bar_, { text_: Foo.hello_ });
-
 //#endregion
+
 export { entry_default as default };
 ```
 ### diff

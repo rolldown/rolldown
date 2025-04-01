@@ -22,15 +22,15 @@ console.log(x());
 function x() {
 	return 2;
 }
-
 //#endregion
+
 ```
 ### diff
 ```diff
 ===================================================================
 --- esbuild	/out/function2.js
 +++ rolldown	function2.js
-@@ -1,8 +1,11 @@
+@@ -1,8 +1,10 @@
 -// function2.js
 +
 +//#region function2.js
@@ -45,9 +45,7 @@ function x() {
 \ No newline at end of file
 +	return 2;
 +}
-+
 +//#endregion
-\ No newline at end of file
 
 ```
 ## /out/function3.js
@@ -81,15 +79,15 @@ console.log(x());
 function x() {
 	return 3;
 }
-
 //#endregion
+
 ```
 ### diff
 ```diff
 ===================================================================
 --- esbuild	/out/function3.js
 +++ rolldown	function3.js
-@@ -1,12 +1,15 @@
+@@ -1,12 +1,14 @@
 -// function3.js
 +
 +//#region function3.js
@@ -109,8 +107,6 @@ function x() {
 \ No newline at end of file
 +	return 3;
 +}
-+
 +//#endregion
-\ No newline at end of file
 
 ```

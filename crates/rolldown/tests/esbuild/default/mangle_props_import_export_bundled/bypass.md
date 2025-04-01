@@ -43,8 +43,8 @@ let bar_ = [
 	esm_foo_,
 	import_cjs.cjs_foo_
 ];
-
 //#endregion
+
 export { bar_ };
 ```
 ### diff
@@ -117,8 +117,8 @@ var require_entry_cjs = __commonJS({ "entry-cjs.js"(exports) {
 	let { cjs_foo_ } = require_cjs();
 	exports.bar_ = [esm_foo_, cjs_foo_];
 } });
-
 //#endregion
+
 export default require_entry_cjs();
 
 ```

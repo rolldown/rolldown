@@ -26,18 +26,18 @@ console.log(loose_default, strict_default);
 var loose_default = class {
 	foo;
 };
-
 //#endregion
+
 //#region strict/index.js
 var strict_default = class {
 	foo;
 };
-
 //#endregion
+
 //#region entry.js
 console.log(loose_default, strict_default);
-
 //#endregion
+
 ```
 ### diff
 ```diff

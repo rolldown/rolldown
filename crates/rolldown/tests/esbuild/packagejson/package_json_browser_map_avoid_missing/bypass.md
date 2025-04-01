@@ -27,22 +27,23 @@ var index;
 ```js
 
 
+
 //#region node_modules/component-indexof/index.js
 var require_component_indexof = __commonJS({ "node_modules/component-indexof/index.js"(exports, module) {
 	module.exports = function() {
 		return 234;
 	};
 } });
-
 //#endregion
+
 //#region node_modules/component-classes/index.js
 try {
 	var index = require_component_indexof();
 } catch (err) {
 	var index = require_component_indexof();
 }
-
 //#endregion
+
 ```
 ### diff
 ```diff

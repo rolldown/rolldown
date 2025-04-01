@@ -17,6 +17,7 @@ console.log(import_demo_pkg.default, require_main());
 ```js
 
 
+
 //#region node_modules/demo-pkg/module.js
 var module_exports = {};
 __export(module_exports, { default: () => module_default });
@@ -24,13 +25,13 @@ var module_default;
 var init_module = __esm({ "node_modules/demo-pkg/module.js"() {
 	module_default = "module";
 } });
-
 //#endregion
+
 //#region src/entry.js
 init_module();
 console.log(module_default, (init_module(), __toCommonJS(module_exports)));
-
 //#endregion
+
 ```
 ### diff
 ```diff

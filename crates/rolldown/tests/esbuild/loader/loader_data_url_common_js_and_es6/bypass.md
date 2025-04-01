@@ -22,21 +22,22 @@ console.log(x_url, y_default);
 ```js
 
 
+
 //#region y.txt
 var y_default = "data:text/plain;charset=utf-8,y";
-
 //#endregion
+
 //#region x.txt
 var require_x = __commonJS({ "x.txt"(exports, module) {
 	module.exports = "data:text/plain;charset=utf-8,x";
 } });
-
 //#endregion
+
 //#region entry.js
 const x_url = require_x();
 console.log(x_url, y_default);
-
 //#endregion
+
 ```
 ### diff
 ```diff

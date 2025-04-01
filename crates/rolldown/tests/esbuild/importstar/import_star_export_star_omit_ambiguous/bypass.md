@@ -25,29 +25,30 @@ console.log(common_exports);
 import assert from "node:assert";
 
 
+
 //#region foo.js
 const x = 1;
-
 //#endregion
+
 //#region bar.js
 const z = 4;
-
 //#endregion
+
 //#region common.js
 var common_exports = {};
 __export(common_exports, {
 	x: () => x,
 	z: () => z
 });
-
 //#endregion
+
 //#region entry.js
 assert.deepEqual(common_exports, {
 	x: 1,
 	z: 4
 });
-
 //#endregion
+
 ```
 ### diff
 ```diff

@@ -11,12 +11,12 @@ var o=123;console.log(o,"no identifier in this file should be named W, X, Y, or 
 
 //#region WWWWWWWWWWXXXXXXXXXXYYYYYYYYYYZZZZZZZZZZ.js
 var WWWWWWWWWWXXXXXXXXXXYYYYYYYYYYZZZZZZZZZZ_default = 123;
-
 //#endregion
+
 //#region import.js
 console.log(WWWWWWWWWWXXXXXXXXXXYYYYYYYYYYZZZZZZZZZZ_default, "no identifier in this file should be named W, X, Y, or Z");
-
 //#endregion
+
 ```
 ### diff
 ```diff
@@ -39,17 +39,18 @@ var i=r((t,e)=>{e.exports=123});var s=i();console.log(s,"no identifier in this f
 ```js
 
 
+
 //#region AAAAAAAAAABBBBBBBBBBCCCCCCCCCCDDDDDDDDDD.js
 var require_AAAAAAAAAABBBBBBBBBBCCCCCCCCCCDDDDDDDDDD = __commonJS({ "AAAAAAAAAABBBBBBBBBBCCCCCCCCCCDDDDDDDDDD.js"(exports, module) {
 	module.exports = 123;
 } });
-
 //#endregion
+
 //#region require.js
 const foo = require_AAAAAAAAAABBBBBBBBBBCCCCCCCCCCDDDDDDDDDD();
 console.log(foo, "no identifier in this file should be named A, B, C, or D");
-
 //#endregion
+
 ```
 ### diff
 ```diff

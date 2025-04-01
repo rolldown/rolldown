@@ -20,8 +20,8 @@ import config from "/api/config?a=1&b=2";
 
 //#region nested/folder/test.js
 console.log(foo, out, sha256, config);
-
 //#endregion
+
 ```
 ### diff
 ```diff

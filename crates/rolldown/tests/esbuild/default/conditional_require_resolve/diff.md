@@ -14,8 +14,8 @@ x ? y ? require.resolve("a") : require.resolve("b") : require.resolve(c);
 //#region a.js
 require.resolve(x ? "a" : y ? "b" : "c");
 require.resolve(x ? y ? "a" : "b" : c);
-
 //#endregion
+
 ```
 ### diff
 ```diff

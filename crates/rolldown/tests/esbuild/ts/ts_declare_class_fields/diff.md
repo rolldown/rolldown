@@ -33,8 +33,8 @@ var Foo = class {
 	static [C];
 };
 new Foo();
-
 //#endregion
+
 //#region define-true/index.ts
 var Bar = class {
 	a;
@@ -43,8 +43,8 @@ var Bar = class {
 	static [C];
 };
 new Bar();
-
 //#endregion
+
 ```
 ### diff
 ```diff

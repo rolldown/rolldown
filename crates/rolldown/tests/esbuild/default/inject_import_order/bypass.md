@@ -22,8 +22,8 @@ import "third";
 
 //#region entry.ts
 console.log("third");
-
 //#endregion
+
 ```
 ### diff
 ```diff

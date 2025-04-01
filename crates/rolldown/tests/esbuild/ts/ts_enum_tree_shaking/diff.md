@@ -17,8 +17,8 @@ var x = /* @__PURE__ */ function(x$1) {
 	return x$1;
 }(x || {});
 console.log(x.y);
-
 //#endregion
+
 ```
 ### diff
 ```diff
@@ -53,8 +53,8 @@ var x = /* @__PURE__ */ function(x$1) {
 	return x$1;
 }(x || {});
 console.log(x);
-
 //#endregion
+
 ```
 ### diff
 ```diff
@@ -91,8 +91,8 @@ x = /* @__PURE__ */ function(x$1) {
 	return x$1;
 }(x || {});
 console.log(x.y, x.z);
-
 //#endregion
+
 ```
 ### diff
 ```diff
@@ -139,8 +139,8 @@ x = /* @__PURE__ */ function(x$1) {
 	x$1[x$1["z"] = 246] = "z";
 	return x$1;
 }(x || {});
-
 //#endregion
+
 ```
 ### diff
 ```diff
@@ -192,8 +192,8 @@ x = /* @__PURE__ */ function(x$1) {
 	x$1[x$1["z"] = 246] = "z";
 	return x$1;
 }(x || {});
-
 //#endregion
+
 ```
 ### diff
 ```diff
@@ -245,8 +245,8 @@ x = /* @__PURE__ */ function(x$1) {
 	return x$1;
 }(x || {});
 console.log(x);
-
 //#endregion
+
 ```
 ### diff
 ```diff
@@ -294,8 +294,8 @@ var x = /* @__PURE__ */ function(x$1) {
 	x$1[x$1["y"] = 123] = "y";
 	return x$1;
 }(x || {});
-
 //#endregion
+
 ```
 ### diff
 ```diff
@@ -340,8 +340,8 @@ var x = /* @__PURE__ */ function(x$1) {
 (function(_x) {
 	console.log(x, y);
 })(x || (x = {}));
-
 //#endregion
+
 ```
 ### diff
 ```diff

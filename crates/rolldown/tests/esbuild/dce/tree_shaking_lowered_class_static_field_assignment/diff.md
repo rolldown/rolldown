@@ -37,8 +37,8 @@ var KeepMe3 = class {
 	static z = "z";
 };
 new KeepMe3();
-
 //#endregion
+
 ```
 ### diff
 ```diff

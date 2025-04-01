@@ -17,19 +17,19 @@ import { jsx } from "react/jsx-runtime";
 
 //#region foo.js
 var mustStartWithUpperCaseLetter = class {};
-
 //#endregion
+
 //#region entry.jsx
 console.log(/* @__PURE__ */ jsx(mustStartWithUpperCaseLetter, { "tag-must-start-with-capital-letter": true }));
-
 //#endregion
+
 ```
 ### diff
 ```diff
 ===================================================================
 --- esbuild	/out.js
 +++ rolldown	entry.js
-@@ -1,6 +1,10 @@
+@@ -1,6 +1,9 @@
 -// foo.js
 -var Y = class {
 -};
@@ -40,12 +40,10 @@ console.log(/* @__PURE__ */ jsx(mustStartWithUpperCaseLetter, { "tag-must-start-
 \ No newline at end of file
 +//#region foo.js
 +var mustStartWithUpperCaseLetter = class {};
-+
 +//#endregion
++
 +//#region entry.jsx
 +console.log(/* @__PURE__ */ jsx(mustStartWithUpperCaseLetter, { "tag-must-start-with-capital-letter": true }));
-+
 +//#endregion
-\ No newline at end of file
 
 ```

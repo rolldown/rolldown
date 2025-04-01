@@ -12,8 +12,8 @@ import("./foo-X6C7FV5C.js").then(({ default: { bar } }) => console.log(bar));
 
 //#region entry.js
 import("./foo.js").then(({ default: { bar } }) => console.log(bar));
-
 //#endregion
+
 ```
 ### diff
 ```diff

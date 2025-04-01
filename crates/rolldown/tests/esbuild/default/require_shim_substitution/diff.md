@@ -32,12 +32,13 @@ console.log([
 ```js
 
 
+
 //#region example.json
 var require_example = __commonJS({ "example.json"(exports, module) {
 	module.exports = { "works": true };
 } });
-
 //#endregion
+
 //#region entry.js
 var require_entry = __commonJS({ "entry.js"(exports, module) {
 	console.log([
@@ -55,8 +56,8 @@ var require_entry = __commonJS({ "entry.js"(exports, module) {
 		import(window.SOME_PATH)
 	]);
 } });
-
 //#endregion
+
 export default require_entry();
 
 ```

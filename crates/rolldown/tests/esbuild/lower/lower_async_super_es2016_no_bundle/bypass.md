@@ -105,8 +105,8 @@ for (let i = 0; i < 3; i++) objs.push({
 		return super.foo();
 	}
 });
-
 //#endregion
+
 ```
 ### diff
 ```diff

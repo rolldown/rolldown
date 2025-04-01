@@ -29,22 +29,23 @@ console.log(
 ```js
 
 
+
 //#region a/test.txt
 var require_test$1 = __commonJS({ "a/test.txt"(exports, module) {
 	module.exports = "assets/test-BrHGE6Cv.txt";
 } });
-
 //#endregion
+
 //#region b/test.txt
 var require_test = __commonJS({ "b/test.txt"(exports, module) {
 	module.exports = "assets/test-1P-S1VxP.txt";
 } });
-
 //#endregion
+
 //#region entry.js
 console.log(require_test$1(), require_test());
-
 //#endregion
+
 ```
 ### diff
 ```diff

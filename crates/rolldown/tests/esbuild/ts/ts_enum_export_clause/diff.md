@@ -32,8 +32,8 @@ var D = /* @__PURE__ */ function(D$1) {
 	D$1[D$1["D"] = 4] = "D";
 	return D$1;
 }(D || {});
-
 //#endregion
+
 //#region entry.ts
 console.log([
 	A.A,
@@ -41,8 +41,8 @@ console.log([
 	C.C,
 	D.D
 ]);
-
 //#endregion
+
 ```
 ### diff
 ```diff

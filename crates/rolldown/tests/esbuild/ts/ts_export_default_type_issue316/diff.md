@@ -100,31 +100,31 @@ export {
 //#region keep/declare-class.ts
 var declare_class_default = foo;
 let bar$12 = 123;
-
 //#endregion
+
 //#region keep/declare-let.ts
 var declare_let_default = foo;
 let bar$11 = 123;
-
 //#endregion
+
 //#region keep/interface-merged.ts
 var foo$2 = class foo$2 {
 	static x = new foo$2();
 };
 var interface_merged_default = foo$2;
 let bar$10 = 123;
-
 //#endregion
+
 //#region keep/interface-nested.ts
 var interface_nested_default = foo;
 let bar$9 = 123;
-
 //#endregion
+
 //#region keep/type-nested.ts
 var type_nested_default = foo;
 let bar$8 = 123;
-
 //#endregion
+
 //#region keep/value-namespace.ts
 let foo$1;
 (function(_foo) {
@@ -132,46 +132,46 @@ let foo$1;
 })(foo$1 || (foo$1 = {}));
 var value_namespace_default = foo$1;
 let bar$7 = 123;
-
 //#endregion
+
 //#region keep/value-namespace-merged.ts
 (function(_foo2) {
 	let num = _foo2.num = 0;
 })(foo || (foo = {}));
 var value_namespace_merged_default = foo;
 let bar$6 = 123;
-
 //#endregion
+
 //#region remove/interface.ts
 var interface_default = foo;
 let bar$5 = 123;
-
 //#endregion
+
 //#region remove/interface-exported.ts
 var interface_exported_default = foo;
 let bar$4 = 123;
-
 //#endregion
+
 //#region remove/type.ts
 var type_default = foo;
 let bar$3 = 123;
-
 //#endregion
+
 //#region remove/type-exported.ts
 var type_exported_default = foo;
 let bar$2 = 123;
-
 //#endregion
+
 //#region remove/type-only-namespace.ts
 var type_only_namespace_default = foo;
 let bar$1 = 123;
-
 //#endregion
+
 //#region remove/type-only-namespace-exported.ts
 var type_only_namespace_exported_default = foo;
 let bar = 123;
-
 //#endregion
+
 //#region entry.ts
 var entry_default = [
 	declare_class_default,
@@ -195,8 +195,8 @@ var entry_default = [
 	bar$1,
 	bar
 ];
-
 //#endregion
+
 export { entry_default as default };
 ```
 ### diff

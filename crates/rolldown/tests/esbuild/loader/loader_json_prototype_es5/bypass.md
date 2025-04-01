@@ -23,12 +23,12 @@ var data_default = {
 	"": "The property below should NOT be converted to a computed property for ES5:",
 	__proto__: __proto__
 };
-
 //#endregion
+
 //#region entry.js
 console.log(data_default);
-
 //#endregion
+
 ```
 ### diff
 ```diff

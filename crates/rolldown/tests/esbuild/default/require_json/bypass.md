@@ -22,6 +22,7 @@ console.log(require_test());
 ```js
 
 
+
 //#region test.json
 var require_test = __commonJS({ "test.json"(exports, module) {
 	module.exports = {
@@ -30,12 +31,12 @@ var require_test = __commonJS({ "test.json"(exports, module) {
 		"c": [null]
 	};
 } });
-
 //#endregion
+
 //#region entry.js
 console.log(require_test());
-
 //#endregion
+
 ```
 ### diff
 ```diff

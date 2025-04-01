@@ -17,6 +17,7 @@ var all_the_stuff = __toESM(require("./foo"));
 ```js
 "use strict";
 
+
 const foo = __toESM(require("./foo"));
 
 Object.defineProperty(exports, 'all the stuff', {

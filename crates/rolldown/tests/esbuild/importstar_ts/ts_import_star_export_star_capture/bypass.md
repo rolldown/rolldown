@@ -21,20 +21,21 @@ console.log(bar_exports, foo, foo2);
 ```js
 
 
+
 //#region foo.ts
 const foo$1 = 123;
-
 //#endregion
+
 //#region bar.ts
 var bar_exports = {};
 __export(bar_exports, { foo: () => foo$1 });
-
 //#endregion
+
 //#region entry.ts
 let foo = 234;
 console.log(bar_exports, foo$1, foo);
-
 //#endregion
+
 ```
 ### diff
 ```diff

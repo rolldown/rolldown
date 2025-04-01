@@ -19,12 +19,12 @@ console.log(data_default === data_default, data_default !== data_default2);
 //#region data.json
 var works = true;
 var data_default = { works };
-
 //#endregion
+
 //#region entry.js
 console.log(data_default === data_default, data_default !== data_default);
-
 //#endregion
+
 ```
 ### diff
 ```diff

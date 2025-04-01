@@ -21,6 +21,7 @@ console.log(import_demo_pkg.default);
 import assert, { deepEqual } from "node:assert";
 
 
+
 //#region node_modules/demo-pkg/module.js
 var module_exports = {};
 __export(module_exports, { default: () => module_default });
@@ -28,17 +29,17 @@ var module_default;
 var init_module = __esm({ "node_modules/demo-pkg/module.js"() {
 	module_default = "module";
 } });
-
 //#endregion
+
 //#region src/test-index.js
 deepEqual((init_module(), __toCommonJS(module_exports)), { default: "module" });
-
 //#endregion
+
 //#region src/test-module.js
 init_module();
 assert.equal(module_default, "module");
-
 //#endregion
+
 ```
 ### diff
 ```diff

@@ -42,8 +42,8 @@ x._mangleThisToo(
 );
 x._someKey = "_someKey" in y;
 x([`foo._mangleThis = bar._mangleThisToo`, `foo.notMangled = bar.notMangledEither`]);
-
 //#endregion
+
 ```
 ### diff
 ```diff

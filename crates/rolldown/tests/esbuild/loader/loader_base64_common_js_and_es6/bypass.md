@@ -23,22 +23,23 @@ console.log(x_b64, y_default);
 import assert from "node:assert";
 
 
+
 //#region y.b64
 var y_default = "eQ==";
-
 //#endregion
+
 //#region x.b64
 var require_x = __commonJS({ "x.b64"(exports, module) {
 	module.exports = "eA==";
 } });
-
 //#endregion
+
 //#region entry.js
 const x_b64 = require_x();
 assert.deepEqual(x_b64, "eA==");
 assert.equal(y_default, "eQ==");
-
 //#endregion
+
 ```
 ### diff
 ```diff

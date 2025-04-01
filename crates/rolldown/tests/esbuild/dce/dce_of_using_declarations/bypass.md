@@ -37,15 +37,15 @@ await using await_asyncDispose_keep = { [Symbol.asyncDispose]() {
 using undef_keep = void 0;
 await using await_undef_keep = void 0;
 console.log(null_keep, undef_keep);
-
 //#endregion
+
 ```
 ### diff
 ```diff
 ===================================================================
 --- esbuild	/out/entry.js
 +++ rolldown	entry.js
-@@ -1,16 +1,16 @@
+@@ -1,16 +1,15 @@
 -// entry.js
 +
 +//#region entry.js
@@ -68,8 +68,6 @@ console.log(null_keep, undef_keep);
 -);
 \ No newline at end of file
 +console.log(null_keep, undef_keep);
-+
 +//#endregion
-\ No newline at end of file
 
 ```

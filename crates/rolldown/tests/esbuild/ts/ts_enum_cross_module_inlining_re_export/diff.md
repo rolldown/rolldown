@@ -27,16 +27,16 @@ let c = /* @__PURE__ */ function(c$1) {
 	c$1["x"] = "c";
 	return c$1;
 }({});
-
 //#endregion
+
 //#region entry.js
 console.log([
 	a.x,
 	b.x,
 	c.x
 ]);
-
 //#endregion
+
 ```
 ### diff
 ```diff

@@ -34,8 +34,8 @@ for (var e of []);
 for (var { f, x: [g] } of []);
 for (var h in {});
 for (var { j, x: [k] } in {});
-
 //#endregion
+
 ```
 ### diff
 ```diff
@@ -110,8 +110,8 @@ var l2;
 	for (var { j, x: [k] } in {});
 	function l() {}
 }
-
 //#endregion
+
 ```
 ### diff
 ```diff
@@ -178,8 +178,8 @@ if (true) {
 	for (let h in {});
 	for (let { j, x: [k] } in {});
 }
-
 //#endregion
+
 ```
 ### diff
 ```diff
@@ -231,8 +231,8 @@ function x() {
 	function l() {}
 }
 x();
-
 //#endregion
+
 ```
 ### diff
 ```diff
@@ -294,8 +294,8 @@ function x() {
 	}
 }
 x();
-
 //#endregion
+
 ```
 ### diff
 ```diff

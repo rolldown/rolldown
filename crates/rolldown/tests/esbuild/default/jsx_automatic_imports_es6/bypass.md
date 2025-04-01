@@ -19,12 +19,12 @@ import { Fragment, jsx } from "react/jsx-runtime";
 //#region custom-react.js
 function jsx$1() {}
 function Fragment$1() {}
-
 //#endregion
+
 //#region entry.jsx
 console.log(/* @__PURE__ */ jsx("div", { jsx: jsx$1 }), /* @__PURE__ */ jsx(Fragment, { children: /* @__PURE__ */ jsx(Fragment$1, {}) }));
-
 //#endregion
+
 ```
 ### diff
 ```diff

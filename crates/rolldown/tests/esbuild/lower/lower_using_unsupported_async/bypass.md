@@ -116,15 +116,15 @@ function bar() {
 //#region loops.js
 for (using a of b) c(() => a);
 if (nested) for (using a of b) c(() => a);
-
 //#endregion
+
 ```
 ### diff
 ```diff
 ===================================================================
 --- esbuild	/out/loops.js
 +++ rolldown	loops.js
-@@ -1,24 +1,6 @@
+@@ -1,24 +1,5 @@
 +
 +//#region loops.js
  for (using a of b) c(() => a);
@@ -153,9 +153,7 @@ if (nested) for (using a of b) c(() => a);
 -}
 \ No newline at end of file
 +if (nested) for (using a of b) c(() => a);
-+
 +//#endregion
-\ No newline at end of file
 
 ```
 ## /out/switch.js
@@ -214,15 +212,15 @@ async function foo() {
 		default: using e = f;
 	}
 }
-
 //#endregion
+
 ```
 ### diff
 ```diff
 ===================================================================
 --- esbuild	/out/switch.js
 +++ rolldown	switch.js
-@@ -1,32 +1,20 @@
+@@ -1,32 +1,19 @@
 +
 +//#region switch.js
  using x = y;
@@ -271,8 +269,6 @@ async function foo() {
 +		default: using e = f;
 +	}
 +}
-+
 +//#endregion
-\ No newline at end of file
 
 ```

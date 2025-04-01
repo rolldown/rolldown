@@ -115,64 +115,64 @@ var foo1_default = class extends x {
 		super.foo();
 	}
 };
-
 //#endregion
+
 //#region foo2.js
 var foo2_default = class extends x {
 	#foo() {
 		super.foo++;
 	}
 };
-
 //#endregion
+
 //#region foo3.js
 var foo3_default = class extends x {
 	static #foo() {
 		super.foo();
 	}
 };
-
 //#endregion
+
 //#region foo4.js
 var foo4_default = class extends x {
 	static #foo() {
 		super.foo++;
 	}
 };
-
 //#endregion
+
 //#region foo5.js
 var foo5_default = class extends x {
 	#foo = () => {
 		super.foo();
 	};
 };
-
 //#endregion
+
 //#region foo6.js
 var foo6_default = class extends x {
 	#foo = () => {
 		super.foo++;
 	};
 };
-
 //#endregion
+
 //#region foo7.js
 var foo7_default = class extends x {
 	static #foo = () => {
 		super.foo();
 	};
 };
-
 //#endregion
+
 //#region foo8.js
 var foo8_default = class extends x {
 	static #foo = () => {
 		super.foo++;
 	};
 };
-
 //#endregion
+
 export { foo1_default as foo1, foo2_default as foo2, foo3_default as foo3, foo4_default as foo4, foo5_default as foo5, foo6_default as foo6, foo7_default as foo7, foo8_default as foo8 };
 ```
 ### diff

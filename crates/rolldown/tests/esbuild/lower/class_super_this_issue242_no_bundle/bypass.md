@@ -35,8 +35,8 @@ var B = class extends A {
 		return this.#e;
 	}
 };
-
 //#endregion
+
 export { A, B };
 ```
 ### diff

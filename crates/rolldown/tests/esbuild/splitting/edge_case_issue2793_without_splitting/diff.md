@@ -43,12 +43,12 @@ export {
 
 //#region a.js
 const A = 42;
-
 //#endregion
+
 //#region b.js
 const B = async () => (await import("./index.js")).A;
-
 //#endregion
+
 export { A, B };
 ```
 ### diff

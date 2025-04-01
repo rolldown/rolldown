@@ -16,8 +16,8 @@ const external = require_chunk.__toESM(require("external"));
 
 //#region a.js
 console.log(external[foo](), new external[foo]());
-
 //#endregion
+
 ```
 ### diff
 ```diff
@@ -47,8 +47,8 @@ const external = require_chunk.__toESM(require("external"));
 
 //#region b.js
 console.log(external.foo(), new external.foo());
-
 //#endregion
+
 ```
 ### diff
 ```diff
@@ -80,8 +80,8 @@ const external = require_chunk.__toESM(require("external"));
 //#region c.js
 console.log((0, external.default)(), (0, external.foo)());
 console.log(new external.default(), new external.foo());
-
 //#endregion
+
 ```
 ### diff
 ```diff

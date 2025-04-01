@@ -40,6 +40,7 @@ var { bar: bar2 } = (init_bar(), __toCommonJS(bar_exports));
 import assert from "node:assert";
 
 
+
 //#region foo.js
 var foo_exports = {};
 __export(foo_exports, { foo: () => foo$1 });
@@ -47,8 +48,8 @@ function foo$1() {
 	return "foo";
 }
 var init_foo = __esm({ "foo.js"() {} });
-
 //#endregion
+
 //#region bar.js
 var bar_exports = {};
 __export(bar_exports, { bar: () => bar$1 });
@@ -56,8 +57,8 @@ function bar$1() {
 	return "bar";
 }
 var init_bar = __esm({ "bar.js"() {} });
-
 //#endregion
+
 //#region entry.js
 const { foo } = (init_foo(), __toCommonJS(
 	// This should not be hoisted
@@ -66,8 +67,8 @@ const { foo } = (init_foo(), __toCommonJS(
 assert.equal(foo(), "foo");
 assert.equal(bar(), "bar");
 const { bar } = (init_bar(), __toCommonJS(bar_exports));
-
 //#endregion
+
 ```
 ### diff
 ```diff

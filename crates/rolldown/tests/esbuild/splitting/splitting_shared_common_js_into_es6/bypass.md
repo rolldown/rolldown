@@ -17,8 +17,8 @@ import { require_shared } from "./shared.js";
 //#region a.js
 const { foo } = require_shared();
 console.log(foo);
-
 //#endregion
+
 ```
 ### diff
 ```diff
@@ -50,8 +50,8 @@ import { require_shared } from "./shared.js";
 //#region b.js
 const { foo } = require_shared();
 console.log(foo);
-
 //#endregion
+
 ```
 ### diff
 ```diff

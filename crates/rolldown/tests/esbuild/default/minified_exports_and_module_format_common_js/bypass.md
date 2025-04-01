@@ -26,22 +26,23 @@ console.log(exports, module.exports, o, r);
 ```js
 
 
+
 //#region foo/test.js
 var test_exports$1 = {};
 __export(test_exports$1, { foo: () => foo });
 let foo = 123;
-
 //#endregion
+
 //#region bar/test.js
 var test_exports = {};
 __export(test_exports, { bar: () => bar });
 let bar = 123;
-
 //#endregion
+
 //#region entry.js
 console.log(exports, module.exports, test_exports$1, test_exports);
-
 //#endregion
+
 ```
 ### diff
 ```diff

@@ -99,8 +99,8 @@ let shouldNotBeWrapped = [
 	(empty(), foo)` + "``" + `
 ];
 let shouldNotBeDoubleWrapped = [delete (empty(), foo(), bar()), delete id((foo(), bar()))];
-
 //#endregion
+
 export { shouldBeWrapped, shouldNotBeDoubleWrapped, shouldNotBeWrapped };
 ```
 ### diff

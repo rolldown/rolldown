@@ -18,8 +18,8 @@ console.log(/* @__PURE__ */ el(frag, null, /* @__PURE__ */ el("div", null)));
 
 //#region entry.jsx
 console.log(/* @__PURE__ */ React.createElement(React.Fragment, null, /* @__PURE__ */ React.createElement("div", null)));
-
 //#endregion
+
 ```
 ### diff
 ```diff

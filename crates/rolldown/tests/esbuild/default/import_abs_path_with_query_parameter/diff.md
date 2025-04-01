@@ -20,8 +20,8 @@ import bar from "/Users/user/project/file.txt#bar";
 
 //#region entry.js
 console.log(foo, bar);
-
 //#endregion
+
 ```
 ### diff
 ```diff

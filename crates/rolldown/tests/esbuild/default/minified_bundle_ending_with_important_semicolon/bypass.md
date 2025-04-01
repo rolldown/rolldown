@@ -11,8 +11,8 @@
 
 //#region entry.js
 while (foo());
-
 //#endregion
+
 ```
 ### diff
 ```diff

@@ -40,8 +40,8 @@ var StaticAccessor = class {
 const fn = () => {
 	console.log("side effect");
 };
-
 //#endregion
+
 //#region keep-these.js
 var Class = @fn class {};
 var Field = class {
@@ -56,15 +56,15 @@ var StaticField = class {
 var StaticMethod = class {
 	@fn static method() {}
 };
-
 //#endregion
+
 ```
 ### diff
 ```diff
 ===================================================================
 --- esbuild	/out/keep-these.js
 +++ rolldown	keep-these.js
-@@ -1,28 +1,23 @@
+@@ -1,28 +1,22 @@
 -// decorator.js
 -var fn = () => {
 -  console.log("side effect");
@@ -76,8 +76,8 @@ var StaticMethod = class {
 +const fn = () => {
 +	console.log("side effect");
  };
-+
 +//#endregion
++
 +//#region keep-these.js
 +var Class = @fn class {};
  var Field = class {
@@ -105,8 +105,6 @@ var StaticMethod = class {
 -  @fn static accessor accessor;
 -};
 \ No newline at end of file
-+
 +//#endregion
-\ No newline at end of file
 
 ```

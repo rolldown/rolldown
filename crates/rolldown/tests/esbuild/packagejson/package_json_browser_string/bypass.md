@@ -23,6 +23,7 @@ console.log((0, import_demo_pkg.default)());
 import assert from "node:assert";
 
 
+
 //#region node_modules/demo-pkg/browser.js
 var require_browser = __commonJS({ "node_modules/demo-pkg/browser.js"(exports, module) {
 	module.exports = function() {
@@ -30,12 +31,12 @@ var require_browser = __commonJS({ "node_modules/demo-pkg/browser.js"(exports, m
 	};
 } });
 var import_browser = __toESM(require_browser());
-
 //#endregion
+
 //#region src/entry.js
 assert.equal((0, import_browser.default)(), 123);
-
 //#endregion
+
 ```
 ### diff
 ```diff

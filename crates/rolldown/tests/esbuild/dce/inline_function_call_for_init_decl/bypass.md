@@ -20,8 +20,8 @@ function id(x) {
 }
 var y = empty();
 var z = id(123);
-
 //#endregion
+
 ```
 ### diff
 ```diff

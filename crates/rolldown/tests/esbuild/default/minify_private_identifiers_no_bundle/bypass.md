@@ -53,8 +53,8 @@ var Bar = class {
 	get #bar() {}
 	set #bar(x) {}
 };
-
 //#endregion
+
 ```
 ### diff
 ```diff

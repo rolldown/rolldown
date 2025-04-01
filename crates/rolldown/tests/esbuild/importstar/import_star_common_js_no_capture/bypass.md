@@ -20,6 +20,7 @@ console.log(ns.foo, ns.foo, foo2);
 ### rolldown
 ```js
 
+
 const node_assert = __toESM(require("node:assert"));
 
 //#region foo.js
@@ -27,15 +28,15 @@ var require_foo = __commonJS({ "foo.js"(exports) {
 	exports.foo = 123;
 } });
 var import_foo = __toESM(require_foo());
-
 //#endregion
+
 //#region entry.js
 let foo = 234;
 node_assert.default.equal(import_foo.foo, 123);
 node_assert.default.equal(import_foo.foo, 123);
 node_assert.default.equal(foo, 234);
-
 //#endregion
+
 ```
 ### diff
 ```diff

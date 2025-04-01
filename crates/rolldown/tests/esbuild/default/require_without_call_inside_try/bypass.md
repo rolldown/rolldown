@@ -18,6 +18,7 @@ var aliasedRequire;
 ```js
 
 
+
 //#region entry.js
 try {
 	oldLocale = globalLocale._abbr;
@@ -25,8 +26,8 @@ try {
 	aliasedRequire("./locale/" + name);
 	getSetGlobalLocale(oldLocale);
 } catch (e) {}
-
 //#endregion
+
 ```
 ### diff
 ```diff

@@ -53,8 +53,8 @@ import { __toCommonJS, a_exports, init_a } from "./a2.js";
 
 //#region b.js
 let bar = (init_a(), __toCommonJS(a_exports));
-
 //#endregion
+
 export { bar };
 ```
 ### diff
@@ -94,13 +94,14 @@ export {
 ```js
 
 
+
 //#region a.js
 var a_exports = {};
 __export(a_exports, { foo: () => foo });
 var foo;
 var init_a = __esm({ "a.js"() {} });
-
 //#endregion
+
 export { __toCommonJS, a_exports, foo, init_a };
 ```
 ### diff
@@ -108,8 +109,9 @@ export { __toCommonJS, a_exports, foo, init_a };
 ===================================================================
 --- esbuild	/out/chunk-PDZFCFBH.js
 +++ rolldown	a2.js
-@@ -1,17 +1,10 @@
+@@ -1,17 +1,11 @@
 -// a.js
++
 +
 +
 +//#region a.js
@@ -124,6 +126,7 @@ export { __toCommonJS, a_exports, foo, init_a };
 -  }
 -});
 +var init_a = __esm({ "a.js"() {} });
++//#endregion
  
 -export {
 -  __toCommonJS,
@@ -132,7 +135,6 @@ export { __toCommonJS, a_exports, foo, init_a };
 -  init_a
 -};
 \ No newline at end of file
-+//#endregion
 +export { __toCommonJS, a_exports, foo, init_a };
 \ No newline at end of file
 

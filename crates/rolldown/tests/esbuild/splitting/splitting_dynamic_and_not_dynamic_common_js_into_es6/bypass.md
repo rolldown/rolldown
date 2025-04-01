@@ -19,8 +19,8 @@ import { import_foo } from "./foo.js";
 
 //#region entry.js
 import("./foo2.js").then(({ default: { bar: b } }) => console.log(import_foo.bar, b));
-
 //#endregion
+
 ```
 ### diff
 ```diff
@@ -47,13 +47,14 @@ export default require_foo();
 ```js
 
 
+
 //#region foo.js
 var require_foo = __commonJS({ "foo.js"(exports) {
 	exports.bar = 123;
 } });
 var import_foo = __toESM(require_foo());
-
 //#endregion
+
 export { import_foo, require_foo };
 ```
 ### diff

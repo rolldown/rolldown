@@ -16,8 +16,8 @@ import pkg from "/Users/user/project/node_modules/pkg/index";
 
 //#region entry.js
 console.log(pkg);
-
 //#endregion
+
 ```
 ### diff
 ```diff

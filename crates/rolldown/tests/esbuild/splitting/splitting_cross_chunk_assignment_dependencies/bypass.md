@@ -17,8 +17,8 @@ import { setValue } from "./shared.js";
 
 //#region a.js
 setValue(123);
-
 //#endregion
+
 ```
 ### diff
 ```diff

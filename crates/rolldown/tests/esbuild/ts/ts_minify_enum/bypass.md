@@ -34,8 +34,8 @@ let Foo = /* @__PURE__ */ function(Foo$1) {
 	Foo$1[Foo$1["Z"] = Foo$1] = "Z";
 	return Foo$1;
 }({});
-
 //#endregion
+
 export { Foo };
 ```
 ### diff

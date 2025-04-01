@@ -87,25 +87,26 @@ import default$1, { file_default } from "./copy.js";
 import a from "extern-esm";
 
 
+
 //#region esm.js
 var esm_default = 1;
-
 //#endregion
+
 //#region <data:application/json,2>
 var json_2_default = 2;
-
 //#endregion
+
 //#region cjs.js
 var require_cjs = __commonJS({ "cjs.js"(exports, module) {
 	module.exports = 4;
 } });
-
 //#endregion
+
 //#region entry.js
 console.log(a, esm_default, json_2_default, file_default, default$1, __require("extern-cjs"), require_cjs(), import("./dynamic.js"));
 let exported;
-
 //#endregion
+
 export { exported };
 ```
 ### diff

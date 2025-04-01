@@ -17,8 +17,8 @@ import { shared_default } from "./shared.js";
 
 //#region pageA/page.js
 console.log(shared_default);
-
 //#endregion
+
 ```
 ### diff
 ```diff
@@ -47,8 +47,8 @@ import { shared_default } from "./shared.js";
 
 //#region pageB/page.js
 console.log(-shared_default);
-
 //#endregion
+
 ```
 ### diff
 ```diff

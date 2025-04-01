@@ -18,16 +18,17 @@ require_require();
 ```js
 
 
+
 //#region node_modules/pkg/require.js
 var require_require = __commonJS({ "node_modules/pkg/require.js"() {
 	console.log("SUCCESS");
 } });
-
 //#endregion
+
 //#region src/entry.js
 require_require();
-
 //#endregion
+
 ```
 ### diff
 ```diff

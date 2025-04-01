@@ -24,6 +24,7 @@ init_entry();
 "use strict";
 
 
+
 //#region entry.js
 var entry_exports = {};
 __export(entry_exports, { foo: () => foo });
@@ -32,8 +33,8 @@ var init_entry = __esm({ "entry.js"() {
 	foo = 123;
 	console.log((init_entry(), __toCommonJS(entry_exports)));
 } });
-
 //#endregion
+
 init_entry();
 exports.foo = foo
 ```

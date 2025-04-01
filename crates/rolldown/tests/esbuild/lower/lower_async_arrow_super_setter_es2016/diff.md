@@ -136,72 +136,72 @@ var foo1_default = class extends x {
 		return async () => super.foo = "foo1";
 	}
 };
-
 //#endregion
+
 //#region foo2.js
 var foo2_default = class extends x {
 	foo2() {
 		return async () => () => super.foo = "foo2";
 	}
 };
-
 //#endregion
+
 //#region foo3.js
 var foo3_default = class extends x {
 	foo3() {
 		return () => async () => super.foo = "foo3";
 	}
 };
-
 //#endregion
+
 //#region foo4.js
 var foo4_default = class extends x {
 	foo4() {
 		return async () => async () => super.foo = "foo4";
 	}
 };
-
 //#endregion
+
 //#region bar1.js
 var bar1_default = class extends x {
 	bar1 = async () => super.foo = "bar1";
 };
-
 //#endregion
+
 //#region bar2.js
 var bar2_default = class extends x {
 	bar2 = async () => () => super.foo = "bar2";
 };
-
 //#endregion
+
 //#region bar3.js
 var bar3_default = class extends x {
 	bar3 = () => async () => super.foo = "bar3";
 };
-
 //#endregion
+
 //#region bar4.js
 var bar4_default = class extends x {
 	bar4 = async () => async () => super.foo = "bar4";
 };
-
 //#endregion
+
 //#region baz1.js
 var baz1_default = class extends x {
 	async baz1() {
 		return () => super.foo = "baz1";
 	}
 };
-
 //#endregion
+
 //#region baz2.js
 var baz2_default = class extends x {
 	async baz2() {
 		return () => () => super.foo = "baz2";
 	}
 };
-
 //#endregion
+
 //#region outer.js
 var outer_default = async function() {
 	class y extends z {
@@ -209,8 +209,8 @@ var outer_default = async function() {
 	}
 	await new y().foo()();
 }();
-
 //#endregion
+
 export { bar1_default as bar1, bar2_default as bar2, bar3_default as bar3, bar4_default as bar4, baz1_default as baz1, baz2_default as baz2, foo1_default as foo1, foo2_default as foo2, foo3_default as foo3, foo4_default as foo4 };
 ```
 ### diff

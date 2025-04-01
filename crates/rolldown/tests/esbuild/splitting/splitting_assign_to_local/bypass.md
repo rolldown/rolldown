@@ -20,8 +20,8 @@ import { foo, setFoo } from "./shared.js";
 //#region a.js
 setFoo(123);
 console.log(foo);
-
 //#endregion
+
 ```
 ### diff
 ```diff
@@ -51,8 +51,8 @@ import { foo } from "./shared.js";
 
 //#region b.js
 console.log(foo);
-
 //#endregion
+
 ```
 ### diff
 ```diff

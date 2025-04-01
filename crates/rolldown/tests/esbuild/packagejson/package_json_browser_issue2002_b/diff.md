@@ -25,16 +25,17 @@ require_foo();
 ```js
 
 
+
 //#region src/node_modules/pkg/sub/foo.js
 var require_foo = __commonJS({ "src/node_modules/pkg/sub/foo.js"() {
 	__require("sub");
 } });
-
 //#endregion
+
 //#region src/entry.js
 require_foo();
-
 //#endregion
+
 ```
 ### diff
 ```diff

@@ -22,8 +22,8 @@ module.exports = 3;
 let foo = 1;
 exports.foo = 2;
 module.exports = 3;
-
 //#endregion
+
 exports.foo = foo
 ```
 ### diff
@@ -54,13 +54,14 @@ module.exports = import_bar.foo;
 ### rolldown
 ```js
 
+
 const bar = __toESM(require("bar"));
 
 //#region import-in-cjs.js
 exports.foo = bar.foo;
 module.exports = bar.foo;
-
 //#endregion
+
 ```
 ### diff
 ```diff

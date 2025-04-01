@@ -20,19 +20,20 @@ console.log(JSON.stringify(folders_exports));
 ```js
 
 
+
 //#region folders/child/foo.js
 const foo = () => "hi there";
-
 //#endregion
+
 //#region folders/index.js
 var folders_exports = {};
 __export(folders_exports, { foo: () => foo });
-
 //#endregion
+
 //#region entry.js
 console.log(JSON.stringify(folders_exports));
-
 //#endregion
+
 ```
 ### diff
 ```diff

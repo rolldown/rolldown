@@ -33,8 +33,8 @@ var { "_doNotMangleThis": x } = y;
 "_doNotMangleThis" in x;
 (y ? "_doNotMangleThis" : z) in x;
 (y ? z : "_doNotMangleThis") in x;
-
 //#endregion
+
 ```
 ### diff
 ```diff

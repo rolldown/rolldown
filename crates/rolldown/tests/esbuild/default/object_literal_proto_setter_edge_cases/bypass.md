@@ -26,8 +26,8 @@ function foo() {
 		bar
 	});
 }
-
 //#endregion
+
 ```
 ### diff
 ```diff
@@ -70,8 +70,8 @@ function foo() {
 		bar
 	});
 }
-
 //#endregion
+
 ```
 ### diff
 ```diff
@@ -113,8 +113,8 @@ function foo(__proto__, bar) {
 		bar
 	});
 }
-
 //#endregion
+
 ```
 ### diff
 ```diff
@@ -160,8 +160,8 @@ function foo(__proto__, bar) {
 		});
 	}
 }
-
 //#endregion
+
 ```
 ### diff
 ```diff

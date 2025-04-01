@@ -50,20 +50,21 @@
 
 
 
+
 //#region c.js
 var require_c = __commonJS({ "c.js"() {} });
-
 //#endregion
+
 //#region b.js
 var b_exports = {};
 var init_b = __esm({ "b.js"() {} });
-
 //#endregion
+
 //#region a.js
 var a_exports = {};
 var init_a = __esm({ "a.js"() {} });
-
 //#endregion
+
 //#region entry.js
 var require_entry = __commonJS({ "entry.js"() {
 	init_a();
@@ -71,8 +72,8 @@ var require_entry = __commonJS({ "entry.js"() {
 	require_c();
 	require_entry();
 } });
-
 //#endregion
+
 return require_entry();
 
 })();

@@ -469,15 +469,15 @@ while (a);
 do;
 while (a);
 switch (a) {}
-
 //#endregion
+
 ```
 ### diff
 ```diff
 ===================================================================
 --- esbuild	/out/entry.js
 +++ rolldown	entry.js
-@@ -1,350 +1,113 @@
+@@ -1,350 +1,112 @@
 +
 +//#region entry.js
 +console.log(import(
@@ -932,8 +932,6 @@ switch (a) {}
 +do;
 +while (a);
 +switch (a) {}
-+
 +//#endregion
-\ No newline at end of file
 
 ```

@@ -22,13 +22,14 @@ console.log(ns, ns.foo, foo2);
 import assert from "node:assert";
 
 
+
 //#region foo.js
 var require_foo = __commonJS({ "foo.js"(exports) {
 	exports.foo = 123;
 } });
 var import_foo = __toESM(require_foo());
-
 //#endregion
+
 //#region entry.js
 let foo = 234;
 assert.deepEqual(import_foo, {
@@ -37,8 +38,8 @@ assert.deepEqual(import_foo, {
 });
 assert.equal(import_foo.foo, 123);
 assert.equal(foo, 234);
-
 //#endregion
+
 ```
 ### diff
 ```diff

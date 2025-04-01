@@ -26,8 +26,8 @@ var Foo = class extends Bar {
 		bar();
 	}
 };
-
 //#endregion
+
 ```
 ### diff
 ```diff

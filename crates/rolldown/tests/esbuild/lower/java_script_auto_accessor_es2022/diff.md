@@ -60,15 +60,15 @@ var Foo = class {
 	static accessor #five = 5;
 	static accessor [six()] = 6;
 };
-
 //#endregion
+
 ```
 ### diff
 ```diff
 ===================================================================
 --- esbuild	/out/js-define.js
 +++ rolldown	js-define.js
-@@ -1,45 +1,12 @@
+@@ -1,45 +1,11 @@
 -var _a, _b;
 -class Foo {
 -    #one = 1;
@@ -124,9 +124,7 @@ var Foo = class {
 +	static accessor #five = 5;
 +	static accessor [six()] = 6;
 +};
-+
 +//#endregion
-\ No newline at end of file
 
 ```
 ## /out/ts-define/ts-define.js

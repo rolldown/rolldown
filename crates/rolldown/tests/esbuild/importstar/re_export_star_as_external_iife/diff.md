@@ -20,6 +20,7 @@ var mod = (function(exports, foo) {
 
 "use strict";
 
+
 foo = __toESM(foo);
 
 Object.defineProperty(exports, 'out', {

@@ -14,19 +14,20 @@ console.log(foo_exports);
 ```js
 
 
+
 //#region bar.js
 var nope = void 0;
-
 //#endregion
+
 //#region foo.ts
 var foo_exports = {};
 __export(foo_exports, { nope: () => nope });
-
 //#endregion
+
 //#region entry.js
 console.log(foo_exports);
-
 //#endregion
+
 ```
 ### diff
 ```diff

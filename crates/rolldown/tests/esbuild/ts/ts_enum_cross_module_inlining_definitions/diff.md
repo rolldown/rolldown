@@ -32,8 +32,8 @@ let a = /* @__PURE__ */ function(a$1) {
 	a$1[a$1["non_constant"] = foo] = "non_constant";
 	return a$1;
 }({});
-
 //#endregion
+
 //#region entry.ts
 console.log([
 	a.implicit_number,
@@ -41,8 +41,8 @@ console.log([
 	a.explicit_string,
 	a.non_constant
 ]);
-
 //#endregion
+
 ```
 ### diff
 ```diff

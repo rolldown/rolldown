@@ -21,11 +21,12 @@ __reExport(inner_exports, require("b"));
 "use strict";
 
 
+
 //#region inner.js
 var inner_exports = {};
 __reExport(inner_exports, require("b"));
-
 //#endregion
+
 Object.defineProperty(exports, 'inner', {
   enumerable: true,
   get: function () {

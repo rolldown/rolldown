@@ -18,12 +18,12 @@ console.log(foo);
 
 //#region node_modules/d/index.js
 const foo = 123;
-
 //#endregion
+
 //#region src/entry.js
 console.log(foo);
-
 //#endregion
+
 ```
 ### diff
 ```diff

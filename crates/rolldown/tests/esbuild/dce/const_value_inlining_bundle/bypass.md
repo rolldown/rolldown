@@ -21,8 +21,8 @@ export {
 const x_REMOVE = 1;
 const y_keep = 2;
 console.log(x_REMOVE, y_keep);
-
 //#endregion
+
 export { y_keep };
 ```
 ### diff
@@ -56,12 +56,12 @@ export {
 //#region re-exported-constants.js
 const x_REMOVE = 1;
 const y_keep = 2;
-
 //#endregion
+
 //#region re-exported-entry.js
 console.log(x_REMOVE, y_keep);
-
 //#endregion
+
 export { y_keep };
 ```
 ### diff
@@ -93,8 +93,8 @@ export {
 //#region re-exported-star-constants.js
 const x_keep = 1;
 const y_keep = 2;
-
 //#endregion
+
 export { x_keep, y_keep };
 ```
 ### diff
@@ -132,12 +132,12 @@ const y_keep = 1;
 function foo() {
 	return [x_REMOVE, y_keep];
 }
-
 //#endregion
+
 //#region cross-module-entry.js
 console.log(x_REMOVE, y_keep);
-
 //#endregion
+
 ```
 ### diff
 ```diff
@@ -168,15 +168,15 @@ console.log({ foo: 123, a: -321 });
 //#region print-shorthand-constants.js
 const foo = 123;
 const _bar = -321;
-
 //#endregion
+
 //#region print-shorthand-entry.js
 console.log({
 	foo,
 	_bar
 });
-
 //#endregion
+
 ```
 ### diff
 ```diff
@@ -213,12 +213,12 @@ const foo = 123;
 function bar() {
 	return foo;
 }
-
 //#endregion
+
 //#region non-circular-export-entry.js
 console.log(foo, bar());
-
 //#endregion
+
 ```
 ### diff
 ```diff

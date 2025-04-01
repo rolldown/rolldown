@@ -14,12 +14,13 @@ console.log(fs, import_fs2.readFileSync, import_fs.default);
 ```js
 "use strict";
 
+
 const fs = __toESM(require("fs"));
 
 //#region entry.js
 console.log(fs, fs.readFileSync, fs.default);
-
 //#endregion
+
 ```
 ### diff
 ```diff

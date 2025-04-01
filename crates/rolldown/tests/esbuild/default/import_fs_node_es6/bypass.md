@@ -17,8 +17,8 @@ import defaultValue, { readFileSync } from "fs";
 
 //#region entry.js
 console.log(fs, readFileSync, defaultValue);
-
 //#endregion
+
 ```
 ### diff
 ```diff

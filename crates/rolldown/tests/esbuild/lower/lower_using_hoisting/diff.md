@@ -28,15 +28,15 @@ try {
 
 //#region hoist-use-strict.js
 using a = b;
-
 //#endregion
+
 ```
 ### diff
 ```diff
 ===================================================================
 --- esbuild	/out/hoist-use-strict.js
 +++ rolldown	hoist-use-strict.js
-@@ -1,20 +1,5 @@
+@@ -1,20 +1,4 @@
 -"use strict";
 -function foo() {
 -    "use strict";
@@ -60,9 +60,7 @@ using a = b;
 +
 +//#region hoist-use-strict.js
 +using a = b;
-+
 +//#endregion
-\ No newline at end of file
 
 ```
 ## /out/hoist-directive.js
@@ -95,15 +93,15 @@ try {
 //#region hoist-directive.js
 "use wtf";
 using a = b;
-
 //#endregion
+
 ```
 ### diff
 ```diff
 ===================================================================
 --- esbuild	/out/hoist-directive.js
 +++ rolldown	hoist-directive.js
-@@ -1,20 +1,6 @@
+@@ -1,20 +1,5 @@
 +
 +//#region hoist-directive.js
  "use wtf";
@@ -127,9 +125,7 @@ using a = b;
 -    __callDispose(_stack, _error, _hasError);
 -}
 +using a = b;
-+
 +//#endregion
-\ No newline at end of file
 
 ```
 ## /out/hoist-import.js
@@ -153,15 +149,15 @@ import "./foo";
 //#region hoist-import.js
 using a = b;
 using c = d;
-
 //#endregion
+
 ```
 ### diff
 ```diff
 ===================================================================
 --- esbuild	/out/hoist-import.js
 +++ rolldown	hoist-import.js
-@@ -1,10 +1,7 @@
+@@ -1,10 +1,6 @@
  import "./foo";
 -var _stack = [];
 -try {
@@ -176,9 +172,7 @@ using c = d;
 +//#region hoist-import.js
 +using a = b;
 +using c = d;
-+
 +//#endregion
-\ No newline at end of file
 
 ```
 ## /out/hoist-export-star.js
@@ -203,15 +197,15 @@ export * from "./foo"
 //#region hoist-export-star.js
 using a = b;
 using c = d;
-
 //#endregion
+
 ```
 ### diff
 ```diff
 ===================================================================
 --- esbuild	/out/hoist-export-star.js
 +++ rolldown	hoist-export-star.js
-@@ -1,10 +1,8 @@
+@@ -1,10 +1,7 @@
 -export * from "./foo";
 -var _stack = [];
 -try {
@@ -228,9 +222,7 @@ using c = d;
 +//#region hoist-export-star.js
 +using a = b;
 +using c = d;
-+
 +//#endregion
-\ No newline at end of file
 
 ```
 ## /out/hoist-export-from.js
@@ -254,8 +246,8 @@ import { x, y } from "./foo";
 //#region hoist-export-from.js
 using a = b;
 using c = d;
-
 //#endregion
+
 export { x, y };
 ```
 ### diff
@@ -279,8 +271,8 @@ export { x, y };
 +//#region hoist-export-from.js
 +using a = b;
 +using c = d;
-+
 +//#endregion
++
 +export { x, y };
 \ No newline at end of file
 
@@ -308,8 +300,8 @@ export {
 //#region hoist-export-clause.js
 using a = b;
 using c = d;
-
 //#endregion
+
 export { a, c as "c!" };
 ```
 ### diff
@@ -332,8 +324,8 @@ export { a, c as "c!" };
 +//#region hoist-export-clause.js
 +using a = b;
 +using c = d;
-+
 +//#endregion
++
 +export { a, c as "c!" };
 \ No newline at end of file
 
@@ -380,8 +372,8 @@ var ac2 = [a, c], { x: [x2] } = foo;
 let a2 = a, { y: [y2] } = foo;
 const c2 = c, { z: [z2] } = foo;
 using c = d;
-
 //#endregion
+
 export { a1, ac1, c1, x1, y1, z1 };
 ```
 ### diff
@@ -419,8 +411,8 @@ export { a1, ac1, c1, x1, y1, z1 };
 +let a2 = a, { y: [y2] } = foo;
 +const c2 = c, { z: [z2] } = foo;
 +using c = d;
-+
 +//#endregion
++
 +export { a1, ac1, c1, x1, y1, z1 };
 \ No newline at end of file
 
@@ -461,8 +453,8 @@ var ac2 = [a, c], { x: [x2] } = foo;
 let a2 = a, { y: [y2] } = foo;
 const c2 = c, { z: [z2] } = foo;
 using c = d;
-
 //#endregion
+
 export { x1, y1, z1 };
 ```
 ### diff
@@ -497,8 +489,8 @@ export { x1, y1, z1 };
 +let a2 = a, { y: [y2] } = foo;
 +const c2 = c, { z: [z2] } = foo;
 +using c = d;
-+
 +//#endregion
++
 +export { x1, y1, z1 };
 \ No newline at end of file
 
@@ -548,8 +540,8 @@ var Bar1 = class Bar1 {
 	];
 };
 using c = d;
-
 //#endregion
+
 export { Bar1, Foo1 };
 ```
 ### diff
@@ -594,8 +586,8 @@ export { Bar1, Foo1 };
 +	];
 +};
 +using c = d;
-+
 +//#endregion
++
 +export { Bar1, Foo1 };
 \ No newline at end of file
 
@@ -645,8 +637,8 @@ var Bar1 = class Bar1 {
 	];
 };
 using c = d;
-
 //#endregion
+
 export { Bar1, Foo1 };
 ```
 ### diff
@@ -691,8 +683,8 @@ export { Bar1, Foo1 };
 +	];
 +};
 +using c = d;
-+
 +//#endregion
++
 +export { Bar1, Foo1 };
 \ No newline at end of file
 
@@ -738,8 +730,8 @@ function bar1() {
 	];
 }
 using c = d;
-
 //#endregion
+
 export { bar1, foo1 };
 ```
 ### diff
@@ -781,8 +773,8 @@ export { bar1, foo1 };
 -    __callDispose(_stack, _error, _hasError);
 -}
 +using c = d;
-+
 +//#endregion
++
 +export { bar1, foo1 };
 \ No newline at end of file
 
@@ -832,8 +824,8 @@ function bar1() {
 	];
 }
 using c = d;
-
 //#endregion
+
 export { bar1, foo1 };
 ```
 ### diff
@@ -874,8 +866,8 @@ export { bar1, foo1 };
 -}
 -export {foo1, bar1};
 +using c = d;
-+
 +//#endregion
++
 +export { bar1, foo1 };
 \ No newline at end of file
 
@@ -908,8 +900,8 @@ var Foo = class {
 	ac = [a, c];
 };
 using c = d;
-
 //#endregion
+
 export { Foo as default };
 ```
 ### diff
@@ -938,8 +930,8 @@ export { Foo as default };
 +	ac = [a, c];
 +};
 +using c = d;
-+
 +//#endregion
++
 +export { Foo as default };
 \ No newline at end of file
 
@@ -976,8 +968,8 @@ var Foo = class Foo {
 	];
 };
 using c = d;
-
 //#endregion
+
 export { Foo as default };
 ```
 ### diff
@@ -1010,8 +1002,8 @@ export { Foo as default };
 +	];
 +};
 +using c = d;
-+
 +//#endregion
++
 +export { Foo as default };
 \ No newline at end of file
 
@@ -1044,8 +1036,8 @@ var hoist_export_default_class_anonymous_default = class {
 	ac = [a, c];
 };
 using c = d;
-
 //#endregion
+
 export { hoist_export_default_class_anonymous_default as default };
 ```
 ### diff
@@ -1074,8 +1066,8 @@ export { hoist_export_default_class_anonymous_default as default };
 +	ac = [a, c];
 +};
 +using c = d;
-+
 +//#endregion
++
 +export { hoist_export_default_class_anonymous_default as default };
 \ No newline at end of file
 
@@ -1105,8 +1097,8 @@ function foo() {
 	return [a, c];
 }
 using c = d;
-
 //#endregion
+
 export { foo as default };
 ```
 ### diff
@@ -1133,8 +1125,8 @@ export { foo as default };
 -    __callDispose(_stack, _error, _hasError);
 -}
 +using c = d;
-+
 +//#endregion
++
 +export { foo as default };
 \ No newline at end of file
 
@@ -1168,8 +1160,8 @@ function foo() {
 	];
 }
 using c = d;
-
 //#endregion
+
 export { foo as default };
 ```
 ### diff
@@ -1200,8 +1192,8 @@ export { foo as default };
 -    __callDispose(_stack, _error, _hasError);
 -}
 +using c = d;
-+
 +//#endregion
++
 +export { foo as default };
 \ No newline at end of file
 
@@ -1231,8 +1223,8 @@ function hoist_export_default_function_anonymous_default() {
 	return [a, c];
 }
 using c = d;
-
 //#endregion
+
 export { hoist_export_default_function_anonymous_default as default };
 ```
 ### diff
@@ -1259,8 +1251,8 @@ export { hoist_export_default_function_anonymous_default as default };
 -    __callDispose(_stack, _error, _hasError);
 -}
 +using c = d;
-+
 +//#endregion
++
 +export { hoist_export_default_function_anonymous_default as default };
 \ No newline at end of file
 
@@ -1289,8 +1281,8 @@ export {
 using a = b;
 var hoist_export_default_expr_default = [a, c];
 using c = d;
-
 //#endregion
+
 export { hoist_export_default_expr_default as default };
 ```
 ### diff
@@ -1315,8 +1307,8 @@ export { hoist_export_default_expr_default as default };
 +using a = b;
 +var hoist_export_default_expr_default = [a, c];
 +using c = d;
-+
 +//#endregion
++
 +export { hoist_export_default_expr_default as default };
 \ No newline at end of file
 

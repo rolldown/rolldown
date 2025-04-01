@@ -21,18 +21,19 @@ console.log(import_b.default);
 ```js
 
 
+
 //#region b.ts
 var require_b = __commonJS({ "b.ts"(exports, module) {
 	module.exports = [123, foo];
 	function foo() {}
 } });
 var import_b = __toESM(require_b());
-
 //#endregion
+
 //#region a.ts
 console.log(import_b.default);
-
 //#endregion
+
 ```
 ### diff
 ```diff

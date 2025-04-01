@@ -34,8 +34,8 @@ var WeakMap = class {
 var WeakSet = class {
 	#y() {}
 };
-
 //#endregion
+
 export { WeakMap, WeakSet };
 ```
 ### diff

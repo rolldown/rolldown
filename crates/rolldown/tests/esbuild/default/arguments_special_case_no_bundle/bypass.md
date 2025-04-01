@@ -99,15 +99,15 @@
 		return arguments$1;
 	}
 })();
-
 //#endregion
+
 ```
 ### diff
 ```diff
 ===================================================================
 --- esbuild	/out.js
 +++ rolldown	entry.js
-@@ -1,74 +1,19 @@
+@@ -1,74 +1,18 @@
 -/* @__PURE__ */ (() => {
 -  var r;
 -  function t(n = arguments) {
@@ -200,8 +200,6 @@
 +		return arguments$1;
 +	}
 +})();
-+
 +//#endregion
-\ No newline at end of file
 
 ```

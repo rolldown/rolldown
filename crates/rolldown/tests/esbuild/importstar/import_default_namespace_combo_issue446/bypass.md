@@ -15,8 +15,8 @@ import def from "external";
 
 //#region external-default2.js
 console.log(def, def);
-
 //#endregion
+
 ```
 ### diff
 ```diff
@@ -44,8 +44,8 @@ import def from "external";
 
 //#region external-ns.js
 console.log(def, ns);
-
 //#endregion
+
 ```
 ### diff
 ```diff
@@ -73,8 +73,8 @@ import def from "external";
 
 //#region external-ns-default.js
 console.log(def, ns, ns.default);
-
 //#endregion
+
 ```
 ### diff
 ```diff
@@ -102,8 +102,8 @@ import def from "external";
 
 //#region external-ns-def.js
 console.log(def, ns, ns.def);
-
 //#endregion
+
 ```
 ### diff
 ```diff
@@ -131,8 +131,8 @@ import def from "external";
 
 //#region external-default.js
 console.log(def, ns.default);
-
 //#endregion
+
 ```
 ### diff
 ```diff
@@ -160,8 +160,8 @@ import def from "external";
 
 //#region external-def.js
 console.log(def, ns.def);
-
 //#endregion
+
 ```
 ### diff
 ```diff
@@ -190,8 +190,8 @@ import { internal_default } from "./internal.js";
 
 //#region internal-default2.js
 console.log(internal_default, internal_default);
-
 //#endregion
+
 ```
 ### diff
 ```diff
@@ -223,8 +223,8 @@ import { internal_default, internal_exports } from "./internal.js";
 
 //#region internal-ns.js
 console.log(internal_default, internal_exports);
-
 //#endregion
+
 ```
 ### diff
 ```diff
@@ -260,8 +260,8 @@ import { internal_default, internal_exports } from "./internal.js";
 
 //#region internal-ns-default.js
 console.log(internal_default, internal_exports, internal_default);
-
 //#endregion
+
 ```
 ### diff
 ```diff
@@ -297,8 +297,8 @@ import { internal_default, internal_exports } from "./internal.js";
 
 //#region internal-ns-def.js
 console.log(internal_default, internal_exports, void 0);
-
 //#endregion
+
 ```
 ### diff
 ```diff
@@ -330,8 +330,8 @@ import { internal_default } from "./internal.js";
 
 //#region internal-default.js
 console.log(internal_default, internal_default);
-
 //#endregion
+
 ```
 ### diff
 ```diff
@@ -359,8 +359,8 @@ import { internal_default } from "./internal.js";
 
 //#region internal-def.js
 console.log(internal_default, void 0);
-
 //#endregion
+
 ```
 ### diff
 ```diff

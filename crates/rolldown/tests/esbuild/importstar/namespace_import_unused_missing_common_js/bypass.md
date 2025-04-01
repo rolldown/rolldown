@@ -21,17 +21,18 @@ console.log(ns.foo);
 import assert from "node:assert";
 
 
+
 //#region foo.js
 var require_foo = __commonJS({ "foo.js"(exports) {
 	exports.x = 123;
 } });
 var import_foo = __toESM(require_foo());
-
 //#endregion
+
 //#region entry.js
 assert.equal(import_foo.foo, void 0);
-
 //#endregion
+
 ```
 ### diff
 ```diff

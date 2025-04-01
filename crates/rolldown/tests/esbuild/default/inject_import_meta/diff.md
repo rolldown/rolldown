@@ -35,8 +35,8 @@ console.log(
 	// This should not be substituted
 	import.meta.bar
 );
-
 //#endregion
+
 ```
 ### diff
 ```diff

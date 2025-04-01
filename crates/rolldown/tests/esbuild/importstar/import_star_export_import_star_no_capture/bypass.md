@@ -21,14 +21,14 @@ import assert from "node:assert";
 
 //#region foo.js
 const foo$1 = 123;
-
 //#endregion
+
 //#region entry.js
 let foo = 234;
 assert.equal(foo$1, 123);
 assert.equal(foo, 234);
-
 //#endregion
+
 ```
 ### diff
 ```diff

@@ -24,6 +24,7 @@ var import_foo = __toESM(require_foo());
 import assert from "node:assert";
 
 
+
 //#region foo.js
 var require_foo = __commonJS({ "foo.js"(exports) {
 	exports.fn = function() {
@@ -31,12 +32,12 @@ var require_foo = __commonJS({ "foo.js"(exports) {
 	};
 } });
 var import_foo = __toESM(require_foo());
-
 //#endregion
+
 //#region entry.js
 assert.equal((0, import_foo.fn)(), 123);
-
 //#endregion
+
 ```
 ### diff
 ```diff

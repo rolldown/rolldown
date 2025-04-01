@@ -34,8 +34,8 @@ let ns;
 	class Baz {}
 	_ns.Baz = Baz;
 })(ns || (ns = {}));
-
 //#endregion
+
 ```
 ### diff
 ```diff

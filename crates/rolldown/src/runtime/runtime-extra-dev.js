@@ -140,7 +140,7 @@ function loadScript(url) {
 }
 
 
-const socket = new WebSocket(`ws://localhost:3000`)
+const socket = new WebSocket(`ws://$ADDR`)
 
 socket.onmessage = function (event) {
   const data = JSON.parse(event.data)

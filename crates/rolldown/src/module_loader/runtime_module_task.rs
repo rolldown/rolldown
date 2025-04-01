@@ -45,13 +45,19 @@ impl RuntimeModuleTask {
     }
   }
 
+  #[expect(clippy::too_many_lines)]
   fn run_inner(&self) -> BuildResult<()> {
-    let source = if self.options.is_hmr_enabled() {
-      arcstr::literal!(concat!(
+    let source = if let Some(hmr_options) = &self.options.experimental.hmr {
+      let host = hmr_options.host.as_deref().unwrap_or("localhost");
+      let port = hmr_options.port.unwrap_or(3000);
+      let addr = format!("{host}:{port}");
+      let runtime_source = arcstr::literal!(concat!(
         include_str!("../runtime/runtime-base.js"),
         include_str!("../runtime/runtime-tail.js"),
         include_str!("../runtime/runtime-extra-dev.js"),
-      ))
+      ));
+      let runtime_source: ArcStr = runtime_source.replace("$ADDR", &addr).into();
+      runtime_source
     } else if self.options.is_esm_format_with_node_platform() {
       arcstr::literal!(concat!(
         include_str!("../runtime/runtime-head-node.js"),

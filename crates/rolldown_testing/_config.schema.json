@@ -675,9 +675,13 @@
           ]
         },
         "hmr": {
-          "type": [
-            "boolean",
-            "null"
+          "anyOf": [
+            {
+              "$ref": "#/definitions/HmrOptions"
+            },
+            {
+              "type": "null"
+            }
           ]
         },
         "incrementalBuild": {
@@ -714,6 +718,28 @@
         "base36",
         "hex"
       ]
+    },
+    "HmrOptions": {
+      "type": "object",
+      "properties": {
+        "host": {
+          "description": "IP addresses that `DevRuntime` will connect to using WebSocket.",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "port": {
+          "description": "Port that `DevRuntime` will connect to using WebSocket.",
+          "type": [
+            "integer",
+            "null"
+          ],
+          "format": "uint16",
+          "minimum": 0.0
+        }
+      },
+      "additionalProperties": false
     },
     "InjectImport": {
       "title": "Usage",

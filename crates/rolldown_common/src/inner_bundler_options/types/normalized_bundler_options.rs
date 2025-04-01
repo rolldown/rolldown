@@ -164,7 +164,7 @@ impl NormalizedBundlerOptions {
   }
 
   pub fn is_hmr_enabled(&self) -> bool {
-    self.experimental.hmr.unwrap_or(false)
+    self.experimental.hmr.is_some()
   }
 
   /// make sure the `polyfill_require` is only valid for `esm` format with `node` platform

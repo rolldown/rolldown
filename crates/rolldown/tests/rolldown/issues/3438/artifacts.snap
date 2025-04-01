@@ -22,8 +22,8 @@ var main_default = [
 	() => import("./repro2.js").then(console.log),
 	() => import("./repro3.js").then(console.log)
 ];
-
 //#endregion
+
 export { main_default as default };
 ```
 ## repro1.js
@@ -39,8 +39,8 @@ export { clear };
 
 //#region repro1.js
 const clear = "repro1_clear";
-
 //#endregion
+
 export { clear };
 ```
 ## repro2.js
@@ -57,8 +57,8 @@ export { clear, clear$1 };
 //#region repro2.js
 const clear$1 = "repro2_clear$1";
 const clear = "repro2_clear";
-
 //#endregion
+
 export { clear as clear$1, clear$1 as clear$1$1 };
 ```
 ## repro3.js
@@ -76,7 +76,7 @@ export { clear, clear$1, clear$2 };
 const clear$2 = "repro3_clear$2";
 const clear$1 = "repro3_clear$1";
 const clear = "repro3_clear";
-
 //#endregion
+
 export { clear$1 as clear$1$2, clear$2, clear as clear$3 };
 ```

@@ -9,10 +9,10 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 //#region <data:text/javascript;base64, ZXhwb3J0IGRlZmF1bHQgJ2hpJw==>
 var javascript_base64__ZXhwb3J0IGRlZmF1bHQgJ2hpJw___default = "hi";
-
 //#endregion
+
 //#region main.js
 console.log(javascript_base64__ZXhwb3J0IGRlZmF1bHQgJ2hpJw___default);
-
 //#endregion
+
 ```

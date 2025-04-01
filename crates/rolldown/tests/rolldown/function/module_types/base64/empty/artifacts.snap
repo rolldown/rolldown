@@ -10,10 +10,10 @@ import assert from "node:assert";
 
 //#region example.base64
 var example_default = "";
-
 //#endregion
+
 //#region main.js
 assert(typeof example_default === "string");
-
 //#endregion
+
 ```

@@ -1,6 +1,5 @@
 ---
 source: crates/rolldown_testing/src/integration_test.rs
-snapshot_kind: text
 ---
 # Assets
 
@@ -13,8 +12,8 @@ import { __commonJS, import_main2 } from "./main22.js";
 var require_main = __commonJS({ "main.js"(exports, module) {
 	module.exports = import_main2.default;
 } });
-
 //#endregion
+
 export default require_main();
 
 ```
@@ -31,12 +30,13 @@ export default require_main2();
 ```js
 
 
+
 //#region main2.js
 var require_main2 = __commonJS({ "main2.js"(exports, module) {
 	module.exports = {};
 } });
 var import_main2 = __toESM(require_main2());
-
 //#endregion
+
 export { __commonJS, import_main2, require_main2 };
 ```

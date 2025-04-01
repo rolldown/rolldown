@@ -1,6 +1,5 @@
 ---
 source: crates/rolldown_testing/src/integration_test.rs
-snapshot_kind: text
 ---
 # Assets
 
@@ -14,13 +13,14 @@ snapshot_kind: text
 })(this, function(node_path) {
 "use strict";
 
+
 node_path = __toESM(node_path);
 
 //#region main.js
 console.log(node_path.default);
 const node_path$1 = {};
 console.log(node_path$1);
-
 //#endregion
+
 });
 ```

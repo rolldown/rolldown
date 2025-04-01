@@ -12,13 +12,14 @@ import { __esm } from "./rolldown.js";
 var init_main = __esm({ "main.js"() {
 	import("./square.js").then(console.log);
 } });
-
 //#endregion
+
 init_main();
 ```
 ## rolldown.js
 
 ```js
+
 
 
 export { __esm };
@@ -31,7 +32,7 @@ import { __esm } from "./rolldown.js";
 //#region square.json
 var hello = "world";
 var square_default = { hello };
-
 //#endregion
+
 export { square_default as default, hello };
 ```

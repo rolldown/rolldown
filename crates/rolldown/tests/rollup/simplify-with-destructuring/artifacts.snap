@@ -1,6 +1,5 @@
 ---
 source: crates/rolldown_testing/src/integration_test.rs
-snapshot_kind: text
 ---
 # Assets
 
@@ -16,6 +15,6 @@ assert.strictEqual(foo, "bar");
 const assign = () => unused = {foo} = { foo: "baz" };
 assign();
 assert.strictEqual(foo, "baz");
-
 //#endregion
+
 ```

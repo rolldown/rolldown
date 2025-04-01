@@ -1,6 +1,5 @@
 ---
 source: crates/rolldown_testing/src/integration_test.rs
-snapshot_kind: text
 ---
 # Assets
 
@@ -9,6 +8,7 @@ snapshot_kind: text
 ```js
 
 export * from "node:fs"
+
 
 
 //#region main.js
@@ -21,8 +21,8 @@ var init_main = __esm({ "main.js"() {
 	main = "main";
 	console.log((init_main(), __toCommonJS(main_exports)));
 } });
-
 //#endregion
+
 init_main();
 export { main };
 ```

@@ -11,8 +11,8 @@ source: crates/rolldown_testing/src/integration_test.rs
 //#region main.js
 const validator = "if_default_prop_false";
 const value = true;
-
 //#endregion
+
 exports.validator = validator
 exports.value = value
 ```

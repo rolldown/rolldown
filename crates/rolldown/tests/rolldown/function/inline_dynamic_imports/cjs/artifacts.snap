@@ -8,6 +8,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ```js
 
 
+
 //#region main.js
 Promise.resolve().then(function() {
 	return __toESM(require_foo());
@@ -18,18 +19,18 @@ Promise.resolve().then(function() {
 Promise.resolve().then(function() {
 	return init_esm(), esm_exports;
 });
-
 //#endregion
+
 //#region foo.js
 var require_foo = __commonJS({ "foo.js"() {} });
-
 //#endregion
+
 //#region cjs.js
 var require_cjs = __commonJS({ "cjs.js"(exports, module) {
 	module.exports = 1;
 } });
-
 //#endregion
+
 //#region esm.js
 var esm_exports = {};
 __export(esm_exports, { value: () => value });
@@ -37,6 +38,6 @@ var value;
 var init_esm = __esm({ "esm.js"() {
 	value = 1;
 } });
-
 //#endregion
+
 ```

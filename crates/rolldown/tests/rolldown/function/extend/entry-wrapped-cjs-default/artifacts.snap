@@ -1,6 +1,5 @@
 ---
 source: crates/rolldown_testing/src/integration_test.rs
-snapshot_kind: text
 ---
 # Assets
 
@@ -9,12 +8,13 @@ snapshot_kind: text
 ```js
 
 
+
 //#region main.js
 var require_main = __commonJS({ "main.js"() {
 	require_main();
 } });
-
 //#endregion
+
 export default require_main();
 
 ```
@@ -29,12 +29,13 @@ Variant: (format: Cjs)
 ```js
 
 
+
 //#region main.js
 var require_main = __commonJS({ "main.js"() {
 	require_main();
 } });
-
 //#endregion
+
 module.exports = require_main();
 
 ```
@@ -51,12 +52,13 @@ this.module = (function() {
 
 
 
+
 //#region main.js
 var require_main = __commonJS({ "main.js"() {
 	require_main();
 } });
-
 //#endregion
+
 return require_main();
 
 })();
@@ -77,12 +79,13 @@ Variant: (extend: true, format: Umd, name: "module")
 })(this, function() {
 
 
+
 //#region main.js
 var require_main = __commonJS({ "main.js"() {
 	require_main();
 } });
-
 //#endregion
+
 return require_main();
 
 });

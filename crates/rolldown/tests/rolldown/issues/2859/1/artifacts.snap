@@ -1,6 +1,5 @@
 ---
 source: crates/rolldown_testing/src/integration_test.rs
-snapshot_kind: text
 ---
 # Assets
 
@@ -13,8 +12,8 @@ const foo = "foo";
 let bar = "";
 bar = "bar";
 var lib_default = "default";
-
 //#endregion
+
 export { bar, lib_default as default, foo };
 ```
 ## main.js
@@ -28,8 +27,8 @@ import("./lib.js").then((exports) => assert.deepStrictEqual({ ...exports }, {
 	bar: "bar",
 	default: "default"
 }));
-
 //#endregion
+
 ```
 ---
 
@@ -47,8 +46,8 @@ const foo = "foo";
 let bar = "";
 bar = "bar";
 var lib_default = "default";
-
 //#endregion
+
 Object.defineProperty(exports, 'bar', {
   enumerable: true,
   get: function () {
@@ -63,6 +62,7 @@ exports.foo = foo
 ```js
 "use strict";
 
+
 const assert = __toESM(require("assert"));
 
 //#region main.js
@@ -73,6 +73,6 @@ Promise.resolve().then(function() {
 	bar: "bar",
 	default: "default"
 }));
-
 //#endregion
+
 ```

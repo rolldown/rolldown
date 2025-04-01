@@ -1,6 +1,5 @@
 ---
 source: crates/rolldown_testing/src/integration_test.rs
-snapshot_kind: text
 ---
 # Assets
 
@@ -14,15 +13,15 @@ Object.defineProperty(exports, '__esModule', { value: true });
 function example() {
 	return "named";
 }
-
 //#endregion
+
 //#region main.js
 function a() {
 	return "named";
 }
 var main_default = example();
-
 //#endregion
+
 exports.a = a
 exports.default = main_default
 ```

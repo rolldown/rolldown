@@ -1,6 +1,5 @@
 ---
 source: crates/rolldown_testing/src/integration_test.rs
-snapshot_kind: text
 ---
 # Assets
 
@@ -9,48 +8,49 @@ snapshot_kind: text
 ```js
 
 
+
 //#region cjs_esmodule_flag1.js
 var require_cjs_esmodule_flag1 = __commonJS({ "cjs_esmodule_flag1.js"(exports) {
 	exports.foo = 1e3;
 	exports.__esModule = true;
 } });
 var import_cjs_esmodule_flag1 = __toESM(require_cjs_esmodule_flag1());
-
 //#endregion
+
 //#region cjs_esmodule_flag2.js
 var require_cjs_esmodule_flag2 = __commonJS({ "cjs_esmodule_flag2.js"(exports) {
 	exports.foo = 1e3;
 	Object.defineProperty(exports, "__esModule", { value: true });
 } });
 var import_cjs_esmodule_flag2 = __toESM(require_cjs_esmodule_flag2());
-
 //#endregion
+
 //#region cjs_esmodule_flag3.js
 var require_cjs_esmodule_flag3 = __commonJS({ "cjs_esmodule_flag3.js"(exports, module) {
 	exports.foo = 1e3;
 	Object.defineProperty(module.exports, "__esModule", { value: true });
 } });
 var import_cjs_esmodule_flag3 = __toESM(require_cjs_esmodule_flag3());
-
 //#endregion
+
 //#region cjs_esmodule_flag4.js
 var require_cjs_esmodule_flag4 = __commonJS({ "cjs_esmodule_flag4.js"(exports, module) {
 	exports.foo = 1e3;
 	module.exports.__esModule = true;
 } });
 var import_cjs_esmodule_flag4 = __toESM(require_cjs_esmodule_flag4());
-
 //#endregion
+
 //#region commonjs_without_module_exports.js
 var require_commonjs_without_module_exports = __commonJS({ "commonjs_without_module_exports.js"(exports) {
 	exports.default = 1e3;
 	exports.foo = 1e3;
 } });
 var import_commonjs_without_module_exports = __toESM(require_commonjs_without_module_exports());
-
 //#endregion
+
 //#region main.js
 console.log(import_cjs_esmodule_flag1.default, import_cjs_esmodule_flag2.default, import_cjs_esmodule_flag3.default, import_cjs_esmodule_flag4.default, import_commonjs_without_module_exports.default);
-
 //#endregion
+
 ```

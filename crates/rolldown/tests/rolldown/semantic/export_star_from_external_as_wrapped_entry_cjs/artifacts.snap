@@ -1,6 +1,5 @@
 ---
 source: crates/rolldown_testing/src/integration_test.rs
-snapshot_kind: text
 ---
 # Assets
 
@@ -8,6 +7,7 @@ snapshot_kind: text
 
 ```js
 "use strict";
+
 
 
 //#region main.js
@@ -19,8 +19,8 @@ var init_main = __esm({ "main.js"() {
 	main = "main";
 	console.log((init_main(), __toCommonJS(main_exports)));
 } });
-
 //#endregion
+
 init_main();
 exports.main = main
 var node_fs = require("node:fs");

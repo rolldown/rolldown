@@ -21,6 +21,6 @@ var e = "failed1", x = "value";
 	var x$1;
 })();
 assert.strictEqual(x, "value");
-
 //#endregion
+
 ```

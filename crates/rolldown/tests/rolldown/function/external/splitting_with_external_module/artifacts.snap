@@ -11,8 +11,8 @@ import assert from "node:assert";
 
 //#region entry.js
 assert.equal(value, 1);
-
 //#endregion
+
 ```
 ## main.js
 
@@ -22,8 +22,8 @@ import assert from "node:assert";
 
 //#region main.js
 assert(value === 1);
-
 //#endregion
+
 ```
 ## share.js
 
@@ -31,7 +31,7 @@ assert(value === 1);
 
 //#region share.js
 const value = 1;
-
 //#endregion
+
 export { value };
 ```

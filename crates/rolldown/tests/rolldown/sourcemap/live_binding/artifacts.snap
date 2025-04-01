@@ -1,6 +1,5 @@
 ---
 source: crates/rolldown_testing/src/integration_test.rs
-snapshot_kind: text
 ---
 # Assets
 
@@ -17,6 +16,7 @@ function main() {
 main();
 
 //#endregion
+
 //# sourceMappingURL=main1.js.map
 ```
 ## main2.js
@@ -37,6 +37,7 @@ function shared() {
 }
 
 //#endregion
+
 Object.defineProperty(exports, 'shared', {
   enumerable: true,
   get: function () {

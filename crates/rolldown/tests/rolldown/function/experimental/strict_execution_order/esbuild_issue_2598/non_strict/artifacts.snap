@@ -10,8 +10,8 @@ import { foo } from "./user-lib.js";
 
 //#region lazy-chunk.js
 foo();
-
 //#endregion
+
 ```
 ## main.js
 
@@ -20,12 +20,12 @@ import { foo } from "./user-lib.js";
 
 //#region polyfill.js
 Object.somePolyfilledFunction = () => {};
-
 //#endregion
+
 //#region main.js
 foo();
-
 //#endregion
+
 ```
 ## user-lib.js
 
@@ -36,7 +36,7 @@ Object.somePolyfilledFunction();
 async function foo() {
 	return import("./lazy-chunk.js");
 }
-
 //#endregion
+
 export { foo };
 ```

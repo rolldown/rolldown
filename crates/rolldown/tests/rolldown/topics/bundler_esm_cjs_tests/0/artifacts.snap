@@ -1,6 +1,5 @@
 ---
 source: crates/rolldown_testing/src/integration_test.rs
-snapshot_kind: text
 ---
 # warnings
 
@@ -24,8 +23,8 @@ snapshot_kind: text
 
 //#region entry.js
 input.works = void 0 === void 0;
-
 //#endregion
+
 ```
 ---
 
@@ -54,8 +53,8 @@ Variant: (format: Cjs)
 
 //#region entry.js
 input.works = void 0 === void 0;
-
 //#endregion
+
 ```
 ---
 
@@ -86,8 +85,8 @@ Variant: (format: Iife)
 
 //#region entry.js
 input.works = void 0 === void 0;
-
 //#endregion
+
 })();
 ```
 ---
@@ -122,7 +121,7 @@ Variant: (format: Umd)
 
 //#region entry.js
 input.works = void 0 === void 0;
-
 //#endregion
+
 });
 ```

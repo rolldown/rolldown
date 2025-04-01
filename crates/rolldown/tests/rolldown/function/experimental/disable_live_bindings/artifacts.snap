@@ -13,8 +13,8 @@ let foo = 1;
 function change() {
 	foo = 2;
 }
-
 //#endregion
+
 exports.change = change
 exports.foo = foo
 ```

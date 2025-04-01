@@ -9,6 +9,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 import assert from "node:assert";
 
 
+
 //#region main.js
 var require_main = __commonJS$1({ "main.js"(exports, module) {
 	module.exports = "main";
@@ -16,8 +17,8 @@ var require_main = __commonJS$1({ "main.js"(exports, module) {
 	__commonJS = 1;
 	assert.equal(__commonJS, 1);
 } });
-
 //#endregion
+
 export default require_main();
 
 ```

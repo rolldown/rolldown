@@ -1,6 +1,5 @@
 ---
 source: crates/rolldown_testing/src/integration_test.rs
-snapshot_kind: text
 ---
 # Assets
 
@@ -9,17 +8,20 @@ snapshot_kind: text
 ```js
 
 
+
 //#region cjs.js
 var require_cjs = __commonJS({ "cjs.js"(exports, module) {
 	module.exports = {};
 } });
 
 //#endregion
+
 //#region main.js
 require_cjs();
 var cjs = require_cjs();
 
 //#endregion
+
 //# sourceMappingURL=main.js.map
 ```
 
@@ -32,7 +34,7 @@ var cjs = require_cjs();
 (0:17) "{}" --> (10:18) "{"
 (0:19) "\n" --> (10:19) "};\n"
 - ../main.js
-(0:0) "require('./cjs.js');\n" --> (15:0) "require_cjs();\n"
-(1:0) "var " --> (16:0) "var "
-(1:4) "cjs = require('./cjs.js');\n" --> (16:4) "cjs = require_cjs();\n"
+(0:0) "require('./cjs.js');\n" --> (16:0) "require_cjs();\n"
+(1:0) "var " --> (17:0) "var "
+(1:4) "cjs = require('./cjs.js');\n" --> (17:4) "cjs = require_cjs();\n"
 ```

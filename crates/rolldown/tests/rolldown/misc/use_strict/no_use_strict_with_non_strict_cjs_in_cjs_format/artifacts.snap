@@ -1,12 +1,12 @@
 ---
 source: crates/rolldown_testing/src/integration_test.rs
-snapshot_kind: text
 ---
 # Assets
 
 ## main.js
 
 ```js
+
 
 const node_assert = __toESM(require("node:assert"));
 
@@ -16,10 +16,10 @@ var require_cjs = __commonJS({ "cjs.js"(exports, module) {
 	module.exports = {};
 } });
 var import_cjs = __toESM(require_cjs());
-
 //#endregion
+
 //#region main.js
 node_assert.default.deepEqual(import_cjs.default, { default: {} });
-
 //#endregion
+
 ```

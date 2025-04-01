@@ -1,6 +1,5 @@
 ---
 source: crates/rolldown_testing/src/integration_test.rs
-snapshot_kind: text
 ---
 # Assets
 
@@ -10,8 +9,8 @@ snapshot_kind: text
 
 //#region lib.js
 var foo = "foo";
-
 //#endregion
+
 export { foo };
 ```
 ## main.js
@@ -20,6 +19,6 @@ export { foo };
 
 //#region main.js
 import("./lib.js").then(({ foo: x, bar: a }) => [x, thing]);
-
 //#endregion
+
 ```

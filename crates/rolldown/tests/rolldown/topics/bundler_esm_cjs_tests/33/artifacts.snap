@@ -1,6 +1,5 @@
 ---
 source: crates/rolldown_testing/src/integration_test.rs
-snapshot_kind: text
 ---
 # Assets
 
@@ -10,8 +9,8 @@ snapshot_kind: text
 
 //#region entry.js
 input.works = import("./foo.js").then((foo) => foo[Math.random() < 1 && "default"] === 123 && foo[Math.random() < 1 && "__esModule"] === void 0);
-
 //#endregion
+
 ```
 ## foo.js
 
@@ -19,8 +18,8 @@ input.works = import("./foo.js").then((foo) => foo[Math.random() < 1 && "default
 
 //#region foo.js
 var foo_default = 123;
-
 //#endregion
+
 export { foo_default as default };
 ```
 ---
@@ -37,8 +36,8 @@ Variant: (format: Cjs)
 input.works = Promise.resolve().then(function() {
 	return require("./foo.js");
 }).then((foo) => foo[Math.random() < 1 && "default"] === 123 && foo[Math.random() < 1 && "__esModule"] === void 0);
-
 //#endregion
+
 ```
 ## foo.js
 
@@ -47,8 +46,8 @@ input.works = Promise.resolve().then(function() {
 
 //#region foo.js
 var foo_default = 123;
-
 //#endregion
+
 exports.default = foo_default
 ```
 ---
@@ -64,12 +63,13 @@ Variant: (format: Iife)
 
 
 
+
 //#region entry.js
 input.works = Promise.resolve().then(function() {
 	return init_foo(), foo_exports;
 }).then((foo) => foo[Math.random() < 1 && "default"] === 123 && foo[Math.random() < 1 && "__esModule"] === void 0);
-
 //#endregion
+
 //#region foo.js
 var foo_exports = {};
 __export(foo_exports, { default: () => foo_default });
@@ -77,8 +77,8 @@ var foo_default;
 var init_foo = __esm({ "foo.js"() {
 	foo_default = 123;
 } });
-
 //#endregion
+
 })();
 ```
 ---
@@ -97,12 +97,13 @@ Variant: (format: Umd)
 })(function() {
 
 
+
 //#region entry.js
 input.works = Promise.resolve().then(function() {
 	return init_foo(), foo_exports;
 }).then((foo) => foo[Math.random() < 1 && "default"] === 123 && foo[Math.random() < 1 && "__esModule"] === void 0);
-
 //#endregion
+
 //#region foo.js
 var foo_exports = {};
 __export(foo_exports, { default: () => foo_default });
@@ -110,7 +111,7 @@ var foo_default;
 var init_foo = __esm({ "foo.js"() {
 	foo_default = 123;
 } });
-
 //#endregion
+
 });
 ```

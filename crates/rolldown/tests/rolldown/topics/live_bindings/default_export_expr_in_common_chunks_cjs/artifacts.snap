@@ -1,6 +1,5 @@
 ---
 source: crates/rolldown_testing/src/integration_test.rs
-snapshot_kind: text
 ---
 # Assets
 
@@ -8,6 +7,7 @@ snapshot_kind: text
 
 ```js
 "use strict";
+
 
 const node_assert = __toESM(require("node:assert"));
 
@@ -20,8 +20,8 @@ function inc() {
 	count += 1;
 }
 var shared_default = count;
-
 //#endregion
+
 //#region async-entry.js
 reset();
 node_assert.default.strictEqual(shared_default, 0);
@@ -29,8 +29,8 @@ node_assert.default.strictEqual(shared_default, shared_default);
 inc();
 node_assert.default.strictEqual(shared_default, 0);
 node_assert.default.strictEqual(shared_default, shared_default);
-
 //#endregion
+
 ```
 ## main.js
 
@@ -40,6 +40,6 @@ node_assert.default.strictEqual(shared_default, shared_default);
 Promise.resolve().then(function() {
 	return require("./async-entry.js");
 });
-
 //#endregion
+
 ```

@@ -9,10 +9,10 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 //#region shared.js
 const foo = 1;
-
 //#endregion
+
 //#region main.js
 assert.strictEqual(foo, 1);
-
 //#endregion
+
 ```

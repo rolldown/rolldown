@@ -1,12 +1,12 @@
 ---
 source: crates/rolldown_testing/src/integration_test.rs
-snapshot_kind: text
 ---
 # Assets
 
 ## a.js
 
 ```js
+
 
 
 //#region b.js
@@ -16,8 +16,8 @@ var require_b = __commonJS({ "b.js"(exports) {
 	};
 } });
 var import_b = __toESM(require_b());
-
 //#endregion
+
 export { import_b };
 ```
 ## a2.js
@@ -37,8 +37,8 @@ import { import_b } from "./a.js";
 function c_default(tag, options) {
 	return import_b._default;
 }
-
 //#endregion
+
 export { c_default as default };
 ```
 ## main.js
@@ -53,6 +53,6 @@ import("./c.js").then((mod) => {
 import("./a2.js").then((mod) => {
 	assert.strictEqual(mod.default(), "f");
 });
-
 //#endregion
+
 ```

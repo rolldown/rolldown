@@ -1,6 +1,5 @@
 ---
 source: crates/rolldown_testing/src/integration_test.rs
-snapshot_kind: text
 ---
 # Assets
 
@@ -12,6 +11,7 @@ snapshot_kind: text
 console.log(1);
 
 //#endregion
-//# debugId=36ae879f-60cb-4b8f-bd97-a92f68526a0f
+
+//# debugId=554b5dd7-3813-4ec2-a995-19f031e3d595
 //# sourceMappingURL=main.js.map
 ```

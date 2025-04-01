@@ -1,6 +1,5 @@
 ---
 source: crates/rolldown_testing/src/integration_test.rs
-snapshot_kind: text
 ---
 # Assets
 
@@ -11,10 +10,10 @@ import assert from "node:assert";
 
 //#region app/index.js
 const a = 1e3;
-
 //#endregion
+
 //#region main.js
 assert.strictEqual(a, 1e3);
-
 //#endregion
+
 ```

@@ -1,6 +1,5 @@
 ---
 source: crates/rolldown_testing/src/integration_test.rs
-snapshot_kind: text
 ---
 # Assets
 
@@ -9,13 +8,14 @@ snapshot_kind: text
 ```js
 
 
+
 //#region cjs.js
 var require_cjs = __commonJS({ "cjs.js"(exports, module) {
 	module.exports.a = {};
 } });
 var import_cjs = __toESM(require_cjs());
-
 //#endregion
+
 var a = import_cjs.a;
 var a2 = import_cjs.a;
 export { a, a2 };

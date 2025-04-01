@@ -1,6 +1,5 @@
 ---
 source: crates/rolldown_testing/src/integration_test.rs
-snapshot_kind: text
 ---
 # Assets
 
@@ -10,26 +9,27 @@ snapshot_kind: text
 import assert from "node:assert";
 
 
+
 //#region commonjs.js
 var require_commonjs = __commonJS({ "commonjs.js"(exports) {
 	exports.a = 1;
 } });
-
 //#endregion
+
 //#region commonjs2.js
 var require_commonjs2 = __commonJS({ "commonjs2.js"(exports) {
 	exports.a = 2;
 } });
-
 //#endregion
+
 //#region proxy.js
 var proxy_exports = {};
 __reExport(proxy_exports, __toESM(require_commonjs()));
 __reExport(proxy_exports, __toESM(require_commonjs2()));
-
 //#endregion
+
 //#region main.js
 assert.equal(proxy_exports.a, 1);
-
 //#endregion
+
 ```

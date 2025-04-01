@@ -1,12 +1,12 @@
 ---
 source: crates/rolldown_testing/src/integration_test.rs
-snapshot_kind: text
 ---
 # Assets
 
 ## main.js
 
 ```js
+
 
 const node_assert = __toESM(require("node:assert"));
 const node_util = __toESM(require("node:util"));
@@ -18,11 +18,11 @@ var require_node = __commonJS({ "../../../../../../../node_modules/.pnpm/util-de
 	*/
 	module.exports = require("util").deprecate;
 } });
-
 //#endregion
+
 //#region main.js
 const exports$1 = require_node();
 node_assert.default.strictEqual(node_util.deprecate, exports$1);
-
 //#endregion
+
 ```

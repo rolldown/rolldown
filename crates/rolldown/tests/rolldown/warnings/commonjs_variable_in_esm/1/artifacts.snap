@@ -1,6 +1,5 @@
 ---
 source: crates/rolldown_testing/src/integration_test.rs
-snapshot_kind: text
 ---
 # warnings
 
@@ -50,7 +49,7 @@ module.exports = {};
 let res = typeof module === "object" ? module.exports : exports;
 const a = 1;
 const e = 1;
-
 //#endregion
+
 export { a, e };
 ```

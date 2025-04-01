@@ -1,6 +1,5 @@
 ---
 source: crates/rolldown_testing/src/integration_test.rs
-snapshot_kind: text
 ---
 # Assets
 
@@ -13,8 +12,8 @@ var __getOwnPropNames = Object.getOwnPropertyNames;
 var __esm = (fn, res) => function() {
 	return fn && (res = (0, fn[__getOwnPropNames(fn)[0]])(fn = 0)), res;
 };
-
 //#endregion
+
 export { __esm };
 ```
 ## 40max-size2.js
@@ -26,21 +25,21 @@ import { __esm } from "./40max-size.js";
 var init_size_15 = __esm({ "size-15.js"() {
 	console.log(10);
 } });
-
 //#endregion
+
 //#region size-20.js
 var init_size_20 = __esm({ "size-20.js"() {
 	console.log(1e6);
 } });
-
 //#endregion
+
 //#region size-41.js
 var init_size_41 = __esm({ "size-41.js"() {
 	console.log(1e6);
 	console.log(1e6);
 } });
-
 //#endregion
+
 export { init_size_15, init_size_20, init_size_41 };
 ```
 ## main.js
@@ -55,7 +54,7 @@ var init_main = __esm({ "main.js"() {
 	init_size_20();
 	init_size_41();
 } });
-
 //#endregion
+
 init_main();
 ```

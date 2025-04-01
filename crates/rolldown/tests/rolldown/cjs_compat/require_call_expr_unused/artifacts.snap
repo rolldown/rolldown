@@ -8,6 +8,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ```js
 
 
+
 //#region esm.js
 var esm_exports = {};
 __export(esm_exports, { a: () => a$1 });
@@ -15,8 +16,8 @@ var a$1;
 var init_esm = __esm({ "esm.js"() {
 	a$1 = 100;
 } });
-
 //#endregion
+
 //#region main.js
 init_esm();
 1, init_esm();
@@ -28,6 +29,6 @@ function foo() {
 console.log((1, init_esm(), 1));
 console.log((1, init_esm(), __toCommonJS(esm_exports)));
 console.log((1, (init_esm(), __toCommonJS(esm_exports)) + 1, 200));
-
 //#endregion
+
 ```

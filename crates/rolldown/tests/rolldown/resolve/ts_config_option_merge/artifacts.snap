@@ -12,16 +12,16 @@ import { jsx } from "preact/jsx-runtime";
 function add(a, b) {
 	return a + b;
 }
-
 //#endregion
+
 //#region ../../../../../../node_modules/.pnpm/@oxc-project+runtime@0.61.2/node_modules/@oxc-project/runtime/src/helpers/esm/decorateParam.js
 function __decorateParam(paramIndex, decorator) {
 	return function(target, key) {
 		decorator(target, key, paramIndex);
 	};
 }
-
 //#endregion
+
 //#region ../../../../../../node_modules/.pnpm/@oxc-project+runtime@0.61.2/node_modules/@oxc-project/runtime/src/helpers/esm/decorate.js
 function __decorate(decorators, target, key, desc) {
 	var c = arguments.length, r = c < 3 ? target : desc === null ? desc = Object.getOwnPropertyDescriptor(target, key) : desc, d;
@@ -29,8 +29,8 @@ function __decorate(decorators, target, key, desc) {
 	else for (var i = decorators.length - 1; i >= 0; i--) if (d = decorators[i]) r = (c < 3 ? d(r) : c > 3 ? d(target, key, r) : d(target, key)) || r;
 	return c > 3 && r && Object.defineProperty(target, key, r), r;
 }
-
 //#endregion
+
 //#region main.tsx
 function first() {
 	return function(...args) {};
@@ -43,6 +43,6 @@ var Foo = class {
 __decorate([first(), __decorateParam(0, first())], Foo.prototype, "method", null);
 console.log(/* @__PURE__ */ jsx(Div, {}));
 console.log(`add(1, 2): `, add(1, 2));
-
 //#endregion
+
 ```

@@ -1,12 +1,12 @@
 ---
 source: crates/rolldown_testing/src/integration_test.rs
-snapshot_kind: text
 ---
 # Assets
 
 ## main.js
 
 ```js
+
 
 
 //#region foo.js
@@ -34,10 +34,12 @@ var init_foo = __esm({ "foo.js"() {
 } });
 
 //#endregion
+
 //#region main.js
 init_foo();
 
 //#endregion
+
 //# sourceMappingURL=main.js.map
 ```
 
@@ -72,5 +74,5 @@ init_foo();
 (4:25) "{ }" --> (36:13) "{"
 (4:28) "\n" --> (36:14) "};\n"
 - ../main.js
-(0:0) "require('./foo')\n" --> (41:0) "init_foo();\n"
+(0:0) "require('./foo')\n" --> (42:0) "init_foo();\n"
 ```

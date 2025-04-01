@@ -1,6 +1,5 @@
 ---
 source: crates/rolldown_testing/src/integration_test.rs
-snapshot_kind: text
 ---
 # Assets
 
@@ -15,6 +14,6 @@ __commonJS({ "..."(exports) {
 __commonJS({ "..."(module, exports) {
 	module.exports = void 0;
 } });
-
 //#endregion
+
 ```

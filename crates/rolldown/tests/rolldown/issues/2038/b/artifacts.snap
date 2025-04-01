@@ -10,13 +10,14 @@ import { import_c } from "./b.js";
 
 //#region a.js
 let a = import_c.test;
-
 //#endregion
+
 export { a };
 ```
 ## b.js
 
 ```js
+
 
 
 //#region c.js
@@ -25,8 +26,8 @@ var require_c = __commonJS({ "c.js"(exports) {
 	exports.test = test;
 } });
 var import_c = __toESM(require_c());
-
 //#endregion
+
 export { import_c };
 ```
 ## b2.js
@@ -49,6 +50,6 @@ import("./a.js").then((mod) => {
 import("./b2.js").then((mod) => {
 	assert.strictEqual(mod.test, 1e3);
 });
-
 //#endregion
+
 ```

@@ -17,6 +17,6 @@ Promise.resolve().then(function() {
 const a = await Promise.resolve().then(function() {
 	return /* @__PURE__ */ Object.freeze({ __proto__: null });
 });
-
 //#endregion
+
 ```

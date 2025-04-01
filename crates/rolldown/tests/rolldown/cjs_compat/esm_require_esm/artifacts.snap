@@ -8,6 +8,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ```js
 
 
+
 //#region esm.js
 var esm_exports = {};
 __export(esm_exports, { default: () => esm_default });
@@ -15,11 +16,11 @@ var esm_default;
 var init_esm = __esm({ "esm.js"() {
 	esm_default = "esm";
 } });
-
 //#endregion
+
 //#region main.js
 const esm = (init_esm(), __toCommonJS(esm_exports));
-
 //#endregion
+
 export { esm };
 ```

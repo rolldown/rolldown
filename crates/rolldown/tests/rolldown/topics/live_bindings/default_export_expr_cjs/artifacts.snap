@@ -1,6 +1,5 @@
 ---
 source: crates/rolldown_testing/src/integration_test.rs
-snapshot_kind: text
 ---
 # Assets
 
@@ -19,8 +18,8 @@ function inc() {
 	count += 1;
 }
 var main_default = count;
-
 //#endregion
+
 exports.default = main_default
 exports.inc = inc
 exports.reset = reset

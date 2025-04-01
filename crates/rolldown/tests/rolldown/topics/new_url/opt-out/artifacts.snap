@@ -1,6 +1,5 @@
 ---
 source: crates/rolldown_testing/src/integration_test.rs
-snapshot_kind: text
 ---
 # Assets
 
@@ -14,6 +13,6 @@ new URL(
 	"path-should-not-exists",
 	import.meta.url
 );
-
 //#endregion
+
 ```

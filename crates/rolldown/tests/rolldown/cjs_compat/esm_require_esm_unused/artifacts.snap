@@ -1,12 +1,12 @@
 ---
 source: crates/rolldown_testing/src/integration_test.rs
-snapshot_kind: text
 ---
 # Assets
 
 ## main.js
 
 ```js
+
 
 
 //#region esm.js
@@ -16,10 +16,10 @@ var esm_default;
 var init_esm = __esm({ "esm.js"() {
 	esm_default = "esm";
 } });
-
 //#endregion
+
 //#region main.js
 init_esm();
-
 //#endregion
+
 ```

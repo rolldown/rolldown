@@ -1,6 +1,5 @@
 ---
 source: crates/rolldown_testing/src/integration_test.rs
-snapshot_kind: text
 ---
 # Assets
 
@@ -13,12 +12,13 @@ import { __toCommonJS, bar, foo_exports, init_foo } from "./foo.js";
 init_foo();
 const foo = (init_foo(), __toCommonJS(foo_exports));
 input.works = import("./foo2.js").then((foo3) => foo.bar === 123 && bar === 123 && foo3.bar === 123 && foo[Math.random() < 1 && "__esModule"] === true && foo_exports[Math.random() < 1 && "__esModule"] === void 0 && foo3[Math.random() < 1 && "__esModule"] === void 0);
-
 //#endregion
+
 ```
 ## foo.js
 
 ```js
+
 
 
 //#region foo.js
@@ -28,8 +28,8 @@ var bar;
 var init_foo = __esm({ "foo.js"() {
 	bar = 123;
 } });
-
 //#endregion
+
 export { __toCommonJS, bar, foo_exports, init_foo };
 ```
 ## foo2.js
@@ -58,13 +58,14 @@ const foo = (require_foo.init_foo(), require_foo.__toCommonJS(require_foo.foo_ex
 input.works = Promise.resolve().then(function() {
 	return require("./foo2.js");
 }).then((foo3) => foo.bar === 123 && require_foo.bar === 123 && foo3.bar === 123 && foo[Math.random() < 1 && "__esModule"] === true && require_foo.foo_exports[Math.random() < 1 && "__esModule"] === void 0 && foo3[Math.random() < 1 && "__esModule"] === void 0);
-
 //#endregion
+
 ```
 ## foo.js
 
 ```js
 "use strict";
+
 
 
 //#region foo.js
@@ -74,8 +75,8 @@ var bar;
 var init_foo = __esm({ "foo.js"() {
 	bar = 123;
 } });
-
 //#endregion
+
 Object.defineProperty(exports, '__toCommonJS', {
   enumerable: true,
   get: function () {
@@ -123,6 +124,7 @@ Variant: (format: Iife)
 "use strict";
 
 
+
 //#region foo.js
 var foo_exports = {};
 __export(foo_exports, { bar: () => bar });
@@ -130,16 +132,16 @@ var bar;
 var init_foo = __esm({ "foo.js"() {
 	bar = 123;
 } });
-
 //#endregion
+
 //#region entry.js
 init_foo();
 const foo = (init_foo(), __toCommonJS(foo_exports));
 input.works = Promise.resolve().then(function() {
 	return init_foo(), foo_exports;
 }).then((foo3) => foo.bar === 123 && bar === 123 && foo3.bar === 123 && foo[Math.random() < 1 && "__esModule"] === true && foo_exports[Math.random() < 1 && "__esModule"] === void 0 && foo3[Math.random() < 1 && "__esModule"] === void 0);
-
 //#endregion
+
 })();
 ```
 ---
@@ -159,6 +161,7 @@ Variant: (format: Umd)
 "use strict";
 
 
+
 //#region foo.js
 var foo_exports = {};
 __export(foo_exports, { bar: () => bar });
@@ -166,15 +169,15 @@ var bar;
 var init_foo = __esm({ "foo.js"() {
 	bar = 123;
 } });
-
 //#endregion
+
 //#region entry.js
 init_foo();
 const foo = (init_foo(), __toCommonJS(foo_exports));
 input.works = Promise.resolve().then(function() {
 	return init_foo(), foo_exports;
 }).then((foo3) => foo.bar === 123 && bar === 123 && foo3.bar === 123 && foo[Math.random() < 1 && "__esModule"] === true && foo_exports[Math.random() < 1 && "__esModule"] === void 0 && foo3[Math.random() < 1 && "__esModule"] === void 0);
-
 //#endregion
+
 });
 ```

@@ -1,6 +1,5 @@
 ---
 source: crates/rolldown_testing/src/integration_test.rs
-snapshot_kind: text
 ---
 # Assets
 
@@ -17,11 +16,11 @@ const url2 = new URL("assets/index-B0GLEKT9.txt", import.meta.url);
 const url3 = new URL("assets/index-B0GLEKT9.txt", import.meta.url);
 assert.strictEqual(url.href, url3.href);
 assert.strictEqual(url2.href, url3.href);
-
 //#endregion
+
 //#region node_modules/foo/index.txt
 var foo_default = "assets/index-B0GLEKT9.txt";
-
 //#endregion
+
 export { url, url2, url3 };
 ```

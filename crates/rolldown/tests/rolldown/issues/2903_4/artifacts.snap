@@ -1,6 +1,5 @@
 ---
 source: crates/rolldown_testing/src/integration_test.rs
-snapshot_kind: text
 ---
 # Assets
 
@@ -8,6 +7,7 @@ snapshot_kind: text
 
 ```js
 "use strict";
+
 
 
 Object.defineProperty(exports, '__commonJS', {
@@ -26,8 +26,8 @@ const require_chunk = require('./chunk.js');
 var require_cjs_dep = require_chunk.__commonJS({ "cjs-dep.js"(exports, module) {
 	module.exports = console.log("cjs-dep");
 } });
-
 //#endregion
+
 ```
 ## main2.js
 
@@ -38,6 +38,6 @@ const require_chunk = require('./chunk.js');
 var require_cjs_dep2 = require_chunk.__commonJS({ "cjs-dep2.js"(exports, module) {
 	module.exports = console.log("cjs-dep2");
 } });
-
 //#endregion
+
 ```

@@ -1,6 +1,5 @@
 ---
 source: crates/rolldown_testing/src/integration_test.rs
-snapshot_kind: text
 ---
 # Assets
 
@@ -12,10 +11,10 @@ import assert from "node:assert";
 //#region foo.json
 var null$1 = null;
 var foo_default = { null: null$1 };
-
 //#endregion
+
 //#region main.js
 assert.deepStrictEqual(foo_default, { "null": null });
-
 //#endregion
+
 ```

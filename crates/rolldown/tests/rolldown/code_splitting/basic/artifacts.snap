@@ -9,8 +9,8 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 //#region dynamic.js
 console.log("dynamic");
-
 //#endregion
+
 ```
 ## main1.js
 
@@ -19,8 +19,8 @@ import "./share.js";
 
 //#region main1.js
 import("./dynamic.js");
-
 //#endregion
+
 ```
 ## main2.js
 
@@ -34,8 +34,8 @@ import "./share.js";
 
 //#region share.js
 console.log("shared");
-
 //#endregion
+
 ```
 ## Output Stats
 

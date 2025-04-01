@@ -1,6 +1,5 @@
 ---
 source: crates/rolldown_testing/src/integration_test.rs
-snapshot_kind: text
 ---
 # Assets
 
@@ -8,6 +7,7 @@ snapshot_kind: text
 
 ```js
 import assert from "node:assert";
+
 
 
 //#region foo.js
@@ -23,11 +23,13 @@ var init_foo = __esm({ "foo.js"() {
 } });
 
 //#endregion
+
 //#region bar.js
 init_foo();
 var bar_default = { foo: foo$1 };
 
 //#endregion
+
 //#region main.js
 const a = 2;
 const { foo } = bar_default;
@@ -35,6 +37,7 @@ assert.strictEqual(typeof foo, "function");
 init_foo();
 
 //#endregion
+
 //# sourceMappingURL=main.js.map
 ```
 
@@ -60,24 +63,24 @@ init_foo();
 (2:6) "a = " --> (25:1) "a$1 = "
 (2:10) "1;\n" --> (25:7) "1;\n"
 - ../bar.js
-(0:0) "import foo from './foo'" --> (30:0) "init_foo()"
-(0:23) "\n" --> (30:10) ";\n"
-(2:15) "{ " --> (31:18) "{ "
-(2:17) "foo }" --> (31:20) "foo: foo$1 "
-(2:22) [invalid] --> (31:31)
+(0:0) "import foo from './foo'" --> (31:0) "init_foo()"
+(0:23) "\n" --> (31:10) ";\n"
+(2:15) "{ " --> (32:18) "{ "
+(2:17) "foo }" --> (32:20) "foo: foo$1 "
+(2:22) [invalid] --> (32:31)
 - ../main.js
-(3:0) "const " --> (35:0) "const "
-(3:6) "a = " --> (35:6) "a = "
-(3:10) "2; // make foo `a` conflict\n" --> (35:10) "2;\n"
-(5:0) "const " --> (36:0) "const "
-(5:6) "{ " --> (36:6) "{ "
-(5:8) "foo }" --> (36:8) "foo }"
-(5:13) " = " --> (36:13) " = "
-(5:16) "bar\n" --> (36:16) "bar_default;\n"
-(7:0) "assert." --> (37:0) "assert."
-(7:7) "strictEqual(typeof " --> (37:7) "strictEqual(typeof "
-(7:26) "foo, " --> (37:26) "foo, "
-(7:31) "'function')" --> (37:31) "\"function\")"
-(7:42) "\n" --> (37:42) ";\n"
-(9:0) "require('./foo')\n" --> (38:0) "init_foo();\n"
+(3:0) "const " --> (37:0) "const "
+(3:6) "a = " --> (37:6) "a = "
+(3:10) "2; // make foo `a` conflict\n" --> (37:10) "2;\n"
+(5:0) "const " --> (38:0) "const "
+(5:6) "{ " --> (38:6) "{ "
+(5:8) "foo }" --> (38:8) "foo }"
+(5:13) " = " --> (38:13) " = "
+(5:16) "bar\n" --> (38:16) "bar_default;\n"
+(7:0) "assert." --> (39:0) "assert."
+(7:7) "strictEqual(typeof " --> (39:7) "strictEqual(typeof "
+(7:26) "foo, " --> (39:26) "foo, "
+(7:31) "'function')" --> (39:31) "\"function\")"
+(7:42) "\n" --> (39:42) ";\n"
+(9:0) "require('./foo')\n" --> (40:0) "init_foo();\n"
 ```

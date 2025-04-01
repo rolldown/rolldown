@@ -1,6 +1,5 @@
 ---
 source: crates/rolldown_testing/src/integration_test.rs
-snapshot_kind: text
 ---
 # Assets
 
@@ -17,8 +16,8 @@ export { devil as "😈" };
 
 //#region foo.js
 const devil = "devil";
-
 //#endregion
+
 export { devil };
 ```
 ## main.js
@@ -28,7 +27,7 @@ import { devil } from "./foo2.js";
 
 //#region main.js
 const moduleFoo = import("./foo.js");
-
 //#endregion
+
 export { moduleFoo, devil as "😈" };
 ```

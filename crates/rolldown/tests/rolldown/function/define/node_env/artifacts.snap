@@ -1,6 +1,5 @@
 ---
 source: crates/rolldown_testing/src/integration_test.rs
-snapshot_kind: text
 ---
 # Assets
 
@@ -15,6 +14,6 @@ nodeAssert.strictEqual(processNodeEnv, "production");
 (function(process) {
 	nodeAssert.strictEqual(process.env.NODE_ENV, void 0);
 })({ env: {} });
-
 //#endregion
+
 ```

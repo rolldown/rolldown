@@ -1,6 +1,5 @@
 ---
 source: crates/rolldown_testing/src/integration_test.rs
-snapshot_kind: text
 ---
 # Assets
 
@@ -9,16 +8,17 @@ snapshot_kind: text
 ```js
 
 
+
 //#region foo.js
 var foo_exports = {};
 __export(foo_exports, { bar: () => bar });
 let bar = 123;
-
 //#endregion
+
 //#region entry.js
 input.works = foo_exports[Math.random() < 1 && "__esModule"] === void 0 && bar === 123;
-
 //#endregion
+
 ```
 ---
 
@@ -32,16 +32,17 @@ Variant: (format: Cjs)
 "use strict";
 
 
+
 //#region foo.js
 var foo_exports = {};
 __export(foo_exports, { bar: () => bar });
 let bar = 123;
-
 //#endregion
+
 //#region entry.js
 input.works = foo_exports[Math.random() < 1 && "__esModule"] === void 0 && bar === 123;
-
 //#endregion
+
 ```
 ---
 
@@ -57,16 +58,17 @@ Variant: (format: Iife)
 "use strict";
 
 
+
 //#region foo.js
 var foo_exports = {};
 __export(foo_exports, { bar: () => bar });
 let bar = 123;
-
 //#endregion
+
 //#region entry.js
 input.works = foo_exports[Math.random() < 1 && "__esModule"] === void 0 && bar === 123;
-
 //#endregion
+
 })();
 ```
 ---
@@ -86,15 +88,16 @@ Variant: (format: Umd)
 "use strict";
 
 
+
 //#region foo.js
 var foo_exports = {};
 __export(foo_exports, { bar: () => bar });
 let bar = 123;
-
 //#endregion
+
 //#region entry.js
 input.works = foo_exports[Math.random() < 1 && "__esModule"] === void 0 && bar === 123;
-
 //#endregion
+
 });
 ```

@@ -9,10 +9,10 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 //#region foo.js
 const foo = 1;
-
 //#endregion
+
 //#region main.js
 console.log(foo);
-
 //#endregion
+
 ```

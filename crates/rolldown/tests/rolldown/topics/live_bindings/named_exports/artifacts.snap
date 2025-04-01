@@ -15,7 +15,7 @@ function reset() {
 function inc() {
 	count += 1;
 }
-
 //#endregion
+
 export { count, inc, reset };
 ```

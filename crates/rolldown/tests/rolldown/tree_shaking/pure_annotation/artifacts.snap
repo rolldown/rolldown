@@ -9,20 +9,20 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 //#region a.js
 const a = 100;
-
 //#endregion
+
 //#region c.js
 function test() {}
 const c = test();
-
 //#endregion
+
 //#region d.js
 function test2() {}
 const e = test2();
-
 //#endregion
+
 //#region main.js
 console.log(`a: `, a);
-
 //#endregion
+
 ```

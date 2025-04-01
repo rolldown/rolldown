@@ -1,6 +1,5 @@
 ---
 source: crates/rolldown_testing/src/integration_test.rs
-snapshot_kind: text
 ---
 # Assets
 
@@ -9,15 +8,16 @@ snapshot_kind: text
 ```js
 
 
+
 //#region test.json
 var require_test = __commonJS({ "test.json"(exports, module) {
 	module.exports = { "a": 1 };
 } });
-
 //#endregion
+
 //#region main.js
 const a = require_test();
 console.log(`a: `, a);
-
 //#endregion
+
 ```

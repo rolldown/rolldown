@@ -1,6 +1,5 @@
 ---
 source: crates/rolldown_testing/src/integration_test.rs
-snapshot_kind: text
 ---
 # warnings
 
@@ -27,24 +26,29 @@ snapshot_kind: text
 import assert from "node:assert";
 
 
+
 //#region esm-export-cjs-export.js
 module.exports = 1;
 
 //#endregion
+
 //#region foo.js
 var require_foo = __commonJS({ "foo.js"() {} });
 
 //#endregion
+
 //#region esm-export-cjs-require.js
 require_foo();
 
 //#endregion
+
 //#region esm-import-cjs-export.js
 var require_esm_import_cjs_export = __commonJS({ "esm-import-cjs-export.js"(exports, module) {
 	module.exports = 1;
 } });
 
 //#endregion
+
 //#region cjs.js
 var require_cjs = __commonJS({ "cjs.js"(exports, module) {
 	module.exports = 1;
@@ -52,11 +56,13 @@ var require_cjs = __commonJS({ "cjs.js"(exports, module) {
 var import_cjs = __toESM(require_cjs());
 
 //#endregion
+
 //#region esm-import-cjs-require.js
 require_foo();
 assert.equal(import_cjs.a, void 0);
 
 //#endregion
+
 //# sourceMappingURL=main.js.map
 ```
 
@@ -68,19 +74,19 @@ assert.equal(import_cjs.a, void 0);
 (0:7) "exports = " --> (29:7) "exports = "
 (0:17) "1;\n" --> (29:17) "1;\n"
 - ../esm-export-cjs-require.js
-(0:0) "require('./foo')\n" --> (37:0) "require_foo();\n"
+(0:0) "require('./foo')\n" --> (39:0) "require_foo();\n"
 - ../esm-import-cjs-export.js
-(1:0) "module." --> (42:0) "\tmodule."
-(1:7) "exports = " --> (42:8) "exports = "
-(1:17) "1" --> (42:18) "1;\n"
+(1:0) "module." --> (45:0) "\tmodule."
+(1:7) "exports = " --> (45:8) "exports = "
+(1:17) "1" --> (45:18) "1;\n"
 - ../cjs.js
-(0:0) "module." --> (48:0) "\tmodule."
-(0:7) "exports = " --> (48:8) "exports = "
-(0:17) "1;" --> (48:18) "1;\n"
+(0:0) "module." --> (52:0) "\tmodule."
+(0:7) "exports = " --> (52:8) "exports = "
+(0:17) "1;" --> (52:18) "1;\n"
 - ../esm-import-cjs-require.js
-(2:0) "require('./foo')\n" --> (54:0) "require_foo();\n"
-(3:0) "assert." --> (55:0) "assert."
-(3:7) "equal(" --> (55:7) "equal("
-(3:13) "a, undefined)" --> (55:13) "import_cjs.a, void 0)"
-(3:26) "\n" --> (55:34) ";\n"
+(2:0) "require('./foo')\n" --> (59:0) "require_foo();\n"
+(3:0) "assert." --> (60:0) "assert."
+(3:7) "equal(" --> (60:7) "equal("
+(3:13) "a, undefined)" --> (60:13) "import_cjs.a, void 0)"
+(3:26) "\n" --> (60:34) ";\n"
 ```

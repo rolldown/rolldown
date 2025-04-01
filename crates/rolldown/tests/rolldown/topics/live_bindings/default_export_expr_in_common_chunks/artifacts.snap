@@ -17,8 +17,8 @@ function inc() {
 	count += 1;
 }
 var shared_default = count;
-
 //#endregion
+
 //#region async-entry.js
 reset();
 assert.strictEqual(shared_default, 0);
@@ -26,8 +26,8 @@ assert.strictEqual(shared_default, shared_default);
 inc();
 assert.strictEqual(shared_default, 0);
 assert.strictEqual(shared_default, shared_default);
-
 //#endregion
+
 ```
 ## main.js
 
@@ -35,6 +35,6 @@ assert.strictEqual(shared_default, shared_default);
 
 //#region main.js
 import("./async-entry.js");
-
 //#endregion
+
 ```

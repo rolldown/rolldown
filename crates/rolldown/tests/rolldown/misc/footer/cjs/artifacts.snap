@@ -10,8 +10,8 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 //#region main.js
 var main_default = "banner";
-
 //#endregion
+
 module.exports = main_default;
 // Footer
 

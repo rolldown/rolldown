@@ -11,6 +11,6 @@ source: crates/rolldown_testing/src/integration_test.rs
 Promise.resolve().then(function() {
 	return /* @__PURE__ */ Object.freeze({ __proto__: null });
 }).then(({ foo: x, thing: a }) => []);
-
 //#endregion
+
 ```

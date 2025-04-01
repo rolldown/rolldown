@@ -9,12 +9,13 @@ source: crates/rolldown_testing/src/integration_test.rs
 import assert from "node:assert";
 
 
+
 //#region example.data
 var example_default = __toBinary("");
-
 //#endregion
+
 //#region main.js
 assert(example_default instanceof Uint8Array);
-
 //#endregion
+
 ```

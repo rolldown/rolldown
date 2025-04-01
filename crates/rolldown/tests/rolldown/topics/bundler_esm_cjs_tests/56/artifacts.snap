@@ -1,6 +1,5 @@
 ---
 source: crates/rolldown_testing/src/integration_test.rs
-snapshot_kind: text
 ---
 # Assets
 
@@ -9,19 +8,20 @@ snapshot_kind: text
 ```js
 
 
+
 //#region foo.js
 var require_foo = __commonJS({ "foo.js"(exports) {
 	exports.__esModule = true;
 	exports.foo = 123;
 } });
 var import_foo = __toESM(require_foo());
-
 //#endregion
+
 //#region entry.js
 let keys = Object.keys(import_foo);
 input.works = import_foo.foo === 123 && keys.includes("foo") && !keys.includes("default");
-
 //#endregion
+
 ```
 ---
 
@@ -34,19 +34,20 @@ Variant: (format: Cjs)
 ```js
 
 
+
 //#region foo.js
 var require_foo = __commonJS({ "foo.js"(exports) {
 	exports.__esModule = true;
 	exports.foo = 123;
 } });
 var import_foo = __toESM(require_foo());
-
 //#endregion
+
 //#region entry.js
 let keys = Object.keys(import_foo);
 input.works = import_foo.foo === 123 && keys.includes("foo") && !keys.includes("default");
-
 //#endregion
+
 ```
 ---
 
@@ -61,19 +62,20 @@ Variant: (format: Iife)
 
 
 
+
 //#region foo.js
 var require_foo = __commonJS({ "foo.js"(exports) {
 	exports.__esModule = true;
 	exports.foo = 123;
 } });
 var import_foo = __toESM(require_foo());
-
 //#endregion
+
 //#region entry.js
 let keys = Object.keys(import_foo);
 input.works = import_foo.foo === 123 && keys.includes("foo") && !keys.includes("default");
-
 //#endregion
+
 })();
 ```
 ---
@@ -92,18 +94,19 @@ Variant: (format: Umd)
 })(function() {
 
 
+
 //#region foo.js
 var require_foo = __commonJS({ "foo.js"(exports) {
 	exports.__esModule = true;
 	exports.foo = 123;
 } });
 var import_foo = __toESM(require_foo());
-
 //#endregion
+
 //#region entry.js
 let keys = Object.keys(import_foo);
 input.works = import_foo.foo === 123 && keys.includes("foo") && !keys.includes("default");
-
 //#endregion
+
 });
 ```

@@ -1,6 +1,5 @@
 ---
 source: crates/rolldown_testing/src/integration_test.rs
-snapshot_kind: text
 ---
 # Assets
 
@@ -8,6 +7,7 @@ snapshot_kind: text
 
 ```js
 import assert from "node:assert";
+
 
 
 //#region a.js
@@ -19,8 +19,8 @@ var Foo$1 = class {
 		__name(this, "Foo");
 	}
 };
-
 //#endregion
+
 //#region main.js
 test$1();
 a();
@@ -30,6 +30,6 @@ console.log(`test: `, test);
 assert.strictEqual(Foo.name, "Foo");
 assert.strictEqual(Foo$1.name, "Foo");
 assert.strictEqual(test$1.name, "test");
-
 //#endregion
+
 ```

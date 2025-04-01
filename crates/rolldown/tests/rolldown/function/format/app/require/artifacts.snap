@@ -7,12 +7,13 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```js
 
+
 //#region foo.js
 module.exports = 1;
-
 //#endregion
+
 //#region main.js
 require("foo.js");
-
 //#endregion
+
 ```

@@ -10,8 +10,8 @@ import "./run-dep.js";
 
 //#region init-dep-1.js
 global.foo = { log: () => console.log("foo.log() (from entry 1) called") };
-
 //#endregion
+
 ```
 ## entry2.js
 
@@ -20,8 +20,8 @@ import "./run-dep.js";
 
 //#region init-dep-2.js
 global.foo = { log: () => console.log("foo.log() (from entry 2) called") };
-
 //#endregion
+
 ```
 ## run-dep.js
 
@@ -29,6 +29,6 @@ global.foo = { log: () => console.log("foo.log() (from entry 2) called") };
 
 //#region run-dep.js
 global.foo.log();
-
 //#endregion
+
 ```

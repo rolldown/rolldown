@@ -13,8 +13,8 @@ var init_lazy_chunk = __esm({ "lazy-chunk.js"() {
 	init_user_lib();
 	foo();
 } });
-
 //#endregion
+
 init_lazy_chunk();
 ```
 ## main.js
@@ -26,21 +26,22 @@ import { __esm, foo, init_user_lib } from "./user-lib.js";
 var init_polyfill = __esm({ "polyfill.js"() {
 	Object.somePolyfilledFunction = () => {};
 } });
-
 //#endregion
+
 //#region main.js
 var init_main = __esm({ "main.js"() {
 	init_polyfill();
 	init_user_lib();
 	foo();
 } });
-
 //#endregion
+
 init_main();
 ```
 ## user-lib.js
 
 ```js
+
 
 
 //#region user-lib.js
@@ -50,7 +51,7 @@ async function foo() {
 var init_user_lib = __esm({ "user-lib.js"() {
 	Object.somePolyfilledFunction();
 } });
-
 //#endregion
+
 export { __esm, foo, init_user_lib };
 ```

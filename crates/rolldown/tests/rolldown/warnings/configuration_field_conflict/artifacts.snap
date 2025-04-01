@@ -21,6 +21,6 @@ function Something() {
 	return /* @__PURE__ */ React.createElement("div", null, "Something");
 }
 console.log(`<Something/>: `, /* @__PURE__ */ React.createElement(Something, null));
-
 //#endregion
+
 ```

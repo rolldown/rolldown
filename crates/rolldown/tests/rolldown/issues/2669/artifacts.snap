@@ -1,6 +1,5 @@
 ---
 source: crates/rolldown_testing/src/integration_test.rs
-snapshot_kind: text
 ---
 # Assets
 
@@ -38,7 +37,7 @@ function nested2() {
 	];
 }
 const x = "x";
-
 //#endregion
+
 export { nested1, nested2, x };
 ```

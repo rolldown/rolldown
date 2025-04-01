@@ -1,6 +1,5 @@
 ---
 source: crates/rolldown_testing/src/integration_test.rs
-snapshot_kind: text
 ---
 # Assets
 
@@ -9,18 +8,19 @@ snapshot_kind: text
 ```js
 
 
+
 //#region foo.js
 var foo_exports = {};
 var missing;
 var init_foo = __esm({ "foo.js"() {
 	missing = void 0;
 } });
-
 //#endregion
+
 //#region main.js
 init_foo();
 init_foo();
-
 //#endregion
+
 export { missing };
 ```

@@ -1,6 +1,5 @@
 ---
 source: crates/rolldown_testing/src/integration_test.rs
-snapshot_kind: text
 ---
 # Assets
 
@@ -9,17 +8,18 @@ snapshot_kind: text
 ```js
 
 
+
 //#region foo.js
 var require_foo = __commonJS({ "foo.js"(exports, module) {
 	module[Math.random() < 1 && "exports"] = "123";
 } });
 var import_foo = __toESM(require_foo());
-
 //#endregion
+
 //#region entry.js
 input.works = import_foo[Math.random() < 1 && "default"] === "123";
-
 //#endregion
+
 ```
 ---
 
@@ -32,17 +32,18 @@ Variant: (format: Cjs)
 ```js
 
 
+
 //#region foo.js
 var require_foo = __commonJS({ "foo.js"(exports, module) {
 	module[Math.random() < 1 && "exports"] = "123";
 } });
 var import_foo = __toESM(require_foo());
-
 //#endregion
+
 //#region entry.js
 input.works = import_foo[Math.random() < 1 && "default"] === "123";
-
 //#endregion
+
 ```
 ---
 
@@ -57,17 +58,18 @@ Variant: (format: Iife)
 
 
 
+
 //#region foo.js
 var require_foo = __commonJS({ "foo.js"(exports, module) {
 	module[Math.random() < 1 && "exports"] = "123";
 } });
 var import_foo = __toESM(require_foo());
-
 //#endregion
+
 //#region entry.js
 input.works = import_foo[Math.random() < 1 && "default"] === "123";
-
 //#endregion
+
 })();
 ```
 ---
@@ -86,16 +88,17 @@ Variant: (format: Umd)
 })(function() {
 
 
+
 //#region foo.js
 var require_foo = __commonJS({ "foo.js"(exports, module) {
 	module[Math.random() < 1 && "exports"] = "123";
 } });
 var import_foo = __toESM(require_foo());
-
 //#endregion
+
 //#region entry.js
 input.works = import_foo[Math.random() < 1 && "default"] === "123";
-
 //#endregion
+
 });
 ```

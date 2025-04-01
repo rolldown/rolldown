@@ -1,6 +1,5 @@
 ---
 source: crates/rolldown_testing/src/integration_test.rs
-snapshot_kind: text
 ---
 # Assets
 
@@ -10,23 +9,24 @@ snapshot_kind: text
 import assert from "node:assert";
 
 
+
 //#region react.js
 var require_react = __commonJS({ "react.js"(exports) {
 	exports.createReactElement = function() {
 		return "div";
 	};
 } });
-
 //#endregion
+
 //#region commonjs.js
 var require_commonjs = __commonJS({ "commonjs.js"(exports, module) {
 	module.exports = require_react();
 } });
 var import_commonjs = __toESM(require_commonjs());
-
 //#endregion
+
 //#region main.js
 assert.equal(import_commonjs.createReactElement(), "div");
-
 //#endregion
+
 ```

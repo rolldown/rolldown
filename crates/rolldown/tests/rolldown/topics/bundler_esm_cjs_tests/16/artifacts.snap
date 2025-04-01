@@ -1,12 +1,12 @@
 ---
 source: crates/rolldown_testing/src/integration_test.rs
-snapshot_kind: text
 ---
 # Assets
 
 ## entry.js
 
 ```js
+
 
 
 //#region entry.js
@@ -16,8 +16,8 @@ var init_entry = __esm({ "entry.js"() {
 	entry = (init_entry(), __toCommonJS(entry_exports));
 	input.works = entry.__esModule === true;
 } });
-
 //#endregion
+
 init_entry();
 ```
 ---
@@ -32,6 +32,7 @@ Variant: (format: Cjs)
 "use strict";
 
 
+
 //#region entry.js
 var entry_exports = {};
 var entry;
@@ -39,8 +40,8 @@ var init_entry = __esm({ "entry.js"() {
 	entry = (init_entry(), __toCommonJS(entry_exports));
 	input.works = entry.__esModule === true;
 } });
-
 //#endregion
+
 init_entry();
 ```
 ---
@@ -57,6 +58,7 @@ Variant: (format: Iife)
 "use strict";
 
 
+
 //#region entry.js
 var entry_exports = {};
 var entry;
@@ -64,8 +66,8 @@ var init_entry = __esm({ "entry.js"() {
 	entry = (init_entry(), __toCommonJS(entry_exports));
 	input.works = entry.__esModule === true;
 } });
-
 //#endregion
+
 init_entry();
 })();
 ```
@@ -86,6 +88,7 @@ Variant: (format: Umd)
 "use strict";
 
 
+
 //#region entry.js
 var entry_exports = {};
 var entry;
@@ -93,8 +96,8 @@ var init_entry = __esm({ "entry.js"() {
 	entry = (init_entry(), __toCommonJS(entry_exports));
 	input.works = entry.__esModule === true;
 } });
-
 //#endregion
+
 init_entry();
 });
 ```

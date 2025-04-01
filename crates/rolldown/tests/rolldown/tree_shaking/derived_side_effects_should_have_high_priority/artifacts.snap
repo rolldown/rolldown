@@ -10,10 +10,10 @@ import assert from "node:assert";
 
 //#region another/b/index.js
 const b = 100;
-
 //#endregion
+
 //#region main.js
 assert.equal(b, 100);
-
 //#endregion
+
 ```

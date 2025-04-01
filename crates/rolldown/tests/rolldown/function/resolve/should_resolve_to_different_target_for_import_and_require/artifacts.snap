@@ -8,19 +8,20 @@ source: crates/rolldown_testing/src/integration_test.rs
 ```js
 
 
+
 //#region node_modules/package/esm-output.js
 const output = "esm";
-
 //#endregion
+
 //#region node_modules/package/cjs-output.js
 var require_cjs_output = __commonJS({ "node_modules/package/cjs-output.js"(exports, module) {
 	module.exports.output = "cjs";
 } });
-
 //#endregion
+
 //#region main.js
 const { output: requireOutput } = require_cjs_output();
-
 //#endregion
+
 export { output as importOutput, requireOutput };
 ```

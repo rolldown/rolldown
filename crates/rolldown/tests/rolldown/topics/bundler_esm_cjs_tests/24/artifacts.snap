@@ -1,6 +1,5 @@
 ---
 source: crates/rolldown_testing/src/integration_test.rs
-snapshot_kind: text
 ---
 # Assets
 
@@ -9,26 +8,27 @@ snapshot_kind: text
 ```js
 
 
+
 //#region bar.js
 var baz;
 var init_bar = __esm({ "bar.js"() {
 	baz = 123;
 } });
-
 //#endregion
+
 //#region foo.js
 var foo_exports = {};
 __export(foo_exports, { baz: () => baz });
 var init_foo = __esm({ "foo.js"() {
 	init_bar();
 } });
-
 //#endregion
+
 //#region entry.js
 const foo = (init_foo(), __toCommonJS(foo_exports));
 input.works = foo.baz === 123 && foo.__esModule === true;
-
 //#endregion
+
 ```
 ---
 
@@ -41,26 +41,27 @@ Variant: (format: Cjs)
 ```js
 
 
+
 //#region bar.js
 var baz;
 var init_bar = __esm({ "bar.js"() {
 	baz = 123;
 } });
-
 //#endregion
+
 //#region foo.js
 var foo_exports = {};
 __export(foo_exports, { baz: () => baz });
 var init_foo = __esm({ "foo.js"() {
 	init_bar();
 } });
-
 //#endregion
+
 //#region entry.js
 const foo = (init_foo(), __toCommonJS(foo_exports));
 input.works = foo.baz === 123 && foo.__esModule === true;
-
 //#endregion
+
 ```
 ---
 
@@ -75,26 +76,27 @@ Variant: (format: Iife)
 
 
 
+
 //#region bar.js
 var baz;
 var init_bar = __esm({ "bar.js"() {
 	baz = 123;
 } });
-
 //#endregion
+
 //#region foo.js
 var foo_exports = {};
 __export(foo_exports, { baz: () => baz });
 var init_foo = __esm({ "foo.js"() {
 	init_bar();
 } });
-
 //#endregion
+
 //#region entry.js
 const foo = (init_foo(), __toCommonJS(foo_exports));
 input.works = foo.baz === 123 && foo.__esModule === true;
-
 //#endregion
+
 })();
 ```
 ---
@@ -113,25 +115,26 @@ Variant: (format: Umd)
 })(function() {
 
 
+
 //#region bar.js
 var baz;
 var init_bar = __esm({ "bar.js"() {
 	baz = 123;
 } });
-
 //#endregion
+
 //#region foo.js
 var foo_exports = {};
 __export(foo_exports, { baz: () => baz });
 var init_foo = __esm({ "foo.js"() {
 	init_bar();
 } });
-
 //#endregion
+
 //#region entry.js
 const foo = (init_foo(), __toCommonJS(foo_exports));
 input.works = foo.baz === 123 && foo.__esModule === true;
-
 //#endregion
+
 });
 ```

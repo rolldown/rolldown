@@ -1,6 +1,5 @@
 ---
 source: crates/rolldown_testing/src/integration_test.rs
-snapshot_kind: text
 ---
 # Assets
 
@@ -40,8 +39,8 @@ import "./common-imported-by-js.js";
 
 //#region entry-a.ts
 console.log("entry-a");
-
 //#endregion
+
 ```
 ## entry-b-fpA6EH7c.css
 
@@ -63,8 +62,8 @@ import "./common-imported-by-js.js";
 
 //#region entry-b.ts
 console.log("entry-b");
-
 //#endregion
+
 ```
 ## main.js
 
@@ -73,6 +72,6 @@ console.log("entry-b");
 //#region main.ts
 import("./entry-a.js");
 import("./entry-b.js");
-
 //#endregion
+
 ```

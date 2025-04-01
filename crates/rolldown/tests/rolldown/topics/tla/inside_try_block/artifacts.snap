@@ -1,6 +1,5 @@
 ---
 source: crates/rolldown_testing/src/integration_test.rs
-snapshot_kind: text
 ---
 # Assets
 
@@ -13,8 +12,8 @@ let foo;
 try {
 	foo = await Promise.resolve("foo");
 } catch (_e) {}
-
 //#endregion
+
 export { foo };
 ```
 ---
@@ -28,6 +27,7 @@ Variant: (strict_execution_order: true)
 ```js
 
 
+
 //#region lib.js
 var foo;
 var init_lib = __esm({ async "lib.js"() {
@@ -35,14 +35,14 @@ var init_lib = __esm({ async "lib.js"() {
 		foo = await Promise.resolve("foo");
 	} catch (_e) {}
 } });
-
 //#endregion
+
 //#region main.js
 var init_main = __esm({ async "main.js"() {
 	await init_lib();
 } });
-
 //#endregion
+
 await init_main();
 export { foo };
 ```

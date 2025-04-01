@@ -13,7 +13,7 @@ const Hello = () => /* @__PURE__ */ jsx("div", { children: "Hello" });
 function World() {
 	return /* @__PURE__ */ jsxs("div", { children: [/* @__PURE__ */ jsx(Hello, {}), "World"] });
 }
-
 //#endregion
+
 export { World as default };
 ```

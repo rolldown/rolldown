@@ -11,10 +11,10 @@ import "ext2";
 
 //#region foo.js
 const a = "foo";
-
 //#endregion
+
 //#region main.js
 console.log(a);
-
 //#endregion
+
 ```

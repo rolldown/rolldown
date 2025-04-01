@@ -1,6 +1,5 @@
 ---
 source: crates/rolldown_testing/src/integration_test.rs
-snapshot_kind: text
 ---
 # Assets
 
@@ -9,13 +8,14 @@ snapshot_kind: text
 ```js
 
 
+
 //#region commonjs.js
 var require_commonjs = __commonJS({ "commonjs.js"(exports, module) {
 	module.exports = 1;
 } });
 var import_commonjs = __toESM(require_commonjs(), 1);
-
 //#endregion
+
 export { __reExport, __toESM, import_commonjs, require_commonjs };
 ```
 ## entry.js
@@ -25,8 +25,8 @@ import { import_commonjs } from "./commonjs.js";
 
 //#region entry.js
 console.log(import_commonjs.default);
-
 //#endregion
+
 ```
 ## main.js
 
@@ -36,10 +36,10 @@ import { __reExport, __toESM, import_commonjs, require_commonjs } from "./common
 //#region star-export.js
 var star_export_exports = {};
 __reExport(star_export_exports, __toESM(require_commonjs(), 1));
-
 //#endregion
+
 //#region main.mjs
 console.log(import_commonjs.default, star_export_exports);
-
 //#endregion
+
 ```

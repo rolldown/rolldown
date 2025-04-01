@@ -1,6 +1,5 @@
 ---
 source: crates/rolldown_testing/src/integration_test.rs
-snapshot_kind: text
 ---
 # Assets
 
@@ -9,31 +8,32 @@ snapshot_kind: text
 ```js
 
 
+
 //#region a.js
 var require_a = __commonJS({ "a.js"(exports, module) {
 	module.exports = function test(a, b) {
 		return a + b;
 	};
 } });
-
 //#endregion
+
 //#region b.js
 var require_b = __commonJS({ "b.js"(exports, module) {
 	module.exports = function test(a, b) {
 		return a + b;
 	};
 } });
-
 //#endregion
+
 //#region commonjs.js
 var require_commonjs = __commonJS({ "commonjs.js"(exports, module) {
 	module.exports = Math.random() < .5 ? require_a() : require_b();
 } });
 var import_commonjs = __toESM(require_commonjs());
-
 //#endregion
+
 //#region main.js
 assert.equal(import_commonjs.default.call({}, 1, 2), 3);
-
 //#endregion
+
 ```

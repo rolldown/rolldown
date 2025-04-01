@@ -1,6 +1,5 @@
 ---
 source: crates/rolldown_testing/src/integration_test.rs
-snapshot_kind: text
 ---
 # Assets
 
@@ -9,14 +8,15 @@ snapshot_kind: text
 ```js
 
 
+
 //#region entry.js
 var require_entry = __commonJS({ "entry.js"(exports) {
 	const entry = require_entry();
 	input.works = entry[Math.random() < 1 && "__esModule"] === void 0;
 	exports.foo = 123;
 } });
-
 //#endregion
+
 export default require_entry();
 
 ```
@@ -31,14 +31,15 @@ Variant: (format: Cjs)
 ```js
 
 
+
 //#region entry.js
 var require_entry = __commonJS({ "entry.js"(exports) {
 	const entry = require_entry();
 	input.works = entry[Math.random() < 1 && "__esModule"] === void 0;
 	exports.foo = 123;
 } });
-
 //#endregion
+
 module.exports = require_entry();
 
 ```
@@ -63,14 +64,15 @@ Variant: (format: Iife)
 
 
 
+
 //#region entry.js
 var require_entry = __commonJS({ "entry.js"(exports) {
 	const entry = require_entry();
 	input.works = entry[Math.random() < 1 && "__esModule"] === void 0;
 	exports.foo = 123;
 } });
-
 //#endregion
+
 return require_entry();
 
 })();
@@ -91,14 +93,15 @@ Variant: (format: Umd, name: "module")
 })(this, function() {
 
 
+
 //#region entry.js
 var require_entry = __commonJS({ "entry.js"(exports) {
 	const entry = require_entry();
 	input.works = entry[Math.random() < 1 && "__esModule"] === void 0;
 	exports.foo = 123;
 } });
-
 //#endregion
+
 return require_entry();
 
 });

@@ -9,14 +9,14 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 //#region foo.js
 var foo_default = 1;
-
 //#endregion
+
 //#region export.js
 var export_default = { foo: foo_default };
-
 //#endregion
+
 //#region main.js
 export_default.foo;
-
 //#endregion
+
 ```

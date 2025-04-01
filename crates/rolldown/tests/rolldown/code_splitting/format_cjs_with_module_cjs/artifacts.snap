@@ -1,6 +1,5 @@
 ---
 source: crates/rolldown_testing/src/integration_test.rs
-snapshot_kind: text
 ---
 # Assets
 
@@ -13,8 +12,8 @@ const node_assert = require_share.__toESM(require("node:assert"));
 
 //#region main1.js
 node_assert.default.equal((0, require_share.import_share.share)(), 1);
-
 //#endregion
+
 ```
 ## main2.js
 
@@ -25,12 +24,13 @@ const node_assert = require_share.__toESM(require("node:assert"));
 
 //#region main2.js
 node_assert.default.equal((0, require_share.import_share.share)(), 1);
-
 //#endregion
+
 ```
 ## share.js
 
 ```js
+
 
 
 //#region share.js
@@ -40,8 +40,8 @@ var require_share = __commonJS({ "share.js"(exports) {
 	};
 } });
 var import_share = __toESM(require_share());
-
 //#endregion
+
 Object.defineProperty(exports, '__toESM', {
   enumerable: true,
   get: function () {

@@ -1,4 +1,4 @@
-use std::borrow::Cow;
+use std::{borrow::Cow, path::Path};
 
 use anyhow::Ok;
 use ast_visitors::DtsAstScanner;
@@ -10,13 +10,15 @@ use oxc::{
   span::SourceType,
 };
 use oxc_index::IndexVec;
-use rolldown_common::{ModuleId, ModuleIdx, ModuleType, SymbolRefDb, SymbolRefDbForModule};
+use rolldown_common::{ModuleId, ModuleIdx, ModuleType, Output, SymbolRefDb, SymbolRefDbForModule};
 use rolldown_ecmascript::EcmaCompiler;
 use rolldown_plugin::{Plugin, PluginHookMeta, PluginOrder};
 use rolldown_utils::dashmap::{FxDashMap, FxDashSet};
-use types::DtsModule;
+use sugar_path::SugarPath;
+use types::{DtsChunk, DtsModule};
 
 mod ast_visitors;
+mod generate_stage;
 mod link_stage;
 mod types;
 
@@ -155,23 +157,35 @@ impl Plugin for DtsPlugin {
 
     let link_stage = link_stage::DtsLinkStage::new(dts_modules, entries, SymbolRefDb::new(symbols));
     link_stage.link();
+
+    // TODO emit warnings and errors
     Ok(())
   }
 
-  // async fn generate_bundle(
-  //   &self,
-  //   _ctx: &rolldown_plugin::PluginContext,
-  //   args: &mut rolldown_plugin::HookGenerateBundleArgs<'_>,
-  // ) -> rolldown_plugin::HookNoopReturn {
-  //   for output in args.bundle.iter() {
-  //     if let Output::Chunk(chunk) = output {
-  //       for module in &chunk.modules.keys {
-  //         if let Some((ast, _)) = self.asts.get(module) {
-  //           args.bundle.push(Output::Dts(module.clone(), ast.clone()));
-  //         }
-  //       }
-  //     }
-  //   }
-  //   Ok(())
-  // }
+  async fn generate_bundle(
+    &self,
+    _ctx: &rolldown_plugin::PluginContext,
+    args: &mut rolldown_plugin::HookGenerateBundleArgs<'_>,
+  ) -> rolldown_plugin::HookNoopReturn {
+    for output in args.bundle.iter() {
+      if let Output::Chunk(chunk) = output {
+        let dts_modules = chunk
+          .modules
+          .keys
+          .iter()
+          .filter_map(|module_id| self.module_id_to_module_idx.get(module_id).map(|s| *s.value()))
+          .collect::<Vec<_>>();
+        let chunk = DtsChunk {
+          dts_modules,
+          name: {
+            let mut name = Path::new(chunk.name.as_str()).to_path_buf();
+            name.set_extension("d.ts");
+            name.to_slash_lossy().into()
+          },
+          is_entry: chunk.is_entry,
+        };
+      }
+    }
+    Ok(())
+  }
 }

@@ -60,6 +60,17 @@ export function bindingifyRenderChunk(
 
   return {
     plugin: async (ctx, code, chunk, opts, chunks) => {
+      // cache the chunks binding to deduplicated avoid clone chunks
+      if (args.pluginContextData.getRenderChunkMeta() == null) {
+        args.pluginContextData.setRenderChunkMeta({
+          chunks: Object.fromEntries(
+            Object.entries(chunks).map(([key, value]) => [
+              key,
+              transformRenderedChunk(value),
+            ]),
+          ),
+        })
+      }
       const ret = await handler.call(
         new PluginContextImpl(
           args.outputOptions,
@@ -77,14 +88,7 @@ export function bindingifyRenderChunk(
           args.outputOptions,
           args.normalizedOutputPlugins,
         ),
-        {
-          chunks: Object.fromEntries(
-            Object.entries(chunks).map(([key, value]) => [
-              key,
-              transformRenderedChunk(value),
-            ]),
-          ),
-        },
+        args.pluginContextData.getRenderChunkMeta()!,
       )
 
       if (ret == null) {

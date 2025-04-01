@@ -3,11 +3,13 @@ import { ModuleOptions } from '..'
 import { transformModuleInfo } from '../utils/transform-module-info'
 import { PluginContextResolveOptions } from './plugin-context'
 import type { ModuleInfo } from '../types/module-info'
+import { RenderedChunkMeta } from '.'
 
 export class PluginContextData {
   moduleOptionMap: Map<string, ModuleOptions> = new Map()
   resolveOptionsMap: Map<number, PluginContextResolveOptions> = new Map()
   loadModulePromiseMap: Map<string, Promise<void>> = new Map()
+  meta: RenderedChunkMeta | null = null
 
   updateModuleOption(id: string, option: ModuleOptions): ModuleOptions {
     const existing = this.moduleOptionMap.get(id)
@@ -87,5 +89,13 @@ export class PluginContextData {
 
   removeSavedResolveOptions(receipt: number): void {
     this.resolveOptionsMap.delete(receipt)
+  }
+
+  setRenderChunkMeta(meta: RenderedChunkMeta): void {
+    this.meta = meta
+  }
+
+  getRenderChunkMeta(): RenderedChunkMeta | null {
+    return this.meta
   }
 }

@@ -7,8 +7,8 @@ use rolldown_common::{
   NormalModule, side_effects::DeterminedSideEffects,
 };
 use rolldown_common::{
-  ModuleLoaderMsg, RUNTIME_MODULE_ID, ResolvedId, RuntimeModuleBrief, RuntimeModuleTaskResult,
-  SharedNormalizedBundlerOptions,
+  ModuleLoaderMsg, Platform, RUNTIME_MODULE_ID, ResolvedId, RuntimeModuleBrief,
+  RuntimeModuleTaskResult, SharedNormalizedBundlerOptions,
 };
 use rolldown_ecmascript::{EcmaAst, EcmaCompiler};
 use rolldown_error::BuildResult;
@@ -51,13 +51,22 @@ impl RuntimeModuleTask {
       let host = hmr_options.host.as_deref().unwrap_or("localhost");
       let port = hmr_options.port.unwrap_or(3000);
       let addr = format!("{host}:{port}");
-      let runtime_source = arcstr::literal!(concat!(
+      let mut runtime_source = String::new();
+      match self.options.platform {
+        Platform::Node => {
+          runtime_source.push_str("import { WebSocket } from 'ws';\n");
+        }
+        Platform::Browser | Platform::Neutral => {
+          // Browser platform should use the native WebSocket and neutral platform doesn't have any assumptions.
+        }
+      }
+      runtime_source.push_str(&arcstr::literal!(concat!(
         include_str!("../runtime/runtime-base.js"),
         include_str!("../runtime/runtime-tail.js"),
         include_str!("../runtime/runtime-extra-dev.js"),
-      ));
-      let runtime_source: ArcStr = runtime_source.replace("$ADDR", &addr).into();
-      runtime_source
+      )));
+      let runtime_source = runtime_source.replace("$ADDR", &addr);
+      ArcStr::from(runtime_source)
     } else if self.options.is_esm_format_with_node_platform() {
       arcstr::literal!(concat!(
         include_str!("../runtime/runtime-head-node.js"),

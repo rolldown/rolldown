@@ -25,7 +25,7 @@
     "!dist/*.node"
   ],
   "bin": {
-    "rolldown": "./bin/cli.js"
+    "rolldown": "./bin/cli.mjs"
   },
   "main": "./dist/index.cjs",
   "types": "./dist/types/index.d.ts",

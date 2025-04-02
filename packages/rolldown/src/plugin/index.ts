@@ -89,6 +89,8 @@ export type LoadResult = NullValue | string | SourceDescription
 
 export type TransformResult = NullValue | string | Partial<SourceDescription>
 
+export type RenderedChunkMeta = { chunks: Record<string, RenderedChunk> }
+
 export interface FunctionPluginHooks {
   [DEFINED_HOOK_NAMES.onLog]: (
     this: MinimalPluginContext,
@@ -163,7 +165,7 @@ export interface FunctionPluginHooks {
     code: string,
     chunk: RenderedChunk,
     outputOptions: NormalizedOutputOptions,
-    meta: { chunks: Record<string, RenderedChunk> },
+    meta: RenderedChunkMeta,
   ) =>
     | NullValue
     | string

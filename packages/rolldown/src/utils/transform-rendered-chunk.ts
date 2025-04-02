@@ -5,6 +5,7 @@ import { transformToRenderedModule } from './transform-rendered-module'
 export function transformRenderedChunk(
   chunk: BindingRenderedChunk,
 ): RenderedChunk {
+  let modules: null | RenderedChunk['modules'] = null
   return {
     get name() {
       return chunk.name
@@ -34,7 +35,10 @@ export function transformRenderedChunk(
       return chunk.dynamicImports
     },
     get modules() {
-      return transformChunkModules(chunk.modules)
+      if (!modules) {
+        modules = transformChunkModules(chunk.modules)
+      }
+      return modules
     },
   }
 }

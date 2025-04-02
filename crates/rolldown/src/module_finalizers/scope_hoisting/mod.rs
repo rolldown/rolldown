@@ -1,10 +1,10 @@
 use oxc::{
-  allocator::{self, Allocator, CloneIn, IntoIn},
+  allocator::{self, Allocator, Box as ArenaBox, CloneIn, Dummy, IntoIn, TakeIn},
   ast::{
     Comment, NONE,
     ast::{
       self, BindingIdentifier, ClassElement, Expression, IdentifierReference, ImportExpression,
-      MemberExpression, Statement, VariableDeclarationKind,
+      MemberExpression, ObjectExpression, Statement, VariableDeclarationKind,
     },
   },
   semantic::{ReferenceId, SymbolId},
@@ -15,8 +15,7 @@ use rolldown_common::{
   OutputFormat, Platform, SymbolRef, WrapKind,
 };
 use rolldown_ecmascript_utils::{
-  AllocatorExt, AstSnippet, BindingPatternExt, CallExpressionExt, ExpressionExt, StatementExt,
-  TakeIn,
+  AstSnippet, BindingPatternExt, CallExpressionExt, ExpressionExt, StatementExt,
 };
 
 mod finalizer_context;
@@ -264,7 +263,7 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
               ast::AssignmentExpression {
                 left,
                 right: init_expr.take_in(self.alloc),
-                ..TakeIn::dummy(self.alloc)
+                ..ast::AssignmentExpression::dummy(self.alloc)
               }
               .into_in(self.alloc),
             ));
@@ -276,7 +275,7 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
           Some(ast::Statement::ExpressionStatement(
             ast::ExpressionStatement {
               expression: ast::Expression::SequenceExpression(seq_expr.into_in(self.alloc)),
-              ..TakeIn::dummy(self.alloc)
+              ..ast::ExpressionStatement::dummy(self.alloc)
             }
             .into_in(self.alloc),
           ))
@@ -286,13 +285,17 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
     }
   }
 
+  #[expect(clippy::too_many_lines)]
   fn generate_declaration_of_module_namespace_object(&self) -> Vec<ast::Statement<'ast>> {
     let binding_name_for_namespace_object_ref =
       self.canonical_name_for(self.ctx.module.namespace_object_ref);
     // construct `var [binding_name_for_namespace_object_ref] = {}`
     let decl_stmt = self.snippet.var_decl_stmt(
       binding_name_for_namespace_object_ref,
-      ast::Expression::ObjectExpression(TakeIn::dummy(self.alloc)),
+      ast::Expression::ObjectExpression(ArenaBox::new_in(
+        ObjectExpression::dummy(self.alloc),
+        self.alloc,
+      )),
     );
 
     let exports_len = self.ctx.linking_info.canonical_exports().count();
@@ -382,7 +385,7 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
             ast::PropertyKey::StringLiteral(self.snippet.alloc_string_literal(prop_name, SPAN))
           },
           value: self.snippet.only_return_arrow_expr(returned),
-          ..TakeIn::dummy(self.alloc)
+          ..ast::ObjectProperty::dummy(self.alloc)
         }
         .into_in(self.alloc),
       ));
@@ -673,7 +676,10 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
           NONE,
           false,
         ),
-        Some(Expression::ClassExpression(class.take_in(self.alloc))),
+        Some(Expression::ClassExpression(ArenaBox::new_in(
+          class.as_mut().take_in(self.alloc),
+          self.alloc,
+        ))),
         false,
       )),
       false,
@@ -730,7 +736,7 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
                             false,
                           ),
                           property: self.snippet.id_name("default", SPAN),
-                          ..TakeIn::dummy(self.alloc)
+                          ..ast::StaticMemberExpression::dummy(self.alloc)
                         }
                         .into_in(self.alloc),
                       ),
@@ -921,7 +927,7 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
 
   #[allow(clippy::too_many_lines)]
   fn remove_unused_top_level_stmt(&mut self, program: &mut ast::Program<'ast>) {
-    let old_body = self.alloc.take(&mut program.body);
+    let old_body = program.body.take_in(self.alloc);
     // the first statement info is the namespace variable declaration
     // skip first statement info to make sure `program.body` has same index as `stmt_infos`
     old_body.into_iter().enumerate().zip(self.ctx.module.stmt_infos.iter().skip(1)).for_each(
@@ -1070,7 +1076,10 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
                   self.canonical_name_for(self.ctx.module.default_export_ref);
                 func.id = Some(self.snippet.id(canonical_name_for_default_export_ref, SPAN));
               }
-              top_stmt = ast::Statement::FunctionDeclaration(func.take_in(self.alloc));
+              top_stmt = ast::Statement::FunctionDeclaration(ArenaBox::new_in(
+                func.as_mut().take_in(self.alloc),
+                self.alloc,
+              ));
             }
             ast::ExportDefaultDeclarationKind::ClassDeclaration(class) => {
               // "export default class {}" => "class default {}"
@@ -1080,7 +1089,10 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
                   self.canonical_name_for(self.ctx.module.default_export_ref);
                 class.id = Some(self.snippet.id(canonical_name_for_default_export_ref, SPAN));
               }
-              top_stmt = ast::Statement::ClassDeclaration(class.take_in(self.alloc));
+              top_stmt = ast::Statement::ClassDeclaration(ArenaBox::new_in(
+                class.as_mut().take_in(self.alloc),
+                self.alloc,
+              ));
             }
             _ => {}
           }

@@ -1,14 +1,17 @@
 use oxc::{
-  allocator::Allocator,
+  allocator::{Allocator, Box as ArenaBox, Dummy, IntoIn, TakeIn},
+  ast::NONE,
   ast::ast::{self, ExportDefaultDeclarationKind},
   ast_visit::{VisitMut, walk_mut},
   semantic::{Scoping, SymbolId},
-  span::Atom,
+  span::{Atom, SPAN},
 };
+
 use rolldown_common::{IndexModules, Module, ModuleIdx, NormalModule};
 use rolldown_ecmascript_utils::{
   AstSnippet, BindingIdentifierExt, BindingPatternExt, ExpressionExt, quote_stmt, quote_stmts,
 };
+use rolldown_utils::{ecmascript::is_validate_identifier_name, indexmap::FxIndexSet};
 use rustc_hash::FxHashMap;
 
 pub struct HmrAstFinalizer<'me, 'ast> {
@@ -24,10 +27,6 @@ pub struct HmrAstFinalizer<'me, 'ast> {
   pub exports: FxHashMap<Atom<'ast>, Atom<'ast>>,
   pub dependencies: FxIndexSet<ModuleIdx>,
 }
-
-use oxc::{allocator::IntoIn, ast::NONE, span::SPAN};
-use rolldown_ecmascript_utils::TakeIn;
-use rolldown_utils::{ecmascript::is_validate_identifier_name, indexmap::FxIndexSet};
 
 impl<'ast> HmrAstFinalizer<'_, 'ast> {
   pub fn generate_hmr_header(&self) -> Vec<ast::Statement<'ast>> {
@@ -78,7 +77,7 @@ impl<'ast> HmrAstFinalizer<'_, 'ast> {
                 ast::PropertyKey::StringLiteral(self.snippet.alloc_string_literal(prop_name, SPAN))
               },
               value: self.snippet.only_return_arrow_expr(returned),
-              ..TakeIn::dummy(self.alloc)
+              ..ast::ObjectProperty::dummy(self.alloc)
             }
             .into_in(self.alloc),
           ));
@@ -215,6 +214,7 @@ impl<'ast> VisitMut<'ast> for HmrAstFinalizer<'_, 'ast> {
     it.body.push(ast::Statement::VariableDeclaration(var_decl));
   }
 
+  #[expect(clippy::too_many_lines)]
   fn visit_statement(&mut self, node: &mut ast::Statement<'ast>) {
     if let Some(module_decl) = node.as_module_declaration_mut() {
       match module_decl {
@@ -307,7 +307,10 @@ impl<'ast> VisitMut<'ast> for HmrAstFinalizer<'_, 'ast> {
               function.id = Some(self.snippet.id("__rolldown_default__", SPAN));
               self.exports.insert("default".into(), "__rolldown_default__".into());
             }
-            *node = ast::Statement::FunctionDeclaration(function.take_in(self.alloc));
+            *node = ast::Statement::FunctionDeclaration(ArenaBox::new_in(
+              function.as_mut().take_in(self.alloc),
+              self.alloc,
+            ));
           }
           ast::ExportDefaultDeclarationKind::ClassDeclaration(class) => {
             if let Some(id) = &class.id {
@@ -316,7 +319,10 @@ impl<'ast> VisitMut<'ast> for HmrAstFinalizer<'_, 'ast> {
               class.id = Some(self.snippet.id("__rolldown_default__", SPAN));
               self.exports.insert("default".into(), "__rolldown_default__".into());
             }
-            *node = ast::Statement::ClassDeclaration(class.take_in(self.alloc));
+            *node = ast::Statement::ClassDeclaration(ArenaBox::new_in(
+              class.as_mut().take_in(self.alloc),
+              self.alloc,
+            ));
           }
           expr @ ast::match_expression!(ExportDefaultDeclarationKind) => {
             let expr = expr.to_expression_mut();

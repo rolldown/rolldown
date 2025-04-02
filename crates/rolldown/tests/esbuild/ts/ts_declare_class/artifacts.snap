@@ -1,6 +1,23 @@
 ---
 source: crates/rolldown_testing/src/integration_test.rs
 ---
+# warnings
+
+## PARSE_ERROR
+
+```text
+[PARSE_ERROR] Warning: Identifier `foo` has already been declared
+   ╭─[ entry.ts:5:15 ]
+   │
+ 5 │ declare class foo {}
+   │               ─┬─  
+   │                ╰─── `foo` has already been declared here
+ 6 │ let foo = bar()
+   │     ─┬─  
+   │      ╰─── It can not be redeclared here
+───╯
+
+```
 # Assets
 
 ## entry.js

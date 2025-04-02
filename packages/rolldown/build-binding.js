@@ -1,5 +1,5 @@
 const { spawn } = require('node:child_process');
-const fs = require('fs-extra');
+const fs = require('fs');
 const glob = require('glob');
 const path = require('node:path');
 
@@ -42,7 +42,7 @@ cmd.on('close', (code) => {
       },
     );
     nodeFiles.forEach((file) => {
-      fs.rmSync(file);
+      fs.rmSync(file, { force: true, recursive: true });
     });
 
     const wasmFiles = glob.globSync(
@@ -53,7 +53,7 @@ cmd.on('close', (code) => {
     );
 
     wasmFiles.forEach((file) => {
-      fs.rmSync(file);
+      fs.rmSync(file, { recursive: true, force: true });
     });
     console.error('Command failed!');
     process.exit(code);

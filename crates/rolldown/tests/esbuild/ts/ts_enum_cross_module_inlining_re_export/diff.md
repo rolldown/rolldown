@@ -15,24 +15,24 @@ console.log([
 ```js
 
 //#region enums.ts
-let a = /* @__PURE__ */ function(a$1) {
-	a$1["x"] = "a";
-	return a$1;
+let a = /* @__PURE__ */ function(a) {
+	a["x"] = "a";
+	return a;
 }({});
-let b = /* @__PURE__ */ function(b$1) {
-	b$1["x"] = "b";
-	return b$1;
+let b$1 = /* @__PURE__ */ function(b) {
+	b["x"] = "b";
+	return b;
 }({});
-let c = /* @__PURE__ */ function(c$1) {
-	c$1["x"] = "c";
-	return c$1;
+let c = /* @__PURE__ */ function(c) {
+	c["x"] = "c";
+	return c;
 }({});
 
 //#endregion
 //#region entry.js
 console.log([
 	a.x,
-	b.x,
+	b$1.x,
 	c.x
 ]);
 
@@ -45,18 +45,18 @@ console.log([
 +++ rolldown	entry.js
 @@ -1,1 +1,13 @@
 -console.log(["a", "b", "c"]);
-+var a = (function (a$1) {
-+    a$1["x"] = "a";
-+    return a$1;
++var a = (function (a) {
++    a["x"] = "a";
++    return a;
 +})({});
-+var b = (function (b$1) {
-+    b$1["x"] = "b";
-+    return b$1;
++var b$1 = (function (b) {
++    b["x"] = "b";
++    return b;
 +})({});
-+var c = (function (c$1) {
-+    c$1["x"] = "c";
-+    return c$1;
++var c = (function (c) {
++    c["x"] = "c";
++    return c;
 +})({});
-+console.log([a.x, b.x, c.x]);
++console.log([a.x, b$1.x, c.x]);
 
 ```

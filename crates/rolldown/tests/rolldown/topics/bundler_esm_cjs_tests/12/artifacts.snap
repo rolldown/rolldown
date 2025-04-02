@@ -1,6 +1,5 @@
 ---
 source: crates/rolldown_testing/src/integration_test.rs
-snapshot_kind: text
 ---
 # warnings
 
@@ -166,8 +165,8 @@ Variant: (format: Iife)
 
 
 //#region foo.js
-var foo_exports = {};
-__export(foo_exports, { bar: () => bar });
+var foo2 = {};
+__export(foo2, { bar: () => bar });
 var bar;
 var init_foo = __esm({ "foo.js"() {
 	bar = 123;
@@ -176,9 +175,9 @@ var init_foo = __esm({ "foo.js"() {
 //#endregion
 //#region entry.js
 init_foo();
-const foo = (init_foo(), __toCommonJS(foo_exports));
+const foo = (init_foo(), __toCommonJS(foo2));
 input.works = Promise.resolve().then(function() {
-	return init_foo(), foo_exports;
+	return init_foo(), foo2;
 }).then((foo3) => foo.bar === 123 && foo.__esModule === true && bar === 123 && void 0 === void 0 && foo3.bar === 123 && foo3.__esModule === void 0);
 
 //#endregion
@@ -216,8 +215,8 @@ Variant: (format: Umd)
 
 
 //#region foo.js
-var foo_exports = {};
-__export(foo_exports, { bar: () => bar });
+var foo2 = {};
+__export(foo2, { bar: () => bar });
 var bar;
 var init_foo = __esm({ "foo.js"() {
 	bar = 123;
@@ -226,9 +225,9 @@ var init_foo = __esm({ "foo.js"() {
 //#endregion
 //#region entry.js
 init_foo();
-const foo = (init_foo(), __toCommonJS(foo_exports));
+const foo = (init_foo(), __toCommonJS(foo2));
 input.works = Promise.resolve().then(function() {
-	return init_foo(), foo_exports;
+	return init_foo(), foo2;
 }).then((foo3) => foo.bar === 123 && foo.__esModule === true && bar === 123 && void 0 === void 0 && foo3.bar === 123 && foo3.__esModule === void 0);
 
 //#endregion

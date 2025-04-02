@@ -8,8 +8,8 @@ source: crates/rolldown_testing/src/integration_test.rs
 ```js
 
 //#region bar.js
-const c = 123;
+const a = 123;
 
 //#endregion
-export { c as a };
+export { a };
 ```

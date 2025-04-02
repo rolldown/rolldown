@@ -13,10 +13,10 @@ setValue(123);
 ```
 ### rolldown
 ```js
-import { setValue } from "./shared.js";
+import { setValue as setValue$1 } from "./shared.js";
 
 //#region a.js
-setValue(123);
+setValue$1(123);
 
 //#endregion
 ```
@@ -27,8 +27,9 @@ setValue(123);
 +++ rolldown	a.js
 @@ -1,2 +1,2 @@
 -import {setValue} from "./chunk-3GNPIT25.js";
-+import {setValue} from "./shared.js";
- setValue(123);
+-setValue(123);
++import {setValue as setValue$1} from "./shared.js";
++setValue$1(123);
 
 ```
 ## /out/b.js

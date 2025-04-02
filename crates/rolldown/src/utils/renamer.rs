@@ -1,7 +1,8 @@
-use oxc::semantic::ScopeId;
+use oxc::semantic::{ScopeId, Scoping};
 use oxc::syntax::keyword::{GLOBAL_OBJECTS, RESERVED_KEYWORDS};
 use rolldown_common::{
-  AstScopes, ModuleIdx, NormalModule, OutputFormat, SymbolNameRefToken, SymbolRef, SymbolRefDb,
+  AstScopes, GetLocalDb, ModuleIdx, NormalModule, OutputFormat, SymbolNameRefToken, SymbolRef,
+  SymbolRefDb,
 };
 use rolldown_rstr::{Rstr, ToRstr};
 use rolldown_utils::rustc_hash::FxHashMapExt;
@@ -9,7 +10,7 @@ use rolldown_utils::{
   concat_string,
   rayon::{IntoParallelIterator, IntoParallelRefIterator, ParallelIterator},
 };
-use rustc_hash::FxHashMap;
+use rustc_hash::{FxHashMap, FxHashSet};
 use std::borrow::Cow;
 use std::collections::hash_map::Entry;
 
@@ -34,14 +35,22 @@ pub struct Renamer<'name> {
   ///                       // so we rename `a` to `a$2`
   /// ```
   ///
+  injection_keywords: FxHashSet<&'static str>,
   used_canonical_names: FxHashMap<Rstr, u32>,
   canonical_names: FxHashMap<SymbolRef, Rstr>,
   canonical_token_to_name: FxHashMap<SymbolNameRefToken, Rstr>,
   symbol_db: &'name SymbolRefDb,
+  module_scoping: Option<&'name Scoping>,
+  module_used_names: FxHashSet<&'name str>,
+  new_module_used_names: FxHashSet<Rstr>,
 }
 
 impl<'name> Renamer<'name> {
-  pub fn new(symbols: &'name SymbolRefDb, format: OutputFormat) -> Self {
+  pub fn new(
+    base_module_index: Option<ModuleIdx>,
+    symbols: &'name SymbolRefDb,
+    format: OutputFormat,
+  ) -> Self {
     // Port from https://github.com/rollup/rollup/blob/master/src/Chunk.ts#L1377-L1394.
     let mut manual_reserved = match format {
       OutputFormat::Esm | OutputFormat::App => vec![],
@@ -51,15 +60,29 @@ impl<'name> Renamer<'name> {
     // https://github.com/rollup/rollup/blob/bfbea66569491f5466fbba99de2ba6a0225f851b/src/Chunk.ts#L1359
     manual_reserved.extend(["Object", "Promise"]);
     Self {
-      canonical_names: FxHashMap::default(),
-      canonical_token_to_name: FxHashMap::default(),
-      symbol_db: symbols,
       used_canonical_names: manual_reserved
         .iter()
         .chain(RESERVED_KEYWORDS.iter())
         .chain(GLOBAL_OBJECTS.iter())
         .map(|s| (Rstr::new(s), 0))
         .collect(),
+      injection_keywords: manual_reserved.into_iter().collect(),
+      canonical_names: FxHashMap::default(),
+      canonical_token_to_name: FxHashMap::default(),
+      symbol_db: symbols,
+      module_used_names: base_module_index
+        .map(|index| {
+          symbols
+            .local_db(index)
+            .ast_scopes
+            .scoping()
+            .symbol_names()
+            .map(|s| s)
+            .collect::<FxHashSet<_>>()
+        })
+        .unwrap_or_default(),
+      new_module_used_names: FxHashSet::default(),
+      module_scoping: base_module_index.map(|index| symbols.local_db(index).ast_scopes.scoping()),
     }
   }
 
@@ -69,26 +92,54 @@ impl<'name> Renamer<'name> {
 
   pub fn add_symbol_in_root_scope(&mut self, symbol_ref: SymbolRef) {
     let canonical_ref = symbol_ref.canonical_ref(self.symbol_db);
-    let original_name = canonical_ref.name(self.symbol_db).to_rstr();
+    let original_name = symbol_ref.name(self.symbol_db).to_rstr();
+
+    // println!("original name: {:?}", original_name);
     match self.canonical_names.entry(canonical_ref) {
       Entry::Vacant(vacant) => {
-        let mut candidate_name = original_name.clone();
-        loop {
-          match self.used_canonical_names.entry(candidate_name.clone()) {
-            Entry::Occupied(mut occ) => {
-              let next_conflict_index = *occ.get() + 1;
-              *occ.get_mut() = next_conflict_index;
-              candidate_name =
-                concat_string!(original_name, "$", itoa::Buffer::new().format(next_conflict_index))
-                  .into();
-            }
-            Entry::Vacant(vac) => {
-              vac.insert(0);
-              break;
-            }
+        let count = match self.used_canonical_names.entry(original_name.clone()) {
+          Entry::Occupied(entry) => {
+            let count = entry.into_mut();
+            *count += 1;
+            count
           }
+          Entry::Vacant(vacant_entry) => vacant_entry.insert(0),
+        };
+
+        loop {
+          // Create a candidate name
+          let candidate_name = if *count == 0 {
+            original_name.clone()
+          } else {
+            concat_string!(&original_name, "$", itoa::Buffer::new().format(*count)).into()
+          };
+
+          let is_root_binding = self.module_scoping.is_some_and(|scoping| {
+            scoping
+              .get_root_binding(&original_name)
+              .is_some_and(|b| b == canonical_ref.symbol || b == symbol_ref.symbol)
+          });
+
+          // println!(
+          //   "add_symbol_in_root_scope: {:?} {:?} {:?} {:?} {:?}",
+          //   candidate_name,
+          //   canonical_ref,
+          //   self.module_scoping.map(|scoping| { scoping.get_root_binding(&original_name) }),
+          //   count, // self.used_canonical_names.get(&candidate_name) == Some(&0),
+          //   ""     // self.module_used_names
+          // );
+
+          if (is_root_binding && !self.injection_keywords.contains(original_name.as_str()))
+            || !self.module_used_names.contains(candidate_name.as_str())
+              && !self.new_module_used_names.contains(&candidate_name)
+          {
+            self.new_module_used_names.insert(candidate_name.to_owned());
+            vacant.insert(candidate_name.clone());
+            break;
+          }
+
+          *count += 1;
         }
-        vacant.insert(candidate_name);
       }
       Entry::Occupied(_) => {
         // The symbol is already renamed

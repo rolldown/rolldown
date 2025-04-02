@@ -19,8 +19,8 @@ source: crates/rolldown_testing/src/integration_test.rs
 		}
 	}
 	function foo(x = arguments) {
-		var arguments$1;
-		return arguments$1;
+		var arguments;
+		return arguments;
 	}
 })();
 

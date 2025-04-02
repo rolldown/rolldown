@@ -9,12 +9,12 @@ source: crates/rolldown_testing/src/integration_test.rs
 import assert from "node:assert";
 
 //#region node_modules/demo-pkg/index.js
-const foo = 123;
+const foo$1 = 123;
 console.log("hello");
 
 //#endregion
 //#region src/entry.js
-assert.equal(foo, 123);
+assert.equal(foo$1, 123);
 
 //#endregion
 ```

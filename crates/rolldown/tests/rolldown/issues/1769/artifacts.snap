@@ -8,11 +8,11 @@ source: crates/rolldown_testing/src/integration_test.rs
 ```js
 
 //#region lib.js
-const a = 1e3;
+const a$1 = 1e3;
 
 //#endregion
 //#region main.js
-console.log(a);
+console.log(a$1);
 
 //#endregion
 ```

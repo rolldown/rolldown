@@ -339,7 +339,7 @@ switch (foo) {
 	default: using e = f;
 }
 async function foo() {
-	using x$1 = y;
+	using x = y;
 	switch (foo) {
 		case 0: using c = d;
 		default: using e = f;
@@ -424,7 +424,7 @@ async function foo() {
 -} finally {
 -    __callDispose(_stack2, _error2, _hasError2);
 +async function foo() {
-+	using x$1 = y;
++	using x = y;
 +	switch (foo) {
 +		case 0: using c = d;
 +		default: using e = f;

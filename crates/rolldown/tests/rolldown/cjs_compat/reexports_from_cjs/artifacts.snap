@@ -1,13 +1,12 @@
 ---
 source: crates/rolldown_testing/src/integration_test.rs
-snapshot_kind: text
 ---
 # Assets
 
 ## main.js
 
 ```js
-import assert from "node:assert";
+import assert, { default as assert$1 } from "node:assert";
 
 
 //#region commonjs.js
@@ -20,7 +19,7 @@ var import_commonjs = __toESM(require_commonjs(), 1);
 //#region reexports.mjs
 var reexports_exports = {};
 __reExport(reexports_exports, __toESM(require_commonjs(), 1));
-assert.equal(import_commonjs.bar, 1);
+assert$1.equal(import_commonjs.bar, 1);
 
 //#endregion
 //#region main.mjs

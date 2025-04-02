@@ -23,9 +23,9 @@ export {
 function before() {
 	console.log(Foo.FOO);
 }
-var Foo = /* @__PURE__ */ function(Foo$1) {
-	Foo$1[Foo$1["FOO"] = 0] = "FOO";
-	return Foo$1;
+var Foo = /* @__PURE__ */ function(Foo) {
+	Foo[Foo["FOO"] = 0] = "FOO";
+	return Foo;
 }(Foo || {});
 function after() {
 	console.log(Foo.FOO);
@@ -44,9 +44,9 @@ export { after, before };
 -    console.log(0);
 +    console.log(Foo.FOO);
  }
-+var Foo = (function (Foo$1) {
-+    Foo$1[Foo$1["FOO"] = 0] = "FOO";
-+    return Foo$1;
++var Foo = (function (Foo) {
++    Foo[Foo["FOO"] = 0] = "FOO";
++    return Foo;
 +})(Foo || ({}));
  function after() {
 -    console.log(0);

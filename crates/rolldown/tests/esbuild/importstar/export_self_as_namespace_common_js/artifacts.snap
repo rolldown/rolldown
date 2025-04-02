@@ -10,10 +10,10 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 
 //#region entry.js
-var entry_exports = {};
-__export(entry_exports, {
+var ns = {};
+__export(ns, {
 	foo: () => foo,
-	ns: () => entry_exports
+	ns: () => ns
 });
 const foo = 123;
 
@@ -22,7 +22,7 @@ exports.foo = foo
 Object.defineProperty(exports, 'ns', {
   enumerable: true,
   get: function () {
-    return entry_exports;
+    return ns;
   }
 });
 ```

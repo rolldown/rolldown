@@ -20,15 +20,15 @@ export { read };
 ## main.js
 
 ```js
-import { read } from "./indirect2.js";
+import { read as read$1 } from "./indirect2.js";
 
 //#region read.js
-const read$1 = 1;
-console.log(read$1);
+const read$2 = 1;
+console.log(read$2);
 
 //#endregion
 //#region main.js
-console.log(read);
+console.log(read$1);
 import("./indirect.js").then(console.log);
 
 //#endregion

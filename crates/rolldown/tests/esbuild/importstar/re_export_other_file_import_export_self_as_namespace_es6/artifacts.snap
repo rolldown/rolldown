@@ -9,13 +9,13 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 
 //#region foo.js
-var foo_exports = {};
-__export(foo_exports, {
+var ns = {};
+__export(ns, {
 	foo: () => foo,
-	ns: () => foo_exports
+	ns: () => ns
 });
 const foo = 123;
 
 //#endregion
-export { foo, foo_exports as ns };
+export { foo, ns };
 ```

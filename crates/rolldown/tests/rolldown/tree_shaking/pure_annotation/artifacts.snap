@@ -13,7 +13,7 @@ const a = 100;
 //#endregion
 //#region c.js
 function test() {}
-const c = test();
+const c$1 = test();
 
 //#endregion
 //#region d.js

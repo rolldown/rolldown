@@ -10,26 +10,26 @@ source: crates/rolldown_testing/src/integration_test.rs
 //#region nested-number.ts
 let foo;
 (function(_foo) {
-	let x$1 = /* @__PURE__ */ function(x$2) {
-		x$2[x$2["y"] = 0] = "y";
-		x$2[x$2["yy"] = 0] = "yy";
-		return x$2;
+	let x = /* @__PURE__ */ function(x) {
+		x[x["y"] = 0] = "y";
+		x[x["yy"] = 0] = "yy";
+		return x;
 	}({});
-	_foo.x = x$1;
+	_foo.x = x;
 })(foo || (foo = {}));
 (function(_foo2) {
-	x = /* @__PURE__ */ function(x$1) {
-		x$1[x$1["z"] = 1] = "z";
-		return x$1;
+	x = /* @__PURE__ */ function(x) {
+		x[x["z"] = 1] = "z";
+		return x;
 	}(x || {});
 	_foo2.x = x;
 })(foo || (foo = {}));
 (function(_foo3) {
-	let x$1;
+	let x;
 	(function(_x) {
 		console.log(y, z);
-		console.log(x$1.y, x$1.z);
-	})(x$1 || (x$1 = _foo3.x || (_foo3.x = {})));
+		console.log(x.y, x.z);
+	})(x || (x = _foo3.x || (_foo3.x = {})));
 })(foo || (foo = {}));
 
 //#endregion
@@ -42,26 +42,26 @@ export { foo };
 //#region nested-propagation.ts
 let n;
 (function(_n) {
-	let a$1 = /* @__PURE__ */ function(a$2) {
-		a$2[a$2["b"] = 100] = "b";
-		return a$2;
+	let a = /* @__PURE__ */ function(a) {
+		a[a["b"] = 100] = "b";
+		return a;
 	}({});
-	_n.a = a$1;
+	_n.a = a;
 })(n || (n = {}));
 (function(_n2) {
-	let x$1 = /* @__PURE__ */ function(x$2) {
-		x$2[x$2["c"] = n.a.b] = "c";
-		x$2[x$2["d"] = x$2.c * 2] = "d";
-		x$2[x$2["e"] = x$2.d ** 2] = "e";
-		x$2[x$2["f"] = x$2["e"] / 4] = "f";
-		return x$2;
+	let x = /* @__PURE__ */ function(x) {
+		x[x["c"] = n.a.b] = "c";
+		x[x["d"] = x.c * 2] = "d";
+		x[x["e"] = x.d ** 2] = "e";
+		x[x["f"] = x["e"] / 4] = "f";
+		return x;
 	}({});
-	_n2.x = x$1;
+	_n2.x = x;
 })(n || (n = {}));
 (function(_n3) {
-	x = /* @__PURE__ */ function(x$1) {
-		x$1[x$1["g"] = x$1.f >> 4] = "g";
-		return x$1;
+	x = /* @__PURE__ */ function(x) {
+		x[x["g"] = x.f >> 4] = "g";
+		return x;
 	}(x || {});
 	_n3.x = x;
 	console.log(a.b, n.a.b, n["a"]["b"], x.g, n.x.g, n["x"]["g"]);
@@ -77,26 +77,26 @@ export { n };
 //#region nested-string.ts
 let foo;
 (function(_foo) {
-	let x$1 = /* @__PURE__ */ function(x$2) {
-		x$2["y"] = "a";
-		x$2["yy"] = "a";
-		return x$2;
+	let x = /* @__PURE__ */ function(x) {
+		x["y"] = "a";
+		x["yy"] = "a";
+		return x;
 	}({});
-	_foo.x = x$1;
+	_foo.x = x;
 })(foo || (foo = {}));
 (function(_foo2) {
-	x = /* @__PURE__ */ function(x$1) {
-		x$1["z"] = "a";
-		return x$1;
+	x = /* @__PURE__ */ function(x) {
+		x["z"] = "a";
+		return x;
 	}(x || {});
 	_foo2.x = x;
 })(foo || (foo = {}));
 (function(_foo3) {
-	let x$1;
+	let x;
 	(function(_x) {
 		console.log(y, z);
-		console.log(x$1.y, x$1.z);
-	})(x$1 || (x$1 = _foo3.x || (_foo3.x = {})));
+		console.log(x.y, x.z);
+	})(x || (x = _foo3.x || (_foo3.x = {})));
 })(foo || (foo = {}));
 
 //#endregion
@@ -107,14 +107,14 @@ export { foo };
 ```js
 
 //#region number.ts
-let x = /* @__PURE__ */ function(x$1) {
-	x$1[x$1["y"] = 0] = "y";
-	x$1[x$1["yy"] = 0] = "yy";
-	return x$1;
+let x = /* @__PURE__ */ function(x) {
+	x[x["y"] = 0] = "y";
+	x[x["yy"] = 0] = "yy";
+	return x;
 }({});
-x = /* @__PURE__ */ function(x$1) {
-	x$1[x$1["z"] = 1] = "z";
-	return x$1;
+x = /* @__PURE__ */ function(x) {
+	x[x["z"] = 1] = "z";
+	return x;
 }(x || {});
 (function(_x) {
 	console.log(y, z);
@@ -129,20 +129,20 @@ export { x };
 ```js
 
 //#region propagation.ts
-let a = /* @__PURE__ */ function(a$1) {
-	a$1[a$1["b"] = 100] = "b";
-	return a$1;
+let a = /* @__PURE__ */ function(a) {
+	a[a["b"] = 100] = "b";
+	return a;
 }({});
-let x = /* @__PURE__ */ function(x$1) {
-	x$1[x$1["c"] = 100] = "c";
-	x$1[x$1["d"] = 200] = "d";
-	x$1[x$1["e"] = x$1.d ** 2] = "e";
-	x$1[x$1["f"] = x$1["e"] / 4] = "f";
-	return x$1;
+let x = /* @__PURE__ */ function(x) {
+	x[x["c"] = 100] = "c";
+	x[x["d"] = 200] = "d";
+	x[x["e"] = x.d ** 2] = "e";
+	x[x["f"] = x["e"] / 4] = "f";
+	return x;
 }({});
-x = /* @__PURE__ */ function(x$1) {
-	x$1[x$1["g"] = x$1.f >> 4] = "g";
-	return x$1;
+x = /* @__PURE__ */ function(x) {
+	x[x["g"] = x.f >> 4] = "g";
+	return x;
 }(x || {});
 console.log(a.b, a["b"], x.g, x["g"]);
 
@@ -154,14 +154,14 @@ export { a, x };
 ```js
 
 //#region string.ts
-let x = /* @__PURE__ */ function(x$1) {
-	x$1["y"] = "a";
-	x$1["yy"] = "a";
-	return x$1;
+let x = /* @__PURE__ */ function(x) {
+	x["y"] = "a";
+	x["yy"] = "a";
+	return x;
 }({});
-x = /* @__PURE__ */ function(x$1) {
-	x$1["z"] = "a";
-	return x$1;
+x = /* @__PURE__ */ function(x) {
+	x["z"] = "a";
+	return x;
 }(x || {});
 (function(_x) {
 	console.log(y, z);

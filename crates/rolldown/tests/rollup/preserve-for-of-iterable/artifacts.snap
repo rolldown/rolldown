@@ -1,6 +1,5 @@
 ---
 source: crates/rolldown_testing/src/integration_test.rs
-snapshot_kind: text
 ---
 # Assets
 
@@ -10,7 +9,7 @@ snapshot_kind: text
 import assert from "assert";
 
 //#region iterables.js
-let dirty;
+let dirty$1;
 const zeroToFive = { [Symbol.iterator]() {
 	return {
 		current: 0,
@@ -20,7 +19,7 @@ const zeroToFive = { [Symbol.iterator]() {
 				done: false,
 				value: this.current++
 			} : { done: true };
-			dirty = this.current;
+			dirty$1 = this.current;
 			return ret;
 		}
 	};
@@ -28,15 +27,15 @@ const zeroToFive = { [Symbol.iterator]() {
 
 //#endregion
 //#region loops.js
-const iterate = (iterable) => {
+const iterate$1 = (iterable) => {
 	for (const value of iterable);
 };
 
 //#endregion
 //#region main.js
-assert.equal(dirty, void 0);
-iterate(zeroToFive);
-assert.equal(dirty, 5);
+assert.equal(dirty$1, void 0);
+iterate$1(zeroToFive);
+assert.equal(dirty$1, 5);
 
 //#endregion
 ```

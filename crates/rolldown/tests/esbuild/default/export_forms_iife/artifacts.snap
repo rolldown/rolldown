@@ -1,6 +1,5 @@
 ---
 source: crates/rolldown_testing/src/integration_test.rs
-snapshot_kind: text
 ---
 # warnings
 
@@ -26,8 +25,8 @@ const abc = void 0;
 
 //#endregion
 //#region b.js
-var b_exports = {};
-__export(b_exports, { xyz: () => xyz });
+var b = {};
+__export(b, { xyz: () => xyz });
 const xyz = null;
 
 //#endregion
@@ -47,7 +46,7 @@ exports.abc = abc
 Object.defineProperty(exports, 'b', {
   enumerable: true,
   get: function () {
-    return b_exports;
+    return b;
   }
 });
 exports.c = c

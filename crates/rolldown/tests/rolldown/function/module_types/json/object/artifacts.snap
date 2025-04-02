@@ -1,6 +1,5 @@
 ---
 source: crates/rolldown_testing/src/integration_test.rs
-snapshot_kind: text
 ---
 # Assets
 
@@ -10,12 +9,12 @@ snapshot_kind: text
 import assert from "node:assert";
 
 //#region foo.json
-var foo = 1;
-var foo_default = { foo };
+var foo$1 = 1;
+var foo_default = { foo: foo$1 };
 
 //#endregion
 //#region main.js
-assert.deepStrictEqual(foo_default, { foo });
+assert.deepStrictEqual(foo_default, { foo: foo$1 });
 
 //#endregion
 ```

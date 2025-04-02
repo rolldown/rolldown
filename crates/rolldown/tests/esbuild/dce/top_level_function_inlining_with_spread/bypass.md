@@ -99,10 +99,10 @@ function empty3() {}
 function identity1(x) {
 	return x;
 }
-function identity2(x) {
+function identity2$1(x) {
 	return x;
 }
-function identity3(x) {
+function identity3$1(x) {
 	return x;
 }
 
@@ -112,8 +112,8 @@ empty1();
 empty2(args);
 empty3(...args);
 identity1();
-identity2(args);
-identity3(...args);
+identity2$1(args);
+identity3$1(...args);
 
 //#endregion
 ```
@@ -129,20 +129,22 @@ identity3(...args);
  function identity1(x) {
      return x;
  }
-+function identity2(x) {
-+    return x;
-+}
- function identity3(x) {
+-function identity3(x) {
++function identity2$1(x) {
      return x;
  }
 -args;
 -[...args];
++function identity3$1(x) {
++    return x;
++}
 +empty1();
 +empty2(args);
 +empty3(...args);
  identity1();
 -args;
-+identity2(args);
- identity3(...args);
+-identity3(...args);
++identity2$1(args);
++identity3$1(...args);
 
 ```

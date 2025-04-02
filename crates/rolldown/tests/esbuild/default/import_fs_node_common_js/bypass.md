@@ -14,10 +14,10 @@ console.log(fs, import_fs2.readFileSync, import_fs.default);
 ```js
 "use strict";
 
-const fs = __toESM(require("fs"));
+const fs$1 = __toESM(require("fs"));
 
 //#region entry.js
-console.log(fs, fs.readFileSync, fs.default);
+console.log(fs$1, fs$1.readFileSync, fs$1.default);
 
 //#endregion
 ```
@@ -27,10 +27,11 @@ console.log(fs, fs.readFileSync, fs.default);
 --- esbuild	/out.js
 +++ rolldown	entry.js
 @@ -1,4 +1,2 @@
- var fs = __toESM(require("fs"));
+-var fs = __toESM(require("fs"));
 -var import_fs = __toESM(require("fs"));
 -var import_fs2 = require("fs");
 -console.log(fs, import_fs2.readFileSync, import_fs.default);
-+console.log(fs, fs.readFileSync, fs.default);
++var fs$1 = __toESM(require("fs"));
++console.log(fs$1, fs$1.readFileSync, fs$1.default);
 
 ```

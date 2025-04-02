@@ -16,10 +16,10 @@ console.log(a);
 ## b.js
 
 ```js
-import { b } from "./shared.js";
+import { b as b$1 } from "./shared.js";
 
 //#region b.js
-console.log(b);
+console.log(b$1);
 
 //#endregion
 ```

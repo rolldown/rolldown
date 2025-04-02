@@ -10,7 +10,7 @@ import assert from "node:assert";
 
 //#region shared.js
 let count = 0;
-function reset() {
+function reset$1() {
 	count = 0;
 }
 function inc() {
@@ -20,7 +20,7 @@ var shared_default = count;
 
 //#endregion
 //#region async-entry.js
-reset();
+reset$1();
 assert.strictEqual(shared_default, 0);
 assert.strictEqual(shared_default, shared_default);
 inc();

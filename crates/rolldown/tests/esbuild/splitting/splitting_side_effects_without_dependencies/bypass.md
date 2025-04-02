@@ -43,10 +43,10 @@ console.log(b);
 ```
 ### rolldown
 ```js
-import { b } from "./shared.js";
+import { b as b$1 } from "./shared.js";
 
 //#region b.js
-console.log(b);
+console.log(b$1);
 
 //#endregion
 ```
@@ -57,7 +57,8 @@ console.log(b);
 +++ rolldown	b.js
 @@ -1,2 +1,2 @@
 -import {b} from "./chunk-Y3CWGI3W.js";
-+import {b} from "./shared.js";
- console.log(b);
+-console.log(b);
++import {b as b$1} from "./shared.js";
++console.log(b$1);
 
 ```

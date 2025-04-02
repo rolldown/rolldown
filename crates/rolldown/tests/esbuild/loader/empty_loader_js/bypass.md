@@ -65,13 +65,13 @@ var default$1 = void 0;
 
 //#endregion
 //#region d.empty
-var named = void 0;
+var named$1 = void 0;
 
 //#endregion
 //#region entry.js
 assert.deepEqual(b_exports, {});
 assert.deepEqual(default$1, void 0);
-assert.equal(named, void 0);
+assert.equal(named$1, void 0);
 
 //#endregion
 //# sourceMappingURL=entry.js.map
@@ -93,8 +93,8 @@ assert.equal(named, void 0);
 -console.log(ns, import_c.default, void 0);
 +var b_exports = {};
 +var default$1 = void 0;
-+var named = void 0;
-+console.log(b_exports, default$1, named);
++var named$1 = void 0;
++console.log(b_exports, default$1, named$1);
 
 ```
 ## metafile.json

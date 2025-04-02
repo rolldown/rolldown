@@ -31,30 +31,30 @@ console.log(reexpo_rt);
 ```
 ### rolldown
 ```js
-import { re_export } from "external-pkg";
+import { re_export as re_export$1 } from "external-pkg";
 import { "reexpo.rt" as reexpo_rt } from "external-pkg2";
 
 //#region replacement.js
-let replace = { test() {} };
+let replace$1 = { test() {} };
 let replaceDot = { test() {} };
 
 //#endregion
 //#region inject.js
-let obj = {};
+let obj$1 = {};
 let sideEffects$1 = console.log("this should be renamed");
 
 //#endregion
 //#region entry.js
 let sideEffects = console.log("side effects");
 let collide = 123;
-console.log(obj.prop);
+console.log(obj$1.prop);
 console.log("defined");
 console.log("should be used");
 console.log("should be used");
-console.log(replace.test);
+console.log(replace$1.test);
 console.log(replaceDot.test);
 console.log(collide);
-console.log(re_export);
+console.log(re_export$1);
 console.log(reexpo_rt);
 
 //#endregion
@@ -69,9 +69,9 @@ console.log(reexpo_rt);
 -var sideEffects2 = console.log("this should be renamed");
 -console.log("This is unused but still has side effects");
 -var replace2 = {
-+import {re_export} from "external-pkg";
++import {re_export as re_export$1} from "external-pkg";
 +import {undefined as reexpo_rt} from "external-pkg2";
-+var replace = {
++var replace$1 = {
      test() {}
  };
  var replaceDot = {
@@ -82,20 +82,20 @@ console.log(reexpo_rt);
 -let sideEffects = console.log("side effects");
 -let collide = 123;
 -console.log(obj2.prop);
-+var obj = {};
++var obj$1 = {};
 +var sideEffects$1 = console.log("this should be renamed");
 +var sideEffects = console.log("side effects");
 +var collide = 123;
-+console.log(obj.prop);
++console.log(obj$1.prop);
  console.log("defined");
  console.log("should be used");
  console.log("should be used");
 -console.log(replace2.test);
-+console.log(replace.test);
++console.log(replace$1.test);
  console.log(replaceDot.test);
  console.log(collide);
 -console.log(re_export2);
-+console.log(re_export);
++console.log(re_export$1);
  console.log(reexpo_rt);
 
 ```

@@ -285,6 +285,7 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
     }
   }
 
+  #[expect(clippy::too_many_lines)]
   fn generate_declaration_of_module_namespace_object(&self) -> Vec<ast::Statement<'ast>> {
     let binding_name_for_namespace_object_ref =
       self.canonical_name_for(self.ctx.module.namespace_object_ref);

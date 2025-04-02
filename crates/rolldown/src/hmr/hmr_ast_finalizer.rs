@@ -214,6 +214,7 @@ impl<'ast> VisitMut<'ast> for HmrAstFinalizer<'_, 'ast> {
     it.body.push(ast::Statement::VariableDeclaration(var_decl));
   }
 
+  #[expect(clippy::too_many_lines)]
   fn visit_statement(&mut self, node: &mut ast::Statement<'ast>) {
     if let Some(module_decl) = node.as_module_declaration_mut() {
       match module_decl {

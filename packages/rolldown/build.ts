@@ -1,8 +1,6 @@
 import nodePath from 'node:path'
-
-import fsExtra from 'fs-extra'
 import { globSync } from 'glob'
-
+import fs from 'node:fs'
 import { defineConfig, OutputOptions, rolldown, type Plugin } from './src/index'
 import pkgJson from './package.json' with { type: 'json' }
 import { colors } from './src/cli/colors'
@@ -44,7 +42,7 @@ const configs = defineConfig([
     output: {
       dir: outputDir,
       format: 'esm',
-      entryFileNames: 'esm/[name].mjs',
+      entryFileNames: '[name].mjs',
       chunkFileNames: 'shared/[name]-[hash].mjs',
     },
     plugins: [
@@ -79,7 +77,7 @@ const configs = defineConfig([
           }
 
           const copyTo = nodePath.resolve(outputDir)
-          fsExtra.ensureDirSync(copyTo)
+          fs.mkdirSync(copyTo, { recursive: true })
 
           if (!IS_RELEASING_CI) {
             // Released `rolldown` package import binary via `@rolldown/binding-<platform>` packages.
@@ -99,13 +97,16 @@ const configs = defineConfig([
                     file,
                     `to ${copyTo}`,
                   )
-                  fsExtra.copyFileSync(file, nodePath.join(copyTo, fileName))
+                  fs.cpSync(file, nodePath.join(copyTo, fileName), {
+                    recursive: true,
+                    force: true,
+                  })
                 }
                 console.log(colors.green('[build:done]'), `Cleaning ${file}`)
                 try {
                   // GitHub windows runner emits `operation not permitted` error, most likely because of the file is still in use.
                   // We could safely ignore the error.
-                  fsExtra.rmSync(file)
+                  fs.rmSync(file, { recursive: true, force: true })
                 } catch {}
               })
             } else {
@@ -118,7 +119,10 @@ const configs = defineConfig([
                   file,
                   `to ${copyTo}`,
                 )
-                fsExtra.copyFileSync(file, nodePath.join(copyTo, fileName))
+                fs.cpSync(file, nodePath.join(copyTo, fileName), {
+                  recursive: true,
+                  force: true,
+                })
                 console.log(colors.green('[build:done]'), `Cleaning ${file}`)
               })
             }
@@ -131,13 +135,16 @@ const configs = defineConfig([
                 file,
                 'to ./dist/shared',
               )
-              fsExtra.copyFileSync(file, nodePath.join(copyTo, fileName))
+              fs.cpSync(file, nodePath.join(copyTo, fileName), {
+                recursive: true,
+                force: true,
+              })
             })
           }
 
           // Copy binding types and rollup types to dist
           const distTypesDir = nodePath.resolve(outputDir, 'types')
-          fsExtra.ensureDirSync(distTypesDir)
+          fs.mkdirSync(distTypesDir, { recursive: true })
           const types = globSync(['./src/*.d.ts'], {
             absolute: true,
           })
@@ -149,7 +156,10 @@ const configs = defineConfig([
               file,
               'to ./dist/shared',
             )
-            fsExtra.copyFileSync(file, nodePath.join(distTypesDir, fileName))
+            fs.cpSync(file, nodePath.join(distTypesDir, fileName), {
+              recursive: true,
+              force: true,
+            })
           })
         },
       },
@@ -179,7 +189,7 @@ const configs = defineConfig([
     output: {
       dir: outputDir,
       format: 'cjs',
-      entryFileNames: 'cjs/[name].cjs',
+      entryFileNames: '[name].cjs',
       chunkFileNames: 'shared/[name]-[hash].cjs',
     },
   },

@@ -1,4 +1,3 @@
-// @ts-check
 import { globSync } from 'glob';
 import { spawnSync } from 'node:child_process';
 import { rmSync } from 'node:fs';

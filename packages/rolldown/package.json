@@ -107,6 +107,7 @@
   "dependencies": {
     "@oxc-project/types": "0.63.0",
     "@valibot/to-json-schema": "1.0.0",
+    "ansis": "^3.17.0",
     "valibot": "1.0.0"
   },
   "peerDependencies": {
@@ -124,7 +125,6 @@
     "@rolldown/testing": "workspace:*",
     "@types/fs-extra": "^11.0.4",
     "@types/lodash-es": "^4.17.12",
-    "colorette": "^2.0.20",
     "consola": "^3.4.2",
     "emnapi": "^1.2.0",
     "execa": "^9.2.0",

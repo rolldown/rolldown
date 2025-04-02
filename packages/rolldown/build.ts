@@ -1,8 +1,8 @@
+import colors from 'ansis';
 import { globSync } from 'glob';
 import fs from 'node:fs';
 import nodePath from 'node:path';
 import pkgJson from './package.json' with { type: 'json' };
-import { colors } from './src/cli/colors';
 import {
   defineConfig,
   OutputOptions,

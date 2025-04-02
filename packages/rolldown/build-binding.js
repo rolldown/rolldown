@@ -1,5 +1,5 @@
 const { spawn } = require('node:child_process');
-const fs = require('fs');
+const fs = require('node:fs');
 const glob = require('glob');
 const path = require('node:path');
 

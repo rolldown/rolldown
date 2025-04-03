@@ -1,6 +1,5 @@
 ---
 source: crates/rolldown_testing/src/integration_test.rs
-snapshot_kind: text
 ---
 # Assets
 
@@ -14,8 +13,8 @@ const abc = void 0;
 
 //#endregion
 //#region b.js
-var b_exports = {};
-__export(b_exports, { xyz: () => xyz });
+var b = {};
+__export(b, { xyz: () => xyz });
 const xyz = null;
 
 //#endregion
@@ -28,5 +27,5 @@ function Fn() {}
 var Class = class {};
 
 //#endregion
-export { Class as C, Class, Fn, abc, b_exports as b, c, entry_default as default, l, v };
+export { Class as C, Class, Fn, abc, b, c, entry_default as default, l, v };
 ```

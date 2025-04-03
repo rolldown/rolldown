@@ -9,11 +9,11 @@ source: crates/rolldown_testing/src/integration_test.rs
 import assert from "node:assert";
 
 //#region another/b/index.js
-const b = 100;
+const b$1 = 100;
 
 //#endregion
 //#region main.js
-assert.equal(b, 100);
+assert.equal(b$1, 100);
 
 //#endregion
 ```

@@ -112,10 +112,10 @@ function foo(__proto__, bar) {
 //#region local-computed.js
 function foo(__proto__, bar) {
 	{
-		let __proto__$1, bar$1;
+		let __proto__, bar;
 		console.log("this must not become \"{ __proto__: ... }\":", {
-			["__proto__"]: __proto__$1,
-			["bar"]: bar$1
+			["__proto__"]: __proto__,
+			["bar"]: bar
 		});
 	}
 }
@@ -134,10 +134,10 @@ function foo(__proto__, bar) {
 -        console.log('this must not become "{ __proto__: ... }":', {
 -            ["__proto__"]: __proto__2,
 -            bar: bar2
-+        let __proto__$1, bar$1;
++        let __proto__, bar;
 +        console.log("this must not become \"{ __proto__: ... }\":", {
-+            ["__proto__"]: __proto__$1,
-+            ["bar"]: bar$1
++            ["__proto__"]: __proto__,
++            ["bar"]: bar
          });
      }
  }

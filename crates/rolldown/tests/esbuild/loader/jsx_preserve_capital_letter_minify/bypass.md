@@ -13,14 +13,14 @@ console.log(<Y tag-must-start-with-capital-letter />);
 ```
 ### rolldown
 ```js
-import { jsx } from "react/jsx-runtime";
+import { jsx as _jsx } from "react/jsx-runtime";
 
 //#region foo.js
 var mustStartWithUpperCaseLetter = class {};
 
 //#endregion
 //#region entry.jsx
-console.log(/* @__PURE__ */ jsx(mustStartWithUpperCaseLetter, { "tag-must-start-with-capital-letter": true }));
+console.log(/* @__PURE__ */ _jsx(mustStartWithUpperCaseLetter, { "tag-must-start-with-capital-letter": true }));
 
 //#endregion
 ```
@@ -33,7 +33,7 @@ console.log(/* @__PURE__ */ jsx(mustStartWithUpperCaseLetter, { "tag-must-start-
 -// foo.js
 -var Y = class {
 -};
-+import { jsx } from "react/jsx-runtime";
++import { jsx as _jsx } from "react/jsx-runtime";
  
 -// entry.jsx
 -console.log(<Y tag-must-start-with-capital-letter />);
@@ -43,7 +43,7 @@ console.log(/* @__PURE__ */ jsx(mustStartWithUpperCaseLetter, { "tag-must-start-
 +
 +//#endregion
 +//#region entry.jsx
-+console.log(/* @__PURE__ */ jsx(mustStartWithUpperCaseLetter, { "tag-must-start-with-capital-letter": true }));
++console.log(/* @__PURE__ */ _jsx(mustStartWithUpperCaseLetter, { "tag-must-start-with-capital-letter": true }));
 +
 +//#endregion
 \ No newline at end of file

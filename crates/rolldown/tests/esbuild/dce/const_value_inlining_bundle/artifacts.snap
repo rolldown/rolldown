@@ -24,7 +24,7 @@ function bar() {
 ```js
 
 //#region circular-re-export-cycle.js
-const baz = 0;
+const baz$1 = 0;
 console.log(bar());
 
 //#endregion
@@ -36,7 +36,7 @@ function bar() {
 
 //#endregion
 //#region circular-re-export-entry.js
-console.log(baz);
+console.log(baz$1);
 
 //#endregion
 ```

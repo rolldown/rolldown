@@ -8,11 +8,11 @@ source: crates/rolldown_testing/src/integration_test.rs
 ```js
 
 //#region node_modules/pkg/button.jsx
-const Button = () => /* @__PURE__ */ React.createElement("button", null);
+const Button$1 = () => /* @__PURE__ */ React.createElement("button", null);
 
 //#endregion
 //#region test.jsx
-render(/* @__PURE__ */ React.createElement(Button, null));
+render(/* @__PURE__ */ React.createElement(Button$1, null));
 
 //#endregion
 ```

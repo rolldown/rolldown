@@ -34,8 +34,8 @@ let foo = 123;
 //#endregion
 //#region bar/test.js
 var test_exports = {};
-__export(test_exports, { bar: () => bar });
-let bar = 123;
+__export(test_exports, { bar: () => bar$1 });
+let bar$1 = 123;
 
 //#endregion
 //#region entry.js
@@ -63,11 +63,11 @@ console.log(exports, module.exports, test_exports$1, test_exports);
 +var foo = 123;
 +var test_exports = {};
 +__export(test_exports, {
-+    bar: () => bar
++    bar: () => bar$1
  });
 -var m = 123;
 -console.log(exports, module.exports, o, r);
-+var bar = 123;
++var bar$1 = 123;
 +console.log(exports, module.exports, test_exports$1, test_exports);
 
 ```

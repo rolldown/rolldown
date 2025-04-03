@@ -13,10 +13,10 @@ console.log(foo());
 ```
 ### rolldown
 ```js
-import { foo } from "./common.js";
+import { foo as foo$1 } from "./common.js";
 
 //#region a.js
-console.log(foo());
+console.log(foo$1());
 
 //#endregion
 ```
@@ -27,8 +27,9 @@ console.log(foo());
 +++ rolldown	a.js
 @@ -1,2 +1,2 @@
 -import {foo} from "./chunk-QVTGQSXT.js";
-+import {foo} from "./common.js";
- console.log(foo());
+-console.log(foo());
++import {foo as foo$1} from "./common.js";
++console.log(foo$1());
 
 ```
 ## /out/b.js
@@ -43,10 +44,10 @@ console.log(bar());
 ```
 ### rolldown
 ```js
-import { bar } from "./common.js";
+import { bar as bar$1 } from "./common.js";
 
 //#region b.js
-console.log(bar());
+console.log(bar$1());
 
 //#endregion
 ```
@@ -57,8 +58,9 @@ console.log(bar());
 +++ rolldown	b.js
 @@ -1,2 +1,2 @@
 -import {bar} from "./chunk-QVTGQSXT.js";
-+import {bar} from "./common.js";
- console.log(bar());
+-console.log(bar());
++import {bar as bar$1} from "./common.js";
++console.log(bar$1());
 
 ```
 ## /out/chunk-QVTGQSXT.js

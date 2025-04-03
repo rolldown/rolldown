@@ -194,6 +194,59 @@ console.log({
  });
 
 ```
+## /out/circular-re-export-entry.js
+### esbuild
+```js
+// circular-re-export-cycle.js
+var baz = 0;
+console.log(bar());
+
+// circular-re-export-constants.js
+var foo = 123;
+function bar() {
+  return foo;
+}
+
+// circular-re-export-entry.js
+console.log(baz);
+```
+### rolldown
+```js
+
+//#region circular-re-export-cycle.js
+const baz$1 = 0;
+console.log(bar());
+
+//#endregion
+//#region circular-re-export-constants.js
+const foo = 123;
+function bar() {
+	return foo;
+}
+
+//#endregion
+//#region circular-re-export-entry.js
+console.log(baz$1);
+
+//#endregion
+```
+### diff
+```diff
+===================================================================
+--- esbuild	/out/circular-re-export-entry.js
++++ rolldown	circular-re-export-entry.js
+@@ -1,7 +1,7 @@
+-var baz = 0;
++var baz$1 = 0;
+ console.log(bar());
+ var foo = 123;
+ function bar() {
+     return foo;
+ }
+-console.log(baz);
++console.log(baz$1);
+
+```
 ## /out/non-circular-export-entry.js
 ### esbuild
 ```js

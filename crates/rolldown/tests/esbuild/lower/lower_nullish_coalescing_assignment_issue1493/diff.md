@@ -23,7 +23,7 @@ function _checkPrivateRedeclaration(e, t) {
 
 //#endregion
 //#region ../../../../../../node_modules/.pnpm/@oxc-project+runtime@0.62.0/node_modules/@oxc-project/runtime/src/helpers/esm/classPrivateFieldInitSpec.js
-function _classPrivateFieldInitSpec(e, t, a) {
+function _classPrivateFieldInitSpec$1(e, t, a) {
 	_checkPrivateRedeclaration(e, t), t.set(e, a);
 }
 
@@ -36,7 +36,7 @@ function _assertClassBrand(e, t, n) {
 
 //#endregion
 //#region ../../../../../../node_modules/.pnpm/@oxc-project+runtime@0.62.0/node_modules/@oxc-project/runtime/src/helpers/esm/classPrivateFieldGet2.js
-function _classPrivateFieldGet2(s, a) {
+function _classPrivateFieldGet2$1(s, a) {
 	return s.get(_assertClassBrand(s, a));
 }
 
@@ -51,11 +51,11 @@ function _classPrivateFieldSet2(s, a, r) {
 var _a = /* @__PURE__ */ new WeakMap();
 var A = class {
 	constructor() {
-		_classPrivateFieldInitSpec(this, _a, void 0);
+		_classPrivateFieldInitSpec$1(this, _a, void 0);
 	}
 	f() {
-		var _classPrivateFieldGet2$1;
-		(_classPrivateFieldGet2$1 = _classPrivateFieldGet2(_a, this)) !== null && _classPrivateFieldGet2$1 !== void 0 || _classPrivateFieldSet2(_a, this, 1);
+		var _classPrivateFieldGet2;
+		(_classPrivateFieldGet2 = _classPrivateFieldGet2$1(_a, this)) !== null && _classPrivateFieldGet2 !== void 0 || _classPrivateFieldSet2(_a, this, 1);
 	}
 };
 
@@ -71,14 +71,14 @@ export { A };
 +function _checkPrivateRedeclaration(e, t) {
 +    if (t.has(e)) throw new TypeError("Cannot initialize the same private elements twice on an object");
 +}
-+function _classPrivateFieldInitSpec(e, t, a) {
++function _classPrivateFieldInitSpec$1(e, t, a) {
 +    (_checkPrivateRedeclaration(e, t), t.set(e, a));
 +}
 +function _assertClassBrand(e, t, n) {
 +    if ("function" == typeof e ? e === t : e.has(t)) return arguments.length < 3 ? t : n;
 +    throw new TypeError("Private element is not present on this object");
 +}
-+function _classPrivateFieldGet2(s, a) {
++function _classPrivateFieldGet2$1(s, a) {
 +    return s.get(_assertClassBrand(s, a));
 +}
 +function _classPrivateFieldSet2(s, a, r) {
@@ -88,12 +88,12 @@ export { A };
  var A = class {
 -    #a;
 +    constructor() {
-+        _classPrivateFieldInitSpec(this, _a, void 0);
++        _classPrivateFieldInitSpec$1(this, _a, void 0);
 +    }
      f() {
 -        this.#a ?? (this.#a = 1);
-+        var _classPrivateFieldGet2$1;
-+        (_classPrivateFieldGet2$1 = _classPrivateFieldGet2(_a, this)) !== null && _classPrivateFieldGet2$1 !== void 0 || _classPrivateFieldSet2(_a, this, 1);
++        var _classPrivateFieldGet2;
++        (_classPrivateFieldGet2 = _classPrivateFieldGet2$1(_a, this)) !== null && _classPrivateFieldGet2 !== void 0 || _classPrivateFieldSet2(_a, this, 1);
      }
  };
  export {A};

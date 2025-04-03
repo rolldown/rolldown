@@ -13,14 +13,14 @@ console.log(<MustStartWithUpperCaseLetter />);
 ```
 ### rolldown
 ```js
-import { jsx } from "react/jsx-runtime";
+import { jsx as _jsx } from "react/jsx-runtime";
 
 //#region foo.js
 var mustStartWithUpperCaseLetter = class {};
 
 //#endregion
 //#region entry.jsx
-console.log(/* @__PURE__ */ jsx(mustStartWithUpperCaseLetter, {}));
+console.log(/* @__PURE__ */ _jsx(mustStartWithUpperCaseLetter, {}));
 
 //#endregion
 ```
@@ -33,7 +33,7 @@ console.log(/* @__PURE__ */ jsx(mustStartWithUpperCaseLetter, {}));
 -// foo.js
 -var MustStartWithUpperCaseLetter = class {
 -};
-+import { jsx } from "react/jsx-runtime";
++import { jsx as _jsx } from "react/jsx-runtime";
  
 -// entry.jsx
 -console.log(<MustStartWithUpperCaseLetter />);
@@ -43,7 +43,7 @@ console.log(/* @__PURE__ */ jsx(mustStartWithUpperCaseLetter, {}));
 +
 +//#endregion
 +//#region entry.jsx
-+console.log(/* @__PURE__ */ jsx(mustStartWithUpperCaseLetter, {}));
++console.log(/* @__PURE__ */ _jsx(mustStartWithUpperCaseLetter, {}));
 +
 +//#endregion
 \ No newline at end of file

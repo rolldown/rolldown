@@ -93,16 +93,16 @@ function empty3() {}
 function identity1(x) {
 	return x;
 }
-function identity2(x) {
+function identity2$1(x) {
 	return x;
 }
-function identity3(x) {
+function identity3$1(x) {
 	return x;
 }
 
 //#endregion
 //#region entry-outer.js
-check(empty1(), empty2(args), empty3(...args), identity1(), identity2(args), identity3(...args));
+check(empty1(), empty2(args), empty3(...args), identity1(), identity2$1(args), identity3$1(...args));
 
 //#endregion
 ```
@@ -118,13 +118,14 @@ check(empty1(), empty2(args), empty3(...args), identity1(), identity2(args), ide
  function identity1(x) {
      return x;
  }
-+function identity2(x) {
-+    return x;
-+}
- function identity3(x) {
+-function identity3(x) {
++function identity2$1(x) {
      return x;
  }
 -check(void 0, (args, void 0), ([...args], void 0), identity1(), args, identity3(...args));
-+check(empty1(), empty2(args), empty3(...args), identity1(), identity2(args), identity3(...args));
++function identity3$1(x) {
++    return x;
++}
++check(empty1(), empty2(args), empty3(...args), identity1(), identity2$1(args), identity3$1(...args));
 
 ```

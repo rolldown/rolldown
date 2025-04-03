@@ -1,6 +1,5 @@
 ---
 source: crates/rolldown_testing/src/integration_test.rs
-snapshot_kind: text
 ---
 # warnings
 
@@ -33,20 +32,20 @@ snapshot_kind: text
 ## a.js
 
 ```js
-import { foo } from "./common.js";
+import { foo as foo$1 } from "./common.js";
 
 //#region a.js
-console.log(foo());
+console.log(foo$1());
 
 //#endregion
 ```
 ## b.js
 
 ```js
-import { bar } from "./common.js";
+import { bar as bar$1 } from "./common.js";
 
 //#region b.js
-console.log(bar());
+console.log(bar$1());
 
 //#endregion
 ```

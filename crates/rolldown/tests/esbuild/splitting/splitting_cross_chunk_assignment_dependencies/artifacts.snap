@@ -6,10 +6,10 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## a.js
 
 ```js
-import { setValue } from "./shared.js";
+import { setValue as setValue$1 } from "./shared.js";
 
 //#region a.js
-setValue(123);
+setValue$1(123);
 
 //#endregion
 ```

@@ -10,16 +10,16 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 //#region node_modules/demo-pkg/module.js
 var module_exports = {};
-__export(module_exports, { default: () => module_default });
-var module_default;
+__export(module_exports, { default: () => value });
+var value;
 var init_module = __esm({ "node_modules/demo-pkg/module.js"() {
-	module_default = "module";
+	value = "module";
 } });
 
 //#endregion
 //#region src/entry.js
 init_module();
-console.log(module_default, (init_module(), __toCommonJS(module_exports)));
+console.log(value, (init_module(), __toCommonJS(module_exports)));
 
 //#endregion
 ```

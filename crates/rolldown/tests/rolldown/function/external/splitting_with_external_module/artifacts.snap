@@ -6,22 +6,22 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## entry.js
 
 ```js
-import { value } from "./share.js";
+import { value as value$1 } from "./share.js";
 import assert from "node:assert";
 
 //#region entry.js
-assert.equal(value, 1);
+assert.equal(value$1, 1);
 
 //#endregion
 ```
 ## main.js
 
 ```js
-import { value } from "./share.js";
+import { value as value$1 } from "./share.js";
 import assert from "node:assert";
 
 //#region main.js
-assert(value === 1);
+assert(value$1 === 1);
 
 //#endregion
 ```

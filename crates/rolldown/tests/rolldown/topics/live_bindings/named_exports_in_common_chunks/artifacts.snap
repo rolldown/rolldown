@@ -6,19 +6,19 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## async-entry.js
 
 ```js
-import { count, inc, reset } from "./shared.js";
+import { count as count$1, inc, reset as reset$1 } from "./shared.js";
 import assert from "node:assert";
 
 //#region async-entry.js
-reset();
-assert.strictEqual(count, 0);
-assert.strictEqual(count, count);
+reset$1();
+assert.strictEqual(count$1, 0);
+assert.strictEqual(count$1, count$1);
 inc();
-assert.strictEqual(count, 1);
-assert.strictEqual(count, count);
+assert.strictEqual(count$1, 1);
+assert.strictEqual(count$1, count$1);
 inc();
-assert.strictEqual(count, 2);
-assert.strictEqual(count, count);
+assert.strictEqual(count$1, 2);
+assert.strictEqual(count$1, count$1);
 
 //#endregion
 ```

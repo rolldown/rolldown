@@ -34,8 +34,8 @@ let foo = 123;
 //#endregion
 //#region bar/test.js
 var test_exports = {};
-__export(test_exports, { bar: () => bar });
-let bar = 123;
+__export(test_exports, { bar: () => bar$1 });
+let bar$1 = 123;
 
 //#endregion
 //#region entry.js
@@ -61,12 +61,14 @@ node_assert.default.deepEqual(test_exports, { bar: 123 });
  var foo = 123;
 -var test_exports2 = {};
 -__export(test_exports2, {
+-    bar: () => bar
 +var test_exports = {};
 +__export(test_exports, {
-     bar: () => bar
++    bar: () => bar$1
  });
- var bar = 123;
+-var bar = 123;
 -console.log(exports, module.exports, test_exports, test_exports2);
++var bar$1 = 123;
 +console.log(exports, module.exports);
 +node_assert.default.deepEqual(test_exports$1, {
 +    foo: 123

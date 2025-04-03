@@ -204,7 +204,7 @@ switch (foo) {
 	default: using e = f;
 }
 async function foo() {
-	using x$1 = y;
+	using x = y;
 	switch (foo) {
 		case 0: using c = d;
 		default: using e = f;
@@ -261,7 +261,7 @@ async function foo() {
 -}
 \ No newline at end of file
 +async function foo() {
-+	using x$1 = y;
++	using x = y;
 +	switch (foo) {
 +		case 0: using c = d;
 +		default: using e = f;

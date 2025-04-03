@@ -1,16 +1,15 @@
 ---
 source: crates/rolldown_testing/src/integration_test.rs
-snapshot_kind: text
 ---
 # Assets
 
 ## main.js
 
 ```js
-import { parse } from "ext";
+import { parse, parse as parse$1 } from "ext";
 
 //#region foo.js
-console.log(parse);
+console.log(parse$1);
 
 //#endregion
 //#region main.js

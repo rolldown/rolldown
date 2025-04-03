@@ -47,10 +47,10 @@ console.log([
 ```js
 
 //#region enum-constants.ts
-let x = /* @__PURE__ */ function(x$1) {
-	x$1[x$1["a"] = 3] = "a";
-	x$1[x$1["b"] = 6] = "b";
-	return x$1;
+let x = /* @__PURE__ */ function(x) {
+	x[x["a"] = 3] = "a";
+	x[x["b"] = 6] = "b";
+	return x;
 }({});
 
 //#endregion
@@ -102,10 +102,10 @@ console.log([
 +++ rolldown	enum-entry.js
 @@ -1,1 +1,6 @@
 -console.log([6, -6, -7, !6, typeof 6], [9, -3, 3 * 6, 3 / 6, 3 % 6, 3 ** 6], [!0, !1, !0, !1, !1, !0, !1, !0], [12, 3, 3], [2, 7, 5], [6, 3, 3, "y", "n"]);
-+var x = (function (x$1) {
-+    x$1[x$1["a"] = 3] = "a";
-+    x$1[x$1["b"] = 6] = "b";
-+    return x$1;
++var x = (function (x) {
++    x[x["a"] = 3] = "a";
++    x[x["b"] = 6] = "b";
++    return x;
 +})({});
 +console.log([+x.b, -x.b, ~x.b, !x.b, typeof x.b], [x.a + x.b, x.a - x.b, x.a * x.b, x.a / x.b, x.a % x.b, x.a ** x.b], [x.a < x.b, x.a > x.b, x.a <= x.b, x.a >= x.b, x.a == x.b, x.a != x.b, x.a === x.b, x.a !== x.b], [x.b << 1, x.b >> 1, x.b >>> 1], [x.a & x.b, x.a | x.b, x.a ^ x.b], [x.a && x.b, x.a || x.b, x.a ?? x.b, x.a ? "y" : "n", !x.b ? "y" : "n"]);
 
@@ -229,11 +229,11 @@ console.log({
 const a = 2;
 const b = 4;
 const c = 8;
-let x = /* @__PURE__ */ function(x$1) {
-	x$1[x$1["a"] = 16] = "a";
-	x$1[x$1["b"] = 32] = "b";
-	x$1[x$1["c"] = 64] = "c";
-	return x$1;
+let x = /* @__PURE__ */ function(x) {
+	x[x["a"] = 16] = "a";
+	x[x["b"] = 32] = "b";
+	x[x["c"] = 64] = "c";
+	return x;
 }({});
 
 //#endregion
@@ -254,11 +254,11 @@ console.log({
 +var a = 2;
 +var b = 4;
 +var c = 8;
-+var x = (function (x$1) {
-+    x$1[x$1["a"] = 16] = "a";
-+    x$1[x$1["b"] = 32] = "b";
-+    x$1[x$1["c"] = 64] = "c";
-+    return x$1;
++var x = (function (x) {
++    x[x["a"] = 16] = "a";
++    x[x["b"] = 32] = "b";
++    x[x["c"] = 64] = "c";
++    return x;
 +})({});
  console.log({
 -    "should be 4": 4,

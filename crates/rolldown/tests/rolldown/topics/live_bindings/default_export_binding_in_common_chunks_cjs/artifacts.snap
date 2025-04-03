@@ -1,6 +1,5 @@
 ---
 source: crates/rolldown_testing/src/integration_test.rs
-snapshot_kind: text
 ---
 # Assets
 
@@ -13,7 +12,7 @@ const node_assert = __toESM(require("node:assert"));
 
 //#region shared.js
 let count = 0;
-function reset() {
+function reset$1() {
 	count = 0;
 }
 function inc() {
@@ -22,7 +21,7 @@ function inc() {
 
 //#endregion
 //#region async-entry.js
-reset();
+reset$1();
 node_assert.default.strictEqual(count, 0);
 node_assert.default.strictEqual(count, count);
 inc();

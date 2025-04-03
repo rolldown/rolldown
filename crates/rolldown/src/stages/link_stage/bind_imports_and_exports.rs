@@ -191,10 +191,13 @@ impl LinkStage<'_> {
           let legal_name = legitimize_identifier_name(key);
           Cow::Owned(legal_name.as_ref().into())
         };
-        let target_symbol = self.symbols.create_facade_root_symbol_ref(*module_idx, &name);
-        for symbol_ref in symbol_set {
-          self.symbols.link(*symbol_ref, target_symbol);
-        }
+
+        // TODO: What is the propose of this logic?
+        // let target_symbol = self.symbols.create_facade_root_symbol_ref(*module_idx, &name);
+        // println!("{:?} {:?}", symbol_set, target_symbol);
+        // for symbol_ref in symbol_set {
+        //   self.symbols.link(*symbol_ref, target_symbol);
+        // }
       }
     }
     self.metas.par_iter_mut().for_each(|meta| {

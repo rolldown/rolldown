@@ -6,10 +6,10 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## a.js
 
 ```js
-import { setX } from "./x.js";
+import { setX as setX$1 } from "./x.js";
 
 //#region a.js
-setX();
+setX$1();
 
 //#endregion
 ```
@@ -17,23 +17,23 @@ setX();
 
 ```js
 import "./x.js";
-import { setZ } from "./z.js";
+import { setZ as setZ$1 } from "./z.js";
 
 //#region b.js
-setZ();
+setZ$1();
 
 //#endregion
 ```
 ## c.js
 
 ```js
-import { setX2 } from "./x.js";
-import { setY2, setZ2 } from "./z.js";
+import { setX2 as setX2$1 } from "./x.js";
+import { setY2 as setY2$1, setZ2 as setZ2$1 } from "./z.js";
 
 //#region c.js
-setX2();
-setY2();
-setZ2();
+setX2$1();
+setY2$1();
+setZ2$1();
 
 //#endregion
 ```

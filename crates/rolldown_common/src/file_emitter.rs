@@ -187,7 +187,7 @@ impl FileEmitter {
       let mut filename = filename_template.render(
         name,
         Some(extension.unwrap_or_default()),
-        Some(|len: Option<usize>| &hash[..len.unwrap_or(8)]),
+        Some(|len: Option<usize>| &hash[..len.map_or(8, |len| len.min(21))]),
       );
 
       // deconflict file name

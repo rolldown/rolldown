@@ -182,15 +182,21 @@ const WatchOptionsSchema = v.strictObject({
 const ChecksOptionsSchema = v.strictObject({
   circularDependency: v.pipe(
     v.optional(v.boolean()),
-    v.description('Whether to emit warning when detecting circular dependency'),
+    v.description(
+      'Whether to emit warning when detecting circular dependency',
+    ),
   ),
   eval: v.pipe(
     v.optional(v.boolean()),
-    v.description('Whether to emit warning when detecting eval'),
+    v.description(
+      'Whether to emit warning when detecting eval',
+    ),
   ),
   missingGlobalName: v.pipe(
     v.optional(v.boolean()),
-    v.description('Whether to emit warning when detecting missing global name'),
+    v.description(
+      'Whether to emit warning when detecting missing global name',
+    ),
   ),
   missingNameOptionForIifeExport: v.pipe(
     v.optional(v.boolean()),
@@ -200,19 +206,27 @@ const ChecksOptionsSchema = v.strictObject({
   ),
   mixedExport: v.pipe(
     v.optional(v.boolean()),
-    v.description('Whether to emit warning when detecting mixed export'),
+    v.description(
+      'Whether to emit warning when detecting mixed export',
+    ),
   ),
   unresolvedEntry: v.pipe(
     v.optional(v.boolean()),
-    v.description('Whether to emit warning when detecting unresolved entry'),
+    v.description(
+      'Whether to emit warning when detecting unresolved entry',
+    ),
   ),
   unresolvedImport: v.pipe(
     v.optional(v.boolean()),
-    v.description('Whether to emit warning when detecting unresolved import'),
+    v.description(
+      'Whether to emit warning when detecting unresolved import',
+    ),
   ),
   filenameConflict: v.pipe(
     v.optional(v.boolean()),
-    v.description('Whether to emit warning when detecting filename conflict'),
+    v.description(
+      'Whether to emit warning when detecting filename conflict',
+    ),
   ),
   commonJsVariableInEsm: v.pipe(
     v.optional(v.boolean()),
@@ -222,7 +236,9 @@ const ChecksOptionsSchema = v.strictObject({
   ),
   importIsUndefined: v.pipe(
     v.optional(v.boolean()),
-    v.description('Whether to emit warning when detecting import is undefined'),
+    v.description(
+      'Whether to emit warning when detecting import is undefined',
+    ),
   ),
   configurationFieldConflict: v.pipe(
     v.optional(v.boolean()),

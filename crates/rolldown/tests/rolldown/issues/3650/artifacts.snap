@@ -1,0 +1,65 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## first.js
+
+```js
+import { __esm, __export } from "./rolldown-runtime.js";
+import { init_second, value$1 as value } from "./second.js";
+
+//#region first.js
+var first_exports = {};
+__export(first_exports, { value: () => value$1 });
+var value$1;
+var init_first = __esm({ "first.js"() {
+	init_second();
+	value$1 = "first" + value;
+} });
+
+//#endregion
+export { first_exports, init_first, value$1 as value };
+```
+## main.js
+
+```js
+import { __esm } from "./rolldown-runtime.js";
+import { init_second, second_exports } from "./second.js";
+import { first_exports, init_first } from "./first.js";
+
+//#region main.js
+var init_main = __esm({ "main.js"() {
+	init_first();
+	init_second();
+	console.log(first_exports, second_exports);
+} });
+
+//#endregion
+init_main();
+```
+## rolldown-runtime.js
+
+```js
+
+
+export { __esm, __export };
+```
+## second.js
+
+```js
+import { __esm, __export } from "./rolldown-runtime.js";
+import { init_first, value } from "./first.js";
+
+//#region second.js
+var second_exports = {};
+__export(second_exports, { value: () => value$1 });
+var value$1;
+var init_second = __esm({ "second.js"() {
+	init_first();
+	value$1 = "second" + value;
+} });
+
+//#endregion
+export { init_second, second_exports, value$1 };
+```

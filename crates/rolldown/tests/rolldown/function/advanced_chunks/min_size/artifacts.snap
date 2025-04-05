@@ -1,26 +1,12 @@
 ---
 source: crates/rolldown_testing/src/integration_test.rs
-snapshot_kind: text
 ---
 # Assets
 
-## common_a.js
-
-```js
-
-
-//#region a.js
-var init_a = __esm({ "a.js"() {
-	console.log("a");
-} });
-
-//#endregion
-export { __esm, init_a };
-```
 ## common_b.js
 
 ```js
-import { __esm } from "./common_a.js";
+import { __esm } from "./rolldown-runtime.js";
 
 //#region b.js
 var init_b = __esm({ "b.js"() {
@@ -33,9 +19,15 @@ export { init_b };
 ## main.js
 
 ```js
-import { __esm, init_a } from "./common_a.js";
+import { __esm } from "./rolldown-runtime.js";
 import { init_b } from "./common_b.js";
 
+//#region a.js
+var init_a = __esm({ "a.js"() {
+	console.log("a");
+} });
+
+//#endregion
 //#region main.js
 var init_main = __esm({ "main.js"() {
 	init_a();
@@ -44,4 +36,11 @@ var init_main = __esm({ "main.js"() {
 
 //#endregion
 init_main();
+```
+## rolldown-runtime.js
+
+```js
+
+
+export { __esm };
 ```

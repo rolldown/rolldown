@@ -1,13 +1,13 @@
 ---
 source: crates/rolldown_testing/src/integration_test.rs
-snapshot_kind: text
 ---
 # Assets
 
 ## main.js
 
 ```js
-import { __esm, init_lib, lib_default } from "./splited_lib.js";
+import { __esm } from "./rolldown-runtime.js";
+import { init_lib, lib_default } from "./splited_lib.js";
 
 //#region main.js
 var init_main = __esm({ "main.js"() {
@@ -18,10 +18,17 @@ var init_main = __esm({ "main.js"() {
 //#endregion
 init_main();
 ```
-## splited_lib.js
+## rolldown-runtime.js
 
 ```js
 
+
+export { __esm };
+```
+## splited_lib.js
+
+```js
+import { __esm } from "./rolldown-runtime.js";
 
 //#region shaked.js
 var init_shaked = __esm({ "shaked.js"() {} });
@@ -35,5 +42,5 @@ var init_lib = __esm({ "lib.js"() {
 } });
 
 //#endregion
-export { __esm, init_lib, lib_default };
+export { init_lib, lib_default };
 ```

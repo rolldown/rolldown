@@ -307,6 +307,7 @@ pub fn normalize_binding_options(
           })
           .collect::<Vec<_>>()
       }),
+      include_dependencies_recursively: None,
     }),
     checks: input_options.checks.map(Into::into),
     profiler_names: input_options.profiler_names,

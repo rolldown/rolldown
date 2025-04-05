@@ -1,6 +1,5 @@
 ---
 source: crates/rolldown_testing/src/integration_test.rs
-snapshot_kind: text
 ---
 # Assets
 
@@ -23,7 +22,7 @@ export { b };
 ## common.js
 
 ```js
-
+import { __esm } from "./rolldown-runtime.js";
 
 //#region a.js
 var a;
@@ -40,4 +39,11 @@ var init_b = __esm({ "b.js"() {
 
 //#endregion
 export { a, b, init_a, init_b };
+```
+## rolldown-runtime.js
+
+```js
+
+
+export { __esm };
 ```

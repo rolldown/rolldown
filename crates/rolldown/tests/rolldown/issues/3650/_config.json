@@ -1,0 +1,17 @@
+{
+  "config": {
+    "advancedChunks": {
+      "includeDependenciesRecursively": false,
+      "groups": [
+        {
+          "name": "first",
+          "test": "first"
+        },
+        {
+          "name": "second",
+          "test": "second|rolldown:runtime"
+        }
+      ]
+    }
+  }
+}

@@ -1,26 +1,12 @@
 ---
 source: crates/rolldown_testing/src/integration_test.rs
-snapshot_kind: text
 ---
 # Assets
 
 ## 14max-size.js
 
 ```js
-
-//#region rolldown:runtime
-var __getOwnPropNames = Object.getOwnPropertyNames;
-var __esm = (fn, res) => function() {
-	return fn && (res = (0, fn[__getOwnPropNames(fn)[0]])(fn = 0)), res;
-};
-
-//#endregion
-export { __esm };
-```
-## 14max-size2.js
-
-```js
-import { __esm } from "./14max-size.js";
+import { __esm } from "./rolldown-runtime.js";
 
 //#region size-15.js
 var init_size_15 = __esm({ "size-15.js"() {
@@ -30,10 +16,10 @@ var init_size_15 = __esm({ "size-15.js"() {
 //#endregion
 export { init_size_15 };
 ```
-## 14max-size3.js
+## 14max-size2.js
 
 ```js
-import { __esm } from "./14max-size.js";
+import { __esm } from "./rolldown-runtime.js";
 
 //#region size-20.js
 var init_size_20 = __esm({ "size-20.js"() {
@@ -43,10 +29,10 @@ var init_size_20 = __esm({ "size-20.js"() {
 //#endregion
 export { init_size_20 };
 ```
-## 14max-size4.js
+## 14max-size3.js
 
 ```js
-import { __esm } from "./14max-size.js";
+import { __esm } from "./rolldown-runtime.js";
 
 //#region size-41.js
 var init_size_41 = __esm({ "size-41.js"() {
@@ -60,10 +46,10 @@ export { init_size_41 };
 ## main.js
 
 ```js
-import { __esm } from "./14max-size.js";
-import { init_size_15 } from "./14max-size2.js";
-import { init_size_20 } from "./14max-size3.js";
-import { init_size_41 } from "./14max-size4.js";
+import { __esm } from "./rolldown-runtime.js";
+import { init_size_15 } from "./14max-size.js";
+import { init_size_20 } from "./14max-size2.js";
+import { init_size_41 } from "./14max-size3.js";
 
 //#region main.js
 var init_main = __esm({ "main.js"() {
@@ -74,4 +60,17 @@ var init_main = __esm({ "main.js"() {
 
 //#endregion
 init_main();
+```
+## rolldown-runtime.js
+
+```js
+
+//#region rolldown:runtime
+var __getOwnPropNames = Object.getOwnPropertyNames;
+var __esm = (fn, res) => function() {
+	return fn && (res = (0, fn[__getOwnPropNames(fn)[0]])(fn = 0)), res;
+};
+
+//#endregion
+export { __esm };
 ```

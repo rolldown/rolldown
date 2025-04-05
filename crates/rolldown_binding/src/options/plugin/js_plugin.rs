@@ -21,6 +21,7 @@ use super::{
     binding_hook_filter::BindingTransformHookFilter,
     binding_hook_resolve_id_extra_args::BindingHookResolveIdExtraArgs,
     binding_plugin_transform_extra_args::BindingTransformHookExtraArgs,
+    binding_render_chunk_meta_chunks::BindingRenderedChunkMeta,
   },
 };
 
@@ -384,13 +385,7 @@ impl Plugin for JsPlugin {
             args.code.to_string(),
             BindingRenderedChunk::new(Arc::clone(&args.chunk)),
             BindingNormalizedOptions::new(Arc::clone(args.options)),
-            args
-              .chunks
-              .iter()
-              .map(|(filename, chunk)| {
-                (filename.to_string(), BindingRenderedChunk::new(Arc::clone(chunk)))
-              })
-              .collect(),
+            BindingRenderedChunkMeta::new(Arc::clone(&args.chunks)),
           )
             .into(),
         )

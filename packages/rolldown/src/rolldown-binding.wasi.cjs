@@ -95,6 +95,7 @@ module.exports.BindingOutputChunk = __napiModule.exports.BindingOutputChunk
 module.exports.BindingOutputs = __napiModule.exports.BindingOutputs
 module.exports.BindingPluginContext = __napiModule.exports.BindingPluginContext
 module.exports.BindingRenderedChunk = __napiModule.exports.BindingRenderedChunk
+module.exports.BindingRenderedChunkMeta = __napiModule.exports.BindingRenderedChunkMeta
 module.exports.BindingRenderedModule = __napiModule.exports.BindingRenderedModule
 module.exports.BindingTransformPluginContext = __napiModule.exports.BindingTransformPluginContext
 module.exports.BindingWatcher = __napiModule.exports.BindingWatcher

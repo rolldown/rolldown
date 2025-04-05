@@ -77,7 +77,7 @@ pub fn update_outputs(
           update_output_chunk(old_chunk, chunk)?;
         }
         rolldown_common::Output::Asset(_) => {}
-      };
+      }
     }
   }
   for asset in changed.assets {

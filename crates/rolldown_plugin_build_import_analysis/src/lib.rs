@@ -176,7 +176,7 @@ impl<'a> BuildImportAnalysisVisitor<'a> {
     };
     if callee.property.name != "then" {
       return;
-    };
+    }
     let [Argument::ArrowFunctionExpression(arrow_expr)] = expr.arguments.as_slice() else {
       return;
     };

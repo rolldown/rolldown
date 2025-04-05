@@ -92,7 +92,7 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
           .dynamic_import_exports_usage
           .insert(import_record_idx, DynamicImportExportsUsage::Complete);
       }
-    };
+    }
     None
   }
 

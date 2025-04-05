@@ -124,7 +124,7 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
           || self.generated_init_esm_importee_ids.contains(&importee.idx)
         {
           return true;
-        };
+        }
         self.generated_init_esm_importee_ids.insert(importee.idx);
         // `init_foo`
         let wrapper_ref_expr = self.finalized_expr_for_symbol_ref(
@@ -268,7 +268,7 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
               }
               .into_in(self.alloc),
             ));
-          };
+          }
         });
         if seq_expr.expressions.is_empty() {
           None
@@ -356,7 +356,7 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
         }
         OutputFormat::App => unreachable!(),
       }
-    };
+    }
 
     if exports_len == 0 {
       let mut ret = vec![decl_stmt];
@@ -648,7 +648,7 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
     if self.scope.scoping().scope_parent_id(scope_id) != Some(self.scope.scoping().root_scope_id())
     {
       return None;
-    };
+    }
 
     let id = class.id.take()?;
 
@@ -1195,7 +1195,7 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
 
         var_init_stmts.push(var_init);
       }
-    };
+    }
     if let Some(esm_ns) = &self.ctx.module.esm_namespace_in_cjs_node_mode {
       if self.ctx.module.stmt_infos[esm_ns.stmt_info_idx].is_included {
         // `__toESM`
@@ -1249,7 +1249,7 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
 
         var_init_stmts.push(var_init);
       }
-    };
+    }
     var_init_stmts
   }
 }

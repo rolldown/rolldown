@@ -1,8 +1,10 @@
+use std::borrow::Cow;
+use std::fmt::Write as _;
+
 use rolldown_common::ModuleType;
 use rolldown_plugin::{HookTransformOutput, Plugin};
 use rolldown_sourcemap::SourceMap;
 use serde_json::Value;
-use std::borrow::Cow;
 
 #[derive(Debug, Default)]
 pub struct JsonPlugin {
@@ -45,16 +47,17 @@ impl Plugin for JsonPlugin {
         let mut default_object_code = "{\n".to_owned();
         for (key, value) in parsed {
           if rolldown_utils::ecmascript::is_validate_assignee_identifier_name(key) {
-            code += &format!("export const {key} = {};\n", &serialize_value(value)?);
-            default_object_code += &format!("  {key},\n");
+            writeln!(code, "export const {key} = {};", &serialize_value(value)?).unwrap();
+            writeln!(default_object_code, "  {key},").unwrap();
           } else {
             let key = serde_json::to_string(key).unwrap();
-            default_object_code += &format!("  {key}: {},\n", &serialize_value(value)?);
+            writeln!(default_object_code, "  {key}: {},", &serialize_value(value)?).unwrap();
           }
         }
         default_object_code += "}";
 
-        code += &format!("export default {default_object_code};\n");
+        writeln!(code, "export default {default_object_code};").unwrap();
+
         return Ok(Some(HookTransformOutput {
           code: Some(code),
           map: Some(SourceMap::default()),
@@ -133,7 +136,7 @@ fn is_special_query(ext: &str) -> bool {
         return true;
       }
       None => return true,
-      _ => continue,
+      _ => {}
     }
   }
   false
@@ -158,7 +161,7 @@ fn to_esm(data: &Value, named_exports: bool) -> String {
   for (key, value) in data.as_object().unwrap() {
     if rolldown_utils::ecmascript::is_validate_assignee_identifier_name(key) {
       default_export_rows.push(Cow::Borrowed(key));
-      named_export_code += &format!("export const {key} = {value};\n");
+      writeln!(named_export_code, "export const {key} = {value};").unwrap();
     } else {
       let key = serde_json::to_string(key).unwrap();
       default_export_rows.push(Cow::Owned(format!("{key}: {value}",)));

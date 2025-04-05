@@ -73,7 +73,7 @@ fn main() -> anyhow::Result<()> {
               eprintln!("{} should be snake_case", relative_path.display());
             }
             _ => {}
-          };
+          }
         }
       }
     } else {
@@ -91,7 +91,7 @@ fn main() -> anyhow::Result<()> {
               eprintln!("{} should be snake_case", relative_path.display());
             }
             _ => {}
-          };
+          }
         }
       }
     }

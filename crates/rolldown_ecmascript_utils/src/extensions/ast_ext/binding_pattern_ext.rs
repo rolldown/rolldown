@@ -35,7 +35,7 @@ impl<'ast> BindingPatternExt<'ast> for ast::BindingPattern<'ast> {
         ast::BindingPatternKind::AssignmentPattern(assign_pat) => {
           stack.push(&assign_pat.left.kind);
         }
-      };
+      }
     }
     ret
   }

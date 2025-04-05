@@ -154,7 +154,7 @@ impl Bundler {
         if !self.fs.exists(p) {
           self.fs.create_dir_all(p).unwrap();
         }
-      };
+      }
       self
         .fs
         .write(&dest, chunk.content_as_bytes())

@@ -1,8 +1,10 @@
-use crate::{build_error::severity::Severity, utils::is_context_too_long};
+use std::{fmt::Display, fmt::Write as _, ops::Range};
+
 use arcstr::ArcStr;
 use ariadne::{Config, Label, Report, ReportBuilder, ReportKind, Span, sources};
 use rustc_hash::FxHashMap;
-use std::{fmt::Display, ops::Range};
+
+use crate::{build_error::severity::Severity, utils::is_context_too_long};
 
 #[derive(Debug, Clone, PartialEq, PartialOrd, Hash, Eq)]
 pub struct DiagnosticFileId(ArcStr);
@@ -114,12 +116,14 @@ impl Diagnostic {
     for label in self.labels.clone() {
       if is_context_too_long(&label, &self.files) {
         let span = label.span();
-        message += &format!(
+        write!(
+          message,
           "\n - {} in {} at {:?}",
           label.display_info().msg().unwrap_or_default(),
           span.source(),
           span.start()..span.end()
-        );
+        )
+        .expect("Failed to write report message");
       } else {
         builder = builder.with_label(label);
       }

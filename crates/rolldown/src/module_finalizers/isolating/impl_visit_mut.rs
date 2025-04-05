@@ -32,7 +32,7 @@ impl<'ast> VisitMut<'ast> for IsolatingModuleFinalizer<'_, 'ast> {
           self.transform_export_all_declaration(export_all_decl);
         }
         _ => stmts.push(stmt),
-      };
+      }
     }
 
     // Add __esModule flag for esm module
@@ -98,7 +98,7 @@ impl<'ast> VisitMut<'ast> for IsolatingModuleFinalizer<'_, 'ast> {
             );
           }
         }
-      };
+      }
     }
     walk_mut::walk_expression(self, expr);
   }

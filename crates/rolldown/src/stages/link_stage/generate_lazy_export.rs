@@ -180,7 +180,7 @@ fn json_object_expr_to_esm(
           }
         }
         ast::ObjectPropertyKind::SpreadProperty(_) => unreachable!(),
-      };
+      }
     }
     // recreate Json Module
     let stmts = index_map

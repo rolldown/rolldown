@@ -211,7 +211,7 @@ impl LinkStage<'_> {
               continue 'next_export;
             }
           }
-        };
+        }
         sorted_and_non_ambiguous_resolved_exports.push(exported_name.clone());
       }
       sorted_and_non_ambiguous_resolved_exports.sort_unstable();
@@ -257,7 +257,7 @@ impl LinkStage<'_> {
         Entry::Vacant(vac) => {
           vac.insert(CacheStatus::Seen);
         }
-      };
+      }
       let module = module_tables[module_idx].as_normal().unwrap();
       let v = if module.ast_usage.contains(EcmaModuleAstUsage::IsCjsReexport) {
         module.import_records.iter().filter(|item| !item.is_dummy()).all(|item| {
@@ -436,7 +436,7 @@ impl LinkStage<'_> {
                       (None, member_expr_ref.props[cursor..].to_vec()),
                     );
                     return;
-                  };
+                  }
 
                   // TODO(hyf0): suspicious cjs might just fallback to dynamic lookup?
                   if !self.module_table.modules[export_symbol.symbol_ref.owner]

@@ -81,7 +81,7 @@ impl BundlerBuilder {
           )
           .with_severity_warning(),
         );
-      };
+      }
     }
 
     if let Some(ref jsx_fragment_factory) = ts_config.compiler_options.jsx_fragment_factory {

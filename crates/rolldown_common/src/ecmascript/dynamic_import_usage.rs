@@ -38,17 +38,15 @@ impl DynamicImportExportsUsage {
       (_, Self::Complete) => {
         *self = DynamicImportExportsUsage::Complete;
       }
-      (Self::Partial(lhs), rhs) => {
-        match rhs {
-          DynamicImportExportsUsage::Complete => unreachable!(),
-          DynamicImportExportsUsage::Partial(rhs) => {
-            lhs.extend(rhs);
-          }
-          DynamicImportExportsUsage::Single(name) => {
-            lhs.insert(name);
-          }
-        };
-      }
+      (Self::Partial(lhs), rhs) => match rhs {
+        DynamicImportExportsUsage::Complete => unreachable!(),
+        DynamicImportExportsUsage::Partial(rhs) => {
+          lhs.extend(rhs);
+        }
+        DynamicImportExportsUsage::Single(name) => {
+          lhs.insert(name);
+        }
+      },
       (Self::Single(name), rhs) => {
         let set = match rhs {
           DynamicImportExportsUsage::Complete => unreachable!(),
@@ -65,6 +63,6 @@ impl DynamicImportExportsUsage {
         };
         *self = DynamicImportExportsUsage::Partial(set);
       }
-    };
+    }
   }
 }

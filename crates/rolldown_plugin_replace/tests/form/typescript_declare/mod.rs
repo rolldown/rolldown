@@ -57,6 +57,6 @@ async fn typescript_declare() {
   )
   .await;
 
-  let replaced = "declare const NAME: string\nconsole.log(replaced)\n";
+  let replaced = "declare const NAME: string;\nconsole.log(replaced);\n";
   assert_eq!(*code.lock().unwrap().as_ref().unwrap(), replaced);
 }

@@ -1,7 +1,8 @@
+use std::fmt::Write as _;
 use std::fs;
+use std::sync::LazyLock;
 
 use jsonschema::{Draft, Validator};
-use std::sync::LazyLock;
 
 pub use rolldown_testing_config::{TestConfig, TestMeta};
 
@@ -36,7 +37,7 @@ pub fn read_test_config(config_path: &std::path::Path) -> TestConfig {
   let errors = COMPILED_SCHEMA.iter_errors(&config_json);
   let mut msg = String::new();
   for error in errors {
-    msg.push_str(&format!("Validation error: {} in {}\n", error, error.instance_path));
+    writeln!(msg, "Validation error: {} in {}", error, error.instance_path).unwrap();
   }
   assert!(msg.is_empty(), "Failed to validate test config {config_path:?}. Got {msg}");
 

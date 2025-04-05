@@ -445,11 +445,8 @@ impl<'a> SideEffectDetector<'a> {
             for p in &pat.elements {
               match &p {
                 Some(binding_pat)
-                  if matches!(binding_pat.kind, BindingPatternKind::BindingIdentifier(_)) =>
-                {
-                  continue;
-                }
-                None => continue,
+                  if matches!(binding_pat.kind, BindingPatternKind::BindingIdentifier(_)) => {}
+                None => {}
                 _ => {
                   return true;
                 }

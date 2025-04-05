@@ -74,7 +74,7 @@ impl WatcherImpl {
       move |res| {
         if let Err(e) = tx.send(WatcherChannelMsg::NotifyEvent(res)) {
           eprintln!("send watch event error {e:?}");
-        };
+        }
       },
       watch_option,
     )?));

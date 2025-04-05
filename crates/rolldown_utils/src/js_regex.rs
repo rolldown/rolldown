@@ -55,7 +55,7 @@ fn regress_regexp_replace_all<'a>(
   let mut iter = iter.peekable();
   if iter.peek().is_none() {
     return Cow::Borrowed(haystack);
-  };
+  }
 
   let mut ret = String::with_capacity(haystack.len());
   let mut last = 0;

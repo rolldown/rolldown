@@ -348,7 +348,7 @@ impl ModuleLoader {
       if let Entry::Occupied(mut occ) = self.cache.module_id_to_idx.entry(resolved_id.id.clone()) {
         let idx = occ.get().idx();
         occ.insert(VisitState::Invalidate(idx));
-      };
+      }
       // set `Owner` to `None` is safe, since it is used to emit `Unloadable` diagnostic, we know this is
       // exists in fs system, which is loadable.
       // TODO: copy assert_module_type
@@ -606,7 +606,7 @@ impl ModuleLoader {
           Entry::Occupied(mut occ) => {
             occ.get_mut().merge(usage);
           }
-        };
+        }
         acc
       },
     );

@@ -365,7 +365,7 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
         }
       }
       super::IdentifierReferenceKind::Other => {}
-    };
+    }
   }
 
   fn process_global_identifier_ref_by_ancestor(

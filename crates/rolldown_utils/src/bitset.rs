@@ -7,7 +7,7 @@ pub struct BitSet {
 
 impl BitSet {
   pub fn new(max_bit_count: u32) -> Self {
-    Self { entries: vec![0; ((max_bit_count + 7) / 8) as usize] }
+    Self { entries: vec![0; max_bit_count.div_ceil(8) as usize] }
   }
 
   pub fn has_bit(&self, bit: u32) -> bool {

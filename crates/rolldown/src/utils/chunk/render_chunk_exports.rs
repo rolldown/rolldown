@@ -1,5 +1,5 @@
-use crate::{stages::link_stage::LinkStageOutput, types::generator::GenerateContext};
 use std::borrow::Cow;
+use std::fmt::Write as _;
 
 use rolldown_common::{
   Chunk, ChunkKind, EntryPointKind, ExportsKind, IndexModules, ModuleIdx, NormalizedBundlerOptions,
@@ -11,6 +11,8 @@ use rolldown_utils::{
   ecmascript::{property_access_str, to_module_import_export_name},
   indexmap::FxIndexSet,
 };
+
+use crate::{stages::link_stage::LinkStageOutput, types::generator::GenerateContext};
 
 pub fn render_wrapped_entry_chunk(
   ctx: &GenerateContext<'_>,
@@ -164,7 +166,7 @@ pub fn render_chunk_exports(
                           ".",
                           canonical_name.as_str()
                         )));
-                      };
+                      }
                       canonical_name.clone()
                     }
                   }
@@ -220,7 +222,7 @@ pub fn render_chunk_exports(
   });
 });\n".replace("$NAME", binding_ref_name);
 
-          s.push_str(&format!("\nvar {} = require(\"{}\");\n", binding_ref_name, &external.get_import_path(chunk)));
+          write!(s, "\nvar {} = require(\"{}\");\n", binding_ref_name, &external.get_import_path(chunk)).unwrap();
           s.push_str(&import_stmt);
         });
         }

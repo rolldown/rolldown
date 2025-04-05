@@ -429,7 +429,7 @@ impl<'ast> AstSnippet<'ast> {
       let arrow_expr =
         self.builder.alloc_arrow_function_expression(SPAN, false, false, NONE, params, NONE, body);
       commonjs_call_expr.arguments.push(ast::Argument::ArrowFunctionExpression(arrow_expr));
-    };
+    }
 
     // var require_foo = ...
     let var_decl_stmt = self.var_decl_stmt(
@@ -497,7 +497,7 @@ impl<'ast> AstSnippet<'ast> {
         .builder
         .alloc_arrow_function_expression(SPAN, false, is_async, NONE, params, NONE, body);
       esm_call_expr.arguments.push(ast::Argument::ArrowFunctionExpression(arrow_expr));
-    };
+    }
 
     // var init_foo = __esm(...)
     self.var_decl_stmt(

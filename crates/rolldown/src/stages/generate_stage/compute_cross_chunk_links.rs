@@ -239,7 +239,7 @@ impl GenerateStage<'_> {
                     }
                   }
                 }
-              };
+              }
             });
           });
         });

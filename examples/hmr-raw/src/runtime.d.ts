@@ -2,10 +2,10 @@
 declare global {
   interface ImportMeta {
     hot: {
-      accept: (callback: (exports: any) => void) => void
-    }
+      accept: (callback: (exports: any) => void) => void;
+    };
   }
-  function render(): void
+  function render(): void;
 }
 
-export {}
+export {};

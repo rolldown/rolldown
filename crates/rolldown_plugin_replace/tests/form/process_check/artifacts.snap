@@ -1,6 +1,5 @@
 ---
 source: crates/rolldown_testing/src/integration_test.rs
-snapshot_kind: text
 ---
 # Assets
 
@@ -21,17 +20,17 @@ if ("object" !== "undefined" && "object" === "object" && "production" === "produ
 
 ```
 - ../input.js
-(0:0) "if (" --> (2:0) "if ("
-(0:4) "typeof process !== " --> (2:4) "\"object\" !== "
-(0:23) "'undefined' && " --> (2:17) "\"undefined\" && "
-(0:38) "typeof process.env === " --> (2:32) "\"object\" === "
-(0:61) "\"object\" && " --> (2:45) "\"object\" && "
-(0:73) "process.env.NODE_ENV === " --> (2:57) "\"production\" === "
-(0:98) "'production') " --> (2:74) "\"production\") "
-(0:112) "{\n" --> (2:88) "{\n"
-(1:2) "console." --> (3:0) "\tconsole."
-(1:10) "log(" --> (3:9) "log("
-(1:14) "'production')" --> (3:13) "\"production\")"
-(1:27) ";\n" --> (3:26) ";\n"
-(2:0) "}\n" --> (4:0) "}\n"
+(0:0) "if (\n" --> (2:0) "if ("
+(1:2) "typeof process !== " --> (2:4) "\"object\" !== "
+(1:21) "'undefined' && " --> (2:17) "\"undefined\" && "
+(1:36) "typeof process.env === " --> (2:32) "\"object\" === "
+(1:59) "'object' &&\n" --> (2:45) "\"object\" && "
+(2:2) "process.env.NODE_ENV === " --> (2:57) "\"production\" === "
+(2:27) "'production'\n" --> (2:74) "\"production\") "
+(3:2) "{\n" --> (2:88) "{\n"
+(4:2) "console." --> (3:0) "\tconsole."
+(4:10) "log(" --> (3:9) "log("
+(4:14) "'production')" --> (3:13) "\"production\")"
+(4:27) ";\n" --> (3:26) ";\n"
+(5:0) "}\n" --> (4:0) "}\n"
 ```

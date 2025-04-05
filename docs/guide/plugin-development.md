@@ -93,9 +93,9 @@ interface HookFilter {
    * }}
    * ```
    */
-  id?: StringFilter
-  moduleType?: ModuleTypeFilter
-  code?: StringFilter
+  id?: StringFilter;
+  moduleType?: ModuleTypeFilter;
+  code?: StringFilter;
 }
 ````
 

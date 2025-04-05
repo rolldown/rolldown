@@ -5,7 +5,7 @@
  * @param {number} index
  */
 function rangeContains(range, index) {
-  return range.start <= index && index < range.end
+  return range.start <= index && index < range.end;
 }
 
 /**
@@ -13,20 +13,20 @@ function rangeContains(range, index) {
  * @param {import('./types').Options} [options]
  */
 export function getLocator(source, options = {}) {
-  const { offsetLine = 0, offsetColumn = 0 } = options
+  const { offsetLine = 0, offsetColumn = 0 } = options;
 
-  let start = 0
+  let start = 0;
   const ranges = source.split('\n').map((line, i) => {
-    const end = start + line.length + 1
+    const end = start + line.length + 1;
 
     /** @type {import('./types').Range} */
-    const range = { start, end, line: i }
+    const range = { start, end, line: i };
 
-    start = end
-    return range
-  })
+    start = end;
+    return range;
+  });
 
-  let i = 0
+  let i = 0;
 
   /**
    * @param {string | number} search
@@ -35,14 +35,14 @@ export function getLocator(source, options = {}) {
    */
   function locator(search, index) {
     if (typeof search === 'string') {
-      search = source.indexOf(search, index ?? 0)
+      search = source.indexOf(search, index ?? 0);
     }
 
-    if (search === -1) return undefined
+    if (search === -1) return undefined;
 
-    let range = ranges[i]
+    let range = ranges[i];
 
-    const d = search >= range.end ? 1 : -1
+    const d = search >= range.end ? 1 : -1;
 
     while (range) {
       if (rangeContains(range, search)) {
@@ -50,15 +50,15 @@ export function getLocator(source, options = {}) {
           line: offsetLine + range.line,
           column: offsetColumn + search - range.start,
           character: search,
-        }
+        };
       }
 
-      i += d
-      range = ranges[i]
+      i += d;
+      range = ranges[i];
     }
   }
 
-  return locator
+  return locator;
 }
 
 /**
@@ -68,5 +68,5 @@ export function getLocator(source, options = {}) {
  * @returns {Location | undefined}
  */
 export function locate(source, search, options) {
-  return getLocator(source, options)(search, options && options.startIndex)
+  return getLocator(source, options)(search, options && options.startIndex);
 }

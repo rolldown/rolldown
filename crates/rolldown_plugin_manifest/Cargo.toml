@@ -1,10 +1,10 @@
 [package]
-edition.workspace    = true
-homepage.workspace   = true
-license.workspace    = true
-name                 = "rolldown_plugin_manifest"
+name = "rolldown_plugin_manifest"
+version = "0.1.0"
+edition.workspace = true
+homepage.workspace = true
+license.workspace = true
 repository.workspace = true
-version              = "0.1.0"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
@@ -12,10 +12,10 @@ version              = "0.1.0"
 workspace = true
 
 [dependencies]
-arcstr          = { workspace = true }
+arcstr = { workspace = true }
 rolldown_common = { workspace = true }
 rolldown_plugin = { workspace = true }
-rolldown_utils  = { workspace = true }
-rustc-hash      = { workspace = true }
-serde           = { workspace = true, features = ["rc"] }
-serde_json      = { workspace = true }
+rolldown_utils = { workspace = true }
+rustc-hash = { workspace = true }
+serde = { workspace = true, features = ["rc"] }
+serde_json = { workspace = true }

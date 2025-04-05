@@ -1,24 +1,24 @@
-import { BindingHookSideEffects } from '../binding'
-import { ModuleSideEffects } from '../plugin'
+import { BindingHookSideEffects } from '../binding';
+import { ModuleSideEffects } from '../plugin';
 
 export function bindingifySideEffects(
   sideEffects?: ModuleSideEffects,
 ): BindingHookSideEffects | undefined {
   switch (sideEffects) {
     case true:
-      return BindingHookSideEffects.True
+      return BindingHookSideEffects.True;
 
     case false:
-      return BindingHookSideEffects.False
+      return BindingHookSideEffects.False;
 
     case 'no-treeshake':
-      return BindingHookSideEffects.NoTreeshake
+      return BindingHookSideEffects.NoTreeshake;
 
     case null:
     case undefined:
-      return undefined
+      return undefined;
 
     default:
-      throw new Error(`Unexpected side effects: ${sideEffects}`)
+      throw new Error(`Unexpected side effects: ${sideEffects}`);
   }
 }

@@ -1,11 +1,11 @@
 [package]
+name = "rolldown_resolver"
+version = "0.1.0"
 description = "rolldown_resolver"
-name        = "rolldown_resolver"
-version     = "0.1.0"
 
-edition.workspace    = true
-homepage.workspace   = true
-license.workspace    = true
+edition.workspace = true
+homepage.workspace = true
+license.workspace = true
 repository.workspace = true
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
@@ -16,11 +16,11 @@ doctest = false
 workspace = true
 
 [dependencies]
-arcstr          = { workspace = true }
-dashmap         = { workspace = true }
-itertools       = { workspace = true }
-oxc_resolver    = { workspace = true }
+arcstr = { workspace = true }
+dashmap = { workspace = true }
+itertools = { workspace = true }
+oxc_resolver = { workspace = true }
 rolldown_common = { workspace = true }
-rolldown_fs     = { workspace = true, features = ["os"] }
-rolldown_utils  = { workspace = true }
-sugar_path      = { workspace = true }
+rolldown_fs = { workspace = true, features = ["os"] }
+rolldown_utils = { workspace = true }
+sugar_path = { workspace = true }

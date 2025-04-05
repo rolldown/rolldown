@@ -1,16 +1,15 @@
 [package]
-edition.workspace    = true
-homepage.workspace   = true
-license.workspace    = true
-name                 = "rolldown_ecmascript_utils"
+name = "rolldown_ecmascript_utils"
+version = "0.1.0"
+edition.workspace = true
+homepage.workspace = true
+license.workspace = true
 repository.workspace = true
-version              = "0.1.0"
 
 [dependencies]
-oxc             = { workspace = true }
+oxc = { workspace = true }
 rolldown_common = { workspace = true }
-smallvec        = { workspace = true }
-
+smallvec = { workspace = true }
 
 [lints]
 workspace = true

@@ -1,15 +1,15 @@
 [package]
+name = "rolldown_plugin_data_url"
+version = "0.1.0"
 edition = "2021"
 license = "MIT"
-name    = "rolldown_plugin_data_url"
-version = "0.1.0"
 
 [lib]
 doctest = false
 
 [dependencies]
-base64-simd     = { workspace = true }
+base64-simd = { workspace = true }
 rolldown_common = { workspace = true }
 rolldown_plugin = { workspace = true }
-rolldown_utils  = { workspace = true }
-urlencoding     = { workspace = true }
+rolldown_utils = { workspace = true }
+urlencoding = { workspace = true }

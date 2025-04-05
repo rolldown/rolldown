@@ -1,13 +1,13 @@
 [package]
+name = "rolldown_error"
+version = "0.1.0"
 description = "rolldown_error"
-name        = "rolldown_error"
-version     = "0.1.0"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
-edition.workspace    = true
-homepage.workspace   = true
-license.workspace    = true
+edition.workspace = true
+homepage.workspace = true
+license.workspace = true
 repository.workspace = true
 
 [lib]
@@ -17,17 +17,17 @@ doctest = false
 workspace = true
 
 [dependencies]
-anyhow         = { workspace = true }
-arcstr         = { workspace = true }
-ariadne        = { workspace = true }
-bitflags       = { workspace = true }
-derive_more    = { workspace = true }
-heck           = { workspace = true }
-napi           = { workspace = true, optional = true }
-oxc            = { workspace = true }
-oxc_resolver   = { workspace = true }
-oxc_sourcemap  = { workspace = true }
+anyhow = { workspace = true }
+arcstr = { workspace = true }
+ariadne = { workspace = true }
+bitflags = { workspace = true }
+derive_more = { workspace = true }
+heck = { workspace = true }
+napi = { workspace = true, optional = true }
+oxc = { workspace = true }
+oxc_resolver = { workspace = true }
+oxc_sourcemap = { workspace = true }
 rolldown_utils = { workspace = true }
-ropey          = { workspace = true }
-rustc-hash     = { workspace = true }
-sugar_path     = { workspace = true }
+ropey = { workspace = true }
+rustc-hash = { workspace = true }
+sugar_path = { workspace = true }

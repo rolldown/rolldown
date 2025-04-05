@@ -15,7 +15,7 @@ export default {
   moduleTypes: {
     '.data': 'json',
   },
-}
+};
 ```
 
 ## Module types and plugins
@@ -29,10 +29,10 @@ const myPlugin = {
       return {
         code: '...',
         moduleType: 'json',
-      }
+      };
     }
   },
-}
+};
 ```
 
 The main significance of module types is that it provides a central convention for supported types, making it easier to chain multiple plugins that need to operate on the same module type.

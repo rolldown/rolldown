@@ -1,15 +1,15 @@
-import { BuiltinPlugin } from './constructors'
+import { BuiltinPlugin } from './constructors';
 
 type AliasPluginAlias = {
-  find: string | RegExp
-  replacement: string
-}
+  find: string | RegExp;
+  replacement: string;
+};
 
 // A temp config type for giving better user experience
 type AliasPluginConfig = {
-  entries: AliasPluginAlias[]
-}
+  entries: AliasPluginAlias[];
+};
 
 export function aliasPlugin(config: AliasPluginConfig): BuiltinPlugin {
-  return new BuiltinPlugin('builtin:alias', config)
+  return new BuiltinPlugin('builtin:alias', config);
 }

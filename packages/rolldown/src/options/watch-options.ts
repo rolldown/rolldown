@@ -1,6 +1,6 @@
-import { InputOptions } from '../options/input-options'
-import { OutputOptions } from '../options/output-options'
+import { InputOptions } from '../options/input-options';
+import { OutputOptions } from '../options/output-options';
 
 export interface WatchOptions extends InputOptions {
-  output?: OutputOptions | OutputOptions[]
+  output?: OutputOptions | OutputOptions[];
 }

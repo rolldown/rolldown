@@ -1,16 +1,16 @@
-import { type ConsolaInstance, createConsola } from 'consola'
+import { type ConsolaInstance, createConsola } from 'consola';
 
 /**
  * Console logger
  */
 export const logger: Record<string, any> | ConsolaInstance = process.env
-  .ROLLDOWN_TEST
+    .ROLLDOWN_TEST
   ? createTestingLogger()
   : createConsola({
-      formatOptions: {
-        date: false,
-      },
-    })
+    formatOptions: {
+      date: false,
+    },
+  });
 
 function createTestingLogger() {
   const types = [
@@ -28,10 +28,10 @@ function createTestingLogger() {
     'debug',
     'trace',
     'verbose',
-  ]
-  const ret: Record<string, any> = Object.create(null)
+  ];
+  const ret: Record<string, any> = Object.create(null);
   for (const type of types) {
-    ret[type] = console.log
+    ret[type] = console.log;
   }
-  return ret
+  return ret;
 }

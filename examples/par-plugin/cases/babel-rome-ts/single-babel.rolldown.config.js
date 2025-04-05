@@ -1,9 +1,9 @@
-import { defineConfig } from 'rolldown'
-import { builtinModules } from 'node:module'
-import nodePath from 'node:path'
-import { babelPlugin } from '../../parallel-babel-plugin/impl.js'
+import { builtinModules } from 'node:module';
+import nodePath from 'node:path';
+import { defineConfig } from 'rolldown';
+import { babelPlugin } from '../../parallel-babel-plugin/impl.js';
 
-export const REPO_ROOT = nodePath.resolve(import.meta.dirname, '../../../..')
+export const REPO_ROOT = nodePath.resolve(import.meta.dirname, '../../../..');
 
 export default defineConfig({
   logLevel: 'silent',
@@ -21,4 +21,4 @@ export default defineConfig({
       './tmp/bench/rome/src/tsconfig.json',
     ),
   },
-})
+});

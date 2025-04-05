@@ -5,66 +5,66 @@ export interface ChecksOptions {
   /**
    * Whether to emit warning when detecting circular dependency
    * @default false
-   * */
-  circularDependency?: boolean
+   */
+  circularDependency?: boolean;
 
   /**
    * Whether to emit warning when detecting eval
    * @default true
-   * */
-  eval?: boolean
+   */
+  eval?: boolean;
 
   /**
    * Whether to emit warning when detecting missing global name
    * @default true
-   * */
-  missingGlobalName?: boolean
+   */
+  missingGlobalName?: boolean;
 
   /**
    * Whether to emit warning when detecting missing name option for iife export
    * @default true
-   * */
-  missingNameOptionForIifeExport?: boolean
+   */
+  missingNameOptionForIifeExport?: boolean;
 
   /**
    * Whether to emit warning when detecting mixed export
    * @default true
-   * */
-  mixedExport?: boolean
+   */
+  mixedExport?: boolean;
 
   /**
    * Whether to emit warning when detecting unresolved entry
    * @default true
-   * */
-  unresolvedEntry?: boolean
+   */
+  unresolvedEntry?: boolean;
 
   /**
    * Whether to emit warning when detecting unresolved import
    * @default true
-   * */
-  unresolvedImport?: boolean
+   */
+  unresolvedImport?: boolean;
 
   /**
    * Whether to emit warning when detecting filename conflict
    * @default true
-   * */
-  filenameConflict?: boolean
+   */
+  filenameConflict?: boolean;
 
   /**
    * Whether to emit warning when detecting common js variable in esm
    * @default true
-   * */
-  commonJsVariableInEsm?: boolean
+   */
+  commonJsVariableInEsm?: boolean;
 
   /**
    * Whether to emit warning when detecting import is undefined
    * @default true
-   * */
-  importIsUndefined?: boolean
+   */
+  importIsUndefined?: boolean;
 
   /**
    * Whether to emit warning when detecting configuration field conflict
    * @default true
-   * */
-  configurationFieldConflict?: boolean
+   */
+  configurationFieldConflict?: boolean;
 }

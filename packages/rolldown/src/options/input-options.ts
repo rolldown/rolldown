@@ -1,17 +1,17 @@
-import type { RolldownPluginOption } from '../plugin'
+import { TransformOptions } from '../binding';
 import type {
   LogLevel,
   LogLevelOption,
   LogOrStringHandler,
   RollupLog,
   RollupLogWithString,
-} from '../log/logging'
-import type { NullValue, StringOrRegExp } from '../types/utils'
-import type { TreeshakingOptions } from '../types/module-side-effects'
-import { TransformOptions } from '../binding'
-import type { ChecksOptions } from './generated/checks-options'
+} from '../log/logging';
+import type { RolldownPluginOption } from '../plugin';
+import type { TreeshakingOptions } from '../types/module-side-effects';
+import type { NullValue, StringOrRegExp } from '../types/utils';
+import type { ChecksOptions } from './generated/checks-options';
 
-export type InputOption = string | string[] | Record<string, string>
+export type InputOption = string | string[] | Record<string, string>;
 
 // Omit those key that are part of rolldown option
 // Note: `target` should be omit either because it is also used in `minifier`
@@ -25,16 +25,16 @@ type OxcTransformOption = Omit<
   | 'define'
   | 'inject'
   | 'target'
->
+>;
 
 export type ExternalOption =
   | StringOrRegExp
   | StringOrRegExp[]
   | ((
-      id: string,
-      parentId: string | undefined,
-      isResolved: boolean,
-    ) => NullValue<boolean>)
+    id: string,
+    parentId: string | undefined,
+    isResolved: boolean,
+  ) => NullValue<boolean>);
 
 export type ModuleTypes = Record<
   string,
@@ -49,35 +49,35 @@ export type ModuleTypes = Record<
   | 'binary'
   | 'empty'
   | 'css'
->
+>;
 
 export interface JsxOptions {
-  mode?: 'classic' | 'automatic' | 'preserve'
-  factory?: string
-  fragment?: string
-  importSource?: string
-  jsxImportSource?: string
-  refresh?: boolean
-  development?: boolean
+  mode?: 'classic' | 'automatic' | 'preserve';
+  factory?: string;
+  fragment?: string;
+  importSource?: string;
+  jsxImportSource?: string;
+  refresh?: boolean;
+  development?: boolean;
 }
 
 export interface WatchOptions {
-  skipWrite?: boolean
-  buildDelay?: number
+  skipWrite?: boolean;
+  buildDelay?: number;
   notify?: {
-    pollInterval?: number
-    compareContents?: boolean
-  }
-  include?: StringOrRegExp | StringOrRegExp[]
-  exclude?: StringOrRegExp | StringOrRegExp[]
+    pollInterval?: number;
+    compareContents?: boolean;
+  };
+  include?: StringOrRegExp | StringOrRegExp[];
+  exclude?: StringOrRegExp | StringOrRegExp[];
 }
 
-export type MakeAbsoluteExternalsRelative = boolean | 'ifRelativeSource'
+export type MakeAbsoluteExternalsRelative = boolean | 'ifRelativeSource';
 
 export interface InputOptions {
-  input?: InputOption
-  plugins?: RolldownPluginOption
-  external?: ExternalOption
+  input?: InputOption;
+  plugins?: RolldownPluginOption;
+  external?: ExternalOption;
   resolve?: {
     /**
      * > [!WARNING]
@@ -85,25 +85,25 @@ export interface InputOptions {
      * > If you want to call `resolveId` hooks of other plugin, use `aliasPlugin` from `rolldown/experimental` instead.
      * > You could find more discussion in [this issue](https://github.com/rolldown/rolldown/issues/3615)
      */
-    alias?: Record<string, string[] | string>
-    aliasFields?: string[][]
-    conditionNames?: string[]
+    alias?: Record<string, string[] | string>;
+    aliasFields?: string[][];
+    conditionNames?: string[];
     /**
      * Map of extensions to alternative extensions.
      *
      * With writing `import './foo.js'` in a file, you want to resolve it to `foo.ts` instead of `foo.js`.
      * You can achieve this by setting: `extensionAlias: { '.js': ['.ts', '.js'] }`.
      */
-    extensionAlias?: Record<string, string[]>
-    exportsFields?: string[][]
-    extensions?: string[]
-    mainFields?: string[]
-    mainFiles?: string[]
-    modules?: string[]
-    symlinks?: boolean
-    tsconfigFilename?: string
-  }
-  cwd?: string
+    extensionAlias?: Record<string, string[]>;
+    exportsFields?: string[][];
+    extensions?: string[];
+    mainFields?: string[];
+    mainFiles?: string[];
+    modules?: string[];
+    symlinks?: boolean;
+    tsconfigFilename?: string;
+  };
+  cwd?: string;
   /**
    * Expected platform where the code run.
    *
@@ -111,30 +111,30 @@ export interface InputOptions {
    * - 'node' if the format is 'cjs'
    * - 'browser' for other formats
    */
-  platform?: 'node' | 'browser' | 'neutral'
-  shimMissingExports?: boolean
-  treeshake?: boolean | TreeshakingOptions
-  logLevel?: LogLevelOption
+  platform?: 'node' | 'browser' | 'neutral';
+  shimMissingExports?: boolean;
+  treeshake?: boolean | TreeshakingOptions;
+  logLevel?: LogLevelOption;
   onLog?: (
     level: LogLevel,
     log: RollupLog,
     defaultHandler: LogOrStringHandler,
-  ) => void
+  ) => void;
   onwarn?: (
     warning: RollupLog,
     defaultHandler: (
       warning: RollupLogWithString | (() => RollupLogWithString),
     ) => void,
-  ) => void
-  moduleTypes?: ModuleTypes
+  ) => void;
+  moduleTypes?: ModuleTypes;
   experimental?: {
-    enableComposingJsPlugins?: boolean
-    strictExecutionOrder?: boolean
-    disableLiveBindings?: boolean
-    viteMode?: boolean
-    resolveNewUrlToAsset?: boolean
-    hmr?: boolean
-  }
+    enableComposingJsPlugins?: boolean;
+    strictExecutionOrder?: boolean;
+    disableLiveBindings?: boolean;
+    viteMode?: boolean;
+    resolveNewUrlToAsset?: boolean;
+    hmr?: boolean;
+  };
   /**
    * Replace global variables or [property accessors](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Operators/Property_accessors) with the provided values.
    *
@@ -158,7 +158,7 @@ export interface InputOptions {
    * if (true) {
    *   console.log('Production mode')
    * }
-   *```
+   * ```
    *
    * - Replace the property accessor `process.env.NODE_ENV` with `'production'`
    *
@@ -181,7 +181,7 @@ export interface InputOptions {
    *
    * ```
    */
-  define?: Record<string, string>
+  define?: Record<string, string>;
   /**
    * Inject import statements on demand.
    *
@@ -205,8 +205,8 @@ export interface InputOptions {
    * }
    * ```
    */
-  inject?: Record<string, string | [string, string]>
-  profilerNames?: boolean
+  inject?: Record<string, string | [string, string]>;
+  profilerNames?: boolean;
   /**
    * - `false` disables the JSX parser, resulting in a syntax error if JSX syntax is used.
    * - `"preserve"` disables the JSX transformer, preserving the original JSX syntax in the output.
@@ -215,31 +215,32 @@ export interface InputOptions {
    *
    * @default mode = "automatic"
    */
-  jsx?: false | 'react' | 'react-jsx' | 'preserve' | JsxOptions
-  transform?: OxcTransformOption
-  watch?: WatchOptions | false
-  dropLabels?: string[]
-  keepNames?: boolean
-  checks?: ChecksOptions
-  makeAbsoluteExternalsRelative?: MakeAbsoluteExternalsRelative
+  jsx?: false | 'react' | 'react-jsx' | 'preserve' | JsxOptions;
+  transform?: OxcTransformOption;
+  watch?: WatchOptions | false;
+  dropLabels?: string[];
+  keepNames?: boolean;
+  checks?: ChecksOptions;
+  makeAbsoluteExternalsRelative?: MakeAbsoluteExternalsRelative;
 }
 
 interface OverwriteInputOptionsForCli {
-  external?: string[]
-  inject?: Record<string, string>
-  treeshake?: boolean
+  external?: string[];
+  inject?: Record<string, string>;
+  treeshake?: boolean;
 }
 
-export type InputCliOptions = Omit<
-  InputOptions,
-  | keyof OverwriteInputOptionsForCli
-  | 'input'
-  | 'plugins'
-  | 'onwarn'
-  | 'onLog'
-  | 'resolve'
-  | 'experimental'
-  | 'profilerNames'
-  | 'watch'
-> &
-  OverwriteInputOptionsForCli
+export type InputCliOptions =
+  & Omit<
+    InputOptions,
+    | keyof OverwriteInputOptionsForCli
+    | 'input'
+    | 'plugins'
+    | 'onwarn'
+    | 'onLog'
+    | 'resolve'
+    | 'experimental'
+    | 'profilerNames'
+    | 'watch'
+  >
+  & OverwriteInputOptionsForCli;

@@ -1,21 +1,21 @@
-import { normalizeHook } from '../utils/normalize-hook'
-import type { BindingPluginOptions } from '../binding'
-import type { ChangeEvent } from './index'
-import { PluginContextImpl } from './plugin-context'
+import type { BindingPluginOptions } from '../binding';
+import { normalizeHook } from '../utils/normalize-hook';
+import { BindingifyPluginArgs } from './bindingify-plugin';
 import {
-  PluginHookWithBindingExt,
   bindingifyPluginHookMeta,
-} from './bindingify-plugin-hook-meta'
-import { BindingifyPluginArgs } from './bindingify-plugin'
+  PluginHookWithBindingExt,
+} from './bindingify-plugin-hook-meta';
+import type { ChangeEvent } from './index';
+import { PluginContextImpl } from './plugin-context';
 
 export function bindingifyWatchChange(
   args: BindingifyPluginArgs,
 ): PluginHookWithBindingExt<BindingPluginOptions['watchChange']> {
-  const hook = args.plugin.watchChange
+  const hook = args.plugin.watchChange;
   if (!hook) {
-    return {}
+    return {};
   }
-  const { handler, meta } = normalizeHook(hook)
+  const { handler, meta } = normalizeHook(hook);
 
   return {
     plugin: async (ctx, id, event) => {
@@ -31,20 +31,20 @@ export function bindingifyWatchChange(
         ),
         id,
         { event: event as ChangeEvent },
-      )
+      );
     },
     meta: bindingifyPluginHookMeta(meta),
-  }
+  };
 }
 
 export function bindingifyCloseWatcher(
   args: BindingifyPluginArgs,
 ): PluginHookWithBindingExt<BindingPluginOptions['closeWatcher']> {
-  const hook = args.plugin.closeWatcher
+  const hook = args.plugin.closeWatcher;
   if (!hook) {
-    return {}
+    return {};
   }
-  const { handler, meta } = normalizeHook(hook)
+  const { handler, meta } = normalizeHook(hook);
 
   return {
     plugin: async (ctx) => {
@@ -58,8 +58,8 @@ export function bindingifyCloseWatcher(
           args.logLevel,
           args.watchMode,
         ),
-      )
+      );
     },
     meta: bindingifyPluginHookMeta(meta),
-  }
+  };
 }

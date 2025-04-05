@@ -1,45 +1,45 @@
 [package]
-name    = "rolldown_testing"
+name = "rolldown_testing"
 version = "0.1.0"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
-edition.workspace    = true
-homepage.workspace   = true
-license.workspace    = true
+edition.workspace = true
+homepage.workspace = true
+license.workspace = true
 repository.workspace = true
 
 [lib]
 doctest = false
-test    = false
+test = false
 
 [lints]
 workspace = true
 
 [dependencies]
-anyhow                  = { workspace = true }
-dunce                   = { workspace = true }
-insta                   = { workspace = true }
-json-strip-comments     = { workspace = true }
-jsonschema              = { workspace = true }
-regex                   = { workspace = true }
-rolldown                = { workspace = true }
-rolldown_common         = { workspace = true }
-rolldown_error          = { workspace = true }
-rolldown_sourcemap      = { workspace = true }
+anyhow = { workspace = true }
+dunce = { workspace = true }
+insta = { workspace = true }
+json-strip-comments = { workspace = true }
+jsonschema = { workspace = true }
+regex = { workspace = true }
+rolldown = { workspace = true }
+rolldown_common = { workspace = true }
+rolldown_error = { workspace = true }
+rolldown_sourcemap = { workspace = true }
 rolldown_testing_config = { workspace = true }
-rolldown_workspace      = { workspace = true }
-rustc-hash              = { workspace = true }
-serde_json              = { workspace = true }
-sugar_path              = { workspace = true }
-tokio                   = { workspace = true, features = ["rt", "macros", "sync", "rt-multi-thread"] }
+rolldown_workspace = { workspace = true }
+rustc-hash = { workspace = true }
+serde_json = { workspace = true }
+sugar_path = { workspace = true }
+tokio = { workspace = true, features = ["rt", "macros", "sync", "rt-multi-thread"] }
 
 [build-dependencies]
 rolldown_testing_config = { workspace = true }
-schemars                = { workspace = true }
-serde_json              = { workspace = true }
+schemars = { workspace = true }
+serde_json = { workspace = true }
 
 [[bin]]
 doctest = false
-name    = "run-fixture"
-path    = "./bin/run_fixture.rs"
-test    = false
+name = "run-fixture"
+path = "./bin/run_fixture.rs"
+test = false

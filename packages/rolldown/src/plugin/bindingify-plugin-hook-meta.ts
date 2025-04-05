@@ -1,12 +1,12 @@
-import { ObjectHookMeta, PluginOrder } from '.'
-import { BindingPluginHookMeta, BindingPluginOrder } from '../binding'
+import { BindingPluginHookMeta, BindingPluginOrder } from '../binding';
+import { ObjectHookMeta, PluginOrder } from '.';
 
 export function bindingifyPluginHookMeta(
   options: ObjectHookMeta,
 ): BindingPluginHookMeta {
   return {
     order: bindingPluginOrder(options.order),
-  }
+  };
 }
 
 function bindingPluginOrder(
@@ -14,19 +14,19 @@ function bindingPluginOrder(
 ): BindingPluginOrder | undefined {
   switch (order) {
     case 'post':
-      return BindingPluginOrder.Post
+      return BindingPluginOrder.Post;
     case 'pre':
-      return BindingPluginOrder.Pre
+      return BindingPluginOrder.Pre;
     case null:
     case undefined:
-      return undefined
+      return undefined;
     default:
-      throw new Error(`Unknown plugin order: ${order}`)
+      throw new Error(`Unknown plugin order: ${order}`);
   }
 }
 
 export type PluginHookWithBindingExt<T, F = undefined> = {
-  plugin?: T
-  meta?: BindingPluginHookMeta
-  filter?: F
-}
+  plugin?: T;
+  meta?: BindingPluginHookMeta;
+  filter?: F;
+};

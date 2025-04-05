@@ -4,8 +4,7 @@ Rolldown's codebase has a lot of [`tracing::debug!`] (or `tracing::trace!`) call
 
 [`tracing::debug!`]: https://docs.rs/tracing/0.1/tracing/macro.debug.html
 
-To see the logs, you need to set the `RD_LOG` environment variable to your log filter. The full syntax of the log filters can be found in the [rustdoc
-of `tracing-subscriber`](https://docs.rs/tracing-subscriber/0.2.24/tracing_subscriber/filter/struct.EnvFilter.html#directives).
+To see the logs, you need to set the `RD_LOG` environment variable to your log filter. The full syntax of the log filters can be found in the [rustdoc of `tracing-subscriber`](https://docs.rs/tracing-subscriber/0.2.24/tracing_subscriber/filter/struct.EnvFilter.html#directives).
 
 ## Usages
 

@@ -94,9 +94,9 @@ jobs:
       - name: Setup Rust
         uses: ./.github/actions/setup-rust
         with:
-          tools: just, taplo-cli, cargo-shear
+          tools: just, cargo-shear
           cache-key: debug-build
-          components: clippy rustfmt
+          components: clippy
 
       - name: Lint
         run: just lint-rust
@@ -162,12 +162,6 @@ jobs:
 
       - name: Lint Spell
         run: pnpm lint-spell
-
-      - name: Lint Prettier
-        run: pnpm lint-prettier
-
-      - name: Lint Toml
-        run: pnpm lint-toml
 
       - name: update generated code
         run: |

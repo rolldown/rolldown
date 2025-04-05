@@ -1,1 +1,1 @@
-export type D = string
+export type D = string;

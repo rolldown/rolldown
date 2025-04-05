@@ -1,9 +1,9 @@
-import { unimplemented } from './misc'
-import { transformRenderedChunk } from './transform-rendered-chunk'
-import type { BindingOutputOptions } from '../binding'
-import type { OutputOptions } from '../options/output-options'
-import { transformAssetSource } from './asset-source'
-import { SourcemapIgnoreListOption } from '../types/misc'
+import type { BindingOutputOptions } from '../binding';
+import type { OutputOptions } from '../options/output-options';
+import { SourcemapIgnoreListOption } from '../types/misc';
+import { transformAssetSource } from './asset-source';
+import { unimplemented } from './misc';
+import { transformRenderedChunk } from './transform-rendered-chunk';
 
 export function bindingifyOutputOptions(
   outputOptions: OutputOptions,
@@ -31,7 +31,7 @@ export function bindingifyOutputOptions(
     globals,
     file,
     sanitizeFileName,
-  } = outputOptions
+  } = outputOptions;
 
   return {
     dir,
@@ -66,20 +66,20 @@ export function bindingifyOutputOptions(
     polyfillRequire: outputOptions.polyfillRequire,
     target: outputOptions.target,
     sanitizeFileName,
-  }
+  };
 }
 
-type AddonKeys = 'banner' | 'footer' | 'intro' | 'outro'
+type AddonKeys = 'banner' | 'footer' | 'intro' | 'outro';
 
 function bindingifyAddon(
   configAddon: OutputOptions[AddonKeys],
 ): BindingOutputOptions[AddonKeys] {
   return async (chunk) => {
     if (typeof configAddon === 'function') {
-      return configAddon(transformRenderedChunk(chunk))
+      return configAddon(transformRenderedChunk(chunk));
     }
-    return configAddon || ''
-  }
+    return configAddon || '';
+  };
 }
 
 function bindingifyFormat(
@@ -90,23 +90,23 @@ function bindingifyFormat(
     case 'es':
     case 'esm':
     case 'module': {
-      return 'es'
+      return 'es';
     }
     case 'cjs':
     case 'commonjs': {
-      return 'cjs'
+      return 'cjs';
     }
     case 'iife': {
-      return 'iife'
+      return 'iife';
     }
     case 'umd': {
-      return 'umd'
+      return 'umd';
     }
     case 'experimental-app': {
-      return 'app'
+      return 'app';
     }
     default:
-      unimplemented(`output.format: ${format}`)
+      unimplemented(`output.format: ${format}`);
   }
 }
 
@@ -115,16 +115,16 @@ function bindingifySourcemap(
 ): BindingOutputOptions['sourcemap'] {
   switch (sourcemap) {
     case true:
-      return 'file'
+      return 'file';
     case 'inline':
-      return 'inline'
+      return 'inline';
     case false:
     case undefined:
-      return undefined
+      return undefined;
     case 'hidden':
-      return 'hidden'
+      return 'hidden';
     default:
-      throw new Error(`unknown sourcemap: ${sourcemap}`)
+      throw new Error(`unknown sourcemap: ${sourcemap}`);
   }
 }
 
@@ -134,9 +134,9 @@ export function bindingifySourcemapIgnoreList(
   return typeof sourcemapIgnoreList === 'function'
     ? sourcemapIgnoreList
     : sourcemapIgnoreList === false
-      ? () => false
-      : (relativeSourcePath: string, _sourcemapPath: string) =>
-          relativeSourcePath.includes('node_modules')
+    ? () => false
+    : (relativeSourcePath: string, _sourcemapPath: string) =>
+      relativeSourcePath.includes('node_modules');
 }
 
 function bindingifyAssetFilenames(
@@ -149,8 +149,8 @@ function bindingifyAssetFilenames(
         originalFileNames: asset.originalFileNames,
         source: transformAssetSource(asset.source),
         type: 'asset',
-      })
-    }
+      });
+    };
   }
-  return assetFileNames
+  return assetFileNames;
 }

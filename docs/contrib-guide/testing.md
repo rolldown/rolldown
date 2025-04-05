@@ -10,7 +10,7 @@ We have two groups of test suites: one for Rust, and one for Node.js.
 
 1. When adding new feature with options, always make sure adding related tests in javascript side if possible.
 
-Here is some details about how to choose test technique [details](#how-to-choose-test-technique)  
+Here is some details about how to choose test technique [details](#how-to-choose-test-technique)\
 :::
 
 ## Summary

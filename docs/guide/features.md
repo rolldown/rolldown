@@ -43,18 +43,18 @@ Rolldown handles mixed ESM / CJS module graphs out of the box, without the need 
   ```ts
   interface InputOptions {
     resolve?: {
-      alias?: Record<string, string[] | string>
-      aliasFields?: string[][]
-      conditionNames?: string[]
-      extensionAlias?: Record<string, string[]>
-      exportsFields?: string[][]
-      extensions?: string[]
-      mainFields?: string[]
-      mainFiles?: string[]
-      modules?: string[]
-      symlinks?: boolean
-      tsconfigFilename?: string
-    }
+      alias?: Record<string, string[] | string>;
+      aliasFields?: string[][];
+      conditionNames?: string[];
+      extensionAlias?: Record<string, string[]>;
+      exportsFields?: string[][];
+      extensions?: string[];
+      mainFields?: string[];
+      mainFiles?: string[];
+      modules?: string[];
+      symlinks?: boolean;
+      tsconfigFilename?: string;
+    };
   }
   ```
 
@@ -94,7 +94,7 @@ export default {
     // Inject shims for property access pattern
     'Object.assign': path.resolve('src/helpers/object-assign.js'),
   },
-}
+};
 ```
 
 ## CSS bundling
@@ -112,16 +112,16 @@ Rolldown supports bundling CSS imported from JS out of the box. Note this featur
 ```ts
 interface OutputOptions {
   advancedChunks?: {
-    minSize?: number
-    minShareCount?: number
+    minSize?: number;
+    minShareCount?: number;
     groups?: {
-      name: string
-      test?: StringOrRegExp
-      priority?: number
-      minSize?: number
-      minShareCount?: number
-    }[]
-  }
+      name: string;
+      test?: StringOrRegExp;
+      priority?: number;
+      minSize?: number;
+      minShareCount?: number;
+    }[];
+  };
 }
 ```
 
@@ -143,19 +143,19 @@ For now, it is recommended to use an external minifier for production use cases.
 With [`rollup-plugin-esbuild`](https://github.com/egoist/rollup-plugin-esbuild):
 
 ```js [rolldown.config.js]
-import { defineConfig } from 'rolldown'
-import { minify } from 'rollup-plugin-esbuild'
+import { defineConfig } from 'rolldown';
+import { minify } from 'rollup-plugin-esbuild';
 
 export default defineConfig({
   plugins: [minify()],
-})
+});
 ```
 
 With [`rollup-plugin-swc3`](https://github.com/SukkaW/rollup-plugin-swc):
 
 ```js [rolldown.config.js]
-import { defineConfig } from 'rolldown'
-import { minify } from 'rollup-plugin-swc3'
+import { defineConfig } from 'rolldown';
+import { minify } from 'rollup-plugin-swc3';
 
 export default defineConfig({
   plugins: [
@@ -166,5 +166,5 @@ export default defineConfig({
       compress: {},
     }),
   ],
-})
+});
 ```

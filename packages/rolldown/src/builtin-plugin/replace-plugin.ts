@@ -1,6 +1,6 @@
-import { BindingReplacePluginConfig } from '../binding'
+import { BindingReplacePluginConfig } from '../binding';
 
-import { BuiltinPlugin } from './constructors'
+import { BuiltinPlugin } from './constructors';
 
 /**
  * Replaces targeted strings in files while bundling.
@@ -25,11 +25,10 @@ import { BuiltinPlugin } from './constructors'
  *   preventAssignment: false,
  * })
  * ```
- *
  */
 export function replacePlugin(
   values: BindingReplacePluginConfig['values'] = {},
   options: Omit<BindingReplacePluginConfig, 'values'> = {},
 ): BuiltinPlugin {
-  return new BuiltinPlugin('builtin:replace', { ...options, values })
+  return new BuiltinPlugin('builtin:replace', { ...options, values });
 }

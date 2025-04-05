@@ -1,10 +1,10 @@
 [package]
-edition.workspace    = true
-homepage.workspace   = true
-license.workspace    = true
-name                 = "rolldown_plugin_dynamic_import_vars"
+name = "rolldown_plugin_dynamic_import_vars"
+version = "0.0.1"
+edition.workspace = true
+homepage.workspace = true
+license.workspace = true
 repository.workspace = true
-version              = "0.0.1"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
@@ -15,10 +15,10 @@ doctest = false
 workspace = true
 
 [dependencies]
-anyhow          = { workspace = true }
-arcstr          = { workspace = true }
-glob            = { workspace = true }
-memchr          = { workspace = true }
-oxc             = { workspace = true }
-phf             = { workspace = true, features = ["phf_macros"] }
+anyhow = { workspace = true }
+arcstr = { workspace = true }
+glob = { workspace = true }
+memchr = { workspace = true }
+oxc = { workspace = true }
+phf = { workspace = true, features = ["phf_macros"] }
 rolldown_plugin = { workspace = true }

@@ -4,12 +4,12 @@ export default (
   path,
   segments,
 ) => {
-  const v = glob[path] ?? glob['./' + path]
+  const v = glob[path] ?? glob['./' + path];
   if (v) {
-    return typeof v === 'function' ? v() : Promise.resolve(v)
+    return typeof v === 'function' ? v() : Promise.resolve(v);
   }
   return new Promise((_, reject) => {
-    ;(typeof queueMicrotask === 'function' ? queueMicrotask : setTimeout)(
+    (typeof queueMicrotask === 'function' ? queueMicrotask : setTimeout)(
       reject.bind(
         null,
         new Error(
@@ -20,6 +20,6 @@ export default (
               : ''),
         ),
       ),
-    )
-  })
-}
+    );
+  });
+};

@@ -1,38 +1,38 @@
 [package]
-name    = "bench"
+name = "bench"
 version = "0.1.0"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
-edition.workspace    = true
-homepage.workspace   = true
-license.workspace    = true
+edition.workspace = true
+homepage.workspace = true
+license.workspace = true
 repository.workspace = true
 
 [lib]
-bench   = false
+bench = false
 doctest = false
-test    = false
+test = false
 
 [dependencies]
-criterion2         = { workspace = true }
-oxc                = { workspace = true }
-rolldown           = { workspace = true }
+criterion2 = { workspace = true }
+oxc = { workspace = true }
+rolldown = { workspace = true }
 rolldown_sourcemap = { workspace = true }
-rolldown_testing   = { workspace = true }
+rolldown_testing = { workspace = true }
 rolldown_workspace = { workspace = true }
-tokio              = { workspace = true, features = ["full"] }
+tokio = { workspace = true, features = ["full"] }
 
 [[bench]]
 harness = false
-name    = "bundle"
+name = "bundle"
 
 [[bench]]
 harness = false
-name    = "scan"
+name = "scan"
 
 [[bench]]
 harness = false
-name    = "remapping"
+name = "remapping"
 
 [features]
 codspeed = ["criterion2/codspeed"]

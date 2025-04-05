@@ -1,17 +1,17 @@
-import nodePath from 'node:path'
-import { builtinModules } from 'node:module'
+import { builtinModules } from 'node:module';
+import nodePath from 'node:path';
 
-import { REPO_ROOT, defineSuite } from '../utils'
-import { default as parallelBabelPlugin } from '../parallel-babel-plugin/index'
-import { babelPlugin } from '../parallel-babel-plugin/impl'
-import type { BenchSuite } from '../types'
-import { ExternalOption } from 'rolldown'
+import { ExternalOption } from 'rolldown';
+import { babelPlugin } from '../parallel-babel-plugin/impl';
+import { default as parallelBabelPlugin } from '../parallel-babel-plugin/index';
+import type { BenchSuite } from '../types';
+import { defineSuite, REPO_ROOT } from '../utils';
 
-const inputs = [nodePath.join(REPO_ROOT, './tmp/bench/rome/src/entry.ts')]
+const inputs = [nodePath.join(REPO_ROOT, './tmp/bench/rome/src/entry.ts')];
 
 const esbuildOptions = {
   tsconfig: nodePath.join(REPO_ROOT, './tmp/bench/rome/src/tsconfig.json'),
-}
+};
 
 const rolldownOptionsForParallelism: BenchSuite['rolldownOptions'] = [
   {
@@ -48,14 +48,14 @@ const rolldownOptionsForParallelism: BenchSuite['rolldownOptions'] = [
       },
     },
   },
-]
+];
 
 export const suiteRomeTsWithBabelAndParallelism = defineSuite({
   title: 'rome-ts-babel-parallelism',
   disableBundler: ['rollup', 'esbuild'],
   inputs,
   rolldownOptions: rolldownOptionsForParallelism,
-})
+});
 
 export const suiteRomeTs = defineSuite({
   title: 'rome-ts',
@@ -77,4 +77,4 @@ export const suiteRomeTs = defineSuite({
   derived: {
     sourcemap: true,
   },
-})
+});

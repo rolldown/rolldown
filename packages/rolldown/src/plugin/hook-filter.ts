@@ -1,19 +1,19 @@
-import type { MaybeArray } from '../types/utils'
-import type { StringOrRegExp } from '../types/utils'
-import type { ModuleType } from '../index'
+import type { ModuleType } from '../index';
+import type { MaybeArray } from '../types/utils';
+import type { StringOrRegExp } from '../types/utils';
 
 export type StringFilter<Value = StringOrRegExp> =
   | MaybeArray<Value>
   | {
-      include?: MaybeArray<Value>
-      exclude?: MaybeArray<Value>
-    }
+    include?: MaybeArray<Value>;
+    exclude?: MaybeArray<Value>;
+  };
 
 interface FormalModuleTypeFilter {
-  include?: ModuleType[]
+  include?: ModuleType[];
 }
 
-export type ModuleTypeFilter = ModuleType[] | FormalModuleTypeFilter
+export type ModuleTypeFilter = ModuleType[] | FormalModuleTypeFilter;
 
 export interface HookFilter {
   /**
@@ -48,7 +48,7 @@ export interface HookFilter {
    * }}
    * ```
    */
-  id?: StringFilter
-  moduleType?: ModuleTypeFilter
-  code?: StringFilter
+  id?: StringFilter;
+  moduleType?: ModuleTypeFilter;
+  code?: StringFilter;
 }

@@ -1,10 +1,10 @@
 [package]
-edition.workspace    = true
-homepage.workspace   = true
-license.workspace    = true
-name                 = "rolldown"
+name = "rolldown"
+version = "0.1.0"
+edition.workspace = true
+homepage.workspace = true
+license.workspace = true
 repository.workspace = true
-version              = "0.1.0"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
@@ -16,54 +16,54 @@ workspace = true
 
 [features]
 default = ["serde"]
-serde   = ["dep:serde", "oxc_index/serde"]
+serde = ["dep:serde", "oxc_index/serde"]
 
 [dependencies]
-anyhow                    = { workspace = true }
-append-only-vec           = { workspace = true }
-arcstr                    = { workspace = true }
-commondir                 = { workspace = true }
-css-module-lexer          = { workspace = true }
-dunce                     = { workspace = true }
-futures                   = { workspace = true }
-indexmap                  = { workspace = true }
-itertools                 = { workspace = true }
-itoa                      = { workspace = true }
-memchr                    = { workspace = true }
-notify                    = { workspace = true }
-oxc                       = { workspace = true }
-oxc_index                 = { workspace = true }
-rolldown_common           = { workspace = true }
-rolldown_ecmascript       = { workspace = true }
+anyhow = { workspace = true }
+append-only-vec = { workspace = true }
+arcstr = { workspace = true }
+commondir = { workspace = true }
+css-module-lexer = { workspace = true }
+dunce = { workspace = true }
+futures = { workspace = true }
+indexmap = { workspace = true }
+itertools = { workspace = true }
+itoa = { workspace = true }
+memchr = { workspace = true }
+notify = { workspace = true }
+oxc = { workspace = true }
+oxc_index = { workspace = true }
+rolldown_common = { workspace = true }
+rolldown_ecmascript = { workspace = true }
 rolldown_ecmascript_utils = { workspace = true }
-rolldown_error            = { workspace = true }
-rolldown_fs               = { workspace = true, features = ["os"] }
-rolldown_loader_utils     = { workspace = true }
-rolldown_plugin           = { workspace = true }
-rolldown_plugin_data_url  = { workspace = true }
-rolldown_resolver         = { workspace = true }
-rolldown_rstr             = { workspace = true }
-rolldown_sourcemap        = { workspace = true }
-rolldown_std_utils        = { workspace = true }
-rolldown_tracing          = { workspace = true }
-rolldown_utils            = { workspace = true }
-rustc-hash                = { workspace = true }
-serde                     = { workspace = true, optional = true }
-string_wizard             = { workspace = true }
-sugar_path                = { workspace = true }
-tokio                     = { workspace = true, features = ["rt", "macros", "sync", "time"] }
-tracing                   = { workspace = true }
-tracing-chrome            = { workspace = true }
-xxhash-rust               = { workspace = true, features = ["xxh3"] }
+rolldown_error = { workspace = true }
+rolldown_fs = { workspace = true, features = ["os"] }
+rolldown_loader_utils = { workspace = true }
+rolldown_plugin = { workspace = true }
+rolldown_plugin_data_url = { workspace = true }
+rolldown_resolver = { workspace = true }
+rolldown_rstr = { workspace = true }
+rolldown_sourcemap = { workspace = true }
+rolldown_std_utils = { workspace = true }
+rolldown_tracing = { workspace = true }
+rolldown_utils = { workspace = true }
+rustc-hash = { workspace = true }
+serde = { workspace = true, optional = true }
+string_wizard = { workspace = true }
+sugar_path = { workspace = true }
+tokio = { workspace = true, features = ["rt", "macros", "sync", "time"] }
+tracing = { workspace = true }
+tracing-chrome = { workspace = true }
+xxhash-rust = { workspace = true, features = ["xxh3"] }
 
 [dev-dependencies]
-glob               = { workspace = true }
-insta              = { workspace = true }
-rolldown_testing   = { workspace = true }
+glob = { workspace = true }
+insta = { workspace = true }
+rolldown_testing = { workspace = true }
 rolldown_workspace = { workspace = true }
-sugar_path         = { workspace = true }
-testing_macros     = { workspace = true }
-tokio              = { workspace = true, features = ["rt", "macros", "sync", "rt-multi-thread"] }
+sugar_path = { workspace = true }
+testing_macros = { workspace = true }
+tokio = { workspace = true, features = ["rt", "macros", "sync", "rt-multi-thread"] }
 
 [package.metadata.cargo-shear]
 ignored = ["serde"]

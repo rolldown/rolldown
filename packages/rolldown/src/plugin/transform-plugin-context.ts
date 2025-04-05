@@ -1,31 +1,31 @@
 import type {
   BindingPluginContext,
   BindingTransformPluginContext,
-} from '../binding'
+} from '../binding';
+import { normalizeLog } from '../log/log-handler';
+import { augmentCodeLocation, error, logPluginError } from '../log/logs';
+import { OutputOptions } from '../options/output-options';
+import type { Extends, TypeAssert } from '../types/assert';
 import type {
   LoggingFunctionWithPosition,
   LogHandler,
   LogLevelOption,
   RollupError,
-} from '../types/misc'
-import { normalizeLog } from '../log/log-handler'
-import { PluginContextImpl, type PluginContext } from './plugin-context'
-import { augmentCodeLocation, error, logPluginError } from '../log/logs'
-import { PluginContextData } from './plugin-context-data'
-import type { Plugin } from './index'
-import { SourceMap } from '../types/rolldown-output'
-import { OutputOptions } from '../options/output-options'
-import type { Extends, TypeAssert } from '../types/assert'
+} from '../types/misc';
+import { SourceMap } from '../types/rolldown-output';
+import type { Plugin } from './index';
+import { type PluginContext, PluginContextImpl } from './plugin-context';
+import { PluginContextData } from './plugin-context-data';
 
 export interface TransformPluginContext extends PluginContext {
-  debug: LoggingFunctionWithPosition
-  info: LoggingFunctionWithPosition
-  warn: LoggingFunctionWithPosition
+  debug: LoggingFunctionWithPosition;
+  info: LoggingFunctionWithPosition;
+  warn: LoggingFunctionWithPosition;
   error(
     e: RollupError | string,
     pos?: number | { column: number; line: number },
-  ): never
-  getCombinedSourcemap(): SourceMap
+  ): never;
+  getCombinedSourcemap(): SourceMap;
 }
 
 export class TransformPluginContextImpl extends PluginContextImpl {
@@ -50,35 +50,35 @@ export class TransformPluginContextImpl extends PluginContextImpl {
       LogLevelOption,
       watchMode,
       moduleId,
-    )
+    );
     const getLogHandler =
       (handler: LoggingFunctionWithPosition): LoggingFunctionWithPosition =>
       (log, pos) => {
-        log = normalizeLog(log)
-        if (pos) augmentCodeLocation(log, pos, moduleSource, moduleId)
-        log.id = moduleId
-        log.hook = 'transform'
-        handler(log)
-      }
+        log = normalizeLog(log);
+        if (pos) augmentCodeLocation(log, pos, moduleSource, moduleId);
+        log.id = moduleId;
+        log.hook = 'transform';
+        handler(log);
+      };
 
-    this.debug = getLogHandler(this.debug)
-    this.warn = getLogHandler(this.warn)
-    this.info = getLogHandler(this.info)
+    this.debug = getLogHandler(this.debug);
+    this.warn = getLogHandler(this.warn);
+    this.info = getLogHandler(this.info);
   }
 
   error(
     e: RollupError | string,
     pos?: number | { column: number; line: number },
   ): never {
-    if (typeof e === 'string') e = { message: e }
-    if (pos) augmentCodeLocation(e, pos, this.moduleSource, this.moduleId)
-    e.id = this.moduleId
-    e.hook = 'transform'
-    return error(logPluginError(normalizeLog(e), this.pluginName))
+    if (typeof e === 'string') e = { message: e };
+    if (pos) augmentCodeLocation(e, pos, this.moduleSource, this.moduleId);
+    e.id = this.moduleId;
+    e.hook = 'transform';
+    return error(logPluginError(normalizeLog(e), this.pluginName));
   }
 
   public getCombinedSourcemap(): SourceMap {
-    return JSON.parse(this.inner.getCombinedSourcemap())
+    return JSON.parse(this.inner.getCombinedSourcemap());
   }
 }
 
@@ -87,5 +87,5 @@ function _assert() {
   // instead check that TransformPluginContextImpl is assignable to TransformPluginContext here
   type _ = TypeAssert<
     Extends<TransformPluginContextImpl, TransformPluginContext>
-  >
+  >;
 }

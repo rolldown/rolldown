@@ -218,7 +218,7 @@ impl<'a> GenerateStage<'a> {
               vac.insert(2);
               break name;
             }
-          };
+          }
         }
       }
     };

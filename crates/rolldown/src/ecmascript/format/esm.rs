@@ -128,7 +128,7 @@ fn render_esm_chunk_imports(ctx: &GenerateContext<'_>) -> String {
         let canonical_ref = &ctx.link_output.symbol_db.canonical_ref_for(item.imported_as);
         if !ctx.link_output.used_symbol_refs.contains(canonical_ref) {
           return None;
-        };
+        }
         let alias = &ctx.chunk.canonical_names[canonical_ref];
         match &item.imported {
           Specifier::Star => {

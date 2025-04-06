@@ -83,8 +83,8 @@ pub fn normalize_options(mut raw_options: crate::BundlerOptions) -> NormalizeOpt
           .entry("import.meta.filename".to_string())
           .or_insert_with(|| "import.meta.filename".to_string());
       }
-    };
-  };
+    }
+  }
 
   let define = raw_define.into_iter().collect();
 

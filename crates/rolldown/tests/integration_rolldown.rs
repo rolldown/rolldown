@@ -1,3 +1,4 @@
+use std::fmt::Write as _;
 use std::path::{Component, PathBuf};
 
 use rolldown_common::Output;
@@ -8,6 +9,7 @@ use rolldown_testing::{
 };
 use sugar_path::SugarPath;
 use testing_macros::fixture;
+
 mod rolldown;
 
 #[allow(clippy::needless_pass_by_value)]
@@ -51,18 +53,20 @@ async fn filename_with_hash() {
     }
     let assets = integration_test.bundle(options).await.unwrap();
 
-    snapshot_output.push_str(&format!("# {}\n\n", fixture_path.relative(&cwd).to_slash_lossy()));
+    write!(snapshot_output, "# {}\n\n", fixture_path.relative(&cwd).to_slash_lossy()).unwrap();
 
     assets.assets.iter().for_each(|asset| match asset {
       Output::Asset(asset) => {
-        snapshot_output.push_str(&format!("- {}\n", asset.filename));
+        writeln!(snapshot_output, "- {}", asset.filename).unwrap();
       }
       Output::Chunk(chunk) => {
-        snapshot_output.push_str(&format!(
-          "- {} => {}\n",
+        writeln!(
+          snapshot_output,
+          "- {} => {}",
           chunk.preliminary_filename.as_str(),
           chunk.filename.as_str()
-        ));
+        )
+        .unwrap();
       }
     });
 

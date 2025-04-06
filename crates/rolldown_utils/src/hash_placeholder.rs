@@ -99,7 +99,7 @@ impl HashPlaceholderGenerator {
     let mut placeholder =
       String::with_capacity(len + HASH_PLACEHOLDER_LEFT.len() + HASH_PLACEHOLDER_RIGHT.len());
     placeholder.push_str(HASH_PLACEHOLDER_LEFT);
-    placeholder.extend(std::iter::repeat('0').take(allow_middle_len - seed_base64.len()));
+    placeholder.extend(std::iter::repeat_n('0', allow_middle_len - seed_base64.len()));
     placeholder.push_str(&seed_base64);
     placeholder.push_str(HASH_PLACEHOLDER_RIGHT);
 

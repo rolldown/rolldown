@@ -51,7 +51,7 @@ impl BuildEvent for DiagnosableResolveError {
         diagnostic.add_label(&importer_file, span.start..span.end, self.reason.clone());
       }
       _ => {}
-    };
+    }
     diagnostic.title = self.message(opts);
     diagnostic.help.clone_from(&self.help);
   }

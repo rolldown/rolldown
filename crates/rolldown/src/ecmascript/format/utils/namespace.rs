@@ -4,11 +4,14 @@
 //!    - If it is a namespaced name;
 //!    - If it is a valid identifier;
 //! - The `extend`: whether extends the object or not.
-use crate::types::generator::GenerateContext;
+use std::fmt::Write as _;
+
 use arcstr::ArcStr;
 use rolldown_common::OutputExports;
 use rolldown_error::{BuildDiagnostic, BuildResult};
 use rolldown_utils::{concat_string, ecmascript::is_validate_assignee_identifier_name};
+
+use crate::types::generator::GenerateContext;
 
 /// According to the amount of `.` in the name (levels),
 /// it generates the initialization code and the final code.
@@ -42,7 +45,7 @@ pub fn generate_namespace_definition(
 
     if i < parts.len() - 1 {
       let property = &namespace[global_len..];
-      stmts.push_str(&format!("{global}{property} = {global}{property} || {{}}{delimiter}"));
+      write!(stmts, "{global}{property} = {global}{property} || {{}}{delimiter}").unwrap();
     }
   }
 

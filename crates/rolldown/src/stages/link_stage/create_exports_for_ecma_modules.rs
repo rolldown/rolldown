@@ -86,7 +86,7 @@ impl LinkStage<'_> {
               }
               OutputFormat::Cjs | OutputFormat::Iife | OutputFormat::Umd | OutputFormat::App => {}
             }
-          };
+          }
           // Create a StmtInfo to represent the statement that declares and constructs the Module Namespace Object.
           // Corresponding AST for this statement will be created by the finalizer.
           declared_symbols.push(ecma_module.namespace_object_ref);

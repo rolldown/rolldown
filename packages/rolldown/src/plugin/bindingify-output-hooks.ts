@@ -59,12 +59,12 @@ export function bindingifyRenderChunk(
   const { handler, meta } = normalizeHook(hook);
 
   return {
-    plugin: async (ctx, code, chunk, opts, chunks) => {
+    plugin: async (ctx, code, chunk, opts, meta) => {
       // cache the chunks binding to deduplicated avoid clone chunks
       if (args.pluginContextData.getRenderChunkMeta() == null) {
         args.pluginContextData.setRenderChunkMeta({
           chunks: Object.fromEntries(
-            Object.entries(chunks).map(([key, value]) => [
+            Object.entries(meta.chunks).map(([key, value]) => [
               key,
               transformRenderedChunk(value),
             ]),

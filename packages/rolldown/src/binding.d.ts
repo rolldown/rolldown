@@ -119,6 +119,10 @@ export declare class BindingRenderedChunk {
   get dynamicImports(): Array<string>
 }
 
+export declare class BindingRenderedChunkMeta {
+  get chunks(): Record<string, BindingRenderedChunk>
+}
+
 export declare class BindingRenderedModule {
   get code(): string | null
   get renderedExports(): Array<string>
@@ -576,7 +580,7 @@ export interface BindingPluginOptions {
   moduleParsedMeta?: BindingPluginHookMeta
   buildEnd?: (ctx: BindingPluginContext, error?: (Error | BindingError)[]) => MaybePromise<VoidNullable>
   buildEndMeta?: BindingPluginHookMeta
-  renderChunk?: (ctx: BindingPluginContext, code: string, chunk: BindingRenderedChunk, opts: BindingNormalizedOptions, chunks: Record<string, BindingRenderedChunk>) => MaybePromise<VoidNullable<BindingHookRenderChunkOutput>>
+  renderChunk?: (ctx: BindingPluginContext, code: string, chunk: BindingRenderedChunk, opts: BindingNormalizedOptions, meta: BindingRenderedChunkMeta) => MaybePromise<VoidNullable<BindingHookRenderChunkOutput>>
   renderChunkMeta?: BindingPluginHookMeta
   augmentChunkHash?: (ctx: BindingPluginContext, chunk: BindingRenderedChunk) => MaybePromise<void | string>
   augmentChunkHashMeta?: BindingPluginHookMeta

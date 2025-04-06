@@ -1,5 +1,5 @@
 use napi::bindgen_prelude::{Either, FnArgs};
-use std::{collections::HashMap, fmt::Debug};
+use std::fmt::Debug;
 
 use crate::types::{
   binding_module_info::BindingModuleInfo,
@@ -22,6 +22,7 @@ use super::{
     binding_hook_resolve_id_output::BindingHookResolveIdOutput,
     binding_hook_transform_output::BindingHookTransformOutput,
     binding_plugin_transform_extra_args::BindingTransformHookExtraArgs,
+    binding_render_chunk_meta_chunks::BindingRenderedChunkMeta,
   },
 };
 
@@ -104,7 +105,7 @@ pub struct BindingPluginOptions {
   pub build_end_meta: Option<BindingPluginHookMeta>,
 
   #[napi(
-    ts_type = "(ctx: BindingPluginContext, code: string, chunk: BindingRenderedChunk, opts: BindingNormalizedOptions, chunks: Record<string, BindingRenderedChunk>) => MaybePromise<VoidNullable<BindingHookRenderChunkOutput>>"
+    ts_type = "(ctx: BindingPluginContext, code: string, chunk: BindingRenderedChunk, opts: BindingNormalizedOptions, meta: BindingRenderedChunkMeta) => MaybePromise<VoidNullable<BindingHookRenderChunkOutput>>"
   )]
   pub render_chunk: Option<
     MaybeAsyncJsCallback<
@@ -113,7 +114,7 @@ pub struct BindingPluginOptions {
         String,
         BindingRenderedChunk,
         BindingNormalizedOptions,
-        HashMap<String, BindingRenderedChunk>,
+        BindingRenderedChunkMeta,
       )>,
       Option<BindingHookRenderChunkOutput>,
     >,

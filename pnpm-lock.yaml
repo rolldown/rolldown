@@ -263,43 +263,6 @@ importers:
       valibot:
         specifier: 1.0.0
         version: 1.0.0(typescript@5.8.2)
-    optionalDependencies:
-      '@rolldown/binding-darwin-arm64':
-        specifier: workspace:*
-        version: link:npm/darwin-arm64
-      '@rolldown/binding-darwin-x64':
-        specifier: workspace:*
-        version: link:npm/darwin-x64
-      '@rolldown/binding-freebsd-x64':
-        specifier: workspace:*
-        version: link:npm/freebsd-x64
-      '@rolldown/binding-linux-arm-gnueabihf':
-        specifier: workspace:*
-        version: link:npm/linux-arm-gnueabihf
-      '@rolldown/binding-linux-arm64-gnu':
-        specifier: workspace:*
-        version: link:npm/linux-arm64-gnu
-      '@rolldown/binding-linux-arm64-musl':
-        specifier: workspace:*
-        version: link:npm/linux-arm64-musl
-      '@rolldown/binding-linux-x64-gnu':
-        specifier: workspace:*
-        version: link:npm/linux-x64-gnu
-      '@rolldown/binding-linux-x64-musl':
-        specifier: workspace:*
-        version: link:npm/linux-x64-musl
-      '@rolldown/binding-wasm32-wasi':
-        specifier: workspace:*
-        version: link:npm/wasm32-wasi
-      '@rolldown/binding-win32-arm64-msvc':
-        specifier: workspace:*
-        version: link:npm/win32-arm64-msvc
-      '@rolldown/binding-win32-ia32-msvc':
-        specifier: workspace:*
-        version: link:npm/win32-ia32-msvc
-      '@rolldown/binding-win32-x64-msvc':
-        specifier: workspace:*
-        version: link:npm/win32-x64-msvc
     devDependencies:
       '@jridgewell/sourcemap-codec':
         specifier: ^1.5.0
@@ -382,6 +345,43 @@ importers:
       why-is-node-running:
         specifier: ^3.0.0
         version: 3.2.2
+    optionalDependencies:
+      '@rolldown/binding-darwin-arm64':
+        specifier: workspace:*
+        version: link:npm/darwin-arm64
+      '@rolldown/binding-darwin-x64':
+        specifier: workspace:*
+        version: link:npm/darwin-x64
+      '@rolldown/binding-freebsd-x64':
+        specifier: workspace:*
+        version: link:npm/freebsd-x64
+      '@rolldown/binding-linux-arm-gnueabihf':
+        specifier: workspace:*
+        version: link:npm/linux-arm-gnueabihf
+      '@rolldown/binding-linux-arm64-gnu':
+        specifier: workspace:*
+        version: link:npm/linux-arm64-gnu
+      '@rolldown/binding-linux-arm64-musl':
+        specifier: workspace:*
+        version: link:npm/linux-arm64-musl
+      '@rolldown/binding-linux-x64-gnu':
+        specifier: workspace:*
+        version: link:npm/linux-x64-gnu
+      '@rolldown/binding-linux-x64-musl':
+        specifier: workspace:*
+        version: link:npm/linux-x64-musl
+      '@rolldown/binding-wasm32-wasi':
+        specifier: workspace:*
+        version: link:npm/wasm32-wasi
+      '@rolldown/binding-win32-arm64-msvc':
+        specifier: workspace:*
+        version: link:npm/win32-arm64-msvc
+      '@rolldown/binding-win32-ia32-msvc':
+        specifier: workspace:*
+        version: link:npm/win32-ia32-msvc
+      '@rolldown/binding-win32-x64-msvc':
+        specifier: workspace:*
+        version: link:npm/win32-x64-msvc
 
   packages/rolldown/npm/darwin-arm64: {}
 

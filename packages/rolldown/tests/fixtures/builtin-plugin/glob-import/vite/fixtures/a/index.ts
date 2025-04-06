@@ -5,9 +5,7 @@ export interface ModuleType {
 }
 
 export const basic = import.meta.glob<ModuleType>('./modules/*.ts')
-// prettier-ignore
 export const basicWithObjectKeys = Object.keys(import.meta.glob<ModuleType>('./modules/*.ts'))
-// prettier-ignore
 export const basicWithObjectValues = Object.values(import.meta.glob<ModuleType>('./modules/*.ts'))
 
 export const basicEager = import.meta.glob<ModuleType>('./modules/*.ts', {

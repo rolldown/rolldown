@@ -16,48 +16,48 @@ A example output code with circular import:
 
 ```js
 // first.js
-import { __esm, __export, init_second, value$1 as value } from './second.js'
-var first_exports = {}
-__export(first_exports, { value: () => value$1 })
-var value$1
+import { __esm, __export, init_second, value$1 as value } from './second.js';
+var first_exports = {};
+__export(first_exports, { value: () => value$1 });
+var value$1;
 var init_first = __esm({
   'first.js'() {
-    init_second()
-    //...
+    init_second();
+    // ...
   },
-})
-export { first_exports, init_first, value$1 as value }
+});
+export { first_exports, init_first, value$1 as value };
 
 // main.js
-import { __esm, init_second, second_exports } from './second.js'
-import { first_exports, init_first } from './first.js'
+import { first_exports, init_first } from './first.js';
+import { __esm, init_second, second_exports } from './second.js';
 
 var init_main = __esm({
   'main.js'() {
-    init_first()
-    init_second()
+    init_first();
+    init_second();
     // ...
   },
-})
+});
 
-init_main()
+init_main();
 
 // second.js
-import { init_first, value } from './first.js'
-var __esm = '...'
-var __export = '...'
+import { init_first, value } from './first.js';
+var __esm = '...';
+var __export = '...';
 
-var second_exports = {}
-__export(second_exports, { value: () => value$1 })
-var value$1
+var second_exports = {};
+__export(second_exports, { value: () => value$1 });
+var value$1;
 var init_second = __esm({
   'second.js'() {
-    init_first()
-    //...
+    init_first();
+    // ...
   },
-})
+});
 
-export { __esm, __export, init_second, second_exports, value$1 }
+export { __esm, __export, init_second, second_exports, value$1 };
 ```
 
 When we run `node ./main.js`, the traversal order of the modules would be `main.js` -> `first.js` -> `second.js`. The module execution order would be `second.js` -> `first.js` -> `main.js`.

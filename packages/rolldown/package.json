@@ -73,7 +73,7 @@
     "build-native:debug": "pnpm run --workspace-concurrency=1 \"/^build-(binding|js-glue)$/\"",
     "build-native:release": "pnpm run --workspace-concurrency=1 \"/^build-(binding:release|js-glue)$/\"",
     "build-wasi:debug": "pnpm run --workspace-concurrency=1 \"/^build-(binding|binding:wasi|node)$/\"",
-    "build-wasi:release": "pnpm run --workspace-concurrency=1 \"/^/build-(binding|binding:wasi:release|node)$/\"",
+    "build-wasi:release": "pnpm run --workspace-concurrency=1 \"/^build-(binding|binding:wasi:release|node)$/\"",
     "build-types-check": "tsc -p ./tsconfig.check.json",
     "# Scrips for docs #": "_",
     "extract-options-doc": "typedoc"

@@ -1,20 +1,20 @@
 [package]
-edition.workspace    = true
-homepage.workspace   = true
-license.workspace    = true
-name                 = "rolldown_loader_utils"
+name = "rolldown_loader_utils"
+version = "0.1.0"
+edition.workspace = true
+homepage.workspace = true
+license.workspace = true
 repository.workspace = true
-version              = "0.1.0"
 
 [lib]
 doctest = false
 
 [dependencies]
-anyhow          = { workspace = true }
-itoa            = { workspace = true }
+anyhow = { workspace = true }
+itoa = { workspace = true }
 rolldown_common = { workspace = true }
-rolldown_utils  = { workspace = true }
-serde_json      = { workspace = true }
+rolldown_utils = { workspace = true }
+serde_json = { workspace = true }
 
 [lints]
 workspace = true

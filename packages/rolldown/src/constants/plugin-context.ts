@@ -6,4 +6,4 @@
  */
 export const SYMBOL_FOR_RESOLVE_CALLER_THAT_SKIP_SELF: unique symbol = Symbol(
   'plugin-context-resolve-caller',
-)
+);

@@ -1,5 +1,5 @@
 export {
+  type Context,
   defineParallelPluginImplementation,
   type ParallelPluginImplementation,
-  type Context,
-} from './plugin/parallel-plugin-implementation'
+} from './plugin/parallel-plugin-implementation';

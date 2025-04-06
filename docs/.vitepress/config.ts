@@ -1,9 +1,9 @@
-import { defineConfig } from 'vitepress'
+import { defineConfig } from 'vitepress';
 import {
   groupIconMdPlugin,
   groupIconVitePlugin,
   localIconLoader,
-} from 'vitepress-plugin-group-icons'
+} from 'vitepress-plugin-group-icons';
 
 const sharedSidebar = [
   {
@@ -40,7 +40,7 @@ const sharedSidebar = [
       // { text: 'Use Strict', link: '/guide/in-depth/use-strict.md' },
     ],
   },
-]
+];
 
 // https://vitepress.dev/reference/site-config
 export default defineConfig({
@@ -52,12 +52,22 @@ export default defineConfig({
 
   /* prettier-ignore */
   head: [
-    ['link', { rel: 'icon', type: 'image/svg+xml', href: '/lightning-down.svg' }],
+    ['link', {
+      rel: 'icon',
+      type: 'image/svg+xml',
+      href: '/lightning-down.svg',
+    }],
     ['meta', { name: 'theme-color', content: '#ff7e17' }],
     ['meta', { property: 'og:type', content: 'website' }],
     ['meta', { property: 'og:locale', content: 'en' }],
-    ['meta', { property: 'og:title', content: 'Rolldown | Rust bundler for JavaScript' }],
-    ['meta', { property: 'og:image', content: 'https://rolldown.rs/og-image.png' }],
+    ['meta', {
+      property: 'og:title',
+      content: 'Rolldown | Rust bundler for JavaScript',
+    }],
+    ['meta', {
+      property: 'og:image',
+      content: 'https://rolldown.rs/og-image.png',
+    }],
     ['meta', { property: 'og:site_name', content: 'Rolldown' }],
     ['meta', { property: 'og:url', content: 'https://rolldown.rs/' }],
     ['meta', { name: 'twitter:card', content: 'summary_large_image' }],
@@ -124,7 +134,8 @@ export default defineConfig({
             },
             {
               text: 'Etiquette',
-              link: 'https://developer.mozilla.org/en-US/docs/MDN/Community/Open_source_etiquette',
+              link:
+                'https://developer.mozilla.org/en-US/docs/MDN/Community/Open_source_etiquette',
             },
           ],
         },
@@ -191,7 +202,7 @@ export default defineConfig({
   },
   markdown: {
     config(md) {
-      md.use(groupIconMdPlugin)
+      md.use(groupIconMdPlugin);
     },
   },
-})
+});

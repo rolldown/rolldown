@@ -1,5 +1,5 @@
-import { defineConfig } from 'rolldown'
-import { moduleFederationPlugin } from 'rolldown/experimental'
+import { defineConfig } from 'rolldown';
+import { moduleFederationPlugin } from 'rolldown/experimental';
 
 // TODO: can't resolve `./Button.jsx` at ubuntu.
 export default defineConfig({
@@ -20,4 +20,4 @@ export default defineConfig({
       getPublicPath: 'http://localhost:8085/',
     }),
   ],
-})
+});

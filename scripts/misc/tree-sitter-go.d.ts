@@ -1,4 +1,4 @@
 declare module 'tree-sitter-go' {
-  const Go: unknown
-  export default Go
+  const Go: unknown;
+  export default Go;
 }

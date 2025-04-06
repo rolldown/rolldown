@@ -1,24 +1,23 @@
 [package]
-edition.workspace    = true
-homepage.workspace   = true
-license.workspace    = true
-name                 = "rolldown_plugin_replace"
+name = "rolldown_plugin_replace"
+version = "0.1.0"
+edition.workspace = true
+homepage.workspace = true
+license.workspace = true
 repository.workspace = true
-version              = "0.1.0"
 
 [dependencies]
-oxc             = { workspace = true }
-regex           = { workspace = true }
-regress         = { workspace = true }
+oxc = { workspace = true }
+regex = { workspace = true }
+regress = { workspace = true }
 rolldown_plugin = { path = "../rolldown_plugin" }
-rustc-hash      = { workspace = true }
-string_wizard   = { workspace = true }
+rustc-hash = { workspace = true }
+string_wizard = { workspace = true }
 
 [dev-dependencies]
-rolldown         = { workspace = true }
+rolldown = { workspace = true }
 rolldown_testing = { workspace = true }
-tokio            = { workspace = true, features = ["rt", "macros", "sync", "rt-multi-thread"] }
-
+tokio = { workspace = true, features = ["rt", "macros", "sync", "rt-multi-thread"] }
 
 [lints]
 workspace = true

@@ -1,10 +1,10 @@
-const { spawn } = require('node:child_process')
-const fs = require('fs-extra')
-const glob = require('glob')
-const path = require('node:path')
+const { spawn } = require('node:child_process');
+const fs = require('fs-extra');
+const glob = require('glob');
+const path = require('node:path');
 
-const args = process.argv.slice(2)
-console.log(`args: `, args)
+const args = process.argv.slice(2);
+console.log(`args: `, args);
 
 const cmd = spawn(
   'npx',
@@ -30,7 +30,7 @@ const cmd = spawn(
     env: { ...process.env, RUSTC_COLOR: 'always' }, // Force color output
     shell: true,
   },
-)
+);
 
 // Inspect exit code
 cmd.on('close', (code) => {
@@ -40,22 +40,22 @@ cmd.on('close', (code) => {
       {
         absolute: true,
       },
-    )
+    );
     nodeFiles.forEach((file) => {
-      fs.rmSync(file)
-    })
+      fs.rmSync(file);
+    });
 
     const wasmFiles = glob.globSync(
       [path.resolve(__dirname, './src/rolldown-binding.*.wasm')],
       {
         absolute: true,
       },
-    )
+    );
 
     wasmFiles.forEach((file) => {
-      fs.rmSync(file)
-    })
-    console.error('Command failed!')
-    process.exit(code)
+      fs.rmSync(file);
+    });
+    console.error('Command failed!');
+    process.exit(code);
   }
-})
+});

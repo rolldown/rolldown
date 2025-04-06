@@ -20,9 +20,6 @@ importers:
       '@oxc-project/runtime':
         specifier: 0.61.2
         version: 0.61.2
-      '@taplo/cli':
-        specifier: ^0.7.0
-        version: 0.7.0
       '@types/node':
         specifier: 22.13.14
         version: 22.13.14
@@ -38,6 +35,9 @@ importers:
       cspell:
         specifier: ^8.8.4
         version: 8.18.1
+      dprint:
+        specifier: ^0.49.1
+        version: 0.49.1
       husky:
         specifier: ^9.0.0
         version: 9.1.7
@@ -50,9 +50,6 @@ importers:
       oxlint:
         specifier: ^0.16.0
         version: 0.16.3
-      prettier:
-        specifier: ^3.3.1
-        version: 3.5.3
       rolldown:
         specifier: workspace:*
         version: link:packages/rolldown
@@ -266,6 +263,43 @@ importers:
       valibot:
         specifier: 1.0.0
         version: 1.0.0(typescript@5.8.2)
+    optionalDependencies:
+      '@rolldown/binding-darwin-arm64':
+        specifier: workspace:*
+        version: link:npm/darwin-arm64
+      '@rolldown/binding-darwin-x64':
+        specifier: workspace:*
+        version: link:npm/darwin-x64
+      '@rolldown/binding-freebsd-x64':
+        specifier: workspace:*
+        version: link:npm/freebsd-x64
+      '@rolldown/binding-linux-arm-gnueabihf':
+        specifier: workspace:*
+        version: link:npm/linux-arm-gnueabihf
+      '@rolldown/binding-linux-arm64-gnu':
+        specifier: workspace:*
+        version: link:npm/linux-arm64-gnu
+      '@rolldown/binding-linux-arm64-musl':
+        specifier: workspace:*
+        version: link:npm/linux-arm64-musl
+      '@rolldown/binding-linux-x64-gnu':
+        specifier: workspace:*
+        version: link:npm/linux-x64-gnu
+      '@rolldown/binding-linux-x64-musl':
+        specifier: workspace:*
+        version: link:npm/linux-x64-musl
+      '@rolldown/binding-wasm32-wasi':
+        specifier: workspace:*
+        version: link:npm/wasm32-wasi
+      '@rolldown/binding-win32-arm64-msvc':
+        specifier: workspace:*
+        version: link:npm/win32-arm64-msvc
+      '@rolldown/binding-win32-ia32-msvc':
+        specifier: workspace:*
+        version: link:npm/win32-ia32-msvc
+      '@rolldown/binding-win32-x64-msvc':
+        specifier: workspace:*
+        version: link:npm/win32-x64-msvc
     devDependencies:
       '@jridgewell/sourcemap-codec':
         specifier: ^1.5.0
@@ -348,43 +382,6 @@ importers:
       why-is-node-running:
         specifier: ^3.0.0
         version: 3.2.2
-    optionalDependencies:
-      '@rolldown/binding-darwin-arm64':
-        specifier: workspace:*
-        version: link:npm/darwin-arm64
-      '@rolldown/binding-darwin-x64':
-        specifier: workspace:*
-        version: link:npm/darwin-x64
-      '@rolldown/binding-freebsd-x64':
-        specifier: workspace:*
-        version: link:npm/freebsd-x64
-      '@rolldown/binding-linux-arm-gnueabihf':
-        specifier: workspace:*
-        version: link:npm/linux-arm-gnueabihf
-      '@rolldown/binding-linux-arm64-gnu':
-        specifier: workspace:*
-        version: link:npm/linux-arm64-gnu
-      '@rolldown/binding-linux-arm64-musl':
-        specifier: workspace:*
-        version: link:npm/linux-arm64-musl
-      '@rolldown/binding-linux-x64-gnu':
-        specifier: workspace:*
-        version: link:npm/linux-x64-gnu
-      '@rolldown/binding-linux-x64-musl':
-        specifier: workspace:*
-        version: link:npm/linux-x64-musl
-      '@rolldown/binding-wasm32-wasi':
-        specifier: workspace:*
-        version: link:npm/wasm32-wasi
-      '@rolldown/binding-win32-arm64-msvc':
-        specifier: workspace:*
-        version: link:npm/win32-arm64-msvc
-      '@rolldown/binding-win32-ia32-msvc':
-        specifier: workspace:*
-        version: link:npm/win32-ia32-msvc
-      '@rolldown/binding-win32-x64-msvc':
-        specifier: workspace:*
-        version: link:npm/win32-x64-msvc
 
   packages/rolldown/npm/darwin-arm64: {}
 
@@ -1473,6 +1470,51 @@ packages:
         optional: true
       search-insights:
         optional: true
+
+  '@dprint/darwin-arm64@0.49.1':
+    resolution: {integrity: sha512-ib6KcJWo/M5RJWXOQKhP664FG1hAvG7nrbkh+j8n+oXdzmbyDdXTP+zW+aM3/sIQUkGaZky1xy1j2VeScMEEHQ==}
+    cpu: [arm64]
+    os: [darwin]
+
+  '@dprint/darwin-x64@0.49.1':
+    resolution: {integrity: sha512-vIVgnYxV7YYa1d6Uyz707RbgB9rwefGPam+rzaueFNPQjdOxPOTQDuMEJDS+Z3BlI00MfeoupIfIUGsXoM4dpQ==}
+    cpu: [x64]
+    os: [darwin]
+
+  '@dprint/linux-arm64-glibc@0.49.1':
+    resolution: {integrity: sha512-ZeIh6qMPWLBBifDtU0XadpK36b4WoaTqCOt0rWKfoTjq1RAt78EgqETWp43Dbr6et/HvTgYdoWF0ZNEu2FJFFA==}
+    cpu: [arm64]
+    os: [linux]
+
+  '@dprint/linux-arm64-musl@0.49.1':
+    resolution: {integrity: sha512-/nuRyx+TykN6MqhlSCRs/t3o1XXlikiwTc9emWdzMeLGllYvJrcht9gRJ1/q1SqwCFhzgnD9H7roxxfji1tc+Q==}
+    cpu: [arm64]
+    os: [linux]
+
+  '@dprint/linux-riscv64-glibc@0.49.1':
+    resolution: {integrity: sha512-RHBqrnvGO+xW4Oh0QuToBqWtkXMcfjqa1TqbBFF03yopFzZA2oRKX83PhjTWgd/IglaOns0BgmaLJy/JBSxOfQ==}
+    cpu: [riscv64]
+    os: [linux]
+
+  '@dprint/linux-x64-glibc@0.49.1':
+    resolution: {integrity: sha512-MjFE894mIQXOKBencuakKyzAI4KcDe/p0Y9lRp9YSw/FneR4QWH9VBH90h8fRxcIlWMArjFFJJAtsBnn5qgxeg==}
+    cpu: [x64]
+    os: [linux]
+
+  '@dprint/linux-x64-musl@0.49.1':
+    resolution: {integrity: sha512-CvGBWOksHgrL1uzYqtPFvZz0+E82BzgoCIEHJeuYaveEn37qWZS5jqoCm/vz6BfoivE1dVuyyOT78Begj9KxkQ==}
+    cpu: [x64]
+    os: [linux]
+
+  '@dprint/win32-arm64@0.49.1':
+    resolution: {integrity: sha512-gQa4s82lMcXjfdxjWBQun6IJlXdPZZaIj2/2cqXWVEOYPKxAZ/JvGzt2pPG+i73h9KHjNLIV8M9ckqEH3oHufg==}
+    cpu: [arm64]
+    os: [win32]
+
+  '@dprint/win32-x64@0.49.1':
+    resolution: {integrity: sha512-nPU6+hoVze5JJlgET7woYWElBw0IUaB/9XKTaglknQuUUfsmD75D9pkgJTxdIxl9Bg/i5O7c9wb3Nj4XNiTIfw==}
+    cpu: [x64]
+    os: [win32]
 
   '@emnapi/core@1.4.0':
     resolution: {integrity: sha512-H+N/FqT07NmLmt6OFFtDfwe8PNygprzBikrEMyQfgqSmT0vzE515Pz7R8izwB9q/zsH/MA64AKoul3sA6/CzVg==}
@@ -3218,10 +3260,6 @@ packages:
     resolution: {integrity: sha512-tlqY9xq5ukxTUZBmoOp+m61cqwQD5pHJtFY3Mn8CA8ps6yghLH/Hw8UPdqg4OLmFW3IFlcXnQNmo/dh8HzXYIQ==}
     engines: {node: '>=18'}
 
-  '@taplo/cli@0.7.0':
-    resolution: {integrity: sha512-Ck3zFhQhIhi02Hl6T4ZmJsXdnJE+wXcJz5f8klxd4keRYgenMnip3JDPMGDRLbnC/2iGd8P0sBIQqI3KxfVjBg==}
-    hasBin: true
-
   '@trysound/sax@0.2.0':
     resolution: {integrity: sha512-L7z9BgrNEcYyUYtF+HaEfiS5ebkh9jXqbszz7pC0hRBPaatV0XjSD3+eHrpqFemQfgwiFF0QPIarnIihIDn7OA==}
     engines: {node: '>=10.13.0'}
@@ -4194,6 +4232,10 @@ packages:
   dot-prop@5.3.0:
     resolution: {integrity: sha512-QM8q3zDe58hqUqjraQOmzZ1LIH9SWQJTlEKCH4kJ2oQvLZk7RbQXvtDM2XEq3fwkV9CCvvH4LA0AV+ogFsBM2Q==}
     engines: {node: '>=8'}
+
+  dprint@0.49.1:
+    resolution: {integrity: sha512-pO9XH79SyXybj2Vhc9ITZMEI8cJkdlQQRoD8oEfPH6Jjpp/7WX5kIgECVd3DBOjjAdCSiW6R47v3gJBx/qZVkw==}
+    hasBin: true
 
   dunder-proto@1.0.1:
     resolution: {integrity: sha512-KIN/nDJBQRcXw0MLVhZE9iQHmG68qAVIBg9CqmUYjmQIhgij9U5MFvrqkUL5FbtyyzZuOeOt0zdeRe4UY7ct+A==}
@@ -5753,11 +5795,6 @@ packages:
 
   preact@10.26.4:
     resolution: {integrity: sha512-KJhO7LBFTjP71d83trW+Ilnjbo+ySsaAgCfXOXUlmGzJ4ygYPWmysm77yg4emwfmoz3b22yvH5IsVFHbhUaH5w==}
-
-  prettier@3.5.3:
-    resolution: {integrity: sha512-QQtaxnoDJeAkDvDKWCLiwIXkTgRhwYDEQCghU9Z6q03iyek/rxRh/2lC3HB7P8sWT2xC/y5JDctPLBIGzHKbhw==}
-    engines: {node: '>=14'}
-    hasBin: true
 
   pretty-bytes@5.6.0:
     resolution: {integrity: sha512-FFw039TmrBqFK8ma/7OL3sDz/VytdtJr044/QUJtH0wK9lb9jLq9tJyIxUwtQJHwar2BqtiA4iCWSwo9JLkzFg==}
@@ -7933,6 +7970,33 @@ snapshots:
     transitivePeerDependencies:
       - '@algolia/client-search'
 
+  '@dprint/darwin-arm64@0.49.1':
+    optional: true
+
+  '@dprint/darwin-x64@0.49.1':
+    optional: true
+
+  '@dprint/linux-arm64-glibc@0.49.1':
+    optional: true
+
+  '@dprint/linux-arm64-musl@0.49.1':
+    optional: true
+
+  '@dprint/linux-riscv64-glibc@0.49.1':
+    optional: true
+
+  '@dprint/linux-x64-glibc@0.49.1':
+    optional: true
+
+  '@dprint/linux-x64-musl@0.49.1':
+    optional: true
+
+  '@dprint/win32-arm64@0.49.1':
+    optional: true
+
+  '@dprint/win32-x64@0.49.1':
+    optional: true
+
   '@emnapi/core@1.4.0':
     dependencies:
       '@emnapi/wasi-threads': 1.0.1
@@ -9343,8 +9407,6 @@ snapshots:
 
   '@sindresorhus/merge-streams@4.0.0': {}
 
-  '@taplo/cli@0.7.0': {}
-
   '@trysound/sax@0.2.0': {}
 
   '@tybys/wasm-util@0.9.0':
@@ -10438,6 +10500,18 @@ snapshots:
   dot-prop@5.3.0:
     dependencies:
       is-obj: 2.0.0
+
+  dprint@0.49.1:
+    optionalDependencies:
+      '@dprint/darwin-arm64': 0.49.1
+      '@dprint/darwin-x64': 0.49.1
+      '@dprint/linux-arm64-glibc': 0.49.1
+      '@dprint/linux-arm64-musl': 0.49.1
+      '@dprint/linux-riscv64-glibc': 0.49.1
+      '@dprint/linux-x64-glibc': 0.49.1
+      '@dprint/linux-x64-musl': 0.49.1
+      '@dprint/win32-arm64': 0.49.1
+      '@dprint/win32-x64': 0.49.1
 
   dunder-proto@1.0.1:
     dependencies:
@@ -12205,8 +12279,6 @@ snapshots:
       source-map-js: 1.2.1
 
   preact@10.26.4: {}
-
-  prettier@3.5.3: {}
 
   pretty-bytes@5.6.0: {}
 

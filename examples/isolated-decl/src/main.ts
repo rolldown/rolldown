@@ -1,11 +1,11 @@
-import { type Num } from './types'
-import { Component } from './component'
-export type Str = string
+import { Component } from './component';
+import { type Num } from './types';
+export type Str = string;
 
 export function hello(s: Str): Str {
-  return 'hello' + s
+  return 'hello' + s;
 }
 
-export let c: React.JSX.Element = Component
+export let c: React.JSX.Element = Component;
 
-export let num: Num = 1
+export let num: Num = 1;

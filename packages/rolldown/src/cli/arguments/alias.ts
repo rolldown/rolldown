@@ -1,19 +1,19 @@
-import type { InputCliOptions } from '../../options/input-options'
-import type { OutputCliOptions } from '../../options/output-options'
+import type { InputCliOptions } from '../../options/input-options';
+import type { OutputCliOptions } from '../../options/output-options';
 
 export interface CliOptions extends InputCliOptions, OutputCliOptions {
-  config?: string | boolean
-  help?: boolean
-  version?: boolean
-  watch?: boolean
+  config?: string | boolean;
+  help?: boolean;
+  version?: boolean;
+  watch?: boolean;
 }
 
 export interface OptionConfig {
-  abbreviation?: string
-  description?: string
-  default?: string | boolean
-  hint?: string
-  reverse?: boolean
+  abbreviation?: string;
+  description?: string;
+  default?: string | boolean;
+  hint?: string;
+  reverse?: boolean;
 }
 
 export const alias: Partial<Record<keyof CliOptions, OptionConfig>> = {
@@ -78,4 +78,4 @@ export const alias: Partial<Record<keyof CliOptions, OptionConfig>> = {
   moduleTypes: {
     hint: 'types',
   },
-}
+};

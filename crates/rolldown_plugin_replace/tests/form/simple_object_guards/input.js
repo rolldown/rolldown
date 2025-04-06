@@ -1,1 +1,1 @@
-[foo, foo.qux, "foo"];
+[foo, foo.qux, 'foo'];

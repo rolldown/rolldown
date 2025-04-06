@@ -38,7 +38,7 @@ targets = [
 # they are connected to another crate in the graph that hasn't been pruned,
 # so it should be used with care. The identifiers are [Package ID Specifications]
 # (https://doc.rust-lang.org/cargo/reference/pkgid-spec.html)
-#exclude = []
+# exclude = []
 # If true, metadata will be collected with `--all-features`. Note that this can't
 # be toggled off if true, if you want to conditionally enable `--all-features` it
 # is recommended to pass `--all-features` on the cmd line instead
@@ -48,7 +48,7 @@ all-features = false
 no-default-features = false
 # If set, these feature will be enabled when collecting metadata. If `--features`
 # is specified on the cmd line they will take precedence over this option.
-#features = []
+# features = []
 
 # The output table provides options for how/if diagnostics are outputted
 [output]
@@ -90,7 +90,7 @@ allow = [
   "MPL-2.0",
   "MIT-0",
   "CC0-1.0",
-  #"Apache-2.0 WITH LLVM-exception",
+  # "Apache-2.0 WITH LLVM-exception",
 ]
 # Lint level for licenses considered copyleft
 # Blanket approval or denial for OSI-approved or FSF Free/Libre licenses
@@ -146,7 +146,7 @@ ignore = false
 # is only published to private registries, and ignore is true, the crate will
 # not have its license(s) checked
 registries = [
-  #"https://sekretz.com/registry
+  # "https://sekretz.com/registry
 ]
 
 # This section is considered when running `cargo deny check bans`.
@@ -173,27 +173,27 @@ workspace-default-features = "allow"
 external-default-features = "allow"
 # List of crates that are allowed. Use with care!
 allow = [
-  #"ansi_term@0.11.0",
-  #{ crate = "ansi_term@0.11.0", reason = "you can specify a reason it is allowed" },
+  # "ansi_term@0.11.0",
+  # { crate = "ansi_term@0.11.0", reason = "you can specify a reason it is allowed" },
 ]
 # List of crates to deny
 deny = [
-  #"ansi_term@0.11.0",
-  #{ crate = "ansi_term@0.11.0", reason = "you can specify a reason it is banned" },
+  # "ansi_term@0.11.0",
+  # { crate = "ansi_term@0.11.0", reason = "you can specify a reason it is banned" },
   # Wrapper crates can optionally be specified to allow the crate when it
   # is a direct dependency of the otherwise banned crate
-  #{ crate = "ansi_term@0.11.0", wrappers = ["this-crate-directly-depends-on-ansi_term"] },
+  # { crate = "ansi_term@0.11.0", wrappers = ["this-crate-directly-depends-on-ansi_term"] },
 ]
 
 # List of features to allow/deny
 # Each entry the name of a crate and a version range. If version is
 # not specified, all versions will be matched.
-#[[bans.features]]
-#crate = "reqwest"
+# [[bans.features]]
+# crate = "reqwest"
 # Features to not allow
-#deny = ["json"]
+# deny = ["json"]
 # Features to allow
-#allow = [
+# allow = [
 #    "rustls",
 #    "__rustls",
 #    "__tls",
@@ -203,23 +203,23 @@ deny = [
 #    "rustls-tls-webpki-roots",
 #    "tokio-rustls",
 #    "webpki-roots",
-#]
+# ]
 # If true, the allowed features must exactly match the enabled feature set. If
 # this is set there is no point setting `deny`
-#exact = true
+# exact = true
 
 # Certain crates/versions that will be skipped when doing duplicate detection.
 skip = [
-  #"ansi_term@0.11.0",
-  #{ crate = "ansi_term@0.11.0", reason = "you can specify a reason why it can't be updated/removed" },
+  # "ansi_term@0.11.0",
+  # { crate = "ansi_term@0.11.0", reason = "you can specify a reason why it can't be updated/removed" },
 ]
 # Similarly to `skip` allows you to skip certain crates during duplicate
 # detection. Unlike skip, it also includes the entire tree of transitive
 # dependencies starting at the specified crate, up to a certain depth, which is
 # by default infinite.
 skip-tree = [
-  #"ansi_term@0.11.0", # will be skipped along with _all_ of its direct and transitive dependencies
-  #{ crate = "ansi_term@0.11.0", depth = 20 },
+  # "ansi_term@0.11.0", # will be skipped along with _all_ of its direct and transitive dependencies
+  # { crate = "ansi_term@0.11.0", depth = 20 },
 ]
 
 # This section is considered when running `cargo deny check sources`.

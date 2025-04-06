@@ -1,9 +1,9 @@
-import { defineConfig } from 'rolldown'
-import { builtinModules } from 'node:module'
-import nodePath from 'node:path'
-import { noopPlugin } from '../../parallel-noop-plugin/impl.js'
+import { builtinModules } from 'node:module';
+import nodePath from 'node:path';
+import { defineConfig } from 'rolldown';
+import { noopPlugin } from '../../parallel-noop-plugin/impl.js';
 
-export const REPO_ROOT = nodePath.resolve(import.meta.dirname, '../../../..')
+export const REPO_ROOT = nodePath.resolve(import.meta.dirname, '../../../..');
 
 export default defineConfig({
   logLevel: 'silent',
@@ -12,4 +12,4 @@ export default defineConfig({
   },
   external: builtinModules,
   plugins: [noopPlugin()],
-})
+});

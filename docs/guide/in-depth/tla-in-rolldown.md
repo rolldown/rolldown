@@ -22,38 +22,38 @@ A real-world example would looks like
 
 ```js
 // main.js
-import { foo1 } from './tla1.js'
-import { foo2 } from './tla2.js'
-import { bar } from './sync.js'
-console.log(foo, foo2, bar)
+import { bar } from './sync.js';
+import { foo1 } from './tla1.js';
+import { foo2 } from './tla2.js';
+console.log(foo, foo2, bar);
 
 // tla1.js
 
-export const foo1 = await Promise.resolve('foo1')
+export const foo1 = await Promise.resolve('foo1');
 
 // tla2.js
 
-export const foo2 = await Promise.resolve('foo2')
+export const foo2 = await Promise.resolve('foo2');
 
 // sync.js
 
-export const bar = 'bar'
+export const bar = 'bar';
 ```
 
 After bundling, it will be
 
 ```js
 // tla1.js
-const foo1 = await Promise.resolve('foo1')
+const foo1 = await Promise.resolve('foo1');
 
 // tla2.js
-const foo2 = await Promise.resolve('foo2')
+const foo2 = await Promise.resolve('foo2');
 
 // sync.js
-const bar = 'bar'
+const bar = 'bar';
 
 // main.js
-console.log(foo1, foo2, bar)
+console.log(foo1, foo2, bar);
 ```
 
 You can see that, in bundled code, promise `foo1` and `foo2` are resolved sequentially, but in the original code, they are resolved concurrently.
@@ -61,35 +61,35 @@ You can see that, in bundled code, promise `foo1` and `foo2` are resolved sequen
 There's a very [good example](https://github.com/tc39/proposal-top-level-await?tab=readme-ov-file#semantics-as-desugaring) of TLA spec repo, which explains the mental model of how the TLA works
 
 ```js
-import { a } from './a.mjs'
-import { b } from './b.mjs'
-import { c } from './c.mjs'
+import { a } from './a.mjs';
+import { b } from './b.mjs';
+import { c } from './c.mjs';
 
-console.log(a, b, c)
+console.log(a, b, c);
 ```
 
 could be considered as the following code after desugaring:
 
 ```js
-import { promise as aPromise, a } from './a.mjs'
-import { promise as bPromise, b } from './b.mjs'
-import { promise as cPromise, c } from './c.mjs'
+import { a, promise as aPromise } from './a.mjs';
+import { b, promise as bPromise } from './b.mjs';
+import { c, promise as cPromise } from './c.mjs';
 
 export const promise = Promise.all([aPromise, bPromise, cPromise]).then(() => {
-  console.log(a, b, c)
-})
+  console.log(a, b, c);
+});
 ```
 
 However, in rolldown, it will looks like this after bundling:
 
 ```js
-import { promise as aPromise, a } from './a.mjs'
-import { promise as bPromise, b } from './b.mjs'
-import { promise as cPromise, c } from './c.mjs'
+import { a, promise as aPromise } from './a.mjs';
+import { b, promise as bPromise } from './b.mjs';
+import { c, promise as cPromise } from './c.mjs';
 
-await aPromise
-await bPromise
-await cPromise
+await aPromise;
+await bPromise;
+await cPromise;
 
-console.log(a, b, c)
+console.log(a, b, c);
 ```

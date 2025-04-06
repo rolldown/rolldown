@@ -9,11 +9,8 @@
   "scripts": {
     "lint-code": "oxlint -c .oxlintrc.json --ignore-path=.oxlintignore --deny-warnings",
     "lint-spell": "cspell \"**\" --no-progress  --gitignore",
-    "lint-prettier": "prettier '**/*.{js,ts,json,md,yml,yaml,vue}' -c",
-    "lint-prettier:fix": "prettier '**/*.{js,ts,json,md,yml,yaml,vue}' -w",
-    "lint-toml": "taplo format --check",
-    "lint-toml:fix": "taplo format",
-    "lint-repo": "npm-run-all -l --parallel lint-prettier lint-toml lint-spell",
+    "lint-repo": "npm-run-all -l --parallel fmt lint-spell",
+    "fmt": "dprint fmt",
     "build": "echo \"Use just build\"",
     "build:release": "echo \"Use just build native release\"",
     "test": "echo \"Use just test-node\"",
@@ -31,31 +28,24 @@
     "@babel/runtime": "7.27.0",
     "@oxc-node/core": "^0.0.21",
     "@oxc-project/runtime": "0.61.2",
-    "@taplo/cli": "^0.7.0",
     "@types/node": "22.13.14",
     "cjs-module-lexer": "^2.0.0",
     "conventional-changelog-cli": "^5.0.0",
     "cross-env": "^7.0.3",
     "cspell": "^8.8.4",
+    "dprint": "^0.49.1",
     "husky": "^9.0.0",
     "lint-staged": "^15.2.5",
     "npm-run-all": "^4.1.5",
     "oxlint": "^0.16.0",
-    "prettier": "^3.3.1",
     "rolldown": "workspace:*",
     "typescript": "^5.6.3"
   },
-  "prettier": {
-    "printWidth": 80,
-    "semi": false,
-    "singleQuote": true,
-    "trailingComma": "all",
-    "arrowParens": "always"
-  },
   "lint-staged": {
-    "*.toml": "taplo format",
-    "*.{js,ts,json,md,yml,yaml,vue}": [
-      "prettier --write",
+    "*.@(js|ts|tsx|yml|yaml|md|json|html|toml)": [
+      "dprint fmt"
+    ],
+    "*.@(js|ts|tsx)": [
       "pnpm lint-code -- --fix"
     ],
     "*": "cspell --no-progress --gitignore --no-must-find-files"

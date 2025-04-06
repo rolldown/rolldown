@@ -9,7 +9,7 @@
   "scripts": {
     "lint-code": "oxlint -c .oxlintrc.json --ignore-path=.oxlintignore --deny-warnings",
     "lint-spell": "cspell \"**\" --no-progress  --gitignore",
-    "lint-repo": "pnpm run --stream --color \"/fmt|lint-spell/\"",
+    "lint-repo": "pnpm run --stream --color \"/^fmt|lint-spell$/\"",
     "fmt": "dprint fmt",
     "build": "echo \"Use just build\"",
     "build:release": "echo \"Use just build native release\"",

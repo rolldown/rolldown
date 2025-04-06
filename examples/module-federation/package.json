@@ -4,9 +4,6 @@
   "scripts": {
     "dev:host": "pnpm --filter @example/module-federation-host run dev",
     "dev:remote": "pnpm --filter @example/module-federation-remote run dev",
-    "dev": "npm-run-all -l --parallel dev:remote dev:host"
-  },
-  "devDependencies": {
-    "npm-run-all": "^4.1.5"
+    "dev": "pnpm run --stream --color \"/^dev:(remote|host)/\""
   }
 }

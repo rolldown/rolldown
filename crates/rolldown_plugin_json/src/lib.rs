@@ -167,11 +167,11 @@ fn to_esm(data: &Value, named_exports: bool) -> String {
       default_export_rows.push(Cow::Owned(format!("{key}: {value}",)));
     }
   }
-  let default_export_code: String =
-    default_export_rows.iter().map(|s| s.as_str()).collect::<Vec<_>>().join(",\n");
-  let default_export_code = format!("export default {{\n{default_export_code}\n}};\n");
 
-  format!("{named_export_code}{default_export_code}")
+  let default_export_code =
+    default_export_rows.iter().map(|s| s.as_str()).collect::<Vec<_>>().join(",\n");
+
+  format!("{named_export_code}export default {{\n{default_export_code}\n}};\n")
 }
 
 #[cfg(test)]

@@ -1,6 +1,8 @@
-# rolldown_plugin_module_preload_polyfill
+# Maintenance Guide
 
 A plugin for [rolldown-vite](https://github.com/vitejs/rolldown-vite) that injects a `modulepreload` polyfill for legacy browsers, ported from [Vite's `modulePreloadPolyfillPlugin`](https://github.com/vitejs/vite/blob/main/packages/vite/src/node/plugins/modulePreloadPolyfill.ts#L34).
+
+**This plugin is exclusive to `rolldown-vite` and is currently considered unstable for external use.**
 
 ## 📦 What it does
 
@@ -12,9 +14,7 @@ import 'vite/modulepreload-polyfill';
 
 By default, it injects a polyfill for `rel="modulepreload"` into each entry module, ensuring compatibility with browsers that don't support `modulepreload` natively.
 
-## 🚀 Usage
-
-Add this plugin to your `plugins`:
+## 🚀 Debug Usage
 
 ```js
 import { defineConfig } from 'rolldown';
@@ -28,9 +28,7 @@ export default defineConfig({
 });
 ```
 
-## 🧪 Compatibility
-
-This plugin is originally designed for `Vite` but is more versatile.
+## 🧪 Porting Differences
 
 Unlike `Vite`, which uses `__VITE_IS_MODERN__` to control the polyfill, this plugin automatically applies the polyfill only when `output.format` is `esm`, matching `Vite`’s behavior.
 

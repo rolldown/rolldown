@@ -19,6 +19,10 @@
     "editor.formatOnSave": true,
     "editor.defaultFormatter": "dprint.dprint"
   },
+  "[prisma]": {
+    "editor.formatOnSave": true,
+    "editor.defaultFormatter": "Prisma.prisma"
+  },
   "files.associations": {
     "*.snap": "markdown",
     "*.snap.new": "markdown",

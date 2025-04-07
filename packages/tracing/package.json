@@ -1,0 +1,20 @@
+{
+  "name": "@rolldown/tracing",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "sync": "prisma db push"
+  },
+  "files": [
+    "prisma"
+  ],
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "packageManager": "pnpm@10.7.0",
+  "dependencies": {
+    "@prisma/client": "6.5.0",
+    "prisma": "^6.5.0"
+  }
+}

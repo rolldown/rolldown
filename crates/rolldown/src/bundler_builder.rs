@@ -44,6 +44,9 @@ impl BundlerBuilder {
     let file_emitter = Arc::new(FileEmitter::new(Arc::clone(&options)));
 
     apply_inner_plugins(&mut self.plugins);
+
+    let conn = rolldown_tracing::create_sqlite_connect("./debug.db")
+      .map_err(|_| anyhow::format_err!("Failed to create SQLite connection").into())?;
     Bundler {
       closed: false,
       plugin_driver: PluginDriver::new_shared(self.plugins, &resolver, &file_emitter, &options),

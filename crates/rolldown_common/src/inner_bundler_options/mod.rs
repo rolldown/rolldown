@@ -3,6 +3,7 @@ use rustc_hash::FxHashMap;
 use std::{fmt::Debug, path::PathBuf};
 use types::advanced_chunks_options::AdvancedChunksOptions;
 use types::comments::Comments;
+use types::debug_options::DebugOptions;
 use types::inject_import::InjectImport;
 use types::jsx::Jsx;
 use types::make_absolute_externals_relative::MakeAbsoluteExternalsRelative;
@@ -188,6 +189,7 @@ pub struct BundlerOptions {
   )]
   pub defer_sync_scan_data: Option<DeferSyncScanDataOption>,
   pub make_absolute_externals_relative: Option<MakeAbsoluteExternalsRelative>,
+  pub debug: Option<DebugOptions>,
 }
 
 impl BundlerOptions {

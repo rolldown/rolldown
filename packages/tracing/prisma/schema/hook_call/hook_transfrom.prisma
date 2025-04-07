@@ -1,0 +1,52 @@
+model HookTransformCall {
+  // Custom fields
+
+  // Common + Relations
+  isHookTransformCall Boolean      @default(true) @map("is_hook_transform_call")
+  id                  Int          @id @default(autoincrement())
+  event               Event        @relation(fields: [eventId], references: [id])
+  eventId             Int          @unique() @map("event_id")
+  hookCallMeta        HookCallMeta @relation(fields: [hookCallMetaId], references: [id])
+  hookCallMetaId      Int          @unique() @map("hook_call_meta_id")
+
+  hookTransformStart         HookTransformStart @relation(fields: [pluginHookTransformStartId], references: [id])
+  pluginHookTransformStartId Int                @unique @map("plugin_hook_transform_start_id")
+  hookTransformEnd           HookTransformEnd   @relation(fields: [pluginHookTransformEndId], references: [id])
+  pluginHookTransformEndId   Int                @unique @map("plugin_hook_transform_end_id")
+
+  @@map("hook_transform_call")
+}
+
+model HookTransformStart {
+  // Custom fields
+  source   String
+  moduleId String @map("module_id")
+
+  // Common + Relations
+  isHookTransformStart Boolean            @default(true) @map("is_hook_transform_start")
+  id                   Int                @id @default(autoincrement())
+  event                Event              @relation(fields: [eventId], references: [id])
+  eventId              Int                @unique() @map("event_id")
+  hookCallMeta         HookCallMeta       @relation(fields: [hookCallMetaId], references: [id])
+  hookCallMetaId       Int                @unique() @map("hook_call_meta_id")
+  HookTransformCall    HookTransformCall?
+
+  @@map("hook_transform_start")
+}
+
+model HookTransformEnd {
+  // Custom fields
+  transformedSource String @map("transformed_source")
+  moduleId          String @map("module_id")
+
+  // Common + Relations
+  isPluginHookTransformEnd Boolean            @default(true) @map("is_plugin_hook_transform_end")
+  id                       Int                @id @default(autoincrement())
+  event                    Event              @relation(fields: [eventId], references: [id])
+  eventId                  Int                @unique() @map("event_id")
+  hookCallMeta             HookCallMeta       @relation(fields: [hookCallMetaId], references: [id])
+  hookCallMetaId           Int                @unique() @map("hook_call_meta_id")
+  HookTransformCall        HookTransformCall?
+
+  @@map("hook_transform_end")
+}

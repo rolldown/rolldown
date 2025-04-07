@@ -1,3 +1,3 @@
-import type * as fs from 'node:fs'
+import type * as fs from 'node:fs';
 
-export type { fs }
+export type { fs };

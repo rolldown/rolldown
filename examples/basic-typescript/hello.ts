@@ -1,3 +1,3 @@
 export function hello(): void {
-  console.log('Hello, world!')
+  console.log('Hello, world!');
 }

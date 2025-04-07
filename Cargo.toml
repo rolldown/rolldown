@@ -1,24 +1,24 @@
 [workspace]
-members  = ["./crates/*", "tasks/*"]
+members = ["./crates/*", "tasks/*"]
 resolver = "3"
 
 [workspace.package]
-edition    = "2024"
-homepage   = "https://rolldown.rs/"
-license    = "MIT"
+edition = "2024"
+homepage = "https://rolldown.rs/"
+license = "MIT"
 repository = "https://github.com/rolldown/rolldown"
 
 [profile.release-debug]
-debug    = true
+debug = true
 inherits = "release"
 
 [profile.release-wasi]
 codegen-units = 16
-debug         = 'full'
-inherits      = "release"
-lto           = "thin"
-opt-level     = "s"
-strip         = "none"
+debug = 'full'
+inherits = "release"
+lto = "thin"
+opt-level = "s"
+strip = "none"
 
 [workspace.lints.clippy]
 # Guidelines
@@ -27,29 +27,29 @@ strip         = "none"
 #   - https://doc.rust-lang.org/stable/cargo/reference/manifest.html#the-lints-section
 
 # --- restriction https://doc.rust-lang.org/clippy/usage.html#clippyrestriction
-dbg_macro    = "deny"
+dbg_macro = "deny"
 print_stdout = "deny"
 
 # I like the explicitness of this rule as it removes confusion around `clone`.
 # This increases readability, avoids `clone` mindlessly and heap allocating on accident.
-clone_on_ref_ptr                = "deny"
-empty_drop                      = "deny"
-exit                            = "deny"
-filetype_is_file                = "deny"
-get_unwrap                      = "deny"
-rc_buffer                       = "deny"
-rc_mutex                        = "deny"
+clone_on_ref_ptr = "deny"
+empty_drop = "deny"
+exit = "deny"
+filetype_is_file = "deny"
+get_unwrap = "deny"
+rc_buffer = "deny"
+rc_mutex = "deny"
 rest_pat_in_fully_bound_structs = "deny"
-unnecessary_safety_comment      = "deny"
+unnecessary_safety_comment = "deny"
 
 # --- pedantic #https://doc.rust-lang.org/clippy/usage.html#clippypedantic
 # To write the best rust code, pedantic group is enabled by default.
 pedantic = { level = "deny", priority = -1 }
 
 # Wizards, naming is too hard.
-module_inception        = "allow"
+module_inception = "allow"
 module_name_repetitions = "allow"
-similar_names           = "allow"
+similar_names = "allow"
 
 # Forwarding `Result` is a common pattern, this rule is too pedantic.
 missing_errors_doc = "allow"
@@ -59,10 +59,10 @@ missing_errors_doc = "allow"
 # Having #[must_use] everywhere also hinders readability.
 must_use_candidate = "allow"
 
-doc_markdown         = "allow"
+doc_markdown = "allow"
 missing_const_for_fn = "allow"
-needless_for_each    = "allow"
-new_without_default  = "allow"
+needless_for_each = "allow"
+new_without_default = "allow"
 # TODO: should review this rule.
 missing_panics_doc = "allow"
 
@@ -70,145 +70,134 @@ missing_panics_doc = "allow"
 inconsistent_struct_constructor = "allow"
 
 # Single match is equally readable as if/else. https://rust-lang.github.io/rust-clippy/master/index.html#/single_match
-single_match      = "allow"
+single_match = "allow"
 single_match_else = "allow"
 
 # Though the following are nursery rules, they’re still useful.
-debug_assert_with_mut_call    = "warn"
-iter_on_single_items          = "warn"
-needless_pass_by_ref_mut      = "warn"
-redundant_clone               = "warn"
-redundant_pub_crate           = "warn"
+debug_assert_with_mut_call = "warn"
+iter_on_single_items = "warn"
+needless_pass_by_ref_mut = "warn"
+redundant_clone = "warn"
+redundant_pub_crate = "warn"
 significant_drop_in_scrutinee = "warn"
-unused_peekable               = "warn"
+unused_peekable = "warn"
 
 [workspace.dependencies]
-criterion2                              = { version = "3.0.0", default-features = false }
-css-module-lexer                        = "0.0.15"
-rolldown                                = { version = "0.1.0", path = "./crates/rolldown" }
-rolldown_common                         = { version = "0.1.0", path = "./crates/rolldown_common" }
-rolldown_ecmascript                     = { version = "0.1.0", path = "./crates/rolldown_ecmascript" }
-rolldown_ecmascript_utils               = { version = "0.1.0", path = "./crates/rolldown_ecmascript_utils" }
-rolldown_error                          = { version = "0.1.0", path = "./crates/rolldown_error" }
-rolldown_fs                             = { version = "0.1.0", path = "./crates/rolldown_fs" }
-rolldown_loader_utils                   = { version = "0.1.0", path = "./crates/rolldown_loader_utils" }
-rolldown_plugin                         = { version = "0.1.0", path = "./crates/rolldown_plugin" }
-rolldown_plugin_alias                   = { version = "0.1.0", path = "./crates/rolldown_plugin_alias/" }
-rolldown_plugin_build_import_analysis   = { version = "0.1.0", path = "./crates/rolldown_plugin_build_import_analysis" }
-rolldown_plugin_data_url                = { version = "0.1.0", path = "./crates/rolldown_plugin_data_url" }
-rolldown_plugin_dynamic_import_vars     = { version = "0.0.1", path = "./crates/rolldown_plugin_dynamic_import_vars" }
-rolldown_plugin_import_glob             = { version = "0.1.0", path = "./crates/rolldown_plugin_import_glob" }
-rolldown_plugin_isolated_declaration    = { version = "0.1.0", path = "./crates/rolldown_plugin_isolated_declaration" }
-rolldown_plugin_json                    = { version = "0.1.0", path = "./crates/rolldown_plugin_json" }
-rolldown_plugin_load_fallback           = { version = "0.1.0", path = "./crates/rolldown_plugin_load_fallback" }
-rolldown_plugin_manifest                = { version = "0.1.0", path = "./crates/rolldown_plugin_manifest" }
-rolldown_plugin_module_federation       = { version = "0.1.0", path = "./crates/rolldown_plugin_module_federation" }
+criterion2 = { version = "3.0.0", default-features = false }
+css-module-lexer = "0.0.15"
+rolldown = { version = "0.1.0", path = "./crates/rolldown" }
+rolldown_common = { version = "0.1.0", path = "./crates/rolldown_common" }
+rolldown_ecmascript = { version = "0.1.0", path = "./crates/rolldown_ecmascript" }
+rolldown_ecmascript_utils = { version = "0.1.0", path = "./crates/rolldown_ecmascript_utils" }
+rolldown_error = { version = "0.1.0", path = "./crates/rolldown_error" }
+rolldown_fs = { version = "0.1.0", path = "./crates/rolldown_fs" }
+rolldown_loader_utils = { version = "0.1.0", path = "./crates/rolldown_loader_utils" }
+rolldown_plugin = { version = "0.1.0", path = "./crates/rolldown_plugin" }
+rolldown_plugin_alias = { version = "0.1.0", path = "./crates/rolldown_plugin_alias/" }
+rolldown_plugin_build_import_analysis = { version = "0.1.0", path = "./crates/rolldown_plugin_build_import_analysis" }
+rolldown_plugin_data_url = { version = "0.1.0", path = "./crates/rolldown_plugin_data_url" }
+rolldown_plugin_dynamic_import_vars = { version = "0.0.1", path = "./crates/rolldown_plugin_dynamic_import_vars" }
+rolldown_plugin_import_glob = { version = "0.1.0", path = "./crates/rolldown_plugin_import_glob" }
+rolldown_plugin_isolated_declaration = { version = "0.1.0", path = "./crates/rolldown_plugin_isolated_declaration" }
+rolldown_plugin_json = { version = "0.1.0", path = "./crates/rolldown_plugin_json" }
+rolldown_plugin_load_fallback = { version = "0.1.0", path = "./crates/rolldown_plugin_load_fallback" }
+rolldown_plugin_manifest = { version = "0.1.0", path = "./crates/rolldown_plugin_manifest" }
+rolldown_plugin_module_federation = { version = "0.1.0", path = "./crates/rolldown_plugin_module_federation" }
 rolldown_plugin_module_preload_polyfill = { version = "0.1.0", path = "./crates/rolldown_plugin_module_preload_polyfill" }
-rolldown_plugin_replace                 = { version = "0.1.0", path = "./crates/rolldown_plugin_replace" }
-rolldown_plugin_transform               = { version = "0.1.0", path = "./crates/rolldown_plugin_transform" }
-rolldown_plugin_vite_resolve            = { version = "0.1.0", path = "./crates/rolldown_plugin_vite_resolve" }
-rolldown_plugin_wasm_fallback           = { version = "0.1.0", path = "./crates/rolldown_plugin_wasm_fallback" }
-rolldown_plugin_wasm_helper             = { version = "0.1.0", path = "./crates/rolldown_plugin_wasm_helper" }
-rolldown_resolver                       = { version = "0.1.0", path = "./crates/rolldown_resolver" }
-rolldown_rstr                           = { version = "0.1.0", path = "./crates/rolldown_rstr" }
-rolldown_sourcemap                      = { version = "0.1.0", path = "./crates/rolldown_sourcemap" }
-rolldown_std_utils                      = { version = "0.1.0", path = "./crates/rolldown_std_utils" }
-rolldown_testing                        = { version = "0.1.0", path = "./crates/rolldown_testing" }
-rolldown_testing_config                 = { version = "0.1.0", path = "./crates/rolldown_testing_config" }
-rolldown_tracing                        = { version = "0.1.0", path = "./crates/rolldown_tracing" }
-rolldown_utils                          = { version = "0.1.0", path = "./crates/rolldown_utils" }
-rolldown_workspace                      = { version = "0.1.0", path = "./crates/rolldown_workspace" }
+rolldown_plugin_replace = { version = "0.1.0", path = "./crates/rolldown_plugin_replace" }
+rolldown_plugin_transform = { version = "0.1.0", path = "./crates/rolldown_plugin_transform" }
+rolldown_plugin_vite_resolve = { version = "0.1.0", path = "./crates/rolldown_plugin_vite_resolve" }
+rolldown_plugin_wasm_fallback = { version = "0.1.0", path = "./crates/rolldown_plugin_wasm_fallback" }
+rolldown_plugin_wasm_helper = { version = "0.1.0", path = "./crates/rolldown_plugin_wasm_helper" }
+rolldown_resolver = { version = "0.1.0", path = "./crates/rolldown_resolver" }
+rolldown_rstr = { version = "0.1.0", path = "./crates/rolldown_rstr" }
+rolldown_sourcemap = { version = "0.1.0", path = "./crates/rolldown_sourcemap" }
+rolldown_std_utils = { version = "0.1.0", path = "./crates/rolldown_std_utils" }
+rolldown_testing = { version = "0.1.0", path = "./crates/rolldown_testing" }
+rolldown_testing_config = { version = "0.1.0", path = "./crates/rolldown_testing_config" }
+rolldown_tracing = { version = "0.1.0", path = "./crates/rolldown_tracing" }
+rolldown_utils = { version = "0.1.0", path = "./crates/rolldown_utils" }
+rolldown_workspace = { version = "0.1.0", path = "./crates/rolldown_workspace" }
 
-anyhow              = "1.0.86"
-append-only-vec     = { version = "0.1.5" }
-arcstr              = "1.2.0"
-ariadne             = { package = "rolldown-ariadne", version = "0.5.1" }
-async-channel       = "2.3.1"
-async-scoped        = { version = "0.9.0" }
-async-trait         = "0.1.80"
-base-encode         = "0.3.1"
-base64-simd         = "0.8.0"
-bitflags            = { version = "2.6.0" }
-commondir           = "1.0.0"
-cow-utils           = "0.1.3"
-dashmap             = "6.0.0"
-derive_more         = { version = "2.0.1", features = ["debug"] }
-dunce               = "1.0.4"                                                                           # Normalize Windows paths to the most compatible format, avoiding UNC where possible
-fast-glob           = "0.4.4"
-futures             = "0.3.30"
-glob                = "0.3.1"
-heck                = { version = "0.5.0" }
-indexmap            = "2.2.6"
-infer               = "0.19.0"
-insta               = "1.39.0"
-itertools           = "0.14.0"
-itoa                = "1.0.11"
+anyhow = "1.0.86"
+append-only-vec = { version = "0.1.5" }
+arcstr = "1.2.0"
+ariadne = { package = "rolldown-ariadne", version = "0.5.1" }
+async-channel = "2.3.1"
+async-scoped = { version = "0.9.0" }
+async-trait = "0.1.80"
+base-encode = "0.3.1"
+base64-simd = "0.8.0"
+bitflags = { version = "2.6.0" }
+commondir = "1.0.0"
+cow-utils = "0.1.3"
+dashmap = "6.0.0"
+derive_more = { version = "2.0.1", features = ["debug"] }
+dunce = "1.0.4" # Normalize Windows paths to the most compatible format, avoiding UNC where possible
+fast-glob = "0.4.4"
+futures = "0.3.30"
+glob = "0.3.1"
+heck = { version = "0.5.0" }
+indexmap = "2.2.6"
+infer = "0.19.0"
+insta = "1.39.0"
+itertools = "0.14.0"
+itoa = "1.0.11"
 json-strip-comments = "1.0.4"
-jsonschema          = { version = "0.29.0", default-features = false }
-memchr              = "2.7.2"
-mimalloc-safe       = "0.1.49"
-mime                = "0.3.17"
-napi                = { version = "3.0.0-alpha.33", features = ["async", "anyhow"] }
-napi-build          = { version = "2.1.5" }
-napi-derive         = { version = "3.0.0-alpha.28", default-features = false, features = ["type-def"] }
-nom                 = "8.0.0"
-notify              = { version = "8.0.0" }
-phf                 = "0.11.3"
-rayon               = "1.10.0"
-regex               = "1.10.5"
-regress             = "0.10.0"
-ropey               = { version = "1.6.1" }
-rustc-hash          = "2.0.0"
-schemars            = "0.8.21"
-self_cell           = "1.0.4"
-serde               = { version = "1.0.203", features = ["derive"] }
-serde_json          = "1.0.117"
-simdutf8            = { version = "0.1.5" }
-smallvec            = "1.13.2"
-string_wizard       = { path = "./crates/string_wizard", features = ["serde"] }
-sugar_path          = { version = "1.2.0", features = ["cached_current_dir"] }
-testing_macros      = "1.0.0"
-tokio               = { version = "1.38.0", default-features = false }
-tracing             = "0.1.40"
-tracing-chrome      = "0.7.2"
-tracing-subscriber  = { version = "0.3.18", default-features = false }
-typedmap            = "0.6.0"
-url                 = "2.5.4"
-urlencoding         = "2.1.3"
-vfs                 = "0.12.0"
-xxhash-rust         = "0.8.10"
-
+jsonschema = { version = "0.29.0", default-features = false }
+memchr = "2.7.2"
+mimalloc-safe = "0.1.49"
+mime = "0.3.17"
+napi = { version = "3.0.0-alpha.33", features = ["async", "anyhow"] }
+napi-build = { version = "2.1.5" }
+napi-derive = { version = "3.0.0-alpha.28", default-features = false, features = ["type-def"] }
+nom = "8.0.0"
+notify = { version = "8.0.0" }
+phf = "0.11.3"
+rayon = "1.10.0"
+regex = "1.10.5"
+regress = "0.10.0"
+ropey = { version = "1.6.1" }
+rustc-hash = "2.0.0"
+schemars = "0.8.21"
+self_cell = "1.0.4"
+serde = { version = "1.0.203", features = ["derive"] }
+serde_json = "1.0.117"
+simdutf8 = { version = "0.1.5" }
+smallvec = "1.13.2"
+string_wizard = { path = "./crates/string_wizard", features = ["serde"] }
+sugar_path = { version = "1.2.0", features = ["cached_current_dir"] }
+testing_macros = "1.0.0"
+tokio = { version = "1.38.0", default-features = false }
+tracing = "0.1.40"
+tracing-chrome = "0.7.2"
+tracing-subscriber = { version = "0.3.18", default-features = false }
+typedmap = "0.6.0"
+url = "2.5.4"
+urlencoding = "2.1.3"
+vfs = "0.12.0"
+xxhash-rust = "0.8.10"
 
 prettyplease = "0.2.29"
-proc-macro2  = "1"
-quote        = "1"
-syn          = { version = "2", default-features = false }
+proc-macro2 = "1"
+quote = "1"
+syn = { version = "2", default-features = false }
 
 # oxc crates with the same version
-oxc = { version = "0.61.2", features = [
-  "ast_visit",
-  "transformer",
-  "minifier",
-  "mangler",
-  "semantic",
-  "codegen",
-  "serialize",
-  "isolated_declarations",
-  "regular_expression",
-] }
+oxc = { version = "0.61.2", features = ["ast_visit", "transformer", "minifier", "mangler", "semantic", "codegen", "serialize", "isolated_declarations", "regular_expression"] }
 oxc_parser_napi = { version = "0.61.2" }
 oxc_transform_napi = { version = "0.61.2" }
 
 # oxc crates in their own repos
 # Versions must be relaxed for usage in oxc.
 # Please update with `cargo update oxc_resolver oxc_sourcemap oxc_index`
-oxc_index     = { version = "3", features = ["rayon", "serde"] }            # https://github.com/oxc-project/oxc-index-vec
-oxc_resolver  = { version = "5", features = ["package_json_raw_json_api"] } # https://github.com/oxc-project/oxc-resolver
-oxc_sourcemap = { version = "3" }                                           # https://github.com/oxc-project/oxc-sourcemap
+oxc_index = { version = "3", features = ["rayon", "serde"] } # https://github.com/oxc-project/oxc-index-vec
+oxc_resolver = { version = "5", features = ["package_json_raw_json_api"] } # https://github.com/oxc-project/oxc-resolver
+oxc_sourcemap = { version = "3" } # https://github.com/oxc-project/oxc-sourcemap
 
 [profile.release]
 codegen-units = 1
-debug         = false     # Set to `true` for debug information
-lto           = "fat"
-opt-level     = 3
-strip         = "symbols" # Set to `false` for debug information
+debug = false # Set to `true` for debug information
+lto = "fat"
+opt-level = 3
+strip = "symbols" # Set to `false` for debug information

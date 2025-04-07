@@ -1,2 +1,2 @@
-declare const NAME: string
-console.log(NAME)
+declare const NAME: string;
+console.log(NAME);

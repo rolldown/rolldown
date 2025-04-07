@@ -38,7 +38,7 @@ pub struct NormalizedScanStageOutput {
 }
 
 impl NormalizedScanStageOutput {
-  /// Make a copy of the current ScanStage, skipping clone some fields that is immutable in
+  /// Make a snapshot of the current ScanStage, skipping clone some fields that is immutable in
   /// following stage
   pub fn make_copy(&self) -> Self {
     Self {
@@ -49,7 +49,7 @@ impl NormalizedScanStageOutput {
         .map(|(ast, module_idx)| (ast.clone_with_another_arena(), *module_idx))
         .collect(),
       entry_points: self.entry_points.clone(),
-      symbol_ref_db: self.symbol_ref_db.clone(),
+      symbol_ref_db: self.symbol_ref_db.clone_without_scoping(),
       runtime: self.runtime.clone(),
       warnings: vec![],
       dynamic_import_exports_usage_map: self.dynamic_import_exports_usage_map.clone(),

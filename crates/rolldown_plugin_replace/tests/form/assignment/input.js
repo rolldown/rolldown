@@ -5,6 +5,6 @@ if (process.env.DEBUG === 'production') {
 }
 
 if (hello == 'world') {
-  let  hello = 'world';
+  let hello = 'world';
   console.log(hello);
 }

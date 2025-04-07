@@ -17,14 +17,14 @@ impl Plugin for TestPlugin {
     "test-plugin".into()
   }
 
-  fn transform(
+  async fn transform(
     &self,
     _ctx: SharedTransformPluginContext,
     args: &HookTransformArgs<'_>,
-  ) -> impl std::future::Future<Output = HookTransformReturn> + Send {
+  ) -> HookTransformReturn {
     let mut code = self.0.lock().unwrap();
     *code = Some(args.code.clone());
-    async { Ok(None) }
+    Ok(None)
   }
 }
 
@@ -57,6 +57,6 @@ async fn typescript_declare() {
   )
   .await;
 
-  let replaced = "declare const NAME: string\nconsole.log(replaced)\n";
+  let replaced = "declare const NAME: string;\nconsole.log(replaced);\n";
   assert_eq!(*code.lock().unwrap().as_ref().unwrap(), replaced);
 }

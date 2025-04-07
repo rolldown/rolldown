@@ -14,16 +14,6 @@
       "matchDepNames": ["oxlint"],
       "rangeStrategy": "replace",
       "groupName": "oxlint"
-    },
-    {
-      "groupName": "all non-major dependencies",
-      "groupSlug": "all-minor-patch",
-      "matchUpdateTypes": ["minor", "patch"]
     }
-  ],
-  "lockFileMaintenance": {
-    "enabled": true,
-    "automerge": true,
-    "extends": ["schedule:weekly"]
-  }
+  ]
 }

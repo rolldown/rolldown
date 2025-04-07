@@ -15,4 +15,5 @@ pub mod binding_module_federation_plugin_option;
 pub mod binding_module_type;
 pub mod binding_plugin_context_resolve_options;
 pub mod binding_plugin_transform_extra_args;
+pub mod binding_render_chunk_meta_chunks;
 pub mod binding_resolved_external;

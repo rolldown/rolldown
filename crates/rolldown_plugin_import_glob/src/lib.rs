@@ -1,3 +1,9 @@
+use std::{
+  borrow::Cow,
+  fmt::Write as _,
+  path::{Path, PathBuf},
+};
+
 use glob::{Pattern, glob};
 use oxc::{
   allocator::Vec,
@@ -14,10 +20,6 @@ use oxc::{
 use rolldown_ecmascript_utils::ExpressionExt;
 use rolldown_plugin::{HookTransformAstArgs, HookTransformAstReturn, Plugin, PluginContext};
 use rustc_hash::FxHashMap;
-use std::{
-  borrow::Cow,
-  path::{Path, PathBuf},
-};
 use sugar_path::SugarPath;
 
 #[derive(Debug)]
@@ -84,7 +86,7 @@ impl<'ast> VisitMut<'ast> for GlobImportVisit<'ast, '_> {
   fn visit_expression(&mut self, expr: &mut Expression<'ast>) {
     if !self.maybe_visit_obj_call(expr).unwrap_or_default() {
       self.maybe_visit_glob_import_call(expr, None);
-    };
+    }
     walk_mut::walk_expression(self, expr);
   }
 }
@@ -230,7 +232,7 @@ fn extract_import_glob_options(arg: &Argument, opts: &mut ImportGlobOptions) {
               if i != 0 {
                 query_string.push('&');
               }
-              query_string.push_str(&format!("{k}={v}"));
+              write!(query_string, "{k}={v}").unwrap();
             }
             opts.query = Some(query_string);
           }

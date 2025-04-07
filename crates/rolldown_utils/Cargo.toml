@@ -1,12 +1,12 @@
 [package]
-name    = "rolldown_utils"
+name = "rolldown_utils"
 version = "0.1.0"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
-edition.workspace    = true
-homepage.workspace   = true
-license.workspace    = true
+edition.workspace = true
+homepage.workspace = true
+license.workspace = true
 repository.workspace = true
 
 [lib]
@@ -14,40 +14,40 @@ doctest = false
 
 [[bench]]
 harness = false
-name    = "concat_string"
-path    = "bench/concat_string.rs"
+name = "concat_string"
+path = "bench/concat_string.rs"
 
 [lints]
 workspace = true
 
 [dependencies]
-anyhow             = { workspace = true }
-arcstr             = { workspace = true }
-base-encode        = { workspace = true }
-base64-simd        = { workspace = true }
-cow-utils          = { workspace = true }
-dashmap            = { workspace = true }
-fast-glob          = { workspace = true }
-futures            = { workspace = true }
-indexmap           = { workspace = true, features = ["serde"] }
-infer              = { workspace = true }
-memchr             = { workspace = true }
-mime               = { workspace = true }
-nom                = { workspace = true }
-oxc                = { workspace = true }
-oxc_index          = { workspace = true }
-phf                = { workspace = true }
-regex              = { workspace = true }
-regress            = { workspace = true }
+anyhow = { workspace = true }
+arcstr = { workspace = true }
+base-encode = { workspace = true }
+base64-simd = { workspace = true }
+cow-utils = { workspace = true }
+dashmap = { workspace = true }
+fast-glob = { workspace = true }
+futures = { workspace = true }
+indexmap = { workspace = true, features = ["serde"] }
+infer = { workspace = true }
+memchr = { workspace = true }
+mime = { workspace = true }
+nom = { workspace = true }
+oxc = { workspace = true }
+oxc_index = { workspace = true }
+phf = { workspace = true }
+regex = { workspace = true }
+regress = { workspace = true }
 rolldown_std_utils = { workspace = true }
-rustc-hash         = { workspace = true }
-serde_json         = { workspace = true }
-simdutf8           = { workspace = true }
-xxhash-rust        = { workspace = true, features = ["xxh3"] }
+rustc-hash = { workspace = true }
+serde_json = { workspace = true }
+simdutf8 = { workspace = true }
+xxhash-rust = { workspace = true, features = ["xxh3"] }
 
 [target.'cfg(not(target_family = "wasm"))'.dependencies]
 async-scoped = { workspace = true, features = ["use-tokio"] }
-rayon        = { workspace = true }
+rayon = { workspace = true }
 
 [dev-dependencies]
 criterion2 = { workspace = true }

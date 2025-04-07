@@ -10,7 +10,7 @@ setup:
     just check-setup-prerequisites
     # Rust related setup
     cargo install cargo-binstall
-    cargo binstall taplo-cli cargo-insta cargo-deny cargo-shear -y
+    cargo binstall cargo-insta cargo-deny cargo-shear -y
     # Node.js related setup
     corepack enable
     pnpm install
@@ -63,7 +63,7 @@ test-rust:
     cargo test --workspace --exclude rolldown_binding
 
 update-generated-code:
-    cargo run --bin generator 
+    cargo run --bin generator
 
 # Supported presets: all, rolldown, rollup
 test-node preset="all" *args="": _build-native-debug
@@ -95,14 +95,12 @@ fmt-rust:
     cargo fmt --all -- --emit=files
 
 fmt-repo:
-    pnpm lint-prettier:fix
-    pnpm lint-toml:fix
+    pnpm run fmt
 
 # Lint the codebase
 lint: lint-rust lint-node lint-repo
 
 lint-rust:
-    cargo fmt --all -- --check
     cargo clippy --workspace --all-targets -- --deny warnings
     cargo shear
 

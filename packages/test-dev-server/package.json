@@ -22,7 +22,7 @@
     "chokidar": "^4.0.3",
     "connect": "^3.7.0",
     "rolldown": "workspace:*",
-    "serve-static": "^1.16.2",
+    "serve-static": "^2.0.0",
     "ws": "^8.18.1"
   },
   "devDependencies": {

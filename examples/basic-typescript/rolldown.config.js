@@ -1,4 +1,4 @@
-import { defineConfig } from 'rolldown'
+import { defineConfig } from 'rolldown';
 
 export default defineConfig({
   input: {
@@ -10,4 +10,4 @@ export default defineConfig({
     // aligns with Vite in the future.
     conditionNames: ['import'],
   },
-})
+});

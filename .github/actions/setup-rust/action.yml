@@ -36,7 +36,7 @@ runs:
   using: 'composite'
   steps:
     - name: Setup Rust
-      uses: Boshen/setup-rust@main
+      uses: oxc-project/setup-rust@cd82e1efec7fef815e2c23d296756f31c7cdc03d # v1.0.0
       with:
         components: ${{ inputs.components }}
         tools: ${{ inputs.tools }}

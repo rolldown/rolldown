@@ -1,10 +1,10 @@
 [package]
-edition.workspace    = true
-homepage.workspace   = true
-license.workspace    = true
-name                 = "rolldown_std_utils"
+name = "rolldown_std_utils"
+version = "0.1.0"
+edition.workspace = true
+homepage.workspace = true
+license.workspace = true
 repository.workspace = true
-version              = "0.1.0"
 
 [dependencies]
 regex = { workspace = true }

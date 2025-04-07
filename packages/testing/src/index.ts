@@ -1,1 +1,1 @@
-export { workspaceRoot } from './workspace'
+export { workspaceRoot } from './workspace';

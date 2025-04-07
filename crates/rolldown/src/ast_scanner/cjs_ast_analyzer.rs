@@ -63,7 +63,7 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
     };
     if v.unwrap_or_default() {
       self.ast_usage.insert(EcmaModuleAstUsage::EsModuleFlag);
-    };
+    }
     None
   }
 

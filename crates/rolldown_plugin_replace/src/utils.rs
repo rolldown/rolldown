@@ -61,7 +61,7 @@ pub fn expand_typeof_replacements(values: &FxHashMap<String, String>) -> Vec<(St
         let match_str = &key[..index];
         (format!("typeof {match_str}"), "\"object\"".to_string())
       }));
-    };
+    }
   }
 
   replacements

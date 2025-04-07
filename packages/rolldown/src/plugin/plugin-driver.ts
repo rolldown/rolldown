@@ -1,142 +1,124 @@
-import { getLogHandler, normalizeLog } from '../log/log-handler'
-import { LOG_LEVEL_DEBUG, LOG_LEVEL_INFO, LOG_LEVEL_WARN } from '../log/logging'
-import { Plugin } from './'
-import { error, logPluginError } from '../log/logs'
-import { RollupError } from '../types/misc'
-import { normalizeHook } from '../utils/normalize-hook'
-import { InputOptions, OutputOptions, RolldownPlugin, VERSION } from '..'
-import { getLogger, getOnLog } from '../log/logger'
-import { BuiltinPlugin } from '../builtin-plugin/constructors'
-import { normalizePluginOption } from '../utils/normalize-plugin-option'
+import { InputOptions, OutputOptions, RolldownPlugin } from '..';
+import { BuiltinPlugin } from '../builtin-plugin/constructors';
+import { getLogger, getOnLog } from '../log/logger';
+import { LOG_LEVEL_INFO, type LogLevelOption } from '../log/logging';
+import type { LogHandler } from '../types/misc';
+import { normalizeHook } from '../utils/normalize-hook';
+import { normalizePluginOption } from '../utils/normalize-plugin-option';
+import { Plugin } from './';
+import { MinimalPluginContextImpl } from './minimal-plugin-context';
 
 export class PluginDriver {
   public static async callOptionsHook(
     inputOptions: InputOptions,
     watchMode: boolean = false,
   ): Promise<InputOptions> {
-    const logLevel = inputOptions.logLevel || LOG_LEVEL_INFO
+    const logLevel = inputOptions.logLevel || LOG_LEVEL_INFO;
     const plugins = getSortedPlugins(
       'options',
       getObjectPlugins(await normalizePluginOption(inputOptions.plugins)),
-    )
+    );
     const logger = getLogger(
       plugins,
       getOnLog(inputOptions, logLevel),
       logLevel,
       watchMode,
-    )
+    );
 
     for (const plugin of plugins) {
-      const name = plugin.name || 'unknown'
-      const options = plugin.options
+      const name = plugin.name || 'unknown';
+      const options = plugin.options;
       if (options) {
-        const { handler } = normalizeHook(options)
+        const { handler } = normalizeHook(options);
         const result = await handler.call(
-          {
-            debug: getLogHandler(
-              LOG_LEVEL_DEBUG,
-              'PLUGIN_LOG',
-              logger,
-              name,
-              logLevel,
-            ),
-            error: (e: RollupError | string) =>
-              error(logPluginError(normalizeLog(e), name, { hook: 'onLog' })),
-            info: getLogHandler(
-              LOG_LEVEL_INFO,
-              'PLUGIN_LOG',
-              logger,
-              name,
-              logLevel,
-            ),
-            meta: {
-              rollupVersion: '4.23.0',
-              rolldownVersion: VERSION,
-              watchMode,
-            },
-            warn: getLogHandler(
-              LOG_LEVEL_WARN,
-              'PLUGIN_WARNING',
-              logger,
-              name,
-              logLevel,
-            ),
-            pluginName: name,
-          },
+          new MinimalPluginContextImpl(
+            logger,
+            logLevel,
+            name,
+            watchMode,
+            'onLog',
+          ),
           inputOptions,
-        )
+        );
 
         if (result) {
-          inputOptions = result
+          inputOptions = result;
         }
       }
     }
 
-    return inputOptions
+    return inputOptions;
   }
 
   public static callOutputOptionsHook(
     rawPlugins: RolldownPlugin[],
     outputOptions: OutputOptions,
+    onLog: LogHandler,
+    logLevel: LogLevelOption,
+    watchMode: boolean,
   ): OutputOptions {
     const sortedPlugins = getSortedPlugins(
       'outputOptions',
       getObjectPlugins(rawPlugins),
-    )
+    );
 
     for (const plugin of sortedPlugins) {
-      const options = plugin.outputOptions
+      const name = plugin.name || 'unknown';
+      const options = plugin.outputOptions;
       if (options) {
-        const { handler } = normalizeHook(options)
-        const result = handler.call(null, outputOptions)
+        const { handler } = normalizeHook(options);
+        const result = handler.call(
+          new MinimalPluginContextImpl(onLog, logLevel, name, watchMode),
+          outputOptions,
+        );
 
         if (result) {
-          outputOptions = result
+          outputOptions = result;
         }
       }
     }
 
-    return outputOptions
+    return outputOptions;
   }
 }
 
 export function getObjectPlugins(plugins: RolldownPlugin[]): Plugin[] {
   return plugins.filter((plugin) => {
     if (!plugin) {
-      return undefined
+      return undefined;
     }
     if ('_parallel' in plugin) {
-      return undefined
+      return undefined;
     }
     if (plugin instanceof BuiltinPlugin) {
-      return undefined
+      return undefined;
     }
-    return plugin
-  }) as Plugin[]
+    return plugin;
+  }) as Plugin[];
 }
 
 export function getSortedPlugins(
   hookName: 'options' | 'outputOptions' | 'onLog',
   plugins: readonly Plugin[],
 ): Plugin[] {
-  const pre: Plugin[] = []
-  const normal: Plugin[] = []
-  const post: Plugin[] = []
+  const pre: Plugin[] = [];
+  const normal: Plugin[] = [];
+  const post: Plugin[] = [];
   for (const plugin of plugins) {
-    const hook = plugin[hookName]
+    const hook = plugin[hookName];
     if (hook) {
       if (typeof hook === 'object') {
         if (hook.order === 'pre') {
-          pre.push(plugin)
-          continue
+          pre.push(plugin);
+          continue;
         }
         if (hook.order === 'post') {
-          post.push(plugin)
-          continue
+          post.push(plugin);
+          continue;
         }
       }
-      normal.push(plugin)
+      normal.push(plugin);
     }
   }
-  return [...pre, ...normal, ...post]
+  return [...pre, ...normal, ...post];
 }

@@ -69,12 +69,12 @@
   },
   "dependencies": {
     "@napi-rs/wasm-runtime": "^0.2.4",
-    "@oxc-project/types": "0.58.1",
-    "@valibot/to-json-schema": "1.0.0-rc.0",
-    "valibot": "1.0.0-rc.4"
+    "@oxc-project/types": "0.61.2",
+    "@valibot/to-json-schema": "1.0.0",
+    "valibot": "1.0.0"
   },
   "peerDependencies": {
-    "@oxc-project/runtime": "0.58.1"
+    "@oxc-project/runtime": "0.61.2"
   },
   "peerDependenciesMeta": {
     "@oxc-project/runtime": {

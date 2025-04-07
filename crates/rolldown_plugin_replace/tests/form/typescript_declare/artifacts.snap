@@ -1,6 +1,5 @@
 ---
 source: crates/rolldown_testing/src/integration_test.rs
-snapshot_kind: text
 ---
 # Assets
 
@@ -21,6 +20,6 @@ console.log(replaced);
 - ../input.ts
 (1:0) "console." --> (2:0) "console."
 (1:8) "log(" --> (2:8) "log("
-(1:12) "NAME" --> (2:12) "replaced)"
-(1:16) ")\n" --> (2:21) ";\n"
+(1:12) "NAME)" --> (2:12) "replaced)"
+(1:17) ";\n" --> (2:21) ";\n"
 ```

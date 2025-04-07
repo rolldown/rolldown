@@ -1,10 +1,10 @@
+import babel from '@babel/core';
+import nodePath from 'node:path';
+import type { Plugin } from 'rolldown';
 import {
   defineParallelPluginImplementation,
   type ParallelPluginImplementation,
-} from 'rolldown/parallel-plugin'
-import type { Plugin } from 'rolldown'
-import babel from '@babel/core'
-import nodePath from 'node:path'
+} from 'rolldown/parallel-plugin';
 
 export const babelPlugin = (): Plugin => {
   const partialConfig = babel.loadPartialConfig({
@@ -16,32 +16,32 @@ export const babelPlugin = (): Plugin => {
     sourceMaps: true,
     configFile: false,
     browserslistConfigFile: false,
-  })
+  });
 
   return {
     name: 'parallel-babel-plugin',
     transform(code, id) {
-      const ext = nodePath.extname(id)
+      const ext = nodePath.extname(id);
       if (ext === '.ts' || ext === '.tsx') {
-        let now = performance.now()
+        let now = performance.now();
         const ast = babel.parseSync(code, {
           ...partialConfig?.options,
           filename: id,
-        })
+        });
         if (!ast || !partialConfig || !partialConfig.options) {
-          throw new Error('failed to parse')
+          throw new Error('failed to parse');
         }
-        let diffAst = performance.now() - now
-        const ret =
-          /** @type {babel.BabelFileResult} */ babel.transformFromAstSync(
+        let diffAst = performance.now() - now;
+        const ret = /** @type {babel.BabelFileResult} */ babel
+          .transformFromAstSync(
             ast,
             code,
             {
               ...partialConfig?.options,
               filename: id,
             },
-          )
-        let diffTrans = performance.now() - now - diffAst
+          );
+        let diffTrans = performance.now() - now - diffAst;
         console.log(
           id,
           'total',
@@ -50,17 +50,17 @@ export const babelPlugin = (): Plugin => {
           diffAst,
           'trans: ',
           diffTrans,
-        )
-        return { code: /** @type {string} */ ret?.code ?? void 0 }
+        );
+        return { code: /** @type {string} */ ret?.code ?? void 0 };
       }
     },
-  }
-}
+  };
+};
 
 const impl: ParallelPluginImplementation = defineParallelPluginImplementation(
   (_options, _context) => {
-    return babelPlugin()
+    return babelPlugin();
   },
-)
+);
 
-export default impl
+export default impl;

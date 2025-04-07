@@ -25,6 +25,7 @@ pub mod bundler_options {
       experimental_options::ExperimentalOptions,
       filename_template::FilenameTemplate,
       hash_characters::HashCharacters,
+      hmr_options::HmrOptions,
       inject_import::InjectImport,
       input_item::InputItem,
       is_external::IsExternal,

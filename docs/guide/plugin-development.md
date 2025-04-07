@@ -51,34 +51,41 @@ export default function myPlugin() {
 
 Rolldown can now compile and execute the regular expression on the Rust side, and can avoid invoking JS if the filter does not match.
 
-In addition to `id`, you can also filter based on `moduleType` and the module's source code. Full `HookFilter` interface for the `filter` property:
+In addition to `id`, you can also filter based on `moduleType` and the module's source code. The `filter` property works similarly to [`createFilter` from `@rollup/pluginutils`](https://github.com/rollup/plugins/blob/master/packages/pluginutils/README.md#createfilter). Here are some important details:
+
+- If multiple values are passed to `include`, the filter matches if **any** of them match.
+- If a filter has both `include` and `exclude`, `exclude` takes precedence.
+- The filters are checked in the following order: `moduleType`, `id`, `code`. If any filter matches, it **early returns**. For example, if a module is excluded by the `moduleType` filter, it is excluded regardless of the `id` or `code` filters.
+
+Full `HookFilter` interface for the `filter` property:
 
 ````ts
 interface HookFilter {
   /**
    * This filter is used to do a pre-test to determine whether the hook should be called.
+   *
    * @example
-   * // Filter out all `id`s that contain `node_modules` in the path.
+   * Include all `id`s that contain `node_modules` in the path.
    * ```js
    * { id: 'node_modules' }
    * ```
    * @example
-   * // Filter out all `id`s that contain `node_modules` or `src` in the path.
+   * Include all `id`s that contain `node_modules` or `src` in the path.
    * ```js
    * { id: ['node_modules', 'src'] }
    * ```
    * @example
-   * // Filter out all `id`s that start with `http`
+   * Include all `id`s that start with `http`
    * ```js
    * { id: /^http/ }
    * ```
    * @example
-   * // Exclude all `id`s that contain `node_modules` in the path.
+   * Exclude all `id`s that contain `node_modules` in the path.
    * ```js
    * { id: { exclude: 'node_modules' } }
    * ```
    * @example
-   * // Formal pattern
+   * Formal pattern to define includes and excludes.
    * ```
    * { id : {
    *   include: ["foo", /bar/],
@@ -86,13 +93,13 @@ interface HookFilter {
    * }}
    * ```
    */
-  id?: StringFilter
-  moduleType?: ModuleTypeFilter
-  code?: StringFilter
+  id?: StringFilter;
+  moduleType?: ModuleTypeFilter;
+  code?: StringFilter;
 }
 ````
 
-The following properties are supported by each hooks:
+The following properties are supported by each hook:
 
 - `resolveId` hook: `id` (only `RegExp`)
 - `load` hook: `id`

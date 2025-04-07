@@ -13,8 +13,8 @@ use oxc::transformer::TransformOptions;
 use rolldown::{
   AddonOutputOption, AdvancedChunksOptions, AssetFilenamesOutputOption, BundlerOptions,
   ChunkFilenamesOutputOption, DeferSyncScanDataOption, ExperimentalOptions, HashCharacters,
-  IsExternal, MatchGroup, ModuleType, OutputExports, OutputFormat, Platform, RawMinifyOptions,
-  SanitizeFilename,
+  HmrOptions, IsExternal, MatchGroup, ModuleType, OutputExports, OutputFormat, Platform,
+  RawMinifyOptions, SanitizeFilename,
 };
 use rolldown_common::DeferSyncScanData;
 use rolldown_plugin::__inner::SharedPluginable;
@@ -263,7 +263,7 @@ pub fn normalize_binding_options(
       resolve_new_url_to_asset: inner.resolve_new_url_to_asset,
       // TODO: binding
       incremental_build: None,
-      hmr: inner.hmr,
+      hmr: if inner.hmr.is_some_and(|v| v) { Some(HmrOptions::default()) } else { None },
     }),
     minify: output_options
       .minify
@@ -307,6 +307,7 @@ pub fn normalize_binding_options(
           })
           .collect::<Vec<_>>()
       }),
+      include_dependencies_recursively: None,
     }),
     checks: input_options.checks.map(Into::into),
     profiler_names: input_options.profiler_names,

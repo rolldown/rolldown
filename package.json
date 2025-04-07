@@ -9,7 +9,7 @@
   "scripts": {
     "lint-code": "oxlint -c .oxlintrc.json --ignore-path=.oxlintignore --deny-warnings",
     "lint-spell": "cspell \"**\" --no-progress  --gitignore",
-    "lint-repo": "npm-run-all -l --parallel fmt lint-spell",
+    "lint-repo": "pnpm run --stream --color \"/^fmt|lint-spell$/\"",
     "fmt": "dprint fmt",
     "build": "echo \"Use just build\"",
     "build:release": "echo \"Use just build native release\"",
@@ -36,7 +36,6 @@
     "dprint": "^0.49.1",
     "husky": "^9.0.0",
     "lint-staged": "^15.2.5",
-    "npm-run-all2": "^7.0.0",
     "oxlint": "^0.16.0",
     "rolldown": "workspace:*",
     "typescript": "^5.6.3"

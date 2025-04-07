@@ -229,7 +229,8 @@
     "krate",
     "prettyplease",
     "unparse",
-    "commondir"
+    "commondir",
+    "dprint"
   ],
   "ignoreWords": ["Jeqs", "Gwetwem", "bpwli", "mxrh"]
 }

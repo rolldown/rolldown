@@ -1,8 +1,11 @@
-use oxc::ast::ast::{self, ExportDefaultDeclarationKind, Expression, Statement};
-use oxc::ast_visit::{VisitMut, walk_mut};
-use oxc::span::{CompactStr, SPAN, Span};
+use oxc::{
+  allocator::{Box as ArenaBox, TakeIn},
+  ast::ast::{self, ExportDefaultDeclarationKind, Expression, Statement},
+  ast_visit::{VisitMut, walk_mut},
+  span::{CompactStr, SPAN, Span},
+};
 use rolldown_common::{Interop, Module, SymbolRef};
-use rolldown_ecmascript_utils::{CallExpressionExt, TakeIn};
+use rolldown_ecmascript_utils::CallExpressionExt;
 
 use super::IsolatingModuleFinalizer;
 
@@ -152,10 +155,13 @@ impl<'ast> IsolatingModuleFinalizer<'_, 'ast> {
           self.snippet.id_ref_expr(from, SPAN),
           false,
         ));
-        self
-          .snippet
-          .builder
-          .statement_expression(SPAN, Expression::FunctionExpression(func.take_in(self.alloc)))
+        self.snippet.builder.statement_expression(
+          SPAN,
+          Expression::FunctionExpression(ArenaBox::new_in(
+            func.as_mut().take_in(self.alloc),
+            self.alloc,
+          )),
+        )
       }
       ast::ExportDefaultDeclarationKind::ClassDeclaration(class) => {
         let from = class.id.as_ref().map_or(default_export_ref, |ident| ident.name.as_str());
@@ -164,10 +170,13 @@ impl<'ast> IsolatingModuleFinalizer<'_, 'ast> {
           self.snippet.id_ref_expr(from, SPAN),
           false,
         ));
-        self
-          .snippet
-          .builder
-          .statement_expression(SPAN, Expression::ClassExpression(class.take_in(self.alloc)))
+        self.snippet.builder.statement_expression(
+          SPAN,
+          Expression::ClassExpression(ArenaBox::new_in(
+            class.as_mut().take_in(self.alloc),
+            self.alloc,
+          )),
+        )
       }
       ast::ExportDefaultDeclarationKind::TSInterfaceDeclaration(_) => {
         unreachable!("ExportDefaultDeclaration TSInterfaceDeclaration should be removed")
@@ -261,7 +270,10 @@ impl<'ast> IsolatingModuleFinalizer<'_, 'ast> {
               ));
               return Some(self.snippet.builder.statement_expression(
                 SPAN,
-                Expression::FunctionExpression(func_decl.take_in(self.alloc)),
+                Expression::FunctionExpression(ArenaBox::new_in(
+                  func_decl.as_mut().take_in(self.alloc),
+                  self.alloc,
+                )),
               ));
             }
             ast::Declaration::ClassDeclaration(class_decl) => {
@@ -274,7 +286,10 @@ impl<'ast> IsolatingModuleFinalizer<'_, 'ast> {
               ));
               return Some(self.snippet.builder.statement_expression(
                 SPAN,
-                Expression::ClassExpression(class_decl.take_in(self.alloc)),
+                Expression::ClassExpression(ArenaBox::new_in(
+                  class_decl.as_mut().take_in(self.alloc),
+                  self.alloc,
+                )),
               ));
             }
             _ => {}

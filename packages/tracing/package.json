@@ -1,0 +1,24 @@
+{
+  "name": "@rolldown/tracing",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "sync": "run-s prisma:reset prisma:generate prisma:push",
+    "prisma:reset": "prisma migrate reset --force",
+    "prisma:generate": "pnpm prisma migrate dev --create-only --name init",
+    "prisma:push": "prisma db push"
+
+  },
+  "files": [
+    "prisma"
+  ],
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "packageManager": "pnpm@10.7.0",
+  "dependencies": {
+    "@prisma/client": "6.5.0",
+    "prisma": "^6.5.0"
+  }
+}

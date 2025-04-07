@@ -1,0 +1,15 @@
+// Any kind of action will be an event and has a unique event id, except the only special `Build` action/model.
+model Event {
+  // Custom fields
+  createdAt DateTime @default(now()) @map("created_at")
+  build     Build    @relation(fields: [buildId], references: [id])
+  buildId   Int      @map("build_id")
+
+  // Common + Relations
+  isEvent Boolean @default(true) @map("is_event")
+  id      Int     @id @default(autoincrement())
+
+  HookTransformCall  HookTransformCall?
+  HookTransformStart HookTransformStart?
+  HookTransformEnd   HookTransformEnd?
+}

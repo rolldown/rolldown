@@ -1,0 +1,21 @@
+generator client {
+  provider        = "prisma-client-js"
+  previewFeatures = ["prismaSchemaFolder"]
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = "file:../../tmp/instance.db"
+}
+
+model Build {
+  // Custom fields
+  createdAt DateTime @default(now()) @map("created_at")
+
+  // Common + Relations
+  isBuild Boolean @default(true) @map("is_build")
+  id      Int     @id @default(autoincrement())
+  Event   Event[]
+
+  @@map("build")
+}

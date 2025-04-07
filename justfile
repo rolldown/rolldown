@@ -162,3 +162,7 @@ changelog:
 
 check-setup-prerequisites:
     node ./scripts/misc/setup-prerequisites/node.js
+
+sync-schema:
+    pnpm --filter tracing run sync
+    diesel print-schema --database-url ./packages/tracing/tmp/instance.db > ./crates/rolldown_tracing/src/schema.rs

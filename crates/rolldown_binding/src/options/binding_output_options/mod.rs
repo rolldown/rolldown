@@ -1,6 +1,8 @@
 mod binding_advanced_chunks_options;
+mod binding_debug_options;
 mod binding_pre_rendered_asset;
 mod binding_pre_rendered_chunk;
+use binding_debug_options::BindingDebugOptions;
 use binding_pre_rendered_asset::BindingPreRenderedAsset;
 use derive_more::Debug;
 use napi::Either;
@@ -121,4 +123,5 @@ pub struct BindingOutputOptions {
   pub comments: Option<String>,
   pub polyfill_require: Option<bool>,
   pub target: Option<String>,
+  pub debug: Option<BindingDebugOptions>,
 }

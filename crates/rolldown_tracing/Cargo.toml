@@ -22,3 +22,9 @@ test = false
 tracing = { workspace = true }
 tracing-chrome = { workspace = true }
 tracing-subscriber = { workspace = true, features = ["env-filter"] }
+
+diesel = { workspace = true, features = ["sqlite"] }
+anyhow = { workspace = true }
+
+[build-dependencies]
+anyhow = { workspace = true }

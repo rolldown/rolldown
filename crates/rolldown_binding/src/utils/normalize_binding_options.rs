@@ -333,6 +333,7 @@ pub fn normalize_binding_options(
     make_absolute_externals_relative: input_options
       .make_absolute_externals_relative
       .map(Into::into),
+    debug: None,
   };
 
   #[cfg(not(target_family = "wasm"))]

@@ -1,0 +1,13 @@
+model HookCallMeta {
+  // Custom fields
+  pluginName String @map("plugin_name")
+
+  // Common + Relations
+  isHookCallMeta     Boolean             @default(true) @map("is_hook_call_meta")
+  id                 Int                 @id @default(autoincrement())
+  HookTransformCall  HookTransformCall?
+  HookTransformStart HookTransformStart?
+  HookTransformEnd   HookTransformEnd?
+
+  @@map("hook_call_meta")
+}

@@ -7,9 +7,6 @@ export default defineTest({
     output: {
       format: 'cjs',
     },
-    define: {
-      __VITE_IS_MODERN__: 'false',
-    },
     plugins: [modulePreloadPolyfillPlugin()],
   },
   async afterTest(output) {

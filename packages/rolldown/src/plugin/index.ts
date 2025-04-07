@@ -73,7 +73,7 @@ export interface SourceDescription extends Partial<PartialNull<ModuleOptions>> {
   moduleType?: ModuleType;
 }
 
-interface ResolveIdExtraOptions {
+export interface ResolveIdExtraOptions {
   custom?: CustomPluginOptions;
   isEntry: boolean;
   kind: 'import' | 'dynamic-import' | 'require-call';

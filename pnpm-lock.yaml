@@ -256,43 +256,6 @@ importers:
       valibot:
         specifier: 1.0.0
         version: 1.0.0(typescript@5.8.2)
-    optionalDependencies:
-      '@rolldown/binding-darwin-arm64':
-        specifier: workspace:*
-        version: link:npm/darwin-arm64
-      '@rolldown/binding-darwin-x64':
-        specifier: workspace:*
-        version: link:npm/darwin-x64
-      '@rolldown/binding-freebsd-x64':
-        specifier: workspace:*
-        version: link:npm/freebsd-x64
-      '@rolldown/binding-linux-arm-gnueabihf':
-        specifier: workspace:*
-        version: link:npm/linux-arm-gnueabihf
-      '@rolldown/binding-linux-arm64-gnu':
-        specifier: workspace:*
-        version: link:npm/linux-arm64-gnu
-      '@rolldown/binding-linux-arm64-musl':
-        specifier: workspace:*
-        version: link:npm/linux-arm64-musl
-      '@rolldown/binding-linux-x64-gnu':
-        specifier: workspace:*
-        version: link:npm/linux-x64-gnu
-      '@rolldown/binding-linux-x64-musl':
-        specifier: workspace:*
-        version: link:npm/linux-x64-musl
-      '@rolldown/binding-wasm32-wasi':
-        specifier: workspace:*
-        version: link:npm/wasm32-wasi
-      '@rolldown/binding-win32-arm64-msvc':
-        specifier: workspace:*
-        version: link:npm/win32-arm64-msvc
-      '@rolldown/binding-win32-ia32-msvc':
-        specifier: workspace:*
-        version: link:npm/win32-ia32-msvc
-      '@rolldown/binding-win32-x64-msvc':
-        specifier: workspace:*
-        version: link:npm/win32-x64-msvc
     devDependencies:
       '@jridgewell/sourcemap-codec':
         specifier: ^1.5.0
@@ -302,7 +265,7 @@ importers:
         version: 3.0.0-alpha.76(@emnapi/runtime@1.4.0)(@types/node@22.13.14)(emnapi@1.3.1(node-addon-api@8.3.1))
       '@napi-rs/wasm-runtime':
         specifier: ^0.2.4
-        version: 0.2.7
+        version: 0.2.8
       '@oxc-node/core':
         specifier: ^0.0.21
         version: 0.0.21
@@ -372,6 +335,43 @@ importers:
       why-is-node-running:
         specifier: ^3.0.0
         version: 3.2.2
+    optionalDependencies:
+      '@rolldown/binding-darwin-arm64':
+        specifier: workspace:*
+        version: link:npm/darwin-arm64
+      '@rolldown/binding-darwin-x64':
+        specifier: workspace:*
+        version: link:npm/darwin-x64
+      '@rolldown/binding-freebsd-x64':
+        specifier: workspace:*
+        version: link:npm/freebsd-x64
+      '@rolldown/binding-linux-arm-gnueabihf':
+        specifier: workspace:*
+        version: link:npm/linux-arm-gnueabihf
+      '@rolldown/binding-linux-arm64-gnu':
+        specifier: workspace:*
+        version: link:npm/linux-arm64-gnu
+      '@rolldown/binding-linux-arm64-musl':
+        specifier: workspace:*
+        version: link:npm/linux-arm64-musl
+      '@rolldown/binding-linux-x64-gnu':
+        specifier: workspace:*
+        version: link:npm/linux-x64-gnu
+      '@rolldown/binding-linux-x64-musl':
+        specifier: workspace:*
+        version: link:npm/linux-x64-musl
+      '@rolldown/binding-wasm32-wasi':
+        specifier: workspace:*
+        version: link:npm/wasm32-wasi
+      '@rolldown/binding-win32-arm64-msvc':
+        specifier: workspace:*
+        version: link:npm/win32-arm64-msvc
+      '@rolldown/binding-win32-ia32-msvc':
+        specifier: workspace:*
+        version: link:npm/win32-ia32-msvc
+      '@rolldown/binding-win32-x64-msvc':
+        specifier: workspace:*
+        version: link:npm/win32-x64-msvc
 
   packages/rolldown/npm/darwin-arm64: {}
 
@@ -393,7 +393,7 @@ importers:
     dependencies:
       '@napi-rs/wasm-runtime':
         specifier: ^0.2.4
-        version: 0.2.7
+        version: 0.2.8
 
   packages/rolldown/npm/win32-arm64-msvc: {}
 
@@ -1506,14 +1506,8 @@ packages:
     cpu: [x64]
     os: [win32]
 
-  '@emnapi/core@1.3.1':
-    resolution: {integrity: sha512-pVGjBIt1Y6gg3EJN8jTcfpP/+uuRksIo055oE/OBkDNcjZqVbfkWCksG1Jp4yZnj3iKWyWX8fdG/j6UDYPbFog==}
-
   '@emnapi/core@1.4.0':
     resolution: {integrity: sha512-H+N/FqT07NmLmt6OFFtDfwe8PNygprzBikrEMyQfgqSmT0vzE515Pz7R8izwB9q/zsH/MA64AKoul3sA6/CzVg==}
-
-  '@emnapi/runtime@1.3.1':
-    resolution: {integrity: sha512-kEBmG8KyqtxJZv+ygbEim+KCGtIq1fC22Ms3S4ziXmYKm8uyoLX0MHONVKwp+9opg390VaKRNt4a7A9NwmpNhw==}
 
   '@emnapi/runtime@1.4.0':
     resolution: {integrity: sha512-64WYIf4UYcdLnbKn/umDlNjQDSS8AgZrI/R9+x5ilkUVFxXcA1Ebl+gQLc/6mERA4407Xof0R7wEyEuj091CVw==}
@@ -2398,9 +2392,6 @@ packages:
   '@napi-rs/tar@0.1.4':
     resolution: {integrity: sha512-hDsvmMZY8tl2CcLfjnTeE1o5W1eGTSL+ZIX8YEybtcJwA+Cc8SNHb7l6JqMnGcjOrWBZbHt8tzTN+W7qHS5Wmg==}
     engines: {node: '>= 10'}
-
-  '@napi-rs/wasm-runtime@0.2.7':
-    resolution: {integrity: sha512-5yximcFK5FNompXfJFoWanu5l8v1hNGqNHh9du1xETp9HWk/B/PzvchX55WYOPaIeNglG8++68AAiauBAtbnzw==}
 
   '@napi-rs/wasm-runtime@0.2.8':
     resolution: {integrity: sha512-OBlgKdX7gin7OIq4fadsjpg+cp2ZphvAIKucHsNfTdJiqdOmOEwQd/bHi0VwNrcw5xpBJyUw6cK/QilCqy1BSg==}
@@ -7626,18 +7617,9 @@ snapshots:
   '@dprint/win32-x64@0.49.1':
     optional: true
 
-  '@emnapi/core@1.3.1':
-    dependencies:
-      '@emnapi/wasi-threads': 1.0.1
-      tslib: 2.8.1
-
   '@emnapi/core@1.4.0':
     dependencies:
       '@emnapi/wasi-threads': 1.0.1
-      tslib: 2.8.1
-
-  '@emnapi/runtime@1.3.1':
-    dependencies:
       tslib: 2.8.1
 
   '@emnapi/runtime@1.4.0':
@@ -8262,12 +8244,6 @@ snapshots:
       '@napi-rs/tar-win32-arm64-msvc': 0.1.4
       '@napi-rs/tar-win32-ia32-msvc': 0.1.4
       '@napi-rs/tar-win32-x64-msvc': 0.1.4
-
-  '@napi-rs/wasm-runtime@0.2.7':
-    dependencies:
-      '@emnapi/core': 1.3.1
-      '@emnapi/runtime': 1.3.1
-      '@tybys/wasm-util': 0.9.0
 
   '@napi-rs/wasm-runtime@0.2.8':
     dependencies:

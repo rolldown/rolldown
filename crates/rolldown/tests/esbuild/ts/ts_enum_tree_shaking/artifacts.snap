@@ -27,7 +27,7 @@ let x;
 (function(_x) {
 	console.log(x, y);
 })(x || (x = {}));
-var x = /* @__PURE__ */ function(x$1) {
+x = /* @__PURE__ */ function(x$1) {
 	x$1[x$1["y"] = 123] = "y";
 	return x$1;
 }(x || {});

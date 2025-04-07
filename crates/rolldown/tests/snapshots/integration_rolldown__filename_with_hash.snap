@@ -2648,7 +2648,7 @@ expression: output
 
 # tests/esbuild/lower/lower_nullish_coalescing_assignment_issue1493
 
-- entry-!~{000}~.js => entry-GV3eGSy6.js
+- entry-!~{000}~.js => entry-DkqL3scz.js
 
 # tests/esbuild/lower/lower_object_spread_no_bundle
 
@@ -3444,7 +3444,7 @@ expression: output
 # tests/esbuild/ts/ts_enum_tree_shaking
 
 - namespace-after-!~{007}~.js => namespace-after-Bj5RTHQ2.js
-- namespace-before-!~{006}~.js => namespace-before-jE_Uwev8.js
+- namespace-before-!~{006}~.js => namespace-before-Cl5xzxya.js
 - sibling-enum-after-!~{005}~.js => sibling-enum-after-8putMZ4f.js
 - sibling-enum-before-!~{003}~.js => sibling-enum-before-BbwZwrJv.js
 - sibling-enum-middle-!~{004}~.js => sibling-enum-middle-CnNHDdS-.js
@@ -3638,9 +3638,9 @@ expression: output
 
 # tests/esbuild/ts/ts_sibling_enum
 
-- nested-number-!~{003}~.js => nested-number-BKE2uVSD.js
-- nested-propagation-!~{005}~.js => nested-propagation-BB9xKGCp.js
-- nested-string-!~{004}~.js => nested-string-ZnvT0vdz.js
+- nested-number-!~{003}~.js => nested-number-Ded3WelP.js
+- nested-propagation-!~{005}~.js => nested-propagation-CFLZx8Uj.js
+- nested-string-!~{004}~.js => nested-string-BrzRR0Hx.js
 - number-!~{000}~.js => number-SavMurzL.js
 - propagation-!~{002}~.js => propagation-n_gXqInj.js
 - string-!~{001}~.js => string-B34EWOoJ.js
@@ -4786,7 +4786,7 @@ expression: output
 
 # tests/rolldown/resolve/ts_config_option_merge
 
-- main-!~{000}~.js => main-BNvBfQMB.js
+- main-!~{000}~.js => main-FgTKQteb.js
 
 # tests/rolldown/resolve/wildcard_alias
 

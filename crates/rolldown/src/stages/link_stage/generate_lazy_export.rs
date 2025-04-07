@@ -139,7 +139,7 @@ fn json_object_expr_to_esm(
       unreachable!();
     };
     // clean program body, since we already take it and left a dummy expr
-    snippet.builder.move_vec(&mut program.body);
+    program.body.clear();
 
     // convert {"a": "b", "c": "d"} to
     // {"a": b, "c": d}

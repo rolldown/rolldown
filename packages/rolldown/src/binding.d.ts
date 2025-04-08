@@ -283,12 +283,17 @@ export interface BindingEmittedChunk {
   importer?: string
 }
 
+export interface BindingExperimentalHmrOptions {
+  host?: string
+  port?: number
+}
+
 export interface BindingExperimentalOptions {
   strictExecutionOrder?: boolean
   disableLiveBindings?: boolean
   viteMode?: boolean
   resolveNewUrlToAsset?: boolean
-  hmr?: boolean
+  hmr?: BindingExperimentalHmrOptions
 }
 
 export interface BindingGeneralHookFilter {

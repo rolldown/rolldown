@@ -72,6 +72,10 @@ export class RolldownBuild {
   async generateHmrPatch(changedFiles: string[]): Promise<string | void> {
     return this.#bundler?.bundler.generateHmrPatch(changedFiles);
   }
+
+  get watchFiles(): string[] {
+    return this.#bundler?.bundler.watchFiles ?? [];
+  }
 }
 
 function _assert() {

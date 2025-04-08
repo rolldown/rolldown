@@ -166,11 +166,7 @@ impl GenerateStage<'_> {
       return Err(errors.into());
     }
 
-    Ok(BundleOutput {
-      assets: output,
-      warnings,
-      watch_files: self.plugin_driver.watch_files.iter().map(|f| f.clone()).collect(),
-    })
+    Ok(BundleOutput { assets: output, warnings })
   }
 
   async fn instantiate_chunks(

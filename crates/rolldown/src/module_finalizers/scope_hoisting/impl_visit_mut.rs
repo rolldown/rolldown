@@ -1,5 +1,5 @@
 use oxc::{
-  allocator::{self, IntoIn},
+  allocator::{self, Dummy, IntoIn, TakeIn},
   ast::{
     ast::{self, BindingPatternKind, Expression, SimpleAssignmentTarget},
     match_member_expression,
@@ -8,7 +8,7 @@ use oxc::{
   span::{SPAN, Span},
 };
 use rolldown_common::{ExportsKind, Module, StmtInfoIdx, SymbolRef, ThisExprReplaceKind, WrapKind};
-use rolldown_ecmascript_utils::{ExpressionExt, TakeIn};
+use rolldown_ecmascript_utils::ExpressionExt;
 use rustc_hash::FxHashSet;
 
 use super::ScopeHoistingFinalizer;
@@ -173,17 +173,17 @@ impl<'ast> VisitMut<'ast> for ScopeHoistingFinalizer<'_, 'ast> {
                   kind: ast::BindingPatternKind::BindingIdentifier(
                     self.snippet.id(&var_name, SPAN).into_in(self.alloc),
                   ),
-                  ..TakeIn::dummy(self.alloc)
+                  ..ast::BindingPattern::dummy(self.alloc)
                 },
                 kind: ast::VariableDeclarationKind::Var,
-                ..TakeIn::dummy(self.alloc)
+                ..ast::VariableDeclarator::dummy(self.alloc)
               });
             });
             program.body.push(ast::Statement::VariableDeclaration(
               ast::VariableDeclaration {
                 declarations: declarators,
                 kind: ast::VariableDeclarationKind::Var,
-                ..TakeIn::dummy(self.alloc)
+                ..ast::VariableDeclaration::dummy(self.alloc)
               }
               .into_in(self.alloc),
             ));
@@ -223,13 +223,10 @@ impl<'ast> VisitMut<'ast> for ScopeHoistingFinalizer<'_, 'ast> {
 
   fn visit_statement(&mut self, it: &mut ast::Statement<'ast>) {
     if !self.ctx.options.drop_labels.is_empty() {
-      match it {
-        ast::Statement::LabeledStatement(stmt)
-          if self.ctx.options.drop_labels.contains(stmt.label.name.as_str()) =>
-        {
-          self.snippet.builder.move_statement(it);
+      if let ast::Statement::LabeledStatement(stmt) = it {
+        if self.ctx.options.drop_labels.contains(stmt.label.name.as_str()) {
+          *it = self.snippet.builder.statement_empty(stmt.span);
         }
-        _ => {}
       }
     }
     walk_mut::walk_statement(self, it);
@@ -314,7 +311,7 @@ impl<'ast> VisitMut<'ast> for ScopeHoistingFinalizer<'_, 'ast> {
           *expr = new_expr;
         }
       }
-    };
+    }
 
     walk_mut::walk_expression(self, expr);
   }
@@ -335,7 +332,7 @@ impl<'ast> VisitMut<'ast> for ScopeHoistingFinalizer<'_, 'ast> {
     } else {
       if let Some(ref_id) = self.try_get_valid_namespace_alias_ref_id_from_member_expr(expr) {
         self.interested_namespace_alias_ref_id.insert(ref_id);
-      };
+      }
       walk_mut::walk_member_expression(self, expr);
     }
   }

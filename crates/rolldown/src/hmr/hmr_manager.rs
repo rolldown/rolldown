@@ -1,4 +1,5 @@
 use std::{
+  fmt::Write as _,
   ops::{Deref, DerefMut},
   sync::Arc,
 };
@@ -203,9 +204,10 @@ impl HmrManager {
     let mut patch = outputs.concat();
     hmr_boundary.iter().for_each(|idx| {
       let init_fn_name = &module_idx_to_init_fn_name[idx];
-      patch.push_str(&format!("{init_fn_name}()\n"));
+      writeln!(patch, "{init_fn_name}()").unwrap();
     });
-    patch.push_str(&format!(
+    write!(
+      patch,
       "\n__rolldown_runtime__.applyUpdates([{}]);",
       hmr_boundary
         .iter()
@@ -215,7 +217,8 @@ impl HmrManager {
         })
         .collect::<Vec<_>>()
         .join(",")
-    ));
+    )
+    .unwrap();
 
     Ok(patch)
   }

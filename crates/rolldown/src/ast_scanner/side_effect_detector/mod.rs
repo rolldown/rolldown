@@ -443,16 +443,11 @@ impl<'a> SideEffectDetector<'a> {
           BindingPatternKind::ObjectPattern(_) => true,
           BindingPatternKind::ArrayPattern(pat) => {
             for p in &pat.elements {
-              match &p {
-                Some(binding_pat)
-                  if matches!(binding_pat.kind, BindingPatternKind::BindingIdentifier(_)) =>
-                {
-                  continue;
-                }
-                None => continue,
-                _ => {
-                  return true;
-                }
+              if p
+                .as_ref()
+                .is_some_and(|pat| !matches!(pat.kind, BindingPatternKind::BindingIdentifier(_)))
+              {
+                return true;
               }
             }
             declarator.init.as_ref().is_some_and(|init| self.detect_side_effect_of_expr(init))

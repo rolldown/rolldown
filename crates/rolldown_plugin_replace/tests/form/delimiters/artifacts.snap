@@ -1,6 +1,5 @@
 ---
 source: crates/rolldown_testing/src/integration_test.rs
-snapshot_kind: text
 ---
 # Assets
 
@@ -26,5 +25,5 @@ console.log(`
 (0:0) "console." --> (2:0) "console."
 (0:8) "log(" --> (2:8) "log(`"
 (0:12) "`\n" --> (2:13) "\n"
-(4:2) ";" --> (6:2) ";\n"
+(4:2) ";\n" --> (6:2) ";\n"
 ```

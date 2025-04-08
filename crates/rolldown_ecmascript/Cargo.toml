@@ -1,11 +1,10 @@
 [package]
-name    = "rolldown_ecmascript"
+name = "rolldown_ecmascript"
 version = "0.1.0"
 
-
-edition.workspace    = true
-homepage.workspace   = true
-license.workspace    = true
+edition.workspace = true
+homepage.workspace = true
+license.workspace = true
 repository.workspace = true
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
@@ -15,11 +14,10 @@ doctest = false
 [lints]
 workspace = true
 
-
 [dependencies]
-arcstr         = { workspace = true }
-itertools      = { workspace = true }
-oxc            = { workspace = true }
-oxc_sourcemap  = { workspace = true }
+arcstr = { workspace = true }
+itertools = { workspace = true }
+oxc = { workspace = true }
+oxc_sourcemap = { workspace = true }
 rolldown_error = { workspace = true }
-self_cell      = { workspace = true }
+self_cell = { workspace = true }

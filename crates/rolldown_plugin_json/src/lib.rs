@@ -1,8 +1,11 @@
+use std::borrow::Cow;
+use std::fmt::Write as _;
+
 use rolldown_common::ModuleType;
 use rolldown_plugin::{HookTransformOutput, Plugin};
 use rolldown_sourcemap::SourceMap;
+use rolldown_utils::concat_string;
 use serde_json::Value;
-use std::borrow::Cow;
 
 #[derive(Debug, Default)]
 pub struct JsonPlugin {
@@ -45,16 +48,17 @@ impl Plugin for JsonPlugin {
         let mut default_object_code = "{\n".to_owned();
         for (key, value) in parsed {
           if rolldown_utils::ecmascript::is_validate_assignee_identifier_name(key) {
-            code += &format!("export const {key} = {};\n", &serialize_value(value)?);
-            default_object_code += &format!("  {key},\n");
+            writeln!(code, "export const {key} = {};", &serialize_value(value)?).unwrap();
+            writeln!(default_object_code, "  {key},").unwrap();
           } else {
             let key = serde_json::to_string(key).unwrap();
-            default_object_code += &format!("  {key}: {},\n", &serialize_value(value)?);
+            writeln!(default_object_code, "  {key}: {},", &serialize_value(value)?).unwrap();
           }
         }
         default_object_code += "}";
 
-        code += &format!("export default {default_object_code};\n");
+        writeln!(code, "export default {default_object_code};").unwrap();
+
         return Ok(Some(HookTransformOutput {
           code: Some(code),
           map: Some(SourceMap::default()),
@@ -77,7 +81,11 @@ impl Plugin for JsonPlugin {
         };
         let normalized_code_string = serde_json::to_string(&normalized_code)?;
         return Ok(Some(HookTransformOutput {
-          code: Some(format!("export default /*#__PURE__*/ JSON.parse({normalized_code_string})")),
+          code: Some(concat_string!(
+            "export default /*#__PURE__*/ JSON.parse(",
+            normalized_code_string,
+            ")"
+          )),
           map: Some(SourceMap::default()),
           module_type: Some(ModuleType::Js),
           ..Default::default()
@@ -133,7 +141,7 @@ fn is_special_query(ext: &str) -> bool {
         return true;
       }
       None => return true,
-      _ => continue,
+      _ => {}
     }
   }
   false
@@ -142,7 +150,8 @@ fn is_special_query(ext: &str) -> bool {
 fn serialize_value(value: &Value) -> Result<String, serde_json::Error> {
   let value_as_string = serde_json::to_string(value)?;
   if value.is_object() && !value.is_null() && value_as_string.len() > 10 * 1000 {
-    Ok(format!("/*#__PURE__*/ JSON.parse({})", serde_json::to_string(&value_as_string)?))
+    let value = serde_json::to_string(&value_as_string)?;
+    Ok(concat_string!("/*#__PURE__*/ JSON.parse(", value, ")"))
   } else {
     Ok(value_as_string)
   }
@@ -150,7 +159,7 @@ fn serialize_value(value: &Value) -> Result<String, serde_json::Error> {
 
 fn to_esm(data: &Value, named_exports: bool) -> String {
   if !named_exports || !data.is_object() {
-    return format!("export default {data};\n");
+    return concat_string!("export default ", data.to_string(), ";\n");
   }
 
   let mut default_export_rows = vec![];
@@ -158,17 +167,17 @@ fn to_esm(data: &Value, named_exports: bool) -> String {
   for (key, value) in data.as_object().unwrap() {
     if rolldown_utils::ecmascript::is_validate_assignee_identifier_name(key) {
       default_export_rows.push(Cow::Borrowed(key));
-      named_export_code += &format!("export const {key} = {value};\n");
+      writeln!(named_export_code, "export const {key} = {value};").unwrap();
     } else {
       let key = serde_json::to_string(key).unwrap();
-      default_export_rows.push(Cow::Owned(format!("{key}: {value}",)));
+      default_export_rows.push(Cow::Owned(concat_string!(key, ": ", value.to_string())));
     }
   }
-  let default_export_code: String =
-    default_export_rows.iter().map(|s| s.as_str()).collect::<Vec<_>>().join(",\n");
-  let default_export_code = format!("export default {{\n{default_export_code}\n}};\n");
 
-  format!("{named_export_code}{default_export_code}")
+  let default_export_code =
+    default_export_rows.iter().map(|s| s.as_str()).collect::<Vec<_>>().join(",\n");
+
+  concat_string!(named_export_code, "export default {\n", default_export_code, "\n};\n")
 }
 
 #[cfg(test)]

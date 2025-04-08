@@ -47,7 +47,7 @@ async fn test() {
         }]),
         cwd: Some(cwd),
         asset_filenames: Some(AssetFilenamesOutputOption::String(
-          "[name]-[hash]-[hash:1].js".into(),
+          "[name]-[hash]-[hash:1]-[hash:23].js".into(),
         )),
         ..Default::default()
       },

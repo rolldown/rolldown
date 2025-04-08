@@ -1,19 +1,19 @@
-import fs from 'node:fs'
-import path from 'node:path'
-import { cwd } from 'node:process'
-import { readdir } from 'node:fs/promises'
-import { pathToFileURL } from 'node:url'
-import { rolldown } from '../api/rolldown'
-import type { ConfigExport } from '../types/config-export'
-import type { OutputChunk } from '../types/rolldown-output'
+import fs from 'node:fs';
+import { readdir } from 'node:fs/promises';
+import path from 'node:path';
+import { cwd } from 'node:process';
+import { pathToFileURL } from 'node:url';
+import { rolldown } from '../api/rolldown';
+import type { ConfigExport } from '../types/config-export';
+import type { OutputChunk } from '../types/rolldown-output';
 
 async function bundleTsConfig(
   configFile: string,
   isEsm: boolean,
 ): Promise<string> {
-  const dirnameVarName = 'injected_original_dirname'
-  const filenameVarName = 'injected_original_filename'
-  const importMetaUrlVarName = 'injected_original_import_meta_url'
+  const dirnameVarName = 'injected_original_dirname';
+  const filenameVarName = 'injected_original_filename';
+  const importMetaUrlVarName = 'injected_original_import_meta_url';
   const bundle = await rolldown({
     input: configFile,
     platform: 'node',
@@ -38,95 +38,99 @@ async function bundleTsConfig(
             const injectValues =
               `const ${dirnameVarName} = ${JSON.stringify(path.dirname(id))};` +
               `const ${filenameVarName} = ${JSON.stringify(id)};` +
-              `const ${importMetaUrlVarName} = ${JSON.stringify(
-                pathToFileURL(id).href,
-              )};`
-            return { code: injectValues + code, map: null }
+              `const ${importMetaUrlVarName} = ${
+                JSON.stringify(
+                  pathToFileURL(id).href,
+                )
+              };`;
+            return { code: injectValues + code, map: null };
           },
         },
       },
     ],
-  })
-  const outputDir = path.dirname(configFile)
+  });
+  const outputDir = path.dirname(configFile);
   const result = await bundle.write({
     dir: outputDir,
     format: isEsm ? 'esm' : 'cjs',
     sourcemap: 'inline',
     // respect the original file extension, mts -> mjs, cts -> cjs
     // mts should be generate mjs, it avoid add `type: module` at package.json
-    entryFileNames: `rolldown.config.[hash]${path.extname(configFile).replace('ts', 'js')}`,
-  })
+    entryFileNames: `rolldown.config.[hash]${
+      path.extname(configFile).replace('ts', 'js')
+    }`,
+  });
   const fileName = result.output.find(
     (chunk): chunk is OutputChunk => chunk.type === 'chunk' && chunk.isEntry,
-  )!.fileName
-  return path.join(outputDir, fileName)
+  )!.fileName;
+  return path.join(outputDir, fileName);
 }
 
-const SUPPORTED_JS_CONFIG_FORMATS = ['.js', '.mjs', '.cjs']
-const SUPPORTED_TS_CONFIG_FORMATS = ['.ts', '.mts', '.cts']
+const SUPPORTED_JS_CONFIG_FORMATS = ['.js', '.mjs', '.cjs'];
+const SUPPORTED_TS_CONFIG_FORMATS = ['.ts', '.mts', '.cts'];
 const SUPPORTED_CONFIG_FORMATS = [
   ...SUPPORTED_JS_CONFIG_FORMATS,
   ...SUPPORTED_TS_CONFIG_FORMATS,
-]
+];
 
-const DEFAULT_CONFIG_BASE = 'rolldown.config'
+const DEFAULT_CONFIG_BASE = 'rolldown.config';
 
 async function findConfigFileNameInCwd(): Promise<string> {
-  const filesInWorkingDirectory = new Set(await readdir(cwd()))
+  const filesInWorkingDirectory = new Set(await readdir(cwd()));
   for (const extension of SUPPORTED_CONFIG_FORMATS) {
-    const fileName = `${DEFAULT_CONFIG_BASE}${extension}`
-    if (filesInWorkingDirectory.has(fileName)) return fileName
+    const fileName = `${DEFAULT_CONFIG_BASE}${extension}`;
+    if (filesInWorkingDirectory.has(fileName)) return fileName;
   }
-  throw new Error('No `rolldown.config` configuration file found.')
+  throw new Error('No `rolldown.config` configuration file found.');
 }
 
 export async function loadTsConfig(configFile: string): Promise<ConfigExport> {
-  const isEsm = isFilePathESM(configFile)
-  const file = await bundleTsConfig(configFile, isEsm)
+  const isEsm = isFilePathESM(configFile);
+  const file = await bundleTsConfig(configFile, isEsm);
   try {
-    return (await import(pathToFileURL(file).href)).default
+    return (await import(pathToFileURL(file).href)).default;
   } finally {
-    fs.unlink(file, () => {}) // Ignore errors
+    fs.unlink(file, () => {}); // Ignore errors
   }
 }
 
 export function isFilePathESM(filePath: string): boolean {
   if (/\.m[jt]s$/.test(filePath)) {
-    return true
+    return true;
   } else if (/\.c[jt]s$/.test(filePath)) {
-    return false
+    return false;
   } else {
     // check package.json for type: "module"
-    const pkg = findNearestPackageData(path.dirname(filePath))
+    const pkg = findNearestPackageData(path.dirname(filePath));
     if (pkg) {
-      return pkg.type === 'module'
+      return pkg.type === 'module';
     }
     // no package.json, default to cjs
-    return false
+    return false;
   }
 }
 
 export function findNearestPackageData(basedir: string): any | null {
   while (basedir) {
-    const pkgPath = path.join(basedir, 'package.json')
+    const pkgPath = path.join(basedir, 'package.json');
     if (tryStatSync(pkgPath)?.isFile()) {
       try {
-        return JSON.parse(fs.readFileSync(pkgPath, 'utf-8'))
+        return JSON.parse(fs.readFileSync(pkgPath, 'utf-8'));
       } catch {}
     }
 
-    const nextBasedir = path.dirname(basedir)
-    if (nextBasedir === basedir) break
-    basedir = nextBasedir
+    const nextBasedir = path.dirname(basedir);
+    if (nextBasedir === basedir) break;
+    basedir = nextBasedir;
   }
 
-  return null
+  return null;
 }
 
 function tryStatSync(file: string): fs.Stats | undefined {
   try {
     // The "throwIfNoEntry" is a performance optimization for cases where the file does not exist
-    return fs.statSync(file, { throwIfNoEntry: false })
+    return fs.statSync(file, { throwIfNoEntry: false });
   } catch {
     // Ignore errors
   }
@@ -134,8 +138,8 @@ function tryStatSync(file: string): fs.Stats | undefined {
 
 export async function loadConfig(configPath: string): Promise<ConfigExport> {
   const ext = path.extname(
-    (configPath = configPath || (await findConfigFileNameInCwd())),
-  )
+    configPath = configPath || (await findConfigFileNameInCwd()),
+  );
 
   try {
     if (
@@ -143,16 +147,18 @@ export async function loadConfig(configPath: string): Promise<ConfigExport> {
       (process.env.NODE_OPTIONS?.includes('--import=tsx') &&
         SUPPORTED_TS_CONFIG_FORMATS.includes(ext))
     ) {
-      return (await import(pathToFileURL(configPath).href)).default
+      return (await import(pathToFileURL(configPath).href)).default;
     } else if (SUPPORTED_TS_CONFIG_FORMATS.includes(ext)) {
-      const rawConfigPath = path.resolve(configPath)
-      return await loadTsConfig(rawConfigPath)
+      const rawConfigPath = path.resolve(configPath);
+      return await loadTsConfig(rawConfigPath);
     } else {
       throw new Error(
-        `Unsupported config format. Expected: \`${SUPPORTED_CONFIG_FORMATS.join(',')}\` but got \`${ext}\``,
-      )
+        `Unsupported config format. Expected: \`${
+          SUPPORTED_CONFIG_FORMATS.join(',')
+        }\` but got \`${ext}\``,
+      );
     }
   } catch (err) {
-    throw new Error('Error happened while loading config.', { cause: err })
+    throw new Error('Error happened while loading config.', { cause: err });
   }
 }

@@ -1,4 +1,4 @@
-import { defineDevConfig } from '@rolldown/test-dev-server'
+import { defineDevConfig } from '@rolldown/test-dev-server';
 
 export default defineDevConfig({
   build: {
@@ -8,4 +8,4 @@ export default defineDevConfig({
     },
     treeshake: false,
   },
-})
+});

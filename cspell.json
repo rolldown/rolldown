@@ -187,7 +187,6 @@
     "stylesheet",
     "systemjs",
     "Taegert",
-    "taplo",
     "thiserror",
     "threadsafe",
     "threejs",
@@ -230,7 +229,8 @@
     "krate",
     "prettyplease",
     "unparse",
-    "commondir"
+    "commondir",
+    "dprint"
   ],
   "ignoreWords": ["Jeqs", "Gwetwem", "bpwli", "mxrh"]
 }

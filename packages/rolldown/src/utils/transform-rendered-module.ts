@@ -1,18 +1,18 @@
-import { BindingRenderedModule } from '../binding'
-import { RenderedModule } from '../types/rolldown-output'
+import { BindingRenderedModule } from '../binding';
+import { RenderedModule } from '../types/rolldown-output';
 
 export function transformToRenderedModule(
   bindingRenderedModule: BindingRenderedModule,
 ): RenderedModule {
   return {
     get code() {
-      return bindingRenderedModule.code
+      return bindingRenderedModule.code;
     },
     get renderedLength() {
-      return bindingRenderedModule.code?.length || 0
+      return bindingRenderedModule.code?.length || 0;
     },
     get renderedExports() {
-      return bindingRenderedModule.renderedExports
+      return bindingRenderedModule.renderedExports;
     },
-  }
+  };
 }

@@ -1,6 +1,6 @@
 
 //#region \0vite/modulepreload-polyfill.js
-__VITE_IS_MODERN__ && function polyfill() {
+(function polyfill() {
 	const relList = document.createElement("link").relList;
 	if (relList && relList.supports && relList.supports("modulepreload")) return;
 	for (const link of document.querySelectorAll("link[rel=\"modulepreload\"]")) processPreload(link);
@@ -28,6 +28,6 @@ __VITE_IS_MODERN__ && function polyfill() {
 		const fetchOpts = getFetchOpts(link);
 		fetch(link.href, fetchOpts);
 	}
-}();
+})();
 
 //#endregion

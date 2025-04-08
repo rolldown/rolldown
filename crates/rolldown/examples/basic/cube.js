@@ -4,5 +4,5 @@ import square from './square.js';
 // a separate chunk that is imported by both entry
 // chunks to avoid code duplication
 export default function cube(x) {
-	return square(x) * x;
+  return square(x) * x;
 }

@@ -331,15 +331,7 @@ impl TryFrom<BindingBuiltinPlugin> for Arc<dyn Pluginable> {
         Arc::new(ImportGlobPlugin { config })
       }
       BindingBuiltinPluginName::DynamicImportVars => Arc::new(DynamicImportVarsPlugin {}),
-      BindingBuiltinPluginName::ModulePreloadPolyfill => {
-        let skip = if let Some(options) = plugin.options {
-          let config = BindingModulePreloadPolyfillPluginConfig::from_unknown(options)?;
-          config.skip.unwrap_or_default()
-        } else {
-          false
-        };
-        Arc::new(ModulePreloadPolyfillPlugin { skip })
-      }
+      BindingBuiltinPluginName::ModulePreloadPolyfill => Arc::new(ModulePreloadPolyfillPlugin {}),
       BindingBuiltinPluginName::Manifest => {
         let config = if let Some(options) = plugin.options {
           BindingManifestPluginConfig::from_unknown(options)?.into()

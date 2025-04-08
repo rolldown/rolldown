@@ -23,6 +23,7 @@ var x = /* @__PURE__ */ function(x) {
 ```js
 
 //#region namespace-before.ts
+let x;
 (function(_x) {
 	console.log(x, y);
 })(x || (x = {}));

@@ -10,8 +10,8 @@ use anyhow::Context;
 use arcstr::ArcStr;
 use derive_more::Debug;
 use rolldown_common::{
-  ModuleDefFormat, ModuleInfo, ModuleLoaderMsg, ResolvedId, SharedFileEmitter,
-  SharedNormalizedBundlerOptions, side_effects::HookSideEffects,
+  ModuleDefFormat, ModuleInfo, ModuleLoaderMsg, NormalizedBundlerOptions, ResolvedId,
+  SharedFileEmitter, SharedNormalizedBundlerOptions, side_effects::HookSideEffects,
 };
 use rolldown_resolver::{ResolveError, Resolver};
 use rolldown_utils::dashmap::{FxDashMap, FxDashSet};
@@ -47,6 +47,10 @@ impl PluginContext {
       context_load_modules: Arc::clone(&self.context_load_modules),
       tx: Arc::clone(&self.tx),
     }))
+  }
+
+  pub fn options(&self) -> &NormalizedBundlerOptions {
+    &self.options
   }
 }
 

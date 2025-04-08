@@ -1,32 +1,31 @@
 [package]
-name    = "rolldown_sourcemap"
+name = "rolldown_sourcemap"
 version = "0.1.0"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
-edition.workspace    = true
-homepage.workspace   = true
-license.workspace    = true
+edition.workspace = true
+homepage.workspace = true
+license.workspace = true
 repository.workspace = true
 
 [lints]
 workspace = true
 
 [lib]
-bench   = false
+bench = false
 doctest = false
 
 [dependencies]
-memchr         = { workspace = true }
-oxc            = { workspace = true }
-oxc_sourcemap  = { workspace = true, features = ["rayon"] }
+memchr = { workspace = true }
+oxc = { workspace = true }
+oxc_sourcemap = { workspace = true, features = ["rayon"] }
 rolldown_utils = { workspace = true }
-rustc-hash     = { workspace = true }
+rustc-hash = { workspace = true }
 
 [dev-dependencies]
 criterion2 = { workspace = true, default-features = false }
 
-
 [[bench]]
 harness = false
-name    = "join"
+name = "join"

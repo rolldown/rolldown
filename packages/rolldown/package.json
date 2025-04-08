@@ -67,16 +67,17 @@
     "build-binding:wasi:release": "pnpm build-binding --profile release-wasi --target wasm32-wasip1-threads",
     "# Scrips for node #": "_",
     "bak_build-node": "unbuild",
-    "build-node": "tsx ./build.ts",
     "build-types": "tsc -p ./tsconfig.json",
-    "build-js-glue": "run-s build-types build-node build-types-check",
-    "build-native:debug": "run-s build-binding build-js-glue",
-    "build-native:release": "run-s build-binding:release build-js-glue",
-    "build-wasi:debug": "run-s build-binding build-binding:wasi build-node",
-    "build-wasi:release": "run-s build-binding build-binding:wasi:release build-node",
+    "build-node": "tsx ./build.ts",
     "build-types-check": "tsc -p ./tsconfig.check.json",
+    "build-js-glue": "pnpm run --sequential \"/^build-(types|node|types-check)$/\"",
+    "build-native:debug": "pnpm run --sequential \"/^build-(binding|js-glue)$/\"",
+    "build-native:release": "pnpm run --sequential \"/^build-(binding:release|js-glue)$/\"",
+    "build-wasi:debug": "pnpm run --sequential \"/^build-(binding|binding:wasi|node)$/\"",
+    "build-wasi:release": "pnpm run --sequential \"/^build-(binding|binding:wasi:release|node)$/\"",
     "# Scrips for docs #": "_",
-    "extract-options-doc": "typedoc"
+    "extract-options-doc": "typedoc",
+    "preinstall": "npx only-allow pnpm"
   },
   "napi": {
     "binaryName": "rolldown-binding",
@@ -104,12 +105,12 @@
     "dtsHeader": "type MaybePromise<T> = T | Promise<T>\ntype Nullable<T> = T | null | undefined\ntype VoidNullable<T = void> = T | null | undefined | void\nexport type BindingStringOrRegex = string | RegExp\n\n"
   },
   "dependencies": {
-    "@oxc-project/types": "0.61.2",
+    "@oxc-project/types": "0.62.0",
     "@valibot/to-json-schema": "1.0.0",
     "valibot": "1.0.0"
   },
   "peerDependencies": {
-    "@oxc-project/runtime": "0.61.2"
+    "@oxc-project/runtime": "0.62.0"
   },
   "peerDependenciesMeta": {
     "@oxc-project/runtime": {
@@ -120,7 +121,7 @@
     "@jridgewell/sourcemap-codec": "^1.5.0",
     "@napi-rs/cli": "^3.0.0-alpha.74",
     "@napi-rs/wasm-runtime": "^0.2.4",
-    "@oxc-node/core": "^0.0.21",
+    "@oxc-node/core": "^0.0.22",
     "@rolldown/testing": "workspace:*",
     "@types/fs-extra": "^11.0.4",
     "@types/lodash-es": "^4.17.12",
@@ -131,8 +132,7 @@
     "fs-extra": "^11.2.0",
     "glob": "^11.0.0",
     "locate-character": "^3.0.0",
-    "npm-run-all2": "^7.0.0",
-    "oxc-parser": "^0.61.0",
+    "oxc-parser": "^0.62.0",
     "remeda": "^2.10.0",
     "rolldown": "workspace:*",
     "rollup": "^4.18.0",

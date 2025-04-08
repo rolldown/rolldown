@@ -1,6 +1,5 @@
 ---
 source: crates/rolldown_testing/src/integration_test.rs
-snapshot_kind: text
 ---
 # Assets
 
@@ -10,8 +9,8 @@ snapshot_kind: text
 "use strict";
 
 //#region entry.mjs
-function confuseNode(exports$1) {
-	exports$1.notAnExport = function() {};
+function confuseNode(exports) {
+	exports.notAnExport = function() {};
 }
 
 //#endregion

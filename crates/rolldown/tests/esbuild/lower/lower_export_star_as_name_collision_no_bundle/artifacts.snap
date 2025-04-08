@@ -1,6 +1,5 @@
 ---
 source: crates/rolldown_testing/src/integration_test.rs
-snapshot_kind: text
 ---
 # warnings
 
@@ -21,11 +20,11 @@ snapshot_kind: text
 ## entry.js
 
 ```js
-import * as ns from "path";
+import * as ns$1 from "path";
 
 //#region entry.js
-let ns$1 = 123;
+let ns$2 = 123;
 
 //#endregion
-export { ns, ns$1 as sn };
+export { ns$1 as ns, ns$2 as sn };
 ```

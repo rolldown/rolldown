@@ -1,6 +1,5 @@
 ---
 source: crates/rolldown_testing/src/integration_test.rs
-snapshot_kind: text
 ---
 # Assets
 
@@ -10,7 +9,7 @@ snapshot_kind: text
 import assert from "node:assert";
 
 //#region promise-shim.js
-const Promise$1 = "promise-shim";
+const P = "promise-shim";
 
 //#endregion
 //#region jquery.js
@@ -26,8 +25,8 @@ var object_assign_shim_default = "object-assign-shim";
 
 //#endregion
 //#region main.js
-assert.strictEqual(Promise$1, "promise-shim");
-assert.strictEqual(Promise$1, "promise-shim");
+assert.strictEqual(P, "promise-shim");
+assert.strictEqual(P, "promise-shim");
 assert.strictEqual(jquery_default, "jquery");
 assert.strictEqual(node_fs_default, "node-fs");
 assert.strictEqual(object_assign_shim_default, "object-assign-shim");

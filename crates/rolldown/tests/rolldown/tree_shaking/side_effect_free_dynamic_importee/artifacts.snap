@@ -10,7 +10,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 //#region main.js
 Promise.resolve().then(function() {
 	return /* @__PURE__ */ Object.freeze({ __proto__: null });
-}).then(({ foo: x, thing: a$1 }) => []);
+}).then(({ foo: x, thing: a }) => []);
 Promise.resolve().then(function() {
 	return /* @__PURE__ */ Object.freeze({ __proto__: null });
 });

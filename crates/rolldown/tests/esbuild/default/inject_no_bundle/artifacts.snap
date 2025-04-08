@@ -1,6 +1,5 @@
 ---
 source: crates/rolldown_testing/src/integration_test.rs
-snapshot_kind: text
 ---
 # Assets
 
@@ -12,7 +11,7 @@ import { "reexpo.rt" as reexpo_rt } from "external-pkg2";
 
 //#region replacement.js
 let replace = { test() {} };
-let replaceDot = { test() {} };
+let $inject_chain2_prop2 = { test() {} };
 
 //#endregion
 //#region inject.js
@@ -28,7 +27,7 @@ console.log("defined");
 console.log("should be used");
 console.log("should be used");
 console.log(replace.test);
-console.log(replaceDot.test);
+console.log($inject_chain2_prop2.test);
 console.log(collide);
 console.log(re_export);
 console.log(reexpo_rt);

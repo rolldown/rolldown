@@ -6,7 +6,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## main.js
 
 ```js
-import { jsx } from "preact/jsx-runtime";
+import { jsx as _jsx } from "preact/jsx-runtime";
 
 //#region src/util.ts
 function add(a, b) {
@@ -15,7 +15,7 @@ function add(a, b) {
 
 //#endregion
 //#region ../../../../../../node_modules/.pnpm/@oxc-project+runtime@0.61.2/node_modules/@oxc-project/runtime/src/helpers/esm/decorateParam.js
-function __decorateParam(paramIndex, decorator) {
+function _decorateParam(paramIndex, decorator) {
 	return function(target, key) {
 		decorator(target, key, paramIndex);
 	};
@@ -23,7 +23,7 @@ function __decorateParam(paramIndex, decorator) {
 
 //#endregion
 //#region ../../../../../../node_modules/.pnpm/@oxc-project+runtime@0.61.2/node_modules/@oxc-project/runtime/src/helpers/esm/decorate.js
-function __decorate(decorators, target, key, desc) {
+function _decorate(decorators, target, key, desc) {
 	var c = arguments.length, r = c < 3 ? target : desc === null ? desc = Object.getOwnPropertyDescriptor(target, key) : desc, d;
 	if (typeof Reflect === "object" && typeof Reflect.decorate === "function") r = Reflect.decorate(decorators, target, key, desc);
 	else for (var i = decorators.length - 1; i >= 0; i--) if (d = decorators[i]) r = (c < 3 ? d(r) : c > 3 ? d(target, key, r) : d(target, key)) || r;
@@ -40,8 +40,8 @@ var Foo = class {
 		return test;
 	}
 };
-__decorate([first(), __decorateParam(0, first())], Foo.prototype, "method", null);
-console.log(/* @__PURE__ */ jsx(Div, {}));
+_decorate([first(), _decorateParam(0, first())], Foo.prototype, "method", null);
+console.log(/* @__PURE__ */ _jsx(Div, {}));
 console.log(`add(1, 2): `, add(1, 2));
 
 //#endregion

@@ -1,6 +1,5 @@
 ---
 source: crates/rolldown_testing/src/integration_test.rs
-snapshot_kind: text
 ---
 # Assets
 
@@ -11,15 +10,15 @@ snapshot_kind: text
   typeof exports === 'object' && typeof module !== 'undefined' ?  factory(require('node:path')) :
   typeof define === 'function' && define.amd ? define(['node:path'], factory) :
   (global = typeof globalThis !== 'undefined' ? globalThis : global || self, factory(global["1"]["2"]));
-})(this, function(node_path) {
+})(this, function(node_path$1) {
 "use strict";
 
-node_path = __toESM(node_path);
+node_path$1 = __toESM(node_path$1);
 
 //#region main.js
-console.log(node_path.default);
-const node_path$1 = {};
-console.log(node_path$1);
+console.log(node_path$1.default);
+const node_path$2 = {};
+console.log(node_path$2);
 
 //#endregion
 });

@@ -23,15 +23,15 @@ source: crates/rolldown_testing/src/integration_test.rs
 import { h, render } from "preact";
 
 //#region import.js
-const p = "p";
+const Part = "p";
 
 //#endregion
 //#region in2.jsx
-const Internal = () => /* @__PURE__ */ h(p, null, " Test 2 ");
+const Internal = () => /* @__PURE__ */ h(Part, null, " Test 2 ");
 
 //#endregion
 //#region app.jsx
-const App = () => /* @__PURE__ */ h(p, null, " ", /* @__PURE__ */ h(Internal, null), " T ");
+const App = () => /* @__PURE__ */ h(Part, null, " ", /* @__PURE__ */ h(Internal, null), " T ");
 render(/* @__PURE__ */ h(App, null), document.getElementById("app"));
 
 //#endregion

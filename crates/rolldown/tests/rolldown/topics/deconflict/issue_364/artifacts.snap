@@ -1,6 +1,5 @@
 ---
 source: crates/rolldown_testing/src/integration_test.rs
-snapshot_kind: text
 ---
 # Assets
 
@@ -10,13 +9,13 @@ snapshot_kind: text
 import assert from "node:assert";
 
 //#region shared.js
-const a$2 = "shared.js";
+const a2 = "shared.js";
 
 //#endregion
 //#region main.js
 const a = "a";
 const a$1 = "a$1";
-assert.equal(a$2, "shared.js");
+assert.equal(a2, "shared.js");
 assert.equal(a, "a");
 assert.equal(a$1, "a$1");
 
@@ -29,8 +28,8 @@ assert.equal(a$1, "a$1");
 ```
 - ../shared.js
 (0:0) "const " --> (3:0) "const "
-(0:6) "a = " --> (3:6) "a$2 = "
-(0:10) "'shared.js'\n" --> (3:12) "\"shared.js\";\n"
+(0:6) "a = " --> (3:6) "a2 = "
+(0:10) "'shared.js'\n" --> (3:11) "\"shared.js\";\n"
 - ../main.js
 (2:0) "const " --> (7:0) "const "
 (2:6) "a = " --> (7:6) "a = "
@@ -40,9 +39,9 @@ assert.equal(a$1, "a$1");
 (3:12) "'a$1'\n" --> (8:12) "\"a$1\";\n"
 (5:0) "assert." --> (9:0) "assert."
 (5:7) "equal(" --> (9:7) "equal("
-(5:13) "a2, " --> (9:13) "a$2, "
-(5:17) "'shared.js')" --> (9:18) "\"shared.js\")"
-(5:29) "\n" --> (9:30) ";\n"
+(5:13) "a2, " --> (9:13) "a2, "
+(5:17) "'shared.js')" --> (9:17) "\"shared.js\")"
+(5:29) "\n" --> (9:29) ";\n"
 (6:0) "assert." --> (10:0) "assert."
 (6:7) "equal(" --> (10:7) "equal("
 (6:13) "a, " --> (10:13) "a, "

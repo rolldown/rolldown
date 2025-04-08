@@ -11,13 +11,13 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 //#region entry.js
 function a(x = arguments) {
-	let arguments$1;
+	let arguments;
 }
 function b(x = arguments) {
-	let arguments$1;
+	let arguments;
 }
 function c(x = arguments) {
-	let arguments$1;
+	let arguments;
 }
 a();
 b();

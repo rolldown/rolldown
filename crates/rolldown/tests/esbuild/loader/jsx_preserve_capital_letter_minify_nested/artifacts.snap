@@ -14,12 +14,12 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## entry.js
 
 ```js
-import { jsx } from "react/jsx-runtime";
+import { jsx as _jsx } from "react/jsx-runtime";
 
 //#region entry.jsx
 x = () => {
 	class XYYYYY {}
-	return /* @__PURE__ */ jsx(XYYYYY, { "tag-must-start-with-capital-letter": true });
+	return /* @__PURE__ */ _jsx(XYYYYY, { "tag-must-start-with-capital-letter": true });
 };
 
 //#endregion

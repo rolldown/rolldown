@@ -10,8 +10,8 @@ source: crates/rolldown_testing/src/integration_test.rs
 //#region class.ts
 let x;
 (function(_x) {
-	class y$1 {}
-	_x.y = y$1;
+	class y {}
+	_x.y = y;
 })(x || (x = {}));
 (function(_x2) {
 	let z = _x2.z = y;
@@ -27,10 +27,10 @@ export { x };
 //#region enum.ts
 let x;
 (function(_x) {
-	let y$1 = /* @__PURE__ */ function(y$2) {
-		return y$2;
+	let y = /* @__PURE__ */ function(y) {
+		return y;
 	}({});
-	_x.y = y$1;
+	_x.y = y;
 })(x || (x = {}));
 (function(_x2) {
 	let z = _x2.z = y;
@@ -46,8 +46,8 @@ export { x };
 //#region function.ts
 let x;
 (function(_x) {
-	function y$1() {}
-	_x.y = y$1;
+	function y() {}
+	_x.y = y;
 })(x || (x = {}));
 (function(_x2) {
 	let z = _x2.z = y;
@@ -63,7 +63,7 @@ export { x };
 //#region let.ts
 let x;
 (function(_x) {
-	let y$1 = _x.y = 123;
+	let y = _x.y = 123;
 })(x || (x = {}));
 (function(_x2) {
 	let z = _x2.z = y;
@@ -79,8 +79,8 @@ export { x };
 //#region namespace.ts
 let x;
 (function(_x) {
-	let y$1;
-	(function(_y) {})(y$1 || (y$1 = _x.y || (_x.y = {})));
+	let y;
+	(function(_y) {})(y || (y = _x.y || (_x.y = {})));
 })(x || (x = {}));
 (function(_x2) {
 	let z = _x2.z = y;

@@ -1,7 +1,8 @@
 use oxc::semantic::ScopeId;
 use oxc::syntax::keyword::{GLOBAL_OBJECTS, RESERVED_KEYWORDS};
 use rolldown_common::{
-  AstScopes, ModuleIdx, NormalModule, OutputFormat, SymbolNameRefToken, SymbolRef, SymbolRefDb,
+  AstScopes, GetLocalDb, ModuleIdx, NormalModule, OutputFormat, SymbolNameRefToken, SymbolRef,
+  SymbolRefDb, SymbolRefDbForModule,
 };
 use rolldown_rstr::{Rstr, ToRstr};
 use rolldown_utils::rustc_hash::FxHashMapExt;
@@ -9,7 +10,7 @@ use rolldown_utils::{
   concat_string,
   rayon::{IntoParallelIterator, IntoParallelRefIterator, ParallelIterator},
 };
-use rustc_hash::FxHashMap;
+use rustc_hash::{FxHashMap, FxHashSet};
 use std::borrow::Cow;
 use std::collections::hash_map::Entry;
 
@@ -34,32 +35,49 @@ pub struct Renamer<'name> {
   ///                       // so we rename `a` to `a$2`
   /// ```
   ///
+  manual_reserved: FxHashSet<&'static str>,
   used_canonical_names: FxHashMap<Rstr, u32>,
   canonical_names: FxHashMap<SymbolRef, Rstr>,
   canonical_token_to_name: FxHashMap<SymbolNameRefToken, Rstr>,
   symbol_db: &'name SymbolRefDb,
+  entry_module: Option<&'name SymbolRefDbForModule>,
+  entry_module_used_names: FxHashSet<&'name str>,
 }
 
 impl<'name> Renamer<'name> {
-  pub fn new(symbols: &'name SymbolRefDb, format: OutputFormat) -> Self {
+  pub fn new(
+    base_module_index: Option<ModuleIdx>,
+    symbol_db: &'name SymbolRefDb,
+    format: OutputFormat,
+  ) -> Self {
     // Port from https://github.com/rollup/rollup/blob/master/src/Chunk.ts#L1377-L1394.
     let mut manual_reserved = match format {
-      OutputFormat::Esm | OutputFormat::App => vec![],
-      OutputFormat::Cjs => vec!["module", "require", "__filename", "__dirname", "exports"],
-      OutputFormat::Iife | OutputFormat::Umd => vec!["exports"], // Also for  AMD, but we don't support them yet.
+      OutputFormat::Esm | OutputFormat::App => FxHashSet::default(),
+      OutputFormat::Cjs => {
+        FxHashSet::from_iter(["module", "require", "__filename", "__dirname", "exports"])
+      }
+      OutputFormat::Iife | OutputFormat::Umd => FxHashSet::from_iter(["exports"]), // Also for  AMD, but we don't support them yet.
     };
     // https://github.com/rollup/rollup/blob/bfbea66569491f5466fbba99de2ba6a0225f851b/src/Chunk.ts#L1359
     manual_reserved.extend(["Object", "Promise"]);
+
+    let entry_module = base_module_index.map(|index| symbol_db.local_db(index));
+
     Self {
-      canonical_names: FxHashMap::default(),
-      canonical_token_to_name: FxHashMap::default(),
-      symbol_db: symbols,
       used_canonical_names: manual_reserved
         .iter()
         .chain(RESERVED_KEYWORDS.iter())
         .chain(GLOBAL_OBJECTS.iter())
         .map(|s| (Rstr::new(s), 0))
         .collect(),
+      manual_reserved,
+      canonical_names: FxHashMap::default(),
+      canonical_token_to_name: FxHashMap::default(),
+      symbol_db,
+      entry_module_used_names: entry_module.map_or(FxHashSet::default(), |module| {
+        module.ast_scopes.scoping().symbol_names().collect::<FxHashSet<_>>()
+      }),
+      entry_module: base_module_index.map(|index| symbol_db.local_db(index)),
     }
   }
 
@@ -67,32 +85,83 @@ impl<'name> Renamer<'name> {
     self.used_canonical_names.insert(name, 0);
   }
 
+  #[expect(clippy::map_entry)]
   pub fn add_symbol_in_root_scope(&mut self, symbol_ref: SymbolRef) {
     let canonical_ref = symbol_ref.canonical_ref(self.symbol_db);
     let original_name = canonical_ref.name(self.symbol_db).to_rstr();
-    match self.canonical_names.entry(canonical_ref) {
-      Entry::Vacant(vacant) => {
-        let mut candidate_name = original_name.clone();
-        loop {
-          match self.used_canonical_names.entry(candidate_name.clone()) {
-            Entry::Occupied(mut occ) => {
-              let next_conflict_index = *occ.get() + 1;
-              *occ.get_mut() = next_conflict_index;
-              candidate_name =
-                concat_string!(original_name, "$", itoa::Buffer::new().format(next_conflict_index))
-                  .into();
-            }
-            Entry::Vacant(vac) => {
-              vac.insert(0);
-              break;
-            }
-          }
-        }
-        vacant.insert(candidate_name);
+
+    if !self.canonical_names.contains_key(&canonical_ref) {
+      let name = self.get_unique_name(symbol_ref, original_name);
+      self.canonical_names.insert(canonical_ref, name);
+    }
+  }
+
+  #[expect(clippy::map_entry)]
+  pub fn add_symbol_in_root_scope_with_original_name(
+    &mut self,
+    symbol_ref: SymbolRef,
+    original_name: Rstr,
+  ) {
+    let canonical_ref = symbol_ref.canonical_ref(self.symbol_db);
+
+    if !self.canonical_names.contains_key(&canonical_ref) {
+      let name = self.get_unique_name(symbol_ref, original_name);
+      self.canonical_names.insert(canonical_ref, name);
+    }
+  }
+
+  /// Get the name without `$` with digits.
+  ///
+  /// `good` -> `good`
+  /// `good$1` -> `good`
+  /// `good$1$2` -> `good`
+  /// `good$1$2$1` -> `good`
+  fn normalize_name(name: Rstr) -> Rstr {
+    let bytes = name.as_bytes();
+    let exclude_index = bytes.iter().rposition(|&b| b != b'$' && !b.is_ascii_digit());
+
+    if let Some(index) = exclude_index {
+      if bytes.get(index + 1).copied().is_some_and(|c| c == b'$') {
+        return name.split_at(index + 1).0.to_rstr();
       }
-      Entry::Occupied(_) => {
-        // The symbol is already renamed
+    }
+
+    // If there is no `$` in the name, return the original name.
+    name
+  }
+
+  fn generate_candidate_name(original_name: &Rstr, count: u32) -> Rstr {
+    concat_string!(original_name, "$", itoa::Buffer::new().format(count)).into()
+  }
+
+  fn get_unique_name(&mut self, canonical_ref: SymbolRef, original_name: Rstr) -> Rstr {
+    let original_name = Self::normalize_name(original_name);
+    let (mut candidate_name, count) = match self.used_canonical_names.entry(original_name.clone()) {
+      Entry::Occupied(o) => {
+        let count = o.into_mut();
+        *count += 1;
+        (Self::generate_candidate_name(&original_name, *count), count)
       }
+      Entry::Vacant(v) => (original_name.clone(), v.insert(0)),
+    };
+
+    loop {
+      let is_root_binding = self.entry_module.is_some_and(|module| {
+        let scoping = module.ast_scopes.scoping();
+        scoping.get_root_binding(&candidate_name).is_some_and(|symbol_id| {
+          let base_symbol = SymbolRef::from((module.owner_idx, symbol_id));
+          base_symbol == canonical_ref || base_symbol.canonical_ref(self.symbol_db) == canonical_ref
+        })
+      });
+
+      if (is_root_binding && !self.manual_reserved.contains(candidate_name.as_str()))
+        || !self.entry_module_used_names.contains(candidate_name.as_str())
+      {
+        return candidate_name;
+      }
+
+      *count += 1;
+      candidate_name = Self::generate_candidate_name(&original_name, *count);
     }
   }
 

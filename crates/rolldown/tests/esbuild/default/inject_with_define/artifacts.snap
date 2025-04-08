@@ -1,6 +1,5 @@
 ---
 source: crates/rolldown_testing/src/integration_test.rs
-snapshot_kind: text
 ---
 # Assets
 
@@ -10,7 +9,7 @@ snapshot_kind: text
 
 //#region inject.js
 let second = "success (identifier)";
-let second2 = "success (dot name)";
+let $inject_seco_nd = "success (dot name)";
 
 //#endregion
 //#region entry.js
@@ -20,7 +19,7 @@ console.log(
 	true,
 	// define forwards to inject
 	second === "success (identifier)",
-	second2 === "success (dot name)"
+	$inject_seco_nd === "success (dot name)"
 );
 
 //#endregion

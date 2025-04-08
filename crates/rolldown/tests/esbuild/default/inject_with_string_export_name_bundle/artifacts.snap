@@ -1,6 +1,5 @@
 ---
 source: crates/rolldown_testing/src/integration_test.rs
-snapshot_kind: text
 ---
 # Assets
 
@@ -9,14 +8,14 @@ snapshot_kind: text
 ```js
 
 //#region inject.js
-const old = fn;
-const fn = (...args) => old.apply(console, ["log:"].concat(args));
+const old = info;
+const info = (...args) => old.apply(console, ["log:"].concat(args));
 
 //#endregion
 //#region entry.js
-fn(test);
-fn(test);
-fn(test);
+info(test);
+info(test);
+info(test);
 
 //#endregion
 ```

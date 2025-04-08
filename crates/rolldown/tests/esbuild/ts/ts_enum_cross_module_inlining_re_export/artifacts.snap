@@ -8,17 +8,17 @@ source: crates/rolldown_testing/src/integration_test.rs
 ```js
 
 //#region enums.ts
-let a = /* @__PURE__ */ function(a$1) {
-	a$1["x"] = "a";
-	return a$1;
+let a = /* @__PURE__ */ function(a) {
+	a["x"] = "a";
+	return a;
 }({});
-let b = /* @__PURE__ */ function(b$1) {
-	b$1["x"] = "b";
-	return b$1;
+let b = /* @__PURE__ */ function(b) {
+	b["x"] = "b";
+	return b;
 }({});
-let c = /* @__PURE__ */ function(c$1) {
-	c$1["x"] = "c";
-	return c$1;
+let c = /* @__PURE__ */ function(c) {
+	c["x"] = "c";
+	return c;
 }({});
 
 //#endregion

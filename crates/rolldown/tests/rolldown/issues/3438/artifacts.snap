@@ -7,17 +7,17 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```js
 import { clear } from "./repro12.js";
-import { clear$1, clear$1$1 } from "./repro22.js";
-import { clear$1$2, clear$2 as clear$2$1, clear$3 as clear$2 } from "./repro32.js";
+import { clear$1, clear$1$1 as clear$2 } from "./repro22.js";
+import { clear$1$2 as clear$4, clear$2 as clear$5, clear$3 } from "./repro32.js";
 
 //#region main.js
 var main_default = [
 	clear,
 	clear$1,
-	clear$1$1,
 	clear$2,
-	clear$1$2,
-	clear$2$1,
+	clear$3,
+	clear$4,
+	clear$5,
 	() => import("./repro1.js").then(console.log),
 	() => import("./repro2.js").then(console.log),
 	() => import("./repro3.js").then(console.log)
@@ -46,37 +46,37 @@ export { clear };
 ## repro2.js
 
 ```js
-import { clear$1 as clear, clear$1$1 as clear$1 } from "./repro22.js";
+import { clear$1 as clear$2, clear$1$1 as clear$1 } from "./repro22.js";
 
-export { clear, clear$1 };
+export { clear$2 as clear, clear$1 };
 ```
 ## repro22.js
 
 ```js
 
 //#region repro2.js
-const clear$1 = "repro2_clear$1";
-const clear = "repro2_clear";
+const clear = "repro2_clear$1";
+const clear$1 = "repro2_clear";
 
 //#endregion
-export { clear as clear$1, clear$1 as clear$1$1 };
+export { clear$1, clear as clear$1$1 };
 ```
 ## repro3.js
 
 ```js
-import { clear$1$2 as clear$1, clear$2, clear$3 as clear } from "./repro32.js";
+import { clear$1$2 as clear$3, clear$2, clear$3 as clear$4 } from "./repro32.js";
 
-export { clear, clear$1, clear$2 };
+export { clear$4 as clear, clear$3 as clear$1, clear$2 };
 ```
 ## repro32.js
 
 ```js
 
 //#region repro3.js
-const clear$2 = "repro3_clear$2";
+const clear = "repro3_clear$2";
 const clear$1 = "repro3_clear$1";
-const clear = "repro3_clear";
+const clear$2 = "repro3_clear";
 
 //#endregion
-export { clear$1 as clear$1$2, clear$2, clear as clear$3 };
+export { clear$1 as clear$1$2, clear as clear$2, clear$2 as clear$3 };
 ```

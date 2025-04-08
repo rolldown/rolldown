@@ -1,6 +1,5 @@
 ---
 source: crates/rolldown_testing/src/integration_test.rs
-snapshot_kind: text
 ---
 # Assets
 
@@ -9,11 +8,11 @@ snapshot_kind: text
 ```js
 
 //#region tla.js
-const value$1 = await Promise.resolve("tla");
+const tlaValue = await Promise.resolve("tla");
 
 //#endregion
 //#region lib.js
-const value = value$1 + "+lib";
+const value = tlaValue + "+lib";
 
 //#endregion
 export { value };

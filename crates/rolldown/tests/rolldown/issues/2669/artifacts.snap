@@ -1,6 +1,5 @@
 ---
 source: crates/rolldown_testing/src/integration_test.rs
-snapshot_kind: text
 ---
 # Assets
 
@@ -10,29 +9,29 @@ snapshot_kind: text
 
 //#region main.js
 function nested1() {
-	function x$1() {}
-	function x$1$1() {
-		x$1();
+	function x() {}
+	function x$1() {
+		x();
 	}
-	function x$1$1$1() {
-		x$1();
+	function x$1$1() {
+		x();
 	}
 	return [
+		x,
 		x$1,
-		x$1$1,
-		x$1$1$1
+		x$1$1
 	];
 }
 function nested2() {
 	function x$1$1() {
-		x$2();
+		x();
 	}
 	function x$1() {
-		x$2();
+		x();
 	}
-	function x$2() {}
+	function x() {}
 	return [
-		x$2,
+		x,
 		x$1,
 		x$1$1
 	];

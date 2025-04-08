@@ -212,7 +212,7 @@ impl<'ast> VisitMut<'ast> for ScopeHoistingFinalizer<'_, 'ast> {
       let symbol = self.ctx.symbol_db.get(canonical_ref);
       assert!(symbol.namespace_alias.is_none());
       let canonical_name = self.canonical_name_for(symbol_ref);
-      if ident.name != canonical_name.as_str() {
+      if ident.name != canonical_name {
         ident.name = self.snippet.atom(canonical_name);
       }
       ident.symbol_id.get_mut().take();

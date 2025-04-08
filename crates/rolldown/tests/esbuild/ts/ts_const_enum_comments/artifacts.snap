@@ -8,18 +8,18 @@ source: crates/rolldown_testing/src/integration_test.rs
 ```js
 
 //#region bar.ts
-let Foo = /* @__PURE__ */ function(Foo$1) {
-	Foo$1[Foo$1["%/*"] = 1] = "%/*";
-	Foo$1[Foo$1["*/%"] = 2] = "*/%";
-	return Foo$1;
+let Foo = /* @__PURE__ */ function(Foo) {
+	Foo[Foo["%/*"] = 1] = "%/*";
+	Foo[Foo["*/%"] = 2] = "*/%";
+	return Foo;
 }({});
 
 //#endregion
 //#region foo.ts
-var Bar = /* @__PURE__ */ function(Bar$1) {
-	Bar$1[Bar$1["%/*"] = 1] = "%/*";
-	Bar$1[Bar$1["*/%"] = 2] = "*/%";
-	return Bar$1;
+var Bar = /* @__PURE__ */ function(Bar) {
+	Bar[Bar["%/*"] = 1] = "%/*";
+	Bar[Bar["*/%"] = 2] = "*/%";
+	return Bar;
 }(Bar || {});
 console.log({
 	"should have comments": [Foo["%/*"], Bar["%/*"]],

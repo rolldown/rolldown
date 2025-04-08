@@ -1,16 +1,15 @@
 ---
 source: crates/rolldown_testing/src/integration_test.rs
-snapshot_kind: text
 ---
 # Assets
 
 ## entry.js
 
 ```js
-import { "an import" as an_import, "another import" as an_export } from "./foo";
+import { "an import" as anImport, "another import" as an_export } from "./foo";
 
 //#region entry.js
-an_import();
+anImport();
 
 //#endregion
 export { an_export as "an export" };

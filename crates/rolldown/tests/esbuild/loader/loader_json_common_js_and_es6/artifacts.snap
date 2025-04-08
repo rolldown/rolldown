@@ -1,6 +1,5 @@
 ---
 source: crates/rolldown_testing/src/integration_test.rs
-snapshot_kind: text
 ---
 # Assets
 
@@ -20,7 +19,7 @@ var y_default = {
 //#endregion
 //#region z.json
 var small = "some small text";
-var if$1 = "test keyword imports";
+var fi = "test keyword imports";
 
 //#endregion
 //#region x.json
@@ -31,7 +30,7 @@ var require_x = __commonJS({ "x.json"(exports, module) {
 //#endregion
 //#region entry.js
 const x_json = require_x();
-console.log(x_json, y_default, small, if$1);
+console.log(x_json, y_default, small, fi);
 
 //#endregion
 ```

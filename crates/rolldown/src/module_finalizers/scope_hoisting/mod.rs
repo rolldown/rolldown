@@ -22,7 +22,7 @@ use rolldown_ecmascript_utils::{
 mod finalizer_context;
 mod impl_visit_mut;
 pub use finalizer_context::ScopeHoistingFinalizerContext;
-use rolldown_rstr::Rstr;
+use rolldown_rstr::{Rstr, ToRstr};
 use rolldown_std_utils::OptionExt;
 use rolldown_utils::ecmascript::is_validate_identifier_name;
 use rustc_hash::FxHashSet;
@@ -57,11 +57,11 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
     self.scope.is_unresolved(reference_id)
   }
 
-  pub fn canonical_name_for(&self, symbol: SymbolRef) -> &'me Rstr {
+  pub fn canonical_name_for(&self, symbol: SymbolRef) -> &'me str {
     self.ctx.symbol_db.canonical_name_for(symbol, self.ctx.canonical_names)
   }
 
-  pub fn canonical_name_for_runtime(&self, name: &str) -> &Rstr {
+  pub fn canonical_name_for_runtime(&self, name: &str) -> &str {
     let sym_ref = self.ctx.runtime.resolve_symbol(name);
     self.canonical_name_for(sym_ref)
   }
@@ -627,15 +627,12 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
     }
   }
 
-  fn get_conflicted_info(
-    &self,
-    id: &BindingIdentifier<'ast>,
-  ) -> Option<(&str, &rolldown_rstr::Rstr)> {
+  fn get_conflicted_info(&self, id: &BindingIdentifier<'ast>) -> Option<(&str, &str)> {
     let symbol_id = id.symbol_id.get()?;
     let symbol_ref: SymbolRef = (self.ctx.id, symbol_id).into();
     let original_name = symbol_ref.name(self.ctx.symbol_db);
     let canonical_name = self.canonical_name_for(symbol_ref);
-    (original_name != canonical_name.as_str()).then_some((original_name, canonical_name))
+    (original_name != canonical_name).then_some((original_name, canonical_name))
   }
 
   /// rewrite toplevel `class ClassName {}` to `var ClassName = class {}`
@@ -859,7 +856,7 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
               Some(self.snippet.promise_resolve_then_call_expr(
                 import_expr.span,
                 self.snippet.builder.vec1(self.snippet.return_stmt(self.snippet.wrap_with_to_esm(
-                  self.snippet.builder.expression_identifier(SPAN, to_esm_fn_name.as_str()),
+                  self.snippet.builder.expression_identifier(SPAN, to_esm_fn_name),
                   self.snippet.call_expr_expr(importee_wrapper_ref_name),
                   self.ctx.module.should_consider_node_esm_spec(),
                 ))),
@@ -1121,7 +1118,7 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
     let (original_name, _) = self.get_conflicted_info(name_binding_id.as_ref()?)?;
     let (_, canonical_name) = self.get_conflicted_info(symbol_binding_id.as_ref()?)?;
     let original_name: Rstr = original_name.into();
-    let new_name = canonical_name.clone();
+    let new_name = canonical_name.to_rstr();
     let insert_position = self.ctx.cur_stmt_index + 1;
     self.ctx.keep_name_statement_to_insert.push((insert_position, original_name, new_name));
     None
@@ -1165,7 +1162,7 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
           self.snippet.builder.binding_pattern(
             self.snippet.builder.binding_pattern_kind_binding_identifier(
               SPAN,
-              self.canonical_name_for(esm_ns.namespace_ref).as_str(),
+              self.canonical_name_for(esm_ns.namespace_ref),
             ),
             NONE,
             false,
@@ -1219,7 +1216,7 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
           self.snippet.builder.binding_pattern(
             self.snippet.builder.binding_pattern_kind_binding_identifier(
               SPAN,
-              self.canonical_name_for(esm_ns.namespace_ref).as_str(),
+              self.canonical_name_for(esm_ns.namespace_ref),
             ),
             NONE,
             false,

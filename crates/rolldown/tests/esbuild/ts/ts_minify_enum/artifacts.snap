@@ -13,11 +13,11 @@ source: crates/rolldown_testing/src/integration_test.rs
 ```js
 
 //#region b.ts
-let Foo = /* @__PURE__ */ function(Foo$1) {
-	Foo$1[Foo$1["X"] = 0] = "X";
-	Foo$1[Foo$1["Y"] = 1] = "Y";
-	Foo$1[Foo$1["Z"] = Foo$1] = "Z";
-	return Foo$1;
+let Foo = /* @__PURE__ */ function(Foo) {
+	Foo[Foo["X"] = 0] = "X";
+	Foo[Foo["Y"] = 1] = "Y";
+	Foo[Foo["Z"] = Foo] = "Z";
+	return Foo;
 }({});
 
 //#endregion

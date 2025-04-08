@@ -159,6 +159,7 @@ export declare class Bundler {
   scan(): Promise<BindingOutputs>
   close(): Promise<void>
   get closed(): boolean
+  get watchFiles(): Array<string>
   generateHmrPatch(changedFiles: Array<string>): Promise<string>
 }
 

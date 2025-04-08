@@ -77,7 +77,8 @@
     "build-wasi:debug": "pnpm run --sequential \"/^build-(binding|binding:wasi|node)$/\"",
     "build-wasi:release": "pnpm run --sequential \"/^build-(binding|binding:wasi:release|node)$/\"",
     "# Scrips for docs #": "_",
-    "extract-options-doc": "typedoc"
+    "extract-options-doc": "typedoc",
+    "preinstall": "npx only-allow pnpm"
   },
   "napi": {
     "binaryName": "rolldown-binding",

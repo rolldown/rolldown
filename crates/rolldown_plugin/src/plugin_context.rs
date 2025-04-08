@@ -62,7 +62,7 @@ impl Deref for PluginContext {
   }
 }
 
-type LoadCallbackFn = dyn Fn() -> Pin<Box<(dyn Future<Output = anyhow::Result<()>> + Send + 'static)>>
+type LoadCallbackFn = dyn Fn(bool) -> Pin<Box<(dyn Future<Output = anyhow::Result<()>> + Send + 'static)>>
   + Send
   + Sync
   + 'static;

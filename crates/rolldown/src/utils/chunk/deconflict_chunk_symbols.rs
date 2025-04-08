@@ -142,11 +142,12 @@ pub fn deconflict_chunk_symbols(
         .filter(|stmt_info| stmt_info.is_included)
         .flat_map(|stmt_info| stmt_info.declared_symbols.iter().copied())
         .for_each(|symbol_ref| {
-          if let Some(symbol) = named_imports_map.get(&symbol_ref) {
+          let canonical_ref = &symbol_ref.canonical_ref(&link_output.symbol_db);
+          if let Some(symbol) = named_imports_map.get(canonical_ref) {
             let original_name = symbol.name(&link_output.symbol_db).to_rstr();
-            renamer.add_symbol_in_root_scope_with_original_name(symbol_ref, original_name);
+            renamer.add_symbol_in_root_scope_with_original_name(*canonical_ref, original_name);
           } else {
-            renamer.add_symbol_in_root_scope(symbol_ref);
+            renamer.add_symbol_in_root_scope(*canonical_ref);
           }
         });
     });

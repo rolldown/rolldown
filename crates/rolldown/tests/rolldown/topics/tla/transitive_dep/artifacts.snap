@@ -29,9 +29,9 @@ Variant: (strict_execution_order: true)
 
 
 //#region tla.js
-var value$1;
+var tlaValue;
 var init_tla = __esm({ async "tla.js"() {
-	value$1 = await Promise.resolve("tla");
+	tlaValue = await Promise.resolve("tla");
 } });
 
 //#endregion
@@ -39,7 +39,7 @@ var init_tla = __esm({ async "tla.js"() {
 var value;
 var init_lib = __esm({ async "lib.js"() {
 	await init_tla();
-	value = value$1 + "+lib";
+	value = tlaValue + "+lib";
 } });
 
 //#endregion

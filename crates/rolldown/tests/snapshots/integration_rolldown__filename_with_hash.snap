@@ -699,7 +699,7 @@ expression: output
 
 # tests/esbuild/default/const_with_let_no_bundle
 
-- entry-!~{000}~.js => entry-B7XOJ017.js
+- entry-!~{000}~.js => entry-Bw7snr_N.js
 
 # tests/esbuild/default/const_with_let_no_mangle
 
@@ -3667,7 +3667,7 @@ expression: output
 
 # tests/rolldown/cjs_compat/basic_commonjs
 
-- main-!~{000}~.js => main-LJu2f94g.js
+- main-!~{000}~.js => main-Dn4rpk7E.js
 
 # tests/rolldown/cjs_compat/cjs_entry
 

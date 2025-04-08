@@ -42,7 +42,7 @@ Variant: (format: Cjs)
 "use strict";
 Object.defineProperty(exports, '__esModule', { value: true });
 
-const assert$1 = __toESM(require("assert"));
+const assert = __toESM(require("assert"));
 
 //#region main.js
 const foo = "foo";
@@ -51,7 +51,7 @@ bar = "bar";
 var main_default = "default";
 Promise.resolve().then(function() {
 	return require("./main.js");
-}).then((exports) => assert$1.default.deepStrictEqual({ ...exports }, {
+}).then((exports) => assert.default.deepStrictEqual({ ...exports }, {
 	foo: "foo",
 	bar: "bar",
 	default: "default"

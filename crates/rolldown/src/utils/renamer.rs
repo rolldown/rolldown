@@ -41,7 +41,7 @@ pub struct Renamer<'name> {
   canonical_token_to_name: FxHashMap<SymbolNameRefToken, Rstr>,
   symbol_db: &'name SymbolRefDb,
   entry_module: Option<&'name SymbolRefDbForModule>,
-  entry_module_used_names: FxHashSet<&'name str>,
+  module_used_names: FxHashMap<ModuleIdx, FxHashSet<&'name str>>,
 }
 
 impl<'name> Renamer<'name> {
@@ -74,9 +74,7 @@ impl<'name> Renamer<'name> {
       canonical_names: FxHashMap::default(),
       canonical_token_to_name: FxHashMap::default(),
       symbol_db,
-      entry_module_used_names: entry_module.map_or(FxHashSet::default(), |module| {
-        module.ast_scopes.scoping().symbol_names().collect::<FxHashSet<_>>()
-      }),
+      module_used_names: FxHashMap::default(),
       entry_module: base_module_index.map(|index| symbol_db.local_db(index)),
     }
   }
@@ -134,6 +132,30 @@ impl<'name> Renamer<'name> {
     concat_string!(original_name, "$", itoa::Buffer::new().format(count)).into()
   }
 
+  fn get_module_used_names(
+    symbol_db: &'name SymbolRefDb,
+    canonical_ref: SymbolRef,
+  ) -> FxHashSet<&'name str> {
+    if canonical_ref.owner.is_dummy() || canonical_ref.owner == ModuleIdx::from_usize(0) {
+      FxHashSet::default()
+    } else {
+      let scoping = symbol_db.local_db(canonical_ref.owner).ast_scopes.scoping();
+      if scoping.symbols_len() == 0 {
+        return FxHashSet::default();
+      }
+      let root_symbol_ids =
+        scoping.get_bindings(scoping.root_scope_id()).values().collect::<FxHashSet<_>>();
+      symbol_db
+        .local_db(canonical_ref.owner)
+        .ast_scopes
+        .scoping()
+        .symbol_ids()
+        .filter(|symbol_id| !root_symbol_ids.contains(symbol_id))
+        .map(|symbol_id| scoping.symbol_name(symbol_id))
+        .collect::<FxHashSet<&str>>()
+    }
+  }
+
   fn get_unique_name(&mut self, canonical_ref: SymbolRef, original_name: Rstr) -> Rstr {
     let original_name = Self::normalize_name(original_name);
     let (mut candidate_name, count) = match self.used_canonical_names.entry(original_name.clone()) {
@@ -155,7 +177,11 @@ impl<'name> Renamer<'name> {
       });
 
       if (is_root_binding && !self.manual_reserved.contains(candidate_name.as_str()))
-        || !self.entry_module_used_names.contains(candidate_name.as_str())
+        || (!self
+          .module_used_names
+          .entry(canonical_ref.owner)
+          .or_insert_with(|| Self::get_module_used_names(self.symbol_db, canonical_ref))
+          .contains(candidate_name.as_str()))
       {
         return candidate_name;
       }

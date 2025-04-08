@@ -11,12 +11,12 @@ var module = (function(exports) {
 "use strict";
 
 //#region main.js
-const exports$2 = "exports";
-const exports$3 = "exports$1";
+const exports$1 = "exports";
+const exports$2 = "exports$1";
 
 //#endregion
-exports.exports = exports$2
-exports.exports$1 = exports$3
+exports.exports = exports$1
+exports.exports$1 = exports$2
 return exports;
 })({});
 ```

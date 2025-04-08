@@ -13,11 +13,11 @@ import assert from "assert";
 var foo_exports = {};
 __export(foo_exports, { foo: () => foo$1 });
 function foo$1(a$1) {
-	console.log(a$1, a$1);
+	console.log(a$1, a$2);
 }
-var a$1;
+var a$2;
 var init_foo = __esm({ "foo.js"() {
-	a$1 = 1;
+	a$2 = 1;
 } });
 
 //#endregion
@@ -47,10 +47,10 @@ init_foo();
 (3:4) "console." --> (20:0) "\tconsole."
 (3:12) "log(" --> (20:9) "log("
 (3:16) "a$1, " --> (20:13) "a$1, "
-(3:21) "a)" --> (20:18) "a$1)"
+(3:21) "a)" --> (20:18) "a$2)"
 (3:23) "\n" --> (20:22) ";\n"
 (4:1) [invalid] --> (21:0)
-(0:6) "a = " --> (24:1) "a$1 = "
+(0:6) "a = " --> (24:1) "a$2 = "
 (0:10) "1;\n" --> (24:7) "1;\n"
 - ../bar.js
 (0:0) "import { foo } from './foo'" --> (29:0) "init_foo()"

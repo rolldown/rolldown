@@ -62,12 +62,12 @@ exports.foo = foo
 ```js
 "use strict";
 
-const assert$1 = __toESM(require("assert"));
+const assert = __toESM(require("assert"));
 
 //#region main.js
 Promise.resolve().then(function() {
 	return require("./lib.js");
-}).then((exports) => assert$1.default.deepStrictEqual({ ...exports }, {
+}).then((exports) => assert.default.deepStrictEqual({ ...exports }, {
 	foo: "foo",
 	bar: "bar",
 	default: "default"

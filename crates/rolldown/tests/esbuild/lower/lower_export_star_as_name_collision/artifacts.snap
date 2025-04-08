@@ -33,7 +33,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```js
 import * as foo from "path2";
-import * as ns$1 from "path1";
+import * as ns from "path1";
 
 //#region nested.js
 let foo$1 = 123;
@@ -41,8 +41,8 @@ let foo$1 = 123;
 //#endregion
 //#region entry.js
 console.log(foo, foo$1);
-let ns$2 = 123;
+let ns$1 = 123;
 
 //#endregion
-export { ns$1 as ns, ns$2 as sn };
+export { ns, ns$1 as sn };
 ```

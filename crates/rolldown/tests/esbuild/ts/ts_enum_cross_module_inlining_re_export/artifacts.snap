@@ -16,7 +16,7 @@ let b = /* @__PURE__ */ function(b) {
 	b["x"] = "b";
 	return b;
 }({});
-let c = /* @__PURE__ */ function(c) {
+let c$1 = /* @__PURE__ */ function(c) {
 	c["x"] = "c";
 	return c;
 }({});
@@ -26,7 +26,7 @@ let c = /* @__PURE__ */ function(c) {
 console.log([
 	a.x,
 	b.x,
-	c.x
+	c$1.x
 ]);
 
 //#endregion

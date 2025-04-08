@@ -14,11 +14,11 @@ var foo_exports = {};
 __export(foo_exports, { default: () => foo$1 });
 function foo$1(a$1) {
 	assert.equal(a$1, a$1);
-	assert.equal(a$1, 1);
+	assert.equal(a$2, 1);
 }
-var a$1;
+var a$2;
 var init_foo = __esm({ "foo.js"() {
-	a$1 = 1;
+	a$2 = 1;
 } });
 
 //#endregion
@@ -52,11 +52,11 @@ init_foo();
 (5:24) "\n" --> (20:23) ";\n"
 (6:2) "assert." --> (21:0) "\tassert."
 (6:9) "equal(" --> (21:8) "equal("
-(6:15) "a, " --> (21:14) "a$1, "
+(6:15) "a, " --> (21:14) "a$2, "
 (6:18) "1)" --> (21:19) "1)"
 (6:20) "\n" --> (21:21) ";\n"
 (7:1) "\n" --> (22:0) "}\n"
-(2:6) "a = " --> (25:1) "a$1 = "
+(2:6) "a = " --> (25:1) "a$2 = "
 (2:10) "1;\n" --> (25:7) "1;\n"
 - ../bar.js
 (0:0) "import foo from './foo'" --> (30:0) "init_foo()"

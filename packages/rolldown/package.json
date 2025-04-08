@@ -123,11 +123,13 @@
     "@napi-rs/wasm-runtime": "^0.2.4",
     "@oxc-node/core": "^0.0.22",
     "@rolldown/testing": "workspace:*",
+    "@types/fs-extra": "^11.0.4",
     "@types/lodash-es": "^4.17.12",
     "colorette": "^2.0.20",
     "consola": "^3.4.2",
     "emnapi": "^1.2.0",
     "execa": "^9.2.0",
+    "fs-extra": "^11.2.0",
     "glob": "^11.0.0",
     "locate-character": "^3.0.0",
     "oxc-parser": "^0.62.0",
@@ -139,7 +141,9 @@
     "tsx": "^4.19.2",
     "type-fest": "^4.20.0",
     "typedoc": "^0.28.0",
-    "typescript": "^5.7.3"
+    "typescript": "^5.7.3",
+    "unbuild": "^3.0.0",
+    "why-is-node-running": "^3.0.0"
   },
   "optionalDependencies": {
     "@rolldown/binding-darwin-arm64": "workspace:*",

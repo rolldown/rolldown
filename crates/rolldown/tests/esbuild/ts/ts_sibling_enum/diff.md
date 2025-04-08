@@ -256,26 +256,26 @@ export var foo;
 //#region nested-number.ts
 let foo;
 (function(_foo) {
-	let x$1 = /* @__PURE__ */ function(x$2) {
-		x$2[x$2["y"] = 0] = "y";
-		x$2[x$2["yy"] = 0] = "yy";
-		return x$2;
+	let x = /* @__PURE__ */ function(x$1) {
+		x$1[x$1["y"] = 0] = "y";
+		x$1[x$1["yy"] = 0] = "yy";
+		return x$1;
 	}({});
-	_foo.x = x$1;
+	_foo.x = x;
 })(foo || (foo = {}));
 (function(_foo2) {
-	x = /* @__PURE__ */ function(x$1) {
+	let x = /* @__PURE__ */ function(x$1) {
 		x$1[x$1["z"] = 1] = "z";
 		return x$1;
-	}(x || {});
+	}({});
 	_foo2.x = x;
 })(foo || (foo = {}));
 (function(_foo3) {
-	let x$1;
+	let x;
 	(function(_x) {
 		console.log(y, z);
-		console.log(x$1.y, x$1.z);
-	})(x$1 || (x$1 = _foo3.x || (_foo3.x = {})));
+		console.log(x.y, x.z);
+	})(x || (x = _foo3.x || (_foo3.x = {})));
 })(foo || (foo = {}));
 
 //#endregion
@@ -296,12 +296,12 @@ export { foo };
 -    })(x = foo2.x || (foo2.x = {}));
 +var foo;
 +(function (_foo) {
-+    let x$1 = (function (x$2) {
-+        x$2[x$2["y"] = 0] = "y";
-+        x$2[x$2["yy"] = 0] = "yy";
-+        return x$2;
++    let x = (function (x$1) {
++        x$1[x$1["y"] = 0] = "y";
++        x$1[x$1["yy"] = 0] = "yy";
++        return x$1;
 +    })({});
-+    _foo.x = x$1;
++    _foo.x = x;
  })(foo || (foo = {}));
 -(foo2 => {
 -    let x;
@@ -309,23 +309,22 @@ export { foo };
 -        x2[x2["z"] = 1] = "z";
 -    })(x = foo2.x || (foo2.x = {}));
 +(function (_foo2) {
-+    x = (function (x$1) {
++    let x = (function (x$1) {
 +        x$1[x$1["z"] = 1] = "z";
 +        return x$1;
-+    })(x || ({}));
++    })({});
 +    _foo2.x = x;
  })(foo || (foo = {}));
 -(foo2 => {
--    let x;
--    (x2 => {
 +(function (_foo3) {
-+    let x$1;
+     let x;
+-    (x2 => {
 +    (function (_x) {
          console.log(y, z);
 -        console.log(0, 1);
 -    })(x = foo2.x || (foo2.x = {}));
-+        console.log(x$1.y, x$1.z);
-+    })(x$1 || (x$1 = _foo3.x || (_foo3.x = {})));
++        console.log(x.y, x.z);
++    })(x || (x = _foo3.x || (_foo3.x = {})));
  })(foo || (foo = {}));
 +export {foo};
 
@@ -361,26 +360,26 @@ export var foo;
 //#region nested-string.ts
 let foo;
 (function(_foo) {
-	let x$1 = /* @__PURE__ */ function(x$2) {
-		x$2["y"] = "a";
-		x$2["yy"] = "a";
-		return x$2;
+	let x = /* @__PURE__ */ function(x$1) {
+		x$1["y"] = "a";
+		x$1["yy"] = "a";
+		return x$1;
 	}({});
-	_foo.x = x$1;
+	_foo.x = x;
 })(foo || (foo = {}));
 (function(_foo2) {
-	x = /* @__PURE__ */ function(x$1) {
+	let x = /* @__PURE__ */ function(x$1) {
 		x$1["z"] = "a";
 		return x$1;
-	}(x || {});
+	}({});
 	_foo2.x = x;
 })(foo || (foo = {}));
 (function(_foo3) {
-	let x$1;
+	let x;
 	(function(_x) {
 		console.log(y, z);
-		console.log(x$1.y, x$1.z);
-	})(x$1 || (x$1 = _foo3.x || (_foo3.x = {})));
+		console.log(x.y, x.z);
+	})(x || (x = _foo3.x || (_foo3.x = {})));
 })(foo || (foo = {}));
 
 //#endregion
@@ -401,12 +400,12 @@ export { foo };
 -    })(x = foo2.x || (foo2.x = {}));
 +var foo;
 +(function (_foo) {
-+    let x$1 = (function (x$2) {
-+        x$2["y"] = "a";
-+        x$2["yy"] = "a";
-+        return x$2;
++    let x = (function (x$1) {
++        x$1["y"] = "a";
++        x$1["yy"] = "a";
++        return x$1;
 +    })({});
-+    _foo.x = x$1;
++    _foo.x = x;
  })(foo || (foo = {}));
 -(foo2 => {
 -    let x;
@@ -414,23 +413,22 @@ export { foo };
 -        x2["z"] = "a";
 -    })(x = foo2.x || (foo2.x = {}));
 +(function (_foo2) {
-+    x = (function (x$1) {
++    let x = (function (x$1) {
 +        x$1["z"] = "a";
 +        return x$1;
-+    })(x || ({}));
++    })({});
 +    _foo2.x = x;
  })(foo || (foo = {}));
 -(foo2 => {
--    let x;
--    (x2 => {
 +(function (_foo3) {
-+    let x$1;
+     let x;
+-    (x2 => {
 +    (function (_x) {
          console.log(y, z);
 -        console.log("a", "a");
 -    })(x = foo2.x || (foo2.x = {}));
-+        console.log(x$1.y, x$1.z);
-+    })(x$1 || (x$1 = _foo3.x || (_foo3.x = {})));
++        console.log(x.y, x.z);
++    })(x || (x = _foo3.x || (_foo3.x = {})));
  })(foo || (foo = {}));
 +export {foo};
 
@@ -475,20 +473,20 @@ let n;
 	_n.a = a$1;
 })(n || (n = {}));
 (function(_n2) {
-	let x$1 = /* @__PURE__ */ function(x$2) {
-		x$2[x$2["c"] = n.a.b] = "c";
-		x$2[x$2["d"] = x$2.c * 2] = "d";
-		x$2[x$2["e"] = x$2.d ** 2] = "e";
-		x$2[x$2["f"] = x$2["e"] / 4] = "f";
-		return x$2;
+	let x = /* @__PURE__ */ function(x$1) {
+		x$1[x$1["c"] = n.a.b] = "c";
+		x$1[x$1["d"] = x$1.c * 2] = "d";
+		x$1[x$1["e"] = x$1.d ** 2] = "e";
+		x$1[x$1["f"] = x$1["e"] / 4] = "f";
+		return x$1;
 	}({});
-	_n2.x = x$1;
+	_n2.x = x;
 })(n || (n = {}));
 (function(_n3) {
-	x = /* @__PURE__ */ function(x$1) {
+	let x = /* @__PURE__ */ function(x$1) {
 		x$1[x$1["g"] = x$1.f >> 4] = "g";
 		return x$1;
-	}(x || {});
+	}({});
 	_n3.x = x;
 	console.log(a.b, n.a.b, n["a"]["b"], x.g, n.x.g, n["x"]["g"]);
 })(n || (n = {}));
@@ -525,14 +523,14 @@ export { n };
 -        x2[x2["f"] = 1e4] = "f";
 -    })(x = n2.x || (n2.x = {}));
 +(function (_n2) {
-+    let x$1 = (function (x$2) {
-+        x$2[x$2["c"] = n.a.b] = "c";
-+        x$2[x$2["d"] = x$2.c * 2] = "d";
-+        x$2[x$2["e"] = x$2.d ** 2] = "e";
-+        x$2[x$2["f"] = x$2["e"] / 4] = "f";
-+        return x$2;
++    let x = (function (x$1) {
++        x$1[x$1["c"] = n.a.b] = "c";
++        x$1[x$1["d"] = x$1.c * 2] = "d";
++        x$1[x$1["e"] = x$1.d ** 2] = "e";
++        x$1[x$1["f"] = x$1["e"] / 4] = "f";
++        return x$1;
 +    })({});
-+    _n2.x = x$1;
++    _n2.x = x;
  })(n || (n = {}));
 -(n2 => {
 -    let x;
@@ -541,10 +539,10 @@ export { n };
 -    })(x = n2.x || (n2.x = {}));
 -    console.log(100, 100, 100, 625, 625, 625);
 +(function (_n3) {
-+    x = (function (x$1) {
++    let x = (function (x$1) {
 +        x$1[x$1["g"] = x$1.f >> 4] = "g";
 +        return x$1;
-+    })(x || ({}));
++    })({});
 +    _n3.x = x;
 +    console.log(a.b, n.a.b, n["a"]["b"], x.g, n.x.g, n["x"]["g"]);
  })(n || (n = {}));

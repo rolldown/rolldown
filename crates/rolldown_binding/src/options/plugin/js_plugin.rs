@@ -196,7 +196,7 @@ impl Plugin for JsPlugin {
       ctx.inner.cwd(),
       args.module_type,
       args.code,
-    )? {
+    ) {
       return Ok(None);
     }
 
@@ -541,10 +541,8 @@ impl Plugin for JsPlugin {
 }
 
 /// If the transform hook is filtered out and need to be skipped.
-/// Using `Option<bool>` for better programming experience.
-/// return `None` means it is early return, should not be skipped.
-/// return `Some(false)` means it should be skipped.
-/// return `Some(true)` means it should not be skipped.
+/// return `false` means it should be skipped.
+/// return `true` means it should not be skipped.
 /// Since transform has three different filter, so we need to check all of them.
 fn filter_transform(
   transform_filter: Option<&BindingTransformHookFilter>,
@@ -552,18 +550,16 @@ fn filter_transform(
   cwd: &Path,
   module_type: &ModuleType,
   code: &str,
-) -> anyhow::Result<bool> {
+) -> bool {
   let Some(transform_filter) = transform_filter else {
-    return Ok(true);
+    return true;
   };
 
   if let Some(ref module_type_filter) = transform_filter.module_type {
     if !module_type_filter.iter().any(|ty| ty.as_ref() == module_type) {
-      return Ok(false);
+      return false;
     }
   }
-
-  // We don't need to early return since there is no exclude in `moduleType`
 
   let mut filter_ret = true;
 
@@ -579,7 +575,7 @@ fn filter_transform(
   }
 
   if !filter_ret {
-    return Ok(false);
+    return false;
   }
 
   if let Some(ref code_filter) = transform_filter.code {
@@ -591,7 +587,7 @@ fn filter_transform(
 
     filter_ret = filter_ret && code_res.inner();
   }
-  Ok(filter_ret)
+  filter_ret
 }
 
 #[cfg(test)]
@@ -717,8 +713,7 @@ mod tests {
       for (si, (id, code, expected)) in test_case.cases.into_iter().enumerate() {
         let result = filter_transform(Some(&filter), id, Path::new(""), &ModuleType::Js, code);
         assert_eq!(
-          result.unwrap(),
-          expected,
+          result, expected,
           r"Failed at Case {i}  subcase {si}.\n filter: {filter:?}, id: {id}, code: {code}",
         );
       }

@@ -89,7 +89,7 @@ impl<'name> Renamer<'name> {
     let original_name = canonical_ref.name(self.symbol_db).to_rstr();
 
     if !self.canonical_names.contains_key(&canonical_ref) {
-      let name = self.get_unique_name(symbol_ref, original_name);
+      let name = self.get_unique_name(symbol_ref, &original_name);
       self.canonical_names.insert(canonical_ref, name);
     }
   }
@@ -103,7 +103,7 @@ impl<'name> Renamer<'name> {
     let canonical_ref = symbol_ref.canonical_ref(self.symbol_db);
 
     if !self.canonical_names.contains_key(&canonical_ref) {
-      let name = self.get_unique_name(symbol_ref, original_name);
+      let name = self.get_unique_name(symbol_ref, &original_name);
       self.canonical_names.insert(canonical_ref, name);
     }
   }
@@ -135,7 +135,7 @@ impl<'name> Renamer<'name> {
     }
   }
 
-  fn get_unique_name(&mut self, canonical_ref: SymbolRef, original_name: Rstr) -> Rstr {
+  fn get_unique_name(&mut self, canonical_ref: SymbolRef, original_name: &Rstr) -> Rstr {
     let (mut candidate_name, count) = match self.used_canonical_names.entry(original_name.clone()) {
       Entry::Occupied(o) => {
         let count = o.into_mut();

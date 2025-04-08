@@ -104,9 +104,13 @@ impl PluginDriver {
     *tx_guard = tx;
   }
 
-  pub async fn mark_context_load_modules_loaded(&self, module_id: &ModuleId) -> anyhow::Result<()> {
+  pub async fn mark_context_load_modules_loaded(
+    &self,
+    module_id: &ModuleId,
+    success: bool,
+  ) -> anyhow::Result<()> {
     if let Some((_, callback)) = self.context_load_modules.remove(module_id.resource_id()) {
-      callback().await?;
+      callback(success).await?;
     }
     Ok(())
   }

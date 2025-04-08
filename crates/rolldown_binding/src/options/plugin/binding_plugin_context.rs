@@ -27,24 +27,24 @@ pub struct BindingPluginContext {
 #[napi]
 impl BindingPluginContext {
   #[napi(
-    ts_args_type = "specifier: string, sideEffects: BindingHookSideEffects | undefined, fn: () => void"
+    ts_args_type = "specifier: string, sideEffects: BindingHookSideEffects | undefined, fn: (success: boolean) => void"
   )]
   pub async fn load(
     &self,
     specifier: String,
     side_effects: Option<BindingHookSideEffects>,
-    load_callback_fn: JsCallback<(), ()>,
+    load_callback_fn: JsCallback<bool, ()>,
   ) -> napi::Result<()> {
     self
       .inner
       .load(
         &specifier,
         side_effects.map(Into::into),
-        Some(Box::new(move || {
+        Some(Box::new(move |success| {
           let load_callback_fn = Arc::clone(&load_callback_fn);
-          Box::pin(
-            async move { load_callback_fn.invoke_async(()).await.map_err(anyhow::Error::from) },
-          )
+          Box::pin(async move {
+            load_callback_fn.invoke_async(success).await.map_err(anyhow::Error::from)
+          })
         })),
       )
       .await

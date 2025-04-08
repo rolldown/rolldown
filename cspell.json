@@ -230,7 +230,8 @@
     "prettyplease",
     "unparse",
     "commondir",
-    "dprint"
+    "dprint",
+    "rposition"
   ],
   "ignoreWords": ["Jeqs", "Gwetwem", "bpwli", "mxrh"]
 }

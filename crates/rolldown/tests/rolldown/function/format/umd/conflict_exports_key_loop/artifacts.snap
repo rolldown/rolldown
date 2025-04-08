@@ -14,11 +14,11 @@ source: crates/rolldown_testing/src/integration_test.rs
 "use strict";
 
 //#region main.js
-const exports$1 = "exports";
-const exports$2 = "exports$1";
+const exports$2 = "exports";
+const exports$1 = "exports$1";
 
 //#endregion
-exports.exports = exports$1
-exports.exports$1 = exports$2
+exports.exports = exports$2
+exports.exports$1 = exports$1
 });
 ```

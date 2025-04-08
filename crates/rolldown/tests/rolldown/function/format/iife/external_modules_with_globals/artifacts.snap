@@ -6,16 +6,16 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## main.js
 
 ```js
-(function(node_path) {
+(function(node_path$1) {
 
 "use strict";
 
-node_path = __toESM(node_path);
+node_path$1 = __toESM(node_path$1);
 
 //#region main.js
-console.log(node_path.default);
-const node_path$1 = {};
-console.log(node_path$1);
+console.log(node_path$1.default);
+const node_path$2 = {};
+console.log(node_path$2);
 
 //#endregion
 })(path);

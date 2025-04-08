@@ -33,7 +33,9 @@ pub struct Renamer<'name> {
   canonical_token_to_name: FxHashMap<SymbolNameRefToken, Rstr>,
   symbol_db: &'name SymbolRefDb,
   entry_module: Option<&'name SymbolRefDbForModule>,
+  entry_module_used_names: FxHashSet<&'name str>,
   module_used_names: FxHashMap<ModuleIdx, FxHashSet<&'name str>>,
+  used_names: FxHashSet<Rstr>,
 }
 
 impl<'name> Renamer<'name> {
@@ -64,8 +66,16 @@ impl<'name> Renamer<'name> {
       canonical_names: FxHashMap::default(),
       canonical_token_to_name: FxHashMap::default(),
       symbol_db,
-      module_used_names: FxHashMap::default(),
+      module_used_names: base_module_index
+        .map(|index| FxHashMap::from_iter([(index, FxHashSet::default())]))
+        .unwrap_or_default(),
+      entry_module_used_names: base_module_index
+        .map(|index| {
+          symbol_db.local_db(index).ast_scopes.scoping().symbol_names().collect::<FxHashSet<_>>()
+        })
+        .unwrap_or_default(),
       entry_module: base_module_index.map(|index| symbol_db.local_db(index)),
+      used_names: FxHashSet::default(),
     }
   }
 
@@ -98,26 +108,6 @@ impl<'name> Renamer<'name> {
     }
   }
 
-  /// Get the name without `$` with digits.
-  ///
-  /// `good` -> `good`
-  /// `good$1` -> `good`
-  /// `good$1$2` -> `good`
-  /// `good$1$2$1` -> `good`
-  fn normalize_name(name: Rstr) -> Rstr {
-    let bytes = name.as_bytes();
-    let exclude_index = bytes.iter().rposition(|&b| b != b'$' && !b.is_ascii_digit());
-
-    if let Some(index) = exclude_index {
-      if bytes.get(index + 1).copied().is_some_and(|c| c == b'$') {
-        return name.split_at(index + 1).0.to_rstr();
-      }
-    }
-
-    // If there is no `$` in the name, return the original name.
-    name
-  }
-
   fn generate_candidate_name(original_name: &Rstr, count: u32) -> Rstr {
     concat_string!(original_name, "$", itoa::Buffer::new().format(count)).into()
   }
@@ -146,7 +136,6 @@ impl<'name> Renamer<'name> {
   }
 
   fn get_unique_name(&mut self, canonical_ref: SymbolRef, original_name: Rstr) -> Rstr {
-    let original_name = Self::normalize_name(original_name);
     let (mut candidate_name, count) = match self.used_canonical_names.entry(original_name.clone()) {
       Entry::Occupied(o) => {
         let count = o.into_mut();
@@ -166,12 +155,15 @@ impl<'name> Renamer<'name> {
       });
 
       if (is_root_binding && !self.manual_reserved.contains(candidate_name.as_str()))
-        || (!self
-          .module_used_names
-          .entry(canonical_ref.owner)
-          .or_insert_with(|| Self::get_module_used_names(self.symbol_db, canonical_ref))
-          .contains(candidate_name.as_str()))
+        || !self.used_names.contains(&candidate_name)
+          && !(self.entry_module_used_names.contains(candidate_name.as_str()))
+          && !self
+            .module_used_names
+            .entry(canonical_ref.owner)
+            .or_insert_with(|| Self::get_module_used_names(self.symbol_db, canonical_ref))
+            .contains(candidate_name.as_str())
       {
+        self.used_names.insert(candidate_name.clone());
         return candidate_name;
       }
 

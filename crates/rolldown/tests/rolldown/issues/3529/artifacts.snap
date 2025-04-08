@@ -10,10 +10,10 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 //#region b.cjs
 var require_b = __commonJS({ "b.cjs"(exports, module) {
-	const a = require_a();
+	const a$1 = require_a();
 	Object.defineProperty(module.exports, "b", {
 		enumerable: true,
-		get: () => () => ({ a })
+		get: () => () => ({ a: a$1 })
 	});
 } });
 var import_b = __toESM(require_b(), 1);
@@ -21,10 +21,10 @@ var import_b = __toESM(require_b(), 1);
 //#endregion
 //#region a.cjs
 var require_a = __commonJS({ "a.cjs"(exports, module) {
-	const b = require_b();
+	const b$1 = require_b();
 	Object.defineProperty(module.exports, "a", {
 		enumerable: true,
-		get: () => () => ({ b })
+		get: () => () => ({ b: b$1 })
 	});
 } });
 var import_a = __toESM(require_a(), 1);

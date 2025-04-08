@@ -1,7 +1,7 @@
 import assert from "node:assert";
 
 //#region promise-shim.js
-const Promise$1 = "promise-shim";
+const P = "promise-shim";
 
 //#endregion
 //#region jquery.js
@@ -17,17 +17,17 @@ var object_assign_shim_default = "object-assign-shim";
 
 //#endregion
 //#region main.js
-assert.strictEqual(Promise$1, "promise-shim");
-assert.strictEqual(Promise$1, "promise-shim");
+assert.strictEqual(P, "promise-shim");
+assert.strictEqual(P, "promise-shim");
 assert.strictEqual(jquery_default, "jquery");
 assert.strictEqual(node_fs_default, "node-fs");
 assert.strictEqual(object_assign_shim_default, "object-assign-shim");
-(function(Promise$2, P, $, fs, Object$1) {
-	assert.strictEqual(Promise$2, void 0);
+(function(Promise, P, $, fs, Object) {
+	assert.strictEqual(Promise, void 0);
 	assert.strictEqual(P, void 0);
 	assert.strictEqual($, void 0);
 	assert.strictEqual(fs.default, void 0);
-	assert.strictEqual(Object$1.assign, void 0);
+	assert.strictEqual(Object.assign, void 0);
 })(void 0, void 0, void 0, {}, {});
 
 //#endregion

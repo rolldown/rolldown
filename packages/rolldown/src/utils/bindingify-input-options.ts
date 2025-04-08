@@ -1,6 +1,7 @@
 import { BindingLogLevel } from '../binding';
 import type {
   BindingDeferSyncScanData,
+  BindingExperimentalOptions,
   BindingInjectImportNamed,
   BindingInjectImportNamespace,
   BindingInputOptions,
@@ -8,7 +9,7 @@ import type {
 import { BuiltinPlugin } from '../builtin-plugin/constructors';
 import { bindingifyBuiltInPlugin } from '../builtin-plugin/utils';
 import { LogLevelOption } from '../log/logging';
-import type { InputOptions } from '../options/input-options';
+import type { HmrOptions, InputOptions } from '../options/input-options';
 import type { OutputOptions } from '../options/output-options';
 import type { RolldownPlugin } from '../plugin';
 import { bindingifyPlugin } from '../plugin/bindingify-plugin';
@@ -72,7 +73,7 @@ export function bindingifyInputOptions(
       disableLiveBindings: inputOptions.experimental?.disableLiveBindings,
       viteMode: inputOptions.experimental?.viteMode,
       resolveNewUrlToAsset: inputOptions.experimental?.resolveNewUrlToAsset,
-      hmr: inputOptions.experimental?.hmr,
+      hmr: bindingifyHmr(inputOptions.experimental?.hmr),
     },
     profilerNames: inputOptions?.profilerNames,
     jsx: bindingifyJsx(inputOptions.jsx),
@@ -97,6 +98,17 @@ export function bindingifyInputOptions(
       inputOptions.makeAbsoluteExternalsRelative,
     ),
   };
+}
+
+function bindingifyHmr(
+  hmr?: HmrOptions,
+): BindingExperimentalOptions['hmr'] {
+  if (hmr) {
+    if (typeof hmr === 'boolean') {
+      return hmr ? {} : undefined;
+    }
+    return hmr;
+  }
 }
 
 function bindingifyExternal(

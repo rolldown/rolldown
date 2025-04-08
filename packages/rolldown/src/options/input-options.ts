@@ -74,6 +74,8 @@ export interface WatchOptions {
 
 export type MakeAbsoluteExternalsRelative = boolean | 'ifRelativeSource';
 
+export type HmrOptions = boolean | { host?: string; port?: number };
+
 export interface InputOptions {
   input?: InputOption;
   plugins?: RolldownPluginOption;
@@ -133,7 +135,7 @@ export interface InputOptions {
     disableLiveBindings?: boolean;
     viteMode?: boolean;
     resolveNewUrlToAsset?: boolean;
-    hmr?: boolean;
+    hmr?: HmrOptions;
   };
   /**
    * Replace global variables or [property accessors](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Operators/Property_accessors) with the provided values.

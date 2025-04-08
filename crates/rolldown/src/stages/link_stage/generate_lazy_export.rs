@@ -1,5 +1,6 @@
 use indexmap::map::Entry;
 use oxc::{
+  allocator::TakeIn,
   ast::ast::{self, Expression},
   semantic::{SemanticBuilder, Stats},
   span::SPAN,
@@ -9,7 +10,7 @@ use rolldown_common::{
   ModuleType, NormalModule, StmtInfo, StmtInfoIdx, SymbolOrMemberExprRef, SymbolRef,
   SymbolRefDbForModule, WrapKind,
 };
-use rolldown_ecmascript_utils::{AstSnippet, TakeIn};
+use rolldown_ecmascript_utils::AstSnippet;
 use rolldown_rstr::{Rstr, ToRstr};
 use rolldown_utils::{
   concat_string,

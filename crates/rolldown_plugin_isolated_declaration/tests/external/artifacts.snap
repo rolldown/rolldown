@@ -3,18 +3,14 @@ source: crates/rolldown_testing/src/integration_test.rs
 ---
 # Assets
 
-## entry.css
+## main.d.ts
 
-```css
-
-
-```
-## entry.js
-
-```js
+```ts
+import type * as fs from "node:fs";
+export type  { fs };
 
 ```
-## res-B_SY1GJM-B-B_SY1GJMMBYNiYRwHTBqq.js
+## main.js
 
 ```js
 

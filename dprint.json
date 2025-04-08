@@ -19,6 +19,7 @@
     "crates/rolldown_testing/_config.schema.json",
     "packages/rolldown/src/binding.d.ts",
     "packages/rolldown/src/binding.js",
+    "packages/rolldown/src/browser.js",
     "packages/rolldown/src/rolldown-binding.wasi-browser.js",
     "packages/rolldown/src/rolldown-binding.wasi.cjs",
     "packages/rolldown/src/wasi-worker-browser.mjs",

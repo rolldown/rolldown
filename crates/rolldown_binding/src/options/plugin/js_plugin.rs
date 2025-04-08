@@ -11,7 +11,7 @@ use napi::bindgen_prelude::FnArgs;
 use rolldown::ModuleType;
 use rolldown_common::NormalModule;
 use rolldown_plugin::{__inner::SharedPluginable, Plugin, typedmap::TypedMapKey};
-use rolldown_utils::pattern_filter::{self, FilterResult};
+use rolldown_utils::pattern_filter::{self};
 use std::{borrow::Cow, ops::Deref, path::Path, sync::Arc};
 
 use super::{
@@ -557,14 +557,15 @@ fn filter_transform(
     return Ok(true);
   };
 
-  let mut fallback_ret = if let Some(ref module_type_filter) = transform_filter.module_type {
-    if module_type_filter.iter().any(|ty| ty.as_ref() == module_type) {
-      return Ok(true);
+  if let Some(ref module_type_filter) = transform_filter.module_type {
+    if !module_type_filter.iter().any(|ty| ty.as_ref() == module_type) {
+      return Ok(false);
     }
-    false
-  } else {
-    true
-  };
+  }
+
+  // We don't need to early return since there is no exclude in `moduleType`
+
+  let mut filter_ret = true;
 
   if let Some(ref id_filter) = transform_filter.id {
     let id_res = pattern_filter::filter(
@@ -574,12 +575,11 @@ fn filter_transform(
       cwd.to_string_lossy().as_ref(),
     );
 
-    // it matched by `exclude` or `include`, early return
-    if let FilterResult::Match(id_res) = id_res {
-      return Ok(id_res);
-    }
+    filter_ret = filter_ret && id_res.inner();
+  }
 
-    fallback_ret = fallback_ret && id_res.inner();
+  if !filter_ret {
+    return Ok(false);
   }
 
   if let Some(ref code_filter) = transform_filter.code {
@@ -589,15 +589,9 @@ fn filter_transform(
       code,
     );
 
-    // it matched by `exclude` or `include`, early return
-    if let FilterResult::Match(code_res) = code_res {
-      return Ok(code_res);
-    }
-
-    fallback_ret = fallback_ret && code_res.inner();
+    filter_ret = filter_ret && code_res.inner();
   }
-
-  Ok(fallback_ret)
+  Ok(filter_ret)
 }
 
 #[cfg(test)]
@@ -611,6 +605,7 @@ mod tests {
   use super::*;
 
   #[test]
+  #[allow(clippy::too_many_lines)]
   fn test_filter() {
     #[derive(Debug)]
     struct InputFilter {
@@ -670,7 +665,38 @@ mod tests {
           ("foo.js", "import.meta", false),
           ("foo.js", "import_meta", false),
           ("foo.ts", "import.meta", true),
-          ("foo.ts", "import_meta", true),
+          ("foo.ts", "import_meta", false),
+        ],
+      },
+      TestCases {
+        input_id_filter: Some(InputFilter {
+          exclude: string_filter("*b"),
+          include: string_filter("a*"),
+        }),
+        input_code_filter: Some(InputFilter {
+          exclude: string_filter("b"),
+          include: string_filter("a"),
+        }),
+        cases: vec![
+          ("ab", "", false),
+          ("a", "b", false),
+          ("a", "", false),
+          ("c", "a", false),
+          ("a", "a", true),
+        ],
+      },
+      TestCases {
+        input_id_filter: Some(InputFilter {
+          exclude: string_filter("*b"),
+          include: string_filter("a*"),
+        }),
+        input_code_filter: Some(InputFilter { exclude: string_filter("b"), include: None }),
+        cases: vec![
+          ("ab", "", false),
+          ("a", "b", false),
+          ("a", "", true),
+          ("c", "a", false),
+          ("a", "a", true),
         ],
       },
     ];

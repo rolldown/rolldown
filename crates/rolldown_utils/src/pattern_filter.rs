@@ -29,7 +29,6 @@ impl StringOrRegex {
 }
 
 /// `id` is the raw path of file used for `regex` testing
-/// `stable_id` is the relative path for cwd , used for `glob` testing
 /// Using `FilterResult` rather than `bool` for complicated scenario, e.g.
 /// If you have only one filter, just use `FilterResult#inner` to determine if the `id` is matched,
 /// for multiple filters, you should use `FilterResult` to determine if the `id` is matched.
@@ -150,7 +149,7 @@ pub fn filter_code(
       }
     }
   }
-  // If the path is neither matched the exclude nor include,
+  // If the code is neither matched the exclude nor include,
   // it should only considered should be included if the include pattern is empty
   match include {
     None => FilterResult::NoneMatch(true),

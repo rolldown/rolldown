@@ -1,20 +1,12 @@
-use oxc::semantic::ScopeId;
 use oxc::syntax::keyword::{GLOBAL_OBJECTS, RESERVED_KEYWORDS};
 use rolldown_common::{
-  AstScopes, GetLocalDb, ModuleIdx, NormalModule, OutputFormat, SymbolNameRefToken, SymbolRef,
-  SymbolRefDb, SymbolRefDbForModule,
+  GetLocalDb, ModuleIdx, OutputFormat, SymbolNameRefToken, SymbolRef, SymbolRefDb,
+  SymbolRefDbForModule,
 };
 use rolldown_rstr::{Rstr, ToRstr};
-use rolldown_utils::rustc_hash::FxHashMapExt;
-use rolldown_utils::{
-  concat_string,
-  rayon::{IntoParallelIterator, IntoParallelRefIterator, ParallelIterator},
-};
+use rolldown_utils::concat_string;
 use rustc_hash::{FxHashMap, FxHashSet};
-use std::borrow::Cow;
 use std::collections::hash_map::Entry;
-
-use crate::stages::link_stage::LinkStageOutput;
 
 #[derive(Debug)]
 pub struct Renamer<'name> {
@@ -60,8 +52,6 @@ impl<'name> Renamer<'name> {
     };
     // https://github.com/rollup/rollup/blob/bfbea66569491f5466fbba99de2ba6a0225f851b/src/Chunk.ts#L1359
     manual_reserved.extend(["Object", "Promise"]);
-
-    let entry_module = base_module_index.map(|index| symbol_db.local_db(index));
 
     Self {
       used_canonical_names: manual_reserved
@@ -229,101 +219,6 @@ impl<'name> Renamer<'name> {
       }
     }
     self.canonical_token_to_name.insert(token.clone(), conflictless_name);
-  }
-
-  // non-top-level symbols won't be linked cross-module. So the canonical `SymbolRef` for them are themselves.
-  #[tracing::instrument(level = "trace", skip_all)]
-  pub fn rename_non_root_symbol(
-    &mut self,
-    modules_in_chunk: &[ModuleIdx],
-    link_stage_output: &LinkStageOutput,
-  ) {
-    #[tracing::instrument(level = "trace", skip_all)]
-    fn rename_symbols_of_nested_scopes<'name>(
-      module: &'name NormalModule,
-      scope_id: ScopeId,
-      stack: &mut Vec<Cow<FxHashMap<Rstr, u32>>>,
-      canonical_names: &mut FxHashMap<SymbolRef, Rstr>,
-      ast_scope: &'name AstScopes,
-    ) {
-      let mut bindings = ast_scope.scoping().get_bindings(scope_id).iter().collect::<Vec<_>>();
-      let mut used_canonical_names_for_this_scope = FxHashMap::with_capacity(bindings.len());
-
-      bindings.sort_unstable_by_key(|(_, symbol_id)| *symbol_id);
-      bindings.iter().for_each(|&(binding_name, &symbol_id)| {
-        let binding_ref: SymbolRef = (module.idx, symbol_id).into();
-
-        let mut count = 1;
-        let mut candidate_name = binding_name.to_rstr();
-        match canonical_names.entry(binding_ref) {
-          Entry::Vacant(slot) => loop {
-            let is_shadowed = stack
-              .iter()
-              .any(|used_canonical_names| used_canonical_names.contains_key(&candidate_name))
-              || used_canonical_names_for_this_scope.contains_key(&candidate_name);
-
-            if is_shadowed {
-              candidate_name =
-                concat_string!(&binding_name, "$", itoa::Buffer::new().format(count)).into();
-              count += 1;
-            } else {
-              used_canonical_names_for_this_scope.insert(candidate_name.clone(), 0);
-              slot.insert(candidate_name);
-              break;
-            }
-          },
-          Entry::Occupied(_) => {
-            // The symbol is already renamed
-          }
-        }
-      });
-
-      stack.push(Cow::Owned(used_canonical_names_for_this_scope));
-      let child_scopes = ast_scope.scoping().get_scope_child_ids(scope_id);
-      child_scopes.iter().for_each(|scope_id| {
-        rename_symbols_of_nested_scopes(module, *scope_id, stack, canonical_names, ast_scope);
-      });
-      stack.pop();
-    }
-
-    let modules = &link_stage_output.module_table.modules;
-    let copied_scope_iter =
-      modules_in_chunk.par_iter().copied().filter_map(|id| modules[id].as_normal()).flat_map(
-        |module| {
-          let ast_scope = &link_stage_output.symbol_db[module.idx].as_ref().unwrap().ast_scopes;
-          let child_scopes: &[ScopeId] =
-            ast_scope.scoping().get_scope_child_ids(ast_scope.scoping().root_scope_id());
-
-          child_scopes.into_par_iter().map(|child_scope_id| {
-            let mut stack = vec![Cow::Borrowed(&self.used_canonical_names)];
-            let mut canonical_names = FxHashMap::default();
-            rename_symbols_of_nested_scopes(
-              module,
-              *child_scope_id,
-              &mut stack,
-              &mut canonical_names,
-              ast_scope,
-            );
-            canonical_names
-          })
-        },
-      );
-
-    #[cfg(not(target_family = "wasm"))]
-    let canonical_names_of_nested_scopes =
-      copied_scope_iter.reduce(FxHashMap::default, |mut acc, canonical_names| {
-        acc.extend(canonical_names);
-        acc
-      });
-    #[cfg(target_family = "wasm")]
-    let canonical_names_of_nested_scopes = copied_scope_iter
-      .reduce(|mut acc, canonical_names| {
-        acc.extend(canonical_names);
-        acc
-      })
-      .unwrap_or_default();
-
-    self.canonical_names.extend(canonical_names_of_nested_scopes);
   }
 
   pub fn into_canonical_names(

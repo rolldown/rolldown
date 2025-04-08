@@ -33,9 +33,9 @@ var require_demo_pkg$1 = __commonJS({ "node_modules/demo-pkg"() {} });
 //#endregion
 //#region node_modules/demo-pkg/index.js
 var require_demo_pkg = __commonJS({ "node_modules/demo-pkg/index.js"(exports, module) {
-	const fn = require_demo_pkg$1();
+	const fn$1 = require_demo_pkg$1();
 	module.exports = function() {
-		return fn();
+		return fn$1();
 	};
 } });
 var import_demo_pkg = __toESM(require_demo_pkg());
@@ -61,10 +61,10 @@ assert.equal((0, import_demo_pkg.default)(), 234);
 -    "Users/user/project/node_modules/demo-pkg/index.js"(exports, module) {
 -        var fn2 = require_node_pkg();
 +    "node_modules/demo-pkg/index.js"(exports, module) {
-+        const fn = require_demo_pkg$1();
++        const fn$1 = require_demo_pkg$1();
          module.exports = function () {
 -            return fn2();
-+            return fn();
++            return fn$1();
          };
      }
  });

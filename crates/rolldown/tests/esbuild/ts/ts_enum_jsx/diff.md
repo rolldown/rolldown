@@ -14,9 +14,9 @@ console.log(/* @__PURE__ */ React.createElement("div" /* Div */, null));
 ```js
 
 //#region element.tsx
-let Foo = /* @__PURE__ */ function(Foo$1) {
-	Foo$1["Div"] = "div";
-	return Foo$1;
+let Foo = /* @__PURE__ */ function(Foo) {
+	Foo["Div"] = "div";
+	return Foo;
 }({});
 console.log(/* @__PURE__ */ React.createElement(Foo.Div, null));
 
@@ -34,9 +34,9 @@ export { Foo };
 -    return Foo2;
 -})(Foo || ({}));
 -console.log(React.createElement("div", null));
-+var Foo = (function (Foo$1) {
-+    Foo$1["Div"] = "div";
-+    return Foo$1;
++var Foo = (function (Foo) {
++    Foo["Div"] = "div";
++    return Foo;
 +})({});
 +console.log(React.createElement(Foo.Div, null));
 +export {Foo};
@@ -55,9 +55,9 @@ console.log(/* @__PURE__ */ React.createElement("div" /* Fragment */, null, "tes
 ```js
 
 //#region fragment.tsx
-let React = /* @__PURE__ */ function(React$1) {
-	React$1["Fragment"] = "div";
-	return React$1;
+let React = /* @__PURE__ */ function(React) {
+	React["Fragment"] = "div";
+	return React;
 }({});
 console.log(/* @__PURE__ */ React.createElement(React.Fragment, null, "test"));
 
@@ -75,9 +75,9 @@ export { React };
 -    return React2;
 -})(React || ({}));
 -console.log(React.createElement("div", null, "test"));
-+var React = (function (React$1) {
-+    React$1["Fragment"] = "div";
-+    return React$1;
++var React = (function (React) {
++    React["Fragment"] = "div";
++    return React;
 +})({});
 +console.log(React.createElement(React.Fragment, null, "test"));
 +export {React};
@@ -111,9 +111,9 @@ let x;
 (function(_x) {
 	let y;
 	(function(_y) {
-		let Foo = /* @__PURE__ */ function(Foo$1) {
-			Foo$1["Div"] = "div";
-			return Foo$1;
+		let Foo = /* @__PURE__ */ function(Foo) {
+			Foo["Div"] = "div";
+			return Foo;
 		}({});
 		_y.Foo = Foo;
 	})(y || (y = _x.y || (_x.y = {})));
@@ -144,9 +144,9 @@ let x;
 -        })(Foo = y2.Foo || (y2.Foo = {}));
 -    })(y = x2.y || (x2.y = {}));
 +    (function (_y) {
-+        let Foo = (function (Foo$1) {
-+            Foo$1["Div"] = "div";
-+            return Foo$1;
++        let Foo = (function (Foo) {
++            Foo["Div"] = "div";
++            return Foo;
 +        })({});
 +        _y.Foo = Foo;
 +    })(y || (y = _x.y || (_x.y = {})));
@@ -191,11 +191,11 @@ let x;
 (function(_x) {
 	let y;
 	(function(_y) {
-		let React$1 = /* @__PURE__ */ function(React$2) {
-			React$2["Fragment"] = "div";
-			return React$2;
+		let React = /* @__PURE__ */ function(React) {
+			React["Fragment"] = "div";
+			return React;
 		}({});
-		_y.React = React$1;
+		_y.React = React;
 	})(y || (y = _x.y || (_x.y = {})));
 })(x || (x = {}));
 (function(_x2) {
@@ -224,11 +224,11 @@ let x;
 -        })(React = y2.React || (y2.React = {}));
 -    })(y = x2.y || (x2.y = {}));
 +    (function (_y) {
-+        let React$1 = (function (React$2) {
-+            React$2["Fragment"] = "div";
-+            return React$2;
++        let React = (function (React) {
++            React["Fragment"] = "div";
++            return React;
 +        })({});
-+        _y.React = React$1;
++        _y.React = React;
 +    })(y || (y = _x.y || (_x.y = {})));
  })(x || (x = {}));
 -(x2 => {

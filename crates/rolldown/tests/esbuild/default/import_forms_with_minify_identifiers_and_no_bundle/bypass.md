@@ -24,13 +24,13 @@ console.log(o, r, m, t, f, i, p, s, n, a);
 ```js
 import * as ns from "foo";
 import * as ns2 from "foo";
-import def, { a, a2, b } from "foo";
+import def, { a, a2, b as c, b as c3, default as def2, default as def3 } from "foo";
 
 //#region entry.js
 const imp = [import("foo"), function() {
 	return import("foo");
 }];
-console.log(ns, a, b, def, def, ns2, def, a2, b, imp);
+console.log(ns, a, c, def, def2, ns2, def3, a2, c3, imp);
 
 //#endregion
 ```
@@ -50,11 +50,11 @@ console.log(ns, a, b, def, def, ns2, def, a2, b, imp);
 -const a = [import("foo"), function () {
 +import * as ns from "foo";
 +import * as ns2 from "foo";
-+import def, {a, a2, b} from "foo";
++import def, {a, a2, b as c, b as c3, default as def2, default as def3} from "foo";
 +var imp = [import("foo"), function () {
      return import("foo");
  }];
 -console.log(o, r, m, t, f, i, p, s, n, a);
-+console.log(ns, a, b, def, def, ns2, def, a2, b, imp);
++console.log(ns, a, c, def, def2, ns2, def3, a2, c3, imp);
 
 ```

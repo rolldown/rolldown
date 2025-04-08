@@ -32,11 +32,11 @@ export function foo(){let e;return(n=>(n[n.X=0]="X",n[n.Y=1]="Y",n[n.Z=n]="Z"))(
 
 //#region b.ts
 function foo() {
-	let Foo = /* @__PURE__ */ function(Foo$1) {
-		Foo$1[Foo$1["X"] = 0] = "X";
-		Foo$1[Foo$1["Y"] = 1] = "Y";
-		Foo$1[Foo$1["Z"] = Foo$1] = "Z";
-		return Foo$1;
+	let Foo = /* @__PURE__ */ function(Foo) {
+		Foo[Foo["X"] = 0] = "X";
+		Foo[Foo["Y"] = 1] = "Y";
+		Foo[Foo["Z"] = Foo] = "Z";
+		return Foo;
 	}({});
 	return Foo;
 }
@@ -54,11 +54,11 @@ export { foo };
 -    let e;
 -    return ((n => (n[n.X = 0] = "X", n[n.Y = 1] = "Y", n[n.Z = n] = "Z"))(e || (e = {})), e);
 +function foo() {
-+    let Foo = (function (Foo$1) {
-+        Foo$1[Foo$1["X"] = 0] = "X";
-+        Foo$1[Foo$1["Y"] = 1] = "Y";
-+        Foo$1[Foo$1["Z"] = Foo$1] = "Z";
-+        return Foo$1;
++    let Foo = (function (Foo) {
++        Foo[Foo["X"] = 0] = "X";
++        Foo[Foo["Y"] = 1] = "Y";
++        Foo[Foo["Z"] = Foo] = "Z";
++        return Foo;
 +    })({});
 +    return Foo;
  }

@@ -27,13 +27,13 @@
 
 //#region entry.js
 function a(x = arguments) {
-	let arguments$1;
+	let arguments;
 }
 function b(x = arguments) {
-	let arguments$1;
+	let arguments;
 }
 function c(x = arguments) {
-	let arguments$1;
+	let arguments;
 }
 a();
 b();
@@ -47,29 +47,40 @@ c();
 ===================================================================
 --- esbuild	/out.js
 +++ rolldown	entry.js
-@@ -1,14 +1,14 @@
+@@ -1,14 +1,19 @@
 -(() => {
 -    function e(n = arguments) {
 -        let t;
-+(function () {
-+    function a(x = arguments) {
-+        let arguments$1;
-     }
+-    }
 -    function u(n = arguments) {
 -        let t;
-+    function b(x = arguments) {
-+        let arguments$1;
-     }
+-    }
 -    function a(n = arguments) {
 -        let t;
-+    function c(x = arguments) {
-+        let arguments$1;
-     }
+-    }
 -    e();
 -    u();
-     a();
-+    b();
-+    c();
- })();
+-    a();
+-})();
++(function() {
++
++
++//#region entry.js
++function a(x = arguments) {
++	let arguments;
++}
++function b(x = arguments) {
++	let arguments;
++}
++function c(x = arguments) {
++	let arguments;
++}
++a();
++b();
++c();
++
++//#endregion
++})();
+\ No newline at end of file
 
 ```

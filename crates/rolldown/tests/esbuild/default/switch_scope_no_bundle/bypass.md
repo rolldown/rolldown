@@ -21,7 +21,7 @@ switch (foo) {
 	default: var foo;
 }
 switch (bar) {
-	default: let bar$1;
+	default: let bar;
 }
 
 //#endregion
@@ -37,7 +37,7 @@ switch (bar) {
  switch (bar) {
      default:
 -        let a;
-+        let bar$1;
++        let bar;
  }
 
 ```

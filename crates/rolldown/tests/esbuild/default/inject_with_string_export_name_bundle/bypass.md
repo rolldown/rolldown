@@ -17,14 +17,14 @@ fn(test);
 ```js
 
 //#region inject.js
-const old = fn;
-const fn = (...args) => old.apply(console, ["log:"].concat(args));
+const old = info;
+const info = (...args) => old.apply(console, ["log:"].concat(args));
 
 //#endregion
 //#region entry.js
-fn(test);
-fn(test);
-fn(test);
+info(test);
+info(test);
+info(test);
 
 //#endregion
 ```
@@ -35,10 +35,14 @@ fn(test);
 +++ rolldown	entry.js
 @@ -1,5 +1,5 @@
 -var old = console.log;
-+var old = fn;
- var fn = (...args) => old.apply(console, ["log:"].concat(args));
- fn(test);
- fn(test);
- fn(test);
+-var fn = (...args) => old.apply(console, ["log:"].concat(args));
+-fn(test);
+-fn(test);
+-fn(test);
++var old = info;
++var info = (...args) => old.apply(console, ["log:"].concat(args));
++info(test);
++info(test);
++info(test);
 
 ```

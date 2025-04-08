@@ -18,7 +18,7 @@ console.log(/* @__PURE__ */ jsx2("div", { jsx: import_custom_react.jsx }), /* @_
 ```
 ### rolldown
 ```js
-import { Fragment, jsx } from "react/jsx-runtime";
+import { Fragment as _Fragment, jsx as _jsx } from "react/jsx-runtime";
 
 
 //#region custom-react.js
@@ -29,7 +29,7 @@ var import_custom_react = __toESM(require_custom_react());
 
 //#endregion
 //#region entry.jsx
-console.log(/* @__PURE__ */ jsx("div", { jsx: import_custom_react.jsx }), /* @__PURE__ */ jsx(Fragment, { children: /* @__PURE__ */ jsx(import_custom_react.Fragment, {}) }));
+console.log(/* @__PURE__ */ _jsx("div", { jsx: import_custom_react.jsx }), /* @__PURE__ */ _jsx(_Fragment, { children: /* @__PURE__ */ _jsx(import_custom_react.Fragment, {}) }));
 
 //#endregion
 ```
@@ -39,7 +39,7 @@ console.log(/* @__PURE__ */ jsx("div", { jsx: import_custom_react.jsx }), /* @__
 --- esbuild	/out.js
 +++ rolldown	entry.js
 @@ -1,12 +1,12 @@
-+import {Fragment, jsx} from "react/jsx-runtime";
++import {Fragment as _Fragment, jsx as _jsx} from "react/jsx-runtime";
  var require_custom_react = __commonJS({
      "custom-react.js"(exports, module) {
          module.exports = {};
@@ -48,12 +48,12 @@ console.log(/* @__PURE__ */ jsx("div", { jsx: import_custom_react.jsx }), /* @__
  var import_custom_react = __toESM(require_custom_react());
 -import {Fragment as Fragment2, jsx as jsx2} from "react/jsx-runtime";
 -console.log(jsx2("div", {
-+console.log(jsx("div", {
++console.log(_jsx("div", {
      jsx: import_custom_react.jsx
 -}), jsx2(Fragment2, {
 -    children: jsx2(import_custom_react.Fragment, {})
-+}), jsx(Fragment, {
-+    children: jsx(import_custom_react.Fragment, {})
++}), _jsx(_Fragment, {
++    children: _jsx(import_custom_react.Fragment, {})
  }));
 
 ```

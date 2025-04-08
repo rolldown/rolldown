@@ -21,7 +21,7 @@ let jsx = [
 ```
 ### rolldown
 ```js
-import { jsx } from "react/jsx-runtime";
+import { jsx as _jsx } from "react/jsx-runtime";
 
 //#region entry.jsx
 let tests = [
@@ -57,27 +57,27 @@ let tests = [
 		j
 	}
 ];
-let jsx$1 = [
-	/* @__PURE__ */ jsx("div", {
+let jsx = [
+	/* @__PURE__ */ _jsx("div", {
 		...a,
 		...b
 	}),
-	/* @__PURE__ */ jsx("div", {
+	/* @__PURE__ */ _jsx("div", {
 		a: true,
 		b: true,
 		...c
 	}),
-	/* @__PURE__ */ jsx("div", {
+	/* @__PURE__ */ _jsx("div", {
 		...a,
 		b: true,
 		c: true
 	}),
-	/* @__PURE__ */ jsx("div", {
+	/* @__PURE__ */ _jsx("div", {
 		a: true,
 		...b,
 		c: true
 	}),
-	/* @__PURE__ */ jsx("div", {
+	/* @__PURE__ */ _jsx("div", {
 		a: true,
 		b: true,
 		...c,
@@ -100,7 +100,7 @@ let jsx$1 = [
 +++ rolldown	entry.js
 @@ -1,40 +1,55 @@
 -let tests = [__spreadValues(__spreadValues({}, a), b), __spreadValues({
-+import {jsx} from "react/jsx-runtime";
++import {jsx as _jsx} from "react/jsx-runtime";
 +var tests = [{
 +    ...a,
 +    ...b
@@ -140,28 +140,28 @@ let jsx$1 = [
 -})];
 -let jsx = [React.createElement("div", __spreadValues(__spreadValues({}, a), b)), React.createElement("div", __spreadValues({
 +}];
-+var jsx$1 = [jsx("div", {
++var jsx = [_jsx("div", {
 +    ...a,
 +    ...b
-+}), jsx("div", {
++}), _jsx("div", {
      a: true,
 -    b: true
 -}, c)), React.createElement("div", __spreadProps(__spreadValues({}, a), {
      b: true,
 +    ...c
-+}), jsx("div", {
++}), _jsx("div", {
 +    ...a,
 +    b: true,
      c: true
 -})), React.createElement("div", __spreadProps(__spreadValues({
 -    a: true
 -}, b), {
-+}), jsx("div", {
++}), _jsx("div", {
 +    a: true,
 +    ...b,
      c: true
 -})), React.createElement("div", __spreadProps(__spreadValues(__spreadValues(__spreadProps(__spreadValues(__spreadValues({
-+}), jsx("div", {
++}), _jsx("div", {
      a: true,
 -    b: true
 -}, c), d), {

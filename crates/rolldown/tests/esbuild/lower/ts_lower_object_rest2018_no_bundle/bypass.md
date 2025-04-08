@@ -66,8 +66,8 @@ let { ...local_let } = {};
 var { ...local_var } = {};
 let ns;
 (function(_ns) {
-	let { ...x$1 } = {};
-	_ns.x = x$1;
+	let { ...x } = {};
+	_ns.x = x;
 })(ns || (ns = {}));
 for (const { ...for_in_const } in { abc });
 for (let { ...for_in_let } in { abc });
@@ -114,8 +114,8 @@ console.log({x: {...xx}} = { x });
 -(ns2 => {
 -    ({...ns2.x} = {});
 +(function (_ns) {
-+    let {...x$1} = {};
-+    _ns.x = x$1;
++    let {...x} = {};
++    _ns.x = x;
  })(ns || (ns = {}));
 -try {} catch ({...catch_clause}) {}
  for (const {...for_in_const} in {

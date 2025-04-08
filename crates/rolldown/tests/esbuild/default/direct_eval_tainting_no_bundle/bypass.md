@@ -58,11 +58,11 @@ function test3() {
 		return first + second;
 	}
 }
-function test4(eval$1) {
+function test4(eval) {
 	function add(first, second) {
 		return first + second;
 	}
-	eval$1("add(1, 2)");
+	eval("add(1, 2)");
 }
 function test5() {
 	function containsDirectEval() {
@@ -109,16 +109,15 @@ function test5() {
 +		return first + second;
 +	}
  }
--function test4(eval) {
+ function test4(eval) {
 -  function add(n, t) {
 -    return n + t;
 -  }
 -  eval("add(1, 2)");
-+function test4(eval$1) {
 +	function add(first, second) {
 +		return first + second;
 +	}
-+	eval$1("add(1, 2)");
++	eval("add(1, 2)");
  }
  function test5() {
 -  function containsDirectEval() {

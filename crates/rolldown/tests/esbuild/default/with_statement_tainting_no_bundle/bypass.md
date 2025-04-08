@@ -34,9 +34,9 @@
 	let outerDead = 3;
 	with({}) {
 		var hoisted = 4;
-		let local$1 = 5;
+		let local = 5;
 		hoisted++;
-		local$1++;
+		local++;
 		if (1) outer++;
 		if (0) outerDead++;
 	}
@@ -83,9 +83,9 @@
 +	let outerDead = 3;
 +	with({}) {
 +		var hoisted = 4;
-+		let local$1 = 5;
++		let local = 5;
 +		hoisted++;
-+		local$1++;
++		local++;
 +		if (1) outer++;
 +		if (0) outerDead++;
 +	}

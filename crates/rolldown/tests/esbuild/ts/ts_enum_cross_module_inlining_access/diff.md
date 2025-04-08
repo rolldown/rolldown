@@ -50,45 +50,45 @@ not_inlined = [
 ```js
 
 //#region enums.ts
-let a_num = /* @__PURE__ */ function(a_num$1) {
-	a_num$1[a_num$1["x"] = 123] = "x";
-	return a_num$1;
+let a_num = /* @__PURE__ */ function(a_num) {
+	a_num[a_num["x"] = 123] = "x";
+	return a_num;
 }({});
-let b_num = /* @__PURE__ */ function(b_num$1) {
-	b_num$1[b_num$1["x"] = 123] = "x";
-	return b_num$1;
+let b_num = /* @__PURE__ */ function(b_num) {
+	b_num[b_num["x"] = 123] = "x";
+	return b_num;
 }({});
-let c_num = /* @__PURE__ */ function(c_num$1) {
-	c_num$1[c_num$1["x"] = 123] = "x";
-	return c_num$1;
+let c_num = /* @__PURE__ */ function(c_num) {
+	c_num[c_num["x"] = 123] = "x";
+	return c_num;
 }({});
-let d_num = /* @__PURE__ */ function(d_num$1) {
-	d_num$1[d_num$1["x"] = 123] = "x";
-	return d_num$1;
+let d_num = /* @__PURE__ */ function(d_num) {
+	d_num[d_num["x"] = 123] = "x";
+	return d_num;
 }({});
-let e_num = /* @__PURE__ */ function(e_num$1) {
-	e_num$1[e_num$1["x"] = 123] = "x";
-	return e_num$1;
+let e_num = /* @__PURE__ */ function(e_num) {
+	e_num[e_num["x"] = 123] = "x";
+	return e_num;
 }({});
-let a_str = /* @__PURE__ */ function(a_str$1) {
-	a_str$1["x"] = "abc";
-	return a_str$1;
+let a_str = /* @__PURE__ */ function(a_str) {
+	a_str["x"] = "abc";
+	return a_str;
 }({});
-let b_str = /* @__PURE__ */ function(b_str$1) {
-	b_str$1["x"] = "abc";
-	return b_str$1;
+let b_str = /* @__PURE__ */ function(b_str) {
+	b_str["x"] = "abc";
+	return b_str;
 }({});
-let c_str = /* @__PURE__ */ function(c_str$1) {
-	c_str$1["x"] = "abc";
-	return c_str$1;
+let c_str = /* @__PURE__ */ function(c_str) {
+	c_str["x"] = "abc";
+	return c_str;
 }({});
-let d_str = /* @__PURE__ */ function(d_str$1) {
-	d_str$1["x"] = "abc";
-	return d_str$1;
+let d_str = /* @__PURE__ */ function(d_str) {
+	d_str["x"] = "abc";
+	return d_str;
 }({});
-let e_str = /* @__PURE__ */ function(e_str$1) {
-	e_str$1["x"] = "abc";
-	return e_str$1;
+let e_str = /* @__PURE__ */ function(e_str) {
+	e_str["x"] = "abc";
+	return e_str;
 }({});
 
 //#endregion
@@ -141,45 +141,45 @@ not_inlined = [
 -    return e_str2;
 -})(e_str || ({}));
 -inlined = [123, 123, "abc", "abc"];
-+var a_num = (function (a_num$1) {
-+    a_num$1[a_num$1["x"] = 123] = "x";
-+    return a_num$1;
++var a_num = (function (a_num) {
++    a_num[a_num["x"] = 123] = "x";
++    return a_num;
 +})({});
-+var b_num = (function (b_num$1) {
-+    b_num$1[b_num$1["x"] = 123] = "x";
-+    return b_num$1;
++var b_num = (function (b_num) {
++    b_num[b_num["x"] = 123] = "x";
++    return b_num;
 +})({});
-+var c_num = (function (c_num$1) {
-+    c_num$1[c_num$1["x"] = 123] = "x";
-+    return c_num$1;
++var c_num = (function (c_num) {
++    c_num[c_num["x"] = 123] = "x";
++    return c_num;
 +})({});
-+var d_num = (function (d_num$1) {
-+    d_num$1[d_num$1["x"] = 123] = "x";
-+    return d_num$1;
++var d_num = (function (d_num) {
++    d_num[d_num["x"] = 123] = "x";
++    return d_num;
 +})({});
-+var e_num = (function (e_num$1) {
-+    e_num$1[e_num$1["x"] = 123] = "x";
-+    return e_num$1;
++var e_num = (function (e_num) {
++    e_num[e_num["x"] = 123] = "x";
++    return e_num;
 +})({});
-+var a_str = (function (a_str$1) {
-+    a_str$1["x"] = "abc";
-+    return a_str$1;
++var a_str = (function (a_str) {
++    a_str["x"] = "abc";
++    return a_str;
 +})({});
-+var b_str = (function (b_str$1) {
-+    b_str$1["x"] = "abc";
-+    return b_str$1;
++var b_str = (function (b_str) {
++    b_str["x"] = "abc";
++    return b_str;
 +})({});
-+var c_str = (function (c_str$1) {
-+    c_str$1["x"] = "abc";
-+    return c_str$1;
++var c_str = (function (c_str) {
++    c_str["x"] = "abc";
++    return c_str;
 +})({});
-+var d_str = (function (d_str$1) {
-+    d_str$1["x"] = "abc";
-+    return d_str$1;
++var d_str = (function (d_str) {
++    d_str["x"] = "abc";
++    return d_str;
 +})({});
-+var e_str = (function (e_str$1) {
-+    e_str$1["x"] = "abc";
-+    return e_str$1;
++var e_str = (function (e_str) {
++    e_str["x"] = "abc";
++    return e_str;
 +})({});
 +inlined = [a_num.x, b_num["x"], a_str.x, b_str["x"]];
  not_inlined = [c_num?.x, d_num?.["x"], e_num, c_str?.x, d_str?.["x"], e_str];

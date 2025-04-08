@@ -12,9 +12,9 @@ console.log(123 /* y */);
 ```js
 
 //#region simple-member.ts
-var x = /* @__PURE__ */ function(x$1) {
-	x$1[x$1["y"] = 123] = "y";
-	return x$1;
+var x = /* @__PURE__ */ function(x) {
+	x[x["y"] = 123] = "y";
+	return x;
 }(x || {});
 console.log(x.y);
 
@@ -27,9 +27,9 @@ console.log(x.y);
 +++ rolldown	simple-member.js
 @@ -1,1 +1,5 @@
 -console.log(123);
-+var x = (function (x$1) {
-+    x$1[x$1["y"] = 123] = "y";
-+    return x$1;
++var x = (function (x) {
++    x[x["y"] = 123] = "y";
++    return x;
 +})(x || ({}));
 +console.log(x.y);
 
@@ -48,9 +48,9 @@ console.log(x);
 ```js
 
 //#region simple-enum.ts
-var x = /* @__PURE__ */ function(x$1) {
-	x$1[x$1["y"] = 123] = "y";
-	return x$1;
+var x = /* @__PURE__ */ function(x) {
+	x[x["y"] = 123] = "y";
+	return x;
 }(x || {});
 console.log(x);
 
@@ -65,9 +65,9 @@ console.log(x);
 -var x = (x2 => {
 -    x2[x2["y"] = 123] = "y";
 -    return x2;
-+var x = (function (x$1) {
-+    x$1[x$1["y"] = 123] = "y";
-+    return x$1;
++var x = (function (x) {
++    x[x["y"] = 123] = "y";
++    return x;
  })(x || ({}));
  console.log(x);
 
@@ -82,13 +82,13 @@ console.log(123 /* y */, 246 /* z */);
 ```js
 
 //#region sibling-member.ts
-var x = /* @__PURE__ */ function(x$1) {
-	x$1[x$1["y"] = 123] = "y";
-	return x$1;
+var x = /* @__PURE__ */ function(x) {
+	x[x["y"] = 123] = "y";
+	return x;
 }(x || {});
-x = /* @__PURE__ */ function(x$1) {
-	x$1[x$1["z"] = 246] = "z";
-	return x$1;
+x = /* @__PURE__ */ function(x) {
+	x[x["z"] = 246] = "z";
+	return x;
 }(x || {});
 console.log(x.y, x.z);
 
@@ -101,13 +101,13 @@ console.log(x.y, x.z);
 +++ rolldown	sibling-member.js
 @@ -1,1 +1,9 @@
 -console.log(123, 246);
-+var x = (function (x$1) {
-+    x$1[x$1["y"] = 123] = "y";
-+    return x$1;
++var x = (function (x) {
++    x[x["y"] = 123] = "y";
++    return x;
 +})(x || ({}));
-+x = (function (x$1) {
-+    x$1[x$1["z"] = 246] = "z";
-+    return x$1;
++x = (function (x) {
++    x[x["z"] = 246] = "z";
++    return x;
 +})(x || ({}));
 +console.log(x.y, x.z);
 
@@ -131,13 +131,13 @@ var x = /* @__PURE__ */ ((x2) => {
 
 //#region sibling-enum-before.ts
 console.log(x);
-var x = /* @__PURE__ */ function(x$1) {
-	x$1[x$1["y"] = 123] = "y";
-	return x$1;
+var x = /* @__PURE__ */ function(x) {
+	x[x["y"] = 123] = "y";
+	return x;
 }(x || {});
-x = /* @__PURE__ */ function(x$1) {
-	x$1[x$1["z"] = 246] = "z";
-	return x$1;
+x = /* @__PURE__ */ function(x) {
+	x[x["z"] = 246] = "z";
+	return x;
 }(x || {});
 
 //#endregion
@@ -152,16 +152,16 @@ x = /* @__PURE__ */ function(x$1) {
 -var x = (x2 => {
 -    x2[x2["y"] = 123] = "y";
 -    return x2;
-+var x = (function (x$1) {
-+    x$1[x$1["y"] = 123] = "y";
-+    return x$1;
++var x = (function (x) {
++    x[x["y"] = 123] = "y";
++    return x;
  })(x || ({}));
 -var x = (x2 => {
 -    x2[x2["z"] = 246] = "z";
 -    return x2;
-+x = (function (x$1) {
-+    x$1[x$1["z"] = 246] = "z";
-+    return x$1;
++x = (function (x) {
++    x[x["z"] = 246] = "z";
++    return x;
  })(x || ({}));
 
 ```
@@ -183,14 +183,14 @@ var x = /* @__PURE__ */ ((x2) => {
 ```js
 
 //#region sibling-enum-middle.ts
-var x = /* @__PURE__ */ function(x$1) {
-	x$1[x$1["y"] = 123] = "y";
-	return x$1;
+var x = /* @__PURE__ */ function(x) {
+	x[x["y"] = 123] = "y";
+	return x;
 }(x || {});
 console.log(x);
-x = /* @__PURE__ */ function(x$1) {
-	x$1[x$1["z"] = 246] = "z";
-	return x$1;
+x = /* @__PURE__ */ function(x) {
+	x[x["z"] = 246] = "z";
+	return x;
 }(x || {});
 
 //#endregion
@@ -204,17 +204,17 @@ x = /* @__PURE__ */ function(x$1) {
 -var x = (x2 => {
 -    x2[x2["y"] = 123] = "y";
 -    return x2;
-+var x = (function (x$1) {
-+    x$1[x$1["y"] = 123] = "y";
-+    return x$1;
++var x = (function (x) {
++    x[x["y"] = 123] = "y";
++    return x;
  })(x || ({}));
  console.log(x);
 -var x = (x2 => {
 -    x2[x2["z"] = 246] = "z";
 -    return x2;
-+x = (function (x$1) {
-+    x$1[x$1["z"] = 246] = "z";
-+    return x$1;
++x = (function (x) {
++    x[x["z"] = 246] = "z";
++    return x;
  })(x || ({}));
 
 ```
@@ -236,13 +236,13 @@ console.log(x);
 ```js
 
 //#region sibling-enum-after.ts
-var x = /* @__PURE__ */ function(x$1) {
-	x$1[x$1["y"] = 123] = "y";
-	return x$1;
+var x = /* @__PURE__ */ function(x) {
+	x[x["y"] = 123] = "y";
+	return x;
 }(x || {});
-x = /* @__PURE__ */ function(x$1) {
-	x$1[x$1["z"] = 246] = "z";
-	return x$1;
+x = /* @__PURE__ */ function(x) {
+	x[x["z"] = 246] = "z";
+	return x;
 }(x || {});
 console.log(x);
 
@@ -257,16 +257,16 @@ console.log(x);
 -var x = (x2 => {
 -    x2[x2["y"] = 123] = "y";
 -    return x2;
-+var x = (function (x$1) {
-+    x$1[x$1["y"] = 123] = "y";
-+    return x$1;
++var x = (function (x) {
++    x[x["y"] = 123] = "y";
++    return x;
  })(x || ({}));
 -var x = (x2 => {
 -    x2[x2["z"] = 246] = "z";
 -    return x2;
-+x = (function (x$1) {
-+    x$1[x$1["z"] = 246] = "z";
-+    return x$1;
++x = (function (x) {
++    x[x["z"] = 246] = "z";
++    return x;
  })(x || ({}));
  console.log(x);
 
@@ -291,9 +291,9 @@ let x;
 (function(_x) {
 	console.log(x, y);
 })(x || (x = {}));
-var x = /* @__PURE__ */ function(x$1) {
-	x$1[x$1["y"] = 123] = "y";
-	return x$1;
+var x = /* @__PURE__ */ function(x) {
+	x[x["y"] = 123] = "y";
+	return x;
 }(x || {});
 
 //#endregion
@@ -316,9 +316,9 @@ var x = /* @__PURE__ */ function(x$1) {
 -    x2[x2["y"] = 123] = "y";
 -    return x2;
 -})(x || ({}));
-+var x = /* @__PURE__ */ function(x$1) {
-+	x$1[x$1["y"] = 123] = "y";
-+	return x$1;
++var x = /* @__PURE__ */ function(x) {
++	x[x["y"] = 123] = "y";
++	return x;
 +}(x || {});
 +
 +//#endregion
@@ -341,9 +341,9 @@ var x = /* @__PURE__ */ ((x2) => {
 ```js
 
 //#region namespace-after.ts
-var x = /* @__PURE__ */ function(x$1) {
-	x$1[x$1["y"] = 123] = "y";
-	return x$1;
+var x = /* @__PURE__ */ function(x) {
+	x[x["y"] = 123] = "y";
+	return x;
 }(x || {});
 (function(_x) {
 	console.log(x, y);
@@ -360,9 +360,9 @@ var x = /* @__PURE__ */ function(x$1) {
 -var x = (x2 => {
 -    x2[x2["y"] = 123] = "y";
 -    return x2;
-+var x = (function (x$1) {
-+    x$1[x$1["y"] = 123] = "y";
-+    return x$1;
++var x = (function (x) {
++    x[x["y"] = 123] = "y";
++    return x;
  })(x || ({}));
 -(x2 => {
 -    console.log(x2, y);

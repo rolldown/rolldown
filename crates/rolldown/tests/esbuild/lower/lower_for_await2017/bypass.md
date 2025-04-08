@@ -121,10 +121,10 @@ var entry_default = [
 		for await (x.y of y) z(x);
 	},
 	async () => {
-		for await (let x$1 of y) z(x$1);
+		for await (let x of y) z(x);
 	},
 	async () => {
-		for await (const x$1 of y) z(x$1);
+		for await (const x of y) z(x);
 	}
 ];
 
@@ -185,7 +185,7 @@ export { entry_default as default };
 -            if (error) throw error[0];
 -        }
 -    }
-+    for await (let x$1 of y) z(x$1);
++    for await (let x of y) z(x);
  }, async () => {
 -    try {
 -        for (var iter = __forAwait(y), more, temp, error; more = !(temp = await iter.next()).done; more = false) {
@@ -231,7 +231,7 @@ export { entry_default as default };
 -            if (error) throw error[0];
 -        }
 -    }
-+    for await (const x$1 of y) z(x$1);
++    for await (const x of y) z(x);
  }];
 +export {entry_default as default};
 

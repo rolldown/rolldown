@@ -99,22 +99,22 @@ var E = class {
 var F = class {
 	static ["name"] = 0;
 };
-let a = class a$1 {
+let a = class a {
 	static foo;
 };
-let b = class b$1 {
+let b = class b {
 	static name;
 };
-let c = class c$1 {
+let c = class c {
 	static name() {}
 };
-let d = class d$1 {
+let d = class d {
 	static get name() {}
 };
-let e = class e$1 {
+let e = class e {
 	static set name(x) {}
 };
-let f = class f$1 {
+let f = class f {
 	static ["name"] = 0;
 };
 let a2 = class {
@@ -181,27 +181,27 @@ let f2 = class {
 -        __name(this, "a");
 -    }
 +};
-+var a = class a$1 {
++var a = class a {
      static foo;
  };
 -let b = class b3 {
-+var b = class b$1 {
++var b = class b {
      static name;
  };
 -let c = class c3 {
-+var c = class c$1 {
++var c = class c {
      static name() {}
  };
 -let d = class d3 {
-+var d = class d$1 {
++var d = class d {
      static get name() {}
  };
 -let e = class e3 {
-+var e = class e$1 {
++var e = class e {
      static set name(x) {}
  };
 -let f = class f3 {
-+var f = class f$1 {
++var f = class f {
      static ["name"] = 0;
  };
 -let a2 = class {

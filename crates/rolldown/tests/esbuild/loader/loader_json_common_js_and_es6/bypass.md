@@ -38,7 +38,7 @@ var y_default = {
 //#endregion
 //#region z.json
 var small = "some small text";
-var if$1 = "test keyword imports";
+var fi = "test keyword imports";
 
 //#endregion
 //#region x.json
@@ -49,7 +49,7 @@ var require_x = __commonJS({ "x.json"(exports, module) {
 //#endregion
 //#region entry.js
 const x_json = require_x();
-console.log(x_json, y_default, small, if$1);
+console.log(x_json, y_default, small, fi);
 
 //#endregion
 ```
@@ -66,7 +66,7 @@ console.log(x_json, y_default, small, if$1);
 +    y2
 +};
 +var small = "some small text";
-+var if$1 = "test keyword imports";
++var fi = "test keyword imports";
  var require_x = __commonJS({
      "x.json"(exports, module) {
          module.exports = {
@@ -83,6 +83,6 @@ console.log(x_json, y_default, small, if$1);
 -var if2 = "test keyword imports";
  var x_json = require_x();
 -console.log(x_json, y_default, small, if2);
-+console.log(x_json, y_default, small, if$1);
++console.log(x_json, y_default, small, fi);
 
 ```

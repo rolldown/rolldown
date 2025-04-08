@@ -25,12 +25,12 @@ console.log([
 ```js
 
 //#region enums.ts
-let a = /* @__PURE__ */ function(a$1) {
-	a$1[a$1["implicit_number"] = 0] = "implicit_number";
-	a$1[a$1["explicit_number"] = 123] = "explicit_number";
-	a$1["explicit_string"] = "xyz";
-	a$1[a$1["non_constant"] = foo] = "non_constant";
-	return a$1;
+let a = /* @__PURE__ */ function(a) {
+	a[a["implicit_number"] = 0] = "implicit_number";
+	a[a["explicit_number"] = 123] = "explicit_number";
+	a["explicit_string"] = "xyz";
+	a[a["non_constant"] = foo] = "non_constant";
+	return a;
 }({});
 
 //#endregion
@@ -58,12 +58,12 @@ console.log([
 -    return a2;
 -})(a || ({}));
 -console.log([0, 123, "xyz", a.non_constant]);
-+var a = (function (a$1) {
-+    a$1[a$1["implicit_number"] = 0] = "implicit_number";
-+    a$1[a$1["explicit_number"] = 123] = "explicit_number";
-+    a$1["explicit_string"] = "xyz";
-+    a$1[a$1["non_constant"] = foo] = "non_constant";
-+    return a$1;
++var a = (function (a) {
++    a[a["implicit_number"] = 0] = "implicit_number";
++    a[a["explicit_number"] = 123] = "explicit_number";
++    a["explicit_string"] = "xyz";
++    a[a["non_constant"] = foo] = "non_constant";
++    return a;
 +})({});
 +console.log([a.implicit_number, a.explicit_number, a.explicit_string, a.non_constant]);
 

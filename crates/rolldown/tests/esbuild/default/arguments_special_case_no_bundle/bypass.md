@@ -95,8 +95,8 @@
 		}
 	}
 	function foo(x = arguments) {
-		var arguments$1;
-		return arguments$1;
+		var arguments;
+		return arguments;
 	}
 })();
 
@@ -196,8 +196,8 @@
 +		}
 +	}
 +	function foo(x = arguments) {
-+		var arguments$1;
-+		return arguments$1;
++		var arguments;
++		return arguments;
 +	}
 +})();
 +

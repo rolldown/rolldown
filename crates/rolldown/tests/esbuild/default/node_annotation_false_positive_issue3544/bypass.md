@@ -26,8 +26,8 @@ function confuseNode(exports2) {
 "use strict";
 
 //#region entry.mjs
-function confuseNode(exports$1) {
-	exports$1.notAnExport = function() {};
+function confuseNode(exports) {
+	exports.notAnExport = function() {};
 }
 
 //#endregion
@@ -46,8 +46,8 @@ exports.confuseNode = confuseNode
 -module.exports = __toCommonJS(entry_exports);
 -function confuseNode(exports2) {
 -    exports2.notAnExport = function () {};
-+function confuseNode(exports$1) {
-+    exports$1.notAnExport = function () {};
++function confuseNode(exports) {
++    exports.notAnExport = function () {};
  }
 -0 && (module.exports = {
 -    confuseNode

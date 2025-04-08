@@ -126,7 +126,8 @@ impl<'name> Renamer<'name> {
     symbol_db: &'name SymbolRefDb,
     canonical_ref: SymbolRef,
   ) -> FxHashSet<&'name str> {
-    if canonical_ref.owner.is_dummy() || canonical_ref.owner == ModuleIdx::from_usize(0) {
+    const RUNTIME_MODULE_INDEX: ModuleIdx = ModuleIdx::from_usize_unchecked(0);
+    if canonical_ref.owner.is_dummy() || canonical_ref.owner == RUNTIME_MODULE_INDEX {
       FxHashSet::default()
     } else {
       let scoping = symbol_db.local_db(canonical_ref.owner).ast_scopes.scoping();
@@ -135,13 +136,11 @@ impl<'name> Renamer<'name> {
       }
       let root_symbol_ids =
         scoping.get_bindings(scoping.root_scope_id()).values().collect::<FxHashSet<_>>();
-      symbol_db
-        .local_db(canonical_ref.owner)
-        .ast_scopes
-        .scoping()
+      scoping
         .symbol_ids()
-        .filter(|symbol_id| !root_symbol_ids.contains(symbol_id))
-        .map(|symbol_id| scoping.symbol_name(symbol_id))
+        .zip(scoping.symbol_names())
+        .filter(|(symbol_id, _)| !root_symbol_ids.contains(symbol_id))
+        .map(|(_, name)| name)
         .collect::<FxHashSet<&str>>()
     }
   }

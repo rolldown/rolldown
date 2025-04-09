@@ -137,7 +137,11 @@ export class PluginContextImpl extends MinimalPluginContextImpl {
         await context.load(
           id,
           bindingifySideEffects(options.moduleSideEffects),
-          resolveFn!,
+          (_success) => {
+            // Here the bundler will give an error for it, so here avoid give other error again, it could be is confusing.
+            // TODO: It maybe could be improved in the future.
+            resolveFn!();
+          },
         );
       } finally {
         // If the load module has failed, avoid it re-load using unresolved promise.

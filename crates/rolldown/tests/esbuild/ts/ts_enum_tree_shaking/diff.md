@@ -291,7 +291,7 @@ let x;
 (function(_x) {
 	console.log(x, y);
 })(x || (x = {}));
-var x = /* @__PURE__ */ function(x) {
+x = /* @__PURE__ */ function(x) {
 	x[x["y"] = 123] = "y";
 	return x;
 }(x || {});
@@ -303,26 +303,20 @@ var x = /* @__PURE__ */ function(x) {
 ===================================================================
 --- esbuild	/out/namespace-before.js
 +++ rolldown	namespace-before.js
-@@ -1,7 +1,12 @@
+@@ -1,7 +1,8 @@
 -(x2 => {
 -    console.log(x2, y);
-+
-+//#region namespace-before.ts
-+let x;
-+(function(_x) {
-+	console.log(x, y);
++var x;
++(function (_x) {
++    console.log(x, y);
  })(x || (x = {}));
 -var x = (x2 => {
 -    x2[x2["y"] = 123] = "y";
 -    return x2;
--})(x || ({}));
-+var x = /* @__PURE__ */ function(x) {
-+	x[x["y"] = 123] = "y";
-+	return x;
-+}(x || {});
-+
-+//#endregion
-\ No newline at end of file
++x = (function (x) {
++    x[x["y"] = 123] = "y";
++    return x;
+ })(x || ({}));
 
 ```
 ## /out/namespace-after.js

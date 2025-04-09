@@ -699,7 +699,7 @@ expression: output
 
 # tests/esbuild/default/const_with_let_no_bundle
 
-- entry-!~{000}~.js => entry-Bw7snr_N.js
+- entry-!~{000}~.js => entry-B7XOJ017.js
 
 # tests/esbuild/default/const_with_let_no_mangle
 
@@ -3444,7 +3444,7 @@ expression: output
 # tests/esbuild/ts/ts_enum_tree_shaking
 
 - namespace-after-!~{007}~.js => namespace-after-DFRDf-3O.js
-- namespace-before-!~{006}~.js => namespace-before-It6rDugU.js
+- namespace-before-!~{006}~.js => namespace-before-7un-Ui15.js
 - sibling-enum-after-!~{005}~.js => sibling-enum-after-CTTV4Sil.js
 - sibling-enum-before-!~{003}~.js => sibling-enum-before-BMw0MYML.js
 - sibling-enum-middle-!~{004}~.js => sibling-enum-middle-BI5VWkRl.js
@@ -3638,9 +3638,9 @@ expression: output
 
 # tests/esbuild/ts/ts_sibling_enum
 
-- nested-number-!~{003}~.js => nested-number-CeNALRZA.js
-- nested-propagation-!~{005}~.js => nested-propagation-BVgm6Ca3.js
-- nested-string-!~{004}~.js => nested-string-D31C9uGD.js
+- nested-number-!~{003}~.js => nested-number-j83XVZsR.js
+- nested-propagation-!~{005}~.js => nested-propagation-BcMrL4hg.js
+- nested-string-!~{004}~.js => nested-string-B2Nj4oWz.js
 - number-!~{000}~.js => number-DeBfvXot.js
 - propagation-!~{002}~.js => propagation-CgZ239_4.js
 - string-!~{001}~.js => string-M7QGR9zT.js

@@ -20,6 +20,7 @@ use rolldown_fs::{FileSystem, OsFileSystem};
 use rolldown_plugin::{
   __inner::SharedPluginable, HookBuildEndArgs, HookRenderErrorArgs, SharedPluginDriver,
 };
+use rolldown_utils::dashmap::FxDashSet;
 use std::sync::Arc;
 use tracing_chrome::FlushGuard;
 
@@ -210,8 +211,6 @@ impl Bundler {
       .generate_bundle(&mut output.assets, is_write, &self.options, &mut output.warnings)
       .await?;
 
-    output.watch_files = self.plugin_driver.watch_files.iter().map(|f| f.clone()).collect();
-
     self.merge_immutable_fields_for_cache(link_stage_output.symbol_db);
 
     if self.options.is_hmr_enabled() {
@@ -232,6 +231,10 @@ impl Bundler {
   #[inline]
   pub fn options(&self) -> &NormalizedBundlerOptions {
     &self.options
+  }
+
+  pub fn get_watch_files(&self) -> &Arc<FxDashSet<ArcStr>> {
+    &self.plugin_driver.watch_files
   }
 
   pub async fn generate_hmr_patch(&mut self, changed_files: Vec<String>) -> BuildResult<String> {

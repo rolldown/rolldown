@@ -1,5 +1,5 @@
 use oxc::{
-  allocator::{self, Allocator, Box, Dummy, IntoIn},
+  allocator::{self, Allocator, Box, Dummy, IntoIn, TakeIn},
   ast::{
     AstBuilder, NONE,
     ast::{
@@ -878,7 +878,7 @@ impl<'ast> AstSnippet<'ast> {
 
   pub fn expr_without_parentheses(&self, mut expr: Expression<'ast>) -> Expression<'ast> {
     while let Expression::ParenthesizedExpression(mut paren_expr) = expr {
-      expr = self.builder.move_expression(&mut paren_expr.expression);
+      expr = paren_expr.expression.take_in(self.builder.allocator);
     }
     expr
   }

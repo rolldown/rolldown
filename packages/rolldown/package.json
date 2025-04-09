@@ -2,6 +2,7 @@
   "name": "rolldown",
   "version": "1.0.0-beta.7",
   "description": "Fast JavaScript/TypeScript bundler in Rust with Rollup-compatible API.",
+  "type": "commonjs",
   "homepage": "https://rolldown.rs/",
   "repository": {
     "type": "git",
@@ -24,35 +25,35 @@
     "!dist/*.node"
   ],
   "bin": {
-    "rolldown": "./bin/cli.js"
+    "rolldown": "./bin/cli.mjs"
   },
-  "main": "./dist/cjs/index.cjs",
+  "main": "./dist/index.cjs",
   "types": "./dist/types/index.d.ts",
   "exports": {
     ".": {
       "types": "./dist/types/index.d.ts",
-      "require": "./dist/cjs/index.cjs",
-      "import": "./dist/esm/index.mjs"
+      "require": "./dist/index.cjs",
+      "import": "./dist/index.mjs"
     },
     "./experimental": {
       "types": "./dist/types/experimental-index.d.ts",
-      "require": "./dist/cjs/experimental-index.cjs",
-      "import": "./dist/esm/experimental-index.mjs"
+      "require": "./dist/experimental-index.cjs",
+      "import": "./dist/experimental-index.mjs"
     },
     "./parallel-plugin": {
       "types": "./dist/types/parallel-plugin.d.ts",
-      "require": "./dist/cjs/parallel-plugin.cjs",
-      "import": "./dist/esm/parallel-plugin.mjs"
+      "require": "./dist/parallel-plugin.cjs",
+      "import": "./dist/parallel-plugin.mjs"
     },
     "./parseAst": {
       "types": "./dist/types/parse-ast-index.d.ts",
-      "require": "./dist/cjs/parse-ast-index.cjs",
-      "import": "./dist/esm/parse-ast-index.mjs"
+      "require": "./dist/parse-ast-index.cjs",
+      "import": "./dist/parse-ast-index.mjs"
     },
     "./package.json": "./package.json"
   },
   "imports": {
-    "#parallel-plugin-worker": "./dist/esm/parallel-plugin-worker.mjs"
+    "#parallel-plugin-worker": "./dist/parallel-plugin-worker.mjs"
   },
   "publishConfig": {
     "registry": "https://registry.npmjs.org/",
@@ -61,12 +62,12 @@
   "scripts": {
     "# Scrips for binding #": "_",
     "artifacts": "napi artifacts --cwd ./src --package-json-path ../package.json -o=../artifacts --npm-dir ../npm",
-    "build-binding": "node ./build-binding.js",
+    "build-binding": "tsx ./build-binding.mts",
     "build-binding:release": "pnpm build-binding --release",
     "build-binding:wasi": "pnpm build-binding --target wasm32-wasip1-threads",
     "build-binding:wasi:release": "pnpm build-binding --profile release-wasi --target wasm32-wasip1-threads",
     "# Scrips for node #": "_",
-    "bak_build-node": "unbuild",
+    "build-node": "tsx ./build.ts",
     "build-types": "tsc -p ./tsconfig.json",
     "build-node": "tsx ./build.ts",
     "build-types-check": "tsc -p ./tsconfig.check.json",
@@ -105,12 +106,12 @@
     "dtsHeader": "type MaybePromise<T> = T | Promise<T>\ntype Nullable<T> = T | null | undefined\ntype VoidNullable<T = void> = T | null | undefined | void\nexport type BindingStringOrRegex = string | RegExp\n\n"
   },
   "dependencies": {
-    "@oxc-project/types": "0.62.0",
+    "@oxc-project/types": "0.63.0",
     "@valibot/to-json-schema": "1.0.0",
     "valibot": "1.0.0"
   },
   "peerDependencies": {
-    "@oxc-project/runtime": "0.62.0"
+    "@oxc-project/runtime": "0.63.0"
   },
   "peerDependenciesMeta": {
     "@oxc-project/runtime": {
@@ -132,7 +133,7 @@
     "fs-extra": "^11.2.0",
     "glob": "^11.0.0",
     "locate-character": "^3.0.0",
-    "oxc-parser": "^0.62.0",
+    "oxc-parser": "^0.63.0",
     "remeda": "^2.10.0",
     "rolldown": "workspace:*",
     "rollup": "^4.18.0",

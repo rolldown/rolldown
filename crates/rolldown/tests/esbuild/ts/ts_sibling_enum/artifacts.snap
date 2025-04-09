@@ -18,10 +18,10 @@ let foo;
 	_foo.x = x;
 })(foo || (foo = {}));
 (function(_foo2) {
-	x = /* @__PURE__ */ function(x) {
+	let x = /* @__PURE__ */ function(x) {
 		x[x["z"] = 1] = "z";
 		return x;
-	}(x || {});
+	}({});
 	_foo2.x = x;
 })(foo || (foo = {}));
 (function(_foo3) {
@@ -59,10 +59,10 @@ let n;
 	_n2.x = x;
 })(n || (n = {}));
 (function(_n3) {
-	x = /* @__PURE__ */ function(x) {
+	let x = /* @__PURE__ */ function(x) {
 		x[x["g"] = x.f >> 4] = "g";
 		return x;
-	}(x || {});
+	}({});
 	_n3.x = x;
 	console.log(a.b, n.a.b, n["a"]["b"], x.g, n.x.g, n["x"]["g"]);
 })(n || (n = {}));
@@ -85,10 +85,10 @@ let foo;
 	_foo.x = x;
 })(foo || (foo = {}));
 (function(_foo2) {
-	x = /* @__PURE__ */ function(x) {
+	let x = /* @__PURE__ */ function(x) {
 		x["z"] = "a";
 		return x;
-	}(x || {});
+	}({});
 	_foo2.x = x;
 })(foo || (foo = {}));
 (function(_foo3) {

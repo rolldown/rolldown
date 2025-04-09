@@ -3,6 +3,7 @@
   "version": "1.0.0-beta.7",
   "description": "Fast JavaScript/TypeScript bundler in Rust with Rollup-compatible API.",
   "homepage": "https://rolldown.rs/",
+  "type": "commonjs",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/rolldown/rolldown.git",
@@ -25,35 +26,35 @@
     "!dist/*.node"
   ],
   "bin": {
-    "rolldown": "./bin/cli.js"
+    "rolldown": "./bin/cli.mjs"
   },
-  "main": "./dist/cjs/index.cjs",
+  "main": "./dist/index.cjs",
   "types": "./dist/types/index.d.ts",
   "exports": {
     ".": {
       "types": "./dist/types/index.d.ts",
-      "require": "./dist/cjs/index.cjs",
-      "import": "./dist/esm/index.mjs"
+      "require": "./dist/index.cjs",
+      "import": "./dist/index.mjs"
     },
     "./experimental": {
       "types": "./dist/types/experimental-index.d.ts",
-      "require": "./dist/cjs/experimental-index.cjs",
-      "import": "./dist/esm/experimental-index.mjs"
+      "require": "./dist/experimental-index.cjs",
+      "import": "./dist/experimental-index.mjs"
     },
     "./parallel-plugin": {
       "types": "./dist/types/parallel-plugin.d.ts",
-      "require": "./dist/cjs/parallel-plugin.cjs",
-      "import": "./dist/esm/parallel-plugin.mjs"
+      "require": "./dist/parallel-plugin.cjs",
+      "import": "./dist/parallel-plugin.mjs"
     },
     "./parseAst": {
       "types": "./dist/types/parse-ast-index.d.ts",
-      "require": "./dist/cjs/parse-ast-index.cjs",
-      "import": "./dist/esm/parse-ast-index.mjs"
+      "require": "./dist/parse-ast-index.cjs",
+      "import": "./dist/parse-ast-index.mjs"
     },
     "./package.json": "./package.json"
   },
   "imports": {
-    "#parallel-plugin-worker": "./dist/esm/parallel-plugin-worker.mjs"
+    "#parallel-plugin-worker": "./dist/parallel-plugin-worker.mjs"
   },
   "publishConfig": {
     "registry": "https://registry.npmjs.org/",
@@ -70,12 +71,12 @@
   },
   "dependencies": {
     "@napi-rs/wasm-runtime": "^0.2.4",
-    "@oxc-project/types": "0.62.0",
+    "@oxc-project/types": "0.63.0",
     "@valibot/to-json-schema": "1.0.0",
     "valibot": "1.0.0"
   },
   "peerDependencies": {
-    "@oxc-project/runtime": "0.62.0"
+    "@oxc-project/runtime": "0.63.0"
   },
   "peerDependenciesMeta": {
     "@oxc-project/runtime": {

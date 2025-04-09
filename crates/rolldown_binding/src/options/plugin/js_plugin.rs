@@ -11,7 +11,7 @@ use napi::bindgen_prelude::FnArgs;
 use rolldown::ModuleType;
 use rolldown_common::NormalModule;
 use rolldown_plugin::{__inner::SharedPluginable, Plugin, typedmap::TypedMapKey};
-use rolldown_utils::pattern_filter::{self, FilterResult};
+use rolldown_utils::pattern_filter::{self};
 use std::{borrow::Cow, ops::Deref, path::Path, sync::Arc};
 
 use super::{
@@ -196,7 +196,7 @@ impl Plugin for JsPlugin {
       ctx.inner.cwd(),
       args.module_type,
       args.code,
-    )? {
+    ) {
       return Ok(None);
     }
 
@@ -541,10 +541,8 @@ impl Plugin for JsPlugin {
 }
 
 /// If the transform hook is filtered out and need to be skipped.
-/// Using `Option<bool>` for better programming experience.
-/// return `None` means it is early return, should not be skipped.
-/// return `Some(false)` means it should be skipped.
-/// return `Some(true)` means it should not be skipped.
+/// return `false` means it should be skipped.
+/// return `true` means it should not be skipped.
 /// Since transform has three different filter, so we need to check all of them.
 fn filter_transform(
   transform_filter: Option<&BindingTransformHookFilter>,
@@ -552,19 +550,18 @@ fn filter_transform(
   cwd: &Path,
   module_type: &ModuleType,
   code: &str,
-) -> anyhow::Result<bool> {
+) -> bool {
   let Some(transform_filter) = transform_filter else {
-    return Ok(true);
+    return true;
   };
 
-  let mut fallback_ret = if let Some(ref module_type_filter) = transform_filter.module_type {
-    if module_type_filter.iter().any(|ty| ty.as_ref() == module_type) {
-      return Ok(true);
+  if let Some(ref module_type_filter) = transform_filter.module_type {
+    if !module_type_filter.iter().any(|ty| ty.as_ref() == module_type) {
+      return false;
     }
-    false
-  } else {
-    true
-  };
+  }
+
+  let mut filter_ret = true;
 
   if let Some(ref id_filter) = transform_filter.id {
     let id_res = pattern_filter::filter(
@@ -574,12 +571,11 @@ fn filter_transform(
       cwd.to_string_lossy().as_ref(),
     );
 
-    // it matched by `exclude` or `include`, early return
-    if let FilterResult::Match(id_res) = id_res {
-      return Ok(id_res);
-    }
+    filter_ret = filter_ret && id_res.inner();
+  }
 
-    fallback_ret = fallback_ret && id_res.inner();
+  if !filter_ret {
+    return false;
   }
 
   if let Some(ref code_filter) = transform_filter.code {
@@ -589,15 +585,9 @@ fn filter_transform(
       code,
     );
 
-    // it matched by `exclude` or `include`, early return
-    if let FilterResult::Match(code_res) = code_res {
-      return Ok(code_res);
-    }
-
-    fallback_ret = fallback_ret && code_res.inner();
+    filter_ret = filter_ret && code_res.inner();
   }
-
-  Ok(fallback_ret)
+  filter_ret
 }
 
 #[cfg(test)]
@@ -611,6 +601,7 @@ mod tests {
   use super::*;
 
   #[test]
+  #[allow(clippy::too_many_lines)]
   fn test_filter() {
     #[derive(Debug)]
     struct InputFilter {
@@ -670,7 +661,38 @@ mod tests {
           ("foo.js", "import.meta", false),
           ("foo.js", "import_meta", false),
           ("foo.ts", "import.meta", true),
-          ("foo.ts", "import_meta", true),
+          ("foo.ts", "import_meta", false),
+        ],
+      },
+      TestCases {
+        input_id_filter: Some(InputFilter {
+          exclude: string_filter("*b"),
+          include: string_filter("a*"),
+        }),
+        input_code_filter: Some(InputFilter {
+          exclude: string_filter("b"),
+          include: string_filter("a"),
+        }),
+        cases: vec![
+          ("ab", "", false),
+          ("a", "b", false),
+          ("a", "", false),
+          ("c", "a", false),
+          ("a", "a", true),
+        ],
+      },
+      TestCases {
+        input_id_filter: Some(InputFilter {
+          exclude: string_filter("*b"),
+          include: string_filter("a*"),
+        }),
+        input_code_filter: Some(InputFilter { exclude: string_filter("b"), include: None }),
+        cases: vec![
+          ("ab", "", false),
+          ("a", "b", false),
+          ("a", "", true),
+          ("c", "a", false),
+          ("a", "a", true),
         ],
       },
     ];
@@ -691,8 +713,7 @@ mod tests {
       for (si, (id, code, expected)) in test_case.cases.into_iter().enumerate() {
         let result = filter_transform(Some(&filter), id, Path::new(""), &ModuleType::Js, code);
         assert_eq!(
-          result.unwrap(),
-          expected,
+          result, expected,
           r"Failed at Case {i}  subcase {si}.\n filter: {filter:?}, id: {id}, code: {code}",
         );
       }

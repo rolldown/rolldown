@@ -264,10 +264,10 @@ let foo;
 	_foo.x = x;
 })(foo || (foo = {}));
 (function(_foo2) {
-	x = /* @__PURE__ */ function(x) {
+	let x = /* @__PURE__ */ function(x) {
 		x[x["z"] = 1] = "z";
 		return x;
-	}(x || {});
+	}({});
 	_foo2.x = x;
 })(foo || (foo = {}));
 (function(_foo3) {
@@ -309,10 +309,10 @@ export { foo };
 -        x2[x2["z"] = 1] = "z";
 -    })(x = foo2.x || (foo2.x = {}));
 +(function (_foo2) {
-+    x = (function (x) {
++    let x = (function (x) {
 +        x[x["z"] = 1] = "z";
 +        return x;
-+    })(x || ({}));
++    })({});
 +    _foo2.x = x;
  })(foo || (foo = {}));
 -(foo2 => {
@@ -368,10 +368,10 @@ let foo;
 	_foo.x = x;
 })(foo || (foo = {}));
 (function(_foo2) {
-	x = /* @__PURE__ */ function(x) {
+	let x = /* @__PURE__ */ function(x) {
 		x["z"] = "a";
 		return x;
-	}(x || {});
+	}({});
 	_foo2.x = x;
 })(foo || (foo = {}));
 (function(_foo3) {
@@ -413,10 +413,10 @@ export { foo };
 -        x2["z"] = "a";
 -    })(x = foo2.x || (foo2.x = {}));
 +(function (_foo2) {
-+    x = (function (x) {
++    let x = (function (x) {
 +        x["z"] = "a";
 +        return x;
-+    })(x || ({}));
++    })({});
 +    _foo2.x = x;
  })(foo || (foo = {}));
 -(foo2 => {
@@ -483,10 +483,10 @@ let n;
 	_n2.x = x;
 })(n || (n = {}));
 (function(_n3) {
-	x = /* @__PURE__ */ function(x) {
+	let x = /* @__PURE__ */ function(x) {
 		x[x["g"] = x.f >> 4] = "g";
 		return x;
-	}(x || {});
+	}({});
 	_n3.x = x;
 	console.log(a.b, n.a.b, n["a"]["b"], x.g, n.x.g, n["x"]["g"]);
 })(n || (n = {}));
@@ -539,10 +539,10 @@ export { n };
 -    })(x = n2.x || (n2.x = {}));
 -    console.log(100, 100, 100, 625, 625, 625);
 +(function (_n3) {
-+    x = (function (x) {
++    let x = (function (x) {
 +        x[x["g"] = x.f >> 4] = "g";
 +        return x;
-+    })(x || ({}));
++    })({});
 +    _n3.x = x;
 +    console.log(a.b, n.a.b, n["a"]["b"], x.g, n.x.g, n["x"]["g"]);
  })(n || (n = {}));

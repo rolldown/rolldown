@@ -17,6 +17,9 @@ test('validate input option', async () => {
         // @ts-ignore
         chokidar: {},
       },
+      experimental: {
+        hmr: {}
+      }
     })
     expect.unreachable()
   } catch (error: any) {

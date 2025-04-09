@@ -315,6 +315,14 @@ const OnwarnSchema = v.pipe(
   ),
 );
 
+const HmrSchema = v.union([
+  v.boolean(),
+  v.strictObject({
+    port: v.optional(v.number()),
+    host: v.optional(v.string()),
+  }),
+]);
+
 const InputOptionsSchema = v.strictObject({
   input: v.optional(InputOptionSchema),
   plugins: v.optional(v.custom<RolldownPluginOption>(() => true)),
@@ -359,7 +367,7 @@ const InputOptionsSchema = v.strictObject({
       enableComposingJsPlugins: v.optional(v.boolean()),
       resolveNewUrlToAsset: v.optional(v.boolean()),
       strictExecutionOrder: v.optional(v.boolean()),
-      hmr: v.optional(v.boolean()),
+      hmr: v.optional(HmrSchema),
     }),
   ),
   define: v.pipe(

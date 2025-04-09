@@ -83,15 +83,47 @@ impl<'name> Renamer<'name> {
     self.used_canonical_names.insert(name, 0);
   }
 
-  #[expect(clippy::map_entry)]
   pub fn add_symbol_in_root_scope(&mut self, symbol_ref: SymbolRef) {
     let canonical_ref = symbol_ref.canonical_ref(self.symbol_db);
-    let original_name = canonical_ref.name(self.symbol_db).to_rstr();
+    let original_name = canonical_ref.name(self.symbol_db);
 
-    if !self.canonical_names.contains_key(&canonical_ref) {
-      let name = self.get_unique_name(symbol_ref, &original_name);
-      self.canonical_names.insert(canonical_ref, name);
-    }
+    self.canonical_names.entry(canonical_ref).or_insert_with(|| {
+      let (mut candidate_name, count) =
+        match self.used_canonical_names.entry(original_name.to_rstr()) {
+          Entry::Occupied(o) => {
+            let count = o.into_mut();
+            *count += 1;
+            (Self::generate_candidate_name(original_name, *count), count)
+          }
+          Entry::Vacant(v) => (original_name.to_rstr(), v.insert(0)),
+        };
+
+      loop {
+        let is_root_binding = self.entry_module.is_some_and(|module| {
+          let scoping = module.ast_scopes.scoping();
+          scoping.get_root_binding(&candidate_name).is_some_and(|symbol_id| {
+            let base_symbol = SymbolRef::from((module.owner_idx, symbol_id));
+            base_symbol == symbol_ref || base_symbol.canonical_ref(self.symbol_db) == symbol_ref
+          })
+        });
+
+        if (is_root_binding && !self.manual_reserved.contains(candidate_name.as_str()))
+          || !self.used_names.contains(&candidate_name)
+            && !(self.entry_module_used_names.contains(candidate_name.as_str()))
+            && !self
+              .module_used_names
+              .entry(symbol_ref.owner)
+              .or_insert_with(|| Self::get_module_used_names(self.symbol_db, symbol_ref))
+              .contains(candidate_name.as_str())
+        {
+          self.used_names.insert(candidate_name.clone());
+          return candidate_name;
+        }
+
+        *count += 1;
+        candidate_name = Self::generate_candidate_name(original_name, *count);
+      }
+    });
   }
 
   fn generate_candidate_name(original_name: &str, count: u32) -> Rstr {
@@ -118,44 +150,6 @@ impl<'name> Renamer<'name> {
         .filter(|(symbol_id, _)| !root_symbol_ids.contains(symbol_id))
         .map(|(_, name)| name)
         .collect::<FxHashSet<&str>>()
-    }
-  }
-
-  fn get_unique_name(&mut self, canonical_ref: SymbolRef, original_name: &str) -> Rstr {
-    let (mut candidate_name, count) = match self.used_canonical_names.entry(original_name.to_rstr())
-    {
-      Entry::Occupied(o) => {
-        let count = o.into_mut();
-        *count += 1;
-        (Self::generate_candidate_name(original_name, *count), count)
-      }
-      Entry::Vacant(v) => (original_name.to_rstr(), v.insert(0)),
-    };
-
-    loop {
-      let is_root_binding = self.entry_module.is_some_and(|module| {
-        let scoping = module.ast_scopes.scoping();
-        scoping.get_root_binding(&candidate_name).is_some_and(|symbol_id| {
-          let base_symbol = SymbolRef::from((module.owner_idx, symbol_id));
-          base_symbol == canonical_ref || base_symbol.canonical_ref(self.symbol_db) == canonical_ref
-        })
-      });
-
-      if (is_root_binding && !self.manual_reserved.contains(candidate_name.as_str()))
-        || !self.used_names.contains(&candidate_name)
-          && !(self.entry_module_used_names.contains(candidate_name.as_str()))
-          && !self
-            .module_used_names
-            .entry(canonical_ref.owner)
-            .or_insert_with(|| Self::get_module_used_names(self.symbol_db, canonical_ref))
-            .contains(candidate_name.as_str())
-      {
-        self.used_names.insert(candidate_name.clone());
-        return candidate_name;
-      }
-
-      *count += 1;
-      candidate_name = Self::generate_candidate_name(original_name, *count);
     }
   }
 

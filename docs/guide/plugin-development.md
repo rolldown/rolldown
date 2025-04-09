@@ -55,8 +55,23 @@ In addition to `id`, you can also filter based on `moduleType` and the module's 
 
 - If multiple values are passed to `include`, the filter matches if **any** of them match.
 - If a filter has both `include` and `exclude`, `exclude` takes precedence.
-- The filters are checked in the following order: `moduleType`, `id`, `code`. If any filter matches, it **early returns**. For example, if a module is excluded by the `moduleType` filter, it is excluded regardless of the `id` or `code` filters.
-
+- The filters are checked in the following order: `moduleType`, `id`, `code`. 
+When Multiple filter type is specified at the same time, any exclude filter type is matched will early return `false`, it would only return `true` if all include are matched at the same time.
+Here is an example:
+```js
+{
+  id: {
+    include: /\.js$/,
+    exclude: /\.ts$/
+  },
+  code: {
+    include: 'foo',
+    exclude: 'bar'
+  }
+}
+```
+Only module filename ends with `.js` and contains `foo` in source code but also don't contains `bar` will match the filter
+  
 Full `HookFilter` interface for the `filter` property:
 
 ````ts

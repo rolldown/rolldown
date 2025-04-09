@@ -144,7 +144,7 @@ pub fn deconflict_chunk_symbols(
         .for_each(|symbol_ref| {
           let canonical_ref = &symbol_ref.canonical_ref(&link_output.symbol_db);
           if let Some(symbol) = named_imports_map.get(canonical_ref) {
-            let original_name = symbol.name(&link_output.symbol_db).to_rstr();
+            let original_name = symbol.name(&link_output.symbol_db);
             renamer.add_symbol_in_root_scope_with_original_name(*canonical_ref, original_name);
           } else {
             renamer.add_symbol_in_root_scope(*canonical_ref);

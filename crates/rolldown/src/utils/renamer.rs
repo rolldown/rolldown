@@ -98,17 +98,17 @@ impl<'name> Renamer<'name> {
   pub fn add_symbol_in_root_scope_with_original_name(
     &mut self,
     symbol_ref: SymbolRef,
-    original_name: Rstr,
+    original_name: &str,
   ) {
     let canonical_ref = symbol_ref.canonical_ref(self.symbol_db);
 
     if !self.canonical_names.contains_key(&canonical_ref) {
-      let name = self.get_unique_name(symbol_ref, &original_name);
+      let name = self.get_unique_name(symbol_ref, original_name);
       self.canonical_names.insert(canonical_ref, name);
     }
   }
 
-  fn generate_candidate_name(original_name: &Rstr, count: u32) -> Rstr {
+  fn generate_candidate_name(original_name: &str, count: u32) -> Rstr {
     concat_string!(original_name, "$", itoa::Buffer::new().format(count)).into()
   }
 
@@ -135,14 +135,15 @@ impl<'name> Renamer<'name> {
     }
   }
 
-  fn get_unique_name(&mut self, canonical_ref: SymbolRef, original_name: &Rstr) -> Rstr {
-    let (mut candidate_name, count) = match self.used_canonical_names.entry(original_name.clone()) {
+  fn get_unique_name(&mut self, canonical_ref: SymbolRef, original_name: &str) -> Rstr {
+    let (mut candidate_name, count) = match self.used_canonical_names.entry(original_name.to_rstr())
+    {
       Entry::Occupied(o) => {
         let count = o.into_mut();
         *count += 1;
-        (Self::generate_candidate_name(&original_name, *count), count)
+        (Self::generate_candidate_name(original_name, *count), count)
       }
-      Entry::Vacant(v) => (original_name.clone(), v.insert(0)),
+      Entry::Vacant(v) => (original_name.to_rstr(), v.insert(0)),
     };
 
     loop {
@@ -168,7 +169,7 @@ impl<'name> Renamer<'name> {
       }
 
       *count += 1;
-      candidate_name = Self::generate_candidate_name(&original_name, *count);
+      candidate_name = Self::generate_candidate_name(original_name, *count);
     }
   }
 

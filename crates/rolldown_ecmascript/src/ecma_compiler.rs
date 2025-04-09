@@ -150,8 +150,8 @@ impl EcmaCompiler {
     }
     let scoping = options.mangle.map(|options| {
       let semantic = SemanticBuilder::new()
-        .with_stats(stats)
         .with_scope_tree_child_ids(true)
+        .with_stats(stats)
         .build(program)
         .semantic;
       Mangler::default().with_options(options).build_with_semantic(semantic, program)

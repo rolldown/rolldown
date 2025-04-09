@@ -208,7 +208,7 @@ fn json_object_expr_to_esm(
   // recreate semantic data
   #[allow(clippy::cast_possible_truncation)]
   let scoping = ecma_ast.make_symbol_table_and_scope_tree_with_semantic_builder(
-    SemanticBuilder::new().with_scope_tree_child_ids(true).with_stats(Stats {
+    SemanticBuilder::new().with_stats(Stats {
       nodes: declaration_binding_names.len().next_power_of_two() as u32,
       scopes: 1,
       symbols: declaration_binding_names.len() as u32,

@@ -139,8 +139,6 @@ impl PreProcessEcmaAst {
     // NOTE: Recreate semantic data because AST is changed in the transformations above.
     let scoping = ast.program.with_dependent(|_owner, dep| {
       SemanticBuilder::new()
-        // Required by `module.scope.get_child_ids` in `crates/rolldown/src/utils/renamer.rs`.
-        .with_scope_tree_child_ids(true)
         // Preallocate memory for the underlying data structures.
         .with_stats(self.stats)
         .build(&dep.program)

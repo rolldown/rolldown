@@ -12,7 +12,7 @@ for (const e of x) console.log(e);
 ```js
 
 //#region bar.js
-var bar = class {
+var bar$1 = class {
 	static base = true;
 };
 var bar$ = class {
@@ -30,7 +30,7 @@ var bar$ = class {
 	barb.test();
 }
 {
-	let bar = class extends bar {
+	let bar = class extends bar$1 {
 		static test() {
 			assert.ok(bar.base);
 		}
@@ -52,7 +52,7 @@ var bar$ = class {
 -for (const c = x; ; ) console.log(c);
 -for (const d in x) console.log(d);
 -for (const e of x) console.log(e);
-+var bar = class {
++var bar$1 = class {
 +    static base = true;
 +};
 +var bar$ = class {
@@ -67,7 +67,7 @@ var bar$ = class {
 +    barb.test();
 +}
 +{
-+    let bar = class extends bar {
++    let bar = class extends bar$1 {
 +        static test() {
 +            assert.ok(bar.base);
 +        }

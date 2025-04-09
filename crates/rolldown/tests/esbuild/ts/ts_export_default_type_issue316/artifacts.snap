@@ -9,12 +9,12 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 //#region keep/declare-class.ts
 var declare_class_default = foo;
-let dc = 123;
+let bar$12 = 123;
 
 //#endregion
 //#region keep/declare-let.ts
 var declare_let_default = foo;
-let dl = 123;
+let bar$11 = 123;
 
 //#endregion
 //#region keep/interface-merged.ts
@@ -22,17 +22,17 @@ var foo$2 = class foo$2 {
 	static x = new foo$2();
 };
 var interface_merged_default = foo$2;
-let im = 123;
+let bar$10 = 123;
 
 //#endregion
 //#region keep/interface-nested.ts
 var interface_nested_default = foo;
-let _in = 123;
+let bar$9 = 123;
 
 //#endregion
 //#region keep/type-nested.ts
 var type_nested_default = foo;
-let tn = 123;
+let bar$8 = 123;
 
 //#endregion
 //#region keep/value-namespace.ts
@@ -41,7 +41,7 @@ let foo$1;
 	let num = _foo.num = 0;
 })(foo$1 || (foo$1 = {}));
 var value_namespace_default = foo$1;
-let vn = 123;
+let bar$7 = 123;
 
 //#endregion
 //#region keep/value-namespace-merged.ts
@@ -49,61 +49,61 @@ let vn = 123;
 	let num = _foo2.num = 0;
 })(foo || (foo = {}));
 var value_namespace_merged_default = foo;
-let vnm = 123;
+let bar$6 = 123;
 
 //#endregion
 //#region remove/interface.ts
 var interface_default = foo;
-let i = 123;
+let bar$5 = 123;
 
 //#endregion
 //#region remove/interface-exported.ts
 var interface_exported_default = foo;
-let ie = 123;
+let bar$4 = 123;
 
 //#endregion
 //#region remove/type.ts
 var type_default = foo;
-let t = 123;
+let bar$3 = 123;
 
 //#endregion
 //#region remove/type-exported.ts
 var type_exported_default = foo;
-let te = 123;
+let bar$2 = 123;
 
 //#endregion
 //#region remove/type-only-namespace.ts
 var type_only_namespace_default = foo;
-let ton = 123;
+let bar$1 = 123;
 
 //#endregion
 //#region remove/type-only-namespace-exported.ts
 var type_only_namespace_exported_default = foo;
-let tone = 123;
+let bar = 123;
 
 //#endregion
 //#region entry.ts
 var entry_default = [
 	declare_class_default,
-	dc,
+	bar$12,
 	declare_let_default,
-	dl,
+	bar$11,
 	interface_merged_default,
-	im,
+	bar$10,
 	interface_nested_default,
-	_in,
+	bar$9,
 	type_nested_default,
-	tn,
+	bar$8,
 	value_namespace_default,
-	vn,
+	bar$7,
 	value_namespace_merged_default,
-	vnm,
-	i,
-	ie,
-	t,
-	te,
-	ton,
-	tone
+	bar$6,
+	bar$5,
+	bar$4,
+	bar$3,
+	bar$2,
+	bar$1,
+	bar
 ];
 
 //#endregion

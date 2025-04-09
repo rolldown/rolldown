@@ -14,7 +14,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## entry.js
 
 ```js
-import { Fragment as _Fragment, jsx as _jsx } from "react/jsx-runtime";
+import { Fragment as Fragment$1, jsx as jsx$1 } from "react/jsx-runtime";
 
 
 //#region custom-react.js
@@ -25,7 +25,7 @@ var import_custom_react = __toESM(require_custom_react());
 
 //#endregion
 //#region entry.jsx
-console.log(/* @__PURE__ */ _jsx("div", { jsx: import_custom_react.jsx }), /* @__PURE__ */ _jsx(_Fragment, { children: /* @__PURE__ */ _jsx(import_custom_react.Fragment, {}) }));
+console.log(/* @__PURE__ */ jsx$1("div", { jsx: import_custom_react.jsx }), /* @__PURE__ */ jsx$1(Fragment$1, { children: /* @__PURE__ */ jsx$1(import_custom_react.Fragment, {}) }));
 
 //#endregion
 ```

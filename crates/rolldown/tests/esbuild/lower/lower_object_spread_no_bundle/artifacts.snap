@@ -14,7 +14,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## entry.js
 
 ```js
-import { jsx as _jsx } from "react/jsx-runtime";
+import { jsx as jsx$1 } from "react/jsx-runtime";
 
 //#region entry.jsx
 let tests = [
@@ -50,27 +50,27 @@ let tests = [
 		j
 	}
 ];
-let jsx = [
-	/* @__PURE__ */ _jsx("div", {
+let jsx$2 = [
+	/* @__PURE__ */ jsx$1("div", {
 		...a,
 		...b
 	}),
-	/* @__PURE__ */ _jsx("div", {
+	/* @__PURE__ */ jsx$1("div", {
 		a: true,
 		b: true,
 		...c
 	}),
-	/* @__PURE__ */ _jsx("div", {
+	/* @__PURE__ */ jsx$1("div", {
 		...a,
 		b: true,
 		c: true
 	}),
-	/* @__PURE__ */ _jsx("div", {
+	/* @__PURE__ */ jsx$1("div", {
 		a: true,
 		...b,
 		c: true
 	}),
-	/* @__PURE__ */ _jsx("div", {
+	/* @__PURE__ */ jsx$1("div", {
 		a: true,
 		b: true,
 		...c,

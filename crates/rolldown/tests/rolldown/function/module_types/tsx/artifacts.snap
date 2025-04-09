@@ -6,12 +6,12 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## main_tsx.js
 
 ```js
-import { jsx as _jsx, jsxs as _jsxs } from "react/jsx-runtime";
+import { jsx, jsxs } from "react/jsx-runtime";
 
 //#region main.tsx
-const Hello = () => /* @__PURE__ */ _jsx("div", { children: "Hello" });
+const Hello = () => /* @__PURE__ */ jsx("div", { children: "Hello" });
 function World() {
-	return /* @__PURE__ */ _jsxs("div", { children: [/* @__PURE__ */ _jsx(Hello, {}), "World"] });
+	return /* @__PURE__ */ jsxs("div", { children: [/* @__PURE__ */ jsx(Hello, {}), "World"] });
 }
 
 //#endregion

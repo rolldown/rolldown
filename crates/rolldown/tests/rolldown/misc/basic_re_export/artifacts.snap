@@ -9,13 +9,13 @@ source: crates/rolldown_testing/src/integration_test.rs
 import assert from "node:assert";
 
 //#region a.js
-const a2 = "a.js";
+const a$1 = "a.js";
 
 //#endregion
 //#region main.js
 const a = "index.js";
 assert.equal(a, "index.js");
-assert.equal(a2, "a.js");
+assert.equal(a$1, "a.js");
 
 //#endregion
 ```

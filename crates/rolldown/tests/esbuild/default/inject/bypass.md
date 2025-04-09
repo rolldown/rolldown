@@ -47,7 +47,7 @@ const external_pkg2 = __toESM(require("external-pkg2"));
 
 //#region replacement.js
 let replace = { test() {} };
-let $inject_chain2_prop2 = { test() {} };
+let replace2 = { test() {} };
 
 //#endregion
 //#region inject.js
@@ -63,7 +63,7 @@ console.log("defined");
 console.log("should be used");
 console.log("should be used");
 console.log(replace.test);
-console.log($inject_chain2_prop2.test);
+console.log(replace2.test);
 console.log(collide);
 console.log(external_pkg.re_export);
 console.log(external_pkg2.re.export);
@@ -84,8 +84,7 @@ console.log(external_pkg2.re.export);
  var replace = {
      test() {}
  };
--var replace2 = {
-+var $inject_chain2_prop2 = {
+ var replace2 = {
      test() {}
  };
 -var import_external_pkg = require("external-pkg");
@@ -100,8 +99,7 @@ console.log(external_pkg2.re.export);
  console.log("should be used");
  console.log("should be used");
  console.log(replace.test);
--console.log(replace2.test);
-+console.log($inject_chain2_prop2.test);
+ console.log(replace2.test);
  console.log(collide);
 -console.log(import_external_pkg.re_export);
 -console.log(re_export2);

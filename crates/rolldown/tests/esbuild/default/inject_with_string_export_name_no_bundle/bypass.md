@@ -12,12 +12,12 @@ fn(test);
 ```js
 
 //#region inject.js
-const old = $inject_console_log;
-const $inject_console_log = (...args) => old.apply(console, ["log:"].concat(args));
+const old = fn;
+const fn = (...args) => old.apply(console, ["log:"].concat(args));
 
 //#endregion
 //#region entry.js
-$inject_console_log(test);
+fn(test);
 
 //#endregion
 ```
@@ -28,10 +28,8 @@ $inject_console_log(test);
 +++ rolldown	entry.js
 @@ -1,3 +1,3 @@
 -var old = console.log;
--var fn = (...args) => old.apply(console, ["log:"].concat(args));
--fn(test);
-+var old = $inject_console_log;
-+var $inject_console_log = (...args) => old.apply(console, ["log:"].concat(args));
-+$inject_console_log(test);
++var old = fn;
+ var fn = (...args) => old.apply(console, ["log:"].concat(args));
+ fn(test);
 
 ```

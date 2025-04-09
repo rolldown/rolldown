@@ -6,6 +6,7 @@
         "name": "entry",
         "import": "entry.js"
       }
-    ]
+    ],
+    "treeshake": true
   }
 }

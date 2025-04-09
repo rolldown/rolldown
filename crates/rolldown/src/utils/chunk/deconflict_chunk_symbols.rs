@@ -115,8 +115,6 @@ pub fn deconflict_chunk_symbols(
     });
   }
 
-  let mut named_imports_map = FxHashMap::default();
-
   chunk
     .modules
     .iter()
@@ -125,30 +123,13 @@ pub fn deconflict_chunk_symbols(
     .rev()
     .filter_map(|id| link_output.module_table.modules[id].as_normal())
     .for_each(|module| {
-      named_imports_map.extend(module.named_imports.keys().filter_map(|symbol_ref| {
-        let canonical_ref = symbol_ref.canonical_ref(&link_output.symbol_db);
-        let facade_symbol_classic_data =
-          link_output.symbol_db.local_db(canonical_ref.owner).facade_symbol_classic_data();
-        if facade_symbol_classic_data.contains_key(&canonical_ref.symbol) {
-          None
-        } else {
-          Some((canonical_ref, symbol_ref))
-        }
-      }));
-
       module
         .stmt_infos
         .iter()
         .filter(|stmt_info| stmt_info.is_included)
         .flat_map(|stmt_info| stmt_info.declared_symbols.iter().copied())
         .for_each(|symbol_ref| {
-          let canonical_ref = &symbol_ref.canonical_ref(&link_output.symbol_db);
-          if let Some(symbol) = named_imports_map.get(canonical_ref) {
-            let original_name = symbol.name(&link_output.symbol_db);
-            renamer.add_symbol_in_root_scope_with_original_name(*canonical_ref, original_name);
-          } else {
-            renamer.add_symbol_in_root_scope(*canonical_ref);
-          }
+          renamer.add_symbol_in_root_scope(symbol_ref);
         });
     });
 

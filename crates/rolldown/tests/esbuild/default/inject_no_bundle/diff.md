@@ -36,7 +36,7 @@ import { "reexpo.rt" as reexpo_rt } from "external-pkg2";
 
 //#region replacement.js
 let replace = { test() {} };
-let $inject_chain2_prop2 = { test() {} };
+let replaceDot = { test() {} };
 
 //#endregion
 //#region inject.js
@@ -52,7 +52,7 @@ console.log("defined");
 console.log("should be used");
 console.log("should be used");
 console.log(replace.test);
-console.log($inject_chain2_prop2.test);
+console.log(replaceDot.test);
 console.log(collide);
 console.log(re_export);
 console.log(reexpo_rt);
@@ -74,8 +74,7 @@ console.log(reexpo_rt);
 +var replace = {
      test() {}
  };
--var replaceDot = {
-+var $inject_chain2_prop2 = {
+ var replaceDot = {
      test() {}
  };
 -import {re_export as re_export2} from "external-pkg";
@@ -92,9 +91,8 @@ console.log(reexpo_rt);
  console.log("should be used");
  console.log("should be used");
 -console.log(replace2.test);
--console.log(replaceDot.test);
 +console.log(replace.test);
-+console.log($inject_chain2_prop2.test);
+ console.log(replaceDot.test);
  console.log(collide);
 -console.log(re_export2);
 +console.log(re_export);

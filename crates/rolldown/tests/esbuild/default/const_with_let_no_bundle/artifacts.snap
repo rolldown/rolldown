@@ -1,6 +1,5 @@
 ---
 source: crates/rolldown_testing/src/integration_test.rs
-snapshot_kind: text
 ---
 # Assets
 
@@ -8,20 +7,33 @@ snapshot_kind: text
 
 ```js
 
-//#region entry.js
-const a = 1;
-console.log(a);
+//#region bar.js
+var bar = class {
+	static base = true;
+};
+var bar$ = class {
+	static base = true;
+};
+
+//#endregion
+//#region expression.js
 {
-	const b = 2;
-	console.log(b);
+	let barb = class extends bar$ {
+		static test() {
+			assert.ok(bar$.base);
+		}
+	};
+	barb.test();
 }
 {
-	const b = 3;
-	unknownFn(b);
+	let bar = class extends bar {
+		static test() {
+			assert.ok(bar.base);
+		}
+	};
+	assert.strictEqual(bar.name, "bar");
+	bar.test();
 }
-for (const c = x;;) console.log(c);
-for (const d in x) console.log(d);
-for (const e of x) console.log(e);
 
 //#endregion
 ```

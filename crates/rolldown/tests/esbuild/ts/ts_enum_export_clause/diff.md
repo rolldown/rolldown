@@ -24,22 +24,22 @@ var B = /* @__PURE__ */ function(B) {
 	B[B["B"] = 2] = "B";
 	return B;
 }(B || {});
-let c = /* @__PURE__ */ function(C) {
+let C$1 = /* @__PURE__ */ function(C) {
 	C[C["C"] = 3] = "C";
 	return C;
 }({});
-var dd = /* @__PURE__ */ function(D) {
+var D$1 = /* @__PURE__ */ function(D) {
 	D[D["D"] = 4] = "D";
 	return D;
-}(dd || {});
+}(D$1 || {});
 
 //#endregion
 //#region entry.ts
 console.log([
 	A.A,
 	B.B,
-	c.C,
-	dd.D
+	C$1.C,
+	D$1.D
 ]);
 
 //#endregion
@@ -59,14 +59,14 @@ console.log([
 +    B[B["B"] = 2] = "B";
 +    return B;
 +})(B || ({}));
-+var c = (function (C) {
++var C$1 = (function (C) {
 +    C[C["C"] = 3] = "C";
 +    return C;
 +})({});
-+var dd = (function (D) {
++var D$1 = (function (D) {
 +    D[D["D"] = 4] = "D";
 +    return D;
-+})(dd || ({}));
-+console.log([A.A, B.B, c.C, dd.D]);
++})(D$1 || ({}));
++console.log([A.A, B.B, C$1.C, D$1.D]);
 
 ```

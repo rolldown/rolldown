@@ -13,12 +13,12 @@ x = () => {
 ```
 ### rolldown
 ```js
-import { jsx as _jsx } from "react/jsx-runtime";
+import { jsx } from "react/jsx-runtime";
 
 //#region entry.jsx
 x = () => {
 	class XYYYYY {}
-	return /* @__PURE__ */ _jsx(XYYYYY, { "tag-must-start-with-capital-letter": true });
+	return /* @__PURE__ */ jsx(XYYYYY, { "tag-must-start-with-capital-letter": true });
 };
 
 //#endregion
@@ -30,7 +30,7 @@ x = () => {
 +++ rolldown	entry.js
 @@ -1,6 +1,9 @@
 -// entry.jsx
-+import { jsx as _jsx } from "react/jsx-runtime";
++import { jsx } from "react/jsx-runtime";
 +
 +//#region entry.jsx
  x = () => {
@@ -40,7 +40,7 @@ x = () => {
 -};
 \ No newline at end of file
 +	class XYYYYY {}
-+	return /* @__PURE__ */ _jsx(XYYYYY, { "tag-must-start-with-capital-letter": true });
++	return /* @__PURE__ */ jsx(XYYYYY, { "tag-must-start-with-capital-letter": true });
 +};
 +
 +//#endregion

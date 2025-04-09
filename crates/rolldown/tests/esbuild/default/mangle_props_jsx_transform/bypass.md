@@ -20,12 +20,12 @@ export default /* @__PURE__ */ Foo.a(Foo.b, { c: Foo.e });
 ```
 ### rolldown
 ```js
-import { Fragment as _Fragment, jsx as _jsx } from "react/jsx-runtime";
+import { Fragment, jsx } from "react/jsx-runtime";
 
 //#region entry.jsx
 let Foo = {
 	Bar_(props) {
-		return /* @__PURE__ */ _jsx(_Fragment, { children: props.text_ });
+		return /* @__PURE__ */ jsx(Fragment, { children: props.text_ });
 	},
 	hello_: "hello, world",
 	createElement_(...args) {
@@ -35,7 +35,7 @@ let Foo = {
 		console.log("Fragment", ...args);
 	}
 };
-var entry_default = /* @__PURE__ */ _jsx(Foo.Bar_, { text_: Foo.hello_ });
+var entry_default = /* @__PURE__ */ jsx(Foo.Bar_, { text_: Foo.hello_ });
 
 //#endregion
 export { entry_default as default };
@@ -49,10 +49,10 @@ export { entry_default as default };
 -let Foo = {
 -    b(props) {
 -        return Foo.a(Foo.d, null, props.c);
-+import {Fragment as _Fragment, jsx as _jsx} from "react/jsx-runtime";
++import {Fragment, jsx} from "react/jsx-runtime";
 +var Foo = {
 +    Bar_(props) {
-+        return _jsx(_Fragment, {
++        return jsx(Fragment, {
 +            children: props.text_
 +        });
      },
@@ -69,7 +69,7 @@ export { entry_default as default };
  };
 -export default Foo.a(Foo.b, {
 -    c: Foo.e
-+var entry_default = _jsx(Foo.Bar_, {
++var entry_default = jsx(Foo.Bar_, {
 +    text_: Foo.hello_
  });
 +export {entry_default as default};

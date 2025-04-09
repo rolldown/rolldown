@@ -11,6 +11,8 @@
   diff
 ## [conditional_require_resolve](../../../crates/rolldown/tests/esbuild/default/conditional_require_resolve/diff.md)
   diff
+## [const_with_let_no_bundle](../../../crates/rolldown/tests/esbuild/default/const_with_let_no_bundle/diff.md)
+  diff
 ## decorator_printing_cjs
   missing
 ## decorator_printing_esm
@@ -41,8 +43,6 @@
   diff
 ## [import_namespace_this_value](../../../crates/rolldown/tests/esbuild/default/import_namespace_this_value/diff.md)
   diff
-## [import_re_export_es6_issue149](../../../crates/rolldown/tests/esbuild/default/import_re_export_es6_issue149/diff.md)
-  diff
 ## import_with_hash_parameter
   missing
 ## import_with_query_parameter
@@ -51,11 +51,7 @@
   diff
 ## [inject_import_meta](../../../crates/rolldown/tests/esbuild/default/inject_import_meta/diff.md)
   diff
-## [inject_jsx_dot_names](../../../crates/rolldown/tests/esbuild/default/inject_jsx_dot_names/diff.md)
-  diff
 ## [inject_no_bundle](../../../crates/rolldown/tests/esbuild/default/inject_no_bundle/diff.md)
-  diff
-## [inject_with_define](../../../crates/rolldown/tests/esbuild/default/inject_with_define/diff.md)
   diff
 ## jsx_constant_fragments
   missing
@@ -172,8 +168,11 @@
 ## [import_meta_es6](../../../crates/rolldown/tests/esbuild/default/import_meta_es6)
 ## [import_meta_no_bundle](../../../crates/rolldown/tests/esbuild/default/import_meta_no_bundle)
 ## [import_missing_common_js](../../../crates/rolldown/tests/esbuild/default/import_missing_common_js)
+## [import_re_export_es6_issue149](../../../crates/rolldown/tests/esbuild/default/import_re_export_es6_issue149)
 ## [import_then_catch](../../../crates/rolldown/tests/esbuild/default/import_then_catch)
 ## [import_with_hash_in_path](../../../crates/rolldown/tests/esbuild/default/import_with_hash_in_path)
+## [inject_jsx_dot_names](../../../crates/rolldown/tests/esbuild/default/inject_jsx_dot_names)
+## [inject_with_define](../../../crates/rolldown/tests/esbuild/default/inject_with_define)
 ## [jsx_imports_common_js](../../../crates/rolldown/tests/esbuild/default/jsx_imports_common_js)
 ## [jsx_imports_es6](../../../crates/rolldown/tests/esbuild/default/jsx_imports_es6)
 ## [jsx_this_property_esm](../../../crates/rolldown/tests/esbuild/default/jsx_this_property_esm)
@@ -217,7 +216,6 @@
 ## [comment_preservation_transform_jsx](../../../crates/rolldown/tests/esbuild/default/comment_preservation_transform_jsx/bypass.md)
 ## [common_js_from_es6](../../../crates/rolldown/tests/esbuild/default/common_js_from_es6/bypass.md)
 ## [const_with_let](../../../crates/rolldown/tests/esbuild/default/const_with_let/bypass.md)
-## [const_with_let_no_bundle](../../../crates/rolldown/tests/esbuild/default/const_with_let_no_bundle/bypass.md)
 ## [define_import_meta_es5](../../../crates/rolldown/tests/esbuild/default/define_import_meta_es5/bypass.md)
 ## [define_optional_chain_lowered](../../../crates/rolldown/tests/esbuild/default/define_optional_chain_lowered/bypass.md)
 ## [direct_eval_tainting_no_bundle](../../../crates/rolldown/tests/esbuild/default/direct_eval_tainting_no_bundle/bypass.md)

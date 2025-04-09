@@ -10,11 +10,10 @@ import assert from "node:assert";
 
 
 //#region a.js
-function s() {}
-__name(s, "test");
-function b() {}
-__name(b, "a");
-var Bar = class {
+function test$1() {}
+__name(test$1, "test");
+function a() {}
+var Foo$1 = class {
 	static {
 		__name(this, "Foo");
 	}
@@ -22,14 +21,14 @@ var Bar = class {
 
 //#endregion
 //#region main.js
-s();
-b();
+test$1();
+a();
 const test = 10;
-var Foo = class extends Bar {};
+var Foo = class extends Foo$1 {};
 console.log(`test: `, test);
 assert.strictEqual(Foo.name, "Foo");
-assert.strictEqual(Bar.name, "Foo");
-assert.strictEqual(s.name, "test");
+assert.strictEqual(Foo$1.name, "Foo");
+assert.strictEqual(test$1.name, "test");
 
 //#endregion
 ```

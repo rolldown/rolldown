@@ -8,14 +8,14 @@ source: crates/rolldown_testing/src/integration_test.rs
 ```js
 
 //#region inject.js
-const old = info;
-const info = (...args) => old.apply(console, ["log:"].concat(args));
+const old = fn;
+const fn = (...args) => old.apply(console, ["log:"].concat(args));
 
 //#endregion
 //#region entry.js
-info(test);
-info(test);
-info(test);
+fn(test);
+fn(test);
+fn(test);
 
 //#endregion
 ```

@@ -9,22 +9,22 @@ source: crates/rolldown_testing/src/integration_test.rs
 import assert from "node:assert";
 
 //#region src/demo-pkg/no-ext-browser.js
-let a = "browser";
+let browser$1 = "browser";
 
 //#endregion
 //#region src/demo-pkg/no-ext.js
-let b = "node";
+let node = "node";
 
 //#endregion
 //#region src/demo-pkg/ext-browser.js
-let d = "browser";
+let browser = "browser";
 
 //#endregion
 //#region src/entry.js
-assert.equal(a, "browser");
-assert.equal(b, "node");
-assert.equal(d, "browser");
-assert.equal(d, "browser");
+assert.equal(browser$1, "browser");
+assert.equal(node, "node");
+assert.equal(browser, "browser");
+assert.equal(browser, "browser");
 
 //#endregion
 ```

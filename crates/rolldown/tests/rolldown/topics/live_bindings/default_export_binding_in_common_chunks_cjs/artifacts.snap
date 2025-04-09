@@ -11,22 +11,22 @@ source: crates/rolldown_testing/src/integration_test.rs
 const node_assert = __toESM(require("node:assert"));
 
 //#region shared.js
-let countInDefault = 0;
+let count = 0;
 function reset() {
-	countInDefault = 0;
+	count = 0;
 }
 function inc() {
-	countInDefault += 1;
+	count += 1;
 }
 
 //#endregion
 //#region async-entry.js
 reset();
-node_assert.default.strictEqual(countInDefault, 0);
-node_assert.default.strictEqual(countInDefault, countInDefault);
+node_assert.default.strictEqual(count, 0);
+node_assert.default.strictEqual(count, count);
 inc();
-node_assert.default.strictEqual(countInDefault, 1);
-node_assert.default.strictEqual(countInDefault, countInDefault);
+node_assert.default.strictEqual(count, 1);
+node_assert.default.strictEqual(count, count);
 
 //#endregion
 ```

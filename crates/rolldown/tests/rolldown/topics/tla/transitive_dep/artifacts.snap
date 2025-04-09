@@ -8,11 +8,11 @@ source: crates/rolldown_testing/src/integration_test.rs
 ```js
 
 //#region tla.js
-const tlaValue = await Promise.resolve("tla");
+const value$1 = await Promise.resolve("tla");
 
 //#endregion
 //#region lib.js
-const value = tlaValue + "+lib";
+const value = value$1 + "+lib";
 
 //#endregion
 export { value };
@@ -29,9 +29,9 @@ Variant: (strict_execution_order: true)
 
 
 //#region tla.js
-var tlaValue;
+var value$1;
 var init_tla = __esm({ async "tla.js"() {
-	tlaValue = await Promise.resolve("tla");
+	value$1 = await Promise.resolve("tla");
 } });
 
 //#endregion
@@ -39,7 +39,7 @@ var init_tla = __esm({ async "tla.js"() {
 var value;
 var init_lib = __esm({ async "lib.js"() {
 	await init_tla();
-	value = tlaValue + "+lib";
+	value = value$1 + "+lib";
 } });
 
 //#endregion

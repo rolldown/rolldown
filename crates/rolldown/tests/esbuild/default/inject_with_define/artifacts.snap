@@ -9,7 +9,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 //#region inject.js
 let second = "success (identifier)";
-let $inject_seco_nd = "success (dot name)";
+let second2 = "success (dot name)";
 
 //#endregion
 //#region entry.js
@@ -19,7 +19,7 @@ console.log(
 	true,
 	// define forwards to inject
 	second === "success (identifier)",
-	$inject_seco_nd === "success (dot name)"
+	second2 === "success (dot name)"
 );
 
 //#endregion

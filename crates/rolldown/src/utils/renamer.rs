@@ -94,20 +94,6 @@ impl<'name> Renamer<'name> {
     }
   }
 
-  #[expect(clippy::map_entry)]
-  pub fn add_symbol_in_root_scope_with_original_name(
-    &mut self,
-    symbol_ref: SymbolRef,
-    original_name: &str,
-  ) {
-    let canonical_ref = symbol_ref.canonical_ref(self.symbol_db);
-
-    if !self.canonical_names.contains_key(&canonical_ref) {
-      let name = self.get_unique_name(symbol_ref, original_name);
-      self.canonical_names.insert(canonical_ref, name);
-    }
-  }
-
   fn generate_candidate_name(original_name: &str, count: u32) -> Rstr {
     concat_string!(original_name, "$", itoa::Buffer::new().format(count)).into()
   }

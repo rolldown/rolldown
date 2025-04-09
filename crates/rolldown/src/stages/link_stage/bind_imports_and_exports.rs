@@ -191,7 +191,6 @@ impl LinkStage<'_> {
           let legal_name = legitimize_identifier_name(key);
           Cow::Owned(legal_name.as_ref().into())
         };
-
         let target_symbol = self.symbols.create_facade_root_symbol_ref(*module_idx, &name);
         for symbol_ref in symbol_set {
           self.symbols.link(*symbol_ref, target_symbol);
@@ -528,15 +527,16 @@ impl BindImportsAndExportsContext<'_> {
           .resolved_exports
           .iter()
           .all(|(_, resolved_export)| resolved_export.symbol_ref != *imported_as_ref)
-        && matches!(named_import.imported, Specifier::Literal(_))
       {
-        self
-          .external_import_binding_merger
-          .entry(rec.resolved_module)
-          .or_default()
-          .entry(imported_as_ref.name(self.symbol_db).into())
-          .or_default()
-          .insert(*imported_as_ref);
+        if let Specifier::Literal(ref name) = named_import.imported {
+          self
+            .external_import_binding_merger
+            .entry(rec.resolved_module)
+            .or_default()
+            .entry(name.inner().clone())
+            .or_default()
+            .insert(*imported_as_ref);
+        }
       }
       let ret = self.match_import_with_export(
         self.index_modules,

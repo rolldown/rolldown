@@ -53,23 +53,23 @@ console.log(
 ```
 ### rolldown
 ```js
-import { Fragment as _Fragment, jsx as _jsx, jsxs as _jsxs } from "react/jsx-runtime";
+import { Fragment, jsx, jsxs } from "react/jsx-runtime";
 
 //#region entry.jsx
 console.log(
-	/* @__PURE__ */ _jsx("div", { x }),
-	/* @__PURE__ */ _jsx("div", { x: "y" }),
-	/* @__PURE__ */ _jsx("div", { x: true }),
-	/* @__PURE__ */ _jsx("div", { ...x }),
-	/* @__PURE__ */ _jsx("div", { children: x }),
-	/* @__PURE__ */ _jsx(_Fragment, { children: x }),
+	/* @__PURE__ */ jsx("div", { x }),
+	/* @__PURE__ */ jsx("div", { x: "y" }),
+	/* @__PURE__ */ jsx("div", { x: true }),
+	/* @__PURE__ */ jsx("div", { ...x }),
+	/* @__PURE__ */ jsx("div", { children: x }),
+	/* @__PURE__ */ jsx(Fragment, { children: x }),
 	// Comments on absent AST nodes
-	/* @__PURE__ */ _jsxs("div", { children: ["before", "after"] }),
-	/* @__PURE__ */ _jsxs("div", { children: ["before", "after"] }),
-	/* @__PURE__ */ _jsxs("div", { children: ["before", "after"] }),
-	/* @__PURE__ */ _jsxs(_Fragment, { children: ["before", "after"] }),
-	/* @__PURE__ */ _jsxs(_Fragment, { children: ["before", "after"] }),
-	/* @__PURE__ */ _jsxs(_Fragment, { children: ["before", "after"] })
+	/* @__PURE__ */ jsxs("div", { children: ["before", "after"] }),
+	/* @__PURE__ */ jsxs("div", { children: ["before", "after"] }),
+	/* @__PURE__ */ jsxs("div", { children: ["before", "after"] }),
+	/* @__PURE__ */ jsxs(Fragment, { children: ["before", "after"] }),
+	/* @__PURE__ */ jsxs(Fragment, { children: ["before", "after"] }),
+	/* @__PURE__ */ jsxs(Fragment, { children: ["before", "after"] })
 );
 
 //#endregion
@@ -81,7 +81,7 @@ console.log(
 +++ rolldown	entry.js
 @@ -1,46 +1,20 @@
 -// entry.jsx
-+import { Fragment as _Fragment, jsx as _jsx, jsxs as _jsxs } from "react/jsx-runtime";
++import { Fragment, jsx, jsxs } from "react/jsx-runtime";
 +
 +//#region entry.jsx
  console.log(
@@ -130,19 +130,19 @@ console.log(
 -  }after</>
 -);
 \ No newline at end of file
-+	/* @__PURE__ */ _jsx("div", { x }),
-+	/* @__PURE__ */ _jsx("div", { x: "y" }),
-+	/* @__PURE__ */ _jsx("div", { x: true }),
-+	/* @__PURE__ */ _jsx("div", { ...x }),
-+	/* @__PURE__ */ _jsx("div", { children: x }),
-+	/* @__PURE__ */ _jsx(_Fragment, { children: x }),
++	/* @__PURE__ */ jsx("div", { x }),
++	/* @__PURE__ */ jsx("div", { x: "y" }),
++	/* @__PURE__ */ jsx("div", { x: true }),
++	/* @__PURE__ */ jsx("div", { ...x }),
++	/* @__PURE__ */ jsx("div", { children: x }),
++	/* @__PURE__ */ jsx(Fragment, { children: x }),
 +	// Comments on absent AST nodes
-+	/* @__PURE__ */ _jsxs("div", { children: ["before", "after"] }),
-+	/* @__PURE__ */ _jsxs("div", { children: ["before", "after"] }),
-+	/* @__PURE__ */ _jsxs("div", { children: ["before", "after"] }),
-+	/* @__PURE__ */ _jsxs(_Fragment, { children: ["before", "after"] }),
-+	/* @__PURE__ */ _jsxs(_Fragment, { children: ["before", "after"] }),
-+	/* @__PURE__ */ _jsxs(_Fragment, { children: ["before", "after"] })
++	/* @__PURE__ */ jsxs("div", { children: ["before", "after"] }),
++	/* @__PURE__ */ jsxs("div", { children: ["before", "after"] }),
++	/* @__PURE__ */ jsxs("div", { children: ["before", "after"] }),
++	/* @__PURE__ */ jsxs(Fragment, { children: ["before", "after"] }),
++	/* @__PURE__ */ jsxs(Fragment, { children: ["before", "after"] }),
++	/* @__PURE__ */ jsxs(Fragment, { children: ["before", "after"] })
 +);
 +
 +//#endregion

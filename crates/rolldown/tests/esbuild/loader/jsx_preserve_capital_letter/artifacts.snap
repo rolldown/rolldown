@@ -14,14 +14,14 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## entry.js
 
 ```js
-import { jsx as _jsx } from "react/jsx-runtime";
+import { jsx } from "react/jsx-runtime";
 
 //#region foo.js
-var Test = class {};
+var mustStartWithUpperCaseLetter = class {};
 
 //#endregion
 //#region entry.jsx
-console.log(/* @__PURE__ */ _jsx(Test, {}));
+console.log(/* @__PURE__ */ jsx(mustStartWithUpperCaseLetter, {}));
 
 //#endregion
 ```

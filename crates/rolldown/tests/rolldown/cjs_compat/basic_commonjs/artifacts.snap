@@ -11,12 +11,12 @@ source: crates/rolldown_testing/src/integration_test.rs
 //#region esm.js
 var esm_exports = {};
 __export(esm_exports, {
-	default: () => esm,
+	default: () => esm_default_fn$1,
 	esm_named_class: () => esm_named_class,
 	esm_named_fn: () => esm_named_fn,
 	esm_named_var: () => esm_named_var
 });
-function esm() {}
+function esm_default_fn$1() {}
 function esm_named_fn() {}
 function hoisted_fn() {
 	const bar = 1;
@@ -40,10 +40,10 @@ var import_commonjs = __toESM(require_commonjs$1());
 //#endregion
 //#region main.js
 init_esm();
-console.log(import_commonjs.default, esm, esm_named_var, esm_named_fn, esm_named_class);
+console.log(import_commonjs.default, esm_default_fn$1, esm_named_var, esm_named_fn, esm_named_class);
 const require_commonjs = () => {};
-function esm_default_fn() {}
-console.log(require_commonjs, esm_default_fn);
+function esm_default_fn$2() {}
+console.log(require_commonjs, esm_default_fn$2);
 
 //#endregion
 ```

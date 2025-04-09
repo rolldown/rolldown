@@ -1,4 +1,4 @@
-import * as path from 'node:path'
+import path from 'node:path'
 import { expect } from 'vitest'
 import { defineTest } from 'rolldown-tests'
 import { importGlobPlugin } from 'rolldown/experimental'
@@ -23,19 +23,20 @@ export default defineTest({
           if (id === 'virtual:module') {
             return 'virtual:module'
           }
+          if (id.startsWith('/../b') || id.startsWith('/modules')) {
+            return { id, external: true }
+          }
         },
         load(id) {
           if (id === 'virtual:module') {
-            // TODO: support importGlob in virtual module
-            // const code = [
-            //   "export const a = import.meta.glob('/modules/*.ts')",
-            //   "export const b = import.meta.glob(['/../fixture-b/*.ts'])",
-            // ].join('\n')
-            // return code
-            return 'export const a = 1; export const b = 0'
+            const code = [
+              "export const a = import.meta.glob('/modules/*.ts')",
+              "export const b = import.meta.glob(['/../b/*.ts'])",
+            ].join('\n')
+            return code
           }
-        },
-      },
+        }
+      }
     ],
   },
   async afterTest(output) {

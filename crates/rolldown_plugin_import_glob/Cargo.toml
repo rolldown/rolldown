@@ -15,11 +15,9 @@ doctest = false
 workspace = true
 
 [dependencies]
-anyhow = { workspace = true }
 glob = { workspace = true }
 itoa = { workspace = true }
 oxc = { workspace = true }
 rolldown_ecmascript_utils = { workspace = true }
 rolldown_plugin = { workspace = true }
-rustc-hash = { workspace = true }
 sugar_path = { workspace = true }

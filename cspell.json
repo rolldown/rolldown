@@ -159,6 +159,7 @@
     "renderable",
     "replacen",
     "repr",
+    "rfind",
     "rolldown",
     "rollup",
     "rollupjs",

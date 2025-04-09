@@ -1,7 +1,15 @@
 
 //#region virtual:module
-const a = 1;
-const b = 0;
+const a = {
+	"/modules/a.ts": () => import("/modules/a.ts"),
+	"/modules/b.ts": () => import("/modules/b.ts"),
+	"/modules/index.ts": () => import("/modules/index.ts")
+};
+const b = {
+	"/../b/a.ts": () => import("/../b/a.ts"),
+	"/../b/b.ts": () => import("/../b/b.ts"),
+	"/../b/index.ts": () => import("/../b/index.ts")
+};
 
 //#endregion
 //#region index.ts

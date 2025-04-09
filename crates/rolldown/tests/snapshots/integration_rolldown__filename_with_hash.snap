@@ -699,7 +699,7 @@ expression: output
 
 # tests/esbuild/default/const_with_let_no_bundle
 
-- entry-!~{000}~.js => entry-BHq9kM71.js
+- entry-!~{000}~.js => entry-B7XOJ017.js
 
 # tests/esbuild/default/const_with_let_no_mangle
 

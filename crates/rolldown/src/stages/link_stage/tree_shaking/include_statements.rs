@@ -179,13 +179,23 @@ fn include_symbol(ctx: &mut Context, symbol_ref: SymbolRef) {
 
   ctx.used_symbol_refs.insert(canonical_ref);
 
-  if let Module::Normal(module) = &ctx.modules[canonical_ref.owner] {
-    include_module(ctx, module);
-    module.stmt_infos.declared_stmts_by_symbol(&canonical_ref).iter().copied().for_each(
-      |stmt_info_id| {
-        include_statement(ctx, module, stmt_info_id);
-      },
-    );
+  let mut include_symbol_impl = |symbol_ref: SymbolRef| {
+    if let Module::Normal(module) = &ctx.modules[symbol_ref.owner] {
+      include_module(ctx, module);
+      module.stmt_infos.declared_stmts_by_symbol(&symbol_ref).iter().copied().for_each(
+        |stmt_info_id| {
+          include_statement(ctx, module, stmt_info_id);
+        },
+      );
+    }
+  };
+
+  // `symbol_ref` is symbol itself in current module
+  include_symbol_impl(symbol_ref);
+  // Skip if symbol_ref is the same as canonical_ref.
+  if symbol_ref != canonical_ref {
+    // `canonical_ref` is the symbol that imports from the other module.
+    include_symbol_impl(canonical_ref);
   }
 }
 

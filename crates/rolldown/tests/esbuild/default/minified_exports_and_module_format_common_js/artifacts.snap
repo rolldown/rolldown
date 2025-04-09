@@ -9,19 +9,19 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 
 //#region foo/test.js
-var test_exports$1 = {};
-__export(test_exports$1, { foo: () => foo$1 });
+var test_exports = {};
+__export(test_exports, { foo: () => foo$1 });
 let foo$1 = 123;
 
 //#endregion
 //#region bar/test.js
-var test_exports = {};
-__export(test_exports, { bar: () => bar$1 });
+var test_exports$1 = {};
+__export(test_exports$1, { bar: () => bar$1 });
 let bar$1 = 123;
 
 //#endregion
 //#region entry.js
-console.log(exports, module.exports, test_exports$1, test_exports);
+console.log(exports, module.exports, test_exports, test_exports$1);
 
 //#endregion
 ```

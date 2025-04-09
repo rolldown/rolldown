@@ -16,22 +16,22 @@ var B = /* @__PURE__ */ function(B) {
 	B[B["B"] = 2] = "B";
 	return B;
 }(B || {});
-let C$1 = /* @__PURE__ */ function(C) {
+let C = /* @__PURE__ */ function(C) {
 	C[C["C"] = 3] = "C";
 	return C;
 }({});
-var D$1 = /* @__PURE__ */ function(D) {
+var D = /* @__PURE__ */ function(D) {
 	D[D["D"] = 4] = "D";
 	return D;
-}(D$1 || {});
+}(D || {});
 
 //#endregion
 //#region entry.ts
 console.log([
 	A.A,
 	B.B,
-	C$1.C,
-	D$1.D
+	C.C,
+	D.D
 ]);
 
 //#endregion

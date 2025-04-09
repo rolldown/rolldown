@@ -8,7 +8,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ```js
 
 //#region bar.js
-var bar = class {
+var bar$1 = class {
 	static base = true;
 };
 var bar$ = class {
@@ -26,7 +26,7 @@ var bar$ = class {
 	barb.test();
 }
 {
-	let bar = class extends bar {
+	let bar = class extends bar$1 {
 		static test() {
 			assert.ok(bar.base);
 		}

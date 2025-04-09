@@ -699,7 +699,7 @@ expression: output
 
 # tests/esbuild/default/const_with_let_no_bundle
 
-- entry-!~{000}~.js => entry-RBIS6bLm.js
+- entry-!~{000}~.js => entry-BHq9kM71.js
 
 # tests/esbuild/default/const_with_let_no_mangle
 
@@ -838,7 +838,7 @@ expression: output
 
 # tests/esbuild/default/exports_and_module_format_common_js
 
-- entry-!~{000}~.js => entry-DrHgV39v.js
+- entry-!~{000}~.js => entry-21CEB_oP.js
 
 # tests/esbuild/default/external_es6_converted_to_common_js
 
@@ -1381,7 +1381,7 @@ expression: output
 
 # tests/esbuild/default/minified_exports_and_module_format_common_js
 
-- entry-!~{000}~.js => entry-DhuKVKHK.js
+- entry-!~{000}~.js => entry-D0MrDPaA.js
 
 # tests/esbuild/default/minified_jsx_preserve_with_object_spread
 
@@ -2900,7 +2900,7 @@ expression: output
 
 # tests/esbuild/packagejson/package_json_browser_index_no_ext
 
-- entry-!~{000}~.js => entry-DEzgRw24.js
+- entry-!~{000}~.js => entry-Dv39UzBV.js
 
 # tests/esbuild/packagejson/package_json_browser_issue2002_a
 
@@ -2948,15 +2948,15 @@ expression: output
 
 # tests/esbuild/packagejson/package_json_browser_no_ext
 
-- entry-!~{000}~.js => entry-CDa22rfJ.js
+- entry-!~{000}~.js => entry-De-e1yQ-.js
 
 # tests/esbuild/packagejson/package_json_browser_node_modules_index_no_ext
 
-- entry-!~{000}~.js => entry-qYvU3w5L.js
+- entry-!~{000}~.js => entry-BL0xYy0_.js
 
 # tests/esbuild/packagejson/package_json_browser_node_modules_no_ext
 
-- entry-!~{000}~.js => entry-BwGK4wwh.js
+- entry-!~{000}~.js => entry-DofpIrhO.js
 
 # tests/esbuild/packagejson/package_json_browser_over_main_node
 
@@ -3428,7 +3428,7 @@ expression: output
 
 # tests/esbuild/ts/ts_enum_export_clause
 
-- entry-!~{000}~.js => entry-B_cIMqYh.js
+- entry-!~{000}~.js => entry-BbIS8cOV.js
 
 # tests/esbuild/ts/ts_enum_jsx
 
@@ -3494,7 +3494,7 @@ expression: output
 
 # tests/esbuild/ts/ts_export_default_type_issue316
 
-- entry-!~{000}~.js => entry-CRfDwfRt.js
+- entry-!~{000}~.js => entry-CwMz5eFD.js
 
 # tests/esbuild/ts/ts_export_equals
 
@@ -4342,8 +4342,8 @@ expression: output
 
 # tests/rolldown/function/minify/basic
 
-- main-!~{000}~.js => main-iuKz2ghl.js
-- main-iuKz2ghl.js.map
+- main-!~{000}~.js => main-CoGHQdMm.js
+- main-CoGHQdMm.js.map
 
 # tests/rolldown/function/minify/inject_node_env
 
@@ -4548,10 +4548,10 @@ expression: output
 
 # tests/rolldown/issues/2038/b
 
-- main-!~{000}~.js => main-BOgv8VMr.js
-- a-!~{005}~.js => a-BI0QnFA7.js
-- b-!~{001}~.js => b-CYReoXMq.js
-- b-!~{003}~.js => b-xFtuetjn.js
+- main-!~{000}~.js => main-BvxoVkC5.js
+- a-!~{005}~.js => a-B8Py3ia_.js
+- b-!~{003}~.js => b-C-qVn9bJ.js
+- b-!~{001}~.js => b-D-QK_KAT.js
 
 # tests/rolldown/issues/2085
 
@@ -4685,12 +4685,12 @@ expression: output
 
 # tests/rolldown/misc/basic
 
-- main-!~{000}~.js => main-iuKz2ghl.js
-- main-iuKz2ghl.js.map
+- main-!~{000}~.js => main-CoGHQdMm.js
+- main-CoGHQdMm.js.map
 
 # tests/rolldown/misc/basic_re_export
 
-- main-!~{000}~.js => main-CpnSvEoA.js
+- main-!~{000}~.js => main-bluvy1V7.js
 
 # tests/rolldown/misc/cjs_entry_as_dependency
 
@@ -5129,12 +5129,12 @@ expression: output
 
 # tests/rolldown/topics/deconflict/basic
 
-- main-!~{000}~.js => main-BDoDIaEP.js
+- main-!~{000}~.js => main-DhlyVCTz.js
 
 # tests/rolldown/topics/deconflict/basic_scoped
 
-- main-!~{000}~.js => main-BykqzF8f.js
-- main-BykqzF8f.js.map
+- main-!~{000}~.js => main-Bi_HEbCq.js
+- main-Bi_HEbCq.js.map
 
 # tests/rolldown/topics/deconflict/complex_params_patterns
 
@@ -5166,8 +5166,8 @@ expression: output
 
 # tests/rolldown/topics/deconflict/issue_364
 
-- main-!~{000}~.js => main-Dhg00Vwi.js
-- main-Dhg00Vwi.js.map
+- main-!~{000}~.js => main-BrMOMN94.js
+- main-BrMOMN94.js.map
 
 # tests/rolldown/topics/deconflict/wrapped_esm_default_function
 
@@ -5190,7 +5190,7 @@ expression: output
 
 # tests/rolldown/topics/keep_names/declaration
 
-- main-!~{000}~.js => main-D-HGS_0P.js
+- main-!~{000}~.js => main-D0nCGbhN.js
 
 # tests/rolldown/topics/keep_names/declaration2
 

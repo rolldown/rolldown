@@ -67,7 +67,6 @@
     "build-binding:wasi": "pnpm build-binding --target wasm32-wasip1-threads",
     "build-binding:wasi:release": "pnpm build-binding --profile release-wasi --target wasm32-wasip1-threads",
     "# Scrips for node #": "_",
-    "build-node": "tsx ./build.ts",
     "build-types": "tsc -p ./tsconfig.json",
     "build-node": "tsx ./build.ts",
     "build-types-check": "tsc -p ./tsconfig.check.json",

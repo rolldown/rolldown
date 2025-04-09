@@ -321,6 +321,7 @@ impl GlobImportVisit<'_, '_> {
       return glob;
     } else {
       // https://github.com/rolldown/vite/blob/454c8fff9f7115ed29281c2d927366280508a0ab/packages/vite/src/node/plugins/importMetaGlob.ts#L563-L569
+      // TODO: Needs to investigate if oxc resolver support this pattern
       panic!(
         "Invalid glob pattern: {glob} (resolved: '{}'), it must start with '/' or './'.",
         self.id

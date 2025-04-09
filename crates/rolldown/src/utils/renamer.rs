@@ -27,7 +27,6 @@ pub struct Renamer<'name> {
   ///                       // so we rename `a` to `a$2`
   /// ```
   ///
-  manual_reserved: FxHashSet<&'static str>,
   used_canonical_names: FxHashMap<Rstr, u32>,
   canonical_names: FxHashMap<SymbolRef, Rstr>,
   canonical_token_to_name: FxHashMap<SymbolNameRefToken, Rstr>,
@@ -46,15 +45,12 @@ impl<'name> Renamer<'name> {
   ) -> Self {
     // Port from https://github.com/rollup/rollup/blob/master/src/Chunk.ts#L1377-L1394.
     let mut manual_reserved = match format {
-      OutputFormat::Esm | OutputFormat::App => FxHashSet::default(),
-      OutputFormat::Cjs => {
-        FxHashSet::from_iter(["module", "require", "__filename", "__dirname", "exports"])
-      }
-      OutputFormat::Iife | OutputFormat::Umd => FxHashSet::from_iter(["exports"]), // Also for  AMD, but we don't support them yet.
+      OutputFormat::Esm | OutputFormat::App => vec![],
+      OutputFormat::Cjs => vec!["module", "require", "__filename", "__dirname", "exports"],
+      OutputFormat::Iife | OutputFormat::Umd => vec!["exports"], // Also for  AMD, but we don't support them yet.
     };
     // https://github.com/rollup/rollup/blob/bfbea66569491f5466fbba99de2ba6a0225f851b/src/Chunk.ts#L1359
     manual_reserved.extend(["Object", "Promise"]);
-
     Self {
       used_canonical_names: manual_reserved
         .iter()
@@ -62,7 +58,6 @@ impl<'name> Renamer<'name> {
         .chain(GLOBAL_OBJECTS.iter())
         .map(|s| (Rstr::new(s), 0))
         .collect(),
-      manual_reserved,
       canonical_names: FxHashMap::default(),
       canonical_token_to_name: FxHashMap::default(),
       symbol_db,
@@ -107,14 +102,16 @@ impl<'name> Renamer<'name> {
           })
         });
 
-        if (is_root_binding && !self.manual_reserved.contains(candidate_name.as_str()))
-          || !self.used_names.contains(&candidate_name)
+        if is_root_binding
+          || (!self.used_names.contains(&candidate_name)
+            // Cannot rename to a name that is already used in the entry module
             && !(self.entry_module_used_names.contains(candidate_name.as_str()))
+            // Cannot rename to a name that is already used in symbol itself module
             && !self
               .module_used_names
               .entry(symbol_ref.owner)
               .or_insert_with(|| Self::get_module_used_names(self.symbol_db, symbol_ref))
-              .contains(candidate_name.as_str())
+              .contains(candidate_name.as_str()))
         {
           self.used_names.insert(candidate_name.clone());
           return candidate_name;

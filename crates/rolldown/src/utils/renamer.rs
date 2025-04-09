@@ -32,8 +32,9 @@ pub struct Renamer<'name> {
   canonical_token_to_name: FxHashMap<SymbolNameRefToken, Rstr>,
   symbol_db: &'name SymbolRefDb,
   entry_module: Option<&'name SymbolRefDbForModule>,
-  entry_module_used_names: FxHashSet<&'name str>,
+  // Store every module's used names
   module_used_names: FxHashMap<ModuleIdx, FxHashSet<&'name str>>,
+  /// Store names that are used in renaming process
   used_names: FxHashSet<Rstr>,
 }
 
@@ -62,11 +63,12 @@ impl<'name> Renamer<'name> {
       canonical_token_to_name: FxHashMap::default(),
       symbol_db,
       module_used_names: base_module_index
-        .map(|index| FxHashMap::from_iter([(index, FxHashSet::default())]))
-        .unwrap_or_default(),
-      entry_module_used_names: base_module_index
         .map(|index| {
-          symbol_db.local_db(index).ast_scopes.scoping().symbol_names().collect::<FxHashSet<_>>()
+          // Special for entry module, the whole symbol names are stored; other modules only store non-root symbol names.
+          FxHashMap::from_iter([(
+            index,
+            symbol_db.local_db(index).ast_scopes.scoping().symbol_names().collect::<FxHashSet<_>>(),
+          )])
         })
         .unwrap_or_default(),
       entry_module: base_module_index.map(|index| symbol_db.local_db(index)),
@@ -102,16 +104,21 @@ impl<'name> Renamer<'name> {
           })
         });
 
-        if is_root_binding
-          || (!self.used_names.contains(&candidate_name)
+        if is_root_binding {
+          return candidate_name;
+        }
+
+        if !self.used_names.contains(&candidate_name)
             // Cannot rename to a name that is already used in the entry module
-            && !(self.entry_module_used_names.contains(candidate_name.as_str()))
+            && !self.entry_module.is_some_and(|entry|
+                  self.module_used_names.get(&entry.owner_idx).is_some_and(|used_names| {
+                    used_names.contains(candidate_name.as_str())}))
             // Cannot rename to a name that is already used in symbol itself module
             && !self
               .module_used_names
               .entry(symbol_ref.owner)
               .or_insert_with(|| Self::get_module_used_names(self.symbol_db, symbol_ref))
-              .contains(candidate_name.as_str()))
+              .contains(candidate_name.as_str())
         {
           self.used_names.insert(candidate_name.clone());
           return candidate_name;

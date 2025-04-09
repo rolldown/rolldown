@@ -32,9 +32,9 @@ pub struct Renamer<'name> {
   canonical_token_to_name: FxHashMap<SymbolNameRefToken, Rstr>,
   symbol_db: &'name SymbolRefDb,
   entry_module: Option<&'name SymbolRefDbForModule>,
-  // Store every module's used names
+  /// Store names that are used in the module.
   module_used_names: FxHashMap<ModuleIdx, FxHashSet<&'name str>>,
-  /// Store names that are used in renaming process
+  /// Store names that are used in renaming process.
   used_names: FxHashSet<Rstr>,
 }
 

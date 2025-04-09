@@ -30,7 +30,6 @@ $ bun add -D rolldown
 
 - **Latest**: currently `1.0.0-beta.*`
 - **Nightly releases**: published nightly from the `main` branch under the `nightly` npm dist tag. You can install it with `npm i rolldown@nightly`.
-- **Continuous releases**: every commit on the `main` branch is published to [pkg.pr.new](https://pkg.pr.new). You can install them via URLs with e.g. `npm i rolldown@https://pkg.pr.new/rolldown@45f463a`.
 
 ## Using the CLI
 

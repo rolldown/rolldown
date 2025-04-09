@@ -16,32 +16,32 @@ export {
 ### rolldown
 ```js
 
-//#region ../../../../../../node_modules/.pnpm/@oxc-project+runtime@0.62.0/node_modules/@oxc-project/runtime/src/helpers/esm/checkPrivateRedeclaration.js
+//#region ../../../../../../node_modules/.pnpm/@oxc-project+runtime@0.63.0/node_modules/@oxc-project/runtime/src/helpers/esm/checkPrivateRedeclaration.js
 function checkPrivateRedeclaration(e, t) {
 	if (t.has(e)) throw new TypeError("Cannot initialize the same private elements twice on an object");
 }
 
 //#endregion
-//#region ../../../../../../node_modules/.pnpm/@oxc-project+runtime@0.62.0/node_modules/@oxc-project/runtime/src/helpers/esm/classPrivateFieldInitSpec.js
+//#region ../../../../../../node_modules/.pnpm/@oxc-project+runtime@0.63.0/node_modules/@oxc-project/runtime/src/helpers/esm/classPrivateFieldInitSpec.js
 function _classPrivateFieldInitSpec(e, t, a) {
 	checkPrivateRedeclaration(e, t), t.set(e, a);
 }
 
 //#endregion
-//#region ../../../../../../node_modules/.pnpm/@oxc-project+runtime@0.62.0/node_modules/@oxc-project/runtime/src/helpers/esm/assertClassBrand.js
+//#region ../../../../../../node_modules/.pnpm/@oxc-project+runtime@0.63.0/node_modules/@oxc-project/runtime/src/helpers/esm/assertClassBrand.js
 function assertClassBrand(e, t, n) {
 	if ("function" == typeof e ? e === t : e.has(t)) return arguments.length < 3 ? t : n;
 	throw new TypeError("Private element is not present on this object");
 }
 
 //#endregion
-//#region ../../../../../../node_modules/.pnpm/@oxc-project+runtime@0.62.0/node_modules/@oxc-project/runtime/src/helpers/esm/classPrivateFieldGet2.js
+//#region ../../../../../../node_modules/.pnpm/@oxc-project+runtime@0.63.0/node_modules/@oxc-project/runtime/src/helpers/esm/classPrivateFieldGet2.js
 function _classPrivateFieldGet(s, a) {
 	return s.get(assertClassBrand(s, a));
 }
 
 //#endregion
-//#region ../../../../../../node_modules/.pnpm/@oxc-project+runtime@0.62.0/node_modules/@oxc-project/runtime/src/helpers/esm/classPrivateFieldSet2.js
+//#region ../../../../../../node_modules/.pnpm/@oxc-project+runtime@0.63.0/node_modules/@oxc-project/runtime/src/helpers/esm/classPrivateFieldSet2.js
 function _classPrivateFieldSet(s, a, r) {
 	return s.set(assertClassBrand(s, a), r), r;
 }

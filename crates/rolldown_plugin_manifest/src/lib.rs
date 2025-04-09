@@ -21,7 +21,7 @@ pub struct ManifestPluginConfig {
 
 impl Plugin for ManifestPlugin {
   fn name(&self) -> Cow<'static, str> {
-    Cow::Borrowed("builtin:manifest-plugin")
+    Cow::Borrowed("builtin:manifest")
   }
 
   #[allow(clippy::case_sensitive_file_extension_comparisons)]

@@ -7,7 +7,7 @@ pub struct WasmFallbackPlugin {}
 
 impl Plugin for WasmFallbackPlugin {
   fn name(&self) -> Cow<'static, str> {
-    Cow::Borrowed("builtin:wasm-fallback-plugin")
+    Cow::Borrowed("builtin:wasm-fallback")
   }
 
   #[allow(clippy::case_sensitive_file_extension_comparisons)]

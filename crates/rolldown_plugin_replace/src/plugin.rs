@@ -1,3 +1,4 @@
+use std::borrow::Cow;
 use std::ops::Range;
 use std::{cmp::Reverse, sync::Arc};
 
@@ -170,7 +171,7 @@ impl ReplacePlugin {
 
 impl Plugin for ReplacePlugin {
   fn name(&self) -> std::borrow::Cow<'static, str> {
-    "builtin:replace".into()
+    Cow::Borrowed("builtin:replace")
   }
 
   async fn transform(

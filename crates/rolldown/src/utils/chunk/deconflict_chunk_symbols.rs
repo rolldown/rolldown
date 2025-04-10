@@ -2,7 +2,9 @@ use std::borrow::Cow;
 
 use crate::{stages::link_stage::LinkStageOutput, utils::renamer::Renamer};
 use arcstr::ArcStr;
-use rolldown_common::{Chunk, ChunkIdx, ChunkKind, GetLocalDb, OutputFormat};
+use rolldown_common::{
+  Chunk, ChunkIdx, ChunkKind, GetLocalDb, ModuleScopeSymbolIdMap, OutputFormat,
+};
 use rolldown_rstr::ToRstr;
 use rolldown_utils::ecmascript::legitimize_identifier_name;
 use rustc_hash::FxHashMap;
@@ -13,6 +15,7 @@ pub fn deconflict_chunk_symbols(
   link_output: &LinkStageOutput,
   format: OutputFormat,
   index_chunk_id_to_name: &FxHashMap<ChunkIdx, ArcStr>,
+  map: &ModuleScopeSymbolIdMap<'_>,
 ) {
   let mut renamer = Renamer::new(&link_output.symbol_db, format);
 
@@ -134,7 +137,7 @@ pub fn deconflict_chunk_symbols(
     });
 
   // rename non-top-level names
-  renamer.rename_non_root_symbol(&chunk.modules, link_output);
+  renamer.rename_non_root_symbol(&chunk.modules, link_output, map);
 
   (chunk.canonical_names, chunk.canonical_name_by_token) = renamer.into_canonical_names();
 }

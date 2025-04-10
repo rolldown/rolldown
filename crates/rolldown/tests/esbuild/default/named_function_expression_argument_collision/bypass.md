@@ -13,9 +13,9 @@ let x = function(foo) {
 ```js
 
 //#region entry.js
-let x = function foo(foo) {
-	var foo;
-	return foo;
+let x = function foo(foo$1) {
+	var foo$1;
+	return foo$1;
 };
 
 //#endregion
@@ -27,9 +27,11 @@ let x = function foo(foo) {
 +++ rolldown	entry.js
 @@ -1,4 +1,4 @@
 -let x = function (foo) {
-+let x = function foo(foo) {
-     var foo;
-     return foo;
+-    var foo;
+-    return foo;
++let x = function foo(foo$1) {
++    var foo$1;
++    return foo$1;
  };
 
 ```

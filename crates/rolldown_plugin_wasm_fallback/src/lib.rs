@@ -3,7 +3,7 @@ use std::borrow::Cow;
 use rolldown_plugin::{HookLoadArgs, HookLoadReturn, Plugin, PluginContext};
 
 #[derive(Debug)]
-pub struct WasmFallbackPlugin {}
+pub struct WasmFallbackPlugin;
 
 impl Plugin for WasmFallbackPlugin {
   fn name(&self) -> Cow<'static, str> {
@@ -19,9 +19,8 @@ impl Plugin for WasmFallbackPlugin {
         Use plugin-wasm or other community plugins to handle this.
         Alternatively, you can use `.wasm?init` or `.wasm?url`.
         See https://vitejs.dev/guide/features.html#webassembly for more details."
-      ))
-    } else {
-      Ok(None)
+      ))?;
     }
+    Ok(None)
   }
 }

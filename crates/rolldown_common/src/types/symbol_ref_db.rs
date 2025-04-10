@@ -167,8 +167,12 @@ impl SymbolRefDb {
     }
   }
 
-  pub fn inner(self) -> IndexVec<ModuleIdx, Option<SymbolRefDbForModule>> {
+  pub fn into_inner(self) -> IndexVec<ModuleIdx, Option<SymbolRefDbForModule>> {
     self.inner
+  }
+
+  pub fn inner(&self) -> &IndexVec<ModuleIdx, Option<SymbolRefDbForModule>> {
+    &self.inner
   }
 
   pub fn store_local_db(&mut self, module_id: ModuleIdx, local_db: SymbolRefDbForModule) {

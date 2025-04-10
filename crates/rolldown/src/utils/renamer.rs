@@ -1,7 +1,8 @@
 use oxc::semantic::ScopeId;
 use oxc::syntax::keyword::{GLOBAL_OBJECTS, RESERVED_KEYWORDS};
 use rolldown_common::{
-  AstScopes, ModuleIdx, NormalModule, OutputFormat, SymbolNameRefToken, SymbolRef, SymbolRefDb,
+  AstScopes, ModuleIdx, ModuleScopeSymbolIdMap, NormalModule, OutputFormat, SymbolNameRefToken,
+  SymbolRef, SymbolRefDb,
 };
 use rolldown_rstr::{Rstr, ToRstr};
 use rolldown_utils::rustc_hash::FxHashMapExt;
@@ -142,6 +143,7 @@ impl<'name> Renamer<'name> {
     &mut self,
     modules_in_chunk: &[ModuleIdx],
     link_stage_output: &LinkStageOutput,
+    map: &ModuleScopeSymbolIdMap<'_>,
   ) {
     #[tracing::instrument(level = "trace", skip_all)]
     fn rename_symbols_of_nested_scopes<'name>(
@@ -150,12 +152,13 @@ impl<'name> Renamer<'name> {
       stack: &mut Vec<Cow<FxHashMap<Rstr, u32>>>,
       canonical_names: &mut FxHashMap<SymbolRef, Rstr>,
       ast_scope: &'name AstScopes,
+      map: &ModuleScopeSymbolIdMap<'_>,
     ) {
-      let mut bindings = ast_scope.scoping().get_bindings(scope_id).iter().collect::<Vec<_>>();
+      let bindings = map.get(&module.idx).map(|vec| &vec[scope_id]).unwrap();
+      // let mut bindings = ast_scope.scoping().get_bindings(scope_id).iter().collect::<Vec<_>>();
       let mut used_canonical_names_for_this_scope = FxHashMap::with_capacity(bindings.len());
 
-      bindings.sort_unstable_by_key(|(_, symbol_id)| *symbol_id);
-      bindings.iter().for_each(|&(binding_name, &symbol_id)| {
+      bindings.iter().for_each(|&(symbol_id, binding_name)| {
         let binding_ref: SymbolRef = (module.idx, symbol_id).into();
 
         let mut count = 1;
@@ -186,7 +189,7 @@ impl<'name> Renamer<'name> {
       stack.push(Cow::Owned(used_canonical_names_for_this_scope));
       let child_scopes = ast_scope.scoping().get_scope_child_ids(scope_id);
       child_scopes.iter().for_each(|scope_id| {
-        rename_symbols_of_nested_scopes(module, *scope_id, stack, canonical_names, ast_scope);
+        rename_symbols_of_nested_scopes(module, *scope_id, stack, canonical_names, ast_scope, map);
       });
       stack.pop();
     }
@@ -208,6 +211,7 @@ impl<'name> Renamer<'name> {
               &mut stack,
               &mut canonical_names,
               ast_scope,
+              map,
             );
             canonical_names
           })

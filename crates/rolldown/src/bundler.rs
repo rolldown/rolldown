@@ -251,7 +251,7 @@ impl Bundler {
       return;
     }
     let snapshot = self.cache.get_snapshot_mut();
-    for (idx, symbol_ref_db) in symbol_db.inner().into_iter_enumerated() {
+    for (idx, symbol_ref_db) in symbol_db.into_inner().into_iter_enumerated() {
       let Some(db_for_module) = symbol_ref_db else {
         continue;
       };

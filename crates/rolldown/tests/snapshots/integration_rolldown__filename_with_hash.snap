@@ -1410,6 +1410,10 @@ expression: output
 - b_entry-!~{001}~.js => b_entry-x8tKztsP.js
 - common-!~{002}~.js => common-s1-0Qldr.js
 
+# tests/esbuild/default/named_function_expression_argument_collision
+
+- entry-!~{000}~.js => entry-DFpo-Z4P.js
+
 # tests/esbuild/default/nested_common_js
 
 - entry-!~{000}~.js => entry-ClolTcLe.js

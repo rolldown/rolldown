@@ -199,6 +199,9 @@ export default defineConfig({
       }) as any,
       llmstxt({
         ignoreFiles: ['contrib-guide/**/*', 'index.md', 'README.md', 'team.md'],
+        description:
+          'Fast Rust-based bundler for JavaScript with Rollup-compatible API',
+        details: '',
       }),
     ],
   },

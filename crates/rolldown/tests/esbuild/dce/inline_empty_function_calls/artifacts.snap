@@ -1,39 +1,6 @@
 ---
 source: crates/rolldown_testing/src/integration_test.rs
-snapshot_kind: text
 ---
-# warnings
-
-## PARSE_ERROR
-
-```text
-[PARSE_ERROR] Warning: Identifier `DROP` has already been declared
-   ╭─[ empty-last.js:1:10 ]
-   │
- 1 │ function DROP() { return x }
-   │          ──┬─  
-   │            ╰─── `DROP` has already been declared here
- 2 │ function DROP() { return }
-   │          ──┬─  
-   │            ╰─── It can not be redeclared here
-───╯
-
-```
-## PARSE_ERROR
-
-```text
-[PARSE_ERROR] Warning: Identifier `keep` has already been declared
-   ╭─[ empty-first.js:1:10 ]
-   │
- 1 │ function keep() { return }
-   │          ──┬─  
-   │            ╰─── `keep` has already been declared here
- 2 │ function keep() { return x }
-   │          ──┬─  
-   │            ╰─── It can not be redeclared here
-───╯
-
-```
 # Assets
 
 ## empty-async.js

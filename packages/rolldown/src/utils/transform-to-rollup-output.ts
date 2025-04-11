@@ -80,7 +80,9 @@ function transformToRollupOutputChunk(
       if (p in cache) {
         return cache[p];
       }
-      return target[p as keyof OutputChunk];
+      const value = target[p as keyof OutputChunk];
+      cache[p] = value;
+      return value;
     },
     set(target, p, newValue): boolean {
       cache[p] = newValue;
@@ -115,7 +117,9 @@ function transformToRollupOutputAsset(
       if (p in cache) {
         return cache[p];
       }
-      return target[p as keyof OutputAsset];
+      const value = target[p as keyof OutputAsset];
+      cache[p] = value;
+      return value;
     },
     set(target, p, newValue): boolean {
       cache[p] = newValue;

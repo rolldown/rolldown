@@ -2,14 +2,14 @@
   "name": "monorepo",
   "description": "Rollup in Rust",
   "private": true,
-  "packageManager": "pnpm@10.7.0",
+  "packageManager": "pnpm@10.8.0",
   "engines": {
     "node": ">=18.20.3"
   },
   "scripts": {
     "lint-code": "oxlint -c .oxlintrc.json --ignore-path=.oxlintignore --deny-warnings",
     "lint-spell": "cspell \"**\" --no-progress  --gitignore",
-    "lint-repo": "npm-run-all -l --parallel fmt lint-spell",
+    "lint-repo": "pnpm run --stream --color \"/^fmt|lint-spell$/\"",
     "fmt": "dprint fmt",
     "build": "echo \"Use just build\"",
     "build:release": "echo \"Use just build native release\"",
@@ -20,15 +20,16 @@
     "docs:build": "pnpm --filter rolldown-docs run build",
     "docs:preview": "pnpm --filter rolldown-docs run preview",
     "changelog": "conventional-changelog -p angular -i CHANGELOG.md -s",
-    "prepare": "husky prepare"
+    "prepare": "husky prepare",
+    "preinstall": "npx only-allow pnpm"
   },
   "license": "MIT",
   "devDependencies": {
     "@actions/core": "^1.11.1",
     "@babel/runtime": "7.27.0",
-    "@oxc-node/core": "^0.0.21",
-    "@oxc-project/runtime": "0.61.2",
-    "@types/node": "22.13.14",
+    "@oxc-node/core": "^0.0.22",
+    "@oxc-project/runtime": "0.63.0",
+    "@types/node": "22.14.0",
     "cjs-module-lexer": "^2.0.0",
     "conventional-changelog-cli": "^5.0.0",
     "cross-env": "^7.0.3",
@@ -36,7 +37,6 @@
     "dprint": "^0.49.1",
     "husky": "^9.0.0",
     "lint-staged": "^15.2.5",
-    "npm-run-all2": "^7.0.0",
     "oxlint": "^0.16.0",
     "rolldown": "workspace:*",
     "typescript": "^5.6.3"

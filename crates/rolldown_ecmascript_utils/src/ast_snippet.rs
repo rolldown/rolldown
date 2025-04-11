@@ -1,5 +1,5 @@
 use oxc::{
-  allocator::{self, Allocator, Box, IntoIn},
+  allocator::{self, Allocator, Box, Dummy, IntoIn, TakeIn},
   ast::{
     AstBuilder, NONE,
     ast::{
@@ -11,8 +11,6 @@ use oxc::{
   span::{Atom, CompactStr, SPAN, Span},
 };
 use rolldown_common::{EcmaModuleAstUsage, Interop};
-
-use crate::allocator_helpers::take_in::TakeIn;
 
 type PassedStr<'a> = &'a str;
 
@@ -325,12 +323,13 @@ impl<'ast> AstSnippet<'ast> {
     declarations.push(ast::VariableDeclarator {
       id: ast::BindingPattern {
         kind: ast::BindingPatternKind::ObjectPattern(
-          ast::ObjectPattern { properties, ..TakeIn::dummy(self.alloc()) }.into_in(self.alloc()),
+          ast::ObjectPattern { properties, ..ast::ObjectPattern::dummy(self.alloc()) }
+            .into_in(self.alloc()),
         ),
-        ..TakeIn::dummy(self.alloc())
+        ..ast::BindingPattern::dummy(self.alloc())
       },
       init: Some(init),
-      ..TakeIn::dummy(self.alloc())
+      ..ast::VariableDeclarator::dummy(self.alloc())
     });
     self.builder.alloc_variable_declaration(
       SPAN,
@@ -762,8 +761,11 @@ impl<'ast> AstSnippet<'ast> {
   // return xxx
   pub fn return_stmt(&self, argument: ast::Expression<'ast>) -> ast::Statement<'ast> {
     ast::Statement::ReturnStatement(
-      ast::ReturnStatement { argument: Some(argument), ..TakeIn::dummy(self.alloc()) }
-        .into_in(self.alloc()),
+      ast::ReturnStatement {
+        argument: Some(argument),
+        ..ast::ReturnStatement::dummy(self.alloc())
+      }
+      .into_in(self.alloc()),
     )
   }
 
@@ -876,7 +878,7 @@ impl<'ast> AstSnippet<'ast> {
 
   pub fn expr_without_parentheses(&self, mut expr: Expression<'ast>) -> Expression<'ast> {
     while let Expression::ParenthesizedExpression(mut paren_expr) = expr {
-      expr = self.builder.move_expression(&mut paren_expr.expression);
+      expr = paren_expr.expression.take_in(self.builder.allocator);
     }
     expr
   }

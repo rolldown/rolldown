@@ -103,6 +103,8 @@
   diff
 ## minify_nested_labels_no_bundle
   missing
+## named_function_expression_argument_collision
+  missing
 ## [nested_scope_bug](../../../crates/rolldown/tests/esbuild/default/nested_scope_bug/diff.md)
   diff
 ## [non_determinism_issue2537](../../../crates/rolldown/tests/esbuild/default/non_determinism_issue2537/diff.md)
@@ -280,7 +282,6 @@
 ## [minify_private_identifiers_no_bundle](../../../crates/rolldown/tests/esbuild/default/minify_private_identifiers_no_bundle/bypass.md)
 ## [minify_sibling_labels_no_bundle](../../../crates/rolldown/tests/esbuild/default/minify_sibling_labels_no_bundle/bypass.md)
 ## [multiple_entry_points_same_name_collision](../../../crates/rolldown/tests/esbuild/default/multiple_entry_points_same_name_collision/bypass.md)
-## [named_function_expression_argument_collision](../../../crates/rolldown/tests/esbuild/default/named_function_expression_argument_collision/bypass.md)
 ## [nested_common_js](../../../crates/rolldown/tests/esbuild/default/nested_common_js/bypass.md)
 ## [nested_es6_from_common_js](../../../crates/rolldown/tests/esbuild/default/nested_es6_from_common_js/bypass.md)
 ## [no_warn_common_js_exports_in_esm_pass_through](../../../crates/rolldown/tests/esbuild/default/no_warn_common_js_exports_in_esm_pass_through/bypass.md)

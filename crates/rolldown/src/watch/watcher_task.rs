@@ -60,17 +60,17 @@ impl WatcherTask {
 
     let result = {
       let result = bundler.scan(changed_files.to_owned()).await;
-      // FIXME(hyf0): probably should have a more official API/better way to get watch files
-      self.watch_files(&bundler.plugin_driver.watch_files, &bundler.options).await?;
+      let watched_files = Arc::clone(bundler.get_watch_files());
+      self.watch_files(&watched_files, &bundler.options).await?;
       match result {
         Ok(scan_stage_output) => {
           if bundler.options.watch.skip_write {
             Ok(())
           } else {
             // avoid watching scan stage files twice
-            bundler.plugin_driver.watch_files.clear();
+            watched_files.clear();
             let output = bundler.bundle_write(scan_stage_output).await;
-            self.watch_files(&bundler.plugin_driver.watch_files, &bundler.options).await?;
+            self.watch_files(&watched_files, &bundler.options).await?;
             match output {
               Ok(_) => Ok(()),
               Err(errs) => Err(errs),

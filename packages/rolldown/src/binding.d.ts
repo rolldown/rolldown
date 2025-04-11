@@ -96,7 +96,7 @@ export declare class BindingOutputs {
 }
 
 export declare class BindingPluginContext {
-  load(specifier: string, sideEffects: BindingHookSideEffects | undefined, fn: () => void): Promise<void>
+  load(specifier: string, sideEffects: BindingHookSideEffects | undefined, fn: (success: boolean) => void): Promise<void>
   resolve(specifier: string, importer?: string | undefined | null, extraOptions?: BindingPluginContextResolveOptions | undefined | null): Promise<BindingPluginContextResolvedId | null>
   emitFile(file: BindingEmittedAsset, assetFilename?: string | undefined | null, fnSanitizedFileName?: string | undefined | null): string
   emitChunk(file: BindingEmittedChunk): string
@@ -159,6 +159,7 @@ export declare class Bundler {
   scan(): Promise<BindingOutputs>
   close(): Promise<void>
   get closed(): boolean
+  get watchFiles(): Array<string>
   generateHmrPatch(changedFiles: Array<string>): Promise<string>
 }
 
@@ -283,12 +284,17 @@ export interface BindingEmittedChunk {
   importer?: string
 }
 
+export interface BindingExperimentalHmrOptions {
+  host?: string
+  port?: number
+}
+
 export interface BindingExperimentalOptions {
   strictExecutionOrder?: boolean
   disableLiveBindings?: boolean
   viteMode?: boolean
   resolveNewUrlToAsset?: boolean
-  hmr?: boolean
+  hmr?: BindingExperimentalHmrOptions
 }
 
 export interface BindingGeneralHookFilter {

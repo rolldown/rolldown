@@ -20,5 +20,4 @@ arcstr = { workspace = true }
 glob = { workspace = true }
 memchr = { workspace = true }
 oxc = { workspace = true }
-phf = { workspace = true, features = ["phf_macros"] }
 rolldown_plugin = { workspace = true }

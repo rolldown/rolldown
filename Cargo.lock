@@ -2409,7 +2409,7 @@ dependencies = [
  "rolldown_fs",
  "rolldown_loader_utils",
  "rolldown_plugin",
- "rolldown_plugin_data_url",
+ "rolldown_plugin_data_uri",
  "rolldown_resolver",
  "rolldown_rstr",
  "rolldown_sourcemap",
@@ -2616,7 +2616,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "rolldown_plugin_data_url"
+name = "rolldown_plugin_data_uri"
 version = "0.1.0"
 dependencies = [
  "base64-simd",

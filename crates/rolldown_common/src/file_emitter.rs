@@ -14,7 +14,7 @@ use std::sync::Arc;
 use std::sync::atomic::{AtomicUsize, Ordering};
 use tokio::sync::Mutex;
 
-#[derive(Debug)]
+#[derive(Debug, Default)]
 pub struct EmittedAsset {
   pub name: Option<String>,
   pub original_file_name: Option<String>,

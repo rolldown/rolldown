@@ -1,23 +1,29 @@
 use std::borrow::Cow;
+use std::fs::read_to_string;
 
 use rolldown_plugin::{HookLoadArgs, HookLoadOutput, HookLoadReturn, Plugin, PluginContext};
-use rolldown_utils::{clean_url::clean_url, dataurl::parse_data_url};
 
 #[derive(Debug)]
-pub struct LoadFallbackPlugin {}
+pub struct LoadFallbackPlugin;
 
 impl Plugin for LoadFallbackPlugin {
   fn name(&self) -> Cow<'static, str> {
     Cow::Borrowed("builtin:load-fallback")
   }
 
-  async fn load(&self, _ctx: &PluginContext, args: &HookLoadArgs<'_>) -> HookLoadReturn {
-    if parse_data_url(args.id).is_some() {
+  async fn load(&self, ctx: &PluginContext, args: &HookLoadArgs<'_>) -> HookLoadReturn {
+    if args.id.trim_start().starts_with("data:") {
       return Ok(None);
     }
-    let normalized_id = clean_url(args.id);
-    let code =
-      std::fs::read_to_string(normalized_id).or_else(|_| std::fs::read_to_string(args.id))?;
+
+    let start = args.id.rfind('/').unwrap_or(0);
+    let Some(index) = args.id[start..].find(['?', '#']) else { return Ok(None) };
+
+    let path = &args.id[..start + index];
+    let code = read_to_string(path)?;
+
+    ctx.add_watch_file(path);
+
     Ok(Some(HookLoadOutput { code, ..Default::default() }))
   }
 }

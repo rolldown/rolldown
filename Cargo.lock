@@ -2680,7 +2680,6 @@ name = "rolldown_plugin_load_fallback"
 version = "0.1.0"
 dependencies = [
  "rolldown_plugin",
- "rolldown_utils",
 ]
 
 [[package]]

@@ -4,7 +4,6 @@ pub mod asset_meta;
 pub mod ast_scope_idx;
 pub mod ast_scopes;
 pub mod bundler_file_system;
-pub mod cache;
 pub mod chunk_idx;
 pub mod chunk_kind;
 pub mod defer_sync_scan_data;

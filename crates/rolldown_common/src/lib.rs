@@ -96,7 +96,6 @@ pub use crate::{
   types::ast_scope_idx::AstScopeIdx,
   types::ast_scopes::AstScopes,
   types::bundler_file_system::BundlerFileSystem,
-  types::cache::Cache,
   types::chunk_idx::ChunkIdx,
   types::chunk_kind::ChunkKind,
   types::defer_sync_scan_data::DeferSyncScanData,

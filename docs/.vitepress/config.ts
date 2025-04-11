@@ -4,6 +4,7 @@ import {
   groupIconVitePlugin,
   localIconLoader,
 } from 'vitepress-plugin-group-icons';
+import llmstxt from 'vitepress-plugin-llms';
 
 const sharedSidebar = [
   {
@@ -196,6 +197,12 @@ export default defineConfig({
           ),
         },
       }) as any,
+      llmstxt({
+        ignoreFiles: ['contrib-guide/**/*', 'index.md', 'README.md', 'team.md'],
+        description:
+          'Fast Rust-based bundler for JavaScript with Rollup-compatible API',
+        details: '',
+      }),
     ],
   },
   markdown: {

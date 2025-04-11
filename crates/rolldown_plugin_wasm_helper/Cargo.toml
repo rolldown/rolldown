@@ -18,4 +18,3 @@ workspace = true
 arcstr = { workspace = true }
 rolldown_common = { workspace = true }
 rolldown_plugin = { workspace = true }
-rolldown_utils = { workspace = true }

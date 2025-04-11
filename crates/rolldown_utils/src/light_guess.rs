@@ -1,5 +1,4 @@
 // Port from https://github.com/7086cmd/mime_more/blob/main/src/light_guess.rs
-use phf::{Map, phf_map};
 
 use crate::mime::MimeExt;
 
@@ -15,38 +14,59 @@ impl RawMimeExt {
   }
 }
 
-pub static MIME_TYPES: Map<&'static str, RawMimeExt> = phf_map! {
-    // Text
-    "css" => RawMimeExt::new("text/css", true),
-    "htm" => RawMimeExt::new("text/html", true),
-    "html" => RawMimeExt::new("text/html", true),
-    "js" => RawMimeExt::new("text/javascript", true),
-    "json" => RawMimeExt::new("application/json", true),
-    "markdown" => RawMimeExt::new("text/markdown", true),
-    "md" => RawMimeExt::new("text/markdown", true),
-    "mjs" => RawMimeExt::new("text/javascript", true),
+pub static MIME_TYPES_KEYS: [&str; 24] = [
+  "avif",
+  "css",
+  "eot",
+  "gif",
+  "htm",
+  "html",
+  "jpeg",
+  "jpg",
+  "js",
+  "json",
+  "markdown",
+  "md",
+  "mjs",
+  "otf",
+  "pdf",
+  "png",
+  "sfnt",
+  "svg",
+  "ttf",
+  "wasm",
+  "webmanifest",
+  "webp",
+  "woff",
+  "woff2",
+];
 
-    // Images
-    "avif" => RawMimeExt::new("image/avif", false),
-    "gif" => RawMimeExt::new("image/gif", false),
-    "jpg" => RawMimeExt::new("image/jpeg", false),
-    "jpeg" => RawMimeExt::new("image/jpeg", false),
-    "png" => RawMimeExt::new("image/png", false),
-    "svg" => RawMimeExt::new("image/svg+xml",false),
-    "webp" => RawMimeExt::new("image/webp", false),
-
-    // Fonts
-    "eot" => RawMimeExt::new("application/vnd.ms-fontobject", false),
-    "otf" => RawMimeExt::new("font/otf", false),
-    "sfnt" => RawMimeExt::new("font/sfnt", false),
-    "ttf" => RawMimeExt::new("font/ttf", false),
-    "woff" => RawMimeExt::new("font/woff", false),
-    "woff2" => RawMimeExt::new("font/woff2", false),
-    // Others
-    "pdf" => RawMimeExt::new("application/pdf", false),
-    "wasm" => RawMimeExt::new("application/wasm", false),
-    "webmanifest" => RawMimeExt::new("application/manifest+json", false),
-};
+pub static MIME_TYPES_VALUES: [RawMimeExt; 24] = [
+  RawMimeExt::new("image/avif", false),
+  RawMimeExt::new("text/css", true),
+  RawMimeExt::new("application/vnd.ms-fontobject", false),
+  RawMimeExt::new("image/gif", false),
+  RawMimeExt::new("text/html", true),
+  RawMimeExt::new("text/html", true),
+  RawMimeExt::new("image/jpeg", false),
+  RawMimeExt::new("image/jpeg", false),
+  RawMimeExt::new("text/javascript", true),
+  RawMimeExt::new("application/json", true),
+  RawMimeExt::new("text/markdown", true),
+  RawMimeExt::new("text/markdown", true),
+  RawMimeExt::new("text/javascript", true),
+  RawMimeExt::new("font/otf", false),
+  RawMimeExt::new("application/pdf", false),
+  RawMimeExt::new("image/png", false),
+  RawMimeExt::new("font/sfnt", false),
+  RawMimeExt::new("image/svg+xml", false),
+  RawMimeExt::new("font/ttf", false),
+  RawMimeExt::new("application/wasm", false),
+  RawMimeExt::new("application/manifest+json", false),
+  RawMimeExt::new("image/webp", false),
+  RawMimeExt::new("font/woff", false),
+  RawMimeExt::new("font/woff2", false),
+];
 
 /// Adapted from:
 /// - https://github.com/rolldown/rolldown/pull/1406/files#diff-4b612e077c82ae0e05e50eb0d419e02c05a04b83c6ac5440c0d0c9d0c38af942
@@ -54,7 +74,7 @@ pub static MIME_TYPES: Map<&'static str, RawMimeExt> = phf_map! {
 ///
 /// Thanks to @ikkz and @evanw for the inspiration.
 pub fn mime_type_by_extension(ext: &str) -> Option<RawMimeExt> {
-  MIME_TYPES.get(ext).copied()
+  MIME_TYPES_KEYS.binary_search(&ext).map(|index| MIME_TYPES_VALUES[index]).ok()
 }
 
 pub fn try_from_ext(ext: &str) -> anyhow::Result<MimeExt> {

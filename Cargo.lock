@@ -2635,7 +2635,6 @@ dependencies = [
  "glob",
  "memchr",
  "oxc",
- "phf",
  "rolldown_plugin",
 ]
 

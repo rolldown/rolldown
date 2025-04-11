@@ -1,7 +1,5 @@
 // Ported from https://github.com/KermanX/vite/blob/main/packages/vite/src/node/plugins/dynamicImportVars.ts#L67-L108
 
-use phf::phf_set;
-
 /// Finds the position of the first occurrence of a question mark pattern in a string.
 /// Handles both escaped and unescaped question marks: \? or ?
 ///
@@ -34,9 +32,7 @@ fn find_query_marker_maybe_escaped(s: &str) -> Option<usize> {
 /// - And be followed by either & or the end of the string
 fn has_special_query_param(query: &str) -> bool {
   // Special parameter names we're looking for
-  static SPECIAL_PARAMS: phf::Set<&str> = phf_set! {
-    "url", "raw", "worker", "sharedworker"
-  };
+  static SPECIAL_PARAMS: [&str; 4] = ["raw", "sharedworker", "url", "worker"];
 
   // Early return if query is empty or has no parameters
   if query.is_empty() {
@@ -60,7 +56,7 @@ fn has_special_query_param(query: &str) -> bool {
     };
 
     // Check if it's a special parameter
-    SPECIAL_PARAMS.contains(param_name)
+    SPECIAL_PARAMS.contains(&param_name)
   })
 }
 

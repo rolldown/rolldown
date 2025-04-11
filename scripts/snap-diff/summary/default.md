@@ -11,6 +11,8 @@
   diff
 ## [conditional_require_resolve](../../../crates/rolldown/tests/esbuild/default/conditional_require_resolve/diff.md)
   diff
+## [const_with_let_no_bundle](../../../crates/rolldown/tests/esbuild/default/const_with_let_no_bundle/diff.md)
+  diff
 ## decorator_printing_cjs
   missing
 ## decorator_printing_esm
@@ -214,7 +216,6 @@
 ## [comment_preservation_transform_jsx](../../../crates/rolldown/tests/esbuild/default/comment_preservation_transform_jsx/bypass.md)
 ## [common_js_from_es6](../../../crates/rolldown/tests/esbuild/default/common_js_from_es6/bypass.md)
 ## [const_with_let](../../../crates/rolldown/tests/esbuild/default/const_with_let/bypass.md)
-## [const_with_let_no_bundle](../../../crates/rolldown/tests/esbuild/default/const_with_let_no_bundle/bypass.md)
 ## [define_import_meta_es5](../../../crates/rolldown/tests/esbuild/default/define_import_meta_es5/bypass.md)
 ## [define_optional_chain_lowered](../../../crates/rolldown/tests/esbuild/default/define_optional_chain_lowered/bypass.md)
 ## [direct_eval_tainting_no_bundle](../../../crates/rolldown/tests/esbuild/default/direct_eval_tainting_no_bundle/bypass.md)

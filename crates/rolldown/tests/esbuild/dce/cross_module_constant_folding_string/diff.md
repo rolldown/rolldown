@@ -30,10 +30,10 @@ console.log([
 ```js
 
 //#region enum-constants.ts
-let x = /* @__PURE__ */ function(x$1) {
-	x$1["a"] = "foo";
-	x$1["b"] = "bar";
-	return x$1;
+let x = /* @__PURE__ */ function(x) {
+	x["a"] = "foo";
+	x["b"] = "bar";
+	return x;
 }({});
 
 //#endregion
@@ -64,10 +64,10 @@ console.log([typeof x.b], [x.a + x.b], [
 +++ rolldown	enum-entry.js
 @@ -1,1 +1,6 @@
 -console.log([typeof "bar"], ["foobar"], [!1, !0, !1, !0, !1, !0, !1, !0], ["bar", "foo", "foo", "y", "n"]);
-+var x = (function (x$1) {
-+    x$1["a"] = "foo";
-+    x$1["b"] = "bar";
-+    return x$1;
++var x = (function (x) {
++    x["a"] = "foo";
++    x["b"] = "bar";
++    return x;
 +})({});
 +console.log([typeof x.b], [x.a + x.b], [x.a < x.b, x.a > x.b, x.a <= x.b, x.a >= x.b, x.a == x.b, x.a != x.b, x.a === x.b, x.a !== x.b], [x.a && x.b, x.a || x.b, x.a ?? x.b, x.a ? "y" : "n", !x.b ? "y" : "n"]);
 
@@ -160,11 +160,11 @@ console.log({
 const a = "foo";
 const b = "bar";
 const c = "baz";
-let x = /* @__PURE__ */ function(x$1) {
-	x$1["a"] = "FOO";
-	x$1["b"] = "BAR";
-	x$1["c"] = "BAZ";
-	return x$1;
+let x = /* @__PURE__ */ function(x) {
+	x["a"] = "FOO";
+	x["b"] = "BAR";
+	x["c"] = "BAZ";
+	return x;
 }({});
 
 //#endregion
@@ -186,11 +186,11 @@ console.log({
 +var a = "foo";
 +var b = "bar";
 +var c = "baz";
-+var x = (function (x$1) {
-+    x$1["a"] = "FOO";
-+    x$1["b"] = "BAR";
-+    x$1["c"] = "BAZ";
-+    return x$1;
++var x = (function (x) {
++    x["a"] = "FOO";
++    x["b"] = "BAR";
++    x["c"] = "BAZ";
++    return x;
 +})({});
  console.log({
      "should be foobarbaz": a + b + c,

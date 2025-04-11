@@ -11,14 +11,14 @@ import assert from "assert";
 //#region main.js
 var e = "failed1", x = "value";
 (function() {
-	try {} catch (e$1) {
-		var e$1;
+	try {} catch (e) {
+		var e;
 	}
-	assert.strictEqual(e$1, void 0);
-	assert.strictEqual(x$1, void 0);
-	x$1 = "failed3";
+	assert.strictEqual(e, void 0);
+	assert.strictEqual(x, void 0);
+	x = "failed3";
 	return;
-	var x$1;
+	var x;
 })();
 assert.strictEqual(x, "value");
 

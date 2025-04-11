@@ -14,15 +14,15 @@ console.log(/* @__PURE__ */ jsx2("div", { jsx }), /* @__PURE__ */ jsx2(Fragment2
 ```
 ### rolldown
 ```js
-import { Fragment, jsx } from "react/jsx-runtime";
+import { Fragment as Fragment$1, jsx as jsx$1 } from "react/jsx-runtime";
 
 //#region custom-react.js
-function jsx$1() {}
-function Fragment$1() {}
+function jsx$2() {}
+function Fragment$2() {}
 
 //#endregion
 //#region entry.jsx
-console.log(/* @__PURE__ */ jsx("div", { jsx: jsx$1 }), /* @__PURE__ */ jsx(Fragment, { children: /* @__PURE__ */ jsx(Fragment$1, {}) }));
+console.log(/* @__PURE__ */ jsx$1("div", { jsx: jsx$2 }), /* @__PURE__ */ jsx$1(Fragment$1, { children: /* @__PURE__ */ jsx$1(Fragment$2, {}) }));
 
 //#endregion
 ```
@@ -39,13 +39,13 @@ console.log(/* @__PURE__ */ jsx("div", { jsx: jsx$1 }), /* @__PURE__ */ jsx(Frag
 -    jsx
 -}), jsx2(Fragment2, {
 -    children: jsx2(Fragment, {})
-+import {Fragment, jsx} from "react/jsx-runtime";
-+function jsx$1() {}
-+function Fragment$1() {}
-+console.log(jsx("div", {
-+    jsx: jsx$1
-+}), jsx(Fragment, {
-+    children: jsx(Fragment$1, {})
++import {Fragment as Fragment$1, jsx as jsx$1} from "react/jsx-runtime";
++function jsx$2() {}
++function Fragment$2() {}
++console.log(jsx$1("div", {
++    jsx: jsx$2
++}), jsx$1(Fragment$1, {
++    children: jsx$1(Fragment$2, {})
  }));
 
 ```

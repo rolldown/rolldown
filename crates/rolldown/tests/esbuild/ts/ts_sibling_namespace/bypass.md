@@ -18,7 +18,7 @@ export var x;
 //#region let.ts
 let x;
 (function(_x) {
-	let y$1 = _x.y = 123;
+	let y = _x.y = 123;
 })(x || (x = {}));
 (function(_x2) {
 	let z = _x2.z = y;
@@ -38,7 +38,7 @@ export { x };
 -    x2.y = 123;
 +var x;
 +(function (_x) {
-+    let y$1 = _x.y = 123;
++    let y = _x.y = 123;
  })(x || (x = {}));
 -(x2 => {
 -    x2.z = x2.y;
@@ -67,8 +67,8 @@ export var x;
 //#region function.ts
 let x;
 (function(_x) {
-	function y$1() {}
-	_x.y = y$1;
+	function y() {}
+	_x.y = y;
 })(x || (x = {}));
 (function(_x2) {
 	let z = _x2.z = y;
@@ -85,12 +85,11 @@ export { x };
 @@ -1,8 +1,9 @@
 -export var x;
 -(x2 => {
--    function y() {}
--    x2.y = y;
 +var x;
 +(function (_x) {
-+    function y$1() {}
-+    _x.y = y$1;
+     function y() {}
+-    x2.y = y;
++    _x.y = y;
  })(x || (x = {}));
 -(x2 => {
 -    x2.z = x2.y;
@@ -119,8 +118,8 @@ export var x;
 //#region class.ts
 let x;
 (function(_x) {
-	class y$1 {}
-	_x.y = y$1;
+	class y {}
+	_x.y = y;
 })(x || (x = {}));
 (function(_x2) {
 	let z = _x2.z = y;
@@ -137,12 +136,11 @@ export { x };
 @@ -1,8 +1,9 @@
 -export var x;
 -(x2 => {
--    class y {}
--    x2.y = y;
 +var x;
 +(function (_x) {
-+    class y$1 {}
-+    _x.y = y$1;
+     class y {}
+-    x2.y = y;
++    _x.y = y;
  })(x || (x = {}));
 -(x2 => {
 -    x2.z = x2.y;
@@ -172,8 +170,8 @@ export var x;
 //#region namespace.ts
 let x;
 (function(_x) {
-	let y$1;
-	(function(_y) {})(y$1 || (y$1 = _x.y || (_x.y = {})));
+	let y;
+	(function(_y) {})(y || (y = _x.y || (_x.y = {})));
 })(x || (x = {}));
 (function(_x2) {
 	let z = _x2.z = y;
@@ -190,14 +188,13 @@ export { x };
 @@ -1,10 +1,9 @@
 -export var x;
 -(x2 => {
--    let y;
++var x;
++(function (_x) {
+     let y;
 -    (y2 => {
 -        0;
 -    })(y = x2.y || (x2.y = {}));
-+var x;
-+(function (_x) {
-+    let y$1;
-+    (function (_y) {})(y$1 || (y$1 = _x.y || (_x.y = {})));
++    (function (_y) {})(y || (y = _x.y || (_x.y = {})));
  })(x || (x = {}));
 -(x2 => {
 -    x2.z = x2.y;
@@ -226,10 +223,10 @@ export var x;
 //#region enum.ts
 let x;
 (function(_x) {
-	let y$1 = /* @__PURE__ */ function(y$2) {
-		return y$2;
+	let y = /* @__PURE__ */ function(y) {
+		return y;
 	}({});
-	_x.y = y$1;
+	_x.y = y;
 })(x || (x = {}));
 (function(_x2) {
 	let z = _x2.z = y;
@@ -250,10 +247,10 @@ export { x };
 -    (y2 => {})(y = x2.y || (x2.y = {}));
 +var x;
 +(function (_x) {
-+    let y$1 = (function (y$2) {
-+        return y$2;
++    let y = (function (y) {
++        return y;
 +    })({});
-+    _x.y = y$1;
++    _x.y = y;
  })(x || (x = {}));
 -(x2 => {
 -    x2.z = x2.y;

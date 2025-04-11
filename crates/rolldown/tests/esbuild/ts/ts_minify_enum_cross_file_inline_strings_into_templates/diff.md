@@ -16,18 +16,18 @@ console.log(`
 ```js
 
 //#region cross-file.ts
-let CrossFile = /* @__PURE__ */ function(CrossFile$1) {
-	CrossFile$1["STR"] = "str 2";
-	CrossFile$1[CrossFile$1["NUM"] = 321] = "NUM";
-	return CrossFile$1;
+let CrossFile = /* @__PURE__ */ function(CrossFile) {
+	CrossFile["STR"] = "str 2";
+	CrossFile[CrossFile["NUM"] = 321] = "NUM";
+	return CrossFile;
 }({});
 
 //#endregion
 //#region entry.ts
-var SameFile = /* @__PURE__ */ function(SameFile$1) {
-	SameFile$1["STR"] = "str 1";
-	SameFile$1[SameFile$1["NUM"] = 123] = "NUM";
-	return SameFile$1;
+var SameFile = /* @__PURE__ */ function(SameFile) {
+	SameFile["STR"] = "str 1";
+	SameFile[SameFile["NUM"] = 123] = "NUM";
+	return SameFile;
 }(SameFile || {});
 console.log(`
 	SameFile.STR = ${SameFile.STR}
@@ -44,15 +44,15 @@ console.log(`
 --- esbuild	/out.js
 +++ rolldown	entry.js
 @@ -1,6 +1,16 @@
-+var CrossFile = (function (CrossFile$1) {
-+    CrossFile$1["STR"] = "str 2";
-+    CrossFile$1[CrossFile$1["NUM"] = 321] = "NUM";
-+    return CrossFile$1;
++var CrossFile = (function (CrossFile) {
++    CrossFile["STR"] = "str 2";
++    CrossFile[CrossFile["NUM"] = 321] = "NUM";
++    return CrossFile;
 +})({});
-+var SameFile = (function (SameFile$1) {
-+    SameFile$1["STR"] = "str 1";
-+    SameFile$1[SameFile$1["NUM"] = 123] = "NUM";
-+    return SameFile$1;
++var SameFile = (function (SameFile) {
++    SameFile["STR"] = "str 1";
++    SameFile[SameFile["NUM"] = 123] = "NUM";
++    return SameFile;
 +})(SameFile || ({}));
  console.log(`
 -					SameFile.STR = str 1

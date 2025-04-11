@@ -130,5 +130,9 @@ module.exports = [
     "rollup@function@preload-loading-module: waits for pre-loaded modules that are currently loading",
     // passed, the rolldown using `__name` to keep the original name
     "rollup@form@assignment-to-exports-class-declaration: does not rewrite class expression IDs@generates es",
-    "rollup@form@simplify-expression-annotations: keeps correct annotations when simplifying expressinos"
+    "rollup@form@simplify-expression-annotations: keeps correct annotations when simplifying expressinos",
+
+    // passed. but the renaming strategy is different from rollup, causing a mismatch.
+    "rollup@form@deconflict-module-priority: prioritizes entry modules over dependencies when deconflicting",
+    "rollup@form@reexport-star-deshadow: Star reexports scope deshadowing@generates es"
 ]

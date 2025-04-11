@@ -40,31 +40,31 @@ export let c = [
 
 //#region entry.js
 function a(x = foo) {
-	var foo$1;
+	var foo;
 	return x;
 }
 var b = class {
 	fn(x = foo) {
-		var foo$1;
+		var foo;
 		return x;
 	}
 };
 let c = [
 	function(x = foo) {
-		var foo$1;
+		var foo;
 		return x;
 	},
 	(x = foo) => {
-		var foo$1;
+		var foo;
 		return x;
 	},
 	{ fn(x = foo) {
-		var foo$1;
+		var foo;
 		return x;
 	} },
 	class {
 		fn(x = foo) {
-			var foo$1;
+			var foo;
 			return x;
 		}
 	}
@@ -83,7 +83,7 @@ export { a, b, c };
 -    var r;
 -    return o;
 +function a(x = foo) {
-+    var foo$1;
++    var foo;
 +    return x;
  }
 -export class b {
@@ -92,7 +92,7 @@ export { a, b, c };
 -        return r;
 +var b = class {
 +    fn(x = foo) {
-+        var foo$1;
++        var foo;
 +        return x;
      }
 -}
@@ -104,17 +104,17 @@ export { a, b, c };
 -    return o;
 +};
 +var c = [function (x = foo) {
-+    var foo$1;
++    var foo;
 +    return x;
 +}, (x = foo) => {
-+    var foo$1;
++    var foo;
 +    return x;
  }, {
 -    fn(o = foo) {
 -        var r;
 -        return o;
 +    fn(x = foo) {
-+        var foo$1;
++        var foo;
 +        return x;
      }
  }, class {
@@ -122,7 +122,7 @@ export { a, b, c };
 -        var r;
 -        return o;
 +    fn(x = foo) {
-+        var foo$1;
++        var foo;
 +        return x;
      }
  }];

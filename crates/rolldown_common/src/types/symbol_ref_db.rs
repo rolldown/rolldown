@@ -33,7 +33,7 @@ bitflags::bitflags! {
 
 #[derive(Debug)]
 pub struct SymbolRefDbForModule {
-  owner_idx: ModuleIdx,
+  pub owner_idx: ModuleIdx,
   root_scope_id: ScopeId,
   pub ast_scopes: AstScopes,
   // Only some symbols would be cared about, so we use a hashmap to store the flags.
@@ -194,17 +194,14 @@ impl SymbolRefDb {
   }
 
   pub fn canonical_name_for<'name>(
-    &self,
+    &'name self,
     refer: SymbolRef,
     canonical_names: &'name FxHashMap<SymbolRef, Rstr>,
-  ) -> &'name Rstr {
+  ) -> &'name str {
     let canonical_ref = self.canonical_ref_for(refer);
-    canonical_names.get(&canonical_ref).unwrap_or_else(|| {
-      panic!(
-        "canonical name not found for {canonical_ref:?}, original_name: {:?}",
-        refer.name(self)
-      );
-    })
+    canonical_names
+      .get(&canonical_ref)
+      .map_or_else(move || refer.name(self), rolldown_rstr::Rstr::as_str)
   }
 
   pub fn get(&self, refer: SymbolRef) -> &SymbolRefDataClassic {

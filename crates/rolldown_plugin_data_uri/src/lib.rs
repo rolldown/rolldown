@@ -11,19 +11,19 @@ use rolldown_utils::{
 };
 
 #[derive(Debug)]
-pub struct ResolvedDataUrl {
-  pub module_type: ModuleType,
+pub struct ResolvedDataUri {
   pub data: String,
+  pub module_type: ModuleType,
 }
 
 #[derive(Debug, Default)]
-pub struct DataUrlPlugin {
-  resolved_data_url: FxDashMap<String, ResolvedDataUrl>,
+pub struct DataUriPlugin {
+  resolved_data_uri: FxDashMap<String, ResolvedDataUri>,
 }
 
-impl Plugin for DataUrlPlugin {
+impl Plugin for DataUriPlugin {
   fn name(&self) -> Cow<'static, str> {
-    "rolldown:data-url".into()
+    Cow::Borrowed("builtin:data-uri")
   }
 
   async fn resolve_id(
@@ -35,27 +35,29 @@ impl Plugin for DataUrlPlugin {
       let Some(parsed) = parse_data_url(args.specifier) else {
         return Ok(None);
       };
-      let decoded_data = if parsed.is_base64 {
-        String::from_utf8_lossy(base64_simd::STANDARD.decode_to_vec(parsed.data)?.as_ref())
-          .to_string()
-      } else {
-        urlencoding::decode(parsed.data)?.into_owned()
-      };
+
       let module_type = match parsed.mime {
+        "text/css" => ModuleType::Css,
         "text/javascript" => ModuleType::Js,
         "application/json" => ModuleType::Json,
-        "text/css" => ModuleType::Css,
         _ => {
           return Ok(None);
         }
       };
 
-      self
-        .resolved_data_url
-        .insert(args.specifier.to_string(), ResolvedDataUrl { module_type, data: decoded_data });
+      let data = if parsed.is_base64 {
+        let data = base64_simd::STANDARD.decode_to_vec(parsed.data)?;
+        String::from_utf8_lossy(data.as_ref()).to_string()
+      } else {
+        urlencoding::decode(parsed.data)?.into_owned()
+      };
 
-      // Return the specifier as the id to tell rolldown that this data url is handled by the plugin. Don't fallback to
-      // the default resolve behavior and mark it as external.
+      self
+        .resolved_data_uri
+        .insert(args.specifier.to_string(), ResolvedDataUri { data, module_type });
+
+      // Return the specifier as the id to tell rolldown that this data url is handled by the plugin.
+      // Don't fallback to the default resolve behavior and mark it as external.
       return Ok(Some(HookResolveIdOutput { id: args.specifier.into(), ..Default::default() }));
     }
     Ok(None)
@@ -63,7 +65,7 @@ impl Plugin for DataUrlPlugin {
 
   async fn load(&self, _ctx: &PluginContext, args: &HookLoadArgs<'_>) -> HookLoadReturn {
     if is_data_url(args.id) {
-      let Some(resolved) = self.resolved_data_url.get(args.id) else {
+      let Some(resolved) = self.resolved_data_uri.get(args.id) else {
         return Ok(None);
       };
 

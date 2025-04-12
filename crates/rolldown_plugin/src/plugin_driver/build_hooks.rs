@@ -17,6 +17,7 @@ use rolldown_common::{
 use rolldown_sourcemap::SourceMap;
 use rolldown_utils::unique_arc::UniqueArc;
 use string_wizard::{MagicString, SourceMapOptions};
+use tracing::{Instrument, debug_span};
 
 impl PluginDriver {
   #[tracing::instrument(level = "trace", skip_all)]
@@ -104,6 +105,7 @@ impl PluginDriver {
           ),
           args,
         )
+        .instrument(debug_span!("resolve_id_hook", plugin_name = plugin.call_name().as_ref()))
         .await?
       {
         return Ok(Some(r));
@@ -140,6 +142,10 @@ impl PluginDriver {
           ),
           args,
         )
+        .instrument(debug_span!(
+          "resolve_dynamic_import_hook",
+          plugin_name = plugin.call_name().as_ref()
+        ))
         .await?
       {
         return Ok(Some(r));
@@ -152,7 +158,11 @@ impl PluginDriver {
     for (_plugin_idx, plugin, ctx) in
       self.iter_plugin_with_context_by_order(&self.order_by_load_meta)
     {
-      if let Some(r) = plugin.call_load(ctx, args).await? {
+      if let Some(r) = plugin
+        .call_load(ctx, args)
+        .instrument(debug_span!("load_hook", plugin_name = plugin.call_name().as_ref()))
+        .await?
+      {
         return Ok(Some(r));
       }
     }
@@ -183,6 +193,7 @@ impl PluginDriver {
           )),
           &HookTransformArgs { id, code: &code, module_type: &*module_type },
         )
+        .instrument(debug_span!("transform_hook", plugin_name = plugin.call_name().as_ref()))
         .await?
       {
         original_sourcemap_chain = plugin_sourcemap_chain.into_inner();
@@ -260,6 +271,7 @@ impl PluginDriver {
             module_type: args.module_type,
           },
         )
+        .instrument(debug_span!("transform_ast_hook", plugin_name = plugin.call_name().as_ref()))
         .await?;
     }
     Ok(args.ast)
@@ -273,14 +285,20 @@ impl PluginDriver {
     for (_, plugin, ctx) in
       self.iter_plugin_with_context_by_order(&self.order_by_module_parsed_meta)
     {
-      plugin.call_module_parsed(ctx, Arc::clone(&module_info), normal_module).await?;
+      plugin
+        .call_module_parsed(ctx, Arc::clone(&module_info), normal_module)
+        .instrument(debug_span!("module_parsed_hook", plugin_name = plugin.call_name().as_ref()))
+        .await?;
     }
     Ok(())
   }
 
   pub async fn build_end(&self, args: Option<&HookBuildEndArgs<'_>>) -> HookNoopReturn {
     for (_, plugin, ctx) in self.iter_plugin_with_context_by_order(&self.order_by_build_end_meta) {
-      plugin.call_build_end(ctx, args).await?;
+      plugin
+        .call_build_end(ctx, args)
+        .instrument(debug_span!("build_end_hook", plugin_name = plugin.call_name().as_ref()))
+        .await?;
     }
     Ok(())
   }

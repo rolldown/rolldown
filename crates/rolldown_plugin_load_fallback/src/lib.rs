@@ -1,5 +1,4 @@
 use std::borrow::Cow;
-use std::fs::read_to_string;
 
 use rolldown_plugin::{HookLoadArgs, HookLoadOutput, HookLoadReturn, Plugin, PluginContext};
 
@@ -20,7 +19,7 @@ impl Plugin for LoadFallbackPlugin {
     let Some(index) = args.id[start..].find(['?', '#']) else { return Ok(None) };
 
     let path = &args.id[..start + index];
-    let code = read_to_string(path)?;
+    let Ok(code) = std::fs::read_to_string(path) else { return Ok(None) };
 
     ctx.add_watch_file(path);
 

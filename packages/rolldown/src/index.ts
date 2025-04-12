@@ -44,7 +44,7 @@ import type {
   SourceDescription,
   TransformResult,
 } from './plugin';
-export {withFilter} from './plugin';
+export { withFilter } from './plugin';
 import type {
   HookFilter,
   ModuleTypeFilter,

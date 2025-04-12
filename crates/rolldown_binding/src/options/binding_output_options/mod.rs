@@ -117,7 +117,7 @@ pub struct BindingOutputOptions {
   #[napi(ts_type = "boolean | 'dce-only' | BindingMinifyOptions")]
   pub minify: Option<Either3<bool, String, BindingMinifyOptions>>,
   pub advanced_chunks: Option<BindingAdvancedChunksOptions>,
-  #[napi(ts_type = "'none' | 'preserve-legal'")]
+  #[napi(ts_type = "'none' | 'preserve' | 'preserve-legal'")]
   pub comments: Option<String>,
   pub polyfill_require: Option<bool>,
   pub target: Option<String>,

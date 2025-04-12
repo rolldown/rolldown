@@ -44,7 +44,7 @@ export interface NormalizedOutputOptions {
   sourcemapIgnoreList: SourcemapIgnoreListOption;
   sourcemapPathTransform: SourcemapPathTransformOption | undefined;
   minify: false | BindingMinifyOptions;
-  comments: 'none' | 'preserve-legal';
+  comments: 'none' | 'preserve' | 'preserve-legal';
   polyfillRequire: boolean;
   plugins: RolldownPlugin[];
 }
@@ -165,7 +165,7 @@ export class NormalizedOutputOptionsImpl implements NormalizedOutputOptions {
     return this.inner.minify;
   }
 
-  get comments(): 'none' | 'preserve-legal' {
+  get comments(): 'none' | 'preserve' | 'preserve-legal' {
     return this.inner.comments;
   }
 

@@ -642,7 +642,13 @@ const OutputOptionsSchema = v.strictObject({
   ),
   advancedChunks: v.optional(AdvancedChunksSchema),
   comments: v.pipe(
-    v.optional(v.union([v.literal('none'), v.literal('preserve-legal')])),
+    v.optional(
+      v.union([
+        v.literal('none'),
+        v.literal('preserve'),
+        v.literal('preserve-legal'),
+      ]),
+    ),
     v.description('Control comments in the output'),
   ),
   target: v.pipe(

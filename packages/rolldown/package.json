@@ -118,7 +118,6 @@
     }
   },
   "devDependencies": {
-    "@jridgewell/sourcemap-codec": "^1.5.0",
     "@napi-rs/cli": "^3.0.0-alpha.74",
     "@napi-rs/wasm-runtime": "^0.2.4",
     "@oxc-node/core": "^0.0.22",

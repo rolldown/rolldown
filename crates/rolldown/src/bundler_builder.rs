@@ -23,6 +23,19 @@ pub struct BundlerBuilder {
 
 impl BundlerBuilder {
   pub fn build(mut self) -> Bundler {
+    let mut build_id = std::time::SystemTime::now()
+      .duration_since(std::time::UNIX_EPOCH)
+      .expect("Time went backwards")
+      .as_millis()
+      .to_string();
+    if let Some(debug_options) = &self.options.debug {
+      if let Some(id) = &debug_options.build_id {
+        build_id = id.to_string();
+      }
+      rolldown_debug::init_devtool_tracing();
+    }
+    let build_span = tracing::trace_span!("Build", buildId = build_id);
+
     let maybe_guard = rolldown_tracing::try_init_tracing();
 
     let NormalizeOptionsReturn { mut options, resolve_options, mut warnings } =
@@ -55,6 +68,7 @@ impl BundlerBuilder {
       _log_guard: maybe_guard,
       cache: ScanStageCache::default(),
       hmr_manager: None,
+      build_span,
     }
   }
 

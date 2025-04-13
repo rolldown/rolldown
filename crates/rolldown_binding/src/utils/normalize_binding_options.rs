@@ -324,6 +324,7 @@ pub fn normalize_binding_options(
     make_absolute_externals_relative: input_options
       .make_absolute_externals_relative
       .map(Into::into),
+    debug: input_options.debug.map(|inner| rolldown::DebugOptions { build_id: inner.build_id }),
   };
 
   #[cfg(not(target_family = "wasm"))]

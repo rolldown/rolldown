@@ -97,6 +97,7 @@ export function bindingifyInputOptions(
     makeAbsoluteExternalsRelative: bindingifyMakeAbsoluteExternalsRelative(
       inputOptions.makeAbsoluteExternalsRelative,
     ),
+    debug: inputOptions.debug,
   };
 }
 

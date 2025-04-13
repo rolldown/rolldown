@@ -21,8 +21,7 @@ use rolldown_plugin::{
   __inner::SharedPluginable, HookBuildEndArgs, HookRenderErrorArgs, SharedPluginDriver,
 };
 use rolldown_utils::dashmap::FxDashSet;
-use std::sync::Arc;
-use tracing_chrome::FlushGuard;
+use std::{any::Any, sync::Arc};
 
 pub struct Bundler {
   pub closed: bool,
@@ -32,10 +31,11 @@ pub struct Bundler {
   pub(crate) file_emitter: SharedFileEmitter,
   pub(crate) plugin_driver: SharedPluginDriver,
   pub(crate) warnings: Vec<BuildDiagnostic>,
-  pub(crate) _log_guard: Option<FlushGuard>,
+  pub(crate) _log_guard: Option<Box<dyn Any + Send>>,
   #[allow(unused)]
   pub(crate) cache: ScanStageCache,
   pub(crate) hmr_manager: Option<HmrManager>,
+  pub(crate) build_span: tracing::Span,
 }
 
 impl Bundler {
@@ -49,14 +49,14 @@ impl Bundler {
 }
 
 impl Bundler {
-  #[tracing::instrument(level = "debug", skip_all)]
+  #[tracing::instrument(level = "debug", skip_all, parent = &self.build_span)]
   pub async fn write(&mut self) -> BuildResult<BundleOutput> {
     let scan_stage_output = self.scan(vec![]).await?;
 
     self.bundle_write(scan_stage_output).await
   }
 
-  #[tracing::instrument(level = "debug", skip_all)]
+  #[tracing::instrument(level = "debug", skip_all, parent = &self.build_span)]
   pub async fn generate(&mut self) -> BuildResult<BundleOutput> {
     let scan_stage_output = self.scan(vec![]).await?;
 
@@ -78,6 +78,7 @@ impl Bundler {
     Ok(())
   }
 
+  #[tracing::instrument(target = "devtool", level = "debug", skip_all)]
   pub async fn scan(&mut self, changed_ids: Vec<ArcStr>) -> BuildResult<NormalizedScanStageOutput> {
     let mode =
       if !self.options.experimental.is_incremental_build_enabled() || changed_ids.is_empty() {
@@ -93,6 +94,7 @@ impl Bundler {
       Arc::clone(&self.plugin_driver),
       self.fs,
       Arc::clone(&self.resolver),
+      self.build_span.clone(),
     )
     .scan(mode, cache)
     .await
@@ -223,6 +225,7 @@ impl Bundler {
         index_ecma_ast: link_stage_output.ast_table,
         // Don't forget to reset the cache if you want to rebuild the bundle instead hmr.
         cache: std::mem::take(&mut self.cache),
+        build_span: self.build_span.clone(),
       }));
     }
     Ok(output)

@@ -28,6 +28,7 @@ pub struct HmrManagerInput {
   pub plugin_driver: SharedPluginDriver,
   pub index_ecma_ast: IndexEcmaAst,
   pub cache: ScanStageCache,
+  pub build_span: tracing::Span,
 }
 
 pub struct HmrManager {
@@ -130,6 +131,7 @@ impl HmrManager {
       Arc::clone(&self.plugin_driver),
       std::mem::take(&mut self.cache),
       false,
+      self.build_span.clone(),
     )?;
 
     let module_loader_output =

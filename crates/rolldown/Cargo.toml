@@ -34,6 +34,7 @@ notify = { workspace = true }
 oxc = { workspace = true }
 oxc_index = { workspace = true }
 rolldown_common = { workspace = true }
+rolldown_debug = { workspace = true }
 rolldown_ecmascript = { workspace = true }
 rolldown_ecmascript_utils = { workspace = true }
 rolldown_error = { workspace = true }
@@ -53,7 +54,6 @@ string_wizard = { workspace = true }
 sugar_path = { workspace = true }
 tokio = { workspace = true, features = ["rt", "macros", "sync", "time"] }
 tracing = { workspace = true }
-tracing-chrome = { workspace = true }
 xxhash-rust = { workspace = true, features = ["xxh3"] }
 
 [dev-dependencies]

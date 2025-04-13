@@ -401,6 +401,17 @@ const InputOptionsSchema = v.strictObject({
     v.optional(v.boolean()),
     v.description('Keep function/class name'),
   ),
+  debug: v.pipe(
+    v.optional(v.object({
+      buildId: v.pipe(
+        v.optional(v.string()),
+        v.description('Used to name the build.'),
+      ),
+    })),
+    v.description(
+      'Enable debug mode. Emit debug information to disk. This might slow down the build process significantly.',
+    ),
+  ),
 });
 
 const InputCliOverrideSchema = v.strictObject({

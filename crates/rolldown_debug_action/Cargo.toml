@@ -1,0 +1,15 @@
+[package]
+name = "rolldown_debug_action"
+version = "0.1.0"
+edition.workspace = true
+homepage.workspace = true
+license.workspace = true
+repository.workspace = true
+
+[dependencies]
+serde = { workspace = true, features = ["derive"] }
+ts-rs = { workspace = true }
+valuable = { workspace = true, features = ["derive"] }
+
+[lints]
+workspace = true

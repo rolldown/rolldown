@@ -40,6 +40,7 @@ OPTIONS
   --css-chunk-file-names <css-chunk-file-names>Name pattern for emitted css secondary chunks.
   --css-entry-file-names <css-entry-file-names>Name pattern for emitted css entry chunks.
   --cwd <cwd>                 Current working directory.
+  --debug.build-id <debug.build-id>Used to name the build.
   --define <define>           Define global variables.
   --drop-labels <drop-labels> Remove labeled statements with these label names.
   --entry-file-names <name>   Name pattern for emitted entry chunks.

@@ -264,6 +264,10 @@ export interface BindingChecksOptions {
   configurationFieldConflict?: boolean
 }
 
+export interface BindingDebugOptions {
+  buildId?: string
+}
+
 export interface BindingDeferSyncScanData {
   /** ModuleId */
   id: string
@@ -403,6 +407,7 @@ export interface BindingInputOptions {
   checks?: BindingChecksOptions
   deferSyncScanData?: undefined | (() => BindingDeferSyncScanData[])
   makeAbsoluteExternalsRelative?: BindingMakeAbsoluteExternalsRelative
+  debug?: BindingDebugOptions
 }
 
 export interface BindingIsolatedDeclarationPluginConfig {

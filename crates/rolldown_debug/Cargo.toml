@@ -1,0 +1,18 @@
+[package]
+name = "rolldown_debug"
+version = "0.1.0"
+edition.workspace = true
+homepage.workspace = true
+license.workspace = true
+repository.workspace = true
+
+[dependencies]
+rolldown_debug_action = { workspace = true }
+serde = { workspace = true, features = ["derive", "rc"] }
+serde_json = { workspace = true }
+tracing = { workspace = true, features = ["valuable"] }
+tracing-serde = { workspace = true }
+tracing-subscriber = { workspace = true, features = ["env-filter", "json", "valuable"] }
+
+[lints]
+workspace = true

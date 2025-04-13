@@ -2403,6 +2403,7 @@ dependencies = [
  "oxc",
  "oxc_index",
  "rolldown_common",
+ "rolldown_debug",
  "rolldown_ecmascript",
  "rolldown_ecmascript_utils",
  "rolldown_error",
@@ -2425,7 +2426,6 @@ dependencies = [
  "testing_macros",
  "tokio",
  "tracing",
- "tracing-chrome",
  "xxhash-rust",
 ]
 
@@ -2513,6 +2513,27 @@ dependencies = [
 ]
 
 [[package]]
+name = "rolldown_debug"
+version = "0.1.0"
+dependencies = [
+ "rolldown_debug_action",
+ "serde",
+ "serde_json",
+ "tracing",
+ "tracing-serde",
+ "tracing-subscriber",
+]
+
+[[package]]
+name = "rolldown_debug_action"
+version = "0.1.0"
+dependencies = [
+ "serde",
+ "ts-rs",
+ "valuable",
+]
+
+[[package]]
 name = "rolldown_ecmascript"
 version = "0.1.0"
 dependencies = [
@@ -2583,6 +2604,7 @@ dependencies = [
  "derive_more",
  "oxc_index",
  "rolldown_common",
+ "rolldown_debug",
  "rolldown_ecmascript",
  "rolldown_error",
  "rolldown_resolver",
@@ -2595,6 +2617,7 @@ dependencies = [
  "tokio",
  "tracing",
  "typedmap",
+ "valuable",
 ]
 
 [[package]]
@@ -3199,6 +3222,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "termcolor"
+version = "1.4.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "06794f8f6c5c898b3275aebefa6b8a1cb24cd2c6c79397ab15774837a0bc5755"
+dependencies = [
+ "winapi-util",
+]
+
+[[package]]
 name = "testing_macros"
 version = "1.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3388,6 +3420,18 @@ dependencies = [
 ]
 
 [[package]]
+name = "tracing-serde"
+version = "0.2.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "704b1aeb7be0d0a84fc9828cae51dab5970fee5088f83d1dd7ee6f6246fc6ff1"
+dependencies = [
+ "serde",
+ "tracing-core",
+ "valuable",
+ "valuable-serde",
+]
+
+[[package]]
 name = "tracing-subscriber"
 version = "0.3.19"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3397,12 +3441,40 @@ dependencies = [
  "nu-ansi-term",
  "once_cell",
  "regex",
+ "serde",
+ "serde_json",
  "sharded-slab",
  "smallvec",
  "thread_local",
  "tracing",
  "tracing-core",
  "tracing-log",
+ "tracing-serde",
+ "valuable",
+ "valuable-serde",
+]
+
+[[package]]
+name = "ts-rs"
+version = "10.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "e640d9b0964e9d39df633548591090ab92f7a4567bc31d3891af23471a3365c6"
+dependencies = [
+ "lazy_static",
+ "thiserror 2.0.12",
+ "ts-rs-macros",
+]
+
+[[package]]
+name = "ts-rs-macros"
+version = "10.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "0e9d8656589772eeec2cf7a8264d9cda40fb28b9bc53118ceb9e8c07f8f38730"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "syn",
+ "termcolor",
 ]
 
 [[package]]
@@ -3516,6 +3588,30 @@ name = "valuable"
 version = "0.1.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "ba73ea9cf16a25df0c8caa16c51acb937d5712a8429db78a3ee29d5dcacd3a65"
+dependencies = [
+ "valuable-derive",
+]
+
+[[package]]
+name = "valuable-derive"
+version = "0.1.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "4e3a32a9bcc0f6c6ccfd5b27bcf298c58e753bcc9eeff268157a303393183a6d"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "syn",
+]
+
+[[package]]
+name = "valuable-serde"
+version = "0.1.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "2ee0548edecd1b907be7e67789923b7d02275b9ba4a33ebc33300e2c947a8cb1"
+dependencies = [
+ "serde",
+ "valuable",
+]
 
 [[package]]
 name = "version_check"

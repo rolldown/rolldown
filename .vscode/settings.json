@@ -24,6 +24,11 @@
     "*.snap.new": "markdown",
     "_config.json": "jsonc"
   },
+  "files.readonlyInclude": {
+    "**/CHANGELOG.md": true,
+    "**/generated/**": true,
+    "packages/rolldown/src/*{binding,worker}*": true
+  },
   "git.ignoreLimitWarning": true,
   "json.schemas": [
     {

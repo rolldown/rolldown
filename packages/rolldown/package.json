@@ -142,8 +142,7 @@
     "type-fest": "^4.20.0",
     "typedoc": "^0.28.0",
     "typescript": "^5.7.3",
-    "unbuild": "^3.0.0",
-    "why-is-node-running": "^3.0.0"
+    "unbuild": "^3.0.0"
   },
   "optionalDependencies": {
     "@rolldown/binding-darwin-arm64": "workspace:*",

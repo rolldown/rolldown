@@ -69,11 +69,7 @@ impl Plugin for JsonPlugin {
         }));
       }
 
-      if self.stringify == JsonPluginStringify::True ||
-      // use 10kB as a threshold for 'auto'
-      // https://v8.dev/blog/cost-of-javascript-2019#:~:text=A%20good%20rule%20of%20thumb%20is%20to%20apply%20this%20technique%20for%20objects%20of%2010%20kB%20or%20larger
-      code.len() > 10 * 1000
-      {
+      if self.stringify == JsonPluginStringify::True || code.len() > utils::THRESHOLD_SIZE {
         let normalized_code = if self.is_build {
           // TODO: perf: find better way than https://github.com/rolldown/vite/blob/3bf86e3f715c952a032b476b60c8c869e9c50f3f/packages/vite/src/node/plugins/json.ts#L55-L57
           let value = serde_json::from_str::<Value>(code)?;
@@ -96,7 +92,7 @@ impl Plugin for JsonPlugin {
     }
 
     let value = serde_json::from_str::<Value>(code)?;
-    let output = utils::to_esm(&value, self.named_exports);
+    let output = utils::json_to_esm(&value, self.named_exports);
     Ok(Some(HookTransformOutput {
       code: Some(output),
       map: Some(SourceMap::default()),

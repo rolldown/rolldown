@@ -335,9 +335,6 @@ importers:
       unbuild:
         specifier: ^3.0.0
         version: 3.5.0(typescript@5.8.3)(vue@3.5.13(typescript@5.8.3))
-      why-is-node-running:
-        specifier: ^3.0.0
-        version: 3.2.2
     optionalDependencies:
       '@rolldown/binding-darwin-arm64':
         specifier: workspace:*
@@ -6541,11 +6538,6 @@ packages:
     engines: {node: '>=8'}
     hasBin: true
 
-  why-is-node-running@3.2.2:
-    resolution: {integrity: sha512-NKUzAelcoCXhXL4dJzKIwXeR8iEVqsA0Lq6Vnd0UXvgaKbzVo4ZTHROF2Jidrv+SgxOQ03fMinnNhzZATxOD3A==}
-    engines: {node: '>=20.11'}
-    hasBin: true
-
   widest-line@3.1.0:
     resolution: {integrity: sha512-NsmoXalsWVDMGupxZ5R08ka9flZjjiLvHVAWYOKtiKM8ujtZWr9cRffak+uSE48+Ob8ObalXpwyeUiyDD6QFgg==}
     engines: {node: '>=8'}
@@ -12732,8 +12724,6 @@ snapshots:
     dependencies:
       siginfo: 2.0.0
       stackback: 0.0.2
-
-  why-is-node-running@3.2.2: {}
 
   widest-line@3.1.0:
     dependencies:

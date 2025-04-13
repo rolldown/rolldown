@@ -10,7 +10,7 @@ use serde_json::Value;
 
 #[derive(Debug, Default)]
 pub struct JsonPlugin {
-  pub is_build: bool,
+  pub minify: bool,
   pub named_exports: bool,
   pub stringify: JsonPluginStringify,
 }
@@ -44,7 +44,7 @@ impl Plugin for JsonPlugin {
     let is_stringify = self.stringify != JsonPluginStringify::False
       && (self.stringify == JsonPluginStringify::True || code.len() > utils::THRESHOLD_SIZE);
     if !is_name_exports && is_stringify {
-      let json = if self.is_build {
+      let json = if self.minify {
         // TODO(perf): find better way than https://github.com/rolldown/vite/blob/3bf86e3f/packages/vite/src/node/plugins/json.ts#L55-L57
         let value = serde_json::from_str::<Value>(code)?;
         Cow::Owned(serde_json::to_string(&value)?)

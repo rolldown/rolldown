@@ -7,7 +7,7 @@ export default defineTest({
   config: {
     input: 'main.js',
     plugins: [
-      jsonPlugin({ namedExports: false, stringify: true, isBuild: true }),
+      jsonPlugin({ namedExports: false, stringify: true, minify: true }),
       {
         name: 'test-plugin',
         async transform(code, id) {

@@ -4,7 +4,7 @@ import { expect } from 'vitest'
 
 export default defineTest({
   config: {
-    plugins: [jsonPlugin({ stringify: true, isBuild: true })],
+    plugins: [jsonPlugin({ stringify: true, minify: true })],
   },
   async afterTest(output) {
     expect(output.output[0].code).toContain(

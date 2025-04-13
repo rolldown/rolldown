@@ -5,7 +5,7 @@ import { expect } from 'vitest'
 export default defineTest({
   config: {
     plugins: [
-      jsonPlugin({ stringify: false, isBuild: true, namedExports: true }),
+      jsonPlugin({ stringify: false, minify: true, namedExports: true }),
     ],
   },
   async afterTest(output) {

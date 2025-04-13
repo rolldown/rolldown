@@ -1,12 +1,11 @@
 import { expect } from 'vitest'
 import { defineTest } from 'rolldown-tests'
-import { encode } from '@jridgewell/sourcemap-codec'
+import { SourceMapConsumer } from 'source-map'
 import {
   getLocation,
   getOutputAsset,
   getOutputChunk,
 } from 'rolldown-tests/utils'
-import { SourceMapConsumer } from 'source-map'
 
 // Copy from "rollup@sourcemaps@transform-low-resolution: handles combining low-resolution and high-resolution source-maps when transforming@generates es".
 export default defineTest({
@@ -20,9 +19,9 @@ export default defineTest({
           // this mapping only maps the second line to the first with no column
           // details
           const decodedMap = [[], [[0, 0, 0, 0]]]
+          const encode = (_map = decodedMap) => ';AAAA';
           return {
             code: `console.log('added');\n${code}`,
-            // @ts-expect-error typing is not same as rollup
             map: { mappings: encode(decodedMap) }, // The invalid map used `sourceIndex`, but not `sources` field
           }
         },

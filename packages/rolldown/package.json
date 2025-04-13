@@ -73,8 +73,8 @@
     "build-js-glue": "pnpm run --sequential \"/^build-(types|node|types-check)$/\"",
     "build-native:debug": "pnpm run --sequential \"/^build-(binding|js-glue)$/\"",
     "build-native:release": "pnpm run --sequential \"/^build-(binding:release|js-glue)$/\"",
-    "build-wasi:debug": "pnpm run --sequential \"/^build-(binding|binding:wasi|node)$/\"",
-    "build-wasi:release": "pnpm run --sequential \"/^build-(binding|binding:wasi:release|node)$/\"",
+    "build-wasi:debug": "cross-env WASI_PKG=1 pnpm run --sequential \"/^build-(binding|binding:wasi|node)$/\"",
+    "build-wasi:release": "cross-env WASI_PKG=1 pnpm run --sequential \"/^build-(binding|binding:wasi:release|node)$/\"",
     "# Scrips for docs #": "_",
     "extract-options-doc": "typedoc",
     "preinstall": "npx only-allow pnpm"

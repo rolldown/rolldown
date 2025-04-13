@@ -65,8 +65,8 @@
     "build-types": "tsc -p ../rolldown/tsconfig.json --outDir ../wasi/dist/types --tsBuildInfoFile ../wasi/dist/.tsbuildinfo",
     "build:debug": "pnpm run --sequential \"/^build-(types|pkg:debug)$/\"",
     "build:release": "pnpm run --sequential \"/^build-(types|pkg:release)$/\"",
-    "build-pkg:debug": "cross-env WASI_PKG=1 pnpm run --filter rolldown build-wasi:debug",
-    "build-pkg:release": "cross-env WASI_PKG=1 pnpm run --filter rolldown build-wasi:release",
+    "build-pkg:debug": "pnpm run --filter rolldown build-wasi:debug",
+    "build-pkg:release": "pnpm run --filter rolldown build-wasi:release",
     "preinstall": "npx only-allow pnpm"
   },
   "dependencies": {

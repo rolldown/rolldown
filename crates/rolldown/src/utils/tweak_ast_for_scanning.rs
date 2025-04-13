@@ -77,21 +77,20 @@ impl<'ast> VisitMut<'ast> for PreProcessor<'ast> {
         true
       }
     });
-    let original_body = program.body.take_in(self.snippet.alloc());
-    program.body.reserve_exact(original_body.len());
-    self.top_level_stmt_temp_storage = Vec::with_capacity(
-      original_body.iter().filter(|stmt| !stmt.is_module_declaration_with_source()).count(),
-    );
 
-    for mut stmt in original_body {
+    let drain_elements = program
+      .body
+      .drain_filter(|stmt| !stmt.is_module_declaration_with_source())
+      .collect::<Vec<_>>();
+
+    self.top_level_stmt_temp_storage = Vec::with_capacity(drain_elements.len());
+    for mut stmt in drain_elements {
       let stmt_addr = Address::from_ptr(&stmt);
       self.statement_stack.push(stmt_addr);
       walk_mut::walk_statement(self, &mut stmt);
       self.statement_stack.pop();
       if let Some(stmts) = self.statement_replace_map.remove(&stmt_addr) {
         self.top_level_stmt_temp_storage.extend(stmts);
-      } else if stmt.is_module_declaration_with_source() {
-        program.body.push(stmt);
       } else {
         self.top_level_stmt_temp_storage.push(stmt);
       }

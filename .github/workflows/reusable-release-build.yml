@@ -112,6 +112,8 @@ jobs:
       - name: Build Binding
         run: ${{ matrix.build }}
         shell: bash
+        env:
+          RUSTFLAGS: '--cfg tracing_unstable'
 
       - name: Upload Binding Artifact
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
@@ -257,3 +259,33 @@ jobs:
           name: wasi-artifact
           path: |
             packages/wasi/dist/**
+
+  build-rolldown-debug:
+    strategy:
+      fail-fast: false
+    name: Build `@rolldown/wasi` Package
+    runs-on: ubuntu-latest
+    steps:
+      - uses: taiki-e/checkout-action@b13d20b7cda4e2f325ef19895128f7ff735c0b3d # v1.3.1
+
+      - name: Setup Rust
+        uses: ./.github/actions/setup-rust
+        with:
+          tools: just
+          # `@rolldown/debug` only rely on debug build to produce code in `src/generated`.
+          cache-key: debug-build
+
+      - name: Setup Node
+        uses: ./.github/actions/setup-node
+
+      - name: Build `@rolldown/debug`
+        # This binary is only used to build the node package itself. It's won't be published.
+        run: pnpm --filter "@rolldown/debug" build
+
+      - name: Upload `@rolldown/debug` Artifact
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          if-no-files-found: error
+          name: debug-artifact
+          path: |
+            packages/debug/dist/**

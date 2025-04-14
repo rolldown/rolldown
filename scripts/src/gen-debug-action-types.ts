@@ -39,7 +39,7 @@ nodeFs.rmSync(generatedTypesDir, { recursive: true, force: true });
 
 // Create a `index.ts` file that re-exports all the generated types
 const barrelFile = generatedTypesFiles
-  .map((file) => `export * from './${file.slice(0, -3)}'`) // remove `.ts` extension
+  .map((file) => `export * from './${file.slice(0, -3)}.js'`) // remove `.ts` extension
   .join('\n');
 
 nodeFs.writeFileSync(

@@ -45,7 +45,7 @@ onKeyStroke('Escape', () => {
   </button>
   <Teleport to="body" v-if="isModalVisible">
     <transition name="modal-fade">
-      <div class="modal-overlay" @click="closeModal" aria-modal="true" role="dialog">
+      <dialog class="modal-overlay" @click="closeModal" open aria-modal="true">
         <div class="modal-container" @click.stop>
           <div class="modal-header">
             <button class="close-button" @click="closeModal" aria-label="Close modal">
@@ -64,7 +64,7 @@ onKeyStroke('Escape', () => {
               </a>
             </div>
         </div>
-      </div>
+      </dialog>
     </transition>
   </Teleport>
 </template>
@@ -72,6 +72,7 @@ onKeyStroke('Escape', () => {
 <style scoped>
 .modal-overlay {
   position: fixed;
+  border: 0;
   z-index: 9999;
   top: 0;
   left: 0;

@@ -37,7 +37,7 @@ const shared = defineConfig({
     /\.\/rolldown-binding\.wasi\.cjs/,
     // some dependencies, e.g. zod, cannot be inlined because their types
     // are used in public APIs
-    ...Object.keys(pkgJson.dependencies),
+    ...(pkgJson.dependencies ? Object.keys(pkgJson.dependencies) : []),
   ],
 });
 

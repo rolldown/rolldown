@@ -7,7 +7,6 @@ use rolldown_error::BuildResult;
 use rolldown_utils::dashmap::FxDashSet;
 use std::{
   ops::Deref,
-  path::Path,
   sync::{
     Arc,
     atomic::{AtomicBool, Ordering},
@@ -38,7 +37,6 @@ pub struct WatcherImpl {
   pub emitter: SharedWatcherEmitter,
   tasks: Vec<WatcherTask>,
   notify_watcher: Arc<Mutex<RecommendedWatcher>>,
-  notify_watch_files: Arc<FxDashSet<ArcStr>>,
   running: AtomicBool,
   watch_changes: FxDashSet<WatcherChangeData>,
   tx: Arc<Sender<WatcherChannelMsg>>,
@@ -97,7 +95,6 @@ impl WatcherImpl {
       tasks,
       emitter,
       notify_watcher,
-      notify_watch_files,
       running: AtomicBool::default(),
       watch_changes: FxDashSet::default(),
       rx: Arc::new(Mutex::new(rx)),
@@ -153,11 +150,7 @@ impl WatcherImpl {
     self.exec_tx.send(ExecChannelMsg::Close)?;
     // stop watching files
     // TODO the notify watcher should be dropped, because the stop method is private
-    let mut inner = self.notify_watcher.lock().await;
-    for path in self.notify_watch_files.iter() {
-      tracing::debug!(name= "notify close ", path = ?path.as_str());
-      inner.unwatch(Path::new(path.as_str()))?;
-    }
+    let inner = self.notify_watcher.lock().await;
     // The inner mutex should be dropped to avoid deadlock with bundler lock at `Watcher::run`
     std::mem::drop(inner);
     // emit close event

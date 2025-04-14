@@ -15,10 +15,11 @@ impl Plugin for LoadFallbackPlugin {
       return Ok(None);
     }
 
-    let start = args.id.rfind('/').unwrap_or(0);
-    let Some(index) = args.id[start..].find(['?', '#']) else { return Ok(None) };
+    let Some(index) = memchr::memchr2(b'?', b'#', args.id.as_bytes()) else {
+      return Ok(None);
+    };
 
-    let path = &args.id[..start + index];
+    let path = &args.id[..index];
     let Ok(code) = std::fs::read_to_string(path) else { return Ok(None) };
 
     ctx.add_watch_file(path);

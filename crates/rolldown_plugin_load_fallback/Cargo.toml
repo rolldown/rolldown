@@ -15,4 +15,5 @@ doctest = false
 workspace = true
 
 [dependencies]
+memchr = { workspace = true }
 rolldown_plugin = { workspace = true }

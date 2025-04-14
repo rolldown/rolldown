@@ -2679,6 +2679,7 @@ dependencies = [
 name = "rolldown_plugin_load_fallback"
 version = "0.1.0"
 dependencies = [
+ "memchr",
  "rolldown_plugin",
 ]
 

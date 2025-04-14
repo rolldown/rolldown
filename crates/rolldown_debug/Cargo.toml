@@ -12,7 +12,7 @@ serde = { workspace = true, features = ["derive", "rc"] }
 serde_json = { workspace = true }
 tracing = { workspace = true, features = ["valuable"] }
 tracing-serde = { workspace = true }
-tracing-subscriber = { workspace = true, features = ["env-filter", "json", "valuable"] }
+tracing-subscriber = { workspace = true, features = ["env-filter", "fmt", "json", "registry", "std", "valuable"] }
 
 [lints]
 workspace = true

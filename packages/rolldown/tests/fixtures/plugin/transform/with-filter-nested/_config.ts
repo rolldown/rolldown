@@ -36,10 +36,15 @@ const nestedPlugin: RolldownPluginOption = [
 export default defineTest({
 	skipComposingJsPlugin: true,
 	config: {
-    // Without this override, the transform function will be called 9 times
-		plugins: [withFilter(nestedPlugin, { transform: { id: /\.vue$/ } })],
+		// Without this override, the transform function will be called 9 times
+		plugins: [
+			withFilter(nestedPlugin, {
+				transform: { id: /\.vue$/ },
+				pluginNamePattern: [/test-plugin-1-.*/],
+			}),
+		],
 	},
 	afterTest: () => {
-		expect(transformFn).toHaveBeenCalledTimes(0);
+		expect(transformFn).toHaveBeenCalledTimes(3);
 	},
 });

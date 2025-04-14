@@ -10,6 +10,8 @@ hero:
     src: /rolldown-round.svg
     alt: Rolldown
   actions:
+    - text: Why Rolldown?
+      openVideoModal: true
     - theme: brand
       text: Get Started
       link: /guide/
@@ -45,6 +47,8 @@ features:
     details: |
       Serving as the unified bundler in Vite in the near future
 ---
+
+
 
 <h2 class="voidzero-lead">Brought to you by</h2>
 

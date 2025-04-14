@@ -5,6 +5,7 @@ use rolldown_plugin::PluginDriver;
 use rolldown_sourcemap::SourceMap;
 
 #[inline]
+#[tracing::instrument(level = "debug", skip_all)]
 pub async fn transform_source(
   plugin_driver: &PluginDriver,
   resolved_id: &ResolvedId,

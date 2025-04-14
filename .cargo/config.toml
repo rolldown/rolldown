@@ -2,12 +2,21 @@
 [env]
 WORKSPACE_DIR = { value = "", relative = true }
 
+[build]
+# We are using https://docs.rs/tracing/latest/tracing/field/index.html#using-valuable to support recording nested fields.
+rustflags = ["--cfg", "tracing_unstable"]
+
 [alias]
 ls-lint = "run --bin ls-lint"
 run-fixture = "run --bin run-fixture"
 
 [target.'cfg(target_vendor = "apple")']
-rustflags = ["-C", "link-args=-Wl,-undefined,dynamic_lookup,-no_fixup_chains"]
+rustflags = [
+  "-C",
+  "link-args=-Wl,-undefined,dynamic_lookup,-no_fixup_chains",
+  "--cfg",
+  "tracing_unstable",
+]
 
 # To be able to run unit tests on Linux, support compilation to 'x86_64-unknown-linux-gnu'.
 # pthread_key_create() destructors and segfault after a DSO unloading https://sourceware.org/bugzilla/show_bug.cgi?id=21031
@@ -17,17 +26,19 @@ rustflags = [
   "link-args=-Wl,--warn-unresolved-symbols",
   "-C",
   "link-args=-Wl,-z,nodelete",
+  "--cfg",
+  "tracing_unstable",
 ]
 
 # To be able to run unit tests on Windows, support compilation to 'x86_64-pc-windows-msvc'.
 [target.'cfg(target_env = "msvc")']
-rustflags = ["-C", "link-args=/FORCE"]
+rustflags = ["-C", "link-args=/FORCE", "--cfg", "tracing_unstable"]
 
 [target.x86_64-pc-windows-msvc]
-rustflags = ["-C", "target-feature=+crt-static"]
+rustflags = ["-C", "target-feature=+crt-static", "--cfg", "tracing_unstable"]
 
 [target.i686-pc-windows-msvc]
-rustflags = ["-C", "target-feature=+crt-static"]
+rustflags = ["-C", "target-feature=+crt-static", "--cfg", "tracing_unstable"]
 
 [target.wasm32-wasip1-threads]
-rustflags = ["--cfg", "tokio_unstable"]
+rustflags = ["--cfg", "tokio_unstable", "--cfg", "tracing_unstable"]

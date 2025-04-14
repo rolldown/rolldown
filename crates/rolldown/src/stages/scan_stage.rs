@@ -24,6 +24,7 @@ pub struct ScanStage {
   plugin_driver: SharedPluginDriver,
   fs: OsFileSystem,
   resolver: SharedResolver,
+  build_span: tracing::Span,
 }
 
 #[derive(Debug)]
@@ -92,11 +93,12 @@ impl ScanStage {
     plugin_driver: SharedPluginDriver,
     fs: OsFileSystem,
     resolver: SharedResolver,
+    build_span: tracing::Span,
   ) -> Self {
-    Self { options, plugin_driver, fs, resolver }
+    Self { options, plugin_driver, fs, resolver, build_span }
   }
 
-  #[tracing::instrument(level = "debug", skip_all)]
+  #[tracing::instrument(target = "devtool", level = "debug", skip_all)]
   pub async fn scan(
     &mut self,
     mode: ScanMode,
@@ -113,6 +115,7 @@ impl ScanStage {
       Arc::clone(&self.plugin_driver),
       cache,
       mode.is_full(),
+      self.build_span.clone(),
     )?;
 
     // For `pluginContext.emitFile` with `type: chunk`, support it at buildStart hook.
@@ -166,7 +169,7 @@ impl ScanStage {
   }
 
   /// Resolve `InputOptions.input`
-  #[tracing::instrument(level = "debug", skip_all)]
+  #[tracing::instrument(target = "devtool", level = "debug", skip_all)]
   async fn resolve_user_defined_entries(
     &mut self,
   ) -> BuildResult<Vec<(Option<ArcStr>, ResolvedId)>> {

@@ -14,10 +14,12 @@ use rolldown_common::{
   ModuleInfo, ModuleType, NormalModule, SharedNormalizedBundlerOptions,
   side_effects::HookSideEffects,
 };
+use rolldown_debug::{action, trace_action};
 use rolldown_sourcemap::SourceMap;
 use rolldown_utils::unique_arc::UniqueArc;
 use string_wizard::{MagicString, SourceMapOptions};
 use tracing::{Instrument, debug_span};
+use valuable::Valuable;
 
 impl PluginDriver {
   #[tracing::instrument(level = "trace", skip_all)]
@@ -169,6 +171,7 @@ impl PluginDriver {
     Ok(None)
   }
 
+  #[tracing::instrument(target = "devtool", level = "trace", skip_all)]
   pub async fn transform(
     &self,
     id: &str,
@@ -183,6 +186,12 @@ impl PluginDriver {
     for (_plugin_idx, plugin, ctx) in
       self.iter_plugin_with_context_by_order(&self.order_by_transform_meta)
     {
+      trace_action!(action::HookTransformCallStart {
+        kind: "HookTransformCallStart".to_string(),
+        module_id: id.to_string(),
+        source: code.clone(),
+        plugin_name: plugin.call_name().to_string(),
+      });
       if let Some(r) = plugin
         .call_transform(
           Arc::new(TransformPluginContext::new(
@@ -206,10 +215,23 @@ impl PluginDriver {
         }
         if let Some(v) = r.code {
           code = v;
+          trace_action!(action::HookTransformCallEnd {
+            kind: "HookTransformCallEnd".to_string(),
+            module_id: id.to_string(),
+            transformed_source: Some(code.to_string()),
+            plugin_name: plugin.call_name().to_string(),
+          });
         }
         if let Some(ty) = r.module_type {
           *module_type = ty;
         }
+      } else {
+        trace_action!(action::HookTransformCallEnd {
+          kind: "HookTransformCallEnd".to_string(),
+          module_id: id.to_string(),
+          transformed_source: Some(code.to_string()),
+          plugin_name: plugin.call_name().to_string(),
+        });
       }
     }
     *sourcemap_chain = plugin_sourcemap_chain.into_inner();

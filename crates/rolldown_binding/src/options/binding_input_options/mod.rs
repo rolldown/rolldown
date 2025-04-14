@@ -1,3 +1,4 @@
+mod binding_debug_options;
 mod binding_defer_sync_scan_data;
 mod binding_experimental_options;
 pub mod binding_inject_import;
@@ -8,6 +9,7 @@ mod binding_resolve_options;
 mod binding_treeshake;
 mod binding_watch_option;
 
+use binding_debug_options::BindingDebugOptions;
 use binding_defer_sync_scan_data::BindingDeferSyncScanDataOption;
 use binding_make_absolute_externals_relative::BindingMakeAbsoluteExternalsRelative;
 use derive_more::Debug;
@@ -95,4 +97,5 @@ pub struct BindingInputOptions {
   #[napi(ts_type = "undefined | (() => BindingDeferSyncScanData[])")]
   pub defer_sync_scan_data: Option<BindingDeferSyncScanDataOption>,
   pub make_absolute_externals_relative: Option<BindingMakeAbsoluteExternalsRelative>,
+  pub debug: Option<BindingDebugOptions>,
 }

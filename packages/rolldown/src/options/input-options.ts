@@ -224,6 +224,9 @@ export interface InputOptions {
   keepNames?: boolean;
   checks?: ChecksOptions;
   makeAbsoluteExternalsRelative?: MakeAbsoluteExternalsRelative;
+  debug?: {
+    buildId?: string;
+  };
 }
 
 interface OverwriteInputOptionsForCli {

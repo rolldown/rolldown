@@ -186,6 +186,16 @@
             "null"
           ]
         },
+        "debug": {
+          "anyOf": [
+            {
+              "$ref": "#/definitions/DebugOptions"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
         "define": {
           "type": [
             "object",
@@ -622,6 +632,18 @@
         "strictExecutionOrder": {
           "type": [
             "boolean",
+            "null"
+          ]
+        }
+      },
+      "additionalProperties": false
+    },
+    "DebugOptions": {
+      "type": "object",
+      "properties": {
+        "buildId": {
+          "type": [
+            "string",
             "null"
           ]
         }

@@ -86,6 +86,7 @@ impl VisitState {
   }
 }
 
+#[allow(unused)] // `build_span` field is used but clippy fails to detect it
 pub struct ModuleLoader {
   options: SharedOptions,
   shared_context: Arc<TaskContext>,
@@ -98,6 +99,7 @@ pub struct ModuleLoader {
   is_full_scan: bool,
   new_added_modules_from_partial_scan: FxIndexSet<ModuleIdx>,
   cache: ScanStageCache,
+  build_span: tracing::Span,
 }
 
 pub struct ModuleLoaderOutput {
@@ -123,6 +125,7 @@ impl ModuleLoader {
     plugin_driver: SharedPluginDriver,
     mut cache: ScanStageCache,
     is_full_scan: bool,
+    build_span: tracing::Span,
   ) -> BuildResult<Self> {
     // 1024 should be enough for most cases
     // over 1024 pending tasks are insane
@@ -178,6 +181,7 @@ impl ModuleLoader {
       is_full_scan,
       new_added_modules_from_partial_scan: FxIndexSet::default(),
       cache,
+      build_span,
     })
   }
 
@@ -305,6 +309,7 @@ impl ModuleLoader {
         owner,
         is_user_defined_entry,
         assert_module_type,
+        tracing::Span::current(),
       );
 
       tokio::spawn(task.run());

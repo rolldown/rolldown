@@ -16,6 +16,7 @@
     "crates/rolldown/tests/**",
     "prepare/**",
     "packages/rolldown/tests/fixtures/builtin-plugin/load-fallback/path-has-hashtag/**",
+    "packages/debug/src/generated/**",
     "**/*.config.{js,mjs,cjs,ts,cts,mts}",
     "**/*.test.{js,mjs,cjs,ts,cts,mts}",
     ".git/**",

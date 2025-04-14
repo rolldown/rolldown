@@ -55,7 +55,8 @@ pub fn strip_bom(code: &str) -> &str {
   code.strip_prefix("\u{FEFF}").unwrap_or(code)
 }
 
-pub fn serialize_value(value: &Value) -> Result<String, serde_json::Error> {
+#[inline]
+fn serialize_value(value: &Value) -> Result<String, serde_json::Error> {
   let value_as_string = serde_json::to_string(value)?;
   if value_as_string.len() > THRESHOLD_SIZE && value.is_object() {
     let value = serde_json::to_string(&value_as_string)?;

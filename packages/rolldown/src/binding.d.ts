@@ -410,9 +410,9 @@ export interface BindingIsolatedDeclarationPluginConfig {
 }
 
 export interface BindingJsonPluginConfig {
-  stringify?: BindingJsonPluginStringify
-  isBuild?: boolean
+  minify?: boolean
   namedExports?: boolean
+  stringify?: BindingJsonPluginStringify
 }
 
 export type BindingJsonPluginStringify =

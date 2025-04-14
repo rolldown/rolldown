@@ -6,9 +6,9 @@ export default defineTest({
   config: {
     plugins: [
       jsonPlugin({
+        minify: false,
         stringify: true,
         namedExports: true,
-        isBuild: false,
       }),
     ],
   },

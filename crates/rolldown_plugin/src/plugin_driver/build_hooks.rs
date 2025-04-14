@@ -160,13 +160,30 @@ impl PluginDriver {
     for (_plugin_idx, plugin, ctx) in
       self.iter_plugin_with_context_by_order(&self.order_by_load_meta)
     {
+      trace_action!(action::HookLoadCallStart {
+        kind: "HookLoadCallStart".to_string(),
+        module_id: args.id.to_string(),
+        plugin_name: plugin.call_name().to_string(),
+      });
       if let Some(r) = plugin
         .call_load(ctx, args)
         .instrument(debug_span!("load_hook", plugin_name = plugin.call_name().as_ref()))
         .await?
       {
+        trace_action!(action::HookLoadCallEnd {
+          kind: "HookLoadCallEnd".to_string(),
+          module_id: args.id.to_string(),
+          source: Some(r.code.to_string()),
+          plugin_name: plugin.call_name().to_string(),
+        });
         return Ok(Some(r));
       }
+      trace_action!(action::HookLoadCallEnd {
+        kind: "HookLoadCallEnd".to_string(),
+        module_id: args.id.to_string(),
+        source: None,
+        plugin_name: plugin.call_name().to_string(),
+      });
     }
     Ok(None)
   }

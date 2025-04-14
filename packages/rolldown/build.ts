@@ -3,32 +3,39 @@ import { globSync } from 'glob';
 import fs from 'node:fs';
 import nodePath from 'node:path';
 import pkgJson from './package.json' with { type: 'json' };
-import {
-  defineConfig,
-  OutputOptions,
-  type Plugin,
-  rolldown,
-} from './src/index';
+import { build, BuildOptions, defineConfig, type Plugin } from './src/index';
 
-const IS_RELEASING_CI = !!process.env.RELEASING;
-const IS_BUILD_WASI_PKG = !!process.env.WASI_PKG;
+const isCI = !!process.env.CI;
+const isReleasingCI = !!process.env.RELEASING;
+const isBrowserBuild = !!process.env.BROWSER_PKG;
 
-const outputDir = IS_BUILD_WASI_PKG
-  ? nodePath.resolve(__dirname, '../wasi/dist')
+const outputDir = isBrowserBuild
+  ? nodePath.resolve(__dirname, '../browser/dist')
   : nodePath.resolve(__dirname, 'dist');
+
+const bindingFile = nodePath.resolve('src/binding.js');
+const bindingFileWasiBrowser = nodePath.resolve(
+  'src/rolldown-binding.wasi-browser.js',
+);
 
 const shared = defineConfig({
   input: {
     index: './src/index',
-    cli: './src/cli/index',
-    'parallel-plugin': './src/parallel-plugin',
-    'parallel-plugin-worker': './src/parallel-plugin-worker',
-    'experimental-index': './src/experimental-index',
-    'parse-ast-index': './src/parse-ast-index',
+    ...isBrowserBuild ? {} : {
+      cli: './src/cli/index',
+      'parallel-plugin': './src/parallel-plugin',
+      'parallel-plugin-worker': './src/parallel-plugin-worker',
+      'experimental-index': './src/experimental-index',
+      'parse-ast-index': './src/parse-ast-index',
+    },
   },
-  platform: 'node',
+  platform: isBrowserBuild ? 'browser' : 'node',
   resolve: {
     extensions: ['.js', '.cjs', '.mjs', '.ts'],
+    alias: {
+      'node:path': 'pathe',
+      ...(isBrowserBuild ? { [bindingFile]: bindingFileWasiBrowser } : {}),
+    },
   },
   external: [
     /rolldown-binding\..*\.node/,
@@ -37,9 +44,27 @@ const shared = defineConfig({
     /\.\/rolldown-binding\.wasi\.cjs/,
     // some dependencies, e.g. zod, cannot be inlined because their types
     // are used in public APIs
-    ...Object.keys(pkgJson.dependencies),
+    ...(isBrowserBuild
+      ? []
+      : Object.keys(pkgJson.dependencies)),
+    bindingFileWasiBrowser,
+  ],
+  define: {
+    'import.meta.browserBuild': String(isBrowserBuild),
+  },
+  plugins: [
+    isBrowserBuild && {
+      name: 'remove-built-modules',
+      resolveId(id) {
+        if (id === 'node:os' || id === 'node:worker_threads') {
+          return { id, external: true, moduleSideEffects: false };
+        }
+      },
+    },
   ],
 });
+
+const esmSuffix = isBrowserBuild ? 'js' : 'mjs';
 
 const configs = defineConfig([
   {
@@ -47,10 +72,11 @@ const configs = defineConfig([
     output: {
       dir: outputDir,
       format: 'esm',
-      entryFileNames: '[name].mjs',
-      chunkFileNames: 'shared/[name]-[hash].mjs',
+      entryFileNames: `[name].${esmSuffix}`,
+      chunkFileNames: `shared/[name]-[hash].${esmSuffix}`,
     },
     plugins: [
+      shared.plugins,
       {
         name: 'shim',
         buildEnd() {
@@ -59,32 +85,21 @@ const configs = defineConfig([
           const wasmFiles = globSync(['./src/rolldown-binding.*.wasm'], {
             absolute: true,
           });
-
-          const isWasmBuild = wasmFiles.length > 0;
+          const isWasmBuild = wasmFiles.length;
 
           const nodeFiles = globSync(['./src/rolldown-binding.*.node'], {
             absolute: true,
           });
 
-          const wasiShims = globSync(
-            ['./src/*.wasi.js', './src/*.wasi.cjs', './src/*.mjs'],
-            {
-              absolute: true,
-            },
-          );
           // Binary build is on the separate step on CI
-          if (
-            !process.env.CI &&
-            wasmFiles.length === 0 &&
-            nodeFiles.length === 0
-          ) {
+          if (!isCI && !wasmFiles.length && !nodeFiles.length) {
             throw new Error('No binary files found');
           }
 
           const copyTo = nodePath.resolve(outputDir);
           fs.mkdirSync(copyTo, { recursive: true });
 
-          if (!IS_RELEASING_CI) {
+          if (!isReleasingCI) {
             // Released `rolldown` package import binary via `@rolldown/binding-<platform>` packages.
             // There's no need to copy binary files to dist folder.
 
@@ -92,7 +107,7 @@ const configs = defineConfig([
               // Move the binary file to dist
               wasmFiles.forEach((file) => {
                 const fileName = nodePath.basename(file);
-                if (IS_BUILD_WASI_PKG && fileName.includes('debug')) {
+                if (isBrowserBuild && fileName.includes('debug')) {
                   // NAPI-RS now generates a debug wasm binary no matter how and we don't want to ship it to npm.
                   console.log(colors.yellow('[build:done]'), 'Skipping', file);
                 } else {
@@ -102,17 +117,8 @@ const configs = defineConfig([
                     file,
                     `to ${copyTo}`,
                   );
-                  fs.cpSync(file, nodePath.join(copyTo, fileName), {
-                    recursive: true,
-                    force: true,
-                  });
+                  fs.cpSync(file, nodePath.join(copyTo, fileName));
                 }
-                console.log(colors.green('[build:done]'), `Cleaning ${file}`);
-                try {
-                  // GitHub windows runner emits `operation not permitted` error, most likely because of the file is still in use.
-                  // We could safely ignore the error.
-                  fs.rmSync(file, { recursive: true, force: true });
-                } catch {}
               });
             } else {
               // Move the binary file to dist
@@ -124,27 +130,26 @@ const configs = defineConfig([
                   file,
                   `to ${copyTo}`,
                 );
-                fs.cpSync(file, nodePath.join(copyTo, fileName), {
-                  recursive: true,
-                  force: true,
-                });
-                console.log(colors.green('[build:done]'), `Cleaning ${file}`);
+                fs.cpSync(file, nodePath.join(copyTo, fileName));
               });
             }
 
-            wasiShims.forEach((file) => {
-              const fileName = nodePath.basename(file);
-              console.log(
-                colors.green('[build:done]'),
-                'Copying',
-                file,
-                'to ./dist/shared',
+            if (isBrowserBuild) {
+              const browserShims = globSync(
+                './src/*-browser.*js',
+                { absolute: true },
               );
-              fs.cpSync(file, nodePath.join(copyTo, fileName), {
-                recursive: true,
-                force: true,
+              browserShims.forEach((file) => {
+                const fileName = nodePath.basename(file);
+                console.log(
+                  colors.green('[build:done]'),
+                  'Copying',
+                  file,
+                  `to ${copyTo}`,
+                );
+                fs.cpSync(file, nodePath.join(copyTo, fileName));
               });
-            });
+            }
           }
 
           // Copy binding types and rollup types to dist
@@ -159,7 +164,7 @@ const configs = defineConfig([
               colors.green('[build:done]'),
               'Copying',
               file,
-              'to ./dist/shared',
+              `to ${distTypesDir}`,
             );
             fs.cpSync(file, nodePath.join(distTypesDir, fileName), {
               recursive: true,
@@ -169,36 +174,43 @@ const configs = defineConfig([
         },
       },
       patchBindingJs(),
+      isBrowserBuild && exportBindingFs(),
     ],
-  },
-  {
-    ...shared,
-    plugins: [
-      {
-        name: 'shim-import-meta',
-        transform: {
-          filter: {
-            code: {
-              include: ['import.meta.resolve'],
-            },
-          },
-          handler(code, id) {
-            if (id.endsWith('.ts') && code.includes('import.meta.resolve')) {
-              return code.replace('import.meta.resolve', 'undefined');
-            }
-          },
-        },
-      },
-      patchBindingJs(),
-    ],
-    output: {
-      dir: outputDir,
-      format: 'cjs',
-      entryFileNames: '[name].cjs',
-      chunkFileNames: 'shared/[name]-[hash].cjs',
-    },
   },
 ]);
+
+if (!isBrowserBuild) {
+  configs.push(
+    {
+      ...shared,
+      plugins: [
+        shared.plugins,
+        {
+          name: 'shim-import-meta',
+          transform: {
+            filter: {
+              code: {
+                include: ['import.meta.resolve'],
+              },
+            },
+            handler(code, id) {
+              if (id.endsWith('.ts') && code.includes('import.meta.resolve')) {
+                return code.replace('import.meta.resolve', 'undefined');
+              }
+            },
+          },
+        },
+        patchBindingJs(),
+      ],
+      output: {
+        dir: outputDir,
+        format: 'cjs',
+        entryFileNames: '[name].cjs',
+        chunkFileNames: 'shared/[name]-[hash].cjs',
+      },
+    },
+  );
+}
 
 function patchBindingJs(): Plugin {
   return {
@@ -232,8 +244,22 @@ if (!nativeBinding && globalThis.process?.versions?.["webcontainer"]) {
   };
 }
 
+function exportBindingFs(): Plugin {
+  return {
+    name: 'export-binding-fs',
+    transform: {
+      filter: {
+        id: 'src/index.ts',
+      },
+      handler(code) {
+        return code + 'export { __fs, __volume } from "./binding"';
+      },
+    },
+  };
+}
+
 (async () => {
   for (const config of configs) {
-    await (await rolldown(config)).write(config.output as OutputOptions);
+    await build(config as BuildOptions);
   }
 })();

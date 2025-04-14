@@ -73,8 +73,8 @@
     "build-js-glue": "pnpm run --sequential \"/^build-(types|node|types-check)$/\"",
     "build-native:debug": "pnpm run --sequential \"/^build-(binding|js-glue)$/\"",
     "build-native:release": "pnpm run --sequential \"/^build-(binding:release|js-glue)$/\"",
-    "build-wasi:debug": "cross-env WASI_PKG=1 pnpm run --sequential \"/^build-(binding|binding:wasi|node)$/\"",
-    "build-wasi:release": "cross-env WASI_PKG=1 pnpm run --sequential \"/^build-(binding|binding:wasi:release|node)$/\"",
+    "build-browser:debug": "cross-env BROWSER_PKG=1 pnpm run --sequential \"/^build-(binding|binding:wasi|node)$/\"",
+    "build-browser:release": "cross-env BROWSER_PKG=1 pnpm run --sequential \"/^build-(binding|binding:wasi:release|node)$/\"",
     "# Scrips for docs #": "_",
     "extract-options-doc": "typedoc",
     "preinstall": "npx only-allow pnpm"
@@ -99,7 +99,8 @@
     "wasm": {
       "initialMemory": 16384,
       "browser": {
-        "fs": true
+        "fs": true,
+        "asyncInit": true
       }
     },
     "dtsHeader": "type MaybePromise<T> = T | Promise<T>\ntype Nullable<T> = T | null | undefined\ntype VoidNullable<T = void> = T | null | undefined | void\nexport type BindingStringOrRegex = string | RegExp\n\n"
@@ -132,6 +133,7 @@
     "glob": "^11.0.0",
     "locate-character": "^3.0.0",
     "oxc-parser": "^0.63.0",
+    "pathe": "^2.0.3",
     "remeda": "^2.10.0",
     "rolldown": "workspace:*",
     "rollup": "^4.18.0",

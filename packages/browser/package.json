@@ -1,13 +1,13 @@
 {
-  "name": "@rolldown/wasi",
+  "name": "@rolldown/browser",
   "version": "1.0.0-beta.7",
   "description": "Fast JavaScript/TypeScript bundler in Rust with Rollup-compatible API.",
   "homepage": "https://rolldown.rs/",
-  "type": "commonjs",
+  "type": "module",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/rolldown/rolldown.git",
-    "directory": "packages/wasi"
+    "directory": "packages/browser"
   },
   "license": "MIT",
   "keywords": [
@@ -23,38 +23,17 @@
     "cli",
     "dist",
     "!dist/rolldown-binding.debug.wasm32-wasi.wasm",
-    "!dist/*.node"
+    "!dist/*.node",
+    "!*/.tsbuildinfo"
   ],
-  "bin": {
-    "rolldown": "./bin/cli.mjs"
-  },
-  "main": "./dist/index.cjs",
+  "main": "./dist/index.js",
   "types": "./dist/types/index.d.ts",
   "exports": {
     ".": {
       "types": "./dist/types/index.d.ts",
-      "require": "./dist/index.cjs",
-      "import": "./dist/index.mjs"
-    },
-    "./experimental": {
-      "types": "./dist/types/experimental-index.d.ts",
-      "require": "./dist/experimental-index.cjs",
-      "import": "./dist/experimental-index.mjs"
-    },
-    "./parallel-plugin": {
-      "types": "./dist/types/parallel-plugin.d.ts",
-      "require": "./dist/parallel-plugin.cjs",
-      "import": "./dist/parallel-plugin.mjs"
-    },
-    "./parseAst": {
-      "types": "./dist/types/parse-ast-index.d.ts",
-      "require": "./dist/parse-ast-index.cjs",
-      "import": "./dist/parse-ast-index.mjs"
+      "default": "./dist/index.js"
     },
     "./package.json": "./package.json"
-  },
-  "imports": {
-    "#parallel-plugin-worker": "./dist/parallel-plugin-worker.mjs"
   },
   "publishConfig": {
     "registry": "https://registry.npmjs.org/",
@@ -62,11 +41,11 @@
   },
   "scripts": {
     "build": "pnpm run build:debug",
-    "build-types": "tsc -p ../rolldown/tsconfig.json --outDir ../wasi/dist/types --tsBuildInfoFile ../wasi/dist/.tsbuildinfo",
+    "build-types": "tsc -p ../rolldown/tsconfig.json --outDir ../browser/dist/types --tsBuildInfoFile ../browser/dist/.tsbuildinfo",
     "build:debug": "pnpm run --sequential \"/^build-(types|pkg:debug)$/\"",
     "build:release": "pnpm run --sequential \"/^build-(types|pkg:release)$/\"",
-    "build-pkg:debug": "pnpm run --filter rolldown build-wasi:debug",
-    "build-pkg:release": "pnpm run --filter rolldown build-wasi:release",
+    "build-pkg:debug": "pnpm run --filter rolldown build-browser:debug",
+    "build-pkg:release": "pnpm run --filter rolldown build-browser:release",
     "preinstall": "npx only-allow pnpm"
   },
   "dependencies": {

@@ -252,6 +252,24 @@ importers:
         specifier: ^4.0.0
         version: 4.0.1
 
+  packages/browser:
+    dependencies:
+      '@napi-rs/wasm-runtime':
+        specifier: ^0.2.4
+        version: 0.2.8
+      '@oxc-project/runtime':
+        specifier: 0.63.0
+        version: 0.63.0
+      '@oxc-project/types':
+        specifier: 0.63.0
+        version: 0.63.0
+      '@valibot/to-json-schema':
+        specifier: 1.0.0
+        version: 1.0.0(valibot@1.0.0(typescript@5.8.3))
+      valibot:
+        specifier: 1.0.0
+        version: 1.0.0(typescript@5.8.3)
+
   packages/debug: {}
 
   packages/rolldown:
@@ -311,6 +329,9 @@ importers:
       oxc-parser:
         specifier: ^0.63.0
         version: 0.63.0
+      pathe:
+        specifier: ^2.0.3
+        version: 2.0.3
       remeda:
         specifier: ^2.10.0
         version: 2.21.2
@@ -501,24 +522,6 @@ importers:
         version: 1.15.7
 
   packages/testing: {}
-
-  packages/wasi:
-    dependencies:
-      '@napi-rs/wasm-runtime':
-        specifier: ^0.2.4
-        version: 0.2.8
-      '@oxc-project/runtime':
-        specifier: 0.63.0
-        version: 0.63.0
-      '@oxc-project/types':
-        specifier: 0.63.0
-        version: 0.63.0
-      '@valibot/to-json-schema':
-        specifier: 1.0.0
-        version: 1.0.0(valibot@1.0.0(typescript@5.8.3))
-      valibot:
-        specifier: 1.0.0
-        version: 1.0.0(typescript@5.8.3)
 
   scripts:
     dependencies:

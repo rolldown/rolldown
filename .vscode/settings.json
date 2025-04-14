@@ -27,7 +27,7 @@
   "files.readonlyInclude": {
     "**/CHANGELOG.md": true,
     "**/generated/**": true,
-    "packages/rolldown/src/*{binding,worker}*": true
+    "packages/rolldown/src/*{binding,worker}*.*js": true
   },
   "git.ignoreLimitWarning": true,
   "json.schemas": [

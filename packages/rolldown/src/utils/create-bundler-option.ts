@@ -67,7 +67,9 @@ export async function createBundlerOptions(
     plugins = composeJsPlugins(plugins);
   }
 
-  const parallelPluginInitResult = await initializeParallelPlugins(plugins);
+  const parallelPluginInitResult = import.meta.browserBuild
+    ? undefined
+    : await initializeParallelPlugins(plugins);
 
   try {
     // Convert `InputOptions` to `BindingInputOptions`

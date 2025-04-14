@@ -47,7 +47,7 @@ export async function initializeParallelPlugins(
   return { registry: parallelJsPluginRegistry, stopWorkers };
 }
 
-export function initializeWorkers(
+function initializeWorkers(
   registryId: number,
   count: number,
   pluginInfos: ParallelPluginInfo[],

@@ -52,12 +52,17 @@ onKeyStroke('Escape', () => {
               <span aria-hidden="true">&times;</span>
             </button>
           </div>
-          <div class="modal-content">
+            <div class="modal-content">
             <iframe class="video-iframe"
               :src="`https://www.youtube.com/embed/${VIDEO_ID}?autoplay=1&modestbranding=1&rel=0`"
               title="YouTube video player" frameborder="0" allow="autoplay; picture-in-picture"
               allowfullscreen></iframe>
-          </div>
+            </div>
+            <div class="modal-footer">
+              <a class="vp-external-link-icon" href="https://vite.dev/rolldown" target="_blank" rel="noopener noreferrer">
+                Read the guide and try <code>rolldown-vite</code> now!
+              </a>
+            </div>
         </div>
       </div>
     </transition>
@@ -113,6 +118,22 @@ onKeyStroke('Escape', () => {
     width: 100%;
     height: 100%;
     border: none;
+  }
+}
+
+.modal-footer {
+  padding: 18px;
+  text-align: center;
+  background-color: var(--vp-c-bg-soft);
+  font-weight: bold;
+  color: var(--vp-c-text-1);
+  & a {
+    color: white;
+    transition: color 0.25s;
+    display: inline;
+    &:hover {
+      color: var(--vp-c-brand-3);
+    }
   }
 }
 

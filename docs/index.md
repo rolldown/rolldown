@@ -48,8 +48,6 @@ features:
       Serving as the unified bundler in Vite in the near future
 ---
 
-
-
 <h2 class="voidzero-lead">Brought to you by</h2>
 
 <a class="voidzero" href="https://voidzero.dev/" target="_blank" title="voidzero.dev"></a>

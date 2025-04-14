@@ -210,11 +210,11 @@ export default defineConfig({
         {
           find: /^.*\/VPHero\.vue$/,
           replacement: fileURLToPath(
-            new URL('./theme/components/overrides/VPHero.vue', import.meta.url)
-          )
-        }
-      ]
-    }
+            new URL('./theme/components/overrides/VPHero.vue', import.meta.url),
+          ),
+        },
+      ],
+    },
   },
   markdown: {
     config(md) {

@@ -1,6 +1,5 @@
 ---
 source: crates/rolldown_testing/src/integration_test.rs
-snapshot_kind: text
 ---
 # Assets
 
@@ -9,9 +8,9 @@ snapshot_kind: text
 ```js
 
 //#region entry.js
-let x = function foo(foo) {
-	var foo;
-	return foo;
+let x = function foo(foo$1) {
+	var foo$1;
+	return foo$1;
 };
 
 //#endregion

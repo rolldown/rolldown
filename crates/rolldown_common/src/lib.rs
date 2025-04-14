@@ -98,6 +98,7 @@ pub use crate::{
   types::bundler_file_system::BundlerFileSystem,
   types::chunk_idx::ChunkIdx,
   types::chunk_kind::ChunkKind,
+  types::deconflict::ModuleScopeSymbolIdMap,
   types::defer_sync_scan_data::DeferSyncScanData,
   types::ecma_ast_idx::EcmaAstIdx,
   types::entry_point::{EntryPoint, EntryPointKind},

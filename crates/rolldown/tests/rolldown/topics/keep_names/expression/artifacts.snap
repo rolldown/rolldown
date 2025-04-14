@@ -1,6 +1,5 @@
 ---
 source: crates/rolldown_testing/src/integration_test.rs
-snapshot_kind: text
 ---
 # Assets
 
@@ -32,16 +31,11 @@ assert.strictEqual(fn2$1.name, "fn2");
 
 //#endregion
 //#region b.js
-var Foo$1 = class Foo$3 {
-	static {
-		__name(this, "Foo");
-	}
-};
+var Foo$1 = class Foo {};
 var Bar = class {};
 assert.strictEqual(Foo$1.name, "Foo");
 assert.strictEqual(Bar.name, "Bar");
-var fn$1 = function fn$3() {};
-__name(fn$1, "fn");
+var fn$1 = function fn() {};
 var fn2 = function() {};
 assert.strictEqual(fn$1.name, "fn");
 assert.strictEqual(fn2.name, "fn2");

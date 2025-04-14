@@ -21,8 +21,8 @@ export { a };
 
 //#region c.js
 var require_c = __commonJS({ "c.js"(exports) {
-	const test = 1e3;
-	exports.test = test;
+	const test$1 = 1e3;
+	exports.test = test$1;
 } });
 var import_c = __toESM(require_c());
 

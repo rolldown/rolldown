@@ -28,11 +28,11 @@ export var Foo=(e=>(e[e.X=0]="X",e[e.Y=1]="Y",e[e.Z=e]="Z",e))(Foo||{});
 ```js
 
 //#region b.ts
-let Foo = /* @__PURE__ */ function(Foo$1) {
-	Foo$1[Foo$1["X"] = 0] = "X";
-	Foo$1[Foo$1["Y"] = 1] = "Y";
-	Foo$1[Foo$1["Z"] = Foo$1] = "Z";
-	return Foo$1;
+let Foo = /* @__PURE__ */ function(Foo) {
+	Foo[Foo["X"] = 0] = "X";
+	Foo[Foo["Y"] = 1] = "Y";
+	Foo[Foo["Z"] = Foo] = "Z";
+	return Foo;
 }({});
 
 //#endregion
@@ -45,11 +45,11 @@ export { Foo };
 +++ rolldown	b.js
 @@ -1,1 +1,7 @@
 -export var Foo = (e => (e[e.X = 0] = "X", e[e.Y = 1] = "Y", e[e.Z = e] = "Z", e))(Foo || ({}));
-+var Foo = (function (Foo$1) {
-+    Foo$1[Foo$1["X"] = 0] = "X";
-+    Foo$1[Foo$1["Y"] = 1] = "Y";
-+    Foo$1[Foo$1["Z"] = Foo$1] = "Z";
-+    return Foo$1;
++var Foo = (function (Foo) {
++    Foo[Foo["X"] = 0] = "X";
++    Foo[Foo["Y"] = 1] = "Y";
++    Foo[Foo["Z"] = Foo] = "Z";
++    return Foo;
 +})({});
 +export {Foo};
 

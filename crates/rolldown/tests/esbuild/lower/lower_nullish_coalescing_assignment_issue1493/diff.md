@@ -36,7 +36,7 @@ function _assertClassBrand(e, t, n) {
 
 //#endregion
 //#region ../../../../../../node_modules/.pnpm/@oxc-project+runtime@0.63.0/node_modules/@oxc-project/runtime/src/helpers/esm/classPrivateFieldGet2.js
-function _classPrivateFieldGet2(s, a) {
+function _classPrivateFieldGet2$1(s, a) {
 	return s.get(_assertClassBrand(s, a));
 }
 
@@ -54,8 +54,8 @@ var A = class {
 		_classPrivateFieldInitSpec(this, _a, void 0);
 	}
 	f() {
-		var _classPrivateFieldGet2$1;
-		(_classPrivateFieldGet2$1 = _classPrivateFieldGet2(_a, this)) !== null && _classPrivateFieldGet2$1 !== void 0 || _classPrivateFieldSet2(_a, this, 1);
+		var _classPrivateFieldGet2;
+		(_classPrivateFieldGet2 = _classPrivateFieldGet2$1(_a, this)) !== null && _classPrivateFieldGet2 !== void 0 || _classPrivateFieldSet2(_a, this, 1);
 	}
 };
 
@@ -78,7 +78,7 @@ export { A };
 +    if ("function" == typeof e ? e === t : e.has(t)) return arguments.length < 3 ? t : n;
 +    throw new TypeError("Private element is not present on this object");
 +}
-+function _classPrivateFieldGet2(s, a) {
++function _classPrivateFieldGet2$1(s, a) {
 +    return s.get(_assertClassBrand(s, a));
 +}
 +function _classPrivateFieldSet2(s, a, r) {
@@ -92,8 +92,8 @@ export { A };
 +    }
      f() {
 -        this.#a ?? (this.#a = 1);
-+        var _classPrivateFieldGet2$1;
-+        (_classPrivateFieldGet2$1 = _classPrivateFieldGet2(_a, this)) !== null && _classPrivateFieldGet2$1 !== void 0 || _classPrivateFieldSet2(_a, this, 1);
++        var _classPrivateFieldGet2;
++        (_classPrivateFieldGet2 = _classPrivateFieldGet2$1(_a, this)) !== null && _classPrivateFieldGet2 !== void 0 || _classPrivateFieldSet2(_a, this, 1);
      }
  };
  export {A};

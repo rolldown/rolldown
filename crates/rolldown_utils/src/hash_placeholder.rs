@@ -81,29 +81,40 @@ fn to_base64(mut value: u32) -> String {
 
 #[derive(Debug, Default)]
 pub struct HashPlaceholderGenerator {
-  seed: u32,
+  // This is used to generate hash placeholder. Something like `~!{001}~`.
+  next_index: u32,
 }
 
 impl HashPlaceholderGenerator {
+  // Refer to https://github.com/rollup/rollup/blob/1f2d579ccd4b39f223fed14ac7d031a6c848cd80/src/utils/hashPlaceholders.ts#L16-L17
   pub fn generate(&mut self, len: Option<usize>) -> String {
     // Ensure the generated hash length is within the valid range (6-21).
     // If `len` is `None`, default to 8.
     let len = len.map_or(DEFAULT_HASH_SIZE, |len| len.clamp(MIN_HASH_SIZE, MAX_HASH_SIZE));
 
     let allow_middle_len = len - HASH_PLACEHOLDER_OVERHEAD;
-    let seed_base64 = to_base64(self.seed);
-
-    // TODO(hyf0): improve this
-    assert!(seed_base64.len() <= allow_middle_len, "seed is too large");
+    let index_in_base64 = to_base64(self.next_index);
 
     let mut placeholder =
       String::with_capacity(len + HASH_PLACEHOLDER_LEFT.len() + HASH_PLACEHOLDER_RIGHT.len());
+
+    // If the allowed middle length is 3, the pattern would looks like `!~{^^^}~`.
+    // If the index reaches to `100_000_000`, the base64 string is `5Zu40`. In this case, we can't safely create a hash placeholder satisfying the length.
+    // TODO(hyf0): return error instead of panic
+    assert!(
+      index_in_base64.len() <= allow_middle_len,
+      "To generate hashes for this number of chunks (currently ${}), you need a minimum hash size of {}, received ${}.",
+      self.next_index,
+      placeholder.len(),
+      len,
+    );
+
     placeholder.push_str(HASH_PLACEHOLDER_LEFT);
-    placeholder.extend(std::iter::repeat_n('0', allow_middle_len - seed_base64.len()));
-    placeholder.push_str(&seed_base64);
+    placeholder.extend(std::iter::repeat_n('0', allow_middle_len - index_in_base64.len()));
+    placeholder.push_str(&index_in_base64);
     placeholder.push_str(HASH_PLACEHOLDER_RIGHT);
 
-    self.seed += 1;
+    self.next_index += 1;
 
     placeholder
   }

@@ -757,6 +757,13 @@
             "null"
           ]
         },
+        "implement": {
+          "description": "Custom hmr runtime implementation.",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
         "port": {
           "description": "Port that `DevRuntime` will connect to using WebSocket.",
           "type": [

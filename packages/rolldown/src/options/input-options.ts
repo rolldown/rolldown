@@ -74,7 +74,11 @@ export interface WatchOptions {
 
 export type MakeAbsoluteExternalsRelative = boolean | 'ifRelativeSource';
 
-export type HmrOptions = boolean | { host?: string; port?: number };
+export type HmrOptions = boolean | {
+  host?: string;
+  port?: number;
+  implement?: string;
+};
 
 export interface InputOptions {
   input?: InputOption;

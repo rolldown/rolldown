@@ -291,6 +291,7 @@ export interface BindingEmittedChunk {
 export interface BindingExperimentalHmrOptions {
   host?: string
   port?: number
+  implement?: string
 }
 
 export interface BindingExperimentalOptions {

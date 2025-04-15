@@ -27,10 +27,11 @@ impl From<BindingExperimentalOptions> for rolldown_common::ExperimentalOptions {
 pub struct BindingExperimentalHmrOptions {
   pub host: Option<String>,
   pub port: Option<u16>,
+  pub implement: Option<String>,
 }
 
 impl From<BindingExperimentalHmrOptions> for rolldown_common::HmrOptions {
   fn from(value: BindingExperimentalHmrOptions) -> Self {
-    Self { host: value.host, port: value.port }
+    Self { host: value.host, port: value.port, implement: value.implement }
   }
 }

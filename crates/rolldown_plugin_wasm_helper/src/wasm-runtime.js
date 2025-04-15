@@ -1,4 +1,3 @@
-// Port from https://github.com/vitejs/vite/blob/main/packages/vite/src/node/plugins/wasm.ts#L7
 export default async function wasmHelper(opts, url) {
   let result;
   if (url.startsWith('data:')) {

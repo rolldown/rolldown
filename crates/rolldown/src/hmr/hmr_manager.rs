@@ -6,7 +6,9 @@ use std::{
 
 use arcstr::ArcStr;
 use oxc::ast_visit::VisitMut;
-use rolldown_common::{EcmaModuleAstUsage, Module, ModuleIdx, ModuleTable};
+use rolldown_common::{
+  EcmaModuleAstUsage, HmrBoundary, HmrBoundaryOutput, HmrOutput, Module, ModuleIdx, ModuleTable,
+};
 use rolldown_ecmascript::{EcmaAst, EcmaCompiler};
 use rolldown_ecmascript_utils::AstSnippet;
 use rolldown_error::BuildResult;
@@ -69,7 +71,7 @@ impl HmrManager {
   pub async fn generate_hmr_patch(
     &mut self,
     changed_file_paths: Vec<String>,
-  ) -> BuildResult<String> {
+  ) -> BuildResult<HmrOutput> {
     let mut changed_modules = FxIndexSet::default();
     for changed_file_path in changed_file_paths {
       let changed_file_path = ArcStr::from(changed_file_path);
@@ -104,7 +106,7 @@ impl HmrManager {
       }
     }
     if need_to_full_reload {
-      return Ok(String::new());
+      return Ok(HmrOutput::default());
     }
 
     let mut modules_to_invalidate = changed_modules.clone();
@@ -204,8 +206,8 @@ impl HmrManager {
       outputs.push(codegen.code);
     }
     let mut patch = outputs.concat();
-    hmr_boundary.iter().for_each(|idx| {
-      let init_fn_name = &module_idx_to_init_fn_name[idx];
+    hmr_boundary.iter().for_each(|boundary| {
+      let init_fn_name = &module_idx_to_init_fn_name[&boundary.boundary];
       writeln!(patch, "{init_fn_name}()").unwrap();
     });
     write!(
@@ -213,8 +215,8 @@ impl HmrManager {
       "\n__rolldown_runtime__.applyUpdates([{}]);",
       hmr_boundary
         .iter()
-        .map(|idx| {
-          let module = &self.module_db.modules[*idx];
+        .map(|boundary| {
+          let module = &self.module_db.modules[boundary.boundary];
           format!("'{}'", module.stable_id())
         })
         .collect::<Vec<_>>()
@@ -222,14 +224,23 @@ impl HmrManager {
     )
     .unwrap();
 
-    Ok(patch)
+    Ok(HmrOutput {
+      patch,
+      hmr_boundaries: hmr_boundary
+        .into_iter()
+        .map(|boundary| HmrBoundaryOutput {
+          boundary: self.module_db.modules[boundary.boundary].stable_id().into(),
+          accepted_via: self.module_db.modules[boundary.accepted_via].stable_id().into(),
+        })
+        .collect(),
+    })
   }
 
   fn propagate_update(
     &self,
     module_idx: ModuleIdx,
     visited_modules: &mut FxHashSet<ModuleIdx>,
-    hmr_boundaries: &mut FxIndexSet<ModuleIdx>,
+    hmr_boundaries: &mut FxIndexSet<HmrBoundary>,
     affected_modules: &mut FxIndexSet<ModuleIdx>,
   ) -> bool /* is reached to hmr boundary  */ {
     if visited_modules.contains(&module_idx) {
@@ -244,7 +255,7 @@ impl HmrManager {
     affected_modules.insert(module_idx);
 
     if module.ast_usage.contains(EcmaModuleAstUsage::HmrSelfAccept) {
-      hmr_boundaries.insert(module_idx);
+      hmr_boundaries.insert(HmrBoundary { boundary: module_idx, accepted_via: module_idx });
       return true;
     }
     module.importers_idx.iter().all(|importer_idx| {

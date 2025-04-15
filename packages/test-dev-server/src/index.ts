@@ -77,15 +77,15 @@ class DevServer {
     watcher.on('change', async (path) => {
       console.log(`File ${path} has been changed`);
       if (this.hasLiveConnections) {
-        const patch = await build.generateHmrPatch([path]);
-        if (patch) {
+        const output = (await build.generateHmrPatch([path]))!;
+        if (output.patch) {
           console.log('Patching...');
           if (socket) {
             const path = `${seed}.js`;
             seed++;
             nodeFs.writeFileSync(
               nodePath.join(process.cwd(), 'dist', path),
-              patch,
+              output.patch,
             );
             console.log(
               'Patch:',

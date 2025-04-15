@@ -1,3 +1,4 @@
+pub mod binding_hmr_output;
 pub mod binding_log;
 pub mod binding_log_level;
 pub mod binding_minify_options;

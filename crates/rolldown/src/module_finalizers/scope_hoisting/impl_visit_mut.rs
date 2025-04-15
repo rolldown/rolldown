@@ -339,16 +339,16 @@ impl<'ast> VisitMut<'ast> for ScopeHoistingFinalizer<'_, 'ast> {
 
   fn visit_object_property(&mut self, prop: &mut ast::ObjectProperty<'ast>) {
     // Ensure `{ a }` would be rewritten to `{ a: a$1 }` instead of `{ a$1 }`
-    match &mut prop.value {
-      ast::Expression::Identifier(id_ref) if prop.shorthand => {
-        if let Some(expr) = self.generate_finalized_expr_for_reference(id_ref, false) {
-          prop.value = expr;
-          prop.shorthand = false;
-        } else {
-          id_ref.reference_id.get_mut().take();
-        }
+    if prop.shorthand {
+      let ast::Expression::Identifier(id_ref) = &mut prop.value else {
+        unreachable!("Shorthand property value should be an identifier")
+      };
+      if let Some(expr) = self.generate_finalized_expr_for_reference(id_ref, false) {
+        prop.value = expr;
+        prop.shorthand = false;
+      } else {
+        id_ref.reference_id.get_mut().take();
       }
-      _ => {}
     }
 
     walk_mut::walk_object_property(self, prop);

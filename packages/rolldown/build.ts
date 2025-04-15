@@ -2,7 +2,6 @@ import colors from 'ansis';
 import { globSync } from 'glob';
 import fs from 'node:fs';
 import nodePath from 'node:path';
-// import pkgJson from './package.json' with { type: 'json' };
 import { build, BuildOptions, type Plugin } from './src/index';
 
 const isCI = !!process.env.CI;
@@ -10,8 +9,7 @@ const isReleasingCI = !!process.env.RELEASING;
 
 // In `@rolldown/browser`, there will be three builds:
 // - CJS and ESM for Node (used in StackBlitz / WebContainers)
-// - ESM for bundlers (used in Vite and running in the browser)
-// - ESM with inlined dependencies for CDN imports
+// - ESM for browser bundlers (used in Vite and running in the browser)
 const isBrowserPkg = !!process.env.BROWSER_PKG;
 
 const pkgRoot = isBrowserPkg
@@ -27,70 +25,6 @@ const bindingFileWasi = nodePath.resolve('src/rolldown-binding.wasi.cjs');
 const bindingFileWasiBrowser = nodePath.resolve(
   'src/rolldown-binding.wasi-browser.js',
 );
-
-const withShared = (
-  { browserBuild: isBrowserBuild, inlineDependency, ...options }: {
-    browserBuild?: boolean;
-    inlineDependency?: boolean;
-  } & BuildOptions,
-): BuildOptions => {
-  const alias = {};
-  if (isBrowserPkg) {
-    alias[bindingFile] = isBrowserBuild
-      ? bindingFileWasiBrowser
-      : bindingFileWasi;
-  }
-  if (isBrowserBuild) {
-    alias['node:path'] = 'pathe';
-  }
-
-  return {
-    input: {
-      index: './src/index',
-      ...!isBrowserBuild
-        ? {
-          cli: './src/cli/index',
-          'parallel-plugin': './src/parallel-plugin',
-          'parallel-plugin-worker': './src/parallel-plugin-worker',
-          'experimental-index': './src/experimental-index',
-          'parse-ast-index': './src/parse-ast-index',
-        }
-        : {},
-    },
-    platform: isBrowserBuild ? 'browser' : 'node',
-    resolve: {
-      extensions: ['.js', '.cjs', '.mjs', '.ts'],
-      alias,
-    },
-    external: [
-      /rolldown-binding\..*\.node/,
-      /rolldown-binding\..*\.wasm/,
-      /@rolldown\/binding-.*/,
-      /\.\/rolldown-binding\.wasi\.cjs/,
-      // some dependencies, e.g. zod, cannot be inlined because their types
-      // are used in public APIs
-      ...(inlineDependency ? [] : Object.keys(pkgJson.dependencies)),
-      bindingFileWasi,
-      bindingFileWasiBrowser,
-    ],
-    define: {
-      'import.meta.browserBuild': String(isBrowserBuild),
-    },
-    ...options,
-    plugins: [
-      isBrowserPkg && {
-        name: 'remove-built-modules',
-        resolveId(id) {
-          if (id === 'node:os' || id === 'node:worker_threads') {
-            return { id, external: true, moduleSideEffects: false };
-          }
-        },
-      },
-      patchBindingJs(),
-      options.plugins,
-    ],
-  };
-};
 
 const configs: BuildOptions[] = [
   withShared({
@@ -117,22 +51,84 @@ if (isBrowserPkg) {
   configs.push(
     withShared({
       browserBuild: true,
-      plugins: [],
       output: {
         format: 'esm',
-        file: nodePath.resolve(outputDir, 'browser-bundler.mjs'),
-      },
-    }),
-    withShared({
-      browserBuild: true,
-      inlineDependency: true,
-      plugins: [],
-      output: {
-        format: 'esm',
-        file: nodePath.resolve(outputDir, 'browser.js'),
+        file: nodePath.resolve(outputDir, 'browser.mjs'),
       },
     }),
   );
+}
+
+(async () => {
+  for (const config of configs) {
+    await build(config);
+  }
+  copy();
+})();
+
+function withShared(
+  { browserBuild: isBrowserBuild, ...options }:
+    & { browserBuild?: boolean }
+    & BuildOptions,
+): BuildOptions {
+  return {
+    input: {
+      index: './src/index',
+      ...!isBrowserBuild
+        ? {
+          cli: './src/cli/index',
+          'parallel-plugin': './src/parallel-plugin',
+          'parallel-plugin-worker': './src/parallel-plugin-worker',
+          'experimental-index': './src/experimental-index',
+          'parse-ast-index': './src/parse-ast-index',
+        }
+        : {},
+    },
+    platform: isBrowserBuild ? 'browser' : 'node',
+    resolve: {
+      extensions: ['.js', '.cjs', '.mjs', '.ts'],
+      alias: isBrowserPkg
+        ? {
+          [bindingFile]: isBrowserBuild
+            ? bindingFileWasiBrowser
+            : bindingFileWasi,
+        }
+        : {},
+    },
+    external: [
+      /rolldown-binding\..*\.node/,
+      /rolldown-binding\..*\.wasm/,
+      /@rolldown\/binding-.*/,
+      /\.\/rolldown-binding\.wasi\.cjs/,
+      // some dependencies, e.g. zod, cannot be inlined because their types
+      // are used in public APIs
+      ...Object.keys(pkgJson.dependencies),
+      bindingFileWasi,
+      bindingFileWasiBrowser,
+    ],
+    define: {
+      'import.meta.browserBuild': String(isBrowserBuild),
+    },
+    ...options,
+    plugins: [
+      isBrowserBuild && removeBuiltModules(),
+      options.plugins,
+    ],
+  };
+}
+
+function removeBuiltModules(): Plugin {
+  return {
+    name: 'remove-built-modules',
+    resolveId(id) {
+      if (id === 'node:path') {
+        return this.resolve('pathe');
+      }
+      if (id === 'node:os' || id === 'node:worker_threads') {
+        return { id, external: true, moduleSideEffects: false };
+      }
+    },
+  };
 }
 
 function shimImportMeta(): Plugin {
@@ -184,13 +180,6 @@ if (!nativeBinding && globalThis.process?.versions?.["webcontainer"]) {
     },
   };
 }
-
-(async () => {
-  for (const config of configs) {
-    await build(config);
-  }
-  copy();
-})();
 
 function copy() {
   // wasm build rely on `.node` binaries. But we don't want to copy `.node` files

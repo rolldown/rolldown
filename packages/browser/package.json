@@ -20,18 +20,33 @@
   ],
   "files": [
     "bin",
-    "cli",
     "dist",
-    "!dist/rolldown-binding.debug.wasm32-wasi.wasm",
-    "!dist/*.node",
     "!*/.tsbuildinfo"
   ],
-  "main": "./dist/index.js",
+  "main": "./dist/index.cjs",
+  "module": "./dist/index.mjs",
   "types": "./dist/types/index.d.ts",
   "exports": {
     ".": {
       "types": "./dist/types/index.d.ts",
-      "default": "./dist/index.js"
+      "browser": "./dist/browser-bundler.js",
+      "required": "./dist/index.cjs",
+      "import": "./dist/index.mjs"
+    },
+    "./experimental": {
+      "types": "./dist/types/experimental-index.d.ts",
+      "require": "./dist/experimental-index.cjs",
+      "import": "./dist/experimental-index.mjs"
+    },
+    "./parallel-plugin": {
+      "types": "./dist/types/parallel-plugin.d.ts",
+      "require": "./dist/parallel-plugin.cjs",
+      "import": "./dist/parallel-plugin.mjs"
+    },
+    "./parseAst": {
+      "types": "./dist/types/parse-ast-index.d.ts",
+      "require": "./dist/parse-ast-index.cjs",
+      "import": "./dist/parse-ast-index.mjs"
     },
     "./package.json": "./package.json"
   },
@@ -49,9 +64,11 @@
     "preinstall": "npx only-allow pnpm"
   },
   "dependencies": {
-    "@napi-rs/wasm-runtime": "^0.2.4",
+    "@napi-rs/wasm-runtime": "^0.2.8",
     "@oxc-project/types": "0.63.0",
     "@valibot/to-json-schema": "1.0.0",
+    "ansis": "^3.17.0",
+    "pathe": "^2.0.3",
     "valibot": "1.0.0"
   },
   "peerDependencies": {

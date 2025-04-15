@@ -120,7 +120,7 @@
     }
   },
   "devDependencies": {
-    "@napi-rs/cli": "^3.0.0-alpha.74",
+    "@napi-rs/cli": "^3.0.0-alpha.77",
     "@napi-rs/wasm-runtime": "^0.2.4",
     "@oxc-node/core": "^0.0.22",
     "@rolldown/testing": "workspace:*",

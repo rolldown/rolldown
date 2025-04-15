@@ -89,7 +89,6 @@ impl Plugin for JsPlugin {
     let Some(cb) = &self.resolve_id else { return Ok(None) };
 
     if let Some(resolve_id_filter) = &self.inner.resolve_id_filter {
-      dbg!(&resolve_id_filter);
       let matched = pattern_filter::filter(
         resolve_id_filter.exclude.as_deref(),
         resolve_id_filter.include.as_deref(),
@@ -161,7 +160,6 @@ impl Plugin for JsPlugin {
     let Some(cb) = &self.load else { return Ok(None) };
 
     if let Some(load_filter) = &self.load_filter {
-      dbg!(&load_filter);
       let matched = pattern_filter::filter(
         load_filter.exclude.as_deref(),
         load_filter.include.as_deref(),

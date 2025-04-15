@@ -3,6 +3,8 @@ import { defineTest } from "rolldown-tests";
 import { expect, vi } from "vitest";
 
 const transformFn = vi.fn();
+const transformFn1 = vi.fn();
+const transformFn2 = vi.fn();
 
 const nestedPlugin: RolldownPluginOption = [
 	{
@@ -18,7 +20,7 @@ const nestedPlugin: RolldownPluginOption = [
 			name: "test-plugin-1-1",
 			transform: {
 				handler(_, _id) {
-					transformFn();
+					transformFn1();
 				},
 			},
 		},
@@ -26,7 +28,7 @@ const nestedPlugin: RolldownPluginOption = [
 			name: "test-plugin-1-2",
 			transform: {
 				handler(_, _id) {
-					transformFn();
+					transformFn2();
 				},
 			},
 		},
@@ -46,5 +48,7 @@ export default defineTest({
 	},
 	afterTest: () => {
 		expect(transformFn).toHaveBeenCalledTimes(3);
+		expect(transformFn1).toHaveBeenCalledTimes(0);
+		expect(transformFn2).toHaveBeenCalledTimes(0);
 	},
 });

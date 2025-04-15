@@ -58,14 +58,14 @@ const withShared = (
         }
         : {},
     },
-    external: [
+    external: inlineDependency ? undefined : [
       /rolldown-binding\..*\.node/,
       /rolldown-binding\..*\.wasm/,
       /@rolldown\/binding-.*/,
       /\.\/rolldown-binding\.wasi\.cjs/,
       // some dependencies, e.g. zod, cannot be inlined because their types
       // are used in public APIs
-      ...(inlineDependency ? [] : Object.keys(pkgJson.dependencies)),
+      ...Object.keys(pkgJson.dependencies),
       bindingFileWasi,
       bindingFileWasiBrowser,
     ],
@@ -74,18 +74,8 @@ const withShared = (
     },
     ...options,
     plugins: [
-      isBrowserBuild && {
-        name: 'remove-built-modules',
-        resolveId(id) {
-          if (id === 'node:path') {
-            return this.resolve('pathe');
-          }
-          if (id === 'node:os' || id === 'node:worker_threads') {
-            return { id, external: true, moduleSideEffects: false };
-          }
-        },
-      },
-      patchBindingJs(),
+      isBrowserBuild && removeBuiltModules(),
+      isBrowserBuild && inlineDependency && rewriteWasmUrl(),
       options.plugins,
     ],
   };
@@ -116,7 +106,6 @@ if (isBrowserPkg) {
   configs.push(
     withShared({
       browserBuild: true,
-      plugins: [],
       output: {
         format: 'esm',
         file: nodePath.resolve(outputDir, 'browser-bundler.mjs'),
@@ -125,13 +114,53 @@ if (isBrowserPkg) {
     withShared({
       browserBuild: true,
       inlineDependency: true,
-      plugins: [],
       output: {
         format: 'esm',
         file: nodePath.resolve(outputDir, 'browser.js'),
+        minify: 'dce-only',
       },
     }),
   );
+}
+
+function rewriteWasmUrl(): Plugin {
+  return {
+    name: 'patch-new-url',
+    resolveId: {
+      filter: { id: /\?url$/ },
+      handler(source) {
+        return source;
+      },
+    },
+    load: {
+      filter: { id: /\?url$/ },
+      handler(id) {
+        const filename = cleanUrl(id);
+        return `export default new URL(${
+          JSON.stringify(filename)
+        }, import.meta.url).href`;
+      },
+    },
+  };
+}
+
+const postfixRE = /[#?].*$/s;
+function cleanUrl(url: string) {
+  return url.replace(postfixRE, '');
+}
+
+function removeBuiltModules(): Plugin {
+  return {
+    name: 'remove-built-modules',
+    resolveId(id) {
+      if (id === 'node:path') {
+        return this.resolve('pathe');
+      }
+      if (id === 'node:os' || id === 'node:worker_threads') {
+        return { id, external: true, moduleSideEffects: false };
+      }
+    },
+  };
 }
 
 function shimImportMeta(): Plugin {

@@ -41,6 +41,9 @@ jobs:
       - name: Build Browser Rolldown
         run: just build browser release
 
+      - name: Build Node Packages
+        run: pnpm --filter rolldown build-node
+
       - name: Build Basic Example
         run: pnpm --filter '@example/*' run --sequential build
         if: ${{ inputs.os != 'windows-latest' }}

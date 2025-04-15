@@ -2665,6 +2665,7 @@ dependencies = [
 name = "rolldown_plugin_import_glob"
 version = "0.1.0"
 dependencies = [
+ "fast-glob",
  "glob",
  "itoa",
  "oxc",

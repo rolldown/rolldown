@@ -2,7 +2,6 @@ use std::borrow::Cow;
 use std::fmt::Write as _;
 use std::path::{Path, PathBuf};
 
-use glob::Pattern;
 use oxc::ast::NONE;
 use oxc::ast::ast::{
   Argument, ArrayExpressionElement, Expression, FormalParameterKind, ImportOrExportKind,
@@ -14,7 +13,7 @@ use rolldown_ecmascript_utils::ExpressionExt;
 use sugar_path::SugarPath;
 
 pub struct GlobImportVisit<'ast, 'a> {
-  pub id: Cow<'a, str>,
+  pub id: &'a str,
   pub root: &'a PathBuf,
   pub ast_builder: oxc::ast::AstBuilder<'ast>,
   pub restore_query_extension: bool,
@@ -299,35 +298,21 @@ impl GlobImportVisit<'_, '_> {
   }
 
   fn to_absolute_glob<'a>(&self, glob: &'a str, dir: &Path, root: &Path) -> Cow<'a, str> {
-    // hack some syntax that `glob` did not support
-    // 1. `**.js` -> `*.js`
-    let index = glob.rfind('/').unwrap_or(0);
-    let glob = if glob[index..].contains("**.") {
-      let mut result = String::with_capacity(glob.len());
-      if index != 0 {
-        result.push_str(&glob[..index]);
-      }
-      result.push_str(&glob[index..].replace("**.", "*."));
-      Cow::Owned(result)
-    } else {
-      Cow::Borrowed(glob)
-    };
-
     let absolute_glob = if let Some(glob) = glob.strip_prefix('/') {
       root.join(glob)
     } else if glob.starts_with('.') {
-      dir.join(glob.as_ref())
+      dir.join(glob)
     } else if glob.starts_with("**") {
-      return glob;
+      return Cow::Borrowed(glob);
     } else {
-      // https://github.com/rolldown/vite/blob/454c8fff9f7115ed29281c2d927366280508a0ab/packages/vite/src/node/plugins/importMetaGlob.ts#L563-L569
       // TODO: Needs to investigate if oxc resolver support this pattern
+      // https://github.com/rolldown/vite/blob/454c8fff/packages/vite/src/node/plugins/importMetaGlob.ts#L563-L569
       panic!(
         "Invalid glob pattern: {glob} (resolved: '{}'), it must start with '/' or './'.",
         self.id
       );
     };
-    Cow::Owned(absolute_glob.to_slash_lossy().to_string())
+    Cow::Owned(absolute_glob.normalize().to_slash_lossy().into_owned())
   }
 
   fn relative_path(&self, path: &Path, to: Option<&Path>) -> String {
@@ -341,14 +326,41 @@ impl GlobImportVisit<'_, '_> {
     }
   }
 
+  fn split_static_and_glob(path: &Path) -> (String, Option<String>) {
+    let mut static_path = String::new();
+    let mut dynamic_path = String::new();
+
+    let mut is_dynamic = false;
+    for component in path.components() {
+      match component {
+        std::path::Component::Prefix(p) => {
+          static_path.push_str(&p.as_os_str().to_string_lossy());
+        }
+        std::path::Component::Normal(c) => {
+          if !is_dynamic && c.to_str().is_some_and(|s| s.contains(['*', '?', '[', ']', '{', '}'])) {
+            is_dynamic = true;
+          }
+
+          let path = if is_dynamic { &mut dynamic_path } else { &mut static_path };
+
+          path.push('/');
+          path.push_str(&c.to_string_lossy());
+        }
+        _ => {}
+      }
+    }
+
+    if is_dynamic { (static_path, Some(dynamic_path)) } else { (static_path, None) }
+  }
+
   fn eval_glob_expr(&self, arg: &Argument, files: &mut Vec<ImportGlobFileData>) {
-    let root = Path::new(self.root);
+    let root = Path::new(&self.root);
     let is_virtual_module = self.is_virtual_module();
 
     let dir = if is_virtual_module {
       root
     } else {
-      let id = Path::new(self.id.as_ref());
+      let id = Path::new(self.id);
       id.parent().unwrap_or(root)
     };
 
@@ -359,8 +371,7 @@ impl GlobImportVisit<'_, '_> {
     match arg {
       Argument::StringLiteral(str) => {
         if let Some(glob) = str.value.strip_prefix('!') {
-          let glob = self.to_absolute_glob(glob, dir, root);
-          negated_globs.push(Pattern::new(&glob).unwrap());
+          negated_globs.push(self.to_absolute_glob(glob, dir, root));
         } else {
           positive_globs.push(self.to_absolute_glob(&str.value, dir, root));
           if !str.value.starts_with('.') {
@@ -372,8 +383,7 @@ impl GlobImportVisit<'_, '_> {
         for expr in &array_expr.elements {
           if let ArrayExpressionElement::StringLiteral(str) = expr {
             if let Some(glob) = str.value.strip_prefix('!') {
-              let glob = self.to_absolute_glob(glob, dir, root);
-              negated_globs.push(Pattern::new(&glob).unwrap());
+              negated_globs.push(self.to_absolute_glob(glob, dir, root));
             } else {
               positive_globs.push(self.to_absolute_glob(&str.value, dir, root));
               if !str.value.starts_with('.') {
@@ -391,11 +401,24 @@ impl GlobImportVisit<'_, '_> {
       "In virtual modules, all globs must start with '/'"
     );
 
-    let self_path = self.relative_path(Path::new(self.id.as_ref()), Some(dir));
+    let self_path = self.relative_path(Path::new(self.id), Some(dir));
     for glob_expr in positive_globs {
-      for file in glob::glob(&glob_expr).unwrap() {
+      let (static_path, glob) = Self::split_static_and_glob(glob_expr.as_path());
+      let pattern = if glob.is_some() { &format!("{static_path}/**/*") } else { &static_path };
+      for file in glob::glob(pattern).unwrap() {
         let file = file.unwrap();
-        if negated_globs.iter().any(|g| g.matches_path(&file)) {
+
+        if file.is_dir() {
+          continue;
+        }
+
+        let path: &str = &file.to_slash_lossy();
+        let should_be_skip = glob
+          .as_ref()
+          .is_some_and(|glob| !fast_glob::glob_match(glob, &path[static_path.len()..]))
+          || negated_globs.iter().any(|g| fast_glob::glob_match(&**g, path));
+
+        if should_be_skip {
           continue;
         }
 
@@ -412,7 +435,6 @@ impl GlobImportVisit<'_, '_> {
         }
 
         let file_path = if is_relative { None } else { Some(file_path) };
-
         files.push(ImportGlobFileData { file_path, import_path });
       }
     }

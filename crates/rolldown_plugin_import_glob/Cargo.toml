@@ -15,6 +15,7 @@ doctest = false
 workspace = true
 
 [dependencies]
+fast-glob = { workspace = true }
 glob = { workspace = true }
 itoa = { workspace = true }
 oxc = { workspace = true }

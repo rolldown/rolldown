@@ -174,7 +174,6 @@ const configs = defineConfig([
         },
       },
       patchBindingJs(),
-      isBrowserBuild && exportBindingFs(),
     ],
   },
 ]);
@@ -239,20 +238,6 @@ if (!nativeBinding && globalThis.process?.versions?.["webcontainer"]) {
 ` + s,
             )
         );
-      },
-    },
-  };
-}
-
-function exportBindingFs(): Plugin {
-  return {
-    name: 'export-binding-fs',
-    transform: {
-      filter: {
-        id: 'src/index.ts',
-      },
-      handler(code) {
-        return code + 'export { __fs, __volume } from "./binding"';
       },
     },
   };

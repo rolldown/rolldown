@@ -150,6 +150,3 @@ export type {
   RollupLog,
   WarningHandlerWithDefault,
 } from './types/misc';
-
-export declare const __fs: any;
-export declare const __volume: any;

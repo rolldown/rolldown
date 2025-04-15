@@ -3671,8 +3671,8 @@ packages:
   birpc@0.2.19:
     resolution: {integrity: sha512-5WeXXAvTmitV1RqJFppT5QtUiz2p1mRSYU000Jkft5ZUCLJIk4uQriYNO50HknxKwM6jd8utNc66K1qGIwwWBQ==}
 
-  bole@5.0.18:
-    resolution: {integrity: sha512-r5T3WOgSLtYC53PcBxJPKWLC90DEwVp10yeD8ygJhYRaDc1qLNJ3oB8kQj9QAJ459kTgmy9jXHYolBumFLKCXA==}
+  bole@5.0.19:
+    resolution: {integrity: sha512-OgMuI8erST2t4K/Y+tSsn4SOxlKj4JR2wluQgLYadQFPIhj0r3jcmnp0OthgiyNO91CnxR8woKeLQmnMPgl1Ug==}
 
   boolbase@1.0.0:
     resolution: {integrity: sha512-JZOSA7Mo9sNGB8+UjSgzdLtokWAky1zbztM3WRLCbZ70/3cTANmQmOdR7y2g+J0e2WXywy1yS468tY+IruqEww==}
@@ -8862,7 +8862,7 @@ snapshots:
 
   '@pnpm/logger@5.2.0':
     dependencies:
-      bole: 5.0.18
+      bole: 5.0.19
       ndjson: 2.0.0
 
   '@pnpm/manifest-utils@5.0.1(@pnpm/logger@5.2.0)':
@@ -9569,7 +9569,7 @@ snapshots:
 
   birpc@0.2.19: {}
 
-  bole@5.0.18:
+  bole@5.0.19:
     dependencies:
       fast-safe-stringify: 2.1.1
       individual: 3.0.0

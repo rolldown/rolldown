@@ -10,6 +10,8 @@ hero:
     src: /rolldown-round.svg
     alt: Rolldown
   actions:
+    - text: Why Rolldown?
+      openVideoModal: true
     - theme: brand
       text: Get Started
       link: /guide/

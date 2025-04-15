@@ -1,3 +1,4 @@
+import { fileURLToPath } from 'node:url';
 import { defineConfig } from 'vitepress';
 import {
   groupIconMdPlugin,
@@ -204,6 +205,16 @@ export default defineConfig({
         details: '',
       }),
     ],
+    resolve: {
+      alias: [
+        {
+          find: /^.*\/VPHero\.vue$/,
+          replacement: fileURLToPath(
+            new URL('./theme/components/overrides/VPHero.vue', import.meta.url),
+          ),
+        },
+      ],
+    },
   },
   markdown: {
     config(md) {

@@ -1,6 +1,5 @@
 ---
 source: crates/rolldown_testing/src/integration_test.rs
-snapshot_kind: text
 ---
 # Assets
 
@@ -36,7 +35,7 @@ assert.strictEqual(typeof foo, "function");
 (0:0) "const " --> (3:0) "const "
 (0:6) "a = " --> (3:6) "a$1 = "
 (0:10) "1;\n" --> (3:12) "1;\n"
-(2:15) "function " --> (4:0) "function "
+(2:0) "export default function " --> (4:0) "function "
 (2:24) "foo(" --> (4:9) "foo$1("
 (2:28) "a$1) " --> (4:15) "a$1$1) "
 (2:33) "{\n" --> (4:22) "{\n"

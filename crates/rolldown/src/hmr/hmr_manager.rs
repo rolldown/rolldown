@@ -84,6 +84,13 @@ impl HmrManager {
         }
       }
     }
+    tracing::debug!(
+      target: "hmr",
+      "initial changed modules {:?}",
+      changed_modules.iter()
+        .map(|module_idx| self.module_db.modules[*module_idx].stable_id())
+        .collect::<Vec<_>>(),
+    );
 
     let mut affected_modules = FxIndexSet::default();
     let mut hmr_boundary = FxIndexSet::default();
@@ -108,6 +115,30 @@ impl HmrManager {
     if need_to_full_reload {
       return Ok(HmrOutput::default());
     }
+
+    tracing::debug!(
+      target: "hmr",
+      "computed out `affected_modules` {:?}",
+      affected_modules.iter()
+        .map(|module_idx| self.module_db.modules[*module_idx].stable_id())
+        .collect::<Vec<_>>(),
+    );
+
+    tracing::debug!(
+      target: "hmr",
+      "computed out `affected_modules` {:?}",
+      affected_modules.iter()
+        .map(|module_idx| self.module_db.modules[*module_idx].stable_id())
+        .collect::<Vec<_>>(),
+    );
+
+    tracing::debug!(
+      target: "hmr",
+      "computed out `hmr_boundary` {:?}",
+      hmr_boundary.iter()
+        .map(|b| self.module_db.modules[b.boundary].stable_id())
+        .collect::<Vec<_>>(),
+    );
 
     let mut modules_to_invalidate = changed_modules.clone();
     // FIXME(hyf0): In general, only modules got edited need to be invalidated, because we need to refetch their latest content.
@@ -141,11 +172,27 @@ impl HmrManager {
 
     self.cache = module_loader_output.cache;
 
+    tracing::debug!(
+      target: "hmr",
+      "New added modules` {:?}",
+      module_loader_output
+        .new_added_modules_from_partial_scan
+        .iter()
+        .map(|module_idx| self.module_db.modules[*module_idx].stable_id())
+        .collect::<Vec<_>>(),
+    );
+
     affected_modules.extend(module_loader_output.new_added_modules_from_partial_scan);
-    // Update
 
     let mut updated_modules =
       module_loader_output.module_table.into_iter_enumerated().into_iter().collect::<Vec<_>>();
+    tracing::debug!(
+      target: "hmr",
+      "updated_modules` {:?}",
+      updated_modules
+        .iter().map(|(idx, module)| (idx, module.stable_id()))
+        .collect::<Vec<_>>(),
+    );
     updated_modules.sort_by_key(|(idx, _)| *idx);
 
     // TODO(hyf0): This is a temporary merging solution. We need to find a better way to handle this.
@@ -159,6 +206,14 @@ impl HmrManager {
         self.module_db.modules[idx] = module;
       }
     }
+    tracing::debug!(
+      target: "hmr",
+      "New added modules2` {:?}",
+      affected_modules
+        .iter()
+        .map(|module_idx| self.module_db.modules[*module_idx].stable_id())
+        .collect::<Vec<_>>(),
+    );
     self.index_ecma_ast = module_loader_output.index_ecma_ast;
 
     let module_idx_to_init_fn_name = affected_modules
@@ -166,7 +221,10 @@ impl HmrManager {
       .enumerate()
       .map(|(index, module_idx)| {
         let Module::Normal(module) = &self.module_db.modules[*module_idx] else {
-          unreachable!("HMR only supports normal module");
+          unreachable!(
+            "HMR only supports normal module. Got {:?}",
+            self.module_db.modules[*module_idx].id()
+          );
         };
 
         (*module_idx, format!("init_{}_{}", module.repr_name, index))
@@ -243,15 +301,20 @@ impl HmrManager {
     hmr_boundaries: &mut FxIndexSet<HmrBoundary>,
     affected_modules: &mut FxIndexSet<ModuleIdx>,
   ) -> bool /* is reached to hmr boundary  */ {
+    let module = match &self.module_db.modules[module_idx] {
+      Module::Normal(normal_module) => normal_module,
+      Module::External(_) => {
+        // Meaningless to collect external modules into affected_modules.
+        return false;
+      }
+    };
     if visited_modules.contains(&module_idx) {
       // At this point, we consider circular dependencies as a full reload. We can improve this later.
       return false;
     }
 
     visited_modules.insert(module_idx);
-    let Module::Normal(module) = &self.module_db.modules[module_idx] else {
-      unreachable!("HMR only supports normal module");
-    };
+
     affected_modules.insert(module_idx);
 
     if module.ast_usage.contains(EcmaModuleAstUsage::HmrSelfAccept) {

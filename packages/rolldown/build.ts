@@ -120,7 +120,7 @@ if (isBrowserPkg) {
       plugins: [],
       output: {
         format: 'esm',
-        file: nodePath.resolve(outputDir, 'browser-bundler.js'),
+        file: nodePath.resolve(outputDir, 'browser-bundler.mjs'),
       },
     }),
     withShared({

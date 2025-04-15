@@ -134,9 +134,9 @@ _build-native-debug:
 build-js-glue:
     pnpm run --filter rolldown build-js-glue
 
-# This will build the package `@rolldown/wasi`.
-build-wasi mode="debug":
-    pnpm run --filter "@rolldown/wasi" build:{{ mode }}
+# This will build the package `@rolldown/browser`.
+build-browser mode="debug":
+    pnpm run --filter "@rolldown/browser" build:{{ mode }}
 
 run *args:
     pnpm rolldown {{ args }}

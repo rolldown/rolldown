@@ -1,7 +1,6 @@
-import { isPromise } from 'node:util/types';
 import { HookFilterExtension, Plugin, RolldownPluginOption } from '..';
 import { StringOrRegExp } from '../types/utils';
-import { arraify } from '../utils/misc';
+import { arraify, isPromiseLike } from '../utils/misc';
 
 type OverrideFilterObject = {
   transform?: HookFilterExtension<'transform'>['filter'];
@@ -14,7 +13,7 @@ function withFilterImpl<A, T extends RolldownPluginOption<A>>(
   pluginOption: T,
   filterObjectList: OverrideFilterObject[],
 ): T {
-  if (isPromise(pluginOption)) {
+  if (isPromiseLike(pluginOption)) {
     return pluginOption.then((p) => withFilter(p, filterObjectList)) as T;
   }
   if (pluginOption == false || pluginOption == null) {

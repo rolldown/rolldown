@@ -6,7 +6,7 @@ import * as path from 'node:path';
 const packagesNeedToPublish = [
   'packages/rolldown',
   'packages/rolldown/npm/*',
-  'packages/wasi',
+  'packages/browser',
   'packages/debug',
 ];
 

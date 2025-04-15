@@ -1,3 +1,4 @@
+import colors from 'ansis';
 import path from 'node:path';
 import { performance } from 'node:perf_hooks';
 import { onExit } from 'signal-exit';
@@ -6,7 +7,6 @@ import { rolldown } from '../../api/rolldown';
 import { watch as rolldownWatch } from '../../api/watch';
 import { arraify } from '../../utils/misc';
 import { NormalizedCliOptions } from '../arguments/normalize';
-import { colors } from '../colors';
 import { loadConfig } from '../load-config';
 import { logger } from '../logger';
 

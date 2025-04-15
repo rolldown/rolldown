@@ -1,9 +1,9 @@
+import colors from 'ansis';
 import { description, version } from '../../../package.json' assert {
   type: 'json',
 };
 import { options } from '../arguments';
 import { camelCaseToKebabCase } from '../arguments/utils';
-import { colors } from '../colors';
 import { logger } from '../logger';
 
 const introduction = `${colors.gray(`${description} (rolldown v${version})`)}

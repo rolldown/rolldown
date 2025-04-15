@@ -1,4 +1,4 @@
-import { colors } from '../cli/colors';
+import colors from 'ansis';
 import type { RollupLog } from '../types/misc';
 import { getCodeFrame } from '../utils/code-frame';
 import { locate } from './locate-character';

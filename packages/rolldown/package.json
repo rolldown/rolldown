@@ -73,8 +73,8 @@
     "build-js-glue": "pnpm run --sequential \"/^build-(types|node|types-check)$/\"",
     "build-native:debug": "pnpm run --sequential \"/^build-(binding|js-glue)$/\"",
     "build-native:release": "pnpm run --sequential \"/^build-(binding:release|js-glue)$/\"",
-    "build-wasi:debug": "pnpm run --sequential \"/^build-(binding|binding:wasi|node)$/\"",
-    "build-wasi:release": "pnpm run --sequential \"/^build-(binding|binding:wasi:release|node)$/\"",
+    "build-browser:debug": "cross-env BROWSER_PKG=1 pnpm run --sequential \"/^build-(binding|binding:wasi|node)$/\"",
+    "build-browser:release": "cross-env BROWSER_PKG=1 pnpm run --sequential \"/^build-(binding|binding:wasi:release|node)$/\"",
     "# Scrips for docs #": "_",
     "extract-options-doc": "typedoc",
     "preinstall": "npx only-allow pnpm"
@@ -99,7 +99,8 @@
     "wasm": {
       "initialMemory": 16384,
       "browser": {
-        "fs": true
+        "fs": true,
+        "asyncInit": true
       }
     },
     "dtsHeader": "type MaybePromise<T> = T | Promise<T>\ntype Nullable<T> = T | null | undefined\ntype VoidNullable<T = void> = T | null | undefined | void\nexport type BindingStringOrRegex = string | RegExp\n\n"
@@ -107,6 +108,7 @@
   "dependencies": {
     "@oxc-project/types": "0.63.0",
     "@valibot/to-json-schema": "1.0.0",
+    "ansis": "^3.17.0",
     "valibot": "1.0.0"
   },
   "peerDependencies": {
@@ -118,13 +120,12 @@
     }
   },
   "devDependencies": {
-    "@napi-rs/cli": "^3.0.0-alpha.74",
+    "@napi-rs/cli": "^3.0.0-alpha.77",
     "@napi-rs/wasm-runtime": "^0.2.4",
     "@oxc-node/core": "^0.0.22",
     "@rolldown/testing": "workspace:*",
     "@types/fs-extra": "^11.0.4",
     "@types/lodash-es": "^4.17.12",
-    "colorette": "^2.0.20",
     "consola": "^3.4.2",
     "emnapi": "^1.2.0",
     "execa": "^9.2.0",
@@ -132,6 +133,7 @@
     "glob": "^11.0.0",
     "locate-character": "^3.0.0",
     "oxc-parser": "^0.63.0",
+    "pathe": "^2.0.3",
     "remeda": "^2.10.0",
     "rolldown": "workspace:*",
     "rollup": "^4.18.0",

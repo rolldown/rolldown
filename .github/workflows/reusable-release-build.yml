@@ -215,10 +215,10 @@ jobs:
           path: |
             rolldown-version.txt
 
-  build-rolldown-wasi:
+  build-rolldown-browser:
     strategy:
       fail-fast: false
-    name: Build `@rolldown/wasi` Package
+    name: Build `@rolldown/browser` Package
     runs-on: ubuntu-latest
     steps:
       - uses: taiki-e/checkout-action@b13d20b7cda4e2f325ef19895128f7ff735c0b3d # v1.3.1
@@ -245,25 +245,25 @@ jobs:
         env:
           ROLLDOWN_VERSION: ${{ inputs.version }}
 
-      - name: Build `@rolldown/wasi`
+      - name: Build `@rolldown/browser`
         # Binaries are built in the previous steps. Unlike in local development, we only need to build the node package itself.
-        run: pnpm --filter "@rolldown/wasi" build:release
+        run: pnpm --filter "@rolldown/browser" build:release
 
       - name: Build Type Definitions
-        run: pnpm --filter "@rolldown/wasi" build-types
+        run: pnpm --filter "@rolldown/browser" build-types
 
-      - name: Upload `@rolldown/wasi` Artifact
+      - name: Upload `@rolldown/browser` Artifact
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           if-no-files-found: error
-          name: wasi-artifact
+          name: browser-artifact
           path: |
-            packages/wasi/dist/**
+            packages/browser/dist/**
 
   build-rolldown-debug:
     strategy:
       fail-fast: false
-    name: Build `@rolldown/wasi` Package
+    name: Build `@rolldown/debug` Package
     runs-on: ubuntu-latest
     steps:
       - uses: taiki-e/checkout-action@b13d20b7cda4e2f325ef19895128f7ff735c0b3d # v1.3.1

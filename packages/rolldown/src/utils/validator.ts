@@ -1,7 +1,7 @@
 import { toJsonSchema } from '@valibot/to-json-schema';
+import colors from 'ansis';
 import * as v from 'valibot';
 import type { PreRenderedChunk } from '../binding';
-import { colors } from '../cli/colors';
 import { PreRenderedAsset } from '../options/output-options';
 import type {
   RolldownOutputPluginOption,
@@ -787,7 +787,7 @@ const inputHelperMsgRecord: HelperMsgRecord = {
 const outputHelperMsgRecord: HelperMsgRecord = {};
 
 export function validateOption<T>(key: 'input' | 'output', options: T): void {
-  if (process.env.ROLLDOWN_OPTIONS_VALIDATION === 'loose') return;
+  if (globalThis.process?.env?.ROLLDOWN_OPTIONS_VALIDATION === 'loose') return;
 
   let parsed = v.safeParse(
     key === 'input' ? InputOptionsSchema : OutputOptionsSchema,

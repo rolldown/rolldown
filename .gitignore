@@ -172,3 +172,6 @@ packages/**/THIRD-PARTY-LICENSE
 !/packages/rolldown/tests/fixtures/**/node_modules
 
 .spr.yml
+
+# generated bindings type
+crates/rolldown_debug_action/bindings/**

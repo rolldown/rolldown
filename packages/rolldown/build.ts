@@ -34,16 +34,6 @@ const withShared = (
     inlineDependency?: boolean;
   } & BuildOptions,
 ): BuildOptions => {
-  const alias = {};
-  if (isBrowserPkg) {
-    alias[bindingFile] = isBrowserBuild
-      ? bindingFileWasiBrowser
-      : bindingFileWasi;
-  }
-  if (isBrowserBuild) {
-    alias['node:path'] = 'pathe';
-  }
-
   return {
     input: {
       index: './src/index',
@@ -60,7 +50,13 @@ const withShared = (
     platform: isBrowserBuild ? 'browser' : 'node',
     resolve: {
       extensions: ['.js', '.cjs', '.mjs', '.ts'],
-      alias,
+      alias: isBrowserPkg
+        ? {
+          [bindingFile]: isBrowserBuild
+            ? bindingFileWasiBrowser
+            : bindingFileWasi,
+        }
+        : {},
     },
     external: [
       /rolldown-binding\..*\.node/,
@@ -78,9 +74,12 @@ const withShared = (
     },
     ...options,
     plugins: [
-      isBrowserPkg && {
+      isBrowserBuild && {
         name: 'remove-built-modules',
         resolveId(id) {
+          if (id === 'node:path') {
+            return this.resolve('pathe');
+          }
           if (id === 'node:os' || id === 'node:worker_threads') {
             return { id, external: true, moduleSideEffects: false };
           }

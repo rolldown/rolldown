@@ -9,7 +9,7 @@ use rolldown_plugin::{
 const WASM_HELPER_ID: &str = "\0vite/wasm-helper.js";
 
 #[derive(Debug)]
-pub struct WasmHelperPlugin {}
+pub struct WasmHelperPlugin;
 
 impl Plugin for WasmHelperPlugin {
   fn name(&self) -> Cow<'static, str> {

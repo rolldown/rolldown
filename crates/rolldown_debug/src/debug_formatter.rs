@@ -4,6 +4,7 @@ use std::{
   time::{SystemTime, UNIX_EPOCH},
 };
 
+use dashmap::DashMap;
 use serde::ser::{SerializeMap, Serializer as _};
 use tracing::{Event, Subscriber};
 use tracing_serde::AsSerde;
@@ -13,6 +14,9 @@ use tracing_subscriber::{
 };
 
 use crate::build_id_propagate_layer::BuildId;
+
+static OPEN_FILES: std::sync::LazyLock<DashMap<String, std::fs::File>> =
+  std::sync::LazyLock::new(DashMap::new);
 
 pub struct DevtoolFormatter;
 
@@ -53,19 +57,29 @@ where
         format!(".rolldown/{}/log.json", build_id.0)
       });
 
-    let mut file = match OpenOptions::new().create(true).append(true).open(&log_filename) {
-      Ok(v) => v,
-      Err(e) => match e.kind() {
-        std::io::ErrorKind::ReadOnlyFilesystem => {
-          // WASI environment, we can't write to the filesystem
-          return Ok(());
-        }
-        _ => {
-          // Other errors, we just return the error
-          return Err(std::fmt::Error);
-        }
-      },
-    };
+    // TODO(hyf0): While this prevents memory leaks, we should come up with a better solution.
+    if OPEN_FILES.len() > 10 {
+      let oldest_file = OPEN_FILES.iter().next();
+      if let Some(oldest_file) = oldest_file {
+        // If we have more than 10 open files, we need to close the oldest one.
+        OPEN_FILES.remove(oldest_file.key());
+      }
+    }
+
+    if !OPEN_FILES.contains_key(&log_filename) {
+      let file = OpenOptions::new()
+        .create(true)
+        .append(true)
+        .open(&log_filename)
+        .map_err(|_| std::fmt::Error)?;
+      // Ensure for each file, we only have one unique file handle to prevent multiple writes.
+      OPEN_FILES.insert(log_filename.clone(), file);
+    }
+
+    let mut file =
+      OPEN_FILES.get_mut(&log_filename).unwrap_or_else(|| panic!("{log_filename} not found"));
+    let mut file = file.value_mut();
+
     let visit = || {
       let mut serializer = serde_json::Serializer::new(&mut file);
       let mut serializer = serializer.serialize_map(None)?;

@@ -1,5 +1,5 @@
-import { type Action } from './generated';
-export * from './generated';
+import { type Action } from './generated/index.js';
+export * from './generated/index.js';
 
 export interface Event {
   timestamp: string;

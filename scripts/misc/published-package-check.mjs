@@ -7,6 +7,7 @@ const packagesNeedToPublish = [
   'packages/rolldown',
   'packages/rolldown/npm/*',
   'packages/wasi',
+  'packages/debug',
 ];
 
 const root = process.cwd();

@@ -40,5 +40,11 @@ rustflags = ["-C", "target-feature=+crt-static", "--cfg", "tracing_unstable"]
 [target.i686-pc-windows-msvc]
 rustflags = ["-C", "target-feature=+crt-static", "--cfg", "tracing_unstable"]
 
+[target.x86_64-unknown-linux-musl]
+rustflags = ["--cfg", "tracing_unstable"]
+
+[target.aarch64-unknown-linux-musl]
+rustflags = ["--cfg", "tracing_unstable"]
+
 [target.wasm32-wasip1-threads]
 rustflags = ["--cfg", "tokio_unstable", "--cfg", "tracing_unstable"]

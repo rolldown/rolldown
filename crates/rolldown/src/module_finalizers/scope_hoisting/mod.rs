@@ -1076,10 +1076,11 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
                   self.canonical_name_for(self.ctx.module.default_export_ref);
                 func.id = Some(self.snippet.id(canonical_name_for_default_export_ref, SPAN));
               }
-              top_stmt = ast::Statement::FunctionDeclaration(ArenaBox::new_in(
-                func.as_mut().take_in(self.alloc),
-                self.alloc,
-              ));
+              let mut func = func.as_mut().take_in(self.alloc);
+              // Transfer span of ExportDefaultDeclaration to FunctionDeclaration to preserve the
+              // comments
+              func.span = default_decl.span;
+              top_stmt = ast::Statement::FunctionDeclaration(ArenaBox::new_in(func, self.alloc));
             }
             ast::ExportDefaultDeclarationKind::ClassDeclaration(class) => {
               // "export default class {}" => "class default {}"

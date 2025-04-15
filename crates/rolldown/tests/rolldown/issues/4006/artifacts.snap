@@ -1,0 +1,22 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## main.js
+
+```js
+
+//#region main.js
+/**
+* hello
+*/
+function hello() {}
+/**
+* 666
+*/
+console.log(666);
+
+//#endregion
+export { hello as default };
+```

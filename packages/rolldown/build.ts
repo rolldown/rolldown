@@ -53,7 +53,7 @@ if (isBrowserPkg) {
       browserBuild: true,
       output: {
         format: 'esm',
-        file: nodePath.resolve(outputDir, 'browser-bundler.mjs'),
+        file: nodePath.resolve(outputDir, 'browser.mjs'),
       },
     }),
   );

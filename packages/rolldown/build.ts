@@ -2,7 +2,6 @@ import colors from 'ansis';
 import { globSync } from 'glob';
 import fs from 'node:fs';
 import nodePath from 'node:path';
-// import pkgJson from './package.json' with { type: 'json' };
 import { build, BuildOptions, type Plugin } from './src/index';
 
 const isCI = !!process.env.CI;
@@ -10,8 +9,7 @@ const isReleasingCI = !!process.env.RELEASING;
 
 // In `@rolldown/browser`, there will be three builds:
 // - CJS and ESM for Node (used in StackBlitz / WebContainers)
-// - ESM for bundlers (used in Vite and running in the browser)
-// - ESM with inlined dependencies for CDN imports
+// - ESM for browser bundlers (used in Vite and running in the browser)
 const isBrowserPkg = !!process.env.BROWSER_PKG;
 
 const pkgRoot = isBrowserPkg
@@ -58,15 +56,6 @@ if (isBrowserPkg) {
         file: nodePath.resolve(outputDir, 'browser-bundler.mjs'),
       },
     }),
-    withShared({
-      browserBuild: true,
-      inlineDependency: true,
-      output: {
-        format: 'esm',
-        file: nodePath.resolve(outputDir, 'browser.js'),
-        minify: 'dce-only',
-      },
-    }),
   );
 }
 
@@ -78,10 +67,9 @@ if (isBrowserPkg) {
 })();
 
 function withShared(
-  { browserBuild: isBrowserBuild, inlineDependency, ...options }: {
-    browserBuild?: boolean;
-    inlineDependency?: boolean;
-  } & BuildOptions,
+  { browserBuild: isBrowserBuild, ...options }:
+    & { browserBuild?: boolean }
+    & BuildOptions,
 ): BuildOptions {
   return {
     input: {
@@ -107,7 +95,7 @@ function withShared(
         }
         : {},
     },
-    external: inlineDependency ? undefined : [
+    external: [
       /rolldown-binding\..*\.node/,
       /rolldown-binding\..*\.wasm/,
       /@rolldown\/binding-.*/,
@@ -124,36 +112,9 @@ function withShared(
     ...options,
     plugins: [
       isBrowserBuild && removeBuiltModules(),
-      isBrowserBuild && inlineDependency && rewriteWasmUrl(),
       options.plugins,
     ],
   };
-}
-
-function rewriteWasmUrl(): Plugin {
-  return {
-    name: 'patch-new-url',
-    resolveId: {
-      filter: { id: /\?url$/ },
-      handler(source) {
-        return source;
-      },
-    },
-    load: {
-      filter: { id: /\?url$/ },
-      handler(id) {
-        const filename = cleanUrl(id);
-        return `export default new URL(${
-          JSON.stringify(filename)
-        }, import.meta.url).href`;
-      },
-    },
-  };
-}
-
-const postfixRE = /[#?].*$/s;
-function cleanUrl(url: string) {
-  return url.replace(postfixRE, '');
 }
 
 function removeBuiltModules(): Plugin {

@@ -13,7 +13,7 @@ use anyhow::Result;
 
 use arcstr::ArcStr;
 use rolldown_common::{
-  GetLocalDbMut, NormalizedBundlerOptions, ScanMode, SharedFileEmitter, SymbolRefDb,
+  GetLocalDbMut, HmrOutput, NormalizedBundlerOptions, ScanMode, SharedFileEmitter, SymbolRefDb,
 };
 use rolldown_error::{BuildDiagnostic, BuildResult};
 use rolldown_fs::{FileSystem, OsFileSystem};
@@ -240,7 +240,7 @@ impl Bundler {
     &self.plugin_driver.watch_files
   }
 
-  pub async fn generate_hmr_patch(&mut self, changed_files: Vec<String>) -> BuildResult<String> {
+  pub async fn generate_hmr_patch(&mut self, changed_files: Vec<String>) -> BuildResult<HmrOutput> {
     self
       .hmr_manager
       .as_mut()

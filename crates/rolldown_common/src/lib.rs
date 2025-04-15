@@ -4,6 +4,7 @@ mod css;
 mod ecmascript;
 mod file_emitter;
 mod generated;
+mod hmr;
 mod inner_bundler_options;
 mod module;
 mod module_loader;
@@ -80,6 +81,10 @@ pub use crate::{
     node_builtin_modules::is_existing_node_builtin_modules,
   },
   file_emitter::{EmittedAsset, EmittedChunk, EmittedChunkInfo, FileEmitter, SharedFileEmitter},
+  hmr::{
+    hmr_boundary::HmrBoundary,
+    hmr_output::{HmrBoundaryOutput, HmrOutput},
+  },
   module::{
     Module,
     external_module::ExternalModule,

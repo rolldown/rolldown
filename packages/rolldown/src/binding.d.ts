@@ -160,7 +160,7 @@ export declare class Bundler {
   close(): Promise<void>
   get closed(): boolean
   get watchFiles(): Array<string>
-  generateHmrPatch(changedFiles: Array<string>): Promise<string>
+  generateHmrPatch(changedFiles: Array<string>): Promise<BindingHmrOutput>
 }
 
 export declare class ParallelJsPluginRegistry {
@@ -309,6 +309,16 @@ export interface BindingGeneralHookFilter {
 export interface BindingGlobImportPluginConfig {
   root?: string
   restoreQueryExtension?: boolean
+}
+
+export interface BindingHmrBoundaryOutput {
+  boundary: string
+  acceptedVia: string
+}
+
+export interface BindingHmrOutput {
+  patch: string
+  hmrBoundaries: Array<BindingHmrBoundaryOutput>
 }
 
 export interface BindingHookJsLoadOutput {

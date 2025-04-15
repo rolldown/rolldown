@@ -6,7 +6,8 @@ use crate::{
   options::{BindingInputOptions, BindingOnLog, BindingOutputOptions},
   parallel_js_plugin_registry::ParallelJsPluginRegistry,
   types::{
-    binding_log::BindingLog, binding_log_level::BindingLogLevel, binding_outputs::BindingOutputs,
+    binding_hmr_output::BindingHmrOutput, binding_log::BindingLog,
+    binding_log_level::BindingLogLevel, binding_outputs::BindingOutputs,
   },
   utils::{
     handle_result, normalize_binding_options::normalize_binding_options,
@@ -116,9 +117,13 @@ impl Bundler {
   }
 
   #[napi]
-  pub async fn generate_hmr_patch(&self, changed_files: Vec<String>) -> String {
+  pub async fn generate_hmr_patch(&self, changed_files: Vec<String>) -> BindingHmrOutput {
     let mut bundler_core = self.inner.lock().await;
-    bundler_core.generate_hmr_patch(changed_files).await.expect("Failed to generate HMR patch")
+    bundler_core
+      .generate_hmr_patch(changed_files)
+      .await
+      .expect("Failed to generate HMR patch")
+      .into()
   }
 }
 

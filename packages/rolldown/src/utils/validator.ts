@@ -320,6 +320,7 @@ const HmrSchema = v.union([
   v.strictObject({
     port: v.optional(v.number()),
     host: v.optional(v.string()),
+    implement: v.optional(v.string()),
   }),
 ]);
 

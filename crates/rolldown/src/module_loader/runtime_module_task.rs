@@ -48,9 +48,6 @@ impl RuntimeModuleTask {
   #[expect(clippy::too_many_lines)]
   fn run_inner(&self) -> BuildResult<()> {
     let source = if let Some(hmr_options) = &self.options.experimental.hmr {
-      let host = hmr_options.host.as_deref().unwrap_or("localhost");
-      let port = hmr_options.port.unwrap_or(3000);
-      let addr = format!("{host}:{port}");
       let mut runtime_source = String::new();
       match self.options.platform {
         Platform::Node => {
@@ -63,9 +60,16 @@ impl RuntimeModuleTask {
       runtime_source.push_str(&arcstr::literal!(concat!(
         include_str!("../runtime/runtime-base.js"),
         include_str!("../runtime/runtime-tail.js"),
-        include_str!("../runtime/runtime-extra-dev.js"),
       )));
-      let runtime_source = runtime_source.replace("$ADDR", &addr);
+      if let Some(implement) = hmr_options.implement.as_deref() {
+        runtime_source.push_str(implement);
+      } else {
+        let content = include_str!("../runtime/runtime-extra-dev.js");
+        let host = hmr_options.host.as_deref().unwrap_or("localhost");
+        let port = hmr_options.port.unwrap_or(3000);
+        let addr = format!("{host}:{port}");
+        runtime_source.push_str(&content.replace("$ADDR", &addr));
+      }
       ArcStr::from(runtime_source)
     } else if self.options.is_esm_format_with_node_platform() {
       arcstr::literal!(concat!(

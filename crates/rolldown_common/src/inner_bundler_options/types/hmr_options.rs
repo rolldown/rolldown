@@ -14,4 +14,6 @@ pub struct HmrOptions {
   pub host: Option<String>,
   /// Port that `DevRuntime` will connect to using WebSocket.
   pub port: Option<u16>,
+  /// Custom hmr runtime implementation.
+  pub implement: Option<String>,
 }

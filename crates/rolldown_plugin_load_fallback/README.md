@@ -26,4 +26,4 @@ export default defineConfig({
 
 In Vite’s plugin, if reading the cleaned path fails, it falls back to reading the original full ID (including the `query/hash`).
 
-In contrast, Rolldown’s plugin only attempts to read the cleaned path and does not retry the full ID, leaving such cases to be handled by the native bundling logic.
+In contrast, Rolldown’s plugin only attempts to read the cleaned path and does not retry the full ID, leaving such cases to be handled by the rolldown core loading logic.

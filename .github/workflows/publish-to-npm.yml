@@ -52,11 +52,11 @@ jobs:
           path: packages/rolldown/dist
           name: node-artifact
 
-      - name: Download `@rolldown/wasi` Artifacts
+      - name: Download `@rolldown/browser` Artifacts
         uses: actions/download-artifact@95815c38cf2ff2164869cbab79da8d1f422bc89e # v4.2.1
         with:
-          path: packages/wasi/dist
-          name: wasi-artifact
+          path: packages/browser/dist
+          name: browser-artifact
 
       - name: Download `@rolldown/debug` Artifacts
         uses: actions/download-artifact@95815c38cf2ff2164869cbab79da8d1f422bc89e # v4.2.1

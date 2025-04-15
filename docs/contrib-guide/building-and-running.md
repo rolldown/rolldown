@@ -54,8 +54,8 @@ Rolldown supports WASI by considering is as a special platform. So we still use 
 
 To build the WASI version, you can run the following command:
 
-- `just build wasi`
-- `just build wasi release` (**important if running benchmarks**)
+- `just build browser`
+- `just build browser release` (**important if running benchmarks**)
 
 Building the WASI version will remove the native version of Rolldown. We designed the local build process on purpose that is you either build the native version or the WASI version. You can't mix them together, though NAPI-RS supports it.
 

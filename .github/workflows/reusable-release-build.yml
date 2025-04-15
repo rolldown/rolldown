@@ -227,7 +227,7 @@ jobs:
         uses: ./.github/actions/setup-rust
         with:
           tools: just
-          cache-key: release-build-browser
+          cache-key: release-build-wasi
 
       - name: Add WASI target
         run: rustup target add wasm32-wasip1-threads

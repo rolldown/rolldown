@@ -28,12 +28,61 @@ const bindingFileWasiBrowser = nodePath.resolve(
   'src/rolldown-binding.wasi-browser.js',
 );
 
-const withShared = (
+const configs: BuildOptions[] = [
+  withShared({
+    plugins: [patchBindingJs()],
+    output: {
+      dir: outputDir,
+      format: 'esm',
+      entryFileNames: `[name].mjs`,
+      chunkFileNames: `shared/[name]-[hash].mjs`,
+    },
+  }),
+  withShared({
+    plugins: [shimImportMeta(), patchBindingJs()],
+    output: {
+      dir: outputDir,
+      format: 'cjs',
+      entryFileNames: '[name].cjs',
+      chunkFileNames: 'shared/[name]-[hash].cjs',
+    },
+  }),
+];
+
+if (isBrowserPkg) {
+  configs.push(
+    withShared({
+      browserBuild: true,
+      output: {
+        format: 'esm',
+        file: nodePath.resolve(outputDir, 'browser-bundler.mjs'),
+      },
+    }),
+    withShared({
+      browserBuild: true,
+      inlineDependency: true,
+      output: {
+        format: 'esm',
+        file: nodePath.resolve(outputDir, 'browser.js'),
+        minify: 'dce-only',
+      },
+    }),
+  );
+}
+
+(async () => {
+  for (const config of configs) {
+    await build(config);
+  }
+  copy();
+})();
+
+function withShared(
   { browserBuild: isBrowserBuild, inlineDependency, ...options }: {
     browserBuild?: boolean;
     inlineDependency?: boolean;
   } & BuildOptions,
-): BuildOptions => {
+): BuildOptions {
   return {
     input: {
       index: './src/index',
@@ -79,48 +128,6 @@ const withShared = (
       options.plugins,
     ],
   };
-};
-
-const configs: BuildOptions[] = [
-  withShared({
-    plugins: [patchBindingJs()],
-    output: {
-      dir: outputDir,
-      format: 'esm',
-      entryFileNames: `[name].mjs`,
-      chunkFileNames: `shared/[name]-[hash].mjs`,
-    },
-  }),
-  withShared({
-    plugins: [shimImportMeta(), patchBindingJs()],
-    output: {
-      dir: outputDir,
-      format: 'cjs',
-      entryFileNames: '[name].cjs',
-      chunkFileNames: 'shared/[name]-[hash].cjs',
-    },
-  }),
-];
-
-if (isBrowserPkg) {
-  configs.push(
-    withShared({
-      browserBuild: true,
-      output: {
-        format: 'esm',
-        file: nodePath.resolve(outputDir, 'browser-bundler.mjs'),
-      },
-    }),
-    withShared({
-      browserBuild: true,
-      inlineDependency: true,
-      output: {
-        format: 'esm',
-        file: nodePath.resolve(outputDir, 'browser.js'),
-        minify: 'dce-only',
-      },
-    }),
-  );
 }
 
 function rewriteWasmUrl(): Plugin {
@@ -212,13 +219,6 @@ if (!nativeBinding && globalThis.process?.versions?.["webcontainer"]) {
     },
   };
 }
-
-(async () => {
-  for (const config of configs) {
-    await build(config);
-  }
-  copy();
-})();
 
 function copy() {
   // wasm build rely on `.node` binaries. But we don't want to copy `.node` files

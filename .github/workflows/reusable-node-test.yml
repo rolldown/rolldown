@@ -38,6 +38,9 @@ jobs:
       - name: Build Native Rolldown
         run: just build native
 
+      - name: Build `@rolldown/test-dev-server`
+        run: pnpm --filter '@rolldown/test-dev-server' build
+
       - name: Type Check
         run: pnpm type-check
 
@@ -56,6 +59,9 @@ jobs:
       - name: Build Examples For Node18
         run: pnpm --filter '@example/**' build
 
+      - name: HMR Test For Node18
+        run: pnpm run --filter '@rolldown/test-dev-server-tests' test
+
       - name: Setup Node20 For Testing
         uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
         with:
@@ -71,6 +77,9 @@ jobs:
       - name: Build Examples For Node20
         run: pnpm --filter '@example/**' build
 
+      - name: HMR Test For Node20
+        run: pnpm run --filter '@rolldown/test-dev-server-tests' test
+
       - name: Setup Node22 For Testing
         uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
         with:
@@ -85,3 +94,6 @@ jobs:
 
       - name: Build Examples For Node22
         run: pnpm --filter '@example/**' build
+
+      - name: HMR Test For Node22
+        run: pnpm run --filter '@rolldown/test-dev-server-tests' test

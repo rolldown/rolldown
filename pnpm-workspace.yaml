@@ -3,6 +3,9 @@ packages:
   - packages/rolldown/tests
   - packages/rolldown/tests/module-federation
   - packages/rolldown/npm/*
+  - packages/test-dev-server/tests
+  - packages/test-dev-server/tests/fixtures/*
+  - packages/test-dev-server/tests/tmp/fixtures/*
   - docs
   - examples/*
   - examples/module-federation/*

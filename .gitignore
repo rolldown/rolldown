@@ -11,7 +11,7 @@ target/
 # Used to store temporary files that rolldown used
 temp/**
 tmp/**
-
+**/tmp
 # [Rust]
 
 

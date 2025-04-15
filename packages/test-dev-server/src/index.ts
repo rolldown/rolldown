@@ -3,6 +3,7 @@ import connect from 'connect';
 import nodeFs from 'node:fs';
 import http from 'node:http';
 import nodePath from 'node:path';
+import nodeUrl from 'node:url';
 import * as rolldown from 'rolldown';
 import serveStatic from 'serve-static';
 import { WebSocket, WebSocketServer } from 'ws';
@@ -12,13 +13,17 @@ import { defineDevConfig, DevConfig } from './define-dev-config.js';
 let seed = 0;
 
 async function loadDevConfig(): Promise<DevConfig> {
-  const exports = await import(nodePath.join(process.cwd(), 'dev.config.mjs'));
+  const exports = await import(
+    nodeUrl.pathToFileURL(nodePath.join(process.cwd(), 'dev.config.mjs'))
+      .href
+  );
   return exports.default;
 }
 
 class DevServer {
   private config: DevConfig;
   private numberOfLiveConnections = 0;
+  private sockets: Set<WebSocket> = new Set();
 
   constructor(config: DevConfig) {
     this.config = config;
@@ -47,7 +52,10 @@ class DevServer {
     const app = connect();
 
     console.log(`Serving ${nodePath.join(process.cwd(), 'dist')}`);
-    const watcher = chokidar.watch(nodePath.join(process.cwd(), 'src'));
+    const watcher = chokidar.watch(nodePath.join(process.cwd(), 'src'), {
+      usePolling: true,
+      interval: 100,
+    });
 
     app.use(
       serveStatic(nodePath.join(process.cwd(), 'dist'), {
@@ -59,20 +67,26 @@ class DevServer {
     // create node.js http server and listen on port
     const server = http.createServer(app);
     const wsServer = new WebSocketServer({ server });
-    let socket: WebSocket;
-    wsServer.on('connection', (ws) => {
+    wsServer.on('connection', (ws, req) => {
+      const url = new URL(req.url!, `http://${req.headers.host}`);
+      const from = url.searchParams.get('from');
+      if (from === 'hmr-runtime') {
+        this.sendMessage({ type: 'connected-from-hmr-runtime' });
+      }
+
       this.numberOfLiveConnections += 1;
       console.debug(
         `Detected new Websocket connection. Current live connections: ${this.numberOfLiveConnections}`,
       );
-      socket = ws;
+
+      this.sockets.add(ws);
       ws.on('error', console.error);
-    });
-    wsServer.on('close', () => {
-      this.numberOfLiveConnections -= 1;
-      console.debug(
-        `Detected Websocket disconnection. Current live connections: ${this.numberOfLiveConnections}`,
-      );
+      ws.on('close', () => {
+        this.numberOfLiveConnections -= 1;
+        console.debug(
+          `Websocket connection closed. Current live connections: ${this.numberOfLiveConnections}`,
+        );
+      });
     });
     watcher.on('change', async (path) => {
       console.log(`File ${path} has been changed`);
@@ -80,26 +94,30 @@ class DevServer {
         const output = (await build.generateHmrPatch([path]))!;
         if (output.patch) {
           console.log('Patching...');
-          if (socket) {
+          if (this.hasLiveConnections) {
             const path = `${seed}.js`;
             seed++;
             nodeFs.writeFileSync(
               nodePath.join(process.cwd(), 'dist', path),
               output.patch,
             );
+            const patchUriForBrowser = `/${path}`;
+            const patchUriForFile = nodeUrl.pathToFileURL(
+              nodePath.join(process.cwd(), 'dist', path),
+            ).toString();
             console.log(
               'Patch:',
               JSON.stringify({
                 type: 'update',
-                url: path,
+                url: patchUriForBrowser,
+                path: patchUriForFile,
               }),
             );
-            socket.send(
-              JSON.stringify({
-                type: 'update',
-                url: path,
-              }),
-            );
+            this.sendMessage({
+              type: 'update',
+              url: patchUriForBrowser,
+              path: patchUriForFile,
+            });
           } else {
             console.log('No socket connected');
           }
@@ -113,6 +131,16 @@ class DevServer {
     server.listen(3000);
     console.log('Server listening on http://localhost:3000');
   }
+
+  sendMessage(message: ConnectedFromHmrRuntime | UpdateMessage) {
+    if (this.hasLiveConnections) {
+      for (const s of this.sockets) {
+        if (s.readyState === WebSocket.OPEN) {
+          s.send(JSON.stringify(message));
+        }
+      }
+    }
+  }
 }
 
 export async function serve(): Promise<void> {
@@ -123,3 +151,13 @@ export async function serve(): Promise<void> {
 }
 
 export { defineDevConfig };
+
+interface ConnectedFromHmrRuntime {
+  type: 'connected-from-hmr-runtime';
+}
+
+interface UpdateMessage {
+  type: 'update';
+  url: string;
+  path: string;
+}

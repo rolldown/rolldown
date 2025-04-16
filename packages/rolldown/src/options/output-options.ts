@@ -191,9 +191,10 @@ export interface OutputOptions {
    * Control comments in the output.
    *
    * - `none`: no comments
+   * - `preserve`: preserve all comments except legal comments
    * - `preserve-legal`: preserve comments that contain `@license`, `@preserve` or starts with `//!` `/*!`
    */
-  comments?: 'none' | 'preserve-legal';
+  comments?: 'none' | 'preserve' | 'preserve-legal';
   plugins?: RolldownOutputPluginOption;
   polyfillRequire?: boolean;
   target?: ESTarget;

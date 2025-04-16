@@ -60,7 +60,7 @@ export declare class BindingNormalizedOptions {
   get sourcemapDebugIds(): boolean
   get minify(): false | BindingMinifyOptions
   get polyfillRequire(): boolean
-  get comments(): 'none' | 'preserve-legal'
+  get comments(): 'none' | 'preserve' | 'preserve-legal'
 }
 
 export declare class BindingOutputAsset {
@@ -563,7 +563,7 @@ export interface BindingOutputOptions {
   sourcemapPathTransform?: (source: string, sourcemapPath: string) => string
   minify?: boolean | 'dce-only' | BindingMinifyOptions
   advancedChunks?: BindingAdvancedChunksOptions
-  comments?: 'none' | 'preserve-legal'
+  comments?: 'none' | 'preserve' | 'preserve-legal'
   polyfillRequire?: boolean
   target?: string
 }

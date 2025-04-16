@@ -1,0 +1,18 @@
+
+//#region ../none/main.js
+let x;
+console.log("in a");
+console.log("in b");
+//! Legal comments1
+/*! Legal comments2 */
+foo;
+bar;
+function test() {}
+var main_default = () => {
+	/**
+	* @preserve
+	*/
+};
+
+//#endregion
+export { main_default as default, test, x };

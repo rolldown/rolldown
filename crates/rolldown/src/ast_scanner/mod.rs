@@ -253,6 +253,12 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
 
     self.result.exports_kind = exports_kind;
 
+    if self.options.is_hmr_enabled() && exports_kind.is_commonjs() {
+      // https://github.com/rolldown/rolldown/issues/4129
+      // For cjs module with hmr enabled, bundler will generates code that references `module`.
+      self.ast_usage.insert(EcmaModuleAstUsage::ModuleRef);
+    }
+
     if cfg!(debug_assertions) {
       use rustc_hash::FxHashSet;
       let mut scanned_symbols_in_root_scope = self

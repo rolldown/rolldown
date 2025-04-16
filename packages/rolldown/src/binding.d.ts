@@ -242,7 +242,8 @@ export type BindingBuiltinPluginName =  'builtin:wasm-helper'|
 'builtin:replace'|
 'builtin:vite-resolve'|
 'builtin:module-federation'|
-'builtin:isolated-declaration';
+'builtin:isolated-declaration'|
+'builtin:report';
 
 export interface BindingBundlerOptions {
   inputOptions: BindingInputOptions
@@ -660,6 +661,10 @@ export interface BindingReplacePluginConfig {
   preventAssignment?: boolean
   objectGuards?: boolean
   sourcemap?: boolean
+}
+
+export interface BindingReportPluginConfig {
+  isTty: boolean
 }
 
 export type BindingResolvedExternal =

@@ -110,6 +110,7 @@ rolldown_plugin_replace = { version = "0.1.0", path = "./crates/rolldown_plugin_
 rolldown_plugin_transform = { version = "0.1.0", path = "./crates/rolldown_plugin_transform" }
 rolldown_plugin_vite_resolve = { version = "0.1.0", path = "./crates/rolldown_plugin_vite_resolve" }
 rolldown_plugin_wasm_fallback = { version = "0.1.0", path = "./crates/rolldown_plugin_wasm_fallback" }
+rolldown_plugin_report = { version = "0.1.0", path = "./crates/rolldown_plugin_report" }
 rolldown_plugin_wasm_helper = { version = "0.1.0", path = "./crates/rolldown_plugin_wasm_helper" }
 rolldown_resolver = { version = "0.1.0", path = "./crates/rolldown_resolver" }
 rolldown_rstr = { version = "0.1.0", path = "./crates/rolldown_rstr" }
@@ -181,6 +182,7 @@ urlencoding = "2.1.3"
 valuable = "0.1.1"
 vfs = "0.12.0"
 xxhash-rust = "0.8.10"
+termcolor = { version = "1.4.1" }
 
 prettyplease = "0.2.29"
 proc-macro2 = "1"

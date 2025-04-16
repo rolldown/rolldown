@@ -15,6 +15,7 @@ use rolldown_plugin_manifest::{ManifestPlugin, ManifestPluginConfig};
 use rolldown_plugin_module_federation::ModuleFederationPlugin;
 use rolldown_plugin_module_preload_polyfill::ModulePreloadPolyfillPlugin;
 use rolldown_plugin_replace::{ReplaceOptions, ReplacePlugin};
+use rolldown_plugin_report::ReportPlugin;
 use rolldown_plugin_transform::TransformPlugin;
 use rolldown_plugin_vite_resolve::{
   FinalizeBareSpecifierCallback, FinalizeOtherSpecifiersCallback, ViteResolveOptions,
@@ -353,7 +354,6 @@ impl TryFrom<BindingBuiltinPlugin> for Arc<dyn Pluginable> {
         };
         Arc::new(plugin)
       }
-
       BindingBuiltinPluginName::Json => {
         let config = if let Some(options) = plugin.options {
           BindingJsonPluginConfig::from_unknown(options)?
@@ -412,7 +412,7 @@ impl TryFrom<BindingBuiltinPlugin> for Arc<dyn Pluginable> {
         } else {
           return Err(napi::Error::new(
             napi::Status::InvalidArg,
-            "Missing options for ViteResolvePlugin",
+            "Missing options for ModuleFederationPlugin",
           ));
         };
         Arc::new(ModuleFederationPlugin::new(config.into()))
@@ -422,6 +422,17 @@ impl TryFrom<BindingBuiltinPlugin> for Arc<dyn Pluginable> {
           BindingIsolatedDeclarationPluginConfig::from_unknown(options)?.into()
         } else {
           IsolatedDeclarationPlugin::default()
+        };
+        Arc::new(plugin)
+      }
+      BindingBuiltinPluginName::Report => {
+        let plugin: ReportPlugin = if let Some(options) = plugin.options {
+          BindingReportPluginConfig::from_unknown(options)?.into()
+        } else {
+          return Err(napi::Error::new(
+            napi::Status::InvalidArg,
+            "Missing options for ReportPlugin",
+          ));
         };
         Arc::new(plugin)
       }
@@ -451,4 +462,16 @@ pub struct BindingReplacePluginConfig {
   pub prevent_assignment: Option<bool>,
   pub object_guards: Option<bool>,
   pub sourcemap: Option<bool>,
+}
+
+#[napi_derive::napi(object)]
+#[derive(Debug, Default)]
+pub struct BindingReportPluginConfig {
+  pub is_tty: bool,
+}
+
+impl From<BindingReportPluginConfig> for ReportPlugin {
+  fn from(config: BindingReportPluginConfig) -> Self {
+    ReportPlugin::new(config.is_tty)
+  }
 }

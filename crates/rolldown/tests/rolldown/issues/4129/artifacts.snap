@@ -12,7 +12,7 @@ import assert from "node:assert";
 //#region lib.js
 var require_lib = __commonJS({ "lib.js"(exports, module) {
 	import.meta.hot = __rolldown_runtime__.createModuleHotContext("lib.js");
-	__rolldown_runtime__.registerModule("lib.js", module.exports);
+	__rolldown_runtime__.registerModule("lib.js", module.exports, { cjs: true });
 	exports.a = 1;
 } });
 var import_lib = __toESM(require_lib());

@@ -308,7 +308,7 @@ pub fn normalize_binding_options(
       .comments
       .map(|inner| match inner.as_str() {
         "none" => Ok(rolldown::Comments::None),
-        "preserve-legal" => Ok(rolldown::Comments::Preserve),
+        "preserve-legal" => Ok(rolldown::Comments::PreserveLegal),
         _ => Err(napi::Error::new(
           napi::Status::GenericFailure,
           format!("Invalid valid for `comments` option: {inner}"),

@@ -7,7 +7,7 @@ use oxc::{
   codegen::{CodeGenerator, CodegenOptions, CodegenReturn},
   semantic::SemanticBuilder,
   span::SourceType,
-  transformer::{EnvOptions, ReactRefreshOptions, TransformOptions, Transformer},
+  transformer::{EnvOptions, TransformOptions, Transformer},
 };
 
 use rolldown_common::ModuleType;
@@ -20,11 +20,6 @@ pub struct TransformPlugin {
   pub include: Vec<StringOrRegex>,
   pub exclude: Vec<StringOrRegex>,
   pub jsx_inject: Option<String>,
-  pub react_refresh: bool,
-
-  // TODO: support specific transform options. Firstly we can use `target` & `browserslist` but we'd better allowing user to pass more options.
-  pub target: Option<String>,
-  pub browserslist: Option<String>,
 }
 
 /// only handle ecma like syntax, `jsx`,`tsx`,`ts`
@@ -58,25 +53,12 @@ impl Plugin for TransformPlugin {
       anyhow::anyhow!("Error occurred when parsing {}\n: {:?}", args.id, errs)
     })?;
 
-    let env = if self.target.is_some() && self.browserslist.is_some() {
-      Err("Cannot specify both `target` and `browserslist` at the same time".to_string())
-    } else if let Some(target) = &self.target {
-      EnvOptions::from_target(target)
-    } else if let Some(browserslist) = &self.browserslist {
-      EnvOptions::from_browserslist_query(browserslist)
-    } else {
-      Ok(EnvOptions::default())
-    };
-
-    let env = env.map_err(|e| anyhow::anyhow!(e))?;
+    let env = EnvOptions::default();
     let ret = ecma_ast.program.with_mut(move |fields| {
       let mut transformer_options = TransformOptions { env, ..TransformOptions::default() };
 
       if !matches!(args.module_type, ModuleType::Ts) {
         transformer_options.jsx.jsx_plugin = true;
-        if self.react_refresh {
-          transformer_options.jsx.refresh = Some(ReactRefreshOptions::default());
-        }
       }
 
       let scoping = SemanticBuilder::new().build(fields.program).semantic.into_scoping();

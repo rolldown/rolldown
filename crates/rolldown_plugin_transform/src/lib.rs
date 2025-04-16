@@ -1,6 +1,7 @@
+mod utils;
+
 use std::borrow::Cow;
 use std::path::Path;
-use sugar_path::SugarPath;
 
 use oxc::{
   codegen::{CodeGenerator, CodegenOptions, CodegenReturn},
@@ -12,10 +13,7 @@ use oxc::{
 use rolldown_common::ModuleType;
 use rolldown_ecmascript::EcmaCompiler;
 use rolldown_plugin::{Plugin, SharedTransformPluginContext};
-use rolldown_utils::{
-  clean_url::clean_url,
-  pattern_filter::{StringOrRegex, filter as pattern_filter},
-};
+use rolldown_utils::pattern_filter::StringOrRegex;
 
 #[derive(Debug, Default)]
 pub struct TransformPlugin {
@@ -112,25 +110,5 @@ impl Plugin for TransformPlugin {
       module_type: Some(ModuleType::Js),
       ..Default::default()
     }))
-  }
-}
-
-impl TransformPlugin {
-  fn filter(&self, ctx: &SharedTransformPluginContext, id: &str, module_type: &ModuleType) -> bool {
-    if self.include.is_empty() && self.exclude.is_empty() {
-      return matches!(module_type, ModuleType::Jsx | ModuleType::Tsx | ModuleType::Ts);
-    }
-
-    let normalized_path = Path::new(id).relative(ctx.inner.cwd());
-    let normalized_id = normalized_path.to_string_lossy();
-    let cleaned_id = clean_url(&normalized_id);
-
-    let result =
-      pattern_filter(Some(&self.exclude), Some(&self.include), id, &normalized_id).inner();
-    if cleaned_id == normalized_id {
-      result
-    } else {
-      result || pattern_filter(Some(&self.exclude), Some(&self.include), id, cleaned_id).inner()
-    }
   }
 }

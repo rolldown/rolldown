@@ -2765,7 +2765,6 @@ dependencies = [
 name = "rolldown_plugin_report"
 version = "0.1.0"
 dependencies = [
- "anyhow",
  "rolldown_plugin",
  "sugar_path",
 ]

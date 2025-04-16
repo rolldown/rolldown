@@ -9,6 +9,7 @@ import {
   BindingModuleFederationPluginOption,
   BindingModulePreloadPolyfillPluginConfig,
   BindingRemote,
+  BindingReportPluginConfig,
   type BindingViteResolvePluginConfig,
 } from '../binding';
 import { makeBuiltinPluginCallable } from './utils';
@@ -35,6 +36,12 @@ export function importGlobPlugin(
   config?: BindingGlobImportPluginConfig,
 ): BuiltinPlugin {
   return new BuiltinPlugin('builtin:import-glob', config);
+}
+
+export function reportPlugin(
+  config?: BindingReportPluginConfig,
+): BuiltinPlugin {
+  return new BuiltinPlugin('builtin:report', config);
 }
 
 export function manifestPlugin(

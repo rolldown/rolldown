@@ -1,8 +1,8 @@
 // @cSpell:ignore subcase
 use memchr::memmem;
-use std::{borrow::Cow, path::Path};
+use std::borrow::Cow;
 
-use crate::js_regex::HybridRegex;
+use crate::{join_path_with_glob::join_path_with_glob, js_regex::HybridRegex};
 use fast_glob::glob_match;
 
 #[derive(Debug, Clone)]
@@ -44,7 +44,7 @@ pub fn filter(
     for pattern in exclude {
       let v = match pattern.as_ref() {
         StringOrRegex::String(glob) => {
-          let glob = get_matcher_string(glob, cwd);
+          let glob = join_path_with_glob(glob, cwd);
           glob_match(glob.as_bytes(), id.as_bytes())
         }
         StringOrRegex::Regex(re) => re.matches(&normalized_id),
@@ -58,7 +58,7 @@ pub fn filter(
     for pattern in include {
       let v = match pattern.as_ref() {
         StringOrRegex::String(glob) => {
-          let glob = get_matcher_string(glob, cwd);
+          let glob = join_path_with_glob(glob, cwd);
           glob_match(glob.as_bytes(), id.as_bytes())
         }
         StringOrRegex::Regex(re) => re.matches(&normalized_id),
@@ -73,16 +73,6 @@ pub fn filter(
   match include {
     None => FilterResult::NoneMatch(true),
     Some(include) => FilterResult::NoneMatch(include.is_empty()),
-  }
-}
-
-/// https://github.com/rollup/plugins/blob/e1a5ef99f1578eb38a8c87563cb9651db228f3bd/packages/pluginutils/src/createFilter.ts#L10
-fn get_matcher_string<'a>(glob: &'a str, cwd: &'a str) -> Cow<'a, str> {
-  if glob.starts_with("**") || Path::new(glob).is_absolute() {
-    normalize_path(glob)
-  } else {
-    let final_path = Path::new(cwd).join(glob);
-    Cow::Owned(normalize_path(final_path.to_string_lossy().as_ref()).to_string())
   }
 }
 
@@ -176,6 +166,7 @@ mod tests {
     struct TestCases<'a> {
       input_filter: InputFilter,
       cases: Vec<TestCase<'a>>,
+      cwd: Option<&'a str>,
     }
 
     #[expect(clippy::unnecessary_wraps)]
@@ -201,6 +192,7 @@ mod tests {
           ("\0foo.js", FilterResult::NoneMatch(false)),
           (&full_virtual_path, FilterResult::NoneMatch(false)),
         ],
+        cwd: None,
       },
       TestCases {
         input_filter: InputFilter { exclude: None, include: glob_filter("*.js") },
@@ -208,6 +200,7 @@ mod tests {
           ("foo.js", FilterResult::Match(true)),
           ("foo.ts", FilterResult::NoneMatch(false)),
         ],
+        cwd: None,
       },
       TestCases {
         input_filter: InputFilter { exclude: None, include: regex_filter("\\.js$") },
@@ -215,6 +208,7 @@ mod tests {
           ("foo.js", FilterResult::Match(true)),
           ("foo.ts", FilterResult::NoneMatch(false)),
         ],
+        cwd: None,
       },
       TestCases {
         input_filter: InputFilter { exclude: None, include: regex_filter("/foo\\.js$") },
@@ -224,6 +218,7 @@ mod tests {
           ("a\\foo.js", FilterResult::Match(true)),
           ("a_foo.js", FilterResult::NoneMatch(false)),
         ],
+        cwd: None,
       },
       TestCases {
         input_filter: InputFilter { exclude: glob_filter("foo.js"), include: None },
@@ -231,6 +226,7 @@ mod tests {
           ("foo.js", FilterResult::Match(false)),
           ("foo.ts", FilterResult::NoneMatch(true)),
         ],
+        cwd: None,
       },
       TestCases {
         input_filter: InputFilter { exclude: glob_filter("*.js"), include: None },
@@ -238,6 +234,7 @@ mod tests {
           ("foo.js", FilterResult::Match(false)),
           ("foo.ts", FilterResult::NoneMatch(true)),
         ],
+        cwd: None,
       },
       TestCases {
         input_filter: InputFilter { exclude: regex_filter("\\.js$"), include: None },
@@ -245,6 +242,7 @@ mod tests {
           ("foo.js", FilterResult::Match(false)),
           ("foo.ts", FilterResult::NoneMatch(true)),
         ],
+        cwd: None,
       },
       TestCases {
         input_filter: InputFilter {
@@ -256,6 +254,7 @@ mod tests {
           ("bar.js", FilterResult::Match(false)),
           ("baz.js", FilterResult::NoneMatch(false)),
         ],
+        cwd: None,
       },
       TestCases {
         input_filter: InputFilter { exclude: glob_filter("foo.*"), include: glob_filter("*.js") },
@@ -264,6 +263,7 @@ mod tests {
           ("bar.js", FilterResult::Match(true)),
           ("foo.ts", FilterResult::Match(false)),
         ],
+        cwd: None,
       },
       // https://github.com/rolldown/rolldown/issues/3970
       TestCases {
@@ -271,6 +271,17 @@ mod tests {
         cases: vec![
           ("/virtual/foo", FilterResult::Match(true)), // exclude has higher priority
         ],
+        cwd: None,
+      },
+      TestCases {
+        input_filter: InputFilter { include: glob_filter("**/foo\\*"), exclude: None },
+        cases: vec![("/virtual/foo*", FilterResult::Match(true))],
+        cwd: None,
+      },
+      TestCases {
+        input_filter: InputFilter { include: glob_filter("foo/\\[*.js"), exclude: None },
+        cases: vec![("C:\\path\\foo\\[bar.js", FilterResult::Match(true))],
+        cwd: Some("C:\\path"),
       },
     ];
 
@@ -280,7 +291,7 @@ mod tests {
           test_case.input_filter.exclude.as_ref().map(|v| &v[..]),
           test_case.input_filter.include.as_ref().map(|v| &v[..]),
           id,
-          "",
+          test_case.cwd.as_ref().map_or("", |v| v),
         );
         assert_eq!(
           result, expected,

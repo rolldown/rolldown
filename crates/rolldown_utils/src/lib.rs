@@ -21,6 +21,7 @@ pub mod clean_url;
 pub mod concat_string;
 pub mod hash_placeholder;
 pub mod index_vec_ext;
+pub mod join_path_with_glob;
 pub mod js_regex;
 pub mod pattern_filter;
 pub mod replace_all_placeholder;

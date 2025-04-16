@@ -102,7 +102,7 @@ function withShared(
       /\.\/rolldown-binding\.wasi\.cjs/,
       // some dependencies, e.g. zod, cannot be inlined because their types
       // are used in public APIs
-      ...Object.keys(pkgJson.dependencies),
+      ...Object.keys(pkgJson.dependencies ?? {}),
       bindingFileWasi,
       bindingFileWasiBrowser,
     ],

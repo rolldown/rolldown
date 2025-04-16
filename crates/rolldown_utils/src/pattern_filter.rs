@@ -278,6 +278,7 @@ mod tests {
         cases: vec![("/virtual/foo*", FilterResult::Match(true))],
         cwd: None,
       },
+      #[cfg(windows)]
       TestCases {
         input_filter: InputFilter { include: glob_filter("foo/\\[*.js"), exclude: None },
         cases: vec![("C:\\path\\foo\\[bar.js", FilterResult::Match(true))],

@@ -44,7 +44,7 @@ pub fn filter(
     for pattern in exclude {
       let v = match pattern.as_ref() {
         StringOrRegex::String(glob) => {
-          let glob = join_path_with_glob(glob, cwd);
+          let glob = join_path_with_glob(cwd, glob);
           glob_match(glob.as_bytes(), id.as_bytes())
         }
         StringOrRegex::Regex(re) => re.matches(&normalized_id),
@@ -58,7 +58,7 @@ pub fn filter(
     for pattern in include {
       let v = match pattern.as_ref() {
         StringOrRegex::String(glob) => {
-          let glob = join_path_with_glob(glob, cwd);
+          let glob = join_path_with_glob(cwd, glob);
           glob_match(glob.as_bytes(), id.as_bytes())
         }
         StringOrRegex::Regex(re) => re.matches(&normalized_id),

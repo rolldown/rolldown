@@ -46,14 +46,18 @@ mod tests {
   #[test]
   fn test_join_path_with_glob_basic() {
     assert_eq!(join_path_with_glob("path/to", "*.txt"), "path/to/*.txt");
-    assert_eq!(join_path_with_glob("path\\to", "*.txt"), "path/to/*.txt");
-    assert_eq!(join_path_with_glob("path\\to\\", "*.txt"), "path/to/*.txt");
-    assert_eq!(join_path_with_glob("C:\\path\\to", "*.txt"), "C:/path/to/*.txt");
+    #[cfg(windows)]
+    {
+      assert_eq!(join_path_with_glob("path\\to", "*.txt"), "path/to/*.txt");
+      assert_eq!(join_path_with_glob("path\\to\\", "*.txt"), "path/to/*.txt");
+      assert_eq!(join_path_with_glob("C:\\path\\to", "*.txt"), "C:/path/to/*.txt");
+    }
   }
 
   #[test]
   fn test_join_path_with_glob_glob_with_separator() {
     assert_eq!(join_path_with_glob("path/to", "/*.txt"), "/*.txt");
+    #[cfg(windows)]
     assert_eq!(join_path_with_glob("C:\\path\\to", "/*.txt"), "C:/*.txt");
   }
 }

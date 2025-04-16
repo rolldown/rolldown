@@ -304,6 +304,8 @@ impl From<BindingTransformPluginConfig> for TransformPlugin {
       include: value.include.map(bindingify_string_or_regex_array).unwrap_or_default(),
       exclude: value.exclude.map(bindingify_string_or_regex_array).unwrap_or_default(),
       jsx_inject: value.jsx_inject,
+      // TODO: handle config
+      ..Default::default()
     }
   }
 }

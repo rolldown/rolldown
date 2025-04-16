@@ -100,7 +100,7 @@ impl<'ast> HmrAstFinalizer<'_, 'ast> {
     };
 
     // __rolldown_runtime__.register(moduleId, module)
-    let arguments = self.snippet.builder.vec_from_array([
+    let mut arguments = self.snippet.builder.vec_from_array([
       ast::Argument::StringLiteral(self.snippet.builder.alloc_string_literal(
         SPAN,
         &self.module.stable_id,
@@ -108,6 +108,29 @@ impl<'ast> HmrAstFinalizer<'_, 'ast> {
       )),
       module_exports,
     ]);
+
+    if self.module.exports_kind.is_commonjs() {
+      // __rolldown_runtime__.register(moduleId, module, { cjs: true })
+      arguments.push(ast::Argument::ObjectExpression(
+        self.snippet.builder.alloc_object_expression(
+          SPAN,
+          self.snippet.builder.vec1(ast::ObjectPropertyKind::ObjectProperty(
+            ast::ObjectProperty {
+              key: ast::PropertyKey::StaticIdentifier(
+                self.snippet.id_name("cjs", SPAN).into_in(self.alloc),
+              ),
+              value: ast::Expression::BooleanLiteral(
+                self.snippet.builder.alloc_boolean_literal(SPAN, true),
+              ),
+              ..ast::ObjectProperty::dummy(self.alloc)
+            }
+            .into_in(self.alloc),
+          )),
+          None,
+        ),
+      ));
+    }
+
     let register_call = self.snippet.builder.alloc_call_expression(
       SPAN,
       self.snippet.id_ref_expr("__rolldown_runtime__.registerModule", SPAN),

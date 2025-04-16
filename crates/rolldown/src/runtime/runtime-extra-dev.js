@@ -88,14 +88,21 @@ class DevRuntime {
     this.moduleHotContextsToBeUpdated.clear()
     // swap new contexts
   }
-  registerModule(id, exportGetters) {
+  registerModule(id, esmExportGettersOrCjsExports, meta = {}) {
     const exports = {};
-    Object.keys(exportGetters).forEach((key) => {
-      if (Object.prototype.hasOwnProperty.call(exportGetters, key)) {
-        Object.defineProperty(exports, key, {
-          enumerable: true,
-          get: exportGetters[key],
-        });
+    Object.keys(esmExportGettersOrCjsExports).forEach((key) => {
+      if (Object.prototype.hasOwnProperty.call(esmExportGettersOrCjsExports, key)) {
+        if (meta.cjs) {
+          Object.defineProperty(exports, key, {
+            enumerable: true,
+            get: () => esmExportGettersOrCjsExports[key],
+          });
+        } else {
+          Object.defineProperty(exports, key, {
+            enumerable: true,
+            get: esmExportGettersOrCjsExports[key],
+          });
+        }
       }
     })
     console.debug('Registering module', id, exports);

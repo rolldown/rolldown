@@ -4668,7 +4668,7 @@ expression: output
 
 # tests/rolldown/issues/4129
 
-- main-!~{000}~.js => main-pcCHAJja.js
+- main-!~{000}~.js => main-Bl27OrDc.js
 
 # tests/rolldown/misc/ambiguous_star_export
 
@@ -5193,7 +5193,7 @@ expression: output
 
 # tests/rolldown/topics/hmr/register_exports
 
-- main-!~{000}~.js => main-BJ9L-p0c.js
+- main-!~{000}~.js => main-2OjAHm2E.js
 
 # tests/rolldown/topics/import_meta_url_dirname_filename_polyfill/node_cjs
 

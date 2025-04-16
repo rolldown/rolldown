@@ -13,12 +13,15 @@ use oxc::{
 use rolldown_common::ModuleType;
 use rolldown_ecmascript::EcmaCompiler;
 use rolldown_plugin::{Plugin, SharedTransformPluginContext};
-use rolldown_utils::pattern_filter::StringOrRegex;
+use rolldown_utils::{clean_url::clean_url, pattern_filter::StringOrRegex};
 
 #[derive(Debug, Default)]
 pub struct TransformPlugin {
   pub include: Vec<StringOrRegex>,
   pub exclude: Vec<StringOrRegex>,
+  pub jsx_refresh_include: Vec<StringOrRegex>,
+  pub jsx_refresh_exclude: Vec<StringOrRegex>,
+
   pub jsx_inject: Option<String>,
 }
 
@@ -33,7 +36,10 @@ impl Plugin for TransformPlugin {
     ctx: SharedTransformPluginContext,
     args: &rolldown_plugin::HookTransformArgs<'_>,
   ) -> rolldown_plugin::HookTransformReturn {
-    if !self.filter(&ctx, args.id, args.module_type) {
+    let cwd = ctx.inner.cwd().to_string_lossy();
+    let ext = Path::new(args.id).extension().map(|s| s.to_string_lossy());
+    let module_type = ext.as_ref().map(|s| ModuleType::from_str_with_fallback(clean_url(s)));
+    if !self.filter(args.id, &cwd, &module_type) {
       return Ok(None);
     }
 

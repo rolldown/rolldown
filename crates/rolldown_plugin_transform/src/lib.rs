@@ -23,6 +23,10 @@ pub struct TransformPlugin {
   pub jsx_refresh_exclude: Vec<StringOrRegex>,
 
   pub jsx_inject: Option<String>,
+  pub environment_consumer: String,
+
+  pub source_type: Option<SourceType>,
+  pub transform_options: TransformOptions,
 }
 
 /// only handle ecma like syntax, `jsx`,`tsx`,`ts`

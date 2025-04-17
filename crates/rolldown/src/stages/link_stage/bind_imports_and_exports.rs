@@ -610,13 +610,19 @@ impl BindImportsAndExportsContext<'_> {
         }
         MatchImportKind::NoMatch => {
           let importee = &self.index_modules[rec.resolved_module];
-          self.errors.push(BuildDiagnostic::missing_export(
+          let mut diagnostic = BuildDiagnostic::missing_export(
             module.stable_id.to_string(),
             importee.stable_id().to_string(),
             module.source.clone(),
             named_import.imported.to_string(),
             named_import.span_imported,
-          ));
+          );
+          if let Some(importer) = importee.as_normal() {
+            if matches!(importer.module_type, ModuleType::Ts | ModuleType::Tsx) {
+              diagnostic = diagnostic.with_severity_warning();
+            }
+          }
+          self.errors.push(diagnostic);
         }
       }
     }

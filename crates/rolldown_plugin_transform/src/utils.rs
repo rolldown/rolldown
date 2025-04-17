@@ -1,8 +1,12 @@
-use std::borrow::Cow;
+use std::{
+  borrow::Cow,
+  path::{Path, PathBuf},
+};
 
 use itertools::Either;
 use oxc::{span::SourceType, transformer::TransformOptions};
 use rolldown_common::ModuleType;
+use rolldown_plugin::SharedTransformPluginContext;
 use rolldown_utils::{clean_url::clean_url, pattern_filter::filter as pattern_filter};
 
 use crate::TransformPlugin;
@@ -49,6 +53,7 @@ impl TransformPlugin {
 
   pub fn get_modified_transform_options(
     &self,
+    ctx: &SharedTransformPluginContext,
     id: &str,
     cwd: &str,
     ext: Option<&str>,
@@ -85,6 +90,27 @@ impl TransformPlugin {
       }
     }
 
+    if source_type.is_typescript() {
+      let path = Path::new(id).parent().and_then(find_tsconfig_json_for_file);
+      let _ = path.and_then(|path| ctx.inner.resolver().resolve_tsconfig(&path).ok());
+    }
+
     (source_type, Cow::Owned(TransformOptions::default()))
   }
+}
+
+fn find_tsconfig_json_for_file(path: &Path) -> Option<PathBuf> {
+  let mut dir = path.to_path_buf();
+
+  loop {
+    let tsconfig_json = dir.join("tsconfig.json");
+    if tsconfig_json.exists() {
+      return Some(tsconfig_json);
+    }
+
+    let Some(parent) = dir.parent() else { break };
+    dir = parent.to_path_buf();
+  }
+
+  None
 }

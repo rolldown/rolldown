@@ -52,6 +52,10 @@ impl PluginContext {
   pub fn options(&self) -> &NormalizedBundlerOptions {
     &self.options
   }
+
+  pub fn resolver(&self) -> &Resolver {
+    &self.resolver
+  }
 }
 
 impl Deref for PluginContext {

@@ -10,7 +10,7 @@ use crate::{AstScopes, ChunkIdx, ModuleIdx, SymbolRef};
 
 use super::namespace_alias::NamespaceAlias;
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Default)]
 pub struct SymbolRefDataClassic {
   /// For case `import {a} from 'foo.cjs';console.log(a)`, the symbol `a` reference to `module.exports.a` of `foo.cjs`.
   /// So we will transform the code into `console.log(foo_ns.a)`. `foo_ns` is the namespace symbol of `foo.cjs and `a` is the property name.
@@ -59,14 +59,9 @@ impl SymbolRefDbForModule {
       owner_idx,
       root_scope_id: top_level_scope_id,
       classic_data: IndexVec::from_vec(vec![
-        SymbolRefDataClassic {
-          link: None,
-          chunk_id: None,
-          namespace_alias: None,
-        };
+        SymbolRefDataClassic::default();
         scoping.symbols_len()
       ]),
-
       ast_scopes: AstScopes::new(scoping),
       flags: FxHashMap::default(),
     }

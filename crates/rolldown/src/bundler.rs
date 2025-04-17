@@ -15,6 +15,7 @@ use arcstr::ArcStr;
 use rolldown_common::{
   GetLocalDbMut, HmrOutput, NormalizedBundlerOptions, ScanMode, SharedFileEmitter, SymbolRefDb,
 };
+use rolldown_debug::{action, trace_action};
 use rolldown_error::{BuildDiagnostic, BuildResult};
 use rolldown_fs::{FileSystem, OsFileSystem};
 use rolldown_plugin::{
@@ -22,6 +23,7 @@ use rolldown_plugin::{
 };
 use rolldown_utils::dashmap::FxDashSet;
 use std::{any::Any, sync::Arc};
+use valuable::Valuable;
 
 pub struct Bundler {
   pub closed: bool,
@@ -51,19 +53,25 @@ impl Bundler {
 impl Bundler {
   #[tracing::instrument(level = "debug", skip_all, parent = &self.build_span)]
   pub async fn write(&mut self) -> BuildResult<BundleOutput> {
+    trace_action!(action::BuildStart { kind: "BuildStart" });
     let scan_stage_output = self.scan(vec![]).await?;
 
-    self.bundle_write(scan_stage_output).await
+    let ret = self.bundle_write(scan_stage_output).await;
+    trace_action!(action::BuildEnd { kind: "BuildEnd" });
+    ret
   }
 
   #[tracing::instrument(level = "debug", skip_all, parent = &self.build_span)]
   pub async fn generate(&mut self) -> BuildResult<BundleOutput> {
+    trace_action!(action::BuildStart { kind: "BuildStart" });
     let scan_stage_output = self.scan(vec![]).await?;
 
-    self.bundle_up(scan_stage_output, /* is_write */ false).await.map(|mut output| {
+    let ret = self.bundle_up(scan_stage_output, /* is_write */ false).await.map(|mut output| {
       output.warnings.append(&mut self.warnings);
       output
-    })
+    });
+    trace_action!(action::BuildEnd { kind: "BuildEnd" });
+    ret
   }
 
   #[tracing::instrument(level = "debug", skip_all)]
@@ -80,6 +88,7 @@ impl Bundler {
 
   #[tracing::instrument(target = "devtool", level = "debug", skip_all)]
   pub async fn scan(&mut self, changed_ids: Vec<ArcStr>) -> BuildResult<NormalizedScanStageOutput> {
+    trace_action!(action::BuildStart { kind: "BuildStart" });
     let mode =
       if !self.options.experimental.is_incremental_build_enabled() || changed_ids.is_empty() {
         ScanMode::Full
@@ -112,9 +121,8 @@ impl Bundler {
 
     let scan_stage_output =
       self.normalize_scan_stage_output_and_update_cache(scan_stage_output, is_full_scan_mode);
-
     self.plugin_driver.build_end(None).await?;
-
+    trace_action!(action::BuildEnd { kind: "BuildEnd" });
     Ok(scan_stage_output)
   }
 

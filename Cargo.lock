@@ -2428,6 +2428,7 @@ dependencies = [
  "testing_macros",
  "tokio",
  "tracing",
+ "valuable",
  "xxhash-rust",
 ]
 

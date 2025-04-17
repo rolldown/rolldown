@@ -18,6 +18,7 @@ export default defineTest({
     ],
   },
   async afterTest() {
+    // TODO(shulaodao): enable these assertions
     // await import('./assert.mjs')
   },
 })

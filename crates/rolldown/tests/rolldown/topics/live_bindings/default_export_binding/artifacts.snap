@@ -16,6 +16,5 @@ function inc() {
 	count += 1;
 }
 
-//#endregion
 export { count as default, inc, reset };
 ```

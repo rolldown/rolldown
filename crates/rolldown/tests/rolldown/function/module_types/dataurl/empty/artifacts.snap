@@ -11,9 +11,7 @@ import assert from "node:assert";
 //#region empty.empty
 var empty_default = "data:text/plain;charset=utf-8,";
 
-//#endregion
 //#region main.js
 assert(empty_default === "data:text/plain;charset=utf-8,");
 
-//#endregion
 ```

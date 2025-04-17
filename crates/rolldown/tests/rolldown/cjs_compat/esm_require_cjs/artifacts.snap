@@ -7,16 +7,19 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```js
 
+//#region rolldown:runtime
+var __getOwnPropNames = Object.getOwnPropertyNames;
+var __commonJS = (cb, mod) => function() {
+	return mod || (0, cb[__getOwnPropNames(cb)[0]])((mod = { exports: {} }).exports, mod), mod.exports;
+};
 
 //#region cjs.js
 var require_cjs = __commonJS({ "cjs.js"(exports, module) {
 	module.exports = "cjs";
 } });
 
-//#endregion
 //#region main.js
 const cjs = require_cjs();
 
-//#endregion
 export { cjs };
 ```

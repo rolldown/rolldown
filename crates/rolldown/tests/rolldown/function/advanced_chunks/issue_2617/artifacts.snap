@@ -15,13 +15,17 @@ var init_main = __esm({ "main.js"() {
 	console.log("lib", lib_default);
 } });
 
-//#endregion
 init_main();
 ```
 ## rolldown-runtime.js
 
 ```js
 
+//#region rolldown:runtime
+var __getOwnPropNames = Object.getOwnPropertyNames;
+var __esm = (fn, res) => function() {
+	return fn && (res = (0, fn[__getOwnPropNames(fn)[0]])(fn = 0)), res;
+};
 
 export { __esm };
 ```
@@ -33,7 +37,6 @@ import { __esm } from "./rolldown-runtime.js";
 //#region shaked.js
 var init_shaked = __esm({ "shaked.js"() {} });
 
-//#endregion
 //#region lib.js
 var lib_default;
 var init_lib = __esm({ "lib.js"() {
@@ -41,6 +44,5 @@ var init_lib = __esm({ "lib.js"() {
 	lib_default = "hello, world";
 } });
 
-//#endregion
 export { init_lib, lib_default };
 ```

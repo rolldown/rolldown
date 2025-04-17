@@ -13,6 +13,5 @@ function main_default() {
 	return "default";
 }
 
-//#endregion
 module.exports = main_default;
 ```

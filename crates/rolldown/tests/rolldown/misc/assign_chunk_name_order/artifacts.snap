@@ -16,7 +16,6 @@ import "./file2.js";
 //#region file.js
 console.log("file");
 
-//#endregion
 ```
 ## file3.js
 
@@ -25,7 +24,6 @@ console.log("file");
 //#region 1/file.js
 const value = "a";
 
-//#endregion
 export { value };
 ```
 ## file4.js
@@ -35,7 +33,6 @@ export { value };
 //#region 2/file.js
 const value = "b";
 
-//#endregion
 export { value };
 ```
 ## file5.js
@@ -45,7 +42,6 @@ export { value };
 //#region 3/file.js
 const value = "c";
 
-//#endregion
 export { value };
 ```
 ## file6.js
@@ -55,7 +51,6 @@ export { value };
 //#region 4/file.js
 const value = "d";
 
-//#endregion
 export { value };
 ```
 ## file7.js
@@ -65,7 +60,6 @@ export { value };
 //#region 5/file.js
 const value = "e";
 
-//#endregion
 export { value };
 ```
 ## file8.js
@@ -75,7 +69,6 @@ export { value };
 //#region 6/file.js
 const value = "f";
 
-//#endregion
 export { value };
 ```
 ## file9.js
@@ -85,7 +78,6 @@ export { value };
 //#region 7/file.js
 const value = "g";
 
-//#endregion
 export { value };
 ```
 ## main.js
@@ -102,5 +94,4 @@ import("./file7.js").then(console.log);
 import("./file8.js").then(console.log);
 import("./file9.js").then(console.log);
 
-//#endregion
 ```

@@ -7,13 +7,17 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```js
 
+//#region rolldown:runtime
+var __getOwnPropNames = Object.getOwnPropertyNames;
+var __commonJS = (cb, mod) => function() {
+	return mod || (0, cb[__getOwnPropNames(cb)[0]])((mod = { exports: {} }).exports, mod), mod.exports;
+};
 
 //#region react-dom.js
 var require_react_dom = __commonJS({ "react-dom.js"(exports, module) {
 	module.exports = "react-dom";
 } });
 
-//#endregion
 export default require_react_dom();
 
 ```

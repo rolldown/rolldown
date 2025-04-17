@@ -15,5 +15,4 @@ const unused = { ...{ get prop() {
 } } };
 assert.strictEqual(result, "PASS");
 
-//#endregion
 ```

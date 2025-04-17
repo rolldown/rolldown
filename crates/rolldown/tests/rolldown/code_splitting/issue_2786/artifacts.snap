@@ -14,7 +14,6 @@ console.log(share_default, share_default$1);
 import("./share.js").then(console.log);
 import("./share3.js").then(console.log);
 
-//#endregion
 ```
 ## share.js
 
@@ -30,7 +29,6 @@ export { share_default as default };
 //#region share.js
 var share_default = "shared";
 
-//#endregion
 export { share_default };
 ```
 ## share3.js
@@ -47,6 +45,5 @@ export { share_default as default };
 //#region share.json
 var share_default = {};
 
-//#endregion
 export { share_default as share_default$1 };
 ```

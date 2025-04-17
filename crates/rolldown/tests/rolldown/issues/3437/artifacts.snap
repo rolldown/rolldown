@@ -13,13 +13,17 @@ var init_main = __esm({ "main.js"() {
 	import("./square.js").then(console.log);
 } });
 
-//#endregion
 init_main();
 ```
 ## rolldown-runtime.js
 
 ```js
 
+//#region rolldown:runtime
+var __getOwnPropNames = Object.getOwnPropertyNames;
+var __esm = (fn, res) => function() {
+	return fn && (res = (0, fn[__getOwnPropNames(fn)[0]])(fn = 0)), res;
+};
 
 export { __esm };
 ```
@@ -32,6 +36,5 @@ import { __esm } from "./rolldown-runtime.js";
 var hello = "world";
 var square_default = { hello };
 
-//#endregion
 export { square_default as default, hello };
 ```

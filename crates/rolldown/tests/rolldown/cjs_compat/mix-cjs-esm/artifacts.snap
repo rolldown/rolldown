@@ -1,6 +1,5 @@
 ---
 source: crates/rolldown_testing/src/integration_test.rs
-snapshot_kind: text
 ---
 # warnings
 
@@ -26,37 +25,55 @@ snapshot_kind: text
 ```js
 import assert from "node:assert";
 
+//#region rolldown:runtime
+var __create = Object.create;
+var __defProp = Object.defineProperty;
+var __getOwnPropDesc = Object.getOwnPropertyDescriptor;
+var __getOwnPropNames = Object.getOwnPropertyNames;
+var __getProtoOf = Object.getPrototypeOf;
+var __hasOwnProp = Object.prototype.hasOwnProperty;
+var __commonJS = (cb, mod) => function() {
+	return mod || (0, cb[__getOwnPropNames(cb)[0]])((mod = { exports: {} }).exports, mod), mod.exports;
+};
+var __copyProps = (to, from, except, desc) => {
+	if (from && typeof from === "object" || typeof from === "function") for (var keys = __getOwnPropNames(from), i = 0, n = keys.length, key; i < n; i++) {
+		key = keys[i];
+		if (!__hasOwnProp.call(to, key) && key !== except) __defProp(to, key, {
+			get: ((k) => from[k]).bind(null, key),
+			enumerable: !(desc = __getOwnPropDesc(from, key)) || desc.enumerable
+		});
+	}
+	return to;
+};
+var __toESM = (mod, isNodeMode, target) => (target = mod != null ? __create(__getProtoOf(mod)) : {}, __copyProps(isNodeMode || !mod || !mod.__esModule ? __defProp(target, "default", {
+	value: mod,
+	enumerable: true
+}) : target, mod));
 
 //#region esm-export-cjs-export.js
 module.exports = 1;
 
-//#endregion
 //#region foo.js
 var require_foo = __commonJS({ "foo.js"() {} });
 
-//#endregion
 //#region esm-export-cjs-require.js
 require_foo();
 
-//#endregion
 //#region esm-import-cjs-export.js
 var require_esm_import_cjs_export = __commonJS({ "esm-import-cjs-export.js"(exports, module) {
 	module.exports = 1;
 } });
 
-//#endregion
 //#region cjs.js
 var require_cjs = __commonJS({ "cjs.js"(exports, module) {
 	module.exports = 1;
 } });
 var import_cjs = __toESM(require_cjs());
 
-//#endregion
 //#region esm-import-cjs-require.js
 require_foo();
 assert.equal(import_cjs.a, void 0);
 
-//#endregion
 //# sourceMappingURL=main.js.map
 ```
 
@@ -64,23 +81,23 @@ assert.equal(import_cjs.a, void 0);
 
 ```
 - ../esm-export-cjs-export.js
-(0:0) "module." --> (29:0) "module."
-(0:7) "exports = " --> (29:7) "exports = "
-(0:17) "1;\n" --> (29:17) "1;\n"
+(0:0) "module." --> (28:0) "module."
+(0:7) "exports = " --> (28:7) "exports = "
+(0:17) "1;\n" --> (28:17) "1;\n"
 - ../esm-export-cjs-require.js
-(0:0) "require('./foo')\n" --> (37:0) "require_foo();\n"
+(0:0) "require('./foo')\n" --> (34:0) "require_foo();\n"
 - ../esm-import-cjs-export.js
-(1:0) "module." --> (42:0) "\tmodule."
-(1:7) "exports = " --> (42:8) "exports = "
-(1:17) "1" --> (42:18) "1;\n"
+(1:0) "module." --> (38:0) "\tmodule."
+(1:7) "exports = " --> (38:8) "exports = "
+(1:17) "1" --> (38:18) "1;\n"
 - ../cjs.js
-(0:0) "module." --> (48:0) "\tmodule."
-(0:7) "exports = " --> (48:8) "exports = "
-(0:17) "1;" --> (48:18) "1;\n"
+(0:0) "module." --> (43:0) "\tmodule."
+(0:7) "exports = " --> (43:8) "exports = "
+(0:17) "1;" --> (43:18) "1;\n"
 - ../esm-import-cjs-require.js
-(2:0) "require('./foo')\n" --> (54:0) "require_foo();\n"
-(3:0) "assert." --> (55:0) "assert."
-(3:7) "equal(" --> (55:7) "equal("
-(3:13) "a, undefined)" --> (55:13) "import_cjs.a, void 0)"
-(3:26) "\n" --> (55:34) ";\n"
+(2:0) "require('./foo')\n" --> (48:0) "require_foo();\n"
+(3:0) "assert." --> (49:0) "assert."
+(3:7) "equal(" --> (49:7) "equal("
+(3:13) "a, undefined)" --> (49:13) "import_cjs.a, void 0)"
+(3:26) "\n" --> (49:34) ";\n"
 ```

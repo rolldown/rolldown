@@ -1,6 +1,5 @@
 ---
 source: crates/rolldown_testing/src/integration_test.rs
-snapshot_kind: text
 ---
 # Assets
 
@@ -12,12 +11,10 @@ import assert from "assert";
 //#region foo.js
 var foo_default = "foo";
 
-//#endregion
 //#region main.js
 const value = { foo: foo_default };
 assert.strictEqual(value.foo, "foo");
 
-//#endregion
 //# sourceMappingURL=main.js.map
 ```
 
@@ -27,15 +24,15 @@ assert.strictEqual(value.foo, "foo");
 - ../foo.js
 (0:15) "'foo'" --> (3:18) "\"foo\";\n"
 - ../main.js
-(3:0) "const " --> (7:0) "const "
-(3:6) "value = " --> (7:6) "value = "
-(3:14) "{ " --> (7:14) "{ "
-(3:16) "foo }" --> (7:16) "foo: foo_default "
-(3:21) "\n" --> (7:33) "};\n"
-(5:0) "assert." --> (8:0) "assert."
-(5:7) "strictEqual(" --> (8:7) "strictEqual("
-(5:19) "value." --> (8:19) "value."
-(5:25) "foo, " --> (8:25) "foo, "
-(5:30) "'foo')" --> (8:30) "\"foo\")"
-(5:36) [invalid] --> (8:36)
+(3:0) "const " --> (6:0) "const "
+(3:6) "value = " --> (6:6) "value = "
+(3:14) "{ " --> (6:14) "{ "
+(3:16) "foo }" --> (6:16) "foo: foo_default "
+(3:21) "\n" --> (6:33) "};\n"
+(5:0) "assert." --> (7:0) "assert."
+(5:7) "strictEqual(" --> (7:7) "strictEqual("
+(5:19) "value." --> (7:19) "value."
+(5:25) "foo, " --> (7:25) "foo, "
+(5:30) "'foo')" --> (7:30) "\"foo\")"
+(5:36) [invalid] --> (7:36)
 ```

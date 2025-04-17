@@ -14,7 +14,6 @@ var init_share_by_1 = __esm({ "share-by-1.js"() {
 	console.log("share-by-1");
 } });
 
-//#endregion
 //#region a.js
 var init_a = __esm({ "a.js"() {
 	init_share_by_1();
@@ -22,7 +21,6 @@ var init_a = __esm({ "a.js"() {
 	init_share_by_3();
 } });
 
-//#endregion
 init_a();
 ```
 ## at_least_share_by_2.js
@@ -35,13 +33,11 @@ var init_share_by_2 = __esm({ "share-by-2.js"() {
 	console.log("share-by-2");
 } });
 
-//#endregion
 //#region share-by-3.js
 var init_share_by_3 = __esm({ "share-by-3.js"() {
 	console.log("share-by-3");
 } });
 
-//#endregion
 export { init_share_by_2, init_share_by_3 };
 ```
 ## b.js
@@ -56,7 +52,6 @@ var init_b = __esm({ "b.js"() {
 	init_share_by_3();
 } });
 
-//#endregion
 init_b();
 ```
 ## c.js
@@ -70,13 +65,17 @@ var init_c = __esm({ "c.js"() {
 	init_share_by_3();
 } });
 
-//#endregion
 init_c();
 ```
 ## rolldown-runtime.js
 
 ```js
 
+//#region rolldown:runtime
+var __getOwnPropNames = Object.getOwnPropertyNames;
+var __esm = (fn, res) => function() {
+	return fn && (res = (0, fn[__getOwnPropNames(fn)[0]])(fn = 0)), res;
+};
 
 export { __esm };
 ```

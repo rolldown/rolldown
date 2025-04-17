@@ -11,12 +11,10 @@ __toCommonJS(exports);
 __export(exports, { default: () => foo_default });
 function() {};
 
-//#endregion
 //#region main.js
 __toCommonJS(exports);
 __export(exports, { default: () => fn });
 var foo_exports = require("foo.js");
 function fn() {};
 
-//#endregion
 ```

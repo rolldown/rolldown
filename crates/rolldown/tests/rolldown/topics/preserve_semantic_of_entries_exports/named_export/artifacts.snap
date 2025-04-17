@@ -11,6 +11,5 @@ source: crates/rolldown_testing/src/integration_test.rs
 const foo = "foo";
 var main_default = "main";
 
-//#endregion
 export { main_default as default, foo };
 ```

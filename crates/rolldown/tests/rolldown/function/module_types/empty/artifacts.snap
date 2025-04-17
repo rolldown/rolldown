@@ -10,6 +10,5 @@ source: crates/rolldown_testing/src/integration_test.rs
 //#region index.css
 var notExistExport = void 0;
 
-//#endregion
 export { notExistExport };
 ```

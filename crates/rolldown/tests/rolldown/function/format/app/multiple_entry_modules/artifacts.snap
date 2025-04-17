@@ -13,7 +13,6 @@ function square(x) {
 	return x * x;
 };
 
-//#endregion
 //#region cube.js
 __toCommonJS(exports);
 __export(exports, { default: () => cube });
@@ -22,7 +21,6 @@ function cube(x) {
 	return square_exports.default(x) * x;
 };
 
-//#endregion
 ```
 ## main.js
 
@@ -35,13 +33,11 @@ function hyperCube(x) {
 	return cube_exports.default(x) * x;
 };
 
-//#endregion
 //#region main.js
 __toCommonJS(exports);
 var hyper_cube_exports = require("hyper-cube.js");
 console.log(hyper_cube_exports.default(5));
 
-//#endregion
 ```
 ## other-entry.js
 
@@ -51,5 +47,4 @@ __toCommonJS(exports);
 var cube_exports = require("cube.js");
 console.log(cube_exports.default(5));
 
-//#endregion
 ```

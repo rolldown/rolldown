@@ -22,7 +22,6 @@ source: crates/rolldown_testing/src/integration_test.rs
 const a = 1;
 const b = 2;
 
-//#endregion
 exports.a = a
 exports.b = b
 })(this[""] = this[""] || {});

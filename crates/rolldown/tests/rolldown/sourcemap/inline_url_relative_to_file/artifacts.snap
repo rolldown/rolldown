@@ -10,6 +10,5 @@ source: crates/rolldown_testing/src/integration_test.rs
 //#region main.js
 console.log(1);
 
-//#endregion
 //# sourceMappingURL=main.js.map
 ```

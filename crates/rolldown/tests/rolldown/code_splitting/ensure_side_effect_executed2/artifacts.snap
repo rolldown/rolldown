@@ -22,5 +22,4 @@ import "./shared.js";
 //#region shared.js
 globalThis.sideEffectExecuted = true;
 
-//#endregion
 ```

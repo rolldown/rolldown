@@ -17,6 +17,5 @@ function hello() {}
 */
 console.log(666);
 
-//#endregion
 export { hello as default };
 ```

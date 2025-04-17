@@ -8,15 +8,29 @@ source: crates/rolldown_testing/src/integration_test.rs
 ```js
 import assert from "node:assert";
 
+//#region rolldown:runtime
+var __toBinary = /* @__PURE__ */ (() => {
+	var table = new Uint8Array(128);
+	for (var i = 0; i < 64; i++) table[i < 26 ? i + 65 : i < 52 ? i + 71 : i < 62 ? i - 4 : i * 4 - 205] = i;
+	return (base64) => {
+		var n = base64.length, bytes = new Uint8Array((n - (base64[n - 1] == "=") - (base64[n - 2] == "=")) * 3 / 4 | 0);
+		for (var i$1 = 0, j = 0; i$1 < n;) {
+			var c0 = table[base64.charCodeAt(i$1++)], c1 = table[base64.charCodeAt(i$1++)];
+			var c2 = table[base64.charCodeAt(i$1++)], c3 = table[base64.charCodeAt(i$1++)];
+			bytes[j++] = c0 << 2 | c1 >> 4;
+			bytes[j++] = c1 << 4 | c2 >> 2;
+			bytes[j++] = c2 << 6 | c3;
+		}
+		return bytes;
+	};
+})();
 
 //#region text.data
 var text_default = __toBinary("IidgKz0vQCMkJCVeJiooCuS9oOWlve+8jOS4lueVjArQn9GA0LjQstC10YIg0LzQuNGACuOBk+OCk+OBq+OBoeOBr+S4lueVjAo=");
 
-//#endregion
 //#region main.js
 assert(text_default instanceof Uint8Array);
 var main_default = text_default;
 
-//#endregion
 export { main_default as default };
 ```

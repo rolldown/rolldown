@@ -99,5 +99,4 @@ function g19(n) {
 }
 g19("World");
 
-//#endregion
 ```

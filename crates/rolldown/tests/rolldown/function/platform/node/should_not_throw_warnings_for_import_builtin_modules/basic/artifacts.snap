@@ -1,6 +1,5 @@
 ---
 source: crates/rolldown_testing/src/integration_test.rs
-snapshot_kind: text
 ---
 # Assets
 
@@ -11,9 +10,10 @@ import { createRequire } from "module";
 import * as fs from "fs";
 import * as nodeFs from "node:fs";
 
+//#region rolldown:runtime
+var __require = /* @__PURE__ */ createRequire(import.meta.url);
 
 //#region main.js
 console.log(fs, nodeFs, __require("path"), __require("node:path"));
 
-//#endregion
 ```

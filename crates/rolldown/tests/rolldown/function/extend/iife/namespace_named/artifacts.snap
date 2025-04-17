@@ -18,7 +18,6 @@ this.test = this.test || {};
 const a = 1;
 const b = 2;
 
-//#endregion
 exports.a = a
 exports.b = b
 })(this.test.module = this.test.module || {});

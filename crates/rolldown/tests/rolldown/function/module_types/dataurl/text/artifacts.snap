@@ -11,9 +11,7 @@ import assert from "node:assert";
 //#region text.data
 var text_default = "data:text/plain;charset=utf-8,\"'`+=/@%23$$%^&*(%0A你好，世界%0AПривет мир%0Aこんにちは世界%0A<script>";
 
-//#endregion
 //#region main.js
 assert(typeof text_default === "string" && text_default.startsWith("data:text/plain;charset=utf-8,"));
 
-//#endregion
 ```

@@ -13,7 +13,6 @@ function add(a, b) {
 	return a + b;
 }
 
-//#endregion
 //#region ../../../../../../node_modules/.pnpm/@oxc-project+runtime@0.64.0/node_modules/@oxc-project/runtime/src/helpers/esm/decorateParam.js
 function __decorateParam(paramIndex, decorator) {
 	return function(target, key) {
@@ -21,7 +20,6 @@ function __decorateParam(paramIndex, decorator) {
 	};
 }
 
-//#endregion
 //#region ../../../../../../node_modules/.pnpm/@oxc-project+runtime@0.64.0/node_modules/@oxc-project/runtime/src/helpers/esm/decorate.js
 function __decorate(decorators, target, key, desc) {
 	var c = arguments.length, r = c < 3 ? target : desc === null ? desc = Object.getOwnPropertyDescriptor(target, key) : desc, d;
@@ -30,7 +28,6 @@ function __decorate(decorators, target, key, desc) {
 	return c > 3 && r && Object.defineProperty(target, key, r), r;
 }
 
-//#endregion
 //#region main.tsx
 function first() {
 	return function(...args) {};
@@ -44,5 +41,4 @@ __decorate([first(), __decorateParam(0, first())], Foo.prototype, "method", null
 console.log(/* @__PURE__ */ jsx(Div, {}));
 console.log(`add(1, 2): `, add(1, 2));
 
-//#endregion
 ```

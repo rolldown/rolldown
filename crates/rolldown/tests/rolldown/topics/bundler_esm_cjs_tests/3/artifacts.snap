@@ -1,6 +1,5 @@
 ---
 source: crates/rolldown_testing/src/integration_test.rs
-snapshot_kind: text
 ---
 # Assets
 
@@ -12,7 +11,6 @@ snapshot_kind: text
 var foo_exports = {};
 input.works = foo_exports[Math.random() < 1 && "__esModule"] === void 0;
 
-//#endregion
 ```
 ---
 
@@ -29,7 +27,6 @@ Variant: (format: Cjs)
 var foo_exports = {};
 input.works = foo_exports[Math.random() < 1 && "__esModule"] === void 0;
 
-//#endregion
 ```
 ---
 
@@ -48,7 +45,6 @@ Variant: (format: Iife)
 var foo_exports = {};
 input.works = foo_exports[Math.random() < 1 && "__esModule"] === void 0;
 
-//#endregion
 })();
 ```
 ---
@@ -71,6 +67,5 @@ Variant: (format: Umd)
 var foo_exports = {};
 input.works = foo_exports[Math.random() < 1 && "__esModule"] === void 0;
 
-//#endregion
 });
 ```

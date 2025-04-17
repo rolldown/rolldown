@@ -1,6 +1,5 @@
 ---
 source: crates/rolldown_testing/src/integration_test.rs
-snapshot_kind: text
 ---
 # Assets
 
@@ -11,6 +10,14 @@ var module = (function(exports) {
 
 "use strict";
 Object.defineProperty(exports, '__esModule', { value: true });
+//#region rolldown:runtime
+var __defProp = Object.defineProperty;
+var __export = (target, all) => {
+	for (var name in all) __defProp(target, name, {
+		get: all[name],
+		enumerable: true
+	});
+};
 
 
 //#region mod.js
@@ -26,13 +33,11 @@ function subtract(a, b) {
 	return a - b;
 }
 
-//#endregion
 //#region main.js
 function aaa() {
 	return "aaa";
 }
 
-//#endregion
 exports.aaa = aaa
 Object.defineProperty(exports, 'default', {
   enumerable: true,

@@ -1,6 +1,5 @@
 ---
 source: crates/rolldown_testing/src/integration_test.rs
-snapshot_kind: text
 ---
 # Assets
 
@@ -9,9 +8,10 @@ snapshot_kind: text
 ```js
 import { createRequire } from "module";
 
+//#region rolldown:runtime
+var __require = /* @__PURE__ */ createRequire(import.meta.url);
 
 //#region main.js
 __require("fs");
 
-//#endregion
 ```

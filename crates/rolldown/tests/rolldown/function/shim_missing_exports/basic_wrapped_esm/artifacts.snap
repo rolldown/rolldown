@@ -1,6 +1,5 @@
 ---
 source: crates/rolldown_testing/src/integration_test.rs
-snapshot_kind: text
 ---
 # Assets
 
@@ -8,6 +7,11 @@ snapshot_kind: text
 
 ```js
 
+//#region rolldown:runtime
+var __getOwnPropNames = Object.getOwnPropertyNames;
+var __esm = (fn, res) => function() {
+	return fn && (res = (0, fn[__getOwnPropNames(fn)[0]])(fn = 0)), res;
+};
 
 //#region foo.js
 var foo_exports = {};
@@ -16,11 +20,9 @@ var init_foo = __esm({ "foo.js"() {
 	missing = void 0;
 } });
 
-//#endregion
 //#region main.js
 init_foo();
 init_foo();
 
-//#endregion
 export { missing };
 ```

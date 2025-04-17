@@ -1,6 +1,5 @@
 ---
 source: crates/rolldown_testing/src/integration_test.rs
-snapshot_kind: text
 ---
 # warnings
 
@@ -25,10 +24,8 @@ snapshot_kind: text
 //#region foo.js
 const foo = { a: 0 };
 
-//#endregion
 //#region main.js
 foo.a = 1;
 (void 0).a = 1;
 
-//#endregion
 ```

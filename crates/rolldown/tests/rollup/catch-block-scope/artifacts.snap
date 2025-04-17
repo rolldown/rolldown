@@ -24,5 +24,4 @@ try {
 	assert.strictEqual(d, "PASS2");
 }
 
-//#endregion
 ```

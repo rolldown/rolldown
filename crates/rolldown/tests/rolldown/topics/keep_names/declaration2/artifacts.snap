@@ -8,6 +8,18 @@ source: crates/rolldown_testing/src/integration_test.rs
 ```js
 import assert from "node:assert";
 
+//#region rolldown:runtime
+var __defProp = Object.defineProperty;
+var __name = (target, value) => __defProp(target, "name", {
+	value,
+	configurable: true
+});
+var __export = (target, all) => {
+	for (var name in all) __defProp(target, name, {
+		get: all[name],
+		enumerable: true
+	});
+};
 
 //#region a.js
 var a_exports = {};
@@ -22,7 +34,6 @@ function random64$1() {
 }
 __name(random64$1, "random64");
 
-//#endregion
 //#region main.js
 console.log(`namespace: `, a_exports);
 var delay = function(time) {};
@@ -34,5 +45,4 @@ assert.strictEqual(random64$1.name, "random64");
 assert.strictEqual(delay.name, "delay");
 assert.strictEqual(random64.name, "random64");
 
-//#endregion
 ```

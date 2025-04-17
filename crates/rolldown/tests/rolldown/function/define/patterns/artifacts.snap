@@ -1,6 +1,5 @@
 ---
 source: crates/rolldown_testing/src/integration_test.rs
-snapshot_kind: text
 ---
 # Assets
 
@@ -19,5 +18,4 @@ assert.strictEqual(objProp, "ok");
 	assert.strictEqual(Obj.prop, void 0);
 })(void 0, {});
 
-//#endregion
 ```

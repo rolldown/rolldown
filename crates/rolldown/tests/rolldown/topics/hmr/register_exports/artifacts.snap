@@ -7,6 +7,174 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```js
 
+//#region rolldown:runtime
+var __create = Object.create;
+var __defProp = Object.defineProperty;
+var __getOwnPropDesc = Object.getOwnPropertyDescriptor;
+var __getOwnPropNames = Object.getOwnPropertyNames;
+var __getProtoOf = Object.getPrototypeOf;
+var __hasOwnProp = Object.prototype.hasOwnProperty;
+var __commonJS = (cb, mod) => function() {
+	return mod || (0, cb[__getOwnPropNames(cb)[0]])((mod = { exports: {} }).exports, mod), mod.exports;
+};
+var __export = (target, all) => {
+	for (var name in all) __defProp(target, name, {
+		get: all[name],
+		enumerable: true
+	});
+};
+var __copyProps = (to, from, except, desc) => {
+	if (from && typeof from === "object" || typeof from === "function") for (var keys = __getOwnPropNames(from), i = 0, n = keys.length, key; i < n; i++) {
+		key = keys[i];
+		if (!__hasOwnProp.call(to, key) && key !== except) __defProp(to, key, {
+			get: ((k) => from[k]).bind(null, key),
+			enumerable: !(desc = __getOwnPropDesc(from, key)) || desc.enumerable
+		});
+	}
+	return to;
+};
+var __toESM = (mod, isNodeMode, target) => (target = mod != null ? __create(__getProtoOf(mod)) : {}, __copyProps(isNodeMode || !mod || !mod.__esModule ? __defProp(target, "default", {
+	value: mod,
+	enumerable: true
+}) : target, mod));
+var ModuleHotContext = class {
+	/**
+	* @type {{ deps: [string], fn: (moduleExports: Record<string, any>[]) => void }[]}
+	*/
+	acceptCallbacks = [];
+	/**
+	* 
+	* @param {string} moduleId 
+	* @param {DevRuntime} devRuntime 
+	*/
+	constructor(moduleId, devRuntime) {
+		this.moduleId = moduleId;
+		this.devRuntime = devRuntime;
+	}
+	accept(...args) {
+		if (args.length === 1) {
+			const [cb] = args;
+			const acceptingPath = this.moduleId;
+			this.acceptCallbacks.push({
+				deps: [acceptingPath],
+				fn: cb
+			});
+		} else {
+			throw new Error("Invalid arguments for `import.meta.hot.accept`");
+		}
+	}
+};
+var DevRuntime = class {
+	/**
+	* @type {Map<string, Set<(...args: any[]) => void>>}
+	*/
+	acceptPathToCallers = new Map();
+	modules = {};
+	/**
+	* @type {Map<string, ModuleHotContext>}
+	*/
+	moduleHotContexts = new Map();
+	/**
+	* @type {Map<string, ModuleHotContext>}
+	*/
+	moduleHotContextsToBeUpdated = new Map();
+	/**
+	* 
+	* @returns {DevRuntime}
+	*/
+	static getInstance() {
+		/**
+		* @type {DevRuntime | undefined}
+		*/
+		let instance = globalThis.__rolldown_runtime__;
+		if (!instance) {
+			instance = new DevRuntime();
+			globalThis.__rolldown_runtime__ = instance;
+		}
+		return instance;
+	}
+	createModuleHotContext(moduleId) {
+		const hotContext = new ModuleHotContext(moduleId, this);
+		if (this.moduleHotContexts.has(moduleId)) {
+			this.moduleHotContextsToBeUpdated.set(moduleId, hotContext);
+		} else {
+			this.moduleHotContexts.set(moduleId, hotContext);
+		}
+		return hotContext;
+	}
+	/**
+	* 
+	* @param {string[]} boundaries 
+	*/
+	applyUpdates(boundaries) {
+		for (let moduleId of boundaries) {
+			const hotContext = this.moduleHotContexts.get(moduleId);
+			if (hotContext) {
+				const acceptCallbacks = hotContext.acceptCallbacks;
+				acceptCallbacks.filter((cb) => {
+					cb.fn(this.modules[moduleId].exports);
+				});
+			}
+		}
+		this.moduleHotContextsToBeUpdated.forEach((hotContext, moduleId) => {
+			this.moduleHotContexts[moduleId] = hotContext;
+		});
+		this.moduleHotContextsToBeUpdated.clear();
+	}
+	registerModule(id, esmExportGettersOrCjsExports, meta = {}) {
+		const exports = {};
+		Object.keys(esmExportGettersOrCjsExports).forEach((key) => {
+			if (Object.prototype.hasOwnProperty.call(esmExportGettersOrCjsExports, key)) {
+				if (meta.cjs) {
+					Object.defineProperty(exports, key, {
+						enumerable: true,
+						get: () => esmExportGettersOrCjsExports[key]
+					});
+				} else {
+					Object.defineProperty(exports, key, {
+						enumerable: true,
+						get: esmExportGettersOrCjsExports[key]
+					});
+				}
+			}
+		});
+		console.debug("Registering module", id, exports);
+		if (this.modules[id]) {
+			this.modules[id] = { exports };
+		} else {
+			this.modules[id] = { exports };
+		}
+	}
+	loadExports(id) {
+		const module$1 = this.modules[id];
+		if (module$1) {
+			return module$1.exports;
+		} else {
+			console.warn(`Module ${id} not found`);
+			return {};
+		}
+	}
+	createEsmInitializer = (fn, res) => () => (fn && (res = fn(fn = 0)), res);
+	createCjsInitializer = (cb, mod) => () => (mod || cb((mod = { exports: {} }).exports, mod), mod.exports);
+};
+globalThis.__rolldown_runtime__ = DevRuntime.getInstance();
+function loadScript(url) {
+	var script = document.createElement("script");
+	script.src = url;
+	script.type = "module";
+	script.onerror = function() {
+		console.error("Failed to load script: " + url);
+	};
+	document.body.appendChild(script);
+}
+const socket = new WebSocket(`ws://localhost:3000`);
+socket.onmessage = function(event) {
+	const data = JSON.parse(event.data);
+	if (data.type === "update") {
+		loadScript(data.url);
+		console.debug("Module updated");
+	}
+};
 
 //#region cjs.js
 var require_cjs = __commonJS({ "cjs.js"(exports, module) {
@@ -16,7 +184,6 @@ var require_cjs = __commonJS({ "cjs.js"(exports, module) {
 } });
 var import_cjs = __toESM(require_cjs());
 
-//#endregion
 //#region esm.js
 import.meta.hot = __rolldown_runtime__.createModuleHotContext("esm.js");
 __rolldown_runtime__.registerModule("esm.js", { value: () => value });
@@ -24,11 +191,9 @@ var esm_exports = {};
 __export(esm_exports, { value: () => value });
 const value = "main";
 
-//#endregion
 //#region main.js
 import.meta.hot = __rolldown_runtime__.createModuleHotContext("main.js");
 __rolldown_runtime__.registerModule("main.js", {});
 console.log(import_cjs, esm_exports);
 
-//#endregion
 ```

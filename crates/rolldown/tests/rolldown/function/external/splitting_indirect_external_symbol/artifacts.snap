@@ -26,10 +26,8 @@ import { read } from "./indirect2.js";
 const read$1 = 1;
 console.log(read$1);
 
-//#endregion
 //#region main.js
 console.log(read);
 import("./indirect.js").then(console.log);
 
-//#endregion
 ```

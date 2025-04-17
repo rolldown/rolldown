@@ -11,5 +11,4 @@ __toCommonJS(exports);
 __export(exports, { default: () => main_default });
 var main_default = 1;
 
-//#endregion
 ```

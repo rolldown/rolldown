@@ -21,5 +21,4 @@ function fn() {};
 class A {};
 const abc = 1;
 
-//#endregion
 ```

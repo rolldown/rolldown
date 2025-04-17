@@ -13,6 +13,5 @@ function a() {
 	return "named";
 }
 
-//#endregion
 exports.a = a
 ```

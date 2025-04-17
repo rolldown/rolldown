@@ -7,13 +7,20 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```js
 
+//#region rolldown:runtime
+var __defProp = Object.defineProperty;
+var __export = (target, all) => {
+	for (var name in all) __defProp(target, name, {
+		get: all[name],
+		enumerable: true
+	});
+};
 
 //#region foo.js
 var foo_exports = {};
 __export(foo_exports, { foo: () => foo });
 const foo = 1;
 
-//#endregion
 export { foo, foo_exports };
 ```
 ## foo2.js
@@ -32,7 +39,6 @@ import { foo_exports } from "./foo.js";
 import("./foo2.js").then(console.log);
 console.log(foo_exports);
 
-//#endregion
 ```
 ## Output Stats
 

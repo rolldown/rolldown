@@ -1,6 +1,5 @@
 ---
 source: crates/rolldown_testing/src/integration_test.rs
-snapshot_kind: text
 ---
 # Assets
 
@@ -11,7 +10,6 @@ snapshot_kind: text
 //#region lib.js
 const foo = await Promise.resolve("foo");
 
-//#endregion
 export { foo };
 ```
 ---
@@ -24,6 +22,11 @@ Variant: (strict_execution_order: true)
 
 ```js
 
+//#region rolldown:runtime
+var __getOwnPropNames = Object.getOwnPropertyNames;
+var __esm = (fn, res) => function() {
+	return fn && (res = (0, fn[__getOwnPropNames(fn)[0]])(fn = 0)), res;
+};
 
 //#region lib.js
 var foo;
@@ -31,13 +34,11 @@ var init_lib = __esm({ async "lib.js"() {
 	foo = await Promise.resolve("foo");
 } });
 
-//#endregion
 //#region main.js
 var init_main = __esm({ async "main.js"() {
 	await init_lib();
 } });
 
-//#endregion
 await init_main();
 export { foo };
 ```

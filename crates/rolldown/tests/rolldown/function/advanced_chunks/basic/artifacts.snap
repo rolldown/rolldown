@@ -30,20 +30,23 @@ var init_a = __esm({ "a.js"() {
 	a = "a";
 } });
 
-//#endregion
 //#region b.js
 var b;
 var init_b = __esm({ "b.js"() {
 	b = "a";
 } });
 
-//#endregion
 export { a, b, init_a, init_b };
 ```
 ## rolldown-runtime.js
 
 ```js
 
+//#region rolldown:runtime
+var __getOwnPropNames = Object.getOwnPropertyNames;
+var __esm = (fn, res) => function() {
+	return fn && (res = (0, fn[__getOwnPropNames(fn)[0]])(fn = 0)), res;
+};
 
 export { __esm };
 ```

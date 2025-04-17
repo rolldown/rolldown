@@ -1,6 +1,5 @@
 ---
 source: crates/rolldown_testing/src/integration_test.rs
-snapshot_kind: text
 ---
 # warnings
 
@@ -25,11 +24,9 @@ snapshot_kind: text
 //#region foo.js
 let bar = 123;
 
-//#endregion
 //#region entry.js
 input.works = void 0 === void 0 && bar === 123;
 
-//#endregion
 ```
 ---
 
@@ -59,11 +56,9 @@ Variant: (format: Cjs)
 //#region foo.js
 let bar = 123;
 
-//#endregion
 //#region entry.js
 input.works = void 0 === void 0 && bar === 123;
 
-//#endregion
 ```
 ---
 
@@ -95,11 +90,9 @@ Variant: (format: Iife)
 //#region foo.js
 let bar = 123;
 
-//#endregion
 //#region entry.js
 input.works = void 0 === void 0 && bar === 123;
 
-//#endregion
 })();
 ```
 ---
@@ -135,10 +128,8 @@ Variant: (format: Umd)
 //#region foo.js
 let bar = 123;
 
-//#endregion
 //#region entry.js
 input.works = void 0 === void 0 && bar === 123;
 
-//#endregion
 });
 ```

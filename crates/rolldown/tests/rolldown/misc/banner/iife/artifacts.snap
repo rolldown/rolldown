@@ -15,7 +15,6 @@ var module = (function() {
 //#region main.js
 var main_default = "banner";
 
-//#endregion
 return main_default;
 })();
 ```

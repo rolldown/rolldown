@@ -14,17 +14,14 @@ function foo$1(a$1$1) {
 	console.log(a$1$1, a$1);
 }
 
-//#endregion
 //#region bar.js
 var bar_default = { foo: foo$1 };
 
-//#endregion
 //#region main.js
 const a = 2;
 const { foo } = bar_default;
 assert.strictEqual(typeof foo, "function");
 
-//#endregion
 //# sourceMappingURL=main.js.map
 ```
 
@@ -46,21 +43,21 @@ assert.strictEqual(typeof foo, "function");
 (3:23) "\n" --> (5:24) ";\n"
 (4:1) "\n" --> (6:0) "}\n"
 - ../bar.js
-(2:15) "{ " --> (10:18) "{ "
-(2:17) "foo }" --> (10:20) "foo: foo$1 "
-(2:22) [invalid] --> (10:31)
+(2:15) "{ " --> (9:18) "{ "
+(2:17) "foo }" --> (9:20) "foo: foo$1 "
+(2:22) [invalid] --> (9:31)
 - ../main.js
-(3:0) "const " --> (14:0) "const "
-(3:6) "a = " --> (14:6) "a = "
-(3:10) "2; // make foo `a` conflict\n" --> (14:10) "2;\n"
-(5:0) "const " --> (15:0) "const "
-(5:6) "{ " --> (15:6) "{ "
-(5:8) "foo }" --> (15:8) "foo }"
-(5:13) " = " --> (15:13) " = "
-(5:16) "bar\n" --> (15:16) "bar_default;\n"
-(7:0) "assert." --> (16:0) "assert."
-(7:7) "strictEqual(typeof " --> (16:7) "strictEqual(typeof "
-(7:26) "foo, " --> (16:26) "foo, "
-(7:31) "'function')" --> (16:31) "\"function\")"
-(7:42) [invalid] --> (16:42)
+(3:0) "const " --> (12:0) "const "
+(3:6) "a = " --> (12:6) "a = "
+(3:10) "2; // make foo `a` conflict\n" --> (12:10) "2;\n"
+(5:0) "const " --> (13:0) "const "
+(5:6) "{ " --> (13:6) "{ "
+(5:8) "foo }" --> (13:8) "foo }"
+(5:13) " = " --> (13:13) " = "
+(5:16) "bar\n" --> (13:16) "bar_default;\n"
+(7:0) "assert." --> (14:0) "assert."
+(7:7) "strictEqual(typeof " --> (14:7) "strictEqual(typeof "
+(7:26) "foo, " --> (14:26) "foo, "
+(7:31) "'function')" --> (14:31) "\"function\")"
+(7:42) [invalid] --> (14:42)
 ```

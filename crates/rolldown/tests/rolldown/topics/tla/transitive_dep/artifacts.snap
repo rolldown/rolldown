@@ -1,6 +1,5 @@
 ---
 source: crates/rolldown_testing/src/integration_test.rs
-snapshot_kind: text
 ---
 # Assets
 
@@ -11,11 +10,9 @@ snapshot_kind: text
 //#region tla.js
 const value$1 = await Promise.resolve("tla");
 
-//#endregion
 //#region lib.js
 const value = value$1 + "+lib";
 
-//#endregion
 export { value };
 ```
 ---
@@ -28,6 +25,11 @@ Variant: (strict_execution_order: true)
 
 ```js
 
+//#region rolldown:runtime
+var __getOwnPropNames = Object.getOwnPropertyNames;
+var __esm = (fn, res) => function() {
+	return fn && (res = (0, fn[__getOwnPropNames(fn)[0]])(fn = 0)), res;
+};
 
 //#region tla.js
 var value$1;
@@ -35,7 +37,6 @@ var init_tla = __esm({ async "tla.js"() {
 	value$1 = await Promise.resolve("tla");
 } });
 
-//#endregion
 //#region lib.js
 var value;
 var init_lib = __esm({ async "lib.js"() {
@@ -43,13 +44,11 @@ var init_lib = __esm({ async "lib.js"() {
 	value = value$1 + "+lib";
 } });
 
-//#endregion
 //#region main.js
 var init_main = __esm({ async "main.js"() {
 	await init_lib();
 } });
 
-//#endregion
 await init_main();
 export { value };
 ```

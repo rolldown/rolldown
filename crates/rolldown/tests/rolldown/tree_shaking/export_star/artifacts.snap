@@ -7,18 +7,23 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```js
 
+//#region rolldown:runtime
+var __defProp = Object.defineProperty;
+var __export = (target, all) => {
+	for (var name in all) __defProp(target, name, {
+		get: all[name],
+		enumerable: true
+	});
+};
 
 //#region foo.js
 const foo = 1;
 
-//#endregion
 //#region export-star.js
 var export_star_exports = {};
 __export(export_star_exports, { foo: () => foo });
 
-//#endregion
 //#region main.js
 console.log(export_star_exports);
 
-//#endregion
 ```

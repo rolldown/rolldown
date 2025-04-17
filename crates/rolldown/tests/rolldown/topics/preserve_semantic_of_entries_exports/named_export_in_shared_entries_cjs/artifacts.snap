@@ -1,6 +1,5 @@
 ---
 source: crates/rolldown_testing/src/integration_test.rs
-snapshot_kind: text
 ---
 # Assets
 
@@ -29,7 +28,6 @@ exports.foo = require_main.foo
 const foo = "foo";
 var main_default = "main";
 
-//#endregion
 Object.defineProperty(exports, 'foo', {
   enumerable: true,
   get: function () {

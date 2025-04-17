@@ -1,6 +1,5 @@
 ---
 source: crates/rolldown_testing/src/integration_test.rs
-snapshot_kind: text
 ---
 # Assets
 
@@ -12,7 +11,6 @@ import { result } from "./b2.js";
 //#region a.js
 var a_default = result();
 
-//#endregion
 export { a_default as default };
 ```
 ## b.js
@@ -31,7 +29,6 @@ function result() {
 	return "result";
 }
 
-//#endregion
 export { result };
 ```
 ## main.js
@@ -47,5 +44,4 @@ import("./a.js").then((mod) => {
 	assert.strictEqual(mod.default, "result");
 });
 
-//#endregion
 ```

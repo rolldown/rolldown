@@ -1,6 +1,5 @@
 ---
 source: crates/rolldown_testing/src/integration_test.rs
-snapshot_kind: text
 ---
 # warnings
 
@@ -17,6 +16,18 @@ snapshot_kind: text
 ```js
 (function() {
 
+//#region rolldown:runtime
+var __defProp = Object.defineProperty;
+var __getOwnPropNames = Object.getOwnPropertyNames;
+var __esm = (fn, res) => function() {
+	return fn && (res = (0, fn[__getOwnPropNames(fn)[0]])(fn = 0)), res;
+};
+var __export = (target, all) => {
+	for (var name in all) __defProp(target, name, {
+		get: all[name],
+		enumerable: true
+	});
+};
 
 
 //#region main.js
@@ -24,7 +35,6 @@ Promise.resolve().then(function() {
 	return init_lib(), lib_exports;
 }).then(console.log);
 
-//#endregion
 //#region lib.js
 var lib_exports = {};
 __export(lib_exports, { default: () => lib_default });
@@ -33,6 +43,5 @@ var init_lib = __esm({ "lib.js"() {
 	lib_default = 2;
 } });
 
-//#endregion
 })();
 ```

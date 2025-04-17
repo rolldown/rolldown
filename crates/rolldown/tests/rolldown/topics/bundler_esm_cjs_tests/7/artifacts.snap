@@ -1,6 +1,5 @@
 ---
 source: crates/rolldown_testing/src/integration_test.rs
-snapshot_kind: text
 ---
 # Assets
 
@@ -8,17 +7,23 @@ snapshot_kind: text
 
 ```js
 
+//#region rolldown:runtime
+var __defProp = Object.defineProperty;
+var __export = (target, all) => {
+	for (var name in all) __defProp(target, name, {
+		get: all[name],
+		enumerable: true
+	});
+};
 
 //#region foo.js
 var foo_exports = {};
 __export(foo_exports, { bar: () => bar });
 let bar = 123;
 
-//#endregion
 //#region entry.js
 input.works = foo_exports[Math.random() < 1 && "__esModule"] === void 0 && bar === 123;
 
-//#endregion
 ```
 ---
 
@@ -30,6 +35,14 @@ Variant: (format: Cjs)
 
 ```js
 "use strict";
+//#region rolldown:runtime
+var __defProp = Object.defineProperty;
+var __export = (target, all) => {
+	for (var name in all) __defProp(target, name, {
+		get: all[name],
+		enumerable: true
+	});
+};
 
 
 //#region foo.js
@@ -37,11 +50,9 @@ var foo_exports = {};
 __export(foo_exports, { bar: () => bar });
 let bar = 123;
 
-//#endregion
 //#region entry.js
 input.works = foo_exports[Math.random() < 1 && "__esModule"] === void 0 && bar === 123;
 
-//#endregion
 ```
 ---
 
@@ -55,6 +66,14 @@ Variant: (format: Iife)
 (function() {
 
 "use strict";
+//#region rolldown:runtime
+var __defProp = Object.defineProperty;
+var __export = (target, all) => {
+	for (var name in all) __defProp(target, name, {
+		get: all[name],
+		enumerable: true
+	});
+};
 
 
 //#region foo.js
@@ -62,11 +81,9 @@ var foo_exports = {};
 __export(foo_exports, { bar: () => bar });
 let bar = 123;
 
-//#endregion
 //#region entry.js
 input.works = foo_exports[Math.random() < 1 && "__esModule"] === void 0 && bar === 123;
 
-//#endregion
 })();
 ```
 ---
@@ -84,6 +101,14 @@ Variant: (format: Umd)
   factory();
 })(function() {
 "use strict";
+//#region rolldown:runtime
+var __defProp = Object.defineProperty;
+var __export = (target, all) => {
+	for (var name in all) __defProp(target, name, {
+		get: all[name],
+		enumerable: true
+	});
+};
 
 
 //#region foo.js
@@ -91,10 +116,8 @@ var foo_exports = {};
 __export(foo_exports, { bar: () => bar });
 let bar = 123;
 
-//#endregion
 //#region entry.js
 input.works = foo_exports[Math.random() < 1 && "__esModule"] === void 0 && bar === 123;
 
-//#endregion
 });
 ```

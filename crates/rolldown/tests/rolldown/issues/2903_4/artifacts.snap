@@ -1,6 +1,5 @@
 ---
 source: crates/rolldown_testing/src/integration_test.rs
-snapshot_kind: text
 ---
 # Assets
 
@@ -8,6 +7,11 @@ snapshot_kind: text
 
 ```js
 "use strict";
+//#region rolldown:runtime
+var __getOwnPropNames = Object.getOwnPropertyNames;
+var __commonJS = (cb, mod) => function() {
+	return mod || (0, cb[__getOwnPropNames(cb)[0]])((mod = { exports: {} }).exports, mod), mod.exports;
+};
 
 
 Object.defineProperty(exports, '__commonJS', {
@@ -27,7 +31,6 @@ var require_cjs_dep = require_chunk.__commonJS({ "cjs-dep.js"(exports, module) {
 	module.exports = console.log("cjs-dep");
 } });
 
-//#endregion
 ```
 ## main2.js
 
@@ -39,5 +42,4 @@ var require_cjs_dep2 = require_chunk.__commonJS({ "cjs-dep2.js"(exports, module)
 	module.exports = console.log("cjs-dep2");
 } });
 
-//#endregion
 ```

@@ -11,5 +11,4 @@ source: crates/rolldown_testing/src/integration_test.rs
 console.log("as-it");
 console.log(typeof window.document);
 
-//#endregion
 ```

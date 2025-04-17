@@ -1,6 +1,5 @@
 ---
 source: crates/rolldown_testing/src/integration_test.rs
-snapshot_kind: text
 ---
 # Assets
 
@@ -12,7 +11,6 @@ snapshot_kind: text
 first ? second : third;
 console.log(first, second, third);
 
-//#endregion
 //# sourceMappingURL=input.js.map
 ```
 

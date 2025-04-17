@@ -1,6 +1,5 @@
 ---
 source: crates/rolldown_testing/src/integration_test.rs
-snapshot_kind: text
 ---
 # Assets
 
@@ -12,10 +11,8 @@ import { createRequire } from "module";
 //#region rolldown:runtime
 var __require = /* @__PURE__ */ createRequire(import.meta.url);
 
-//#endregion
 //#region main.js
 var main_default = __require("path").join;
 
-//#endregion
 export { main_default as default };
 ```

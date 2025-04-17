@@ -1,6 +1,5 @@
 ---
 source: crates/rolldown_testing/src/integration_test.rs
-snapshot_kind: text
 ---
 # Assets
 
@@ -8,6 +7,11 @@ snapshot_kind: text
 
 ```js
 
+//#region rolldown:runtime
+var __getOwnPropNames = Object.getOwnPropertyNames;
+var __commonJS = (cb, mod) => function() {
+	return mod || (0, cb[__getOwnPropNames(cb)[0]])((mod = { exports: {} }).exports, mod), mod.exports;
+};
 
 //#region entry.js
 var require_entry = __commonJS({ "entry.js"(exports) {
@@ -16,7 +20,6 @@ var require_entry = __commonJS({ "entry.js"(exports) {
 	exports.foo = 123;
 } });
 
-//#endregion
 export default require_entry();
 
 ```
@@ -29,6 +32,11 @@ Variant: (format: Cjs)
 ## entry.js
 
 ```js
+//#region rolldown:runtime
+var __getOwnPropNames = Object.getOwnPropertyNames;
+var __commonJS = (cb, mod) => function() {
+	return mod || (0, cb[__getOwnPropNames(cb)[0]])((mod = { exports: {} }).exports, mod), mod.exports;
+};
 
 
 //#region entry.js
@@ -38,7 +46,6 @@ var require_entry = __commonJS({ "entry.js"(exports) {
 	exports.foo = 123;
 } });
 
-//#endregion
 module.exports = require_entry();
 
 ```
@@ -61,6 +68,11 @@ Variant: (format: Iife)
 ```js
 (function() {
 
+//#region rolldown:runtime
+var __getOwnPropNames = Object.getOwnPropertyNames;
+var __commonJS = (cb, mod) => function() {
+	return mod || (0, cb[__getOwnPropNames(cb)[0]])((mod = { exports: {} }).exports, mod), mod.exports;
+};
 
 
 //#region entry.js
@@ -70,7 +82,6 @@ var require_entry = __commonJS({ "entry.js"(exports) {
 	exports.foo = 123;
 } });
 
-//#endregion
 return require_entry();
 
 })();
@@ -89,6 +100,11 @@ Variant: (format: Umd, name: "module")
   typeof define === 'function' && define.amd ? define([], factory) :
   (global = typeof globalThis !== 'undefined' ? globalThis : global || self, (global.module = factory()));
 })(this, function() {
+//#region rolldown:runtime
+var __getOwnPropNames = Object.getOwnPropertyNames;
+var __commonJS = (cb, mod) => function() {
+	return mod || (0, cb[__getOwnPropNames(cb)[0]])((mod = { exports: {} }).exports, mod), mod.exports;
+};
 
 
 //#region entry.js
@@ -98,7 +114,6 @@ var require_entry = __commonJS({ "entry.js"(exports) {
 	exports.foo = 123;
 } });
 
-//#endregion
 return require_entry();
 
 });

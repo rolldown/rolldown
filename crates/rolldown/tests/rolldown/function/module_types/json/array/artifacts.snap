@@ -11,9 +11,7 @@ import assert from "node:assert";
 //#region foo.json
 var foo_default = ["foo"];
 
-//#endregion
 //#region main.js
 assert.deepStrictEqual(foo_default, ["foo"]);
 
-//#endregion
 ```

@@ -20,7 +20,6 @@ inc();
 assert.strictEqual(count, 2);
 assert.strictEqual(count, count);
 
-//#endregion
 ```
 ## main.js
 
@@ -30,7 +29,6 @@ import { count, inc, reset } from "./shared.js";
 //#region main.js
 import("./async-entry.js");
 
-//#endregion
 export { count, inc, reset };
 ```
 ## shared.js
@@ -46,6 +44,5 @@ function inc() {
 	count += 1;
 }
 
-//#endregion
 export { count, inc, reset };
 ```

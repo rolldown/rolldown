@@ -10,11 +10,9 @@ source: crates/rolldown_testing/src/integration_test.rs
 //#region a.js
 const a = "a";
 
-//#endregion
 //#region entrya.js
 console.log(`a: `, a);
 
-//#endregion
 ```
 ## entryb.js
 
@@ -23,9 +21,7 @@ console.log(`a: `, a);
 //#region b.js
 const b = "b";
 
-//#endregion
 //#region entryb.js
 console.log(`b: `, b);
 
-//#endregion
 ```

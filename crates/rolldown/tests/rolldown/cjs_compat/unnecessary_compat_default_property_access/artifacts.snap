@@ -1,6 +1,5 @@
 ---
 source: crates/rolldown_testing/src/integration_test.rs
-snapshot_kind: text
 ---
 # Assets
 
@@ -8,6 +7,30 @@ snapshot_kind: text
 
 ```js
 
+//#region rolldown:runtime
+var __create = Object.create;
+var __defProp = Object.defineProperty;
+var __getOwnPropDesc = Object.getOwnPropertyDescriptor;
+var __getOwnPropNames = Object.getOwnPropertyNames;
+var __getProtoOf = Object.getPrototypeOf;
+var __hasOwnProp = Object.prototype.hasOwnProperty;
+var __commonJS = (cb, mod) => function() {
+	return mod || (0, cb[__getOwnPropNames(cb)[0]])((mod = { exports: {} }).exports, mod), mod.exports;
+};
+var __copyProps = (to, from, except, desc) => {
+	if (from && typeof from === "object" || typeof from === "function") for (var keys = __getOwnPropNames(from), i = 0, n = keys.length, key; i < n; i++) {
+		key = keys[i];
+		if (!__hasOwnProp.call(to, key) && key !== except) __defProp(to, key, {
+			get: ((k) => from[k]).bind(null, key),
+			enumerable: !(desc = __getOwnPropDesc(from, key)) || desc.enumerable
+		});
+	}
+	return to;
+};
+var __toESM = (mod, isNodeMode, target) => (target = mod != null ? __create(__getProtoOf(mod)) : {}, __copyProps(isNodeMode || !mod || !mod.__esModule ? __defProp(target, "default", {
+	value: mod,
+	enumerable: true
+}) : target, mod));
 
 //#region cjs_esmodule_flag1.js
 var require_cjs_esmodule_flag1 = __commonJS({ "cjs_esmodule_flag1.js"(exports) {
@@ -16,7 +39,6 @@ var require_cjs_esmodule_flag1 = __commonJS({ "cjs_esmodule_flag1.js"(exports) {
 } });
 var import_cjs_esmodule_flag1 = __toESM(require_cjs_esmodule_flag1());
 
-//#endregion
 //#region cjs_esmodule_flag2.js
 var require_cjs_esmodule_flag2 = __commonJS({ "cjs_esmodule_flag2.js"(exports) {
 	exports.foo = 1e3;
@@ -24,7 +46,6 @@ var require_cjs_esmodule_flag2 = __commonJS({ "cjs_esmodule_flag2.js"(exports) {
 } });
 var import_cjs_esmodule_flag2 = __toESM(require_cjs_esmodule_flag2());
 
-//#endregion
 //#region cjs_esmodule_flag3.js
 var require_cjs_esmodule_flag3 = __commonJS({ "cjs_esmodule_flag3.js"(exports, module) {
 	exports.foo = 1e3;
@@ -32,7 +53,6 @@ var require_cjs_esmodule_flag3 = __commonJS({ "cjs_esmodule_flag3.js"(exports, m
 } });
 var import_cjs_esmodule_flag3 = __toESM(require_cjs_esmodule_flag3());
 
-//#endregion
 //#region cjs_esmodule_flag4.js
 var require_cjs_esmodule_flag4 = __commonJS({ "cjs_esmodule_flag4.js"(exports, module) {
 	exports.foo = 1e3;
@@ -40,7 +60,6 @@ var require_cjs_esmodule_flag4 = __commonJS({ "cjs_esmodule_flag4.js"(exports, m
 } });
 var import_cjs_esmodule_flag4 = __toESM(require_cjs_esmodule_flag4());
 
-//#endregion
 //#region commonjs_without_module_exports.js
 var require_commonjs_without_module_exports = __commonJS({ "commonjs_without_module_exports.js"(exports) {
 	exports.default = 1e3;
@@ -48,9 +67,7 @@ var require_commonjs_without_module_exports = __commonJS({ "commonjs_without_mod
 } });
 var import_commonjs_without_module_exports = __toESM(require_commonjs_without_module_exports());
 
-//#endregion
 //#region main.js
 console.log(import_cjs_esmodule_flag1.default, import_cjs_esmodule_flag2.default, import_cjs_esmodule_flag3.default, import_cjs_esmodule_flag4.default, import_commonjs_without_module_exports.default);
 
-//#endregion
 ```

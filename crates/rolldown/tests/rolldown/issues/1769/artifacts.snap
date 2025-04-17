@@ -10,9 +10,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 //#region lib.js
 const a = 1e3;
 
-//#endregion
 //#region main.js
 console.log(a);
 
-//#endregion
 ```

@@ -25,6 +25,5 @@ export { main_default as default, foo };
 const foo = "foo";
 var main_default = "main";
 
-//#endregion
 export { foo, main_default };
 ```

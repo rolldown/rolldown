@@ -17,6 +17,5 @@ function inc() {
 }
 var main_default = count;
 
-//#endregion
 export { main_default as default, inc, reset };
 ```

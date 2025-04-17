@@ -11,9 +11,7 @@ import assert from "node:assert";
 //#region string/#/contains/index.js
 const a = 1;
 
-//#endregion
 //#region main.js
 assert.strictEqual(a, 1);
 
-//#endregion
 ```

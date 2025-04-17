@@ -1,6 +1,5 @@
 ---
 source: crates/rolldown_testing/src/integration_test.rs
-snapshot_kind: text
 ---
 # warnings
 
@@ -28,12 +27,36 @@ init_foo();
 const foo = (init_foo(), __toCommonJS(foo_exports));
 input.works = import("./foo2.js").then((foo3) => foo.bar === 123 && foo.__esModule === true && bar === 123 && void 0 === void 0 && foo3.bar === 123 && foo3.__esModule === void 0);
 
-//#endregion
 ```
 ## foo.js
 
 ```js
 
+//#region rolldown:runtime
+var __defProp = Object.defineProperty;
+var __getOwnPropDesc = Object.getOwnPropertyDescriptor;
+var __getOwnPropNames = Object.getOwnPropertyNames;
+var __hasOwnProp = Object.prototype.hasOwnProperty;
+var __esm = (fn, res) => function() {
+	return fn && (res = (0, fn[__getOwnPropNames(fn)[0]])(fn = 0)), res;
+};
+var __export = (target, all) => {
+	for (var name in all) __defProp(target, name, {
+		get: all[name],
+		enumerable: true
+	});
+};
+var __copyProps = (to, from, except, desc) => {
+	if (from && typeof from === "object" || typeof from === "function") for (var keys = __getOwnPropNames(from), i = 0, n = keys.length, key; i < n; i++) {
+		key = keys[i];
+		if (!__hasOwnProp.call(to, key) && key !== except) __defProp(to, key, {
+			get: ((k) => from[k]).bind(null, key),
+			enumerable: !(desc = __getOwnPropDesc(from, key)) || desc.enumerable
+		});
+	}
+	return to;
+};
+var __toCommonJS = (mod) => __copyProps(__defProp({}, "__esModule", { value: true }), mod);
 
 //#region foo.js
 var foo_exports = {};
@@ -43,7 +66,6 @@ var init_foo = __esm({ "foo.js"() {
 	bar = 123;
 } });
 
-//#endregion
 export { __toCommonJS, bar, foo_exports, init_foo };
 ```
 ## foo2.js
@@ -87,12 +109,36 @@ input.works = Promise.resolve().then(function() {
 	return require("./foo2.js");
 }).then((foo3) => foo.bar === 123 && foo.__esModule === true && require_foo.bar === 123 && void 0 === void 0 && foo3.bar === 123 && foo3.__esModule === void 0);
 
-//#endregion
 ```
 ## foo.js
 
 ```js
 "use strict";
+//#region rolldown:runtime
+var __defProp = Object.defineProperty;
+var __getOwnPropDesc = Object.getOwnPropertyDescriptor;
+var __getOwnPropNames = Object.getOwnPropertyNames;
+var __hasOwnProp = Object.prototype.hasOwnProperty;
+var __esm = (fn, res) => function() {
+	return fn && (res = (0, fn[__getOwnPropNames(fn)[0]])(fn = 0)), res;
+};
+var __export = (target, all) => {
+	for (var name in all) __defProp(target, name, {
+		get: all[name],
+		enumerable: true
+	});
+};
+var __copyProps = (to, from, except, desc) => {
+	if (from && typeof from === "object" || typeof from === "function") for (var keys = __getOwnPropNames(from), i = 0, n = keys.length, key; i < n; i++) {
+		key = keys[i];
+		if (!__hasOwnProp.call(to, key) && key !== except) __defProp(to, key, {
+			get: ((k) => from[k]).bind(null, key),
+			enumerable: !(desc = __getOwnPropDesc(from, key)) || desc.enumerable
+		});
+	}
+	return to;
+};
+var __toCommonJS = (mod) => __copyProps(__defProp({}, "__esModule", { value: true }), mod);
 
 
 //#region foo.js
@@ -103,7 +149,6 @@ var init_foo = __esm({ "foo.js"() {
 	bar = 123;
 } });
 
-//#endregion
 Object.defineProperty(exports, '__toCommonJS', {
   enumerable: true,
   get: function () {
@@ -163,6 +208,31 @@ Variant: (format: Iife)
 (function() {
 
 "use strict";
+//#region rolldown:runtime
+var __defProp = Object.defineProperty;
+var __getOwnPropDesc = Object.getOwnPropertyDescriptor;
+var __getOwnPropNames = Object.getOwnPropertyNames;
+var __hasOwnProp = Object.prototype.hasOwnProperty;
+var __esm = (fn, res) => function() {
+	return fn && (res = (0, fn[__getOwnPropNames(fn)[0]])(fn = 0)), res;
+};
+var __export = (target, all) => {
+	for (var name in all) __defProp(target, name, {
+		get: all[name],
+		enumerable: true
+	});
+};
+var __copyProps = (to, from, except, desc) => {
+	if (from && typeof from === "object" || typeof from === "function") for (var keys = __getOwnPropNames(from), i = 0, n = keys.length, key; i < n; i++) {
+		key = keys[i];
+		if (!__hasOwnProp.call(to, key) && key !== except) __defProp(to, key, {
+			get: ((k) => from[k]).bind(null, key),
+			enumerable: !(desc = __getOwnPropDesc(from, key)) || desc.enumerable
+		});
+	}
+	return to;
+};
+var __toCommonJS = (mod) => __copyProps(__defProp({}, "__esModule", { value: true }), mod);
 
 
 //#region foo.js
@@ -173,7 +243,6 @@ var init_foo = __esm({ "foo.js"() {
 	bar = 123;
 } });
 
-//#endregion
 //#region entry.js
 init_foo();
 const foo = (init_foo(), __toCommonJS(foo_exports));
@@ -181,7 +250,6 @@ input.works = Promise.resolve().then(function() {
 	return init_foo(), foo_exports;
 }).then((foo3) => foo.bar === 123 && foo.__esModule === true && bar === 123 && void 0 === void 0 && foo3.bar === 123 && foo3.__esModule === void 0);
 
-//#endregion
 })();
 ```
 ---
@@ -213,6 +281,31 @@ Variant: (format: Umd)
   factory();
 })(function() {
 "use strict";
+//#region rolldown:runtime
+var __defProp = Object.defineProperty;
+var __getOwnPropDesc = Object.getOwnPropertyDescriptor;
+var __getOwnPropNames = Object.getOwnPropertyNames;
+var __hasOwnProp = Object.prototype.hasOwnProperty;
+var __esm = (fn, res) => function() {
+	return fn && (res = (0, fn[__getOwnPropNames(fn)[0]])(fn = 0)), res;
+};
+var __export = (target, all) => {
+	for (var name in all) __defProp(target, name, {
+		get: all[name],
+		enumerable: true
+	});
+};
+var __copyProps = (to, from, except, desc) => {
+	if (from && typeof from === "object" || typeof from === "function") for (var keys = __getOwnPropNames(from), i = 0, n = keys.length, key; i < n; i++) {
+		key = keys[i];
+		if (!__hasOwnProp.call(to, key) && key !== except) __defProp(to, key, {
+			get: ((k) => from[k]).bind(null, key),
+			enumerable: !(desc = __getOwnPropDesc(from, key)) || desc.enumerable
+		});
+	}
+	return to;
+};
+var __toCommonJS = (mod) => __copyProps(__defProp({}, "__esModule", { value: true }), mod);
 
 
 //#region foo.js
@@ -223,7 +316,6 @@ var init_foo = __esm({ "foo.js"() {
 	bar = 123;
 } });
 
-//#endregion
 //#region entry.js
 init_foo();
 const foo = (init_foo(), __toCommonJS(foo_exports));
@@ -231,6 +323,5 @@ input.works = Promise.resolve().then(function() {
 	return init_foo(), foo_exports;
 }).then((foo3) => foo.bar === 123 && foo.__esModule === true && bar === 123 && void 0 === void 0 && foo3.bar === 123 && foo3.__esModule === void 0);
 
-//#endregion
 });
 ```

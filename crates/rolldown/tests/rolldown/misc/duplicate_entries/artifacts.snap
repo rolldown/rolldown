@@ -24,6 +24,5 @@ export { main_default as default };
 //#region main.js
 var main_default = {};
 
-//#endregion
 export { main_default };
 ```

@@ -18,7 +18,6 @@ var init_first = __esm({ "first.js"() {
 	value$1 = "first" + value;
 } });
 
-//#endregion
 export { first_exports, init_first, value$1 as value };
 ```
 ## main.js
@@ -35,13 +34,24 @@ var init_main = __esm({ "main.js"() {
 	console.log(first_exports, second_exports);
 } });
 
-//#endregion
 init_main();
 ```
 ## rolldown-runtime.js
 
 ```js
 
+//#region rolldown:runtime
+var __defProp = Object.defineProperty;
+var __getOwnPropNames = Object.getOwnPropertyNames;
+var __esm = (fn, res) => function() {
+	return fn && (res = (0, fn[__getOwnPropNames(fn)[0]])(fn = 0)), res;
+};
+var __export = (target, all) => {
+	for (var name in all) __defProp(target, name, {
+		get: all[name],
+		enumerable: true
+	});
+};
 
 export { __esm, __export };
 ```
@@ -60,6 +70,5 @@ var init_second = __esm({ "second.js"() {
 	value$1 = "second" + value;
 } });
 
-//#endregion
 export { init_second, second_exports, value$1 };
 ```

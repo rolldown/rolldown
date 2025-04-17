@@ -17,7 +17,6 @@ function inc() {
 	count += 1;
 }
 
-//#endregion
 Object.defineProperty(exports, 'count', {
   enumerable: true,
   get: function () {

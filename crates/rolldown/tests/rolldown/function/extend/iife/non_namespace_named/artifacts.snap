@@ -17,7 +17,6 @@ class A {
 const a = 1;
 const b = 2;
 
-//#endregion
 exports.a = a
 exports.b = b
 })(this.module = this.module || {});

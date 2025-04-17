@@ -22,6 +22,5 @@ export { foo } from "./foo";
 //#region foo.tsx
 const foo = "foo";
 
-//#endregion
 export { foo };
 ```

@@ -11,9 +11,7 @@ import assert from "node:assert";
 //#region x.txt
 var x_default = "";
 
-//#endregion
 //#region main.js
 assert.equal(x_default, "");
 
-//#endregion
 ```

@@ -17,7 +17,6 @@ function inc() {
 	count += 1;
 }
 
-//#endregion
 //#region async-entry.js
 reset();
 assert.strictEqual(count, 0);
@@ -26,7 +25,6 @@ inc();
 assert.strictEqual(count, 1);
 assert.strictEqual(count, count);
 
-//#endregion
 ```
 ## main.js
 
@@ -35,5 +33,4 @@ assert.strictEqual(count, count);
 //#region main.js
 import("./async-entry.js");
 
-//#endregion
 ```

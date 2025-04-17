@@ -15,7 +15,6 @@ if (world == "world") {
 	console.log(world);
 }
 
-//#endregion
 //# sourceMappingURL=input.js.map
 ```
 

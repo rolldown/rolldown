@@ -8,6 +8,18 @@ source: crates/rolldown_testing/src/integration_test.rs
 ```js
 import assert from "node:assert";
 
+//#region rolldown:runtime
+var __defProp = Object.defineProperty;
+var __getOwnPropNames = Object.getOwnPropertyNames;
+var __esm = (fn, res) => function() {
+	return fn && (res = (0, fn[__getOwnPropNames(fn)[0]])(fn = 0)), res;
+};
+var __export = (target, all) => {
+	for (var name in all) __defProp(target, name, {
+		get: all[name],
+		enumerable: true
+	});
+};
 
 //#region foo.js
 var foo_exports = {};
@@ -21,19 +33,16 @@ var init_foo = __esm({ "foo.js"() {
 	a$1 = 1;
 } });
 
-//#endregion
 //#region bar.js
 init_foo();
 var bar_default = { foo: foo$1 };
 
-//#endregion
 //#region main.js
 const a = 2;
 const { foo } = bar_default;
 assert.strictEqual(typeof foo, "function");
 init_foo();
 
-//#endregion
 //# sourceMappingURL=main.js.map
 ```
 
@@ -41,42 +50,42 @@ init_foo();
 
 ```
 - ../foo.js
-(4:0) "export default function " --> (19:0) "function "
-(4:24) "foo(" --> (19:9) "foo$1("
-(4:28) "a$1) " --> (19:15) "a$1$1) "
-(4:33) "{\n" --> (19:22) "{\n"
-(5:2) "assert." --> (20:0) "\tassert."
-(5:9) "equal(" --> (20:8) "equal("
-(5:15) "a$1, " --> (20:14) "a$1$1, "
-(5:20) "a$1)" --> (20:21) "a$1$1)"
-(5:24) "\n" --> (20:27) ";\n"
-(6:2) "assert." --> (21:0) "\tassert."
-(6:9) "equal(" --> (21:8) "equal("
-(6:15) "a, " --> (21:14) "a$1, "
-(6:18) "1)" --> (21:19) "1)"
-(6:20) "\n" --> (21:21) ";\n"
-(7:1) "\n" --> (22:0) "}\n"
-(2:6) "a = " --> (25:1) "a$1 = "
-(2:10) "1;\n" --> (25:7) "1;\n"
+(4:0) "export default function " --> (18:0) "function "
+(4:24) "foo(" --> (18:9) "foo$1("
+(4:28) "a$1) " --> (18:15) "a$1$1) "
+(4:33) "{\n" --> (18:22) "{\n"
+(5:2) "assert." --> (19:0) "\tassert."
+(5:9) "equal(" --> (19:8) "equal("
+(5:15) "a$1, " --> (19:14) "a$1$1, "
+(5:20) "a$1)" --> (19:21) "a$1$1)"
+(5:24) "\n" --> (19:27) ";\n"
+(6:2) "assert." --> (20:0) "\tassert."
+(6:9) "equal(" --> (20:8) "equal("
+(6:15) "a, " --> (20:14) "a$1, "
+(6:18) "1)" --> (20:19) "1)"
+(6:20) "\n" --> (20:21) ";\n"
+(7:1) "\n" --> (21:0) "}\n"
+(2:6) "a = " --> (24:1) "a$1 = "
+(2:10) "1;\n" --> (24:7) "1;\n"
 - ../bar.js
-(0:0) "import foo from './foo'" --> (30:0) "init_foo()"
-(0:23) "\n" --> (30:10) ";\n"
-(2:15) "{ " --> (31:18) "{ "
-(2:17) "foo }" --> (31:20) "foo: foo$1 "
-(2:22) [invalid] --> (31:31)
+(0:0) "import foo from './foo'" --> (28:0) "init_foo()"
+(0:23) "\n" --> (28:10) ";\n"
+(2:15) "{ " --> (29:18) "{ "
+(2:17) "foo }" --> (29:20) "foo: foo$1 "
+(2:22) [invalid] --> (29:31)
 - ../main.js
-(3:0) "const " --> (35:0) "const "
-(3:6) "a = " --> (35:6) "a = "
-(3:10) "2; // make foo `a` conflict\n" --> (35:10) "2;\n"
-(5:0) "const " --> (36:0) "const "
-(5:6) "{ " --> (36:6) "{ "
-(5:8) "foo }" --> (36:8) "foo }"
-(5:13) " = " --> (36:13) " = "
-(5:16) "bar\n" --> (36:16) "bar_default;\n"
-(7:0) "assert." --> (37:0) "assert."
-(7:7) "strictEqual(typeof " --> (37:7) "strictEqual(typeof "
-(7:26) "foo, " --> (37:26) "foo, "
-(7:31) "'function')" --> (37:31) "\"function\")"
-(7:42) "\n" --> (37:42) ";\n"
-(9:0) "require('./foo')\n" --> (38:0) "init_foo();\n"
+(3:0) "const " --> (32:0) "const "
+(3:6) "a = " --> (32:6) "a = "
+(3:10) "2; // make foo `a` conflict\n" --> (32:10) "2;\n"
+(5:0) "const " --> (33:0) "const "
+(5:6) "{ " --> (33:6) "{ "
+(5:8) "foo }" --> (33:8) "foo }"
+(5:13) " = " --> (33:13) " = "
+(5:16) "bar\n" --> (33:16) "bar_default;\n"
+(7:0) "assert." --> (34:0) "assert."
+(7:7) "strictEqual(typeof " --> (34:7) "strictEqual(typeof "
+(7:26) "foo, " --> (34:26) "foo, "
+(7:31) "'function')" --> (34:31) "\"function\")"
+(7:42) "\n" --> (34:42) ";\n"
+(9:0) "require('./foo')\n" --> (35:0) "init_foo();\n"
 ```

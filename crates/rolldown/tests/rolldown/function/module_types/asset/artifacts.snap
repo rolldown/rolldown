@@ -1,6 +1,5 @@
 ---
 source: crates/rolldown_testing/src/integration_test.rs
-snapshot_kind: text
 ---
 # Assets
 
@@ -13,11 +12,9 @@ snapshot_kind: text
 //#region foo.txt
 var foo_default = "assets/foo-C-m4uiP6.txt";
 
-//#endregion
 //#region main.js
 var main_default = foo_default;
 
-//#endregion
 export { main_default as default };
 //# sourceMappingURL=main.js.map
 ```
@@ -31,5 +28,5 @@ export { main_default as default };
 (0:0) "import.meta." --> (2:18) "\"assets/foo-C-m4uiP6.txt\""
 (0:12) "__ROLLDOWN_ASSET_FILENAME" --> (2:43) ";\n"
 - ../main.js
-(2:15) "filePath" --> (6:19) "foo_default;\n"
+(2:15) "filePath" --> (5:19) "foo_default;\n"
 ```

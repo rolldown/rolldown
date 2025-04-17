@@ -18,7 +18,6 @@ nonShort1 = "";
 function nonShort2() {}
 nonShort2 = () => {};
 
-//#endregion
 Object.defineProperty(exports, 'nonShort1', {
   enumerable: true,
   get: function () {

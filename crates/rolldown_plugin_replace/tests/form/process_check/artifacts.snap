@@ -12,7 +12,6 @@ if ("object" !== "undefined" && "object" === "object" && "production" === "produ
 	console.log("production");
 }
 
-//#endregion
 //# sourceMappingURL=input.js.map
 ```
 

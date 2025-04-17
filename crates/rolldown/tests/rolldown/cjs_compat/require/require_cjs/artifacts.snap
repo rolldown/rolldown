@@ -1,6 +1,5 @@
 ---
 source: crates/rolldown_testing/src/integration_test.rs
-snapshot_kind: text
 ---
 # Assets
 
@@ -8,18 +7,21 @@ snapshot_kind: text
 
 ```js
 
+//#region rolldown:runtime
+var __getOwnPropNames = Object.getOwnPropertyNames;
+var __commonJS = (cb, mod) => function() {
+	return mod || (0, cb[__getOwnPropNames(cb)[0]])((mod = { exports: {} }).exports, mod), mod.exports;
+};
 
 //#region cjs.js
 var require_cjs = __commonJS({ "cjs.js"(exports, module) {
 	module.exports = {};
 } });
 
-//#endregion
 //#region main.js
 require_cjs();
 var cjs = require_cjs();
 
-//#endregion
 //# sourceMappingURL=main.js.map
 ```
 
@@ -27,12 +29,12 @@ var cjs = require_cjs();
 
 ```
 - ../cjs.js
-(0:0) "module." --> (10:0) "\tmodule."
-(0:7) "exports = " --> (10:8) "exports = "
-(0:17) "{}" --> (10:18) "{"
-(0:19) "\n" --> (10:19) "};\n"
+(0:0) "module." --> (9:0) "\tmodule."
+(0:7) "exports = " --> (9:8) "exports = "
+(0:17) "{}" --> (9:18) "{"
+(0:19) "\n" --> (9:19) "};\n"
 - ../main.js
-(0:0) "require('./cjs.js');\n" --> (15:0) "require_cjs();\n"
-(1:0) "var " --> (16:0) "var "
-(1:4) "cjs = require('./cjs.js');\n" --> (16:4) "cjs = require_cjs();\n"
+(0:0) "require('./cjs.js');\n" --> (13:0) "require_cjs();\n"
+(1:0) "var " --> (14:0) "var "
+(1:4) "cjs = require('./cjs.js');\n" --> (14:4) "cjs = require_cjs();\n"
 ```

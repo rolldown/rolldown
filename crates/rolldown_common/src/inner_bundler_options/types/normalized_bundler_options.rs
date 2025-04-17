@@ -26,8 +26,8 @@ use super::{
 };
 use crate::{
   DeferSyncScanDataOption, EmittedAsset, EsModuleFlag, FilenameTemplate, GlobalsOutputOption,
-  HashCharacters, InjectImport, InputItem, MakeAbsoluteExternalsRelative, ModuleType,
-  RollupPreRenderedAsset,
+  HashCharacters, InjectImport, InputItem, InvalidateJsSideCache, MakeAbsoluteExternalsRelative,
+  ModuleType, RollupPreRenderedAsset,
 };
 
 #[allow(clippy::struct_excessive_bools)] // Using raw booleans is more clear in this case
@@ -90,6 +90,7 @@ pub struct NormalizedBundlerOptions {
   pub defer_sync_scan_data: Option<DeferSyncScanDataOption>,
   pub transform_options: TransformOptions,
   pub make_absolute_externals_relative: MakeAbsoluteExternalsRelative,
+  pub invalidate_js_side_cache: Option<InvalidateJsSideCache>,
 }
 
 // This is only used for testing
@@ -148,6 +149,7 @@ impl Default for NormalizedBundlerOptions {
       transform_options: Default::default(),
       make_absolute_externals_relative: Default::default(),
       jsx: Default::default(),
+      invalidate_js_side_cache: Default::default(),
     }
   }
 }

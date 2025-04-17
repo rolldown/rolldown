@@ -213,6 +213,10 @@ impl Bundler {
       .generate_bundle(&mut output.assets, is_write, &self.options, &mut output.warnings)
       .await?;
 
+    if let Some(invalidate_js_side_cache) = &self.options.invalidate_js_side_cache {
+      invalidate_js_side_cache.call().await?;
+    }
+
     self.merge_immutable_fields_for_cache(link_stage_output.symbol_db);
 
     if self.options.is_hmr_enabled() {

@@ -98,6 +98,7 @@ export function bindingifyInputOptions(
       inputOptions.makeAbsoluteExternalsRelative,
     ),
     debug: inputOptions.debug,
+    invalidateJsSideCache: pluginContextData.clear.bind(pluginContextData),
   };
 }
 

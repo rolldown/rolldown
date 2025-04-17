@@ -420,6 +420,7 @@ export interface BindingInputOptions {
   deferSyncScanData?: undefined | (() => BindingDeferSyncScanData[])
   makeAbsoluteExternalsRelative?: BindingMakeAbsoluteExternalsRelative
   debug?: BindingDebugOptions
+  invalidateJsSideCache?: () => void
 }
 
 export interface BindingIsolatedDeclarationPluginConfig {

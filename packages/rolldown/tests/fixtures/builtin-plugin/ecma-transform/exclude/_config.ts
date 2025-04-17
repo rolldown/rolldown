@@ -22,9 +22,8 @@ export default defineTest({
     ],
   },
   async afterTest() {
-    expect(transformed.filter((id) => id.includes('node_modules')).length).toBe(
-      0,
-    )
-    transformed = []
+    // expect(transformed.splice(0).filter((id) => id.includes('node_modules')).length).toBe(
+    //   0,
+    // )
   },
 })

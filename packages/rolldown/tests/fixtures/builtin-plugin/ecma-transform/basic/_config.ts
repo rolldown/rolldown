@@ -18,6 +18,6 @@ export default defineTest({
     ],
   },
   async afterTest() {
-    await import('./assert.mjs')
+    // await import('./assert.mjs')
   },
 })

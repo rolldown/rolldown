@@ -3,9 +3,9 @@
   "type": "module",
   "private": true,
   "scripts": {
-    "dev": "vitepress dev",
-    "build": "vitepress build",
-    "preview": "vitepress preview"
+    "dev": "ROLLDOWN_OPTIONS_VALIDATION=loose vitepress dev",
+    "build": "ROLLDOWN_OPTIONS_VALIDATION=loose vitepress build",
+    "preview": "ROLLDOWN_OPTIONS_VALIDATION=loose vitepress preview"
   },
   "devDependencies": {
     "@iconify-json/vscode-icons": "^1.1.37",

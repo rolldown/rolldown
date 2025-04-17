@@ -30,6 +30,7 @@ pub mod bundler_options {
       hmr_options::HmrOptions,
       inject_import::InjectImport,
       input_item::InputItem,
+      invalidate_js_side_cache::InvalidateJsSideCache,
       is_external::IsExternal,
       jsx::{Jsx, NormalizedJsxOptions},
       make_absolute_externals_relative::MakeAbsoluteExternalsRelative,

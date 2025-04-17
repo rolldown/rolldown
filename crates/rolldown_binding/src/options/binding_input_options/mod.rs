@@ -98,4 +98,8 @@ pub struct BindingInputOptions {
   pub defer_sync_scan_data: Option<BindingDeferSyncScanDataOption>,
   pub make_absolute_externals_relative: Option<BindingMakeAbsoluteExternalsRelative>,
   pub debug: Option<BindingDebugOptions>,
+  #[debug(skip)]
+  #[napi(ts_type = "() => void")]
+  // TODO: The `FnArgs<()>` is not supported.
+  pub invalidate_js_side_cache: Option<JsCallback<FnArgs<(Option<bool>,)>, ()>>,
 }

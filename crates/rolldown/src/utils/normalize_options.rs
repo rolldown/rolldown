@@ -255,6 +255,7 @@ pub fn normalize_options(mut raw_options: crate::BundlerOptions) -> NormalizeOpt
     make_absolute_externals_relative: raw_options
       .make_absolute_externals_relative
       .unwrap_or_default(),
+    invalidate_js_side_cache: raw_options.invalidate_js_side_cache,
   };
 
   NormalizeOptionsReturn { options: normalized, resolve_options: raw_resolve, warnings }

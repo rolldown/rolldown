@@ -174,6 +174,13 @@ pub fn normalize_binding_options(
     }))
   });
 
+  let invalidate_js_side_cache = input_options.invalidate_js_side_cache.map(|ts_fn| {
+    rolldown::InvalidateJsSideCache::new(Arc::new(move || {
+      let ts_fn = Arc::clone(&ts_fn);
+      Box::pin(async move { ts_fn.invoke_async((None,).into()).await.map_err(anyhow::Error::from) })
+    }))
+  });
+
   let mut module_types = None;
   if let Some(raw) = input_options.module_types {
     let mut tmp: FxHashMap<_, _> = FxHashMapExt::with_capacity(raw.len());
@@ -325,6 +332,7 @@ pub fn normalize_binding_options(
       .make_absolute_externals_relative
       .map(Into::into),
     debug: input_options.debug.map(|inner| rolldown::DebugOptions { build_id: inner.build_id }),
+    invalidate_js_side_cache,
   };
 
   #[cfg(not(target_family = "wasm"))]

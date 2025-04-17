@@ -5,6 +5,7 @@ use types::advanced_chunks_options::AdvancedChunksOptions;
 use types::comments::Comments;
 use types::debug_options::DebugOptions;
 use types::inject_import::InjectImport;
+use types::invalidate_js_side_cache::InvalidateJsSideCache;
 use types::jsx::Jsx;
 use types::make_absolute_externals_relative::MakeAbsoluteExternalsRelative;
 use types::minify_options::RawMinifyOptions;
@@ -190,6 +191,12 @@ pub struct BundlerOptions {
   pub defer_sync_scan_data: Option<DeferSyncScanDataOption>,
   pub make_absolute_externals_relative: Option<MakeAbsoluteExternalsRelative>,
   pub debug: Option<DebugOptions>,
+  #[cfg_attr(
+    feature = "deserialize_bundler_options",
+    serde(default, skip_deserializing),
+    schemars(skip)
+  )]
+  pub invalidate_js_side_cache: Option<InvalidateJsSideCache>,
 }
 
 impl BundlerOptions {

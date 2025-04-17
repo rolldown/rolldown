@@ -9,7 +9,7 @@ export class PluginContextData {
   moduleOptionMap: Map<string, ModuleOptions> = new Map();
   resolveOptionsMap: Map<number, PluginContextResolveOptions> = new Map();
   loadModulePromiseMap: Map<string, Promise<void>> = new Map();
-  meta: RenderedChunkMeta | null = null;
+  renderedChunkMeta: RenderedChunkMeta | null = null;
 
   updateModuleOption(id: string, option: ModuleOptions): ModuleOptions {
     const existing = this.moduleOptionMap.get(id);
@@ -92,10 +92,15 @@ export class PluginContextData {
   }
 
   setRenderChunkMeta(meta: RenderedChunkMeta): void {
-    this.meta = meta;
+    this.renderedChunkMeta = meta;
   }
 
   getRenderChunkMeta(): RenderedChunkMeta | null {
-    return this.meta;
+    return this.renderedChunkMeta;
+  }
+
+  clear(): void {
+    this.renderedChunkMeta = null;
+    this.loadModulePromiseMap.clear();
   }
 }

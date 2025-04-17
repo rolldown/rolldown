@@ -9,6 +9,7 @@ pub mod hash_characters;
 pub mod hmr_options;
 pub mod inject_import;
 pub mod input_item;
+pub mod invalidate_js_side_cache;
 pub mod is_external;
 pub mod jsx;
 pub mod make_absolute_externals_relative;

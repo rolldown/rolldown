@@ -126,14 +126,6 @@ impl HmrManager {
 
     tracing::debug!(
       target: "hmr",
-      "computed out `affected_modules` {:?}",
-      affected_modules.iter()
-        .map(|module_idx| self.module_db.modules[*module_idx].stable_id())
-        .collect::<Vec<_>>(),
-    );
-
-    tracing::debug!(
-      target: "hmr",
       "computed out `hmr_boundary` {:?}",
       hmr_boundary.iter()
         .map(|b| self.module_db.modules[b.boundary].stable_id())
@@ -216,13 +208,26 @@ impl HmrManager {
     );
     self.index_ecma_ast = module_loader_output.index_ecma_ast;
 
+    // Remove external modules from affected_modules.
+    affected_modules.retain(|idx| {
+      let module = &self.module_db.modules[*idx];
+      match module {
+        Module::Normal(_) => true,
+        Module::External(_) => {
+          // It's possible affected modules are external modules. New added code might contains import from external modules.
+          // However, HMR doesn't need to deal with them.
+          false
+        }
+      }
+    });
+
     let module_idx_to_init_fn_name = affected_modules
       .iter()
       .enumerate()
       .map(|(index, module_idx)| {
         let Module::Normal(module) = &self.module_db.modules[*module_idx] else {
           unreachable!(
-            "HMR only supports normal module. Got {:?}",
+            "External modules should be removed before. But got {:?}",
             self.module_db.modules[*module_idx].id()
           );
         };

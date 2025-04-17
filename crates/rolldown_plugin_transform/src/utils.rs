@@ -105,8 +105,10 @@ impl TransformPlugin {
 
         // when both the normal options and tsconfig is set,
         // we want to prioritize the normal options
-        if transform_options.jsx.is_none()
-          || matches!(&transform_options.jsx, Some(Either::Right(jsx)) if jsx.runtime.is_none())
+        if transform_options
+          .jsx
+          .as_ref()
+          .is_none_or(|jsx| matches!(jsx, Either::Right(right) if right.runtime.is_none()))
         {
           if compiler_options.jsx.as_deref() == Some("preserve") {
             transform_options.jsx = Some(Either::Left(String::from("preserve")));
@@ -145,6 +147,16 @@ impl TransformPlugin {
 
             transform_options.jsx = Some(Either::Right(jsx));
           }
+        }
+
+        if transform_options.decorator.as_ref().is_none_or(|decorator| decorator.legacy.is_none()) {
+          let mut decorator = transform_options.decorator.unwrap_or_default();
+
+          if compiler_options.experimental_decorators.is_some() {
+            decorator.legacy = compiler_options.experimental_decorators;
+          }
+
+          transform_options.decorator = Some(decorator);
         }
       }
     }

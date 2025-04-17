@@ -69,6 +69,8 @@
   diff
 ## [ts_export_missing_es6](../../../crates/rolldown/tests/esbuild/ts/ts_export_missing_es6/diff.md)
   diff
+## [ts_import_cts](../../../crates/rolldown/tests/esbuild/ts/ts_import_cts/diff.md)
+  diff
 ## [ts_import_in_node_modules_name_collision_with_css](../../../crates/rolldown/tests/esbuild/ts/ts_import_in_node_modules_name_collision_with_css/diff.md)
   diff
 ## [ts_minify_derived_class](../../../crates/rolldown/tests/esbuild/ts/ts_minify_derived_class/diff.md)
@@ -97,7 +99,6 @@
 ## [ts_declare_namespace](../../../crates/rolldown/tests/esbuild/ts/ts_declare_namespace)
 ## [ts_declare_var](../../../crates/rolldown/tests/esbuild/ts/ts_declare_var)
 ## [ts_implicit_extensions](../../../crates/rolldown/tests/esbuild/ts/ts_implicit_extensions)
-## [ts_import_cts](../../../crates/rolldown/tests/esbuild/ts/ts_import_cts)
 ## [ts_import_empty_namespace](../../../crates/rolldown/tests/esbuild/ts/ts_import_empty_namespace)
 ## [ts_import_equals_bundle](../../../crates/rolldown/tests/esbuild/ts/ts_import_equals_bundle)
 ## [ts_import_missing_unused_es6](../../../crates/rolldown/tests/esbuild/ts/ts_import_missing_unused_es6)

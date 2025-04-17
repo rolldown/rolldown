@@ -25,9 +25,13 @@
   diff
 ## [package_json_side_effects_false_all_fork](../../../crates/rolldown/tests/esbuild/dce/package_json_side_effects_false_all_fork/diff.md)
   diff
+## [package_json_side_effects_false_keep_star_import_es6](../../../crates/rolldown/tests/esbuild/dce/package_json_side_effects_false_keep_star_import_es6/diff.md)
+  diff
 ## [package_json_side_effects_false_one_fork](../../../crates/rolldown/tests/esbuild/dce/package_json_side_effects_false_one_fork/diff.md)
   diff
 ## [remove_unused_no_side_effects_tagged_templates](../../../crates/rolldown/tests/esbuild/dce/remove_unused_no_side_effects_tagged_templates/diff.md)
+  diff
+## [tree_shaking_in_esm_wrapper](../../../crates/rolldown/tests/esbuild/dce/tree_shaking_in_esm_wrapper/diff.md)
   diff
 ## [tree_shaking_lowered_class_static_field](../../../crates/rolldown/tests/esbuild/dce/tree_shaking_lowered_class_static_field/diff.md)
   diff
@@ -59,7 +63,6 @@
 ## [package_json_side_effects_false_cross_platform_slash](../../../crates/rolldown/tests/esbuild/dce/package_json_side_effects_false_cross_platform_slash)
 ## [package_json_side_effects_false_intermediate_files_unused](../../../crates/rolldown/tests/esbuild/dce/package_json_side_effects_false_intermediate_files_unused)
 ## [package_json_side_effects_false_keep_named_import_es6](../../../crates/rolldown/tests/esbuild/dce/package_json_side_effects_false_keep_named_import_es6)
-## [package_json_side_effects_false_keep_star_import_es6](../../../crates/rolldown/tests/esbuild/dce/package_json_side_effects_false_keep_star_import_es6)
 ## [package_json_side_effects_false_no_warning_in_node_modules_issue999](../../../crates/rolldown/tests/esbuild/dce/package_json_side_effects_false_no_warning_in_node_modules_issue999)
 ## [package_json_side_effects_false_remove_bare_import_common_js](../../../crates/rolldown/tests/esbuild/dce/package_json_side_effects_false_remove_bare_import_common_js)
 ## [package_json_side_effects_false_remove_bare_import_es6](../../../crates/rolldown/tests/esbuild/dce/package_json_side_effects_false_remove_bare_import_es6)
@@ -81,7 +84,6 @@
 ## [tree_shaking_class_property](../../../crates/rolldown/tests/esbuild/dce/tree_shaking_class_property)
 ## [tree_shaking_class_static_property](../../../crates/rolldown/tests/esbuild/dce/tree_shaking_class_static_property)
 ## [tree_shaking_import_identifier](../../../crates/rolldown/tests/esbuild/dce/tree_shaking_import_identifier)
-## [tree_shaking_in_esm_wrapper](../../../crates/rolldown/tests/esbuild/dce/tree_shaking_in_esm_wrapper)
 ## [tree_shaking_object_property](../../../crates/rolldown/tests/esbuild/dce/tree_shaking_object_property)
 # Bypassed Cases
 ## [const_value_inlining_bundle](../../../crates/rolldown/tests/esbuild/dce/const_value_inlining_bundle/bypass.md)

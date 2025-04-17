@@ -25,7 +25,7 @@ A real-world example would looks like
 import { bar } from './sync.js';
 import { foo1 } from './tla1.js';
 import { foo2 } from './tla2.js';
-console.log(foo, foo2, bar);
+console.log(foo1, foo2, bar);
 
 // tla1.js
 

@@ -1,6 +1,6 @@
 use std::{
   borrow::Cow,
-  io::Write,
+  io::{StdoutLock, Write},
   path::Path,
   sync::{
     Arc, RwLock,
@@ -33,17 +33,19 @@ impl ReportPlugin {
 
 #[inline]
 #[allow(clippy::print_stdout)]
-pub fn clear_current_line() {
-  print!("\x1B[2K\r"); // clear current line and move cursor to the beginning
-  std::io::stdout().flush().unwrap();
+pub fn clear_current_line() -> StdoutLock<'static> {
+  let mut lock = std::io::stdout().lock();
+  write!(&mut lock, "\x1B[2K\r").unwrap(); // clear current line and move cursor to the beginning
+  lock.flush().unwrap();
+  lock
 }
 
 #[inline]
 #[allow(clippy::print_stdout)]
 fn write_line(line: &str) {
-  clear_current_line();
-  print!("{line}",);
-  std::io::stdout().flush().unwrap();
+  let mut lock = clear_current_line();
+  write!(&mut lock, "{line}",).unwrap();
+  lock.flush().unwrap();
 }
 
 impl Plugin for ReportPlugin {
@@ -89,7 +91,7 @@ impl Plugin for ReportPlugin {
   }
 
   #[allow(clippy::print_stdout)]
-  #[allow(clippy::print_literal)]
+  #[allow(clippy::write_literal)]
   async fn build_end(
     &self,
     _ctx: &PluginContext,
@@ -100,11 +102,11 @@ impl Plugin for ReportPlugin {
     }
     let count = self.count.load(Ordering::SeqCst);
 
-    clear_current_line();
+    let mut lock = clear_current_line();
     // print text with green fg color
-    print!("\x1b[32m{}\x1b[0m", "✓");
-    println!(" {count} modules transformed.",);
-    std::io::stdout().flush().unwrap();
+    write!(&mut lock, "\x1b[32m{}\x1b[0m", "✓").unwrap();
+    writeln!(&mut lock, " {count} modules transformed.",).unwrap();
+    lock.flush().unwrap();
     Ok(())
   }
 }

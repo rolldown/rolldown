@@ -157,13 +157,14 @@ impl PluginDriver {
   }
 
   pub async fn load(&self, args: &HookLoadArgs<'_>) -> HookLoadReturn {
-    for (_plugin_idx, plugin, ctx) in
+    for (plugin_idx, plugin, ctx) in
       self.iter_plugin_with_context_by_order(&self.order_by_load_meta)
     {
       trace_action!(action::HookLoadCallStart {
         kind: "HookLoadCallStart".to_string(),
         module_id: args.id.to_string(),
         plugin_name: plugin.call_name().to_string(),
+        plugin_index: plugin_idx.raw()
       });
       if let Some(r) = plugin
         .call_load(ctx, args)
@@ -175,6 +176,7 @@ impl PluginDriver {
           module_id: args.id.to_string(),
           source: Some(r.code.to_string()),
           plugin_name: plugin.call_name().to_string(),
+          plugin_index: plugin_idx.raw()
         });
         return Ok(Some(r));
       }
@@ -183,6 +185,7 @@ impl PluginDriver {
         module_id: args.id.to_string(),
         source: None,
         plugin_name: plugin.call_name().to_string(),
+        plugin_index: plugin_idx.raw()
       });
     }
     Ok(None)
@@ -200,7 +203,7 @@ impl PluginDriver {
     let mut code = original_code;
     let mut original_sourcemap_chain = std::mem::take(sourcemap_chain);
     let mut plugin_sourcemap_chain = UniqueArc::new(original_sourcemap_chain);
-    for (_plugin_idx, plugin, ctx) in
+    for (plugin_idx, plugin, ctx) in
       self.iter_plugin_with_context_by_order(&self.order_by_transform_meta)
     {
       trace_action!(action::HookTransformCallStart {
@@ -208,6 +211,7 @@ impl PluginDriver {
         module_id: id.to_string(),
         source: code.clone(),
         plugin_name: plugin.call_name().to_string(),
+        plugin_index: plugin_idx.raw()
       });
       if let Some(r) = plugin
         .call_transform(
@@ -237,6 +241,7 @@ impl PluginDriver {
             module_id: id.to_string(),
             transformed_source: Some(code.to_string()),
             plugin_name: plugin.call_name().to_string(),
+            plugin_index: plugin_idx.raw(),
           });
         }
         if let Some(ty) = r.module_type {
@@ -248,6 +253,7 @@ impl PluginDriver {
           module_id: id.to_string(),
           transformed_source: Some(code.to_string()),
           plugin_name: plugin.call_name().to_string(),
+          plugin_index: plugin_idx.raw(),
         });
       }
     }

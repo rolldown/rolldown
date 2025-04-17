@@ -76,10 +76,10 @@ impl AstScopes {
       .facade_scoping
       .mutated_symbol_id_to_names
       .insert(SymbolId::new(symbol_id), name.to_string());
-    self.facade_scoping.facade_symbol_classic_data.insert(
-      SymbolId::new(symbol_id),
-      SymbolRefDataClassic { link: None, chunk_id: None, namespace_alias: None },
-    );
+    self
+      .facade_scoping
+      .facade_symbol_classic_data
+      .insert(SymbolId::new(symbol_id), SymbolRefDataClassic::default());
     SymbolId::new(symbol_id)
   }
 

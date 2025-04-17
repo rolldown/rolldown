@@ -15,5 +15,4 @@ function d() {}
 var e = class {};
 console.log(a, b, c, d, e);
 
-//#endregion
 ```

@@ -6,6 +6,14 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## entry.js
 
 ```js
+//#region rolldown:runtime
+var __defProp = Object.defineProperty;
+var __export = (target, all) => {
+	for (var name in all) __defProp(target, name, {
+		get: all[name],
+		enumerable: true
+	});
+};
 
 
 //#region foo/test.js
@@ -13,15 +21,12 @@ var test_exports$1 = {};
 __export(test_exports$1, { foo: () => foo });
 let foo = 123;
 
-//#endregion
 //#region bar/test.js
 var test_exports = {};
 __export(test_exports, { bar: () => bar });
 let bar = 123;
 
-//#endregion
 //#region entry.js
 console.log(exports, module.exports, test_exports$1, test_exports);
 
-//#endregion
 ```

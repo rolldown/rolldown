@@ -38,14 +38,13 @@ const obj = {
 Foo, key, value, value;
 Bar, a, b, c, { ...d }, e;
 
-//#endregion
 ```
 ### diff
 ```diff
 ===================================================================
 --- esbuild	/out.js
 +++ rolldown	entry.js
-@@ -1,19 +1,13 @@
+@@ -1,19 +1,11 @@
 -// entry.jsx
 -var obj = {
 -  before,
@@ -76,8 +75,5 @@ Bar, a, b, c, { ...d }, e;
 \ No newline at end of file
 +Foo, key, value, value;
 +Bar, a, b, c, { ...d }, e;
-+
-+//#endregion
-\ No newline at end of file
 
 ```

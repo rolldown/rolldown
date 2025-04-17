@@ -91,7 +91,6 @@ let e_str = /* @__PURE__ */ function(e_str$1) {
 	return e_str$1;
 }({});
 
-//#endregion
 //#region entry.ts
 inlined = [
 	a_num.x,
@@ -108,7 +107,6 @@ not_inlined = [
 	e_str
 ];
 
-//#endregion
 ```
 ### diff
 ```diff

@@ -1,6 +1,5 @@
 ---
 source: crates/rolldown_testing/src/integration_test.rs
-snapshot_kind: text
 ---
 # warnings
 
@@ -127,5 +126,4 @@ const imp = [import("foo"), function nested() {
 }];
 console.log(ns, a, b, def, def, ns2, def, a2, b, imp);
 
-//#endregion
 ```

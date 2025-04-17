@@ -21,11 +21,9 @@ export {
 //#region other.js
 let bar = async () => {};
 
-//#endregion
 //#region entry.js
 let foo = async () => void 0;
 
-//#endregion
 export { bar, foo };
 ```
 ### diff

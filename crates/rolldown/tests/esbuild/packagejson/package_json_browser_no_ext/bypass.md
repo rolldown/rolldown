@@ -27,22 +27,18 @@ import assert from "node:assert";
 //#region src/demo-pkg/no-ext-browser.js
 let browser$1 = "browser";
 
-//#endregion
 //#region src/demo-pkg/no-ext.js
 let node = "node";
 
-//#endregion
 //#region src/demo-pkg/ext-browser.js
 let browser = "browser";
 
-//#endregion
 //#region src/entry.js
 assert.equal(browser$1, "browser");
 assert.equal(node, "node");
 assert.equal(browser, "browser");
 assert.equal(browser, "browser");
 
-//#endregion
 ```
 ### diff
 ```diff

@@ -21,14 +21,13 @@ x = () => {
 	return /* @__PURE__ */ jsx(XYYYYY, { "tag-must-start-with-capital-letter": true });
 };
 
-//#endregion
 ```
 ### diff
 ```diff
 ===================================================================
 --- esbuild	/out.js
 +++ rolldown	entry.js
-@@ -1,6 +1,9 @@
+@@ -1,6 +1,7 @@
 -// entry.jsx
 +import { jsx } from "react/jsx-runtime";
 +
@@ -42,8 +41,5 @@ x = () => {
 +	class XYYYYY {}
 +	return /* @__PURE__ */ jsx(XYYYYY, { "tag-must-start-with-capital-letter": true });
 +};
-+
-+//#endregion
-\ No newline at end of file
 
 ```

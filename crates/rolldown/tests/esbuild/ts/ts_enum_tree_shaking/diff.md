@@ -18,7 +18,6 @@ var x = /* @__PURE__ */ function(x$1) {
 }(x || {});
 console.log(x.y);
 
-//#endregion
 ```
 ### diff
 ```diff
@@ -54,7 +53,6 @@ var x = /* @__PURE__ */ function(x$1) {
 }(x || {});
 console.log(x);
 
-//#endregion
 ```
 ### diff
 ```diff
@@ -92,7 +90,6 @@ x = /* @__PURE__ */ function(x$1) {
 }(x || {});
 console.log(x.y, x.z);
 
-//#endregion
 ```
 ### diff
 ```diff
@@ -140,7 +137,6 @@ x = /* @__PURE__ */ function(x$1) {
 	return x$1;
 }(x || {});
 
-//#endregion
 ```
 ### diff
 ```diff
@@ -193,7 +189,6 @@ x = /* @__PURE__ */ function(x$1) {
 	return x$1;
 }(x || {});
 
-//#endregion
 ```
 ### diff
 ```diff
@@ -246,7 +241,6 @@ x = /* @__PURE__ */ function(x$1) {
 }(x || {});
 console.log(x);
 
-//#endregion
 ```
 ### diff
 ```diff
@@ -296,7 +290,6 @@ x = /* @__PURE__ */ function(x$1) {
 	return x$1;
 }(x || {});
 
-//#endregion
 ```
 ### diff
 ```diff
@@ -343,7 +336,6 @@ var x = /* @__PURE__ */ function(x$1) {
 	console.log(x, y);
 })(x || (x = {}));
 
-//#endregion
 ```
 ### diff
 ```diff

@@ -13,7 +13,6 @@ console.log(import("./output-path/should-contain/this-text/file-G2XPANW2.js"));
 //#region entry.js
 console.log(import("./file.js"));
 
-//#endregion
 ```
 ### diff
 ```diff

@@ -32,7 +32,6 @@ console.log("in entry.ts");
 //#region entry.ts
 console.log("in entry.ts");
 
-//#endregion
 ```
 ### diff
 ```diff

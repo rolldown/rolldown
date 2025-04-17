@@ -15,11 +15,9 @@ function foo() {
 }
 foo();
 
-//#endregion
 //#region entry.js
 console.log(foo());
 
-//#endregion
 ```
 ### diff
 ```diff

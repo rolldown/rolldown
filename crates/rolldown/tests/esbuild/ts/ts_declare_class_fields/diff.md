@@ -34,7 +34,6 @@ var Foo = class {
 };
 new Foo();
 
-//#endregion
 //#region define-true/index.ts
 var Bar = class {
 	a;
@@ -44,7 +43,6 @@ var Bar = class {
 };
 new Bar();
 
-//#endregion
 ```
 ### diff
 ```diff

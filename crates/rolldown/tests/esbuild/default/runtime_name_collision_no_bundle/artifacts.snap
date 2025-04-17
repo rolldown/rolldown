@@ -13,5 +13,4 @@ function __require() {
 }
 console.log(__require());
 
-//#endregion
 ```

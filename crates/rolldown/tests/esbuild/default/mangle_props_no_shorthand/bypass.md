@@ -12,7 +12,6 @@ export let yyyyy = ({ y }) => ({ y: y });
 //#region entry.js
 let yyyyy = ({ xxxxx }) => ({ xxxxx });
 
-//#endregion
 export { yyyyy };
 ```
 ### diff

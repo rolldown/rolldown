@@ -20,7 +20,6 @@ function a_default(one, two, three, four) {
 	return "the argument names must be the same";
 }
 
-//#endregion
 export { a_default as default };
 ```
 ### diff
@@ -56,7 +55,6 @@ function b_default(one, two, three, four) {
 	return "the argument names must be the same";
 }
 
-//#endregion
 export { b_default as default };
 ```
 ### diff

@@ -12,7 +12,6 @@ import { foo, setFoo } from "./shared.js";
 setFoo(123);
 console.log(foo);
 
-//#endregion
 ```
 ## b.js
 
@@ -22,7 +21,6 @@ import { foo } from "./shared.js";
 //#region b.js
 console.log(foo);
 
-//#endregion
 ```
 ## shared.js
 
@@ -34,6 +32,5 @@ function setFoo(value) {
 	foo = value;
 }
 
-//#endregion
 export { foo, setFoo };
 ```

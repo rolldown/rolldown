@@ -34,7 +34,6 @@ var Foo = @x.y() @(new y.x()) class Foo {
 	}
 };
 
-//#endregion
 export { Foo as default };
 ```
 ### diff
@@ -42,7 +41,7 @@ export { Foo as default };
 ===================================================================
 --- esbuild	/out.js
 +++ rolldown	entry.js
-@@ -1,14 +1,17 @@
+@@ -1,14 +1,16 @@
 -@x.y()
 -@(new y.x())
 -export default class Foo {
@@ -73,7 +72,6 @@ export { Foo as default };
 +	}
 +};
 +
-+//#endregion
 +export { Foo as default };
 \ No newline at end of file
 

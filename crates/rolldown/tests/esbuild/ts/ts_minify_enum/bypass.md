@@ -35,7 +35,6 @@ let Foo = /* @__PURE__ */ function(Foo$1) {
 	return Foo$1;
 }({});
 
-//#endregion
 export { Foo };
 ```
 ### diff

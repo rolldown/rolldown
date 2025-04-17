@@ -11,5 +11,4 @@ source: crates/rolldown_testing/src/integration_test.rs
 require.resolve(x ? "a" : y ? "b" : "c");
 require.resolve(x ? y ? "a" : "b" : c);
 
-//#endregion
 ```

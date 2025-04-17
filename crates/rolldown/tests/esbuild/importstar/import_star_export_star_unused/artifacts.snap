@@ -12,5 +12,4 @@ import assert from "node:assert";
 let foo = 234;
 assert.equal(foo, 234);
 
-//#endregion
 ```

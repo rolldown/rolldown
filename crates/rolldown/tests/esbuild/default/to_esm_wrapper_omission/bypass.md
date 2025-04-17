@@ -29,6 +29,27 @@ x = Promise.resolve().then(() => __toESM(require("k_WRAP")));
 ### rolldown
 ```js
 "use strict";
+//#region rolldown:runtime
+var __create = Object.create;
+var __defProp = Object.defineProperty;
+var __getOwnPropDesc = Object.getOwnPropertyDescriptor;
+var __getOwnPropNames = Object.getOwnPropertyNames;
+var __getProtoOf = Object.getPrototypeOf;
+var __hasOwnProp = Object.prototype.hasOwnProperty;
+var __copyProps = (to, from, except, desc) => {
+	if (from && typeof from === "object" || typeof from === "function") for (var keys = __getOwnPropNames(from), i = 0, n = keys.length, key; i < n; i++) {
+		key = keys[i];
+		if (!__hasOwnProp.call(to, key) && key !== except) __defProp(to, key, {
+			get: ((k) => from[k]).bind(null, key),
+			enumerable: !(desc = __getOwnPropDesc(from, key)) || desc.enumerable
+		});
+	}
+	return to;
+};
+var __toESM = (mod, isNodeMode, target) => (target = mod != null ? __create(__getProtoOf(mod)) : {}, __copyProps(isNodeMode || !mod || !mod.__esModule ? __defProp(target, "default", {
+	value: mod,
+	enumerable: true
+}) : target, mod));
 
 require("a_nowrap");
 const b_nowrap = __toESM(require("b_nowrap"));
@@ -51,7 +72,6 @@ i_WRAP.x();
 j_WRAP.x``;
 x = import("k_WRAP");
 
-//#endregion
 
 var c_nowrap = require("c_nowrap");
 Object.keys(c_nowrap).forEach(function (k) {
@@ -67,7 +87,7 @@ Object.keys(c_nowrap).forEach(function (k) {
 ===================================================================
 --- esbuild	/out/entry.js
 +++ rolldown	entry.js
-@@ -1,21 +1,27 @@
+@@ -1,21 +1,47 @@
 -var entry_exports = {};
 -module.exports = __toCommonJS(entry_exports);
 -var import_a_nowrap = require("a_nowrap");
@@ -89,6 +109,26 @@ Object.keys(c_nowrap).forEach(function (k) {
 -i.x();
 -(j.x)``;
 -x = Promise.resolve().then(() => __toESM(require("k_WRAP")));
++var __create = Object.create;
++var __defProp = Object.defineProperty;
++var __getOwnPropDesc = Object.getOwnPropertyDescriptor;
++var __getOwnPropNames = Object.getOwnPropertyNames;
++var __getProtoOf = Object.getPrototypeOf;
++var __hasOwnProp = Object.prototype.hasOwnProperty;
++var __copyProps = (to, from, except, desc) => {
++    if (from && typeof from === "object" || typeof from === "function") for (var keys = __getOwnPropNames(from), i = 0, n = keys.length, key; i < n; i++) {
++        key = keys[i];
++        if (!__hasOwnProp.call(to, key) && key !== except) __defProp(to, key, {
++            get: (k => from[k]).bind(null, key),
++            enumerable: !(desc = __getOwnPropDesc(from, key)) || desc.enumerable
++        });
++    }
++    return to;
++};
++var __toESM = (mod, isNodeMode, target) => (target = mod != null ? __create(__getProtoOf(mod)) : {}, __copyProps(isNodeMode || !mod || !mod.__esModule ? __defProp(target, "default", {
++    value: mod,
++    enumerable: true
++}) : target, mod));
 +require("a_nowrap");
 +var b_nowrap = __toESM(require("b_nowrap"));
 +var d_WRAP = __toESM(require("d_WRAP"));

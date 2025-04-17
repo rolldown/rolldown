@@ -11,5 +11,4 @@ source: crates/rolldown_testing/src/integration_test.rs
 if (test) for (var a = b in {});
 for (var x = y in {});
 
-//#endregion
 ```

@@ -16,26 +16,39 @@ console.log(foo);
 ### rolldown
 ```js
 
+//#region rolldown:runtime
+var __defProp = Object.defineProperty;
+var __export = (target, all) => {
+	for (var name in all) __defProp(target, name, {
+		get: all[name],
+		enumerable: true
+	});
+};
 
 //#region import.ts
 var import_exports = {};
 __export(import_exports, { value: () => value });
 let value = 123;
 
-//#endregion
 //#region entry.ts
 var value_copy = import_exports.value;
 let foo = value_copy;
 console.log(foo);
 
-//#endregion
 ```
 ### diff
 ```diff
 ===================================================================
 --- esbuild	/out.js
 +++ rolldown	entry.js
-@@ -1,4 +1,8 @@
+@@ -1,4 +1,15 @@
++var __defProp = Object.defineProperty;
++var __export = (target, all) => {
++    for (var name in all) __defProp(target, name, {
++        get: all[name],
++        enumerable: true
++    });
++};
 +var import_exports = {};
 +__export(import_exports, {
 +    value: () => value

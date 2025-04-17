@@ -25,7 +25,6 @@ let e = /* @__PURE__ */ React.createElement(Foo, null, d);
 let f = /* @__PURE__ */ React.createElement(React.Fragment, null, e);
 console.log(f);
 
-//#endregion
 ```
 ### diff
 ```diff

@@ -43,7 +43,6 @@ var T = class {
 };
 new T().d();
 
-//#endregion
 ```
 ### diff
 ```diff

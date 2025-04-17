@@ -1,6 +1,5 @@
 ---
 source: crates/rolldown_testing/src/integration_test.rs
-snapshot_kind: text
 ---
 # Assets
 
@@ -36,7 +35,6 @@ import "./c2.js";
 //#region c.js
 await 0;
 
-//#endregion
 ```
 ## entry.js
 
@@ -49,5 +47,4 @@ import("./c.js");
 import("./entry.js");
 await 0;
 
-//#endregion
 ```

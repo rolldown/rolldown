@@ -29,7 +29,6 @@ console.log(
 	3
 );
 
-//#endregion
 ```
 ### diff
 ```diff

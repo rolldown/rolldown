@@ -40,7 +40,6 @@ function aap(noot, wim) {
 	return mies;
 }
 
-//#endregion
 export { aap };
 ```
 ### diff

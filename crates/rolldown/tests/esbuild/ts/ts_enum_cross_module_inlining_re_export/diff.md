@@ -28,7 +28,6 @@ let c = /* @__PURE__ */ function(c$1) {
 	return c$1;
 }({});
 
-//#endregion
 //#region entry.js
 console.log([
 	a.x,
@@ -36,7 +35,6 @@ console.log([
 	c.x
 ]);
 
-//#endregion
 ```
 ### diff
 ```diff

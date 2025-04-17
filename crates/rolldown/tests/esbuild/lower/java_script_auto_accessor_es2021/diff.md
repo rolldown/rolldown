@@ -73,14 +73,13 @@ var Foo = class {
 	static accessor [six()] = 6;
 };
 
-//#endregion
 ```
 ### diff
 ```diff
 ===================================================================
 --- esbuild	/out/js-define.js
 +++ rolldown	js-define.js
-@@ -1,57 +1,12 @@
+@@ -1,57 +1,10 @@
 -var _a, _b, _one, __two, _Foo_instances, two_get, two_set, _a2, _four, __five, _Foo_static, five_get, five_set, _b2;
 -class Foo {
 -    constructor() {
@@ -147,9 +146,6 @@ var Foo = class {
 -__privateAdd(Foo, _four, 4);
 -__privateAdd(Foo, __five, 5);
 -__privateAdd(Foo, _b2, 6);
-+
-+//#endregion
-\ No newline at end of file
 
 ```
 ## /out/ts-define/ts-define.js

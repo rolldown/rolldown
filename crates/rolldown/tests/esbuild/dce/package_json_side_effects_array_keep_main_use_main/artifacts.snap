@@ -10,9 +10,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 //#region node_modules/demo-pkg/index-main.js
 console.log("this should be kept");
 
-//#endregion
 //#region src/entry.js
 console.log("unused import");
 
-//#endregion
 ```

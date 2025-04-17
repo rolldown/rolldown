@@ -8,7 +8,6 @@ var __rolldown_dynamic_import_helper_default = (glob, path, segments) => {
 	});
 };
 
-//#endregion
 //#region main.js
 function basic(base) {
 	return __rolldown_dynamic_import_helper_default(import.meta.glob("./mods/*.js"), `./mods/${base}.js`, 3);
@@ -38,5 +37,4 @@ function withMultiParentDirAndItself(name) {
 	return __rolldown_dynamic_import_helper_default(import.meta.glob("../../plugins/dynamicImportVar/*.js"), `../../plugins/dynamicImportVar/${name}.js`, 5);
 }
 
-//#endregion
 export { basic, wildcardInUrl, wildcardInVariables, wildcardInWorker, withMultiParentDirAndItself, withParentDirAndItself, withQuery, withQueryRaw, withQueryUrl };

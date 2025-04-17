@@ -38,12 +38,10 @@ import { "reexpo.rt" as reexpo_rt } from "external-pkg2";
 let replace = { test() {} };
 let replaceDot = { test() {} };
 
-//#endregion
 //#region inject.js
 let obj = {};
 let sideEffects$1 = console.log("this should be renamed");
 
-//#endregion
 //#region entry.js
 let sideEffects = console.log("side effects");
 let collide = 123;
@@ -57,7 +55,6 @@ console.log(collide);
 console.log(re_export);
 console.log(reexpo_rt);
 
-//#endregion
 ```
 ### diff
 ```diff

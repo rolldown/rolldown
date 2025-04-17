@@ -11,7 +11,6 @@ import { setValue } from "./shared.js";
 //#region a.js
 setValue(123);
 
-//#endregion
 ```
 ## b.js
 
@@ -35,6 +34,5 @@ function setValue(next) {
 }
 sideEffects(getValue);
 
-//#endregion
 export { setValue };
 ```

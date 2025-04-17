@@ -108,7 +108,6 @@ var Foo = class {
 	}
 };
 
-//#endregion
 export { Foo };
 ```
 ### diff

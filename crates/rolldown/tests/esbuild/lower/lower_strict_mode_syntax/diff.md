@@ -19,14 +19,13 @@ var x;
 if (test) for (var a = b in {});
 for (var x = y in {});
 
-//#endregion
 ```
 ### diff
 ```diff
 ===================================================================
 --- esbuild	/out.js
 +++ rolldown	entry.js
-@@ -1,8 +1,6 @@
+@@ -1,8 +1,4 @@
 -if (test) {
 -    a = b;
 -    for (a in {}) ;
@@ -39,8 +38,5 @@ for (var x = y in {});
 +//#region for-in.js
 +if (test) for (var a = b in {});
 +for (var x = y in {});
-+
-+//#endregion
-\ No newline at end of file
 
 ```

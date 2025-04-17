@@ -33,7 +33,6 @@ let ns;
 	_ns.Baz = Baz;
 })(ns || (ns = {}));
 
-//#endregion
 ```
 ### diff
 ```diff

@@ -1,6 +1,5 @@
 ---
 source: crates/rolldown_testing/src/integration_test.rs
-snapshot_kind: text
 ---
 # Assets
 
@@ -24,5 +23,4 @@ x["_mangleThisToo"] = 2;
 x["_doNotMangleThis"] = 3;
 x([`${foo}._mangleThis = bar._mangleThisToo`, `${foo}.notMangled = bar.notMangledEither`]);
 
-//#endregion
 ```

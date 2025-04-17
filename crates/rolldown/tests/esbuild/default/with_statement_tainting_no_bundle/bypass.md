@@ -48,14 +48,13 @@
 	}
 })();
 
-//#endregion
 ```
 ### diff
 ```diff
 ===================================================================
 --- esbuild	/out.js
 +++ rolldown	entry.js
-@@ -1,19 +1,23 @@
+@@ -1,19 +1,21 @@
 +
 +//#region entry.js
  (() => {
@@ -96,8 +95,5 @@
 +		outerDead++;
 +	}
 +})();
-+
-+//#endregion
-\ No newline at end of file
 
 ```

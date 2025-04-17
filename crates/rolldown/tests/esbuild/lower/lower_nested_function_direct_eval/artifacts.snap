@@ -86,7 +86,6 @@ if (foo) {
 	function x() {}
 }
 
-//#endregion
 ```
 ## 2.js
 
@@ -98,7 +97,6 @@ if (foo) {
 	eval("");
 }
 
-//#endregion
 ```
 ## 3.js
 
@@ -110,7 +108,6 @@ if (foo) {
 	if (bar) eval("");
 }
 
-//#endregion
 ```
 ## 4.js
 
@@ -122,7 +119,6 @@ if (foo) {
 	function x() {}
 }
 
-//#endregion
 ```
 ## 5.js
 
@@ -133,7 +129,6 @@ if (foo) {
 	function x() {}
 }
 
-//#endregion
 ```
 ## 6.js
 
@@ -145,7 +140,6 @@ if (foo) {
 	eval("");
 }
 
-//#endregion
 ```
 ## 7.js
 
@@ -157,7 +151,6 @@ if (foo) {
 	if (bar) eval("");
 }
 
-//#endregion
 ```
 ## 8.js
 
@@ -169,5 +162,4 @@ if (foo) {
 	function x() {}
 }
 
-//#endregion
 ```

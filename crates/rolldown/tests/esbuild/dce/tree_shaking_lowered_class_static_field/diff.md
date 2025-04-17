@@ -33,7 +33,6 @@ var KeepMe2 = class {
 };
 new KeepMe2();
 
-//#endregion
 ```
 ### diff
 ```diff

@@ -54,7 +54,6 @@ var Bar = class {
 	set #bar(x) {}
 };
 
-//#endregion
 ```
 ### diff
 ```diff

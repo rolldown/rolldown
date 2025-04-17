@@ -20,11 +20,9 @@ var import_foo = __toESM(require_foo());
 //#region (ignored) 
 var default$1 = void 0;
 
-//#endregion
 //#region entry.js
 default$1();
 
-//#endregion
 ```
 ### diff
 ```diff

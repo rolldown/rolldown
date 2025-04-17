@@ -26,6 +26,18 @@ console.log("unused import");
 ### rolldown
 ```js
 
+//#region rolldown:runtime
+var __defProp = Object.defineProperty;
+var __getOwnPropNames = Object.getOwnPropertyNames;
+var __esm = (fn, res) => function() {
+	return fn && (res = (0, fn[__getOwnPropNames(fn)[0]])(fn = 0)), res;
+};
+var __export = (target, all) => {
+	for (var name in all) __defProp(target, name, {
+		get: all[name],
+		enumerable: true
+	});
+};
 
 //#region node_modules/demo-pkg/index-module.js
 var index_module_exports = {};
@@ -36,25 +48,33 @@ var init_index_module = __esm({ "node_modules/demo-pkg/index-module.js"() {
 	console.log("TEST FAILED");
 } });
 
-//#endregion
 //#region src/require-demo-pkg.js
 init_index_module();
 
-//#endregion
 //#region src/entry.js
 init_index_module();
 console.log("unused import");
 
-//#endregion
 ```
 ### diff
 ```diff
 ===================================================================
 --- esbuild	/out.js
 +++ rolldown	src_entry.js
-@@ -1,13 +1,14 @@
+@@ -1,13 +1,25 @@
 -var index_main_exports = {};
 -__export(index_main_exports, {
++var __defProp = Object.defineProperty;
++var __getOwnPropNames = Object.getOwnPropertyNames;
++var __esm = (fn, res) => function () {
++    return (fn && (res = (0, fn[__getOwnPropNames(fn)[0]])(fn = 0)), res);
++};
++var __export = (target, all) => {
++    for (var name in all) __defProp(target, name, {
++        get: all[name],
++        enumerable: true
++    });
++};
 +var index_module_exports = {};
 +__export(index_module_exports, {
      foo: () => foo

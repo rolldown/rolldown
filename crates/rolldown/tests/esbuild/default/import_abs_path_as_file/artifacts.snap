@@ -1,6 +1,5 @@
 ---
 source: crates/rolldown_testing/src/integration_test.rs
-snapshot_kind: text
 ---
 # Assets
 
@@ -12,5 +11,4 @@ import pkg from "/Users/user/project/node_modules/pkg/index";
 //#region entry.js
 console.log(pkg);
 
-//#endregion
 ```

@@ -31,7 +31,6 @@ function entry_default(x) {
 	x?.foo_["bar_"];
 }
 
-//#endregion
 export { entry_default as default };
 ```
 ### diff

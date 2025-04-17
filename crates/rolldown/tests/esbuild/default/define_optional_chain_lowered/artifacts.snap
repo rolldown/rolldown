@@ -1,6 +1,5 @@
 ---
 source: crates/rolldown_testing/src/integration_test.rs
-snapshot_kind: text
 ---
 # Assets
 
@@ -24,5 +23,4 @@ console.log([
 	(_a$b = a[b]) === null || _a$b === void 0 ? void 0 : _a$b[c]
 ]);
 
-//#endregion
 ```

@@ -24,6 +24,18 @@ console.log("unused import");
 ### rolldown
 ```js
 
+//#region rolldown:runtime
+var __defProp = Object.defineProperty;
+var __getOwnPropNames = Object.getOwnPropertyNames;
+var __esm = (fn, res) => function() {
+	return fn && (res = (0, fn[__getOwnPropNames(fn)[0]])(fn = 0)), res;
+};
+var __export = (target, all) => {
+	for (var name in all) __defProp(target, name, {
+		get: all[name],
+		enumerable: true
+	});
+};
 
 //#region node_modules/demo-pkg/index.js
 var demo_pkg_exports = {};
@@ -34,19 +46,30 @@ var init_demo_pkg = __esm({ "node_modules/demo-pkg/index.js"() {
 	console.log("hello");
 } });
 
-//#endregion
 //#region src/entry.js
 init_demo_pkg();
 console.log("unused import");
 
-//#endregion
 ```
 ### diff
 ```diff
 ===================================================================
 --- esbuild	/out.js
 +++ rolldown	src_entry.js
-@@ -3,9 +3,9 @@
+@@ -1,11 +1,22 @@
++var __defProp = Object.defineProperty;
++var __getOwnPropNames = Object.getOwnPropertyNames;
++var __esm = (fn, res) => function () {
++    return (fn && (res = (0, fn[__getOwnPropNames(fn)[0]])(fn = 0)), res);
++};
++var __export = (target, all) => {
++    for (var name in all) __defProp(target, name, {
++        get: all[name],
++        enumerable: true
++    });
++};
+ var demo_pkg_exports = {};
+ __export(demo_pkg_exports, {
      foo: () => foo
  });
  var foo;

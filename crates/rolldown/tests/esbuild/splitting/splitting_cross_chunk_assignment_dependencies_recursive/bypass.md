@@ -18,7 +18,6 @@ import { setX } from "./x.js";
 //#region a.js
 setX();
 
-//#endregion
 ```
 ### diff
 ```diff
@@ -50,7 +49,6 @@ import { setZ } from "./z.js";
 //#region b.js
 setZ();
 
-//#endregion
 ```
 ### diff
 ```diff
@@ -91,7 +89,6 @@ setX2();
 setY2();
 setZ2();
 
-//#endregion
 ```
 ### diff
 ```diff
@@ -155,7 +152,6 @@ function setY2(v) {
 	_y = v;
 }
 
-//#endregion
 //#region z.js
 let _z;
 function setZ(v) {
@@ -166,7 +162,6 @@ function setZ2(v) {
 	_z = v;
 }
 
-//#endregion
 export { setY2, setZ, setZ2 };
 ```
 ### diff

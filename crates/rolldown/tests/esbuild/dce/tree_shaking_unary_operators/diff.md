@@ -29,7 +29,6 @@ let keep;
 keep++;
 keep--;
 
-//#endregion
 })();
 ```
 ### diff
@@ -37,7 +36,7 @@ keep--;
 ===================================================================
 --- esbuild	/out.js
 +++ rolldown	entry.js
-@@ -1,12 +1,12 @@
+@@ -1,12 +1,11 @@
 -(() => {
 -  // entry.js
 -  var keep;
@@ -59,7 +58,6 @@ keep--;
 +keep++;
 +keep--;
 +
-+//#endregion
  })();
 \ No newline at end of file
 

@@ -8,18 +8,24 @@ source: crates/rolldown_testing/src/integration_test.rs
 ```js
 import assert from "node:assert";
 
+//#region rolldown:runtime
+var __defProp = Object.defineProperty;
+var __export = (target, all) => {
+	for (var name in all) __defProp(target, name, {
+		get: all[name],
+		enumerable: true
+	});
+};
 
 //#region foo.js
 var foo_exports = {};
 __export(foo_exports, { foo: () => foo$1 });
 const foo$1 = 123;
 
-//#endregion
 //#region entry.js
 let foo = 234;
 assert.deepEqual(foo_exports, { foo: 123 });
 assert.equal(foo$1, 123);
 assert.equal(foo, 234);
 
-//#endregion
 ```

@@ -54,7 +54,6 @@ import { __toCommonJS, a_exports, init_a } from "./a2.js";
 //#region b.js
 let bar = (init_a(), __toCommonJS(a_exports));
 
-//#endregion
 export { bar };
 ```
 ### diff
@@ -93,6 +92,31 @@ export {
 ### rolldown
 ```js
 
+//#region rolldown:runtime
+var __defProp = Object.defineProperty;
+var __getOwnPropDesc = Object.getOwnPropertyDescriptor;
+var __getOwnPropNames = Object.getOwnPropertyNames;
+var __hasOwnProp = Object.prototype.hasOwnProperty;
+var __esm = (fn, res) => function() {
+	return fn && (res = (0, fn[__getOwnPropNames(fn)[0]])(fn = 0)), res;
+};
+var __export = (target, all) => {
+	for (var name in all) __defProp(target, name, {
+		get: all[name],
+		enumerable: true
+	});
+};
+var __copyProps = (to, from, except, desc) => {
+	if (from && typeof from === "object" || typeof from === "function") for (var keys = __getOwnPropNames(from), i = 0, n = keys.length, key; i < n; i++) {
+		key = keys[i];
+		if (!__hasOwnProp.call(to, key) && key !== except) __defProp(to, key, {
+			get: ((k) => from[k]).bind(null, key),
+			enumerable: !(desc = __getOwnPropDesc(from, key)) || desc.enumerable
+		});
+	}
+	return to;
+};
+var __toCommonJS = (mod) => __copyProps(__defProp({}, "__esModule", { value: true }), mod);
 
 //#region a.js
 var a_exports = {};
@@ -100,7 +124,6 @@ __export(a_exports, { foo: () => foo });
 var foo;
 var init_a = __esm({ "a.js"() {} });
 
-//#endregion
 export { __toCommonJS, a_exports, foo, init_a };
 ```
 ### diff
@@ -108,9 +131,34 @@ export { __toCommonJS, a_exports, foo, init_a };
 ===================================================================
 --- esbuild	/out/chunk-PDZFCFBH.js
 +++ rolldown	a2.js
-@@ -1,17 +1,10 @@
+@@ -1,17 +1,34 @@
 -// a.js
 +
++//#region rolldown:runtime
++var __defProp = Object.defineProperty;
++var __getOwnPropDesc = Object.getOwnPropertyDescriptor;
++var __getOwnPropNames = Object.getOwnPropertyNames;
++var __hasOwnProp = Object.prototype.hasOwnProperty;
++var __esm = (fn, res) => function() {
++	return fn && (res = (0, fn[__getOwnPropNames(fn)[0]])(fn = 0)), res;
++};
++var __export = (target, all) => {
++	for (var name in all) __defProp(target, name, {
++		get: all[name],
++		enumerable: true
++	});
++};
++var __copyProps = (to, from, except, desc) => {
++	if (from && typeof from === "object" || typeof from === "function") for (var keys = __getOwnPropNames(from), i = 0, n = keys.length, key; i < n; i++) {
++		key = keys[i];
++		if (!__hasOwnProp.call(to, key) && key !== except) __defProp(to, key, {
++			get: ((k) => from[k]).bind(null, key),
++			enumerable: !(desc = __getOwnPropDesc(from, key)) || desc.enumerable
++		});
++	}
++	return to;
++};
++var __toCommonJS = (mod) => __copyProps(__defProp({}, "__esModule", { value: true }), mod);
 +
 +//#region a.js
  var a_exports = {};
@@ -132,7 +180,6 @@ export { __toCommonJS, a_exports, foo, init_a };
 -  init_a
 -};
 \ No newline at end of file
-+//#endregion
 +export { __toCommonJS, a_exports, foo, init_a };
 \ No newline at end of file
 

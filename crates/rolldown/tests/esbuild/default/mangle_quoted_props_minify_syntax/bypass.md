@@ -26,7 +26,6 @@ foo("_keepThisProperty");
 var { [foo("_keepThisProperty")]: x } = y;
 foo("_keepThisProperty") in x;
 
-//#endregion
 ```
 ### diff
 ```diff
@@ -81,7 +80,6 @@ var { [(z, "_mangleThis")]: x } = y;
 (y ? z : "_mangleThis") in x;
 (y, "_mangleThis") in x;
 
-//#endregion
 ```
 ### diff
 ```diff

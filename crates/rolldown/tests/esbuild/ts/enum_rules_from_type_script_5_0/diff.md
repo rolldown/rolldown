@@ -160,7 +160,6 @@ console.log(
 	Foo.X41
 );
 
-//#endregion
 ```
 ### diff
 ```diff
@@ -271,7 +270,6 @@ var TemplateExpressions = /* @__PURE__ */ function(TemplateExpressions$1) {
 }(TemplateExpressions || {});
 console.log(TemplateExpressions.NULL, TemplateExpressions.TRUE, TemplateExpressions.FALSE, TemplateExpressions.BIGINT);
 
-//#endregion
 ```
 ### diff
 ```diff

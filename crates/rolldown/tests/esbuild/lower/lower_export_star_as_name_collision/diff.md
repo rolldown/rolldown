@@ -25,12 +25,10 @@ import * as ns from "path1";
 //#region nested.js
 let foo$1 = 123;
 
-//#endregion
 //#region entry.js
 console.log(foo, foo$1);
 let ns$1 = 123;
 
-//#endregion
 export { ns, ns$1 as sn };
 ```
 ### diff

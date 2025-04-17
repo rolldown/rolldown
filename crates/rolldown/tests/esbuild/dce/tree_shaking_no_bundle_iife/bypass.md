@@ -19,7 +19,6 @@
 function keep() {}
 keep();
 
-//#endregion
 })();
 ```
 ### diff

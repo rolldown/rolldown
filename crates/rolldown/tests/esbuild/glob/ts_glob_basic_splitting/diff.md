@@ -42,6 +42,11 @@ console.log({
 ### rolldown
 ```js
 
+//#region rolldown:runtime
+var __require = /* @__PURE__ */ ((x) => typeof require !== "undefined" ? require : typeof Proxy !== "undefined" ? new Proxy(x, { get: (a, b) => (typeof require !== "undefined" ? require : a)[b] }) : x)(function(x) {
+	if (typeof require !== "undefined") return require.apply(this, arguments);
+	throw Error("Calling `require` for \"" + x + "\" in an environment that doesn't expose the `require` function.");
+});
 
 //#region entry.ts
 const ab = Math.random() < .5 ? "a.ts" : "b.ts";
@@ -56,21 +61,25 @@ console.log({
 	}
 });
 
-//#endregion
 ```
 ### diff
 ```diff
 ===================================================================
 --- esbuild	/out/entry.js
 +++ rolldown	entry.js
-@@ -1,22 +1,11 @@
+@@ -1,22 +1,17 @@
 -import {require_a} from "./chunk-YMCIDKCT.js";
 -import {require_b} from "./chunk-2BST4PYI.js";
 -import {__glob} from "./chunk-WCFE7E2E.js";
 -var globRequire_src = __glob({
 -    "./src/a.ts": () => require_a(),
 -    "./src/b.ts": () => require_b()
--});
++var __require = (x => typeof require !== "undefined" ? require : typeof Proxy !== "undefined" ? new Proxy(x, {
++    get: (a, b) => (typeof require !== "undefined" ? require : a)[b]
++}) : x)(function (x) {
++    if (typeof require !== "undefined") return require.apply(this, arguments);
++    throw Error("Calling `require` for \"" + x + "\" in an environment that doesn't expose the `require` function.");
+ });
 -var globImport_src = __glob({
 -    "./src/a.ts": () => import("./a-YXM4MR7E.js"),
 -    "./src/b.ts": () => import("./b-IPMBSSGN.js")

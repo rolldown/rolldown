@@ -11,5 +11,4 @@ source: crates/rolldown_testing/src/integration_test.rs
 let ns;
 (function(_ns) {})(ns || (ns = {}));
 
-//#endregion
 ```

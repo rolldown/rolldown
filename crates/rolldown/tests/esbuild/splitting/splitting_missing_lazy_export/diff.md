@@ -18,7 +18,6 @@ import { foo } from "./common.js";
 //#region a.js
 console.log(foo());
 
-//#endregion
 ```
 ### diff
 ```diff
@@ -48,7 +47,6 @@ import { bar } from "./common.js";
 //#region b.js
 console.log(bar());
 
-//#endregion
 ```
 ### diff
 ```diff
@@ -86,7 +84,6 @@ export {
 //#region empty.js
 var empty_exports = {};
 
-//#endregion
 //#region common.js
 function foo() {
 	return [empty_exports, void 0];
@@ -95,7 +92,6 @@ function bar() {
 	return [void 0];
 }
 
-//#endregion
 export { bar, foo };
 ```
 ### diff

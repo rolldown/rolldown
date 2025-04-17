@@ -21,25 +21,35 @@ console.log(foo);
 ```js
 import assert from "node:assert";
 
+//#region rolldown:runtime
+var __getOwnPropNames = Object.getOwnPropertyNames;
+var __commonJS = (cb, mod) => function() {
+	return mod || (0, cb[__getOwnPropNames(cb)[0]])((mod = { exports: {} }).exports, mod), mod.exports;
+};
 
 //#region foo.js
 var require_foo = __commonJS({ "foo.js"(exports) {
 	exports.foo = 123;
 } });
 
-//#endregion
 //#region entry.js
 let foo = 234;
 assert.equal(foo, 234);
 
-//#endregion
 ```
 ### diff
 ```diff
 ===================================================================
 --- esbuild	/out.js
 +++ rolldown	entry.js
-@@ -2,7 +2,6 @@
+@@ -1,8 +1,13 @@
++var __getOwnPropNames = Object.getOwnPropertyNames;
++var __commonJS = (cb, mod) => function () {
++    return (mod || (0, cb[__getOwnPropNames(cb)[0]])((mod = {
++        exports: {}
++    }).exports, mod), mod.exports);
++};
+ var require_foo = __commonJS({
      "foo.js"(exports) {
          exports.foo = 123;
      }

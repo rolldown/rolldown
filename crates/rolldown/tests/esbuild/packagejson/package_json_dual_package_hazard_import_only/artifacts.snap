@@ -11,9 +11,7 @@ import assert from "node:assert";
 //#region node_modules/demo-pkg/module.js
 var module_default = "module";
 
-//#endregion
 //#region src/entry.js
 assert.equal(module_default, "module");
 
-//#endregion
 ```

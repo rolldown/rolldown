@@ -1,6 +1,5 @@
 ---
 source: crates/rolldown_testing/src/integration_test.rs
-snapshot_kind: text
 ---
 # warnings
 
@@ -50,12 +49,30 @@ import { init_foo } from "./foo.js";
 //#region bare.js
 init_foo();
 
-//#endregion
 ```
 ## foo.js
 
 ```js
 
+//#region rolldown:runtime
+var __defProp = Object.defineProperty;
+var __getOwnPropDesc = Object.getOwnPropertyDescriptor;
+var __getOwnPropNames = Object.getOwnPropertyNames;
+var __hasOwnProp = Object.prototype.hasOwnProperty;
+var __esm = (fn, res) => function() {
+	return fn && (res = (0, fn[__getOwnPropNames(fn)[0]])(fn = 0)), res;
+};
+var __copyProps = (to, from, except, desc) => {
+	if (from && typeof from === "object" || typeof from === "function") for (var keys = __getOwnPropNames(from), i = 0, n = keys.length, key; i < n; i++) {
+		key = keys[i];
+		if (!__hasOwnProp.call(to, key) && key !== except) __defProp(to, key, {
+			get: ((k) => from[k]).bind(null, key),
+			enumerable: !(desc = __getOwnPropDesc(from, key)) || desc.enumerable
+		});
+	}
+	return to;
+};
+var __toCommonJS = (mod) => __copyProps(__defProp({}, "__esModule", { value: true }), mod);
 
 //#region foo.js
 var foo_exports = {};
@@ -67,7 +84,6 @@ var init_foo = __esm({ "foo.js"() {
 	y = void 0;
 } });
 
-//#endregion
 export { __toCommonJS, default$1 as default, foo_exports, init_foo, x, y };
 ```
 ## foo2.js
@@ -84,7 +100,6 @@ init_foo();
 //#region import.js
 console.log(import("./foo2.js"));
 
-//#endregion
 ```
 ## named.js
 
@@ -95,7 +110,6 @@ import default$1, { init_foo, x, y } from "./foo.js";
 init_foo();
 console.log(default$1(x, y));
 
-//#endregion
 ```
 ## require.js
 
@@ -105,7 +119,6 @@ import { __toCommonJS, foo_exports, init_foo } from "./foo.js";
 //#region require.js
 console.log((init_foo(), __toCommonJS(foo_exports)));
 
-//#endregion
 ```
 ## star-capture.js
 
@@ -116,7 +129,6 @@ import { foo_exports, init_foo } from "./foo.js";
 init_foo();
 console.log(foo_exports);
 
-//#endregion
 ```
 ## star.js
 
@@ -127,5 +139,4 @@ import { init_foo } from "./foo.js";
 init_foo();
 console.log((void 0)(void 0, void 0));
 
-//#endregion
 ```

@@ -63,7 +63,6 @@ function _usingCtx() {
 	};
 }
 
-//#endregion
 //#region entry.ts
 async function* foo() {
 	try {
@@ -180,5 +179,4 @@ Foo = class {
 	}
 };
 
-//#endregion
 ```

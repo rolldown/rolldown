@@ -21,13 +21,11 @@ import assert from "node:assert";
 //#region src/foo-import.js
 var foo_import_default = "foo";
 
-//#endregion
 //#region src/index.js
 var src_default = "index";
 assert.equal(src_default, "index");
 assert.equal(foo_import_default, "foo");
 
-//#endregion
 export { src_default as default };
 ```
 ### diff

@@ -24,6 +24,11 @@ nestedScope();
 ```js
 import assert from "node:assert";
 
+//#region rolldown:runtime
+var __getOwnPropNames = Object.getOwnPropertyNames;
+var __commonJS = (cb, mod) => function() {
+	return mod || (0, cb[__getOwnPropNames(cb)[0]])((mod = { exports: {} }).exports, mod), mod.exports;
+};
 
 //#region foo.js
 var require_foo = __commonJS({ "foo.js"(exports, module) {
@@ -32,7 +37,6 @@ var require_foo = __commonJS({ "foo.js"(exports, module) {
 	};
 } });
 
-//#endregion
 //#region entry.js
 function nestedScope() {
 	const fn = require_foo();
@@ -40,14 +44,24 @@ function nestedScope() {
 }
 nestedScope();
 
-//#endregion
 ```
 ### diff
 ```diff
 ===================================================================
 --- esbuild	/out.js
 +++ rolldown	entry.js
-@@ -6,7 +6,7 @@
+@@ -1,4 +1,10 @@
++var __getOwnPropNames = Object.getOwnPropertyNames;
++var __commonJS = (cb, mod) => function () {
++    return (mod || (0, cb[__getOwnPropNames(cb)[0]])((mod = {
++        exports: {}
++    }).exports, mod), mod.exports);
++};
+ var require_foo = __commonJS({
+     "foo.js"(exports, module) {
+         module.exports = function () {
+             return 123;
+@@ -6,7 +12,7 @@
      }
  });
  function nestedScope() {

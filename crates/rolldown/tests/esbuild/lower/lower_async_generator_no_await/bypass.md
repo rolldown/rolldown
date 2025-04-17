@@ -359,7 +359,6 @@ function _usingCtx() {
 	};
 }
 
-//#endregion
 //#region entry.ts
 async function* foo() {
 	try {
@@ -476,14 +475,13 @@ Foo = class {
 	}
 };
 
-//#endregion
 ```
 ### diff
 ```diff
 ===================================================================
 --- esbuild	/out/entry.js
 +++ rolldown	entry.js
-@@ -1,295 +1,175 @@
+@@ -1,295 +1,172 @@
 -function foo() {
 -  return __asyncGenerator(this, null, function* () {
 -    var _stack2 = [];
@@ -645,7 +643,6 @@ Foo = class {
 -    }
 -  });
 +
-+//#endregion
 +//#region entry.ts
 +async function* foo() {
 +	try {
@@ -947,9 +944,6 @@ Foo = class {
 -    }
 -  });
 -}
-\ No newline at end of file
-+
-+//#endregion
 \ No newline at end of file
 
 ```

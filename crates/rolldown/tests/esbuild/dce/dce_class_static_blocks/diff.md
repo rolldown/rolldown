@@ -59,7 +59,6 @@ var D_keep = class {
 	}
 };
 
-//#endregion
 ```
 ### diff
 ```diff

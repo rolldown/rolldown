@@ -30,7 +30,6 @@
 	secondImportantSideEffect(g());
 })();
 
-//#endregion
 ```
 ### diff
 ```diff

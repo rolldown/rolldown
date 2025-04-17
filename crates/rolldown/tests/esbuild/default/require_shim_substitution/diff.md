@@ -31,13 +31,21 @@ console.log([
 ### rolldown
 ```js
 
+//#region rolldown:runtime
+var __getOwnPropNames = Object.getOwnPropertyNames;
+var __commonJS = (cb, mod) => function() {
+	return mod || (0, cb[__getOwnPropNames(cb)[0]])((mod = { exports: {} }).exports, mod), mod.exports;
+};
+var __require = /* @__PURE__ */ ((x) => typeof require !== "undefined" ? require : typeof Proxy !== "undefined" ? new Proxy(x, { get: (a, b) => (typeof require !== "undefined" ? require : a)[b] }) : x)(function(x) {
+	if (typeof require !== "undefined") return require.apply(this, arguments);
+	throw Error("Calling `require` for \"" + x + "\" in an environment that doesn't expose the `require` function.");
+});
 
 //#region example.json
 var require_example = __commonJS({ "example.json"(exports, module) {
 	module.exports = { "works": true };
 } });
 
-//#endregion
 //#region entry.js
 var require_entry = __commonJS({ "entry.js"(exports, module) {
 	console.log([
@@ -56,7 +64,6 @@ var require_entry = __commonJS({ "entry.js"(exports, module) {
 	]);
 } });
 
-//#endregion
 export default require_entry();
 
 ```
@@ -65,7 +72,19 @@ export default require_entry();
 ===================================================================
 --- esbuild	/out/entry.js
 +++ rolldown	entry.js
-@@ -1,12 +1,15 @@
+@@ -1,12 +1,27 @@
++var __getOwnPropNames = Object.getOwnPropertyNames;
++var __commonJS = (cb, mod) => function () {
++    return (mod || (0, cb[__getOwnPropNames(cb)[0]])((mod = {
++        exports: {}
++    }).exports, mod), mod.exports);
++};
++var __require = (x => typeof require !== "undefined" ? require : typeof Proxy !== "undefined" ? new Proxy(x, {
++    get: (a, b) => (typeof require !== "undefined" ? require : a)[b]
++}) : x)(function (x) {
++    if (typeof require !== "undefined") return require.apply(this, arguments);
++    throw Error("Calling `require` for \"" + x + "\" in an environment that doesn't expose the `require` function.");
++});
  var require_example = __commonJS({
      "example.json"(exports, module) {
          module.exports = {

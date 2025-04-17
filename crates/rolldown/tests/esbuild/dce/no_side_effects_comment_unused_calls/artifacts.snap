@@ -19,7 +19,6 @@ onlyKeepThisIdentifier;
 x(/* @__PURE__ */ f("keepThisCall"));
 x(/* @__PURE__ */ g("keepThisCall"));
 
-//#endregion
 ```
 ## stmt-export-default-fn.js
 
@@ -33,7 +32,6 @@ function f(y) {
 onlyKeepThisIdentifier;
 x(/* @__PURE__ */ f("keepThisCall"));
 
-//#endregion
 export { f as default };
 ```
 ## stmt-fn.js
@@ -54,7 +52,6 @@ onlyKeepThisIdentifier;
 x(/* @__PURE__ */ f("keepThisCall"));
 x(/* @__PURE__ */ g("keepThisCall"));
 
-//#endregion
 ```
 ## stmt-local.js
 
@@ -72,5 +69,4 @@ onlyKeepThisIdentifier;
 x(/* @__PURE__ */ f("keepThisCall"));
 x(/* @__PURE__ */ g("keepThisCall"));
 
-//#endregion
 ```

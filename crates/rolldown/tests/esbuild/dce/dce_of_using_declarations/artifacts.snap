@@ -1,6 +1,5 @@
 ---
 source: crates/rolldown_testing/src/integration_test.rs
-snapshot_kind: text
 ---
 # Assets
 
@@ -22,5 +21,4 @@ using undef_keep = void 0;
 await using await_undef_keep = void 0;
 console.log(null_keep, undef_keep);
 
-//#endregion
 ```

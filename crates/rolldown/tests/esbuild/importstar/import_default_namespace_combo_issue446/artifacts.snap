@@ -1,6 +1,5 @@
 ---
 source: crates/rolldown_testing/src/integration_test.rs
-snapshot_kind: text
 ---
 # warnings
 
@@ -111,7 +110,6 @@ import def from "external";
 //#region external-def.js
 console.log(def, ns.def);
 
-//#endregion
 ```
 ## external-default.js
 
@@ -122,7 +120,6 @@ import def from "external";
 //#region external-default.js
 console.log(def, ns.default);
 
-//#endregion
 ```
 ## external-default2.js
 
@@ -132,7 +129,6 @@ import def from "external";
 //#region external-default2.js
 console.log(def, def);
 
-//#endregion
 ```
 ## external-ns-def.js
 
@@ -143,7 +139,6 @@ import def from "external";
 //#region external-ns-def.js
 console.log(def, ns, ns.def);
 
-//#endregion
 ```
 ## external-ns-default.js
 
@@ -154,7 +149,6 @@ import def from "external";
 //#region external-ns-default.js
 console.log(def, ns, ns.default);
 
-//#endregion
 ```
 ## external-ns.js
 
@@ -165,7 +159,6 @@ import def from "external";
 //#region external-ns.js
 console.log(def, ns);
 
-//#endregion
 ```
 ## internal-def.js
 
@@ -175,7 +168,6 @@ import { internal_default } from "./internal.js";
 //#region internal-def.js
 console.log(internal_default, void 0);
 
-//#endregion
 ```
 ## internal-default.js
 
@@ -185,7 +177,6 @@ import { internal_default } from "./internal.js";
 //#region internal-default.js
 console.log(internal_default, internal_default);
 
-//#endregion
 ```
 ## internal-default2.js
 
@@ -195,7 +186,6 @@ import { internal_default } from "./internal.js";
 //#region internal-default2.js
 console.log(internal_default, internal_default);
 
-//#endregion
 ```
 ## internal-ns-def.js
 
@@ -205,7 +195,6 @@ import { internal_default, internal_exports } from "./internal.js";
 //#region internal-ns-def.js
 console.log(internal_default, internal_exports, void 0);
 
-//#endregion
 ```
 ## internal-ns-default.js
 
@@ -215,7 +204,6 @@ import { internal_default, internal_exports } from "./internal.js";
 //#region internal-ns-default.js
 console.log(internal_default, internal_exports, internal_default);
 
-//#endregion
 ```
 ## internal-ns.js
 
@@ -225,18 +213,24 @@ import { internal_default, internal_exports } from "./internal.js";
 //#region internal-ns.js
 console.log(internal_default, internal_exports);
 
-//#endregion
 ```
 ## internal.js
 
 ```js
 
+//#region rolldown:runtime
+var __defProp = Object.defineProperty;
+var __export = (target, all) => {
+	for (var name in all) __defProp(target, name, {
+		get: all[name],
+		enumerable: true
+	});
+};
 
 //#region internal.js
 var internal_exports = {};
 __export(internal_exports, { default: () => internal_default });
 var internal_default = 123;
 
-//#endregion
 export { internal_default, internal_exports };
 ```

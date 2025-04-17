@@ -1,6 +1,5 @@
 ---
 source: crates/rolldown_testing/src/integration_test.rs
-snapshot_kind: text
 ---
 # warnings
 
@@ -39,11 +38,9 @@ import redBook from "pkg/books/red";
 //#region node_modules/pkg/good-apples/green.js
 var green_default = "🍏";
 
-//#endregion
 //#region node_modules/pkg/good-books/green-book.js
 var green_book_default = "📗";
 
-//#endregion
 //#region src/entry.js
 console.log({
 	redApple,
@@ -52,5 +49,4 @@ console.log({
 	greenBook: green_book_default
 });
 
-//#endregion
 ```

@@ -13,11 +13,9 @@ console.log("unused import");
 //#region node_modules/demo-pkg/index-module.js
 console.log("TEST FAILED");
 
-//#endregion
 //#region src/entry.js
 console.log("unused import");
 
-//#endregion
 ```
 ### diff
 ```diff

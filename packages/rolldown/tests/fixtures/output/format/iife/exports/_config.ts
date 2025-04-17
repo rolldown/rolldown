@@ -52,13 +52,11 @@ export default defineTest({
       	enumerable: true
       }) : target, mod));
 
-      //#endregion
       node_path = __toESM(node_path);
 
       //#region main.js
       var main_default = node_path.join;
 
-      //#endregion
       exports.default = main_default
       return exports;
       })({}, node_path);"

@@ -23,5 +23,4 @@ with(x) {
 	checkPrecedence(1 / Foo.NAN, 1 / Foo.POS_INF, 1 / Foo.NEG_INF);
 }
 
-//#endregion
 ```

@@ -10,6 +10,11 @@ var t=e(r=>{r.foo=function(){return 123}});var n=e((l,c)=>{c.exports={test:!0}})
 ### rolldown
 ```js
 
+//#region rolldown:runtime
+var __getOwnPropNames = Object.getOwnPropertyNames;
+var __commonJS = (cb, mod) => function() {
+	return mod || (0, cb[__getOwnPropNames(cb)[0]])((mod = { exports: {} }).exports, mod), mod.exports;
+};
 
 //#region a.js
 var require_a = __commonJS({ "a.js"(exports) {
@@ -18,29 +23,32 @@ var require_a = __commonJS({ "a.js"(exports) {
 	};
 } });
 
-//#endregion
 //#region j.json
 var require_j = __commonJS({ "j.json"(exports, module) {
 	module.exports = { "test": true };
 } });
 
-//#endregion
 //#region entry.js
 const { foo } = require_a();
 console.log(foo(), require_j());
 
-//#endregion
 ```
 ### diff
 ```diff
 ===================================================================
 --- esbuild	/out.js
 +++ rolldown	entry.js
-@@ -1,12 +1,16 @@
+@@ -1,12 +1,22 @@
 -var t = e(r => {
 -    r.foo = function () {
 -        return 123;
 -    };
++var __getOwnPropNames = Object.getOwnPropertyNames;
++var __commonJS = (cb, mod) => function () {
++    return (mod || (0, cb[__getOwnPropNames(cb)[0]])((mod = {
++        exports: {}
++    }).exports, mod), mod.exports);
++};
 +var require_a = __commonJS({
 +    "a.js"(exports) {
 +        exports.foo = function () {

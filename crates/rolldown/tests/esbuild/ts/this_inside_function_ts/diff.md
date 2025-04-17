@@ -97,7 +97,6 @@ if (nested) {
 	new Bar(bar(objBar));
 }
 
-//#endregion
 ```
 ### diff
 ```diff

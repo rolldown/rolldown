@@ -50,7 +50,6 @@ ok(1, 2, 3, 2 .baz, 1 .bar);
 	doNotSubstitute(this, this.foo, this.foo.bar, this.foo.baz, this.bar);
 })();
 
-//#endregion
 ```
 ### diff
 ```diff

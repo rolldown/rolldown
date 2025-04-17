@@ -12,7 +12,6 @@ import { require_shared } from "./shared.js";
 const { foo } = require_shared();
 console.log(foo);
 
-//#endregion
 ```
 ## b.js
 
@@ -23,18 +22,21 @@ import { require_shared } from "./shared.js";
 const { foo } = require_shared();
 console.log(foo);
 
-//#endregion
 ```
 ## shared.js
 
 ```js
 
+//#region rolldown:runtime
+var __getOwnPropNames = Object.getOwnPropertyNames;
+var __commonJS = (cb, mod) => function() {
+	return mod || (0, cb[__getOwnPropNames(cb)[0]])((mod = { exports: {} }).exports, mod), mod.exports;
+};
 
 //#region shared.js
 var require_shared = __commonJS({ "shared.js"(exports) {
 	exports.foo = 123;
 } });
 
-//#endregion
 export { require_shared };
 ```

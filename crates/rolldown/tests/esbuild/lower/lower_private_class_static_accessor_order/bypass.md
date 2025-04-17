@@ -48,7 +48,6 @@ var FooThis = class {
 };
 assert.equal(FooThis.bar, 123);
 
-//#endregion
 ```
 ### diff
 ```diff

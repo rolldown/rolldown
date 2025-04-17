@@ -24,9 +24,9 @@ export default defineTest({
           fn()
           if (chunk.fileName.includes('entry')) {
             expect(Object.values(chunk.modules)[0].code).toBe(
-              '//#region entry.js\nconsole.log();\n\n//#endregion',
+              '//#region entry.js\nconsole.log();\n',
             )
-            expect(Object.values(chunk.modules)[0].renderedLength).toBe(47)
+            expect(Object.values(chunk.modules)[0].renderedLength).toBe(34)
             return 'entry-hash'
           }
         },
@@ -40,17 +40,17 @@ export default defineTest({
       switch (chunk.facadeModuleId) {
         case path.join(__dirname, 'main.js'):
           isComposingJs
-            ? expect(chunk.fileName).toMatchInlineSnapshot(`"main-z7Zg_USA.js"`)
-            : expect(chunk.fileName).toMatchInlineSnapshot(`"main-z7Zg_USA.js"`)
+            ? expect(chunk.fileName).toMatchInlineSnapshot(`"main-cnQkfbOs.js"`)
+            : expect(chunk.fileName).toMatchInlineSnapshot(`"main-cnQkfbOs.js"`)
           break
 
         case path.join(__dirname, 'entry.js'):
           isComposingJs
             ? expect(chunk.fileName).toMatchInlineSnapshot(
-                `"entry-DCDr1Iu-.js"`,
+                `"entry-CErzYP8F.js"`,
               )
             : expect(chunk.fileName).toMatchInlineSnapshot(
-                `"entry-DCDr1Iu-.js"`,
+                `"entry-CErzYP8F.js"`,
               )
           break
 

@@ -31,7 +31,6 @@ let keepMe4 = /* @__PURE__ */ keepMe3();
 let keepMe5 = pure();
 let keepMe6 = some.fn();
 
-//#endregion
 ```
 ### diff
 ```diff

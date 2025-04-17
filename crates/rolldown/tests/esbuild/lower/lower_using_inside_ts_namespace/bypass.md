@@ -77,7 +77,6 @@ function _usingCtx() {
 	};
 }
 
-//#endregion
 //#region entry.ts
 let ns;
 (function(_ns) {
@@ -93,7 +92,6 @@ let ns;
 	}
 })(ns || (ns = {}));
 
-//#endregion
 ```
 ### diff
 ```diff

@@ -142,6 +142,18 @@ init_h();
 ### rolldown
 ```js
 
+//#region rolldown:runtime
+var __defProp = Object.defineProperty;
+var __getOwnPropNames = Object.getOwnPropertyNames;
+var __esm = (fn, res) => function() {
+	return fn && (res = (0, fn[__getOwnPropNames(fn)[0]])(fn = 0)), res;
+};
+var __export = (target, all) => {
+	for (var name in all) __defProp(target, name, {
+		get: all[name],
+		enumerable: true
+	});
+};
 
 //#region a.js
 var abc;
@@ -149,7 +161,6 @@ var init_a = __esm({ "a.js"() {
 	abc = void 0;
 } });
 
-//#endregion
 //#region b.js
 var b_exports = {};
 __export(b_exports, { xyz: () => xyz });
@@ -158,7 +169,6 @@ var init_b = __esm({ "b.js"() {
 	xyz = null;
 } });
 
-//#endregion
 //#region commonjs.js
 var commonjs_exports = {};
 __export(commonjs_exports, {
@@ -184,7 +194,6 @@ var init_commonjs = __esm({ "commonjs.js"() {
 	Class = class {};
 } });
 
-//#endregion
 //#region c.js
 var c_exports = {};
 __export(c_exports, { default: () => c_default });
@@ -193,7 +202,6 @@ var init_c = __esm({ "c.js"() {
 	c_default = class {};
 } });
 
-//#endregion
 //#region d.js
 var d_exports = {};
 __export(d_exports, { default: () => Foo });
@@ -203,14 +211,12 @@ var init_d = __esm({ "d.js"() {
 	Foo.prop = 123;
 } });
 
-//#endregion
 //#region e.js
 var e_exports = {};
 __export(e_exports, { default: () => e_default });
 function e_default() {}
 var init_e = __esm({ "e.js"() {} });
 
-//#endregion
 //#region f.js
 var f_exports = {};
 __export(f_exports, { default: () => foo$1 });
@@ -219,14 +225,12 @@ var init_f = __esm({ "f.js"() {
 	foo$1.prop = 123;
 } });
 
-//#endregion
 //#region g.js
 var g_exports = {};
 __export(g_exports, { default: () => g_default });
 async function g_default() {}
 var init_g = __esm({ "g.js"() {} });
 
-//#endregion
 //#region h.js
 var h_exports = {};
 __export(h_exports, { default: () => foo });
@@ -235,7 +239,6 @@ var init_h = __esm({ "h.js"() {
 	foo.prop = 123;
 } });
 
-//#endregion
 //#region entry.js
 init_commonjs();
 init_c();
@@ -245,14 +248,29 @@ init_f();
 init_g();
 init_h();
 
-//#endregion
 ```
 ### diff
 ```diff
 ===================================================================
 --- esbuild	/out.js
 +++ rolldown	entry.js
-@@ -69,14 +69,14 @@
+@@ -1,4 +1,15 @@
++var __defProp = Object.defineProperty;
++var __getOwnPropNames = Object.getOwnPropertyNames;
++var __esm = (fn, res) => function () {
++    return (fn && (res = (0, fn[__getOwnPropNames(fn)[0]])(fn = 0)), res);
++};
++var __export = (target, all) => {
++    for (var name in all) __defProp(target, name, {
++        get: all[name],
++        enumerable: true
++    });
++};
+ var abc;
+ var init_a = __esm({
+     "a.js"() {
+         abc = void 0;
+@@ -69,14 +80,14 @@
      "e.js"() {}
  });
  var f_exports = {};
@@ -270,7 +288,7 @@ init_h();
  });
  var g_exports = {};
  __export(g_exports, {
-@@ -87,14 +87,14 @@
+@@ -87,14 +98,14 @@
      "g.js"() {}
  });
  var h_exports = {};

@@ -1,6 +1,5 @@
 ---
 source: crates/rolldown_testing/src/integration_test.rs
-snapshot_kind: text
 ---
 # warnings
 
@@ -23,16 +22,22 @@ snapshot_kind: text
 ```js
 import assert from "node:assert";
 
+//#region rolldown:runtime
+var __defProp = Object.defineProperty;
+var __export = (target, all) => {
+	for (var name in all) __defProp(target, name, {
+		get: all[name],
+		enumerable: true
+	});
+};
 
 //#region bar.js
 var bar_exports = {};
 __export(bar_exports, { x: () => x });
 const x = 123;
 
-//#endregion
 //#region entry.js
 assert.deepEqual(bar_exports, { x: 123 });
 assert.equal(void 0, void 0);
 
-//#endregion
 ```

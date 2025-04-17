@@ -11,7 +11,6 @@ import { shared_default } from "./shared.js";
 //#region e00.js
 console.log(shared_default);
 
-//#endregion
 ```
 ## e01.js
 
@@ -21,7 +20,6 @@ import { shared_default } from "./shared.js";
 //#region e01.js
 console.log(shared_default);
 
-//#endregion
 ```
 ## e02.js
 
@@ -31,7 +29,6 @@ import { shared_default } from "./shared.js";
 //#region e02.js
 console.log(shared_default);
 
-//#endregion
 ```
 ## e03.js
 
@@ -41,7 +38,6 @@ import { shared_default } from "./shared.js";
 //#region e03.js
 console.log(shared_default);
 
-//#endregion
 ```
 ## e04.js
 
@@ -51,7 +47,6 @@ import { shared_default } from "./shared.js";
 //#region e04.js
 console.log(shared_default);
 
-//#endregion
 ```
 ## e05.js
 
@@ -61,7 +56,6 @@ import { shared_default } from "./shared.js";
 //#region e05.js
 console.log(shared_default);
 
-//#endregion
 ```
 ## e06.js
 
@@ -71,7 +65,6 @@ import { shared_default } from "./shared.js";
 //#region e06.js
 console.log(shared_default);
 
-//#endregion
 ```
 ## e07.js
 
@@ -81,7 +74,6 @@ import { shared_default } from "./shared.js";
 //#region e07.js
 console.log(shared_default);
 
-//#endregion
 ```
 ## e08.js
 
@@ -91,7 +83,6 @@ import { shared_default } from "./shared.js";
 //#region e08.js
 console.log(shared_default);
 
-//#endregion
 ```
 ## e09.js
 
@@ -101,7 +92,6 @@ import { shared_default } from "./shared.js";
 //#region e09.js
 console.log(shared_default);
 
-//#endregion
 ```
 ## e10.js
 
@@ -111,7 +101,6 @@ import { shared_default } from "./shared.js";
 //#region e10.js
 console.log(shared_default);
 
-//#endregion
 ```
 ## e11.js
 
@@ -121,7 +110,6 @@ import { shared_default } from "./shared.js";
 //#region e11.js
 console.log(shared_default);
 
-//#endregion
 ```
 ## e12.js
 
@@ -131,7 +119,6 @@ import { shared_default } from "./shared.js";
 //#region e12.js
 console.log(shared_default);
 
-//#endregion
 ```
 ## e13.js
 
@@ -141,7 +128,6 @@ import { shared_default } from "./shared.js";
 //#region e13.js
 console.log(shared_default);
 
-//#endregion
 ```
 ## e14.js
 
@@ -151,7 +137,6 @@ import { shared_default } from "./shared.js";
 //#region e14.js
 console.log(shared_default);
 
-//#endregion
 ```
 ## e15.js
 
@@ -161,7 +146,6 @@ import { shared_default } from "./shared.js";
 //#region e15.js
 console.log(shared_default);
 
-//#endregion
 ```
 ## e16.js
 
@@ -171,7 +155,6 @@ import { shared_default } from "./shared.js";
 //#region e16.js
 console.log(shared_default);
 
-//#endregion
 ```
 ## e17.js
 
@@ -181,7 +164,6 @@ import { shared_default } from "./shared.js";
 //#region e17.js
 console.log(shared_default);
 
-//#endregion
 ```
 ## e18.js
 
@@ -191,7 +173,6 @@ import { shared_default } from "./shared.js";
 //#region e18.js
 console.log(shared_default);
 
-//#endregion
 ```
 ## e19.js
 
@@ -201,7 +182,6 @@ import { shared_default } from "./shared.js";
 //#region e19.js
 console.log(shared_default);
 
-//#endregion
 ```
 ## e20.js
 
@@ -211,7 +191,6 @@ import { shared_default } from "./shared.js";
 //#region e20.js
 console.log(shared_default);
 
-//#endregion
 ```
 ## e21.js
 
@@ -221,7 +200,6 @@ import { shared_default } from "./shared.js";
 //#region e21.js
 console.log(shared_default);
 
-//#endregion
 ```
 ## e22.js
 
@@ -231,7 +209,6 @@ import { shared_default } from "./shared.js";
 //#region e22.js
 console.log(shared_default);
 
-//#endregion
 ```
 ## e23.js
 
@@ -241,7 +218,6 @@ import { shared_default } from "./shared.js";
 //#region e23.js
 console.log(shared_default);
 
-//#endregion
 ```
 ## e24.js
 
@@ -251,7 +227,6 @@ import { shared_default } from "./shared.js";
 //#region e24.js
 console.log(shared_default);
 
-//#endregion
 ```
 ## e25.js
 
@@ -261,7 +236,6 @@ import { shared_default } from "./shared.js";
 //#region e25.js
 console.log(shared_default);
 
-//#endregion
 ```
 ## e26.js
 
@@ -271,7 +245,6 @@ import { shared_default } from "./shared.js";
 //#region e26.js
 console.log(shared_default);
 
-//#endregion
 ```
 ## e27.js
 
@@ -281,7 +254,6 @@ import { shared_default } from "./shared.js";
 //#region e27.js
 console.log(shared_default);
 
-//#endregion
 ```
 ## e28.js
 
@@ -291,7 +263,6 @@ import { shared_default } from "./shared.js";
 //#region e28.js
 console.log(shared_default);
 
-//#endregion
 ```
 ## e29.js
 
@@ -301,7 +272,6 @@ import { shared_default } from "./shared.js";
 //#region e29.js
 console.log(shared_default);
 
-//#endregion
 ```
 ## e30.js
 
@@ -311,7 +281,6 @@ import { shared_default } from "./shared.js";
 //#region e30.js
 console.log(shared_default);
 
-//#endregion
 ```
 ## e31.js
 
@@ -321,7 +290,6 @@ import { shared_default } from "./shared.js";
 //#region e31.js
 console.log(shared_default);
 
-//#endregion
 ```
 ## e32.js
 
@@ -331,7 +299,6 @@ import { shared_default } from "./shared.js";
 //#region e32.js
 console.log(shared_default);
 
-//#endregion
 ```
 ## e33.js
 
@@ -341,7 +308,6 @@ import { shared_default } from "./shared.js";
 //#region e33.js
 console.log(shared_default);
 
-//#endregion
 ```
 ## e34.js
 
@@ -351,7 +317,6 @@ import { shared_default } from "./shared.js";
 //#region e34.js
 console.log(shared_default);
 
-//#endregion
 ```
 ## e35.js
 
@@ -361,7 +326,6 @@ import { shared_default } from "./shared.js";
 //#region e35.js
 console.log(shared_default);
 
-//#endregion
 ```
 ## e36.js
 
@@ -371,7 +335,6 @@ import { shared_default } from "./shared.js";
 //#region e36.js
 console.log(shared_default);
 
-//#endregion
 ```
 ## e37.js
 
@@ -381,7 +344,6 @@ import { shared_default } from "./shared.js";
 //#region e37.js
 console.log(shared_default);
 
-//#endregion
 ```
 ## e38.js
 
@@ -391,7 +353,6 @@ import { shared_default } from "./shared.js";
 //#region e38.js
 console.log(shared_default);
 
-//#endregion
 ```
 ## e39.js
 
@@ -401,7 +362,6 @@ import { shared_default } from "./shared.js";
 //#region e39.js
 console.log(shared_default);
 
-//#endregion
 ```
 ## shared.js
 
@@ -410,6 +370,5 @@ console.log(shared_default);
 //#region shared.js
 var shared_default = 123;
 
-//#endregion
 export { shared_default };
 ```

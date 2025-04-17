@@ -14,7 +14,6 @@ console.log(foo);
 let foo = 234;
 console.log(foo);
 
-//#endregion
 ```
 ### diff
 ```diff

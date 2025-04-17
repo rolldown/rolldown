@@ -31,7 +31,6 @@ function after() {
 	console.log(Foo.FOO);
 }
 
-//#endregion
 export { after, before };
 ```
 ### diff

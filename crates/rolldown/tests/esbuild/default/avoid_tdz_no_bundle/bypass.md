@@ -25,7 +25,6 @@ console.log(foo);
 var Bar = class {};
 let bar = 123;
 
-//#endregion
 export { Bar, bar };
 ```
 ### diff

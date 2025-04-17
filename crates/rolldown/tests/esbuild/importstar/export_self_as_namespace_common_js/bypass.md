@@ -16,6 +16,14 @@ var foo = 123;
 ### rolldown
 ```js
 "use strict";
+//#region rolldown:runtime
+var __defProp = Object.defineProperty;
+var __export = (target, all) => {
+	for (var name in all) __defProp(target, name, {
+		get: all[name],
+		enumerable: true
+	});
+};
 
 
 //#region entry.js
@@ -26,7 +34,6 @@ __export(entry_exports, {
 });
 const foo = 123;
 
-//#endregion
 exports.foo = foo
 Object.defineProperty(exports, 'ns', {
   enumerable: true,
@@ -40,7 +47,15 @@ Object.defineProperty(exports, 'ns', {
 ===================================================================
 --- esbuild	/out.js
 +++ rolldown	entry.js
-@@ -2,6 +2,12 @@
+@@ -1,7 +1,20 @@
++var __defProp = Object.defineProperty;
++var __export = (target, all) => {
++    for (var name in all) __defProp(target, name, {
++        get: all[name],
++        enumerable: true
++    });
++};
+ var entry_exports = {};
  __export(entry_exports, {
      foo: () => foo,
      ns: () => entry_exports

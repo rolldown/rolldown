@@ -10,7 +10,6 @@ source: crates/rolldown_testing/src/integration_test.rs
 //#region assets/some.file
 stuff;
 
-//#endregion
 ```
 ## src_entry.js
 
@@ -19,5 +18,4 @@ stuff;
 //#region src/entry.js
 console.log("entry");
 
-//#endregion
 ```

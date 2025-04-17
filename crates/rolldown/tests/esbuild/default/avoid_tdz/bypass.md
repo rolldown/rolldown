@@ -31,7 +31,6 @@ assert(foo instanceof Foo, true);
 var Bar = class {};
 let bar = 123;
 
-//#endregion
 export { Bar, bar };
 ```
 ### diff

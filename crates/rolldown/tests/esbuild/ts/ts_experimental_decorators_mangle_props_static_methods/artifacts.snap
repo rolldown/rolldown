@@ -17,5 +17,4 @@ var Foo = class {
 	@dec(6) static ["prop6_"]() {}
 };
 
-//#endregion
 ```

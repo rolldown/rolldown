@@ -16,7 +16,6 @@ export {
 //#region warning2.ts
 var foo = void 0 || (void 0).foo;
 
-//#endregion
 export { foo };
 ```
 ### diff
@@ -45,7 +44,6 @@ export {
 //#region silent1.ts
 var foo = void 0 && (void 0).foo;
 
-//#endregion
 export { foo };
 ```
 ### diff
@@ -74,7 +72,6 @@ export {
 //#region silent2.ts
 var foo = void 0 && (() => (void 0).foo);
 
-//#endregion
 export { foo };
 ```
 ### diff

@@ -26,6 +26,11 @@ var index;
 ### rolldown
 ```js
 
+//#region rolldown:runtime
+var __getOwnPropNames = Object.getOwnPropertyNames;
+var __commonJS = (cb, mod) => function() {
+	return mod || (0, cb[__getOwnPropNames(cb)[0]])((mod = { exports: {} }).exports, mod), mod.exports;
+};
 
 //#region node_modules/component-indexof/index.js
 var require_component_indexof = __commonJS({ "node_modules/component-indexof/index.js"(exports, module) {
@@ -34,7 +39,6 @@ var require_component_indexof = __commonJS({ "node_modules/component-indexof/ind
 	};
 } });
 
-//#endregion
 //#region node_modules/component-classes/index.js
 try {
 	var index = require_component_indexof();
@@ -42,14 +46,19 @@ try {
 	var index = require_component_indexof();
 }
 
-//#endregion
 ```
 ### diff
 ```diff
 ===================================================================
 --- esbuild	/Users/user/project/out.js
 +++ rolldown	entry.js
-@@ -1,13 +1,12 @@
+@@ -1,13 +1,18 @@
++var __getOwnPropNames = Object.getOwnPropertyNames;
++var __commonJS = (cb, mod) => function () {
++    return (mod || (0, cb[__getOwnPropNames(cb)[0]])((mod = {
++        exports: {}
++    }).exports, mod), mod.exports);
++};
  var require_component_indexof = __commonJS({
 -    "Users/user/project/node_modules/component-indexof/index.js"(exports, module) {
 +    "node_modules/component-indexof/index.js"(exports, module) {

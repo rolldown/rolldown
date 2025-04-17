@@ -21,29 +21,37 @@ render(/* @__PURE__ */ React.createElement(Button, null));
 ### rolldown
 ```js
 
+//#region rolldown:runtime
+var __getOwnPropNames = Object.getOwnPropertyNames;
+var __commonJS = (cb, mod) => function() {
+	return mod || (0, cb[__getOwnPropNames(cb)[0]])((mod = { exports: {} }).exports, mod), mod.exports;
+};
 
 //#region node_modules/pkg/button.css
 var require_button = __commonJS({ "node_modules/pkg/button.css"(exports, module) {
 	module.exports = {};
 } });
 
-//#endregion
 //#region node_modules/pkg/components.jsx
 require_button();
 const Button = () => /* @__PURE__ */ React.createElement("button", null);
 
-//#endregion
 //#region test.jsx
 render(/* @__PURE__ */ React.createElement(Button, null));
 
-//#endregion
 ```
 ### diff
 ```diff
 ===================================================================
 --- esbuild	/out/test.js
 +++ rolldown	test.js
-@@ -1,6 +1,6 @@
+@@ -1,6 +1,12 @@
++var __getOwnPropNames = Object.getOwnPropertyNames;
++var __commonJS = (cb, mod) => function () {
++    return (mod || (0, cb[__getOwnPropNames(cb)[0]])((mod = {
++        exports: {}
++    }).exports, mod), mod.exports);
++};
  var require_button = __commonJS({
 -    "project/node_modules/pkg/button.css"(exports, module) {
 +    "node_modules/pkg/button.css"(exports, module) {

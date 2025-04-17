@@ -48,22 +48,27 @@
 ```js
 (function() {
 
+//#region rolldown:runtime
+var __getOwnPropNames = Object.getOwnPropertyNames;
+var __esm = (fn, res) => function() {
+	return fn && (res = (0, fn[__getOwnPropNames(fn)[0]])(fn = 0)), res;
+};
+var __commonJS = (cb, mod) => function() {
+	return mod || (0, cb[__getOwnPropNames(cb)[0]])((mod = { exports: {} }).exports, mod), mod.exports;
+};
 
 
 //#region c.js
 var require_c = __commonJS({ "c.js"() {} });
 
-//#endregion
 //#region b.js
 var b_exports = {};
 var init_b = __esm({ "b.js"() {} });
 
-//#endregion
 //#region a.js
 var a_exports = {};
 var init_a = __esm({ "a.js"() {} });
 
-//#endregion
 //#region entry.js
 var require_entry = __commonJS({ "entry.js"() {
 	init_a();
@@ -72,7 +77,6 @@ var require_entry = __commonJS({ "entry.js"() {
 	require_entry();
 } });
 
-//#endregion
 return require_entry();
 
 })();
@@ -82,7 +86,7 @@ return require_entry();
 ===================================================================
 --- esbuild	/out.js
 +++ rolldown	entry.js
-@@ -1,31 +1,22 @@
+@@ -1,31 +1,31 @@
 -(() => {
 -    var c_exports = {};
 -    var init_c = __esm({
@@ -90,6 +94,15 @@ return require_entry();
 -            if (false) for (let x of y) ;
 -        }
 +(function () {
++    var __getOwnPropNames = Object.getOwnPropertyNames;
++    var __esm = (fn, res) => function () {
++        return (fn && (res = (0, fn[__getOwnPropNames(fn)[0]])(fn = 0)), res);
++    };
++    var __commonJS = (cb, mod) => function () {
++        return (mod || (0, cb[__getOwnPropNames(cb)[0]])((mod = {
++            exports: {}
++        }).exports, mod), mod.exports);
++    };
 +    var require_c = __commonJS({
 +        "c.js"() {}
      });

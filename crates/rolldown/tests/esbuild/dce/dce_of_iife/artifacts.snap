@@ -30,7 +30,6 @@ use(isNotPure);
 	} };
 })();
 
-//#endregion
 ```
 ## remove-these.js
 
@@ -42,5 +41,4 @@ var someVar;
 ((x) => {})(someVar);
 var removeThis2 = (() => 123)();
 
-//#endregion
 ```

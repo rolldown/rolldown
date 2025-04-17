@@ -56,6 +56,11 @@ export default require_entry();
 ### rolldown
 ```js
 
+//#region rolldown:runtime
+var __require = /* @__PURE__ */ ((x) => typeof require !== "undefined" ? require : typeof Proxy !== "undefined" ? new Proxy(x, { get: (a, b$1) => (typeof require !== "undefined" ? require : a)[b$1] }) : x)(function(x) {
+	if (typeof require !== "undefined") return require.apply(this, arguments);
+	throw Error("Calling `require` for \"" + x + "\" in an environment that doesn't expose the `require` function.");
+});
 
 //#region entry.js
 __require(tag`./b`);
@@ -77,14 +82,13 @@ try {
 	} catch {}
 })();
 
-//#endregion
 ```
 ### diff
 ```diff
 ===================================================================
 --- esbuild	/out.js
 +++ rolldown	entry.js
-@@ -1,41 +1,18 @@
+@@ -1,41 +1,24 @@
 -var globRequire;
 -var init_ = __esm({
 -    'require("./**/*") in entry.js'() {
@@ -92,7 +96,12 @@ try {
 -            "./entry.js": () => require_entry()
 -        });
 -    }
--});
++var __require = (x => typeof require !== "undefined" ? require : typeof Proxy !== "undefined" ? new Proxy(x, {
++    get: (a, b$1) => (typeof require !== "undefined" ? require : a)[b$1]
++}) : x)(function (x) {
++    if (typeof require !== "undefined") return require.apply(this, arguments);
++    throw Error("Calling `require` for \"" + x + "\" in an environment that doesn't expose the `require` function.");
+ });
 -var globImport;
 -var init_2 = __esm({
 -    'import("./**/*") in entry.js'() {

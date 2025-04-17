@@ -1,6 +1,5 @@
 ---
 source: crates/rolldown_testing/src/integration_test.rs
-snapshot_kind: text
 ---
 # Assets
 
@@ -9,16 +8,19 @@ snapshot_kind: text
 ```js
 import assert from "node:assert";
 
+//#region rolldown:runtime
+var __getOwnPropNames = Object.getOwnPropertyNames;
+var __commonJS = (cb, mod) => function() {
+	return mod || (0, cb[__getOwnPropNames(cb)[0]])((mod = { exports: {} }).exports, mod), mod.exports;
+};
 
 //#region foo.js
 var require_foo = __commonJS({ "foo.js"(exports) {
 	exports.foo = 123;
 } });
 
-//#endregion
 //#region entry.js
 let foo = 234;
 assert.equal(foo, 234);
 
-//#endregion
 ```

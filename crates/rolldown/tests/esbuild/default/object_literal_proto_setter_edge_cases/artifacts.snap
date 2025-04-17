@@ -1,6 +1,5 @@
 ---
 source: crates/rolldown_testing/src/integration_test.rs
-snapshot_kind: text
 ---
 # warnings
 
@@ -43,7 +42,6 @@ function foo() {
 	});
 }
 
-//#endregion
 ```
 ## import-shorthand.js
 
@@ -58,7 +56,6 @@ function foo() {
 	});
 }
 
-//#endregion
 ```
 ## local-normal.js
 
@@ -72,7 +69,6 @@ function foo(__proto__, bar) {
 	});
 }
 
-//#endregion
 ```
 ## local-shorthand.js
 
@@ -89,5 +85,4 @@ function foo(__proto__, bar) {
 	}
 }
 
-//#endregion
 ```

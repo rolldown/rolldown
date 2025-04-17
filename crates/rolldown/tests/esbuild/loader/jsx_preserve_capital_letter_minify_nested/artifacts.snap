@@ -22,5 +22,4 @@ x = () => {
 	return /* @__PURE__ */ jsx(XYYYYY, { "tag-must-start-with-capital-letter": true });
 };
 
-//#endregion
 ```

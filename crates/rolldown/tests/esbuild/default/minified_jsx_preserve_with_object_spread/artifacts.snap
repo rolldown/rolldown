@@ -26,5 +26,4 @@ const obj = {
 Foo, key, value, value;
 Bar, a, b, c, { ...d }, e;
 
-//#endregion
 ```

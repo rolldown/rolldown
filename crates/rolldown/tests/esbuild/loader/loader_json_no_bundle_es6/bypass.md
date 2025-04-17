@@ -23,7 +23,6 @@ var test_default = {
 	"invalid-identifier": invalid_identifier
 };
 
-//#endregion
 export { test_default as default, invalid_identifier as "invalid-identifier", test };
 ```
 ### diff

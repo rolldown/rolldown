@@ -13,7 +13,6 @@ console.log(keep());
 keep(foo());
 keep(1);
 
-//#endregion
 ```
 ## empty-comma.js
 
@@ -29,7 +28,6 @@ DROP(), DROP(), foo();
 DROP(), foo(), DROP();
 foo(), DROP(), DROP();
 
-//#endregion
 ```
 ## empty-cross-module.js
 
@@ -38,12 +36,10 @@ foo(), DROP(), DROP();
 //#region empty-cross-module-def.js
 function DROP() {}
 
-//#endregion
 //#region empty-cross-module.js
 console.log(DROP());
 DROP();
 
-//#endregion
 ```
 ## empty-first.js
 
@@ -60,7 +56,6 @@ console.log(keep());
 keep(foo());
 keep(1);
 
-//#endregion
 ```
 ## empty-generator.js
 
@@ -72,7 +67,6 @@ console.log(keep());
 keep(foo());
 keep(1);
 
-//#endregion
 ```
 ## empty-if-else.js
 
@@ -86,7 +80,6 @@ if (foo) {
 	bar();
 } else DROP();
 
-//#endregion
 ```
 ## empty-last.js
 
@@ -102,7 +95,6 @@ function DROP() {
 console.log(DROP());
 DROP();
 
-//#endregion
 ```
 ## empty.js
 
@@ -121,7 +113,6 @@ DROP(1, foo());
 DROP(1);
 DROP();
 
-//#endregion
 ```
 ## reassign-array.js
 
@@ -134,7 +125,6 @@ console.log(keep(1));
 keep(foo());
 keep(1);
 
-//#endregion
 ```
 ## reassign-div.js
 
@@ -147,7 +137,6 @@ console.log(keep(1));
 keep(foo());
 keep(1);
 
-//#endregion
 ```
 ## reassign-inc.js
 
@@ -160,7 +149,6 @@ console.log(keep(1));
 keep(foo());
 keep(1);
 
-//#endregion
 ```
 ## reassign-object.js
 
@@ -173,7 +161,6 @@ console.log(keep(1));
 keep(foo());
 keep(1);
 
-//#endregion
 ```
 ## reassign.js
 
@@ -186,5 +173,4 @@ console.log(keep());
 keep(foo());
 keep(1);
 
-//#endregion
 ```

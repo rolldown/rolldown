@@ -28,7 +28,6 @@
 "use 3";
 entry();
 
-//#endregion
 })();
 ```
 ### diff

@@ -1,6 +1,5 @@
 ---
 source: crates/rolldown_testing/src/integration_test.rs
-snapshot_kind: text
 ---
 # warnings
 
@@ -41,5 +40,4 @@ try {
 	x = await import("nope2");
 } catch {}
 
-//#endregion
 ```

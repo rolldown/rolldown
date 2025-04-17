@@ -106,7 +106,6 @@ for (let i = 0; i < 3; i++) objs.push({
 	}
 });
 
-//#endregion
 ```
 ### diff
 ```diff

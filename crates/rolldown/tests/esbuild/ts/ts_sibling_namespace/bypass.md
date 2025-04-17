@@ -24,7 +24,6 @@ let x;
 	let z = _x2.z = y;
 })(x || (x = {}));
 
-//#endregion
 export { x };
 ```
 ### diff
@@ -74,7 +73,6 @@ let x;
 	let z = _x2.z = y;
 })(x || (x = {}));
 
-//#endregion
 export { x };
 ```
 ### diff
@@ -126,7 +124,6 @@ let x;
 	let z = _x2.z = y;
 })(x || (x = {}));
 
-//#endregion
 export { x };
 ```
 ### diff
@@ -179,7 +176,6 @@ let x;
 	let z = _x2.z = y;
 })(x || (x = {}));
 
-//#endregion
 export { x };
 ```
 ### diff
@@ -235,7 +231,6 @@ let x;
 	let z = _x2.z = y;
 })(x || (x = {}));
 
-//#endregion
 export { x };
 ```
 ### diff

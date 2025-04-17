@@ -21,12 +21,16 @@ let exported;
 import a from "pkg";
 import b from "./file";
 
+//#region rolldown:runtime
+var __require = /* @__PURE__ */ ((x) => typeof require !== "undefined" ? require : typeof Proxy !== "undefined" ? new Proxy(x, { get: (a$1, b$1) => (typeof require !== "undefined" ? require : a$1)[b$1] }) : x)(function(x) {
+	if (typeof require !== "undefined") return require.apply(this, arguments);
+	throw Error("Calling `require` for \"" + x + "\" in an environment that doesn't expose the `require` function.");
+});
 
 //#region entry.js
 console.log(a, b, __require("pkg2"), __require("./file2"), import("./dynamic"));
 let exported;
 
-//#endregion
 export { exported };
 ```
 ### diff
@@ -34,11 +38,17 @@ export { exported };
 ===================================================================
 --- esbuild	/out/entry.js
 +++ rolldown	entry.js
-@@ -1,4 +1,5 @@
+@@ -1,4 +1,11 @@
  import a from "pkg";
  import b from "./file";
 -console.log(a, b, require("pkg2"), require("./file2"), import("./dynamic"));
 -let exported;
++var __require = (x => typeof require !== "undefined" ? require : typeof Proxy !== "undefined" ? new Proxy(x, {
++    get: (a$1, b$1) => (typeof require !== "undefined" ? require : a$1)[b$1]
++}) : x)(function (x) {
++    if (typeof require !== "undefined") return require.apply(this, arguments);
++    throw Error("Calling `require` for \"" + x + "\" in an environment that doesn't expose the `require` function.");
++});
 +console.log(a, b, __require("pkg2"), __require("./file2"), import("./dynamic"));
 +var exported;
 +export {exported};

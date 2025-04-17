@@ -86,26 +86,31 @@ export {
 import default$1, { file_default } from "./copy.js";
 import a from "extern-esm";
 
+//#region rolldown:runtime
+var __getOwnPropNames = Object.getOwnPropertyNames;
+var __commonJS = (cb, mod) => function() {
+	return mod || (0, cb[__getOwnPropNames(cb)[0]])((mod = { exports: {} }).exports, mod), mod.exports;
+};
+var __require = /* @__PURE__ */ ((x) => typeof require !== "undefined" ? require : typeof Proxy !== "undefined" ? new Proxy(x, { get: (a$1, b) => (typeof require !== "undefined" ? require : a$1)[b] }) : x)(function(x) {
+	if (typeof require !== "undefined") return require.apply(this, arguments);
+	throw Error("Calling `require` for \"" + x + "\" in an environment that doesn't expose the `require` function.");
+});
 
 //#region esm.js
 var esm_default = 1;
 
-//#endregion
 //#region <data:application/json,2>
 var json_2_default = 2;
 
-//#endregion
 //#region cjs.js
 var require_cjs = __commonJS({ "cjs.js"(exports, module) {
 	module.exports = 4;
 } });
 
-//#endregion
 //#region entry.js
 console.log(a, esm_default, json_2_default, file_default, default$1, __require("extern-cjs"), require_cjs(), import("./dynamic.js"));
 let exported;
 
-//#endregion
 export { exported };
 ```
 ### diff
@@ -113,10 +118,22 @@ export { exported };
 ===================================================================
 --- esbuild	/out/entry.js
 +++ rolldown	entry.js
-@@ -1,14 +1,12 @@
+@@ -1,14 +1,24 @@
 -import {__commonJS, __require} from "./chunk-MQN2VSL5.js";
 +import default$1, {file_default} from "./copy.js";
 +import a from "extern-esm";
++var __getOwnPropNames = Object.getOwnPropertyNames;
++var __commonJS = (cb, mod) => function () {
++    return (mod || (0, cb[__getOwnPropNames(cb)[0]])((mod = {
++        exports: {}
++    }).exports, mod), mod.exports);
++};
++var __require = (x => typeof require !== "undefined" ? require : typeof Proxy !== "undefined" ? new Proxy(x, {
++    get: (a$1, b) => (typeof require !== "undefined" ? require : a$1)[b]
++}) : x)(function (x) {
++    if (typeof require !== "undefined") return require.apply(this, arguments);
++    throw Error("Calling `require` for \"" + x + "\" in an environment that doesn't expose the `require` function.");
++});
 +var esm_default = 1;
 +var json_2_default = 2;
  var require_cjs = __commonJS({

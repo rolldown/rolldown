@@ -82,7 +82,6 @@ function shouldNotMangle() {
 	};
 }
 
-//#endregion
 export { shouldMangle, shouldNotMangle };
 ```
 ### diff
@@ -151,7 +150,6 @@ var entry2_default = {
 	"baz_": 1
 };
 
-//#endregion
 export { entry2_default as default };
 ```
 ### diff

@@ -10,14 +10,12 @@ source: crates/rolldown_testing/src/integration_test.rs
 //#region circular-import-cycle.js
 console.log(bar());
 
-//#endregion
 //#region circular-import-constants.js
 const foo = 123;
 function bar() {
 	return foo;
 }
 
-//#endregion
 ```
 ## circular-re-export-entry.js
 
@@ -27,18 +25,15 @@ function bar() {
 const baz = 0;
 console.log(bar());
 
-//#endregion
 //#region circular-re-export-constants.js
 const foo = 123;
 function bar() {
 	return foo;
 }
 
-//#endregion
 //#region circular-re-export-entry.js
 console.log(baz);
 
-//#endregion
 ```
 ## circular-re-export-star-entry.js
 
@@ -47,14 +42,12 @@ console.log(baz);
 //#region circular-re-export-star-cycle.js
 console.log(bar());
 
-//#endregion
 //#region circular-re-export-star-constants.js
 const foo = 123;
 function bar() {
 	return foo;
 }
 
-//#endregion
 ```
 ## cross-module-entry.js
 
@@ -68,11 +61,9 @@ function foo() {
 	return [x_REMOVE, y_keep];
 }
 
-//#endregion
 //#region cross-module-entry.js
 console.log(x_REMOVE, y_keep);
 
-//#endregion
 ```
 ## exported-entry.js
 
@@ -83,7 +74,6 @@ const x_REMOVE = 1;
 const y_keep = 2;
 console.log(x_REMOVE, y_keep);
 
-//#endregion
 export { y_keep };
 ```
 ## non-circular-export-entry.js
@@ -96,11 +86,9 @@ function bar() {
 	return foo;
 }
 
-//#endregion
 //#region non-circular-export-entry.js
 console.log(foo, bar());
 
-//#endregion
 ```
 ## print-shorthand-entry.js
 
@@ -110,14 +98,12 @@ console.log(foo, bar());
 const foo = 123;
 const _bar = -321;
 
-//#endregion
 //#region print-shorthand-entry.js
 console.log({
 	foo,
 	_bar
 });
 
-//#endregion
 ```
 ## re-exported-2-entry.js
 
@@ -126,7 +112,6 @@ console.log({
 //#region re-exported-2-constants.js
 const y_keep = 2;
 
-//#endregion
 export { y_keep };
 ```
 ## re-exported-entry.js
@@ -137,11 +122,9 @@ export { y_keep };
 const x_REMOVE = 1;
 const y_keep = 2;
 
-//#endregion
 //#region re-exported-entry.js
 console.log(x_REMOVE, y_keep);
 
-//#endregion
 export { y_keep };
 ```
 ## re-exported-star-entry.js
@@ -152,6 +135,5 @@ export { y_keep };
 const x_keep = 1;
 const y_keep = 2;
 
-//#endregion
 export { x_keep, y_keep };
 ```

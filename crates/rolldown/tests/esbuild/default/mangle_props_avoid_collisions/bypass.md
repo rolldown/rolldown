@@ -27,7 +27,6 @@ var entry_default = {
 	__proto__: {}
 };
 
-//#endregion
 export { entry_default as default };
 ```
 ### diff

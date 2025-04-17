@@ -15,7 +15,6 @@ console.log(keep(1));
 keep(foo());
 keep(1);
 
-//#endregion
 ```
 ## identity-cross-module.js
 
@@ -26,13 +25,11 @@ function DROP(x) {
 	return x;
 }
 
-//#endregion
 //#region identity-cross-module.js
 console.log(DROP(1));
 DROP(foo());
 DROP(1);
 
-//#endregion
 ```
 ## identity-first.js
 
@@ -49,7 +46,6 @@ console.log(keep(1));
 keep(foo());
 keep(1);
 
-//#endregion
 ```
 ## identity-generator.js
 
@@ -63,7 +59,6 @@ console.log(keep(1));
 keep(foo());
 keep(1);
 
-//#endregion
 ```
 ## identity-last.js
 
@@ -80,7 +75,6 @@ console.log(DROP(1));
 DROP(foo());
 DROP(1);
 
-//#endregion
 ```
 ## identity-no-args.js
 
@@ -93,7 +87,6 @@ function keep(x) {
 console.log(keep());
 keep();
 
-//#endregion
 ```
 ## identity-two-args.js
 
@@ -106,7 +99,6 @@ function keep(x) {
 console.log(keep(1, 2));
 keep(1, 2);
 
-//#endregion
 ```
 ## identity.js
 
@@ -120,7 +112,6 @@ console.log(DROP(1));
 DROP(foo());
 DROP(1);
 
-//#endregion
 ```
 ## not-identity-array.js
 
@@ -134,7 +125,6 @@ console.log(keep(1));
 keep(foo());
 keep(1);
 
-//#endregion
 ```
 ## not-identity-default.js
 
@@ -148,7 +138,6 @@ console.log(keep(1));
 keep(foo());
 keep(1);
 
-//#endregion
 ```
 ## not-identity-object.js
 
@@ -162,7 +151,6 @@ console.log(keep(1));
 keep(foo());
 keep(1);
 
-//#endregion
 ```
 ## not-identity-rest.js
 
@@ -176,7 +164,6 @@ console.log(keep(1));
 keep(foo());
 keep(1);
 
-//#endregion
 ```
 ## not-identity-return.js
 
@@ -190,7 +177,6 @@ console.log(keep(1));
 keep(foo());
 keep(1);
 
-//#endregion
 ```
 ## not-identity-two-args.js
 
@@ -204,7 +190,6 @@ console.log(keep(1));
 keep(foo());
 keep(1);
 
-//#endregion
 ```
 ## reassign-array.js
 
@@ -219,7 +204,6 @@ console.log(keep(1));
 keep(foo());
 keep(1);
 
-//#endregion
 ```
 ## reassign-div.js
 
@@ -234,7 +218,6 @@ console.log(keep(1));
 keep(foo());
 keep(1);
 
-//#endregion
 ```
 ## reassign-inc.js
 
@@ -249,7 +232,6 @@ console.log(keep(1));
 keep(foo());
 keep(1);
 
-//#endregion
 ```
 ## reassign-object.js
 
@@ -264,7 +246,6 @@ console.log(keep(1));
 keep(foo());
 keep(1);
 
-//#endregion
 ```
 ## reassign.js
 
@@ -279,5 +260,4 @@ console.log(keep(1));
 keep(foo());
 keep(1);
 
-//#endregion
 ```

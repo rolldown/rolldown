@@ -80,7 +80,6 @@ function shouldNotMangle_YYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYY() {
 	};
 }
 
-//#endregion
 export { shouldMangle_XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX, shouldNotMangle_YYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYY };
 ```
 ### diff
@@ -169,7 +168,6 @@ var entry2_default = {
 	"baz_": 1
 };
 
-//#endregion
 export { entry2_default as default };
 ```
 ### diff

@@ -1,6 +1,5 @@
 ---
 source: crates/rolldown_testing/src/integration_test.rs
-snapshot_kind: text
 ---
 # Assets
 
@@ -11,10 +10,8 @@ snapshot_kind: text
 //#region other.js
 let bar = async () => {};
 
-//#endregion
 //#region entry.js
 let foo = async () => void 0;
 
-//#endregion
 export { bar, foo };
 ```

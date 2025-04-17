@@ -16,7 +16,6 @@ function x() {
 	return 2;
 }
 
-//#endregion
 ```
 ## function3.js
 
@@ -35,7 +34,6 @@ function x() {
 	return 3;
 }
 
-//#endregion
 ```
 ## var2.js
 
@@ -46,7 +44,6 @@ var x = 1;
 console.log(x);
 var x = 2;
 
-//#endregion
 ```
 ## var3.js
 
@@ -59,5 +56,4 @@ var x = 2;
 console.log(x);
 var x = 3;
 
-//#endregion
 ```

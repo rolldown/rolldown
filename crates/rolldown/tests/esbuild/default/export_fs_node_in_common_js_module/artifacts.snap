@@ -1,6 +1,5 @@
 ---
 source: crates/rolldown_testing/src/integration_test.rs
-snapshot_kind: text
 ---
 # warnings
 
@@ -36,6 +35,11 @@ snapshot_kind: text
 import * as fs from "fs";
 import { readFileSync } from "fs";
 
+//#region rolldown:runtime
+var __getOwnPropNames = Object.getOwnPropertyNames;
+var __commonJS = (cb, mod) => function() {
+	return mod || (0, cb[__getOwnPropNames(cb)[0]])((mod = { exports: {} }).exports, mod), mod.exports;
+};
 
 //#region entry.js
 var require_entry = __commonJS({ "entry.js"(exports) {
@@ -44,7 +48,6 @@ var require_entry = __commonJS({ "entry.js"(exports) {
 	exports.foo = 123;
 } });
 
-//#endregion
 export default require_entry();
 
 ```

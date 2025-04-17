@@ -12,7 +12,6 @@ const fn = () => {
 	console.log("side effect");
 };
 
-//#endregion
 //#region keep-these.ts
 var Class = @fn class {};
 var Field = class {
@@ -34,5 +33,4 @@ var StaticParameter = class {
 	static foo(@fn bar) {}
 };
 
-//#endregion
 ```

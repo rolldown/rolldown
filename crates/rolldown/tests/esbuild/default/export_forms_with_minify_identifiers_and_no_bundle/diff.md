@@ -34,7 +34,6 @@ var Class2 = class {};
 function Func() {}
 var Class = class {};
 
-//#endregion
 export { Class, Class as Cls, Class2 as Cls2, Func2 as Fn2, Func, constName, a_default as default, b_exports as fromB, letName, varName };
 ```
 ### diff
@@ -101,7 +100,6 @@ export default function o() {
 //#region c.js
 function foo() {}
 
-//#endregion
 export { foo as default };
 ```
 ### diff
@@ -127,7 +125,6 @@ export default class {
 //#region d.js
 var d_default = class {};
 
-//#endregion
 export { d_default as default };
 ```
 ### diff
@@ -153,7 +150,6 @@ export default class o {
 //#region e.js
 var Foo = class {};
 
-//#endregion
 export { Foo as default };
 ```
 ### diff

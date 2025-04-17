@@ -72,14 +72,13 @@ console.log(
 	/* @__PURE__ */ jsxs(Fragment, { children: ["before", "after"] })
 );
 
-//#endregion
 ```
 ### diff
 ```diff
 ===================================================================
 --- esbuild	/out/entry.js
 +++ rolldown	entry.js
-@@ -1,46 +1,20 @@
+@@ -1,46 +1,18 @@
 -// entry.jsx
 +import { Fragment, jsx, jsxs } from "react/jsx-runtime";
 +
@@ -144,8 +143,5 @@ console.log(
 +	/* @__PURE__ */ jsxs(Fragment, { children: ["before", "after"] }),
 +	/* @__PURE__ */ jsxs(Fragment, { children: ["before", "after"] })
 +);
-+
-+//#endregion
-\ No newline at end of file
 
 ```

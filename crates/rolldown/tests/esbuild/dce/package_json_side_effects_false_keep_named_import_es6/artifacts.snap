@@ -12,9 +12,7 @@ import assert from "node:assert";
 const foo = 123;
 console.log("hello");
 
-//#endregion
 //#region src/entry.js
 assert.equal(foo, 123);
 
-//#endregion
 ```

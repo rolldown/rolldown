@@ -104,7 +104,6 @@ not_inlined = [
 	e_str
 ];
 
-//#endregion
 ```
 ### diff
 ```diff

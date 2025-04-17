@@ -12,11 +12,9 @@ function bar() {
 	throw new Error("test");
 }
 
-//#endregion
 //#region data.txt
 var data_default = "#2041";
 
-//#endregion
 //#region entry.js
 function foo() {
 	bar();
@@ -24,5 +22,4 @@ function foo() {
 foo();
 console.log(data_default);
 
-//#endregion
 ```

@@ -13,5 +13,4 @@ var Foo = class {
 	method2(@dec(() => foo) foo = 3) {}
 };
 
-//#endregion
 ```

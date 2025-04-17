@@ -21,32 +21,27 @@ function _checkPrivateRedeclaration(e, t) {
 	if (t.has(e)) throw new TypeError("Cannot initialize the same private elements twice on an object");
 }
 
-//#endregion
 //#region ../../../../../../node_modules/.pnpm/@oxc-project+runtime@0.64.0/node_modules/@oxc-project/runtime/src/helpers/esm/classPrivateFieldInitSpec.js
 function _classPrivateFieldInitSpec(e, t, a) {
 	_checkPrivateRedeclaration(e, t), t.set(e, a);
 }
 
-//#endregion
 //#region ../../../../../../node_modules/.pnpm/@oxc-project+runtime@0.64.0/node_modules/@oxc-project/runtime/src/helpers/esm/assertClassBrand.js
 function _assertClassBrand(e, t, n) {
 	if ("function" == typeof e ? e === t : e.has(t)) return arguments.length < 3 ? t : n;
 	throw new TypeError("Private element is not present on this object");
 }
 
-//#endregion
 //#region ../../../../../../node_modules/.pnpm/@oxc-project+runtime@0.64.0/node_modules/@oxc-project/runtime/src/helpers/esm/classPrivateFieldGet2.js
 function _classPrivateFieldGet2(s, a) {
 	return s.get(_assertClassBrand(s, a));
 }
 
-//#endregion
 //#region ../../../../../../node_modules/.pnpm/@oxc-project+runtime@0.64.0/node_modules/@oxc-project/runtime/src/helpers/esm/classPrivateFieldSet2.js
 function _classPrivateFieldSet2(s, a, r) {
 	return s.set(_assertClassBrand(s, a), r), r;
 }
 
-//#endregion
 //#region entry.js
 var _a = /* @__PURE__ */ new WeakMap();
 var A = class {
@@ -59,7 +54,6 @@ var A = class {
 	}
 };
 
-//#endregion
 export { A };
 ```
 ### diff

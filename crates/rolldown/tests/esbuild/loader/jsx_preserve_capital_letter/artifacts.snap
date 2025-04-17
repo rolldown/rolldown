@@ -19,9 +19,7 @@ import { jsx } from "react/jsx-runtime";
 //#region foo.js
 var mustStartWithUpperCaseLetter = class {};
 
-//#endregion
 //#region entry.jsx
 console.log(/* @__PURE__ */ jsx(mustStartWithUpperCaseLetter, {}));
 
-//#endregion
 ```

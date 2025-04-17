@@ -18,11 +18,9 @@ import assert from "node:assert";
 //#region index.js
 var require_parent_dir_es6_default = 123;
 
-//#endregion
 //#region dir/entry.js
 assert.equal(require_parent_dir_es6_default, 123);
 
-//#endregion
 ```
 ### diff
 ```diff

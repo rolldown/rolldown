@@ -19,7 +19,6 @@
 //#region entry.js
 let a = 1;
 
-//#endregion
 exports.a = a
 return exports;
 })({});

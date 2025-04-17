@@ -1,6 +1,5 @@
 ---
 source: crates/rolldown_testing/src/integration_test.rs
-snapshot_kind: text
 ---
 # Assets
 
@@ -8,15 +7,21 @@ snapshot_kind: text
 
 ```js
 
+//#region rolldown:runtime
+var __defProp = Object.defineProperty;
+var __export = (target, all) => {
+	for (var name in all) __defProp(target, name, {
+		get: all[name],
+		enumerable: true
+	});
+};
 
 //#region internal.js
 let ok = true;
 
-//#endregion
 //#region very-nested.js
 let nested$1 = 2;
 
-//#endregion
 //#region nested.js
 var nested_exports = {};
 __export(nested_exports, {
@@ -25,6 +30,5 @@ __export(nested_exports, {
 });
 let nested = 1;
 
-//#endregion
 export { nested_exports as "name space", nested as "nested name", ok as "not ok", ok, nested$1 as "very nested name" };
 ```

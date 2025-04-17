@@ -1,6 +1,5 @@
 ---
 source: crates/rolldown_testing/src/integration_test.rs
-snapshot_kind: text
 ---
 # Assets
 
@@ -14,6 +13,5 @@ function confuseNode(exports$1) {
 	exports$1.notAnExport = function() {};
 }
 
-//#endregion
 exports.confuseNode = confuseNode
 ```

@@ -19,5 +19,4 @@ import { jsx } from "react/jsx-runtime";
 //#region entry.js
 console.log(/* @__PURE__ */ jsx("div", {}));
 
-//#endregion
 ```

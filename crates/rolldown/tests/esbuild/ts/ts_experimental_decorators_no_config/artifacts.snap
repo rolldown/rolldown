@@ -39,6 +39,5 @@ var Foo = @x.y() @(new y.x()) class Foo {
 	@x @y static accessor #asDef = 1;
 };
 
-//#endregion
 export { Foo as default };
 ```

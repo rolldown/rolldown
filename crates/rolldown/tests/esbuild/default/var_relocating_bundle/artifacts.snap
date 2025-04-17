@@ -21,7 +21,6 @@ function x() {
 }
 x();
 
-//#endregion
 ```
 ## function.js
 
@@ -39,7 +38,6 @@ function x() {
 }
 x();
 
-//#endregion
 ```
 ## let.js
 
@@ -54,7 +52,6 @@ x();
 	for (let { j, x: [k] } in {});
 }
 
-//#endregion
 ```
 ## nested.js
 
@@ -71,7 +68,6 @@ x();
 	function l() {}
 }
 
-//#endregion
 ```
 ## top-level.js
 
@@ -83,5 +79,4 @@ for (var { f, x: [g] } of []);
 for (var h in {});
 for (var { j, x: [k] } in {});
 
-//#endregion
 ```

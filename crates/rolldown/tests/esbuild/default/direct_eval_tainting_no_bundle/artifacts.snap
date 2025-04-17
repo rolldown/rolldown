@@ -64,5 +64,4 @@ function test5() {
 	var shouldNotBeRenamed;
 }
 
-//#endregion
 ```

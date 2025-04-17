@@ -82,14 +82,13 @@ if (nested) {
 	await using y = 2;
 }
 
-//#endregion
 ```
 ### diff
 ```diff
 ===================================================================
 --- esbuild	/out/entry.js
 +++ rolldown	entry.js
-@@ -1,66 +1,10 @@
+@@ -1,66 +1,8 @@
 -function foo() {
 -    var _stack4 = [];
 -    try {
@@ -163,9 +162,6 @@ if (nested) {
 -    var _promise2 = __callDispose(_stack2, _error2, _hasError2);
 -    _promise2 && await _promise2;
 -}
-+
-+//#endregion
-\ No newline at end of file
 
 ```
 ## /out/loops.js
@@ -342,14 +338,13 @@ if (nested) {
 	for await (await using j of k) l(() => j);
 }
 
-//#endregion
 ```
 ### diff
 ```diff
 ===================================================================
 --- esbuild	/out/loops.js
 +++ rolldown	loops.js
-@@ -1,155 +1,14 @@
+@@ -1,155 +1,12 @@
 -for (var _a of b) {
 -    var _stack = [];
 -    try {
@@ -515,9 +510,6 @@ if (nested) {
 -        }
 -    }
 -}
-+
-+//#endregion
-\ No newline at end of file
 
 ```
 ## /out/switch.js
@@ -621,14 +613,13 @@ async function foo() {
 	}
 }
 
-//#endregion
 ```
 ### diff
 ```diff
 ===================================================================
 --- esbuild	/out/switch.js
 +++ rolldown	switch.js
-@@ -1,72 +1,24 @@
+@@ -1,72 +1,22 @@
 -async function foo() {
 -    var _stack6 = [];
 -    try {
@@ -721,8 +712,5 @@ async function foo() {
 +		default: using e = f;
 +	}
 +}
-+
-+//#endregion
-\ No newline at end of file
 
 ```

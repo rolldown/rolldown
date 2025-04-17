@@ -34,7 +34,6 @@ let Foo = class {
 	}
 };
 
-//#endregion
 export { Foo };
 ```
 ### diff

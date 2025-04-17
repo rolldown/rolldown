@@ -38,23 +38,28 @@ console.log(a_exports, b_exports, c_exports, d_exports);
 ### rolldown
 ```js
 
+//#region rolldown:runtime
+var __defProp = Object.defineProperty;
+var __export = (target, all) => {
+	for (var name in all) __defProp(target, name, {
+		get: all[name],
+		enumerable: true
+	});
+};
 
 //#region a.ts
 var a_exports = {};
 __export(a_exports, { foo: () => foo$3 });
 let foo$3 = 123;
 
-//#endregion
 //#region b.ts
 var b_exports = {};
 __export(b_exports, { foo: () => foo$2 });
 let foo$2 = 123;
 
-//#endregion
 //#region test.ts
 var Test = void 0;
 
-//#endregion
 //#region c.ts
 var c_exports = {};
 __export(c_exports, {
@@ -63,7 +68,6 @@ __export(c_exports, {
 });
 let foo$1 = 123;
 
-//#endregion
 //#region d.ts
 var d_exports = {};
 __export(d_exports, {
@@ -72,18 +76,23 @@ __export(d_exports, {
 });
 let foo = 123;
 
-//#endregion
 //#region entry.ts
 console.log(a_exports, b_exports, c_exports, d_exports);
 
-//#endregion
 ```
 ### diff
 ```diff
 ===================================================================
 --- esbuild	/out.js
 +++ rolldown	entry.js
-@@ -1,21 +1,24 @@
+@@ -1,21 +1,31 @@
++var __defProp = Object.defineProperty;
++var __export = (target, all) => {
++    for (var name in all) __defProp(target, name, {
++        get: all[name],
++        enumerable: true
++    });
++};
  var a_exports = {};
  __export(a_exports, {
 -    foo: () => foo

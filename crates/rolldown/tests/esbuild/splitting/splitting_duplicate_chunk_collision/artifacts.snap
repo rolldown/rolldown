@@ -16,7 +16,6 @@ import "./ab.js";
 //#region ab.js
 console.log(123);
 
-//#endregion
 ```
 ## b.js
 
@@ -37,7 +36,6 @@ import "./cd.js";
 //#region cd.js
 console.log(123);
 
-//#endregion
 ```
 ## d.js
 

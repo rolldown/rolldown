@@ -16,7 +16,6 @@ source: crates/rolldown_testing/src/integration_test.rs
 for (using a of b) c(() => a);
 if (nested) for (using a of b) c(() => a);
 
-//#endregion
 ```
 ## switch.js
 
@@ -40,5 +39,4 @@ async function foo() {
 	}
 }
 
-//#endregion
 ```

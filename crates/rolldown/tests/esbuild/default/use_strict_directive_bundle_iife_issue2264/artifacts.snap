@@ -21,7 +21,6 @@ source: crates/rolldown_testing/src/integration_test.rs
 //#region entry.js
 let a = 1;
 
-//#endregion
 exports.a = a
 return exports;
 })({});

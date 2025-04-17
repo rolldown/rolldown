@@ -11,7 +11,6 @@ import { shared_default } from "./shared.js";
 //#region pageA/page.js
 console.log(shared_default);
 
-//#endregion
 ```
 ## pageB_page.js
 
@@ -21,7 +20,6 @@ import { shared_default } from "./shared.js";
 //#region pageB/page.js
 console.log(-shared_default);
 
-//#endregion
 ```
 ## shared.js
 
@@ -30,6 +28,5 @@ console.log(-shared_default);
 //#region shared.js
 var shared_default = 123;
 
-//#endregion
 export { shared_default };
 ```

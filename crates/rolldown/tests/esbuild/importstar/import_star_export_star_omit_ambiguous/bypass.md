@@ -24,15 +24,21 @@ console.log(common_exports);
 ```js
 import assert from "node:assert";
 
+//#region rolldown:runtime
+var __defProp = Object.defineProperty;
+var __export = (target, all) => {
+	for (var name in all) __defProp(target, name, {
+		get: all[name],
+		enumerable: true
+	});
+};
 
 //#region foo.js
 const x = 1;
 
-//#endregion
 //#region bar.js
 const z = 4;
 
-//#endregion
 //#region common.js
 var common_exports = {};
 __export(common_exports, {
@@ -40,21 +46,26 @@ __export(common_exports, {
 	z: () => z
 });
 
-//#endregion
 //#region entry.js
 assert.deepEqual(common_exports, {
 	x: 1,
 	z: 4
 });
 
-//#endregion
 ```
 ### diff
 ```diff
 ===================================================================
 --- esbuild	/out.js
 +++ rolldown	entry.js
-@@ -1,8 +1,8 @@
+@@ -1,8 +1,15 @@
++var __defProp = Object.defineProperty;
++var __export = (target, all) => {
++    for (var name in all) __defProp(target, name, {
++        get: all[name],
++        enumerable: true
++    });
++};
 +var x = 1;
 +var z = 4;
  var common_exports = {};

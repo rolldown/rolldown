@@ -33,7 +33,6 @@ let a = /* @__PURE__ */ function(a$1) {
 	return a$1;
 }({});
 
-//#endregion
 //#region entry.ts
 console.log([
 	a.implicit_number,
@@ -42,7 +41,6 @@ console.log([
 	a.non_constant
 ]);
 
-//#endregion
 ```
 ### diff
 ```diff

@@ -21,7 +21,6 @@ var a = 1;
 //#region entry.js
 let a = 1;
 
-//#endregion
 exports.a = a
 ```
 ### diff

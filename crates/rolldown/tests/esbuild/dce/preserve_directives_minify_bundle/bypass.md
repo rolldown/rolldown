@@ -39,14 +39,12 @@
 "use C";
 nested();
 
-//#endregion
 //#region entry.js
 "use 1";
 "use 2";
 "use 3";
 entry();
 
-//#endregion
 })();
 ```
 ### diff

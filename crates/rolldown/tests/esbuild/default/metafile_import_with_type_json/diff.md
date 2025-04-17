@@ -20,7 +20,6 @@ x = [data_default, data_default, data_default2];
 var some = "data";
 var data_default = { some };
 
-//#endregion
 //#region entry.js
 x = [
 	data_default,
@@ -28,7 +27,6 @@ x = [
 	data_default
 ];
 
-//#endregion
 ```
 ### diff
 ```diff

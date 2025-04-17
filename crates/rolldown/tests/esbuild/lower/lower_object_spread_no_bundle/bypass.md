@@ -91,7 +91,6 @@ let jsx$1 = [
 	})
 ];
 
-//#endregion
 ```
 ### diff
 ```diff

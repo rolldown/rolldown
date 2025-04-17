@@ -17,7 +17,6 @@ import { data_default } from "./data.js";
 //#region a.js
 console.log("a:", data_default);
 
-//#endregion
 ```
 ### diff
 ```diff
@@ -48,7 +47,6 @@ import { data_default } from "./data.js";
 //#region b.js
 console.log("b:", data_default);
 
-//#endregion
 ```
 ### diff
 ```diff

@@ -44,8 +44,6 @@ pub fn render_ecma_module(
       sources.push(Box::new(render_output.code));
     }
 
-    sources.push(Box::new("//#endregion"));
-
     Some(Arc::from(sources.into_boxed_slice()))
   }
 }

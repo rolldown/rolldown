@@ -12,17 +12,16 @@ export default defineTest({
   },
   afterTest: (output) => {
     expect(output.output[0].code).toMatchInlineSnapshot(`
-        "var module = (function(exports) {
+      "var module = (function(exports) {
 
-        "use strict";
+      "use strict";
 
-        //#region main.js
-        const main = "main";
+      //#region main.js
+      const main = "main";
 
-        //#endregion
-        exports.main = main
-        return exports;
-        })({});"
-      `)
+      exports.main = main
+      return exports;
+      })({});"
+    `)
   },
 })

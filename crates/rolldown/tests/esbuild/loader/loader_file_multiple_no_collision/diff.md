@@ -28,31 +28,39 @@ console.log(
 ### rolldown
 ```js
 
+//#region rolldown:runtime
+var __getOwnPropNames = Object.getOwnPropertyNames;
+var __commonJS = (cb, mod) => function() {
+	return mod || (0, cb[__getOwnPropNames(cb)[0]])((mod = { exports: {} }).exports, mod), mod.exports;
+};
 
 //#region a/test.txt
 var require_test$1 = __commonJS({ "a/test.txt"(exports, module) {
 	module.exports = "assets/test-BrHGE6Cv.txt";
 } });
 
-//#endregion
 //#region b/test.txt
 var require_test = __commonJS({ "b/test.txt"(exports, module) {
 	module.exports = "assets/test-1P-S1VxP.txt";
 } });
 
-//#endregion
 //#region entry.js
 console.log(require_test$1(), require_test());
 
-//#endregion
 ```
 ### diff
 ```diff
 ===================================================================
 --- esbuild	/dist/out.js
 +++ rolldown	entry.js
-@@ -1,11 +1,11 @@
+@@ -1,11 +1,17 @@
 -var require_test = __commonJS({
++var __getOwnPropNames = Object.getOwnPropertyNames;
++var __commonJS = (cb, mod) => function () {
++    return (mod || (0, cb[__getOwnPropNames(cb)[0]])((mod = {
++        exports: {}
++    }).exports, mod), mod.exports);
++};
 +var require_test$1 = __commonJS({
      "a/test.txt"(exports, module) {
 -        module.exports = "./test-J7OMUXO3.txt";

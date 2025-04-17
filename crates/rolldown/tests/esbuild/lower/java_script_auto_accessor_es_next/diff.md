@@ -24,14 +24,13 @@ var Foo = class {
 	static accessor [six()] = 6;
 };
 
-//#endregion
 ```
 ### diff
 ```diff
 ===================================================================
 --- esbuild	/out/js-define.js
 +++ rolldown	js-define.js
-@@ -1,8 +1,12 @@
+@@ -1,8 +1,10 @@
 -class Foo {
 -  accessor one = 1;
 -  accessor #two = 2;
@@ -51,9 +50,6 @@ var Foo = class {
 +	static accessor #five = 5;
 +	static accessor [six()] = 6;
 +};
-+
-+//#endregion
-\ No newline at end of file
 
 ```
 ## /out/ts-define/ts-define.js

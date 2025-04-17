@@ -1,6 +1,5 @@
 ---
 source: crates/rolldown_testing/src/integration_test.rs
-snapshot_kind: text
 ---
 # Assets
 
@@ -11,65 +10,49 @@ snapshot_kind: text
 //#region pick-js.js
 console.log("correct");
 
-//#endregion
 //#region pick-ts.ts
 console.log("correct");
 
-//#endregion
 //#region pick-jsx.jsx
 console.log("correct");
 
-//#endregion
 //#region pick-tsx.tsx
 console.log("correct");
 
-//#endregion
 //#region order-js.ts
 console.log("correct");
 
-//#endregion
 //#region order-jsx.ts
 console.log("correct");
 
-//#endregion
 //#region node_modules/pkg/foo-js.ts
 console.log("correct");
 
-//#endregion
 //#region node_modules/pkg/foo-jsx.tsx
 console.log("correct");
 
-//#endregion
 //#region node_modules/pkg-exports/abc-js.ts
 console.log("correct");
 
-//#endregion
 //#region node_modules/pkg-exports/abc-jsx.tsx
 console.log("correct");
 
-//#endregion
 //#region node_modules/pkg-exports/lib/foo-js.ts
 console.log("correct");
 
-//#endregion
 //#region node_modules/pkg-exports/lib/foo-jsx.tsx
 console.log("correct");
 
-//#endregion
 //#region node_modules/pkg-imports/abc-js.ts
 console.log("correct");
 
-//#endregion
 //#region node_modules/pkg-imports/abc-jsx.tsx
 console.log("correct");
 
-//#endregion
 //#region node_modules/pkg-imports/lib/foo-js.ts
 console.log("correct");
 
-//#endregion
 //#region node_modules/pkg-imports/lib/foo-jsx.tsx
 console.log("correct");
 
-//#endregion
 ```

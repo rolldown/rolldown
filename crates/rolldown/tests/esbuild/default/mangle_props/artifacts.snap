@@ -1,6 +1,5 @@
 ---
 source: crates/rolldown_testing/src/integration_test.rs
-snapshot_kind: text
 ---
 # Assets
 
@@ -46,7 +45,6 @@ function shouldNotMangle() {
 	};
 }
 
-//#endregion
 export { shouldMangle, shouldNotMangle };
 ```
 ## entry2.js
@@ -59,6 +57,5 @@ var entry2_default = {
 	"baz_": 1
 };
 
-//#endregion
 export { entry2_default as default };
 ```

@@ -13,7 +13,6 @@ import("./package-ZBNDRRRB.js");
 //#region src/entry1.js
 import("./package.js");
 
-//#endregion
 ```
 ### diff
 ```diff
@@ -37,7 +36,6 @@ import("./package-ZBNDRRRB.js");
 //#region src/entry2.js
 import("./package.js");
 
-//#endregion
 ```
 ### diff
 ```diff

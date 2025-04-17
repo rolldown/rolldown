@@ -42,7 +42,6 @@ console.log(
 	s_keep
 );
 
-//#endregion
 ```
 ### diff
 ```diff
@@ -105,7 +104,6 @@ console.log(
 );
 }
 
-//#endregion
 ```
 ### diff
 ```diff
@@ -170,7 +168,6 @@ function nested() {
 }
 assert(nested() !== void 0);
 
-//#endregion
 ```
 ### diff
 ```diff
@@ -212,7 +209,6 @@ let ns;
 	console.log(x_REMOVE, x_REMOVE, y_keep, y_keep);
 })(ns || (ns = {}));
 
-//#endregion
 ```
 ### diff
 ```diff
@@ -247,7 +243,6 @@ let ns;
 	x = [REMOVE, REMOVE];
 }
 
-//#endregion
 ```
 ### diff
 ```diff
@@ -281,7 +276,6 @@ function nested() {
 }
 assert(nested() !== void 0);
 
-//#endregion
 ```
 ### diff
 ```diff
@@ -312,7 +306,6 @@ x = [1, 1];
 	x = [REMOVE, REMOVE];
 }
 
-//#endregion
 ```
 ### diff
 ```diff
@@ -345,7 +338,6 @@ x = [1, 1];
 	x = [REMOVE, REMOVE];
 }
 
-//#endregion
 ```
 ### diff
 ```diff
@@ -375,7 +367,6 @@ x = [1, 1];
 	x = [REMOVE, REMOVE];
 }
 
-//#endregion
 ```
 ### diff
 ```diff
@@ -423,7 +414,6 @@ function nested() {
 }
 assert(nested() !== void 0);
 
-//#endregion
 ```
 ### diff
 ```diff
@@ -461,7 +451,6 @@ function foo() {
 	return x_keep;
 }
 
-//#endregion
 ```
 ### diff
 ```diff
@@ -496,7 +485,6 @@ const x = y;
 const y = 1;
 console.log(x, x, y, y);
 
-//#endregion
 ```
 ### diff
 ```diff
@@ -534,7 +522,6 @@ function foo() {
 }
 assert(foo() !== void 0);
 
-//#endregion
 ```
 ### diff
 ```diff
@@ -570,7 +557,6 @@ function foo() {
 }
 assert(foo() !== void 0);
 
-//#endregion
 ```
 ### diff
 ```diff

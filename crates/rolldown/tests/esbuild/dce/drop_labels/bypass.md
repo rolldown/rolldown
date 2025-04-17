@@ -23,7 +23,6 @@ exports.bar = function() {
 	if (y) keep_2: require("bar2");
 };
 
-//#endregion
 ```
 ### diff
 ```diff

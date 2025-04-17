@@ -1,6 +1,5 @@
 ---
 source: crates/rolldown_testing/src/integration_test.rs
-snapshot_kind: text
 ---
 # Assets
 
@@ -24,7 +23,6 @@ div {
 //#region shared/common.png
 var common_default = "assets/common-CHxUrMdU.png";
 
-//#endregion
 ```
 ## entries_entry.css
 

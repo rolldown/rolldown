@@ -6,12 +6,11 @@ export default defineTest({
     let code = output.output[0].code
 
     expect(code).toMatchInlineSnapshot(`
-			"
-			//#region main.js
-			const jQuery = $;
-			const element = angular.element;
-
-			//#endregion"
-		`)
+      "
+      //#region main.js
+      const jQuery = $;
+      const element = angular.element;
+      "
+    `)
   },
 })

@@ -34,7 +34,6 @@ import { import_no_side_effects } from "./no-side-effects.js";
 //#region entry-nope.js
 console.log(void 0, void 0, import_no_side_effects.nope);
 
-//#endregion
 ```
 ### diff
 ```diff
@@ -92,7 +91,6 @@ import { import_no_side_effects } from "./no-side-effects.js";
 //#region entry-default.js
 console.log(void 0, void 0, import_no_side_effects.default);
 
-//#endregion
 ```
 ### diff
 ```diff

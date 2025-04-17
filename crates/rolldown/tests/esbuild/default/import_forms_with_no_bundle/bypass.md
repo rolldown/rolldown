@@ -32,7 +32,6 @@ const imp = [import("foo"), function nested() {
 }];
 console.log(ns, a, b, def, def, ns2, def, a2, b, imp);
 
-//#endregion
 ```
 ### diff
 ```diff

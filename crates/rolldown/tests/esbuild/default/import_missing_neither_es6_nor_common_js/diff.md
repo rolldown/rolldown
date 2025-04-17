@@ -23,7 +23,6 @@ import default$1, { init_foo, x, y } from "./foo.js";
 init_foo();
 console.log(default$1(x, y));
 
-//#endregion
 ```
 ### diff
 ```diff
@@ -65,7 +64,6 @@ import { init_foo } from "./foo.js";
 init_foo();
 console.log((void 0)(void 0, void 0));
 
-//#endregion
 ```
 ### diff
 ```diff
@@ -107,7 +105,6 @@ import { foo_exports, init_foo } from "./foo.js";
 init_foo();
 console.log(foo_exports);
 
-//#endregion
 ```
 ### diff
 ```diff
@@ -140,7 +137,6 @@ import { init_foo } from "./foo.js";
 //#region bare.js
 init_foo();
 
-//#endregion
 ```
 ### diff
 ```diff
@@ -173,7 +169,6 @@ import { __toCommonJS, foo_exports, init_foo } from "./foo.js";
 //#region require.js
 console.log((init_foo(), __toCommonJS(foo_exports)));
 
-//#endregion
 ```
 ### diff
 ```diff
@@ -210,7 +205,6 @@ console.log(Promise.resolve().then(() => __toESM(require_foo())));
 //#region import.js
 console.log(import("./foo2.js"));
 
-//#endregion
 ```
 ### diff
 ```diff

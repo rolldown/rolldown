@@ -36,7 +36,6 @@ let x = /* @__PURE__ */ function(x$1) {
 	return x$1;
 }({});
 
-//#endregion
 //#region enum-entry.ts
 console.log([typeof x.b], [x.a + x.b], [
 	x.a < x.b,
@@ -55,7 +54,6 @@ console.log([typeof x.b], [x.a + x.b], [
 	!x.b ? "y" : "n"
 ]);
 
-//#endregion
 ```
 ### diff
 ```diff
@@ -107,7 +105,6 @@ console.log([
 const a = "foo";
 const b = "bar";
 
-//#endregion
 //#region const-entry.js
 console.log([typeof b], [a + b], [
 	a < b,
@@ -126,7 +123,6 @@ console.log([typeof b], [a + b], [
 	!b ? "y" : "n"
 ]);
 
-//#endregion
 ```
 ### diff
 ```diff
@@ -167,14 +163,12 @@ let x = /* @__PURE__ */ function(x$1) {
 	return x$1;
 }({});
 
-//#endregion
 //#region nested-entry.ts
 console.log({
 	"should be foobarbaz": a + b + c,
 	"should be FOOBARBAZ": x.a + x.b + x.c
 });
 
-//#endregion
 ```
 ### diff
 ```diff

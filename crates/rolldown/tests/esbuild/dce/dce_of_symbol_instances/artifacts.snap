@@ -20,7 +20,6 @@ var Keep3 = class {
 	*[Symbol.wtf]() {}
 };
 
-//#endregion
 ```
 ## object.js
 
@@ -37,5 +36,4 @@ let keep2 = {
 };
 let keep3 = { *[Symbol.wtf]() {} };
 
-//#endregion
 ```

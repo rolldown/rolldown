@@ -21,6 +21,5 @@ var Foo = @x.y() @(new y.x()) class Foo {
 	}
 };
 
-//#endregion
 export { Foo as default };
 ```

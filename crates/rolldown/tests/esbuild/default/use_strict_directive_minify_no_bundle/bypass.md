@@ -14,7 +14,6 @@
 a;
 b;
 
-//#endregion
 ```
 ### diff
 ```diff

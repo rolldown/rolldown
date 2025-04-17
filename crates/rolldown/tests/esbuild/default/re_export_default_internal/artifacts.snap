@@ -10,10 +10,8 @@ source: crates/rolldown_testing/src/integration_test.rs
 //#region foo.js
 var foo_default = "foo";
 
-//#endregion
 //#region bar.js
 var bar_default = "bar";
 
-//#endregion
 export { bar_default as bar, foo_default as foo };
 ```

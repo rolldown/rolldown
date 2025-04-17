@@ -29,7 +29,6 @@ var TemplateExpressions = /* @__PURE__ */ function(TemplateExpressions$1) {
 }(TemplateExpressions || {});
 console.log(TemplateExpressions.NULL, TemplateExpressions.TRUE, TemplateExpressions.FALSE, TemplateExpressions.BIGINT);
 
-//#endregion
 ```
 ## supported.js
 
@@ -134,5 +133,4 @@ console.log(
 	Foo.X41
 );
 
-//#endregion
 ```

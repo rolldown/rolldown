@@ -10,5 +10,4 @@ source: crates/rolldown_testing/src/integration_test.rs
 //#region entry.ts
 console.log("in entry.ts");
 
-//#endregion
 ```

@@ -18,18 +18,16 @@ import { jsx } from "react/jsx-runtime";
 //#region foo.js
 var mustStartWithUpperCaseLetter = class {};
 
-//#endregion
 //#region entry.jsx
 console.log(/* @__PURE__ */ jsx(mustStartWithUpperCaseLetter, {}));
 
-//#endregion
 ```
 ### diff
 ```diff
 ===================================================================
 --- esbuild	/out.js
 +++ rolldown	entry.js
-@@ -1,6 +1,10 @@
+@@ -1,6 +1,7 @@
 -// foo.js
 -var MustStartWithUpperCaseLetter = class {
 -};
@@ -41,11 +39,7 @@ console.log(/* @__PURE__ */ jsx(mustStartWithUpperCaseLetter, {}));
 +//#region foo.js
 +var mustStartWithUpperCaseLetter = class {};
 +
-+//#endregion
 +//#region entry.jsx
 +console.log(/* @__PURE__ */ jsx(mustStartWithUpperCaseLetter, {}));
-+
-+//#endregion
-\ No newline at end of file
 
 ```

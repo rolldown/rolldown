@@ -31,5 +31,4 @@ for (var { fn = function() {} } of obj);
 [fn = function() {}] = [];
 ({fn = function() {}} = {});
 
-//#endregion
 ```

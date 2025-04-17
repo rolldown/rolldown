@@ -40,7 +40,6 @@ identity1();
 identity2(args);
 identity3(...args);
 
-//#endregion
 ```
 ### diff
 ```diff
@@ -106,7 +105,6 @@ function identity3(x) {
 	return x;
 }
 
-//#endregion
 //#region entry-outer.js
 empty1();
 empty2(args);
@@ -115,7 +113,6 @@ identity1();
 identity2(args);
 identity3(...args);
 
-//#endregion
 ```
 ### diff
 ```diff

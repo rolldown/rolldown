@@ -1,6 +1,5 @@
 ---
 source: crates/rolldown_testing/src/integration_test.rs
-snapshot_kind: text
 ---
 # Assets
 
@@ -18,20 +17,22 @@ y
 
 ```js
 
+//#region rolldown:runtime
+var __getOwnPropNames = Object.getOwnPropertyNames;
+var __commonJS = (cb, mod) => function() {
+	return mod || (0, cb[__getOwnPropNames(cb)[0]])((mod = { exports: {} }).exports, mod), mod.exports;
+};
 
 //#region y.txt
 var y_default = "assets/y-DBJZ7rtI.txt";
 
-//#endregion
 //#region x.txt
 var require_x = __commonJS({ "x.txt"(exports, module) {
 	module.exports = "assets/x-BA9VvU_1.txt";
 } });
 
-//#endregion
 //#region entry.js
 const x_url = require_x();
 console.log(x_url, y_default);
 
-//#endregion
 ```

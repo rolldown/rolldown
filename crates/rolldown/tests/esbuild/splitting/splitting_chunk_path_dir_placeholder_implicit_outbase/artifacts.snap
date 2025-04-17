@@ -10,7 +10,6 @@ source: crates/rolldown_testing/src/integration_test.rs
 //#region entry.js
 console.log(import("./file.js"));
 
-//#endregion
 ```
 ## file.js
 
@@ -19,5 +18,4 @@ console.log(import("./file.js"));
 //#region output-path/should-contain/this-text/file.js
 console.log("file.js");
 
-//#endregion
 ```

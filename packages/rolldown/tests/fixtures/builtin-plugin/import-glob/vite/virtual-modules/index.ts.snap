@@ -11,8 +11,5 @@ const b = {
 	"/../b/index.ts": () => import("/../b/index.ts")
 };
 
-//#endregion
 //#region index.ts
 console.log(a, b);
-
-//#endregion

@@ -26,7 +26,6 @@ export * from "./external"
 //#region internal.js
 let foo = 123;
 
-//#endregion
 export { foo };
 ```
 ### diff

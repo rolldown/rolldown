@@ -1,6 +1,5 @@
 ---
 source: crates/rolldown_testing/src/integration_test.rs
-snapshot_kind: text
 ---
 # warnings
 
@@ -17,22 +16,27 @@ snapshot_kind: text
 ```js
 (function() {
 
+//#region rolldown:runtime
+var __getOwnPropNames = Object.getOwnPropertyNames;
+var __esm = (fn, res) => function() {
+	return fn && (res = (0, fn[__getOwnPropNames(fn)[0]])(fn = 0)), res;
+};
+var __commonJS = (cb, mod) => function() {
+	return mod || (0, cb[__getOwnPropNames(cb)[0]])((mod = { exports: {} }).exports, mod), mod.exports;
+};
 
 
 //#region c.js
 var require_c = __commonJS({ "c.js"() {} });
 
-//#endregion
 //#region b.js
 var b_exports = {};
 var init_b = __esm({ "b.js"() {} });
 
-//#endregion
 //#region a.js
 var a_exports = {};
 var init_a = __esm({ "a.js"() {} });
 
-//#endregion
 //#region entry.js
 var require_entry = __commonJS({ "entry.js"() {
 	init_a();
@@ -41,7 +45,6 @@ var require_entry = __commonJS({ "entry.js"() {
 	require_entry();
 } });
 
-//#endregion
 return require_entry();
 
 })();

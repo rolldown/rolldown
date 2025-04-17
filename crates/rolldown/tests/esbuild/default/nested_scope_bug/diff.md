@@ -26,7 +26,6 @@
 	a();
 })();
 
-//#endregion
 ```
 ### diff
 ```diff

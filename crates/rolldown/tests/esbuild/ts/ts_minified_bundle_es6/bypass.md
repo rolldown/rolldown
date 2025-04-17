@@ -14,11 +14,9 @@ function foo() {
 	return 123;
 }
 
-//#endregion
 //#region entry.ts
 console.log(foo());
 
-//#endregion
 ```
 ### diff
 ```diff

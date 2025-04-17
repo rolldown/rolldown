@@ -20,13 +20,11 @@ fn(test);
 const old = fn;
 const fn = (...args) => old.apply(console, ["log:"].concat(args));
 
-//#endregion
 //#region entry.js
 fn(test);
 fn(test);
 fn(test);
 
-//#endregion
 ```
 ### diff
 ```diff

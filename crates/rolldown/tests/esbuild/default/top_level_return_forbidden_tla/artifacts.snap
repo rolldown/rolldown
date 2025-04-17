@@ -10,5 +10,4 @@ source: crates/rolldown_testing/src/integration_test.rs
 //#region entry.js
 return await foo;
 
-//#endregion
 ```

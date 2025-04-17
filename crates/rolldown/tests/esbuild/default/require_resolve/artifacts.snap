@@ -1,6 +1,5 @@
 ---
 source: crates/rolldown_testing/src/integration_test.rs
-snapshot_kind: text
 ---
 # Assets
 
@@ -29,5 +28,4 @@ console.log(false);
 console.log(true);
 console.log(true);
 
-//#endregion
 ```

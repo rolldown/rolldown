@@ -71,14 +71,13 @@ function test5() {
 	var shouldNotBeRenamed;
 }
 
-//#endregion
 ```
 ### diff
 ```diff
 ===================================================================
 --- esbuild	/out.js
 +++ rolldown	entry.js
-@@ -1,31 +1,33 @@
+@@ -1,31 +1,31 @@
 +
 +//#region entry.js
  function test1() {
@@ -134,8 +133,5 @@ function test5() {
 +	}
 +	var shouldNotBeRenamed;
 +}
-+
-+//#endregion
-\ No newline at end of file
 
 ```

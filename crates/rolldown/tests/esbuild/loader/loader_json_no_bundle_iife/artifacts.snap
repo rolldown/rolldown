@@ -1,6 +1,5 @@
 ---
 source: crates/rolldown_testing/src/integration_test.rs
-snapshot_kind: text
 ---
 # warnings
 
@@ -34,7 +33,6 @@ var test_default = {
 	"invalid-identifier": invalid_identifier
 };
 
-//#endregion
 Object.defineProperty(exports, 'default', {
   enumerable: true,
   get: function () {

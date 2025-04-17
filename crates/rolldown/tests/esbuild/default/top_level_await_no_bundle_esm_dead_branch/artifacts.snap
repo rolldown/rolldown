@@ -11,5 +11,4 @@ source: crates/rolldown_testing/src/integration_test.rs
 if (false) await foo;
 if (false) for await (foo of bar);
 
-//#endregion
 ```

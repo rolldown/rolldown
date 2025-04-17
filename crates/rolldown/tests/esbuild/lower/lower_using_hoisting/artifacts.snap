@@ -1,6 +1,5 @@
 ---
 source: crates/rolldown_testing/src/integration_test.rs
-snapshot_kind: text
 ---
 # Assets
 
@@ -12,7 +11,6 @@ snapshot_kind: text
 "use wtf";
 using a = b;
 
-//#endregion
 ```
 ## hoist-export-class-direct.js
 
@@ -32,7 +30,6 @@ var Bar1 = class Bar1 {
 };
 using c = d;
 
-//#endregion
 export { Bar1, Foo1 };
 ```
 ## hoist-export-class-indirect.js
@@ -53,7 +50,6 @@ var Bar1 = class Bar1 {
 };
 using c = d;
 
-//#endregion
 export { Bar1, Foo1 };
 ```
 ## hoist-export-clause.js
@@ -64,7 +60,6 @@ export { Bar1, Foo1 };
 using a = b;
 using c = d;
 
-//#endregion
 export { a, c as "c!" };
 ```
 ## hoist-export-default-class-anonymous.js
@@ -78,7 +73,6 @@ var hoist_export_default_class_anonymous_default = class {
 };
 using c = d;
 
-//#endregion
 export { hoist_export_default_class_anonymous_default as default };
 ```
 ## hoist-export-default-class-name-unused.js
@@ -92,7 +86,6 @@ var Foo = class {
 };
 using c = d;
 
-//#endregion
 export { Foo as default };
 ```
 ## hoist-export-default-class-name-used.js
@@ -110,7 +103,6 @@ var Foo = class Foo {
 };
 using c = d;
 
-//#endregion
 export { Foo as default };
 ```
 ## hoist-export-default-expr.js
@@ -122,7 +114,6 @@ using a = b;
 var hoist_export_default_expr_default = [a, c];
 using c = d;
 
-//#endregion
 export { hoist_export_default_expr_default as default };
 ```
 ## hoist-export-default-function-anonymous.js
@@ -136,7 +127,6 @@ function hoist_export_default_function_anonymous_default() {
 }
 using c = d;
 
-//#endregion
 export { hoist_export_default_function_anonymous_default as default };
 ```
 ## hoist-export-default-function-name-unused.js
@@ -150,7 +140,6 @@ function foo() {
 }
 using c = d;
 
-//#endregion
 export { foo as default };
 ```
 ## hoist-export-default-function-name-used.js
@@ -168,7 +157,6 @@ function foo() {
 }
 using c = d;
 
-//#endregion
 export { foo as default };
 ```
 ## hoist-export-from.js
@@ -180,7 +168,6 @@ import { x, y } from "./foo";
 using a = b;
 using c = d;
 
-//#endregion
 export { x, y };
 ```
 ## hoist-export-function-direct.js
@@ -201,7 +188,6 @@ function bar1() {
 }
 using c = d;
 
-//#endregion
 export { bar1, foo1 };
 ```
 ## hoist-export-function-indirect.js
@@ -222,7 +208,6 @@ function bar1() {
 }
 using c = d;
 
-//#endregion
 export { bar1, foo1 };
 ```
 ## hoist-export-local-direct.js
@@ -242,7 +227,6 @@ let a2 = a, { y: [y2] } = foo;
 const c2 = c, { z: [z2] } = foo;
 using c = d;
 
-//#endregion
 export { a1, ac1, c1, x1, y1, z1 };
 ```
 ## hoist-export-local-indirect.js
@@ -259,7 +243,6 @@ let a2 = a, { y: [y2] } = foo;
 const c2 = c, { z: [z2] } = foo;
 using c = d;
 
-//#endregion
 export { x1, y1, z1 };
 ```
 ## hoist-export-star.js
@@ -272,7 +255,6 @@ export * from "./foo"
 using a = b;
 using c = d;
 
-//#endregion
 ```
 ## hoist-import.js
 
@@ -283,7 +265,6 @@ import "./foo";
 using a = b;
 using c = d;
 
-//#endregion
 ```
 ## hoist-use-strict.js
 
@@ -292,5 +273,4 @@ using c = d;
 //#region hoist-use-strict.js
 using a = b;
 
-//#endregion
 ```

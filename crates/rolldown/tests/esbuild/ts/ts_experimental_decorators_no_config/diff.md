@@ -74,7 +74,6 @@ var Foo = @x.y() @(new y.x()) class Foo {
 	@x @y static accessor #asDef = 1;
 };
 
-//#endregion
 export { Foo as default };
 ```
 ### diff
@@ -82,7 +81,7 @@ export { Foo as default };
 ===================================================================
 --- esbuild	/out.js
 +++ rolldown	entry.js
-@@ -1,34 +1,35 @@
+@@ -1,34 +1,34 @@
 -// entry.ts
 -var Foo = @x.y() @(new y.x()) class _Foo {
 -  @x @y mUndef;
@@ -150,7 +149,6 @@ export { Foo as default };
 -};
 \ No newline at end of file
 +
-+//#endregion
 +export { Foo as default };
 \ No newline at end of file
 

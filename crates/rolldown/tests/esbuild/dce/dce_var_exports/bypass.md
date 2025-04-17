@@ -23,7 +23,6 @@ var require_a = __commonJS({ "a.js"(exports, module) {
 	module.exports = foo;
 } });
 
-//#endregion
 export default require_a();
 
 ```
@@ -62,7 +61,6 @@ var require_b = __commonJS({ "b.js"(exports, module) {
 	module.exports = exports;
 } });
 
-//#endregion
 export default require_b();
 
 ```
@@ -101,7 +99,6 @@ var require_c = __commonJS({ "c.js"(exports) {
 	exports.foo = module;
 } });
 
-//#endregion
 export default require_c();
 
 ```

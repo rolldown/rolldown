@@ -15,5 +15,4 @@ var Foo = class {
 };
 (() => new Foo())();
 
-//#endregion
 ```

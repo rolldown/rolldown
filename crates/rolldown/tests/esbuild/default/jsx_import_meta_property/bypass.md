@@ -26,7 +26,6 @@ f = function() {
 	console.log([/* @__PURE__ */ import.meta.factory("y", null), /* @__PURE__ */ import.meta.factory("y", null)]);
 };
 
-//#endregion
 ```
 ### diff
 ```diff
@@ -66,7 +65,6 @@ console.log([/* @__PURE__ */ import.meta.factory(import.meta.fragment, null, "x"
 	console.log([/* @__PURE__ */ import.meta.factory(import.meta.fragment, null, "y"), /* @__PURE__ */ import.meta.factory(import.meta.fragment, null, "y")]);
 };
 
-//#endregion
 ```
 ### diff
 ```diff

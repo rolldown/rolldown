@@ -17,7 +17,6 @@ let foo = 1;
 exports.foo = 2;
 module.exports = 3;
 
-//#endregion
 export { foo };
 ```
 ### diff
@@ -51,7 +50,6 @@ var require_import_in_cjs = __commonJS({ "import-in-cjs.js"(exports, module) {
 	module.exports = foo;
 } });
 
-//#endregion
 export default require_import_in_cjs();
 
 ```
@@ -88,7 +86,6 @@ var require_no_warnings_here = __commonJS({ "no-warnings-here.js"(exports, modul
 	console.log(module, exports);
 } });
 
-//#endregion
 export default require_no_warnings_here();
 
 ```

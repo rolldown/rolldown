@@ -29,14 +29,13 @@ try {
 //#region hoist-use-strict.js
 using a = b;
 
-//#endregion
 ```
 ### diff
 ```diff
 ===================================================================
 --- esbuild	/out/hoist-use-strict.js
 +++ rolldown	hoist-use-strict.js
-@@ -1,20 +1,5 @@
+@@ -1,20 +1,3 @@
 -"use strict";
 -function foo() {
 -    "use strict";
@@ -60,9 +59,6 @@ using a = b;
 +
 +//#region hoist-use-strict.js
 +using a = b;
-+
-+//#endregion
-\ No newline at end of file
 
 ```
 ## /out/hoist-directive.js
@@ -96,14 +92,13 @@ try {
 "use wtf";
 using a = b;
 
-//#endregion
 ```
 ### diff
 ```diff
 ===================================================================
 --- esbuild	/out/hoist-directive.js
 +++ rolldown	hoist-directive.js
-@@ -1,20 +1,6 @@
+@@ -1,20 +1,4 @@
 +
 +//#region hoist-directive.js
  "use wtf";
@@ -127,9 +122,6 @@ using a = b;
 -    __callDispose(_stack, _error, _hasError);
 -}
 +using a = b;
-+
-+//#endregion
-\ No newline at end of file
 
 ```
 ## /out/hoist-import.js
@@ -154,14 +146,13 @@ import "./foo";
 using a = b;
 using c = d;
 
-//#endregion
 ```
 ### diff
 ```diff
 ===================================================================
 --- esbuild	/out/hoist-import.js
 +++ rolldown	hoist-import.js
-@@ -1,10 +1,7 @@
+@@ -1,10 +1,5 @@
  import "./foo";
 -var _stack = [];
 -try {
@@ -176,9 +167,6 @@ using c = d;
 +//#region hoist-import.js
 +using a = b;
 +using c = d;
-+
-+//#endregion
-\ No newline at end of file
 
 ```
 ## /out/hoist-export-star.js
@@ -204,14 +192,13 @@ export * from "./foo"
 using a = b;
 using c = d;
 
-//#endregion
 ```
 ### diff
 ```diff
 ===================================================================
 --- esbuild	/out/hoist-export-star.js
 +++ rolldown	hoist-export-star.js
-@@ -1,10 +1,8 @@
+@@ -1,10 +1,6 @@
 -export * from "./foo";
 -var _stack = [];
 -try {
@@ -228,9 +215,6 @@ using c = d;
 +//#region hoist-export-star.js
 +using a = b;
 +using c = d;
-+
-+//#endregion
-\ No newline at end of file
 
 ```
 ## /out/hoist-export-from.js
@@ -255,7 +239,6 @@ import { x, y } from "./foo";
 using a = b;
 using c = d;
 
-//#endregion
 export { x, y };
 ```
 ### diff
@@ -263,7 +246,7 @@ export { x, y };
 ===================================================================
 --- esbuild	/out/hoist-export-from.js
 +++ rolldown	hoist-export-from.js
-@@ -1,10 +1,8 @@
+@@ -1,10 +1,7 @@
 -export {x, y} from "./foo";
 -var _stack = [];
 -try {
@@ -280,7 +263,6 @@ export { x, y };
 +using a = b;
 +using c = d;
 +
-+//#endregion
 +export { x, y };
 \ No newline at end of file
 
@@ -309,7 +291,6 @@ export {
 using a = b;
 using c = d;
 
-//#endregion
 export { a, c as "c!" };
 ```
 ### diff
@@ -317,7 +298,7 @@ export { a, c as "c!" };
 ===================================================================
 --- esbuild	/out/hoist-export-clause.js
 +++ rolldown	hoist-export-clause.js
-@@ -1,10 +1,7 @@
+@@ -1,10 +1,6 @@
 -var _stack = [];
 -try {
 -    var a = __using(_stack, b);
@@ -333,7 +314,6 @@ export { a, c as "c!" };
 +using a = b;
 +using c = d;
 +
-+//#endregion
 +export { a, c as "c!" };
 \ No newline at end of file
 
@@ -381,7 +361,6 @@ let a2 = a, { y: [y2] } = foo;
 const c2 = c, { z: [z2] } = foo;
 using c = d;
 
-//#endregion
 export { a1, ac1, c1, x1, y1, z1 };
 ```
 ### diff
@@ -389,7 +368,7 @@ export { a1, ac1, c1, x1, y1, z1 };
 ===================================================================
 --- esbuild	/out/hoist-export-local-direct.js
 +++ rolldown	hoist-export-local-direct.js
-@@ -1,16 +1,16 @@
+@@ -1,16 +1,15 @@
 -var _stack = [];
 -try {
 -    var a = __using(_stack, b);
@@ -420,7 +399,6 @@ export { a1, ac1, c1, x1, y1, z1 };
 +const c2 = c, { z: [z2] } = foo;
 +using c = d;
 +
-+//#endregion
 +export { a1, ac1, c1, x1, y1, z1 };
 \ No newline at end of file
 
@@ -462,7 +440,6 @@ let a2 = a, { y: [y2] } = foo;
 const c2 = c, { z: [z2] } = foo;
 using c = d;
 
-//#endregion
 export { x1, y1, z1 };
 ```
 ### diff
@@ -470,7 +447,7 @@ export { x1, y1, z1 };
 ===================================================================
 --- esbuild	/out/hoist-export-local-indirect.js
 +++ rolldown	hoist-export-local-indirect.js
-@@ -1,16 +1,13 @@
+@@ -1,16 +1,12 @@
 -var _stack = [];
 -try {
 -    var a = __using(_stack, b);
@@ -498,7 +475,6 @@ export { x1, y1, z1 };
 +const c2 = c, { z: [z2] } = foo;
 +using c = d;
 +
-+//#endregion
 +export { x1, y1, z1 };
 \ No newline at end of file
 
@@ -549,7 +525,6 @@ var Bar1 = class Bar1 {
 };
 using c = d;
 
-//#endregion
 export { Bar1, Foo1 };
 ```
 ### diff
@@ -557,7 +532,7 @@ export { Bar1, Foo1 };
 ===================================================================
 --- esbuild	/out/hoist-export-class-direct.js
 +++ rolldown	hoist-export-class-direct.js
-@@ -1,22 +1,17 @@
+@@ -1,22 +1,16 @@
 -var _stack = [];
 -try {
 -    var a = __using(_stack, b);
@@ -595,7 +570,6 @@ export { Bar1, Foo1 };
 +};
 +using c = d;
 +
-+//#endregion
 +export { Bar1, Foo1 };
 \ No newline at end of file
 
@@ -646,7 +620,6 @@ var Bar1 = class Bar1 {
 };
 using c = d;
 
-//#endregion
 export { Bar1, Foo1 };
 ```
 ### diff
@@ -654,7 +627,7 @@ export { Bar1, Foo1 };
 ===================================================================
 --- esbuild	/out/hoist-export-class-indirect.js
 +++ rolldown	hoist-export-class-indirect.js
-@@ -1,22 +1,17 @@
+@@ -1,22 +1,16 @@
 -var _stack = [];
 -try {
 -    var a = __using(_stack, b);
@@ -692,7 +665,6 @@ export { Bar1, Foo1 };
 +};
 +using c = d;
 +
-+//#endregion
 +export { Bar1, Foo1 };
 \ No newline at end of file
 
@@ -739,7 +711,6 @@ function bar1() {
 }
 using c = d;
 
-//#endregion
 export { bar1, foo1 };
 ```
 ### diff
@@ -747,7 +718,7 @@ export { bar1, foo1 };
 ===================================================================
 --- esbuild	/out/hoist-export-function-direct.js
 +++ rolldown	hoist-export-function-direct.js
-@@ -1,21 +1,17 @@
+@@ -1,21 +1,16 @@
 -export function foo1() {
 -    return [a, c];
 +
@@ -782,7 +753,6 @@ export { bar1, foo1 };
 -}
 +using c = d;
 +
-+//#endregion
 +export { bar1, foo1 };
 \ No newline at end of file
 
@@ -833,7 +803,6 @@ function bar1() {
 }
 using c = d;
 
-//#endregion
 export { bar1, foo1 };
 ```
 ### diff
@@ -841,7 +810,7 @@ export { bar1, foo1 };
 ===================================================================
 --- esbuild	/out/hoist-export-function-indirect.js
 +++ rolldown	hoist-export-function-indirect.js
-@@ -1,22 +1,17 @@
+@@ -1,22 +1,16 @@
 +
 +//#region hoist-export-function-indirect.js
 +using a = b;
@@ -875,7 +844,6 @@ export { bar1, foo1 };
 -export {foo1, bar1};
 +using c = d;
 +
-+//#endregion
 +export { bar1, foo1 };
 \ No newline at end of file
 
@@ -909,7 +877,6 @@ var Foo = class {
 };
 using c = d;
 
-//#endregion
 export { Foo as default };
 ```
 ### diff
@@ -917,7 +884,7 @@ export { Foo as default };
 ===================================================================
 --- esbuild	/out/hoist-export-default-class-name-unused.js
 +++ rolldown	hoist-export-default-class-name-unused.js
-@@ -1,13 +1,10 @@
+@@ -1,13 +1,9 @@
 -var _stack = [];
 -try {
 -    var a = __using(_stack, b);
@@ -939,7 +906,6 @@ export { Foo as default };
 +};
 +using c = d;
 +
-+//#endregion
 +export { Foo as default };
 \ No newline at end of file
 
@@ -977,7 +943,6 @@ var Foo = class Foo {
 };
 using c = d;
 
-//#endregion
 export { Foo as default };
 ```
 ### diff
@@ -985,7 +950,7 @@ export { Foo as default };
 ===================================================================
 --- esbuild	/out/hoist-export-default-class-name-used.js
 +++ rolldown	hoist-export-default-class-name-used.js
-@@ -1,13 +1,14 @@
+@@ -1,13 +1,13 @@
 -var _stack = [];
 -try {
 -    var a = __using(_stack, b);
@@ -1011,7 +976,6 @@ export { Foo as default };
 +};
 +using c = d;
 +
-+//#endregion
 +export { Foo as default };
 \ No newline at end of file
 
@@ -1045,7 +1009,6 @@ var hoist_export_default_class_anonymous_default = class {
 };
 using c = d;
 
-//#endregion
 export { hoist_export_default_class_anonymous_default as default };
 ```
 ### diff
@@ -1053,7 +1016,7 @@ export { hoist_export_default_class_anonymous_default as default };
 ===================================================================
 --- esbuild	/out/hoist-export-default-class-anonymous.js
 +++ rolldown	hoist-export-default-class-anonymous.js
-@@ -1,13 +1,10 @@
+@@ -1,13 +1,9 @@
 -var _stack = [];
 -try {
 -    var a = __using(_stack, b);
@@ -1075,7 +1038,6 @@ export { hoist_export_default_class_anonymous_default as default };
 +};
 +using c = d;
 +
-+//#endregion
 +export { hoist_export_default_class_anonymous_default as default };
 \ No newline at end of file
 
@@ -1106,7 +1068,6 @@ function foo() {
 }
 using c = d;
 
-//#endregion
 export { foo as default };
 ```
 ### diff
@@ -1114,7 +1075,7 @@ export { foo as default };
 ===================================================================
 --- esbuild	/out/hoist-export-default-function-name-unused.js
 +++ rolldown	hoist-export-default-function-name-unused.js
-@@ -1,12 +1,10 @@
+@@ -1,12 +1,9 @@
 -export default function foo() {
 -    return [a, c];
 +
@@ -1134,7 +1095,6 @@ export { foo as default };
 -}
 +using c = d;
 +
-+//#endregion
 +export { foo as default };
 \ No newline at end of file
 
@@ -1169,7 +1129,6 @@ function foo() {
 }
 using c = d;
 
-//#endregion
 export { foo as default };
 ```
 ### diff
@@ -1177,7 +1136,7 @@ export { foo as default };
 ===================================================================
 --- esbuild	/out/hoist-export-default-function-name-used.js
 +++ rolldown	hoist-export-default-function-name-used.js
-@@ -1,12 +1,14 @@
+@@ -1,12 +1,13 @@
 -export default function foo() {
 -    return [a, c, foo];
 +
@@ -1201,7 +1160,6 @@ export { foo as default };
 -}
 +using c = d;
 +
-+//#endregion
 +export { foo as default };
 \ No newline at end of file
 
@@ -1232,7 +1190,6 @@ function hoist_export_default_function_anonymous_default() {
 }
 using c = d;
 
-//#endregion
 export { hoist_export_default_function_anonymous_default as default };
 ```
 ### diff
@@ -1240,7 +1197,7 @@ export { hoist_export_default_function_anonymous_default as default };
 ===================================================================
 --- esbuild	/out/hoist-export-default-function-anonymous.js
 +++ rolldown	hoist-export-default-function-anonymous.js
-@@ -1,12 +1,10 @@
+@@ -1,12 +1,9 @@
 -export default function () {
 -    return [a, c];
 +
@@ -1260,7 +1217,6 @@ export { hoist_export_default_function_anonymous_default as default };
 -}
 +using c = d;
 +
-+//#endregion
 +export { hoist_export_default_function_anonymous_default as default };
 \ No newline at end of file
 
@@ -1290,7 +1246,6 @@ using a = b;
 var hoist_export_default_expr_default = [a, c];
 using c = d;
 
-//#endregion
 export { hoist_export_default_expr_default as default };
 ```
 ### diff
@@ -1298,7 +1253,7 @@ export { hoist_export_default_expr_default as default };
 ===================================================================
 --- esbuild	/out/hoist-export-default-expr.js
 +++ rolldown	hoist-export-default-expr.js
-@@ -1,11 +1,8 @@
+@@ -1,11 +1,7 @@
 -var _stack = [];
 -try {
 -    var a = __using(_stack, b);
@@ -1316,7 +1271,6 @@ export { hoist_export_default_expr_default as default };
 +var hoist_export_default_expr_default = [a, c];
 +using c = d;
 +
-+//#endregion
 +export { hoist_export_default_expr_default as default };
 \ No newline at end of file
 

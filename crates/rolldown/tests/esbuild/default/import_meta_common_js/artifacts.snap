@@ -1,6 +1,5 @@
 ---
 source: crates/rolldown_testing/src/integration_test.rs
-snapshot_kind: text
 ---
 # Assets
 
@@ -11,5 +10,4 @@ snapshot_kind: text
 //#region entry.js
 console.log(require("url").pathToFileURL(__filename).href, void 0);
 
-//#endregion
 ```

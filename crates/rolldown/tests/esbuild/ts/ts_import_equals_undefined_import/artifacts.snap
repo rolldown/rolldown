@@ -1,6 +1,5 @@
 ---
 source: crates/rolldown_testing/src/integration_test.rs
-snapshot_kind: text
 ---
 # Assets
 
@@ -8,17 +7,23 @@ snapshot_kind: text
 
 ```js
 
+//#region rolldown:runtime
+var __defProp = Object.defineProperty;
+var __export = (target, all) => {
+	for (var name in all) __defProp(target, name, {
+		get: all[name],
+		enumerable: true
+	});
+};
 
 //#region import.ts
 var import_exports = {};
 __export(import_exports, { value: () => value });
 let value = 123;
 
-//#endregion
 //#region entry.ts
 var value_copy = import_exports.value;
 let foo = value_copy;
 console.log(foo);
 
-//#endregion
 ```

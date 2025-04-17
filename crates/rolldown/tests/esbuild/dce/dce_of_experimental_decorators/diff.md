@@ -76,7 +76,6 @@ const fn = () => {
 	console.log("side effect");
 };
 
-//#endregion
 //#region keep-these.ts
 var Class = @fn class {};
 var Field = class {
@@ -98,14 +97,13 @@ var StaticParameter = class {
 	static foo(@fn bar) {}
 };
 
-//#endregion
 ```
 ### diff
 ```diff
 ===================================================================
 --- esbuild	/out/keep-these.js
 +++ rolldown	keep-these.js
-@@ -1,63 +1,29 @@
+@@ -1,63 +1,26 @@
 -// decorator.ts
 -var fn = () => {
 -  console.log("side effect");
@@ -121,7 +119,6 @@ var StaticParameter = class {
 -  fn
 -], Class);
 +
-+//#endregion
 +//#region keep-these.ts
 +var Class = @fn class {};
  var Field = class {
@@ -182,9 +179,6 @@ var StaticParameter = class {
 -__decorateClass([
 -  __decorateParam(0, fn)
 -], StaticParameter, "foo", 1);
-\ No newline at end of file
-+
-+//#endregion
 \ No newline at end of file
 
 ```

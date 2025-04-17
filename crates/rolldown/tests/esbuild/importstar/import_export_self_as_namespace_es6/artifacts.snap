@@ -7,6 +7,14 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```js
 
+//#region rolldown:runtime
+var __defProp = Object.defineProperty;
+var __export = (target, all) => {
+	for (var name in all) __defProp(target, name, {
+		get: all[name],
+		enumerable: true
+	});
+};
 
 //#region entry.js
 var entry_exports = {};
@@ -16,6 +24,5 @@ __export(entry_exports, {
 });
 const foo = 123;
 
-//#endregion
 export { foo, entry_exports as ns };
 ```

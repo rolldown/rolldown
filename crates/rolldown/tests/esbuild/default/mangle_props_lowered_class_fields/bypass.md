@@ -22,7 +22,6 @@ var Foo = class {
 };
 Foo.bar_ = new Foo().foo_;
 
-//#endregion
 ```
 ### diff
 ```diff

@@ -18,7 +18,6 @@ let Foo;
 	})(Bar || (Bar = _Foo.Bar || (_Foo.Bar = {})));
 })(Foo || (Foo = {}));
 
-//#endregion
 ```
 ### diff
 ```diff
@@ -56,7 +55,6 @@ let Foo;
 	})(Bar || (Bar = _Foo.Bar || (_Foo.Bar = {})));
 })(Foo || (Foo = {}));
 
-//#endregion
 export { Foo };
 ```
 ### diff

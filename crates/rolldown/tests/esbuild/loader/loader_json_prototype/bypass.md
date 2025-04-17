@@ -24,11 +24,9 @@ var data_default = {
 	["__proto__"]: __proto__
 };
 
-//#endregion
 //#region entry.js
 console.log(data_default);
 
-//#endregion
 ```
 ### diff
 ```diff

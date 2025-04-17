@@ -10,19 +10,22 @@ source: crates/rolldown_testing/src/integration_test.rs
 //#region entry.js
 import("./foo.js").then(({ default: { bar } }) => console.log(bar));
 
-//#endregion
 ```
 ## foo.js
 
 ```js
 
+//#region rolldown:runtime
+var __getOwnPropNames = Object.getOwnPropertyNames;
+var __commonJS = (cb, mod) => function() {
+	return mod || (0, cb[__getOwnPropNames(cb)[0]])((mod = { exports: {} }).exports, mod), mod.exports;
+};
 
 //#region foo.js
 var require_foo = __commonJS({ "foo.js"(exports) {
 	exports.bar = 123;
 } });
 
-//#endregion
 export default require_foo();
 
 ```

@@ -18,7 +18,6 @@ import { bar } from "./foo2.js";
 //#region entry.js
 import("./foo.js").then(({ bar: b }) => console.log(bar, b));
 
-//#endregion
 ```
 ### diff
 ```diff

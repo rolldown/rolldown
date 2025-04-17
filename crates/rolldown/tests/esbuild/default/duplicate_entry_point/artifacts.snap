@@ -22,5 +22,4 @@ import "./entry3.js";
 //#region entry.js
 console.log(123);
 
-//#endregion
 ```

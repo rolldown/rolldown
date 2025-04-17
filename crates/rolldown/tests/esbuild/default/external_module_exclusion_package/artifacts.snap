@@ -1,6 +1,5 @@
 ---
 source: crates/rolldown_testing/src/integration_test.rs
-snapshot_kind: text
 ---
 # warnings
 
@@ -28,6 +27,5 @@ import { DocumentClient } from "aws-sdk/clients/dynamodb";
 const s3 = new S3();
 const dynamodb = new DocumentClient();
 
-//#endregion
 export { dynamodb, s3 };
 ```

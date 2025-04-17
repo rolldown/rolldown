@@ -19,7 +19,6 @@ var foo = 123;
 //#region entry.js
 const foo = 123;
 
-//#endregion
 exports.foo = foo
 ```
 ### diff

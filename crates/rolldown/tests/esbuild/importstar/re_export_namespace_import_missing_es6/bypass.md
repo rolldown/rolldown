@@ -18,25 +18,39 @@ console.log(bar_exports, bar_exports.foo);
 ```js
 import assert from "node:assert";
 
+//#region rolldown:runtime
+var __defProp = Object.defineProperty;
+var __export = (target, all) => {
+	for (var name in all) __defProp(target, name, {
+		get: all[name],
+		enumerable: true
+	});
+};
 
 //#region bar.js
 var bar_exports = {};
 __export(bar_exports, { x: () => x });
 const x = 123;
 
-//#endregion
 //#region entry.js
 assert.deepEqual(bar_exports, { x: 123 });
 assert.equal(void 0, void 0);
 
-//#endregion
 ```
 ### diff
 ```diff
 ===================================================================
 --- esbuild	/out.js
 +++ rolldown	entry.js
-@@ -2,5 +2,5 @@
+@@ -1,6 +1,13 @@
++var __defProp = Object.defineProperty;
++var __export = (target, all) => {
++    for (var name in all) __defProp(target, name, {
++        get: all[name],
++        enumerable: true
++    });
++};
+ var bar_exports = {};
  __export(bar_exports, {
      x: () => x
  });

@@ -130,14 +130,13 @@ for (var { fn = function() {} } of obj);
 [fn = function() {}] = [];
 ({fn = function() {}} = {});
 
-//#endregion
 ```
 ### diff
 ```diff
 ===================================================================
 --- esbuild	/out/keep.js
 +++ rolldown	keep.js
-@@ -1,103 +1,21 @@
+@@ -1,103 +1,19 @@
 -function fn() {
 -}
 -__name(fn, "fn");
@@ -261,9 +260,6 @@ for (var { fn = function() {} } of obj);
 +for (var { fn = function() {} } of obj);
 +[fn = function() {}] = [];
 +({fn = function() {}} = {});
-+
-+//#endregion
-\ No newline at end of file
 
 ```
 ## /out/do-not-keep.js

@@ -40,7 +40,6 @@ foo: bar: {
 	break foo;
 }
 
-//#endregion
 ```
 ### diff
 ```diff

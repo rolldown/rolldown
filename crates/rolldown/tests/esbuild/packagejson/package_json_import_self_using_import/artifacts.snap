@@ -1,6 +1,5 @@
 ---
 source: crates/rolldown_testing/src/integration_test.rs
-snapshot_kind: text
 ---
 # Assets
 
@@ -11,11 +10,9 @@ snapshot_kind: text
 //#region src/foo-import.js
 var foo_import_default = "foo";
 
-//#endregion
 //#region src/index.js
 var src_default = "index";
 console.log(src_default, foo_import_default);
 
-//#endregion
 export { src_default as default };
 ```

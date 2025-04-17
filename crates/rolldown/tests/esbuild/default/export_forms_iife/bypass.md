@@ -48,18 +48,24 @@ var globalName = (function(exports) {
 
 "use strict";
 Object.defineProperty(exports, '__esModule', { value: true });
+//#region rolldown:runtime
+var __defProp = Object.defineProperty;
+var __export = (target, all) => {
+	for (var name in all) __defProp(target, name, {
+		get: all[name],
+		enumerable: true
+	});
+};
 
 
 //#region a.js
 const abc = void 0;
 
-//#endregion
 //#region b.js
 var b_exports = {};
 __export(b_exports, { xyz: () => xyz });
 const xyz = null;
 
-//#endregion
 //#region entry.js
 var entry_default = 123;
 var v = 234;
@@ -68,7 +74,6 @@ const c = 234;
 function Fn() {}
 var Class = class {};
 
-//#endregion
 exports.C = Class
 exports.Class = Class
 exports.Fn = Fn
@@ -91,7 +96,7 @@ return exports;
 ===================================================================
 --- esbuild	/out.js
 +++ rolldown	entry.js
-@@ -1,27 +1,32 @@
+@@ -1,27 +1,39 @@
 -var globalName = (() => {
 -    var entry_exports = {};
 -    __export(entry_exports, {
@@ -109,6 +114,13 @@ return exports;
 +        value: true
      });
 -    var abc = void 0;
++    var __defProp = Object.defineProperty;
++    var __export = (target, all) => {
++        for (var name in all) __defProp(target, name, {
++            get: all[name],
++            enumerable: true
++        });
++    };
 +    const abc = void 0;
      var b_exports = {};
      __export(b_exports, {

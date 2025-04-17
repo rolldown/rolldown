@@ -24,7 +24,6 @@ switch (bar) {
 	default: let bar$1;
 }
 
-//#endregion
 ```
 ### diff
 ```diff

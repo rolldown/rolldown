@@ -1,6 +1,5 @@
 ---
 source: crates/rolldown_testing/src/integration_test.rs
-snapshot_kind: text
 ---
 # Assets
 
@@ -19,5 +18,4 @@ let keep7 = { set [x](_) {} };
 let keep8 = { async [x]() {} };
 let keep9 = { [{ toString() {} }]: "x" };
 
-//#endregion
 ```

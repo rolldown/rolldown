@@ -10,17 +10,13 @@ source: crates/rolldown_testing/src/integration_test.rs
 //#region src/a.js
 console.log("a.js");
 
-//#endregion
 //#region src/b.js
 console.log("b.js");
 
-//#endregion
 //#region src/some-star/c.js
 console.log("c.js");
 
-//#endregion
 //#region src/some-slash/d.js
 console.log("d.js");
 
-//#endregion
 ```

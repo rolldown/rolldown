@@ -19,7 +19,6 @@ console.log(DROP(1));
 DROP(foo());
 DROP(1);
 
-//#endregion
 ```
 ### diff
 ```diff
@@ -58,14 +57,13 @@ console.log(DROP(1));
 DROP(foo());
 DROP(1);
 
-//#endregion
 ```
 ### diff
 ```diff
 ===================================================================
 --- esbuild	/out/identity-last.js
 +++ rolldown	identity-last.js
-@@ -1,2 +1,13 @@
+@@ -1,2 +1,11 @@
 -console.log(1);
 -foo();
 +
@@ -79,9 +77,6 @@ DROP(1);
 +console.log(DROP(1));
 +DROP(foo());
 +DROP(1);
-+
-+//#endregion
-\ No newline at end of file
 
 ```
 ## /out/identity-first.js
@@ -109,14 +104,13 @@ console.log(keep(1));
 keep(foo());
 keep(1);
 
-//#endregion
 ```
 ### diff
 ```diff
 ===================================================================
 --- esbuild	/out/identity-first.js
 +++ rolldown	identity-first.js
-@@ -1,6 +1,13 @@
+@@ -1,6 +1,11 @@
 +
 +//#region identity-first.js
  function keep(x) {
@@ -129,9 +123,6 @@ keep(1);
  console.log(keep(1));
  keep(foo());
  keep(1);
-+
-+//#endregion
-\ No newline at end of file
 
 ```
 ## /out/identity-cross-module.js
@@ -149,13 +140,11 @@ function DROP(x) {
 	return x;
 }
 
-//#endregion
 //#region identity-cross-module.js
 console.log(DROP(1));
 DROP(foo());
 DROP(1);
 
-//#endregion
 ```
 ### diff
 ```diff

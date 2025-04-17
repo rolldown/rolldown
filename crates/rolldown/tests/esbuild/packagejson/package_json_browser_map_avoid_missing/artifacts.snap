@@ -1,6 +1,5 @@
 ---
 source: crates/rolldown_testing/src/integration_test.rs
-snapshot_kind: text
 ---
 # Assets
 
@@ -8,6 +7,11 @@ snapshot_kind: text
 
 ```js
 
+//#region rolldown:runtime
+var __getOwnPropNames = Object.getOwnPropertyNames;
+var __commonJS = (cb, mod) => function() {
+	return mod || (0, cb[__getOwnPropNames(cb)[0]])((mod = { exports: {} }).exports, mod), mod.exports;
+};
 
 //#region node_modules/component-indexof/index.js
 var require_component_indexof = __commonJS({ "node_modules/component-indexof/index.js"(exports, module) {
@@ -16,7 +20,6 @@ var require_component_indexof = __commonJS({ "node_modules/component-indexof/ind
 	};
 } });
 
-//#endregion
 //#region node_modules/component-classes/index.js
 try {
 	var index = require_component_indexof();
@@ -24,5 +27,4 @@ try {
 	var index = require_component_indexof();
 }
 
-//#endregion
 ```

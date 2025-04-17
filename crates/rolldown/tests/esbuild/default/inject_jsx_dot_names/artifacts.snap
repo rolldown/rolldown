@@ -11,9 +11,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 function el() {}
 function frag() {}
 
-//#endregion
 //#region entry.jsx
 console.log(/* @__PURE__ */ el(frag, null, /* @__PURE__ */ el("div", null)));
 
-//#endregion
 ```

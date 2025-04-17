@@ -22,7 +22,6 @@ let CrossFile = /* @__PURE__ */ function(CrossFile$1) {
 	return CrossFile$1;
 }({});
 
-//#endregion
 //#region entry.ts
 var SameFile = /* @__PURE__ */ function(SameFile$1) {
 	SameFile$1["STR"] = "str 1";
@@ -36,7 +35,6 @@ console.log(`
 	CrossFile.NUM = ${CrossFile.NUM}
 `);
 
-//#endregion
 ```
 ### diff
 ```diff

@@ -18,7 +18,6 @@ let x = function foo(foo$1) {
 	return foo$1;
 };
 
-//#endregion
 ```
 ### diff
 ```diff

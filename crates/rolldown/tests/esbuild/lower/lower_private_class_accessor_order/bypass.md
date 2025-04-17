@@ -31,7 +31,6 @@ var Foo = class {
 };
 assert(new Foo().bar === 123);
 
-//#endregion
 ```
 ### diff
 ```diff

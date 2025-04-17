@@ -11,7 +11,6 @@ import { setX } from "./x.js";
 //#region a.js
 setX();
 
-//#endregion
 ```
 ## b.js
 
@@ -22,7 +21,6 @@ import { setZ } from "./z.js";
 //#region b.js
 setZ();
 
-//#endregion
 ```
 ## c.js
 
@@ -35,7 +33,6 @@ setX2();
 setY2();
 setZ2();
 
-//#endregion
 ```
 ## x.js
 
@@ -50,7 +47,6 @@ function setX2(v) {
 	_x = v;
 }
 
-//#endregion
 export { setX, setX2 };
 ```
 ## z.js
@@ -68,7 +64,6 @@ function setY2(v) {
 	_y = v;
 }
 
-//#endregion
 //#region z.js
 let _z;
 function setZ(v) {
@@ -79,6 +74,5 @@ function setZ2(v) {
 	_z = v;
 }
 
-//#endregion
 export { setY2, setZ, setZ2 };
 ```

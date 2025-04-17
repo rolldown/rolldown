@@ -54,14 +54,13 @@ with(x) {
 	checkPrecedence(1 / Foo.NAN, 1 / Foo.POS_INF, 1 / Foo.NEG_INF);
 }
 
-//#endregion
 ```
 ### diff
 ```diff
 ===================================================================
 --- esbuild	/out.js
 +++ rolldown	entry.js
-@@ -1,30 +1,18 @@
+@@ -1,30 +1,16 @@
 -var Foo = /* @__PURE__ */ ((Foo2) => {
 -  Foo2[Foo2["NAN"] = NaN] = "NAN";
 -  Foo2[Foo2["POS_INF"] = Infinity] = "POS_INF";
@@ -107,8 +106,5 @@ with(x) {
 +	console.log(Foo.NAN, Foo.POS_INF, Foo.NEG_INF);
 +	checkPrecedence(1 / Foo.NAN, 1 / Foo.POS_INF, 1 / Foo.NEG_INF);
 +}
-+
-+//#endregion
-\ No newline at end of file
 
 ```

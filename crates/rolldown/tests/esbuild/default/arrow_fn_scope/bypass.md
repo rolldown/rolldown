@@ -31,7 +31,6 @@ tests = {
 	7: (y, z, x = (z$1, y$1 = (z$2) => x + y$1 + z$2) => x + y$1 + z$1, x + y + z)
 };
 
-//#endregion
 ```
 ### diff
 ```diff

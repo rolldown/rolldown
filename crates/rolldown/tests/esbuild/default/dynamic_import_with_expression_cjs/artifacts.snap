@@ -11,5 +11,4 @@ source: crates/rolldown_testing/src/integration_test.rs
 import("foo");
 import(foo());
 
-//#endregion
 ```

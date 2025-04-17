@@ -26,5 +26,4 @@ let B = class {
 	}
 };
 
-//#endregion
 ```

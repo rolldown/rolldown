@@ -34,11 +34,9 @@ console.log(image_default);
 //#region images/image.png
 var image_default = "assets/image-Dq1zDy-k.png";
 
-//#endregion
 //#region entries/entry.js
 console.log(image_default);
 
-//#endregion
 ```
 ### diff
 ```diff

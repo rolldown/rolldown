@@ -21,7 +21,6 @@ import assert from "node:assert";
 //#region entry.js
 assert.deepEqual(void 0, void 0);
 
-//#endregion
 ```
 ### diff
 ```diff

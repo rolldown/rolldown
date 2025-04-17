@@ -33,7 +33,6 @@ var require_factory = __commonJS({ "factory.jsx"(exports) {
 	};
 } });
 
-//#endregion
 export default require_factory();
 
 ```
@@ -80,7 +79,6 @@ var require_fragment = __commonJS({ "fragment.jsx"(exports) {
 	};
 } });
 
-//#endregion
 export default require_fragment();
 
 ```

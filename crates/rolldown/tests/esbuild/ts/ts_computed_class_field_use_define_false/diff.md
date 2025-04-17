@@ -32,14 +32,13 @@ var Foo = class {
 };
 new Foo();
 
-//#endregion
 ```
 ### diff
 ```diff
 ===================================================================
 --- esbuild	/out.js
 +++ rolldown	entry.js
-@@ -1,11 +1,11 @@
+@@ -1,11 +1,9 @@
 -var _a, _b, _c;
 -(q, _c = r, _b = x, _a = y);
 -class Foo {
@@ -59,8 +58,5 @@ new Foo();
 +	@dec [y] = z;
 +};
  new Foo();
-+
-+//#endregion
-\ No newline at end of file
 
 ```

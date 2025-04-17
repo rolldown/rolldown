@@ -25,7 +25,6 @@ var x = foo.x;
 var y = x.y;
 let bar = c;
 
-//#endregion
 export { bar };
 ```
 ### diff

@@ -36,7 +36,6 @@ console.log(
 	import.meta.bar
 );
 
-//#endregion
 ```
 ### diff
 ```diff

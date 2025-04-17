@@ -1,6 +1,5 @@
 ---
 source: crates/rolldown_testing/src/integration_test.rs
-snapshot_kind: text
 ---
 # Assets
 
@@ -8,6 +7,18 @@ snapshot_kind: text
 
 ```js
 
+//#region rolldown:runtime
+var __defProp = Object.defineProperty;
+var __getOwnPropNames = Object.getOwnPropertyNames;
+var __esm = (fn, res) => function() {
+	return fn && (res = (0, fn[__getOwnPropNames(fn)[0]])(fn = 0)), res;
+};
+var __export = (target, all) => {
+	for (var name in all) __defProp(target, name, {
+		get: all[name],
+		enumerable: true
+	});
+};
 
 //#region node_modules/demo-pkg/index.js
 var demo_pkg_exports = {};
@@ -18,10 +29,8 @@ var init_demo_pkg = __esm({ "node_modules/demo-pkg/index.js"() {
 	console.log("hello");
 } });
 
-//#endregion
 //#region src/entry.js
 init_demo_pkg();
 console.log("unused import");
 
-//#endregion
 ```

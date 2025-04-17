@@ -71,7 +71,6 @@ let d_keep = /* @__PURE__ */ function(d_keep$1) {
 }({});
 let e_keep = {};
 
-//#endregion
 //#region entry.ts
 console.log([
 	a_DROP.x,
@@ -86,7 +85,6 @@ console.log([
 	e_keep.x
 ]);
 
-//#endregion
 ```
 ### diff
 ```diff

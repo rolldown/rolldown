@@ -10,9 +10,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 //#region foo.json
 var foo_default = {};
 
-//#endregion
 //#region entry.js
 console.log(foo_default);
 
-//#endregion
 ```

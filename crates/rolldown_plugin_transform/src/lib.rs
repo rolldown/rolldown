@@ -1,13 +1,14 @@
+mod types;
 mod utils;
 
 use std::borrow::Cow;
 use std::path::Path;
 
-use oxc::{span::SourceType, transformer::TransformOptions};
-
 use rolldown_common::ModuleType;
 use rolldown_plugin::{Plugin, SharedTransformPluginContext};
 use rolldown_utils::{clean_url::clean_url, pattern_filter::StringOrRegex};
+
+use types::transform_options::TransformOptions;
 
 #[derive(Debug, Default)]
 pub struct TransformPlugin {
@@ -19,7 +20,6 @@ pub struct TransformPlugin {
   pub jsx_inject: Option<String>,
   pub environment_consumer: String,
 
-  pub source_type: Option<SourceType>,
   pub transform_options: TransformOptions,
 }
 

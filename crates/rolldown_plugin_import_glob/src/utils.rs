@@ -175,7 +175,7 @@ impl<'ast> GlobImportVisit<'ast, '_> {
             formatted_file.as_str(),
             None,
           ),
-          self.ast_builder.vec(),
+          None,
           None,
         );
 
@@ -269,7 +269,7 @@ impl<'ast> GlobImportVisit<'ast, '_> {
     if matches!(omit_type, ImportGlobOmitType::Keys) {
       let elements = properties.map(|(_, value)| ArrayExpressionElement::from(value));
       let elements = self.ast_builder.vec_from_iter(elements);
-      self.ast_builder.expression_array(span, elements, None)
+      self.ast_builder.expression_array(span, elements)
     } else {
       let properties = properties.map(|(file, value)| {
         self.ast_builder.object_property_kind_object_property(
@@ -287,7 +287,7 @@ impl<'ast> GlobImportVisit<'ast, '_> {
         )
       });
       let properties = self.ast_builder.vec_from_iter(properties);
-      self.ast_builder.expression_object(span, properties, None)
+      self.ast_builder.expression_object(span, properties)
     }
   }
 }

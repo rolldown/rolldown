@@ -363,7 +363,7 @@ impl<'ast> VisitMut<'ast> for ScopeHoistingFinalizer<'_, 'ast> {
   fn visit_import_expression(&mut self, expr: &mut ast::ImportExpression<'ast>) {
     // Make sure the import expression is in correct form. If it's not, we should leave it as it is.
     match &mut expr.source {
-      ast::Expression::StringLiteral(str) if expr.options.is_empty() => {
+      ast::Expression::StringLiteral(str) if expr.options.is_none() => {
         let rec_id = self.ctx.module.imports[&expr.span];
         let rec = &self.ctx.module.import_records[rec_id];
         let importee_id = rec.resolved_module;

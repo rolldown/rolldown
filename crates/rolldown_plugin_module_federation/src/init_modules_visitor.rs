@@ -74,7 +74,7 @@ impl<'ast> VisitMut<'ast> for InitModuleVisitor<'ast, '_> {
                     self.ast_builder.atom(&id),
                     None,
                   ),
-                  self.ast_builder.vec(),
+                  None,
                   None,
                 ),
                 self.ast_builder.identifier_name(SPAN, self.ast_builder.atom("then")),

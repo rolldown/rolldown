@@ -113,7 +113,7 @@ fn construct_vite_preload_call<'a>(
                 ast_builder.expression_import(
                   SPAN,
                   ast_builder.expression_string_literal(SPAN, source, None),
-                  ast_builder.vec(),
+                  None,
                   None,
                 ),
               )),
@@ -136,7 +136,6 @@ fn construct_vite_preload_call<'a>(
                   false,
                 )
               })),
-              None,
             )),
           ));
           items

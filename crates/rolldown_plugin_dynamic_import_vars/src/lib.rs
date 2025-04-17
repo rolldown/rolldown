@@ -142,34 +142,30 @@ impl<'ast> DynamicImportVarsVisit<'ast> {
                 self.ast_builder.expression_string_literal(SPAN, pattern, None),
               ));
               if let Some(params) = params {
-                arguments.push(Argument::from(self.ast_builder.expression_object(
-                  SPAN,
-                  {
-                    let mut items =
-                      self.ast_builder.vec1(self.ast_builder.object_property_kind_object_property(
-                        SPAN,
-                        PropertyKind::Init,
-                        self.ast_builder.property_key_static_identifier(SPAN, "query"),
-                        self.ast_builder.expression_string_literal(SPAN, params.query, None),
-                        false,
-                        false,
-                        false,
-                      ));
-                    if params.import {
-                      items.push(self.ast_builder.object_property_kind_object_property(
-                        SPAN,
-                        PropertyKind::Init,
-                        self.ast_builder.property_key_static_identifier(SPAN, "import"),
-                        self.ast_builder.expression_string_literal(SPAN, "*", None),
-                        false,
-                        false,
-                        false,
-                      ));
-                    }
-                    items
-                  },
-                  None,
-                )));
+                arguments.push(Argument::from(self.ast_builder.expression_object(SPAN, {
+                  let mut items =
+                    self.ast_builder.vec1(self.ast_builder.object_property_kind_object_property(
+                      SPAN,
+                      PropertyKind::Init,
+                      self.ast_builder.property_key_static_identifier(SPAN, "query"),
+                      self.ast_builder.expression_string_literal(SPAN, params.query, None),
+                      false,
+                      false,
+                      false,
+                    ));
+                  if params.import {
+                    items.push(self.ast_builder.object_property_kind_object_property(
+                      SPAN,
+                      PropertyKind::Init,
+                      self.ast_builder.property_key_static_identifier(SPAN, "import"),
+                      self.ast_builder.expression_string_literal(SPAN, "*", None),
+                      false,
+                      false,
+                      false,
+                    ));
+                  }
+                  items
+                })));
               }
               arguments
             },

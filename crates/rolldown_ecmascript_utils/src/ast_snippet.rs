@@ -421,7 +421,6 @@ impl<'ast> AstSnippet<'ast> {
           false,
           false,
         )),
-        None,
       );
       commonjs_call_expr.arguments.push(ast::Argument::ObjectExpression(obj_expr));
     } else {
@@ -488,7 +487,6 @@ impl<'ast> AstSnippet<'ast> {
           false,
           false,
         )),
-        None,
       );
       esm_call_expr.arguments.push(ast::Argument::ObjectExpression(obj_expr));
     } else {
@@ -980,11 +978,9 @@ impl<'ast> AstSnippet<'ast> {
 
     self.call_expr_with_arg_expr(
       self.literal_prop_access_member_expr_expr("Object", "freeze"),
-      ast::Expression::ObjectExpression(self.builder.alloc_object_expression(
-        SPAN,
-        self.builder.vec_from_iter([proto]),
-        None,
-      )),
+      ast::Expression::ObjectExpression(
+        self.builder.alloc_object_expression(SPAN, self.builder.vec_from_iter([proto])),
+      ),
       true,
     )
   }

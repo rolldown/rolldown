@@ -61,7 +61,7 @@ impl<'ast> HmrAstFinalizer<'_, 'ast> {
 
         // Empty object `{}`
         let mut arg_obj_expr =
-          self.snippet.builder.alloc_object_expression(SPAN, self.snippet.builder.vec(), None);
+          self.snippet.builder.alloc_object_expression(SPAN, self.snippet.builder.vec());
 
         self.exports.iter().for_each(|(exported, local_name)| {
           // prop_name: () => returned
@@ -95,7 +95,7 @@ impl<'ast> HmrAstFinalizer<'_, 'ast> {
       }
       rolldown_common::ExportsKind::None => ast::Argument::ObjectExpression(
         // `{}`
-        self.snippet.builder.alloc_object_expression(SPAN, self.snippet.builder.vec(), None),
+        self.snippet.builder.alloc_object_expression(SPAN, self.snippet.builder.vec()),
       ),
     };
 
@@ -126,7 +126,6 @@ impl<'ast> HmrAstFinalizer<'_, 'ast> {
             }
             .into_in(self.alloc),
           )),
-          None,
         ),
       ));
     }

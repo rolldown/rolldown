@@ -197,7 +197,7 @@ impl<'ast> VisitMut<'ast> for PreProcessor<'ast> {
         }
       }
       // transpose `import(test ? 'a' : 'b')` into `test ? import('a') : import('b')`
-      ast::Expression::ImportExpression(expr) if expr.options.is_empty() => {
+      ast::Expression::ImportExpression(expr) if expr.options.is_none() => {
         let source = &mut expr.source;
         match source {
           ast::Expression::ConditionalExpression(cond_expr) => {
@@ -208,18 +208,8 @@ impl<'ast> VisitMut<'ast> for PreProcessor<'ast> {
             let new_cond_expr = self.snippet.builder.expression_conditional(
               SPAN,
               test,
-              self.snippet.builder.expression_import(
-                SPAN,
-                consequent,
-                self.snippet.builder.vec(),
-                None,
-              ),
-              self.snippet.builder.expression_import(
-                SPAN,
-                alternative,
-                self.snippet.builder.vec(),
-                None,
-              ),
+              self.snippet.builder.expression_import(SPAN, consequent, None, None),
+              self.snippet.builder.expression_import(SPAN, alternative, None, None),
             );
 
             Some(new_cond_expr)

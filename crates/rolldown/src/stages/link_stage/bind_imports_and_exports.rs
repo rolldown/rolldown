@@ -617,8 +617,8 @@ impl BindImportsAndExportsContext<'_> {
             named_import.imported.to_string(),
             named_import.span_imported,
           );
-          if let Some(importer) = importee.as_normal() {
-            if matches!(importer.module_type, ModuleType::Ts | ModuleType::Tsx) {
+          if let Some(importee) = importee.as_normal() {
+            if matches!(importee.module_type, ModuleType::Ts | ModuleType::Tsx) {
               diagnostic = diagnostic.with_severity_warning();
             }
           }

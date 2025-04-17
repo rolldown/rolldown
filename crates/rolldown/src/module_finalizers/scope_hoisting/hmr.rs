@@ -34,7 +34,7 @@ impl<'ast> ScopeHoistingFinalizer<'_, 'ast> {
 
         // Empty object `{}`
         let mut arg_obj_expr =
-          self.snippet.builder.alloc_object_expression(SPAN, self.snippet.builder.vec(), None);
+          self.snippet.builder.alloc_object_expression(SPAN, self.snippet.builder.vec());
 
         self.ctx.linking_info.canonical_exports().for_each(|(export, resolved_export)| {
           // prop_name: () => returned
@@ -69,7 +69,7 @@ impl<'ast> ScopeHoistingFinalizer<'_, 'ast> {
       }
       rolldown_common::ExportsKind::None => ast::Argument::ObjectExpression(
         // `{}`
-        self.snippet.builder.alloc_object_expression(SPAN, self.snippet.builder.vec(), None),
+        self.snippet.builder.alloc_object_expression(SPAN, self.snippet.builder.vec()),
       ),
     };
 
@@ -100,7 +100,6 @@ impl<'ast> ScopeHoistingFinalizer<'_, 'ast> {
             }
             .into_in(self.alloc),
           )),
-          None,
         ),
       ));
     }

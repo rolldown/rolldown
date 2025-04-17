@@ -60,7 +60,6 @@ impl<'ast> VisitMut<'ast> for IsolatingModuleFinalizer<'_, 'ast> {
           Expression::ObjectExpression(self.snippet.builder.alloc_object_expression(
             SPAN,
             self.snippet.builder.vec_from_iter(self.generated_exports.drain(..)),
-            None,
           )),
         ),
       ));

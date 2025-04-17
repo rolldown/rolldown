@@ -82,7 +82,7 @@ fn get_matcher_string<'a>(glob: &'a str, cwd: &'a str) -> Cow<'a, str> {
     normalize_path(glob)
   } else {
     let final_path = Path::new(cwd).join(glob);
-    Cow::Owned(normalize_path(final_path.to_string_lossy().as_ref()).to_string())
+    Cow::Owned(normalize_path(&final_path.to_string_lossy()).into_owned())
   }
 }
 

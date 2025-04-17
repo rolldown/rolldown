@@ -129,7 +129,6 @@ onKeyStroke('Escape', () => {
   font-weight: bold;
   color: var(--vp-c-text-1);
   & a {
-    color: white;
     transition: color 0.25s;
     display: inline;
     &:hover {

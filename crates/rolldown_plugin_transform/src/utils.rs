@@ -158,6 +158,21 @@ impl TransformPlugin {
 
           transform_options.decorator = Some(decorator);
         }
+
+        // | preserveValueImports | importsNotUsedAsValues | verbatimModuleSyntax | onlyRemoveTypeImports |
+        // | -------------------- | ---------------------- | -------------------- |---------------------- |
+        // | false                | remove                 | false                | false                 |
+        // | false                | preserve, error        | -                    | -                     |
+        // | true                 | remove                 | -                    | -                     |
+        // | true                 | preserve, error        | true                 | true                  |
+        // TODO(shulaoda): port the rest logic of the `typescript` option
+        if compiler_options.verbatim_module_syntax.is_some() {
+          let mut typescript = transform_options.typescript.unwrap_or_default();
+
+          typescript.only_remove_type_imports = compiler_options.verbatim_module_syntax;
+
+          transform_options.typescript = Some(typescript);
+        }
       }
     }
 

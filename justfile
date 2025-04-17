@@ -123,7 +123,7 @@ fix-repo:
     pnpm lint-code -- --fix
     just fmt-repo
 
-# Support `just build [native|wasi] [debug|release]`
+# Support `just build [native|browser] [debug|release]`
 build target="native" mode="debug":
     pnpm run --filter rolldown build-{{ target }}:{{ mode }}
 

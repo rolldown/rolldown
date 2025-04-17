@@ -2773,6 +2773,7 @@ dependencies = [
 name = "rolldown_plugin_transform"
 version = "0.1.0"
 dependencies = [
+ "itertools",
  "oxc",
  "rolldown_common",
  "rolldown_plugin",

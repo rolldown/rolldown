@@ -1,5 +1,6 @@
 use std::borrow::Cow;
 
+use itertools::Either;
 use oxc::{span::SourceType, transformer::TransformOptions};
 use rolldown_common::ModuleType;
 use rolldown_utils::{clean_url::clean_url, pattern_filter::filter as pattern_filter};
@@ -52,41 +53,38 @@ impl TransformPlugin {
     cwd: &str,
     ext: Option<&str>,
   ) -> (SourceType, Cow<'_, TransformOptions>) {
-    let is_refresh_disabled = self.transform_options.jsx.refresh.is_some()
-      && (self.environment_consumer == "server"
-        || matches!(self.jsx_refresh_filter(id, cwd), JsxRefreshFilter::False));
+    let is_refresh_disabled = self.environment_consumer == "server"
+      || matches!(self.jsx_refresh_filter(id, cwd), JsxRefreshFilter::False);
 
     let is_js_lang = matches!(self.jsx_refresh_filter(id, cwd), JsxRefreshFilter::True)
       && ext.is_some_and(|ext| ["js", "jsx", "ts", "tsx", "mjs"].contains(&ext));
 
     let source_type = if is_js_lang {
       SourceType::mjs()
-    } else if let Some(source_type) = self.source_type {
-      source_type
     } else {
-      match ext {
+      match self.transform_options.lang.as_deref().xor(ext) {
         Some("js") => SourceType::mjs(),
         Some("jsx") => SourceType::jsx(),
         Some("ts") => SourceType::ts(),
         Some("tsx") => SourceType::tsx(),
         None | Some(_) => {
-          panic!("Failed to detect the lang of {id}. Please specify `transformOptions.lang`")
+          if let Some(lang) = &self.transform_options.lang {
+            panic!("Invalid value for `transformOptions.lang`: `{lang}`.")
+          } else {
+            panic!("Failed to detect the lang of {id}. Please specify `transformOptions.lang`.")
+          }
         }
       }
     };
 
-    let transform_options = if is_refresh_disabled {
-      let mut transform_options = self.transform_options.clone();
+    let mut transform_options = self.transform_options.clone();
 
-      if is_refresh_disabled {
-        transform_options.jsx.refresh = None;
+    if let Some(Either::Right(jsx)) = &mut transform_options.jsx {
+      if jsx.refresh.is_some() && is_refresh_disabled {
+        jsx.refresh = None;
       }
+    }
 
-      Cow::Owned(transform_options)
-    } else {
-      Cow::Borrowed(&self.transform_options)
-    };
-
-    (source_type, transform_options)
+    (source_type, Cow::Owned(TransformOptions::default()))
   }
 }

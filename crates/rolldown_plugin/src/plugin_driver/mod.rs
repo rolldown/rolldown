@@ -90,6 +90,7 @@ impl PluginDriver {
     self.watch_files.clear();
     self.modules.clear();
     self.file_emitter.clear();
+    self.context_load_modules.clear();
   }
 
   pub fn set_module_info(&self, module_id: &ModuleId, module_info: Arc<ModuleInfo>) {

@@ -143,9 +143,10 @@ export class PluginContextImpl extends MinimalPluginContextImpl {
             resolveFn!();
           },
         );
-      } finally {
+      } catch (e) {
         // If the load module has failed, avoid it re-load using unresolved promise.
         data.loadModulePromiseMap.delete(id);
+        throw e;
       }
       return promise;
     }

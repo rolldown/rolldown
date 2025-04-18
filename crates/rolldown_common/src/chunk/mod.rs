@@ -11,7 +11,7 @@ use arcstr::ArcStr;
 use rolldown_rstr::Rstr;
 use rolldown_std_utils::PathExt;
 use rolldown_utils::{
-  BitSet, hash_placeholder::HashPlaceholderGenerator, indexmap::FxIndexMap,
+  BitSet, dashmap::FxDashMap, hash_placeholder::HashPlaceholderGenerator, indexmap::FxIndexMap,
   make_unique_name::make_unique_name,
 };
 use rustc_hash::FxHashMap;
@@ -142,7 +142,7 @@ impl Chunk {
     rollup_pre_rendered_chunk: &RollupPreRenderedChunk,
     chunk_name: &ArcStr,
     hash_placeholder_generator: &mut HashPlaceholderGenerator,
-    used_name_counts: &mut FxHashMap<ArcStr, u32>,
+    used_name_counts: &FxDashMap<ArcStr, u32>,
   ) -> anyhow::Result<PreliminaryFilename> {
     if let Some(file) = &options.file {
       let basename = PathBuf::from(file)
@@ -188,7 +188,7 @@ impl Chunk {
     rollup_pre_rendered_chunk: &RollupPreRenderedChunk,
     chunk_name: &ArcStr,
     hash_placeholder_generator: &mut HashPlaceholderGenerator,
-    used_name_counts: &mut FxHashMap<ArcStr, u32>,
+    used_name_counts: &FxDashMap<ArcStr, u32>,
   ) -> anyhow::Result<PreliminaryFilename> {
     if let Some(file) = &options.file {
       let mut file = PathBuf::from(file);

@@ -20,8 +20,10 @@ use rolldown_common::{
 use rolldown_plugin::SharedPluginDriver;
 use rolldown_std_utils::{PathBufExt, PathExt};
 use rolldown_utils::{
+  dashmap::FxDashMap,
   hash_placeholder::HashPlaceholderGenerator,
   index_vec_ext::IndexVecRefExt,
+  make_unique_name::make_unique_name,
   rayon::{IntoParallelRefMutIterator, ParallelIterator},
 };
 use sugar_path::SugarPath;
@@ -227,7 +229,7 @@ impl<'a> GenerateStage<'a> {
 
     let mut hash_placeholder_generator = HashPlaceholderGenerator::default();
 
-    let mut used_name_counts = FxHashMap::default();
+    let used_name_counts = FxDashMap::default();
 
     for chunk_id in &chunk_graph.sorted_chunk_idx_vec {
       let chunk = &mut chunk_graph.chunk_table[*chunk_id];
@@ -248,7 +250,7 @@ impl<'a> GenerateStage<'a> {
           &pre_rendered_chunk,
           pre_generated_chunk_name,
           &mut hash_placeholder_generator,
-          &mut used_name_counts,
+          &used_name_counts,
         )
         .await?;
 
@@ -258,7 +260,7 @@ impl<'a> GenerateStage<'a> {
           &pre_rendered_chunk,
           pre_generated_chunk_name,
           &mut hash_placeholder_generator,
-          &mut used_name_counts,
+          &used_name_counts,
         )
         .await?;
 
@@ -292,8 +294,10 @@ impl<'a> GenerateStage<'a> {
             }
           });
 
-          let filename = asset_filename_template.render(Some(&name), extension, hash_replacer);
-          let preliminary = PreliminaryFilename::new(filename, hash_placeholder);
+          let mut filename =
+            asset_filename_template.render(Some(&name), extension, hash_replacer).into();
+          filename = make_unique_name(&filename, &used_name_counts);
+          let preliminary = PreliminaryFilename::new(filename.to_string(), hash_placeholder);
 
           chunk.asset_absolute_preliminary_filenames.insert(
             module.idx,

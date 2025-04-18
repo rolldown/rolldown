@@ -43,27 +43,22 @@ export async function bundleWithCliOptions(
     process.exit(1);
   }
 
-  // Rolldown doesn't yet support the following syntax:
-  // await using build = await rolldown(cliOptions.input)
-  const build = await rolldown(cliOptions.input);
-  try {
-    const { output: outputs } = await build.generate(cliOptions.output);
+  await using build = await rolldown(cliOptions.input);
 
-    if (outputs.length === 0) {
-      logger.error('No output generated');
-      process.exit(1);
-    }
+  const { output: outputs } = await build.generate(cliOptions.output);
 
-    for (const file of outputs) {
-      if (outputs.length > 1) {
-        logger.log(`\n${colors.cyan(colors.bold(`|→ ${file.fileName}:`))}\n`);
-      }
-      // avoid consola since it doesn't print it as raw string
-      // eslint-disable-next-line no-console
-      console.log(file.type === 'asset' ? file.source : file.code);
+  if (outputs.length === 0) {
+    logger.error('No output generated');
+    process.exit(1);
+  }
+
+  for (const file of outputs) {
+    if (outputs.length > 1) {
+      logger.log(`\n${colors.cyan(colors.bold(`|→ ${file.fileName}:`))}\n`);
     }
-  } finally {
-    await build.close();
+    // avoid consola since it doesn't print it as raw string
+    // eslint-disable-next-line no-console
+    console.log(file.type === 'asset' ? file.source : file.code);
   }
 }
 

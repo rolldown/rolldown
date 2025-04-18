@@ -6,7 +6,6 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## entry.js
 
 ```js
-
 //#region entry.js
 import("./foo.js");
 import("./foo2.js");
@@ -16,7 +15,6 @@ import("./foo2.js");
 ## foo.js
 
 ```js
-
 //#region a/foo.js
 console.log("a/foo");
 
@@ -25,7 +23,6 @@ console.log("a/foo");
 ## foo2.js
 
 ```js
-
 //#region b/foo.js
 console.log("b/foo");
 

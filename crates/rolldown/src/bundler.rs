@@ -38,6 +38,8 @@ pub struct Bundler {
   pub(crate) cache: ScanStageCache,
   pub(crate) hmr_manager: Option<HmrManager>,
   pub(crate) build_span: tracing::Span,
+  // Guard for the tracing system. Responsible for cleaning up the allocated resources when the bundler gets dropped.
+  pub(crate) _debug_tracer: Option<rolldown_debug::DebugTracer>,
 }
 
 impl Bundler {

@@ -5,4 +5,4 @@ mod trace_action_macro;
 
 pub use rolldown_debug_action as action;
 
-pub use init_tracing::init_devtool_tracing;
+pub use init_tracing::{DebugTracer, init_devtool_tracing};

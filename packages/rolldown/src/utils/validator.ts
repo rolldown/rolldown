@@ -416,6 +416,10 @@ const InputOptionsSchema = v.strictObject({
 });
 
 const InputCliOverrideSchema = v.strictObject({
+  input: v.pipe(
+    v.optional(v.array(v.string())),
+    v.description('Entry file'),
+  ),
   external: v.pipe(
     v.optional(v.array(v.string())),
     v.description(
@@ -439,7 +443,6 @@ const InputCliOptionsSchema = v.omit(
     ...InputCliOverrideSchema.entries,
   }),
   [
-    'input',
     'plugins',
     'onwarn',
     'onLog',

@@ -40,6 +40,13 @@ describe('basic arguments', () => {
 })
 
 describe('cli options for bundling', () => {
+  it('should handle `--input` and positional args as entries', async () => {
+    const cwd = cliFixturesDir('cli-multi-entries')
+    const status = await $({ cwd })`rolldown 1.ts --input ./2.js`
+    expect(status.exitCode).toBe(0)
+    expect(cleanStdout(status.stdout)).toMatchSnapshot()
+  })
+
   it('should handle single boolean option', async () => {
     const cwd = cliFixturesDir('cli-option-boolean')
     const status = await $({ cwd })`rolldown index.ts --minify -d dist`

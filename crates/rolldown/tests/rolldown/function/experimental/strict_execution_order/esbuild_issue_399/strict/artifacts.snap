@@ -47,7 +47,6 @@ init_entry2();
 
 ```js
 
-
 //#region run-dep.js
 var init_run_dep = __esm({ "run-dep.js"() {
 	global.foo.log();

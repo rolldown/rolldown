@@ -6,7 +6,6 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## entry.js
 
 ```js
-
 //#region entry.jsx
 function KeepMe1() {}
 let keepMe2 = /* @__PURE__ */ React.createElement(KeepMe1, null);

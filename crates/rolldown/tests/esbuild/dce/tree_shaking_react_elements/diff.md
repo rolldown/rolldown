@@ -14,7 +14,6 @@ console.log(f);
 ```
 ### rolldown
 ```js
-
 //#region entry.jsx
 function Foo() {}
 let a = /* @__PURE__ */ React.createElement("div", null);

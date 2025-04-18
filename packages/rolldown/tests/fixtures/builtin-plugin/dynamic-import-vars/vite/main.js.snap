@@ -1,4 +1,3 @@
-
 //#region \0rolldown_dynamic_import_helper.js
 var __rolldown_dynamic_import_helper_default = (glob, path, segments) => {
 	const v = glob[path] ?? glob["./" + path];

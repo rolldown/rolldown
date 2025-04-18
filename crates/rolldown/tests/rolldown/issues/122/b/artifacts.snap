@@ -6,7 +6,6 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## 1.js
 
 ```js
-
 //#region 1.js
 console.log(1);
 
@@ -15,7 +14,6 @@ console.log(1);
 ## 2.js
 
 ```js
-
 //#region 2.js
 console.log(2);
 

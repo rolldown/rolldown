@@ -24,7 +24,6 @@ require_foo();
 ### rolldown
 ```js
 
-
 //#region src/node_modules/pkg/sub/foo.js
 var require_foo = __commonJS({ "src/node_modules/pkg/sub/foo.js"() {
 	__require("sub");

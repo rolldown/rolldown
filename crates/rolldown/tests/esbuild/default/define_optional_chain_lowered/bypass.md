@@ -22,7 +22,6 @@ console.log([
 ```
 ### rolldown
 ```js
-
 //#region entry.js
 var _a, _a$b;
 console.log([

@@ -16,7 +16,6 @@ foo();
 ```
 ### rolldown
 ```js
-
 //#region empty.js
 function DROP() {}
 console.log(DROP(foo(), bar()));
@@ -73,7 +72,6 @@ foo();
 ```
 ### rolldown
 ```js
-
 //#region empty-comma.js
 function DROP() {}
 console.log((DROP(), DROP(), foo()));
@@ -120,7 +118,6 @@ if (foo) {
 ```
 ### rolldown
 ```js
-
 //#region empty-if-else.js
 function DROP() {}
 if (foo) {
@@ -155,7 +152,6 @@ console.log(void 0);
 ```
 ### rolldown
 ```js
-
 //#region empty-last.js
 function DROP() {
 	return x;
@@ -173,9 +169,8 @@ DROP();
 ===================================================================
 --- esbuild	/out/empty-last.js
 +++ rolldown	empty-last.js
-@@ -1,1 +1,12 @@
+@@ -1,1 +1,11 @@
 -console.log(void 0);
-+
 +//#region empty-last.js
 +function DROP() {
 +	return x;
@@ -198,7 +193,6 @@ console.log(void 0);
 ```
 ### rolldown
 ```js
-
 //#region empty-cross-module-def.js
 function DROP() {}
 
@@ -234,7 +228,6 @@ keep(1);
 ```
 ### rolldown
 ```js
-
 //#region empty-first.js
 function keep() {
 	return;
@@ -253,8 +246,7 @@ keep(1);
 ===================================================================
 --- esbuild	/out/empty-first.js
 +++ rolldown	empty-first.js
-@@ -1,6 +1,13 @@
-+
+@@ -1,6 +1,12 @@
 +//#region empty-first.js
  function keep() {
 -    return x;

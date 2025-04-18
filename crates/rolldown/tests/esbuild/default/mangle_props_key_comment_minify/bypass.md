@@ -19,7 +19,6 @@ x = class {
 ```
 ### rolldown
 ```js
-
 //#region entry.js
 x = class {
 	_mangleThis = 1;

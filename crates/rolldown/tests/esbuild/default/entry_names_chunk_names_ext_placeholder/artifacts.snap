@@ -38,7 +38,6 @@ console.log("entry2");
 ## shared.js
 
 ```js
-
 //#region lib/shared.js
 console.log("shared");
 

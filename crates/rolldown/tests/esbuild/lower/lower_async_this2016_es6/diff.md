@@ -17,7 +17,6 @@ export {
 ```
 ### rolldown
 ```js
-
 //#region other.js
 let bar = async () => {};
 

@@ -15,7 +15,6 @@ export {
 ```
 ### rolldown
 ```js
-
 //#region ../../../../../../node_modules/.pnpm/@oxc-project+runtime@0.64.0/node_modules/@oxc-project/runtime/src/helpers/esm/checkPrivateRedeclaration.js
 function _checkPrivateRedeclaration(e, t) {
 	if (t.has(e)) throw new TypeError("Cannot initialize the same private elements twice on an object");

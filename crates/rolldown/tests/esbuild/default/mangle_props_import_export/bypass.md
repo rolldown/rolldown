@@ -40,7 +40,6 @@ let bar_ = require("xyz").b;
 ### rolldown
 ```js
 
-
 //#region cjs.js
 var require_cjs = __commonJS({ "cjs.js"(exports) {
 	exports.foo_ = 123;

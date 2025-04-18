@@ -31,7 +31,6 @@ class Bar {
 ```
 ### rolldown
 ```js
-
 //#region entry.js
 var Foo = class {
 	#foo;

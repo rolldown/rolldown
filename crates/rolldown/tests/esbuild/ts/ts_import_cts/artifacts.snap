@@ -7,7 +7,6 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```js
 
-
 //#region required.cjs
 var require_required = __commonJS({ "required.cjs"() {
 	console.log("works");

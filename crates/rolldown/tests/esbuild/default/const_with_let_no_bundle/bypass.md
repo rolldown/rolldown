@@ -12,7 +12,6 @@ for (const e of x) console.log(e);
 ```
 ### rolldown
 ```js
-
 //#region entry.js
 const a = 1;
 console.log(a);

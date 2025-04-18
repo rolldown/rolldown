@@ -1,13 +1,11 @@
 ---
 source: crates/rolldown_testing/src/integration_test.rs
-snapshot_kind: text
 ---
 # Assets
 
 ## entry.js
 
 ```js
-
 //#region inject.js
 const old = fn;
 const fn = (...args) => old.apply(console, ["log:"].concat(args));

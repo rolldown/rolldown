@@ -20,7 +20,6 @@ x([
 ```
 ### rolldown
 ```js
-
 //#region entry.js
 x(
 	/* __KEY__ */

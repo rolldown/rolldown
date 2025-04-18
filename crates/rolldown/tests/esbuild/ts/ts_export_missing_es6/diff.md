@@ -13,7 +13,6 @@ console.log(foo_exports);
 ### rolldown
 ```js
 
-
 //#region bar.js
 var nope = void 0;
 

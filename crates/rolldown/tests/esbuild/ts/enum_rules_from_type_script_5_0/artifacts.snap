@@ -6,7 +6,6 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## not-supported.js
 
 ```js
-
 //#region not-supported.ts
 var NonIntegerNumberToString = /* @__PURE__ */ function(NonIntegerNumberToString$1) {
 	NonIntegerNumberToString$1["SUPPORTED"] = "1";
@@ -34,7 +33,6 @@ console.log(TemplateExpressions.NULL, TemplateExpressions.TRUE, TemplateExpressi
 ## supported.js
 
 ```js
-
 //#region supported.ts
 var Foo = /* @__PURE__ */ function(Foo$1) {
 	Foo$1[Foo$1["X0"] = 123] = "X0";

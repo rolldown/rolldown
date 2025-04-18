@@ -8,7 +8,6 @@
 ```
 ### rolldown
 ```js
-
 //#region entry.js
 while (foo());
 

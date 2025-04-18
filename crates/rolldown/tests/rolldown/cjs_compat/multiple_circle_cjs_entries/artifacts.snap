@@ -1,6 +1,5 @@
 ---
 source: crates/rolldown_testing/src/integration_test.rs
-snapshot_kind: text
 ---
 # Assets
 
@@ -15,7 +14,6 @@ export default require_a();
 ## a2.js
 
 ```js
-
 
 //#region b.js
 var require_b = __commonJS({ "b.js"(exports, module) {

@@ -6,7 +6,6 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## entry.js
 
 ```js
-
 //#region file#foo.txt
 var file_foo_default = "foo";
 

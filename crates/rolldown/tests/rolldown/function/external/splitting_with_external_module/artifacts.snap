@@ -28,7 +28,6 @@ assert(value === 1);
 ## share.js
 
 ```js
-
 //#region share.js
 const value = 1;
 

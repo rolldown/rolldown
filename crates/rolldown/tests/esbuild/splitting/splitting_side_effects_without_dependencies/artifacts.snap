@@ -26,7 +26,6 @@ console.log(b);
 ## shared.js
 
 ```js
-
 //#region shared.js
 let a = 1;
 let b = 2;

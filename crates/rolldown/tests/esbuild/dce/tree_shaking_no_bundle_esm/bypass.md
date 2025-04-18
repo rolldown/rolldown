@@ -12,7 +12,6 @@ keep();
 ```
 ### rolldown
 ```js
-
 //#region entry.js
 function keep() {}
 keep();

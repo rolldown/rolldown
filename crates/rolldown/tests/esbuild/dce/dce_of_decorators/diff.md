@@ -35,7 +35,6 @@ var StaticAccessor = class {
 ```
 ### rolldown
 ```js
-
 //#region decorator.js
 const fn = () => {
 	console.log("side effect");
@@ -64,19 +63,18 @@ var StaticMethod = class {
 ===================================================================
 --- esbuild	/out/keep-these.js
 +++ rolldown	keep-these.js
-@@ -1,28 +1,23 @@
+@@ -1,28 +1,22 @@
 -// decorator.js
 -var fn = () => {
 -  console.log("side effect");
--};
- 
--// keep-these.js
--var Class = @fn class {
 +//#region decorator.js
 +const fn = () => {
 +	console.log("side effect");
  };
-+
+ 
+-// keep-these.js
+-var Class = @fn class {
+-};
 +//#endregion
 +//#region keep-these.js
 +var Class = @fn class {};

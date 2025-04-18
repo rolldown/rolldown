@@ -1,13 +1,11 @@
 ---
 source: crates/rolldown_testing/src/integration_test.rs
-snapshot_kind: text
 ---
 # Assets
 
 ## input.js
 
 ```js
-
 //#region input.js
 const one = 1;
 console.log(one);
@@ -20,11 +18,11 @@ console.log(one);
 
 ```
 - ../input.js
-(0:0) "const " --> (2:0) "const "
-(0:6) "one = " --> (2:6) "one = "
-(0:12) "require('one');\n" --> (2:12) "1;\n"
-(2:0) "console." --> (3:0) "console."
-(2:8) "log(" --> (3:8) "log("
-(2:12) "one)" --> (3:12) "one)"
-(2:16) ";\n" --> (3:16) ";\n"
+(0:0) "const " --> (1:0) "const "
+(0:6) "one = " --> (1:6) "one = "
+(0:12) "require('one');\n" --> (1:12) "1;\n"
+(2:0) "console." --> (2:0) "console."
+(2:8) "log(" --> (2:8) "log("
+(2:12) "one)" --> (2:12) "one)"
+(2:16) ";\n" --> (2:16) ";\n"
 ```

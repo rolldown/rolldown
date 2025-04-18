@@ -13,7 +13,6 @@ export { p, q };
 ## a2.js
 
 ```js
-
 //#region b.js
 var q = 6;
 

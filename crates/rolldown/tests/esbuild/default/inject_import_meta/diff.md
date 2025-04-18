@@ -23,7 +23,6 @@ console.log(
 ```
 ### rolldown
 ```js
-
 //#region entry.js
 console.log(
 	// These should be fully substituted

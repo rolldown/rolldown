@@ -1,6 +1,5 @@
 ---
 source: crates/rolldown_testing/src/integration_test.rs
-snapshot_kind: text
 ---
 # Assets
 
@@ -29,7 +28,6 @@ export default require_main2();
 ## main22.js
 
 ```js
-
 
 //#region main2.js
 var require_main2 = __commonJS({ "main2.js"(exports, module) {

@@ -9,7 +9,6 @@ import("./foo-X6C7FV5C.js").then(({ default: { bar } }) => console.log(bar));
 ```
 ### rolldown
 ```js
-
 //#region entry.js
 import("./foo.js").then(({ default: { bar } }) => console.log(bar));
 

@@ -19,7 +19,6 @@ new KeepMe2();
 ```
 ### rolldown
 ```js
-
 //#region entry.js
 var KeepMe1 = class {
 	static x = "x";

@@ -46,7 +46,6 @@ keep &&= keep2;
 ```
 ### rolldown
 ```js
-
 //#region entry.js
 let keep, keep2;
 keep + keep2;

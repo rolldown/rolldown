@@ -53,7 +53,6 @@ export let shouldBeWrapped = [
 ```
 ### rolldown
 ```js
-
 //#region entry.js
 function empty() {}
 function id(x) {

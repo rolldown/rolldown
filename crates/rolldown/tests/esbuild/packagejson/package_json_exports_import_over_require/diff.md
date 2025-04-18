@@ -8,7 +8,6 @@ console.log("SUCCESS");
 ### rolldown
 ```js
 
-
 //#region node_modules/pkg/require.js
 var require_require = __commonJS({ "node_modules/pkg/require.js"() {
 	console.log("FAILURE");

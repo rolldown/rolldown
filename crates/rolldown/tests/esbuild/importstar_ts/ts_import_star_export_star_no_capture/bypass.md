@@ -13,7 +13,6 @@ console.log(foo, foo, foo2);
 ```
 ### rolldown
 ```js
-
 //#region foo.ts
 const foo$1 = 123;
 

@@ -15,7 +15,6 @@ fn(test);
 ```
 ### rolldown
 ```js
-
 //#region inject.js
 const old = fn;
 const fn = (...args) => old.apply(console, ["log:"].concat(args));

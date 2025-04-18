@@ -11,7 +11,6 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## loops.js
 
 ```js
-
 //#region loops.js
 for (using a of b) c(() => a);
 if (nested) for (using a of b) c(() => a);
@@ -21,7 +20,6 @@ if (nested) for (using a of b) c(() => a);
 ## switch.js
 
 ```js
-
 //#region switch.js
 using x = y;
 switch (foo) {

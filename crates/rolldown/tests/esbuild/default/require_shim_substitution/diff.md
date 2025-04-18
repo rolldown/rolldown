@@ -31,7 +31,6 @@ console.log([
 ### rolldown
 ```js
 
-
 //#region example.json
 var require_example = __commonJS({ "example.json"(exports, module) {
 	module.exports = { "works": true };

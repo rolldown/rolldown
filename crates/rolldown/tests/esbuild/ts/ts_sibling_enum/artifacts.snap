@@ -6,7 +6,6 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## nested-number.js
 
 ```js
-
 //#region nested-number.ts
 let foo;
 (function(_foo) {
@@ -38,7 +37,6 @@ export { foo };
 ## nested-propagation.js
 
 ```js
-
 //#region nested-propagation.ts
 let n;
 (function(_n) {
@@ -73,7 +71,6 @@ export { n };
 ## nested-string.js
 
 ```js
-
 //#region nested-string.ts
 let foo;
 (function(_foo) {
@@ -105,7 +102,6 @@ export { foo };
 ## number.js
 
 ```js
-
 //#region number.ts
 let x = /* @__PURE__ */ function(x$1) {
 	x$1[x$1["y"] = 0] = "y";
@@ -127,7 +123,6 @@ export { x };
 ## propagation.js
 
 ```js
-
 //#region propagation.ts
 let a = /* @__PURE__ */ function(a$1) {
 	a$1[a$1["b"] = 100] = "b";
@@ -152,7 +147,6 @@ export { a, x };
 ## string.js
 
 ```js
-
 //#region string.ts
 let x = /* @__PURE__ */ function(x$1) {
 	x$1["y"] = "a";

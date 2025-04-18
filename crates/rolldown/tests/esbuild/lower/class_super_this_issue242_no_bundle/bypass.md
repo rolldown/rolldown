@@ -22,7 +22,6 @@ _e = new WeakMap();
 ```
 ### rolldown
 ```js
-
 //#region entry.ts
 var A = class {};
 var B = class extends A {

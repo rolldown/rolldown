@@ -1,6 +1,5 @@
 ---
 source: crates/rolldown_testing/src/integration_test.rs
-snapshot_kind: text
 ---
 # warnings
 
@@ -47,7 +46,6 @@ snapshot_kind: text
 ## copy.js
 
 ```js
-
 //#region file.file
 var file_default = "assets/file-kQXAkSQM.file";
 
@@ -62,7 +60,6 @@ export { default$1 as default, file_default };
 ## dynamic.js
 
 ```js
-
 //#region dynamic.js
 var dynamic_default = 5;
 

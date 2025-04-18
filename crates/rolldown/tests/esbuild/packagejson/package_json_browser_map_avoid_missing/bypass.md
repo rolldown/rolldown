@@ -26,7 +26,6 @@ var index;
 ### rolldown
 ```js
 
-
 //#region node_modules/component-indexof/index.js
 var require_component_indexof = __commonJS({ "node_modules/component-indexof/index.js"(exports, module) {
 	module.exports = function() {

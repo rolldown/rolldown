@@ -16,7 +16,6 @@ export {
 ```
 ### rolldown
 ```js
-
 //#region entry.ts
 var a = foo.a;
 var b = a.b;

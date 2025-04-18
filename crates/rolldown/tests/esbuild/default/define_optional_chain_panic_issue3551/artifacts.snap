@@ -1,13 +1,11 @@
 ---
 source: crates/rolldown_testing/src/integration_test.rs
-snapshot_kind: text
 ---
 # Assets
 
 ## dot-define.js
 
 ```js
-
 //#region dot-define.js
 1 .c;
 1 .c;
@@ -29,7 +27,6 @@ delete 1["c"];
 ## id-define.js
 
 ```js
-
 //#region id-define.js
 1?.y.z;
 (1?.y).z;

@@ -8,7 +8,6 @@ export let yyyyy = ({ y }) => ({ y });
 ```
 ### rolldown
 ```js
-
 //#region entry.js
 let yyyyy = ({ xxxxx }) => ({ xxxxx });
 

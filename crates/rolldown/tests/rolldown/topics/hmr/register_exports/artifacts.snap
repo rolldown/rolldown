@@ -7,7 +7,6 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```js
 
-
 //#region cjs.js
 var require_cjs = __commonJS({ "cjs.js"(exports, module) {
 	import.meta.hot = __rolldown_runtime__.createModuleHotContext("cjs.js");

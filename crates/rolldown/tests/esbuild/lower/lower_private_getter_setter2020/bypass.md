@@ -61,7 +61,6 @@ export {
 ```
 ### rolldown
 ```js
-
 //#region entry.js
 var Foo = class {
 	get #foo() {

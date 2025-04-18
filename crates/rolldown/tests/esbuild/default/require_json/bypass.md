@@ -21,7 +21,6 @@ console.log(require_test());
 ### rolldown
 ```js
 
-
 //#region test.json
 var require_test = __commonJS({ "test.json"(exports, module) {
 	module.exports = {

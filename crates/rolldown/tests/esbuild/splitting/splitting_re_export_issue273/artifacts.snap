@@ -13,7 +13,6 @@ export { a };
 ## a2.js
 
 ```js
-
 //#region a.js
 const a = 1;
 

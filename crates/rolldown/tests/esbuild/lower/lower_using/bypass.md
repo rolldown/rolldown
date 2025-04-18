@@ -73,7 +73,6 @@ try {
 ```
 ### rolldown
 ```js
-
 //#region entry.js
 using a = b;
 await using c = d;
@@ -89,7 +88,7 @@ if (nested) {
 ===================================================================
 --- esbuild	/out/entry.js
 +++ rolldown	entry.js
-@@ -1,66 +1,10 @@
+@@ -1,66 +1,9 @@
 -function foo() {
 -    var _stack4 = [];
 -    try {
@@ -109,7 +108,6 @@ if (nested) {
 -    } finally {
 -        __callDispose(_stack4, _error4, _hasError4);
 -    }
-+
 +//#region entry.js
 +using a = b;
 +await using c = d;
@@ -329,7 +327,6 @@ async function bar() {
 ```
 ### rolldown
 ```js
-
 //#region loops.js
 for (using a of b) c(() => a);
 for (await using d of e) f(() => d);
@@ -349,7 +346,7 @@ if (nested) {
 ===================================================================
 --- esbuild	/out/loops.js
 +++ rolldown	loops.js
-@@ -1,155 +1,14 @@
+@@ -1,155 +1,13 @@
 -for (var _a of b) {
 -    var _stack = [];
 -    try {
@@ -396,7 +393,6 @@ if (nested) {
 -        _promise2 && await _promise2;
 -    }
 -}
-+
 +//#region loops.js
 +for (using a of b) c(() => a);
 +for (await using d of e) f(() => d);
@@ -598,7 +594,6 @@ try {
 ```
 ### rolldown
 ```js
-
 //#region switch.js
 using x = y;
 switch (foo) {
@@ -628,7 +623,7 @@ async function foo() {
 ===================================================================
 --- esbuild	/out/switch.js
 +++ rolldown	switch.js
-@@ -1,72 +1,24 @@
+@@ -1,72 +1,23 @@
 -async function foo() {
 -    var _stack6 = [];
 -    try {
@@ -665,7 +660,6 @@ async function foo() {
 -    } finally {
 -        __callDispose(_stack6, _error6, _hasError6);
 -    }
-+
 +//#region switch.js
 +using x = y;
 +switch (foo) {

@@ -19,7 +19,6 @@ console.log(new Foo());
 ```
 ### rolldown
 ```js
-
 //#region b.ts
 var Foo = class {};
 (function(_Foo) {

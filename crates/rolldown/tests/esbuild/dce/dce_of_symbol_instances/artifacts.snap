@@ -6,7 +6,6 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## class.js
 
 ```js
-
 //#region class.js
 var Keep1 = class {
 	*[Symbol.iterator]() {}
@@ -25,7 +24,6 @@ var Keep3 = class {
 ## object.js
 
 ```js
-
 //#region object.js
 let keep1 = {
 	*[Symbol.iterator]() {},

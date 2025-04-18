@@ -26,7 +26,6 @@ console.log(foo);
 ## common.js
 
 ```js
-
 //#region common.js
 let foo = 123;
 

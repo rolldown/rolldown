@@ -1,6 +1,5 @@
 ---
 source: crates/rolldown_testing/src/integration_test.rs
-snapshot_kind: text
 ---
 # Assets
 
@@ -23,7 +22,6 @@ body {
 ## main.js
 
 ```js
-
 //#region test.png
 var test_default = "assets/test-3kwOTbJ8.png";
 

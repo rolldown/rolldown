@@ -23,7 +23,6 @@ export { main_default as default, foo };
 
 ```js
 
-
 //#region main.js
 var main_exports = {};
 __export(main_exports, {

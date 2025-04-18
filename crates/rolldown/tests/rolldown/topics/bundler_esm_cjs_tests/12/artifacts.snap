@@ -1,6 +1,5 @@
 ---
 source: crates/rolldown_testing/src/integration_test.rs
-snapshot_kind: text
 ---
 # warnings
 
@@ -33,7 +32,6 @@ input.works = import("./foo2.js").then((foo3) => foo.bar === 123 && foo.__esModu
 ## foo.js
 
 ```js
-
 
 //#region foo.js
 var foo_exports = {};

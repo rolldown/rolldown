@@ -23,7 +23,6 @@ console.log(
 ```
 ### rolldown
 ```js
-
 //#region entry.js
 using null_keep = null;
 await using await_null_keep = null;
@@ -45,9 +44,8 @@ console.log(null_keep, undef_keep);
 ===================================================================
 --- esbuild	/out/entry.js
 +++ rolldown	entry.js
-@@ -1,16 +1,16 @@
+@@ -1,16 +1,15 @@
 -// entry.js
-+
 +//#region entry.js
  using null_keep = null;
  await using await_null_keep = null;

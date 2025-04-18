@@ -15,7 +15,6 @@ console.log(foo);
 ```
 ### rolldown
 ```js
-
 //#region node_modules/demo-pkg/foo.js
 const foo = 123;
 

@@ -1,6 +1,5 @@
 ---
 source: crates/rolldown_testing/src/integration_test.rs
-snapshot_kind: text
 ---
 # Assets
 
@@ -17,7 +16,6 @@ body {
 ## src_entry.js
 
 ```js
-
 //#region assets/some.file
 var some_default = "assets/some-ufipoOFk.file";
 

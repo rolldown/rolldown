@@ -18,7 +18,6 @@ __name(outer, "outer"), outer();
 ```
 ### rolldown
 ```js
-
 //#region entry.js
 function outer() {
 	{

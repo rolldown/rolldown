@@ -6,7 +6,6 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## factory.js
 
 ```js
-
 //#region factory.jsx
 console.log([/* @__PURE__ */ (void 0).factory("x", null), /* @__PURE__ */ (void 0).factory("x", null)]);
 f = function() {
@@ -18,7 +17,6 @@ f = function() {
 ## fragment.js
 
 ```js
-
 //#region fragment.jsx
 console.log([/* @__PURE__ */ (void 0).factory((void 0).fragment, null, "x"), /* @__PURE__ */ (void 0).factory((void 0).fragment, null, "x")]), f = function() {
 	console.log([/* @__PURE__ */ this.factory(this.fragment, null, "y"), /* @__PURE__ */ this.factory(this.fragment, null, "y")]);

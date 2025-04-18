@@ -6,7 +6,6 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## entry.js
 
 ```js
-
 //#region enums.ts
 let a = /* @__PURE__ */ function(a$1) {
 	a$1["x"] = "a";

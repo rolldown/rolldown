@@ -6,7 +6,6 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## entry.js
 
 ```js
-
 //#region foo1.js
 var foo1_default = class extends x {
 	static foo1() {

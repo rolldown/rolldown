@@ -57,7 +57,6 @@ mustBeComputed(
 ```
 ### rolldown
 ```js
-
 //#region cross-file.ts
 let CrossFileGood = /* @__PURE__ */ function(CrossFileGood$1) {
 	CrossFileGood$1["STR"] = "str 2";

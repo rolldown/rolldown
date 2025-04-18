@@ -25,7 +25,6 @@ a: {
 ```
 ### rolldown
 ```js
-
 //#region entry.js
 foo: bar: {
 	if (x) break bar;

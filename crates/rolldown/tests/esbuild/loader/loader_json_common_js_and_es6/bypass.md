@@ -26,7 +26,6 @@ console.log(x_json, y_default, small, if2);
 ### rolldown
 ```js
 
-
 //#region y.json
 var y1 = true;
 var y2 = false;

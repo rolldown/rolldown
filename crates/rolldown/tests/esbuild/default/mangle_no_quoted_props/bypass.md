@@ -21,7 +21,6 @@ var { "_doNotMangleThis": x } = y;
 ```
 ### rolldown
 ```js
-
 //#region entry.js
 x["_doNotMangleThis"];
 x?.["_doNotMangleThis"];

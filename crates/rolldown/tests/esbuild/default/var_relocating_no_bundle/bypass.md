@@ -20,7 +20,6 @@ function l() {
 ```
 ### rolldown
 ```js
-
 //#region top-level.js
 var { c, x: [d] } = {};
 for (var e of []);
@@ -36,7 +35,7 @@ for (var { j, x: [k] } in {});
 ===================================================================
 --- esbuild	/out/top-level.js
 +++ rolldown	top-level.js
-@@ -1,10 +1,10 @@
+@@ -1,10 +1,9 @@
 -var a;
 -for (var b; 0; ) ;
 -for (var {c, x: [d]} = {}; 0; ) ;
@@ -47,7 +46,6 @@ for (var { j, x: [k] } in {});
 -for (var i in {}) ;
 -for (var {j, x: [k]} in {}) ;
 -function l() {}
-+
 +//#region top-level.js
 +var { c, x: [d] } = {};
 +for (var e of []);
@@ -80,7 +78,6 @@ if (true) {
 ```
 ### rolldown
 ```js
-
 //#region nested.js
 {
 	var a;
@@ -101,7 +98,7 @@ if (true) {
 ===================================================================
 --- esbuild	/out/nested.js
 +++ rolldown	nested.js
-@@ -1,13 +1,15 @@
+@@ -1,13 +1,14 @@
 -if (true) {
 -    let l = function () {};
 -    var l2 = l;
@@ -114,7 +111,6 @@ if (true) {
 -    i = 1;
 -    for (var i in {}) ;
 -    for (var {j, x: [k]} in {}) ;
-+
 +//#region nested.js
 +{
 +	var a;
@@ -147,7 +143,6 @@ if (true) {
 ```
 ### rolldown
 ```js
-
 //#region let.js
 {
 	let a;
@@ -196,7 +191,6 @@ x();
 ```
 ### rolldown
 ```js
-
 //#region function.js
 function x() {
 	var a;
@@ -218,8 +212,7 @@ x();
 ===================================================================
 --- esbuild	/out/function.js
 +++ rolldown	function.js
-@@ -1,13 +1,16 @@
-+
+@@ -1,13 +1,15 @@
 +//#region function.js
  function x() {
 -    var a;
@@ -271,7 +264,6 @@ x();
 ```
 ### rolldown
 ```js
-
 //#region function-nested.js
 function x() {
 	{
@@ -295,8 +287,7 @@ x();
 ===================================================================
 --- esbuild	/out/function-nested.js
 +++ rolldown	function-nested.js
-@@ -1,16 +1,18 @@
-+
+@@ -1,16 +1,17 @@
 +//#region function-nested.js
  function x() {
 -    if (true) {

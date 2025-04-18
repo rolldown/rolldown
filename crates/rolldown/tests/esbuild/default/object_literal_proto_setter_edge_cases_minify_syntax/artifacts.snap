@@ -1,6 +1,5 @@
 ---
 source: crates/rolldown_testing/src/integration_test.rs
-snapshot_kind: text
 ---
 # warnings
 
@@ -63,7 +62,6 @@ function foo() {
 ## local-computed.js
 
 ```js
-
 //#region local-computed.js
 function foo(__proto__, bar) {
 	{
@@ -80,7 +78,6 @@ function foo(__proto__, bar) {
 ## local-normal.js
 
 ```js
-
 //#region local-normal.js
 function foo(__proto__, bar) {
 	console.log("this must not become \"{ __proto__ }\":", {

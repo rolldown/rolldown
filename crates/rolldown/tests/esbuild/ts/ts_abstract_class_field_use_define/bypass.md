@@ -13,7 +13,6 @@ class Foo {
 ```
 ### rolldown
 ```js
-
 //#region entry.ts
 const keepThisToo = Symbol("keepThisToo");
 var Foo = class {

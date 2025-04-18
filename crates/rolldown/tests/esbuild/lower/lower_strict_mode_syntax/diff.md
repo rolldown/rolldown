@@ -14,7 +14,6 @@ var x;
 ```
 ### rolldown
 ```js
-
 //#region for-in.js
 if (test) for (var a = b in {});
 for (var x = y in {});
@@ -26,7 +25,7 @@ for (var x = y in {});
 ===================================================================
 --- esbuild	/out.js
 +++ rolldown	entry.js
-@@ -1,8 +1,6 @@
+@@ -1,8 +1,5 @@
 -if (test) {
 -    a = b;
 -    for (a in {}) ;
@@ -35,7 +34,6 @@ for (var x = y in {});
 -x = y;
 -for (x in {}) ;
 -var x;
-+
 +//#region for-in.js
 +if (test) for (var a = b in {});
 +for (var x = y in {});

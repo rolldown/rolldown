@@ -29,7 +29,6 @@ console.log(foo);
 
 ```js
 
-
 //#region shared.js
 var require_shared = __commonJS({ "shared.js"(exports) {
 	exports.foo = 123;

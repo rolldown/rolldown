@@ -7,7 +7,6 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```js
 
-
 //#region custom-react.js
 var require_custom_react = __commonJS({ "custom-react.js"(exports, module) {
 	module.exports = {};

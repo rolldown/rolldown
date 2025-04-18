@@ -6,7 +6,6 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## index.js
 
 ```js
-
 //#region a.js
 const A = 42;
 

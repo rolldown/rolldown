@@ -6,7 +6,6 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## keep.js
 
 ```js
-
 //#region keep.js
 foo("_keepThisProperty");
 foo("_keepThisProperty");
@@ -25,7 +24,6 @@ foo("_keepThisProperty") in x;
 ## mangle.js
 
 ```js
-
 //#region mangle.js
 x["_mangleThis"];
 x?.["_mangleThis"];

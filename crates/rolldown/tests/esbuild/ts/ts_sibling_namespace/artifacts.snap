@@ -6,7 +6,6 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## class.js
 
 ```js
-
 //#region class.ts
 let x;
 (function(_x) {
@@ -23,7 +22,6 @@ export { x };
 ## enum.js
 
 ```js
-
 //#region enum.ts
 let x;
 (function(_x) {
@@ -42,7 +40,6 @@ export { x };
 ## function.js
 
 ```js
-
 //#region function.ts
 let x;
 (function(_x) {
@@ -59,7 +56,6 @@ export { x };
 ## let.js
 
 ```js
-
 //#region let.ts
 let x;
 (function(_x) {
@@ -75,7 +71,6 @@ export { x };
 ## namespace.js
 
 ```js
-
 //#region namespace.ts
 let x;
 (function(_x) {

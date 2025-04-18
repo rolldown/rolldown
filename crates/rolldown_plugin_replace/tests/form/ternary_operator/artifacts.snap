@@ -1,13 +1,11 @@
 ---
 source: crates/rolldown_testing/src/integration_test.rs
-snapshot_kind: text
 ---
 # Assets
 
 ## input.js
 
 ```js
-
 //#region input.js
 first ? second : third;
 console.log(first, second, third);
@@ -20,13 +18,13 @@ console.log(first, second, third);
 
 ```
 - ../input.js
-(0:0) "condition ? " --> (2:0) "first ? "
-(0:12) "exprIfTrue : " --> (2:8) "second : "
-(0:25) "exprIfFalse;\n" --> (2:17) "third;\n"
-(1:0) "console." --> (3:0) "console."
-(1:8) "log(" --> (3:8) "log("
-(1:12) "condition, " --> (3:12) "first, "
-(1:23) "exprIfTrue, " --> (3:19) "second, "
-(1:35) "exprIfFalse)" --> (3:27) "third)"
-(1:47) ";\n" --> (3:33) ";\n"
+(0:0) "condition ? " --> (1:0) "first ? "
+(0:12) "exprIfTrue : " --> (1:8) "second : "
+(0:25) "exprIfFalse;\n" --> (1:17) "third;\n"
+(1:0) "console." --> (2:0) "console."
+(1:8) "log(" --> (2:8) "log("
+(1:12) "condition, " --> (2:12) "first, "
+(1:23) "exprIfTrue, " --> (2:19) "second, "
+(1:35) "exprIfFalse)" --> (2:27) "third)"
+(1:47) ";\n" --> (2:33) ";\n"
 ```

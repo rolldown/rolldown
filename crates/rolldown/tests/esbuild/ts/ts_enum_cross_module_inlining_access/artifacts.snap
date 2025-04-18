@@ -6,7 +6,6 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## entry.js
 
 ```js
-
 //#region enums.ts
 let a_num = /* @__PURE__ */ function(a_num$1) {
 	a_num$1[a_num$1["x"] = 123] = "x";

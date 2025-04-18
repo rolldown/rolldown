@@ -27,7 +27,6 @@ var B = class {
 ```
 ### rolldown
 ```js
-
 //#region entry.js
 var A = class A {
 	static {}

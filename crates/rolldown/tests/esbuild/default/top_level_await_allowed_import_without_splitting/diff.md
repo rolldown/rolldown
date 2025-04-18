@@ -44,7 +44,6 @@ await init_entry();
 ### rolldown
 ```js
 
-
 //#region entry.js
 var require_entry = __commonJS({ "entry.js"() {
 	Promise.resolve().then(function() {
@@ -89,7 +88,7 @@ export default require_entry();
 ===================================================================
 --- esbuild	/out.js
 +++ rolldown	entry.js
-@@ -1,29 +1,39 @@
+@@ -1,29 +1,38 @@
 -var c_exports = {};
 -var init_c = __esm({
 -    async "c.js"() {
@@ -102,7 +101,6 @@ export default require_entry();
 -        await init_c();
 -    }
 -});
-+
 +
 +//#region entry.js
 +var require_entry = __commonJS({ "entry.js"() {

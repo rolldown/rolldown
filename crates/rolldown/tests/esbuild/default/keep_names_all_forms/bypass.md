@@ -110,7 +110,6 @@ __name(foo, "foo");
 ```
 ### rolldown
 ```js
-
 //#region keep.js
 function fn() {}
 var fn = function() {};
@@ -137,7 +136,7 @@ for (var { fn = function() {} } of obj);
 ===================================================================
 --- esbuild	/out/keep.js
 +++ rolldown	keep.js
-@@ -1,103 +1,21 @@
+@@ -1,103 +1,20 @@
 -function fn() {
 -}
 -__name(fn, "fn");
@@ -242,7 +241,6 @@ for (var { fn = function() {} } of obj);
 -({ fn = /* @__PURE__ */ __name(function() {
 -}, "fn") } = {});
 \ No newline at end of file
-+
 +//#region keep.js
 +function fn() {}
 +var fn = function() {};

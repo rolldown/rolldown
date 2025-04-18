@@ -18,7 +18,6 @@ tests = {
 ```
 ### rolldown
 ```js
-
 //#region entry.js
 tests = {
 	0: (x$1 = (y$2) => x$1 + y$2, y$1) => x$1 + y$1,

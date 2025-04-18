@@ -79,7 +79,6 @@ let f2 = class {
 ```
 ### rolldown
 ```js
-
 //#region entry.js
 var A = class {
 	static foo;

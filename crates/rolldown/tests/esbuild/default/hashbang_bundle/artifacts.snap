@@ -7,7 +7,6 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```js
 #!/usr/bin/env a
-
 //#region code.js
 const code = 0;
 

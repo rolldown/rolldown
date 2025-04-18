@@ -11,7 +11,6 @@ module.exports = null;
 ### rolldown
 ```js
 
-
 //#region entry.ts
 var require_entry = __commonJS({ "entry.ts"(exports, module) {
 	module.exports = null;

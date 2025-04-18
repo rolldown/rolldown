@@ -45,7 +45,6 @@ console.log(
 ```
 ### rolldown
 ```js
-
 //#region entry.jsx
 console.log(
 	/* @__PURE__ */ React.createElement("div", { x }),

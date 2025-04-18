@@ -23,7 +23,6 @@ console.log([
 ```
 ### rolldown
 ```js
-
 //#region enums.ts
 let a = /* @__PURE__ */ function(a$1) {
 	a$1[a$1["implicit_number"] = 0] = "implicit_number";

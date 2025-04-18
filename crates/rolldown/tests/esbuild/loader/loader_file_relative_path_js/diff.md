@@ -12,7 +12,6 @@ console.log(image_default);
 ```
 ### rolldown
 ```js
-
 //#region images/image.png
 var image_default = "assets/image-Dq1zDy-k.png";
 

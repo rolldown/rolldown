@@ -14,7 +14,6 @@ export {
 ```
 ### rolldown
 ```js
-
 //#region a.js
 function a_default(one, two, three, four) {
 	return "the argument names must be the same";
@@ -50,7 +49,6 @@ export {
 ```
 ### rolldown
 ```js
-
 //#region b.js
 function b_default(one, two, three, four) {
 	return "the argument names must be the same";

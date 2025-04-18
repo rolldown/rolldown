@@ -18,7 +18,6 @@ console.log(
 ```
 ### rolldown
 ```js
-
 //#region entry.js
 console.log(
 	1,

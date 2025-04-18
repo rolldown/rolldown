@@ -12,7 +12,6 @@ export {
 ```
 ### rolldown
 ```js
-
 //#region entry.js
 function foo(RegExp) {
 	return new RegExp(/./d, "d");

@@ -6,7 +6,6 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## input.js
 
 ```js
-
 //#region input.js
 console.log(42);
 console.log("object");

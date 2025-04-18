@@ -28,7 +28,6 @@ console.log(
 ### rolldown
 ```js
 
-
 //#region a/test.txt
 var require_test$1 = __commonJS({ "a/test.txt"(exports, module) {
 	module.exports = "assets/test-BrHGE6Cv.txt";

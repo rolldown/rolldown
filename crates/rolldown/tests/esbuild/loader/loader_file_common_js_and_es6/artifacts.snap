@@ -1,6 +1,5 @@
 ---
 source: crates/rolldown_testing/src/integration_test.rs
-snapshot_kind: text
 ---
 # Assets
 
@@ -17,7 +16,6 @@ y
 ## entry.js
 
 ```js
-
 
 //#region y.txt
 var y_default = "assets/y-DBJZ7rtI.txt";

@@ -21,7 +21,6 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```js
 
-
 //#region entry.js
 __require();
 __require("a", "b");

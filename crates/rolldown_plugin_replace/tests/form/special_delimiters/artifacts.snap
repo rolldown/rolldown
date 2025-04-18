@@ -1,13 +1,11 @@
 ---
 source: crates/rolldown_testing/src/integration_test.rs
-snapshot_kind: text
 ---
 # Assets
 
 ## input.js
 
 ```js
-
 //#region input.js
 console.log(`
   replaced
@@ -25,8 +23,8 @@ console.log(`
 
 ```
 - ../input.js
-(0:0) "console." --> (2:0) "console."
-(0:8) "log(" --> (2:8) "log(`"
-(0:12) "`\n" --> (2:13) "\n"
-(6:2) ";\n" --> (8:2) ";\n"
+(0:0) "console." --> (1:0) "console."
+(0:8) "log(" --> (1:8) "log(`"
+(0:12) "`\n" --> (1:13) "\n"
+(6:2) ";\n" --> (7:2) ";\n"
 ```

@@ -6,7 +6,6 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## entry-outer.js
 
 ```js
-
 //#region inner.js
 function empty1() {}
 function empty2() {}
@@ -30,7 +29,6 @@ check(empty1(), empty2(args), empty3(...args), identity1(), identity2(args), ide
 ## entry.js
 
 ```js
-
 //#region entry.js
 function empty1() {}
 function empty2() {}

@@ -10,7 +10,6 @@ console.log(import_meta.y);
 ```
 ### rolldown
 ```js
-
 //#region kept.js
 console.log(import.meta.y);
 

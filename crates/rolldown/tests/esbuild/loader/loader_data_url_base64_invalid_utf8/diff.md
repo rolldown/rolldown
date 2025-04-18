@@ -12,7 +12,6 @@ console.log(binary_default);
 ```
 ### rolldown
 ```js
-
 //#region binary.txt
 var binary_default = "data:application/octet-stream;base64,/w==";
 

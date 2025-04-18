@@ -62,7 +62,6 @@ __privateAdd(Foo, _b2, 6);
 ```
 ### rolldown
 ```js
-
 //#region js-define.js
 var Foo = class {
 	accessor one = 1;
@@ -80,7 +79,7 @@ var Foo = class {
 ===================================================================
 --- esbuild	/out/js-define.js
 +++ rolldown	js-define.js
-@@ -1,57 +1,12 @@
+@@ -1,57 +1,11 @@
 -var _a, _b, _one, __two, _Foo_instances, two_get, two_set, _a2, _four, __five, _Foo_static, five_get, five_set, _b2;
 -class Foo {
 -    constructor() {
@@ -119,7 +118,6 @@ var Foo = class {
 -_Foo_instances = new WeakSet();
 -two_get = function () {
 -    return __privateGet(this, __two);
-+
 +//#region js-define.js
 +var Foo = class {
 +	accessor one = 1;

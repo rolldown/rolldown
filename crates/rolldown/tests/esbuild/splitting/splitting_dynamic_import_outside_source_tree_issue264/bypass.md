@@ -9,7 +9,6 @@ import("./package-ZBNDRRRB.js");
 ```
 ### rolldown
 ```js
-
 //#region src/entry1.js
 import("./package.js");
 
@@ -33,7 +32,6 @@ import("./package-ZBNDRRRB.js");
 ```
 ### rolldown
 ```js
-
 //#region src/entry2.js
 import("./package.js");
 

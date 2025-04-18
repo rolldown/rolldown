@@ -24,7 +24,6 @@ console.log("unused import");
 ### rolldown
 ```js
 
-
 //#region node_modules/demo-pkg/index.js
 var demo_pkg_exports = {};
 __export(demo_pkg_exports, { foo: () => foo });

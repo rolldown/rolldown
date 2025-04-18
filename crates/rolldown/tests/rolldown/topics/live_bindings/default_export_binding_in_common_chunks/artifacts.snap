@@ -31,7 +31,6 @@ assert.strictEqual(count, count);
 ## main.js
 
 ```js
-
 //#region main.js
 import("./async-entry.js");
 

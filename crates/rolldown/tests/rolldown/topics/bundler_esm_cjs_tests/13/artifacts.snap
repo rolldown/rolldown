@@ -1,6 +1,5 @@
 ---
 source: crates/rolldown_testing/src/integration_test.rs
-snapshot_kind: text
 ---
 # Assets
 
@@ -19,7 +18,6 @@ input.works = import("./foo2.js").then((foo3) => foo.bar === 123 && bar === 123 
 ## foo.js
 
 ```js
-
 
 //#region foo.js
 var foo_exports = {};

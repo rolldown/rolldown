@@ -32,7 +32,6 @@ assert.strictEqual(shared_default, shared_default);
 ## main.js
 
 ```js
-
 //#region main.js
 import("./async-entry.js");
 

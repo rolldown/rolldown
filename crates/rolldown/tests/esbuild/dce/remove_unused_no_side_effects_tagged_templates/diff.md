@@ -14,7 +14,6 @@ keep, alsoKeep;
 ```
 ### rolldown
 ```js
-
 //#region entry.js
 /* @__NO_SIDE_EFFECTS__ */
 function foo() {}

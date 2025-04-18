@@ -6,7 +6,6 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## entry.js
 
 ```js
-
 //#region entry.js
 import("./foo.js").then(({ default: { bar } }) => console.log(bar));
 
@@ -15,7 +14,6 @@ import("./foo.js").then(({ default: { bar } }) => console.log(bar));
 ## foo.js
 
 ```js
-
 
 //#region foo.js
 var require_foo = __commonJS({ "foo.js"(exports) {

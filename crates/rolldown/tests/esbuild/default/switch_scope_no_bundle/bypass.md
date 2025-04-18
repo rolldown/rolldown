@@ -15,7 +15,6 @@ switch (bar) {
 ```
 ### rolldown
 ```js
-
 //#region entry.js
 switch (foo) {
 	default: var foo;

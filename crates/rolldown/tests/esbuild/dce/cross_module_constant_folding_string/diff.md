@@ -28,7 +28,6 @@ console.log([
 ```
 ### rolldown
 ```js
-
 //#region enum-constants.ts
 let x = /* @__PURE__ */ function(x$1) {
 	x$1["a"] = "foo";
@@ -102,7 +101,6 @@ console.log([
 ```
 ### rolldown
 ```js
-
 //#region const-constants.js
 const a = "foo";
 const b = "bar";
@@ -155,7 +153,6 @@ console.log({
 ```
 ### rolldown
 ```js
-
 //#region nested-constants.ts
 const a = "foo";
 const b = "bar";

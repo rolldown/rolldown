@@ -34,7 +34,6 @@ ok(
 ```
 ### rolldown
 ```js
-
 //#region entry.js
 ok(
 	1,

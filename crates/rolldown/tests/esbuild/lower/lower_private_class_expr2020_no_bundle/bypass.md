@@ -21,7 +21,6 @@ export let Foo = (_a = class {
 ```
 ### rolldown
 ```js
-
 //#region entry.js
 let Foo = class {
 	#field;

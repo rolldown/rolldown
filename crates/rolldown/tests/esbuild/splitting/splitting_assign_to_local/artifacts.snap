@@ -27,7 +27,6 @@ console.log(foo);
 ## shared.js
 
 ```js
-
 //#region shared.js
 let foo;
 function setFoo(value) {

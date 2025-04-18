@@ -24,7 +24,6 @@ var Bar = class {
 ```
 ### rolldown
 ```js
-
 //#region define-false/index.ts
 var Foo = class {
 	a;

@@ -1,17 +1,15 @@
 ---
 source: crates/rolldown_testing/src/integration_test.rs
-snapshot_kind: text
 ---
 # Assets
 
 ## assets/main.js
 
 ```js
-
 //#region main.js
 console.log(1);
 
 //#endregion
-//# debugId=36ae879f-60cb-4b8f-bd97-a92f68526a0f
+//# debugId=535b0fdd-74be-4342-8924-c8166fd01be3
 //# sourceMappingURL=main.js.map
 ```

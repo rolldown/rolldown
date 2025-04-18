@@ -15,7 +15,6 @@ export { foo };
 
 ```js
 
-
 //#region a.js
 var a_exports = {};
 __export(a_exports, { foo: () => foo });

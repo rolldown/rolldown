@@ -40,7 +40,6 @@ setZ2();
 ## x.js
 
 ```js
-
 //#region x.js
 let _x;
 function setX(v) {

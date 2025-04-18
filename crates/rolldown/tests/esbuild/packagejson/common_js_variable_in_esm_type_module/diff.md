@@ -10,7 +10,6 @@ module.exports = null;
 ### rolldown
 ```js
 
-
 //#region entry.js
 var require_entry = __commonJS({ "entry.js"(exports, module) {
 	module.exports = null;

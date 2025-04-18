@@ -52,6 +52,5 @@ export default require_c();
 
 ```js
 
-
 export { __commonJS };
 ```

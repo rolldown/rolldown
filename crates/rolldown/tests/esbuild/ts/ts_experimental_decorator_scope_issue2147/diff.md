@@ -58,7 +58,6 @@ class Bar {
 ```
 ### rolldown
 ```js
-
 //#region entry.ts
 var Foo = class {
 	method1(@dec(foo) foo = 2) {}
@@ -72,7 +71,7 @@ var Foo = class {
 ===================================================================
 --- esbuild	/out.js
 +++ rolldown	entry.js
-@@ -1,30 +1,8 @@
+@@ -1,30 +1,7 @@
 -let foo = 1;
 -class Foo {
 -    method1(foo2 = 2) {}
@@ -103,7 +102,6 @@ var Foo = class {
 -        };
 -    }
 -}
-+
 +//#region entry.ts
 +var Foo = class {
 +	method1(@dec(foo) foo = 2) {}

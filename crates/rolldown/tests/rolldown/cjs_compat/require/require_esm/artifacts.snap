@@ -1,13 +1,11 @@
 ---
 source: crates/rolldown_testing/src/integration_test.rs
-snapshot_kind: text
 ---
 # Assets
 
 ## main.js
 
 ```js
-
 
 //#region esm.js
 var esm_exports = {};
@@ -26,7 +24,7 @@ var esm = (init_esm(), __toCommonJS(esm_exports));
 
 ```
 - ../main.js
-(0:0) "require('./esm.js');\n" --> (28:0) "init_esm();\n"
-(1:0) "var " --> (29:0) "var "
-(1:4) "esm = require('./esm.js');\n" --> (29:4) "esm = (init_esm(), __toCommonJS(esm_exports));\n"
+(0:0) "require('./esm.js');\n" --> (27:0) "init_esm();\n"
+(1:0) "var " --> (28:0) "var "
+(1:4) "esm = require('./esm.js');\n" --> (28:4) "esm = (init_esm(), __toCommonJS(esm_exports));\n"
 ```

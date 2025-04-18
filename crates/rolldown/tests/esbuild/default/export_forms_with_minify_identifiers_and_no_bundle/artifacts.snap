@@ -32,7 +32,6 @@ export { b_default as default };
 
 ```js
 
-
 //#region b.js
 var b_exports = {};
 __export(b_exports, { default: () => b_default });
@@ -44,7 +43,6 @@ export { b_default, b_exports };
 ## c.js
 
 ```js
-
 //#region c.js
 function foo() {}
 
@@ -54,7 +52,6 @@ export { foo as default };
 ## d.js
 
 ```js
-
 //#region d.js
 var d_default = class {};
 
@@ -64,7 +61,6 @@ export { d_default as default };
 ## e.js
 
 ```js
-
 //#region e.js
 var Foo = class {};
 

@@ -48,7 +48,6 @@ not_inlined = [
 ```
 ### rolldown
 ```js
-
 //#region enums.ts
 let a_num = /* @__PURE__ */ function(a_num$1) {
 	a_num$1[a_num$1["x"] = 123] = "x";

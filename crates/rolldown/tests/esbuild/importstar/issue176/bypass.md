@@ -19,7 +19,6 @@ console.log(JSON.stringify(folders_exports));
 ### rolldown
 ```js
 
-
 //#region folders/child/foo.js
 const foo = () => "hi there";
 

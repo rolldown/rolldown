@@ -1,6 +1,5 @@
 ---
 source: crates/rolldown_testing/src/integration_test.rs
-snapshot_kind: text
 ---
 # warnings
 
@@ -77,7 +76,6 @@ console.log(void 0, void 0, import_no_side_effects.nope);
 ## no-side-effects.js
 
 ```js
-
 
 //#region foo/no-side-effects.cjs
 var require_no_side_effects = __commonJS({ "foo/no-side-effects.cjs"() {

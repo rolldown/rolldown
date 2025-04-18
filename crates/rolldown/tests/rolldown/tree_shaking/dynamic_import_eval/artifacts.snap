@@ -20,7 +20,6 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## lib.js
 
 ```js
-
 //#region a.js
 const a = "a";
 const b = "b";
@@ -31,7 +30,6 @@ export { a, b };
 ## lib2.js
 
 ```js
-
 //#region b.js
 const c = "c";
 const d = "d";
@@ -42,7 +40,6 @@ export { c, d };
 ## main.js
 
 ```js
-
 //#region main.js
 const ns = await import("./lib.js");
 eval("ns.a");

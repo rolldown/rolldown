@@ -82,7 +82,6 @@
 ```
 ### rolldown
 ```js
-
 //#region entry.js
 (() => {
 	var arguments;
@@ -107,7 +106,7 @@
 ===================================================================
 --- esbuild	/out.js
 +++ rolldown	entry.js
-@@ -1,74 +1,19 @@
+@@ -1,74 +1,18 @@
 -/* @__PURE__ */ (() => {
 -  var r;
 -  function t(n = arguments) {
@@ -183,7 +182,6 @@
 -  };
 -})();
 \ No newline at end of file
-+
 +//#region entry.js
 +(() => {
 +	var arguments;

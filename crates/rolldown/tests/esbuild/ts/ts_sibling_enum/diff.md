@@ -20,7 +20,6 @@ console.log(0 /* y */, 1 /* z */);
 ```
 ### rolldown
 ```js
-
 //#region number.ts
 let x = /* @__PURE__ */ function(x$1) {
 	x$1[x$1["y"] = 0] = "y";
@@ -90,7 +89,6 @@ console.log("a" /* y */, "a" /* z */);
 ```
 ### rolldown
 ```js
-
 //#region string.ts
 let x = /* @__PURE__ */ function(x$1) {
 	x$1["y"] = "a";
@@ -163,7 +161,6 @@ console.log(100 /* b */, 100 /* b */, 625 /* g */, 625 /* g */);
 ```
 ### rolldown
 ```js
-
 //#region propagation.ts
 let a = /* @__PURE__ */ function(a$1) {
 	a$1[a$1["b"] = 100] = "b";
@@ -252,7 +249,6 @@ export var foo;
 ```
 ### rolldown
 ```js
-
 //#region nested-number.ts
 let foo;
 (function(_foo) {
@@ -356,7 +352,6 @@ export var foo;
 ```
 ### rolldown
 ```js
-
 //#region nested-string.ts
 let foo;
 (function(_foo) {
@@ -462,7 +457,6 @@ export var n;
 ```
 ### rolldown
 ```js
-
 //#region nested-propagation.ts
 let n;
 (function(_n) {

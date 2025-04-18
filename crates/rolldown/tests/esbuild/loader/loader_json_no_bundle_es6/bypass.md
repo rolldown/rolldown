@@ -14,7 +14,6 @@ export {
 ```
 ### rolldown
 ```js
-
 //#region test.json
 var test = 123;
 var invalid_identifier = true;

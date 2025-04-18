@@ -10,7 +10,6 @@ var t=e(r=>{r.foo=function(){return 123}});var n=e((l,c)=>{c.exports={test:!0}})
 ### rolldown
 ```js
 
-
 //#region a.js
 var require_a = __commonJS({ "a.js"(exports) {
 	exports.foo = function() {

@@ -70,7 +70,6 @@ __decorateClass([
 ```
 ### rolldown
 ```js
-
 //#region decorator.ts
 const fn = () => {
 	console.log("side effect");
@@ -105,22 +104,21 @@ var StaticParameter = class {
 ===================================================================
 --- esbuild	/out/keep-these.js
 +++ rolldown	keep-these.js
-@@ -1,63 +1,29 @@
+@@ -1,63 +1,28 @@
 -// decorator.ts
 -var fn = () => {
 -  console.log("side effect");
--};
- 
--// keep-these.ts
--var Class = class {
 +//#region decorator.ts
 +const fn = () => {
 +	console.log("side effect");
  };
+ 
+-// keep-these.ts
+-var Class = class {
+-};
 -Class = __decorateClass([
 -  fn
 -], Class);
-+
 +//#endregion
 +//#region keep-these.ts
 +var Class = @fn class {};

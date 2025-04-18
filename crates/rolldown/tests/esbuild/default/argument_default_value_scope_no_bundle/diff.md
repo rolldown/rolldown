@@ -37,7 +37,6 @@ export let c = [
 ```
 ### rolldown
 ```js
-
 //#region entry.js
 function a(x = foo) {
 	var foo$1;

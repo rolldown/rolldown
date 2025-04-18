@@ -1,6 +1,5 @@
 ---
 source: crates/rolldown_testing/src/integration_test.rs
-snapshot_kind: text
 ---
 # Assets
 
@@ -25,7 +24,6 @@ export { result };
 ## b2.js
 
 ```js
-
 //#region b.js
 function result() {
 	return "result";

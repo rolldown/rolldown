@@ -111,7 +111,6 @@ export default [
 ```
 ### rolldown
 ```js
-
 //#region entry.js
 var entry_default = [
 	async () => {

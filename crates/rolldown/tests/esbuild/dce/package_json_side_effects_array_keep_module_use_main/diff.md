@@ -9,7 +9,6 @@ console.log("unused import");
 ```
 ### rolldown
 ```js
-
 //#region node_modules/demo-pkg/index-module.js
 console.log("TEST FAILED");
 

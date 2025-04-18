@@ -119,7 +119,6 @@ export {
 ```
 ### rolldown
 ```js
-
 //#region foo1.js
 var foo1_default = class extends x {
 	static foo1() {

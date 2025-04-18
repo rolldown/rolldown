@@ -11,7 +11,6 @@ let x = function(foo) {
 ```
 ### rolldown
 ```js
-
 //#region entry.js
 let x = function foo(foo$1) {
 	var foo$1;

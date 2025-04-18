@@ -206,7 +206,6 @@ console.log(Promise.resolve().then(() => __toESM(require_foo())));
 ```
 ### rolldown
 ```js
-
 //#region import.js
 console.log(import("./foo2.js"));
 

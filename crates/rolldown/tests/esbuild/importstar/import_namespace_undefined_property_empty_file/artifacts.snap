@@ -1,6 +1,5 @@
 ---
 source: crates/rolldown_testing/src/integration_test.rs
-snapshot_kind: text
 ---
 # warnings
 
@@ -57,7 +56,6 @@ snapshot_kind: text
 ## empty.js
 
 ```js
-
 
 //#region empty.cjs
 var require_empty = __commonJS({ "empty.cjs"() {} });

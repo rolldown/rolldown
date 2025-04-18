@@ -12,7 +12,6 @@ foo("_keepThisProperty") in x;
 ```
 ### rolldown
 ```js
-
 //#region keep.js
 foo("_keepThisProperty");
 foo("_keepThisProperty");
@@ -59,7 +58,6 @@ var { a: x } = y, { ["a"]: x } = y, { [(z, "a")]: x } = y;
 ```
 ### rolldown
 ```js
-
 //#region mangle.js
 x["_mangleThis"];
 x?.["_mangleThis"];

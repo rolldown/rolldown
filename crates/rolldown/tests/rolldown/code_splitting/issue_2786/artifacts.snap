@@ -26,7 +26,6 @@ export { share_default as default };
 ## share2.js
 
 ```js
-
 //#region share.js
 var share_default = "shared";
 
@@ -43,7 +42,6 @@ export { share_default as default };
 ## share4.js
 
 ```js
-
 //#region share.json
 var share_default = {};
 

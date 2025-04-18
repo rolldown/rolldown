@@ -10,7 +10,6 @@ foo();
 ```
 ### rolldown
 ```js
-
 //#region identity.js
 function DROP(x) {
 	return x;
@@ -46,7 +45,6 @@ foo();
 ```
 ### rolldown
 ```js
-
 //#region identity-last.js
 function DROP(x) {
 	return [x];
@@ -65,10 +63,9 @@ DROP(1);
 ===================================================================
 --- esbuild	/out/identity-last.js
 +++ rolldown	identity-last.js
-@@ -1,2 +1,13 @@
+@@ -1,2 +1,12 @@
 -console.log(1);
 -foo();
-+
 +//#region identity-last.js
 +function DROP(x) {
 +	return [x];
@@ -97,7 +94,6 @@ keep(1);
 ```
 ### rolldown
 ```js
-
 //#region identity-first.js
 function keep(x) {
 	return x;
@@ -116,8 +112,7 @@ keep(1);
 ===================================================================
 --- esbuild	/out/identity-first.js
 +++ rolldown	identity-first.js
-@@ -1,6 +1,13 @@
-+
+@@ -1,6 +1,12 @@
 +//#region identity-first.js
  function keep(x) {
 -    return [x];
@@ -143,7 +138,6 @@ foo();
 ```
 ### rolldown
 ```js
-
 //#region identity-cross-module-def.js
 function DROP(x) {
 	return x;

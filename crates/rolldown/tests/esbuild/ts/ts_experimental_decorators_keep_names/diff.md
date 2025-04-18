@@ -17,7 +17,6 @@ export {
 ```
 ### rolldown
 ```js
-
 //#region entry.ts
 var Foo = @decoratorMustComeAfterName class {};
 
@@ -29,12 +28,11 @@ export { Foo };
 ===================================================================
 --- esbuild	/out.js
 +++ rolldown	entry.js
-@@ -1,4 +1,6 @@
+@@ -1,4 +1,5 @@
 -var Foo = class {};
 -__name(Foo, "Foo");
 -Foo = __decorateClass([decoratorMustComeAfterName], Foo);
 -export {Foo};
-+
 +//#region entry.ts
 +var Foo = @decoratorMustComeAfterName class {};
 +

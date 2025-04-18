@@ -16,7 +16,6 @@ x(/* @__PURE__ */ g("keepThisCall"));
 ```
 ### rolldown
 ```js
-
 //#region stmt-local.js
 const f = /* @__NO_SIDE_EFFECTS__ */ function(y) {
 	sideEffect(y);
@@ -64,7 +63,6 @@ x(/* @__PURE__ */ g("keepThisCall"));
 ```
 ### rolldown
 ```js
-
 //#region expr-fn.js
 const f = /* @__NO_SIDE_EFFECTS__ */ function(y) {
 	sideEffect(y);
@@ -109,7 +107,6 @@ x(/* @__PURE__ */ f("keepThisCall"));
 ```
 ### rolldown
 ```js
-
 //#region stmt-export-default-fn.js
 /* @__NO_SIDE_EFFECTS__ */
 function f(y) {

@@ -48,7 +48,6 @@ if (nested) {
 ```
 ### rolldown
 ```js
-
 //#region entry.ts
 function foo(x = this) {
 	console.log(this);

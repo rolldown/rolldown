@@ -1,6 +1,6 @@
-import { transformPlugin } from 'rolldown/experimental'
-import { defineTest } from 'rolldown-tests'
 import { expect } from 'vitest'
+import { defineTest } from 'rolldown-tests'
+import { transformPlugin } from 'rolldown/experimental'
 
 let transformed: string[] = []
 export default defineTest({
@@ -22,9 +22,6 @@ export default defineTest({
     ],
   },
   async afterTest() {
-    // TODO(shulaodao): enable these assertions
-    // expect(transformed.splice(0).filter((id) => id.includes('node_modules')).length).toBe(
-    //   0,
-    // )
+    expect(transformed.splice(0).filter((id) => id.includes('node_modules')).length).toBe(0)
   },
 })

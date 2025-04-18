@@ -196,9 +196,6 @@ jobs:
         # Binaries are built in the previous steps. Unlike in local development, we only need to build the node package itself.
         run: pnpm --filter rolldown build-node
 
-      - name: Build Type Definitions
-        run: pnpm --filter rolldown build-types
-
       - name: Upload Node Artifact
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
@@ -248,9 +245,6 @@ jobs:
       - name: Build `@rolldown/browser`
         # Binaries are built in the previous steps. Unlike in local development, we only need to build the node package itself.
         run: pnpm --filter "@rolldown/browser" build:release
-
-      - name: Build Type Definitions
-        run: pnpm --filter "@rolldown/browser" build-types
 
       - name: Upload `@rolldown/browser` Artifact
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2

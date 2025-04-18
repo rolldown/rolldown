@@ -28,25 +28,21 @@
     "rolldown": "./bin/cli.mjs"
   },
   "main": "./dist/index.cjs",
-  "types": "./dist/types/index.d.ts",
+  "types": "./dist/index.d.cts",
   "exports": {
     ".": {
-      "types": "./dist/types/index.d.ts",
       "require": "./dist/index.cjs",
       "import": "./dist/index.mjs"
     },
     "./experimental": {
-      "types": "./dist/types/experimental-index.d.ts",
       "require": "./dist/experimental-index.cjs",
       "import": "./dist/experimental-index.mjs"
     },
     "./parallel-plugin": {
-      "types": "./dist/types/parallel-plugin.d.ts",
       "require": "./dist/parallel-plugin.cjs",
       "import": "./dist/parallel-plugin.mjs"
     },
     "./parseAst": {
-      "types": "./dist/types/parse-ast-index.d.ts",
       "require": "./dist/parse-ast-index.cjs",
       "import": "./dist/parse-ast-index.mjs"
     },
@@ -67,7 +63,6 @@
     "build-binding:wasi": "pnpm build-binding --target wasm32-wasip1-threads",
     "build-binding:wasi:release": "pnpm build-binding --profile release-wasi --target wasm32-wasip1-threads",
     "# Scrips for node #": "_",
-    "build-types": "tsc -p ./tsconfig.json",
     "build-node": "tsx ./build.ts",
     "build-types-check": "tsc -p ./tsconfig.check.json",
     "build-js-glue": "pnpm run --sequential \"/^build-(types|node|types-check)$/\"",
@@ -136,6 +131,7 @@
     "pathe": "^2.0.3",
     "remeda": "^2.10.0",
     "rolldown": "workspace:*",
+    "rolldown-plugin-dts": "^0.7.4",
     "rollup": "^4.18.0",
     "signal-exit": "4.1.0",
     "source-map": "^0.7.4",

@@ -28,26 +28,22 @@
   },
   "main": "./dist/index.cjs",
   "module": "./dist/index.mjs",
-  "types": "./dist/types/index.d.ts",
+  "types": "./dist/index.d.cts",
   "exports": {
     ".": {
-      "types": "./dist/types/index.d.ts",
       "browser": "./dist/browser.mjs",
-      "required": "./dist/index.cjs",
+      "require": "./dist/index.cjs",
       "import": "./dist/index.mjs"
     },
     "./experimental": {
-      "types": "./dist/types/experimental-index.d.ts",
       "require": "./dist/experimental-index.cjs",
       "import": "./dist/experimental-index.mjs"
     },
     "./parallel-plugin": {
-      "types": "./dist/types/parallel-plugin.d.ts",
       "require": "./dist/parallel-plugin.cjs",
       "import": "./dist/parallel-plugin.mjs"
     },
     "./parseAst": {
-      "types": "./dist/types/parse-ast-index.d.ts",
       "require": "./dist/parse-ast-index.cjs",
       "import": "./dist/parse-ast-index.mjs"
     },
@@ -59,11 +55,8 @@
   },
   "scripts": {
     "build": "pnpm run build:debug",
-    "build-types": "tsc -p ../rolldown/tsconfig.json --outDir ../browser/dist/types --tsBuildInfoFile ../browser/dist/.tsbuildinfo",
-    "build:debug": "pnpm run --sequential \"/^build-(types|pkg:debug)$/\"",
-    "build:release": "pnpm run --sequential \"/^build-(types|pkg:release)$/\"",
-    "build-pkg:debug": "pnpm run --filter rolldown build-browser:debug",
-    "build-pkg:release": "pnpm run --filter rolldown build-browser:release",
+    "build:debug": "pnpm run --filter rolldown build-browser:debug",
+    "build:release": "pnpm run --filter rolldown build-browser:release",
     "build-node": "cross-env BROWSER_PKG=1 pnpm run --filter rolldown build-node",
     "preinstall": "npx only-allow pnpm"
   },

@@ -15,6 +15,7 @@ doctest = false
 workspace = true
 
 [dependencies]
+anyhow = { workspace = true }
 itertools = { workspace = true }
 oxc = { workspace = true }
 rolldown_common = { workspace = true }

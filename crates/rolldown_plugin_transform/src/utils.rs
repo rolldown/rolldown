@@ -1,7 +1,4 @@
-use std::{
-  borrow::Cow,
-  path::{Path, PathBuf},
-};
+use std::path::{Path, PathBuf};
 
 use itertools::Either;
 use oxc::{span::SourceType, transformer::TransformOptions};
@@ -57,12 +54,12 @@ impl TransformPlugin {
     id: &str,
     cwd: &str,
     ext: Option<&str>,
-  ) -> (SourceType, Cow<'_, TransformOptions>) {
-    let is_refresh_disabled = self.environment_consumer == "server"
-      || matches!(self.jsx_refresh_filter(id, cwd), JsxRefreshFilter::False);
-
+  ) -> (SourceType, TransformOptions) {
     let is_js_lang = matches!(self.jsx_refresh_filter(id, cwd), JsxRefreshFilter::True)
       && ext.is_some_and(|ext| ["js", "jsx", "ts", "tsx", "mjs"].contains(&ext));
+
+    let is_refresh_disabled = self.environment_consumer == "server"
+      || matches!(self.jsx_refresh_filter(id, cwd), JsxRefreshFilter::False);
 
     let source_type = if is_js_lang {
       SourceType::mjs()
@@ -84,9 +81,11 @@ impl TransformPlugin {
 
     let mut transform_options = self.transform_options.clone();
 
-    if let Some(Either::Right(jsx)) = &mut transform_options.jsx {
-      if jsx.refresh.is_some() && is_refresh_disabled {
-        jsx.refresh = None;
+    if is_refresh_disabled {
+      if let Some(Either::Right(jsx)) = &mut transform_options.jsx {
+        if jsx.refresh.is_some() {
+          jsx.refresh = None;
+        }
       }
     }
 
@@ -176,7 +175,7 @@ impl TransformPlugin {
       }
     }
 
-    (source_type, Cow::Owned(TransformOptions::default()))
+    (source_type, transform_options.into())
   }
 }
 

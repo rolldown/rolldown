@@ -150,10 +150,10 @@ impl Chunk {
         .expect("The file should have basename")
         .to_string_lossy()
         .to_string();
-      return Ok(PreliminaryFilename::new(basename, None));
+      return Ok(PreliminaryFilename::new(basename.into(), None));
     }
     if let Some(file_name) = &self.file_name {
-      return Ok(PreliminaryFilename::new(file_name.to_string(), None));
+      return Ok(PreliminaryFilename::new(file_name.clone(), None));
     }
 
     let filename_template = self.filename_template(options, rollup_pre_rendered_chunk).await?;
@@ -179,7 +179,7 @@ impl Chunk {
       make_unique_name(&filename, used_name_counts)
     };
 
-    Ok(PreliminaryFilename::new(name.to_string(), hash_placeholder))
+    Ok(PreliminaryFilename::new(name, hash_placeholder))
   }
 
   pub async fn generate_css_preliminary_filename(
@@ -193,7 +193,10 @@ impl Chunk {
     if let Some(file) = &options.file {
       let mut file = PathBuf::from(file);
       file.set_extension("css");
-      return Ok(PreliminaryFilename::new(file.into_os_string().into_string().unwrap(), None));
+      return Ok(PreliminaryFilename::new(
+        file.into_os_string().into_string().unwrap().into(),
+        None,
+      ));
     }
 
     let filename_template = self.css_filename_template(options, rollup_pre_rendered_chunk).await?;
@@ -219,7 +222,7 @@ impl Chunk {
       make_unique_name(&filename, used_name_counts)
     };
 
-    Ok(PreliminaryFilename::new(name.to_string(), hash_placeholder))
+    Ok(PreliminaryFilename::new(name, hash_placeholder))
   }
 
   pub fn user_defined_entry_module_idx(&self) -> Option<ModuleIdx> {

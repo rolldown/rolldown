@@ -12,8 +12,8 @@ pub struct PreliminaryFilename {
 }
 
 impl PreliminaryFilename {
-  pub fn new(filename: String, hash_placeholder: Option<Vec<String>>) -> Self {
-    Self { filename: filename.into(), hash_placeholder }
+  pub fn new(filename: ArcStr, hash_placeholder: Option<Vec<String>>) -> Self {
+    Self { filename, hash_placeholder }
   }
 
   pub fn hash_placeholder(&self) -> Option<&[String]> {

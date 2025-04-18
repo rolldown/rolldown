@@ -3,7 +3,7 @@ export * from './generated/index.js';
 
 export interface Event {
   timestamp: string;
-  buildId: string;
+  session_id: string;
   fields: {
     action: Action;
   };

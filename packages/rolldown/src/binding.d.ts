@@ -266,7 +266,7 @@ export interface BindingChecksOptions {
 }
 
 export interface BindingDebugOptions {
-  buildId?: string
+  sessionId?: string
 }
 
 export interface BindingDeferSyncScanData {

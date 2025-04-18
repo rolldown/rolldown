@@ -10,5 +10,5 @@ use serde::Deserialize;
   serde(rename_all = "camelCase", deny_unknown_fields)
 )]
 pub struct DebugOptions {
-  pub build_id: Option<String>,
+  pub session_id: Option<String>,
 }

@@ -37,7 +37,7 @@ pub struct Bundler {
   #[allow(unused)]
   pub(crate) cache: ScanStageCache,
   pub(crate) hmr_manager: Option<HmrManager>,
-  pub(crate) build_span: tracing::Span,
+  pub(crate) session_span: tracing::Span,
   // Guard for the tracing system. Responsible for cleaning up the allocated resources when the bundler gets dropped.
   pub(crate) _debug_tracer: Option<rolldown_debug::DebugTracer>,
 }
@@ -53,7 +53,7 @@ impl Bundler {
 }
 
 impl Bundler {
-  #[tracing::instrument(level = "debug", skip_all, parent = &self.build_span)]
+  #[tracing::instrument(level = "debug", skip_all, parent = &self.session_span)]
   pub async fn write(&mut self) -> BuildResult<BundleOutput> {
     trace_action!(action::BuildStart { kind: "BuildStart" });
     let scan_stage_output = self.scan(vec![]).await?;
@@ -63,7 +63,7 @@ impl Bundler {
     ret
   }
 
-  #[tracing::instrument(level = "debug", skip_all, parent = &self.build_span)]
+  #[tracing::instrument(level = "debug", skip_all, parent = &self.session_span)]
   pub async fn generate(&mut self) -> BuildResult<BundleOutput> {
     trace_action!(action::BuildStart { kind: "BuildStart" });
     let scan_stage_output = self.scan(vec![]).await?;
@@ -105,7 +105,7 @@ impl Bundler {
       Arc::clone(&self.plugin_driver),
       self.fs,
       Arc::clone(&self.resolver),
-      self.build_span.clone(),
+      self.session_span.clone(),
     )
     .scan(mode, cache)
     .await
@@ -239,7 +239,7 @@ impl Bundler {
         index_ecma_ast: link_stage_output.ast_table,
         // Don't forget to reset the cache if you want to rebuild the bundle instead hmr.
         cache: std::mem::take(&mut self.cache),
-        build_span: self.build_span.clone(),
+        session_span: self.session_span.clone(),
       }));
     }
     Ok(output)

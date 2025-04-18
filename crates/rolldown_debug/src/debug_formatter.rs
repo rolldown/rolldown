@@ -32,7 +32,7 @@ where
     event: &Event<'_>,
   ) -> std::fmt::Result {
     let meta = event.metadata();
-    let build_id = if let Some(scope) = ctx.event_scope() {
+    let session_id = if let Some(scope) = ctx.event_scope() {
       let mut spans = scope.from_root();
       loop {
         if let Some(span) = spans.next() {
@@ -47,13 +47,13 @@ where
       None
     };
 
-    if let Some(build_id) = &build_id {
-      std::fs::create_dir_all(format!(".rolldown/{}", build_id.0)).ok();
+    if let Some(session_id) = &session_id {
+      std::fs::create_dir_all(format!(".rolldown/{}", session_id.0)).ok();
     } else {
       std::fs::create_dir_all(".rolldown/default").ok();
     }
     let log_filename =
-      build_id.as_ref().map_or(".rolldown/default/log.json".to_string(), |build_id| {
+      session_id.as_ref().map_or(".rolldown/default/log.json".to_string(), |build_id| {
         format!(".rolldown/{}/log.json", build_id.0)
       });
 
@@ -86,8 +86,8 @@ where
 
       serializer.serialize_entry("timestamp", &current_utc_timestamp_ms())?;
       serializer.serialize_entry("level", &meta.level().as_serde())?;
-      if let Some(build_id) = build_id {
-        serializer.serialize_entry("buildId", &build_id.0)?;
+      if let Some(session_id) = session_id {
+        serializer.serialize_entry("session_id", &session_id.0)?;
       }
 
       let flatten_event = false;

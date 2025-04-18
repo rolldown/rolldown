@@ -331,7 +331,7 @@ pub fn normalize_binding_options(
     make_absolute_externals_relative: input_options
       .make_absolute_externals_relative
       .map(Into::into),
-    debug: input_options.debug.map(|inner| rolldown::DebugOptions { build_id: inner.build_id }),
+    debug: input_options.debug.map(|inner| rolldown::DebugOptions { session_id: inner.session_id }),
     invalidate_js_side_cache,
   };
 

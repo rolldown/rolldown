@@ -23,20 +23,21 @@ pub struct BundlerBuilder {
 
 impl BundlerBuilder {
   pub fn build(mut self) -> Bundler {
-    let mut session_id = std::time::SystemTime::now()
+    let mut session_id: Arc<str> = std::time::SystemTime::now()
       .duration_since(std::time::UNIX_EPOCH)
       .expect("Time went backwards")
       .as_millis()
-      .to_string();
+      .to_string()
+      .into();
 
     let mut debug_tracer = None;
     if let Some(debug_options) = &self.options.debug {
       if let Some(id) = &debug_options.session_id {
-        session_id = id.to_string();
+        session_id = id.to_string().into();
       }
-      debug_tracer = Some(rolldown_debug::DebugTracer::init());
+      debug_tracer = Some(rolldown_debug::DebugTracer::init(Arc::clone(&session_id)));
     }
-    let build_span = tracing::trace_span!("Session", session_id = session_id);
+    let session_span = tracing::trace_span!("Session", session_id = &*session_id);
 
     let maybe_guard = rolldown_tracing::try_init_tracing();
 
@@ -70,7 +71,7 @@ impl BundlerBuilder {
       _log_guard: maybe_guard,
       cache: ScanStageCache::default(),
       hmr_manager: None,
-      session_span: build_span,
+      session_span,
       _debug_tracer: debug_tracer,
     }
   }

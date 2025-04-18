@@ -13,14 +13,14 @@ use tracing_subscriber::{
   registry::LookupSpan,
 };
 
-use crate::build_id_propagate_layer::BuildId;
+use crate::debug_data_propagate_layer::BuildId;
 
 static OPEN_FILES: std::sync::LazyLock<DashMap<String, std::fs::File>> =
   std::sync::LazyLock::new(DashMap::new);
 
-pub struct DevtoolFormatter;
+pub struct DebugFormatter;
 
-impl<S, N> FormatEvent<S, N> for DevtoolFormatter
+impl<S, N> FormatEvent<S, N> for DebugFormatter
 where
   S: Subscriber + for<'lookup> LookupSpan<'lookup>,
   N: for<'writer> FormatFields<'writer> + 'static,

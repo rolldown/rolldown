@@ -641,7 +641,7 @@
     "DebugOptions": {
       "type": "object",
       "properties": {
-        "buildId": {
+        "sessionId": {
           "type": [
             "string",
             "null"

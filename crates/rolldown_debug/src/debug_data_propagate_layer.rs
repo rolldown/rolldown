@@ -8,7 +8,7 @@ use tracing_subscriber::{Layer, layer::Context, registry::LookupSpan};
 pub struct DebugDataPropagateLayer;
 
 struct DebugDataFinder {
-  build_id: Option<Arc<str>>,
+  session_id: Option<Arc<str>>,
 }
 
 #[derive(Debug, Clone, serde::Serialize)]
@@ -16,14 +16,14 @@ pub struct BuildId(pub Arc<str>);
 
 impl tracing::field::Visit for DebugDataFinder {
   fn record_str(&mut self, field: &tracing::field::Field, value: &str) {
-    if field.name() == "buildId" {
-      self.build_id = Some(value.into());
+    if field.name() == "session_id" {
+      self.session_id = Some(value.into());
     }
   }
   /// Visit an unsigned 128-bit integer value.
   fn record_u128(&mut self, field: &tracing::field::Field, value: u128) {
-    if field.name() == "buildId" {
-      self.build_id = Some(value.to_string().into());
+    if field.name() == "session_id" {
+      self.session_id = Some(value.to_string().into());
     }
   }
   fn record_debug(&mut self, _: &tracing::field::Field, _: &dyn std::fmt::Debug) {
@@ -40,12 +40,12 @@ where
       return;
     };
 
-    let mut visitor = DebugDataFinder { build_id: None };
+    let mut visitor = DebugDataFinder { session_id: None };
     // First see if the current span has a `buildId` field
     attrs.record(&mut visitor);
 
     let mut exts = span_ref.extensions_mut();
-    if let Some(build_id) = visitor.build_id {
+    if let Some(build_id) = visitor.session_id {
       // If it does, it means this span is the root build span. Let's store the `buildId` into the extensions.
       exts.insert(BuildId(build_id));
     } else {

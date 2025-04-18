@@ -404,7 +404,7 @@ const InputOptionsSchema = v.strictObject({
   ),
   debug: v.pipe(
     v.optional(v.object({
-      buildId: v.pipe(
+      sessionId: v.pipe(
         v.optional(v.string()),
         v.description('Used to name the build.'),
       ),

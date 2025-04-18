@@ -229,7 +229,7 @@ export interface InputOptions {
   checks?: ChecksOptions;
   makeAbsoluteExternalsRelative?: MakeAbsoluteExternalsRelative;
   debug?: {
-    buildId?: string;
+    sessionId?: string;
   };
 }
 

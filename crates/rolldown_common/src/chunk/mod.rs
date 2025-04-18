@@ -172,12 +172,7 @@ impl Chunk {
 
     let filename = filename_template.render(Some(chunk_name), None, hash_replacer).into();
 
-    let name = if has_hash_pattern {
-      make_unique_name(&filename, used_name_counts);
-      filename
-    } else {
-      make_unique_name(&filename, used_name_counts)
-    };
+    let name = make_unique_name(&filename, used_name_counts);
 
     Ok(PreliminaryFilename::new(name, hash_placeholder))
   }
@@ -215,12 +210,7 @@ impl Chunk {
 
     let filename = filename_template.render(Some(chunk_name), None, hash_replacer).into();
 
-    let name = if has_hash_pattern {
-      make_unique_name(&filename, used_name_counts);
-      filename
-    } else {
-      make_unique_name(&filename, used_name_counts)
-    };
+    let name = make_unique_name(&filename, used_name_counts);
 
     Ok(PreliminaryFilename::new(name, hash_placeholder))
   }

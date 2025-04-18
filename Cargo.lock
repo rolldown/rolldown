@@ -2522,6 +2522,7 @@ version = "0.1.0"
 dependencies = [
  "dashmap",
  "rolldown_debug_action",
+ "rustc-hash",
  "serde",
  "serde_json",
  "tracing",

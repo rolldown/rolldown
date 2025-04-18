@@ -1,6 +1,6 @@
 use std::str::FromStr;
+use std::sync::Arc;
 use std::sync::atomic::AtomicBool;
-use std::sync::atomic::AtomicU32;
 
 use tracing_subscriber::EnvFilter;
 use tracing_subscriber::fmt;
@@ -8,8 +8,8 @@ use tracing_subscriber::prelude::*;
 
 use crate::debug_data_propagate_layer::DebugDataPropagateLayer;
 use crate::debug_formatter::DebugFormatter;
-
-static TRACER_ID: AtomicU32 = AtomicU32::new(0);
+use crate::static_data::OPENED_FILE_HANDLES;
+use crate::static_data::OPENED_FILES_BY_SESSION;
 
 static IS_INITIALIZED: AtomicBool = AtomicBool::new(false);
 
@@ -30,15 +30,13 @@ pub fn init_devtool_tracing() {
 
 #[allow(dead_code)]
 pub struct DebugTracer {
-  id: u32,
+  session_id: Arc<str>,
 }
 
 impl DebugTracer {
   #[must_use]
-  pub fn init() -> Self {
-    let id = TRACER_ID.fetch_add(1, std::sync::atomic::Ordering::SeqCst);
-
-    let tracer = Self { id };
+  pub fn init(session_id: Arc<str>) -> Self {
+    let tracer = Self { session_id };
     if IS_INITIALIZED.swap(true, std::sync::atomic::Ordering::SeqCst) {
       return tracer;
     }
@@ -51,5 +49,15 @@ impl DebugTracer {
       .init();
 
     tracer
+  }
+}
+
+impl Drop for DebugTracer {
+  fn drop(&mut self) {
+    if let Some((_session_id, files)) = OPENED_FILES_BY_SESSION.remove(self.session_id.as_ref()) {
+      for file in files {
+        OPENED_FILE_HANDLES.remove(&file);
+      }
+    }
   }
 }

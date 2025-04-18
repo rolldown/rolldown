@@ -9,6 +9,7 @@ repository.workspace = true
 [dependencies]
 dashmap = { workspace = true }
 rolldown_debug_action = { workspace = true }
+rustc-hash = { workspace = true }
 serde = { workspace = true, features = ["derive", "rc"] }
 serde_json = { workspace = true }
 tracing = { workspace = true, features = ["valuable"] }

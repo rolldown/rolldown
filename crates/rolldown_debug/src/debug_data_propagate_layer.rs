@@ -12,7 +12,7 @@ struct DebugDataFinder {
 }
 
 #[derive(Debug, Clone, serde::Serialize)]
-pub struct BuildId(pub Arc<str>);
+pub struct SessionId(pub Arc<str>);
 
 impl tracing::field::Visit for DebugDataFinder {
   fn record_str(&mut self, field: &tracing::field::Field, value: &str) {
@@ -47,7 +47,7 @@ where
     let mut exts = span_ref.extensions_mut();
     if let Some(build_id) = visitor.session_id {
       // If it does, it means this span is the root build span. Let's store the `buildId` into the extensions.
-      exts.insert(BuildId(build_id));
+      exts.insert(SessionId(build_id));
     } else {
       // If not, we need to propagate the `buildId` from the parent span.
       let mut next_parent_ref = span_ref.parent();
@@ -55,7 +55,7 @@ where
       let build_id = loop {
         // Find the first ancestor that has a `buildId` field
         if let Some(parent_ref) = next_parent_ref {
-          if let Some(build_id) = parent_ref.extensions().get::<BuildId>() {
+          if let Some(build_id) = parent_ref.extensions().get::<SessionId>() {
             break Some(build_id.clone());
           }
           next_parent_ref = parent_ref.parent();

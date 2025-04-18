@@ -1,10 +1,11 @@
 use std::{
   fs::OpenOptions,
   io::Write,
+  sync::Arc,
   time::{SystemTime, UNIX_EPOCH},
 };
 
-use dashmap::DashMap;
+use crate::static_data::{DEFAULT_SESSION_ID, OPENED_FILE_HANDLES, OPENED_FILES_BY_SESSION};
 use serde::ser::{SerializeMap, Serializer as _};
 use tracing::{Event, Subscriber};
 use tracing_serde::AsSerde;
@@ -13,10 +14,7 @@ use tracing_subscriber::{
   registry::LookupSpan,
 };
 
-use crate::debug_data_propagate_layer::BuildId;
-
-static OPEN_FILES: std::sync::LazyLock<DashMap<String, std::fs::File>> =
-  std::sync::LazyLock::new(DashMap::new);
+use crate::debug_data_propagate_layer::SessionId;
 
 pub struct DebugFormatter;
 
@@ -36,7 +34,7 @@ where
       let mut spans = scope.from_root();
       loop {
         if let Some(span) = spans.next() {
-          if let Some(build_id) = span.extensions().get::<BuildId>() {
+          if let Some(build_id) = span.extensions().get::<SessionId>() {
             break Some(build_id.clone());
           }
         } else {
@@ -47,48 +45,39 @@ where
       None
     };
 
-    if let Some(session_id) = &session_id {
-      std::fs::create_dir_all(format!(".rolldown/{}", session_id.0)).ok();
-    } else {
-      std::fs::create_dir_all(".rolldown/default").ok();
-    }
-    let log_filename =
-      session_id.as_ref().map_or(".rolldown/default/log.json".to_string(), |build_id| {
-        format!(".rolldown/{}/log.json", build_id.0)
-      });
+    let session_id = session_id.as_ref().map_or(DEFAULT_SESSION_ID, |s| &s.0);
 
-    // TODO(hyf0): While this prevents memory leaks, we should come up with a better solution.
-    if OPEN_FILES.len() > 10 {
-      let oldest_file = OPEN_FILES.iter().next();
-      if let Some(oldest_file) = oldest_file {
-        // If we have more than 10 open files, we need to close the oldest one.
-        OPEN_FILES.remove(oldest_file.key());
-      }
-    }
+    std::fs::create_dir_all(format!(".rolldown/{session_id}")).ok();
 
-    if !OPEN_FILES.contains_key(&log_filename) {
+    let log_filename: Arc<str> = format!(".rolldown/{session_id}/log.json").into();
+
+    if !OPENED_FILE_HANDLES.contains_key(&log_filename) {
       let file = OpenOptions::new()
         .create(true)
         .append(true)
-        .open(&log_filename)
+        .open(log_filename.as_ref())
         .map_err(|_| std::fmt::Error)?;
       // Ensure for each file, we only have one unique file handle to prevent multiple writes.
-      OPEN_FILES.insert(log_filename.clone(), file);
+      OPENED_FILE_HANDLES.insert(Arc::clone(&log_filename), file);
     }
 
-    let mut file =
-      OPEN_FILES.get_mut(&log_filename).unwrap_or_else(|| panic!("{log_filename} not found"));
+    OPENED_FILES_BY_SESSION
+      .entry(session_id.to_string())
+      .or_default()
+      .insert(Arc::clone(&log_filename));
+
+    let mut file = OPENED_FILE_HANDLES
+      .get_mut(&log_filename)
+      .unwrap_or_else(|| panic!("{log_filename} not found"));
     let mut file = file.value_mut();
 
-    let visit = || {
+    let mut visit = || {
       let mut serializer = serde_json::Serializer::new(&mut file);
       let mut serializer = serializer.serialize_map(None)?;
 
       serializer.serialize_entry("timestamp", &current_utc_timestamp_ms())?;
       serializer.serialize_entry("level", &meta.level().as_serde())?;
-      if let Some(session_id) = session_id {
-        serializer.serialize_entry("session_id", &session_id.0)?;
-      }
+      serializer.serialize_entry("session_id", session_id)?;
 
       let flatten_event = false;
 

@@ -33,7 +33,9 @@ pub fn render_esm<'code>(
     source_joiner.append_source(intro);
   }
 
-  source_joiner.append_source(render_esm_chunk_imports(ctx));
+  if let Some(imports) = render_esm_chunk_imports(ctx) {
+    source_joiner.append_source(imports);
+  }
 
   if let Some(entry_module) = ctx.chunk.entry_module(&ctx.link_output.module_table) {
     if matches!(entry_module.exports_kind, ExportsKind::Esm) {
@@ -82,7 +84,7 @@ pub fn render_esm<'code>(
   source_joiner
 }
 
-fn render_esm_chunk_imports(ctx: &GenerateContext<'_>) -> String {
+fn render_esm_chunk_imports(ctx: &GenerateContext<'_>) -> Option<String> {
   let mut s = String::new();
 
   ctx.chunk.imports_from_other_chunks.iter().for_each(|(exporter_id, items)| {
@@ -173,7 +175,7 @@ fn render_esm_chunk_imports(ctx: &GenerateContext<'_>) -> String {
     }
   });
 
-  s
+  if s.is_empty() { None } else { Some(s) }
 }
 
 fn create_import_declaration(

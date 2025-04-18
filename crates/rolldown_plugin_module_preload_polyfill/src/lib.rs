@@ -3,7 +3,7 @@ use std::borrow::Cow;
 use rolldown_common::{OutputFormat, side_effects::HookSideEffects};
 use rolldown_plugin::{
   HookLoadArgs, HookLoadOutput, HookLoadReturn, HookResolveIdArgs, HookResolveIdOutput,
-  HookResolveIdReturn, Plugin, PluginContext,
+  HookResolveIdReturn, HookUsage, Plugin, PluginContext,
 };
 
 const MODULE_PRELOAD_POLYFILL: &str = "vite/modulepreload-polyfill";
@@ -40,5 +40,9 @@ impl Plugin for ModulePreloadPolyfillPlugin {
         HookLoadOutput { code: String::new(), ..Default::default() }
       }
     }))
+  }
+
+  fn register_hook_usage(&self) -> HookUsage {
+    HookUsage::ResolveId | HookUsage::Load
   }
 }

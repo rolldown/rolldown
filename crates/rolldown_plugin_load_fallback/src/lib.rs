@@ -1,6 +1,8 @@
 use std::borrow::Cow;
 
-use rolldown_plugin::{HookLoadArgs, HookLoadOutput, HookLoadReturn, Plugin, PluginContext};
+use rolldown_plugin::{
+  HookLoadArgs, HookLoadOutput, HookLoadReturn, HookUsage, Plugin, PluginContext,
+};
 
 #[derive(Debug)]
 pub struct LoadFallbackPlugin;
@@ -25,5 +27,9 @@ impl Plugin for LoadFallbackPlugin {
     ctx.add_watch_file(path);
 
     Ok(Some(HookLoadOutput { code, ..Default::default() }))
+  }
+
+  fn register_hook_usage(&self) -> HookUsage {
+    HookUsage::Load
   }
 }

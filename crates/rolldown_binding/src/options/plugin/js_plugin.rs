@@ -10,7 +10,7 @@ use anyhow::Ok;
 use napi::bindgen_prelude::FnArgs;
 use rolldown::ModuleType;
 use rolldown_common::NormalModule;
-use rolldown_plugin::{__inner::SharedPluginable, Plugin, typedmap::TypedMapKey};
+use rolldown_plugin::{__inner::SharedPluginable, HookUsage, Plugin, typedmap::TypedMapKey};
 use rolldown_utils::pattern_filter::{self};
 use std::{borrow::Cow, ops::Deref, path::Path, sync::Arc};
 
@@ -537,6 +537,10 @@ impl Plugin for JsPlugin {
 
   fn close_watcher_meta(&self) -> Option<rolldown_plugin::PluginHookMeta> {
     self.close_watcher_meta.as_ref().map(Into::into)
+  }
+
+  fn register_hook_usage(&self) -> HookUsage {
+    HookUsage::all()
   }
 }
 

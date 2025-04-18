@@ -3,7 +3,7 @@ mod utils;
 use std::borrow::Cow;
 
 use rolldown_common::ModuleType;
-use rolldown_plugin::{HookTransformOutput, Plugin};
+use rolldown_plugin::{HookTransformOutput, HookUsage, Plugin};
 use rolldown_sourcemap::SourceMap;
 use rolldown_utils::concat_string;
 use serde_json::Value;
@@ -72,5 +72,10 @@ impl Plugin for JsonPlugin {
       module_type: Some(ModuleType::Js),
       ..Default::default()
     }))
+  }
+
+  fn register_hook_usage(&self) -> rolldown_plugin::HookUsage {
+    // TODO: get hook usage from option
+    HookUsage::all()
   }
 }

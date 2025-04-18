@@ -10,7 +10,8 @@ use oxc::{
 use parse_pattern::{DynamicImportPattern, DynamicImportRequest, parse_pattern};
 use rolldown_plugin::{
   HookLoadArgs, HookLoadOutput, HookLoadReturn, HookResolveIdArgs, HookResolveIdOutput,
-  HookResolveIdReturn, HookTransformAstArgs, HookTransformAstReturn, Plugin, PluginContext,
+  HookResolveIdReturn, HookTransformAstArgs, HookTransformAstReturn, HookUsage, Plugin,
+  PluginContext,
 };
 use std::borrow::Cow;
 use to_glob::to_glob_pattern;
@@ -69,6 +70,10 @@ impl Plugin for DynamicImportVarsPlugin {
       }
     });
     Ok(args.ast)
+  }
+
+  fn register_hook_usage(&self) -> HookUsage {
+    HookUsage::ResolveId | HookUsage::Load | HookUsage::TransformAst
   }
 }
 

@@ -4,7 +4,7 @@ use super::plugin_context::PluginContext;
 use crate::{
   HookAddonArgs, HookBuildEndArgs, HookGenerateBundleArgs, HookLoadArgs, HookLoadOutput,
   HookRenderChunkArgs, HookRenderChunkOutput, HookResolveIdArgs, HookResolveIdOutput,
-  HookTransformArgs, HookWriteBundleArgs, SharedTransformPluginContext,
+  HookTransformArgs, HookUsage, HookWriteBundleArgs, SharedTransformPluginContext,
   plugin_hook_meta::PluginHookMeta,
   types::{
     hook_build_start_args::HookBuildStartArgs, hook_render_error::HookRenderErrorArgs,
@@ -291,4 +291,6 @@ pub trait Plugin: Any + Debug + Send + Sync + 'static {
   fn transform_ast_meta(&self) -> Option<PluginHookMeta> {
     None
   }
+
+  fn register_hook_usage(&self) -> HookUsage;
 }

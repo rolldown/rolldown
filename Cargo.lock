@@ -2605,6 +2605,7 @@ dependencies = [
  "anyhow",
  "arcstr",
  "async-trait",
+ "bitflags 2.9.0",
  "dashmap",
  "derive_more",
  "oxc_index",

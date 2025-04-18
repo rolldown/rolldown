@@ -1,6 +1,6 @@
 use std::borrow::Cow;
 
-use rolldown_plugin::{HookLoadArgs, HookLoadReturn, Plugin, PluginContext};
+use rolldown_plugin::{HookLoadArgs, HookLoadReturn, HookUsage, Plugin, PluginContext};
 
 #[derive(Debug)]
 pub struct WasmFallbackPlugin;
@@ -22,5 +22,9 @@ impl Plugin for WasmFallbackPlugin {
       ))?;
     }
     Ok(None)
+  }
+
+  fn register_hook_usage(&self) -> HookUsage {
+    HookUsage::Load
   }
 }

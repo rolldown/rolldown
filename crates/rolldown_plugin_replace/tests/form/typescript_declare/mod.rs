@@ -3,7 +3,7 @@ use std::sync::Arc;
 use rolldown::BundlerOptions;
 
 use rolldown_plugin::{
-  HookTransformArgs, HookTransformReturn, Plugin, SharedTransformPluginContext,
+  HookTransformArgs, HookTransformReturn, HookUsage, Plugin, SharedTransformPluginContext,
 };
 use rolldown_plugin_replace::{ReplaceOptions, ReplacePlugin};
 use rolldown_testing::{abs_file_dir, integration_test::IntegrationTest, test_config::TestMeta};
@@ -25,6 +25,10 @@ impl Plugin for TestPlugin {
     let mut code = self.0.lock().unwrap();
     *code = Some(args.code.clone());
     Ok(None)
+  }
+
+  fn register_hook_usage(&self) -> HookUsage {
+    HookUsage::Transform
   }
 }
 

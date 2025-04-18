@@ -12,7 +12,8 @@ use oxc::semantic::ScopeFlags;
 use oxc::span::{Atom, SPAN};
 use rolldown_plugin::{
   HookLoadArgs, HookLoadOutput, HookLoadReturn, HookResolveIdArgs, HookResolveIdOutput,
-  HookResolveIdReturn, HookTransformAstArgs, HookTransformAstReturn, Plugin, PluginContext,
+  HookResolveIdReturn, HookTransformAstArgs, HookTransformAstReturn, HookUsage, Plugin,
+  PluginContext,
 };
 use rustc_hash::FxHashMap;
 
@@ -86,6 +87,10 @@ impl Plugin for BuildImportAnalysisPlugin {
     let mut codegen = CodeGenerator::new();
     ast.program().r#gen(&mut codegen, codegen::Context::default());
     Ok(ast)
+  }
+
+  fn register_hook_usage(&self) -> HookUsage {
+    HookUsage::ResolveId | HookUsage::Load | HookUsage::TransformAst
   }
 }
 

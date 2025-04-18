@@ -2,7 +2,7 @@ use std::{borrow::Cow, collections::BTreeMap, path::Path, sync::Arc};
 
 use arcstr::ArcStr;
 use rolldown_common::{EmittedAsset, Output, OutputAsset, OutputChunk};
-use rolldown_plugin::{HookNoopReturn, Plugin, PluginContext};
+use rolldown_plugin::{HookNoopReturn, HookUsage, Plugin, PluginContext};
 use rolldown_utils::rustc_hash::FxHashSetExt;
 use rustc_hash::FxHashSet;
 use serde::Serialize;
@@ -108,6 +108,10 @@ impl Plugin for ManifestPlugin {
     // }
 
     Ok(())
+  }
+
+  fn register_hook_usage(&self) -> HookUsage {
+    HookUsage::GenerateBundle
   }
 }
 

@@ -9,7 +9,7 @@ use std::{
   time::{Duration, Instant},
 };
 
-use rolldown_plugin::{Plugin, PluginContext};
+use rolldown_plugin::{HookUsage, Plugin, PluginContext};
 use sugar_path::SugarPath;
 
 #[derive(Debug)]
@@ -108,5 +108,9 @@ impl Plugin for ReportPlugin {
     writeln!(&mut lock, " {count} modules transformed.",).unwrap();
     lock.flush().unwrap();
     Ok(())
+  }
+
+  fn register_hook_usage(&self) -> HookUsage {
+    HookUsage::Transform | HookUsage::BuildStart | HookUsage::BuildEnd
   }
 }

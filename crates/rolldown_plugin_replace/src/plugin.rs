@@ -2,7 +2,7 @@ use std::borrow::Cow;
 use std::ops::Range;
 use std::{cmp::Reverse, sync::Arc};
 
-use rolldown_plugin::{HookRenderChunkOutput, HookTransformOutput, Plugin};
+use rolldown_plugin::{HookRenderChunkOutput, HookTransformOutput, HookUsage, Plugin};
 use rustc_hash::FxHashMap;
 use string_wizard::{MagicString, SourceMapOptions};
 
@@ -215,5 +215,9 @@ impl Plugin for ReplacePlugin {
       }));
     }
     Ok(None)
+  }
+
+  fn register_hook_usage(&self) -> HookUsage {
+    HookUsage::Transform | HookUsage::RenderChunk
   }
 }

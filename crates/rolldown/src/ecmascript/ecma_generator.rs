@@ -97,13 +97,15 @@ impl Generator for EcmaGenerator {
       ctx.chunk.pre_rendered_chunk.as_ref().expect("Should have pre-rendered chunk"),
       ctx.chunk_graph,
     ));
-    let hashbang = match ctx.chunk.user_defined_entry_module(&ctx.link_output.module_table) {
-      Some(normal_module) => normal_module
-        .ecma_view
-        .hashbang_range
-        .map(|range| &normal_module.source[range.start as usize..range.end as usize]),
-      None => None,
-    };
+
+    let hashbang = ctx.chunk.user_defined_entry_module(&ctx.link_output.module_table).and_then(
+      |normal_module| {
+        normal_module
+          .ecma_view
+          .hashbang_range
+          .map(|range| &normal_module.source[range.start as usize..range.end as usize])
+      },
+    );
 
     let banner = {
       let injection = match ctx.options.banner.as_ref() {

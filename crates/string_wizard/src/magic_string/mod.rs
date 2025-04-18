@@ -212,13 +212,10 @@ impl<'a> Iterator for IterChunks<'a> {
   type Item = &'a Chunk<'a>;
 
   fn next(&mut self) -> Option<Self::Item> {
-    match self.next {
-      None => None,
-      Some(idx) => {
-        let chunk = &self.chunks[idx];
-        self.next = chunk.next;
-        Some(chunk)
-      }
-    }
+    self.next.map(|idx| {
+      let chunk = &self.chunks[idx];
+      self.next = chunk.next;
+      chunk
+    })
   }
 }

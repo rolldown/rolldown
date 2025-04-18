@@ -1,4 +1,5 @@
 {
+  "expectExecuted": false,
   "config": {
     "experimental": {
       "hmr": {}

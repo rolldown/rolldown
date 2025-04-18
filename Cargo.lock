@@ -2923,6 +2923,7 @@ dependencies = [
  "futures",
  "indexmap",
  "infer",
+ "itoa",
  "memchr",
  "mime",
  "nom",
@@ -2935,6 +2936,7 @@ dependencies = [
  "rustc-hash",
  "serde_json",
  "simdutf8",
+ "sugar_path",
  "xxhash-rust",
 ]
 

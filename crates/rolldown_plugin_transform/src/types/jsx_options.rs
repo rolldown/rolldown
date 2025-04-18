@@ -1,6 +1,6 @@
 use itertools::Either;
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Default, Clone)]
 pub struct JsxOptions {
   /// Decides which runtime to use.
   ///

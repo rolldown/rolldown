@@ -9,7 +9,7 @@ use rolldown_common::ModuleType;
 use rolldown_plugin::SharedTransformPluginContext;
 use rolldown_utils::{clean_url::clean_url, pattern_filter::filter as pattern_filter};
 
-use crate::TransformPlugin;
+use crate::{TransformPlugin, types::jsx_options::JsxOptions};
 
 pub enum JsxRefreshFilter {
   None,
@@ -99,6 +99,52 @@ impl TransformPlugin {
         let tsconfig_path = tsconfig.path.to_string_lossy();
         if !tsconfig_path.starts_with(cwd) {
           ctx.inner.add_watch_file(&tsconfig_path);
+        }
+
+        let compiler_options = &tsconfig.compiler_options;
+
+        // when both the normal options and tsconfig is set,
+        // we want to prioritize the normal options
+        if transform_options.jsx.is_none()
+          || matches!(&transform_options.jsx, Some(Either::Right(jsx)) if jsx.runtime.is_none())
+        {
+          if compiler_options.jsx.as_deref() == Some("preserve") {
+            transform_options.jsx = Some(Either::Left(String::from("preserve")));
+          } else {
+            let mut jsx = if let Some(Either::Right(jsx)) = transform_options.jsx {
+              jsx
+            } else {
+              JsxOptions::default()
+            };
+
+            if compiler_options.jsx_factory.is_some() && jsx.pragma.is_none() {
+              jsx.pragma.clone_from(&compiler_options.jsx_factory);
+            }
+            if compiler_options.jsx_import_source.is_some() && jsx.import_source.is_none() {
+              jsx.import_source.clone_from(&compiler_options.jsx_import_source);
+            }
+            if compiler_options.jsx_fragment_factory.is_some() && jsx.pragma_frag.is_none() {
+              jsx.pragma_frag.clone_from(&compiler_options.jsx_fragment_factory);
+            }
+
+            match compiler_options.jsx.as_deref() {
+              Some("react") => {
+                jsx.runtime = Some(String::from("classic"));
+                // this option should not be set when using classic runtime
+                jsx.import_source = None;
+              }
+              Some("react-jsx") => {
+                jsx.runtime = Some(String::from("automatic"));
+                // these options should not be set when using automatic runtime
+                jsx.pragma = None;
+                jsx.pragma_frag = None;
+              }
+              Some("react-jsxdev") => jsx.development = Some(true),
+              _ => {}
+            }
+
+            transform_options.jsx = Some(Either::Right(jsx));
+          }
         }
       }
     }

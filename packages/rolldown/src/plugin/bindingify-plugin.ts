@@ -137,7 +137,6 @@ export function bindingifyPlugin(
 
   const { plugin: closeWatcher, meta: closeWatcherMeta } =
     bindingifyCloseWatcher(args);
-
   const result: BindingPluginOptions = {
     // The plugin name already normalized at `normalizePlugins`, see `packages/rolldown/src/utils/normalize-plugin-option.ts`
     name: plugin.name!,

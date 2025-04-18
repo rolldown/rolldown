@@ -5,7 +5,9 @@ use std::path::Path;
 use std::{borrow::Cow, sync::Arc};
 
 use rolldown_common::ModuleType;
-use rolldown_plugin::{Plugin, PluginContextResolveOptions, SharedTransformPluginContext};
+use rolldown_plugin::{
+  HookUsage, Plugin, PluginContextResolveOptions, SharedTransformPluginContext,
+};
 use rolldown_utils::{clean_url::clean_url, pattern_filter::StringOrRegex};
 
 use types::transform_options::TransformOptions;
@@ -73,5 +75,9 @@ impl Plugin for TransformPlugin {
     }
 
     Ok(None)
+  }
+
+  fn register_hook_usage(&self) -> HookUsage {
+    HookUsage::ResolveId | HookUsage::Transform
   }
 }

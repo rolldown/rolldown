@@ -4,7 +4,9 @@ use std::path::PathBuf;
 use anyhow::Result;
 
 mod checks;
+mod hook_usage;
 pub use checks::CheckOptionsGenerator;
+pub use hook_usage::HookUsageGenerator;
 
 /// Trait to define a generator.
 pub trait Generator: Runner {

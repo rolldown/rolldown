@@ -3,7 +3,7 @@ use std::{borrow::Cow, fs, path::Path};
 use rolldown_common::{EmittedAsset, ModuleType, StrOrBytes};
 use rolldown_plugin::{
   HookLoadArgs, HookLoadOutput, HookLoadReturn, HookResolveIdArgs, HookResolveIdOutput,
-  HookResolveIdReturn, Plugin, PluginContext,
+  HookResolveIdReturn, HookUsage, Plugin, PluginContext,
 };
 
 const WASM_HELPER_ID: &str = "\0vite/wasm-helper.js";
@@ -53,5 +53,9 @@ impl Plugin for WasmHelperPlugin {
     }
 
     Ok(None)
+  }
+
+  fn register_hook_usage(&self) -> HookUsage {
+    HookUsage::ResolveId | HookUsage::Load
   }
 }

@@ -1,7 +1,9 @@
 use std::{borrow::Cow, path::PathBuf};
 
 use oxc::{ast::AstBuilder, ast_visit::VisitMut};
-use rolldown_plugin::{HookTransformAstArgs, HookTransformAstReturn, Plugin, PluginContext};
+use rolldown_plugin::{
+  HookTransformAstArgs, HookTransformAstReturn, HookUsage, Plugin, PluginContext,
+};
 use sugar_path::SugarPath;
 
 mod utils;
@@ -53,5 +55,9 @@ impl Plugin for ImportGlobPlugin {
       }
     });
     Ok(args.ast)
+  }
+
+  fn register_hook_usage(&self) -> HookUsage {
+    HookUsage::TransformAst
   }
 }

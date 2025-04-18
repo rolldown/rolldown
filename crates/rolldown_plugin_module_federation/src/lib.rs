@@ -16,7 +16,7 @@ use oxc::{
   span::SPAN,
 };
 use rolldown_common::{EmittedChunk, Output};
-use rolldown_plugin::{HookResolveIdReturn, Plugin};
+use rolldown_plugin::{HookResolveIdReturn, HookUsage, Plugin};
 use rolldown_utils::{concat_string, dashmap::FxDashMap};
 use rustc_hash::FxHashSet;
 use utils::{
@@ -462,5 +462,15 @@ impl Plugin for ModuleFederationPlugin {
       generate_manifest(ctx, args, &self.options, &self.resolved_remote_modules).await?;
     }
     Ok(())
+  }
+
+  fn register_hook_usage(&self) -> HookUsage {
+    HookUsage::BuildStart
+      | HookUsage::ResolveId
+      | HookUsage::Load
+      | HookUsage::TransformAst
+      | HookUsage::ModuleParsed
+      | HookUsage::RenderChunk
+      | HookUsage::GenerateBundle
   }
 }

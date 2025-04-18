@@ -3,7 +3,7 @@ use std::borrow::Cow;
 use rolldown_common::ModuleType;
 use rolldown_plugin::{
   HookLoadArgs, HookLoadOutput, HookLoadReturn, HookResolveIdArgs, HookResolveIdOutput,
-  HookResolveIdReturn, Plugin, PluginContext,
+  HookResolveIdReturn, HookUsage, Plugin, PluginContext,
 };
 use rolldown_utils::{
   dashmap::FxDashMap,
@@ -77,5 +77,9 @@ impl Plugin for DataUriPlugin {
     } else {
       Ok(None)
     }
+  }
+
+  fn register_hook_usage(&self) -> HookUsage {
+    HookUsage::ResolveId | HookUsage::Load
   }
 }

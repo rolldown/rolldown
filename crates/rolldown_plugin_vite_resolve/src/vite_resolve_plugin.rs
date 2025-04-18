@@ -22,7 +22,8 @@ use derive_more::Debug;
 use rolldown_common::{ImportKind, WatcherChangeKind, side_effects::HookSideEffects};
 use rolldown_plugin::{
   HookLoadArgs, HookLoadOutput, HookLoadReturn, HookNoopReturn, HookResolveIdArgs,
-  HookResolveIdOutput, HookResolveIdReturn, Plugin, PluginContext, typedmap::TypedMapKey,
+  HookResolveIdOutput, HookResolveIdReturn, HookUsage, Plugin, PluginContext,
+  typedmap::TypedMapKey,
 };
 use rustc_hash::FxHashSet;
 use sugar_path::SugarPath;
@@ -424,6 +425,10 @@ impl Plugin for ViteResolvePlugin {
     event: WatcherChangeKind,
   ) -> rolldown_plugin::HookNoopReturn {
     self.watch_change_internal(path, event)
+  }
+
+  fn register_hook_usage(&self) -> HookUsage {
+    HookUsage::ResolveId | HookUsage::Load | HookUsage::WatchChange
   }
 }
 

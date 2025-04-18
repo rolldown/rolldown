@@ -211,6 +211,7 @@
     "Trivias",
     "typedmap",
     "typeof",
+    "bitflag",
     "typeofs",
     "underfin",
     "unhandleable",

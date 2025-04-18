@@ -8,6 +8,7 @@ use std::sync::Arc;
 use futures::future::{self, BoxFuture};
 #[cfg(not(target_family = "wasm"))]
 use rolldown_plugin::__inner::Pluginable;
+use rolldown_plugin::HookUsage;
 #[cfg(not(target_family = "wasm"))]
 use rolldown_plugin::Plugin;
 
@@ -175,5 +176,9 @@ impl Plugin for ParallelJsPlugin {
     } else {
       Ok(())
     }
+  }
+
+  fn register_hook_usage(&self) -> HookUsage {
+    HookUsage::all()
   }
 }

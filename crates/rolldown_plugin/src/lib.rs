@@ -1,3 +1,4 @@
+mod generated;
 mod plugin;
 mod plugin_context;
 mod plugin_driver;
@@ -17,6 +18,7 @@ pub mod __inner {
 }
 
 pub use crate::{
+  generated::hook_usage::HookUsage,
   plugin::{
     HookAugmentChunkHashReturn, HookInjectionOutputReturn, HookLoadReturn, HookNoopReturn,
     HookRenderChunkReturn, HookResolveIdReturn, HookTransformAstReturn, HookTransformReturn,

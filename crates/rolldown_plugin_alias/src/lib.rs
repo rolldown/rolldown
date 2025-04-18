@@ -1,7 +1,9 @@
 use std::borrow::Cow;
 use std::sync::Arc;
 
-use rolldown_plugin::{HookResolveIdOutput, Plugin, PluginContext, PluginContextResolveOptions};
+use rolldown_plugin::{
+  HookResolveIdOutput, HookUsage, Plugin, PluginContext, PluginContextResolveOptions,
+};
 use rolldown_utils::pattern_filter::StringOrRegex;
 
 #[derive(Debug, Default)]
@@ -71,5 +73,9 @@ impl Plugin for AliasPlugin {
           Some(HookResolveIdOutput { id: resolved_id.id, ..Default::default() })
         })?,
     )
+  }
+
+  fn register_hook_usage(&self) -> HookUsage {
+    HookUsage::ResolveId
   }
 }

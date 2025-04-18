@@ -7,7 +7,7 @@ use oxc::{
   isolated_declarations::{IsolatedDeclarations, IsolatedDeclarationsOptions},
 };
 use rolldown_common::{ModuleType, ResolvedExternal};
-use rolldown_plugin::{Plugin, PluginHookMeta, PluginOrder};
+use rolldown_plugin::{HookUsage, Plugin, PluginHookMeta, PluginOrder};
 use sugar_path::SugarPath;
 use type_import_visitor::TypeImportVisitor;
 
@@ -78,5 +78,9 @@ impl Plugin for IsolatedDeclarationPlugin {
   // The rolldown strip types at the end of the build process, make sure to run this plugin before that.
   fn transform_ast_meta(&self) -> Option<PluginHookMeta> {
     Some(PluginHookMeta { order: Some(PluginOrder::Post) })
+  }
+
+  fn register_hook_usage(&self) -> HookUsage {
+    HookUsage::TransformAst
   }
 }

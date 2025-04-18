@@ -4666,6 +4666,10 @@ expression: output
 
 - main-!~{000}~.js => main-Bl27OrDc.js
 
+# tests/rolldown/issues/4196
+
+- main-!~{000}~.js => main-Ck3tZAk1.js
+
 # tests/rolldown/misc/ambiguous_star_export
 
 - main-!~{000}~.js => main-Brk4weCb.js

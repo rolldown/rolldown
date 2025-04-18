@@ -38,3 +38,33 @@ pub struct IsolatedDeclarationsOptions {
 
   pub sourcemap: Option<bool>,
 }
+
+impl From<TypeScriptOptions> for oxc::transformer::TypeScriptOptions {
+  fn from(options: TypeScriptOptions) -> Self {
+    let ops = oxc::transformer::TypeScriptOptions::default();
+    Self {
+      jsx_pragma: options.jsx_pragma.map(Into::into).unwrap_or(ops.jsx_pragma),
+      jsx_pragma_frag: options.jsx_pragma_frag.map(Into::into).unwrap_or(ops.jsx_pragma_frag),
+      only_remove_type_imports: options
+        .only_remove_type_imports
+        .unwrap_or(ops.only_remove_type_imports),
+      allow_namespaces: options.allow_namespaces.unwrap_or(ops.allow_namespaces),
+      allow_declare_fields: options.allow_declare_fields.unwrap_or(ops.allow_declare_fields),
+      optimize_const_enums: false,
+      rewrite_import_extensions: options.rewrite_import_extensions.and_then(|value| match value {
+        Either::Left(v) => {
+          if v {
+            Some(oxc::transformer::RewriteExtensionsMode::Rewrite)
+          } else {
+            None
+          }
+        }
+        Either::Right(v) => match v.as_str() {
+          "rewrite" => Some(oxc::transformer::RewriteExtensionsMode::Rewrite),
+          "remove" => Some(oxc::transformer::RewriteExtensionsMode::Remove),
+          _ => None,
+        },
+      }),
+    }
+  }
+}

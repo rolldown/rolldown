@@ -72,6 +72,9 @@ impl Plugin for TransformPlugin {
       return Ok(None);
     }
 
+    let (_source_type, _transform_options) =
+      self.get_modified_transform_options(&ctx, args.id, &cwd, ext.as_deref());
+
     Ok(None)
   }
 }

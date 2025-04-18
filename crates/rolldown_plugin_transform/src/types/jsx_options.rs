@@ -94,3 +94,39 @@ pub struct ReactRefreshOptions {
 
   pub emit_full_signatures: Option<bool>,
 }
+
+impl From<ReactRefreshOptions> for oxc::transformer::ReactRefreshOptions {
+  fn from(options: ReactRefreshOptions) -> Self {
+    let ops = oxc::transformer::ReactRefreshOptions::default();
+    Self {
+      refresh_reg: options.refresh_reg.unwrap_or(ops.refresh_reg),
+      refresh_sig: options.refresh_sig.unwrap_or(ops.refresh_sig),
+      emit_full_signatures: options.emit_full_signatures.unwrap_or(ops.emit_full_signatures),
+    }
+  }
+}
+
+impl From<JsxOptions> for oxc::transformer::JsxOptions {
+  fn from(options: JsxOptions) -> Self {
+    let ops = oxc::transformer::JsxOptions::default();
+    Self {
+      runtime: match options.runtime.as_deref() {
+        Some("classic") => oxc::transformer::JsxRuntime::Classic,
+        /* "automatic" */ _ => oxc::transformer::JsxRuntime::Automatic,
+      },
+      development: options.development.unwrap_or(ops.development),
+      throw_if_namespace: options.throw_if_namespace.unwrap_or(ops.throw_if_namespace),
+      pure: options.pure.unwrap_or(ops.pure),
+      import_source: options.import_source,
+      pragma: options.pragma,
+      pragma_frag: options.pragma_frag,
+      use_built_ins: options.use_built_ins,
+      use_spread: options.use_spread,
+      refresh: options.refresh.and_then(|value| match value {
+        Either::Left(b) => b.then(oxc::transformer::ReactRefreshOptions::default),
+        Either::Right(options) => Some(oxc::transformer::ReactRefreshOptions::from(options)),
+      }),
+      ..Default::default()
+    }
+  }
+}

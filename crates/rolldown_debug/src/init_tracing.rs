@@ -6,8 +6,8 @@ use tracing_subscriber::EnvFilter;
 use tracing_subscriber::fmt;
 use tracing_subscriber::prelude::*;
 
-use crate::build_id_propagate_layer::BuildIdPropagateLayer;
-use crate::debug_formatter::DevtoolFormatter;
+use crate::debug_data_propagate_layer::DebugDataPropagateLayer;
+use crate::debug_formatter::DebugFormatter;
 
 static TRACER_ID: AtomicU32 = AtomicU32::new(0);
 
@@ -23,8 +23,8 @@ pub fn init_devtool_tracing() {
   let env_filter = EnvFilter::from_str(FILTER_FOR_DEVTOOL).unwrap();
   tracing_subscriber::registry()
     .with(env_filter)
-    .with(BuildIdPropagateLayer)
-    .with(fmt::layer().event_format(DevtoolFormatter))
+    .with(DebugDataPropagateLayer)
+    .with(fmt::layer().event_format(DebugFormatter))
     .init();
 }
 
@@ -46,8 +46,8 @@ impl DebugTracer {
     let env_filter = EnvFilter::from_str(FILTER_FOR_DEVTOOL).unwrap();
     tracing_subscriber::registry()
       .with(env_filter)
-      .with(BuildIdPropagateLayer)
-      .with(fmt::layer().event_format(DevtoolFormatter))
+      .with(DebugDataPropagateLayer)
+      .with(fmt::layer().event_format(DebugFormatter))
       .init();
 
     tracer

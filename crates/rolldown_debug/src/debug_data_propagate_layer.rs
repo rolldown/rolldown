@@ -5,16 +5,16 @@ use tracing_subscriber::{Layer, layer::Context, registry::LookupSpan};
 
 #[derive(Debug, Clone)]
 
-pub struct BuildIdPropagateLayer;
+pub struct DebugDataPropagateLayer;
 
-struct BuildIdFinder {
+struct DebugDataFinder {
   build_id: Option<Arc<str>>,
 }
 
 #[derive(Debug, Clone, serde::Serialize)]
 pub struct BuildId(pub Arc<str>);
 
-impl tracing::field::Visit for BuildIdFinder {
+impl tracing::field::Visit for DebugDataFinder {
   fn record_str(&mut self, field: &tracing::field::Field, value: &str) {
     if field.name() == "buildId" {
       self.build_id = Some(value.into());
@@ -31,7 +31,7 @@ impl tracing::field::Visit for BuildIdFinder {
   }
 }
 
-impl<S> Layer<S> for BuildIdPropagateLayer
+impl<S> Layer<S> for DebugDataPropagateLayer
 where
   S: Subscriber + for<'a> LookupSpan<'a>,
 {
@@ -40,7 +40,7 @@ where
       return;
     };
 
-    let mut visitor = BuildIdFinder { build_id: None };
+    let mut visitor = DebugDataFinder { build_id: None };
     // First see if the current span has a `buildId` field
     attrs.record(&mut visitor);
 

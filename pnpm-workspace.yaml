@@ -8,6 +8,3 @@ packages:
   - examples/module-federation/*
   - scripts
   - crates/rolldown/tests/rolldown/topics/npm_packages
-
-onlyBuiltDependencies:
-  - dprint

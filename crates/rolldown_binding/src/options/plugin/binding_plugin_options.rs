@@ -34,6 +34,7 @@ pub type BindingPluginOrParallelJsPluginPlaceholder =
 #[derive(Default)]
 pub struct BindingPluginOptions {
   pub name: String,
+  pub hook_usage: u32,
   #[napi(
     ts_type = "(ctx: BindingPluginContext, opts: BindingNormalizedOptions) => MaybePromise<VoidNullable>"
   )]

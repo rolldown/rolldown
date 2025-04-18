@@ -587,6 +587,7 @@ export interface BindingPluginHookMeta {
 
 export interface BindingPluginOptions {
   name: string
+  hookUsage: number
   buildStart?: (ctx: BindingPluginContext, opts: BindingNormalizedOptions) => MaybePromise<VoidNullable>
   buildStartMeta?: BindingPluginHookMeta
   resolveId?: (ctx: BindingPluginContext, specifier: string, importer: Nullable<string>, options: BindingHookResolveIdExtraArgs) => MaybePromise<VoidNullable<BindingHookResolveIdOutput>>

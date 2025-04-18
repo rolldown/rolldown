@@ -366,7 +366,7 @@ impl PluginDriver {
     for (plugin_idx, plugin, ctx) in
       self.iter_plugin_with_context_by_order(&self.order_by_build_end_meta)
     {
-      if !self.plugin_usage_vec[plugin_idx].contains(HookUsage::Transform) {
+      if !self.plugin_usage_vec[plugin_idx].contains(HookUsage::BuildEnd) {
         continue;
       }
       plugin

@@ -540,7 +540,7 @@ impl Plugin for JsPlugin {
   }
 
   fn register_hook_usage(&self) -> HookUsage {
-    HookUsage::all()
+    HookUsage::from_bits(self.inner.hook_usage).expect("Failed to register hook usage")
   }
 }
 

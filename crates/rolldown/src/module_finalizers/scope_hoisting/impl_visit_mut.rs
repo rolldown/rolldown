@@ -340,7 +340,6 @@ impl<'ast> VisitMut<'ast> for ScopeHoistingFinalizer<'_, 'ast> {
   fn visit_object_property(&mut self, prop: &mut ast::ObjectProperty<'ast>) {
     // Ensure `{ a }` would be rewritten to `{ a: a$1 }` instead of `{ a$1 }`
     if prop.shorthand {
-      // Issue: <https://github.com/rolldown/rolldown/issues/4196>
       if let ast::Expression::Identifier(id_ref) = &mut prop.value {
         match self.generate_finalized_expr_for_reference(id_ref, false) {
           Some(expr) => {

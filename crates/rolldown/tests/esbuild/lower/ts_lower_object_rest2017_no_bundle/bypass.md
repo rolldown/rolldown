@@ -84,7 +84,6 @@ console.log(({ x: _x } = _w = { x }, xx = __objRest(_x, []), _w));
 ```
 ### rolldown
 ```js
-
 //#region entry.ts
 const { ...local_const } = {};
 let { ...local_let } = {};

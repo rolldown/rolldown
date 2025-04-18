@@ -10,7 +10,6 @@ var ns;
 ```
 ### rolldown
 ```js
-
 //#region entry.ts
 let ns;
 (function(_ns) {})(ns || (ns = {}));

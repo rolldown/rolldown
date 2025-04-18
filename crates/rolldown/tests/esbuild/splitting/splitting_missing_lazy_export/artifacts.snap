@@ -1,6 +1,5 @@
 ---
 source: crates/rolldown_testing/src/integration_test.rs
-snapshot_kind: text
 ---
 # warnings
 
@@ -53,7 +52,6 @@ console.log(bar());
 ## common.js
 
 ```js
-
 //#region empty.js
 var empty_exports = {};
 

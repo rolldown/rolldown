@@ -36,7 +36,6 @@ export { clear };
 ## repro12.js
 
 ```js
-
 //#region repro1.js
 const clear = "repro1_clear";
 
@@ -53,7 +52,6 @@ export { clear, clear$1 };
 ## repro22.js
 
 ```js
-
 //#region repro2.js
 const clear$1 = "repro2_clear$1";
 const clear = "repro2_clear";
@@ -71,7 +69,6 @@ export { clear, clear$1, clear$2 };
 ## repro32.js
 
 ```js
-
 //#region repro3.js
 const clear$2 = "repro3_clear$2";
 const clear$1 = "repro3_clear$1";

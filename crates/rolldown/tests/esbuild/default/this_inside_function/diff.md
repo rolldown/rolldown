@@ -50,7 +50,6 @@ var bar2;
 ```
 ### rolldown
 ```js
-
 //#region entry.js
 function foo(x = this) {
 	console.log(this);

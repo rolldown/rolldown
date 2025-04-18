@@ -35,7 +35,6 @@ Promise.resolve().then(() => (init_a(), a_exports)).then((x) => assert(x.foo ===
 ```
 ### rolldown
 ```js
-
 //#region src/entry.js
 import("./a.js").then((x) => assert(x.foo === "foo"));
 

@@ -12,7 +12,6 @@ import "./ab.js";
 ## ab.js
 
 ```js
-
 //#region ab.js
 console.log(123);
 
@@ -33,7 +32,6 @@ import "./cd.js";
 ## cd.js
 
 ```js
-
 //#region cd.js
 console.log(123);
 

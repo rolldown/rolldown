@@ -6,7 +6,6 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## ./chunks/async.mjs
 
 ```js
-
 //#region async.js
 const value = "async";
 
@@ -16,7 +15,6 @@ export { value };
 ## ./chunks/shared.mjs
 
 ```js
-
 //#region shared.js
 const value = "shared";
 

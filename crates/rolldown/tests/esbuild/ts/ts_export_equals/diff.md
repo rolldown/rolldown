@@ -20,7 +20,6 @@ console.log(import_b.default);
 ### rolldown
 ```js
 
-
 //#region b.ts
 var require_b = __commonJS({ "b.ts"(exports, module) {
 	module.exports = [123, foo];

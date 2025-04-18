@@ -6,7 +6,6 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## input.js
 
 ```js
-
 //#region input.js
 process.env.DEBUG = "test";
 if (replaced === "production") console.log("");
@@ -23,27 +22,27 @@ if (world == "world") {
 
 ```
 - ../input.js
-(0:0) "process." --> (2:0) "process."
-(0:8) "env." --> (2:8) "env."
-(0:12) "DEBUG = " --> (2:12) "DEBUG = "
-(0:20) "'test';\n" --> (2:20) "\"test\";\n"
-(2:0) "if (" --> (3:0) "if ("
-(2:4) "process.env.DEBUG === " --> (3:4) "replaced === "
-(2:26) "'production') {\n" --> (3:17) "\"production\")"
-(3:2) "console." --> (3:30) " console."
-(3:10) "log(" --> (3:39) "log("
-(3:14) "'')" --> (3:43) "\"\")"
-(3:17) ";\n" --> (3:46) ";\n"
-(6:0) "if (" --> (4:0) "if ("
-(6:4) "hello == " --> (4:4) "world == "
-(6:13) "'world') " --> (4:13) "\"world\") "
-(6:22) "{\n" --> (4:22) "{\n"
-(7:2) "let " --> (5:1) "let "
-(7:6) "hello = " --> (5:5) "hello = "
-(7:14) "'world';\n" --> (5:13) "\"world\";\n"
-(8:2) "console." --> (6:0) "\tconsole."
-(8:10) "log(" --> (6:9) "log("
-(8:14) "hello)" --> (6:13) "world)"
-(8:20) ";\n" --> (6:19) ";\n"
-(9:0) "}\n" --> (7:0) "}\n"
+(0:0) "process." --> (1:0) "process."
+(0:8) "env." --> (1:8) "env."
+(0:12) "DEBUG = " --> (1:12) "DEBUG = "
+(0:20) "'test';\n" --> (1:20) "\"test\";\n"
+(2:0) "if (" --> (2:0) "if ("
+(2:4) "process.env.DEBUG === " --> (2:4) "replaced === "
+(2:26) "'production') {\n" --> (2:17) "\"production\")"
+(3:2) "console." --> (2:30) " console."
+(3:10) "log(" --> (2:39) "log("
+(3:14) "'')" --> (2:43) "\"\")"
+(3:17) ";\n" --> (2:46) ";\n"
+(6:0) "if (" --> (3:0) "if ("
+(6:4) "hello == " --> (3:4) "world == "
+(6:13) "'world') " --> (3:13) "\"world\") "
+(6:22) "{\n" --> (3:22) "{\n"
+(7:2) "let " --> (4:1) "let "
+(7:6) "hello = " --> (4:5) "hello = "
+(7:14) "'world';\n" --> (4:13) "\"world\";\n"
+(8:2) "console." --> (5:0) "\tconsole."
+(8:10) "log(" --> (5:9) "log("
+(8:14) "hello)" --> (5:13) "world)"
+(8:20) ";\n" --> (5:19) ";\n"
+(9:0) "}\n" --> (6:0) "}\n"
 ```

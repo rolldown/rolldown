@@ -3,10 +3,9 @@ source: crates/rolldown_testing/src/integration_test.rs
 ---
 # Assets
 
-## ./entries/ClqcCbMH-ClqcCbMH3vP-ClqcCb-ClqcCbMH3vPeisL87rygy.js
+## ./entries/DdSsPkRG-DdSsPkRG2Yj-DdSsPk-DdSsPkRG2Yjs97Y7JepQN.js
 
 ```js
-
 //#region shared.js
 const value = "shared";
 

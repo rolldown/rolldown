@@ -9,7 +9,6 @@ console.log(1 + 2);
 ```
 ### rolldown
 ```js
-
 //#region <data:text/javascript,console.log(1+2)>
 console.log(3);
 

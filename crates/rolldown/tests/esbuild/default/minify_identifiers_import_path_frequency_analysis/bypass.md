@@ -8,7 +8,6 @@ var o=123;console.log(o,"no identifier in this file should be named W, X, Y, or 
 ```
 ### rolldown
 ```js
-
 //#region WWWWWWWWWWXXXXXXXXXXYYYYYYYYYYZZZZZZZZZZ.js
 var WWWWWWWWWWXXXXXXXXXXYYYYYYYYYYZZZZZZZZZZ_default = 123;
 
@@ -37,7 +36,6 @@ var i=r((t,e)=>{e.exports=123});var s=i();console.log(s,"no identifier in this f
 ```
 ### rolldown
 ```js
-
 
 //#region AAAAAAAAAABBBBBBBBBBCCCCCCCCCCDDDDDDDDDD.js
 var require_AAAAAAAAAABBBBBBBBBBCCCCCCCCCCDDDDDDDDDD = __commonJS({ "AAAAAAAAAABBBBBBBBBBCCCCCCCCCCDDDDDDDDDD.js"(exports, module) {

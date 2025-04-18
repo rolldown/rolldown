@@ -32,7 +32,6 @@ var D_keep = class {
 ```
 ### rolldown
 ```js
-
 //#region entry.ts
 var A_keep = class {
 	static {

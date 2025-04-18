@@ -13,7 +13,6 @@ class Foo {
 ```
 ### rolldown
 ```js
-
 //#region js-define.js
 var Foo = class {
 	accessor one = 1;
@@ -31,7 +30,7 @@ var Foo = class {
 ===================================================================
 --- esbuild	/out/js-define.js
 +++ rolldown	js-define.js
-@@ -1,8 +1,12 @@
+@@ -1,8 +1,11 @@
 -class Foo {
 -  accessor one = 1;
 -  accessor #two = 2;
@@ -41,7 +40,6 @@ var Foo = class {
 -  static accessor [six()] = 6;
 -}
 \ No newline at end of file
-+
 +//#region js-define.js
 +var Foo = class {
 +	accessor one = 1;

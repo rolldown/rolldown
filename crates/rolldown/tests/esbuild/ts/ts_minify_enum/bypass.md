@@ -26,7 +26,6 @@ export var Foo=(e=>(e[e.X=0]="X",e[e.Y=1]="Y",e[e.Z=e]="Z",e))(Foo||{});
 ```
 ### rolldown
 ```js
-
 //#region b.ts
 let Foo = /* @__PURE__ */ function(Foo$1) {
 	Foo$1[Foo$1["X"] = 0] = "X";

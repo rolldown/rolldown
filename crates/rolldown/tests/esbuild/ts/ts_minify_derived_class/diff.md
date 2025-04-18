@@ -15,7 +15,6 @@ class Foo extends Bar {
 ```
 ### rolldown
 ```js
-
 //#region entry.ts
 var Foo = class extends Bar {
 	foo = 1;

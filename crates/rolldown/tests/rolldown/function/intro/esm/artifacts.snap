@@ -7,7 +7,6 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```js
 // intro
-
 //#region main.js
 var main_default = "banner";
 

@@ -14,7 +14,6 @@ console.log(`
 ```
 ### rolldown
 ```js
-
 //#region cross-file.ts
 let CrossFile = /* @__PURE__ */ function(CrossFile$1) {
 	CrossFile$1["STR"] = "str 2";

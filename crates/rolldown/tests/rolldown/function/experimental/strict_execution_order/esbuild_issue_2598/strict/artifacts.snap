@@ -42,7 +42,6 @@ init_main();
 
 ```js
 
-
 //#region user-lib.js
 async function foo() {
 	return import("./lazy-chunk.js");

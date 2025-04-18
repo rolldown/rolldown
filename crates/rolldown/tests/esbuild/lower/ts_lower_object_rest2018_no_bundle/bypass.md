@@ -59,7 +59,6 @@ console.log({ x: { ...xx } } = { x });
 ```
 ### rolldown
 ```js
-
 //#region entry.ts
 const { ...local_const } = {};
 let { ...local_let } = {};

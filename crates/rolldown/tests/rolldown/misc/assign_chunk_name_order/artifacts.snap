@@ -12,7 +12,6 @@ import "./file2.js";
 ## file2.js
 
 ```js
-
 //#region file.js
 console.log("file");
 
@@ -21,7 +20,6 @@ console.log("file");
 ## file3.js
 
 ```js
-
 //#region 1/file.js
 const value = "a";
 
@@ -31,7 +29,6 @@ export { value };
 ## file4.js
 
 ```js
-
 //#region 2/file.js
 const value = "b";
 
@@ -41,7 +38,6 @@ export { value };
 ## file5.js
 
 ```js
-
 //#region 3/file.js
 const value = "c";
 
@@ -51,7 +47,6 @@ export { value };
 ## file6.js
 
 ```js
-
 //#region 4/file.js
 const value = "d";
 
@@ -61,7 +56,6 @@ export { value };
 ## file7.js
 
 ```js
-
 //#region 5/file.js
 const value = "e";
 
@@ -71,7 +65,6 @@ export { value };
 ## file8.js
 
 ```js
-
 //#region 6/file.js
 const value = "f";
 
@@ -81,7 +74,6 @@ export { value };
 ## file9.js
 
 ```js
-
 //#region 7/file.js
 const value = "g";
 

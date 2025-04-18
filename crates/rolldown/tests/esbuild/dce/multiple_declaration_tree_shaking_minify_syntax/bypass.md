@@ -12,7 +12,6 @@ function x() {
 ```
 ### rolldown
 ```js
-
 //#region function2.js
 function x() {
 	return 1;
@@ -29,8 +28,7 @@ function x() {
 ===================================================================
 --- esbuild	/out/function2.js
 +++ rolldown	function2.js
-@@ -1,4 +1,11 @@
-+
+@@ -1,4 +1,10 @@
 +//#region function2.js
 +function x() {
 +	return 1;
@@ -57,7 +55,6 @@ function x() {
 ```
 ### rolldown
 ```js
-
 //#region function3.js
 function x() {
 	return 1;
@@ -78,8 +75,7 @@ function x() {
 ===================================================================
 --- esbuild	/out/function3.js
 +++ rolldown	function3.js
-@@ -1,5 +1,15 @@
-+
+@@ -1,5 +1,14 @@
 +//#region function3.js
 +function x() {
 +	return 1;

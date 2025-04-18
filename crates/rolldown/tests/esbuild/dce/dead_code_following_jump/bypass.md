@@ -68,7 +68,6 @@ testStmts();
 ```
 ### rolldown
 ```js
-
 //#region entry.js
 function testReturn() {
 	return y + z();

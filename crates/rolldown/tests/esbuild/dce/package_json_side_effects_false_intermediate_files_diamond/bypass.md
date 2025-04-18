@@ -18,7 +18,6 @@ console.log(foo);
 ```
 ### rolldown
 ```js
-
 //#region node_modules/d/index.js
 const foo = 123;
 

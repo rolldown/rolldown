@@ -6,7 +6,6 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## a.js
 
 ```js
-
 //#region b.ts
 var Foo = class {};
 (function(_Foo) {

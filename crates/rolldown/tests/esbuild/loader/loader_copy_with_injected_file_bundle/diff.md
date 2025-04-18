@@ -28,7 +28,6 @@ console.log("in entry.ts");
 ```
 ### rolldown
 ```js
-
 //#region entry.ts
 console.log("in entry.ts");
 

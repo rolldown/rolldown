@@ -29,7 +29,6 @@ export function foo(){let e;return(n=>(n[n.X=0]="X",n[n.Y=1]="Y",n[n.Z=n]="Z"))(
 ```
 ### rolldown
 ```js
-
 //#region b.ts
 function foo() {
 	let Foo = /* @__PURE__ */ function(Foo$1) {

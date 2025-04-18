@@ -7,7 +7,6 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```js
 
-
 //#region main.js
 Promise.resolve().then(function() {
 	return __toESM(require_foo());

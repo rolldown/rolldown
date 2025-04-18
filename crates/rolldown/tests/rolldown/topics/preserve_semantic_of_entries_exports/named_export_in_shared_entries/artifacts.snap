@@ -20,7 +20,6 @@ export { main_default as default, foo };
 ## main.js
 
 ```js
-
 //#region main.js
 const foo = "foo";
 var main_default = "main";

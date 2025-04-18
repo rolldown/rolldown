@@ -1,15 +1,14 @@
 ---
 source: crates/rolldown_testing/src/integration_test.rs
-snapshot_kind: text
 ---
 # Assets
 
 ## assets/foo-gTZMu9ze.txt
 
-## chunks/dep-CyU4Hv6x.js
+## chunks/dep-CTy6HCTO.js
 
 ```js
-import "./foo-Cxwkl5cC.js";
+import "./foo-CC-QHWRg.js";
 
 //#region dep.js
 const url = new URL("../assets/foo-gTZMu9ze.txt", import.meta.url);
@@ -17,10 +16,9 @@ const url = new URL("../assets/foo-gTZMu9ze.txt", import.meta.url);
 //#endregion
 export { url };
 ```
-## chunks/foo-Cxwkl5cC.js
+## chunks/foo-CC-QHWRg.js
 
 ```js
-
 //#region foo.txt
 var foo_default = "assets/foo-gTZMu9ze.txt";
 
@@ -29,11 +27,11 @@ var foo_default = "assets/foo-gTZMu9ze.txt";
 ## main.js
 
 ```js
-import "./chunks/foo-Cxwkl5cC.js";
+import "./chunks/foo-CC-QHWRg.js";
 
 //#region main.js
 const url = new URL("assets/foo-gTZMu9ze.txt", import.meta.url);
-const dep = import("./chunks/dep-CyU4Hv6x.js");
+const dep = import("./chunks/dep-CTy6HCTO.js");
 
 //#endregion
 export { dep, url };

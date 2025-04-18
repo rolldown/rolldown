@@ -46,7 +46,6 @@ __decorateClass([
 ```
 ### rolldown
 ```js
-
 //#region entry.ts
 var Foo = class {
 	@dec(1) static prop1 = null;
@@ -64,8 +63,7 @@ var Foo = class {
 ===================================================================
 --- esbuild	/out.js
 +++ rolldown	entry.js
-@@ -1,26 +1,12 @@
-+
+@@ -1,26 +1,11 @@
 +//#region entry.ts
  var Foo = class {
 -    static {

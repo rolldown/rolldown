@@ -1,6 +1,5 @@
 ---
 source: crates/rolldown_testing/src/integration_test.rs
-snapshot_kind: text
 ---
 # Assets
 
@@ -23,7 +22,6 @@ export { main, sub };
 ## main2.js
 
 ```js
-
 
 //#region sub.cjs
 var require_sub = __commonJS({ "sub.cjs"(exports, module) {

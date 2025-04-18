@@ -15,7 +15,6 @@ Make sure this is what you expected
 ## main.js
 
 ```js
-
 //#region main.tsx
 function Something() {
 	return /* @__PURE__ */ React.createElement("div", null, "Something");

@@ -7,7 +7,6 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```js
 
-
 export { __commonJS };
 ```
 ## factory.js

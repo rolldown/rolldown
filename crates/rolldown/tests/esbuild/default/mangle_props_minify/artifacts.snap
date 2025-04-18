@@ -1,13 +1,11 @@
 ---
 source: crates/rolldown_testing/src/integration_test.rs
-snapshot_kind: text
 ---
 # Assets
 
 ## entry1.js
 
 ```js
-
 //#region entry1.js
 function shouldMangle_XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX() {
 	let foo = {
@@ -52,7 +50,6 @@ export { shouldMangle_XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX, shouldNotMangle_YYYYYYYY
 ## entry2.js
 
 ```js
-
 //#region entry2.js
 var entry2_default = {
 	bar_: 0,

@@ -1,6 +1,5 @@
 ---
 source: crates/rolldown_testing/src/integration_test.rs
-snapshot_kind: text
 ---
 # warnings
 
@@ -56,7 +55,6 @@ init_foo();
 
 ```js
 
-
 //#region foo.js
 var foo_exports = {};
 var default$1, x, y;
@@ -80,7 +78,6 @@ init_foo();
 ## import.js
 
 ```js
-
 //#region import.js
 console.log(import("./foo2.js"));
 

@@ -8,7 +8,6 @@ var Foo;(function(e){let a;(function(p){foo(e,p)})(a=e.Bar||={})})(Foo||={});
 ```
 ### rolldown
 ```js
-
 //#region a.ts
 let Foo;
 (function(_Foo) {
@@ -48,7 +47,6 @@ export var Foo;(function(e){let a;(function(p){foo(e,p)})(a=e.Bar||={})})(Foo||=
 ```
 ### rolldown
 ```js
-
 //#region b.ts
 let Foo;
 (function(_Foo) {

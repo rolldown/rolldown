@@ -28,7 +28,6 @@ var k;
 ```
 ### rolldown
 ```js
-
 //#region top-level.js
 for (var e of []);
 for (var { f, x: [g] } of []);
@@ -99,7 +98,6 @@ var l2;
 ```
 ### rolldown
 ```js
-
 //#region nested.js
 {
 	var a;
@@ -169,7 +167,6 @@ if (true) {
 ```
 ### rolldown
 ```js
-
 //#region let.js
 {
 	let a;
@@ -219,7 +216,6 @@ x();
 ```
 ### rolldown
 ```js
-
 //#region function.js
 function x() {
 	var a;
@@ -280,7 +276,6 @@ x();
 ```
 ### rolldown
 ```js
-
 //#region function-nested.js
 function x() {
 	{

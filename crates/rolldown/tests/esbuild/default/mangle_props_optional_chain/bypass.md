@@ -17,7 +17,6 @@ export default function(x) {
 ```
 ### rolldown
 ```js
-
 //#region entry.js
 function entry_default(x) {
 	x.foo_;

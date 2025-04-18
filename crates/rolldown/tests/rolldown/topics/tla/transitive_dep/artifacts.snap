@@ -1,13 +1,11 @@
 ---
 source: crates/rolldown_testing/src/integration_test.rs
-snapshot_kind: text
 ---
 # Assets
 
 ## main.js
 
 ```js
-
 //#region tla.js
 const value$1 = await Promise.resolve("tla");
 
@@ -27,7 +25,6 @@ Variant: (strict_execution_order: true)
 ## main.js
 
 ```js
-
 
 //#region tla.js
 var value$1;

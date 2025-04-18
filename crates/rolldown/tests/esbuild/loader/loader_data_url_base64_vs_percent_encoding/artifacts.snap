@@ -6,7 +6,6 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## entry.js
 
 ```js
-
 //#region shouldUsePercent_1.txt
 var shouldUsePercent_1_default = "data:text/plain;charset=utf-8,%0A%0A%0A";
 

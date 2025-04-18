@@ -24,7 +24,6 @@ notInlined = [
 ```
 ### rolldown
 ```js
-
 //#region lib.ts
 let Bar = /* @__PURE__ */ function(Bar$1) {
 	Bar$1["bar1"] = "xyz";

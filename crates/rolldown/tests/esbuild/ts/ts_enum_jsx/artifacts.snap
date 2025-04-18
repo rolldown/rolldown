@@ -6,7 +6,6 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## element.js
 
 ```js
-
 //#region element.tsx
 let Foo = /* @__PURE__ */ function(Foo$1) {
 	Foo$1["Div"] = "div";
@@ -20,7 +19,6 @@ export { Foo };
 ## fragment.js
 
 ```js
-
 //#region fragment.tsx
 let React = /* @__PURE__ */ function(React$1) {
 	React$1["Fragment"] = "div";
@@ -34,7 +32,6 @@ export { React };
 ## nested-element.js
 
 ```js
-
 //#region nested-element.tsx
 let x;
 (function(_x) {
@@ -59,7 +56,6 @@ let x;
 ## nested-fragment.js
 
 ```js
-
 //#region nested-fragment.tsx
 let x;
 (function(_x) {

@@ -12,7 +12,6 @@ console.log(/* @__PURE__ */ React.createElement("div" /* Div */, null));
 ```
 ### rolldown
 ```js
-
 //#region element.tsx
 let Foo = /* @__PURE__ */ function(Foo$1) {
 	Foo$1["Div"] = "div";
@@ -53,7 +52,6 @@ console.log(/* @__PURE__ */ React.createElement("div" /* Fragment */, null, "tes
 ```
 ### rolldown
 ```js
-
 //#region fragment.tsx
 let React = /* @__PURE__ */ function(React$1) {
 	React$1["Fragment"] = "div";
@@ -105,7 +103,6 @@ var x;
 ```
 ### rolldown
 ```js
-
 //#region nested-element.tsx
 let x;
 (function(_x) {
@@ -185,7 +182,6 @@ var x;
 ```
 ### rolldown
 ```js
-
 //#region nested-fragment.tsx
 let x;
 (function(_x) {

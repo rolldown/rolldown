@@ -9,7 +9,6 @@ console.log(1, evil("x"));
 ```
 ### rolldown
 ```js
-
 //#region top-level-no-eval.js
 const x = 1;
 console.log(x, evil("x"));
@@ -36,7 +35,6 @@ console.log(1, eval("x"));
 ```
 ### rolldown
 ```js
-
 //#region top-level-eval.js
 const x = 1;
 console.log(x, eval("x"));
@@ -62,7 +60,6 @@ console.log(1, evil("x"));
 ```
 ### rolldown
 ```js
-
 //#region nested-no-eval.js
 (() => {
 	const x = 1;
@@ -94,7 +91,6 @@ console.log(1, evil("x"));
 ```
 ### rolldown
 ```js
-
 //#region nested-eval.js
 (() => {
 	const x = 1;
@@ -124,7 +120,6 @@ var y;
 ```
 ### rolldown
 ```js
-
 //#region ts-namespace-no-eval.ts
 let y;
 (function(_y) {
@@ -156,7 +151,6 @@ var z;
 ```
 ### rolldown
 ```js
-
 //#region ts-namespace-eval.ts
 let z;
 (function(_z) {

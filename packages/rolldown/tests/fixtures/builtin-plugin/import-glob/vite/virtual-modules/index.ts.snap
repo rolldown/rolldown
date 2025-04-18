@@ -1,4 +1,3 @@
-
 //#region virtual:module
 const a = {
 	"/modules/a.ts": () => import("/modules/a.ts"),

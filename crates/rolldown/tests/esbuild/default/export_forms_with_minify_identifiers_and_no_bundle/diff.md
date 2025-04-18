@@ -97,7 +97,6 @@ export default function o() {
 ```
 ### rolldown
 ```js
-
 //#region c.js
 function foo() {}
 
@@ -123,7 +122,6 @@ export default class {
 ```
 ### rolldown
 ```js
-
 //#region d.js
 var d_default = class {};
 
@@ -149,7 +147,6 @@ export default class o {
 ```
 ### rolldown
 ```js
-
 //#region e.js
 var Foo = class {};
 

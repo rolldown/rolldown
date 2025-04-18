@@ -15,7 +15,6 @@ x = [data_default, data_default, data_default2];
 ```
 ### rolldown
 ```js
-
 //#region data.json
 var some = "data";
 var data_default = { some };

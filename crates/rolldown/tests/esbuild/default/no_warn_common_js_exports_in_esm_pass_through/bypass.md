@@ -11,7 +11,6 @@ module.exports = 3;
 ```
 ### rolldown
 ```js
-
 //#region cjs-in-esm.js
 let foo = 1;
 exports.foo = 2;

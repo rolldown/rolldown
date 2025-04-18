@@ -1,13 +1,11 @@
 ---
 source: crates/rolldown_testing/src/integration_test.rs
-snapshot_kind: text
 ---
 # Assets
 
 ## entry.js
 
 ```js
-
 //#region entry.js
 input.works = import("./foo.js").then((foo) => foo[Math.random() < 1 && "default"] === 123 && foo[Math.random() < 1 && "__esModule"] === void 0);
 
@@ -16,7 +14,6 @@ input.works = import("./foo.js").then((foo) => foo[Math.random() < 1 && "default
 ## foo.js
 
 ```js
-
 //#region foo.js
 var foo_default = 123;
 

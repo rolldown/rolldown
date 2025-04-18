@@ -1,13 +1,11 @@
 ---
 source: crates/rolldown_testing/src/integration_test.rs
-snapshot_kind: text
 ---
 # Assets
 
 ## package.js
 
 ```js
-
 //#region node_modules/package/index.js
 console.log("imported");
 
@@ -16,7 +14,6 @@ console.log("imported");
 ## src_entry1.js
 
 ```js
-
 //#region src/entry1.js
 import("./package.js");
 
@@ -25,7 +22,6 @@ import("./package.js");
 ## src_entry2.js
 
 ```js
-
 //#region src/entry2.js
 import("./package.js");
 

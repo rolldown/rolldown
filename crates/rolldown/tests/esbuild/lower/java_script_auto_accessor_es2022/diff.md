@@ -50,7 +50,6 @@ class Foo {
 ```
 ### rolldown
 ```js
-
 //#region js-define.js
 var Foo = class {
 	accessor one = 1;
@@ -68,7 +67,7 @@ var Foo = class {
 ===================================================================
 --- esbuild	/out/js-define.js
 +++ rolldown	js-define.js
-@@ -1,45 +1,12 @@
+@@ -1,45 +1,11 @@
 -var _a, _b;
 -class Foo {
 -    #one = 1;
@@ -114,7 +113,6 @@ var Foo = class {
 -        this.#b = _;
 -    }
 -}
-+
 +//#region js-define.js
 +var Foo = class {
 +	accessor one = 1;

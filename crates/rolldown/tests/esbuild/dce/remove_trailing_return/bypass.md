@@ -31,7 +31,6 @@ export {
 ```
 ### rolldown
 ```js
-
 //#region entry.js
 function foo() {
 	if (a) b();

@@ -86,7 +86,6 @@ for (let i = 0; i < 3; i++) {
 ```
 ### rolldown
 ```js
-
 //#region entry.js
 for (let i = 0; i < 3; i++) objs.push({
 	__proto__: { foo() {

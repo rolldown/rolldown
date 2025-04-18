@@ -16,7 +16,6 @@ console.log(data_default);
 ```
 ### rolldown
 ```js
-
 //#region data.json
 var __proto__ = { "foo": "bar" };
 var data_default = {

@@ -14,7 +14,6 @@ await 0;
 ```
 ### rolldown
 ```js
-
 //#region entry.js
 import("./a.js");
 import("./b.js");

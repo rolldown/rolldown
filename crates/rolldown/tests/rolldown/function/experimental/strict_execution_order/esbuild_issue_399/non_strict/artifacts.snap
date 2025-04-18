@@ -26,7 +26,6 @@ global.foo = { log: () => console.log("foo.log() (from entry 2) called") };
 ## run-dep.js
 
 ```js
-
 //#region run-dep.js
 global.foo.log();
 

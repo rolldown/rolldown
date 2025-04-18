@@ -42,7 +42,6 @@ console.log({
 ### rolldown
 ```js
 
-
 //#region entry.ts
 const ab = Math.random() < .5 ? "a.ts" : "b.ts";
 console.log({

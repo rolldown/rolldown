@@ -108,7 +108,6 @@ function foo(__proto__, bar) {
 ```
 ### rolldown
 ```js
-
 //#region local-computed.js
 function foo(__proto__, bar) {
 	{
@@ -158,7 +157,6 @@ function foo(__proto__, bar) {
 ```
 ### rolldown
 ```js
-
 //#region local-normal.js
 function foo(__proto__, bar) {
 	console.log("this must not become \"{ __proto__ }\":", {

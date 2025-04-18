@@ -48,7 +48,6 @@ init_main();
 ## rolldown-runtime.js
 
 ```js
-
 //#region rolldown:runtime
 var __getOwnPropNames = Object.getOwnPropertyNames;
 var __esm = (fn, res) => function() {

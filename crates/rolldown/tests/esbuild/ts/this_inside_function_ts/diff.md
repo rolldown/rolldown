@@ -58,7 +58,6 @@ var bar2;
 ```
 ### rolldown
 ```js
-
 //#region entry.ts
 function foo(x = this) {
 	console.log(this);

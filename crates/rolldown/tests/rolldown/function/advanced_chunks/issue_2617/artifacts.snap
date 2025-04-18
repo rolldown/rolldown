@@ -22,7 +22,6 @@ init_main();
 
 ```js
 
-
 export { __esm };
 ```
 ## splited_lib.js

@@ -56,7 +56,6 @@ export default require_entry();
 ### rolldown
 ```js
 
-
 //#region entry.js
 __require(tag`./b`);
 __require(`./${b}`);

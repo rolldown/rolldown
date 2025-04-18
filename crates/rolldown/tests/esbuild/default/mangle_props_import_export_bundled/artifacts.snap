@@ -7,7 +7,6 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```js
 
-
 //#region esm.js
 var esm_exports = {};
 __export(esm_exports, { esm_foo_: () => esm_foo_ });

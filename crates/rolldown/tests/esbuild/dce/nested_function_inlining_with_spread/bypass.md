@@ -22,7 +22,6 @@ check(
 ```
 ### rolldown
 ```js
-
 //#region entry.js
 function empty1() {}
 function empty2() {}
@@ -85,7 +84,6 @@ check(
 ```
 ### rolldown
 ```js
-
 //#region inner.js
 function empty1() {}
 function empty2() {}

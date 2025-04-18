@@ -16,7 +16,6 @@ var import_foo = __toESM(require_foo());
 ```
 ### rolldown
 ```js
-
 //#region (ignored) 
 var default$1 = void 0;
 

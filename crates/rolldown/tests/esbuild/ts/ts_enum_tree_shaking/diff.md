@@ -10,7 +10,6 @@ console.log(123 /* y */);
 ```
 ### rolldown
 ```js
-
 //#region simple-member.ts
 var x = /* @__PURE__ */ function(x$1) {
 	x$1[x$1["y"] = 123] = "y";
@@ -46,7 +45,6 @@ console.log(x);
 ```
 ### rolldown
 ```js
-
 //#region simple-enum.ts
 var x = /* @__PURE__ */ function(x$1) {
 	x$1[x$1["y"] = 123] = "y";
@@ -80,7 +78,6 @@ console.log(123 /* y */, 246 /* z */);
 ```
 ### rolldown
 ```js
-
 //#region sibling-member.ts
 var x = /* @__PURE__ */ function(x$1) {
 	x$1[x$1["y"] = 123] = "y";
@@ -128,7 +125,6 @@ var x = /* @__PURE__ */ ((x2) => {
 ```
 ### rolldown
 ```js
-
 //#region sibling-enum-before.ts
 console.log(x);
 var x = /* @__PURE__ */ function(x$1) {
@@ -181,7 +177,6 @@ var x = /* @__PURE__ */ ((x2) => {
 ```
 ### rolldown
 ```js
-
 //#region sibling-enum-middle.ts
 var x = /* @__PURE__ */ function(x$1) {
 	x$1[x$1["y"] = 123] = "y";
@@ -234,7 +229,6 @@ console.log(x);
 ```
 ### rolldown
 ```js
-
 //#region sibling-enum-after.ts
 var x = /* @__PURE__ */ function(x$1) {
 	x$1[x$1["y"] = 123] = "y";
@@ -285,7 +279,6 @@ var x = /* @__PURE__ */ ((x2) => {
 ```
 ### rolldown
 ```js
-
 //#region namespace-before.ts
 let x;
 (function(_x) {
@@ -333,7 +326,6 @@ var x = /* @__PURE__ */ ((x2) => {
 ```
 ### rolldown
 ```js
-
 //#region namespace-after.ts
 var x = /* @__PURE__ */ function(x$1) {
 	x$1[x$1["y"] = 123] = "y";

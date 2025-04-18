@@ -40,7 +40,6 @@ export {
 ```
 ### rolldown
 ```js
-
 //#region a.js
 const A = 42;
 

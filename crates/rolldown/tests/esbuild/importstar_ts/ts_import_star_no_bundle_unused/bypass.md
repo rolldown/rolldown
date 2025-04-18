@@ -9,7 +9,6 @@ console.log(foo);
 ```
 ### rolldown
 ```js
-
 //#region entry.ts
 let foo = 234;
 console.log(foo);

@@ -6,7 +6,6 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## function-nested.js
 
 ```js
-
 //#region function-nested.js
 function x() {
 	{
@@ -26,7 +25,6 @@ x();
 ## function.js
 
 ```js
-
 //#region function.js
 function x() {
 	var a;
@@ -44,7 +42,6 @@ x();
 ## let.js
 
 ```js
-
 //#region let.js
 {
 	let a;
@@ -59,7 +56,6 @@ x();
 ## nested.js
 
 ```js
-
 //#region nested.js
 {
 	var a;
@@ -76,7 +72,6 @@ x();
 ## top-level.js
 
 ```js
-
 //#region top-level.js
 for (var e of []);
 for (var { f, x: [g] } of []);

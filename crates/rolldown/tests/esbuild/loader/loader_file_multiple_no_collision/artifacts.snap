@@ -1,6 +1,5 @@
 ---
 source: crates/rolldown_testing/src/integration_test.rs
-snapshot_kind: text
 ---
 # Assets
 
@@ -17,7 +16,6 @@ test
 ## entry.js
 
 ```js
-
 
 //#region a/test.txt
 var require_test$1 = __commonJS({ "a/test.txt"(exports, module) {

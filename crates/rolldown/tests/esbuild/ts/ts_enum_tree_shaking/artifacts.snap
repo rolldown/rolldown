@@ -6,7 +6,6 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## namespace-after.js
 
 ```js
-
 //#region namespace-after.ts
 var x = /* @__PURE__ */ function(x$1) {
 	x$1[x$1["y"] = 123] = "y";
@@ -21,7 +20,6 @@ var x = /* @__PURE__ */ function(x$1) {
 ## namespace-before.js
 
 ```js
-
 //#region namespace-before.ts
 let x;
 (function(_x) {
@@ -37,7 +35,6 @@ x = /* @__PURE__ */ function(x$1) {
 ## sibling-enum-after.js
 
 ```js
-
 //#region sibling-enum-after.ts
 var x = /* @__PURE__ */ function(x$1) {
 	x$1[x$1["y"] = 123] = "y";
@@ -54,7 +51,6 @@ console.log(x);
 ## sibling-enum-before.js
 
 ```js
-
 //#region sibling-enum-before.ts
 console.log(x);
 var x = /* @__PURE__ */ function(x$1) {
@@ -71,7 +67,6 @@ x = /* @__PURE__ */ function(x$1) {
 ## sibling-enum-middle.js
 
 ```js
-
 //#region sibling-enum-middle.ts
 var x = /* @__PURE__ */ function(x$1) {
 	x$1[x$1["y"] = 123] = "y";
@@ -88,7 +83,6 @@ x = /* @__PURE__ */ function(x$1) {
 ## sibling-member.js
 
 ```js
-
 //#region sibling-member.ts
 var x = /* @__PURE__ */ function(x$1) {
 	x$1[x$1["y"] = 123] = "y";
@@ -105,7 +99,6 @@ console.log(x.y, x.z);
 ## simple-enum.js
 
 ```js
-
 //#region simple-enum.ts
 var x = /* @__PURE__ */ function(x$1) {
 	x$1[x$1["y"] = 123] = "y";
@@ -118,7 +111,6 @@ console.log(x);
 ## simple-member.js
 
 ```js
-
 //#region simple-member.ts
 var x = /* @__PURE__ */ function(x$1) {
 	x$1[x$1["y"] = 123] = "y";

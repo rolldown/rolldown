@@ -60,7 +60,6 @@ console.log(
 ```
 ### rolldown
 ```js
-
 //#region supported.ts
 var Foo = /* @__PURE__ */ function(Foo$1) {
 	Foo$1[Foo$1["X0"] = 123] = "X0";
@@ -248,7 +247,6 @@ console.log(
 ```
 ### rolldown
 ```js
-
 //#region not-supported.ts
 var NonIntegerNumberToString = /* @__PURE__ */ function(NonIntegerNumberToString$1) {
 	NonIntegerNumberToString$1["SUPPORTED"] = "1";

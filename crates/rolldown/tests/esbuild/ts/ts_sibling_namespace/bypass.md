@@ -14,7 +14,6 @@ export var x;
 ```
 ### rolldown
 ```js
-
 //#region let.ts
 let x;
 (function(_x) {
@@ -63,7 +62,6 @@ export var x;
 ```
 ### rolldown
 ```js
-
 //#region function.ts
 let x;
 (function(_x) {
@@ -115,7 +113,6 @@ export var x;
 ```
 ### rolldown
 ```js
-
 //#region class.ts
 let x;
 (function(_x) {
@@ -168,7 +165,6 @@ export var x;
 ```
 ### rolldown
 ```js
-
 //#region namespace.ts
 let x;
 (function(_x) {
@@ -222,7 +218,6 @@ export var x;
 ```
 ### rolldown
 ```js
-
 //#region enum.ts
 let x;
 (function(_x) {

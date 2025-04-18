@@ -20,7 +20,6 @@ console.log(ns, ns.foo, foo2);
 ### rolldown
 ```js
 
-
 //#region foo.ts
 var require_foo = __commonJS({ "foo.ts"(exports) {
 	exports.foo = 123;

@@ -14,7 +14,6 @@ export declare class A {
 ## main.js
 
 ```js
-
 //#region main.ts
 var A = class {
 	foo = 1;

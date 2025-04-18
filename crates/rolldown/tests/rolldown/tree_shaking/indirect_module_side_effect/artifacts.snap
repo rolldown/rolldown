@@ -6,7 +6,6 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## main.js
 
 ```js
-
 //#region indirect-side-effect.js
 console.log("should be kept");
 

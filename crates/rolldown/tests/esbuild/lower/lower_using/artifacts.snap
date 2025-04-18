@@ -6,7 +6,6 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## entry.js
 
 ```js
-
 //#region entry.js
 using a = b;
 await using c = d;
@@ -20,7 +19,6 @@ if (nested) {
 ## loops.js
 
 ```js
-
 //#region loops.js
 for (using a of b) c(() => a);
 for (await using d of e) f(() => d);
@@ -38,7 +36,6 @@ if (nested) {
 ## switch.js
 
 ```js
-
 //#region switch.js
 using x = y;
 switch (foo) {

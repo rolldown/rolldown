@@ -41,7 +41,6 @@ export function shouldNotMangle_YYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYY() {
 ```
 ### rolldown
 ```js
-
 //#region entry1.js
 function shouldMangle_XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX() {
 	let foo = {
@@ -162,7 +161,6 @@ export default {
 ```
 ### rolldown
 ```js
-
 //#region entry2.js
 var entry2_default = {
 	bar_: 0,

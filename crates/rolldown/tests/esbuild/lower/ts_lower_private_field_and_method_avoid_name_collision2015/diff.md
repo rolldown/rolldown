@@ -26,7 +26,6 @@ export {
 ```
 ### rolldown
 ```js
-
 //#region entry.ts
 var WeakMap = class {
 	#x;

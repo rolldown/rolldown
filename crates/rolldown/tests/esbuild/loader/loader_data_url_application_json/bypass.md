@@ -26,7 +26,6 @@ console.log([
 ```
 ### rolldown
 ```js
-
 //#region <data:application/json,"%31%32%33">
 var json___31_32_33__default = "123";
 

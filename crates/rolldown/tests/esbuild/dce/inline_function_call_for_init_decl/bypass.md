@@ -12,7 +12,6 @@ var z;
 ```
 ### rolldown
 ```js
-
 //#region entry.js
 function empty() {}
 function id(x) {

@@ -6,7 +6,6 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## a.js
 
 ```js
-
 //#region a.ts
 let Foo;
 (function(_Foo) {
@@ -21,7 +20,6 @@ let Foo;
 ## b.js
 
 ```js
-
 //#region b.ts
 let Foo;
 (function(_Foo) {

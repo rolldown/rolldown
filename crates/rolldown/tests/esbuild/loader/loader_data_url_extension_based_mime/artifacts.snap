@@ -6,7 +6,6 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## entry.js
 
 ```js
-
 //#region example.css
 var example_default = "data:text/css;charset=utf-8,css";
 

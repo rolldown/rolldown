@@ -77,6 +77,5 @@ init_c();
 
 ```js
 
-
 export { __esm };
 ```

@@ -23,7 +23,6 @@ export { bar };
 ## foo2.js
 
 ```js
-
 //#region foo.js
 let bar = 123;
 

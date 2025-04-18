@@ -18,7 +18,6 @@ console.log(loose_default, strict_default);
 ```
 ### rolldown
 ```js
-
 //#region loose/index.ts
 var loose_default = class {
 	foo;

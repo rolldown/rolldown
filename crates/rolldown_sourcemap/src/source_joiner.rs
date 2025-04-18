@@ -32,8 +32,9 @@ impl<'source> SourceJoiner<'source> {
     let sources_len = self.prepend_source.len() + self.inner.len();
     let sources_iter = self.prepend_source.iter().chain(self.inner.iter()).enumerate();
 
-    let size_hint_of_ret_source = sources_iter.clone().map(|(_idx, source)| source.content().len()).sum::<usize>()
-        + /* Each source we will emit a '\n' but exclude last one */ (sources_len - /* Exclude the last source  */ 1);
+    let size_hint_of_ret_source =
+      sources_iter.clone().map(|(_idx, source)| source.content().len()).sum::<usize>()
+        + sources_len;
     let mut ret_source = String::with_capacity(size_hint_of_ret_source);
 
     let mut line_offset = 0;

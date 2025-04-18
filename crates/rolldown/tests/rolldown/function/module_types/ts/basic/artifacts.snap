@@ -6,7 +6,6 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## main_ts.js
 
 ```js
-
 //#region main.ts
 const A = "hello";
 const B = function() {

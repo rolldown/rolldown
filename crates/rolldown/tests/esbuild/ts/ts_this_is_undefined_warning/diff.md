@@ -12,7 +12,6 @@ export {
 ```
 ### rolldown
 ```js
-
 //#region warning2.ts
 var foo = void 0 || (void 0).foo;
 
@@ -41,7 +40,6 @@ export {
 ```
 ### rolldown
 ```js
-
 //#region silent1.ts
 var foo = void 0 && (void 0).foo;
 
@@ -70,7 +68,6 @@ export {
 ```
 ### rolldown
 ```js
-
 //#region silent2.ts
 var foo = void 0 && (() => (void 0).foo);
 

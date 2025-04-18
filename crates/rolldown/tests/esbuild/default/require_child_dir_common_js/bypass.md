@@ -17,7 +17,6 @@ console.log(require_dir());
 ### rolldown
 ```js
 
-
 //#region dir/index.js
 var require_dir = __commonJS({ "dir/index.js"(exports, module) {
 	module.exports = 123;

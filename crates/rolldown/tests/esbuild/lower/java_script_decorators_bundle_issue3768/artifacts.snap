@@ -11,7 +11,6 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## base-instance-field.js
 
 ```js
-
 //#region base-instance-field.js
 var Foo = class Foo {
 	@dec foo = Foo;
@@ -22,7 +21,6 @@ var Foo = class Foo {
 ## base-instance-method.js
 
 ```js
-
 //#region base-instance-method.js
 var Foo = class Foo {
 	@dec foo() {
@@ -40,7 +38,6 @@ var Foo = class Foo {
 ## base-static-field.js
 
 ```js
-
 //#region base-static-field.js
 var Foo = class Foo {
 	@dec static foo = Foo;
@@ -51,7 +48,6 @@ var Foo = class Foo {
 ## base-static-method.js
 
 ```js
-
 //#region base-static-method.js
 var Foo = class Foo {
 	@dec static foo() {
@@ -69,7 +65,6 @@ var Foo = class Foo {
 ## derived-instance-field.js
 
 ```js
-
 //#region derived-instance-field.js
 var Foo = class Foo extends Bar {
 	@dec foo = Foo;
@@ -80,7 +75,6 @@ var Foo = class Foo extends Bar {
 ## derived-instance-method.js
 
 ```js
-
 //#region derived-instance-method.js
 var Foo = class Foo extends Bar {
 	@dec foo() {
@@ -98,7 +92,6 @@ var Foo = class Foo extends Bar {
 ## derived-static-field.js
 
 ```js
-
 //#region derived-static-field.js
 var Foo = class Foo extends Bar {
 	@dec static foo = Foo;
@@ -109,7 +102,6 @@ var Foo = class Foo extends Bar {
 ## derived-static-method.js
 
 ```js
-
 //#region derived-static-method.js
 var Foo = class Foo extends Bar {
 	@dec static foo() {

@@ -6,7 +6,6 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## identity-async.js
 
 ```js
-
 //#region identity-async.js
 async function keep(x) {
 	return x;
@@ -20,7 +19,6 @@ keep(1);
 ## identity-cross-module.js
 
 ```js
-
 //#region identity-cross-module-def.js
 function DROP(x) {
 	return x;
@@ -37,7 +35,6 @@ DROP(1);
 ## identity-first.js
 
 ```js
-
 //#region identity-first.js
 function keep(x) {
 	return x;
@@ -54,7 +51,6 @@ keep(1);
 ## identity-generator.js
 
 ```js
-
 //#region identity-generator.js
 function* keep(x) {
 	return x;
@@ -68,7 +64,6 @@ keep(1);
 ## identity-last.js
 
 ```js
-
 //#region identity-last.js
 function DROP(x) {
 	return [x];
@@ -85,7 +80,6 @@ DROP(1);
 ## identity-no-args.js
 
 ```js
-
 //#region identity-no-args.js
 function keep(x) {
 	return x;
@@ -98,7 +92,6 @@ keep();
 ## identity-two-args.js
 
 ```js
-
 //#region identity-two-args.js
 function keep(x) {
 	return x;
@@ -111,7 +104,6 @@ keep(1, 2);
 ## identity.js
 
 ```js
-
 //#region identity.js
 function DROP(x) {
 	return x;
@@ -125,7 +117,6 @@ DROP(1);
 ## not-identity-array.js
 
 ```js
-
 //#region not-identity-array.js
 function keep([x]) {
 	return x;
@@ -139,7 +130,6 @@ keep(1);
 ## not-identity-default.js
 
 ```js
-
 //#region not-identity-default.js
 function keep(x = foo()) {
 	return x;
@@ -153,7 +143,6 @@ keep(1);
 ## not-identity-object.js
 
 ```js
-
 //#region not-identity-object.js
 function keep({ x }) {
 	return x;
@@ -167,7 +156,6 @@ keep(1);
 ## not-identity-rest.js
 
 ```js
-
 //#region not-identity-rest.js
 function keep(...x) {
 	return x;
@@ -181,7 +169,6 @@ keep(1);
 ## not-identity-return.js
 
 ```js
-
 //#region not-identity-return.js
 function keep(x) {
 	return [x];
@@ -195,7 +182,6 @@ keep(1);
 ## not-identity-two-args.js
 
 ```js
-
 //#region not-identity-two-args.js
 function keep(x, y) {
 	return x;
@@ -209,7 +195,6 @@ keep(1);
 ## reassign-array.js
 
 ```js
-
 //#region reassign-array.js
 function keep(x) {
 	return x;
@@ -224,7 +209,6 @@ keep(1);
 ## reassign-div.js
 
 ```js
-
 //#region reassign-div.js
 function keep(x) {
 	return x;
@@ -239,7 +223,6 @@ keep(1);
 ## reassign-inc.js
 
 ```js
-
 //#region reassign-inc.js
 function keep(x) {
 	return x;
@@ -254,7 +237,6 @@ keep(1);
 ## reassign-object.js
 
 ```js
-
 //#region reassign-object.js
 function keep(x) {
 	return x;
@@ -269,7 +251,6 @@ keep(1);
 ## reassign.js
 
 ```js
-
 //#region reassign.js
 function keep(x) {
 	return x;

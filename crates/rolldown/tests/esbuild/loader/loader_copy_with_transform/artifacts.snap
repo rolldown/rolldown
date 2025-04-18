@@ -6,7 +6,6 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## assets_some.js
 
 ```js
-
 //#region assets/some.file
 stuff;
 
@@ -15,7 +14,6 @@ stuff;
 ## src_entry.js
 
 ```js
-
 //#region src/entry.js
 console.log("entry");
 

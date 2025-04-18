@@ -1,13 +1,11 @@
 ---
 source: crates/rolldown_testing/src/integration_test.rs
-snapshot_kind: text
 ---
 # Assets
 
 ## read.js
 
 ```js
-
 //#region read.js
 console.log([
 	null,
@@ -28,7 +26,6 @@ console.log([
 ## write.js
 
 ```js
-
 //#region write.js
 console.log([
 	a = 0,

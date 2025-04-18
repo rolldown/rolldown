@@ -32,7 +32,6 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## entry.js
 
 ```js
-
 //#region entry.js
 function test1() {
 	function add(first, second) {

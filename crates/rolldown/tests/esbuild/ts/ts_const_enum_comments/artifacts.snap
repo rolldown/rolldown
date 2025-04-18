@@ -6,7 +6,6 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## foo.js
 
 ```js
-
 //#region bar.ts
 let Foo = /* @__PURE__ */ function(Foo$1) {
 	Foo$1[Foo$1["%/*"] = 1] = "%/*";

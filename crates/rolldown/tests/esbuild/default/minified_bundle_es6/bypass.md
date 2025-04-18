@@ -8,7 +8,6 @@ function o(){return 123}o();console.log(o());
 ```
 ### rolldown
 ```js
-
 //#region a.js
 function foo() {
 	return 123;

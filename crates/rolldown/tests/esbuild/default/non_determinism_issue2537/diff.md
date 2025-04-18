@@ -24,7 +24,6 @@ export {
 ```
 ### rolldown
 ```js
-
 //#region entry.ts
 function aap(noot, wim) {
 	let mies = "teun";

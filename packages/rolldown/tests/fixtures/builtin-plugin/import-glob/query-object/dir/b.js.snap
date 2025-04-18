@@ -1,4 +1,3 @@
-
 //#region dir/b.js?a=true&b=test&c=10000
 const a = 1e3;
 

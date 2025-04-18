@@ -39,7 +39,6 @@ function test5() {
 ```
 ### rolldown
 ```js
-
 //#region entry.js
 function test1() {
 	function add(first, second) {
@@ -78,8 +77,7 @@ function test5() {
 ===================================================================
 --- esbuild	/out.js
 +++ rolldown	entry.js
-@@ -1,31 +1,33 @@
-+
+@@ -1,31 +1,32 @@
 +//#region entry.js
  function test1() {
 -  function add(n, t) {

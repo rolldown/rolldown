@@ -14,7 +14,6 @@ Foo.b = new Foo().a;
 ```
 ### rolldown
 ```js
-
 //#region entry.js
 var Foo = class {
 	foo_ = 123;

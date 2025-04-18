@@ -47,7 +47,6 @@ not_inlined = [
 ```
 ### rolldown
 ```js
-
 //#region entry.ts
 var a_num = /* @__PURE__ */ function(a_num$1) {
 	a_num$1[a_num$1["x"] = 123] = "x";

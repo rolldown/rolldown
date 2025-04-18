@@ -93,7 +93,6 @@ export {
 ### rolldown
 ```js
 
-
 //#region a.js
 var a_exports = {};
 __export(a_exports, { foo: () => foo });
@@ -108,9 +107,8 @@ export { __toCommonJS, a_exports, foo, init_a };
 ===================================================================
 --- esbuild	/out/chunk-PDZFCFBH.js
 +++ rolldown	a2.js
-@@ -1,17 +1,10 @@
+@@ -1,17 +1,9 @@
 -// a.js
-+
 +
 +//#region a.js
  var a_exports = {};

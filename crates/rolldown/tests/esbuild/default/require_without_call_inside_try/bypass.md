@@ -17,7 +17,6 @@ var aliasedRequire;
 ### rolldown
 ```js
 
-
 //#region entry.js
 try {
 	oldLocale = globalLocale._abbr;

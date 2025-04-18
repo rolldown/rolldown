@@ -15,7 +15,6 @@ export let bar = 123;
 ```
 ### rolldown
 ```js
-
 //#region entry.js
 var Foo = class Foo {
 	static foo = new Foo();

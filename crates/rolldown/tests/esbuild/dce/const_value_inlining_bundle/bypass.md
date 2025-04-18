@@ -16,7 +16,6 @@ export {
 ```
 ### rolldown
 ```js
-
 //#region exported-entry.js
 const x_REMOVE = 1;
 const y_keep = 2;
@@ -52,7 +51,6 @@ export {
 ```
 ### rolldown
 ```js
-
 //#region re-exported-constants.js
 const x_REMOVE = 1;
 const y_keep = 2;
@@ -89,7 +87,6 @@ export {
 ```
 ### rolldown
 ```js
-
 //#region re-exported-star-constants.js
 const x_keep = 1;
 const y_keep = 2;
@@ -124,7 +121,6 @@ console.log(1, y_keep);
 ```
 ### rolldown
 ```js
-
 //#region cross-module-constants.js
 const x_REMOVE = 1;
 foo();
@@ -164,7 +160,6 @@ console.log({ foo: 123, a: -321 });
 ```
 ### rolldown
 ```js
-
 //#region print-shorthand-constants.js
 const foo = 123;
 const _bar = -321;
@@ -207,7 +202,6 @@ console.log(123, bar());
 ```
 ### rolldown
 ```js
-
 //#region non-circular-export-constants.js
 const foo = 123;
 function bar() {

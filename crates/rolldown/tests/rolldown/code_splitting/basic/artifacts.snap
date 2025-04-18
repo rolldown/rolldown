@@ -6,7 +6,6 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## dynamic.js
 
 ```js
-
 //#region dynamic.js
 console.log("dynamic");
 
@@ -31,7 +30,6 @@ import "./share.js";
 ## share.js
 
 ```js
-
 //#region share.js
 console.log("shared");
 

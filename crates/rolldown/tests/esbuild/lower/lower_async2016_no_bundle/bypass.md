@@ -46,7 +46,6 @@ export default [
 ```
 ### rolldown
 ```js
-
 //#region entry.js
 async function foo(bar) {
 	await bar;

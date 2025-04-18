@@ -30,7 +30,6 @@ foo();
 ## user-lib.js
 
 ```js
-
 //#region user-lib.js
 Object.somePolyfilledFunction();
 async function foo() {

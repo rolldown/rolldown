@@ -6,7 +6,6 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## entry.js
 
 ```js
-
 //#region cross-file.ts
 let CrossFile = /* @__PURE__ */ function(CrossFile$1) {
 	CrossFile$1["STR"] = "str 2";

@@ -6,7 +6,6 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## test.js
 
 ```js
-
 //#region node_modules/pkg/button.jsx
 const Button = () => /* @__PURE__ */ React.createElement("button", null);
 

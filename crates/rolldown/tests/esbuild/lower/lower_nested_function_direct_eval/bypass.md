@@ -12,7 +12,6 @@ if (foo) {
 ```
 ### rolldown
 ```js
-
 //#region 1.js
 if (foo) {
 	function x() {}
@@ -46,7 +45,6 @@ if (foo) {
 ```
 ### rolldown
 ```js
-
 //#region 3.js
 if (foo) {
 	function x() {}
@@ -81,7 +79,6 @@ if (foo) {
 ```
 ### rolldown
 ```js
-
 //#region 4.js
 if (foo) {
 	eval("");
@@ -114,7 +111,6 @@ if (foo) {
 ```
 ### rolldown
 ```js
-
 //#region 5.js
 if (foo) {
 	function x() {}
@@ -147,7 +143,6 @@ if (foo) {
 ```
 ### rolldown
 ```js
-
 //#region 6.js
 if (foo) {
 	function x() {}
@@ -183,7 +178,6 @@ if (foo) {
 ```
 ### rolldown
 ```js
-
 //#region 7.js
 if (foo) {
 	function x() {}
@@ -220,7 +214,6 @@ if (foo) {
 ```
 ### rolldown
 ```js
-
 //#region 8.js
 if (foo) {
 	eval("");

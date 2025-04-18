@@ -22,7 +22,6 @@ import "./shared.js";
 ## shared.js
 
 ```js
-
 //#region shared.js
 var observer;
 var value;

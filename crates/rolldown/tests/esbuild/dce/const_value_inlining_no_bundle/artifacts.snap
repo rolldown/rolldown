@@ -1,13 +1,11 @@
 ---
 source: crates/rolldown_testing/src/integration_test.rs
-snapshot_kind: text
 ---
 # Assets
 
 ## backwards-reference-nested-function.js
 
 ```js
-
 //#region backwards-reference-nested-function.js
 function foo() {
 	const x = y;
@@ -21,7 +19,6 @@ assert(foo() !== void 0);
 ## backwards-reference-top-level.js
 
 ```js
-
 //#region backwards-reference-top-level.js
 const x = y;
 const y = 1;
@@ -32,7 +29,6 @@ console.log(x, x, y, y);
 ## comment-before.js
 
 ```js
-
 //#region comment-before.js
 {
 	//! comment
@@ -45,7 +41,6 @@ console.log(x, x, y, y);
 ## debugger-before.js
 
 ```js
-
 //#region debugger-before.js
 {
 	debugger;
@@ -58,7 +53,6 @@ console.log(x, x, y, y);
 ## directive-before.js
 
 ```js
-
 //#region directive-before.js
 function nested() {
 	"directive";
@@ -72,7 +66,6 @@ assert(nested() !== void 0);
 ## disabled-tdz.js
 
 ```js
-
 //#region disabled-tdz.js
 foo();
 const x_keep = 1;
@@ -85,7 +78,6 @@ function foo() {
 ## exprs-before.js
 
 ```js
-
 //#region exprs-before.js
 function nested() {
 	const x = [
@@ -109,7 +101,6 @@ assert(nested() !== void 0);
 ## issue-3125.js
 
 ```js
-
 //#region issue-3125.js
 function foo() {
 	const f = () => x;
@@ -123,7 +114,6 @@ assert(foo() !== void 0);
 ## namespace-export.js
 
 ```js
-
 //#region namespace-export.ts
 let ns;
 (function(_ns) {
@@ -137,7 +127,6 @@ let ns;
 ## nested-block.js
 
 ```js
-
 //#region nested-block.js
 {
 	const REMOVE_n = null;
@@ -165,7 +154,6 @@ let ns;
 ## nested-function.js
 
 ```js
-
 //#region nested-function.js
 function nested() {
 	const REMOVE_n = null;
@@ -194,7 +182,6 @@ assert(nested() !== void 0);
 ## semicolon-before.js
 
 ```js
-
 //#region semicolon-before.js
 {
 	const REMOVE = 1;
@@ -206,7 +193,6 @@ assert(nested() !== void 0);
 ## top-level.js
 
 ```js
-
 //#region top-level.js
 const n_keep = null;
 const u_keep = void 0;
@@ -232,7 +218,6 @@ console.log(
 ## type-before.js
 
 ```js
-
 //#region type-before.ts
 {
 	const REMOVE = 1;

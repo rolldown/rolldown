@@ -18,7 +18,6 @@ export {
 ```
 ### rolldown
 ```js
-
 //#region entry.ts
 function before() {
 	console.log(Foo.FOO);

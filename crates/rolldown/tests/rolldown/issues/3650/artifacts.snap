@@ -42,7 +42,6 @@ init_main();
 
 ```js
 
-
 export { __esm, __export };
 ```
 ## second.js

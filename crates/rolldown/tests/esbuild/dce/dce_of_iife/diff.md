@@ -8,7 +8,6 @@ keepThisButRemoveTheIIFE;
 ```
 ### rolldown
 ```js
-
 //#region remove-these.js
 (() => {})(keepThisButRemoveTheIIFE);
 var someVar;
@@ -61,7 +60,6 @@ use(isNotPure);
 ```
 ### rolldown
 ```js
-
 //#region keep-these.js
 undef = (() => {})();
 keepMe();

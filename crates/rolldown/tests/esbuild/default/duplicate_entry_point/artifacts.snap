@@ -18,7 +18,6 @@ import "./entry3.js";
 ## entry3.js
 
 ```js
-
 //#region entry.js
 console.log(123);
 

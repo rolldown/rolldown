@@ -7,7 +7,6 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```js
 
-
 //#region node_modules/package/esm-output.js
 const output = "esm";
 

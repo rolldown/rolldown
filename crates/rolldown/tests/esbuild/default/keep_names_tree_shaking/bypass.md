@@ -27,7 +27,6 @@ new clsExprKeep();
 ```
 ### rolldown
 ```js
-
 //#region entry.js
 function fnStmtKeep() {}
 x = fnStmtKeep;

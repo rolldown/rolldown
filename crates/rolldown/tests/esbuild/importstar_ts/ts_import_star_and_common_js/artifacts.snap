@@ -7,7 +7,6 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```js
 
-
 //#region foo.ts
 var foo_exports = {};
 __export(foo_exports, { foo: () => foo });

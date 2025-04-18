@@ -6,7 +6,6 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## js-define.js
 
 ```js
-
 //#region js-define.js
 var Foo = class {
 	accessor one = 1;
@@ -22,7 +21,6 @@ var Foo = class {
 ## ts-assign_ts-assign.js
 
 ```js
-
 //#region ts-assign/ts-assign.ts
 var Foo = class {
 	accessor one = 1;
@@ -54,7 +52,6 @@ var StaticPrivate = class {
 ## ts-define_ts-define.js
 
 ```js
-
 //#region ts-define/ts-define.ts
 var Foo = class {
 	accessor one = 1;

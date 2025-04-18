@@ -6,7 +6,6 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## entry.js
 
 ```js
-
 //#region entry.ts
 const { ...local_const } = {};
 let { ...local_let } = {};

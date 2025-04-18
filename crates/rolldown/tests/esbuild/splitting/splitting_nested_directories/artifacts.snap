@@ -26,7 +26,6 @@ console.log(-shared_default);
 ## shared.js
 
 ```js
-
 //#region shared.js
 var shared_default = 123;
 

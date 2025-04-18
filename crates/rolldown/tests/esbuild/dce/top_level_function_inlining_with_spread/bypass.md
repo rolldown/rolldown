@@ -19,7 +19,6 @@ identity3(...args);
 ```
 ### rolldown
 ```js
-
 //#region entry.js
 function empty1() {}
 function empty2() {}
@@ -91,7 +90,6 @@ identity3(...args);
 ```
 ### rolldown
 ```js
-
 //#region inner.js
 function empty1() {}
 function empty2() {}

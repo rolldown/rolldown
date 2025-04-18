@@ -26,7 +26,6 @@ export default require_src();
 ### rolldown
 ```js
 
-
 //#region src/foo-require.js
 var require_foo_require = __commonJS({ "src/foo-require.js"(exports, module) {
 	module.exports = "foo";

@@ -1,6 +1,5 @@
 ---
 source: crates/rolldown_testing/src/integration_test.rs
-snapshot_kind: text
 ---
 # warnings
 
@@ -21,7 +20,6 @@ snapshot_kind: text
 ## entry.js
 
 ```js
-
 
 //#region example.json
 var require_example = __commonJS({ "example.json"(exports, module) {

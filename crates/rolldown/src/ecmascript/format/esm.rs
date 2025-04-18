@@ -174,8 +174,7 @@ fn render_esm_chunk_imports(ctx: &GenerateContext<'_>) -> Option<String> {
       ));
     }
   });
-
-  if s.is_empty() { None } else { Some(s) }
+  (!s.is_empty()).then_some(s)
 }
 
 fn create_import_declaration(

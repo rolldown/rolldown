@@ -1,5 +1,6 @@
 use std::str::FromStr;
 use std::sync::atomic::AtomicBool;
+use std::sync::atomic::AtomicU32;
 
 use tracing_subscriber::EnvFilter;
 use tracing_subscriber::fmt;
@@ -7,6 +8,8 @@ use tracing_subscriber::prelude::*;
 
 use crate::build_id_propagate_layer::BuildIdPropagateLayer;
 use crate::debug_formatter::DevtoolFormatter;
+
+static TRACER_ID: AtomicU32 = AtomicU32::new(0);
 
 static IS_INITIALIZED: AtomicBool = AtomicBool::new(false);
 
@@ -23,4 +26,30 @@ pub fn init_devtool_tracing() {
     .with(BuildIdPropagateLayer)
     .with(fmt::layer().event_format(DevtoolFormatter))
     .init();
+}
+
+#[allow(dead_code)]
+pub struct DebugTracer {
+  id: u32,
+}
+
+impl DebugTracer {
+  #[must_use]
+  pub fn init() -> Self {
+    let id = TRACER_ID.fetch_add(1, std::sync::atomic::Ordering::SeqCst);
+
+    let tracer = Self { id };
+    if IS_INITIALIZED.swap(true, std::sync::atomic::Ordering::SeqCst) {
+      return tracer;
+    }
+
+    let env_filter = EnvFilter::from_str(FILTER_FOR_DEVTOOL).unwrap();
+    tracing_subscriber::registry()
+      .with(env_filter)
+      .with(BuildIdPropagateLayer)
+      .with(fmt::layer().event_format(DevtoolFormatter))
+      .init();
+
+    tracer
+  }
 }

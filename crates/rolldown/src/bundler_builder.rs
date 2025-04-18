@@ -28,11 +28,12 @@ impl BundlerBuilder {
       .expect("Time went backwards")
       .as_millis()
       .to_string();
+    let mut debug_tracer = None;
     if let Some(debug_options) = &self.options.debug {
       if let Some(id) = &debug_options.build_id {
         build_id = id.to_string();
       }
-      rolldown_debug::init_devtool_tracing();
+      debug_tracer = Some(rolldown_debug::DebugTracer::init());
     }
     let build_span = tracing::trace_span!("Build", buildId = build_id);
 
@@ -69,6 +70,7 @@ impl BundlerBuilder {
       cache: ScanStageCache::default(),
       hmr_manager: None,
       build_span,
+      _debug_tracer: debug_tracer,
     }
   }
 

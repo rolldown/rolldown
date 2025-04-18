@@ -22,6 +22,7 @@ pub mod concat_string;
 pub mod hash_placeholder;
 pub mod index_vec_ext;
 pub mod js_regex;
+pub mod make_unique_name;
 pub mod pattern_filter;
 pub mod replace_all_placeholder;
 pub mod unique_arc;

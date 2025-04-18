@@ -1,7 +1,4 @@
-use std::{
-  borrow::Cow,
-  path::{Path, PathBuf},
-};
+use std::path::{Path, PathBuf};
 
 use crate::{
   ChunkIdx, ChunkKind, FilenameTemplate, ModuleIdx, ModuleTable, NamedImport, NormalModule,
@@ -13,7 +10,10 @@ pub mod types;
 use arcstr::ArcStr;
 use rolldown_rstr::Rstr;
 use rolldown_std_utils::PathExt;
-use rolldown_utils::{BitSet, hash_placeholder::HashPlaceholderGenerator, indexmap::FxIndexMap};
+use rolldown_utils::{
+  BitSet, hash_placeholder::HashPlaceholderGenerator, indexmap::FxIndexMap,
+  make_unique_name::make_unique_name,
+};
 use rustc_hash::FxHashMap;
 use sugar_path::SugarPath;
 
@@ -142,7 +142,7 @@ impl Chunk {
     rollup_pre_rendered_chunk: &RollupPreRenderedChunk,
     chunk_name: &ArcStr,
     hash_placeholder_generator: &mut HashPlaceholderGenerator,
-    make_unique_name: &mut impl FnMut(&ArcStr) -> ArcStr,
+    used_name_counts: &mut FxHashMap<ArcStr, u32>,
   ) -> anyhow::Result<PreliminaryFilename> {
     if let Some(file) = &options.file {
       let basename = PathBuf::from(file)
@@ -159,14 +159,6 @@ impl Chunk {
     let filename_template = self.filename_template(options, rollup_pre_rendered_chunk).await?;
     let has_hash_pattern = filename_template.has_hash_pattern();
 
-    let name = if has_hash_pattern {
-      make_unique_name(chunk_name);
-      Cow::Borrowed(chunk_name)
-    } else {
-      let unique = make_unique_name(chunk_name);
-      Cow::Owned(unique)
-    };
-
     let mut hash_placeholder = has_hash_pattern.then_some(vec![]);
     let hash_replacer = has_hash_pattern.then_some({
       |len: Option<usize>| {
@@ -178,9 +170,16 @@ impl Chunk {
       }
     });
 
-    let filename = filename_template.render(Some(&name), None, hash_replacer);
+    let filename = filename_template.render(Some(chunk_name), None, hash_replacer).into();
 
-    Ok(PreliminaryFilename::new(filename, hash_placeholder))
+    let name = if has_hash_pattern {
+      make_unique_name(&filename, used_name_counts);
+      filename
+    } else {
+      make_unique_name(&filename, used_name_counts)
+    };
+
+    Ok(PreliminaryFilename::new(name.to_string(), hash_placeholder))
   }
 
   pub async fn generate_css_preliminary_filename(
@@ -189,7 +188,7 @@ impl Chunk {
     rollup_pre_rendered_chunk: &RollupPreRenderedChunk,
     chunk_name: &ArcStr,
     hash_placeholder_generator: &mut HashPlaceholderGenerator,
-    make_unique_name: &mut impl FnMut(&ArcStr) -> ArcStr,
+    used_name_counts: &mut FxHashMap<ArcStr, u32>,
   ) -> anyhow::Result<PreliminaryFilename> {
     if let Some(file) = &options.file {
       let mut file = PathBuf::from(file);
@@ -200,14 +199,6 @@ impl Chunk {
     let filename_template = self.css_filename_template(options, rollup_pre_rendered_chunk).await?;
     let has_hash_pattern = filename_template.has_hash_pattern();
 
-    let name = if has_hash_pattern {
-      make_unique_name(chunk_name);
-      Cow::Borrowed(chunk_name)
-    } else {
-      let unique = make_unique_name(chunk_name);
-      Cow::Owned(unique)
-    };
-
     let mut hash_placeholder = has_hash_pattern.then_some(vec![]);
     let hash_replacer = has_hash_pattern.then_some({
       |len: Option<usize>| {
@@ -219,9 +210,16 @@ impl Chunk {
       }
     });
 
-    let filename = filename_template.render(Some(&name), None, hash_replacer);
+    let filename = filename_template.render(Some(chunk_name), None, hash_replacer).into();
 
-    Ok(PreliminaryFilename::new(filename, hash_placeholder))
+    let name = if has_hash_pattern {
+      make_unique_name(&filename, used_name_counts);
+      filename
+    } else {
+      make_unique_name(&filename, used_name_counts)
+    };
+
+    Ok(PreliminaryFilename::new(name.to_string(), hash_placeholder))
   }
 
   pub fn user_defined_entry_module_idx(&self) -> Option<ModuleIdx> {

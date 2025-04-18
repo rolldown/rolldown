@@ -1,4 +1,4 @@
-use std::{collections::hash_map::Entry, sync::Arc};
+use std::sync::Arc;
 
 use arcstr::ArcStr;
 use futures::future::try_join_all;
@@ -20,7 +20,6 @@ use rolldown_common::{
 use rolldown_plugin::SharedPluginDriver;
 use rolldown_std_utils::{PathBufExt, PathExt};
 use rolldown_utils::{
-  concat_string,
   hash_placeholder::HashPlaceholderGenerator,
   index_vec_ext::IndexVecRefExt,
   rayon::{IntoParallelRefMutIterator, ParallelIterator},
@@ -228,30 +227,7 @@ impl<'a> GenerateStage<'a> {
 
     let mut hash_placeholder_generator = HashPlaceholderGenerator::default();
 
-    let create_make_unique_name = |mut used_name_counts: FxHashMap<ArcStr, u32>| {
-      move |name: &ArcStr| {
-        let mut candidate = name.clone();
-        loop {
-          match used_name_counts.entry(candidate.clone()) {
-            Entry::Occupied(mut occ) => {
-              // This name is already used
-              let next_count = *occ.get();
-              occ.insert(next_count + 1);
-              candidate =
-                ArcStr::from(concat_string!(name, itoa::Buffer::new().format(next_count)).as_str());
-            }
-            Entry::Vacant(vac) => {
-              // This is the first time we see this name
-              let name = vac.key().clone();
-              vac.insert(2);
-              break name;
-            }
-          }
-        }
-      }
-    };
-    let mut make_unique_name_for_ecma_chunk = create_make_unique_name(FxHashMap::default());
-    let mut make_unique_name_for_css_chunk = create_make_unique_name(FxHashMap::default());
+    let mut used_name_counts = FxHashMap::default();
 
     for chunk_id in &chunk_graph.sorted_chunk_idx_vec {
       let chunk = &mut chunk_graph.chunk_table[*chunk_id];
@@ -272,7 +248,7 @@ impl<'a> GenerateStage<'a> {
           &pre_rendered_chunk,
           pre_generated_chunk_name,
           &mut hash_placeholder_generator,
-          &mut make_unique_name_for_ecma_chunk,
+          &mut used_name_counts,
         )
         .await?;
 
@@ -282,7 +258,7 @@ impl<'a> GenerateStage<'a> {
           &pre_rendered_chunk,
           pre_generated_chunk_name,
           &mut hash_placeholder_generator,
-          &mut make_unique_name_for_css_chunk,
+          &mut used_name_counts,
         )
         .await?;
 

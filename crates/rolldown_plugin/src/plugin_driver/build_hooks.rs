@@ -94,6 +94,14 @@ impl PluginDriver {
       if skipped_plugins.iter().any(|p| *p == plugin_idx) {
         continue;
       }
+      trace_action!(action::HookResolveIdCallStart {
+        kind: "HookResolveIdCallStart",
+        importer: args.importer.map(ToString::to_string),
+        module_request: args.specifier.to_string(),
+        import_kind: args.kind.to_string(),
+        plugin_name: plugin.call_name().to_string(),
+        plugin_index: plugin_idx.raw()
+      });
       if let Some(r) = plugin
         .call_resolve_id(
           &skipped_resolve_calls.map_or_else(
@@ -110,8 +118,22 @@ impl PluginDriver {
         .instrument(debug_span!("resolve_id_hook", plugin_name = plugin.call_name().as_ref()))
         .await?
       {
+        trace_action!(action::HookResolveIdCallEnd {
+          kind: "HookResolveIdCallEnd",
+          resolved_id: Some(r.id.to_string()),
+          is_external: r.external.map(|v| v.is_external()),
+          plugin_name: plugin.call_name().to_string(),
+          plugin_index: plugin_idx.raw(),
+        });
         return Ok(Some(r));
       }
+      trace_action!(action::HookResolveIdCallEnd {
+        kind: "HookResolveIdCallEnd",
+        resolved_id: None,
+        is_external: None,
+        plugin_name: plugin.call_name().to_string(),
+        plugin_index: plugin_idx.raw(),
+      });
     }
     Ok(None)
   }

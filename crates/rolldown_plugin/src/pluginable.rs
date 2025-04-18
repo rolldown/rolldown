@@ -4,7 +4,7 @@ use super::plugin_context::PluginContext;
 use crate::{
   HookAddonArgs, HookBuildEndArgs, HookBuildStartArgs, HookGenerateBundleArgs,
   HookInjectionOutputReturn, HookLoadArgs, HookRenderChunkArgs, HookRenderStartArgs,
-  HookResolveIdArgs, HookTransformArgs, Plugin, SharedTransformPluginContext,
+  HookResolveIdArgs, HookTransformArgs, HookUsage, Plugin, SharedTransformPluginContext,
   plugin_hook_meta::PluginHookMeta,
   types::{
     hook_render_error::HookRenderErrorArgs, hook_transform_ast_args::HookTransformAstArgs,
@@ -208,6 +208,8 @@ pub trait Pluginable: Any + Debug + Send + Sync + 'static {
   fn call_close_watcher_meta(&self) -> Option<PluginHookMeta> {
     None
   }
+
+  fn call_hook_usage(&self) -> HookUsage;
 }
 
 #[async_trait::async_trait]
@@ -457,5 +459,9 @@ impl<T: Plugin> Pluginable for T {
 
   fn call_transform_ast_meta(&self) -> Option<PluginHookMeta> {
     Plugin::transform_ast_meta(self)
+  }
+
+  fn call_hook_usage(&self) -> HookUsage {
+    Plugin::register_hook_usage(self)
   }
 }

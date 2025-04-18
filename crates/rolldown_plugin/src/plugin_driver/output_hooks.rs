@@ -1,7 +1,7 @@
 use std::sync::Arc;
 
 use crate::types::hook_render_error::HookRenderErrorArgs;
-use crate::{HookAddonArgs, PluginDriver};
+use crate::{HookAddonArgs, HookUsage, PluginDriver};
 use crate::{HookAugmentChunkHashReturn, HookNoopReturn, HookRenderChunkArgs};
 use anyhow::{Ok, Result};
 use rolldown_common::{Output, RollupRenderedChunk, SharedNormalizedBundlerOptions};
@@ -11,8 +11,12 @@ use tracing::{Instrument, debug_span};
 
 impl PluginDriver {
   pub async fn render_start(&self, opts: &SharedNormalizedBundlerOptions) -> HookNoopReturn {
-    for (_, plugin, ctx) in self.iter_plugin_with_context_by_order(&self.order_by_render_start_meta)
+    for (plugin_idx, plugin, ctx) in
+      self.iter_plugin_with_context_by_order(&self.order_by_render_start_meta)
     {
+      if !self.plugin_usage_vec[plugin_idx].contains(HookUsage::RenderStart) {
+        continue;
+      }
       plugin
         .call_render_start(ctx, &crate::HookRenderStartArgs { options: opts })
         .instrument(debug_span!("render_start_hook", plugin_name = plugin.call_name().as_ref()))
@@ -22,7 +26,12 @@ impl PluginDriver {
   }
 
   pub async fn banner(&self, args: HookAddonArgs, mut banner: String) -> Result<Option<String>> {
-    for (_, plugin, ctx) in self.iter_plugin_with_context_by_order(&self.order_by_banner_meta) {
+    for (plugin_idx, plugin, ctx) in
+      self.iter_plugin_with_context_by_order(&self.order_by_banner_meta)
+    {
+      if !self.plugin_usage_vec[plugin_idx].contains(HookUsage::Banner) {
+        continue;
+      }
       if let Some(r) = plugin
         .call_banner(ctx, &args)
         .instrument(debug_span!("banner_hook", plugin_name = plugin.call_name().as_ref()))
@@ -39,7 +48,12 @@ impl PluginDriver {
   }
 
   pub async fn footer(&self, args: HookAddonArgs, mut footer: String) -> Result<Option<String>> {
-    for (_, plugin, ctx) in self.iter_plugin_with_context_by_order(&self.order_by_footer_meta) {
+    for (plugin_idx, plugin, ctx) in
+      self.iter_plugin_with_context_by_order(&self.order_by_footer_meta)
+    {
+      if !self.plugin_usage_vec[plugin_idx].contains(HookUsage::Footer) {
+        continue;
+      }
       if let Some(r) = plugin
         .call_footer(ctx, &args)
         .instrument(debug_span!("footer_hook", plugin_name = plugin.call_name().as_ref()))
@@ -56,7 +70,12 @@ impl PluginDriver {
   }
 
   pub async fn intro(&self, args: HookAddonArgs, mut intro: String) -> Result<Option<String>> {
-    for (_, plugin, ctx) in self.iter_plugin_with_context_by_order(&self.order_by_intro_meta) {
+    for (plugin_idx, plugin, ctx) in
+      self.iter_plugin_with_context_by_order(&self.order_by_intro_meta)
+    {
+      if !self.plugin_usage_vec[plugin_idx].contains(HookUsage::Intro) {
+        continue;
+      }
       if let Some(r) = plugin
         .call_intro(ctx, &args)
         .instrument(debug_span!("intro_hook", plugin_name = plugin.call_name().as_ref()))
@@ -73,7 +92,12 @@ impl PluginDriver {
   }
 
   pub async fn outro(&self, args: HookAddonArgs, mut outro: String) -> Result<Option<String>> {
-    for (_, plugin, ctx) in self.iter_plugin_with_context_by_order(&self.order_by_outro_meta) {
+    for (plugin_idx, plugin, ctx) in
+      self.iter_plugin_with_context_by_order(&self.order_by_outro_meta)
+    {
+      if !self.plugin_usage_vec[plugin_idx].contains(HookUsage::Outro) {
+        continue;
+      }
       if let Some(r) = plugin
         .call_outro(ctx, &args)
         .instrument(debug_span!("outro_hook", plugin_name = plugin.call_name().as_ref()))
@@ -94,8 +118,12 @@ impl PluginDriver {
     mut args: HookRenderChunkArgs<'_>,
   ) -> Result<(String, Vec<SourceMap>)> {
     let mut sourcemap_chain = vec![];
-    for (_, plugin, ctx) in self.iter_plugin_with_context_by_order(&self.order_by_render_chunk_meta)
+    for (plugin_idx, plugin, ctx) in
+      self.iter_plugin_with_context_by_order(&self.order_by_render_chunk_meta)
     {
+      if !self.plugin_usage_vec[plugin_idx].contains(HookUsage::RenderChunk) {
+        continue;
+      }
       if let Some(r) = plugin
         .call_render_chunk(ctx, &args)
         .instrument(debug_span!("render_chunk_hook", plugin_name = plugin.call_name().as_ref()))
@@ -115,9 +143,12 @@ impl PluginDriver {
     chunk: Arc<RollupRenderedChunk>,
   ) -> HookAugmentChunkHashReturn {
     let mut hash = None;
-    for (_, plugin, ctx) in
+    for (plugin_idx, plugin, ctx) in
       self.iter_plugin_with_context_by_order(&self.order_by_augment_chunk_hash_meta)
     {
+      if !self.plugin_usage_vec[plugin_idx].contains(HookUsage::AugmentChunkHash) {
+        continue;
+      }
       if let Some(plugin_hash) = plugin
         .call_augment_chunk_hash(ctx, Arc::clone(&chunk))
         .instrument(debug_span!(
@@ -133,8 +164,12 @@ impl PluginDriver {
   }
 
   pub async fn render_error(&self, args: &HookRenderErrorArgs<'_>) -> HookNoopReturn {
-    for (_, plugin, ctx) in self.iter_plugin_with_context_by_order(&self.order_by_render_error_meta)
+    for (plugin_idx, plugin, ctx) in
+      self.iter_plugin_with_context_by_order(&self.order_by_render_error_meta)
     {
+      if !self.plugin_usage_vec[plugin_idx].contains(HookUsage::RenderError) {
+        continue;
+      }
       plugin
         .call_render_error(ctx, args)
         .instrument(debug_span!("render_error_hook", plugin_name = plugin.call_name().as_ref()))
@@ -150,9 +185,12 @@ impl PluginDriver {
     opts: &SharedNormalizedBundlerOptions,
     warnings: &mut Vec<BuildDiagnostic>,
   ) -> HookNoopReturn {
-    for (_, plugin, ctx) in
+    for (plugin_idx, plugin, ctx) in
       self.iter_plugin_with_context_by_order(&self.order_by_generate_bundle_meta)
     {
+      if !self.plugin_usage_vec[plugin_idx].contains(HookUsage::GenerateBundle) {
+        continue;
+      }
       let mut args = crate::HookGenerateBundleArgs { is_write, bundle, options: opts };
       plugin
         .call_generate_bundle(ctx, &mut args)

@@ -41,8 +41,8 @@ impl Plugin for ImportGlobPlugin {
       let ast_builder = AstBuilder::new(fields.allocator);
 
       let mut visitor = GlobImportVisit {
-        id,
         root,
+        id: &id,
         ast_builder,
         restore_query_extension: self.config.restore_query_extension,
         current: 0,

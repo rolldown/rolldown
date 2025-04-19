@@ -35,6 +35,8 @@ const HOOK_KIND: [&str; 21] = [
   "outro",
 ];
 
+const DISABLE_JS_HOOK: [&str; 1] = ["transform_ast"];
+
 impl Generator for HookUsageGenerator {
   fn generate_many(&self, _ctx: &Context) -> anyhow::Result<Vec<crate::output::Output>> {
     Ok(vec![
@@ -57,6 +59,26 @@ fn generate_hook_usage_ts() -> String {
     .map(|(i, &kind)| format!("  {} = 1 << {},", kind.to_lower_camel_case(), i))
     .collect::<Vec<_>>()
     .join("\n");
+
+  let union_hook_usage_list = HOOK_KIND
+    .iter()
+    .filter_map(|kind| {
+      if DISABLE_JS_HOOK.contains(kind) {
+        return None;
+      }
+      Some(format!(
+        r"
+      if (plugin.{}) {{
+        hookUsage.union(HookUsageKind.{});
+      
+      }}
+      ",
+        kind.to_lower_camel_case(),
+        kind.to_lower_camel_case()
+      ))
+    })
+    .collect::<Vec<_>>()
+    .join("\n");
   format!(
     r"
    export enum HookUsageKind {{
@@ -64,7 +86,8 @@ fn generate_hook_usage_ts() -> String {
    }};
 
   export class HookUsage {{
-  	constructor(public bitflag: bigint) {{}}
+    private bitflag: bigint = BigInt(0);
+  	constructor() {{}}
 
     union(kind: HookUsageKind): void {{
       this.bitflag |= BigInt(kind);
@@ -77,6 +100,13 @@ fn generate_hook_usage_ts() -> String {
       return Number(this.bitflag)
     }}
   }}
+
+import {{ Plugin }} from '../..';
+export function extractHookUsage(plugin: Plugin): HookUsage {{
+  let hookUsage = new HookUsage();
+  {union_hook_usage_list}
+  return hookUsage;
+}}
   ",
   )
 }

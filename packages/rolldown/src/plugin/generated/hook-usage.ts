@@ -26,7 +26,8 @@ export enum HookUsageKind {
 }
 
 export class HookUsage {
-  constructor(public bitflag: bigint) {}
+  private bitflag: bigint = BigInt(0);
+  constructor() {}
 
   union(kind: HookUsageKind): void {
     this.bitflag |= BigInt(kind);
@@ -38,4 +39,91 @@ export class HookUsage {
   inner(): number {
     return Number(this.bitflag);
   }
+}
+
+import { Plugin } from '../..';
+export function extractHookUsage(plugin: Plugin): HookUsage {
+  let hookUsage = new HookUsage();
+
+  if (plugin.buildStart) {
+    hookUsage.union(HookUsageKind.buildStart);
+  }
+
+  if (plugin.resolveId) {
+    hookUsage.union(HookUsageKind.resolveId);
+  }
+
+  if (plugin.resolveDynamicImport) {
+    hookUsage.union(HookUsageKind.resolveDynamicImport);
+  }
+
+  if (plugin.load) {
+    hookUsage.union(HookUsageKind.load);
+  }
+
+  if (plugin.transform) {
+    hookUsage.union(HookUsageKind.transform);
+  }
+
+  if (plugin.moduleParsed) {
+    hookUsage.union(HookUsageKind.moduleParsed);
+  }
+
+  if (plugin.buildEnd) {
+    hookUsage.union(HookUsageKind.buildEnd);
+  }
+
+  if (plugin.renderStart) {
+    hookUsage.union(HookUsageKind.renderStart);
+  }
+
+  if (plugin.renderError) {
+    hookUsage.union(HookUsageKind.renderError);
+  }
+
+  if (plugin.renderChunk) {
+    hookUsage.union(HookUsageKind.renderChunk);
+  }
+
+  if (plugin.augmentChunkHash) {
+    hookUsage.union(HookUsageKind.augmentChunkHash);
+  }
+
+  if (plugin.generateBundle) {
+    hookUsage.union(HookUsageKind.generateBundle);
+  }
+
+  if (plugin.writeBundle) {
+    hookUsage.union(HookUsageKind.writeBundle);
+  }
+
+  if (plugin.closeBundle) {
+    hookUsage.union(HookUsageKind.closeBundle);
+  }
+
+  if (plugin.watchChange) {
+    hookUsage.union(HookUsageKind.watchChange);
+  }
+
+  if (plugin.closeWatcher) {
+    hookUsage.union(HookUsageKind.closeWatcher);
+  }
+
+  if (plugin.banner) {
+    hookUsage.union(HookUsageKind.banner);
+  }
+
+  if (plugin.footer) {
+    hookUsage.union(HookUsageKind.footer);
+  }
+
+  if (plugin.intro) {
+    hookUsage.union(HookUsageKind.intro);
+  }
+
+  if (plugin.outro) {
+    hookUsage.union(HookUsageKind.outro);
+  }
+
+  return hookUsage;
 }

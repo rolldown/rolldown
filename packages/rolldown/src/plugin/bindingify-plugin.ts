@@ -31,6 +31,7 @@ import {
   bindingifyCloseWatcher,
   bindingifyWatchChange,
 } from './bindingify-watch-hooks';
+import { extractHookUsage } from './generated/hook-usage';
 import type { Plugin, RolldownPlugin } from './index';
 import { PluginContextData } from './plugin-context-data';
 
@@ -137,6 +138,7 @@ export function bindingifyPlugin(
 
   const { plugin: closeWatcher, meta: closeWatcherMeta } =
     bindingifyCloseWatcher(args);
+  let hookUsage = extractHookUsage(plugin).inner();
   const result: BindingPluginOptions = {
     // The plugin name already normalized at `normalizePlugins`, see `packages/rolldown/src/utils/normalize-plugin-option.ts`
     name: plugin.name!,
@@ -184,6 +186,7 @@ export function bindingifyPlugin(
     watchChangeMeta,
     closeWatcher,
     closeWatcherMeta,
+    hookUsage,
   };
   return wrapHandlers(result);
 }

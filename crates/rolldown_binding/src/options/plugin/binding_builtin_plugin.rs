@@ -340,6 +340,11 @@ impl From<BindingTransformPluginConfig> for TransformPlugin {
         }
       });
 
+      let target = v.target.map(|target| match target {
+        Either::A(v) => itertools::Either::Left(v),
+        Either::B(v) => itertools::Either::Right(v),
+      });
+
       let decorator = v.decorator.map(|decorator| rolldown_plugin_transform::DecoratorOptions {
         legacy: decorator.legacy,
         emit_decorator_metadata: decorator.emit_decorator_metadata,
@@ -379,6 +384,7 @@ impl From<BindingTransformPluginConfig> for TransformPlugin {
       rolldown_plugin_transform::TransformOptions {
         lang: v.lang,
         jsx,
+        target,
         decorator,
         typescript,
         assumptions,

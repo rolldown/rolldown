@@ -368,7 +368,21 @@ impl From<BindingTransformPluginConfig> for TransformPlugin {
         }
       });
 
-      rolldown_plugin_transform::TransformOptions { lang: v.lang, jsx, decorator, typescript }
+      let assumptions = v.assumptions.map(|v| rolldown_plugin_transform::CompilerAssumptions {
+        ignore_function_length: v.ignore_function_length,
+        no_document_all: v.no_document_all,
+        object_rest_no_symbols: v.object_rest_no_symbols,
+        pure_getters: v.pure_getters,
+        set_public_class_fields: v.set_public_class_fields,
+      });
+
+      rolldown_plugin_transform::TransformOptions {
+        lang: v.lang,
+        jsx,
+        decorator,
+        typescript,
+        assumptions,
+      }
     });
 
     Self {

@@ -672,6 +672,18 @@ static GLOBAL_IDENT: phf::Set<&str> = phf::phf_set![
   "window",
 ];
 
+/// `Math`
+static MATH_SECOND_PROP: phf::Set<&str> = phf::phf_set![
+  // Math: Static properties
+  // https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Math#Static_properties
+  "E", "LN10", "LN2", "LOG10E", "LOG2E", "PI", "SQRT1_2", "SQRT2",
+  // Math: Static methods
+  // https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Math#Static_methods
+  "abs", "acos", "acosh", "asin", "asinh", "atan", "atan2", "atanh", "cbrt", "ceil", "clz32", "cos",
+  "cosh", "exp", "expm1", "floor", "fround", "hypot", "imul", "log", "log10", "log1p", "log2",
+  "max", "min", "pow", "random", "round", "sign", "sin", "sinh", "sqrt", "tan", "tanh", "trunc",
+];
+
 /// Console method references are assumed to have no side effects
 /// https://developer.mozilla.org/en-US/docs/Web/API/console
 /// `console`
@@ -716,21 +728,10 @@ static REFLECT_SECOND_PROP: [&str; 13] = [
   "setPrototypeOf",
 ];
 
-/// `Math`
-static MATH_SECOND_PROP: [&str; 43] = [
-  // Math: Static properties
-  // https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Math#Static_properties
-  "E", "LN10", "LN2", "LOG10E", "LOG2E", "PI", "SQRT1_2", "SQRT2",
-  // Math: Static methods
-  // https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Math#Static_methods
-  "abs", "acos", "acosh", "asin", "asinh", "atan", "atan2", "atanh", "cbrt", "ceil", "clz32", "cos",
-  "cosh", "exp", "expm1", "floor", "fround", "hypot", "imul", "log", "log10", "log1p", "log2",
-  "max", "min", "pow", "random", "round", "sign", "sin", "sinh", "sqrt", "tan", "tanh", "trunc",
-];
-
-/// Object: Static methods
-/// https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Object#Static_methods
+/// `Object`
 static OBJECT_SECOND_PROP: [&str; 21] = [
+  // Object: Static methods
+  // https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Object#Static_methods
   "assign",
   "create",
   "defineProperties",
@@ -754,9 +755,10 @@ static OBJECT_SECOND_PROP: [&str; 21] = [
   "values",
 ];
 
-/// Symbol: Static properties
-/// https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Symbol#static_properties
+/// `Symbol`
 static SYMBOL_SECOND_PROP: [&str; 15] = [
+  // Symbol: Static properties
+  // https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Symbol#static_properties
   "asyncDispose",
   "asyncIterator",
   "dispose",
@@ -774,9 +776,10 @@ static SYMBOL_SECOND_PROP: [&str; 15] = [
   "unscopables",
 ];
 
-/// Object: Instance methods
-/// https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Object#Instance_methods
+/// `Object.prototype`
 static OBJECT_PROTOTYPE_THIRD_PROP: [&str; 12] = [
+  // Object: Instance methods
+  // https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Object#Instance_methods
   "__defineGetter__",
   "__defineSetter__",
   "__lookupGetter__",
@@ -798,15 +801,18 @@ pub fn is_global_ident_ref(ident: &str) -> bool {
 
 pub fn is_side_effect_free_member_expr_of_len_two(member_expr: &[Atom]) -> bool {
   match member_expr {
-    [first, second] => match first.as_str() {
-      "console" => CONSOLE_SECOND_PROP.binary_search(&second.as_str()).is_ok(),
-      "Reflect" => REFLECT_SECOND_PROP.binary_search(&second.as_str()).is_ok(),
-      "Math" => MATH_SECOND_PROP.binary_search(&second.as_str()).is_ok(),
-      "Object" => OBJECT_SECOND_PROP.binary_search(&second.as_str()).is_ok(),
-      "Symbol" => SYMBOL_SECOND_PROP.binary_search(&second.as_str()).is_ok(),
-      "JSON" => second == "stringify" || second == "parse",
-      _ => false,
-    },
+    [first, second] => {
+      let second = second.as_str();
+      match first.as_str() {
+        "console" => CONSOLE_SECOND_PROP.contains(&second),
+        "Reflect" => REFLECT_SECOND_PROP.contains(&second),
+        "Math" => MATH_SECOND_PROP.contains(second),
+        "Object" => OBJECT_SECOND_PROP.contains(&second),
+        "Symbol" => SYMBOL_SECOND_PROP.contains(&second),
+        "JSON" => second == "stringify" || second == "parse",
+        _ => false,
+      }
+    }
     _ => false,
   }
 }
@@ -816,7 +822,7 @@ pub fn is_side_effect_free_member_expr_of_len_three(member_expr: &[Atom]) -> boo
     [first, second, third] => {
       first == "Object"
         && second == "prototype"
-        && OBJECT_PROTOTYPE_THIRD_PROP.binary_search(&third.as_str()).is_ok()
+        && OBJECT_PROTOTYPE_THIRD_PROP.contains(&third.as_str())
     }
     _ => false,
   }

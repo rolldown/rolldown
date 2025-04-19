@@ -74,7 +74,7 @@ pub static MIME_TYPES_VALUES: [RawMimeExt; 24] = [
 ///
 /// Thanks to @ikkz and @evanw for the inspiration.
 pub fn mime_type_by_extension(ext: &str) -> Option<RawMimeExt> {
-  MIME_TYPES_KEYS.binary_search(&ext).map(|index| MIME_TYPES_VALUES[index]).ok()
+  MIME_TYPES_KEYS.into_iter().position(|v| v == ext).map(|index| MIME_TYPES_VALUES[index])
 }
 
 pub fn try_from_ext(ext: &str) -> anyhow::Result<MimeExt> {

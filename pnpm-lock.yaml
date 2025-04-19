@@ -345,8 +345,8 @@ importers:
         specifier: workspace:*
         version: 'link:'
       rolldown-plugin-dts:
-        specifier: ^0.7.4
-        version: 0.7.4(rolldown@packages+rolldown)(typescript@5.8.3)
+        specifier: ^0.7.12
+        version: 0.7.12(rolldown@packages+rolldown)(typescript@5.8.3)
       rollup:
         specifier: ^4.18.0
         version: 4.37.0
@@ -4302,8 +4302,8 @@ packages:
     resolution: {integrity: sha512-pO9XH79SyXybj2Vhc9ITZMEI8cJkdlQQRoD8oEfPH6Jjpp/7WX5kIgECVd3DBOjjAdCSiW6R47v3gJBx/qZVkw==}
     hasBin: true
 
-  dts-resolver@0.1.1:
-    resolution: {integrity: sha512-Pj0AEP6US2fH1kwYAUHPh5f8XBawGKr25PGzCRnCQne/MW9CvFczL4u++FC8+jO0ZtquRy4J512FJca4zH39rg==}
+  dts-resolver@1.0.0:
+    resolution: {integrity: sha512-BTW78HXK66TvRHBRkU91a7CGoD5/PWi8ovMXbKVHjhR5xCqt1dgwl6CVk3wxWLzhNVIGXDbGWPBlRKrgSHMzfw==}
     engines: {node: '>=20.18.0'}
 
   dunder-proto@1.0.1:
@@ -5915,8 +5915,8 @@ packages:
     engines: {node: '>= 0.10'}
     deprecated: Please use String.prototype.padEnd() over this package.
 
-  rolldown-plugin-dts@0.7.4:
-    resolution: {integrity: sha512-KQIPVbNTT2ziAmmFbrKHl97yV2nxmwK9lkZoe7Tx5H4sCxWwcgA0gwoqSIl03DQFogvqdVaQ9nueHbYgZ3ccmA==}
+  rolldown-plugin-dts@0.7.12:
+    resolution: {integrity: sha512-ECZRqikcDxz/gbWOULjUQLwpSKapld3aKFZdKYD/Zorven8z2Z3Ht1SoRJLtqL3zjq9fwdkEtb/e68uArExYNA==}
     engines: {node: '>=20.18.0'}
     peerDependencies:
       rolldown: ^1.0.0-beta.7
@@ -10356,7 +10356,7 @@ snapshots:
       '@dprint/win32-arm64': 0.49.1
       '@dprint/win32-x64': 0.49.1
 
-  dts-resolver@0.1.1:
+  dts-resolver@1.0.0:
     dependencies:
       oxc-resolver: 5.2.0
       pathe: 2.0.3
@@ -12131,10 +12131,10 @@ snapshots:
 
   right-pad@1.0.1: {}
 
-  rolldown-plugin-dts@0.7.4(rolldown@packages+rolldown)(typescript@5.8.3):
+  rolldown-plugin-dts@0.7.12(rolldown@packages+rolldown)(typescript@5.8.3):
     dependencies:
       debug: 4.4.0(supports-color@8.1.1)
-      dts-resolver: 0.1.1
+      dts-resolver: 1.0.0
       get-tsconfig: 4.10.0
       magic-string-ast: 0.9.1
       oxc-parser: 0.64.0

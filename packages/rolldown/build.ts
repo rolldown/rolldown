@@ -119,6 +119,10 @@ function withShared(
     ],
   };
 }
+
+// browser package only
+// alias binding file to rolldown-binding.wasi.js and mark it as external
+// alias its dts file to rolldown-binding.d.ts without external
 function resolveWasiBinding(isBrowserBuild?: boolean): Plugin {
   return {
     name: 'resolve-wasi-binding',
@@ -126,13 +130,14 @@ function resolveWasiBinding(isBrowserBuild?: boolean): Plugin {
       filter: { id: /\bbinding\b/ },
       async handler(id, importer, options) {
         const resolution = await this.resolve(id, importer, options);
-        if (!resolution) return;
 
-        if (resolution.id === bindingFile) {
+        if (resolution?.id === bindingFile) {
           const mod = importer && this.getModuleInfo(importer);
+          // if importer is a dts file
           const dtsFile = mod ? mod.meta?.dtsFile : false;
 
           if (dtsFile) {
+            // link to src/binding.d.ts
             return { id: bindingDtsFile };
           } else {
             const id = isBrowserBuild

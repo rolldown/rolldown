@@ -228,8 +228,7 @@ impl Plugin for JsPlugin {
     _normal_module: &NormalModule,
   ) -> rolldown_plugin::HookNoopReturn {
     if let Some(cb) = &self.module_parsed {
-      cb.await_call((ctx.clone().into(), BindingModuleInfo::new(module_info)).into())
-        .await?;
+      cb.await_call((ctx.clone().into(), BindingModuleInfo::new(module_info)).into()).await?;
     }
     Ok(())
   }
@@ -409,10 +408,9 @@ impl Plugin for JsPlugin {
     chunk: Arc<rolldown_common::RollupRenderedChunk>,
   ) -> rolldown_plugin::HookAugmentChunkHashReturn {
     match &self.augment_chunk_hash {
-      Some(cb) => Ok(
-        cb.await_call((ctx.clone().into(), BindingRenderedChunk::new(chunk)).into())
-          .await?,
-      ),
+      Some(cb) => {
+        Ok(cb.await_call((ctx.clone().into(), BindingRenderedChunk::new(chunk)).into()).await?)
+      }
       _ => Ok(None),
     }
   }
@@ -503,8 +501,7 @@ impl Plugin for JsPlugin {
     ctx: &rolldown_plugin::PluginContext,
   ) -> rolldown_plugin::HookNoopReturn {
     if let Some(cb) = &self.close_bundle {
-      cb.await_call(FnArgs { data: (ctx.clone().into(),) })
-        .await?;
+      cb.await_call(FnArgs { data: (ctx.clone().into(),) }).await?;
     }
     Ok(())
   }
@@ -520,8 +517,7 @@ impl Plugin for JsPlugin {
     event: rolldown_common::WatcherChangeKind,
   ) -> rolldown_plugin::HookNoopReturn {
     if let Some(cb) = &self.watch_change {
-      cb.await_call((ctx.clone().into(), path.to_string(), event.to_string()).into())
-        .await?;
+      cb.await_call((ctx.clone().into(), path.to_string(), event.to_string()).into()).await?;
     }
     Ok(())
   }
@@ -535,8 +531,7 @@ impl Plugin for JsPlugin {
     ctx: &rolldown_plugin::PluginContext,
   ) -> rolldown_plugin::HookNoopReturn {
     if let Some(cb) = &self.close_watcher {
-      cb.await_call(FnArgs { data: (ctx.clone().into(),) })
-        .await?;
+      cb.await_call(FnArgs { data: (ctx.clone().into(),) }).await?;
     }
     Ok(())
   }

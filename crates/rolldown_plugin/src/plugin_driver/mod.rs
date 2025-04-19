@@ -6,6 +6,7 @@ use std::{
 
 use arcstr::ArcStr;
 use dashmap::{DashMap, DashSet};
+use oxc_index::IndexVec;
 use rolldown_common::{
   ModuleId, ModuleInfo, ModuleLoaderMsg, SharedFileEmitter, SharedNormalizedBundlerOptions,
 };
@@ -15,7 +16,7 @@ use tokio::sync::Mutex;
 
 use crate::{
   __inner::SharedPluginable,
-  PluginContext, PluginHookMeta, PluginOrder,
+  HookUsage, PluginContext, PluginHookMeta, PluginOrder,
   plugin_context::{LoadCallback, PluginContextImpl},
   type_aliases::{IndexPluginContext, IndexPluginable},
   types::plugin_idx::PluginIdx,
@@ -36,6 +37,7 @@ pub struct PluginDriver {
   pub modules: Arc<FxDashMap<ArcStr, Arc<ModuleInfo>>>,
   pub context_load_modules: Arc<FxDashMap<ArcStr, LoadCallback>>,
   pub(crate) tx: Arc<Mutex<Option<tokio::sync::mpsc::Sender<ModuleLoaderMsg>>>>,
+  pub(crate) plugin_usage_vec: IndexVec<PluginIdx, HookUsage>,
 }
 
 impl PluginDriver {
@@ -49,6 +51,7 @@ impl PluginDriver {
     let modules = Arc::new(DashMap::default());
     let context_load_modules = Arc::new(DashMap::default());
     let tx = Arc::new(Mutex::new(None));
+    let mut plugin_usage_vec = IndexVec::new();
 
     Arc::new_cyclic(|plugin_driver| {
       let mut index_plugins = IndexPluginable::with_capacity(plugins.len());
@@ -56,6 +59,7 @@ impl PluginDriver {
 
       plugins.into_iter().for_each(|plugin| {
         let plugin_idx = index_plugins.push(Arc::clone(&plugin));
+        plugin_usage_vec.push(plugin.call_hook_usage());
         index_contexts.push(
           PluginContextImpl {
             skipped_resolve_calls: vec![],
@@ -82,6 +86,7 @@ impl PluginDriver {
         modules,
         context_load_modules,
         tx,
+        plugin_usage_vec,
       }
     })
   }

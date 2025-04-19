@@ -199,6 +199,34 @@ impl TransformPlugin {
         let mut assumptions = transform_options.assumptions.unwrap_or_default();
         assumptions.set_public_class_fields = Some(disable_use_define_for_class_fields);
         transform_options.assumptions = Some(assumptions);
+
+        // set target to es2021 or lower to enable class property transforms
+        // https://github.com/oxc-project/oxc/issues/6735#issuecomment-2513866362
+        if disable_use_define_for_class_fields {
+          let target = if let Some(target) = transform_options.target {
+            let mut target = match target {
+              Either::Left(t) => t.split(',').map(String::from).collect(),
+              Either::Right(t) => t,
+            };
+
+            if let Some(target) =
+              target.iter_mut().find(|t| t.len() > 2 && t[..2].eq_ignore_ascii_case("es"))
+            {
+              let reset = &target[2..];
+              if reset.eq_ignore_ascii_case("next")
+                || reset.parse::<usize>().is_ok_and(|x| x > 2021)
+              {
+                *target = String::from("es2021");
+              }
+            } else {
+              target.push(String::from("es2021"));
+            }
+            Either::Right(target)
+          } else {
+            Either::Left(String::from("es2021"))
+          };
+          transform_options.target = Some(target);
+        }
       }
     }
 
@@ -230,9 +258,9 @@ fn is_use_define_for_class_fields(target: Option<&str>) -> bool {
   }
 
   let reset = &target[2..];
-  if reset.eq_ignore_ascii_case("esnext") {
+  if reset.eq_ignore_ascii_case("next") {
     return true;
   }
 
-  reset.parse::<usize>().is_ok_and(|x| x >= 2022)
+  reset.parse::<usize>().is_ok_and(|x| x > 2021)
 }

@@ -1,8 +1,8 @@
 use itertools::Either;
 
 use super::{
-  decorator_options::DecoratorOptions, jsx_options::JsxOptions,
-  typescript_options::TypeScriptOptions,
+  compiler_assumptions::CompilerAssumptions, decorator_options::DecoratorOptions,
+  jsx_options::JsxOptions, typescript_options::TypeScriptOptions,
 };
 
 #[derive(Debug, Default, Clone)]
@@ -14,6 +14,8 @@ pub struct TransformOptions {
   pub decorator: Option<DecoratorOptions>,
 
   pub typescript: Option<TypeScriptOptions>,
+
+  pub assumptions: Option<CompilerAssumptions>,
 }
 
 impl From<TransformOptions> for oxc::transformer::TransformOptions {

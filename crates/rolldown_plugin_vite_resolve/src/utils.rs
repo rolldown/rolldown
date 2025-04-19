@@ -45,7 +45,7 @@ pub fn is_builtin(id: &str, runtime: &str) -> bool {
 }
 
 fn is_node_builtin(id: &str) -> bool {
-  id.starts_with(NODE_BUILTIN_NAMESPACE) || NODEJS_BUILTINS.binary_search(&id).is_ok()
+  id.starts_with(NODE_BUILTIN_NAMESPACE) || NODEJS_BUILTINS.contains(&id)
 }
 
 pub fn get_extension(id: &str) -> &str {

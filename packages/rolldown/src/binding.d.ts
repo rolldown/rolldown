@@ -713,7 +713,12 @@ export interface BindingTransformHookFilter {
 export interface BindingTransformPluginConfig {
   include?: Array<BindingStringOrRegex>
   exclude?: Array<BindingStringOrRegex>
+  jsxRefreshInclude?: Array<BindingStringOrRegex>
+  jsxRefreshExclude?: Array<BindingStringOrRegex>
+  isServerConsumer?: boolean
+  runtimeResolveBase?: string
   jsxInject?: string
+  transformOptions?: TransformOptions
 }
 
 export interface BindingTreeshake {

@@ -11,6 +11,8 @@ pub struct TransformOptions {
 
   pub jsx: Option<Either<String, JsxOptions>>,
 
+  pub target: Option<Either<String, Vec<String>>>,
+
   pub decorator: Option<DecoratorOptions>,
 
   pub typescript: Option<TypeScriptOptions>,

@@ -1,0 +1,9 @@
+.button {
+  background: blue;
+  color: white;
+}
+
+body {
+  box-sizing: border-box;
+}
+

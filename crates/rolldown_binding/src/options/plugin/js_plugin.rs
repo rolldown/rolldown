@@ -13,7 +13,6 @@ use rolldown_common::NormalModule;
 use rolldown_plugin::{__inner::SharedPluginable, HookUsage, Plugin, typedmap::TypedMapKey};
 use rolldown_utils::pattern_filter::{self};
 use std::{borrow::Cow, ops::Deref, path::Path, sync::Arc};
-use tracing::{Instrument, debug_span};
 
 use super::{
   BindingPluginOptions,

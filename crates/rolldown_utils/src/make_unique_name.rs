@@ -1,13 +1,12 @@
-use std::{collections::hash_map::Entry, ffi::OsStr};
+use std::ffi::OsStr;
 
 use arcstr::ArcStr;
-use rustc_hash::FxHashMap;
+use dashmap::Entry;
 use sugar_path::SugarPath;
 
-use crate::concat_string;
+use crate::{concat_string, dashmap::FxDashMap};
 
-#[allow(clippy::implicit_hasher)]
-pub fn make_unique_name(name: &ArcStr, used_name_counts: &mut FxHashMap<ArcStr, u32>) -> ArcStr {
+pub fn make_unique_name(name: &ArcStr, used_name_counts: &FxDashMap<ArcStr, u32>) -> ArcStr {
   let mut candidate = name.clone();
   let extension = name
     .as_path()
@@ -44,29 +43,29 @@ mod tests {
 
   #[test]
   fn test() {
-    let mut used_name_counts = FxHashMap::default();
+    let used_name_counts = FxDashMap::default();
 
-    let unique_name = make_unique_name(&ArcStr::from("foo.js"), &mut used_name_counts);
+    let unique_name = make_unique_name(&ArcStr::from("foo.js"), &used_name_counts);
     assert_eq!(unique_name.as_str(), "foo.js");
 
-    let unique_name = make_unique_name(&ArcStr::from("foo.js"), &mut used_name_counts);
+    let unique_name = make_unique_name(&ArcStr::from("foo.js"), &used_name_counts);
     assert_eq!(unique_name.as_str(), "foo2.js");
 
-    let unique_name = make_unique_name(&ArcStr::from("foo2.js"), &mut used_name_counts);
+    let unique_name = make_unique_name(&ArcStr::from("foo2.js"), &used_name_counts);
     assert_eq!(unique_name.as_str(), "foo22.js");
   }
 
   #[test]
   fn test2() {
-    let mut used_name_counts = FxHashMap::default();
+    let used_name_counts = FxDashMap::default();
 
-    let unique_name = make_unique_name(&ArcStr::from("foo.js"), &mut used_name_counts);
+    let unique_name = make_unique_name(&ArcStr::from("foo.js"), &used_name_counts);
     assert_eq!(unique_name.as_str(), "foo.js");
 
-    let unique_name = make_unique_name(&ArcStr::from("foo2.js"), &mut used_name_counts);
+    let unique_name = make_unique_name(&ArcStr::from("foo2.js"), &used_name_counts);
     assert_eq!(unique_name.as_str(), "foo2.js");
 
-    let unique_name = make_unique_name(&ArcStr::from("foo.js"), &mut used_name_counts);
+    let unique_name = make_unique_name(&ArcStr::from("foo.js"), &used_name_counts);
     assert_eq!(unique_name.as_str(), "foo3.js");
   }
 }

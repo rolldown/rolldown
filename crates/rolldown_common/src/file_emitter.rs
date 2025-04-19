@@ -7,6 +7,7 @@ use arcstr::ArcStr;
 use dashmap::{DashMap, DashSet};
 use rolldown_error::BuildDiagnostic;
 use rolldown_utils::dashmap::{FxDashMap, FxDashSet};
+use rolldown_utils::make_unique_name::make_unique_name;
 use rolldown_utils::xxhash::{xxhash_base64_url, xxhash_with_base};
 use std::ffi::OsStr;
 use std::path::Path;
@@ -184,26 +185,19 @@ impl FileEmitter {
       let filename_template =
         filename_template.expect("should has filename template without filename");
 
-      let mut filename = filename_template.render(
-        name,
-        Some(extension.unwrap_or_default()),
-        Some(|len: Option<usize>| &hash[..len.map_or(8, |len| len.min(21))]),
-      );
+      let mut filename = filename_template
+        .render(
+          name,
+          Some(extension.unwrap_or_default()),
+          Some(|len: Option<usize>| &hash[..len.map_or(8, |len| len.min(21))]),
+        )
+        .into();
 
       // deconflict file name
-      match self.names.get_mut(filename.as_str()).as_deref_mut() {
-        Some(count) => {
-          *count += 1;
-          let extension = extension.map(|e| format!(".{e}")).unwrap_or_default();
-          filename =
-            format!("{}{count}{extension}", &filename[..filename.len() - extension.len()],);
-        }
-        _ => {
-          self.names.insert(filename.clone().into(), 1);
-        }
-      }
+      // TODO(underfin): could be using bundle files key as `make_unique_name`
+      filename = make_unique_name(&filename, &self.names);
 
-      file.file_name = Some(filename.into());
+      file.file_name = Some(filename);
     }
   }
 

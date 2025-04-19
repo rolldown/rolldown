@@ -3,5 +3,7 @@ export * from './BuildEnd.js';
 export * from './BuildStart.js';
 export * from './HookLoadCallEnd.js';
 export * from './HookLoadCallStart.js';
+export * from './HookResolveIdCallEnd.js';
+export * from './HookResolveIdCallStart.js';
 export * from './HookTransformCallEnd.js';
 export * from './HookTransformCallStart.js';

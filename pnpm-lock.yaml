@@ -530,6 +530,30 @@ importers:
         specifier: ^1.15.7
         version: 1.15.7
 
+  packages/test-dev-server/tests:
+    devDependencies:
+      '@rolldown/test-dev-server':
+        specifier: workspace:*
+        version: link:..
+      execa:
+        specifier: ^9.2.0
+        version: 9.5.2
+      vitest:
+        specifier: ^3.0.1
+        version: 3.0.9(@types/debug@4.1.12)(@types/node@22.14.0)(jiti@2.4.2)(terser@5.39.0)(tsx@4.19.3)(yaml@2.7.1)
+
+  packages/test-dev-server/tests/fixtures/basic:
+    devDependencies:
+      '@rolldown/test-dev-server':
+        specifier: workspace:*
+        version: link:../../..
+
+  packages/test-dev-server/tests/tmp/fixtures/basic:
+    devDependencies:
+      '@rolldown/test-dev-server':
+        specifier: workspace:*
+        version: link:../../../..
+
   packages/testing: {}
 
   scripts:

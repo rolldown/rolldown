@@ -1,0 +1,13 @@
+{
+  "name": "@rolldown/test-dev-server-tests",
+  "private": true,
+  "license": "MIT",
+  "scripts": {
+    "test": "vitest run"
+  },
+  "devDependencies": {
+    "vitest": "^3.0.1",
+    "@rolldown/test-dev-server": "workspace:*",
+    "execa": "^9.2.0"
+  }
+}

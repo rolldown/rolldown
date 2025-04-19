@@ -65,7 +65,11 @@ export function normalizeCliOptions(
   }
 
   if (!result.config && positionals.length > 0) {
-    result.input.input = positionals;
+    if (Array.isArray(result.input.input)) {
+      result.input.input.push(...positionals);
+    } else {
+      result.input.input = positionals;
+    }
   }
 
   return result;

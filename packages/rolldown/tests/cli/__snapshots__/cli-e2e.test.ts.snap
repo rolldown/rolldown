@@ -51,6 +51,7 @@ OPTIONS
   --hash-characters <hash-characters>Use the specified character set for file hashes.
   --inject <inject>           Inject import statements on demand.
   --inline-dynamic-imports    Inline dynamic imports.
+  --input <input>             Entry file.
   --intro <intro>             Code to insert the top of the bundled file (inside the wrapper function).
   --jsx.development           Development specific information.
   --jsx.factory <jsx.factory> Jsx element transformation.
@@ -126,6 +127,23 @@ output cli default options {}
 <DIR>/index.js  chunk │ size: 0.13 kB
 
 "
+`;
+
+exports[`cli options for bundling > should handle \`--input\` and positional args as entries 1`] = `
+"
+|→ 1.js:
+
+//#region 1.ts
+console.log("1");
+
+//#endregion
+
+|→ 2.js:
+
+//#region 2.js
+console.log("2");
+
+//#endregion"
 `;
 
 exports[`cli options for bundling > should handle negative boolean options 1`] = `

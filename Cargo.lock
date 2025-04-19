@@ -2452,6 +2452,7 @@ dependencies = [
  "dashmap",
  "derive_more",
  "futures",
+ "itertools",
  "mimalloc-safe",
  "napi",
  "napi-build",

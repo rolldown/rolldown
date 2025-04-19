@@ -14,7 +14,10 @@ use rolldown_plugin::{
 };
 use rolldown_utils::{clean_url::clean_url, pattern_filter::StringOrRegex};
 
-use types::transform_options::TransformOptions;
+pub use types::{
+  DecoratorOptions, IsolatedDeclarationsOptions, JsxOptions, ReactRefreshOptions, TransformOptions,
+  TypeScriptOptions,
+};
 
 #[derive(Debug, Default)]
 pub struct TransformPlugin {
@@ -25,8 +28,8 @@ pub struct TransformPlugin {
 
   pub jsx_inject: Option<String>,
 
-  pub filename: String,
-  pub environment_consumer: String,
+  pub is_server_consumer: bool,
+  pub runtime_resolve_base: Option<String>,
 
   pub sourcemap: bool,
   pub transform_options: TransformOptions,
@@ -47,7 +50,7 @@ impl Plugin for TransformPlugin {
       let resolved_id = ctx
         .resolve(
           args.specifier,
-          Some(&self.filename),
+          self.runtime_resolve_base.as_deref(),
           Some(PluginContextResolveOptions {
             skip_self: true,
             import_kind: args.kind,
@@ -127,6 +130,10 @@ impl Plugin for TransformPlugin {
   }
 
   fn register_hook_usage(&self) -> HookUsage {
-    HookUsage::ResolveId | HookUsage::Transform
+    if self.runtime_resolve_base.is_some() {
+      HookUsage::ResolveId | HookUsage::Transform
+    } else {
+      HookUsage::Transform
+    }
   }
 }

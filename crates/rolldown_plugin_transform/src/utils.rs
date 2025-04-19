@@ -6,7 +6,7 @@ use rolldown_common::ModuleType;
 use rolldown_plugin::SharedTransformPluginContext;
 use rolldown_utils::{clean_url::clean_url, pattern_filter::filter as pattern_filter};
 
-use crate::{TransformPlugin, types::jsx_options::JsxOptions};
+use crate::{JsxOptions, TransformPlugin};
 
 pub enum JsxRefreshFilter {
   None,
@@ -58,7 +58,7 @@ impl TransformPlugin {
     let is_js_lang = matches!(self.jsx_refresh_filter(id, cwd), JsxRefreshFilter::True)
       && ext.is_some_and(|ext| ["js", "jsx", "ts", "tsx", "mjs"].contains(&ext));
 
-    let is_refresh_disabled = self.environment_consumer == "server"
+    let is_refresh_disabled = self.is_server_consumer
       || matches!(self.jsx_refresh_filter(id, cwd), JsxRefreshFilter::False);
 
     let source_type = if is_js_lang {

@@ -48,6 +48,7 @@ impl TransformPlugin {
     JsxRefreshFilter::False
   }
 
+  #[allow(clippy::too_many_lines)]
   pub fn get_modified_transform_options(
     &self,
     ctx: &SharedTransformPluginContext,
@@ -164,14 +165,32 @@ impl TransformPlugin {
         // | false                | preserve, error        | -                    | -                     |
         // | true                 | remove                 | -                    | -                     |
         // | true                 | preserve, error        | true                 | true                  |
-        // TODO(shulaoda): port the rest logic of the `typescript` option
-        if compiler_options.verbatim_module_syntax.is_some() {
-          let mut typescript = transform_options.typescript.unwrap_or_default();
-
-          typescript.only_remove_type_imports = compiler_options.verbatim_module_syntax;
-
-          transform_options.typescript = Some(typescript);
-        }
+        let mut typescript = transform_options.typescript.unwrap_or_default();
+        typescript.only_remove_type_imports = if compiler_options.verbatim_module_syntax.is_some() {
+          compiler_options.verbatim_module_syntax
+        } else if compiler_options.preserve_value_imports.is_some()
+          || compiler_options.imports_not_used_as_values.is_some()
+        {
+          let preserve_value_imports = compiler_options.preserve_value_imports.unwrap_or(false);
+          let imports_not_used_as_values =
+            compiler_options.imports_not_used_as_values.as_deref().unwrap_or("remove");
+          if !preserve_value_imports && imports_not_used_as_values == "remove" {
+            Some(true)
+          } else if preserve_value_imports
+            && (imports_not_used_as_values == "preserve" || imports_not_used_as_values == "error")
+          {
+            Some(false)
+          } else {
+            // warnings.push(
+            //   `preserveValueImports=${preserveValueImports} + importsNotUsedAsValues=${importsNotUsedAsValues} is not supported by oxc.` +
+            //     'Please migrate to the new verbatimModuleSyntax option.',
+            // )
+            Some(false)
+          }
+        } else {
+          Some(false)
+        };
+        transform_options.typescript = Some(typescript);
       }
     }
 

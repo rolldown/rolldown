@@ -2,6 +2,7 @@ import colors from 'ansis';
 import { globSync } from 'glob';
 import fs from 'node:fs';
 import nodePath from 'node:path';
+import { dts } from 'rolldown-plugin-dts';
 import { build, BuildOptions, type Plugin } from './src/index';
 
 const isCI = !!process.env.CI;
@@ -21,6 +22,7 @@ const pkgJson = JSON.parse(
 );
 
 const bindingFile = nodePath.resolve('src/binding.js');
+const bindingDtsFile = nodePath.resolve('src/binding.d.ts');
 const bindingFileWasi = nodePath.resolve('src/rolldown-binding.wasi.cjs');
 const bindingFileWasiBrowser = nodePath.resolve(
   'src/rolldown-binding.wasi-browser.js',
@@ -28,7 +30,7 @@ const bindingFileWasiBrowser = nodePath.resolve(
 
 const configs: BuildOptions[] = [
   withShared({
-    plugins: [patchBindingJs()],
+    plugins: [patchBindingJs(), dts()],
     output: {
       dir: outputDir,
       format: 'esm',
@@ -41,6 +43,15 @@ const configs: BuildOptions[] = [
     output: {
       dir: outputDir,
       format: 'cjs',
+      entryFileNames: '[name].cjs',
+      chunkFileNames: 'shared/[name]-[hash].cjs',
+    },
+  }),
+  withShared({
+    plugins: [dts({ emitDtsOnly: true })],
+    output: {
+      dir: outputDir,
+      format: 'esm',
       entryFileNames: '[name].cjs',
       chunkFileNames: 'shared/[name]-[hash].cjs',
     },
@@ -87,13 +98,6 @@ function withShared(
     platform: isBrowserBuild ? 'browser' : 'node',
     resolve: {
       extensions: ['.js', '.cjs', '.mjs', '.ts'],
-      alias: isBrowserPkg
-        ? {
-          [bindingFile]: isBrowserBuild
-            ? bindingFileWasiBrowser
-            : bindingFileWasi,
-        }
-        : {},
     },
     external: [
       /rolldown-binding\..*\.node/,
@@ -103,30 +107,67 @@ function withShared(
       // some dependencies, e.g. zod, cannot be inlined because their types
       // are used in public APIs
       ...Object.keys(pkgJson.dependencies ?? {}),
-      bindingFileWasi,
-      bindingFileWasiBrowser,
     ],
     define: {
       'import.meta.browserBuild': String(isBrowserBuild),
     },
     ...options,
     plugins: [
+      isBrowserPkg && resolveWasiBinding(isBrowserBuild),
       isBrowserBuild && removeBuiltModules(),
       options.plugins,
     ],
   };
 }
 
+// browser package only
+// alias binding file to rolldown-binding.wasi.js and mark it as external
+// alias its dts file to rolldown-binding.d.ts without external
+function resolveWasiBinding(isBrowserBuild?: boolean): Plugin {
+  return {
+    name: 'resolve-wasi-binding',
+    resolveId: {
+      filter: { id: /\bbinding\b/ },
+      async handler(id, importer, options) {
+        const resolution = await this.resolve(id, importer, options);
+
+        if (resolution?.id === bindingFile) {
+          const mod = importer && this.getModuleInfo(importer);
+          // if importer is a dts file
+          const dtsFile = mod ? mod.meta?.dtsFile : false;
+
+          if (dtsFile) {
+            // link to src/binding.d.ts
+            return { id: bindingDtsFile };
+          } else {
+            const id = isBrowserBuild
+              ? bindingFileWasiBrowser
+              : bindingFileWasi;
+            return { id, external: 'relative' };
+          }
+        }
+
+        return resolution;
+      },
+    },
+  };
+}
+
 function removeBuiltModules(): Plugin {
   return {
     name: 'remove-built-modules',
-    resolveId(id) {
-      if (id === 'node:path') {
-        return this.resolve('pathe');
-      }
-      if (id === 'node:os' || id === 'node:worker_threads') {
-        return { id, external: true, moduleSideEffects: false };
-      }
+    resolveId: {
+      filter: { id: /node:/ },
+      handler(id) {
+        if (id === 'node:path') {
+          return this.resolve('pathe');
+        }
+        if (id === 'node:os' || id === 'node:worker_threads') {
+          // conditional import
+          return { id, external: true, moduleSideEffects: false };
+        }
+        throw new Error(`Unresolved module: ${id}`);
+      },
     },
   };
 }
@@ -254,24 +295,4 @@ function copy() {
       });
     }
   }
-
-  // Copy binding types and rollup types to dist
-  const distTypesDir = nodePath.resolve(outputDir, 'types');
-  fs.mkdirSync(distTypesDir, { recursive: true });
-  const types = globSync(['./src/*.d.ts'], {
-    absolute: true,
-  });
-  types.forEach((file) => {
-    const fileName = nodePath.basename(file);
-    console.log(
-      colors.green('[build:done]'),
-      'Copying',
-      file,
-      `to ${distTypesDir}`,
-    );
-    fs.cpSync(file, nodePath.join(distTypesDir, fileName), {
-      recursive: true,
-      force: true,
-    });
-  });
 }

@@ -15,8 +15,8 @@ use rolldown_plugin::{
 use rolldown_utils::{clean_url::clean_url, pattern_filter::StringOrRegex};
 
 pub use types::{
-  DecoratorOptions, IsolatedDeclarationsOptions, JsxOptions, ReactRefreshOptions, TransformOptions,
-  TypeScriptOptions,
+  CompilerAssumptions, DecoratorOptions, IsolatedDeclarationsOptions, JsxOptions,
+  ReactRefreshOptions, TransformOptions, TypeScriptOptions,
 };
 
 #[derive(Debug, Default)]

@@ -191,6 +191,14 @@ impl TransformPlugin {
           Some(false)
         };
         transform_options.typescript = Some(typescript);
+
+        let disable_use_define_for_class_fields = !compiler_options
+          .use_define_for_class_fields
+          .unwrap_or_else(|| is_use_define_for_class_fields(compiler_options.target.as_deref()));
+
+        let mut assumptions = transform_options.assumptions.unwrap_or_default();
+        assumptions.set_public_class_fields = Some(disable_use_define_for_class_fields);
+        transform_options.assumptions = Some(assumptions);
       }
     }
 
@@ -212,4 +220,19 @@ fn find_tsconfig_json_for_file(path: &Path) -> Option<PathBuf> {
   }
 
   None
+}
+
+fn is_use_define_for_class_fields(target: Option<&str>) -> bool {
+  let Some(target) = target else { return false };
+
+  if target.len() < 3 || !&target[..2].eq_ignore_ascii_case("es") {
+    return false;
+  }
+
+  let reset = &target[2..];
+  if reset.eq_ignore_ascii_case("esnext") {
+    return true;
+  }
+
+  reset.parse::<usize>().is_ok_and(|x| x >= 2022)
 }

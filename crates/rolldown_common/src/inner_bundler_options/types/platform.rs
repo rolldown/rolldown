@@ -1,3 +1,5 @@
+use std::fmt::Display;
+
 #[cfg(feature = "deserialize_bundler_options")]
 use schemars::JsonSchema;
 #[cfg(feature = "deserialize_bundler_options")]
@@ -22,6 +24,16 @@ impl TryFrom<&str> for Platform {
       "browser" => Ok(Self::Browser),
       "neutral" => Ok(Self::Neutral),
       _ => Err(format!("Unknown platform: {value:?}")),
+    }
+  }
+}
+
+impl Display for Platform {
+  fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+    match self {
+      Self::Node => write!(f, "node"),
+      Self::Browser => write!(f, "browser"),
+      Self::Neutral => write!(f, "neutral"),
     }
   }
 }

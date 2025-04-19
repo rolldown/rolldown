@@ -4,6 +4,7 @@ pub mod hook_load_call_end;
 pub mod hook_load_call_start;
 pub mod hook_transform_call_end;
 pub mod hook_transform_call_start;
+pub mod session_preface;
 
 #[derive(valuable::Valuable, ts_rs::TS, serde::Serialize)]
 #[ts(export)]
@@ -15,4 +16,5 @@ pub enum Action {
   HookLoadCallEnd(hook_load_call_end::HookLoadCallEnd),
   BuildStart(build_start::BuildStart),
   BuildEnd(build_end::BuildEnd),
+  BuildPreface(session_preface::SessionPreface),
 }

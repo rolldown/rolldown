@@ -5,6 +5,7 @@ import type { HookLoadCallEnd } from './HookLoadCallEnd';
 import type { HookLoadCallStart } from './HookLoadCallStart';
 import type { HookTransformCallEnd } from './HookTransformCallEnd';
 import type { HookTransformCallStart } from './HookTransformCallStart';
+import type { SessionPreface } from './SessionPreface';
 
 export type Action =
   | HookTransformCallStart
@@ -12,4 +13,5 @@ export type Action =
   | HookLoadCallStart
   | HookLoadCallEnd
   | BuildStart
-  | BuildEnd;
+  | BuildEnd
+  | SessionPreface;

@@ -1,10 +1,12 @@
 use std::sync::Arc;
 
 use rolldown_common::{FileEmitter, NormalizedBundlerOptions};
+use rolldown_debug::{action, trace_action};
 use rolldown_error::BuildDiagnostic;
 use rolldown_fs::OsFileSystem;
 use rolldown_plugin::{__inner::SharedPluginable, PluginDriver};
 use rolldown_resolver::{ResolveError, Resolver};
+use valuable::Valuable;
 
 use crate::{
   Bundler, BundlerOptions, SharedResolver,
@@ -38,11 +40,13 @@ impl BundlerBuilder {
       debug_tracer = Some(rolldown_debug::DebugTracer::init(Arc::clone(&session_id)));
     }
     let session_span = tracing::trace_span!("Session", session_id = &*session_id);
+    let _entered = session_span.enter();
 
     let maybe_guard = rolldown_tracing::try_init_tracing();
 
     let NormalizeOptionsReturn { mut options, resolve_options, mut warnings } =
       normalize_options(self.options);
+
     let tsconfig_filename = resolve_options.tsconfig_filename.clone();
     let resolver: SharedResolver =
       Resolver::new(resolve_options, options.platform, options.cwd.clone(), OsFileSystem).into();
@@ -60,6 +64,24 @@ impl BundlerBuilder {
     let file_emitter = Arc::new(FileEmitter::new(Arc::clone(&options)));
 
     apply_inner_plugins(&mut self.plugins);
+    trace_action!(
+      true,
+      action::SessionPreface {
+        kind: "SessionPreface",
+        input: options
+          .input
+          .iter()
+          .map(|inner| action::InputItem { name: inner.name.clone(), import: inner.import.clone() })
+          .collect(),
+        cwd: options.cwd.to_string_lossy().into_owned(),
+        format: options.format.to_string(),
+        dir: options.dir.clone(),
+        minify: options.minify.is_enabled(),
+        platform: options.platform.to_string(),
+        plugins: self.plugins.iter().map(|plugin| plugin.call_name().into_owned()).collect(),
+      }
+    );
+
     Bundler {
       closed: false,
       plugin_driver: PluginDriver::new_shared(self.plugins, &resolver, &file_emitter, &options),
@@ -71,7 +93,7 @@ impl BundlerBuilder {
       _log_guard: maybe_guard,
       cache: ScanStageCache::default(),
       hmr_manager: None,
-      session_span,
+      session_span: session_span.clone(),
       _debug_tracer: debug_tracer,
     }
   }

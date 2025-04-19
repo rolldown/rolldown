@@ -5,3 +5,5 @@ export * from './HookLoadCallEnd.js';
 export * from './HookLoadCallStart.js';
 export * from './HookTransformCallEnd.js';
 export * from './HookTransformCallStart.js';
+export * from './InputItem.js';
+export * from './SessionPreface.js';

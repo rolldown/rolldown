@@ -6,16 +6,44 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## main.js
 
 ```js
+//#region a.js
+/**
+* default export function
+*/
+function a() {}
+
+//#endregion
+//#region b.js
+/**
+* default export class
+*/
+var b = class {};
+
+//#endregion
 //#region main.js
 /**
-* hello
+* named export function
 */
-function hello() {}
+function foo() {
+	return a + b;
+}
 /**
-* 666
+* named export class
+*/
+var Bar = class {};
+/**
+* named export const decl
+*/
+var Baz = "baz";
+/**
+* default export expr
+*/
+var main_default = Baz;
+/**
+* stmt
 */
 console.log(666);
 
 //#endregion
-export { hello as default };
+export { Bar, Baz, main_default as default, foo };
 ```

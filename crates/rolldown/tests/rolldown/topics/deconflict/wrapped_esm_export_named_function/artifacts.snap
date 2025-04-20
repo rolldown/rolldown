@@ -1,6 +1,5 @@
 ---
 source: crates/rolldown_testing/src/integration_test.rs
-snapshot_kind: text
 ---
 # Assets
 
@@ -41,7 +40,7 @@ init_foo();
 
 ```
 - ../foo.js
-(2:7) "function " --> (19:0) "function "
+(2:0) "export function " --> (19:0) "function "
 (2:16) "foo(" --> (19:9) "foo$1("
 (2:20) "a$1) " --> (19:15) "a$1$1) "
 (2:25) "{\n" --> (19:22) "{\n"
@@ -56,6 +55,7 @@ init_foo();
 - ../bar.js
 (0:0) "import { foo } from './foo'" --> (29:0) "init_foo()"
 (0:27) "\n" --> (29:10) ";\n"
+(2:0) "export default " --> (30:0) "var bar_default = "
 (2:15) "{ " --> (30:18) "{ "
 (2:17) "foo }" --> (30:20) "foo: foo$1 "
 (2:22) [invalid] --> (30:31)

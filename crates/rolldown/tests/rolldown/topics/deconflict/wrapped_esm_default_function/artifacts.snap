@@ -61,6 +61,7 @@ init_foo();
 - ../bar.js
 (0:0) "import foo from './foo'" --> (30:0) "init_foo()"
 (0:23) "\n" --> (30:10) ";\n"
+(2:0) "export default " --> (31:0) "var bar_default = "
 (2:15) "{ " --> (31:18) "{ "
 (2:17) "foo }" --> (31:20) "foo: foo$1 "
 (2:22) [invalid] --> (31:31)

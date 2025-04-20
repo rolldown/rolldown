@@ -1,6 +1,5 @@
 ---
 source: crates/rolldown_testing/src/integration_test.rs
-snapshot_kind: text
 ---
 # Assets
 
@@ -27,7 +26,7 @@ export { baz, baz$1 as baz2 };
 
 ```
 - ../names.js
-(0:7) "const " --> (3:0) "const "
+(0:0) "export const " --> (3:0) "const "
 (0:13) "{ " --> (3:6) "{ "
 (0:15) "foo: " --> (3:8) "foo: "
 (0:20) "{ " --> (3:13) "{ "

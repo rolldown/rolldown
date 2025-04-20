@@ -46,6 +46,7 @@ assert.strictEqual(typeof foo, "function");
 (3:23) "\n" --> (5:24) ";\n"
 (4:1) "\n" --> (6:0) "}\n"
 - ../bar.js
+(2:0) "export default " --> (10:0) "var bar_default = "
 (2:15) "{ " --> (10:18) "{ "
 (2:17) "foo }" --> (10:20) "foo: foo$1 "
 (2:22) [invalid] --> (10:31)

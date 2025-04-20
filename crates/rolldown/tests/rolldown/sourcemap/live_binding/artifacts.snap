@@ -1,6 +1,5 @@
 ---
 source: crates/rolldown_testing/src/integration_test.rs
-snapshot_kind: text
 ---
 # Assets
 
@@ -60,7 +59,7 @@ Object.defineProperty(exports, 'shared', {
 (6:6) "\n" --> (7:6) ";\n"
 
 - ../shared.js
-(0:7) "function " --> (3:0) "function "
+(0:0) "export function " --> (3:0) "function "
 (0:16) "shared() " --> (3:9) "shared() "
 (0:25) "{\n" --> (3:18) "{\n"
 (1:2) "console." --> (4:0) "\tconsole."

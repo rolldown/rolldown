@@ -1,6 +1,5 @@
 ---
 source: crates/rolldown_testing/src/integration_test.rs
-snapshot_kind: text
 ---
 # Assets
 
@@ -84,7 +83,7 @@ export { a, b, c, d, e };
 
 ```
 - ../names.js
-(0:7) "const " --> (3:0) "const "
+(0:0) "export const " --> (3:0) "const "
 (0:13) "[" --> (3:6) "["
 (0:14) "a, " --> (3:7) "a$1, "
 (0:17) "b, " --> (3:12) "b$1, "
@@ -100,7 +99,7 @@ export { a, b, c, d, e };
 (0:56) "'e2']" --> (8:1) "\"e2\"\n"
 (0:61) "\n" --> (9:0) "];\n"
 - ../main.js
-(9:7) "const " --> (13:0) "const "
+(9:0) "export const " --> (13:0) "const "
 (9:13) "[" --> (13:6) "["
 (9:14) "a, " --> (13:7) "a, "
 (9:17) "b, " --> (13:10) "b, "

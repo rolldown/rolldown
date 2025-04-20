@@ -55,7 +55,7 @@ impl TransformPlugin {
     id: &str,
     cwd: &str,
     ext: Option<&str>,
-  ) -> (SourceType, TransformOptions) {
+  ) -> anyhow::Result<(SourceType, TransformOptions)> {
     let is_js_lang = matches!(self.jsx_refresh_filter(id, cwd), JsxRefreshFilter::True)
       && ext.is_some_and(|ext| ["js", "jsx", "ts", "tsx", "mjs"].contains(&ext));
 
@@ -230,7 +230,7 @@ impl TransformPlugin {
       }
     }
 
-    (source_type, transform_options.into())
+    Ok((source_type, transform_options.try_into().map_err(|err: String| anyhow::anyhow!(err))?))
   }
 }
 

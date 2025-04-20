@@ -1,4 +1,5 @@
 use itertools::Either;
+use oxc::transformer::EnvOptions;
 
 use super::{
   compiler_assumptions::CompilerAssumptions, decorator_options::DecoratorOptions,
@@ -20,17 +21,18 @@ pub struct TransformOptions {
   pub assumptions: Option<CompilerAssumptions>,
 }
 
-impl From<TransformOptions> for oxc::transformer::TransformOptions {
-  fn from(value: TransformOptions) -> Self {
-    // let env = match options.target {
-    //   Some(Either::A(s)) => EnvOptions::from_target(&s)?,
-    //   Some(Either::B(list)) => EnvOptions::from_target_list(&list)?,
-    //   _ => EnvOptions::default(),
-    // };
-    let env = oxc::transformer::EnvOptions::default();
-    Self {
+impl TryFrom<TransformOptions> for oxc::transformer::TransformOptions {
+  type Error = String;
+
+  fn try_from(value: TransformOptions) -> Result<Self, Self::Error> {
+    let env = match value.target {
+      Some(Either::Left(s)) => EnvOptions::from_target(&s)?,
+      Some(Either::Right(list)) => EnvOptions::from_target_list(&list)?,
+      _ => EnvOptions::default(),
+    };
+    Ok(Self {
       // cwd: options.cwd.map(PathBuf::from).unwrap_or_default(),
-      // assumptions: options.assumptions.map(Into::into).unwrap_or_default(),
+      assumptions: value.assumptions.map(Into::into).unwrap_or_default(),
       typescript: value
         .typescript
         .map(oxc::transformer::TypeScriptOptions::from)
@@ -41,8 +43,7 @@ impl From<TransformOptions> for oxc::transformer::TransformOptions {
           if s == "preserve" {
             oxc::transformer::JsxOptions::disable()
           } else {
-            // return Err(format!("Invalid jsx option: `{s}`."));
-            oxc::transformer::JsxOptions::default()
+            return Err(format!("Invalid jsx option: `{s}`."));
           }
         }
         Some(Either::Right(options)) => oxc::transformer::JsxOptions::from(options),
@@ -54,6 +55,6 @@ impl From<TransformOptions> for oxc::transformer::TransformOptions {
       //   .helpers
       //   .map_or_else(HelperLoaderOptions::default, HelperLoaderOptions::from),
       ..Default::default()
-    }
+    })
   }
 }

@@ -363,9 +363,9 @@ impl<'ast> VisitMut<'ast> for ScopeHoistingFinalizer<'_, 'ast> {
   }
 
   fn visit_import_expression(&mut self, expr: &mut ast::ImportExpression<'ast>) {
-    // Make sure the import expression is in correct form. If it's not, we should leave it as it is.
-    match &mut expr.source {
-      ast::Expression::StringLiteral(str) if expr.options.is_none() => {
+    if expr.options.is_none() {
+      // Make sure the import expression is in correct form. If it's not, we should leave it as it is.
+      if let ast::Expression::StringLiteral(str) = &mut expr.source {
         let rec_id = self.ctx.module.imports[&expr.span];
         let rec = &self.ctx.module.import_records[rec_id];
         let importee_id = rec.resolved_module;
@@ -387,7 +387,6 @@ impl<'ast> VisitMut<'ast> for ScopeHoistingFinalizer<'_, 'ast> {
           }
         }
       }
-      _ => {}
     }
 
     walk_mut::walk_import_expression(self, expr);

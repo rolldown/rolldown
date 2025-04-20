@@ -1,6 +1,5 @@
 ---
 source: crates/rolldown_testing/src/integration_test.rs
-snapshot_kind: text
 ---
 # Assets
 
@@ -25,6 +24,7 @@ assert.strictEqual(value.foo, "foo");
 
 ```
 - ../foo.js
+(0:0) "export default " --> (3:0) "var foo_default = "
 (0:15) "'foo'" --> (3:18) "\"foo\";\n"
 - ../main.js
 (3:0) "const " --> (7:0) "const "

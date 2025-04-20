@@ -244,8 +244,8 @@ expression: output
 - stmt-export-default-before-fn-name-!~{007}~.js => stmt-export-default-before-fn-name-Cpxe47cZ.js
 - stmt-export-default-before-gen-fn-anon-!~{008}~.js => stmt-export-default-before-gen-fn-anon-D7e_4kUj.js
 - stmt-export-default-before-gen-fn-name-!~{009}~.js => stmt-export-default-before-gen-fn-name-C9IbedIm.js
-- stmt-export-fn-!~{003}~.js => stmt-export-fn-CtfDcPDX.js
-- stmt-export-local-!~{005}~.js => stmt-export-local-B7PyidQ9.js
+- stmt-export-fn-!~{003}~.js => stmt-export-fn-Bilmv0Zm.js
+- stmt-export-local-!~{005}~.js => stmt-export-local-Buuvd7B7.js
 - stmt-fn-!~{002}~.js => stmt-fn-CxCyePrn.js
 - stmt-local-!~{004}~.js => stmt-local-B1OTwJnp.js
 
@@ -1115,19 +1115,19 @@ expression: output
 # tests/esbuild/default/legal_comments_avoid_slash_tag_end_of_file
 
 - entry-!~{001}~.js => entry-DC4KoLXg.js
-- entry-!~{000}~.js => entry-uA1Au3-Q.js
+- entry-!~{000}~.js => entry-DNZPsB0q.js
 - entry2.css
 
 # tests/esbuild/default/legal_comments_avoid_slash_tag_external
 
 - entry-!~{001}~.js => entry-DC4KoLXg.js
-- entry-!~{000}~.js => entry-uA1Au3-Q.js
+- entry-!~{000}~.js => entry-DNZPsB0q.js
 - entry2.css
 
 # tests/esbuild/default/legal_comments_avoid_slash_tag_inline
 
 - entry-!~{001}~.js => entry-DC4KoLXg.js
-- entry-!~{000}~.js => entry-uA1Au3-Q.js
+- entry-!~{000}~.js => entry-DNZPsB0q.js
 - entry2.css
 
 # tests/esbuild/default/legal_comments_end_of_file
@@ -4660,7 +4660,7 @@ expression: output
 
 # tests/rolldown/issues/4006
 
-- main-!~{000}~.js => main-BehtKK0L.js
+- main-!~{000}~.js => main-C2pFBQES.js
 
 # tests/rolldown/issues/4129
 

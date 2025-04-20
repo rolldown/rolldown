@@ -1,6 +1,5 @@
 ---
 source: crates/rolldown_testing/src/integration_test.rs
-snapshot_kind: text
 ---
 # Assets
 
@@ -27,16 +26,18 @@ assert.equal(c, 1);
 
 ```
 - ../foo.js
+(0:0) "export const " --> (3:0) "const "
 (0:13) "{ " --> (3:6) "{ "
 (0:15) "baz }" --> (3:8) "baz }"
 (0:20) " = " --> (3:13) " = "
 (0:23) "{ " --> (3:16) "{ "
 (0:25) "baz: " --> (3:18) "baz: "
 (0:30) "'baz' }" --> (3:23) "\"baz\" "
-(0:37) ", " --> (3:29) "};\n"
+(0:37) ", foo = 'foo', bar = 'bar';\n" --> (3:29) "};\n"
+(2:1) [invalid] --> (4:0)
 (0:39) "foo = " --> (4:6) "foo = "
 (0:45) "'foo', bar = 'bar';\n" --> (4:12) "\"foo\";\n"
-(1:7) "const " --> (5:0) "const "
+(1:0) "export const " --> (5:0) "const "
 (1:13) "[" --> (5:6) "["
 (1:14) "c, " --> (5:7) "c, "
 (1:17) "d]" --> (5:10) "d]"

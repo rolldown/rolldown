@@ -8,7 +8,7 @@ use oxc::{
     },
   },
   semantic::{ReferenceId, SymbolId},
-  span::{Atom, GetSpan, SPAN},
+  span::{Atom, GetSpan, GetSpanMut, SPAN},
 };
 use rolldown_common::{
   AstScopes, ExportsKind, ImportRecordIdx, ImportRecordMeta, Module, ModuleIdx, ModuleType,
@@ -666,7 +666,7 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
       }
     }
     Some(self.snippet.builder.declaration_variable(
-      SPAN,
+      class.span,
       VariableDeclarationKind::Var,
       self.snippet.builder.vec1(self.snippet.builder.variable_declarator(
         SPAN,
@@ -1058,6 +1058,7 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
           }
         } else if let Some(default_decl) = top_stmt.as_export_default_declaration_mut() {
           use ast::ExportDefaultDeclarationKind;
+          let default_decl_span = default_decl.span;
           match &mut default_decl.declaration {
             decl @ ast::match_expression!(ExportDefaultDeclarationKind) => {
               let expr = decl.to_expression_mut();
@@ -1076,10 +1077,7 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
                   self.canonical_name_for(self.ctx.module.default_export_ref);
                 func.id = Some(self.snippet.id(canonical_name_for_default_export_ref, SPAN));
               }
-              let mut func = func.as_mut().take_in(self.alloc);
-              // Transfer span of ExportDefaultDeclaration to FunctionDeclaration to preserve the
-              // comments
-              func.span = default_decl.span;
+              let func = func.as_mut().take_in(self.alloc);
               top_stmt = ast::Statement::FunctionDeclaration(ArenaBox::new_in(func, self.alloc));
             }
             ast::ExportDefaultDeclarationKind::ClassDeclaration(class) => {
@@ -1090,19 +1088,27 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
                   self.canonical_name_for(self.ctx.module.default_export_ref);
                 class.id = Some(self.snippet.id(canonical_name_for_default_export_ref, SPAN));
               }
-              top_stmt = ast::Statement::ClassDeclaration(ArenaBox::new_in(
-                class.as_mut().take_in(self.alloc),
-                self.alloc,
-              ));
+
+              // Class should be handled specially, because the `ClassDecl` will be transformed again.
+              let mut class = class.as_mut().take_in(self.alloc);
+              class.span = default_decl_span;
+              top_stmt = ast::Statement::ClassDeclaration(ArenaBox::new_in(class, self.alloc));
             }
             _ => {}
           }
+
+          // Transfer span of ExportDefaultDeclaration to FunctionDeclaration to preserve the
+          // comments
+          *top_stmt.span_mut() = default_decl_span;
         } else if let Some(named_decl) = top_stmt.as_export_named_declaration_mut() {
           if named_decl.source.is_none() {
+            let named_decl_span = named_decl.span;
             if let Some(decl) = &mut named_decl.declaration {
               // `export var foo = 1` => `var foo = 1`
               // `export function foo() {}` => `function foo() {}`
               // `export class Foo {}` => `class Foo {}`
+
+              *decl.span_mut() = named_decl_span;
               top_stmt = ast::Statement::from(decl.take_in(self.alloc));
             } else {
               // `export { foo }`

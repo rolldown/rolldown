@@ -71,6 +71,7 @@ export async function* d() {
 ### rolldown
 ```js
 //#region stmt-export-fn.js
+//! These should all have "no side effects"
 /* @__NO_SIDE_EFFECTS__ */
 function a() {}
 /* @__NO_SIDE_EFFECTS__ */
@@ -180,6 +181,7 @@ export const c2 = /* @__NO_SIDE_EFFECTS__ */ () => {
 ### rolldown
 ```js
 //#region stmt-export-local.js
+//! Only "c0" and "c2" should have "no side effects" (Rollup only respects "const" and only for the first one)
 var v0 = function() {};
 var v1 = function() {};
 let l0 = function() {};

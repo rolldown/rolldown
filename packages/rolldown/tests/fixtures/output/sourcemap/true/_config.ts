@@ -21,7 +21,7 @@ export default defineTest({
       const map = JSON.parse(output.output[1].source.toString())
       expect(map.file).toMatch('main.js')
       expect(map.mappings).toMatchInlineSnapshot(
-        `";MAAa,MAAM;;;;ACEnB,QAAQ,IAAI,IAAI"`,
+        `";AAAA,MAAa,MAAM;;;;ACEnB,QAAQ,IAAI,IAAI"`,
       )
     }
   },

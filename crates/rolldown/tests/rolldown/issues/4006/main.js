@@ -1,10 +1,25 @@
+import a from './a.js';
+import b from './b.js';
 /**
- * hello
+ * named export function
  */
-export default function hello() {}
-
+export function foo() {
+  return a + b
+}
 /**
- * 666
+ * named export class
+ */
+export class Bar {}
+/**
+ * named export const decl
+ */
+export var Baz = 'baz';
+/**
+ * default export expr
+ */
+export default Baz;
+/**
+ * stmt
  */
 console.log(666);
 

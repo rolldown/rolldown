@@ -101,36 +101,28 @@ impl<'ast> ScopeHoistingFinalizer<'_, 'ast> {
 
   pub fn rewrite_simple_assignment_target(
     &self,
-    simple_target: &mut ast::SimpleAssignmentTarget<'ast>,
+    target: &mut ast::SimpleAssignmentTarget<'ast>,
   ) -> Option<()> {
     // Some `IdentifierReference`s constructed by bundler don't have `ReferenceId` and we just ignore them.
-    let ast::SimpleAssignmentTarget::AssignmentTargetIdentifier(target_id_ref) = simple_target
-    else {
-      return None;
-    };
+    if let ast::SimpleAssignmentTarget::AssignmentTargetIdentifier(target_id_ref) = target {
+      let reference_id = target_id_ref.reference_id.get()?;
+      let symbol_id = self.scope.symbol_id_for(reference_id)?;
 
-    let reference_id = target_id_ref.reference_id.get()?;
+      let symbol_ref = (self.ctx.id, symbol_id).into();
+      let canonical_ref = self.ctx.symbol_db.canonical_ref_for(symbol_ref);
+      let symbol = self.ctx.symbol_db.get(canonical_ref);
 
-    let symbol_id = self.scope.symbol_id_for(reference_id)?;
-
-    let symbol_ref: SymbolRef = (self.ctx.id, symbol_id).into();
-    let canonical_ref = self.ctx.symbol_db.canonical_ref_for(symbol_ref);
-    let symbol = self.ctx.symbol_db.get(canonical_ref);
-
-    match &symbol.namespace_alias {
-      Some(ns_alias) => {
-        let canonical_ns_name = self.canonical_name_for(ns_alias.namespace_ref);
-        let prop_name = &ns_alias.property_name;
-        let access_expr =
-          self.snippet.literal_prop_access_member_expr(canonical_ns_name, prop_name);
-        *simple_target = ast::SimpleAssignmentTarget::from(access_expr);
-      }
-      _ => {
+      if let Some(ns_alias) = &symbol.namespace_alias {
+        *target = ast::SimpleAssignmentTarget::from(self.snippet.literal_prop_access_member_expr(
+          self.canonical_name_for(ns_alias.namespace_ref),
+          &ns_alias.property_name,
+        ));
+      } else {
         let canonical_name = self.canonical_name_for(canonical_ref);
         if target_id_ref.name != canonical_name.as_str() {
           target_id_ref.name = self.snippet.atom(canonical_name);
         }
-        *target_id_ref.reference_id.get_mut() = None;
+        target_id_ref.reference_id.take();
       }
     }
     None

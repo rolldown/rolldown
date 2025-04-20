@@ -102,26 +102,10 @@ impl LinkStage<'_> {
 
 /// if no export is used, and the module has no side effects, the module should not be included
 fn include_module(ctx: &mut Context, module: &NormalModule) {
-  fn forcefully_include_all_statements(ctx: &mut Context, module: &NormalModule) {
-    // Skip the first statement, which is the namespace object. It should be included only if it is used no matter
-    // tree shaking is enabled or not.
-    module.stmt_infos.iter_enumerated().skip(1).for_each(|(stmt_info_id, stmt_info)| {
-      if stmt_info.force_tree_shaking {
-        if stmt_info.side_effect {
-          // If `force_tree_shaking` is true, the statement should be included either by itself due to having side effects
-          // or by other statements referencing it.
-          include_statement(ctx, module, stmt_info_id);
-        }
-      } else {
-        include_statement(ctx, module, stmt_info_id);
-      }
-    });
-  }
-
-  let is_included = ctx.is_module_included_vec[module.idx];
-  if is_included {
+  if ctx.is_module_included_vec[module.idx] {
     return;
   }
+
   ctx.is_module_included_vec[module.idx] = true;
 
   if module.idx == ctx.runtime_id && !ctx.options.is_hmr_enabled() {
@@ -142,7 +126,19 @@ fn include_module(ctx: &mut Context, module: &NormalModule) {
       }
     });
   } else {
-    forcefully_include_all_statements(ctx, module);
+    // Skip the first statement, which is the namespace object. It should be included only if it is used no matter
+    // tree shaking is enabled or not.
+    module.stmt_infos.iter_enumerated().skip(1).for_each(|(stmt_info_id, stmt_info)| {
+      if stmt_info.force_tree_shaking {
+        if stmt_info.side_effect {
+          // If `force_tree_shaking` is true, the statement should be included either by itself due to having side effects
+          // or by other statements referencing it.
+          include_statement(ctx, module, stmt_info_id);
+        }
+      } else {
+        include_statement(ctx, module, stmt_info_id);
+      }
+    });
   }
 
   let module_meta = &ctx.metas[module.idx];

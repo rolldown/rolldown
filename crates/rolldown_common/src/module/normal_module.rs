@@ -363,7 +363,7 @@ pub enum EsmNamespaceKind {
 }
 
 impl EsmNamespaceKind {
-  pub fn debug_label(&self) -> &'static str {
+  pub fn debug_label(self) -> &'static str {
     match self {
       EsmNamespaceKind::Default => "esm_namespace_ref_derived_from_module_exports",
       EsmNamespaceKind::NodeMode => "esm_namespace_ref_derived_from_module_exports node",

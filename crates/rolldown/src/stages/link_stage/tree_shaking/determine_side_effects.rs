@@ -32,7 +32,7 @@ impl LinkStage<'_> {
   ) -> DeterminedSideEffects {
     let module = &self.module_table.modules[module_idx];
 
-    match &mut cache[module_idx] {
+    match cache[module_idx] {
       SideEffectCache::None => {
         cache[module_idx] = SideEffectCache::Visited;
       }
@@ -40,32 +40,34 @@ impl LinkStage<'_> {
         return *module.side_effects();
       }
       SideEffectCache::Cache(v) => {
-        return *v;
+        return v;
       }
     }
 
-    let ret = match *module.side_effects() {
+    let module_side_effects = *module.side_effects();
+    match module_side_effects {
       // should keep as is if the side effects is derived from package.json, it is already
       // true or `no-treeshake`
-      DeterminedSideEffects::UserDefined(_) | DeterminedSideEffects::NoTreeshake => {
-        *module.side_effects()
-      }
-      DeterminedSideEffects::Analyzed(v) if v => *module.side_effects(),
+      DeterminedSideEffects::Analyzed(true)
+      | DeterminedSideEffects::UserDefined(_)
+      | DeterminedSideEffects::NoTreeshake => module_side_effects,
       // this branch means the side effects of the module is analyzed `false`
-      DeterminedSideEffects::Analyzed(_) => match module {
-        Module::Normal(module) => DeterminedSideEffects::Analyzed(
-          module.import_records.iter().filter(|rec| !rec.is_dummy()).any(|import_record| {
-            self
-              .determine_side_effects_for_module(import_record.resolved_module, cache)
-              .has_side_effects()
-          }),
-        ),
-        Module::External(module) => module.side_effects,
+      DeterminedSideEffects::Analyzed(false) => match module {
+        Module::Normal(module) => {
+          let side_effects = DeterminedSideEffects::Analyzed(
+            module.import_records.iter().filter(|rec| !rec.is_dummy()).any(|import_record| {
+              self
+                .determine_side_effects_for_module(import_record.resolved_module, cache)
+                .has_side_effects()
+            }),
+          );
+
+          cache[module_idx] = SideEffectCache::Cache(side_effects);
+
+          side_effects
+        }
+        Module::External(_) => module_side_effects,
       },
-    };
-
-    cache[module_idx] = SideEffectCache::Cache(ret);
-
-    ret
+    }
   }
 }

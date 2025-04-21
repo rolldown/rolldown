@@ -45,11 +45,17 @@ where
       None
     };
 
+    let is_meta_event = event.fields().any(|f| f.name() == "is_meta");
+
     let session_id = session_id.as_ref().map_or(DEFAULT_SESSION_ID, |s| &s.0);
 
     std::fs::create_dir_all(format!(".rolldown/{session_id}")).ok();
 
-    let log_filename: Arc<str> = format!(".rolldown/{session_id}/log.json").into();
+    let log_filename: Arc<str> = if is_meta_event {
+      format!(".rolldown/{session_id}/meta.json").into()
+    } else {
+      format!(".rolldown/{session_id}/log.json").into()
+    };
 
     if !OPENED_FILE_HANDLES.contains_key(&log_filename) {
       let file = OpenOptions::new()

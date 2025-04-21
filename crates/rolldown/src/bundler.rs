@@ -55,7 +55,7 @@ impl Bundler {
 impl Bundler {
   #[tracing::instrument(level = "debug", skip_all, parent = &self.session_span)]
   pub async fn write(&mut self) -> BuildResult<BundleOutput> {
-    trace_action!(action::BuildStart { kind: "BuildStart" });
+    self.build_start();
     let scan_stage_output = self.scan(vec![]).await?;
 
     let ret = self.bundle_write(scan_stage_output).await;
@@ -65,7 +65,7 @@ impl Bundler {
 
   #[tracing::instrument(level = "debug", skip_all, parent = &self.session_span)]
   pub async fn generate(&mut self) -> BuildResult<BundleOutput> {
-    trace_action!(action::BuildStart { kind: "BuildStart" });
+    self.build_start();
     let scan_stage_output = self.scan(vec![]).await?;
 
     let ret = self.bundle_up(scan_stage_output, /* is_write */ false).await.map(|mut output| {
@@ -90,7 +90,6 @@ impl Bundler {
 
   #[tracing::instrument(target = "devtool", level = "debug", skip_all)]
   pub async fn scan(&mut self, changed_ids: Vec<ArcStr>) -> BuildResult<NormalizedScanStageOutput> {
-    trace_action!(action::BuildStart { kind: "BuildStart" });
     let mode =
       if !self.options.experimental.is_incremental_build_enabled() || changed_ids.is_empty() {
         ScanMode::Full
@@ -124,7 +123,6 @@ impl Bundler {
     let scan_stage_output =
       self.normalize_scan_stage_output_and_update_cache(scan_stage_output, is_full_scan_mode);
     self.plugin_driver.build_end(None).await?;
-    trace_action!(action::BuildEnd { kind: "BuildEnd" });
     Ok(scan_stage_output)
   }
 
@@ -276,6 +274,10 @@ impl Bundler {
       let (scoping, _) = db_for_module.ast_scopes.into_inner();
       cache_db.ast_scopes.set_scoping(scoping);
     }
+  }
+
+  pub fn build_start(&self) {
+    trace_action!(action::BuildStart { kind: "BuildStart" });
   }
 }
 

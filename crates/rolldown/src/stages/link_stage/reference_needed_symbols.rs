@@ -42,7 +42,7 @@ impl LinkStage<'_> {
         let stmt_infos = unsafe { &mut *(addr_of!(importer.stmt_infos).cast_mut()) };
         let importer_side_effect = unsafe { &mut *(addr_of!(importer.side_effects).cast_mut()) };
 
-        stmt_infos.infos.iter_mut_enumerated().for_each(|(_stmt_idx, stmt_info)| {
+        stmt_infos.infos.iter_mut().for_each(|stmt_info| {
           stmt_info.import_records.iter().for_each(|rec_id| {
             let rec = &importer.import_records[*rec_id];
             if rec.is_dummy() {

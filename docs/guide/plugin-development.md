@@ -119,5 +119,5 @@ The following properties are supported by each hook:
 
 > [!NOTE]
 > `id` is treated as glob pattern when you passing `string`, and treated as regular expression when you passing `RegExp`.
-> You could only passing *id* with `RegExp` in `resolveId` filter, because there `id` parameter in `resolveId` hook is relative path, 
+> You could only passing _id_ with `RegExp` in `resolveId` filter, because there `id` parameter in `resolveId` hook is relative path,
 > `glob` usually needs to compare against absolute path.

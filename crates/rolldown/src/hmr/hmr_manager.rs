@@ -186,7 +186,7 @@ impl HmrManager {
       let ast = &mut self.input.index_ecma_ast[ecma_ast_idx].0;
 
       ast.program.with_mut(|fields| {
-        let scoping = EcmaAst::make_semantic(fields.program).into_scoping();
+        let scoping = EcmaAst::make_semantic(fields.program, /*with_cfg*/ false).into_scoping();
         let mut finalizer = HmrAstFinalizer {
           modules,
           alloc: fields.allocator,

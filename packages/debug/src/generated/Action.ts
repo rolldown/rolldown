@@ -3,6 +3,8 @@ import type { BuildEnd } from './BuildEnd';
 import type { BuildStart } from './BuildStart';
 import type { HookLoadCallEnd } from './HookLoadCallEnd';
 import type { HookLoadCallStart } from './HookLoadCallStart';
+import type { HookResolveIdCallEnd } from './HookResolveIdCallEnd';
+import type { HookResolveIdCallStart } from './HookResolveIdCallStart';
 import type { HookTransformCallEnd } from './HookTransformCallEnd';
 import type { HookTransformCallStart } from './HookTransformCallStart';
 
@@ -12,4 +14,6 @@ export type Action =
   | HookLoadCallStart
   | HookLoadCallEnd
   | BuildStart
-  | BuildEnd;
+  | BuildEnd
+  | HookResolveIdCallStart
+  | HookResolveIdCallEnd;

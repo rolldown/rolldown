@@ -81,10 +81,10 @@ impl GenerateStage<'_> {
       .collect::<Vec<_>>();
 
     let index_sorted_imports_from_other_chunks = index_imports_from_other_chunks
-      .into_iter_enumerated()
+      .into_iter()
       .collect_vec()
       .into_par_iter()
-      .map(|(_chunk_id, importee_map)| {
+      .map(|importee_map| {
         importee_map
           .into_iter()
           .sorted_by_key(|(importee_chunk_id, _)| {

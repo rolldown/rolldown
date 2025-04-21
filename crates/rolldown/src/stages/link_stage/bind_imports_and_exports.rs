@@ -481,8 +481,8 @@ impl LinkStage<'_> {
 
     debug_assert_eq!(self.metas.len(), resolved_meta_data.len());
     self.warnings.extend(warnings);
-    self.metas.iter_mut_enumerated().zip(resolved_meta_data).for_each(
-      |((_idx, meta), (resolved_map, side_effects_dependency))| {
+    self.metas.iter_mut().zip(resolved_meta_data).for_each(
+      |(meta, (resolved_map, side_effects_dependency))| {
         meta.resolved_member_expr_refs = resolved_map;
         meta.dependencies.extend(side_effects_dependency);
       },

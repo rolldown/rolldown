@@ -263,7 +263,7 @@ impl NormalModule {
     symbol_db: &mut SymbolRefDb,
     runtime_module: &RuntimeModuleBrief,
     wrap_ref: SymbolRef,
-    kind: EsmNamespaceKind,
+    is_node_mode: bool,
   ) -> Option<EsmNamespaceInCjs> {
     let esm_namespace_ref = symbol_db.create_facade_root_symbol_ref(
       self.idx,
@@ -276,7 +276,11 @@ impl NormalModule {
       referenced_symbols: vec![wrap_ref.into(), runtime_module.resolve_symbol("__toESM").into()],
       force_tree_shaking: true,
       #[cfg(debug_assertions)]
-      debug_label: Some(kind.debug_label().to_string()),
+      debug_label: Some(if is_node_mode {
+        "esm_namespace_ref_derived_from_module_exports node".to_string()
+      } else {
+        "esm_namespace_ref_derived_from_module_exports".to_string()
+      }),
       ..Default::default()
     });
 
@@ -296,12 +300,8 @@ impl NormalModule {
     if self.esm_namespace_in_cjs.is_some() {
       return;
     }
-    self.esm_namespace_in_cjs = self.generate_esm_namespace_in_cjs_internal(
-      symbol_db,
-      runtime_module,
-      wrap_ref,
-      EsmNamespaceKind::Default,
-    );
+    self.esm_namespace_in_cjs =
+      self.generate_esm_namespace_in_cjs_internal(symbol_db, runtime_module, wrap_ref, false);
   }
 
   /// Generates
@@ -317,12 +317,8 @@ impl NormalModule {
     if self.esm_namespace_in_cjs_node_mode.is_some() {
       return;
     }
-    self.esm_namespace_in_cjs_node_mode = self.generate_esm_namespace_in_cjs_internal(
-      symbol_db,
-      runtime_module,
-      wrap_ref,
-      EsmNamespaceKind::NodeMode,
-    );
+    self.esm_namespace_in_cjs_node_mode =
+      self.generate_esm_namespace_in_cjs_internal(symbol_db, runtime_module, wrap_ref, true);
   }
 
   #[expect(clippy::cast_precision_loss)]
@@ -354,19 +350,4 @@ impl DerefMut for NormalModule {
 
 pub enum ModuleRenderArgs<'any> {
   Ecma { ast: &'any EcmaAst },
-}
-
-#[derive(Debug, Clone, Copy)]
-pub enum EsmNamespaceKind {
-  Default,
-  NodeMode,
-}
-
-impl EsmNamespaceKind {
-  pub fn debug_label(self) -> &'static str {
-    match self {
-      EsmNamespaceKind::Default => "esm_namespace_ref_derived_from_module_exports",
-      EsmNamespaceKind::NodeMode => "esm_namespace_ref_derived_from_module_exports node",
-    }
-  }
 }

@@ -147,7 +147,7 @@ insta = "1.39.0"
 itertools = "0.14.0"
 itoa = "1.0.11"
 json-strip-comments = "1.0.4"
-jsonschema = { version = "0.29.0", default-features = false }
+jsonschema = { version = "0.30.0", default-features = false }
 memchr = "2.7.2"
 mimalloc-safe = "0.1.49"
 mime = "0.3.17"

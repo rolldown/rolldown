@@ -18,15 +18,6 @@ export function logParseError(message: string): RollupLog {
   };
 }
 
-export function logMinifyWarning(): RollupLog {
-  return {
-    code: MINIFY_WARNING,
-    message: colors.yellow(
-      'The built-in minifier is still under development. Setting "minify: true" is not recommended for production use.',
-    ),
-  };
-}
-
 export function logInvalidLogPosition(pluginName: string): RollupLog {
   return {
     code: INVALID_LOG_POSITION,

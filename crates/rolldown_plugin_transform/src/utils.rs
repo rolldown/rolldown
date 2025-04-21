@@ -20,14 +20,15 @@ impl TransformPlugin {
       return matches!(module_type, Some(ModuleType::Jsx | ModuleType::Tsx | ModuleType::Ts));
     }
 
-    if pattern_filter(Some(&self.exclude), Some(&self.include), id, cwd).inner() {
+    let exclude = (!self.exclude.is_empty()).then_some(self.exclude.as_slice());
+    let include = (!self.include.is_empty()).then_some(self.include.as_slice());
+
+    if pattern_filter(exclude, include, id, cwd).inner() {
       return true;
     }
 
     let cleaned_id = clean_url(id);
-    if cleaned_id != id
-      && pattern_filter(Some(&self.exclude), Some(&self.include), cleaned_id, cwd).inner()
-    {
+    if cleaned_id != id && pattern_filter(exclude, include, cleaned_id, cwd).inner() {
       return true;
     }
 
@@ -39,9 +40,12 @@ impl TransformPlugin {
       return JsxRefreshFilter::None;
     }
 
-    if pattern_filter(Some(&self.jsx_refresh_exclude), Some(&self.jsx_refresh_include), id, cwd)
-      .inner()
-    {
+    let jsx_refresh_exclude =
+      (!self.jsx_refresh_exclude.is_empty()).then_some(self.jsx_refresh_exclude.as_slice());
+    let jsx_refresh_include =
+      (!self.jsx_refresh_include.is_empty()).then_some(self.jsx_refresh_include.as_slice());
+
+    if pattern_filter(jsx_refresh_exclude, jsx_refresh_include, id, cwd).inner() {
       return JsxRefreshFilter::True;
     }
 
@@ -56,26 +60,30 @@ impl TransformPlugin {
     cwd: &str,
     ext: Option<&str>,
   ) -> anyhow::Result<(SourceType, TransformOptions)> {
-    let is_js_lang = matches!(self.jsx_refresh_filter(id, cwd), JsxRefreshFilter::True)
-      && ext.is_some_and(|ext| ["js", "jsx", "ts", "tsx", "mjs"].contains(&ext));
+    let is_jsx_refresh_lang = matches!(self.jsx_refresh_filter(id, cwd), JsxRefreshFilter::True)
+      && ext.is_none_or(|ext| ["js", "jsx", "mjs", "ts", "tsx"].binary_search(&ext).is_err());
 
     let is_refresh_disabled = self.is_server_consumer
       || matches!(self.jsx_refresh_filter(id, cwd), JsxRefreshFilter::False);
 
-    let source_type = if is_js_lang {
+    let source_type = if is_jsx_refresh_lang {
       SourceType::mjs()
     } else {
       match self.transform_options.lang.as_deref().xor(ext) {
-        Some("js") => SourceType::mjs(),
+        Some("js" | "cjs" | "mjs") => SourceType::mjs(),
         Some("jsx") => SourceType::jsx(),
-        Some("ts") => SourceType::ts(),
+        Some("ts" | "cts" | "mts") => SourceType::ts(),
         Some("tsx") => SourceType::tsx(),
         None | Some(_) => {
-          if let Some(lang) = &self.transform_options.lang {
-            panic!("Invalid value for `transformOptions.lang`: `{lang}`.")
+          let message = if let Some(lang) = &self.transform_options.lang {
+            anyhow::anyhow!("Invalid value for `transformOptions.lang`: `{lang}`.")
           } else {
-            panic!("Failed to detect the lang of {id}. Please specify `transformOptions.lang`.")
-          }
+            anyhow::anyhow!(
+              "Failed to detect the lang of {id}. Please specify `transformOptions.lang`."
+            )
+          };
+
+          return Err(message);
         }
       }
     };

@@ -15,22 +15,22 @@ pub fn filterable(source: &str) -> bool {
   let ast = EcmaCompiler::parse("<Noop>", source, SourceType::mjs()).unwrap();
   let semantic = EcmaAst::make_semantic(ast.program(), true);
   let mut analyzer = FilterableAnalyzer::new(&semantic);
-  analyzer.visit_program(&ast.program());
+  analyzer.visit_program(ast.program());
   analyzer.ret
 }
 
-struct FilterableAnalyzer<'b, 'a: 'b> {
-  ast_ext: &'b Semantic<'a>,
+struct FilterableAnalyzer<'a> {
+  ast_ext: &'a Semantic<'a>,
   ret: bool,
 }
 
-impl<'b, 'a> FilterableAnalyzer<'b, 'a> {
-  pub fn new(ast_ext: &'b Semantic<'a>) -> Self {
+impl<'a> FilterableAnalyzer<'a> {
+  pub fn new(ast_ext: &'a Semantic<'a>) -> Self {
     Self { ast_ext, ret: false }
   }
 }
 
-impl<'b, 'a> Visit<'a> for FilterableAnalyzer<'b, 'a> {
+impl<'a> Visit<'a> for FilterableAnalyzer<'a> {
   fn visit_program(&mut self, _it: &Program<'a>) {
     let Some(cfg) = self.ast_ext.cfg() else {
       return;
@@ -40,7 +40,7 @@ impl<'b, 'a> Visit<'a> for FilterableAnalyzer<'b, 'a> {
     let mut caller_index = NodeIndex::from(0);
     let ret = set_depth_first_search(g, Some(NodeIndex::from(1)), |e| {
       match e {
-        DfsEvent::Discover(n, _) => Control::<bool>::Continue,
+        DfsEvent::Discover(_, _) => Control::<bool>::Continue,
         DfsEvent::TreeEdge(s, e) => {
           if function_index.is_some() {
             for b in cfg.basic_block(e).instructions() {
@@ -66,7 +66,7 @@ impl<'b, 'a> Visit<'a> for FilterableAnalyzer<'b, 'a> {
                   }
                 },
                 Some(AstKind::IfStatement(_) | AstKind::BlockStatement(_)) => {
-                  continue;
+                  // continue
                 }
                 Some(_) => {
                   if matches!(b.kind, InstructionKind::Condition) {
@@ -89,8 +89,9 @@ impl<'b, 'a> Visit<'a> for FilterableAnalyzer<'b, 'a> {
           }
           Control::Continue
         }
-        DfsEvent::BackEdge(..) | DfsEvent::CrossForwardEdge(..) => Control::Continue,
-        DfsEvent::Finish(s, _) => Control::Continue,
+        DfsEvent::BackEdge(..) | DfsEvent::CrossForwardEdge(..) | DfsEvent::Finish(..) => {
+          Control::Continue
+        }
       }
     });
     self.ret = ret.break_value().unwrap_or_default();

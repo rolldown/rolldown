@@ -614,7 +614,7 @@ mod test {
   fn get_statements_side_effect(code: &str) -> bool {
     let source_type = SourceType::tsx();
     let ast = EcmaCompiler::parse("<Noop>", code, source_type).unwrap();
-    let semantic = EcmaAst::make_semantic(ast.program());
+    let semantic = EcmaAst::make_semantic(ast.program(), false);
     let scoping = semantic.into_scoping();
     let ast_scopes = AstScopes::new(scoping);
 

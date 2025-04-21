@@ -1,50 +1,40 @@
 use crate::filterable;
 
 #[test]
-fn unfilterable_case() {
-  assert_eq!(
-    filterable(
-      r#"
+fn not_filterable_case() {
+  assert!(!filterable(
+    r"
 function test() {
       throw new Error(
       )
 }
-  "#,
-    ),
-    false
-  );
+  ",
+  ),);
 
-  assert_eq!(
-    filterable(
-      r#"
+  assert!(!filterable(
+    r"
 function test() {
   if (a) {
     call();
   }
   call();
 }
-  "#,
-    ),
-    false
-  );
+  ",
+  ),);
 
-  assert_eq!(
-    filterable(
-      r#"
+  assert!(!filterable(
+    r"
 function test() {
   if (a) {
     call();
   }
   throw new Error();
 }
-  "#,
-    ),
-    false
-  );
+  ",
+  ),);
 
-  assert_eq!(
-    filterable(
-      r#"
+  assert!(!filterable(
+    r#"
 function test() {
   if (a) {
     call();
@@ -54,17 +44,14 @@ function test() {
   };
 }
   "#,
-    ),
-    false
-  );
+  ),);
 }
 
 #[test]
 fn filterable_case() {
   // Different return case
-  assert_eq!(
-    filterable(
-      r#"
+  assert!(filterable(
+    r"
 function test() {
   if (a) {
     return;
@@ -72,43 +59,34 @@ function test() {
   call();
 }
 
-  "#,
-    ),
-    true
-  );
+  ",
+  ),);
 
-  assert_eq!(
-    filterable(
-      r#"
+  assert!(filterable(
+    r"
 function test() {
   if (a) {
     return undefined;
   }
   call();
 }
-  "#,
-    ),
-    true
-  );
+  ",
+  ));
 
   // implicit return at the end of function
-  assert_eq!(
-    filterable(
-      r#"
+  assert!(filterable(
+    r"
 function test() {
   if (a) {
     call();
   }
 }
 
-  "#,
-    ),
-    true
-  );
+  ",
+  ),);
 
-  assert_eq!(
-    filterable(
-      r#"
+  assert!(filterable(
+    r"
 function test() {
   if (a) {
     return;
@@ -118,8 +96,6 @@ function test() {
     call();
   }
 }
-  "#,
-    ),
-    true
-  );
+  ",
+  ),);
 }

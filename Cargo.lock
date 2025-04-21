@@ -2585,11 +2585,8 @@ dependencies = [
 name = "rolldown_filter_analyzer"
 version = "0.1.0"
 dependencies = [
- "anyhow",
- "arcstr",
  "oxc",
  "rolldown_ecmascript",
- "rolldown_error",
 ]
 
 [[package]]

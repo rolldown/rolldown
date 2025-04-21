@@ -7,10 +7,7 @@ license.workspace = true
 repository.workspace = true
 
 [dependencies]
-anyhow         = { workspace = true }
-arcstr         = { workspace = true }
-oxc            = { workspace = true }
-rolldown_error = { workspace = true }
+oxc = { workspace = true }
 rolldown_ecmascript = { workspace = true }
 
 [lints]

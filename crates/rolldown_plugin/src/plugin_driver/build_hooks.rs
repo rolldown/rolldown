@@ -108,7 +108,8 @@ impl PluginDriver {
         module_request: args.specifier.to_string(),
         import_kind: args.kind.to_string(),
         plugin_name: plugin.call_name().to_string(),
-        plugin_index: plugin_idx.raw()
+        plugin_index: plugin_idx.raw(),
+        trigger: "${hook_resolve_id_trigger}",
       });
       if let Some(r) = plugin
         .call_resolve_id(
@@ -132,6 +133,7 @@ impl PluginDriver {
           is_external: r.external.map(|v| v.is_external()),
           plugin_name: plugin.call_name().to_string(),
           plugin_index: plugin_idx.raw(),
+          trigger: "${hook_resolve_id_trigger}",
         });
         return Ok(Some(r));
       }
@@ -141,6 +143,7 @@ impl PluginDriver {
         is_external: None,
         plugin_name: plugin.call_name().to_string(),
         plugin_index: plugin_idx.raw(),
+        trigger: "${hook_resolve_id_trigger}",
       });
     }
     Ok(None)

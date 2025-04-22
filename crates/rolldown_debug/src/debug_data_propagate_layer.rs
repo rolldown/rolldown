@@ -1,7 +1,9 @@
-use std::sync::Arc;
+use std::{ops::Deref, sync::Arc};
 
 use tracing::{Subscriber, span::Attributes};
 use tracing_subscriber::{Layer, layer::Context, registry::LookupSpan};
+
+use crate::type_alias::ContextDataMap;
 
 #[derive(Debug, Clone)]
 
@@ -44,7 +46,15 @@ where
     // First see if the current span has a `buildId` field
     attrs.record(&mut visitor);
 
+    let mut context_data_finder = ContextDataFinder::default();
+    attrs.record(&mut context_data_finder);
+
     let mut exts = span_ref.extensions_mut();
+
+    if !context_data_finder.context_data.is_empty() {
+      exts.insert(ContextData(context_data_finder.context_data));
+    }
+
     if let Some(build_id) = visitor.session_id {
       // If it does, it means this span is the root build span. Let's store the `buildId` into the extensions.
       exts.insert(SessionId(build_id));
@@ -74,5 +84,36 @@ where
         }
       }
     }
+  }
+}
+
+#[derive(Debug)]
+pub struct ContextData(ContextDataMap);
+
+impl Deref for ContextData {
+  type Target = ContextDataMap;
+
+  fn deref(&self) -> &Self::Target {
+    &self.0
+  }
+}
+
+#[derive(Default)]
+pub struct ContextDataFinder {
+  context_data: ContextDataMap,
+}
+
+const CONTEXT_PREFIX: &str = "CONTEXT_";
+const CONTEXT_PREFIX_LEN: usize = CONTEXT_PREFIX.len();
+impl tracing::field::Visit for ContextDataFinder {
+  fn record_str(&mut self, field: &tracing::field::Field, value: &str) {
+    if field.name().starts_with(CONTEXT_PREFIX) {
+      let key = &field.name()[CONTEXT_PREFIX_LEN..];
+      let value = value.to_string();
+      self.context_data.insert(key, value);
+    }
+  }
+  fn record_debug(&mut self, _: &tracing::field::Field, _: &dyn std::fmt::Debug) {
+    // Ignore debug fields
   }
 }

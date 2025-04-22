@@ -3,6 +3,7 @@ mod debug_formatter;
 mod init_tracing;
 mod static_data;
 mod trace_action_macro;
+mod type_alias;
 
 pub use rolldown_debug_action as action;
 

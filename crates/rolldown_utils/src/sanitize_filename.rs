@@ -19,7 +19,7 @@ macro_rules! matches_invalid_chars {
           | '?'
           | '['
           | ']'
-          | '@'
+          | '^'
           | '`'
           | '{'
           | '|'

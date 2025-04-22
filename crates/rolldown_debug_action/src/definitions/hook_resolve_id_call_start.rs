@@ -2,7 +2,7 @@
 #[ts(export)]
 pub struct HookResolveIdCallStart {
   #[ts(type = "'HookResolveIdCallStart'")]
-  pub kind: &'static str,
+  pub action: &'static str,
   pub importer: Option<String>,
   pub module_request: String,
   pub import_kind: String,

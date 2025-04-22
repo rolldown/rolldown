@@ -10,7 +10,7 @@ pub mod hook_transform_call_start;
 #[derive(valuable::Valuable, ts_rs::TS, serde::Serialize)]
 #[ts(export)]
 #[serde(untagged)]
-pub enum Action {
+pub enum Meta {
   HookTransformCallStart(hook_transform_call_start::HookTransformCallStart),
   HookTransformCallEnd(hook_transform_call_end::HookTransformCallEnd),
   HookLoadCallStart(hook_load_call_start::HookLoadCallStart),

@@ -2,5 +2,5 @@
 #[ts(export)]
 pub struct BuildEnd {
   #[ts(type = "'BuildEnd'")]
-  pub kind: &'static str,
+  pub action: &'static str,
 }

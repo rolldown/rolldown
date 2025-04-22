@@ -1,10 +1,10 @@
-import { type Action } from './generated/index.js';
+import { type Meta } from './generated/index.js';
 export * from './generated/index.js';
 
 export interface Event {
   timestamp: string;
   session_id: string;
-  action: Action;
+  meta: Meta;
 }
 
 export function parseToEvents(data: string): Event[] {

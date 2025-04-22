@@ -4,6 +4,7 @@ import { BindingTransformPluginConfig } from '../binding';
 import { normalizedStringOrRegex } from '../utils/normalize-string-or-regex';
 
 type TransformPattern = string | RegExp | (RegExp | string)[];
+
 // A temp config type for giving better user experience
 export type TransformPluginConfig =
   & Omit<
@@ -17,11 +18,9 @@ export type TransformPluginConfig =
     jsxRefreshExclude?: TransformPattern;
   };
 
-function normalizeEcmaTransformPluginConfig(
-  config?: TransformPluginConfig,
-): BindingTransformPluginConfig | undefined {
+export function transformPlugin(config?: TransformPluginConfig): BuiltinPlugin {
   if (config) {
-    return {
+    config = {
       ...config,
       include: normalizedStringOrRegex(config.include),
       exclude: normalizedStringOrRegex(config.exclude),
@@ -29,11 +28,5 @@ function normalizeEcmaTransformPluginConfig(
       jsxRefreshExclude: normalizedStringOrRegex(config.jsxRefreshExclude),
     };
   }
-}
-
-export function transformPlugin(config?: TransformPluginConfig): BuiltinPlugin {
-  return new BuiltinPlugin(
-    'builtin:transform',
-    normalizeEcmaTransformPluginConfig(config),
-  );
+  return new BuiltinPlugin('builtin:transform', config);
 }

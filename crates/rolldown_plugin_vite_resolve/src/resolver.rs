@@ -5,6 +5,7 @@ use std::{
   sync::Arc,
 };
 
+use oxc_resolver::PackageJsonResolutionKind;
 use rolldown_common::side_effects::HookSideEffects;
 use rolldown_plugin::{HookResolveIdOutput, HookResolveIdReturn};
 use rustc_hash::FxHashSet;
@@ -224,18 +225,52 @@ impl Resolver {
     Self { inner, package_json_cache, runtime, root, try_prefix }
   }
 
+  fn resolve_inner<P: AsRef<Path>>(
+    &self,
+    directory: P,
+    specifier: &str,
+    package_json_resolution_kind: PackageJsonResolutionKind,
+  ) -> Result<oxc_resolver::FsResolution, oxc_resolver::ResolveError> {
+    let mut ctx =
+      oxc_resolver::ResolveContext { package_json_resolution_kind, ..Default::default() };
+    self.inner.resolve_with_context(directory, specifier, &mut ctx)
+  }
+
+  fn resolve_nearest_main_package_json(
+    &self,
+    absolute_path_to_file: &str,
+  ) -> Result<oxc_resolver::FsResolution, oxc_resolver::ResolveError> {
+    let mut ctx = oxc_resolver::ResolveContext {
+      package_json_resolution_kind: PackageJsonResolutionKind::Root,
+      ..Default::default()
+    };
+    self.inner.resolve_with_context(
+      /* actually this can be anything, as the specifier is absolute path */ &self.root,
+      absolute_path_to_file,
+      &mut ctx,
+    )
+  }
+
+  fn resolve<P: AsRef<Path>>(
+    &self,
+    directory: P,
+    specifier: &str,
+  ) -> Result<oxc_resolver::FsResolution, oxc_resolver::ResolveError> {
+    self.resolve_inner(directory, specifier, PackageJsonResolutionKind::Nearest)
+  }
+
   pub fn resolve_raw<P: AsRef<Path>>(
     &self,
     directory: P,
     specifier: &str,
   ) -> Result<oxc_resolver::FsResolution, oxc_resolver::ResolveError> {
     let Some(try_prefix) = &self.try_prefix else {
-      return self.inner.resolve(directory, specifier);
+      return self.resolve(directory, specifier);
     };
 
     let mut path = Path::new(specifier).components();
     let Some(path::Component::Normal(filename)) = path.next_back() else {
-      return self.inner.resolve(directory, specifier);
+      return self.resolve(directory, specifier);
     };
 
     let mut filename_with_prefix = OsString::with_capacity(try_prefix.len() + filename.len());
@@ -244,15 +279,15 @@ impl Resolver {
 
     let path_with_prefix = path.as_path().join(filename_with_prefix);
     let Some(path_with_prefix) = path_with_prefix.to_str() else {
-      return self.inner.resolve(directory, specifier);
+      return self.resolve(directory, specifier);
     };
 
-    let result_with_prefix = self.inner.resolve(directory.as_ref(), path_with_prefix);
+    let result_with_prefix = self.resolve(directory.as_ref(), path_with_prefix);
     match result_with_prefix {
       Err(
         oxc_resolver::ResolveError::NotFound(_)
         | oxc_resolver::ResolveError::ExtensionAlias(_, _, _),
-      ) => self.inner.resolve(directory, specifier),
+      ) => self.resolve(directory, specifier),
       _ => result_with_prefix,
     }
   }
@@ -292,7 +327,7 @@ impl Resolver {
             let base_dir = get_base_dir(id, importer, dedupe).unwrap_or(&self.root);
             if base_dir != self.root {
               if let Some(package_json) =
-                self.get_nearest_package_json_optional_peer_deps(importer.unwrap())
+                self.get_nearest_main_package_json_optional_peer_deps(importer.unwrap())
               {
                 if package_json.optional_peer_dependencies.contains(pkg_name) {
                   return Ok(Some(HookResolveIdOutput {
@@ -314,19 +349,16 @@ impl Resolver {
     }
   }
 
-  fn get_nearest_package_json_optional_peer_deps(
+  fn get_nearest_main_package_json_optional_peer_deps(
     &self,
     p: &str,
   ) -> Option<Arc<PackageJsonWithOptionalPeerDependencies>> {
-    let specifier = Path::new(p).absolutize();
-    let Ok(result) = self.inner.resolve(
-      /* actually this can be anything, as the specifier is absolute path */ &self.root,
-      specifier.to_str().unwrap_or(p),
-    ) else {
+    let absolute_path = Path::new(p).absolutize();
+    let specifier = absolute_path.to_str().unwrap_or(p);
+    let Ok(result) = self.resolve_nearest_main_package_json(specifier) else {
       // Errors when p is a virtual module
       return None;
     };
-
     result
       .package_json()
       .map(|pj| self.package_json_cache.cached_package_json_optional_peer_dep(pj))
@@ -351,13 +383,16 @@ impl Resolver {
       let id = specifier;
       let mut resolved_id = id;
       if is_deep_import(id) && get_extension(id) != get_extension(&resolved.id) {
-        if let Some(pkg_json) = oxc_resolved_result.unwrap().package_json() {
-          let has_exports_field = pkg_json.raw_json().as_object().unwrap().get("exports").is_some();
-          if !has_exports_field {
-            // id date-fns/locale
-            // resolve.id ...date-fns/esm/locale/index.js
-            if let Some(index) = resolved.id.find(id) {
-              resolved_id = &resolved.id[index..];
+        if let Ok(pkg_resolved_result) = self.resolve_nearest_main_package_json(&resolved.id) {
+          if let Some(pkg_json) = pkg_resolved_result.package_json() {
+            let has_exports_field =
+              pkg_json.raw_json().as_object().unwrap().get("exports").is_some();
+            if !has_exports_field {
+              // id date-fns/locale
+              // resolve.id ...date-fns/esm/locale/index.js
+              if let Some(index) = resolved.id.find(id) {
+                resolved_id = &resolved.id[index..];
+              }
             }
           }
         }

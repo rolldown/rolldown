@@ -1,5 +1,6 @@
-use std::sync::Arc;
+use std::{ops::Deref, sync::Arc};
 
+use rustc_hash::FxHashMap;
 use tracing::{Subscriber, span::Attributes};
 use tracing_subscriber::{Layer, layer::Context, registry::LookupSpan};
 
@@ -7,13 +8,43 @@ use tracing_subscriber::{Layer, layer::Context, registry::LookupSpan};
 
 pub struct DebugDataPropagateLayer;
 
-struct DebugDataFinder {
-  session_id: Option<Arc<str>>,
-}
-
 #[derive(Debug, Clone, serde::Serialize)]
 pub struct SessionId(pub Arc<str>);
 
+#[derive(Debug)]
+pub struct ProvidedData(FxHashMap<String, String>);
+
+impl Deref for ProvidedData {
+  type Target = FxHashMap<String, String>;
+
+  fn deref(&self) -> &Self::Target {
+    &self.0
+  }
+}
+
+#[derive(Default)]
+pub struct ProvidedDataFinder {
+  provided_data: FxHashMap<String, String>,
+}
+
+const PROVIDE_PREFIX: &str = "PROVIDE_";
+const PROVIDE_PREFIX_LEN: usize = PROVIDE_PREFIX.len();
+impl tracing::field::Visit for ProvidedDataFinder {
+  fn record_str(&mut self, field: &tracing::field::Field, value: &str) {
+    if field.name().starts_with("PROVIDE") {
+      let key = field.name()[PROVIDE_PREFIX_LEN..].to_string();
+      let value = value.to_string();
+      self.provided_data.insert(key, value);
+    }
+  }
+  fn record_debug(&mut self, _: &tracing::field::Field, _: &dyn std::fmt::Debug) {
+    // Ignore debug fields
+  }
+}
+
+struct DebugDataFinder {
+  session_id: Option<Arc<str>>,
+}
 impl tracing::field::Visit for DebugDataFinder {
   fn record_str(&mut self, field: &tracing::field::Field, value: &str) {
     if field.name() == "session_id" {
@@ -44,7 +75,12 @@ where
     // First see if the current span has a `buildId` field
     attrs.record(&mut visitor);
 
+    let mut provided_data_finder = ProvidedDataFinder::default();
+    attrs.record(&mut provided_data_finder);
     let mut exts = span_ref.extensions_mut();
+    if !provided_data_finder.provided_data.is_empty() {
+      exts.insert(ProvidedData(provided_data_finder.provided_data));
+    }
     if let Some(build_id) = visitor.session_id {
       // If it does, it means this span is the root build span. Let's store the `buildId` into the extensions.
       exts.insert(SessionId(build_id));

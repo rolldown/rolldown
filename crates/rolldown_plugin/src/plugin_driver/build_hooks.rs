@@ -109,7 +109,8 @@ impl PluginDriver {
         module_request: args.specifier.to_string(),
         import_kind: args.kind.to_string(),
         plugin_name: plugin.call_name().to_string(),
-        plugin_index: plugin_idx.raw()
+        plugin_index: plugin_idx.raw(),
+        trigger: "${hook_resolve_id_trigger}",
       });
       if let Some(r) = plugin
         .call_resolve_id(
@@ -127,22 +128,30 @@ impl PluginDriver {
         .instrument(debug_span!("resolve_id_hook", plugin_name = plugin.call_name().as_ref()))
         .await?
       {
-        trace_action!(action::HookResolveIdCallEnd {
-          kind: "HookResolveIdCallEnd",
-          resolved_id: Some(r.id.to_string()),
-          is_external: r.external.map(|v| v.is_external()),
-          plugin_name: plugin.call_name().to_string(),
-          plugin_index: plugin_idx.raw(),
-        });
+        trace_action!(
+          action::HookResolveIdCallEnd {
+            kind: "HookResolveIdCallEnd",
+            resolved_id: Some(r.id.to_string()),
+            is_external: r.external.map(|v| v.is_external()),
+            plugin_name: plugin.call_name().to_string(),
+            plugin_index: plugin_idx.raw(),
+            trigger: "${hook_resolve_id_trigger}",
+          },
+          INJECT_hook_resolve_id_trigger = ""
+        );
         return Ok(Some(r));
       }
-      trace_action!(action::HookResolveIdCallEnd {
-        kind: "HookResolveIdCallEnd",
-        resolved_id: None,
-        is_external: None,
-        plugin_name: plugin.call_name().to_string(),
-        plugin_index: plugin_idx.raw(),
-      });
+      trace_action!(
+        action::HookResolveIdCallEnd {
+          kind: "HookResolveIdCallEnd",
+          resolved_id: None,
+          is_external: None,
+          plugin_name: plugin.call_name().to_string(),
+          plugin_index: plugin_idx.raw(),
+          trigger: "${hook_resolve_id_trigger}",
+        },
+        INJECT_hook_resolve_id_trigger = ""
+      );
     }
     Ok(None)
   }

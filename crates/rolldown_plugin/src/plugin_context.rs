@@ -134,6 +134,7 @@ impl PluginContextImpl {
     Ok(())
   }
 
+  #[tracing::instrument(skip_all, fields(PROVIDE_hook_resolve_id_trigger = "manual"))]
   pub async fn resolve(
     &self,
     specifier: &str,

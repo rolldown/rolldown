@@ -35,6 +35,7 @@ rolldown_sourcemap = { workspace = true }
 rolldown_utils = { workspace = true }
 rustc-hash = { workspace = true }
 serde = { workspace = true, optional = true }
+serde_json = { workspace = true }
 string_wizard = { workspace = true }
 sugar_path = { workspace = true }
 tokio = { workspace = true, features = ["sync"] }

@@ -7,6 +7,9 @@ license.workspace = true
 repository.workspace = true
 
 [dependencies]
+anyhow = { workspace = true }
+rustc-hash = { workspace = true }
+scoped-tls = { workspace = true }
 serde = { workspace = true, features = ["derive"] }
 ts-rs = { workspace = true }
 valuable = { workspace = true, features = ["derive"] }

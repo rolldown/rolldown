@@ -23,7 +23,6 @@ use rolldown_plugin::{
 };
 use rolldown_utils::dashmap::FxDashSet;
 use std::{any::Any, sync::Arc};
-use valuable::Valuable;
 
 pub struct Bundler {
   pub closed: bool,

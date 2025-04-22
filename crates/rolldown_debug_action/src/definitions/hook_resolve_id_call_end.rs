@@ -9,4 +9,6 @@ pub struct HookResolveIdCallEnd {
   pub plugin_name: String,
   /// The index of the plugin in the plugin list. It's unique to each plugin.
   pub plugin_index: u32,
+  // #[serde(serialize_with = "crate::serialize_with_provided_data")]
+  pub trigger: &'static str,
 }

@@ -5,6 +5,7 @@ use std::sync::atomic::AtomicBool;
 use tracing_subscriber::EnvFilter;
 use tracing_subscriber::fmt;
 use tracing_subscriber::prelude::*;
+use tracing_subscriber::registry::LookupSpan;
 
 use crate::debug_data_propagate_layer::DebugDataPropagateLayer;
 use crate::debug_formatter::DebugFormatter;

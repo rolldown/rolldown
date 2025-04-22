@@ -2425,6 +2425,7 @@ dependencies = [
  "rolldown_workspace",
  "rustc-hash",
  "serde",
+ "serde_json",
  "string_wizard",
  "sugar_path",
  "testing_macros",
@@ -2529,14 +2530,20 @@ dependencies = [
  "serde",
  "serde_json",
  "tracing",
+ "tracing-core",
  "tracing-serde",
  "tracing-subscriber",
+ "valuable",
+ "valuable-serde",
 ]
 
 [[package]]
 name = "rolldown_debug_action"
 version = "0.1.0"
 dependencies = [
+ "anyhow",
+ "rustc-hash",
+ "scoped-tls",
  "serde",
  "ts-rs",
  "valuable",
@@ -2630,6 +2637,7 @@ dependencies = [
  "rolldown_utils",
  "rustc-hash",
  "serde",
+ "serde_json",
  "string_wizard",
  "sugar_path",
  "tokio",
@@ -3029,6 +3037,12 @@ dependencies = [
  "serde_derive_internals",
  "syn",
 ]
+
+[[package]]
+name = "scoped-tls"
+version = "1.0.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "e1cf6437eb19a8f4a6cc0f7dca544973b0b78843adbfeb3683d1a94a0024a294"
 
 [[package]]
 name = "scopeguard"

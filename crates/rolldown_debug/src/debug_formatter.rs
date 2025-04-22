@@ -5,7 +5,12 @@ use std::{
   time::{SystemTime, UNIX_EPOCH},
 };
 
-use crate::static_data::{DEFAULT_SESSION_ID, OPENED_FILE_HANDLES, OPENED_FILES_BY_SESSION};
+use crate::{
+  debug_data_propagate_layer::ProvidedData,
+  static_data::{DEFAULT_SESSION_ID, OPENED_FILE_HANDLES, OPENED_FILES_BY_SESSION},
+  utils::custom_serde_map_visitor::CustomSerdeMapVisitor,
+};
+use rustc_hash::FxHashMap;
 use serde::ser::{SerializeMap, Serializer as _};
 use tracing::{Event, Subscriber};
 use tracing_serde::AsSerde;
@@ -15,6 +20,27 @@ use tracing_subscriber::{
 };
 
 use crate::debug_data_propagate_layer::SessionId;
+
+#[derive(Default)]
+pub struct InjectedFieldNameFinder {
+  pub names: Vec<String>,
+}
+
+pub const INJECTED_FIELD_NAME_PREFIX: &str = "INJECT_";
+pub const INJECTED_FIELD_NAME_PREFIX_LEN: usize = INJECTED_FIELD_NAME_PREFIX.len();
+
+impl tracing::field::Visit for InjectedFieldNameFinder {
+  fn record_str(&mut self, field: &tracing::field::Field, _value: &str) {
+    if field.name().starts_with(INJECTED_FIELD_NAME_PREFIX) {
+      let name = field.name()[INJECTED_FIELD_NAME_PREFIX_LEN..].to_string();
+      self.names.push(name);
+    }
+  }
+
+  fn record_debug(&mut self, _: &tracing::field::Field, _: &dyn std::fmt::Debug) {
+    // Ignore debug fields
+  }
+}
 
 pub struct DebugFormatter;
 
@@ -29,6 +55,35 @@ where
     _writer: Writer<'_>,
     event: &Event<'_>,
   ) -> std::fmt::Result {
+    let mut injected_field_name_finder = InjectedFieldNameFinder::default();
+    event.record(&mut injected_field_name_finder);
+    let mut injected_field_names = injected_field_name_finder.names;
+    let mut injected_data = FxHashMap::default();
+
+    if let Some(scope) = ctx.event_scope() {
+      for span in scope {
+        let span_extensions = span.extensions();
+        let Some(provided_data) = span_extensions.get::<ProvidedData>() else {
+          continue;
+        };
+        let found_field_indexes = injected_field_names
+          .iter()
+          .enumerate()
+          .filter_map(|(idx, name)| {
+            if let Some(value) = provided_data.get(name) {
+              injected_data.insert(name.clone(), value.clone());
+              Some(idx)
+            } else {
+              None
+            }
+          })
+          .collect::<Vec<_>>();
+
+        found_field_indexes.iter().rev().for_each(|idx| {
+          injected_field_names.swap_remove(*idx);
+        });
+      }
+    }
     let meta = event.metadata();
     let session_id = if let Some(scope) = ctx.event_scope() {
       let mut spans = scope.from_root();
@@ -50,7 +105,6 @@ where
     std::fs::create_dir_all(format!(".rolldown/{session_id}")).ok();
 
     let log_filename: Arc<str> = format!(".rolldown/{session_id}/log.json").into();
-
     if !OPENED_FILE_HANDLES.contains_key(&log_filename) {
       let file = OpenOptions::new()
         .create(true)
@@ -60,7 +114,6 @@ where
       // Ensure for each file, we only have one unique file handle to prevent multiple writes.
       OPENED_FILE_HANDLES.insert(Arc::clone(&log_filename), file);
     }
-
     OPENED_FILES_BY_SESSION
       .entry(session_id.to_string())
       .or_default()
@@ -78,18 +131,17 @@ where
       serializer.serialize_entry("timestamp", &current_utc_timestamp_ms())?;
       serializer.serialize_entry("level", &meta.level().as_serde())?;
       serializer.serialize_entry("session_id", session_id)?;
+      injected_data.iter().for_each(|(key, value)| {
+        serializer.serialize_entry(key, value).unwrap();
+      });
 
       let flatten_event = false;
-
-      if flatten_event {
-        let mut visitor = tracing_serde::SerdeMapVisitor::new(serializer);
+      let mut visitor = CustomSerdeMapVisitor::new(serializer, &injected_data);
+      rolldown_debug_action::PROVIDED_DATA.set(&injected_data, || {
         event.record(&mut visitor);
+      });
 
-        serializer = visitor.take_serializer()?;
-      } else {
-        use tracing_serde::fields::AsMap;
-        serializer.serialize_entry("fields", &event.field_map())?;
-      }
+      serializer = visitor.take_serializer()?;
 
       serializer.end()
     };

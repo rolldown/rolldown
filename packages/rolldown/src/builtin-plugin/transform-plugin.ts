@@ -8,26 +8,27 @@ type TransformPattern = string | RegExp | (RegExp | string)[];
 export type TransformPluginConfig =
   & Omit<
     BindingTransformPluginConfig,
-    'include' | 'exclude'
+    'include' | 'exclude' | 'jsxRefreshInclude' | 'jsxRefreshExclude'
   >
   & {
     include?: TransformPattern;
     exclude?: TransformPattern;
+    jsxRefreshInclude?: TransformPattern;
+    jsxRefreshExclude?: TransformPattern;
   };
 
 function normalizeEcmaTransformPluginConfig(
   config?: TransformPluginConfig,
 ): BindingTransformPluginConfig | undefined {
-  if (!config) {
-    return undefined;
+  if (config) {
+    return {
+      ...config,
+      include: normalizedStringOrRegex(config.include),
+      exclude: normalizedStringOrRegex(config.exclude),
+      jsxRefreshInclude: normalizedStringOrRegex(config.jsxRefreshInclude),
+      jsxRefreshExclude: normalizedStringOrRegex(config.jsxRefreshExclude),
+    };
   }
-  let normalizedConfig: BindingTransformPluginConfig = {
-    ...config,
-    exclude: normalizedStringOrRegex(config.exclude),
-    include: normalizedStringOrRegex(config.include),
-  };
-
-  return normalizedConfig;
 }
 
 export function transformPlugin(config?: TransformPluginConfig): BuiltinPlugin {

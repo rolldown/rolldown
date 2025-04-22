@@ -76,14 +76,15 @@ impl Plugin for TransformPlugin {
     args: &rolldown_plugin::HookTransformArgs<'_>,
   ) -> rolldown_plugin::HookTransformReturn {
     let cwd = ctx.inner.cwd().to_string_lossy();
-    let ext = Path::new(args.id).extension().map(|s| s.to_string_lossy());
-    let module_type = ext.as_ref().map(|s| ModuleType::from_str_with_fallback(clean_url(s)));
+    let extension = Path::new(args.id).extension().map(|s| s.to_string_lossy());
+    let extension = extension.as_ref().map(|s| clean_url(s));
+    let module_type = extension.map(ModuleType::from_str_with_fallback);
     if !self.filter(args.id, &cwd, &module_type) {
       return Ok(None);
     }
 
     let (source_type, transform_options) =
-      self.get_modified_transform_options(&ctx, args.id, &cwd, ext.as_deref())?;
+      self.get_modified_transform_options(&ctx, args.id, &cwd, extension)?;
 
     let allocator = oxc::allocator::Allocator::default();
     let ret = Parser::new(&allocator, args.code, source_type).parse();

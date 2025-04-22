@@ -465,47 +465,46 @@ impl ModuleLoader {
             raw_import_records,
             resolved_deps,
           } = task_result;
-          let import_records: IndexVec<ImportRecordIdx, rolldown_common::ResolvedImportRecord> =
-            raw_import_records
-              .into_iter_enumerated()
-              .zip(resolved_deps)
-              .map(|((_rec_idx, raw_rec), info)| {
-                let id = self.try_spawn_new_task(
-                  info,
-                  None,
-                  false,
-                  raw_rec.asserted_module_type.clone(),
-                  &user_defined_entries,
-                );
-                // Dynamic imported module will be considered as an entry
-                self.intermediate_normal_modules.importers[id].push(ImporterRecord {
-                  kind: raw_rec.kind,
-                  importer_path: module.id.clone(),
-                  importer_idx: module.idx,
-                });
+          let import_records = raw_import_records
+            .into_iter()
+            .zip(resolved_deps)
+            .map(|(raw_rec, info)| {
+              let id = self.try_spawn_new_task(
+                info,
+                None,
+                false,
+                raw_rec.asserted_module_type.clone(),
+                &user_defined_entries,
+              );
+              // Dynamic imported module will be considered as an entry
+              self.intermediate_normal_modules.importers[id].push(ImporterRecord {
+                kind: raw_rec.kind,
+                importer_path: module.id.clone(),
+                importer_idx: module.idx,
+              });
 
-                if matches!(raw_rec.kind, ImportKind::DynamicImport)
-                  && !user_defined_entry_ids.contains(&id)
-                {
-                  match dynamic_import_entry_ids.entry(id) {
-                    Entry::Vacant(vac) => match raw_rec.related_stmt_info_idx {
-                      Some(stmt_info_idx) => {
-                        vac.insert(vec![(module.idx, stmt_info_idx)]);
-                      }
-                      None => {
-                        vac.insert(vec![]);
-                      }
-                    },
-                    Entry::Occupied(mut occ) => {
-                      if let Some(stmt_info_idx) = raw_rec.related_stmt_info_idx {
-                        occ.get_mut().push((module.idx, stmt_info_idx));
-                      }
+              if matches!(raw_rec.kind, ImportKind::DynamicImport)
+                && !user_defined_entry_ids.contains(&id)
+              {
+                match dynamic_import_entry_ids.entry(id) {
+                  Entry::Vacant(vac) => match raw_rec.related_stmt_info_idx {
+                    Some(stmt_info_idx) => {
+                      vac.insert(vec![(module.idx, stmt_info_idx)]);
+                    }
+                    None => {
+                      vac.insert(vec![]);
+                    }
+                  },
+                  Entry::Occupied(mut occ) => {
+                    if let Some(stmt_info_idx) = raw_rec.related_stmt_info_idx {
+                      occ.get_mut().push((module.idx, stmt_info_idx));
                     }
                   }
                 }
-                raw_rec.into_resolved(id)
-              })
-              .collect::<IndexVec<ImportRecordIdx, _>>();
+              }
+              raw_rec.into_resolved(id)
+            })
+            .collect::<IndexVec<_, _>>();
           let ast_idx = self.intermediate_normal_modules.index_ecma_ast.push((ast, module.idx));
           module.ecma_ast_idx = Some(ast_idx);
           module.import_records = import_records;

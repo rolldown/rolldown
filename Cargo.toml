@@ -147,7 +147,7 @@ insta = "1.39.0"
 itertools = "0.14.0"
 itoa = "1.0.11"
 json-strip-comments = "1.0.4"
-jsonschema = { version = "0.29.0", default-features = false }
+jsonschema = { version = "0.30.0", default-features = false }
 memchr = "2.7.2"
 mimalloc-safe = "0.1.49"
 mime = "0.3.17"
@@ -190,9 +190,11 @@ quote = "1"
 syn = { version = "2", default-features = false }
 
 # oxc crates with the same version
-oxc = { version = "0.64.0", features = ["ast_visit", "transformer", "minifier", "mangler", "semantic", "codegen", "serialize", "isolated_declarations", "regular_expression", "cfg"] }
-oxc_parser_napi = { version = "0.64.0" }
-oxc_transform_napi = { version = "0.64.0" }
+
+oxc = { version = "0.65.0", features = ["ast_visit", "transformer", "minifier", "mangler", "semantic", "codegen", "serialize", "isolated_declarations", "regular_expression", "cfg"] }
+oxc_parser_napi = { version = "0.65.0" }
+oxc_transform_napi = { version = "0.65.0" }
+
 
 # oxc crates in their own repos
 # Versions must be relaxed for usage in oxc.

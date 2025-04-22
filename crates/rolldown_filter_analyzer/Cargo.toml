@@ -1,0 +1,14 @@
+[package]
+name = "rolldown_filter_analyzer"
+version = "0.1.0"
+edition.workspace = true
+homepage.workspace = true
+license.workspace = true
+repository.workspace = true
+
+[dependencies]
+oxc = { workspace = true }
+rolldown_ecmascript = { workspace = true }
+
+[lints]
+workspace = true

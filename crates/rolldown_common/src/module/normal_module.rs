@@ -258,6 +258,35 @@ impl NormalModule {
     self.ecma_view.meta.is_included()
   }
 
+  pub fn generate_esm_namespace_in_cjs_internal(
+    &mut self,
+    symbol_db: &mut SymbolRefDb,
+    runtime_module: &RuntimeModuleBrief,
+    wrap_ref: SymbolRef,
+    is_node_mode: bool,
+  ) -> Option<EsmNamespaceInCjs> {
+    let esm_namespace_ref = symbol_db.create_facade_root_symbol_ref(
+      self.idx,
+      &concat_string!("import_", legitimize_identifier_name(&self.repr_name)),
+    );
+
+    let stmt_info_idx = self.stmt_infos.add_stmt_info(StmtInfo {
+      stmt_idx: None,
+      declared_symbols: vec![esm_namespace_ref],
+      referenced_symbols: vec![wrap_ref.into(), runtime_module.resolve_symbol("__toESM").into()],
+      force_tree_shaking: true,
+      #[cfg(debug_assertions)]
+      debug_label: Some(if is_node_mode {
+        "esm_namespace_ref_derived_from_module_exports node".to_string()
+      } else {
+        "esm_namespace_ref_derived_from_module_exports".to_string()
+      }),
+      ..Default::default()
+    });
+
+    Some(EsmNamespaceInCjs { namespace_ref: esm_namespace_ref, stmt_info_idx })
+  }
+
   /// Generates
   /// ```js
   /// var import_xxx = __toESM(require_xxx());
@@ -271,25 +300,8 @@ impl NormalModule {
     if self.esm_namespace_in_cjs.is_some() {
       return;
     }
-    let esm_namespace_ref_derived_from_module_exports = symbol_db.create_facade_root_symbol_ref(
-      self.idx,
-      &concat_string!("import_", legitimize_identifier_name(&self.repr_name)),
-    );
-
-    let stmt_info_idx = self.stmt_infos.add_stmt_info(StmtInfo {
-      stmt_idx: None,
-      declared_symbols: vec![esm_namespace_ref_derived_from_module_exports],
-      referenced_symbols: vec![wrap_ref.into(), runtime_module.resolve_symbol("__toESM").into()],
-      force_tree_shaking: true,
-      #[cfg(debug_assertions)]
-      debug_label: Some("esm_namespace_ref_derived_from_module_exports".to_string()),
-      ..Default::default()
-    });
-
-    self.esm_namespace_in_cjs = Some(EsmNamespaceInCjs {
-      namespace_ref: esm_namespace_ref_derived_from_module_exports,
-      stmt_info_idx,
-    });
+    self.esm_namespace_in_cjs =
+      self.generate_esm_namespace_in_cjs_internal(symbol_db, runtime_module, wrap_ref, false);
   }
 
   /// Generates
@@ -305,25 +317,8 @@ impl NormalModule {
     if self.esm_namespace_in_cjs_node_mode.is_some() {
       return;
     }
-    let esm_namespace_ref_derived_from_module_exports = symbol_db.create_facade_root_symbol_ref(
-      self.idx,
-      &concat_string!("import_", legitimize_identifier_name(&self.repr_name)),
-    );
-
-    let stmt_info_idx = self.stmt_infos.add_stmt_info(StmtInfo {
-      stmt_idx: None,
-      declared_symbols: vec![esm_namespace_ref_derived_from_module_exports],
-      referenced_symbols: vec![wrap_ref.into(), runtime_module.resolve_symbol("__toESM").into()],
-      #[cfg(debug_assertions)]
-      debug_label: Some("esm_namespace_ref_derived_from_module_exports node".to_string()),
-      force_tree_shaking: true,
-      ..Default::default()
-    });
-
-    self.esm_namespace_in_cjs_node_mode = Some(EsmNamespaceInCjs {
-      namespace_ref: esm_namespace_ref_derived_from_module_exports,
-      stmt_info_idx,
-    });
+    self.esm_namespace_in_cjs_node_mode =
+      self.generate_esm_namespace_in_cjs_internal(symbol_db, runtime_module, wrap_ref, true);
   }
 
   #[expect(clippy::cast_precision_loss)]

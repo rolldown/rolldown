@@ -321,6 +321,7 @@ export interface BindingHmrBoundaryOutput {
 export interface BindingHmrOutput {
   patch: string
   hmrBoundaries: Array<BindingHmrBoundaryOutput>
+  fullReload: boolean
 }
 
 export interface BindingHookJsLoadOutput {

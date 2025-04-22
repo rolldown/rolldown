@@ -4,6 +4,7 @@ use arcstr::ArcStr;
 pub struct HmrOutput {
   pub patch: String,
   pub hmr_boundaries: Vec<HmrBoundaryOutput>,
+  pub full_reload: bool,
 }
 
 #[derive(Debug)]

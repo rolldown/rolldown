@@ -3,6 +3,7 @@
 pub struct BindingHmrOutput {
   pub patch: String,
   pub hmr_boundaries: Vec<BindingHmrBoundaryOutput>,
+  pub full_reload: bool,
 }
 
 impl From<rolldown_common::HmrOutput> for BindingHmrOutput {
@@ -10,6 +11,7 @@ impl From<rolldown_common::HmrOutput> for BindingHmrOutput {
     Self {
       patch: value.patch,
       hmr_boundaries: value.hmr_boundaries.into_iter().map(Into::into).collect(),
+      full_reload: value.full_reload,
     }
   }
 }

@@ -94,19 +94,20 @@ impl HmrManager {
       }
       let mut visited_modules = FxHashSet::default();
 
-      let is_reach_to_hmr_boundary = self.propagate_update(
+      let is_reach_to_hmr_root_boundary = self.propagate_update(
         changed_module_idx,
         &mut visited_modules,
         &mut hmr_boundary,
         &mut affected_modules,
       );
 
-      if !is_reach_to_hmr_boundary {
+      if is_reach_to_hmr_root_boundary {
         need_to_full_reload = true;
       }
     }
+
     if need_to_full_reload {
-      return Ok(HmrOutput::default());
+      return Ok(HmrOutput { full_reload: true, ..Default::default() });
     }
 
     let mut modules_to_invalidate = changed_modules.clone();
@@ -233,6 +234,7 @@ impl HmrManager {
           accepted_via: self.module_db.modules[boundary.accepted_via].stable_id().into(),
         })
         .collect(),
+      ..Default::default()
     })
   }
 
@@ -242,10 +244,10 @@ impl HmrManager {
     visited_modules: &mut FxHashSet<ModuleIdx>,
     hmr_boundaries: &mut FxIndexSet<HmrBoundary>,
     affected_modules: &mut FxIndexSet<ModuleIdx>,
-  ) -> bool /* is reached to hmr boundary  */ {
+  ) -> bool /* is reached to hmr root boundary  */ {
     if visited_modules.contains(&module_idx) {
       // At this point, we consider circular dependencies as a full reload. We can improve this later.
-      return false;
+      return true;
     }
 
     visited_modules.insert(module_idx);
@@ -256,10 +258,20 @@ impl HmrManager {
 
     if module.ast_usage.contains(EcmaModuleAstUsage::HmrSelfAccept) {
       hmr_boundaries.insert(HmrBoundary { boundary: module_idx, accepted_via: module_idx });
+      return false;
+    }
+
+    // If the module is not imported by one module, it should be a hmr root boundary.
+    if module.importers_idx.is_empty() {
       return true;
     }
-    module.importers_idx.iter().all(|importer_idx| {
-      self.propagate_update(*importer_idx, visited_modules, hmr_boundaries, affected_modules)
-    })
+
+    for importer_idx in &module.importers_idx {
+      if self.propagate_update(*importer_idx, visited_modules, hmr_boundaries, affected_modules) {
+        return true;
+      }
+    }
+
+    false
   }
 }

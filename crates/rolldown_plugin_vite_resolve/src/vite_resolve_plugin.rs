@@ -138,6 +138,7 @@ impl ViteResolvePlugin {
           external: options.external,
           no_external: Arc::clone(&no_external),
           dedupe,
+          is_build: options.resolve_options.is_build,
         },
         options.runtime,
         resolvers.get_for_external(),

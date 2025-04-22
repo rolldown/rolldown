@@ -50,11 +50,11 @@ rolldown_tracing = { workspace = true }
 rolldown_utils = { workspace = true }
 rustc-hash = { workspace = true }
 serde = { workspace = true, optional = true }
+serde_json = { workspace = true }
 string_wizard = { workspace = true }
 sugar_path = { workspace = true }
 tokio = { workspace = true, features = ["rt", "macros", "sync", "time"] }
 tracing = { workspace = true }
-valuable = { workspace = true }
 xxhash-rust = { workspace = true, features = ["xxh3"] }
 
 [dev-dependencies]
@@ -67,4 +67,5 @@ testing_macros = { workspace = true }
 tokio = { workspace = true, features = ["rt", "macros", "sync", "rt-multi-thread"] }
 
 [package.metadata.cargo-shear]
-ignored = ["serde"]
+# `serde_json` is used in `trace_action` macro.
+ignored = ["serde", "serde_json"]

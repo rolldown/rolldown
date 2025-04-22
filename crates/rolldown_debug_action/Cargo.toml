@@ -9,7 +9,6 @@ repository.workspace = true
 [dependencies]
 serde = { workspace = true, features = ["derive"] }
 ts-rs = { workspace = true }
-valuable = { workspace = true, features = ["derive"] }
 
 [lints]
 workspace = true

@@ -174,7 +174,6 @@ testing_macros = "1.0.0"
 tokio = { version = "1.38.0", default-features = false }
 tracing = { version = "0.1.41" }
 tracing-chrome = "0.7.2"
-tracing-serde = "0.2.0"
 tracing-subscriber = { version = "0.3.18", default-features = false }
 ts-rs = "10.1"
 typedmap = "0.6.0"

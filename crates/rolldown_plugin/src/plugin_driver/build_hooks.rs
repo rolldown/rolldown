@@ -102,49 +102,65 @@ impl PluginDriver {
       if skipped_plugins.iter().any(|p| *p == plugin_idx) {
         continue;
       }
-      trace_action!(action::HookResolveIdCallStart {
-        action: "HookResolveIdCallStart",
-        importer: args.importer.map(ToString::to_string),
-        module_request: args.specifier.to_string(),
-        import_kind: args.kind.to_string(),
-        plugin_name: plugin.call_name().to_string(),
-        plugin_index: plugin_idx.raw(),
-        trigger: "${hook_resolve_id_trigger}",
-      });
-      if let Some(r) = plugin
-        .call_resolve_id(
-          &skipped_resolve_calls.map_or_else(
-            || ctx.clone(),
-            |skipped_resolve_calls| {
-              PluginContext::new_shared_with_skipped_resolve_calls(
-                ctx,
-                skipped_resolve_calls.clone(),
-              )
-            },
-          ),
-          args,
-        )
-        .instrument(debug_span!("resolve_id_hook", plugin_name = plugin.call_name().as_ref()))
-        .await?
-      {
-        trace_action!(action::HookResolveIdCallEnd {
-          action: "HookResolveIdCallEnd",
-          resolved_id: Some(r.id.to_string()),
-          is_external: r.external.map(|v| v.is_external()),
+      let ret = async {
+        trace_action!(action::HookResolveIdCallStart {
+          action: "HookResolveIdCallStart",
+          importer: args.importer.map(ToString::to_string),
+          module_request: args.specifier.to_string(),
+          import_kind: args.kind.to_string(),
           plugin_name: plugin.call_name().to_string(),
           plugin_index: plugin_idx.raw(),
           trigger: "${hook_resolve_id_trigger}",
+          call_id: "${call_id}",
         });
-        return Ok(Some(r));
+        if let Some(r) = plugin
+          .call_resolve_id(
+            &skipped_resolve_calls.map_or_else(
+              || ctx.clone(),
+              |skipped_resolve_calls| {
+                PluginContext::new_shared_with_skipped_resolve_calls(
+                  ctx,
+                  skipped_resolve_calls.clone(),
+                )
+              },
+            ),
+            args,
+          )
+          .instrument(debug_span!("resolve_id_hook", plugin_name = plugin.call_name().as_ref()))
+          .await?
+        {
+          trace_action!(action::HookResolveIdCallEnd {
+            action: "HookResolveIdCallEnd",
+            resolved_id: Some(r.id.to_string()),
+            is_external: r.external.map(|v| v.is_external()),
+            plugin_name: plugin.call_name().to_string(),
+            plugin_index: plugin_idx.raw(),
+            trigger: "${hook_resolve_id_trigger}",
+            call_id: "${call_id}",
+          });
+          anyhow::Ok(Some(r))
+        } else {
+          trace_action!(action::HookResolveIdCallEnd {
+            action: "HookResolveIdCallEnd",
+            resolved_id: None,
+            is_external: None,
+            plugin_name: plugin.call_name().to_string(),
+            plugin_index: plugin_idx.raw(),
+            trigger: "${hook_resolve_id_trigger}",
+            call_id: "${call_id}",
+          });
+          Ok(None)
+        }
       }
-      trace_action!(action::HookResolveIdCallEnd {
-        action: "HookResolveIdCallEnd",
-        resolved_id: None,
-        is_external: None,
-        plugin_name: plugin.call_name().to_string(),
-        plugin_index: plugin_idx.raw(),
-        trigger: "${hook_resolve_id_trigger}",
-      });
+      .instrument(tracing::trace_span!(
+        "HookResolveIdCall",
+        CONTEXT_call_id =
+          format!("{}_{}", args.specifier, rolldown_utils::time::current_utc_timestamp_ms())
+      ))
+      .await?;
+      if ret.is_some() {
+        return Ok(ret);
+      }
     }
     Ok(None)
   }

@@ -9,6 +9,7 @@ pub struct HookResolveIdCallEnd {
   pub plugin_name: String,
   /// The index of the plugin in the plugin list. It's unique to each plugin.
   pub plugin_index: u32,
-  #[ts(type = "'automatic' | 'manual")]
+  #[ts(type = "'automatic' | 'manual'")]
   pub trigger: &'static str,
+  pub call_id: &'static str,
 }

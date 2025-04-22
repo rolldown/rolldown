@@ -1,7 +1,6 @@
 import { BindingBundlerOptions } from '../binding';
 import { getLogger, getOnLog } from '../log/logger';
-import { LOG_LEVEL_INFO, LOG_LEVEL_WARN } from '../log/logging';
-import { logMinifyWarning } from '../log/logs';
+import { LOG_LEVEL_INFO } from '../log/logging';
 import type { InputOptions } from '../options/input-options';
 import type { OutputOptions } from '../options/output-options';
 import { PluginDriver } from '../plugin/plugin-driver';
@@ -45,10 +44,6 @@ export async function createBundlerOptions(
       logLevel,
       watchMode,
     );
-  }
-
-  if (outputOptions.minify === true) {
-    onLog(LOG_LEVEL_WARN, logMinifyWarning());
   }
 
   const normalizedOutputPlugins = await normalizePluginOption(

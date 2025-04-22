@@ -1,4 +1,3 @@
-import colors from 'ansis';
 import type { RollupLog } from '../types/misc';
 import { getCodeFrame } from '../utils/code-frame';
 import { locate } from './locate-character';
@@ -8,22 +7,12 @@ const INVALID_LOG_POSITION = 'INVALID_LOG_POSITION',
   INPUT_HOOK_IN_OUTPUT_PLUGIN = 'INPUT_HOOK_IN_OUTPUT_PLUGIN',
   CYCLE_LOADING = 'CYCLE_LOADING',
   MULTIPLY_NOTIFY_OPTION = 'MULTIPLY_NOTIFY_OPTION',
-  MINIFY_WARNING = 'MINIFY_WARNING',
   PARSE_ERROR = 'PARSE_ERROR';
 
 export function logParseError(message: string): RollupLog {
   return {
     code: PARSE_ERROR,
     message,
-  };
-}
-
-export function logMinifyWarning(): RollupLog {
-  return {
-    code: MINIFY_WARNING,
-    message: colors.yellow(
-      'The built-in minifier is still under development. Setting "minify: true" is not recommended for production use.',
-    ),
   };
 }
 

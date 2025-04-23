@@ -3540,11 +3540,6 @@ expression: output
 
 - entry-!~{000}~.js => entry-Bk58htPI.js
 
-# tests/esbuild/ts/ts_import_in_node_modules_name_collision_with_css
-
-- entry-!~{000}~.js => entry-BdivPvW6.js
-- entry.css
-
 # tests/esbuild/ts/ts_import_missing_unused_es6
 
 - entry-!~{000}~.js => entry-CMXZovLt.js
@@ -3630,7 +3625,7 @@ expression: output
 
 # tests/esbuild/ts/ts_prefer_js_over_ts_inside_node_modules
 
-- src_main-!~{000}~.js => src_main-DnMCSLLi.js
+- src_main-!~{000}~.js => src_main-DZCcAwNA.js
 
 # tests/esbuild/ts/ts_print_non_finite_number_inside_with
 

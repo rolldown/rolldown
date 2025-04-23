@@ -9,12 +9,13 @@ use std::{
 
 use crate::{
   CallablePlugin, ResolveOptionsExternal,
+  builtin::{BuiltinChecker, is_node_like_builtin},
   external::{self, ExternalDecider, ExternalDeciderOptions},
   file_url::file_url_str_to_path_and_postfix,
   resolver::{self, AdditionalOptions, Resolvers},
   utils::{
-    BROWSER_EXTERNAL_ID, OPTIONAL_PEER_DEP_ID, clean_url, is_bare_import, is_builtin,
-    is_in_node_modules, is_windows_drive_path, normalize_path,
+    BROWSER_EXTERNAL_ID, OPTIONAL_PEER_DEP_ID, clean_url, is_bare_import, is_in_node_modules,
+    is_windows_drive_path, normalize_path,
   },
 };
 use anyhow::anyhow;
@@ -25,6 +26,7 @@ use rolldown_plugin::{
   HookResolveIdOutput, HookResolveIdReturn, HookUsage, Plugin, PluginContext,
   typedmap::TypedMapKey,
 };
+use rolldown_utils::pattern_filter::StringOrRegex;
 use rustc_hash::FxHashSet;
 use sugar_path::SugarPath;
 
@@ -35,6 +37,7 @@ pub struct ViteResolveOptions {
   pub resolve_options: ViteResolveResolveOptions,
   pub environment_consumer: String,
   pub environment_name: String,
+  pub builtins: Vec<StringOrRegex>,
   pub external: external::ResolveOptionsExternal,
   pub no_external: external::ResolveOptionsNoExternal,
   pub dedupe: Vec<String>,
@@ -42,8 +45,6 @@ pub struct ViteResolveOptions {
   pub finalize_bare_specifier: Option<Arc<FinalizeBareSpecifierCallback>>,
   #[debug(skip)]
   pub finalize_other_specifiers: Option<Arc<FinalizeOtherSpecifiersCallback>>,
-
-  pub runtime: String,
 }
 pub type FinalizeBareSpecifierCallback = dyn (Fn(
     &str,
@@ -96,10 +97,9 @@ pub struct ViteResolvePlugin {
   #[debug(skip)]
   finalize_other_specifiers: Option<Arc<FinalizeOtherSpecifiersCallback>>,
 
-  runtime: String,
-
   resolvers: Resolvers,
   external_decider: ExternalDecider,
+  builtin_checker: Arc<BuiltinChecker>,
 }
 
 impl ViteResolvePlugin {
@@ -115,10 +115,11 @@ impl ViteResolvePlugin {
       root: &options.resolve_options.root,
       preserve_symlinks: options.resolve_options.preserve_symlinks,
     };
+    let builtin_checker = Arc::new(BuiltinChecker::new(options.builtins));
     let resolvers = Resolvers::new(
       &base_options,
       &options.resolve_options.external_conditions,
-      options.runtime.clone(),
+      Arc::clone(&builtin_checker),
     );
     let no_external = Arc::new(options.no_external);
     let dedupe = Arc::new(options.dedupe.into_iter().collect());
@@ -131,7 +132,6 @@ impl ViteResolvePlugin {
       environment_name: options.environment_name,
       finalize_bare_specifier: options.finalize_bare_specifier,
       finalize_other_specifiers: options.finalize_other_specifiers,
-      runtime: options.runtime.clone(),
       external_decider: ExternalDecider::new(
         ExternalDeciderOptions {
           external: options.external,
@@ -139,9 +139,10 @@ impl ViteResolvePlugin {
           dedupe,
           is_build: options.resolve_options.is_build,
         },
-        options.runtime,
         resolvers.get_for_external(),
+        Arc::clone(&builtin_checker),
       ),
+      builtin_checker,
 
       resolvers,
       resolve_options: options.resolve_options,
@@ -233,51 +234,78 @@ impl ViteResolvePlugin {
         return Ok(Some(result));
       }
 
-      if is_builtin(args.specifier, &self.runtime) {
-        if self.environment_consumer == "server" {
-          if self.no_external.is_true()
-              // if both noExternal and external are true, noExternal will take the higher priority and bundle it.
-              // only if the id is explicitly listed in external, we will externalize it and skip this error.
-              &&(matches!(self.external, ResolveOptionsExternal::True)
-              || !self.external.is_external_explicitly(args.specifier))
-          {
-            let mut message = format!("Cannot bundle Node.js built-in \"{}\"", args.specifier);
-            if let Some(importer) = args.importer {
-              let current_dir =
-                env::current_dir().unwrap_or(PathBuf::from(&self.resolve_options.root));
-              message.push_str(&format!(
-                " imported from \"{}\"",
-                Path::new(importer).relative(current_dir).to_string_lossy()
-              ));
-            }
-            message.push_str(&format!(
-              ". Consider disabling environments.{}.noExternal or remove the built-in dependency.",
-              self.environment_name
-            ));
-            return Err(anyhow!(message));
-          }
-
-          return Ok(Some(HookResolveIdOutput {
-            id: args.specifier.into(),
-            external: Some(true.into()),
-            side_effects: Some(HookSideEffects::False),
-            ..Default::default()
-          }));
-        } else {
-          if !self.resolve_options.as_src {
-            // TODO(sapphi-red): debug log
-          } else if self.resolve_options.is_production {
-            // TODO(sapphi-red): warn log
-          }
-          return Ok(Some(HookResolveIdOutput {
-            id: if self.resolve_options.is_production {
-              arcstr::literal!(BROWSER_EXTERNAL_ID)
-            } else {
-              format!("{BROWSER_EXTERNAL_ID}:{}", args.specifier).into()
-            },
-            ..Default::default()
-          }));
+      // built-ins
+      // externalize if building for a server environment, otherwise redirect to an empty module
+      if self.environment_consumer == "server" && self.builtin_checker.is_builtin(args.specifier) {
+        return Ok(Some(HookResolveIdOutput {
+          id: args.specifier.into(),
+          external: Some(true.into()),
+          side_effects: Some(HookSideEffects::False),
+          ..Default::default()
+        }));
+      } else if self.environment_consumer == "server" && is_node_like_builtin(args.specifier) {
+        if !(matches!(self.external, ResolveOptionsExternal::True)
+          || self.external.is_external_explicitly(args.specifier))
+        {
+          // TODO(sapphi-red): warn log
+          // let mut message =
+          //   format!("Automatically externalized node built-in module \"{}\"", &args.specifier);
+          // if let Some(importer) = args.importer {
+          //   let current_dir =
+          //     env::current_dir().unwrap_or(PathBuf::from(&self.resolve_options.root));
+          //   message.push_str(&format!(
+          //     " imported from \"{}\"",
+          //     Path::new(importer).relative(current_dir).to_string_lossy()
+          //   ));
+          // }
+          // message.push_str(&format!(
+          //   ". Consider adding it to environments.{}.external if it is intended.",
+          //   self.environment_name
+          // ));
         }
+
+        return Ok(Some(HookResolveIdOutput {
+          id: args.specifier.into(),
+          external: Some(true.into()),
+          side_effects: Some(HookSideEffects::False),
+          ..Default::default()
+        }));
+      } else if self.environment_consumer == "client" && is_node_like_builtin(args.specifier) {
+        if self.no_external.is_true()
+            // if both noExternal and external are true, noExternal will take the higher priority and bundle it.
+            // only if the id is explicitly listed in external, we will externalize it and skip this error.
+            &&(matches!(self.external, ResolveOptionsExternal::True)
+            || !self.external.is_external_explicitly(args.specifier))
+        {
+          let mut message = format!("Cannot bundle Node.js built-in \"{}\"", args.specifier);
+          if let Some(importer) = args.importer {
+            let current_dir =
+              env::current_dir().unwrap_or(PathBuf::from(&self.resolve_options.root));
+            message.push_str(&format!(
+              " imported from \"{}\"",
+              Path::new(importer).relative(current_dir).to_string_lossy()
+            ));
+          }
+          message.push_str(&format!(
+            ". Consider disabling environments.{}.noExternal or remove the built-in dependency.",
+            self.environment_name
+          ));
+          return Err(anyhow!(message));
+        }
+
+        if !self.resolve_options.as_src {
+          // TODO(sapphi-red): debug log
+        } else if self.resolve_options.is_production {
+          // TODO(sapphi-red): warn log
+        }
+        return Ok(Some(HookResolveIdOutput {
+          id: if self.resolve_options.is_production {
+            arcstr::literal!(BROWSER_EXTERNAL_ID)
+          } else {
+            format!("{BROWSER_EXTERNAL_ID}:{}", args.specifier).into()
+          },
+          ..Default::default()
+        }));
       }
     }
 

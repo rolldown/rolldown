@@ -1,14 +1,9 @@
 use std::borrow::Cow;
 
 use cow_utils::CowUtils;
-use oxc_resolver::NODEJS_BUILTINS;
 
 pub const BROWSER_EXTERNAL_ID: &str = "__vite-browser-external";
 pub const OPTIONAL_PEER_DEP_ID: &str = "__vite-optional-peer-dep";
-
-const NODE_BUILTIN_NAMESPACE: &str = "node:";
-const NPM_BUILTIN_NAMESPACE: &str = "npm:";
-const BUN_BUILTIN_NAMESPACE: &str = "bun:";
 
 pub fn clean_url(url: &str) -> &str {
   url.find(['?', '#']).map(|pos| (&url[..pos])).unwrap_or(url)
@@ -32,20 +27,6 @@ pub fn is_deep_import(id: &str) -> bool {
   } else {
     id[1..].contains('/')
   }
-}
-
-pub fn is_builtin(id: &str, runtime: &str) -> bool {
-  if runtime == "deno" && id.starts_with(NPM_BUILTIN_NAMESPACE) {
-    return true;
-  }
-  if runtime == "bun" && id.starts_with(BUN_BUILTIN_NAMESPACE) {
-    return true;
-  }
-  is_node_builtin(id)
-}
-
-fn is_node_builtin(id: &str) -> bool {
-  id.starts_with(NODE_BUILTIN_NAMESPACE) || NODEJS_BUILTINS.contains(&id)
 }
 
 pub fn get_extension(id: &str) -> &str {

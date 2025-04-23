@@ -11,10 +11,11 @@ use rustc_hash::FxHashSet;
 use sugar_path::SugarPath;
 
 use crate::{
+  builtin::BuiltinChecker,
   package_json_cache::{PackageJsonCache, PackageJsonWithOptionalPeerDependencies},
   utils::{
     BROWSER_EXTERNAL_ID, OPTIONAL_PEER_DEP_ID, can_externalize_file, clean_url, get_extension,
-    get_npm_package_name, is_bare_import, is_builtin, is_deep_import, normalize_path,
+    get_npm_package_name, is_bare_import, is_deep_import, normalize_path,
   },
 };
 
@@ -77,7 +78,7 @@ impl Resolvers {
   pub fn new(
     base_options: &BaseOptions,
     external_conditions: &Vec<String>,
-    runtime: String,
+    builtin_checker: Arc<BuiltinChecker>,
   ) -> Self {
     let package_json_cache = Arc::new(PackageJsonCache::default());
 
@@ -87,8 +88,8 @@ impl Resolvers {
       .map(|v| {
         Resolver::new(
           base_resolver.clone_with_options(get_resolve_options(base_options, v.into())),
+          Arc::clone(&builtin_checker),
           Arc::clone(&package_json_cache),
-          runtime.clone(),
           base_options.root.to_owned(),
           base_options.try_prefix.to_owned(),
         )
@@ -102,8 +103,8 @@ impl Resolvers {
         &BaseOptions { is_production: false, conditions: external_conditions, ..*base_options },
         AdditionalOptions { is_require: false, prefer_relative: false },
       )),
+      Arc::clone(&builtin_checker),
       Arc::clone(&package_json_cache),
-      runtime,
       base_options.root.to_owned(),
       base_options.try_prefix.to_owned(),
     );
@@ -202,8 +203,8 @@ fn u8_to_bools<const N: usize>(n: u8) -> [bool; N] {
 #[derive(Debug)]
 pub struct Resolver {
   inner: oxc_resolver::Resolver,
+  built_in_checker: Arc<BuiltinChecker>,
   package_json_cache: Arc<PackageJsonCache>,
-  runtime: String,
   root: String,
   try_prefix: Option<String>,
 }
@@ -211,12 +212,12 @@ pub struct Resolver {
 impl Resolver {
   pub fn new(
     inner: oxc_resolver::Resolver,
+    built_in_checker: Arc<BuiltinChecker>,
     package_json_cache: Arc<PackageJsonCache>,
-    runtime: String,
     root: String,
     try_prefix: Option<String>,
   ) -> Self {
-    Self { inner, package_json_cache, runtime, root, try_prefix }
+    Self { inner, built_in_checker, package_json_cache, root, try_prefix }
   }
 
   pub fn resolve_raw<P: AsRef<Path>>(
@@ -281,7 +282,7 @@ impl Resolver {
       Err(oxc_resolver::ResolveError::NotFound(id)) => {
         // if import can't be found, check if it's an optional peer dep.
         // if so, we can resolve to a special id that errors only when imported.
-        if is_bare_import(id) && !is_builtin(id, &self.runtime) && !id.contains('\0') {
+        if is_bare_import(id) && !self.built_in_checker.is_builtin(id) && !id.contains('\0') {
           if let Some(pkg_name) = get_npm_package_name(id) {
             let base_dir = get_base_dir(id, importer, dedupe).unwrap_or(&self.root);
             if base_dir != self.root {

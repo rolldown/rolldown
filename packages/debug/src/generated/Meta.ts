@@ -8,7 +8,7 @@ import type { HookResolveIdCallStart } from './HookResolveIdCallStart';
 import type { HookTransformCallEnd } from './HookTransformCallEnd';
 import type { HookTransformCallStart } from './HookTransformCallStart';
 
-export type Action =
+export type Meta =
   | HookTransformCallStart
   | HookTransformCallEnd
   | HookLoadCallStart

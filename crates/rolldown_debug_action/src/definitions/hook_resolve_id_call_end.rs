@@ -2,7 +2,7 @@
 #[ts(export)]
 pub struct HookResolveIdCallEnd {
   #[ts(type = "'HookResolveIdCallEnd'")]
-  pub kind: &'static str,
+  pub action: &'static str,
   pub resolved_id: Option<String>,
   /// If the value is `true/false`, it means the plugin explicitly returned the value for this field.
   pub is_external: Option<bool>,

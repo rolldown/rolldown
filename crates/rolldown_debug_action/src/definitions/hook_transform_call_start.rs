@@ -2,7 +2,7 @@
 #[ts(export)]
 pub struct HookTransformCallStart {
   #[ts(type = "'HookTransformCallStart'")]
-  pub kind: String,
+  pub action: &'static str,
   pub module_id: String,
   pub source: String,
   pub plugin_name: String,

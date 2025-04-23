@@ -49,7 +49,7 @@ where
 
     std::fs::create_dir_all(format!(".rolldown/{session_id}")).ok();
 
-    let log_filename: Arc<str> = format!(".rolldown/{session_id}/log.json").into();
+    let log_filename: Arc<str> = format!(".rolldown/{session_id}/logs.json").into();
 
     if !OPENED_FILE_HANDLES.contains_key(&log_filename) {
       let file = OpenOptions::new()

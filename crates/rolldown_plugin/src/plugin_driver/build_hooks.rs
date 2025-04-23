@@ -104,7 +104,7 @@ impl PluginDriver {
         continue;
       }
       trace_action!(action::HookResolveIdCallStart {
-        kind: "HookResolveIdCallStart",
+        action: "HookResolveIdCallStart",
         importer: args.importer.map(ToString::to_string),
         module_request: args.specifier.to_string(),
         import_kind: args.kind.to_string(),
@@ -128,7 +128,7 @@ impl PluginDriver {
         .await?
       {
         trace_action!(action::HookResolveIdCallEnd {
-          kind: "HookResolveIdCallEnd",
+          action: "HookResolveIdCallEnd",
           resolved_id: Some(r.id.to_string()),
           is_external: r.external.map(|v| v.is_external()),
           plugin_name: plugin.call_name().to_string(),
@@ -137,7 +137,7 @@ impl PluginDriver {
         return Ok(Some(r));
       }
       trace_action!(action::HookResolveIdCallEnd {
-        kind: "HookResolveIdCallEnd",
+        action: "HookResolveIdCallEnd",
         resolved_id: None,
         is_external: None,
         plugin_name: plugin.call_name().to_string(),
@@ -198,7 +198,7 @@ impl PluginDriver {
         continue;
       }
       trace_action!(action::HookLoadCallStart {
-        kind: "HookLoadCallStart".to_string(),
+        action: "HookLoadCallStart",
         module_id: args.id.to_string(),
         plugin_name: plugin.call_name().to_string(),
         plugin_index: plugin_idx.raw()
@@ -209,7 +209,7 @@ impl PluginDriver {
         .await?
       {
         trace_action!(action::HookLoadCallEnd {
-          kind: "HookLoadCallEnd".to_string(),
+          action: "HookLoadCallEnd",
           module_id: args.id.to_string(),
           source: Some(r.code.to_string()),
           plugin_name: plugin.call_name().to_string(),
@@ -218,7 +218,7 @@ impl PluginDriver {
         return Ok(Some(r));
       }
       trace_action!(action::HookLoadCallEnd {
-        kind: "HookLoadCallEnd".to_string(),
+        action: "HookLoadCallEnd",
         module_id: args.id.to_string(),
         source: None,
         plugin_name: plugin.call_name().to_string(),
@@ -247,7 +247,7 @@ impl PluginDriver {
         continue;
       }
       trace_action!(action::HookTransformCallStart {
-        kind: "HookTransformCallStart".to_string(),
+        action: "HookTransformCallStart",
         module_id: id.to_string(),
         source: code.clone(),
         plugin_name: plugin.call_name().to_string(),
@@ -277,7 +277,7 @@ impl PluginDriver {
         if let Some(v) = r.code {
           code = v;
           trace_action!(action::HookTransformCallEnd {
-            kind: "HookTransformCallEnd".to_string(),
+            action: "HookTransformCallEnd",
             module_id: id.to_string(),
             transformed_source: Some(code.to_string()),
             plugin_name: plugin.call_name().to_string(),
@@ -289,7 +289,7 @@ impl PluginDriver {
         }
       } else {
         trace_action!(action::HookTransformCallEnd {
-          kind: "HookTransformCallEnd".to_string(),
+          action: "HookTransformCallEnd",
           module_id: id.to_string(),
           transformed_source: Some(code.to_string()),
           plugin_name: plugin.call_name().to_string(),

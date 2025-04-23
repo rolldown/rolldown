@@ -13,7 +13,7 @@ use crate::static_data::OPENED_FILES_BY_SESSION;
 
 static IS_INITIALIZED: AtomicBool = AtomicBool::new(false);
 
-static FILTER_FOR_DEVTOOL: &str = "[{action}]=trace";
+static FILTER_FOR_DEVTOOL: &str = "[{meta}]=trace";
 
 pub fn init_devtool_tracing() {
   if IS_INITIALIZED.swap(true, std::sync::atomic::Ordering::SeqCst) {

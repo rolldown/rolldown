@@ -12,7 +12,6 @@ use crate::{
 use rustc_hash::FxHashMap;
 use serde::ser::{SerializeMap, Serializer as _};
 use tracing::{Event, Subscriber};
-use tracing_serde::AsSerde;
 use tracing_subscriber::{
   fmt::{FmtContext, FormatEvent, FormatFields, format::Writer},
   registry::LookupSpan,
@@ -69,7 +68,6 @@ where
       inject_context_data(&mut action_meta, &captured_values);
 
       // This branch means this event is not only for normal tracing, but also for devtool tracing.
-      let meta = event.metadata();
       let session_id = if let Some(scope) = ctx.event_scope() {
         let mut spans = scope.from_root();
         loop {
@@ -112,13 +110,11 @@ where
       let mut file = file.value_mut();
 
       let mut visit = || {
-        let mut serializer = serde_json::Serializer::new(&mut file);
+        let mut serializer = serde_json::Serializer::pretty(&mut file);
         let mut serializer = serializer.serialize_map(None)?;
 
         serializer.serialize_entry("timestamp", &current_utc_timestamp_ms())?;
-        serializer.serialize_entry("level", &meta.level().as_serde())?;
         serializer.serialize_entry("session_id", session_id)?;
-        serializer.serialize_value(&action_meta)?;
         let serde_json::Value::Object(action_meta) = &action_meta else {
           unreachable!("action_meta should always be an object");
         };

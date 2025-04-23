@@ -12,4 +12,6 @@ export type HookResolveIdCallEnd = {
    * The index of the plugin in the plugin list. It's unique to each plugin.
    */
   plugin_index: number;
+  trigger: 'automatic' | 'manual';
+  call_id: string;
 };

@@ -6,7 +6,6 @@ use rolldown_common::{EmittedAsset, Output};
 use rolldown_plugin::{HookNoopReturn, HookUsage, Plugin, PluginContext};
 use rolldown_utils::rustc_hash::FxHashSetExt;
 use rustc_hash::FxHashSet;
-use utils::ManifestChunk;
 
 #[derive(Debug)]
 pub struct ManifestPlugin {
@@ -34,10 +33,11 @@ impl Plugin for ManifestPlugin {
     // Use BTreeMap to make the result sorted
     let mut manifest = BTreeMap::default();
 
-    let entry_css_reference_ids: &FxHashSet<String> = &self.entry_css_asset_file_names;
+    let entry_css_reference_ids = &self.entry_css_asset_file_names;
     let mut entry_css_asset_file_names = FxHashSet::with_capacity(entry_css_reference_ids.len());
+
     for reference_id in entry_css_reference_ids {
-      match ctx.get_file_name(reference_id.as_str()) {
+      match ctx.get_file_name(reference_id) {
         Ok(file_name) => {
           entry_css_asset_file_names.insert(file_name);
         }
@@ -53,39 +53,34 @@ impl Plugin for ManifestPlugin {
         Output::Chunk(chunk) => {
           let name = self.get_chunk_name(chunk);
           let chunk_manifest = Arc::new(self.create_chunk(args.bundle, chunk, name.clone()));
-          manifest.insert(name.clone(), chunk_manifest);
+          manifest.insert(name, chunk_manifest);
         }
         Output::Asset(asset) => {
           if !asset.names.is_empty() {
-            let src = asset.original_file_names.first().map_or_else(
+            // Add every unique asset to the manifest, keyed by its original name
+            let file = asset.original_file_names.first().map_or_else(
               || {
-                format!(
-                  "_{}",
-                  Path::new(asset.filename.as_str())
-                    .file_name()
-                    .map(|x| x.to_string_lossy())
-                    .unwrap()
-                )
+                let filename = Path::new(asset.filename.as_str())
+                  .file_name()
+                  .map(|x| x.to_string_lossy())
+                  .unwrap();
+                Cow::Owned(rolldown_utils::concat_string!("_", filename))
               },
-              ToOwned::to_owned,
+              Cow::Borrowed,
             );
-            let is_entry = entry_css_asset_file_names.contains(asset.filename.as_str());
-            let asset_manifest = Arc::new(Self::create_asset(asset, src.clone(), is_entry));
+
+            let is_entry = entry_css_asset_file_names.contains(&asset.filename);
+            let asset_manifest = Arc::new(Self::create_asset(asset, file.to_string(), is_entry));
 
             // If JS chunk and asset chunk are both generated from the same source file,
             // prioritize JS chunk as it contains more information
-            if !manifest.get(&src).is_some_and(|m| {
-              m.file.ends_with(".js") || m.file.ends_with(".cjs") || m.file.ends_with(".mjs")
-            }) {
-              manifest.insert(src.clone(), Arc::<ManifestChunk>::clone(&asset_manifest));
+            if utils::is_non_js_file(&file, &manifest) {
+              manifest.insert(file.into_owned(), Arc::clone(&asset_manifest));
             }
 
             for original_file_name in &asset.original_file_names {
-              if !manifest.get(original_file_name).is_some_and(|m| {
-                m.file.ends_with(".js") || m.file.ends_with(".cjs") || m.file.ends_with(".mjs")
-              }) {
-                manifest
-                  .insert(original_file_name.clone(), Arc::<ManifestChunk>::clone(&asset_manifest));
+              if utils::is_non_js_file(original_file_name, &manifest) {
+                manifest.insert(original_file_name.clone(), Arc::clone(&asset_manifest));
               }
             }
           }
@@ -101,9 +96,8 @@ impl Plugin for ManifestPlugin {
     ctx
       .emit_file_async(EmittedAsset {
         file_name: Some(self.config.out_path.as_str().into()),
-        name: None,
-        original_file_name: None,
         source: (serde_json::to_string_pretty(&manifest)?).into(),
+        ..Default::default()
       })
       .await?;
     // }

@@ -96,3 +96,13 @@ impl ManifestPlugin {
     }
   }
 }
+
+#[allow(clippy::case_sensitive_file_extension_comparisons)]
+pub fn is_non_js_file(
+  file: &str,
+  manifest: &std::collections::BTreeMap<String, std::sync::Arc<ManifestChunk>>,
+) -> bool {
+  manifest.get(file).is_none_or(|m| {
+    !(m.file.ends_with(".js") || m.file.ends_with(".cjs") || m.file.ends_with(".mjs"))
+  })
+}

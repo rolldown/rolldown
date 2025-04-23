@@ -197,6 +197,7 @@ export interface OutputOptions {
   plugins?: RolldownOutputPluginOption;
   polyfillRequire?: boolean;
   target?: ESTarget;
+  hoistTransitiveImports?: false;
 }
 
 interface OverwriteOutputOptionsForCli {

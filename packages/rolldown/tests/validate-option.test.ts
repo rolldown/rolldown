@@ -42,12 +42,32 @@ test('validate output option', async () => {
     await bundle.write({
       // @ts-ignore  invalid key
       foo: 'bar',
+      hoistTransitiveImports: false
     })
     expect.unreachable()
   } catch (error: any) {
     expect(error.message).toMatchInlineSnapshot(`
         "Failed validate output options.
         - For the "foo". Invalid key: Expected never but received "foo". "
+      `)
+  }
+})
+
+test('give a error for hoistTransitiveImports: true', async () => {
+  try {
+    const bundle = await rolldown({
+      input: './build-api/main.js',
+      cwd: import.meta.dirname,
+    })
+    await bundle.write({
+      // @ts-ignore  invalid value
+      hoistTransitiveImports: true
+    })
+    expect.unreachable()
+  } catch (error: any) {
+    expect(error.message).toMatchInlineSnapshot(`
+        "Failed validate output options.
+        - For the "hoistTransitiveImports". The 'true' value is not supported. "
       `)
   }
 })

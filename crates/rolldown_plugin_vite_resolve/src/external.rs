@@ -69,6 +69,7 @@ pub struct ExternalDeciderOptions {
   pub external: ResolveOptionsExternal,
   pub no_external: Arc<ResolveOptionsNoExternal>,
   pub dedupe: Arc<FxHashSet<String>>,
+  pub is_build: bool,
 }
 
 #[derive(Debug)]
@@ -129,6 +130,10 @@ impl ExternalDecider {
     if !is_bare_import(id) || id.contains('\0') {
       return false;
     }
+
+    // Skip passing importer in build to avoid externalizing non-hoisted dependencies
+    // unresolvable from root (which would be unresolvable from output bundles also)
+    let importer = if self.options.is_build { None } else { importer };
 
     let result = self.resolver.resolve_bare_import(id, importer, false, &self.options.dedupe);
     match result {

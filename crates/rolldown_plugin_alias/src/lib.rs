@@ -8,8 +8,8 @@ use rolldown_utils::pattern_filter::StringOrRegex;
 
 #[derive(Debug, Default)]
 pub struct AliasPlugin {
-  // We don't support `customResolver` and `resolverFunction`, it will generate many threadSafeFunction in queue, and slowdown the
-  // performance, downstream user should fallback to js alias plugin when needs advance feature.
+  // We don't support `customResolver` and `resolverFunction`, it will generate many threadSafeFunction in queue,
+  // and slowdown the performance, downstream user should fallback to js alias plugin when needs advance feature.
   pub entries: Vec<Alias>,
 }
 
@@ -17,24 +17,6 @@ pub struct AliasPlugin {
 pub struct Alias {
   pub find: StringOrRegex,
   pub replacement: String,
-}
-
-impl AliasPlugin {
-  fn matches(pattern: &StringOrRegex, importee: &str) -> bool {
-    match pattern {
-      StringOrRegex::String(p) => {
-        if importee.len() < p.len() {
-          return false;
-        }
-        if importee == p {
-          return true;
-        }
-        // avoid alloc
-        importee.starts_with(p) && importee[p.len()..].starts_with('/')
-      }
-      StringOrRegex::Regex(regex) => regex.matches(importee),
-    }
-  }
 }
 
 impl Plugin for AliasPlugin {
@@ -48,34 +30,53 @@ impl Plugin for AliasPlugin {
     args: &rolldown_plugin::HookResolveIdArgs<'_>,
   ) -> rolldown_plugin::HookResolveIdReturn {
     let importee = args.specifier;
-    let match_entry = self.entries.iter().find(|alias| Self::matches(&alias.find, importee));
-    let Some(match_entry) = match_entry else {
-      return Ok(None);
+    let matched_entry = self.entries.iter().find(|alias| matches(&alias.find, importee));
+
+    let Some(matched_entry) = matched_entry else { return Ok(None) };
+    let update_id = match &matched_entry.find {
+      StringOrRegex::String(find) => importee.replace(find, &matched_entry.replacement),
+      StringOrRegex::Regex(find) => find.replace_all(importee, &matched_entry.replacement),
     };
 
-    let update_id = match &match_entry.find {
-      StringOrRegex::String(find) => importee.replace(find, &match_entry.replacement),
-      StringOrRegex::Regex(find) => find.replace_all(importee, &match_entry.replacement),
-    };
-    Ok(
-      ctx
-        .resolve(
-          &update_id,
-          None,
-          Some(PluginContextResolveOptions {
-            import_kind: args.kind,
-            skip_self: true,
-            custom: Arc::clone(&args.custom),
-          }),
-        )
-        .await?
-        .map(|resolved_id| {
-          Some(HookResolveIdOutput { id: resolved_id.id, ..Default::default() })
-        })?,
-    )
+    let resolved_id = ctx
+      .resolve(
+        &update_id,
+        args.importer,
+        Some(PluginContextResolveOptions {
+          skip_self: true,
+          import_kind: args.kind,
+          custom: Arc::clone(&args.custom),
+        }),
+      )
+      .await??;
+
+    // TODO: give an warning
+    // if !Path::new(&update_id).is_absolute() {
+    //   this.warn(
+    //     `rewrote ${importee} to ${updatedId} but was not an absolute path and was not handled by other plugins. ` +
+    //       `This will lead to duplicated modules for the same path. ` +
+    //       `To avoid duplicating modules, you should resolve to an absolute path.`
+    //   );
+    // }
+
+    // TODO: support `viteAliasCustomResolver`
+    // https://github.com/vitejs/rolldown-vite/blob/91a494c/packages/vite/src/node/plugins/index.ts#L325-L334
+    Ok(Some(HookResolveIdOutput { id: resolved_id.id, ..Default::default() }))
   }
 
   fn register_hook_usage(&self) -> HookUsage {
     HookUsage::ResolveId
+  }
+}
+
+fn matches(pattern: &StringOrRegex, importee: &str) -> bool {
+  match pattern {
+    StringOrRegex::String(p) => {
+      if importee.len() < p.len() {
+        return false;
+      }
+      importee == p || (importee.starts_with(p) && importee.as_bytes()[p.len()] == b'/')
+    }
+    StringOrRegex::Regex(regex) => regex.matches(importee),
   }
 }

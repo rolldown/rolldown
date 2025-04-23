@@ -22,12 +22,12 @@ export interface HookFilter {
    * @example
    * Include all `id`s that contain `node_modules` in the path.
    * ```js
-   * { id: 'node_modules' }
+   * { id: '**'+'/node_modules/**' }
    * ```
    * @example
    * Include all `id`s that contain `node_modules` or `src` in the path.
    * ```js
-   * { id: ['node_modules', 'src'] }
+   * { id: ['**'+'/node_modules/**', '**'+'/src/**'] }
    * ```
    * @example
    * Include all `id`s that start with `http`
@@ -37,14 +37,14 @@ export interface HookFilter {
    * @example
    * Exclude all `id`s that contain `node_modules` in the path.
    * ```js
-   * { id: { exclude: 'node_modules' } }
+   * { id: { exclude: '**'+'/node_modules/**' } }
    * ```
    * @example
    * Formal pattern to define includes and excludes.
    * ```
    * { id : {
-   *   include: ["foo", /bar/],
-   *   exclude: ["baz", /qux/]
+   *   include: ['**'+'/foo/**', /bar/],
+   *   exclude: ['**'+'/baz/**', /qux/]
    * }}
    * ```
    */

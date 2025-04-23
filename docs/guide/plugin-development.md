@@ -79,12 +79,12 @@ interface HookFilter {
    * @example
    * Include all `id`s that contain `node_modules` in the path.
    * ```js
-   * { id: 'node_modules' }
+   * { id: '**'+'/node_modules/**' }
    * ```
    * @example
    * Include all `id`s that contain `node_modules` or `src` in the path.
    * ```js
-   * { id: ['node_modules', 'src'] }
+   * { id: ['**'+'/node_modules/**', '**'+'/src/**'] }
    * ```
    * @example
    * Include all `id`s that start with `http`
@@ -94,14 +94,14 @@ interface HookFilter {
    * @example
    * Exclude all `id`s that contain `node_modules` in the path.
    * ```js
-   * { id: { exclude: 'node_modules' } }
+   * { id: { exclude: '**'+'/node_modules/**' } }
    * ```
    * @example
    * Formal pattern to define includes and excludes.
    * ```
    * { id : {
-   *   include: ["foo", /bar/],
-   *   exclude: ["baz", /qux/]
+   *   include: ['**'+'/foo/**', /bar/],
+   *   exclude: ['**'+'/baz/**', /qux/]
    * }}
    * ```
    */
@@ -118,6 +118,6 @@ The following properties are supported by each hook:
 - `transform` hook: `id`, `moduleType`, `code`
 
 > [!NOTE]
-> `id` is treated as glob pattern when you passing `string`, and treated as regular expression when you passing `RegExp`.
-> You could only passing _id_ with `RegExp` in `resolveId` filter, because there `id` parameter in `resolveId` hook is relative path,
-> `glob` usually needs to compare against absolute path.
+> `id` is treated as a glob pattern when you pass a `string`, and treated as a regular expression when you pass a `RegExp`.
+> In the `resolve` hook, `id` must be a `RegExp`. `string`s are not allowed.
+> This is because the `id` value in `resolveId` is the exact text written in the import statement and usually not an absolute path, while glob patterns are designed to match absolute paths.

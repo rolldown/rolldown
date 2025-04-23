@@ -1,6 +1,7 @@
-import {
+import type {
   BindingBuildImportAnalysisPluginConfig,
-  type BindingBuiltinPluginName,
+  BindingBuiltinPluginName,
+  BindingDynamicImportVarsPluginConfig,
   BindingGlobImportPluginConfig,
   BindingIsolatedDeclarationPluginConfig,
   BindingJsonPluginConfig,
@@ -10,7 +11,7 @@ import {
   BindingModulePreloadPolyfillPluginConfig,
   BindingRemote,
   BindingReportPluginConfig,
-  type BindingViteResolvePluginConfig,
+  BindingViteResolvePluginConfig,
 } from '../binding';
 import { makeBuiltinPluginCallable } from './utils';
 
@@ -28,8 +29,10 @@ export function modulePreloadPolyfillPlugin(
   return new BuiltinPlugin('builtin:module-preload-polyfill', config);
 }
 
-export function dynamicImportVarsPlugin(): BuiltinPlugin {
-  return new BuiltinPlugin('builtin:dynamic-import-vars');
+export function dynamicImportVarsPlugin(
+  config?: BindingDynamicImportVarsPluginConfig,
+): BuiltinPlugin {
+  return new BuiltinPlugin('builtin:dynamic-import-vars', config);
 }
 
 export function importGlobPlugin(

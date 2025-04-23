@@ -2676,6 +2676,7 @@ dependencies = [
  "memchr",
  "oxc",
  "rolldown_plugin",
+ "rolldown_utils",
 ]
 
 [[package]]

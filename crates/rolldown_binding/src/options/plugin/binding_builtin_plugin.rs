@@ -412,6 +412,22 @@ impl From<BindingTransformPluginConfig> for TransformPlugin {
   }
 }
 
+#[napi_derive::napi(object, object_to_js = false)]
+#[derive(Default)]
+pub struct BindingDynamicImportVarsPluginConfig {
+  pub include: Option<Vec<BindingStringOrRegex>>,
+  pub exclude: Option<Vec<BindingStringOrRegex>>,
+}
+
+impl From<BindingDynamicImportVarsPluginConfig> for DynamicImportVarsPlugin {
+  fn from(value: BindingDynamicImportVarsPluginConfig) -> Self {
+    Self {
+      include: value.include.map(bindingify_string_or_regex_array).unwrap_or_default(),
+      exclude: value.exclude.map(bindingify_string_or_regex_array).unwrap_or_default(),
+    }
+  }
+}
+
 impl TryFrom<BindingBuiltinPlugin> for Arc<dyn Pluginable> {
   type Error = napi::Error;
 
@@ -428,7 +444,14 @@ impl TryFrom<BindingBuiltinPlugin> for Arc<dyn Pluginable> {
         };
         Arc::new(ImportGlobPlugin { config })
       }
-      BindingBuiltinPluginName::DynamicImportVars => Arc::new(DynamicImportVarsPlugin {}),
+      BindingBuiltinPluginName::DynamicImportVars => {
+        let plugin = if let Some(options) = plugin.options {
+          BindingDynamicImportVarsPluginConfig::from_unknown(options)?.into()
+        } else {
+          DynamicImportVarsPlugin::default()
+        };
+        Arc::new(plugin)
+      }
       BindingBuiltinPluginName::ModulePreloadPolyfill => Arc::new(ModulePreloadPolyfillPlugin {}),
       BindingBuiltinPluginName::Manifest => {
         let config = if let Some(options) = plugin.options {

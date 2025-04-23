@@ -275,6 +275,11 @@ export interface BindingDeferSyncScanData {
   sideEffects?: BindingHookSideEffects
 }
 
+export interface BindingDynamicImportVarsPluginConfig {
+  include?: Array<BindingStringOrRegex>
+  exclude?: Array<BindingStringOrRegex>
+}
+
 export interface BindingEmittedAsset {
   name?: string
   fileName?: string

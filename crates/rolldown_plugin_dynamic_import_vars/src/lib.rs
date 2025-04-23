@@ -2,6 +2,7 @@ mod ast_visit;
 mod parse_pattern;
 mod should_ignore;
 mod to_glob;
+mod utils;
 
 use std::borrow::Cow;
 
@@ -11,13 +12,17 @@ use rolldown_plugin::{
   HookResolveIdReturn, HookTransformAstArgs, HookTransformAstReturn, HookUsage, Plugin,
   PluginContext,
 };
+use rolldown_utils::pattern_filter::StringOrRegex;
 
 use crate::ast_visit::DynamicImportVarsVisit;
 
 pub const DYNAMIC_IMPORT_HELPER: &str = "\0rolldown_dynamic_import_helper.js";
 
-#[derive(Debug)]
-pub struct DynamicImportVarsPlugin;
+#[derive(Debug, Default)]
+pub struct DynamicImportVarsPlugin {
+  pub include: Vec<StringOrRegex>,
+  pub exclude: Vec<StringOrRegex>,
+}
 
 impl Plugin for DynamicImportVarsPlugin {
   fn name(&self) -> Cow<'static, str> {
@@ -47,6 +52,11 @@ impl Plugin for DynamicImportVarsPlugin {
     _ctx: &PluginContext,
     mut args: HookTransformAstArgs<'_>,
   ) -> HookTransformAstReturn {
+    let cwd = args.cwd.to_string_lossy();
+    if self.filter(args.id, &cwd) {
+      return Ok(args.ast);
+    }
+
     // TODO: Ignore if includes a marker like "/* @rolldown-ignore */"
     args.ast.program.with_mut(|fields| {
       let ast_builder: AstBuilder = AstBuilder::new(fields.allocator);

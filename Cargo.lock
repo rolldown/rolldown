@@ -2640,6 +2640,7 @@ dependencies = [
 name = "rolldown_plugin_alias"
 version = "0.1.0"
 dependencies = [
+ "cow-utils",
  "rolldown_plugin",
  "rolldown_utils",
 ]

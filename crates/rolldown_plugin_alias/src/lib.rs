@@ -1,6 +1,7 @@
 use std::borrow::Cow;
 use std::sync::Arc;
 
+use cow_utils::CowUtils;
 use rolldown_plugin::{
   HookResolveIdOutput, HookUsage, Plugin, PluginContext, PluginContextResolveOptions,
 };
@@ -33,14 +34,14 @@ impl Plugin for AliasPlugin {
     let matched_entry = self.entries.iter().find(|alias| matches(&alias.find, importee));
 
     let Some(matched_entry) = matched_entry else { return Ok(None) };
-    let update_id = match &matched_entry.find {
-      StringOrRegex::String(find) => importee.replace(find, &matched_entry.replacement),
+    let specifier = match &matched_entry.find {
+      StringOrRegex::String(find) => importee.cow_replace(find, &matched_entry.replacement),
       StringOrRegex::Regex(find) => find.replace_all(importee, &matched_entry.replacement),
     };
 
     let resolved_id = ctx
       .resolve(
-        &update_id,
+        &specifier,
         args.importer,
         Some(PluginContextResolveOptions {
           skip_self: true,

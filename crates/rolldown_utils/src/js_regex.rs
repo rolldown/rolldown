@@ -38,19 +38,19 @@ impl HybridRegex {
     }
   }
 
-  pub fn replace_all(&self, haystack: &str, replacement: &str) -> String {
+  pub fn replace_all<'a>(&self, haystack: &'a str, replacement: &str) -> Cow<'a, str> {
     match self {
-      HybridRegex::Optimize(r) => r.replace_all(haystack, replacement).to_string(),
-      HybridRegex::Ecma(reg) => regress_regexp_replace_all(reg, haystack, replacement).to_string(),
+      HybridRegex::Optimize(r) => r.replace_all(haystack, replacement),
+      HybridRegex::Ecma(reg) => regress_regexp_replace_all(reg, haystack, replacement),
     }
   }
 }
 
-fn regress_regexp_replace_all<'a>(
+fn regress_regexp_replace_all<'h>(
   reg: &regress::Regex,
-  haystack: &'a str,
+  haystack: &'h str,
   replacement: &str,
-) -> Cow<'a, str> {
+) -> Cow<'h, str> {
   let iter = reg.find_iter(haystack);
   let mut iter = iter.peekable();
   if iter.peek().is_none() {

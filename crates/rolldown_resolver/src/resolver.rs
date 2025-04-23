@@ -107,7 +107,7 @@ impl<F: FileSystem + Default> Resolver<F> {
         .unwrap_or_else(|| vec![vec!["exports".to_string()]]),
       extension_alias,
       extensions: raw_resolve.extensions.unwrap_or_else(|| {
-        [".jsx", ".js", ".ts", ".tsx", ".json"].into_iter().map(str::to_string).collect()
+        [".tsx", ".ts", ".jsx", ".js", ".json"].into_iter().map(str::to_string).collect()
       }),
       fallback: vec![],
       fully_specified: false,

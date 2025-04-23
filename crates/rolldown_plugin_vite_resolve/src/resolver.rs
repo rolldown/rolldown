@@ -30,7 +30,7 @@ pub struct BaseOptions<'a> {
   pub preserve_symlinks: bool,
 }
 
-const ADDITIONAL_OPTIONS_FIELD_COUNT: u8 = 3;
+const ADDITIONAL_OPTIONS_FIELD_COUNT: u8 = 2;
 const RESOLVER_COUNT: u8 = 2_u8.pow(ADDITIONAL_OPTIONS_FIELD_COUNT as u32);
 
 const DEV_PROD_CONDITION: &str = "development|production";
@@ -39,16 +39,15 @@ const DEV_PROD_CONDITION: &str = "development|production";
 pub struct AdditionalOptions {
   is_require: bool,
   prefer_relative: bool,
-  is_from_ts_importer: bool,
 }
 
 impl AdditionalOptions {
-  pub fn new(is_require: bool, prefer_relative: bool, is_from_ts_importer: bool) -> Self {
-    Self { is_require, prefer_relative, is_from_ts_importer }
+  pub fn new(is_require: bool, prefer_relative: bool) -> Self {
+    Self { is_require, prefer_relative }
   }
 
   fn as_bools(&self) -> [bool; ADDITIONAL_OPTIONS_FIELD_COUNT as usize] {
-    [self.is_require, self.prefer_relative, self.is_from_ts_importer]
+    [self.is_require, self.prefer_relative]
   }
 
   fn as_u8(&self) -> u8 {
@@ -58,7 +57,7 @@ impl AdditionalOptions {
 
 impl From<[bool; RESOLVER_COUNT as usize]> for AdditionalOptions {
   fn from(value: [bool; RESOLVER_COUNT as usize]) -> Self {
-    Self { is_require: value[0], prefer_relative: value[1], is_from_ts_importer: value[2] }
+    Self { is_require: value[0], prefer_relative: value[1] }
   }
 }
 
@@ -101,7 +100,7 @@ impl Resolvers {
     let external_resolver = Resolver::new(
       base_resolver.clone_with_options(get_resolve_options(
         &BaseOptions { is_production: false, conditions: external_conditions, ..*base_options },
-        AdditionalOptions { is_from_ts_importer: false, is_require: false, prefer_relative: false },
+        AdditionalOptions { is_require: false, prefer_relative: false },
       )),
       Arc::clone(&package_json_cache),
       runtime,
@@ -143,16 +142,12 @@ fn get_resolve_options(
     },
     condition_names: get_conditions(base_options, &additional_options),
     extensions,
-    extension_alias: if additional_options.is_from_ts_importer {
-      vec![
-        (".js".to_string(), vec![".ts".to_string(), ".tsx".to_string(), ".js".to_string()]),
-        (".jsx".to_string(), vec![".ts".to_string(), ".tsx".to_string(), ".jsx".to_string()]),
-        (".mjs".to_string(), vec![".mts".to_string(), ".mjs".to_string()]),
-        (".cjs".to_string(), vec![".cts".to_string(), ".cjs".to_string()]),
-      ]
-    } else {
-      vec![]
-    },
+    extension_alias: vec![
+      (".js".to_string(), vec![".ts".to_string(), ".tsx".to_string(), ".js".to_string()]),
+      (".jsx".to_string(), vec![".ts".to_string(), ".tsx".to_string(), ".jsx".to_string()]),
+      (".mjs".to_string(), vec![".mts".to_string(), ".mjs".to_string()]),
+      (".cjs".to_string(), vec![".cts".to_string(), ".cjs".to_string()]),
+    ],
     main_fields,
     main_files: if !base_options.try_index {
       vec![]

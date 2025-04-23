@@ -29,7 +29,6 @@ use rustc_hash::FxHashSet;
 use sugar_path::SugarPath;
 
 const FS_PREFIX: &str = "/@fs/";
-const TS_EXTENSIONS: &[&str] = &[".ts", ".mts", ".cts", ".tsx"];
 
 #[derive(Debug)]
 pub struct ViteResolveOptions {
@@ -211,7 +210,6 @@ impl ViteResolvePlugin {
     let additional_options = AdditionalOptions::new(
       self.resolve_options.is_require.unwrap_or(args.kind == ImportKind::Require),
       self.resolve_options.prefer_relative || args.importer.is_some_and(|i| i.ends_with(".html")),
-      is_from_ts_importer(args.importer),
     );
     let resolver = self.resolvers.get(additional_options);
 
@@ -487,28 +485,6 @@ fn is_external_url(id: &str) -> bool {
       let protocol = &id[0..double_slash_pos];
       protocol.strip_suffix(':').map(|p| p.bytes().all(|c| c.is_ascii_alphabetic())).is_some()
     }
-  } else {
-    false
-  }
-}
-
-fn is_from_ts_importer(importer: Option<&str>) -> bool {
-  if let Some(importer) = importer {
-    // TODO(sapphi-red): support depScan, moduleMeta
-    // https://github.com/vitejs/vite/blob/58f1df3288b0f9584bb413dd34b8d65671258f6f/packages/vite/src/node/plugins/resolve.ts#L240-L248
-    has_suffix(importer, TS_EXTENSIONS)
-  } else {
-    false
-  }
-}
-
-fn has_suffix(s: &str, suffix: &[&str]) -> bool {
-  if suffix.iter().any(|suffix| s.ends_with(suffix)) {
-    return true;
-  }
-
-  if let Some((s, _)) = s.split_once('?') {
-    suffix.iter().any(|suffix| s.ends_with(suffix))
   } else {
     false
   }

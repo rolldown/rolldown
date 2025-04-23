@@ -266,8 +266,7 @@ impl Resolver {
     match result {
       Ok(result) => {
         let raw_path = result.full_path().to_str().unwrap().to_string();
-        let path = raw_path.strip_prefix("\\\\?\\").unwrap_or(&raw_path);
-        let path = normalize_path(path);
+        let path = normalize_path(&raw_path);
 
         let side_effects = result
           .package_json()

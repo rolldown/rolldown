@@ -390,6 +390,7 @@ impl GlobImportVisit<'_, '_> {
     for glob_expr in positive_globs {
       let (path, glob) = Self::split_path_and_glob(&glob_expr);
       let entries = walkdir::WalkDir::new(path)
+        .sort_by(|a, b| a.file_name().cmp(b.file_name()))
         .into_iter()
         .filter_map(Result::ok)
         .filter(|e| !e.file_type().is_dir());

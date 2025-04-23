@@ -5,7 +5,11 @@ use std::{
   time::{SystemTime, UNIX_EPOCH},
 };
 
-use crate::static_data::{DEFAULT_SESSION_ID, OPENED_FILE_HANDLES, OPENED_FILES_BY_SESSION};
+use crate::{
+  debug_data_propagate_layer::ContextData,
+  static_data::{DEFAULT_SESSION_ID, OPENED_FILE_HANDLES, OPENED_FILES_BY_SESSION},
+};
+use rustc_hash::FxHashMap;
 use serde::ser::{SerializeMap, Serializer as _};
 use tracing::{Event, Subscriber};
 use tracing_serde::AsSerde;
@@ -33,7 +37,37 @@ where
     event.record(&mut action_meta_extractor);
     let action_meta = action_meta_extractor.meta;
 
-    if let Some(action_meta) = action_meta {
+    if let Some(mut action_meta) = action_meta {
+      let mut context_variables = extract_context_variables(&action_meta);
+      let mut captured_values = FxHashMap::default();
+
+      if let Some(scope) = ctx.event_scope() {
+        for span in scope {
+          let span_extensions = span.extensions();
+          let Some(context_data) = span_extensions.get::<ContextData>() else {
+            continue;
+          };
+          let found_field_indexes = context_variables
+            .iter()
+            .enumerate()
+            .filter_map(|(idx, name)| {
+              if let Some(value) = context_data.get(name.as_str()) {
+                captured_values.insert(name.clone(), value.clone());
+                Some(idx)
+              } else {
+                None
+              }
+            })
+            .collect::<Vec<_>>();
+
+          found_field_indexes.iter().rev().for_each(|idx| {
+            context_variables.swap_remove(*idx);
+          });
+        }
+      }
+
+      inject_context_data(&mut action_meta, &captured_values);
+
       // This branch means this event is not only for normal tracing, but also for devtool tracing.
       let meta = event.metadata();
       let session_id = if let Some(scope) = ctx.event_scope() {
@@ -130,5 +164,44 @@ impl tracing::field::Visit for ActionMetaExtractor {
 
   fn record_debug(&mut self, _field: &tracing::field::Field, _value: &dyn std::fmt::Debug) {
     // `EventMetaExtractor` doesn't care about debug values.
+  }
+}
+
+pub fn extract_context_variables(meta: &serde_json::Value) -> Vec<String> {
+  fn visit(meta: &serde_json::Value, context_variables: &mut Vec<String>) {
+    if let serde_json::Value::Object(map) = meta {
+      for (_key, value) in map {
+        match value {
+          serde_json::Value::String(value) if value.starts_with("${") && value.ends_with('}') => {
+            // Check if the value is a placeholder for provided data
+            {
+              let var_name = &value[2..value.len() - 1];
+              context_variables.push(var_name.to_string());
+            }
+          }
+          _ => visit(value, context_variables),
+        }
+      }
+    }
+  }
+
+  let mut context_variables = vec![];
+  visit(meta, &mut context_variables);
+  context_variables
+}
+
+pub fn inject_context_data(meta: &mut serde_json::Value, context_data: &FxHashMap<String, String>) {
+  if let serde_json::Value::Object(map) = meta {
+    for value in map.values_mut() {
+      if let serde_json::Value::String(value) = value {
+        if value.starts_with("${") && value.ends_with('}') {
+          // Check if the value is a placeholder for provided data
+          let var_name = &value[2..value.len() - 1];
+          if let Some(replacement_value) = context_data.get(var_name) {
+            *value = replacement_value.clone();
+          }
+        }
+      }
+    }
   }
 }

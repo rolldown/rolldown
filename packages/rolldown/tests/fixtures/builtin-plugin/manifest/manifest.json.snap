@@ -1,6 +1,3 @@
-// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
-
-exports[`builtin-plugin/manifest 1`] = `
 {
   "asset.txt": {
     "file": "asset.txt",
@@ -22,4 +19,3 @@ exports[`builtin-plugin/manifest 1`] = `
     "src": "main.js",
   },
 }
-`;

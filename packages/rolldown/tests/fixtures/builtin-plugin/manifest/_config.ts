@@ -1,13 +1,13 @@
-import { manifestPlugin } from 'rolldown/experimental'
-import { defineTest } from '../../../src/index'
 import path from 'node:path'
 import { expect } from 'vitest'
+import { defineTest } from 'rolldown-tests'
+import { manifestPlugin } from 'rolldown/experimental'
 
 export default defineTest({
   config: {
     output: {
-      assetFileNames: '[name][extname]',
       chunkFileNames: '[name].js',
+      assetFileNames: '[name][extname]',
     },
     plugins: [
       manifestPlugin({
@@ -20,8 +20,8 @@ export default defineTest({
           this.emitFile({
             type: 'asset',
             name: 'asset.txt',
+            source: 'hello world',
             originalFileName: 'asset.txt',
-            source: 'test',
           })
         },
       },
@@ -30,6 +30,8 @@ export default defineTest({
   async afterTest() {
     // @ts-ignore
     const manifest = await import('./dist/manifest.json')
-    expect(manifest.default).toMatchSnapshot()
+    await expect(manifest.default).toMatchFileSnapshot(
+      path.resolve(import.meta.dirname, "manifest.json.snap")
+    )
   },
 })

@@ -14,8 +14,7 @@ import type { LogHandler, LogLevelOption } from '../types/misc';
 import { ModuleInfo } from '../types/module-info';
 import { PartialNull } from '../types/utils';
 import { AssetSource, bindingAssetSource } from '../utils/asset-source';
-import { unimplemented } from '../utils/misc';
-import { transformResolvedExternal } from '../utils/resolved-external';
+import { unimplemented, unreachable } from '../utils/misc';
 import { bindingifySideEffects } from '../utils/transform-side-effects';
 import type {
   CustomPluginOptions,
@@ -177,7 +176,11 @@ export class PluginContextImpl extends MinimalPluginContextImpl {
     const info = this.data.getModuleOption(res.id) || ({} as ModuleOptions);
     return {
       ...res,
-      external: transformResolvedExternal(res.external),
+      external: res.external === 'relative'
+        ? unreachable(
+          `The PluginContext resolve result external couldn't be 'relative'`,
+        )
+        : res.external,
       ...info,
     };
   }

@@ -120,5 +120,6 @@ impl From<PluginContext> for BindingPluginContext {
 #[napi(object)]
 pub struct BindingPluginContextResolvedId {
   pub id: String,
+  #[napi(ts_type = "boolean | 'absolute' | 'relative'")]
   pub external: BindingResolvedExternal,
 }

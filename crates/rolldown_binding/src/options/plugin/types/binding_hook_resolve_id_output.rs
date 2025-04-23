@@ -12,13 +12,15 @@ pub struct BindingHookResolveIdOutput {
   pub side_effects: Option<BindingHookSideEffects>,
 }
 
-impl From<BindingHookResolveIdOutput> for rolldown_plugin::HookResolveIdOutput {
-  fn from(value: BindingHookResolveIdOutput) -> Self {
-    Self {
+impl TryFrom<BindingHookResolveIdOutput> for rolldown_plugin::HookResolveIdOutput {
+  type Error = napi::Error;
+
+  fn try_from(value: BindingHookResolveIdOutput) -> Result<Self, Self::Error> {
+    Ok(Self {
       id: value.id.into(),
-      external: value.external.map(Into::into),
+      external: value.external.map(TryInto::try_into).transpose()?,
       normalize_external_id: value.normalize_external_id,
       side_effects: value.side_effects.map(Into::into),
-    }
+    })
   }
 }

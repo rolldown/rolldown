@@ -11,7 +11,6 @@ import { SYMBOL_FOR_RESOLVE_CALLER_THAT_SKIP_SELF } from '../constants/plugin-co
 import { NormalizedInputOptionsImpl } from '../options/normalized-input-options';
 import { bindingifySourcemap, ExistingRawSourceMap } from '../types/sourcemap';
 import { normalizeErrors } from '../utils/error';
-import { bindingResolvedExternal } from '../utils/resolved-external';
 import { transformModuleInfo } from '../utils/transform-module-info';
 import { bindingifySideEffects } from '../utils/transform-side-effects';
 import {
@@ -141,7 +140,7 @@ export function bindingifyResolveId(
       if (ret === false) {
         return {
           id: specifier,
-          external: bindingResolvedExternal(true),
+          external: true,
           normalizeExternalId: true,
         };
       }
@@ -161,7 +160,7 @@ export function bindingifyResolveId(
 
       return {
         id: ret.id,
-        external: bindingResolvedExternal(ret.external),
+        external: ret.external,
         normalizeExternalId: false,
         sideEffects: bindingifySideEffects(exist.moduleSideEffects),
       };
@@ -201,7 +200,7 @@ export function bindingifyResolveDynamicImport(
       if (ret === false) {
         return {
           id: specifier,
-          external: bindingResolvedExternal(true),
+          external: true,
         };
       }
       if (typeof ret === 'string') {
@@ -212,7 +211,7 @@ export function bindingifyResolveDynamicImport(
 
       const result: BindingHookResolveIdOutput = {
         id: ret.id,
-        external: bindingResolvedExternal(ret.external),
+        external: ret.external,
       };
 
       if (ret.moduleSideEffects !== null) {

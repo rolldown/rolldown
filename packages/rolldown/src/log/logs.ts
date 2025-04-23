@@ -58,24 +58,31 @@ export function logPluginError(
   error: Omit<RollupLog, 'code'> & { code?: unknown },
   plugin: string,
   { hook, id }: { hook?: string; id?: string } = {},
-) {
-  const code = error.code;
-  if (
-    !error.pluginCode &&
-    code != null &&
-    (typeof code !== 'string' || !code.startsWith('PLUGIN_'))
-  ) {
-    error.pluginCode = code;
+): RollupLog {
+  try {
+    const code = error.code;
+    if (
+      !error.pluginCode &&
+      code != null &&
+      (typeof code !== 'string' || !code.startsWith('PLUGIN_'))
+    ) {
+      error.pluginCode = code;
+    }
+    error.code = PLUGIN_ERROR;
+    error.plugin = plugin;
+    if (hook) {
+      error.hook = hook;
+    }
+    if (id) {
+      error.id = id;
+    }
+    // eslint-disable-next-line no-unused-vars
+  } catch (_) {
+    // Ignore error, maybe the error can't be assigned.
+  } finally {
+    // eslint-disable-next-line no-unsafe-finally
+    return error as RollupLog;
   }
-  error.code = PLUGIN_ERROR;
-  error.plugin = plugin;
-  if (hook) {
-    error.hook = hook;
-  }
-  if (id) {
-    error.id = id;
-  }
-  return error as RollupLog;
 }
 
 export function error(base: Error | RollupLog): never {

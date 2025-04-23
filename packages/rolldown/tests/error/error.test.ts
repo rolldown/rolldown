@@ -123,6 +123,18 @@ test('call transformContext error', async () => {
   expect(error!.message).toContain('transform hook error')
 })
 
+// #4141
+test('should print original error if it can not be assigned', async () => {
+  const error = await buildWithPlugin({
+    name: 'test',
+    transform() {
+      const proxy = new Proxy({ a: 1 }, {})
+      structuredClone(proxy)
+    },
+  })
+  expect(error!.message).toContain('DataCloneError: #<Object> could not be cloned')
+})
+
 describe('Error output format', () => {
   test('should correctly output the custom error defined on the rust side', async () => {
     try {

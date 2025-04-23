@@ -17,7 +17,7 @@ use crate::ast_visit::DynamicImportVarsVisit;
 pub const DYNAMIC_IMPORT_HELPER: &str = "\0rolldown_dynamic_import_helper.js";
 
 #[derive(Debug)]
-pub struct DynamicImportVarsPlugin {}
+pub struct DynamicImportVarsPlugin;
 
 impl Plugin for DynamicImportVarsPlugin {
   fn name(&self) -> Cow<'static, str> {
@@ -29,25 +29,17 @@ impl Plugin for DynamicImportVarsPlugin {
     _ctx: &PluginContext,
     args: &HookResolveIdArgs<'_>,
   ) -> HookResolveIdReturn {
-    if args.specifier == DYNAMIC_IMPORT_HELPER {
-      Ok(Some(HookResolveIdOutput {
-        id: arcstr::literal!(DYNAMIC_IMPORT_HELPER),
-        ..Default::default()
-      }))
-    } else {
-      Ok(None)
-    }
+    Ok((args.specifier == DYNAMIC_IMPORT_HELPER).then_some(HookResolveIdOutput {
+      id: arcstr::literal!(DYNAMIC_IMPORT_HELPER),
+      ..Default::default()
+    }))
   }
 
   async fn load(&self, _ctx: &PluginContext, args: &HookLoadArgs<'_>) -> HookLoadReturn {
-    if args.id == DYNAMIC_IMPORT_HELPER {
-      Ok(Some(HookLoadOutput {
-        code: include_str!("dynamic-import-helper.js").to_string(),
-        ..Default::default()
-      }))
-    } else {
-      Ok(None)
-    }
+    Ok((args.id == DYNAMIC_IMPORT_HELPER).then_some(HookLoadOutput {
+      code: include_str!("dynamic-import-helper.js").to_string(),
+      ..Default::default()
+    }))
   }
 
   async fn transform_ast(

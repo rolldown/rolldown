@@ -10,7 +10,7 @@ use std::{
 use crate::{
   CallablePlugin, ResolveOptionsExternal,
   external::{self, ExternalDecider, ExternalDeciderOptions},
-  file_url::file_url_str_to_path,
+  file_url::file_url_str_to_path_and_postfix,
   resolver::{self, AdditionalOptions, Resolvers},
   utils::{
     BROWSER_EXTERNAL_ID, OPTIONAL_PEER_DEP_ID, clean_url, is_bare_import, is_builtin,
@@ -184,8 +184,8 @@ impl ViteResolvePlugin {
 
     // file url as path
     if args.specifier.starts_with("file://") {
-      let path = file_url_str_to_path(args.specifier)?;
-      let mut res = normalize_path(&path).into_owned();
+      let (path, postfix) = file_url_str_to_path_and_postfix(args.specifier)?;
+      let mut res = normalize_path(&path).into_owned() + &postfix;
       if let Some(finalize_other_specifiers) = &self.finalize_other_specifiers {
         if let Some(finalized) = finalize_other_specifiers(&res, args.specifier).await? {
           res = finalized;

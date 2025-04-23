@@ -34,7 +34,28 @@ pub struct ManifestChunk {
 
 impl ManifestPlugin {
   pub fn get_chunk_name(&self, chunk: &OutputChunk) -> String {
-    get_chunk_original_file_name(chunk, &self.config.root)
+    match &chunk.facade_module_id {
+      Some(facade_module_id) => {
+        let name = facade_module_id.relative_path(&self.config.root);
+        let name_str = name.to_string_lossy().to_string();
+        // TODO: Support System format
+        // if format == 'system' && !chunk.name.as_str().contains("-legacy") {
+        //   name_str = if let Some(ext) = name.extension() {
+        //     let end = name_str.len() - ext.len() - 1;
+        //     format!("{}-legacy.{}", &name_str[0..end], ext.to_string_lossy())
+        //   } else {
+        //     format!("{name_str}-legacy")
+        //   }
+        // }
+        name_str.replace('\0', "")
+      }
+      _ => {
+        format!(
+          "_{}",
+          std::path::Path::new(chunk.filename.as_str()).file_name().unwrap().to_string_lossy()
+        )
+      }
+    }
   }
   fn get_internal_imports(&self, bundle: &Vec<Output>, imports: &Vec<ArcStr>) -> Vec<String> {
     let mut filtered_imports = vec![];
@@ -72,31 +93,6 @@ impl ManifestPlugin {
       src: Some(src),
       is_entry,
       ..Default::default()
-    }
-  }
-}
-
-fn get_chunk_original_file_name(chunk: &OutputChunk, root: &str) -> String {
-  match &chunk.facade_module_id {
-    Some(facade_module_id) => {
-      let name = facade_module_id.relative_path(root);
-      let name_str = name.to_string_lossy().to_string();
-      // TODO: Support System format
-      // if format == 'system' && !chunk.name.as_str().contains("-legacy") {
-      //   name_str = if let Some(ext) = name.extension() {
-      //     let end = name_str.len() - ext.len() - 1;
-      //     format!("{}-legacy.{}", &name_str[0..end], ext.to_string_lossy())
-      //   } else {
-      //     format!("{name_str}-legacy")
-      //   }
-      // }
-      name_str.replace('\0', "")
-    }
-    _ => {
-      format!(
-        "_{}",
-        std::path::Path::new(chunk.filename.as_str()).file_name().unwrap().to_string_lossy()
-      )
     }
   }
 }

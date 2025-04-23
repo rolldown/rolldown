@@ -2425,12 +2425,12 @@ dependencies = [
  "rolldown_workspace",
  "rustc-hash",
  "serde",
+ "serde_json",
  "string_wizard",
  "sugar_path",
  "testing_macros",
  "tokio",
  "tracing",
- "valuable",
  "xxhash-rust",
 ]
 
@@ -2539,7 +2539,6 @@ version = "0.1.0"
 dependencies = [
  "serde",
  "ts-rs",
- "valuable",
 ]
 
 [[package]]
@@ -2630,12 +2629,12 @@ dependencies = [
  "rolldown_utils",
  "rustc-hash",
  "serde",
+ "serde_json",
  "string_wizard",
  "sugar_path",
  "tokio",
  "tracing",
  "typedmap",
- "valuable",
 ]
 
 [[package]]
@@ -3616,20 +3615,6 @@ name = "valuable"
 version = "0.1.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "ba73ea9cf16a25df0c8caa16c51acb937d5712a8429db78a3ee29d5dcacd3a65"
-dependencies = [
- "valuable-derive",
-]
-
-[[package]]
-name = "valuable-derive"
-version = "0.1.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "4e3a32a9bcc0f6c6ccfd5b27bcf298c58e753bcc9eeff268157a303393183a6d"
-dependencies = [
- "proc-macro2",
- "quote",
- "syn",
-]
 
 [[package]]
 name = "valuable-serde"

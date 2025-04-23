@@ -20,7 +20,6 @@ use rolldown_sourcemap::SourceMap;
 use rolldown_utils::unique_arc::UniqueArc;
 use string_wizard::{MagicString, SourceMapOptions};
 use tracing::{Instrument, debug_span};
-use valuable::Valuable;
 
 impl PluginDriver {
   #[tracing::instrument(level = "trace", skip_all)]

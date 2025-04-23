@@ -12,9 +12,9 @@ rolldown_debug_action = { workspace = true }
 rustc-hash = { workspace = true }
 serde = { workspace = true, features = ["derive", "rc"] }
 serde_json = { workspace = true }
-tracing = { workspace = true, features = ["valuable"] }
+tracing = { workspace = true }
 tracing-serde = { workspace = true }
-tracing-subscriber = { workspace = true, features = ["env-filter", "fmt", "json", "valuable"] }
+tracing-subscriber = { workspace = true, features = ["env-filter", "fmt", "json"] }
 
 [lints]
 workspace = true

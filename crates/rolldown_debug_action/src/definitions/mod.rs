@@ -7,7 +7,7 @@ pub mod hook_resolve_id_call_start;
 pub mod hook_transform_call_end;
 pub mod hook_transform_call_start;
 
-#[derive(valuable::Valuable, ts_rs::TS, serde::Serialize)]
+#[derive(ts_rs::TS, serde::Serialize)]
 #[ts(export)]
 #[serde(untagged)]
 pub enum Meta {

@@ -5,7 +5,10 @@ use rolldown_utils::{dashmap::FxDashMap, pattern_filter::StringOrRegex};
 use rustc_hash::FxHashSet;
 
 use crate::{
-  builtin::BuiltinChecker, resolver::Resolver, utils::{can_externalize_file, get_npm_package_name, is_bare_import, is_in_node_modules}, utils_filter::UtilsFilter
+  builtin::BuiltinChecker,
+  resolver::Resolver,
+  utils::{can_externalize_file, get_npm_package_name, is_bare_import, is_in_node_modules},
+  utils_filter::UtilsFilter,
 };
 
 #[derive(Debug, Clone)]

@@ -40,8 +40,9 @@ impl PackageJsonCache {
           let Ok(package_json_string) = fs::read_to_string(&oxc_pkg_json.realpath) else {
             return Default::default();
           };
+          let package_json_string = package_json_string.trim_start_matches("\u{feff}"); // strip bom
           let Ok(package_json) =
-            serde_json::from_str::<PackageJsonWithPeerDependenciesRaw>(&package_json_string)
+            serde_json::from_str::<PackageJsonWithPeerDependenciesRaw>(package_json_string)
           else {
             return Default::default();
           };

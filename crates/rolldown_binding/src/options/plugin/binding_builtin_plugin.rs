@@ -164,6 +164,7 @@ pub struct BindingViteResolvePluginConfig {
   pub resolve_options: BindingViteResolvePluginResolveOptions,
   pub environment_consumer: String,
   pub environment_name: String,
+  pub builtins: Vec<BindingStringOrRegex>,
   #[napi(ts_type = "true | string[]")]
   pub external: napi::Either<BindingTrueValue, Vec<String>>,
   #[napi(ts_type = "true | Array<string | RegExp>")]
@@ -178,8 +179,6 @@ pub struct BindingViteResolvePluginConfig {
   #[debug("{}", if finalize_bare_specifier.is_some() { "Some(<finalize_other_specifiers>)" } else { "None" })]
   #[napi(ts_type = "(resolvedId: string, rawId: string) => VoidNullable<string>")]
   pub finalize_other_specifiers: Option<JsCallback<FnArgs<(String, String)>, Option<String>>>,
-
-  pub runtime: String,
 }
 
 impl From<BindingViteResolvePluginConfig> for ViteResolveOptions {
@@ -199,6 +198,7 @@ impl From<BindingViteResolvePluginConfig> for ViteResolveOptions {
       resolve_options: value.resolve_options.into(),
       environment_consumer: value.environment_consumer,
       environment_name: value.environment_name,
+      builtins: bindingify_string_or_regex_array(value.builtins),
       external,
       no_external,
       dedupe: value.dedupe,
@@ -233,8 +233,6 @@ impl From<BindingViteResolvePluginConfig> for ViteResolveOptions {
           })
         },
       ),
-
-      runtime: value.runtime,
     }
   }
 }

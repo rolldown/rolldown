@@ -1,3 +1,4 @@
+mod builtin;
 mod callable_plugin;
 mod external;
 mod file_url;

@@ -73,16 +73,9 @@ export function buildImportAnalysisPlugin(
 }
 
 export function viteResolvePlugin(
-  config: Omit<BindingViteResolvePluginConfig, 'runtime'>,
+  config: BindingViteResolvePluginConfig,
 ): BuiltinPlugin {
-  const builtinPlugin = new BuiltinPlugin('builtin:vite-resolve', {
-    ...config,
-    runtime: process.versions.deno
-      ? 'deno'
-      : process.versions.bun
-      ? 'bun'
-      : 'node',
-  });
+  const builtinPlugin = new BuiltinPlugin('builtin:vite-resolve', config);
   return makeBuiltinPluginCallable(builtinPlugin);
 }
 

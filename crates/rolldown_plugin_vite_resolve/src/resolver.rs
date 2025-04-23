@@ -11,10 +11,11 @@ use rustc_hash::FxHashSet;
 use sugar_path::SugarPath;
 
 use crate::{
+  builtin::BuiltinChecker,
   package_json_cache::{PackageJsonCache, PackageJsonWithOptionalPeerDependencies},
   utils::{
     BROWSER_EXTERNAL_ID, OPTIONAL_PEER_DEP_ID, can_externalize_file, clean_url, get_extension,
-    get_npm_package_name, is_bare_import, is_builtin, is_deep_import, normalize_path,
+    get_npm_package_name, is_bare_import, is_deep_import, normalize_path,
   },
 };
 
@@ -30,7 +31,7 @@ pub struct BaseOptions<'a> {
   pub preserve_symlinks: bool,
 }
 
-const ADDITIONAL_OPTIONS_FIELD_COUNT: u8 = 3;
+const ADDITIONAL_OPTIONS_FIELD_COUNT: u8 = 2;
 const RESOLVER_COUNT: u8 = 2_u8.pow(ADDITIONAL_OPTIONS_FIELD_COUNT as u32);
 
 const DEV_PROD_CONDITION: &str = "development|production";
@@ -39,16 +40,15 @@ const DEV_PROD_CONDITION: &str = "development|production";
 pub struct AdditionalOptions {
   is_require: bool,
   prefer_relative: bool,
-  is_from_ts_importer: bool,
 }
 
 impl AdditionalOptions {
-  pub fn new(is_require: bool, prefer_relative: bool, is_from_ts_importer: bool) -> Self {
-    Self { is_require, prefer_relative, is_from_ts_importer }
+  pub fn new(is_require: bool, prefer_relative: bool) -> Self {
+    Self { is_require, prefer_relative }
   }
 
   fn as_bools(&self) -> [bool; ADDITIONAL_OPTIONS_FIELD_COUNT as usize] {
-    [self.is_require, self.prefer_relative, self.is_from_ts_importer]
+    [self.is_require, self.prefer_relative]
   }
 
   fn as_u8(&self) -> u8 {
@@ -58,7 +58,7 @@ impl AdditionalOptions {
 
 impl From<[bool; RESOLVER_COUNT as usize]> for AdditionalOptions {
   fn from(value: [bool; RESOLVER_COUNT as usize]) -> Self {
-    Self { is_require: value[0], prefer_relative: value[1], is_from_ts_importer: value[2] }
+    Self { is_require: value[0], prefer_relative: value[1] }
   }
 }
 
@@ -78,7 +78,7 @@ impl Resolvers {
   pub fn new(
     base_options: &BaseOptions,
     external_conditions: &Vec<String>,
-    runtime: String,
+    builtin_checker: Arc<BuiltinChecker>,
   ) -> Self {
     let package_json_cache = Arc::new(PackageJsonCache::default());
 
@@ -88,8 +88,8 @@ impl Resolvers {
       .map(|v| {
         Resolver::new(
           base_resolver.clone_with_options(get_resolve_options(base_options, v.into())),
+          Arc::clone(&builtin_checker),
           Arc::clone(&package_json_cache),
-          runtime.clone(),
           base_options.root.to_owned(),
           base_options.try_prefix.to_owned(),
         )
@@ -101,10 +101,10 @@ impl Resolvers {
     let external_resolver = Resolver::new(
       base_resolver.clone_with_options(get_resolve_options(
         &BaseOptions { is_production: false, conditions: external_conditions, ..*base_options },
-        AdditionalOptions { is_from_ts_importer: false, is_require: false, prefer_relative: false },
+        AdditionalOptions { is_require: false, prefer_relative: false },
       )),
+      Arc::clone(&builtin_checker),
       Arc::clone(&package_json_cache),
-      runtime,
       base_options.root.to_owned(),
       base_options.try_prefix.to_owned(),
     );
@@ -143,16 +143,12 @@ fn get_resolve_options(
     },
     condition_names: get_conditions(base_options, &additional_options),
     extensions,
-    extension_alias: if additional_options.is_from_ts_importer {
-      vec![
-        (".js".to_string(), vec![".ts".to_string(), ".tsx".to_string(), ".js".to_string()]),
-        (".jsx".to_string(), vec![".ts".to_string(), ".tsx".to_string(), ".jsx".to_string()]),
-        (".mjs".to_string(), vec![".mts".to_string(), ".mjs".to_string()]),
-        (".cjs".to_string(), vec![".cts".to_string(), ".cjs".to_string()]),
-      ]
-    } else {
-      vec![]
-    },
+    extension_alias: vec![
+      (".js".to_string(), vec![".ts".to_string(), ".tsx".to_string(), ".js".to_string()]),
+      (".jsx".to_string(), vec![".ts".to_string(), ".tsx".to_string(), ".jsx".to_string()]),
+      (".mjs".to_string(), vec![".mts".to_string(), ".mjs".to_string()]),
+      (".cjs".to_string(), vec![".cts".to_string(), ".cjs".to_string()]),
+    ],
     main_fields,
     main_files: if !base_options.try_index {
       vec![]
@@ -207,8 +203,8 @@ fn u8_to_bools<const N: usize>(n: u8) -> [bool; N] {
 #[derive(Debug)]
 pub struct Resolver {
   inner: oxc_resolver::Resolver,
+  built_in_checker: Arc<BuiltinChecker>,
   package_json_cache: Arc<PackageJsonCache>,
-  runtime: String,
   root: String,
   try_prefix: Option<String>,
 }
@@ -216,12 +212,12 @@ pub struct Resolver {
 impl Resolver {
   pub fn new(
     inner: oxc_resolver::Resolver,
+    built_in_checker: Arc<BuiltinChecker>,
     package_json_cache: Arc<PackageJsonCache>,
-    runtime: String,
     root: String,
     try_prefix: Option<String>,
   ) -> Self {
-    Self { inner, package_json_cache, runtime, root, try_prefix }
+    Self { inner, built_in_checker, package_json_cache, root, try_prefix }
   }
 
   pub fn resolve_raw<P: AsRef<Path>>(
@@ -266,8 +262,7 @@ impl Resolver {
     match result {
       Ok(result) => {
         let raw_path = result.full_path().to_str().unwrap().to_string();
-        let path = raw_path.strip_prefix("\\\\?\\").unwrap_or(&raw_path);
-        let path = normalize_path(path);
+        let path = normalize_path(&raw_path);
 
         let side_effects = result
           .package_json()
@@ -287,7 +282,7 @@ impl Resolver {
       Err(oxc_resolver::ResolveError::NotFound(id)) => {
         // if import can't be found, check if it's an optional peer dep.
         // if so, we can resolve to a special id that errors only when imported.
-        if is_bare_import(id) && !is_builtin(id, &self.runtime) && !id.contains('\0') {
+        if is_bare_import(id) && !self.built_in_checker.is_builtin(id) && !id.contains('\0') {
           if let Some(pkg_name) = get_npm_package_name(id) {
             let base_dir = get_base_dir(id, importer, dedupe).unwrap_or(&self.root);
             if base_dir != self.root {

@@ -5,10 +5,9 @@ use rolldown_utils::{dashmap::FxDashMap, pattern_filter::StringOrRegex};
 use rustc_hash::FxHashSet;
 
 use crate::{
+  builtin::BuiltinChecker,
   resolver::Resolver,
-  utils::{
-    can_externalize_file, get_npm_package_name, is_bare_import, is_builtin, is_in_node_modules,
-  },
+  utils::{can_externalize_file, get_npm_package_name, is_bare_import, is_in_node_modules},
   utils_filter::UtilsFilter,
 };
 
@@ -75,14 +74,18 @@ pub struct ExternalDeciderOptions {
 #[derive(Debug)]
 pub struct ExternalDecider {
   options: ExternalDeciderOptions,
-  runtime: String,
   resolver: Arc<Resolver>,
+  builtin_checker: Arc<BuiltinChecker>,
   processed_ids: FxDashMap<String, bool>,
 }
 
 impl ExternalDecider {
-  pub fn new(options: ExternalDeciderOptions, runtime: String, resolver: Arc<Resolver>) -> Self {
-    Self { options, runtime, resolver, processed_ids: DashMap::default() }
+  pub fn new(
+    options: ExternalDeciderOptions,
+    resolver: Arc<Resolver>,
+    builtin_checker: Arc<BuiltinChecker>,
+  ) -> Self {
+    Self { options, resolver, builtin_checker, processed_ids: DashMap::default() }
   }
 
   pub fn is_external(&self, id: &str, importer: Option<&str>) -> bool {
@@ -92,7 +95,8 @@ impl ExternalDecider {
 
     let mut is_external = false;
     if !id.starts_with('.') && !Path::new(id).is_absolute() {
-      is_external = is_builtin(id, &self.runtime) || self.is_configured_as_external(id, importer);
+      is_external =
+        self.builtin_checker.is_builtin(id) || self.is_configured_as_external(id, importer);
     }
     self.processed_ids.insert(id.to_owned(), is_external);
 

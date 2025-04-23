@@ -2,12 +2,30 @@ use anyhow::anyhow;
 use url::Url;
 
 /// The caller should check if the url has file scheme.
-pub fn file_url_str_to_path(url: &str) -> anyhow::Result<String> {
+pub fn file_url_str_to_path_and_postfix(url: &str) -> anyhow::Result<(String, String)> {
   let url = Url::parse(url)?;
+
+  let postfix = {
+    let postfix_len =
+      url.query().map_or(0, |q| q.len() + 1) + url.fragment().map_or(0, |f| f.len() + 1);
+
+    let mut postfix = String::with_capacity(postfix_len);
+    if let Some(q) = url.query() {
+      postfix.push('?');
+      postfix.push_str(q);
+    }
+    if let Some(f) = url.fragment() {
+      postfix.push('#');
+      postfix.push_str(f);
+    }
+    postfix
+  };
+
   // it seems url.to_file_path() does not work in some cases
   // https://github.com/servo/rust-url/issues/505
   // implemented the same logic with fileURLToPath in Node.js for now
-  file_url_to_path(url)
+  let path = file_url_to_path(url)?;
+  Ok((path, postfix))
 }
 
 fn file_url_to_path(url: Url) -> anyhow::Result<String> {

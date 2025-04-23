@@ -731,12 +731,12 @@ export interface BindingViteResolvePluginConfig {
   resolveOptions: BindingViteResolvePluginResolveOptions
   environmentConsumer: string
   environmentName: string
+  builtins: Array<BindingStringOrRegex>
   external: true | string[]
   noExternal: true | Array<string | RegExp>
   dedupe: Array<string>
   finalizeBareSpecifier?: (resolvedId: string, rawId: string, importer: string | null | undefined) => VoidNullable<string>
   finalizeOtherSpecifiers?: (resolvedId: string, rawId: string) => VoidNullable<string>
-  runtime: string
 }
 
 export interface BindingViteResolvePluginResolveOptions {

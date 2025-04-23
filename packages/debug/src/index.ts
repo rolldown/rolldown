@@ -4,9 +4,7 @@ export * from './generated/index.js';
 export interface Event {
   timestamp: string;
   session_id: string;
-  fields: {
-    action: Action;
-  };
+  action: Action;
 }
 
 export function parseToEvents(data: string): Event[] {

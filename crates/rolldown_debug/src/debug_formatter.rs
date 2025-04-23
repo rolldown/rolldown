@@ -79,17 +79,10 @@ where
       serializer.serialize_entry("level", &meta.level().as_serde())?;
       serializer.serialize_entry("session_id", session_id)?;
 
-      let flatten_event = false;
+      let mut visitor = tracing_serde::SerdeMapVisitor::new(serializer);
+      event.record(&mut visitor);
 
-      if flatten_event {
-        let mut visitor = tracing_serde::SerdeMapVisitor::new(serializer);
-        event.record(&mut visitor);
-
-        serializer = visitor.take_serializer()?;
-      } else {
-        use tracing_serde::fields::AsMap;
-        serializer.serialize_entry("fields", &event.field_map())?;
-      }
+      serializer = visitor.take_serializer()?;
 
       serializer.end()
     };

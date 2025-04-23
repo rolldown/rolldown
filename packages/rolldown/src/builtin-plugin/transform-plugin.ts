@@ -3,7 +3,7 @@ import { BuiltinPlugin } from './constructors';
 import { BindingTransformPluginConfig } from '../binding';
 import { normalizedStringOrRegex } from '../utils/normalize-string-or-regex';
 
-type TransformPattern = string | RegExp | (RegExp | string)[];
+type TransformPattern = string | RegExp | readonly (RegExp | string)[];
 
 // A temp config type for giving better user experience
 export type TransformPluginConfig =

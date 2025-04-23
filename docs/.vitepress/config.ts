@@ -21,7 +21,7 @@ const sharedSidebar = [
       {
         text: 'Trouble shooting',
         link: '/guide/troubleshooting.md',
-      }
+      },
     ],
   },
   {

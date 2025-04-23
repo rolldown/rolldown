@@ -17,7 +17,7 @@ File system access on Windows is generally slower compared to other operating sy
 To improve performance on Windows, consider using alternative file system environments:
 
 1. [**Dev Drive**](https://learn.microsoft.com/en-us/windows/dev-drive/): A newer Windows feature designed for developer workloads, using the Resilient File System (ReFS). Using a Dev Drive can lead to a **2x to 3x speedup** compared to the standard Windows NTFS file system for file system operations.
-2. [**Windows Subsystem for Linux (WSL)**](https://learn.microsoft.com/en-us/windows/wsl/): WSL lets Linux environment to run on Windows easily,  which offers significantly better file system performance. Placing your project files and running the build process within WSL can result in speedups of around **10x** compared to the standard Windows NTFS file system for file system operations.
+2. [**Windows Subsystem for Linux (WSL)**](https://learn.microsoft.com/en-us/windows/wsl/): WSL lets Linux environment to run on Windows easily, which offers significantly better file system performance. Placing your project files and running the build process within WSL can result in speedups of around **10x** compared to the standard Windows NTFS file system for file system operations.
 
 :::details Benchmark Reference
 
@@ -51,9 +51,10 @@ Plugins extend Rolldown's functionality, but can also introduce performance over
 Rolldown provides a feature called **Plugin Hook Filters**. This allows you to specify precisely which modules a plugin hook should process, reducing the communication overhead between JavaScript and Rust. For detailed information on how filters work internally, refer to the [Plugin Development Guide - Hook Filters](https://rolldown.rs/guide/plugin-development#plugin-hook-filters).
 
 If you are a plugin user and the plugin you use does not have hook filters specified, you can apply them by using the `withFilter` utility function exported by Rolldown.
+
 ```js
-import { withFilter, defineConfig } from 'rolldown'
-import yaml from '@rollup/plugin-yaml'
+import yaml from '@rollup/plugin-yaml';
+import { defineConfig, withFilter } from 'rolldown';
 
 export default defineConfig({
   plugins: [
@@ -65,7 +66,7 @@ export default defineConfig({
       { transform: { id: /\.yaml$/ } },
     ),
   ],
-})
+});
 ```
 
 #### Leverage Built-in Features

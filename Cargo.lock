@@ -2681,12 +2681,13 @@ dependencies = [
 name = "rolldown_plugin_import_glob"
 version = "0.1.0"
 dependencies = [
- "glob",
+ "fast-glob",
  "itoa",
  "oxc",
  "rolldown_ecmascript_utils",
  "rolldown_plugin",
  "sugar_path",
+ "walkdir",
 ]
 
 [[package]]

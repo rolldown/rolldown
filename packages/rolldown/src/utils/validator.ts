@@ -653,6 +653,14 @@ const OutputOptionsSchema = v.strictObject({
     v.description('The JavaScript target environment'),
   ),
   plugins: v.optional(v.custom<RolldownOutputPluginOption>(() => true)),
+  hoistTransitiveImports: v.optional(
+    v.custom<boolean, () => string>((input) => {
+      if (input) {
+        return false;
+      }
+      return true;
+    }, () => `The 'true' value is not supported`),
+  ),
 });
 
 const getAddonDescription = (
@@ -747,7 +755,12 @@ const OutputCliOptionsSchema = v.omit(
     ...OutputOptionsSchema.entries,
     ...OutputCliOverrideSchema.entries,
   }),
-  ['sourcemapIgnoreList', 'sourcemapPathTransform', 'plugins'],
+  [
+    'sourcemapIgnoreList',
+    'sourcemapPathTransform',
+    'plugins',
+    'hoistTransitiveImports',
+  ],
 );
 
 /// --- CliSchema ---

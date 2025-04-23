@@ -1,4 +1,3 @@
-// Ported from https://github.com/vitejs/vite/blob/main/packages/vite/src/node/plugins/dynamicImportVars.ts#L42-L65
 export default (
   glob,
   path,

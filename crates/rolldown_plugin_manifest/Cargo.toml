@@ -13,6 +13,7 @@ workspace = true
 
 [dependencies]
 arcstr = { workspace = true }
+cow-utils = { workspace = true }
 rolldown_common = { workspace = true }
 rolldown_plugin = { workspace = true }
 rolldown_utils = { workspace = true }

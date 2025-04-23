@@ -109,6 +109,7 @@ impl From<BindingHookJsResolveIdOptions> for Arc<CustomField> {
 #[napi(object)]
 pub struct BindingHookJsResolveIdOutput {
   pub id: String,
+  #[napi(ts_type = "boolean | 'absolute' | 'relative'")]
   pub external: Option<BindingResolvedExternal>,
   #[napi(ts_type = "boolean | 'no-treeshake'")]
   pub side_effects: BindingJsSideEffects,

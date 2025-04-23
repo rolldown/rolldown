@@ -125,7 +125,8 @@ impl Plugin for JsPlugin {
       )
       .instrument(debug_span!("resolve_id_hook", plugin_name = self.name))
       .await?
-      .map(Into::into),
+      .map(TryInto::try_into)
+      .transpose()?,
     )
   }
 
@@ -146,7 +147,8 @@ impl Plugin for JsPlugin {
         )
         .instrument(debug_span!("resolve_dynamic_import_hook", plugin_name = self.name))
         .await?
-        .map(Into::into),
+        .map(TryInto::try_into)
+        .transpose()?,
       ),
       _ => Ok(None),
     }

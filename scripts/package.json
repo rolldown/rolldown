@@ -29,7 +29,7 @@
     "zx": "^8.1.2"
   },
   "devDependencies": {
-    "@oxc-node/core": "^0.0.22",
+    "@oxc-node/core": "^0.0.23",
     "@types/diff": "^7.0.0",
     "@types/lodash-es": "^4.17.12",
     "acorn": "^8.12.1",

@@ -36,7 +36,7 @@ The benchmark was ran on the following environment:
 - OS: Windows 11 Pro 23H2 22631.5189
 - CPU: AMD Ryzen 9 5900X
 - Memory: DDR4-3600 32GB
-- SSD: Western Digital Black SN850X 1GB
+- SSD: Western Digital Black SN850X 1TB
 
 :::
 

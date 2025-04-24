@@ -4,8 +4,9 @@ mod should_ignore;
 mod to_glob;
 mod utils;
 
-use std::borrow::Cow;
+use std::{borrow::Cow, pin::Pin, sync::Arc};
 
+use derive_more::Debug;
 use oxc::{ast::AstBuilder, ast_visit::VisitMut};
 use rolldown_plugin::{
   HookLoadArgs, HookLoadOutput, HookLoadReturn, HookResolveIdArgs, HookResolveIdOutput,
@@ -18,10 +19,16 @@ use crate::ast_visit::DynamicImportVarsVisit;
 
 pub const DYNAMIC_IMPORT_HELPER: &str = "\0rolldown_dynamic_import_helper.js";
 
+pub type ResolverFn = dyn Fn(&str, &str) -> Pin<Box<(dyn Future<Output = anyhow::Result<Option<String>>> + Send)>>
+  + Send
+  + Sync;
+
 #[derive(Debug, Default)]
 pub struct DynamicImportVarsPlugin {
   pub include: Vec<StringOrRegex>,
   pub exclude: Vec<StringOrRegex>,
+  #[debug(skip)]
+  pub resolver: Option<Arc<ResolverFn>>,
 }
 
 impl Plugin for DynamicImportVarsPlugin {
@@ -59,7 +66,7 @@ impl Plugin for DynamicImportVarsPlugin {
 
     // TODO: Ignore if includes a marker like "/* @rolldown-ignore */"
     args.ast.program.with_mut(|fields| {
-      let ast_builder: AstBuilder = AstBuilder::new(fields.allocator);
+      let ast_builder = AstBuilder::new(fields.allocator);
       let mut visitor = DynamicImportVarsVisit { ast_builder, need_helper: false };
       visitor.visit_program(fields.program);
       if visitor.need_helper {

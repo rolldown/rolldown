@@ -278,6 +278,7 @@ export interface BindingDeferSyncScanData {
 export interface BindingDynamicImportVarsPluginConfig {
   include?: Array<BindingStringOrRegex>
   exclude?: Array<BindingStringOrRegex>
+  resolver?: (id: string, importer: string) => MaybePromise<string | undefined>
 }
 
 export interface BindingEmittedAsset {

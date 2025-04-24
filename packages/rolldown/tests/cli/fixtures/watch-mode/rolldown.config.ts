@@ -1,5 +1,8 @@
 import { defineConfig } from 'rolldown'
 
+console.log('process.env.ROLLUP_WATCH', process.env.ROLLUP_WATCH)
+console.log('process.env.ROLLDOWN_WATCH', process.env.ROLLDOWN_WATCH)
+
 export default defineConfig({
   input: 'index.ts',
   cwd: import.meta.dirname,

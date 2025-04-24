@@ -14,6 +14,11 @@ export async function bundleWithConfig(
   configPath: string,
   cliOptions: NormalizedCliOptions,
 ): Promise<void> {
+  if (cliOptions.watch) {
+    process.env.ROLLUP_WATCH = 'true';
+    process.env.ROLLDOWN_WATCH = 'true';
+  }
+
   const config = await loadConfig(configPath);
 
   if (!config) {
@@ -68,8 +73,6 @@ async function watchInner(
 ) {
   // Only if watch is true in CLI can we use watch mode.
   // We should not make it `await`, as it never ends.
-  process.env.ROLLUP_WATCH = 'true';
-  process.env.ROLLDOWN_WATCH = 'true';
 
   let normalizedConfig = arraify(config).map((option) => {
     return {

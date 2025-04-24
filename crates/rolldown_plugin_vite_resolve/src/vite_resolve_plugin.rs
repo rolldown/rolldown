@@ -14,7 +14,7 @@ use crate::{
   file_url::file_url_str_to_path_and_postfix,
   resolver::{self, AdditionalOptions, Resolvers},
   utils::{
-    BROWSER_EXTERNAL_ID, OPTIONAL_PEER_DEP_ID, clean_url, is_bare_import, is_in_node_modules,
+    BROWSER_EXTERNAL_ID, OPTIONAL_PEER_DEP_ID, is_bare_import, is_in_node_modules,
     is_windows_drive_path, normalize_path,
   },
 };
@@ -307,11 +307,6 @@ impl ViteResolvePlugin {
           ..Default::default()
         }));
       }
-    }
-
-    // skip for now: https://github.com/oxc-project/oxc-resolver/pull/310
-    if clean_url(args.specifier) == "/" {
-      return Ok(None);
     }
 
     let base_dir = args

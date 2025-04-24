@@ -251,7 +251,6 @@ const ChecksOptionsSchema = v.strictObject({
 const MinifyOptionsSchema = v.strictObject({
   mangle: v.boolean(),
   compress: v.boolean(),
-  deadCodeElimination: v.boolean(),
   removeWhitespace: v.boolean(),
 });
 
@@ -648,11 +647,15 @@ const OutputOptionsSchema = v.strictObject({
     v.optional(v.union([v.literal('none'), v.literal('preserve-legal')])),
     v.description('Control comments in the output'),
   ),
+  plugins: v.optional(v.custom<RolldownOutputPluginOption>(() => true)),
+  polyfillRequire: v.pipe(
+    v.optional(v.boolean()),
+    v.description('Disable require polyfill injection'),
+  ),
   target: v.pipe(
     v.optional(v.enum(ESTarget)),
     v.description('The JavaScript target environment'),
   ),
-  plugins: v.optional(v.custom<RolldownOutputPluginOption>(() => true)),
   hoistTransitiveImports: v.optional(
     v.custom<boolean, () => string>((input) => {
       if (input) {

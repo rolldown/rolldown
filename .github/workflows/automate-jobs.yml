@@ -15,7 +15,6 @@ jobs:
     permissions:
       contents: read
       pull-requests: write
-      issues: write
 
     runs-on: ubuntu-latest
     steps:
@@ -25,6 +24,9 @@ jobs:
   remove-needs-triage-when-assigned:
     if: github.event.action == 'assigned'
     runs-on: ubuntu-latest
+    permissions:
+      pull-requests: write
+      issues: write
     steps:
       - uses: actions-cool/issues-helper@a610082f8ac0cf03e357eb8dd0d5e2ba075e017e # v3.6.0
         with:

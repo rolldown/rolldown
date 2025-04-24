@@ -19,7 +19,7 @@ const sharedSidebar = [
         link: '/guide/plugin-development.md',
       },
       {
-        text: 'Trouble shooting',
+        text: 'Troubleshooting',
         link: '/guide/troubleshooting.md',
       },
     ],

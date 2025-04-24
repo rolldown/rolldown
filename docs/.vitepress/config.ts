@@ -18,6 +18,10 @@ const sharedSidebar = [
         text: 'Plugin Development',
         link: '/guide/plugin-development.md',
       },
+      {
+        text: 'Troubleshooting',
+        link: '/guide/troubleshooting.md',
+      },
     ],
   },
   {

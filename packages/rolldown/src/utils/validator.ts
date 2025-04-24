@@ -249,9 +249,9 @@ const ChecksOptionsSchema = v.strictObject({
 });
 
 const MinifyOptionsSchema = v.strictObject({
-  mangle: v.boolean(),
-  compress: v.boolean(),
-  removeWhitespace: v.boolean(),
+  mangle: v.optional(v.boolean()),
+  compress: v.optional(v.boolean()),
+  removeWhitespace: v.optional(v.boolean()),
 });
 
 const ResolveOptionsSchema = v.strictObject({

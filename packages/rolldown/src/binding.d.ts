@@ -506,9 +506,9 @@ export interface BindingMfManifest {
 }
 
 export interface BindingMinifyOptions {
-  mangle: boolean
-  compress: boolean
-  removeWhitespace: boolean
+  mangle?: boolean
+  compress?: boolean
+  removeWhitespace?: boolean
 }
 
 export interface BindingModuleFederationPluginOption {

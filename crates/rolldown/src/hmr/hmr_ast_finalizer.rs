@@ -271,7 +271,22 @@ impl<'ast> VisitMut<'ast> for HmrAstFinalizer<'_, 'ast> {
                       format!("{binding_name}.{}", import_specifier.imported.name()),
                     );
                   }
-                  _ => {}
+                  ast::ImportDeclarationSpecifier::ImportDefaultSpecifier(
+                    import_default_specifier,
+                  ) => {
+                    self.import_binding.insert(
+                      import_default_specifier.local.expect_symbol_id(),
+                      format!("{binding_name}.default"),
+                    );
+                  }
+                  ast::ImportDeclarationSpecifier::ImportNamespaceSpecifier(
+                    import_namespace_specifier,
+                  ) => {
+                    self.import_binding.insert(
+                      import_namespace_specifier.local.expect_symbol_id(),
+                      binding_name.to_string(),
+                    );
+                  }
                 });
               });
               *node = stmt;

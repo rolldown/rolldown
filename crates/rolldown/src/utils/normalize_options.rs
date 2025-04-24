@@ -1,4 +1,4 @@
-use std::path::Path;
+use std::{borrow::Cow, path::Path};
 
 use oxc::transformer::{ESTarget, InjectGlobalVariablesConfig, TransformOptions};
 use rolldown_common::{
@@ -91,39 +91,30 @@ pub fn normalize_options(mut raw_options: crate::BundlerOptions) -> NormalizeOpt
   // Take out resolve options
   let raw_resolve = std::mem::take(&mut raw_options.resolve).unwrap_or_default();
 
-  let mut loaders = FxHashMap::from(
+  let mut module_types: FxHashMap<Cow<'static, str>, ModuleType> = FxHashMap::from(
     [
-      ("js".to_string(), ModuleType::Js),
-      ("mjs".to_string(), ModuleType::Js),
-      ("cjs".to_string(), ModuleType::Js),
-      ("jsx".to_string(), ModuleType::Jsx),
-      ("ts".to_string(), ModuleType::Ts),
-      ("mts".to_string(), ModuleType::Ts),
-      ("cts".to_string(), ModuleType::Ts),
-      ("tsx".to_string(), ModuleType::Tsx),
-      ("json".to_string(), ModuleType::Json),
-      ("txt".to_string(), ModuleType::Text),
-      ("css".to_string(), ModuleType::Css),
+      ("js".into(), ModuleType::Js),
+      ("mjs".into(), ModuleType::Js),
+      ("cjs".into(), ModuleType::Js),
+      ("jsx".into(), ModuleType::Jsx),
+      ("ts".into(), ModuleType::Ts),
+      ("mts".into(), ModuleType::Ts),
+      ("cts".into(), ModuleType::Ts),
+      ("tsx".into(), ModuleType::Tsx),
+      ("json".into(), ModuleType::Json),
+      ("txt".into(), ModuleType::Text),
+      ("css".into(), ModuleType::Css),
     ]
     .into_iter()
     .collect(),
   );
 
-  let user_defined_loaders: FxHashMap<String, ModuleType> = raw_options
-    .module_types
-    .map(|loaders| {
-      loaders
-        .into_iter()
-        .map(|(ext, value)| {
-          let stripped = ext.strip_prefix('.').map(ToString::to_string).unwrap_or(ext);
-
-          (stripped, value)
-        })
-        .collect()
-    })
-    .unwrap_or_default();
-
-  loaders.extend(user_defined_loaders);
+  if let Some(user_defined_loaders) = raw_options.module_types {
+    user_defined_loaders.into_iter().for_each(|(ext, value)| {
+      let stripped = ext.strip_prefix('.').map(ToString::to_string).unwrap_or(ext);
+      module_types.insert(Cow::Owned(stripped), value);
+    });
+  }
 
   let globals = raw_options.globals.unwrap_or(GlobalsOutputOption::FxHashMap(FxHashMap::default()));
 
@@ -233,7 +224,7 @@ pub fn normalize_options(mut raw_options: crate::BundlerOptions) -> NormalizeOpt
     sourcemap_path_transform: raw_options.sourcemap_path_transform,
     sourcemap_debug_ids: raw_options.sourcemap_debug_ids.unwrap_or(false),
     shim_missing_exports: raw_options.shim_missing_exports.unwrap_or(false),
-    module_types: loaders,
+    module_types,
     experimental,
     // https://github.com/evanw/esbuild/blob/d34e79e2a998c21bb71d57b92b0017ca11756912/internal/bundler/bundler.go#L2767
     profiler_names: raw_options.profiler_names.unwrap_or(!minify.is_enabled()),

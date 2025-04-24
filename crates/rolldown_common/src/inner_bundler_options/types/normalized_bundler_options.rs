@@ -1,6 +1,7 @@
 //! [crate::InputOptions] meant to provide dx-friendly options for the `rolldown` users, but it's not suitable for
 //! the `rolldown` internal use.
 
+use std::borrow::Cow;
 use std::path::PathBuf;
 use std::sync::Arc;
 
@@ -42,7 +43,7 @@ pub struct NormalizedBundlerOptions {
   pub platform: Platform,
   pub shim_missing_exports: bool,
   /// The key is the extension. Unlike `BundlerOptions`, the extension doesn't start with a dot.
-  pub module_types: FxHashMap<String, ModuleType>,
+  pub module_types: FxHashMap<Cow<'static, str>, ModuleType>,
   // --- Output
   pub name: Option<String>,
   pub css_entry_filenames: ChunkFilenamesOutputOption,

@@ -1,4 +1,4 @@
-use std::path::Path;
+use std::{borrow::Cow, path::Path};
 
 use rolldown_common::{
   ModuleType, NormalizedBundlerOptions, ResolvedId, StrOrBytes, side_effects::HookSideEffects,
@@ -101,7 +101,7 @@ pub async fn load_source(
 /// ref: https://github.com/evanw/esbuild/blob/9c13ae1f06dfa909eb4a53882e3b7e4216a503fe/internal/bundler/bundler.go#L1161-L1183
 fn get_module_loader_from_file_extension<S: AsRef<str>>(
   id: S,
-  module_types: &FxHashMap<String, ModuleType>,
+  module_types: &FxHashMap<Cow<'static, str>, ModuleType>,
 ) -> Option<ModuleType> {
   let id = id.as_ref();
   for i in memchr::memchr_iter(b'.', id.as_bytes()) {

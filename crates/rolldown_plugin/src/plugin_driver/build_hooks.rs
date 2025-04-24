@@ -1,4 +1,4 @@
-use std::sync::Arc;
+use std::{borrow::Cow, sync::Arc};
 
 use crate::{
   HookBuildEndArgs, HookLoadArgs, HookLoadReturn, HookNoopReturn, HookResolveIdArgs,
@@ -215,33 +215,48 @@ impl PluginDriver {
       if !self.plugin_usage_vec[plugin_idx].contains(HookUsage::Load) {
         continue;
       }
-      trace_action!(action::HookLoadCallStart {
-        action: "HookLoadCallStart",
-        module_id: args.id.to_string(),
-        plugin_name: plugin.call_name().to_string(),
-        plugin_index: plugin_idx.raw()
-      });
-      if let Some(r) = plugin
-        .call_load(ctx, args)
-        .instrument(debug_span!("load_hook", plugin_name = plugin.call_name().as_ref()))
-        .await?
-      {
-        trace_action!(action::HookLoadCallEnd {
-          action: "HookLoadCallEnd",
+      let ret = async {
+        trace_action!(action::HookLoadCallStart {
+          action: "HookLoadCallStart",
           module_id: args.id.to_string(),
-          source: Some(r.code.to_string()),
           plugin_name: plugin.call_name().to_string(),
-          plugin_index: plugin_idx.raw()
+          plugin_index: plugin_idx.raw(),
+          call_id: "${call_id}",
         });
-        return Ok(Some(r));
+        if let Some(r) = plugin
+          .call_load(ctx, args)
+          .instrument(debug_span!("load_hook", plugin_name = plugin.call_name().as_ref()))
+          .await?
+        {
+          trace_action!(action::HookLoadCallEnd {
+            action: "HookLoadCallEnd",
+            module_id: args.id.to_string(),
+            source: Some(r.code.to_string()),
+            plugin_name: plugin.call_name().to_string(),
+            plugin_index: plugin_idx.raw(),
+            call_id: "${call_id}",
+          });
+          anyhow::Ok(Some(r))
+        } else {
+          trace_action!(action::HookLoadCallEnd {
+            action: "HookLoadCallEnd",
+            module_id: args.id.to_string(),
+            source: None,
+            plugin_name: plugin.call_name().to_string(),
+            plugin_index: plugin_idx.raw(),
+            call_id: "${call_id}",
+          });
+          Ok(None)
+        }
       }
-      trace_action!(action::HookLoadCallEnd {
-        action: "HookLoadCallEnd",
-        module_id: args.id.to_string(),
-        source: None,
-        plugin_name: plugin.call_name().to_string(),
-        plugin_index: plugin_idx.raw()
-      });
+      .instrument(tracing::trace_span!(
+        "HookLoadCall",
+        CONTEXT_call_id = format!("load_{}", rolldown_utils::time::current_utc_timestamp_ms())
+      ))
+      .await?;
+      if ret.is_some() {
+        return Ok(ret);
+      }
     }
     Ok(None)
   }
@@ -264,12 +279,23 @@ impl PluginDriver {
       if !self.plugin_usage_vec[plugin_idx].contains(HookUsage::Transform) {
         continue;
       }
+      let call_id = if tracing::enabled!(tracing::Level::TRACE) {
+        Cow::Owned(format!(
+          "transform_{}_{}",
+          plugin_idx.raw(),
+          rolldown_utils::time::current_utc_timestamp_ms()
+        ))
+      } else {
+        Cow::Borrowed("")
+      };
+
       trace_action!(action::HookTransformCallStart {
         action: "HookTransformCallStart",
         module_id: id.to_string(),
         source: code.clone(),
         plugin_name: plugin.call_name().to_string(),
-        plugin_index: plugin_idx.raw()
+        plugin_index: plugin_idx.raw(),
+        call_id: call_id.to_string(),
       });
       if let Some(r) = plugin
         .call_transform(
@@ -300,6 +326,7 @@ impl PluginDriver {
             transformed_source: Some(code.to_string()),
             plugin_name: plugin.call_name().to_string(),
             plugin_index: plugin_idx.raw(),
+            call_id: call_id.to_string()
           });
         }
         if let Some(ty) = r.module_type {
@@ -312,6 +339,7 @@ impl PluginDriver {
           transformed_source: Some(code.to_string()),
           plugin_name: plugin.call_name().to_string(),
           plugin_index: plugin_idx.raw(),
+          call_id: call_id.to_string()
         });
       }
     }

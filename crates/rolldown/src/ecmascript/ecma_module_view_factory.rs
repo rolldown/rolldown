@@ -78,12 +78,11 @@ pub async fn create_ecma_view(
   ctx.warnings.extend(scan_warnings);
 
   let side_effects = normalize_side_effects(
-    hook_side_effects,
     ctx.options,
-    &ctx.module_type,
     ctx.resolved_id,
-    ctx.stable_id,
-    &stmt_infos,
+    Some(&stmt_infos),
+    Some(&ctx.module_type),
+    hook_side_effects,
   )
   .await?;
 
@@ -136,16 +135,15 @@ pub async fn create_ecma_view(
 ///
 /// We should skip the `check_side_effects_for` if the hook side effects is not `None`.
 pub async fn normalize_side_effects(
-  hook_side_effects: Option<HookSideEffects>,
   options: &SharedNormalizedBundlerOptions,
-  module_type: &ModuleType,
   resolved_id: &ResolvedId,
-  stable_id: &str,
-  stmt_infos: &rolldown_common::StmtInfos,
+  stmt_infos: Option<&rolldown_common::StmtInfos>,
+  module_type: Option<&ModuleType>,
+  hook_side_effects: Option<HookSideEffects>,
 ) -> BuildResult<DeterminedSideEffects> {
   let side_effects = match hook_side_effects {
     Some(side_effects) => match side_effects {
-      HookSideEffects::True => lazy_check_side_effects(module_type, resolved_id, stmt_infos),
+      HookSideEffects::True => lazy_check_side_effects(resolved_id, module_type, stmt_infos),
       HookSideEffects::False => DeterminedSideEffects::UserDefined(false),
       HookSideEffects::NoTreeshake => DeterminedSideEffects::NoTreeshake,
     },
@@ -155,23 +153,22 @@ pub async fn normalize_side_effects(
       None => DeterminedSideEffects::NoTreeshake,
       Some(opt) => {
         if opt.module_side_effects.is_fn() {
-          if opt
+          let module_side_effects = opt
             .module_side_effects
-            .ffi_resolve(stable_id, resolved_id.external.is_external())
-            .await?
-            .unwrap_or_default()
-          {
-            lazy_check_side_effects(module_type, resolved_id, stmt_infos)
+            .ffi_resolve(&resolved_id.id, resolved_id.external.is_external())
+            .await?;
+          if module_side_effects.unwrap_or_default() {
+            lazy_check_side_effects(resolved_id, module_type, stmt_infos)
           } else {
             DeterminedSideEffects::UserDefined(false)
           }
         } else {
           match opt
             .module_side_effects
-            .native_resolve(stable_id, resolved_id.external.is_external())
+            .native_resolve(&resolved_id.id, resolved_id.external.is_external())
           {
             Some(value) => DeterminedSideEffects::UserDefined(value),
-            None => lazy_check_side_effects(module_type, resolved_id, stmt_infos),
+            None => lazy_check_side_effects(resolved_id, module_type, stmt_infos),
           }
         }
       }
@@ -181,10 +178,19 @@ pub async fn normalize_side_effects(
 }
 
 pub fn lazy_check_side_effects(
-  module_type: &ModuleType,
   resolved_id: &ResolvedId,
-  stmt_infos: &rolldown_common::StmtInfos,
+  module_type: Option<&ModuleType>,
+  stmt_infos: Option<&rolldown_common::StmtInfos>,
 ) -> DeterminedSideEffects {
+  if resolved_id.external.is_external() {
+    return if resolved_id.is_external_without_side_effects {
+      DeterminedSideEffects::UserDefined(false)
+    } else {
+      DeterminedSideEffects::NoTreeshake
+    };
+  }
+  let module_type = module_type.expect("Normal module should have module_type");
+  let stmt_infos = stmt_infos.expect("Normal module should have stmt_infos");
   if matches!(module_type, ModuleType::Css) {
     // CSS modules are considered to have side effects by default
     return DeterminedSideEffects::Analyzed(true);

@@ -1,0 +1,3 @@
+export { foo } from './mod';
+
+

@@ -152,6 +152,9 @@ pub fn normalize_options(mut raw_options: crate::BundlerOptions) -> NormalizeOpt
   );
 
   let mut experimental = raw_options.experimental.unwrap_or_default();
+  if experimental.hmr.is_some() {
+    experimental.incremental_build = Some(true);
+  }
   let is_advanced_chunks_enabled = raw_options
     .advanced_chunks
     .as_ref()

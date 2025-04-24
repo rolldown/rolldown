@@ -267,6 +267,15 @@ impl HmrManager {
     }
 
     for importer_idx in &module.importers_idx {
+      let Module::Normal(importer) = &self.module_db.modules[*importer_idx] else {
+        continue;
+      };
+
+      if importer.accepted_hmr_deps_idx.contains(&module_idx) {
+        hmr_boundaries.insert(HmrBoundary { boundary: module_idx, accepted_via: *importer_idx });
+        continue;
+      }
+
       if self.propagate_update(*importer_idx, visited_modules, hmr_boundaries, affected_modules) {
         return true;
       }

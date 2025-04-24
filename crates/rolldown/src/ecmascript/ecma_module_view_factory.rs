@@ -7,6 +7,7 @@ use rolldown_common::{
 use rolldown_error::BuildResult;
 use rolldown_std_utils::PathExt;
 use rolldown_utils::{ecmascript::legitimize_identifier_name, indexmap::FxIndexSet};
+use rustc_hash::FxHashSet;
 use sugar_path::SugarPath;
 
 use crate::{
@@ -103,6 +104,7 @@ pub async fn create_ecma_view(
     import_records: IndexVec::default(),
     importers: FxIndexSet::default(),
     importers_idx: FxIndexSet::default(),
+    accepted_hmr_deps_idx: FxHashSet::default(),
     dynamic_importers: FxIndexSet::default(),
     imported_ids: FxIndexSet::default(),
     dynamically_imported_ids: FxIndexSet::default(),

@@ -631,6 +631,9 @@ impl ModuleLoader {
               if importer.kind.is_static() {
                 module.importers.insert(importer.importer_path.clone());
                 module.importers_idx.insert(importer.importer_idx);
+              }
+              if matches!(importer.kind, ImportKind::HotAccept) {
+                module.accepted_hmr_deps_idx.insert(importer.importer_idx);
               } else {
                 module.dynamic_importers.insert(importer.importer_path.clone());
               }
@@ -639,7 +642,6 @@ impl ModuleLoader {
               none_empty_importer_module.push(idx);
             }
           }
-
           (idx, module)
         },
       );

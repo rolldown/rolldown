@@ -110,7 +110,8 @@ where
       let mut file = file.value_mut();
 
       let mut visit = || {
-        let mut serializer = serde_json::Serializer::pretty(&mut file);
+        // WARN: Do not use pretty print here, vite-devtool relies on the format of every line is a json object.
+        let mut serializer = serde_json::Serializer::new(&mut file);
         let mut serializer = serializer.serialize_map(None)?;
 
         serializer.serialize_entry("timestamp", &current_utc_timestamp_ms())?;

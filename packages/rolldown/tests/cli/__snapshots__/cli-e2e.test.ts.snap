@@ -308,7 +308,9 @@ called output options hook
 `;
 
 exports[`watch cli > should require both ROLLDOWN_WATCH and this.meta.watchMode to be false 1`] = `
-"options called:
+"process.env.ROLLUP_WATCH undefined
+process.env.ROLLDOWN_WATCH undefined
+options called:
 this.meta.watchMode false
 process.env.ROLLUP_WATCH undefined
 process.env.ROLLDOWN_WATCH undefined
@@ -320,7 +322,9 @@ this.meta.watchMode false"
 `;
 
 exports[`watch cli > should require both ROLLDOWN_WATCH and this.meta.watchMode to be true 1`] = `
-"Waiting for changes...
+"process.env.ROLLUP_WATCH true
+process.env.ROLLDOWN_WATCH true
+Waiting for changes...
 options called:
 this.meta.watchMode true
 process.env.ROLLUP_WATCH true

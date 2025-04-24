@@ -52,7 +52,7 @@ impl Plugin for ManifestPlugin {
       match file {
         Output::Chunk(chunk) => {
           let name = self.get_chunk_name(chunk);
-          let chunk_manifest = Arc::new(self.create_chunk(args.bundle, chunk, name.clone()));
+          let chunk_manifest = Arc::new(self.create_chunk(args.bundle, chunk, &name));
           manifest.insert(name, chunk_manifest);
         }
         Output::Asset(asset) => {
@@ -60,11 +60,10 @@ impl Plugin for ManifestPlugin {
             // Add every unique asset to the manifest, keyed by its original name
             let file = asset.original_file_names.first().map_or_else(
               || {
-                let filename = Path::new(asset.filename.as_str())
-                  .file_name()
-                  .map(|x| x.to_string_lossy())
-                  .unwrap();
-                Cow::Owned(rolldown_utils::concat_string!("_", filename))
+                Cow::Owned(rolldown_utils::concat_string!(
+                  "_",
+                  Path::new(asset.filename.as_str()).file_name().unwrap().to_string_lossy()
+                ))
               },
               Cow::Borrowed,
             );

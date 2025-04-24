@@ -1,13 +1,10 @@
 use arcstr::ArcStr;
+use cow_utils::CowUtils;
 use rolldown_common::{Output, OutputAsset, OutputChunk};
+use rolldown_utils::pattern_filter::normalize_path;
 use serde::Serialize;
 
 use super::ManifestPlugin;
-
-#[allow(clippy::trivially_copy_pass_by_ref)]
-fn is_false(b: &bool) -> bool {
-  !b
-}
 
 #[derive(Debug, Default, Serialize)]
 #[serde(rename_all = "camelCase")]
@@ -17,9 +14,9 @@ pub struct ManifestChunk {
   pub name: Option<String>,
   #[serde(skip_serializing_if = "Option::is_none")]
   pub src: Option<String>,
-  #[serde(skip_serializing_if = "is_false")]
+  #[serde(skip_serializing_if = "std::ops::Not::not")]
   pub is_entry: bool,
-  #[serde(skip_serializing_if = "is_false")]
+  #[serde(skip_serializing_if = "std::ops::Not::not")]
   pub is_dynamic_entry: bool,
   #[serde(skip_serializing_if = "Vec::is_empty")]
   pub imports: Vec<String>,
@@ -35,58 +32,28 @@ pub struct ManifestChunk {
 impl ManifestPlugin {
   pub fn get_chunk_name(&self, chunk: &OutputChunk) -> String {
     match &chunk.facade_module_id {
-      Some(facade_module_id) => {
-        let name = facade_module_id.relative_path(&self.config.root);
-        let name_str = name.to_string_lossy().to_string();
+      Some(module_id) => {
+        let name = module_id.relative_path(&self.config.root);
+        let name = name.to_string_lossy();
+        let name = normalize_path(&name);
         // TODO: Support System format
         // if format == 'system' && !chunk.name.as_str().contains("-legacy") {
-        //   name_str = if let Some(ext) = name.extension() {
-        //     let end = name_str.len() - ext.len() - 1;
-        //     format!("{}-legacy.{}", &name_str[0..end], ext.to_string_lossy())
+        //   name = if let Some(ext) = name.extension() {
+        //     let end = name.len() - ext.len() - 1;
+        //     format!("{}-legacy.{}", &name[0..end], ext.to_string_lossy())
         //   } else {
-        //     format!("{name_str}-legacy")
+        //     format!("{name}-legacy")
         //   }
         // }
-        name_str.replace('\0', "")
+        name.cow_replace('\0', "").into_owned()
       }
-      _ => {
-        format!(
-          "_{}",
-          std::path::Path::new(chunk.filename.as_str()).file_name().unwrap().to_string_lossy()
-        )
-      }
+      _ => rolldown_utils::concat_string!(
+        "_",
+        std::path::Path::new(chunk.filename.as_str()).file_name().unwrap().to_string_lossy()
+      ),
     }
   }
-  fn get_internal_imports(&self, bundle: &Vec<Output>, imports: &Vec<ArcStr>) -> Vec<String> {
-    let mut filtered_imports = vec![];
-    for file in imports {
-      for chunk in bundle {
-        if let Output::Chunk(output_chunk) = chunk {
-          if output_chunk.filename == *file {
-            filtered_imports.push(self.get_chunk_name(output_chunk));
-            break;
-          }
-        }
-      }
-    }
-    filtered_imports
-  }
-  pub fn create_chunk(
-    &self,
-    bundle: &Vec<Output>,
-    chunk: &OutputChunk,
-    src: String,
-  ) -> ManifestChunk {
-    ManifestChunk {
-      file: chunk.filename.to_string(),
-      name: Some(chunk.name.to_string()),
-      src: chunk.facade_module_id.is_some().then_some(src),
-      is_entry: chunk.is_entry,
-      is_dynamic_entry: chunk.is_dynamic_entry,
-      imports: self.get_internal_imports(bundle, &chunk.imports),
-      dynamic_imports: self.get_internal_imports(bundle, &chunk.dynamic_imports),
-    }
-  }
+
   pub fn create_asset(asset: &OutputAsset, src: String, is_entry: bool) -> ManifestChunk {
     ManifestChunk {
       file: asset.filename.to_string(),
@@ -94,6 +61,38 @@ impl ManifestPlugin {
       is_entry,
       ..Default::default()
     }
+  }
+
+  pub fn create_chunk(
+    &self,
+    bundle: &Vec<Output>,
+    chunk: &OutputChunk,
+    src: &str,
+  ) -> ManifestChunk {
+    ManifestChunk {
+      file: chunk.filename.to_string(),
+      name: Some(chunk.name.to_string()),
+      src: chunk.facade_module_id.is_some().then(|| src.to_string()),
+      is_entry: chunk.is_entry,
+      is_dynamic_entry: chunk.is_dynamic_entry,
+      imports: self.get_internal_imports(bundle, &chunk.imports),
+      dynamic_imports: self.get_internal_imports(bundle, &chunk.dynamic_imports),
+    }
+  }
+
+  fn get_internal_imports(&self, bundle: &Vec<Output>, imports: &Vec<ArcStr>) -> Vec<String> {
+    let mut filtered_imports = vec![];
+    for file in imports {
+      for output in bundle {
+        if let Output::Chunk(chunk) = output {
+          if chunk.filename == *file {
+            filtered_imports.push(self.get_chunk_name(chunk));
+            break;
+          }
+        }
+      }
+    }
+    filtered_imports
   }
 }
 

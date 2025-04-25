@@ -49,6 +49,7 @@ impl GenerateStage<'_> {
 
     let mut assets = finalize_assets(
       chunk_graph,
+      self.link_output,
       instantiated_chunks,
       &index_chunk_to_assets,
       self.options.hash_characters,

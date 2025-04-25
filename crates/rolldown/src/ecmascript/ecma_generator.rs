@@ -91,12 +91,7 @@ impl Generator for EcmaGenerator {
       );
     });
 
-    let rendered_chunk = Arc::new(generate_rendered_chunk(
-      ctx.chunk,
-      rendered_modules,
-      ctx.chunk.pre_rendered_chunk.as_ref().expect("Should have pre-rendered chunk"),
-      ctx.chunk_graph,
-    ));
+    let rendered_chunk = Arc::new(generate_rendered_chunk(ctx, rendered_modules));
 
     let hashbang = ctx.chunk.user_defined_entry_module(&ctx.link_output.module_table).and_then(
       |normal_module| {

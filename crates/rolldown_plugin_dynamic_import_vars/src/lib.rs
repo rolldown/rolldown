@@ -5,6 +5,7 @@ mod utils;
 
 use std::{borrow::Cow, pin::Pin, sync::Arc};
 
+use ast_visit::DynamicImportVarsVisitConfig;
 use derive_more::Debug;
 use oxc::{ast::AstBuilder, ast_visit::VisitMut};
 use rolldown_plugin::{
@@ -63,17 +64,16 @@ impl Plugin for DynamicImportVarsPlugin {
       return Ok(args.ast);
     }
 
+    let config = DynamicImportVarsVisitConfig::default();
+
     // TODO: Ignore if includes a marker like "/* @rolldown-ignore */"
     args.ast.program.with_mut(|fields| {
+      let source_text = fields.program.source_text;
       let ast_builder = AstBuilder::new(fields.allocator);
-      let mut visitor = DynamicImportVarsVisit {
-        ast_builder,
-        source_text: fields.program.source_text,
-        need_helper: false,
-      };
+      let mut visitor = DynamicImportVarsVisit { ast_builder, source_text, config };
 
       visitor.visit_program(fields.program);
-      if visitor.need_helper {
+      if visitor.config.need_helper {
         fields.program.body.push(visitor.import_helper());
       }
     });

@@ -9,17 +9,6 @@ use std::{borrow::Cow, path::Path};
 const EXAMPLE_CODE: &str = "For example: import(`./foo/${bar}.js`).";
 const IGNORED_PROTOCOLS: [&str; 3] = ["data:", "http:", "https:"];
 
-pub fn to_glob_pattern<'a>(
-  expr: &'a Expression,
-  source: &'a str,
-) -> anyhow::Result<Option<String>> {
-  let glob = expr_to_glob(expr)?;
-  if should_ignore(&glob) {
-    return Ok(None);
-  }
-  Ok(Some(to_valid_glob(&glob, source)?.into_owned()))
-}
-
 pub fn should_ignore(glob: &str) -> bool {
   if memchr::memchr(b'*', glob.as_bytes()).is_none() {
     return true;
@@ -67,6 +56,17 @@ pub fn to_valid_glob<'a>(glob: &'a str, source: &'a str) -> anyhow::Result<Cow<'
   Ok(glob)
 }
 
+pub fn template_literal_to_glob<'a>(node: &'a TemplateLiteral) -> anyhow::Result<Cow<'a, str>> {
+  let mut glob = String::new();
+  for (index, quasi) in node.quasis.iter().enumerate() {
+    glob += &sanitize_string(&quasi.value.raw)?;
+    if let Some(expr) = node.expressions.get(index) {
+      glob += &expr_to_glob(expr)?;
+    }
+  }
+  Ok(Cow::Owned(glob))
+}
+
 fn expr_to_glob<'a>(expr: &'a Expression) -> anyhow::Result<Cow<'a, str>> {
   match expr {
     Expression::TemplateLiteral(node) => template_literal_to_glob(node),
@@ -104,17 +104,6 @@ fn sanitize_string(s: &str) -> anyhow::Result<Cow<'_, str>> {
   } else {
     Cow::Borrowed(s)
   })
-}
-
-pub fn template_literal_to_glob<'a>(node: &'a TemplateLiteral) -> anyhow::Result<Cow<'a, str>> {
-  let mut glob = String::new();
-  for (index, quasi) in node.quasis.iter().enumerate() {
-    glob += &sanitize_string(&quasi.value.raw)?;
-    if let Some(expr) = node.expressions.get(index) {
-      glob += &expr_to_glob(expr)?;
-    }
-  }
-  Ok(Cow::Owned(glob))
 }
 
 fn call_expr_to_glob<'a>(node: &'a CallExpression) -> anyhow::Result<Cow<'a, str>> {
@@ -166,6 +155,14 @@ mod tests {
       let parser = Parser::new(&self.allocator, source_text, SourceType::default());
       parser.parse_expression().unwrap()
     }
+  }
+
+  fn to_glob_pattern<'a>(expr: &'a Expression, source: &'a str) -> anyhow::Result<Option<String>> {
+    let glob = expr_to_glob(expr)?;
+    if should_ignore(&glob) {
+      return Ok(None);
+    }
+    Ok(Some(to_valid_glob(&glob, source)?.into_owned()))
   }
 
   #[test]

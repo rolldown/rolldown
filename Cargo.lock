@@ -2672,6 +2672,7 @@ version = "0.0.1"
 dependencies = [
  "anyhow",
  "arcstr",
+ "derive_more",
  "glob",
  "memchr",
  "oxc",

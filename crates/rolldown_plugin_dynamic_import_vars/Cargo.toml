@@ -17,6 +17,7 @@ workspace = true
 [dependencies]
 anyhow = { workspace = true }
 arcstr = { workspace = true }
+derive_more = { workspace = true }
 glob = { workspace = true }
 memchr = { workspace = true }
 oxc = { workspace = true }

@@ -9,6 +9,7 @@ use rolldown_plugin::__inner::Pluginable;
 use rolldown_plugin_alias::{Alias, AliasPlugin};
 use rolldown_plugin_build_import_analysis::BuildImportAnalysisPlugin;
 use rolldown_plugin_dynamic_import_vars::DynamicImportVarsPlugin;
+use rolldown_plugin_dynamic_import_vars::ResolverFn;
 use rolldown_plugin_import_glob::{ImportGlobPlugin, ImportGlobPluginConfig};
 use rolldown_plugin_isolated_declaration::IsolatedDeclarationPlugin;
 use rolldown_plugin_json::{JsonPlugin, JsonPluginStringify};
@@ -33,7 +34,9 @@ use super::types::binding_builtin_plugin_name::BindingBuiltinPluginName;
 use super::types::binding_js_or_regex::{BindingStringOrRegex, bindingify_string_or_regex_array};
 use super::types::binding_limited_boolean::BindingTrueValue;
 use super::types::binding_module_federation_plugin_option::BindingModuleFederationPluginOption;
-use crate::types::js_callback::{JsCallback, JsCallbackExt};
+use crate::types::js_callback::{
+  JsCallback, JsCallbackExt, MaybeAsyncJsCallback, MaybeAsyncJsCallbackExt,
+};
 
 #[allow(clippy::pub_underscore_fields)]
 #[napi(object)]
@@ -417,6 +420,8 @@ impl From<BindingTransformPluginConfig> for TransformPlugin {
 pub struct BindingDynamicImportVarsPluginConfig {
   pub include: Option<Vec<BindingStringOrRegex>>,
   pub exclude: Option<Vec<BindingStringOrRegex>>,
+  #[napi(ts_type = "(id: string, importer: string) => MaybePromise<string | undefined>")]
+  pub resolver: Option<MaybeAsyncJsCallback<FnArgs<(String, String)>, Option<String>>>,
 }
 
 impl From<BindingDynamicImportVarsPluginConfig> for DynamicImportVarsPlugin {
@@ -424,6 +429,16 @@ impl From<BindingDynamicImportVarsPluginConfig> for DynamicImportVarsPlugin {
     Self {
       include: value.include.map(bindingify_string_or_regex_array).unwrap_or_default(),
       exclude: value.exclude.map(bindingify_string_or_regex_array).unwrap_or_default(),
+      resolver: value.resolver.map(|resolver| -> Arc<ResolverFn> {
+        Arc::new(move |id: &str, importer: &str| {
+          let id = id.to_string();
+          let importer = importer.to_string();
+          let resolver = Arc::clone(&resolver);
+          Box::pin(async move {
+            resolver.await_call((id, importer).into()).await.map_err(anyhow::Error::from)
+          })
+        })
+      }),
     }
   }
 }

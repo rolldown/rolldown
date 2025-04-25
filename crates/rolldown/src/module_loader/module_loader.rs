@@ -15,9 +15,9 @@ use rolldown_common::side_effects::{DeterminedSideEffects, HookSideEffects};
 use rolldown_common::{
   DUMMY_MODULE_IDX, EcmaRelated, EntryPoint, EntryPointKind, ExternalModule, HybridIndexVec,
   ImportKind, ImportRecordIdx, ImportRecordMeta, ImporterRecord, Module, ModuleId, ModuleIdx,
-  ModuleInfo, ModuleLoaderMsg, ModuleSideEffects, ModuleType, NormalModuleTaskResult,
-  RUNTIME_MODULE_ID, ResolvedExternal, ResolvedId, RuntimeModuleBrief, RuntimeModuleTaskResult,
-  StmtInfoIdx, SymbolRefDb, SymbolRefDbForModule,
+  ModuleInfo, ModuleLoaderMsg, ModuleType, NormalModuleTaskResult, RUNTIME_MODULE_ID,
+  ResolvedExternal, ResolvedId, RuntimeModuleBrief, RuntimeModuleTaskResult, StmtInfoIdx,
+  SymbolRefDb, SymbolRefDbForModule,
 };
 use rolldown_error::{BuildDiagnostic, BuildResult};
 use rolldown_fs::OsFileSystem;
@@ -186,16 +186,16 @@ impl ModuleLoader {
   }
 
   #[allow(clippy::too_many_lines)]
-  fn try_spawn_new_task(
+  async fn try_spawn_new_task(
     &mut self,
     resolved_id: ResolvedId,
     owner: Option<ModuleTaskOwner>,
     is_user_defined_entry: bool,
     assert_module_type: Option<ModuleType>,
     user_defined_entries: &[(Option<ArcStr>, ResolvedId)],
-  ) -> ModuleIdx {
+  ) -> BuildResult<ModuleIdx> {
     let idx = match self.cache.module_id_to_idx.get(&resolved_id.id) {
-      Some(VisitState::Seen(idx)) => return *idx,
+      Some(VisitState::Seen(idx)) => return Ok(*idx),
       Some(VisitState::Invalidate(idx)) => {
         // Full scan mode the idx will never be invalidated right?
         let idx = *idx;
@@ -219,27 +219,9 @@ impl ModuleLoader {
       }
     };
     if resolved_id.external.is_external() {
-      let external_module_side_effects = match resolved_id.side_effects {
-        Some(hook_side_effects) => match hook_side_effects {
-          HookSideEffects::True => DeterminedSideEffects::UserDefined(true),
-          HookSideEffects::False => DeterminedSideEffects::UserDefined(false),
-          HookSideEffects::NoTreeshake => DeterminedSideEffects::NoTreeshake,
-        },
-        _ => match self.options.treeshake.as_ref() {
-          None => DeterminedSideEffects::NoTreeshake,
-          Some(opt) => match opt.module_side_effects {
-            ModuleSideEffects::Boolean(false) => DeterminedSideEffects::UserDefined(false),
-            _ => {
-              if resolved_id.is_external_without_side_effects {
-                DeterminedSideEffects::UserDefined(false)
-              } else {
-                DeterminedSideEffects::NoTreeshake
-              }
-            }
-          },
-        },
-      };
-
+      let external_module_side_effects =
+        normalize_side_effects(&self.options, &resolved_id, None, None, resolved_id.side_effects)
+          .await?;
       let id = ModuleId::new(&resolved_id.id);
       self.shared_context.plugin_driver.set_module_info(
         &id.clone(),
@@ -314,7 +296,7 @@ impl ModuleLoader {
 
       tokio::spawn(task.run());
     }
-    idx
+    Ok(idx)
   }
 
   #[tracing::instrument(level = "debug", skip_all)]
@@ -332,21 +314,21 @@ impl ModuleLoader {
 
     // Store the already consider as entry module
     let mut user_defined_entry_ids = FxHashSet::with_capacity(user_defined_entries.len());
-
-    let mut entry_points = user_defined_entries
-      .iter()
-      .map(|(name, info)| EntryPoint {
-        name: name.clone(),
-        id: self.try_spawn_new_task(info.clone(), None, true, None, &user_defined_entries),
+    let mut entry_points = Vec::with_capacity(user_defined_entries.len());
+    for (defined_name, resolved_id) in &user_defined_entries {
+      let id = self
+        .try_spawn_new_task(resolved_id.clone(), None, true, None, &user_defined_entries)
+        .await?;
+      user_defined_entry_ids.insert(id);
+      entry_points.push(EntryPoint {
+        name: defined_name.clone(),
+        id,
         kind: EntryPointKind::UserDefined,
         file_name: None,
         reference_id: None,
         related_stmt_infos: vec![],
-      })
-      .inspect(|e| {
-        user_defined_entry_ids.insert(e.id);
-      })
-      .collect::<Vec<_>>();
+      });
+    }
 
     // Incremental partial rebuild files
     for resolved_id in changed_resolved_ids {
@@ -357,7 +339,7 @@ impl ModuleLoader {
       // set `Owner` to `None` is safe, since it is used to emit `Unloadable` diagnostic, we know this is
       // exists in fs system, which is loadable.
       // TODO: copy assert_module_type
-      self.try_spawn_new_task(resolved_id, None, false, None, &user_defined_entries);
+      self.try_spawn_new_task(resolved_id, None, false, None, &user_defined_entries).await?;
     }
 
     let mut dynamic_import_entry_ids: FxHashMap<ModuleIdx, Vec<(ModuleIdx, StmtInfoIdx)>> =
@@ -385,64 +367,66 @@ impl ModuleLoader {
             .map(|item| std::mem::take(&mut item.dynamic_import_rec_exports_usage))
             .unwrap_or_default();
 
-          let import_records: IndexVec<ImportRecordIdx, rolldown_common::ResolvedImportRecord> =
-            raw_import_records
-              .into_iter_enumerated()
-              .zip(resolved_deps)
-              .map(|((rec_idx, raw_rec), info)| {
-                if raw_rec.meta.contains(ImportRecordMeta::IS_DUMMY) {
-                  return raw_rec.into_resolved(DUMMY_MODULE_IDX);
-                }
-                let idx = if let Some(idx) = self.try_spawn_with_cache(&info) {
-                  idx
-                } else {
-                  let normal_module = module.as_normal().unwrap();
-                  let owner = ModuleTaskOwner::new(
-                    normal_module.source.clone(),
-                    normal_module.stable_id.as_str().into(),
-                    raw_rec.span,
-                  );
-                  self.try_spawn_new_task(
-                    info,
-                    Some(owner),
-                    false,
-                    raw_rec.asserted_module_type.clone(),
-                    &user_defined_entries,
-                  )
-                };
-                // Dynamic imported module will be considered as an entry
-                self.intermediate_normal_modules.importers[idx].push(ImporterRecord {
-                  kind: raw_rec.kind,
-                  importer_path: ModuleId::new(module.id()),
-                  importer_idx: module.idx(),
-                });
-                // defer usage merging, since we only have one consumer, we should keep action during fetching as simple
-                // as possible
-                if let Some(usage) = dynamic_import_rec_exports_usage.remove(&rec_idx) {
-                  dynamic_import_exports_usage_pairs.push((idx, usage));
-                }
-                if matches!(raw_rec.kind, ImportKind::DynamicImport)
-                  && !user_defined_entry_ids.contains(&idx)
-                {
-                  match dynamic_import_entry_ids.entry(idx) {
-                    Entry::Vacant(vac) => match raw_rec.related_stmt_info_idx {
-                      Some(stmt_info_idx) => {
-                        vac.insert(vec![(module.idx(), stmt_info_idx)]);
-                      }
-                      None => {
-                        vac.insert(vec![]);
-                      }
-                    },
-                    Entry::Occupied(mut occ) => {
-                      if let Some(stmt_info_idx) = raw_rec.related_stmt_info_idx {
-                        occ.get_mut().push((module.idx(), stmt_info_idx));
-                      }
-                    }
+          let mut import_records: IndexVec<ImportRecordIdx, rolldown_common::ResolvedImportRecord> =
+            IndexVec::with_capacity(raw_import_records.len());
+          for ((rec_idx, raw_rec), info) in
+            raw_import_records.into_iter_enumerated().zip(resolved_deps)
+          {
+            if raw_rec.meta.contains(ImportRecordMeta::IS_DUMMY) {
+              import_records.push(raw_rec.into_resolved(DUMMY_MODULE_IDX));
+              continue;
+            }
+            let idx = if let Some(idx) = self.try_spawn_with_cache(&info) {
+              idx
+            } else {
+              let normal_module = module.as_normal().unwrap();
+              let owner = ModuleTaskOwner::new(
+                normal_module.source.clone(),
+                normal_module.stable_id.as_str().into(),
+                raw_rec.span,
+              );
+              self
+                .try_spawn_new_task(
+                  info,
+                  Some(owner),
+                  false,
+                  raw_rec.asserted_module_type.clone(),
+                  &user_defined_entries,
+                )
+                .await?
+            };
+            // Dynamic imported module will be considered as an entry
+            self.intermediate_normal_modules.importers[idx].push(ImporterRecord {
+              kind: raw_rec.kind,
+              importer_path: ModuleId::new(module.id()),
+              importer_idx: module.idx(),
+            });
+            // defer usage merging, since we only have one consumer, we should keep action during fetching as simple
+            // as possible
+            if let Some(usage) = dynamic_import_rec_exports_usage.remove(&rec_idx) {
+              dynamic_import_exports_usage_pairs.push((idx, usage));
+            }
+            if matches!(raw_rec.kind, ImportKind::DynamicImport)
+              && !user_defined_entry_ids.contains(&idx)
+            {
+              match dynamic_import_entry_ids.entry(idx) {
+                Entry::Vacant(vac) => match raw_rec.related_stmt_info_idx {
+                  Some(stmt_info_idx) => {
+                    vac.insert(vec![(module.idx(), stmt_info_idx)]);
+                  }
+                  None => {
+                    vac.insert(vec![]);
+                  }
+                },
+                Entry::Occupied(mut occ) => {
+                  if let Some(stmt_info_idx) = raw_rec.related_stmt_info_idx {
+                    occ.get_mut().push((module.idx(), stmt_info_idx));
                   }
                 }
-                raw_rec.into_resolved(idx)
-              })
-              .collect::<IndexVec<ImportRecordIdx, _>>();
+              }
+            }
+            import_records.push(raw_rec.into_resolved(idx));
+          }
 
           module.set_import_records(import_records);
 
@@ -465,46 +449,47 @@ impl ModuleLoader {
             raw_import_records,
             resolved_deps,
           } = task_result;
-          let import_records = raw_import_records
-            .into_iter()
-            .zip(resolved_deps)
-            .map(|(raw_rec, info)| {
-              let id = self.try_spawn_new_task(
+          let mut import_records = IndexVec::with_capacity(raw_import_records.len());
+
+          for (raw_rec, info) in raw_import_records.into_iter().zip(resolved_deps) {
+            let id = self
+              .try_spawn_new_task(
                 info,
                 None,
                 false,
                 raw_rec.asserted_module_type.clone(),
                 &user_defined_entries,
-              );
-              // Dynamic imported module will be considered as an entry
-              self.intermediate_normal_modules.importers[id].push(ImporterRecord {
-                kind: raw_rec.kind,
-                importer_path: module.id.clone(),
-                importer_idx: module.idx,
-              });
+              )
+              .await?;
+            // Dynamic imported module will be considered as an entry
+            self.intermediate_normal_modules.importers[id].push(ImporterRecord {
+              kind: raw_rec.kind,
+              importer_path: module.id.clone(),
+              importer_idx: module.idx,
+            });
 
-              if matches!(raw_rec.kind, ImportKind::DynamicImport)
-                && !user_defined_entry_ids.contains(&id)
-              {
-                match dynamic_import_entry_ids.entry(id) {
-                  Entry::Vacant(vac) => match raw_rec.related_stmt_info_idx {
-                    Some(stmt_info_idx) => {
-                      vac.insert(vec![(module.idx, stmt_info_idx)]);
-                    }
-                    None => {
-                      vac.insert(vec![]);
-                    }
-                  },
-                  Entry::Occupied(mut occ) => {
-                    if let Some(stmt_info_idx) = raw_rec.related_stmt_info_idx {
-                      occ.get_mut().push((module.idx, stmt_info_idx));
-                    }
+            if matches!(raw_rec.kind, ImportKind::DynamicImport)
+              && !user_defined_entry_ids.contains(&id)
+            {
+              match dynamic_import_entry_ids.entry(id) {
+                Entry::Vacant(vac) => match raw_rec.related_stmt_info_idx {
+                  Some(stmt_info_idx) => {
+                    vac.insert(vec![(module.idx, stmt_info_idx)]);
+                  }
+                  None => {
+                    vac.insert(vec![]);
+                  }
+                },
+                Entry::Occupied(mut occ) => {
+                  if let Some(stmt_info_idx) = raw_rec.related_stmt_info_idx {
+                    occ.get_mut().push((module.idx, stmt_info_idx));
                   }
                 }
               }
-              raw_rec.into_resolved(id)
-            })
-            .collect::<IndexVec<_, _>>();
+            }
+
+            import_records.push(raw_rec.into_resolved(id));
+          }
           let ast_idx = self.intermediate_normal_modules.index_ecma_ast.push((ast, module.idx));
           module.ecma_ast_idx = Some(ast_idx);
           module.import_records = import_records;
@@ -515,7 +500,7 @@ impl ModuleLoader {
           self.remaining -= 1;
         }
         ModuleLoaderMsg::FetchModule(resolve_id) => {
-          self.try_spawn_new_task(resolve_id, None, false, None, &user_defined_entries);
+          self.try_spawn_new_task(resolve_id, None, false, None, &user_defined_entries).await?;
         }
         ModuleLoaderMsg::AddEntryModule(msg) => {
           let data = msg.chunk;
@@ -535,7 +520,9 @@ impl ModuleLoader {
           };
           extra_entry_points.push(EntryPoint {
             name: data.name.clone(),
-            id: self.try_spawn_new_task(resolved_id, None, true, None, &user_defined_entries),
+            id: self
+              .try_spawn_new_task(resolved_id, None, true, None, &user_defined_entries)
+              .await?,
             kind: EntryPointKind::UserDefined,
             file_name: data.file_name.clone(),
             reference_id: Some(msg.reference_id),
@@ -587,12 +574,11 @@ impl ModuleLoader {
               .expect("Should have resolved id")
               .into();
             normalize_side_effects(
-              d.side_effects,
               &self.options,
-              &normal.module_type,
               &resolved_id,
-              &normal.stable_id,
-              &normal.stmt_infos,
+              Some(&normal.stmt_infos),
+              Some(&normal.module_type),
+              d.side_effects,
             )
             .await?
           }

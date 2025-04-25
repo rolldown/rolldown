@@ -271,8 +271,9 @@ impl HmrManager {
         continue;
       };
 
-      if importer.accepted_hmr_deps_idx.contains(&module_idx) {
-        hmr_boundaries.insert(HmrBoundary { boundary: module_idx, accepted_via: *importer_idx });
+      if importer.hmr_info.deps.contains(&module.id) {
+        affected_modules.insert(*importer_idx);
+        hmr_boundaries.insert(HmrBoundary { boundary: *importer_idx, accepted_via: module_idx });
         continue;
       }
 

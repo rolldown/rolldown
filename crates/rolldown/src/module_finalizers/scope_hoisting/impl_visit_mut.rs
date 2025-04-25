@@ -260,6 +260,8 @@ impl<'ast> VisitMut<'ast> for ScopeHoistingFinalizer<'_, 'ast> {
   }
 
   fn visit_call_expression(&mut self, expr: &mut ast::CallExpression<'ast>) {
+    self.rewrite_hot_accept_call_deps(expr);
+
     if let Some(new_expr) = expr
       .callee
       .as_identifier_mut()

@@ -147,6 +147,41 @@ impl<'ast> HmrAstFinalizer<'_, 'ast> {
 
     ret
   }
+
+  pub fn rewrite_hot_accept_call_deps(&self, call_expr: &mut ast::CallExpression<'ast>) {
+    // Check whether the callee is `import.meta.hot.accept`.
+    if !call_expr.callee.is_import_meta_hot_accept() {
+      return;
+    }
+
+    if call_expr.arguments.is_empty() {
+      // `import.meta.hot.accept()`
+      return;
+    }
+
+    match &mut call_expr.arguments[0] {
+      ast::Argument::StringLiteral(string_literal) => {
+        // `import.meta.hot.accept('./dep.js', ...)`
+        let import_record = &self.module.import_records
+          [self.module.hmr_info.module_request_to_import_record_idx[string_literal.value.as_str()]];
+        string_literal.value =
+          self.snippet.builder.atom(self.modules[import_record.resolved_module].stable_id());
+      }
+      ast::Argument::ArrayExpression(array_expression) => {
+        // `import.meta.hot.accept(['./dep1.js', './dep2.js'], ...)`
+        array_expression.elements.iter_mut().for_each(|element| {
+          if let ast::ArrayExpressionElement::StringLiteral(string_literal) = element {
+            let import_record =
+              &self.module.import_records[self.module.hmr_info.module_request_to_import_record_idx
+                [string_literal.value.as_str()]];
+            string_literal.value =
+              self.snippet.builder.atom(self.modules[import_record.resolved_module].stable_id());
+          }
+        });
+      }
+      _ => {}
+    }
+  }
 }
 
 impl<'ast> VisitMut<'ast> for HmrAstFinalizer<'_, 'ast> {
@@ -419,5 +454,10 @@ impl<'ast> VisitMut<'ast> for HmrAstFinalizer<'_, 'ast> {
     }
 
     walk_mut::walk_expression(self, it);
+  }
+
+  fn visit_call_expression(&mut self, call_expr: &mut ast::CallExpression<'ast>) {
+    self.rewrite_hot_accept_call_deps(call_expr);
+    walk_mut::walk_call_expression(self, call_expr);
   }
 }

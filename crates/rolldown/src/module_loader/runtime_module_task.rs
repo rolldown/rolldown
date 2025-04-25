@@ -122,7 +122,6 @@ impl RuntimeModuleTask {
         // The internal runtime module `importers/imported` should be skip.
         importers: FxIndexSet::default(),
         importers_idx: FxIndexSet::default(),
-        accepted_hmr_deps_idx: FxHashSet::default(),
         dynamic_importers: FxIndexSet::default(),
         imported_ids: FxIndexSet::default(),
         dynamically_imported_ids: FxIndexSet::default(),

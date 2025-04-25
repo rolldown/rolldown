@@ -77,7 +77,6 @@ pub struct EcmaView {
   // the ids of all modules that statically import this module
   pub importers: FxIndexSet<ModuleId>,
   pub importers_idx: FxIndexSet<ModuleIdx>,
-  pub accepted_hmr_deps_idx: FxHashSet<ModuleIdx>,
   // the ids of all modules that import this module via dynamic import()
   pub dynamic_importers: FxIndexSet<ModuleId>,
   // the module ids statically imported by this module

@@ -8,9 +8,6 @@ on:
   workflow_dispatch:
   pull_request:
     types: [opened, synchronize, labeled]
-  push:
-    branches:
-      - main
 
 jobs:
   build:

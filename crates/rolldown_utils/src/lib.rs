@@ -19,6 +19,7 @@ pub mod xxhash;
 pub use bitset::BitSet;
 pub mod clean_url;
 pub mod concat_string;
+pub mod filter_expression;
 pub mod hash_placeholder;
 pub mod index_vec_ext;
 pub mod js_regex;

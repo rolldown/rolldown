@@ -16,6 +16,11 @@ impl AsRef<StringOrRegex> for StringOrRegex {
     self
   }
 }
+pub enum StringOrRegexMatchKind<'a> {
+  Code,
+  // The cwd of id
+  Id(&'a str),
+}
 
 impl StringOrRegex {
   pub fn new(value: String, flag: &Option<String>) -> anyhow::Result<Self> {
@@ -24,6 +29,21 @@ impl StringOrRegex {
       Ok(Self::Regex(regex))
     } else {
       Ok(Self::String(value))
+    }
+  }
+
+  pub fn test(&self, value: &str, match_kind: &StringOrRegexMatchKind) -> bool {
+    match self {
+      StringOrRegex::String(string_pat) => match match_kind {
+        StringOrRegexMatchKind::Code => {
+          memmem::find(value.as_bytes(), string_pat.as_bytes()).is_some()
+        }
+        StringOrRegexMatchKind::Id(cwd) => {
+          let glob = get_matcher_string(string_pat, cwd);
+          glob_match(glob.as_bytes(), value.as_bytes())
+        }
+      },
+      StringOrRegex::Regex(re) => re.matches(value),
     }
   }
 }
@@ -42,13 +62,7 @@ pub fn filter(
   let normalized_id = normalize_path(id);
   if let Some(exclude) = exclude {
     for pattern in exclude {
-      let v = match pattern.as_ref() {
-        StringOrRegex::String(glob) => {
-          let glob = get_matcher_string(glob, cwd);
-          glob_match(glob.as_bytes(), id.as_bytes())
-        }
-        StringOrRegex::Regex(re) => re.matches(&normalized_id),
-      };
+      let v = pattern.as_ref().test(&normalized_id, &StringOrRegexMatchKind::Id(cwd));
       if v {
         return FilterResult::Match(false);
       }
@@ -56,13 +70,7 @@ pub fn filter(
   }
   if let Some(include) = include {
     for pattern in include {
-      let v = match pattern.as_ref() {
-        StringOrRegex::String(glob) => {
-          let glob = get_matcher_string(glob, cwd);
-          glob_match(glob.as_bytes(), id.as_bytes())
-        }
-        StringOrRegex::Regex(re) => re.matches(&normalized_id),
-      };
+      let v = pattern.as_ref().test(&normalized_id, &StringOrRegexMatchKind::Id(cwd));
       if v {
         return FilterResult::Match(true);
       }
@@ -125,12 +133,7 @@ pub fn filter_code(
 ) -> FilterResult {
   if let Some(exclude) = exclude {
     for pattern in exclude {
-      let v = match pattern.as_ref() {
-        StringOrRegex::String(pattern) => {
-          memmem::find(code.as_bytes(), pattern.as_bytes()).is_some()
-        }
-        StringOrRegex::Regex(re) => re.matches(code),
-      };
+      let v = pattern.as_ref().test(code, &StringOrRegexMatchKind::Code);
       if v {
         return FilterResult::Match(false);
       }

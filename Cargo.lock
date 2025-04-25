@@ -2672,8 +2672,8 @@ version = "0.0.1"
 dependencies = [
  "anyhow",
  "arcstr",
+ "cow-utils",
  "derive_more",
- "glob",
  "memchr",
  "oxc",
  "rolldown_plugin",

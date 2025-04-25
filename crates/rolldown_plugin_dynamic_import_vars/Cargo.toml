@@ -17,8 +17,8 @@ workspace = true
 [dependencies]
 anyhow = { workspace = true }
 arcstr = { workspace = true }
+cow-utils = { workspace = true }
 derive_more = { workspace = true }
-glob = { workspace = true }
 memchr = { workspace = true }
 oxc = { workspace = true }
 rolldown_plugin = { workspace = true }

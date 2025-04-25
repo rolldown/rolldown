@@ -1,7 +1,6 @@
 mod ast_visit;
+mod dynamic_import_to_glob;
 mod parse_pattern;
-mod should_ignore;
-mod to_glob;
 mod utils;
 
 use std::{borrow::Cow, pin::Pin, sync::Arc};
@@ -67,7 +66,12 @@ impl Plugin for DynamicImportVarsPlugin {
     // TODO: Ignore if includes a marker like "/* @rolldown-ignore */"
     args.ast.program.with_mut(|fields| {
       let ast_builder = AstBuilder::new(fields.allocator);
-      let mut visitor = DynamicImportVarsVisit { ast_builder, need_helper: false };
+      let mut visitor = DynamicImportVarsVisit {
+        ast_builder,
+        source_text: fields.program.source_text,
+        need_helper: false,
+      };
+
       visitor.visit_program(fields.program);
       if visitor.need_helper {
         fields.program.body.push(visitor.import_helper());

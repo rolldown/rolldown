@@ -10,11 +10,12 @@ use oxc::{
 
 use crate::DYNAMIC_IMPORT_HELPER;
 
+use super::dynamic_import_to_glob::to_glob_pattern;
 use super::parse_pattern::{DynamicImportPattern, DynamicImportRequest, parse_pattern};
-use super::to_glob::to_glob_pattern;
 
 pub struct DynamicImportVarsVisit<'ast> {
   pub ast_builder: AstBuilder<'ast>,
+  pub source_text: &'ast str,
   pub need_helper: bool,
 }
 
@@ -22,9 +23,13 @@ impl<'ast> VisitMut<'ast> for DynamicImportVarsVisit<'ast> {
   #[allow(clippy::too_many_lines)]
   fn visit_expression(&mut self, expr: &mut Expression<'ast>) {
     if let Expression::ImportExpression(import_expr) = expr {
+      let Expression::TemplateLiteral(source) = &import_expr.source else { return };
+
       // TODO: Support @/path via options.createResolver
       // TODO: handle error
-      let pattern = to_glob_pattern(&import_expr.source).unwrap();
+      let pattern =
+        to_glob_pattern(&import_expr.source, source.span.source_text(self.source_text)).unwrap();
+
       if let Some(pattern) = pattern {
         let DynamicImportPattern { glob_params, user_pattern, raw_pattern: _ } =
           parse_pattern(pattern.as_str());

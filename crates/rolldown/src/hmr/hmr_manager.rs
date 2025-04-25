@@ -195,7 +195,7 @@ impl HmrManager {
           scoping: &scoping,
           import_binding: FxHashMap::default(),
           module: affected_module,
-          exports: FxHashMap::default(),
+          exports: oxc::allocator::Vec::new_in(fields.allocator),
           affected_module_idx_to_init_fn_name: &module_idx_to_init_fn_name,
           dependencies: FxIndexSet::default(),
         };

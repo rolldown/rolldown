@@ -189,8 +189,8 @@ impl<'ast> VisitMut<'ast> for HmrAstFinalizer<'_, 'ast> {
     try_block
       .body
       .reserve_exact(dev_runtime_head.len() + it.body.len() + dependencies_init_fn_stmts.len());
-    try_block.body.extend(dev_runtime_head);
     try_block.body.extend(dependencies_init_fn_stmts);
+    try_block.body.extend(dev_runtime_head);
     try_block.body.extend(it.body.take_in(self.alloc));
 
     let final_block = self.snippet.builder.alloc_block_statement(SPAN, self.snippet.builder.vec());

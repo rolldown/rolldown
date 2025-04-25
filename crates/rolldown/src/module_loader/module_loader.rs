@@ -625,7 +625,6 @@ impl ModuleLoader {
               none_empty_importer_module.push(idx);
             }
           }
-
           (idx, module)
         },
       );

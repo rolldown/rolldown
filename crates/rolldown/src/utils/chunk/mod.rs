@@ -3,7 +3,7 @@ use rolldown_common::{
 };
 use rustc_hash::FxHashMap;
 
-use crate::{chunk_graph::ChunkGraph, stages::link_stage::LinkStageOutput};
+use crate::{stages::link_stage::LinkStageOutput, types::generator::GenerateContext};
 
 use self::render_chunk_exports::get_chunk_export_names;
 
@@ -37,11 +37,12 @@ pub fn generate_pre_rendered_chunk(
 }
 
 pub fn generate_rendered_chunk(
-  chunk: &Chunk,
+  chunk: &GenerateContext<'_>,
   render_modules: FxHashMap<ModuleId, RenderedModule>,
-  pre_rendered_chunk: &RollupPreRenderedChunk,
-  chunk_graph: &ChunkGraph,
 ) -> RollupRenderedChunk {
+  let GenerateContext { chunk_graph, chunk, link_output, .. } = chunk;
+  let pre_rendered_chunk =
+    chunk.pre_rendered_chunk.as_ref().expect("Should have pre-rendered chunk");
   RollupRenderedChunk {
     name: pre_rendered_chunk.name.clone(),
     is_entry: pre_rendered_chunk.is_entry,
@@ -65,6 +66,12 @@ pub fn generate_rendered_chunk(
           .expect("should have preliminary_filename")
           .clone()
       })
+      .chain(
+        chunk
+          .imports_from_external_modules
+          .iter()
+          .map(|(idx, _)| link_output.module_table.modules[*idx].id().into()),
+      )
       .collect(),
     dynamic_imports: chunk
       .cross_chunk_dynamic_imports

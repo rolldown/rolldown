@@ -19,12 +19,14 @@ use xxhash_rust::xxh3::Xxh3;
 
 use crate::{
   chunk_graph::ChunkGraph,
+  stages::link_stage::LinkStageOutput,
   type_alias::{IndexAssets, IndexChunkToAssets, IndexInstantiatedChunks},
 };
 
 #[tracing::instrument(level = "debug", skip_all)]
 pub fn finalize_assets(
   chunk_graph: &mut ChunkGraph,
+  link_output: &LinkStageOutput,
   preliminary_assets: IndexInstantiatedChunks,
   index_chunk_to_assets: &IndexChunkToAssets,
   hash_characters: HashCharacters,
@@ -162,6 +164,12 @@ pub fn finalize_assets(
         .iter()
         .flat_map(|importee_idx| &index_chunk_to_assets[*importee_idx])
         .map(|importee_asset_idx| index_asset_to_filename[*importee_asset_idx].clone())
+        .chain(
+          chunk
+            .imports_from_external_modules
+            .iter()
+            .map(|(idx, _)| link_output.module_table.modules[*idx].id().into()),
+        )
         .collect();
 
       ecma_meta.dynamic_imports = chunk

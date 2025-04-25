@@ -8,8 +8,27 @@ on:
   workflow_dispatch:
   pull_request:
     types: [opened, synchronize, labeled]
+  push:
+    branches:
+      - main
+
+# If this is a push on main, we want to debounce the workflow
+concurrency:
+  group: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' && 'debounce-main' || github.run_id }}
+  cancel-in-progress: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }}
 
 jobs:
+  debounce:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Conditionally wait for debounce (only on push to main)
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        # The sleep time is 20 min currently. It should be 1.5 times bigger than time at https://github.com/rolldown/rolldown/queue/main.
+        run: |
+          echo "Start debounce wait: $(date)"
+          sleep 1200
+          echo "End debounce wait: $(date)"
+
   build:
     if: >
       github.repository == 'rolldown/rolldown' &&
@@ -17,6 +36,8 @@ jobs:
       (github.event_name == 'pull_request' && contains(github.event.pull_request.labels.*.name, 'trigger: preview')))
     name: Build bindings and node packages
     uses: ./.github/workflows/reusable-release-build.yml
+    needs:
+      - debounce
     with:
       version: 'commit'
 
@@ -28,6 +49,7 @@ jobs:
     name: Pkg Preview
     runs-on: ubuntu-latest
     needs:
+      - debounce
       - build
     steps:
       - uses: taiki-e/checkout-action@b13d20b7cda4e2f325ef19895128f7ff735c0b3d # v1.3.1

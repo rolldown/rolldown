@@ -3,7 +3,7 @@ use std::sync::Arc;
 use arcstr::ArcStr;
 use rolldown_error::BuildDiagnostic;
 use runtime_task_result::RuntimeModuleTaskResult;
-use task_result::NormalModuleTaskResult;
+use task_result::{ExternalModuleTaskResult, NormalModuleTaskResult};
 
 use crate::{EmittedChunk, ResolvedId};
 
@@ -13,6 +13,7 @@ pub mod task_result;
 
 pub enum ModuleLoaderMsg {
   NormalModuleDone(NormalModuleTaskResult),
+  ExternalModuleDone(ExternalModuleTaskResult),
   RuntimeNormalModuleDone(RuntimeModuleTaskResult),
   FetchModule(ResolvedId),
   AddEntryModule(AddEntryModuleMsg),

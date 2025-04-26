@@ -1,3 +1,4 @@
+use super::external_module_task::ExternalModuleTask;
 use super::module_task::{ModuleTask, ModuleTaskOwner};
 use super::runtime_module_task::RuntimeModuleTask;
 use super::task_context::TaskContextMeta;
@@ -13,24 +14,21 @@ use oxc_index::IndexVec;
 use rolldown_common::dynamic_import_usage::DynamicImportExportsUsage;
 use rolldown_common::side_effects::{DeterminedSideEffects, HookSideEffects};
 use rolldown_common::{
-  DUMMY_MODULE_IDX, EcmaRelated, EntryPoint, EntryPointKind, ExternalModule, HybridIndexVec,
-  ImportKind, ImportRecordIdx, ImportRecordMeta, ImporterRecord, Module, ModuleId, ModuleIdx,
-  ModuleInfo, ModuleLoaderMsg, ModuleType, NormalModuleTaskResult, RUNTIME_MODULE_ID,
-  ResolvedExternal, ResolvedId, RuntimeModuleBrief, RuntimeModuleTaskResult, StmtInfoIdx,
+  DUMMY_MODULE_IDX, EcmaRelated, EntryPoint, EntryPointKind, ExternalModule,
+  ExternalModuleTaskResult, HybridIndexVec, ImportKind, ImportRecordIdx, ImportRecordMeta,
+  ImporterRecord, Module, ModuleId, ModuleIdx, ModuleLoaderMsg, ModuleType, NormalModuleTaskResult,
+  RUNTIME_MODULE_ID, ResolvedId, RuntimeModuleBrief, RuntimeModuleTaskResult, StmtInfoIdx,
   SymbolRefDb, SymbolRefDbForModule,
 };
 use rolldown_error::{BuildDiagnostic, BuildResult};
 use rolldown_fs::OsFileSystem;
 use rolldown_plugin::SharedPluginDriver;
-use rolldown_utils::ecmascript::legitimize_identifier_name;
 use rolldown_utils::indexmap::FxIndexSet;
 use rolldown_utils::rayon::{IntoParallelIterator, ParallelIterator};
 use rolldown_utils::rustc_hash::FxHashSetExt;
 use rustc_hash::{FxHashMap, FxHashSet};
 use std::collections::hash_map::Entry;
-use std::path::Path;
 use std::sync::Arc;
-use sugar_path::SugarPath;
 
 use crate::{SharedOptions, SharedResolver};
 
@@ -186,16 +184,17 @@ impl ModuleLoader {
   }
 
   #[allow(clippy::too_many_lines)]
-  async fn try_spawn_new_task(
+  #[allow(clippy::rc_buffer)]
+  fn try_spawn_new_task(
     &mut self,
     resolved_id: ResolvedId,
     owner: Option<ModuleTaskOwner>,
     is_user_defined_entry: bool,
     assert_module_type: Option<ModuleType>,
-    user_defined_entries: &[(Option<ArcStr>, ResolvedId)],
-  ) -> BuildResult<ModuleIdx> {
+    user_defined_entries: Arc<Vec<(Option<ArcStr>, ResolvedId)>>,
+  ) -> ModuleIdx {
     let idx = match self.cache.module_id_to_idx.get(&resolved_id.id) {
-      Some(VisitState::Seen(idx)) => return Ok(*idx),
+      Some(VisitState::Seen(idx)) => return *idx,
       Some(VisitState::Invalidate(idx)) => {
         // Full scan mode the idx will never be invalidated right?
         let idx = *idx;
@@ -218,72 +217,17 @@ impl ModuleLoader {
         idx
       }
     };
+    self.remaining += 1;
     if resolved_id.external.is_external() {
-      let external_module_side_effects =
-        normalize_side_effects(&self.options, &resolved_id, None, None, resolved_id.side_effects)
-          .await?;
-      let id = ModuleId::new(&resolved_id.id);
-      self.shared_context.plugin_driver.set_module_info(
-        &id.clone(),
-        Arc::new(ModuleInfo {
-          code: None,
-          id,
-          is_entry: false,
-          importers: FxIndexSet::default(),
-          dynamic_importers: FxIndexSet::default(),
-          imported_ids: FxIndexSet::default(),
-          dynamically_imported_ids: FxIndexSet::default(),
-          exports: vec![],
-        }),
-      );
-
-      self
-        .symbol_ref_db
-        .store_local_db(idx, SymbolRefDbForModule::new(Scoping::default(), idx, ScopeId::new(0)));
-
-      let need_renormalize_render_path =
-        !matches!(resolved_id.external, ResolvedExternal::Absolute)
-          && Path::new(resolved_id.id.as_str()).is_absolute();
-
-      let file_name = if need_renormalize_render_path {
-        let entries_common_dir = commondir::CommonDir::try_new(
-          user_defined_entries.iter().map(|(_, resolved_id)| resolved_id.id.as_str()),
-        )
-        .expect("should have common dir for entries");
-        let relative_path =
-          Path::new(resolved_id.id.as_str()).relative(entries_common_dir.common_root());
-        relative_path.to_slash_lossy().into()
-      } else {
-        resolved_id.id.clone()
-      };
-
-      let identifier_name = if need_renormalize_render_path {
-        Path::new(resolved_id.id.as_str())
-          .relative(&self.options.cwd)
-          .normalize()
-          .to_slash_lossy()
-          .into()
-      } else {
-        resolved_id.id.clone()
-      };
-      let legitimized_identifier_name = legitimize_identifier_name(&identifier_name);
-
-      let symbol_ref =
-        self.symbol_ref_db.create_facade_root_symbol_ref(idx, &legitimized_identifier_name);
-
-      let ext = ExternalModule::new(
+      let task = ExternalModuleTask::new(
+        Arc::clone(&self.shared_context),
         idx,
-        resolved_id.id,
-        file_name,
-        legitimized_identifier_name.into(),
-        external_module_side_effects,
-        symbol_ref,
-        need_renormalize_render_path,
+        resolved_id,
+        tracing::Span::current(),
+        user_defined_entries,
       );
-      *self.intermediate_normal_modules.modules.get_mut(idx) = Some(ext.into());
+      tokio::spawn(task.run());
     } else {
-      self.remaining += 1;
-
       let task = ModuleTask::new(
         Arc::clone(&self.shared_context),
         idx,
@@ -296,7 +240,7 @@ impl ModuleLoader {
 
       tokio::spawn(task.run());
     }
-    Ok(idx)
+    idx
   }
 
   #[tracing::instrument(level = "debug", skip_all)]
@@ -315,10 +259,16 @@ impl ModuleLoader {
     // Store the already consider as entry module
     let mut user_defined_entry_ids = FxHashSet::with_capacity(user_defined_entries.len());
     let mut entry_points = Vec::with_capacity(user_defined_entries.len());
-    for (defined_name, resolved_id) in &user_defined_entries {
-      let id = self
-        .try_spawn_new_task(resolved_id.clone(), None, true, None, &user_defined_entries)
-        .await?;
+    let user_defined_entries: Arc<Vec<(Option<ArcStr>, ResolvedId)>> =
+      Arc::new(user_defined_entries);
+    for (defined_name, resolved_id) in user_defined_entries.iter() {
+      let id = self.try_spawn_new_task(
+        resolved_id.clone(),
+        None,
+        true,
+        None,
+        Arc::clone(&user_defined_entries),
+      );
       user_defined_entry_ids.insert(id);
       entry_points.push(EntryPoint {
         name: defined_name.clone(),
@@ -339,7 +289,7 @@ impl ModuleLoader {
       // set `Owner` to `None` is safe, since it is used to emit `Unloadable` diagnostic, we know this is
       // exists in fs system, which is loadable.
       // TODO: copy assert_module_type
-      self.try_spawn_new_task(resolved_id, None, false, None, &user_defined_entries).await?;
+      self.try_spawn_new_task(resolved_id, None, false, None, Arc::clone(&user_defined_entries));
     }
 
     let mut dynamic_import_entry_ids: FxHashMap<ModuleIdx, Vec<(ModuleIdx, StmtInfoIdx)>> =
@@ -385,15 +335,13 @@ impl ModuleLoader {
                 normal_module.stable_id.as_str().into(),
                 raw_rec.span,
               );
-              self
-                .try_spawn_new_task(
-                  info,
-                  Some(owner),
-                  false,
-                  raw_rec.asserted_module_type.clone(),
-                  &user_defined_entries,
-                )
-                .await?
+              self.try_spawn_new_task(
+                info,
+                Some(owner),
+                false,
+                raw_rec.asserted_module_type.clone(),
+                Arc::clone(&user_defined_entries),
+              )
             };
             // Dynamic imported module will be considered as an entry
             self.intermediate_normal_modules.importers[idx].push(ImporterRecord {
@@ -440,6 +388,34 @@ impl ModuleLoader {
           *self.intermediate_normal_modules.modules.get_mut(module_idx) = Some(module);
           self.remaining -= 1;
         }
+        ModuleLoaderMsg::ExternalModuleDone(task_result) => {
+          let ExternalModuleTaskResult {
+            id,
+            name,
+            idx,
+            identifier_name,
+            side_effects,
+            need_renormalize_render_path,
+          } = task_result;
+
+          self.symbol_ref_db.store_local_db(
+            task_result.idx,
+            SymbolRefDbForModule::new(Scoping::default(), task_result.idx, ScopeId::new(0)),
+          );
+          let symbol_ref = self.symbol_ref_db.create_facade_root_symbol_ref(idx, &identifier_name);
+          let ext = ExternalModule::new(
+            idx,
+            id,
+            name,
+            identifier_name,
+            side_effects,
+            symbol_ref,
+            need_renormalize_render_path,
+          );
+          *self.intermediate_normal_modules.modules.get_mut(task_result.idx) = Some(ext.into());
+
+          self.remaining -= 1;
+        }
         ModuleLoaderMsg::RuntimeNormalModuleDone(task_result) => {
           let RuntimeModuleTaskResult {
             local_symbol_ref_db,
@@ -452,15 +428,13 @@ impl ModuleLoader {
           let mut import_records = IndexVec::with_capacity(raw_import_records.len());
 
           for (raw_rec, info) in raw_import_records.into_iter().zip(resolved_deps) {
-            let id = self
-              .try_spawn_new_task(
-                info,
-                None,
-                false,
-                raw_rec.asserted_module_type.clone(),
-                &user_defined_entries,
-              )
-              .await?;
+            let id = self.try_spawn_new_task(
+              info,
+              None,
+              false,
+              raw_rec.asserted_module_type.clone(),
+              Arc::clone(&user_defined_entries),
+            );
             // Dynamic imported module will be considered as an entry
             self.intermediate_normal_modules.importers[id].push(ImporterRecord {
               kind: raw_rec.kind,
@@ -500,7 +474,7 @@ impl ModuleLoader {
           self.remaining -= 1;
         }
         ModuleLoaderMsg::FetchModule(resolve_id) => {
-          self.try_spawn_new_task(resolve_id, None, false, None, &user_defined_entries).await?;
+          self.try_spawn_new_task(resolve_id, None, false, None, Arc::clone(&user_defined_entries));
         }
         ModuleLoaderMsg::AddEntryModule(msg) => {
           let data = msg.chunk;
@@ -520,9 +494,13 @@ impl ModuleLoader {
           };
           extra_entry_points.push(EntryPoint {
             name: data.name.clone(),
-            id: self
-              .try_spawn_new_task(resolved_id, None, true, None, &user_defined_entries)
-              .await?,
+            id: self.try_spawn_new_task(
+              resolved_id,
+              None,
+              true,
+              None,
+              Arc::clone(&user_defined_entries),
+            ),
             kind: EntryPointKind::UserDefined,
             file_name: data.file_name.clone(),
             reference_id: Some(msg.reference_id),

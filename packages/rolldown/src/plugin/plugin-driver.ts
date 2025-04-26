@@ -1,11 +1,11 @@
-import { InputOptions, OutputOptions, RolldownPlugin } from '..';
+import type { InputOptions, OutputOptions, RolldownPlugin } from '..';
 import { BuiltinPlugin } from '../builtin-plugin/constructors';
 import { getLogger, getOnLog } from '../log/logger';
 import { LOG_LEVEL_INFO, type LogLevelOption } from '../log/logging';
 import type { LogHandler } from '../types/misc';
 import { normalizeHook } from '../utils/normalize-hook';
 import { normalizePluginOption } from '../utils/normalize-plugin-option';
-import { Plugin } from './';
+import type { Plugin } from './';
 import { MinimalPluginContextImpl } from './minimal-plugin-context';
 
 export class PluginDriver {

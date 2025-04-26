@@ -1,4 +1,4 @@
-import { type ExistingRawSourceMap, SourceMapInput } from '../types/sourcemap';
+import type { ExistingRawSourceMap, SourceMapInput } from '../types/sourcemap';
 
 export function isEmptySourcemapFiled(
   array: undefined | (string | null)[],

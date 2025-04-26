@@ -13,7 +13,7 @@ import type { NormalizedOutputOptions } from '../options/normalized-output-optio
 import type { RollupLog } from '../types/misc';
 import type { ModuleInfo } from '../types/module-info';
 import type { OutputBundle } from '../types/output-bundle';
-import { RenderedChunk } from '../types/rolldown-output';
+import type { RenderedChunk } from '../types/rolldown-output';
 import type { SourceMapInput } from '../types/sourcemap';
 import type {
   MakeAsync,

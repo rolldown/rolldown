@@ -1,4 +1,4 @@
-import { ModuleOptions } from '..';
+import type { ModuleOptions } from '..';
 
 export interface ModuleInfo extends ModuleOptions {
   /**

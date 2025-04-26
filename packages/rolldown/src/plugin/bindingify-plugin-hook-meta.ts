@@ -1,5 +1,5 @@
-import { BindingPluginHookMeta, BindingPluginOrder } from '../binding';
-import { ObjectHookMeta, PluginOrder } from '.';
+import { type BindingPluginHookMeta, BindingPluginOrder } from '../binding';
+import type { ObjectHookMeta, PluginOrder } from '.';
 
 export function bindingifyPluginHookMeta(
   options: ObjectHookMeta,

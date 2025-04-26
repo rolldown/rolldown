@@ -1,4 +1,4 @@
-import { InputOptions } from '..';
+import type { InputOptions } from '..';
 import { BindingNormalizedOptions } from '../binding';
 import type { LogHandler } from '../types/misc';
 

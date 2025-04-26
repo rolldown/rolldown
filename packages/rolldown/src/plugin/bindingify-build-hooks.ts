@@ -9,7 +9,10 @@ import { normalizeHook } from '../utils/normalize-hook';
 import path from 'node:path';
 import { SYMBOL_FOR_RESOLVE_CALLER_THAT_SKIP_SELF } from '../constants/plugin-context';
 import { NormalizedInputOptionsImpl } from '../options/normalized-input-options';
-import { bindingifySourcemap, ExistingRawSourceMap } from '../types/sourcemap';
+import {
+  bindingifySourcemap,
+  type ExistingRawSourceMap,
+} from '../types/sourcemap';
 import { normalizeErrors } from '../utils/error';
 import { transformModuleInfo } from '../utils/transform-module-info';
 import { bindingifySideEffects } from '../utils/transform-side-effects';
@@ -25,7 +28,7 @@ import {
 import type { BindingifyPluginArgs } from './bindingify-plugin';
 import {
   bindingifyPluginHookMeta,
-  PluginHookWithBindingExt,
+  type PluginHookWithBindingExt,
 } from './bindingify-plugin-hook-meta';
 import type {
   PluginHooks,
@@ -34,7 +37,7 @@ import type {
 } from './index';
 import {
   PluginContextImpl,
-  PrivatePluginContextResolveOptions,
+  type PrivatePluginContextResolveOptions,
 } from './plugin-context';
 import { TransformPluginContextImpl } from './transform-plugin-context';
 

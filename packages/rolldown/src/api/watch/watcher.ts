@@ -1,10 +1,10 @@
 import { BindingWatcher, shutdownAsyncRuntime } from '../../binding';
 import { LOG_LEVEL_WARN } from '../../log/logging';
 import { logMultiplyNotifyOption } from '../../log/logs';
-import { WatchOptions } from '../../options/watch-options';
+import type { WatchOptions } from '../../options/watch-options';
 import { PluginDriver } from '../../plugin/plugin-driver';
 import {
-  BundlerOptionWithStopWorker,
+  type BundlerOptionWithStopWorker,
   createBundlerOptions,
 } from '../../utils/create-bundler-option';
 import { arraify } from '../../utils/misc';

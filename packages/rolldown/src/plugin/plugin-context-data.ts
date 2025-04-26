@@ -1,9 +1,9 @@
-import { ModuleOptions } from '..';
+import type { ModuleOptions } from '..';
 import { BindingPluginContext } from '../binding';
 import type { ModuleInfo } from '../types/module-info';
 import { transformModuleInfo } from '../utils/transform-module-info';
-import { RenderedChunkMeta } from '.';
-import { PluginContextResolveOptions } from './plugin-context';
+import type { RenderedChunkMeta } from '.';
+import type { PluginContextResolveOptions } from './plugin-context';
 
 export class PluginContextData {
   moduleOptionMap: Map<string, ModuleOptions> = new Map();

@@ -1,11 +1,11 @@
-import { BindingBundlerOptions } from '../binding';
+import type { BindingBundlerOptions } from '../binding';
 import { getLogger, getOnLog } from '../log/logger';
 import { LOG_LEVEL_INFO } from '../log/logging';
 import type { InputOptions } from '../options/input-options';
 import type { OutputOptions } from '../options/output-options';
 import { PluginDriver } from '../plugin/plugin-driver';
 import { getObjectPlugins } from '../plugin/plugin-driver';
-import { LogHandler } from '../types/misc';
+import type { LogHandler } from '../types/misc';
 import { bindingifyInputOptions } from './bindingify-input-options';
 import { bindingifyOutputOptions } from './bindingify-output-options';
 import { composeJsPlugins } from './compose-js-plugins';

@@ -1,20 +1,20 @@
 import * as R from 'remeda';
-import { TupleToUnion } from 'type-fest';
+import type { TupleToUnion } from 'type-fest';
 import { BuiltinPlugin } from '../builtin-plugin/constructors';
-import { PluginHookNames } from '../constants/plugin';
+import type { PluginHookNames } from '../constants/plugin';
 import { SYMBOL_FOR_RESOLVE_CALLER_THAT_SKIP_SELF } from '../constants/plugin-context';
-import {
+import type {
   ModuleSideEffects,
   Plugin,
   PrivateResolveIdExtraOptions,
   RolldownPlugin,
 } from '../plugin';
-import {
+import type {
   PluginContext,
   PrivatePluginContextResolveOptions,
 } from '../plugin/plugin-context';
-import { TransformPluginContext } from '../plugin/transform-plugin-context';
-import { AssertNever } from '../types/assert';
+import type { TransformPluginContext } from '../plugin/transform-plugin-context';
+import type { AssertNever } from '../types/assert';
 import { isNullish } from './misc';
 import { normalizeHook } from './normalize-hook';
 import { isPluginHookName } from './plugin';

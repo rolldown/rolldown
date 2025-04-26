@@ -1,4 +1,4 @@
-import { ModuleOptions } from '..';
+import type { ModuleOptions } from '..';
 import type { BindingModuleInfo } from '../binding';
 import type { ModuleInfo } from '../types/module-info';
 import { unsupported } from './misc';

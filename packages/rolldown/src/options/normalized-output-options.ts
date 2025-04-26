@@ -1,4 +1,4 @@
-import { RolldownPlugin } from '..';
+import type { RolldownPlugin } from '..';
 import type {
   BindingMinifyOptions,
   BindingNormalizedOptions,

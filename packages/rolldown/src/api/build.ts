@@ -1,5 +1,5 @@
-import { InputOptions } from '../options/input-options';
-import { OutputOptions } from '../options/output-options';
+import type { InputOptions } from '../options/input-options';
+import type { OutputOptions } from '../options/output-options';
 import type { RolldownOutput } from '../types/rolldown-output';
 import { rolldown } from './rolldown';
 

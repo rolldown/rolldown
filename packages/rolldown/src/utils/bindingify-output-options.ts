@@ -1,6 +1,6 @@
 import type { BindingOutputOptions } from '../binding';
 import type { OutputOptions } from '../options/output-options';
-import { SourcemapIgnoreListOption } from '../types/misc';
+import type { SourcemapIgnoreListOption } from '../types/misc';
 import { transformAssetSource } from './asset-source';
 import { unimplemented } from './misc';
 import { transformRenderedChunk } from './transform-rendered-chunk';

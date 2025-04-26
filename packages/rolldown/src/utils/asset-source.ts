@@ -1,4 +1,4 @@
-import { BindingAssetSource } from '../binding';
+import type { BindingAssetSource } from '../binding';
 
 export type AssetSource = string | Uint8Array;
 

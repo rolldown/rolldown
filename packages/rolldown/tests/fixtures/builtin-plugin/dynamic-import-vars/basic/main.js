@@ -10,6 +10,6 @@ export function noFile(name) {
   return import(`./dir/c/${name}.js`)
 }
 
-export function withAssert(name) {
-  return import(`./dir/a/${name}.js`, { assert: { type: 'json' } })
+export function withAlias(name) {
+  return import(`@/${name}.js`)
 }

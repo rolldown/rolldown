@@ -8,7 +8,11 @@ import {
 export default defineTest({
   config: {
     plugins: [
-      dynamicImportVarsPlugin(),
+      dynamicImportVarsPlugin({
+        async resolver(id) {
+          return id.replace("@", path.resolve(import.meta.dirname, "./dir/a"))
+        },
+      }),
       importGlobPlugin({
         root: path.resolve(import.meta.dirname),
       }),

@@ -1,5 +1,6 @@
 use std::borrow::Cow;
 
+use cow_utils::CowUtils;
 use oxc::{
   ast::{
     AstBuilder, NONE,
@@ -11,8 +12,15 @@ use oxc::{
 };
 
 use super::DYNAMIC_IMPORT_HELPER;
-use super::dynamic_import_to_glob::{should_ignore, template_literal_to_glob, to_valid_glob};
-use super::parse_pattern::{DynamicImportPattern, DynamicImportRequest, parse_pattern};
+use super::dynamic_import_to_glob::{
+  has_special_query_param, should_ignore, template_literal_to_glob, to_valid_glob,
+};
+
+#[derive(Debug)]
+struct DynamicImportRequest<'a> {
+  pub query: &'a str,
+  pub import: bool,
+}
 
 #[derive(Default)]
 pub struct DynamicImportVarsVisitConfig {
@@ -47,8 +55,8 @@ impl<'ast> VisitMut<'ast> for DynamicImportVarsVisit<'ast> {
       }
     } else {
       let glob = template_literal_to_glob(source).unwrap();
-      let byte = source.quasis[0].value.raw.as_bytes().first();
-      if self.config.async_enabled && byte.is_some_and(|&b| b != b'.' && b != b'/') {
+      let byte = source.quasis[0].value.raw.as_bytes();
+      if self.config.async_enabled && byte.first().is_some_and(|&b| b != b'.' && b != b'/') {
         self.config.current += 1;
         self.config.async_imports.push(Some(glob.into_owned()));
         return;
@@ -62,11 +70,21 @@ impl<'ast> VisitMut<'ast> for DynamicImportVarsVisit<'ast> {
 
     let Some(index) = memchr::memchr(b'*', glob.as_bytes()) else { return };
 
+    let glob = glob.cow_replace("**", "*");
     let source_text = source.span.source_text(self.source_text);
-    let pattern = to_valid_glob(&glob, source_text).unwrap();
 
-    let DynamicImportPattern { glob_params, user_pattern, raw_pattern: _ } =
-      parse_pattern(&pattern);
+    let (pattern, glob_params) = {
+      let index = glob.rfind('/').unwrap_or(0);
+      let index = glob[index..].find('?').map_or(glob.len(), |i| i + index);
+
+      let (glob, query) = glob.split_at(index);
+
+      let glob = to_valid_glob(glob, source_text).unwrap();
+      let glob_params = (!query.is_empty())
+        .then_some(DynamicImportRequest { query, import: has_special_query_param(query) });
+
+      (glob, glob_params)
+    };
 
     self.config.need_helper = true;
 
@@ -78,7 +96,7 @@ impl<'ast> VisitMut<'ast> for DynamicImportVarsVisit<'ast> {
 
     *expr = self.call_helper(
       import_expr.span,
-      user_pattern.as_str(),
+      &pattern,
       std::mem::replace(&mut import_expr.source, self.ast_builder.expression_null_literal(SPAN)),
       glob_params,
     );

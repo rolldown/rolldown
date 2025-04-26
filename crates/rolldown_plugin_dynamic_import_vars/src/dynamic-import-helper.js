@@ -3,7 +3,12 @@ export default (
   path,
   segments,
 ) => {
-  const v = glob[path] ?? glob['./' + path];
+  const query = path.lastIndexOf('?');
+  const v = glob[
+    query === -1 || query < path.lastIndexOf('/')
+      ? path
+      : path.slice(0, query)
+  ];
   if (v) {
     return typeof v === 'function' ? v() : Promise.resolve(v);
   }

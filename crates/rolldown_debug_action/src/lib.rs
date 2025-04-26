@@ -5,4 +5,5 @@ pub use definitions::{
   hook_load_call_start::HookLoadCallStart, hook_resolve_id_call_end::HookResolveIdCallEnd,
   hook_resolve_id_call_start::HookResolveIdCallStart,
   hook_transform_call_end::HookTransformCallEnd, hook_transform_call_start::HookTransformCallStart,
+  module_transform_done::ModuleTransformDone,
 };

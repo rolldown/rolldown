@@ -6,6 +6,7 @@ pub mod hook_resolve_id_call_end;
 pub mod hook_resolve_id_call_start;
 pub mod hook_transform_call_end;
 pub mod hook_transform_call_start;
+pub mod module_transform_done;
 
 #[derive(ts_rs::TS, serde::Serialize)]
 #[ts(export)]

@@ -1,8 +1,7 @@
 mod ast_visit;
 mod dynamic_import_to_glob;
-mod utils;
 
-use std::{borrow::Cow, pin::Pin, sync::Arc};
+use std::{borrow::Cow, path::Path, pin::Pin, sync::Arc};
 
 use ast_visit::DynamicImportVarsVisitConfig;
 use derive_more::Debug;
@@ -12,10 +11,11 @@ use rolldown_plugin::{
   HookResolveIdReturn, HookTransformAstArgs, HookTransformAstReturn, HookUsage, Plugin,
   PluginContext,
 };
-use rolldown_utils::{futures::block_on_spawn_all, pattern_filter::StringOrRegex};
+use rolldown_utils::{
+  futures::block_on_spawn_all,
+  pattern_filter::{StringOrRegex, filter as pattern_filter},
+};
 use sugar_path::SugarPath;
-
-use crate::ast_visit::DynamicImportVarsVisit;
 
 pub const DYNAMIC_IMPORT_HELPER: &str = "\0rolldown_dynamic_import_helper.js";
 
@@ -29,6 +29,18 @@ pub struct DynamicImportVarsPlugin {
   pub exclude: Vec<StringOrRegex>,
   #[debug(skip)]
   pub resolver: Option<Arc<ResolverFn>>,
+}
+
+impl DynamicImportVarsPlugin {
+  fn filter(&self, id: &str, cwd: &Path) -> bool {
+    if self.include.is_empty() && self.exclude.is_empty() {
+      return true;
+    }
+
+    let exclude = (!self.exclude.is_empty()).then_some(self.exclude.as_slice());
+    let include = (!self.include.is_empty()).then_some(self.include.as_slice());
+    pattern_filter(exclude, include, id, &cwd.to_string_lossy()).inner()
+  }
 }
 
 impl Plugin for DynamicImportVarsPlugin {
@@ -59,8 +71,7 @@ impl Plugin for DynamicImportVarsPlugin {
     _ctx: &PluginContext,
     mut args: HookTransformAstArgs<'_>,
   ) -> HookTransformAstReturn {
-    let cwd = args.cwd.to_string_lossy();
-    if self.filter(args.id, &cwd) {
+    if !self.filter(args.id, args.cwd) {
       return Ok(args.ast);
     }
 
@@ -70,7 +81,7 @@ impl Plugin for DynamicImportVarsPlugin {
     args.ast.program.with_mut(|fields| {
       let source_text = fields.source.as_str();
       let ast_builder = AstBuilder::new(fields.allocator);
-      let mut visitor = DynamicImportVarsVisit {
+      let mut visitor = ast_visit::DynamicImportVarsVisit {
         ast_builder,
         source_text,
         config: DynamicImportVarsVisitConfig {
@@ -111,7 +122,7 @@ impl Plugin for DynamicImportVarsPlugin {
       args.ast.program.with_mut(|fields| {
         let source_text = fields.source.as_str();
         let ast_builder = AstBuilder::new(fields.allocator);
-        let mut visitor = DynamicImportVarsVisit { ast_builder, source_text, config };
+        let mut visitor = ast_visit::DynamicImportVarsVisit { ast_builder, source_text, config };
 
         visitor.visit_program(fields.program);
 

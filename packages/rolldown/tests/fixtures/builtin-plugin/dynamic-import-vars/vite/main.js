@@ -2,13 +2,13 @@ export function basic(base) {
   return import(`./mods/${base}.js`)
 }
 
-// export function aliasPath(base) {
-//   return import(`@/${base}.js`)
-// }
+export function aliasPath(base) {
+  return import(`@/${base}.js`)
+}
 
-// export function aliasPathWithMultiParentDir() {
-//   return import(`#/${base}.js`)
-// }
+export function aliasPathWithMultiParentDir(base) {
+  return import(`#/${base}.js`)
+}
 
 export function withQuery(base) {
   return import(`./mods/${base}.js?foo=bar`)

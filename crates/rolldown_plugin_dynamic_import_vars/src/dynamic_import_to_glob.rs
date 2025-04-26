@@ -9,10 +9,8 @@ use std::{borrow::Cow, path::Path};
 const EXAMPLE_CODE: &str = "For example: import(`./foo/${bar}.js`).";
 const IGNORED_PROTOCOLS: [&str; 3] = ["data:", "http:", "https:"];
 
+#[inline]
 pub fn should_ignore(glob: &str) -> bool {
-  if memchr::memchr(b'*', glob.as_bytes()).is_none() {
-    return true;
-  }
   IGNORED_PROTOCOLS.into_iter().any(|protocol| glob.starts_with(protocol))
 }
 
@@ -53,7 +51,24 @@ pub fn to_valid_glob<'a>(glob: &'a str, source: &'a str) -> anyhow::Result<Cow<'
     ))?;
   }
 
-  Ok(glob)
+  Ok(if glob.contains(['?', '[', ']', '{', '}']) {
+    let mut escaped = String::with_capacity(glob.len());
+    for c in glob.chars() {
+      match c {
+        '?' | '[' | ']' | '{' | '}' => {
+          escaped.push('[');
+          escaped.push(c);
+          escaped.push(']');
+        }
+        c => {
+          escaped.push(c);
+        }
+      }
+    }
+    Cow::Owned(escaped)
+  } else {
+    glob
+  })
 }
 
 pub fn template_literal_to_glob<'a>(node: &'a TemplateLiteral) -> anyhow::Result<Cow<'a, str>> {
@@ -78,32 +93,10 @@ fn expr_to_glob<'a>(expr: &'a Expression) -> anyhow::Result<Cow<'a, str>> {
 }
 
 fn sanitize_string(s: &str) -> anyhow::Result<Cow<'_, str>> {
-  if s.is_empty() {
-    return Ok(Cow::Borrowed(s));
-  }
-  if s.contains(['*']) {
+  if s.contains('*') {
     Err(anyhow::anyhow!("A dynamic import cannot contain * characters."))?;
   }
-  Ok(if s.contains(['?', '[', ']', '{', '}']) {
-    let mut escaped = String::with_capacity(s.len());
-    for c in s.chars() {
-      match c {
-        // note that ! does not need escaping because it is only special
-        // inside brackets
-        '?' | '[' | ']' | '{' | '}' => {
-          escaped.push('[');
-          escaped.push(c);
-          escaped.push(']');
-        }
-        c => {
-          escaped.push(c);
-        }
-      }
-    }
-    Cow::Owned(escaped)
-  } else {
-    Cow::Borrowed(s)
-  })
+  Ok(Cow::Borrowed(s))
 }
 
 fn call_expr_to_glob<'a>(node: &'a CallExpression) -> anyhow::Result<Cow<'a, str>> {
@@ -159,7 +152,7 @@ mod tests {
 
   fn to_glob_pattern<'a>(expr: &'a Expression, source: &'a str) -> anyhow::Result<Option<String>> {
     let glob = expr_to_glob(expr)?;
-    if should_ignore(&glob) {
+    if should_ignore(&glob) || !glob.contains('*') {
       return Ok(None);
     }
     Ok(Some(to_valid_glob(&glob, source)?.into_owned()))

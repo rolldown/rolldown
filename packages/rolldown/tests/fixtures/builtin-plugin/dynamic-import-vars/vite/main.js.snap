@@ -12,6 +12,12 @@ var __rolldown_dynamic_import_helper_default = (glob, path, segments) => {
 function basic(base) {
 	return __rolldown_dynamic_import_helper_default(import.meta.glob("./mods/*.js"), `./mods/${base}.js`, 3);
 }
+function aliasPath(base) {
+	return __rolldown_dynamic_import_helper_default(import.meta.glob("./mods/*.js"), `./mods/${base}.js`, 3);
+}
+function aliasPathWithMultiParentDir(base) {
+	return __rolldown_dynamic_import_helper_default(import.meta.glob("../../*.js"), `../../${base}.js`, 3);
+}
 function withQuery(base) {
 	return __rolldown_dynamic_import_helper_default(import.meta.glob("./mods/*.js[", { query: "?]foo=bar" }), `./mods/${base}.js?foo=bar`, 3);
 }
@@ -38,4 +44,4 @@ function withMultiParentDirAndItself(name) {
 }
 
 //#endregion
-export { basic, wildcardInUrl, wildcardInVariables, wildcardInWorker, withMultiParentDirAndItself, withParentDirAndItself, withQuery, withQueryRaw, withQueryUrl };
+export { aliasPath, aliasPathWithMultiParentDir, basic, wildcardInUrl, wildcardInVariables, wildcardInWorker, withMultiParentDirAndItself, withParentDirAndItself, withQuery, withQueryRaw, withQueryUrl };

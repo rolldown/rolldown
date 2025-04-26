@@ -8,43 +8,68 @@ use oxc::{
   syntax::number::NumberBase,
 };
 
-use crate::DYNAMIC_IMPORT_HELPER;
-
-use super::dynamic_import_to_glob::to_glob_pattern;
+use super::DYNAMIC_IMPORT_HELPER;
+use super::dynamic_import_to_glob::{should_ignore, template_literal_to_glob, to_valid_glob};
 use super::parse_pattern::{DynamicImportPattern, DynamicImportRequest, parse_pattern};
 
-pub struct DynamicImportVarsVisit<'ast> {
-  pub ast_builder: AstBuilder<'ast>,
-  pub source_text: &'ast str,
+#[derive(Default)]
+pub struct DynamicImportVarsVisitConfig {
+  pub current: usize,
   pub need_helper: bool,
+  pub async_imports: Vec<Option<String>>,
+}
+
+pub struct DynamicImportVarsVisit<'ast> {
+  pub config: DynamicImportVarsVisitConfig,
+  pub source_text: &'ast str,
+  pub ast_builder: AstBuilder<'ast>,
 }
 
 impl<'ast> VisitMut<'ast> for DynamicImportVarsVisit<'ast> {
   #[allow(clippy::too_many_lines)]
   fn visit_expression(&mut self, expr: &mut Expression<'ast>) {
-    if let Expression::ImportExpression(import_expr) = expr {
-      let Expression::TemplateLiteral(source) = &import_expr.source else { return };
-
-      // TODO: Support @/path via options.createResolver
-      // TODO: handle error
-      let pattern =
-        to_glob_pattern(&import_expr.source, source.span.source_text(self.source_text)).unwrap();
-
-      if let Some(pattern) = pattern {
-        let DynamicImportPattern { glob_params, user_pattern, raw_pattern: _ } =
-          parse_pattern(pattern.as_str());
-        self.need_helper = true;
-        *expr = self.call_helper(
-          import_expr.span,
-          user_pattern.as_str(),
-          std::mem::replace(
-            &mut import_expr.source,
-            self.ast_builder.expression_null_literal(SPAN),
-          ),
-          glob_params,
-        );
-      }
+    let Expression::ImportExpression(import_expr) = expr else { return };
+    let Expression::TemplateLiteral(source) = &import_expr.source else { return };
+    if source.is_no_substitution_template() {
+      return;
     }
+
+    // TODO: Support @/path via options.createResolver
+    // TODO: handle error
+    let glob = template_literal_to_glob(source).unwrap();
+
+    let raw = source.quasis[0].value.raw.as_bytes();
+    let glob = if raw.first().is_some_and(|&b| b != b'.' && b != b'/') {
+      let prev = self.config.current;
+      self.config.current += 1;
+      if prev < self.config.async_imports.len() {
+        if let Some(glob) = &self.config.async_imports[prev] {
+          glob
+        } else {
+          return;
+        }
+      } else {
+        self.config.async_imports.push(Some(glob.into_owned()));
+        return;
+      }
+    } else {
+      glob.as_ref()
+    };
+
+    if should_ignore(glob) {
+      return;
+    }
+
+    let pattern = to_valid_glob(glob, source.span.source_text(self.source_text)).unwrap();
+    let DynamicImportPattern { glob_params, user_pattern, raw_pattern: _ } =
+      parse_pattern(&pattern);
+    self.config.need_helper = true;
+    *expr = self.call_helper(
+      import_expr.span,
+      user_pattern.as_str(),
+      std::mem::replace(&mut import_expr.source, self.ast_builder.expression_null_literal(SPAN)),
+      glob_params,
+    );
   }
 }
 

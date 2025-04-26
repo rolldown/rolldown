@@ -71,8 +71,7 @@
     "build-browser:debug": "cross-env BROWSER_PKG=1 pnpm run --sequential \"/^build-(binding|binding:wasi|node)$/\"",
     "build-browser:release": "cross-env BROWSER_PKG=1 pnpm run --sequential \"/^build-(binding|binding:wasi:release|node)$/\"",
     "# Scrips for docs #": "_",
-    "extract-options-doc": "typedoc",
-    "preinstall": "npx only-allow pnpm"
+    "extract-options-doc": "typedoc"
   },
   "napi": {
     "binaryName": "rolldown-binding",

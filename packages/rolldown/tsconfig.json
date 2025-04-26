@@ -15,6 +15,8 @@
     "outDir": "./dist/types",
     "resolveJsonModule": true,
     "noEmit": false,
-    "emitDeclarationOnly": true
+    "emitDeclarationOnly": true,
+    "isolatedModules": true,
+    "verbatimModuleSyntax": true
   }
 }

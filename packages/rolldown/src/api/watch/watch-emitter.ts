@@ -1,5 +1,5 @@
 import { BindingWatcherEvent } from '../../binding';
-import { MaybePromise } from '../../types/utils';
+import type { MaybePromise } from '../../types/utils';
 import { normalizeErrors } from '../../utils/error';
 
 export type WatcherEvent = 'close' | 'event' | 'restart' | 'change';

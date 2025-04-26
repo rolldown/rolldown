@@ -1,5 +1,5 @@
 import type { WatchOptions } from '../../options/watch-options';
-import { RolldownWatcher, WatcherEmitter } from './watch-emitter';
+import { type RolldownWatcher, WatcherEmitter } from './watch-emitter';
 import { createWatcher } from './watcher';
 
 // Compat to `rollup.watch`

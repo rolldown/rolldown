@@ -1,4 +1,4 @@
-import { BindingReplacePluginConfig } from '../binding';
+import type { BindingReplacePluginConfig } from '../binding';
 
 import { BuiltinPlugin } from './constructors';
 

@@ -1,5 +1,5 @@
 import type { ObjectHook, ObjectHookMeta } from '../plugin';
-import { AnyFn } from '../types/utils';
+import type { AnyFn } from '../types/utils';
 import { unreachable } from './misc';
 
 export function normalizeHook<Hook extends ObjectHook<AnyFn | string>>(

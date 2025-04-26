@@ -1,4 +1,4 @@
-import { Program } from '@oxc-project/types';
+import type { Program } from '@oxc-project/types';
 import { parseAsync, parseSync } from './binding';
 import type { ParseResult, ParserOptions } from './binding';
 import { locate } from './log/locate-character';

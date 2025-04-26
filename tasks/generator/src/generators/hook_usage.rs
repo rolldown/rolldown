@@ -101,7 +101,7 @@ fn generate_hook_usage_ts() -> String {
     }}
   }}
 
-import {{ Plugin }} from '../..';
+import type {{ Plugin }} from '../..';
 export function extractHookUsage(plugin: Plugin): HookUsage {{
   let hookUsage = new HookUsage();
   {union_hook_usage_list}

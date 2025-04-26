@@ -1,6 +1,6 @@
 import {
   ENUMERATED_PLUGIN_HOOK_NAMES,
-  PluginHookNames,
+  type PluginHookNames,
 } from '../../constants/plugin';
 
 export const isPluginHookName: (

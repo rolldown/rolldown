@@ -6,14 +6,14 @@ import { normalizeErrors } from '../utils/error';
 import { normalizeHook } from '../utils/normalize-hook';
 import { transformRenderedChunk } from '../utils/transform-rendered-chunk';
 import {
-  ChangedOutputs,
+  type ChangedOutputs,
   collectChangedBundle,
   transformToOutputBundle,
 } from '../utils/transform-to-rollup-output';
 import type { BindingifyPluginArgs } from './bindingify-plugin';
 import {
   bindingifyPluginHookMeta,
-  PluginHookWithBindingExt,
+  type PluginHookWithBindingExt,
 } from './bindingify-plugin-hook-meta';
 import { PluginContextImpl } from './plugin-context';
 

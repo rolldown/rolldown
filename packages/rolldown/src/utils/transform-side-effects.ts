@@ -1,5 +1,5 @@
 import { BindingHookSideEffects } from '../binding';
-import { ModuleSideEffects } from '../plugin';
+import type { ModuleSideEffects } from '../plugin';
 
 export function bindingifySideEffects(
   sideEffects?: ModuleSideEffects,

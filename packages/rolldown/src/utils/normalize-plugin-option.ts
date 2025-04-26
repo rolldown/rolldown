@@ -5,7 +5,7 @@ import { logInputHookInOutputPlugin } from '../log/logs';
 import type { InputOptions } from '../options/input-options';
 import type { OutputOptions } from '../options/output-options';
 import type { RolldownOutputPlugin, RolldownPlugin } from '../plugin';
-import { LogHandler } from '../types/misc';
+import type { LogHandler } from '../types/misc';
 import { asyncFlatten } from './async-flatten';
 
 export const normalizePluginOption: {

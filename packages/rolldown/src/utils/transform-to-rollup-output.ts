@@ -15,7 +15,7 @@ import type {
 } from '../types/rolldown-output';
 import { bindingifySourcemap } from '../types/sourcemap';
 import {
-  AssetSource,
+  type AssetSource,
   bindingAssetSource,
   transformAssetSource,
 } from './asset-source';

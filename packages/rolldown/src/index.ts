@@ -3,26 +3,36 @@ import { build, type BuildOptions } from './api/build';
 import { rolldown } from './api/rolldown';
 import { RolldownBuild } from './api/rolldown/rolldown-build';
 import { watch } from './api/watch';
-import { RolldownWatcher } from './api/watch/watch-emitter';
-import { PreRenderedChunk } from './binding';
-import type { LogOrStringHandler } from './log/logging';
+import type { RolldownWatcher } from './api/watch/watch-emitter';
+import type { PreRenderedChunk } from './binding';
+import type {
+  LogLevel,
+  LogLevelOption,
+  LogOrStringHandler,
+  RollupLog,
+  RollupLogWithString,
+} from './log/logging';
 import type {
   ExternalOption,
   InputOption,
   InputOptions,
   JsxOptions,
 } from './options/input-options';
-import { NormalizedInputOptions } from './options/normalized-input-options';
-import {
+import type { NormalizedInputOptions } from './options/normalized-input-options';
+import type {
   InternalModuleFormat,
   NormalizedOutputOptions,
 } from './options/normalized-output-options';
 import type {
+  AddonFunction,
+  ChunkFileNamesFunction,
+  GlobalsFunction,
+  MinifyOptions,
   ModuleFormat,
   OutputOptions,
   PreRenderedAsset,
 } from './options/output-options';
-import { WatchOptions } from './options/watch-options';
+import type { WatchOptions } from './options/watch-options';
 import type {
   AsyncPluginHooks,
   CustomPluginOptions,
@@ -44,29 +54,36 @@ import type {
   SourceDescription,
   TransformResult,
 } from './plugin';
-export { withFilter } from './plugin';
+import { withFilter } from './plugin';
 import type {
   HookFilter,
   ModuleTypeFilter,
   StringFilter,
 } from './plugin/hook-filter';
-import {
+import type {
   MinimalPluginContext,
   PluginContextMeta,
 } from './plugin/minimal-plugin-context';
-import { DefineParallelPluginResult } from './plugin/parallel-plugin';
-import {
+import type { DefineParallelPluginResult } from './plugin/parallel-plugin';
+import type {
   EmittedAsset,
   EmittedFile,
   GetModuleInfo,
   PluginContext,
 } from './plugin/plugin-context';
-import { TransformPluginContext } from './plugin/transform-plugin-context';
-import { ConfigExport } from './types/config-export';
-import { ModuleInfo } from './types/module-info';
-import { OutputBundle } from './types/output-bundle';
+import type { TransformPluginContext } from './plugin/transform-plugin-context';
+import type { ConfigExport } from './types/config-export';
+import type {
+  LoggingFunction,
+  RollupError,
+  SourcemapIgnoreListOption,
+  WarningHandlerWithDefault,
+} from './types/misc';
+import type { ModuleInfo } from './types/module-info';
+import type { TreeshakingOptions } from './types/module-side-effects';
+import type { OutputBundle } from './types/output-bundle';
 import type { RolldownOptions } from './types/rolldown-options';
-import {
+import type {
   OutputAsset,
   OutputChunk,
   RenderedChunk,
@@ -74,16 +91,18 @@ import {
   RolldownOutput,
   SourceMap,
 } from './types/rolldown-output';
-import { ExistingRawSourceMap, SourceMapInput } from './types/sourcemap';
-import { PartialNull } from './types/utils';
+import type { ExistingRawSourceMap, SourceMapInput } from './types/sourcemap';
+import type { PartialNull } from './types/utils';
 import { defineConfig } from './utils/define-config';
 
-export { build, defineConfig, rolldown, watch };
+export { build, defineConfig, rolldown, watch, withFilter };
 export const VERSION: string = version;
 
 export type {
+  AddonFunction,
   AsyncPluginHooks,
   BuildOptions,
+  ChunkFileNamesFunction,
   ConfigExport,
   CustomPluginOptions,
   DefineParallelPluginResult,
@@ -93,6 +112,7 @@ export type {
   ExternalOption,
   FunctionPluginHooks,
   GetModuleInfo,
+  GlobalsFunction,
   HookFilter,
   HookFilterExtension,
   ImportKind,
@@ -101,7 +121,11 @@ export type {
   InternalModuleFormat,
   JsxOptions,
   LoadResult,
+  LoggingFunction,
+  LogLevel,
+  LogLevelOption,
   LogOrStringHandler,
+  MinifyOptions,
   MinimalPluginContext,
   ModuleFormat,
   ModuleInfo,
@@ -134,19 +158,17 @@ export type {
   RolldownPlugin,
   RolldownPluginOption,
   RolldownWatcher,
+  RollupError,
+  RollupLog,
+  RollupLogWithString,
   SourceDescription,
   SourceMap,
+  SourcemapIgnoreListOption,
   SourceMapInput,
   StringFilter,
   TransformPluginContext,
   TransformResult,
+  TreeshakingOptions,
+  WarningHandlerWithDefault,
   WatchOptions,
 };
-
-export type {
-  LoggingFunction,
-  LogLevel,
-  RollupError,
-  RollupLog,
-  WarningHandlerWithDefault,
-} from './types/misc';

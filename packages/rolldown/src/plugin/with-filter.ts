@@ -1,5 +1,5 @@
-import { HookFilterExtension, Plugin, RolldownPluginOption } from '..';
-import { StringOrRegExp } from '../types/utils';
+import type { HookFilterExtension, Plugin, RolldownPluginOption } from '..';
+import type { StringOrRegExp } from '../types/utils';
 import { arraify, isPromiseLike } from '../utils/misc';
 
 type OverrideFilterObject = {

@@ -1,5 +1,5 @@
-import { BindingRenderedModule } from '../binding';
-import { RenderedModule } from '../types/rolldown-output';
+import type { BindingRenderedModule } from '../binding';
+import type { RenderedModule } from '../types/rolldown-output';
 
 export function transformToRenderedModule(
   bindingRenderedModule: BindingRenderedModule,

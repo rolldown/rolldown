@@ -1,4 +1,4 @@
-import { TransformOptions } from '../binding';
+import type { TransformOptions } from '../binding';
 import type {
   LogLevel,
   LogLevelOption,

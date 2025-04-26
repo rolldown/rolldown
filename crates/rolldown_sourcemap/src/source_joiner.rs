@@ -50,6 +50,7 @@ impl<'source> SourceJoiner<'source> {
     for (index, source) in sources_iter {
       if let Some(sourcemap_builder) = &mut sourcemap_builder {
         source.sourcemap().inspect(|map| {
+          dbg!(&map);
           sourcemap_builder.add_sourcemap(map, line_offset);
         });
       }
@@ -59,7 +60,11 @@ impl<'source> SourceJoiner<'source> {
         line_offset += source.lines_count() + 1; // +1 for the newline
       }
     }
-    (ret_source, sourcemap_builder.map(ConcatSourceMapBuilder::into_sourcemap))
+    let source = sourcemap_builder.map(ConcatSourceMapBuilder::into_sourcemap);
+    source.as_ref().inspect(|item| {
+      println!("{}", item.to_json_string());
+    });
+    (ret_source, source)
   }
 
   fn accumulate_sourcemap_data_size(&mut self, hint: &SourceMap) {

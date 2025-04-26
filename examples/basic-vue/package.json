@@ -6,6 +6,7 @@
     "build": "rolldown --config ./rolldown.config.js"
   },
   "devDependencies": {
+    "magic-string": "^0.30.17",
     "rolldown": "workspace:*"
   },
   "dependencies": {

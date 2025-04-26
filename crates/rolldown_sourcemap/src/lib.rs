@@ -1,6 +1,8 @@
 mod source;
 mod source_joiner;
 
+use std::sync::Arc;
+
 use oxc_sourcemap::Token;
 use rolldown_utils::rayon::{IntoParallelRefIterator, ParallelIterator};
 use rustc_hash::FxHashMap;
@@ -29,7 +31,6 @@ pub fn collapse_sourcemaps(mut sourcemap_chain: Vec<&SourceMap>) -> SourceMap {
 
   let sources_map =
     FxHashMap::from_iter(first_map.get_sources().enumerate().map(|(i, source)| (source, i as u32)));
-
   let tokens = source_view_tokens
     .par_iter()
     .filter_map(|token| {
@@ -62,12 +63,21 @@ pub fn collapse_sourcemaps(mut sourcemap_chain: Vec<&SourceMap>) -> SourceMap {
     })
     .collect::<Vec<_>>();
 
+  let sources = first_map.get_sources().map(Into::into).collect::<Vec<_>>();
+
+  let mut sources_contents =
+    first_map.get_source_contents().map(|item| item.map(Arc::from)).collect::<Vec<_>>();
+  // Filling `None` if the related sourcesContent is not specified
+  if sources_contents.len() < sources.len() {
+    sources_contents.resize(sources.len(), None);
+  }
+
   SourceMap::new(
     None,
     first_map.get_names().map(Into::into).collect::<Vec<_>>(),
     None,
-    first_map.get_sources().map(Into::into).collect::<Vec<_>>(),
-    first_map.get_source_contents().map(|x| x.map(Into::into).collect::<Vec<_>>()),
+    sources,
+    sources_contents,
     tokens,
     None,
   )

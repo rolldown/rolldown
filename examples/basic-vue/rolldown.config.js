@@ -1,25 +1,35 @@
 import { defineConfig } from 'rolldown';
+import MagicString from 'magic-string';
 
 export default defineConfig({
-  input: './index.js',
-  resolve: {
-    // This needs to be explicitly set for now because oxc resolver doesn't
-    // assume default exports conditions. Rolldown will ship with a default that
-    // aligns with Vite in the future.
-    conditionNames: ['import'],
-  },
+  input: ['/virtual'],
   output: {
-    plugins: [
-      {
-        name: 'test-plugin',
-        outputOptions: function(options) {
-          options.banner = '/* banner */';
-          return options;
-        },
+    dir: 'dist',
+    sourcemap: true,
+  },
+  plugins: [
+    {
+      name: 'test',
+      resolveId(id) {
+        if (id === '/virtual') {
+          return '/virtual';
+        }
       },
-    ],
-  },
-  experimental: {
-    enableComposingJsPlugins: true,
-  },
+      load(code, id) {
+        const s = new MagicString('export const foo = 42');
+        s.prepend('//hello\n');
+let map = s.generateMap({
+            hires: true,
+            includeContent: false,
+            source: id,
+          });
+        console.log(`map.sourcesContent: `, map.sourcesContent)
+        return {
+          code: s.toString(),
+          map,
+        };
+      },
+    },
+  ],
 });
+

@@ -1,6 +1,5 @@
 mod ast_visit;
 mod dynamic_import_to_glob;
-mod parse_pattern;
 mod utils;
 
 use std::{borrow::Cow, pin::Pin, sync::Arc};
@@ -93,8 +92,9 @@ impl Plugin for DynamicImportVarsPlugin {
     if let Some(mut config) = config {
       let resolver = self.resolver.as_ref().unwrap();
       let iter = config.async_imports.into_iter().map(async |source| {
+        let importer = args.id.as_path().parent().unwrap();
         resolver(source.unwrap(), args.id.to_string()).await.ok()?.and_then(|id| {
-          let id = id.relative(args.id.as_path().parent().unwrap());
+          let id = id.relative(importer);
           let id = id.to_slash_lossy();
           if id.is_empty() {
             None

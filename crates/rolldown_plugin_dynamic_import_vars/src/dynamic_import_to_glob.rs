@@ -1,5 +1,4 @@
 // Ported from https://github.com/rollup/plugins/blob/944e7d3/packages/dynamic-import-vars/src/dynamic-import-to-glob.js
-use cow_utils::CowUtils;
 use oxc::{
   ast::ast::{Argument, BinaryExpression, CallExpression, Expression, TemplateLiteral},
   syntax::operator::BinaryOperator,
@@ -8,15 +7,22 @@ use std::{borrow::Cow, path::Path};
 
 const EXAMPLE_CODE: &str = "For example: import(`./foo/${bar}.js`).";
 const IGNORED_PROTOCOLS: [&str; 3] = ["data:", "http:", "https:"];
+const SPECIAL_PARAMS: [&str; 4] = ["raw", "sharedworker", "url", "worker"];
+
+#[inline]
+pub fn has_special_query_param(query: &str) -> bool {
+  if query.len() < 2 {
+    return false;
+  }
+  query[1..].split('&').any(|param| SPECIAL_PARAMS.contains(&param))
+}
 
 #[inline]
 pub fn should_ignore(glob: &str) -> bool {
   IGNORED_PROTOCOLS.into_iter().any(|protocol| glob.starts_with(protocol))
 }
 
-pub fn to_valid_glob<'a>(glob: &'a str, source: &'a str) -> anyhow::Result<Cow<'a, str>> {
-  let glob = glob.cow_replace("**", "*");
-
+pub fn to_valid_glob<'a>(glob: &'a str, source: &str) -> anyhow::Result<Cow<'a, str>> {
   if glob.starts_with('*') {
     Err(anyhow::anyhow!(
       "Invalid import {source}. It cannot be statically analyzed. Variable dynamic imports must start with ./ and be limited to a specific directory. {EXAMPLE_CODE}"
@@ -45,7 +51,7 @@ pub fn to_valid_glob<'a>(glob: &'a str, source: &'a str) -> anyhow::Result<Cow<'
     ))?;
   }
 
-  if Path::new(glob.as_ref()).extension().is_none() {
+  if Path::new(glob).extension().is_none() {
     Err(anyhow::anyhow!(
       "Invalid import {source}. A file extension must be included in the static part of the import. {EXAMPLE_CODE}"
     ))?;
@@ -67,11 +73,11 @@ pub fn to_valid_glob<'a>(glob: &'a str, source: &'a str) -> anyhow::Result<Cow<'
     }
     Cow::Owned(escaped)
   } else {
-    glob
+    Cow::Borrowed(glob)
   })
 }
 
-pub fn template_literal_to_glob<'a>(node: &'a TemplateLiteral) -> anyhow::Result<Cow<'a, str>> {
+pub fn template_literal_to_glob<'a>(node: &TemplateLiteral) -> anyhow::Result<Cow<'a, str>> {
   let mut glob = String::new();
   for (index, quasi) in node.quasis.iter().enumerate() {
     glob += &sanitize_string(&quasi.value.raw)?;
@@ -130,6 +136,7 @@ fn binary_expr_to_glob<'a>(node: &'a BinaryExpression) -> anyhow::Result<Cow<'a,
 
 #[cfg(test)]
 mod tests {
+  use cow_utils::CowUtils;
   use oxc::{allocator::Allocator, parser::Parser, span::SourceType};
 
   use super::*;
@@ -152,6 +159,7 @@ mod tests {
 
   fn to_glob_pattern<'a>(expr: &'a Expression, source: &'a str) -> anyhow::Result<Option<String>> {
     let glob = expr_to_glob(expr)?;
+    let glob = glob.cow_replace("**", "*");
     if should_ignore(&glob) || !glob.contains('*') {
       return Ok(None);
     }

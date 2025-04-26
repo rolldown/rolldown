@@ -13,13 +13,14 @@ use rolldown_plugin::{
   HookResolveIdReturn, HookTransformAstArgs, HookTransformAstReturn, HookUsage, Plugin,
   PluginContext,
 };
-use rolldown_utils::pattern_filter::StringOrRegex;
+use rolldown_utils::{futures::block_on_spawn_all, pattern_filter::StringOrRegex};
+use sugar_path::SugarPath;
 
 use crate::ast_visit::DynamicImportVarsVisit;
 
 pub const DYNAMIC_IMPORT_HELPER: &str = "\0rolldown_dynamic_import_helper.js";
 
-pub type ResolverFn = dyn Fn(&str, &str) -> Pin<Box<(dyn Future<Output = anyhow::Result<Option<String>>> + Send)>>
+pub type ResolverFn = dyn Fn(String, String) -> Pin<Box<(dyn Future<Output = anyhow::Result<Option<String>>> + Send)>>
   + Send
   + Sync;
 
@@ -64,19 +65,62 @@ impl Plugin for DynamicImportVarsPlugin {
       return Ok(args.ast);
     }
 
-    let config = DynamicImportVarsVisitConfig::default();
+    let mut config = None;
 
     // TODO: Ignore if includes a marker like "/* @rolldown-ignore */"
     args.ast.program.with_mut(|fields| {
-      let source_text = fields.program.source_text;
+      let source_text = fields.source.as_str();
       let ast_builder = AstBuilder::new(fields.allocator);
-      let mut visitor = DynamicImportVarsVisit { ast_builder, source_text, config };
+      let mut visitor = DynamicImportVarsVisit {
+        ast_builder,
+        source_text,
+        config: DynamicImportVarsVisitConfig {
+          async_enabled: self.resolver.is_some(),
+          ..Default::default()
+        },
+      };
 
       visitor.visit_program(fields.program);
-      if visitor.config.need_helper {
+
+      if visitor.config.async_enabled && !visitor.config.async_imports.is_empty() {
+        visitor.config.current = 0;
+        config = Some(visitor.config);
+      } else if visitor.config.need_helper {
         fields.program.body.push(visitor.import_helper());
       }
     });
+
+    if let Some(mut config) = config {
+      let resolver = self.resolver.as_ref().unwrap();
+      let iter = config.async_imports.into_iter().map(async |source| {
+        resolver(source.unwrap(), args.id.to_string()).await.ok()?.and_then(|id| {
+          let id = id.relative(args.id.as_path().parent().unwrap());
+          let id = id.to_slash_lossy();
+          if id.is_empty() {
+            None
+          } else if id.as_bytes()[0] != b'.' {
+            Some(rolldown_utils::concat_string!("./", id))
+          } else {
+            Some(id.into_owned())
+          }
+        })
+      });
+
+      config.async_imports = block_on_spawn_all(iter).await;
+
+      args.ast.program.with_mut(|fields| {
+        let source_text = fields.source.as_str();
+        let ast_builder = AstBuilder::new(fields.allocator);
+        let mut visitor = DynamicImportVarsVisit { ast_builder, source_text, config };
+
+        visitor.visit_program(fields.program);
+
+        if visitor.config.need_helper {
+          fields.program.body.push(visitor.import_helper());
+        }
+      });
+    }
+
     Ok(args.ast)
   }
 

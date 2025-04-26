@@ -5,7 +5,15 @@ import { dynamicImportVarsPlugin } from 'rolldown/experimental'
 
 export default defineTest({
   config: {
-    plugins: [dynamicImportVarsPlugin()],
+    plugins: [
+      dynamicImportVarsPlugin({
+        async resolver(id) {
+          return id
+            .replace("@", path.resolve(import.meta.dirname, "./mods/"))
+            .replace("#", path.resolve(import.meta.dirname, "../../"))
+        },
+      }),
+    ],
   },
   async afterTest(output) {
     for (const chunk of output.output) {

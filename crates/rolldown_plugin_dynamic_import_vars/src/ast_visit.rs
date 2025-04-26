@@ -1,10 +1,12 @@
+use std::borrow::Cow;
+
 use oxc::{
   ast::{
     AstBuilder, NONE,
     ast::{Argument, Expression, ImportOrExportKind, PropertyKind, Statement},
   },
   ast_visit::VisitMut,
-  span::{SPAN, Span},
+  span::{Atom, SPAN, Span},
   syntax::number::NumberBase,
 };
 
@@ -16,6 +18,7 @@ use super::parse_pattern::{DynamicImportPattern, DynamicImportRequest, parse_pat
 pub struct DynamicImportVarsVisitConfig {
   pub current: usize,
   pub need_helper: bool,
+  pub async_enabled: bool,
   pub async_imports: Vec<Option<String>>,
 }
 
@@ -29,41 +32,50 @@ impl<'ast> VisitMut<'ast> for DynamicImportVarsVisit<'ast> {
   #[allow(clippy::too_many_lines)]
   fn visit_expression(&mut self, expr: &mut Expression<'ast>) {
     let Expression::ImportExpression(import_expr) = expr else { return };
-    let Expression::TemplateLiteral(source) = &import_expr.source else { return };
+    let Expression::TemplateLiteral(source) = &mut import_expr.source else { return };
     if source.is_no_substitution_template() {
       return;
     }
 
-    // TODO: Support @/path via options.createResolver
-    // TODO: handle error
-    let glob = template_literal_to_glob(source).unwrap();
-
-    let raw = source.quasis[0].value.raw.as_bytes();
-    let glob = if raw.first().is_some_and(|&b| b != b'.' && b != b'/') {
-      let prev = self.config.current;
+    let prev = self.config.current;
+    let (glob, is_async) = if prev < self.config.async_imports.len() {
       self.config.current += 1;
-      if prev < self.config.async_imports.len() {
-        if let Some(glob) = &self.config.async_imports[prev] {
-          glob
-        } else {
-          return;
-        }
+      if let Some(glob) = &self.config.async_imports[prev] {
+        (Cow::Borrowed(glob.as_str()), true)
       } else {
-        self.config.async_imports.push(Some(glob.into_owned()));
         return;
       }
     } else {
-      glob.as_ref()
+      let glob = template_literal_to_glob(source).unwrap();
+      let byte = source.quasis[0].value.raw.as_bytes().first();
+      if self.config.async_enabled && byte.is_some_and(|&b| b != b'.' && b != b'/') {
+        self.config.current += 1;
+        self.config.async_imports.push(Some(glob.into_owned()));
+        return;
+      }
+      (glob, false)
     };
 
-    if should_ignore(glob) {
+    if should_ignore(&glob) {
       return;
     }
 
-    let pattern = to_valid_glob(glob, source.span.source_text(self.source_text)).unwrap();
+    let Some(index) = memchr::memchr(b'*', glob.as_bytes()) else { return };
+
+    let source_text = source.span.source_text(self.source_text);
+    let pattern = to_valid_glob(&glob, source_text).unwrap();
+
     let DynamicImportPattern { glob_params, user_pattern, raw_pattern: _ } =
       parse_pattern(&pattern);
+
     self.config.need_helper = true;
+
+    if is_async && &glob[..index] != source.quasis[0].value.raw {
+      let glob = self.ast_builder.allocator.alloc_str(&glob[..index]);
+      source.quasis[0].value.raw = Atom::from(glob);
+      source.quasis[0].value.cooked = None;
+    }
+
     *expr = self.call_helper(
       import_expr.span,
       user_pattern.as_str(),

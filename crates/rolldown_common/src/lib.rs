@@ -95,7 +95,7 @@ pub use crate::{
     AddEntryModuleMsg, ModuleLoaderMsg,
     runtime_module_brief::{RUNTIME_MODULE_ID, RuntimeModuleBrief},
     runtime_task_result::RuntimeModuleTaskResult,
-    task_result::{EcmaRelated, NormalModuleTaskResult},
+    task_result::{EcmaRelated, ExternalModuleTaskResult, NormalModuleTaskResult},
   },
   types::asset::Asset,
   types::asset_idx::AssetIdx,

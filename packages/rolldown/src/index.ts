@@ -61,9 +61,9 @@ import type {
 } from './plugin';
 import { withFilter } from './plugin';
 import type {
+  GeneralHookFilter,
   HookFilter,
   ModuleTypeFilter,
-  StringFilter,
 } from './plugin/hook-filter';
 import type {
   MinimalPluginContext,
@@ -111,6 +111,7 @@ export type {
   ExistingRawSourceMap,
   ExternalOption,
   FunctionPluginHooks,
+  GeneralHookFilter,
   GetModuleInfo,
   GlobalsFunction,
   HookFilter,
@@ -165,7 +166,6 @@ export type {
   SourceMap,
   SourcemapIgnoreListOption,
   SourceMapInput,
-  StringFilter,
   TransformPluginContext,
   TransformResult,
   TreeshakingOptions,

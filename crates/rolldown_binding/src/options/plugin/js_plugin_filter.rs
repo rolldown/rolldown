@@ -3,7 +3,7 @@ use std::path::Path;
 use rolldown::ModuleType;
 use rolldown_utils::pattern_filter;
 
-use super::types::binding_hook_filter::BindingTransformHookFilter;
+use super::types::binding_hook_filter::{BindingRenderChunkHookFilter, BindingTransformHookFilter};
 
 /// If the transform hook is filtered out and need to be skipped.
 /// return `false` means it should be skipped.
@@ -53,6 +53,24 @@ pub fn filter_transform(
     filter_ret = filter_ret && code_res.inner();
   }
   filter_ret
+}
+
+pub fn filter_render_chunk(
+  code: &str,
+  render_chunk_filter: Option<&BindingRenderChunkHookFilter>,
+) -> bool {
+  if let Some(render_chunk_filter) = render_chunk_filter {
+    if let Some(ref code_filter) = render_chunk_filter.code {
+      let result = pattern_filter::filter_code(
+        code_filter.exclude.as_deref(),
+        code_filter.include.as_deref(),
+        code,
+      );
+
+      return result.inner();
+    }
+  }
+  true
 }
 
 #[cfg(test)]

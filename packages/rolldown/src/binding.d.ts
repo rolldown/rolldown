@@ -614,6 +614,7 @@ export interface BindingPluginOptions {
   buildEndMeta?: BindingPluginHookMeta
   renderChunk?: (ctx: BindingPluginContext, code: string, chunk: BindingRenderedChunk, opts: BindingNormalizedOptions, meta: BindingRenderedChunkMeta) => MaybePromise<VoidNullable<BindingHookRenderChunkOutput>>
   renderChunkMeta?: BindingPluginHookMeta
+  renderChunkFilter?: BindingRenderChunkHookFilter
   augmentChunkHash?: (ctx: BindingPluginContext, chunk: BindingRenderedChunk) => MaybePromise<void | string>
   augmentChunkHashMeta?: BindingPluginHookMeta
   renderStart?: (ctx: BindingPluginContext, opts: BindingNormalizedOptions) => void
@@ -662,6 +663,10 @@ export interface BindingRemote {
   name: string
   entryGlobalName?: string
   shareScope?: string
+}
+
+export interface BindingRenderChunkHookFilter {
+  code?: BindingGeneralHookFilter
 }
 
 export interface BindingReplacePluginConfig {

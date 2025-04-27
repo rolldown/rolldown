@@ -15,3 +15,9 @@ pub struct BindingTransformHookFilter {
   pub module_type: Option<Vec<BindingModuleType>>,
   pub id: Option<BindingGeneralHookFilter>,
 }
+
+#[napi_derive::napi(object, object_to_js = false)]
+#[derive(Default, Clone, Debug)]
+pub struct BindingRenderChunkHookFilter {
+  pub code: Option<BindingGeneralHookFilter>,
+}

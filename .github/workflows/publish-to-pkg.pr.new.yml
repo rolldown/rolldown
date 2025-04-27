@@ -33,6 +33,7 @@ jobs:
     if: >
       github.repository == 'rolldown/rolldown' &&
       (github.event_name == 'workflow_call' || github.event_name == 'workflow_dispatch' ||
+      (github.event_name == 'push' && github.ref == 'refs/heads/main') ||
       (github.event_name == 'pull_request' && contains(github.event.pull_request.labels.*.name, 'trigger: preview')))
     name: Build bindings and node packages
     uses: ./.github/workflows/reusable-release-build.yml
@@ -45,6 +46,7 @@ jobs:
     if: >
       github.repository == 'rolldown/rolldown' &&
       (github.event_name == 'workflow_call' || github.event_name == 'workflow_dispatch' ||
+      (github.event_name == 'push' && github.ref == 'refs/heads/main') ||
       (github.event_name == 'pull_request' && contains(github.event.pull_request.labels.*.name, 'trigger: preview')))
     name: Pkg Preview
     runs-on: ubuntu-latest

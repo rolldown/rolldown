@@ -46,9 +46,9 @@ import type {
 } from './plugin';
 export { withFilter } from './plugin';
 import type {
+  GeneralHookFilter,
   HookFilter,
   ModuleTypeFilter,
-  StringFilter,
 } from './plugin/hook-filter';
 import {
   MinimalPluginContext,
@@ -92,6 +92,7 @@ export type {
   ExistingRawSourceMap,
   ExternalOption,
   FunctionPluginHooks,
+  GeneralHookFilter,
   GetModuleInfo,
   HookFilter,
   HookFilterExtension,
@@ -137,7 +138,6 @@ export type {
   SourceDescription,
   SourceMap,
   SourceMapInput,
-  StringFilter,
   TransformPluginContext,
   TransformResult,
   WatchOptions,

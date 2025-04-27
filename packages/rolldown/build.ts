@@ -91,6 +91,7 @@ function withShared(
           'parallel-plugin': './src/parallel-plugin',
           'parallel-plugin-worker': './src/parallel-plugin-worker',
           'experimental-index': './src/experimental-index',
+          'filter-expression-index': './src/filter-expression-index',
           'parse-ast-index': './src/parse-ast-index',
         }
         : {},

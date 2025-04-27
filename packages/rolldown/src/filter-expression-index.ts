@@ -1,50 +1,93 @@
 import { ModuleType as PluginModuleType } from './plugin';
 import { StringOrRegExp } from './types/utils';
 
-interface FilterExpression {
-  kind: string;
-}
+export type FilterExpressionKind = FilterExpression['kind'];
 
-interface And extends FilterExpression {
+export type FilterExpression =
+  | And
+  | Or
+  | Not
+  | Id
+  | ModuleType
+  | Code
+  | Include
+  | Exclude;
+
+export type TopLevelFilterExpression = Include | Exclude;
+
+export class And {
   kind: 'and';
   left: FilterExpression;
   right: FilterExpression;
+  constructor(left: FilterExpression, right: FilterExpression) {
+    this.left = left;
+    this.right = right;
+    this.kind = 'and';
+  }
 }
-
-interface Or extends FilterExpression {
+class Or {
   kind: 'or';
   left: FilterExpression;
   right: FilterExpression;
+  constructor(left: FilterExpression, right: FilterExpression) {
+    this.left = left;
+    this.right = right;
+    this.kind = 'or';
+  }
 }
 
-interface Not extends FilterExpression {
+class Not {
   kind: 'not';
   expr: FilterExpression;
+  constructor(expr: FilterExpression) {
+    this.expr = expr;
+    this.kind = 'not';
+  }
 }
 
-interface Id extends FilterExpression {
+class Id {
   kind: 'id';
   pattern: StringOrRegExp;
+  constructor(pattern: StringOrRegExp) {
+    this.pattern = pattern;
+    this.kind = 'id';
+  }
 }
 
-interface ModuleType extends FilterExpression {
+class ModuleType {
   kind: 'moduleType';
-  pattern: string;
+  pattern: PluginModuleType;
+  constructor(pattern: PluginModuleType) {
+    this.pattern = pattern;
+    this.kind = 'moduleType';
+  }
 }
 
-interface Code extends FilterExpression {
+class Code {
   kind: 'code';
   pattern: StringOrRegExp;
+  constructor(expr: StringOrRegExp) {
+    this.pattern = expr;
+    this.kind = 'code';
+  }
 }
 
-interface Include extends FilterExpression {
+class Include {
   kind: 'include';
   expr: FilterExpression;
+  constructor(expr: FilterExpression) {
+    this.expr = expr;
+    this.kind = 'include';
+  }
 }
 
-interface Exclude extends FilterExpression {
+class Exclude {
   kind: 'exclude';
   expr: FilterExpression;
+  constructor(expr: FilterExpression) {
+    this.expr = expr;
+    this.kind = 'exclude';
+  }
 }
 
 export function and(left: FilterExpression, right: FilterExpression): And {
@@ -60,7 +103,10 @@ export function not(expr: FilterExpression): Not {
 }
 
 export function id(pattern: StringOrRegExp): Id {
-  return { kind: 'id', pattern };
+  return {
+    kind: 'id',
+    pattern,
+  };
 }
 
 export function moduleType(pattern: PluginModuleType): ModuleType {

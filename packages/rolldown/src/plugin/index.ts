@@ -21,7 +21,7 @@ import type {
   NullValue,
   PartialNull,
 } from '../types/utils';
-import type { HookFilter, StringFilter } from './hook-filter';
+import type { GeneralHookFilter, HookFilter } from './hook-filter';
 import type { MinimalPluginContext } from './minimal-plugin-context';
 import type { ParallelPlugin } from './parallel-plugin';
 import type { PluginContext } from './plugin-context';
@@ -274,8 +274,10 @@ export type ParallelPluginHooks = Exclude<
 >;
 export type HookFilterExtension<K extends keyof FunctionPluginHooks> = K extends
   'transform' ? { filter?: HookFilter }
-  : K extends 'load' ? { filter?: Pick<HookFilter, 'id'> }
-  : K extends 'resolveId' ? { filter?: { id?: StringFilter<RegExp> } }
+  : K extends 'load' ? { filter?: Pick<HookFilter, 'id' | 'custom'> }
+  : K extends 'resolveId' ? {
+      filter?: { id?: GeneralHookFilter<RegExp> } & Pick<HookFilter, 'custom'>;
+    }
   : {};
 
 export type PluginHooks = {

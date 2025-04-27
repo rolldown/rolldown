@@ -8,7 +8,9 @@ use super::{
 pub struct BindingGeneralHookFilter {
   pub include: Option<Vec<BindingStringOrRegex>>,
   pub exclude: Option<Vec<BindingStringOrRegex>>,
-  pub custom: Option<Vec<BindingFilterToken>>,
+  // one Array of BindingFilterToken to construct a FilterExpression
+  // use Array of Array of BindingFilterToken construct multiple FilterExpression
+  pub custom: Option<Vec<Vec<BindingFilterToken>>>,
 }
 
 #[napi_derive::napi(object, object_to_js = false)]
@@ -18,5 +20,5 @@ pub struct BindingTransformHookFilter {
   #[napi(ts_type = "Array<string>")]
   pub module_type: Option<Vec<BindingModuleType>>,
   pub id: Option<BindingGeneralHookFilter>,
-  pub custom: Option<Vec<BindingFilterToken>>,
+  pub custom: Option<Vec<Vec<BindingFilterToken>>>,
 }

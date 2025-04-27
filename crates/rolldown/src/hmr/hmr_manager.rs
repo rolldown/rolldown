@@ -67,11 +67,47 @@ impl HmrManager {
       .collect();
     Self { input, module_idx_by_abs_path }
   }
-  #[expect(clippy::dbg_macro, clippy::too_many_lines)] // FIXME: Remove dbg! macro once the feature is stable
-  pub async fn generate_hmr_patch(
+
+  pub async fn hmr_invalidate(
     &mut self,
-    changed_file_paths: Vec<String>,
+    file: String,
+    first_invalidated_by: Option<String>,
   ) -> BuildResult<HmrOutput> {
+    let module_idx = self
+      .cache
+      .module_id_to_idx
+      .get(&ArcStr::from(file))
+      .expect("Not found hmr invalidate module")
+      .idx();
+    let module = self.module_db.modules[module_idx].as_normal().unwrap();
+
+    // only self accept modules can be invalidated
+    if !module.ast_usage.contains(EcmaModuleAstUsage::HmrSelfAccept) {
+      return Ok(HmrOutput {
+        is_self_accepting: false,
+        first_invalidated_by,
+        ..Default::default()
+      });
+    }
+
+    // Modules could be empty if a root module is invalidated via import.meta.hot.invalidate()
+    if module.importers_idx.is_empty() {
+      return Ok(HmrOutput {
+        is_self_accepting: true,
+        first_invalidated_by,
+        full_reload: true,
+        ..Default::default()
+      });
+    }
+
+    let mut ret =
+      self.generate_hmr_patch(module.importers_idx.clone(), first_invalidated_by).await?;
+    ret.is_self_accepting = true;
+    Ok(ret)
+  }
+
+  #[expect(clippy::dbg_macro)] // FIXME: Remove dbg! macro once the feature is stable
+  pub async fn hmr(&mut self, changed_file_paths: Vec<String>) -> BuildResult<HmrOutput> {
     let mut changed_modules = FxIndexSet::default();
     for changed_file_path in changed_file_paths {
       let changed_file_path = ArcStr::from(changed_file_path);
@@ -85,29 +121,59 @@ impl HmrManager {
       }
     }
 
+    self.generate_hmr_patch(changed_modules, None).await
+  }
+
+  #[expect(clippy::too_many_lines)]
+  pub async fn generate_hmr_patch(
+    &mut self,
+    mut changed_modules: FxIndexSet<ModuleIdx>,
+    first_invalidated_by: Option<String>,
+  ) -> BuildResult<HmrOutput> {
     let mut affected_modules = FxIndexSet::default();
-    let mut hmr_boundary = FxIndexSet::default();
+    let mut hmr_boundaries = FxIndexSet::default();
     let mut need_to_full_reload = false;
+    let mut full_reload_reason = None;
     while let Some(changed_module_idx) = changed_modules.pop() {
       if need_to_full_reload {
         break;
       }
       let mut visited_modules = FxHashSet::default();
-
+      let mut boundaries = FxIndexSet::default();
       let is_reach_to_hmr_root_boundary = self.propagate_update(
         changed_module_idx,
         &mut visited_modules,
-        &mut hmr_boundary,
+        &mut boundaries,
         &mut affected_modules,
       );
 
       if is_reach_to_hmr_root_boundary {
         need_to_full_reload = true;
+        continue;
       }
+
+      // If import.meta.hot.invalidate was called already on that module for the same update,
+      // it means any importer of that module can't hot update. We should fallback to full reload.
+      if let Some(first_invalidated_by) = first_invalidated_by.as_ref() {
+        if boundaries.iter().any(|boundary| {
+          self.module_db.modules[boundary.accepted_via].stable_id() == first_invalidated_by
+        }) {
+          need_to_full_reload = true;
+          full_reload_reason = Some("circular import invalidate".to_string());
+          continue;
+        }
+      }
+
+      hmr_boundaries.extend(boundaries);
     }
 
     if need_to_full_reload {
-      return Ok(HmrOutput { full_reload: true, ..Default::default() });
+      return Ok(HmrOutput {
+        full_reload_reason,
+        first_invalidated_by,
+        full_reload: true,
+        ..Default::default()
+      });
     }
 
     let mut modules_to_invalidate = changed_modules.clone();
@@ -207,14 +273,14 @@ impl HmrManager {
       outputs.push(codegen.code);
     }
     let mut patch = outputs.concat();
-    hmr_boundary.iter().for_each(|boundary| {
+    hmr_boundaries.iter().for_each(|boundary| {
       let init_fn_name = &module_idx_to_init_fn_name[&boundary.boundary];
       writeln!(patch, "{init_fn_name}()").unwrap();
     });
     write!(
       patch,
       "\n__rolldown_runtime__.applyUpdates([{}]);",
-      hmr_boundary
+      hmr_boundaries
         .iter()
         .map(|boundary| {
           let module = &self.module_db.modules[boundary.boundary];
@@ -227,7 +293,8 @@ impl HmrManager {
 
     Ok(HmrOutput {
       patch,
-      hmr_boundaries: hmr_boundary
+      first_invalidated_by,
+      hmr_boundaries: hmr_boundaries
         .into_iter()
         .map(|boundary| HmrBoundaryOutput {
           boundary: self.module_db.modules[boundary.boundary].stable_id().into(),

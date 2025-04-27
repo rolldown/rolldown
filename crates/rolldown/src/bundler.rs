@@ -254,11 +254,19 @@ impl Bundler {
   }
 
   pub async fn generate_hmr_patch(&mut self, changed_files: Vec<String>) -> BuildResult<HmrOutput> {
+    self.hmr_manager.as_mut().expect("HMR manager is not initialized").hmr(changed_files).await
+  }
+
+  pub async fn hmr_invalidate(
+    &mut self,
+    file: String,
+    first_invalidated_by: Option<String>,
+  ) -> BuildResult<HmrOutput> {
     self
       .hmr_manager
       .as_mut()
       .expect("HMR manager is not initialized")
-      .generate_hmr_patch(changed_files)
+      .hmr_invalidate(file, first_invalidated_by)
       .await
   }
 

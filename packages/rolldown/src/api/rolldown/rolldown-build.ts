@@ -76,6 +76,13 @@ export class RolldownBuild {
     return this.#bundler?.bundler.generateHmrPatch(changedFiles);
   }
 
+  async hmrInvalidate(
+    file: string,
+    firstInvalidatedBy?: string,
+  ): Promise<BindingHmrOutput | undefined> {
+    return this.#bundler?.bundler.hmrInvalidate(file, firstInvalidatedBy);
+  }
+
   get watchFiles(): string[] {
     return this.#bundler?.bundler.watchFiles ?? [];
   }

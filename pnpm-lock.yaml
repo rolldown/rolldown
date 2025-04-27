@@ -97,6 +97,9 @@ importers:
         specifier: ^3.4.21
         version: 3.5.13(typescript@5.8.3)
     devDependencies:
+      magic-string:
+        specifier: ^0.30.17
+        version: 0.30.17
       rolldown:
         specifier: workspace:*
         version: link:../../packages/rolldown
@@ -6039,7 +6042,7 @@ packages:
   right-pad@1.0.1:
     resolution: {integrity: sha512-bYBjgxmkvTAfgIYy328fmkwhp39v8lwVgWhhrzxPV3yHtcSqyYKe9/XOhvW48UFjATg3VuJbpsp5822ACNvkmw==}
     engines: {node: '>= 0.10'}
-    deprecated: Use String.prototype.padEnd() instead
+    deprecated: Please use String.prototype.padEnd() over this package.
 
   rolldown-plugin-dts@0.7.12:
     resolution: {integrity: sha512-ECZRqikcDxz/gbWOULjUQLwpSKapld3aKFZdKYD/Zorven8z2Z3Ht1SoRJLtqL3zjq9fwdkEtb/e68uArExYNA==}

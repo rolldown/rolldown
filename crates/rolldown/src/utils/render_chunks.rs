@@ -61,6 +61,7 @@ pub async fn render_chunks<'a>(
         sourcemap_chain.push(asset_map);
         sourcemap_chain.extend(sourcemaps.iter());
         asset.map = Some(collapse_sourcemaps(sourcemap_chain));
+        dbg!(&asset.map);
       }
     }
   }

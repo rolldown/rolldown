@@ -1,12 +1,14 @@
-use std::{borrow::Cow, path::Path};
-
-use oxc::transformer::{ESTarget, InjectGlobalVariablesConfig, TransformOptions};
+use oxc::{
+  transformer::{ESTarget, TransformOptions},
+  transformer_plugins::InjectGlobalVariablesConfig,
+};
 use rolldown_common::{
   Comments, GlobalsOutputOption, InjectImport, MinifyOptions, ModuleType, NormalizedBundlerOptions,
   NormalizedJsxOptions, OutputFormat, Platform,
 };
 use rolldown_error::{BuildDiagnostic, InvalidOptionType};
 use rustc_hash::{FxHashMap, FxHashSet};
+use std::{borrow::Cow, path::Path};
 
 pub struct NormalizeOptionsReturn {
   pub options: NormalizedBundlerOptions,
@@ -127,14 +129,14 @@ pub fn normalize_options(mut raw_options: crate::BundlerOptions) -> NormalizeOpt
           .iter()
           .map(|raw| match raw {
             InjectImport::Named { imported, alias, from } => {
-              oxc::transformer::InjectImport::named_specifier(
+              oxc::transformer_plugins::InjectImport::named_specifier(
                 from,
                 Some(imported),
                 alias.as_deref().unwrap_or(imported),
               )
             }
             InjectImport::Namespace { alias, from } => {
-              oxc::transformer::InjectImport::namespace_specifier(from, alias)
+              oxc::transformer_plugins::InjectImport::namespace_specifier(from, alias)
             }
           })
           .collect()

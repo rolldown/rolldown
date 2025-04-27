@@ -1,4 +1,4 @@
-use oxc::transformer::ReplaceGlobalDefinesConfig;
+use oxc::transformer_plugins::ReplaceGlobalDefinesConfig;
 use rolldown_common::ModuleLoaderMsg;
 use rolldown_fs::OsFileSystem;
 use rolldown_plugin::SharedPluginDriver;

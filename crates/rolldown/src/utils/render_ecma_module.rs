@@ -31,6 +31,10 @@ pub fn render_ecma_module(
         }
         Some(collapse_sourcemaps(sourcemap_chain))
       };
+      dbg!(&sourcemap);
+      sourcemap.as_ref().inspect(|item| {
+        println!("{}", item.to_json_string());
+      });
 
       if let Some(sourcemap) = sourcemap {
         sources.push(Box::new(

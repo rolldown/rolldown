@@ -65,6 +65,7 @@ impl From<TypeScriptOptions> for oxc::transformer::TypeScriptOptions {
           _ => None,
         },
       }),
+      remove_class_fields_without_initializer: Default::default(),
     }
   }
 }

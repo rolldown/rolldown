@@ -734,12 +734,15 @@ mod tests {
         id: test_case.input_id_filter.map(|f| BindingGeneralHookFilter {
           include: f.include.map(|f| f.into_iter().map(BindingStringOrRegex::new).collect()),
           exclude: f.exclude.map(|f| f.into_iter().map(BindingStringOrRegex::new).collect()),
+          custom: None,
         }),
         code: test_case.input_code_filter.map(|f| BindingGeneralHookFilter {
           include: f.include.map(|f| f.into_iter().map(BindingStringOrRegex::new).collect()),
           exclude: f.exclude.map(|f| f.into_iter().map(BindingStringOrRegex::new).collect()),
+          custom: None,
         }),
         module_type: None,
+        custom: None,
       };
 
       for (si, (id, code, expected)) in test_case.cases.into_iter().enumerate() {

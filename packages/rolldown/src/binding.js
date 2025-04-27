@@ -400,6 +400,7 @@ module.exports.BindingPluginOrder = nativeBinding.BindingPluginOrder
 module.exports.ExportExportNameKind = nativeBinding.ExportExportNameKind
 module.exports.ExportImportNameKind = nativeBinding.ExportImportNameKind
 module.exports.ExportLocalNameKind = nativeBinding.ExportLocalNameKind
+module.exports.FilterTokenKind = nativeBinding.FilterTokenKind
 module.exports.getBufferOffset = nativeBinding.getBufferOffset
 module.exports.HelperMode = nativeBinding.HelperMode
 module.exports.ImportNameKind = nativeBinding.ImportNameKind

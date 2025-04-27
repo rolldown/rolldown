@@ -309,9 +309,15 @@ export interface BindingExperimentalOptions {
   hmr?: BindingExperimentalHmrOptions
 }
 
+export interface BindingFilterToken {
+  kind: FilterTokenKind
+  value?: BindingStringOrRegex
+}
+
 export interface BindingGeneralHookFilter {
   include?: Array<BindingStringOrRegex>
   exclude?: Array<BindingStringOrRegex>
+  custom?: Array<BindingFilterToken>
 }
 
 export interface BindingGlobImportPluginConfig {
@@ -718,6 +724,7 @@ export interface BindingTransformHookFilter {
   code?: BindingGeneralHookFilter
   moduleType?: Array<string>
   id?: BindingGeneralHookFilter
+  custom?: Array<BindingFilterToken>
 }
 
 export interface BindingTransformPluginConfig {
@@ -939,6 +946,17 @@ export type ExportLocalNameKind = /** `export { name } */
 export interface ExtensionAliasItem {
   target: string
   replacements: Array<string>
+}
+
+export declare enum FilterTokenKind {
+  Id = 0,
+  Code = 1,
+  ModuleType = 2,
+  And = 3,
+  Or = 4,
+  Not = 5,
+  Include = 6,
+  Exclude = 7
 }
 
 /**

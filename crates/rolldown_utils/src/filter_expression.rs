@@ -86,28 +86,22 @@ pub fn parse(mut tokens: Vec<Token>) -> FilterKind {
   fn rec(tokens: &mut Vec<Token>) -> Option<FilterExpr> {
     let token = tokens.pop()?;
     match token {
-      Token::Id(string_or_regex) => {
-        return Some(FilterExpr::Id(string_or_regex));
-      }
-      Token::Code(string_or_regex) => {
-        return Some(FilterExpr::Code(string_or_regex));
-      }
-      Token::ModuleType(string) => {
-        return Some(FilterExpr::ModuleType(string));
-      }
+      Token::Id(string_or_regex) => Some(FilterExpr::Id(string_or_regex)),
+      Token::Code(string_or_regex) => Some(FilterExpr::Code(string_or_regex)),
+      Token::ModuleType(string) => Some(FilterExpr::ModuleType(string)),
       Token::And => {
         let left = rec(tokens)?;
         let right = rec(tokens)?;
-        return Some(FilterExpr::And(Box::new(left), Box::new(right)));
+        Some(FilterExpr::And(Box::new(left), Box::new(right)))
       }
       Token::Or => {
         let left = rec(tokens)?;
         let right = rec(tokens)?;
-        return Some(FilterExpr::Or(Box::new(left), Box::new(right)));
+        Some(FilterExpr::Or(Box::new(left), Box::new(right)))
       }
       Token::Not => {
         let inner = rec(tokens)?;
-        return Some(FilterExpr::Not(Box::new(inner)));
+        Some(FilterExpr::Not(Box::new(inner)))
       }
       Token::Include => {
         unreachable!("Include token should not be in the expression");
@@ -120,11 +114,11 @@ pub fn parse(mut tokens: Vec<Token>) -> FilterKind {
   match tokens.pop() {
     Some(Token::Include) => {
       let inner = rec(&mut tokens).expect("Failed to parse expression");
-      return FilterKind::Include(inner);
+      FilterKind::Include(inner)
     }
     Some(Token::Exclude) => {
       let inner = rec(&mut tokens).expect("Failed to parse expression");
-      return FilterKind::Exclude(inner);
+      FilterKind::Exclude(inner)
     }
 
     _ => unreachable!("Expression should start with Include or Exclude"),

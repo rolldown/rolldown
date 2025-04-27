@@ -64,6 +64,12 @@ impl BindingStringOrRegex {
   }
 }
 
+impl BindingStringOrRegex {
+  pub fn inner(self) -> StringOrRegex {
+    self.0
+  }
+}
+
 impl FromNapiValue for BindingStringOrRegex {
   unsafe fn from_napi_value(env: sys::napi_env, napi_val: sys::napi_value) -> napi::Result<Self> {
     unsafe {

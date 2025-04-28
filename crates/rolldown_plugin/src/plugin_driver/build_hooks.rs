@@ -1,4 +1,4 @@
-use std::{borrow::Cow, sync::Arc};
+use std::sync::Arc;
 
 use crate::{
   HookBuildEndArgs, HookLoadArgs, HookLoadReturn, HookNoopReturn, HookResolveIdArgs,
@@ -279,15 +279,13 @@ impl PluginDriver {
       if !self.plugin_usage_vec[plugin_idx].contains(HookUsage::Transform) {
         continue;
       }
-      let call_id = if tracing::enabled!(tracing::Level::TRACE) {
-        Cow::Owned(format!(
+      let call_id = tracing::enabled!(tracing::Level::TRACE).then(|| {
+        format!(
           "transform_{}_{}",
           plugin_idx.raw(),
           rolldown_utils::time::current_utc_timestamp_ms()
-        ))
-      } else {
-        Cow::Borrowed("")
-      };
+        )
+      });
 
       trace_action!(action::HookTransformCallStart {
         action: "HookTransformCallStart",
@@ -295,7 +293,7 @@ impl PluginDriver {
         source: code.clone(),
         plugin_name: plugin.call_name().to_string(),
         plugin_index: plugin_idx.raw(),
-        call_id: call_id.to_string(),
+        call_id: call_id.clone().unwrap_or_default(),
       });
       if let Some(r) = plugin
         .call_transform(
@@ -326,7 +324,7 @@ impl PluginDriver {
             transformed_source: Some(code.to_string()),
             plugin_name: plugin.call_name().to_string(),
             plugin_index: plugin_idx.raw(),
-            call_id: call_id.to_string()
+            call_id: call_id.unwrap_or_default()
           });
         }
         if let Some(ty) = r.module_type {
@@ -339,7 +337,7 @@ impl PluginDriver {
           transformed_source: Some(code.to_string()),
           plugin_name: plugin.call_name().to_string(),
           plugin_index: plugin_idx.raw(),
-          call_id: call_id.to_string()
+          call_id: call_id.unwrap_or_default()
         });
       }
     }

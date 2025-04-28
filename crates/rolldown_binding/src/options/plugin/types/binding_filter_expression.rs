@@ -13,7 +13,7 @@ pub struct BindingFilterToken {
   pub value: Option<BindingStringOrRegex>,
 }
 
-#[napi]
+#[napi(string_enum)]
 #[derive(Debug, Clone, Copy)]
 pub enum FilterTokenKind {
   Id,

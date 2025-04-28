@@ -317,7 +317,7 @@ export interface BindingFilterToken {
 export interface BindingGeneralHookFilter {
   include?: Array<BindingStringOrRegex>
   exclude?: Array<BindingStringOrRegex>
-  custom?: Array<BindingFilterToken>
+  custom?: Array<Array<BindingFilterToken>>
 }
 
 export interface BindingGlobImportPluginConfig {
@@ -724,7 +724,7 @@ export interface BindingTransformHookFilter {
   code?: BindingGeneralHookFilter
   moduleType?: Array<string>
   id?: BindingGeneralHookFilter
-  custom?: Array<BindingFilterToken>
+  custom?: Array<Array<BindingFilterToken>>
 }
 
 export interface BindingTransformPluginConfig {
@@ -948,16 +948,14 @@ export interface ExtensionAliasItem {
   replacements: Array<string>
 }
 
-export declare enum FilterTokenKind {
-  Id = 0,
-  Code = 1,
-  ModuleType = 2,
-  And = 3,
-  Or = 4,
-  Not = 5,
-  Include = 6,
-  Exclude = 7
-}
+export type FilterTokenKind =  'Id'|
+'Code'|
+'ModuleType'|
+'And'|
+'Or'|
+'Not'|
+'Include'|
+'Exclude';
 
 /**
  * Get offset within a `Uint8Array` which is aligned on 4 GiB.

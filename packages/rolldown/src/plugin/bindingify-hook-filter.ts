@@ -4,7 +4,7 @@ import type {
   BindingRenderChunkHookFilter,
   BindingTransformHookFilter,
 } from '../binding.d';
-import { FilterExpression } from '../filter-expression-index';
+import type { FilterExpression } from '../filter-expression-index';
 import { arraify } from '../utils/misc';
 import type { HookFilterExtension, ModuleType } from '.';
 import type { GeneralHookFilter } from './hook-filter';
@@ -134,19 +134,7 @@ export function bindingifyRenderChunkFilter(
     const { code } = filterOption;
 
     return {
-      code: code ? bindingifyStringFilter(code) : undefined,
-    };
-  }
-}
-
-export function bindingifyRenderChunkFilter(
-  filterOption?: HookFilterExtension<'renderChunk'>['filter'],
-): BindingRenderChunkHookFilter | undefined {
-  if (filterOption) {
-    const { code } = filterOption;
-
-    return {
-      code: code ? bindingifyStringFilter(code) : undefined,
+      code: code ? bindingifyGeneralHookFilter(code) : undefined,
     };
   }
 }

@@ -9,14 +9,14 @@ use napi::bindgen_prelude::FnArgs;
 use rolldown_common::NormalModule;
 use rolldown_plugin::{__inner::SharedPluginable, HookUsage, Plugin, typedmap::TypedMapKey};
 use rolldown_utils::{
-  filter_expression::{FilterExprKind, filter_exprs_interpreter},
+  filter_expression::filter_exprs_interpreter,
   pattern_filter::{self},
 };
 use std::{borrow::Cow, ops::Deref, sync::Arc};
 use tracing::{Instrument, debug_span};
 
 use super::{
-  BindingPluginOptions,
+  BindingPluginOptions, FilterExprCache,
   binding_transform_context::BindingTransformPluginContext,
   js_plugin_filter::{filter_render_chunk, filter_transform},
   types::{
@@ -32,19 +32,11 @@ pub struct JsPluginContextResolveCustomArgId;
 impl TypedMapKey for JsPluginContextResolveCustomArgId {
   type Value = u32;
 }
-#[derive(Debug, PartialEq, Eq)]
-pub enum FilterExprCacheKey {
-  ResolveId,
-  Transform,
-  Load,
-  RenderChunk,
-}
-
 #[derive(Debug)]
 pub struct JsPlugin {
   pub(crate) inner: BindingPluginOptions,
   /// Since there at most three key in the cache, use vec should always faster than hashmap
-  pub(crate) filter_expr_cache: Vec<(FilterExprCacheKey, Vec<FilterExprKind>)>,
+  pub(crate) filter_expr_cache: FilterExprCache,
 }
 
 impl Deref for JsPlugin {
@@ -100,9 +92,7 @@ impl Plugin for JsPlugin {
     args: &rolldown_plugin::HookResolveIdArgs<'_>,
   ) -> rolldown_plugin::HookResolveIdReturn {
     let Some(cb) = &self.resolve_id else { return Ok(None) };
-    if let Some((_, v)) =
-      self.filter_expr_cache.iter().find(|(key, _)| key == &FilterExprCacheKey::ResolveId)
-    {
+    if let Some(ref v) = self.filter_expr_cache.resolve_id {
       if !filter_exprs_interpreter(
         v,
         Some(args.specifier),
@@ -187,9 +177,7 @@ impl Plugin for JsPlugin {
   ) -> rolldown_plugin::HookLoadReturn {
     let Some(cb) = &self.load else { return Ok(None) };
 
-    if let Some((_, v)) =
-      self.filter_expr_cache.iter().find(|(key, _)| key == &FilterExprCacheKey::Load)
-    {
+    if let Some(ref v) = self.filter_expr_cache.load {
       if !filter_exprs_interpreter(
         v,
         Some(args.id),
@@ -232,9 +220,7 @@ impl Plugin for JsPlugin {
     let Some(cb) = &self.transform else { return Ok(None) };
 
     // Custom field have higher priority, it will override the default filter
-    if let Some((_, v)) =
-      self.filter_expr_cache.iter().find(|(key, _)| key == &FilterExprCacheKey::Transform)
-    {
+    if let Some(ref v) = self.filter_expr_cache.transform {
       if !filter_exprs_interpreter(
         v,
         Some(args.id),
@@ -442,9 +428,7 @@ impl Plugin for JsPlugin {
   ) -> rolldown_plugin::HookRenderChunkReturn {
     let Some(cb) = &self.render_chunk else { return Ok(None) };
 
-    if let Some((_, v)) =
-      self.filter_expr_cache.iter().find(|(key, _)| key == &FilterExprCacheKey::RenderChunk)
-    {
+    if let Some(ref v) = self.filter_expr_cache.render_chunk {
       if !filter_exprs_interpreter(
         v,
         None,

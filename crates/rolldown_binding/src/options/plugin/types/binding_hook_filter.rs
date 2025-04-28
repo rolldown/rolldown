@@ -29,3 +29,5 @@ pub struct BindingRenderChunkHookFilter {
   pub code: Option<BindingGeneralHookFilter>,
   pub custom: Option<Vec<Vec<BindingFilterToken>>>,
 }
+
+pub type FilterExprTokens = Option<Vec<Vec<BindingFilterToken>>>;

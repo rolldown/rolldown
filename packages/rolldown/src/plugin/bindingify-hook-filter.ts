@@ -1,9 +1,6 @@
 import * as R from 'remeda';
 import type {
   BindingFilterToken,
-  BindingGeneralHookFilter,
-  BindingRenderChunkHookFilter,
-  BindingTransformHookFilter,
 } from '../binding.d';
 import type { FilterExpression } from '../filter-expression-index';
 import * as filter from '../filter-expression-index';
@@ -128,15 +125,13 @@ function joinFilterExprsWithOr(
 export function bindingifyGeneralHookFilter(
   matcher: GeneralHookFilter,
   stringKind: 'code' | 'id',
-): BindingGeneralHookFilter {
+): BindingFilterToken[][] | undefined {
   let filterExprs = generalHookFilterMatcherToFilterExprs(matcher, stringKind);
   let custom: BindingFilterToken[][] = [];
   if (filterExprs) {
     custom = filterExprs.map(bindingifyFilterExpr);
   }
-  return {
-    custom: custom.length > 0 ? custom : undefined,
-  };
+  return custom.length > 0 ? custom : undefined;
 }
 
 function bindingifyFilterExpr(
@@ -195,7 +190,7 @@ function bindingifyFilterExprImpl(
 
 export function bindingifyResolveIdFilter(
   filterOption?: HookFilterExtension<'resolveId'>['filter'],
-): BindingGeneralHookFilter | undefined {
+): BindingFilterToken[][] | undefined {
   return filterOption?.id
     ? bindingifyGeneralHookFilter(filterOption.id, 'id')
     : undefined;
@@ -203,7 +198,7 @@ export function bindingifyResolveIdFilter(
 
 export function bindingifyLoadFilter(
   filterOption?: HookFilterExtension<'load'>['filter'],
-): BindingGeneralHookFilter | undefined {
+): BindingFilterToken[][] | undefined {
   return filterOption?.id
     ? bindingifyGeneralHookFilter(filterOption.id, 'id')
     : undefined;
@@ -211,7 +206,7 @@ export function bindingifyLoadFilter(
 
 export function bindingifyTransformFilter(
   filterOption?: HookFilterExtension<'transform'>['filter'],
-): BindingTransformHookFilter | undefined {
+): BindingFilterToken[][] | undefined {
   if (!filterOption) {
     return undefined;
   }
@@ -222,21 +217,17 @@ export function bindingifyTransformFilter(
   if (custom) {
     ret = custom.map(bindingifyFilterExpr);
   }
-  return {
-    custom: ret.length > 0 ? ret : undefined,
-  };
+  return ret.length > 0 ? ret : undefined;
 }
 
 export function bindingifyRenderChunkFilter(
   filterOption?: HookFilterExtension<'renderChunk'>['filter'],
-): BindingRenderChunkHookFilter | undefined {
+): BindingFilterToken[][] | undefined {
   if (filterOption) {
     const { code } = filterOption;
 
-    return {
-      custom: code
-        ? bindingifyGeneralHookFilter(code, 'code').custom
-        : undefined,
-    };
+    return code
+        ? bindingifyGeneralHookFilter(code, 'code')
+        : undefined;
   }
 }

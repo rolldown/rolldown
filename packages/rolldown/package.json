@@ -67,7 +67,7 @@
     "build-binding:wasi": "pnpm build-binding --target wasm32-wasip1-threads",
     "build-binding:wasi:release": "pnpm build-binding --profile release-wasi --target wasm32-wasip1-threads",
     "# Scrips for node #": "_",
-    "build-node": "tsx ./build.ts",
+    "build-node": "ROLLDOWN_OPTIONS_VALIDATION=loose tsx ./build.ts",
     "build-types-check": "tsc -p ./tsconfig.check.json",
     "build-js-glue": "pnpm run --sequential \"/^build-(types|node|types-check)$/\"",
     "build-native:debug": "pnpm run --sequential \"/^build-(binding|js-glue)$/\"",

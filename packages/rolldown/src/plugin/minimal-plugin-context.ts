@@ -1,18 +1,19 @@
 import { VERSION } from '..';
-import { getLogHandler, normalizeLog } from '../log/log-handler';
+import {
+  getLogHandler,
+  type LoggingFunction,
+  type LogHandler,
+  normalizeLog,
+} from '../log/log-handler';
 import {
   LOG_LEVEL_DEBUG,
   LOG_LEVEL_INFO,
   LOG_LEVEL_WARN,
+  type LogLevelOption,
+  type RollupError,
 } from '../log/logging';
 import { error, logPluginError } from '../log/logs';
 import type { Extends, TypeAssert } from '../types/assert';
-import type {
-  LoggingFunction,
-  LogHandler,
-  LogLevelOption,
-  RollupError,
-} from '../types/misc';
 
 export interface PluginContextMeta {
   rollupVersion: string;

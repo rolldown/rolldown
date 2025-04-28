@@ -23,10 +23,11 @@ import {
   bindingifyWriteBundle,
 } from './bindingify-output-hooks';
 
+import type { LogHandler } from '../log/log-handler';
+import type { LogLevelOption } from '../log/logging';
 import { error, logPluginError } from '../log/logs';
 import type { InputOptions } from '../options/input-options';
 import type { OutputOptions } from '../options/output-options';
-import type { LogHandler, LogLevelOption } from '../types/misc';
 import {
   bindingifyCloseWatcher,
   bindingifyWatchChange,

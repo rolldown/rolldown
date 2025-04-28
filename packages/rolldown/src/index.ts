@@ -6,9 +6,14 @@ import { watch } from './api/watch';
 import type { RolldownWatcher } from './api/watch/watch-emitter';
 import type { PreRenderedChunk } from './binding';
 import type {
+  LoggingFunction,
+  WarningHandlerWithDefault,
+} from './log/log-handler';
+import type {
   LogLevel,
   LogLevelOption,
   LogOrStringHandler,
+  RollupError,
   RollupLog,
   RollupLogWithString,
 } from './log/logging';
@@ -73,12 +78,7 @@ import type {
 } from './plugin/plugin-context';
 import type { TransformPluginContext } from './plugin/transform-plugin-context';
 import type { ConfigExport } from './types/config-export';
-import type {
-  LoggingFunction,
-  RollupError,
-  SourcemapIgnoreListOption,
-  WarningHandlerWithDefault,
-} from './types/misc';
+import type { SourcemapIgnoreListOption } from './types/misc';
 import type { ModuleInfo } from './types/module-info';
 import type { TreeshakingOptions } from './types/module-side-effects';
 import type { OutputBundle } from './types/output-bundle';

@@ -1,14 +1,10 @@
-import type {
-  LoggingFunctionWithPosition,
-  LogHandler,
-  RollupLog,
-} from '../types/misc';
 import { noop } from '../utils/misc';
 import {
   LOG_LEVEL_WARN,
   type LogLevel,
   type LogLevelOption,
   logLevelPriority,
+  type RollupLog,
 } from './logging';
 import { logInvalidLogPosition } from './logs';
 
@@ -44,3 +40,19 @@ export function getLogHandler(
     logger(level, log);
   };
 }
+
+export type LoggingFunction = (
+  log: RollupLog | string | (() => RollupLog | string),
+) => void;
+
+export type LoggingFunctionWithPosition = (
+  log: RollupLog | string | (() => RollupLog | string),
+  pos?: number | { column: number; line: number },
+) => void;
+
+export type LogHandler = (level: LogLevel, log: RollupLog) => void;
+
+export type WarningHandlerWithDefault = (
+  warning: RollupLog,
+  defaultHandler: LoggingFunction,
+) => void;

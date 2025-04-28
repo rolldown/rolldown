@@ -1,11 +1,11 @@
 import { BuiltinPlugin } from '../builtin-plugin/constructors';
 import { ENUMERATED_INPUT_PLUGIN_HOOK_NAMES } from '../constants/plugin';
+import type { LogHandler } from '../log/log-handler';
 import { LOG_LEVEL_WARN } from '../log/logging';
 import { logInputHookInOutputPlugin } from '../log/logs';
 import type { InputOptions } from '../options/input-options';
 import type { OutputOptions } from '../options/output-options';
 import type { RolldownOutputPlugin, RolldownPlugin } from '../plugin';
-import type { LogHandler } from '../types/misc';
 import { asyncFlatten } from './async-flatten';
 
 export const normalizePluginOption: {

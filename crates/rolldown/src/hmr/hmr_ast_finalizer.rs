@@ -31,17 +31,6 @@ pub struct HmrAstFinalizer<'me, 'ast> {
 }
 
 impl<'ast> HmrAstFinalizer<'_, 'ast> {
-  pub fn generate_hmr_header(&mut self) -> Vec<ast::Statement<'ast>> {
-    let mut ret = vec![];
-
-    // `import.meta.hot = __rolldown_runtime__.createModuleHotContext(moduleId);`
-    ret.push(self.generate_stmt_of_init_module_hot_context());
-
-    ret.extend(self.generate_runtime_module_register_for_hmr());
-
-    ret
-  }
-
   pub fn generate_stmt_of_init_module_hot_context(&self) -> ast::Statement<'ast> {
     // import.meta.hot = __rolldown_runtime__.createModuleHotContext(moduleId);
     let stmt = quote_stmt(
@@ -184,13 +173,14 @@ impl<'ast> VisitMut<'ast> for HmrAstFinalizer<'_, 'ast> {
 
     let dependencies_init_fn_stmts = quote_stmts(self.alloc, dependencies_init_fns.as_str());
 
-    let dev_runtime_head = self.generate_hmr_header();
+    let runtime_module_register = self.generate_runtime_module_register_for_hmr();
 
-    try_block
-      .body
-      .reserve_exact(dev_runtime_head.len() + it.body.len() + dependencies_init_fn_stmts.len());
-    try_block.body.extend(dev_runtime_head);
+    try_block.body.reserve_exact(
+      runtime_module_register.len() + it.body.len() + dependencies_init_fn_stmts.len() + 1 /* import.meta.hot*/,
+    );
+    try_block.body.extend(runtime_module_register);
     try_block.body.extend(dependencies_init_fn_stmts);
+    try_block.body.push(self.generate_stmt_of_init_module_hot_context());
     try_block.body.extend(it.body.take_in(self.alloc));
 
     let final_block = self.snippet.builder.alloc_block_statement(SPAN, self.snippet.builder.vec());

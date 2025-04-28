@@ -12,7 +12,7 @@ use rolldown_utils::{
   filter_expression::{FilterExprKind, filter_exprs_interpreter},
   pattern_filter::{self},
 };
-use std::{borrow::Cow, ops::Deref, path::Path, sync::Arc};
+use std::{borrow::Cow, ops::Deref, sync::Arc};
 use tracing::{Instrument, debug_span};
 
 use super::{

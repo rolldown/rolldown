@@ -1,5 +1,5 @@
 import { defineTest } from "rolldown-tests";
-import { and, code, exclude, id, not } from "rolldown/filterExpr";
+import { and, code, exclude, id, not } from "rolldown/filter";
 import { expect, vi } from "vitest";
 
 const transformHookFunction = vi.fn(() => {});

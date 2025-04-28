@@ -11,6 +11,14 @@ pub enum HybridRegex {
   Ecma(regress::Regex),
 }
 
+// Please only used for testing
+impl From<&str> for HybridRegex {
+  fn from(pattern: &str) -> Self {
+    HybridRegex::new(pattern).unwrap_or_else(|err| {
+      panic!("failed to create HybridRegex from {pattern}, error details: {err}",)
+    })
+  }
+}
 impl HybridRegex {
   pub fn new(pattern: &str) -> anyhow::Result<Self> {
     match regex::Regex::new(pattern).map(HybridRegex::Optimize) {

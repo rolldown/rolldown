@@ -1,7 +1,5 @@
 import * as R from 'remeda';
-import type {
-  BindingFilterToken,
-} from '../binding.d';
+import type { BindingFilterToken } from '../binding.d';
 import type { FilterExpression } from '../filter-expression-index';
 import * as filter from '../filter-expression-index';
 import { arraify } from '../utils/misc';
@@ -227,7 +225,7 @@ export function bindingifyRenderChunkFilter(
     const { code } = filterOption;
 
     return code
-        ? bindingifyGeneralHookFilter(code, 'code')
-        : undefined;
+      ? bindingifyGeneralHookFilter(code, 'code')
+      : undefined;
   }
 }

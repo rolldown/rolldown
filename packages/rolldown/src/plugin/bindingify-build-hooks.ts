@@ -1,5 +1,5 @@
 import type {
-    BindingFilterToken,
+  BindingFilterToken,
   BindingHookResolveIdOutput,
   BindingPluginOptions,
 } from '../binding';

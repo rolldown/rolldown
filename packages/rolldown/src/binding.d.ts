@@ -96,7 +96,7 @@ export declare class BindingOutputs {
 }
 
 export declare class BindingPluginContext {
-  load(specifier: string, sideEffects: BindingHookSideEffects | undefined, fn: (success: boolean) => void): Promise<void>
+  load(specifier: string, sideEffects: BindingHookSideEffects | undefined): Promise<void>
   resolve(specifier: string, importer?: string | undefined | null, extraOptions?: BindingPluginContextResolveOptions | undefined | null): Promise<BindingPluginContextResolvedId | null>
   emitFile(file: BindingEmittedAsset, assetFilename?: string | undefined | null, fnSanitizedFileName?: string | undefined | null): string
   emitChunk(file: BindingEmittedChunk): string
@@ -434,6 +434,7 @@ export interface BindingInputOptions {
   makeAbsoluteExternalsRelative?: BindingMakeAbsoluteExternalsRelative
   debug?: BindingDebugOptions
   invalidateJsSideCache?: () => void
+  markModuleLoaded?: (id: string, success: bool) => void
 }
 
 export interface BindingIsolatedDeclarationPluginConfig {

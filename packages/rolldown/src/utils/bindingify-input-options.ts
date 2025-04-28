@@ -99,6 +99,9 @@ export function bindingifyInputOptions(
     ),
     debug: inputOptions.debug,
     invalidateJsSideCache: pluginContextData.clear.bind(pluginContextData),
+    markModuleLoaded: pluginContextData.markModuleLoaded.bind(
+      pluginContextData,
+    ),
   };
 }
 

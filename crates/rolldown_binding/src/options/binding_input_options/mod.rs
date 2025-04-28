@@ -102,4 +102,7 @@ pub struct BindingInputOptions {
   #[napi(ts_type = "() => void")]
   // TODO: The `FnArgs<()>` is not supported.
   pub invalidate_js_side_cache: Option<JsCallback<FnArgs<(Option<bool>,)>, ()>>,
+  #[debug(skip)]
+  #[napi(ts_type = "(id: string, success: bool) => void")]
+  pub mark_module_loaded: Option<JsCallback<FnArgs<(String, bool)>, ()>>,
 }

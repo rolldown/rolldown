@@ -250,6 +250,15 @@ impl BindingPluginOptions {
       filter_expr_kinds.push((FilterExprCacheKey::Transform, filter_kind));
     }
 
+    if let Some(filter) = self.render_chunk_filter.as_ref().and_then(|item| item.custom.as_ref()) {
+      let filter_kind = filter
+        .clone()
+        .into_iter()
+        .map(|tokens| filter_expression::parse(normalized_tokens(tokens)))
+        .collect_vec();
+      filter_expr_kinds.push((FilterExprCacheKey::RenderChunk, filter_kind));
+    }
+
     filter_expr_kinds
   }
 }

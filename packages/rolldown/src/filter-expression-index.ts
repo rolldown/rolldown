@@ -1,5 +1,5 @@
-import { ModuleType as PluginModuleType } from './plugin';
-import { StringOrRegExp } from './types/utils';
+import type { ModuleType as PluginModuleType } from './plugin';
+import type { StringOrRegExp } from './types/utils';
 
 interface FilterExpression {
   kind: string;

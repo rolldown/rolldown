@@ -1,9 +1,9 @@
 import type { BindingPluginOptions } from '../binding';
 import { normalizeHook } from '../utils/normalize-hook';
-import { BindingifyPluginArgs } from './bindingify-plugin';
+import type { BindingifyPluginArgs } from './bindingify-plugin';
 import {
   bindingifyPluginHookMeta,
-  PluginHookWithBindingExt,
+  type PluginHookWithBindingExt,
 } from './bindingify-plugin-hook-meta';
 import type { ChangeEvent } from './index';
 import { PluginContextImpl } from './plugin-context';

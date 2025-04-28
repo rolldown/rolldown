@@ -8,15 +8,37 @@ on:
   workflow_dispatch:
   pull_request:
     types: [opened, synchronize, labeled]
+  push:
+    branches:
+      - main
+
+# If this is a push on main, we want to debounce the workflow
+concurrency:
+  group: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' && 'debounce-main' || github.run_id }}
+  cancel-in-progress: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }}
 
 jobs:
+  debounce:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Conditionally wait for debounce (only on push to main)
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        # The sleep time is 20 min currently. It should be 1.5 times bigger than time at https://github.com/rolldown/rolldown/queue/main.
+        run: |
+          echo "Start debounce wait: $(date)"
+          sleep 1200
+          echo "End debounce wait: $(date)"
+
   build:
     if: >
       github.repository == 'rolldown/rolldown' &&
       (github.event_name == 'workflow_call' || github.event_name == 'workflow_dispatch' ||
+      (github.event_name == 'push' && github.ref == 'refs/heads/main') ||
       (github.event_name == 'pull_request' && contains(github.event.pull_request.labels.*.name, 'trigger: preview')))
     name: Build bindings and node packages
     uses: ./.github/workflows/reusable-release-build.yml
+    needs:
+      - debounce
     with:
       version: 'commit'
 
@@ -24,10 +46,12 @@ jobs:
     if: >
       github.repository == 'rolldown/rolldown' &&
       (github.event_name == 'workflow_call' || github.event_name == 'workflow_dispatch' ||
+      (github.event_name == 'push' && github.ref == 'refs/heads/main') ||
       (github.event_name == 'pull_request' && contains(github.event.pull_request.labels.*.name, 'trigger: preview')))
     name: Pkg Preview
     runs-on: ubuntu-latest
     needs:
+      - debounce
       - build
     steps:
       - uses: taiki-e/checkout-action@b13d20b7cda4e2f325ef19895128f7ff735c0b3d # v1.3.1
@@ -39,7 +63,7 @@ jobs:
         run: git reset --hard # fix pnpm install add new line for package.json
 
       - name: Download Binding Artifacts
-        uses: actions/download-artifact@95815c38cf2ff2164869cbab79da8d1f422bc89e # v4.2.1
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
         with:
           path: packages/rolldown/artifacts
 
@@ -51,25 +75,25 @@ jobs:
         shell: bash
 
       - name: Download Node Artifacts
-        uses: actions/download-artifact@95815c38cf2ff2164869cbab79da8d1f422bc89e # v4.2.1
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
         with:
           path: packages/rolldown/dist
           name: node-artifact
 
       - name: Download `@rolldown/browser` Artifacts
-        uses: actions/download-artifact@95815c38cf2ff2164869cbab79da8d1f422bc89e # v4.2.1
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
         with:
           path: packages/browser/dist
           name: browser-artifact
 
       - name: Download `@rolldown/debug` Artifacts
-        uses: actions/download-artifact@95815c38cf2ff2164869cbab79da8d1f422bc89e # v4.2.1
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
         with:
           path: packages/debug/dist
           name: debug-artifact
 
       - name: Download `rolldown-version.txt`
-        uses: actions/download-artifact@95815c38cf2ff2164869cbab79da8d1f422bc89e # v4.2.1
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
         with:
           name: rolldown-version
 

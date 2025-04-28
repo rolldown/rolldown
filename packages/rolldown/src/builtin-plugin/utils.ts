@@ -1,4 +1,7 @@
-import { BindingBuiltinPlugin, BindingCallableBuiltinPlugin } from '../binding';
+import {
+  type BindingBuiltinPlugin,
+  BindingCallableBuiltinPlugin,
+} from '../binding';
 
 import { BuiltinPlugin } from './constructors';
 

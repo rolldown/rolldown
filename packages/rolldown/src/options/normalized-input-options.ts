@@ -1,6 +1,6 @@
-import { InputOptions } from '..';
+import type { InputOptions } from '..';
 import { BindingNormalizedOptions } from '../binding';
-import type { LogHandler } from '../types/misc';
+import type { LogHandler } from '../log/log-handler';
 
 export interface NormalizedInputOptions {
   input: string[] | Record<string, string>;

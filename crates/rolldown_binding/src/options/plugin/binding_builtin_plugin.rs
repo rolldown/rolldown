@@ -430,9 +430,7 @@ impl From<BindingDynamicImportVarsPluginConfig> for DynamicImportVarsPlugin {
       include: value.include.map(bindingify_string_or_regex_array).unwrap_or_default(),
       exclude: value.exclude.map(bindingify_string_or_regex_array).unwrap_or_default(),
       resolver: value.resolver.map(|resolver| -> Arc<ResolverFn> {
-        Arc::new(move |id: &str, importer: &str| {
-          let id = id.to_string();
-          let importer = importer.to_string();
+        Arc::new(move |id: String, importer: String| {
           let resolver = Arc::clone(&resolver);
           Box::pin(async move {
             resolver.await_call((id, importer).into()).await.map_err(anyhow::Error::from)

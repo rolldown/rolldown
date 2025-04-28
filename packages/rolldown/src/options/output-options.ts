@@ -1,10 +1,10 @@
-import type { PreRenderedChunk } from '../binding';
-import { RolldownOutputPluginOption } from '../plugin';
-import {
+import type { BindingMinifyOptions, PreRenderedChunk } from '../binding';
+import type { RolldownOutputPluginOption } from '../plugin';
+import type {
   SourcemapIgnoreListOption,
   SourcemapPathTransformOption,
 } from '../types/misc';
-import { RenderedChunk } from '../types/rolldown-output';
+import type { RenderedChunk } from '../types/rolldown-output';
 import type { StringOrRegExp } from '../types/utils';
 
 export type ModuleFormat =
@@ -20,12 +20,6 @@ export type ModuleFormat =
 export type AddonFunction = (chunk: RenderedChunk) => string | Promise<string>;
 
 export type ChunkFileNamesFunction = (chunkInfo: PreRenderedChunk) => string;
-
-export interface MinifyOptions {
-  mangle: boolean;
-  compress: boolean;
-  removeWhitespace: boolean;
-}
 
 export interface PreRenderedAsset {
   names: string[];
@@ -51,6 +45,8 @@ export type ESTarget =
   | 'es2023'
   | 'es2024'
   | 'esnext';
+
+export type MinifyOptions = BindingMinifyOptions;
 
 export interface OutputOptions {
   dir?: string;

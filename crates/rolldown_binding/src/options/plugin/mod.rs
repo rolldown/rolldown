@@ -2,6 +2,7 @@ pub mod binding_plugin_context;
 mod binding_plugin_options;
 mod binding_transform_context;
 mod js_plugin;
+mod js_plugin_filter;
 pub mod types;
 
 pub use binding_plugin_options::*;

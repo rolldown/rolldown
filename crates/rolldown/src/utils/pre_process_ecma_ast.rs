@@ -5,8 +5,9 @@ use oxc::ast_visit::VisitMut;
 use oxc::diagnostics::Severity as OxcSeverity;
 use oxc::minifier::{CompressOptions, Compressor};
 use oxc::semantic::{SemanticBuilder, Stats};
-use oxc::transformer::{
-  InjectGlobalVariables, ReplaceGlobalDefines, ReplaceGlobalDefinesConfig, Transformer,
+use oxc::transformer::Transformer;
+use oxc::transformer_plugins::{
+  InjectGlobalVariables, ReplaceGlobalDefines, ReplaceGlobalDefinesConfig,
 };
 
 use rolldown_common::{ESTarget, NormalizedBundlerOptions};

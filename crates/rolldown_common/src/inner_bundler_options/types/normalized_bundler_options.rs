@@ -6,7 +6,8 @@ use std::path::PathBuf;
 use std::sync::Arc;
 
 use arcstr::ArcStr;
-use oxc::transformer::{InjectGlobalVariablesConfig, JsxOptions, TransformOptions};
+use oxc::transformer::{JsxOptions, TransformOptions};
+use oxc::transformer_plugins::InjectGlobalVariablesConfig;
 use rolldown_error::EventKindSwitcher;
 use rustc_hash::{FxHashMap, FxHashSet};
 

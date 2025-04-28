@@ -1,50 +1,105 @@
+use std::borrow::Cow;
+
+use cow_utils::CowUtils;
 use oxc::{
   ast::{
     AstBuilder, NONE,
     ast::{Argument, Expression, ImportOrExportKind, PropertyKind, Statement},
   },
   ast_visit::VisitMut,
-  span::{SPAN, Span},
+  span::{Atom, SPAN, Span},
   syntax::number::NumberBase,
 };
 
-use crate::DYNAMIC_IMPORT_HELPER;
+use super::DYNAMIC_IMPORT_HELPER;
+use super::dynamic_import_to_glob::{
+  has_special_query_param, should_ignore, template_literal_to_glob, to_valid_glob,
+};
 
-use super::dynamic_import_to_glob::to_glob_pattern;
-use super::parse_pattern::{DynamicImportPattern, DynamicImportRequest, parse_pattern};
+#[derive(Debug)]
+struct DynamicImportRequest<'a> {
+  pub query: &'a str,
+  pub import: bool,
+}
+
+#[derive(Default)]
+pub struct DynamicImportVarsVisitConfig {
+  pub current: usize,
+  pub need_helper: bool,
+  pub async_enabled: bool,
+  pub async_imports: Vec<Option<String>>,
+}
 
 pub struct DynamicImportVarsVisit<'ast> {
-  pub ast_builder: AstBuilder<'ast>,
+  pub config: DynamicImportVarsVisitConfig,
   pub source_text: &'ast str,
-  pub need_helper: bool,
+  pub ast_builder: AstBuilder<'ast>,
 }
 
 impl<'ast> VisitMut<'ast> for DynamicImportVarsVisit<'ast> {
   #[allow(clippy::too_many_lines)]
   fn visit_expression(&mut self, expr: &mut Expression<'ast>) {
-    if let Expression::ImportExpression(import_expr) = expr {
-      let Expression::TemplateLiteral(source) = &import_expr.source else { return };
-
-      // TODO: Support @/path via options.createResolver
-      // TODO: handle error
-      let pattern =
-        to_glob_pattern(&import_expr.source, source.span.source_text(self.source_text)).unwrap();
-
-      if let Some(pattern) = pattern {
-        let DynamicImportPattern { glob_params, user_pattern, raw_pattern: _ } =
-          parse_pattern(pattern.as_str());
-        self.need_helper = true;
-        *expr = self.call_helper(
-          import_expr.span,
-          user_pattern.as_str(),
-          std::mem::replace(
-            &mut import_expr.source,
-            self.ast_builder.expression_null_literal(SPAN),
-          ),
-          glob_params,
-        );
-      }
+    let Expression::ImportExpression(import_expr) = expr else { return };
+    let Expression::TemplateLiteral(source) = &mut import_expr.source else { return };
+    if source.is_no_substitution_template() {
+      return;
     }
+
+    let prev = self.config.current;
+    let (glob, is_async) = if prev < self.config.async_imports.len() {
+      self.config.current += 1;
+      if let Some(glob) = &self.config.async_imports[prev] {
+        (Cow::Borrowed(glob.as_str()), true)
+      } else {
+        return;
+      }
+    } else {
+      let glob = template_literal_to_glob(source).unwrap();
+      let byte = source.quasis[0].value.raw.as_bytes();
+      if self.config.async_enabled && byte.first().is_some_and(|&b| b != b'.' && b != b'/') {
+        self.config.current += 1;
+        self.config.async_imports.push(Some(glob.into_owned()));
+        return;
+      }
+      (glob, false)
+    };
+
+    if should_ignore(&glob) {
+      return;
+    }
+
+    let Some(index) = memchr::memchr(b'*', glob.as_bytes()) else { return };
+
+    let glob = glob.cow_replace("**", "*");
+    let source_text = source.span.source_text(self.source_text);
+
+    let (pattern, glob_params) = {
+      let index = glob.rfind('/').unwrap_or(0);
+      let index = glob[index..].find('?').map_or(glob.len(), |i| i + index);
+
+      let (glob, query) = glob.split_at(index);
+
+      let glob = to_valid_glob(glob, source_text).unwrap();
+      let glob_params = (!query.is_empty())
+        .then_some(DynamicImportRequest { query, import: has_special_query_param(query) });
+
+      (glob, glob_params)
+    };
+
+    self.config.need_helper = true;
+
+    if is_async && &glob[..index] != source.quasis[0].value.raw {
+      let glob = self.ast_builder.allocator.alloc_str(&glob[..index]);
+      source.quasis[0].value.raw = Atom::from(glob);
+      source.quasis[0].value.cooked = None;
+    }
+
+    *expr = self.call_helper(
+      import_expr.span,
+      &pattern,
+      std::mem::replace(&mut import_expr.source, self.ast_builder.expression_null_literal(SPAN)),
+      glob_params,
+    );
   }
 }
 

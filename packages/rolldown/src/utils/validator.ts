@@ -2,7 +2,7 @@ import { toJsonSchema } from '@valibot/to-json-schema';
 import colors from 'ansis';
 import * as v from 'valibot';
 import type { PreRenderedChunk } from '../binding';
-import { PreRenderedAsset } from '../options/output-options';
+import type { PreRenderedAsset } from '../options/output-options';
 import type {
   RolldownOutputPluginOption,
   RolldownPluginOption,

@@ -1,5 +1,4 @@
 // Ported from https://github.com/rollup/plugins/blob/944e7d3/packages/dynamic-import-vars/src/dynamic-import-to-glob.js
-use cow_utils::CowUtils;
 use oxc::{
   ast::ast::{Argument, BinaryExpression, CallExpression, Expression, TemplateLiteral},
   syntax::operator::BinaryOperator,
@@ -8,28 +7,22 @@ use std::{borrow::Cow, path::Path};
 
 const EXAMPLE_CODE: &str = "For example: import(`./foo/${bar}.js`).";
 const IGNORED_PROTOCOLS: [&str; 3] = ["data:", "http:", "https:"];
+const SPECIAL_PARAMS: [&str; 4] = ["raw", "sharedworker", "url", "worker"];
 
-pub fn to_glob_pattern<'a>(
-  expr: &'a Expression,
-  source: &'a str,
-) -> anyhow::Result<Option<String>> {
-  let glob = expr_to_glob(expr)?;
-  if should_ignore(&glob) {
-    return Ok(None);
+#[inline]
+pub fn has_special_query_param(query: &str) -> bool {
+  if query.len() < 2 {
+    return false;
   }
-  Ok(Some(to_valid_glob(&glob, source)?.into_owned()))
+  query[1..].split('&').any(|param| SPECIAL_PARAMS.contains(&param))
 }
 
+#[inline]
 pub fn should_ignore(glob: &str) -> bool {
-  if memchr::memchr(b'*', glob.as_bytes()).is_none() {
-    return true;
-  }
   IGNORED_PROTOCOLS.into_iter().any(|protocol| glob.starts_with(protocol))
 }
 
-pub fn to_valid_glob<'a>(glob: &'a str, source: &'a str) -> anyhow::Result<Cow<'a, str>> {
-  let glob = glob.cow_replace("**", "*");
-
+pub fn to_valid_glob<'a>(glob: &'a str, source: &str) -> anyhow::Result<Cow<'a, str>> {
   if glob.starts_with('*') {
     Err(anyhow::anyhow!(
       "Invalid import {source}. It cannot be statically analyzed. Variable dynamic imports must start with ./ and be limited to a specific directory. {EXAMPLE_CODE}"
@@ -58,13 +51,41 @@ pub fn to_valid_glob<'a>(glob: &'a str, source: &'a str) -> anyhow::Result<Cow<'
     ))?;
   }
 
-  if Path::new(glob.as_ref()).extension().is_none() {
+  if Path::new(glob).extension().is_none() {
     Err(anyhow::anyhow!(
       "Invalid import {source}. A file extension must be included in the static part of the import. {EXAMPLE_CODE}"
     ))?;
   }
 
-  Ok(glob)
+  Ok(if glob.contains(['?', '[', ']', '{', '}']) {
+    let mut escaped = String::with_capacity(glob.len());
+    for c in glob.chars() {
+      match c {
+        '?' | '[' | ']' | '{' | '}' => {
+          escaped.push('[');
+          escaped.push(c);
+          escaped.push(']');
+        }
+        c => {
+          escaped.push(c);
+        }
+      }
+    }
+    Cow::Owned(escaped)
+  } else {
+    Cow::Borrowed(glob)
+  })
+}
+
+pub fn template_literal_to_glob<'a>(node: &TemplateLiteral) -> anyhow::Result<Cow<'a, str>> {
+  let mut glob = String::new();
+  for (index, quasi) in node.quasis.iter().enumerate() {
+    glob += &sanitize_string(&quasi.value.raw)?;
+    if let Some(expr) = node.expressions.get(index) {
+      glob += &expr_to_glob(expr)?;
+    }
+  }
+  Ok(Cow::Owned(glob))
 }
 
 fn expr_to_glob<'a>(expr: &'a Expression) -> anyhow::Result<Cow<'a, str>> {
@@ -78,43 +99,10 @@ fn expr_to_glob<'a>(expr: &'a Expression) -> anyhow::Result<Cow<'a, str>> {
 }
 
 fn sanitize_string(s: &str) -> anyhow::Result<Cow<'_, str>> {
-  if s.is_empty() {
-    return Ok(Cow::Borrowed(s));
-  }
-  if s.contains(['*']) {
+  if s.contains('*') {
     Err(anyhow::anyhow!("A dynamic import cannot contain * characters."))?;
   }
-  Ok(if s.contains(['?', '[', ']', '{', '}']) {
-    let mut escaped = String::with_capacity(s.len());
-    for c in s.chars() {
-      match c {
-        // note that ! does not need escaping because it is only special
-        // inside brackets
-        '?' | '[' | ']' | '{' | '}' => {
-          escaped.push('[');
-          escaped.push(c);
-          escaped.push(']');
-        }
-        c => {
-          escaped.push(c);
-        }
-      }
-    }
-    Cow::Owned(escaped)
-  } else {
-    Cow::Borrowed(s)
-  })
-}
-
-pub fn template_literal_to_glob<'a>(node: &'a TemplateLiteral) -> anyhow::Result<Cow<'a, str>> {
-  let mut glob = String::new();
-  for (index, quasi) in node.quasis.iter().enumerate() {
-    glob += &sanitize_string(&quasi.value.raw)?;
-    if let Some(expr) = node.expressions.get(index) {
-      glob += &expr_to_glob(expr)?;
-    }
-  }
-  Ok(Cow::Owned(glob))
+  Ok(Cow::Borrowed(s))
 }
 
 fn call_expr_to_glob<'a>(node: &'a CallExpression) -> anyhow::Result<Cow<'a, str>> {
@@ -148,6 +136,7 @@ fn binary_expr_to_glob<'a>(node: &'a BinaryExpression) -> anyhow::Result<Cow<'a,
 
 #[cfg(test)]
 mod tests {
+  use cow_utils::CowUtils;
   use oxc::{allocator::Allocator, parser::Parser, span::SourceType};
 
   use super::*;
@@ -166,6 +155,15 @@ mod tests {
       let parser = Parser::new(&self.allocator, source_text, SourceType::default());
       parser.parse_expression().unwrap()
     }
+  }
+
+  fn to_glob_pattern<'a>(expr: &'a Expression, source: &'a str) -> anyhow::Result<Option<String>> {
+    let glob = expr_to_glob(expr)?;
+    let glob = glob.cow_replace("**", "*");
+    if should_ignore(&glob) || !glob.contains('*') {
+      return Ok(None);
+    }
+    Ok(Some(to_valid_glob(&glob, source)?.into_owned()))
   }
 
   #[test]

@@ -6,7 +6,7 @@ import type { ConfigExport, RolldownOutput } from '../..';
 import { rolldown } from '../../api/rolldown';
 import { watch as rolldownWatch } from '../../api/watch';
 import { arraify } from '../../utils/misc';
-import { NormalizedCliOptions } from '../arguments/normalize';
+import type { NormalizedCliOptions } from '../arguments/normalize';
 import { loadConfig } from '../load-config';
 import { logger } from '../logger';
 

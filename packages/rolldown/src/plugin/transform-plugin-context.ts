@@ -2,17 +2,16 @@ import type {
   BindingPluginContext,
   BindingTransformPluginContext,
 } from '../binding';
-import { normalizeLog } from '../log/log-handler';
+import {
+  type LoggingFunctionWithPosition,
+  type LogHandler,
+  normalizeLog,
+} from '../log/log-handler';
+import type { LogLevelOption, RollupError } from '../log/logging';
 import { augmentCodeLocation, error, logPluginError } from '../log/logs';
-import { OutputOptions } from '../options/output-options';
+import type { OutputOptions } from '../options/output-options';
 import type { Extends, TypeAssert } from '../types/assert';
-import type {
-  LoggingFunctionWithPosition,
-  LogHandler,
-  LogLevelOption,
-  RollupError,
-} from '../types/misc';
-import { SourceMap } from '../types/rolldown-output';
+import type { SourceMap } from '../types/rolldown-output';
 import type { Plugin } from './index';
 import { type PluginContext, PluginContextImpl } from './plugin-context';
 import { PluginContextData } from './plugin-context-data';

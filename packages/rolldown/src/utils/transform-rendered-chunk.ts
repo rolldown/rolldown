@@ -1,5 +1,5 @@
-import { BindingRenderedChunk } from '../binding';
-import { RenderedChunk } from '../types/rolldown-output';
+import type { BindingRenderedChunk } from '../binding';
+import type { RenderedChunk } from '../types/rolldown-output';
 import { transformToRenderedModule } from './transform-rendered-module';
 
 export function transformRenderedChunk(

@@ -1,4 +1,4 @@
-import { BindingSourcemap } from '../binding';
+import type { BindingSourcemap } from '../binding';
 import type { SourceMap } from './rolldown-output';
 
 export interface ExistingRawSourceMap {

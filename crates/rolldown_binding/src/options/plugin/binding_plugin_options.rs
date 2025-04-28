@@ -20,7 +20,9 @@ use super::{
   binding_transform_context::BindingTransformPluginContext,
   types::{
     binding_filter_expression::normalized_tokens,
-    binding_hook_filter::{BindingGeneralHookFilter, BindingTransformHookFilter},
+    binding_hook_filter::{
+      BindingGeneralHookFilter, BindingRenderChunkHookFilter, BindingTransformHookFilter,
+    },
     binding_hook_load_output::BindingHookLoadOutput,
     binding_hook_render_chunk_output::BindingHookRenderChunkOutput,
     binding_hook_resolve_id_extra_args::BindingHookResolveIdExtraArgs,
@@ -125,6 +127,7 @@ pub struct BindingPluginOptions {
     >,
   >,
   pub render_chunk_meta: Option<BindingPluginHookMeta>,
+  pub render_chunk_filter: Option<BindingRenderChunkHookFilter>,
 
   #[napi(
     ts_type = "(ctx: BindingPluginContext, chunk: BindingRenderedChunk) => MaybePromise<void | string>"

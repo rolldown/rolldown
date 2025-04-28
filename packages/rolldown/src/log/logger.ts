@@ -3,14 +3,12 @@ import { VERSION } from '..';
 import type { InputOptions } from '../options/input-options';
 import type { Plugin } from '../plugin';
 import { getSortedPlugins } from '../plugin/plugin-driver';
-import type {
-  LoggingFunction,
-  LogHandler,
-  RollupError,
-  RollupLog,
-  WarningHandlerWithDefault,
-} from '../types/misc';
-import { normalizeLog } from './log-handler';
+import {
+  type LoggingFunction,
+  type LogHandler,
+  normalizeLog,
+  type WarningHandlerWithDefault,
+} from './log-handler';
 import {
   LOG_LEVEL_DEBUG,
   LOG_LEVEL_ERROR,
@@ -19,6 +17,8 @@ import {
   type LogLevel,
   type LogLevelOption,
   logLevelPriority,
+  type RollupError,
+  type RollupLog,
 } from './logging';
 import { error } from './logs';
 

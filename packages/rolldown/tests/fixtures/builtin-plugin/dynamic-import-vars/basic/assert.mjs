@@ -1,6 +1,6 @@
 // @ts-nocheck
 import assert from 'node:assert'
-import { singleDir, multiDirs, noFile } from './dist/main'
+import { singleDir, multiDirs, noFile, withAlias } from './dist/main'
 
 singleDir('module-a-1').then((m) => {
   assert.strictEqual(m.default, 'a-1')
@@ -23,4 +23,8 @@ noFile('module-c-1').catch((e) => {
     e.message,
     'Unknown variable dynamic import: ./dir/c/module-c-1.js',
   )
+})
+
+withAlias('module-a-1').then((m) => {
+  assert.strictEqual(m.default, 'a-1')
 })

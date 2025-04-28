@@ -8,13 +8,13 @@ import type {
 } from '../binding';
 import { BuiltinPlugin } from '../builtin-plugin/constructors';
 import { bindingifyBuiltInPlugin } from '../builtin-plugin/utils';
-import { LogLevelOption } from '../log/logging';
+import type { LogHandler } from '../log/log-handler';
+import type { LogLevelOption } from '../log/logging';
 import type { HmrOptions, InputOptions } from '../options/input-options';
 import type { OutputOptions } from '../options/output-options';
 import type { RolldownPlugin } from '../plugin';
 import { bindingifyPlugin } from '../plugin/bindingify-plugin';
 import { PluginContextData } from '../plugin/plugin-context-data';
-import { LogHandler } from '../types/misc';
 import { arraify } from './misc';
 import { normalizedStringOrRegex } from './normalize-string-or-regex';
 import { bindingifySideEffects } from './transform-side-effects';

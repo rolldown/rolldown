@@ -50,6 +50,7 @@ impl From<TypeScriptOptions> for oxc::transformer::TypeScriptOptions {
         .unwrap_or(ops.only_remove_type_imports),
       allow_namespaces: options.allow_namespaces.unwrap_or(ops.allow_namespaces),
       allow_declare_fields: options.allow_declare_fields.unwrap_or(ops.allow_declare_fields),
+      remove_class_fields_without_initializer: true,
       optimize_const_enums: false,
       rewrite_import_extensions: options.rewrite_import_extensions.and_then(|value| match value {
         Either::Left(v) => {

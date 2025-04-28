@@ -1,4 +1,7 @@
+// @Cspell:ignore tokenss
+use itertools::Itertools;
 use napi::bindgen_prelude::{Either, FnArgs};
+use rolldown_utils::filter_expression::{self, FilterExprKind};
 use std::fmt::Debug;
 
 use crate::types::{
@@ -10,11 +13,13 @@ use crate::types::{
 };
 
 use super::{
+  FilterExprCacheKey,
   binding_builtin_plugin::BindingBuiltinPlugin,
   binding_plugin_context::BindingPluginContext,
   binding_plugin_hook_meta::BindingPluginHookMeta,
   binding_transform_context::BindingTransformPluginContext,
   types::{
+    binding_filter_expression::normalized_tokens,
     binding_hook_filter::{
       BindingGeneralHookFilter, BindingRenderChunkHookFilter, BindingTransformHookFilter,
     },
@@ -211,6 +216,41 @@ pub struct BindingPluginOptions {
 impl Debug for BindingPluginOptions {
   fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
     f.debug_struct("BindingPluginOptions").field("name", &self.name).finish_non_exhaustive()
+  }
+}
+
+impl BindingPluginOptions {
+  pub fn pre_compile_filter_expr(&self) -> Vec<(FilterExprCacheKey, Vec<FilterExprKind>)> {
+    let mut filter_expr_kinds = vec![];
+
+    if let Some(tokenss) = self.resolve_id_filter.as_ref().and_then(|item| item.custom.as_ref()) {
+      let filter_kind = tokenss
+        .clone()
+        .into_iter()
+        .map(|tokens| filter_expression::parse(normalized_tokens(tokens)))
+        .collect_vec();
+      filter_expr_kinds.push((FilterExprCacheKey::ResolveId, filter_kind));
+    }
+
+    if let Some(filter) = self.load_filter.as_ref().and_then(|item| item.custom.as_ref()) {
+      let filter_kind = filter
+        .clone()
+        .into_iter()
+        .map(|tokens| filter_expression::parse(normalized_tokens(tokens)))
+        .collect_vec();
+      filter_expr_kinds.push((FilterExprCacheKey::Load, filter_kind));
+    }
+
+    if let Some(filter) = self.transform_filter.as_ref().and_then(|item| item.custom.as_ref()) {
+      let filter_kind = filter
+        .clone()
+        .into_iter()
+        .map(|tokens| filter_expression::parse(normalized_tokens(tokens)))
+        .collect_vec();
+      filter_expr_kinds.push((FilterExprCacheKey::Transform, filter_kind));
+    }
+
+    filter_expr_kinds
   }
 }
 

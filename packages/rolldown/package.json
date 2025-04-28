@@ -38,7 +38,7 @@
       "require": "./dist/experimental-index.cjs",
       "import": "./dist/experimental-index.mjs"
     },
-    "./filterExpr": {
+    "./filter": {
       "require": "./dist/filter-expression-index.cjs",
       "import": "./dist/filter-expression-index.mjs"
     },

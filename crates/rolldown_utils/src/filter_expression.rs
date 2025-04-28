@@ -1,5 +1,6 @@
 use crate::pattern_filter::{StringOrRegex, StringOrRegexMatchKind};
 
+#[derive(Debug)]
 pub enum FilterExpr {
   Or(Box<FilterExpr>, Box<FilterExpr>),
   And(Box<FilterExpr>, Box<FilterExpr>),
@@ -9,7 +10,8 @@ pub enum FilterExpr {
   ModuleType(String),
 }
 
-pub enum FilterKind {
+#[derive(Debug)]
+pub enum FilterExprKind {
   Include(FilterExpr),
   Exclude(FilterExpr),
 }
@@ -48,27 +50,30 @@ pub fn filter_expr_interpreter(
 }
 
 pub fn filter_exprs_interpreter(
-  exprs: &[FilterKind],
+  exprs: &[FilterExprKind],
   id: Option<&str>,
   code: Option<&str>,
+  // TODO: Use ModuleType instead
   module_type: Option<&str>,
   cwd: &str,
 ) -> bool {
+  let mut include_count = 0;
   for kind in exprs {
     match kind {
-      FilterKind::Include(filter_expr) => {
+      FilterExprKind::Include(filter_expr) => {
+        include_count += 1;
         if filter_expr_interpreter(filter_expr, id, code, module_type, cwd) {
           return true;
         }
       }
-      FilterKind::Exclude(filter_expr) => {
+      FilterExprKind::Exclude(filter_expr) => {
         if filter_expr_interpreter(filter_expr, id, code, module_type, cwd) {
           return false;
         }
       }
     }
   }
-  false
+  include_count == 0
 }
 
 pub enum Token {
@@ -82,7 +87,7 @@ pub enum Token {
   Exclude,
 }
 
-pub fn parse(mut tokens: Vec<Token>) -> FilterKind {
+pub fn parse(mut tokens: Vec<Token>) -> FilterExprKind {
   fn rec(tokens: &mut Vec<Token>) -> Option<FilterExpr> {
     let token = tokens.pop()?;
     match token {
@@ -114,11 +119,11 @@ pub fn parse(mut tokens: Vec<Token>) -> FilterKind {
   match tokens.pop() {
     Some(Token::Include) => {
       let inner = rec(&mut tokens).expect("Failed to parse expression");
-      FilterKind::Include(inner)
+      FilterExprKind::Include(inner)
     }
     Some(Token::Exclude) => {
       let inner = rec(&mut tokens).expect("Failed to parse expression");
-      FilterKind::Exclude(inner)
+      FilterExprKind::Exclude(inner)
     }
 
     _ => unreachable!("Expression should start with Include or Exclude"),

@@ -8,7 +8,10 @@ use crate::types::{
 use napi::bindgen_prelude::FnArgs;
 use rolldown_common::NormalModule;
 use rolldown_plugin::{__inner::SharedPluginable, HookUsage, Plugin, typedmap::TypedMapKey};
-use rolldown_utils::pattern_filter::{self};
+use rolldown_utils::{
+  filter_expression::{FilterExprKind, filter_exprs_interpreter},
+  pattern_filter::{self},
+};
 use std::{borrow::Cow, ops::Deref, sync::Arc};
 use tracing::{Instrument, debug_span};
 
@@ -29,10 +32,18 @@ pub struct JsPluginContextResolveCustomArgId;
 impl TypedMapKey for JsPluginContextResolveCustomArgId {
   type Value = u32;
 }
+#[derive(Debug, PartialEq, Eq)]
+pub enum FilterExprCacheKey {
+  ResolveId,
+  Transform,
+  Load,
+}
 
 #[derive(Debug)]
 pub struct JsPlugin {
   pub(crate) inner: BindingPluginOptions,
+  /// Since there at most three key in the cache, use vec should always faster than hashmap
+  pub(crate) filter_expr_cache: Vec<(FilterExprCacheKey, Vec<FilterExprKind>)>,
 }
 
 impl Deref for JsPlugin {
@@ -46,11 +57,13 @@ impl Deref for JsPlugin {
 impl JsPlugin {
   #[cfg_attr(target_family = "wasm", allow(unused))]
   pub(super) fn new(inner: BindingPluginOptions) -> Self {
-    Self { inner }
+    let filter_expr_cache = inner.pre_compile_filter_expr();
+    Self { inner, filter_expr_cache }
   }
 
   pub(crate) fn new_shared(inner: BindingPluginOptions) -> SharedPluginable {
-    Arc::new(Self { inner })
+    let filter_expr_cache = inner.pre_compile_filter_expr();
+    Arc::new(Self { inner, filter_expr_cache })
   }
 }
 
@@ -86,8 +99,19 @@ impl Plugin for JsPlugin {
     args: &rolldown_plugin::HookResolveIdArgs<'_>,
   ) -> rolldown_plugin::HookResolveIdReturn {
     let Some(cb) = &self.resolve_id else { return Ok(None) };
-
-    if let Some(resolve_id_filter) = &self.inner.resolve_id_filter {
+    if let Some((_, v)) =
+      self.filter_expr_cache.iter().find(|(key, _)| key == &FilterExprCacheKey::ResolveId)
+    {
+      if !filter_exprs_interpreter(
+        v,
+        Some(args.specifier),
+        None,
+        None,
+        ctx.cwd().to_string_lossy().as_ref(),
+      ) {
+        return Ok(None);
+      }
+    } else if let Some(resolve_id_filter) = &self.inner.resolve_id_filter {
       let matched = pattern_filter::filter(
         resolve_id_filter.exclude.as_deref(),
         resolve_id_filter.include.as_deref(),
@@ -162,7 +186,19 @@ impl Plugin for JsPlugin {
   ) -> rolldown_plugin::HookLoadReturn {
     let Some(cb) = &self.load else { return Ok(None) };
 
-    if let Some(load_filter) = &self.load_filter {
+    if let Some((_, v)) =
+      self.filter_expr_cache.iter().find(|(key, _)| key == &FilterExprCacheKey::Load)
+    {
+      if !filter_exprs_interpreter(
+        v,
+        Some(args.id),
+        None,
+        None,
+        ctx.cwd().to_string_lossy().as_ref(),
+      ) {
+        return Ok(None);
+      }
+    } else if let Some(load_filter) = &self.load_filter {
       let matched = pattern_filter::filter(
         load_filter.exclude.as_deref(),
         load_filter.include.as_deref(),
@@ -194,7 +230,20 @@ impl Plugin for JsPlugin {
   ) -> rolldown_plugin::HookTransformReturn {
     let Some(cb) = &self.transform else { return Ok(None) };
 
-    if !filter_transform(
+    // Custom field have higher priority, it will override the default filter
+    if let Some((_, v)) =
+      self.filter_expr_cache.iter().find(|(key, _)| key == &FilterExprCacheKey::Transform)
+    {
+      if !filter_exprs_interpreter(
+        v,
+        Some(args.id),
+        Some(args.code),
+        Some(args.module_type.to_string().as_ref()),
+        ctx.inner.cwd().to_string_lossy().as_ref(),
+      ) {
+        return Ok(None);
+      }
+    } else if !filter_transform(
       self.transform_filter.as_ref(),
       args.id,
       ctx.inner.cwd(),

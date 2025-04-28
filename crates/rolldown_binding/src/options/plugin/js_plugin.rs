@@ -37,6 +37,7 @@ pub enum FilterExprCacheKey {
   ResolveId,
   Transform,
   Load,
+  RenderChunk,
 }
 
 #[derive(Debug)]
@@ -441,7 +442,19 @@ impl Plugin for JsPlugin {
   ) -> rolldown_plugin::HookRenderChunkReturn {
     let Some(cb) = &self.render_chunk else { return Ok(None) };
 
-    if !filter_render_chunk(&args.code, self.render_chunk_filter.as_ref()) {
+    if let Some((_, v)) =
+      self.filter_expr_cache.iter().find(|(key, _)| key == &FilterExprCacheKey::RenderChunk)
+    {
+      if !filter_exprs_interpreter(
+        v,
+        None,
+        Some(&args.code),
+        None,
+        ctx.cwd().to_string_lossy().as_ref(),
+      ) {
+        return Ok(None);
+      }
+    } else if !filter_render_chunk(&args.code, self.render_chunk_filter.as_ref()) {
       return Ok(None);
     }
 

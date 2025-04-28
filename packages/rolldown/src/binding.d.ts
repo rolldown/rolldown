@@ -674,6 +674,7 @@ export interface BindingRemote {
 
 export interface BindingRenderChunkHookFilter {
   code?: BindingGeneralHookFilter
+  custom?: Array<Array<BindingFilterToken>>
 }
 
 export interface BindingReplacePluginConfig {

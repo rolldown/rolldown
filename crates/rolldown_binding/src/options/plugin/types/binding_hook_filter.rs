@@ -27,4 +27,5 @@ pub struct BindingTransformHookFilter {
 #[derive(Default, Clone, Debug)]
 pub struct BindingRenderChunkHookFilter {
   pub code: Option<BindingGeneralHookFilter>,
+  pub custom: Option<Vec<Vec<BindingFilterToken>>>,
 }

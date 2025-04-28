@@ -1,4 +1,7 @@
-import type { BindingPluginOptions } from '../binding';
+import type {
+  BindingPluginOptions,
+  BindingRenderChunkHookFilter,
+} from '../binding';
 import { NormalizedInputOptionsImpl } from '../options/normalized-input-options';
 import { NormalizedOutputOptionsImpl } from '../options/normalized-output-options';
 import { bindingifySourcemap } from '../types/sourcemap';
@@ -10,6 +13,7 @@ import {
   collectChangedBundle,
   transformToOutputBundle,
 } from '../utils/transform-to-rollup-output';
+import { bindingifyRenderChunkFilter } from './bindingify-hook-filter';
 import type { BindingifyPluginArgs } from './bindingify-plugin';
 import {
   bindingifyPluginHookMeta,
@@ -51,12 +55,15 @@ export function bindingifyRenderStart(
 }
 export function bindingifyRenderChunk(
   args: BindingifyPluginArgs,
-): PluginHookWithBindingExt<BindingPluginOptions['renderChunk']> {
+): PluginHookWithBindingExt<
+  BindingPluginOptions['renderChunk'],
+  BindingRenderChunkHookFilter | undefined
+> {
   const hook = args.plugin.renderChunk;
   if (!hook) {
     return {};
   }
-  const { handler, meta } = normalizeHook(hook);
+  const { handler, meta, options } = normalizeHook(hook);
 
   return {
     plugin: async (ctx, code, chunk, opts, meta) => {
@@ -109,6 +116,7 @@ export function bindingifyRenderChunk(
       };
     },
     meta: bindingifyPluginHookMeta(meta),
+    filter: bindingifyRenderChunkFilter(options.filter),
   };
 }
 

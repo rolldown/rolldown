@@ -5,7 +5,6 @@ use crate::types::{
   binding_rendered_chunk::BindingRenderedChunk,
   js_callback::MaybeAsyncJsCallbackExt,
 };
-use anyhow::Ok;
 use napi::bindgen_prelude::FnArgs;
 use rolldown_common::NormalModule;
 use rolldown_plugin::{__inner::SharedPluginable, HookUsage, Plugin, typedmap::TypedMapKey};
@@ -16,7 +15,7 @@ use tracing::{Instrument, debug_span};
 use super::{
   BindingPluginOptions,
   binding_transform_context::BindingTransformPluginContext,
-  js_plugin_filter::filter_transform,
+  js_plugin_filter::{filter_render_chunk, filter_transform},
   types::{
     binding_hook_resolve_id_extra_args::BindingHookResolveIdExtraArgs,
     binding_plugin_transform_extra_args::BindingTransformHookExtraArgs,
@@ -391,25 +390,26 @@ impl Plugin for JsPlugin {
     ctx: &rolldown_plugin::PluginContext,
     args: &rolldown_plugin::HookRenderChunkArgs<'_>,
   ) -> rolldown_plugin::HookRenderChunkReturn {
-    match &self.render_chunk {
-      Some(cb) => Ok(
-        cb.await_call(
-          (
-            ctx.clone().into(),
-            args.code.to_string(),
-            BindingRenderedChunk::new(Arc::clone(&args.chunk)),
-            BindingNormalizedOptions::new(Arc::clone(args.options)),
-            BindingRenderedChunkMeta::new(Arc::clone(&args.chunks)),
-          )
-            .into(),
-        )
-        .instrument(debug_span!("render_chunk_hook", plugin_name = self.name))
-        .await?
-        .map(TryInto::try_into)
-        .transpose()?,
-      ),
-      _ => Ok(None),
+    let Some(cb) = &self.render_chunk else { return Ok(None) };
+
+    if !filter_render_chunk(&args.code, self.render_chunk_filter.as_ref()) {
+      return Ok(None);
     }
+
+    cb.await_call(
+      (
+        ctx.clone().into(),
+        args.code.to_string(),
+        BindingRenderedChunk::new(Arc::clone(&args.chunk)),
+        BindingNormalizedOptions::new(Arc::clone(args.options)),
+        BindingRenderedChunkMeta::new(Arc::clone(&args.chunks)),
+      )
+        .into(),
+    )
+    .instrument(debug_span!("render_chunk_hook", plugin_name = self.name))
+    .await?
+    .map(TryInto::try_into)
+    .transpose()
   }
 
   fn render_chunk_meta(&self) -> Option<rolldown_plugin::PluginHookMeta> {

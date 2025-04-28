@@ -276,6 +276,7 @@ export type HookFilterExtension<K extends keyof FunctionPluginHooks> = K extends
   'transform' ? { filter?: HookFilter }
   : K extends 'load' ? { filter?: Pick<HookFilter, 'id'> }
   : K extends 'resolveId' ? { filter?: { id?: StringFilter<RegExp> } }
+  : K extends 'renderChunk' ? { filter?: Pick<HookFilter, 'code'> }
   : {};
 
 export type PluginHooks = {

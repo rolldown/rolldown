@@ -98,7 +98,11 @@ export function bindingifyPlugin(
     filter: loadFilter,
   } = bindingifyLoad(args);
 
-  const { plugin: renderChunk, meta: renderChunkMeta } = bindingifyRenderChunk(
+  const {
+    plugin: renderChunk,
+    meta: renderChunkMeta,
+    filter: renderChunkFilter,
+  } = bindingifyRenderChunk(
     args,
   );
 
@@ -162,6 +166,7 @@ export function bindingifyPlugin(
     loadFilter,
     renderChunk,
     renderChunkMeta,
+    renderChunkFilter,
     augmentChunkHash,
     augmentChunkHashMeta,
     renderStart,

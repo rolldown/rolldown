@@ -1,5 +1,6 @@
 import type {
   BindingGeneralHookFilter,
+  BindingRenderChunkHookFilter,
   BindingTransformHookFilter,
 } from '../binding.d';
 import { arraify } from '../utils/misc';
@@ -56,4 +57,16 @@ export function bindingifyTransformFilter(
     code: code ? bindingifyStringFilter(code) : undefined,
     moduleType: moduleTypeRet,
   };
+}
+
+export function bindingifyRenderChunkFilter(
+  filterOption?: HookFilterExtension<'renderChunk'>['filter'],
+): BindingRenderChunkHookFilter | undefined {
+  if (filterOption) {
+    const { code } = filterOption;
+
+    return {
+      code: code ? bindingifyStringFilter(code) : undefined,
+    };
+  }
 }

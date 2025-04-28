@@ -111,6 +111,7 @@ module.exports.BindingPluginOrder = __napiModule.exports.BindingPluginOrder
 module.exports.ExportExportNameKind = __napiModule.exports.ExportExportNameKind
 module.exports.ExportImportNameKind = __napiModule.exports.ExportImportNameKind
 module.exports.ExportLocalNameKind = __napiModule.exports.ExportLocalNameKind
+module.exports.FilterTokenKind = __napiModule.exports.FilterTokenKind
 module.exports.getBufferOffset = __napiModule.exports.getBufferOffset
 module.exports.HelperMode = __napiModule.exports.HelperMode
 module.exports.ImportNameKind = __napiModule.exports.ImportNameKind

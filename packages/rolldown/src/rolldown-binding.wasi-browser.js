@@ -86,6 +86,7 @@ export const BindingPluginOrder = __napiModule.exports.BindingPluginOrder
 export const ExportExportNameKind = __napiModule.exports.ExportExportNameKind
 export const ExportImportNameKind = __napiModule.exports.ExportImportNameKind
 export const ExportLocalNameKind = __napiModule.exports.ExportLocalNameKind
+export const FilterTokenKind = __napiModule.exports.FilterTokenKind
 export const getBufferOffset = __napiModule.exports.getBufferOffset
 export const HelperMode = __napiModule.exports.HelperMode
 export const ImportNameKind = __napiModule.exports.ImportNameKind

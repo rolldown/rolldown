@@ -11,6 +11,22 @@ pub enum StringOrRegex {
   Regex(HybridRegex),
 }
 
+impl StringOrRegex {
+  pub fn expect_string(self) -> String {
+    match self {
+      StringOrRegex::String(s) => s,
+      StringOrRegex::Regex(_) => unreachable!("Expected a string, but got {:?}", self),
+    }
+  }
+
+  pub fn expect_regex(self) -> HybridRegex {
+    match self {
+      StringOrRegex::Regex(s) => s,
+      StringOrRegex::String(_) => unreachable!("Expected a regex, but got {:?}", self),
+    }
+  }
+}
+
 impl AsRef<StringOrRegex> for StringOrRegex {
   fn as_ref(&self) -> &StringOrRegex {
     self

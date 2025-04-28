@@ -1,8 +1,8 @@
 import type { InputOptions, OutputOptions, RolldownPlugin } from '..';
 import { BuiltinPlugin } from '../builtin-plugin/constructors';
+import type { LogHandler } from '../log/log-handler';
 import { getLogger, getOnLog } from '../log/logger';
 import { LOG_LEVEL_INFO, type LogLevelOption } from '../log/logging';
-import type { LogHandler } from '../types/misc';
 import { normalizeHook } from '../utils/normalize-hook';
 import { normalizePluginOption } from '../utils/normalize-plugin-option';
 import type { Plugin } from './';

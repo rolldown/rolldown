@@ -1,6 +1,6 @@
-import type { RollupLog } from '../types/misc';
 import { getCodeFrame } from '../utils/code-frame';
 import { locate } from './locate-character';
+import type { RollupLog } from './logging';
 
 const INVALID_LOG_POSITION = 'INVALID_LOG_POSITION',
   PLUGIN_ERROR = 'PLUGIN_ERROR',

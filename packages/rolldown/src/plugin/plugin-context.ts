@@ -1,7 +1,8 @@
 import type { Program } from '@oxc-project/types';
 import type { BindingPluginContext, ParserOptions } from '../binding';
 import { SYMBOL_FOR_RESOLVE_CALLER_THAT_SKIP_SELF } from '../constants/plugin-context';
-import { LOG_LEVEL_WARN } from '../log/logging';
+import type { LogHandler } from '../log/log-handler';
+import { LOG_LEVEL_WARN, type LogLevelOption } from '../log/logging';
 import { logCycleLoading } from '../log/logs';
 import type { OutputOptions } from '../options/output-options';
 import { parseAst } from '../parse-ast-index';
@@ -10,7 +11,6 @@ import {
   MinimalPluginContextImpl,
 } from '../plugin/minimal-plugin-context';
 import type { Extends, TypeAssert } from '../types/assert';
-import type { LogHandler, LogLevelOption } from '../types/misc';
 import type { ModuleInfo } from '../types/module-info';
 import type { PartialNull } from '../types/utils';
 import { type AssetSource, bindingAssetSource } from '../utils/asset-source';

@@ -7,14 +7,14 @@ use rolldown_utils::filter_expression::Token;
 use super::binding_js_or_regex::BindingStringOrRegex;
 
 #[napi(object, object_to_js = false)]
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct BindingFilterToken {
   pub kind: FilterTokenKind,
   pub value: Option<BindingStringOrRegex>,
 }
 
 #[napi]
-#[derive(Debug)]
+#[derive(Debug, Clone, Copy)]
 pub enum FilterTokenKind {
   Id,
   Code,

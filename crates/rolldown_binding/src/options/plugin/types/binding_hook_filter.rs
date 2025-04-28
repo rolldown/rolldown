@@ -4,7 +4,7 @@ use super::{
 };
 
 #[napi_derive::napi(object, object_to_js = false)]
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct BindingGeneralHookFilter {
   pub include: Option<Vec<BindingStringOrRegex>>,
   pub exclude: Option<Vec<BindingStringOrRegex>>,

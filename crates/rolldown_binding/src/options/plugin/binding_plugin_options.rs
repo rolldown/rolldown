@@ -13,7 +13,6 @@ use crate::types::{
 };
 
 use super::{
-  FilterExprCacheKey,
   binding_builtin_plugin::BindingBuiltinPlugin,
   binding_plugin_context::BindingPluginContext,
   binding_plugin_hook_meta::BindingPluginHookMeta,
@@ -219,17 +218,23 @@ impl Debug for BindingPluginOptions {
   }
 }
 
+#[derive(Default, Debug)]
+pub struct FilterExprCache {
+  pub resolve_id: Option<Vec<FilterExprKind>>,
+  pub load: Option<Vec<FilterExprKind>>,
+  pub transform: Option<Vec<FilterExprKind>>,
+  pub render_chunk: Option<Vec<FilterExprKind>>,
+}
 impl BindingPluginOptions {
-  pub fn pre_compile_filter_expr(&self) -> Vec<(FilterExprCacheKey, Vec<FilterExprKind>)> {
-    let mut filter_expr_kinds = vec![];
-
+  pub fn pre_compile_filter_expr(&self) -> FilterExprCache {
+    let mut cache = FilterExprCache::default();
     if let Some(tokenss) = self.resolve_id_filter.as_ref().and_then(|item| item.custom.as_ref()) {
       let filter_kind = tokenss
         .clone()
         .into_iter()
         .map(|tokens| filter_expression::parse(normalized_tokens(tokens)))
         .collect_vec();
-      filter_expr_kinds.push((FilterExprCacheKey::ResolveId, filter_kind));
+      cache.resolve_id = Some(filter_kind);
     }
 
     if let Some(filter) = self.load_filter.as_ref().and_then(|item| item.custom.as_ref()) {
@@ -238,7 +243,7 @@ impl BindingPluginOptions {
         .into_iter()
         .map(|tokens| filter_expression::parse(normalized_tokens(tokens)))
         .collect_vec();
-      filter_expr_kinds.push((FilterExprCacheKey::Load, filter_kind));
+      cache.load = Some(filter_kind);
     }
 
     if let Some(filter) = self.transform_filter.as_ref().and_then(|item| item.custom.as_ref()) {
@@ -247,7 +252,7 @@ impl BindingPluginOptions {
         .into_iter()
         .map(|tokens| filter_expression::parse(normalized_tokens(tokens)))
         .collect_vec();
-      filter_expr_kinds.push((FilterExprCacheKey::Transform, filter_kind));
+      cache.transform = Some(filter_kind);
     }
 
     if let Some(filter) = self.render_chunk_filter.as_ref().and_then(|item| item.custom.as_ref()) {
@@ -256,10 +261,10 @@ impl BindingPluginOptions {
         .into_iter()
         .map(|tokens| filter_expression::parse(normalized_tokens(tokens)))
         .collect_vec();
-      filter_expr_kinds.push((FilterExprCacheKey::RenderChunk, filter_kind));
+      cache.render_chunk = Some(filter_kind);
     }
 
-    filter_expr_kinds
+    cache
   }
 }
 

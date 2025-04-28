@@ -1,8 +1,8 @@
 import fs from 'node:fs';
-import { readdir } from 'node:fs/promises';
 import path from 'node:path';
 import { cwd } from 'node:process';
 import { pathToFileURL } from 'node:url';
+import { loadConfig as loadUnConfig } from 'unconfig';
 import { rolldown } from '../api/rolldown';
 import type { ConfigExport } from '../types/config-export';
 import type { OutputChunk } from '../types/rolldown-output';
@@ -75,15 +75,6 @@ const SUPPORTED_CONFIG_FORMATS = [
 
 const DEFAULT_CONFIG_BASE = 'rolldown.config';
 
-async function findConfigFileNameInCwd(): Promise<string> {
-  const filesInWorkingDirectory = new Set(await readdir(cwd()));
-  for (const extension of SUPPORTED_CONFIG_FORMATS) {
-    const fileName = `${DEFAULT_CONFIG_BASE}${extension}`;
-    if (filesInWorkingDirectory.has(fileName)) return fileName;
-  }
-  throw new Error('No `rolldown.config` configuration file found.');
-}
-
 export async function loadTsConfig(configFile: string): Promise<ConfigExport> {
   const isEsm = isFilePathESM(configFile);
   const file = await bundleTsConfig(configFile, isEsm);
@@ -136,27 +127,44 @@ function tryStatSync(file: string): fs.Stats | undefined {
   }
 }
 
-export async function loadConfig(configPath: string): Promise<ConfigExport> {
-  const ext = path.extname(
-    configPath = configPath || (await findConfigFileNameInCwd()),
-  );
+async function parseConfig(configPath: string): Promise<ConfigExport> {
+  const ext = path.extname(configPath);
 
+  if (
+    SUPPORTED_JS_CONFIG_FORMATS.includes(ext) ||
+    (process.env.NODE_OPTIONS?.includes('--import=tsx') &&
+      SUPPORTED_TS_CONFIG_FORMATS.includes(ext))
+  ) {
+    return (await import(pathToFileURL(configPath).href)).default;
+  } else if (SUPPORTED_TS_CONFIG_FORMATS.includes(ext)) {
+    const rawConfigPath = path.resolve(configPath);
+    return await loadTsConfig(rawConfigPath);
+  } else {
+    throw new Error(
+      `Unsupported config format. Expected: \`${
+        SUPPORTED_CONFIG_FORMATS.join(',')
+      }\` but got \`${ext}\``,
+    );
+  }
+}
+
+export async function loadConfig(configPath: string): Promise<ConfigExport> {
   try {
-    if (
-      SUPPORTED_JS_CONFIG_FORMATS.includes(ext) ||
-      (process.env.NODE_OPTIONS?.includes('--import=tsx') &&
-        SUPPORTED_TS_CONFIG_FORMATS.includes(ext))
-    ) {
-      return (await import(pathToFileURL(configPath).href)).default;
-    } else if (SUPPORTED_TS_CONFIG_FORMATS.includes(ext)) {
-      const rawConfigPath = path.resolve(configPath);
-      return await loadTsConfig(rawConfigPath);
+    if (configPath) {
+      return parseConfig(configPath);
     } else {
-      throw new Error(
-        `Unsupported config format. Expected: \`${
-          SUPPORTED_CONFIG_FORMATS.join(',')
-        }\` but got \`${ext}\``,
-      );
+      const { config } = await loadUnConfig.async<ConfigExport>({
+        sources: [
+          {
+            files: DEFAULT_CONFIG_BASE,
+            extensions: SUPPORTED_CONFIG_FORMATS,
+            parser: parseConfig,
+          },
+        ],
+        cwd: cwd(),
+        defaults: {},
+      });
+      return config;
     }
   } catch (err) {
     throw new Error('Error happened while loading config.', { cause: err });

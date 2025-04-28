@@ -39,7 +39,8 @@
     "lint-staged": "^15.2.5",
     "oxlint": "^0.16.0",
     "rolldown": "workspace:*",
-    "typescript": "^5.6.3"
+    "typescript": "^5.6.3",
+    "unconfig": "^7.3.2"
   },
   "lint-staged": {
     "*.@(js|ts|tsx|yml|yaml|md|json|html|toml)": [

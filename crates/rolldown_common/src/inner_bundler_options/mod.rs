@@ -8,6 +8,7 @@ use types::inject_import::InjectImport;
 use types::invalidate_js_side_cache::InvalidateJsSideCache;
 use types::jsx::Jsx;
 use types::make_absolute_externals_relative::MakeAbsoluteExternalsRelative;
+use types::mark_module_loaded::MarkModuleLoaded;
 use types::minify_options::RawMinifyOptions;
 use types::output_option::{AssetFilenamesOutputOption, GlobalsOutputOption};
 use types::sanitize_filename::SanitizeFilename;
@@ -197,6 +198,12 @@ pub struct BundlerOptions {
     schemars(skip)
   )]
   pub invalidate_js_side_cache: Option<InvalidateJsSideCache>,
+  #[cfg_attr(
+    feature = "deserialize_bundler_options",
+    serde(default, skip_deserializing),
+    schemars(skip)
+  )]
+  pub mark_module_loaded: Option<MarkModuleLoaded>,
 }
 
 impl BundlerOptions {

@@ -34,6 +34,7 @@ pub mod bundler_options {
       is_external::IsExternal,
       jsx::{Jsx, NormalizedJsxOptions},
       make_absolute_externals_relative::MakeAbsoluteExternalsRelative,
+      mark_module_loaded::MarkModuleLoaded,
       minify_options::{MinifyOptions, MinifyOptionsObject, RawMinifyOptions},
       module_type::ModuleType,
       normalized_bundler_options::{NormalizedBundlerOptions, SharedNormalizedBundlerOptions},

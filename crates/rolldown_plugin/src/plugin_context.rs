@@ -1,8 +1,6 @@
 use std::{
-  future::Future,
   ops::Deref,
   path::PathBuf,
-  pin::Pin,
   sync::{Arc, Weak},
 };
 
@@ -44,7 +42,6 @@ impl PluginContext {
       options: Arc::clone(&self.options),
       watch_files: Arc::clone(&self.watch_files),
       modules: Arc::clone(&self.modules),
-      context_load_modules: Arc::clone(&self.context_load_modules),
       tx: Arc::clone(&self.tx),
     }))
   }
@@ -66,22 +63,6 @@ impl Deref for PluginContext {
   }
 }
 
-type LoadCallbackFn = dyn Fn(bool) -> Pin<Box<(dyn Future<Output = anyhow::Result<()>> + Send + 'static)>>
-  + Send
-  + Sync
-  + 'static;
-
-#[derive(Debug)]
-pub struct LoadCallback(#[debug("LoadCallback fn")] Box<LoadCallbackFn>);
-
-impl Deref for LoadCallback {
-  type Target = LoadCallbackFn;
-
-  fn deref(&self) -> &Self::Target {
-    &*self.0
-  }
-}
-
 #[derive(Debug)]
 pub struct PluginContextImpl {
   pub(crate) skipped_resolve_calls: Vec<Arc<HookResolveIdSkipped>>,
@@ -92,7 +73,6 @@ pub struct PluginContextImpl {
   pub(crate) options: SharedNormalizedBundlerOptions,
   pub(crate) watch_files: Arc<FxDashSet<ArcStr>>,
   pub(crate) modules: Arc<FxDashMap<ArcStr, Arc<ModuleInfo>>>,
-  pub(crate) context_load_modules: Arc<FxDashMap<ArcStr, LoadCallback>>,
   pub(crate) tx: Arc<Mutex<Option<tokio::sync::mpsc::Sender<ModuleLoaderMsg>>>>,
 }
 
@@ -107,11 +87,7 @@ impl PluginContextImpl {
     &self,
     specifier: &str,
     side_effects: Option<HookSideEffects>,
-    load_callback_fn: Option<Box<LoadCallbackFn>>,
   ) -> anyhow::Result<()> {
-    if let Some(load_callback_fn) = load_callback_fn {
-      self.context_load_modules.insert(specifier.into(), LoadCallback(load_callback_fn));
-    }
     self
       .tx
       .lock()

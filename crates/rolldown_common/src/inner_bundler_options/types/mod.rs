@@ -13,6 +13,7 @@ pub mod invalidate_js_side_cache;
 pub mod is_external;
 pub mod jsx;
 pub mod make_absolute_externals_relative;
+pub mod mark_module_loaded;
 pub mod minify_options;
 pub mod module_type;
 pub mod normalized_bundler_options;

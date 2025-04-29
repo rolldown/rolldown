@@ -75,7 +75,6 @@ impl Plugin for JsonPlugin {
   }
 
   fn register_hook_usage(&self) -> rolldown_plugin::HookUsage {
-    // TODO: get hook usage from option
-    HookUsage::all()
+    HookUsage::Transform
   }
 }

@@ -1,4 +1,5 @@
-import { RolldownPluginOption, withFilter } from "rolldown";
+import { RolldownPluginOption } from "rolldown";
+import {withFilter} from 'rolldown/filter';
 import { defineTest } from "rolldown-tests";
 import { expect, vi } from "vitest";
 

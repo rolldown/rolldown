@@ -59,7 +59,6 @@ import type {
   SourceDescription,
   TransformResult,
 } from './plugin';
-import { withFilter } from './plugin';
 import type {
   GeneralHookFilter,
   HookFilter,
@@ -95,7 +94,7 @@ import type { ExistingRawSourceMap, SourceMapInput } from './types/sourcemap';
 import type { PartialNull } from './types/utils';
 import { defineConfig } from './utils/define-config';
 
-export { build, defineConfig, rolldown, watch, withFilter };
+export { build, defineConfig, rolldown, watch };
 export const VERSION: string = version;
 
 export type {

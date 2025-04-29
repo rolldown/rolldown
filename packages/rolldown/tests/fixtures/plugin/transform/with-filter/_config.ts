@@ -1,4 +1,4 @@
-import { withFilter } from "rolldown";
+import { withFilter } from "rolldown/filter";
 import { defineTest } from "rolldown-tests";
 import { expect, vi } from "vitest";
 

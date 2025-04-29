@@ -124,3 +124,5 @@ export function include(expr: FilterExpression): Include {
 export function exclude(expr: FilterExpression): Exclude {
   return { kind: 'exclude', expr };
 }
+
+export { withFilter } from './plugin';

@@ -150,7 +150,7 @@ export interface OutputOptions {
        * - Type: `number`
        * - Default: `0`
        *
-       * Minimum size of the desired chunk. If accumulated size of captured modules is smaller than this value, this group will be ignored.s
+       * Minimum size of the desired chunk. If accumulated size of captured modules is smaller than this value, this group will be ignored.
        */
       minSize?: number;
       /**

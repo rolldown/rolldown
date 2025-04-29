@@ -105,9 +105,7 @@
   },
   "dependencies": {
     "@oxc-project/types": "0.67.0",
-    "@valibot/to-json-schema": "1.0.0",
-    "ansis": "^3.17.0",
-    "valibot": "1.0.0"
+    "ansis": "^3.17.0"
   },
   "peerDependencies": {
     "@oxc-project/runtime": "0.67.0"
@@ -124,6 +122,7 @@
     "@rolldown/testing": "workspace:*",
     "@types/fs-extra": "^11.0.4",
     "@types/lodash-es": "^4.17.12",
+    "@valibot/to-json-schema": "1.0.0",
     "consola": "^3.4.2",
     "emnapi": "^1.2.0",
     "execa": "^9.2.0",
@@ -142,7 +141,8 @@
     "type-fest": "^4.20.0",
     "typedoc": "^0.28.0",
     "typescript": "^5.7.3",
-    "unbuild": "^3.0.0"
+    "unbuild": "^3.0.0",
+    "valibot": "1.0.0"
   },
   "optionalDependencies": {
     "@rolldown/binding-darwin-arm64": "workspace:*",

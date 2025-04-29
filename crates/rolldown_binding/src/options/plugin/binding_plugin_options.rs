@@ -18,10 +18,7 @@ use super::{
   binding_plugin_hook_meta::BindingPluginHookMeta,
   binding_transform_context::BindingTransformPluginContext,
   types::{
-    binding_filter_expression::normalized_tokens,
-    binding_hook_filter::{
-      BindingGeneralHookFilter, BindingRenderChunkHookFilter, BindingTransformHookFilter,
-    },
+    binding_filter_expression::normalized_tokens, binding_hook_filter::BindingHookFilter,
     binding_hook_load_output::BindingHookLoadOutput,
     binding_hook_render_chunk_output::BindingHookRenderChunkOutput,
     binding_hook_resolve_id_extra_args::BindingHookResolveIdExtraArgs,
@@ -58,7 +55,7 @@ pub struct BindingPluginOptions {
     >,
   >,
   pub resolve_id_meta: Option<BindingPluginHookMeta>,
-  pub resolve_id_filter: Option<BindingGeneralHookFilter>,
+  pub resolve_id_filter: Option<BindingHookFilter>,
 
   #[napi(
     ts_type = "(ctx: BindingPluginContext, specifier: string, importer: Nullable<string>) => MaybePromise<VoidNullable<BindingHookResolveIdOutput>>"
@@ -78,7 +75,7 @@ pub struct BindingPluginOptions {
     MaybeAsyncJsCallback<FnArgs<(BindingPluginContext, String)>, Option<BindingHookLoadOutput>>,
   >,
   pub load_meta: Option<BindingPluginHookMeta>,
-  pub load_filter: Option<BindingGeneralHookFilter>,
+  pub load_filter: Option<BindingHookFilter>,
 
   #[napi(
     ts_type = "(ctx:  BindingTransformPluginContext, id: string, code: string, module_type: BindingTransformHookExtraArgs) => MaybePromise<VoidNullable<BindingHookTransformOutput>>"
@@ -90,7 +87,7 @@ pub struct BindingPluginOptions {
     >,
   >,
   pub transform_meta: Option<BindingPluginHookMeta>,
-  pub transform_filter: Option<BindingTransformHookFilter>,
+  pub transform_filter: Option<BindingHookFilter>,
 
   #[napi(
     ts_type = "(ctx: BindingPluginContext, module: BindingModuleInfo) => MaybePromise<VoidNullable>"
@@ -126,7 +123,7 @@ pub struct BindingPluginOptions {
     >,
   >,
   pub render_chunk_meta: Option<BindingPluginHookMeta>,
-  pub render_chunk_filter: Option<BindingRenderChunkHookFilter>,
+  pub render_chunk_filter: Option<BindingHookFilter>,
 
   #[napi(
     ts_type = "(ctx: BindingPluginContext, chunk: BindingRenderedChunk) => MaybePromise<void | string>"
@@ -228,7 +225,7 @@ pub struct FilterExprCache {
 impl BindingPluginOptions {
   pub fn pre_compile_filter_expr(&self) -> FilterExprCache {
     let mut cache = FilterExprCache::default();
-    if let Some(tokenss) = self.resolve_id_filter.as_ref().and_then(|item| item.custom.as_ref()) {
+    if let Some(tokenss) = self.resolve_id_filter.as_ref().and_then(|item| item.value.as_ref()) {
       let filter_kind = tokenss
         .clone()
         .into_iter()
@@ -237,7 +234,7 @@ impl BindingPluginOptions {
       cache.resolve_id = Some(filter_kind);
     }
 
-    if let Some(filter) = self.load_filter.as_ref().and_then(|item| item.custom.as_ref()) {
+    if let Some(filter) = self.load_filter.as_ref().and_then(|item| item.value.as_ref()) {
       let filter_kind = filter
         .clone()
         .into_iter()
@@ -246,7 +243,7 @@ impl BindingPluginOptions {
       cache.load = Some(filter_kind);
     }
 
-    if let Some(filter) = self.transform_filter.as_ref().and_then(|item| item.custom.as_ref()) {
+    if let Some(filter) = self.transform_filter.as_ref().and_then(|item| item.value.as_ref()) {
       let filter_kind = filter
         .clone()
         .into_iter()
@@ -255,7 +252,7 @@ impl BindingPluginOptions {
       cache.transform = Some(filter_kind);
     }
 
-    if let Some(filter) = self.render_chunk_filter.as_ref().and_then(|item| item.custom.as_ref()) {
+    if let Some(filter) = self.render_chunk_filter.as_ref().and_then(|item| item.value.as_ref()) {
       let filter_kind = filter
         .clone()
         .into_iter()

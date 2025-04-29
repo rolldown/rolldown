@@ -8,17 +8,13 @@ use crate::types::{
 use napi::bindgen_prelude::FnArgs;
 use rolldown_common::NormalModule;
 use rolldown_plugin::{__inner::SharedPluginable, HookUsage, Plugin, typedmap::TypedMapKey};
-use rolldown_utils::{
-  filter_expression::filter_exprs_interpreter,
-  pattern_filter::{self},
-};
+use rolldown_utils::filter_expression::filter_exprs_interpreter;
 use std::{borrow::Cow, ops::Deref, sync::Arc};
 use tracing::{Instrument, debug_span};
 
 use super::{
   BindingPluginOptions, FilterExprCache,
   binding_transform_context::BindingTransformPluginContext,
-  js_plugin_filter::{filter_render_chunk, filter_transform},
   types::{
     binding_hook_resolve_id_extra_args::BindingHookResolveIdExtraArgs,
     binding_plugin_transform_extra_args::BindingTransformHookExtraArgs,
@@ -102,18 +98,6 @@ impl Plugin for JsPlugin {
       ) {
         return Ok(None);
       }
-    } else if let Some(resolve_id_filter) = &self.inner.resolve_id_filter {
-      let matched = pattern_filter::filter(
-        resolve_id_filter.exclude.as_deref(),
-        resolve_id_filter.include.as_deref(),
-        args.specifier,
-        ctx.cwd().to_string_lossy().as_ref(),
-      )
-      .inner();
-
-      if !matched {
-        return Ok(None);
-      }
     }
 
     let extra_args = BindingHookResolveIdExtraArgs {
@@ -187,18 +171,6 @@ impl Plugin for JsPlugin {
       ) {
         return Ok(None);
       }
-    } else if let Some(load_filter) = &self.load_filter {
-      let matched = pattern_filter::filter(
-        load_filter.exclude.as_deref(),
-        load_filter.include.as_deref(),
-        args.id,
-        ctx.cwd().to_string_lossy().as_ref(),
-      )
-      .inner();
-
-      if !matched {
-        return Ok(None);
-      }
     }
 
     cb.await_call((ctx.clone().into(), args.id.to_string()).into())
@@ -230,14 +202,6 @@ impl Plugin for JsPlugin {
       ) {
         return Ok(None);
       }
-    } else if !filter_transform(
-      self.transform_filter.as_ref(),
-      args.id,
-      ctx.inner.cwd(),
-      args.module_type,
-      args.code,
-    ) {
-      return Ok(None);
     }
 
     let extra_args = BindingTransformHookExtraArgs { module_type: args.module_type.to_string() };
@@ -438,8 +402,6 @@ impl Plugin for JsPlugin {
       ) {
         return Ok(None);
       }
-    } else if !filter_render_chunk(&args.code, self.render_chunk_filter.as_ref()) {
-      return Ok(None);
     }
 
     cb.await_call(

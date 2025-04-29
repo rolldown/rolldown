@@ -8,7 +8,6 @@ export type GeneralHookFilter<Value = StringOrRegExp> =
   | {
     include?: MaybeArray<Value>;
     exclude?: MaybeArray<Value>;
-    custom?: TopLevelFilterExpression[];
   };
 
 interface FormalModuleTypeFilter {
@@ -53,5 +52,8 @@ export interface HookFilter {
   id?: GeneralHookFilter;
   moduleType?: ModuleTypeFilter;
   code?: GeneralHookFilter;
-  custom?: TopLevelFilterExpression[];
 }
+
+export type TUnionWithTopLevelFilterExpressionArray<T> =
+  | T
+  | TopLevelFilterExpression[];

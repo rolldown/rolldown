@@ -12,10 +12,8 @@ export default defineTest({
 					handler() {
 						transformHookFunction();
 					},
-					filter: {
-						custom: [exclude(and(id(/src/), not(code(/import\s+{/))))],
-					},
-				},
+          filter: [exclude(and(id(/src/), not(code(/import\s+{/))))],
+        },
 			},
 		],
 	},

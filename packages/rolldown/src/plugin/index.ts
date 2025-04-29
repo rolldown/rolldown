@@ -20,7 +20,11 @@ import type {
   NullValue,
   PartialNull,
 } from '../types/utils';
-import type { GeneralHookFilter, HookFilter } from './hook-filter';
+import type {
+  GeneralHookFilter,
+  HookFilter,
+  TUnionWithTopLevelFilterExpressionArray,
+} from './hook-filter';
 import type { MinimalPluginContext } from './minimal-plugin-context';
 import type { ParallelPlugin } from './parallel-plugin';
 import type { PluginContext } from './plugin-context';
@@ -271,13 +275,22 @@ export type ParallelPluginHooks = Exclude<
   keyof FunctionPluginHooks | AddonHooks,
   FirstPluginHooks | SequentialPluginHooks
 >;
+
 export type HookFilterExtension<K extends keyof FunctionPluginHooks> = K extends
-  'transform' ? { filter?: HookFilter }
-  : K extends 'load' ? { filter?: Pick<HookFilter, 'id' | 'custom'> }
-  : K extends 'resolveId' ? {
-      filter?: { id?: GeneralHookFilter<RegExp> } & Pick<HookFilter, 'custom'>;
+  'transform' ? { filter?: TUnionWithTopLevelFilterExpressionArray<HookFilter> }
+  : K extends 'load' ? {
+      filter?: TUnionWithTopLevelFilterExpressionArray<Pick<HookFilter, 'id'>>;
     }
-  : K extends 'renderChunk' ? { filter?: Pick<HookFilter, 'code'> }
+  : K extends 'resolveId' ? {
+      filter?: TUnionWithTopLevelFilterExpressionArray<
+        { id?: GeneralHookFilter<RegExp> }
+      >;
+    }
+  : K extends 'renderChunk' ? {
+      filter?: TUnionWithTopLevelFilterExpressionArray<
+        Pick<HookFilter, 'code'>
+      >;
+    }
   : {};
 
 export type PluginHooks = {

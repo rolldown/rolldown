@@ -42,7 +42,7 @@
       "require": "./dist/filter-expression-index.cjs",
       "import": "./dist/filter-expression-index.mjs"
     },
-    "./parallel-plugin": {
+    "./parallelPlugin": {
       "require": "./dist/parallel-plugin.cjs",
       "import": "./dist/parallel-plugin.mjs"
     },

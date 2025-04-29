@@ -4,7 +4,7 @@ import type { Plugin } from 'rolldown';
 import {
   defineParallelPluginImplementation,
   type ParallelPluginImplementation,
-} from 'rolldown/parallel-plugin';
+} from 'rolldown/parallelPlugin';
 
 export const babelPlugin = (): Plugin => {
   const partialConfig = babel.loadPartialConfig({

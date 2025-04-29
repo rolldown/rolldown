@@ -1,6 +1,5 @@
 ---
 source: crates/rolldown_testing/src/integration_test.rs
-snapshot_kind: text
 ---
 # warnings
 
@@ -117,7 +116,6 @@ snapshot_kind: text
 ## entry.js
 
 ```js
-import * as ns from "foo";
 import * as ns2 from "foo";
 import def, { a, a2, b } from "foo";
 
@@ -125,7 +123,7 @@ import def, { a, a2, b } from "foo";
 const imp = [import("foo"), function() {
 	return import("foo");
 }];
-console.log(ns, a, b, def, def, ns2, def, a2, b, imp);
+console.log(ns2, a, b, def, def, ns2, def, a2, b, imp);
 
 //#endregion
 ```

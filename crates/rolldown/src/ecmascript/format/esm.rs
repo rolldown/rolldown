@@ -3,6 +3,7 @@ use itertools::Itertools;
 use rolldown_common::{AddonRenderContext, ExportsKind, Specifier};
 use rolldown_sourcemap::SourceJoiner;
 use rolldown_utils::{concat_string, ecmascript::to_module_import_export_name};
+use rustc_hash::FxHashSet;
 
 use crate::{
   ecmascript::ecma_generator::{RenderedModuleSource, RenderedModuleSources},
@@ -125,7 +126,7 @@ fn render_esm_chunk_imports(ctx: &GenerateContext<'_>) -> Option<String> {
       &ctx.chunk.import_path_for(importee_chunk),
     ));
   });
-
+  let mut rendered_external_import_namespace_modules = FxHashSet::default();
   // render external imports
   ctx.chunk.imports_from_external_modules.iter().for_each(|(importee_id, named_imports)| {
     let importee = &ctx.link_output.module_table[*importee_id]
@@ -143,6 +144,10 @@ fn render_esm_chunk_imports(ctx: &GenerateContext<'_>) -> Option<String> {
         let alias = &ctx.chunk.canonical_names[canonical_ref];
         match &item.imported {
           Specifier::Star => {
+            if rendered_external_import_namespace_modules.contains(&importee.idx) {
+              return None;
+            }
+            rendered_external_import_namespace_modules.insert(importee.idx);
             has_importee_imported = true;
             s.push_str("import * as ");
             s.push_str(alias);

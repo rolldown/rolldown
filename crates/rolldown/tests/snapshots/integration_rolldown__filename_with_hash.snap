@@ -843,7 +843,7 @@ expression: output
 
 # tests/esbuild/default/external_es6_converted_to_common_js
 
-- entry-!~{000}~.js => entry-BmDksj4Q.js
+- entry-!~{000}~.js => entry-Bgev7Bqj.js
 
 # tests/esbuild/default/external_module_exclusion_package
 
@@ -915,11 +915,11 @@ expression: output
 
 # tests/esbuild/default/import_forms_with_minify_identifiers_and_no_bundle
 
-- entry-!~{000}~.js => entry-qpFBF9v6.js
+- entry-!~{000}~.js => entry-BP3Qc8x8.js
 
 # tests/esbuild/default/import_forms_with_no_bundle
 
-- entry-!~{000}~.js => entry-COyv-4Wz.js
+- entry-!~{000}~.js => entry-ClQqYg4L.js
 
 # tests/esbuild/default/import_fs_browser
 
@@ -1895,18 +1895,20 @@ expression: output
 
 # tests/esbuild/importstar/import_default_namespace_combo_issue446
 
-- external-def-!~{005}~.js => external-def-DMWRNYC1.js
-- external-default-!~{004}~.js => external-default-CeaZt81w.js
+- external-def-!~{005}~.js => external-def-BbZtze6f.js
+- external-default-!~{004}~.js => external-default-BlR6JmYG.js
 - external-default2-!~{000}~.js => external-default2-DUcUjrRi.js
 - external-ns-!~{001}~.js => external-ns-all2LFha.js
-- external-ns-def-!~{003}~.js => external-ns-def-CPrnmGVn.js
-- external-ns-default-!~{002}~.js => external-ns-default-Cbqf8eIs.js
+- external-ns-def-!~{003}~.js => external-ns-def-BG3w8rdv.js
+- external-ns-default-!~{002}~.js => external-ns-default-3z7HkR6q.js
 - internal-def-!~{00b}~.js => internal-def-CRNsLces.js
 - internal-default-!~{00a}~.js => internal-default-Dx0cXe3H.js
 - internal-default2-!~{006}~.js => internal-default2-Br-ACsYq.js
 - internal-ns-!~{007}~.js => internal-ns-a_Hq6o6-.js
 - internal-ns-def-!~{009}~.js => internal-ns-def-BSYbjTZ1.js
 - internal-ns-default-!~{008}~.js => internal-ns-default-BkqjZs1S.js
+- external-def-!~{00g}~.js => external-def-ceM7EDte.js
+- external-ns-def-!~{00e}~.js => external-ns-def-BE4XoJvZ.js
 - internal-!~{00c}~.js => internal-1sX5rN8A.js
 
 # tests/esbuild/importstar/import_export_other_as_namespace_common_js
@@ -4188,7 +4190,7 @@ expression: output
 
 # tests/rolldown/function/external/export_external
 
-- main-!~{000}~.js => main-bboG_iKl.js
+- main-!~{000}~.js => main-5sPV7EtM.js
 
 # tests/rolldown/function/external/implicit_import_external
 
@@ -4196,7 +4198,7 @@ expression: output
 
 # tests/rolldown/function/external/import_external
 
-- main-!~{000}~.js => main-B3SOe15B.js
+- main-!~{000}~.js => main-De65fPUh.js
 
 # tests/rolldown/function/external/keep_import_external_order
 
@@ -4695,6 +4697,10 @@ expression: output
 - main-!~{000}~.js => main-BjZFiMIo.js
 - chunk-!~{001}~.js => chunk-e6zvK7dF.js
 - lib-!~{003}~.js => lib-DXD_OL-7.js
+
+# tests/rolldown/issues/4324
+
+- main-!~{000}~.js => main-BvlzDs6f.js
 
 # tests/rolldown/issues/4390
 

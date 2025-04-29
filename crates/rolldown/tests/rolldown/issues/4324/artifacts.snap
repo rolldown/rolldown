@@ -1,0 +1,20 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## main.js
+
+```js
+import * as hello from "node:http";
+import { URL } from "node:net";
+
+//#region file.js
+console.log("file", hello, URL);
+
+//#endregion
+//#region file2.js
+console.log("file", hello, URL);
+
+//#endregion
+```

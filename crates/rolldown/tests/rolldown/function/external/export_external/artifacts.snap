@@ -1,6 +1,5 @@
 ---
 source: crates/rolldown_testing/src/integration_test.rs
-snapshot_kind: text
 ---
 # Assets
 
@@ -8,7 +7,6 @@ snapshot_kind: text
 
 ```js
 import * as ext1 from "external";
-import * as ext from "external";
 import { a, a as a$1, a as a1, b, b as b$1, b as b1 } from "external";
 
 //#region foo.js
@@ -17,7 +15,7 @@ console.log(a1$1);
 
 //#endregion
 //#region main.js
-console.log(ext, a1, b1, ext1, a$1, b$1);
+console.log(ext1, a1, b1, ext1, a$1, b$1);
 
 //#endregion
 export { a, b };

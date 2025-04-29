@@ -23,14 +23,13 @@ console.log(ns, a, c, def, def2, ns2, def3, a2, c3, imp);
 ### rolldown
 ```js
 import * as ns from "foo";
-import * as ns2 from "foo";
 import def, { a, a2, b } from "foo";
 
 //#region entry.js
 const imp = [import("foo"), function nested() {
 	return import("foo");
 }];
-console.log(ns, a, b, def, def, ns2, def, a2, b, imp);
+console.log(ns, a, b, def, def, ns, def, a2, b, imp);
 
 //#endregion
 ```
@@ -39,7 +38,7 @@ console.log(ns, a, b, def, def, ns2, def, a2, b, imp);
 ===================================================================
 --- esbuild	/out.js
 +++ rolldown	entry.js
-@@ -1,11 +1,7 @@
+@@ -1,11 +1,6 @@
 -import "foo";
 -import "foo";
  import * as ns from "foo";
@@ -48,12 +47,11 @@ console.log(ns, a, b, def, def, ns2, def, a2, b, imp);
 -import def2, * as ns2 from "foo";
 -import def3, {a2, b as c3} from "foo";
 -const imp = [import("foo"), function nested() {
-+import * as ns2 from "foo";
 +import def, {a, a2, b} from "foo";
 +var imp = [import("foo"), function nested() {
      return import("foo");
  }];
 -console.log(ns, a, c, def, def2, ns2, def3, a2, c3, imp);
-+console.log(ns, a, b, def, def, ns2, def, a2, b, imp);
++console.log(ns, a, b, def, def, ns, def, a2, b, imp);
 
 ```

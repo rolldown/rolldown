@@ -15,6 +15,7 @@ use rolldown_rstr::{Rstr, ToRstr};
 use rolldown_utils::{
   ecmascript::{is_validate_identifier_name, legitimize_identifier_name},
   index_vec_ext::IndexVecExt,
+  indexmap::FxIndexSet,
   rayon::{IntoParallelRefIterator, IntoParallelRefMutIterator, ParallelIterator},
 };
 
@@ -178,15 +179,7 @@ impl LinkStage<'_> {
     self.errors.extend(binding_ctx.errors);
     self.warnings.extend(binding_ctx.warnings);
 
-    for symbol_set in binding_ctx.external_import_namespace_merger.values() {
-      let mut peekable = symbol_set.iter();
-      let Some(first) = peekable.next() else {
-        continue;
-      };
-      for symbol in peekable {
-        binding_ctx.symbol_db.link(*first, *symbol);
-      }
-    }
+    self.external_import_namespace_merger = binding_ctx.external_import_namespace_merger;
 
     for (module_idx, map) in &binding_ctx.external_import_binding_merger {
       for (key, symbol_set) in map {
@@ -534,7 +527,7 @@ struct BindImportsAndExportsContext<'a> {
   pub warnings: Vec<BuildDiagnostic>,
   pub external_import_binding_merger:
     FxHashMap<ModuleIdx, FxHashMap<CompactStr, IndexSet<SymbolRef>>>,
-  pub external_import_namespace_merger: FxHashMap<ModuleIdx, IndexSet<SymbolRef>>,
+  pub external_import_namespace_merger: FxHashMap<ModuleIdx, FxIndexSet<SymbolRef>>,
   pub side_effects_modules: &'a FxHashSet<ModuleIdx>,
   pub normal_symbol_exports_chain_map: &'a mut FxHashMap<SymbolRef, Vec<SymbolRef>>,
 }

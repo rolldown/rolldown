@@ -114,6 +114,27 @@ impl GenerateStage<'_> {
         .split_chunks(&mut index_splitting_info, &mut chunk_graph, &mut bits_to_chunk, &input_base)
         .await?;
     }
+    // Merge external import namespaces at chunk level.
+    for symbol_set in self.link_output.external_import_namespace_merger.values() {
+      for (_, mut group) in symbol_set
+        .iter()
+        .filter_map(|item| {
+          let module = self.link_output.module_table[item.owner].as_normal()?;
+          module.meta.is_included().then_some(item)
+        })
+        .into_group_map_by(|item| {
+          chunk_graph.module_to_chunk[item.owner].expect("should have chunk idx")
+        })
+      {
+        if group.len() <= 1 {
+          continue;
+        }
+        group.sort_unstable_by_key(|item| self.link_output.module_table[item.owner].exec_order());
+        for symbol in &group[1..] {
+          self.link_output.symbol_db.link(**symbol, *group[0]);
+        }
+      }
+    }
 
     // Sort modules in each chunk by execution order
     chunk_graph.chunk_table.iter_mut().for_each(|chunk| {

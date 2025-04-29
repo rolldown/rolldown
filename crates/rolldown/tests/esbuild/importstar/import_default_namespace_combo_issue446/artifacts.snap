@@ -104,12 +104,6 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## external-def.js
 
 ```js
-import "./external-def2.js";
-
-```
-## external-def2.js
-
-```js
 import * as ns from "external";
 import def from "external";
 
@@ -117,12 +111,10 @@ import def from "external";
 console.log(def, ns.def);
 
 //#endregion
-export { ns };
 ```
 ## external-default.js
 
 ```js
-import { ns } from "./external-def2.js";
 import * as ns from "external";
 import def from "external";
 
@@ -144,12 +136,6 @@ console.log(def, def);
 ## external-ns-def.js
 
 ```js
-import "./external-ns-def2.js";
-
-```
-## external-ns-def2.js
-
-```js
 import * as ns from "external";
 import def from "external";
 
@@ -157,12 +143,10 @@ import def from "external";
 console.log(def, ns, ns.def);
 
 //#endregion
-export { ns };
 ```
 ## external-ns-default.js
 
 ```js
-import { ns } from "./external-ns-def2.js";
 import * as ns from "external";
 import def from "external";
 

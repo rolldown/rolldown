@@ -314,12 +314,6 @@ export interface BindingFilterToken {
   value?: BindingStringOrRegex
 }
 
-export interface BindingGeneralHookFilter {
-  include?: Array<BindingStringOrRegex>
-  exclude?: Array<BindingStringOrRegex>
-  custom?: Array<Array<BindingFilterToken>>
-}
-
 export interface BindingGlobImportPluginConfig {
   root?: string
   restoreQueryExtension?: boolean
@@ -334,6 +328,10 @@ export interface BindingHmrOutput {
   patch: string
   hmrBoundaries: Array<BindingHmrBoundaryOutput>
   fullReload: boolean
+}
+
+export interface BindingHookFilter {
+  value?: Array<Array<BindingFilterToken>>
 }
 
 export interface BindingHookJsLoadOutput {
@@ -606,22 +604,22 @@ export interface BindingPluginOptions {
   buildStartMeta?: BindingPluginHookMeta
   resolveId?: (ctx: BindingPluginContext, specifier: string, importer: Nullable<string>, options: BindingHookResolveIdExtraArgs) => MaybePromise<VoidNullable<BindingHookResolveIdOutput>>
   resolveIdMeta?: BindingPluginHookMeta
-  resolveIdFilter?: BindingGeneralHookFilter
+  resolveIdFilter?: BindingHookFilter
   resolveDynamicImport?: (ctx: BindingPluginContext, specifier: string, importer: Nullable<string>) => MaybePromise<VoidNullable<BindingHookResolveIdOutput>>
   resolveDynamicImportMeta?: BindingPluginHookMeta
   load?: (ctx: BindingPluginContext, id: string) => MaybePromise<VoidNullable<BindingHookLoadOutput>>
   loadMeta?: BindingPluginHookMeta
-  loadFilter?: BindingGeneralHookFilter
+  loadFilter?: BindingHookFilter
   transform?: (ctx:  BindingTransformPluginContext, id: string, code: string, module_type: BindingTransformHookExtraArgs) => MaybePromise<VoidNullable<BindingHookTransformOutput>>
   transformMeta?: BindingPluginHookMeta
-  transformFilter?: BindingTransformHookFilter
+  transformFilter?: BindingHookFilter
   moduleParsed?: (ctx: BindingPluginContext, module: BindingModuleInfo) => MaybePromise<VoidNullable>
   moduleParsedMeta?: BindingPluginHookMeta
   buildEnd?: (ctx: BindingPluginContext, error?: (Error | BindingError)[]) => MaybePromise<VoidNullable>
   buildEndMeta?: BindingPluginHookMeta
   renderChunk?: (ctx: BindingPluginContext, code: string, chunk: BindingRenderedChunk, opts: BindingNormalizedOptions, meta: BindingRenderedChunkMeta) => MaybePromise<VoidNullable<BindingHookRenderChunkOutput>>
   renderChunkMeta?: BindingPluginHookMeta
-  renderChunkFilter?: BindingRenderChunkHookFilter
+  renderChunkFilter?: BindingHookFilter
   augmentChunkHash?: (ctx: BindingPluginContext, chunk: BindingRenderedChunk) => MaybePromise<void | string>
   augmentChunkHashMeta?: BindingPluginHookMeta
   renderStart?: (ctx: BindingPluginContext, opts: BindingNormalizedOptions) => void
@@ -672,11 +670,6 @@ export interface BindingRemote {
   shareScope?: string
 }
 
-export interface BindingRenderChunkHookFilter {
-  code?: BindingGeneralHookFilter
-  custom?: Array<Array<BindingFilterToken>>
-}
-
 export interface BindingReplacePluginConfig {
   values: Record<string, string>
   delimiters?: [string, string]
@@ -720,13 +713,6 @@ export interface BindingSourcemap {
 
 export interface BindingTransformHookExtraArgs {
   moduleType: string
-}
-
-export interface BindingTransformHookFilter {
-  code?: BindingGeneralHookFilter
-  moduleType?: Array<string>
-  id?: BindingGeneralHookFilter
-  custom?: Array<Array<BindingFilterToken>>
 }
 
 export interface BindingTransformPluginConfig {

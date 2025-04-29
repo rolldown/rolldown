@@ -1,7 +1,4 @@
-import type {
-  BindingPluginOptions,
-  BindingRenderChunkHookFilter,
-} from '../binding';
+import type { BindingHookFilter, BindingPluginOptions } from '../binding';
 import { NormalizedInputOptionsImpl } from '../options/normalized-input-options';
 import { NormalizedOutputOptionsImpl } from '../options/normalized-output-options';
 import { bindingifySourcemap } from '../types/sourcemap';
@@ -57,7 +54,7 @@ export function bindingifyRenderChunk(
   args: BindingifyPluginArgs,
 ): PluginHookWithBindingExt<
   BindingPluginOptions['renderChunk'],
-  BindingRenderChunkHookFilter | undefined
+  BindingHookFilter | undefined
 > {
   const hook = args.plugin.renderChunk;
   if (!hook) {

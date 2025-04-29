@@ -1,8 +1,7 @@
 import type {
-  BindingGeneralHookFilter,
+  BindingHookFilter,
   BindingHookResolveIdOutput,
   BindingPluginOptions,
-  BindingTransformHookFilter,
 } from '../binding';
 import { normalizeHook } from '../utils/normalize-hook';
 
@@ -100,7 +99,7 @@ export function bindingifyResolveId(
   args: BindingifyPluginArgs,
 ): PluginHookWithBindingExt<
   BindingPluginOptions['resolveId'],
-  BindingGeneralHookFilter | undefined
+  BindingHookFilter | undefined
 > {
   const hook = args.plugin.resolveId as unknown as PluginHooks['resolveId'];
   if (!hook) {
@@ -237,7 +236,7 @@ export function bindingifyTransform(
   args: BindingifyPluginArgs,
 ): PluginHookWithBindingExt<
   BindingPluginOptions['transform'],
-  BindingTransformHookFilter | undefined
+  BindingHookFilter | undefined
 > {
   const hook = args.plugin.transform;
   if (!hook) {
@@ -297,7 +296,7 @@ export function bindingifyLoad(
   args: BindingifyPluginArgs,
 ): PluginHookWithBindingExt<
   BindingPluginOptions['load'],
-  BindingGeneralHookFilter | undefined
+  BindingHookFilter | undefined
 > {
   const hook = args.plugin.load;
   if (!hook) {

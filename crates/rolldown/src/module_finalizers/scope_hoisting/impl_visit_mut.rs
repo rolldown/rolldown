@@ -314,6 +314,7 @@ impl<'ast> VisitMut<'ast> for ScopeHoistingFinalizer<'_, 'ast> {
         }
       }
     }
+    self.rewrite_import_meta_hot(expr);
 
     walk_mut::walk_expression(self, expr);
   }

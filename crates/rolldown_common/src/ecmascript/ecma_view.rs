@@ -102,6 +102,7 @@ pub struct EcmaView {
   /// - Only exist when this module is a cjs module and get imported by static `import` statement.
   pub esm_namespace_in_cjs_node_mode: Option<EsmNamespaceInCjs>,
 
+  pub hmr_hot_ref: Option<SymbolRef>,
   pub hmr_info: HmrInfo,
 }
 

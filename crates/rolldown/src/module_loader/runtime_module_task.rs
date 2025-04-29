@@ -149,6 +149,7 @@ impl RuntimeModuleTask {
         esm_namespace_in_cjs: None,
         esm_namespace_in_cjs_node_mode: None,
         hmr_info: scan_result.hmr_info,
+        hmr_hot_ref: None,
       },
       css_view: None,
       asset_view: None,

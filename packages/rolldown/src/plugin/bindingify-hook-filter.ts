@@ -1,7 +1,7 @@
 import * as R from 'remeda';
 import type { BindingFilterToken, BindingHookFilter } from '../binding.d';
-import type { FilterExpression } from '../filter-expression-index';
-import * as filter from '../filter-expression-index';
+import type { FilterExpression } from '../filter-index';
+import * as filter from '../filter-index';
 import type { StringOrRegExp } from '../types/utils';
 import { arraify } from '../utils/misc';
 import type { HookFilterExtension } from '.';

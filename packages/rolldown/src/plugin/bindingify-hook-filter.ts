@@ -5,12 +5,13 @@ import * as filter from '../filter-expression-index';
 import { arraify } from '../utils/misc';
 import type { HookFilterExtension } from '.';
 import type { GeneralHookFilter } from './hook-filter';
+import type { StringOrRegExp } from '../types/utils';
 
 // Convert `exclude` and `include` to tokens of FilterExpr
 // Array of `BindingFilterToken` will be converted to `FilterExpr` finally,
 // use `generalHookFilterToFilterExprs` instead of `generalHookFilterToFilterArrayOfArrayBindingFilterToken` would be concise
-function generalHookFilterMatcherToFilterExprs(
-  matcher: GeneralHookFilter,
+function generalHookFilterMatcherToFilterExprs<T extends StringOrRegExp>(
+  matcher: GeneralHookFilter<T>,
   stringKind: 'code' | 'id',
 ): filter.TopLevelFilterExpression[] | undefined {
   if (typeof matcher === 'string' || matcher instanceof RegExp) {
@@ -18,9 +19,6 @@ function generalHookFilterMatcherToFilterExprs(
   }
   if (Array.isArray(matcher)) {
     return matcher.map((m) => filter.include(filter.id(m)));
-  }
-  if (matcher.custom) {
-    return matcher.custom;
   }
   let ret: filter.TopLevelFilterExpression[] = [];
   let isCode = stringKind === 'code';
@@ -48,11 +46,11 @@ function transformFilterMatcherToFilterExprs(
   if (!filterOption) {
     return undefined;
   }
-  const { id, code, moduleType, custom } = filterOption;
-
-  if (custom) {
-    return custom;
+  if (Array.isArray(filterOption)) {
+    return filterOption;
   }
+  const { id, code, moduleType} = filterOption;
+
   let ret: filter.TopLevelFilterExpression[] = [];
   let idIncludes: filter.TopLevelFilterExpression[] = [];
   let idExcludes: filter.TopLevelFilterExpression[] = [];
@@ -122,11 +120,11 @@ function joinFilterExprsWithOr(
   return filter.or(filterExprs[0], joinFilterExprsWithOr(filterExprs.slice(1)));
 }
 
-export function bindingifyGeneralHookFilter(
-  matcher: GeneralHookFilter,
+export function bindingifyGeneralHookFilter<T extends StringOrRegExp, F extends GeneralHookFilter<T>>(
   stringKind: 'code' | 'id',
+  pattern: F,
 ): BindingHookFilter | undefined {
-  let filterExprs = generalHookFilterMatcherToFilterExprs(matcher, stringKind);
+  let filterExprs = generalHookFilterMatcherToFilterExprs(pattern, stringKind);
   let ret: BindingFilterToken[][] = [];
   if (filterExprs) {
     ret = filterExprs.map(bindingifyFilterExpr);
@@ -193,17 +191,29 @@ function bindingifyFilterExprImpl(
 export function bindingifyResolveIdFilter(
   filterOption?: HookFilterExtension<'resolveId'>['filter'],
 ): BindingHookFilter | undefined {
-  return filterOption?.id
-    ? bindingifyGeneralHookFilter(filterOption.id, 'id')
-    : undefined;
+  if (!filterOption) {
+    return undefined;
+  }
+  if (Array.isArray(filterOption)) {
+    return {
+      value: filterOption.map(bindingifyFilterExpr)
+    }
+  }
+  return filterOption.id ?  bindingifyGeneralHookFilter('id', filterOption.id) : undefined;
 }
 
 export function bindingifyLoadFilter(
   filterOption?: HookFilterExtension<'load'>['filter'],
 ): BindingHookFilter | undefined {
-  return filterOption?.id
-    ? bindingifyGeneralHookFilter(filterOption.id, 'id')
-    : undefined;
+  if (!filterOption) {
+    return undefined;
+  }
+  if (Array.isArray(filterOption)) {
+    return {
+      value: filterOption.map(bindingifyFilterExpr)
+    }
+  }
+  return filterOption.id ?  bindingifyGeneralHookFilter('id', filterOption.id) : undefined;
 }
 
 export function bindingifyTransformFilter(
@@ -227,9 +237,13 @@ export function bindingifyTransformFilter(
 export function bindingifyRenderChunkFilter(
   filterOption?: HookFilterExtension<'renderChunk'>['filter'],
 ): BindingHookFilter | undefined {
-  if (filterOption) {
-    const { code } = filterOption;
-
-    return code ? bindingifyGeneralHookFilter(code, 'code') : undefined;
+  if (!filterOption) {
+    return undefined;
   }
+  if (Array.isArray(filterOption)) {
+    return {
+      value: filterOption.map(bindingifyFilterExpr)
+    }
+  }
+  return filterOption.code ?  bindingifyGeneralHookFilter('code', filterOption.code) : undefined;
 }

@@ -2,10 +2,10 @@ import * as R from 'remeda';
 import type { BindingFilterToken, BindingHookFilter } from '../binding.d';
 import type { FilterExpression } from '../filter-expression-index';
 import * as filter from '../filter-expression-index';
+import type { StringOrRegExp } from '../types/utils';
 import { arraify } from '../utils/misc';
 import type { HookFilterExtension } from '.';
 import type { GeneralHookFilter } from './hook-filter';
-import type { StringOrRegExp } from '../types/utils';
 
 // Convert `exclude` and `include` to tokens of FilterExpr
 // Array of `BindingFilterToken` will be converted to `FilterExpr` finally,
@@ -49,7 +49,7 @@ function transformFilterMatcherToFilterExprs(
   if (Array.isArray(filterOption)) {
     return filterOption;
   }
-  const { id, code, moduleType} = filterOption;
+  const { id, code, moduleType } = filterOption;
 
   let ret: filter.TopLevelFilterExpression[] = [];
   let idIncludes: filter.TopLevelFilterExpression[] = [];
@@ -120,7 +120,10 @@ function joinFilterExprsWithOr(
   return filter.or(filterExprs[0], joinFilterExprsWithOr(filterExprs.slice(1)));
 }
 
-export function bindingifyGeneralHookFilter<T extends StringOrRegExp, F extends GeneralHookFilter<T>>(
+export function bindingifyGeneralHookFilter<
+  T extends StringOrRegExp,
+  F extends GeneralHookFilter<T>,
+>(
   stringKind: 'code' | 'id',
   pattern: F,
 ): BindingHookFilter | undefined {
@@ -196,10 +199,12 @@ export function bindingifyResolveIdFilter(
   }
   if (Array.isArray(filterOption)) {
     return {
-      value: filterOption.map(bindingifyFilterExpr)
-    }
+      value: filterOption.map(bindingifyFilterExpr),
+    };
   }
-  return filterOption.id ?  bindingifyGeneralHookFilter('id', filterOption.id) : undefined;
+  return filterOption.id
+    ? bindingifyGeneralHookFilter('id', filterOption.id)
+    : undefined;
 }
 
 export function bindingifyLoadFilter(
@@ -210,10 +215,12 @@ export function bindingifyLoadFilter(
   }
   if (Array.isArray(filterOption)) {
     return {
-      value: filterOption.map(bindingifyFilterExpr)
-    }
+      value: filterOption.map(bindingifyFilterExpr),
+    };
   }
-  return filterOption.id ?  bindingifyGeneralHookFilter('id', filterOption.id) : undefined;
+  return filterOption.id
+    ? bindingifyGeneralHookFilter('id', filterOption.id)
+    : undefined;
 }
 
 export function bindingifyTransformFilter(
@@ -223,11 +230,11 @@ export function bindingifyTransformFilter(
     return undefined;
   }
 
-  let custom = transformFilterMatcherToFilterExprs(filterOption);
+  let filterExprs = transformFilterMatcherToFilterExprs(filterOption);
 
   let ret: BindingFilterToken[][] = [];
-  if (custom) {
-    ret = custom.map(bindingifyFilterExpr);
+  if (filterExprs) {
+    ret = filterExprs.map(bindingifyFilterExpr);
   }
   return {
     value: ret.length > 0 ? ret : undefined,
@@ -242,8 +249,10 @@ export function bindingifyRenderChunkFilter(
   }
   if (Array.isArray(filterOption)) {
     return {
-      value: filterOption.map(bindingifyFilterExpr)
-    }
+      value: filterOption.map(bindingifyFilterExpr),
+    };
   }
-  return filterOption.code ?  bindingifyGeneralHookFilter('code', filterOption.code) : undefined;
+  return filterOption.code
+    ? bindingifyGeneralHookFilter('code', filterOption.code)
+    : undefined;
 }

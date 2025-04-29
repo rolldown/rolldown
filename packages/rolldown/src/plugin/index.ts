@@ -7,7 +7,6 @@ import type { BuiltinPlugin } from '../builtin-plugin/constructors';
 import type { DefinedHookNames } from '../constants/plugin';
 import type { DEFINED_HOOK_NAMES } from '../constants/plugin';
 import type { SYMBOL_FOR_RESOLVE_CALLER_THAT_SKIP_SELF } from '../constants/plugin-context';
-import type { TopLevelFilterExpression } from '../filter-expression-index';
 import type { LogLevel, RollupLog } from '../log/logging';
 import type { NormalizedInputOptions } from '../options/normalized-input-options';
 import type { NormalizedOutputOptions } from '../options/normalized-output-options';
@@ -21,7 +20,11 @@ import type {
   NullValue,
   PartialNull,
 } from '../types/utils';
-import type { GeneralHookFilter, HookFilter, TUnionWithTopLevelFilterExpressionArray } from './hook-filter';
+import type {
+  GeneralHookFilter,
+  HookFilter,
+  TUnionWithTopLevelFilterExpressionArray,
+} from './hook-filter';
 import type { MinimalPluginContext } from './minimal-plugin-context';
 import type { ParallelPlugin } from './parallel-plugin';
 import type { PluginContext } from './plugin-context';
@@ -275,11 +278,19 @@ export type ParallelPluginHooks = Exclude<
 
 export type HookFilterExtension<K extends keyof FunctionPluginHooks> = K extends
   'transform' ? { filter?: TUnionWithTopLevelFilterExpressionArray<HookFilter> }
-  : K extends 'load' ? { filter?: TUnionWithTopLevelFilterExpressionArray<Pick<HookFilter, 'id'>> }
-  : K extends 'resolveId' ? {
-      filter?: TUnionWithTopLevelFilterExpressionArray<{ id?: GeneralHookFilter<RegExp> }>;
+  : K extends 'load' ? {
+      filter?: TUnionWithTopLevelFilterExpressionArray<Pick<HookFilter, 'id'>>;
     }
-  : K extends 'renderChunk' ? { filter?: TUnionWithTopLevelFilterExpressionArray<Pick<HookFilter, 'code'>> }
+  : K extends 'resolveId' ? {
+      filter?: TUnionWithTopLevelFilterExpressionArray<
+        { id?: GeneralHookFilter<RegExp> }
+      >;
+    }
+  : K extends 'renderChunk' ? {
+      filter?: TUnionWithTopLevelFilterExpressionArray<
+        Pick<HookFilter, 'code'>
+      >;
+    }
   : {};
 
 export type PluginHooks = {

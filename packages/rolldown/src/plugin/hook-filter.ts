@@ -52,6 +52,8 @@ export interface HookFilter {
   id?: GeneralHookFilter;
   moduleType?: ModuleTypeFilter;
   code?: GeneralHookFilter;
-};
+}
 
-export type  TUnionWithTopLevelFilterExpressionArray<T> = T | TopLevelFilterExpression[];
+export type TUnionWithTopLevelFilterExpressionArray<T> =
+  | T
+  | TopLevelFilterExpression[];

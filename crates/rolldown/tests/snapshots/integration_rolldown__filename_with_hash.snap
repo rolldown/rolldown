@@ -4659,7 +4659,7 @@ expression: output
 
 # tests/rolldown/issues/4129
 
-- main-!~{000}~.js => main-Bl27OrDc.js
+- main-!~{000}~.js => main-DFoYJjFt.js
 
 # tests/rolldown/issues/4196
 
@@ -5192,7 +5192,7 @@ expression: output
 
 # tests/rolldown/topics/hmr/register_exports
 
-- main-!~{000}~.js => main-DTHexXOW.js
+- main-!~{000}~.js => main-D3FcQdsf.js
 
 # tests/rolldown/topics/import_meta_url_dirname_filename_polyfill/node_cjs
 

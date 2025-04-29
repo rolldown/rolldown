@@ -39,8 +39,8 @@
       "import": "./dist/experimental-index.mjs"
     },
     "./filter": {
-      "require": "./dist/filter-expression-index.cjs",
-      "import": "./dist/filter-expression-index.mjs"
+      "require": "./dist/filter-index.cjs",
+      "import": "./dist/filter-index.mjs"
     },
     "./parallelPlugin": {
       "require": "./dist/parallel-plugin.cjs",

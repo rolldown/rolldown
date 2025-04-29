@@ -1,6 +1,6 @@
 import * as esbuild from 'esbuild';
 import nodePath from 'node:path';
-import { defineParallelPluginImplementation } from 'rolldown/parallel-plugin';
+import { defineParallelPluginImplementation } from 'rolldown/parallelPlugin';
 
 /** @returns {import('rolldown').Plugin} */
 export const plugin = () => {

@@ -1,4 +1,4 @@
-import { defineParallelPluginImplementation } from 'rolldown/parallel-plugin';
+import { defineParallelPluginImplementation } from 'rolldown/parallelPlugin';
 // @ts-expect-error
 import babel from '@babel/core';
 import nodePath from 'node:path';

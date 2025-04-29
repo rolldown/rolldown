@@ -39,7 +39,6 @@ function generalHookFilterMatcherToFilterExprs<T extends StringOrRegExp>(
   return ret;
 }
 
-// TODO: support variadic `or` and `and`
 function transformFilterMatcherToFilterExprs(
   filterOption: HookFilterExtension<'transform'>['filter'],
 ): filter.TopLevelFilterExpression[] | undefined {
@@ -71,62 +70,33 @@ function transformFilterMatcherToFilterExprs(
   ret.push(...idExcludes);
   ret.push(...codeExcludes);
 
-  let cursor: filter.FilterExpression | undefined;
+  let andExprList: FilterExpression[] = [];
   if (moduleType) {
     let moduleTypes = Array.isArray(moduleType)
       ? moduleType
       : moduleType.include ?? [];
-    cursor = joinFilterExprsWithOr(
-      moduleTypes.map((m) => filter.moduleType(m)),
+    andExprList.push(
+      filter.or(...moduleTypes.map((m) => filter.moduleType(m))),
     );
   }
   if (idIncludes.length) {
-    let joinedOrExpr = joinFilterExprsWithOr(
-      idIncludes.map((item) => item.expr),
-    );
-    if (!cursor) {
-      cursor = joinedOrExpr;
-    } else {
-      cursor = filter.and(cursor, joinedOrExpr);
-    }
+    andExprList.push(filter.or(...idIncludes.map((item) => item.expr)));
   }
 
   if (codeIncludes.length) {
-    let joinedOrExpr = joinFilterExprsWithOr(
-      codeIncludes.map((item) => item.expr),
-    );
-    if (!cursor) {
-      cursor = joinedOrExpr;
-    } else {
-      cursor = filter.and(cursor, joinedOrExpr);
-    }
+    andExprList.push(filter.or(...codeIncludes.map((item) => item.expr)));
   }
-  if (cursor) {
-    ret.push(filter.include(cursor));
+
+  if (andExprList.length) {
+    ret.push(filter.include(filter.and(...andExprList)));
   }
   return ret;
-}
-
-// This is temp function, it is no more used when we support variadic `or` and `and`
-// Convert List of `TopLevelFilterExpression` to a `FilterExpression`
-// if the length is one then return the first element
-// or recursively join the elements with `or`
-function joinFilterExprsWithOr(
-  filterExprs: FilterExpression[],
-): FilterExpression {
-  if (filterExprs.length === 1) {
-    return filterExprs[0];
-  }
-  return filter.or(filterExprs[0], joinFilterExprsWithOr(filterExprs.slice(1)));
 }
 
 export function bindingifyGeneralHookFilter<
   T extends StringOrRegExp,
   F extends GeneralHookFilter<T>,
->(
-  stringKind: 'code' | 'id',
-  pattern: F,
-): BindingHookFilter | undefined {
+>(stringKind: 'code' | 'id', pattern: F): BindingHookFilter | undefined {
   let filterExprs = generalHookFilterMatcherToFilterExprs(pattern, stringKind);
   let ret: BindingFilterToken[][] = [];
   if (filterExprs) {
@@ -150,10 +120,24 @@ function bindingifyFilterExprImpl(
 ) {
   switch (expr.kind) {
     case 'and': {
-      bindingifyFilterExprImpl(expr.right, list);
-      bindingifyFilterExprImpl(expr.left, list);
+      let args = expr.args;
+      for (let i = args.length - 1; i >= 0; i--) {
+        bindingifyFilterExprImpl(args[i], list);
+      }
       list.push({
         kind: 'And',
+        payload: args.length,
+      });
+      break;
+    }
+    case 'or': {
+      let args = expr.args;
+      for (let i = args.length - 1; i >= 0; i--) {
+        bindingifyFilterExprImpl(args[i], list);
+      }
+      list.push({
+        kind: 'Or',
+        payload: args.length,
       });
       break;
     }
@@ -165,15 +149,15 @@ function bindingifyFilterExprImpl(
       break;
     }
     case 'id': {
-      list.push({ kind: 'Id', value: expr.pattern });
+      list.push({ kind: 'Id', payload: expr.pattern });
       break;
     }
     case 'moduleType': {
-      list.push({ kind: 'ModuleType', value: expr.pattern });
+      list.push({ kind: 'ModuleType', payload: expr.pattern });
       break;
     }
     case 'code': {
-      list.push({ kind: 'Code', value: expr.pattern });
+      list.push({ kind: 'Code', payload: expr.pattern });
       break;
     }
     case 'include': {
@@ -187,7 +171,7 @@ function bindingifyFilterExprImpl(
       break;
     }
     default:
-      throw new Error(`Unknown filter expression kind: ${expr.kind}`);
+      throw new Error(`Unknown filter expression: ${expr}`);
   }
 }
 

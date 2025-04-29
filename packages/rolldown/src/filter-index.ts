@@ -17,21 +17,23 @@ export type TopLevelFilterExpression = Include | Exclude;
 
 export class And {
   kind: 'and';
-  left: FilterExpression;
-  right: FilterExpression;
-  constructor(left: FilterExpression, right: FilterExpression) {
-    this.left = left;
-    this.right = right;
+  args: FilterExpression[];
+  constructor(...args: FilterExpression[]) {
+    if (args.length === 0) {
+      throw new Error('`And` expects at least one operand');
+    }
+    this.args = args;
     this.kind = 'and';
   }
 }
 class Or {
   kind: 'or';
-  left: FilterExpression;
-  right: FilterExpression;
-  constructor(left: FilterExpression, right: FilterExpression) {
-    this.left = left;
-    this.right = right;
+  args: FilterExpression[];
+  constructor(...args: FilterExpression[]) {
+    if (args.length === 0) {
+      throw new Error('`Or` expects at least one operand');
+    }
+    this.args = args;
     this.kind = 'or';
   }
 }
@@ -90,39 +92,36 @@ class Exclude {
   }
 }
 
-export function and(left: FilterExpression, right: FilterExpression): And {
-  return { kind: 'and', left, right };
+export function and(...args: FilterExpression[]): And {
+  return new And(...args);
 }
 
-export function or(left: FilterExpression, right: FilterExpression): Or {
-  return { kind: 'or', left, right };
+export function or(...args: FilterExpression[]): Or {
+  return new Or(...args);
 }
 
 export function not(expr: FilterExpression): Not {
-  return { kind: 'not', expr };
+  return new Not(expr);
 }
 
 export function id(pattern: StringOrRegExp): Id {
-  return {
-    kind: 'id',
-    pattern,
-  };
+  return new Id(pattern);
 }
 
 export function moduleType(pattern: PluginModuleType): ModuleType {
-  return { kind: 'moduleType', pattern };
+  return new ModuleType(pattern);
 }
 
 export function code(pattern: StringOrRegExp): Code {
-  return { kind: 'code', pattern };
+  return new Code(pattern);
 }
 
 export function include(expr: FilterExpression): Include {
-  return { kind: 'include', expr };
+  return new Include(expr);
 }
 
 export function exclude(expr: FilterExpression): Exclude {
-  return { kind: 'exclude', expr };
+  return new Exclude(expr);
 }
 
 export { withFilter } from './plugin';

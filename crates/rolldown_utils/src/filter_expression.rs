@@ -2,8 +2,8 @@ use crate::pattern_filter::{StringOrRegex, StringOrRegexMatchKind};
 
 #[derive(Debug)]
 pub enum FilterExpr {
-  Or(Box<FilterExpr>, Box<FilterExpr>),
-  And(Box<FilterExpr>, Box<FilterExpr>),
+  Or(Vec<FilterExpr>),
+  And(Vec<FilterExpr>),
   Not(Box<FilterExpr>),
   Code(StringOrRegex),
   Id(StringOrRegex),
@@ -24,13 +24,11 @@ pub fn filter_expr_interpreter(
   cwd: &str,
 ) -> bool {
   match expr {
-    FilterExpr::Or(left, right) => {
-      filter_expr_interpreter(left, id, code, module_type, cwd)
-        || filter_expr_interpreter(right, id, code, module_type, cwd)
+    FilterExpr::Or(args) => {
+      args.iter().any(|arg| filter_expr_interpreter(arg, id, code, module_type, cwd))
     }
-    FilterExpr::And(left, right) => {
-      filter_expr_interpreter(left, id, code, module_type, cwd)
-        && filter_expr_interpreter(right, id, code, module_type, cwd)
+    FilterExpr::And(args) => {
+      args.iter().all(|arg| filter_expr_interpreter(arg, id, code, module_type, cwd))
     }
     FilterExpr::Not(inner) => !filter_expr_interpreter(inner, id, code, module_type, cwd),
     FilterExpr::Code(pattern) => {
@@ -40,11 +38,7 @@ pub fn filter_expr_interpreter(
       id_pattern.test(id.expect("id should not be none"), &StringOrRegexMatchKind::Id(cwd))
     }
     FilterExpr::ModuleType(module_type_filter) => {
-      if let Some(module_type) = module_type {
-        module_type == module_type_filter
-      } else {
-        false
-      }
+      module_type.as_ref().is_some_and(|module_type| module_type == module_type_filter)
     }
   }
 }
@@ -76,17 +70,21 @@ pub fn filter_exprs_interpreter(
   include_count == 0
 }
 
+#[derive(Debug)]
 pub enum Token {
   Id(StringOrRegex),
   Code(StringOrRegex),
   ModuleType(String),
-  And,
-  Or,
+  /// Arg count
+  And(u32),
+  /// Arg count
+  Or(u32),
   Not,
   Include,
   Exclude,
 }
 
+// TODO: better error handling
 pub fn parse(mut tokens: Vec<Token>) -> FilterExprKind {
   fn rec(tokens: &mut Vec<Token>) -> Option<FilterExpr> {
     let token = tokens.pop()?;
@@ -94,15 +92,21 @@ pub fn parse(mut tokens: Vec<Token>) -> FilterExprKind {
       Token::Id(string_or_regex) => Some(FilterExpr::Id(string_or_regex)),
       Token::Code(string_or_regex) => Some(FilterExpr::Code(string_or_regex)),
       Token::ModuleType(string) => Some(FilterExpr::ModuleType(string)),
-      Token::And => {
-        let left = rec(tokens)?;
-        let right = rec(tokens)?;
-        Some(FilterExpr::And(Box::new(left), Box::new(right)))
+      Token::And(arg_count) => {
+        let mut args = Vec::with_capacity(arg_count as usize);
+        for _ in 0..arg_count {
+          let inner = rec(tokens)?;
+          args.push(inner);
+        }
+        Some(FilterExpr::And(args))
       }
-      Token::Or => {
-        let left = rec(tokens)?;
-        let right = rec(tokens)?;
-        Some(FilterExpr::Or(Box::new(left), Box::new(right)))
+      Token::Or(arg_count) => {
+        let mut args = Vec::with_capacity(arg_count as usize);
+        for _ in 0..arg_count {
+          let inner = rec(tokens)?;
+          args.push(inner);
+        }
+        Some(FilterExpr::Or(args))
       }
       Token::Not => {
         let inner = rec(tokens)?;
@@ -142,12 +146,10 @@ mod test {
   #[test]
   fn test_filter_expr_interpreter() {
     // https://github.com/vitejs/rolldown-vite/blob/fef84b75dbb35a6ec27debdc0dced1d0f1250eb8/packages/vite/src/node/plugins/importAnalysisBuild.ts?plain=1#L242-L244
-    let expr = FilterExpr::And(
-      Box::new(FilterExpr::Id(StringOrRegex::Regex("node_modules".into()))),
-      Box::new(FilterExpr::Not(Box::new(FilterExpr::Code(StringOrRegex::Regex(
-        "import\\s*".into(),
-      ))))),
-    );
+    let expr = FilterExpr::And(vec![
+      FilterExpr::Id(StringOrRegex::Regex("node_modules".into())),
+      FilterExpr::Not(Box::new(FilterExpr::Code(StringOrRegex::Regex("import\\s*".into())))),
+    ]);
     assert!(!filter_expr_interpreter(
       &expr,
       Some("/foo/bar.js"),
@@ -178,7 +180,7 @@ mod test {
     // exclude(and(id(/node_modules/), not(code(/import\\s*/))))
     let mut tokens = vec![
       Token::Exclude,
-      Token::And,
+      Token::And(2u32),
       Token::Id(StringOrRegex::Regex("node_modules".into())),
       Token::Not,
       Token::Code(StringOrRegex::Regex("import\\s*".into())),

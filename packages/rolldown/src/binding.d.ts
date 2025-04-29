@@ -311,7 +311,7 @@ export interface BindingExperimentalOptions {
 
 export interface BindingFilterToken {
   kind: FilterTokenKind
-  value?: BindingStringOrRegex
+  payload?: BindingStringOrRegex | number
 }
 
 export interface BindingGlobImportPluginConfig {

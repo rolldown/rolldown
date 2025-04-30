@@ -1,4 +1,4 @@
-import { expect, test, vi } from 'vitest'
+import { expect, Mock, test, vi } from 'vitest'
 import { watch, RolldownWatcher } from 'rolldown'
 import fs from 'node:fs'
 import path from 'node:path'
@@ -158,6 +158,59 @@ test.sequential('watch event', async () => {
   // the listener is called with async
   await waitUtil(() => {
     expect(closeFn).toBeCalled()
+  })
+})
+
+test.sequential('watch event off', async () => {
+  const { input, outputDir } = await createTestInputAndOutput('watch-event-off')
+  const watcher = watch({
+    input,
+    output: { dir: outputDir },
+    watch: {
+      buildDelay: 50,
+    },
+  })
+  
+  const events: Record<any, Mock> = {
+    event: vi.fn(),
+    restart: vi.fn(),
+    close: vi.fn(),
+    change: vi.fn(),
+  }
+  
+  for(let evt in events) watcher.on(evt as any, events[evt])
+
+  fs.writeFileSync(input, 'console.log(12)')
+  await waitUtil(() => {
+    expect(events.event).toHaveBeenCalled()
+    expect(events.restart).toHaveBeenCalled()
+  })
+
+  for (let evt in events) {
+    if (evt !== 'close') {
+      events[evt].mockClear()
+      watcher.on(evt as any, events[evt])
+    }
+  }
+
+  fs.writeFileSync(input, 'console.log(9)')
+  await waitUtil(() => {
+    expect(events.event).not.toHaveBeenCalled()
+    expect(events.restart).not.toHaveBeenCalled()
+  })
+
+  await watcher.close()
+  await waitUtil(() => {
+    expect(events.close).toHaveBeenCalled()
+  })
+
+  watcher.off('close', events.close);
+  events.close.mockClear()
+
+  await watcher.close()
+
+  await waitUtil(() => {
+    expect(events.close).not.toHaveBeenCalled()
   })
 })
 

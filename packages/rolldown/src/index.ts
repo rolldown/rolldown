@@ -25,6 +25,7 @@ import type {
   InputOption,
   InputOptions,
   JsxOptions,
+  WatcherOptions,
 } from './options/input-options';
 import type { NormalizedInputOptions } from './options/normalized-input-options';
 import type {
@@ -173,5 +174,6 @@ export type {
   TransformResult,
   TreeshakingOptions,
   WarningHandlerWithDefault,
+  WatcherOptions,
   WatchOptions,
 };

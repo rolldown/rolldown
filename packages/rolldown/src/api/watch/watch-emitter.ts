@@ -6,7 +6,7 @@ export type WatcherEvent = 'close' | 'event' | 'restart' | 'change';
 
 export type ChangeEvent = 'create' | 'update' | 'delete';
 
-export type RollupWatcherEvent =
+export type RolldownWatcherEvent =
   | { code: 'START' }
   | {
     code: 'BUNDLE_START'; /* input?: InputOption; output: readonly string[] */
@@ -48,7 +48,7 @@ export class WatcherEmitter {
   ): this;
   on(
     event: 'event',
-    listener: (data: RollupWatcherEvent) => MaybePromise<void>,
+    listener: (data: RolldownWatcherEvent) => MaybePromise<void>,
   ): this;
   on(event: 'restart' | 'close', listener: () => MaybePromise<void>): this;
   on(

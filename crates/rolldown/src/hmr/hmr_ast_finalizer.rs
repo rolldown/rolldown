@@ -32,11 +32,12 @@ pub struct HmrAstFinalizer<'me, 'ast> {
 
 impl<'ast> HmrAstFinalizer<'_, 'ast> {
   pub fn generate_stmt_of_init_module_hot_context(&self) -> ast::Statement<'ast> {
+    let hot_name = format!("hot_{}", self.module.repr_name);
     // import.meta.hot = __rolldown_runtime__.createModuleHotContext(moduleId);
     let stmt = quote_stmt(
       self.alloc,
       &format!(
-        "import.meta.hot = __rolldown_runtime__.createModuleHotContext({:?});",
+        "const {hot_name} = __rolldown_runtime__.createModuleHotContext({:?});",
         self.module.stable_id
       ),
     );
@@ -152,6 +153,13 @@ impl<'ast> HmrAstFinalizer<'_, 'ast> {
         });
       }
       _ => {}
+    }
+  }
+
+  pub fn rewrite_import_meta_hot(&self, expr: &mut ast::Expression<'ast>) {
+    if expr.is_import_meta_hot() {
+      let hot_name = format!("hot_{}", self.module.repr_name);
+      *expr = self.snippet.id_ref_expr(&hot_name, SPAN);
     }
   }
 }
@@ -512,6 +520,8 @@ impl<'ast> VisitMut<'ast> for HmrAstFinalizer<'_, 'ast> {
         }
       }
     }
+
+    self.rewrite_import_meta_hot(it);
 
     walk_mut::walk_expression(self, it);
   }

@@ -69,6 +69,7 @@ pub async fn create_ecma_view(
     new_url_references: new_url_imports,
     this_expr_replace_map,
     hmr_info,
+    hmr_hot_ref,
   } = scanner.scan(ast.program())?;
 
   if !errors.is_empty() {
@@ -122,6 +123,7 @@ pub async fn create_ecma_view(
     esm_namespace_in_cjs: None,
     esm_namespace_in_cjs_node_mode: None,
     hmr_info,
+    hmr_hot_ref,
   };
 
   let ecma_related = EcmaRelated { ast, symbols, dynamic_import_rec_exports_usage };

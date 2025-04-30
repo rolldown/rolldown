@@ -4,8 +4,7 @@ use super::plugin_context::PluginContext;
 use crate::{
   HookAddonArgs, HookBuildEndArgs, HookGenerateBundleArgs, HookLoadArgs, HookLoadOutput,
   HookRenderChunkArgs, HookRenderChunkOutput, HookResolveIdArgs, HookResolveIdOutput,
-  HookTransformArgs, HookUsage, HookWriteBundleArgs, SharedTransformPluginContext,
-  plugin_hook_meta::PluginHookMeta,
+  HookTransformArgs, HookUsage, HookWriteBundleArgs, PluginHookMeta, SharedTransformPluginContext,
   types::{
     hook_build_start_args::HookBuildStartArgs, hook_render_error::HookRenderErrorArgs,
     hook_render_start_args::HookRenderStartArgs, hook_transform_ast_args::HookTransformAstArgs,

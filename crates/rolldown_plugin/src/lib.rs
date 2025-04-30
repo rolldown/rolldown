@@ -2,9 +2,7 @@ mod generated;
 mod plugin;
 mod plugin_context;
 mod plugin_driver;
-mod plugin_hook_meta;
 mod pluginable;
-mod transform_plugin_context;
 mod type_aliases;
 mod types;
 mod utils;
@@ -24,10 +22,8 @@ pub use crate::{
     HookRenderChunkReturn, HookResolveIdReturn, HookTransformAstReturn, HookTransformReturn,
     Plugin,
   },
-  plugin_context::PluginContext,
+  plugin_context::{PluginContext, SharedTransformPluginContext, TransformPluginContext},
   plugin_driver::{PluginDriver, SharedPluginDriver},
-  plugin_hook_meta::{PluginHookMeta, PluginOrder},
-  transform_plugin_context::{SharedTransformPluginContext, TransformPluginContext},
   types::custom_field::CustomField,
   types::hook_addon_args::HookAddonArgs,
   types::hook_build_end_args::HookBuildEndArgs,
@@ -46,6 +42,7 @@ pub use crate::{
   types::hook_transform_output::HookTransformOutput,
   types::hook_write_bundle_args::HookWriteBundleArgs,
   types::plugin_context_resolve_options::PluginContextResolveOptions,
+  types::plugin_hook_meta::{PluginHookMeta, PluginOrder},
 };
 
 pub use typedmap;

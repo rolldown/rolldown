@@ -125,6 +125,20 @@ impl Bundler {
       .expect("Failed to generate HMR patch")
       .into()
   }
+
+  #[napi]
+  pub async fn hmr_invalidate(
+    &self,
+    file: String,
+    first_invalidated_by: Option<String>,
+  ) -> BindingHmrOutput {
+    let mut bundler_core = self.inner.lock().await;
+    bundler_core
+      .hmr_invalidate(file, first_invalidated_by)
+      .await
+      .expect("Failed to call hmr_invalidate")
+      .into()
+  }
 }
 
 impl Bundler {

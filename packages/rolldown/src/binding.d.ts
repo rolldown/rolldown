@@ -161,6 +161,7 @@ export declare class Bundler {
   get closed(): boolean
   get watchFiles(): Array<string>
   generateHmrPatch(changedFiles: Array<string>): Promise<BindingHmrOutput>
+  hmrInvalidate(file: string, firstInvalidatedBy?: string | undefined | null): Promise<BindingHmrOutput>
 }
 
 export declare class ParallelJsPluginRegistry {
@@ -328,6 +329,9 @@ export interface BindingHmrOutput {
   patch: string
   hmrBoundaries: Array<BindingHmrBoundaryOutput>
   fullReload: boolean
+  firstInvalidatedBy?: string
+  isSelfAccepting: boolean
+  fullReloadReason?: string
 }
 
 export interface BindingHookFilter {

@@ -2616,9 +2616,7 @@ name = "rolldown_loader_utils"
 version = "0.1.0"
 dependencies = [
  "anyhow",
- "itoa",
  "rolldown_common",
- "rolldown_utils",
  "serde_json",
 ]
 

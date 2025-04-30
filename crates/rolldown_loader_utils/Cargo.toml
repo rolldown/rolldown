@@ -11,9 +11,7 @@ doctest = false
 
 [dependencies]
 anyhow = { workspace = true }
-itoa = { workspace = true }
 rolldown_common = { workspace = true }
-rolldown_utils = { workspace = true }
 serde_json = { workspace = true }
 
 [lints]

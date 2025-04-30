@@ -263,18 +263,12 @@ importers:
       '@oxc-project/types':
         specifier: 0.67.0
         version: 0.67.0
-      '@valibot/to-json-schema':
-        specifier: 1.0.0
-        version: 1.0.0(valibot@1.0.0(typescript@5.8.3))
       ansis:
         specifier: ^3.17.0
         version: 3.17.0
       pathe:
         specifier: ^2.0.3
         version: 2.0.3
-      valibot:
-        specifier: 1.0.0
-        version: 1.0.0(typescript@5.8.3)
 
   packages/debug: {}
 
@@ -286,15 +280,9 @@ importers:
       '@oxc-project/types':
         specifier: 0.67.0
         version: 0.67.0
-      '@valibot/to-json-schema':
-        specifier: 1.0.0
-        version: 1.0.0(valibot@1.0.0(typescript@5.8.3))
       ansis:
         specifier: ^3.17.0
         version: 3.17.0
-      valibot:
-        specifier: 1.0.0
-        version: 1.0.0(typescript@5.8.3)
     devDependencies:
       '@napi-rs/cli':
         specifier: ^3.0.0-alpha.77
@@ -314,6 +302,9 @@ importers:
       '@types/lodash-es':
         specifier: ^4.17.12
         version: 4.17.12
+      '@valibot/to-json-schema':
+        specifier: 1.0.0
+        version: 1.0.0(valibot@1.0.0(typescript@5.8.3))
       consola:
         specifier: ^3.4.2
         version: 3.4.2
@@ -371,6 +362,9 @@ importers:
       unbuild:
         specifier: ^3.0.0
         version: 3.5.0(typescript@5.8.3)(vue@3.5.13(typescript@5.8.3))
+      valibot:
+        specifier: 1.0.0
+        version: 1.0.0(typescript@5.8.3)
     optionalDependencies:
       '@rolldown/binding-darwin-arm64':
         specifier: workspace:*

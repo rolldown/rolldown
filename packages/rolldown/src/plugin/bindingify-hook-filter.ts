@@ -15,28 +15,33 @@ function generalHookFilterMatcherToFilterExprs<T extends StringOrRegExp>(
   stringKind: 'code' | 'id',
 ): filter.TopLevelFilterExpression[] | undefined {
   if (typeof matcher === 'string' || matcher instanceof RegExp) {
-    return [filter.include(filter.id(matcher))];
+    return [filter.include(generateAtomMatcher(stringKind, matcher))];
   }
   if (Array.isArray(matcher)) {
-    return matcher.map((m) => filter.include(filter.id(m)));
+    return matcher.map((m) =>
+      filter.include(generateAtomMatcher(stringKind, m))
+    );
   }
   let ret: filter.TopLevelFilterExpression[] = [];
-  let isCode = stringKind === 'code';
   if (matcher.exclude) {
     ret.push(
       ...arraify(matcher.exclude).map((m) =>
-        filter.exclude(isCode ? filter.code(m) : filter.id(m))
+        filter.exclude(generateAtomMatcher(stringKind, m))
       ),
     );
   }
   if (matcher.include) {
     ret.push(
       ...arraify(matcher.include).map((m) =>
-        filter.include(isCode ? filter.code(m) : filter.id(m))
+        filter.include(generateAtomMatcher(stringKind, m))
       ),
     );
   }
   return ret;
+}
+
+function generateAtomMatcher(kind: 'code' | 'id', matcher: StringOrRegExp) {
+  return kind === 'code' ? filter.code(matcher) : filter.id(matcher);
 }
 
 function transformFilterMatcherToFilterExprs(

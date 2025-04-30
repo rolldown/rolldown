@@ -18,20 +18,22 @@ function generalHookFilterMatcherToFilterExprs<T extends StringOrRegExp>(
     return [filter.include(generateAtomMatcher(stringKind, matcher))];
   }
   if (Array.isArray(matcher)) {
-    return matcher.map((m) => filter.include(generateAtomMatcher(stringKind, m)));
+    return matcher.map((m) =>
+      filter.include(generateAtomMatcher(stringKind, m))
+    );
   }
   let ret: filter.TopLevelFilterExpression[] = [];
   if (matcher.exclude) {
     ret.push(
       ...arraify(matcher.exclude).map((m) =>
-        filter.exclude(generateAtomMatcher(stringKind, m)),
+        filter.exclude(generateAtomMatcher(stringKind, m))
       ),
     );
   }
   if (matcher.include) {
     ret.push(
       ...arraify(matcher.include).map((m) =>
-        filter.include(generateAtomMatcher(stringKind, m)),
+        filter.include(generateAtomMatcher(stringKind, m))
       ),
     );
   }

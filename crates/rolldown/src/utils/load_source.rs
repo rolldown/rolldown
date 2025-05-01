@@ -74,6 +74,7 @@ pub async fn load_source(
           | ModuleType::Jsx
           | ModuleType::Ts
           | ModuleType::Tsx
+          | ModuleType::Dts
           | ModuleType::Json
           | ModuleType::Text
           | ModuleType::Empty
@@ -123,6 +124,7 @@ fn read_file_by_module_type(
     | ModuleType::Jsx
     | ModuleType::Ts
     | ModuleType::Tsx
+    | ModuleType::Dts
     | ModuleType::Json
     | ModuleType::Css
     | ModuleType::Empty

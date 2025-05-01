@@ -2741,6 +2741,7 @@ dependencies = [
  "rolldown_common",
  "rolldown_plugin",
  "rolldown_testing",
+ "rolldown_utils",
  "sugar_path",
  "testing_macros",
 ]

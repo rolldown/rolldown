@@ -5,6 +5,7 @@ pub enum OxcParseType {
   Jsx,
   Ts,
   Tsx,
+  Dts,
 }
 
 impl From<&ModuleType> for OxcParseType {
@@ -13,6 +14,7 @@ impl From<&ModuleType> for OxcParseType {
       ModuleType::Jsx => OxcParseType::Jsx,
       ModuleType::Ts => OxcParseType::Ts,
       ModuleType::Tsx => OxcParseType::Tsx,
+      ModuleType::Dts => OxcParseType::Dts,
       _ => OxcParseType::Js,
     }
   }

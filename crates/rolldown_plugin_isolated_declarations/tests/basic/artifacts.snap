@@ -3,16 +3,9 @@ source: crates/rolldown_testing/src/integration_test.rs
 ---
 # Assets
 
-## foo.d.ts
+## main.d.js
 
-```ts
-export declare const foo: string;
-
-```
-## main.d.ts
-
-```ts
-export { foo } from "./foo";
+```js
 
 ```
 ## main.js

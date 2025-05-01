@@ -57,6 +57,7 @@ pub async fn parse_to_ecma_ast(
       OxcParseType::Js => default,
       OxcParseType::Jsx => default.with_jsx(!options.jsx.is_jsx_disabled()),
       OxcParseType::Ts => default.with_typescript(true),
+      OxcParseType::Dts => default.with_typescript_definition(true),
       OxcParseType::Tsx => default.with_typescript(true).with_jsx(!options.jsx.is_jsx_disabled()),
     }
   };
@@ -106,9 +107,12 @@ fn pre_process_source(
   );
 
   let source = match module_type {
-    ModuleType::Js | ModuleType::Jsx | ModuleType::Ts | ModuleType::Tsx | ModuleType::Json => {
-      source.try_into_string()?
-    }
+    ModuleType::Js
+    | ModuleType::Jsx
+    | ModuleType::Ts
+    | ModuleType::Tsx
+    | ModuleType::Dts
+    | ModuleType::Json => source.try_into_string()?,
     ModuleType::Css => {
       if is_user_defined_entry {
         "export {}".to_owned()

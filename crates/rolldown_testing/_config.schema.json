@@ -1021,6 +1021,7 @@
             "jsx",
             "ts",
             "tsx",
+            "dts",
             "json",
             "text",
             "base64",

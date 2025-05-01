@@ -6,7 +6,6 @@ use testing_macros::fixture;
 #[allow(clippy::needless_pass_by_value)]
 #[fixture("./tests/**/_config.json")]
 fn fixture_with_config(config_path: PathBuf) {
-  Fixture::new(config_path.parent().unwrap()).run_integration_test_with_plugins(vec![Arc::new(
-    IsolatedDeclarationPlugin { strip_internal: true },
-  )]);
+  Fixture::new(config_path.parent().unwrap())
+    .run_integration_test_with_plugins(vec![Arc::new(IsolatedDeclarationPlugin::new(true))]);
 }

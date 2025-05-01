@@ -585,7 +585,7 @@ pub struct BindingIsolatedDeclarationPluginConfig {
 
 impl From<BindingIsolatedDeclarationPluginConfig> for IsolatedDeclarationPlugin {
   fn from(value: BindingIsolatedDeclarationPluginConfig) -> Self {
-    IsolatedDeclarationPlugin { strip_internal: value.strip_internal.unwrap_or_default() }
+    IsolatedDeclarationPlugin::new(value.strip_internal.unwrap_or_default())
   }
 }
 

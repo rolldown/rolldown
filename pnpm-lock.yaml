@@ -29,9 +29,6 @@ importers:
       conventional-changelog-cli:
         specifier: ^5.0.0
         version: 5.0.0(conventional-commits-filter@5.0.0)
-      cross-env:
-        specifier: ^7.0.3
-        version: 7.0.3
       cspell:
         specifier: ^8.8.4
         version: 8.18.1
@@ -433,9 +430,6 @@ importers:
 
   packages/rolldown/tests:
     dependencies:
-      cross-env:
-        specifier: ^7.0.3
-        version: 7.0.3
       rolldown:
         specifier: workspace:*
         version: link:..
@@ -458,9 +452,6 @@ importers:
 
   packages/rollup-tests:
     dependencies:
-      cross-env:
-        specifier: ^7.0.3
-        version: 7.0.3
       fixturify:
         specifier: ^3.0.0
         version: 3.0.0
@@ -4212,11 +4203,6 @@ packages:
   corser@2.0.1:
     resolution: {integrity: sha512-utCYNzRSQIZNPIcGZdQc92UVJYAhtGAteCFg0yRaFm8f0P+CPtyGyHXJcGXnffjCybUCEx3FQ2G7U3/o9eIkVQ==}
     engines: {node: '>= 0.4.0'}
-
-  cross-env@7.0.3:
-    resolution: {integrity: sha512-+/HKd6EgcQCJGh2PSjZuUitQBQynKor4wrFbRg4DtAgS1aWO+gU52xpH7M9ScGgXSYmAVS9bIJ8EzuaGw0oNAw==}
-    engines: {node: '>=10.14', npm: '>=6', yarn: '>=1'}
-    hasBin: true
 
   cross-spawn@7.0.6:
     resolution: {integrity: sha512-uV2QOWP2nWzsy2aMp8aRibhi9dlzF5Hgh5SHaB9OiTGEyDTiJJyx0uy51QXdyWbtAHNua4XJzUKca3OzKUd3vA==}
@@ -10278,10 +10264,6 @@ snapshots:
   core-util-is@1.0.3: {}
 
   corser@2.0.1: {}
-
-  cross-env@7.0.3:
-    dependencies:
-      cross-spawn: 7.0.6
 
   cross-spawn@7.0.6:
     dependencies:

@@ -36,7 +36,7 @@ rolldown_plugin_alias = { workspace = true }
 rolldown_plugin_build_import_analysis = { workspace = true }
 rolldown_plugin_dynamic_import_vars = { workspace = true }
 rolldown_plugin_import_glob = { workspace = true }
-rolldown_plugin_isolated_declaration = { workspace = true }
+rolldown_plugin_isolated_declarations = { workspace = true }
 rolldown_plugin_json = { workspace = true }
 rolldown_plugin_load_fallback = { workspace = true }
 rolldown_plugin_manifest = { workspace = true }

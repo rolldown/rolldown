@@ -1,5 +1,5 @@
 [package]
-name = "rolldown_plugin_isolated_declaration"
+name = "rolldown_plugin_isolated_declarations"
 version = "0.1.0"
 edition.workspace = true
 homepage.workspace = true

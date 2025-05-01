@@ -1180,15 +1180,6 @@
             "type": "string"
           }
         },
-        "modules": {
-          "type": [
-            "array",
-            "null"
-          ],
-          "items": {
-            "type": "string"
-          }
-        },
         "symlinks": {
           "type": [
             "boolean",

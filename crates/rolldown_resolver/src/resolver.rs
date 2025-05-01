@@ -100,7 +100,6 @@ impl<F: FileSystem + Default> Resolver<F> {
       imports_fields: vec![vec!["imports".to_string()]],
       alias_fields,
       condition_names: default_conditions,
-      description_files: vec!["package.json".to_string()],
       enforce_extension: EnforceExtension::Auto,
       exports_fields: raw_resolve
         .exports_fields
@@ -113,7 +112,6 @@ impl<F: FileSystem + Default> Resolver<F> {
       fully_specified: false,
       main_fields,
       main_files: raw_resolve.main_files.unwrap_or_else(|| vec!["index".to_string()]),
-      modules: raw_resolve.modules.unwrap_or_else(|| vec!["node_modules".to_string()]),
       resolve_to_context: false,
       prefer_relative: false,
       prefer_absolute: false,

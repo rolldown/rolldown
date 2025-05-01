@@ -36,7 +36,6 @@ impl From<BindingResolveOptions> for rolldown::ResolveOptions {
       }),
       main_fields: value.main_fields,
       main_files: value.main_files,
-      modules: value.modules,
       symlinks: value.symlinks,
       tsconfig_filename: value.tsconfig_filename,
     }

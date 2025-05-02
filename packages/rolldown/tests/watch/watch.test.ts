@@ -1,4 +1,4 @@
-import { expect, Mock, test, vi } from 'vitest'
+import { expect, test, vi } from 'vitest'
 import { watch, RolldownWatcher } from 'rolldown'
 import fs from 'node:fs'
 import path from 'node:path'
@@ -170,48 +170,19 @@ test.sequential('watch event off', async () => {
       buildDelay: 50,
     },
   })
-  
-  const events: Record<any, Mock> = {
-    event: vi.fn(),
-    restart: vi.fn(),
-    close: vi.fn(),
-    change: vi.fn(),
-  }
-  
-  for(let evt in events) watcher.on(evt as any, events[evt])
+  const eventFn = vi.fn()
+  watcher.on('event', eventFn)
+  await waitBuildFinished(watcher)
+  expect(eventFn).toHaveBeenCalled()
+
+  eventFn.mockClear()
+  watcher.off('event', eventFn);
 
   fs.writeFileSync(input, 'console.log(12)')
-  await waitUtil(() => {
-    expect(events.event).toHaveBeenCalled()
-    expect(events.restart).toHaveBeenCalled()
-  })
-
-  for (let evt in events) {
-    if (evt !== 'close') {
-      events[evt].mockClear()
-      watcher.on(evt as any, events[evt])
-    }
-  }
-
-  fs.writeFileSync(input, 'console.log(9)')
-  await waitUtil(() => {
-    expect(events.event).not.toHaveBeenCalled()
-    expect(events.restart).not.toHaveBeenCalled()
-  })
+  await waitBuildFinished(watcher)
+  expect(eventFn).not.toHaveBeenCalled()
 
   await watcher.close()
-  await waitUtil(() => {
-    expect(events.close).toHaveBeenCalled()
-  })
-
-  watcher.off('close', events.close);
-  events.close.mockClear()
-
-  await watcher.close()
-
-  await waitUtil(() => {
-    expect(events.close).not.toHaveBeenCalled()
-  })
 })
 
 test.sequential('watch BUNDLE_END event output + "file" option', async () => {

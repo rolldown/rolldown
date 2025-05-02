@@ -137,8 +137,10 @@ impl<'ast> ScopeHoistingFinalizer<'_, 'ast> {
 
   pub fn rewrite_import_meta_hot(&self, expr: &mut ast::Expression<'ast>) {
     if expr.is_import_meta_hot() {
-      let hot_name = self.canonical_name_for(self.ctx.module.ecma_view.hmr_hot_ref.unwrap());
-      *expr = self.snippet.id_ref_expr(hot_name, SPAN);
+      if let Some(hmr_hot_ref) = self.ctx.module.ecma_view.hmr_hot_ref {
+        let hot_name = self.canonical_name_for(hmr_hot_ref);
+        *expr = self.snippet.id_ref_expr(hot_name, SPAN);
+      }
     }
   }
 

@@ -161,6 +161,30 @@ test.sequential('watch event', async () => {
   })
 })
 
+test.sequential('watch event off', async () => {
+  const { input, outputDir } = await createTestInputAndOutput('watch-event-off')
+  const watcher = watch({
+    input,
+    output: { dir: outputDir },
+    watch: {
+      buildDelay: 50,
+    },
+  })
+  const eventFn = vi.fn()
+  watcher.on('event', eventFn)
+  await waitBuildFinished(watcher)
+  expect(eventFn).toHaveBeenCalled()
+
+  eventFn.mockClear()
+  watcher.off('event', eventFn);
+
+  fs.writeFileSync(input, 'console.log(12)')
+  await waitBuildFinished(watcher)
+  expect(eventFn).not.toHaveBeenCalled()
+
+  await watcher.close()
+})
+
 test.sequential('watch BUNDLE_END event output + "file" option', async () => {
   const { input, output } = await createTestInputAndOutput('watch-event')
   const watcher = watch({

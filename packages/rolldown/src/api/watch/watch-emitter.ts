@@ -64,6 +64,18 @@ export class WatcherEmitter {
     return this;
   }
 
+  off(
+    event: WatcherEvent,
+    listener: (...parameters: any[]) => MaybePromise<void>,
+  ): this {
+    const listeners = this.listeners.get(event);
+    if (listeners) {
+      const index = listeners.indexOf(listener);
+      if (index !== -1) listeners.splice(index, 1);
+    }
+    return this;
+  }
+
   async onEvent(event: BindingWatcherEvent): Promise<void> {
     const listeners = this.listeners.get(event.eventKind() as WatcherEvent);
     if (listeners) {

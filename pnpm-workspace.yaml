@@ -10,3 +10,8 @@ packages:
   - crates/rolldown/tests/rolldown/topics/npm_packages
 
 shellEmulator: true
+
+# Define a catalog of version ranges.
+catalog:
+  '@oxc-node/cli': '^0.0.25'
+  '@oxc-node/core': '^0.0.25'

@@ -157,6 +157,7 @@
     "outro",
     "oxlint",
     "oxlintignore",
+    "oxnode",
     "peekable",
     "Pluginable",
     "pluginutils",

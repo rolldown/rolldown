@@ -42,14 +42,12 @@ impl PluginContextImpl {
     specifier: &str,
     side_effects: Option<HookSideEffects>,
   ) -> anyhow::Result<()> {
-    self
-      .tx
-      .lock()
-      .await
-      .as_ref()
-      .context(
-        "The `PluginContext.load` only work at `resolveId/load/transform/moduleParsed` hooks. If you using it at resolveId hook, please make sure it could not load the entry module.",
-      )?
+    // Clone out the sender under the lock, then drop the lock before awaiting.
+    let sender = {
+      let guard = self.tx.lock().await.clone();
+      guard.context("The `PluginContext.load` only work at `resolveId/load/transform/moduleParsed` hooks. If you using it at resolveId hook, please make sure it could not load the entry module.")?
+    };
+    sender
       .send(ModuleLoaderMsg::FetchModule(ResolvedId {
         id: specifier.into(),
         ignored: false,

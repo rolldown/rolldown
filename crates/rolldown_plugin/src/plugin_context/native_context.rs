@@ -72,9 +72,23 @@ impl PluginContextImpl {
     let plugin_driver = self
       .plugin_driver
       .upgrade()
-      .ok_or_else(|| anyhow::format_err!("Plugin driver is already dropped."))?;
+      .ok_or_else(|| anyhow::anyhow!("Plugin driver is already dropped."))?;
 
     let normalized_extra_options = extra_options.unwrap_or_default();
+    let skipped_resolve_calls = if normalized_extra_options.skip_self {
+      let mut skipped_resolve_calls = Vec::with_capacity(self.skipped_resolve_calls.len() + 1);
+      skipped_resolve_calls.extend(self.skipped_resolve_calls.clone());
+      skipped_resolve_calls.push(Arc::new(HookResolveIdSkipped {
+        plugin_idx: self.plugin_idx,
+        importer: importer.map(Into::into),
+        specifier: specifier.into(),
+      }));
+      Some(skipped_resolve_calls)
+    } else if !self.skipped_resolve_calls.is_empty() {
+      Some(self.skipped_resolve_calls.clone())
+    } else {
+      None
+    };
 
     resolve_id_check_external(
       &self.resolver,
@@ -83,20 +97,7 @@ impl PluginContextImpl {
       importer,
       false,
       normalized_extra_options.import_kind,
-      if normalized_extra_options.skip_self {
-        let mut skipped_resolve_calls = Vec::with_capacity(self.skipped_resolve_calls.len() + 1);
-        skipped_resolve_calls.extend(self.skipped_resolve_calls.clone());
-        skipped_resolve_calls.push(Arc::new(HookResolveIdSkipped {
-          plugin_idx: self.plugin_idx,
-          importer: importer.map(Into::into),
-          specifier: specifier.into(),
-        }));
-        Some(skipped_resolve_calls)
-      } else if !self.skipped_resolve_calls.is_empty() {
-        Some(self.skipped_resolve_calls.clone())
-      } else {
-        None
-      },
+      skipped_resolve_calls,
       normalized_extra_options.custom,
       false,
       &self.options,
@@ -114,16 +115,13 @@ impl PluginContextImpl {
     fn_asset_filename: Option<String>,
     fn_sanitized_file_name: Option<String>,
   ) -> ArcStr {
-    let sanitized_file_name = match file.file_name {
-      Some(_) => None,
-      None => {
-        Some(self.options.sanitize_filename.value(file.name_for_sanitize(), fn_sanitized_file_name))
-      }
-    };
-    let asset_filename_template = match file.file_name {
-      Some(_) => None,
-      None => Some(self.options.asset_filenames.value(fn_asset_filename).into()),
-    };
+    let file_name_is_none = file.file_name.is_none();
+    let asset_filename_template =
+      file_name_is_none.then(|| self.options.asset_filenames.value(fn_asset_filename).into());
+    let sanitized_file_name = file_name_is_none.then(|| {
+      self.options.sanitize_filename.value(file.name_for_sanitize(), fn_sanitized_file_name)
+    });
+
     self.file_emitter.emit_file(file, asset_filename_template, sanitized_file_name)
   }
 

@@ -196,7 +196,7 @@ impl PluginDriver {
         .call_generate_bundle(ctx, &mut args)
         .instrument(debug_span!("generate_bundle_hook", plugin_name = plugin.call_name().as_ref()))
         .await?;
-      ctx.file_emitter.add_additional_files(bundle, warnings);
+      ctx.file_emitter().add_additional_files(bundle, warnings);
     }
     Ok(())
   }
@@ -215,7 +215,7 @@ impl PluginDriver {
         .call_write_bundle(ctx, &mut args)
         .instrument(debug_span!("write_bundle_hook", plugin_name = plugin.call_name().as_ref()))
         .await?;
-      ctx.file_emitter.add_additional_files(bundle, warnings);
+      ctx.file_emitter().add_additional_files(bundle, warnings);
     }
     Ok(())
   }

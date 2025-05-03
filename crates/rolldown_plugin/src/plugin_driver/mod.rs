@@ -17,7 +17,7 @@ use tokio::sync::Mutex;
 use crate::{
   __inner::SharedPluginable,
   HookUsage, PluginContext, PluginHookMeta, PluginOrder,
-  plugin_context::PluginContextImpl,
+  plugin_context::NativePluginContextImpl,
   type_aliases::{IndexPluginContext, IndexPluginable},
   types::plugin_idx::PluginIdx,
 };
@@ -59,20 +59,17 @@ impl PluginDriver {
       plugins.into_iter().for_each(|plugin| {
         let plugin_idx = index_plugins.push(Arc::clone(&plugin));
         plugin_usage_vec.push(plugin.call_hook_usage());
-        index_contexts.push(
-          PluginContextImpl {
-            skipped_resolve_calls: vec![],
-            plugin_idx,
-            plugin_driver: Weak::clone(plugin_driver),
-            resolver: Arc::clone(resolver),
-            file_emitter: Arc::clone(file_emitter),
-            modules: Arc::clone(&modules),
-            options: Arc::clone(options),
-            watch_files: Arc::clone(&watch_files),
-            tx: Arc::clone(&tx),
-          }
-          .into(),
-        );
+        index_contexts.push(PluginContext::Native(Arc::new(NativePluginContextImpl {
+          skipped_resolve_calls: vec![],
+          plugin_idx,
+          plugin_driver: Weak::clone(plugin_driver),
+          resolver: Arc::clone(resolver),
+          file_emitter: Arc::clone(file_emitter),
+          modules: Arc::clone(&modules),
+          options: Arc::clone(options),
+          watch_files: Arc::clone(&watch_files),
+          tx: Arc::clone(&tx),
+        })));
       });
 
       Self {

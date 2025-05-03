@@ -24,7 +24,7 @@ use crate::{
 };
 
 #[derive(Debug)]
-pub struct PluginContextImpl {
+pub struct NativePluginContextImpl {
   pub(crate) skipped_resolve_calls: Vec<Arc<HookResolveIdSkipped>>,
   pub(crate) plugin_idx: PluginIdx,
   pub(crate) resolver: Arc<Resolver>,
@@ -36,7 +36,7 @@ pub struct PluginContextImpl {
   pub(crate) tx: Arc<Mutex<Option<tokio::sync::mpsc::Sender<ModuleLoaderMsg>>>>,
 }
 
-impl PluginContextImpl {
+impl NativePluginContextImpl {
   pub async fn load(
     &self,
     specifier: &str,

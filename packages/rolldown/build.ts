@@ -2,11 +2,13 @@ import colors from 'ansis';
 import { globSync } from 'glob';
 import fs from 'node:fs';
 import nodePath from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { dts } from 'rolldown-plugin-dts';
 import { build, BuildOptions, type Plugin } from './src/index';
 
 const isCI = !!process.env.CI;
 const isReleasingCI = !!process.env.RELEASING;
+const __dirname = nodePath.join(fileURLToPath(import.meta.url), '..');
 
 // In `@rolldown/browser`, there will be three builds:
 // - CJS and ESM for Node (used in StackBlitz / WebContainers)

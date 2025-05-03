@@ -27,7 +27,7 @@
   "devDependencies": {
     "@actions/core": "^1.11.1",
     "@babel/runtime": "7.27.0",
-    "@oxc-node/core": "^0.0.22",
+    "@oxc-node/core": "catalog:",
     "@oxc-project/runtime": "0.67.0",
     "@types/node": "22.14.0",
     "cjs-module-lexer": "^2.0.0",

@@ -256,6 +256,12 @@ exports[`config > should allow loading ts config from non-working dir 1`] = `
 "
 `;
 
+exports[`config > should allow loading ts config with oxnode 1`] = `
+"<DIR>/index.js  chunk │ size: 0.11 kB
+
+"
+`;
+
 exports[`config > should allow loading ts config with tsx 1`] = `
 "<DIR>/index.js  chunk │ size: 0.11 kB
 

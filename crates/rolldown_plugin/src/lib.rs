@@ -22,7 +22,9 @@ pub use crate::{
     HookRenderChunkReturn, HookResolveIdReturn, HookTransformAstReturn, HookTransformReturn,
     Plugin,
   },
-  plugin_context::{PluginContext, SharedTransformPluginContext, TransformPluginContext},
+  plugin_context::{
+    PluginContext, SharedNativePluginContext, SharedTransformPluginContext, TransformPluginContext,
+  },
   plugin_driver::{PluginDriver, SharedPluginDriver},
   types::custom_field::CustomField,
   types::hook_addon_args::HookAddonArgs,

@@ -1,6 +1,6 @@
 use napi_derive::napi;
 
-use rolldown_plugin::PluginContext;
+use rolldown_plugin::{PluginContext, SharedNativePluginContext};
 
 use super::types::{
   binding_emitted_asset::BindingEmittedAsset, binding_emitted_chunk::BindingEmittedChunk,
@@ -13,7 +13,7 @@ use crate::{types::binding_module_info::BindingModuleInfo, utils::napi_error};
 
 #[napi]
 pub struct BindingPluginContext {
-  inner: PluginContext,
+  inner: SharedNativePluginContext,
 }
 
 #[napi]
@@ -93,8 +93,11 @@ impl BindingPluginContext {
 }
 
 impl From<PluginContext> for BindingPluginContext {
-  fn from(inner: PluginContext) -> Self {
-    Self { inner }
+  fn from(ctx: PluginContext) -> Self {
+    match ctx {
+      PluginContext::Napi(_) => unreachable!("Js plugins don't have PluginContext::Napi"),
+      PluginContext::Native(inner) => Self { inner },
+    }
   }
 }
 #[napi(object)]

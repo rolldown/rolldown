@@ -23,6 +23,8 @@ use crate::{
   utils::resolve_id_check_external::resolve_id_check_external,
 };
 
+pub type SharedNativePluginContext = Arc<NativePluginContextImpl>;
+
 #[derive(Debug)]
 pub struct NativePluginContextImpl {
   pub(crate) skipped_resolve_calls: Vec<Arc<HookResolveIdSkipped>>,

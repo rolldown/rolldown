@@ -35,7 +35,7 @@ impl<'ast> AstSnippet<'ast> {
 
   #[inline]
   pub fn id(&self, name: PassedStr, span: Span) -> ast::BindingIdentifier<'ast> {
-    self.builder.binding_identifier(span, name)
+    self.builder.binding_identifier(span, self.builder.atom(name))
   }
 
   #[inline]
@@ -44,17 +44,17 @@ impl<'ast> AstSnippet<'ast> {
     name: PassedStr,
     span: Span,
   ) -> Box<'ast, ast::IdentifierReference<'ast>> {
-    self.builder.alloc_identifier_reference(span, name)
+    self.builder.alloc_identifier_reference(span, self.builder.atom(name))
   }
 
   #[inline]
   pub fn id_name(&self, name: PassedStr, span: Span) -> ast::IdentifierName<'ast> {
-    self.builder.identifier_name(span, name)
+    self.builder.identifier_name(span, self.builder.atom(name))
   }
 
   #[inline]
   pub fn id_ref_expr(&self, name: PassedStr, span: Span) -> ast::Expression<'ast> {
-    self.builder.expression_identifier(span, name)
+    self.builder.expression_identifier(span, self.builder.atom(name))
   }
 
   pub fn member_expr_or_ident_ref(
@@ -101,7 +101,7 @@ impl<'ast> AstSnippet<'ast> {
     ast::MemberExpression::StaticMemberExpression(self.builder.alloc_static_member_expression(
       SPAN,
       self.id_ref_expr(object, SPAN),
-      self.builder.identifier_name(SPAN, property),
+      self.builder.identifier_name(SPAN, self.builder.atom(property)),
       false,
     ))
   }
@@ -121,7 +121,7 @@ impl<'ast> AstSnippet<'ast> {
   pub fn call_expr(&self, name: PassedStr) -> ast::CallExpression<'ast> {
     self.builder.call_expression(
       SPAN,
-      self.builder.expression_identifier(SPAN, name),
+      self.builder.expression_identifier(SPAN, self.builder.atom(name)),
       NONE,
       self.builder.vec(),
       false,
@@ -132,7 +132,7 @@ impl<'ast> AstSnippet<'ast> {
   pub fn call_expr_expr(&self, name: PassedStr) -> ast::Expression<'ast> {
     self.builder.expression_call(
       SPAN,
-      self.builder.expression_identifier(SPAN, name),
+      self.builder.expression_identifier(SPAN, self.builder.atom(name)),
       NONE,
       self.builder.vec(),
       false,
@@ -186,7 +186,7 @@ impl<'ast> AstSnippet<'ast> {
   ) -> ast::Expression<'ast> {
     self.builder.expression_call(
       SPAN,
-      self.builder.expression_identifier(SPAN, name),
+      self.builder.expression_identifier(SPAN, self.builder.atom(name)),
       NONE,
       self.builder.vec_from_iter([Argument::from(arg1), Argument::from(arg2)]),
       false,
@@ -235,7 +235,7 @@ impl<'ast> AstSnippet<'ast> {
       SPAN,
       ast::VariableDeclarationKind::Var,
       self.builder.binding_pattern(
-        self.builder.binding_pattern_kind_binding_identifier(SPAN, name),
+        self.builder.binding_pattern_kind_binding_identifier(SPAN, self.builder.atom(name)),
         NONE,
         false,
       ),
@@ -261,7 +261,7 @@ impl<'ast> AstSnippet<'ast> {
       SPAN,
       ast::VariableDeclarationKind::Var,
       self.builder.binding_pattern(
-        self.builder.binding_pattern_kind_binding_identifier(SPAN, name),
+        self.builder.binding_pattern_kind_binding_identifier(SPAN, self.builder.atom(name)),
         NONE,
         false,
       ),
@@ -285,7 +285,7 @@ impl<'ast> AstSnippet<'ast> {
       SPAN,
       ast::VariableDeclarationKind::Var,
       self.builder.binding_pattern(
-        self.builder.binding_pattern_kind_binding_identifier(SPAN, name),
+        self.builder.binding_pattern_kind_binding_identifier(SPAN, self.builder.atom(name)),
         NONE,
         false,
       ),
@@ -310,9 +310,9 @@ impl<'ast> AstSnippet<'ast> {
     names.iter().for_each(|(imported, local)| {
       properties.push(self.builder.binding_property(
         SPAN,
-        self.builder.property_key_static_identifier(SPAN, *imported),
+        self.builder.property_key_static_identifier(SPAN, self.builder.atom(imported)),
         self.builder.binding_pattern(
-          self.builder.binding_pattern_kind_binding_identifier(SPAN, *local),
+          self.builder.binding_pattern_kind_binding_identifier(SPAN, self.builder.atom(local)),
           NONE,
           false,
         ),
@@ -403,7 +403,11 @@ impl<'ast> AstSnippet<'ast> {
         self.builder.vec1(self.builder.object_property_kind_object_property(
           SPAN,
           PropertyKind::Init,
-          ast::PropertyKey::from(self.builder.expression_string_literal(SPAN, stable_id, None)),
+          ast::PropertyKey::from(self.builder.expression_string_literal(
+            SPAN,
+            self.builder.atom(stable_id),
+            None,
+          )),
           self.builder.expression_function(
             SPAN,
             FunctionType::FunctionExpression,
@@ -469,7 +473,11 @@ impl<'ast> AstSnippet<'ast> {
         self.builder.vec1(self.builder.object_property_kind_object_property(
           SPAN,
           PropertyKind::Init,
-          ast::PropertyKey::from(self.builder.expression_string_literal(SPAN, stable_id, None)),
+          ast::PropertyKey::from(self.builder.expression_string_literal(
+            SPAN,
+            self.builder.atom(stable_id),
+            None,
+          )),
           self.builder.expression_function(
             SPAN,
             FunctionType::FunctionExpression,
@@ -577,7 +585,7 @@ impl<'ast> AstSnippet<'ast> {
     value: PassedStr,
     span: Span,
   ) -> Box<'ast, ast::StringLiteral<'ast>> {
-    self.builder.alloc_string_literal(span, value, None)
+    self.builder.alloc_string_literal(span, self.builder.atom(value), None)
   }
 
   pub fn string_literal_expr(&self, value: PassedStr, span: Span) -> ast::Expression<'ast> {
@@ -591,7 +599,7 @@ impl<'ast> AstSnippet<'ast> {
     ast::Statement::ImportDeclaration(self.builder.alloc_import_declaration(
       SPAN,
       Some(specifiers),
-      self.builder.string_literal(SPAN, source, None),
+      self.builder.string_literal(SPAN, self.builder.atom(source), None),
       None,
       NONE,
       ImportOrExportKind::Value,
@@ -613,7 +621,7 @@ impl<'ast> AstSnippet<'ast> {
       SPAN,
       ast::VariableDeclarationKind::Var,
       self.builder.binding_pattern(
-        self.builder.binding_pattern_kind_binding_identifier(SPAN, as_name),
+        self.builder.binding_pattern_kind_binding_identifier(SPAN, self.builder.atom(as_name)),
         NONE,
         false,
       ),
@@ -639,9 +647,9 @@ impl<'ast> AstSnippet<'ast> {
     names.iter().for_each(|(imported, local)| {
       properties.push(self.builder.binding_property(
         SPAN,
-        self.builder.property_key_static_identifier(SPAN, *imported),
+        self.builder.property_key_static_identifier(SPAN, self.builder.atom(imported)),
         self.builder.binding_pattern(
-          self.builder.binding_pattern_kind_binding_identifier(SPAN, *local),
+          self.builder.binding_pattern_kind_binding_identifier(SPAN, self.builder.atom(local)),
           NONE,
           false,
         ),
@@ -678,7 +686,11 @@ impl<'ast> AstSnippet<'ast> {
       SPAN,
       self.builder.expression_identifier(SPAN, "require"),
       NONE,
-      self.builder.vec1(Argument::from(self.builder.expression_string_literal(SPAN, source, None))),
+      self.builder.vec1(Argument::from(self.builder.expression_string_literal(
+        SPAN,
+        self.builder.atom(source),
+        None,
+      ))),
       false,
     )
   }
@@ -697,7 +709,7 @@ impl<'ast> AstSnippet<'ast> {
         SPAN,
         VariableDeclarationKind::Var,
         self.builder.binding_pattern(
-          self.builder.binding_pattern_kind_binding_identifier(SPAN, assignee),
+          self.builder.binding_pattern_kind_binding_identifier(SPAN, self.builder.atom(assignee)),
           NONE,
           false,
         ),
@@ -778,9 +790,13 @@ impl<'ast> AstSnippet<'ast> {
       SPAN,
       PropertyKind::Init,
       if computed {
-        ast::PropertyKey::from(self.builder.expression_string_literal(SPAN, key, None))
+        ast::PropertyKey::from(self.builder.expression_string_literal(
+          SPAN,
+          self.builder.atom(key),
+          None,
+        ))
       } else {
-        self.builder.property_key_static_identifier(SPAN, key)
+        self.builder.property_key_static_identifier(SPAN, self.builder.atom(key))
       },
       self.only_return_arrow_expr(expr),
       true,
@@ -893,16 +909,26 @@ impl<'ast> AstSnippet<'ast> {
       {
         let mut vec = self.builder.vec_with_capacity(specifiers.len());
         for (local, exported, legal_ident) in specifiers {
-          vec.push(self.builder.export_specifier(
-            SPAN,
-            self.builder.module_export_name_identifier_reference(SPAN, local.as_ref()),
-            if *legal_ident {
-              self.builder.module_export_name_identifier_name(SPAN, exported.as_ref())
-            } else {
-              self.builder.module_export_name_string_literal(SPAN, exported.as_ref(), None)
-            },
-            ImportOrExportKind::Value,
-          ));
+          vec.push(
+            self.builder.export_specifier(
+              SPAN,
+              self
+                .builder
+                .module_export_name_identifier_reference(SPAN, self.builder.atom(local.as_ref())),
+              if *legal_ident {
+                self
+                  .builder
+                  .module_export_name_identifier_name(SPAN, self.builder.atom(exported.as_ref()))
+              } else {
+                self.builder.module_export_name_string_literal(
+                  SPAN,
+                  self.builder.atom(exported.as_ref()),
+                  None,
+                )
+              },
+              ImportOrExportKind::Value,
+            ),
+          );
         }
         vec
       },
@@ -925,8 +951,13 @@ impl<'ast> AstSnippet<'ast> {
         NONE,
         {
           let mut items = self.builder.vec_with_capacity(2);
-          items.push(self.builder.expression_identifier(SPAN, new_name).into());
-          items.push(self.builder.expression_string_literal(SPAN, original_name, None).into());
+          items.push(self.builder.expression_identifier(SPAN, self.builder.atom(new_name)).into());
+          items.push(
+            self
+              .builder
+              .expression_string_literal(SPAN, self.builder.atom(original_name), None)
+              .into(),
+          );
           items
         },
         false,
@@ -946,7 +977,9 @@ impl<'ast> AstSnippet<'ast> {
           {
             let mut items = self.builder.vec_with_capacity(2);
             items.push(self.builder.expression_this(SPAN).into());
-            items.push(self.builder.expression_string_literal(SPAN, name, None).into());
+            items.push(
+              self.builder.expression_string_literal(SPAN, self.builder.atom(name), None).into(),
+            );
             items
           },
           false,

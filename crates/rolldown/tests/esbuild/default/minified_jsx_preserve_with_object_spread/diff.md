@@ -31,8 +31,8 @@ import "react/jsx-runtime";
 //#region entry.jsx
 const obj = {
 	before,
-	...{ [key]: value },
-	...{ key: value },
+	[key]: value,
+	key: value,
 	after
 };
 Foo, key, value, value;
@@ -57,8 +57,8 @@ Bar, a, b, c, { ...d }, e;
 +//#region entry.jsx
 +const obj = {
 +	before,
-+	...{ [key]: value },
-+	...{ key: value },
++	[key]: value,
++	key: value,
 +	after
  };
 -<Foo

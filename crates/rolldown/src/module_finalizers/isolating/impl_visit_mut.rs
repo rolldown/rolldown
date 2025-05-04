@@ -94,7 +94,10 @@ impl<'ast> VisitMut<'ast> for IsolatingModuleFinalizer<'_, 'ast> {
               self.snippet.builder.alloc_static_member_expression(
                 ident.span,
                 self.snippet.id_ref_expr(namespace_object_ref.as_str(), SPAN),
-                self.snippet.builder.identifier_name(SPAN, imported.as_str()),
+                self
+                  .snippet
+                  .builder
+                  .identifier_name(SPAN, self.snippet.builder.atom(imported.as_str())),
                 false,
               ),
             );

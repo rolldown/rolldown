@@ -62,12 +62,12 @@
   },
   "dependencies": {
     "@napi-rs/wasm-runtime": "^0.2.8",
-    "@oxc-project/types": "0.67.0",
+    "@oxc-project/types": "catalog:",
     "ansis": "^3.17.0",
     "pathe": "^2.0.3"
   },
   "peerDependencies": {
-    "@oxc-project/runtime": "0.67.0"
+    "@oxc-project/runtime": "catalog:"
   },
   "peerDependenciesMeta": {
     "@oxc-project/runtime": {

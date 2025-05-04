@@ -161,14 +161,18 @@ fn json_object_expr_to_esm(
 
           let value = std::mem::replace(
             &mut property.value,
-            snippet.builder.expression_identifier(SPAN, legitimized_ident.as_str()),
+            snippet
+              .builder
+              .expression_identifier(SPAN, snippet.builder.atom(legitimized_ident.as_str())),
           );
           if key == "__proto__" && !matches!(target, ESTarget::Es5) {
             property.computed = true;
           } else if is_legal_ident {
             property.shorthand = is_legal_ident;
             property.key = ast::PropertyKey::StaticIdentifier(
-              snippet.builder.alloc_identifier_name(SPAN, legitimized_ident.as_ref()),
+              snippet
+                .builder
+                .alloc_identifier_name(SPAN, snippet.builder.atom(legitimized_ident.as_ref())),
             );
           }
           match index_map.entry(legitimized_ident) {

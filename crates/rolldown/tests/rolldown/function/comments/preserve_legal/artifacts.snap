@@ -9,8 +9,6 @@ source: crates/rolldown_testing/src/integration_test.rs
 //#region main.js
 foo;
 bar;
-//! Legal comments1
-/*! Legal comments2 */
 foo;
 bar;
 foo(a, b);

@@ -1385,7 +1385,7 @@ expression: output
 
 # tests/esbuild/default/minified_jsx_preserve_with_object_spread
 
-- entry-!~{000}~.js => entry-Y1ZVSzNA.js
+- entry-!~{000}~.js => entry-C3ygLqqW.js
 
 # tests/esbuild/default/minify_arguments
 
@@ -2581,11 +2581,11 @@ expression: output
 
 # tests/esbuild/lower/lower_async_generator
 
-- entry-!~{000}~.js => entry--_fvWRm3.js
+- entry-!~{000}~.js => entry-BEXZ2wM9.js
 
 # tests/esbuild/lower/lower_async_generator_no_await
 
-- entry-!~{000}~.js => entry--_fvWRm3.js
+- entry-!~{000}~.js => entry-BEXZ2wM9.js
 
 # tests/esbuild/lower/lower_async_super_es2016_no_bundle
 
@@ -2652,7 +2652,7 @@ expression: output
 
 # tests/esbuild/lower/lower_nullish_coalescing_assignment_issue1493
 
-- entry-!~{000}~.js => entry-DLXpcLWa.js
+- entry-!~{000}~.js => entry-DRhlz0MP.js
 
 # tests/esbuild/lower/lower_object_spread_no_bundle
 
@@ -2840,7 +2840,7 @@ expression: output
 
 # tests/esbuild/lower/lower_using_inside_ts_namespace
 
-- entry-!~{000}~.js => entry-DAnLticq.js
+- entry-!~{000}~.js => entry-Ci_e_XVg.js
 
 # tests/esbuild/lower/lower_using_unsupported_async
 
@@ -3939,7 +3939,7 @@ expression: output
 
 # tests/rolldown/function/comments/preserve_legal
 
-- main-!~{000}~.js => main-bn1Pw2ND.js
+- main-!~{000}~.js => main-DXEt0uDC.js
 
 # tests/rolldown/function/define/node_env
 
@@ -4801,7 +4801,7 @@ expression: output
 
 # tests/rolldown/resolve/ts_config_option_merge
 
-- main-!~{000}~.js => main-5tImZXu4.js
+- main-!~{000}~.js => main-wrTYWrxK.js
 
 # tests/rolldown/resolve/wildcard_alias
 

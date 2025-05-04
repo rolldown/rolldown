@@ -76,7 +76,7 @@ fn test_concat_sourcemaps() {
   use crate::{SourceJoiner, SourceMapSource};
   use oxc::{
     allocator::Allocator,
-    codegen::{CodeGenerator, CodegenOptions, CodegenReturn},
+    codegen::{Codegen, CodegenOptions, CodegenReturn},
     parser::Parser,
     span::SourceType,
   };
@@ -92,7 +92,7 @@ fn test_concat_sourcemaps() {
   let source_type = SourceType::from_path(&filename).unwrap();
   let ret1 = Parser::new(&allocator, &source_text, source_type).parse();
 
-  let CodegenReturn { map, code, .. } = CodeGenerator::new()
+  let CodegenReturn { map, code, .. } = Codegen::new()
     .with_options(CodegenOptions {
       source_map_path: Some(filename.into()),
       ..CodegenOptions::default()

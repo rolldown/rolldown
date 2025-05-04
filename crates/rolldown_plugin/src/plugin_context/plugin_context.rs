@@ -22,6 +22,11 @@ pub enum PluginContext {
 
 impl PluginContext {
   #[must_use]
+  pub fn new_napi_context() -> Self {
+    Self::Napi(Arc::new(NapiPluginContextImpl))
+  }
+
+  #[must_use]
   pub fn new_shared_with_skipped_resolve_calls(
     &self,
     skipped_resolve_calls: Vec<Arc<HookResolveIdSkipped>>,

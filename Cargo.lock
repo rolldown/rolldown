@@ -2818,7 +2818,6 @@ version = "0.1.0"
 dependencies = [
  "anyhow",
  "arcstr",
- "async-trait",
  "cow-utils",
  "dashmap",
  "derive_more",

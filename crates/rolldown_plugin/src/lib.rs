@@ -26,6 +26,7 @@ pub use crate::{
     PluginContext, SharedNativePluginContext, SharedTransformPluginContext, TransformPluginContext,
   },
   plugin_driver::{PluginDriver, SharedPluginDriver},
+  pluginable::Pluginable,
   types::custom_field::CustomField,
   types::hook_addon_args::HookAddonArgs,
   types::hook_build_end_args::HookBuildEndArgs,

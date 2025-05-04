@@ -454,20 +454,20 @@ const InputCliOptionsSchema = v.omit(
 
 /// --- OutputSchema ---
 
-enum ESTarget {
-  ES6 = 'es6',
-  ES2015 = 'es2015',
-  ES2016 = 'es2016',
-  ES2017 = 'es2017',
-  ES2018 = 'es2018',
-  ES2019 = 'es2019',
-  ES2020 = 'es2020',
-  ES2021 = 'es2021',
-  ES2022 = 'es2022',
-  ES2023 = 'es2023',
-  ES2024 = 'es2024',
-  ESNext = 'esnext',
-}
+const ESTargetSchema = v.union([
+  v.literal('es6'),
+  v.literal('es2015'),
+  v.literal('es2016'),
+  v.literal('es2017'),
+  v.literal('es2018'),
+  v.literal('es2019'),
+  v.literal('es2020'),
+  v.literal('es2021'),
+  v.literal('es2022'),
+  v.literal('es2023'),
+  v.literal('es2024'),
+  v.literal('esnext'),
+]);
 
 const ModuleFormatSchema = v.union([
   v.literal('es'),
@@ -653,7 +653,7 @@ const OutputOptionsSchema = v.strictObject({
     v.description('Disable require polyfill injection'),
   ),
   target: v.pipe(
-    v.optional(v.enum(ESTarget)),
+    v.optional(ESTargetSchema),
     v.description('The JavaScript target environment'),
   ),
   hoistTransitiveImports: v.optional(

@@ -11,6 +11,7 @@ use rolldown_utils::{
   ecmascript::{property_access_str, to_module_import_export_name},
   indexmap::FxIndexSet,
 };
+use rustc_hash::FxHashSet;
 
 use crate::{stages::link_stage::LinkStageOutput, types::generator::GenerateContext};
 
@@ -210,6 +211,18 @@ pub fn render_chunk_exports(
             .iter()
             .map(|rec_idx| module.ecma_view.import_records[*rec_idx].resolved_module)
             .collect::<FxIndexSet<ModuleIdx>>();
+
+          // Track already imported external modules to avoid duplicates
+          let mut imported_external_modules = FxHashSet::default();
+
+          // First check if any of these external modules have already been imported elsewhere in the chunk
+          for (ext_module_idx, _) in &ctx.chunk.imports_from_external_modules {
+            let external = &ctx.link_output.module_table.modules[*ext_module_idx]
+              .as_external()
+              .expect("Should be external module here");
+            imported_external_modules.insert(external.namespace_ref);
+          }
+
           external_modules.iter().for_each(|idx| {
           let external = &ctx.link_output.module_table.modules[*idx].as_external().expect("Should be external module here");
           let binding_ref_name =
@@ -222,7 +235,11 @@ pub fn render_chunk_exports(
   });
 });\n".replace("$NAME", binding_ref_name);
 
-          write!(s, "\nvar {} = require(\"{}\");\n", binding_ref_name, &external.get_import_path(chunk)).unwrap();
+          // Only generate require statement if this external module hasn't been imported yet
+          if !imported_external_modules.contains(&external.namespace_ref) {
+            write!(s, "\nvar {} = require(\"{}\");\n", binding_ref_name, &external.get_import_path(chunk)).unwrap();
+            imported_external_modules.insert(external.namespace_ref);
+          }
           s.push_str(&import_stmt);
         });
         }

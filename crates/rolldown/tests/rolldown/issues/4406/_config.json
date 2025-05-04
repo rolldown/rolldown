@@ -1,0 +1,9 @@
+{
+  "expectExecuted": false,
+  "config": {
+    "format": "cjs",
+    "external": [
+      "zod"
+    ]
+  }
+}

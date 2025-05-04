@@ -316,7 +316,7 @@ impl Plugin for ViteResolvePlugin {
 
     let base_dir = args
       .importer
-      .map(|i| Path::new(i).parent().map(|i| i.to_str().unwrap()).unwrap_or(i))
+      .map(|i| Path::new(i).parent().and_then(|p| p.to_str()).unwrap_or(i))
       .unwrap_or(&self.resolve_options.root);
     let resolved = resolver.normalize_oxc_resolver_result(
       args.importer,
@@ -387,6 +387,7 @@ impl Plugin for ViteResolvePlugin {
         let [_, peer_dep, parent_dep, _] = args.id.splitn(4, ":").collect::<Vec<&str>>()[..] else {
           unreachable!()
         };
+
         return Ok(Some(HookLoadOutput {
           code: get_development_optional_peer_dep_module_code(peer_dep, parent_dep),
           ..Default::default()

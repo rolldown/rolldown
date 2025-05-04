@@ -16,6 +16,7 @@ use super::{
 #[napi]
 pub struct BindingCallableBuiltinPlugin {
   inner: Arc<dyn Pluginable>,
+  context: rolldown_plugin::PluginContext,
 }
 
 #[napi]
@@ -24,7 +25,7 @@ impl BindingCallableBuiltinPlugin {
   pub fn new(plugin: BindingBuiltinPlugin) -> napi::Result<Self> {
     let inner: Arc<dyn Pluginable> = plugin.try_into()?;
 
-    Ok(Self { inner })
+    Ok(Self { inner, context: rolldown_plugin::PluginContext::new_napi_context() })
   }
 
   #[napi]
@@ -38,7 +39,7 @@ impl BindingCallableBuiltinPlugin {
       self
         .inner
         .call_resolve_id(
-          &rolldown_plugin::PluginContext::new_napi_context(),
+          &self.context,
           &HookResolveIdArgs {
             specifier: &id,
             importer: importer.as_deref(),
@@ -54,13 +55,7 @@ impl BindingCallableBuiltinPlugin {
 
   #[napi]
   pub async fn load(&self, id: String) -> napi::Result<Option<BindingHookJsLoadOutput>> {
-    Ok(
-      self
-        .inner
-        .call_load(&rolldown_plugin::PluginContext::new_napi_context(), &HookLoadArgs { id: &id })
-        .await?
-        .map(Into::into),
-    )
+    Ok(self.inner.call_load(&self.context, &HookLoadArgs { id: &id }).await?.map(Into::into))
   }
 
   #[napi]
@@ -71,11 +66,7 @@ impl BindingCallableBuiltinPlugin {
   ) -> napi::Result<()> {
     self
       .inner
-      .call_watch_change(
-        &rolldown_plugin::PluginContext::new_napi_context(),
-        &path,
-        bindingify_watcher_change_kind(event.event)?,
-      )
+      .call_watch_change(&self.context, &path, bindingify_watcher_change_kind(event.event)?)
       .await?;
     Ok(())
   }

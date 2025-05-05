@@ -213,15 +213,18 @@ pub fn render_chunk_exports(
             .collect::<FxIndexSet<ModuleIdx>>();
 
           // Track already imported external modules to avoid duplicates
-          let mut imported_external_modules = FxHashSet::default();
-
           // First check if any of these external modules have already been imported elsewhere in the chunk
-          for (ext_module_idx, _) in &ctx.chunk.imports_from_external_modules {
-            let external = &ctx.link_output.module_table.modules[*ext_module_idx]
-              .as_external()
-              .expect("Should be external module here");
-            imported_external_modules.insert(external.namespace_ref);
-          }
+          let mut imported_external_modules: FxHashSet<SymbolRef> = ctx
+            .chunk
+            .imports_from_external_modules
+            .iter()
+            .map(|(idx, _)| {
+              let external = &ctx.link_output.module_table.modules[*idx]
+                .as_external()
+                .expect("Should be external module here");
+              external.namespace_ref
+            })
+            .collect();
 
           external_modules.iter().for_each(|idx| {
           let external = &ctx.link_output.module_table.modules[*idx].as_external().expect("Should be external module here");
@@ -236,9 +239,8 @@ pub fn render_chunk_exports(
 });\n".replace("$NAME", binding_ref_name);
 
           // Only generate require statement if this external module hasn't been imported yet
-          if !imported_external_modules.contains(&external.namespace_ref) {
+          if imported_external_modules.insert(external.namespace_ref) {
             write!(s, "\nvar {} = require(\"{}\");\n", binding_ref_name, &external.get_import_path(chunk)).unwrap();
-            imported_external_modules.insert(external.namespace_ref);
           }
           s.push_str(&import_stmt);
         });

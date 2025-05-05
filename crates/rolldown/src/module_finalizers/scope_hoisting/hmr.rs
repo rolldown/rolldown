@@ -77,7 +77,7 @@ impl<'ast> ScopeHoistingFinalizer<'_, 'ast> {
     let mut arguments = self.snippet.builder.vec_from_array([
       ast::Argument::StringLiteral(self.snippet.builder.alloc_string_literal(
         SPAN,
-        &self.ctx.module.stable_id,
+        self.snippet.builder.atom(&self.ctx.module.stable_id),
         None,
       )),
       module_exports,

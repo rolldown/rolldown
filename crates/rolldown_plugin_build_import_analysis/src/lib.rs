@@ -7,7 +7,7 @@ use oxc::ast::ast::{
 };
 use oxc::ast::{AstBuilder, NONE};
 use oxc::ast_visit::{VisitMut, walk_mut};
-use oxc::codegen::{self, CodeGenerator, Gen};
+use oxc::codegen::{self, Codegen, Gen};
 use oxc::semantic::ScopeFlags;
 use oxc::span::{Atom, SPAN};
 use rolldown_plugin::{
@@ -84,7 +84,7 @@ impl Plugin for BuildImportAnalysisPlugin {
       visitor.visit_program(fields.program);
     });
 
-    let mut codegen = CodeGenerator::new();
+    let mut codegen = Codegen::new();
     ast.program().r#gen(&mut codegen, codegen::Context::default());
     Ok(ast)
   }

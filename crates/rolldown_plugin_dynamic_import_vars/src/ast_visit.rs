@@ -139,9 +139,12 @@ impl<'ast> DynamicImportVarsVisit<'ast> {
             )),
             NONE,
             {
-              let mut arguments = self.ast_builder.vec1(Argument::from(
-                self.ast_builder.expression_string_literal(SPAN, pattern, None),
-              ));
+              let mut arguments =
+                self.ast_builder.vec1(Argument::from(self.ast_builder.expression_string_literal(
+                  SPAN,
+                  self.ast_builder.atom(pattern),
+                  None,
+                )));
               if let Some(params) = params {
                 arguments.push(Argument::from(self.ast_builder.expression_object(SPAN, {
                   let mut items =
@@ -149,7 +152,11 @@ impl<'ast> DynamicImportVarsVisit<'ast> {
                       SPAN,
                       PropertyKind::Init,
                       self.ast_builder.property_key_static_identifier(SPAN, "query"),
-                      self.ast_builder.expression_string_literal(SPAN, params.query, None),
+                      self.ast_builder.expression_string_literal(
+                        SPAN,
+                        self.ast_builder.atom(params.query),
+                        None,
+                      ),
                       false,
                       false,
                       false,

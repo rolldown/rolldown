@@ -4,7 +4,7 @@ mod utils;
 use std::path::Path;
 use std::{borrow::Cow, sync::Arc};
 
-use oxc::codegen::{CodeGenerator, CodegenOptions, CodegenReturn};
+use oxc::codegen::{Codegen, CodegenOptions, CodegenReturn};
 use oxc::parser::Parser;
 use oxc::semantic::SemanticBuilder;
 use oxc::transformer::Transformer;
@@ -111,7 +111,7 @@ impl Plugin for TransformPlugin {
       codegen_options.source_map_path = Some(args.id.into());
     }
 
-    let ret = CodeGenerator::new().with_options(codegen_options).build(&program);
+    let ret = Codegen::new().with_options(codegen_options).build(&program);
     let CodegenReturn { mut code, map, .. } = ret;
 
     if let Some(inject) = &self.jsx_inject {

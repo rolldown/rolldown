@@ -5,7 +5,7 @@ use itertools::Either;
 use oxc::{
   allocator::Allocator,
   ast::{AstBuilder, ast::Program},
-  codegen::{CodeGenerator, Codegen, CodegenOptions, CodegenReturn, LegalComment},
+  codegen::{Codegen, CodegenOptions, CodegenReturn, LegalComment},
   mangler::Mangler,
   minifier::{CompressOptions, Compressor, MinifierOptions, MinifierReturn},
   parser::{ParseOptions, Parser},
@@ -83,7 +83,7 @@ impl EcmaCompiler {
   }
 
   pub fn print(ast: &EcmaAst, filename: &str, enable_source_map: bool) -> CodegenReturn {
-    CodeGenerator::new()
+    Codegen::new()
       .with_options(CodegenOptions {
         comments: true,
         source_map_path: enable_source_map.then(|| PathBuf::from(filename)),
@@ -97,7 +97,7 @@ impl EcmaCompiler {
       Either::Left(value) => (value, LegalComment::None),
       Either::Right(value) => (false, value),
     };
-    CodeGenerator::new()
+    Codegen::new()
       .with_options(CodegenOptions {
         comments: is_print_full_comments,
         source_map_path: options.sourcemap.then(|| PathBuf::from(options.filename)),

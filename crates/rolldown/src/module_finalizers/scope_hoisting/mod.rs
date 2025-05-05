@@ -475,8 +475,9 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
           return new_expr;
         }
         "dirname" | "filename" => {
+          let name = self.snippet.atom(&format!("__{property_name}"));
           return is_node_cjs.then_some(ast::Expression::Identifier(
-            self.snippet.builder.alloc_identifier_reference(SPAN, format!("__{property_name}")),
+            self.snippet.builder.alloc_identifier_reference(SPAN, name),
           ));
         }
         _ => {}
@@ -509,7 +510,7 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
             self.snippet.builder.vec_from_array([
               ast::Argument::StringLiteral(self.snippet.builder.alloc_string_literal(
                 SPAN,
-                relative_asset_path,
+                self.snippet.builder.atom(relative_asset_path),
                 None,
               )),
               ast::Argument::StaticMemberExpression(
@@ -865,7 +866,10 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
               Some(self.snippet.promise_resolve_then_call_expr(
                 import_expr.span,
                 self.snippet.builder.vec1(self.snippet.return_stmt(self.snippet.wrap_with_to_esm(
-                  self.snippet.builder.expression_identifier(SPAN, to_esm_fn_name.as_str()),
+                  self.snippet.builder.expression_identifier(
+                    SPAN,
+                    self.snippet.builder.atom(to_esm_fn_name.as_str()),
+                  ),
                   self.snippet.call_expr_expr(importee_wrapper_ref_name),
                   self.ctx.module.should_consider_node_esm_spec(),
                 ))),
@@ -1184,7 +1188,7 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
           self.snippet.builder.binding_pattern(
             self.snippet.builder.binding_pattern_kind_binding_identifier(
               SPAN,
-              self.canonical_name_for(esm_ns.namespace_ref).as_str(),
+              self.snippet.builder.atom(self.canonical_name_for(esm_ns.namespace_ref).as_str()),
             ),
             NONE,
             false,
@@ -1238,7 +1242,7 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
           self.snippet.builder.binding_pattern(
             self.snippet.builder.binding_pattern_kind_binding_identifier(
               SPAN,
-              self.canonical_name_for(esm_ns.namespace_ref).as_str(),
+              self.snippet.builder.atom(self.canonical_name_for(esm_ns.namespace_ref).as_str()),
             ),
             NONE,
             false,

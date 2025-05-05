@@ -76,7 +76,7 @@ impl<'ast> HmrAstFinalizer<'_, 'ast> {
     let mut arguments = self.snippet.builder.vec_from_array([
       ast::Argument::StringLiteral(self.snippet.builder.alloc_string_literal(
         SPAN,
-        &self.module.stable_id,
+        self.snippet.builder.atom(&self.module.stable_id),
         None,
       )),
       module_exports,
@@ -227,25 +227,30 @@ impl<'ast> VisitMut<'ast> for HmrAstFinalizer<'_, 'ast> {
     let var_decl = self.snippet.builder.alloc_variable_declaration(
       SPAN,
       ast::VariableDeclarationKind::Var,
-      self.snippet.builder.vec1(self.snippet.builder.variable_declarator(
-        SPAN,
-        ast::VariableDeclarationKind::Var,
-        self.snippet.builder.binding_pattern(
-          ast::BindingPatternKind::BindingIdentifier(
-            self.snippet.builder.alloc_binding_identifier(SPAN, init_fn_name),
+      self.snippet.builder.vec1(
+        self.snippet.builder.variable_declarator(
+          SPAN,
+          ast::VariableDeclarationKind::Var,
+          self.snippet.builder.binding_pattern(
+            ast::BindingPatternKind::BindingIdentifier(
+              self
+                .snippet
+                .builder
+                .alloc_binding_identifier(SPAN, self.snippet.builder.atom(init_fn_name)),
+            ),
+            NONE,
+            false,
           ),
-          NONE,
+          Some(ast::Expression::CallExpression(self.snippet.builder.alloc_call_expression(
+            SPAN,
+            self.snippet.id_ref_expr("__rolldown_runtime__.createEsmInitializer", SPAN),
+            NONE,
+            self.snippet.builder.vec1(ast::Argument::from(user_code_wrapper)),
+            false,
+          ))),
           false,
         ),
-        Some(ast::Expression::CallExpression(self.snippet.builder.alloc_call_expression(
-          SPAN,
-          self.snippet.id_ref_expr("__rolldown_runtime__.createEsmInitializer", SPAN),
-          NONE,
-          self.snippet.builder.vec1(ast::Argument::from(user_code_wrapper)),
-          false,
-        ))),
-        false,
-      )),
+      ),
       false,
     );
 

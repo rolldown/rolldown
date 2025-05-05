@@ -1,7 +1,7 @@
 use criterion::{Criterion, criterion_group, criterion_main};
 use oxc::{
   allocator::Allocator,
-  codegen::{CodeGenerator, CodegenOptions, CodegenReturn},
+  codegen::{Codegen, CodegenOptions, CodegenReturn},
   parser::Parser,
   span::SourceType,
 };
@@ -23,12 +23,12 @@ fn criterion_benchmark(c: &mut Criterion) {
     CodegenOptions { source_map_path: Some(filename.into()), ..CodegenOptions::default() };
 
   let CodegenReturn { map, code, .. } =
-    CodeGenerator::new().with_options(options.clone()).build(&ret1.program);
+    Codegen::new().with_options(options.clone()).build(&ret1.program);
   sourcemap_chain.push(map.as_ref().unwrap());
 
   let ret2 = Parser::new(&allocator, &code, source_type).parse();
   let CodegenReturn { map, code: _, .. } =
-    CodeGenerator::new().with_options(options.clone()).build(&ret2.program);
+    Codegen::new().with_options(options.clone()).build(&ret2.program);
   sourcemap_chain.push(map.as_ref().unwrap());
 
   group.sample_size(20);
@@ -57,7 +57,7 @@ fn criterion_benchmark(c: &mut Criterion) {
 
   let ret3 = Parser::new(&allocator, &source_text, source_type).parse();
   let CodegenReturn { map, code: _, .. } =
-    CodeGenerator::new().with_options(options.clone()).build(&ret3.program);
+    Codegen::new().with_options(options.clone()).build(&ret3.program);
   sourcemap_chain.push(map.as_ref().unwrap());
 
   group.bench_with_input("render-chunk-remapping", &sourcemap_chain, move |b, sourcemap_chain| {

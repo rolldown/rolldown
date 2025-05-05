@@ -137,19 +137,21 @@ impl<'ast> GlobImportVisit<'ast, '_> {
           Some("default") => {
             self.ast_builder.import_declaration_specifier_import_default_specifier(
               SPAN,
-              self.ast_builder.binding_identifier(SPAN, &name),
+              self.ast_builder.binding_identifier(SPAN, self.ast_builder.atom(&name)),
             )
           }
           Some("*") | None => {
             self.ast_builder.import_declaration_specifier_import_namespace_specifier(
               SPAN,
-              self.ast_builder.binding_identifier(SPAN, &name),
+              self.ast_builder.binding_identifier(SPAN, self.ast_builder.atom(&name)),
             )
           }
           Some(import) => self.ast_builder.import_declaration_specifier_import_specifier(
             SPAN,
-            self.ast_builder.module_export_name_identifier_reference(SPAN, import),
-            self.ast_builder.binding_identifier(SPAN, &name),
+            self
+              .ast_builder
+              .module_export_name_identifier_reference(SPAN, self.ast_builder.atom(import)),
+            self.ast_builder.binding_identifier(SPAN, self.ast_builder.atom(&name)),
             ImportOrExportKind::Value,
           ),
         };
@@ -158,21 +160,25 @@ impl<'ast> GlobImportVisit<'ast, '_> {
           self.ast_builder.module_declaration_import_declaration(
             SPAN,
             Some(self.ast_builder.vec1(module_specifier)),
-            self.ast_builder.string_literal(Span::default(), formatted_file.as_str(), None),
+            self.ast_builder.string_literal(
+              Span::default(),
+              self.ast_builder.atom(formatted_file.as_str()),
+              None,
+            ),
             None,
             NONE,
             ImportOrExportKind::Value,
           ),
         ));
 
-        self.ast_builder.expression_identifier(SPAN, &name)
+        self.ast_builder.expression_identifier(SPAN, self.ast_builder.atom(&name))
       } else {
         // import('./dir/bar.js')
         let mut import_expression = self.ast_builder.expression_import(
           SPAN,
           self.ast_builder.expression_string_literal(
             Span::default(),
-            formatted_file.as_str(),
+            self.ast_builder.atom(formatted_file.as_str()),
             None,
           ),
           None,
@@ -225,7 +231,7 @@ impl<'ast> GlobImportVisit<'ast, '_> {
                         Expression::from(self.ast_builder.member_expression_static(
                           SPAN,
                           self.ast_builder.expression_identifier(SPAN, "m"),
-                          self.ast_builder.identifier_name(SPAN, import),
+                          self.ast_builder.identifier_name(SPAN, self.ast_builder.atom(import)),
                           false,
                         )),
                       )),
@@ -277,7 +283,7 @@ impl<'ast> GlobImportVisit<'ast, '_> {
           PropertyKind::Init,
           PropertyKey::from(self.ast_builder.expression_string_literal(
             Span::default(),
-            file,
+            self.ast_builder.atom(file),
             None,
           )),
           value,

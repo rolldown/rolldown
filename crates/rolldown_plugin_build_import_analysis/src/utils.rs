@@ -26,7 +26,7 @@ pub fn construct_snippet_from_await_decl<'a>(
     ast_builder.binding_pattern(
       ast_builder.binding_pattern_kind_object_pattern(
         SPAN,
-        ast_builder.vec_from_iter(decls.iter().map(|name| {
+        ast_builder.vec_from_iter(decls.iter().map(|&name| {
           ast_builder.binding_property(
             SPAN,
             ast_builder.property_key_static_identifier(SPAN, name),
@@ -90,7 +90,7 @@ fn construct_vite_preload_call<'a>(
               ast_builder.binding_pattern(
                 ast_builder.binding_pattern_kind_object_pattern(
                   SPAN,
-                  ast_builder.vec_from_iter(decls.iter().map(|name| {
+                  ast_builder.vec_from_iter(decls.iter().map(|&name| {
                     ast_builder.binding_property(
                       SPAN,
                       ast_builder.property_key_static_identifier(SPAN, name),
@@ -125,7 +125,7 @@ fn construct_vite_preload_call<'a>(
             SPAN,
             Some(ast_builder.expression_object(
               SPAN,
-              ast_builder.vec_from_iter(decls.iter().map(|name| {
+              ast_builder.vec_from_iter(decls.iter().map(|&name| {
                 ast_builder.object_property_kind_object_property(
                   SPAN,
                   PropertyKind::Init,

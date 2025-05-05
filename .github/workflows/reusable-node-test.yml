@@ -44,24 +44,6 @@ jobs:
       - name: Type Check
         run: pnpm type-check
 
-      - name: Setup Node18 For Testing
-        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
-        with:
-          node-version: 18
-
-      - name: Node Test For Node18
-        run: |
-          pnpm run --filter rolldown-tests test:main && pnpm run --filter rolldown-tests test:watcher && pnpm run --filter rolldown-tests test:stability
-
-      - name: Rollup Test Node18
-        run: pnpm run --filter rollup-tests test
-
-      - name: Build Examples For Node18
-        run: pnpm --filter '@example/**' build
-
-      - name: HMR Test For Node18
-        run: pnpm run --filter '@rolldown/test-dev-server-tests' test
-
       - name: Setup Node20 For Testing
         uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
         with:
@@ -71,7 +53,7 @@ jobs:
         run: |
           pnpm run --filter rolldown-tests test:main && pnpm run --filter rolldown-tests test:watcher && pnpm run --filter rolldown-tests test:stability
 
-      - name: Rollup Test Node20
+      - name: Rollup Test For Node20
         run: pnpm run --filter rollup-tests test
 
       - name: Build Examples For Node20
@@ -89,11 +71,29 @@ jobs:
         run: |
           pnpm run --filter rolldown-tests test:main && pnpm run --filter rolldown-tests test:watcher && pnpm run --filter rolldown-tests test:stability
 
-      - name: Rollup Test Node22
+      - name: Rollup Test For Node22
         run: pnpm run --filter rollup-tests test
 
       - name: Build Examples For Node22
         run: pnpm --filter '@example/**' build
 
       - name: HMR Test For Node22
+        run: pnpm run --filter '@rolldown/test-dev-server-tests' test
+
+      - name: Setup Node24 For Testing
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: 24
+
+      - name: Node Test For Node24
+        run: |
+          pnpm run --filter rolldown-tests test:main && pnpm run --filter rolldown-tests test:watcher && pnpm run --filter rolldown-tests test:stability
+
+      - name: Rollup Test For Node24
+        run: pnpm run --filter rollup-tests test
+
+      - name: Build Examples For Node24
+        run: pnpm --filter '@example/**' build
+
+      - name: HMR Test For Node24
         run: pnpm run --filter '@rolldown/test-dev-server-tests' test

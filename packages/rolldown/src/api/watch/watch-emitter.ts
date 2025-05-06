@@ -24,8 +24,8 @@ export type RolldownWatcherEvent =
   | { code: 'END' }
   | {
     code: 'ERROR';
-    error:
-      Error; /* the error is not compilable with rollup * /  /**  result: RollupBuild | null **/
+    error: Error; /* the error is not compilable with rollup */
+    result: RolldownWatchBuild;
   };
 
 export class WatcherEmitter {
@@ -105,10 +105,11 @@ export class WatcherEmitter {
                 break;
 
               case 'ERROR':
-                const errors = event.errors();
+                const data = event.bundleErrorData();
                 await listener({
                   code: 'ERROR',
-                  error: normalizeErrors(errors),
+                  error: normalizeErrors(data.error),
+                  result: data.result,
                 });
                 break;
 

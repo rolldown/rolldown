@@ -41,7 +41,7 @@ pub enum BundleEvent {
   BundleStart,
   BundleEnd(BundleEndEventData),
   End,
-  Error(OutputsDiagnostics),
+  Error(BundleErrorEventData),
 }
 
 impl Display for BundleEvent {
@@ -65,5 +65,16 @@ pub struct BundleEndEventData {
 impl Debug for BundleEndEventData {
   fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
     write!(f, "BundleEndEventData {{ output: {}, duration: {} }}", self.output, self.duration)
+  }
+}
+
+pub struct BundleErrorEventData {
+  pub error: OutputsDiagnostics,
+  pub result: Arc<Mutex<Bundler>>,
+}
+
+impl Debug for BundleErrorEventData {
+  fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+    write!(f, "BundleEndEventData {{ errors: {:?} }}", self.error)
   }
 }

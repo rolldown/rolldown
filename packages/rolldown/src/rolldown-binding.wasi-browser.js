@@ -61,6 +61,7 @@ const {
   },
 })
 export const BindingBundleEndEventData = __napiModule.exports.BindingBundleEndEventData
+export const BindingBundleErrorEventData = __napiModule.exports.BindingBundleErrorEventData
 export const BindingCallableBuiltinPlugin = __napiModule.exports.BindingCallableBuiltinPlugin
 export const BindingError = __napiModule.exports.BindingError
 export const BindingModuleInfo = __napiModule.exports.BindingModuleInfo

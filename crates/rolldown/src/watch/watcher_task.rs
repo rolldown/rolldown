@@ -10,11 +10,10 @@ use std::{
 use crate::{Bundler, SharedOptions};
 
 use super::emitter::SharedWatcherEmitter;
+use crate::watch::event::{BundleEndEventData, BundleEvent, WatcherEvent};
 use arcstr::ArcStr;
 use notify::{RecommendedWatcher, RecursiveMode, Watcher};
-use rolldown_common::{
-  BundleEndEventData, BundleEvent, OutputsDiagnostics, WatcherChangeKind, WatcherEvent,
-};
+use rolldown_common::{OutputsDiagnostics, WatcherChangeKind};
 use rolldown_error::{BuildDiagnostic, BuildResult, ResultExt};
 use rolldown_utils::{dashmap::FxDashSet, pattern_filter};
 use tokio::sync::Mutex;

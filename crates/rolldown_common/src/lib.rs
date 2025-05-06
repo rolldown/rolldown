@@ -153,9 +153,7 @@ pub use crate::{
   types::symbol_ref_db::{
     GetLocalDb, GetLocalDbMut, SymbolRefDb, SymbolRefDbForModule, SymbolRefFlags,
   },
-  types::watch::{
-    BundleEndEventData, BundleEvent, WatcherChangeData, WatcherChangeKind, WatcherEvent,
-  },
+  types::watch::WatcherChangeKind,
   types::wrap_kind::WrapKind,
 };
 pub use bundler_options::*;

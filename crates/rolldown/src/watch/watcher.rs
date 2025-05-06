@@ -1,8 +1,7 @@
+use crate::watch::event::{BundleEvent, WatcherChangeData, WatcherEvent};
 use arcstr::ArcStr;
 use notify::{Config, RecommendedWatcher, Watcher as NotifyWatcher, event::ModifyKind};
-use rolldown_common::{
-  BundleEvent, NotifyOption, WatcherChangeData, WatcherChangeKind, WatcherEvent,
-};
+use rolldown_common::{NotifyOption, WatcherChangeKind};
 use rolldown_error::BuildResult;
 use rolldown_utils::dashmap::FxDashSet;
 use std::{
@@ -124,7 +123,7 @@ impl WatcherImpl {
 
   #[tracing::instrument(level = "debug", skip_all)]
   pub async fn run(&self, changed_files: &[ArcStr]) -> BuildResult<()> {
-    self.emitter.emit(WatcherEvent::ReStart)?;
+    self.emitter.emit(WatcherEvent::Restart)?;
 
     self.running.store(true, Ordering::Relaxed);
     self.emitter.emit(WatcherEvent::Event(BundleEvent::Start))?;

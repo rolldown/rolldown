@@ -2,7 +2,7 @@ use anyhow::Result;
 use std::sync::Arc;
 use tokio::sync::Mutex;
 
-use rolldown_common::WatcherEvent;
+use crate::watch::event::WatcherEvent;
 
 pub type SharedWatcherEmitter = Arc<WatcherEmitter>;
 

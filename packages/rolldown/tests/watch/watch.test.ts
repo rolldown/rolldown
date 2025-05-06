@@ -207,6 +207,11 @@ test.sequential('watch BUNDLE_END event result.close() + closeBundle', async () 
 
   expect(closeBundleFn).toBeCalledTimes(1)
 
+  // The `result.close` could be call multiply times.
+  fs.writeFileSync(input, 'console.log(3)')
+  await waitBuildFinished(watcher)
+  expect(closeBundleFn).toBeCalledTimes(2)
+
   await watcher.close()
 })
 

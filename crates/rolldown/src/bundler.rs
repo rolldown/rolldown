@@ -87,6 +87,12 @@ impl Bundler {
     Ok(())
   }
 
+  // The rollup always crate a new build at watch mode, it cloud be call multiply times.
+  // Here only reset the closed flag to make it possible to call again.
+  pub fn reset_closed(&mut self) {
+    self.closed = false;
+  }
+
   #[tracing::instrument(target = "devtool", level = "debug", skip_all)]
   pub async fn scan(&mut self, changed_ids: Vec<ArcStr>) -> BuildResult<NormalizedScanStageOutput> {
     trace_action!(action::BuildStart { action: "BuildStart" });

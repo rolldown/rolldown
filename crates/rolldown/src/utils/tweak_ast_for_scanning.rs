@@ -140,20 +140,20 @@ impl<'ast> VisitMut<'ast> for PreProcessor<'ast> {
 
   fn visit_export_named_declaration(&mut self, named_decl: &mut ast::ExportNamedDeclaration<'ast>) {
     walk_mut::walk_export_named_declaration(self, named_decl);
-    let named_decl_span = named_decl.span;
 
     let Some(Declaration::VariableDeclaration(ref mut var_decl)) = named_decl.declaration else {
       return;
     };
 
-    if var_decl
-      .declarations
-      .iter()
-      // TODO: support nested destructuring tree shake, `export const {a, b} = obj; export const
-      // [a, b] = arr;`
-      .any(|declarator| matches!(declarator.id.kind, BindingPatternKind::BindingIdentifier(_)))
+    if var_decl.declarations.len() > 1
+      && var_decl
+        .declarations
+        .iter()
+        // TODO: support nested destructuring tree shake, `export const {a, b} = obj; export const
+        // [a, b] = arr;`
+        .any(|declarator| matches!(declarator.id.kind, BindingPatternKind::BindingIdentifier(_)))
     {
-      let rewritten = self.split_var_declaration(var_decl, Some(named_decl_span));
+      let rewritten = self.split_var_declaration(var_decl, Some(named_decl.span));
       self.statement_replace_map.insert(self.statement_stack.last().copied().unwrap(), rewritten);
     }
   }

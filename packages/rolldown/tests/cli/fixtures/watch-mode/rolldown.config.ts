@@ -24,7 +24,9 @@ export default defineConfig({
       buildStart() {
         console.log('buildStart called:')
         console.log('this.meta.watchMode', this.meta.watchMode)
-
+      },
+      closeBundle() {
+        console.log('closeBundle called:')
         process.exit(0)
       },
     },

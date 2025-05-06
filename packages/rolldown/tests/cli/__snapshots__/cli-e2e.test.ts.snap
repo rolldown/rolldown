@@ -325,7 +325,8 @@ onLog called:
 this.meta.watchMode false
 (test plugin) trigger onLog
 buildStart called:
-this.meta.watchMode false"
+this.meta.watchMode false
+closeBundle called:"
 `;
 
 exports[`watch cli > should require both ROLLDOWN_WATCH and this.meta.watchMode to be true 1`] = `
@@ -340,5 +341,6 @@ onLog called:
 this.meta.watchMode true
 (test plugin) trigger onLog
 buildStart called:
-this.meta.watchMode true"
+this.meta.watchMode true
+closeBundle called:"
 `;

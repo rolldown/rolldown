@@ -101,7 +101,7 @@ async function watchInner(
       changedFile.push(id);
     }
   });
-  watcher.on('event', (event) => {
+  watcher.on('event', async (event) => {
     switch (event.code) {
       case 'BUNDLE_START':
         if (changedFile.length > 0) {
@@ -115,6 +115,7 @@ async function watchInner(
         break;
 
       case 'BUNDLE_END':
+        await event.result.close();
         logger.success(
           `Rebuilt ${colors.bold(relativeId(event.output[0]))} in ${
             colors.bold(ms(event.duration))
@@ -123,6 +124,7 @@ async function watchInner(
         break;
 
       case 'ERROR':
+        await event.result.close();
         logger.error(event.error);
         break;
 

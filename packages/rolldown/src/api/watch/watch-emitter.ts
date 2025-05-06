@@ -1,10 +1,13 @@
-import { BindingWatcherEvent } from '../../binding';
+import { BindingWatcherEvent, Bundler } from '../../binding';
 import type { MaybePromise } from '../../types/utils';
 import { normalizeErrors } from '../../utils/error';
 
 export type WatcherEvent = 'close' | 'event' | 'restart' | 'change';
 
 export type ChangeEvent = 'create' | 'update' | 'delete';
+
+// TODO: find a way use `RolldownBuild` instead of `Bundler`.
+export type RolldownWatchBuild = Bundler;
 
 export type RolldownWatcherEvent =
   | { code: 'START' }
@@ -16,7 +19,7 @@ export type RolldownWatcherEvent =
     duration: number;
     // input?: InputOption
     output: readonly string[];
-    // result: RollupBuild
+    result: RolldownWatchBuild;
   }
   | { code: 'END' }
   | {
@@ -92,11 +95,12 @@ export class WatcherEmitter {
             const code = event.bundleEventKind();
             switch (code) {
               case 'BUNDLE_END':
-                const { duration, output } = event.bundleEndData();
+                const { duration, output, result } = event.bundleEndData();
                 await listener({
                   code: 'BUNDLE_END',
                   duration,
                   output: [output], // rolldown doesn't support arraying configure output
+                  result,
                 });
                 break;
 

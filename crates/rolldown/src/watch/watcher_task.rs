@@ -91,6 +91,7 @@ impl WatcherTask {
             .to_string(),
           #[allow(clippy::cast_possible_truncation)]
           duration: start_time.elapsed().as_millis() as u32,
+          result: Arc::clone(&self.bundler),
         })))?;
       }
       Err(errs) => {

@@ -1,8 +1,14 @@
-use std::fmt::Display;
+use std::{
+  fmt::{Debug, Display},
+  sync::Arc,
+};
 
 use arcstr::ArcStr;
 
 use rolldown_common::{OutputsDiagnostics, WatcherChangeKind};
+use tokio::sync::Mutex;
+
+use crate::Bundler;
 
 #[derive(Debug)]
 pub enum WatcherEvent {
@@ -50,8 +56,14 @@ impl Display for BundleEvent {
   }
 }
 
-#[derive(Debug)]
 pub struct BundleEndEventData {
   pub output: String,
   pub duration: u32,
+  pub result: Arc<Mutex<Bundler>>,
+}
+
+impl Debug for BundleEndEventData {
+  fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+    write!(f, "BundleEndEventData {{ output: {}, duration: {} }}", self.output, self.duration)
+  }
 }

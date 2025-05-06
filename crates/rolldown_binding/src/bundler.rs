@@ -64,6 +64,10 @@ impl Bundler {
     })
   }
 
+  pub fn new_with_bundler(inner: Arc<Mutex<NativeBundler>>) -> Self {
+    Self { inner }
+  }
+
   #[napi]
   #[tracing::instrument(level = "debug", skip_all)]
   pub async fn write(&self) -> napi::Result<BindingOutputs> {

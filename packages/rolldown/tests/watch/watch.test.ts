@@ -185,6 +185,31 @@ test.sequential('watch event off', async () => {
   await watcher.close()
 })
 
+test.sequential('watch BUNDLE_END event result.close() + closeBundle', async () => {
+  const { input, outputDir } = await createTestInputAndOutput('watch-event-close-closeBundle')
+  const closeBundleFn = vi.fn()
+  const watcher = watch({
+    input,
+    output: { dir: outputDir },
+    plugins: [
+      {
+        name: 'test',
+        closeBundle: closeBundleFn
+      }
+    ]
+  })
+  watcher.on('event', async (event) => {
+    if (event.code === 'BUNDLE_END') {
+      await event.result.close()
+    }
+  })
+  await waitBuildFinished(watcher)
+
+  expect(closeBundleFn).toBeCalledTimes(1)
+
+  await watcher.close()
+})
+
 test.sequential('watch BUNDLE_END event output + "file" option', async () => {
   const { input, output } = await createTestInputAndOutput('watch-event')
   const watcher = watch({

@@ -123,7 +123,7 @@ impl WatcherImpl {
 
   #[tracing::instrument(level = "debug", skip_all)]
   pub async fn run(&self, changed_files: &[ArcStr]) -> BuildResult<()> {
-    self.emitter.emit(WatcherEvent::ReStart)?;
+    self.emitter.emit(WatcherEvent::Restart)?;
 
     self.running.store(true, Ordering::Relaxed);
     self.emitter.emit(WatcherEvent::Event(BundleEvent::Start))?;

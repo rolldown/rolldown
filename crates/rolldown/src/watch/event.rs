@@ -8,7 +8,7 @@ use rolldown_common::{OutputsDiagnostics, WatcherChangeKind};
 pub enum WatcherEvent {
   Close,
   Event(BundleEvent),
-  ReStart,
+  Restart,
   Change(WatcherChangeData),
 }
 
@@ -17,7 +17,7 @@ impl Display for WatcherEvent {
     match self {
       WatcherEvent::Close => write!(f, "close"),
       WatcherEvent::Event(_) => write!(f, "event"),
-      WatcherEvent::ReStart => write!(f, "restart"),
+      WatcherEvent::Restart => write!(f, "restart"),
       WatcherEvent::Change(_) => write!(f, "change"),
     }
   }

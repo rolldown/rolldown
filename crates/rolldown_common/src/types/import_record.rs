@@ -27,26 +27,22 @@ pub struct ImportRecordStateResolved {
 bitflags::bitflags! {
   #[derive(Debug, Clone, Copy)]
   pub struct ImportRecordMeta: u16 {
-    /// If it is `import * as ns from '...'` or `export * as ns from '...'`
-    const CONTAINS_IMPORT_STAR = 1;
-    /// If it is `import def from '...'`, `import { default as def }`, `export { default as def }` or `export { default } from '...'`
-    const CONTAINS_IMPORT_DEFAULT = 1 << 1;
     /// If it is `import {} from '...'` or `import '...'`
-    const IS_PLAIN_IMPORT = 1 << 2;
+    const IS_PLAIN_IMPORT = 1;
     /// the import is inserted during ast transformation, can't get source slice from the original source file
-    const IS_UNSPANNED_IMPORT = 1 << 3;
+    const IS_UNSPANNED_IMPORT = 1 << 1;
     /// `export * from 'mod'` only
-    const IS_EXPORT_STAR = 1 << 4;
+    const IS_EXPORT_STAR = 1 << 2;
     ///  Tell the finalizer to use the runtime "__require()" instead of "require()"
-    const CALL_RUNTIME_REQUIRE = 1 << 5;
+    const CALL_RUNTIME_REQUIRE = 1 << 3;
     ///  `require('mod')` is used to load the module only
-    const IS_REQUIRE_UNUSED = 1 << 6;
+    const IS_REQUIRE_UNUSED = 1 << 4;
     /// If the import is a dummy import, it should be ignored during linking, e.g.
     /// `require` ExpressionIdentifier should be considering as a import record,
     /// but it did not import any module.
-    const IS_DUMMY = 1 << 7;
+    const IS_DUMMY = 1 << 5;
     /// if the import record is in a try-catch block
-    const IN_TRY_CATCH_BLOCK = 1 << 8;
+    const IN_TRY_CATCH_BLOCK = 1 << 6;
     /// Whether it is a pure dynamic import, aka a dynamic import only reference a module without using
     /// its exports e.g.
     /// ```js
@@ -54,11 +50,11 @@ bitflags::bitflags! {
     /// import('mod').then(mod => {});
     /// const a = await import('mod'); // the a is never be referenced
     /// ```
-    const PURE_DYNAMIC_IMPORT = 1 << 9;
+    const PURE_DYNAMIC_IMPORT = 1 << 7;
     /// Whether it is a pure dynamic import referenced a side effect free module
-    const DEAD_DYNAMIC_IMPORT = 1 << 10;
+    const DEAD_DYNAMIC_IMPORT = 1 << 8;
     /// Whether the import is a top level import
-    const IS_TOP_LEVEL = 1 << 11;
+    const IS_TOP_LEVEL = 1 << 9;
     const TOP_LEVEL_PURE_DYNAMIC_IMPORT = Self::IS_TOP_LEVEL.bits() | Self::PURE_DYNAMIC_IMPORT.bits();
   }
 }

@@ -1,7 +1,10 @@
+use std::sync::Arc;
+
+use napi::tokio::sync::Mutex;
 use napi_derive::napi;
 
 use super::binding_outputs::{BindingError, to_js_diagnostic};
-use rolldown::{BundleEvent, WatcherEvent};
+use rolldown::{BundleEvent, Bundler, WatcherEvent};
 
 #[napi]
 pub struct BindingWatcherEvent {
@@ -34,9 +37,11 @@ impl BindingWatcherEvent {
   #[napi]
   pub fn bundle_end_data(&self) -> BindingBundleEndEventData {
     match &self.inner {
-      WatcherEvent::Event(BundleEvent::BundleEnd(data)) => {
-        BindingBundleEndEventData { output: data.output.to_string(), duration: data.duration }
-      }
+      WatcherEvent::Event(BundleEvent::BundleEnd(data)) => BindingBundleEndEventData {
+        output: data.output.to_string(),
+        duration: data.duration,
+        result: Arc::clone(&data.result),
+      },
       _ => {
         unreachable!("Expected WatcherEvent::Event(BundleEventKind::BundleEnd)")
       }
@@ -79,4 +84,13 @@ pub struct BindingWatcherChangeData {
 pub struct BindingBundleEndEventData {
   pub output: String,
   pub duration: u32,
+  result: Arc<Mutex<Bundler>>,
+}
+
+#[napi]
+impl BindingBundleEndEventData {
+  #[napi(getter)]
+  pub fn result(&self) -> crate::bundler::Bundler {
+    crate::bundler::Bundler::new_with_bundler(Arc::clone(&self.result))
+  }
 }

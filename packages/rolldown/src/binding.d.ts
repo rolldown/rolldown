@@ -6,6 +6,7 @@ export type BindingStringOrRegex = string | RegExp
 export declare class BindingBundleEndEventData {
   output: string
   duration: number
+  get result(): Bundler
 }
 
 export declare class BindingCallableBuiltinPlugin {
@@ -436,7 +437,7 @@ export interface BindingInputOptions {
   makeAbsoluteExternalsRelative?: BindingMakeAbsoluteExternalsRelative
   debug?: BindingDebugOptions
   invalidateJsSideCache?: () => void
-  markModuleLoaded?: (id: string, success: bool) => void
+  markModuleLoaded?: (id: string, success: boolean) => void
 }
 
 export interface BindingIsolatedDeclarationPluginConfig {

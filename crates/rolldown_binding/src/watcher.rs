@@ -70,7 +70,7 @@ impl BindingWatcher {
       while run {
         match rx.recv() {
           Ok(event) => {
-            if let rolldown_common::WatcherEvent::Close = &event {
+            if let rolldown::WatcherEvent::Close = &event {
               run = false;
             }
             tracing::debug!(name= "send event to js side", event = ?event);

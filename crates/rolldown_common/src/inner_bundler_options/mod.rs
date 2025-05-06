@@ -7,9 +7,11 @@ use types::debug_options::DebugOptions;
 use types::inject_import::InjectImport;
 use types::invalidate_js_side_cache::InvalidateJsSideCache;
 use types::jsx::Jsx;
+use types::log_level::LogLevel;
 use types::make_absolute_externals_relative::MakeAbsoluteExternalsRelative;
 use types::mark_module_loaded::MarkModuleLoaded;
 use types::minify_options::RawMinifyOptions;
+use types::on_log::OnLog;
 use types::output_option::{AssetFilenamesOutputOption, GlobalsOutputOption};
 use types::sanitize_filename::SanitizeFilename;
 use types::target::ESTarget;
@@ -204,6 +206,13 @@ pub struct BundlerOptions {
     schemars(skip)
   )]
   pub mark_module_loaded: Option<MarkModuleLoaded>,
+  pub log_level: Option<LogLevel>,
+  #[cfg_attr(
+    feature = "deserialize_bundler_options",
+    serde(default, skip_deserializing),
+    schemars(skip)
+  )]
+  pub on_log: Option<OnLog>,
 }
 
 impl BundlerOptions {

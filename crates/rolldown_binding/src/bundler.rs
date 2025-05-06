@@ -1,14 +1,11 @@
-use std::{path::PathBuf, sync::Arc};
+use std::sync::Arc;
 
 #[cfg(not(target_family = "wasm"))]
 use crate::worker_manager::WorkerManager;
 use crate::{
-  options::{BindingInputOptions, BindingOnLog, BindingOutputOptions},
+  options::{BindingInputOptions, BindingOutputOptions},
   parallel_js_plugin_registry::ParallelJsPluginRegistry,
-  types::{
-    binding_hmr_output::BindingHmrOutput, binding_log::BindingLog,
-    binding_log_level::BindingLogLevel, binding_outputs::BindingOutputs,
-  },
+  types::{binding_hmr_output::BindingHmrOutput, binding_outputs::BindingOutputs},
   utils::{
     handle_result, normalize_binding_options::normalize_binding_options,
     try_init_custom_trace_subscriber,
@@ -16,7 +13,7 @@ use crate::{
 };
 use napi::{Env, tokio::sync::Mutex};
 use napi_derive::napi;
-use rolldown::{Bundler as NativeBundler, NormalizedBundlerOptions};
+use rolldown::{Bundler as NativeBundler, LogLevel, NormalizedBundlerOptions};
 use rolldown_error::{
   BuildDiagnostic, BuildResult, DiagnosticOptions, filter_out_disabled_diagnostics,
 };
@@ -31,9 +28,6 @@ pub struct BindingBundlerOptions {
 #[napi]
 pub struct Bundler {
   inner: Arc<Mutex<NativeBundler>>,
-  on_log: BindingOnLog,
-  log_level: BindingLogLevel,
-  cwd: PathBuf,
 }
 
 #[napi]
@@ -43,11 +37,7 @@ impl Bundler {
   pub fn new(env: Env, option: BindingBundlerOptions) -> napi::Result<Self> {
     try_init_custom_trace_subscriber(env);
 
-    let BindingBundlerOptions { mut input_options, output_options, parallel_plugins_registry } =
-      option;
-
-    let log_level = input_options.log_level;
-    let on_log = input_options.on_log.take();
+    let BindingBundlerOptions { input_options, output_options, parallel_plugins_registry } = option;
 
     #[cfg(not(target_family = "wasm"))]
     let worker_count =
@@ -70,10 +60,7 @@ impl Bundler {
     )?;
 
     Ok(Self {
-      cwd: ret.bundler_options.cwd.clone().unwrap_or_else(|| std::env::current_dir().unwrap()),
       inner: Arc::new(Mutex::new(NativeBundler::with_plugins(ret.bundler_options, ret.plugins))),
-      log_level,
-      on_log,
     })
   }
 
@@ -145,7 +132,7 @@ impl Bundler {
   #[allow(clippy::significant_drop_tightening)]
   pub async fn scan_impl(&self) -> napi::Result<BindingOutputs> {
     let mut bundler_core = self.inner.lock().await;
-    let output = self.handle_result(bundler_core.scan(vec![]).await);
+    let output = Self::handle_result(bundler_core.scan(vec![]).await, bundler_core.options());
 
     match output {
       Ok(output) => {
@@ -165,7 +152,7 @@ impl Bundler {
 
     let outputs = match bundler_core.write().await {
       Ok(outputs) => outputs,
-      Err(errs) => return Ok(self.handle_errors(errs.into_vec())),
+      Err(errs) => return Ok(Self::handle_errors(errs.into_vec(), bundler_core.options())),
     };
 
     self.handle_warnings(outputs.warnings, bundler_core.options()).await;
@@ -179,7 +166,7 @@ impl Bundler {
 
     let bundle_output = match bundler_core.generate().await {
       Ok(output) => output,
-      Err(errs) => return Ok(self.handle_errors(errs.into_vec())),
+      Err(errs) => return Ok(Self::handle_errors(errs.into_vec(), bundler_core.options())),
     };
 
     self.handle_warnings(bundle_output.warnings, bundler_core.options()).await;
@@ -207,12 +194,18 @@ impl Bundler {
     Ok(bundler_core.closed)
   }
 
-  fn handle_errors(&self, errs: Vec<BuildDiagnostic>) -> BindingOutputs {
-    BindingOutputs::from_errors(errs, self.cwd.clone())
+  fn handle_errors(
+    errs: Vec<BuildDiagnostic>,
+    options: &NormalizedBundlerOptions,
+  ) -> BindingOutputs {
+    BindingOutputs::from_errors(errs, options.cwd.clone())
   }
 
-  fn handle_result<T>(&self, result: BuildResult<T>) -> Result<T, BindingOutputs> {
-    result.map_err(|e| self.handle_errors(e.into_vec()))
+  fn handle_result<T>(
+    result: BuildResult<T>,
+    options: &NormalizedBundlerOptions,
+  ) -> Result<T, BindingOutputs> {
+    result.map_err(|e| Self::handle_errors(e.into_vec(), options))
   }
 
   #[allow(clippy::print_stdout, unused_must_use)]
@@ -221,26 +214,23 @@ impl Bundler {
     mut warnings: Vec<BuildDiagnostic>,
     options: &NormalizedBundlerOptions,
   ) {
-    if self.log_level == BindingLogLevel::Silent {
+    if options.log_level == Some(LogLevel::Silent) {
       return;
     }
     warnings = filter_out_disabled_diagnostics(warnings, &options.checks);
-    if let Some(on_log) = self.on_log.as_ref() {
+    if let Some(on_log) = options.on_log.as_ref() {
       for warning in warnings {
         on_log
-          .call_async(
-            (
-              BindingLogLevel::Warn.to_string(),
-              BindingLog {
-                code: warning.kind().to_string(),
-                message: warning
-                  .to_diagnostic_with(&DiagnosticOptions { cwd: self.cwd.clone() })
-                  .to_color_string(),
-                id: warning.id(),
-                exporter: warning.exporter(),
-              },
-            )
-              .into(),
+          .call(
+            LogLevel::Warn,
+            rolldown::Log {
+              code: warning.kind().to_string(),
+              message: warning
+                .to_diagnostic_with(&DiagnosticOptions { cwd: options.cwd.clone() })
+                .to_color_string(),
+              id: warning.id(),
+              exporter: warning.exporter(),
+            },
           )
           .await;
       }

@@ -146,13 +146,22 @@ function loadScript(url) {
   document.body.appendChild(script);
 }
 
+console.debug('HMR runtime loaded', '$ADDR');
+const addr = new URL('ws://$ADDR');
+addr.searchParams.set('from', 'hmr-runtime');
 
-const socket = new WebSocket(`ws://$ADDR`)
+const socket = new WebSocket(addr)
 
 socket.onmessage = function (event) {
   const data = JSON.parse(event.data)
+  console.debug('Received message:', data);
   if (data.type === 'update') {
-    loadScript(data.url)
-    console.debug('Module updated');
+    if(typeof process === 'object') {
+      import(data.path)
+      console.debug(`[hmr]: Importing HMR patch: ${data.path}`);
+    } else {
+      console.debug(`[hmr]: Loading HMR patch: ${data.path}`);
+      loadScript(data.url)
+    }
   }
 }

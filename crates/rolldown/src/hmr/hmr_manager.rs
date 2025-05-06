@@ -120,6 +120,13 @@ impl HmrManager {
         }
       }
     }
+    tracing::debug!(
+      target: "hmr",
+      "initial changed modules {:?}",
+      changed_modules.iter()
+        .map(|module_idx| self.module_db.modules[*module_idx].stable_id())
+        .collect::<Vec<_>>(),
+    );
 
     self.generate_hmr_patch(changed_modules, None).await
   }
@@ -176,6 +183,14 @@ impl HmrManager {
       });
     }
 
+    tracing::debug!(
+      target: "hmr",
+      "computed out `affected_modules` {:?}",
+      affected_modules.iter()
+        .map(|module_idx| self.module_db.modules[*module_idx].stable_id())
+        .collect::<Vec<_>>(),
+    );
+
     let mut modules_to_invalidate = changed_modules.clone();
     // FIXME(hyf0): In general, only modules got edited need to be invalidated, because we need to refetch their latest content.
     // For those modules that are not edited, we should be able to reuse their AST. But currently we don't have a good way to do that
@@ -208,11 +223,27 @@ impl HmrManager {
 
     self.cache = module_loader_output.cache;
 
+    tracing::debug!(
+      target: "hmr",
+      "New added modules` {:?}",
+      module_loader_output
+        .new_added_modules_from_partial_scan
+        .iter()
+        .map(|module_idx| module_loader_output.module_table.get(*module_idx).stable_id())
+        .collect::<Vec<_>>(),
+    );
+
     affected_modules.extend(module_loader_output.new_added_modules_from_partial_scan);
-    // Update
 
     let mut updated_modules =
       module_loader_output.module_table.into_iter_enumerated().into_iter().collect::<Vec<_>>();
+    tracing::debug!(
+      target: "hmr",
+      "updated_modules` {:?}",
+      updated_modules
+        .iter().map(|(idx, module)| (idx, module.stable_id()))
+        .collect::<Vec<_>>(),
+    );
     updated_modules.sort_by_key(|(idx, _)| *idx);
 
     // TODO(hyf0): This is a temporary merging solution. We need to find a better way to handle this.
@@ -226,14 +257,33 @@ impl HmrManager {
         self.module_db.modules[idx] = module;
       }
     }
+    tracing::debug!(
+      target: "hmr",
+      "New added modules2` {:?}",
+      affected_modules
+        .iter()
+        .map(|module_idx| self.module_db.modules[*module_idx].stable_id())
+        .collect::<Vec<_>>(),
+    );
     self.index_ecma_ast = module_loader_output.index_ecma_ast;
+
+    // Remove external modules from affected_modules.
+    affected_modules.retain(|idx| {
+      let module = &self.module_db.modules[*idx];
+      // It's possible that affected modules are external modules. New added code might contains import from external modules.
+      // However, HMR doesn't need to deal with them.
+      !matches!(module, Module::External(_))
+    });
 
     let module_idx_to_init_fn_name = affected_modules
       .iter()
       .enumerate()
       .map(|(index, module_idx)| {
         let Module::Normal(module) = &self.module_db.modules[*module_idx] else {
-          unreachable!("HMR only supports normal module");
+          unreachable!(
+            "External modules should be removed before. But got {:?}",
+            self.module_db.modules[*module_idx].id()
+          );
         };
 
         (*module_idx, format!("init_{}_{}", module.repr_name, index))
@@ -311,16 +361,15 @@ impl HmrManager {
     visited_modules: &mut FxHashSet<ModuleIdx>,
     hmr_boundaries: &mut FxIndexSet<HmrBoundary>,
     affected_modules: &mut FxIndexSet<ModuleIdx>,
-  ) -> bool /* is reached to hmr root boundary  */ {
+  ) -> bool /* is reached to hmr boundary  */ {
+    let Module::Normal(module) = &self.module_db.modules[module_idx] else { return false };
     if visited_modules.contains(&module_idx) {
       // At this point, we consider circular dependencies as a full reload. We can improve this later.
       return true;
     }
 
     visited_modules.insert(module_idx);
-    let Module::Normal(module) = &self.module_db.modules[module_idx] else {
-      unreachable!("HMR only supports normal module");
-    };
+
     affected_modules.insert(module_idx);
 
     if module.ast_usage.contains(EcmaModuleAstUsage::HmrSelfAccept) {

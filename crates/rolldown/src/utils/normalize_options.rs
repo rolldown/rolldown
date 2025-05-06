@@ -252,6 +252,8 @@ pub fn normalize_options(mut raw_options: crate::BundlerOptions) -> NormalizeOpt
       .unwrap_or_default(),
     invalidate_js_side_cache: raw_options.invalidate_js_side_cache,
     mark_module_loaded: raw_options.mark_module_loaded,
+    log_level: raw_options.log_level,
+    on_log: raw_options.on_log,
   };
 
   NormalizeOptionsReturn { options: normalized, resolve_options: raw_resolve, warnings }

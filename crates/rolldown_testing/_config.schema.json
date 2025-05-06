@@ -363,6 +363,16 @@
             "null"
           ]
         },
+        "logLevel": {
+          "anyOf": [
+            {
+              "$ref": "#/definitions/LogLevel"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
         "makeAbsoluteExternalsRelative": {
           "anyOf": [
             {
@@ -884,6 +894,15 @@
           ]
         }
       }
+    },
+    "LogLevel": {
+      "type": "string",
+      "enum": [
+        "silent",
+        "warn",
+        "info",
+        "debug"
+      ]
     },
     "MakeAbsoluteExternalsRelative": {
       "oneOf": [

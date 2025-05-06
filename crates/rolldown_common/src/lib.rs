@@ -33,11 +33,13 @@ pub mod bundler_options {
       invalidate_js_side_cache::InvalidateJsSideCache,
       is_external::IsExternal,
       jsx::{Jsx, NormalizedJsxOptions},
+      log_level::LogLevel,
       make_absolute_externals_relative::MakeAbsoluteExternalsRelative,
       mark_module_loaded::MarkModuleLoaded,
       minify_options::{MinifyOptions, MinifyOptionsObject, RawMinifyOptions},
       module_type::ModuleType,
       normalized_bundler_options::{NormalizedBundlerOptions, SharedNormalizedBundlerOptions},
+      on_log::{Log, OnLog},
       output_exports::OutputExports,
       output_format::OutputFormat,
       output_option::{

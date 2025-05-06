@@ -191,6 +191,18 @@ pub fn normalize_binding_options(
     }))
   });
 
+  let on_log = input_options.on_log.map(|ts_fn| {
+    rolldown::OnLog::new(Arc::new(move |level, log| {
+      let ts_fn = Arc::clone(&ts_fn);
+      Box::pin(async move {
+        ts_fn
+          .invoke_async((level.to_string(), log.into()).into())
+          .await
+          .map_err(anyhow::Error::from)
+      })
+    }))
+  });
+
   let mut module_types = None;
   if let Some(raw) = input_options.module_types {
     let mut tmp: FxHashMap<_, _> = FxHashMapExt::with_capacity(raw.len());
@@ -344,6 +356,8 @@ pub fn normalize_binding_options(
     debug: input_options.debug.map(|inner| rolldown::DebugOptions { session_id: inner.session_id }),
     invalidate_js_side_cache,
     mark_module_loaded,
+    log_level: Some(input_options.log_level.into()),
+    on_log,
   };
 
   #[cfg(not(target_family = "wasm"))]

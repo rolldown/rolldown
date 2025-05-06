@@ -2,7 +2,6 @@
   "extends": "./tsconfig.base.json",
   "compilerOptions": {
     "module": "ESNext", /* Specify what module code is generated. */
-    "outDir": "./dist/esm", /* Specify an output folder for all emitted files. */
+    "outDir": "./dist/esm" /* Specify an output folder for all emitted files. */
   }
 }
-

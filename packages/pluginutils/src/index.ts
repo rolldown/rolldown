@@ -1,9 +1,20 @@
 type StringOrRegExp = string | RegExp;
 
 // Inline this type to avoid import it from `rolldown`.
-// The only downside is we need to keep it in sync with `rolldown` manually, 
-// it is alright since it is pretty stable now. 
-type PluginModuleType = "js" | "jsx" | "ts" | "tsx" | "json" | "text" | "base64" | "dataurl" | "binary" | "empty" | (string & {});
+// The only downside is we need to keep it in sync with `rolldown` manually,
+// it is alright since it is pretty stable now.
+type PluginModuleType =
+  | 'js'
+  | 'jsx'
+  | 'ts'
+  | 'tsx'
+  | 'json'
+  | 'text'
+  | 'base64'
+  | 'dataurl'
+  | 'binary'
+  | 'empty'
+  | (string & {});
 
 export type FilterExpressionKind = FilterExpression['kind'];
 
@@ -127,4 +138,3 @@ export function include(expr: FilterExpression): Include {
 export function exclude(expr: FilterExpression): Exclude {
   return new Exclude(expr);
 }
-

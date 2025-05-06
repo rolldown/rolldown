@@ -9,8 +9,3 @@ export {
   include,
 } from "@rolldown/pluginutils";
 export { withFilter } from "./plugin";
-export type {
-  FilterExpression,
-  FilterExpressionKind,
-  TopLevelFilterExpression,
-} from "@rolldown/pluginutils";

@@ -290,7 +290,11 @@ importers:
 
   packages/debug: {}
 
-  packages/pluginutils: {}
+  packages/pluginutils:
+    devDependencies:
+      rimraf:
+        specifier: ^6.0.1
+        version: 6.0.1
 
   packages/rolldown:
     dependencies:

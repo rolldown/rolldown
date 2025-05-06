@@ -3,8 +3,8 @@
   // https://github.com/vitejs/vite/blob/1465b2064ee23ac5df5414b13355a394ccd931af/packages/vite/tsconfig.check.json
   "compilerOptions": {
     "target": "ES2020",
-    "moduleResolution": "node16",
-    "module": "node16",
+    "moduleResolution": "bundler",
+    "module": "ESNext",
     "lib": ["ES2020", "ESNext.Disposable"], // ES2020 is very conservative check for client types, could be bumped if needed
     "types": ["node"], // Avoid checking unrelated node_modules types
     "noEmit": true,

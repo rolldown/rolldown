@@ -13,15 +13,21 @@
   },
   "exports": {
     ".": {
-      "import": "./dist/index.js",
-      "types": "./dist/index.d.ts"
+      "import": "./dist/esm/index.js",
+      "require": "./dist/cjs/index.js",
+      "types": "./dist/cjs/index.d.ts"
     }
   },
   "files": [
     "dist"
   ],
+  "devDependencies": {
+    "rimraf": "^5.0.0"
+  },
   "scripts": {
-    "build": "tsc -b",
+    "build": "rimraf dist && npm run build:esm && npm run build:cjs",
+    "build:esm": "tsc -p ./tsconfig.esm.json",
+    "build:cjs": "tsc -p ./tsconfig.cjs.json",
     "test": "echo \"Error: no test specified\" && exit 1"
   }
 }

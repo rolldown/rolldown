@@ -16,9 +16,7 @@ export function makeBuiltinPluginCallable(
     bindingifyBuiltInPlugin(plugin),
   );
 
-  const wrappedPlugin:
-    & Partial<BindingCallableBuiltinPluginLike>
-    & BuiltinPlugin = plugin;
+  const wrappedPlugin: any = {};
   for (const key in callablePlugin) {
     // @ts-expect-error
     wrappedPlugin[key] = function(...args) {

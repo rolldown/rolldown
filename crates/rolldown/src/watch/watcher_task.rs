@@ -9,7 +9,7 @@ use std::{
 
 use crate::{Bundler, SharedOptions};
 
-use super::emitter::SharedWatcherEmitter;
+use super::{emitter::SharedWatcherEmitter, event::BundleErrorEventData};
 use crate::watch::event::{BundleEndEventData, BundleEvent, WatcherEvent};
 use arcstr::ArcStr;
 use notify::{RecommendedWatcher, RecursiveMode, Watcher};
@@ -95,9 +95,12 @@ impl WatcherTask {
         })))?;
       }
       Err(errs) => {
-        self.emitter.emit(WatcherEvent::Event(BundleEvent::Error(OutputsDiagnostics {
-          diagnostics: errs.into_vec(),
-          cwd: bundler.options.cwd.clone(),
+        self.emitter.emit(WatcherEvent::Event(BundleEvent::Error(BundleErrorEventData {
+          error: OutputsDiagnostics {
+            diagnostics: errs.into_vec(),
+            cwd: bundler.options.cwd.clone(),
+          },
+          result: Arc::clone(&self.bundler),
         })))?;
       }
     }
@@ -169,9 +172,12 @@ impl WatcherTask {
   pub async fn on_change(&self, path: &str, kind: WatcherChangeKind) {
     let bundler = self.bundler.lock().await;
     let _ = bundler.plugin_driver.watch_change(path, kind).await.map_err(|e| {
-      self.emitter.emit(WatcherEvent::Event(BundleEvent::Error(OutputsDiagnostics {
-        diagnostics: vec![BuildDiagnostic::unhandleable_error(e)],
-        cwd: bundler.options.cwd.clone(),
+      self.emitter.emit(WatcherEvent::Event(BundleEvent::Error(BundleErrorEventData {
+        error: OutputsDiagnostics {
+          diagnostics: vec![BuildDiagnostic::unhandleable_error(e)],
+          cwd: bundler.options.cwd.clone(),
+        },
+        result: Arc::clone(&self.bundler),
       })))
     });
   }

@@ -59,14 +59,17 @@ impl BindingWatcherEvent {
   }
 
   #[napi]
-  pub fn errors(&mut self) -> Vec<napi::Either<napi::JsError, BindingError>> {
-    match &mut self.inner {
-      WatcherEvent::Event(BundleEvent::Error(rolldown_common::OutputsDiagnostics {
-        diagnostics,
-        cwd,
-      })) => {
-        diagnostics.iter().map(|diagnostic| to_js_diagnostic(diagnostic, cwd.clone())).collect()
-      }
+  pub fn bundle_error_data(&self) -> BindingBundleErrorEventData {
+    match &self.inner {
+      WatcherEvent::Event(BundleEvent::Error(data)) => BindingBundleErrorEventData {
+        error: data
+          .error
+          .diagnostics
+          .iter()
+          .map(|diagnostic| to_js_diagnostic(diagnostic, data.error.cwd.clone()))
+          .collect(),
+        result: Arc::clone(&data.result),
+      },
       _ => {
         unreachable!("Expected WatcherEvent::Event(BundleEventKind::Error)")
       }
@@ -92,5 +95,24 @@ impl BindingBundleEndEventData {
   #[napi(getter)]
   pub fn result(&self) -> crate::bundler::Bundler {
     crate::bundler::Bundler::new_with_bundler(Arc::clone(&self.result))
+  }
+}
+
+#[napi]
+pub struct BindingBundleErrorEventData {
+  error: Vec<napi::Either<napi::JsError, BindingError>>,
+  result: Arc<Mutex<Bundler>>,
+}
+
+#[napi]
+impl BindingBundleErrorEventData {
+  #[napi(getter)]
+  pub fn result(&self) -> crate::bundler::Bundler {
+    crate::bundler::Bundler::new_with_bundler(Arc::clone(&self.result))
+  }
+
+  #[napi(getter)]
+  pub fn error(&mut self) -> Vec<napi::Either<napi::JsError, BindingError>> {
+    std::mem::take(&mut self.error)
   }
 }

@@ -9,6 +9,11 @@ export declare class BindingBundleEndEventData {
   get result(): Bundler
 }
 
+export declare class BindingBundleErrorEventData {
+  get result(): Bundler
+  get error(): Array<Error | BindingError>
+}
+
 export declare class BindingCallableBuiltinPlugin {
   constructor(plugin: BindingBuiltinPlugin)
   resolveId(id: string, importer?: string | undefined | null, options?: BindingHookJsResolveIdOptions | undefined | null): Promise<BindingHookJsResolveIdOutput | null>
@@ -150,7 +155,7 @@ export declare class BindingWatcherEvent {
   watchChangeData(): BindingWatcherChangeData
   bundleEndData(): BindingBundleEndEventData
   bundleEventKind(): string
-  errors(): Array<Error | BindingError>
+  bundleErrorData(): BindingBundleErrorEventData
 }
 
 export declare class Bundler {

@@ -5,7 +5,7 @@ use oxc::{
     match_member_expression,
   },
   ast_visit::{VisitMut, walk_mut},
-  span::{Atom, GetSpan, SPAN, Span},
+  span::{SPAN, Span},
 };
 use rolldown_common::{ExportsKind, Module, StmtInfoIdx, SymbolRef, ThisExprReplaceKind, WrapKind};
 use rolldown_ecmascript_utils::ExpressionExt;

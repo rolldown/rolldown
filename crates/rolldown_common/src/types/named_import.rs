@@ -35,10 +35,6 @@ impl Specifier {
   pub fn is_star(&self) -> bool {
     matches!(self, Self::Star)
   }
-
-  pub fn is_default(&self) -> bool {
-    matches!(self, Self::Literal(atom) if atom.as_str() == "default")
-  }
 }
 
 impl Display for Specifier {

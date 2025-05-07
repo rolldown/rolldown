@@ -605,10 +605,11 @@ pub struct BindingReplacePluginConfig {
 #[derive(Debug, Default)]
 pub struct BindingReportPluginConfig {
   pub is_tty: bool,
+  pub should_log_info: bool,
 }
 
 impl From<BindingReportPluginConfig> for ReporterPlugin {
   fn from(config: BindingReportPluginConfig) -> Self {
-    ReporterPlugin::new(config.is_tty)
+    ReporterPlugin::new(config.is_tty, config.should_log_info)
   }
 }

@@ -690,6 +690,7 @@ export interface BindingReplacePluginConfig {
 
 export interface BindingReportPluginConfig {
   isTty: boolean
+  shouldLogInfo: boolean
 }
 
 export type BindingResolvedExternal =

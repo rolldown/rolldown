@@ -13,7 +13,7 @@ spawnSync(command, args, {
 });
 
 fs.writeFileSync(
-  path.resolve(import.meta.dirname, 'dist/cjs/package.json'),
+  path.resolve(path.dirname(fileURLToPath(import.meta.url)), 'dist/cjs/package.json'),
   `{
   "type": "commonjs"
 }`,

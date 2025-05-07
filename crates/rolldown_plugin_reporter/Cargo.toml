@@ -15,5 +15,7 @@ doctest = false
 workspace = true
 
 [dependencies]
+itoa = { workspace = true }
 rolldown_plugin = { workspace = true }
 sugar_path = { workspace = true }
+terminal_size = { workspace = true }

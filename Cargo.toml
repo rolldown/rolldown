@@ -170,6 +170,7 @@ simdutf8 = { version = "0.1.5" }
 smallvec = "1.13.2"
 string_wizard = { path = "./crates/string_wizard", features = ["serde"] }
 sugar_path = { version = "1.2.0", features = ["cached_current_dir"] }
+terminal_size = "0.4.2"
 testing_macros = "1.0.0"
 tokio = { version = "1.38.0", default-features = false }
 tracing = { version = "0.1.41" }

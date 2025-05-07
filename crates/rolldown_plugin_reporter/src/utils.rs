@@ -1,18 +1,28 @@
 use std::io::{StdoutLock, Write as _};
 
 #[inline]
-#[allow(clippy::print_stdout)]
-pub fn clear_current_line() -> StdoutLock<'static> {
+pub fn clear_line() -> StdoutLock<'static> {
   let mut lock = std::io::stdout().lock();
-  write!(&mut lock, "\x1B[2K\r").unwrap(); // clear current line and move cursor to the beginning
-  lock.flush().unwrap();
+  let _ = write!(&mut lock, "\x1b[2K\r");
+  let _ = lock.flush();
   lock
 }
 
 #[inline]
-#[allow(clippy::print_stdout)]
-pub fn write_line(line: &str) {
-  let mut lock = clear_current_line();
-  write!(&mut lock, "{line}",).unwrap();
-  lock.flush().unwrap();
+pub fn write_line(message: &str) {
+  let mut lock = clear_line();
+
+  let message = terminal_size::terminal_size()
+    .map(|(width, _)| width.0 as usize)
+    .map_or(message, |width| if message.len() < width { message } else { &message[..width] });
+
+  let _ = write!(&mut lock, "{message}");
+  let _ = lock.flush();
+}
+
+#[inline]
+pub fn log_info(message: &str) {
+  let mut lock = std::io::stdout().lock();
+  let _ = write!(&mut lock, "{message}");
+  let _ = lock.flush();
 }

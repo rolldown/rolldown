@@ -9,6 +9,7 @@ const args = ['run', 'build:all']; // Replace with any arguments for the command
 
 spawnSync(command, args, {
   stdio: ['pipe', process.stdout, process.stderr],
+  shell: true,
 });
 
 fs.writeFileSync(

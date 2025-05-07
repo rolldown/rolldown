@@ -26,8 +26,8 @@
     "rimraf": "^5.0.0"
   },
   "scripts": {
-    "build": "rimraf dist && npm run build:esm && npm run build:cjs && npm run tweak-cjs-type",
-    "tweak-cjs-type": "echo \"{\\\"type\\\": \\\"commonjs\\\"}\" > dist/cjs/package.json",
+    "build": "node build.mjs",
+    "build:all": "npm run build:esm && npm run build:cjs",
     "build:esm": "tsc -p ./tsconfig.esm.json",
     "build:cjs": "tsc -p ./tsconfig.cjs.json",
     "test": "echo \"Error: no test specified\" && exit 1"

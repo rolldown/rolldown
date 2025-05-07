@@ -18,7 +18,7 @@ use rolldown_plugin_manifest::{ManifestPlugin, ManifestPluginConfig};
 use rolldown_plugin_module_federation::ModuleFederationPlugin;
 use rolldown_plugin_module_preload_polyfill::ModulePreloadPolyfillPlugin;
 use rolldown_plugin_replace::{ReplaceOptions, ReplacePlugin};
-use rolldown_plugin_report::ReportPlugin;
+use rolldown_plugin_reporter::ReporterPlugin;
 use rolldown_plugin_transform::TransformPlugin;
 use rolldown_plugin_vite_resolve::{
   FinalizeBareSpecifierCallback, FinalizeOtherSpecifiersCallback, ViteResolveOptions,
@@ -563,7 +563,7 @@ impl TryFrom<BindingBuiltinPlugin> for Arc<dyn Pluginable> {
         Arc::new(plugin)
       }
       BindingBuiltinPluginName::Report => {
-        let plugin: ReportPlugin = if let Some(options) = plugin.options {
+        let plugin: ReporterPlugin = if let Some(options) = plugin.options {
           BindingReportPluginConfig::from_unknown(options)?.into()
         } else {
           return Err(napi::Error::new(
@@ -607,8 +607,8 @@ pub struct BindingReportPluginConfig {
   pub is_tty: bool,
 }
 
-impl From<BindingReportPluginConfig> for ReportPlugin {
+impl From<BindingReportPluginConfig> for ReporterPlugin {
   fn from(config: BindingReportPluginConfig) -> Self {
-    ReportPlugin::new(config.is_tty)
+    ReporterPlugin::new(config.is_tty)
   }
 }

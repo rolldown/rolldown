@@ -42,7 +42,7 @@ rolldown_plugin_manifest = { workspace = true }
 rolldown_plugin_module_federation = { workspace = true }
 rolldown_plugin_module_preload_polyfill = { workspace = true }
 rolldown_plugin_replace = { workspace = true }
-rolldown_plugin_report = { workspace = true }
+rolldown_plugin_reporter = { workspace = true }
 rolldown_plugin_transform = { workspace = true }
 rolldown_plugin_vite_resolve = { workspace = true }
 rolldown_plugin_wasm_fallback = { workspace = true }

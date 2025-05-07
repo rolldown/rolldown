@@ -355,9 +355,11 @@ impl GenerateStage<'_> {
       if self.options.is_hmr_enabled() {
         if let Some(importee_chunk_id) = chunk_graph.module_to_chunk[self.link_output.runtime.id()]
         {
-          index_cross_chunk_imports[chunk_id].insert(importee_chunk_id);
-          let imports_from_other_chunks = &mut index_imports_from_other_chunks[chunk_id];
-          imports_from_other_chunks.entry(importee_chunk_id).or_default();
+          if importee_chunk_id != chunk_id {
+            index_cross_chunk_imports[chunk_id].insert(importee_chunk_id);
+            let imports_from_other_chunks = &mut index_imports_from_other_chunks[chunk_id];
+            imports_from_other_chunks.entry(importee_chunk_id).or_default();
+          }
         }
       }
     });

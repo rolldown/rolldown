@@ -1,4 +1,4 @@
-import type { TopLevelFilterExpression } from '../filter-index';
+import type { TopLevelFilterExpression } from '@rolldown/pluginutils';
 import type { ModuleType } from '../index';
 import type { MaybeArray } from '../types/utils';
 import type { StringOrRegExp } from '../types/utils';

@@ -38,6 +38,9 @@ jobs:
       - name: Add WASI target
         run: rustup target add wasm32-wasip1-threads
 
+      - name: Build `@rolldown/pluginutils`
+        run: pnpm --filter '@rolldown/pluginutils' build
+
       - name: Build Browser Rolldown
         run: just build browser release
 

@@ -1,7 +1,7 @@
+import type { FilterExpression } from '@rolldown/pluginutils';
+import * as filter from '@rolldown/pluginutils';
 import * as R from 'remeda';
 import type { BindingFilterToken, BindingHookFilter } from '../binding.d';
-import type { FilterExpression } from '../filter-index';
-import * as filter from '../filter-index';
 import type { StringOrRegExp } from '../types/utils';
 import { arraify } from '../utils/misc';
 import type { HookFilterExtension } from '.';

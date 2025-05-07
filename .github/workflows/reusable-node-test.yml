@@ -35,6 +35,9 @@ jobs:
       - name: Setup Node For Development
         uses: ./.github/actions/setup-node
 
+      - name: Build `@rolldown/pluginutils`
+        run: pnpm --filter '@rolldown/pluginutils' build
+
       - name: Build Native Rolldown
         run: just build native
 

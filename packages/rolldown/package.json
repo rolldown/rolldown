@@ -105,7 +105,8 @@
   },
   "dependencies": {
     "@oxc-project/types": "catalog:",
-    "ansis": "^3.17.0"
+    "ansis": "^3.17.0",
+    "@rolldown/pluginutils": "workspace:*"
   },
   "peerDependencies": {
     "@oxc-project/runtime": "catalog:"

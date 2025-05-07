@@ -290,6 +290,12 @@ importers:
 
   packages/debug: {}
 
+  packages/pluginutils:
+    devDependencies:
+      rimraf:
+        specifier: ^5.0.0
+        version: 5.0.10
+
   packages/rolldown:
     dependencies:
       '@oxc-project/runtime':
@@ -298,6 +304,9 @@ importers:
       '@oxc-project/types':
         specifier: 'catalog:'
         version: 0.68.1
+      '@rolldown/pluginutils':
+        specifier: workspace:*
+        version: link:../pluginutils
       ansis:
         specifier: ^3.17.0
         version: 3.17.0
@@ -568,12 +577,6 @@ importers:
       '@rolldown/test-dev-server':
         specifier: workspace:*
         version: link:../../..
-
-  packages/test-dev-server/tests/tmp/fixtures/basic:
-    devDependencies:
-      '@rolldown/test-dev-server':
-        specifier: workspace:*
-        version: link:../../../..
 
   packages/testing: {}
 
@@ -6089,7 +6092,11 @@ packages:
   right-pad@1.0.1:
     resolution: {integrity: sha512-bYBjgxmkvTAfgIYy328fmkwhp39v8lwVgWhhrzxPV3yHtcSqyYKe9/XOhvW48UFjATg3VuJbpsp5822ACNvkmw==}
     engines: {node: '>= 0.10'}
-    deprecated: Please use String.prototype.padEnd() over this package.
+    deprecated: Use String.prototype.padEnd() instead
+
+  rimraf@5.0.10:
+    resolution: {integrity: sha512-l0OE8wL34P4nJH/H2ffoaniAokM2qSmrtXHmlpvYr5AVVX8msAyW0l8NVJFDxlSK4u3Uh/f41cQheDVdnYijwQ==}
+    hasBin: true
 
   rimraf@6.0.1:
     resolution: {integrity: sha512-9dkvaxAsk/xNXSJzMgFqqMCuFgt2+KsOFek3TMLfo8NCPfWpBmqwyNn5Y+NX56QUYfCtsyhF3ayiboEoUmJk/A==}
@@ -12410,6 +12417,10 @@ snapshots:
   rfdc@1.4.1: {}
 
   right-pad@1.0.1: {}
+
+  rimraf@5.0.10:
+    dependencies:
+      glob: 10.4.5
 
   rimraf@6.0.1:
     dependencies:

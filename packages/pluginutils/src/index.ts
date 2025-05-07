@@ -138,3 +138,89 @@ export function include(expr: FilterExpression): Include {
 export function exclude(expr: FilterExpression): Exclude {
   return new Exclude(expr);
 }
+
+export function interpreter(
+  exprs: TopLevelFilterExpression | TopLevelFilterExpression[],
+  code?: string,
+  id?: string,
+  moduleType?: PluginModuleType,
+): boolean {
+  let arr: TopLevelFilterExpression[] = [];
+  if (Array.isArray(exprs)) {
+    arr = exprs;
+  } else {
+    arr = [exprs];
+  }
+  return interpreterImpl(arr, code, id, moduleType);
+}
+
+export function interpreterImpl(
+  expr: TopLevelFilterExpression[],
+  code?: string,
+  id?: string,
+  moduleType?: PluginModuleType,
+): boolean {
+  let hasInclude = false;
+  for (const e of expr) {
+    switch (e.kind) {
+      case 'include': {
+        hasInclude = true;
+        if (exprInterpreter(e.expr, code, id, moduleType)) {
+          return true;
+        }
+        break;
+      }
+      case 'exclude': {
+        if (exprInterpreter(e.expr, code, id, moduleType)) {
+          return false;
+        }
+        break;
+      }
+    }
+  }
+  return !hasInclude;
+}
+
+export function exprInterpreter(
+  expr: FilterExpression,
+  code?: string,
+  id?: string,
+  moduleType?: PluginModuleType,
+): boolean {
+  switch (expr.kind) {
+    case 'and': {
+      return expr.args.every((e) => exprInterpreter(e, code, id, moduleType));
+    }
+    case 'or': {
+      return expr.args.some((e) => exprInterpreter(e, code, id, moduleType));
+    }
+    case 'not': {
+      return !exprInterpreter(expr.expr, code, id, moduleType);
+    }
+    case 'id': {
+      if (id === undefined) {
+        throw new Error('`id` is required for `id` expression');
+      }
+      return typeof expr.pattern === 'string'
+        ? id === expr.pattern
+        : expr.pattern.test(id);
+    }
+    case 'moduleType': {
+      if (moduleType === undefined) {
+        throw new Error('`moduleType` is required for `moduleType` expression');
+      }
+      return moduleType === expr.pattern;
+    }
+    case 'code': {
+      if (code === undefined) {
+        throw new Error('`code` is required for `code` expression');
+      }
+      return typeof expr.pattern === 'string'
+        ? code.includes(expr.pattern)
+        : expr.pattern.test(code);
+    }
+    default: {
+      throw new Error(`Expression kind ${expr.kind} is not expected.`);
+    }
+  }
+}

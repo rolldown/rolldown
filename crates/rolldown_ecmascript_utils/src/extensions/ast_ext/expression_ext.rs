@@ -1,4 +1,4 @@
-use oxc::ast::ast;
+use oxc::{ast::ast, span::Atom};
 
 pub trait ExpressionExt<'ast> {
   fn as_call_expression(&self) -> Option<&ast::CallExpression<'ast>>;
@@ -10,6 +10,7 @@ pub trait ExpressionExt<'ast> {
   fn as_string_literal(&self) -> Option<&ast::StringLiteral<'ast>>;
   fn as_binary_expression(&self) -> Option<&ast::BinaryExpression<'ast>>;
   fn as_static_member_expr_mut(&mut self) -> Option<&mut ast::StaticMemberExpression<'ast>>;
+  fn as_static_module_request(&self) -> Option<Atom<'ast>>;
 
   fn is_import_meta(&self) -> bool;
   fn is_import_meta_url(&self) -> bool;
@@ -46,6 +47,16 @@ impl<'ast> ExpressionExt<'ast> for ast::Expression<'ast> {
       return None;
     };
     Some(expr)
+  }
+
+  fn as_static_module_request(&self) -> Option<Atom<'ast>> {
+    match &self {
+      ast::Expression::StringLiteral(request) => Some(request.value),
+      ast::Expression::TemplateLiteral(request) if request.is_no_substitution_template() => {
+        request.quasi()
+      }
+      _ => None,
+    }
   }
 
   fn as_binary_expression(&self) -> Option<&ast::BinaryExpression<'ast>> {

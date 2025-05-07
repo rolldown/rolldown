@@ -5,7 +5,7 @@ use oxc::{
     match_member_expression,
   },
   ast_visit::{VisitMut, walk_mut},
-  span::{SPAN, Span},
+  span::{Atom, GetSpan, SPAN, Span},
 };
 use rolldown_common::{ExportsKind, Module, StmtInfoIdx, SymbolRef, ThisExprReplaceKind, WrapKind};
 use rolldown_ecmascript_utils::ExpressionExt;
@@ -368,7 +368,7 @@ impl<'ast> VisitMut<'ast> for ScopeHoistingFinalizer<'_, 'ast> {
   fn visit_import_expression(&mut self, expr: &mut ast::ImportExpression<'ast>) {
     if expr.options.is_none() {
       // Make sure the import expression is in correct form. If it's not, we should leave it as it is.
-      if let ast::Expression::StringLiteral(str) = &mut expr.source {
+      if let Some(str) = expr.source.as_static_module_request() {
         let rec_id = self.ctx.module.imports[&expr.span];
         let rec = &self.ctx.module.import_records[rec_id];
         let importee_id = rec.resolved_module;
@@ -379,13 +379,14 @@ impl<'ast> VisitMut<'ast> for ScopeHoistingFinalizer<'_, 'ast> {
             let importee_chunk = &self.ctx.chunk_graph.chunk_table[importee_chunk_id];
 
             let import_path = importer_chunk.import_path_for(importee_chunk);
-
-            str.value = self.snippet.atom(&import_path);
+            expr.source =
+              Expression::StringLiteral(self.snippet.alloc_string_literal(&import_path, SPAN));
           }
           Module::External(importee) => {
             let import_path = importee.get_import_path(importer_chunk);
-            if str.value != import_path {
-              str.value = self.snippet.atom(&import_path);
+            if str != import_path {
+              expr.source =
+                Expression::StringLiteral(self.snippet.alloc_string_literal(&import_path, SPAN));
             }
           }
         }

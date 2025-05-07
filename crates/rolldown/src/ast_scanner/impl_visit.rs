@@ -14,6 +14,7 @@ use rolldown_common::{
 };
 #[cfg(debug_assertions)]
 use rolldown_ecmascript::ToSourceString;
+use rolldown_ecmascript_utils::ExpressionExt;
 use rolldown_error::BuildDiagnostic;
 use rolldown_std_utils::OptionExt;
 
@@ -170,18 +171,14 @@ impl<'me, 'ast: 'me> Visit<'ast> for AstScanner<'me, 'ast> {
   }
 
   fn visit_import_expression(&mut self, expr: &ast::ImportExpression<'ast>) {
-    if let ast::Expression::StringLiteral(request) = &expr.source {
-      let import_rec_idx = self.add_import_record(
-        request.value.as_str(),
-        ImportKind::DynamicImport,
-        expr.source.span(),
-        {
+    if let Some(request) = expr.source.as_static_module_request() {
+      let import_rec_idx =
+        self.add_import_record(request.as_str(), ImportKind::DynamicImport, expr.source.span(), {
           let mut meta = ImportRecordMeta::empty();
           meta.set(ImportRecordMeta::IS_TOP_LEVEL, self.is_root_scope());
           meta.set(ImportRecordMeta::IS_UNSPANNED_IMPORT, expr.source.span().is_empty());
           meta
-        },
-      );
+        });
       self.init_dynamic_import_binding_usage_info(import_rec_idx);
       self.result.imports.insert(expr.span, import_rec_idx);
     }

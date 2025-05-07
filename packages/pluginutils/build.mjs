@@ -1,5 +1,6 @@
 import { spawnSync } from 'node:child_process';
 import * as fs from 'node:fs';
+import * as path from 'node:path';
 
 fs.rmSync('dist', { recursive: true, force: true });
 
@@ -11,7 +12,7 @@ spawnSync(command, args, {
 });
 
 fs.writeFileSync(
-  'dist/cjs/package.json',
+  path.resolve(import.meta.dirname, 'dist/cjs/package.json'),
   `{
   "type": "commonjs"
 }`,

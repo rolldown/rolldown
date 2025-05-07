@@ -41,6 +41,9 @@ jobs:
       - name: Build Browser Rolldown
         run: just build browser release
 
+      - name: Build `@rolldown/pluginutils`
+        run: pnpm --filter '@rolldown/pluginutils' build
+
       - name: Build Node Packages
         run: pnpm --filter rolldown build-node
 

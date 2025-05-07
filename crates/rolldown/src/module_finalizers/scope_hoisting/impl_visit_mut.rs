@@ -5,7 +5,7 @@ use oxc::{
     match_member_expression,
   },
   ast_visit::{VisitMut, walk_mut},
-  span::{SPAN, Span},
+  span::{GetSpan, SPAN, Span},
 };
 use rolldown_common::{ExportsKind, Module, StmtInfoIdx, SymbolRef, ThisExprReplaceKind, WrapKind};
 use rolldown_ecmascript_utils::ExpressionExt;
@@ -379,14 +379,16 @@ impl<'ast> VisitMut<'ast> for ScopeHoistingFinalizer<'_, 'ast> {
             let importee_chunk = &self.ctx.chunk_graph.chunk_table[importee_chunk_id];
 
             let import_path = importer_chunk.import_path_for(importee_chunk);
-            expr.source =
-              Expression::StringLiteral(self.snippet.alloc_string_literal(&import_path, SPAN));
+            expr.source = Expression::StringLiteral(
+              self.snippet.alloc_string_literal(&import_path, expr.source.span()),
+            );
           }
           Module::External(importee) => {
             let import_path = importee.get_import_path(importer_chunk);
             if str != import_path {
-              expr.source =
-                Expression::StringLiteral(self.snippet.alloc_string_literal(&import_path, SPAN));
+              expr.source = Expression::StringLiteral(
+                self.snippet.alloc_string_literal(&import_path, expr.source.span()),
+              );
             }
           }
         }

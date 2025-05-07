@@ -1,0 +1,19 @@
+{
+  "config": {
+    "input": [
+      {
+        "name": "entry",
+        "import": "entry.js"
+      },
+      {
+        "name": "index",
+        "import": "index.js"
+      }
+    ],
+    "experimental": {
+      "hmr": {}
+    }
+  },
+  // Runtime currently relies on browser environment's `WebSocket`
+  "expectExecuted": false
+}

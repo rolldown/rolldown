@@ -5198,6 +5198,12 @@ expression: output
 - main-!~{000}~.js => main-BPZcaBgY.js
 - main-BPZcaBgY.js.map
 
+# tests/rolldown/topics/hmr/mutiply-entires
+
+- entry-!~{000}~.js => entry-cqNUbIkK.js
+- index-!~{001}~.js => index-t76-tv7f.js
+- chunk-!~{002}~.js => chunk-DvBEc7YG.js
+
 # tests/rolldown/topics/hmr/register_exports
 
 - main-!~{000}~.js => main-B1WfpZkd.js

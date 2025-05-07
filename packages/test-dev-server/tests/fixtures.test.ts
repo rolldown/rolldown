@@ -35,7 +35,7 @@ function main() {
       projectName,
     );
     copyProjectToTmp(projectName);
-    await execa('pnpm install', {
+    await execa('pnpm install --no-frozen-lockfile', {
       cwd: tmpProjectPath,
       shell: true,
       stdio: 'inherit',

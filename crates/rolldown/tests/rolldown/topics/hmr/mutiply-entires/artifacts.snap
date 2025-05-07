@@ -1,0 +1,34 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## chunk.js
+
+```js
+
+```
+## entry.js
+
+```js
+import "./chunk.js";
+
+//#region entry.js
+const entry_hot = __rolldown_runtime__.createModuleHotContext("entry.js");
+__rolldown_runtime__.registerModule("entry.js", {});
+console.log("entry");
+
+//#endregion
+```
+## index.js
+
+```js
+import "./chunk.js";
+
+//#region index.js
+const mutiply_entires_hot = __rolldown_runtime__.createModuleHotContext("index.js");
+__rolldown_runtime__.registerModule("index.js", {});
+console.log("index");
+
+//#endregion
+```

@@ -192,6 +192,9 @@ jobs:
         env:
           ROLLDOWN_VERSION: ${{ inputs.version }}
 
+      - name: Build `@rolldown/pluginutils`
+        run: pnpm --filter '@rolldown/pluginutils' build
+
       - name: Build Node Packages
         # Binaries are built in the previous steps. Unlike in local development, we only need to build the node package itself.
         run: pnpm --filter rolldown build-node
@@ -241,6 +244,9 @@ jobs:
         run: node --import @oxc-node/core/register ./scripts/misc/bump-version.js ${ROLLDOWN_VERSION}
         env:
           ROLLDOWN_VERSION: ${{ inputs.version }}
+
+      - name: Build `@rolldown/pluginutils`
+        run: pnpm --filter '@rolldown/pluginutils' build
 
       - name: Build `@rolldown/browser`
         # Binaries are built in the previous steps. Unlike in local development, we only need to build the node package itself.

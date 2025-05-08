@@ -70,6 +70,10 @@ impl LinkingMetadata {
       .map(|name| (name, &self.resolved_exports[name]))
   }
 
+  pub fn canonical_exports_len(&self) -> usize {
+    self.sorted_and_non_ambiguous_resolved_exports.len()
+  }
+
   pub fn is_canonical_exports_empty(&self) -> bool {
     self.sorted_and_non_ambiguous_resolved_exports.is_empty()
   }

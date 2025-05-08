@@ -1,5 +1,5 @@
 use oxc::{
-  allocator::{Allocator, Box as ArenaBox, Dummy, IntoIn, TakeIn},
+  allocator::{Allocator, Box as ArenaBox, IntoIn, TakeIn},
   ast::{
     NONE,
     ast::{self, ExportDefaultDeclarationKind, Expression, ObjectPropertyKind},
@@ -51,9 +51,21 @@ impl<'ast> HmrAstFinalizer<'_, 'ast> {
       rolldown_common::ExportsKind::Esm => {
         // TODO: Still we could reuse use module namespace def
 
-        let arg_obj_expr = self.snippet.builder.alloc_object_expression(
+        let mut arg_obj_expr = self.snippet.builder.alloc_object_expression(
           SPAN,
-          self.snippet.builder.vec_from_iter(self.exports.drain(..)),
+          self.snippet.builder.vec_with_capacity(self.exports.len() + 1 /* __esModule */),
+        );
+        arg_obj_expr.properties.extend(self.exports.drain(..));
+        // Add __esModule flag
+        arg_obj_expr.properties.push(
+          self
+            .snippet
+            .object_property_kind_object_property(
+              "__esModule",
+              self.snippet.builder.expression_boolean_literal(SPAN, true),
+              false,
+            )
+            .into_in(self.alloc),
         );
         ast::Argument::ObjectExpression(arg_obj_expr)
       }
@@ -73,7 +85,7 @@ impl<'ast> HmrAstFinalizer<'_, 'ast> {
     };
 
     // __rolldown_runtime__.register(moduleId, module)
-    let mut arguments = self.snippet.builder.vec_from_array([
+    let arguments = self.snippet.builder.vec_from_array([
       ast::Argument::StringLiteral(self.snippet.builder.alloc_string_literal(
         SPAN,
         self.snippet.builder.atom(&self.module.stable_id),
@@ -81,27 +93,6 @@ impl<'ast> HmrAstFinalizer<'_, 'ast> {
       )),
       module_exports,
     ]);
-
-    if self.module.exports_kind.is_commonjs() {
-      // __rolldown_runtime__.register(moduleId, module, { cjs: true })
-      arguments.push(ast::Argument::ObjectExpression(
-        self.snippet.builder.alloc_object_expression(
-          SPAN,
-          self.snippet.builder.vec1(ast::ObjectPropertyKind::ObjectProperty(
-            ast::ObjectProperty {
-              key: ast::PropertyKey::StaticIdentifier(
-                self.snippet.id_name("cjs", SPAN).into_in(self.alloc),
-              ),
-              value: ast::Expression::BooleanLiteral(
-                self.snippet.builder.alloc_boolean_literal(SPAN, true),
-              ),
-              ..ast::ObjectProperty::dummy(self.alloc)
-            }
-            .into_in(self.alloc),
-          )),
-        ),
-      ));
-    }
 
     let register_call = self.snippet.builder.alloc_call_expression(
       SPAN,

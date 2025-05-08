@@ -3,8 +3,8 @@ use std::{borrow::Cow, path::Path};
 use oxc::transformer::{ESTarget, TransformOptions};
 use oxc::transformer_plugins::InjectGlobalVariablesConfig;
 use rolldown_common::{
-  Comments, GlobalsOutputOption, InjectImport, MinifyOptions, ModuleType, NormalizedBundlerOptions,
-  NormalizedJsxOptions, OutputFormat, Platform,
+  GlobalsOutputOption, InjectImport, LegalComments, MinifyOptions, ModuleType,
+  NormalizedBundlerOptions, NormalizedJsxOptions, OutputFormat, Platform,
 };
 use rolldown_error::{BuildDiagnostic, InvalidOptionType};
 use rustc_hash::{FxHashMap, FxHashSet};
@@ -240,7 +240,7 @@ pub fn normalize_options(mut raw_options: crate::BundlerOptions) -> NormalizeOpt
     checks: raw_options.checks.unwrap_or_default().into(),
     jsx,
     watch: raw_options.watch.unwrap_or_default(),
-    comments: raw_options.comments.unwrap_or(Comments::Preserve),
+    comments: raw_options.legal_comments.unwrap_or(LegalComments::Preserve),
     drop_labels: FxHashSet::from_iter(raw_options.drop_labels.unwrap_or_default()),
     target,
     keep_names: raw_options.keep_names.unwrap_or_default(),

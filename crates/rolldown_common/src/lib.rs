@@ -20,7 +20,6 @@ pub mod bundler_options {
     BundlerOptions,
     types::{
       advanced_chunks_options::{AdvancedChunksOptions, MatchGroup},
-      comments::Comments,
       debug_options::DebugOptions,
       defer_sync_scan_data_option::DeferSyncScanDataOption,
       es_module_flag::EsModuleFlag,
@@ -33,6 +32,7 @@ pub mod bundler_options {
       invalidate_js_side_cache::InvalidateJsSideCache,
       is_external::IsExternal,
       jsx::{Jsx, NormalizedJsxOptions},
+      legal_comments::LegalComments,
       log_level::LogLevel,
       make_absolute_externals_relative::MakeAbsoluteExternalsRelative,
       mark_module_loaded::MarkModuleLoaded,

@@ -2,11 +2,11 @@ use rolldown_utils::indexmap::FxIndexMap;
 use rustc_hash::FxHashMap;
 use std::{fmt::Debug, path::PathBuf};
 use types::advanced_chunks_options::AdvancedChunksOptions;
-use types::comments::Comments;
 use types::debug_options::DebugOptions;
 use types::inject_import::InjectImport;
 use types::invalidate_js_side_cache::InvalidateJsSideCache;
 use types::jsx::Jsx;
+use types::legal_comments::LegalComments;
 use types::log_level::LogLevel;
 use types::make_absolute_externals_relative::MakeAbsoluteExternalsRelative;
 use types::mark_module_loaded::MarkModuleLoaded;
@@ -182,7 +182,7 @@ pub struct BundlerOptions {
   )]
   pub transform: Option<oxc::transformer::TransformOptions>,
   pub watch: Option<WatchOption>,
-  pub comments: Option<Comments>,
+  pub legal_comments: Option<LegalComments>,
   pub target: Option<ESTarget>,
   pub polyfill_require: Option<bool>,
 

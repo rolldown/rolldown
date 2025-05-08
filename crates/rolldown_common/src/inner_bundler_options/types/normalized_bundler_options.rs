@@ -12,9 +12,9 @@ use rolldown_error::EventKindSwitcher;
 use rustc_hash::{FxHashMap, FxHashSet};
 
 use super::advanced_chunks_options::AdvancedChunksOptions;
-use super::comments::Comments;
 use super::experimental_options::ExperimentalOptions;
 use super::jsx::NormalizedJsxOptions;
+use super::legal_comments::LegalComments;
 use super::minify_options::MinifyOptions;
 use super::output_option::{AssetFilenamesOutputOption, ChunkFilenamesOutputOption};
 use super::sanitize_filename::SanitizeFilename;
@@ -85,7 +85,7 @@ pub struct NormalizedBundlerOptions {
   pub profiler_names: bool,
   pub jsx: NormalizedJsxOptions,
   pub watch: WatchOption,
-  pub comments: Comments,
+  pub comments: LegalComments,
   pub drop_labels: FxHashSet<String>,
   pub target: ESTarget,
   pub polyfill_require: bool,
@@ -146,7 +146,7 @@ impl Default for NormalizedBundlerOptions {
       checks: Default::default(),
       profiler_names: Default::default(),
       watch: Default::default(),
-      comments: Comments::None,
+      comments: LegalComments::None,
       drop_labels: Default::default(),
       target: Default::default(),
       polyfill_require: Default::default(),

@@ -3929,18 +3929,6 @@ expression: output
 - rolldown-runtime-!~{001}~.js => rolldown-runtime-BvgZlyOU.js
 - ui-!~{003}~.js => ui-17vXJ9Bu.js
 
-# tests/rolldown/function/comments/none
-
-- main-!~{000}~.js => main-DXEt0uDC.js
-
-# tests/rolldown/function/comments/preserve
-
-- main-!~{000}~.js => main-bn1Pw2ND.js
-
-# tests/rolldown/function/comments/preserve_legal
-
-- main-!~{000}~.js => main-DXEt0uDC.js
-
 # tests/rolldown/function/define/node_env
 
 - main-!~{000}~.js => main-BbIehRpk.js
@@ -4334,6 +4322,18 @@ expression: output
 # tests/rolldown/function/intro/iife
 
 - main-!~{000}~.js => main-C0FRRr_E.js
+
+# tests/rolldown/function/legal_comments/none
+
+- main-!~{000}~.js => main-DXEt0uDC.js
+
+# tests/rolldown/function/legal_comments/preserve
+
+- main-!~{000}~.js => main-bn1Pw2ND.js
+
+# tests/rolldown/function/legal_comments/preserve_legal
+
+- main-!~{000}~.js => main-DXEt0uDC.js
 
 # tests/rolldown/function/minify/basic
 

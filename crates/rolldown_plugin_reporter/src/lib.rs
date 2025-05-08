@@ -17,6 +17,12 @@ use sugar_path::SugarPath;
 pub struct ReporterPlugin {
   is_tty: bool,
   should_log_info: bool,
+  chunk_count: AtomicU32,
+  compressed_count: AtomicU32,
+  #[allow(dead_code)]
+  has_compress_chunk: AtomicBool,
+  #[allow(dead_code)]
+  has_rendered_chunk: AtomicBool,
   has_transformed: AtomicBool,
   transformed_count: AtomicU32,
   latest_checkpoint: Arc<RwLock<Instant>>,
@@ -27,6 +33,10 @@ impl ReporterPlugin {
     Self {
       is_tty,
       should_log_info,
+      chunk_count: AtomicU32::new(0),
+      compressed_count: AtomicU32::new(0),
+      has_compress_chunk: AtomicBool::new(false),
+      has_rendered_chunk: AtomicBool::new(false),
       has_transformed: AtomicBool::new(false),
       transformed_count: AtomicU32::new(0),
       latest_checkpoint: Arc::new(RwLock::new(Instant::now())),
@@ -95,11 +105,48 @@ impl Plugin for ReporterPlugin {
     Ok(())
   }
 
+  async fn render_start(
+    &self,
+    _ctx: &PluginContext,
+    _args: &rolldown_plugin::HookRenderStartArgs<'_>,
+  ) -> rolldown_plugin::HookNoopReturn {
+    self.chunk_count.store(0, Ordering::SeqCst);
+    self.compressed_count.store(0, Ordering::SeqCst);
+    Ok(())
+  }
+
+  async fn render_chunk(
+    &self,
+    _ctx: &PluginContext,
+    _args: &rolldown_plugin::HookRenderChunkArgs<'_>,
+  ) -> rolldown_plugin::HookRenderChunkReturn {
+    Ok(None)
+  }
+
+  async fn write_bundle(
+    &self,
+    _ctx: &PluginContext,
+    _args: &mut rolldown_plugin::HookWriteBundleArgs<'_>,
+  ) -> rolldown_plugin::HookNoopReturn {
+    Ok(())
+  }
+
+  async fn generate_bundle(
+    &self,
+    _ctx: &PluginContext,
+    _args: &mut rolldown_plugin::HookGenerateBundleArgs<'_>,
+  ) -> rolldown_plugin::HookNoopReturn {
+    let _ = utils::clear_line();
+    Ok(())
+  }
+
   fn register_hook_usage(&self) -> HookUsage {
+    let hook_usage = HookUsage::RenderStart | HookUsage::RenderChunk | HookUsage::WriteBundle;
     if self.should_log_info {
-      HookUsage::Transform | HookUsage::BuildStart | HookUsage::BuildEnd
+      let usage = hook_usage | HookUsage::Transform | HookUsage::BuildStart | HookUsage::BuildEnd;
+      if self.is_tty { usage | HookUsage::GenerateBundle } else { usage }
     } else {
-      HookUsage::empty()
+      hook_usage
     }
   }
 }

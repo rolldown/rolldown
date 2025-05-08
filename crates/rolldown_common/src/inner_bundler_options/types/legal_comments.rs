@@ -11,7 +11,7 @@ use serde::Deserialize;
   derive(Deserialize, JsonSchema),
   serde(rename_all = "kebab-case", deny_unknown_fields)
 )]
-pub enum Comments {
+pub enum LegalComments {
   /// Don't preserve any comment
   None,
   /// Keep comments as much as possible
@@ -20,12 +20,12 @@ pub enum Comments {
   PreserveLegal,
 }
 
-impl Display for Comments {
+impl Display for LegalComments {
   fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
     match self {
-      Comments::None => write!(f, "none"),
-      Comments::Preserve => write!(f, "preserve"),
-      Comments::PreserveLegal => write!(f, "preserve-legal"),
+      LegalComments::None => write!(f, "none"),
+      LegalComments::Preserve => write!(f, "preserve"),
+      LegalComments::PreserveLegal => write!(f, "preserve-legal"),
     }
   }
 }

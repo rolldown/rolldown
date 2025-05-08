@@ -158,16 +158,6 @@
             "null"
           ]
         },
-        "comments": {
-          "anyOf": [
-            {
-              "$ref": "#/definitions/Comments"
-            },
-            {
-              "type": "null"
-            }
-          ]
-        },
         "cssChunkFilenames": {
           "type": [
             "string",
@@ -361,6 +351,16 @@
           "type": [
             "boolean",
             "null"
+          ]
+        },
+        "legalComments": {
+          "anyOf": [
+            {
+              "$ref": "#/definitions/LegalComments"
+            },
+            {
+              "type": "null"
+            }
           ]
         },
         "logLevel": {
@@ -572,31 +572,6 @@
         }
       },
       "additionalProperties": false
-    },
-    "Comments": {
-      "oneOf": [
-        {
-          "description": "Don't preserve any comment",
-          "type": "string",
-          "enum": [
-            "none"
-          ]
-        },
-        {
-          "description": "Keep comments as much as possible",
-          "type": "string",
-          "enum": [
-            "preserve"
-          ]
-        },
-        {
-          "description": "Keep legal comments only",
-          "type": "string",
-          "enum": [
-            "preserve-legal"
-          ]
-        }
-      ]
     },
     "ConfigVariant": {
       "type": "object",
@@ -894,6 +869,31 @@
           ]
         }
       }
+    },
+    "LegalComments": {
+      "oneOf": [
+        {
+          "description": "Don't preserve any comment",
+          "type": "string",
+          "enum": [
+            "none"
+          ]
+        },
+        {
+          "description": "Keep comments as much as possible",
+          "type": "string",
+          "enum": [
+            "preserve"
+          ]
+        },
+        {
+          "description": "Keep legal comments only",
+          "type": "string",
+          "enum": [
+            "preserve-legal"
+          ]
+        }
+      ]
     },
     "LogLevel": {
       "type": "string",

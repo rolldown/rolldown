@@ -1,5 +1,4 @@
 pub mod advanced_chunks_options;
-pub mod comments;
 pub mod debug_options;
 pub mod defer_sync_scan_data_option;
 pub mod es_module_flag;
@@ -12,6 +11,7 @@ pub mod input_item;
 pub mod invalidate_js_side_cache;
 pub mod is_external;
 pub mod jsx;
+pub mod legal_comments;
 pub mod log_level;
 pub mod make_absolute_externals_relative;
 pub mod mark_module_loaded;

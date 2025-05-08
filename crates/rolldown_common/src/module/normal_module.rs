@@ -5,9 +5,9 @@ use crate::css::css_view::CssView;
 use crate::ecmascript::ecma_view::EsmNamespaceInCjs;
 use crate::types::module_render_output::ModuleRenderOutput;
 use crate::{
-  AssetView, Comments, DebugStmtInfoForTreeShaking, ExportsKind, ImportRecordIdx, ImportRecordMeta,
-  ModuleId, ModuleIdx, ModuleInfo, NormalizedBundlerOptions, RawImportRecord, ResolvedId,
-  RuntimeModuleBrief, StmtInfo, SymbolRef, SymbolRefDb,
+  AssetView, DebugStmtInfoForTreeShaking, ExportsKind, ImportRecordIdx, ImportRecordMeta,
+  LegalComments, ModuleId, ModuleIdx, ModuleInfo, NormalizedBundlerOptions, RawImportRecord,
+  ResolvedId, RuntimeModuleBrief, StmtInfo, SymbolRef, SymbolRefDb,
 };
 use crate::{EcmaAstIdx, EcmaView, IndexModules, Interop, Module, ModuleType};
 use std::ops::{Deref, DerefMut};
@@ -222,9 +222,9 @@ impl NormalModule {
         let enable_sourcemap = options.sourcemap.is_some() && !self.is_virtual();
 
         let comments = match options.comments {
-          Comments::None => Either::Left(false),
-          Comments::Preserve => Either::Left(true),
-          Comments::PreserveLegal => Either::Right(LegalComment::Inline),
+          LegalComments::None => Either::Left(false),
+          LegalComments::Preserve => Either::Left(true),
+          LegalComments::PreserveLegal => Either::Right(LegalComment::Inline),
         };
 
         // Because oxc codegen sourcemap is last of sourcemap chain,

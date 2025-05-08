@@ -1,5 +1,5 @@
 use oxc::{
-  allocator::{Allocator, Box as ArenaBox, Dummy, IntoIn, TakeIn},
+  allocator::{Allocator, Box as ArenaBox, IntoIn, TakeIn},
   ast::{
     NONE,
     ast::{self, ExportDefaultDeclarationKind, Expression, ObjectPropertyKind},
@@ -57,16 +57,16 @@ impl<'ast> HmrAstFinalizer<'_, 'ast> {
         );
         arg_obj_expr.properties.extend(self.exports.drain(..));
         // Add __esModule flag
-        arg_obj_expr.properties.push(ast::ObjectPropertyKind::ObjectProperty(
-          ast::ObjectProperty {
-            key: ast::PropertyKey::StaticIdentifier(
-              self.snippet.id_name("__esModule", SPAN).into_in(self.alloc),
-            ),
-            value: self.snippet.builder.expression_boolean_literal(SPAN, true),
-            ..ast::ObjectProperty::dummy(self.alloc)
-          }
-          .into_in(self.alloc),
-        ));
+        arg_obj_expr.properties.push(
+          self
+            .snippet
+            .object_property_kind_object_property(
+              "__esModule",
+              self.snippet.builder.expression_boolean_literal(SPAN, true),
+              false,
+            )
+            .into_in(self.alloc),
+        );
         ast::Argument::ObjectExpression(arg_obj_expr)
       }
       rolldown_common::ExportsKind::CommonJs => {

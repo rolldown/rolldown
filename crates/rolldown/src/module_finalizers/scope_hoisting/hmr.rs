@@ -61,16 +61,16 @@ impl<'ast> ScopeHoistingFinalizer<'_, 'ast> {
           ));
         });
         // Add __esModule flag
-        arg_obj_expr.properties.push(ast::ObjectPropertyKind::ObjectProperty(
-          ast::ObjectProperty {
-            key: ast::PropertyKey::StaticIdentifier(
-              self.snippet.id_name("__esModule", SPAN).into_in(self.alloc),
-            ),
-            value: self.snippet.builder.expression_boolean_literal(SPAN, true),
-            ..ast::ObjectProperty::dummy(self.alloc)
-          }
-          .into_in(self.alloc),
-        ));
+        arg_obj_expr.properties.push(
+          self
+            .snippet
+            .object_property_kind_object_property(
+              "__esModule",
+              self.snippet.builder.expression_boolean_literal(SPAN, true),
+              false,
+            )
+            .into_in(self.alloc),
+        );
         ast::Argument::ObjectExpression(arg_obj_expr)
       }
       rolldown_common::ExportsKind::CommonJs => {

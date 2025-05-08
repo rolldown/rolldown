@@ -20,7 +20,7 @@ var import_lib = __toESM(require_lib());
 //#endregion
 //#region main.js
 const main_hot = __rolldown_runtime__.createModuleHotContext("main.js");
-__rolldown_runtime__.registerModule("main.js", { __esModule: true });
+__rolldown_runtime__.registerModule("main.js", { __esModule: () => true });
 assert.strictEqual(import_lib.a, 1);
 
 //#endregion

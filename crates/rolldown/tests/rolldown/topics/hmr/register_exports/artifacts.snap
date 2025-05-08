@@ -20,7 +20,7 @@ var import_cjs = __toESM(require_cjs());
 const esm_hot = __rolldown_runtime__.createModuleHotContext("esm.js");
 __rolldown_runtime__.registerModule("esm.js", {
 	value: () => value,
-	__esModule: true
+	__esModule: () => true
 });
 var esm_exports = {};
 __export(esm_exports, { value: () => value });
@@ -29,7 +29,7 @@ const value = "main";
 //#endregion
 //#region main.js
 const main_hot = __rolldown_runtime__.createModuleHotContext("main.js");
-__rolldown_runtime__.registerModule("main.js", { __esModule: true });
+__rolldown_runtime__.registerModule("main.js", { __esModule: () => true });
 console.log(import_cjs, esm_exports);
 
 //#endregion

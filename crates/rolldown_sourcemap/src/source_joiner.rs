@@ -5,12 +5,11 @@ use crate::source::Source;
 #[derive(Default)]
 pub struct SourceJoiner<'source> {
   inner: Vec<Box<dyn Source + Send + 'source>>,
-  prepend_source: Vec<Box<dyn Source + Send + 'source>>,
-  pub enable_sourcemap: bool,
   names_len: usize,
   sources_len: usize,
   tokens_len: usize,
   token_chunks_len: usize,
+  pub enable_sourcemap: bool,
 }
 
 impl<'source> SourceJoiner<'source> {
@@ -21,16 +20,9 @@ impl<'source> SourceJoiner<'source> {
     self.inner.push(Box::new(source));
   }
 
-  pub fn prepend_source(&mut self, source: Box<dyn Source + Send + 'source>) {
-    if let Some(sourcemap) = source.sourcemap() {
-      self.accumulate_sourcemap_data_size(sourcemap);
-    }
-    self.prepend_source.push(source);
-  }
-
   pub fn join(&self) -> (String, Option<SourceMap>) {
-    let sources_len = self.prepend_source.len() + self.inner.len();
-    let sources_iter = self.prepend_source.iter().chain(self.inner.iter()).enumerate();
+    let sources_len = self.inner.len();
+    let sources_iter = self.inner.iter().enumerate();
 
     let size_hint_of_ret_source =
       sources_iter.clone().map(|(_idx, source)| source.content().len()).sum::<usize>()
@@ -84,7 +76,6 @@ fn test_concat_sourcemaps() {
 
   let mut source_joiner = SourceJoiner::default();
   source_joiner.append_source("\nconsole.log()".to_string());
-  source_joiner.prepend_source(Box::new("// banner".to_string()));
 
   let filename = "foo.js".to_string();
   let allocator = Allocator::default();
@@ -104,8 +95,7 @@ fn test_concat_sourcemaps() {
 
   assert_eq!(
     &content,
-    r"// banner
-
+    r"
 console.log()
 const foo = 1;
 console.log(foo);
@@ -114,13 +104,13 @@ console.log(foo);
   assert_eq!(
     SourcemapVisualizer::new(&content, &map.unwrap()).into_visualizer_text(),
     r#"- foo.js
-(0:0) "const " --> (3:0) "const "
-(0:6) "foo = " --> (3:6) "foo = "
-(0:12) "1; " --> (3:12) "1;\n"
-(0:15) "console." --> (4:0) "console."
-(0:23) "log(" --> (4:8) "log("
-(0:27) "foo)" --> (4:12) "foo)"
-(0:31) ";\n" --> (4:16) ";\n"
+(0:0) "const " --> (2:0) "const "
+(0:6) "foo = " --> (2:6) "foo = "
+(0:12) "1; " --> (2:12) "1;\n"
+(0:15) "console." --> (3:0) "console."
+(0:23) "log(" --> (3:8) "log("
+(0:27) "foo)" --> (3:12) "foo)"
+(0:31) ";\n" --> (3:16) ";\n"
 "#
   );
 }

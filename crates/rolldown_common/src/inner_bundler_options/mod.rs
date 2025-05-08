@@ -213,6 +213,7 @@ pub struct BundlerOptions {
     schemars(skip)
   )]
   pub on_log: Option<OnLog>,
+  pub preserve_modules: Option<bool>,
 }
 
 impl BundlerOptions {

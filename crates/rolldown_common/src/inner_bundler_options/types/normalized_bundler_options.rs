@@ -96,6 +96,7 @@ pub struct NormalizedBundlerOptions {
   pub mark_module_loaded: Option<MarkModuleLoaded>,
   pub log_level: Option<LogLevel>,
   pub on_log: Option<OnLog>,
+  pub preserve_modules: bool,
 }
 
 // This is only used for testing
@@ -158,6 +159,7 @@ impl Default for NormalizedBundlerOptions {
       mark_module_loaded: Default::default(),
       log_level: Default::default(),
       on_log: Default::default(),
+      preserve_modules: false,
     }
   }
 }

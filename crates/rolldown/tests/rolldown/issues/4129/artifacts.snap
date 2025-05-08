@@ -12,7 +12,7 @@ import assert from "node:assert";
 //#region lib.js
 var require_lib = __commonJS({ "lib.js"(exports, module) {
 	const lib_hot = __rolldown_runtime__.createModuleHotContext("lib.js");
-	__rolldown_runtime__.registerModule("lib.js", module.exports, { cjs: true });
+	__rolldown_runtime__.registerModule("lib.js", module.exports);
 	exports.a = 1;
 } });
 var import_lib = __toESM(require_lib());
@@ -20,7 +20,7 @@ var import_lib = __toESM(require_lib());
 //#endregion
 //#region main.js
 const main_hot = __rolldown_runtime__.createModuleHotContext("main.js");
-__rolldown_runtime__.registerModule("main.js", {});
+__rolldown_runtime__.registerModule("main.js", { __esModule: true });
 assert.strictEqual(import_lib.a, 1);
 
 //#endregion

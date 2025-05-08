@@ -33,8 +33,12 @@ impl<'ast> ScopeHoistingFinalizer<'_, 'ast> {
         // TODO: Still we could reuse use module namespace def
 
         // Empty object `{}`
-        let mut arg_obj_expr =
-          self.snippet.builder.alloc_object_expression(SPAN, self.snippet.builder.vec());
+        let mut arg_obj_expr = self.snippet.builder.alloc_object_expression(
+          SPAN,
+          self.snippet.builder.vec_with_capacity(
+            self.ctx.linking_info.canonical_exports_len() + 1, /* __esModule */
+          ),
+        );
 
         self.ctx.linking_info.canonical_exports().for_each(|(export, resolved_export)| {
           // prop_name: () => returned
@@ -56,6 +60,17 @@ impl<'ast> ScopeHoistingFinalizer<'_, 'ast> {
             .into_in(self.alloc),
           ));
         });
+        // Add __esModule flag
+        arg_obj_expr.properties.push(ast::ObjectPropertyKind::ObjectProperty(
+          ast::ObjectProperty {
+            key: ast::PropertyKey::StaticIdentifier(
+              self.snippet.id_name("__esModule", SPAN).into_in(self.alloc),
+            ),
+            value: self.snippet.builder.expression_boolean_literal(SPAN, true),
+            ..ast::ObjectProperty::dummy(self.alloc)
+          }
+          .into_in(self.alloc),
+        ));
         ast::Argument::ObjectExpression(arg_obj_expr)
       }
       rolldown_common::ExportsKind::CommonJs => {
@@ -74,7 +89,7 @@ impl<'ast> ScopeHoistingFinalizer<'_, 'ast> {
     };
 
     // __rolldown_runtime__.register(moduleId, module)
-    let mut arguments = self.snippet.builder.vec_from_array([
+    let arguments = self.snippet.builder.vec_from_array([
       ast::Argument::StringLiteral(self.snippet.builder.alloc_string_literal(
         SPAN,
         self.snippet.builder.atom(&self.ctx.module.stable_id),
@@ -82,27 +97,6 @@ impl<'ast> ScopeHoistingFinalizer<'_, 'ast> {
       )),
       module_exports,
     ]);
-
-    if self.ctx.module.exports_kind.is_commonjs() {
-      // __rolldown_runtime__.register(moduleId, module, { cjs: true })
-      arguments.push(ast::Argument::ObjectExpression(
-        self.snippet.builder.alloc_object_expression(
-          SPAN,
-          self.snippet.builder.vec1(ast::ObjectPropertyKind::ObjectProperty(
-            ast::ObjectProperty {
-              key: ast::PropertyKey::StaticIdentifier(
-                self.snippet.id_name("cjs", SPAN).into_in(self.alloc),
-              ),
-              value: ast::Expression::BooleanLiteral(
-                self.snippet.builder.alloc_boolean_literal(SPAN, true),
-              ),
-              ..ast::ObjectProperty::dummy(self.alloc)
-            }
-            .into_in(self.alloc),
-          )),
-        ),
-      ));
-    }
 
     let register_call = self.snippet.builder.alloc_call_expression(
       SPAN,

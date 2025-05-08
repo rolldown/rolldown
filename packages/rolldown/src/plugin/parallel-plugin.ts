@@ -15,6 +15,9 @@ export type DefineParallelPluginResult<Options> = (
 export function defineParallelPlugin<Options>(
   pluginPath: string,
 ): DefineParallelPluginResult<Options> {
+  if (import.meta.browserBuild) {
+    throw new Error('`defineParallelPlugin` is not supported in browser build');
+  }
   return (options) => {
     return { _parallel: { fileUrl: pathToFileURL(pluginPath).href, options } };
   };

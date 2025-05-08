@@ -224,7 +224,7 @@ impl NormalModule {
         let comments = match options.comments {
           LegalComments::None => Either::Left(false),
           LegalComments::Preserve => Either::Left(true),
-          LegalComments::PreserveLegal => Either::Right(LegalComment::Inline),
+          LegalComments::Inline => Either::Right(LegalComment::Inline),
         };
 
         // Because oxc codegen sourcemap is last of sourcemap chain,

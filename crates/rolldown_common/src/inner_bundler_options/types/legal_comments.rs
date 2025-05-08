@@ -16,8 +16,8 @@ pub enum LegalComments {
   None,
   /// Keep comments as much as possible
   Preserve,
-  /// Keep legal comments only
-  PreserveLegal,
+  /// Preserve all legal comments
+  Inline,
 }
 
 impl Display for LegalComments {
@@ -25,7 +25,7 @@ impl Display for LegalComments {
     match self {
       LegalComments::None => write!(f, "none"),
       LegalComments::Preserve => write!(f, "preserve"),
-      LegalComments::PreserveLegal => write!(f, "preserve-legal"),
+      LegalComments::Inline => write!(f, "inline"),
     }
   }
 }

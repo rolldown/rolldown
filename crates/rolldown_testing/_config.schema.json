@@ -887,10 +887,10 @@
           ]
         },
         {
-          "description": "Keep legal comments only",
+          "description": "Preserve all legal comments",
           "type": "string",
           "enum": [
-            "preserve-legal"
+            "inline"
           ]
         }
       ]

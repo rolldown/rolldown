@@ -4323,6 +4323,10 @@ expression: output
 
 - main-!~{000}~.js => main-C0FRRr_E.js
 
+# tests/rolldown/function/legal_comments/inline
+
+- main-!~{000}~.js => main-DXEt0uDC.js
+
 # tests/rolldown/function/legal_comments/none
 
 - main-!~{000}~.js => main-DXEt0uDC.js
@@ -4330,10 +4334,6 @@ expression: output
 # tests/rolldown/function/legal_comments/preserve
 
 - main-!~{000}~.js => main-bn1Pw2ND.js
-
-# tests/rolldown/function/legal_comments/preserve_legal
-
-- main-!~{000}~.js => main-DXEt0uDC.js
 
 # tests/rolldown/function/minify/basic
 

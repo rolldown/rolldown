@@ -3,7 +3,7 @@ use std::cmp::Ordering;
 use crate::chunk_graph::ChunkGraph;
 use itertools::Itertools;
 use oxc_index::IndexVec;
-use rolldown_common::{Chunk, ChunkIdx, ChunkKind, Module, ModuleIdx, OutputFormat};
+use rolldown_common::{Chunk, ChunkIdx, ChunkKind, Module, ModuleId, ModuleIdx, OutputFormat};
 use rolldown_utils::{BitSet, rustc_hash::FxHashMapExt};
 use rustc_hash::FxHashMap;
 

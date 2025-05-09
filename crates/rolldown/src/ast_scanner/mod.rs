@@ -440,8 +440,10 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
   ) {
     // We will pretend `export { [imported] as [export_name] }` to be `import `
     let ident = if export_name == "default" {
-      let importee_repr =
-        self.result.import_records[record_id].module_request.as_path().representative_file_name();
+      let importee_repr = self.result.import_records[record_id]
+        .module_request
+        .as_path()
+        .representative_file_name(false);
       let importee_repr = legitimize_identifier_name(&importee_repr);
       Cow::Owned(concat_string!(importee_repr, "_default"))
     } else {

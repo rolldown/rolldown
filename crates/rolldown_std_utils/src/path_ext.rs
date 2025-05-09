@@ -1,3 +1,4 @@
+use cow_utils;
 use std::{borrow::Cow, ffi::OsStr, path::Path};
 
 pub trait PathExt {
@@ -5,7 +6,7 @@ pub trait PathExt {
 
   fn expect_to_slash(&self) -> String;
 
-  fn representative_file_name(&self) -> Cow<str>;
+  fn representative_file_name(&self, absolute: bool) -> Cow<str>;
 }
 
 impl PathExt for std::path::Path {
@@ -28,7 +29,7 @@ impl PathExt for std::path::Path {
   }
 
   /// It doesn't ensure the file name is a valid identifier in JS.
-  fn representative_file_name(&self) -> Cow<str> {
+  fn representative_file_name(&self, absolute: bool) -> Cow<str> {
     let file_name =
       self.file_stem().map_or_else(|| self.to_string_lossy(), |stem| stem.to_string_lossy());
 
@@ -47,7 +48,13 @@ impl PathExt for std::path::Path {
       _ => file_name,
     };
 
-    file_name
+    if absolute {
+      let idx =
+        self.to_string_lossy().rfind(file_name.as_ref()).expect("should contains file_name");
+      Cow::Owned(self.to_string_lossy()[0..idx + file_name.len()].to_string())
+    } else {
+      file_name
+    }
   }
 }
 
@@ -55,11 +62,14 @@ impl PathExt for std::path::Path {
 fn test_representative_file_name() {
   let cwd = Path::new(".").join("project");
   let path = cwd.join("src").join("vue.js");
-  assert_eq!(path.representative_file_name(), "vue");
+  assert_eq!(path.representative_file_name(false), "vue");
 
   let path = cwd.join("vue").join("index.js");
-  assert_eq!(path.representative_file_name(), "vue");
+  assert_eq!(path.representative_file_name(false), "vue");
 
   let path = cwd.join("vue").join("mod.ts");
-  assert_eq!(path.representative_file_name(), "vue");
+  assert_eq!(path.representative_file_name(false), "vue");
+
+  let path = cwd.join("src").join("vue.js");
+  assert_eq!(path.representative_file_name(true), "./project/src/vue");
 }

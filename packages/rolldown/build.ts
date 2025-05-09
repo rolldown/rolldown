@@ -65,8 +65,9 @@ if (isBrowserPkg) {
     withShared({
       browserBuild: true,
       output: {
+        dir: outputDir,
         format: 'esm',
-        file: nodePath.resolve(outputDir, 'browser.mjs'),
+        entryFileNames: '[name].browser.mjs',
       },
     }),
   );
@@ -87,12 +88,12 @@ function withShared(
   return {
     input: {
       index: './src/index',
+      'experimental-index': './src/experimental-index',
       ...!isBrowserBuild
         ? {
           cli: './src/cli/index',
           'parallel-plugin': './src/parallel-plugin',
           'parallel-plugin-worker': './src/parallel-plugin-worker',
-          'experimental-index': './src/experimental-index',
           'filter-index': './src/filter-index',
           'parse-ast-index': './src/parse-ast-index',
         }
@@ -159,15 +160,17 @@ function removeBuiltModules(): Plugin {
     name: 'remove-built-modules',
     resolveId: {
       filter: { id: /node:/ },
-      handler(id) {
+      handler(id, importer) {
         if (id === 'node:path') {
           return this.resolve('pathe');
         }
-        if (id === 'node:os' || id === 'node:worker_threads') {
+        if (
+          id === 'node:os' || id === 'node:worker_threads' || id === 'node:url'
+        ) {
           // conditional import
           return { id, external: true, moduleSideEffects: false };
         }
-        throw new Error(`Unresolved module: ${id}`);
+        throw new Error(`Unresolved module: ${id} from ${importer}`);
       },
     },
   };

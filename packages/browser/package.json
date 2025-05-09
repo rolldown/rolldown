@@ -31,11 +31,12 @@
   "types": "./dist/index.d.cts",
   "exports": {
     ".": {
-      "browser": "./dist/browser.mjs",
+      "browser": "./dist/index.browser.mjs",
       "require": "./dist/index.cjs",
       "import": "./dist/index.mjs"
     },
     "./experimental": {
+      "browser": "./dist/experimental-index.browser.mjs",
       "require": "./dist/experimental-index.cjs",
       "import": "./dist/experimental-index.mjs"
     },

@@ -1,3 +1,4 @@
+// cSpell:ignore fooa, afoo
 import { describe, expect, test } from 'vitest';
 import { exactRegex, prefixRegex } from './simple-filters.js';
 

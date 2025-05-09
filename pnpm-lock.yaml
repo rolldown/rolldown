@@ -296,6 +296,12 @@ importers:
 
   packages/pluginutils:
     devDependencies:
+      '@types/picomatch':
+        specifier: ^4.0.0
+        version: 4.0.0
+      picomatch:
+        specifier: ^4.0.2
+        version: 4.0.2
       vitest:
         specifier: ^3.0.1
         version: 3.0.9(@types/debug@4.1.12)(@types/node@22.14.0)(jiti@2.4.2)(terser@5.39.0)(tsx@4.19.4)(yaml@2.7.1)
@@ -3600,6 +3606,9 @@ packages:
 
   '@types/normalize-package-data@2.4.4':
     resolution: {integrity: sha512-37i+OaWTh9qeK4LSHPsyRC7NahnGotNuZvjLSgcPzblpHB3rrCJxAOgI5gCdKm7coonsaX1Of0ILiTcnZjbfxA==}
+
+  '@types/picomatch@4.0.0':
+    resolution: {integrity: sha512-J1Bng+wlyEERWSgJQU1Pi0HObCLVcr994xT/M+1wcl/yNRTGBupsCxthgkdYG+GCOMaQH7iSVUY3LJVBBqG7MQ==}
 
   '@types/react-dom@19.0.4':
     resolution: {integrity: sha512-4fSQ8vWFkg+TGhePfUzVmat3eC14TXYSsiiDSLI0dVLsrm9gZFABjPy/Qu6TKgl1tq1Bu1yDsuQgY3A3DOjCcg==}
@@ -9649,6 +9658,8 @@ snapshots:
       undici-types: 6.21.0
 
   '@types/normalize-package-data@2.4.4': {}
+
+  '@types/picomatch@4.0.0': {}
 
   '@types/react-dom@19.0.4(@types/react@19.0.12)':
     dependencies:

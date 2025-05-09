@@ -93,7 +93,7 @@ describe('makeIdFiltersToMatchWithQuery', () => {
     const input = /\/foo\//;
     const output = makeIdFiltersToMatchWithQuery(input);
 
-    const matcher = path => output.test(path);
+    const matcher = (path: string) => output.test(path);
     expectWithAnyQuery(matcher, '/foo/bar.js', true);
     expectWithAnyQuery(matcher, '/bar/bar.ts', false);
   });
@@ -102,7 +102,7 @@ describe('makeIdFiltersToMatchWithQuery', () => {
     const input = /\/foo\/.*\.js$/;
     const output = makeIdFiltersToMatchWithQuery(input);
 
-    const matcher = path => output.test(path);
+    const matcher = (path: string) => output.test(path);
     expectWithAnyQuery(matcher, '/foo/bar.js', true);
     expectWithAnyQuery(matcher, '/foo/bar.ts', false);
   });
@@ -111,7 +111,7 @@ describe('makeIdFiltersToMatchWithQuery', () => {
     const input = /\/foo\/[^/]*(\/src|\/dist\/[^/]*\.js$|$)/;
     const output = makeIdFiltersToMatchWithQuery(input);
 
-    const matcher = path => output.test(path);
+    const matcher = (path: string) => output.test(path);
     expectWithAnyQuery(matcher, '/foo/bar/src/foo', true);
     expectWithAnyQuery(matcher, '/foo/bar/dist/foo.js', true);
     expectWithAnyQuery(matcher, '/foo/bar/dist/foo.ts', false);
@@ -123,7 +123,7 @@ describe('makeIdFiltersToMatchWithQuery', () => {
     const input = /\/foo\/\$.*\.js$/;
     const output = makeIdFiltersToMatchWithQuery(input);
 
-    const matcher = path => output.test(path);
+    const matcher = (path: string) => output.test(path);
     expectWithAnyQuery(matcher, '/foo/$bar.js', true);
     expectWithAnyQuery(matcher, '/foo/$bar.ts', false);
   });

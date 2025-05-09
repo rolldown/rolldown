@@ -1,0 +1,24 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## main.js
+
+```js
+import assert from "node:assert";
+
+
+//#region foo.js
+var require_foo = __commonJS({ "foo.js"(exports) {
+	exports.value = "foo";
+	globalThis.value = exports.value;
+} });
+
+//#endregion
+//#region main.js
+var import_foo = __toESM(require_foo());
+assert.strictEqual(globalThis.value, "foo", "globalThis.value should be \"foo\"");
+
+//#endregion
+```

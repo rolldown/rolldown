@@ -108,6 +108,7 @@
     "FEFF",
     "Finalizer",
     "finalizers",
+    "flate",
     "globset",
     "hashbang",
     "hasher",

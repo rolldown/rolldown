@@ -690,8 +690,11 @@ export interface BindingReplacePluginConfig {
 
 export interface BindingReportPluginConfig {
   isTty: boolean
-  chunkLimit: boolean
+  isLib: boolean
+  assetsDir: string
+  chunkLimit: number
   shouldLogInfo: boolean
+  reportCompressedSize: boolean
 }
 
 export type BindingResolvedExternal =

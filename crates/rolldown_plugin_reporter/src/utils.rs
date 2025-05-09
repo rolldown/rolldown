@@ -1,6 +1,7 @@
 use std::io::{StdoutLock, Write as _};
 
 use flate2::{Compression, write::GzEncoder};
+use num_format::{Locale, ToFormattedString as _};
 
 pub const COMPRESSIBLE_ASSETS: [&str; 7] =
   [".html", ".json", ".svg", ".txt", ".xml", ".xhtml", ".wasm"];
@@ -24,7 +25,8 @@ pub struct LogEntry<'a> {
 
 #[allow(clippy::cast_precision_loss)]
 pub fn display_size(size: usize) -> String {
-  format!("{:.2} kB", size as f64 / 1000.0)
+  let (quotient, remainder) = (size / 1000, (size % 1000) / 10);
+  format!("{}.{:02} kB", quotient.to_formatted_string(&Locale::en), remainder)
 }
 
 pub fn compute_gzip_size(bytes: &[u8]) -> Option<usize> {
@@ -58,6 +60,6 @@ pub fn write_line(message: &str) {
 #[inline]
 pub fn log_info(message: &str) {
   let mut lock = std::io::stdout().lock();
-  let _ = write!(&mut lock, "{message}");
+  let _ = writeln!(&mut lock, "{message}");
   let _ = lock.flush();
 }

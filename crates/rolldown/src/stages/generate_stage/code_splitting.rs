@@ -3,7 +3,7 @@ use std::cmp::Ordering;
 use crate::chunk_graph::ChunkGraph;
 use itertools::Itertools;
 use oxc_index::IndexVec;
-use rolldown_common::{Chunk, ChunkIdx, ChunkKind, Module, ModuleId, ModuleIdx, OutputFormat};
+use rolldown_common::{Chunk, ChunkIdx, ChunkKind, Module, ModuleIdx, OutputFormat};
 use rolldown_utils::{BitSet, rustc_hash::FxHashMapExt};
 use rustc_hash::FxHashMap;
 
@@ -42,15 +42,7 @@ impl GenerateStage<'_> {
     let mut entry_module_to_entry_chunk: FxHashMap<ModuleIdx, ChunkIdx> =
       FxHashMap::with_capacity(self.link_output.entries.len());
 
-    if !self.options.preserve_modules {
-      self.init_entry_point(
-        &mut chunk_graph,
-        &mut bits_to_chunk,
-        &mut entry_module_to_entry_chunk,
-        entries_len,
-      );
-      self.split_chunks(&mut index_splitting_info, &mut chunk_graph, &mut bits_to_chunk);
-    } else {
+    if self.options.preserve_modules {
       let modules_len = self
         .link_output
         .module_table
@@ -80,11 +72,18 @@ impl GenerateStage<'_> {
           module.is_included(),
         ));
         chunk_graph.add_module_to_chunk(module.idx, chunk);
-        // bits_to_chunk.insert(bits, chunk);
+        // bits_to_chunk.insert(bits, chunk); // This line is intentionally commented out because `bits_to_chunk` is not used in this loop. It is updated elsewhere in the `init_entry_point` and `split_chunks` methods.
         entry_module_to_entry_chunk.insert(module.idx, chunk);
       }
+    } else {
+      self.init_entry_point(
+        &mut chunk_graph,
+        &mut bits_to_chunk,
+        &mut entry_module_to_entry_chunk,
+        entries_len,
+      );
+      self.split_chunks(&mut index_splitting_info, &mut chunk_graph, &mut bits_to_chunk);
     }
-    dbg!(&chunk_graph);
 
     // Sort modules in each chunk by execution order
     chunk_graph.chunk_table.iter_mut().for_each(|chunk| {
@@ -226,7 +225,7 @@ impl GenerateStage<'_> {
     let mut module_to_assigned: IndexVec<ModuleIdx, bool> =
       oxc_index::index_vec![false; self.link_output.module_table.modules.len()];
 
-    self.apply_advanced_chunks(&index_splitting_info, &mut module_to_assigned, chunk_graph);
+    self.apply_advanced_chunks(index_splitting_info, &mut module_to_assigned, chunk_graph);
 
     // 1. Assign modules to corresponding chunks
     // 2. Create shared chunks to store modules that belong to multiple chunks.

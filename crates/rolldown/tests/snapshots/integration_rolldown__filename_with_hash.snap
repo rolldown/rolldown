@@ -4456,11 +4456,11 @@ expression: output
 
 # tests/rolldown/function/platform/node/should_not_throw_warnings_for_import_builtin_modules/basic
 
-- main-!~{000}~.js => main-C19_NGhs.js
+- main-!~{000}~.js => main-BJ5nqhB1.js
 
 # tests/rolldown/function/resolve/alias_to_node_builtin_module
 
-- main-!~{000}~.js => main-B0DHcS_I.js
+- main-!~{000}~.js => main-DVLqSnT5.js
 
 # tests/rolldown/function/resolve/browser_filed_false
 
@@ -4565,7 +4565,7 @@ expression: output
 
 # tests/rolldown/issues/2685
 
-- main-!~{000}~.js => main-DVonihTt.js
+- main-!~{000}~.js => main-DuvcNmGS.js
 
 # tests/rolldown/issues/2833
 
@@ -4606,7 +4606,7 @@ expression: output
 
 # tests/rolldown/issues/3395
 
-- main-!~{000}~.js => main-BIyVlF5M.js
+- main-!~{000}~.js => main-HNTwtrHw.js
 
 # tests/rolldown/issues/3437
 

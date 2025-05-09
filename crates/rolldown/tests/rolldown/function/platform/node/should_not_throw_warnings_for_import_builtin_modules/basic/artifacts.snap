@@ -1,13 +1,12 @@
 ---
 source: crates/rolldown_testing/src/integration_test.rs
-snapshot_kind: text
 ---
 # Assets
 
 ## main.js
 
 ```js
-import { createRequire } from "module";
+import { createRequire } from "node:module";
 import * as fs from "fs";
 import * as nodeFs from "node:fs";
 

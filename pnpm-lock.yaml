@@ -236,7 +236,7 @@ importers:
       '@babel/preset-typescript':
         specifier: ^7.24.7
         version: 7.26.0(@babel/core@7.26.10)
-      '@oxc-node/core':
+      '@oxc-node/cli':
         specifier: 'catalog:'
         version: 0.0.25
       '@rollup/plugin-commonjs':
@@ -288,7 +288,11 @@ importers:
         specifier: ^2.0.3
         version: 2.0.3
 
-  packages/debug: {}
+  packages/debug:
+    devDependencies:
+      '@oxc-node/cli':
+        specifier: 'catalog:'
+        version: 0.0.25
 
   packages/pluginutils:
     devDependencies:
@@ -318,9 +322,6 @@ importers:
         specifier: ^0.2.4
         version: 0.2.9
       '@oxc-node/cli':
-        specifier: 'catalog:'
-        version: 0.0.25
-      '@oxc-node/core':
         specifier: 'catalog:'
         version: 0.0.25
       '@rolldown/testing':
@@ -640,7 +641,7 @@ importers:
         specifier: ^8.1.2
         version: 8.4.1
     devDependencies:
-      '@oxc-node/core':
+      '@oxc-node/cli':
         specifier: 'catalog:'
         version: 0.0.25
       '@types/diff':

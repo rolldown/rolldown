@@ -11,6 +11,9 @@
   "publishConfig": {
     "access": "public"
   },
+  "devDependencies": {
+    "@oxc-node/cli": "catalog:"
+  },
   "exports": {
     ".": {
       "import": "./dist/index.js",
@@ -21,7 +24,7 @@
     "dist"
   ],
   "scripts": {
-    "gen-action-types": "node --import @oxc-node/core/register ../../scripts/src/gen-debug-action-types.ts",
+    "gen-action-types": "oxnode ../../scripts/src/gen-debug-action-types.ts",
     "build": "pnpm run gen-action-types && tsc -b",
     "test": "echo \"Error: no test specified\" && exit 1"
   }

@@ -169,7 +169,30 @@ jobs:
           path: ./packages/rolldown/src/rolldown-binding.*.node
           if-no-files-found: error
 
+  build-rolldown-pluginutils:
+    strategy:
+      fail-fast: false
+    name: Build `@rolldown/pluginutils` Package
+    runs-on: ubuntu-latest
+    steps:
+      - uses: taiki-e/checkout-action@b13d20b7cda4e2f325ef19895128f7ff735c0b3d # v1.3.1
+
+      - name: Setup Node
+        uses: ./.github/actions/setup-node
+
+      - name: Build `@rolldown/pluginutils`
+        run: pnpm --filter '@rolldown/pluginutils' build
+
+      - name: Upload `@rolldown/pluginutils` Artifact
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          if-no-files-found: error
+          name: pluginutils-artifact
+          path: |
+            packages/pluginutils/dist/**
+
   build-node-packages:
+    needs: build-rolldown-pluginutils
     strategy:
       fail-fast: false
     name: Build Node Package
@@ -192,8 +215,11 @@ jobs:
         env:
           ROLLDOWN_VERSION: ${{ inputs.version }}
 
-      - name: Build `@rolldown/pluginutils`
-        run: pnpm --filter '@rolldown/pluginutils' build
+      - name: Download Pluginutils Artifacts
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with:
+          path: packages/pluginutils/dist
+          name: pluginutils-artifact
 
       - name: Build Node Packages
         # Binaries are built in the previous steps. Unlike in local development, we only need to build the node package itself.
@@ -216,6 +242,7 @@ jobs:
             rolldown-version.txt
 
   build-rolldown-browser:
+    needs: build-rolldown-pluginutils
     strategy:
       fail-fast: false
     name: Build `@rolldown/browser` Package
@@ -245,8 +272,11 @@ jobs:
         env:
           ROLLDOWN_VERSION: ${{ inputs.version }}
 
-      - name: Build `@rolldown/pluginutils`
-        run: pnpm --filter '@rolldown/pluginutils' build
+      - name: Download Pluginutils Artifacts
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with:
+          path: packages/pluginutils/dist
+          name: pluginutils-artifact
 
       - name: Build `@rolldown/browser`
         # Binaries are built in the previous steps. Unlike in local development, we only need to build the node package itself.

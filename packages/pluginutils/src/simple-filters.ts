@@ -47,25 +47,25 @@ export function makeIdFiltersToMatchWithQuery(
   input: string | RegExp | readonly (string | RegExp)[],
 ): string | RegExp | (string | RegExp)[] {
   if (!Array.isArray(input)) {
-    return makeIdFilterToMatchWithQueries(
+    return makeIdFilterToMatchWithQuery(
       // Array.isArray cannot narrow the type
       // https://github.com/microsoft/TypeScript/issues/17002
       input as Exclude<typeof input, readonly unknown[]>,
     );
   }
-  return input.map((i) => makeIdFilterToMatchWithQueries(i));
+  return input.map((i) => makeIdFilterToMatchWithQuery(i));
 }
 
-function makeIdFilterToMatchWithQueries(
+function makeIdFilterToMatchWithQuery(
   input: string | RegExp,
 ): string | RegExp {
   if (typeof input === 'string') {
     return `${input}{?*,}`;
   }
-  return makeRegexIdFilterToMatchWithQueries(input);
+  return makeRegexIdFilterToMatchWithQuery(input);
 }
 
-function makeRegexIdFilterToMatchWithQueries(input: RegExp) {
+function makeRegexIdFilterToMatchWithQuery(input: RegExp) {
   return new RegExp(
     // replace `$` with `(?:\?.*)?$` (ignore `\$`)
     input.source.replace(/(?<!\\)\$/g, '(?:\\?.*)?$'),

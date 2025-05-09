@@ -17,11 +17,12 @@ use sugar_path::SugarPath;
 pub struct ReporterPlugin {
   is_tty: bool,
   should_log_info: bool,
+  #[allow(dead_code)]
+  chunk_limit: bool,
   chunk_count: AtomicU32,
   compressed_count: AtomicU32,
   #[allow(dead_code)]
   has_compress_chunk: AtomicBool,
-  #[allow(dead_code)]
   has_rendered_chunk: AtomicBool,
   has_transformed: AtomicBool,
   transformed_count: AtomicU32,
@@ -29,10 +30,11 @@ pub struct ReporterPlugin {
 }
 
 impl ReporterPlugin {
-  pub fn new(is_tty: bool, should_log_info: bool) -> Self {
+  pub fn new(is_tty: bool, should_log_info: bool, chunk_limit: bool) -> Self {
     Self {
       is_tty,
       should_log_info,
+      chunk_limit,
       chunk_count: AtomicU32::new(0),
       compressed_count: AtomicU32::new(0),
       has_compress_chunk: AtomicBool::new(false),
@@ -75,6 +77,8 @@ impl Plugin for ReporterPlugin {
     } else if !self.has_transformed.load(Ordering::Relaxed) {
       utils::write_line("transforming...");
     }
+
+    self.has_transformed.store(true, Ordering::Release);
 
     Ok(None)
   }
@@ -120,6 +124,20 @@ impl Plugin for ReporterPlugin {
     _ctx: &PluginContext,
     _args: &rolldown_plugin::HookRenderChunkArgs<'_>,
   ) -> rolldown_plugin::HookRenderChunkReturn {
+    // TODO(shulaoda): dynamic importer warning
+    // <https://github.com/vitejs/rolldown-vite/blob/9865a3a/packages/vite/src/node/plugins/reporter.ts#L300-L328>
+    let chunk_count = self.chunk_count.fetch_add(1, Ordering::SeqCst);
+    if self.should_log_info {
+      if self.is_tty {
+        utils::write_line(&format!(
+          "rendering chunks ({})...",
+          itoa::Buffer::new().format(chunk_count)
+        ));
+      } else if !self.has_rendered_chunk.load(Ordering::Relaxed) {
+        utils::log_info("rendering chunks...");
+      }
+      self.has_rendered_chunk.store(true, Ordering::Release);
+    }
     Ok(None)
   }
 
@@ -128,6 +146,8 @@ impl Plugin for ReporterPlugin {
     _ctx: &PluginContext,
     _args: &mut rolldown_plugin::HookWriteBundleArgs<'_>,
   ) -> rolldown_plugin::HookNoopReturn {
+    // TODO(shulaoda): support this warning
+    // <https://github.com/vitejs/rolldown-vite/blob/9865a3a/packages/vite/src/node/plugins/reporter.ts#L255-L269>
     Ok(())
   }
 

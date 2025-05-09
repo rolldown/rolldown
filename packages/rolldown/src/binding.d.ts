@@ -690,6 +690,7 @@ export interface BindingReplacePluginConfig {
 
 export interface BindingReportPluginConfig {
   isTty: boolean
+  chunkLimit: boolean
   shouldLogInfo: boolean
 }
 

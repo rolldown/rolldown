@@ -605,11 +605,12 @@ pub struct BindingReplacePluginConfig {
 #[derive(Debug, Default)]
 pub struct BindingReportPluginConfig {
   pub is_tty: bool,
+  pub chunk_limit: bool,
   pub should_log_info: bool,
 }
 
 impl From<BindingReportPluginConfig> for ReporterPlugin {
   fn from(config: BindingReportPluginConfig) -> Self {
-    ReporterPlugin::new(config.is_tty, config.should_log_info)
+    ReporterPlugin::new(config.is_tty, config.should_log_info, config.chunk_limit)
   }
 }

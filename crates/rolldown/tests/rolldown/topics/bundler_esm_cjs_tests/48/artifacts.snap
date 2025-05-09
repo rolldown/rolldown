@@ -14,10 +14,10 @@ var require_foo = __commonJS({ "foo.js"(exports, module) {
 		__esModule: true
 	};
 } });
-var import_foo = __toESM(require_foo());
 
 //#endregion
 //#region entry.js
+var import_foo = __toESM(require_foo());
 input.works = import_foo.default === void 0;
 
 //#endregion
@@ -40,10 +40,10 @@ var require_foo = __commonJS({ "foo.js"(exports, module) {
 		__esModule: true
 	};
 } });
-var import_foo = __toESM(require_foo());
 
 //#endregion
 //#region entry.js
+var import_foo = __toESM(require_foo());
 input.works = import_foo.default === void 0;
 
 //#endregion
@@ -68,10 +68,10 @@ var require_foo = __commonJS({ "foo.js"(exports, module) {
 		__esModule: true
 	};
 } });
-var import_foo = __toESM(require_foo());
 
 //#endregion
 //#region entry.js
+var import_foo = __toESM(require_foo());
 input.works = import_foo.default === void 0;
 
 //#endregion
@@ -100,10 +100,10 @@ var require_foo = __commonJS({ "foo.js"(exports, module) {
 		__esModule: true
 	};
 } });
-var import_foo = __toESM(require_foo());
 
 //#endregion
 //#region entry.js
+var import_foo = __toESM(require_foo());
 input.works = import_foo.default === void 0;
 
 //#endregion

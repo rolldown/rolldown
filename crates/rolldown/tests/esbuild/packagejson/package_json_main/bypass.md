@@ -29,10 +29,10 @@ var require_custom_main = __commonJS({ "node_modules/demo-pkg/custom-main.js"(ex
 		return 123;
 	};
 } });
-var import_custom_main = __toESM(require_custom_main());
 
 //#endregion
 //#region src/entry.js
+var import_custom_main = __toESM(require_custom_main());
 assert.equal((0, import_custom_main.default)(), 123);
 
 //#endregion

@@ -1,6 +1,5 @@
 ---
 source: crates/rolldown_testing/src/integration_test.rs
-snapshot_kind: text
 ---
 # Assets
 
@@ -23,10 +22,10 @@ var require_main_browser = __commonJS({ "node_modules/demo-pkg/main-browser.js"(
 		return ["main-browser", util];
 	};
 } });
-var import_main_browser = __toESM(require_main_browser());
 
 //#endregion
 //#region src/entry.js
+var import_main_browser = __toESM(require_main_browser());
 assert.deepEqual((0, import_main_browser.default)(), ["main-browser", "util-browser"]);
 
 //#endregion

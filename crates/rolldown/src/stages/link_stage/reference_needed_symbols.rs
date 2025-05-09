@@ -42,7 +42,7 @@ impl LinkStage<'_> {
         let stmt_infos = unsafe { &mut *(addr_of!(importer.stmt_infos).cast_mut()) };
         let importer_side_effect = unsafe { &mut *(addr_of!(importer.side_effects).cast_mut()) };
 
-        stmt_infos.infos.iter_mut().for_each(|stmt_info| {
+        stmt_infos.infos.iter_mut_enumerated().for_each(|(stmt_info_idx, stmt_info)| {
           stmt_info.import_records.iter().for_each(|rec_id| {
             let rec = &importer.import_records[*rec_id];
             if rec.is_dummy() {
@@ -153,15 +153,28 @@ impl LinkStage<'_> {
                             .push(self.runtime.resolve_symbol("__reExport").into());
                           stmt_info.referenced_symbols.push(importer.namespace_object_ref.into());
                         } else {
-                          // - import * as bar from 'bar_cjs'
-                          // - import { prop } from 'bar_cjs'
-                          // will be removed in the final bundler. Nothing need to do here.
-                          // stmt_info.side_effect = importee.side_effects.has_side_effects();
+                          stmt_info.side_effect = importee.side_effects.has_side_effects();
 
-                          // `require_bar_cjs`
-                          // stmt_info
-                          //   .referenced_symbols
-                          //   .push(importee_linking_info.wrapper_ref.unwrap().into());
+                          // Turn `import * as bar from 'bar_cjs'` into `var import_bar_cjs = __toESM(require_bar_cjs())`
+                          // Turn `import { prop } from 'bar_cjs'; prop;` into `var import_bar_cjs = __toESM(require_bar_cjs()); import_bar_cjs.prop;`
+                          // Reference to `require_bar_cjs`
+                          stmt_info
+                            .referenced_symbols
+                            .push(importee_linking_info.wrapper_ref.unwrap().into());
+                          stmt_info
+                            .referenced_symbols
+                            .push(self.runtime.resolve_symbol("__toESM").into());
+
+                          stmt_info.declared_symbols.push(rec.namespace_ref);
+                          stmt_infos
+                            .symbol_ref_to_declared_stmt_idx
+                            .entry(rec.namespace_ref)
+                            .or_default()
+                            .push(stmt_info_idx);
+                          rec.namespace_ref.set_name(
+                            &mut symbols.lock().unwrap(),
+                            &concat_string!("import_", importee.repr_name),
+                          );
                         }
                       }
                       WrapKind::Esm => {

@@ -2,12 +2,11 @@ use std::fmt::Debug;
 use std::sync::Arc;
 
 use crate::css::css_view::CssView;
-use crate::ecmascript::ecma_view::EsmNamespaceInCjs;
 use crate::types::module_render_output::ModuleRenderOutput;
 use crate::{
   AssetView, DebugStmtInfoForTreeShaking, ExportsKind, ImportRecordIdx, ImportRecordMeta,
   LegalComments, ModuleId, ModuleIdx, ModuleInfo, NormalizedBundlerOptions, RawImportRecord,
-  ResolvedId, RuntimeModuleBrief, StmtInfo, SymbolRef, SymbolRefDb,
+  ResolvedId, StmtInfo,
 };
 use crate::{EcmaAstIdx, EcmaView, IndexModules, Interop, Module, ModuleType};
 use std::ops::{Deref, DerefMut};
@@ -18,8 +17,6 @@ use oxc_index::IndexVec;
 use rolldown_ecmascript::{EcmaAst, EcmaCompiler, PrintOptions};
 use rolldown_rstr::Rstr;
 use rolldown_sourcemap::collapse_sourcemaps;
-use rolldown_utils::concat_string;
-use rolldown_utils::ecmascript::legitimize_identifier_name;
 use rustc_hash::FxHashSet;
 use string_wizard::SourceMapOptions;
 
@@ -256,69 +253,6 @@ impl NormalModule {
 
   pub fn is_included(&self) -> bool {
     self.ecma_view.meta.is_included()
-  }
-
-  pub fn generate_esm_namespace_in_cjs_internal(
-    &mut self,
-    symbol_db: &mut SymbolRefDb,
-    runtime_module: &RuntimeModuleBrief,
-    wrap_ref: SymbolRef,
-    is_node_mode: bool,
-  ) -> Option<EsmNamespaceInCjs> {
-    let esm_namespace_ref = symbol_db.create_facade_root_symbol_ref(
-      self.idx,
-      &concat_string!("import_", legitimize_identifier_name(&self.repr_name)),
-    );
-
-    let stmt_info_idx = self.stmt_infos.add_stmt_info(StmtInfo {
-      stmt_idx: None,
-      declared_symbols: vec![esm_namespace_ref],
-      referenced_symbols: vec![wrap_ref.into(), runtime_module.resolve_symbol("__toESM").into()],
-      force_tree_shaking: true,
-      #[cfg(debug_assertions)]
-      debug_label: Some(if is_node_mode {
-        "esm_namespace_ref_derived_from_module_exports node".to_string()
-      } else {
-        "esm_namespace_ref_derived_from_module_exports".to_string()
-      }),
-      ..Default::default()
-    });
-
-    Some(EsmNamespaceInCjs { namespace_ref: esm_namespace_ref, stmt_info_idx })
-  }
-
-  /// Generates
-  /// ```js
-  /// var import_xxx = __toESM(require_xxx());
-  /// ```
-  pub fn generate_esm_namespace_in_cjs_stmt(
-    &mut self,
-    symbol_db: &mut SymbolRefDb,
-    runtime_module: &RuntimeModuleBrief,
-    wrap_ref: SymbolRef,
-  ) {
-    if self.esm_namespace_in_cjs.is_some() {
-      return;
-    }
-    self.esm_namespace_in_cjs =
-      self.generate_esm_namespace_in_cjs_internal(symbol_db, runtime_module, wrap_ref, false);
-  }
-
-  /// Generates
-  /// ```js
-  /// var import_xxx = __toESM(require_xxx(), 1);
-  /// ```
-  pub fn generate_esm_namespace_in_cjs_node_mode_stmt(
-    &mut self,
-    symbol_db: &mut SymbolRefDb,
-    runtime_module: &RuntimeModuleBrief,
-    wrap_ref: SymbolRef,
-  ) {
-    if self.esm_namespace_in_cjs_node_mode.is_some() {
-      return;
-    }
-    self.esm_namespace_in_cjs_node_mode =
-      self.generate_esm_namespace_in_cjs_internal(symbol_db, runtime_module, wrap_ref, true);
   }
 
   #[expect(clippy::cast_precision_loss)]

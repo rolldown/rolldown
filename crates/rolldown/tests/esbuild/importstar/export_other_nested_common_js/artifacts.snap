@@ -1,6 +1,5 @@
 ---
 source: crates/rolldown_testing/src/integration_test.rs
-snapshot_kind: text
 ---
 # Assets
 
@@ -13,6 +12,9 @@ snapshot_kind: text
 var require_foo = __commonJS({ "foo.js"(exports) {
 	exports.foo = 123;
 } });
+
+//#endregion
+//#region bar.js
 var import_foo = __toESM(require_foo());
 
 //#endregion

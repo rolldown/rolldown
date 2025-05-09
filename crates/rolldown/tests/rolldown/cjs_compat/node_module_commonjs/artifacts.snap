@@ -11,17 +11,17 @@ source: crates/rolldown_testing/src/integration_test.rs
 var require_commonjs = __commonJS({ "commonjs.js"(exports, module) {
 	module.exports = 1;
 } });
-var import_commonjs = __toESM(require_commonjs(), 1);
 
 //#endregion
-export { __reExport, __toESM, import_commonjs, require_commonjs };
+export { __reExport, __toESM, require_commonjs };
 ```
 ## entry.js
 
 ```js
-import { import_commonjs } from "./commonjs.js";
+import { __toESM, require_commonjs } from "./commonjs.js";
 
 //#region entry.js
+var import_commonjs = __toESM(require_commonjs(), 1);
 console.log(import_commonjs.default);
 
 //#endregion
@@ -29,7 +29,7 @@ console.log(import_commonjs.default);
 ## main.js
 
 ```js
-import { __reExport, __toESM, import_commonjs, require_commonjs } from "./commonjs.js";
+import { __reExport, __toESM, require_commonjs } from "./commonjs.js";
 
 //#region star-export.js
 var star_export_exports = {};
@@ -37,6 +37,7 @@ __reExport(star_export_exports, __toESM(require_commonjs(), 1));
 
 //#endregion
 //#region main.mjs
+var import_commonjs = __toESM(require_commonjs(), 1);
 console.log(import_commonjs.default, star_export_exports);
 
 //#endregion

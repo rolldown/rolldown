@@ -1,6 +1,5 @@
 ---
 source: crates/rolldown_testing/src/integration_test.rs
-snapshot_kind: text
 ---
 # Assets
 
@@ -16,6 +15,12 @@ Object.defineProperty(exports, '__commonJS', {
     return __commonJS;
   }
 });
+Object.defineProperty(exports, '__toESM', {
+  enumerable: true,
+  get: function () {
+    return __toESM;
+  }
+});
 ```
 ## main.js
 
@@ -28,6 +33,10 @@ var require_cjs_dep = require_chunk.__commonJS({ "cjs-dep.js"(exports, module) {
 } });
 
 //#endregion
+//#region main.js
+var import_cjs_dep = require_chunk.__toESM(require_cjs_dep());
+
+//#endregion
 ```
 ## main2.js
 
@@ -38,6 +47,10 @@ const require_chunk = require('./chunk.js');
 var require_cjs_dep2 = require_chunk.__commonJS({ "cjs-dep2.js"(exports, module) {
 	module.exports = console.log("cjs-dep2");
 } });
+
+//#endregion
+//#region main2.js
+var import_cjs_dep2 = require_chunk.__toESM(require_cjs_dep2());
 
 //#endregion
 ```

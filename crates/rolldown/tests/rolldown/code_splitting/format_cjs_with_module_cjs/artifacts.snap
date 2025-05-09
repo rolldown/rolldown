@@ -1,6 +1,5 @@
 ---
 source: crates/rolldown_testing/src/integration_test.rs
-snapshot_kind: text
 ---
 # Assets
 
@@ -8,11 +7,12 @@ snapshot_kind: text
 
 ```js
 "use strict";
-const require_share = require('./share.js');
-const node_assert = require_share.__toESM(require("node:assert"));
+const require_share$1 = require('./share.js');
+const node_assert = require_share$1.__toESM(require("node:assert"));
 
 //#region main1.js
-node_assert.default.equal((0, require_share.import_share.share)(), 1);
+var import_share = require_share$1.__toESM(require_share$1.require_share());
+node_assert.default.equal((0, import_share.share)(), 1);
 
 //#endregion
 ```
@@ -20,11 +20,12 @@ node_assert.default.equal((0, require_share.import_share.share)(), 1);
 
 ```js
 "use strict";
-const require_share = require('./share.js');
-const node_assert = require_share.__toESM(require("node:assert"));
+const require_share$1 = require('./share.js');
+const node_assert = require_share$1.__toESM(require("node:assert"));
 
 //#region main2.js
-node_assert.default.equal((0, require_share.import_share.share)(), 1);
+var import_share = require_share$1.__toESM(require_share$1.require_share());
+node_assert.default.equal((0, import_share.share)(), 1);
 
 //#endregion
 ```
@@ -39,7 +40,6 @@ var require_share = __commonJS({ "share.js"(exports) {
 		return 1;
 	};
 } });
-var import_share = __toESM(require_share());
 
 //#endregion
 Object.defineProperty(exports, '__toESM', {
@@ -48,10 +48,10 @@ Object.defineProperty(exports, '__toESM', {
     return __toESM;
   }
 });
-Object.defineProperty(exports, 'import_share', {
+Object.defineProperty(exports, 'require_share', {
   enumerable: true,
   get: function () {
-    return import_share;
+    return require_share;
   }
 });
 ```

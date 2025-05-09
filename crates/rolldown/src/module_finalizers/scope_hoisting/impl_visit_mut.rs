@@ -108,8 +108,6 @@ impl<'ast> VisitMut<'ast> for ScopeHoistingFinalizer<'_, 'ast> {
 
           let commonjs_ref_expr = self.finalized_expr_for_symbol_ref(commonjs_ref, false, None);
 
-          let var_init_stmts = self.generate_esm_namespace_in_cjs();
-
           let mut stmts_inside_closure = allocator::Vec::new_in(self.alloc);
           stmts_inside_closure.append(&mut program.body);
 
@@ -121,7 +119,6 @@ impl<'ast> VisitMut<'ast> for ScopeHoistingFinalizer<'_, 'ast> {
             self.ctx.options.profiler_names,
             &self.ctx.module.stable_id,
           ));
-          program.body.extend(var_init_stmts);
         }
         WrapKind::Esm => {
           use ast::Statement;

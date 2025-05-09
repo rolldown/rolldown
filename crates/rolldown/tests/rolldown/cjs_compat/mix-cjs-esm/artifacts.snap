@@ -1,6 +1,5 @@
 ---
 source: crates/rolldown_testing/src/integration_test.rs
-snapshot_kind: text
 ---
 # warnings
 
@@ -49,12 +48,16 @@ var require_esm_import_cjs_export = __commonJS({ "esm-import-cjs-export.js"(expo
 var require_cjs = __commonJS({ "cjs.js"(exports, module) {
 	module.exports = 1;
 } });
-var import_cjs = __toESM(require_cjs());
 
 //#endregion
 //#region esm-import-cjs-require.js
+var import_cjs = __toESM(require_cjs());
 require_foo();
 assert.equal(import_cjs.a, void 0);
+
+//#endregion
+//#region main.js
+var import_esm_import_cjs_export = __toESM(require_esm_import_cjs_export());
 
 //#endregion
 //# sourceMappingURL=main.js.map

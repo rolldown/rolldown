@@ -27,6 +27,9 @@ export { foo };
 var require_foo = __commonJS({ "foo.js"(exports, module) {
 	module.exports.foo = "foo";
 } });
+
+//#endregion
+//#region main.js
 var import_foo = __toESM(require_foo());
 
 //#endregion

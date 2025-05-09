@@ -1,6 +1,5 @@
 ---
 source: crates/rolldown_testing/src/integration_test.rs
-snapshot_kind: text
 ---
 # Assets
 
@@ -22,11 +21,11 @@ var require_react = __commonJS({ "react.js"(exports) {
 var require_commonjs = __commonJS({ "commonjs.js"(exports, module) {
 	module.exports = require_react();
 } });
-var import_commonjs = __toESM(require_commonjs());
 
 //#endregion
 //#region main.js
-assert.equal(import_commonjs.createReactElement(), "div");
+var import_commonjs = __toESM(require_commonjs());
+assert.equal(import_commonjs.default.createReactElement(), "div");
 
 //#endregion
 ```

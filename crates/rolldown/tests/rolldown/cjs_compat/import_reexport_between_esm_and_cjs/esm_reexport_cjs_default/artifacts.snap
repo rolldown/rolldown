@@ -11,6 +11,9 @@ source: crates/rolldown_testing/src/integration_test.rs
 var require_commonjs = __commonJS({ "commonjs.js"(exports, module) {
 	module.exports = "foo";
 } });
+
+//#endregion
+//#region main.js
 var import_commonjs = __toESM(require_commonjs());
 
 //#endregion

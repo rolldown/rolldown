@@ -22,7 +22,6 @@ mod finalizer_context;
 mod impl_visit_mut;
 pub use finalizer_context::ScopeHoistingFinalizerContext;
 use rolldown_rstr::Rstr;
-use rolldown_std_utils::OptionExt;
 use rolldown_utils::ecmascript::is_validate_identifier_name;
 use rustc_hash::FxHashSet;
 use sugar_path::SugarPath;
@@ -111,9 +110,36 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
         // Remove this statement by ignoring it
       }
       WrapKind::Cjs => {
-        // Remove this statement
+        // Replace the statement with something like `var import_foo = __toESM(require_foo())`
 
-        return true;
+        // `__toESM`
+        let to_esm_fn_name = self.finalized_expr_for_runtime_symbol("__toESM");
+
+        // `require_foo`
+        let importee_wrapper_ref_name = self.finalized_expr_for_symbol_ref(
+          importee_linking_info.wrapper_ref.unwrap(),
+          false,
+          None,
+        );
+
+        // `import_foo`
+        let binding_name_for_wrapper_call_ret = self.canonical_name_for(rec.namespace_ref);
+
+        *stmt = self.snippet.var_decl_stmt(
+          binding_name_for_wrapper_call_ret,
+          self.snippet.wrap_with_to_esm(
+            to_esm_fn_name,
+            self.snippet.builder.expression_call(
+              SPAN,
+              importee_wrapper_ref_name,
+              NONE,
+              self.snippet.builder.vec(),
+              false,
+            ),
+            self.ctx.module.should_consider_node_esm_spec(),
+          ),
+        );
+        return false;
       }
       // Replace the import statement with `init_foo()` if `ImportDeclaration` is not a plain import
       // or the importee have side effects.
@@ -1160,119 +1186,5 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
     let (original_name, _) = self.get_conflicted_info(id.as_ref()?)?;
     let original_name: Rstr = original_name.into();
     Some(self.snippet.static_block_keep_name_helper(&original_name))
-  }
-
-  fn generate_esm_namespace_in_cjs(&self) -> Vec<ast::Statement<'ast>> {
-    let mut var_init_stmts = vec![];
-
-    if let Some(esm_ns) = &self.ctx.module.esm_namespace_in_cjs {
-      if self.ctx.module.stmt_infos[esm_ns.stmt_info_idx].is_included {
-        // `__toESM`
-        let to_esm_fn_name = self.finalized_expr_for_symbol_ref(
-          self.canonical_ref_for_runtime("__toESM"),
-          false,
-          None,
-        );
-
-        // `require_foo`
-        let importee_wrapper_ref_name = self.finalized_expr_for_symbol_ref(
-          self.ctx.linking_info.wrapper_ref.unpack(),
-          false,
-          None,
-        );
-
-        // var import_foo = __toESM(require_foo())
-        let declarations = self.snippet.builder.vec1(self.snippet.builder.variable_declarator(
-          SPAN,
-          ast::VariableDeclarationKind::Var,
-          self.snippet.builder.binding_pattern(
-            self.snippet.builder.binding_pattern_kind_binding_identifier(
-              SPAN,
-              self.snippet.builder.atom(self.canonical_name_for(esm_ns.namespace_ref).as_str()),
-            ),
-            NONE,
-            false,
-          ),
-          // __toESM(require_foo())
-          Some(self.snippet.wrap_with_to_esm(
-            to_esm_fn_name,
-            self.snippet.builder.expression_call(
-              SPAN,
-              importee_wrapper_ref_name,
-              NONE,
-              self.snippet.builder.vec(),
-              false,
-            ),
-            false,
-          )),
-          false,
-        ));
-
-        let var_init =
-          ast::Statement::VariableDeclaration(self.snippet.builder.alloc_variable_declaration(
-            SPAN,
-            ast::VariableDeclarationKind::Var,
-            declarations,
-            false,
-          ));
-
-        var_init_stmts.push(var_init);
-      }
-    }
-    if let Some(esm_ns) = &self.ctx.module.esm_namespace_in_cjs_node_mode {
-      if self.ctx.module.stmt_infos[esm_ns.stmt_info_idx].is_included {
-        // `__toESM`
-        let to_esm_fn_name = self.finalized_expr_for_symbol_ref(
-          self.canonical_ref_for_runtime("__toESM"),
-          false,
-          None,
-        );
-
-        // `require_foo`
-        let importee_wrapper_ref_name = self.finalized_expr_for_symbol_ref(
-          self.ctx.linking_info.wrapper_ref.unpack(),
-          false,
-          None,
-        );
-
-        // var import_foo = __toESM(require_foo())
-        let declarations = self.snippet.builder.vec1(self.snippet.builder.variable_declarator(
-          SPAN,
-          ast::VariableDeclarationKind::Var,
-          self.snippet.builder.binding_pattern(
-            self.snippet.builder.binding_pattern_kind_binding_identifier(
-              SPAN,
-              self.snippet.builder.atom(self.canonical_name_for(esm_ns.namespace_ref).as_str()),
-            ),
-            NONE,
-            false,
-          ),
-          // __toESM(require_foo())
-          Some(self.snippet.wrap_with_to_esm(
-            to_esm_fn_name,
-            self.snippet.builder.expression_call(
-              SPAN,
-              importee_wrapper_ref_name,
-              NONE,
-              self.snippet.builder.vec(),
-              false,
-            ),
-            true,
-          )),
-          false,
-        ));
-
-        let var_init =
-          ast::Statement::VariableDeclaration(self.snippet.builder.alloc_variable_declaration(
-            SPAN,
-            ast::VariableDeclarationKind::Var,
-            declarations,
-            false,
-          ));
-
-        var_init_stmts.push(var_init);
-      }
-    }
-    var_init_stmts
   }
 }

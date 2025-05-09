@@ -26,10 +26,10 @@ import assert from "node:assert";
 var require_foo = __commonJS({ "foo.js"(exports) {
 	exports.foo = 123;
 } });
-var import_foo = __toESM(require_foo());
 
 //#endregion
 //#region entry.js
+var import_foo = __toESM(require_foo());
 let foo = 234;
 assert.deepEqual(import_foo, {
 	default: { foo: 123 },

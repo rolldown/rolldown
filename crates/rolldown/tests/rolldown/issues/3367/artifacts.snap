@@ -13,4 +13,8 @@ var require_foo = __commonJS({ "foo.js"(exports, module) {
 } });
 
 //#endregion
+//#region main.mjs
+var import_foo = __toESM(require_foo(), 1);
+
+//#endregion
 ```

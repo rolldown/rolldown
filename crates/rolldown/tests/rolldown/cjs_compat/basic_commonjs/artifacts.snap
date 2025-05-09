@@ -34,10 +34,10 @@ var require_commonjs$1 = __commonJS({ "commonjs.js"(exports, module) {
 	var value = (init_esm(), __toCommonJS(esm_exports));
 	module.exports = value;
 } });
-var import_commonjs = __toESM(require_commonjs$1());
 
 //#endregion
 //#region main.js
+var import_commonjs = __toESM(require_commonjs$1());
 init_esm();
 console.log(import_commonjs.default, esm_default_fn, esm_named_var, esm_named_fn, esm_named_class);
 const require_commonjs = () => {};

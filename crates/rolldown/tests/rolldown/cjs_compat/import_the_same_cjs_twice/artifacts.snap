@@ -11,10 +11,14 @@ source: crates/rolldown_testing/src/integration_test.rs
 var require_cjs = __commonJS({ "cjs.js"(exports, module) {
 	module.exports.a = {};
 } });
+
+//#endregion
+//#region main.js
 var import_cjs = __toESM(require_cjs());
+var import_cjs$1 = __toESM(require_cjs());
 
 //#endregion
 var a = import_cjs.a;
-var a2 = import_cjs.a;
+var a2 = import_cjs$1.a;
 export { a, a2 };
 ```

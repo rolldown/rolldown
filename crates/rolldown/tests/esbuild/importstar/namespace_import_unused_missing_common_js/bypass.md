@@ -25,10 +25,10 @@ import assert from "node:assert";
 var require_foo = __commonJS({ "foo.js"(exports) {
 	exports.x = 123;
 } });
-var import_foo = __toESM(require_foo());
 
 //#endregion
 //#region entry.js
+var import_foo = __toESM(require_foo());
 assert.equal(import_foo.foo, void 0);
 
 //#endregion

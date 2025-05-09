@@ -3,5 +3,9 @@
   "compilerOptions": {
     "module": "ESNext", /* Specify what module code is generated. */
     "outDir": "./dist/esm" /* Specify an output folder for all emitted files. */
-  }
+  },
+  "exclude": [
+    "**/*.test.ts",
+    "**/*.test-d.ts",
+  ]
 }

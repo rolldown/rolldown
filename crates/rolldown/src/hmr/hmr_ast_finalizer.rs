@@ -180,7 +180,7 @@ impl<'ast> HmrAstFinalizer<'_, 'ast> {
 
     let stmt = self.snippet.variable_declarator_require_call_stmt(
       binding_name,
-      self.snippet.to_esm_call_with_interop("__toESM", call_expr, interop),
+      self.snippet.to_esm_call_with_interop("__rolldown_runtime__.__toESM", call_expr, interop),
       span,
     );
     Some(stmt)

@@ -156,6 +156,7 @@ impl Chunk {
     }
 
     let filename_template = self.filename_template(options, rollup_pre_rendered_chunk).await?;
+    dbg!(&filename_template);
     let has_hash_pattern = filename_template.has_hash_pattern();
 
     let mut hash_placeholder = has_hash_pattern.then_some(vec![]);
@@ -168,7 +169,7 @@ impl Chunk {
         hash
       }
     });
-
+    dbg!(&chunk_name);
     let filename = filename_template.render(Some(chunk_name), None, hash_replacer).into();
 
     let name = make_unique_name(&filename, used_name_counts);

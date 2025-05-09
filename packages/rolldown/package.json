@@ -120,7 +120,6 @@
     "@napi-rs/cli": "^3.0.0-alpha.77",
     "@napi-rs/wasm-runtime": "^0.2.4",
     "@oxc-node/cli": "catalog:",
-    "@oxc-node/core": "catalog:",
     "@rolldown/testing": "workspace:*",
     "@types/fs-extra": "^11.0.4",
     "@types/lodash-es": "^4.17.12",

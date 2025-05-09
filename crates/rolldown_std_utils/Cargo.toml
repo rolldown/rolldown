@@ -8,7 +8,6 @@ repository.workspace = true
 
 [dependencies]
 regex = { workspace = true }
-cow-utils = {workspace = true}
 
 [lints]
 workspace = true

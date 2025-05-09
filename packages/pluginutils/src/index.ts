@@ -1,2 +1,2 @@
-export * from './composableFilters.js';
-export * from './simpleFilters.js';
+export * from './composable-filters.js';
+export * from './simple-filters.js';

@@ -25,10 +25,10 @@ import assert from "node:assert";
 var require_a = __commonJS({ "node_modules/demo-pkg/a.js"(exports, module) {
 	module.exports = "a";
 } });
-var import_a = __toESM(require_a());
 
 //#endregion
 //#region src/entry.js
+var import_a = __toESM(require_a());
 assert.equal(import_a.default, "a");
 
 //#endregion

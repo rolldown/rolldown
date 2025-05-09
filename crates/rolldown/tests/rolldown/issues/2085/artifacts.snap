@@ -13,6 +13,9 @@ var require_b = __commonJS({ "b.js"(exports) {
 		return "f";
 	};
 } });
+
+//#endregion
+//#region a.js
 var import_b = __toESM(require_b());
 
 //#endregion

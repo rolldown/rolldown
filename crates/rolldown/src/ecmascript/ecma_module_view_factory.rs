@@ -120,8 +120,6 @@ pub async fn create_ecma_view(
     mutations: vec![],
     new_url_references: new_url_imports,
     this_expr_replace_map,
-    esm_namespace_in_cjs: None,
-    esm_namespace_in_cjs_node_mode: None,
     hmr_info,
     hmr_hot_ref,
   };

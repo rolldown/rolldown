@@ -28,10 +28,10 @@ var require_demo_pkg = __commonJS({ "node_modules/demo-pkg/index.js"(exports, mo
 		return 123;
 	};
 } });
-var import_demo_pkg = __toESM(require_demo_pkg());
 
 //#endregion
 //#region src/entry.js
+var import_demo_pkg = __toESM(require_demo_pkg());
 assert.equal((0, import_demo_pkg.default)(), 123);
 
 //#endregion

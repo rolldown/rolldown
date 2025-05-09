@@ -12,10 +12,10 @@ var require_b = __commonJS({ "b.ts"(exports, module) {
 	module.exports = [123, foo];
 	function foo() {}
 } });
-var import_b = __toESM(require_b());
 
 //#endregion
 //#region a.ts
+var import_b = __toESM(require_b());
 console.log(import_b.default);
 
 //#endregion

@@ -34,7 +34,10 @@ var init_a = __esm({ async "a.js"() {
 //#endregion
 //#region b.js
 var b_exports = {};
-var init_b = __esm({ async "b.js"() {} });
+var import_c;
+var init_b = __esm({ async "b.js"() {
+	import_c = __toESM(require_c());
+} });
 
 //#endregion
 //#region c.js

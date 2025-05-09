@@ -29,10 +29,10 @@ var require_main_browser = __commonJS({ "node_modules/demo-pkg/main.browser.js"(
 		return 123;
 	};
 } });
-var import_main_browser = __toESM(require_main_browser());
 
 //#endregion
 //#region src/entry.js
+var import_main_browser = __toESM(require_main_browser());
 assert.equal((0, import_main_browser.default)(), 123);
 
 //#endregion

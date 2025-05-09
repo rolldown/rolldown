@@ -1,6 +1,5 @@
 ---
 source: crates/rolldown_testing/src/integration_test.rs
-snapshot_kind: text
 ---
 # Assets
 
@@ -14,7 +13,6 @@ import assert from "node:assert";
 var require_commonjs = __commonJS({ "commonjs.js"(exports, module) {
 	module.exports = { bar: 1 };
 } });
-var import_commonjs = __toESM(require_commonjs());
 
 //#endregion
 //#region esm.js
@@ -24,14 +22,16 @@ const value = 1;
 //#region foo.js
 var foo_exports = {};
 __export(foo_exports, {
-	bar: () => import_commonjs.bar,
+	bar: () => import_commonjs$1.bar,
 	value: () => value
 });
 __reExport(foo_exports, __toESM(require_commonjs()));
+var import_commonjs$1 = __toESM(require_commonjs());
 
 //#endregion
 //#region main.js
-assert.equal(import_commonjs.bar, 1);
+var import_commonjs = __toESM(require_commonjs());
+assert.equal(import_commonjs$1.bar, 1);
 assert.equal(value, 1);
 assert.equal(foo_exports.foo, void 0);
 assert.equal(Object.keys(foo_exports).length, 2);

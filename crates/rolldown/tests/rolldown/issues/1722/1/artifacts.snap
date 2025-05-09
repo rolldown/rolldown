@@ -27,10 +27,10 @@ export { main, sub };
 var require_sub = __commonJS({ "sub.cjs"(exports, module) {
 	module.exports.sub = "sub";
 } });
-var import_sub = __toESM(require_sub());
 
 //#endregion
 //#region main.js
+var import_sub = __toESM(require_sub());
 const main = "main";
 
 //#endregion

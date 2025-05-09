@@ -30,10 +30,10 @@ var require_foo = __commonJS({ "foo.js"(exports) {
 		return 123;
 	};
 } });
-var import_foo = __toESM(require_foo());
 
 //#endregion
 //#region entry.js
+var import_foo = __toESM(require_foo());
 assert.equal((0, import_foo.fn)(), 123);
 
 //#endregion

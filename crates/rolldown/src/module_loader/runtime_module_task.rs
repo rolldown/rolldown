@@ -146,8 +146,6 @@ impl RuntimeModuleTask {
         mutations: vec![],
         new_url_references,
         this_expr_replace_map: FxHashMap::default(),
-        esm_namespace_in_cjs: None,
-        esm_namespace_in_cjs_node_mode: None,
         hmr_info: scan_result.hmr_info,
         hmr_hot_ref: None,
       },

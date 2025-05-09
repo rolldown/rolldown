@@ -29,10 +29,10 @@ var require_main = __commonJS({ "node_modules/demo-pkg/main.js"(exports, module)
 		return 123;
 	};
 } });
-var import_main = __toESM(require_main());
 
 //#endregion
 //#region src/entry.js
+var import_main = __toESM(require_main());
 assert.equal((0, import_main.default)(), 123);
 
 //#endregion

@@ -33,15 +33,17 @@ export {
 ```
 ### rolldown
 ```js
-import { esm_foo_, import_cjs, init_esm } from "./cjs.js";
+import { __toESM, esm_foo_, init_esm, require_cjs } from "./cjs.js";
 
 //#region entry-esm.js
 init_esm();
+var import_cjs = __toESM(require_cjs());
+var import_cjs$1 = __toESM(require_cjs());
 let bar_ = [
 	esm_foo_,
 	import_cjs.cjs_foo_,
 	esm_foo_,
-	import_cjs.cjs_foo_
+	import_cjs$1.cjs_foo_
 ];
 
 //#endregion
@@ -52,7 +54,7 @@ export { bar_ };
 ===================================================================
 --- esbuild	/out/entry-esm.js
 +++ rolldown	entry-esm.js
-@@ -1,14 +1,4 @@
+@@ -1,14 +1,6 @@
 -var require_cjs = __commonJS({
 -    "cjs.js"(exports) {
 -        exports.a = "foo";
@@ -63,12 +65,13 @@ export { bar_ };
 -    esm_foo_: () => esm_foo_
 -});
 -var esm_foo_ = "foo";
--var import_cjs = __toESM(require_cjs());
++import {__toESM, esm_foo_, init_esm, require_cjs} from "./cjs.js";
++init_esm();
+ var import_cjs = __toESM(require_cjs());
 -var cjs = __toESM(require_cjs());
 -var bar_ = [esm_foo_, import_cjs.cjs_foo_, esm_exports.b, cjs.a];
-+import {esm_foo_, import_cjs, init_esm} from "./cjs.js";
-+init_esm();
-+var bar_ = [esm_foo_, import_cjs.cjs_foo_, esm_foo_, import_cjs.cjs_foo_];
++var import_cjs$1 = __toESM(require_cjs());
++var bar_ = [esm_foo_, import_cjs.cjs_foo_, esm_foo_, import_cjs$1.cjs_foo_];
  export {bar_};
 
 ```

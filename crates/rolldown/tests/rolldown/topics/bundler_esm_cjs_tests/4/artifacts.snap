@@ -11,10 +11,10 @@ source: crates/rolldown_testing/src/integration_test.rs
 var require_foo = __commonJS({ "foo.js"(exports, module) {
 	module.exports = "123";
 } });
-var import_foo = __toESM(require_foo());
 
 //#endregion
 //#region entry.js
+var import_foo = __toESM(require_foo());
 input.works = import_foo.default === "123";
 
 //#endregion
@@ -34,10 +34,10 @@ Variant: (format: Cjs)
 var require_foo = __commonJS({ "foo.js"(exports, module) {
 	module.exports = "123";
 } });
-var import_foo = __toESM(require_foo());
 
 //#endregion
 //#region entry.js
+var import_foo = __toESM(require_foo());
 input.works = import_foo.default === "123";
 
 //#endregion
@@ -59,10 +59,10 @@ Variant: (format: Iife)
 var require_foo = __commonJS({ "foo.js"(exports, module) {
 	module.exports = "123";
 } });
-var import_foo = __toESM(require_foo());
 
 //#endregion
 //#region entry.js
+var import_foo = __toESM(require_foo());
 input.works = import_foo.default === "123";
 
 //#endregion
@@ -88,10 +88,10 @@ Variant: (format: Umd)
 var require_foo = __commonJS({ "foo.js"(exports, module) {
 	module.exports = "123";
 } });
-var import_foo = __toESM(require_foo());
 
 //#endregion
 //#region entry.js
+var import_foo = __toESM(require_foo());
 input.works = import_foo.default === "123";
 
 //#endregion

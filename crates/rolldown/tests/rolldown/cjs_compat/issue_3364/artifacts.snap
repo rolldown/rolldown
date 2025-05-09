@@ -27,10 +27,10 @@ var require_b = __commonJS({ "b.js"(exports, module) {
 var require_commonjs = __commonJS({ "commonjs.js"(exports, module) {
 	module.exports = Math.random() < .5 ? require_a() : require_b();
 } });
-var import_commonjs = __toESM(require_commonjs());
 
 //#endregion
 //#region main.js
+var import_commonjs = __toESM(require_commonjs());
 assert.equal(import_commonjs.default.call({}, 1, 2), 3);
 
 //#endregion

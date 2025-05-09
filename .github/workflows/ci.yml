@@ -28,6 +28,7 @@ jobs:
     outputs:
       rust-changes: ${{ (steps.filter.outputs.rust-changes == 'true') || (github.ref_name == 'main') }}
       node-changes: ${{ (steps.filter.outputs.node-changes == 'true') || (github.ref_name == 'main') }}
+      pluginutils-changes: ${{ (steps.filter.outputs.pluginutils-changes == 'true') || (github.ref_name == 'main') }}
     steps:
       - uses: taiki-e/checkout-action@b13d20b7cda4e2f325ef19895128f7ff735c0b3d # v1.3.1
 
@@ -52,10 +53,16 @@ jobs:
               - 'package.json'
               - 'pnpm-lock.yaml'
               - 'pnpm-workspace.yaml'
+            pluginutils-changes:
+              - 'packages/pluginutils/**'
+              - 'package.json'
+              - 'pnpm-lock.yaml'
+              - 'pnpm-workspace.yaml'
       - name: Show outputs
         run: |
           echo "Rust changes: ${{ (steps.filter.outputs.rust-changes == 'true') || (github.ref_name == 'main') }}"
           echo "Node changes: ${{ (steps.filter.outputs.node-changes == 'true') || (github.ref_name == 'main') }}"
+          echo "PluginUtils changes: ${{ (steps.filter.outputs.pluginutils-changes == 'true') || (github.ref_name == 'main') }}"
 
   cargo-deny:
     name: Cargo Deny
@@ -130,6 +137,20 @@ jobs:
     with:
       os: ${{ matrix.target }}
       changed: ${{ needs.changes.outputs.node-changes == 'true' }}
+
+  pluginutils-test:
+    name: Pluginutils Test
+    needs: changes
+    if: ${{ needs.changes.outputs.pluginutils-changes == 'true' }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: taiki-e/checkout-action@b13d20b7cda4e2f325ef19895128f7ff735c0b3d # v1.3.1
+
+      - name: Setup Node
+        uses: ./.github/actions/setup-node
+
+      - name: Test `@rolldown/pluginutils`
+        run: pnpm --filter '@rolldown/pluginutils' test
 
   node-validation:
     name: Node Validation

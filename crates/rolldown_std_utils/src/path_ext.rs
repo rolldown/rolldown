@@ -1,4 +1,3 @@
-use cow_utils;
 use std::{borrow::Cow, ffi::OsStr, path::Path};
 
 pub trait PathExt {
@@ -51,10 +50,18 @@ impl PathExt for std::path::Path {
     if absolute {
       let idx =
         self.to_string_lossy().rfind(file_name.as_ref()).expect("should contains file_name");
-      Cow::Owned(self.to_string_lossy()[0..idx + file_name.len()].to_string())
+      slice_cow_str(self.to_string_lossy(), 0, idx + file_name.len())
     } else {
       file_name
     }
+  }
+}
+
+#[inline]
+fn slice_cow_str(cow: Cow<str>, start: usize, end: usize) -> Cow<'_, str> {
+  match cow {
+    Cow::Borrowed(s) => Cow::Borrowed(&s[start..end]),
+    Cow::Owned(s) => Cow::Owned(s[start..end].to_string()),
   }
 }
 

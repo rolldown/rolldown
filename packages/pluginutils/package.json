@@ -27,6 +27,9 @@
     "build:all": "npm run build:esm && npm run build:cjs",
     "build:esm": "tsc -p ./tsconfig.esm.json",
     "build:cjs": "tsc -p ./tsconfig.cjs.json",
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "vitest"
+  },
+  "devDependencies": {
+    "vitest": "^3.0.1"
   }
 }

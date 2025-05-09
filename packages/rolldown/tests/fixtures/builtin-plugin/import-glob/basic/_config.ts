@@ -1,6 +1,6 @@
-import { importGlobPlugin } from 'rolldown/experimental'
+import path from 'node:path'
 import { defineTest } from 'rolldown-tests'
-import * as path from 'node:path'
+import { importGlobPlugin } from 'rolldown/experimental'
 
 export default defineTest({
   config: {

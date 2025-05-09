@@ -1,8 +1,11 @@
 use oxc::{
-  allocator::{Allocator, Box as ArenaBox, IntoIn, TakeIn},
+  allocator::{Allocator, Box as ArenaBox, Dummy, IntoIn, TakeIn},
   ast::{
     NONE,
-    ast::{self, ExportDefaultDeclarationKind, Expression, ObjectPropertyKind, Statement},
+    ast::{
+      self, ExportDefaultDeclarationKind, Expression, ObjectExpression, ObjectPropertyKind,
+      Statement,
+    },
   },
   ast_visit::{VisitMut, walk_mut},
   semantic::{Scoping, SymbolId},
@@ -50,25 +53,27 @@ impl<'ast> HmrAstFinalizer<'_, 'ast> {
 
     let module_exports = match self.module.exports_kind {
       rolldown_common::ExportsKind::Esm => {
-        // TODO: Still we could reuse use module namespace def
+        let binding_name_for_namespace_object_ref = format!("ns_{}", self.module.repr_name);
 
-        let mut arg_obj_expr = self.snippet.builder.alloc_object_expression(
-          SPAN,
-          self.snippet.builder.vec_with_capacity(self.exports.len() + 1 /* __esModule */),
+        ret.extend(
+          self.generate_declaration_of_module_namespace_object(
+            &binding_name_for_namespace_object_ref,
+          ),
         );
-        arg_obj_expr.properties.extend(self.exports.drain(..));
         // Add __esModule flag
-        arg_obj_expr.properties.push(
-          self
-            .snippet
-            .object_property_kind_object_property(
-              "__esModule",
-              self.snippet.builder.expression_boolean_literal(SPAN, true),
-              false,
-            )
-            .into_in(self.alloc),
-        );
-        ast::Argument::ObjectExpression(arg_obj_expr)
+        ret.push(self.snippet.builder.statement_expression(
+          SPAN,
+          self.snippet.call_expr_with_arg_expr(
+            self.snippet.id_ref_expr("__rolldown_runtime__.__toCommonJS", SPAN),
+            self.snippet.id_ref_expr(&binding_name_for_namespace_object_ref, SPAN),
+            false,
+          ),
+        ));
+
+        ast::Argument::Identifier(self.snippet.builder.alloc_identifier_reference(
+          SPAN,
+          self.snippet.atom(&binding_name_for_namespace_object_ref),
+        ))
       }
       rolldown_common::ExportsKind::CommonJs => {
         // `module.exports`
@@ -184,6 +189,44 @@ impl<'ast> HmrAstFinalizer<'_, 'ast> {
       span,
     );
     Some(stmt)
+  }
+
+  fn generate_declaration_of_module_namespace_object(
+    &mut self,
+    binding_name_for_namespace_object_ref: &str,
+  ) -> Vec<ast::Statement<'ast>> {
+    // construct `var [binding_name_for_namespace_object_ref] = {}`
+    let decl_stmt = self.snippet.var_decl_stmt(
+      binding_name_for_namespace_object_ref,
+      ast::Expression::ObjectExpression(ArenaBox::new_in(
+        ObjectExpression::dummy(self.alloc),
+        self.alloc,
+      )),
+    );
+
+    // TODO reexport external module
+
+    // construct `{ prop_name: () => returned, ... }`
+    let mut arg_obj_expr = self
+      .snippet
+      .builder
+      .alloc_object_expression(SPAN, self.snippet.builder.vec_with_capacity(self.exports.len()));
+    arg_obj_expr.properties.extend(self.exports.drain(..));
+
+    // construct `__export(ns_name, { prop_name: () => returned, ... })`
+    let export_call_expr = self.snippet.builder.expression_call(
+      SPAN,
+      self.snippet.id_ref_expr("__rolldown_runtime__.__export", SPAN),
+      NONE,
+      self.snippet.builder.vec_from_array([
+        ast::Argument::from(self.snippet.id_ref_expr(binding_name_for_namespace_object_ref, SPAN)),
+        ast::Argument::ObjectExpression(arg_obj_expr.into_in(self.alloc)),
+      ]),
+      false,
+    );
+    let export_call_stmt = self.snippet.builder.statement_expression(SPAN, export_call_expr);
+
+    vec![decl_stmt, export_call_stmt]
   }
 }
 

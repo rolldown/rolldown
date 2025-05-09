@@ -1,10 +1,8 @@
 use oxc::{
-  allocator::{Dummy, IntoIn},
   ast::{NONE, ast},
   span::SPAN,
 };
 use rolldown_ecmascript_utils::{ExpressionExt, quote_stmt};
-use rolldown_utils::ecmascript::is_validate_identifier_name;
 
 use super::ScopeHoistingFinalizer;
 
@@ -22,6 +20,7 @@ impl<'ast> ScopeHoistingFinalizer<'_, 'ast> {
 
     ret
   }
+
   fn generate_runtime_module_register_for_hmr(&self) -> Vec<ast::Statement<'ast>> {
     let mut ret = vec![];
     if !self.ctx.options.is_hmr_enabled() {
@@ -30,48 +29,23 @@ impl<'ast> ScopeHoistingFinalizer<'_, 'ast> {
 
     let module_exports = match self.ctx.module.exports_kind {
       rolldown_common::ExportsKind::Esm => {
-        // TODO: Still we could reuse use module namespace def
+        let binding_name_for_namespace_object_ref =
+          self.canonical_name_for(self.ctx.module.namespace_object_ref);
 
-        // Empty object `{}`
-        let mut arg_obj_expr = self.snippet.builder.alloc_object_expression(
-          SPAN,
-          self.snippet.builder.vec_with_capacity(
-            self.ctx.linking_info.canonical_exports_len() + 1, /* __esModule */
-          ),
-        );
-
-        self.ctx.linking_info.canonical_exports().for_each(|(export, resolved_export)| {
-          // prop_name: () => returned
-          let prop_name = export;
-          let returned =
-            self.finalized_expr_for_symbol_ref(resolved_export.symbol_ref, false, None);
-          arg_obj_expr.properties.push(ast::ObjectPropertyKind::ObjectProperty(
-            ast::ObjectProperty {
-              key: if is_validate_identifier_name(prop_name) {
-                ast::PropertyKey::StaticIdentifier(
-                  self.snippet.id_name(prop_name, SPAN).into_in(self.alloc),
-                )
-              } else {
-                ast::PropertyKey::StringLiteral(self.snippet.alloc_string_literal(prop_name, SPAN))
-              },
-              value: self.snippet.only_return_arrow_expr(returned),
-              ..ast::ObjectProperty::dummy(self.alloc)
-            }
-            .into_in(self.alloc),
-          ));
-        });
         // Add __esModule flag
-        arg_obj_expr.properties.push(
-          self
-            .snippet
-            .object_property_kind_object_property(
-              "__esModule",
-              self.snippet.builder.expression_boolean_literal(SPAN, true),
-              false,
-            )
-            .into_in(self.alloc),
-        );
-        ast::Argument::ObjectExpression(arg_obj_expr)
+        ret.push(self.snippet.builder.statement_expression(
+          SPAN,
+          self.snippet.call_expr_with_arg_expr(
+            self.snippet.id_ref_expr("__rolldown_runtime__.__toCommonJS", SPAN),
+            self.snippet.id_ref_expr(binding_name_for_namespace_object_ref.as_str(), SPAN),
+            false,
+          ),
+        ));
+
+        ast::Argument::Identifier(self.snippet.builder.alloc_identifier_reference(
+          SPAN,
+          self.snippet.atom(binding_name_for_namespace_object_ref),
+        ))
       }
       rolldown_common::ExportsKind::CommonJs => {
         // `module.exports`

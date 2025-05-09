@@ -18,9 +18,15 @@ var require_lib = __commonJS({ "lib.js"(exports, module) {
 
 //#endregion
 //#region main.js
+var main_exports = {};
 const main_hot = __rolldown_runtime__.createModuleHotContext("main.js");
+<<<<<<< HEAD
 __rolldown_runtime__.registerModule("main.js", { __esModule: () => true });
 var import_lib = __toESM(require_lib());
+=======
+__rolldown_runtime__.__toCommonJS(main_exports);
+__rolldown_runtime__.registerModule("main.js", main_exports);
+>>>>>>> dce44170c (refactor(hmr): using esm module namespace to store it's exports)
 assert.strictEqual(import_lib.a, 1);
 
 //#endregion

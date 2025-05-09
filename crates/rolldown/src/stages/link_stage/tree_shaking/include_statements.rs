@@ -1,7 +1,7 @@
 use itertools::Itertools;
 use oxc_index::IndexVec;
 use rolldown_common::{
-  EcmaViewMeta, IndexModules, Module, ModuleIdx, ModuleType, NormalModule,
+  EcmaViewMeta, ExportsKind, IndexModules, Module, ModuleIdx, ModuleType, NormalModule,
   NormalizedBundlerOptions, StmtInfoIdx, SymbolOrMemberExprRef, SymbolRef, SymbolRefDb,
   side_effects::DeterminedSideEffects,
 };
@@ -85,6 +85,14 @@ impl LinkStage<'_> {
       is_included_vec[module.idx].iter_enumerated().for_each(|(stmt_info_id, is_included)| {
         module.stmt_infos.get_mut(stmt_info_id).is_included = *is_included;
       });
+
+      // The hmr need to create module namespace object to store exports.
+      if self.options.is_hmr_enabled()
+        && module.idx != self.runtime.id()
+        && matches!(module.exports_kind, ExportsKind::Esm)
+      {
+        module.stmt_infos.get_mut(StmtInfoIdx::new(0)).is_included = true;
+      }
     });
 
     tracing::trace!(

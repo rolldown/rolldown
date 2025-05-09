@@ -79,7 +79,6 @@ impl<'a> GenerateStage<'a> {
 
     let index_chunk_id_to_name =
       self.generate_chunk_name_and_preliminary_filenames(&mut chunk_graph).await?;
-    dbg!(&index_chunk_id_to_name);
     self.patch_asset_modules(&chunk_graph);
     set_emitted_chunk_preliminary_filenames(&self.plugin_driver.file_emitter, &chunk_graph);
 
@@ -205,7 +204,6 @@ impl<'a> GenerateStage<'a> {
                 arcstr::literal!("input")
               }
             } else if self.options.preserve_modules {
-              dbg!(&module.id());
               sanitize_filename.call(&module.id().as_path().representative_file_name(true)).await?
             } else {
               sanitize_filename.call(&module.id().as_path().representative_file_name(false)).await?
@@ -330,7 +328,6 @@ impl<'a> GenerateStage<'a> {
           .expect_into_string(),
       );
       chunk.preliminary_filename = Some(preliminary_filename);
-      dbg!(&chunk.preliminary_filename);
       chunk.css_preliminary_filename = Some(css_preliminary_filename);
     }
     Ok(index_chunk_id_to_name)

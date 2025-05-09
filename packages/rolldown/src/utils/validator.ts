@@ -665,6 +665,7 @@ const OutputOptionsSchema = v.strictObject({
       return true;
     }, () => `The 'true' value is not supported`),
   ),
+  preserveModules: v.optional(v.boolean()),
 });
 
 const getAddonDescription = (

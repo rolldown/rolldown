@@ -31,6 +31,7 @@ export function bindingifyOutputOptions(
     globals,
     file,
     sanitizeFileName,
+    preserveModules,
   } = outputOptions;
 
   return {
@@ -66,6 +67,7 @@ export function bindingifyOutputOptions(
     polyfillRequire: outputOptions.polyfillRequire,
     target: outputOptions.target,
     sanitizeFileName,
+    preserveModules,
   };
 }
 

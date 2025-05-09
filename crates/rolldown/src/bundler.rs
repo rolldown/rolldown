@@ -168,16 +168,15 @@ impl Bundler {
 
     for chunk in &output.assets {
       let dest = dist_dir.join(chunk.filename());
-      dbg!(&dest);
       if let Some(p) = dest.parent() {
         if !self.fs.exists(p) {
           self.fs.create_dir_all(p).unwrap();
         }
       }
-      // self
-      //   .fs
-      //   .write(&dest, chunk.content_as_bytes())
-      //   .map_err(|err| anyhow::anyhow!("Failed to write file in {:?}", dest).context(err))?;
+      self
+        .fs
+        .write(&dest, chunk.content_as_bytes())
+        .map_err(|err| anyhow::anyhow!("Failed to write file in {:?}", dest).context(err))?;
     }
 
     self

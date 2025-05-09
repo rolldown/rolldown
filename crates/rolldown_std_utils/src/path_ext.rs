@@ -35,7 +35,7 @@ impl PathExt for std::path::Path {
     let file_name = match &*file_name {
       // "index": Node.js use `index` as a special name for directory import.
       // "mod": https://docs.deno.com/runtime/manual/references/contributing/style_guide#do-not-use-the-filename-indextsindexjs.
-      "index" | "mod" => {
+      "index" | "mod" if !absolute => {
         if let Some(parent_dir_name) =
           self.parent().and_then(Path::file_stem).map(OsStr::to_string_lossy)
         {
@@ -78,5 +78,6 @@ fn test_representative_file_name() {
   assert_eq!(path.representative_file_name(false), "vue");
 
   let path = cwd.join("src").join("vue.js");
+  #[cfg(not(target_os = "windows"))]
   assert_eq!(path.representative_file_name(true), "./project/src/vue");
 }

@@ -1,10 +1,11 @@
-use std::cmp::Ordering;
+use std::{cmp::Ordering, path::Path};
 
 use crate::chunk_graph::ChunkGraph;
+use arcstr::ArcStr;
 use itertools::Itertools;
 use oxc_index::IndexVec;
-use rolldown_common::{Chunk, ChunkIdx, ChunkKind, Module, ModuleId, ModuleIdx, OutputFormat};
-use rolldown_utils::{BitSet, rustc_hash::FxHashMapExt};
+use rolldown_common::{Chunk, ChunkIdx, ChunkKind, Module, ModuleIdx, OutputFormat};
+use rolldown_utils::{BitSet, commondir, rustc_hash::FxHashMapExt};
 use rustc_hash::FxHashMap;
 
 use super::GenerateStage;
@@ -41,7 +42,11 @@ impl GenerateStage<'_> {
 
     let mut entry_module_to_entry_chunk: FxHashMap<ModuleIdx, ChunkIdx> =
       FxHashMap::with_capacity(self.link_output.entries.len());
-
+    let input_base = ArcStr::from(
+      self
+        .get_common_dir_of_all_modules(self.link_output.module_table.modules.as_vec())
+        .unwrap_or_default(),
+    );
     if self.options.preserve_modules {
       let modules_len = self
         .link_output
@@ -70,6 +75,7 @@ impl GenerateStage<'_> {
             module: module.idx,
           },
           module.is_included(),
+          input_base.clone(),
         ));
         chunk_graph.add_module_to_chunk(module.idx, chunk);
         // bits_to_chunk.insert(bits, chunk); // This line is intentionally commented out because `bits_to_chunk` is not used in this loop. It is updated elsewhere in the `init_entry_point` and `split_chunks` methods.
@@ -81,8 +87,14 @@ impl GenerateStage<'_> {
         &mut bits_to_chunk,
         &mut entry_module_to_entry_chunk,
         entries_len,
+        &input_base,
       );
-      self.split_chunks(&mut index_splitting_info, &mut chunk_graph, &mut bits_to_chunk);
+      self.split_chunks(
+        &mut index_splitting_info,
+        &mut chunk_graph,
+        &mut bits_to_chunk,
+        &input_base,
+      );
     }
 
     // Sort modules in each chunk by execution order
@@ -167,12 +179,37 @@ impl GenerateStage<'_> {
     chunk_graph
   }
 
+  pub fn get_common_dir_of_all_modules(&self, modules: &[Module]) -> Option<String> {
+    let mut ret: Option<String> = None;
+    let iter = modules.iter().filter_map(|m| {
+      m.as_normal().and_then(|item| {
+        if !item.is_included() {
+          return None;
+        }
+        if self.options.preserve_modules || item.is_user_defined_entry {
+          Path::new(m.id()).is_absolute().then_some(m.id())
+        } else {
+          None
+        }
+      })
+    });
+    for id in iter {
+      if let Some(ref mut ret_id) = ret {
+        *ret_id = commondir::extract_longest_common_path(ret_id.as_str(), id);
+      } else {
+        ret = Some(id.to_string());
+      }
+    }
+    ret
+  }
+
   fn init_entry_point(
     &self,
     chunk_graph: &mut ChunkGraph,
     bits_to_chunk: &mut FxHashMap<BitSet, ChunkIdx>,
     entry_module_to_entry_chunk: &mut FxHashMap<ModuleIdx, ChunkIdx>,
     entries_len: u32,
+    input_base: &ArcStr,
   ) {
     // Create chunk for each static and dynamic entry
     for (entry_index, entry_point) in self.link_output.entries.iter().enumerate() {
@@ -194,6 +231,7 @@ impl GenerateStage<'_> {
           module: entry_point.id,
         },
         self.link_output.lived_entry_points.contains(&entry_point.id),
+        input_base.clone(),
       ));
       bits_to_chunk.insert(bits, chunk);
       entry_module_to_entry_chunk.insert(entry_point.id, chunk);
@@ -204,6 +242,7 @@ impl GenerateStage<'_> {
     index_splitting_info: &mut IndexSplittingInfo,
     chunk_graph: &mut ChunkGraph,
     bits_to_chunk: &mut FxHashMap<BitSet, ChunkIdx>,
+    input_base: &ArcStr,
   ) {
     // Determine which modules belong to which chunk. A module could belong to multiple chunks.
     self.link_output.entries.iter().enumerate().for_each(|(i, entry_point)| {
@@ -225,7 +264,12 @@ impl GenerateStage<'_> {
     let mut module_to_assigned: IndexVec<ModuleIdx, bool> =
       oxc_index::index_vec![false; self.link_output.module_table.modules.len()];
 
-    self.apply_advanced_chunks(index_splitting_info, &mut module_to_assigned, chunk_graph);
+    self.apply_advanced_chunks(
+      index_splitting_info,
+      &mut module_to_assigned,
+      chunk_graph,
+      input_base,
+    );
 
     // 1. Assign modules to corresponding chunks
     // 2. Create shared chunks to store modules that belong to multiple chunks.
@@ -251,7 +295,16 @@ impl GenerateStage<'_> {
       if let Some(chunk_id) = bits_to_chunk.get(bits).copied() {
         chunk_graph.add_module_to_chunk(normal_module.idx, chunk_id);
       } else {
-        let chunk = Chunk::new(None, None, None, bits.clone(), vec![], ChunkKind::Common, true);
+        let chunk = Chunk::new(
+          None,
+          None,
+          None,
+          bits.clone(),
+          vec![],
+          ChunkKind::Common,
+          true,
+          input_base.clone(),
+        );
         let chunk_id = chunk_graph.add_chunk(chunk);
         chunk_graph.add_module_to_chunk(normal_module.idx, chunk_id);
         bits_to_chunk.insert(bits.clone(), chunk_id);

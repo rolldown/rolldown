@@ -26,6 +26,7 @@ napi = { workspace = true }
 napi-derive = { workspace = true }
 oxc = { workspace = true }
 oxc_parser_napi = { workspace = true }
+oxc_resolver_napi = { workspace = true }
 oxc_transform_napi = { workspace = true }
 rolldown = { workspace = true }
 rolldown_common = { workspace = true }

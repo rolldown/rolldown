@@ -1394,6 +1394,8 @@ dependencies = [
  "ctor",
  "napi-build",
  "napi-sys",
+ "serde",
+ "serde_json",
  "tokio",
 ]
 
@@ -1976,6 +1978,19 @@ dependencies = [
 ]
 
 [[package]]
+name = "oxc_resolver_napi"
+version = "9.0.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "20cc7031cfc060acc8dd516a61128040fea886b03e9141b735a55b5145973e92"
+dependencies = [
+ "napi",
+ "napi-build",
+ "napi-derive",
+ "oxc_resolver",
+ "tracing-subscriber",
+]
+
+[[package]]
 name = "oxc_semantic"
 version = "0.69.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2520,6 +2535,7 @@ dependencies = [
  "napi-derive",
  "oxc",
  "oxc_parser_napi",
+ "oxc_resolver_napi",
  "oxc_transform_napi",
  "rolldown",
  "rolldown_common",

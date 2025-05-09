@@ -25,6 +25,7 @@ pub mod parallel_js_plugin_registry;
 pub mod types;
 pub mod utils;
 pub use oxc_parser_napi;
+pub use oxc_resolver_napi::{ResolveResult, sync as resolve};
 pub use oxc_transform_napi;
 mod generated;
 pub mod watcher;

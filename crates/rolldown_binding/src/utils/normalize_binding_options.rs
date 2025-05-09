@@ -358,6 +358,8 @@ pub fn normalize_binding_options(
     mark_module_loaded,
     log_level: Some(input_options.log_level.into()),
     on_log,
+    // TODO: binding
+    preserve_modules: None,
   };
 
   #[cfg(not(target_family = "wasm"))]

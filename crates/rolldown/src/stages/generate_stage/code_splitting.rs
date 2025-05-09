@@ -41,82 +41,48 @@ impl GenerateStage<'_> {
 
     let mut entry_module_to_entry_chunk: FxHashMap<ModuleIdx, ChunkIdx> =
       FxHashMap::with_capacity(self.link_output.entries.len());
-    // Create chunk for each static and dynamic entry
-    for (entry_index, entry_point) in self.link_output.entries.iter().enumerate() {
-      let count: u32 = entry_index.try_into().expect("Too many entries, u32 overflowed.");
-      let mut bits = BitSet::new(entries_len);
-      bits.set_bit(count);
-      let Module::Normal(module) = &self.link_output.module_table.modules[entry_point.id] else {
-        continue;
-      };
-      let chunk = chunk_graph.add_chunk(Chunk::new(
-        entry_point.name.clone(),
-        entry_point.reference_id.clone(),
-        entry_point.file_name.clone(),
-        bits.clone(),
-        vec![],
-        ChunkKind::EntryPoint {
-          is_user_defined: module.is_user_defined_entry,
-          bit: count,
-          module: entry_point.id,
-        },
-        self.link_output.lived_entry_points.contains(&entry_point.id),
-      ));
-      bits_to_chunk.insert(bits, chunk);
-      entry_module_to_entry_chunk.insert(entry_point.id, chunk);
-    }
 
-    // Determine which modules belong to which chunk. A module could belong to multiple chunks.
-    self.link_output.entries.iter().enumerate().for_each(|(i, entry_point)| {
-      if self.options.is_hmr_enabled() {
-        // If HMR is enabled, we need to make sure it belongs to at least one chunk even if no module reaches it.
-        self.determine_reachable_modules_for_entry(
-          self.link_output.runtime.id(),
-          i.try_into().expect("Too many entries, u32 overflowed."),
-          &mut index_splitting_info,
-        );
+    if self.options.preserve_modules {
+      let modules_len = self
+        .link_output
+        .module_table
+        .modules
+        .len()
+        .try_into()
+        .expect("Entry length exceeds u32::MAX");
+      for (idx, module) in self.link_output.module_table.modules.iter_enumerated() {
+        let Module::Normal(module) = module else {
+          continue;
+        };
+
+        let count = idx.raw();
+        let mut bits = BitSet::new(modules_len);
+        bits.set_bit(count);
+        let chunk = chunk_graph.add_chunk(Chunk::new(
+          None,
+          None,
+          None,
+          bits.clone(),
+          vec![],
+          ChunkKind::EntryPoint {
+            is_user_defined: module.is_user_defined_entry,
+            bit: count,
+            module: module.idx,
+          },
+          module.is_included(),
+        ));
+        chunk_graph.add_module_to_chunk(module.idx, chunk);
+        // bits_to_chunk.insert(bits, chunk); // This line is intentionally commented out because `bits_to_chunk` is not used in this loop. It is updated elsewhere in the `init_entry_point` and `split_chunks` methods.
+        entry_module_to_entry_chunk.insert(module.idx, chunk);
       }
-      self.determine_reachable_modules_for_entry(
-        entry_point.id,
-        i.try_into().expect("Too many entries, u32 overflowed."),
-        &mut index_splitting_info,
+    } else {
+      self.init_entry_point(
+        &mut chunk_graph,
+        &mut bits_to_chunk,
+        &mut entry_module_to_entry_chunk,
+        entries_len,
       );
-    });
-
-    let mut module_to_assigned: IndexVec<ModuleIdx, bool> =
-      oxc_index::index_vec![false; self.link_output.module_table.modules.len()];
-
-    self.apply_advanced_chunks(&index_splitting_info, &mut module_to_assigned, &mut chunk_graph);
-
-    // 1. Assign modules to corresponding chunks
-    // 2. Create shared chunks to store modules that belong to multiple chunks.
-    for normal_module in self.link_output.module_table.modules.iter().filter_map(Module::as_normal)
-    {
-      if !normal_module.meta.is_included() {
-        continue;
-      }
-
-      if module_to_assigned[normal_module.idx] {
-        continue;
-      }
-
-      module_to_assigned[normal_module.idx] = true;
-
-      let bits = &index_splitting_info[normal_module.idx].bits;
-      debug_assert!(
-        !bits.is_empty(),
-        "Empty bits means the module is not reachable, so it should bail out with `is_included: false` {:?}",
-        normal_module.stable_id
-      );
-
-      if let Some(chunk_id) = bits_to_chunk.get(bits).copied() {
-        chunk_graph.add_module_to_chunk(normal_module.idx, chunk_id);
-      } else {
-        let chunk = Chunk::new(None, None, None, bits.clone(), vec![], ChunkKind::Common, true);
-        let chunk_id = chunk_graph.add_chunk(chunk);
-        chunk_graph.add_module_to_chunk(normal_module.idx, chunk_id);
-        bits_to_chunk.insert(bits.clone(), chunk_id);
-      }
+      self.split_chunks(&mut index_splitting_info, &mut chunk_graph, &mut bits_to_chunk);
     }
 
     // Sort modules in each chunk by execution order
@@ -199,6 +165,98 @@ impl GenerateStage<'_> {
     chunk_graph.entry_module_to_entry_chunk = entry_module_to_entry_chunk;
 
     chunk_graph
+  }
+
+  fn init_entry_point(
+    &self,
+    chunk_graph: &mut ChunkGraph,
+    bits_to_chunk: &mut FxHashMap<BitSet, ChunkIdx>,
+    entry_module_to_entry_chunk: &mut FxHashMap<ModuleIdx, ChunkIdx>,
+    entries_len: u32,
+  ) {
+    // Create chunk for each static and dynamic entry
+    for (entry_index, entry_point) in self.link_output.entries.iter().enumerate() {
+      let count: u32 = entry_index.try_into().expect("Too many entries, u32 overflowed.");
+      let mut bits = BitSet::new(entries_len);
+      bits.set_bit(count);
+      let Module::Normal(module) = &self.link_output.module_table.modules[entry_point.id] else {
+        continue;
+      };
+      let chunk = chunk_graph.add_chunk(Chunk::new(
+        entry_point.name.clone(),
+        entry_point.reference_id.clone(),
+        entry_point.file_name.clone(),
+        bits.clone(),
+        vec![],
+        ChunkKind::EntryPoint {
+          is_user_defined: module.is_user_defined_entry,
+          bit: count,
+          module: entry_point.id,
+        },
+        self.link_output.lived_entry_points.contains(&entry_point.id),
+      ));
+      bits_to_chunk.insert(bits, chunk);
+      entry_module_to_entry_chunk.insert(entry_point.id, chunk);
+    }
+  }
+  fn split_chunks(
+    &self,
+    index_splitting_info: &mut IndexSplittingInfo,
+    chunk_graph: &mut ChunkGraph,
+    bits_to_chunk: &mut FxHashMap<BitSet, ChunkIdx>,
+  ) {
+    // Determine which modules belong to which chunk. A module could belong to multiple chunks.
+    self.link_output.entries.iter().enumerate().for_each(|(i, entry_point)| {
+      if self.options.is_hmr_enabled() {
+        // If HMR is enabled, we need to make sure it belongs to at least one chunk even if no module reaches it.
+        self.determine_reachable_modules_for_entry(
+          self.link_output.runtime.id(),
+          i.try_into().expect("Too many entries, u32 overflowed."),
+          index_splitting_info,
+        );
+      }
+      self.determine_reachable_modules_for_entry(
+        entry_point.id,
+        i.try_into().expect("Too many entries, u32 overflowed."),
+        index_splitting_info,
+      );
+    });
+
+    let mut module_to_assigned: IndexVec<ModuleIdx, bool> =
+      oxc_index::index_vec![false; self.link_output.module_table.modules.len()];
+
+    self.apply_advanced_chunks(index_splitting_info, &mut module_to_assigned, chunk_graph);
+
+    // 1. Assign modules to corresponding chunks
+    // 2. Create shared chunks to store modules that belong to multiple chunks.
+    for normal_module in self.link_output.module_table.modules.iter().filter_map(Module::as_normal)
+    {
+      if !normal_module.meta.is_included() {
+        continue;
+      }
+
+      if module_to_assigned[normal_module.idx] {
+        continue;
+      }
+
+      module_to_assigned[normal_module.idx] = true;
+
+      let bits = &index_splitting_info[normal_module.idx].bits;
+      debug_assert!(
+        !bits.is_empty(),
+        "Empty bits means the module is not reachable, so it should bail out with `is_included: false` {:?}",
+        normal_module.stable_id
+      );
+
+      if let Some(chunk_id) = bits_to_chunk.get(bits).copied() {
+        chunk_graph.add_module_to_chunk(normal_module.idx, chunk_id);
+      } else {
+        let chunk = Chunk::new(None, None, None, bits.clone(), vec![], ChunkKind::Common, true);
+        let chunk_id = chunk_graph.add_chunk(chunk);
+        chunk_graph.add_module_to_chunk(normal_module.idx, chunk_id);
+        bits_to_chunk.insert(bits.clone(), chunk_id);
+      }
+    }
   }
 
   fn determine_reachable_modules_for_entry(

@@ -27,9 +27,11 @@
     "build:all": "npm run build:esm && npm run build:cjs",
     "build:esm": "tsc -p ./tsconfig.esm.json",
     "build:cjs": "tsc -p ./tsconfig.cjs.json",
-    "test": "vitest"
+    "test": "vitest --typecheck"
   },
   "devDependencies": {
+    "@types/picomatch": "^4.0.0",
+    "picomatch": "^4.0.2",
     "vitest": "^3.0.1"
   }
 }

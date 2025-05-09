@@ -1,6 +1,11 @@
 // cSpell:ignore fooa, afoo
+import picomatch from 'picomatch';
 import { describe, expect, test } from 'vitest';
-import { exactRegex, prefixRegex } from './simple-filters.js';
+import {
+  exactRegex,
+  makeIdFiltersToMatchWithQuery,
+  prefixRegex,
+} from './simple-filters.js';
 
 describe('exactRegex', () => {
   test('supports without flag parameter', () => {
@@ -61,5 +66,65 @@ describe('prefixRegex', () => {
     expect(regex.test('foo(bar\\)')).toBe(false);
     expect(regex.test('foo(bar)a')).toBe(true);
     expect(regex.test('afoo(bar)')).toBe(false);
+  });
+});
+
+describe('makeIdFiltersToMatchWithQuery', () => {
+  function expectWithAnyQuery(
+    matcher: (path: string) => boolean,
+    path: string,
+    expected: boolean,
+  ) {
+    expect(matcher(path), path).toBe(expected);
+    expect(matcher(`${path}?foo`), `${path}?foo`).toBe(expected);
+    expect(matcher(`${path}?foo=bar`), `${path}?foo=bar`).toBe(expected);
+  }
+
+  test('supports glob patterns', () => {
+    const input = '/foo/**/*.js';
+    const output = makeIdFiltersToMatchWithQuery(input);
+
+    const matcher = picomatch(output);
+    expectWithAnyQuery(matcher, '/foo/bar.js', true);
+    expectWithAnyQuery(matcher, '/foo/bar.ts', false);
+  });
+
+  test('supports regex patterns without `$`', () => {
+    const input = /\/foo\//;
+    const output = makeIdFiltersToMatchWithQuery(input);
+
+    const matcher = path => output.test(path);
+    expectWithAnyQuery(matcher, '/foo/bar.js', true);
+    expectWithAnyQuery(matcher, '/bar/bar.ts', false);
+  });
+
+  test('supports regex patterns with `$`', () => {
+    const input = /\/foo\/.*\.js$/;
+    const output = makeIdFiltersToMatchWithQuery(input);
+
+    const matcher = path => output.test(path);
+    expectWithAnyQuery(matcher, '/foo/bar.js', true);
+    expectWithAnyQuery(matcher, '/foo/bar.ts', false);
+  });
+
+  test('supports regex patterns with multiple `$`', () => {
+    const input = /\/foo\/[^/]*(\/src|\/dist\/[^/]*\.js$|$)/;
+    const output = makeIdFiltersToMatchWithQuery(input);
+
+    const matcher = path => output.test(path);
+    expectWithAnyQuery(matcher, '/foo/bar/src/foo', true);
+    expectWithAnyQuery(matcher, '/foo/bar/dist/foo.js', true);
+    expectWithAnyQuery(matcher, '/foo/bar/dist/foo.ts', false);
+    expectWithAnyQuery(matcher, '/foo/bar', true);
+    expectWithAnyQuery(matcher, '/foo/bar/', false);
+  });
+
+  test('supports regex patterns with `\\$`', () => {
+    const input = /\/foo\/\$.*\.js$/;
+    const output = makeIdFiltersToMatchWithQuery(input);
+
+    const matcher = path => output.test(path);
+    expectWithAnyQuery(matcher, '/foo/$bar.js', true);
+    expectWithAnyQuery(matcher, '/foo/$bar.ts', false);
   });
 });

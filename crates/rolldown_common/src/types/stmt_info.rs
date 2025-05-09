@@ -8,7 +8,7 @@ use crate::{ImportRecordIdx, SymbolOrMemberExprRef, SymbolRef};
 pub struct StmtInfos {
   pub infos: IndexVec<StmtInfoIdx, StmtInfo>,
   // only for top level symbols
-  pub symbol_ref_to_declared_stmt_idx: FxHashMap<SymbolRef, Vec<StmtInfoIdx>>,
+  symbol_ref_to_declared_stmt_idx: FxHashMap<SymbolRef, Vec<StmtInfoIdx>>,
 }
 
 impl StmtInfos {

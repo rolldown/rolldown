@@ -41,6 +41,7 @@ impl LinkStage<'_> {
         // - Mutating and parallel reading is in different memory locations
         let stmt_infos = unsafe { &mut *(addr_of!(importer.stmt_infos).cast_mut()) };
         let importer_side_effect = unsafe { &mut *(addr_of!(importer.side_effects).cast_mut()) };
+        let mut symbols_to_be_declared = vec![];
 
         stmt_infos.infos.iter_mut_enumerated().for_each(|(stmt_info_idx, stmt_info)| {
           stmt_info.import_records.iter().for_each(|rec_id| {
@@ -165,12 +166,7 @@ impl LinkStage<'_> {
                             .referenced_symbols
                             .push(self.runtime.resolve_symbol("__toESM").into());
 
-                          stmt_info.declared_symbols.push(rec.namespace_ref);
-                          stmt_infos
-                            .symbol_ref_to_declared_stmt_idx
-                            .entry(rec.namespace_ref)
-                            .or_default()
-                            .push(stmt_info_idx);
+                          symbols_to_be_declared.push((rec.namespace_ref, stmt_info_idx));
                           rec.namespace_ref.set_name(
                             &mut symbols.lock().unwrap(),
                             &concat_string!("import_", importee.repr_name),
@@ -259,6 +255,11 @@ impl LinkStage<'_> {
             stmt_info.referenced_symbols.push(self.runtime.resolve_symbol("__name").into());
           }
         });
+
+        symbols_to_be_declared.into_iter().for_each(|(symbol_ref, idx)| {
+          stmt_infos.declare_symbol_for_stmt(idx, symbol_ref);
+        });
+
         (importer_idx, record_meta_pairs)
       })
       .collect::<Vec<_>>();

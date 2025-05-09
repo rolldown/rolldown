@@ -3,9 +3,8 @@
     "input": [
       {
         "name": "main",
-        "import": "./main.mjs",
+        "import": "./main.mjs"
       }
     ]
-  },
-  "expectExecuted": false
+  }
 }

@@ -22,9 +22,6 @@
   "files": [
     "dist"
   ],
-  "devDependencies": {
-    "rimraf": "^5.0.0"
-  },
   "scripts": {
     "build": "node build.mjs",
     "build:all": "npm run build:esm && npm run build:cjs",

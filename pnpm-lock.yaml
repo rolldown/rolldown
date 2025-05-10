@@ -24,6 +24,9 @@ catalogs:
     oxc-transform:
       specifier: 0.72.1
       version: 0.72.1
+    rolldown-plugin-dts:
+      specifier: ^0.13.6
+      version: 0.13.6
     tsdown:
       specifier: 0.12.5
       version: 0.12.5
@@ -295,7 +298,7 @@ importers:
         version: 4.0.2
       tsdown:
         specifier: 'catalog:'
-        version: 0.12.5(oxc-resolver@9.0.2)(typescript@5.8.3)
+        version: 0.12.5(typescript@5.8.3)
       vitest:
         specifier: ^3.0.1
         version: 3.1.3(@types/debug@4.1.12)(@types/node@22.15.24)(jiti@2.4.2)(lightningcss@1.30.1)(terser@5.39.2)(tsx@4.19.4)(yaml@2.8.0)
@@ -354,12 +357,9 @@ importers:
       remeda:
         specifier: ^2.10.0
         version: 2.21.6
-      rolldown:
-        specifier: workspace:*
-        version: 'link:'
       rolldown-plugin-dts:
-        specifier: ^0.11.4
-        version: 0.11.4(rolldown@packages+rolldown)(typescript@5.8.3)
+        specifier: 'catalog:'
+        version: 0.13.6(oxc-resolver@9.0.2)(rolldown@1.0.0-beta.10-commit.ac4e5db)(typescript@5.8.3)
       rollup:
         specifier: ^4.18.0
         version: 4.41.0
@@ -3743,10 +3743,6 @@ packages:
     resolution: {integrity: sha512-aNJhOQsUS5D9k/YkMUaLLniIpxEBUR0ZwT0RXGQV5YpaGwE2nx6FcKuVkC6wRaZXTr8X0NpV/2HFbcvNuI2jtA==}
     hasBin: true
 
-  dts-resolver@1.2.0:
-    resolution: {integrity: sha512-+xNF7raXYI1E3IFB+f3JqvoKYFI8R+1Mh9mpI75yNm3F5XuiC6ErEXe2Lqh9ach+4MQ1tOefzjxulhWGVclYbg==}
-    engines: {node: '>=20.18.0'}
-
   dts-resolver@2.0.1:
     resolution: {integrity: sha512-Pe2kqaQTNVxleYpt9Q9658fn6rEpoZbMbDpEBbcU6pnuGM3Q0IdM+Rv67kN6qcyp8Bv2Uv9NYy5Y1rG1LSgfoQ==}
     engines: {node: '>=20.18.0'}
@@ -5094,19 +5090,6 @@ packages:
     resolution: {integrity: sha512-9dkvaxAsk/xNXSJzMgFqqMCuFgt2+KsOFek3TMLfo8NCPfWpBmqwyNn5Y+NX56QUYfCtsyhF3ayiboEoUmJk/A==}
     engines: {node: 20 || >=22}
     hasBin: true
-
-  rolldown-plugin-dts@0.11.4:
-    resolution: {integrity: sha512-nPPrcdIcvFk/k7FbKsjG67s0MBKZBaEVE3rt68RoqX35nFZ4N2VuuZnH35CDPZ0zOkRdAMxPrNvJ1v2v7/7uaA==}
-    engines: {node: '>=20.18.0'}
-    peerDependencies:
-      rolldown: ^1.0.0-beta.8-commit.534fde3
-      typescript: ^5.0.0
-      vue-tsc: ~2.2.0
-    peerDependenciesMeta:
-      typescript:
-        optional: true
-      vue-tsc:
-        optional: true
 
   rolldown-plugin-dts@0.13.6:
     resolution: {integrity: sha512-eeiRAhGWK/v3hFFSWQ1FeE+tvRIIKxGH7uA/THMC1FD3HuTtltxx79+8TqAuD4msfgApJyB9k4Gu3YSWPwkTIQ==}
@@ -8629,7 +8612,7 @@ snapshots:
 
   ast-kit@2.0.0:
     dependencies:
-      '@babel/parser': 7.27.2
+      '@babel/parser': 7.27.4
       pathe: 2.0.3
 
   astring@1.9.0: {}
@@ -9040,11 +9023,6 @@ snapshots:
       '@dprint/linux-x64-musl': 0.50.0
       '@dprint/win32-arm64': 0.50.0
       '@dprint/win32-x64': 0.50.0
-
-  dts-resolver@1.2.0:
-    dependencies:
-      oxc-resolver: 9.0.2
-      pathe: 2.0.3
 
   dts-resolver@2.0.1(oxc-resolver@9.0.2):
     optionalDependencies:
@@ -10543,22 +10521,24 @@ snapshots:
       glob: 11.0.2
       package-json-from-dist: 1.0.1
 
-  rolldown-plugin-dts@0.11.4(rolldown@packages+rolldown)(typescript@5.8.3):
+  rolldown-plugin-dts@0.13.6(oxc-resolver@9.0.2)(rolldown@1.0.0-beta.10-commit.ac4e5db)(typescript@5.8.3):
     dependencies:
-      '@babel/generator': 7.27.1
-      '@babel/parser': 7.27.2
-      '@babel/types': 7.27.1
+      '@babel/generator': 7.27.3
+      '@babel/parser': 7.27.4
+      '@babel/types': 7.27.3
       ast-kit: 2.0.0
+      birpc: 2.3.0
       debug: 4.4.1(supports-color@8.1.1)
-      dts-resolver: 1.2.0
-      get-tsconfig: 4.10.0
-      rolldown: link:packages/rolldown
+      dts-resolver: 2.0.1(oxc-resolver@9.0.2)
+      get-tsconfig: 4.10.1
+      rolldown: 1.0.0-beta.10-commit.ac4e5db
     optionalDependencies:
       typescript: 5.8.3
     transitivePeerDependencies:
+      - oxc-resolver
       - supports-color
 
-  rolldown-plugin-dts@0.13.6(oxc-resolver@9.0.2)(rolldown@1.0.0-beta.10-commit.87188ed)(typescript@5.8.3):
+  rolldown-plugin-dts@0.13.6(rolldown@1.0.0-beta.10-commit.87188ed)(typescript@5.8.3):
     dependencies:
       '@babel/generator': 7.27.3
       '@babel/parser': 7.27.4
@@ -10583,7 +10563,7 @@ snapshots:
       picomatch: 4.0.2
       postcss: 8.5.3
       rolldown: 1.0.0-beta.10-commit.ac4e5db
-      tinyglobby: 0.2.13
+      tinyglobby: 0.2.14
     optionalDependencies:
       '@types/node': 22.15.24
       esbuild: 0.25.4
@@ -10618,7 +10598,7 @@ snapshots:
       '@oxc-project/runtime': 0.72.1
       '@oxc-project/types': 0.72.1
       '@rolldown/pluginutils': 1.0.0-beta.10-commit.ac4e5db
-      ansis: 4.0.0
+      ansis: 4.1.0
     optionalDependencies:
       '@rolldown/binding-darwin-arm64': 1.0.0-beta.10-commit.ac4e5db
       '@rolldown/binding-darwin-x64': 1.0.0-beta.10-commit.ac4e5db
@@ -10994,7 +10974,7 @@ snapshots:
 
   trough@2.2.0: {}
 
-  tsdown@0.12.5(oxc-resolver@9.0.2)(typescript@5.8.3):
+  tsdown@0.12.5(typescript@5.8.3):
     dependencies:
       ansis: 4.1.0
       cac: 6.7.14
@@ -11004,7 +10984,7 @@ snapshots:
       empathic: 1.1.0
       hookable: 5.5.3
       rolldown: 1.0.0-beta.10-commit.87188ed
-      rolldown-plugin-dts: 0.13.6(oxc-resolver@9.0.2)(rolldown@1.0.0-beta.10-commit.87188ed)(typescript@5.8.3)
+      rolldown-plugin-dts: 0.13.6(rolldown@1.0.0-beta.10-commit.87188ed)(typescript@5.8.3)
       semver: 7.7.2
       tinyexec: 1.0.1
       tinyglobby: 0.2.14

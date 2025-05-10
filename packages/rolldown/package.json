@@ -34,6 +34,10 @@
       "require": "./dist/index.cjs",
       "import": "./dist/index.mjs"
     },
+    "./config": {
+      "require": "./dist/config.cjs",
+      "import": "./dist/config.mjs"
+    },
     "./experimental": {
       "require": "./dist/experimental-index.cjs",
       "import": "./dist/experimental-index.mjs"

@@ -5,9 +5,9 @@ import { onExit } from 'signal-exit';
 import type { ConfigExport, RolldownOutput } from '../..';
 import { rolldown } from '../../api/rolldown';
 import { watch as rolldownWatch } from '../../api/watch';
+import { loadConfig } from '../../utils/load-config';
 import { arraify } from '../../utils/misc';
 import type { NormalizedCliOptions } from '../arguments/normalize';
-import { loadConfig } from '../load-config';
 import { logger } from '../logger';
 
 export async function bundleWithConfig(

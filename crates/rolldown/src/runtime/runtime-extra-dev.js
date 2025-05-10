@@ -125,7 +125,7 @@ class DevRuntime {
   createEsmInitializer = (fn, res) => () => (fn && (res = fn(fn = 0)), res)
   // __commonJSMin
   createCjsInitializer = (cb, mod) => () => (mod || cb((mod = { exports: {} }).exports, mod), mod.exports)
-  // @ts-expect-error it is exits
++  // @ts-expect-error it exists
   __toESM = __toESM
 }
 

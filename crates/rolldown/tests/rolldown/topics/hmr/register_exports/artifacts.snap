@@ -16,19 +16,19 @@ var require_cjs = __commonJS({ "cjs.js"(exports, module) {
 
 //#endregion
 //#region esm.js
-const esm_hot = __rolldown_runtime__.createModuleHotContext("esm.js");
-__rolldown_runtime__.registerModule("esm.js", {
-	value: () => value,
-	__esModule: () => true
-});
 var esm_exports = {};
 __export(esm_exports, { value: () => value });
+const esm_hot = __rolldown_runtime__.createModuleHotContext("esm.js");
+__rolldown_runtime__.__toCommonJS(esm_exports);
+__rolldown_runtime__.registerModule("esm.js", esm_exports);
 const value = "main";
 
 //#endregion
 //#region main.js
+var main_exports = {};
 const main_hot = __rolldown_runtime__.createModuleHotContext("main.js");
-__rolldown_runtime__.registerModule("main.js", { __esModule: () => true });
+__rolldown_runtime__.__toCommonJS(main_exports);
+__rolldown_runtime__.registerModule("main.js", main_exports);
 var import_cjs = __toESM(require_cjs());
 console.log(import_cjs, esm_exports);
 

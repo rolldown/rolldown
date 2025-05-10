@@ -4659,11 +4659,7 @@ expression: output
 
 # tests/rolldown/issues/4129
 
-<<<<<<< HEAD
-- main-!~{000}~.js => main-BwmD_lXY.js
-=======
-- main-!~{000}~.js => main-D03iA8DC.js
->>>>>>> 7100bbdbf (fix: test)
+- main-!~{000}~.js => main-DHp4Ws7A.js
 
 # tests/rolldown/issues/4196
 
@@ -5214,11 +5210,7 @@ expression: output
 
 # tests/rolldown/topics/hmr/register_exports
 
-<<<<<<< HEAD
-- main-!~{000}~.js => main-C6iYd5DX.js
-=======
-- main-!~{000}~.js => main-CwxuJdxp.js
->>>>>>> 7100bbdbf (fix: test)
+- main-!~{000}~.js => main-BdEZr9rY.js
 
 # tests/rolldown/topics/import_meta_url_dirname_filename_polyfill/node_cjs
 

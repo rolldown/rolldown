@@ -155,7 +155,7 @@ impl<'ast> HmrAstFinalizer<'_, 'ast> {
     }
   }
 
-  fn crate_binding_name(importee: &Module) -> String {
+  fn create_binding_name(importee: &Module) -> String {
     format!("import_{}", importee.repr_name())
   }
 

@@ -49,6 +49,7 @@ const ExternalSchema = v.union([
 const ModuleTypesSchema = v.record(
   v.string(),
   v.union([
+    v.literal('asset'),
     v.literal('base64'),
     v.literal('binary'),
     v.literal('css'),

@@ -1,4 +1,7 @@
-use crate::pattern_filter::{StringOrRegex, StringOrRegexMatchKind};
+use crate::{
+  clean_url::clean_url,
+  pattern_filter::{StringOrRegex, StringOrRegexMatchKind},
+};
 
 #[derive(Debug)]
 pub enum FilterExpr {
@@ -7,6 +10,7 @@ pub enum FilterExpr {
   Not(Box<FilterExpr>),
   Code(StringOrRegex),
   Id(StringOrRegex),
+  CleanUrl(Box<FilterExpr>),
   ModuleType(String),
 }
 
@@ -39,6 +43,9 @@ pub fn filter_expr_interpreter(
     }
     FilterExpr::ModuleType(module_type_filter) => {
       module_type.as_ref().is_some_and(|module_type| module_type == module_type_filter)
+    }
+    FilterExpr::CleanUrl(expr) => {
+      filter_expr_interpreter(expr, id.map(clean_url), code, module_type, cwd)
     }
   }
 }
@@ -82,6 +89,7 @@ pub enum Token {
   Not,
   Include,
   Exclude,
+  CleanUrl,
 }
 
 // TODO: better error handling
@@ -117,6 +125,10 @@ pub fn parse(mut tokens: Vec<Token>) -> FilterExprKind {
       }
       Token::Exclude => {
         unreachable!("Exclude token should not be in the expression");
+      }
+      Token::CleanUrl => {
+        let arg = rec(tokens)?;
+        Some(FilterExpr::CleanUrl(Box::new(arg)))
       }
     }
   }

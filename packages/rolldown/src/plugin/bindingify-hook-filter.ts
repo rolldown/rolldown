@@ -155,6 +155,9 @@ function bindingifyFilterExprImpl(
     }
     case 'id': {
       list.push({ kind: 'Id', payload: expr.pattern });
+      if (expr.params.cleanUrl) {
+        list.push({ kind: 'CleanUrl' });
+      }
       break;
     }
     case 'moduleType': {

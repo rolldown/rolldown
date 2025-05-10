@@ -92,6 +92,7 @@ pub enum FilterTokenKind {
   Not,
   Include,
   Exclude,
+  CleanUrl,
 }
 
 impl From<BindingFilterToken> for Token {
@@ -115,6 +116,7 @@ impl From<BindingFilterToken> for Token {
       FilterTokenKind::Not => Token::Not,
       FilterTokenKind::Include => Token::Include,
       FilterTokenKind::Exclude => Token::Exclude,
+      FilterTokenKind::CleanUrl => Token::CleanUrl,
     }
   }
 }

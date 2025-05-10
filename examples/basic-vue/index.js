@@ -1,3 +1,3 @@
-import { createApp } from 'vue';
+import { a} from './utils.js';
 
-export default createApp({});
+console.log(`a: `, a)

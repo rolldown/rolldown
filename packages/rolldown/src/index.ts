@@ -96,11 +96,9 @@ import type {
 } from './types/rolldown-output';
 import type { ExistingRawSourceMap, SourceMapInput } from './types/sourcemap';
 import type { PartialNull } from './types/utils';
-import { defineConfig } from './utils/define-config';
-import { loadConfig } from './utils/load-config';
 
-export { build, defineConfig, loadConfig, rolldown, watch };
-export const VERSION: string = version;
+export * from './config';
+export { build, rolldown, watch };
 
 export type {
   AddonFunction,

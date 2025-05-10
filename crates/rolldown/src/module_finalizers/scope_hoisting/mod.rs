@@ -533,6 +533,7 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
           self.snippet.builder.expression_new(
             SPAN,
             self.snippet.builder.expression_identifier(SPAN, "URL"),
+            NONE,
             self.snippet.builder.vec_from_array([
               ast::Argument::StringLiteral(self.snippet.builder.alloc_string_literal(
                 SPAN,
@@ -552,7 +553,6 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
                 ),
               ),
             ]),
-            NONE,
           ),
           self.snippet.builder.identifier_name(SPAN, "href"),
           false,

@@ -1,18 +1,29 @@
 ---
 source: crates/rolldown_testing/src/integration_test.rs
-snapshot_kind: text
 ---
 # Errors
 
 ## PARSE_ERROR
 
 ```text
-[PARSE_ERROR] Error: Optional chaining cannot appear in the callee of new expressions
-   ╭─[ all_computed.ts:2:2 ]
+[PARSE_ERROR] Error: Expression must be enclosed in parentheses to be used as a decorator.
+   ╭─[ all_computed.ts:1:2 ]
+   │
+ 1 │ @x?.[_ + 'y']()
+   │  ───────┬──────  
+   │         ╰──────── 
+───╯
+
+```
+## PARSE_ERROR
+
+```text
+[PARSE_ERROR] Error: Invalid optional chain from new expression.
+   ╭─[ all_computed.ts:2:7 ]
    │
  2 │ @new y?.[_ + 'x']()
-   │  ──┬──  
-   │    ╰──── 
+   │       ─┬  
+   │        ╰── 
 ───╯
 
 ```

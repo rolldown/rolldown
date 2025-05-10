@@ -32,7 +32,7 @@ const bindingFileWasiBrowser = nodePath.resolve(
 
 const configs: BuildOptions[] = [
   withShared({
-    plugins: [patchBindingJs(), dts() as any],
+    plugins: [patchBindingJs(), dts()],
     output: {
       dir: outputDir,
       format: 'esm',
@@ -50,7 +50,7 @@ const configs: BuildOptions[] = [
     },
   }),
   withShared({
-    plugins: [dts({ emitDtsOnly: true }) as any],
+    plugins: [dts({ emitDtsOnly: true })],
     output: {
       dir: outputDir,
       format: 'esm',

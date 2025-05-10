@@ -11,26 +11,26 @@
   "publishConfig": {
     "access": "public"
   },
+  "main": "./dist/index.cjs",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
   "exports": {
     ".": {
-      "import": "./dist/esm/index.js",
-      "require": "./dist/cjs/index.js",
-      "types": "./dist/cjs/index.d.ts"
+      "import": "./dist/index.js",
+      "require": "./dist/index.cjs"
     }
   },
   "files": [
     "dist"
   ],
   "scripts": {
-    "build": "node build.mjs",
-    "build:all": "npm run build:esm && npm run build:cjs",
-    "build:esm": "tsc -p ./tsconfig.esm.json",
-    "build:cjs": "tsc -p ./tsconfig.cjs.json",
+    "build": "tsdown",
     "test": "vitest --typecheck"
   },
   "devDependencies": {
     "@types/picomatch": "^4.0.0",
     "picomatch": "^4.0.2",
-    "vitest": "^3.0.1"
+    "vitest": "^3.0.1",
+    "tsdown": "catalog:"
   }
 }

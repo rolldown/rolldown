@@ -24,9 +24,6 @@ catalogs:
     oxc-transform:
       specifier: 0.69.0
       version: 0.69.0
-    rolldown:
-      specifier: 1.0.0-beta.8-commit.534fde3
-      version: 1.0.0-beta.8-commit.534fde3
     rolldown-plugin-dts:
       specifier: ^0.11.4
       version: 0.11.4
@@ -382,11 +379,11 @@ importers:
         specifier: ^2.10.0
         version: 2.21.2
       rolldown:
-        specifier: 'catalog:'
-        version: 1.0.0-beta.8-commit.534fde3(@oxc-project/runtime@0.69.0)
+        specifier: workspace:*
+        version: 'link:'
       rolldown-plugin-dts:
         specifier: 'catalog:'
-        version: 0.11.4(rolldown@1.0.0-beta.8-commit.534fde3(@oxc-project/runtime@0.69.0))(typescript@5.8.3)
+        version: 0.11.4(rolldown@packages+rolldown)(typescript@5.8.3)
       rollup:
         specifier: ^4.18.0
         version: 4.37.0
@@ -12506,6 +12503,21 @@ snapshots:
       dts-resolver: 1.2.0
       get-tsconfig: 4.10.0
       rolldown: 1.0.0-beta.8-commit.534fde3(@oxc-project/runtime@0.69.0)
+    optionalDependencies:
+      typescript: 5.8.3
+    transitivePeerDependencies:
+      - supports-color
+
+  rolldown-plugin-dts@0.11.4(rolldown@packages+rolldown)(typescript@5.8.3):
+    dependencies:
+      '@babel/generator': 7.27.1
+      '@babel/parser': 7.27.2
+      '@babel/types': 7.27.1
+      ast-kit: 2.0.0
+      debug: 4.4.0(supports-color@8.1.1)
+      dts-resolver: 1.2.0
+      get-tsconfig: 4.10.0
+      rolldown: link:packages/rolldown
     optionalDependencies:
       typescript: 5.8.3
     transitivePeerDependencies:

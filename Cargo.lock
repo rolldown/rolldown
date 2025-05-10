@@ -1979,9 +1979,9 @@ dependencies = [
 
 [[package]]
 name = "oxc_resolver_napi"
-version = "9.0.0"
+version = "9.0.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "20cc7031cfc060acc8dd516a61128040fea886b03e9141b735a55b5145973e92"
+checksum = "9cfd9a6fb72375391728327088173ee71eb7305094c86faa073c723eda264bc9"
 dependencies = [
  "napi",
  "napi-build",

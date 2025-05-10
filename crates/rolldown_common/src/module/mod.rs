@@ -58,6 +58,13 @@ impl Module {
     }
   }
 
+  pub fn repr_name(&self) -> &str {
+    match self {
+      Module::Normal(v) => v.repr_name.as_str(),
+      Module::External(v) => v.identifier_name.as_str(),
+    }
+  }
+
   pub fn normal(v: NormalModule) -> Self {
     Module::Normal(Box::new(v))
   }

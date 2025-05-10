@@ -314,6 +314,7 @@ impl HmrManager {
           exports: oxc::allocator::Vec::new_in(fields.allocator),
           affected_module_idx_to_init_fn_name: &module_idx_to_init_fn_name,
           dependencies: FxIndexSet::default(),
+          imports: FxHashSet::default(),
         };
 
         finalizer.visit_program(fields.program);

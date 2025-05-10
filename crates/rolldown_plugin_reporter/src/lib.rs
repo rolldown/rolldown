@@ -2,6 +2,7 @@ mod utils;
 
 use std::{
   borrow::Cow,
+  fmt::Write as _,
   path::Path,
   sync::{
     Arc, RwLock,
@@ -10,18 +11,21 @@ use std::{
   time::{Duration, Instant},
 };
 
+use cow_utils::CowUtils;
 use rolldown_plugin::{HookUsage, Plugin, PluginContext};
 use sugar_path::SugarPath;
 
 #[derive(Debug)]
+#[allow(clippy::struct_excessive_bools)]
 pub struct ReporterPlugin {
+  assets_dir: String,
+  is_lib: bool,
   is_tty: bool,
   should_log_info: bool,
-  #[allow(dead_code)]
-  chunk_limit: bool,
+  chunk_limit: usize,
   chunk_count: AtomicU32,
   compressed_count: AtomicU32,
-  #[allow(dead_code)]
+  report_compressed_size: bool,
   has_compress_chunk: AtomicBool,
   has_rendered_chunk: AtomicBool,
   has_transformed: AtomicBool,
@@ -30,13 +34,24 @@ pub struct ReporterPlugin {
 }
 
 impl ReporterPlugin {
-  pub fn new(is_tty: bool, should_log_info: bool, chunk_limit: bool) -> Self {
+  #[allow(clippy::fn_params_excessive_bools)]
+  pub fn new(
+    is_tty: bool,
+    should_log_info: bool,
+    chunk_limit: usize,
+    report_compressed_size: bool,
+    assets_dir: String,
+    is_lib: bool,
+  ) -> Self {
     Self {
+      assets_dir,
+      is_lib,
       is_tty,
       should_log_info,
       chunk_limit,
       chunk_count: AtomicU32::new(0),
       compressed_count: AtomicU32::new(0),
+      report_compressed_size,
       has_compress_chunk: AtomicBool::new(false),
       has_rendered_chunk: AtomicBool::new(false),
       has_transformed: AtomicBool::new(false),
@@ -141,13 +156,165 @@ impl Plugin for ReporterPlugin {
     Ok(None)
   }
 
+  #[allow(clippy::too_many_lines)]
   async fn write_bundle(
     &self,
     _ctx: &PluginContext,
-    _args: &mut rolldown_plugin::HookWriteBundleArgs<'_>,
+    args: &mut rolldown_plugin::HookWriteBundleArgs<'_>,
   ) -> rolldown_plugin::HookNoopReturn {
     // TODO(shulaoda): support this warning
     // <https://github.com/vitejs/rolldown-vite/blob/9865a3a/packages/vite/src/node/plugins/reporter.ts#L255-L269>
+    if self.should_log_info {
+      let mut longest = 0;
+      let mut biggest_size = 0;
+      let mut biggest_map_size = 0;
+      let mut biggest_compress_size = 0;
+
+      let mut log_entries = Vec::with_capacity(args.bundle.len());
+      let mut has_compress_chunk =
+        self.report_compressed_size && self.has_compress_chunk.load(Ordering::Relaxed);
+
+      let mut get_compressed_size = |bytes: &[u8]| -> Option<usize> {
+        if self.report_compressed_size {
+          if self.should_log_info && !has_compress_chunk {
+            if self.is_tty {
+              utils::write_line("computing gzip size (0)...");
+            } else {
+              utils::log_info("computing gzip size...");
+            }
+            has_compress_chunk = true;
+            self.has_rendered_chunk.store(true, Ordering::Release);
+          }
+          utils::compute_gzip_size(bytes).inspect(|_| {
+            let compressed_count = self.compressed_count.fetch_add(1, Ordering::SeqCst);
+            if self.should_log_info && self.is_tty {
+              utils::write_line(&format!(
+                "computing gzip size ({})...",
+                itoa::Buffer::new().format(compressed_count)
+              ));
+            }
+          })
+        } else {
+          None
+        }
+      };
+
+      for output in &*args.bundle {
+        let log_entry = match output {
+          rolldown_common::Output::Chunk(chunk) => utils::LogEntry {
+            name: &chunk.filename,
+            size: chunk.code.len(),
+            group: utils::AssetGroup::JS,
+            map_size: chunk.map.as_ref().map(|m| m.to_json_string().len()),
+            compressed_size: get_compressed_size(chunk.code.as_bytes()),
+          },
+          rolldown_common::Output::Asset(asset) => {
+            if asset.filename.ends_with(".map") {
+              continue;
+            }
+
+            let is_css = asset.filename.ends_with(".css");
+            let group = if is_css { utils::AssetGroup::Css } else { utils::AssetGroup::Assets };
+            let is_compressible =
+              is_css || utils::COMPRESSIBLE_ASSETS.iter().any(|s| asset.filename.ends_with(s));
+
+            utils::LogEntry {
+              name: &asset.filename,
+              size: asset.source.as_bytes().len(),
+              group,
+              map_size: None,
+              compressed_size: if is_compressible {
+                get_compressed_size(asset.source.as_bytes())
+              } else {
+                None
+              },
+            }
+          }
+        };
+
+        if log_entry.name.len() > longest {
+          longest = log_entry.name.len();
+        }
+        if log_entry.size > biggest_size {
+          biggest_size = log_entry.size;
+        }
+        if let Some(size) = log_entry.map_size {
+          if size > biggest_map_size {
+            biggest_map_size = size;
+          }
+        }
+        if let Some(size) = log_entry.compressed_size {
+          if size > biggest_compress_size {
+            biggest_compress_size = size;
+          }
+        }
+
+        log_entries.push(log_entry);
+      }
+
+      if self.is_tty {
+        let _ = utils::clear_line();
+      }
+
+      let size_pad = utils::display_size(biggest_size).len();
+      let map_pad = utils::display_size(biggest_map_size).len();
+      let compress_pad = utils::display_size(biggest_compress_size).len();
+
+      let out_dir =
+        args.options.cwd.join(&args.options.out_dir).normalize().relative(&args.options.cwd);
+      let out_dir = out_dir.to_slash_lossy();
+
+      for group in utils::GROUPS {
+        let mut filtered = log_entries.iter().filter(|e| e.group == group).collect::<Vec<_>>();
+        if filtered.is_empty() {
+          continue;
+        }
+        filtered.sort_by(|a, b| a.size.cmp(&b.size));
+        for log_entry in filtered {
+          let mut info = String::new();
+          let _ = write!(&mut info, "\x1b[2m{out_dir}/\x1b[22m");
+
+          let is_asset = !self.is_lib && Path::new(log_entry.name).starts_with(&self.assets_dir);
+          if is_asset {
+            let _ = write!(&mut info, "\x1b[2m{}\x1b[22m", &self.assets_dir.cow_replace('\\', "/"));
+          }
+
+          let name = if is_asset {
+            let dir_len = self.assets_dir.len();
+            format!("{:pad$}", &log_entry.name[dir_len..], pad = longest + 2 - dir_len)
+          } else {
+            format!("{:pad$}", log_entry.name, pad = longest + 2)
+          };
+
+          let _ = match group {
+            utils::AssetGroup::JS => write!(&mut info, "\x1b[36m{name}\x1b[39m"),
+            utils::AssetGroup::Css => write!(&mut info, "\x1b[35m{name}\x1b[39m"),
+            utils::AssetGroup::Assets => write!(&mut info, "\x1b[32m{name}\x1b[39m"),
+          };
+
+          let size = utils::display_size(log_entry.size);
+          if group == utils::AssetGroup::JS && log_entry.size.div_ceil(1000) > self.chunk_limit {
+            let _ = write!(&mut info, "\x1b[33m{size:>size_pad$}\x1b[39m");
+          } else {
+            let _ = write!(&mut info, "\x1b[2m{size:>size_pad$}\x1b[22m");
+          }
+
+          if let Some(compressed_size) = log_entry.compressed_size {
+            let size = utils::display_size(compressed_size);
+            let _ = write!(&mut info, "\x1b[2m │ gzip: {size:>compress_pad$}\x1b[22m");
+          }
+
+          if let Some(map_size) = log_entry.map_size {
+            let size = utils::display_size(map_size);
+            let _ = write!(&mut info, "\x1b[2m │ map: {size:>map_pad$}\x1b[22m");
+          }
+
+          info.push('\n');
+
+          utils::log_info(&info);
+        }
+      }
+    }
     Ok(())
   }
 

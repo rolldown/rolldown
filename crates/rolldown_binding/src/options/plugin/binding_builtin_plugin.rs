@@ -603,14 +603,25 @@ pub struct BindingReplacePluginConfig {
 
 #[napi_derive::napi(object)]
 #[derive(Debug, Default)]
+#[allow(clippy::struct_excessive_bools)]
 pub struct BindingReportPluginConfig {
   pub is_tty: bool,
-  pub chunk_limit: bool,
+  pub is_lib: bool,
+  pub assets_dir: String,
+  pub chunk_limit: u32,
   pub should_log_info: bool,
+  pub report_compressed_size: bool,
 }
 
 impl From<BindingReportPluginConfig> for ReporterPlugin {
   fn from(config: BindingReportPluginConfig) -> Self {
-    ReporterPlugin::new(config.is_tty, config.should_log_info, config.chunk_limit)
+    ReporterPlugin::new(
+      config.is_tty,
+      config.should_log_info,
+      config.chunk_limit as usize,
+      config.report_compressed_size,
+      config.assets_dir,
+      config.is_lib,
+    )
   }
 }

@@ -15,7 +15,10 @@ doctest = false
 workspace = true
 
 [dependencies]
+cow-utils = { workspace = true }
+flate2 = { workspace = true }
 itoa = { workspace = true }
+rolldown_common = { workspace = true }
 rolldown_plugin = { workspace = true }
 sugar_path = { workspace = true }
 terminal_size = { workspace = true }

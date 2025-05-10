@@ -96,7 +96,7 @@ import type {
 import type { ExistingRawSourceMap, SourceMapInput } from './types/sourcemap';
 import type { PartialNull } from './types/utils';
 
-export * from './config';
+export { defineConfig, VERSION } from './config';
 export { build, rolldown, watch };
 
 export type {

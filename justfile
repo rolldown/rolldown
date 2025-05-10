@@ -138,6 +138,10 @@ build-js-glue:
 build-browser mode="debug":
     pnpm run --filter "@rolldown/browser" build:{{ mode }}
 
+# This will build the package `@rolldown/pluginutils`.
+build-pluginutils:
+    pnpm run --filter "@rolldown/pluginutils" build
+
 run *args:
     pnpm rolldown {{ args }}
 

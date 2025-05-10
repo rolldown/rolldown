@@ -153,7 +153,7 @@ impl<'name> Renamer<'name> {
             } else {
               let name = Rstr::from(candidate_name.as_ref());
               used_canonical_names_for_this_scope.insert(name.clone(), 0);
-              slot.insert(Rstr::from(name));
+              slot.insert(name);
               break;
             }
           },

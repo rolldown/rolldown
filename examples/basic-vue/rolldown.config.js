@@ -8,16 +8,6 @@ export default defineConfig({
     // aligns with Vite in the future.
     conditionNames: ['import'],
   },
-  plugins: [
-    {
-      name: 'test',
-      transform(code, id) {
-        if (id.endsWith('utils.js')) {
-          return code.replace('export const a = 1000', 'export const a = 2000');
-        }
-      },
-    }
-  ],
   output: {
     plugins: [
       {

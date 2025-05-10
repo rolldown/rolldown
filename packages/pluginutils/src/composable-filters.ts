@@ -128,8 +128,8 @@ export function not(expr: FilterExpression): Not {
   return new Not(expr);
 }
 
-export function id(pattern: StringOrRegExp): Id {
-  return new Id(pattern);
+export function id(pattern: StringOrRegExp, params?: IdParams): Id {
+  return new Id(pattern, params);
 }
 
 export function moduleType(pattern: PluginModuleType): ModuleType {

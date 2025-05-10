@@ -1,3 +1,5 @@
+import { cleanUrl } from './utils';
+
 type StringOrRegExp = string | RegExp;
 
 // Inline this type to avoid import it from `rolldown`.
@@ -62,12 +64,19 @@ class Not {
   }
 }
 
+interface IdParams {
+  cleanUrl?: boolean;
+}
 class Id {
   kind: 'id';
   pattern: StringOrRegExp;
-  constructor(pattern: StringOrRegExp) {
+  params: IdParams;
+  constructor(pattern: StringOrRegExp, params?: IdParams) {
     this.pattern = pattern;
     this.kind = 'id';
+    this.params = params ?? {
+      cleanUrl: false,
+    };
   }
 }
 
@@ -200,6 +209,9 @@ export function exprInterpreter(
     case 'id': {
       if (id === undefined) {
         throw new Error('`id` is required for `id` expression');
+      }
+      if (expr.params.cleanUrl) {
+        id = cleanUrl(id);
       }
       return typeof expr.pattern === 'string'
         ? id === expr.pattern

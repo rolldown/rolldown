@@ -4659,11 +4659,7 @@ expression: output
 
 # tests/rolldown/issues/4129
 
-<<<<<<< HEAD
-- main-!~{000}~.js => main-DHp4Ws7A.js
-=======
-- main-!~{000}~.js => main-C8CEOJZX.js
->>>>>>> dce44170c (refactor(hmr): using esm module namespace to store it's exports)
+- main-!~{000}~.js => main-Dyyx3o7E.js
 
 # tests/rolldown/issues/4196
 
@@ -5208,23 +5204,13 @@ expression: output
 
 # tests/rolldown/topics/hmr/mutiply-entires
 
-<<<<<<< HEAD
-- entry-!~{000}~.js => entry-D3qdtA0j.js
-- index-!~{001}~.js => index-Bbp4lvLR.js
-- chunk-!~{002}~.js => chunk-DnGosdBm.js
-
-# tests/rolldown/topics/hmr/register_exports
-
-- main-!~{000}~.js => main-BdEZr9rY.js
-=======
 - entry-!~{000}~.js => entry-CBZpKmcs.js
 - index-!~{001}~.js => index-Bx6GS1WH.js
 - chunk-!~{002}~.js => chunk-DCxEFtjL.js
 
 # tests/rolldown/topics/hmr/register_exports
 
-- main-!~{000}~.js => main-BSpSms2Z.js
->>>>>>> dce44170c (refactor(hmr): using esm module namespace to store it's exports)
+- main-!~{000}~.js => main-CkJjwhFU.js
 
 # tests/rolldown/topics/import_meta_url_dirname_filename_polyfill/node_cjs
 

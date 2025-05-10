@@ -300,7 +300,7 @@ impl<'ast> VisitMut<'ast> for HmrAstFinalizer<'_, 'ast> {
           let importee = &self.modules[rec.resolved_module];
           self.dependencies.insert(rec.resolved_module);
 
-          let binding_name = Self::crate_binding_name(importee);
+          let binding_name = Self::create_binding_name(importee);
           import_decl.specifiers.as_ref().inspect(|specifiers| {
             specifiers.iter().for_each(|spec| match spec {
               ast::ImportDeclarationSpecifier::ImportSpecifier(import_specifier) => {
@@ -339,7 +339,7 @@ impl<'ast> VisitMut<'ast> for HmrAstFinalizer<'_, 'ast> {
             let importee = &self.modules[rec.resolved_module];
             self.dependencies.insert(rec.resolved_module);
 
-            let binding_name = Self::crate_binding_name(importee);
+            let binding_name = Self::create_binding_name(importee);
             self.exports.extend(decl.specifiers.iter().map(|specifier| {
               self.snippet.object_property_kind_object_property(
                 &specifier.exported.name(),

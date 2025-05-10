@@ -1,3 +1,4 @@
+import { version } from '../package.json';
 import { build, type BuildOptions } from './api/build';
 import { rolldown } from './api/rolldown';
 import { RolldownBuild } from './api/rolldown/rolldown-build';
@@ -95,9 +96,10 @@ import type {
 } from './types/rolldown-output';
 import type { ExistingRawSourceMap, SourceMapInput } from './types/sourcemap';
 import type { PartialNull } from './types/utils';
+import { defineConfig } from './utils/define-config';
 
-export { defineConfig, VERSION } from './config';
-export { build, rolldown, watch };
+export { build, defineConfig, rolldown, watch };
+export const VERSION: string = version;
 
 export type {
   AddonFunction,

@@ -138,21 +138,22 @@ impl<'name> Renamer<'name> {
         let binding_ref: SymbolRef = (module.idx, symbol_id).into();
 
         let mut count = 1;
-        let mut candidate_name = binding_name.to_rstr();
+        let mut candidate_name = Cow::Borrowed(binding_name);
         match canonical_names.entry(binding_ref) {
           Entry::Vacant(slot) => loop {
-            let is_shadowed = stack
-              .iter()
-              .any(|used_canonical_names| used_canonical_names.contains_key(&candidate_name))
-              || used_canonical_names_for_this_scope.contains_key(&candidate_name);
+            let is_shadowed = stack.iter().any(|used_canonical_names| {
+              used_canonical_names.contains_key(candidate_name.as_ref())
+            }) || used_canonical_names_for_this_scope
+              .contains_key(candidate_name.as_ref());
 
             if is_shadowed {
               candidate_name =
-                concat_string!(&binding_name, "$", itoa::Buffer::new().format(count)).into();
+                Cow::Owned(concat_string!(&binding_name, "$", itoa::Buffer::new().format(count)));
               count += 1;
             } else {
-              used_canonical_names_for_this_scope.insert(candidate_name.clone(), 0);
-              slot.insert(candidate_name);
+              let name = Rstr::from(candidate_name.as_ref());
+              used_canonical_names_for_this_scope.insert(name.clone(), 0);
+              slot.insert(Rstr::from(name));
               break;
             }
           },

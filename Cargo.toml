@@ -204,6 +204,7 @@ oxc_index = { version = "3", features = ["rayon", "serde"] } # https://github.co
 oxc_resolver = { version = "9", features = ["package_json_raw_json_api"] } # https://github.com/oxc-project/oxc-resolver
 oxc_resolver_napi = { version = "9" }
 oxc_sourcemap = { version = "3" } # https://github.com/oxc-project/oxc-sourcemap
+
 [profile.release]
 codegen-units = 1
 debug = false # Set to `true` for debug information

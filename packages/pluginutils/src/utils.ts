@@ -1,4 +1,4 @@
-const postfixRE = /[?#].*$/
+const postfixRE = /[?#].*$/;
 export function cleanUrl(url: string): string {
-  return url.replace(postfixRE, '')
+  return url.replace(postfixRE, '');
 }

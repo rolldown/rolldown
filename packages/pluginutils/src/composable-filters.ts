@@ -1,4 +1,4 @@
-import { cleanUrl } from "./utils";
+import { cleanUrl } from './utils';
 
 type StringOrRegExp = string | RegExp;
 
@@ -65,7 +65,7 @@ class Not {
 }
 
 interface IdParams {
-  cleanUrl?: boolean
+  cleanUrl?: boolean;
 }
 class Id {
   kind: 'id';
@@ -75,7 +75,7 @@ class Id {
     this.pattern = pattern;
     this.kind = 'id';
     this.params = params ?? {
-      cleanUrl: false
+      cleanUrl: false,
     };
   }
 }
@@ -211,7 +211,7 @@ export function exprInterpreter(
         throw new Error('`id` is required for `id` expression');
       }
       if (expr.params.cleanUrl) {
-        id = cleanUrl(id)
+        id = cleanUrl(id);
       }
       return typeof expr.pattern === 'string'
         ? id === expr.pattern

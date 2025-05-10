@@ -955,7 +955,8 @@ export type FilterTokenKind =  'Id'|
 'Or'|
 'Not'|
 'Include'|
-'Exclude';
+'Exclude'|
+'CleanUrl';
 
 /**
  * Get offset within a `Uint8Array` which is aligned on 4 GiB.

@@ -1,4 +1,3 @@
-import { version } from '../package.json';
 import { build, type BuildOptions } from './api/build';
 import { rolldown } from './api/rolldown';
 import { RolldownBuild } from './api/rolldown/rolldown-build';

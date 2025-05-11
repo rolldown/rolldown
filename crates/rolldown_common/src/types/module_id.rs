@@ -14,8 +14,14 @@ pub struct ModuleId {
 }
 
 impl ModuleId {
+  #[inline]
   pub fn new(value: impl Into<ArcStr>) -> Self {
-    Self { resource_id: value.into() }
+    Self::new_arc_str(value.into())
+  }
+
+  #[inline]
+  pub const fn new_arc_str(resource_id: ArcStr) -> Self {
+    Self { resource_id }
   }
 
   pub fn resource_id(&self) -> &ArcStr {

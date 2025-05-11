@@ -3,11 +3,11 @@ use oxc::ast_visit::VisitMut;
 use oxc::span::SourceType;
 use oxc_index::IndexVec;
 use rolldown_common::{
-  EcmaView, EcmaViewMeta, ExportsKind, ModuleDefFormat, ModuleId, ModuleIdx, ModuleType,
-  NormalModule, side_effects::DeterminedSideEffects,
+  EcmaView, EcmaViewMeta, ExportsKind, ModuleDefFormat, ModuleIdx, ModuleType, NormalModule,
+  side_effects::DeterminedSideEffects,
 };
 use rolldown_common::{
-  ModuleLoaderMsg, Platform, RUNTIME_MODULE_ID, ResolvedId, RuntimeModuleBrief,
+  ModuleLoaderMsg, Platform, RUNTIME_MODULE_ID, RUNTIME_MODULE_KEY, ResolvedId, RuntimeModuleBrief,
   RuntimeModuleTaskResult, SharedNormalizedBundlerOptions,
 };
 use rolldown_ecmascript::{EcmaAst, EcmaCompiler};
@@ -84,7 +84,7 @@ impl RuntimeModuleTask {
       ))
     };
 
-    let (ast, scan_result) = self.make_ecma_ast(RUNTIME_MODULE_ID, &source)?;
+    let (ast, scan_result) = self.make_ecma_ast(RUNTIME_MODULE_KEY, &source)?;
 
     let ScanResult {
       named_imports,
@@ -105,10 +105,10 @@ impl RuntimeModuleTask {
     let module = NormalModule {
       idx: self.module_idx,
       repr_name: "rolldown_runtime".to_string(),
-      stable_id: RUNTIME_MODULE_ID.to_string(),
-      id: ModuleId::new(RUNTIME_MODULE_ID),
+      stable_id: RUNTIME_MODULE_KEY.to_string(),
+      id: RUNTIME_MODULE_ID,
 
-      debug_id: RUNTIME_MODULE_ID.to_string(),
+      debug_id: RUNTIME_MODULE_KEY.to_string(),
       exec_order: u32::MAX,
       is_user_defined_entry: false,
       module_type: ModuleType::Js,
@@ -191,7 +191,7 @@ impl RuntimeModuleTask {
     });
 
     let scoping = ast.make_scoping();
-    let facade_path = ModuleId::new(RUNTIME_MODULE_ID);
+    let facade_path = RUNTIME_MODULE_ID;
     let scanner = AstScanner::new(
       self.module_idx,
       scoping,

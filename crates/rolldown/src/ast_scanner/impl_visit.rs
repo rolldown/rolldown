@@ -8,7 +8,7 @@ use oxc::{
   span::{GetSpan, Span},
 };
 use rolldown_common::{
-  EcmaModuleAstUsage, ImportKind, ImportRecordMeta, RUNTIME_MODULE_ID, StmtInfoMeta,
+  EcmaModuleAstUsage, ImportKind, ImportRecordMeta, RUNTIME_MODULE_KEY, StmtInfoMeta,
   ThisExprReplaceKind, dynamic_import_usage::DynamicImportExportsUsage,
   generate_replace_this_expr_map,
 };
@@ -320,7 +320,7 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
               _ => false,
             };
             // should not replace require in `runtime` code
-            if is_dummy_record && self.id.as_ref() != RUNTIME_MODULE_ID {
+            if is_dummy_record && self.id.as_ref() != RUNTIME_MODULE_KEY {
               let import_rec_idx = self.add_import_record(
                 "",
                 ImportKind::Require,

@@ -17,7 +17,7 @@ use rolldown_common::{
   DUMMY_MODULE_IDX, EcmaRelated, EntryPoint, EntryPointKind, ExternalModule,
   ExternalModuleTaskResult, HybridIndexVec, ImportKind, ImportRecordIdx, ImportRecordMeta,
   ImporterRecord, Module, ModuleId, ModuleIdx, ModuleLoaderMsg, ModuleType, NormalModuleTaskResult,
-  RUNTIME_MODULE_ID, ResolvedId, RuntimeModuleBrief, RuntimeModuleTaskResult, StmtInfoIdx,
+  RUNTIME_MODULE_KEY, ResolvedId, RuntimeModuleBrief, RuntimeModuleTaskResult, StmtInfoIdx,
   SymbolRefDb, SymbolRefDbForModule,
 };
 use rolldown_error::{BuildDiagnostic, BuildResult};
@@ -155,7 +155,7 @@ impl ModuleLoader {
       IntermediateNormalModules::new(is_full_scan, std::mem::take(&mut cache.importers));
     let runtime_id = intermediate_normal_modules.alloc_ecma_module_idx();
 
-    let remaining = if cache.module_id_to_idx.contains_key(RUNTIME_MODULE_ID) {
+    let remaining = if cache.module_id_to_idx.contains_key(RUNTIME_MODULE_KEY) {
       // the first alloc just want to allocate the runtime module id
       intermediate_normal_modules.reset_ecma_module_idx();
       0
@@ -163,7 +163,7 @@ impl ModuleLoader {
       let task = RuntimeModuleTask::new(runtime_id, tx.clone(), Arc::clone(&options));
 
       tokio::spawn(async { task.run() });
-      cache.module_id_to_idx.insert(RUNTIME_MODULE_ID.into(), VisitState::Seen(runtime_id));
+      cache.module_id_to_idx.insert(RUNTIME_MODULE_KEY.into(), VisitState::Seen(runtime_id));
       1
     };
 

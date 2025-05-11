@@ -50,7 +50,7 @@ impl NativePluginContextImpl {
       guard.context("The `PluginContext.load` only work at `resolveId/load/transform/moduleParsed` hooks. If you using it at resolveId hook, please make sure it could not load the entry module.")?
     };
     sender
-      .send(ModuleLoaderMsg::FetchModule(ResolvedId {
+      .send(ModuleLoaderMsg::FetchModule(Box::new(ResolvedId {
         id: specifier.into(),
         ignored: false,
         module_def_format: ModuleDefFormat::Unknown,
@@ -59,7 +59,7 @@ impl NativePluginContextImpl {
         package_json: None,
         side_effects,
         is_external_without_side_effects: false,
-      }))
+      })))
       .await?;
     Ok(())
   }

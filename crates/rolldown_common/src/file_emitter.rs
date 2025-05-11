@@ -91,7 +91,7 @@ impl FileEmitter {
     .context(
       "The `PluginContext.emitFile` with `type: 'chunk'` only work at `buildStart/resolveId/load/transform/moduleParsed` hooks.",
     )?
-    .send(ModuleLoaderMsg::AddEntryModule(AddEntryModuleMsg { chunk: Arc::clone(&chunk), reference_id: reference_id.clone() }))
+    .send(ModuleLoaderMsg::AddEntryModule(Box::new(AddEntryModuleMsg { chunk: Arc::clone(&chunk), reference_id: reference_id.clone() })))
     .await?;
     self.chunks.insert(reference_id.clone(), chunk);
     Ok(reference_id)

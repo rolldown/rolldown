@@ -89,7 +89,7 @@ impl ModuleTask {
       self
         .ctx
         .tx
-        .send(ModuleLoaderMsg::BuildErrors(errs.into_vec()))
+        .send(ModuleLoaderMsg::BuildErrors(errs.into_vec().into_boxed_slice()))
         .await
         .expect("Send should not fail");
     }
@@ -225,13 +225,13 @@ impl ModuleTask {
     self.ctx.plugin_driver.module_parsed(Arc::clone(&module_info), &module).await?;
     self.ctx.plugin_driver.mark_context_load_modules_loaded(&module.id, true).await?;
 
-    let result = ModuleLoaderMsg::NormalModuleDone(NormalModuleTaskResult {
+    let result = ModuleLoaderMsg::NormalModuleDone(Box::new(NormalModuleTaskResult {
       module: module.into(),
       ecma_related: Some(ecma_related),
       resolved_deps,
       raw_import_records,
       warnings,
-    });
+    }));
 
     // If the main thread is dead, nothing we can do to handle these send failures.
     let _ = self.ctx.tx.send(result).await;

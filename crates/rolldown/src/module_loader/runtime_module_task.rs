@@ -40,7 +40,7 @@ impl RuntimeModuleTask {
     if let Err(errs) = self.run_inner() {
       self
         .tx
-        .try_send(ModuleLoaderMsg::BuildErrors(errs.into_vec()))
+        .try_send(ModuleLoaderMsg::BuildErrors(errs.into_vec().into_boxed_slice()))
         .expect("Send should not fail");
     }
   }
@@ -164,14 +164,14 @@ impl RuntimeModuleTask {
       .collect();
 
     let runtime = RuntimeModuleBrief::new(self.module_idx, &symbol_ref_db.ast_scopes);
-    let result = ModuleLoaderMsg::RuntimeNormalModuleDone(RuntimeModuleTaskResult {
+    let result = ModuleLoaderMsg::RuntimeNormalModuleDone(Box::new(RuntimeModuleTaskResult {
       ast,
       module,
       runtime,
       resolved_deps,
       raw_import_records,
       local_symbol_ref_db: symbol_ref_db,
-    });
+    }));
 
     // If the main thread is dead, nothing we can do to handle these send failures.
     let _ = self.tx.try_send(result);

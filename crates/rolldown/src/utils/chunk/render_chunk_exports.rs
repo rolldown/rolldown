@@ -186,7 +186,8 @@ pub fn render_chunk_exports(
                       concat_string!(
                         property_access_str("exports", exported_name.as_str()),
                         " = ",
-                        exported_value.as_str()
+                        exported_value.as_str(),
+                        ";"
                       )
                     }
                   }

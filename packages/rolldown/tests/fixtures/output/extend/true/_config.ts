@@ -20,7 +20,7 @@ export default defineTest({
       const main = "main";
 
       //#endregion
-      exports.main = main
+      exports.main = main;
       })(this.module = this.module || {});"
     `)
   },

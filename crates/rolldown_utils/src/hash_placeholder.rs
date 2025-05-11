@@ -1,6 +1,5 @@
 use std::borrow::Cow;
 
-use arcstr::ArcStr;
 use rustc_hash::FxHashMap;
 
 use crate::indexmap::FxIndexSet;
@@ -130,15 +129,13 @@ impl HashPlaceholderGenerator {
 /// ```
 #[expect(clippy::implicit_hasher)]
 pub fn replace_placeholder_with_hash<'a>(
-  source: impl Into<Cow<'a, str>>,
-  final_hashes_by_placeholder: &FxHashMap<ArcStr, &'a str>,
+  source: &'a str,
+  final_hashes_by_placeholder: &FxHashMap<String, &'a str>,
 ) -> Cow<'a, str> {
-  let source: Cow<'a, str> = source.into();
-
   // Check for placeholders directly
-  let placeholders = find_hash_placeholders(&source);
+  let placeholders = find_hash_placeholders(source);
   if placeholders.is_empty() {
-    return source;
+    return Cow::Borrowed(source);
   }
 
   // Create a new string with replacements
@@ -164,11 +161,11 @@ pub fn replace_placeholder_with_hash<'a>(
   Cow::Owned(result)
 }
 
-pub fn extract_hash_placeholders(source: &str) -> FxIndexSet<ArcStr> {
+pub fn extract_hash_placeholders(source: &str) -> FxIndexSet<&str> {
   let mut result = FxIndexSet::default();
 
   for (_, _, placeholder) in find_hash_placeholders(source) {
-    result.insert(placeholder.into());
+    result.insert(placeholder);
   }
 
   result

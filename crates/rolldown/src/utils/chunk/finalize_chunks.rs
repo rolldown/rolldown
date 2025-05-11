@@ -34,15 +34,12 @@ pub fn finalize_assets(
   let asset_idx_by_placeholder = preliminary_assets
     .iter_enumerated()
     .filter_map(|(asset_idx, asset)| {
-      asset.preliminary_filename.hash_placeholder().map(|placeholders| {
-        placeholders
-          .iter()
-          .map(|hash_placeholder| (hash_placeholder.into(), asset_idx))
-          .collect::<Vec<_>>()
+      asset.preliminary_filename.hash_placeholder().map(move |placeholders| {
+        placeholders.iter().map(move |hash_placeholder| (hash_placeholder.as_str(), asset_idx))
       })
     })
     .flatten()
-    .collect::<FxHashMap<ArcStr, _>>();
+    .collect::<FxHashMap<_, _>>();
 
   let index_direct_dependencies: IndexVec<AssetIdx, Vec<AssetIdx>> = preliminary_assets
     .par_iter()
@@ -106,11 +103,8 @@ pub fn finalize_assets(
   let final_hashes_by_placeholder = index_final_hashes
     .iter_enumerated()
     .filter_map(|(idx, (hash, _))| {
-      let asset = &preliminary_assets[idx];
-      asset.preliminary_filename.hash_placeholder().map(|placeholders| {
-        placeholders
-          .iter()
-          .map(|placeholder| (placeholder.clone().into(), &hash[..placeholder.len()]))
+      preliminary_assets[idx].preliminary_filename.hash_placeholder().map(|placeholders| {
+        placeholders.iter().map(|placeholder| (placeholder.clone(), &hash[..placeholder.len()]))
       })
     })
     .flatten()
@@ -142,7 +136,7 @@ pub fn finalize_assets(
       match &mut asset.content {
         StrOrBytes::Str(content) => {
           *content =
-            replace_placeholder_with_hash(mem::take(content), &final_hashes_by_placeholder)
+            replace_placeholder_with_hash(&mem::take(content), &final_hashes_by_placeholder)
               .into_owned();
         }
         StrOrBytes::Bytes(_content) => {}

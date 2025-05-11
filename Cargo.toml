@@ -124,7 +124,7 @@ rolldown_workspace = { version = "0.1.0", path = "./crates/rolldown_workspace" }
 
 anyhow = "1.0.86"
 append-only-vec = { version = "0.1.5" }
-arcstr = "1.2.0"
+arcstr = { version = "1.2.0", default-features = false }
 ariadne = { package = "rolldown-ariadne", version = "0.5.1" }
 async-channel = "2.3.1"
 async-scoped = { version = "0.9.0" }

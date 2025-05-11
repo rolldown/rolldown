@@ -1,21 +1,35 @@
-use std::path::{Path, PathBuf};
+use std::{
+  fmt,
+  hash::{Hash, Hasher},
+  path::{Path, PathBuf},
+};
 
 use arcstr::ArcStr;
 use rolldown_std_utils::PathExt;
+use rustc_hash::FxHasher;
 use sugar_path::SugarPath;
 
 /// `ModuleId` is the unique string identifier for each module.
 /// - It will be used to identify the module in the whole bundle.
 /// - Users could stored the `ModuleId` to track the module in different stages/hooks.
-#[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone, Default)]
+#[derive(Clone)]
 pub struct ModuleId {
   // Id that rolldown uses to call `read_to_string` or `read` to get the content of the module.
   resource_id: ArcStr,
+  precomputed_hash: u64,
+}
+
+fn fxhash(s: &str) -> u64 {
+  let mut hasher = FxHasher::default();
+  hasher.write(s.as_bytes());
+  hasher.finish()
 }
 
 impl ModuleId {
   pub fn new(value: impl Into<ArcStr>) -> Self {
-    Self { resource_id: value.into() }
+    let resource_id = value.into();
+    let hash = fxhash(resource_id.as_str());
+    Self { resource_id, precomputed_hash: hash }
   }
 
   pub fn resource_id(&self) -> &ArcStr {
@@ -56,6 +70,36 @@ impl From<String> for ModuleId {
 impl From<ArcStr> for ModuleId {
   fn from(value: ArcStr) -> Self {
     Self::new(value)
+  }
+}
+
+impl Hash for ModuleId {
+  fn hash<H: Hasher>(&self, state: &mut H) {
+    self.precomputed_hash.hash(state);
+  }
+}
+
+impl PartialEq for ModuleId {
+  fn eq(&self, other: &Self) -> bool {
+    self.resource_id == other.resource_id
+  }
+}
+impl Eq for ModuleId {}
+
+impl PartialOrd for ModuleId {
+  fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
+    Some(self.resource_id.cmp(&other.resource_id))
+  }
+}
+impl Ord for ModuleId {
+  fn cmp(&self, other: &Self) -> std::cmp::Ordering {
+    self.resource_id.cmp(&other.resource_id)
+  }
+}
+
+impl fmt::Debug for ModuleId {
+  fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+    f.write_str(self.resource_id.as_str())
   }
 }
 

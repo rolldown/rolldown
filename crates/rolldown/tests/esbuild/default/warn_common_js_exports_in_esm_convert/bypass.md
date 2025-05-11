@@ -23,7 +23,7 @@ exports.foo = 2;
 module.exports = 3;
 
 //#endregion
-exports.foo = foo
+exports.foo = foo;
 ```
 ### diff
 ```diff
@@ -63,7 +63,7 @@ let foo = 1;
 module.exports.bar = 3;
 
 //#endregion
-exports.foo = foo
+exports.foo = foo;
 ```
 ### diff
 ```diff

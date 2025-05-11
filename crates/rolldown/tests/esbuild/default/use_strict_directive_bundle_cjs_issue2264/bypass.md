@@ -22,7 +22,7 @@ var a = 1;
 let a = 1;
 
 //#endregion
-exports.a = a
+exports.a = a;
 ```
 ### diff
 ```diff

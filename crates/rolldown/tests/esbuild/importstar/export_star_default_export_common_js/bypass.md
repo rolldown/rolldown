@@ -22,7 +22,7 @@ var foo = "foo";
 let foo = "foo";
 
 //#endregion
-exports.foo = foo
+exports.foo = foo;
 ```
 ### diff
 ```diff

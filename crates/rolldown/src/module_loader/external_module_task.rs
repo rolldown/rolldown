@@ -40,7 +40,7 @@ impl ExternalModuleTask {
       self
         .ctx
         .tx
-        .send(ModuleLoaderMsg::BuildErrors(errs.into_vec()))
+        .send(ModuleLoaderMsg::BuildErrors(errs.into_vec().into_boxed_slice()))
         .await
         .expect("Send should not fail");
     }
@@ -91,14 +91,14 @@ impl ExternalModuleTask {
       resolved_id.id.clone()
     };
     let legitimized_identifier_name = legitimize_identifier_name(&identifier_name);
-    let msg = ModuleLoaderMsg::ExternalModuleDone(ExternalModuleTaskResult {
+    let msg = ModuleLoaderMsg::ExternalModuleDone(Box::new(ExternalModuleTaskResult {
       idx: self.module_idx,
       id: resolved_id.id.clone(),
       name: file_name,
       identifier_name: legitimized_identifier_name.into(),
       side_effects: external_module_side_effects,
       need_renormalize_render_path,
-    });
+    }));
     // If the main thread is dead, nothing we can do to handle these send failures.
     let _ = self.ctx.tx.send(msg).await;
     Ok(())

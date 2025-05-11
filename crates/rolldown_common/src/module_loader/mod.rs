@@ -12,12 +12,12 @@ pub mod runtime_task_result;
 pub mod task_result;
 
 pub enum ModuleLoaderMsg {
-  NormalModuleDone(NormalModuleTaskResult),
-  ExternalModuleDone(ExternalModuleTaskResult),
-  RuntimeNormalModuleDone(RuntimeModuleTaskResult),
-  FetchModule(ResolvedId),
-  AddEntryModule(AddEntryModuleMsg),
-  BuildErrors(Vec<BuildDiagnostic>),
+  NormalModuleDone(Box<NormalModuleTaskResult>),
+  ExternalModuleDone(Box<ExternalModuleTaskResult>),
+  RuntimeNormalModuleDone(Box<RuntimeModuleTaskResult>),
+  FetchModule(Box<ResolvedId>),
+  AddEntryModule(Box<AddEntryModuleMsg>),
+  BuildErrors(Box<[BuildDiagnostic]>),
 }
 
 pub struct AddEntryModuleMsg {

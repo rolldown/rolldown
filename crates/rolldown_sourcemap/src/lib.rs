@@ -67,7 +67,7 @@ pub fn collapse_sourcemaps(mut sourcemap_chain: Vec<&SourceMap>) -> SourceMap {
     first_map.get_names().map(Into::into).collect::<Vec<_>>(),
     None,
     first_map.get_sources().map(Into::into).collect::<Vec<_>>(),
-    first_map.get_source_contents().map(|x| x.map(Into::into).collect::<Vec<_>>()),
+    first_map.get_source_contents().map(|x| x.map(Into::into)).collect::<Vec<_>>(),
     tokens,
     None,
   )

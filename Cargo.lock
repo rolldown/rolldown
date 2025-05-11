@@ -2014,9 +2014,9 @@ dependencies = [
 
 [[package]]
 name = "oxc_sourcemap"
-version = "3.0.0"
+version = "3.0.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "6665c417b2aa1c426a7b142bcc0d2f47d9fee9e6f88610f054cfa7ce6623001e"
+checksum = "9cd7bb37974a2684a080d05b9c28460e1610c5ac5ef13f481a45179f458239cb"
 dependencies = [
  "base64-simd",
  "cfg-if",

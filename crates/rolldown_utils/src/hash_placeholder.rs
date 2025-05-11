@@ -1,5 +1,6 @@
 use std::borrow::Cow;
 
+use memchr::memmem::Finder;
 use rustc_hash::FxHashMap;
 
 use crate::indexmap::FxIndexSet;
@@ -12,6 +13,10 @@ const HASH_PLACEHOLDER_OVERHEAD: usize = HASH_PLACEHOLDER_LEFT.len() + HASH_PLAC
 const MIN_HASH_SIZE: usize = 6;
 const MAX_HASH_SIZE: usize = 21;
 const DEFAULT_HASH_SIZE: usize = 8;
+
+pub fn hash_placeholder_left_finder() -> Finder<'static> {
+  Finder::new(HASH_PLACEHOLDER_LEFT)
+}
 
 /// Checks if a string is a hash placeholder with the pattern "!~{...}~"
 /// where ... is 1-17 alphanumeric characters or _ or $
@@ -30,16 +35,19 @@ fn is_hash_placeholder(s: &str) -> bool {
   }
 
   // All characters must be alphanumeric or _ or $
-  content.chars().all(|c| c.is_ascii_alphanumeric() || c == '_' || c == '$')
+  content.bytes().all(|c| c.is_ascii_alphanumeric() || c == b'_' || c == b'$')
 }
 
 /// Finds all hash placeholders in a string and returns their positions and values
-fn find_hash_placeholders(s: &str) -> Vec<(usize, usize, &str)> {
+pub fn find_hash_placeholders<'a>(
+  s: &'a str,
+  finder: &Finder<'static>,
+) -> Vec<(usize, usize, &'a str)> {
   // pre-allocate, the max number of placeholders is s.len() / 2
   let mut results = Vec::with_capacity(s.len() / 2);
   let mut start = 0;
 
-  while let Some(left_pos) = s[start..].find(HASH_PLACEHOLDER_LEFT) {
+  while let Some(left_pos) = finder.find(&s.as_bytes()[start..]) {
     let left_pos = start + left_pos;
     if let Some(right_pos) = s[left_pos..].find(HASH_PLACEHOLDER_RIGHT) {
       let right_pos = left_pos + right_pos + HASH_PLACEHOLDER_RIGHT.len();
@@ -131,9 +139,10 @@ impl HashPlaceholderGenerator {
 pub fn replace_placeholder_with_hash<'a>(
   source: &'a str,
   final_hashes_by_placeholder: &FxHashMap<String, &'a str>,
+  finder: &Finder<'static>,
 ) -> Cow<'a, str> {
   // Check for placeholders directly
-  let placeholders = find_hash_placeholders(source);
+  let placeholders = find_hash_placeholders(source, finder);
   if placeholders.is_empty() {
     return Cow::Borrowed(source);
   }
@@ -161,14 +170,14 @@ pub fn replace_placeholder_with_hash<'a>(
   Cow::Owned(result)
 }
 
-pub fn extract_hash_placeholders(source: &str) -> FxIndexSet<&str> {
-  let mut result = FxIndexSet::default();
-
-  for (_, _, placeholder) in find_hash_placeholders(source) {
-    result.insert(placeholder);
-  }
-
-  result
+pub fn extract_hash_placeholders<'a>(
+  source: &'a str,
+  finder: &Finder<'static>,
+) -> FxIndexSet<&'a str> {
+  find_hash_placeholders(source, finder)
+    .into_iter()
+    .map(|(_, _, placeholder)| placeholder)
+    .collect()
 }
 
 #[test]
@@ -207,17 +216,17 @@ fn test_is_hash_placeholder() {
 #[test]
 fn test_find_hash_placeholders() {
   let s = "prefix!~{000}~middle!~{abc}~suffix";
-  let placeholders = find_hash_placeholders(s);
+  let placeholders = find_hash_placeholders(s, &hash_placeholder_left_finder());
   assert_eq!(placeholders.len(), 2);
   assert_eq!(placeholders[0], (6, 14, "!~{000}~"));
   assert_eq!(placeholders[1], (20, 28, "!~{abc}~"));
 
   let s = "no placeholders here";
-  let placeholders = find_hash_placeholders(s);
+  let placeholders = find_hash_placeholders(s, &hash_placeholder_left_finder());
   assert_eq!(placeholders.len(), 0);
 
   let s = "!~{000}~!~{001}~";
-  let placeholders = find_hash_placeholders(s);
+  let placeholders = find_hash_placeholders(s, &hash_placeholder_left_finder());
   assert_eq!(placeholders.len(), 2);
   assert_eq!(placeholders[0], (0, 8, "!~{000}~"));
   assert_eq!(placeholders[1], (8, 16, "!~{001}~"));

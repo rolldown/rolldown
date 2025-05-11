@@ -7,7 +7,9 @@ use rolldown_common::{AssetIdx, HashCharacters, InstantiationKind, StrOrBytes};
 #[cfg(not(target_family = "wasm"))]
 use rolldown_utils::rayon::IndexedParallelIterator;
 use rolldown_utils::{
-  hash_placeholder::{extract_hash_placeholders, replace_placeholder_with_hash},
+  hash_placeholder::{
+    extract_hash_placeholders, hash_placeholder_left_finder, replace_placeholder_with_hash,
+  },
   indexmap::FxIndexSet,
   rayon::{
     IntoParallelIterator, IntoParallelRefIterator, IntoParallelRefMutIterator, ParallelIterator,
@@ -31,6 +33,8 @@ pub fn finalize_assets(
   index_chunk_to_assets: &IndexChunkToAssets,
   hash_characters: HashCharacters,
 ) -> IndexAssets {
+  let finder = hash_placeholder_left_finder();
+
   let asset_idx_by_placeholder = preliminary_assets
     .iter_enumerated()
     .filter_map(|(asset_idx, asset)| {
@@ -44,7 +48,7 @@ pub fn finalize_assets(
   let index_direct_dependencies: IndexVec<AssetIdx, Vec<AssetIdx>> = preliminary_assets
     .par_iter()
     .map(|asset| match &asset.content {
-      StrOrBytes::Str(content) => extract_hash_placeholders(content)
+      StrOrBytes::Str(content) => extract_hash_placeholders(content, &finder)
         .iter()
         .filter_map(|placeholder| asset_idx_by_placeholder.get(placeholder).copied())
         .collect_vec(),
@@ -119,6 +123,7 @@ pub fn finalize_assets(
       let filename: ArcStr = replace_placeholder_with_hash(
         asset.preliminary_filename.as_str(),
         &final_hashes_by_placeholder,
+        &finder,
       )
       .into();
 
@@ -135,9 +140,12 @@ pub fn finalize_assets(
       // TODO: PERF: should check if this asset has dependencies/placeholders to be replaced
       match &mut asset.content {
         StrOrBytes::Str(content) => {
-          *content =
-            replace_placeholder_with_hash(&mem::take(content), &final_hashes_by_placeholder)
-              .into_owned();
+          *content = replace_placeholder_with_hash(
+            &mem::take(content),
+            &final_hashes_by_placeholder,
+            &finder,
+          )
+          .into_owned();
         }
         StrOrBytes::Bytes(_content) => {}
       }

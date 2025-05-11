@@ -102,6 +102,9 @@ impl EcmaCompiler {
         comments: is_print_full_comments,
         source_map_path: options.sourcemap.then(|| PathBuf::from(options.filename)),
         legal_comments,
+        // This option will be configurable when we begin to support `ignore-annotations`
+        // https://esbuild.github.io/api/#ignore-annotations
+        annotation_comments: true,
         ..CodegenOptions::default()
       })
       .build(ast.program())

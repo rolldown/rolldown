@@ -109,6 +109,7 @@
     "Finalizer",
     "finalizers",
     "flate",
+    "fxhash",
     "globset",
     "hashbang",
     "hasher",

@@ -1,4 +1,7 @@
-import type { FilterExpression } from '@rolldown/pluginutils';
+import type {
+  FilterExpression,
+  TopLevelFilterExpression,
+} from '@rolldown/pluginutils';
 import * as filter from '@rolldown/pluginutils';
 import * as R from 'remeda';
 import type { BindingFilterToken, BindingHookFilter } from '../binding.d';
@@ -114,13 +117,15 @@ export function bindingifyGeneralHookFilter<
     : undefined;
 }
 
-function bindingifyFilterExpr(expr: FilterExpression): BindingFilterToken[] {
+function bindingifyFilterExpr(
+  expr: FilterExpression | TopLevelFilterExpression,
+): BindingFilterToken[] {
   let list: BindingFilterToken[] = [];
   bindingifyFilterExprImpl(expr, list);
   return list;
 }
 function bindingifyFilterExprImpl(
-  expr: FilterExpression,
+  expr: FilterExpression | TopLevelFilterExpression,
   list: BindingFilterToken[],
 ) {
   switch (expr.kind) {

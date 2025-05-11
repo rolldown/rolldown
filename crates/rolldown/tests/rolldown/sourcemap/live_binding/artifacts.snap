@@ -23,7 +23,7 @@ main();
 ```js
 const require_shared = require('./shared.js');
 
-exports.shared = require_shared.shared
+exports.shared = require_shared.shared;
 ```
 ## shared.js
 

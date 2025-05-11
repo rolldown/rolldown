@@ -1,6 +1,5 @@
 ---
 source: crates/rolldown_testing/src/integration_test.rs
-snapshot_kind: text
 ---
 # Assets
 
@@ -33,7 +32,7 @@ function aaa() {
 }
 
 //#endregion
-exports.aaa = aaa
+exports.aaa = aaa;
 Object.defineProperty(exports, 'default', {
   enumerable: true,
   get: function () {

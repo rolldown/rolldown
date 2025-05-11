@@ -15,8 +15,8 @@ const exports$1 = "exports";
 const exports$1$1 = "exports$1";
 
 //#endregion
-exports.exports = exports$1
-exports.exports$1 = exports$1$1
+exports.exports = exports$1;
+exports.exports$1 = exports$1$1;
 return exports;
 })({});
 ```

@@ -31,8 +31,8 @@ Object.defineProperty(exports, 'nonShort2', {
     return nonShort2;
   }
 });
-exports.short1 = short1
-exports.short2 = short2
-exports.short3 = short3
-exports.short4 = short4
+exports.short1 = short1;
+exports.short2 = short2;
+exports.short3 = short3;
+exports.short4 = short4;
 ```

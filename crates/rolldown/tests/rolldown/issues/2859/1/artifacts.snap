@@ -53,8 +53,8 @@ Object.defineProperty(exports, 'bar', {
     return bar;
   }
 });
-exports.default = lib_default
-exports.foo = foo
+exports.default = lib_default;
+exports.foo = foo;
 ```
 ## main.js
 

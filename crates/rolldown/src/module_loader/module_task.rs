@@ -16,7 +16,7 @@ use sugar_path::SugarPath;
 
 use rolldown_common::{
   ImportKind, ImportRecordIdx, ImportRecordMeta, ModuleDefFormat, ModuleId, ModuleIdx, ModuleInfo,
-  ModuleLoaderMsg, ModuleType, NormalModule, NormalModuleTaskResult, RUNTIME_MODULE_ID,
+  ModuleLoaderMsg, ModuleType, NormalModule, NormalModuleTaskResult, RUNTIME_MODULE_KEY,
   RawImportRecord, ResolvedId, StrOrBytes,
 };
 use rolldown_error::{
@@ -307,7 +307,7 @@ impl ModuleTask {
     kind: ImportKind,
   ) -> anyhow::Result<Result<ResolvedId, ResolveError>> {
     // Check runtime module
-    if specifier == RUNTIME_MODULE_ID {
+    if specifier == RUNTIME_MODULE_KEY {
       return Ok(Ok(ResolvedId {
         id: specifier.into(),
         ignored: false,

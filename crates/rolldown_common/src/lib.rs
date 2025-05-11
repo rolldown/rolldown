@@ -96,7 +96,7 @@ pub use crate::{
   },
   module_loader::{
     AddEntryModuleMsg, ModuleLoaderMsg,
-    runtime_module_brief::{RUNTIME_MODULE_ID, RuntimeModuleBrief},
+    runtime_module_brief::{RUNTIME_MODULE_ID, RUNTIME_MODULE_KEY, RuntimeModuleBrief},
     runtime_task_result::RuntimeModuleTaskResult,
     task_result::{EcmaRelated, ExternalModuleTaskResult, NormalModuleTaskResult},
   },

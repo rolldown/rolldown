@@ -2,10 +2,6 @@
 [env]
 WORKSPACE_DIR = { value = "", relative = true }
 
-[build]
-# We are using https://docs.rs/tracing/latest/tracing/field/index.html#using-valuable to support recording nested fields.
-rustflags = ["--cfg", "tracing_unstable"]
-
 [alias]
 ls-lint = "run --bin ls-lint"
 run-fixture = "run --bin run-fixture"
@@ -14,8 +10,6 @@ run-fixture = "run --bin run-fixture"
 rustflags = [
   "-C",
   "link-args=-Wl,-undefined,dynamic_lookup,-no_fixup_chains",
-  "--cfg",
-  "tracing_unstable",
 ]
 
 # To be able to run unit tests on Linux, support compilation to 'x86_64-unknown-linux-gnu'.
@@ -26,25 +20,17 @@ rustflags = [
   "link-args=-Wl,--warn-unresolved-symbols",
   "-C",
   "link-args=-Wl,-z,nodelete",
-  "--cfg",
-  "tracing_unstable",
 ]
 
 # To be able to run unit tests on Windows, support compilation to 'x86_64-pc-windows-msvc'.
 [target.'cfg(target_env = "msvc")']
-rustflags = ["-C", "link-args=/FORCE", "--cfg", "tracing_unstable"]
+rustflags = ["-C", "link-args=/FORCE"]
 
 [target.x86_64-pc-windows-msvc]
-rustflags = ["-C", "target-feature=+crt-static", "--cfg", "tracing_unstable"]
+rustflags = ["-C", "target-feature=+crt-static"]
 
 [target.i686-pc-windows-msvc]
-rustflags = ["-C", "target-feature=+crt-static", "--cfg", "tracing_unstable"]
-
-[target.x86_64-unknown-linux-musl]
-rustflags = ["--cfg", "tracing_unstable"]
-
-[target.aarch64-unknown-linux-musl]
-rustflags = ["--cfg", "tracing_unstable"]
+rustflags = ["-C", "target-feature=+crt-static"]
 
 [target.wasm32-wasip1-threads]
 rustflags = [
@@ -52,6 +38,4 @@ rustflags = [
   "target-feature=+simd128",
   "--cfg",
   "tokio_unstable",
-  "--cfg",
-  "tracing_unstable",
 ]

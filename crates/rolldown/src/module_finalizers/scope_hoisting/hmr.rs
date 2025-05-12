@@ -1,5 +1,8 @@
 use oxc::{
-  ast::{NONE, ast},
+  ast::{
+    NONE,
+    ast::{self, PropertyKind},
+  },
   span::SPAN,
 };
 use rolldown_ecmascript_utils::{ExpressionExt, quote_stmt};
@@ -42,19 +45,23 @@ impl<'ast> ScopeHoistingFinalizer<'_, 'ast> {
           ),
         ));
 
-        ast::Argument::Identifier(self.snippet.builder.alloc_identifier_reference(
+        // { exports: namespace }
+        ast::Argument::ObjectExpression(self.snippet.builder.alloc_object_expression(
           SPAN,
-          self.snippet.atom(binding_name_for_namespace_object_ref),
+          self.snippet.builder.vec1(self.snippet.builder.object_property_kind_object_property(
+            SPAN,
+            PropertyKind::Init,
+            self.snippet.builder.property_key_static_identifier(SPAN, "exports"),
+            self.snippet.id_ref_expr(binding_name_for_namespace_object_ref, SPAN),
+            true,
+            false,
+            false,
+          )),
         ))
       }
       rolldown_common::ExportsKind::CommonJs => {
-        // `module.exports`
-        ast::Argument::StaticMemberExpression(self.snippet.builder.alloc_static_member_expression(
-          SPAN,
-          self.snippet.id_ref_expr("module", SPAN),
-          self.snippet.id_name("exports", SPAN),
-          false,
-        ))
+        // `module`
+        ast::Argument::Identifier(self.snippet.builder.alloc_identifier_reference(SPAN, "module"))
       }
       rolldown_common::ExportsKind::None => ast::Argument::ObjectExpression(
         // `{}`
@@ -62,7 +69,7 @@ impl<'ast> ScopeHoistingFinalizer<'_, 'ast> {
       ),
     };
 
-    // __rolldown_runtime__.register(moduleId, module)
+    // __rolldown_runtime__.registerModule(moduleId, module)
     let arguments = self.snippet.builder.vec_from_array([
       ast::Argument::StringLiteral(self.snippet.builder.alloc_string_literal(
         SPAN,

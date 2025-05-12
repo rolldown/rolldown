@@ -4,7 +4,7 @@ use oxc::{
     NONE,
     ast::{
       self, ExportDefaultDeclarationKind, Expression, ObjectExpression, ObjectPropertyKind,
-      Statement,
+      PropertyKind, Statement,
     },
   },
   ast_visit::{VisitMut, walk_mut},
@@ -51,46 +51,49 @@ impl<'ast> HmrAstFinalizer<'_, 'ast> {
   pub fn generate_runtime_module_register_for_hmr(&mut self) -> Vec<ast::Statement<'ast>> {
     let mut ret = vec![];
 
-    let module_exports = match self.module.exports_kind {
-      rolldown_common::ExportsKind::Esm => {
-        let binding_name_for_namespace_object_ref = format!("ns_{}", self.module.repr_name);
+    let module_exports =
+      match self.module.exports_kind {
+        rolldown_common::ExportsKind::Esm => {
+          let binding_name_for_namespace_object_ref = format!("ns_{}", self.module.repr_name);
 
-        ret.extend(
-          self.generate_declaration_of_module_namespace_object(
+          ret.extend(self.generate_declaration_of_module_namespace_object(
             &binding_name_for_namespace_object_ref,
-          ),
-        );
-        // Add __esModule flag
-        ret.push(self.snippet.builder.statement_expression(
-          SPAN,
-          self.snippet.call_expr_with_arg_expr(
-            self.snippet.id_ref_expr("__rolldown_runtime__.__toCommonJS", SPAN),
-            self.snippet.id_ref_expr(&binding_name_for_namespace_object_ref, SPAN),
-            false,
-          ),
-        ));
+          ));
+          // Add __esModule flag
+          ret.push(self.snippet.builder.statement_expression(
+            SPAN,
+            self.snippet.call_expr_with_arg_expr(
+              self.snippet.id_ref_expr("__rolldown_runtime__.__toCommonJS", SPAN),
+              self.snippet.id_ref_expr(&binding_name_for_namespace_object_ref, SPAN),
+              false,
+            ),
+          ));
 
-        ast::Argument::Identifier(self.snippet.builder.alloc_identifier_reference(
-          SPAN,
-          self.snippet.atom(&binding_name_for_namespace_object_ref),
-        ))
-      }
-      rolldown_common::ExportsKind::CommonJs => {
-        // `module.exports`
-        ast::Argument::StaticMemberExpression(self.snippet.builder.alloc_static_member_expression(
-          SPAN,
-          self.snippet.id_ref_expr("module", SPAN),
-          self.snippet.id_name("exports", SPAN),
-          false,
-        ))
-      }
-      rolldown_common::ExportsKind::None => ast::Argument::ObjectExpression(
-        // `{}`
-        self.snippet.builder.alloc_object_expression(SPAN, self.snippet.builder.vec()),
-      ),
-    };
+          // { exports: namespace }
+          ast::Argument::ObjectExpression(self.snippet.builder.alloc_object_expression(
+            SPAN,
+            self.snippet.builder.vec1(self.snippet.builder.object_property_kind_object_property(
+              SPAN,
+              PropertyKind::Init,
+              self.snippet.builder.property_key_static_identifier(SPAN, "exports"),
+              self.snippet.id_ref_expr(&binding_name_for_namespace_object_ref, SPAN),
+              true,
+              false,
+              false,
+            )),
+          ))
+        }
+        rolldown_common::ExportsKind::CommonJs => {
+          // `module`
+          ast::Argument::Identifier(self.snippet.builder.alloc_identifier_reference(SPAN, "module"))
+        }
+        rolldown_common::ExportsKind::None => ast::Argument::ObjectExpression(
+          // `{}`
+          self.snippet.builder.alloc_object_expression(SPAN, self.snippet.builder.vec()),
+        ),
+      };
 
-    // __rolldown_runtime__.register(moduleId, module)
+    // __rolldown_runtime__.registerModule(moduleId, module)
     let arguments = self.snippet.builder.vec_from_array([
       ast::Argument::StringLiteral(self.snippet.builder.alloc_string_literal(
         SPAN,

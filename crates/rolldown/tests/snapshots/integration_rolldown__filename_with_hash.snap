@@ -4659,7 +4659,7 @@ expression: output
 
 # tests/rolldown/issues/4129
 
-- main-!~{000}~.js => main-Dyyx3o7E.js
+- main-!~{000}~.js => main-DSnfptiJ.js
 
 # tests/rolldown/issues/4196
 
@@ -5204,13 +5204,13 @@ expression: output
 
 # tests/rolldown/topics/hmr/mutiply-entires
 
-- entry-!~{000}~.js => entry-CBZpKmcs.js
-- index-!~{001}~.js => index-Bx6GS1WH.js
-- chunk-!~{002}~.js => chunk-DCxEFtjL.js
+- entry-!~{000}~.js => entry-C-wenldj.js
+- index-!~{001}~.js => index-BDVb_WKl.js
+- chunk-!~{002}~.js => chunk-CW_H0o01.js
 
 # tests/rolldown/topics/hmr/register_exports
 
-- main-!~{000}~.js => main-CkJjwhFU.js
+- main-!~{000}~.js => main-CMDi0hpF.js
 
 # tests/rolldown/topics/import_meta_url_dirname_filename_polyfill/node_cjs
 

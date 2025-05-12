@@ -124,7 +124,7 @@ fix-repo:
     just fmt-repo
 
 # Support `just build [native|browser] [debug|release]`
-build target="native" mode="debug":
+build target="native" mode="debug": build-pluginutils
     pnpm run --filter rolldown build-{{ target }}:{{ mode }}
 
 _build-native-debug:

@@ -194,6 +194,7 @@ export interface OutputOptions {
   polyfillRequire?: boolean;
   target?: ESTarget;
   hoistTransitiveImports?: false;
+  preserveModules?: boolean;
 }
 
 interface OverwriteOutputOptionsForCli {

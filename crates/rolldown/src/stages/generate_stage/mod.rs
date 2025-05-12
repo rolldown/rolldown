@@ -203,8 +203,10 @@ impl<'a> GenerateStage<'a> {
               } else {
                 arcstr::literal!("input")
               }
+            } else if self.options.preserve_modules {
+              sanitize_filename.call(&module.id().as_path().representative_file_name(true)).await?
             } else {
-              sanitize_filename.call(&module.id().as_path().representative_file_name()).await?
+              sanitize_filename.call(&module.id().as_path().representative_file_name(false)).await?
             };
             Ok(generated)
           }
@@ -215,7 +217,11 @@ impl<'a> GenerateStage<'a> {
               chunk.modules.iter().rev().find(|each| **each != self.link_output.runtime.id())
             {
               let module = &modules[*module_id];
-              Ok(sanitize_filename.call(&module.id().as_path().representative_file_name()).await?)
+              Ok(
+                sanitize_filename
+                  .call(&module.id().as_path().representative_file_name(false))
+                  .await?,
+              )
             } else {
               Ok(arcstr::literal!("chunk"))
             }

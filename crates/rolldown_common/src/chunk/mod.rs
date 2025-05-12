@@ -1,4 +1,7 @@
-use std::path::{Path, PathBuf};
+use std::{
+  borrow::Cow,
+  path::{Path, PathBuf},
+};
 
 use crate::{
   ChunkIdx, ChunkKind, FilenameTemplate, ModuleIdx, ModuleTable, NamedImport, NormalModule,
@@ -50,9 +53,11 @@ pub struct Chunk {
   // meaningless if the chunk is an entrypoint
   pub exports_to_other_chunks: FxHashMap<SymbolRef, Rstr>,
   pub is_alive: bool,
+  pub input_base: ArcStr,
 }
 
 impl Chunk {
+  #[allow(clippy::too_many_arguments)]
   pub fn new(
     name: Option<ArcStr>,
     reference_id: Option<ArcStr>,
@@ -61,6 +66,7 @@ impl Chunk {
     modules: Vec<ModuleIdx>,
     kind: ChunkKind,
     is_alive: bool,
+    input_base: ArcStr,
   ) -> Self {
     Self {
       exec_order: u32::MAX,
@@ -71,6 +77,7 @@ impl Chunk {
       bits,
       kind,
       is_alive,
+      input_base,
       ..Self::default()
     }
   }
@@ -168,8 +175,16 @@ impl Chunk {
         hash
       }
     });
+    let chunk_name = if options.preserve_modules
+      && matches!(self.kind, ChunkKind::EntryPoint { is_user_defined, .. } if !is_user_defined)
+    {
+      let p = chunk_name.relative(self.input_base.as_str());
+      Cow::Owned(p.to_slash_lossy().to_string())
+    } else {
+      Cow::Borrowed(chunk_name.as_str())
+    };
 
-    let filename = filename_template.render(Some(chunk_name), None, hash_replacer).into();
+    let filename = filename_template.render(Some(chunk_name.as_ref()), None, hash_replacer).into();
 
     let name = make_unique_name(&filename, used_name_counts);
 

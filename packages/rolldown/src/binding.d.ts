@@ -602,6 +602,7 @@ export interface BindingOutputOptions {
   advancedChunks?: BindingAdvancedChunksOptions
   comments?: 'none' | 'preserve-legal'
   polyfillRequire?: boolean
+  preserveModules?: boolean
   target?: string
 }
 

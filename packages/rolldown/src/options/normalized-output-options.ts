@@ -47,6 +47,7 @@ export interface NormalizedOutputOptions {
   comments: 'none' | 'preserve-legal';
   polyfillRequire: boolean;
   plugins: RolldownPlugin[];
+  preserveModules: boolean;
 }
 
 // TODO: I guess we make these getters enumerable so it act more like a plain object
@@ -175,6 +176,10 @@ export class NormalizedOutputOptionsImpl implements NormalizedOutputOptions {
 
   get plugins(): RolldownPlugin[] {
     return this.normalizedOutputPlugins;
+  }
+
+  get preserveModules(): boolean {
+    return this.preserveModules;
   }
 }
 

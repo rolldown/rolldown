@@ -18,6 +18,7 @@ pub mod sanitize_filename;
 pub mod xxhash;
 pub use bitset::BitSet;
 pub mod clean_url;
+pub mod commondir;
 pub mod concat_string;
 pub mod filter_expression;
 pub mod hash_placeholder;

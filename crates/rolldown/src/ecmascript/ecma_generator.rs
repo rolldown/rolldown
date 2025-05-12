@@ -240,7 +240,6 @@ impl Generator for EcmaGenerator {
       let sources = paths.iter().map(|x| x.to_string_lossy()).collect::<Vec<_>>();
       map.set_sources(sources.iter().map(std::convert::AsRef::as_ref).collect::<Vec<_>>());
     }
-
     Ok(Ok(GenerateOutput {
       chunks: vec![InstantiatedChunk {
         origin_chunk: ctx.chunk_idx,

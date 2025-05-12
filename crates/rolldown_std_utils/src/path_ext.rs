@@ -5,7 +5,7 @@ pub trait PathExt {
 
   fn expect_to_slash(&self) -> String;
 
-  fn representative_file_name(&self) -> Cow<str>;
+  fn representative_file_name(&self, absolute: bool) -> Cow<str>;
 }
 
 impl PathExt for std::path::Path {
@@ -28,14 +28,14 @@ impl PathExt for std::path::Path {
   }
 
   /// It doesn't ensure the file name is a valid identifier in JS.
-  fn representative_file_name(&self) -> Cow<str> {
+  fn representative_file_name(&self, absolute: bool) -> Cow<str> {
     let file_name =
       self.file_stem().map_or_else(|| self.to_string_lossy(), |stem| stem.to_string_lossy());
 
     let file_name = match &*file_name {
       // "index": Node.js use `index` as a special name for directory import.
       // "mod": https://docs.deno.com/runtime/manual/references/contributing/style_guide#do-not-use-the-filename-indextsindexjs.
-      "index" | "mod" => {
+      "index" | "mod" if !absolute => {
         if let Some(parent_dir_name) =
           self.parent().and_then(Path::file_stem).map(OsStr::to_string_lossy)
         {
@@ -47,7 +47,21 @@ impl PathExt for std::path::Path {
       _ => file_name,
     };
 
-    file_name
+    if absolute {
+      let idx =
+        self.to_string_lossy().rfind(file_name.as_ref()).expect("should contains file_name");
+      slice_cow_str(self.to_string_lossy(), 0, idx + file_name.len())
+    } else {
+      file_name
+    }
+  }
+}
+
+#[inline]
+fn slice_cow_str(cow: Cow<str>, start: usize, end: usize) -> Cow<'_, str> {
+  match cow {
+    Cow::Borrowed(s) => Cow::Borrowed(&s[start..end]),
+    Cow::Owned(s) => Cow::Owned(s[start..end].to_string()),
   }
 }
 
@@ -55,11 +69,15 @@ impl PathExt for std::path::Path {
 fn test_representative_file_name() {
   let cwd = Path::new(".").join("project");
   let path = cwd.join("src").join("vue.js");
-  assert_eq!(path.representative_file_name(), "vue");
+  assert_eq!(path.representative_file_name(false), "vue");
 
   let path = cwd.join("vue").join("index.js");
-  assert_eq!(path.representative_file_name(), "vue");
+  assert_eq!(path.representative_file_name(false), "vue");
 
   let path = cwd.join("vue").join("mod.ts");
-  assert_eq!(path.representative_file_name(), "vue");
+  assert_eq!(path.representative_file_name(false), "vue");
+
+  let path = cwd.join("src").join("vue.js");
+  #[cfg(not(target_os = "windows"))]
+  assert_eq!(path.representative_file_name(true), "./project/src/vue");
 }

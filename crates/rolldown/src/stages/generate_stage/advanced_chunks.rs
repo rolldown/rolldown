@@ -52,6 +52,7 @@ impl GenerateStage<'_> {
     index_splitting_info: &IndexSplittingInfo,
     module_to_assigned: &mut IndexVec<ModuleIdx, bool>,
     chunk_graph: &mut ChunkGraph,
+    input_base: &ArcStr,
   ) {
     let Some(chunking_options) = &self.options.advanced_chunks else {
       return;
@@ -160,6 +161,7 @@ impl GenerateStage<'_> {
         vec![],
         ChunkKind::Common,
         true,
+        input_base.clone(),
       );
       let chunk_idx = chunk_graph.add_chunk(runtime_chunk);
       module_groups.iter_mut().for_each(|group| {
@@ -282,6 +284,7 @@ impl GenerateStage<'_> {
         vec![],
         ChunkKind::Common,
         true,
+        input_base.clone(),
       );
 
       let chunk_idx = chunk_graph.add_chunk(chunk);

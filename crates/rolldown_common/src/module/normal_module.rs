@@ -1,5 +1,4 @@
-use std::fmt::Debug;
-use std::sync::Arc;
+use std::{fmt::Debug, sync::Arc};
 
 use crate::css::css_view::CssView;
 use crate::types::module_render_output::ModuleRenderOutput;
@@ -11,7 +10,7 @@ use crate::{
 use crate::{EcmaAstIdx, EcmaView, IndexModules, Interop, Module, ModuleType};
 use std::ops::{Deref, DerefMut};
 
-use itertools::Either;
+use itertools::{Either, Itertools};
 use oxc::codegen::LegalComment;
 use oxc_index::IndexVec;
 use rolldown_ecmascript::{EcmaAst, EcmaCompiler, PrintOptions};
@@ -93,13 +92,12 @@ impl NormalModule {
       dynamically_imported_ids: self.ecma_view.dynamically_imported_ids.clone(),
       // https://github.com/rollup/rollup/blob/7a8ac460c62b0406a749e367dbd0b74973282449/src/Module.ts#L331
       exports: {
-        let mut exports =
-          self.ecma_view.named_exports.keys().map(|e| e.as_str().into()).collect::<Vec<_>>();
+        let mut exports = self.ecma_view.named_exports.keys().cloned().collect_vec();
         if let Some(e) = raw_import_records {
           exports.extend(
             e.iter()
               .filter(|&rec| rec.meta.contains(ImportRecordMeta::IS_EXPORT_STAR))
-              .map(|_| "*".into()),
+              .map(|_| Rstr::from("*")),
           );
         } else {
           exports.extend(
@@ -108,7 +106,7 @@ impl NormalModule {
               .import_records
               .iter()
               .filter(|&rec| rec.meta.contains(ImportRecordMeta::IS_EXPORT_STAR))
-              .map(|_| "*".into()),
+              .map(|_| Rstr::from("*")),
           );
         }
         exports

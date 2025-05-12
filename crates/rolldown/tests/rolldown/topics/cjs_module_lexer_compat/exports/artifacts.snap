@@ -1,6 +1,5 @@
 ---
 source: crates/rolldown_testing/src/integration_test.rs
-snapshot_kind: text
 ---
 # Assets
 
@@ -17,8 +16,8 @@ const devil = "devil";
 var main_default = "default";
 
 //#endregion
-exports.a = a
-exports.b = b
-exports.default = main_default
-exports["😈"] = devil
+exports.a = a;
+exports.b = b;
+exports.default = main_default;
+exports["😈"] = devil;
 ```

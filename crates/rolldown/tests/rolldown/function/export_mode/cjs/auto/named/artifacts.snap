@@ -14,5 +14,5 @@ function a() {
 }
 
 //#endregion
-exports.a = a
+exports.a = a;
 ```

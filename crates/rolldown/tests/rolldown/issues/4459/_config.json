@@ -1,0 +1,10 @@
+{
+  "expectExecuted": false,
+  "config": {
+    "format": "umd",
+    "name": "Lib",
+    "external": [
+      "es-toolkit"
+    ]
+  }
+}

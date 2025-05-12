@@ -18,7 +18,7 @@ this["1"]["2"] = (function(exports) {
 const value = 1;
 
 //#endregion
-exports.value = value
+exports.value = value;
 return exports;
 })({});
   }

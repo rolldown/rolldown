@@ -117,7 +117,7 @@ impl Plugin for ReporterPlugin {
     }
 
     utils::log_info(&format!(
-      "\x1b[32m✓\x1b[39m {} modules transformed.\n",
+      "\x1b[32m✓\x1b[39m {} modules transformed.",
       self.transformed_count.load(Ordering::SeqCst)
     ));
 
@@ -294,9 +294,9 @@ impl Plugin for ReporterPlugin {
 
           let size = utils::display_size(log_entry.size);
           if group == utils::AssetGroup::JS && log_entry.size.div_ceil(1000) > self.chunk_limit {
-            let _ = write!(&mut info, "\x1b[33m{size:>size_pad$}\x1b[39m");
+            let _ = write!(&mut info, "\x1b[1m\x1b[33m{size:>size_pad$}\x1b[39m\x1b[22m");
           } else {
-            let _ = write!(&mut info, "\x1b[2m{size:>size_pad$}\x1b[22m");
+            let _ = write!(&mut info, "\x1b[1m\x1b[2m{size:>size_pad$}\x1b[22m\x1b[22m");
           }
 
           if let Some(compressed_size) = log_entry.compressed_size {
@@ -308,8 +308,6 @@ impl Plugin for ReporterPlugin {
             let size = utils::display_size(map_size);
             let _ = write!(&mut info, "\x1b[2m │ map: {size:>map_pad$}\x1b[22m");
           }
-
-          info.push('\n');
 
           utils::log_info(&info);
         }

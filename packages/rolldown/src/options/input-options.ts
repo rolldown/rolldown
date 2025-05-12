@@ -49,6 +49,7 @@ export type ModuleTypes = Record<
   | 'binary'
   | 'empty'
   | 'css'
+  | 'asset'
 >;
 
 export interface JsxOptions {

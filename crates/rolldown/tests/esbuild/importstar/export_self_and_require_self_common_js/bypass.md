@@ -35,7 +35,7 @@ var init_entry = __esm({ "entry.js"() {
 
 //#endregion
 init_entry();
-exports.foo = foo
+exports.foo = foo;
 ```
 ### diff
 ```diff

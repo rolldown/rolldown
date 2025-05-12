@@ -1,6 +1,5 @@
 ---
 source: crates/rolldown_testing/src/integration_test.rs
-snapshot_kind: text
 ---
 # Assets
 
@@ -43,8 +42,8 @@ Object.defineProperty(exports, 'count', {
     return require_shared.count;
   }
 });
-exports.inc = require_shared.inc
-exports.reset = require_shared.reset
+exports.inc = require_shared.inc;
+exports.reset = require_shared.reset;
 ```
 ## shared.js
 

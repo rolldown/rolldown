@@ -18,6 +18,7 @@ workspace = true
 cow-utils = { workspace = true }
 flate2 = { workspace = true }
 itoa = { workspace = true }
+num-format = { workspace = true }
 rolldown_common = { workspace = true }
 rolldown_plugin = { workspace = true }
 sugar_path = { workspace = true }

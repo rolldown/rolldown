@@ -46,7 +46,7 @@ input.works = Promise.resolve().then(function() {
 var foo_default = 123;
 
 //#endregion
-exports.default = foo_default
+exports.default = foo_default;
 ```
 ---
 

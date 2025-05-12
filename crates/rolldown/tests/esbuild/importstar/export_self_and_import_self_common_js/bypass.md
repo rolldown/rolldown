@@ -25,7 +25,7 @@ const foo = 123;
 console.log(entry_exports);
 
 //#endregion
-exports.foo = foo
+exports.foo = foo;
 ```
 ### diff
 ```diff

@@ -17,7 +17,7 @@ use rolldown_common::{
   DUMMY_MODULE_IDX, EcmaRelated, EntryPoint, EntryPointKind, ExternalModule,
   ExternalModuleTaskResult, HybridIndexVec, ImportKind, ImportRecordIdx, ImportRecordMeta,
   ImporterRecord, Module, ModuleId, ModuleIdx, ModuleLoaderMsg, ModuleType, NormalModuleTaskResult,
-  RUNTIME_MODULE_ID, ResolvedId, RuntimeModuleBrief, RuntimeModuleTaskResult, StmtInfoIdx,
+  RUNTIME_MODULE_KEY, ResolvedId, RuntimeModuleBrief, RuntimeModuleTaskResult, StmtInfoIdx,
   SymbolRefDb, SymbolRefDbForModule,
 };
 use rolldown_error::{BuildDiagnostic, BuildResult};
@@ -155,7 +155,7 @@ impl ModuleLoader {
       IntermediateNormalModules::new(is_full_scan, std::mem::take(&mut cache.importers));
     let runtime_id = intermediate_normal_modules.alloc_ecma_module_idx();
 
-    let remaining = if cache.module_id_to_idx.contains_key(RUNTIME_MODULE_ID) {
+    let remaining = if cache.module_id_to_idx.contains_key(RUNTIME_MODULE_KEY) {
       // the first alloc just want to allocate the runtime module id
       intermediate_normal_modules.reset_ecma_module_idx();
       0
@@ -163,7 +163,7 @@ impl ModuleLoader {
       let task = RuntimeModuleTask::new(runtime_id, tx.clone(), Arc::clone(&options));
 
       tokio::spawn(async { task.run() });
-      cache.module_id_to_idx.insert(RUNTIME_MODULE_ID.into(), VisitState::Seen(runtime_id));
+      cache.module_id_to_idx.insert(RUNTIME_MODULE_KEY.into(), VisitState::Seen(runtime_id));
       1
     };
 
@@ -310,7 +310,7 @@ impl ModuleLoader {
             resolved_deps,
             raw_import_records,
             warnings,
-          } = task_result;
+          } = *task_result;
           all_warnings.extend(warnings);
           let mut dynamic_import_rec_exports_usage = ecma_related
             .as_mut()
@@ -396,7 +396,7 @@ impl ModuleLoader {
             identifier_name,
             side_effects,
             need_renormalize_render_path,
-          } = task_result;
+          } = *task_result;
 
           self.symbol_ref_db.store_local_db(
             task_result.idx,
@@ -424,7 +424,7 @@ impl ModuleLoader {
             ast,
             raw_import_records,
             resolved_deps,
-          } = task_result;
+          } = *task_result;
           let mut import_records = IndexVec::with_capacity(raw_import_records.len());
 
           for (raw_rec, info) in raw_import_records.into_iter().zip(resolved_deps) {
@@ -474,7 +474,13 @@ impl ModuleLoader {
           self.remaining -= 1;
         }
         ModuleLoaderMsg::FetchModule(resolve_id) => {
-          self.try_spawn_new_task(resolve_id, None, false, None, Arc::clone(&user_defined_entries));
+          self.try_spawn_new_task(
+            *resolve_id,
+            None,
+            false,
+            None,
+            Arc::clone(&user_defined_entries),
+          );
         }
         ModuleLoaderMsg::AddEntryModule(msg) => {
           let data = msg.chunk;

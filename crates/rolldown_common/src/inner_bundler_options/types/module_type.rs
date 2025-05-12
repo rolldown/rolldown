@@ -40,6 +40,8 @@ impl ModuleType {
       "dataurl" => Ok(Self::Dataurl),
       "binary" => Ok(Self::Binary),
       "empty" => Ok(Self::Empty),
+      "css" => Ok(Self::Css),
+      "asset" => Ok(Self::Asset),
       _ => Err(anyhow::format_err!("Unknown module type: {s}")),
     }
   }
@@ -58,6 +60,8 @@ impl ModuleType {
       "dataurl" => Self::Dataurl,
       "binary" => Self::Binary,
       "empty" => Self::Empty,
+      "css" => Self::Css,
+      "asset" => Self::Asset,
       _ => Self::Custom(s.as_ref().to_string()),
     }
   }

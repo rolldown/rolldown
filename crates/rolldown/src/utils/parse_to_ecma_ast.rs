@@ -2,7 +2,7 @@ use std::path::Path;
 
 use arcstr::ArcStr;
 use oxc::{semantic::Scoping, span::SourceType as OxcSourceType};
-use rolldown_common::{ModuleType, NormalizedBundlerOptions, RUNTIME_MODULE_ID, StrOrBytes};
+use rolldown_common::{ModuleType, NormalizedBundlerOptions, RUNTIME_MODULE_KEY, StrOrBytes};
 use rolldown_ecmascript::{EcmaAst, EcmaCompiler};
 use rolldown_error::{BuildDiagnostic, BuildResult};
 use rolldown_loader_utils::{binary_to_esm, text_to_string_literal};
@@ -133,7 +133,7 @@ fn pre_process_source(
     ModuleType::Binary => {
       let source = source.into_bytes();
       let encoded = rolldown_utils::base64::to_standard_base64(source);
-      binary_to_esm(&encoded, options.platform, RUNTIME_MODULE_ID)
+      binary_to_esm(&encoded, options.platform, RUNTIME_MODULE_KEY)
     }
     ModuleType::Empty => String::new(),
     ModuleType::Custom(custom_type) => {

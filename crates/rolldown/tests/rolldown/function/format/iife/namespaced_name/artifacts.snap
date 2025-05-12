@@ -18,7 +18,7 @@ this.namespace.module = (function(exports) {
 const value = 1;
 
 //#endregion
-exports.value = value
+exports.value = value;
 return exports;
 })({});
   }

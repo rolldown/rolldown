@@ -12,5 +12,5 @@ source: crates/rolldown_testing/src/integration_test.rs
 const devil = "devil";
 
 //#endregion
-exports["😈"] = devil
+exports["😈"] = devil;
 ```

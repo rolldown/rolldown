@@ -19,7 +19,7 @@
 const foo = 123;
 
 //#endregion
-exports.foo = foo
+exports.foo = foo;
 return exports;
 })({});
 ```

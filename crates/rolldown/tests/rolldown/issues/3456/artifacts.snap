@@ -1,6 +1,5 @@
 ---
 source: crates/rolldown_testing/src/integration_test.rs
-snapshot_kind: text
 ---
 # Assets
 
@@ -24,5 +23,5 @@ Variant: (format: Cjs)
 
 const external = __toESM(require("external"));
 
-exports["\n\"\\'"] = external["\n\"\\'"]
+exports["\n\"\\'"] = external["\n\"\\'"];
 ```

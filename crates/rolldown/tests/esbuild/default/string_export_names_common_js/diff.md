@@ -25,7 +25,7 @@ Object.defineProperty(exports, 'all the stuff', {
     return foo;
   }
 });
-exports["some export"] = foo["some import"]
+exports["some export"] = foo["some import"];
 ```
 ### diff
 ```diff

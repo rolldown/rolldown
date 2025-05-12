@@ -105,7 +105,7 @@ Object.defineProperty(exports, 'init_foo', {
 const require_foo = require('./foo.js');
 
 require_foo.init_foo();
-exports.bar = require_foo.bar
+exports.bar = require_foo.bar;
 ```
 ---
 

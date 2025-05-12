@@ -12,5 +12,5 @@ source: crates/rolldown_testing/src/integration_test.rs
 const exports$1 = "exports";
 
 //#endregion
-exports.exports = exports$1
+exports.exports = exports$1;
 ```

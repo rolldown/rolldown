@@ -24,6 +24,6 @@ Object.defineProperty(exports, 'count', {
     return count;
   }
 });
-exports.inc = inc
-exports.reset = reset
+exports.inc = inc;
+exports.reset = reset;
 ```

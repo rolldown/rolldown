@@ -1,6 +1,5 @@
 ---
 source: crates/rolldown_testing/src/integration_test.rs
-snapshot_kind: text
 ---
 # Assets
 
@@ -9,16 +8,16 @@ snapshot_kind: text
 ```js
 const require_main = require('./main.js');
 
-exports.default = require_main.main_default
-exports.foo = require_main.foo
+exports.default = require_main.main_default;
+exports.foo = require_main.foo;
 ```
 ## entry2.js
 
 ```js
 const require_main = require('./main.js');
 
-exports.default = require_main.main_default
-exports.foo = require_main.foo
+exports.default = require_main.main_default;
+exports.foo = require_main.foo;
 ```
 ## main.js
 

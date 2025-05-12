@@ -59,7 +59,7 @@ export default defineTest({
       var main_default = node_path.join;
 
       //#endregion
-      exports.default = main_default
+      exports.default = main_default;
       return exports;
       })({}, node_path);"
     `)

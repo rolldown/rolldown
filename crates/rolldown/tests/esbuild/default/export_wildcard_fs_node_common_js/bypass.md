@@ -32,7 +32,7 @@ __reExport(entry_exports, require("./external"), module.exports);
 let foo = 123;
 
 //#endregion
-exports.foo = foo
+exports.foo = foo;
 var fs = require("fs");
 Object.keys(fs).forEach(function (k) {
   if (k !== 'default' && !Object.prototype.hasOwnProperty.call(exports, k)) Object.defineProperty(exports, k, {

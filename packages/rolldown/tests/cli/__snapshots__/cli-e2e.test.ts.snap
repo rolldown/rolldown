@@ -180,11 +180,11 @@ node_fs = __toESM(node_fs);
 const nonExternal = "nonExternal";
 
 //#endregion
-exports.nonExternal = nonExternal
-exports.read = node_fs.read
-exports.readFile = node_fs.readFile
-exports.readFileSync = node_fs.readFileSync
-exports.readSync = node_fs.readSync
+exports.nonExternal = nonExternal;
+exports.read = node_fs.read;
+exports.readFile = node_fs.readFile;
+exports.readFileSync = node_fs.readFileSync;
+exports.readSync = node_fs.readSync;
 return exports;
 })({}, node_fs);"
 `;

@@ -20,7 +20,7 @@
 let a = 1;
 
 //#endregion
-exports.a = a
+exports.a = a;
 return exports;
 })({});
 ```

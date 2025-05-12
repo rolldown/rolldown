@@ -5,10 +5,6 @@ use cow_utils::CowUtils;
 pub const BROWSER_EXTERNAL_ID: &str = "__vite-browser-external";
 pub const OPTIONAL_PEER_DEP_ID: &str = "__vite-optional-peer-dep";
 
-pub fn clean_url(url: &str) -> &str {
-  url.find(['?', '#']).map(|pos| (&url[..pos])).unwrap_or(url)
-}
-
 // bareImportRE.test(id)
 pub fn is_bare_import(id: &str) -> bool {
   if is_windows_drive_path(id) {

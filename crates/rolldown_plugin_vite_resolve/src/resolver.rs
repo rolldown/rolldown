@@ -7,6 +7,7 @@ use std::{
 
 use rolldown_common::side_effects::HookSideEffects;
 use rolldown_plugin::{HookResolveIdOutput, HookResolveIdReturn};
+use rolldown_utils::clean_url::clean_url;
 use rustc_hash::FxHashSet;
 use sugar_path::SugarPath;
 
@@ -14,7 +15,7 @@ use crate::{
   builtin::BuiltinChecker,
   package_json_cache::{PackageJsonCache, PackageJsonWithOptionalPeerDependencies},
   utils::{
-    BROWSER_EXTERNAL_ID, OPTIONAL_PEER_DEP_ID, can_externalize_file, clean_url, get_extension,
+    BROWSER_EXTERNAL_ID, OPTIONAL_PEER_DEP_ID, can_externalize_file, get_extension,
     get_npm_package_name, is_bare_import, is_deep_import, normalize_path,
   },
 };

@@ -1079,9 +1079,8 @@ expression: output
 
 # tests/esbuild/default/jsx_this_property_common_js
 
-- factory-!~{000}~.js => factory-CEGKJiuC.js
-- fragment-!~{001}~.js => fragment-C745Srx7.js
-- chunk-!~{002}~.js => chunk-D7EEQdcO.js
+- factory-!~{000}~.js => factory-YZR45srW.js
+- fragment-!~{001}~.js => fragment-XZykhVoC.js
 
 # tests/esbuild/default/jsx_this_property_esm
 
@@ -1090,9 +1089,8 @@ expression: output
 
 # tests/esbuild/default/jsx_this_value_common_js
 
-- factory-!~{000}~.js => factory-D7OTdSRL.js
-- fragment-!~{001}~.js => fragment-CqNzI-Xk.js
-- chunk-!~{002}~.js => chunk-D7EEQdcO.js
+- factory-!~{000}~.js => factory-B8NMWnyA.js
+- fragment-!~{001}~.js => fragment-CRcArkQ4.js
 
 # tests/esbuild/default/jsx_this_value_esm
 
@@ -1662,7 +1660,7 @@ expression: output
 
 # tests/esbuild/default/this_outside_function
 
-- entry-!~{000}~.js => entry-B7nWs3UL.js
+- entry-!~{000}~.js => entry-Dc2GoFat.js
 
 # tests/esbuild/default/this_undefined_warning_esm
 
@@ -2597,7 +2595,7 @@ expression: output
 
 # tests/esbuild/lower/lower_async_this2016_common_js
 
-- entry-!~{000}~.js => entry-ZqZxE5sf.js
+- entry-!~{000}~.js => entry-EgdW9AG-.js
 
 # tests/esbuild/lower/lower_async_this2016_es6
 
@@ -2617,7 +2615,7 @@ expression: output
 
 # tests/esbuild/lower/lower_exponentiation_operator_no_bundle
 
-- entry-!~{000}~.js => entry-BiT76_mu.js
+- entry-!~{000}~.js => entry-BHgP5iud.js
 
 # tests/esbuild/lower/lower_export_star_as_name_collision
 
@@ -4780,7 +4778,7 @@ expression: output
 
 # tests/rolldown/misc/top_level_this_substitution
 
-- main-!~{000}~.js => main-1xqjSo6q.js
+- main-!~{000}~.js => main-VI4jzbWN.js
 
 # tests/rolldown/misc/use_strict/allow_parse_non_strict_code_in_cjs_format
 

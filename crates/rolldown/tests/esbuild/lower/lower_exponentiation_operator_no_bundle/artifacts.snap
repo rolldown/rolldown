@@ -6,34 +6,29 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## entry.js
 
 ```js
-
 //#region entry.js
-var require_entry = __commonJS({ "entry.js"(exports) {
-	let tests = {
-		0: a ** b ** c,
-		1: (a ** b) ** c,
-		2: a **= b,
-		3: a.b **= c,
-		4: a[b] **= c,
-		5: a().b **= c,
-		6: a()[b] **= c,
-		7: a[b()] **= c,
-		8: a()[b()] **= c,
-		9: a[0] **= b,
-		10: a[false] **= b,
-		11: a[null] **= b,
-		12: a[void 0] **= b,
-		13: a[123n] **= b,
-		14: a[exports] **= b,
-		15: a[/x/] **= b,
-		16: a[{}] **= b,
-		17: a[[]] **= b,
-		18: a[() => {}] **= b,
-		19: a[function() {}] **= b
-	};
-} });
+let tests = {
+	0: a ** b ** c,
+	1: (a ** b) ** c,
+	2: a **= b,
+	3: a.b **= c,
+	4: a[b] **= c,
+	5: a().b **= c,
+	6: a()[b] **= c,
+	7: a[b()] **= c,
+	8: a()[b()] **= c,
+	9: a[0] **= b,
+	10: a[false] **= b,
+	11: a[null] **= b,
+	12: a[void 0] **= b,
+	13: a[123n] **= b,
+	14: a[void 0] **= b,
+	15: a[/x/] **= b,
+	16: a[{}] **= b,
+	17: a[[]] **= b,
+	18: a[() => {}] **= b,
+	19: a[function() {}] **= b
+};
 
 //#endregion
-export default require_entry();
-
 ```

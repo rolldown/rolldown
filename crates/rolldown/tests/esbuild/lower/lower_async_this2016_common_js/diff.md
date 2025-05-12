@@ -17,7 +17,7 @@ export default require_entry();
 
 //#region entry.js
 var require_entry = __commonJS({ "entry.js"(exports) {
-	exports.foo = async () => exports;
+	exports.foo = async () => void 0;
 } });
 
 //#endregion
@@ -35,7 +35,7 @@ export default require_entry();
 -        exports.foo = () => __async(exports, null, function* () {
 -            return exports;
 -        });
-+        exports.foo = async () => exports;
++        exports.foo = async () => void 0;
      }
  });
  export default require_entry();

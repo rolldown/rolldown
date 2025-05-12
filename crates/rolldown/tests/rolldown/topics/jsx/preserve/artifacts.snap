@@ -1,0 +1,24 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## main.js
+
+```js
+import { Router as Router$1 } from "@solidjs/router";
+
+
+//#region util.jsx
+var util_exports = {};
+__export(util_exports, { Router: () => Router$2 });
+const Router$2 = () => <div />;
+
+//#endregion
+//#region main.jsx
+const Router = () => <util_exports.Router />;
+console.log(<Router$1 />);
+
+//#endregion
+export { Router };
+```

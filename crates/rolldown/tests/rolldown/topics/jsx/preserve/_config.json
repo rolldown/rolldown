@@ -1,0 +1,15 @@
+{
+  "config": {
+    "input": [
+      {
+        "name": "main",
+        "import": "./main.jsx"
+      }
+    ],
+    "jsx": "preserve",
+    "external": [
+      "@solidjs/router"
+    ]
+  },
+  "expectExecuted": false
+}

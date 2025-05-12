@@ -8,7 +8,7 @@ use oxc::{
   span::{GetSpan, SPAN, Span},
 };
 use rolldown_common::{ExportsKind, Module, StmtInfoIdx, SymbolRef, ThisExprReplaceKind, WrapKind};
-use rolldown_ecmascript_utils::ExpressionExt;
+use rolldown_ecmascript_utils::{ExpressionExt, JsxExt};
 use rustc_hash::FxHashSet;
 
 use super::ScopeHoistingFinalizer;
@@ -315,6 +315,52 @@ impl<'ast> VisitMut<'ast> for ScopeHoistingFinalizer<'_, 'ast> {
     self.rewrite_import_meta_hot(expr);
 
     walk_mut::walk_expression(self, expr);
+  }
+
+  fn visit_jsx_element_name(&mut self, it: &mut ast::JSXElementName<'ast>) {
+    match it {
+      ast::JSXElementName::Identifier(ident) => {
+        walk_mut::walk_jsx_identifier(self, ident);
+      }
+      ast::JSXElementName::IdentifierReference(identifier_reference) => {
+        if let Some(new_expr) =
+          self.try_rewrite_identifier_reference_expr(identifier_reference, false)
+        {
+          match new_expr {
+            Expression::Identifier(ident_ref) => {
+              *it = ast::JSXElementName::IdentifierReference(ident_ref);
+            }
+            _ => {
+              unreachable!(
+                "Should always rewrite to Identifier for JsxElementName::IdentifierReference"
+              )
+            }
+          }
+        }
+      }
+      ast::JSXElementName::NamespacedName(jsx_namespace_name) => {
+        walk_mut::walk_jsx_namespaced_name(self, jsx_namespace_name);
+      }
+      ast::JSXElementName::MemberExpression(jsx_member_expression) => {
+        if let Some(ident) = jsx_member_expression.get_identifier() {
+          if let Some(new_expr) = self.try_rewrite_identifier_reference_expr(ident, false) {
+            match new_expr {
+              Expression::Identifier(ident_ref) => {
+                jsx_member_expression.object.rewrite_ident_reference(ident_ref);
+              }
+              _ => {
+                unreachable!(
+                  "Should always rewrite to Identifier for JsxMemberExpression::get_identifier()"
+                )
+              }
+            }
+          }
+        }
+      }
+      ast::JSXElementName::ThisExpression(this_expression) => {
+        walk_mut::walk_this_expression(self, this_expression);
+      }
+    }
   }
 
   // foo.js `export const bar = { a: 0 }`

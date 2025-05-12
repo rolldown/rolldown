@@ -5221,6 +5221,10 @@ expression: output
 - main-!~{000}~.js => main-BsHwzpVr.js
 - main-BsHwzpVr.js.map
 
+# tests/rolldown/topics/jsx/preserve
+
+- main-!~{000}~.js => main-CuuG3vVZ.js
+
 # tests/rolldown/topics/keep_names/declaration
 
 - main-!~{000}~.js => main-D-HGS_0P.js

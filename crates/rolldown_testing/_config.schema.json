@@ -338,15 +338,7 @@
             "null"
           ]
         },
-        "jsx": {
-          "type": [
-            "object",
-            "null"
-          ],
-          "additionalProperties": {
-            "type": "string"
-          }
-        },
+        "jsx": true,
         "keepNames": {
           "type": [
             "boolean",

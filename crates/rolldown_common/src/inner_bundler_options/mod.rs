@@ -172,7 +172,7 @@ pub struct BundlerOptions {
   #[cfg_attr(
     feature = "deserialize_bundler_options",
     serde(deserialize_with = "deserialize_jsx", default),
-    schemars(with = "Option<FxHashMap<String, String>>")
+    schemars(with = "Option<Value>")
   )]
   pub jsx: Option<Jsx>,
   #[cfg_attr(
@@ -367,6 +367,7 @@ where
   let value = Option::<Value>::deserialize(deserializer)?;
   match value {
     None => Ok(Some(Jsx::default())),
+    Some(Value::String(str)) if str == "preserve" => Ok(Some(Jsx::Preserve)),
     Some(Value::Object(obj)) => {
       let mut default_jsx_option = JsxOptions::default();
       for (k, v) in obj {
@@ -413,6 +414,6 @@ where
 
       Ok(Some(Jsx::Enable(default_jsx_option)))
     }
-    _ => Err(serde::de::Error::custom("jsx should be an object")),
+    _ => Err(serde::de::Error::custom("jsx should be either an object or `preserve`")),
   }
 }

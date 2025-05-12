@@ -25,6 +25,7 @@ import type {
   InputOption,
   InputOptions,
   JsxOptions,
+  ModuleTypes,
   WatcherOptions,
 } from './options/input-options';
 import type { NormalizedInputOptions } from './options/normalized-input-options';
@@ -136,6 +137,7 @@ export type {
   ModuleOptions,
   ModuleType,
   ModuleTypeFilter,
+  ModuleTypes,
   NormalizedInputOptions,
   NormalizedOutputOptions,
   ObjectHook,

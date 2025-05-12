@@ -29,7 +29,8 @@ function test(str) {
 }
 
 //#endregion
-exports.test = test;Object.keys(es_toolkit).forEach(function (k) {
+exports.test = test;
+Object.keys(es_toolkit).forEach(function (k) {
   if (k !== 'default' && !Object.prototype.hasOwnProperty.call(exports, k)) Object.defineProperty(exports, k, {
     enumerable: true,
     get: function () { return es_toolkit[k]; }

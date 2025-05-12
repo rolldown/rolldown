@@ -4675,7 +4675,7 @@ expression: output
 
 # tests/rolldown/issues/4406
 
-- main-!~{000}~.js => main-jDevdiBc.js
+- main-!~{000}~.js => main-DVIS1vAZ.js
 
 # tests/rolldown/issues/4443
 
@@ -4683,7 +4683,7 @@ expression: output
 
 # tests/rolldown/issues/4459
 
-- main-!~{000}~.js => main-dTusokI9.js
+- main-!~{000}~.js => main-ByqogmIY.js
 
 # tests/rolldown/misc/ambiguous_star_export
 

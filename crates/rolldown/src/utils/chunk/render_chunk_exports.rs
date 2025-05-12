@@ -239,9 +239,10 @@ pub fn render_chunk_exports(
   });
 });\n".replace("$NAME", binding_ref_name);
 
+          s.push('\n');
           // Only generate require statement if this external module hasn't been imported yet
           if imported_external_modules.insert(external.namespace_ref) {
-            write!(s, "\nvar {} = require(\"{}\");\n", binding_ref_name, &external.get_import_path(chunk)).unwrap();
+            writeln!(s, "var {} = require(\"{}\");", binding_ref_name, &external.get_import_path(chunk)).unwrap();
           }
           s.push_str(&import_stmt);
         });

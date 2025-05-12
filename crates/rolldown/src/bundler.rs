@@ -13,7 +13,8 @@ use anyhow::Result;
 
 use arcstr::ArcStr;
 use rolldown_common::{
-  GetLocalDbMut, HmrOutput, NormalizedBundlerOptions, ScanMode, SharedFileEmitter, SymbolRefDb,
+  GetLocalDbMut, HmrOutput, Module, NormalizedBundlerOptions, ScanMode, SharedFileEmitter,
+  SymbolRefDb,
 };
 use rolldown_debug::{action, trace_action};
 use rolldown_error::{BuildDiagnostic, BuildResult};
@@ -128,6 +129,8 @@ impl Bundler {
 
     let scan_stage_output =
       self.normalize_scan_stage_output_and_update_cache(scan_stage_output, is_full_scan_mode);
+
+    Self::trace_action_module_graph_ready(&scan_stage_output);
     self.plugin_driver.build_end(None).await?;
     trace_action!(action::BuildEnd { action: "BuildEnd" });
     Ok(scan_stage_output)
@@ -288,6 +291,37 @@ impl Bundler {
       let cache_db = snapshot.symbol_ref_db.local_db_mut(idx);
       let (scoping, _) = db_for_module.ast_scopes.into_inner();
       cache_db.ast_scopes.set_scoping(scoping);
+    }
+  }
+
+  fn trace_action_module_graph_ready(scan_stage_output: &NormalizedScanStageOutput) {
+    if tracing::enabled!(tracing::Level::TRACE) {
+      let modules = scan_stage_output
+        .module_table
+        .modules
+        .iter()
+        .map(|m| match m {
+          Module::Normal(module) => action::Module {
+            id: module.id.to_string(),
+            is_external: false,
+            imports: Some(
+              module
+                .import_records
+                .iter()
+                .map(|r| scan_stage_output.module_table.modules[r.resolved_module].id().to_string())
+                .collect(),
+            ),
+            importers: Some(module.importers.iter().map(|i| i.to_string()).collect()),
+          },
+          Module::External(module) => action::Module {
+            id: module.id.to_string(),
+            is_external: true,
+            imports: None,
+            importers: None,
+          },
+        })
+        .collect();
+      trace_action!(action::ModuleGraphReady { action: "ModuleGraphReady", modules });
     }
   }
 }

@@ -88,11 +88,9 @@ class DevRuntime {
     this.moduleHotContextsToBeUpdated.clear()
     // swap new contexts
   }
-  registerModule(id, exports) {
-    console.debug('Registering module', id, exports);
-    this.modules[id] = {
-      exports,
-    }
+  registerModule(id, module) {
+    console.debug('Registering module', id, module);
+    this.modules[id] = module
   }
 
   loadExports(id) {

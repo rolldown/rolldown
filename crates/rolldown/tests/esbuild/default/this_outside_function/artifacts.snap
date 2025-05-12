@@ -6,44 +6,39 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## entry.js
 
 ```js
-
 //#region entry.js
-var require_entry = __commonJS({ "entry.js"(exports) {
-	if (shouldBeExportsNotThis) {
-		console.log(exports);
-		console.log((x = exports) => exports);
-		console.log({ x: exports });
-		console.log(class extends exports.foo {});
-		console.log(class {
-			[exports.foo];
-		});
-		console.log(class {
-			[exports.foo]() {}
-		});
-		console.log(class {
-			static [exports.foo];
-		});
-		console.log(class {
-			static [exports.foo]() {}
-		});
-	}
-	if (shouldBeThisNotExports) {
-		console.log(class {
-			foo = this;
-		});
-		console.log(class {
-			foo() {}
-		});
-		console.log(class {
-			static foo = this;
-		});
-		console.log(class {
-			static foo() {}
-		});
-	}
-} });
+if (shouldBeExportsNotThis) {
+	console.log(void 0);
+	console.log((x = void 0) => void 0);
+	console.log({ x: void 0 });
+	console.log(class extends (void 0).foo {});
+	console.log(class {
+		[(void 0).foo];
+	});
+	console.log(class {
+		[(void 0).foo]() {}
+	});
+	console.log(class {
+		static [(void 0).foo];
+	});
+	console.log(class {
+		static [(void 0).foo]() {}
+	});
+}
+if (shouldBeThisNotExports) {
+	console.log(class {
+		foo = this;
+	});
+	console.log(class {
+		foo() {}
+	});
+	console.log(class {
+		static foo = this;
+	});
+	console.log(class {
+		static foo() {}
+	});
+}
 
 //#endregion
-export default require_entry();
-
 ```

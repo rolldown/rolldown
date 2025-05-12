@@ -87,18 +87,10 @@ impl<'me, 'ast: 'me> Visit<'ast> for AstScanner<'me, 'ast> {
     // https://github.com/evanw/esbuild/blob/d34e79e2a998c21bb71d57b92b0017ca11756912/internal/js_parser/js_parser.go#L12551-L12604
     // Since AstScan is immutable, we defer transformation in module finalizer
     if !self.top_level_this_expr_set.is_empty() {
-      if self.esm_export_keyword.is_none() {
-        self.ast_usage.insert(EcmaModuleAstUsage::ExportsRef);
-        self.result.this_expr_replace_map = generate_replace_this_expr_map(
-          &self.top_level_this_expr_set,
-          ThisExprReplaceKind::Exports,
-        );
-      } else {
-        self.result.this_expr_replace_map = generate_replace_this_expr_map(
-          &self.top_level_this_expr_set,
-          ThisExprReplaceKind::Undefined,
-        );
-      }
+      self.result.this_expr_replace_map = generate_replace_this_expr_map(
+        &self.top_level_this_expr_set,
+        ThisExprReplaceKind::Undefined,
+      );
     }
 
     // check if the module is a reexport cjs module e.g.

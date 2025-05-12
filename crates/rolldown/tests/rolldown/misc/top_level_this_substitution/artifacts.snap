@@ -6,17 +6,12 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## main.js
 
 ```js
-
 //#region main.js
-var require_main = __commonJS({ "main.js"(exports) {
-	var BaseNode = class extends Callable {
-		referencesById = children.reduce((result, child) => Object.assign(result, child.referencesById), { [this.id]: this });
-		[exports.id] = this;
-	};
-	console.log(`BaseNode: `, BaseNode);
-} });
+var BaseNode = class extends Callable {
+	referencesById = children.reduce((result, child) => Object.assign(result, child.referencesById), { [this.id]: this });
+	[(void 0).id] = this;
+};
+console.log(`BaseNode: `, BaseNode);
 
 //#endregion
-export default require_main();
-
 ```

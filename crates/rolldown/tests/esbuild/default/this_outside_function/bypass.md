@@ -50,73 +50,124 @@ export default require_entry();
 ```
 ### rolldown
 ```js
-
 //#region entry.js
-var require_entry = __commonJS({ "entry.js"(exports) {
-	if (shouldBeExportsNotThis) {
-		console.log(exports);
-		console.log((x = exports) => exports);
-		console.log({ x: exports });
-		console.log(class extends exports.foo {});
-		console.log(class {
-			[exports.foo];
-		});
-		console.log(class {
-			[exports.foo]() {}
-		});
-		console.log(class {
-			static [exports.foo];
-		});
-		console.log(class {
-			static [exports.foo]() {}
-		});
-	}
-	if (shouldBeThisNotExports) {
-		console.log(class {
-			foo = this;
-		});
-		console.log(class {
-			foo() {}
-		});
-		console.log(class {
-			static foo = this;
-		});
-		console.log(class {
-			static foo() {}
-		});
-	}
-} });
+if (shouldBeExportsNotThis) {
+	console.log(void 0);
+	console.log((x = void 0) => void 0);
+	console.log({ x: void 0 });
+	console.log(class extends (void 0).foo {});
+	console.log(class {
+		[(void 0).foo];
+	});
+	console.log(class {
+		[(void 0).foo]() {}
+	});
+	console.log(class {
+		static [(void 0).foo];
+	});
+	console.log(class {
+		static [(void 0).foo]() {}
+	});
+}
+if (shouldBeThisNotExports) {
+	console.log(class {
+		foo = this;
+	});
+	console.log(class {
+		foo() {}
+	});
+	console.log(class {
+		static foo = this;
+	});
+	console.log(class {
+		static foo() {}
+	});
+}
 
 //#endregion
-export default require_entry();
-
 ```
 ### diff
 ```diff
 ===================================================================
 --- esbuild	/out.js
 +++ rolldown	entry.js
-@@ -24,19 +24,15 @@
-             console.log(class {
-                 foo = this;
-             });
-             console.log(class {
+@@ -1,43 +1,34 @@
+-var require_entry = __commonJS({
+-    "entry.js"(exports) {
+-        if (shouldBeExportsNotThis) {
+-            console.log(exports);
+-            console.log((x = exports) => exports);
+-            console.log({
+-                x: exports
+-            });
+-            console.log(class extends exports.foo {});
+-            console.log(class {
+-                [exports.foo];
+-            });
+-            console.log(class {
+-                [exports.foo]() {}
+-            });
+-            console.log(class {
+-                static [exports.foo];
+-            });
+-            console.log(class {
+-                static [exports.foo]() {}
+-            });
+-        }
+-        if (shouldBeThisNotExports) {
+-            console.log(class {
+-                foo = this;
+-            });
+-            console.log(class {
 -                foo() {
 -                    this;
 -                }
-+                foo() {}
-             });
-             console.log(class {
-                 static foo = this;
-             });
-             console.log(class {
+-            });
+-            console.log(class {
+-                static foo = this;
+-            });
+-            console.log(class {
 -                static foo() {
 -                    this;
 -                }
-+                static foo() {}
-             });
-         }
-     }
- });
+-            });
+-        }
+-    }
+-});
+-export default require_entry();
++if (shouldBeExportsNotThis) {
++    console.log(void 0);
++    console.log((x = void 0) => void 0);
++    console.log({
++        x: void 0
++    });
++    console.log(class extends (void 0).foo {});
++    console.log(class {
++        [(void 0).foo];
++    });
++    console.log(class {
++        [(void 0).foo]() {}
++    });
++    console.log(class {
++        static [(void 0).foo];
++    });
++    console.log(class {
++        static [(void 0).foo]() {}
++    });
++}
++if (shouldBeThisNotExports) {
++    console.log(class {
++        foo = this;
++    });
++    console.log(class {
++        foo() {}
++    });
++    console.log(class {
++        static foo = this;
++    });
++    console.log(class {
++        static foo() {}
++    });
++}
 
 ```

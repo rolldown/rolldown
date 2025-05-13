@@ -9,7 +9,7 @@ export default defineTest({
       banner: '/* banner */',
       intro: '/* intro */',
       outro: '/* outro */',
-      comments: 'preserve-legal',
+      comments: 'none',
     },
     plugins: [
       {
@@ -20,8 +20,14 @@ export default defineTest({
           expect(options.banner).toBe('/* banner */')
           expect(options.intro).toBe('/* intro */')
           expect(options.outro).toBe('/* outro */')
-          expect(options.comments).toBe('preserve-legal')
+          
         },
+      },
+      {
+        name: 'test-plugin-2',
+        renderStart(normalizedOutput, _normalizedInput) {
+          expect(normalizedOutput.comments).toBe('none')
+        }
       },
     ],
   },

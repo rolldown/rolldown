@@ -83,8 +83,11 @@ export class RolldownBuild {
     return this.#bundler?.bundler.hmrInvalidate(file, firstInvalidatedBy);
   }
 
-  get watchFiles(): string[] {
-    return this.#bundler?.bundler.watchFiles ?? [];
+  // TODO(underfin)
+  // The `watchFiles` return is a promise but rollup not.
+  // Making it to sync api maybe cause dead lock if the user call `write` and `watchFiles` at the same time.
+  get watchFiles(): Promise<string[]> {
+    return this.#bundler?.bundler.getWatchFiles() ?? Promise.resolve([]);
   }
 }
 

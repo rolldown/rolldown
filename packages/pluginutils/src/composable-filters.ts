@@ -20,15 +20,7 @@ type PluginModuleType =
 
 export type FilterExpressionKind = FilterExpression['kind'];
 
-export type FilterExpression =
-  | And
-  | Or
-  | Not
-  | Id
-  | ModuleType
-  | Code
-  | Include
-  | Exclude;
+export type FilterExpression = And | Or | Not | Id | ModuleType | Code | Query;
 
 export type TopLevelFilterExpression = Include | Exclude;
 
@@ -64,9 +56,14 @@ class Not {
   }
 }
 
+export interface QueryFilterObject {
+  [key: string]: StringOrRegExp | boolean;
+}
+
 interface IdParams {
   cleanUrl?: boolean;
 }
+
 class Id {
   kind: 'id';
   pattern: StringOrRegExp;
@@ -95,6 +92,17 @@ class Code {
   constructor(expr: StringOrRegExp) {
     this.pattern = expr;
     this.kind = 'code';
+  }
+}
+
+class Query {
+  kind: 'query';
+  key: string;
+  pattern: StringOrRegExp | boolean;
+  constructor(key: string, pattern: StringOrRegExp | boolean) {
+    this.pattern = pattern;
+    this.key = key;
+    this.kind = 'query';
   }
 }
 
@@ -140,12 +148,36 @@ export function code(pattern: StringOrRegExp): Code {
   return new Code(pattern);
 }
 
+export function query(key: string, pattern: StringOrRegExp | boolean): Query {
+  return new Query(key, pattern);
+}
+
 export function include(expr: FilterExpression): Include {
   return new Include(expr);
 }
 
 export function exclude(expr: FilterExpression): Exclude {
   return new Exclude(expr);
+}
+
+/**
+ * convert a queryObject to FilterExpression like
+ * ```js
+ *   and(query(k1, v1), query(k2, v2))
+ * ```
+ * @param queryFilterObject The query filter object needs to be matched.
+ * @returns a `And` FilterExpression
+ *
+ * There are three kinds of conditions are supported:
+ * 1. `boolean`: if the value is `true`, the key must exist and be truthy. if the value is `false`, the key must not exist or be falsy.
+ * 2. `string`: the key must exist and be equal to the value.
+ * 3. `RegExp`: the key must exist and match the value.
+ */
+export function queryObjectToFilterExpr(queryFilter: QueryFilterObject): And {
+  let arr = Object.entries(queryFilter).map(([key, value]) => {
+    return new Query(key, value);
+  });
+  return and(...arr);
 }
 
 export function interpreter(
@@ -163,18 +195,23 @@ export function interpreter(
   return interpreterImpl(arr, code, id, moduleType);
 }
 
+interface InterpreterCtx {
+  urlSearchParamsCache?: URLSearchParams;
+}
+
 export function interpreterImpl(
   expr: TopLevelFilterExpression[],
   code?: string,
   id?: string,
   moduleType?: PluginModuleType,
+  ctx: InterpreterCtx = {},
 ): boolean {
   let hasInclude = false;
   for (const e of expr) {
     switch (e.kind) {
       case 'include': {
         hasInclude = true;
-        if (exprInterpreter(e.expr, code, id, moduleType)) {
+        if (exprInterpreter(e.expr, code, id, moduleType, ctx)) {
           return true;
         }
         break;
@@ -195,16 +232,21 @@ export function exprInterpreter(
   code?: string,
   id?: string,
   moduleType?: PluginModuleType,
+  ctx: InterpreterCtx = {},
 ): boolean {
   switch (expr.kind) {
     case 'and': {
-      return expr.args.every((e) => exprInterpreter(e, code, id, moduleType));
+      return expr.args.every((e) =>
+        exprInterpreter(e, code, id, moduleType, ctx)
+      );
     }
     case 'or': {
-      return expr.args.some((e) => exprInterpreter(e, code, id, moduleType));
+      return expr.args.some((e) =>
+        exprInterpreter(e, code, id, moduleType, ctx)
+      );
     }
     case 'not': {
-      return !exprInterpreter(expr.expr, code, id, moduleType);
+      return !exprInterpreter(expr.expr, code, id, moduleType, ctx);
     }
     case 'id': {
       if (id === undefined) {
@@ -231,8 +273,29 @@ export function exprInterpreter(
         ? code.includes(expr.pattern)
         : expr.pattern.test(code);
     }
+    case 'query': {
+      if (id === undefined) {
+        throw new Error('`id` is required for `Query` expression');
+      }
+      if (!ctx.urlSearchParamsCache) {
+        let [_, queryString = ''] = id.split('?', 2);
+        ctx.urlSearchParamsCache = new URLSearchParams(queryString);
+      }
+      let urlParams = ctx.urlSearchParamsCache;
+      if (typeof expr.pattern === 'boolean') {
+        if (expr.pattern) {
+          return urlParams.has(expr.key);
+        } else {
+          return !urlParams.has(expr.key);
+        }
+      } else if (typeof expr.pattern === 'string') {
+        return urlParams.get(expr.key) === expr.pattern;
+      } else {
+        return expr.pattern.test(urlParams.get(expr.key) ?? '');
+      }
+    }
     default: {
-      throw new Error(`Expression kind ${expr.kind} is not expected.`);
+      throw new Error(`Expression kind ${expr} is not expected.`);
     }
   }
 }

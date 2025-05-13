@@ -187,9 +187,9 @@ export interface OutputOptions {
    * Control comments in the output.
    *
    * - `none`: no comments
-   * - `preserve-legal`: preserve comments that contain `@license`, `@preserve` or starts with `//!` `/*!`
+   * - `inline`: preserve comments that contain `@license`, `@preserve` or starts with `//!` `/*!`
    */
-  comments?: 'none' | 'preserve-legal';
+  legalComments?: 'none' | 'inline';
   plugins?: RolldownOutputPluginOption;
   polyfillRequire?: boolean;
   target?: ESTarget;

@@ -33,7 +33,7 @@ export function bindingifyOutputOptions(
     sanitizeFileName,
     preserveModules,
     virtualDirname,
-    comments,
+    legalComments,
   } = outputOptions;
 
   return {
@@ -71,7 +71,7 @@ export function bindingifyOutputOptions(
     sanitizeFileName,
     preserveModules,
     virtualDirname,
-    comments,
+    legalComments,
   };
 }
 

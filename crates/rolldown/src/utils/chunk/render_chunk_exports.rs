@@ -88,7 +88,7 @@ pub fn render_chunk_exports(
   export_mode: Option<&OutputExports>,
 ) -> Option<String> {
   let GenerateContext { chunk, link_output, options, .. } = ctx;
-  let export_items = get_export_items(chunk, link_output).into_iter().collect::<Vec<_>>();
+  let export_items = get_export_items(chunk, link_output, options).into_iter().collect::<Vec<_>>();
 
   match options.format {
     OutputFormat::Esm => {
@@ -297,9 +297,28 @@ pub fn render_object_define_property(key: &str, value: &str) -> String {
   )
 }
 
-pub fn get_export_items(chunk: &Chunk, graph: &LinkStageOutput) -> Vec<(Rstr, SymbolRef)> {
+pub fn get_export_items(
+  chunk: &Chunk,
+  graph: &LinkStageOutput,
+  options: &NormalizedBundlerOptions,
+) -> Vec<(Rstr, SymbolRef)> {
+  let get_exports_items_from_common_chunk = |chunk: &Chunk| {
+    let mut tmp = chunk
+      .exports_to_other_chunks
+      .iter()
+      .map(|(export_ref, alias)| (alias.clone(), *export_ref))
+      .collect::<Vec<_>>();
+
+    tmp.sort_unstable_by(|a, b| a.0.as_str().cmp(b.0.as_str()));
+
+    tmp
+  };
+
   match chunk.kind {
     ChunkKind::EntryPoint { module, is_user_defined, .. } => {
+      if options.preserve_modules && !is_user_defined {
+        return get_exports_items_from_common_chunk(chunk);
+      }
       let meta = &graph.metas[module];
       meta
         .referenced_canonical_exports_symbols(
@@ -310,21 +329,15 @@ pub fn get_export_items(chunk: &Chunk, graph: &LinkStageOutput) -> Vec<(Rstr, Sy
         .map(|(name, export)| (name.clone(), export.symbol_ref))
         .collect::<Vec<_>>()
     }
-    ChunkKind::Common => {
-      let mut tmp = chunk
-        .exports_to_other_chunks
-        .iter()
-        .map(|(export_ref, alias)| (alias.clone(), *export_ref))
-        .collect::<Vec<_>>();
-
-      tmp.sort_unstable_by(|a, b| a.0.as_str().cmp(b.0.as_str()));
-
-      tmp
-    }
+    ChunkKind::Common => get_exports_items_from_common_chunk(chunk),
   }
 }
 
-pub fn get_chunk_export_names(chunk: &Chunk, graph: &LinkStageOutput) -> Vec<Rstr> {
+pub fn get_chunk_export_names(
+  chunk: &Chunk,
+  graph: &LinkStageOutput,
+  options: &NormalizedBundlerOptions,
+) -> Vec<Rstr> {
   if let ChunkKind::EntryPoint { module: entry_id, .. } = &chunk.kind {
     let entry_meta = &graph.metas[*entry_id];
     if matches!(entry_meta.wrap_kind, WrapKind::Cjs) {
@@ -332,7 +345,7 @@ pub fn get_chunk_export_names(chunk: &Chunk, graph: &LinkStageOutput) -> Vec<Rst
     }
   }
 
-  get_export_items(chunk, graph)
+  get_export_items(chunk, graph, options)
     .into_iter()
     .map(|(exported_name, _)| exported_name)
     .collect::<Vec<_>>()

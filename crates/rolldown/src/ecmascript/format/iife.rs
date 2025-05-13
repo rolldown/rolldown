@@ -70,7 +70,7 @@ pub async fn render_iife<'code>(
   // iife wrapper start
 
   // Analyze the export information of the chunk.
-  let export_names = get_chunk_export_names(ctx.chunk, ctx.link_output);
+  let export_names = get_chunk_export_names(ctx.chunk, ctx.link_output, ctx.options);
   let has_exports = !export_names.is_empty();
   let has_default_export = export_names.iter().any(|name| name.as_str() == "default");
 

@@ -1,5 +1,6 @@
 use rolldown_common::{
-  Chunk, ChunkKind, ModuleId, RenderedModule, RollupPreRenderedChunk, RollupRenderedChunk,
+  Chunk, ChunkKind, ModuleId, NormalizedBundlerOptions, RenderedModule, RollupPreRenderedChunk,
+  RollupRenderedChunk,
 };
 use rustc_hash::FxHashMap;
 
@@ -18,6 +19,7 @@ pub mod validate_options_for_multi_chunk_output;
 pub fn generate_pre_rendered_chunk(
   chunk: &Chunk,
   graph: &LinkStageOutput,
+  options: &NormalizedBundlerOptions,
 ) -> RollupPreRenderedChunk {
   RollupPreRenderedChunk {
     name: chunk.name.clone().expect("should have name"),
@@ -32,7 +34,7 @@ pub fn generate_pre_rendered_chunk(
       .iter()
       .map(|id| graph.module_table.modules[*id].id().into())
       .collect(),
-    exports: get_chunk_export_names(chunk, graph),
+    exports: get_chunk_export_names(chunk, graph, options),
   }
 }
 

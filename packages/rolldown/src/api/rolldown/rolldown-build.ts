@@ -84,8 +84,8 @@ export class RolldownBuild {
   }
 
   // TODO(underfin)
-  // The `watchFiles` return is a promise but rollup not.
-  // Making it to sync api maybe cause dead lock if the user call `write` and `watchFiles` at the same time.
+  // The `watchFiles` method returns a promise, but Rollup does not.
+  // Converting it to a synchronous API might cause a deadlock if the user calls `write` and `watchFiles` simultaneously.
   get watchFiles(): Promise<string[]> {
     return this.#bundler?.bundler.getWatchFiles() ?? Promise.resolve([]);
   }

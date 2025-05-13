@@ -1,6 +1,12 @@
 import type { Schema } from '../../types/schema';
 
-type SchemaType = 'string' | 'boolean' | 'object' | 'number' | 'array';
+type SchemaType =
+  | 'string'
+  | 'boolean'
+  | 'object'
+  | 'number'
+  | 'array'
+  | 'never';
 
 const priority: SchemaType[] = [
   'object',
@@ -32,7 +38,7 @@ export function getSchemaType(schema: Schema): SchemaType {
     return typeof schema.const as SchemaType;
   }
 
-  return 'object';
+  return 'never';
 }
 
 export function flattenSchema(

@@ -643,6 +643,9 @@ const OutputOptionsSchema = v.strictObject({
     v.optional(v.boolean()),
     v.description('Inline dynamic imports'),
   ),
+  manualChunks: v.optional(
+    v.never('manualChunks is not supported. Please use advancedChunks instead'),
+  ),
   advancedChunks: v.optional(AdvancedChunksSchema),
   legalComments: v.pipe(
     v.optional(v.union([v.literal('none'), v.literal('inline')])),
@@ -862,5 +865,10 @@ export function getOutputCliKeys(): string[] {
 }
 
 export function getJsonSchema(): ObjectSchema {
-  return toJsonSchema(CliOptionsSchema) as ObjectSchema;
+  return toJsonSchema(CliOptionsSchema, {
+    // errorMode: 'ignore' is set to ignore `never` schema
+    // there's no way to suppress the error one-by-one
+    // https://github.com/fabian-hiller/valibot/issues/1062
+    errorMode: 'ignore',
+  }) as ObjectSchema;
 }

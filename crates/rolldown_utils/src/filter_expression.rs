@@ -131,7 +131,7 @@ pub fn parse(mut tokens: Vec<Token>) -> FilterExprKind {
       }
       Token::ModuleType => {
         let Token::String(string) = tokens.pop()? else {
-          unreachable!("ModuleType token should be followed by a string or regex");
+          unreachable!("ModuleType token should be followed by a string");
         };
         Some(FilterExpr::ModuleType(string))
       }

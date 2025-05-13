@@ -26,7 +26,6 @@ heck = { workspace = true }
 napi = { workspace = true, optional = true }
 oxc = { workspace = true }
 oxc_resolver = { workspace = true }
-oxc_sourcemap = { workspace = true }
 rolldown_utils = { workspace = true }
 ropey = { workspace = true }
 rustc-hash = { workspace = true }

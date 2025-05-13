@@ -27,7 +27,9 @@ export const options: {
     description: string;
   };
 } = Object.fromEntries(
-  Object.entries(flattenedSchema).map(([key, schema]) => {
+  Object.entries(flattenedSchema).filter(([_key, schema]) =>
+    getSchemaType(schema) !== 'never'
+  ).map(([key, schema]) => {
     const config = Object.getOwnPropertyDescriptor(alias, key)?.value as
       | OptionConfig
       | undefined;

@@ -865,5 +865,8 @@ export function getOutputCliKeys(): string[] {
 }
 
 export function getJsonSchema(): ObjectSchema {
-  return toJsonSchema(CliOptionsSchema) as ObjectSchema;
+  // errorMode: 'ignore' is set to ignore `never` schema
+  // there's no way to surpress the error one-by-one
+  // https://github.com/fabian-hiller/valibot/issues/1062
+  return toJsonSchema(CliOptionsSchema, { errorMode: 'ignore' }) as ObjectSchema;
 }

@@ -18,6 +18,10 @@ impl BuildEvent for UnsupportedFeature {
     crate::event_kind::EventKind::UnsupportedFeatureError
   }
 
+  fn id(&self) -> Option<String> {
+    Some(self.filename.to_string())
+  }
+
   fn on_diagnostic(&self, diagnostic: &mut Diagnostic, opts: &DiagnosticOptions) {
     diagnostic.title.clone_from(&self.error_message);
 

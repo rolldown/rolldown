@@ -19,6 +19,10 @@ impl BuildEvent for AssignToImport {
     crate::event_kind::EventKind::AssignToImportError
   }
 
+  fn id(&self) -> Option<String> {
+    Some(self.filename.to_string())
+  }
+
   fn message(&self, _opts: &DiagnosticOptions) -> String {
     format!("Cannot assign to import '{}'", self.name)
   }

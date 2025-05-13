@@ -7,6 +7,7 @@ use super::BuildEvent;
 
 #[derive(Debug)]
 pub struct MissingExport {
+  pub importer: String,
   pub stable_importer: String,
   pub stable_importee: String,
   pub importer_source: ArcStr,
@@ -17,6 +18,10 @@ pub struct MissingExport {
 impl BuildEvent for MissingExport {
   fn kind(&self) -> crate::event_kind::EventKind {
     EventKind::MissingExportError
+  }
+
+  fn id(&self) -> Option<String> {
+    Some(self.importer.clone())
   }
 
   fn message(&self, _opts: &DiagnosticOptions) -> String {
@@ -31,16 +36,15 @@ impl BuildEvent for MissingExport {
     diagnostic: &mut crate::diagnostic::Diagnostic,
     _opts: &DiagnosticOptions,
   ) {
-    let importer_file =
-      diagnostic.add_file(self.stable_importer.clone(), self.importer_source.clone());
+    let file_id = diagnostic.add_file(&self.stable_importer, &self.importer_source);
 
     diagnostic.title =
       format!(r#""{}" is not exported by "{}"."#, self.imported_specifier, &self.stable_importee);
 
     diagnostic.add_label(
-      &importer_file,
+      &file_id,
       self.imported_specifier_span.start..self.imported_specifier_span.end,
-      "Missing export".to_string(),
+      String::from("Missing export"),
     );
   }
 }

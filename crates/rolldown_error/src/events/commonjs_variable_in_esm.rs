@@ -38,6 +38,10 @@ impl BuildEvent for CommonJsVariableInEsm {
     crate::event_kind::EventKind::CommonJsVariableInEsm
   }
 
+  fn id(&self) -> Option<String> {
+    Some(self.filename.to_string())
+  }
+
   fn message(&self, _opts: &DiagnosticOptions) -> String {
     let variable = match self.cjs_export_ident_span {
       CjsExportSpan::Module(_) => "module",

@@ -196,7 +196,7 @@ async fn render_iife_factory_arguments(
       None => {
         warnings.push(
           BuildDiagnostic::missing_global_name(
-            // Here the rollup using external.id
+            external.id.to_string(),
             external.name.clone(),
             external.identifier_name.clone(),
           )

@@ -8,7 +8,8 @@ use crate::{EventKind, diagnostic::Diagnostic, types::diagnostic_options::Diagno
 pub struct AmbiguousExternalNamespaceModule {
   // Point to `import { [identifier] } from ...` or `export [identifier]`
   pub source: ArcStr,
-  pub filename: String,
+  pub module_id: String,
+  pub stable_id: String,
   pub span_of_identifier: Span,
 }
 
@@ -25,8 +26,12 @@ impl BuildEvent for AmbiguousExternalNamespace {
     EventKind::AmbiguousExternalNamespaceError
   }
 
+  fn id(&self) -> Option<String> {
+    Some(self.importer.module_id.clone())
+  }
+
   fn message(&self, _opts: &DiagnosticOptions) -> String {
-    let mut exporter = self.exporter.iter().map(|v| format!(r#""{0}""#, v.filename));
+    let mut exporter = self.exporter.iter().map(|v| format!(r#""{0}""#, v.stable_id));
 
     let last = exporter.next_back().unwrap();
 
@@ -42,7 +47,8 @@ impl BuildEvent for AmbiguousExternalNamespace {
   fn on_diagnostic(&self, diagnostic: &mut Diagnostic, _opts: &DiagnosticOptions) {
     diagnostic.title = "Found ambiguous export.".to_string();
 
-    let file_id = diagnostic.add_file(self.importer.filename.clone(), self.importer.source.clone());
+    let file_id =
+      diagnostic.add_file(self.importer.stable_id.clone(), self.importer.source.clone());
 
     diagnostic.add_label(
       &file_id,
@@ -51,7 +57,7 @@ impl BuildEvent for AmbiguousExternalNamespace {
     );
 
     self.exporter.iter().for_each(|exporter| {
-      let file_id = diagnostic.add_file(exporter.filename.clone(), exporter.source.clone());
+      let file_id = diagnostic.add_file(exporter.stable_id.clone(), exporter.source.clone());
       diagnostic.add_label(
         &file_id,
         exporter.span_of_identifier.start..exporter.span_of_identifier.end,

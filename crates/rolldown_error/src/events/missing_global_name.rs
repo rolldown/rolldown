@@ -4,6 +4,7 @@ use arcstr::ArcStr;
 
 #[derive(Debug)]
 pub struct MissingGlobalName {
+  pub module_id: String,
   pub module_name: ArcStr,
   pub guessed_name: ArcStr,
 }
@@ -11,6 +12,10 @@ pub struct MissingGlobalName {
 impl BuildEvent for MissingGlobalName {
   fn kind(&self) -> EventKind {
     EventKind::MissingGlobalName
+  }
+
+  fn id(&self) -> Option<String> {
+    Some(self.module_id.clone())
   }
 
   fn message(&self, _opts: &DiagnosticOptions) -> String {

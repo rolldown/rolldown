@@ -4,14 +4,19 @@ use arcstr::ArcStr;
 
 #[derive(Debug)]
 pub struct MixedExport {
+  pub module_id: String,
   pub module_name: ArcStr,
-  pub entry_module: ArcStr,
+  pub entry_module: String,
   pub export_keys: Vec<ArcStr>,
 }
 
 impl BuildEvent for MixedExport {
   fn kind(&self) -> EventKind {
     EventKind::MixedExport
+  }
+
+  fn id(&self) -> Option<String> {
+    Some(self.module_id.clone())
   }
 
   fn message(&self, _opts: &DiagnosticOptions) -> String {

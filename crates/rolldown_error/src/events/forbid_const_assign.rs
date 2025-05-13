@@ -19,9 +19,14 @@ impl BuildEvent for ForbidConstAssign {
     crate::event_kind::EventKind::IllegalReassignmentError
   }
 
+  fn id(&self) -> Option<String> {
+    Some(self.filename.to_string())
+  }
+
   fn message(&self, _opts: &DiagnosticOptions) -> String {
     format!("Unexpected re-assignment of const variable `{0}` at {1}", self.name, self.filename)
   }
+
   fn on_diagnostic(&self, diagnostic: &mut Diagnostic, opts: &DiagnosticOptions) {
     let filename = opts.stabilize_path(&self.filename);
     diagnostic.title = format!("Unexpected re-assignment of const variable `{0}`", self.name);

@@ -18,6 +18,10 @@ impl BuildEvent for ExportUndefinedVariable {
     crate::event_kind::EventKind::ExportUndefinedVariableError
   }
 
+  fn id(&self) -> Option<String> {
+    Some(self.filename.to_string())
+  }
+
   fn message(&self, _opts: &DiagnosticOptions) -> String {
     format!("`{}` is not declared in this file", self.name)
   }

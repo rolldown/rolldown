@@ -643,6 +643,9 @@ const OutputOptionsSchema = v.strictObject({
     v.optional(v.boolean()),
     v.description('Inline dynamic imports'),
   ),
+  manualChunks: v.optional(
+    v.never('manualChunks is not supported. Please use advancedChunks instead'),
+  ),
   advancedChunks: v.optional(AdvancedChunksSchema),
   comments: v.pipe(
     v.optional(v.union([v.literal('none'), v.literal('preserve-legal')])),

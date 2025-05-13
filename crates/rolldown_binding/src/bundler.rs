@@ -98,13 +98,11 @@ impl Bundler {
     napi::bindgen_prelude::block_on(async { self.get_closed_impl().await })
   }
 
-  #[napi(getter)]
+  #[napi]
   #[tracing::instrument(level = "debug", skip_all)]
-  pub fn get_watch_files(&self) -> napi::Result<Vec<String>> {
-    napi::bindgen_prelude::block_on(async {
-      let bundler_core = self.inner.lock().await;
-      Ok(bundler_core.get_watch_files().iter().map(|s| s.to_string()).collect())
-    })
+  pub async fn get_watch_files(&self) -> napi::Result<Vec<String>> {
+    let bundler_core = self.inner.lock().await;
+    Ok(bundler_core.get_watch_files().iter().map(|s| s.to_string()).collect())
   }
 
   #[napi]

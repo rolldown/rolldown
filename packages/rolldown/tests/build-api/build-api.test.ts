@@ -11,7 +11,7 @@ test('rolldown write twice', async () => {
     format: 'esm',
     entryFileNames: 'main.mjs',
   })
-  expect(bundle.watchFiles).toStrictEqual([path.join(import.meta.dirname, 'main.js')])
+  expect(await bundle.watchFiles).toStrictEqual([path.join(import.meta.dirname, 'main.js')])
   expect(esmOutput.output[0].fileName).toBe('main.mjs')
   expect(esmOutput.output[0].code).toBeDefined()
 

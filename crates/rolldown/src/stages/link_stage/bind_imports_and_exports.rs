@@ -559,7 +559,8 @@ impl BindImportsAndExportsContext<'_> {
               let named_export = &owner.named_exports[name];
               exporter.push(AmbiguousExternalNamespaceModule {
                 source: owner.source.clone(),
-                filename: owner.stable_id.to_string(),
+                module_id: owner.id.to_string(),
+                stable_id: owner.stable_id.to_string(),
                 span_of_identifier: named_export.span,
               });
             }
@@ -571,7 +572,8 @@ impl BindImportsAndExportsContext<'_> {
               let named_export = &normal_module.named_exports[name];
               return Some(AmbiguousExternalNamespaceModule {
                 source: normal_module.source.clone(),
-                filename: normal_module.stable_id.to_string(),
+                module_id: normal_module.id.to_string(),
+                stable_id: normal_module.stable_id.to_string(),
                 span_of_identifier: named_export.span,
               });
             }
@@ -584,7 +586,8 @@ impl BindImportsAndExportsContext<'_> {
             importee,
             AmbiguousExternalNamespaceModule {
               source: module.source.clone(),
-              filename: module.stable_id.to_string(),
+              module_id: module.id.to_string(),
+              stable_id: module.stable_id.to_string(),
               span_of_identifier: named_import.span_imported,
             },
             exporter,
@@ -610,6 +613,7 @@ impl BindImportsAndExportsContext<'_> {
         MatchImportKind::NoMatch => {
           let importee = &self.index_modules[rec.resolved_module];
           let mut diagnostic = BuildDiagnostic::missing_export(
+            module.id.to_string(),
             module.stable_id.to_string(),
             importee.stable_id().to_string(),
             module.source.clone(),

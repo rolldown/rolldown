@@ -226,12 +226,12 @@ impl Bundler {
           .call(
             LogLevel::Warn,
             rolldown::Log {
+              id: warning.id(),
+              exporter: warning.exporter(),
               code: warning.kind().to_string(),
               message: warning
                 .to_diagnostic_with(&DiagnosticOptions { cwd: options.cwd.clone() })
                 .to_color_string(),
-              id: warning.id(),
-              exporter: warning.exporter(),
             },
           )
           .await;

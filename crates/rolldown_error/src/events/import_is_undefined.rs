@@ -19,6 +19,10 @@ impl BuildEvent for ImportIsUndefined {
     crate::event_kind::EventKind::ImportIsUndefined
   }
 
+  fn id(&self) -> Option<String> {
+    Some(self.filename.to_string())
+  }
+
   fn message(&self, _opts: &DiagnosticOptions) -> String {
     format!(
       "Import `{}` will always be undefined because there is no matching export in '{}'",

@@ -1,5 +1,3 @@
-use std::path::PathBuf;
-
 use oxc_resolver::ResolveError;
 
 use crate::EventKind;
@@ -8,14 +6,18 @@ use super::BuildEvent;
 
 #[derive(Debug)]
 pub struct UnresolvedImportTreatedAsExternal {
+  pub importer: String,
   pub specifier: String,
-  pub importer: PathBuf,
   pub resolve_error: Option<ResolveError>,
 }
 
 impl BuildEvent for UnresolvedImportTreatedAsExternal {
   fn kind(&self) -> crate::EventKind {
     EventKind::UnresolvedImport
+  }
+
+  fn id(&self) -> Option<String> {
+    Some(self.importer.clone())
   }
 
   fn message(&self, opts: &crate::DiagnosticOptions) -> String {

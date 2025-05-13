@@ -1,4 +1,4 @@
-use std::path::{Path, PathBuf};
+use std::path::Path;
 
 use super::BuildDiagnostic;
 use super::severity::Severity;
@@ -111,17 +111,18 @@ impl BuildDiagnostic {
 
   pub fn unresolved_import_treated_as_external(
     specifier: impl Into<String>,
-    importer: impl Into<PathBuf>,
+    importer: String,
     resolve_error: Option<ResolveError>,
   ) -> Self {
     Self::new_inner(UnresolvedImportTreatedAsExternal {
       specifier: specifier.into(),
-      importer: importer.into(),
+      importer,
       resolve_error,
     })
   }
 
   pub fn missing_export(
+    importer: String,
     stable_importer: String,
     stable_importee: String,
     importer_source: ArcStr,
@@ -129,6 +130,7 @@ impl BuildDiagnostic {
     imported_specifier_span: Span,
   ) -> Self {
     Self::new_inner(MissingExport {
+      importer,
       stable_importer,
       stable_importee,
       importer_source,
@@ -137,12 +139,17 @@ impl BuildDiagnostic {
     })
   }
 
-  pub fn mixed_export(module_name: ArcStr, entry_module: ArcStr, export_keys: Vec<ArcStr>) -> Self {
-    Self::new_inner(MixedExport { module_name, entry_module, export_keys })
+  pub fn mixed_export(
+    module_id: String,
+    module_name: ArcStr,
+    entry_module: String,
+    export_keys: Vec<ArcStr>,
+  ) -> Self {
+    Self::new_inner(MixedExport { module_id, module_name, entry_module, export_keys })
   }
 
-  pub fn missing_global_name(module_name: ArcStr, guessed_name: ArcStr) -> Self {
-    Self::new_inner(MissingGlobalName { module_name, guessed_name })
+  pub fn missing_global_name(module_id: String, module_name: ArcStr, guessed_name: ArcStr) -> Self {
+    Self::new_inner(MissingGlobalName { module_id, module_name, guessed_name })
   }
 
   pub fn missing_name_option_for_iife_export() -> Self {

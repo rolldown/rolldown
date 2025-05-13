@@ -37,9 +37,7 @@ use crate::events::{
   missing_export::MissingExport,
   mixed_export::MixedExport,
   parse_error::ParseError,
-  sourcemap_error::SourceMapError,
   unresolved_entry::UnresolvedEntry,
-  unresolved_import_treated_as_external::UnresolvedImportTreatedAsExternal,
 };
 use crate::line_column_to_byte_offset;
 
@@ -101,24 +99,8 @@ impl BuildDiagnostic {
     })
   }
 
-  pub fn sourcemap_error(error: oxc_sourcemap::Error) -> Self {
-    Self::new_inner(SourceMapError { error })
-  }
-
   pub fn circular_dependency(paths: Vec<String>) -> Self {
     Self::new_inner(CircularDependency { paths })
-  }
-
-  pub fn unresolved_import_treated_as_external(
-    specifier: impl Into<String>,
-    importer: String,
-    resolve_error: Option<ResolveError>,
-  ) -> Self {
-    Self::new_inner(UnresolvedImportTreatedAsExternal {
-      specifier: specifier.into(),
-      importer,
-      resolve_error,
-    })
   }
 
   pub fn missing_export(

@@ -2614,7 +2614,6 @@ dependencies = [
  "napi",
  "oxc",
  "oxc_resolver",
- "oxc_sourcemap",
  "rolldown-ariadne",
  "rolldown_utils",
  "ropey",

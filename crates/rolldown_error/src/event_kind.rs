@@ -18,30 +18,29 @@ pub enum EventKind {
   MissingNameOptionForUmdExportError = 9,
   MixedExport = 10,
   ParseError = 11,
-  SourcemapError = 12,
-  UnresolvedEntry = 13,
-  UnresolvedImport = 14,
-  FilenameConflict = 15,
+  UnresolvedEntry = 12,
+  UnresolvedImport = 13,
+  FilenameConflict = 14,
   // !! Only add new kind if it's not covered by the kinds from rollup !!
 
   // --- These kinds are derived from esbuild
-  AssignToImportError = 16,
-  CommonJsVariableInEsm = 17,
-  ExportUndefinedVariableError = 18,
-  ImportIsUndefined = 19,
-  UnsupportedFeatureError = 20,
+  AssignToImportError = 15,
+  CommonJsVariableInEsm = 16,
+  ExportUndefinedVariableError = 17,
+  ImportIsUndefined = 18,
+  UnsupportedFeatureError = 19,
 
   // --- These kinds are rolldown specific
-  JsonParseError = 21,
-  IllegalReassignmentError = 22,
-  InvalidDefineConfigError = 23,
-  ResolveError = 24,
-  UnhandleableError = 25,
-  UnloadableDependencyError = 26,
+  JsonParseError = 20,
+  IllegalReassignmentError = 21,
+  InvalidDefineConfigError = 22,
+  ResolveError = 23,
+  UnhandleableError = 24,
+  UnloadableDependencyError = 25,
 
-  IoError = 27,
-  NapiError = 28,
-  ConfigurationFieldConflict = 29,
+  IoError = 26,
+  NapiError = 27,
+  ConfigurationFieldConflict = 28,
 }
 
 impl Display for EventKind {
@@ -62,7 +61,6 @@ impl Display for EventKind {
       }
       EventKind::MissingExportError => write!(f, "MISSING_EXPORT"),
       EventKind::ParseError => write!(f, "PARSE_ERROR"),
-      EventKind::SourcemapError => write!(f, "SOURCEMAP_ERROR"),
       EventKind::UnresolvedEntry => write!(f, "UNRESOLVED_ENTRY"),
       EventKind::UnresolvedImport => write!(f, "UNRESOLVED_IMPORT"),
       EventKind::FilenameConflict => write!(f, "FILE_NAME_CONFLICT"),

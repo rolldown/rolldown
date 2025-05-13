@@ -77,7 +77,9 @@ fn test_representative_file_name() {
   let path = cwd.join("vue").join("mod.ts");
   assert_eq!(path.representative_file_name(false), "vue");
 
-  let path = cwd.join("src").join("vue.js");
   #[cfg(not(target_os = "windows"))]
-  assert_eq!(path.representative_file_name(true), "./project/src/vue");
+  {
+    let path = cwd.join("src").join("vue.js");
+    assert_eq!(path.representative_file_name(true), "./project/src/vue");
+  }
 }

@@ -52,18 +52,17 @@ mod tests {
 
   #[test]
   fn test_extract_longest_common_path() {
-    let path1 = "/home/user/documents/report.txt";
-    let path2 = "/home/user/pictures/image.jpg";
-    let path3 = "/home/user/documents/presentation.pdf";
-    let path4 = "/home/user";
-    let path5 = "/home/user/documents";
-    let path6 = "/usr/local/bin";
-    let path7 = "/usr/local";
-    let path8 = "/";
-    let path9 = "/";
-
     #[cfg(not(windows))]
     {
+      let path1 = "/home/user/documents/report.txt";
+      let path2 = "/home/user/pictures/image.jpg";
+      let path3 = "/home/user/documents/presentation.pdf";
+      let path4 = "/home/user";
+      let path5 = "/home/user/documents";
+      let path6 = "/usr/local/bin";
+      let path7 = "/usr/local";
+      let path8 = "/";
+      let path9 = "/";
       assert_eq!(extract_longest_common_path(path1, path2), "/home/user");
       assert_eq!(extract_longest_common_path(path1, path3), "/home/user/documents");
       assert_eq!(extract_longest_common_path(path4, path5), "/home/user");

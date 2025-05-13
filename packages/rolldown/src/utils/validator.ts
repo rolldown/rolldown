@@ -644,8 +644,8 @@ const OutputOptionsSchema = v.strictObject({
     v.description('Inline dynamic imports'),
   ),
   advancedChunks: v.optional(AdvancedChunksSchema),
-  comments: v.pipe(
-    v.optional(v.union([v.literal('none'), v.literal('preserve-legal')])),
+  legalComments: v.pipe(
+    v.optional(v.union([v.literal('none'), v.literal('inline')])),
     v.description('Control comments in the output'),
   ),
   plugins: v.optional(v.custom<RolldownOutputPluginOption>(() => true)),

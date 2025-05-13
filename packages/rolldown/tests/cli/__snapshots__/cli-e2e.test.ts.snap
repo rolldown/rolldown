@@ -36,7 +36,6 @@ OPTIONS
   --checks.unresolved-entry   Whether to emit warning when detecting unresolved entry.
   --checks.unresolved-import  Whether to emit warning when detecting unresolved import.
   --chunk-file-names <name>   Name pattern for emitted secondary chunks.
-  --comments <comments>       Control comments in the output.
   --css-chunk-file-names <css-chunk-file-names>Name pattern for emitted css secondary chunks.
   --css-entry-file-names <css-entry-file-names>Name pattern for emitted css entry chunks.
   --cwd <cwd>                 Current working directory.
@@ -61,6 +60,7 @@ OPTIONS
   --jsx.mode <jsx.mode>       Jsx transformation mode.
   --jsx.refresh               React refresh transformation.
   --keep-names                Keep function/class name.
+  --legal-comments <legal-comments>Control comments in the output.
   --log-level <log-level>     Log level (silent, info, debug, warn).
   --module-types <types>      Module types for customized extensions.
   --no-external-live-bindings Disable external live bindings.

@@ -9,7 +9,7 @@ export default defineTest({
       banner: '/* banner */',
       intro: '/* intro */',
       outro: '/* outro */',
-      comments: 'none',
+      legalComments: 'inline',
     },
     plugins: [
       {
@@ -26,7 +26,7 @@ export default defineTest({
       {
         name: 'test-plugin-2',
         renderStart(normalizedOutput, _normalizedInput) {
-          expect(normalizedOutput.comments).toBe('none')
+          expect(normalizedOutput.legalComments).toBe('inline')
         }
       },
     ],

@@ -216,7 +216,7 @@ impl NormalModule {
       ModuleRenderArgs::Ecma { ast } => {
         let enable_sourcemap = options.sourcemap.is_some() && !self.is_virtual();
 
-        let comments = match options.comments {
+        let comments = match options.legal_comments {
           LegalComments::None => Either::Left(false),
           LegalComments::Preserve => Either::Left(true),
           LegalComments::Inline => Either::Right(LegalComment::Inline),

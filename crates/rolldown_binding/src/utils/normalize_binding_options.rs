@@ -334,13 +334,13 @@ pub fn normalize_binding_options(
     jsx: input_options.jsx.map(Into::into),
     watch: input_options.watch.map(TryInto::try_into).transpose()?,
     legal_comments: output_options
-      .comments
+      .legal_comments
       .map(|inner| match inner.as_str() {
         "none" => Ok(rolldown::LegalComments::None),
-        "preserve-legal" => Ok(rolldown::LegalComments::Inline),
+        "inline" => Ok(rolldown::LegalComments::Inline),
         _ => Err(napi::Error::new(
           napi::Status::GenericFailure,
-          format!("Invalid value for `comments` option: {inner}"),
+          format!("Invalid value for `legalComments` option: {inner}"),
         )),
       })
       .transpose()?,

@@ -97,6 +97,7 @@ pub struct NormalizedBundlerOptions {
   pub log_level: Option<LogLevel>,
   pub on_log: Option<OnLog>,
   pub preserve_modules: bool,
+  pub virtual_dirname: String,
 }
 
 // This is only used for testing
@@ -160,6 +161,7 @@ impl Default for NormalizedBundlerOptions {
       log_level: Default::default(),
       on_log: Default::default(),
       preserve_modules: false,
+      virtual_dirname: "_virtual".into(),
     }
   }
 }

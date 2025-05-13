@@ -255,6 +255,7 @@ pub fn normalize_options(mut raw_options: crate::BundlerOptions) -> NormalizeOpt
     log_level: raw_options.log_level,
     on_log: raw_options.on_log,
     preserve_modules: raw_options.preserve_modules.unwrap_or_default(),
+    virtual_dirname: raw_options.virtual_dirname.unwrap_or_else(|| "_virtual".to_string()),
   };
 
   NormalizeOptionsReturn { options: normalized, resolve_options: raw_resolve, warnings }

@@ -195,6 +195,7 @@ export interface OutputOptions {
   target?: ESTarget;
   hoistTransitiveImports?: false;
   preserveModules?: boolean;
+  virtualDirname?: string;
 }
 
 interface OverwriteOutputOptionsForCli {

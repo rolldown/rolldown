@@ -48,6 +48,7 @@ export interface NormalizedOutputOptions {
   polyfillRequire: boolean;
   plugins: RolldownPlugin[];
   preserveModules: boolean;
+  virtualDirname: string;
 }
 
 // TODO: I guess we make these getters enumerable so it act more like a plain object
@@ -180,6 +181,10 @@ export class NormalizedOutputOptionsImpl implements NormalizedOutputOptions {
 
   get preserveModules(): boolean {
     return this.preserveModules;
+  }
+
+  get virtualDirname(): string {
+    return this.virtualDirname;
   }
 }
 

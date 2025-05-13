@@ -180,8 +180,7 @@ impl Chunk {
     let chunk_name = if options.preserve_modules
       && matches!(self.kind, ChunkKind::EntryPoint { is_user_defined, .. } if !is_user_defined)
     {
-      let p = chunk_name.relative(self.input_base.as_str());
-      Cow::Owned(p.to_slash_lossy().to_string())
+      self.get_preserve_modules_chunk_name(options, chunk_name.as_str())
     } else {
       Cow::Borrowed(chunk_name.as_str())
     };
@@ -191,6 +190,20 @@ impl Chunk {
     let name = make_unique_name(&filename, used_name_counts);
 
     Ok(PreliminaryFilename::new(name, hash_placeholder))
+  }
+
+  pub fn get_preserve_modules_chunk_name(
+    &self,
+    options: &NormalizedBundlerOptions,
+    chunk_name: &str,
+  ) -> Cow<str> {
+    let p = PathBuf::from(chunk_name);
+    if p.is_absolute() {
+      let p = p.relative(self.input_base.as_str());
+      Cow::Owned(p.to_slash_lossy().to_string())
+    } else {
+      Cow::Owned(PathBuf::from(&options.virtual_dirname).join(p).to_string_lossy().to_string())
+    }
   }
 
   pub async fn generate_css_preliminary_filename(

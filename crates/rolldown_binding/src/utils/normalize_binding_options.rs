@@ -359,6 +359,7 @@ pub fn normalize_binding_options(
     log_level: Some(input_options.log_level.into()),
     on_log,
     preserve_modules: output_options.preserve_modules,
+    virtual_dirname: output_options.virtual_dirname,
   };
 
   #[cfg(not(target_family = "wasm"))]

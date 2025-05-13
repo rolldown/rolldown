@@ -122,4 +122,5 @@ pub struct BindingOutputOptions {
   pub polyfill_require: Option<bool>,
   pub preserve_modules: Option<bool>,
   pub target: Option<String>,
+  pub virtual_dirname: Option<String>,
 }

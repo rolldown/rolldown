@@ -1,0 +1,10 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## main.js
+
+```js
+const e=``;function t(){}const n=``;var r=class{foo(){console.log(e,t,n)}bar(){console.log(`bar`)}};export{r as default};
+```

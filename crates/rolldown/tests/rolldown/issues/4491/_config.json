@@ -1,0 +1,6 @@
+{
+  "config": {
+    "legalComments":"none",
+    "minify": true
+  }
+}

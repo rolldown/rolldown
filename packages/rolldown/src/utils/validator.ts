@@ -865,10 +865,10 @@ export function getOutputCliKeys(): string[] {
 }
 
 export function getJsonSchema(): ObjectSchema {
-  // errorMode: 'ignore' is set to ignore `never` schema
-  // there's no way to surpress the error one-by-one
-  // https://github.com/fabian-hiller/valibot/issues/1062
   return toJsonSchema(CliOptionsSchema, {
+    // errorMode: 'ignore' is set to ignore `never` schema
+    // there's no way to suppress the error one-by-one
+    // https://github.com/fabian-hiller/valibot/issues/1062
     errorMode: 'ignore',
   }) as ObjectSchema;
 }

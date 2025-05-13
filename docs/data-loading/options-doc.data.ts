@@ -73,7 +73,7 @@ export default defineLoader({
     await $`pnpm run --filter rolldown extract-options-doc`;
     const { default: docJson } = await import(
       // @ts-ignore - it doesn't exist in the first place, but it will be created by the above command
-      '../../packages/rolldown/options-doc.json'.replace('', ''),
+      '../../../packages/rolldown/options-doc.json'.replace('', ''),
       // `.replace` is a workaround to disable compile-time loading done by vitepress
       { with: { type: 'json' } }
     );

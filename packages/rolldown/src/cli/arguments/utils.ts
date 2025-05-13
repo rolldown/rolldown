@@ -1,6 +1,12 @@
 import type { Schema } from '../../types/schema';
 
-type SchemaType = 'string' | 'boolean' | 'object' | 'number' | 'array' | 'never';
+type SchemaType =
+  | 'string'
+  | 'boolean'
+  | 'object'
+  | 'number'
+  | 'array'
+  | 'never';
 
 const priority: SchemaType[] = [
   'object',

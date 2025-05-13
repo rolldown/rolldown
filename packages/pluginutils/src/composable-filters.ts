@@ -24,7 +24,7 @@ export type FilterExpression = And | Or | Not | Id | ModuleType | Code | Query;
 
 export type TopLevelFilterExpression = Include | Exclude;
 
-export class And {
+class And {
   kind: 'and';
   args: FilterExpression[];
   constructor(...args: FilterExpression[]) {

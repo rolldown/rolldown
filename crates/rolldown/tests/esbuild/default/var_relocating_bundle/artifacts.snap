@@ -11,9 +11,11 @@ function x() {
 	{
 		var a;
 		var b;
+		// for (var { c, x: [d] } = {}; 0;);
 		for (var e of []);
 		for (var { f, x: [g] } of []);
 		for (var h in {});
+		// for (var i = 1 in {});
 		for (var { j, x: [k] } in {});
 		function l() {}
 	}
@@ -29,9 +31,11 @@ x();
 function x() {
 	var a;
 	var b;
+	// for (var { c, x: [d] } = {}; 0;);
 	for (var e of []);
 	for (var { f, x: [g] } of []);
 	for (var h in {});
+	// for (var i = 1 in {});
 	for (var { j, x: [k] } in {});
 	function l() {}
 }
@@ -45,9 +49,11 @@ x();
 //#region let.js
 {
 	let a;
+	// for (let { c, x: [d] } = {}; 0;);
 	for (let e of []);
 	for (let { f, x: [g] } of []);
 	for (let h in {});
+	// for (let i = 1 in {});
 	for (let { j, x: [k] } in {});
 }
 
@@ -60,9 +66,11 @@ x();
 {
 	var a;
 	var b;
+	// for (var { c, x: [d] } = {}; 0;);
 	for (var e of []);
 	for (var { f, x: [g] } of []);
 	for (var h in {});
+	// for (var i = 1 in {});
 	for (var { j, x: [k] } in {});
 	function l() {}
 }
@@ -73,9 +81,11 @@ x();
 
 ```js
 //#region top-level.js
+// for (var { c, x: [d] } = {}; 0;);
 for (var e of []);
 for (var { f, x: [g] } of []);
 for (var h in {});
+// for (var i = 1 in {}); //  the test case is error case, so we don't need to run it   
 for (var { j, x: [k] } in {});
 
 //#endregion

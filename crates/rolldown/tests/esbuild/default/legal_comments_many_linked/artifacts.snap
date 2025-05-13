@@ -24,22 +24,13 @@ console.log("in b");
 //#endregion
 //#region c.js
 function foo() {
-	/*
-	* @license
-	* Copyright notice 2
-	*/
 	console.log("in c");
-	// @preserve This is another comment
 }
 foo();
 
 //#endregion
 //#region node_modules/some-other-pkg/js/index.js
 function bar() {
-	/*
-	* @preserve
-	* (c) Evil Software Corp
-	*/
 	console.log("some-other-pkg");
 }
 bar();

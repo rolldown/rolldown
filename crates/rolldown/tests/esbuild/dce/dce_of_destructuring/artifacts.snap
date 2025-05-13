@@ -10,6 +10,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 var KEEP1 = x;
 var [KEEP2] = [x];
 var [KEEP3] = [...{}];
+// Object patterns (not handled right now)
 var { KEEP4 } = {};
 
 //#endregion

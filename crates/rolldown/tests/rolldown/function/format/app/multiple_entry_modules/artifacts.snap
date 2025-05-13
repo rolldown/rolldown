@@ -38,6 +38,7 @@ function hyperCube(x) {
 //#endregion
 //#region main.js
 __toCommonJS(exports);
+// MULTIPLE ENTRY MODULES
 var hyper_cube_exports = require("hyper-cube.js");
 console.log(hyper_cube_exports.default(5));
 
@@ -48,6 +49,7 @@ console.log(hyper_cube_exports.default(5));
 ```js
 //#region other-entry.js
 __toCommonJS(exports);
+// Additional entry modules create new chunks
 var cube_exports = require("cube.js");
 console.log(cube_exports.default(5));
 

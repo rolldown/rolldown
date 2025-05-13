@@ -7,6 +7,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```js
 //#region entry.js
+// These operators may have side effects
 let keep, keep2;
 keep + keep2;
 keep - keep2;

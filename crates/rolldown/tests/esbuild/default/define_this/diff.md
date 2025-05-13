@@ -44,7 +44,9 @@ ok(
 	// This should not be substituted
 	1 .bar
 );
+// This code should be the same as above
 ok(1, 2, 3, 2 .baz, 1 .bar);
+// Nothing should be substituted in this code
 (function() {
 	doNotSubstitute(this, this.foo, this.foo.bar, this.foo.baz, this.bar);
 })();

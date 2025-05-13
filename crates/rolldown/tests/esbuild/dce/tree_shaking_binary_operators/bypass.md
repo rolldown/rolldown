@@ -47,6 +47,7 @@ keep &&= keep2;
 ### rolldown
 ```js
 //#region entry.js
+// These operators may have side effects
 let keep, keep2;
 keep + keep2;
 keep - keep2;

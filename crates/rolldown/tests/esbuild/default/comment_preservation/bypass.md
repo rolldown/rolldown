@@ -435,7 +435,9 @@ console.log({
 	bar
 });
 console.log(class {
+	// before
 	foo;
+	/* comment before */
 	bar;
 });
 console.log(() => {
@@ -477,7 +479,7 @@ switch (a) {}
 ===================================================================
 --- esbuild	/out/entry.js
 +++ rolldown	entry.js
-@@ -1,350 +1,113 @@
+@@ -1,350 +1,115 @@
 +
 +//#region entry.js
 +console.log(import(
@@ -794,7 +796,9 @@ switch (a) {}
 -  /* comment before */
 -  bar;
 -  // comment after
++	// before
 +	foo;
++	/* comment before */
 +	bar;
  });
 +console.log(() => {

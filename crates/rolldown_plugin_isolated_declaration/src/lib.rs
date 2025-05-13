@@ -3,7 +3,7 @@ use std::{borrow::Cow, path::Path};
 use oxc::{
   allocator::IntoIn,
   ast_visit::VisitMut,
-  codegen::{Codegen, CodegenOptions},
+  codegen::Codegen,
   isolated_declarations::{IsolatedDeclarations, IsolatedDeclarationsOptions},
 };
 use rolldown_common::{ModuleType, ResolvedExternal};
@@ -55,7 +55,7 @@ impl Plugin for IsolatedDeclarationPlugin {
         return Err(anyhow::anyhow!("IsolatedDeclarations error"));
       }
 
-      let codegen_ret = Codegen::new().with_options(CodegenOptions::default()).build(&ret.program);
+      let codegen_ret = Codegen::new().build(&ret.program);
 
       let mut emit_dts_path = Path::new(args.stable_id).to_path_buf();
       emit_dts_path.set_extension("d.ts");

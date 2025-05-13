@@ -85,7 +85,9 @@ impl EcmaCompiler {
   pub fn print(ast: &EcmaAst, filename: &str, enable_source_map: bool) -> CodegenReturn {
     Codegen::new()
       .with_options(CodegenOptions {
-        comments: true,
+        comments: false,
+        annotation_comments: true,
+        legal_comments: LegalComment::Inline,
         source_map_path: enable_source_map.then(|| PathBuf::from(filename)),
         ..CodegenOptions::default()
       })
@@ -100,8 +102,9 @@ impl EcmaCompiler {
     Codegen::new()
       .with_options(CodegenOptions {
         comments: is_print_full_comments,
-        source_map_path: options.sourcemap.then(|| PathBuf::from(options.filename)),
+        annotation_comments: is_print_full_comments,
         legal_comments,
+        source_map_path: options.sourcemap.then(|| PathBuf::from(options.filename)),
         ..CodegenOptions::default()
       })
       .build(ast.program())
@@ -122,6 +125,7 @@ impl EcmaCompiler {
     let ret = Self::minify_impl(minifier_options, run_compress, &allocator, program);
     let ret = Codegen::new()
       .with_options(CodegenOptions {
+        comments: false,
         source_map_path: enable_sourcemap.then(|| PathBuf::from(filename)),
         ..codegen_options
       })

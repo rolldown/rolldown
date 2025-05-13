@@ -7,6 +7,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```js
 //#region entry.js
+// This covers putting the generated temporary variable inside the loop
 for (let i = 0; i < 3; i++) objs.push({
 	__proto__: { foo() {
 		return i;

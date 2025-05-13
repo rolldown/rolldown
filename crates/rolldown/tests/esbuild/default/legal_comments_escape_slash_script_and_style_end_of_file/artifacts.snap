@@ -16,11 +16,11 @@ source: crates/rolldown_testing/src/integration_test.rs
 ```js
 //#region node_modules/js-pkg/index.js
 x;
-/*! </script> */
+
 //#endregion
 //#region entry.js
 a;
-/*! </script> */
+
 //#endregion
 ```
 ## entry2.css

@@ -85,6 +85,7 @@ fn test_concat_sourcemaps() {
 
   let CodegenReturn { map, code, .. } = Codegen::new()
     .with_options(CodegenOptions {
+      comments: false,
       source_map_path: Some(filename.into()),
       ..CodegenOptions::default()
     })

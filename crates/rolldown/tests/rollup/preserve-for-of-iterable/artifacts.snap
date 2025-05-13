@@ -1,6 +1,5 @@
 ---
 source: crates/rolldown_testing/src/integration_test.rs
-snapshot_kind: text
 ---
 # Assets
 
@@ -20,6 +19,7 @@ const zeroToFive = { [Symbol.iterator]() {
 				done: false,
 				value: this.current++
 			} : { done: true };
+			// assert later
 			dirty = this.current;
 			return ret;
 		}

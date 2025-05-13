@@ -9,6 +9,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 //#region entry.js
 using null_keep = null;
 await using await_null_keep = null;
+// This has a side effect: throwing an error
 using throw_keep = {};
 using dispose_keep = { [Symbol.dispose]() {
 	console.log("side effect");

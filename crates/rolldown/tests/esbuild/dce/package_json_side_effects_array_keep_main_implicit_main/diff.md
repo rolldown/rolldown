@@ -40,6 +40,7 @@ var init_index_module = __esm({ "node_modules/demo-pkg/index-module.js"() {
 
 //#endregion
 //#region src/require-demo-pkg.js
+// This causes "index-main.js" to be selected
 init_index_module();
 
 //#endregion

@@ -11,6 +11,7 @@ const node_assert = __toESM(require("node:assert"));
 
 //#region cjs.js
 var require_cjs = __commonJS({ "cjs.js"(exports, module) {
+	// `arguments` is a reserved word in strict mode
 	module.exports = function foo$1(arguments$1) {};
 } });
 

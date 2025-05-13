@@ -46,6 +46,7 @@
 
 
 //#region entry.js
+// Everything here should be kept as live code because it has side effects
 var keep_1 = typeof x <= "u" ? y : null;
 var keep_1 = typeof x < "u" ? y : null;
 var keep_1 = typeof x >= "u" ? null : y;
@@ -62,6 +63,7 @@ var keep_1 = "u" >= typeof x && y;
 var keep_1 = "u" > typeof x && y;
 var keep_1 = "u" <= typeof x || y;
 var keep_1 = "u" < typeof x || y;
+// Everything here should be kept as live code because it has side effects
 var keep_2 = typeof x <= "u" ? null : x;
 var keep_2 = typeof x < "u" ? null : x;
 var keep_2 = typeof x >= "u" ? x : null;

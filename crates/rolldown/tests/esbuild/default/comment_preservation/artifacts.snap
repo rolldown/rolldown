@@ -1,6 +1,5 @@
 ---
 source: crates/rolldown_testing/src/integration_test.rs
-snapshot_kind: text
 ---
 # warnings
 
@@ -230,7 +229,9 @@ console.log({
 	bar
 });
 console.log(class {
+	// before
 	foo;
+	/* comment before */
 	bar;
 });
 console.log(() => {

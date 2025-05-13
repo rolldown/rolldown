@@ -94,6 +94,7 @@ fn test_collapse_sourcemaps() {
   let ret1 = Parser::new(&allocator, &source_text, source_type).parse();
   let CodegenReturn { map, code, .. } = Codegen::new()
     .with_options(CodegenOptions {
+      comments: false,
       source_map_path: Some(filename.into()),
       ..CodegenOptions::default()
     })
@@ -121,6 +122,7 @@ fn test_collapse_sourcemaps() {
   let ret3 = Parser::new(&allocator, &source_text, source_type).parse();
   let CodegenReturn { map, code, .. } = Codegen::new()
     .with_options(CodegenOptions {
+      comments: false,
       source_map_path: Some(filename.into()),
       ..CodegenOptions::default()
     })

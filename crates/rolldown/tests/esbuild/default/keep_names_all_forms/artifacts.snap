@@ -12,13 +12,16 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```js
 //#region keep.js
+// Initializers
 function fn() {}
 var fn = function() {};
 var obj = { "f n": function() {} };
+// Assignments
 fn = function() {};
 fn ||= function() {};
 fn &&= function() {};
 fn ??= function() {};
+// Destructuring
 var [fn = function() {}] = [];
 var { fn = function() {} } = {};
 for (var [fn = function() {}] = [];;);

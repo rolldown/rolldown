@@ -111,13 +111,16 @@ __name(foo, "foo");
 ### rolldown
 ```js
 //#region keep.js
+// Initializers
 function fn() {}
 var fn = function() {};
 var obj = { "f n": function() {} };
+// Assignments
 fn = function() {};
 fn ||= function() {};
 fn &&= function() {};
 fn ??= function() {};
+// Destructuring
 var [fn = function() {}] = [];
 var { fn = function() {} } = {};
 for (var [fn = function() {}] = [];;);
@@ -136,7 +139,7 @@ for (var { fn = function() {} } of obj);
 ===================================================================
 --- esbuild	/out/keep.js
 +++ rolldown	keep.js
-@@ -1,103 +1,20 @@
+@@ -1,103 +1,23 @@
 -function fn() {
 -}
 -__name(fn, "fn");
@@ -242,13 +245,16 @@ for (var { fn = function() {} } of obj);
 -}, "fn") } = {});
 \ No newline at end of file
 +//#region keep.js
++// Initializers
 +function fn() {}
 +var fn = function() {};
 +var obj = { "f n": function() {} };
++// Assignments
 +fn = function() {};
 +fn ||= function() {};
 +fn &&= function() {};
 +fn ??= function() {};
++// Destructuring
 +var [fn = function() {}] = [];
 +var { fn = function() {} } = {};
 +for (var [fn = function() {}] = [];;);

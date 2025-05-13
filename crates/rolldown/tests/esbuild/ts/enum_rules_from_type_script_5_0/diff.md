@@ -61,12 +61,17 @@ console.log(
 ### rolldown
 ```js
 //#region supported.ts
+// From https://github.com/microsoft/TypeScript/pull/50528:
+// "An expression is considered a constant expression if it is
 var Foo = /* @__PURE__ */ function(Foo$1) {
+	// a number or string literal,
 	Foo$1[Foo$1["X0"] = 123] = "X0";
 	Foo$1["X1"] = "x";
+	// a unary +, -, or ~ applied to a numeric constant expression,
 	Foo$1[Foo$1["X2"] = 1] = "X2";
 	Foo$1[Foo$1["X3"] = -2] = "X3";
 	Foo$1[Foo$1["X4"] = -4] = "X4";
+	// a binary +, -, *, /, %, **, <<, >>, >>>, |, &, ^ applied to two numeric constant expressions,
 	Foo$1[Foo$1["X5"] = 3] = "X5";
 	Foo$1[Foo$1["X6"] = -1] = "X6";
 	Foo$1[Foo$1["X7"] = 6] = "X7";
@@ -79,6 +84,7 @@ var Foo = /* @__PURE__ */ function(Foo$1) {
 	Foo$1[Foo$1["X14"] = 13] = "X14";
 	Foo$1[Foo$1["X15"] = 4] = "X15";
 	Foo$1[Foo$1["X16"] = 9] = "X16";
+	// a binary + applied to two constant expressions whereof at least one is a string,
 	Foo$1["X17"] = "x0";
 	Foo$1["X18"] = "0x";
 	Foo$1["X19"] = "xy";
@@ -86,8 +92,13 @@ var Foo = /* @__PURE__ */ function(Foo$1) {
 	Foo$1["X21"] = "Infinity";
 	Foo$1["X22"] = "-Infinity";
 	Foo$1["X23"] = "0";
+	// a template expression where each substitution expression is a constant expression,
 	Foo$1["X24"] = "ABCD";
+	// a parenthesized constant expression,
 	Foo$1[Foo$1["X25"] = 321] = "X25";
+	// a dotted name (e.g. x.y.z) that references a const variable with a constant expression initializer and no type annotation,
+	/* (we don't implement this one) */
+	// a dotted name that references an enum member with an enum literal type, or
 	Foo$1[Foo$1["X26"] = 123] = "X26";
 	Foo$1["X27"] = "123x";
 	Foo$1["X28"] = "x123";
@@ -96,6 +107,7 @@ var Foo = /* @__PURE__ */ function(Foo$1) {
 	Foo$1[Foo$1["X31"] = Foo$1.X0 + "x"] = "X31";
 	Foo$1[Foo$1["X32"] = "x" + Foo$1.X0] = "X32";
 	Foo$1["X33"] = "ab";
+	// a dotted name indexed by a string literal (e.g. x.y["z"]) that references an enum member with an enum literal type."
 	Foo$1["X34"] = "x";
 	Foo$1["X35"] = "xy";
 	Foo$1["X36"] = "yx";
@@ -261,6 +273,7 @@ var OutOfBoundsNumberToString = /* @__PURE__ */ function(OutOfBoundsNumberToStri
 }(OutOfBoundsNumberToString || {});
 console.log(OutOfBoundsNumberToString.SUPPORTED, OutOfBoundsNumberToString.UNSUPPORTED);
 var TemplateExpressions = /* @__PURE__ */ function(TemplateExpressions$1) {
+	// TypeScript enums don't handle any of these
 	TemplateExpressions$1[TemplateExpressions$1["NULL"] = "null"] = "NULL";
 	TemplateExpressions$1[TemplateExpressions$1["TRUE"] = "true"] = "TRUE";
 	TemplateExpressions$1[TemplateExpressions$1["FALSE"] = "false"] = "FALSE";

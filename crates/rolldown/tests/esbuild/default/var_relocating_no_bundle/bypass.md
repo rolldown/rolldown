@@ -149,6 +149,7 @@ if (true) {
 	for (let e of []);
 	for (let { f, x: [g] } of []);
 	for (let h in {});
+	// for (let i = 1 in {});
 	for (let { j, x: [k] } in {});
 }
 

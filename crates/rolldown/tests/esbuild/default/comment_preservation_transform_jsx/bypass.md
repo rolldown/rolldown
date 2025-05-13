@@ -56,13 +56,13 @@ console.log(
 		null,
 		/*before*/
 		x
-),
+	),
 	/* @__PURE__ */ React.createElement(
 		React.Fragment,
 		null,
 		/*before*/
 		x
-),
+	),
 	// Comments on absent AST nodes
 	/* @__PURE__ */ React.createElement("div", null, "before", "after"),
 	/* @__PURE__ */ React.createElement("div", null, "before", "after"),

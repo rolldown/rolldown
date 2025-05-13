@@ -22,8 +22,11 @@
 		return fetchOpts;
 	}
 	function processPreload(link) {
-		if (link.ep) return;
+		if (link.ep)
+ // ep marker = processed
+		return;
 		link.ep = true;
+		// pre populate the load record
 		const fetchOpts = getFetchOpts(link);
 		fetch(link.href, fetchOpts);
 	}

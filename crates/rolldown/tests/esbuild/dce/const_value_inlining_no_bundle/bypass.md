@@ -22,11 +22,13 @@ console.log(
 ### rolldown
 ```js
 //#region top-level.js
+// These should be kept because they are top-level and tree shaking is not enabled
 const n_keep = null;
 const u_keep = void 0;
 const i_keep = 1234567;
 const f_keep = 123.456;
 const s_keep = "";
+// Values should still be inlined
 console.log(
 	// These are doubled to avoid the "inline const/let into next statement if used once" optimization
 	n_keep,
@@ -100,7 +102,7 @@ console.log(
 		REMOVE_f,
 		s_keep,
 		s_keep
-);
+	);
 }
 
 //#endregion
@@ -163,7 +165,7 @@ function nested() {
 		REMOVE_f,
 		s_keep,
 		s_keep
-);
+	);
 }
 assert(nested() !== void 0);
 
@@ -237,7 +239,6 @@ let ns;
 ```js
 //#region comment-before.js
 {
-	//! comment
 	const REMOVE = 1;
 	x = [REMOVE, REMOVE];
 }

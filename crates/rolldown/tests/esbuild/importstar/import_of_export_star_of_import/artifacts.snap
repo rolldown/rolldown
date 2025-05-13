@@ -13,6 +13,7 @@ const value = 123;
 
 //#endregion
 //#region foo.js
+// Add some statements to increase the part index (this reproduced a crash)
 statement();
 statement();
 statement();

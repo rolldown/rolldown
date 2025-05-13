@@ -81,6 +81,7 @@ for ({...x} in { abc });
 for ({...x} of [{}]);
 for ({...x} = {}; x; x = null);
 ({...assign} = {});
+// Check for used return values
 ({...x} = x);
 for ({...x} = x; 0;);
 console.log({...x} = x);

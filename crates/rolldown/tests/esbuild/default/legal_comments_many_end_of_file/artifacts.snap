@@ -16,44 +16,24 @@ source: crates/rolldown_testing/src/integration_test.rs
 ```js
 //#region a.js
 console.log("in a");
-//! Duplicate comment
-//! Duplicate comment
 
 //#endregion
 //#region b.js
 console.log("in b");
-//! Duplicate comment
-//! Duplicate comment
 
 //#endregion
 //#region c.js
 function foo() {
-	/*
-	* @license
-	* Copyright notice 2
-	*/
 	console.log("in c");
-	// @preserve This is another comment
 }
 foo();
 
 //#endregion
 //#region node_modules/some-other-pkg/js/index.js
 function bar() {
-	/*
-	* @preserve
-	* (c) Evil Software Corp
-	*/
 	console.log("some-other-pkg");
 }
-//! Duplicate third-party comment
-//! Duplicate third-party comment
 bar();
-
-//#endregion
-//#region node_modules/some-pkg/js/index.js
-//! Duplicate third-party comment
-//! Duplicate third-party comment
 
 //#endregion
 ```

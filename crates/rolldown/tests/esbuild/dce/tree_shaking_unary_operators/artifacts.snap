@@ -1,6 +1,5 @@
 ---
 source: crates/rolldown_testing/src/integration_test.rs
-snapshot_kind: text
 ---
 # Assets
 
@@ -11,6 +10,7 @@ snapshot_kind: text
 
 
 //#region entry.js
+// These operators may have side effects
 let keep;
 ++keep;
 --keep;

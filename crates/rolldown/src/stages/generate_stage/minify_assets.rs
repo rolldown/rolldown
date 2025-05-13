@@ -25,7 +25,11 @@ impl GenerateStage<'_> {
               &asset.filename,
               minify_options.to_oxc_minifier_options(self.options),
               minify_options.compress,
-              CodegenOptions { minify: minify_options.remove_whitespace, ..Default::default() },
+              if minify_options.remove_whitespace {
+                CodegenOptions::minify()
+              } else {
+                CodegenOptions { comments: false, ..CodegenOptions::default() }
+              },
             );
             asset.content = minified_content.into();
             match (&asset.map, &new_map) {

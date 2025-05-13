@@ -30,6 +30,7 @@ var import_foo = __toESM(require_foo());
 var import_bar = __toESM(require_bar());
 assert.equal((0, import_foo.foo)(), "foo");
 assert.equal((0, import_bar.bar)(), "bar");
+// This should be hoisted
 
 //#endregion
 ```

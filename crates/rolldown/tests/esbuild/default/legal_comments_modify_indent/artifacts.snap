@@ -8,9 +8,9 @@ source: crates/rolldown_testing/src/integration_test.rs
 ```js
 //#region entry.js
 var entry_default = () => {
-	/**
-	* @preserve
-	*/
+/**
+* @preserve
+*/
 };
 
 //#endregion

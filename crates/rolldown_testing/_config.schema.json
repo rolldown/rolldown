@@ -486,6 +486,12 @@
         "treeshake": {
           "$ref": "#/definitions/TreeshakeOptions"
         },
+        "virtualDirname": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
         "watch": {
           "anyOf": [
             {

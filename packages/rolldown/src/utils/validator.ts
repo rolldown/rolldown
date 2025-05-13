@@ -666,6 +666,7 @@ const OutputOptionsSchema = v.strictObject({
     }, () => `The 'true' value is not supported`),
   ),
   preserveModules: v.optional(v.boolean()),
+  virtualDirname: v.optional(v.string()),
 });
 
 const getAddonDescription = (

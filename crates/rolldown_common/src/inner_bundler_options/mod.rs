@@ -214,6 +214,7 @@ pub struct BundlerOptions {
   )]
   pub on_log: Option<OnLog>,
   pub preserve_modules: Option<bool>,
+  pub virtual_dirname: Option<String>,
 }
 
 impl BundlerOptions {

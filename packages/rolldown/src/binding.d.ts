@@ -604,6 +604,7 @@ export interface BindingOutputOptions {
   polyfillRequire?: boolean
   preserveModules?: boolean
   target?: string
+  virtualDirname?: string
 }
 
 export interface BindingPluginContextResolvedId {

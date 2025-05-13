@@ -88,6 +88,7 @@ OPTIONS
   --transform.typescript.jsx-pragma-frag <transform.typescript.jsx-pragma-frag>.
   --transform.typescript.only-remove-type-imports .
   --transform.typescript.rewrite-import-extensions <transform.typescript.rewrite-import-extensions>.
+  --virtual-dirname <virtual-dirname>.
 
 EXAMPLES
 

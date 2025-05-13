@@ -1,4 +1,3 @@
-use itertools::Itertools;
 use napi::{
   bindgen_prelude::{Either3, FromNapiValue},
   sys,
@@ -95,32 +94,45 @@ pub enum FilterTokenKind {
   CleanUrl,
 }
 
-impl From<BindingFilterToken> for Token {
-  fn from(value: BindingFilterToken) -> Self {
+pub fn normalized_tokens(tokens: Vec<BindingFilterToken>) -> Vec<Token> {
+  let mut ret = Vec::with_capacity(tokens.len());
+  for value in tokens {
     match value.kind {
-      FilterTokenKind::Id => Token::Id(
-        value.payload.expect("Id should have payload").into_inner().expect_string_or_regex(),
-      ),
-      FilterTokenKind::Code => Token::Code(
-        value.payload.expect("Code should have payload").into_inner().expect_string_or_regex(),
-      ),
-      FilterTokenKind::ModuleType => Token::ModuleType(
-        value.payload.expect("ModuleType should have payload").into_inner().expect_string(),
-      ),
+      FilterTokenKind::Id => {
+        ret.push(Token::from(
+          value.payload.expect("`Id` should have payload").into_inner().expect_string_or_regex(),
+        ));
+        ret.push(Token::Id);
+      }
+      FilterTokenKind::Code => {
+        ret.push(Token::from(
+          value.payload.expect("`Code` should have payload").into_inner().expect_string_or_regex(),
+        ));
+        ret.push(Token::Code);
+      }
+      FilterTokenKind::ModuleType => {
+        ret.push(Token::String(
+          value.payload.expect("`ModuleType` should have payload").into_inner().expect_string(),
+        ));
+        ret.push(Token::ModuleType);
+      }
       FilterTokenKind::And => {
-        Token::And(value.payload.expect("And should have payload").into_inner().expect_number())
+        ret.push(Token::And(
+          value.payload.expect("And should have payload").into_inner().expect_number(),
+        ));
       }
       FilterTokenKind::Or => {
-        Token::Or(value.payload.expect("`Or` should have payload").into_inner().expect_number())
+        ret.push(Token::Or(
+          value.payload.expect("`Or` should have payload").into_inner().expect_number(),
+        ));
       }
-      FilterTokenKind::Not => Token::Not,
-      FilterTokenKind::Include => Token::Include,
-      FilterTokenKind::Exclude => Token::Exclude,
-      FilterTokenKind::CleanUrl => Token::CleanUrl,
+      FilterTokenKind::Not => {
+        ret.push(Token::Not);
+      }
+      FilterTokenKind::Include => ret.push(Token::Include),
+      FilterTokenKind::Exclude => ret.push(Token::Exclude),
+      FilterTokenKind::CleanUrl => ret.push(Token::CleanUrl),
     }
   }
-}
-
-pub fn normalized_tokens(tokens: Vec<BindingFilterToken>) -> Vec<Token> {
-  tokens.into_iter().map(Token::from).collect_vec()
+  ret
 }

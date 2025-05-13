@@ -1,5 +1,6 @@
 use crate::{
   clean_url::clean_url,
+  js_regex::HybridRegex,
   pattern_filter::{StringOrRegex, StringOrRegexMatchKind},
 };
 
@@ -79,9 +80,9 @@ pub fn filter_exprs_interpreter(
 
 #[derive(Debug)]
 pub enum Token {
-  Id(StringOrRegex),
-  Code(StringOrRegex),
-  ModuleType(String),
+  Id,
+  Code,
+  ModuleType,
   /// Arg count
   And(u32),
   /// Arg count
@@ -90,6 +91,17 @@ pub enum Token {
   Include,
   Exclude,
   CleanUrl,
+  String(String),
+  Regex(HybridRegex),
+}
+
+impl From<StringOrRegex> for Token {
+  fn from(value: StringOrRegex) -> Self {
+    match value {
+      StringOrRegex::String(v) => Self::String(v),
+      StringOrRegex::Regex(regex) => Self::Regex(regex),
+    }
+  }
 }
 
 // TODO: better error handling
@@ -97,9 +109,32 @@ pub fn parse(mut tokens: Vec<Token>) -> FilterExprKind {
   fn rec(tokens: &mut Vec<Token>) -> Option<FilterExpr> {
     let token = tokens.pop()?;
     match token {
-      Token::Id(string_or_regex) => Some(FilterExpr::Id(string_or_regex)),
-      Token::Code(string_or_regex) => Some(FilterExpr::Code(string_or_regex)),
-      Token::ModuleType(string) => Some(FilterExpr::ModuleType(string)),
+      Token::Id => {
+        let string_or_regex = match tokens.pop()? {
+          Token::String(str) => StringOrRegex::String(str),
+          Token::Regex(regexp) => StringOrRegex::Regex(regexp),
+          _ => {
+            unreachable!("Id token should be followed by a string or regex")
+          }
+        };
+        Some(FilterExpr::Id(string_or_regex))
+      }
+      Token::Code => {
+        let string_or_regex = match tokens.pop()? {
+          Token::String(str) => StringOrRegex::String(str),
+          Token::Regex(regexp) => StringOrRegex::Regex(regexp),
+          _ => {
+            unreachable!("Code token should be followed by a string or regex")
+          }
+        };
+        Some(FilterExpr::Code(string_or_regex))
+      }
+      Token::ModuleType => {
+        let Token::String(string) = tokens.pop()? else {
+          unreachable!("ModuleType token should be followed by a string or regex");
+        };
+        Some(FilterExpr::ModuleType(string))
+      }
       Token::And(arg_count) => {
         let mut args = Vec::with_capacity(arg_count as usize);
         for _ in 0..arg_count {
@@ -129,6 +164,12 @@ pub fn parse(mut tokens: Vec<Token>) -> FilterExprKind {
       Token::CleanUrl => {
         let arg = rec(tokens)?;
         Some(FilterExpr::CleanUrl(Box::new(arg)))
+      }
+      Token::String(_) => {
+        unreachable!("String token should not appear standalone");
+      }
+      Token::Regex(_) => {
+        unreachable!("Regex token should not appear standalone");
       }
     }
   }
@@ -193,9 +234,11 @@ mod test {
     let mut tokens = vec![
       Token::Exclude,
       Token::And(2u32),
-      Token::Id(StringOrRegex::Regex("node_modules".into())),
+      Token::Id,
+      Token::Regex("node_modules".into()),
       Token::Not,
-      Token::Code(StringOrRegex::Regex("import\\s*".into())),
+      Token::Code,
+      Token::Regex("import\\s*".into()),
     ];
     tokens.reverse();
 

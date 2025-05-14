@@ -13,12 +13,8 @@ debug = true
 inherits = "release"
 
 [profile.release-wasi]
-codegen-units = 16
-debug = 'full'
 inherits = "release"
-lto = "thin"
 opt-level = "s"
-strip = "none"
 
 [workspace.lints.clippy]
 # Guidelines

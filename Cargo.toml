@@ -140,6 +140,7 @@ derive_more = { version = "2.0.1", features = ["debug"] }
 dunce = "1.0.4" # Normalize Windows paths to the most compatible format, avoiding UNC where possible
 fast-glob = "0.4.4"
 flate2 = "1.1.1"
+form_urlencoded = "1.2.1"
 futures = "0.3.30"
 glob = "0.3.1"
 heck = { version = "0.5.0" }

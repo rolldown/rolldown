@@ -28,6 +28,7 @@ base64-simd = { workspace = true }
 cow-utils = { workspace = true }
 dashmap = { workspace = true }
 fast-glob = { workspace = true }
+form_urlencoded = { workspace = true }
 futures = { workspace = true }
 indexmap = { workspace = true, features = ["serde"] }
 infer = { workspace = true }

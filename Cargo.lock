@@ -2994,6 +2994,7 @@ dependencies = [
  "criterion2",
  "dashmap",
  "fast-glob",
+ "form_urlencoded",
  "futures",
  "indexmap",
  "infer",

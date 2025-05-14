@@ -162,7 +162,7 @@ pub fn normalized_tokens(tokens: Vec<BindingFilterToken>) -> Vec<Token> {
       FilterTokenKind::CleanUrl => ret.push(Token::CleanUrl),
       FilterTokenKind::QueryKey => {
         let query_key =
-          value.payload.take().expect("`Or` should have payload").into_inner().expect_string();
+          value.payload.take().expect("`QueryKey` should have payload").into_inner().expect_string();
         iter.next();
         let Some(next_token) = iter.peek_mut() else {
           unreachable!("`QueryKey` should be followed by one Token");

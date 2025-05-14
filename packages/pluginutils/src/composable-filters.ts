@@ -1,4 +1,4 @@
-import { cleanUrl } from './utils';
+import { cleanUrl, extractQueryWithoutFragment } from './utils';
 
 type StringOrRegExp = string | RegExp;
 
@@ -148,6 +148,12 @@ export function code(pattern: StringOrRegExp): Code {
   return new Code(pattern);
 }
 
+/*
+ * There are three kinds of conditions are supported:
+ * 1. `boolean`: if the value is `true`, the key must exist and be truthy. if the value is `false`, the key must not exist or be falsy.
+ * 2. `string`: the key must exist and be equal to the value.
+ * 3. `RegExp`: the key must exist and match the value.
+ */
 export function query(key: string, pattern: StringOrRegExp | boolean): Query {
   return new Query(key, pattern);
 }
@@ -167,13 +173,8 @@ export function exclude(expr: FilterExpression): Exclude {
  * ```
  * @param queryFilterObject The query filter object needs to be matched.
  * @returns a `And` FilterExpression
- *
- * There are three kinds of conditions are supported:
- * 1. `boolean`: if the value is `true`, the key must exist and be truthy. if the value is `false`, the key must not exist or be falsy.
- * 2. `string`: the key must exist and be equal to the value.
- * 3. `RegExp`: the key must exist and match the value.
  */
-export function queryObjectToFilterExpr(queryFilter: QueryFilterObject): And {
+export function queries(queryFilter: QueryFilterObject): And {
   let arr = Object.entries(queryFilter).map(([key, value]) => {
     return new Query(key, value);
   });
@@ -278,7 +279,7 @@ export function exprInterpreter(
         throw new Error('`id` is required for `Query` expression');
       }
       if (!ctx.urlSearchParamsCache) {
-        let [_, queryString = ''] = id.split('?', 2);
+        let queryString = extractQueryWithoutFragment(id);
         ctx.urlSearchParamsCache = new URLSearchParams(queryString);
       }
       let urlParams = ctx.urlSearchParamsCache;
@@ -295,7 +296,7 @@ export function exprInterpreter(
       }
     }
     default: {
-      throw new Error(`Expression kind ${expr} is not expected.`);
+      throw new Error(`Expression ${JSON.stringify(expr)} is not expected.`);
     }
   }
 }

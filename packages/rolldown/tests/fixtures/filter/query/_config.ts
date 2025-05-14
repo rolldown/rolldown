@@ -1,5 +1,5 @@
 import { defineTest } from "rolldown-tests";
-import { include, queryObjectToFilterExpr } from "rolldown/filter";
+import { include, queries } from "rolldown/filter";
 import * as path from "node:path";
 import {expect, vi} from 'vitest'
 
@@ -17,7 +17,7 @@ export default defineTest({
 				resolveId: {
 					filter: [
 						include(
-							queryObjectToFilterExpr({
+							queries({
 								test: true,
 							}),
 						),

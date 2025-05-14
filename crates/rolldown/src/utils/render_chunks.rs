@@ -30,6 +30,7 @@ pub async fn render_chunks<'a>(
       })
       .collect::<FxHashMap<ArcStr, Arc<RollupRenderedChunk>>>(),
   );
+
   let result = try_join_all(assets.iter_mut().enumerate().map(|(index, asset)| {
     let chunks = Arc::clone(&chunks);
     async move {

@@ -17,7 +17,6 @@ pub mod rustc_hash;
 pub mod sanitize_filename;
 pub mod xxhash;
 pub use bitset::BitSet;
-pub mod clean_url;
 pub mod commondir;
 pub mod concat_string;
 pub mod filter_expression;
@@ -29,3 +28,5 @@ pub mod pattern_filter;
 pub mod replace_all_placeholder;
 pub mod time;
 pub mod unique_arc;
+pub mod url;
+

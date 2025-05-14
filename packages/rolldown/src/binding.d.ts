@@ -336,7 +336,7 @@ export interface BindingExperimentalOptions {
 
 export interface BindingFilterToken {
   kind: FilterTokenKind
-  payload?: BindingStringOrRegex | number
+  payload?: BindingStringOrRegex | number | boolean
 }
 
 export interface BindingGlobImportPluginConfig {
@@ -985,7 +985,9 @@ export type FilterTokenKind =  'Id'|
 'Not'|
 'Include'|
 'Exclude'|
-'CleanUrl';
+'CleanUrl'|
+'QueryKey'|
+'QueryValue';
 
 /**
  * Get offset within a `Uint8Array` which is aligned on 4 GiB.

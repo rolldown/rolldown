@@ -46,6 +46,7 @@ serde_json = { workspace = true }
 simdutf8 = { workspace = true }
 sugar_path = { workspace = true }
 xxhash-rust = { workspace = true, features = ["xxh3"] }
+form_urlencoded = { workspace = true }
 
 [target.'cfg(not(target_family = "wasm"))'.dependencies]
 async-scoped = { workspace = true, features = ["use-tokio"] }

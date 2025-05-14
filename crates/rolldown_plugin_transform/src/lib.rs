@@ -12,7 +12,7 @@ use rolldown_common::ModuleType;
 use rolldown_plugin::{
   HookUsage, Plugin, PluginContextResolveOptions, SharedTransformPluginContext,
 };
-use rolldown_utils::{clean_url::clean_url, pattern_filter::StringOrRegex};
+use rolldown_utils::{pattern_filter::StringOrRegex, url::clean_url};
 
 pub use types::{
   CompilerAssumptions, DecoratorOptions, IsolatedDeclarationsOptions, JsxOptions,

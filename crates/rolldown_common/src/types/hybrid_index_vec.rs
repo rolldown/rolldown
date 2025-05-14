@@ -85,4 +85,11 @@ impl<I: Idx, T> HybridIndexVec<I, T> {
       HybridIndexVec::Map(map) => itertools::Either::Right(map.into_iter()),
     }
   }
+
+  pub fn iter(&self) -> impl Iterator<Item = &T> {
+    match self {
+      HybridIndexVec::IndexVec(index_vec) => itertools::Either::Left(index_vec.iter()),
+      HybridIndexVec::Map(hash_map) => itertools::Either::Right(hash_map.values()),
+    }
+  }
 }

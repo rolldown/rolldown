@@ -7,6 +7,7 @@ import type { HookResolveIdCallEnd } from './HookResolveIdCallEnd';
 import type { HookResolveIdCallStart } from './HookResolveIdCallStart';
 import type { HookTransformCallEnd } from './HookTransformCallEnd';
 import type { HookTransformCallStart } from './HookTransformCallStart';
+import type { ModuleGraphReady } from './ModuleGraphReady';
 
 export type Meta =
   | HookTransformCallStart
@@ -16,4 +17,5 @@ export type Meta =
   | BuildStart
   | BuildEnd
   | HookResolveIdCallStart
-  | HookResolveIdCallEnd;
+  | HookResolveIdCallEnd
+  | ModuleGraphReady;

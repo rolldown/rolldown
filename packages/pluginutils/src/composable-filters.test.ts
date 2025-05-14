@@ -6,9 +6,9 @@ import {
   include,
   interpreter,
   or,
+  queries,
   query,
   QueryFilterObject,
-  queryObjectToFilterExpr,
 } from './composable-filters';
 
 function queryFilter(
@@ -16,7 +16,7 @@ function queryFilter(
   queryFilterObject: QueryFilterObject,
 ): boolean {
   let topLevelFilterExpression = include(
-    queryObjectToFilterExpr(queryFilterObject),
+    queries(queryFilterObject),
   );
   return interpreter([topLevelFilterExpression], undefined, id, undefined);
 }
@@ -45,6 +45,18 @@ describe('queryFilter', () => {
     expect(
       queryFilter('/foo/bar?a=1111&b=2222', {
         bar: false,
+      }),
+    ).toBe(true);
+
+    expect(
+      queryFilter('/foo/bar?a', {
+        a: true,
+      }),
+    ).toBe(true);
+
+    expect(
+      queryFilter('/foo/bar?a=', {
+        a: true,
       }),
     ).toBe(true);
   });

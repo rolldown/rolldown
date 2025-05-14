@@ -7,7 +7,7 @@ export {
   moduleType,
   not,
   or,
+  queries,
   query,
-  queryObjectToFilterExpr,
 } from '@rolldown/pluginutils';
 export { withFilter } from './plugin';

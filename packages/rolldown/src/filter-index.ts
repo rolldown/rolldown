@@ -8,6 +8,6 @@ export {
   not,
   or,
   query,
-  queryObjectToFilterExpr
+  queryObjectToFilterExpr,
 } from '@rolldown/pluginutils';
 export { withFilter } from './plugin';

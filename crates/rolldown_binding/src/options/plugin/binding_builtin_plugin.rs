@@ -578,7 +578,7 @@ impl TryFrom<BindingBuiltinPlugin> for Arc<dyn Pluginable> {
         let plugin = if let Some(options) = plugin.options {
           BindingAssetPluginConfig::from_unknown(options)?.into()
         } else {
-          AssetPlugin
+          AssetPlugin::default()
         };
         Arc::new(plugin)
       }
@@ -635,12 +635,21 @@ impl From<BindingReportPluginConfig> for ReporterPlugin {
   }
 }
 
-#[napi_derive::napi(object)]
+#[napi_derive::napi(object, object_to_js = false)]
 #[derive(Debug, Default)]
-pub struct BindingAssetPluginConfig;
+pub struct BindingAssetPluginConfig {
+  pub public_dir: Option<String>,
+  pub assets_include: Option<Vec<BindingStringOrRegex>>,
+}
 
 impl From<BindingAssetPluginConfig> for AssetPlugin {
-  fn from(_config: BindingAssetPluginConfig) -> Self {
-    Self
+  fn from(config: BindingAssetPluginConfig) -> Self {
+    Self {
+      public_dir: config.public_dir,
+      assets_include: config
+        .assets_include
+        .map(bindingify_string_or_regex_array)
+        .unwrap_or_default(),
+    }
   }
 }

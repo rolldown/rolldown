@@ -10,9 +10,12 @@ const isModalVisible = ref(false);
 
 // Scroll lock
 watch(isModalVisible, (value) => {
-  value
-    ? (document.documentElement.style.overflow = 'hidden')
-    : (document.documentElement.style.overflow = 'auto');
+  if(typeof document === 'undefined') {
+    return
+  }
+
+  const newOverflowValue = value ? 'hidden' : 'auto';
+  document.documentElement.style.overflow = newOverflowValue;
 },
   { immediate: true }
 );

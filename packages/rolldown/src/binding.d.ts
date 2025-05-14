@@ -231,6 +231,10 @@ export interface BindingAliasPluginConfig {
   entries: Array<BindingAliasPluginAlias>
 }
 
+export interface BindingAssetPluginConfig {
+
+}
+
 export interface BindingAssetSource {
   inner: string | Uint8Array
 }
@@ -263,7 +267,8 @@ export type BindingBuiltinPluginName =  'builtin:wasm-helper'|
 'builtin:vite-resolve'|
 'builtin:module-federation'|
 'builtin:isolated-declaration'|
-'builtin:report';
+'builtin:report'|
+'builtin:asset';
 
 export interface BindingBundlerOptions {
   inputOptions: BindingInputOptions

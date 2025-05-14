@@ -8,5 +8,8 @@ pub fn clean_url(v: &str) -> &str {
 }
 
 pub fn get_query(v: &str) -> &str {
-  if let Some(index) = memchr(b'?', v.as_bytes()) { &v[index + 1..] } else { "" }
+  if let Some(query_start) = memchr(b'?', v.as_bytes()) {
+    let query_part = &v[query_start + 1..];
+    if let Some(fragment_start) = memchr(b'#', query_part.as_bytes()) { &query_part[0..fragment_start] } else { query_part }
+  } else { "" }
 }

@@ -68,7 +68,7 @@ use rolldown_utils::debug::pretty_type_name;
 /// - Js: `(a: string | null | undefined, b: number) => Promise<number | null | undefined | void> | number | null | undefined | void`
 /// - Js(Simplified): `(a: Nullable<string>, b: number) => MaybePromise<VoidNullable<number>>`
 pub type JsCallback<Args, Ret> =
-  Arc<ThreadsafeFunction<Args, Either<Ret, UnknownReturnValue>, Args, false, true>>;
+  Arc<ThreadsafeFunction<Args, Either<Ret, UnknownReturnValue>, Args, false>>;
 
 /// Shortcut for `JsCallback<FnArgs<..., Either<Promise<Ret>, Ret>>`, which could be simplified to `MaybeAsyncJsCallback<...>, Ret>`.
 pub type MaybeAsyncJsCallback<Args, Ret> = Arc<
@@ -77,7 +77,6 @@ pub type MaybeAsyncJsCallback<Args, Ret> = Arc<
     Either<Either<Promise<Ret>, Ret>, UnknownReturnValue>,
     Args,
     false,
-    true,
   >,
 >;
 

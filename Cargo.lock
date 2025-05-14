@@ -2508,6 +2508,7 @@ dependencies = [
  "rolldown_error",
  "rolldown_plugin",
  "rolldown_plugin_alias",
+ "rolldown_plugin_asset",
  "rolldown_plugin_build_import_analysis",
  "rolldown_plugin_dynamic_import_vars",
  "rolldown_plugin_import_glob",
@@ -2681,6 +2682,13 @@ dependencies = [
  "cow-utils",
  "rolldown_plugin",
  "rolldown_utils",
+]
+
+[[package]]
+name = "rolldown_plugin_asset"
+version = "0.1.0"
+dependencies = [
+ "rolldown_plugin",
 ]
 
 [[package]]

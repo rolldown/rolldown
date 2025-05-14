@@ -7,6 +7,7 @@ use napi_derive::napi;
 use oxc_transform_napi::TransformOptions;
 use rolldown_plugin::__inner::Pluginable;
 use rolldown_plugin_alias::{Alias, AliasPlugin};
+use rolldown_plugin_asset::AssetPlugin;
 use rolldown_plugin_build_import_analysis::BuildImportAnalysisPlugin;
 use rolldown_plugin_dynamic_import_vars::DynamicImportVarsPlugin;
 use rolldown_plugin_dynamic_import_vars::ResolverFn;
@@ -573,6 +574,14 @@ impl TryFrom<BindingBuiltinPlugin> for Arc<dyn Pluginable> {
         };
         Arc::new(plugin)
       }
+      BindingBuiltinPluginName::Asset => {
+        let plugin = if let Some(options) = plugin.options {
+          BindingAssetPluginConfig::from_unknown(options)?.into()
+        } else {
+          AssetPlugin
+        };
+        Arc::new(plugin)
+      }
     })
   }
 }
@@ -623,5 +632,15 @@ impl From<BindingReportPluginConfig> for ReporterPlugin {
       config.assets_dir,
       config.is_lib,
     )
+  }
+}
+
+#[napi_derive::napi(object)]
+#[derive(Debug, Default)]
+pub struct BindingAssetPluginConfig;
+
+impl From<BindingAssetPluginConfig> for AssetPlugin {
+  fn from(_config: BindingAssetPluginConfig) -> Self {
+    Self
   }
 }

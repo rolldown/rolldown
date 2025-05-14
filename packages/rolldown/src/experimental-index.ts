@@ -15,6 +15,7 @@ export { defineParallelPlugin } from './plugin/parallel-plugin';
 export { composeJsPlugins as composePlugins } from './utils/compose-js-plugins';
 // Builtin plugin factory
 export {
+  assetPlugin,
   buildImportAnalysisPlugin,
   dynamicImportVarsPlugin,
   importGlobPlugin,

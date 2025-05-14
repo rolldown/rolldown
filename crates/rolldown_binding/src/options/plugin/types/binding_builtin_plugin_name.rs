@@ -35,4 +35,6 @@ pub enum BindingBuiltinPluginName {
   IsolatedDeclaration,
   #[napi(value = "builtin:report")]
   Report,
+  #[napi(value = "builtin:asset")]
+  Asset,
 }

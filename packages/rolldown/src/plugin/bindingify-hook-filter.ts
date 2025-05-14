@@ -183,6 +183,11 @@ function bindingifyFilterExprImpl(
       list.push({ kind: 'Exclude' });
       break;
     }
+    case 'query': {
+      list.push({ kind: 'QueryKey', payload: expr.key });
+      list.push({ kind: 'QueryValue', payload: expr.pattern });
+      break;
+    }
     default:
       throw new Error(`Unknown filter expression: ${expr}`);
   }

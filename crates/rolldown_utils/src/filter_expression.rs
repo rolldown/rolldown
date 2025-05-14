@@ -1,7 +1,11 @@
+use std::borrow::Cow;
+
+use rustc_hash::FxHashMap;
+
 use crate::{
-  clean_url::clean_url,
   js_regex::HybridRegex,
   pattern_filter::{StringOrRegex, StringOrRegexMatchKind},
+  url::{clean_url, get_query},
 };
 
 #[derive(Debug)]
@@ -13,6 +17,14 @@ pub enum FilterExpr {
   Id(StringOrRegex),
   CleanUrl(Box<FilterExpr>),
   ModuleType(String),
+  Query(String, QueryValue),
+}
+
+#[derive(Debug)]
+pub enum QueryValue {
+  String(String),
+  Regex(HybridRegex),
+  Boolean(bool),
 }
 
 #[derive(Debug)]
@@ -21,34 +33,66 @@ pub enum FilterExprKind {
   Exclude(FilterExpr),
 }
 
-pub fn filter_expr_interpreter(
+pub fn filter_expr_interpreter<'a>(
   expr: &FilterExpr,
-  id: Option<&str>,
+  id: Option<&'a str>,
   code: Option<&str>,
   module_type: Option<&str>,
   cwd: &str,
+  ctx: &mut InterpreterCtx<'a>,
 ) -> bool {
   match expr {
     FilterExpr::Or(args) => {
-      args.iter().any(|arg| filter_expr_interpreter(arg, id, code, module_type, cwd))
+      args.iter().any(|arg| filter_expr_interpreter(arg, id, code, module_type, cwd, ctx))
     }
     FilterExpr::And(args) => {
-      args.iter().all(|arg| filter_expr_interpreter(arg, id, code, module_type, cwd))
+      args.iter().all(|arg| filter_expr_interpreter(arg, id, code, module_type, cwd, ctx))
     }
-    FilterExpr::Not(inner) => !filter_expr_interpreter(inner, id, code, module_type, cwd),
+    FilterExpr::Not(inner) => !filter_expr_interpreter(inner, id, code, module_type, cwd, ctx),
     FilterExpr::Code(pattern) => {
-      pattern.test(code.expect("code should not be none"), &StringOrRegexMatchKind::Code)
+      pattern.test(code.expect("`code` should not be none"), &StringOrRegexMatchKind::Code)
     }
     FilterExpr::Id(id_pattern) => {
-      id_pattern.test(id.expect("id should not be none"), &StringOrRegexMatchKind::Id(cwd))
+      id_pattern.test(id.expect("`id` should not be none"), &StringOrRegexMatchKind::Id(cwd))
     }
     FilterExpr::ModuleType(module_type_filter) => {
       module_type.as_ref().is_some_and(|module_type| module_type == module_type_filter)
     }
     FilterExpr::CleanUrl(expr) => {
-      filter_expr_interpreter(expr, id.map(clean_url), code, module_type, cwd)
+      filter_expr_interpreter(expr, id.map(clean_url), code, module_type, cwd, ctx)
+    }
+    FilterExpr::Query(key, value) => {
+      if ctx.parsed_url_cache.is_none() {
+        let query_string = get_query(id.expect("`id` should not be none"));
+        let cache = form_urlencoded::parse(query_string.as_bytes())
+          .into_iter()
+          .map(|(k, v)| (k.to_string(), v))
+          .collect::<_>();
+        ctx.parsed_url_cache = Some(cache);
+      }
+      match value {
+        QueryValue::String(v) => ctx
+          .parsed_url_cache
+          .as_ref()
+          .and_then(|cache| cache.get(key).map(|qv| qv == v))
+          .unwrap_or(false),
+        QueryValue::Regex(hybrid_regex) => ctx
+          .parsed_url_cache
+          .as_ref()
+          .and_then(|cache| cache.get(key).map(|qv| hybrid_regex.matches(qv)))
+          .unwrap_or(false),
+        QueryValue::Boolean(v) => {
+          let has_key = ctx.parsed_url_cache.as_ref().is_some_and(|cache| cache.contains_key(key));
+          *v == has_key
+        }
+      }
     }
   }
+}
+
+#[derive(Default, Debug)]
+pub struct InterpreterCtx<'a> {
+  parsed_url_cache: Option<FxHashMap<String, Cow<'a, str>>>,
 }
 
 pub fn filter_exprs_interpreter(
@@ -60,16 +104,17 @@ pub fn filter_exprs_interpreter(
   cwd: &str,
 ) -> bool {
   let mut include_count = 0;
+  let mut ctx = InterpreterCtx::default();
   for kind in exprs {
     match kind {
       FilterExprKind::Include(filter_expr) => {
         include_count += 1;
-        if filter_expr_interpreter(filter_expr, id, code, module_type, cwd) {
+        if filter_expr_interpreter(filter_expr, id, code, module_type, cwd, &mut ctx) {
           return true;
         }
       }
       FilterExprKind::Exclude(filter_expr) => {
-        if filter_expr_interpreter(filter_expr, id, code, module_type, cwd) {
+        if filter_expr_interpreter(filter_expr, id, code, module_type, cwd, &mut ctx) {
           return false;
         }
       }
@@ -91,8 +136,10 @@ pub enum Token {
   Include,
   Exclude,
   CleanUrl,
+  Query,
   String(String),
   Regex(HybridRegex),
+  Boolean(bool),
 }
 
 impl From<StringOrRegex> for Token {
@@ -118,6 +165,20 @@ pub fn parse(mut tokens: Vec<Token>) -> FilterExprKind {
           }
         };
         Some(FilterExpr::Id(string_or_regex))
+      }
+      Token::Query => {
+        let Token::String(key) = tokens.pop()? else {
+          unreachable!("Key of `Query` should be string")
+        };
+        let value = match tokens.pop()? {
+          Token::String(v) => QueryValue::String(v),
+          Token::Regex(v) => QueryValue::Regex(v),
+          Token::Boolean(v) => QueryValue::Boolean(v),
+          _ => {
+            unreachable!("Value of `Query` should be either `string`, `regex` or `boolean`")
+          }
+        };
+        Some(FilterExpr::Query(key, value))
       }
       Token::Code => {
         let string_or_regex = match tokens.pop()? {
@@ -171,6 +232,9 @@ pub fn parse(mut tokens: Vec<Token>) -> FilterExprKind {
       Token::Regex(_) => {
         unreachable!("Regex token should not appear standalone");
       }
+      Token::Boolean(_) => {
+        unreachable!("Boolean token should not appear standalone");
+      }
     }
   }
   match tokens.pop() {
@@ -190,7 +254,7 @@ pub fn parse(mut tokens: Vec<Token>) -> FilterExprKind {
 #[cfg(test)]
 mod test {
   use crate::{
-    filter_expression::{FilterExpr, Token, filter_expr_interpreter},
+    filter_expression::{FilterExpr, InterpreterCtx, Token, filter_expr_interpreter},
     pattern_filter::StringOrRegex,
   };
 
@@ -208,7 +272,8 @@ mod test {
       Some("/foo/bar.js"),
       Some("console.log('test')"),
       None,
-      "."
+      ".",
+      &mut InterpreterCtx::default()
     ));
 
     assert!(filter_expr_interpreter(
@@ -216,7 +281,8 @@ mod test {
       Some("/node_modules/bar.js"),
       Some("console.log('test')"),
       None,
-      "."
+      ".",
+      &mut InterpreterCtx::default()
     ));
 
     assert!(!filter_expr_interpreter(
@@ -224,7 +290,8 @@ mod test {
       Some("/node_modules/bar.js"),
       Some("import('foo')"),
       None,
-      "."
+      ".",
+      &mut InterpreterCtx::default()
     ));
   }
 

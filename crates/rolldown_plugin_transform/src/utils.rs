@@ -4,7 +4,7 @@ use itertools::Either;
 use oxc::{span::SourceType, transformer::TransformOptions};
 use rolldown_common::ModuleType;
 use rolldown_plugin::SharedTransformPluginContext;
-use rolldown_utils::{clean_url::clean_url, pattern_filter::filter as pattern_filter};
+use rolldown_utils::{pattern_filter::filter as pattern_filter, url::clean_url};
 
 use crate::{JsxOptions, TransformPlugin};
 

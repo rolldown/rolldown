@@ -231,6 +231,10 @@ export interface BindingAliasPluginConfig {
   entries: Array<BindingAliasPluginAlias>
 }
 
+export interface BindingAssetPluginConfig {
+
+}
+
 export interface BindingAssetSource {
   inner: string | Uint8Array
 }
@@ -263,7 +267,8 @@ export type BindingBuiltinPluginName =  'builtin:wasm-helper'|
 'builtin:vite-resolve'|
 'builtin:module-federation'|
 'builtin:isolated-declaration'|
-'builtin:report';
+'builtin:report'|
+'builtin:asset';
 
 export interface BindingBundlerOptions {
   inputOptions: BindingInputOptions
@@ -331,7 +336,7 @@ export interface BindingExperimentalOptions {
 
 export interface BindingFilterToken {
   kind: FilterTokenKind
-  payload?: BindingStringOrRegex | number
+  payload?: BindingStringOrRegex | number | boolean
 }
 
 export interface BindingGlobImportPluginConfig {
@@ -980,7 +985,9 @@ export type FilterTokenKind =  'Id'|
 'Not'|
 'Include'|
 'Exclude'|
-'CleanUrl';
+'CleanUrl'|
+'QueryKey'|
+'QueryValue';
 
 /**
  * Get offset within a `Uint8Array` which is aligned on 4 GiB.

@@ -375,6 +375,9 @@ impl<'ast> VisitMut<'ast> for HmrAstFinalizer<'_, 'ast> {
             self.create_load_exports_call_stmt(importee, &binding_name, import_decl.span)
           {
             *node = stmt;
+          } else {
+            *node =
+              ast::Statement::EmptyStatement(self.snippet.builder.alloc_empty_statement(SPAN));
           }
         }
         ast::ModuleDeclaration::ExportNamedDeclaration(decl) => {
@@ -425,6 +428,9 @@ impl<'ast> VisitMut<'ast> for HmrAstFinalizer<'_, 'ast> {
               self.create_load_exports_call_stmt(importee, &binding_name, decl.span)
             {
               *node = stmt;
+            } else {
+              *node =
+                ast::Statement::EmptyStatement(self.snippet.builder.alloc_empty_statement(SPAN));
             }
           } else if let Some(decl) = &mut decl.declaration {
             match decl {

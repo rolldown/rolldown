@@ -26,7 +26,6 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## entry.js
 
 ```js
-"use strict";
 
 const __remix_run_react = __toESM(require("@remix-run/react"));
 const react = __toESM(require("react"));

@@ -6,7 +6,6 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## main.js
 
 ```js
-"use strict";
 
 //#region main.js
 let foo = 1;

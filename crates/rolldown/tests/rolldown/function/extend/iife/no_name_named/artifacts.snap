@@ -16,7 +16,6 @@ source: crates/rolldown_testing/src/integration_test.rs
 ```js
 (function(exports) {
 
-"use strict";
 
 //#region main.js
 const a = 1;

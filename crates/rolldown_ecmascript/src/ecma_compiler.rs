@@ -43,7 +43,7 @@ impl EcmaCompiler {
           Ok(ProgramCellDependent { program: ret.program })
         }
       })?;
-    Ok(EcmaAst { program: inner, source_type: ty, contains_use_strict: false })
+    Ok(EcmaAst { program: inner, source_type: ty })
   }
 
   pub fn parse_expr_as_program(
@@ -79,7 +79,7 @@ impl EcmaCompiler {
           )),
         }
       })?;
-    Ok(EcmaAst { program: inner, source_type: ty, contains_use_strict: false })
+    Ok(EcmaAst { program: inner, source_type: ty })
   }
 
   pub fn print(ast: &EcmaAst, filename: &str, enable_source_map: bool) -> CodegenReturn {

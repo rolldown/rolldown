@@ -1,6 +1,5 @@
 ---
 source: crates/rolldown_testing/src/integration_test.rs
-snapshot_kind: text
 ---
 # warnings
 
@@ -17,7 +16,6 @@ snapshot_kind: text
 ```js
 (function(node_assert) {
 
-"use strict";
 
 node_assert = __toESM(node_assert);
 

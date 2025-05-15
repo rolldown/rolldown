@@ -16,7 +16,6 @@ var foo = "foo";
 ```
 ### rolldown
 ```js
-"use strict";
 
 //#region foo.js
 let foo = "foo";

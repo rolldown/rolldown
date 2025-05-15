@@ -30,9 +30,11 @@ pub fn render_esm<'code>(
     source_joiner.append_source(banner);
   }
 
-  // the order of rendering directives is matter, see https://github.com/evanw/esbuild/blob/d34e79e2a998c21bb71d57b92b0017ca11756912/internal/linker/linker.go?plain=1#L5666-L5701
+  // https://github.com/evanw/esbuild/blob/d34e79e2a998c21bb71d57b92b0017ca11756912/internal/linker/linker.go#L5686-L5698
   if !directives.is_empty() {
-    source_joiner.append_source(render_chunk_directives(directives.iter()));
+    source_joiner.append_source(render_chunk_directives(
+      directives.iter().filter(|d| &d[1..d.len() - 1] != "use strict"),
+    ));
     source_joiner.append_source("");
   }
 

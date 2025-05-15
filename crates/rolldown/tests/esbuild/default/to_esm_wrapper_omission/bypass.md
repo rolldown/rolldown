@@ -28,7 +28,6 @@ x = Promise.resolve().then(() => __toESM(require("k_WRAP")));
 ```
 ### rolldown
 ```js
-"use strict";
 
 require("a_nowrap");
 const b_nowrap = __toESM(require("b_nowrap"));

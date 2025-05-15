@@ -6,7 +6,8 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## entry.js
 
 ```js
-'use loose'
+'use loose';
+
 
 //#region entry.js
 a;

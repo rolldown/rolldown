@@ -4,11 +4,8 @@ use crate::utils::chunk::render_chunk_exports::{
   get_chunk_export_names, render_wrapped_entry_chunk,
 };
 use crate::{
-  ecmascript::ecma_generator::RenderedModuleSources,
-  types::generator::GenerateContext,
-  utils::chunk::{
-    determine_use_strict::determine_use_strict, render_chunk_exports::render_chunk_exports,
-  },
+  ecmascript::ecma_generator::RenderedModuleSources, types::generator::GenerateContext,
+  utils::chunk::render_chunk_exports::render_chunk_exports,
 };
 use rolldown_common::{AddonRenderContext, OutputExports};
 use rolldown_error::{BuildDiagnostic, BuildResult};
@@ -35,16 +32,9 @@ pub fn render_cjs<'code>(
     source_joiner.append_source(banner);
   }
 
-  let need_use_strict = determine_use_strict(ctx);
-
-  if need_use_strict {
-    source_joiner.append_source("\"use strict\";");
-  }
-
   if !directives.is_empty() {
-    source_joiner.append_source(render_chunk_directives(
-      directives.iter().filter(|d| !need_use_strict || **d != "use strict"),
-    ));
+    source_joiner.append_source(render_chunk_directives(directives.iter()));
+    source_joiner.append_source("");
   }
 
   if let Some(intro) = intro {

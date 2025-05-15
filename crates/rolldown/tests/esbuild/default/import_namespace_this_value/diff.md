@@ -10,7 +10,6 @@ console.log(ns[foo](), new ns[foo]());
 ```
 ### rolldown
 ```js
-"use strict";
 const require_chunk = require('./chunk.js');
 const external = require_chunk.__toESM(require("external"));
 
@@ -41,7 +40,6 @@ console.log(ns.foo(), new ns.foo());
 ```
 ### rolldown
 ```js
-"use strict";
 const require_chunk = require('./chunk.js');
 const external = require_chunk.__toESM(require("external"));
 
@@ -73,7 +71,6 @@ console.log(new import_external.default(), new import_external.foo());
 ```
 ### rolldown
 ```js
-"use strict";
 const require_chunk = require('./chunk.js');
 const external = require_chunk.__toESM(require("external"));
 

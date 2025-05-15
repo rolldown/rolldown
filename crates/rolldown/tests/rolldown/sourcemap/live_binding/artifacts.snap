@@ -6,7 +6,6 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## main1.js
 
 ```js
-"use strict";
 const require_shared = require('./shared.js');
 
 //#region main1.js
@@ -28,7 +27,6 @@ exports.shared = require_shared.shared;
 ## shared.js
 
 ```js
-"use strict";
 
 //#region shared.js
 function shared() {
@@ -49,22 +47,22 @@ Object.defineProperty(exports, 'shared', {
 
 ```
 - ../main1.js
-(2:0) "function " --> (4:0) "function "
-(2:9) "main() " --> (4:9) "main() "
-(2:16) "{\n" --> (4:16) "{\n"
-(3:2) "shared()" --> (5:0) "\trequire_shared.shared()"
-(3:10) ";\n" --> (5:24) ";\n"
-(4:1) "\n" --> (6:0) "}\n"
-(6:0) "main()" --> (7:0) "main()"
-(6:6) "\n" --> (7:6) ";\n"
+(2:0) "function " --> (3:0) "function "
+(2:9) "main() " --> (3:9) "main() "
+(2:16) "{\n" --> (3:16) "{\n"
+(3:2) "shared()" --> (4:0) "\trequire_shared.shared()"
+(3:10) ";\n" --> (4:24) ";\n"
+(4:1) "\n" --> (5:0) "}\n"
+(6:0) "main()" --> (6:0) "main()"
+(6:6) "\n" --> (6:6) ";\n"
 
 - ../shared.js
-(0:0) "export function " --> (3:0) "function "
-(0:16) "shared() " --> (3:9) "shared() "
-(0:25) "{\n" --> (3:18) "{\n"
-(1:2) "console." --> (4:0) "\tconsole."
-(1:10) "trace(" --> (4:9) "trace("
-(1:16) "\"shared\")" --> (4:15) "\"shared\")"
-(1:25) "\n" --> (4:24) ";\n"
-(2:1) "\n" --> (5:0) "}\n"
+(0:0) "export function " --> (2:0) "function "
+(0:16) "shared() " --> (2:9) "shared() "
+(0:25) "{\n" --> (2:18) "{\n"
+(1:2) "console." --> (3:0) "\tconsole."
+(1:10) "trace(" --> (3:9) "trace("
+(1:16) "\"shared\")" --> (3:15) "\"shared\")"
+(1:25) "\n" --> (3:24) ";\n"
+(2:1) "\n" --> (4:0) "}\n"
 ```

@@ -16,7 +16,6 @@ export default defineTest({
     expect(output.output[0].code).toMatchInlineSnapshot(`
       "var module = (function(node_path) {
 
-      "use strict";
       //#region rolldown:runtime
       var __create = Object.create;
       var __defProp = Object.defineProperty;

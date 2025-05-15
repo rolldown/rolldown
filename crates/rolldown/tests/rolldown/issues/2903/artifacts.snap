@@ -1,13 +1,11 @@
 ---
 source: crates/rolldown_testing/src/integration_test.rs
-snapshot_kind: text
 ---
 # Assets
 
 ## chunk.js
 
 ```js
-"use strict";
 
 
 Object.defineProperty(exports, '__toESM', {
@@ -20,7 +18,6 @@ Object.defineProperty(exports, '__toESM', {
 ## main.js
 
 ```js
-"use strict";
 const require_chunk = require('./chunk.js');
 const node_path = require_chunk.__toESM(require("node:path"));
 
@@ -33,7 +30,6 @@ module.exports = main_default;
 ## main2.js
 
 ```js
-"use strict";
 const require_chunk = require('./chunk.js');
 const node_fs = require_chunk.__toESM(require("node:fs"));
 

@@ -12,7 +12,6 @@ class A {
 this["1"] = this["1"] || {};
 this["1"]["2"] = (function(exports) {
 
-"use strict";
 
 //#region foo.js
 const value = 1;

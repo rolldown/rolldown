@@ -30,7 +30,6 @@ Variant: (format: Cjs)
 ## entry.js
 
 ```js
-"use strict";
 
 
 //#region entry.js
@@ -58,7 +57,6 @@ Variant: (format: Iife)
 ```js
 var exports = (function() {
 
-"use strict";
 
 
 //#region entry.js
@@ -90,7 +88,6 @@ Variant: (format: Umd)
   typeof define === 'function' && define.amd ? define([], factory) :
   (global = typeof globalThis !== 'undefined' ? globalThis : global || self, (global.exports = factory()));
 })(this, function() {
-"use strict";
 
 
 //#region entry.js

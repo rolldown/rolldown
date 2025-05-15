@@ -18,7 +18,6 @@ var mod = (() => {
 ```js
 var mod = (function(exports, foo) {
 
-"use strict";
 
 foo = __toESM(foo);
 

@@ -22,7 +22,6 @@ source: crates/rolldown_testing/src/integration_test.rs
 ```js
 (function(exports, foo) {
 
-"use strict";
 
 foo = __toESM(foo);
 

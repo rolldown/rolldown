@@ -1,13 +1,11 @@
 ---
 source: crates/rolldown_testing/src/integration_test.rs
-snapshot_kind: text
 ---
 # Assets
 
 ## main.js
 
 ```js
-"use strict";
 
 const node_assert = __toESM(require("node:assert"));
 
@@ -24,21 +22,21 @@ node_assert.default.equal(__filename, __filename);
 
 ```
 - ../main.js
-(2:0) "assert." --> (27:0) "node_assert.default."
-(2:7) "equal(" --> (27:20) "equal("
-(2:13) "require(" --> (27:26) "require("
-(2:21) "\"url\")" --> (27:34) "\"url\")"
-(2:27) "." --> (27:40) "."
-(2:28) "pathToFileURL(" --> (27:41) "pathToFileURL("
-(2:42) "__filename)" --> (27:55) "__filename)"
-(2:53) ", import.meta.url)" --> (27:66) ", require(\"url\").pathToFileURL(__filename).href)"
-(2:71) "\n" --> (27:114) ";\n"
-(3:0) "assert." --> (28:0) "node_assert.default."
-(3:7) "equal(" --> (28:20) "equal("
-(3:13) "__dirname, import.meta.dirname)" --> (28:26) "__dirname, __dirname)"
-(3:44) "\n" --> (28:47) ";\n"
-(4:0) "assert." --> (29:0) "node_assert.default."
-(4:7) "equal(" --> (29:20) "equal("
-(4:13) "__filename, import.meta.filename)" --> (29:26) "__filename, __filename)"
-(4:46) "\n" --> (29:49) ";\n"
+(2:0) "assert." --> (26:0) "node_assert.default."
+(2:7) "equal(" --> (26:20) "equal("
+(2:13) "require(" --> (26:26) "require("
+(2:21) "\"url\")" --> (26:34) "\"url\")"
+(2:27) "." --> (26:40) "."
+(2:28) "pathToFileURL(" --> (26:41) "pathToFileURL("
+(2:42) "__filename)" --> (26:55) "__filename)"
+(2:53) ", import.meta.url)" --> (26:66) ", require(\"url\").pathToFileURL(__filename).href)"
+(2:71) "\n" --> (26:114) ";\n"
+(3:0) "assert." --> (27:0) "node_assert.default."
+(3:7) "equal(" --> (27:20) "equal("
+(3:13) "__dirname, import.meta.dirname)" --> (27:26) "__dirname, __dirname)"
+(3:44) "\n" --> (27:47) ";\n"
+(4:0) "assert." --> (28:0) "node_assert.default."
+(4:7) "equal(" --> (28:20) "equal("
+(4:13) "__filename, import.meta.filename)" --> (28:26) "__filename, __filename)"
+(4:46) "\n" --> (28:49) ";\n"
 ```

@@ -10,7 +10,6 @@ use rustc_hash::FxHashMap;
 /// Pre-process is a essential step to make rolldown generate correct and efficient code.
 pub struct PreProcessor<'ast> {
   snippet: AstSnippet<'ast>,
-  pub contains_use_strict: bool,
   /// used to store none_hoisted statements.
   top_level_stmt_temp_storage: Vec<Statement<'ast>>,
   keep_names: bool,
@@ -22,7 +21,6 @@ impl<'ast> PreProcessor<'ast> {
   pub fn new(alloc: &'ast Allocator, keep_names: bool) -> Self {
     Self {
       snippet: AstSnippet::new(alloc),
-      contains_use_strict: false,
       top_level_stmt_temp_storage: vec![],
       keep_names,
       statement_stack: vec![],
@@ -68,15 +66,6 @@ impl<'ast> PreProcessor<'ast> {
 
 impl<'ast> VisitMut<'ast> for PreProcessor<'ast> {
   fn visit_program(&mut self, program: &mut ast::Program<'ast>) {
-    program.directives.retain(|directive| {
-      let is_use_strict = directive.is_use_strict();
-      if is_use_strict {
-        self.contains_use_strict = true;
-        false
-      } else {
-        true
-      }
-    });
     let original_body = program.body.take_in(self.snippet.alloc());
     program.body.reserve_exact(original_body.len());
     self.top_level_stmt_temp_storage = Vec::with_capacity(

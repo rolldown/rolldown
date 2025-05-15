@@ -1,6 +1,5 @@
 ---
 source: crates/rolldown_testing/src/integration_test.rs
-snapshot_kind: text
 ---
 # warnings
 
@@ -45,7 +44,6 @@ snapshot_kind: text
 ## a.js
 
 ```js
-"use strict";
 const require_chunk = require('./chunk.js');
 const external = require_chunk.__toESM(require("external"));
 
@@ -57,7 +55,6 @@ console.log(external[foo](), new external[foo]());
 ## b.js
 
 ```js
-"use strict";
 const require_chunk = require('./chunk.js');
 const external = require_chunk.__toESM(require("external"));
 
@@ -69,7 +66,6 @@ console.log(external.foo(), new external.foo());
 ## c.js
 
 ```js
-"use strict";
 const require_chunk = require('./chunk.js');
 const external = require_chunk.__toESM(require("external"));
 
@@ -82,7 +78,6 @@ console.log(new external.default(), new external.foo());
 ## chunk.js
 
 ```js
-"use strict";
 
 
 Object.defineProperty(exports, '__toESM', {

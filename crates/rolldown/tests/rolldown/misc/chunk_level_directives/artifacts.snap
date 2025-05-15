@@ -8,6 +8,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ```js
 "use entry2";
 
+
 import { a } from "./shared.js";
 
 //#region entry2.js
@@ -19,6 +20,7 @@ console.log(`a: `, a);
 
 ```js
 "use entry";
+
 
 import { a } from "./shared.js";
 

@@ -8,7 +8,8 @@
 ```
 ### rolldown
 ```js
-'use loose'
+'use loose';
+
 
 //#region entry.js
 a;

@@ -10,7 +10,6 @@ use crate::{
   types::generator::GenerateContext,
   utils::chunk::{
     determine_export_mode::determine_export_mode,
-    determine_use_strict::determine_use_strict,
     namespace_marker::render_namespace_markers,
     render_chunk_exports::{
       get_chunk_export_names, render_chunk_exports, render_wrapped_entry_chunk,
@@ -91,10 +90,6 @@ pub async fn render_umd<'code>(
   {iife_start}{iife_export}{iife_end};
 }})({global_argument}function({factory_parameters}) {{",
   ));
-
-  if determine_use_strict(ctx) {
-    source_joiner.append_source("\"use strict\";");
-  }
 
   if let Some(intro) = intro {
     source_joiner.append_source(intro);

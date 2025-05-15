@@ -12,7 +12,6 @@ class A {
 this.namespace = this.namespace || {};
 this.namespace.module = (function(exports) {
 
-"use strict";
 
 //#region foo.js
 const value = 1;

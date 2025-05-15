@@ -12,7 +12,6 @@ console.log(fs, import_fs2.readFileSync, import_fs.default);
 ```
 ### rolldown
 ```js
-"use strict";
 
 const fs = __toESM(require("fs"));
 

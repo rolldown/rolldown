@@ -6,7 +6,6 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## main.js
 
 ```js
-"use strict";
 Object.defineProperty(exports, '__esModule', { value: true });
 
 //#region mod.js

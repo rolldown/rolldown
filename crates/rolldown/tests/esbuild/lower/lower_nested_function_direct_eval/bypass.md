@@ -111,6 +111,9 @@ if (foo) {
 ```
 ### rolldown
 ```js
+'use strict';
+
+
 //#region 5.js
 if (foo) {
 	function x() {}
@@ -143,6 +146,9 @@ if (foo) {
 ```
 ### rolldown
 ```js
+'use strict';
+
+
 //#region 6.js
 if (foo) {
 	function x() {}
@@ -178,6 +184,9 @@ if (foo) {
 ```
 ### rolldown
 ```js
+'use strict';
+
+
 //#region 7.js
 if (foo) {
 	function x() {}
@@ -214,6 +223,9 @@ if (foo) {
 ```
 ### rolldown
 ```js
+'use strict';
+
+
 //#region 8.js
 if (foo) {
 	eval("");

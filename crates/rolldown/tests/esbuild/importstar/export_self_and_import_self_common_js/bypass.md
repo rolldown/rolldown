@@ -15,7 +15,6 @@ console.log(entry_exports);
 ```
 ### rolldown
 ```js
-"use strict";
 
 
 //#region entry.js

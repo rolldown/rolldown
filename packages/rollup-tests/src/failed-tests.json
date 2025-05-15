@@ -1,1 +1,3 @@
-[]
+[
+  "rollup@function@es5-class-called-without-new: does not swallow type errors when running constructor functions without \"new\""
+]

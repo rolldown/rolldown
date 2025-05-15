@@ -20,7 +20,6 @@ var global;
 ```js
 (function(exports, foo) {
 
-"use strict";
 
 foo = __toESM(foo);
 

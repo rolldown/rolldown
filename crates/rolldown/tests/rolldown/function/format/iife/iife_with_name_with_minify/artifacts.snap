@@ -1,11 +1,10 @@
 ---
 source: crates/rolldown_testing/src/integration_test.rs
-snapshot_kind: text
 ---
 # Assets
 
 ## main.js
 
 ```js
-var module=function(exports){"use strict";let t=1;return exports.value=t,exports}({});
+var module=function(exports){let t=1;return exports.value=t,exports}({});
 ```

@@ -19,7 +19,6 @@ Variant: (format: Cjs)
 ## main.js
 
 ```js
-"use strict";
 
 const external = __toESM(require("external"));
 

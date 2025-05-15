@@ -6,7 +6,6 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## chunk.js
 
 ```js
-"use strict";
 
 
 Object.defineProperty(exports, '__commonJS', {

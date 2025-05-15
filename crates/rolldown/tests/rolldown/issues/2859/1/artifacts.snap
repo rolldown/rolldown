@@ -38,7 +38,6 @@ Variant: (format: Cjs)
 ## lib.js
 
 ```js
-"use strict";
 
 //#region lib.js
 const foo = "foo";
@@ -59,7 +58,6 @@ exports.foo = foo;
 ## main.js
 
 ```js
-"use strict";
 
 const assert = __toESM(require("assert"));
 

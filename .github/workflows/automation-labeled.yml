@@ -51,3 +51,29 @@ jobs:
           body: 'Thanks for reporting this issue! To help us investigate and resolve it more efficiently, could you provide a minimal reproduction? You can either create a [StackBlitz project](https://stackblitz.com/github/rolldown/rolldown-starter-stackblitz?file=README.md) or a GitHub repository demonstrating the problem. This will make it easier for us to debug and find a solution. Thanks!'
           reactions-edit-mode: 'replace'
           edit-mode: replace
+
+  create_issue_if_doc_labeled_on_pr:
+    if: github.event_name == 'pull_request_target' && github.event.label.name == 'doc'
+    runs-on: ubuntu-latest
+    permissions:
+      issues: write       
+      pull-requests: read 
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4 
+
+      - name: Create Issue from PR
+        uses: dacbd/create-issue-action@v2.0.0 
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }} 
+          title: "Update doc for : ${{ github.event.pull_request.title }} #${{github.event.pull_request.number}},"
+          body: |
+            This issue is to track documentation tasks related to Pull Request #${{ github.event.pull_request.number }}.
+
+            **PR Title:** ${{ github.event.pull_request.title }}
+            **PR Author:** @${{ github.event.pull_request.user.login }}
+            **PR Link:** ${{ github.event.pull_request.html_url }}
+
+            Please ensure all necessary documentation updates are completed.
+          assignees: ${{ github.event.pull_request.user.login }}

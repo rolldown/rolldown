@@ -35,7 +35,6 @@
 
 (function() {
 
-"use strict";
 
 //#region nested.js
 nested();

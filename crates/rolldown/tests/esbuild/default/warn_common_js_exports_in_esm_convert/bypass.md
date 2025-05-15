@@ -15,7 +15,6 @@ module.exports = 3;
 ```
 ### rolldown
 ```js
-"use strict";
 
 //#region cjs-in-esm.js
 let foo = 1;
@@ -56,7 +55,6 @@ module.exports.bar = 3;
 ```
 ### rolldown
 ```js
-"use strict";
 
 //#region cjs-in-esm2.js
 let foo = 1;

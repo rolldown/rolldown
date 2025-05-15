@@ -1,6 +1,5 @@
 ---
 source: crates/rolldown_testing/src/integration_test.rs
-snapshot_kind: text
 ---
 # warnings
 
@@ -15,7 +14,6 @@ snapshot_kind: text
 ## test.js
 
 ```js
-"use strict";
 Object.defineProperty(exports, '__esModule', { value: true });
 
 //#region test.json

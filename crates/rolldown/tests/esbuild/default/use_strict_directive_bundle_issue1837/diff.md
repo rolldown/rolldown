@@ -31,7 +31,6 @@
 ```js
 (function(node_assert) {
 
-"use strict";
 
 node_assert = __toESM(node_assert);
 

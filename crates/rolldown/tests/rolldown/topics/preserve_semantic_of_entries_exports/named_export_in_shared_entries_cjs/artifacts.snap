@@ -22,7 +22,6 @@ exports.foo = require_main.foo;
 ## main.js
 
 ```js
-"use strict";
 
 //#region main.js
 const foo = "foo";

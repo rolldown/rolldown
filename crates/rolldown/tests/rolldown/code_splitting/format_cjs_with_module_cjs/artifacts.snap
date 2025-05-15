@@ -6,7 +6,6 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## main1.js
 
 ```js
-"use strict";
 const require_share$1 = require('./share.js');
 const node_assert = require_share$1.__toESM(require("node:assert"));
 
@@ -19,7 +18,6 @@ node_assert.default.equal((0, import_share.share)(), 1);
 ## main2.js
 
 ```js
-"use strict";
 const require_share$1 = require('./share.js');
 const node_assert = require_share$1.__toESM(require("node:assert"));
 

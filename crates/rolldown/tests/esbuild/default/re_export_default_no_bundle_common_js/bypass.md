@@ -15,7 +15,6 @@ var import_bar = __toESM(require("./bar"));
 ```
 ### rolldown
 ```js
-"use strict";
 
 const foo = __toESM(require("./foo"));
 const bar = __toESM(require("./bar"));

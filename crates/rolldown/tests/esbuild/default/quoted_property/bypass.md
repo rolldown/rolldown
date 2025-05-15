@@ -10,7 +10,6 @@ console.log(ns.mustBeUnquoted, ns["mustBeQuoted"]);
 ```
 ### rolldown
 ```js
-"use strict";
 
 const ext = __toESM(require("ext"));
 

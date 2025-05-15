@@ -1,6 +1,5 @@
 ---
 source: crates/rolldown_testing/src/integration_test.rs
-snapshot_kind: text
 ---
 # warnings
 
@@ -17,7 +16,6 @@ snapshot_kind: text
 ```js
 (function(node_path) {
 
-"use strict";
 
 node_path = __toESM(node_path);
 

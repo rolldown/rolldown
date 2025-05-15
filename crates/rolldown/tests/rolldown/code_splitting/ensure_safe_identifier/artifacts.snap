@@ -1,13 +1,11 @@
 ---
 source: crates/rolldown_testing/src/integration_test.rs
-snapshot_kind: text
 ---
 # Assets
 
 ## 0shared-file!.js
 
 ```js
-"use strict";
 
 //#region 0shared-file!.js
 var _0shared_file__default = "shared";
@@ -23,7 +21,6 @@ Object.defineProperty(exports, '_0shared_file__default', {
 ## main1.js
 
 ```js
-"use strict";
 const require_0shared_file_ = require('./0shared-file!.js');
 
 //#region main1.js
@@ -34,7 +31,6 @@ console.log(require_0shared_file_._0shared_file__default);
 ## main2.js
 
 ```js
-"use strict";
 const require_0shared_file_ = require('./0shared-file!.js');
 
 //#region main2.js

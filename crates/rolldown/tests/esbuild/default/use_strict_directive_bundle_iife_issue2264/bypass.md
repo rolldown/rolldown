@@ -12,9 +12,10 @@
 ```
 ### rolldown
 ```js
+'use strict'
+
 (function(exports) {
 
-"use strict";
 
 //#region entry.js
 let a = 1;
@@ -34,7 +35,7 @@ return exports;
 -(() => {
 -    var a = 1;
 -})();
-+(function (exports) {
++('use strict')(function (exports) {
 +    let a = 1;
 +    exports.a = a;
 +    return exports;

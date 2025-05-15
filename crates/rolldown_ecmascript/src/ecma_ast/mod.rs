@@ -20,7 +20,6 @@ pub use r#gen::ToSourceString;
 pub struct EcmaAst {
   pub program: ProgramCell,
   pub source_type: SourceType,
-  pub contains_use_strict: bool,
 }
 
 impl EcmaAst {
@@ -55,11 +54,7 @@ impl EcmaAst {
         ProgramCellDependent { program }
       },
     );
-    EcmaAst {
-      program,
-      source_type: self.source_type,
-      contains_use_strict: self.contains_use_strict,
-    }
+    EcmaAst { program, source_type: self.source_type }
   }
 }
 

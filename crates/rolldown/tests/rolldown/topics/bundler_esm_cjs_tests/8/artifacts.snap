@@ -25,7 +25,6 @@ Variant: (format: Cjs)
 ## entry.js
 
 ```js
-"use strict";
 
 //#region foo.js
 let __esModule = false;
@@ -48,7 +47,6 @@ Variant: (format: Iife)
 ```js
 (function() {
 
-"use strict";
 
 //#region foo.js
 let __esModule = false;
@@ -75,7 +73,6 @@ Variant: (format: Umd)
   typeof define === 'function' && define.amd ? define([], factory) :
   factory();
 })(function() {
-"use strict";
 
 //#region foo.js
 let __esModule = false;

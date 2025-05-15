@@ -18,7 +18,6 @@ __reExport(inner_exports, require("b"));
 ```
 ### rolldown
 ```js
-"use strict";
 
 
 //#region inner.js

@@ -39,7 +39,6 @@ Variant: (format: Cjs)
 ## main.js
 
 ```js
-"use strict";
 Object.defineProperty(exports, '__esModule', { value: true });
 
 const assert = __toESM(require("assert"));

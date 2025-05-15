@@ -31,8 +31,7 @@ use crate::{
   ecmascript::ecma_generator::RenderedModuleSources,
   types::generator::GenerateContext,
   utils::chunk::{
-    determine_export_mode::determine_export_mode, determine_use_strict::determine_use_strict,
-    render_chunk_exports::render_chunk_exports,
+    determine_export_mode::determine_export_mode, render_chunk_exports::render_chunk_exports,
   },
 };
 use rolldown_common::{AddonRenderContext, ExternalModule, OutputExports};
@@ -125,10 +124,6 @@ pub async fn render_iife<'code>(
     factory_parameters,
     ") {\n"
   ));
-
-  if determine_use_strict(ctx) {
-    source_joiner.append_source("\"use strict\";");
-  }
 
   if let Some(intro) = intro {
     source_joiner.append_source(intro);

@@ -15,7 +15,6 @@ var all_the_stuff = __toESM(require("./foo"));
 ```
 ### rolldown
 ```js
-"use strict";
 
 const foo = __toESM(require("./foo"));
 

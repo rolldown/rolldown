@@ -23,7 +23,6 @@ function confuseNode(exports2) {
 ```
 ### rolldown
 ```js
-"use strict";
 
 //#region entry.mjs
 function confuseNode(exports$1) {

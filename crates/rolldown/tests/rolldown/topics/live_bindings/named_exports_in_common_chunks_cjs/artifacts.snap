@@ -6,7 +6,6 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## async-entry.js
 
 ```js
-"use strict";
 
 const require_shared = require('./shared.js');
 const node_assert = __toESM(require("node:assert"));
@@ -27,7 +26,6 @@ node_assert.default.strictEqual(require_shared.count, require_shared.count);
 ## main.js
 
 ```js
-"use strict";
 const require_shared = require('./shared.js');
 
 //#region main.js
@@ -48,7 +46,6 @@ exports.reset = require_shared.reset;
 ## shared.js
 
 ```js
-"use strict";
 
 //#region shared.js
 let count = 0;

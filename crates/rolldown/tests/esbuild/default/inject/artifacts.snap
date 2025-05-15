@@ -1,13 +1,11 @@
 ---
 source: crates/rolldown_testing/src/integration_test.rs
-snapshot_kind: text
 ---
 # Assets
 
 ## entry.js
 
 ```js
-"use strict";
 
 const external_pkg = __toESM(require("external-pkg"));
 const external_pkg2 = __toESM(require("external-pkg2"));

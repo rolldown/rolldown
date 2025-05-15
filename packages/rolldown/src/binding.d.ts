@@ -232,7 +232,8 @@ export interface BindingAliasPluginConfig {
 }
 
 export interface BindingAssetPluginConfig {
-
+  publicDir?: string
+  assetsInclude?: Array<BindingStringOrRegex>
 }
 
 export interface BindingAssetSource {

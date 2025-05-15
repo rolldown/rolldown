@@ -28,7 +28,6 @@ export default defineTest({
     expect(output.output[0].code).toMatchInlineSnapshot(`
       "(function(exports, node_path) {
 
-      "use strict";
       Object.defineProperty(exports, '__esModule', { value: true });
       //#region rolldown:runtime
       var __create = Object.create;

@@ -21,7 +21,6 @@ init_entry();
 ```
 ### rolldown
 ```js
-"use strict";
 
 
 //#region entry.js

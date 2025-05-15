@@ -40,7 +40,6 @@ input.works = Promise.resolve().then(function() {
 ## foo.js
 
 ```js
-"use strict";
 
 //#region foo.js
 var foo_default = 123;

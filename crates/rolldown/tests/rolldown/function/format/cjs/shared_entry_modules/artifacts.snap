@@ -20,7 +20,6 @@ exports.value = require_main.value;
 ## main.js
 
 ```js
-"use strict";
 
 //#region main.js
 const value = "main";

@@ -152,7 +152,6 @@ console.log("2");
 exports[`cli options for bundling > should handle negative boolean options 1`] = `
 "(function(exports, node_fs) {
 
-"use strict";
 //#region rolldown:runtime
 var __create = Object.create;
 var __defProp = Object.defineProperty;
@@ -223,7 +222,7 @@ exports[`cli options for bundling > should handle single object options 1`] = `
 `;
 
 exports[`cli options for bundling > should handle single string options 1`] = `
-"<DIR>/index.js  chunk │ size: 0.14 kB
+"<DIR>/index.js  chunk │ size: 0.13 kB
 
 "
 `;
@@ -272,7 +271,7 @@ exports[`config > should allow loading ts config with tsx 1`] = `
 
 exports[`config > should allow multiply options 1`] = `
 "<DIR>/esm.js  chunk │ size: 0.14 kB
-<DIR>/cjs.js  chunk │ size: 0.15 kB
+<DIR>/cjs.js  chunk │ size: 0.14 kB
 
 "
 `;
@@ -282,14 +281,14 @@ exports[`config > should allow multiply output + call options hook once  + call 
 called output options hook
 called output options hook
 <DIR>/esm.js  chunk │ size: 0.18 kB
-<DIR>/cjs.js  chunk │ size: 0.19 kB
+<DIR>/cjs.js  chunk │ size: 0.17 kB
 
 "
 `;
 
 exports[`config > should allow multiply output 1`] = `
 "<DIR>/esm.js  chunk │ size: 0.14 kB
-<DIR>/cjs.js  chunk │ size: 0.15 kB
+<DIR>/cjs.js  chunk │ size: 0.14 kB
 
 "
 `;
@@ -311,7 +310,7 @@ exports[`watch cli > should allow multiply output + call options hook once + cal
 called output options hook
 called output options hook
 <DIR>/esm.js  chunk │ size: 0.18 kB
-<DIR>/cjs.js  chunk │ size: 0.19 kB
+<DIR>/cjs.js  chunk │ size: 0.17 kB
 
 "
 `;

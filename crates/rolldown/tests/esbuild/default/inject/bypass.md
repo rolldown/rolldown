@@ -40,7 +40,6 @@ console.log(re_export2);
 ```
 ### rolldown
 ```js
-"use strict";
 
 const external_pkg = __toESM(require("external-pkg"));
 const external_pkg2 = __toESM(require("external-pkg2"));

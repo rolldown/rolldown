@@ -39,7 +39,6 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## cjs-in-esm.js
 
 ```js
-"use strict";
 
 //#region cjs-in-esm.js
 let foo = 1;

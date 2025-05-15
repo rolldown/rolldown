@@ -16,9 +16,10 @@
 ```js
 #! in file
 #! from banner
+'use strict'
+
 (function() {
 
-"use strict";
 
 //#region entry.js
 foo();
@@ -31,15 +32,17 @@ foo();
 ===================================================================
 --- esbuild	/out.js
 +++ rolldown	entry.js
-@@ -1,7 +1,11 @@
+@@ -1,7 +1,12 @@
  #! in file
  #! from banner
-+(function() {
-+
- "use strict";
+-"use strict";
 -(() => {
 -  // entry.js
 -  foo();
++'use strict'
++
++(function() {
++
 +
 +//#region entry.js
 +foo();

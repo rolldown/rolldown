@@ -26,7 +26,6 @@ __reExport(entry_exports, require("./external"), module.exports);
 ```
 ### rolldown
 ```js
-"use strict";
 
 //#region internal.js
 let foo = 123;

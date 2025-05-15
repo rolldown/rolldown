@@ -138,6 +138,10 @@ impl BundlerBuilder {
       options.transform_options.decorator.legacy = *experimental_decorator;
     }
 
+    if let Some(ref experimental_decorator) = ts_config.compiler_options.emit_decorator_metadata {
+      options.transform_options.decorator.emit_decorator_metadata = *experimental_decorator;
+    }
+
     // FIXME:
     // if user set `transform.typescript.only_remove_type_imports` to false in `rolldown.config.js`, but also set `verbatim_module_syntax` to true in `tsconfig.json`
     // We will override the value either, but actually `rolldown.config.js` should have higher priority.

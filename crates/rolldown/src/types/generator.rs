@@ -1,6 +1,5 @@
 use rolldown_common::{
-  Chunk, ChunkIdx, InstantiatedChunk, ModuleRenderOutput,
-  NormalizedBundlerOptions, SymbolRef,
+  Chunk, ChunkIdx, InstantiatedChunk, ModuleRenderOutput, NormalizedBundlerOptions, SymbolRef,
 };
 use rolldown_error::{BuildDiagnostic, BuildResult};
 use rolldown_plugin::SharedPluginDriver;

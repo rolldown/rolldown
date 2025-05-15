@@ -17,9 +17,10 @@ entry();
 ```
 ### rolldown
 ```js
-'use 1'
-'use 2'
-'use 3'
+'use 1';
+'use 2';
+'use 3';
+
 
 //#region entry.js
 entry();

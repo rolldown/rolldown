@@ -16,7 +16,8 @@
 ```js
 #! in file
 #! from banner
-'use strict'
+'use strict';
+
 
 (function() {
 
@@ -32,14 +33,15 @@ foo();
 ===================================================================
 --- esbuild	/out.js
 +++ rolldown	entry.js
-@@ -1,7 +1,12 @@
+@@ -1,7 +1,13 @@
  #! in file
  #! from banner
 -"use strict";
 -(() => {
 -  // entry.js
 -  foo();
-+'use strict'
++'use strict';
++
 +
 +(function() {
 +

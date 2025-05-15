@@ -16,7 +16,8 @@ var a = 1;
 ```
 ### rolldown
 ```js
-'use strict'
+'use strict';
+
 
 
 //#region entry.js

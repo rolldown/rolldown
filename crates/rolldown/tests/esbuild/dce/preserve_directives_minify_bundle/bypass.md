@@ -29,9 +29,10 @@
 ```
 ### rolldown
 ```js
-'use 1'
-'use 2'
-'use 3'
+'use 1';
+'use 2';
+'use 3';
+
 
 (function() {
 
@@ -51,14 +52,15 @@ entry();
 ===================================================================
 --- esbuild	/out.js
 +++ rolldown	entry.js
-@@ -1,7 +1,6 @@
+@@ -1,7 +1,7 @@
 -"use 1";
 -"use 2";
 -"use 3";
 -(() => {
 +'use 1';
 +'use 2';
-+('use 3')(function () {
++'use 3';
++(function () {
      nested();
      entry();
  })();

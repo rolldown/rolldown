@@ -12,7 +12,8 @@
 ```
 ### rolldown
 ```js
-'use strict'
+'use strict';
+
 
 (function(exports) {
 
@@ -35,7 +36,7 @@ return exports;
 -(() => {
 -    var a = 1;
 -})();
-+('use strict')(function (exports) {
++(function (exports) {
 +    let a = 1;
 +    exports.a = a;
 +    return exports;

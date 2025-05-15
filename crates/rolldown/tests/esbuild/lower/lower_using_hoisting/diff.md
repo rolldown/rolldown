@@ -93,7 +93,8 @@ try {
 ```
 ### rolldown
 ```js
-"use wtf"
+"use wtf";
+
 
 //#region hoist-directive.js
 using a = b;
@@ -105,8 +106,8 @@ using a = b;
 ===================================================================
 --- esbuild	/out/hoist-directive.js
 +++ rolldown	hoist-directive.js
-@@ -1,20 +1,6 @@
--"use wtf";
+@@ -1,20 +1,7 @@
+ "use wtf";
 -function foo() {
 -    "use wtf";
 -    var _stack2 = [];
@@ -126,7 +127,7 @@ using a = b;
 -} finally {
 -    __callDispose(_stack, _error, _hasError);
 -}
-+"use wtf"
++
 +
 +//#region hoist-directive.js
 +using a = b;

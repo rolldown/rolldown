@@ -18,7 +18,8 @@ const ignoreTests = [
   "rollup@form@nested-pure-comments: correctly associates pure comments before sequence expressions etc.", // The Sequence expression/Binary expression/Calls with parentheses is not implement
 
   "rollup@hooks@assigns chunk IDs before creating outputBundle chunks", // The `renderChunk` is called at parallel, collect chunk info to array is unstable.  https://github.com/rolldown/rolldown/issues/2364
-  "rollup@form@non-empty-block-statement: do not remove non an empty block statement@generates es" // https://github.com/rolldown/rolldown/pull/3541#issuecomment-2649731213
+  "rollup@form@non-empty-block-statement: do not remove non an empty block statement@generates es", // https://github.com/rolldown/rolldown/pull/3541#issuecomment-2649731213
+  "rollup@function@es5-class-called-without-new" // rolldown align directive rendering with esbuild
 ]
 
 module.exports = {

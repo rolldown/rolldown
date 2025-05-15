@@ -15,6 +15,10 @@ inherits = "release"
 [profile.release-wasi]
 inherits = "release"
 opt-level = "s"
+# napi-rs generates *-debug.*.wasm files with these information
+# it will strip these information for non-debug files
+debug = "full"
+strip = "none"
 
 [workspace.lints.clippy]
 # Guidelines

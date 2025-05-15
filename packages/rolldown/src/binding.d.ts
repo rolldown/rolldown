@@ -231,6 +231,10 @@ export interface BindingAliasPluginConfig {
   entries: Array<BindingAliasPluginAlias>
 }
 
+export interface BindingAssetImportMetaUrlPluginConfig {
+
+}
+
 export interface BindingAssetPluginConfig {
   publicDir?: string
   assetsInclude?: Array<BindingStringOrRegex>
@@ -269,7 +273,8 @@ export type BindingBuiltinPluginName =  'builtin:wasm-helper'|
 'builtin:module-federation'|
 'builtin:isolated-declaration'|
 'builtin:report'|
-'builtin:asset';
+'builtin:asset'|
+'builtin:asset-import-meta-url';
 
 export interface BindingBundlerOptions {
   inputOptions: BindingInputOptions

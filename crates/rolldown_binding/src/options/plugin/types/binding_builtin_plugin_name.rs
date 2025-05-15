@@ -37,4 +37,6 @@ pub enum BindingBuiltinPluginName {
   Report,
   #[napi(value = "builtin:asset")]
   Asset,
+  #[napi(value = "builtin:asset-import-meta-url")]
+  AssetImportMetaUrl,
 }

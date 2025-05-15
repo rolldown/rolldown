@@ -8,6 +8,7 @@ use oxc_transform_napi::TransformOptions;
 use rolldown_plugin::__inner::Pluginable;
 use rolldown_plugin_alias::{Alias, AliasPlugin};
 use rolldown_plugin_asset::AssetPlugin;
+use rolldown_plugin_asset_import_meta_url::AssetImportMetaUrlPlugin;
 use rolldown_plugin_build_import_analysis::BuildImportAnalysisPlugin;
 use rolldown_plugin_dynamic_import_vars::DynamicImportVarsPlugin;
 use rolldown_plugin_dynamic_import_vars::ResolverFn;
@@ -582,6 +583,14 @@ impl TryFrom<BindingBuiltinPlugin> for Arc<dyn Pluginable> {
         };
         Arc::new(plugin)
       }
+      BindingBuiltinPluginName::AssetImportMetaUrl => {
+        let plugin = if let Some(options) = plugin.options {
+          BindingAssetImportMetaUrlPluginConfig::from_unknown(options)?.into()
+        } else {
+          AssetImportMetaUrlPlugin
+        };
+        Arc::new(plugin)
+      }
     })
   }
 }
@@ -651,5 +660,15 @@ impl From<BindingAssetPluginConfig> for AssetPlugin {
         .map(bindingify_string_or_regex_array)
         .unwrap_or_default(),
     }
+  }
+}
+
+#[napi_derive::napi(object, object_to_js = false)]
+#[derive(Debug, Default)]
+pub struct BindingAssetImportMetaUrlPluginConfig;
+
+impl From<BindingAssetImportMetaUrlPluginConfig> for AssetImportMetaUrlPlugin {
+  fn from(_config: BindingAssetImportMetaUrlPluginConfig) -> Self {
+    Self
   }
 }

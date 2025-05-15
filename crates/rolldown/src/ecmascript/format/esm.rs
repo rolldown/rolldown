@@ -1,6 +1,6 @@
 use arcstr::ArcStr;
 use itertools::Itertools;
-use rolldown_common::{ExportsKind, Specifier};
+use rolldown_common::{AddonRenderContext, ExportsKind, Specifier};
 use rolldown_sourcemap::SourceJoiner;
 use rolldown_utils::{concat_string, ecmascript::to_module_import_export_name};
 
@@ -10,16 +10,17 @@ use crate::{
   utils::chunk::render_chunk_exports::{render_chunk_exports, render_wrapped_entry_chunk},
 };
 
+use super::utils::render_chunk_directives;
+
+#[allow(clippy::needless_pass_by_value)]
 pub fn render_esm<'code>(
   ctx: &GenerateContext<'_>,
-  hashbang: Option<&'code str>,
-  banner: Option<&'code str>,
-  intro: Option<&'code str>,
-  outro: Option<&'code str>,
-  footer: Option<&'code str>,
+  addon_render_context: AddonRenderContext<'code>,
   module_sources: &'code RenderedModuleSources,
 ) -> SourceJoiner<'code> {
   let mut source_joiner = SourceJoiner::default();
+  let AddonRenderContext { hashbang, banner, intro, outro, footer, directives } =
+    addon_render_context;
 
   if let Some(hashbang) = hashbang {
     source_joiner.append_source(hashbang);
@@ -27,6 +28,12 @@ pub fn render_esm<'code>(
 
   if let Some(banner) = banner {
     source_joiner.append_source(banner);
+  }
+
+  // the order of rendering directives is matter, see https://github.com/evanw/esbuild/blob/d34e79e2a998c21bb71d57b92b0017ca11756912/internal/linker/linker.go?plain=1#L5666-L5701
+  if !directives.is_empty() {
+    source_joiner.append_source(render_chunk_directives(directives.iter()));
+    source_joiner.append_source("");
   }
 
   if let Some(intro) = intro {

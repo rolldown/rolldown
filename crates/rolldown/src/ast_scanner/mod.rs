@@ -80,6 +80,7 @@ pub struct ScanResult {
   pub this_expr_replace_map: FxHashMap<Span, ThisExprReplaceKind>,
   pub hmr_info: HmrInfo,
   pub hmr_hot_ref: Option<SymbolRef>,
+  pub directive_range: Vec<Span>,
 }
 
 pub struct AstScanner<'me, 'ast> {
@@ -166,6 +167,7 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
       this_expr_replace_map: FxHashMap::default(),
       hmr_info: HmrInfo::default(),
       hmr_hot_ref,
+      directive_range: vec![],
     };
 
     Self {

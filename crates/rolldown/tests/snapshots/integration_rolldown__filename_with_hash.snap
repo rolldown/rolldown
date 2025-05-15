@@ -462,15 +462,15 @@ expression: output
 
 # tests/esbuild/dce/preserve_directives_minify_bundle
 
-- entry-!~{000}~.js => entry-COf1Z-06.js
+- entry-!~{000}~.js => entry-DVhmDvJe.js
 
 # tests/esbuild/dce/preserve_directives_minify_iife
 
-- entry-!~{000}~.js => entry-KI7GqHLL.js
+- entry-!~{000}~.js => entry-BrOp3l9b.js
 
 # tests/esbuild/dce/preserve_directives_minify_pass_through
 
-- entry-!~{000}~.js => entry-Cc1JIvwH.js
+- entry-!~{000}~.js => entry-CEsjNgRj.js
 
 # tests/esbuild/dce/pure_calls_with_spread
 
@@ -1769,7 +1769,7 @@ expression: output
 
 # tests/esbuild/default/use_strict_directive_minify_no_bundle
 
-- entry-!~{000}~.js => entry-D8_dPG5o.js
+- entry-!~{000}~.js => entry-CCh2hevo.js
 
 # tests/esbuild/default/var_relocating_bundle
 
@@ -2816,7 +2816,7 @@ expression: output
 
 # tests/esbuild/lower/lower_using_hoisting
 
-- hoist-directive-!~{001}~.js => hoist-directive-CUwiJfyN.js
+- hoist-directive-!~{001}~.js => hoist-directive-DYrqR_VG.js
 - hoist-export-class-direct-!~{008}~.js => hoist-export-class-direct-Z2-HxYi7.js
 - hoist-export-class-indirect-!~{009}~.js => hoist-export-class-indirect-7eZKih0X.js
 - hoist-export-clause-!~{005}~.js => hoist-export-clause-DeiYAT2f.js
@@ -4720,6 +4720,12 @@ expression: output
 # tests/rolldown/misc/basic_re_export
 
 - main-!~{000}~.js => main-CpnSvEoA.js
+
+# tests/rolldown/misc/chunk_level_directives
+
+- entry2-!~{001}~.js => entry2-DDb5nYMJ.js
+- main-!~{000}~.js => main-CX2jhk1D.js
+- shared-!~{002}~.js => shared-BIEIToZA.js
 
 # tests/rolldown/misc/cjs_entry_as_dependency
 

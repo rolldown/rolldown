@@ -88,6 +88,7 @@ pub struct EcmaView {
   pub self_referenced_class_decl_symbol_ids: FxHashSet<SymbolId>,
   // the range of hashbang in source
   pub hashbang_range: Option<Span>,
+  pub directive_range: Vec<Span>,
   pub meta: EcmaViewMeta,
   pub mutations: Vec<ArcSourceMutation>,
   /// `Span` of `new URL('path', import.meta.url)` -> `ImportRecordIdx`

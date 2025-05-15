@@ -148,6 +148,7 @@ impl RuntimeModuleTask {
         this_expr_replace_map: FxHashMap::default(),
         hmr_info: scan_result.hmr_info,
         hmr_hot_ref: None,
+        directive_range: vec![],
       },
       css_view: None,
       asset_view: None,

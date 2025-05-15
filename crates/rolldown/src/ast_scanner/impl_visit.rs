@@ -68,6 +68,7 @@ impl<'me, 'ast: 'me> Visit<'ast> for AstScanner<'me, 'ast> {
     }
 
     self.result.hashbang_range = program.hashbang.as_ref().map(GetSpan::span);
+    self.result.directive_range = program.directives.iter().map(GetSpan::span).collect();
     self.result.dynamic_import_rec_exports_usage =
       std::mem::take(&mut self.dynamic_import_usage_info.dynamic_import_exports_usage);
     if self.result.has_eval {

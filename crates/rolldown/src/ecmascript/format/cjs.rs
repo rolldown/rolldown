@@ -43,7 +43,7 @@ pub fn render_cjs<'code>(
 
   if !directives.is_empty() {
     source_joiner.append_source(render_chunk_directives(
-      directives.iter().filter(|d| if need_use_strict { d == &&"use strict" } else { true }),
+      directives.iter().filter(|d| !need_use_strict || **d != "use strict"),
     ));
   }
 

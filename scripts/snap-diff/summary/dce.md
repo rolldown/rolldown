@@ -27,8 +27,6 @@
   diff
 ## [package_json_side_effects_false_one_fork](../../../crates/rolldown/tests/esbuild/dce/package_json_side_effects_false_one_fork/diff.md)
   diff
-## [preserve_directives_minify_pass_through](../../../crates/rolldown/tests/esbuild/dce/preserve_directives_minify_pass_through/diff.md)
-  diff
 ## [remove_unused_no_side_effects_tagged_templates](../../../crates/rolldown/tests/esbuild/dce/remove_unused_no_side_effects_tagged_templates/diff.md)
   diff
 ## [tree_shaking_lowered_class_static_field](../../../crates/rolldown/tests/esbuild/dce/tree_shaking_lowered_class_static_field/diff.md)
@@ -121,6 +119,7 @@
 ## [package_json_side_effects_true_keep_common_js](../../../crates/rolldown/tests/esbuild/dce/package_json_side_effects_true_keep_common_js/bypass.md)
 ## [preserve_directives_minify_bundle](../../../crates/rolldown/tests/esbuild/dce/preserve_directives_minify_bundle/bypass.md)
 ## [preserve_directives_minify_iife](../../../crates/rolldown/tests/esbuild/dce/preserve_directives_minify_iife/bypass.md)
+## [preserve_directives_minify_pass_through](../../../crates/rolldown/tests/esbuild/dce/preserve_directives_minify_pass_through/bypass.md)
 ## [remove_code_after_label_with_return](../../../crates/rolldown/tests/esbuild/dce/remove_code_after_label_with_return/bypass.md)
 ## [remove_trailing_return](../../../crates/rolldown/tests/esbuild/dce/remove_trailing_return/bypass.md)
 ## [top_level_function_inlining_with_spread](../../../crates/rolldown/tests/esbuild/dce/top_level_function_inlining_with_spread/bypass.md)

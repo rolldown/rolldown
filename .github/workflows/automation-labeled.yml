@@ -56,18 +56,18 @@ jobs:
     if: github.event_name == 'pull_request_target' && github.event.label.name == 'doc'
     runs-on: ubuntu-latest
     permissions:
-      issues: write       
-      pull-requests: read 
+      issues: write
+      pull-requests: read
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4 
+        uses: actions/checkout@v4
 
       - name: Create Issue from PR
-        uses: dacbd/create-issue-action@v2.0.0 
+        uses: dacbd/create-issue-action@fec641442c0897e734fad173cfe83ae21a2284a3
         with:
-          token: ${{ secrets.GITHUB_TOKEN }} 
-          title: "Update doc for : ${{ github.event.pull_request.title }} #${{github.event.pull_request.number}},"
+          token: ${{ secrets.GITHUB_TOKEN }}
+          title: 'Update doc for : ${{ github.event.pull_request.title }} #${{github.event.pull_request.number}}'
           body: |
             This issue is to track documentation tasks related to Pull Request #${{ github.event.pull_request.number }}.
 

@@ -638,6 +638,8 @@ impl From<BindingReportPluginConfig> for ReporterPlugin {
 #[napi_derive::napi(object, object_to_js = false)]
 #[derive(Debug, Default)]
 pub struct BindingAssetPluginConfig {
+  pub is_server: Option<bool>,
+  pub url_base: Option<String>,
   pub public_dir: Option<String>,
   pub assets_include: Option<Vec<BindingStringOrRegex>>,
 }
@@ -645,6 +647,8 @@ pub struct BindingAssetPluginConfig {
 impl From<BindingAssetPluginConfig> for AssetPlugin {
   fn from(config: BindingAssetPluginConfig) -> Self {
     Self {
+      url_base: config.url_base.unwrap_or_default(),
+      is_server: config.is_server.unwrap_or_default(),
       public_dir: config.public_dir,
       assets_include: config
         .assets_include

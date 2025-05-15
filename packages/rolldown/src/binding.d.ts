@@ -232,6 +232,8 @@ export interface BindingAliasPluginConfig {
 }
 
 export interface BindingAssetPluginConfig {
+  isServer?: boolean
+  urlBase?: string
   publicDir?: string
   assetsInclude?: Array<BindingStringOrRegex>
 }

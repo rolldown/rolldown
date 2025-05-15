@@ -7,6 +7,7 @@ export function transformRenderedChunk(
 ): RenderedChunk {
   let modules: null | RenderedChunk['modules'] = null;
   return {
+    type: 'chunk',
     get name() {
       return chunk.name;
     },

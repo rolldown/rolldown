@@ -2689,6 +2689,8 @@ name = "rolldown_plugin_asset"
 version = "0.1.0"
 dependencies = [
  "rolldown_plugin",
+ "rolldown_utils",
+ "sugar_path",
 ]
 
 [[package]]

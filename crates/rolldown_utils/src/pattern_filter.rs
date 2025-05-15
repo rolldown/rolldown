@@ -70,8 +70,8 @@ impl StringOrRegex {
 /// for multiple filters, you should use `FilterResult` to determine if the `id` is matched.
 /// See doc of [FilterResult]
 pub fn filter(
-  exclude: Option<&[impl AsRef<StringOrRegex>]>,
-  include: Option<&[impl AsRef<StringOrRegex>]>,
+  exclude: Option<&[StringOrRegex]>,
+  include: Option<&[StringOrRegex]>,
   id: &str,
   cwd: &str,
 ) -> FilterResult {

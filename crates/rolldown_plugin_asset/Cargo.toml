@@ -16,3 +16,5 @@ workspace = true
 
 [dependencies]
 rolldown_plugin = { workspace = true }
+rolldown_utils = { workspace = true }
+sugar_path = { workspace = true }

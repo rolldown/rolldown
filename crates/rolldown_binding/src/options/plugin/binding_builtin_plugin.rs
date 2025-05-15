@@ -11,7 +11,7 @@ use rolldown_plugin_build_import_analysis::BuildImportAnalysisPlugin;
 use rolldown_plugin_dynamic_import_vars::DynamicImportVarsPlugin;
 use rolldown_plugin_dynamic_import_vars::ResolverFn;
 use rolldown_plugin_import_glob::{ImportGlobPlugin, ImportGlobPluginConfig};
-use rolldown_plugin_isolated_declarations::IsolatedDeclarationPlugin;
+use rolldown_plugin_isolated_declarations::IsolatedDeclarationsPlugin;
 use rolldown_plugin_json::{JsonPlugin, JsonPluginStringify};
 use rolldown_plugin_load_fallback::LoadFallbackPlugin;
 use rolldown_plugin_manifest::{ManifestPlugin, ManifestPluginConfig};
@@ -554,11 +554,11 @@ impl TryFrom<BindingBuiltinPlugin> for Arc<dyn Pluginable> {
         };
         Arc::new(ModuleFederationPlugin::new(config.into()))
       }
-      BindingBuiltinPluginName::IsolatedDeclaration => {
+      BindingBuiltinPluginName::IsolatedDeclarations => {
         let plugin = if let Some(options) = plugin.options {
           BindingIsolatedDeclarationPluginConfig::from_unknown(options)?.into()
         } else {
-          IsolatedDeclarationPlugin::default()
+          IsolatedDeclarationsPlugin::default()
         };
         Arc::new(plugin)
       }
@@ -583,9 +583,9 @@ pub struct BindingIsolatedDeclarationPluginConfig {
   pub strip_internal: Option<bool>,
 }
 
-impl From<BindingIsolatedDeclarationPluginConfig> for IsolatedDeclarationPlugin {
+impl From<BindingIsolatedDeclarationPluginConfig> for IsolatedDeclarationsPlugin {
   fn from(value: BindingIsolatedDeclarationPluginConfig) -> Self {
-    IsolatedDeclarationPlugin::new(value.strip_internal.unwrap_or_default())
+    IsolatedDeclarationsPlugin::new(value.strip_internal.unwrap_or_default())
   }
 }
 

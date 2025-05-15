@@ -14,18 +14,18 @@ use sugar_path::SugarPath;
 mod type_import_visitor;
 
 #[derive(Debug, Default)]
-pub struct IsolatedDeclarationPlugin {
+pub struct IsolatedDeclarationsPlugin {
   pub strip_internal: bool,
   dts_map: FxDashMap<String, String>,
 }
 
-impl IsolatedDeclarationPlugin {
+impl IsolatedDeclarationsPlugin {
   pub fn new(strip_internal: bool) -> Self {
     Self { strip_internal, dts_map: FxDashMap::default() }
   }
 }
 
-impl Plugin for IsolatedDeclarationPlugin {
+impl Plugin for IsolatedDeclarationsPlugin {
   fn name(&self) -> Cow<'static, str> {
     Cow::Borrowed("builtin:isolated-declarations")
   }
@@ -102,8 +102,9 @@ impl Plugin for IsolatedDeclarationPlugin {
 
     let code = self.dts_map.get(args.id).unwrap();
     Ok(Some(HookLoadOutput {
-      code: code.to_string(),
-      module_type: Some(ModuleType::Dts),
+      // code: code.to_string(),
+      // code: "//".to_string(),
+      // module_type: Some(ModuleType::Dts),
       ..Default::default()
     }))
   }

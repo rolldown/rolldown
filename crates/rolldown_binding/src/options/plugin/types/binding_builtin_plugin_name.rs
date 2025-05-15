@@ -31,8 +31,8 @@ pub enum BindingBuiltinPluginName {
   ViteResolve,
   #[napi(value = "builtin:module-federation")]
   ModuleFederation,
-  #[napi(value = "builtin:isolated-declaration")]
-  IsolatedDeclaration,
+  #[napi(value = "builtin:isolated-declarations")]
+  IsolatedDeclarations,
   #[napi(value = "builtin:report")]
   Report,
 }

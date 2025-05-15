@@ -4813,6 +4813,10 @@ expression: output
 
 - main-!~{000}~.js => main-tpAxLMZ5.js
 
+# tests/rolldown/resolve/ts_config_merge_decorator_metadata
+
+- main-!~{000}~.js => main-XYTvG68-.js
+
 # tests/rolldown/resolve/ts_config_option_merge
 
 - main-!~{000}~.js => main-DuVpY81p.js

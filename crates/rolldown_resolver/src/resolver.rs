@@ -19,7 +19,7 @@ use oxc_resolver::{
 };
 
 #[derive(Debug)]
-#[allow(dead_code)]
+#[allow(dead_code, clippy::struct_field_names)]
 pub struct Resolver<T: FileSystem + Default = OsFileSystem> {
   cwd: PathBuf,
   default_resolver: ResolverGeneric<FsCache<T>>,

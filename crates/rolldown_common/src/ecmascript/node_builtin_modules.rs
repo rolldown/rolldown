@@ -9,8 +9,8 @@ const NODEJS_PREFIXED_BUILTINS: &[&str] = &[
   "node:test/reporters",
 ];
 
-/// While `phf` would offer faster lookups, it increases compile time.  
-/// Since this function is not performance-critical, we prefer `contains`,  
+/// While `phf` would offer faster lookups, it increases compile time.
+/// Since this function is not performance-critical, we prefer `contains`,
 /// which is faster than `binary_search` in this case — see <https://github.com/oxc-project/oxc/issues/10076> for details.
 pub fn is_existing_node_builtin_modules(specifier: &str) -> bool {
   if let Some(stripped) = specifier.strip_prefix("node:") {

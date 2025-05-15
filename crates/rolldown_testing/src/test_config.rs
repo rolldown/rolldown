@@ -8,6 +8,7 @@ pub use rolldown_testing_config::{TestConfig, TestMeta};
 
 use rolldown_workspace::crate_dir;
 
+#[allow(clippy::unnecessary_debug_formatting)]
 static COMPILED_SCHEMA: LazyLock<Validator> = LazyLock::new(|| {
   let schema_path = crate_dir("rolldown_testing").join("_config.schema.json");
 
@@ -24,6 +25,7 @@ static COMPILED_SCHEMA: LazyLock<Validator> = LazyLock::new(|| {
     .unwrap_or_else(|e| panic!("Failed to compile {schema_path:?} to json schema. Got {e:?}"))
 });
 
+#[allow(clippy::unnecessary_debug_formatting)]
 pub fn read_test_config(config_path: &std::path::Path) -> TestConfig {
   let mut config_str = fs::read_to_string(config_path)
     .unwrap_or_else(|e| panic!("Failed to read config file in {config_path:?}. Got {e:?}"));

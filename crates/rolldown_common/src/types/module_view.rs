@@ -1,6 +1,6 @@
 use crate::{CssView, ecmascript::ecma_view::EcmaView};
 
 pub enum ModuleView {
-  Ecma(EcmaView),
+  Ecma(Box<EcmaView>),
   Css(CssView),
 }

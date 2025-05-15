@@ -47,7 +47,7 @@ impl<'ast> BindingPatternExt<'ast> for BindingPattern<'ast> {
 
   #[allow(clippy::too_many_lines)]
   fn into_assignment_target(mut self, alloc: &'ast Allocator) -> AssignmentTarget<'ast> {
-    let left = match &mut self.kind {
+    match &mut self.kind {
       // Turn `var a = 1` into `a = 1`
       BindingPatternKind::BindingIdentifier(id) => {
         AstSnippet::new(alloc).simple_id_assignment_target(&id.name, id.span)
@@ -165,7 +165,6 @@ impl<'ast> BindingPatternExt<'ast> for BindingPattern<'ast> {
       BindingPatternKind::AssignmentPattern(_) => {
         unreachable!("`BindingPatternKind::AssignmentPattern` should be pre-handled in above")
       }
-    };
-    left
+    }
   }
 }

@@ -38,14 +38,13 @@ impl<'ast> HmrAstFinalizer<'_, 'ast> {
   pub fn generate_stmt_of_init_module_hot_context(&self) -> ast::Statement<'ast> {
     let hot_name = format!("hot_{}", self.module.repr_name);
     // import.meta.hot = __rolldown_runtime__.createModuleHotContext(moduleId);
-    let stmt = quote_stmt(
+    quote_stmt(
       self.alloc,
       &format!(
         "const {hot_name} = __rolldown_runtime__.createModuleHotContext({:?});",
         self.module.stable_id
       ),
-    );
-    stmt
+    )
   }
 
   pub fn generate_runtime_module_register_for_hmr(&mut self) -> Vec<ast::Statement<'ast>> {

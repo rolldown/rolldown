@@ -61,6 +61,7 @@ impl IntegrationTest {
     self.run_with_plugins(options, vec![]).await;
   }
 
+  #[allow(clippy::unnecessary_debug_formatting)]
   pub async fn run_with_plugins(
     &self,
     mut options: BundlerOptions,
@@ -112,6 +113,7 @@ impl IntegrationTest {
     }
   }
 
+  #[allow(clippy::unnecessary_debug_formatting)]
   pub async fn run_multiple(
     &self,
     multiple_options: Vec<NamedBundlerOptions>,
@@ -408,7 +410,7 @@ impl IntegrationTest {
     } else {
       String::new()
     };
-    let snapshot = [
+    [
       errors_section,
       warnings_section,
       assets_section,
@@ -417,8 +419,7 @@ impl IntegrationTest {
     ]
     .join("\n")
     .trim()
-    .to_owned();
-    snapshot
+    .to_owned()
   }
 
   fn snapshot_bundle_output(

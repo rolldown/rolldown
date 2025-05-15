@@ -99,7 +99,7 @@ impl PluginDriver {
         continue;
       }
       // TODO: Maybe we could optimize this a little
-      if skipped_plugins.iter().any(|p| *p == plugin_idx) {
+      if skipped_plugins.contains(&plugin_idx) {
         continue;
       }
       let ret = async {
@@ -180,7 +180,7 @@ impl PluginDriver {
       if !self.plugin_usage_vec[plugin_idx].contains(HookUsage::ResolveDynamicImport) {
         continue;
       }
-      if skipped_plugins.iter().any(|p| *p == plugin_idx) {
+      if skipped_plugins.contains(&plugin_idx) {
         continue;
       }
       if let Some(r) = plugin

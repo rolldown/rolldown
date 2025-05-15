@@ -11,12 +11,11 @@ impl EcmaAst {
   }
 
   pub fn make_semantic<'ast>(program: &'ast Program<'ast>, with_cfg: bool) -> Semantic<'ast> {
-    let semantic = SemanticBuilder::new()
+    SemanticBuilder::new()
       .with_scope_tree_child_ids(true)
       .with_cfg(with_cfg)
       .build(program)
-      .semantic;
-    semantic
+      .semantic
   }
 
   pub fn make_scoping(&self) -> Scoping {

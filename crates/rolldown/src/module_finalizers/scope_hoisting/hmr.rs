@@ -100,14 +100,13 @@ impl<'ast> ScopeHoistingFinalizer<'_, 'ast> {
   pub fn generate_stmt_of_init_module_hot_context(&self) -> ast::Statement<'ast> {
     let hot_name = self.canonical_name_for(self.ctx.module.ecma_view.hmr_hot_ref.unwrap());
     // import.meta.hot = __rolldown_runtime__.createModuleHotContext(moduleId);
-    let stmt = quote_stmt(
+    quote_stmt(
       self.alloc,
       &format!(
         "const {} = __rolldown_runtime__.createModuleHotContext({:?});",
         hot_name, self.ctx.module.stable_id
       ),
-    );
-    stmt
+    )
   }
 
   pub fn rewrite_import_meta_hot(&self, expr: &mut ast::Expression<'ast>) {

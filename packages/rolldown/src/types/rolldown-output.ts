@@ -33,6 +33,7 @@ export interface RenderedModule {
 }
 
 export interface RenderedChunk extends Omit<BindingRenderedChunk, 'modules'> {
+  type: 'chunk';
   modules: {
     [id: string]: RenderedModule;
   };

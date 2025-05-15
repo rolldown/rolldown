@@ -21,6 +21,7 @@ export default defineTest({
           testChunk(meta.chunks['main.js'])
 
           function testChunk(chunk: RenderedChunk) {
+            expect(chunk.type).toBe('chunk')
             expect(chunk.name).toBe('main')
             expect(chunk.fileName).toBe('main.js')
             expect(chunk.isEntry).toBe(true)

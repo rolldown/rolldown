@@ -10,25 +10,23 @@ use crate::{
     determine_use_strict::determine_use_strict, render_chunk_exports::render_chunk_exports,
   },
 };
-use rolldown_common::OutputExports;
+use rolldown_common::{AddonRenderContext, OutputExports};
 use rolldown_error::{BuildDiagnostic, BuildResult};
 use rolldown_sourcemap::SourceJoiner;
 use rolldown_utils::concat_string;
 
-use super::utils::render_modules_with_peek_runtime_module_at_first;
+use super::utils::{render_chunk_directives, render_modules_with_peek_runtime_module_at_first};
 
-#[allow(clippy::too_many_lines, clippy::too_many_arguments)]
+#[allow(clippy::too_many_lines, clippy::needless_pass_by_value)]
 pub fn render_cjs<'code>(
   ctx: &GenerateContext<'_>,
-  hashbang: Option<&'code str>,
-  banner: Option<&'code str>,
-  intro: Option<&'code str>,
-  outro: Option<&'code str>,
-  footer: Option<&'code str>,
+  addon_render_context: AddonRenderContext<'code>,
   module_sources: &'code RenderedModuleSources,
   warnings: &mut Vec<BuildDiagnostic>,
 ) -> BuildResult<SourceJoiner<'code>> {
   let mut source_joiner = SourceJoiner::default();
+  let AddonRenderContext { hashbang, banner, intro, outro, footer, directives } =
+    addon_render_context;
 
   if let Some(hashbang) = hashbang {
     source_joiner.append_source(hashbang);
@@ -37,8 +35,16 @@ pub fn render_cjs<'code>(
     source_joiner.append_source(banner);
   }
 
-  if determine_use_strict(ctx) {
+  let need_use_strict = determine_use_strict(ctx);
+
+  if need_use_strict {
     source_joiner.append_source("\"use strict\";");
+  }
+
+  if !directives.is_empty() {
+    source_joiner.append_source(render_chunk_directives(
+      directives.iter().filter(|d| !need_use_strict || **d != "use strict"),
+    ));
   }
 
   if let Some(intro) = intro {

@@ -98,3 +98,7 @@ pub fn render_modules_with_peek_runtime_module_at_first<'a>(
     },
   );
 }
+
+pub fn render_chunk_directives<'a, T: Iterator<Item = &'a &'a str>>(mut directives: T) -> String {
+  directives.join("\n")
+}

@@ -66,7 +66,8 @@ pub use crate::{
     Chunk,
     chunk_table::ChunkTable,
     types::{
-      cross_chunk_import_item::CrossChunkImportItem, preliminary_filename::PreliminaryFilename,
+      AddonRenderContext, cross_chunk_import_item::CrossChunkImportItem,
+      preliminary_filename::PreliminaryFilename,
     },
   },
   css::{

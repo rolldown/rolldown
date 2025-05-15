@@ -6,8 +6,9 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## hoist-directive.js
 
 ```js
+"use wtf"
+
 //#region hoist-directive.js
-"use wtf";
 using a = b;
 
 //#endregion

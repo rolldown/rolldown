@@ -7,8 +7,8 @@ use crate::{
 
 use anyhow::Result;
 use rolldown_common::{
-  EcmaAssetMeta, InstantiatedChunk, InstantiationKind, ModuleId, ModuleIdx, OutputFormat,
-  RenderedModule,
+  AddonRenderContext, EcmaAssetMeta, InstantiatedChunk, InstantiationKind, ModuleId, ModuleIdx,
+  OutputFormat, RenderedModule,
 };
 use rolldown_error::BuildResult;
 use rolldown_plugin::HookAddonArgs;
@@ -102,6 +102,19 @@ impl Generator for EcmaGenerator {
       },
     );
 
+    let directives: Vec<_> = ctx
+      .chunk
+      .user_defined_entry_module(&ctx.link_output.module_table)
+      .map(|normal_module| {
+        normal_module
+          .ecma_view
+          .directive_range
+          .iter()
+          .map(|range| &normal_module.source[range.start as usize..range.end as usize])
+          .collect::<_>()
+      })
+      .unwrap_or_default();
+
     let banner = {
       let injection = match ctx.options.banner.as_ref() {
         Some(hook) => hook.call(Arc::clone(&rendered_chunk)).await?,
@@ -148,69 +161,32 @@ impl Generator for EcmaGenerator {
 
     let mut warnings = vec![];
 
+    let addon_render_context = AddonRenderContext {
+      hashbang,
+      banner: banner.as_deref(),
+      intro: intro.as_deref(),
+      outro: outro.as_deref(),
+      footer: footer.as_deref(),
+      directives: &directives,
+    };
     let source_joiner = match ctx.options.format {
-      OutputFormat::Esm => render_esm(
-        ctx,
-        hashbang,
-        banner.as_deref(),
-        intro.as_deref(),
-        outro.as_deref(),
-        footer.as_deref(),
-        &rendered_module_sources,
-      ),
+      OutputFormat::Esm => render_esm(ctx, addon_render_context, &rendered_module_sources),
       OutputFormat::Cjs => {
-        match render_cjs(
-          ctx,
-          hashbang,
-          banner.as_deref(),
-          intro.as_deref(),
-          outro.as_deref(),
-          footer.as_deref(),
-          &rendered_module_sources,
-          &mut warnings,
-        ) {
+        match render_cjs(ctx, addon_render_context, &rendered_module_sources, &mut warnings) {
           Ok(source_joiner) => source_joiner,
           Err(errors) => return Ok(Err(errors)),
         }
       }
-      OutputFormat::App => render_app(
-        ctx,
-        hashbang,
-        banner.as_deref(),
-        intro.as_deref(),
-        outro.as_deref(),
-        footer.as_deref(),
-        &rendered_module_sources,
-      ),
+      OutputFormat::App => render_app(ctx, addon_render_context, &rendered_module_sources),
       OutputFormat::Iife => {
-        match render_iife(
-          ctx,
-          hashbang,
-          banner.as_deref(),
-          intro.as_deref(),
-          outro.as_deref(),
-          footer.as_deref(),
-          &rendered_module_sources,
-          &mut warnings,
-        )
-        .await
+        match render_iife(ctx, addon_render_context, &rendered_module_sources, &mut warnings).await
         {
           Ok(source_joiner) => source_joiner,
           Err(errors) => return Ok(Err(errors)),
         }
       }
       OutputFormat::Umd => {
-        match render_umd(
-          ctx,
-          banner.as_deref(),
-          intro.as_deref(),
-          outro.as_deref(),
-          footer.as_deref(),
-          &rendered_module_sources,
-          &mut warnings,
-        )
-        .await
-        {
+        match render_umd(ctx, addon_render_context, &rendered_module_sources, &mut warnings).await {
           Ok(source_joiner) => source_joiner,
           Err(errors) => return Ok(Err(errors)),
         }

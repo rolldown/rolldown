@@ -12,9 +12,10 @@ use super::IsolatingModuleFinalizer;
 impl<'ast> VisitMut<'ast> for IsolatingModuleFinalizer<'_, 'ast> {
   fn visit_program(&mut self, program: &mut ast::Program<'ast>) {
     // Drop the hashbang since we already store them in ast_scan phase and
-    // we don't want oxc to generate hashbang statement in module level since we already handle
+    // we don't want oxc to generate hashbang statement and directives in module level since we already handle
     // them in chunk level
     program.hashbang.take();
+    program.directives.clear();
     let mut stmts = self.snippet.builder.vec();
 
     for mut stmt in program.body.take_in(self.alloc) {

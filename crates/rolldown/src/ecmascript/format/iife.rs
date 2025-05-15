@@ -35,36 +35,37 @@ use crate::{
     render_chunk_exports::render_chunk_exports,
   },
 };
-use rolldown_common::{ExternalModule, OutputExports};
+use rolldown_common::{AddonRenderContext, ExternalModule, OutputExports};
 use rolldown_error::{BuildDiagnostic, BuildResult};
 use rolldown_sourcemap::SourceJoiner;
 use rolldown_utils::{concat_string, ecmascript::legitimize_identifier_name};
 
 use super::utils::{
-  render_chunk_external_imports, render_factory_parameters,
+  render_chunk_directives, render_chunk_external_imports, render_factory_parameters,
   render_modules_with_peek_runtime_module_at_first,
 };
 
 /// The main function for rendering the IIFE format chunks.
-#[expect(clippy::too_many_arguments)]
 pub async fn render_iife<'code>(
   ctx: &GenerateContext<'_>,
-  hashbang: Option<&'code str>,
-  banner: Option<&'code str>,
-  intro: Option<&'code str>,
-  outro: Option<&'code str>,
-  footer: Option<&'code str>,
+  addon_render_context: AddonRenderContext<'code>,
   module_sources: &'code RenderedModuleSources,
   warnings: &mut Vec<BuildDiagnostic>,
 ) -> BuildResult<SourceJoiner<'code>> {
   let mut source_joiner = SourceJoiner::default();
-
+  let AddonRenderContext { hashbang, banner, intro, outro, footer, directives } =
+    addon_render_context;
   if let Some(hashbang) = hashbang {
     source_joiner.append_source(hashbang);
   }
 
   if let Some(banner) = banner {
     source_joiner.append_source(banner);
+  }
+
+  if !directives.is_empty() {
+    source_joiner.append_source(render_chunk_directives(directives.iter()));
+    source_joiner.append_source("");
   }
 
   // iife wrapper start

@@ -16,6 +16,7 @@ pub mod load_source;
 pub mod normalize_options;
 pub mod parse_to_ecma_ast;
 pub mod pre_process_ecma_ast;
+pub mod process_code_and_sourcemap;
 pub mod renamer;
 pub mod render_chunks;
 pub mod render_ecma_module;

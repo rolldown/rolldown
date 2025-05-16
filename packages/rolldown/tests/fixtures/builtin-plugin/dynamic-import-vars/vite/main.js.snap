@@ -41,16 +41,12 @@ function wildcardInVariables(base) {
 	}), `./mods/${base ?? foo}.js?raw`, 3);
 }
 function wildcardInUrl(base) {
-	// The `?` is not escaped on windows 
-	// (`?` cannot be used as a filename on windows)
 	return __rolldown_dynamic_import_helper_default(import.meta.glob("./mods/*.js", {
 		query: "?raw",
 		import: "*"
 	}), `./mods/${base ?? foo}.js?raw`, 3);
 }
 function wildcardInWorker(base) {
-	// The `?` is not escaped on windows 
-	// (`?` cannot be used as a filename on windows)
 	return __rolldown_dynamic_import_helper_default(import.meta.glob("./mo[?]ds/*.js", {
 		query: "?worker",
 		import: "*"

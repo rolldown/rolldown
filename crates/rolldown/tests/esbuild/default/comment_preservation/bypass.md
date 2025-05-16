@@ -360,53 +360,10 @@ switch (
 ```js
 
 //#region entry.js
-console.log(import(
-	/* before */
-	foo
-), import(
-	/* before */
-	"foo"
-), import(
-	foo
-	/* after */
-), import(
-	"foo"
-	/* after */
-));
-console.log(import(
-	"foo",
-	{ assert: { type: "json" } }
-), import("foo", { assert: { type: "json" } }), import("foo", { assert: { type: "json" } }), import("foo", { assert: { type: "json" } }), import("foo", { assert: { type: "json" } }), import("foo", { assert: { type: "json" } }), import("foo", { assert: { type: "json" } }), import(
-	"foo",
-	{ assert: { type: "json" } }
-	/* before */
-));
-console.log(require(
-	/* before */
-	foo
-), require(
-	/* before */
-	"foo"
-), require(
-	foo
-	/* after */
-), require(
-	"foo"
-	/* after */
-));
-console.log(require.resolve(
-	/* before */
-	foo
-), require.resolve(
-	/* before */
-	"foo"
-), require.resolve(
-	foo
-	/* after */
-), require.resolve(
-	"foo"
-	/* after */
-));
+console.log(import(foo), import("foo"), import(foo), import("foo"));
+console.log(import("foo", { assert: { type: "json" } }), import("foo", { assert: { type: "json" } }), import("foo", { assert: { type: "json" } }), import("foo", { assert: { type: "json" } }), import("foo", { assert: { type: "json" } }), import("foo", { assert: { type: "json" } }), import("foo", { assert: { type: "json" } }), import("foo", { assert: { type: "json" } }));
+console.log(require(foo), require("foo"), require(foo), require("foo"));
+console.log(require.resolve(foo), require.resolve("foo"), require.resolve(foo), require.resolve("foo"));
 let [ ...s] = [...s];
 let [ ...s2] = [...s2];
 let {} = {};
@@ -422,13 +379,7 @@ let { [y5]: y5 } = { [y5]: y5 };
 let { [y6]: y6 } = { [y6]: y6 };
 foo[x] = foo[x];
 foo[x] = foo[x];
-console.log(
-	// before
-	foo,
-	/* comment before */
-	bar
-	// comment after
-);
+console.log(foo, bar);
 console.log([foo, bar]);
 console.log({
 	foo,
@@ -451,11 +402,7 @@ console.log(() => {
 }, () => {
 	throw 1;
 });
-console.log(
-	/*a*/
-	a ? b : c,
-	a ? b : c
-);
+console.log(a ? b : c, a ? b : c);
 for (a;;);
 for (; a;);
 for (;; a);
@@ -477,72 +424,8 @@ switch (a) {}
 ===================================================================
 --- esbuild	/out/entry.js
 +++ rolldown	entry.js
-@@ -1,350 +1,113 @@
-+
-+//#region entry.js
-+console.log(import(
-+	/* before */
-+	foo
-+), import(
-+	/* before */
-+	"foo"
-+), import(
-+	foo
-+	/* after */
-+), import(
-+	"foo"
-+	/* after */
-+));
-+console.log(import(
-+	"foo",
-+	{ assert: { type: "json" } }
-+), import("foo", { assert: { type: "json" } }), import("foo", { assert: { type: "json" } }), import("foo", { assert: { type: "json" } }), import("foo", { assert: { type: "json" } }), import("foo", { assert: { type: "json" } }), import("foo", { assert: { type: "json" } }), import(
-+	"foo",
-+	{ assert: { type: "json" } }
-+	/* before */
-+));
-+console.log(require(
-+	/* before */
-+	foo
-+), require(
-+	/* before */
-+	"foo"
-+), require(
-+	foo
-+	/* after */
-+), require(
-+	"foo"
-+	/* after */
-+));
-+console.log(require.resolve(
-+	/* before */
-+	foo
-+), require.resolve(
-+	/* before */
-+	"foo"
-+), require.resolve(
-+	foo
-+	/* after */
-+), require.resolve(
-+	"foo"
-+	/* after */
-+));
-+let [ ...s] = [...s];
-+let [ ...s2] = [...s2];
-+let {} = {};
-+let {} = {};
-+let { ...s3 } = { ...s3 };
-+let { ...s4 } = { ...s4 };
-+let [x] = [x];
-+let { y } = { y };
-+let { y2 } = { y2 };
-+let { y3 } = { y3 };
-+let { [y4]: y4 } = { [y4]: y4 };
-+let { [y5]: y5 } = { [y5]: y5 };
-+let { [y6]: y6 } = { [y6]: y6 };
-+foo[x] = foo[x];
-+foo[x] = foo[x];
- console.log(
+@@ -1,350 +1,60 @@
+-console.log(
 -  import(
 -    /* before */
 -    foo
@@ -559,12 +442,7 @@ switch (a) {}
 -    "foo"
 -    /* after */
 -  )
-+	// before
-+	foo,
-+	/* comment before */
-+	bar
-+	// comment after
- );
+-);
 -console.log(
 -  import(
 -    "foo",
@@ -778,6 +656,28 @@ switch (a) {}
 -  bar
 -  // comment after
 -]);
++
++//#region entry.js
++console.log(import(foo), import("foo"), import(foo), import("foo"));
++console.log(import("foo", { assert: { type: "json" } }), import("foo", { assert: { type: "json" } }), import("foo", { assert: { type: "json" } }), import("foo", { assert: { type: "json" } }), import("foo", { assert: { type: "json" } }), import("foo", { assert: { type: "json" } }), import("foo", { assert: { type: "json" } }), import("foo", { assert: { type: "json" } }));
++console.log(require(foo), require("foo"), require(foo), require("foo"));
++console.log(require.resolve(foo), require.resolve("foo"), require.resolve(foo), require.resolve("foo"));
++let [ ...s] = [...s];
++let [ ...s2] = [...s2];
++let {} = {};
++let {} = {};
++let { ...s3 } = { ...s3 };
++let { ...s4 } = { ...s4 };
++let [x] = [x];
++let { y } = { y };
++let { y2 } = { y2 };
++let { y3 } = { y3 };
++let { [y4]: y4 } = { [y4]: y4 };
++let { [y5]: y5 } = { [y5]: y5 };
++let { [y6]: y6 } = { [y6]: y6 };
++foo[x] = foo[x];
++foo[x] = foo[x];
++console.log(foo, bar);
 +console.log([foo, bar]);
  console.log({
 -  // before
@@ -797,20 +697,7 @@ switch (a) {}
 +	foo;
 +	bar;
  });
-+console.log(() => {
-+	return null;
-+}, () => {
-+	throw null;
-+}, () => {
-+	return 1;
-+}, () => {
-+	throw 1;
-+}, () => {
-+	return 1;
-+}, () => {
-+	throw 1;
-+});
- console.log(
+-console.log(
 -  () => {
 -    return (
 -      /* foo */
@@ -847,10 +734,7 @@ switch (a) {}
 -      null + 1
 -    );
 -  }
-+	/*a*/
-+	a ? b : c,
-+	a ? b : c
- );
+-);
 -console.log(
 -  /*a*/
 -  a ? (
@@ -919,6 +803,20 @@ switch (a) {}
 -) {
 -}
 \ No newline at end of file
++console.log(() => {
++	return null;
++}, () => {
++	throw null;
++}, () => {
++	return 1;
++}, () => {
++	throw 1;
++}, () => {
++	return 1;
++}, () => {
++	throw 1;
++});
++console.log(a ? b : c, a ? b : c);
 +for (a;;);
 +for (; a;);
 +for (;; a);

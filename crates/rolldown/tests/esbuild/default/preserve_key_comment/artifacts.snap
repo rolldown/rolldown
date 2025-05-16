@@ -7,24 +7,9 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```js
 //#region entry.js
-x(
-	/* __KEY__ */
-	"notKey",
-	/* __KEY__ */
-	`notKey`
-);
-x(
-	/* @__KEY__ */
-	"key",
-	/* @__KEY__ */
-	`key`
-);
-x(
-	/* #__KEY__ */
-	"alsoKey",
-	/* #__KEY__ */
-	`alsoKey`
-);
+x("notKey", `notKey`);
+x("key", `key`);
+x("alsoKey", `alsoKey`);
 
 //#endregion
 ```

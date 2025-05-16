@@ -27,19 +27,7 @@ const u_keep = void 0;
 const i_keep = 1234567;
 const f_keep = 123.456;
 const s_keep = "";
-console.log(
-	// These are doubled to avoid the "inline const/let into next statement if used once" optimization
-	n_keep,
-	n_keep,
-	u_keep,
-	u_keep,
-	i_keep,
-	i_keep,
-	f_keep,
-	f_keep,
-	s_keep,
-	s_keep
-);
+console.log(n_keep, n_keep, u_keep, u_keep, i_keep, i_keep, f_keep, f_keep, s_keep, s_keep);
 
 //#endregion
 ```
@@ -88,19 +76,7 @@ console.log(
 	const REMOVE_i = 1234567;
 	const REMOVE_f = 123.456;
 	const s_keep = "";
-	console.log(
-		// These are doubled to avoid the "inline const/let into next statement if used once" optimization
-		REMOVE_n,
-		REMOVE_n,
-		REMOVE_u,
-		REMOVE_u,
-		REMOVE_i,
-		REMOVE_i,
-		REMOVE_f,
-		REMOVE_f,
-		s_keep,
-		s_keep
-);
+	console.log(REMOVE_n, REMOVE_n, REMOVE_u, REMOVE_u, REMOVE_i, REMOVE_i, REMOVE_f, REMOVE_f, s_keep, s_keep);
 }
 
 //#endregion
@@ -151,19 +127,7 @@ function nested() {
 	const REMOVE_i = 1234567;
 	const REMOVE_f = 123.456;
 	const s_keep = "";
-	console.log(
-		// These are doubled to avoid the "inline const/let into next statement if used once" optimization
-		REMOVE_n,
-		REMOVE_n,
-		REMOVE_u,
-		REMOVE_u,
-		REMOVE_i,
-		REMOVE_i,
-		REMOVE_f,
-		REMOVE_f,
-		s_keep,
-		s_keep
-);
+	console.log(REMOVE_n, REMOVE_n, REMOVE_u, REMOVE_u, REMOVE_i, REMOVE_i, REMOVE_f, REMOVE_f, s_keep, s_keep);
 }
 assert(nested() !== void 0);
 

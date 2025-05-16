@@ -10,8 +10,7 @@ use crate::{
 use crate::{EcmaAstIdx, EcmaView, IndexModules, Interop, Module, ModuleType};
 use std::ops::{Deref, DerefMut};
 
-use itertools::{Either, Itertools};
-use oxc::codegen::LegalComment;
+use itertools::Itertools;
 use oxc_index::IndexVec;
 use rolldown_ecmascript::{EcmaAst, EcmaCompiler, PrintOptions};
 use rolldown_rstr::Rstr;
@@ -216,18 +215,18 @@ impl NormalModule {
       ModuleRenderArgs::Ecma { ast } => {
         let enable_sourcemap = options.sourcemap.is_some() && !self.is_virtual();
 
-        let comments = match options.legal_comments {
-          LegalComments::None => Either::Left(false),
-          LegalComments::Preserve => Either::Left(true),
-          LegalComments::Inline => Either::Right(LegalComment::Inline),
-        };
+        let print_legal_comments = matches!(options.legal_comments, LegalComments::Inline);
 
         // Because oxc codegen sourcemap is last of sourcemap chain,
         // If here no extra sourcemap need remapping, we using it as final module sourcemap.
         // So here make sure using correct `source_name` and `source_content.
         let render_output = EcmaCompiler::print_with(
           ast,
-          PrintOptions { sourcemap: enable_sourcemap, filename: self.id.to_string(), comments },
+          PrintOptions {
+            sourcemap: enable_sourcemap,
+            filename: self.id.to_string(),
+            print_legal_comments,
+          },
         );
         if !self.ecma_view.mutations.is_empty() {
           let original_code: Arc<str> = render_output.code.into();

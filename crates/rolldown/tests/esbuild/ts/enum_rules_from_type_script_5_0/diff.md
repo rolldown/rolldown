@@ -106,58 +106,7 @@ var Foo = /* @__PURE__ */ function(Foo$1) {
 	Foo$1["X41"] = "ab";
 	return Foo$1;
 }(Foo || {});
-console.log(
-	// a number or string literal,
-	Foo.X0,
-	Foo.X1,
-	// a unary +, -, or ~ applied to a numeric constant expression,
-	Foo.X2,
-	Foo.X3,
-	Foo.X4,
-	// a binary +, -, *, /, %, **, <<, >>, >>>, |, &, ^ applied to two numeric constant expressions,
-	Foo.X5,
-	Foo.X6,
-	Foo.X7,
-	Foo.X8,
-	Foo.X9,
-	Foo.X10,
-	Foo.X11,
-	Foo.X12,
-	Foo.X13,
-	Foo.X14,
-	Foo.X15,
-	Foo.X16,
-	// a template expression where each substitution expression is a constant expression,
-	Foo.X17,
-	Foo.X18,
-	Foo.X19,
-	Foo.X20,
-	Foo.X21,
-	Foo.X22,
-	Foo.X23,
-	// a template expression where each substitution expression is a constant expression,
-	Foo.X24,
-	// a parenthesized constant expression,
-	Foo.X25,
-	// a dotted name that references an enum member with an enum literal type, or
-	Foo.X26,
-	Foo.X27,
-	Foo.X28,
-	Foo.X29,
-	Foo.X30,
-	Foo.X31,
-	Foo.X32,
-	Foo.X33,
-	// a dotted name indexed by a string literal (e.g. x.y["z"]) that references an enum member with an enum literal type."
-	Foo.X34,
-	Foo.X35,
-	Foo.X36,
-	Foo.X37,
-	Foo.X38,
-	Foo.X39,
-	Foo.X40,
-	Foo.X41
-);
+console.log(Foo.X0, Foo.X1, Foo.X2, Foo.X3, Foo.X4, Foo.X5, Foo.X6, Foo.X7, Foo.X8, Foo.X9, Foo.X10, Foo.X11, Foo.X12, Foo.X13, Foo.X14, Foo.X15, Foo.X16, Foo.X17, Foo.X18, Foo.X19, Foo.X20, Foo.X21, Foo.X22, Foo.X23, Foo.X24, Foo.X25, Foo.X26, Foo.X27, Foo.X28, Foo.X29, Foo.X30, Foo.X31, Foo.X32, Foo.X33, Foo.X34, Foo.X35, Foo.X36, Foo.X37, Foo.X38, Foo.X39, Foo.X40, Foo.X41);
 
 //#endregion
 ```

@@ -1,7 +1,6 @@
 use std::path::PathBuf;
 
 use arcstr::ArcStr;
-use itertools::Either;
 use oxc::{
   allocator::Allocator,
   ast::{AstBuilder, ast::Program},
@@ -85,7 +84,9 @@ impl EcmaCompiler {
   pub fn print(ast: &EcmaAst, filename: &str, enable_source_map: bool) -> CodegenReturn {
     Codegen::new()
       .with_options(CodegenOptions {
-        comments: true,
+        comments: false,
+        annotation_comments: true,
+        legal_comments: LegalComment::Inline,
         source_map_path: enable_source_map.then(|| PathBuf::from(filename)),
         ..CodegenOptions::default()
       })
@@ -93,15 +94,16 @@ impl EcmaCompiler {
   }
 
   pub fn print_with(ast: &EcmaAst, options: PrintOptions) -> CodegenReturn {
-    let (is_print_full_comments, legal_comments) = match options.comments {
-      Either::Left(value) => (value, LegalComment::None),
-      Either::Right(value) => (false, value),
-    };
+    let legal_comments =
+      if options.print_legal_comments { LegalComment::Inline } else { LegalComment::None };
     Codegen::new()
       .with_options(CodegenOptions {
-        comments: is_print_full_comments,
-        source_map_path: options.sourcemap.then(|| PathBuf::from(options.filename)),
+        comments: false,
+        // This option will be configurable when we begin to support `ignore-annotations`
+        // https://esbuild.github.io/api/#ignore-annotations
+        annotation_comments: true,
         legal_comments,
+        source_map_path: options.sourcemap.then(|| PathBuf::from(options.filename)),
         ..CodegenOptions::default()
       })
       .build(ast.program())
@@ -122,6 +124,7 @@ impl EcmaCompiler {
     let ret = Self::minify_impl(minifier_options, run_compress, &allocator, program);
     let ret = Codegen::new()
       .with_options(CodegenOptions {
+        comments: false,
         source_map_path: enable_sourcemap.then(|| PathBuf::from(filename)),
         ..codegen_options
       })
@@ -168,7 +171,7 @@ fn basic_test() {
 }
 
 pub struct PrintOptions {
-  pub comments: Either</* is print full comments */ bool, LegalComment>,
+  pub print_legal_comments: bool,
   pub filename: String,
   pub sourcemap: bool,
 }

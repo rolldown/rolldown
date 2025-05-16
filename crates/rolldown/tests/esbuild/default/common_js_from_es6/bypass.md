@@ -59,10 +59,7 @@ var init_bar = __esm({ "bar.js"() {} });
 
 //#endregion
 //#region entry.js
-const { foo } = (init_foo(), __toCommonJS(
-	// This should not be hoisted
-	foo_exports
-));
+const { foo } = (init_foo(), __toCommonJS(foo_exports));
 assert.equal(foo(), "foo");
 assert.equal(bar(), "bar");
 const { bar } = (init_bar(), __toCommonJS(bar_exports));

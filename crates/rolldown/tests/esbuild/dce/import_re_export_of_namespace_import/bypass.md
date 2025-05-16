@@ -33,11 +33,7 @@ var import_foo = __toESM(require_foo());
 
 //#endregion
 //#region entry.js
-assert.equal(
-	// => const import_xxx = require_xxx
-	import_foo.default,
-	123
-);
+assert.equal(import_foo.default, 123);
 
 //#endregion
 ```

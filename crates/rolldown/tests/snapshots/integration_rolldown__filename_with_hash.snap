@@ -40,10 +40,10 @@ expression: output
 - exprs-before-!~{009}~.js => exprs-before-DVH4dzjn.js
 - issue-3125-!~{00d}~.js => issue-3125-Wuzt51eK.js
 - namespace-export-!~{003}~.js => namespace-export-CaVCPaHU.js
-- nested-block-!~{001}~.js => nested-block-Cao9hVBo.js
-- nested-function-!~{002}~.js => nested-function-B1JLoZC9.js
+- nested-block-!~{001}~.js => nested-block-CL8cSnuF.js
+- nested-function-!~{002}~.js => nested-function-D-4TQR81.js
 - semicolon-before-!~{006}~.js => semicolon-before-WTlrW06K.js
-- top-level-!~{000}~.js => top-level-CDPfkjfg.js
+- top-level-!~{000}~.js => top-level-CU29_pPZ.js
 - type-before-!~{008}~.js => type-before-860OLV3I.js
 
 # tests/esbuild/dce/cross_module_constant_folding_number
@@ -153,7 +153,7 @@ expression: output
 
 # tests/esbuild/dce/import_re_export_of_namespace_import
 
-- entry-!~{000}~.js => entry-BlSHM1cD.js
+- entry-!~{000}~.js => entry-B3hV4FN9.js
 
 # tests/esbuild/dce/inline_empty_function_calls
 
@@ -661,7 +661,7 @@ expression: output
 
 # tests/esbuild/default/comment_preservation
 
-- entry-!~{000}~.js => entry-DWZWHoBI.js
+- entry-!~{000}~.js => entry-B7ye0rzZ.js
 
 # tests/esbuild/default/comment_preservation_import_assertions
 
@@ -669,15 +669,15 @@ expression: output
 
 # tests/esbuild/default/comment_preservation_preserve_jsx
 
-- entry-!~{000}~.js => entry-Dz3q51Qm.js
+- entry-!~{000}~.js => entry-ChEClsGW.js
 
 # tests/esbuild/default/comment_preservation_transform_jsx
 
-- entry-!~{000}~.js => entry-BKCaUhBs.js
+- entry-!~{000}~.js => entry-BusC-qPv.js
 
 # tests/esbuild/default/common_js_from_es6
 
-- entry-!~{000}~.js => entry-DQRXd5He.js
+- entry-!~{000}~.js => entry-DpeSuKIn.js
 
 # tests/esbuild/default/conditional_import
 
@@ -712,7 +712,7 @@ expression: output
 
 # tests/esbuild/default/define_import_meta
 
-- entry-!~{000}~.js => entry-RBCaVNgg.js
+- entry-!~{000}~.js => entry-Pr6gMpJE.js
 
 # tests/esbuild/default/define_import_meta_es5
 
@@ -739,7 +739,7 @@ expression: output
 
 # tests/esbuild/default/define_this
 
-- entry-!~{000}~.js => entry-C1gAUefP.js
+- entry-!~{000}~.js => entry-Bp19eovW.js
 
 # tests/esbuild/default/direct_eval_tainting_no_bundle
 
@@ -1009,7 +1009,7 @@ expression: output
 
 # tests/esbuild/default/inject_import_meta
 
-- entry-!~{000}~.js => entry-DpIkHyDJ.js
+- entry-!~{000}~.js => entry-C3sdL-S0.js
 
 # tests/esbuild/default/inject_import_order
 
@@ -1037,7 +1037,7 @@ expression: output
 
 # tests/esbuild/default/inject_with_define
 
-- entry-!~{000}~.js => entry-Bb0IYYnB.js
+- entry-!~{000}~.js => entry-BqpaWvqu.js
 
 # tests/esbuild/default/inject_with_string_export_name_bundle
 
@@ -1178,7 +1178,7 @@ expression: output
 
 # tests/esbuild/default/legal_comments_modify_indent
 
-- entry-!~{000}~.js => entry-B161_kiz.js
+- entry-!~{000}~.js => entry-Byt1vSSU.js
 - entry-!~{001}~.js => entry-DC4KoLXg.js
 - entry2.css
 
@@ -1238,7 +1238,7 @@ expression: output
 
 # tests/esbuild/default/mangle_props_key_comment
 
-- entry-!~{000}~.js => entry-CXQz8qa0.js
+- entry-!~{000}~.js => entry-C7WYD0wm.js
 
 # tests/esbuild/default/mangle_props_key_comment_minify
 
@@ -1484,7 +1484,7 @@ expression: output
 
 # tests/esbuild/default/preserve_key_comment
 
-- entry-!~{000}~.js => entry-Din9RcaK.js
+- entry-!~{000}~.js => entry-DHtj98nS.js
 
 # tests/esbuild/default/quoted_property
 
@@ -2579,11 +2579,11 @@ expression: output
 
 # tests/esbuild/lower/lower_async_generator
 
-- entry-!~{000}~.js => entry-Xtjpwmrw.js
+- entry-!~{000}~.js => entry-DVTjDqTv.js
 
 # tests/esbuild/lower/lower_async_generator_no_await
 
-- entry-!~{000}~.js => entry-Xtjpwmrw.js
+- entry-!~{000}~.js => entry-DVTjDqTv.js
 
 # tests/esbuild/lower/lower_async_super_es2016_no_bundle
 
@@ -2650,7 +2650,7 @@ expression: output
 
 # tests/esbuild/lower/lower_nullish_coalescing_assignment_issue1493
 
-- entry-!~{000}~.js => entry-BY4_pFRb.js
+- entry-!~{000}~.js => entry-D7NOOWkW.js
 
 # tests/esbuild/lower/lower_object_spread_no_bundle
 
@@ -2838,7 +2838,7 @@ expression: output
 
 # tests/esbuild/lower/lower_using_inside_ts_namespace
 
-- entry-!~{000}~.js => entry-CAyiTars.js
+- entry-!~{000}~.js => entry-C5Hau7re.js
 
 # tests/esbuild/lower/lower_using_unsupported_async
 
@@ -3318,7 +3318,7 @@ expression: output
 # tests/esbuild/ts/enum_rules_from_type_script_5_0
 
 - not-supported-!~{001}~.js => not-supported-BslC2gdM.js
-- supported-!~{000}~.js => supported-HTAQ0kQr.js
+- supported-!~{000}~.js => supported-CO0TUlwn.js
 
 # tests/esbuild/ts/export_type_issue379
 
@@ -4323,7 +4323,7 @@ expression: output
 
 # tests/rolldown/function/legal_comments/inline
 
-- main-!~{000}~.js => main-DXEt0uDC.js
+- main-!~{000}~.js => main-bn1Pw2ND.js
 
 # tests/rolldown/function/legal_comments/none
 
@@ -4331,7 +4331,7 @@ expression: output
 
 # tests/rolldown/function/legal_comments/preserve
 
-- main-!~{000}~.js => main-bn1Pw2ND.js
+- main-!~{000}~.js => main-DXEt0uDC.js
 
 # tests/rolldown/function/minify/basic
 
@@ -4685,7 +4685,7 @@ expression: output
 
 # tests/rolldown/issues/4491
 
-- main-!~{000}~.js => main-wFhybaYU.js
+- main-!~{000}~.js => main-BOUZhfES.js
 
 # tests/rolldown/misc/ambiguous_star_export
 
@@ -4821,11 +4821,11 @@ expression: output
 
 # tests/rolldown/resolve/ts_config_merge_decorator_metadata
 
-- main-!~{000}~.js => main-XYTvG68-.js
+- main-!~{000}~.js => main-MIbx5D3k.js
 
 # tests/rolldown/resolve/ts_config_option_merge
 
-- main-!~{000}~.js => main-DuVpY81p.js
+- main-!~{000}~.js => main-CMcp5kt7.js
 
 # tests/rolldown/resolve/wildcard_alias
 
@@ -5327,7 +5327,7 @@ expression: output
 
 # tests/rolldown/topics/new_url/opt-out
 
-- main-!~{000}~.js => main-mxPI4CCa.js
+- main-!~{000}~.js => main-BbJnFXzt.js
 
 # tests/rolldown/topics/new_url/opt_out_vite_mode
 

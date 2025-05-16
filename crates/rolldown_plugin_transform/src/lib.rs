@@ -105,13 +105,13 @@ impl Plugin for TransformPlugin {
       Err(anyhow::anyhow!("Transform failed, got {:#?}", ret.errors))?;
     }
 
-    let mut codegen_options = CodegenOptions::default();
-
-    if self.sourcemap {
-      codegen_options.source_map_path = Some(args.id.into());
-    }
-
-    let ret = Codegen::new().with_options(codegen_options).build(&program);
+    let ret = Codegen::new()
+      .with_options(CodegenOptions {
+        comments: false,
+        source_map_path: Some(args.id.into()),
+        ..CodegenOptions::default()
+      })
+      .build(&program);
     let CodegenReturn { mut code, map, .. } = ret;
 
     if let Some(inject) = &self.jsx_inject {

@@ -196,13 +196,13 @@ syn = { version = "2", default-features = false }
 
 # oxc crates with the same version
 
-oxc = { version = "0.69.0", features = ["ast_visit", "transformer", "minifier", "mangler", "semantic", "codegen", "serialize", "isolated_declarations", "regular_expression", "cfg"] }
-oxc_parser_napi = { version = "0.69.0" }
-oxc_transform_napi = { version = "0.69.0" }
+oxc = { version = "0.70.0", features = ["ast_visit", "transformer", "minifier", "mangler", "semantic", "codegen", "serialize", "isolated_declarations", "regular_expression", "cfg"] }
+oxc_parser_napi = { version = "0.70.0" }
+oxc_transform_napi = { version = "0.70.0" }
 
 # oxc crates in their own repos
 # Versions must be relaxed for usage in oxc.
-# Please update with `cargo update oxc_resolver oxc_sourcemap oxc_index`
+# Please update with `cargo update oxc_resolver oxc_resolver_napi oxc_sourcemap oxc_index`
 oxc_index = { version = "3", features = ["rayon", "serde"] } # https://github.com/oxc-project/oxc-index-vec
 oxc_resolver = { version = "9", features = ["package_json_raw_json_api"] } # https://github.com/oxc-project/oxc-resolver
 oxc_resolver_napi = { version = "9" }

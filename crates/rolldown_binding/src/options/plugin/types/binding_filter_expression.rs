@@ -7,7 +7,7 @@ use rolldown_utils::{
   filter_expression::Token, js_regex::HybridRegex, pattern_filter::StringOrRegex,
 };
 
-use super::binding_js_or_regex::JsRegExp;
+use crate::types::js_regex::JsRegExp;
 
 #[derive(Debug, Clone)]
 pub enum BindingFilterTokenPayloadInner {

@@ -7,8 +7,8 @@ use rolldown::{InnerOptions, ModuleSideEffects, ModuleSideEffectsRule};
 use rolldown_utils::js_regex::HybridRegex;
 
 use crate::{
-  options::plugin::types::binding_js_or_regex::JsRegExp,
   types::js_callback::{JsCallback, JsCallbackExt},
+  types::js_regex::JsRegExp,
 };
 
 pub type BindingModuleSideEffects = Either3<

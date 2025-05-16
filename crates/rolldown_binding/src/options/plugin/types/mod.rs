@@ -10,7 +10,6 @@ pub mod binding_hook_resolve_id_extra_args;
 pub mod binding_hook_resolve_id_output;
 pub mod binding_hook_side_effects;
 pub mod binding_hook_transform_output;
-pub mod binding_js_or_regex;
 pub mod binding_limited_boolean;
 pub mod binding_module_federation_plugin_option;
 pub mod binding_module_type;

@@ -1,3 +1,7 @@
+mod binding_import_glob_plugin_config;
+mod binding_reporter_plugin_config;
 mod binding_vite_resolve_plugin_config;
 
+pub use binding_import_glob_plugin_config::BindingImportGlobPluginConfig;
+pub use binding_reporter_plugin_config::BindingReporterPluginConfig;
 pub use binding_vite_resolve_plugin_config::BindingViteResolvePluginConfig;

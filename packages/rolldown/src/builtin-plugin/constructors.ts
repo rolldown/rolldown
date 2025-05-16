@@ -4,7 +4,7 @@ import type {
   BindingBuildImportAnalysisPluginConfig,
   BindingBuiltinPluginName,
   BindingDynamicImportVarsPluginConfig,
-  BindingGlobImportPluginConfig,
+  BindingImportGlobPluginConfig,
   BindingIsolatedDeclarationPluginConfig,
   BindingJsonPluginConfig,
   BindingManifestPluginConfig,
@@ -12,7 +12,7 @@ import type {
   BindingModuleFederationPluginOption,
   BindingModulePreloadPolyfillPluginConfig,
   BindingRemote,
-  BindingReportPluginConfig,
+  BindingReporterPluginConfig,
   BindingViteResolvePluginConfig,
 } from '../binding';
 import { makeBuiltinPluginCallable } from './utils';
@@ -38,13 +38,13 @@ export function dynamicImportVarsPlugin(
 }
 
 export function importGlobPlugin(
-  config?: BindingGlobImportPluginConfig,
+  config?: BindingImportGlobPluginConfig,
 ): BuiltinPlugin {
   return new BuiltinPlugin('builtin:import-glob', config);
 }
 
 export function reportPlugin(
-  config?: BindingReportPluginConfig,
+  config?: BindingReporterPluginConfig,
 ): BuiltinPlugin {
   return new BuiltinPlugin('builtin:report', config);
 }

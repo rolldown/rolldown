@@ -348,11 +348,6 @@ export interface BindingFilterToken {
   payload?: BindingStringOrRegex | number | boolean
 }
 
-export interface BindingGlobImportPluginConfig {
-  root?: string
-  restoreQueryExtension?: boolean
-}
-
 export interface BindingHmrBoundaryOutput {
   boundary: string
   acceptedVia: string
@@ -426,6 +421,11 @@ export interface BindingHookTransformOutput {
   sideEffects?: BindingHookSideEffects
   map?: BindingSourcemap
   moduleType?: string
+}
+
+export interface BindingImportGlobPluginConfig {
+  root?: string
+  restoreQueryExtension?: boolean
 }
 
 export interface BindingInjectImportNamed {
@@ -720,7 +720,7 @@ export interface BindingReplacePluginConfig {
   sourcemap?: boolean
 }
 
-export interface BindingReportPluginConfig {
+export interface BindingReporterPluginConfig {
   isTty: boolean
   isLib: boolean
   assetsDir: string

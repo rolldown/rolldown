@@ -127,7 +127,7 @@
     "@rolldown/testing": "workspace:*",
     "@types/fs-extra": "^11.0.4",
     "@types/lodash-es": "^4.17.12",
-    "@valibot/to-json-schema": "1.0.0",
+    "@valibot/to-json-schema": "1.1.0",
     "consola": "^3.4.2",
     "emnapi": "^1.2.0",
     "execa": "^9.2.0",
@@ -138,7 +138,7 @@
     "pathe": "^2.0.3",
     "remeda": "^2.10.0",
     "rolldown": "workspace:*",
-    "rolldown-plugin-dts": "^0.7.12",
+    "rolldown-plugin-dts": "^0.12.0",
     "rollup": "^4.18.0",
     "signal-exit": "4.1.0",
     "source-map": "^0.7.4",
@@ -146,7 +146,7 @@
     "typedoc": "^0.28.0",
     "typescript": "^5.7.3",
     "unbuild": "^3.0.0",
-    "valibot": "1.0.0"
+    "valibot": "1.1.0"
   },
   "optionalDependencies": {
     "@rolldown/binding-darwin-arm64": "workspace:*",

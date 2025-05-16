@@ -2,7 +2,10 @@ use arcstr::ArcStr;
 
 #[derive(Default)]
 pub struct HmrOutput {
-  pub patch: String,
+  pub code: String,
+  pub filename: String,
+  pub sourcemap: Option<String>,
+  pub sourcemap_filename: Option<String>,
   pub hmr_boundaries: Vec<HmrBoundaryOutput>,
   pub full_reload: bool,
   pub first_invalidated_by: Option<String>,

@@ -92,14 +92,14 @@ class DevServer {
       console.log(`File ${path} has been changed`);
       if (this.hasLiveConnections) {
         const output = (await build.generateHmrPatch([path]))!;
-        if (output.patch) {
+        if (output.code) {
           console.log('Patching...');
           if (this.hasLiveConnections) {
             const path = `${seed}.js`;
             seed++;
             nodeFs.writeFileSync(
               nodePath.join(process.cwd(), 'dist', path),
-              output.patch,
+              output.code,
             );
             const patchUriForBrowser = `/${path}`;
             const patchUriForFile = nodeUrl.pathToFileURL(

@@ -259,24 +259,24 @@ export interface BindingBuiltinPlugin {
   options?: unknown
 }
 
-export type BindingBuiltinPluginName =  'builtin:wasm-helper'|
-'builtin:import-glob'|
-'builtin:dynamic-import-vars'|
-'builtin:module-preload-polyfill'|
-'builtin:manifest'|
-'builtin:load-fallback'|
-'builtin:transform'|
-'builtin:wasm-fallback'|
-'builtin:alias'|
-'builtin:json'|
-'builtin:build-import-analysis'|
-'builtin:replace'|
-'builtin:vite-resolve'|
-'builtin:module-federation'|
-'builtin:isolated-declaration'|
-'builtin:report'|
+export type BindingBuiltinPluginName =  'builtin:alias'|
 'builtin:asset'|
 'builtin:asset-import-meta-url'|
+'builtin:build-import-analysis'|
+'builtin:dynamic-import-vars'|
+'builtin:import-glob'|
+'builtin:isolated-declaration'|
+'builtin:json'|
+'builtin:load-fallback'|
+'builtin:manifest'|
+'builtin:module-federation'|
+'builtin:module-preload-polyfill'|
+'builtin:report'|
+'builtin:replace'|
+'builtin:transform'|
+'builtin:vite-resolve'|
+'builtin:wasm-fallback'|
+'builtin:wasm-helper'|
 'builtin:web-worker-post';
 
 export interface BindingBundlerOptions {

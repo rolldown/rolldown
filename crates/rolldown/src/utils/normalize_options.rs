@@ -240,7 +240,7 @@ pub fn normalize_options(mut raw_options: crate::BundlerOptions) -> NormalizeOpt
     checks: raw_options.checks.unwrap_or_default().into(),
     jsx,
     watch: raw_options.watch.unwrap_or_default(),
-    legal_comments: raw_options.legal_comments.unwrap_or(LegalComments::Preserve),
+    legal_comments: raw_options.legal_comments.unwrap_or(LegalComments::Inline),
     drop_labels: FxHashSet::from_iter(raw_options.drop_labels.unwrap_or_default()),
     target,
     keep_names: raw_options.keep_names.unwrap_or_default(),

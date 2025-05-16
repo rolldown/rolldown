@@ -9,7 +9,6 @@ source: crates/rolldown_testing/src/integration_test.rs
 import assert from "node:assert";
 
 //#region bar.js
-// Add some statements to increase the part index (this reproduced a crash)
 statement();
 statement();
 statement();

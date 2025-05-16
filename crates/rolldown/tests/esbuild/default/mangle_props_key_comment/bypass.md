@@ -21,24 +21,9 @@ x([
 ### rolldown
 ```js
 //#region entry.js
-x(
-	/* __KEY__ */
-	"_doNotMangleThis",
-	/* __KEY__ */
-	`_doNotMangleThis`
-);
-x._mangleThis(
-	/* @__KEY__ */
-	"_mangleThis",
-	/* @__KEY__ */
-	`_mangleThis`
-);
-x._mangleThisToo(
-	/* #__KEY__ */
-	"_mangleThisToo",
-	/* #__KEY__ */
-	`_mangleThisToo`
-);
+x("_doNotMangleThis", `_doNotMangleThis`);
+x._mangleThis("_mangleThis", `_mangleThis`);
+x._mangleThisToo("_mangleThisToo", `_mangleThisToo`);
 x._someKey = "_someKey" in y;
 x([`foo._mangleThis = bar._mangleThisToo`, `foo.notMangled = bar.notMangledEither`]);
 

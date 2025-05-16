@@ -1,7 +1,6 @@
 use std::path::PathBuf;
 
 use arcstr::ArcStr;
-use itertools::Either;
 use oxc::{
   allocator::Allocator,
   ast::{AstBuilder, ast::Program},
@@ -95,14 +94,14 @@ impl EcmaCompiler {
   }
 
   pub fn print_with(ast: &EcmaAst, options: PrintOptions) -> CodegenReturn {
-    let (is_print_full_comments, legal_comments) = match options.comments {
-      Either::Left(value) => (value, LegalComment::None),
-      Either::Right(value) => (false, value),
-    };
+    let legal_comments =
+      if options.print_legal_comments { LegalComment::Inline } else { LegalComment::None };
     Codegen::new()
       .with_options(CodegenOptions {
-        comments: is_print_full_comments,
-        annotation_comments: is_print_full_comments,
+        comments: false,
+        // This option will be configurable when we begin to support `ignore-annotations`
+        // https://esbuild.github.io/api/#ignore-annotations
+        annotation_comments: true,
         legal_comments,
         source_map_path: options.sourcemap.then(|| PathBuf::from(options.filename)),
         ..CodegenOptions::default()
@@ -172,7 +171,7 @@ fn basic_test() {
 }
 
 pub struct PrintOptions {
-  pub comments: Either</* is print full comments */ bool, LegalComment>,
+  pub print_legal_comments: bool,
   pub filename: String,
   pub sourcemap: bool,
 }

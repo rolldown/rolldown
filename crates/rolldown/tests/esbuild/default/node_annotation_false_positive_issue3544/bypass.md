@@ -26,10 +26,6 @@ function confuseNode(exports2) {
 
 //#region entry.mjs
 function confuseNode(exports$1) {
-	// If this local is called "exports", node incorrectly
-	// thinks this file has an export called "notAnExport".
-	// We must make sure that it doesn't have that name
-	// when targeting Node with CommonJS.
 	exports$1.notAnExport = function() {};
 }
 

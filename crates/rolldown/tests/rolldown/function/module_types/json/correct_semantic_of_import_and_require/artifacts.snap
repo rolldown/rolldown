@@ -18,7 +18,6 @@ var require_codes = __commonJS({ "codes.json"(exports, module) {
 //#region main.js
 var import_codes = __toESM(require_codes());
 const codes2 = require_codes();
-// Make sure the two has the same reference
 assert.strictEqual(import_codes.default, codes2);
 
 //#endregion

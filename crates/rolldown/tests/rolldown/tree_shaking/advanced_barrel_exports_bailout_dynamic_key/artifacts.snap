@@ -23,7 +23,6 @@ const a = 100;
 //#endregion
 //#region main.js
 let q = "a";
-// should include all symbols in `a`
 assert.equal(a_exports[q], 100);
 
 //#endregion

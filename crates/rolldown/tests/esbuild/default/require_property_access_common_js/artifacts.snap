@@ -8,7 +8,6 @@ source: crates/rolldown_testing/src/integration_test.rs
 ```js
 
 //#region entry.js
-// These shouldn't warn since the format is CommonJS
 console.log(Object.keys(require.cache));
 console.log(Object.keys(require.extensions));
 delete require.cache["fs"];

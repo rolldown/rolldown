@@ -19,14 +19,7 @@ console.log(
 ### rolldown
 ```js
 //#region entry.js
-console.log(
-	1,
-	2,
-	3,
-	// Should just substitute "import.meta.foo"
-	2 .baz,
-	3
-);
+console.log(1, 2, 3, 2 .baz, 3);
 
 //#endregion
 ```

@@ -19,7 +19,6 @@ const zeroToFive = { [Symbol.iterator]() {
 				done: false,
 				value: this.current++
 			} : { done: true };
-			// assert later
 			dirty = this.current;
 			return ret;
 		}

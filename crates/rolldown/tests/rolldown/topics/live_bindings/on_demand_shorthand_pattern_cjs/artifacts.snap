@@ -13,10 +13,8 @@ let short2 = "";
 function short3() {}
 var short4 = class {};
 let nonShort1 = "";
-// Trigger a re-assignment
 nonShort1 = "";
 function nonShort2() {}
-// Trigger a re-assignment
 nonShort2 = () => {};
 
 //#endregion

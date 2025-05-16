@@ -192,7 +192,6 @@ var baz2_default = class extends x {
 
 //#endregion
 //#region outer.js
-// Helper functions for "super" shouldn't be inserted into this outer function
 var outer_default = async function() {
 	class y extends z {
 		static foo = async () => super.foo();

@@ -22,10 +22,6 @@ var import_bar = __toESM(require("bar"));
 const foo = __toESM(require("foo"));
 const bar = __toESM(require("bar"));
 
-//#region entry.js
-// The test is format cjs
-
-//#endregion
 Object.defineProperty(exports, 'bar', {
   enumerable: true,
   get: function () {

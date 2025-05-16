@@ -7,15 +7,16 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```js
 //#region entry.ts
-// Use const enums to force inline values
 var Foo = /* @__PURE__ */ function(Foo$1) {
 	Foo$1[Foo$1["NAN"] = NaN] = "NAN";
 	Foo$1[Foo$1["POS_INF"] = Infinity] = "POS_INF";
 	Foo$1[Foo$1["NEG_INF"] = -Infinity] = "NEG_INF";
 	return Foo$1;
 }(Foo || {});
+//! It's ok to use "NaN" and "Infinity" here
 console.log(Foo.NAN, Foo.POS_INF, Foo.NEG_INF);
 checkPrecedence(1 / Foo.NAN, 1 / Foo.POS_INF, 1 / Foo.NEG_INF);
+//! We must not use "NaN" or "Infinity" inside "with"
 with(x) {
 	console.log(Foo.NAN, Foo.POS_INF, Foo.NEG_INF);
 	checkPrecedence(1 / Foo.NAN, 1 / Foo.POS_INF, 1 / Foo.NEG_INF);

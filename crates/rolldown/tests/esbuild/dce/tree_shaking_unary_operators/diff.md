@@ -23,7 +23,6 @@
 
 
 //#region entry.js
-// These operators may have side effects
 let keep;
 ++keep;
 --keep;
@@ -38,7 +37,7 @@ keep--;
 ===================================================================
 --- esbuild	/out.js
 +++ rolldown	entry.js
-@@ -1,12 +1,13 @@
+@@ -1,12 +1,12 @@
 -(() => {
 -  // entry.js
 -  var keep;
@@ -54,7 +53,6 @@ keep--;
 +
 +
 +//#region entry.js
-+// These operators may have side effects
 +let keep;
 +++keep;
 +--keep;

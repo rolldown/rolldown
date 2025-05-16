@@ -9,7 +9,6 @@ export let yyyyy = ({ y }) => ({ y });
 ### rolldown
 ```js
 //#region entry.js
-// This should print as "({ y }) => ({ y })" not "({ y: y }) => ({ y: y })"
 let yyyyy = ({ xxxxx }) => ({ xxxxx });
 
 //#endregion

@@ -21,8 +21,6 @@ export { main_default as default };
 
 ```js
 //#region main.js
-// Purpose: Test that duplicate entries are handled correctly.
-// Use object to ensure the reference equality.
 var main_default = {};
 
 //#endregion

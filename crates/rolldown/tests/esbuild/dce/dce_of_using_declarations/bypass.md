@@ -26,7 +26,6 @@ console.log(
 //#region entry.js
 using null_keep = null;
 await using await_null_keep = null;
-// This has a side effect: throwing an error
 using throw_keep = {};
 using dispose_keep = { [Symbol.dispose]() {
 	console.log("side effect");
@@ -45,12 +44,11 @@ console.log(null_keep, undef_keep);
 ===================================================================
 --- esbuild	/out/entry.js
 +++ rolldown	entry.js
-@@ -1,16 +1,16 @@
+@@ -1,16 +1,15 @@
 -// entry.js
 +//#region entry.js
  using null_keep = null;
  await using await_null_keep = null;
-+// This has a side effect: throwing an error
  using throw_keep = {};
  using dispose_keep = { [Symbol.dispose]() {
 -  console.log("side effect");

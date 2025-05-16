@@ -87,7 +87,6 @@ for (let i = 0; i < 3; i++) {
 ### rolldown
 ```js
 //#region entry.js
-// This covers putting the generated temporary variable inside the loop
 for (let i = 0; i < 3; i++) objs.push({
 	__proto__: { foo() {
 		return i;

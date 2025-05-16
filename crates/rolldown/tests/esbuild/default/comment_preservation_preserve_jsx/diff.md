@@ -56,21 +56,7 @@ console.log(
 import { Fragment, jsx, jsxs } from "react/jsx-runtime";
 
 //#region entry.jsx
-console.log(
-	/* @__PURE__ */ jsx("div", { x }),
-	/* @__PURE__ */ jsx("div", { x: "y" }),
-	/* @__PURE__ */ jsx("div", { x: true }),
-	/* @__PURE__ */ jsx("div", { ...x }),
-	/* @__PURE__ */ jsx("div", { children: x }),
-	/* @__PURE__ */ jsx(Fragment, { children: x }),
-	// Comments on absent AST nodes
-	/* @__PURE__ */ jsxs("div", { children: ["before", "after"] }),
-	/* @__PURE__ */ jsxs("div", { children: ["before", "after"] }),
-	/* @__PURE__ */ jsxs("div", { children: ["before", "after"] }),
-	/* @__PURE__ */ jsxs(Fragment, { children: ["before", "after"] }),
-	/* @__PURE__ */ jsxs(Fragment, { children: ["before", "after"] }),
-	/* @__PURE__ */ jsxs(Fragment, { children: ["before", "after"] })
-);
+console.log(/* @__PURE__ */ jsx("div", { x }), /* @__PURE__ */ jsx("div", { x: "y" }), /* @__PURE__ */ jsx("div", { x: true }), /* @__PURE__ */ jsx("div", { ...x }), /* @__PURE__ */ jsx("div", { children: x }), /* @__PURE__ */ jsx(Fragment, { children: x }), /* @__PURE__ */ jsxs("div", { children: ["before", "after"] }), /* @__PURE__ */ jsxs("div", { children: ["before", "after"] }), /* @__PURE__ */ jsxs("div", { children: ["before", "after"] }), /* @__PURE__ */ jsxs(Fragment, { children: ["before", "after"] }), /* @__PURE__ */ jsxs(Fragment, { children: ["before", "after"] }), /* @__PURE__ */ jsxs(Fragment, { children: ["before", "after"] }));
 
 //#endregion
 ```
@@ -79,12 +65,9 @@ console.log(
 ===================================================================
 --- esbuild	/out/entry.js
 +++ rolldown	entry.js
-@@ -1,46 +1,20 @@
+@@ -1,46 +1,6 @@
 -// entry.jsx
-+import { Fragment, jsx, jsxs } from "react/jsx-runtime";
-+
-+//#region entry.jsx
- console.log(
+-console.log(
 -  <div x={
 -    /*before*/
 -    x
@@ -130,20 +113,10 @@ console.log(
 -  }after</>
 -);
 \ No newline at end of file
-+	/* @__PURE__ */ jsx("div", { x }),
-+	/* @__PURE__ */ jsx("div", { x: "y" }),
-+	/* @__PURE__ */ jsx("div", { x: true }),
-+	/* @__PURE__ */ jsx("div", { ...x }),
-+	/* @__PURE__ */ jsx("div", { children: x }),
-+	/* @__PURE__ */ jsx(Fragment, { children: x }),
-+	// Comments on absent AST nodes
-+	/* @__PURE__ */ jsxs("div", { children: ["before", "after"] }),
-+	/* @__PURE__ */ jsxs("div", { children: ["before", "after"] }),
-+	/* @__PURE__ */ jsxs("div", { children: ["before", "after"] }),
-+	/* @__PURE__ */ jsxs(Fragment, { children: ["before", "after"] }),
-+	/* @__PURE__ */ jsxs(Fragment, { children: ["before", "after"] }),
-+	/* @__PURE__ */ jsxs(Fragment, { children: ["before", "after"] })
-+);
++import { Fragment, jsx, jsxs } from "react/jsx-runtime";
++
++//#region entry.jsx
++console.log(/* @__PURE__ */ jsx("div", { x }), /* @__PURE__ */ jsx("div", { x: "y" }), /* @__PURE__ */ jsx("div", { x: true }), /* @__PURE__ */ jsx("div", { ...x }), /* @__PURE__ */ jsx("div", { children: x }), /* @__PURE__ */ jsx(Fragment, { children: x }), /* @__PURE__ */ jsxs("div", { children: ["before", "after"] }), /* @__PURE__ */ jsxs("div", { children: ["before", "after"] }), /* @__PURE__ */ jsxs("div", { children: ["before", "after"] }), /* @__PURE__ */ jsxs(Fragment, { children: ["before", "after"] }), /* @__PURE__ */ jsxs(Fragment, { children: ["before", "after"] }), /* @__PURE__ */ jsxs(Fragment, { children: ["before", "after"] }));
 +
 +//#endregion
 \ No newline at end of file

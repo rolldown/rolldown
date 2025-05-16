@@ -17,21 +17,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 import { Fragment, jsx, jsxs } from "react/jsx-runtime";
 
 //#region entry.jsx
-console.log(
-	/* @__PURE__ */ jsx("div", { x }),
-	/* @__PURE__ */ jsx("div", { x: "y" }),
-	/* @__PURE__ */ jsx("div", { x: true }),
-	/* @__PURE__ */ jsx("div", { ...x }),
-	/* @__PURE__ */ jsx("div", { children: x }),
-	/* @__PURE__ */ jsx(Fragment, { children: x }),
-	// Comments on absent AST nodes
-	/* @__PURE__ */ jsxs("div", { children: ["before", "after"] }),
-	/* @__PURE__ */ jsxs("div", { children: ["before", "after"] }),
-	/* @__PURE__ */ jsxs("div", { children: ["before", "after"] }),
-	/* @__PURE__ */ jsxs(Fragment, { children: ["before", "after"] }),
-	/* @__PURE__ */ jsxs(Fragment, { children: ["before", "after"] }),
-	/* @__PURE__ */ jsxs(Fragment, { children: ["before", "after"] })
-);
+console.log(/* @__PURE__ */ jsx("div", { x }), /* @__PURE__ */ jsx("div", { x: "y" }), /* @__PURE__ */ jsx("div", { x: true }), /* @__PURE__ */ jsx("div", { ...x }), /* @__PURE__ */ jsx("div", { children: x }), /* @__PURE__ */ jsx(Fragment, { children: x }), /* @__PURE__ */ jsxs("div", { children: ["before", "after"] }), /* @__PURE__ */ jsxs("div", { children: ["before", "after"] }), /* @__PURE__ */ jsxs("div", { children: ["before", "after"] }), /* @__PURE__ */ jsxs(Fragment, { children: ["before", "after"] }), /* @__PURE__ */ jsxs(Fragment, { children: ["before", "after"] }), /* @__PURE__ */ jsxs(Fragment, { children: ["before", "after"] }));
 
 //#endregion
 ```

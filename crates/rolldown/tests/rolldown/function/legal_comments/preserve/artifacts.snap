@@ -7,13 +7,11 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```js
 //#region main.js
-/* comments1 */
-/* comments2 */
 foo;
 bar;
 foo;
 bar;
-/* comments */ foo(a, b);
+foo(a, b);
 
 //#endregion
 ```

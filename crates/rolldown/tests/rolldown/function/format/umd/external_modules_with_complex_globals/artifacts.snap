@@ -16,7 +16,6 @@ node_path = __toESM(node_path);
 
 //#region main.js
 console.log(node_path.default);
-// test deconflict
 const node_path$1 = {};
 console.log(node_path$1);
 

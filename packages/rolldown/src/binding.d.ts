@@ -356,7 +356,10 @@ export interface BindingHmrBoundaryOutput {
 }
 
 export interface BindingHmrOutput {
-  patch: string
+  code: string
+  filename: string
+  sourcemap?: string
+  sourcemapFilename?: string
   hmrBoundaries: Array<BindingHmrBoundaryOutput>
   fullReload: boolean
   firstInvalidatedBy?: string

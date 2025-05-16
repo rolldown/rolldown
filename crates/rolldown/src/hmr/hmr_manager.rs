@@ -1,5 +1,4 @@
 use std::{
-  fmt::Write as _,
   ops::{Deref, DerefMut},
   sync::Arc,
 };
@@ -9,17 +8,19 @@ use oxc::ast_visit::VisitMut;
 use rolldown_common::{
   EcmaModuleAstUsage, HmrBoundary, HmrBoundaryOutput, HmrOutput, Module, ModuleIdx, ModuleTable,
 };
-use rolldown_ecmascript::{EcmaAst, EcmaCompiler};
+use rolldown_ecmascript::{EcmaAst, EcmaCompiler, PrintOptions};
 use rolldown_ecmascript_utils::AstSnippet;
 use rolldown_error::BuildResult;
 use rolldown_fs::OsFileSystem;
 use rolldown_plugin::SharedPluginDriver;
+use rolldown_sourcemap::{SourceJoiner, SourceMapSource};
 use rolldown_utils::indexmap::FxIndexSet;
 use rustc_hash::{FxHashMap, FxHashSet};
 
 use crate::{
   SharedOptions, SharedResolver, hmr::hmr_ast_finalizer::HmrAstFinalizer,
   module_loader::ModuleLoader, type_alias::IndexEcmaAst, types::scan_stage_cache::ScanStageCache,
+  utils::process_code_and_sourcemap::process_code_and_sourcemap,
 };
 
 pub struct HmrManagerInput {
@@ -290,14 +291,15 @@ impl HmrManager {
       })
       .collect::<FxHashMap<_, _>>();
 
-    let mut outputs = vec![];
+    let mut source_joiner = SourceJoiner::default();
+
     for affected_module_idx in affected_modules {
       let affected_module = &self.input.module_db.modules[affected_module_idx];
       let Module::Normal(affected_module) = affected_module else {
         unreachable!("HMR only supports normal module");
       };
 
-      let filename = affected_module.id.resource_id().clone();
+      let enable_sourcemap = self.options.sourcemap.is_some() && !affected_module.is_virtual();
       let ecma_ast_idx = affected_module.ecma_ast_idx.unwrap();
       let modules = &self.input.module_db.modules;
       let ast = &mut self.input.index_ecma_ast[ecma_ast_idx].0;
@@ -320,17 +322,28 @@ impl HmrManager {
         finalizer.visit_program(fields.program);
       });
 
-      let codegen = EcmaCompiler::print(ast, &filename, false);
-      outputs.push(codegen.code);
+      let codegen = EcmaCompiler::print_with(
+        ast,
+        PrintOptions {
+          sourcemap: enable_sourcemap,
+          filename: affected_module.id.to_string(),
+          print_legal_comments: false, // ignore hmr chunk comments
+        },
+      );
+      if let Some(map) = codegen.map {
+        source_joiner.append_source(SourceMapSource::new(codegen.code, map));
+      } else {
+        source_joiner.append_source(codegen.code);
+      }
     }
-    let mut patch = outputs.concat();
+
     hmr_boundaries.iter().for_each(|boundary| {
       let init_fn_name = &module_idx_to_init_fn_name[&boundary.boundary];
-      writeln!(patch, "{init_fn_name}()").unwrap();
+      source_joiner.append_source(format!("{init_fn_name}()"));
     });
-    write!(
-      patch,
-      "\n__rolldown_runtime__.applyUpdates([{}]);",
+
+    source_joiner.append_source(format!(
+      "__rolldown_runtime__.applyUpdates([{}]);",
       hmr_boundaries
         .iter()
         .map(|boundary| {
@@ -339,11 +352,37 @@ impl HmrManager {
         })
         .collect::<Vec<_>>()
         .join(",")
-    )
-    .unwrap();
+    ));
+
+    let (mut code, mut map) = source_joiner.join();
+
+    let filename = format!(
+      "{}.js",
+      std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap().as_millis()
+    );
+
+    let file_dir = self.options.cwd.as_path().join(&self.options.out_dir);
+
+    let sourcemap_asset = if let Some(map) = map.as_mut() {
+      process_code_and_sourcemap(
+        &self.options,
+        &mut code,
+        map,
+        &file_dir,
+        filename.as_str(),
+        0,
+        /*is_css*/ false,
+      )
+      .await?
+    } else {
+      None
+    };
 
     Ok(HmrOutput {
-      patch,
+      code,
+      filename,
+      sourcemap_filename: sourcemap_asset.as_ref().map(|asset| asset.filename.to_string()),
+      sourcemap: sourcemap_asset.map(|asset| asset.source.try_into_string()).transpose()?,
       first_invalidated_by,
       hmr_boundaries: hmr_boundaries
         .into_iter()

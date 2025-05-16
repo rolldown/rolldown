@@ -2527,6 +2527,7 @@ dependencies = [
  "rolldown_plugin_vite_resolve",
  "rolldown_plugin_wasm_fallback",
  "rolldown_plugin_wasm_helper",
+ "rolldown_plugin_web_worker_post",
  "rolldown_sourcemap",
  "rolldown_tracing",
  "rolldown_utils",
@@ -2907,6 +2908,15 @@ version = "0.1.0"
 dependencies = [
  "arcstr",
  "rolldown_common",
+ "rolldown_plugin",
+]
+
+[[package]]
+name = "rolldown_plugin_web_worker_post"
+version = "0.1.0"
+dependencies = [
+ "oxc",
+ "rolldown_ecmascript_utils",
  "rolldown_plugin",
 ]
 

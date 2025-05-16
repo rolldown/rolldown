@@ -47,6 +47,10 @@ jobs:
       - name: Type Check
         run: pnpm type-check
 
+      - name: Node Type Test
+        run: |
+          pnpm run --filter rolldown-tests test:types
+
       - name: Setup Node20 For Testing
         uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
         with:

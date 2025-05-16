@@ -337,9 +337,15 @@ export type RolldownPlugin<A = any> =
   | BuiltinPlugin
   | ParallelPlugin;
 export type RolldownPluginOption<A = any> = MaybePromise<
-  NullValue<RolldownPlugin<A>> | false | RolldownPluginOption[]
+  | NullValue<RolldownPlugin<A>>
+  | { name: string } // for rollup plugin compatibility
+  | false
+  | RolldownPluginOption[]
 >;
 export type RolldownOutputPlugin = OutputPlugin | BuiltinPlugin;
 export type RolldownOutputPluginOption = MaybePromise<
-  NullValue<RolldownOutputPlugin> | false | RolldownOutputPluginOption[]
+  | NullValue<RolldownOutputPlugin>
+  | { name: string } // for rollup plugin compatibility
+  | false
+  | RolldownOutputPluginOption[]
 >;

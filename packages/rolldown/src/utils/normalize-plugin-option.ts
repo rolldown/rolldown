@@ -9,8 +9,8 @@ import type { RolldownOutputPlugin, RolldownPlugin } from '../plugin';
 import { asyncFlatten } from './async-flatten';
 
 export const normalizePluginOption: {
-  (plugins: InputOptions['plugins']): Promise<RolldownPlugin[]>;
   (plugins: OutputOptions['plugins']): Promise<RolldownOutputPlugin[]>;
+  (plugins: InputOptions['plugins']): Promise<RolldownPlugin[]>;
   (plugins: unknown): Promise<any[]>;
 } = async (plugins: any) => (await asyncFlatten([plugins])).filter(Boolean);
 

@@ -1,6 +1,6 @@
 {
   "extends": "../../../tsconfig.json",
-  "include": ["src/*", "src/**/*", "**/_config.ts", "**/*.test.ts"],
+  "include": ["src/*", "src/**/*", "**/_config.ts", "**/*.test.ts", "**/*.test-d.ts"],
   "compilerOptions": {
     "types": ["node", "vite/client"],
     "rootDir": "./",

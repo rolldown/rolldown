@@ -1,6 +1,7 @@
 const assert = require('node:assert');
 const { existsSync, readFileSync } = require('node:fs');
 const { basename, resolve } = require('node:path');
+const stripComments = require('strip-comments');
 const oxc = require('oxc-transform')
 /**
  * @type {import('../../src/rollup/types')} Rollup
@@ -152,6 +153,9 @@ async function generateAndTestBundle(bundle, outputOptions, expectedFile, { show
 }
 
 function formatter(input) {
+  // TODO: It's better to have a print comments option in the oxc-transform.
+  input = stripComments(input);
+  
 	const { code, errors } = oxc.transform(
 		'test.js',
 		input,

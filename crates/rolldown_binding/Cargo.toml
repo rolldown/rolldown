@@ -34,6 +34,7 @@ rolldown_error = { workspace = true, features = ["napi"] }
 rolldown_plugin = { workspace = true }
 rolldown_plugin_alias = { workspace = true }
 rolldown_plugin_asset = { workspace = true }
+rolldown_plugin_asset_import_meta_url = { workspace = true }
 rolldown_plugin_build_import_analysis = { workspace = true }
 rolldown_plugin_dynamic_import_vars = { workspace = true }
 rolldown_plugin_import_glob = { workspace = true }

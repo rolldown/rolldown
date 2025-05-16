@@ -1,4 +1,4 @@
-import { availableParallelism } from 'node:os';
+import os from 'node:os';
 import { Worker } from 'node:worker_threads';
 import { ParallelJsPluginRegistry } from '../binding';
 import type { RolldownPlugin } from '../plugin';
@@ -35,7 +35,7 @@ export async function initializeParallelPlugins(
     return undefined;
   }
 
-  const count = Math.min(availableParallelism(), 8);
+  const count = availableParallelism();
   const parallelJsPluginRegistry = new ParallelJsPluginRegistry(count);
   const registryId = parallelJsPluginRegistry.id;
 
@@ -91,3 +91,16 @@ async function initializeWorker(
     throw e;
   }
 }
+
+const availableParallelism = () => {
+  let availableParallelism = 1;
+  try {
+    availableParallelism = os.availableParallelism();
+  } catch {
+    const cpus = os.cpus();
+    if (Array.isArray(cpus) && cpus.length > 0) {
+      availableParallelism = cpus.length;
+    }
+  }
+  return Math.min(availableParallelism, 8);
+};

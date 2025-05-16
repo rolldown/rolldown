@@ -1,42 +1,41 @@
 use derive_more::Debug;
-use napi::Either;
 use napi::JsUnknown;
-use napi::bindgen_prelude::FnArgs;
 use napi::bindgen_prelude::FromNapiValue;
 use napi_derive::napi;
-use oxc_transform_napi::TransformOptions;
 use rolldown_plugin::__inner::Pluginable;
-use rolldown_plugin_alias::{Alias, AliasPlugin};
+use rolldown_plugin_alias::AliasPlugin;
 use rolldown_plugin_asset::AssetPlugin;
 use rolldown_plugin_asset_import_meta_url::AssetImportMetaUrlPlugin;
 use rolldown_plugin_build_import_analysis::BuildImportAnalysisPlugin;
 use rolldown_plugin_dynamic_import_vars::DynamicImportVarsPlugin;
-use rolldown_plugin_dynamic_import_vars::ResolverFn;
-use rolldown_plugin_import_glob::{ImportGlobPlugin, ImportGlobPluginConfig};
+use rolldown_plugin_import_glob::ImportGlobPlugin;
 use rolldown_plugin_isolated_declaration::IsolatedDeclarationPlugin;
-use rolldown_plugin_json::{JsonPlugin, JsonPluginStringify};
+use rolldown_plugin_json::JsonPlugin;
 use rolldown_plugin_load_fallback::LoadFallbackPlugin;
 use rolldown_plugin_manifest::{ManifestPlugin, ManifestPluginConfig};
 use rolldown_plugin_module_federation::ModuleFederationPlugin;
 use rolldown_plugin_module_preload_polyfill::ModulePreloadPolyfillPlugin;
-use rolldown_plugin_replace::{ReplaceOptions, ReplacePlugin};
+use rolldown_plugin_replace::ReplacePlugin;
 use rolldown_plugin_reporter::ReporterPlugin;
 use rolldown_plugin_transform::TransformPlugin;
-use rolldown_plugin_vite_resolve::{ViteResolvePlugin, ViteResolveResolveOptions};
+use rolldown_plugin_vite_resolve::ViteResolvePlugin;
 use rolldown_plugin_wasm_fallback::WasmFallbackPlugin;
 use rolldown_plugin_wasm_helper::WasmHelperPlugin;
 use rolldown_plugin_web_worker_post::WebWorkerPostPlugin;
-use rustc_hash::{FxBuildHasher, FxHashSet};
-use std::collections::HashMap;
+use rustc_hash::FxHashSet;
 use std::sync::Arc;
 
-use crate::types::binding_string_or_regex::{
-  BindingStringOrRegex, bindingify_string_or_regex_array,
-};
-use crate::types::js_callback::{MaybeAsyncJsCallback, MaybeAsyncJsCallbackExt};
-
+use super::config::BindingAliasPluginConfig;
+use super::config::BindingAssetPluginConfig;
+use super::config::BindingBuildImportAnalysisPluginConfig;
+use super::config::BindingDynamicImportVarsPluginConfig;
 use super::config::BindingImportGlobPluginConfig;
+use super::config::BindingIsolatedDeclarationPluginConfig;
+use super::config::BindingJsonPluginConfig;
+use super::config::BindingManifestPluginConfig;
+use super::config::BindingReplacePluginConfig;
 use super::config::BindingReporterPluginConfig;
+use super::config::BindingTransformPluginConfig;
 use super::config::BindingViteResolvePluginConfig;
 use super::types::binding_builtin_plugin_name::BindingBuiltinPluginName;
 use super::types::binding_module_federation_plugin_option::BindingModuleFederationPluginOption;
@@ -60,293 +59,8 @@ impl std::fmt::Debug for BindingBuiltinPlugin {
 
 #[napi_derive::napi(object)]
 #[derive(Debug, Default)]
-pub struct BindingManifestPluginConfig {
-  pub root: String,
-  pub out_path: String,
-  // TODO: Link this with assets plugin
-  // pub generated_assets: Option<Map<String,  GeneratedAssetMeta>>,
-}
-
-impl From<BindingManifestPluginConfig> for ManifestPluginConfig {
-  fn from(value: BindingManifestPluginConfig) -> Self {
-    ManifestPluginConfig { root: value.root, out_path: value.out_path }
-  }
-}
-
-#[napi_derive::napi(object)]
-#[derive(Debug, Default)]
 pub struct BindingModulePreloadPolyfillPluginConfig {
   pub skip: Option<bool>,
-}
-
-#[napi_derive::napi(object)]
-#[derive(Debug, Default)]
-pub struct BindingJsonPluginConfig {
-  pub minify: Option<bool>,
-  pub named_exports: Option<bool>,
-  pub stringify: Option<BindingJsonPluginStringify>,
-}
-
-#[derive(Debug)]
-#[napi(transparent)]
-pub struct BindingJsonPluginStringify(napi::Either<bool, String>);
-
-impl TryFrom<BindingJsonPluginStringify> for JsonPluginStringify {
-  type Error = napi::Error;
-
-  fn try_from(value: BindingJsonPluginStringify) -> Result<Self, Self::Error> {
-    Ok(match value {
-      BindingJsonPluginStringify(napi::Either::A(true)) => JsonPluginStringify::True,
-      BindingJsonPluginStringify(napi::Either::A(false)) => JsonPluginStringify::False,
-      BindingJsonPluginStringify(napi::Either::B(s)) if s == "auto" => JsonPluginStringify::Auto,
-      BindingJsonPluginStringify(napi::Either::B(s)) => {
-        return Err(napi::Error::new(
-          napi::Status::InvalidArg,
-          format!("Invalid stringify option: {s}"),
-        ));
-      }
-    })
-  }
-}
-
-#[napi_derive::napi(object, object_to_js = false)]
-#[derive(Default)]
-pub struct BindingTransformPluginConfig {
-  pub include: Option<Vec<BindingStringOrRegex>>,
-  pub exclude: Option<Vec<BindingStringOrRegex>>,
-  pub jsx_refresh_include: Option<Vec<BindingStringOrRegex>>,
-  pub jsx_refresh_exclude: Option<Vec<BindingStringOrRegex>>,
-
-  pub is_server_consumer: Option<bool>,
-  pub runtime_resolve_base: Option<String>,
-
-  pub jsx_inject: Option<String>,
-  pub transform_options: Option<TransformOptions>,
-}
-
-#[napi_derive::napi(object, object_to_js = false)]
-#[derive(Debug, Default)]
-pub struct BindingAliasPluginConfig {
-  pub entries: Vec<BindingAliasPluginAlias>,
-}
-
-#[napi_derive::napi(object, object_to_js = false)]
-#[derive(Debug)]
-pub struct BindingAliasPluginAlias {
-  pub find: BindingStringOrRegex,
-  pub replacement: String,
-}
-
-#[napi_derive::napi(object)]
-#[derive(Debug, Default)]
-#[allow(clippy::struct_excessive_bools)]
-pub struct BindingBuildImportAnalysisPluginConfig {
-  pub preload_code: String,
-  pub insert_preload: bool,
-  pub optimize_module_preload_relative_paths: bool,
-  pub render_built_url: bool,
-  pub is_relative_base: bool,
-}
-
-#[napi_derive::napi(object)]
-#[derive(Debug)]
-#[allow(clippy::struct_excessive_bools)]
-pub struct BindingViteResolvePluginResolveOptions {
-  pub is_build: bool,
-  pub is_production: bool,
-  pub as_src: bool,
-  pub prefer_relative: bool,
-  pub is_require: Option<bool>,
-  pub root: String,
-  pub scan: bool,
-
-  pub main_fields: Vec<String>,
-  pub conditions: Vec<String>,
-  pub external_conditions: Vec<String>,
-  pub extensions: Vec<String>,
-  pub try_index: bool,
-  pub try_prefix: Option<String>,
-  pub preserve_symlinks: bool,
-}
-
-impl From<BindingViteResolvePluginResolveOptions> for ViteResolveResolveOptions {
-  fn from(value: BindingViteResolvePluginResolveOptions) -> Self {
-    Self {
-      is_build: value.is_build,
-      is_production: value.is_production,
-      as_src: value.as_src,
-      prefer_relative: value.prefer_relative,
-      is_require: value.is_require,
-      root: value.root,
-      scan: value.scan,
-
-      main_fields: value.main_fields,
-      conditions: value.conditions,
-      external_conditions: value.external_conditions,
-      extensions: value.extensions,
-      try_index: value.try_index,
-      try_prefix: value.try_prefix,
-      preserve_symlinks: value.preserve_symlinks,
-    }
-  }
-}
-
-impl TryFrom<BindingBuildImportAnalysisPluginConfig> for BuildImportAnalysisPlugin {
-  type Error = anyhow::Error;
-
-  fn try_from(value: BindingBuildImportAnalysisPluginConfig) -> Result<Self, Self::Error> {
-    Ok(BuildImportAnalysisPlugin {
-      preload_code: value.preload_code,
-      insert_preload: value.insert_preload,
-      render_built_url: value.render_built_url,
-      is_relative_base: value.is_relative_base,
-    })
-  }
-}
-
-impl TryFrom<BindingAliasPluginConfig> for AliasPlugin {
-  type Error = anyhow::Error;
-
-  fn try_from(value: BindingAliasPluginConfig) -> Result<Self, Self::Error> {
-    let mut ret = Vec::with_capacity(value.entries.len());
-    for item in value.entries {
-      ret.push(Alias { find: item.find.into(), replacement: item.replacement });
-    }
-
-    Ok(Self { entries: ret })
-  }
-}
-
-impl From<BindingTransformPluginConfig> for TransformPlugin {
-  fn from(value: BindingTransformPluginConfig) -> Self {
-    let sourcemap = value.transform_options.as_ref().and_then(|v| v.sourcemap).unwrap_or(true);
-    let transform_options = value.transform_options.map(|v| {
-      let jsx = v.jsx.map(|jsx| match jsx {
-        Either::A(jsx) => itertools::Either::Left(jsx),
-        Either::B(jsx) => {
-          let refresh = jsx.refresh.map(|refresh| match refresh {
-            Either::A(refresh) => itertools::Either::Left(refresh),
-            Either::B(refresh) => {
-              itertools::Either::Right(rolldown_plugin_transform::ReactRefreshOptions {
-                refresh_reg: refresh.refresh_reg,
-                refresh_sig: refresh.refresh_sig,
-                emit_full_signatures: refresh.emit_full_signatures,
-              })
-            }
-          });
-          itertools::Either::Right(rolldown_plugin_transform::JsxOptions {
-            runtime: jsx.runtime,
-            development: jsx.development,
-            throw_if_namespace: jsx.throw_if_namespace,
-            pure: jsx.pure,
-            import_source: jsx.import_source,
-            pragma: jsx.pragma,
-            pragma_frag: jsx.pragma_frag,
-            use_built_ins: jsx.use_built_ins,
-            use_spread: jsx.use_spread,
-            refresh,
-          })
-        }
-      });
-
-      let target = v.target.map(|target| match target {
-        Either::A(v) => itertools::Either::Left(v),
-        Either::B(v) => itertools::Either::Right(v),
-      });
-
-      let decorator = v.decorator.map(|decorator| rolldown_plugin_transform::DecoratorOptions {
-        legacy: decorator.legacy,
-        emit_decorator_metadata: decorator.emit_decorator_metadata,
-      });
-
-      let typescript = v.typescript.map(|typescript| {
-        let declaration = typescript.declaration.map(|declaration| {
-          rolldown_plugin_transform::IsolatedDeclarationsOptions {
-            strip_internal: declaration.strip_internal,
-            sourcemap: declaration.sourcemap,
-          }
-        });
-        let rewrite_import_extensions = typescript.rewrite_import_extensions.map(|v| match v {
-          Either::A(v) => itertools::Either::Left(v),
-          Either::B(v) => itertools::Either::Right(v),
-        });
-
-        rolldown_plugin_transform::TypeScriptOptions {
-          declaration,
-          jsx_pragma: typescript.jsx_pragma,
-          jsx_pragma_frag: typescript.jsx_pragma_frag,
-          only_remove_type_imports: typescript.only_remove_type_imports,
-          allow_namespaces: typescript.allow_namespaces,
-          allow_declare_fields: typescript.allow_declare_fields,
-          rewrite_import_extensions,
-        }
-      });
-
-      let assumptions = v.assumptions.map(|v| rolldown_plugin_transform::CompilerAssumptions {
-        ignore_function_length: v.ignore_function_length,
-        no_document_all: v.no_document_all,
-        object_rest_no_symbols: v.object_rest_no_symbols,
-        pure_getters: v.pure_getters,
-        set_public_class_fields: v.set_public_class_fields,
-      });
-
-      rolldown_plugin_transform::TransformOptions {
-        lang: v.lang,
-        jsx,
-        target,
-        decorator,
-        typescript,
-        assumptions,
-      }
-    });
-
-    Self {
-      include: value.include.map(bindingify_string_or_regex_array).unwrap_or_default(),
-      exclude: value.exclude.map(bindingify_string_or_regex_array).unwrap_or_default(),
-      jsx_refresh_include: value
-        .jsx_refresh_include
-        .map(bindingify_string_or_regex_array)
-        .unwrap_or_default(),
-      jsx_refresh_exclude: value
-        .jsx_refresh_exclude
-        .map(bindingify_string_or_regex_array)
-        .unwrap_or_default(),
-
-      jsx_inject: value.jsx_inject,
-
-      is_server_consumer: value.is_server_consumer.unwrap_or(true),
-      runtime_resolve_base: value.runtime_resolve_base,
-
-      sourcemap,
-      transform_options: transform_options.unwrap_or_default(),
-    }
-  }
-}
-
-#[napi_derive::napi(object, object_to_js = false)]
-#[derive(Default)]
-pub struct BindingDynamicImportVarsPluginConfig {
-  pub include: Option<Vec<BindingStringOrRegex>>,
-  pub exclude: Option<Vec<BindingStringOrRegex>>,
-  #[napi(ts_type = "(id: string, importer: string) => MaybePromise<string | undefined>")]
-  pub resolver: Option<MaybeAsyncJsCallback<FnArgs<(String, String)>, Option<String>>>,
-}
-
-impl From<BindingDynamicImportVarsPluginConfig> for DynamicImportVarsPlugin {
-  fn from(value: BindingDynamicImportVarsPluginConfig) -> Self {
-    Self {
-      include: value.include.map(bindingify_string_or_regex_array).unwrap_or_default(),
-      exclude: value.exclude.map(bindingify_string_or_regex_array).unwrap_or_default(),
-      resolver: value.resolver.map(|resolver| -> Arc<ResolverFn> {
-        Arc::new(move |id: String, importer: String| {
-          let resolver = Arc::clone(&resolver);
-          Box::pin(async move {
-            resolver.await_call((id, importer).into()).await.map_err(anyhow::Error::from)
-          })
-        })
-      }),
-    }
-  }
 }
 
 impl TryFrom<BindingBuiltinPlugin> for Arc<dyn Pluginable> {
@@ -371,16 +85,9 @@ impl TryFrom<BindingBuiltinPlugin> for Arc<dyn Pluginable> {
         };
         Arc::new(plugin)
       }
-      BindingBuiltinPluginName::AssetImportMetaUrl => {
-        let plugin = if let Some(options) = plugin.options {
-          BindingAssetImportMetaUrlPluginConfig::from_unknown(options)?.into()
-        } else {
-          AssetImportMetaUrlPlugin
-        };
-        Arc::new(plugin)
-      }
+      BindingBuiltinPluginName::AssetImportMetaUrl => Arc::new(AssetImportMetaUrlPlugin),
       BindingBuiltinPluginName::BuildImportAnalysis => {
-        let config: BindingBuildImportAnalysisPluginConfig = if let Some(options) = plugin.options {
+        let config = if let Some(options) = plugin.options {
           BindingBuildImportAnalysisPluginConfig::from_unknown(options)?
         } else {
           return Err(napi::Error::new(
@@ -399,12 +106,12 @@ impl TryFrom<BindingBuiltinPlugin> for Arc<dyn Pluginable> {
         Arc::new(plugin)
       }
       BindingBuiltinPluginName::ImportGlob => {
-        let config = if let Some(options) = plugin.options {
+        let plugin = if let Some(options) = plugin.options {
           BindingImportGlobPluginConfig::from_unknown(options)?.into()
         } else {
-          ImportGlobPluginConfig::default()
+          ImportGlobPlugin::default()
         };
-        Arc::new(ImportGlobPlugin { config })
+        Arc::new(plugin)
       }
       BindingBuiltinPluginName::IsolatedDeclaration => {
         let plugin = if let Some(options) = plugin.options {
@@ -415,16 +122,12 @@ impl TryFrom<BindingBuiltinPlugin> for Arc<dyn Pluginable> {
         Arc::new(plugin)
       }
       BindingBuiltinPluginName::Json => {
-        let config = if let Some(options) = plugin.options {
-          BindingJsonPluginConfig::from_unknown(options)?
+        let plugin = if let Some(options) = plugin.options {
+          BindingJsonPluginConfig::from_unknown(options)?.try_into()?
         } else {
-          BindingJsonPluginConfig::default()
+          JsonPlugin::default()
         };
-        Arc::new(JsonPlugin {
-          minify: config.minify.unwrap_or_default(),
-          named_exports: config.named_exports.unwrap_or_default(),
-          stringify: config.stringify.map(TryInto::try_into).transpose()?.unwrap_or_default(),
-        })
+        Arc::new(plugin)
       }
       BindingBuiltinPluginName::LoadFallback => Arc::new(LoadFallbackPlugin),
       BindingBuiltinPluginName::Manifest => {
@@ -460,20 +163,11 @@ impl TryFrom<BindingBuiltinPlugin> for Arc<dyn Pluginable> {
       }
       BindingBuiltinPluginName::Replace => {
         let config = if let Some(options) = plugin.options {
-          Some(BindingReplacePluginConfig::from_unknown(options)?)
+          BindingReplacePluginConfig::from_unknown(options)?
         } else {
-          None
+          BindingReplacePluginConfig::default()
         };
-
-        Arc::new(ReplacePlugin::with_options(config.map_or_else(ReplaceOptions::default, |opts| {
-          ReplaceOptions {
-            values: opts.values,
-            delimiters: opts.delimiters.map(|raw| (raw[0].clone(), raw[1].clone())),
-            prevent_assignment: opts.prevent_assignment.unwrap_or(false),
-            object_guards: opts.object_guards.unwrap_or(false),
-            sourcemap: opts.sourcemap.unwrap_or(false),
-          }
-        })))
+        Arc::new(ReplacePlugin::with_options(config.into()))
       }
       BindingBuiltinPluginName::Transform => {
         let plugin = if let Some(options) = plugin.options {
@@ -492,69 +186,11 @@ impl TryFrom<BindingBuiltinPlugin> for Arc<dyn Pluginable> {
             "Missing options for ViteResolvePlugin",
           ));
         };
-
         Arc::new(ViteResolvePlugin::new(config.into()))
       }
       BindingBuiltinPluginName::WasmFallback => Arc::new(WasmFallbackPlugin),
       BindingBuiltinPluginName::WasmHelper => Arc::new(WasmHelperPlugin),
       BindingBuiltinPluginName::WebWorkerPost => Arc::new(WebWorkerPostPlugin),
     })
-  }
-}
-
-#[napi_derive::napi(object)]
-#[derive(Debug, Default)]
-pub struct BindingIsolatedDeclarationPluginConfig {
-  pub strip_internal: Option<bool>,
-}
-
-impl From<BindingIsolatedDeclarationPluginConfig> for IsolatedDeclarationPlugin {
-  fn from(value: BindingIsolatedDeclarationPluginConfig) -> Self {
-    IsolatedDeclarationPlugin { strip_internal: value.strip_internal.unwrap_or_default() }
-  }
-}
-
-#[napi_derive::napi(object)]
-#[derive(Debug, Default)]
-pub struct BindingReplacePluginConfig {
-  // It's ok we use `HashMap` here, because we don't care about the order of the keys.
-  pub values: HashMap<String, String, FxBuildHasher>,
-  #[napi(ts_type = "[string, string]")]
-  pub delimiters: Option<Vec<String>>,
-  pub prevent_assignment: Option<bool>,
-  pub object_guards: Option<bool>,
-  pub sourcemap: Option<bool>,
-}
-
-#[napi_derive::napi(object, object_to_js = false)]
-#[derive(Debug, Default)]
-pub struct BindingAssetPluginConfig {
-  pub is_server: Option<bool>,
-  pub url_base: Option<String>,
-  pub public_dir: Option<String>,
-  pub assets_include: Option<Vec<BindingStringOrRegex>>,
-}
-
-impl From<BindingAssetPluginConfig> for AssetPlugin {
-  fn from(config: BindingAssetPluginConfig) -> Self {
-    Self {
-      url_base: config.url_base.unwrap_or_default(),
-      is_server: config.is_server.unwrap_or_default(),
-      public_dir: config.public_dir,
-      assets_include: config
-        .assets_include
-        .map(bindingify_string_or_regex_array)
-        .unwrap_or_default(),
-    }
-  }
-}
-
-#[napi_derive::napi(object, object_to_js = false)]
-#[derive(Debug, Default)]
-pub struct BindingAssetImportMetaUrlPluginConfig;
-
-impl From<BindingAssetImportMetaUrlPluginConfig> for AssetImportMetaUrlPlugin {
-  fn from(_config: BindingAssetImportMetaUrlPluginConfig) -> Self {
-    Self
   }
 }

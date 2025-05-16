@@ -33,13 +33,16 @@ use rustc_hash::{FxBuildHasher, FxHashSet};
 use std::collections::HashMap;
 use std::sync::Arc;
 
-use super::types::binding_builtin_plugin_name::BindingBuiltinPluginName;
-use super::types::binding_js_or_regex::{BindingStringOrRegex, bindingify_string_or_regex_array};
-use super::types::binding_limited_boolean::BindingTrueValue;
-use super::types::binding_module_federation_plugin_option::BindingModuleFederationPluginOption;
+use crate::types::binding_string_or_regex::{
+  BindingStringOrRegex, bindingify_string_or_regex_array,
+};
 use crate::types::js_callback::{
   JsCallback, JsCallbackExt, MaybeAsyncJsCallback, MaybeAsyncJsCallbackExt,
 };
+
+use super::types::binding_builtin_plugin_name::BindingBuiltinPluginName;
+use super::types::binding_limited_boolean::BindingTrueValue;
+use super::types::binding_module_federation_plugin_option::BindingModuleFederationPluginOption;
 
 #[allow(clippy::pub_underscore_fields)]
 #[napi(object)]

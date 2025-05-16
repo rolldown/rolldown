@@ -1,4 +1,4 @@
-use crate::options::plugin::types::binding_js_or_regex::BindingStringOrRegex;
+use crate::types::binding_string_or_regex::BindingStringOrRegex;
 
 #[napi_derive::napi(object, object_to_js = false)]
 #[derive(Debug)]

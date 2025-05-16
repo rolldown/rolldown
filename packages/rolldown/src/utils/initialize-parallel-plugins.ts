@@ -93,14 +93,14 @@ async function initializeWorker(
 }
 
 const availableParallelism = () => {
-  let availableParallelism = 1
+  let availableParallelism = 1;
   try {
-    availableParallelism = os.availableParallelism()
+    availableParallelism = os.availableParallelism();
   } catch {
-    const cpus = os.cpus()
+    const cpus = os.cpus();
     if (Array.isArray(cpus) && cpus.length > 0) {
-      availableParallelism = cpus.length
+      availableParallelism = cpus.length;
     }
   }
   return Math.min(availableParallelism, 8);
-}
+};

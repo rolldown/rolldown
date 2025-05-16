@@ -453,129 +453,11 @@ impl TryFrom<BindingBuiltinPlugin> for Arc<dyn Pluginable> {
   #[allow(clippy::too_many_lines)]
   fn try_from(plugin: BindingBuiltinPlugin) -> Result<Self, Self::Error> {
     Ok(match plugin.__name {
-      BindingBuiltinPluginName::WasmHelper => Arc::new(WasmHelperPlugin {}),
-      BindingBuiltinPluginName::WasmFallback => Arc::new(WasmFallbackPlugin {}),
-      BindingBuiltinPluginName::ImportGlob => {
-        let config = if let Some(options) = plugin.options {
-          BindingGlobImportPluginConfig::from_unknown(options)?.into()
-        } else {
-          ImportGlobPluginConfig::default()
-        };
-        Arc::new(ImportGlobPlugin { config })
-      }
-      BindingBuiltinPluginName::DynamicImportVars => {
-        let plugin = if let Some(options) = plugin.options {
-          BindingDynamicImportVarsPluginConfig::from_unknown(options)?.into()
-        } else {
-          DynamicImportVarsPlugin::default()
-        };
-        Arc::new(plugin)
-      }
-      BindingBuiltinPluginName::ModulePreloadPolyfill => Arc::new(ModulePreloadPolyfillPlugin {}),
-      BindingBuiltinPluginName::Manifest => {
-        let config = if let Some(options) = plugin.options {
-          BindingManifestPluginConfig::from_unknown(options)?.into()
-        } else {
-          ManifestPluginConfig::default()
-        };
-        Arc::new(ManifestPlugin { config, entry_css_asset_file_names: FxHashSet::default() })
-      }
-      BindingBuiltinPluginName::LoadFallback => Arc::new(LoadFallbackPlugin {}),
-      BindingBuiltinPluginName::Transform => {
-        let plugin = if let Some(options) = plugin.options {
-          BindingTransformPluginConfig::from_unknown(options)?.into()
-        } else {
-          TransformPlugin::default()
-        };
-        Arc::new(plugin)
-      }
       BindingBuiltinPluginName::Alias => {
         let plugin = if let Some(options) = plugin.options {
           BindingAliasPluginConfig::from_unknown(options)?.try_into()?
         } else {
           AliasPlugin::default()
-        };
-        Arc::new(plugin)
-      }
-      BindingBuiltinPluginName::Json => {
-        let config = if let Some(options) = plugin.options {
-          BindingJsonPluginConfig::from_unknown(options)?
-        } else {
-          BindingJsonPluginConfig::default()
-        };
-        Arc::new(JsonPlugin {
-          minify: config.minify.unwrap_or_default(),
-          named_exports: config.named_exports.unwrap_or_default(),
-          stringify: config.stringify.map(TryInto::try_into).transpose()?.unwrap_or_default(),
-        })
-      }
-      BindingBuiltinPluginName::BuildImportAnalysis => {
-        let config: BindingBuildImportAnalysisPluginConfig = if let Some(options) = plugin.options {
-          BindingBuildImportAnalysisPluginConfig::from_unknown(options)?
-        } else {
-          return Err(napi::Error::new(
-            napi::Status::InvalidArg,
-            "Missing options for BuildImportAnalysisPlugin",
-          ));
-        };
-        Arc::new(BuildImportAnalysisPlugin::try_from(config)?)
-      }
-      BindingBuiltinPluginName::Replace => {
-        let config = if let Some(options) = plugin.options {
-          Some(BindingReplacePluginConfig::from_unknown(options)?)
-        } else {
-          None
-        };
-
-        Arc::new(ReplacePlugin::with_options(config.map_or_else(ReplaceOptions::default, |opts| {
-          ReplaceOptions {
-            values: opts.values,
-            delimiters: opts.delimiters.map(|raw| (raw[0].clone(), raw[1].clone())),
-            prevent_assignment: opts.prevent_assignment.unwrap_or(false),
-            object_guards: opts.object_guards.unwrap_or(false),
-            sourcemap: opts.sourcemap.unwrap_or(false),
-          }
-        })))
-      }
-      BindingBuiltinPluginName::ViteResolve => {
-        let config = if let Some(options) = plugin.options {
-          BindingViteResolvePluginConfig::from_unknown(options)?
-        } else {
-          return Err(napi::Error::new(
-            napi::Status::InvalidArg,
-            "Missing options for ViteResolvePlugin",
-          ));
-        };
-
-        Arc::new(ViteResolvePlugin::new(config.into()))
-      }
-      BindingBuiltinPluginName::ModuleFederation => {
-        let config = if let Some(options) = plugin.options {
-          BindingModuleFederationPluginOption::from_unknown(options)?
-        } else {
-          return Err(napi::Error::new(
-            napi::Status::InvalidArg,
-            "Missing options for ModuleFederationPlugin",
-          ));
-        };
-        Arc::new(ModuleFederationPlugin::new(config.into()))
-      }
-      BindingBuiltinPluginName::IsolatedDeclaration => {
-        let plugin = if let Some(options) = plugin.options {
-          BindingIsolatedDeclarationPluginConfig::from_unknown(options)?.into()
-        } else {
-          IsolatedDeclarationPlugin::default()
-        };
-        Arc::new(plugin)
-      }
-      BindingBuiltinPluginName::Report => {
-        let plugin: ReporterPlugin = if let Some(options) = plugin.options {
-          BindingReportPluginConfig::from_unknown(options)?.into()
-        } else {
-          return Err(napi::Error::new(
-            napi::Status::InvalidArg,
-            "Missing options for ReportPlugin",
-          ));
         };
         Arc::new(plugin)
       }
@@ -595,6 +477,124 @@ impl TryFrom<BindingBuiltinPlugin> for Arc<dyn Pluginable> {
         };
         Arc::new(plugin)
       }
+      BindingBuiltinPluginName::BuildImportAnalysis => {
+        let config: BindingBuildImportAnalysisPluginConfig = if let Some(options) = plugin.options {
+          BindingBuildImportAnalysisPluginConfig::from_unknown(options)?
+        } else {
+          return Err(napi::Error::new(
+            napi::Status::InvalidArg,
+            "Missing options for BuildImportAnalysisPlugin",
+          ));
+        };
+        Arc::new(BuildImportAnalysisPlugin::try_from(config)?)
+      }
+      BindingBuiltinPluginName::DynamicImportVars => {
+        let plugin = if let Some(options) = plugin.options {
+          BindingDynamicImportVarsPluginConfig::from_unknown(options)?.into()
+        } else {
+          DynamicImportVarsPlugin::default()
+        };
+        Arc::new(plugin)
+      }
+      BindingBuiltinPluginName::ImportGlob => {
+        let config = if let Some(options) = plugin.options {
+          BindingGlobImportPluginConfig::from_unknown(options)?.into()
+        } else {
+          ImportGlobPluginConfig::default()
+        };
+        Arc::new(ImportGlobPlugin { config })
+      }
+      BindingBuiltinPluginName::IsolatedDeclaration => {
+        let plugin = if let Some(options) = plugin.options {
+          BindingIsolatedDeclarationPluginConfig::from_unknown(options)?.into()
+        } else {
+          IsolatedDeclarationPlugin::default()
+        };
+        Arc::new(plugin)
+      }
+      BindingBuiltinPluginName::Json => {
+        let config = if let Some(options) = plugin.options {
+          BindingJsonPluginConfig::from_unknown(options)?
+        } else {
+          BindingJsonPluginConfig::default()
+        };
+        Arc::new(JsonPlugin {
+          minify: config.minify.unwrap_or_default(),
+          named_exports: config.named_exports.unwrap_or_default(),
+          stringify: config.stringify.map(TryInto::try_into).transpose()?.unwrap_or_default(),
+        })
+      }
+      BindingBuiltinPluginName::LoadFallback => Arc::new(LoadFallbackPlugin),
+      BindingBuiltinPluginName::Manifest => {
+        let config = if let Some(options) = plugin.options {
+          BindingManifestPluginConfig::from_unknown(options)?.into()
+        } else {
+          ManifestPluginConfig::default()
+        };
+        Arc::new(ManifestPlugin { config, entry_css_asset_file_names: FxHashSet::default() })
+      }
+      BindingBuiltinPluginName::ModuleFederation => {
+        let config = if let Some(options) = plugin.options {
+          BindingModuleFederationPluginOption::from_unknown(options)?
+        } else {
+          return Err(napi::Error::new(
+            napi::Status::InvalidArg,
+            "Missing options for ModuleFederationPlugin",
+          ));
+        };
+        Arc::new(ModuleFederationPlugin::new(config.into()))
+      }
+      BindingBuiltinPluginName::ModulePreloadPolyfill => Arc::new(ModulePreloadPolyfillPlugin),
+      BindingBuiltinPluginName::Report => {
+        let plugin: ReporterPlugin = if let Some(options) = plugin.options {
+          BindingReportPluginConfig::from_unknown(options)?.into()
+        } else {
+          return Err(napi::Error::new(
+            napi::Status::InvalidArg,
+            "Missing options for ReportPlugin",
+          ));
+        };
+        Arc::new(plugin)
+      }
+      BindingBuiltinPluginName::Replace => {
+        let config = if let Some(options) = plugin.options {
+          Some(BindingReplacePluginConfig::from_unknown(options)?)
+        } else {
+          None
+        };
+
+        Arc::new(ReplacePlugin::with_options(config.map_or_else(ReplaceOptions::default, |opts| {
+          ReplaceOptions {
+            values: opts.values,
+            delimiters: opts.delimiters.map(|raw| (raw[0].clone(), raw[1].clone())),
+            prevent_assignment: opts.prevent_assignment.unwrap_or(false),
+            object_guards: opts.object_guards.unwrap_or(false),
+            sourcemap: opts.sourcemap.unwrap_or(false),
+          }
+        })))
+      }
+      BindingBuiltinPluginName::Transform => {
+        let plugin = if let Some(options) = plugin.options {
+          BindingTransformPluginConfig::from_unknown(options)?.into()
+        } else {
+          TransformPlugin::default()
+        };
+        Arc::new(plugin)
+      }
+      BindingBuiltinPluginName::ViteResolve => {
+        let config = if let Some(options) = plugin.options {
+          BindingViteResolvePluginConfig::from_unknown(options)?
+        } else {
+          return Err(napi::Error::new(
+            napi::Status::InvalidArg,
+            "Missing options for ViteResolvePlugin",
+          ));
+        };
+
+        Arc::new(ViteResolvePlugin::new(config.into()))
+      }
+      BindingBuiltinPluginName::WasmFallback => Arc::new(WasmFallbackPlugin),
+      BindingBuiltinPluginName::WasmHelper => Arc::new(WasmHelperPlugin),
       BindingBuiltinPluginName::WebWorkerPost => Arc::new(WebWorkerPostPlugin),
     })
   }

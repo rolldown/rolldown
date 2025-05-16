@@ -270,7 +270,7 @@ impl GenerateStage<'_> {
     &self,
     chunk_graph: &ChunkGraph,
   ) -> Vec<Vec<Option<ModuleRenderOutput>>> {
-    let chunk_to_codegen_ret = chunk_graph
+    chunk_graph
       .chunk_table
       .par_iter()
       .filter(|chunk| chunk.is_alive)
@@ -287,8 +287,7 @@ impl GenerateStage<'_> {
           })
           .collect::<Vec<_>>()
       })
-      .collect::<Vec<_>>();
-    chunk_to_codegen_ret
+      .collect::<Vec<_>>()
   }
 
   #[allow(clippy::too_many_arguments)]

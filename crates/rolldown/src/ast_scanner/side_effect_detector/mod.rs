@@ -101,9 +101,7 @@ impl<'a> SideEffectDetector<'a> {
           return true;
         }
 
-        let value_side_effect = def.r#static
-          && def.value.as_ref().is_some_and(|init| self.detect_side_effect_of_expr(init));
-        value_side_effect
+        def.r#static && def.value.as_ref().is_some_and(|init| self.detect_side_effect_of_expr(init))
       }
       ClassElement::AccessorProperty(def) => {
         (match &def.key {
@@ -618,7 +616,7 @@ mod test {
     let scoping = semantic.into_scoping();
     let ast_scopes = AstScopes::new(scoping);
 
-    let has_side_effect = ast.program().body.iter().any(|stmt| {
+    ast.program().body.iter().any(|stmt| {
       SideEffectDetector::new(
         &ast_scopes,
         false,
@@ -626,9 +624,7 @@ mod test {
         &Arc::new(NormalizedBundlerOptions::default()),
       )
       .detect_side_effect_of_stmt(stmt)
-    });
-
-    has_side_effect
+    })
   }
 
   #[test]

@@ -434,12 +434,10 @@ impl<'ast> AstSnippet<'ast> {
     }
 
     // var require_foo = ...
-    let var_decl_stmt = self.var_decl_stmt(
+    self.var_decl_stmt(
       binding_name,
       ast::Expression::CallExpression(commonjs_call_expr.into_in(self.alloc())),
-    );
-
-    var_decl_stmt
+    )
   }
 
   /// ```js

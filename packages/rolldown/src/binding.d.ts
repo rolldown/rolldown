@@ -564,10 +564,6 @@ export interface BindingModuleFederationPluginOption {
   getPublicPath?: string
 }
 
-export interface BindingModulePreloadPolyfillPluginConfig {
-  skip?: boolean
-}
-
 export interface BindingModules {
   values: Array<BindingRenderedModule>
   keys: Array<string>

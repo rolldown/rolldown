@@ -39,4 +39,6 @@ pub enum BindingBuiltinPluginName {
   Asset,
   #[napi(value = "builtin:asset-import-meta-url")]
   AssetImportMetaUrl,
+  #[napi(value = "builtin:web-worker-post")]
+  WebWorkerPost,
 }

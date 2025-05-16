@@ -50,6 +50,7 @@ rolldown_plugin_transform = { workspace = true }
 rolldown_plugin_vite_resolve = { workspace = true }
 rolldown_plugin_wasm_fallback = { workspace = true }
 rolldown_plugin_wasm_helper = { workspace = true }
+rolldown_plugin_web_worker_post = { workspace = true }
 rolldown_sourcemap = { workspace = true }
 rolldown_tracing = { workspace = true }
 rolldown_utils = { workspace = true }

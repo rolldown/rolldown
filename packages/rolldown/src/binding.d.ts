@@ -274,7 +274,8 @@ export type BindingBuiltinPluginName =  'builtin:wasm-helper'|
 'builtin:isolated-declaration'|
 'builtin:report'|
 'builtin:asset'|
-'builtin:asset-import-meta-url';
+'builtin:asset-import-meta-url'|
+'builtin:web-worker-post';
 
 export interface BindingBundlerOptions {
   inputOptions: BindingInputOptions

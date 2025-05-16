@@ -28,6 +28,7 @@ use rolldown_plugin_vite_resolve::{
 };
 use rolldown_plugin_wasm_fallback::WasmFallbackPlugin;
 use rolldown_plugin_wasm_helper::WasmHelperPlugin;
+use rolldown_plugin_web_worker_post::WebWorkerPostPlugin;
 use rustc_hash::{FxBuildHasher, FxHashSet};
 use std::collections::HashMap;
 use std::sync::Arc;
@@ -591,6 +592,7 @@ impl TryFrom<BindingBuiltinPlugin> for Arc<dyn Pluginable> {
         };
         Arc::new(plugin)
       }
+      BindingBuiltinPluginName::WebWorkerPost => Arc::new(WebWorkerPostPlugin),
     })
   }
 }

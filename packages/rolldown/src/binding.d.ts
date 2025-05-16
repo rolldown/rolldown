@@ -236,6 +236,8 @@ export interface BindingAssetImportMetaUrlPluginConfig {
 }
 
 export interface BindingAssetPluginConfig {
+  isServer?: boolean
+  urlBase?: string
   publicDir?: string
   assetsInclude?: Array<BindingStringOrRegex>
 }

@@ -1,20 +1,17 @@
-use std::{ops::Deref, path::Path};
+use std::ops::Deref;
 
 use futures::future::try_join_all;
-use oxc::ast::CommentKind;
 use oxc_index::{IndexVec, index_vec};
 use rolldown_common::{
   Asset, EmittedChunkInfo, InstantiationKind, ModuleRenderArgs, ModuleRenderOutput, Output,
   OutputAsset, OutputChunk, SharedFileEmitter, SourceMapType,
 };
 use rolldown_error::{BuildDiagnostic, BuildResult};
-use rolldown_sourcemap::SourceMap;
 use rolldown_utils::{
   concat_string,
   indexmap::FxIndexSet,
   rayon::{IntoParallelRefIterator, ParallelIterator},
 };
-use sugar_path::SugarPath;
 
 use crate::{
   BundleOutput,
@@ -26,7 +23,7 @@ use crate::{
   types::generator::{GenerateContext, Generator},
   utils::{
     augment_chunk_hash::augment_chunk_hash, chunk::finalize_chunks::finalize_assets,
-    render_chunks::render_chunks, uuid::uuid_v4_string_from_u128,
+    process_code_and_sourcemap::process_code_and_sourcemap, render_chunks::render_chunks,
   },
 };
 
@@ -77,17 +74,19 @@ impl GenerateStage<'_> {
           let mut code = code.try_into_string()?;
           let rendered_chunk = ecma_meta.rendered_chunk;
           if let Some(map) = map.as_mut() {
-            self
-              .process_code_and_sourcemap(
-                &mut code,
-                map,
-                &mut output_assets,
-                &file_dir,
-                filename.as_str(),
-                ecma_meta.debug_id,
-                /*is_css*/ false,
-              )
-              .await?;
+            if let Some(sourcemap_asset) = process_code_and_sourcemap(
+              self.options,
+              &mut code,
+              map,
+              &file_dir,
+              filename.as_str(),
+              ecma_meta.debug_id,
+              /*is_css*/ false,
+            )
+            .await?
+            {
+              output_assets.push(Output::Asset(Box::new(sourcemap_asset)));
+            }
           }
 
           let sourcemap_filename =
@@ -116,17 +115,19 @@ impl GenerateStage<'_> {
         InstantiationKind::Css(css_meta) => {
           let mut code = code.try_into_string()?;
           if let Some(map) = map.as_mut() {
-            self
-              .process_code_and_sourcemap(
-                &mut code,
-                map,
-                &mut output_assets,
-                &file_dir,
-                css_meta.filename.as_str(),
-                css_meta.debug_id,
-                /*is_css*/ true,
-              )
-              .await?;
+            if let Some(sourcemap_asset) = process_code_and_sourcemap(
+              self.options,
+              &mut code,
+              map,
+              &file_dir,
+              filename.as_str(),
+              css_meta.debug_id,
+              /*is_css*/ true,
+            )
+            .await?
+            {
+              output_assets.push(Output::Asset(Box::new(sourcemap_asset)));
+            }
           }
 
           output.push(Output::Asset(Box::new(OutputAsset {
@@ -288,126 +289,6 @@ impl GenerateStage<'_> {
           .collect::<Vec<_>>()
       })
       .collect::<Vec<_>>()
-  }
-
-  #[allow(clippy::too_many_arguments)]
-  async fn process_code_and_sourcemap(
-    &self,
-    code: &mut String,
-    map: &mut SourceMap,
-    output_assets: &mut Vec<Output>,
-    file_dir: &Path,
-    filename: &str,
-    debug_id: u128,
-    is_css: bool,
-  ) -> BuildResult<()> {
-    let source_map_link_comment_kind = if is_css { CommentKind::Block } else { CommentKind::Line };
-    let file_base_name = Path::new(filename).file_name().expect("should have file name");
-    map.set_file(file_base_name.to_string_lossy().as_ref());
-
-    let map_filename = format!("{filename}.map");
-    let map_path = file_dir.join(&map_filename);
-
-    if let Some(source_map_ignore_list) = &self.options.sourcemap_ignore_list {
-      let mut x_google_ignore_list = vec![];
-      for (index, source) in map.get_sources().enumerate() {
-        if source_map_ignore_list.call(source, map_path.to_string_lossy().as_ref()).await? {
-          #[allow(clippy::cast_possible_truncation)]
-          x_google_ignore_list.push(index as u32);
-        }
-      }
-      if !x_google_ignore_list.is_empty() {
-        map.set_x_google_ignore_list(x_google_ignore_list);
-      }
-    }
-
-    if let Some(sourcemap_path_transform) = &self.options.sourcemap_path_transform {
-      let mut sources = Vec::with_capacity(map.get_sources().count());
-      for source in map.get_sources() {
-        sources
-          .push(sourcemap_path_transform.call(source, map_path.to_string_lossy().as_ref()).await?);
-      }
-      map.set_sources(sources.iter().map(std::convert::AsRef::as_ref).collect::<Vec<_>>());
-    }
-
-    if self.options.sourcemap_debug_ids && self.options.sourcemap.is_some() {
-      let debug_id_str = uuid_v4_string_from_u128(debug_id);
-      map.set_debug_id(&debug_id_str);
-
-      process_sourcemap_related_reference(
-        code,
-        |source| {
-          source.push_str("# debugId=");
-          source.push_str(debug_id_str.as_str());
-        },
-        source_map_link_comment_kind,
-      );
-    }
-
-    // Normalize the windows path at final.
-    let sources = map.get_sources().map(|x| x.to_slash_lossy().to_string()).collect::<Vec<_>>();
-    map.set_sources(sources.iter().map(std::convert::AsRef::as_ref).collect::<Vec<_>>());
-
-    if let Some(sourcemap) = &self.options.sourcemap {
-      match sourcemap {
-        SourceMapType::File | SourceMapType::Hidden => {
-          let source = map.to_json_string();
-          output_assets.push(Output::Asset(Box::new(OutputAsset {
-            filename: map_filename.as_str().into(),
-            source: source.into(),
-            original_file_names: vec![],
-            names: vec![],
-          })));
-          if matches!(sourcemap, SourceMapType::File) {
-            process_sourcemap_related_reference(
-              code,
-              |source| {
-                source.push_str("# sourceMappingURL=");
-                source.push_str(
-                  &Path::new(&map_filename)
-                    .file_name()
-                    .expect("should have filename")
-                    .to_string_lossy(),
-                );
-              },
-              source_map_link_comment_kind,
-            );
-          }
-        }
-        SourceMapType::Inline => {
-          let data_url = map.to_data_url();
-          process_sourcemap_related_reference(
-            code,
-            |source| {
-              source.push_str("# sourceMappingURL=");
-              source.push_str(&data_url);
-            },
-            source_map_link_comment_kind,
-          );
-        }
-      }
-    }
-
-    Ok(())
-  }
-}
-
-fn process_sourcemap_related_reference(
-  source: &mut String,
-  mut reference_body_processor: impl FnMut(&mut String),
-  comment_kind: CommentKind,
-) {
-  source.push('\n');
-  match comment_kind {
-    CommentKind::Line => {
-      source.push_str("//");
-      reference_body_processor(source);
-    }
-    CommentKind::Block => {
-      source.push_str("/*");
-      reference_body_processor(source);
-      source.push_str("*/");
-    }
   }
 }
 

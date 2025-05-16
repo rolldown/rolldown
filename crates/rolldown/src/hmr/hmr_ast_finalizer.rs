@@ -14,7 +14,7 @@ use oxc::{
 
 use rolldown_common::{IndexModules, Module, ModuleIdx, NormalModule};
 use rolldown_ecmascript_utils::{
-  AstSnippet, BindingIdentifierExt, ExpressionExt, quote_expr, quote_stmt, quote_stmts,
+  AstSnippet, BindingIdentifierExt, ExpressionExt, quote_expr, quote_stmts,
 };
 use rolldown_utils::indexmap::FxIndexSet;
 use rustc_hash::{FxHashMap, FxHashSet};
@@ -35,18 +35,6 @@ pub struct HmrAstFinalizer<'me, 'ast> {
 }
 
 impl<'ast> HmrAstFinalizer<'_, 'ast> {
-  pub fn generate_stmt_of_init_module_hot_context(&self) -> ast::Statement<'ast> {
-    let hot_name = format!("hot_{}", self.module.repr_name);
-    // import.meta.hot = __rolldown_runtime__.createModuleHotContext(moduleId);
-    quote_stmt(
-      self.alloc,
-      &format!(
-        "const {hot_name} = __rolldown_runtime__.createModuleHotContext({:?});",
-        self.module.stable_id
-      ),
-    )
-  }
-
   pub fn generate_runtime_module_register_for_hmr(&mut self) -> Vec<ast::Statement<'ast>> {
     let mut ret = vec![];
 
@@ -256,7 +244,10 @@ impl<'ast> VisitMut<'ast> for HmrAstFinalizer<'_, 'ast> {
     );
     try_block.body.extend(runtime_module_register);
     try_block.body.extend(dependencies_init_fn_stmts);
-    try_block.body.push(self.generate_stmt_of_init_module_hot_context());
+    try_block.body.push(self.snippet.stmt_of_init_module_hot_context(
+      &format!("hot_{}", self.module.repr_name),
+      &self.module.stable_id,
+    ));
     try_block.body.extend(it.body.take_in(self.alloc));
 
     let final_block = self.snippet.builder.alloc_block_statement(SPAN, self.snippet.builder.vec());

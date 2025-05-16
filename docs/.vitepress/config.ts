@@ -43,6 +43,7 @@ const sharedSidebar = [
       { text: 'Module Types', link: '/guide/in-depth/module-types.md' },
       { text: 'Top Level Await', link: '/guide/in-depth/tla-in-rolldown.md' },
       { text: 'Advanced Chunks', link: '/guide/in-depth/advanced-chunks.md' },
+      { text: 'Bundling CJS', link: '/guide/in-depth/bundling-cjs.md' },
       // { text: 'Use Strict', link: '/guide/in-depth/use-strict.md' },
     ],
   },

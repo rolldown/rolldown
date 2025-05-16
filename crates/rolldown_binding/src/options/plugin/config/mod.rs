@@ -1,0 +1,3 @@
+mod binding_vite_resolve_plugin_config;
+
+pub use binding_vite_resolve_plugin_config::BindingViteResolvePluginConfig;

@@ -4,7 +4,6 @@ use std::{
 };
 
 use arcstr::ArcStr;
-use itertools::Either;
 use oxc::ast_visit::VisitMut;
 use rolldown_common::{
   EcmaModuleAstUsage, HmrBoundary, HmrBoundaryOutput, HmrOutput, Module, ModuleIdx, ModuleTable,
@@ -328,7 +327,7 @@ impl HmrManager {
         PrintOptions {
           sourcemap: enable_sourcemap,
           filename: affected_module.id.to_string(),
-          comments: Either::Left(false), // ignore hmr chunk comments
+          print_legal_comments: false, // ignore hmr chunk comments
         },
       );
       if let Some(map) = codegen.map {

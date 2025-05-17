@@ -4,15 +4,18 @@ mod utils;
 use std::path::Path;
 use std::{borrow::Cow, sync::Arc};
 
+use arcstr::ArcStr;
+use itertools::Itertools;
 use oxc::codegen::{Codegen, CodegenOptions, CodegenReturn};
 use oxc::parser::Parser;
 use oxc::semantic::SemanticBuilder;
 use oxc::transformer::Transformer;
 use rolldown_common::ModuleType;
+use rolldown_error::{BuildDiagnostic, Severity};
 use rolldown_plugin::{
   HookUsage, Plugin, PluginContextResolveOptions, SharedTransformPluginContext,
 };
-use rolldown_utils::{pattern_filter::StringOrRegex, url::clean_url};
+use rolldown_utils::{pattern_filter::StringOrRegex, stabilize_id::stabilize_id, url::clean_url};
 
 pub use types::{
   CompilerAssumptions, DecoratorOptions, IsolatedDeclarationsOptions, JsxOptions,
@@ -88,21 +91,35 @@ impl Plugin for TransformPlugin {
 
     let allocator = oxc::allocator::Allocator::default();
     let ret = Parser::new(&allocator, args.code, source_type).parse();
-
     if ret.panicked || !ret.errors.is_empty() {
-      // TODO: Improve diagnostics handling
-      Err(anyhow::anyhow!("Error occurred when parsing {}\n: {:?}", args.id, ret.errors))?;
+      let errors = BuildDiagnostic::from_oxc_diagnostics(
+        ret.errors,
+        &ArcStr::from(args.code.as_str()),
+        &stabilize_id(args.id, ctx.inner.cwd()),
+        &Severity::Error,
+      )
+      .iter()
+      .map(|error| error.to_diagnostic().with_kind(self.name().into_owned()).to_color_string())
+      .join("\n\n");
+      Err(anyhow::anyhow!("\n{errors}"))?;
     }
 
     let mut program = ret.program;
     let scoping = SemanticBuilder::new().build(&program).semantic.into_scoping();
     let transformer = Transformer::new(&allocator, Path::new(args.id), &transform_options);
 
-    let ret = transformer.build_with_scoping(scoping, &mut program);
-
-    if !ret.errors.is_empty() {
-      // TODO: better error handling
-      Err(anyhow::anyhow!("Transform failed, got {:#?}", ret.errors))?;
+    let transformer_return = transformer.build_with_scoping(scoping, &mut program);
+    if !transformer_return.errors.is_empty() {
+      let errors = BuildDiagnostic::from_oxc_diagnostics(
+        transformer_return.errors,
+        &ArcStr::from(args.code.as_str()),
+        &stabilize_id(args.id, ctx.inner.cwd()),
+        &Severity::Error,
+      )
+      .iter()
+      .map(|error| error.to_diagnostic().with_kind(self.name().into_owned()).to_color_string())
+      .join("\n\n");
+      Err(anyhow::anyhow!("\n{errors}"))?;
     }
 
     let ret = Codegen::new()

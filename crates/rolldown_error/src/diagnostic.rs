@@ -152,6 +152,11 @@ impl Diagnostic {
   pub fn to_color_string(&self) -> String {
     self.convert_to_string(true)
   }
+
+  pub fn with_kind(mut self, kind: String) -> Self {
+    self.kind = kind;
+    self
+  }
 }
 
 impl Display for Diagnostic {

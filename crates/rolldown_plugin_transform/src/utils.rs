@@ -69,7 +69,7 @@ impl TransformPlugin {
     let source_type = if is_jsx_refresh_lang {
       SourceType::mjs()
     } else {
-      match self.transform_options.lang.as_deref().xor(ext) {
+      match self.transform_options.lang.as_deref().or(ext) {
         Some("js" | "cjs" | "mjs") => SourceType::mjs(),
         Some("jsx") => SourceType::jsx(),
         Some("ts" | "cts" | "mts") => SourceType::ts(),

@@ -14,8 +14,6 @@ use serde::Deserialize;
 pub enum LegalComments {
   /// Don't preserve any comment
   None,
-  /// Keep comments as much as possible
-  Preserve,
   /// Preserve all legal comments
   Inline,
 }
@@ -24,7 +22,6 @@ impl Display for LegalComments {
   fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
     match self {
       LegalComments::None => write!(f, "none"),
-      LegalComments::Preserve => write!(f, "preserve"),
       LegalComments::Inline => write!(f, "inline"),
     }
   }

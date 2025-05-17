@@ -4329,10 +4329,6 @@ expression: output
 
 - main-!~{000}~.js => main-DXEt0uDC.js
 
-# tests/rolldown/function/legal_comments/preserve
-
-- main-!~{000}~.js => main-DXEt0uDC.js
-
 # tests/rolldown/function/minify/basic
 
 - main-!~{000}~.js => main-iuKz2ghl.js

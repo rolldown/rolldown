@@ -215,7 +215,16 @@ pub fn normalize_binding_options(
     }
     module_types = Some(tmp);
   }
-  let target = output_options.target.as_deref().map(std::str::FromStr::from_str).transpose()?;
+  let target = output_options.target.map(|target| match target {
+    Either::A(target) => {
+      if target.contains(',') {
+        target.split(',').map(String::from).collect()
+      } else {
+        vec![target]
+      }
+    }
+    Either::B(target) => target,
+  });
   let transform = input_options
     .transform
     .map(|transform_option| {

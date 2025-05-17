@@ -474,14 +474,13 @@
           ]
         },
         "target": {
-          "anyOf": [
-            {
-              "$ref": "#/definitions/ESTarget"
-            },
-            {
-              "type": "null"
-            }
-          ]
+          "type": [
+            "array",
+            "null"
+          ],
+          "items": {
+            "type": "string"
+          }
         },
         "treeshake": {
           "$ref": "#/definitions/TreeshakeOptions"
@@ -638,23 +637,6 @@
         }
       },
       "additionalProperties": false
-    },
-    "ESTarget": {
-      "type": "string",
-      "enum": [
-        "es5",
-        "es2015",
-        "es2016",
-        "es2017",
-        "es2018",
-        "es2019",
-        "es2020",
-        "es2021",
-        "es2022",
-        "es2023",
-        "es2024",
-        "esNext"
-      ]
     },
     "EsModuleFlag": {
       "description": "This configuration determines how the bundler should handle the synthetic `__esModule` property in the CJS and IIFE format. It is rollup-capable, and the rollup default is `IfDefaultProp`. You may find rollup explanation [here](https://rollupjs.org/configuration-options/#output-esmodule).\n\n> Whether to add a `__esModule: true` property when generating exports for non-ES formats. > This property signifies that the exported value is the namespace of an ES module and that the default > export of this module corresponds to the `.default` property of the exported object. > > *From rollupjs.org*",

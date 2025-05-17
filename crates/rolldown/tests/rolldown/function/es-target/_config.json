@@ -1,5 +1,5 @@
 {
     "config": {
-        "target": "es5"
+        "target": ["es5"]
     }
 }

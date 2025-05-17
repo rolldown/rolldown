@@ -6,6 +6,6 @@
         "import": "entry.js"
       }
     ],
-    "target": "es5"
+    "target": ["es5"]
   }
 }

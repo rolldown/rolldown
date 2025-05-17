@@ -18,7 +18,6 @@ use super::legal_comments::LegalComments;
 use super::minify_options::MinifyOptions;
 use super::output_option::{AssetFilenamesOutputOption, ChunkFilenamesOutputOption};
 use super::sanitize_filename::SanitizeFilename;
-use super::target::ESTarget;
 use super::treeshake::NormalizedTreeshakeOptions;
 use super::watch_option::WatchOption;
 use super::{
@@ -27,8 +26,8 @@ use super::{
   sourcemap_ignore_list::SourceMapIgnoreList, sourcemap_path_transform::SourceMapPathTransform,
 };
 use crate::{
-  DeferSyncScanDataOption, EmittedAsset, EsModuleFlag, FilenameTemplate, GlobalsOutputOption,
-  HashCharacters, InjectImport, InputItem, InvalidateJsSideCache, LogLevel,
+  DeferSyncScanDataOption, ESTarget, EmittedAsset, EsModuleFlag, FilenameTemplate,
+  GlobalsOutputOption, HashCharacters, InjectImport, InputItem, InvalidateJsSideCache, LogLevel,
   MakeAbsoluteExternalsRelative, MarkModuleLoaded, ModuleType, OnLog, RollupPreRenderedAsset,
 };
 

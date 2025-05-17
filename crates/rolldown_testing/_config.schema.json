@@ -866,13 +866,6 @@
           ]
         },
         {
-          "description": "Keep comments as much as possible",
-          "type": "string",
-          "enum": [
-            "preserve"
-          ]
-        },
-        {
           "description": "Preserve all legal comments",
           "type": "string",
           "enum": [

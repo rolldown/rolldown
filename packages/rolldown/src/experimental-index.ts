@@ -25,7 +25,7 @@ export {
   manifestPlugin,
   moduleFederationPlugin,
   modulePreloadPolyfillPlugin,
-  reportPlugin,
+  reporterPlugin,
   viteResolvePlugin,
   wasmFallbackPlugin,
   wasmHelperPlugin,

@@ -267,7 +267,7 @@ export type BindingBuiltinPluginName =  'builtin:alias'|
 'builtin:manifest'|
 'builtin:module-federation'|
 'builtin:module-preload-polyfill'|
-'builtin:report'|
+'builtin:reporter'|
 'builtin:replace'|
 'builtin:transform'|
 'builtin:vite-resolve'|

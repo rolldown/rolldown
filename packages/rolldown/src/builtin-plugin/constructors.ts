@@ -39,10 +39,10 @@ export function importGlobPlugin(
   return new BuiltinPlugin('builtin:import-glob', config);
 }
 
-export function reportPlugin(
+export function reporterPlugin(
   config?: BindingReporterPluginConfig,
 ): BuiltinPlugin {
-  return new BuiltinPlugin('builtin:report', config);
+  return new BuiltinPlugin('builtin:reporter', config);
 }
 
 export function manifestPlugin(

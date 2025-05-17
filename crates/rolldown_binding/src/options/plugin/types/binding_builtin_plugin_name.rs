@@ -27,7 +27,7 @@ pub enum BindingBuiltinPluginName {
   ModuleFederation,
   #[napi(value = "builtin:module-preload-polyfill")]
   ModulePreloadPolyfill,
-  #[napi(value = "builtin:report")]
+  #[napi(value = "builtin:reporter")]
   Report,
   #[napi(value = "builtin:replace")]
   Replace,

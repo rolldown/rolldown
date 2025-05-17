@@ -1,5 +1,5 @@
 use oxc::codegen::CodegenOptions;
-use rolldown_common::MinifyOptions;
+use rolldown_common::{LegalComments, MinifyOptions};
 use rolldown_ecmascript::EcmaCompiler;
 use rolldown_error::BuildResult;
 use rolldown_sourcemap::collapse_sourcemaps;
@@ -30,6 +30,7 @@ impl GenerateStage<'_> {
               } else {
                 CodegenOptions { comments: false, ..CodegenOptions::default() }
               },
+              matches!(self.options.legal_comments, LegalComments::Inline),
             );
             asset.content = minified_content.into();
             match (&asset.map, &new_map) {

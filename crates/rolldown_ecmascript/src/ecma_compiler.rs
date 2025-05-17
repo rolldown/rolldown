@@ -97,6 +97,7 @@ impl EcmaCompiler {
       .build(ast.program())
   }
 
+  #[allow(clippy::needless_pass_by_value)] // hyf0: Seems a bug of clippy. `codegen_options` is indeed used as value.
   pub fn minify(
     source_text: &str,
     enable_sourcemap: bool,
@@ -104,6 +105,7 @@ impl EcmaCompiler {
     minifier_options: MinifierOptions,
     run_compress: bool,
     codegen_options: CodegenOptions,
+    print_legal_comments: bool,
   ) -> (String, Option<SourceMap>) {
     let allocator = Allocator::default();
     let program =
@@ -113,6 +115,11 @@ impl EcmaCompiler {
     let ret = Codegen::new()
       .with_options(CodegenOptions {
         comments: false,
+        legal_comments: if print_legal_comments {
+          LegalComment::Inline
+        } else {
+          LegalComment::None
+        },
         source_map_path: enable_sourcemap.then(|| PathBuf::from(filename)),
         ..codegen_options
       })

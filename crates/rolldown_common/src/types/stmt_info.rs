@@ -101,7 +101,6 @@ pub struct StmtInfo {
   #[cfg(debug_assertions)]
   pub debug_label: Option<String>,
   pub meta: StmtInfoMeta,
-  pub force_tree_shaking: bool,
 }
 
 #[cfg(target_pointer_width = "64")]

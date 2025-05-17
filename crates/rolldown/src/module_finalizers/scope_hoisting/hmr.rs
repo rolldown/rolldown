@@ -5,7 +5,7 @@ use oxc::{
   },
   span::SPAN,
 };
-use rolldown_ecmascript_utils::{ExpressionExt, quote_stmt};
+use rolldown_ecmascript_utils::ExpressionExt;
 
 use super::ScopeHoistingFinalizer;
 
@@ -17,7 +17,8 @@ impl<'ast> ScopeHoistingFinalizer<'_, 'ast> {
     }
 
     // `import.meta.hot = __rolldown_runtime__.createModuleHotContext(moduleId);`
-    ret.push(self.generate_stmt_of_init_module_hot_context());
+    let hot_name = self.canonical_name_for(self.ctx.module.ecma_view.hmr_hot_ref.unwrap());
+    ret.push(self.snippet.stmt_of_init_module_hot_context(hot_name, &self.ctx.module.stable_id));
 
     ret.extend(self.generate_runtime_module_register_for_hmr());
 
@@ -95,18 +96,6 @@ impl<'ast> ScopeHoistingFinalizer<'_, 'ast> {
     ));
 
     ret
-  }
-
-  pub fn generate_stmt_of_init_module_hot_context(&self) -> ast::Statement<'ast> {
-    let hot_name = self.canonical_name_for(self.ctx.module.ecma_view.hmr_hot_ref.unwrap());
-    // import.meta.hot = __rolldown_runtime__.createModuleHotContext(moduleId);
-    quote_stmt(
-      self.alloc,
-      &format!(
-        "const {} = __rolldown_runtime__.createModuleHotContext({:?});",
-        hot_name, self.ctx.module.stable_id
-      ),
-    )
   }
 
   pub fn rewrite_import_meta_hot(&self, expr: &mut ast::Expression<'ast>) {

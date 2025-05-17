@@ -231,10 +231,6 @@ export interface BindingAliasPluginConfig {
   entries: Array<BindingAliasPluginAlias>
 }
 
-export interface BindingAssetImportMetaUrlPluginConfig {
-
-}
-
 export interface BindingAssetPluginConfig {
   isServer?: boolean
   urlBase?: string

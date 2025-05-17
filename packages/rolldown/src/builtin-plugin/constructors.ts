@@ -1,5 +1,4 @@
 import type {
-  BindingAssetImportMetaUrlPluginConfig,
   BindingAssetPluginConfig,
   BindingBuildImportAnalysisPluginConfig,
   BindingBuiltinPluginName,
@@ -131,8 +130,6 @@ export function assetPlugin(
   return new BuiltinPlugin('builtin:asset', config);
 }
 
-export function assetImportMetaUrlPlugin(
-  config?: BindingAssetImportMetaUrlPluginConfig,
-): BuiltinPlugin {
-  return new BuiltinPlugin('builtin:asset-import-meta-url', config);
+export function assetImportMetaUrlPlugin(): BuiltinPlugin {
+  return new BuiltinPlugin('builtin:asset-import-meta-url');
 }

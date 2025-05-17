@@ -14,7 +14,7 @@ pub struct BindingReporterPluginConfig {
 
 impl From<BindingReporterPluginConfig> for ReporterPlugin {
   fn from(config: BindingReporterPluginConfig) -> Self {
-    ReporterPlugin::new(
+    Self::new(
       config.is_tty,
       config.should_log_info,
       config.chunk_limit as usize,

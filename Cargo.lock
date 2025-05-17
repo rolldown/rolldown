@@ -2862,9 +2862,11 @@ name = "rolldown_plugin_transform"
 version = "0.1.0"
 dependencies = [
  "anyhow",
+ "arcstr",
  "itertools",
  "oxc",
  "rolldown_common",
+ "rolldown_error",
  "rolldown_plugin",
  "rolldown_utils",
 ]

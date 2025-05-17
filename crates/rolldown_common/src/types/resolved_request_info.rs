@@ -1,10 +1,9 @@
 use std::{path::Path, sync::Arc};
 
 use arcstr::ArcStr;
+use rolldown_utils::stabilize_id::stabilize_id;
 
 use crate::{ModuleDefFormat, PackageJson, side_effects::HookSideEffects};
-
-use super::module_id::stabilize_module_id;
 
 #[derive(Debug, Clone, Copy)]
 pub enum ResolvedExternal {
@@ -72,7 +71,7 @@ impl ResolvedId {
       return format!("<{}>", self.id);
     }
 
-    let stable = stabilize_module_id(&self.id, cwd.as_ref());
+    let stable = stabilize_id(&self.id, cwd.as_ref());
     if self.ignored { format!("(ignored) {stable}") } else { stable }
   }
 

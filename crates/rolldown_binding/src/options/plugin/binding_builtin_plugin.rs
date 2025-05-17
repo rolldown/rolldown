@@ -1,7 +1,10 @@
-use derive_more::Debug;
+use std::sync::Arc;
+
 use napi::JsUnknown;
 use napi::bindgen_prelude::FromNapiValue;
 use napi_derive::napi;
+use rustc_hash::FxHashSet;
+
 use rolldown_plugin::__inner::Pluginable;
 use rolldown_plugin_alias::AliasPlugin;
 use rolldown_plugin_asset::AssetPlugin;
@@ -22,23 +25,20 @@ use rolldown_plugin_vite_resolve::ViteResolvePlugin;
 use rolldown_plugin_wasm_fallback::WasmFallbackPlugin;
 use rolldown_plugin_wasm_helper::WasmHelperPlugin;
 use rolldown_plugin_web_worker_post::WebWorkerPostPlugin;
-use rustc_hash::FxHashSet;
-use std::sync::Arc;
 
-use super::config::BindingAliasPluginConfig;
-use super::config::BindingAssetPluginConfig;
-use super::config::BindingBuildImportAnalysisPluginConfig;
-use super::config::BindingDynamicImportVarsPluginConfig;
-use super::config::BindingImportGlobPluginConfig;
-use super::config::BindingIsolatedDeclarationPluginConfig;
-use super::config::BindingJsonPluginConfig;
-use super::config::BindingManifestPluginConfig;
-use super::config::BindingReplacePluginConfig;
-use super::config::BindingReporterPluginConfig;
-use super::config::BindingTransformPluginConfig;
-use super::config::BindingViteResolvePluginConfig;
-use super::types::binding_builtin_plugin_name::BindingBuiltinPluginName;
-use super::types::binding_module_federation_plugin_option::BindingModuleFederationPluginOption;
+use super::{
+  config::{
+    BindingAliasPluginConfig, BindingAssetPluginConfig, BindingBuildImportAnalysisPluginConfig,
+    BindingDynamicImportVarsPluginConfig, BindingImportGlobPluginConfig,
+    BindingIsolatedDeclarationPluginConfig, BindingJsonPluginConfig, BindingManifestPluginConfig,
+    BindingReplacePluginConfig, BindingReporterPluginConfig, BindingTransformPluginConfig,
+    BindingViteResolvePluginConfig,
+  },
+  types::{
+    binding_builtin_plugin_name::BindingBuiltinPluginName,
+    binding_module_federation_plugin_option::BindingModuleFederationPluginOption,
+  },
+};
 
 #[allow(clippy::pub_underscore_fields)]
 #[napi(object)]
@@ -55,12 +55,6 @@ impl std::fmt::Debug for BindingBuiltinPlugin {
       .field("options", &"<JsUnknown>")
       .finish()
   }
-}
-
-#[napi_derive::napi(object)]
-#[derive(Debug, Default)]
-pub struct BindingModulePreloadPolyfillPluginConfig {
-  pub skip: Option<bool>,
 }
 
 impl TryFrom<BindingBuiltinPlugin> for Arc<dyn Pluginable> {

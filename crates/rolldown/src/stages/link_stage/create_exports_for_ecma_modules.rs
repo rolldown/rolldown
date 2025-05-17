@@ -55,7 +55,6 @@ impl LinkStage<'_> {
             #[cfg(debug_assertions)]
             debug_label: None,
             meta: StmtInfoMeta::default(),
-            ..Default::default()
           };
           ecma_module.stmt_infos.add_stmt_info(stmt_info);
         });
@@ -100,7 +99,6 @@ impl LinkStage<'_> {
             #[cfg(debug_assertions)]
             debug_label: None,
             meta: StmtInfoMeta::default(),
-            ..Default::default()
           };
           ecma_module.stmt_infos.replace_namespace_stmt_info(namespace_stmt_info);
         }

@@ -27,6 +27,12 @@ pub async fn process_code_and_sourcemap(
   let map_filename = format!("{filename}.map");
   let map_path = file_dir.join(&map_filename);
 
+  let paths =
+    map.get_sources().map(|source| source.as_path().relative(file_dir)).collect::<Vec<_>>();
+  // Here not normalize the windows path, the rollup `sourcemap_path_transform` ctx.options need to original path.
+  let sources = paths.iter().map(|x| x.to_string_lossy()).collect::<Vec<_>>();
+  map.set_sources(sources.iter().map(std::convert::AsRef::as_ref).collect::<Vec<_>>());
+
   if let Some(source_map_ignore_list) = &options.sourcemap_ignore_list {
     let mut x_google_ignore_list = vec![];
     for (index, source) in map.get_sources().enumerate() {

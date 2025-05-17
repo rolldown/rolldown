@@ -121,6 +121,6 @@ pub struct BindingOutputOptions {
   pub legal_comments: Option<String>,
   pub polyfill_require: Option<bool>,
   pub preserve_modules: Option<bool>,
-  pub target: Option<String>,
+  pub target: Option<Either<String, Vec<String>>>,
   pub virtual_dirname: Option<String>,
 }

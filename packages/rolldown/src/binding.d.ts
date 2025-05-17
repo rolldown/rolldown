@@ -620,7 +620,7 @@ export interface BindingOutputOptions {
   legalComments?: 'none' | 'inline'
   polyfillRequire?: boolean
   preserveModules?: boolean
-  target?: string
+  target?: string | Array<string>
   virtualDirname?: string
 }
 

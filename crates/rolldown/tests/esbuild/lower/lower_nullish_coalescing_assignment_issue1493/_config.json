@@ -6,6 +6,6 @@
         "import": "entry.js"
       }
     ],
-    "target": "es2015"
+    "target": ["es2015"]
   }
 }

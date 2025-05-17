@@ -1,6 +1,4 @@
-// cspell:ignore Estarget
 use oxc::transformer::ESTarget as OxcEstarget;
-use std::str::FromStr;
 
 #[cfg(feature = "deserialize_bundler_options")]
 use schemars::JsonSchema;
@@ -26,25 +24,37 @@ pub enum ESTarget {
   EsNext,
 }
 
-impl FromStr for ESTarget {
-  type Err = anyhow::Error;
+impl From<Vec<String>> for ESTarget {
+  fn from(value: Vec<String>) -> ESTarget {
+    for target in value {
+      if target.len() <= 2 || !target[..2].eq_ignore_ascii_case("es") {
+        continue;
+      }
 
-  fn from_str(s: &str) -> Result<Self, Self::Err> {
-    match s {
-      "es5" => Ok(Self::Es5),
-      "es2015" | "es6" => Ok(Self::Es2015),
-      "es2016" => Ok(Self::Es2016),
-      "es2017" => Ok(Self::Es2017),
-      "es2018" => Ok(Self::Es2018),
-      "es2019" => Ok(Self::Es2019),
-      "es2020" => Ok(Self::Es2020),
-      "es2021" => Ok(Self::Es2021),
-      "es2022" => Ok(Self::Es2022),
-      "es2023" => Ok(Self::Es2023),
-      "es2024" => Ok(Self::Es2024),
-      "esnext" => Ok(Self::EsNext),
-      _ => Err(anyhow::anyhow!("Invalid target \"{s}\".")),
+      let reset = &target[2..];
+
+      if reset.eq_ignore_ascii_case("next") {
+        return Self::EsNext;
+      }
+
+      if let Ok(n) = reset.parse::<usize>() {
+        return match n {
+          5 => ESTarget::Es5,
+          6 | 2015 => ESTarget::Es2015,
+          2016 => ESTarget::Es2016,
+          2017 => ESTarget::Es2017,
+          2018 => ESTarget::Es2018,
+          2019 => ESTarget::Es2019,
+          2020 => ESTarget::Es2020,
+          2021 => ESTarget::Es2021,
+          2022 => ESTarget::Es2022,
+          2023 => ESTarget::Es2023,
+          2024 => ESTarget::Es2024,
+          _ => continue,
+        };
+      }
     }
+    Self::EsNext
   }
 }
 

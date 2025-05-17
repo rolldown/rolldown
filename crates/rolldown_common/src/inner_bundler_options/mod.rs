@@ -14,7 +14,6 @@ use types::minify_options::RawMinifyOptions;
 use types::on_log::OnLog;
 use types::output_option::{AssetFilenamesOutputOption, GlobalsOutputOption};
 use types::sanitize_filename::SanitizeFilename;
-use types::target::ESTarget;
 use types::watch_option::WatchOption;
 
 #[cfg(feature = "deserialize_bundler_options")]
@@ -183,7 +182,7 @@ pub struct BundlerOptions {
   pub transform: Option<oxc::transformer::TransformOptions>,
   pub watch: Option<WatchOption>,
   pub legal_comments: Option<LegalComments>,
-  pub target: Option<ESTarget>,
+  pub target: Option<Vec<String>>,
   pub polyfill_require: Option<bool>,
 
   #[cfg_attr(

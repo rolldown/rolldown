@@ -110,7 +110,6 @@ fn json_object_expr_to_esm(
   module_idx: ModuleIdx,
   ast_idx: EcmaAstIdx,
 ) -> bool {
-  let target = link_staged.options.target;
   let module = &mut link_staged.module_table.modules[module_idx];
   let Module::Normal(module) = module else {
     return false;
@@ -165,7 +164,7 @@ fn json_object_expr_to_esm(
               .builder
               .expression_identifier(SPAN, snippet.builder.atom(legitimized_ident.as_str())),
           );
-          if key == "__proto__" && !matches!(target, ESTarget::Es5) {
+          if key == "__proto__" && !matches!(link_staged.options.target, ESTarget::Es5) {
             property.computed = true;
           } else if is_legal_ident {
             property.shorthand = is_legal_ident;

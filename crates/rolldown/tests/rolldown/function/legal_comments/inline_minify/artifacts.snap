@@ -1,0 +1,13 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## main.js
+
+```js
+//! Credit to Astro | MIT License
+function e(){}const t=`bar`;
+/*! Bundle license information: */
+console.log(`hello`);export{t as bar,e as hello};
+```

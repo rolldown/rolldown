@@ -4323,7 +4323,11 @@ expression: output
 
 # tests/rolldown/function/legal_comments/inline
 
-- main-!~{000}~.js => main-bn1Pw2ND.js
+- main-!~{000}~.js => main-DRZIeHwa.js
+
+# tests/rolldown/function/legal_comments/inline_minify
+
+- main-!~{000}~.js => main-DRZIeHwa.js
 
 # tests/rolldown/function/legal_comments/none
 

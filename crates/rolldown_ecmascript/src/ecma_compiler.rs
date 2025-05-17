@@ -81,18 +81,6 @@ impl EcmaCompiler {
     Ok(EcmaAst { program: inner, source_type: ty })
   }
 
-  pub fn print(ast: &EcmaAst, filename: &str, enable_source_map: bool) -> CodegenReturn {
-    Codegen::new()
-      .with_options(CodegenOptions {
-        comments: false,
-        annotation_comments: true,
-        legal_comments: LegalComment::Inline,
-        source_map_path: enable_source_map.then(|| PathBuf::from(filename)),
-        ..CodegenOptions::default()
-      })
-      .build(ast.program())
-  }
-
   pub fn print_with(ast: &EcmaAst, options: PrintOptions) -> CodegenReturn {
     let legal_comments =
       if options.print_legal_comments { LegalComment::Inline } else { LegalComment::None };
@@ -166,9 +154,10 @@ impl EcmaCompiler {
 #[test]
 fn basic_test() {
   let ast = EcmaCompiler::parse("", "const a = 1;".to_string(), SourceType::default()).unwrap();
-  let code = EcmaCompiler::print(&ast, "", false).code;
+  let code = EcmaCompiler::print_with(&ast, PrintOptions::default()).code;
   assert_eq!(code, "const a = 1;\n");
 }
+#[derive(Debug, Default)]
 
 pub struct PrintOptions {
   pub print_legal_comments: bool,

@@ -126,15 +126,5 @@ impl LinkStage<'_> {
       Some(self.runtime.id()),
       "runtime module should always be the first module in the sorted modules"
     );
-
-    // Determine safely merged cjs ns binding should put in where
-    // We should put it in the importRecord which first reference the cjs ns binding.
-    for symbol_refs in self.safely_merge_cjs_ns_map.values_mut() {
-      // Note: the sort function is stable so we don't need to provide second element
-      symbol_refs.sort_by_cached_key(|a| {
-        let owner = a.owner;
-        self.module_table.modules[owner].exec_order()
-      });
-    }
   }
 }

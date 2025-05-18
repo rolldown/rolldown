@@ -175,7 +175,39 @@ impl GenerateStage<'_> {
 
     chunk_graph.sorted_chunk_idx_vec = sorted_chunk_idx_vec;
     chunk_graph.entry_module_to_entry_chunk = entry_module_to_entry_chunk;
+    for (k, v) in &self.link_output.safely_merge_cjs_ns_map {
+      for symbol_ref in v
+        .iter()
+        .filter(|item| {
+          self.link_output.module_table.modules[item.owner].as_normal().unwrap().is_included()
+            && self.link_output.metas[item.owner].wrap_kind.is_none()
+        })
+        // Determine safely merged cjs ns binding should put in where
+        // We should put it in the importRecord which first reference the cjs ns binding.
+        .sorted_by_key(|item| self.link_output.module_table.modules[item.owner].exec_order())
+      {
+        let owner = symbol_ref.owner;
+        let chunk_idx = chunk_graph.module_to_chunk[owner].expect("Module should be in chunk");
+        chunk_graph.safely_merge_cjs_ns_map_idx_vec[chunk_idx]
+          .entry(*k)
+          .or_default()
+          .push(*symbol_ref);
+      }
+    }
 
+    for (_, safely_merge_cjs_ns_map) in
+      chunk_graph.safely_merge_cjs_ns_map_idx_vec.iter_mut_enumerated()
+    {
+      for symbol_refs in safely_merge_cjs_ns_map.values_mut() {
+        let mut iter = symbol_refs.iter();
+        let first = iter.next();
+        if let Some(first) = first {
+          for symbol_ref in iter {
+            self.link_output.symbol_db.link(*symbol_ref, *first);
+          }
+        }
+      }
+    }
     chunk_graph
   }
 

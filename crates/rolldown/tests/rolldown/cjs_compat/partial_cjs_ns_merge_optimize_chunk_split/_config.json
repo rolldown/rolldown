@@ -1,0 +1,24 @@
+{
+  "config": {
+    "input": [
+      {
+        "name": "entry",
+        "import": "entry.js"
+      },
+      {
+        "name": "main",
+        "import": "main.js"
+      }
+    ],
+    "resolve": {
+      "alias": [
+        [
+          "this-is-only-used-for-testing",
+          [
+            "./cjs.js"
+          ]
+        ]
+      ]
+    }
+  }
+}

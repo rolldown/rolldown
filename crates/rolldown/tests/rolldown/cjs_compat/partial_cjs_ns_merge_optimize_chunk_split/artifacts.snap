@@ -1,0 +1,55 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## a.js
+
+```js
+
+//#region cjs.js
+var require_cjs = __commonJS({ "cjs.js"(exports, module) {
+	module.exports = 1e4;
+} });
+
+//#endregion
+//#region a.js
+var import_cjs = __toESM(require_cjs());
+function test() {
+	return import_cjs.default;
+}
+
+//#endregion
+export { __toESM, require_cjs, test };
+```
+## entry.js
+
+```js
+import { test } from "./a.js";
+
+//#region entry.js
+const entry = test();
+
+//#endregion
+export { entry };
+```
+## main.js
+
+```js
+import { __toESM, require_cjs, test } from "./a.js";
+
+//#region b.js
+var import_cjs = __toESM(require_cjs());
+function test$1() {
+	return import_cjs.default;
+}
+var b_default = test$1;
+
+//#endregion
+//#region main.js
+const aa = test();
+const bb = b_default();
+
+//#endregion
+export { aa, bb };
+```

@@ -666,8 +666,8 @@ importers:
         specifier: 'catalog:'
         version: 0.0.25
       '@types/diff':
-        specifier: ^7.0.0
-        version: 7.0.1
+        specifier: ^8.0.0
+        version: 8.0.0
       '@types/lodash-es':
         specifier: ^4.17.12
         version: 4.17.12
@@ -678,8 +678,8 @@ importers:
         specifier: ^1.9.0
         version: 1.9.0
       diff:
-        specifier: ^7.0.0
-        version: 7.0.0
+        specifier: ^8.0.0
+        version: 8.0.1
       estree-toolkit:
         specifier: ^1.7.8
         version: 1.7.8
@@ -798,10 +798,6 @@ packages:
     resolution: {integrity: sha512-vMqyb7XCDMPvJFFOaT9kxtiRh42GwlZEg1/uIgtZshS5a/8OaduUfCi7kynKgc3Tw/6Uo2D+db9qBttghhmxwQ==}
     engines: {node: '>=6.9.0'}
 
-  '@babel/generator@7.26.10':
-    resolution: {integrity: sha512-rRHT8siFIXQrAYOYqZQVsAr8vJ+cBNqcVAY6m5V8/4QqzaPl+zDBe6cLEPRDuNOUf3ww8RfJVlOyQMoSI+5Ang==}
-    engines: {node: '>=6.9.0'}
-
   '@babel/generator@7.27.1':
     resolution: {integrity: sha512-UnJfnIpc/+JO0/+KRVQNGU+y5taA5vCbwN8+azkX6beii/ZF+enZJSOKo11ZSzGJjlNfJHfQtmQT8H+9TXPG2w==}
     engines: {node: '>=6.9.0'}
@@ -869,16 +865,8 @@ packages:
     resolution: {integrity: sha512-K4Du3BFa3gvyhzgPcntrkDgZzQaq6uozzcpGbOO1OEJaI+EJdqWIMTLgFgQf6lrfiDFo5FU+BxKepI9RmZqahA==}
     engines: {node: '>=6.9.0'}
 
-  '@babel/helper-string-parser@7.25.9':
-    resolution: {integrity: sha512-4A/SCr/2KLd5jrtOMFzaKjVtAei3+2r/NChoBNoZ3EyP/+GlhoaEGoWOZUmFmoITP7zOJyHIMm+DYRd8o3PvHA==}
-    engines: {node: '>=6.9.0'}
-
   '@babel/helper-string-parser@7.27.1':
     resolution: {integrity: sha512-qMlSxKbpRlAridDExk92nSobyDdpPijUq2DW6oDnUqd0iOGxmQjyqhMIihI9+zv4LPyZdRje2cavWPbCbWm3eA==}
-    engines: {node: '>=6.9.0'}
-
-  '@babel/helper-validator-identifier@7.25.9':
-    resolution: {integrity: sha512-Ed61U6XJc3CVRfkERJWDz4dJwKe7iLmmJsbOGu9wSloNSFttHV0I8g6UAgb7qnK5ly5bGLPd4oXZlxCdANBOWQ==}
     engines: {node: '>=6.9.0'}
 
   '@babel/helper-validator-identifier@7.27.1':
@@ -896,11 +884,6 @@ packages:
   '@babel/helpers@7.26.10':
     resolution: {integrity: sha512-UPYc3SauzZ3JGgj87GgZ89JVdC5dj0AoetR5Bw6wj4niittNyFh6+eOGonYvJ1ao6B8lEa3Q3klS7ADZ53bc5g==}
     engines: {node: '>=6.9.0'}
-
-  '@babel/parser@7.26.10':
-    resolution: {integrity: sha512-6aQR2zGE/QFi8JpDLjUZEPYOs7+mhKXm86VaKFiLP35JQwQb6bwUE+XbvkH0EptsYhbNBSUGaUBLKqxH1xSgsA==}
-    engines: {node: '>=6.0.0'}
-    hasBin: true
 
   '@babel/parser@7.27.2':
     resolution: {integrity: sha512-QYLs8299NA7WM/bZAdp+CviYYkVoYXlDW2rzliy3chxd1PQjej7JORuMJDJXJUb9g0TT+B99EwaVLKmX+sPXWw==}
@@ -1306,10 +1289,6 @@ packages:
 
   '@babel/traverse@7.26.10':
     resolution: {integrity: sha512-k8NuDrxr0WrPH5Aupqb2LCVURP/S0vBEn5mK6iH+GIYob66U5EtoZvcdudR2jQ4cmTwhEwW1DLB+Yyas9zjF6A==}
-    engines: {node: '>=6.9.0'}
-
-  '@babel/types@7.26.10':
-    resolution: {integrity: sha512-emqcG3vHrpxUKTrxcblR36dcrcoRDvKmnL/dCL6ZsHaShW80qxCAcNhzQZrpeM765VzEos+xOi4s+r4IXzTwdQ==}
     engines: {node: '>=6.9.0'}
 
   '@babel/types@7.27.1':
@@ -2804,19 +2783,9 @@ packages:
   '@oxc-project/types@0.70.0':
     resolution: {integrity: sha512-ngyLUpUjO3dpqygSRQDx7nMx8+BmXbWOU4oIwTJFV2MVIDG7knIZwgdwXlQWLg3C3oxg1lS7ppMtPKqKFb7wzw==}
 
-  '@oxc-resolver/binding-darwin-arm64@5.2.0':
-    resolution: {integrity: sha512-3v2eS1swAUZ/OPrBpTB5Imn4Xhbz4zKPa/mugnYCAC4pVt/miBQLBNciBRZG8oyHiGmLtjw/qanZC36uB6MITQ==}
-    cpu: [arm64]
-    os: [darwin]
-
   '@oxc-resolver/binding-darwin-arm64@9.0.2':
     resolution: {integrity: sha512-MVyRgP2gzJJtAowjG/cHN3VQXwNLWnY+FpOEsyvDepJki1SdAX/8XDijM1yN6ESD1kr9uhBKjGelC6h3qtT+rA==}
     cpu: [arm64]
-    os: [darwin]
-
-  '@oxc-resolver/binding-darwin-x64@5.2.0':
-    resolution: {integrity: sha512-6uhnlZU+CBULQAjcwQ4nerA76xDEvPFtHpTzXhEoitr4a3Ks5H92X4uuLT0C0FW3RfhIVL8Lpp9pLYHN3oAvug==}
-    cpu: [x64]
     os: [darwin]
 
   '@oxc-resolver/binding-darwin-x64@9.0.2':
@@ -2824,38 +2793,18 @@ packages:
     cpu: [x64]
     os: [darwin]
 
-  '@oxc-resolver/binding-freebsd-x64@5.2.0':
-    resolution: {integrity: sha512-6TCXw/rPnhBLlS/Rg7QHO9lBjwJSbUJMhd9POpVpQEK1S9viEAl8JPdxXuNCEDPJHSmpMrGt6+DTjQxQ5J1kpQ==}
-    cpu: [x64]
-    os: [freebsd]
-
   '@oxc-resolver/binding-freebsd-x64@9.0.2':
     resolution: {integrity: sha512-6OvkEtRXrt8sJ4aVfxHRikjain9nV1clIsWtJ1J3J8NG1ZhjyJFgT00SCvqxbK+pzeWJq6XzHyTCN78ML+lY2w==}
     cpu: [x64]
     os: [freebsd]
-
-  '@oxc-resolver/binding-linux-arm-gnueabihf@5.2.0':
-    resolution: {integrity: sha512-egjFYBKixAjekmiImCYkpwSo0bnZJOieJIc6cXePuCih2R5nFjkS1F8tSlJ18GdRZ1MmYveM6THmIHJCpnDqaQ==}
-    cpu: [arm]
-    os: [linux]
 
   '@oxc-resolver/binding-linux-arm-gnueabihf@9.0.2':
     resolution: {integrity: sha512-aYpNL6o5IRAUIdoweW21TyLt54Hy/ZS9tvzNzF6ya1ckOQ8DLaGVPjGpmzxdNja9j/bbV6aIzBH7lNcBtiOTkQ==}
     cpu: [arm]
     os: [linux]
 
-  '@oxc-resolver/binding-linux-arm64-gnu@5.2.0':
-    resolution: {integrity: sha512-Cizb3uHnEc2MYZeRnp+BxmDyAKo7szJxbTW4BgPvs+XicYZI0kc/qcZlHRoJImalBqvve+ZObasRqCS1zqub9A==}
-    cpu: [arm64]
-    os: [linux]
-
   '@oxc-resolver/binding-linux-arm64-gnu@9.0.2':
     resolution: {integrity: sha512-RGFW4vCfKMFEIzb9VCY0oWyyY9tR1/o+wDdNePhiUXZU4SVniRPQaZ1SJ0sUFI1k25pXZmzQmIP6cBmazi/Dew==}
-    cpu: [arm64]
-    os: [linux]
-
-  '@oxc-resolver/binding-linux-arm64-musl@5.2.0':
-    resolution: {integrity: sha512-rDiRuIvQXa9MI8oiEbCVnU7dBVDuo74456dN3Bf30/Joz6FVBhYrhoOTxtxH+WgC38qCUWWuBjhFaLRLDLaMRw==}
     cpu: [arm64]
     os: [linux]
 
@@ -2864,19 +2813,9 @@ packages:
     cpu: [arm64]
     os: [linux]
 
-  '@oxc-resolver/binding-linux-riscv64-gnu@5.2.0':
-    resolution: {integrity: sha512-QRdE2DOO9e4oYzYyf/iRnLiomvs3bRedRTvFHbTAcL0JJfsicLLK4T7J5BP76sVum0QUAVJm+JqgEUmk8ETGXw==}
-    cpu: [riscv64]
-    os: [linux]
-
   '@oxc-resolver/binding-linux-riscv64-gnu@9.0.2':
     resolution: {integrity: sha512-yD28ptS/OuNhwkpXRPNf+/FvrO7lwURLsEbRVcL1kIE0GxNJNMtKgIE4xQvtKDzkhk6ZRpLho5VSrkkF+3ARTQ==}
     cpu: [riscv64]
-    os: [linux]
-
-  '@oxc-resolver/binding-linux-s390x-gnu@5.2.0':
-    resolution: {integrity: sha512-bD8HDjnEziw1+Y7uowIRI9JaJd6vldLoVXOZaSeBRjofWk8rQOOyxfNTVymIrcmPE8rZZJfkDdGyCnTJP0h9vA==}
-    cpu: [s390x]
     os: [linux]
 
   '@oxc-resolver/binding-linux-s390x-gnu@9.0.2':
@@ -2884,18 +2823,8 @@ packages:
     cpu: [s390x]
     os: [linux]
 
-  '@oxc-resolver/binding-linux-x64-gnu@5.2.0':
-    resolution: {integrity: sha512-eWEHGjkrk4Dsul7Wyt6X9UMxZ+e2zKgpRG2kbSZOQQTXf6ZnU9+lRAyAgf2X1qdLjmH0GT54wIak7fhSsuNWLA==}
-    cpu: [x64]
-    os: [linux]
-
   '@oxc-resolver/binding-linux-x64-gnu@9.0.2':
     resolution: {integrity: sha512-a2z3/cbOOTUq0UTBG8f3EO/usFcdwwXnCejfXv42HmV/G8GjrT4fp5+5mVDoMByH3Ce3iVPxj1LmS6OvItKMYQ==}
-    cpu: [x64]
-    os: [linux]
-
-  '@oxc-resolver/binding-linux-x64-musl@5.2.0':
-    resolution: {integrity: sha512-iojrjytDOdg4aWm25ak7qpTQwWj+D7O+duHBL2rQhDxIY1K4eysJwobWck0yzJ6VlONaQF6RLt+YeDpGoKV+ww==}
     cpu: [x64]
     os: [linux]
 
@@ -2904,29 +2833,14 @@ packages:
     cpu: [x64]
     os: [linux]
 
-  '@oxc-resolver/binding-wasm32-wasi@5.2.0':
-    resolution: {integrity: sha512-Lgv3HjKUXRa/xMCgBAkwKQcPljAn5IRicjgoPBXGUhghzK/9yF2DTf7aXdVPvRxFKjvcyWtzpzPV2pzYCuBaBA==}
-    engines: {node: '>=14.0.0'}
-    cpu: [wasm32]
-
   '@oxc-resolver/binding-wasm32-wasi@9.0.2':
     resolution: {integrity: sha512-I5cSgCCh5nFozGSHz+PjIOfrqW99eUszlxKLgoNNzQ1xQ2ou9ZJGzcZ94BHsM9SpyYHLtgHljmOZxCT9bgxYNA==}
     engines: {node: '>=14.0.0'}
     cpu: [wasm32]
 
-  '@oxc-resolver/binding-win32-arm64-msvc@5.2.0':
-    resolution: {integrity: sha512-VK5yEOdGbIrb89gUtVIw2IVP4r0rEhiwVLQOD37vZhvrt5iY0FHOTtMz9ZsWI0anZ0swt26U2wRcJYT0/AsBfw==}
-    cpu: [arm64]
-    os: [win32]
-
   '@oxc-resolver/binding-win32-arm64-msvc@9.0.2':
     resolution: {integrity: sha512-5IhoOpPr38YWDWRCA5kP30xlUxbIJyLAEsAK7EMyUgqygBHEYLkElaKGgS0X5jRXUQ6l5yNxuW73caogb2FYaw==}
     cpu: [arm64]
-    os: [win32]
-
-  '@oxc-resolver/binding-win32-x64-msvc@5.2.0':
-    resolution: {integrity: sha512-BhIcyjr/gTafUrdOhd1EC5H4LeUSKK9uQIG2RSyMMH0Cq1yBacTb1yvLowhP/6e4ncCGByXEkW7sWGowCfSY8A==}
-    cpu: [x64]
     os: [win32]
 
   '@oxc-resolver/binding-win32-x64-msvc@9.0.2':
@@ -3686,8 +3600,9 @@ packages:
   '@types/debug@4.1.12':
     resolution: {integrity: sha512-vIChWdVG3LG1SMxEvI/AK+FWJthlrqlTu7fbrlywTkkaONwk/UAGaULXRlf8vkzFBLVm0zkMdCquhL5aOjhXPQ==}
 
-  '@types/diff@7.0.1':
-    resolution: {integrity: sha512-R/BHQFripuhW6XPXy05hIvXJQdQ4540KnTvEFHSLjXfHYM41liOLKgIJEyYYiQe796xpaMHfe4Uj/p7Uvng2vA==}
+  '@types/diff@8.0.0':
+    resolution: {integrity: sha512-o7jqJM04gfaYrdCecCVMbZhNdG6T1MHg/oQoRFdERLV+4d+V7FijhiEAbFu0Usww84Yijk9yH58U4Jk4HbtzZw==}
+    deprecated: This is a stub types definition. diff provides its own type definitions, so you do not need this installed.
 
   '@types/estree-jsx@1.0.5':
     resolution: {integrity: sha512-52CcUVNFyfb1A2ALocQw/Dd1BQFNmSdkuC3BkZ6iqhdMfQz7JWOFRuJFloOzjk+6WijU56m9oKXFAXc7o3Towg==}
@@ -4614,6 +4529,10 @@ packages:
     resolution: {integrity: sha512-PJWHUb1RFevKCwaFA9RlG5tCd+FO5iRh9A8HEtkmBH2Li03iJriB6m6JIN4rGz3K3JLawI7/veA1xzRKP6ISBw==}
     engines: {node: '>=0.3.1'}
 
+  diff@8.0.1:
+    resolution: {integrity: sha512-rEaM3KmVm78zE3dFZaop3aCQa2MTm+T4kcigUFLVU/KbOYdiY6JnL2g2puOYnct3QFw9pjZadaCbCZ1O8ArMlQ==}
+    engines: {node: '>=0.3.1'}
+
   dom-serializer@2.0.0:
     resolution: {integrity: sha512-wIkAryiqt/nV5EQKqQpo3SToSOV9J0DnbJqwK7Wv/Trc92zIAYZ4FlMu+JPFW1DfGFt81ZTCGgDEabffXeLyJg==}
 
@@ -4634,10 +4553,6 @@ packages:
   dprint@0.49.1:
     resolution: {integrity: sha512-pO9XH79SyXybj2Vhc9ITZMEI8cJkdlQQRoD8oEfPH6Jjpp/7WX5kIgECVd3DBOjjAdCSiW6R47v3gJBx/qZVkw==}
     hasBin: true
-
-  dts-resolver@1.0.0:
-    resolution: {integrity: sha512-BTW78HXK66TvRHBRkU91a7CGoD5/PWi8ovMXbKVHjhR5xCqt1dgwl6CVk3wxWLzhNVIGXDbGWPBlRKrgSHMzfw==}
-    engines: {node: '>=20.18.0'}
 
   dts-resolver@1.2.0:
     resolution: {integrity: sha512-+xNF7raXYI1E3IFB+f3JqvoKYFI8R+1Mh9mpI75yNm3F5XuiC6ErEXe2Lqh9ach+4MQ1tOefzjxulhWGVclYbg==}
@@ -4829,14 +4744,6 @@ packages:
 
   fault@2.0.1:
     resolution: {integrity: sha512-WtySTkS4OKev5JtpHXnib4Gxiurzh5NCGvWrFaZ34m6JehfTUhKZvn9njTfw48t6JumVQOmrKqpmGcdwxnhqBQ==}
-
-  fdir@6.4.3:
-    resolution: {integrity: sha512-PMXmW2y1hDDfTSRc9gaXIuCCRpuoz3Kaz8cUelp3smouvfT632ozg2vrT6lJsHKKOF59YLbOGfAWGUcKEfRMQw==}
-    peerDependencies:
-      picomatch: ^3 || ^4
-    peerDependenciesMeta:
-      picomatch:
-        optional: true
 
   fdir@6.4.4:
     resolution: {integrity: sha512-1NZP+GK4GfuAv3PqKvxQRDMjdSRZjnkq7KfhlNrCNNlZ0ygQFpebfrnfnq/W7fpUnAv9aGWmY1zKx7FYL3gwhg==}
@@ -5780,9 +5687,6 @@ packages:
     resolution: {integrity: sha512-YbqTuQDDIYwQF/li0VFK5uTbmHV4jWFeQQONkPdf77vz+JMiq7SusmcSVZ4hBrGM+3WyLdKH5S7spnvz4XVVzQ==}
     engines: {node: '>=14.0.0'}
 
-  oxc-resolver@5.2.0:
-    resolution: {integrity: sha512-ce0rdG5Y0s1jhcvh2Zc6sD+fTw/WA4pUKWrPmjbniZjC/m6pPob2I2Pkz8T0YzdWsbAC98E00Bc7KNB1B6Tolg==}
-
   oxc-resolver@9.0.2:
     resolution: {integrity: sha512-w838ygc1p7rF+7+h5vR9A+Y9Fc4imy6C3xPthCMkdFUgFvUWkmABeNB8RBDQ6+afk44Q60/UMMQ+gfDUW99fBA==}
 
@@ -6311,7 +6215,7 @@ packages:
   right-pad@1.0.1:
     resolution: {integrity: sha512-bYBjgxmkvTAfgIYy328fmkwhp39v8lwVgWhhrzxPV3yHtcSqyYKe9/XOhvW48UFjATg3VuJbpsp5822ACNvkmw==}
     engines: {node: '>= 0.10'}
-    deprecated: Please use String.prototype.padEnd() over this package.
+    deprecated: Use String.prototype.padEnd() instead
 
   rimraf@6.0.1:
     resolution: {integrity: sha512-9dkvaxAsk/xNXSJzMgFqqMCuFgt2+KsOFek3TMLfo8NCPfWpBmqwyNn5Y+NX56QUYfCtsyhF3ayiboEoUmJk/A==}
@@ -6716,10 +6620,6 @@ packages:
 
   tinyexec@1.0.1:
     resolution: {integrity: sha512-5uC6DDlmeqiOwCPmK9jMSdOuZTh8bU39Ys6yidB+UTt5hfZUPGAypSgFRiEp+jbi9qH40BLDvy85jIU88wKSqw==}
-
-  tinyglobby@0.2.12:
-    resolution: {integrity: sha512-qkf4trmKSIiMTs/E63cxH+ojC2unam7rJ0WrauAzpT3ECNTxGRMlaXxVbfxMUC/w0LaYk6jQ4y/nGR9uBO3tww==}
-    engines: {node: '>=12.0.0'}
 
   tinyglobby@0.2.13:
     resolution: {integrity: sha512-mEwzpUgrLySlveBwEVDMKk5B57bhLPYovRfPAXD5gA/98Opn0rCDj3GtLwFvCvH5RK9uPCExUROW5NjDwvqkxw==}
@@ -7369,7 +7269,7 @@ snapshots:
 
   '@babel/code-frame@7.26.2':
     dependencies:
-      '@babel/helper-validator-identifier': 7.25.9
+      '@babel/helper-validator-identifier': 7.27.1
       js-tokens: 4.0.0
       picocolors: 1.1.1
 
@@ -7379,14 +7279,14 @@ snapshots:
     dependencies:
       '@ampproject/remapping': 2.3.0
       '@babel/code-frame': 7.26.2
-      '@babel/generator': 7.26.10
+      '@babel/generator': 7.27.1
       '@babel/helper-compilation-targets': 7.26.5
       '@babel/helper-module-transforms': 7.26.0(@babel/core@7.26.10)
       '@babel/helpers': 7.26.10
-      '@babel/parser': 7.26.10
+      '@babel/parser': 7.27.2
       '@babel/template': 7.26.9
       '@babel/traverse': 7.26.10
-      '@babel/types': 7.26.10
+      '@babel/types': 7.27.1
       convert-source-map: 2.0.0
       debug: 4.4.0(supports-color@8.1.1)
       gensync: 1.0.0-beta.2
@@ -7394,14 +7294,6 @@ snapshots:
       semver: 6.3.1
     transitivePeerDependencies:
       - supports-color
-
-  '@babel/generator@7.26.10':
-    dependencies:
-      '@babel/parser': 7.26.10
-      '@babel/types': 7.26.10
-      '@jridgewell/gen-mapping': 0.3.8
-      '@jridgewell/trace-mapping': 0.3.25
-      jsesc: 3.1.0
 
   '@babel/generator@7.27.1':
     dependencies:
@@ -7413,7 +7305,7 @@ snapshots:
 
   '@babel/helper-annotate-as-pure@7.25.9':
     dependencies:
-      '@babel/types': 7.26.10
+      '@babel/types': 7.27.1
 
   '@babel/helper-compilation-targets@7.26.5':
     dependencies:
@@ -7457,14 +7349,14 @@ snapshots:
   '@babel/helper-member-expression-to-functions@7.25.9':
     dependencies:
       '@babel/traverse': 7.26.10
-      '@babel/types': 7.26.10
+      '@babel/types': 7.27.1
     transitivePeerDependencies:
       - supports-color
 
   '@babel/helper-module-imports@7.25.9':
     dependencies:
       '@babel/traverse': 7.26.10
-      '@babel/types': 7.26.10
+      '@babel/types': 7.27.1
     transitivePeerDependencies:
       - supports-color
 
@@ -7472,14 +7364,14 @@ snapshots:
     dependencies:
       '@babel/core': 7.26.10
       '@babel/helper-module-imports': 7.25.9
-      '@babel/helper-validator-identifier': 7.25.9
+      '@babel/helper-validator-identifier': 7.27.1
       '@babel/traverse': 7.26.10
     transitivePeerDependencies:
       - supports-color
 
   '@babel/helper-optimise-call-expression@7.25.9':
     dependencies:
-      '@babel/types': 7.26.10
+      '@babel/types': 7.27.1
 
   '@babel/helper-plugin-utils@7.26.5': {}
 
@@ -7504,15 +7396,11 @@ snapshots:
   '@babel/helper-skip-transparent-expression-wrappers@7.25.9':
     dependencies:
       '@babel/traverse': 7.26.10
-      '@babel/types': 7.26.10
+      '@babel/types': 7.27.1
     transitivePeerDependencies:
       - supports-color
 
-  '@babel/helper-string-parser@7.25.9': {}
-
   '@babel/helper-string-parser@7.27.1': {}
-
-  '@babel/helper-validator-identifier@7.25.9': {}
 
   '@babel/helper-validator-identifier@7.27.1': {}
 
@@ -7522,18 +7410,14 @@ snapshots:
     dependencies:
       '@babel/template': 7.26.9
       '@babel/traverse': 7.26.10
-      '@babel/types': 7.26.10
+      '@babel/types': 7.27.1
     transitivePeerDependencies:
       - supports-color
 
   '@babel/helpers@7.26.10':
     dependencies:
       '@babel/template': 7.26.9
-      '@babel/types': 7.26.10
-
-  '@babel/parser@7.26.10':
-    dependencies:
-      '@babel/types': 7.26.10
+      '@babel/types': 7.27.1
 
   '@babel/parser@7.27.2':
     dependencies:
@@ -7766,7 +7650,7 @@ snapshots:
       '@babel/core': 7.26.10
       '@babel/helper-module-transforms': 7.26.0(@babel/core@7.26.10)
       '@babel/helper-plugin-utils': 7.26.5
-      '@babel/helper-validator-identifier': 7.25.9
+      '@babel/helper-validator-identifier': 7.27.1
       '@babel/traverse': 7.26.10
     transitivePeerDependencies:
       - supports-color
@@ -8013,7 +7897,7 @@ snapshots:
     dependencies:
       '@babel/core': 7.26.10
       '@babel/helper-plugin-utils': 7.26.5
-      '@babel/types': 7.26.10
+      '@babel/types': 7.27.1
       esutils: 2.0.3
 
   '@babel/preset-typescript@7.26.0(@babel/core@7.26.10)':
@@ -8034,25 +7918,20 @@ snapshots:
   '@babel/template@7.26.9':
     dependencies:
       '@babel/code-frame': 7.26.2
-      '@babel/parser': 7.26.10
-      '@babel/types': 7.26.10
+      '@babel/parser': 7.27.2
+      '@babel/types': 7.27.1
 
   '@babel/traverse@7.26.10':
     dependencies:
       '@babel/code-frame': 7.26.2
-      '@babel/generator': 7.26.10
-      '@babel/parser': 7.26.10
+      '@babel/generator': 7.27.1
+      '@babel/parser': 7.27.2
       '@babel/template': 7.26.9
-      '@babel/types': 7.26.10
+      '@babel/types': 7.27.1
       debug: 4.4.0(supports-color@8.1.1)
       globals: 11.12.0
     transitivePeerDependencies:
       - supports-color
-
-  '@babel/types@7.26.10':
-    dependencies:
-      '@babel/helper-string-parser': 7.25.9
-      '@babel/helper-validator-identifier': 7.25.9
 
   '@babel/types@7.27.1':
     dependencies:
@@ -9214,69 +9093,34 @@ snapshots:
 
   '@oxc-project/types@0.70.0': {}
 
-  '@oxc-resolver/binding-darwin-arm64@5.2.0':
-    optional: true
-
   '@oxc-resolver/binding-darwin-arm64@9.0.2':
-    optional: true
-
-  '@oxc-resolver/binding-darwin-x64@5.2.0':
     optional: true
 
   '@oxc-resolver/binding-darwin-x64@9.0.2':
     optional: true
 
-  '@oxc-resolver/binding-freebsd-x64@5.2.0':
-    optional: true
-
   '@oxc-resolver/binding-freebsd-x64@9.0.2':
-    optional: true
-
-  '@oxc-resolver/binding-linux-arm-gnueabihf@5.2.0':
     optional: true
 
   '@oxc-resolver/binding-linux-arm-gnueabihf@9.0.2':
     optional: true
 
-  '@oxc-resolver/binding-linux-arm64-gnu@5.2.0':
-    optional: true
-
   '@oxc-resolver/binding-linux-arm64-gnu@9.0.2':
-    optional: true
-
-  '@oxc-resolver/binding-linux-arm64-musl@5.2.0':
     optional: true
 
   '@oxc-resolver/binding-linux-arm64-musl@9.0.2':
     optional: true
 
-  '@oxc-resolver/binding-linux-riscv64-gnu@5.2.0':
-    optional: true
-
   '@oxc-resolver/binding-linux-riscv64-gnu@9.0.2':
-    optional: true
-
-  '@oxc-resolver/binding-linux-s390x-gnu@5.2.0':
     optional: true
 
   '@oxc-resolver/binding-linux-s390x-gnu@9.0.2':
     optional: true
 
-  '@oxc-resolver/binding-linux-x64-gnu@5.2.0':
-    optional: true
-
   '@oxc-resolver/binding-linux-x64-gnu@9.0.2':
     optional: true
 
-  '@oxc-resolver/binding-linux-x64-musl@5.2.0':
-    optional: true
-
   '@oxc-resolver/binding-linux-x64-musl@9.0.2':
-    optional: true
-
-  '@oxc-resolver/binding-wasm32-wasi@5.2.0':
-    dependencies:
-      '@napi-rs/wasm-runtime': 0.2.9
     optional: true
 
   '@oxc-resolver/binding-wasm32-wasi@9.0.2':
@@ -9284,13 +9128,7 @@ snapshots:
       '@napi-rs/wasm-runtime': 0.2.9
     optional: true
 
-  '@oxc-resolver/binding-win32-arm64-msvc@5.2.0':
-    optional: true
-
   '@oxc-resolver/binding-win32-arm64-msvc@9.0.2':
-    optional: true
-
-  '@oxc-resolver/binding-win32-x64-msvc@5.2.0':
     optional: true
 
   '@oxc-resolver/binding-win32-x64-msvc@9.0.2':
@@ -9784,7 +9622,7 @@ snapshots:
       '@rollup/pluginutils': 5.1.4(rollup@4.37.0)
       commondir: 1.0.1
       estree-walker: 2.0.2
-      fdir: 6.4.3(picomatch@4.0.2)
+      fdir: 6.4.4(picomatch@4.0.2)
       is-reference: 1.2.1
       magic-string: 0.30.17
       picomatch: 4.0.2
@@ -9944,24 +9782,24 @@ snapshots:
 
   '@types/babel__core@7.20.5':
     dependencies:
-      '@babel/parser': 7.26.10
-      '@babel/types': 7.26.10
+      '@babel/parser': 7.27.2
+      '@babel/types': 7.27.1
       '@types/babel__generator': 7.6.8
       '@types/babel__template': 7.4.4
       '@types/babel__traverse': 7.20.6
 
   '@types/babel__generator@7.6.8':
     dependencies:
-      '@babel/types': 7.26.10
+      '@babel/types': 7.27.1
 
   '@types/babel__template@7.4.4':
     dependencies:
-      '@babel/parser': 7.26.10
-      '@babel/types': 7.26.10
+      '@babel/parser': 7.27.2
+      '@babel/types': 7.27.1
 
   '@types/babel__traverse@7.20.6':
     dependencies:
-      '@babel/types': 7.26.10
+      '@babel/types': 7.27.1
 
   '@types/connect@3.4.38':
     dependencies:
@@ -9971,7 +9809,9 @@ snapshots:
     dependencies:
       '@types/ms': 2.1.0
 
-  '@types/diff@7.0.1': {}
+  '@types/diff@8.0.0':
+    dependencies:
+      diff: 8.0.1
 
   '@types/estree-jsx@1.0.5':
     dependencies:
@@ -10140,7 +9980,7 @@ snapshots:
 
   '@vue/compiler-core@3.5.13':
     dependencies:
-      '@babel/parser': 7.26.10
+      '@babel/parser': 7.27.2
       '@vue/shared': 3.5.13
       entities: 4.5.0
       estree-walker: 2.0.2
@@ -10153,7 +9993,7 @@ snapshots:
 
   '@vue/compiler-sfc@3.5.13':
     dependencies:
-      '@babel/parser': 7.26.10
+      '@babel/parser': 7.27.2
       '@vue/compiler-core': 3.5.13
       '@vue/compiler-dom': 3.5.13
       '@vue/compiler-ssr': 3.5.13
@@ -10974,6 +10814,8 @@ snapshots:
 
   diff@7.0.0: {}
 
+  diff@8.0.1: {}
+
   dom-serializer@2.0.0:
     dependencies:
       domelementtype: 2.3.0
@@ -11007,11 +10849,6 @@ snapshots:
       '@dprint/linux-x64-musl': 0.49.1
       '@dprint/win32-arm64': 0.49.1
       '@dprint/win32-x64': 0.49.1
-
-  dts-resolver@1.0.0:
-    dependencies:
-      oxc-resolver: 5.2.0
-      pathe: 2.0.3
 
   dts-resolver@1.2.0:
     dependencies:
@@ -11225,10 +11062,6 @@ snapshots:
   fault@2.0.1:
     dependencies:
       format: 0.2.2
-
-  fdir@6.4.3(picomatch@4.0.2):
-    optionalDependencies:
-      picomatch: 4.0.2
 
   fdir@6.4.4(picomatch@4.0.2):
     optionalDependencies:
@@ -12119,7 +11952,7 @@ snapshots:
       postcss: 8.5.3
       postcss-nested: 7.0.2(postcss@8.5.3)
       semver: 7.7.1
-      tinyglobby: 0.2.12
+      tinyglobby: 0.2.13
     optionalDependencies:
       typescript: 5.8.3
       vue: 3.5.13(typescript@5.8.3)
@@ -12281,22 +12114,6 @@ snapshots:
       '@oxc-parser/binding-wasm32-wasi': 0.70.0
       '@oxc-parser/binding-win32-arm64-msvc': 0.70.0
       '@oxc-parser/binding-win32-x64-msvc': 0.70.0
-
-  oxc-resolver@5.2.0:
-    optionalDependencies:
-      '@oxc-resolver/binding-darwin-arm64': 5.2.0
-      '@oxc-resolver/binding-darwin-x64': 5.2.0
-      '@oxc-resolver/binding-freebsd-x64': 5.2.0
-      '@oxc-resolver/binding-linux-arm-gnueabihf': 5.2.0
-      '@oxc-resolver/binding-linux-arm64-gnu': 5.2.0
-      '@oxc-resolver/binding-linux-arm64-musl': 5.2.0
-      '@oxc-resolver/binding-linux-riscv64-gnu': 5.2.0
-      '@oxc-resolver/binding-linux-s390x-gnu': 5.2.0
-      '@oxc-resolver/binding-linux-x64-gnu': 5.2.0
-      '@oxc-resolver/binding-linux-x64-musl': 5.2.0
-      '@oxc-resolver/binding-wasm32-wasi': 5.2.0
-      '@oxc-resolver/binding-win32-arm64-msvc': 5.2.0
-      '@oxc-resolver/binding-win32-x64-msvc': 5.2.0
 
   oxc-resolver@9.0.2:
     optionalDependencies:
@@ -12867,7 +12684,7 @@ snapshots:
   rolldown-plugin-dts@0.7.12(rolldown@packages+rolldown)(typescript@5.8.3):
     dependencies:
       debug: 4.4.0(supports-color@8.1.1)
-      dts-resolver: 1.0.0
+      dts-resolver: 1.2.0
       get-tsconfig: 4.10.0
       magic-string-ast: 0.9.1
       oxc-parser: 0.64.0
@@ -13284,11 +13101,6 @@ snapshots:
 
   tinyexec@1.0.1: {}
 
-  tinyglobby@0.2.12:
-    dependencies:
-      fdir: 6.4.3(picomatch@4.0.2)
-      picomatch: 4.0.2
-
   tinyglobby@0.2.13:
     dependencies:
       fdir: 6.4.4(picomatch@4.0.2)
@@ -13407,7 +13219,7 @@ snapshots:
       rollup: 4.37.0
       rollup-plugin-dts: 6.2.1(rollup@4.37.0)(typescript@5.8.3)
       scule: 1.3.0
-      tinyglobby: 0.2.12
+      tinyglobby: 0.2.13
       untyped: 2.0.0
     optionalDependencies:
       typescript: 5.8.3

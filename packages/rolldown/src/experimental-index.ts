@@ -29,6 +29,7 @@ export {
   viteResolvePlugin,
   wasmFallbackPlugin,
   wasmHelperPlugin,
+  webWorkerPostPlugin,
 } from './builtin-plugin/constructors';
 
 export { aliasPlugin } from './builtin-plugin/alias-plugin';

@@ -6,11 +6,32 @@ import nodePath from 'node:path'
 main()
 
 function main() {
-  const testConfigPaths = import.meta.glob<TestConfig>(
+  const fixtureTestConfigPaths = import.meta.glob<TestConfig>(
     './fixtures/**/_config.ts',
     { import: 'default', eager: true },
-  )
-  for (const [testConfigPath, testConfig] of Object.entries(testConfigPaths)) {
+  );
+  
+  const pluginTestConfigPaths = import.meta.glob<TestConfig>(
+    './fixtures/plugin/**/_config.ts',
+    { import: 'default', eager: true },
+  );
+  
+  const onlyFixtureTest = Object.entries(fixtureTestConfigPaths).filter(
+    ([_, testConfig]) => testConfig.only,
+  );
+  
+  const onlyPluginTest = Object.entries(pluginTestConfigPaths).filter(
+    ([_, testConfig]) => testConfig.only,
+  );
+  
+  let fixtureTests = Object.entries(fixtureTestConfigPaths);
+  let pluginTests = Object.entries(pluginTestConfigPaths);
+  if (onlyFixtureTest.length + onlyPluginTest.length > 0) {
+    fixtureTests = onlyFixtureTest;
+    pluginTests = onlyPluginTest;
+  }
+
+  for (const [testConfigPath, testConfig] of fixtureTests) {
     const dirPath = nodePath.dirname(testConfigPath)
     const testName = dirPath.replace('./fixtures/', '')
 
@@ -38,13 +59,8 @@ function main() {
     })
   }
 
-  const pluginTestConfigPaths = import.meta.glob<TestConfig>(
-    './fixtures/plugin/**/_config.ts',
-    { import: 'default', eager: true },
-  )
-  for (const [testConfigPath, testConfig] of Object.entries(
-    pluginTestConfigPaths,
-  )) {
+
+  for (const [testConfigPath, testConfig] of pluginTests) {
     const dirPath = nodePath.dirname(testConfigPath)
     const testName = dirPath.replace('./fixtures/', '')
 

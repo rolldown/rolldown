@@ -108,6 +108,8 @@ impl ScanStageCache {
           .collect::<Vec<_>>();
         IndexVec::from_vec(item)
       },
+      // TODO: incremental merging
+      safely_merge_cjs_ns_map: cache.safely_merge_cjs_ns_map.clone(),
 
       // Since `AstScope` is immutable in following phase, move it to avoid clone
       entry_points: cache.entry_points.clone(),

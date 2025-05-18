@@ -41,6 +41,7 @@ pub struct LinkStageOutput {
   pub used_symbol_refs: FxHashSet<SymbolRef>,
   pub dynamic_import_exports_usage_map: FxHashMap<ModuleIdx, DynamicImportExportsUsage>,
   pub lived_entry_points: FxHashSet<ModuleIdx>,
+  pub safely_merge_cjs_ns_map: FxHashMap<ModuleIdx, Vec<SymbolRef>>,
 }
 
 #[derive(Debug)]
@@ -56,6 +57,7 @@ pub struct LinkStage<'a> {
   pub ast_table: IndexEcmaAst,
   pub options: &'a SharedOptions,
   pub used_symbol_refs: FxHashSet<SymbolRef>,
+  pub safely_merge_cjs_ns_map: FxHashMap<ModuleIdx, Vec<SymbolRef>>,
   pub dynamic_import_exports_usage_map: FxHashMap<ModuleIdx, DynamicImportExportsUsage>,
 }
 
@@ -97,6 +99,7 @@ impl<'a> LinkStage<'a> {
       dynamic_import_exports_usage_map: scan_stage_output.dynamic_import_exports_usage_map,
       options,
       used_symbol_refs: FxHashSet::default(),
+      safely_merge_cjs_ns_map: scan_stage_output.safely_merge_cjs_ns_map,
     }
   }
 
@@ -129,6 +132,7 @@ impl<'a> LinkStage<'a> {
       ast_table: self.ast_table,
       used_symbol_refs: self.used_symbol_refs,
       dynamic_import_exports_usage_map: self.dynamic_import_exports_usage_map,
+      safely_merge_cjs_ns_map: self.safely_merge_cjs_ns_map,
     }
   }
 

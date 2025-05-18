@@ -147,6 +147,7 @@ impl<'a> GenerateStage<'a> {
               cur_stmt_index: 0,
               keep_name_statement_to_insert: Vec::new(),
               file_emitter: &self.plugin_driver.file_emitter,
+              safely_merge_cjs_ns_map: &self.link_output.safely_merge_cjs_ns_map,
             },
             ast,
             ast_scope,

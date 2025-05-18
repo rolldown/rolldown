@@ -60,6 +60,9 @@ pub struct LinkingMetadata {
   pub star_exports_from_external_modules: Vec<ImportRecordIdx>,
   pub safe_cjs_to_eliminate_interop_default: bool,
   pub is_tla_or_contains_tla_dependency: bool,
+  /// If some cjs module ns symbol_ref could be safely merged, we will use this to store the
+  /// symbol_ref.
+  pub safely_merge_cjs_ns_binding: Option<SymbolRef>,
 }
 
 impl LinkingMetadata {

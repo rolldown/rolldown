@@ -3736,6 +3736,14 @@ expression: output
 - main-!~{000}~.js => main-BBmiVxOv.js
 - commonjs-!~{002}~.js => commonjs-B78pQZVM.js
 
+# tests/rolldown/cjs_compat/partial_cjs_ns_merge
+
+- main-!~{000}~.js => main-7Uqf_bwy.js
+
+# tests/rolldown/cjs_compat/partial_cjs_ns_merge_optimize
+
+- main-!~{000}~.js => main-CnFkSBwz.js
+
 # tests/rolldown/cjs_compat/react-like
 
 - main-!~{000}~.js => main-ClpAChLm.js

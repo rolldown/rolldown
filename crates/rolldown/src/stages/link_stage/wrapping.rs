@@ -1,8 +1,9 @@
 use oxc_index::IndexVec;
 use rolldown_common::{
   ExportsKind, IndexModules, Module, ModuleIdx, NormalModule, NormalizedBundlerOptions,
-  RuntimeModuleBrief, StmtInfo, StmtInfoMeta, SymbolRefDb, WrapKind,
+  RuntimeModuleBrief, StmtInfo, StmtInfoMeta, SymbolRef, SymbolRefDb, WrapKind,
 };
+use rustc_hash::FxHashMap;
 
 use crate::types::linking_metadata::{LinkingMetadata, LinkingMetadataVec};
 
@@ -130,7 +131,14 @@ impl LinkStage<'_> {
     self.module_table.modules.iter_mut().filter_map(|m| m.as_normal_mut()).for_each(
       |ecma_module| {
         let linking_info = &mut self.metas[ecma_module.idx];
-        create_wrapper(ecma_module, linking_info, &mut self.symbols, &self.runtime, self.options);
+        create_wrapper(
+          ecma_module,
+          linking_info,
+          &mut self.symbols,
+          &self.runtime,
+          self.options,
+          &self.safely_merge_cjs_ns_map,
+        );
       },
     );
   }
@@ -142,6 +150,7 @@ pub fn create_wrapper(
   symbols: &mut SymbolRefDb,
   runtime: &RuntimeModuleBrief,
   options: &NormalizedBundlerOptions,
+  safely_merge_cjs_ns_map: &FxHashMap<ModuleIdx, Vec<SymbolRef>>,
 ) {
   match linking_info.wrap_kind {
     // If this is a CommonJS file, we're going to need to generate a wrapper
@@ -154,6 +163,11 @@ pub fn create_wrapper(
     WrapKind::Cjs => {
       let wrapper_ref = symbols
         .create_facade_root_symbol_ref(module.idx, &format!("require_{}", &module.repr_name));
+      let safely_merge_cjs_ns_binding =
+        safely_merge_cjs_ns_map.contains_key(&module.idx).then(|| {
+          symbols
+            .create_facade_root_symbol_ref(module.idx, &format!("import_{}", &module.repr_name))
+        });
 
       let stmt_info = StmtInfo {
         stmt_idx: None,
@@ -173,6 +187,7 @@ pub fn create_wrapper(
 
       linking_info.wrapper_stmt_info = Some(module.stmt_infos.add_stmt_info(stmt_info));
       linking_info.wrapper_ref = Some(wrapper_ref);
+      linking_info.safely_merge_cjs_ns_binding = safely_merge_cjs_ns_binding;
     }
     // If this is a lazily-initialized ESM file, we're going to need to
     // generate a wrapper for the ESM closure. That will end up looking

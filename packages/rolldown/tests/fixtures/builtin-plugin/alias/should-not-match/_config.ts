@@ -29,7 +29,7 @@ export default defineTest({
       await import('./assert.mjs')
     } catch (err: any) {
       expect(err.toString()).contains(
-        `Failed to load url rolldownlib.js (resolved id: rolldownlib.js)`,
+        `Cannot find package 'rolldownlib.js'`,
       )
     }
   },

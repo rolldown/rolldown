@@ -121,13 +121,13 @@
     }
   },
   "devDependencies": {
-    "@napi-rs/cli": "^3.0.0-alpha.77",
+    "@napi-rs/cli": "3.0.0-alpha.77",
     "@napi-rs/wasm-runtime": "^0.2.4",
     "@oxc-node/cli": "catalog:",
     "@rolldown/testing": "workspace:*",
     "@types/fs-extra": "^11.0.4",
     "@types/lodash-es": "^4.17.12",
-    "@valibot/to-json-schema": "1.0.0",
+    "@valibot/to-json-schema": "1.2.0",
     "consola": "^3.4.2",
     "emnapi": "^1.2.0",
     "execa": "^9.2.0",
@@ -146,7 +146,7 @@
     "typedoc": "^0.28.0",
     "typescript": "^5.7.3",
     "unbuild": "^3.0.0",
-    "valibot": "1.0.0"
+    "valibot": "1.1.0"
   },
   "optionalDependencies": {
     "@rolldown/binding-darwin-arm64": "workspace:*",

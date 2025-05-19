@@ -129,11 +129,6 @@ pub fn deconflict_chunk_symbols(
       if let Some(hmr_hot_ref) = module.hmr_hot_ref {
         renamer.add_symbol_in_root_scope(hmr_hot_ref);
       }
-      if let Some(safely_merge_cjs_ns_binding) =
-        link_output.metas[module.idx].safely_merge_cjs_ns_binding
-      {
-        renamer.add_symbol_in_root_scope(safely_merge_cjs_ns_binding);
-      }
 
       module
         .stmt_infos

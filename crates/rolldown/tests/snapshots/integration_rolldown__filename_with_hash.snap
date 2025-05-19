@@ -3744,6 +3744,12 @@ expression: output
 
 - main-!~{000}~.js => main-CnFkSBwz.js
 
+# tests/rolldown/cjs_compat/partial_cjs_ns_merge_optimize_chunk_split
+
+- entry-!~{000}~.js => entry-D10B_pFY.js
+- main-!~{001}~.js => main-DiNeS3cz.js
+- a-!~{002}~.js => a-BejOaF8a.js
+
 # tests/rolldown/cjs_compat/react-like
 
 - main-!~{000}~.js => main-ClpAChLm.js

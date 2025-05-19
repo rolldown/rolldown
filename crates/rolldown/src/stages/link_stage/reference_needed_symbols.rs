@@ -165,7 +165,6 @@ impl LinkStage<'_> {
                           stmt_info
                             .referenced_symbols
                             .push(self.runtime.resolve_symbol("__toESM").into());
-
                           symbols_to_be_declared.push((rec.namespace_ref, stmt_info_idx));
                           rec.namespace_ref.set_name(
                             &mut symbols.lock().unwrap(),

@@ -1,5 +1,5 @@
 use oxc_index::{IndexVec, index_vec};
-use rolldown_common::{Chunk, ChunkIdx, ChunkTable, ModuleIdx, ModuleTable};
+use rolldown_common::{Chunk, ChunkIdx, ChunkTable, ModuleIdx, ModuleTable, SymbolRef};
 use rustc_hash::FxHashMap;
 
 #[derive(Debug)]
@@ -9,6 +9,8 @@ pub struct ChunkGraph {
   /// Module to chunk that contains the module
   pub module_to_chunk: IndexVec<ModuleIdx, Option<ChunkIdx>>,
   pub entry_module_to_entry_chunk: FxHashMap<ModuleIdx, ChunkIdx>,
+  /// split original map per chunk
+  pub safely_merge_cjs_ns_map_idx_vec: IndexVec<ChunkIdx, FxHashMap<ModuleIdx, Vec<SymbolRef>>>,
 }
 
 impl ChunkGraph {
@@ -18,6 +20,7 @@ impl ChunkGraph {
       module_to_chunk: index_vec![None; module_table.modules.len()],
       sorted_chunk_idx_vec: Vec::new(),
       entry_module_to_entry_chunk: FxHashMap::default(),
+      safely_merge_cjs_ns_map_idx_vec: index_vec![],
     }
   }
 
@@ -27,7 +30,9 @@ impl ChunkGraph {
   }
 
   pub fn add_chunk(&mut self, chunk: Chunk) -> ChunkIdx {
-    self.chunk_table.push(chunk)
+    let idx = self.chunk_table.push(chunk);
+    self.safely_merge_cjs_ns_map_idx_vec.push(FxHashMap::default());
+    idx
   }
 
   pub fn add_module_to_chunk(&mut self, module_idx: ModuleIdx, chunk_idx: ChunkIdx) {

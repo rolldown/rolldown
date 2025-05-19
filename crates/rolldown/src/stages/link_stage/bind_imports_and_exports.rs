@@ -218,16 +218,6 @@ impl LinkStage<'_> {
     });
     self.resolve_member_expr_refs(&side_effects_modules, &normal_symbol_exports_chain_map);
     self.update_cjs_module_meta();
-    for (module_idx, symbol_refs) in &self.safely_merge_cjs_ns_map {
-      let meta = &mut self.metas[*module_idx];
-      if let Some(safely_merge_cjs_ns_binding) = meta.safely_merge_cjs_ns_binding {
-        for symbol_ref in symbol_refs {
-          if self.metas[symbol_ref.owner].wrap_kind.is_none() {
-            self.symbols.link(*symbol_ref, safely_merge_cjs_ns_binding);
-          }
-        }
-      }
-    }
   }
 
   /// Update the metadata of CommonJS modules.

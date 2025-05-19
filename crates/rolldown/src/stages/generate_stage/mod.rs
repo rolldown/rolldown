@@ -71,6 +71,7 @@ impl<'a> GenerateStage<'a> {
     self.plugin_driver.render_start(self.options).await?;
 
     let mut chunk_graph = self.generate_chunks().await;
+
     if chunk_graph.chunk_table.len() > 1 {
       validate_options_for_multi_chunk_output(self.options)?;
     }
@@ -147,7 +148,6 @@ impl<'a> GenerateStage<'a> {
               cur_stmt_index: 0,
               keep_name_statement_to_insert: Vec::new(),
               file_emitter: &self.plugin_driver.file_emitter,
-              safely_merge_cjs_ns_map: &self.link_output.safely_merge_cjs_ns_map,
             },
             ast,
             ast_scope,

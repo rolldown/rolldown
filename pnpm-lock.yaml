@@ -665,9 +665,6 @@ importers:
       '@oxc-node/cli':
         specifier: 'catalog:'
         version: 0.0.25
-      '@types/diff':
-        specifier: ^8.0.0
-        version: 8.0.0
       '@types/lodash-es':
         specifier: ^4.17.12
         version: 4.17.12
@@ -3599,10 +3596,6 @@ packages:
 
   '@types/debug@4.1.12':
     resolution: {integrity: sha512-vIChWdVG3LG1SMxEvI/AK+FWJthlrqlTu7fbrlywTkkaONwk/UAGaULXRlf8vkzFBLVm0zkMdCquhL5aOjhXPQ==}
-
-  '@types/diff@8.0.0':
-    resolution: {integrity: sha512-o7jqJM04gfaYrdCecCVMbZhNdG6T1MHg/oQoRFdERLV+4d+V7FijhiEAbFu0Usww84Yijk9yH58U4Jk4HbtzZw==}
-    deprecated: This is a stub types definition. diff provides its own type definitions, so you do not need this installed.
 
   '@types/estree-jsx@1.0.5':
     resolution: {integrity: sha512-52CcUVNFyfb1A2ALocQw/Dd1BQFNmSdkuC3BkZ6iqhdMfQz7JWOFRuJFloOzjk+6WijU56m9oKXFAXc7o3Towg==}
@@ -9808,10 +9801,6 @@ snapshots:
   '@types/debug@4.1.12':
     dependencies:
       '@types/ms': 2.1.0
-
-  '@types/diff@8.0.0':
-    dependencies:
-      diff: 8.0.1
 
   '@types/estree-jsx@1.0.5':
     dependencies:

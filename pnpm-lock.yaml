@@ -665,9 +665,6 @@ importers:
       '@oxc-node/cli':
         specifier: 'catalog:'
         version: 0.0.27
-      '@types/diff':
-        specifier: ^8.0.0
-        version: 8.0.0
       '@types/lodash-es':
         specifier: ^4.17.12
         version: 4.17.12

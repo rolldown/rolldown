@@ -4,7 +4,7 @@ use arcstr::ArcStr;
 use futures::future::join_all;
 use rolldown_common::{
   EntryPoint, HybridIndexVec, Module, ModuleIdx, ModuleTable, ResolvedId, RuntimeModuleBrief,
-  ScanMode, SymbolRefDb, dynamic_import_usage::DynamicImportExportsUsage,
+  ScanMode, SymbolRef, SymbolRefDb, dynamic_import_usage::DynamicImportExportsUsage,
 };
 use rolldown_error::{BuildDiagnostic, BuildResult};
 use rolldown_fs::OsFileSystem;
@@ -35,6 +35,7 @@ pub struct NormalizedScanStageOutput {
   pub symbol_ref_db: SymbolRefDb,
   pub runtime: RuntimeModuleBrief,
   pub warnings: Vec<BuildDiagnostic>,
+  pub safely_merge_cjs_ns_map: FxHashMap<ModuleIdx, Vec<SymbolRef>>,
   pub dynamic_import_exports_usage_map: FxHashMap<ModuleIdx, DynamicImportExportsUsage>,
 }
 
@@ -54,6 +55,7 @@ impl NormalizedScanStageOutput {
       runtime: self.runtime.clone(),
       warnings: vec![],
       dynamic_import_exports_usage_map: self.dynamic_import_exports_usage_map.clone(),
+      safely_merge_cjs_ns_map: self.safely_merge_cjs_ns_map.clone(),
     }
   }
 }
@@ -71,6 +73,7 @@ impl From<ScanStageOutput> for NormalizedScanStageOutput {
       runtime: value.runtime,
       warnings: value.warnings,
       dynamic_import_exports_usage_map: value.dynamic_import_exports_usage_map,
+      safely_merge_cjs_ns_map: value.safely_merge_cjs_ns_map,
     }
   }
 }
@@ -84,6 +87,7 @@ pub struct ScanStageOutput {
   pub runtime: RuntimeModuleBrief,
   pub warnings: Vec<BuildDiagnostic>,
   pub dynamic_import_exports_usage_map: FxHashMap<ModuleIdx, DynamicImportExportsUsage>,
+  pub safely_merge_cjs_ns_map: FxHashMap<ModuleIdx, Vec<SymbolRef>>,
   pub cache: ScanStageCache,
 }
 
@@ -150,6 +154,7 @@ impl ScanStage {
       dynamic_import_exports_usage_map,
       new_added_modules_from_partial_scan: _,
       cache,
+      safely_merge_cjs_ns_map,
     } = module_loader.fetch_modules(user_entries, changed_resolved_ids).await?;
 
     self.plugin_driver.file_emitter.set_context_load_modules_tx(None).await;
@@ -165,6 +170,7 @@ impl ScanStage {
       dynamic_import_exports_usage_map,
       module_table,
       cache,
+      safely_merge_cjs_ns_map,
     })
   }
 

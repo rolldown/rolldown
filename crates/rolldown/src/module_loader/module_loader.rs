@@ -18,7 +18,7 @@ use rolldown_common::{
   ExternalModuleTaskResult, HybridIndexVec, ImportKind, ImportRecordIdx, ImportRecordMeta,
   ImporterRecord, Module, ModuleId, ModuleIdx, ModuleLoaderMsg, ModuleType, NormalModuleTaskResult,
   RUNTIME_MODULE_KEY, ResolvedId, RuntimeModuleBrief, RuntimeModuleTaskResult, StmtInfoIdx,
-  SymbolRefDb, SymbolRefDbForModule,
+  SymbolRef, SymbolRefDb, SymbolRefDbForModule,
 };
 use rolldown_error::{BuildDiagnostic, BuildResult};
 use rolldown_fs::OsFileSystem;
@@ -112,6 +112,7 @@ pub struct ModuleLoaderOutput {
   pub dynamic_import_exports_usage_map: FxHashMap<ModuleIdx, DynamicImportExportsUsage>,
   // Empty if it is a full scan
   pub new_added_modules_from_partial_scan: FxIndexSet<ModuleIdx>,
+  pub safely_merge_cjs_ns_map: FxHashMap<ModuleIdx, Vec<SymbolRef>>,
   pub cache: ScanStageCache,
 }
 
@@ -294,9 +295,10 @@ impl ModuleLoader {
 
     let mut dynamic_import_entry_ids: FxHashMap<ModuleIdx, Vec<(ModuleIdx, StmtInfoIdx)>> =
       FxHashMap::default();
+
     let mut dynamic_import_exports_usage_pairs = vec![];
     let mut extra_entry_points = vec![];
-
+    let mut safely_merge_cjs_ns_map: FxHashMap<ModuleIdx, Vec<SymbolRef>> = FxHashMap::default();
     let mut runtime_brief: Option<RuntimeModuleBrief> = None;
     while self.remaining > 0 {
       let Some(msg) = self.rx.recv().await else {
@@ -343,6 +345,9 @@ impl ModuleLoader {
                 Arc::clone(&user_defined_entries),
               )
             };
+            if raw_rec.meta.contains(ImportRecordMeta::SAFELY_MERGE_CJS_NS) {
+              safely_merge_cjs_ns_map.entry(idx).or_default().push(raw_rec.namespace_ref);
+            }
             // Dynamic imported module will be considered as an entry
             self.intermediate_normal_modules.importers[idx].push(ImporterRecord {
               kind: raw_rec.kind,
@@ -667,6 +672,7 @@ impl ModuleLoader {
       dynamic_import_exports_usage_map,
       new_added_modules_from_partial_scan: self.new_added_modules_from_partial_scan,
       cache: self.cache,
+      safely_merge_cjs_ns_map,
     })
   }
 

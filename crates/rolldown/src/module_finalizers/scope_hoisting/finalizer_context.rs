@@ -27,4 +27,5 @@ pub struct ScopeHoistingFinalizerContext<'me> {
   pub cur_stmt_index: usize,
   pub keep_name_statement_to_insert: Vec<(usize, Rstr, Rstr)>,
   pub file_emitter: &'me SharedFileEmitter,
+  pub safely_merge_cjs_ns_map: &'me FxHashMap<ModuleIdx, Vec<SymbolRef>>,
 }

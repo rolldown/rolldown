@@ -110,6 +110,19 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
         // Remove this statement by ignoring it
       }
       WrapKind::Cjs => {
+        // Consider user reference a module use relative path e.g.
+        // ```js
+        // import React from './node_modules/react/index.js';
+        // ```
+        if rec.meta.contains(ImportRecordMeta::SAFELY_MERGE_CJS_NS) {
+          if let Some(symbol_ref_to_be_merged) = self.ctx.safely_merge_cjs_ns_map.get(&importee.idx)
+          {
+            if symbol_ref_to_be_merged[0] != rec.namespace_ref {
+              return true;
+            }
+          }
+        }
+
         // Replace the statement with something like `var import_foo = __toESM(require_foo())`
 
         // `__toESM`

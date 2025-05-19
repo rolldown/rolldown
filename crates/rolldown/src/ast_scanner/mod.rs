@@ -328,7 +328,7 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
         itoa::Buffer::new().format(self.current_stmt_info.stmt_idx.unwrap_or_default().raw()),
         "#"
       ));
-    let rec = RawImportRecord::new(
+    let mut rec = RawImportRecord::new(
       Rstr::from(module_request),
       kind,
       namespace_ref,
@@ -339,6 +339,11 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
       self.current_stmt_info.stmt_idx.map(|idx| idx + 1),
     )
     .with_meta(init_meta);
+
+    // TODO: maybe we could make it configurable?
+    if matches!(rec.kind, ImportKind::Import) && module_request == "this-is-only-used-for-testing" {
+      rec.meta.insert(ImportRecordMeta::SAFELY_MERGE_CJS_NS);
+    }
 
     let id = self.result.import_records.push(rec);
     self.current_stmt_info.import_records.push(id);

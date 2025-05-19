@@ -49,12 +49,8 @@ impl ScanStageCache {
         std::collections::hash_map::Entry::Occupied(mut occupied_entry) => {
           let owners = symbols.iter().map(|item| item.owner).collect::<FxHashSet<ModuleIdx>>();
           let cache_symbols = occupied_entry.get_mut();
-          *cache_symbols = cache_symbols
-            .iter()
-            .copied()
-            .filter(|symbol| !owners.contains(&symbol.owner))
-            .chain(symbols.into_iter())
-            .collect_vec();
+          cache_symbols.retain(|symbol| !owners.contains(&symbol.owner));
+          cache_symbols.extend(symbols);
         }
         std::collections::hash_map::Entry::Vacant(vacant_entry) => {
           vacant_entry.insert(symbols);

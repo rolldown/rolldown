@@ -29,7 +29,7 @@ pub type SanitizeFileName = Either<bool, JsCallback<FnArgs<(String,)>, String>>;
 
 #[napi(object, object_to_js = false)]
 #[derive(Debug)]
-pub struct BindingOutputOptions {
+pub struct BindingOutputOptions<'env> {
   // --- Options Rolldown doesn't need to be supported
   // /** @deprecated Use the "renderDynamicImport" plugin hook instead. */
   // dynamicImportFunction: string | undefined;
@@ -94,7 +94,7 @@ pub struct BindingOutputOptions {
   pub outro: Option<AddonOutputOption>,
   // paths: OptionsPaths;
   #[napi(ts_type = "(BindingBuiltinPlugin | BindingPluginOptions | undefined)[]")]
-  pub plugins: Vec<BindingPluginOrParallelJsPluginPlaceholder>,
+  pub plugins: Vec<BindingPluginOrParallelJsPluginPlaceholder<'env>>,
   // preferConst: boolean;
   // preserveModules: boolean;
   // preserveModulesRoot: string | undefined;

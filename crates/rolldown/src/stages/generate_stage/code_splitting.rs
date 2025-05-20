@@ -175,6 +175,11 @@ impl GenerateStage<'_> {
 
     chunk_graph.sorted_chunk_idx_vec = sorted_chunk_idx_vec;
     chunk_graph.entry_module_to_entry_chunk = entry_module_to_entry_chunk;
+    self.merge_cjs_namespace(&mut chunk_graph);
+    chunk_graph
+  }
+
+  fn merge_cjs_namespace(&mut self, chunk_graph: &mut ChunkGraph) {
     for (k, v) in &self.link_output.safely_merge_cjs_ns_map {
       for symbol_ref in v
         .iter()
@@ -208,7 +213,6 @@ impl GenerateStage<'_> {
         }
       }
     }
-    chunk_graph
   }
 
   pub fn get_common_dir_of_all_modules(&self, modules: &[Module]) -> Option<String> {

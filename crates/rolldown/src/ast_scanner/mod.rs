@@ -44,6 +44,12 @@ use sugar_path::SugarPath;
 
 use crate::SharedOptions;
 
+// TODO: Not sure if this necessary to match the module request.
+// If we found it cause high false positive, we could add a extra step to match it package name as
+// well.
+static ENABLED_CJS_NAMESPACE_MERGING_MODULE_REQUEST: [&str; 3] =
+  ["this-is-only-used-for-testing", "react", "react/jsx-runtime"];
+
 #[derive(Debug)]
 pub struct ScanResult {
   /// Using `IndexMap` to make sure the order of the named imports always sorted by the span of the
@@ -341,7 +347,9 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
     .with_meta(init_meta);
 
     // TODO: maybe we could make it configurable?
-    if matches!(rec.kind, ImportKind::Import) && module_request == "this-is-only-used-for-testing" {
+    if matches!(rec.kind, ImportKind::Import)
+      && ENABLED_CJS_NAMESPACE_MERGING_MODULE_REQUEST.contains(&module_request)
+    {
       rec.meta.insert(ImportRecordMeta::SAFELY_MERGE_CJS_NS);
     }
 

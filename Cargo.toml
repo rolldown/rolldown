@@ -156,9 +156,9 @@ jsonschema = { version = "0.30.0", default-features = false }
 memchr = "2.7.2"
 mimalloc-safe = "0.1.49"
 mime = "0.3.17"
-napi = { version = "3.0.0-alpha.33", features = ["async", "anyhow"] }
-napi-build = { version = "2.1.5" }
-napi-derive = { version = "3.0.0-alpha.28", default-features = false, features = ["type-def"] }
+napi = { version = "3.0.0-beta.1", features = ["async", "anyhow"] }
+napi-build = { version = "2.2.0" }
+napi-derive = { version = "3.0.0-beta.1", default-features = false, features = ["type-def"] }
 nom = "8.0.0"
 notify = { version = "8.0.0" }
 num-format = "0.4"
@@ -197,16 +197,16 @@ syn = { version = "2", default-features = false }
 
 # oxc crates with the same version
 
-oxc = { version = "0.70.0", features = ["ast_visit", "transformer", "minifier", "mangler", "semantic", "codegen", "serialize", "isolated_declarations", "regular_expression", "cfg"] }
-oxc_parser_napi = { version = "0.70.0" }
-oxc_transform_napi = { version = "0.70.0" }
+oxc = { path = "../../oxc/oxc/crates/oxc", features = ["ast_visit", "transformer", "minifier", "mangler", "semantic", "codegen", "serialize", "isolated_declarations", "regular_expression", "cfg"] }
+oxc_parser_napi = { path = "../../oxc/oxc/napi/parser" }
+oxc_transform_napi = { path = "../../oxc/oxc/napi/transform" }
 
 # oxc crates in their own repos
 # Versions must be relaxed for usage in oxc.
 # Please update with `cargo update oxc_resolver oxc_resolver_napi oxc_sourcemap oxc_index`
 oxc_index = { version = "3", features = ["rayon", "serde"] } # https://github.com/oxc-project/oxc-index-vec
-oxc_resolver = { version = "9", features = ["package_json_raw_json_api"] } # https://github.com/oxc-project/oxc-resolver
-oxc_resolver_napi = { version = "9" }
+oxc_resolver = { version = "10", features = ["package_json_raw_json_api"] } # https://github.com/oxc-project/oxc-resolver
+oxc_resolver_napi = { version = "10" }
 oxc_sourcemap = { version = "3" } # https://github.com/oxc-project/oxc-sourcemap
 
 [profile.release]

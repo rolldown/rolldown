@@ -17,7 +17,7 @@ pub fn oxc_resolve_error_to_reason(e: &ResolveError) -> String {
       "All of the aliased extensions are not found".to_string()
     }
     ResolveError::Specifier(_) => "The provided path specifier cannot be parsed".to_string(),
-    ResolveError::JSON(_) => "JSON parse error".to_string(),
+    ResolveError::Json(_) => "JSON parse error".to_string(),
     ResolveError::Restriction(_, _) => "Path restriction".to_string(),
     ResolveError::InvalidModuleSpecifier(_, _) => "Invalid module specifier".to_string(),
     ResolveError::InvalidPackageTarget(_, _, _) => "Invalid package target".to_string(),

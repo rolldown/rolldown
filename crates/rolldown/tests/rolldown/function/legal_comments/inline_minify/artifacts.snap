@@ -6,8 +6,17 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## main.js
 
 ```js
+/**
+* @license Foo v1.0.0
+* MIT License
+*/
 //! Credit to Astro | MIT License
-function e(){}const t=`bar`;
+function e(){}
+/**
+* @license Bar v11.0.0
+* MIT License
+*/
+const t=`bar`;
 /*! Bundle license information: */
 console.log(`hello`);export{t as bar,e as hello};
 ```

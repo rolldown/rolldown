@@ -1178,7 +1178,7 @@ expression: output
 
 # tests/esbuild/default/legal_comments_modify_indent
 
-- entry-!~{000}~.js => entry-Byt1vSSU.js
+- entry-!~{000}~.js => entry-B161_kiz.js
 - entry-!~{001}~.js => entry-DC4KoLXg.js
 - entry2.css
 

@@ -3,7 +3,7 @@ use itertools::Itertools;
 use oxc_index::IndexVec;
 use rolldown_common::{GetLocalDbMut, ImporterRecord, ModuleIdx};
 use rolldown_utils::rayon::{IntoParallelRefIterator, ParallelIterator};
-use rustc_hash::FxHashMap;
+use rustc_hash::{FxHashMap, FxHashSet};
 
 use crate::{
   module_loader::module_loader::VisitState,
@@ -44,6 +44,19 @@ impl ScanStageCache {
         modules
       }
     };
+    for (idx, symbols) in scan_stage_output.safely_merge_cjs_ns_map {
+      match cache.safely_merge_cjs_ns_map.entry(idx) {
+        std::collections::hash_map::Entry::Occupied(mut occupied_entry) => {
+          let owners = symbols.iter().map(|item| item.owner).collect::<FxHashSet<ModuleIdx>>();
+          let cache_symbols = occupied_entry.get_mut();
+          cache_symbols.retain(|symbol| !owners.contains(&symbol.owner));
+          cache_symbols.extend(symbols);
+        }
+        std::collections::hash_map::Entry::Vacant(vacant_entry) => {
+          vacant_entry.insert(symbols);
+        }
+      }
+    }
     // merge module_table, index_ast_scope, index_ecma_ast
     for (new_idx, mut new_module) in modules {
       let idx = self.module_id_to_idx[new_module.id_clone()].idx();
@@ -108,7 +121,6 @@ impl ScanStageCache {
           .collect::<Vec<_>>();
         IndexVec::from_vec(item)
       },
-      // TODO: incremental merging
       safely_merge_cjs_ns_map: cache.safely_merge_cjs_ns_map.clone(),
 
       // Since `AstScope` is immutable in following phase, move it to avoid clone

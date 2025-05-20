@@ -71,7 +71,7 @@
 * **rolldown:** oxc v0.68.1 ([#4405](https://github.com/rolldown/rolldown/issues/4405)) ([4d4df59](https://github.com/rolldown/rolldown/commit/4d4df59349a721c113be5f5e1837b39556ea5742))
 * **rolldown:** oxc v0.69.0 ([#4478](https://github.com/rolldown/rolldown/issues/4478)) ([4940c31](https://github.com/rolldown/rolldown/commit/4940c310c118c6c986c2f27b5ecb03c758dbd2da))
 * **rolldown:** oxc v0.76.0 ([#4345](https://github.com/rolldown/rolldown/issues/4345)) ([86ed7c3](https://github.com/rolldown/rolldown/commit/86ed7c3a283997a636bd950a21aa249f9028ca12))
-* **rolldown:** oxc v9.0.0 ([#4462](https://github.com/rolldown/rolldown/issues/4462)) ([9ef061d](https://github.com/rolldown/rolldown/commit/9ef061d317ac9d7c9b9dd3e1662b5b684e15a709))
+* **rolldown:** oxc_resolver v9.0.0 ([#4462](https://github.com/rolldown/rolldown/issues/4462)) ([9ef061d](https://github.com/rolldown/rolldown/commit/9ef061d317ac9d7c9b9dd3e1662b5b684e15a709))
 * **rolldown:** update to `oxc@0.70.0` to refine printing comments  ([#4562](https://github.com/rolldown/rolldown/issues/4562)) ([1c583fe](https://github.com/rolldown/rolldown/commit/1c583fe976bea726eda3ad3c4aca7910040779bc))
 * **rust:** execute cjs as it is ([#4465](https://github.com/rolldown/rolldown/issues/4465)) ([5becdcf](https://github.com/rolldown/rolldown/commit/5becdcf6104435d60b53b3b6819f4cae8cdd0532))
 * **rust:** impl `Query` filter ([#4542](https://github.com/rolldown/rolldown/issues/4542)) ([8a5f862](https://github.com/rolldown/rolldown/commit/8a5f8621aeb28bc11b0b1e76abb7ad0aa5d4c71c))
@@ -155,6 +155,9 @@
 * don't expose `And` class in pluginutils ([#4537](https://github.com/rolldown/rolldown/issues/4537)) ([985af6d](https://github.com/rolldown/rolldown/commit/985af6d846c0c85a61b19dcdd61d07c880074f38))
 * expose `withFilter` function via `rolldown/filter` instead of `rolldown` ([#4369](https://github.com/rolldown/rolldown/issues/4369)) ([ead9749](https://github.com/rolldown/rolldown/commit/ead9749e14f5f1a3c1119d331f076fbc28027674))
 * use camel cases for `package.json[#exports](https://github.com/rolldown/rolldown/issues/exports)` field ([#4366](https://github.com/rolldown/rolldown/issues/4366)) ([2fa6d40](https://github.com/rolldown/rolldown/commit/2fa6d4067ba6edceeab4d3f841cff6ff690ea160))
+
+
+
 # [1.0.0-beta.8](https://github.com/rolldown/rolldown/compare/v1.0.0-beta.7...v1.0.0-beta.8) (2025-04-22)
 
 

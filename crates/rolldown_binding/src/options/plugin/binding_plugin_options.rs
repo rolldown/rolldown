@@ -30,8 +30,8 @@ use super::{
 };
 
 /// none is parallel js plugin
-pub type BindingPluginOrParallelJsPluginPlaceholder =
-  Option<Either<BindingPluginOptions, BindingBuiltinPlugin>>;
+pub type BindingPluginOrParallelJsPluginPlaceholder<'env> =
+  Option<Either<BindingPluginOptions, BindingBuiltinPlugin<'env>>>;
 
 #[napi_derive::napi(object, object_to_js = false)]
 #[derive(Default)]

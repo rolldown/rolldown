@@ -1,8 +1,8 @@
 import {
-  instantiateNapiModule as __emnapiInstantiateNapiModule,
-  getDefaultContext as __emnapiGetDefaultContext,
-  WASI as __WASI,
   createOnMessage as __wasmCreateOnMessageForFsProxy,
+  getDefaultContext as __emnapiGetDefaultContext,
+  instantiateNapiModule as __emnapiInstantiateNapiModule,
+  WASI as __WASI,
 } from '@napi-rs/wasm-runtime'
 import { memfs } from '@napi-rs/wasm-runtime/fs'
 import __wasmUrl from './rolldown-binding.wasm32-wasi.wasm?url'
@@ -60,6 +60,7 @@ const {
     }
   },
 })
+export default __napiModule.exports
 export const BindingBundleEndEventData = __napiModule.exports.BindingBundleEndEventData
 export const BindingBundleErrorEventData = __napiModule.exports.BindingBundleErrorEventData
 export const BindingCallableBuiltinPlugin = __napiModule.exports.BindingCallableBuiltinPlugin

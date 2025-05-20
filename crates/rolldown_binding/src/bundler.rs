@@ -19,9 +19,9 @@ use rolldown_error::{
 };
 
 #[napi(object, object_to_js = false)]
-pub struct BindingBundlerOptions {
-  pub input_options: BindingInputOptions,
-  pub output_options: BindingOutputOptions,
+pub struct BindingBundlerOptions<'env> {
+  pub input_options: BindingInputOptions<'env>,
+  pub output_options: BindingOutputOptions<'env>,
   pub parallel_plugins_registry: Option<ParallelJsPluginRegistry>,
 }
 

@@ -197,9 +197,9 @@ syn = { version = "2", default-features = false }
 
 # oxc crates with the same version
 
-oxc = { path = "../../oxc/oxc/crates/oxc", features = ["ast_visit", "transformer", "minifier", "mangler", "semantic", "codegen", "serialize", "isolated_declarations", "regular_expression", "cfg"] }
-oxc_parser_napi = { path = "../../oxc/oxc/napi/parser" }
-oxc_transform_napi = { path = "../../oxc/oxc/napi/transform" }
+oxc = { version = "0.71.0", features = ["ast_visit", "transformer", "minifier", "mangler", "semantic", "codegen", "serialize", "isolated_declarations", "regular_expression", "cfg"] }
+oxc_parser_napi = { version = "0.71.0" }
+oxc_transform_napi = { version = "0.71.0" }
 
 # oxc crates in their own repos
 # Versions must be relaxed for usage in oxc.

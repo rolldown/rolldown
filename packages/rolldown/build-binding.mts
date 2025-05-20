@@ -25,7 +25,6 @@ const cmd = spawnSync(
     '--dts',
     'binding.d.ts',
     '--no-const-enum',
-    '--no-dts-cache',
     ...args,
   ],
   {

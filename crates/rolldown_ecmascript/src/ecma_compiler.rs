@@ -138,7 +138,6 @@ impl EcmaCompiler {
     let compress_options = options.compress.unwrap_or_default();
 
     let semantic = SemanticBuilder::new().build(program).semantic;
-    let stats = semantic.stats();
 
     let scoping = semantic.into_scoping();
     if run_compress {
@@ -146,14 +145,8 @@ impl EcmaCompiler {
     } else {
       Compressor::new(allocator, CompressOptions::safest()).dead_code_elimination(program);
     }
-    let scoping = options.mangle.map(|options| {
-      let semantic = SemanticBuilder::new()
-        .with_stats(stats)
-        .with_scope_tree_child_ids(true)
-        .build(program)
-        .semantic;
-      Mangler::default().with_options(options).build_with_semantic(semantic, program)
-    });
+    let scoping =
+      options.mangle.map(|options| Mangler::default().with_options(options).build(program));
     MinifierReturn { scoping }
   }
 }

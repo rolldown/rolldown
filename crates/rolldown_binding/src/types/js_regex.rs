@@ -1,8 +1,10 @@
 use std::fmt::Debug;
 
 use napi::{
-  Env, Error, JsObject, JsUnknown, NapiValue, Status,
-  bindgen_prelude::{FromNapiValue, Function, TypeName, ValidateNapiValue},
+  Env, Error, Status, Unknown,
+  bindgen_prelude::{
+    FromNapiValue, Function, JsObjectValue, JsValue, Object, TypeName, ValidateNapiValue,
+  },
   sys,
 };
 
@@ -28,11 +30,11 @@ impl TypeName for JsRegExp {
 
 impl FromNapiValue for JsRegExp {
   unsafe fn from_napi_value(env: sys::napi_env, napi_val: sys::napi_value) -> napi::Result<Self> {
-    let js_object = unsafe { JsObject::from_raw_unchecked(env, napi_val) };
+    let js_object = Object::from_raw(env, napi_val);
 
     let env = Env::from(env);
     let global = env.get_global()?;
-    let regexp_constructor = global.get_named_property::<Function<JsUnknown, ()>>("RegExp")?;
+    let regexp_constructor = global.get_named_property::<Function<Unknown, ()>>("RegExp")?;
 
     if js_object.instanceof(regexp_constructor)? {
       let source = js_object.get_named_property::<String>("source")?;

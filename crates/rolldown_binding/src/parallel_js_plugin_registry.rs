@@ -1,8 +1,8 @@
 use crate::options::plugin::{BindingPluginOptions, BindingPluginWithIndex};
 use dashmap::DashMap;
 use napi::{
-  Env, JsUnknown,
-  bindgen_prelude::{FromNapiValue, JavaScriptClassExt, Object, ObjectFinalize},
+  Env, Unknown,
+  bindgen_prelude::{FromNapiValue, JavaScriptClassExt, JsObjectValue, Object, ObjectFinalize},
 };
 use napi_derive::napi;
 use rolldown_utils::{dashmap::FxDashMap, rustc_hash::FxHashMapExt};
@@ -67,12 +67,12 @@ impl FromNapiValue for ParallelJsPluginRegistry {
     napi_val: napi::sys::napi_value,
   ) -> napi::Result<Self> {
     unsafe {
-      let unknown = JsUnknown::from_napi_value(env, napi_val)?;
-      if !ParallelJsPluginRegistry::instance_of(env.into(), &unknown)? {
+      let unknown = Unknown::from_napi_value(env, napi_val)?;
+      if !ParallelJsPluginRegistry::instance_of(&Env::from_raw(env), &unknown)? {
         return Err(napi::Error::from_status(napi::Status::GenericFailure));
       }
 
-      let object: Object = unknown.cast();
+      let object: Object = unknown.cast()?;
       let id: u16 = object.get_named_property_unchecked("id")?;
       let worker_count: u16 = object.get_named_property_unchecked("workerCount")?;
       Ok(Self { id, worker_count })

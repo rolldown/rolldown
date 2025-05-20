@@ -1,7 +1,6 @@
 use std::sync::Arc;
 
-use napi::JsUnknown;
-use napi::bindgen_prelude::FromNapiValue;
+use napi::{Unknown, bindgen_prelude::FromNapiValue};
 use napi_derive::napi;
 use rustc_hash::FxHashSet;
 
@@ -42,13 +41,13 @@ use super::{
 
 #[allow(clippy::pub_underscore_fields)]
 #[napi(object)]
-pub struct BindingBuiltinPlugin {
+pub struct BindingBuiltinPlugin<'a> {
   #[napi(js_name = "__name")]
   pub __name: BindingBuiltinPluginName,
-  pub options: Option<JsUnknown>,
+  pub options: Option<Unknown<'a>>,
 }
 
-impl std::fmt::Debug for BindingBuiltinPlugin {
+impl std::fmt::Debug for BindingBuiltinPlugin<'_> {
   fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
     f.debug_struct("BindingBuiltinPlugin")
       .field("name", &self.__name)
@@ -57,7 +56,7 @@ impl std::fmt::Debug for BindingBuiltinPlugin {
   }
 }
 
-impl TryFrom<BindingBuiltinPlugin> for Arc<dyn Pluginable> {
+impl TryFrom<BindingBuiltinPlugin<'_>> for Arc<dyn Pluginable> {
   type Error = napi::Error;
 
   #[allow(clippy::too_many_lines)]

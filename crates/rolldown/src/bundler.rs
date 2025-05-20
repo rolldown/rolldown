@@ -308,7 +308,11 @@ impl Bundler {
               module
                 .import_records
                 .iter()
-                .map(|r| scan_stage_output.module_table.modules[r.resolved_module].id().to_string())
+                .map(|r| action::ModuleImport {
+                  id: scan_stage_output.module_table.modules[r.resolved_module].id().to_string(),
+                  kind: r.kind.to_string(),
+                  module_request: r.module_request.to_string(),
+                })
                 .collect(),
             ),
             importers: Some(module.importers.iter().map(|i| i.to_string()).collect()),

@@ -10,5 +10,5 @@ pub use definitions::{
   hook_resolve_id_call_start::HookResolveIdCallStart,
   hook_transform_call_end::HookTransformCallEnd,
   hook_transform_call_start::HookTransformCallStart,
-  module_graph_ready::{Module, ModuleGraphReady},
+  module_graph_ready::{Module, ModuleGraphReady, ModuleImport},
 };

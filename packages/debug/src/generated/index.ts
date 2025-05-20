@@ -9,3 +9,4 @@ export * from './HookTransformCallStart.js';
 export * from './Meta.js';
 export * from './Module.js';
 export * from './ModuleGraphReady.js';
+export * from './ModuleImport.js';

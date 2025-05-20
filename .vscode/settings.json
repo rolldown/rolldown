@@ -25,6 +25,7 @@
     "_config.json": "jsonc"
   },
   "files.readonlyInclude": {
+    "**/CHANGELOG-*.md": true,
     "**/CHANGELOG.md": true,
     "**/generated/**": true,
     "packages/rolldown/src/*{binding,worker}*.*js": true

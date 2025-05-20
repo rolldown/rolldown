@@ -13,6 +13,7 @@
   "toml": {
   },
   "excludes": [
+    "CHANGELOG-*.md",
     "CHANGELOG.md",
     "crates/rolldown/src/runtime",
     "crates/rolldown/tests",

@@ -196,6 +196,7 @@ export interface OutputOptions {
   hoistTransitiveImports?: false;
   preserveModules?: boolean;
   virtualDirname?: string;
+  preserveModulesRoot?: string;
 }
 
 interface OverwriteOutputOptionsForCli {

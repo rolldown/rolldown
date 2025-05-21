@@ -615,6 +615,7 @@ export interface BindingOutputOptions {
   preserveModules?: boolean
   target?: string | Array<string>
   virtualDirname?: string
+  preserveModulesRoot?: string
 }
 
 export interface BindingPluginContextResolvedId {

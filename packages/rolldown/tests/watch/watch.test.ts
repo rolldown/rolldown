@@ -580,18 +580,6 @@ test.sequential('warning for multiply notify options', async () => {
   await watcher.close()
 })
 
-test.sequential('watch close immediately', async () => {
-  const { input, output } = await createTestInputAndOutput(
-    'watch-close-immediately',
-  )
-  const watcher = watch({
-    input,
-    output: { file: output },
-  })
-
-  await watcher.close()
-})
-
 if (process.platform === 'win32') {
   test.sequential('watch linux path at windows #4385', async () => {
     const { input, output } = await createTestInputAndOutput('watch-linux-path-at-windows')
@@ -621,6 +609,18 @@ if (process.platform === 'win32') {
     await watcher.close()
   })
 }
+
+test.sequential('watch close immediately', async () => {
+  const { input, output } = await createTestInputAndOutput(
+    'watch-close-immediately',
+  )
+  const watcher = watch({
+    input,
+    output: { file: output },
+  })
+
+  await watcher.close()
+})
 
 async function createTestInputAndOutput(dirname: string, content?: string) {
   const dir = path.join(import.meta.dirname, 'temp', dirname)

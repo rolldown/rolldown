@@ -592,7 +592,7 @@ test.sequential('watch close immediately', async () => {
   await watcher.close()
 })
 
-test.sequential('watch linux path at windows #4385', async () => {
+test.only('watch linux path at windows #4385', async () => {
   const { input, output } = await createTestInputAndOutput('watch-linux-path-at-windows')
   const watcher = watch({
     input,
@@ -601,6 +601,7 @@ test.sequential('watch linux path at windows #4385', async () => {
       {
         name: 'test',
         resolveId() {
+          console.log(1111)
           return input.replace(/\\/g, '/');
         },
       },

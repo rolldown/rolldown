@@ -308,6 +308,8 @@ impl GenerateStage<'_> {
   ) {
     chunk_graph.chunk_table.iter_enumerated().for_each(|(chunk_id, chunk)| {
       let chunk_meta_imports = &index_chunk_depended_symbols[chunk_id];
+      dbg!(&chunk.entry_module(&self.link_output.module_table).and_then(|item| { Some(&item.id) }));
+      dbg!(&chunk_meta_imports);
       for import_ref in chunk_meta_imports.iter().copied() {
         if !self.link_output.used_symbol_refs.contains(&import_ref) {
           continue;

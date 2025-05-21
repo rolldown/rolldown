@@ -1,5 +1,5 @@
-import B from './b.js'
+import B, {D} from './b.js'
 
 export {
-  B
+  B,
 }

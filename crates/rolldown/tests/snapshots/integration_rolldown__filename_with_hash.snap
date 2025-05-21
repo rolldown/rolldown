@@ -793,15 +793,15 @@ expression: output
 
 # tests/esbuild/default/export_forms_es6
 
-- entry-!~{000}~.js => entry-nrisdIjZ.js
+- entry-!~{000}~.js => entry-CNJxOU5W.js
 
 # tests/esbuild/default/export_forms_iife
 
-- entry-!~{000}~.js => entry-BUiABuuw.js
+- entry-!~{000}~.js => entry-4De0duF1.js
 
 # tests/esbuild/default/export_forms_with_minify_identifiers_and_no_bundle
 
-- a-!~{000}~.js => a-D34W3e9l.js
+- a-!~{000}~.js => a-C-ZyFH0D.js
 - b-!~{001}~.js => b-qhjqeTzO.js
 - c-!~{002}~.js => c-DbAYnqxj.js
 - d-!~{003}~.js => d-erhulghW.js
@@ -870,11 +870,11 @@ expression: output
 
 # tests/esbuild/default/forbid_string_export_names_bundle
 
-- entry-!~{000}~.js => entry-DC-klnd1.js
+- entry-!~{000}~.js => entry-DZBxtX9-.js
 
 # tests/esbuild/default/forbid_string_export_names_no_bundle
 
-- entry-!~{000}~.js => entry-x7LXCSL8.js
+- entry-!~{000}~.js => entry-CCWu6yUA.js
 
 # tests/esbuild/default/forbid_string_import_names_bundle
 

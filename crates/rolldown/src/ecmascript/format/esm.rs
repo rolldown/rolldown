@@ -108,9 +108,9 @@ fn render_esm_chunk_imports(ctx: &GenerateContext<'_>) -> Option<String> {
         let Specifier::Literal(alias) = item.export_alias.as_ref().unwrap() else {
           panic!("should not be star import from other chunks")
         };
-        let alias = ctx.render_export_items_index_vec[*exporter_id]
+        let alias = &ctx.render_export_items_index_vec[*exporter_id]
           .get(&item.import_ref)
-          .expect("should have export item index");
+          .expect("should have export item index")[0];
         if alias == imported {
           Some(alias.as_str().into())
         } else {

@@ -26,7 +26,7 @@ pub struct GenerateContext<'a> {
   /// export const a = 10000000;
   /// export {a as b}; // symbol_ref points to `a`, and alias is `b`
   /// ```
-  pub render_export_items_index_vec: &'a IndexVec<ChunkIdx, FxIndexMap<SymbolRef, Rstr>>,
+  pub render_export_items_index_vec: &'a IndexVec<ChunkIdx, FxIndexMap<SymbolRef, Vec<Rstr>>>,
 }
 
 impl GenerateContext<'_> {

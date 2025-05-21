@@ -4,9 +4,10 @@ use futures::future::try_join_all;
 use oxc_index::{IndexVec, index_vec};
 use rolldown_common::{
   Asset, EmittedChunkInfo, InstantiationKind, ModuleRenderArgs, ModuleRenderOutput, Output,
-  OutputAsset, OutputChunk, SharedFileEmitter, SourceMapType,
+  OutputAsset, OutputChunk, SharedFileEmitter, SourceMapType, SymbolRef,
 };
 use rolldown_error::{BuildDiagnostic, BuildResult};
+use rolldown_rstr::Rstr;
 use rolldown_utils::{
   concat_string,
   indexmap::{FxIndexMap, FxIndexSet},
@@ -189,10 +190,11 @@ impl GenerateStage<'_> {
       .chunks
       .iter()
       .map(|item| {
-        get_export_items(item, &self.link_output, &self.options)
-          .into_iter()
-          .map(|(k, v)| (v, k))
-          .collect::<FxIndexMap<_, _>>()
+        let mut map: FxIndexMap<SymbolRef, Vec<Rstr>> = FxIndexMap::default();
+        get_export_items(item, &self.link_output, &self.options).into_iter().for_each(|(k, v)| {
+          map.entry(v).or_default().push(k);
+        });
+        map
       })
       .collect();
     dbg!(&render_export_items_index_vec);

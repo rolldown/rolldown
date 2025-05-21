@@ -602,7 +602,6 @@ if (process.platform === 'win32') {
         {
           name: 'test',
           resolveId() {
-            console.log(1111)
             return input.replace(/\\/g, '/');
           },
         },

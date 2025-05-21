@@ -369,6 +369,7 @@ const InputOptionsSchema = v.strictObject({
       resolveNewUrlToAsset: v.optional(v.boolean()),
       strictExecutionOrder: v.optional(v.boolean()),
       hmr: v.optional(HmrSchema),
+      attachDebugInfo: v.optional(v.boolean()),
     }),
   ),
   define: v.pipe(

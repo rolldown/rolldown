@@ -6,6 +6,7 @@ pub struct BindingExperimentalOptions {
   pub vite_mode: Option<bool>,
   pub resolve_new_url_to_asset: Option<bool>,
   pub hmr: Option<BindingExperimentalHmrOptions>,
+  pub attach_debug_info: Option<bool>,
 }
 
 impl From<BindingExperimentalOptions> for rolldown_common::ExperimentalOptions {
@@ -18,6 +19,7 @@ impl From<BindingExperimentalOptions> for rolldown_common::ExperimentalOptions {
       // TODO: binding
       incremental_build: None,
       hmr: value.hmr.map(Into::into),
+      attach_debug_info: value.attach_debug_info,
     }
   }
 }

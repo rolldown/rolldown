@@ -63,7 +63,7 @@ impl GenerateStage<'_> {
         let count = idx.raw();
         let mut bits = BitSet::new(modules_len);
         bits.set_bit(count);
-        let chunk = chunk_graph.add_chunk(Chunk::new(
+        let mut chunk = Chunk::new(
           None,
           None,
           None,
@@ -76,7 +76,17 @@ impl GenerateStage<'_> {
           },
           module.is_included(),
           input_base.clone(),
-        ));
+        );
+        chunk.add_create_reason(
+          || {
+            format!(
+              "Enabling Preserve Module: User-defined({}), module({})",
+              module.is_user_defined_entry, module.stable_id
+            )
+          },
+          self.options,
+        );
+        let chunk = chunk_graph.add_chunk(chunk);
         chunk_graph.add_module_to_chunk(module.idx, chunk);
         // bits_to_chunk.insert(bits, chunk); // This line is intentionally commented out because `bits_to_chunk` is not used in this loop. It is updated elsewhere in the `init_entry_point` and `split_chunks` methods.
         entry_module_to_entry_chunk.insert(module.idx, chunk);
@@ -273,7 +283,7 @@ impl GenerateStage<'_> {
       let Module::Normal(module) = &self.link_output.module_table.modules[entry_point.id] else {
         continue;
       };
-      let chunk = chunk_graph.add_chunk(Chunk::new(
+      let mut chunk = Chunk::new(
         entry_point.name.clone(),
         entry_point.reference_id.clone(),
         entry_point.file_name.clone(),
@@ -286,7 +296,13 @@ impl GenerateStage<'_> {
         },
         self.link_output.lived_entry_points.contains(&entry_point.id),
         input_base.clone(),
-      ));
+      );
+      chunk.add_create_reason(
+        || format!("User-defined Entry: input({}), name({:?})", module.debug_id, entry_point.name),
+        self.options,
+      );
+      let chunk = chunk_graph.add_chunk(chunk);
+
       bits_to_chunk.insert(bits, chunk);
       entry_module_to_entry_chunk.insert(entry_point.id, chunk);
     }
@@ -349,7 +365,7 @@ impl GenerateStage<'_> {
       if let Some(chunk_id) = bits_to_chunk.get(bits).copied() {
         chunk_graph.add_module_to_chunk(normal_module.idx, chunk_id);
       } else {
-        let chunk = Chunk::new(
+        let mut chunk = Chunk::new(
           None,
           None,
           None,
@@ -358,6 +374,26 @@ impl GenerateStage<'_> {
           ChunkKind::Common,
           true,
           input_base.clone(),
+        );
+        chunk.add_create_reason(
+          || {
+            let entries = self
+              .link_output
+              .entries
+              .iter()
+              .enumerate()
+              .filter_map(|(index, entry_point)| {
+                if bits.has_bit(index.try_into().unwrap()) {
+                  let entry_module = &self.link_output.module_table.modules[entry_point.id];
+                  Some(entry_module.stable_id().to_string())
+                } else {
+                  None
+                }
+              })
+              .join(", ");
+            format!("Common Chunk: SharedBy({entries})")
+          },
+          self.options,
         );
         let chunk_id = chunk_graph.add_chunk(chunk);
         chunk_graph.add_module_to_chunk(normal_module.idx, chunk_id);

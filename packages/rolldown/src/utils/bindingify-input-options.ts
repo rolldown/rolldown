@@ -74,6 +74,7 @@ export function bindingifyInputOptions(
       viteMode: inputOptions.experimental?.viteMode,
       resolveNewUrlToAsset: inputOptions.experimental?.resolveNewUrlToAsset,
       hmr: bindingifyHmr(inputOptions.experimental?.hmr),
+      attachDebugInfo: inputOptions.experimental?.attachDebugInfo,
     },
     profilerNames: inputOptions?.profilerNames,
     jsx: bindingifyJsx(inputOptions.jsx),

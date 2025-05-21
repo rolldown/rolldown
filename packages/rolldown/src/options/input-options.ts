@@ -139,6 +139,7 @@ export interface InputOptions {
     viteMode?: boolean;
     resolveNewUrlToAsset?: boolean;
     hmr?: HmrOptions;
+    attachDebugInfo?: boolean;
   };
   /**
    * Replace global variables or [property accessors](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Operators/Property_accessors) with the provided values.

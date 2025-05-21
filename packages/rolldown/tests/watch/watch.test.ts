@@ -592,6 +592,39 @@ test.sequential('watch close immediately', async () => {
   await watcher.close()
 })
 
+test.sequential('watch linux path at windows #4385', async () => {
+  const { input, output, dir } = await createTestInputAndOutput('watch-linux-path-at-windows')
+  const resolveIdFn = vi.fn()
+  const watcher = watch({
+    input,
+    output: { file: output },
+    plugins: [
+      {
+        name: 'test',
+        resolveId(id, importer) {
+          resolveIdFn()
+          return path.resolve(path.dirname(dir), id).replace(/\\/g, '/');
+        },
+      },
+    ],
+  })
+  // should run build once
+  await waitBuildFinished(watcher)
+
+  // edit file
+  resolveIdFn.mockClear()
+  fs.writeFileSync(input, 'console.log(2)')
+  await waitUtil(() => {
+    expect(fs.readFileSync(output, 'utf-8').includes('console.log(2)')).toBe(
+      true,
+    )
+    // The different platform maybe emit multiple events
+    expect(resolveIdFn).toBeCalled()
+  })
+
+  await watcher.close()
+})
+
 async function createTestInputAndOutput(dirname: string, content?: string) {
   const dir = path.join(import.meta.dirname, 'temp', dirname)
   fs.mkdirSync(dir, { recursive: true })

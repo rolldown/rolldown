@@ -58,6 +58,8 @@ bitflags::bitflags! {
     /// Mark namespace of a record could be merged safely
     const SAFELY_MERGE_CJS_NS = 1 << 10;
     const TOP_LEVEL_PURE_DYNAMIC_IMPORT = Self::IS_TOP_LEVEL.bits() | Self::PURE_DYNAMIC_IMPORT.bits();
+    /// Whether the import is a top level awiat import
+    const IS_TOP_LEVEL_AWAIT_DYNAMIC_IMPORT = 1 << 11;
   }
 }
 

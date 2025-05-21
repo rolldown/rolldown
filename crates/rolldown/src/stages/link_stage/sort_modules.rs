@@ -1,6 +1,6 @@
 use std::iter;
 
-use rolldown_common::{Module, ModuleIdx};
+use rolldown_common::{ImportRecordMeta, Module, ModuleIdx};
 use rolldown_error::{BuildDiagnostic, EventKindSwitcher};
 use rolldown_utils::rustc_hash::FxHashSetExt;
 use rustc_hash::{FxHashMap, FxHashSet};
@@ -78,11 +78,16 @@ impl LinkStage<'_> {
             );
             stack_indexes_of_executing_id.insert(id, execution_stack.len() - 1);
 
+            // top level await module should be sorted.
             execution_stack.extend(
               self.module_table.modules[id]
                 .import_records()
                 .iter()
-                .filter(|rec| rec.kind.is_static() && !rec.is_dummy())
+                .filter(|rec| {
+                  (rec.kind.is_static()
+                    || rec.meta.contains(ImportRecordMeta::IS_TOP_LEVEL_AWAIT_DYNAMIC_IMPORT))
+                    && !rec.is_dummy()
+                })
                 .map(|rec| rec.resolved_module)
                 .rev()
                 .map(Status::ToBeExecuted),

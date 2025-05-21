@@ -655,6 +655,7 @@ const OutputOptionsSchema = v.strictObject({
     }, () => `The 'true' value is not supported`),
   ),
   preserveModules: v.optional(v.boolean()),
+  preserveModulesRoot: v.optional(v.string()),
   virtualDirname: v.optional(v.string()),
 });
 

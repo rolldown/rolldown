@@ -21,7 +21,7 @@ pub struct GenerateContext<'a> {
   pub module_id_to_codegen_ret: Vec<Option<ModuleRenderOutput>>,
   /// The key of the map is exported item symbol,
   /// the value of the map is optional alias. e.g.
-  /// - chunkb.js
+  /// - chunkB.js
   /// ```js
   /// export const a = 10000000;
   /// export {a as b}; // symbol_ref points to `a`, and alias is `b`

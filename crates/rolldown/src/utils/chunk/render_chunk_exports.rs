@@ -92,8 +92,7 @@ pub fn render_chunk_exports(
   let export_items: Vec<(Rstr, SymbolRef)> = ctx.render_export_items_index_vec[ctx.chunk_idx]
     .clone()
     .into_iter()
-    .map(|(symbol_ref, names)| names.into_iter().map(|name| (name, symbol_ref)).collect_vec())
-    .flatten()
+    .flat_map(|(symbol_ref, names)| names.into_iter().map(|name| (name, symbol_ref)).collect_vec())
     .collect();
 
   match options.format {

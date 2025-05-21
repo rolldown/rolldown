@@ -191,13 +191,12 @@ impl GenerateStage<'_> {
       .iter()
       .map(|item| {
         let mut map: FxIndexMap<SymbolRef, Vec<Rstr>> = FxIndexMap::default();
-        get_export_items(item, &self.link_output, &self.options).into_iter().for_each(|(k, v)| {
+        get_export_items(item, self.link_output, self.options).into_iter().for_each(|(k, v)| {
           map.entry(v).or_default().push(k);
         });
         map
       })
       .collect();
-    dbg!(&render_export_items_index_vec);
 
     try_join_all(
       chunk_graph
@@ -215,7 +214,7 @@ impl GenerateStage<'_> {
             plugin_driver: self.plugin_driver,
             warnings: vec![],
             module_id_to_codegen_ret,
-            render_export_items_index_vec: &render_export_items_index_vec,
+            render_export_items_index_vec,
           };
           let ecma_chunks = EcmaGenerator::instantiate_chunk(&mut ctx).await;
 

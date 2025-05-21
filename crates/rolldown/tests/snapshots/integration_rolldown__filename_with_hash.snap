@@ -4786,6 +4786,11 @@ expression: output
 
 - main-!~{000}~.js => main-Cv6xMI1a.js
 
+# tests/rolldown/misc/preserve_modules
+
+- main-!~{000}~.js => main-iuKz2ghl.js
+- main-iuKz2ghl.js.map
+
 # tests/rolldown/misc/reexport_star
 
 - entry-!~{001}~.js => entry-9pAfnsAm.js

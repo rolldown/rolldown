@@ -273,7 +273,7 @@ impl GenerateStage<'_> {
           }
         }
       }
-      let chunk = Chunk::new(
+      let mut chunk = Chunk::new(
         Some(this_module_group.name.clone()),
         None,
         None,
@@ -285,6 +285,10 @@ impl GenerateStage<'_> {
         ChunkKind::Common,
         true,
         input_base.clone(),
+      );
+      chunk.add_create_reason(
+        || format!("AdvancedChunks: GroupName({})", this_module_group.name),
+        self.options,
       );
 
       let chunk_idx = chunk_graph.add_chunk(chunk);

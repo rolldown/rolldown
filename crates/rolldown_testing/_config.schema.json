@@ -667,6 +667,12 @@
     "ExperimentalOptions": {
       "type": "object",
       "properties": {
+        "attachDebugInfo": {
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
         "disableLiveBindings": {
           "type": [
             "boolean",

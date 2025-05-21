@@ -1,0 +1,75 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## A.js
+
+```js
+//! User-defined Entry: input(entry-a.js), name(Some("A"))
+import { __esm } from "./rolldown-runtime.js";
+import { init_shared } from "./shared.js";
+import { init_share_splitted } from "./Splitted.js";
+
+//#region entry-a.js
+var init_entry_a = __esm({ "entry-a.js"() {
+	init_shared();
+	init_share_splitted();
+	console.log("entry-a");
+} });
+
+//#endregion
+init_entry_a();
+```
+## B.js
+
+```js
+//! User-defined Entry: input(entry-b.js), name(Some("B"))
+import { __esm } from "./rolldown-runtime.js";
+import { init_shared } from "./shared.js";
+import { init_share_splitted } from "./Splitted.js";
+
+//#region entry-b.js
+var init_entry_b = __esm({ "entry-b.js"() {
+	init_shared();
+	init_share_splitted();
+	console.log("entry-b");
+} });
+
+//#endregion
+init_entry_b();
+```
+## Splitted.js
+
+```js
+//! AdvancedChunks: GroupName(Splitted)
+import { __esm } from "./rolldown-runtime.js";
+
+//#region share-splitted.js
+var init_share_splitted = __esm({ "share-splitted.js"() {
+	console.log("share-splitted");
+} });
+
+//#endregion
+export { init_share_splitted };
+```
+## rolldown-runtime.js
+
+```js
+
+export { __esm };
+```
+## shared.js
+
+```js
+//! Common Chunk: SharedBy(entry-a.js, entry-b.js)
+import { __esm } from "./rolldown-runtime.js";
+
+//#region shared.js
+var init_shared = __esm({ "shared.js"() {
+	console.log("shared");
+} });
+
+//#endregion
+export { init_shared };
+```

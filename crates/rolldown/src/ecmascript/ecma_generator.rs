@@ -168,7 +168,7 @@ impl Generator for EcmaGenerator {
       footer: footer.as_deref(),
       directives: &directives,
     };
-    let source_joiner = match ctx.options.format {
+    let mut source_joiner = match ctx.options.format {
       OutputFormat::Esm => render_esm(ctx, addon_render_context, &rendered_module_sources),
       OutputFormat::Cjs => {
         match render_cjs(ctx, addon_render_context, &rendered_module_sources, &mut warnings) {
@@ -193,6 +193,12 @@ impl Generator for EcmaGenerator {
     };
 
     ctx.warnings.extend(warnings);
+
+    if ctx.options.experimental.is_attach_debug_info_enabled()
+      && !ctx.chunk.create_reasons.is_empty()
+    {
+      source_joiner.prepend_source(format!("//! {}", ctx.chunk.create_reasons.join("\n//! ")));
+    }
 
     let (content, map) = source_joiner.join();
 

@@ -21,11 +21,11 @@ impl<'source> SourceJoiner<'source> {
     self.inner.push(Box::new(source));
   }
 
-  pub fn prepend_source(&mut self, source: Box<dyn Source + Send + 'source>) {
+  pub fn prepend_source<T: Source + Send + 'source>(&mut self, source: T) {
     if let Some(sourcemap) = source.sourcemap() {
       self.accumulate_sourcemap_data_size(sourcemap);
     }
-    self.prepend_source.push(source);
+    self.prepend_source.push(Box::new(source));
   }
 
   pub fn join(&self) -> (String, Option<SourceMap>) {
@@ -84,7 +84,7 @@ fn test_concat_sourcemaps() {
 
   let mut source_joiner = SourceJoiner::default();
   source_joiner.append_source("\nconsole.log()".to_string());
-  source_joiner.prepend_source(Box::new("// banner".to_string()));
+  source_joiner.prepend_source("// banner".to_string());
 
   let filename = "foo.js".to_string();
   let allocator = Allocator::default();

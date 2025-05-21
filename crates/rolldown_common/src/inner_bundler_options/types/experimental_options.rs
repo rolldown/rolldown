@@ -20,6 +20,7 @@ pub struct ExperimentalOptions {
   pub resolve_new_url_to_asset: Option<bool>,
   pub incremental_build: Option<bool>,
   pub hmr: Option<HmrOptions>,
+  pub attach_debug_info: Option<bool>,
 }
 
 impl ExperimentalOptions {
@@ -43,5 +44,9 @@ impl ExperimentalOptions {
   #[inline]
   pub fn is_incremental_build_enabled(&self) -> bool {
     self.incremental_build.unwrap_or(false)
+  }
+
+  pub fn is_attach_debug_info_enabled(&self) -> bool {
+    self.attach_debug_info.unwrap_or(false)
   }
 }

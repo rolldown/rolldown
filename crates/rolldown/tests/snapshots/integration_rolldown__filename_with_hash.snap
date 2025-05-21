@@ -3995,6 +3995,14 @@ expression: output
 
 - main-!~{000}~.js => main-BnlFRw1j.js
 
+# tests/rolldown/function/experimental/attach_debug_info
+
+- A-!~{000}~.js => A-BdptAob2.js
+- B-!~{001}~.js => B-RqteDIcd.js
+- Splitted-!~{006}~.js => Splitted-J5fVspE7.js
+- rolldown-runtime-!~{002}~.js => rolldown-runtime-F0QY5PnL.js
+- shared-!~{004}~.js => shared-BO-bWQCk.js
+
 # tests/rolldown/function/experimental/disable_live_bindings
 
 - main-!~{000}~.js => main-iGXOFHWU.js

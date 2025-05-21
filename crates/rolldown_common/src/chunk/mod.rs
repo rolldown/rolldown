@@ -54,6 +54,7 @@ pub struct Chunk {
   pub exports_to_other_chunks: FxHashMap<SymbolRef, Rstr>,
   pub is_alive: bool,
   pub input_base: ArcStr,
+  pub create_reasons: Vec<String>,
 }
 
 impl Chunk {
@@ -268,5 +269,15 @@ impl Chunk {
     module_table: &'module ModuleTable,
   ) -> Option<&'module NormalModule> {
     self.entry_module_idx().and_then(|idx| module_table.modules[idx].as_normal())
+  }
+
+  pub fn add_create_reason(
+    &mut self,
+    reason: impl Fn() -> String,
+    options: &NormalizedBundlerOptions,
+  ) {
+    if options.experimental.is_attach_debug_info_enabled() {
+      self.create_reasons.push(reason());
+    }
   }
 }

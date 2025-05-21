@@ -337,6 +337,7 @@ export interface BindingExperimentalOptions {
   viteMode?: boolean
   resolveNewUrlToAsset?: boolean
   hmr?: BindingExperimentalHmrOptions
+  attachDebugInfo?: boolean
 }
 
 export interface BindingFilterToken {

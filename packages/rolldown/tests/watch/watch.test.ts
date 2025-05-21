@@ -593,7 +593,7 @@ test.sequential('watch close immediately', async () => {
 })
 
 if (process.platform === 'win32') {
-  test.sequential('watch linux path at windows #4385', async () => {
+  test.only('watch linux path at windows #4385', async () => {
     const { input, output } = await createTestInputAndOutput('watch-linux-path-at-windows')
     const watcher = watch({
       input,

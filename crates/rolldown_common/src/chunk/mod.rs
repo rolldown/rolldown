@@ -177,9 +177,7 @@ impl Chunk {
         hash
       }
     });
-    let chunk_name = if options.preserve_modules
-      && matches!(self.kind, ChunkKind::EntryPoint { is_user_defined, .. } if !is_user_defined)
-    {
+    let chunk_name = if options.preserve_modules {
       self.get_preserve_modules_chunk_name(options, chunk_name.as_str())
     } else {
       Cow::Borrowed(chunk_name.as_str())

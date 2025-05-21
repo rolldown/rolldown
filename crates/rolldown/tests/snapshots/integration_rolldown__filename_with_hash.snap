@@ -4786,7 +4786,13 @@ expression: output
 
 - main-!~{000}~.js => main-Cv6xMI1a.js
 
-# tests/rolldown/misc/preserve_modules
+# tests/rolldown/misc/preserve_modules/issue-4622
+
+- src/index-!~{000}~.js => src/index-BdGskpTR.js
+- package.json-!~{003}~.js => package.json-BVhit7Fb.js
+- src/utils/index-!~{005}~.js => src/utils/index-Csnyz4fa.js
+
+# tests/rolldown/misc/preserve_modules/multi_entry
 
 - a-!~{001}~.js => a-9EeU3Xa2.js
 - b-!~{002}~.js => b-_WUCLyHa.js

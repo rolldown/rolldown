@@ -5398,6 +5398,10 @@ expression: output
 
 - main-!~{000}~.js => main-BT3I38DI.js
 
+# tests/rolldown/topics/tla/inline_dynamic_import
+
+- main-!~{000}~.js => main-DPC8V41u.js
+
 # tests/rolldown/topics/tla/inside_try_block
 
 - main-!~{000}~.js => main-WOWNPsrk.js

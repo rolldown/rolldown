@@ -1,0 +1,26 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## main.js
+
+```js
+
+//#region lib.js
+var lib_exports = {};
+__export(lib_exports, { foo: () => foo$1 });
+var foo$1;
+var init_lib = __esm({ async "lib.js"() {
+	foo$1 = await Promise.resolve("foo");
+} });
+
+//#endregion
+//#region main.js
+const { foo } = await init_lib().then(function() {
+	return lib_exports;
+});
+
+//#endregion
+export { foo };
+```

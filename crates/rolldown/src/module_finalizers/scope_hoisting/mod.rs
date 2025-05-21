@@ -11,8 +11,8 @@ use oxc::{
   span::{Atom, GetSpan, GetSpanMut, SPAN},
 };
 use rolldown_common::{
-  AstScopes, ExportsKind, ImportRecordIdx, ImportRecordMeta, Module, ModuleIdx, ModuleType,
-  OutputFormat, Platform, SymbolRef, WrapKind,
+  AstScopes, EcmaModuleAstUsage, ExportsKind, ImportRecordIdx, ImportRecordMeta, Module, ModuleIdx,
+  ModuleType, OutputFormat, Platform, SymbolRef, WrapKind,
 };
 use rolldown_ecmascript_utils::{
   AstSnippet, BindingPatternExt, CallExpressionExt, ExpressionExt, StatementExt,
@@ -852,6 +852,7 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
     None
   }
 
+  #[allow(clippy::too_many_lines)]
   fn try_rewrite_inline_dynamic_import_expr(
     &self,
     import_expr: &ImportExpression<'ast>,
@@ -887,16 +888,31 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
               // `foo_exports`
               let importee_namespace_name = self.canonical_name_for(importee.namespace_object_ref);
 
-              // `(init_foo(), foo_exports)`
-              Some(self.snippet.promise_resolve_then_call_expr(
-                import_expr.span,
-                self.snippet.builder.vec1(self.snippet.return_stmt(
-                  self.snippet.seq2_in_paren_expr(
+              if importee.ecma_view.ast_usage.contains(EcmaModuleAstUsage::TopLevelAwait) {
+                // `init_foo().then(function() { return foo_exports })`
+                Some(
+                  self.snippet.callee_then_call_expr(
+                    import_expr.span,
                     self.snippet.call_expr_expr(importee_wrapper_ref_name),
-                    self.snippet.id_ref_expr(importee_namespace_name, SPAN),
+                    self.snippet.builder.vec1(
+                      self
+                        .snippet
+                        .return_stmt(self.snippet.id_ref_expr(importee_namespace_name, SPAN)),
+                    ),
                   ),
-                )),
-              ))
+                )
+              } else {
+                //  Promise.resolve().then(function() { return (init_foo(), foo_exports) })
+                Some(self.snippet.promise_resolve_then_call_expr(
+                  import_expr.span,
+                  self.snippet.builder.vec1(self.snippet.return_stmt(
+                    self.snippet.seq2_in_paren_expr(
+                      self.snippet.call_expr_expr(importee_wrapper_ref_name),
+                      self.snippet.id_ref_expr(importee_namespace_name, SPAN),
+                    ),
+                  )),
+                ))
+              }
             }
             WrapKind::Cjs => {
               //  `__toESM(require_foo())`

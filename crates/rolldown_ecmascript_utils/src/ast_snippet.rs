@@ -766,6 +766,43 @@ impl<'ast> AstSnippet<'ast> {
     )
   }
 
+  pub fn callee_then_call_expr(
+    &self,
+    span: Span,
+    call_expr: Expression<'ast>,
+    statements: allocator::Vec<'ast, Statement<'ast>>,
+  ) -> ast::Expression<'ast> {
+    let arguments = self.builder.vec1(Argument::FunctionExpression(self.builder.alloc_function(
+      SPAN,
+      ast::FunctionType::FunctionExpression,
+      None::<BindingIdentifier>,
+      false,
+      false,
+      false,
+      NONE,
+      NONE,
+      self.builder.formal_parameters(
+        SPAN,
+        ast::FormalParameterKind::Signature,
+        self.builder.vec_with_capacity(2),
+        NONE,
+      ),
+      NONE,
+      Some(self.builder.function_body(SPAN, self.builder.vec(), statements)),
+    )));
+
+    let callee =
+      ast::Expression::StaticMemberExpression(self.builder.alloc_static_member_expression(
+        SPAN,
+        call_expr,
+        self.id_name("then", SPAN),
+        false,
+      ));
+    ast::Expression::CallExpression(
+      self.builder.alloc_call_expression(span, callee, NONE, arguments, false),
+    )
+  }
+
   // return xxx
   pub fn return_stmt(&self, argument: ast::Expression<'ast>) -> ast::Statement<'ast> {
     ast::Statement::ReturnStatement(

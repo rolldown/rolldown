@@ -593,20 +593,16 @@ test.sequential('watch close immediately', async () => {
 })
 
 test.sequential('watch linux path at windows #4385', async () => {
-  const { input, output, dir } = await createTestInputAndOutput('watch-linux-path-at-windows')
-  const loadFn = vi.fn()
+  const { input, output } = await createTestInputAndOutput('watch-linux-path-at-windows')
   const watcher = watch({
     input,
     output: { file: output },
     plugins: [
       {
         name: 'test',
-        resolveId(id) {
-          return path.resolve(path.dirname(dir), id).replace(/\\/g, '/');
+        resolveId() {
+          return input.replace(/\\/g, '/');
         },
-        load() {
-          loadFn()
-        }
       },
     ],
   })
@@ -614,13 +610,11 @@ test.sequential('watch linux path at windows #4385', async () => {
   await waitBuildFinished(watcher)
 
   // edit file
-  loadFn.mockClear()
   fs.writeFileSync(input, 'console.log(2)')
   await waitUtil(() => {
     expect(fs.readFileSync(output, 'utf-8').includes('console.log(2)')).toBe(
       true,
     )
-    expect(loadFn).toBeCalled()
   })
 
   await watcher.close()

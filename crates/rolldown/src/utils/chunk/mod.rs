@@ -1,4 +1,4 @@
-use render_chunk_exports::get_chunk_export_names;
+use self::render_chunk_exports::get_chunk_export_names;
 use rolldown_common::{
   Chunk, ChunkKind, ModuleId, NormalizedBundlerOptions, RenderedModule, RollupPreRenderedChunk,
   RollupRenderedChunk,

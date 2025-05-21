@@ -25,7 +25,7 @@
 use crate::ecmascript::format::utils::namespace::generate_identifier;
 use crate::utils::chunk::namespace_marker::render_namespace_markers;
 use crate::utils::chunk::render_chunk_exports::{
-  get_chunk_export_names, render_wrapped_entry_chunk,
+  get_chunk_export_names_with_ctx, render_wrapped_entry_chunk,
 };
 use crate::{
   ecmascript::ecma_generator::RenderedModuleSources,
@@ -70,7 +70,7 @@ pub async fn render_iife<'code>(
   // iife wrapper start
 
   // Analyze the export information of the chunk.
-  let export_names = get_chunk_export_names(ctx.chunk, ctx.link_output, ctx.options);
+  let export_names = get_chunk_export_names_with_ctx(ctx);
   let has_exports = !export_names.is_empty();
   let has_default_export = export_names.iter().any(|name| name.as_str() == "default");
 

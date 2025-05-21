@@ -12,7 +12,7 @@ use crate::{
     determine_export_mode::determine_export_mode,
     namespace_marker::render_namespace_markers,
     render_chunk_exports::{
-      get_chunk_export_names, render_chunk_exports, render_wrapped_entry_chunk,
+      get_chunk_export_names_with_ctx, render_chunk_exports, render_wrapped_entry_chunk,
     },
   },
 };
@@ -43,7 +43,7 @@ pub async fn render_umd<'code>(
   // umd wrapper start
 
   // Analyze the export information of the chunk.
-  let export_names = get_chunk_export_names(ctx.chunk, ctx.link_output, ctx.options);
+  let export_names = get_chunk_export_names_with_ctx(ctx);
   let has_exports = !export_names.is_empty();
   let has_default_export = export_names.iter().any(|name| name.as_str() == "default");
 

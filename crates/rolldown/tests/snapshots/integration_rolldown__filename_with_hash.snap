@@ -4788,8 +4788,9 @@ expression: output
 
 # tests/rolldown/misc/preserve_modules
 
-- main-!~{000}~.js => main-iuKz2ghl.js
-- main-iuKz2ghl.js.map
+- a-!~{001}~.js => a-9EeU3Xa2.js
+- b-!~{002}~.js => b-_WUCLyHa.js
+- main-!~{000}~.js => main-Bq02Itoe.js
 
 # tests/rolldown/misc/reexport_star
 

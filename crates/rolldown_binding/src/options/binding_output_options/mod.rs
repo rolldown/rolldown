@@ -123,4 +123,5 @@ pub struct BindingOutputOptions<'env> {
   pub preserve_modules: Option<bool>,
   pub target: Option<Either<String, Vec<String>>>,
   pub virtual_dirname: Option<String>,
+  pub preserve_modules_root: Option<String>,
 }

@@ -183,11 +183,10 @@ pub fn normalize_options(mut raw_options: crate::BundlerOptions) -> NormalizeOpt
   };
   transform_options.jsx.jsx_plugin = matches!(jsx, NormalizedJsxOptions::Enable);
 
+  let cwd =
+    raw_options.cwd.unwrap_or_else(|| std::env::current_dir().expect("Failed to get current dir"));
   let normalized = NormalizedBundlerOptions {
     input: raw_options.input.unwrap_or_default(),
-    cwd: raw_options
-      .cwd
-      .unwrap_or_else(|| std::env::current_dir().expect("Failed to get current dir")),
     external: raw_options.external,
     treeshake: raw_options.treeshake.into_normalized_options(),
     platform,
@@ -254,6 +253,15 @@ pub fn normalize_options(mut raw_options: crate::BundlerOptions) -> NormalizeOpt
     on_log: raw_options.on_log,
     preserve_modules: raw_options.preserve_modules.unwrap_or_default(),
     virtual_dirname: raw_options.virtual_dirname.unwrap_or_else(|| "_virtual".to_string()),
+    preserve_modules_root: raw_options.preserve_modules_root.map(|preserve_modules_root| {
+      let p = Path::new(&preserve_modules_root);
+      if p.is_absolute() {
+        preserve_modules_root
+      } else {
+        cwd.join(p).to_string_lossy().to_string()
+      }
+    }),
+    cwd,
   };
 
   NormalizeOptionsReturn { options: normalized, resolve_options: raw_resolve, warnings }

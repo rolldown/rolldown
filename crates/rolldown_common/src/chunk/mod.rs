@@ -197,6 +197,16 @@ impl Chunk {
   ) -> Cow<str> {
     let p = PathBuf::from(chunk_name);
     if p.is_absolute() {
+      if let Some(ref preserve_modules_root) = options.preserve_modules_root {
+        if chunk_name.starts_with(preserve_modules_root) {
+          return Cow::Owned(
+            chunk_name[preserve_modules_root.len()..]
+              .trim_start_matches('/')
+              .trim_start_matches('\\')
+              .to_string(),
+          );
+        }
+      }
       let p = p.relative(self.input_base.as_str());
       Cow::Owned(p.to_slash_lossy().to_string())
     } else {

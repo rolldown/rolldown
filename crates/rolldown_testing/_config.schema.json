@@ -429,6 +429,12 @@
             "null"
           ]
         },
+        "preserveModulesRoot": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
         "profilerNames": {
           "type": [
             "boolean",

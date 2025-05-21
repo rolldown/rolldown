@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "test:main": "RUST_BACKTRACE=1 ROLLDOWN_TEST=1 vitest run --exclude '**/watch.test.ts' --reporter verbose --hideSkippedTests",
-    "test:watcher": "RUST_BACKTRACE=1 ROLLDOWN_TEST=1 vitest run watch.test.ts --reporter verbose --hideSkippedTests --allowOnly",
+    "test:watcher": "RD_LOG=debug RUST_BACKTRACE=1 ROLLDOWN_TEST=1 vitest run watch.test.ts --reporter verbose --hideSkippedTests --allowOnly",
     "test:stability": "node ./stability/issue-3453/src/build.mjs && node ./stability/issue-3453/verify.mjs",
     "test:types": "vitest run --typecheck.only --reporter verbose --hideSkippedTests",
     "type-check": "tsc --noEmit"

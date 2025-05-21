@@ -197,15 +197,15 @@ impl<'a> GenerateStage<'a> {
         match chunk.kind {
           ChunkKind::EntryPoint { module: entry_module_id, is_user_defined, .. } => {
             let module = &modules[entry_module_id];
-            let generated = if is_user_defined {
+            let generated = if self.options.preserve_modules {
+              sanitize_filename.call(&module.id().as_path().representative_file_name(true)).await?
+            } else if is_user_defined {
               // try extract meaningful input name from path
               if let Some(file_stem) = module.id().as_path().file_stem().and_then(|f| f.to_str()) {
                 sanitize_filename.call(file_stem).await?
               } else {
                 arcstr::literal!("input")
               }
-            } else if self.options.preserve_modules {
-              sanitize_filename.call(&module.id().as_path().representative_file_name(true)).await?
             } else {
               sanitize_filename.call(&module.id().as_path().representative_file_name(false)).await?
             };

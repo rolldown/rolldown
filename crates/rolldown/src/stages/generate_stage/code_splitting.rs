@@ -215,28 +215,46 @@ impl GenerateStage<'_> {
     }
   }
 
+  // ref:
+  // - https://github.com/rollup/rollup/blob/99d4bee3277b96b30e871fb471f6c7ed55f94850/src/Bundle.ts?plain=1#L267-L278
+  // - https://github.com/rollup/rollup/blob/99d4bee3277b96b30e871fb471f6c7ed55f94850/src/utils/commondir.ts?plain=1#L4-L24
   pub fn get_common_dir_of_all_modules(&self, modules: &[Module]) -> Option<String> {
     let mut ret: Option<String> = None;
-    let iter = modules.iter().filter_map(|m| {
-      m.as_normal().and_then(|item| {
+    let iter = modules.iter().filter_map(|m| match m {
+      Module::Normal(item) => {
         if !item.is_included() {
           return None;
         }
         if self.options.preserve_modules || item.is_user_defined_entry {
-          Path::new(m.id()).is_absolute().then_some(m.id())
+          Path::new(item.id.as_ref()).is_absolute().then_some(item.id.as_ref())
         } else {
           None
         }
-      })
+      }
+      Module::External(external_module) => {
+        if self.options.preserve_modules {
+          Path::new(external_module.id.as_str())
+            .is_absolute()
+            .then_some(external_module.id.as_ref())
+        } else {
+          None
+        }
+      }
     });
+    let mut modules_count = 0;
     for id in iter {
       if let Some(ref mut ret_id) = ret {
         *ret_id = commondir::extract_longest_common_path(ret_id.as_str(), id);
       } else {
         ret = Some(id.to_string());
       }
+      modules_count += 1;
     }
-    ret
+    match modules_count {
+      0 => None,
+      1 => ret.and_then(|item| Path::new(&item).parent().map(|p| p.to_string_lossy().to_string())),
+      _ => ret,
+    }
   }
 
   fn init_entry_point(

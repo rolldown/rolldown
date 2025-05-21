@@ -1,0 +1,36 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## package.json.js
+
+```js
+//#region package.json.js
+const version = "0.0.0";
+
+//#endregion
+export { version };
+```
+## src/index.js
+
+```js
+import { version } from "../package.json.js";
+import { id } from "./utils/index.js";
+
+//#region src/index.js
+console.log(`version: `, id(version));
+
+//#endregion
+```
+## src/utils/index.js
+
+```js
+//#region src/utils/index.js
+function id(a) {
+	return a;
+}
+
+//#endregion
+export { id };
+```

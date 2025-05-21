@@ -592,34 +592,36 @@ test.sequential('watch close immediately', async () => {
   await watcher.close()
 })
 
-test.only('watch linux path at windows #4385', async () => {
-  const { input, output } = await createTestInputAndOutput('watch-linux-path-at-windows')
-  const watcher = watch({
-    input,
-    output: { file: output },
-    plugins: [
-      {
-        name: 'test',
-        resolveId() {
-          console.log(1111)
-          return input.replace(/\\/g, '/');
+if (process.platform === 'win32') {
+  test.only('watch linux path at windows #4385', async () => {
+    const { input, output } = await createTestInputAndOutput('watch-linux-path-at-windows')
+    const watcher = watch({
+      input,
+      output: { file: output },
+      plugins: [
+        {
+          name: 'test',
+          resolveId() {
+            console.log(1111)
+            return input.replace(/\\/g, '/');
+          },
         },
-      },
-    ],
+      ],
+    })
+    // should run build once
+    await waitBuildFinished(watcher)
+  
+    // edit file
+    fs.writeFileSync(input, 'console.log(2)')
+    await waitUtil(() => {
+      expect(fs.readFileSync(output, 'utf-8').includes('console.log(2)')).toBe(
+        true,
+      )
+    })
+  
+    await watcher.close()
   })
-  // should run build once
-  await waitBuildFinished(watcher)
-
-  // edit file
-  fs.writeFileSync(input, 'console.log(2)')
-  await waitUtil(() => {
-    expect(fs.readFileSync(output, 'utf-8').includes('console.log(2)')).toBe(
-      true,
-    )
-  })
-
-  await watcher.close()
-})
+}
 
 async function createTestInputAndOutput(dirname: string, content?: string) {
   const dir = path.join(import.meta.dirname, 'temp', dirname)

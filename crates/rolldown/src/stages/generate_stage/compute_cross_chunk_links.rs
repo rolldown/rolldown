@@ -57,11 +57,7 @@ impl GenerateStage<'_> {
       &mut index_imports_from_other_chunks,
     );
 
-    self.deconflict_exported_names(
-      chunk_graph,
-      &index_chunk_exported_symbols,
-      &mut index_imports_from_other_chunks,
-    );
+    self.deconflict_exported_names(chunk_graph, &index_chunk_exported_symbols);
 
     let index_sorted_cross_chunk_imports = index_cross_chunk_imports
       .into_par_iter()
@@ -329,7 +325,7 @@ impl GenerateStage<'_> {
           imports_from_other_chunks
             .entry(importee_chunk_id)
             .or_default()
-            .push(CrossChunkImportItem { import_ref, export_alias: None });
+            .push(CrossChunkImportItem { import_ref });
           index_chunk_exported_symbols[importee_chunk_id].insert(import_ref);
         }
       }
@@ -369,7 +365,6 @@ impl GenerateStage<'_> {
     &self,
     chunk_graph: &mut ChunkGraph,
     index_chunk_exported_symbols: &IndexChunkExportedSymbols,
-    index_imports_from_other_chunks: &mut IndexImportsFromOtherChunks,
   ) {
     // Generate cross-chunk exports. These must be computed before cross-chunk
     // imports because of export alias renaming, which must consider all export
@@ -407,19 +402,6 @@ impl GenerateStage<'_> {
           }
         }
         chunk.exports_to_other_chunks.insert(chunk_export, candidate_name.clone());
-      }
-    }
-
-    for chunk_id in chunk_graph.chunk_table.indices() {
-      for (importee_chunk_id, import_items) in &mut index_imports_from_other_chunks[chunk_id] {
-        for item in import_items {
-          if let Some(alias) = chunk_graph.chunk_table[*importee_chunk_id]
-            .exports_to_other_chunks
-            .get(&item.import_ref)
-          {
-            item.export_alias = Some(alias.clone().into());
-          }
-        }
       }
     }
   }

@@ -95,8 +95,9 @@ pub fn render_esm<'code>(
 
 fn render_esm_chunk_imports(ctx: &GenerateContext<'_>) -> Option<String> {
   let mut s = String::new();
-
+  println!("imports of {:?}", ctx.chunk.name);
   ctx.chunk.imports_from_other_chunks.iter().for_each(|(exporter_id, items)| {
+    dbg!(&items);
     let importee_chunk = &ctx.chunk_graph.chunk_table[*exporter_id];
     let mut default_alias = vec![];
     let mut specifiers = items
@@ -107,6 +108,9 @@ fn render_esm_chunk_imports(ctx: &GenerateContext<'_>) -> Option<String> {
         let Specifier::Literal(alias) = item.export_alias.as_ref().unwrap() else {
           panic!("should not be star import from other chunks")
         };
+        let alias = ctx.render_export_items_index_vec[*exporter_id]
+          .get(&item.import_ref)
+          .expect("should have export item index");
         if alias == imported {
           Some(alias.as_str().into())
         } else {

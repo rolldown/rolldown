@@ -1,3 +1,4 @@
+use render_chunk_exports::get_chunk_export_names;
 use rolldown_common::{
   Chunk, ChunkKind, ModuleId, NormalizedBundlerOptions, RenderedModule, RollupPreRenderedChunk,
   RollupRenderedChunk,
@@ -5,8 +6,6 @@ use rolldown_common::{
 use rustc_hash::FxHashMap;
 
 use crate::{stages::link_stage::LinkStageOutput, types::generator::GenerateContext};
-
-use self::render_chunk_exports::get_chunk_export_names;
 
 pub mod deconflict_chunk_symbols;
 pub mod determine_export_mode;

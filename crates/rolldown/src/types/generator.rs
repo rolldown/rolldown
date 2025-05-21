@@ -1,9 +1,11 @@
+use oxc_index::IndexVec;
 use rolldown_common::{
   Chunk, ChunkIdx, InstantiatedChunk, ModuleRenderOutput, NormalizedBundlerOptions, SymbolRef,
 };
 use rolldown_error::{BuildDiagnostic, BuildResult};
 use rolldown_plugin::SharedPluginDriver;
 use rolldown_rstr::Rstr;
+use rolldown_utils::indexmap::FxIndexMap;
 use rustc_hash::FxHashMap;
 
 use crate::{chunk_graph::ChunkGraph, stages::link_stage::LinkStageOutput};
@@ -17,6 +19,14 @@ pub struct GenerateContext<'a> {
   pub plugin_driver: &'a SharedPluginDriver,
   pub warnings: Vec<BuildDiagnostic>,
   pub module_id_to_codegen_ret: Vec<Option<ModuleRenderOutput>>,
+  /// The key of the map is exported item symbol,
+  /// the value of the map is optional alias. e.g.
+  /// - chunkb.js
+  /// ```js
+  /// export const a = 10000000;
+  /// export {a as b}; // symbol_ref points to `a`, and alias is `b`
+  /// ```
+  pub render_export_items_index_vec: &'a IndexVec<ChunkIdx, FxIndexMap<SymbolRef, Rstr>>,
 }
 
 impl GenerateContext<'_> {

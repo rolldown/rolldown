@@ -9,7 +9,7 @@ use rolldown_common::{
 use rolldown_error::{BuildDiagnostic, BuildResult};
 use rolldown_utils::{
   concat_string,
-  indexmap::FxIndexSet,
+  indexmap::{FxIndexMap, FxIndexSet},
   rayon::{IntoParallelRefIterator, ParallelIterator},
 };
 
@@ -22,8 +22,10 @@ use crate::{
   type_alias::{IndexAssets, IndexChunkToAssets, IndexInstantiatedChunks},
   types::generator::{GenerateContext, Generator},
   utils::{
-    augment_chunk_hash::augment_chunk_hash, chunk::finalize_chunks::finalize_assets,
-    process_code_and_sourcemap::process_code_and_sourcemap, render_chunks::render_chunks,
+    augment_chunk_hash::augment_chunk_hash,
+    chunk::{finalize_chunks::finalize_assets, render_chunk_exports::get_export_items},
+    process_code_and_sourcemap::process_code_and_sourcemap,
+    render_chunks::render_chunks,
   },
 };
 
@@ -182,6 +184,18 @@ impl GenerateStage<'_> {
     let mut index_preliminary_assets: IndexInstantiatedChunks =
       IndexVec::with_capacity(chunk_graph.chunk_table.len());
     let chunk_index_to_codegen_rets = self.create_chunk_to_codegen_ret_map(chunk_graph);
+    let render_export_items_index_vec = &chunk_graph
+      .chunk_table
+      .chunks
+      .iter()
+      .map(|item| {
+        get_export_items(item, &self.link_output, &self.options)
+          .into_iter()
+          .map(|(k, v)| (v, k))
+          .collect::<FxIndexMap<_, _>>()
+      })
+      .collect();
+    dbg!(&render_export_items_index_vec);
 
     try_join_all(
       chunk_graph
@@ -199,6 +213,7 @@ impl GenerateStage<'_> {
             plugin_driver: self.plugin_driver,
             warnings: vec![],
             module_id_to_codegen_ret,
+            render_export_items_index_vec: &render_export_items_index_vec,
           };
           let ecma_chunks = EcmaGenerator::instantiate_chunk(&mut ctx).await;
 
@@ -212,6 +227,7 @@ impl GenerateStage<'_> {
             warnings: vec![],
             // FIXME: module_id_to_codegen_ret is currently not used in CssGenerator. But we need to pass it to satisfy the args.
             module_id_to_codegen_ret: vec![],
+            render_export_items_index_vec: &index_vec![],
           };
           let css_chunks = CssGenerator::instantiate_chunk(&mut ctx).await;
 
@@ -225,6 +241,7 @@ impl GenerateStage<'_> {
             warnings: vec![],
             // FIXME: module_id_to_codegen_ret is currently not used in AssetGenerator. But we need to pass it to satisfy the args.
             module_id_to_codegen_ret: vec![],
+            render_export_items_index_vec: &index_vec![],
           };
           let asset_chunks = AssetGenerator::instantiate_chunk(&mut ctx).await;
 

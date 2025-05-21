@@ -413,10 +413,12 @@ impl GenerateStage<'_> {
     for chunk_id in chunk_graph.chunk_table.indices() {
       for (importee_chunk_id, import_items) in &mut index_imports_from_other_chunks[chunk_id] {
         for item in import_items {
+          dbg!(&item.import_ref.name(&self.link_output.symbol_db));
           if let Some(alias) = chunk_graph.chunk_table[*importee_chunk_id]
             .exports_to_other_chunks
             .get(&item.import_ref)
           {
+            dbg!(&alias);
             item.export_alias = Some(alias.clone().into());
           }
         }

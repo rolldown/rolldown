@@ -88,7 +88,7 @@ pub fn render_chunk_exports(
   export_mode: Option<&OutputExports>,
 ) -> Option<String> {
   let GenerateContext { chunk, link_output, options, .. } = ctx;
-  let export_items = get_export_items(chunk, link_output, options).into_iter().collect::<Vec<_>>();
+  let export_items = ctx.render_export_items_index_vec[ctx.chunk_idx].clone();
 
   match options.format {
     OutputFormat::Esm => {
@@ -98,7 +98,7 @@ pub fn render_chunk_exports(
       let mut s = String::new();
       let rendered_items = export_items
         .into_iter()
-        .map(|(exported_name, export_ref)| {
+        .map(|(export_ref, exported_name)| {
           let canonical_ref = link_output.symbol_db.canonical_ref_for(export_ref);
           let symbol = link_output.symbol_db.get(canonical_ref);
           let canonical_name = &chunk.canonical_names[&canonical_ref];
@@ -139,7 +139,7 @@ pub fn render_chunk_exports(
           if matches!(module.exports_kind, ExportsKind::Esm) {
             let rendered_items = export_items
               .into_iter()
-              .map(|(exported_name, export_ref)| {
+              .map(|(export_ref, exported_name)| {
                 let canonical_ref = link_output.symbol_db.canonical_ref_for(export_ref);
                 let symbol = link_output.symbol_db.get(canonical_ref);
                 let mut canonical_name = Cow::Borrowed(&chunk.canonical_names[&canonical_ref]);
@@ -250,7 +250,7 @@ pub fn render_chunk_exports(
         ChunkKind::Common => {
           let rendered_items = export_items
             .into_iter()
-            .map(|(exported_name, export_ref)| {
+            .map(|(export_ref, exported_name)| {
               let canonical_ref = link_output.symbol_db.canonical_ref_for(export_ref);
               let symbol = link_output.symbol_db.get(canonical_ref);
               let canonical_name = &chunk.canonical_names[&canonical_ref];
@@ -349,6 +349,17 @@ pub fn get_chunk_export_names(
     .into_iter()
     .map(|(exported_name, _)| exported_name)
     .collect::<Vec<_>>()
+}
+
+pub fn get_chunk_export_names_with_ctx(ctx: &GenerateContext<'_>) -> Vec<Rstr> {
+  let GenerateContext { chunk, link_output, render_export_items_index_vec, .. } = ctx;
+  if let ChunkKind::EntryPoint { module: entry_id, .. } = &chunk.kind {
+    let entry_meta = &link_output.metas[*entry_id];
+    if matches!(entry_meta.wrap_kind, WrapKind::Cjs) {
+      return vec![Rstr::new("default")];
+    }
+  }
+  render_export_items_index_vec[ctx.chunk_idx].values().cloned().collect::<Vec<_>>()
 }
 
 fn must_keep_live_binding(

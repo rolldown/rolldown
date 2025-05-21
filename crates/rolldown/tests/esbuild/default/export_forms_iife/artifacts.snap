@@ -6,7 +6,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## MIXED_EXPORT
 
 ```text
-[MIXED_EXPORT] Warning: Entry module "entry" is using named (including "C", "Class", "Fn", "abc", "b", "c", "default", "l", "v") and default exports together. Consumers of your bundle will have to use `entry.js.default` to access the default export, which may not be what you want. Use `output.exports: "named"` to disable this warning.
+[MIXED_EXPORT] Warning: Entry module "entry" is using named (including "Class", "Fn", "abc", "b", "c", "default", "l", "v") and default exports together. Consumers of your bundle will have to use `entry.js.default` to access the default export, which may not be what you want. Use `output.exports: "named"` to disable this warning.
 
 ```
 # Assets
@@ -38,7 +38,6 @@ function Fn() {}
 var Class = class {};
 
 //#endregion
-exports.C = Class;
 exports.Class = Class;
 exports.Fn = Fn;
 exports.abc = abc;

@@ -1,7 +1,7 @@
 use crate::utils::chunk::determine_export_mode::determine_export_mode;
 use crate::utils::chunk::namespace_marker::render_namespace_markers;
 use crate::utils::chunk::render_chunk_exports::{
-  get_chunk_export_names, render_wrapped_entry_chunk,
+  get_chunk_export_names_with_ctx, render_wrapped_entry_chunk,
 };
 use crate::{
   ecmascript::ecma_generator::RenderedModuleSources, types::generator::GenerateContext,
@@ -46,7 +46,7 @@ pub fn render_cjs<'code>(
   // So we determine the export mode (from auto) here and use it in the following code.
   let export_mode = match ctx.chunk.user_defined_entry_module(&ctx.link_output.module_table) {
     Some(entry_module) => {
-      let export_names = get_chunk_export_names(ctx.chunk, ctx.link_output, ctx.options);
+      let export_names = get_chunk_export_names_with_ctx(ctx);
       let has_default_export = export_names.iter().any(|name| name.as_str() == "default");
       let export_mode = determine_export_mode(warnings, ctx, entry_module, &export_names)?;
       // Only `named` export can we render the namespace markers.

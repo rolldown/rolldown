@@ -24,5 +24,5 @@ __export(nested_exports, {
 let nested = 1;
 
 //#endregion
-export { nested_exports as "name space", nested as "nested name", ok as "not ok", ok, nested$1 as "very nested name" };
+export { nested_exports as "name space", nested as "nested name", ok, nested$1 as "very nested name" };
 ```

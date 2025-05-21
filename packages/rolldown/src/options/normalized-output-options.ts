@@ -184,7 +184,7 @@ export class NormalizedOutputOptionsImpl implements NormalizedOutputOptions {
     return this.preserveModules;
   }
 
-  get preserveModules(): string | undefined {
+  get preserveModulesRoot(): string | undefined {
     return this.preserveModulesRoot;
   }
 

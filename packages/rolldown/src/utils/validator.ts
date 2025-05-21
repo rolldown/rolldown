@@ -654,8 +654,14 @@ const OutputOptionsSchema = v.strictObject({
       return true;
     }, () => `The 'true' value is not supported`),
   ),
-  preserveModules: v.optional(v.boolean()),
-  preserveModulesRoot: v.optional(v.string()),
+  preserveModules: v.pipe(
+    v.optional(v.boolean()),
+    v.description('Preserve module structure'),
+  ),
+  preserveModulesRoot: v.pipe(
+    v.optional(v.string()),
+    v.description('Put preserved modules under this path at root level'),
+  ),
   virtualDirname: v.optional(v.string()),
 });
 

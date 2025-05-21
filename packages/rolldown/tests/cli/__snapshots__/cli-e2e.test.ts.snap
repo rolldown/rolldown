@@ -67,7 +67,8 @@ OPTIONS
   --no-treeshake              Disable treeshaking.
   --outro <outro>             Code to insert the bottom of the bundled file (inside the wrapper function).
   --polyfill-require          Disable require polyfill injection.
-  --preserve-modules          .
+  --preserve-modules          Preserve module structure.
+  --preserve-modules-root <preserve-modules-root>Put preserved modules under this path at root level.
   --sanitize-file-name        Sanitize file name.
   --shim-missing-exports      Create shim variables for missing exports.
   --sourcemap-debug-ids       Inject sourcemap debug IDs.

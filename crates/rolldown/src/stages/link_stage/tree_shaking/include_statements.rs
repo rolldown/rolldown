@@ -136,8 +136,16 @@ fn include_module(ctx: &mut Context, module: &NormalModule) {
   } else {
     // Skip the first statement, which is the namespace object. It should be included only if it is used no matter
     // tree shaking is enabled or not.
-    module.stmt_infos.iter_enumerated().skip(1).for_each(|(stmt_info_id, _)| {
-      include_statement(ctx, module, stmt_info_id);
+    module.stmt_infos.iter_enumerated().skip(1).for_each(|(stmt_info_id, stmt_info)| {
+      if stmt_info.force_tree_shaking {
+        if stmt_info.side_effect {
+          // If `force_tree_shaking` is true, the statement should be included either by itself having side effects
+          // or by other statements referencing it.
+          include_statement(ctx, module, stmt_info_id);
+        }
+      } else {
+        include_statement(ctx, module, stmt_info_id);
+      }
     });
   }
 

@@ -115,12 +115,8 @@ impl From<BindingTransformPluginConfig> for TransformPlugin {
         .jsx_refresh_exclude
         .map(bindingify_string_or_regex_array)
         .unwrap_or_default(),
-
       jsx_inject: value.jsx_inject,
-
       is_server_consumer: value.is_server_consumer.unwrap_or(true),
-      runtime_resolve_base: value.runtime_resolve_base,
-
       sourcemap,
       transform_options: transform_options.unwrap_or_default(),
     }

@@ -542,7 +542,7 @@ export interface BindingManifestPluginConfig {
 
 export interface BindingMatchGroup {
   name: string
-  test?: BindingStringOrRegex
+  test?: string | RegExp | ((id: string) => VoidNullable<boolean>)
   priority?: number
   minSize?: number
   minShareCount?: number

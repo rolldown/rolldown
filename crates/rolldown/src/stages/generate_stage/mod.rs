@@ -71,8 +71,7 @@ impl<'a> GenerateStage<'a> {
   pub async fn generate(&mut self) -> BuildResult<BundleOutput> {
     self.plugin_driver.render_start(self.options).await?;
 
-    let mut chunk_graph = self.generate_chunks().await;
-
+    let mut chunk_graph = self.generate_chunks().await?;
     if chunk_graph.chunk_table.len() > 1 {
       validate_options_for_multi_chunk_output(self.options)?;
     }

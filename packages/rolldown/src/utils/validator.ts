@@ -521,7 +521,17 @@ const AdvancedChunksSchema = v.strictObject({
     v.array(
       v.strictObject({
         name: v.string(),
-        test: v.optional(v.union([v.string(), v.instance(RegExp)])),
+        test: v.optional(
+          v.union([
+            v.string(),
+            v.instance(RegExp),
+            v.pipe(
+              v.function(),
+              v.args(v.tuple([v.string()])),
+              v.returns(v.union([v.nullish(v.boolean()), v.void()])),
+            ),
+          ]),
+        ),
         priority: v.optional(v.number()),
         minSize: v.optional(v.number()),
         minShareCount: v.optional(v.number()),

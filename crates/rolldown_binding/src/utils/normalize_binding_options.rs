@@ -391,7 +391,18 @@ pub fn normalize_binding_options(
           .into_iter()
           .map(|item| MatchGroup {
             name: item.name,
-            test: item.test.map(|inner| inner.try_into().expect("Invalid regex pass to test")),
+            test: item.test.map(|inner| match inner {
+              Either::A(reg) => {
+                rolldown::MatchGroupTest::Regex(reg.try_into().expect("Invalid regex pass to test"))
+              }
+              Either::B(func) => rolldown::MatchGroupTest::Function(Arc::new(move |id: &str| {
+                let id = id.to_string();
+                let func = Arc::clone(&func);
+                Box::pin(async move {
+                  func.invoke_async((id,).into()).await.map_err(anyhow::Error::from)
+                })
+              })),
+            }),
             priority: item.priority,
             min_size: item.min_size,
             min_share_count: item.min_share_count,

@@ -7,7 +7,11 @@ use rustc_hash::{FxHashMap, FxHashSet};
 
 use crate::{chunk_graph::ChunkGraph, types::linking_metadata::LinkingMetadataVec};
 
-use super::{GenerateStage, code_splitting::IndexSplittingInfo};
+use super::{
+  GenerateStage,
+  chunk_ext::{ChunkCreationReason, ChunkDebugExt},
+  code_splitting::IndexSplittingInfo,
+};
 
 // `ModuleGroup` is a temporary representation of `Chunk`. A valid `ModuleGroup` would be converted to a `Chunk` in the end.
 #[derive(Debug)]
@@ -286,8 +290,8 @@ impl GenerateStage<'_> {
         true,
         input_base.clone(),
       );
-      chunk.add_create_reason(
-        || format!("AdvancedChunks: GroupName({})", this_module_group.name),
+      chunk.add_creation_reason(
+        ChunkCreationReason::AdvancedChunkGroup(&this_module_group.name),
         self.options,
       );
 

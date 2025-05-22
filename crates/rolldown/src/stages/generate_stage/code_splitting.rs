@@ -1,6 +1,6 @@
 use std::{cmp::Ordering, collections::VecDeque, path::Path};
 
-use crate::chunk_graph::ChunkGraph;
+use crate::{chunk_graph::ChunkGraph, stages::generate_stage::chunk_ext::ChunkDebugExt};
 use arcstr::ArcStr;
 use itertools::Itertools;
 use oxc_index::IndexVec;
@@ -8,7 +8,7 @@ use rolldown_common::{Chunk, ChunkIdx, ChunkKind, Module, ModuleIdx, OutputForma
 use rolldown_utils::{BitSet, commondir, rustc_hash::FxHashMapExt};
 use rustc_hash::FxHashMap;
 
-use super::GenerateStage;
+use super::{GenerateStage, chunk_ext::ChunkCreationReason};
 
 #[derive(Clone)]
 pub struct SplittingInfo {
@@ -77,12 +77,10 @@ impl GenerateStage<'_> {
           module.is_included(),
           input_base.clone(),
         );
-        chunk.add_create_reason(
-          || {
-            format!(
-              "Enabling Preserve Module: User-defined({}), module({})",
-              module.is_user_defined_entry, module.stable_id
-            )
+        chunk.add_creation_reason(
+          ChunkCreationReason::PreserveModules {
+            is_user_defined_entry: module.is_user_defined_entry,
+            module_stable_id: &module.stable_id,
           },
           self.options,
         );
@@ -297,8 +295,11 @@ impl GenerateStage<'_> {
         self.link_output.lived_entry_points.contains(&entry_point.id),
         input_base.clone(),
       );
-      chunk.add_create_reason(
-        || format!("User-defined Entry: input({}), name({:?})", module.debug_id, entry_point.name),
+      chunk.add_creation_reason(
+        ChunkCreationReason::UserDefinedEntry {
+          debug_id: &module.debug_id,
+          entry_point_name: entry_point.name.as_ref(),
+        },
         self.options,
       );
       let chunk = chunk_graph.add_chunk(chunk);
@@ -375,24 +376,8 @@ impl GenerateStage<'_> {
           true,
           input_base.clone(),
         );
-        chunk.add_create_reason(
-          || {
-            let entries = self
-              .link_output
-              .entries
-              .iter()
-              .enumerate()
-              .filter_map(|(index, entry_point)| {
-                if bits.has_bit(index.try_into().unwrap()) {
-                  let entry_module = &self.link_output.module_table.modules[entry_point.id];
-                  Some(entry_module.stable_id().to_string())
-                } else {
-                  None
-                }
-              })
-              .join(", ");
-            format!("Common Chunk: SharedBy({entries})")
-          },
+        chunk.add_creation_reason(
+          ChunkCreationReason::CommonChunk { bits, link_output: self.link_output },
           self.options,
         );
         let chunk_id = chunk_graph.add_chunk(chunk);

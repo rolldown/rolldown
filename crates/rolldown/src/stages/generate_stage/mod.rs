@@ -46,6 +46,7 @@ use crate::{
 };
 
 mod advanced_chunks;
+mod chunk_ext;
 mod code_splitting;
 mod compute_cross_chunk_links;
 mod minify_assets;

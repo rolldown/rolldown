@@ -167,6 +167,14 @@ impl WatcherTask {
     if self.watch_files.contains(path) {
       self.invalidate_flag.store(true, Ordering::Relaxed);
     }
+
+    // #4385 watch linux path at windows, notify will give an `C:/xxx\\main.js` path
+    #[cfg(windows)]
+    {
+      if self.watch_files.contains(path.replace('\\', "/").as_str()) {
+        self.invalidate_flag.store(true, Ordering::Relaxed);
+      }
+    }
   }
 
   #[tracing::instrument(level = "debug", skip(self))]

@@ -580,6 +580,36 @@ test.sequential('warning for multiply notify options', async () => {
   await watcher.close()
 })
 
+if (process.platform === 'win32') {
+  test.sequential('watch linux path at windows #4385', async () => {
+    const { input, output } = await createTestInputAndOutput('watch-linux-path-at-windows')
+    const watcher = watch({
+      input,
+      output: { file: output },
+      plugins: [
+        {
+          name: 'test',
+          resolveId() {
+            return input.replace(/\\/g, '/');
+          },
+        },
+      ],
+    })
+    // should run build once
+    await waitBuildFinished(watcher)
+  
+    // edit file
+    fs.writeFileSync(input, 'console.log(2)')
+    await waitUtil(() => {
+      expect(fs.readFileSync(output, 'utf-8').includes('console.log(2)')).toBe(
+        true,
+      )
+    })
+  
+    await watcher.close()
+  })
+}
+
 test.sequential('watch close immediately', async () => {
   const { input, output } = await createTestInputAndOutput(
     'watch-close-immediately',

@@ -169,6 +169,8 @@ pub fn create_wrapper(
         #[cfg(debug_assertions)]
         debug_label: None,
         meta: StmtInfoMeta::default(),
+
+        force_tree_shaking: true,
       };
 
       linking_info.wrapper_stmt_info = Some(module.stmt_infos.add_stmt_info(stmt_info));
@@ -200,6 +202,7 @@ pub fn create_wrapper(
         #[cfg(debug_assertions)]
         debug_label: None,
         meta: StmtInfoMeta::default(),
+        force_tree_shaking: true,
       };
 
       linking_info.wrapper_stmt_info = Some(module.stmt_infos.add_stmt_info(stmt_info));

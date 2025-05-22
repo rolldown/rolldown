@@ -124,4 +124,6 @@ pub struct BindingOutputOptions<'env> {
   pub target: Option<Either<String, Vec<String>>>,
   pub virtual_dirname: Option<String>,
   pub preserve_modules_root: Option<String>,
+  #[napi(ts_type = "'strict' | 'allow-extension' | 'exports-only' | false")]
+  pub preserve_entry_signatures: Option<Either<String, bool>>,
 }

@@ -44,7 +44,7 @@ pub mod bundler_options {
       output_format::OutputFormat,
       output_option::{
         AddonFunction, AddonOutputOption, AssetFilenamesOutputOption, ChunkFilenamesOutputOption,
-        GlobalsOutputOption,
+        GlobalsOutputOption, PreserveEntrySignatures,
       },
       platform::Platform,
       resolve_options::ResolveOptions,

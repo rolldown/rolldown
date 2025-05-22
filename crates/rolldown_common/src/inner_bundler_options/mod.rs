@@ -12,7 +12,9 @@ use types::make_absolute_externals_relative::MakeAbsoluteExternalsRelative;
 use types::mark_module_loaded::MarkModuleLoaded;
 use types::minify_options::RawMinifyOptions;
 use types::on_log::OnLog;
-use types::output_option::{AssetFilenamesOutputOption, GlobalsOutputOption};
+use types::output_option::{
+  AssetFilenamesOutputOption, GlobalsOutputOption, PreserveEntrySignatures,
+};
 use types::sanitize_filename::SanitizeFilename;
 use types::watch_option::WatchOption;
 
@@ -215,8 +217,8 @@ pub struct BundlerOptions {
   pub preserve_modules: Option<bool>,
   pub virtual_dirname: Option<String>,
   pub preserve_modules_root: Option<String>,
+  pub preserve_entry_signatures: Option<PreserveEntrySignatures>,
 }
-
 impl BundlerOptions {
   /// # Panic
   /// 1. If `cwd` is not set.

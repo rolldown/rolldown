@@ -16,7 +16,9 @@ use super::experimental_options::ExperimentalOptions;
 use super::jsx::NormalizedJsxOptions;
 use super::legal_comments::LegalComments;
 use super::minify_options::MinifyOptions;
-use super::output_option::{AssetFilenamesOutputOption, ChunkFilenamesOutputOption};
+use super::output_option::{
+  AssetFilenamesOutputOption, ChunkFilenamesOutputOption, PreserveEntrySignatures,
+};
 use super::sanitize_filename::SanitizeFilename;
 use super::treeshake::NormalizedTreeshakeOptions;
 use super::watch_option::WatchOption;
@@ -98,6 +100,7 @@ pub struct NormalizedBundlerOptions {
   pub preserve_modules: bool,
   pub virtual_dirname: String,
   pub preserve_modules_root: Option<String>,
+  pub preserve_entry_signatures: PreserveEntrySignatures,
 }
 
 // This is only used for testing
@@ -163,6 +166,7 @@ impl Default for NormalizedBundlerOptions {
       preserve_modules: false,
       virtual_dirname: "_virtual".into(),
       preserve_modules_root: Default::default(),
+      preserve_entry_signatures: PreserveEntrySignatures::default(),
     }
   }
 }

@@ -13,7 +13,8 @@ use oxc::transformer::TransformOptions;
 use rolldown::{
   AddonOutputOption, AdvancedChunksOptions, AssetFilenamesOutputOption, BundlerOptions,
   ChunkFilenamesOutputOption, DeferSyncScanDataOption, HashCharacters, IsExternal, MatchGroup,
-  ModuleType, OutputExports, OutputFormat, Platform, RawMinifyOptions, SanitizeFilename,
+  ModuleType, OutputExports, OutputFormat, Platform, PreserveEntrySignatures, RawMinifyOptions,
+  SanitizeFilename,
 };
 use rolldown_common::DeferSyncScanData;
 use rolldown_plugin::__inner::SharedPluginable;
@@ -370,6 +371,30 @@ pub fn normalize_binding_options(
     preserve_modules: output_options.preserve_modules,
     virtual_dirname: output_options.virtual_dirname,
     preserve_modules_root: output_options.preserve_modules_root,
+    preserve_entry_signatures: output_options
+      .preserve_entry_signatures
+      .map(|v| match v {
+        Either::A(str) => match str.as_str() {
+          "exports-only" => Ok(PreserveEntrySignatures::ExportsOnly),
+          "strict" => Ok(PreserveEntrySignatures::Strict),
+          "allow-extension" => Ok(PreserveEntrySignatures::AllowExtension),
+          _ => Err(napi::Error::new(
+            napi::Status::GenericFailure,
+            format!("Invalid value for `preserveEntrySignatures` option: {str}"),
+          )),
+        },
+        Either::B(bool) => {
+          if bool {
+            Err(napi::Error::new(
+              napi::Status::GenericFailure,
+              format!("Invalid value for `preserveEntrySignatures` option: {bool}"),
+            ))
+          } else {
+            Ok(PreserveEntrySignatures::False)
+          }
+        }
+      })
+      .transpose()?,
   };
 
   #[cfg(not(target_family = "wasm"))]

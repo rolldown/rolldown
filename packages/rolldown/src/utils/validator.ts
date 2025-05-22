@@ -805,8 +805,6 @@ const inputHelperMsgRecord: HelperMsgRecord = {
 const outputHelperMsgRecord: HelperMsgRecord = {};
 
 export function validateOption<T>(key: 'input' | 'output', options: T): void {
-  if (globalThis.process?.env?.ROLLDOWN_OPTIONS_VALIDATION === 'loose') return;
-
   let parsed = v.safeParse(
     key === 'input' ? InputOptionsSchema : OutputOptionsSchema,
     options,
@@ -844,7 +842,7 @@ export function validateOption<T>(key: 'input' | 'output', options: T): void {
       })
       .filter(Boolean);
     if (errors.length) {
-      throw new Error(`Failed validate ${key} options.\n` + errors.join('\n'));
+      console.warn(`Warning validate ${key} options.\n` + errors.join('\n'));
     }
   }
 }

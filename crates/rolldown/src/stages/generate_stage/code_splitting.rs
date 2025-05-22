@@ -1,4 +1,4 @@
-use std::{cmp::Ordering, path::Path};
+use std::{cmp::Ordering, collections::VecDeque, path::Path};
 
 use crate::chunk_graph::ChunkGraph;
 use arcstr::ArcStr;
@@ -404,28 +404,33 @@ impl GenerateStage<'_> {
 
   fn determine_reachable_modules_for_entry(
     &self,
-    module_id: ModuleIdx,
+    entry_module_idx: ModuleIdx,
     entry_index: u32,
     index_splitting_info: &mut IndexSplittingInfo,
   ) {
-    let Module::Normal(module) = &self.link_output.module_table.modules[module_id] else {
-      return;
-    };
-    let meta = &self.link_output.metas[module_id];
+    let mut q = VecDeque::from([entry_module_idx]);
 
-    if !module.meta.is_included() {
-      return;
+    while let Some(module_idx) = q.pop_front() {
+      let Module::Normal(module) = &self.link_output.module_table.modules[module_idx] else {
+        continue;
+      };
+
+      let meta = &self.link_output.metas[module_idx];
+
+      if !module.meta.is_included() {
+        continue;
+      }
+
+      if index_splitting_info[module_idx].bits.has_bit(entry_index) {
+        continue;
+      }
+
+      index_splitting_info[module_idx].bits.set_bit(entry_index);
+      index_splitting_info[module_idx].share_count += 1;
+
+      meta.dependencies.iter().copied().for_each(|dep_idx| {
+        q.push_back(dep_idx);
+      });
     }
-
-    if index_splitting_info[module_id].bits.has_bit(entry_index) {
-      return;
-    }
-
-    index_splitting_info[module_id].bits.set_bit(entry_index);
-    index_splitting_info[module_id].share_count += 1;
-
-    meta.dependencies.iter().copied().for_each(|dep_idx| {
-      self.determine_reachable_modules_for_entry(dep_idx, entry_index, index_splitting_info);
-    });
   }
 }

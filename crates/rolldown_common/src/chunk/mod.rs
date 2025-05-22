@@ -280,14 +280,4 @@ impl Chunk {
   ) -> Option<&'module NormalModule> {
     self.entry_module_idx().and_then(|idx| module_table.modules[idx].as_normal())
   }
-
-  pub fn add_create_reason(
-    &mut self,
-    reason: impl Fn() -> String,
-    options: &NormalizedBundlerOptions,
-  ) {
-    if options.experimental.is_attach_debug_info_enabled() {
-      self.create_reasons.push(reason());
-    }
-  }
 }

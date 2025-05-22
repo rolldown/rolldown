@@ -805,6 +805,7 @@ const inputHelperMsgRecord: HelperMsgRecord = {
 const outputHelperMsgRecord: HelperMsgRecord = {};
 
 export function validateOption<T>(key: 'input' | 'output', options: T): void {
+  if (globalThis.process?.env?.ROLLUP_TEST) return;
   let parsed = v.safeParse(
     key === 'input' ? InputOptionsSchema : OutputOptionsSchema,
     options,

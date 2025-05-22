@@ -31,17 +31,20 @@ impl BitSet {
 
 impl Display for BitSet {
   fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+    // using little endian representation
+    // e.g. 256
+    // 00000001_00000000
+    // ^               ^
+    // msb             lsb
     let bit_string =
-      self.entries.iter().map(|e| format!("{e:08b}")).collect::<Vec<String>>().join("_");
+      self.entries.iter().rev().map(|e| format!("{e:08b}")).collect::<Vec<String>>().join("_");
     f.write_str(&bit_string)
   }
 }
 
 impl Debug for BitSet {
   fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-    let bit_string =
-      self.entries.iter().map(|e| format!("{e:08b}")).collect::<Vec<String>>().join("_");
-    f.debug_tuple("BitSet").field(&bit_string).finish()
+    f.debug_tuple("BitSet").field(&self.to_string()).finish()
   }
 }
 
@@ -63,11 +66,11 @@ mod tests {
     bs.set_bit(0);
     bs.set_bit(1);
     bs.set_bit(7);
-    assert_eq!(bs.to_string(), "10000011_00000000");
+    assert_eq!(bs.to_string(), "00000000_10000011");
     bs.set_bit(8);
-    assert_eq!(bs.to_string(), "10000011_00000001");
+    assert_eq!(bs.to_string(), "00000001_10000011");
     bs.set_bit(15);
-    assert_eq!(bs.to_string(), "10000011_10000001");
+    assert_eq!(bs.to_string(), "10000001_10000011");
   }
 
   #[test]
@@ -78,12 +81,12 @@ mod tests {
     bs.set_bit(0);
     bs.set_bit(1);
     bs.set_bit(7);
-    assert_eq!(bs.to_string(), "10000011_00000000");
+    assert_eq!(bs.to_string(), "00000000_10000011");
     bs2.set_bit(8);
     bs2.set_bit(15);
-    assert_eq!(bs2.to_string(), "00000000_10000001");
+    assert_eq!(bs2.to_string(), "10000001_00000000");
     //
     bs.union(&bs2);
-    assert_eq!(bs.to_string(), "10000011_10000001");
+    assert_eq!(bs.to_string(), "10000001_10000011");
   }
 }

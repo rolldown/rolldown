@@ -2,8 +2,8 @@
   "name": "rollup-tests",
   "private": true,
   "scripts": {
-    "test": "ROLLDOWN_OPTIONS_VALIDATION=loose mocha --file ./src/intercept/check.js test/test.js",
-    "test--update": "ROLLDOWN_OPTIONS_VALIDATION=loose mocha --jobs 1 --file ./src/intercept/update-test-status.js test/test.js"
+    "test": "ROLLUP_TEST=1 mocha --file ./src/intercept/check.js test/test.js",
+    "test--update": "ROLLUP_TEST=1 mocha --jobs 1 --file ./src/intercept/update-test-status.js test/test.js"
   },
   "keywords": [],
   "author": "",

@@ -1,19 +1,30 @@
 use std::{cmp::Ordering, collections::VecDeque, path::Path};
 
-use crate::{chunk_graph::ChunkGraph, stages::generate_stage::chunk_ext::ChunkDebugExt};
+use crate::{
+  chunk_graph::ChunkGraph,
+  stages::{generate_stage::chunk_ext::ChunkDebugExt, link_stage::LinkStageOutput},
+};
 use arcstr::ArcStr;
 use itertools::Itertools;
+use oxc::cfg::graph::visit::EdgeFilteredNeighborsDirected;
 use oxc_index::IndexVec;
 use rolldown_common::{Chunk, ChunkIdx, ChunkKind, Module, ModuleIdx, OutputFormat};
-use rolldown_utils::{BitSet, commondir, rustc_hash::FxHashMapExt};
+use rolldown_utils::{BitSet, commondir, indexmap::FxIndexMap, rustc_hash::FxHashMapExt};
 use rustc_hash::FxHashMap;
 
 use super::{GenerateStage, chunk_ext::ChunkCreationReason};
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct SplittingInfo {
   pub bits: BitSet,
   pub share_count: u32,
+}
+
+#[derive(Debug)]
+enum CombineChunkRet {
+  DynamicVec(Vec<ChunkIdx>),
+  Entry(ChunkIdx),
+  None,
 }
 
 pub type IndexSplittingInfo = IndexVec<ModuleIdx, SplittingInfo>;
@@ -342,6 +353,8 @@ impl GenerateStage<'_> {
       input_base,
     );
 
+    let mut pending_common_chunks: FxIndexMap<BitSet, Vec<ModuleIdx>> = FxIndexMap::default();
+    let is_allow_extension = self.options.preserve_entry_signatures.is_allow_extension();
     // 1. Assign modules to corresponding chunks
     // 2. Create shared chunks to store modules that belong to multiple chunks.
     for normal_module in self.link_output.module_table.modules.iter().filter_map(Module::as_normal)
@@ -366,23 +379,131 @@ impl GenerateStage<'_> {
       if let Some(chunk_id) = bits_to_chunk.get(bits).copied() {
         chunk_graph.add_module_to_chunk(normal_module.idx, chunk_id);
       } else {
-        let mut chunk = Chunk::new(
-          None,
-          None,
-          None,
-          bits.clone(),
-          vec![],
-          ChunkKind::Common,
-          true,
-          input_base.clone(),
+        if is_allow_extension {
+          pending_common_chunks.entry(bits.clone()).or_default().push(normal_module.idx);
+        } else {
+          let mut chunk = Chunk::new(
+            None,
+            None,
+            None,
+            bits.clone(),
+            vec![],
+            ChunkKind::Common,
+            true,
+            input_base.clone(),
+          );
+          chunk.add_creation_reason(
+            ChunkCreationReason::CommonChunk { bits, link_output: self.link_output },
+            self.options,
+          );
+          let chunk_id = chunk_graph.add_chunk(chunk);
+          chunk_graph.add_module_to_chunk(normal_module.idx, chunk_id);
+          bits_to_chunk.insert(bits.clone(), chunk_id);
+        };
+      }
+
+      for (idx, split) in index_splitting_info.iter_enumerated() {
+        dbg!(&self.link_output.module_table.modules[idx].id());
+        dbg!(&split);
+      }
+      if is_allow_extension {
+        let entry_len = self.link_output.entries.len();
+        // extract entry chunk module relation
+        // this means `key_chunk` also referenced all entry module in value `vec`
+        let mut entry_chunk_reference: FxHashMap<ChunkIdx, Vec<ChunkIdx>> = FxHashMap::default();
+        for (entry_idx, entry_point) in self.link_output.entries.iter().enumerate() {
+          let entry_module_idx = entry_point.id;
+          index_splitting_info[entry_module_idx]
+            .bits
+            .index_of_one()
+            .iter()
+            .filter(|item| (**item as usize) < entry_len)
+            .for_each(|&chunk_idx| {
+              entry_chunk_reference
+                .entry(ChunkIdx::from_raw(chunk_idx))
+                .or_default()
+                .push(entry_idx.into());
+            });
+        }
+
+        for (bits, modules) in &pending_common_chunks {
+          let item = Self::try_insert_into_exists_chunk(
+            &bits.index_of_one().into_iter().map(ChunkIdx::from_raw).collect_vec(),
+            &entry_chunk_reference,
+            chunk_graph,
+            &self.link_output,
+          );
+          dbg!(&item);
+        }
+      }
+    }
+  }
+
+  fn try_insert_into_exists_chunk(
+    chunk_idxs: &[ChunkIdx],
+    entry_chunk_reference: &FxHashMap<ChunkIdx, Vec<ChunkIdx>>,
+    chunk_graph: &ChunkGraph,
+    link_output: &LinkStageOutput,
+  ) -> CombineChunkRet {
+    match chunk_idxs.len() {
+      0 => CombineChunkRet::None,
+      1 => {
+        let chunk = &chunk_graph.chunk_table[chunk_idxs[0]];
+        match chunk.kind {
+          ChunkKind::EntryPoint { is_user_defined, .. } => {
+            if is_user_defined {
+              CombineChunkRet::Entry(chunk_idxs[0])
+            } else {
+              CombineChunkRet::DynamicVec(vec![chunk_idxs[0]])
+            }
+          }
+          ChunkKind::Common => CombineChunkRet::None,
+        }
+      }
+      _ => {
+        let mid = chunk_idxs.len() / 2;
+        let left = &chunk_idxs[0..mid];
+        let right = &chunk_idxs[mid..];
+        let left_ret =
+          Self::try_insert_into_exists_chunk(left, entry_chunk_reference, chunk_graph, link_output);
+        dbg!(&left_ret);
+        let right_ret = Self::try_insert_into_exists_chunk(
+          right,
+          entry_chunk_reference,
+          chunk_graph,
+          link_output,
         );
-        chunk.add_creation_reason(
-          ChunkCreationReason::CommonChunk { bits, link_output: self.link_output },
-          self.options,
-        );
-        let chunk_id = chunk_graph.add_chunk(chunk);
-        chunk_graph.add_module_to_chunk(normal_module.idx, chunk_id);
-        bits_to_chunk.insert(bits.clone(), chunk_id);
+        dbg!(&right_ret);
+        match (left_ret, right_ret) {
+          (CombineChunkRet::DynamicVec(mut left), CombineChunkRet::DynamicVec(right)) => {
+            left.extend(right);
+            CombineChunkRet::DynamicVec(left)
+          }
+          (CombineChunkRet::DynamicVec(dynamic_entry_idxs), CombineChunkRet::Entry(chunk_idx)) => {
+            let ret = dynamic_entry_idxs.iter().all(|idx| {
+              entry_chunk_reference
+                .get(idx)
+                .map(|entry_chunk| entry_chunk.contains(&chunk_idx))
+                .unwrap_or(false)
+            });
+            if ret { CombineChunkRet::Entry(chunk_idx) } else { CombineChunkRet::None }
+          }
+          (_, CombineChunkRet::None) => CombineChunkRet::None,
+          (CombineChunkRet::None, _) => CombineChunkRet::None,
+          (CombineChunkRet::Entry(chunk_idx), CombineChunkRet::DynamicVec(dynamic_entry_idxs)) => {
+            dbg!(&entry_chunk_reference);
+            let entry_module = chunk_graph.chunk_table[chunk_idx].entry_module_idx().unwrap();
+            let deps = &link_output.metas[entry_module].dependencies;
+            dbg!(&deps);
+            let ret = dynamic_entry_idxs.iter().all(|chunk_idx| {
+              let chunk = &chunk_graph.chunk_table[*chunk_idx];
+              let module_idx = chunk.entry_module_idx().expect("Chunk should have entry module");
+              deps.contains(&module_idx)
+            });
+            if ret { CombineChunkRet::Entry(chunk_idx) } else { CombineChunkRet::None }
+          }
+          (CombineChunkRet::Entry(_), CombineChunkRet::Entry(_)) => CombineChunkRet::None,
+        }
       }
     }
   }

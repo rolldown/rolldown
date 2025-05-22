@@ -16,3 +16,10 @@ pub enum PreserveEntrySignatures {
   #[default]
   False,
 }
+
+impl PreserveEntrySignatures {
+  #[must_use]
+  pub fn is_allow_extension(&self) -> bool {
+    matches!(self, Self::AllowExtension)
+  }
+}

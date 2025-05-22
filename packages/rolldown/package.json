@@ -108,17 +108,10 @@
     "dtsHeader": "type MaybePromise<T> = T | Promise<T>\ntype Nullable<T> = T | null | undefined\ntype VoidNullable<T = void> = T | null | undefined | void\nexport type BindingStringOrRegex = string | RegExp\n\n"
   },
   "dependencies": {
+    "@oxc-project/runtime": "catalog:",
     "@oxc-project/types": "catalog:",
     "@rolldown/pluginutils": "workspace:*",
     "ansis": "^4.0.0"
-  },
-  "peerDependencies": {
-    "@oxc-project/runtime": "catalog:"
-  },
-  "peerDependenciesMeta": {
-    "@oxc-project/runtime": {
-      "optional": true
-    }
   },
   "devDependencies": {
     "@napi-rs/cli": "3.0.0-alpha.80",

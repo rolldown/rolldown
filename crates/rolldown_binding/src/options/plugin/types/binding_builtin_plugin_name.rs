@@ -27,6 +27,8 @@ pub enum BindingBuiltinPluginName {
   ModuleFederation,
   #[napi(value = "builtin:module-preload-polyfill")]
   ModulePreloadPolyfill,
+  #[napi(value = "builtin:oxc-runtime")]
+  OxcRuntime,
   #[napi(value = "builtin:reporter")]
   Report,
   #[napi(value = "builtin:replace")]

@@ -44,6 +44,7 @@ rolldown_plugin_load_fallback = { workspace = true }
 rolldown_plugin_manifest = { workspace = true }
 rolldown_plugin_module_federation = { workspace = true }
 rolldown_plugin_module_preload_polyfill = { workspace = true }
+rolldown_plugin_oxc_runtime = { workspace = true }
 rolldown_plugin_replace = { workspace = true }
 rolldown_plugin_reporter = { workspace = true }
 rolldown_plugin_transform = { workspace = true }

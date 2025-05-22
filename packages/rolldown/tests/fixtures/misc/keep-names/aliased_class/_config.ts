@@ -2,13 +2,10 @@ import { defineTest } from 'rolldown-tests'
 
 export default defineTest({
   config: {
-    input: 'main.ts',
     keepNames: true,
-    resolve: {
-      tsconfigFilename: 'tsconfig.json',
-    },
+    external: ['node:assert'],
   },
-  async afterTest(_output) {
+  afterTest: async () => {
     await import('./assert.mjs')
   },
 })

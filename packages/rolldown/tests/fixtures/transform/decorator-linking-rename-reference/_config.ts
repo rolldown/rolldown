@@ -6,11 +6,7 @@ export default defineTest({
     resolve: {
       tsconfigFilename: 'tsconfig.json',
     },
-    transform: {
-      typescript: {
-        onlyRemoveTypeImports: true,
-      },
-    },
+    keepNames: true,
   },
   async afterTest(_output) {
     await import('./assert.mjs')

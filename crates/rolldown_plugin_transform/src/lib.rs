@@ -1,8 +1,8 @@
 mod types;
 mod utils;
 
+use std::borrow::Cow;
 use std::path::Path;
-use std::{borrow::Cow, sync::Arc};
 
 use arcstr::ArcStr;
 use itertools::Itertools;
@@ -12,9 +12,7 @@ use oxc::semantic::SemanticBuilder;
 use oxc::transformer::Transformer;
 use rolldown_common::ModuleType;
 use rolldown_error::{BuildDiagnostic, Severity};
-use rolldown_plugin::{
-  HookUsage, Plugin, PluginContextResolveOptions, SharedTransformPluginContext,
-};
+use rolldown_plugin::{HookUsage, Plugin, SharedTransformPluginContext};
 use rolldown_utils::{pattern_filter::StringOrRegex, stabilize_id::stabilize_id, url::clean_url};
 
 pub use types::{
@@ -28,12 +26,8 @@ pub struct TransformPlugin {
   pub exclude: Vec<StringOrRegex>,
   pub jsx_refresh_include: Vec<StringOrRegex>,
   pub jsx_refresh_exclude: Vec<StringOrRegex>,
-
   pub jsx_inject: Option<String>,
-
   pub is_server_consumer: bool,
-  pub runtime_resolve_base: Option<String>,
-
   pub sourcemap: bool,
   pub transform_options: TransformOptions,
 }
@@ -42,35 +36,6 @@ pub struct TransformPlugin {
 impl Plugin for TransformPlugin {
   fn name(&self) -> Cow<'static, str> {
     Cow::Borrowed("builtin:transform")
-  }
-
-  async fn resolve_id(
-    &self,
-    ctx: &rolldown_plugin::PluginContext,
-    args: &rolldown_plugin::HookResolveIdArgs<'_>,
-  ) -> rolldown_plugin::HookResolveIdReturn {
-    if args.specifier.starts_with("@oxc-project/runtime/") {
-      let resolved_id = ctx
-        .resolve(
-          args.specifier,
-          self.runtime_resolve_base.as_deref(),
-          Some(PluginContextResolveOptions {
-            skip_self: true,
-            import_kind: args.kind,
-            custom: Arc::clone(&args.custom),
-          }),
-        )
-        .await??;
-
-      return Ok(Some(rolldown_plugin::HookResolveIdOutput {
-        id: resolved_id.id,
-        external: Some(resolved_id.external),
-        side_effects: resolved_id.side_effects,
-        normalize_external_id: resolved_id.normalize_external_id,
-      }));
-    }
-
-    Ok(None)
   }
 
   async fn transform(
@@ -148,10 +113,6 @@ impl Plugin for TransformPlugin {
   }
 
   fn register_hook_usage(&self) -> HookUsage {
-    if self.runtime_resolve_base.is_some() {
-      HookUsage::ResolveId | HookUsage::Transform
-    } else {
-      HookUsage::Transform
-    }
+    HookUsage::Transform
   }
 }

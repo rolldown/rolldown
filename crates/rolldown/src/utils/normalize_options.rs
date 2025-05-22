@@ -262,6 +262,7 @@ pub fn normalize_options(mut raw_options: crate::BundlerOptions) -> NormalizeOpt
       }
     }),
     cwd,
+    preserve_entry_signatures: raw_options.preserve_entry_signatures.unwrap_or_default(),
   };
 
   NormalizeOptionsReturn { options: normalized, resolve_options: raw_resolve, warnings }

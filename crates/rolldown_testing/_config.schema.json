@@ -423,6 +423,16 @@
             "null"
           ]
         },
+        "preserveEntrySignatures": {
+          "anyOf": [
+            {
+              "$ref": "#/definitions/PreserveEntrySignatures"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
         "preserveModules": {
           "type": [
             "boolean",
@@ -1067,6 +1077,15 @@
             "node"
           ]
         }
+      ]
+    },
+    "PreserveEntrySignatures": {
+      "type": "string",
+      "enum": [
+        "allow-extension",
+        "strict",
+        "exports-only",
+        "false"
       ]
     },
     "RawMinifyOptions": {

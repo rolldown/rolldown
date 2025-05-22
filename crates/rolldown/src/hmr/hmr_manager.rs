@@ -3,6 +3,11 @@ use std::{
   sync::Arc,
 };
 
+use crate::{
+  SharedOptions, SharedResolver, hmr::hmr_ast_finalizer::HmrAstFinalizer,
+  module_loader::ModuleLoader, types::scan_stage_cache::ScanStageCache,
+  utils::process_code_and_sourcemap::process_code_and_sourcemap,
+};
 use arcstr::ArcStr;
 use oxc::ast_visit::VisitMut;
 use rolldown_common::{
@@ -14,14 +19,11 @@ use rolldown_error::BuildResult;
 use rolldown_fs::OsFileSystem;
 use rolldown_plugin::SharedPluginDriver;
 use rolldown_sourcemap::{SourceJoiner, SourceMapSource};
-use rolldown_utils::indexmap::FxIndexSet;
-use rustc_hash::{FxHashMap, FxHashSet};
-
-use crate::{
-  SharedOptions, SharedResolver, hmr::hmr_ast_finalizer::HmrAstFinalizer,
-  module_loader::ModuleLoader, type_alias::IndexEcmaAst, types::scan_stage_cache::ScanStageCache,
-  utils::process_code_and_sourcemap::process_code_and_sourcemap,
+use rolldown_utils::{
+  indexmap::FxIndexSet,
+  rayon::{IntoParallelRefMutIterator, ParallelIterator},
 };
+use rustc_hash::{FxHashMap, FxHashSet};
 
 pub struct HmrManagerInput {
   pub module_db: ModuleTable,
@@ -29,7 +31,6 @@ pub struct HmrManagerInput {
   pub fs: OsFileSystem,
   pub resolver: SharedResolver,
   pub plugin_driver: SharedPluginDriver,
-  pub index_ecma_ast: IndexEcmaAst,
   pub cache: ScanStageCache,
   pub session_span: tracing::Span,
 }
@@ -219,7 +220,7 @@ impl HmrManager {
       self.session_span.clone(),
     )?;
 
-    let module_loader_output =
+    let mut module_loader_output =
       module_loader.fetch_modules(vec![], module_infos_to_be_updated).await?;
 
     self.cache = module_loader_output.cache;
@@ -266,7 +267,6 @@ impl HmrManager {
         .map(|module_idx| self.module_db.modules[*module_idx].stable_id())
         .collect::<Vec<_>>(),
     );
-    self.index_ecma_ast = module_loader_output.index_ecma_ast;
 
     // Remove external modules from affected_modules.
     affected_modules.retain(|idx| {
@@ -293,49 +293,60 @@ impl HmrManager {
 
     let mut source_joiner = SourceJoiner::default();
 
-    for affected_module_idx in affected_modules {
-      let affected_module = &self.input.module_db.modules[affected_module_idx];
-      let Module::Normal(affected_module) = affected_module else {
-        unreachable!("HMR only supports normal module");
-      };
+    module_loader_output
+      .index_ecma_ast
+      .par_iter_mut()
+      .filter_map(|(ast, module_idx)| {
+        if affected_modules.contains(module_idx) {
+          let affected_module = &self.input.module_db.modules[*module_idx];
+          let Module::Normal(affected_module) = affected_module else {
+            unreachable!("HMR only supports normal module");
+          };
+          Some((affected_module, ast))
+        } else {
+          None
+        }
+      })
+      .map(|(affected_module, ast)| {
+        let enable_sourcemap = self.options.sourcemap.is_some() && !affected_module.is_virtual();
+        let modules = &self.input.module_db.modules;
 
-      let enable_sourcemap = self.options.sourcemap.is_some() && !affected_module.is_virtual();
-      let ecma_ast_idx = affected_module.ecma_ast_idx.unwrap();
-      let modules = &self.input.module_db.modules;
-      let ast = &mut self.input.index_ecma_ast[ecma_ast_idx].0;
+        ast.program.with_mut(|fields| {
+          let scoping = EcmaAst::make_semantic(fields.program, /*with_cfg*/ false).into_scoping();
+          let mut finalizer = HmrAstFinalizer {
+            modules,
+            alloc: fields.allocator,
+            snippet: AstSnippet::new(fields.allocator),
+            scoping: &scoping,
+            import_binding: FxHashMap::default(),
+            module: affected_module,
+            exports: oxc::allocator::Vec::new_in(fields.allocator),
+            affected_module_idx_to_init_fn_name: &module_idx_to_init_fn_name,
+            dependencies: FxIndexSet::default(),
+            imports: FxHashSet::default(),
+          };
 
-      ast.program.with_mut(|fields| {
-        let scoping = EcmaAst::make_semantic(fields.program, /*with_cfg*/ false).into_scoping();
-        let mut finalizer = HmrAstFinalizer {
-          modules,
-          alloc: fields.allocator,
-          snippet: AstSnippet::new(fields.allocator),
-          scoping: &scoping,
-          import_binding: FxHashMap::default(),
-          module: affected_module,
-          exports: oxc::allocator::Vec::new_in(fields.allocator),
-          affected_module_idx_to_init_fn_name: &module_idx_to_init_fn_name,
-          dependencies: FxIndexSet::default(),
-          imports: FxHashSet::default(),
-        };
+          finalizer.visit_program(fields.program);
+        });
 
-        finalizer.visit_program(fields.program);
+        EcmaCompiler::print_with(
+          ast,
+          PrintOptions {
+            sourcemap: enable_sourcemap,
+            filename: affected_module.id.to_string(),
+            print_legal_comments: false, // ignore hmr chunk comments
+          },
+        )
+      })
+      .collect::<Vec<_>>()
+      .into_iter()
+      .for_each(|codegen| {
+        if let Some(map) = codegen.map {
+          source_joiner.append_source(SourceMapSource::new(codegen.code, map));
+        } else {
+          source_joiner.append_source(codegen.code);
+        }
       });
-
-      let codegen = EcmaCompiler::print_with(
-        ast,
-        PrintOptions {
-          sourcemap: enable_sourcemap,
-          filename: affected_module.id.to_string(),
-          print_legal_comments: false, // ignore hmr chunk comments
-        },
-      );
-      if let Some(map) = codegen.map {
-        source_joiner.append_source(SourceMapSource::new(codegen.code, map));
-      } else {
-        source_joiner.append_source(codegen.code);
-      }
-    }
 
     hmr_boundaries.iter().for_each(|boundary| {
       let init_fn_name = &module_idx_to_init_fn_name[&boundary.boundary];

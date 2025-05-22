@@ -244,7 +244,6 @@ impl Bundler {
         options: Arc::clone(&self.options),
         resolver: Arc::clone(&self.resolver),
         plugin_driver: Arc::clone(&self.plugin_driver),
-        index_ecma_ast: link_stage_output.ast_table,
         // Don't forget to reset the cache if you want to rebuild the bundle instead hmr.
         cache: std::mem::take(&mut self.cache),
         session_span: self.session_span.clone(),

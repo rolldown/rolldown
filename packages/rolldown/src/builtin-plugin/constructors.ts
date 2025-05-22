@@ -9,6 +9,7 @@ import type {
   BindingManifestPluginConfig,
   BindingMfManifest,
   BindingModuleFederationPluginOption,
+  BindingOxcRuntimePluginConfig,
   BindingRemote,
   BindingReporterPluginConfig,
   BindingViteResolvePluginConfig,
@@ -133,4 +134,10 @@ export function assetImportMetaUrlPlugin(): BuiltinPlugin {
 
 export function webWorkerPostPlugin(): BuiltinPlugin {
   return new BuiltinPlugin('builtin:web-worker-post');
+}
+
+export function oxcRuntimePlugin(
+  config?: BindingOxcRuntimePluginConfig,
+): BuiltinPlugin {
+  return new BuiltinPlugin('builtin:oxc-runtime', config);
 }

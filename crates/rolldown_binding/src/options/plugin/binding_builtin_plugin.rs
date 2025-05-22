@@ -2,6 +2,7 @@ use std::sync::Arc;
 
 use napi::{Unknown, bindgen_prelude::FromNapiValue};
 use napi_derive::napi;
+use rolldown_plugin_oxc_runtime::OxcRuntimePlugin;
 use rustc_hash::FxHashSet;
 
 use rolldown_plugin::__inner::Pluginable;
@@ -30,8 +31,8 @@ use super::{
     BindingAliasPluginConfig, BindingAssetPluginConfig, BindingBuildImportAnalysisPluginConfig,
     BindingDynamicImportVarsPluginConfig, BindingImportGlobPluginConfig,
     BindingIsolatedDeclarationPluginConfig, BindingJsonPluginConfig, BindingManifestPluginConfig,
-    BindingReplacePluginConfig, BindingReporterPluginConfig, BindingTransformPluginConfig,
-    BindingViteResolvePluginConfig,
+    BindingOxcRuntimePluginConfig, BindingReplacePluginConfig, BindingReporterPluginConfig,
+    BindingTransformPluginConfig, BindingViteResolvePluginConfig,
   },
   types::{
     binding_builtin_plugin_name::BindingBuiltinPluginName,
@@ -143,6 +144,14 @@ impl TryFrom<BindingBuiltinPlugin<'_>> for Arc<dyn Pluginable> {
         Arc::new(ModuleFederationPlugin::new(config.into()))
       }
       BindingBuiltinPluginName::ModulePreloadPolyfill => Arc::new(ModulePreloadPolyfillPlugin),
+      BindingBuiltinPluginName::OxcRuntime => {
+        let plugin = if let Some(options) = plugin.options {
+          BindingOxcRuntimePluginConfig::from_unknown(options)?.into()
+        } else {
+          OxcRuntimePlugin::default()
+        };
+        Arc::new(plugin)
+      }
       BindingBuiltinPluginName::Report => {
         let plugin: ReporterPlugin = if let Some(options) = plugin.options {
           BindingReporterPluginConfig::from_unknown(options)?.into()

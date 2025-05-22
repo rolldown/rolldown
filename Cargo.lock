@@ -2526,6 +2526,7 @@ dependencies = [
  "rolldown_plugin_manifest",
  "rolldown_plugin_module_federation",
  "rolldown_plugin_module_preload_polyfill",
+ "rolldown_plugin_oxc_runtime",
  "rolldown_plugin_replace",
  "rolldown_plugin_reporter",
  "rolldown_plugin_transform",
@@ -2830,6 +2831,13 @@ version = "0.1.0"
 dependencies = [
  "arcstr",
  "rolldown_common",
+ "rolldown_plugin",
+]
+
+[[package]]
+name = "rolldown_plugin_oxc_runtime"
+version = "0.1.0"
+dependencies = [
  "rolldown_plugin",
 ]
 

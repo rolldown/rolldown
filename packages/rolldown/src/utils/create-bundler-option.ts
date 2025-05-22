@@ -13,6 +13,7 @@ import { initializeParallelPlugins } from './initialize-parallel-plugins';
 import {
   ANONYMOUS_OUTPUT_PLUGIN_PREFIX,
   ANONYMOUS_PLUGIN_PREFIX,
+  BUILTIN_PLUGINS,
   checkOutputPluginOption,
   normalizePluginOption,
   normalizePlugins,
@@ -51,6 +52,7 @@ export async function createBundlerOptions(
   );
 
   let plugins = [
+    ...BUILTIN_PLUGINS,
     ...normalizePlugins(inputPlugins, ANONYMOUS_PLUGIN_PREFIX),
     ...checkOutputPluginOption(
       normalizePlugins(normalizedOutputPlugins, ANONYMOUS_OUTPUT_PLUGIN_PREFIX),

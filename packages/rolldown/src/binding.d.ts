@@ -267,6 +267,7 @@ export type BindingBuiltinPluginName =  'builtin:alias'|
 'builtin:manifest'|
 'builtin:module-federation'|
 'builtin:module-preload-polyfill'|
+'builtin:oxc-runtime'|
 'builtin:reporter'|
 'builtin:replace'|
 'builtin:transform'|
@@ -616,6 +617,10 @@ export interface BindingOutputOptions {
   target?: string | Array<string>
   virtualDirname?: string
   preserveModulesRoot?: string
+}
+
+export interface BindingOxcRuntimePluginConfig {
+  resolveBase?: string
 }
 
 export interface BindingPluginContextResolvedId {

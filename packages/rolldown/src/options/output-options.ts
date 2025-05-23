@@ -135,7 +135,7 @@ export interface OutputOptions {
        *
        * If `test` is a string, the module whose id contains the string will be captured.
        * If `test` is a regular expression, the module whose id matches the regular expression will be captured.
-       * If `test` is a function, the module whose id returns `true` when passed to the function will be captured.
+       * If `test` is a function, modules for which `test(id)` returns `true` will be captured.
        * if `test` is empty, any module will be considered as matched.
        */
       test?: StringOrRegExp | ((id: string) => boolean | undefined | void);

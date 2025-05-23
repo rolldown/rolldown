@@ -1,0 +1,23 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## main.js
+
+```js
+//#region main.js
+const mod = () => import("./mod.js");
+
+//#endregion
+export { mod };
+```
+## mod.js
+
+```js
+//#region mod.js
+const a = 1e3;
+
+//#endregion
+export { a };
+```

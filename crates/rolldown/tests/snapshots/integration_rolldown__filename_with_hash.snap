@@ -4800,6 +4800,19 @@ expression: output
 - package.json-!~{003}~.js => package.json-BVhit7Fb.js
 - src/utils/index-!~{005}~.js => src/utils/index-Csnyz4fa.js
 
+# tests/rolldown/misc/preserve_modules/issue-4647
+
+- main-!~{000}~.js => main-BW1pxCZm.js
+- mod-!~{003}~.js => mod-BSpzJoV9.js
+
+# tests/rolldown/misc/preserve_modules/issue-4647-2
+
+- entry2-!~{001}~.js => entry2-DSxXD7UY.js
+- main-!~{000}~.js => main-B5oBoif0.js
+- dynamic-!~{008}~.js => dynamic-DzjSBw-s.js
+- dynamic2-!~{004}~.js => dynamic2-BOUhYg7u.js
+- mod-!~{006}~.js => mod-BGV19WV6.js
+
 # tests/rolldown/misc/preserve_modules/multi_entry
 
 - a-!~{001}~.js => a-9EeU3Xa2.js

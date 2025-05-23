@@ -617,6 +617,7 @@ export interface BindingOutputOptions {
   target?: string | Array<string>
   virtualDirname?: string
   preserveModulesRoot?: string
+  preserveEntrySignatures?: 'strict' | 'allow-extension' | 'exports-only' | false
 }
 
 export interface BindingOxcRuntimePluginConfig {

@@ -320,14 +320,17 @@ pub fn get_export_items(
   };
 
   match chunk.kind {
-    ChunkKind::EntryPoint { module, is_user_defined, .. } => {
-      if options.preserve_modules && !is_user_defined {
+    ChunkKind::EntryPoint { module: module_idx, is_user_defined, .. } => {
+      let module =
+        graph.module_table.modules[module_idx].as_normal().expect("should be normal module");
+      let is_dynamic_imported = !module.ecma_view.dynamic_importers.is_empty();
+      if options.preserve_modules && !is_user_defined && !is_dynamic_imported {
         return get_exports_items_from_common_chunk(chunk);
       }
-      let meta = &graph.metas[module];
+      let meta = &graph.metas[module_idx];
       meta
         .referenced_canonical_exports_symbols(
-          module,
+          module_idx,
           if is_user_defined { EntryPointKind::UserDefined } else { EntryPointKind::DynamicImport },
           &graph.dynamic_import_exports_usage_map,
         )

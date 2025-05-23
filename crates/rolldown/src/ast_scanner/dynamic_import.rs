@@ -100,17 +100,28 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
     &mut self,
     import_record_idx: ImportRecordIdx,
   ) -> Option<std::collections::HashSet<CompactStr, rustc_hash::FxBuildHasher>> {
-    let remove_paren = self
+    let ast_after_remove_paren_idx = self
       .visit_path
       .iter()
-      .rev()
       .skip(1)
-      .find(|kind| !matches!(kind, AstKind::ParenthesizedExpression(_)))?;
-    match remove_paren {
+      .rposition(|kind| !matches!(kind, AstKind::ParenthesizedExpression(_)))?;
+    // ast_after_remove_paren_idx the index is find from `visit_path`
+    #[allow(clippy::match_on_vec_items)]
+    match self.visit_path[ast_after_remove_paren_idx] {
       // 1. const mod = await import('mod'); console.log(mod)
       // 2. const {a} = await import('mod'); a.something;
       AstKind::VariableDeclarator(var_decl) => {
-        self.update_dynamic_import_usage_info_from_binding_pattern(&var_decl.id, import_record_idx)
+        // parent of varDeclarator should be varDeclaration, so we should look for the parent of
+        // parent
+        let is_exported = matches!(
+          self.visit_path.get(ast_after_remove_paren_idx.saturating_sub(2)),
+          Some(AstKind::ExportDefaultDeclaration(_) | AstKind::ExportNamedDeclaration(_))
+        );
+        self.update_dynamic_import_usage_info_from_binding_pattern(
+          &var_decl.id,
+          import_record_idx,
+          is_exported,
+        )
       }
       // 3. await import('mod');
       // only side effects from `mod` is triggered
@@ -155,6 +166,7 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
     self.update_dynamic_import_usage_info_from_binding_pattern(
       &dynamic_import_binding.pattern,
       import_record_id,
+      false,
     )
   }
 
@@ -162,9 +174,15 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
     &mut self,
     binding_pattern: &ast::BindingPattern<'_>,
     import_record_id: ImportRecordIdx,
+    is_exported: bool,
   ) -> Option<FxHashSet<CompactStr>> {
     let symbol_id = match &binding_pattern.kind {
-      ast::BindingPatternKind::BindingIdentifier(id) => id.symbol_id(),
+      ast::BindingPatternKind::BindingIdentifier(id) => {
+        if is_exported {
+          return None;
+        }
+        id.symbol_id()
+      }
       // only care about first level destructuring, if it is nested just assume it is used
       ast::BindingPatternKind::ObjectPattern(obj) => {
         let mut set = FxHashSet::default();
@@ -189,7 +207,7 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
             .scoping()
             .get_resolved_reference_ids(binding_symbol_id)
             .is_empty();
-          if is_used {
+          if is_exported || is_used {
             set.insert(binding_name.into());
           }
         }

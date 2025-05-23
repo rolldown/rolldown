@@ -1,0 +1,68 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## d1.js
+
+```js
+//#region d1.js
+const a = "d1a";
+
+//#endregion
+export { a };
+```
+## d2.js
+
+```js
+//#region d2.js
+const a = "d2a";
+const b = "d2b";
+
+//#endregion
+export { a, b };
+```
+## d3.js
+
+```js
+//#region d3.js
+const a = "d3a";
+const b = "d3b";
+
+//#endregion
+export { a, b };
+```
+## d4.js
+
+```js
+//#region d4.js
+const a = "d4a";
+const b = "d4b";
+
+//#endregion
+export { a, b };
+```
+## d5.js
+
+```js
+//#region d5.js
+const a = "d5a";
+
+//#endregion
+export { a };
+```
+## main.js
+
+```js
+//#region main.js
+const { a } = await import("./d1.js");
+var main_default = await import("./d2.js");
+const d3 = await import("./d3.js");
+const d4 = () => import("./d4.js");
+const d5 = () => import("./d5.js").then((mod) => {
+	mod.a;
+});
+
+//#endregion
+export { a, d3, d4, d5, main_default as default };
+```

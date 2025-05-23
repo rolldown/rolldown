@@ -5505,6 +5505,15 @@ expression: output
 
 - main-!~{000}~.js => main-DnyIjeNr.js
 
+# tests/rolldown/tree_shaking/issue_4646
+
+- main-!~{000}~.js => main-DJ0xXmIa.js
+- d1-!~{001}~.js => d1-DT1jtzoH.js
+- d2-!~{003}~.js => d2-BUM4Zp6g.js
+- d3-!~{005}~.js => d3-DDbIMCn7.js
+- d4-!~{007}~.js => d4-DGCApdvO.js
+- d5-!~{009}~.js => d5-BG99yqGu.js
+
 # tests/rolldown/tree_shaking/json_module_def_format
 
 - main-!~{000}~.js => main-Cp4dwvDl.js

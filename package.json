@@ -43,7 +43,13 @@
   "pnpm": {
     "overrides": {
       "vitepress>vite": "npm:rolldown-vite@latest"
-    }
+    },
+    "onlyBuiltDependencies": [
+      "@parcel/watcher",
+      "dprint",
+      "esbuild",
+      "tree-sitter"
+    ]
   },
   "lint-staged": {
     "*.@(js|ts|tsx|yml|yaml|md|json|html|toml)": [

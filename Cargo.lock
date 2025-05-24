@@ -2887,7 +2887,9 @@ dependencies = [
 name = "rolldown_plugin_utils"
 version = "0.1.0"
 dependencies = [
+ "anyhow",
  "cow-utils",
+ "itertools",
  "rolldown_utils",
  "sugar_path",
 ]

@@ -4031,6 +4031,10 @@ expression: output
 - entry2-!~{001}~.js => entry2-D5YLwzdZ.js
 - run-dep-!~{002}~.js => run-dep-IkByYhJ_.js
 
+# tests/rolldown/function/experimental/strict_execution_order/remove_unused_no_side_effect_module
+
+- main-!~{000}~.js => main-DVzdOrRP.js
+
 # tests/rolldown/function/experimental/strict_execution_order/top_level_await_syntax
 
 - main-!~{000}~.js => main-BbzIdLSS.js

@@ -1,0 +1,39 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## main.js
+
+```js
+import nodeAssert from "node:assert";
+
+//#region main.js
+nodeAssert.equal(globalThis.value, void 0, "Unused no side effect module should be removed");
+
+//#endregion
+```
+---
+
+Variant: (strict_execution_order: true)
+
+# Assets
+
+## main.js
+
+```js
+import nodeAssert from "node:assert";
+
+
+//#region no_side_effect.js
+var init_no_side_effect = __esm({ "no_side_effect.js"() {} });
+
+//#endregion
+//#region main.js
+var init_main = __esm({ "main.js"() {
+	nodeAssert.equal(globalThis.value, void 0, "Unused no side effect module should be removed");
+} });
+
+//#endregion
+init_main();
+```

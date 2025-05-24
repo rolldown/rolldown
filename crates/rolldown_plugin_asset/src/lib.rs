@@ -31,15 +31,9 @@ impl Plugin for AssetPlugin {
     if self.is_not_valid_assets(ctx.cwd(), args.specifier) {
       return Ok(None);
     }
-
-    if check_public_file(clean_url(args.specifier), self.public_dir.as_deref()).is_some() {
-      return Ok(Some(rolldown_plugin::HookResolveIdOutput {
-        id: args.specifier.into(),
-        ..Default::default()
-      }));
-    }
-
-    Ok(None)
+    Ok(check_public_file(clean_url(args.specifier), self.public_dir.as_deref()).map(|_| {
+      rolldown_plugin::HookResolveIdOutput { id: args.specifier.into(), ..Default::default() }
+    }))
   }
 
   async fn load(

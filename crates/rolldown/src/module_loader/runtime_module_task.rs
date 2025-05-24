@@ -1,4 +1,5 @@
 use arcstr::ArcStr;
+use constcat::concat;
 use oxc::ast_visit::VisitMut;
 use oxc::span::SourceType;
 use oxc_index::IndexVec;
@@ -19,6 +20,9 @@ use crate::{
   ast_scanner::{AstScanner, ScanResult},
   utils::tweak_ast_for_scanning::PreProcessor,
 };
+
+const RUNTIME_BASE_JS: &str = include_str!("../runtime/runtime-base.js");
+const RUNTIME_TAIL_JS: &str = include_str!("../runtime/runtime-tail.js");
 
 pub struct RuntimeModuleTask {
   tx: tokio::sync::mpsc::Sender<ModuleLoaderMsg>,
@@ -57,10 +61,7 @@ impl RuntimeModuleTask {
           // Browser platform should use the native WebSocket and neutral platform doesn't have any assumptions.
         }
       }
-      runtime_source.push_str(&arcstr::literal!(concat!(
-        include_str!("../runtime/runtime-base.js"),
-        include_str!("../runtime/runtime-tail.js"),
-      )));
+      runtime_source.push_str(&arcstr::literal!(concat!(RUNTIME_BASE_JS, RUNTIME_TAIL_JS)));
       if let Some(implement) = hmr_options.implement.as_deref() {
         runtime_source.push_str(implement);
       } else {
@@ -74,14 +75,11 @@ impl RuntimeModuleTask {
     } else if self.options.is_esm_format_with_node_platform() {
       arcstr::literal!(concat!(
         include_str!("../runtime/runtime-head-node.js"),
-        include_str!("../runtime/runtime-base.js"),
+        RUNTIME_BASE_JS,
         include_str!("../runtime/runtime-tail-node.js"),
       ))
     } else {
-      arcstr::literal!(concat!(
-        include_str!("../runtime/runtime-base.js"),
-        include_str!("../runtime/runtime-tail.js"),
-      ))
+      arcstr::literal!(concat!(RUNTIME_BASE_JS, RUNTIME_TAIL_JS))
     };
 
     let (ast, scan_result) = self.make_ecma_ast(RUNTIME_MODULE_KEY, &source)?;

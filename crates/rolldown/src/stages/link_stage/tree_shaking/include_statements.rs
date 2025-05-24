@@ -1,8 +1,10 @@
+// cSpell:ignore idxs
 use itertools::Itertools;
 use oxc_index::IndexVec;
 use rolldown_common::{
-  EcmaViewMeta, ExportsKind, IndexModules, Module, ModuleIdx, ModuleType, NormalModule,
-  NormalizedBundlerOptions, StmtInfoIdx, SymbolOrMemberExprRef, SymbolRef, SymbolRefDb,
+  EcmaViewMeta, EntryPoint, EntryPointKind, ExportsKind, ImportRecordIdx, ImportRecordMeta,
+  IndexModules, Module, ModuleIdx, ModuleType, NormalModule, NormalizedBundlerOptions, StmtInfoIdx,
+  SymbolOrMemberExprRef, SymbolRef, SymbolRefDb, dynamic_import_usage::DynamicImportExportsUsage,
   side_effects::DeterminedSideEffects,
 };
 use rolldown_utils::rayon::{IntoParallelRefMutIterator, ParallelIterator};
@@ -35,7 +37,7 @@ impl LinkStage<'_> {
         })
       })
       .collect::<IndexVec<ModuleIdx, _>>();
-
+    let mut used_symbol_refs = FxHashSet::default();
     let mut is_module_included_vec: IndexVec<ModuleIdx, bool> =
       oxc_index::index_vec![false; self.module_table.modules.len()];
 
@@ -48,24 +50,31 @@ impl LinkStage<'_> {
       runtime_id: self.runtime.id(),
       // used_exports_info_vec: &mut used_exports_info_vec,
       metas: &self.metas,
-      used_symbol_refs: &mut self.used_symbol_refs,
+      used_symbol_refs: &mut used_symbol_refs,
       options: self.options,
     };
 
-    self.entries.iter().for_each(|entry| {
-      let module = match &self.module_table.modules[entry.id] {
-        Module::Normal(module) => module,
-        Module::External(_module) => {
-          // Case: import('external').
-          return;
-        }
-      };
-      let meta = &self.metas[entry.id];
-      meta.referenced_symbols_by_entry_point_chunk.iter().for_each(|symbol_ref| {
-        include_symbol(context, *symbol_ref);
+    let (user_defined_entries, mut dynamic_entries): (Vec<_>, Vec<_>) =
+      std::mem::take(&mut self.entries)
+        .into_iter()
+        .partition(|item| matches!(item.kind, EntryPointKind::UserDefined));
+    user_defined_entries
+      .iter()
+      .filter(|entry| matches!(entry.kind, EntryPointKind::UserDefined))
+      .for_each(|entry| {
+        let module = match &self.module_table.modules[entry.id] {
+          Module::Normal(module) => module,
+          Module::External(_module) => {
+            // Case: import('external').
+            return;
+          }
+        };
+        let meta = &self.metas[entry.id];
+        meta.referenced_symbols_by_entry_point_chunk.iter().for_each(|symbol_ref| {
+          include_symbol(context, *symbol_ref);
+        });
+        include_module(context, module);
       });
-      include_module(context, module);
-    });
 
     if self.options.is_hmr_enabled() {
       // HMR runtime contains statements with side effects, they are referenced by other modules via global variables.
@@ -76,6 +85,43 @@ impl LinkStage<'_> {
             include_statement(context, runtime_module, stmt_info_id);
           }
         });
+      }
+    }
+
+    let mut unused_record_idxs = vec![];
+
+    dynamic_entries.sort_by_key(|item| item.id);
+    dynamic_entries.retain(|entry| {
+      if let Some(item) = self.is_dynamic_entry_alive(entry, context.is_included_vec) {
+        unused_record_idxs.extend(item);
+        return false;
+      }
+      let module = match &self.module_table.modules[entry.id] {
+        Module::Normal(module) => module,
+        Module::External(_module) => {
+          // Case: import('external').
+          return true;
+        }
+      };
+      let meta = &self.metas[entry.id];
+      meta.referenced_symbols_by_entry_point_chunk.iter().for_each(|symbol_ref| {
+        include_symbol(context, *symbol_ref);
+      });
+      include_module(context, module);
+      true
+    });
+
+    // update entries with lived only.
+    self.entries = user_defined_entries.into_iter().chain(dynamic_entries).collect();
+
+    // mark those dynamic import records as dead, in case we could eliminate them later in ast
+    // visitor.
+    for (mi, record_idxs) in unused_record_idxs {
+      let module =
+        self.module_table.modules[mi].as_normal_mut().expect("should be a normal module");
+      for record_idx in record_idxs {
+        let rec = &mut module.import_records[record_idx];
+        rec.meta.insert(ImportRecordMeta::DEAD_DYNAMIC_IMPORT);
       }
     }
 
@@ -95,6 +141,8 @@ impl LinkStage<'_> {
       }
     });
 
+    self.used_symbol_refs = used_symbol_refs;
+
     tracing::trace!(
       "included statements {:#?}",
       self
@@ -105,6 +153,58 @@ impl LinkStage<'_> {
         .map(NormalModule::to_debug_normal_module_for_tree_shaking)
         .collect::<Vec<_>>()
     );
+  }
+
+  /// Note:
+  /// this function determine if a dynamic_entry is still alive, return the unused dynamic
+  /// import record idxs(due to limination of rustc borrow checker) if it is unused.
+  fn is_dynamic_entry_alive(
+    &self,
+    item: &EntryPoint,
+    is_stmt_included_vec: &IndexVec<ModuleIdx, IndexVec<StmtInfoIdx, bool>>,
+  ) -> Option<Vec<(ModuleIdx, Vec<ImportRecordIdx>)>> {
+    let mut ret = vec![];
+    let is_lived = match item.kind {
+      EntryPointKind::UserDefined => true,
+      EntryPointKind::DynamicImport => {
+        let is_dynamic_imported_module_exports_unused =
+          self.dynamic_import_exports_usage_map.get(&item.id).is_some_and(
+            |item| matches!(item, DynamicImportExportsUsage::Partial(set) if set.is_empty()),
+          );
+
+        // Mark the dynamic entry as lived if at least one statement that create this entry is included
+        item.related_stmt_infos.iter().any(|(module_idx, stmt_idx)| {
+          let module =
+            &self.module_table.modules[*module_idx].as_normal().expect("should be a normal module");
+          let stmt_info = &module.stmt_infos[*stmt_idx];
+          let mut dead_pure_dynamic_import_record_idx = vec![];
+          let all_dead_pure_dynamic_import =
+            stmt_info.import_records.iter().all(|import_record_idx| {
+              let import_record = &module.import_records[*import_record_idx];
+              if import_record.resolved_module.is_dummy() {
+                return true;
+              }
+              let importee_side_effects = self.module_table.modules[import_record.resolved_module]
+                .side_effects()
+                .has_side_effects();
+              let ret = !importee_side_effects;
+              if ret {
+                dead_pure_dynamic_import_record_idx.push(*import_record_idx);
+              }
+              ret
+            });
+          let is_stmt_included = is_stmt_included_vec[*module_idx][*stmt_idx];
+          let lived = is_stmt_included
+            && (!is_dynamic_imported_module_exports_unused || !all_dead_pure_dynamic_import);
+
+          if !lived {
+            ret.push((*module_idx, dead_pure_dynamic_import_record_idx));
+          }
+          lived
+        })
+      }
+    };
+    if is_lived { None } else { Some(ret) }
   }
 }
 

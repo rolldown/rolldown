@@ -1,5 +1,5 @@
 const a = {
-	aaa: () => import("./d1"),
+  aaa: () => import('./d1'),
 };
 
 export { a };

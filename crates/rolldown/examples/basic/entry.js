@@ -1,5 +1,3 @@
-import {res} from './lib'
+import { res } from './lib';
 
-export {
-  res
-}
+export { res };

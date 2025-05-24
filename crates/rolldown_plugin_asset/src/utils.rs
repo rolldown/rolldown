@@ -52,20 +52,25 @@ pub const KNOWN_ASSET_TYPES: [&str; 34] = [
 ];
 
 impl super::AssetPlugin {
+  pub fn is_assets_include(&self, cwd: &Path, cleaned_id: &str) -> bool {
+    cleaned_id.as_path().extension().is_some_and(|ext| {
+      let ext = ext.to_string_lossy();
+      let ext = ext.cow_to_ascii_lowercase();
+      KNOWN_ASSET_TYPES.contains(&ext.as_ref())
+    }) || (!self.assets_include.is_empty()
+      && pattern_filter(
+        None::<&[StringOrRegex]>,
+        Some(&self.assets_include),
+        cleaned_id,
+        cwd.to_string_lossy().as_ref(),
+      )
+      .inner())
+  }
+
   pub fn is_not_valid_assets(&self, cwd: &Path, id: &str) -> bool {
     let cleaned_id = clean_url(id);
-    let is_valid_assets = has_special_ext(cleaned_id)
-      || ((cleaned_id.len() != id.len()) && find_query_param(id, b"url").is_some());
-
-    !is_valid_assets
-      && (self.assets_include.is_empty()
-        || !pattern_filter(
-          None::<&[StringOrRegex]>,
-          Some(&self.assets_include),
-          cleaned_id,
-          cwd.to_string_lossy().as_ref(),
-        )
-        .inner())
+    (cleaned_id.len() == id.len() || find_query_param(id, b"url").is_none())
+      && !self.is_assets_include(cwd, cleaned_id)
   }
 
   pub fn file_to_dev_url(&self, id: &str, root: &Path) -> anyhow::Result<String> {
@@ -117,16 +122,6 @@ fn asset_to_data_url(path: &Path, content: &[u8]) -> anyhow::Result<String> {
   // }
   let guessed_mime = guess_mime(path, content)?;
   Ok(encode_as_shortest_dataurl(&guessed_mime, content))
-}
-
-#[inline]
-pub fn has_special_ext(path: impl AsRef<Path>) -> bool {
-  let extension = path.as_ref().extension();
-  extension.is_some_and(|ext| {
-    let ext = ext.to_string_lossy();
-    let ext = ext.cow_to_ascii_lowercase();
-    KNOWN_ASSET_TYPES.contains(&ext.as_ref())
-  })
 }
 
 #[inline]

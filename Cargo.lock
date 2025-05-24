@@ -2887,7 +2887,9 @@ dependencies = [
 name = "rolldown_plugin_vite_css"
 version = "0.1.0"
 dependencies = [
+ "rolldown_common",
  "rolldown_plugin",
+ "rolldown_utils",
 ]
 
 [[package]]

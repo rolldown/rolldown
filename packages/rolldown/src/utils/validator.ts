@@ -65,17 +65,22 @@ const ModuleTypesSchema = v.record(
 );
 
 const JsxOptionsSchema = v.strictObject({
+  runtime: v.pipe(
+    v.optional(v.union([
+      v.literal('classic'),
+      v.literal('automatic'),
+    ])),
+    v.description('Which runtime to use'),
+  ),
   development: v.pipe(
     v.optional(v.boolean()),
     v.description('Development specific information'),
   ),
-  factory: v.pipe(
+  throwIfNamespace: v.pipe(
     v.optional(v.string()),
-    v.description('Jsx element transformation'),
-  ),
-  fragment: v.pipe(
-    v.optional(v.string()),
-    v.description('Jsx fragment transformation'),
+    v.description(
+      'Toggles whether to throw an error when a tag name uses an XML namespace',
+    ),
   ),
   importSource: v.pipe(
     v.optional(v.string()),
@@ -83,25 +88,19 @@ const JsxOptionsSchema = v.strictObject({
       'Import the factory of element and fragment if mode is classic',
     ),
   ),
-  jsxImportSource: v.pipe(
+  pragma: v.pipe(
     v.optional(v.string()),
-    v.description(
-      'Import the factory of element and fragment if mode is automatic',
-    ),
+    v.description('Jsx element transformation'),
   ),
-  mode: v.pipe(
+  pragmaFlag: v.pipe(
     v.optional(
-      v.union([
-        v.literal('classic'),
-        v.literal('automatic'),
-        v.literal('preserve'),
-      ]),
+      v.string(),
     ),
-    v.description('Jsx transformation mode'),
+    v.description('Jsx fragment transformation'),
   ),
   refresh: v.pipe(
     v.optional(v.boolean()),
-    v.description('React refresh transformation'),
+    v.description('Enable react fast refresh'),
   ),
 });
 
@@ -147,6 +146,7 @@ const TransformOptionsSchema = v.object({
   typescript: v.optional(TypescriptSchema),
   helpers: v.optional(HelpersSchema),
   decorators: v.optional(DecoratorOptionSchema),
+  jsx: v.optional(JsxOptionsSchema),
 });
 
 const WatchOptionsSchema = v.strictObject({
@@ -383,14 +383,16 @@ const InputOptionsSchema = v.strictObject({
     ),
   ),
   profilerNames: v.optional(v.boolean()),
-  jsx: v.optional(
-    v.union([
-      v.boolean(),
-      JsxOptionsSchema,
-      v.string('react'),
-      v.string('react-jsx'),
-      v.string('preserve'),
-    ]),
+  jsx: v.pipe(
+    v.optional(
+      v.union([
+        v.literal(false),
+        v.literal('react'),
+        v.literal('react-jsx'),
+        v.literal('preserve'),
+      ]),
+    ),
+    v.description('Jsx options preset'),
   ),
   transform: v.optional(TransformOptionsSchema),
   watch: v.optional(v.union([WatchOptionsSchema, v.literal(false)])),
@@ -435,7 +437,6 @@ const InputCliOverrideSchema = v.strictObject({
     v.optional(v.boolean()),
     v.description('enable treeshaking'),
   ),
-  jsx: v.pipe(v.optional(JsxOptionsSchema), v.description('enable jsx')),
 });
 
 const InputCliOptionsSchema = v.omit(

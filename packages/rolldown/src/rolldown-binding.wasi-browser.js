@@ -84,6 +84,7 @@ export const ParseResult = __napiModule.exports.ParseResult
 export const ResolverFactory = __napiModule.exports.ResolverFactory
 export const BindingBuiltinPluginName = __napiModule.exports.BindingBuiltinPluginName
 export const BindingHookSideEffects = __napiModule.exports.BindingHookSideEffects
+export const BindingJsx = __napiModule.exports.BindingJsx
 export const BindingLogLevel = __napiModule.exports.BindingLogLevel
 export const BindingPluginOrder = __napiModule.exports.BindingPluginOrder
 export const EnforceExtension = __napiModule.exports.EnforceExtension

@@ -20,9 +20,11 @@
 				"type": "named"
 			}
 		],
-		"jsx": {
-			"runtime": "classic"
-		}
+    "transform": {
+      "jsx": {
+        "runtime": "classic"
+      }
+    }
 	},
 	"expectExecuted": false
 }

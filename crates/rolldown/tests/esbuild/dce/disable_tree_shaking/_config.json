@@ -9,8 +9,10 @@
     "treeshake": {
       "annotations": false
     },
-    "jsx": {
-      "runtime": "classic"
+    "transform": {
+      "jsx": {
+        "runtime": "classic"
+      }
     },
     "external": [
       "react/jsx-runtime"

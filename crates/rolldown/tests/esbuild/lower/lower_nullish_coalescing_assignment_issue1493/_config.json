@@ -6,6 +6,8 @@
         "import": "entry.js"
       }
     ],
-    "target": ["es2015"]
+    "transform": {
+      "target": "es2015"
+    }
   }
 }

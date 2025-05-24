@@ -9,7 +9,9 @@
     "define": {
       "a.b.c": "1"
     },
-    "target": ["es2019"]
+    "transform": {
+      "target": "es2019"
+    }
   },
   "expectExecuted": false
 }

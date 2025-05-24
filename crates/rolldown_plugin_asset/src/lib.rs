@@ -4,6 +4,7 @@ use std::borrow::Cow;
 
 use rolldown_common::ModuleType;
 use rolldown_plugin::{HookUsage, Plugin};
+use rolldown_plugin_utils::check_public_file;
 use rolldown_utils::{
   pattern_filter::StringOrRegex, percent_encoding::encode_as_percent_escaped, url::clean_url,
 };
@@ -31,7 +32,7 @@ impl Plugin for AssetPlugin {
       return Ok(None);
     }
 
-    if self.check_public_file(clean_url(args.specifier)).is_some() {
+    if check_public_file(clean_url(args.specifier), self.public_dir.as_deref()).is_some() {
       return Ok(Some(rolldown_plugin::HookResolveIdOutput {
         id: args.specifier.into(),
         ..Default::default()
@@ -48,7 +49,7 @@ impl Plugin for AssetPlugin {
   ) -> rolldown_plugin::HookLoadReturn {
     if args.id.starts_with('\0') || utils::find_query_param(args.id, b"raw").is_some() {
       let cleaned_id = clean_url(args.id);
-      let file = match self.check_public_file(cleaned_id) {
+      let file = match check_public_file(cleaned_id, self.public_dir.as_deref()) {
         Some(f) => Cow::Owned(f.to_string_lossy().into_owned()),
         None => Cow::Borrowed(cleaned_id),
       };

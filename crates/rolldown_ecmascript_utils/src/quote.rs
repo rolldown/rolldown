@@ -10,22 +10,22 @@ pub fn quote_expr<'alloc>(
   alloc: &'alloc Allocator,
   input: &str,
 ) -> oxc::ast::ast::Expression<'alloc> {
-  let alloc_input = allocator::String::from_str_in(input, alloc).into_bump_str();
-  Parser::new(alloc, alloc_input, SourceType::default())
+  let input = alloc.alloc_str(input);
+  Parser::new(alloc, input, SourceType::default())
     .parse_expression()
-    .unwrap_or_else(|e| panic!("Failed to parse {alloc_input:?} into expression. Got {e:#?}"))
+    .unwrap_or_else(|e| panic!("Failed to parse {input:?} into expression. Got {e:#?}"))
 }
 
 pub fn quote_stmts<'alloc>(
   alloc: &'alloc Allocator,
   input: &str,
 ) -> allocator::Vec<'alloc, ast::Statement<'alloc>> {
-  let alloc_input = allocator::String::from_str_in(input, alloc).into_bump_str();
-  let p = Parser::new(alloc, alloc_input, SourceType::default()).parse();
+  let input = alloc.alloc_str(input);
+  let p = Parser::new(alloc, input, SourceType::default()).parse();
   assert!(
     !p.panicked && p.errors.is_empty(),
     "Failed to parse {:?} into statements. Got {:#?}",
-    alloc_input,
+    input,
     p.errors
   );
   p.program.body

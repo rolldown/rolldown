@@ -186,6 +186,9 @@ impl<'a> LinkStage<'a> {
           }
           lived
         });
+        dbg!(&item.id);
+        dbg!(&lived);
+
         lived
       }
     });

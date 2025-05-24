@@ -1,9 +1,7 @@
-use std::{
-  borrow::Cow,
-  path::{Path, PathBuf},
-};
+use std::{borrow::Cow, path::Path};
 
 use cow_utils::CowUtils as _;
+use rolldown_plugin_utils::check_public_file;
 use rolldown_utils::{
   dataurl::encode_as_shortest_dataurl,
   mime::guess_mime,
@@ -54,19 +52,6 @@ pub const KNOWN_ASSET_TYPES: [&str; 34] = [
 ];
 
 impl super::AssetPlugin {
-  pub fn check_public_file(&self, id: &str) -> Option<PathBuf> {
-    if id.is_empty() || id.as_bytes()[0] != b'/' {
-      return None;
-    }
-    if let Some(dir) = &self.public_dir {
-      let file = Path::new(dir).join(&id[1..]).normalize();
-      if file.starts_with(dir) && file.exists() {
-        return Some(file);
-      }
-    }
-    None
-  }
-
   pub fn is_not_valid_assets(&self, cwd: &Path, id: &str) -> bool {
     let cleaned_id = clean_url(id);
     let is_valid_assets = has_special_ext(cleaned_id)
@@ -85,8 +70,7 @@ impl super::AssetPlugin {
 
   pub fn file_to_dev_url(&self, id: &str, root: &Path) -> anyhow::Result<String> {
     let cleaned_id = clean_url(id);
-    let public_file = self
-      .check_public_file(cleaned_id)
+    let public_file = check_public_file(cleaned_id, self.public_dir.as_deref())
       .map(|file| Cow::Owned(file.to_string_lossy().into_owned()));
 
     if find_query_param(id, b"inline").is_some() {

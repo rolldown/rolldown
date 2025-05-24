@@ -120,6 +120,14 @@ describe('cli options for bundling', () => {
       expect(error.message).matchSnapshot()
     }
   })
+  
+
+  it('should handle nested options (from flat to deep cli options)', async () => {
+    const cwd = cliFixturesDir('cli-option-short-boolean')
+    const status = await $({ cwd })`rolldown index.ts -d dist --transform.decorators.legacy`
+    expect(status.exitCode).toBe(0)
+    expect(cleanStdout(status.stdout)).toMatchSnapshot()
+  })
 })
 
 describe('config', () => {

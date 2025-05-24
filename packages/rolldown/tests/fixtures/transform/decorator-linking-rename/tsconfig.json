@@ -1,0 +1,8 @@
+{
+  "compilerOptions": {
+    "target": "ES2021",
+		"experimentalDecorators": true,
+		"emitDecoratorMetadata": true,
+  },
+  "extends": "../../../../tsconfig.json"
+}

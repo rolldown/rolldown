@@ -66,7 +66,6 @@ OPTIONS
   --sanitize-file-name        Sanitize file name.
   --shim-missing-exports      Create shim variables for missing exports.
   --sourcemap-debug-ids       Inject sourcemap debug IDs.
-  --target <target>           The JavaScript target environment.
   --transform.assumptions.ignore-function-length .
   --transform.assumptions.no-document-all .
   --transform.assumptions.object-rest-no-symbols .
@@ -82,6 +81,7 @@ OPTIONS
   --transform.jsx.refresh     Enable react fast refresh.
   --transform.jsx.runtime <transform.jsx.runtime>Which runtime to use.
   --transform.jsx.throw-if-namespace <transform.jsx.throw-if-namespace>Toggles whether to throw an error when a tag name uses an XML namespace.
+  --transform.target <transform.target>The JavaScript target environment.
   --transform.typescript.allow-declare-fields .
   --transform.typescript.allow-namespaces .
   --transform.typescript.declaration.sourcemap .

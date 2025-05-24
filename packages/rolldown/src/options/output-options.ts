@@ -192,7 +192,6 @@ export interface OutputOptions {
   legalComments?: 'none' | 'inline';
   plugins?: RolldownOutputPluginOption;
   polyfillRequire?: boolean;
-  target?: string | string[];
   hoistTransitiveImports?: false;
   preserveModules?: boolean;
   virtualDirname?: string;

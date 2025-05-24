@@ -2696,7 +2696,6 @@ dependencies = [
 name = "rolldown_plugin_asset"
 version = "0.1.0"
 dependencies = [
- "anyhow",
  "cow-utils",
  "rolldown_common",
  "rolldown_plugin",

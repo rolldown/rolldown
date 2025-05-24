@@ -52,7 +52,6 @@ pub struct Chunk {
   pub imports_from_external_modules: Vec<(ModuleIdx, Vec<NamedImport>)>,
   // meaningless if the chunk is an entrypoint
   pub exports_to_other_chunks: FxHashMap<SymbolRef, Rstr>,
-  pub is_alive: bool,
   pub input_base: ArcStr,
   pub create_reasons: Vec<String>,
 }
@@ -66,7 +65,6 @@ impl Chunk {
     bits: BitSet,
     modules: Vec<ModuleIdx>,
     kind: ChunkKind,
-    is_alive: bool,
     input_base: ArcStr,
   ) -> Self {
     Self {
@@ -77,7 +75,6 @@ impl Chunk {
       reference_id,
       bits,
       kind,
-      is_alive,
       input_base,
       ..Self::default()
     }

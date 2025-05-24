@@ -1,0 +1,32 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## dep1.js
+
+```js
+//#region dep1.js
+var dep1_default = () => import("./dep2.js");
+
+//#endregion
+export { dep1_default as default };
+```
+## dep2.js
+
+```js
+//#region dep2.js
+var dep2_default = "dep2";
+
+//#endregion
+export { dep2_default as default };
+```
+## main.js
+
+```js
+//#region main.js
+var main_default = () => import("./dep1.js");
+
+//#endregion
+export { main_default as default };
+```

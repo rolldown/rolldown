@@ -59,6 +59,9 @@ impl GenerateStage<'_> {
         let Module::Normal(module) = module else {
           continue;
         };
+        if !module.is_included() {
+          continue;
+        }
 
         let count = idx.raw();
         let mut bits = BitSet::new(modules_len);
@@ -74,7 +77,6 @@ impl GenerateStage<'_> {
             bit: count,
             module: module.idx,
           },
-          module.is_included(),
           input_base.clone(),
         );
         chunk.add_creation_reason(
@@ -292,7 +294,6 @@ impl GenerateStage<'_> {
           bit: count,
           module: entry_point.id,
         },
-        self.link_output.lived_entry_points.contains(&entry_point.id),
         input_base.clone(),
       );
       chunk.add_creation_reason(
@@ -366,16 +367,8 @@ impl GenerateStage<'_> {
       if let Some(chunk_id) = bits_to_chunk.get(bits).copied() {
         chunk_graph.add_module_to_chunk(normal_module.idx, chunk_id);
       } else {
-        let mut chunk = Chunk::new(
-          None,
-          None,
-          None,
-          bits.clone(),
-          vec![],
-          ChunkKind::Common,
-          true,
-          input_base.clone(),
-        );
+        let mut chunk =
+          Chunk::new(None, None, None, bits.clone(), vec![], ChunkKind::Common, input_base.clone());
         chunk.add_creation_reason(
           ChunkCreationReason::CommonChunk { bits, link_output: self.link_output },
           self.options,

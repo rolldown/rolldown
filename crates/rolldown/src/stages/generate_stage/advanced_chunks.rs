@@ -164,7 +164,6 @@ impl GenerateStage<'_> {
         index_splitting_info[runtime_module_idx].bits.clone(),
         vec![],
         ChunkKind::Common,
-        true,
         input_base.clone(),
       );
       let chunk_idx = chunk_graph.add_chunk(runtime_chunk);
@@ -287,7 +286,6 @@ impl GenerateStage<'_> {
         .clone(),
         vec![],
         ChunkKind::Common,
-        true,
         input_base.clone(),
       );
       chunk.add_creation_reason(

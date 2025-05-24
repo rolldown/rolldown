@@ -18,8 +18,10 @@
         "import": "nested-fragment.tsx"
       }
     ],
-    "jsx": {
-      "runtime": "classic"
+    "transform": {
+      "jsx": {
+        "runtime": "classic"
+      }
     }
   },
   "expectExecuted": false

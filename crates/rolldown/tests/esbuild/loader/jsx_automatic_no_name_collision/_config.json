@@ -7,8 +7,10 @@
       }
     ],
     "format": "cjs",
-    "jsx": {
-      "runtime": "automatic"
+    "transform": {
+      "jsx": {
+        "runtime": "automatic"
+      }
     }
   },
   "expectExecuted": false

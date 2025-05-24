@@ -6,9 +6,11 @@
         "import": "app.jsx"
       }
     ],
-    "jsx": {
-      "pragma": "h",
-      "runtime": "classic"
+    "transform": {
+      "jsx": {
+        "pragma": "h",
+        "runtime": "classic"
+      }
     }
   },
   "expectExecuted": false

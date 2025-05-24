@@ -501,13 +501,12 @@ export interface BindingJsWatchChangeEvent {
   event: string
 }
 
-/** TODO: support `preserve-react` mode */
-export type BindingJsx =
-  | { type: 'Disable' }
-  | { type: 'Preserve' }
-  | { type: 'React' }
-  | { type: 'ReactJsx' }
-  | { type: 'Enable', field0: JsxOptions }
+export declare enum BindingJsx {
+  Disable = 0,
+  Preserve = 1,
+  React = 2,
+  ReactJsx = 3
+}
 
 export interface BindingLog {
   code: string

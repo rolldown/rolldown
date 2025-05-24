@@ -5,12 +5,15 @@ import { getOutputChunk } from 'rolldown-tests/utils'
 export default defineTest({
   config: {
     input: 'main.jsx',
-    jsx: {
-      mode: 'preserve',
+    transform: {
+      jsx: {
+        runtime: 'classic',
+      }
     },
+    external: ['react'],
   },
   afterTest: (output) => {
     const chunk = getOutputChunk(output)[0]
-    expect(chunk.code.includes('<div>test</div>')).toBe(true)
+    expect(chunk.code.includes('React.createElement')).toBe(true)
   },
 })

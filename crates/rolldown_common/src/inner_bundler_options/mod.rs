@@ -5,7 +5,6 @@ use types::advanced_chunks_options::AdvancedChunksOptions;
 use types::debug_options::DebugOptions;
 use types::inject_import::InjectImport;
 use types::invalidate_js_side_cache::InvalidateJsSideCache;
-use types::jsx::Jsx;
 use types::legal_comments::LegalComments;
 use types::log_level::LogLevel;
 use types::make_absolute_externals_relative::MakeAbsoluteExternalsRelative;
@@ -34,7 +33,9 @@ use self::types::{
   platform::Platform, resolve_options::ResolveOptions, source_map_type::SourceMapType,
   sourcemap_path_transform::SourceMapPathTransform,
 };
-use crate::{ChecksOptions, ChunkFilenamesOutputOption, ModuleType, SourceMapIgnoreList};
+use crate::{
+  ChecksOptions, ChunkFilenamesOutputOption, ModuleType, SourceMapIgnoreList, TransformOptions,
+};
 
 pub mod types;
 
@@ -172,21 +173,14 @@ pub struct BundlerOptions {
   pub checks: Option<ChecksOptions>,
   #[cfg_attr(
     feature = "deserialize_bundler_options",
-    serde(deserialize_with = "deserialize_jsx", default),
-    schemars(with = "Option<Value>")
+    serde(deserialize_with = "deserialize_transform_options", default),
+    schemars(with = "Option<FxHashMap<String, Value>>")
   )]
-  pub jsx: Option<Jsx>,
-  #[cfg_attr(
-    feature = "deserialize_bundler_options",
-    serde(default, skip_deserializing),
-    schemars(skip)
-  )]
-  pub transform: Option<oxc::transformer::TransformOptions>,
+  pub transform: Option<TransformOptions>,
   pub watch: Option<WatchOption>,
   pub legal_comments: Option<LegalComments>,
   pub target: Option<Vec<String>>,
   pub polyfill_require: Option<bool>,
-
   #[cfg_attr(
     feature = "deserialize_bundler_options",
     serde(default, skip_deserializing),
@@ -219,6 +213,7 @@ pub struct BundlerOptions {
   pub preserve_modules_root: Option<String>,
   pub preserve_entry_signatures: Option<PreserveEntrySignatures>,
 }
+
 impl BundlerOptions {
   /// # Panic
   /// 1. If `cwd` is not set.
@@ -361,62 +356,89 @@ where
 }
 
 #[cfg(feature = "deserialize_bundler_options")]
-fn deserialize_jsx<'de, D>(deserializer: D) -> Result<Option<Jsx>, D::Error>
+fn deserialize_transform_options<'de, D>(
+  deserializer: D,
+) -> Result<Option<TransformOptions>, D::Error>
 where
   D: Deserializer<'de>,
 {
   use oxc::transformer::{JsxOptions, JsxRuntime};
+  use serde_json::Value;
+
+  use crate::JsxPreset;
 
   let value = Option::<Value>::deserialize(deserializer)?;
   match value {
-    None => Ok(Some(Jsx::default())),
-    Some(Value::String(str)) if str == "preserve" => Ok(Some(Jsx::Preserve)),
     Some(Value::Object(obj)) => {
-      let mut default_jsx_option = JsxOptions::default();
+      let mut transform_options = TransformOptions::default();
       for (k, v) in obj {
         match k.as_str() {
-          "runtime" => {
-            let runtime = v
-              .as_str()
-              .ok_or_else(|| serde::de::Error::custom("jsx.pragma should be a string"))?;
-            match runtime {
-              "classic" => default_jsx_option.runtime = JsxRuntime::Classic,
-              "automatic" => default_jsx_option.runtime = JsxRuntime::Automatic,
-              _ => {
-                return Err(serde::de::Error::custom(format!("unknown jsx runtime: {runtime}",)));
+          "jsx" => {
+            let jsx = match v {
+              Value::String(str) if str == "preserve" => {
+                transform_options.jsx_preset = JsxPreset::Preserve;
+                JsxOptions::disable()
               }
-            }
+              Value::Object(obj) => {
+                let mut default_jsx_option = JsxOptions::default();
+                for (k, v) in obj {
+                  match k.as_str() {
+                    "runtime" => {
+                      let runtime = v.as_str().ok_or_else(|| {
+                        serde::de::Error::custom("jsx.runtime should be a string")
+                      })?;
+                      match runtime {
+                        "classic" => default_jsx_option.runtime = JsxRuntime::Classic,
+                        "automatic" => default_jsx_option.runtime = JsxRuntime::Automatic,
+                        _ => {
+                          return Err(serde::de::Error::custom(format!(
+                            "unknown jsx runtime: {runtime}",
+                          )));
+                        }
+                      }
+                    }
+                    "importSource" => {
+                      let import_source = v.as_str().ok_or_else(|| {
+                        serde::de::Error::custom("jsx.importSource should be a string")
+                      })?;
+                      default_jsx_option.import_source = Some(import_source.to_string());
+                    }
+                    "development" => {
+                      let development = v.as_bool().ok_or_else(|| {
+                        serde::de::Error::custom("jsx.development should be a boolean")
+                      })?;
+                      default_jsx_option.development = development;
+                    }
+                    "pragma" => {
+                      let pragma = v
+                        .as_str()
+                        .ok_or_else(|| serde::de::Error::custom("jsx.pragma should be a string"))?;
+                      default_jsx_option.pragma = Some(pragma.to_string());
+                    }
+                    "pragmaFrag" => {
+                      let pragma_frag = v.as_str().ok_or_else(|| {
+                        serde::de::Error::custom("jsx.pragmaFrag should be a string")
+                      })?;
+                      default_jsx_option.pragma_frag = Some(pragma_frag.to_string());
+                    }
+                    _ => return Err(serde::de::Error::custom(format!("unknown jsx option: {k}",))),
+                  }
+                }
+                default_jsx_option
+              }
+              _ => {
+                return Err(serde::de::Error::custom(
+                  "jsx should be either an object or `preserve`",
+                ));
+              }
+            };
+            transform_options.jsx = jsx;
           }
-          "importSource" => {
-            let import_source = v
-              .as_str()
-              .ok_or_else(|| serde::de::Error::custom("jsx.importSource should be a string"))?;
-            default_jsx_option.import_source = Some(import_source.to_string());
-          }
-          "development" => {
-            let development = v
-              .as_bool()
-              .ok_or_else(|| serde::de::Error::custom("jsx.development should be a boolean"))?;
-            default_jsx_option.development = development;
-          }
-          "pragma" => {
-            let pragma = v
-              .as_str()
-              .ok_or_else(|| serde::de::Error::custom("jsx.pragma should be a string"))?;
-            default_jsx_option.pragma = Some(pragma.to_string());
-          }
-          "pragmaFrag" => {
-            let pragma_frag = v
-              .as_str()
-              .ok_or_else(|| serde::de::Error::custom("jsx.pragmaFrag should be a string"))?;
-            default_jsx_option.pragma_frag = Some(pragma_frag.to_string());
-          }
-          _ => return Err(serde::de::Error::custom(format!("unknown jsx option: {k}",))),
+          _ => return Err(serde::de::Error::custom(format!("unknown transform option: {k}",))),
         }
       }
-
-      Ok(Some(Jsx::Enable(default_jsx_option)))
+      Ok(Some(transform_options))
     }
-    _ => Err(serde::de::Error::custom("jsx should be either an object or `preserve`")),
+    _ => Err(serde::de::Error::custom("transform options should be an object")),
   }
 }

@@ -5,9 +5,7 @@ import { getOutputChunk } from 'rolldown-tests/utils'
 export default defineTest({
   config: {
     input: 'main.jsx',
-    jsx: {
-      mode: 'preserve',
-    },
+    jsx: "preserve",
     output: {
       minify: true,
     },

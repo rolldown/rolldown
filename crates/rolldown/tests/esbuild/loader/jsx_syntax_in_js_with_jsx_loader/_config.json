@@ -9,8 +9,10 @@
     "moduleTypes": {
       ".js": "jsx"
     },
-    "jsx": {
-      "runtime": "classic"
+    "transform": {
+      "jsx": {
+        "runtime": "classic"
+      }
     }
   },
   "expectExecuted": false

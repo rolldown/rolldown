@@ -398,6 +398,7 @@ module.exports.ParseResult = nativeBinding.ParseResult
 module.exports.ResolverFactory = nativeBinding.ResolverFactory
 module.exports.BindingBuiltinPluginName = nativeBinding.BindingBuiltinPluginName
 module.exports.BindingHookSideEffects = nativeBinding.BindingHookSideEffects
+module.exports.BindingJsx = nativeBinding.BindingJsx
 module.exports.BindingLogLevel = nativeBinding.BindingLogLevel
 module.exports.BindingPluginOrder = nativeBinding.BindingPluginOrder
 module.exports.EnforceExtension = nativeBinding.EnforceExtension

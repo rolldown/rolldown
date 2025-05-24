@@ -6,14 +6,12 @@ use std::path::PathBuf;
 use std::sync::Arc;
 
 use arcstr::ArcStr;
-use oxc::transformer::{JsxOptions, TransformOptions};
 use oxc::transformer_plugins::InjectGlobalVariablesConfig;
 use rolldown_error::EventKindSwitcher;
 use rustc_hash::{FxHashMap, FxHashSet};
 
 use super::advanced_chunks_options::AdvancedChunksOptions;
 use super::experimental_options::ExperimentalOptions;
-use super::jsx::NormalizedJsxOptions;
 use super::legal_comments::LegalComments;
 use super::minify_options::MinifyOptions;
 use super::output_option::{
@@ -31,6 +29,7 @@ use crate::{
   DeferSyncScanDataOption, ESTarget, EmittedAsset, EsModuleFlag, FilenameTemplate,
   GlobalsOutputOption, HashCharacters, InjectImport, InputItem, InvalidateJsSideCache, LogLevel,
   MakeAbsoluteExternalsRelative, MarkModuleLoaded, ModuleType, OnLog, RollupPreRenderedAsset,
+  TransformOptions,
 };
 
 #[allow(clippy::struct_excessive_bools)] // Using raw booleans is more clear in this case
@@ -84,7 +83,6 @@ pub struct NormalizedBundlerOptions {
   pub advanced_chunks: Option<AdvancedChunksOptions>,
   pub checks: EventKindSwitcher,
   pub profiler_names: bool,
-  pub jsx: NormalizedJsxOptions,
   pub watch: WatchOption,
   pub legal_comments: LegalComments,
   pub drop_labels: FxHashSet<String>,
@@ -158,7 +156,6 @@ impl Default for NormalizedBundlerOptions {
       defer_sync_scan_data: Default::default(),
       transform_options: Default::default(),
       make_absolute_externals_relative: Default::default(),
-      jsx: Default::default(),
       invalidate_js_side_cache: Default::default(),
       mark_module_loaded: Default::default(),
       log_level: Default::default(),
@@ -229,17 +226,6 @@ impl NormalizedBundlerOptions {
     match file.file_name {
       Some(_) => Ok(None),
       None => Ok(Some(self.sanitize_filename.call(file.name_for_sanitize()).await?)),
-    }
-  }
-
-  /// This function only merge some common fields in oxc `JsxOptions` and tsconfig.json `compilerOptions`
-  /// only replace field if it is `None` in `dest`
-  pub fn merge_jsx_options(dest: JsxOptions, src: JsxOptions) -> JsxOptions {
-    JsxOptions {
-      pragma: dest.pragma.or(src.pragma),
-      pragma_frag: dest.pragma_frag.or(src.pragma_frag),
-      import_source: dest.import_source.or(src.import_source),
-      ..dest
     }
   }
 }

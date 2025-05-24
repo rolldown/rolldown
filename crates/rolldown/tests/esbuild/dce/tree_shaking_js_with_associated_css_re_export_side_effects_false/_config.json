@@ -6,9 +6,11 @@
 				"import": "test.jsx"
 			}
 		],
-		"jsx": {
-			"runtime": "classic"
-		}
+    "transform": {
+      "jsx": {
+        "runtime": "classic"
+      }
+    }
 	},
 	"expectExecuted": false
 }

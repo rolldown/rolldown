@@ -24,7 +24,6 @@ import type {
   ExternalOption,
   InputOption,
   InputOptions,
-  JsxOptions,
   ModuleTypes,
   WatcherOptions,
 } from './options/input-options';
@@ -124,7 +123,6 @@ export type {
   InputOption,
   InputOptions,
   InternalModuleFormat,
-  JsxOptions,
   LoadResult,
   LoggingFunction,
   LogLevel,

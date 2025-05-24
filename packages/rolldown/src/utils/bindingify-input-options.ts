@@ -1,4 +1,4 @@
-import { BindingLogLevel } from '../binding';
+import { BindingJsx, BindingLogLevel } from '../binding';
 import type {
   BindingDeferSyncScanData,
   BindingExperimentalOptions,
@@ -252,35 +252,16 @@ function bindingifyInput(
 function bindingifyJsx(input: InputOptions['jsx']): BindingInputOptions['jsx'] {
   switch (input) {
     case false:
-      return { type: 'Disable' };
+      return BindingJsx.Disable;
     case 'react':
-      return { type: 'React' };
+      return BindingJsx.React;
     case 'react-jsx':
-      return { type: 'ReactJsx' };
+      return BindingJsx.ReactJsx;
     case 'preserve':
-      return { type: 'Preserve' };
-    case undefined:
+      return BindingJsx.Preserve;
+    default:
       return undefined;
   }
-  if (input.mode === 'preserve') {
-    return { type: 'Preserve' };
-  }
-  const mode = input.mode ?? 'automatic';
-  return {
-    type: 'Enable',
-    field0: {
-      runtime: mode,
-      importSource: mode === 'classic'
-        ? input.importSource
-        : mode === 'automatic'
-        ? input.jsxImportSource
-        : undefined,
-      pragma: input.factory,
-      pragmaFrag: input.fragment,
-      development: input.development,
-      refresh: input.refresh,
-    },
-  };
 }
 
 function bindingifyWatch(

@@ -7,8 +7,10 @@
         "import": "entry.jsx"
       }
     ],
-    "jsx": {
-      "runtime": "classic"
+    "transform": {
+      "jsx": {
+        "runtime": "classic"
+      }
     }
   }
 }

@@ -6,10 +6,12 @@
         "import": "entry.jsx"
       }
     ],
-    "jsx": {
-      "pragma": "elem",
-      "pragmaFrag": "frag",
-      "runtime": "classic"
+    "transform": {
+      "jsx": {
+        "pragma": "elem",
+        "pragmaFrag": "frag",
+        "runtime": "classic"
+      }
     }
   },
   "expectExecuted": false

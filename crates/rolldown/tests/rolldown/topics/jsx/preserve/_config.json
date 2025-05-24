@@ -6,7 +6,9 @@
         "import": "./main.jsx"
       }
     ],
-    "jsx": "preserve",
+    "transform": {
+      "jsx": "preserve"
+    },
     "external": [
       "@solidjs/router"
     ]

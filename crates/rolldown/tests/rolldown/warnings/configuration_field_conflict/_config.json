@@ -1,8 +1,10 @@
 {
   "config": {
-    "jsx": {
-      "pragma": "React.createElement",
-      "runtime": "classic"
+    "transform": {
+      "jsx": {
+        "pragma": "React.createElement",
+        "runtime": "classic"
+      }
     },
     "resolve": {
       "tsconfigFilename": "tsconfig.json"

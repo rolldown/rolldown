@@ -2885,6 +2885,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "rolldown_plugin_utils"
+version = "0.1.0"
+dependencies = [
+ "cow-utils",
+ "rolldown_utils",
+ "sugar_path",
+]
+
+[[package]]
 name = "rolldown_plugin_vite_css"
 version = "0.1.0"
 dependencies = [

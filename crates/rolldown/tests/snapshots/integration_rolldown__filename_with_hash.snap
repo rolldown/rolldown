@@ -4796,22 +4796,22 @@ expression: output
 
 # tests/rolldown/misc/preserve_modules/issue-4622
 
-- src/index-!~{000}~.js => src/index-BdGskpTR.js
-- package.json-!~{003}~.js => package.json-BVhit7Fb.js
-- src/utils/index-!~{005}~.js => src/utils/index-Csnyz4fa.js
+- src/index-!~{000}~.js => src/index-Bg1j_4g8.js
+- package.json-!~{001}~.js => package.json-DzpaW7wR.js
+- src/utils/index-!~{003}~.js => src/utils/index-DNyPGYGA.js
 
 # tests/rolldown/misc/preserve_modules/issue-4647
 
-- main-!~{000}~.js => main-BW1pxCZm.js
-- mod-!~{003}~.js => mod-BSpzJoV9.js
+- main-!~{000}~.js => main-ujSTG8se.js
+- mod-!~{001}~.js => mod-CJUzm3YK.js
 
 # tests/rolldown/misc/preserve_modules/issue-4647-2
 
-- entry2-!~{001}~.js => entry2-DSxXD7UY.js
-- main-!~{000}~.js => main-B5oBoif0.js
-- dynamic-!~{008}~.js => dynamic-DzjSBw-s.js
-- dynamic2-!~{004}~.js => dynamic2-BOUhYg7u.js
-- mod-!~{006}~.js => mod-BGV19WV6.js
+- entry2-!~{001}~.js => entry2-CnM-PEQ2.js
+- main-!~{000}~.js => main-uyUq6J4Y.js
+- dynamic-!~{006}~.js => dynamic-15A52uWR.js
+- dynamic2-!~{002}~.js => dynamic2-RmRtogxQ.js
+- mod-!~{004}~.js => mod-BUtkwoP6.js
 
 # tests/rolldown/misc/preserve_modules/multi_entry
 
@@ -5517,6 +5517,10 @@ expression: output
 # tests/rolldown/tree_shaking/indirect_module_side_effect
 
 - main-!~{000}~.js => main-DnyIjeNr.js
+
+# tests/rolldown/tree_shaking/issue_3998
+
+- main-!~{000}~.js => main-BrQT-pUf.js
 
 # tests/rolldown/tree_shaking/issue_4646
 

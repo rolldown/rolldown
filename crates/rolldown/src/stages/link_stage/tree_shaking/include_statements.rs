@@ -1,9 +1,9 @@
 use itertools::Itertools;
 use oxc_index::IndexVec;
 use rolldown_common::{
-  EcmaViewMeta, ExportsKind, IndexModules, Module, ModuleIdx, ModuleType, NormalModule,
-  NormalizedBundlerOptions, StmtInfoIdx, SymbolOrMemberExprRef, SymbolRef, SymbolRefDb,
-  side_effects::DeterminedSideEffects,
+  EcmaViewMeta, EntryPointKind, ExportsKind, IndexModules, Module, ModuleIdx, ModuleType,
+  NormalModule, NormalizedBundlerOptions, StmtInfoIdx, SymbolOrMemberExprRef, SymbolRef,
+  SymbolRefDb, side_effects::DeterminedSideEffects,
 };
 use rolldown_utils::rayon::{IntoParallelRefMutIterator, ParallelIterator};
 use rustc_hash::FxHashSet;
@@ -52,20 +52,22 @@ impl LinkStage<'_> {
       options: self.options,
     };
 
-    self.entries.iter().for_each(|entry| {
-      let module = match &self.module_table.modules[entry.id] {
-        Module::Normal(module) => module,
-        Module::External(_module) => {
-          // Case: import('external').
-          return;
-        }
-      };
-      let meta = &self.metas[entry.id];
-      meta.referenced_symbols_by_entry_point_chunk.iter().for_each(|symbol_ref| {
-        include_symbol(context, *symbol_ref);
-      });
-      include_module(context, module);
-    });
+    self.entries.iter().filter(|entry| matches!(entry.kind, EntryPointKind::UserDefined)).for_each(
+      |entry| {
+        let module = match &self.module_table.modules[entry.id] {
+          Module::Normal(module) => module,
+          Module::External(_module) => {
+            // Case: import('external').
+            return;
+          }
+        };
+        let meta = &self.metas[entry.id];
+        meta.referenced_symbols_by_entry_point_chunk.iter().for_each(|symbol_ref| {
+          include_symbol(context, *symbol_ref);
+        });
+        include_module(context, module);
+      },
+    );
 
     if self.options.is_hmr_enabled() {
       // HMR runtime contains statements with side effects, they are referenced by other modules via global variables.
@@ -78,6 +80,40 @@ impl LinkStage<'_> {
         });
       }
     }
+
+    self.get_lived_entry(&is_included_vec);
+
+    let context = &mut Context {
+      modules: &self.module_table.modules,
+      symbols: &self.symbols,
+      is_included_vec: &mut is_included_vec,
+      is_module_included_vec: &mut is_module_included_vec,
+      tree_shaking: self.options.treeshake.is_some(),
+      runtime_id: self.runtime.id(),
+      // used_exports_info_vec: &mut used_exports_info_vec,
+      metas: &self.metas,
+      used_symbol_refs: &mut self.used_symbol_refs,
+      options: self.options,
+    };
+
+    self
+      .entries
+      .iter()
+      .filter(|entry| matches!(entry.kind, EntryPointKind::DynamicImport))
+      .for_each(|entry| {
+        let module = match &self.module_table.modules[entry.id] {
+          Module::Normal(module) => module,
+          Module::External(_module) => {
+            // Case: import('external').
+            return;
+          }
+        };
+        let meta = &self.metas[entry.id];
+        meta.referenced_symbols_by_entry_point_chunk.iter().for_each(|symbol_ref| {
+          include_symbol(context, *symbol_ref);
+        });
+        include_module(context, module);
+      });
 
     self.module_table.modules.par_iter_mut().filter_map(Module::as_normal_mut).for_each(|module| {
       let idx = module.idx;

@@ -147,6 +147,10 @@ const TransformOptionsSchema = v.object({
   helpers: v.optional(HelpersSchema),
   decorators: v.optional(DecoratorOptionSchema),
   jsx: v.optional(JsxOptionsSchema),
+  target: v.pipe(
+    v.optional(v.union([v.string(), v.array(v.string())])),
+    v.description('The JavaScript target environment'),
+  ),
 });
 
 const WatchOptionsSchema = v.strictObject({
@@ -564,7 +568,6 @@ const OutputOptionsSchema = v.strictObject({
       }, cjs, and iife)`,
     ),
   ),
-
   sourcemap: v.pipe(
     v.optional(
       v.union([v.boolean(), v.literal('inline'), v.literal('hidden')]),
@@ -642,10 +645,6 @@ const OutputOptionsSchema = v.strictObject({
   polyfillRequire: v.pipe(
     v.optional(v.boolean()),
     v.description('Disable require polyfill injection'),
-  ),
-  target: v.pipe(
-    v.optional(v.union([v.string(), v.array(v.string())])),
-    v.description('The JavaScript target environment'),
   ),
   hoistTransitiveImports: v.optional(
     v.custom<boolean, () => string>((input) => {

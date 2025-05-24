@@ -6,6 +6,8 @@
         "import": "entry.js"
       }
     ],
-    "target": ["es5"]
+    "transform": {
+      "target": "es5"
+    }
   }
 }

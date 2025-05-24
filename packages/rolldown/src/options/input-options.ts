@@ -14,7 +14,6 @@ import type { ChecksOptions } from './generated/checks-options';
 export type InputOption = string | string[] | Record<string, string>;
 
 // Omit those key that are part of rolldown option
-// Note: `target` should be omit either because it is also used in `minifier`
 type OxcTransformOption = Omit<
   TransformOptions,
   | 'sourceType'
@@ -23,7 +22,6 @@ type OxcTransformOption = Omit<
   | 'sourcemap'
   | 'define'
   | 'inject'
-  | 'target'
 >;
 
 export type ExternalOption =

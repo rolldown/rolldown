@@ -6,7 +6,9 @@
         "import": "entry.js"
       }
     ],
-    "target": ["es2019"]
+    "transform": {
+      "target": "es2019"
+    }
   },
   "expectExecuted": false
 }

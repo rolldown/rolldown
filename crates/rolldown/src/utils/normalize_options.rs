@@ -1,6 +1,5 @@
 use std::{borrow::Cow, path::Path};
 
-use oxc::transformer::{EnvOptions, TransformOptions};
 use oxc::transformer_plugins::InjectGlobalVariablesConfig;
 use rolldown_common::{
   GlobalsOutputOption, InjectImport, LegalComments, MinifyOptions, ModuleType,
@@ -166,18 +165,6 @@ pub fn normalize_options(mut raw_options: crate::BundlerOptions) -> NormalizeOpt
         .unwrap_or_default()
     },
   );
-  let target = raw_options.target.unwrap_or_default();
-  let transform_options = raw_options
-    .transform
-    .map(|mut transform_options| {
-      if let Ok(env) = EnvOptions::from_target_list(&target) {
-        transform_options.env = env;
-      }
-      transform_options
-    })
-    .or_else(|| TransformOptions::from_target_list(&target).ok().map(Into::into))
-    .unwrap_or_default();
-
   let cwd =
     raw_options.cwd.unwrap_or_else(|| std::env::current_dir().expect("Failed to get current dir"));
   let normalized = NormalizedBundlerOptions {
@@ -233,11 +220,10 @@ pub fn normalize_options(mut raw_options: crate::BundlerOptions) -> NormalizeOpt
     watch: raw_options.watch.unwrap_or_default(),
     legal_comments: raw_options.legal_comments.unwrap_or(LegalComments::Inline),
     drop_labels: FxHashSet::from_iter(raw_options.drop_labels.unwrap_or_default()),
-    target: target.into(),
     keep_names: raw_options.keep_names.unwrap_or_default(),
     polyfill_require: raw_options.polyfill_require.unwrap_or(true),
     defer_sync_scan_data: raw_options.defer_sync_scan_data,
-    transform_options,
+    transform_options: raw_options.transform.unwrap_or_default(),
     make_absolute_externals_relative: raw_options
       .make_absolute_externals_relative
       .unwrap_or_default(),

@@ -18,7 +18,7 @@ impl From<BindingAssetPluginConfig> for AssetPlugin {
     Self {
       url_base: config.url_base.unwrap_or_default(),
       is_server: config.is_server.unwrap_or_default(),
-      public_dir: config.public_dir,
+      public_dir: config.public_dir.unwrap_or_default(),
       assets_include: config
         .assets_include
         .map(bindingify_string_or_regex_array)

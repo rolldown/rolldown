@@ -10,10 +10,12 @@
         "import": "fragment.jsx"
       }
     ],
-    "jsx": {
-      "pragma": "import.meta",
-      "pragmaFrag": "import.meta",
-      "runtime": "classic"
+    "transform": {
+      "jsx": {
+        "pragma": "import.meta",
+        "pragmaFrag": "import.meta",
+        "runtime": "classic"
+      }
     }
   },
   "expectExecuted": false

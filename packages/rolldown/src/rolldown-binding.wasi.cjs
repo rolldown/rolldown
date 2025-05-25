@@ -108,6 +108,7 @@ module.exports.ParseResult = __napiModule.exports.ParseResult
 module.exports.ResolverFactory = __napiModule.exports.ResolverFactory
 module.exports.BindingBuiltinPluginName = __napiModule.exports.BindingBuiltinPluginName
 module.exports.BindingHookSideEffects = __napiModule.exports.BindingHookSideEffects
+module.exports.BindingJsx = __napiModule.exports.BindingJsx
 module.exports.BindingLogLevel = __napiModule.exports.BindingLogLevel
 module.exports.BindingPluginOrder = __napiModule.exports.BindingPluginOrder
 module.exports.EnforceExtension = __napiModule.exports.EnforceExtension

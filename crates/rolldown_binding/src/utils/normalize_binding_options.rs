@@ -1,3 +1,4 @@
+use crate::options::binding_jsx::BindingJsx;
 use crate::options::{AssetFileNamesOutputOption, ChunkFileNamesOutputOption, SanitizeFileName};
 use crate::{
   options::binding_inject_import::normalize_binding_inject_import,
@@ -9,12 +10,11 @@ use crate::{
   types::{binding_rendered_chunk::BindingRenderedChunk, js_callback::MaybeAsyncJsCallbackExt},
 };
 use napi::bindgen_prelude::{Either, FnArgs};
-use oxc::transformer::TransformOptions;
 use rolldown::{
   AddonOutputOption, AdvancedChunksOptions, AssetFilenamesOutputOption, BundlerOptions,
-  ChunkFilenamesOutputOption, DeferSyncScanDataOption, HashCharacters, IsExternal, MatchGroup,
-  ModuleType, OutputExports, OutputFormat, Platform, PreserveEntrySignatures, RawMinifyOptions,
-  SanitizeFilename,
+  ChunkFilenamesOutputOption, DeferSyncScanDataOption, HashCharacters, IsExternal, JsxPreset,
+  MatchGroup, ModuleType, OutputExports, OutputFormat, Platform, PreserveEntrySignatures,
+  RawMinifyOptions, SanitizeFilename, TransformOptions,
 };
 use rolldown_common::DeferSyncScanData;
 use rolldown_plugin::__inner::SharedPluginable;
@@ -226,13 +226,43 @@ pub fn normalize_binding_options(
     }
     Either::B(target) => target,
   });
-  let transform = input_options
-    .transform
-    .map(|transform_option| {
-      TransformOptions::try_from(transform_option)
-        .map_err(|err| napi::Error::new(napi::Status::GenericFailure, err))
-    })
-    .transpose()?;
+
+  let transform = match input_options.transform {
+    Some(options) => {
+      let is_preserve = matches!(&options.jsx, Some(Either::A(preset)) if preset == "preserve");
+      oxc::transformer::TransformOptions::try_from(options)
+        .map(|transform_options| {
+          let jsx_preset = if is_preserve {
+            JsxPreset::Preserve
+          } else if transform_options.jsx.jsx_plugin {
+            JsxPreset::Enable
+          } else {
+            JsxPreset::Disable
+          };
+          TransformOptions::new(transform_options, jsx_preset)
+        })
+        .map_err(|err| napi::Error::new(napi::Status::GenericFailure, err))?
+    }
+    None => {
+      let mut jsx_preset = JsxPreset::Enable;
+      let mut transform_options = oxc::transformer::TransformOptions::default();
+      match input_options.jsx {
+        Some(BindingJsx::Disable) => {
+          jsx_preset = JsxPreset::Disable;
+          transform_options.jsx.jsx_plugin = false;
+        }
+        Some(BindingJsx::Preserve) => {
+          jsx_preset = JsxPreset::Preserve;
+          transform_options.jsx = oxc::transformer::JsxOptions::disable();
+        }
+        Some(BindingJsx::React) => {
+          transform_options.jsx.runtime = oxc::transformer::JsxRuntime::Classic;
+        }
+        Some(BindingJsx::ReactJsx) | None => {}
+      }
+      TransformOptions::new(transform_options, jsx_preset)
+    }
+  };
 
   let bundler_options = BundlerOptions {
     input: Some(input_options.input.into_iter().map(Into::into).collect()),
@@ -341,7 +371,6 @@ pub fn normalize_binding_options(
     }),
     checks: input_options.checks.map(Into::into),
     profiler_names: input_options.profiler_names,
-    jsx: input_options.jsx.map(Into::into),
     watch: input_options.watch.map(TryInto::try_into).transpose()?,
     legal_comments: output_options
       .legal_comments
@@ -359,7 +388,7 @@ pub fn normalize_binding_options(
     keep_names: input_options.keep_names,
     polyfill_require: output_options.polyfill_require,
     defer_sync_scan_data: get_defer_sync_scan_data,
-    transform,
+    transform: Some(transform),
     make_absolute_externals_relative: input_options
       .make_absolute_externals_relative
       .map(Into::into),

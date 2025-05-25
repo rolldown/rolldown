@@ -21,7 +21,6 @@ type OxcTransformOption = Omit<
   | 'lang'
   | 'cwd'
   | 'sourcemap'
-  | 'jsx'
   | 'define'
   | 'inject'
   | 'target'
@@ -51,16 +50,6 @@ export type ModuleTypes = Record<
   | 'css'
   | 'asset'
 >;
-
-export interface JsxOptions {
-  mode?: 'classic' | 'automatic' | 'preserve';
-  factory?: string;
-  fragment?: string;
-  importSource?: string;
-  jsxImportSource?: string;
-  refresh?: boolean;
-  development?: boolean;
-}
 
 export interface WatcherOptions {
   skipWrite?: boolean;
@@ -219,9 +208,9 @@ export interface InputOptions {
    * - `"react"` enables the `classic` JSX transformer.
    * - `"react-jsx"` enables the `automatic` JSX transformer.
    *
-   * @default mode = "automatic"
+   * @default runtime = "automatic"
    */
-  jsx?: false | 'react' | 'react-jsx' | 'preserve' | JsxOptions;
+  jsx?: false | 'react' | 'react-jsx' | 'preserve';
   transform?: OxcTransformOption;
   watch?: WatcherOptions | false;
   dropLabels?: string[];

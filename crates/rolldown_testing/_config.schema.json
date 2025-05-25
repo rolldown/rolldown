@@ -338,7 +338,6 @@
             "null"
           ]
         },
-        "jsx": true,
         "keepNames": {
           "type": [
             "boolean",
@@ -497,6 +496,13 @@
           "items": {
             "type": "string"
           }
+        },
+        "transform": {
+          "type": [
+            "object",
+            "null"
+          ],
+          "additionalProperties": true
         },
         "treeshake": {
           "$ref": "#/definitions/TreeshakeOptions"

@@ -55,9 +55,11 @@ pub async fn parse_to_ecma_ast(
     let default = pure_esm_js_oxc_source_type();
     match parsed_type {
       OxcParseType::Js => default,
-      OxcParseType::Jsx => default.with_jsx(!options.jsx.is_jsx_disabled()),
+      OxcParseType::Jsx => default.with_jsx(!options.transform_options.is_jsx_disabled()),
       OxcParseType::Ts => default.with_typescript(true),
-      OxcParseType::Tsx => default.with_typescript(true).with_jsx(!options.jsx.is_jsx_disabled()),
+      OxcParseType::Tsx => {
+        default.with_typescript(true).with_jsx(!options.transform_options.is_jsx_disabled())
+      }
     }
   };
 

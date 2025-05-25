@@ -1,10 +1,10 @@
 use std::{borrow::Cow, path::Path};
 
-use oxc::transformer::TransformOptions;
+use oxc::transformer::{EnvOptions, TransformOptions};
 use oxc::transformer_plugins::InjectGlobalVariablesConfig;
 use rolldown_common::{
   GlobalsOutputOption, InjectImport, LegalComments, MinifyOptions, ModuleType,
-  NormalizedBundlerOptions, NormalizedJsxOptions, OutputFormat, Platform,
+  NormalizedBundlerOptions, OutputFormat, Platform,
 };
 use rolldown_error::{BuildDiagnostic, InvalidOptionType};
 use rustc_hash::{FxHashMap, FxHashSet};
@@ -167,21 +167,16 @@ pub fn normalize_options(mut raw_options: crate::BundlerOptions) -> NormalizeOpt
     },
   );
   let target = raw_options.target.unwrap_or_default();
-  let mut transform_options = raw_options
+  let transform_options = raw_options
     .transform
-    .or_else(|| TransformOptions::from_target_list(&target).ok())
+    .map(|mut transform_options| {
+      if let Ok(env) = EnvOptions::from_target_list(&target) {
+        transform_options.env = env;
+      }
+      transform_options
+    })
+    .or_else(|| TransformOptions::from_target_list(&target).ok().map(Into::into))
     .unwrap_or_default();
-
-  let jsx = match raw_options.jsx.unwrap_or_default() {
-    rolldown_common::Jsx::Disable => NormalizedJsxOptions::Disable,
-    rolldown_common::Jsx::Preserve => NormalizedJsxOptions::Preserve,
-    rolldown_common::Jsx::Enable(jsx_options) => {
-      transform_options.jsx =
-        NormalizedBundlerOptions::merge_jsx_options(jsx_options, transform_options.jsx);
-      NormalizedJsxOptions::Enable
-    }
-  };
-  transform_options.jsx.jsx_plugin = matches!(jsx, NormalizedJsxOptions::Enable);
 
   let cwd =
     raw_options.cwd.unwrap_or_else(|| std::env::current_dir().expect("Failed to get current dir"));
@@ -235,7 +230,6 @@ pub fn normalize_options(mut raw_options: crate::BundlerOptions) -> NormalizeOpt
     inline_dynamic_imports,
     advanced_chunks: raw_options.advanced_chunks,
     checks: raw_options.checks.unwrap_or_default().into(),
-    jsx,
     watch: raw_options.watch.unwrap_or_default(),
     legal_comments: raw_options.legal_comments.unwrap_or(LegalComments::Inline),
     drop_labels: FxHashSet::from_iter(raw_options.drop_labels.unwrap_or_default()),

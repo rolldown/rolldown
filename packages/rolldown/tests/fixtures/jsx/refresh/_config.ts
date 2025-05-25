@@ -5,8 +5,10 @@ import { getOutputChunk } from 'rolldown-tests/utils'
 export default defineTest({
   config: {
     input: 'main.jsx',
-    jsx: {
-      refresh: true,
+    transform: {
+      jsx: {
+        refresh: true,
+      }
     },
     external: ['react', 'react/jsx-runtime'],
   },

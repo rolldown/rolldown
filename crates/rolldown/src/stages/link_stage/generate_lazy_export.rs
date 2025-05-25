@@ -4,12 +4,11 @@ use oxc::{
   ast::ast::{self, Expression},
   semantic::{SemanticBuilder, Stats},
   span::SPAN,
-  transformer::ESTarget,
 };
 use rolldown_common::{
-  EcmaAstIdx, EcmaModuleAstUsage, ExportsKind, LocalExport, Module, ModuleIdx, ModuleType,
-  NormalModule, StmtInfo, StmtInfoIdx, SymbolOrMemberExprRef, SymbolRef, SymbolRefDbForModule,
-  WrapKind,
+  ESTarget, EcmaAstIdx, EcmaModuleAstUsage, ExportsKind, LocalExport, Module, ModuleIdx,
+  ModuleType, NormalModule, StmtInfo, StmtInfoIdx, SymbolOrMemberExprRef, SymbolRef,
+  SymbolRefDbForModule, WrapKind,
 };
 use rolldown_ecmascript_utils::AstSnippet;
 use rolldown_rstr::{Rstr, ToRstr};
@@ -165,10 +164,7 @@ fn json_object_expr_to_esm(
               .builder
               .expression_identifier(SPAN, snippet.builder.atom(legitimized_ident.as_str())),
           );
-          // TODO(shulaoda): Waiting for oxc transform to support the ES feature `ShorthandProperties`.
-          if key == "__proto__"
-            && !matches!(link_staged.options.transform_options.es_target, ESTarget::ES5)
-          {
+          if key == "__proto__" && !matches!(link_staged.options.target, ESTarget::Es5) {
             property.computed = true;
           } else if is_legal_ident {
             property.shorthand = is_legal_ident;

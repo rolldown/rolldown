@@ -10,7 +10,6 @@ use crate::{
   types::{binding_rendered_chunk::BindingRenderedChunk, js_callback::MaybeAsyncJsCallbackExt},
 };
 use napi::bindgen_prelude::{Either, FnArgs};
-use oxc::transformer::ESTarget;
 use rolldown::{
   AddonOutputOption, AdvancedChunksOptions, AssetFilenamesOutputOption, BundlerOptions,
   ChunkFilenamesOutputOption, DeferSyncScanDataOption, HashCharacters, IsExternal, JsxPreset,
@@ -116,48 +115,6 @@ fn normalize_globals_option(
   })
 }
 
-fn normalize_es_target(target: Option<&Either<String, Vec<String>>>) -> ESTarget {
-  target
-    .map(|target| {
-      let targets = match target {
-        Either::A(target) => {
-          if target.contains(',') {
-            target.split(',').collect::<Vec<&str>>()
-          } else {
-            vec![target.as_str()]
-          }
-        }
-        Either::B(target) => target.iter().map(std::string::String::as_str).collect::<Vec<&str>>(),
-      };
-      for target in targets {
-        if target.len() <= 2 || !target[..2].eq_ignore_ascii_case("es") {
-          continue;
-        }
-        if target[2..].eq_ignore_ascii_case("next") {
-          return ESTarget::default();
-        }
-        if let Ok(n) = target[2..].parse::<usize>() {
-          return match n {
-            5 => ESTarget::ES5,
-            6 | 2015 => ESTarget::ES2015,
-            2016 => ESTarget::ES2016,
-            2017 => ESTarget::ES2017,
-            2018 => ESTarget::ES2018,
-            2019 => ESTarget::ES2019,
-            2020 => ESTarget::ES2020,
-            2021 => ESTarget::ES2021,
-            2022 => ESTarget::ES2022,
-            2023 => ESTarget::ES2023,
-            2024 => ESTarget::ES2024,
-            _ => continue,
-          };
-        }
-      }
-      ESTarget::default()
-    })
-    .unwrap_or_default()
-}
-
 #[allow(clippy::too_many_lines)]
 pub fn normalize_binding_options(
   input_options: crate::options::BindingInputOptions,
@@ -259,45 +216,52 @@ pub fn normalize_binding_options(
     }
     module_types = Some(tmp);
   }
+  let target = output_options.target.map(|target| match target {
+    Either::A(target) => {
+      if target.contains(',') {
+        target.split(',').map(String::from).collect()
+      } else {
+        vec![target]
+      }
+    }
+    Either::B(target) => target,
+  });
 
   let transform = match input_options.transform {
     Some(options) => {
-      let es_target = normalize_es_target(options.target.as_ref());
       let is_preserve = matches!(&options.jsx, Some(Either::A(preset)) if preset == "preserve");
-      Some(
-        oxc::transformer::TransformOptions::try_from(options)
-          .map(|transform_options| {
-            let jsx_preset = if is_preserve {
-              JsxPreset::Preserve
-            } else if transform_options.jsx.jsx_plugin {
-              JsxPreset::Enable
-            } else {
-              JsxPreset::Disable
-            };
-            TransformOptions::new(transform_options, es_target, jsx_preset)
-          })
-          .map_err(|err| napi::Error::new(napi::Status::GenericFailure, err))?,
-      )
+      oxc::transformer::TransformOptions::try_from(options)
+        .map(|transform_options| {
+          let jsx_preset = if is_preserve {
+            JsxPreset::Preserve
+          } else if transform_options.jsx.jsx_plugin {
+            JsxPreset::Enable
+          } else {
+            JsxPreset::Disable
+          };
+          TransformOptions::new(transform_options, jsx_preset)
+        })
+        .map_err(|err| napi::Error::new(napi::Status::GenericFailure, err))?
     }
-    None => input_options.jsx.map(|jsx| {
+    None => {
       let mut jsx_preset = JsxPreset::Enable;
       let mut transform_options = oxc::transformer::TransformOptions::default();
-      match jsx {
-        BindingJsx::Disable => {
+      match input_options.jsx {
+        Some(BindingJsx::Disable) => {
           jsx_preset = JsxPreset::Disable;
           transform_options.jsx.jsx_plugin = false;
         }
-        BindingJsx::Preserve => {
+        Some(BindingJsx::Preserve) => {
           jsx_preset = JsxPreset::Preserve;
           transform_options.jsx = oxc::transformer::JsxOptions::disable();
         }
-        BindingJsx::React => {
+        Some(BindingJsx::React) => {
           transform_options.jsx.runtime = oxc::transformer::JsxRuntime::Classic;
         }
-        BindingJsx::ReactJsx => {}
+        Some(BindingJsx::ReactJsx) | None => {}
       }
-      TransformOptions::new(transform_options, ESTarget::default(), jsx_preset)
-    }),
+      TransformOptions::new(transform_options, jsx_preset)
+    }
   };
 
   let bundler_options = BundlerOptions {
@@ -420,10 +384,11 @@ pub fn normalize_binding_options(
       })
       .transpose()?,
     drop_labels: input_options.drop_labels,
+    target,
     keep_names: input_options.keep_names,
     polyfill_require: output_options.polyfill_require,
     defer_sync_scan_data: get_defer_sync_scan_data,
-    transform,
+    transform: Some(transform),
     make_absolute_externals_relative: input_options
       .make_absolute_externals_relative
       .map(Into::into),

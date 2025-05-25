@@ -33,7 +33,6 @@ use self::types::{
   platform::Platform, resolve_options::ResolveOptions, source_map_type::SourceMapType,
   sourcemap_path_transform::SourceMapPathTransform,
 };
-
 use crate::{
   ChecksOptions, ChunkFilenamesOutputOption, ModuleType, SourceMapIgnoreList, TransformOptions,
 };
@@ -180,6 +179,7 @@ pub struct BundlerOptions {
   pub transform: Option<TransformOptions>,
   pub watch: Option<WatchOption>,
   pub legal_comments: Option<LegalComments>,
+  pub target: Option<Vec<String>>,
   pub polyfill_require: Option<bool>,
   #[cfg_attr(
     feature = "deserialize_bundler_options",
@@ -362,7 +362,7 @@ fn deserialize_transform_options<'de, D>(
 where
   D: Deserializer<'de>,
 {
-  use oxc::transformer::{EnvOptions, JsxOptions, JsxRuntime};
+  use oxc::transformer::{JsxOptions, JsxRuntime};
   use serde_json::Value;
 
   use crate::JsxPreset;
@@ -373,15 +373,6 @@ where
       let mut transform_options = TransformOptions::default();
       for (k, v) in obj {
         match k.as_str() {
-          "target" => {
-            let target = v
-              .as_str()
-              .ok_or_else(|| serde::de::Error::custom("transform.target should be a string"))?;
-            transform_options.es_target = std::str::FromStr::from_str(target).map_err(|_| {
-              serde::de::Error::custom("transform.target should be a valid es target")
-            })?;
-            transform_options.env = EnvOptions::from_target(target).unwrap();
-          }
           "jsx" => {
             let jsx = match v {
               Value::String(str) if str == "preserve" => {

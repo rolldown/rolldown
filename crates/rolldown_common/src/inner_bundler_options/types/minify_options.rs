@@ -99,7 +99,7 @@ impl MinifyOptionsObject {
         debug: false,
       }),
       compress: Some(CompressOptions {
-        target: option.transform_options.es_target,
+        target: option.target.into(),
         drop_debugger: false,
         drop_console: false,
         keep_names: CompressOptionsKeepNames { function: keep_names, class: keep_names },

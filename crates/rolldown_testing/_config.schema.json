@@ -488,6 +488,15 @@
             "null"
           ]
         },
+        "target": {
+          "type": [
+            "array",
+            "null"
+          ],
+          "items": {
+            "type": "string"
+          }
+        },
         "transform": {
           "type": [
             "object",

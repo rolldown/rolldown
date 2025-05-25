@@ -26,8 +26,8 @@ use super::{
   sourcemap_ignore_list::SourceMapIgnoreList, sourcemap_path_transform::SourceMapPathTransform,
 };
 use crate::{
-  DeferSyncScanDataOption, EmittedAsset, EsModuleFlag, FilenameTemplate, GlobalsOutputOption,
-  HashCharacters, InjectImport, InputItem, InvalidateJsSideCache, LogLevel,
+  DeferSyncScanDataOption, ESTarget, EmittedAsset, EsModuleFlag, FilenameTemplate,
+  GlobalsOutputOption, HashCharacters, InjectImport, InputItem, InvalidateJsSideCache, LogLevel,
   MakeAbsoluteExternalsRelative, MarkModuleLoaded, ModuleType, OnLog, RollupPreRenderedAsset,
   TransformOptions,
 };
@@ -86,6 +86,7 @@ pub struct NormalizedBundlerOptions {
   pub watch: WatchOption,
   pub legal_comments: LegalComments,
   pub drop_labels: FxHashSet<String>,
+  pub target: ESTarget,
   pub polyfill_require: bool,
   pub defer_sync_scan_data: Option<DeferSyncScanDataOption>,
   pub transform_options: TransformOptions,
@@ -150,6 +151,7 @@ impl Default for NormalizedBundlerOptions {
       watch: Default::default(),
       legal_comments: LegalComments::None,
       drop_labels: Default::default(),
+      target: Default::default(),
       polyfill_require: Default::default(),
       defer_sync_scan_data: Default::default(),
       transform_options: Default::default(),

@@ -10,7 +10,7 @@ use oxc::transformer_plugins::{
   InjectGlobalVariables, ReplaceGlobalDefines, ReplaceGlobalDefinesConfig,
 };
 
-use rolldown_common::NormalizedBundlerOptions;
+use rolldown_common::{ESTarget, NormalizedBundlerOptions};
 use rolldown_ecmascript::{EcmaAst, WithMutFields};
 use rolldown_error::{BuildDiagnostic, BuildResult, Severity};
 
@@ -69,9 +69,9 @@ impl PreProcessEcmaAst {
       }
     });
     // Transform TypeScript and jsx.
-    // Note: Currently, oxc_transform supports es syntax up to ES2024 (unicode-sets-regex).
+    // Transform es syntax.
     if !matches!(parsed_type, OxcParseType::Js)
-      || bundle_options.transform_options.env.regexp.set_notation
+      || !matches!(bundle_options.target, ESTarget::EsNext)
     {
       let ret = ast.program.with_mut(|fields| {
         let transform_options = &bundle_options.transform_options;

@@ -121,6 +121,7 @@ pub struct BindingOutputOptions<'env> {
   pub legal_comments: Option<String>,
   pub polyfill_require: Option<bool>,
   pub preserve_modules: Option<bool>,
+  pub target: Option<Either<String, Vec<String>>>,
   pub virtual_dirname: Option<String>,
   pub preserve_modules_root: Option<String>,
   #[napi(ts_type = "'strict' | 'allow-extension' | 'exports-only' | false")]

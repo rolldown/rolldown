@@ -1,7 +1,5 @@
 {
-  "config": {
-    "transform": {
-      "target": "es5"
+    "config": {
+        "target": ["es5"]
     }
-  }
 }

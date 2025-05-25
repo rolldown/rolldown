@@ -613,6 +613,7 @@ export interface BindingOutputOptions {
   legalComments?: 'none' | 'inline'
   polyfillRequire?: boolean
   preserveModules?: boolean
+  target?: string | Array<string>
   virtualDirname?: string
   preserveModulesRoot?: string
   preserveEntrySignatures?: 'strict' | 'allow-extension' | 'exports-only' | false

@@ -25,11 +25,16 @@ jobs:
       - name: Setup Rust
         uses: oxc-project/setup-rust@cd82e1efec7fef815e2c23d296756f31c7cdc03d # v1.0.0
         with:
-          cache-key: debug-build
           save-cache: ${{ github.ref_name == 'main' }}
+          cache-key: debug-build
+          tools: just
+
+      - name: Setup Node For Development
+        uses: ./.github/actions/setup-node
 
       - run: cargo check --workspace
       - run: cargo test --workspace --no-run
+      - run: just build native debug
 
   release-build:
     strategy:
@@ -46,8 +51,10 @@ jobs:
           cache-key: release-build
           save-cache: ${{ github.ref_name == 'main' }}
 
-      - run: cargo check --release --workspace
-      - run: cargo test --release --workspace --no-run
+      - name: Setup Node For Development
+        uses: ./.github/actions/setup-node
+
+      - run: just build native release
 
   release-build-wasi:
     strategy:

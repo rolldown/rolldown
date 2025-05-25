@@ -38,7 +38,7 @@ jobs:
         uses: ./.github/actions/setup-node
 
       - name: Setup Rust
-        uses: ./.github/actions/setup-rust
+        uses: oxc-project/setup-rust@cd82e1efec7fef815e2c23d296756f31c7cdc03d # v1.0.0
         with:
           tools: just, cargo-codspeed
           cache-key: release-build
@@ -72,7 +72,7 @@ jobs:
         uses: ./.github/actions/setup-node
 
       - name: Setup Rust
-        uses: ./.github/actions/setup-rust
+        uses: oxc-project/setup-rust@cd82e1efec7fef815e2c23d296756f31c7cdc03d # v1.0.0
         with:
           tools: just, critcmp
           cache-key: release-build

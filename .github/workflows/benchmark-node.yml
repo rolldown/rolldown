@@ -68,9 +68,7 @@ jobs:
         run: just setup-bench
 
       - name: Build packages
-        run: |
-          pnpm --filter '@rolldown/pluginutils' build
-          just build native release
+        run: just build native release
 
       - name: Run benchmarks
         run: pnpm --filter bench run bench-ci

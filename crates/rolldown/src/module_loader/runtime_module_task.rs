@@ -1,5 +1,4 @@
 use arcstr::ArcStr;
-use constcat::concat;
 use oxc::ast_visit::VisitMut;
 use oxc::span::SourceType;
 use oxc_index::IndexVec;
@@ -23,12 +22,25 @@ use crate::{
 
 const RUNTIME_BASE_JS: &str = include_str!("../runtime/runtime-base.js");
 const RUNTIME_TAIL_JS: &str = include_str!("../runtime/runtime-tail.js");
-const RUNTIME_JS: ArcStr = arcstr::literal!(concat!(RUNTIME_BASE_JS, RUNTIME_TAIL_JS));
-const RUNTIME_ESM_FORMAT_WITH_NODE_PLATFORM: ArcStr = arcstr::literal!(concat!(
-  include_str!("../runtime/runtime-head-node.js"),
-  RUNTIME_BASE_JS,
-  include_str!("../runtime/runtime-tail-node.js"),
-));
+const RUNTIME_HEAD_NODE_JS: &str = include_str!("../runtime/runtime-head-node.js");
+const RUNTIME_TAIL_NODE_JS: &str = include_str!("../runtime/runtime-tail-node.js");
+
+fn get_runtime_js() -> String {
+  let mut ret = String::with_capacity(RUNTIME_BASE_JS.len() + RUNTIME_TAIL_JS.len());
+  ret.push_str(RUNTIME_BASE_JS);
+  ret.push_str(RUNTIME_TAIL_JS);
+  ret
+}
+
+fn get_runtime_js_with_node_platform() -> String {
+  let mut ret = String::with_capacity(
+    RUNTIME_BASE_JS.len() + RUNTIME_TAIL_NODE_JS.len() + RUNTIME_HEAD_NODE_JS.len(),
+  );
+  ret.push_str(RUNTIME_HEAD_NODE_JS);
+  ret.push_str(RUNTIME_BASE_JS);
+  ret.push_str(RUNTIME_TAIL_NODE_JS);
+  ret
+}
 
 pub struct RuntimeModuleTask {
   tx: tokio::sync::mpsc::Sender<ModuleLoaderMsg>,
@@ -67,7 +79,7 @@ impl RuntimeModuleTask {
           // Browser platform should use the native WebSocket and neutral platform doesn't have any assumptions.
         }
       }
-      runtime_source.push_str(RUNTIME_JS.as_str());
+      runtime_source.push_str(&get_runtime_js());
       if let Some(implement) = hmr_options.implement.as_deref() {
         runtime_source.push_str(implement);
       } else {
@@ -79,9 +91,9 @@ impl RuntimeModuleTask {
       }
       ArcStr::from(runtime_source)
     } else if self.options.is_esm_format_with_node_platform() {
-      RUNTIME_ESM_FORMAT_WITH_NODE_PLATFORM
+      get_runtime_js_with_node_platform().into()
     } else {
-      RUNTIME_JS
+      get_runtime_js().into()
     };
 
     let (ast, scan_result) = self.make_ecma_ast(RUNTIME_MODULE_KEY, &source)?;

@@ -3,25 +3,24 @@ name: Benchmarks Rust
 permissions: {}
 
 on:
+  workflow_dispatch:
   push:
     branches:
       - 'main'
     paths:
       - '**/*.rs'
-      - '**/*.toml'
-      - '.github/workflows/**'
       - 'Cargo.lock'
       - 'rust-toolchain.toml'
       - 'scripts/misc/setup-benchmark-input/**'
+      - '.github/workflows/benchmark-rust.yml'
   pull_request:
     types: [opened, synchronize]
     paths:
       - '**/*.rs'
-      - '**/*.toml'
-      - '.github/workflows/**'
       - 'Cargo.lock'
       - 'rust-toolchain.toml'
-  workflow_dispatch:
+      - 'scripts/misc/setup-benchmark-input/**'
+      - '.github/workflows/benchmark-rust.yml'
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.sha }}

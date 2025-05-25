@@ -3,32 +3,28 @@ name: Benchmarks Node
 permissions: {}
 
 on:
+  workflow_dispatch:
   push:
     branches:
       - 'main' # or "master"
     paths:
       - '**/*.rs'
-      - '**/*.toml'
       - 'Cargo.lock'
       - 'rust-toolchain.toml'
       - 'packages/rolldown/**'
       - 'packages/bench/**'
-      - '.github/workflows/**'
-      - 'package.json'
       - 'pnpm-lock.yaml'
+      - '.github/workflows/benchmark-node.yml'
   pull_request:
     types: [opened, synchronize]
     paths:
       - '**/*.rs'
-      - '**/*.toml'
       - 'Cargo.lock'
       - 'rust-toolchain.toml'
       - 'packages/rolldown/**'
       - 'packages/bench/**'
-      - '.github/workflows/**'
-      - 'package.json'
       - 'pnpm-lock.yaml'
-  workflow_dispatch:
+      - '.github/workflows/benchmark-node.yml'
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.sha }}

@@ -2,8 +2,8 @@ use oxc_index::IndexVec;
 #[cfg(debug_assertions)]
 use rolldown_common::common_debug_symbol_ref;
 use rolldown_common::{
-  EntryPoint, EntryPointKind, ImportKind, ImportRecordMeta, ModuleIdx, ModuleTable,
-  RuntimeModuleBrief, SymbolRef, SymbolRefDb, dynamic_import_usage::DynamicImportExportsUsage,
+  EntryPoint, ImportKind, ModuleIdx, ModuleTable, RuntimeModuleBrief, SymbolRef, SymbolRefDb,
+  dynamic_import_usage::DynamicImportExportsUsage,
 };
 use rolldown_error::BuildDiagnostic;
 use rustc_hash::{FxHashMap, FxHashSet};
@@ -40,7 +40,6 @@ pub struct LinkStageOutput {
   pub errors: Vec<BuildDiagnostic>,
   pub used_symbol_refs: FxHashSet<SymbolRef>,
   pub dynamic_import_exports_usage_map: FxHashMap<ModuleIdx, DynamicImportExportsUsage>,
-  pub lived_entry_points: FxHashSet<ModuleIdx>,
   pub safely_merge_cjs_ns_map: FxHashMap<ModuleIdx, Vec<SymbolRef>>,
 }
 
@@ -120,7 +119,6 @@ impl<'a> LinkStage<'a> {
     tracing::trace!("meta {:#?}", self.metas.iter_enumerated().collect::<Vec<_>>());
 
     LinkStageOutput {
-      lived_entry_points: self.get_lived_entry(),
       module_table: self.module_table,
       entries: self.entries,
       // sorted_modules: self.sorted_modules,
@@ -134,58 +132,6 @@ impl<'a> LinkStage<'a> {
       dynamic_import_exports_usage_map: self.dynamic_import_exports_usage_map,
       safely_merge_cjs_ns_map: self.safely_merge_cjs_ns_map,
     }
-  }
-
-  #[inline]
-  fn get_lived_entry(&mut self) -> FxHashSet<ModuleIdx> {
-    self
-      .entries
-      .iter()
-      .filter_map(|item| match item.kind {
-        EntryPointKind::UserDefined => Some(item.id),
-        EntryPointKind::DynamicImport => {
-          // At least one statement that create this entry is included
-          let lived = item.related_stmt_infos.iter().any(|(module_idx, stmt_idx)| {
-            let module = &self.module_table.modules[*module_idx]
-              .as_normal()
-              .expect("should be a normal module");
-            let stmt_info = &module.stmt_infos[*stmt_idx];
-            let mut dead_pure_dynamic_import_record_idx = vec![];
-            let all_dead_pure_dynamic_import =
-              stmt_info.import_records.iter().all(|import_record_idx| {
-                let import_record = &module.import_records[*import_record_idx];
-                if import_record.resolved_module.is_dummy() {
-                  return true;
-                }
-                let importee_side_effects = self.module_table.modules
-                  [import_record.resolved_module]
-                  .side_effects()
-                  .has_side_effects();
-                let ret =
-                  import_record.meta.contains(ImportRecordMeta::TOP_LEVEL_PURE_DYNAMIC_IMPORT)
-                    && !importee_side_effects;
-                if ret {
-                  dead_pure_dynamic_import_record_idx.push(*import_record_idx);
-                }
-                ret
-              });
-            let lived = stmt_info.is_included && !all_dead_pure_dynamic_import;
-            if !lived {
-              // satisfy rustc borrow checker
-              let module = self.module_table.modules[*module_idx]
-                .as_normal_mut()
-                .expect("should be a normal module");
-              for ele in dead_pure_dynamic_import_record_idx {
-                let rec = &mut module.import_records[ele];
-                rec.meta.insert(ImportRecordMeta::DEAD_DYNAMIC_IMPORT);
-              }
-            }
-            lived
-          });
-          lived.then_some(item.id)
-        }
-      })
-      .collect::<FxHashSet<ModuleIdx>>()
   }
 
   /// A helper function used to debug symbol in link process

@@ -56,7 +56,8 @@ impl<'me, 'ast: 'me> Visit<'ast> for AstScanner<'me, 'ast> {
         self.options.transform_options.is_jsx_preserve(),
         self.options,
       )
-      .detect_side_effect_of_stmt(stmt);
+      .detect_side_effect_of_stmt(stmt)
+      .has_side_effect();
 
       #[cfg(debug_assertions)]
       {

@@ -20,6 +20,28 @@ use crate::{
   utils::tweak_ast_for_scanning::PreProcessor,
 };
 
+const RUNTIME_BASE_JS: &str = include_str!("../runtime/runtime-base.js");
+const RUNTIME_TAIL_JS: &str = include_str!("../runtime/runtime-tail.js");
+const RUNTIME_HEAD_NODE_JS: &str = include_str!("../runtime/runtime-head-node.js");
+const RUNTIME_TAIL_NODE_JS: &str = include_str!("../runtime/runtime-tail-node.js");
+
+fn get_runtime_js() -> String {
+  let mut ret = String::with_capacity(RUNTIME_BASE_JS.len() + RUNTIME_TAIL_JS.len());
+  ret.push_str(RUNTIME_BASE_JS);
+  ret.push_str(RUNTIME_TAIL_JS);
+  ret
+}
+
+fn get_runtime_js_with_node_platform() -> String {
+  let mut ret = String::with_capacity(
+    RUNTIME_BASE_JS.len() + RUNTIME_TAIL_NODE_JS.len() + RUNTIME_HEAD_NODE_JS.len(),
+  );
+  ret.push_str(RUNTIME_HEAD_NODE_JS);
+  ret.push_str(RUNTIME_BASE_JS);
+  ret.push_str(RUNTIME_TAIL_NODE_JS);
+  ret
+}
+
 pub struct RuntimeModuleTask {
   tx: tokio::sync::mpsc::Sender<ModuleLoaderMsg>,
   module_idx: ModuleIdx,
@@ -57,10 +79,7 @@ impl RuntimeModuleTask {
           // Browser platform should use the native WebSocket and neutral platform doesn't have any assumptions.
         }
       }
-      runtime_source.push_str(&arcstr::literal!(concat!(
-        include_str!("../runtime/runtime-base.js"),
-        include_str!("../runtime/runtime-tail.js"),
-      )));
+      runtime_source.push_str(&get_runtime_js());
       if let Some(implement) = hmr_options.implement.as_deref() {
         runtime_source.push_str(implement);
       } else {
@@ -72,16 +91,9 @@ impl RuntimeModuleTask {
       }
       ArcStr::from(runtime_source)
     } else if self.options.is_esm_format_with_node_platform() {
-      arcstr::literal!(concat!(
-        include_str!("../runtime/runtime-head-node.js"),
-        include_str!("../runtime/runtime-base.js"),
-        include_str!("../runtime/runtime-tail-node.js"),
-      ))
+      get_runtime_js_with_node_platform().into()
     } else {
-      arcstr::literal!(concat!(
-        include_str!("../runtime/runtime-base.js"),
-        include_str!("../runtime/runtime-tail.js"),
-      ))
+      get_runtime_js().into()
     };
 
     let (ast, scan_result) = self.make_ecma_ast(RUNTIME_MODULE_KEY, &source)?;

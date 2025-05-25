@@ -23,6 +23,12 @@ use crate::{
 
 const RUNTIME_BASE_JS: &str = include_str!("../runtime/runtime-base.js");
 const RUNTIME_TAIL_JS: &str = include_str!("../runtime/runtime-tail.js");
+const RUNTIME_JS: ArcStr = arcstr::literal!(concat!(RUNTIME_BASE_JS, RUNTIME_TAIL_JS));
+const RUNTIME_ESM_FORMAT_WITH_NODE_PLATFORM: ArcStr = arcstr::literal!(concat!(
+  include_str!("../runtime/runtime-head-node.js"),
+  RUNTIME_BASE_JS,
+  include_str!("../runtime/runtime-tail-node.js"),
+));
 
 pub struct RuntimeModuleTask {
   tx: tokio::sync::mpsc::Sender<ModuleLoaderMsg>,
@@ -61,7 +67,7 @@ impl RuntimeModuleTask {
           // Browser platform should use the native WebSocket and neutral platform doesn't have any assumptions.
         }
       }
-      runtime_source.push_str(&arcstr::literal!(concat!(RUNTIME_BASE_JS, RUNTIME_TAIL_JS)));
+      runtime_source.push_str(RUNTIME_JS.as_str());
       if let Some(implement) = hmr_options.implement.as_deref() {
         runtime_source.push_str(implement);
       } else {
@@ -73,13 +79,9 @@ impl RuntimeModuleTask {
       }
       ArcStr::from(runtime_source)
     } else if self.options.is_esm_format_with_node_platform() {
-      arcstr::literal!(concat!(
-        include_str!("../runtime/runtime-head-node.js"),
-        RUNTIME_BASE_JS,
-        include_str!("../runtime/runtime-tail-node.js"),
-      ))
+      RUNTIME_ESM_FORMAT_WITH_NODE_PLATFORM
     } else {
-      arcstr::literal!(concat!(RUNTIME_BASE_JS, RUNTIME_TAIL_JS))
+      RUNTIME_JS
     };
 
     let (ast, scan_result) = self.make_ecma_ast(RUNTIME_MODULE_KEY, &source)?;

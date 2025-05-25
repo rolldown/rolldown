@@ -7,10 +7,6 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```js
 
-//#region something.js
-var init_something = __esm({ "something.js"() {} });
-
-//#endregion
 //#region c.js
 var require_c = __commonJS({ "c.js"() {
 	await 0;
@@ -28,7 +24,6 @@ var init_b = __esm({ async "b.js"() {
 //#region a.js
 var a_exports = {};
 var init_a = __esm({ async "a.js"() {
-	await init_something();
 	await init_b();
 } });
 

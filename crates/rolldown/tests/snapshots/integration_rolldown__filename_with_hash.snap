@@ -393,7 +393,7 @@ expression: output
 
 # tests/esbuild/dce/package_json_side_effects_false_keep_bare_import_and_require_es6
 
-- src_entry-!~{000}~.js => src_entry-CQtz_ZD8.js
+- src_entry-!~{000}~.js => src_entry-By34m57k.js
 
 # tests/esbuild/dce/package_json_side_effects_false_keep_named_import_common_js
 
@@ -1697,11 +1697,11 @@ expression: output
 
 # tests/esbuild/default/top_level_await_forbidden_require
 
-- entry-!~{000}~.js => entry-CifeoGZd.js
+- entry-!~{000}~.js => entry-tJ3W5hbA.js
 
 # tests/esbuild/default/top_level_await_forbidden_require_dead_branch
 
-- entry-!~{000}~.js => entry-CjA06sAA.js
+- entry-!~{000}~.js => entry-DabYB3n1.js
 
 # tests/esbuild/default/top_level_await_iife_dead_branch
 

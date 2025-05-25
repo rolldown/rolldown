@@ -31,6 +31,7 @@ var init_no_side_effect = __esm({ "no_side_effect.js"() {} });
 //#endregion
 //#region main.js
 var init_main = __esm({ "main.js"() {
+	init_no_side_effect();
 	nodeAssert.equal(globalThis.value, void 0, "Unused no side effect module should be removed");
 } });
 

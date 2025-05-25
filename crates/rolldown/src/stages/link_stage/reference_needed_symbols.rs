@@ -173,9 +173,13 @@ impl LinkStage<'_> {
                         }
                       }
                       WrapKind::Esm => {
-                        *importer_side_effect = DeterminedSideEffects::Analyzed(true);
-                        stmt_info.side_effect = true;
                         // Turn `import ... from 'bar_esm'` into `init_bar_esm()`
+                        // `init_bar_esm()` will be considered as having side effect even when itself doesn't have side effect.
+                        // `init_bar_esm()` is responsible to ensure correct initialization order. It must be included in treeshaking
+                        // even no statements reference it.
+                        stmt_info.side_effect = true;
+                        *importer_side_effect = DeterminedSideEffects::Analyzed(true);
+
                         // Reference to `init_foo`
                         stmt_info
                           .referenced_symbols

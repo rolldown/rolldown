@@ -159,10 +159,7 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
       // Replace the import statement with `init_foo()` if `ImportDeclaration` is not a plain import
       // or the importee have side effects.
       WrapKind::Esm => {
-        if (rec.meta.contains(ImportRecordMeta::IS_PLAIN_IMPORT)
-          && !importee.side_effects.has_side_effects())
-          || self.generated_init_esm_importee_ids.contains(&importee.idx)
-        {
+        if self.generated_init_esm_importee_ids.contains(&importee.idx) {
           return true;
         }
         self.generated_init_esm_importee_ids.insert(importee.idx);

@@ -28,6 +28,7 @@ var init_b = __esm({ async "b.js"() {
 //#region a.js
 var a_exports = {};
 var init_a = __esm({ async "a.js"() {
+	await init_something();
 	await init_b();
 } });
 

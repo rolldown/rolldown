@@ -93,6 +93,7 @@ fmt: fmt-rust fmt-repo
 
 fmt-rust:
     cargo fmt --all -- --emit=files
+    -cargo shear --fix # omit exit status with `-`
 
 fmt-repo:
     pnpm run fmt
@@ -102,7 +103,6 @@ lint: lint-rust lint-node lint-repo
 
 lint-rust:
     cargo clippy --workspace --all-targets -- --deny warnings
-    cargo shear
 
 lint-node:
     pnpm lint-code
@@ -117,7 +117,6 @@ fix: fix-rust fix-repo
 fix-rust:
     just fmt-rust
     cargo fix --allow-dirty --allow-staged
-    cargo shear --fix
 
 fix-repo:
     pnpm lint-code -- --fix

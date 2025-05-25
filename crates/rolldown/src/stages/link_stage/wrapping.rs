@@ -96,36 +96,36 @@ impl LinkStage<'_> {
       let is_strict_execution_order = self.options.experimental.is_strict_execution_order_enabled();
       let is_wrap_kind_none = matches!(self.metas[module_id].wrap_kind, WrapKind::None);
 
-      if is_strict_execution_order && is_wrap_kind_none {
-        self.metas[module_id].wrap_kind = match module.exports_kind {
-          ExportsKind::Esm | ExportsKind::None => WrapKind::Esm,
-          ExportsKind::CommonJs => WrapKind::Cjs,
-        }
-      }
-
       let need_to_wrap = is_strict_execution_order || !is_wrap_kind_none;
 
-      // The `modules` don't seem to be sorted,
-      // and if the module is `WrapKind::None`, it might still be wrapped next iter.
       if need_to_wrap {
-        visited_modules_for_wrapping[module_id] = true;
+        wrap_module_recursively(
+          &mut Context {
+            visited_modules: &mut visited_modules_for_wrapping,
+            linking_infos: &mut self.metas,
+            modules: &self.module_table.modules,
+          },
+          module_id,
+        );
+      } else {
+        // Make sure depended cjs modules got wrapped.
+        module.import_records.iter().filter(|rec| !rec.is_dummy()).for_each(|rec| {
+          let Module::Normal(importee) = &self.module_table.modules[rec.resolved_module] else {
+            return;
+          };
+          // Commonjs as a dependency must be wrapped. The wrapper is like a commonjs runtime to help initialize the commonjs module correctly.
+          if matches!(importee.exports_kind, ExportsKind::CommonJs) {
+            wrap_module_recursively(
+              &mut Context {
+                visited_modules: &mut visited_modules_for_wrapping,
+                linking_infos: &mut self.metas,
+                modules: &self.module_table.modules,
+              },
+              importee.idx,
+            );
+          }
+        });
       }
-
-      module.import_records.iter().filter(|rec| !rec.is_dummy()).for_each(|rec| {
-        let Module::Normal(importee) = &self.module_table.modules[rec.resolved_module] else {
-          return;
-        };
-        if matches!(importee.exports_kind, ExportsKind::CommonJs) || need_to_wrap {
-          wrap_module_recursively(
-            &mut Context {
-              visited_modules: &mut visited_modules_for_wrapping,
-              linking_infos: &mut self.metas,
-              modules: &self.module_table.modules,
-            },
-            importee.idx,
-          );
-        }
-      });
     }
     self.module_table.modules.iter_mut().filter_map(|m| m.as_normal_mut()).for_each(
       |ecma_module| {

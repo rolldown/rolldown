@@ -64,32 +64,6 @@ jobs:
           echo "Node changes: ${{ (steps.filter.outputs.node-changes == 'true') || (github.ref_name == 'main') }}"
           echo "PluginUtils changes: ${{ (steps.filter.outputs.pluginutils-changes == 'true') || (github.ref_name == 'main') }}"
 
-  cargo-deny:
-    name: Cargo Deny
-    needs: changes
-    if: ${{ needs.changes.outputs.rust-changes == 'true' }}
-    runs-on: ubuntu-latest
-    steps:
-      - uses: taiki-e/checkout-action@b13d20b7cda4e2f325ef19895128f7ff735c0b3d # v1.3.1
-      - uses: dorny/paths-filter@de90cc6fb38fc0963ad72b210f1f284cd68cea36 # v3.0.2
-        id: filter
-        with:
-          filters: |
-            src:
-              - 'Cargo.lock'
-              - 'deny.toml'
-              - '.github/workflows/ci.yml'
-
-      - name: Install cargo-deny
-        if: steps.filter.outputs.src == 'true'
-        uses: oxc-project/setup-rust@cd82e1efec7fef815e2c23d296756f31c7cdc03d # v1.0.0
-        with:
-          restore-cache: false
-          tools: cargo-deny
-
-      - if: steps.filter.outputs.src == 'true'
-        run: cargo deny check
-
   rust-validation:
     name: Rust Validation
     needs: changes

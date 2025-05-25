@@ -25,6 +25,16 @@ fn wrap_module_recursively(ctx: &mut Context, target: ModuleIdx) {
   }
   ctx.visited_modules[target] = true;
 
+  // Check if the module really needs to be wrapped
+  match module.exports_kind {
+    ExportsKind::Esm | ExportsKind::None => {
+      if !module.side_effects.has_side_effects() && module.import_records.is_empty() {
+        return;
+      }
+    }
+    ExportsKind::CommonJs => {}
+  }
+
   if matches!(ctx.linking_infos[target].wrap_kind, WrapKind::None) {
     ctx.linking_infos[target].wrap_kind = match module.exports_kind {
       ExportsKind::Esm | ExportsKind::None => WrapKind::Esm,

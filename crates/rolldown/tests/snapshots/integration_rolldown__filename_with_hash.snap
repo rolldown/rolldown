@@ -535,7 +535,7 @@ expression: output
 
 # tests/esbuild/dce/tree_shaking_in_esm_wrapper
 
-- entry-!~{000}~.js => entry-Dpt3CcKB.js
+- entry-!~{000}~.js => entry-B-uR5lyc.js
 
 # tests/esbuild/dce/tree_shaking_js_with_associated_css
 
@@ -789,7 +789,7 @@ expression: output
 
 # tests/esbuild/default/export_forms_common_js
 
-- entry-!~{000}~.js => entry-B3QIko0i.js
+- entry-!~{000}~.js => entry-BC6ZIWDt.js
 
 # tests/esbuild/default/export_forms_es6
 
@@ -1697,7 +1697,7 @@ expression: output
 
 # tests/esbuild/default/top_level_await_forbidden_require
 
-- entry-!~{000}~.js => entry-Bx8ByEeH.js
+- entry-!~{000}~.js => entry-tJ3W5hbA.js
 
 # tests/esbuild/default/top_level_await_forbidden_require_dead_branch
 
@@ -3851,15 +3851,16 @@ expression: output
 
 # tests/rolldown/function/advanced_chunks/basic
 
-- a-!~{000}~.js => a-CcaBLJp5.js
-- b-!~{001}~.js => b-aQ857t6g.js
-- common-!~{002}~.js => common-DfGFFFKe.js
+- a-!~{000}~.js => a-Duokw3jp.js
+- b-!~{001}~.js => b-GanGBqOK.js
+- common-!~{004}~.js => common-CHGMauua.js
+- rolldown-runtime-!~{002}~.js => rolldown-runtime-F0QY5PnL.js
 
 # tests/rolldown/function/advanced_chunks/issue_2617
 
-- main-!~{000}~.js => main-CgB9jNWY.js
+- main-!~{000}~.js => main-IhJhtX9Y.js
 - rolldown-runtime-!~{001}~.js => rolldown-runtime-BjtMze0h.js
-- splited_lib-!~{003}~.js => splited_lib-A55JX3bb.js
+- splited_lib-!~{003}~.js => splited_lib-BgXOTk10.js
 
 # tests/rolldown/function/advanced_chunks/max_module_size
 
@@ -3935,10 +3936,10 @@ expression: output
 
 # tests/rolldown/function/advanced_chunks/split_node_modules
 
-- main-!~{000}~.js => main-C5l1SOxR.js
-- other-libs-!~{005}~.js => other-libs-DDYt6ifN.js
+- main-!~{000}~.js => main-CgintLkr.js
+- other-libs-!~{005}~.js => other-libs-9w3pul5i.js
 - rolldown-runtime-!~{001}~.js => rolldown-runtime-BvgZlyOU.js
-- ui-!~{003}~.js => ui-Bub0P6Va.js
+- ui-!~{003}~.js => ui-17vXJ9Bu.js
 
 # tests/rolldown/function/define/node_env
 
@@ -4030,6 +4031,12 @@ expression: output
 - entry2-!~{001}~.js => entry2-D5YLwzdZ.js
 - run-dep-!~{002}~.js => run-dep-IkByYhJ_.js
 
+# tests/rolldown/function/experimental/strict_execution_order/issue_4684
+
+- main-!~{000}~.js => main-BB2kLC1L.js
+- dynamic-!~{003}~.js => dynamic-DSCFIWqq.js
+- read-!~{001}~.js => read-C1QSWzqi.js
+
 # tests/rolldown/function/experimental/strict_execution_order/remove_unused_no_side_effect_module
 
 - main-!~{000}~.js => main-DVzdOrRP.js
@@ -4040,7 +4047,7 @@ expression: output
 
 # tests/rolldown/function/experimental/strict_execution_order/top_level_await_syntax_minify
 
-- main-!~{000}~.js => main-C4BCfZuJ.js
+- main-!~{000}~.js => main-Buo6YqrV.js
 
 # tests/rolldown/function/export_mode/cjs/auto/default
 
@@ -4633,9 +4640,9 @@ expression: output
 
 # tests/rolldown/issues/3437
 
-- main-!~{000}~.js => main-CYMnVwR9.js
+- main-!~{000}~.js => main-Ds1QWccq.js
 - rolldown-runtime-!~{001}~.js => rolldown-runtime-BjtMze0h.js
-- square-!~{003}~.js => square-DKKPtQr6.js
+- square-!~{003}~.js => square-yFcIWcT3.js
 
 # tests/rolldown/issues/3438
 
@@ -4999,11 +5006,11 @@ expression: output
 
 # tests/rolldown/topics/bundler_esm_cjs_tests/24
 
-- entry-!~{000}~.js => entry-BoIys9GA.js
+- entry-!~{000}~.js => entry-BIe4XfGi.js
 
 # tests/rolldown/topics/bundler_esm_cjs_tests/25
 
-- entry-!~{000}~.js => entry-D1c0Z96Y.js
+- entry-!~{000}~.js => entry-BJlV_0iA.js
 
 # tests/rolldown/topics/bundler_esm_cjs_tests/26
 

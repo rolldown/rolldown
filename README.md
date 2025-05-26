@@ -14,7 +14,7 @@
 </div>
 
 <div align="center">
-  
+
 [![NPM Unpacked Size (with version)](https://img.shields.io/npm/unpacked-size/rolldown/latest?label=npm)][url-npm]
 [![NPM Unpacked Size darwin-arm64](https://img.shields.io/npm/unpacked-size/%40rolldown%2Fbinding-darwin-arm64/latest?label=darwin-arm64)](https://www.npmjs.com/package/@rolldown/binding-darwin-arm64)
 [![NPM Unpacked Size darwin-x64](https://img.shields.io/npm/unpacked-size/%40rolldown%2Fbinding-darwin-x64/latest?label=darwin-x64)](https://www.npmjs.com/package/@rolldown/binding-darwin-x64)
@@ -25,18 +25,16 @@
 </div>
 
 <div align="center">
-  
+
 [![pkg.pr.new](https://pkg.pr.new/badge/pkg.pr.new/pkg.pr.new?style=flat&color=000&logoSize=auto)](https://pkg.pr.new/~/rolldown/rolldown)
 
 </div>
 
 <div align="center">
-  
+
 [![rolldown-starter-stackblitz](https://developer.stackblitz.com/img/open_in_stackblitz.svg)](https://stackblitz.com/github/rolldown/rolldown-starter-stackblitz)
 
 </div>
-
-
 
 > 🚧 **Work in Progress**
 >

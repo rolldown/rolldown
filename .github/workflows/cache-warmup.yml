@@ -50,6 +50,7 @@ jobs:
         with:
           cache-key: release-build
           save-cache: ${{ github.ref_name == 'main' }}
+          tools: just
 
       - name: Setup Node For Development
         uses: ./.github/actions/setup-node

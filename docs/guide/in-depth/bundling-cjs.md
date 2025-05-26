@@ -93,7 +93,7 @@ The `__toESM` helper ensures that CommonJS exports are properly converted to ES 
 
 When [`platform: 'node'`](../features.md#platform-presets) is set, Rolldown will generate a `require` function from [`module.createRequire`](https://nodejs.org/docs/latest/api/module.html#modulecreaterequirefilename).
 
-For other platforms, Rolldown will leave it as it is. You need to ensure the running environment to provide a `require` function or inject it by yourself.
+For other platforms, Rolldown will leave it as it is, so ensure that the running environment provides a `require` function or inject one manually.
 
 For example, you can inject the `require` function that returns the value obtained by `import` by using [`inject` feature](../features.md#inject).
 

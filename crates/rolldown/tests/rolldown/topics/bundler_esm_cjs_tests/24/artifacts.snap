@@ -8,13 +8,18 @@ source: crates/rolldown_testing/src/integration_test.rs
 ```js
 
 //#region bar.js
-let baz = 123;
+var baz;
+var init_bar = __esm({ "bar.js"() {
+	baz = 123;
+} });
 
 //#endregion
 //#region foo.js
 var foo_exports = {};
 __export(foo_exports, { baz: () => baz });
-var init_foo = __esm({ "foo.js"() {} });
+var init_foo = __esm({ "foo.js"() {
+	init_bar();
+} });
 
 //#endregion
 //#region entry.js
@@ -35,13 +40,18 @@ Variant: (format: Cjs)
 
 
 //#region bar.js
-let baz = 123;
+var baz;
+var init_bar = __esm({ "bar.js"() {
+	baz = 123;
+} });
 
 //#endregion
 //#region foo.js
 var foo_exports = {};
 __export(foo_exports, { baz: () => baz });
-var init_foo = __esm({ "foo.js"() {} });
+var init_foo = __esm({ "foo.js"() {
+	init_bar();
+} });
 
 //#endregion
 //#region entry.js
@@ -64,13 +74,18 @@ Variant: (format: Iife)
 
 
 //#region bar.js
-let baz = 123;
+var baz;
+var init_bar = __esm({ "bar.js"() {
+	baz = 123;
+} });
 
 //#endregion
 //#region foo.js
 var foo_exports = {};
 __export(foo_exports, { baz: () => baz });
-var init_foo = __esm({ "foo.js"() {} });
+var init_foo = __esm({ "foo.js"() {
+	init_bar();
+} });
 
 //#endregion
 //#region entry.js
@@ -97,13 +112,18 @@ Variant: (format: Umd)
 
 
 //#region bar.js
-let baz = 123;
+var baz;
+var init_bar = __esm({ "bar.js"() {
+	baz = 123;
+} });
 
 //#endregion
 //#region foo.js
 var foo_exports = {};
 __export(foo_exports, { baz: () => baz });
-var init_foo = __esm({ "foo.js"() {} });
+var init_foo = __esm({ "foo.js"() {
+	init_bar();
+} });
 
 //#endregion
 //#region entry.js

@@ -29,9 +29,14 @@ export { __esm };
 ```js
 import { __esm } from "./rolldown-runtime.js";
 
+//#region shaked.js
+var init_shaked = __esm({ "shaked.js"() {} });
+
+//#endregion
 //#region lib.js
 var lib_default;
 var init_lib = __esm({ "lib.js"() {
+	init_shaked();
 	lib_default = "hello, world";
 } });
 

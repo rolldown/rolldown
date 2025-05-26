@@ -14,6 +14,7 @@ const cmd = spawnSync(
   [
     'napi',
     'build',
+    ...(process.env.CI ? ['--no-dts-cache'] : []),
     '-o=./src',
     '--manifest-path',
     '../../crates/rolldown_binding/Cargo.toml',

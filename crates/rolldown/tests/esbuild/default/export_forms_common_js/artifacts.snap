@@ -8,13 +8,19 @@ source: crates/rolldown_testing/src/integration_test.rs
 ```js
 
 //#region a.js
-const abc = void 0;
+var abc;
+var init_a = __esm({ "a.js"() {
+	abc = void 0;
+} });
 
 //#endregion
 //#region b.js
 var b_exports = {};
 __export(b_exports, { xyz: () => xyz });
-const xyz = null;
+var xyz;
+var init_b = __esm({ "b.js"() {
+	xyz = null;
+} });
 
 //#endregion
 //#region commonjs.js
@@ -33,6 +39,8 @@ __export(commonjs_exports, {
 function Fn() {}
 var commonjs_default, v, l, c, Class;
 var init_commonjs = __esm({ "commonjs.js"() {
+	init_a();
+	init_b();
 	commonjs_default = 123;
 	v = 234;
 	l = 234;

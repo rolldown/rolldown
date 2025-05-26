@@ -1,0 +1,64 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## dynamic.js
+
+```js
+import { __esm, init_read, read } from "./read.js";
+
+//#region dynamic.js
+var init_dynamic = __esm({ "dynamic.js"() {
+	init_read();
+	read();
+} });
+
+//#endregion
+init_dynamic();
+```
+## main.js
+
+```js
+import { __esm, init_read, read } from "./read.js";
+import nodeAssert from "node:assert";
+
+//#region setup.js
+var setup;
+var init_setup = __esm({ "setup.js"() {
+	setup = () => {
+		globalThis.foo = "foo";
+	};
+	setup();
+} });
+
+//#endregion
+//#region main.js
+var init_main = __esm({ "main.js"() {
+	init_setup();
+	init_read();
+	setup();
+	read();
+	import("./dynamic.js");
+	nodeAssert.strictEqual(globalThis.foo, "foo");
+} });
+
+//#endregion
+init_main();
+```
+## read.js
+
+```js
+
+//#region read.js
+var foo, read;
+var init_read = __esm({ "read.js"() {
+	foo = globalThis.foo;
+	read = () => {
+		console.log("read", foo);
+	};
+} });
+
+//#endregion
+export { __esm, init_read, read };
+```

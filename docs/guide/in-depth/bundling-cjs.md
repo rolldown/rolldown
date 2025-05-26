@@ -100,7 +100,7 @@ For example, you can inject the `require` function that returns the value obtain
 ::: code-group
 
 ```js [rolldown.config.js]
-import path from 'node:path'
+import path from 'node:path';
 export default {
   inject: {
     require: path.resolve('./require.js'),

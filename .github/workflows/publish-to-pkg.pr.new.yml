@@ -21,6 +21,11 @@ jobs:
   debounce:
     runs-on: ubuntu-latest
     steps:
+      # Remove ❌ from main branch.
+      - uses: MercuryTechnologies/delete-cancelled-runs@1.0.0
+        with:
+          workflow-file: 'publish-to-pkg.pr.new.yml'
+
       - name: Conditionally wait for debounce (only on push to main)
         if: github.event_name == 'push' && github.ref == 'refs/heads/main'
         # The sleep time is 20 min currently. It should be 1.5 times bigger than time at https://github.com/rolldown/rolldown/queue/main.

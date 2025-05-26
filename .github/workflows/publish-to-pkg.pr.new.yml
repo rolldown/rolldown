@@ -1,20 +1,19 @@
-# https://github.com/stackblitz-labs/pkg.pr.new
 name: Publish to pkg.pr.new
+description: https://pkg.pr.new/~/rolldown/rolldown
 
 permissions: {}
 
 on:
-  workflow_call:
   workflow_dispatch:
   pull_request:
-    types: [opened, synchronize, labeled]
+    types: [labeled]
   push:
     branches:
       - main
 
-# If this is a push on main, we want to debounce the workflow
+# Cancell all previous workflows on main.
 concurrency:
-  group: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' && 'debounce-main' || github.run_id }}
+  group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }}
 
 jobs:
@@ -23,12 +22,13 @@ jobs:
     steps:
       # Remove ❌ from main branch.
       - uses: MercuryTechnologies/delete-cancelled-runs@1.0.0
+        if: github.repository == 'rolldown/rolldown' && github.event_name == 'push' && github.ref == 'refs/heads/main'
         with:
           workflow-file: 'publish-to-pkg.pr.new.yml'
 
-      - name: Conditionally wait for debounce (only on push to main)
-        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-        # The sleep time is 20 min currently. It should be 1.5 times bigger than time at https://github.com/rolldown/rolldown/queue/main.
+      - name: Debounce for 20 mins
+        if: github.repository == 'rolldown/rolldown' && github.event_name == 'push' && github.ref == 'refs/heads/main'
+        # sleep for 20mins, which should be 1.5 times larger than time for https://github.com/rolldown/rolldown/queue/main.
         run: |
           echo "Start debounce wait: $(date)"
           sleep 1200
@@ -37,7 +37,7 @@ jobs:
   build:
     if: >
       github.repository == 'rolldown/rolldown' &&
-      (github.event_name == 'workflow_call' || github.event_name == 'workflow_dispatch' ||
+      (github.event_name == 'workflow_dispatch' ||
       (github.event_name == 'push' && github.ref == 'refs/heads/main') ||
       (github.event_name == 'pull_request' && contains(github.event.pull_request.labels.*.name, 'trigger: preview')))
     name: Build bindings and node packages
@@ -50,7 +50,7 @@ jobs:
   publish:
     if: >
       github.repository == 'rolldown/rolldown' &&
-      (github.event_name == 'workflow_call' || github.event_name == 'workflow_dispatch' ||
+      (github.event_name == 'workflow_dispatch' ||
       (github.event_name == 'push' && github.ref == 'refs/heads/main') ||
       (github.event_name == 'pull_request' && contains(github.event.pull_request.labels.*.name, 'trigger: preview')))
     name: Pkg Preview

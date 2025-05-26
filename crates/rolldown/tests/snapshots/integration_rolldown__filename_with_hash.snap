@@ -4869,8 +4869,8 @@ expression: output
 
 # tests/rolldown/misc/wrapped_esm
 
-- main-!~{000}~.js => main-Qwzmvj__.js
-- main-Qwzmvj__.js.map
+- main-!~{000}~.js => main-DrOlrm86.js
+- main-DrOlrm86.js.map
 
 # tests/rolldown/resolve/hash_tag_as_dir_name
 

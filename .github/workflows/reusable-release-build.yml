@@ -84,7 +84,8 @@ jobs:
       - name: Setup Rust
         uses: oxc-project/setup-rust@cd82e1efec7fef815e2c23d296756f31c7cdc03d # v1.0.0
         with:
-          cache-key: release-build
+          cache-key: release-${{ matrix.target }}
+          save-cache: ${{ github.ref_name == 'main' }}
 
       - name: Rustup Adds Target
         run: rustup target add ${{ matrix.target }}
@@ -251,8 +252,8 @@ jobs:
       - name: Setup Rust
         uses: oxc-project/setup-rust@cd82e1efec7fef815e2c23d296756f31c7cdc03d # v1.0.0
         with:
-          tools: just
-          cache-key: release-build-wasi
+          cache-key: release-wasm32-wasip1-threads
+          save-cache: ${{ github.ref_name == 'main' }}
 
       - name: Add WASI target
         run: rustup target add wasm32-wasip1-threads
@@ -299,7 +300,6 @@ jobs:
       - name: Setup Rust
         uses: oxc-project/setup-rust@cd82e1efec7fef815e2c23d296756f31c7cdc03d # v1.0.0
         with:
-          tools: just
           # `@rolldown/debug` only rely on debug build to produce code in `src/generated`.
           cache-key: debug-build
 

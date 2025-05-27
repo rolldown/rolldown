@@ -126,6 +126,7 @@ pub use crate::{
   types::instantiated_chunk::InstantiatedChunk,
   types::interop::Interop,
   types::member_expr_ref::MemberExprRef,
+  types::member_expr_ref_resolution::MemberExprRefResolution,
   types::module_def_format::ModuleDefFormat,
   types::module_id::ModuleId,
   types::module_idx::LegacyModuleIdx,

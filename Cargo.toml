@@ -8,18 +8,6 @@ homepage = "https://rolldown.rs/"
 license = "MIT"
 repository = "https://github.com/rolldown/rolldown"
 
-[profile.release-debug]
-debug = true
-inherits = "release"
-
-[profile.release-wasi]
-inherits = "release"
-opt-level = "s"
-# napi-rs generates *-debug.*.wasm files with these information
-# it will strip these information for non-debug files
-debug = "full"
-strip = "none"
-
 [workspace.lints.clippy]
 # Guidelines
 # - We should only disable rules globally if they are either false positives, chaotic, or does not make sense.
@@ -213,6 +201,11 @@ oxc_resolver = { version = "10", features = ["package_json_raw_json_api"] } # ht
 oxc_resolver_napi = { version = "10" }
 oxc_sourcemap = { version = "3" } # https://github.com/oxc-project/oxc-sourcemap
 
+[profile.dev]
+# Disabling debug info speeds up local and CI builds,
+# and we don't rely on it for debugging that much.
+debug = false
+
 [profile.release]
 codegen-units = 1
 debug = false # Set to `true` for debug information
@@ -220,5 +213,14 @@ lto = "fat"
 opt-level = 3
 strip = "symbols" # Set to `false` for debug information
 
-[profile.dev]
-debug = "line-tables-only"
+[profile.release-debug]
+debug = true
+inherits = "release"
+
+[profile.release-wasi]
+inherits = "release"
+opt-level = "s"
+# napi-rs generates *-debug.*.wasm files with these information
+# it will strip these information for non-debug files
+debug = "full"
+strip = "none"

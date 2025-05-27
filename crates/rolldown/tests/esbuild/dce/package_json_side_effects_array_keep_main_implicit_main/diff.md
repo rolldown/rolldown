@@ -44,7 +44,6 @@ init_index_module();
 
 //#endregion
 //#region src/entry.js
-init_index_module();
 console.log("unused import");
 
 //#endregion
@@ -54,7 +53,7 @@ console.log("unused import");
 ===================================================================
 --- esbuild	/out.js
 +++ rolldown	src_entry.js
-@@ -1,14 +1,14 @@
+@@ -1,14 +1,13 @@
 -var index_main_exports = {};
 -__export(index_main_exports, {
 +var index_module_exports = {};
@@ -73,7 +72,6 @@ console.log("unused import");
  });
 -init_index_main();
 -init_index_main();
-+init_index_module();
 +init_index_module();
  console.log("unused import");
 

@@ -218,6 +218,7 @@ impl LinkStage<'_> {
     });
     self.resolve_member_expr_refs(&side_effects_modules, &normal_symbol_exports_chain_map);
     self.update_cjs_module_meta();
+    self.normal_symbol_exports_chain_map = normal_symbol_exports_chain_map;
   }
 
   /// Update the metadata of CommonJS modules.
@@ -375,6 +376,7 @@ impl LinkStage<'_> {
   /// export const c = 1;
   /// ```
   /// The final pointed `SymbolRef` of `foo_ns.bar_ns.c` is the `c` in `bar.js`.
+  #[expect(clippy::too_many_lines)]
   fn resolve_member_expr_refs(
     &mut self,
     side_effects_modules: &FxHashSet<ModuleIdx>,
@@ -391,6 +393,7 @@ impl LinkStage<'_> {
           let mut side_effects_dependency = vec![];
           module.stmt_infos.iter().for_each(|stmt_info| {
             stmt_info.referenced_symbols.iter().for_each(|symbol_ref| {
+              let mut symbols_chain: Vec<SymbolRef> = vec![];
               if let SymbolOrMemberExprRef::MemberExpr(member_expr_ref) = symbol_ref {
                 // First get the canonical ref of `foo_ns`, then we get the `NormalModule#namespace_object_ref` of `foo.js`.
                 let mut canonical_ref = self.symbols.canonical_ref_for(member_expr_ref.object_ref);
@@ -414,7 +417,7 @@ impl LinkStage<'_> {
                     if !self.metas[canonical_ref_owner.idx].has_dynamic_exports {
                       resolved_map.insert(
                         member_expr_ref.span,
-                        (None, member_expr_ref.props[cursor..].to_vec()),
+                        (None, member_expr_ref.props[cursor..].to_vec(), vec![]),
                       );
                       warnings.push(
                         BuildDiagnostic::import_is_undefined(
@@ -432,7 +435,7 @@ impl LinkStage<'_> {
                   if !meta.sorted_and_non_ambiguous_resolved_exports.contains(&name.to_rstr()) {
                     resolved_map.insert(
                       member_expr_ref.span,
-                      (None, member_expr_ref.props[cursor..].to_vec()),
+                      (None, member_expr_ref.props[cursor..].to_vec(), vec![]),
                     );
                     return;
                   }
@@ -446,9 +449,11 @@ impl LinkStage<'_> {
                   {
                     break;
                   }
+                  symbols_chain.push(export_symbol.symbol_ref);
                   if let Some(chains) =
                     normal_symbol_exports_chain_map.get(&export_symbol.symbol_ref)
                   {
+                    symbols_chain.extend(chains);
                     for item in chains {
                       if side_effects_modules.contains(&item.owner) {
                         side_effects_dependency.push(item.owner);
@@ -465,7 +470,7 @@ impl LinkStage<'_> {
                 if cursor > 0 {
                   resolved_map.insert(
                     member_expr_ref.span,
-                    (Some(canonical_ref), member_expr_ref.props[cursor..].to_vec()),
+                    (Some(canonical_ref), member_expr_ref.props[cursor..].to_vec(), symbols_chain),
                   );
                 }
               }

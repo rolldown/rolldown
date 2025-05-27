@@ -1,0 +1,8 @@
+{
+  "config": {
+    "external": ["node:assert"]
+  },
+  "configVariants": [{
+    "strictExecutionOrder": true
+  }]
+}

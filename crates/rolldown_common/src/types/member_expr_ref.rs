@@ -1,7 +1,6 @@
 use oxc::span::{CompactStr, Span};
-use rustc_hash::FxHashMap;
 
-use crate::SymbolRef;
+use crate::{SymbolRef, type_aliases::MemberExprRefResolutionMap};
 
 /// For member expression, e.g. `foo_ns.bar_ns.c`
 /// - `object_ref` is the `SymbolRef` that represents `foo_ns`
@@ -25,9 +24,9 @@ impl MemberExprRef {
   #[allow(clippy::manual_map)]
   pub fn resolved_symbol_ref(
     &self,
-    resolved_map: &FxHashMap<Span, (Option<SymbolRef>, Vec<CompactStr>)>,
+    resolved_map: &MemberExprRefResolutionMap,
   ) -> Option<SymbolRef> {
-    if let Some((resolved, _)) = resolved_map.get(&self.span) {
+    if let Some((resolved, ..)) = resolved_map.get(&self.span) {
       // This member expression resolve to a ambiguous export if `resolved` equals to `None`, which means it actually resolve to nothing.
       // It would be rewrite to `undefined` in the final code.
       resolved.map(|sym_ref| sym_ref)

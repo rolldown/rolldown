@@ -3,7 +3,7 @@
 export type ModuleImport = {
   id: string;
   /**
-   * - `import`: `import { foo } from './lib.js';`
+   * - `import-statement`: `import { foo } from './lib.js';`
    * - `dynamic-import`: `import('./lib.js')`
    * - `require-call`: `require('./lib.js')`
    * - `import-rule`: `@import 'bg-color.css'`
@@ -12,7 +12,7 @@ export type ModuleImport = {
    * - `hot-accept`: `import.meta.hot.accept('./lib.js', () => {})`
    */
   kind:
-    | 'import'
+    | 'import-statement'
     | 'dynamic-import'
     | 'require-call'
     | 'import-rule'

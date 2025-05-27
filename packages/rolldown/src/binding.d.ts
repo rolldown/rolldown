@@ -398,7 +398,16 @@ export interface BindingHookRenderChunkOutput {
 export interface BindingHookResolveIdExtraArgs {
   custom?: number
   isEntry: boolean
-  kind: 'import' | 'dynamic-import' | 'require-call'
+  /**
+   * - `import-statement`: `import { foo } from './lib.js';`
+   * - `dynamic-import`: `import('./lib.js')`
+   * - `require-call`: `require('./lib.js')`
+   * - `import-rule`: `@import 'bg-color.css'`
+   * - `url-token`: `url('./icon.png')`
+   * - `new-url`: `new URL('./worker.js', import.meta.url)`
+   * - `hot-accept`: `import.meta.hot.accept('./lib.js', () => {})`
+   */
+  kind: 'import-statement' | 'dynamic-import' | 'require-call' | 'import-rule' | 'url-token' | 'new-url' | 'hot-accept'
 }
 
 export interface BindingHookResolveIdOutput {
@@ -628,7 +637,16 @@ export interface BindingPluginContextResolvedId {
 }
 
 export interface BindingPluginContextResolveOptions {
-  importKind?: 'import' | 'dynamic-import' | 'require-call'
+  /**
+   * - `import-statement`: `import { foo } from './lib.js';`
+   * - `dynamic-import`: `import('./lib.js')`
+   * - `require-call`: `require('./lib.js')`
+   * - `import-rule`: `@import 'bg-color.css'`
+   * - `url-token`: `url('./icon.png')`
+   * - `new-url`: `new URL('./worker.js', import.meta.url)`
+   * - `hot-accept`: `import.meta.hot.accept('./lib.js', () => {})`
+   */
+  importKind?: 'import-statement' | 'dynamic-import' | 'require-call' | 'import-rule' | 'url-token' | 'new-url' | 'hot-accept'
   skipSelf?: boolean
   custom?: number
 }

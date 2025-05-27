@@ -6,6 +6,9 @@ on:
   push:
     branches:
       - main
+    paths:
+      - '**/*.rs'
+      - 'Cargo.lock'
 
 # Only do cache warmup on main branch's latest commit
 concurrency:

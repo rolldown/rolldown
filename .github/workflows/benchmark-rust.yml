@@ -95,10 +95,15 @@ jobs:
       - name: Compare Bench Results
         id: bench_comparison
         shell: bash
+        env:
+          BASE_REF: ${{ github.event.pull_request.base.ref }}
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          HEAD_REF: ${{ github.event.pull_request.head.ref }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha  }}
         run: |
           echo "### Benchmarks Rust" > output
-          echo "- target: \`${{ github.event.pull_request.base.ref }}\`(${{ github.event.pull_request.base.sha }})" >> output
-          echo "- pr: \`${{ github.event.pull_request.head.ref }}\`(${{ github.event.pull_request.head.sha }})" >> output
+          echo "- target: \`${BASE_REF}\`(${BASE_SHA})" >> output
+          echo "- pr: \`${HEAD_REF}\`(${HEAD_SHA})" >> output
           echo "\`\`\`"  >> output
           critcmp target pr >> output
           echo "\`\`\`" >> output

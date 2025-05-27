@@ -1,11 +1,10 @@
-name: 'Mergeability check'
+name: Mergeability check
 
 permissions: {}
 
 on:
-  # https://github.com/actions/labeler?tab=readme-ov-file#permissions
   pull_request:
-    types: [opened, synchronize, assigned, unassigned]
+    types: [opened, assigned, unassigned]
   merge_group:
 
 jobs:

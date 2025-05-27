@@ -1,8 +1,7 @@
-use oxc::span::{CompactStr, Span};
 use oxc_index::IndexVec;
 use rolldown_common::{
-  EntryPointKind, ImportRecordIdx, ModuleIdx, ResolvedExport, StmtInfoIdx, SymbolRef, WrapKind,
-  dynamic_import_usage::DynamicImportExportsUsage,
+  EntryPointKind, ImportRecordIdx, MemberExprRefResolutionMap, ModuleIdx, ResolvedExport,
+  StmtInfoIdx, SymbolRef, WrapKind, dynamic_import_usage::DynamicImportExportsUsage,
 };
 use rolldown_rstr::Rstr;
 use rolldown_utils::indexmap::FxIndexSet;
@@ -56,7 +55,7 @@ pub struct LinkingMetadata {
   /// The dependencies of the module. It means if you want include this module, you need to include these dependencies too.
   pub dependencies: FxIndexSet<ModuleIdx>,
   // `None` the member expression resolve to a ambiguous export.
-  pub resolved_member_expr_refs: FxHashMap<Span, (Option<SymbolRef>, Vec<CompactStr>)>,
+  pub resolved_member_expr_refs: MemberExprRefResolutionMap,
   pub star_exports_from_external_modules: Vec<ImportRecordIdx>,
   pub safe_cjs_to_eliminate_interop_default: bool,
   pub is_tla_or_contains_tla_dependency: bool,

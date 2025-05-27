@@ -70,6 +70,9 @@ redundant_pub_crate = "warn"
 significant_drop_in_scrutinee = "warn"
 unused_peekable = "warn"
 
+# Rewriting `unwrap_or` to `map_or` requires to annotate type explicitly which is cumbersome
+map_unwrap_or = "allow"
+
 [workspace.dependencies]
 criterion2 = { version = "3.0.0", default-features = false }
 css-module-lexer = "0.0.15"

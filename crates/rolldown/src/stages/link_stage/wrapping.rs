@@ -196,7 +196,7 @@ pub fn create_wrapper(
         } else {
           runtime.resolve_symbol("__esmMin").into()
         }],
-        side_effect: false,
+        side_effect: true,
         is_included: false,
         import_records: Vec::new(),
         #[cfg(debug_assertions)]

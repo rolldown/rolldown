@@ -107,6 +107,7 @@ impl LinkStage<'_> {
               }
               Module::Normal(importee) => {
                 let importee_linking_info = &self.metas[importee.idx];
+
                 match rec.kind {
                   ImportKind::Import => {
                     let is_reexport_all = rec.meta.contains(ImportRecordMeta::IS_EXPORT_STAR);
@@ -174,12 +175,8 @@ impl LinkStage<'_> {
                       }
                       WrapKind::Esm => {
                         // Turn `import ... from 'bar_esm'` into `init_bar_esm()`
-                        // `init_bar_esm()` will be considered as having side effect even when itself doesn't have side effect.
-                        // `init_bar_esm()` is responsible to ensure correct initialization order. It must be included in treeshaking
-                        // even no statements reference it.
-                        stmt_info.side_effect = true;
-                        *importer_side_effect = DeterminedSideEffects::Analyzed(true);
-
+                        stmt_info.side_effect =
+                          is_reexport_all || importee.side_effects.has_side_effects();
                         // Reference to `init_foo`
                         stmt_info
                           .referenced_symbols

@@ -22,7 +22,6 @@ init_index_module();
 
 //#endregion
 //#region src/entry.js
-init_index_module();
 console.log("unused import");
 
 //#endregion

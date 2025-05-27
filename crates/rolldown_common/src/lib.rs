@@ -101,6 +101,7 @@ pub use crate::{
     runtime_task_result::RuntimeModuleTaskResult,
     task_result::{EcmaRelated, ExternalModuleTaskResult, NormalModuleTaskResult},
   },
+  type_aliases::MemberExprRefResolutionMap,
   types::asset::Asset,
   types::asset_idx::AssetIdx,
   types::asset_meta::InstantiationKind,

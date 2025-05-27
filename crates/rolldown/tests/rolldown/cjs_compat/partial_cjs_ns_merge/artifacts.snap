@@ -15,7 +15,7 @@ var require_cjs = __commonJS({ "cjs.js"(exports, module) {
 //#endregion
 //#region a.js
 var import_cjs$2 = __toESM(require_cjs());
-function test$1() {
+function test() {
 	return import_cjs$2.default;
 }
 
@@ -23,15 +23,15 @@ function test$1() {
 //#region b.js
 var import_cjs = __toESM(require_cjs());
 var import_cjs$1 = __toESM(require_cjs());
-function test() {
+function test$1() {
 	console.log(import_cjs$1.default);
 	return import_cjs.default;
 }
 
 //#endregion
 //#region main.js
-const aa = test$1();
-const bb = test();
+const aa = test();
+const bb = test$1();
 
 //#endregion
 export { aa, bb };

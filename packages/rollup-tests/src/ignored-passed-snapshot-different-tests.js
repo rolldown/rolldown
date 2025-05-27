@@ -130,5 +130,7 @@ module.exports = [
     "rollup@function@preload-loading-module: waits for pre-loaded modules that are currently loading",
     // passed, the rolldown using `__name` to keep the original name
     "rollup@form@assignment-to-exports-class-declaration: does not rewrite class expression IDs@generates es",
-    "rollup@form@simplify-expression-annotations: keeps correct annotations when simplifying expressinos"
+    "rollup@form@simplify-expression-annotations: keeps correct annotations when simplifying expressinos",
+    // hyf0: We can align the deconflict logic with rollup, but it requires unnecessary logic and doesn't have payoff.
+  "rollup@form@deconflict-module-priority: prioritizes entry modules over dependencies when deconflicting",
 ]

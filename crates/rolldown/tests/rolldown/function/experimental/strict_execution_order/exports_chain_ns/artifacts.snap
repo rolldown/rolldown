@@ -1,0 +1,71 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## main.js
+
+```js
+import nodeAssert from "node:assert";
+
+//#region dep.js
+const value = "";
+
+//#endregion
+//#region lib-foo.js
+const value$1 = "foo" + value;
+
+//#endregion
+//#region main.js
+nodeAssert.equal(value$1, "foo");
+
+//#endregion
+```
+---
+
+Variant: (strict_execution_order: true)
+
+# Assets
+
+## main.js
+
+```js
+import nodeAssert from "node:assert";
+
+
+//#region dep.js
+var value$1;
+var init_dep = __esm({ "dep.js"() {
+	value$1 = "";
+} });
+
+//#endregion
+//#region lib-foo.js
+var value;
+var init_lib_foo = __esm({ "lib-foo.js"() {
+	init_dep();
+	value = "foo" + value$1;
+} });
+
+//#endregion
+//#region proxy-foo.js
+var init_proxy_foo = __esm({ "proxy-foo.js"() {
+	init_lib_foo();
+} });
+
+//#endregion
+//#region proxy.js
+var init_proxy = __esm({ "proxy.js"() {
+	init_proxy_foo();
+} });
+
+//#endregion
+//#region main.js
+var init_main = __esm({ "main.js"() {
+	init_proxy();
+	nodeAssert.equal(value, "foo");
+} });
+
+//#endregion
+init_main();
+```

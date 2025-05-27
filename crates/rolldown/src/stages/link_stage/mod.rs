@@ -58,6 +58,7 @@ pub struct LinkStage<'a> {
   pub used_symbol_refs: FxHashSet<SymbolRef>,
   pub safely_merge_cjs_ns_map: FxHashMap<ModuleIdx, Vec<SymbolRef>>,
   pub dynamic_import_exports_usage_map: FxHashMap<ModuleIdx, DynamicImportExportsUsage>,
+  pub normal_symbol_exports_chain_map: FxHashMap<SymbolRef, Vec<SymbolRef>>,
 }
 
 impl<'a> LinkStage<'a> {
@@ -99,6 +100,7 @@ impl<'a> LinkStage<'a> {
       options,
       used_symbol_refs: FxHashSet::default(),
       safely_merge_cjs_ns_map: scan_stage_output.safely_merge_cjs_ns_map,
+      normal_symbol_exports_chain_map: FxHashMap::default(),
     }
   }
 

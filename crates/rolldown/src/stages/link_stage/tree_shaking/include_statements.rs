@@ -8,7 +8,7 @@ use rolldown_common::{
   side_effects::DeterminedSideEffects,
 };
 use rolldown_utils::rayon::{IntoParallelRefMutIterator, ParallelIterator};
-use rustc_hash::FxHashSet;
+use rustc_hash::{FxHashMap, FxHashSet};
 
 use crate::{stages::link_stage::LinkStage, types::linking_metadata::LinkingMetadataVec};
 
@@ -22,6 +22,7 @@ struct Context<'a> {
   metas: &'a LinkingMetadataVec,
   used_symbol_refs: &'a mut FxHashSet<SymbolRef>,
   options: &'a NormalizedBundlerOptions,
+  normal_symbol_exports_chain_map: &'a FxHashMap<SymbolRef, Vec<SymbolRef>>,
 }
 
 impl LinkStage<'_> {
@@ -52,6 +53,7 @@ impl LinkStage<'_> {
       metas: &self.metas,
       used_symbol_refs: &mut used_symbol_refs,
       options: self.options,
+      normal_symbol_exports_chain_map: &self.normal_symbol_exports_chain_map,
     };
 
     let (user_defined_entries, mut dynamic_entries): (Vec<_>, Vec<_>) =
@@ -305,15 +307,45 @@ fn include_statement(ctx: &mut Context, module: &NormalModule, stmt_info_id: Stm
   // include the statement itself
   *is_included = true;
 
-  stmt_info.referenced_symbols.iter().for_each(|reference_ref| match reference_ref {
-    SymbolOrMemberExprRef::Symbol(symbol_ref) => {
-      include_symbol(ctx, *symbol_ref);
-    }
-    SymbolOrMemberExprRef::MemberExpr(member_expr) => {
-      if let Some(symbol) =
-        member_expr.resolved_symbol_ref(&ctx.metas[module.idx].resolved_member_expr_refs)
-      {
-        include_symbol(ctx, symbol);
+  stmt_info.referenced_symbols.iter().for_each(|reference_ref| {
+    let original_ref = reference_ref.symbol_ref();
+    std::iter::once(original_ref)
+      .chain(
+        ctx.normal_symbol_exports_chain_map.get(original_ref).map(Vec::as_slice).unwrap_or(&[]),
+      )
+      .for_each(|sym_ref| {
+        if let Module::Normal(module) = &ctx.modules[sym_ref.owner] {
+          module.stmt_infos.declared_stmts_by_symbol(sym_ref).iter().copied().for_each(
+            |stmt_info_id| {
+              include_statement(ctx, module, stmt_info_id);
+            },
+          );
+        }
+      });
+
+    match reference_ref {
+      SymbolOrMemberExprRef::Symbol(symbol_ref) => {
+        include_symbol(ctx, *symbol_ref);
+      }
+      SymbolOrMemberExprRef::MemberExpr(member_expr) => {
+        if let Some(symbol) =
+          member_expr.resolved_symbol_ref(&ctx.metas[module.idx].resolved_member_expr_refs)
+        {
+          if let Some((.., deps)) =
+            ctx.metas[module.idx].resolved_member_expr_refs.get(&member_expr.span)
+          {
+            deps.iter().for_each(|sym_ref| {
+              if let Module::Normal(module) = &ctx.modules[sym_ref.owner] {
+                module.stmt_infos.declared_stmts_by_symbol(sym_ref).iter().copied().for_each(
+                  |stmt_info_id| {
+                    include_statement(ctx, module, stmt_info_id);
+                  },
+                );
+              }
+            });
+          }
+          include_symbol(ctx, symbol);
+        }
       }
     }
   });

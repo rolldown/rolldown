@@ -27,19 +27,19 @@ console.log(exports, module.exports, o, r);
 
 
 //#region foo/test.js
-var test_exports$1 = {};
-__export(test_exports$1, { foo: () => foo });
+var test_exports = {};
+__export(test_exports, { foo: () => foo });
 let foo = 123;
 
 //#endregion
 //#region bar/test.js
-var test_exports = {};
-__export(test_exports, { bar: () => bar });
+var test_exports$1 = {};
+__export(test_exports$1, { bar: () => bar });
 let bar = 123;
 
 //#endregion
 //#region entry.js
-console.log(exports, module.exports, test_exports$1, test_exports);
+console.log(exports, module.exports, test_exports, test_exports$1);
 
 //#endregion
 ```
@@ -52,8 +52,8 @@ console.log(exports, module.exports, test_exports$1, test_exports);
 -var o = {};
 -p(o, {
 -    foo: () => l
-+var test_exports$1 = {};
-+__export(test_exports$1, {
++var test_exports = {};
++__export(test_exports, {
 +    foo: () => foo
  });
 -var l = 123;
@@ -61,13 +61,13 @@ console.log(exports, module.exports, test_exports$1, test_exports);
 -p(r, {
 -    bar: () => m
 +var foo = 123;
-+var test_exports = {};
-+__export(test_exports, {
++var test_exports$1 = {};
++__export(test_exports$1, {
 +    bar: () => bar
  });
 -var m = 123;
 -console.log(exports, module.exports, o, r);
 +var bar = 123;
-+console.log(exports, module.exports, test_exports$1, test_exports);
++console.log(exports, module.exports, test_exports, test_exports$1);
 
 ```

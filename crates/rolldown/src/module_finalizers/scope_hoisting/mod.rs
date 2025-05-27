@@ -620,7 +620,7 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
   ) -> Option<Expression<'ast>> {
     match member_expr {
       MemberExpression::ComputedMemberExpression(inner_expr) => {
-        if let Some((object_ref, props)) =
+        if let Some((object_ref, props, ..)) =
           self.ctx.linking_info.resolved_member_expr_refs.get(&inner_expr.span)
         {
           match object_ref {
@@ -640,7 +640,7 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
       }
       MemberExpression::StaticMemberExpression(inner_expr) => {
         match self.ctx.linking_info.resolved_member_expr_refs.get(&inner_expr.span) {
-          Some((object_ref, props)) => {
+          Some((object_ref, props, ..)) => {
             match object_ref {
               Some(object_ref) => {
                 let object_ref_expr = self.finalized_expr_for_symbol_ref(*object_ref, false, None);

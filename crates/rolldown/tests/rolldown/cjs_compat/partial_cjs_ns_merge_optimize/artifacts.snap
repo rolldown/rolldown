@@ -24,21 +24,21 @@ var require_util = __commonJS({ "util.js"(exports, module) {
 //#region a.js
 var import_cjs = __toESM(require_cjs());
 var import_util = __toESM(require_util());
-function test$1() {
+function test() {
 	(0, import_util.default)();
 	return import_cjs.default;
 }
 
 //#endregion
 //#region b.js
-function test() {
+function test$1() {
 	return import_cjs.default;
 }
-var b_default = test;
+var b_default = test$1;
 
 //#endregion
 //#region main.js
-const aa = test$1();
+const aa = test();
 const bb = b_default();
 
 //#endregion

@@ -117,45 +117,43 @@ fn normalize_globals_option(
 }
 
 fn normalize_es_target(target: Option<&Either<String, Vec<String>>>) -> ESTarget {
-  target
-    .map(|target| {
-      let targets = match target {
-        Either::A(target) => {
-          if target.contains(',') {
-            target.split(',').collect::<Vec<&str>>()
-          } else {
-            vec![target.as_str()]
-          }
-        }
-        Either::B(target) => target.iter().map(std::string::String::as_str).collect::<Vec<&str>>(),
-      };
-      for target in targets {
-        if target.len() <= 2 || !target[..2].eq_ignore_ascii_case("es") {
-          continue;
-        }
-        if target[2..].eq_ignore_ascii_case("next") {
-          return ESTarget::default();
-        }
-        if let Ok(n) = target[2..].parse::<usize>() {
-          return match n {
-            5 => ESTarget::ES5,
-            6 | 2015 => ESTarget::ES2015,
-            2016 => ESTarget::ES2016,
-            2017 => ESTarget::ES2017,
-            2018 => ESTarget::ES2018,
-            2019 => ESTarget::ES2019,
-            2020 => ESTarget::ES2020,
-            2021 => ESTarget::ES2021,
-            2022 => ESTarget::ES2022,
-            2023 => ESTarget::ES2023,
-            2024 => ESTarget::ES2024,
-            _ => continue,
-          };
+  target.map_or(ESTarget::ESNext, |target| {
+    let targets = match target {
+      Either::A(target) => {
+        if target.contains(',') {
+          target.split(',').collect::<Vec<&str>>()
+        } else {
+          vec![target.as_str()]
         }
       }
-      ESTarget::default()
-    })
-    .unwrap_or_default()
+      Either::B(target) => target.iter().map(std::string::String::as_str).collect::<Vec<&str>>(),
+    };
+    for target in targets {
+      if target.len() <= 2 || !target[..2].eq_ignore_ascii_case("es") {
+        continue;
+      }
+      if target[2..].eq_ignore_ascii_case("next") {
+        return ESTarget::ESNext;
+      }
+      if let Ok(n) = target[2..].parse::<usize>() {
+        return match n {
+          5 => ESTarget::ES5,
+          6 | 2015 => ESTarget::ES2015,
+          2016 => ESTarget::ES2016,
+          2017 => ESTarget::ES2017,
+          2018 => ESTarget::ES2018,
+          2019 => ESTarget::ES2019,
+          2020 => ESTarget::ES2020,
+          2021 => ESTarget::ES2021,
+          2022 => ESTarget::ES2022,
+          2023 => ESTarget::ES2023,
+          2024 => ESTarget::ES2024,
+          _ => continue,
+        };
+      }
+    }
+    ESTarget::ES2015
+  })
 }
 
 #[allow(clippy::too_many_lines)]
@@ -296,7 +294,7 @@ pub fn normalize_binding_options(
         }
         BindingJsx::ReactJsx => {}
       }
-      TransformOptions::new(transform_options, ESTarget::default(), jsx_preset)
+      TransformOptions::new(transform_options, ESTarget::ESNext, jsx_preset)
     }),
   };
 

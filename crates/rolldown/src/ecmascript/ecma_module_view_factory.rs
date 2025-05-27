@@ -34,7 +34,7 @@ pub async fn create_ecma_view(
 
   let module_id = ModuleId::new(&ctx.resolved_id.id);
 
-  let repr_name = module_id.as_path().representative_file_name(false);
+  let repr_name = module_id.as_path().representative_file_name();
   let repr_name = legitimize_identifier_name(&repr_name);
 
   let scanner = AstScanner::new(

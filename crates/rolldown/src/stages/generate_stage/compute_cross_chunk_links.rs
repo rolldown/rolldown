@@ -218,7 +218,7 @@ impl GenerateStage<'_> {
                   depended_symbols.insert(canonical_ref);
                 }
                 rolldown_common::SymbolOrMemberExprRef::MemberExpr(member_expr) => {
-                  match member_expr.resolved_symbol_ref(
+                  match member_expr.represent_symbol_ref(
                     &self.link_output.metas[module.idx].resolved_member_expr_refs,
                   ) {
                     Some(sym_ref) => {

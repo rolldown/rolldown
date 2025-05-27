@@ -30,7 +30,7 @@ impl LinkStage<'_> {
               }
             }
             rolldown_common::SymbolOrMemberExprRef::MemberExpr(member_expr) => {
-              match member_expr.resolved_symbol_ref(&meta.resolved_member_expr_refs) {
+              match member_expr.represent_symbol_ref(&meta.resolved_member_expr_refs) {
                 Some(sym_ref) => {
                   let canonical_ref = self.symbols.canonical_ref_for(sym_ref);
                   meta.dependencies.insert(canonical_ref.owner);

@@ -412,45 +412,44 @@ fn include_statement(ctx: &mut Context, module: &NormalModule, stmt_info_id: Stm
   *is_included = true;
 
   stmt_info.referenced_symbols.iter().for_each(|reference_ref| {
-    let original_ref = reference_ref.symbol_ref();
-    std::iter::once(original_ref)
-      .chain(
-        ctx.normal_symbol_exports_chain_map.get(original_ref).map(Vec::as_slice).unwrap_or(&[]),
-      )
-      .for_each(|sym_ref| {
-        if let Module::Normal(module) = &ctx.modules[sym_ref.owner] {
-          module.stmt_infos.declared_stmts_by_symbol(sym_ref).iter().copied().for_each(
-            |stmt_info_id| {
-              include_statement(ctx, module, stmt_info_id);
-            },
-          );
-        }
-      });
-
-    match reference_ref {
-      SymbolOrMemberExprRef::Symbol(symbol_ref) => {
-        include_symbol(ctx, *symbol_ref);
+    if let Some(member_expr_resolution) = match reference_ref {
+      SymbolOrMemberExprRef::Symbol(_) => None,
+      SymbolOrMemberExprRef::MemberExpr(member_expr_ref) => {
+        member_expr_ref.resolution(&ctx.metas[module.idx].resolved_member_expr_refs)
       }
-      SymbolOrMemberExprRef::MemberExpr(member_expr) => {
-        if let Some(symbol) =
-          member_expr.resolved_symbol_ref(&ctx.metas[module.idx].resolved_member_expr_refs)
-        {
-          if let Some(resolution) =
-            ctx.metas[module.idx].resolved_member_expr_refs.get(&member_expr.span)
-          {
-            resolution.depended_refs.iter().for_each(|sym_ref| {
-              if let Module::Normal(module) = &ctx.modules[sym_ref.owner] {
-                module.stmt_infos.declared_stmts_by_symbol(sym_ref).iter().copied().for_each(
-                  |stmt_info_id| {
-                    include_statement(ctx, module, stmt_info_id);
-                  },
-                );
-              }
-            });
+    } {
+      // Caveat: If we can get the `MemberExprRefResolution` from the `resolved_member_expr_refs`,
+      // it means this member expr definitely contains module namespace ref.
+      if let Some(resolved_ref) = member_expr_resolution.resolved {
+        member_expr_resolution.depended_refs.iter().for_each(|sym_ref| {
+          if let Module::Normal(module) = &ctx.modules[sym_ref.owner] {
+            module.stmt_infos.declared_stmts_by_symbol(sym_ref).iter().copied().for_each(
+              |stmt_info_id| {
+                include_statement(ctx, module, stmt_info_id);
+              },
+            );
           }
-          include_symbol(ctx, symbol);
-        }
+        });
+        include_symbol(ctx, resolved_ref);
+      } else {
+        // If it points to nothing, the expression will be rewritten as `void 0` and there's nothing we need to include
       }
+    } else {
+      let original_ref = reference_ref.symbol_ref();
+      std::iter::once(original_ref)
+        .chain(
+          ctx.normal_symbol_exports_chain_map.get(original_ref).map(Vec::as_slice).unwrap_or(&[]),
+        )
+        .for_each(|sym_ref| {
+          if let Module::Normal(module) = &ctx.modules[sym_ref.owner] {
+            module.stmt_infos.declared_stmts_by_symbol(sym_ref).iter().copied().for_each(
+              |stmt_info_id| {
+                include_statement(ctx, module, stmt_info_id);
+              },
+            );
+          }
+        });
+      include_symbol(ctx, *original_ref);
     }
   });
 }

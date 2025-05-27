@@ -4035,6 +4035,10 @@ expression: output
 
 - main-!~{000}~.js => main-DLGWTVDF.js
 
+# tests/rolldown/function/experimental/strict_execution_order/exports_chain_indirect_ns
+
+- main-!~{000}~.js => main-CuDlvFzB.js
+
 # tests/rolldown/function/experimental/strict_execution_order/exports_chain_ns
 
 - main-!~{000}~.js => main-CuDlvFzB.js

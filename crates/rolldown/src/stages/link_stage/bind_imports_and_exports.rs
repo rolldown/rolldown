@@ -478,6 +478,14 @@ impl LinkStage<'_> {
                   is_namespace_ref = canonical_ref_owner.namespace_object_ref == canonical_ref;
                 }
                 if cursor > 0 {
+                  // The module namespace might be created in the other module get imported via named import instead of `import * as`.
+                  // We need to include the possible export chain.
+                  depended_refs.push(member_expr_ref.object_ref);
+                  normal_symbol_exports_chain_map.get(&member_expr_ref.object_ref).inspect(
+                    |refs| {
+                      depended_refs.extend(*refs);
+                    },
+                  );
                   resolved_map.insert(
                     member_expr_ref.span,
                     MemberExprRefResolution {

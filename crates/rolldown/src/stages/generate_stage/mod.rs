@@ -18,7 +18,7 @@ use rolldown_common::{
   PreliminaryFilename, RollupPreRenderedAsset,
 };
 use rolldown_plugin::SharedPluginDriver;
-use rolldown_std_utils::{PathBufExt, PathExt};
+use rolldown_std_utils::{PathBufExt, PathExt, representative_file_name_for_preserve_modules};
 use rolldown_utils::{
   dashmap::FxDashMap,
   hash_placeholder::HashPlaceholderGenerator,
@@ -193,22 +193,33 @@ impl<'a> GenerateStage<'a> {
       let sanitize_filename = self.options.sanitize_filename.clone();
       async move {
         if let Some(name) = &chunk.name {
-          return anyhow::Ok(name.clone());
+          return anyhow::Ok((name.clone(), name.clone()));
         }
         match chunk.kind {
           ChunkKind::EntryPoint { module: entry_module_id, is_user_defined, .. } => {
             let module = &modules[entry_module_id];
             let generated = if self.options.preserve_modules {
-              sanitize_filename.call(&module.id().as_path().representative_file_name(true)).await?
+              let module_id = module.id();
+              let (chunk_name, absolute_chunk_file_name) =
+                representative_file_name_for_preserve_modules(module_id.as_path());
+
+              let sanitized_filename =
+                sanitize_filename.call(absolute_chunk_file_name.as_ref()).await?;
+              (ArcStr::from(chunk_name), sanitized_filename)
             } else if is_user_defined {
               // try extract meaningful input name from path
               if let Some(file_stem) = module.id().as_path().file_stem().and_then(|f| f.to_str()) {
-                sanitize_filename.call(file_stem).await?
+                let name = sanitize_filename.call(file_stem).await?;
+                (name.clone(), name)
               } else {
-                arcstr::literal!("input")
+                let name = arcstr::literal!("input");
+                (name.clone(), name)
               }
             } else {
-              sanitize_filename.call(&module.id().as_path().representative_file_name(false)).await?
+              let chunk_name =
+                sanitize_filename.call(&module.id().as_path().representative_file_name()).await?;
+
+              (chunk_name.clone(), chunk_name)
             };
             Ok(generated)
           }
@@ -219,20 +230,21 @@ impl<'a> GenerateStage<'a> {
               chunk.modules.iter().rev().find(|each| **each != self.link_output.runtime.id())
             {
               let module = &modules[*module_id];
-              Ok(
-                sanitize_filename
-                  .call(&module.id().as_path().representative_file_name(false))
-                  .await?,
-              )
+              let module_id = module.id();
+              let name = module_id.as_path().representative_file_name();
+              let sanitized_filename = sanitize_filename.call(&name).await?;
+              Ok((ArcStr::from(name), sanitized_filename))
             } else {
-              Ok(arcstr::literal!("chunk"))
+              let name = arcstr::literal!("chunk");
+              Ok((name.clone(), name))
             }
           }
         }
       }
     });
 
-    let mut index_pre_generated_names: IndexVec<ChunkIdx, ArcStr> =
+    // First one is chunk_name, the second one is chunk filename
+    let mut index_pre_generated_names: IndexVec<ChunkIdx, (ArcStr, ArcStr)> =
       try_join_all(index_pre_generated_names_futures).await?.into();
 
     let mut hash_placeholder_generator = HashPlaceholderGenerator::default();
@@ -248,15 +260,15 @@ impl<'a> GenerateStage<'a> {
 
       let pre_generated_chunk_name = &mut index_pre_generated_names[*chunk_id];
       // Notice we didn't used deconflict name here, chunk names are allowed to be duplicated.
-      chunk.name = Some(pre_generated_chunk_name.clone());
-      index_chunk_id_to_name.insert(*chunk_id, pre_generated_chunk_name.clone());
+      chunk.name = Some(pre_generated_chunk_name.0.clone());
+      index_chunk_id_to_name.insert(*chunk_id, pre_generated_chunk_name.0.clone());
       let pre_rendered_chunk = generate_pre_rendered_chunk(chunk, self.link_output, self.options);
 
       let preliminary_filename = chunk
         .generate_preliminary_filename(
           self.options,
           &pre_rendered_chunk,
-          pre_generated_chunk_name,
+          &pre_generated_chunk_name.1,
           &mut hash_placeholder_generator,
           &used_name_counts,
         )
@@ -266,7 +278,7 @@ impl<'a> GenerateStage<'a> {
         .generate_css_preliminary_filename(
           self.options,
           &pre_rendered_chunk,
-          pre_generated_chunk_name,
+          &pre_generated_chunk_name.1,
           &mut hash_placeholder_generator,
           &used_name_counts,
         )

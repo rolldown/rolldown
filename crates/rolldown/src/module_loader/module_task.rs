@@ -202,7 +202,7 @@ impl ModuleTask {
       }
     }
 
-    let repr_name = self.resolved_id.id.as_path().representative_file_name(false);
+    let repr_name = self.resolved_id.id.as_path().representative_file_name();
     let repr_name = legitimize_identifier_name(&repr_name).into_owned();
 
     let module = NormalModule {

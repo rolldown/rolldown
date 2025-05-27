@@ -1,0 +1,27 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## child.js
+
+```js
+
+//#region child.js
+const childFn = () => {
+	console.log("child");
+};
+
+//#endregion
+exports.childFn = childFn;
+```
+## main.js
+
+```js
+const require_child = require('./child.js');
+
+//#region main.js
+require_child.childFn();
+
+//#endregion
+```

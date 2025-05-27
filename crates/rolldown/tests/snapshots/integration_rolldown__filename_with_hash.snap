@@ -4039,6 +4039,10 @@ expression: output
 
 - main-!~{000}~.js => main-CuDlvFzB.js
 
+# tests/rolldown/function/experimental/strict_execution_order/issue_4636
+
+- main-!~{000}~.js => main-Ccx_HyOp.js
+
 # tests/rolldown/function/experimental/strict_execution_order/issue_4684
 
 - main-!~{000}~.js => main-BB2kLC1L.js

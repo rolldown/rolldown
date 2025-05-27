@@ -1,0 +1,4 @@
+{
+  // FIXME: Relies on https://github.com/oxc-project/oxc-resolver/issues/527
+  "expectExecuted": false
+}

@@ -4892,6 +4892,10 @@ expression: output
 
 - main-!~{000}~.js => main-PHNGJQWh.js
 
+# tests/rolldown/resolve/attach_correct_package_json
+
+- main-!~{000}~.js => main-K-HhwO4S.js
+
 # tests/rolldown/resolve/hash_tag_as_dir_name
 
 - main-!~{000}~.js => main-tpAxLMZ5.js

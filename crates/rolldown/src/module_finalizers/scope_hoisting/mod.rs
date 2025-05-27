@@ -12,7 +12,7 @@ use oxc::{
 };
 use rolldown_common::{
   AstScopes, EcmaModuleAstUsage, ExportsKind, ImportRecordIdx, ImportRecordMeta, Module, ModuleIdx,
-  ModuleType, OutputFormat, Platform, SymbolRef, WrapKind,
+  ModuleType, OutputFormat, SymbolRef, WrapKind,
 };
 use rolldown_ecmascript_utils::{
   AstSnippet, BindingPatternExt, CallExpressionExt, ExpressionExt, StatementExt,
@@ -454,16 +454,13 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
   ) -> Option<Expression<'ast>> {
     if member_expr.object.is_import_meta() {
       let original_expr_span = member_expr.span;
-      let is_node_cjs = matches!(
-        (self.ctx.options.platform, &self.ctx.options.format),
-        (Platform::Node, OutputFormat::Cjs)
-      );
+      let is_cjs = matches!(self.ctx.options.format, OutputFormat::Cjs);
 
       let property_name = member_expr.property.name.as_str();
       match property_name {
         // Try to polyfill `import.meta.url`
         "url" => {
-          let new_expr = if is_node_cjs {
+          let new_expr = if is_cjs {
             // Replace it with `require('url').pathToFileURL(__filename).href`
 
             // require('url')
@@ -514,7 +511,7 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
         }
         "dirname" | "filename" => {
           let name = self.snippet.atom(&format!("__{property_name}"));
-          return is_node_cjs.then_some(ast::Expression::Identifier(
+          return is_cjs.then_some(ast::Expression::Identifier(
             self.snippet.builder.alloc_identifier_reference(SPAN, name),
           ));
         }

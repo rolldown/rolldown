@@ -22,7 +22,6 @@ jobs:
           - os: macos-latest
             target: aarch64-apple-darwin
             build: |
-              export CARGO_BUILD_TARGET=aarch64-apple-darwin;
               pnpm ci:build-release-binding --target aarch64-apple-darwin
 
           - os: windows-latest
@@ -32,20 +31,16 @@ jobs:
           - os: windows-latest
             target: i686-pc-windows-msvc
             build: |
-              export CARGO_BUILD_TARGET=i686-pc-windows-msvc;
               pnpm ci:build-release-binding --target i686-pc-windows-msvc
 
           - os: windows-latest
             target: aarch64-pc-windows-msvc
             build: |
-              export CARGO_BUILD_TARGET=aarch64-pc-windows-msvc;
               pnpm ci:build-release-binding --target aarch64-pc-windows-msvc
 
           - os: ubuntu-latest
             target: x86_64-unknown-linux-gnu
             build: |
-              export CARGO_BUILD_TARGET=x86_64-unknown-linux-gnu;
-              export CC=clang;
               pnpm ci:build-release-binding --target x86_64-unknown-linux-gnu --use-napi-cross
 
           - os: ubuntu-latest
@@ -55,26 +50,20 @@ jobs:
           - os: ubuntu-latest
             target: aarch64-unknown-linux-gnu
             build: |
-              export CARGO_BUILD_TARGET=aarch64-unknown-linux-gnu;
-              export CC=clang;
               pnpm ci:build-release-binding --use-napi-cross --target aarch64-unknown-linux-gnu
 
           - os: ubuntu-latest
             target: armv7-unknown-linux-gnueabihf
             build: |
-              export CARGO_BUILD_TARGET=armv7-unknown-linux-gnueabihf;
-              export CC=clang;
               pnpm ci:build-release-binding --target armv7-unknown-linux-gnueabihf --use-napi-cross
 
           - os: ubuntu-latest
             target: aarch64-unknown-linux-musl
             build: |
-              export CARGO_BUILD_TARGET=aarch64-unknown-linux-musl;
               pnpm ci:build-release-binding -x --target aarch64-unknown-linux-musl
           - os: ubuntu-latest
             target: wasm32-wasip1-threads
             build: |
-              export CARGO_BUILD_TARGET=wasm32-wasip1-threads;
               pnpm --filter rolldown build-binding:wasi:release
     name: Build ${{ matrix.target }}
     runs-on: ${{ matrix.os }}
@@ -113,6 +102,8 @@ jobs:
       - name: Build Binding
         run: ${{ matrix.build }}
         shell: bash
+        env:
+          CC: clang # for mimalloc
 
       - name: Upload Binding Artifact
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2

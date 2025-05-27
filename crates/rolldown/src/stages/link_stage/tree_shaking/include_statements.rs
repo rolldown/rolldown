@@ -1,11 +1,14 @@
+use std::cmp::Reverse;
+
 // cSpell:ignore idxs
 use itertools::Itertools;
 use oxc_index::IndexVec;
+use petgraph::prelude::DiGraphMap;
 use rolldown_common::{
-  EcmaViewMeta, EntryPoint, EntryPointKind, ExportsKind, ImportRecordIdx, ImportRecordMeta,
-  IndexModules, Module, ModuleIdx, ModuleType, NormalModule, NormalizedBundlerOptions, StmtInfoIdx,
-  SymbolOrMemberExprRef, SymbolRef, SymbolRefDb, dynamic_import_usage::DynamicImportExportsUsage,
-  side_effects::DeterminedSideEffects,
+  EcmaViewMeta, EntryPoint, EntryPointKind, ExportsKind, ImportKind, ImportRecordIdx,
+  ImportRecordMeta, IndexModules, Module, ModuleIdx, ModuleType, NormalModule,
+  NormalizedBundlerOptions, StmtInfoIdx, SymbolOrMemberExprRef, SymbolRef, SymbolRefDb,
+  dynamic_import_usage::DynamicImportExportsUsage, side_effects::DeterminedSideEffects,
 };
 use rolldown_utils::rayon::{IntoParallelRefMutIterator, ParallelIterator};
 use rustc_hash::{FxHashMap, FxHashSet};
@@ -91,12 +94,14 @@ impl LinkStage<'_> {
     }
 
     let mut unused_record_idxs = vec![];
+    let cycled_idx = self.get_dynamic_entries_included_order(&mut dynamic_entries);
 
-    dynamic_entries.sort_by_key(|item| item.id);
     dynamic_entries.retain(|entry| {
-      if let Some(item) = self.is_dynamic_entry_alive(entry, context.is_included_vec) {
-        unused_record_idxs.extend(item);
-        return false;
+      if !cycled_idx.contains(&entry.id) {
+        if let Some(item) = self.is_dynamic_entry_alive(entry, context.is_included_vec) {
+          unused_record_idxs.extend(item);
+          return false;
+        }
       }
       let module = match &self.module_table.modules[entry.id] {
         Module::Normal(module) => module,
@@ -155,6 +160,97 @@ impl LinkStage<'_> {
         .map(NormalModule::to_debug_normal_module_for_tree_shaking)
         .collect::<Vec<_>>()
     );
+  }
+
+  /// Some dynamic entries also reference another dynamic entry, we need to ensure each
+  /// dynamic entry is included before all its descendant dynamic entry.
+  /// ```js
+  /// // a.js
+  /// export default import('./b.js').then((mod) => {
+  ///   return mod;
+  /// })
+  ///
+  /// // b.js
+  /// export default import('./c.js').then((mod) => {
+  ///  return mod;
+  /// })
+  ///
+  /// // c.js
+  /// export default 1;
+  /// ```
+  /// after first round user defined entry are included, `default` of `b.js` are included, but
+  /// `default` of `c.js` is not included.
+  /// note: We can't use default entry point order, since they are sorted by stable_id.
+  fn get_dynamic_entries_included_order(
+    &self,
+    dynamic_entries: &mut [EntryPoint],
+  ) -> FxHashSet<ModuleIdx> {
+    let mut graph: DiGraphMap<ModuleIdx, ()> = DiGraphMap::new();
+    for entry in dynamic_entries.iter() {
+      let mut entry_module_idx = entry.id;
+      let cur = entry_module_idx;
+      if graph.contains_node(cur) {
+        continue;
+      }
+      let mut visited = FxHashSet::default();
+      self.construct_dynamic_entry_graph(&mut graph, &mut visited, &mut entry_module_idx, cur);
+    }
+    let mut cycled_dynamic_entries = FxHashSet::default();
+
+    // https://docs.rs/petgraph/latest/petgraph/algo/fn.tarjan_scc.html
+    // the order of struct connected component is sorted by reverse topological sort.
+    let idx_to_order_map = petgraph::algo::tarjan_scc(&graph)
+      .into_iter()
+      .enumerate()
+      .filter(|(_idx, scc)| {
+        if scc.len() > 1 {
+          cycled_dynamic_entries.extend(scc.iter().copied());
+          return false;
+        }
+        true
+      })
+      .map(|(idx, scc)| (scc[0], idx))
+      .collect::<FxHashMap<ModuleIdx, usize>>();
+    // We only need to ensure the relative order of those none cycled dynamic entries are correct, rest of them
+    // we just bailout them
+    dynamic_entries.sort_by_key(|item| {
+      idx_to_order_map.get(&item.id).map_or(Reverse(usize::MAX), |&order| Reverse(order))
+    });
+    cycled_dynamic_entries
+  }
+
+  fn construct_dynamic_entry_graph(
+    &self,
+    g: &mut DiGraphMap<ModuleIdx, ()>,
+    visited: &mut FxHashSet<ModuleIdx>,
+    root_node: &mut ModuleIdx,
+    cur_node: ModuleIdx,
+  ) -> Option<()> {
+    if visited.contains(&cur_node) {
+      return Some(());
+    }
+    visited.insert(cur_node);
+    let module = self.module_table.modules[cur_node].as_normal()?;
+    for ele in &module.import_records {
+      if ele.kind == ImportKind::DynamicImport {
+        let seen = g.contains_node(ele.resolved_module);
+        if *root_node != ele.resolved_module {
+          g.add_edge(*root_node, ele.resolved_module, ());
+          // Even it is visited before, we still needs to connect the edge
+          if seen {
+            continue;
+          }
+        }
+        let previous = *root_node;
+        *root_node = ele.resolved_module;
+        self.construct_dynamic_entry_graph(g, visited, root_node, ele.resolved_module);
+        *root_node = previous;
+        continue;
+      }
+      // Can't put it at the beginning of the loop,
+      self.construct_dynamic_entry_graph(g, visited, root_node, ele.resolved_module);
+    }
+    Some(())
   }
 
   /// Note:

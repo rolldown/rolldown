@@ -1,0 +1,47 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## dynamic.js
+
+```js
+//#region dynamic.no-treeshake.js
+console.log("dynamic no-treeshake");
+
+//#endregion
+//#region dynamic.js
+const lazyLoad = async () => {
+	await import("./static2.js");
+	document.body.classList.add("loaded");
+};
+
+//#endregion
+export { lazyLoad };
+```
+## main.js
+
+```js
+import "./static.js";
+
+//#region main.js
+import("./dynamic.js").then(async ({ lazyLoad }) => {
+	await lazyLoad();
+});
+
+//#endregion
+```
+## static.js
+
+```js
+//#region static.no-treeshake.js
+console.log("static no-treeshake");
+
+//#endregion
+```
+## static2.js
+
+```js
+import "./static.js";
+
+```

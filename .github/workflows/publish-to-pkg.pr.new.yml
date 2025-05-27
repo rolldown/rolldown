@@ -10,6 +10,13 @@ on:
   push:
     branches:
       - main
+    paths:
+      - 'crates/**'
+      - 'packages/**'
+      - 'Cargo.lock'
+      - 'rust-toolchain.toml'
+      - 'pnpm-lock.yaml'
+      - '.github/workflows/publish-to-pkg.pr.new.yml'
 
 # Cancell all previous workflows on main.
 concurrency:

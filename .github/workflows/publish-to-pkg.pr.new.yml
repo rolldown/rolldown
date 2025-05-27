@@ -28,7 +28,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       # Remove ❌ from main branch.
-      - uses: MercuryTechnologies/delete-cancelled-runs@1.0.0
+      - uses: MercuryTechnologies/delete-cancelled-runs@f5c9d322d9c7afbd41f779199818c1ffe381d34b # 1.0.0
         if: github.repository == 'rolldown/rolldown' && github.event_name == 'push' && github.ref == 'refs/heads/main'
         with:
           workflow-file: 'publish-to-pkg.pr.new.yml'

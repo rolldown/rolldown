@@ -1,0 +1,19 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## main.js
+
+```js
+import assert from "node:assert";
+
+//#region node_modules/demo-lib/module.js
+const value = "module";
+
+//#endregion
+//#region main.js
+assert.strictEqual(value, "module");
+
+//#endregion
+```

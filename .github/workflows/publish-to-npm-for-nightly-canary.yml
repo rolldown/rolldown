@@ -96,7 +96,10 @@ jobs:
           path: rolldown-version.txt
 
       - name: Canary/Nightly Versioning
-        run: node --import @oxc-node/core/register ./scripts/misc/bump-version.js ${{ steps.rolldown-version.outputs.content }}
+        shell: bash
+        env:
+          VERSION: ${{ steps.rolldown-version.outputs.content }}
+        run: node --import @oxc-node/core/register ./scripts/misc/bump-version.js ${VERSION}
 
       - name: Copy Licenses
         run: |
@@ -109,6 +112,8 @@ jobs:
           NPM_TOKEN: ${{ secrets.ROLLDOWN_NPM_TOKEN }}
 
       - name: Publish
-        run: node --import @oxc-node/core/register ./scripts/ci/publish-rolldown-to-npm.js ${{ needs.plan.outputs.npm-tag }}
+        shell: bash
         env:
+          TAG: ${{ needs.plan.outputs.npm-tag }}
           NPM_CONFIG_PROVENANCE: true # https://github.com/pnpm/pnpm/issues/6435
+        run: node --import @oxc-node/core/register ./scripts/ci/publish-rolldown-to-npm.js ${TAG}

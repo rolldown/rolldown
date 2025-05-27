@@ -7,27 +7,29 @@ import { fileURLToPath } from 'node:url';
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
 const args = process.argv.slice(2);
-console.log(`args: `, args);
+
+const napiArgs = [
+  'napi',
+  'build',
+  ...(process.env.CI ? ['--no-dts-cache'] : []),
+  '-o=./src',
+  '--manifest-path',
+  '../../crates/rolldown_binding/Cargo.toml',
+  '--platform',
+  '-p',
+  'rolldown_binding',
+  '--js',
+  'binding.js',
+  '--dts',
+  'binding.d.ts',
+  '--no-const-enum',
+  ...args,
+];
+console.info('args:', napiArgs);
 
 const cmd = spawnSync(
   'pnpm',
-  [
-    'napi',
-    'build',
-    ...(process.env.CI ? ['--no-dts-cache'] : []),
-    '-o=./src',
-    '--manifest-path',
-    '../../crates/rolldown_binding/Cargo.toml',
-    '--platform',
-    '-p',
-    'rolldown_binding',
-    '--js',
-    'binding.js',
-    '--dts',
-    'binding.d.ts',
-    '--no-const-enum',
-    ...args,
-  ],
+  napiArgs,
   {
     stdio: 'inherit', // Directly inherit stdio (preserves colors)
     env: { ...process.env, RUSTC_COLOR: 'always' }, // Force color output

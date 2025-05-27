@@ -163,7 +163,7 @@ impl LinkStage<'_> {
   }
 
   /// Some dynamic entries also reference another dynamic entry, we need to ensure each
-  /// dynamic entry is included before all it's descendant dynamic entry.
+  /// dynamic entry is included before all its descendant dynamic entry.
   /// ```js
   /// // a.js
   /// export default import('./b.js').then((mod) => {

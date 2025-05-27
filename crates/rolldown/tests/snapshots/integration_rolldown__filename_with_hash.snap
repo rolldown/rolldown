@@ -5559,6 +5559,13 @@ expression: output
 - d4-!~{007}~.js => d4-DGCApdvO.js
 - d5-!~{009}~.js => d5-BG99yqGu.js
 
+# tests/rolldown/tree_shaking/issue_4682
+
+- main-!~{000}~.js => main-B9FlAHGI.js
+- dynamic-!~{005}~.js => dynamic-C1dXXjI-.js
+- static-!~{003}~.js => static-BP37ah8X.js
+- static-!~{001}~.js => static-CE4ZR3EF.js
+
 # tests/rolldown/tree_shaking/json_module_def_format
 
 - main-!~{000}~.js => main-Cp4dwvDl.js

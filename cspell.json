@@ -242,6 +242,8 @@
     "WASI",
     "webcontainer",
     "webp",
+    "petgraph",
+    "tarjan",
     "rposition",
     "Xiangjun",
     "Yinan",

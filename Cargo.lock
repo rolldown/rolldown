@@ -2462,6 +2462,7 @@ dependencies = [
  "notify",
  "oxc",
  "oxc_index",
+ "petgraph",
  "rolldown_common",
  "rolldown_debug",
  "rolldown_ecmascript",

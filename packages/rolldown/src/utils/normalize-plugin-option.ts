@@ -56,6 +56,6 @@ export function normalizePlugins<T extends RolldownPlugin>(
 export const ANONYMOUS_PLUGIN_PREFIX = 'at position ';
 export const ANONYMOUS_OUTPUT_PLUGIN_PREFIX = 'at output position ';
 
-export const BUILTIN_PLUGINS: BuiltinPlugin[] = [
-  oxcRuntimePlugin({ resolveBase: fileURLToPath(import.meta.url) }),
-];
+export const BUILTIN_PLUGINS: BuiltinPlugin[] = import.meta.browserBuild
+  ? []
+  : [oxcRuntimePlugin({ resolveBase: fileURLToPath(import.meta.url) })];

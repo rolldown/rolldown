@@ -6,17 +6,7 @@ on:
   workflow_dispatch:
   push:
     branches:
-      - 'main' # or "master"
-    paths:
-      - '**/*.rs'
-      - 'Cargo.lock'
-      - 'rust-toolchain.toml'
-      - 'packages/rolldown/**'
-      - 'packages/bench/**'
-      - 'pnpm-lock.yaml'
-      - '.github/workflows/benchmark-node.yml'
-  pull_request:
-    types: [opened, synchronize]
+      - 'main'
     paths:
       - '**/*.rs'
       - 'Cargo.lock'

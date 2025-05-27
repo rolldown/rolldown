@@ -96,7 +96,10 @@ impl LinkStage<'_> {
       let is_strict_execution_order = self.options.experimental.is_strict_execution_order_enabled();
       let is_wrap_kind_none = matches!(self.metas[module_id].wrap_kind, WrapKind::None);
 
-      let need_to_wrap = is_strict_execution_order || !is_wrap_kind_none;
+      // With enabling `strict_execution_order`, we need to wrap every module to lazy/control their execution.
+      // However, this doesn't include runtime module. runtime module should be initialized on its own.
+      let need_to_wrap =
+        !is_wrap_kind_none || (is_strict_execution_order && module_id != self.runtime.id());
 
       if need_to_wrap {
         wrap_module_recursively(

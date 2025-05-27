@@ -1,0 +1,9 @@
+{
+  "config": {
+    "external": ["node:assert"],
+    "experimental": {
+      "hmr": {},
+      "strictExecutionOrder": true
+    }
+  }
+}

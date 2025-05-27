@@ -1,6 +1,6 @@
 use oxc::span::{CompactStr, Span};
 
-use crate::{SymbolRef, type_aliases::MemberExprRefResolutionMap};
+use crate::{MemberExprRefResolution, SymbolRef, type_aliases::MemberExprRefResolutionMap};
 
 /// For member expression, e.g. `foo_ns.bar_ns.c`
 /// - `object_ref` is the `SymbolRef` that represents `foo_ns`
@@ -20,18 +20,31 @@ impl MemberExprRef {
     Self { object_ref, props, span }
   }
 
-  // #[allow(clippy::manual_map)]: Current code is more readable.
-  #[allow(clippy::manual_map)]
-  pub fn resolved_symbol_ref(
+  /// This method is tricky, use it with care.
+  /// If this method returns `None`, it means`MemberExprRef` points to nothing and corresponding member expr will be rewritten as `void 0`.
+  /// There's no any symbol ref in this `MemberExprRef`.
+  /// If this method returns `Some`, it has two possible situations:
+  /// 1. The member expr does resolved to a symbol
+  /// 2. The member expr doesn't contain module namespace ref and is just a normal member expr.
+  pub fn represent_symbol_ref(
     &self,
     resolved_map: &MemberExprRefResolutionMap,
   ) -> Option<SymbolRef> {
     if let Some(resolution) = resolved_map.get(&self.span) {
-      // This member expression resolve to a ambiguous export if `resolved` equals to `None`, which means it actually resolve to nothing.
-      // It would be rewrite to `undefined` in the final code.
+      // If the map does have the resolution, it either produces two results:
+      // 1. The member expr points to a exist variable/export, which is `MemberExprRefResolution#resolved`
+      // 2. The member expr points to a non-exist variable/export, which means `MemberExprRefResolution#resolved` is `None`.
       resolution.resolved
     } else {
+      // If the map doesn't have it, it means this member expr doesn't contain any module namespace ref.
       Some(self.object_ref)
     }
+  }
+
+  pub fn resolution<'a>(
+    &self,
+    resolved_map: &'a MemberExprRefResolutionMap,
+  ) -> Option<&'a MemberExprRefResolution> {
+    resolved_map.get(&self.span)
   }
 }

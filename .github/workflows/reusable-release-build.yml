@@ -148,7 +148,7 @@ jobs:
             env
             sudo corepack enable
             sudo npm i -g corepack@latest # use a newer corepack due to https://github.com/nodejs/corepack/issues/612
-            pnpm install
+            pnpm install --ignore-scripts
             pnpm ci:build-release-binding --target x86_64-unknown-freebsd
             rm -rf node_modules
             rm -rf target

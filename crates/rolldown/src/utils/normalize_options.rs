@@ -84,7 +84,14 @@ pub fn normalize_options(mut raw_options: crate::BundlerOptions) -> NormalizeOpt
   let define = raw_define.into_iter().collect();
 
   // Take out resolve options
-  let raw_resolve = std::mem::take(&mut raw_options.resolve).unwrap_or_default();
+  let mut raw_resolve = std::mem::take(&mut raw_options.resolve).unwrap_or_default();
+
+  // https://github.com/evanw/esbuild/blob/ea453bf687c8e5cf3c5f11aae372c5ca33be0c98/pkg/api/api_impl.go#L1403-L1405
+  // https://github.com/evanw/esbuild/commit/5abe0715f9be662b182989d2f38a44c7c8b28a2d
+  if raw_resolve.condition_names.is_none() && matches!(platform, Platform::Browser | Platform::Node)
+  {
+    raw_resolve.condition_names = Some(vec!["module".to_string()]);
+  }
 
   let mut module_types: FxHashMap<Cow<'static, str>, ModuleType> = FxHashMap::from(
     [

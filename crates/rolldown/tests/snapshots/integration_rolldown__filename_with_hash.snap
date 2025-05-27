@@ -4888,6 +4888,10 @@ expression: output
 - main-!~{000}~.js => main-DrOlrm86.js
 - main-DrOlrm86.js.map
 
+# tests/rolldown/resolve/add_module_condition_by_default
+
+- main-!~{000}~.js => main-PHNGJQWh.js
+
 # tests/rolldown/resolve/hash_tag_as_dir_name
 
 - main-!~{000}~.js => main-tpAxLMZ5.js

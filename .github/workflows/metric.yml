@@ -7,8 +7,13 @@ on:
   push:
     branches:
       - main
-    paths-ignore:
-      - '**/*.md'
+    paths:
+      - 'crates/**'
+      - 'packages/**'
+      - 'Cargo.lock'
+      - 'rust-toolchain.toml'
+      - 'pnpm-lock.yaml'
+      - '.github/workflows/metric.yml'
 
 jobs:
   compile-time-and-binary-size:

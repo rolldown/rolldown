@@ -94,7 +94,7 @@ impl LinkStage<'_> {
     }
 
     let mut unused_record_idxs = vec![];
-    let cycled_idx = self.get_dynamic_entries_included_order(&mut dynamic_entries);
+    let cycled_idx = self.sort_dynamic_entries_by_topological_order(&mut dynamic_entries);
 
     dynamic_entries.retain(|entry| {
       if !cycled_idx.contains(&entry.id) {
@@ -162,6 +162,7 @@ impl LinkStage<'_> {
     );
   }
 
+  /// # Description
   /// Some dynamic entries also reference another dynamic entry, we need to ensure each
   /// dynamic entry is included before all its descendant dynamic entry.
   /// ```js
@@ -181,7 +182,14 @@ impl LinkStage<'_> {
   /// after first round user defined entry are included, `default` of `b.js` are included, but
   /// `default` of `c.js` is not included.
   /// note: We can't use default entry point order, since they are sorted by stable_id.
-  fn get_dynamic_entries_included_order(
+  ///
+  /// # Complexity
+  ///   - construct the dynamic entry relation graph: O(M), `M` the number of modules.
+  ///   - ref https://en.wikipedia.org/wiki/Tarjan%27s_strongly_connected_components_algorithm#Complexity
+  ///     `O(|V|+|E|)`, for the most of the scenario the relation graph is sparsely connected, we
+  ///     could assume it is `O(N)`, `N` is the number of dynamic entries.
+  ///   - So overall, the complexity is `O(M)`.
+  fn sort_dynamic_entries_by_topological_order(
     &self,
     dynamic_entries: &mut [EntryPoint],
   ) -> FxHashSet<ModuleIdx> {

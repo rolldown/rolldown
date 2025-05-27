@@ -21,7 +21,7 @@ impl MemberExprRef {
   }
 
   /// This method is tricky, use it with care.
-  /// If this method returns `None`, it means`MemberExprRef` points to nothing and corresponding member expr will be rewritten as `void 0`.
+  /// If this method returns `None`, it means `MemberExprRef` points to nothing and corresponding member expr will be rewritten as `void 0`.
   /// There's no any symbol ref in this `MemberExprRef`.
   /// If this method returns `Some`, it has two possible situations:
   /// 1. The member expr does resolved to a symbol

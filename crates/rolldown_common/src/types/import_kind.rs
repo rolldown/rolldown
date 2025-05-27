@@ -28,7 +28,7 @@ impl TryFrom<&str> for ImportKind {
 
   fn try_from(value: &str) -> Result<Self, Self::Error> {
     match value {
-      "import" => Ok(Self::Import),
+      "import-statement" => Ok(Self::Import),
       "dynamic-import" => Ok(Self::DynamicImport),
       "require-call" => Ok(Self::Require),
       "import-rule" => Ok(Self::AtImport),

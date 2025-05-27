@@ -80,7 +80,7 @@ export interface SourceDescription extends Partial<PartialNull<ModuleOptions>> {
 export interface ResolveIdExtraOptions {
   custom?: CustomPluginOptions;
   isEntry: boolean;
-  kind: 'import' | 'dynamic-import' | 'require-call';
+  kind: BindingHookResolveIdExtraArgs['kind'];
 }
 
 export interface PrivateResolveIdExtraOptions extends ResolveIdExtraOptions {

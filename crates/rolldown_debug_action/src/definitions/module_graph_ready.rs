@@ -20,7 +20,7 @@ pub struct Module {
 pub struct ModuleImport {
   pub id: String,
   // Refer to crates/rolldown_common/src/types/import_kind.rs
-  /// - `import`: `import { foo } from './lib.js';`
+  /// - `import-statement`: `import { foo } from './lib.js';`
   /// - `dynamic-import`: `import('./lib.js')`
   /// - `require-call`: `require('./lib.js')`
   /// - `import-rule`: `@import 'bg-color.css'`
@@ -28,7 +28,7 @@ pub struct ModuleImport {
   /// - `new-url`: `new URL('./worker.js', import.meta.url)`
   /// - `hot-accept`: `import.meta.hot.accept('./lib.js', () => {})`
   #[ts(
-    type = "'import' | 'dynamic-import' | 'require-call' | 'import-rule' | 'url-token' | 'new-url' | 'hot-accept'"
+    type = "'import-statement' | 'dynamic-import' | 'require-call' | 'import-rule' | 'url-token' | 'new-url' | 'hot-accept'"
   )]
   pub kind: String,
   /// `./lib.js` in `import { foo } from './lib.js';`

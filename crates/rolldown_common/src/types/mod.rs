@@ -20,6 +20,7 @@ pub mod importer_record;
 pub mod instantiated_chunk;
 pub mod interop;
 pub mod member_expr_ref;
+pub mod member_expr_ref_resolution;
 pub mod module_def_format;
 pub mod module_id;
 pub mod module_idx;

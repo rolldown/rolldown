@@ -26,10 +26,10 @@ impl MemberExprRef {
     &self,
     resolved_map: &MemberExprRefResolutionMap,
   ) -> Option<SymbolRef> {
-    if let Some((resolved, ..)) = resolved_map.get(&self.span) {
+    if let Some(resolution) = resolved_map.get(&self.span) {
       // This member expression resolve to a ambiguous export if `resolved` equals to `None`, which means it actually resolve to nothing.
       // It would be rewrite to `undefined` in the final code.
-      resolved.map(|sym_ref| sym_ref)
+      resolution.resolved
     } else {
       Some(self.object_ref)
     }

@@ -331,10 +331,10 @@ fn include_statement(ctx: &mut Context, module: &NormalModule, stmt_info_id: Stm
         if let Some(symbol) =
           member_expr.resolved_symbol_ref(&ctx.metas[module.idx].resolved_member_expr_refs)
         {
-          if let Some((.., deps)) =
+          if let Some(resolution) =
             ctx.metas[module.idx].resolved_member_expr_refs.get(&member_expr.span)
           {
-            deps.iter().for_each(|sym_ref| {
+            resolution.depended_refs.iter().for_each(|sym_ref| {
               if let Module::Normal(module) = &ctx.modules[sym_ref.owner] {
                 module.stmt_infos.declared_stmts_by_symbol(sym_ref).iter().copied().for_each(
                   |stmt_info_id| {

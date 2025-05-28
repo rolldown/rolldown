@@ -131,6 +131,7 @@ impl RawImportRecord {
       meta: self.meta,
       related_stmt_info_idx: self.related_stmt_info_idx,
     };
+    // more details about `is_dummy` please refer: https://github.com/rolldown/rolldown/blob/1c8352a6d0fc79f737f160cefe2eaedb476047ca/crates/rolldown_common/src/ecmascript/module_idx.rs?plain=1#L6-L18
     if resolved_module.is_dummy() {
       ResolvedImportRecord::Dummy(rec)
     } else {

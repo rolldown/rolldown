@@ -101,7 +101,9 @@ export interface InputOptions {
   /**
    * Expected platform where the code run.
    *
-   * @default "browser"
+   * @default
+   * - 'node' if the format is 'cjs'
+   * - 'browser' for other formats
    */
   platform?: 'node' | 'browser' | 'neutral';
   shimMissingExports?: boolean;

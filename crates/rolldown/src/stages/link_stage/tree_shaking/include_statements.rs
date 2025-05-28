@@ -239,7 +239,7 @@ impl LinkStage<'_> {
     }
     visited.insert(cur_node);
     let module = self.module_table.modules[cur_node].as_normal()?;
-    for ele in &module.import_records {
+    for ele in module.import_records.iter().filter(|item| !item.is_dummy()) {
       if ele.kind == ImportKind::DynamicImport {
         let seen = g.contains_node(ele.resolved_module);
         if *root_node != ele.resolved_module {

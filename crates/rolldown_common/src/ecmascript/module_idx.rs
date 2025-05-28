@@ -10,7 +10,7 @@ oxc_index::define_index_type! {
 /// ```js
 /// require();
 /// ```
-/// needs to be rewriten as:
+/// needs to be rewritten as:
 /// ```js
 /// import { __require } from 'rolldown-runtime';
 /// __require();

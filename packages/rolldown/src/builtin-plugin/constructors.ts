@@ -128,10 +128,6 @@ export function assetPlugin(
   return new BuiltinPlugin('builtin:asset', config);
 }
 
-function assetImportMetaUrlPlugin(): BuiltinPlugin {
-  return new BuiltinPlugin('builtin:asset-import-meta-url');
-}
-
 export function webWorkerPostPlugin(): BuiltinPlugin {
   return new BuiltinPlugin('builtin:web-worker-post');
 }

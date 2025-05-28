@@ -56,9 +56,3 @@ export const babelPlugin = (): Plugin => {
     },
   };
 };
-
-const impl: ParallelPluginImplementation = defineParallelPluginImplementation(
-  (_options, _context) => {
-    return babelPlugin();
-  },
-);

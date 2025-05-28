@@ -4,8 +4,6 @@ export interface AnyFn {
   (...args: any[]): any;
 }
 
-interface AnyObj {}
-
 export type NullValue<T = void> = T | undefined | null | void;
 
 export type PartialNull<T> = {

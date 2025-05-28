@@ -66,8 +66,6 @@ export const options: {
   }),
 );
 
-type ParseArgsOptions = typeof options;
-
 export function parseCliArguments(): NormalizedCliOptions {
   const { values, tokens, positionals } = parseArgs({
     options,

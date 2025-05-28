@@ -13,8 +13,8 @@ use std::{
 use sugar_path::SugarPath;
 
 use oxc_resolver::{
-  EnforceExtension, FsCache, PackageJsonSerde as OxcPackageJson, PackageType, Resolution,
-  ResolveError, ResolveOptions as OxcResolverOptions, ResolverGeneric, TsConfigSerde,
+  EnforceExtension, FsCache, ModuleType, PackageJsonSerde as OxcPackageJson, PackageType,
+  Resolution, ResolveError, ResolveOptions as OxcResolverOptions, ResolverGeneric, TsConfigSerde,
   TsconfigOptions,
 };
 
@@ -120,6 +120,7 @@ impl<F: FileSystem + Default> Resolver<F> {
       roots: vec![],
       symlinks: raw_resolve.symlinks.unwrap_or(true),
       builtin_modules,
+      module_type: true,
     };
     let resolve_options_with_import_conditions = OxcResolverOptions {
       condition_names: import_conditions,
@@ -288,14 +289,14 @@ fn infer_module_def_format<F: FileSystem + Default>(
     .path()
     .extension()
     .is_some_and(|ext| matches!(ext.to_str(), Some("js" | "jsx" | "ts" | "tsx")));
-  if let Some(package_json) =
-    is_js_like_extension.then(|| info.package_json()).and_then(|item| item)
-  {
-    return match package_json.r#type {
-      Some(PackageType::CommonJs) => ModuleDefFormat::CjsPackageJson,
-      Some(PackageType::Module) => ModuleDefFormat::EsmPackageJson,
-      _ => ModuleDefFormat::Unknown,
-    };
+  if is_js_like_extension {
+    if let Some(module_type) = info.module_type() {
+      return match module_type {
+        ModuleType::CommonJs => ModuleDefFormat::CjsPackageJson,
+        ModuleType::Module => ModuleDefFormat::EsmPackageJson,
+        ModuleType::Json | ModuleType::Wasm | ModuleType::Addon => ModuleDefFormat::Unknown,
+      };
+    }
   }
   ModuleDefFormat::Unknown
 }

@@ -1265,6 +1265,12 @@ export interface ModuleRunnerTransformResult {
   errors: Array<OxcError>
 }
 
+export type ModuleType =  'module'|
+'commonjs'|
+'json'|
+'wasm'|
+'addon';
+
 /**
  * Module Resolution Options
  *
@@ -1423,6 +1429,12 @@ export interface NapiResolveOptions {
    * Default `false`
    */
   builtinModules?: boolean
+  /**
+   * Resolve [ResolveResult::moduleType].
+   *
+   * Default `false`
+   */
+  moduleType?: boolean
 }
 
 export interface OxcError {
@@ -1439,6 +1451,38 @@ export interface OxcError {
  * Note: This function can be slower than `parseSync` due to the overhead of spawning a thread.
  */
 export declare function parseAsync(filename: string, sourceText: string, options?: ParserOptions | undefined | null): Promise<ParseResult>
+
+/**
+ * Parse AST into provided `Uint8Array` buffer, asynchronously.
+ *
+ * Note: This function can be slower than `parseSyncRaw` due to the overhead of spawning a thread.
+ *
+ * Source text must be written into the start of the buffer, and its length (in UTF-8 bytes)
+ * provided as `source_len`.
+ *
+ * This function will parse the source, and write the AST into the buffer, starting at the end.
+ *
+ * It also writes to the very end of the buffer the offset of `Program` within the buffer.
+ *
+ * Caller can deserialize data from the buffer on JS side.
+ *
+ * # SAFETY
+ *
+ * Caller must ensure:
+ * * Source text is written into start of the buffer.
+ * * Source text's UTF-8 byte length is `source_len`.
+ * * The 1st `source_len` bytes of the buffer comprises a valid UTF-8 string.
+ * * Contents of buffer must not be mutated by caller until the `AsyncTask` returned by this
+ *   function resolves.
+ *
+ * If source text is originally a JS string on JS side, and converted to a buffer with
+ * `Buffer.from(str)` or `new TextEncoder().encode(str)`, this guarantees it's valid UTF-8.
+ *
+ * # Panics
+ *
+ * Panics if source text is too long, or AST takes more memory than is available in the buffer.
+ */
+export declare function parseAsyncRaw(filename: string, buffer: Uint8Array, sourceLen: number, options?: ParserOptions | undefined | null): Promise<unknown>
 
 export interface ParserOptions {
   /** Treat the source text as `js`, `jsx`, `ts`, or `tsx`. */
@@ -1477,7 +1521,7 @@ export interface ParserOptions {
 export declare function parseSync(filename: string, sourceText: string, options?: ParserOptions | undefined | null): ParseResult
 
 /**
- * Parses AST into provided `Uint8Array` buffer.
+ * Parse AST into provided `Uint8Array` buffer, synchronously.
  *
  * Source text must be written into the start of the buffer, and its length (in UTF-8 bytes)
  * provided as `source_len`.
@@ -1537,8 +1581,17 @@ export declare function registerPlugins(id: number, plugins: Array<BindingPlugin
 export interface ResolveResult {
   path?: string
   error?: string
-  /** "type" field in the package.json file */
-  moduleType?: string
+  /**
+   * Module type for this path.
+   *
+   * Enable with `ResolveOptions#moduleType`.
+   *
+   * The module type is computed `ESM_FILE_FORMAT` from the [ESM resolution algorithm specification](https://nodejs.org/docs/latest/api/esm.html#resolution-algorithm-specification).
+   *
+   *  The algorithm uses the file extension or finds the closest `package.json` with the `type` field.
+   */
+  moduleType?: ModuleType
+  /** `package.json` path for the given module. */
   packageJsonPath?: string
 }
 

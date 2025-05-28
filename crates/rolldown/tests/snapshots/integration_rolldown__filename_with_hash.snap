@@ -2579,11 +2579,11 @@ expression: output
 
 # tests/esbuild/lower/lower_async_generator
 
-- entry-!~{000}~.js => entry-DnCmLX3Y.js
+- entry-!~{000}~.js => entry-C6l44jTH.js
 
 # tests/esbuild/lower/lower_async_generator_no_await
 
-- entry-!~{000}~.js => entry-DnCmLX3Y.js
+- entry-!~{000}~.js => entry-C6l44jTH.js
 
 # tests/esbuild/lower/lower_async_super_es2016_no_bundle
 
@@ -2650,7 +2650,7 @@ expression: output
 
 # tests/esbuild/lower/lower_nullish_coalescing_assignment_issue1493
 
-- entry-!~{000}~.js => entry-CAsp0LC2.js
+- entry-!~{000}~.js => entry-CjTuXPfC.js
 
 # tests/esbuild/lower/lower_object_spread_no_bundle
 
@@ -2838,7 +2838,7 @@ expression: output
 
 # tests/esbuild/lower/lower_using_inside_ts_namespace
 
-- entry-!~{000}~.js => entry-BkqceQrQ.js
+- entry-!~{000}~.js => entry-C6vvHM8I.js
 
 # tests/esbuild/lower/lower_using_unsupported_async
 
@@ -4899,7 +4899,7 @@ expression: output
 
 # tests/rolldown/resolve/attach_correct_package_json
 
-- main-!~{000}~.js => main-K-HhwO4S.js
+- main-!~{000}~.js => main-Do9XgdS8.js
 
 # tests/rolldown/resolve/hash_tag_as_dir_name
 
@@ -4907,11 +4907,11 @@ expression: output
 
 # tests/rolldown/resolve/ts_config_merge_decorator_metadata
 
-- main-!~{000}~.js => main-DJGltSwr.js
+- main-!~{000}~.js => main-B3rzvVg5.js
 
 # tests/rolldown/resolve/ts_config_option_merge
 
-- main-!~{000}~.js => main-Bo_t_Y2q.js
+- main-!~{000}~.js => main-BYXc_gOi.js
 
 # tests/rolldown/resolve/wildcard_alias
 

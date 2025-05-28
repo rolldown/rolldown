@@ -108,7 +108,6 @@
     "dtsHeader": "type MaybePromise<T> = T | Promise<T>\ntype Nullable<T> = T | null | undefined\ntype VoidNullable<T = void> = T | null | undefined | void\nexport type BindingStringOrRegex = string | RegExp\n\n"
   },
   "dependencies": {
-    "@oxc-project/runtime": "catalog:",
     "@oxc-project/types": "catalog:",
     "@rolldown/pluginutils": "workspace:*",
     "ansis": "^4.0.0"
@@ -118,17 +117,12 @@
     "@napi-rs/wasm-runtime": "^0.2.10",
     "@oxc-node/cli": "catalog:",
     "@rolldown/testing": "workspace:*",
-    "@types/fs-extra": "^11.0.4",
-    "@types/lodash-es": "^4.17.12",
     "@valibot/to-json-schema": "1.2.0",
     "consola": "^3.4.2",
     "emnapi": "^1.2.0",
     "execa": "^9.2.0",
-    "fs-extra": "^11.2.0",
     "glob": "^11.0.0",
-    "locate-character": "^3.0.0",
     "oxc-parser": "catalog:",
-    "pathe": "^2.0.3",
     "remeda": "^2.10.0",
     "rolldown": "workspace:*",
     "rolldown-plugin-dts": "^0.7.12",
@@ -138,7 +132,6 @@
     "type-fest": "^4.20.0",
     "typedoc": "^0.28.0",
     "typescript": "^5.7.3",
-    "unbuild": "^3.0.0",
     "valibot": "1.1.0"
   },
   "optionalDependencies": {

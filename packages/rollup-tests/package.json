@@ -13,16 +13,13 @@
     "fs-extra": "^11.2.0",
     "mocha": "^11.0.0",
     "oxc-transform": "catalog:",
-    "rolldown": "workspace:*",
     "source-map-support": "^0.5.21"
   },
   "devDependencies": {
     "@types/mocha": "10.0.10",
     "@types/node": "22.15.18",
     "@types/strip-comments": "^2.0.4",
-    "buble": "^0.20.0",
     "source-map": "^0.7.4",
-    "strip-comments": "^2.0.1",
-    "terser": "^5.31.1"
+    "strip-comments": "^2.0.1"
   }
 }

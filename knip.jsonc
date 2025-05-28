@@ -38,6 +38,7 @@
     },
     "packages/rolldown/tests": {
       "entry": ["*/**"],
+      "ignore": ["{cli,fixtures,module-federation,stability}/**"], // lots of unlisted dependencies
     },
     "packages/rolldown/tests/module-federation": {
       "entry": ["*.js"],

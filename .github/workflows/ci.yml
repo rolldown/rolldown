@@ -155,10 +155,16 @@ jobs:
       - name: Lint Filename
         run: cargo ls-lint
 
-      - name: Lint Spell
-        run: pnpm lint-spell
-
       - name: update generated code
         run: |
           cargo run --bin generator
           git diff --exit-code
+
+  typos:
+    name: Spell Check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: taiki-e/checkout-action@b13d20b7cda4e2f325ef19895128f7ff735c0b3d # v1.3.1
+      - uses: crate-ci/typos@0f0ccba9ed1df83948f0c15026e4f5ccfce46109 # v1.32.0
+        with:
+          files: .

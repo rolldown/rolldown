@@ -26,7 +26,7 @@ OPTIONS
   --advanced-chunks.min-size <advanced-chunks.min-size>Minimum size of the chunk.
   --asset-file-names <name>   Name pattern for asset files.
   --banner <banner>           Code to insert the top of the bundled file (outside the wrapper function).
-  --checks.circular-dependency Wether to emit warnings when detecting circular dependencies.
+  --checks.circular-dependency Whether to emit warnings when detecting circular dependencies.
   --chunk-file-names <name>   Name pattern for emitted secondary chunks.
   --comments <comments>       Control comments in the output.
   --css-chunk-file-names <css-chunk-file-names>Name pattern for emitted css secondary chunks.

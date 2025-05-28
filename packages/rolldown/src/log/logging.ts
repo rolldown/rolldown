@@ -40,7 +40,7 @@ export type LogOrStringHandler = (
   log: RollupLogWithString,
 ) => void;
 
-export const LOG_LEVEL_SILENT: LogLevelOption = 'silent';
+const LOG_LEVEL_SILENT: LogLevelOption = 'silent';
 export const LOG_LEVEL_ERROR = 'error';
 export const LOG_LEVEL_WARN: LogLevel = 'warn';
 export const LOG_LEVEL_INFO: LogLevel = 'info';

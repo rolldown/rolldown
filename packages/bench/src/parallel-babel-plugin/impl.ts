@@ -62,5 +62,3 @@ const impl: ParallelPluginImplementation = defineParallelPluginImplementation(
     return babelPlugin();
   },
 );
-
-export default impl;

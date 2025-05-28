@@ -84,7 +84,7 @@ async function findConfigFileNameInCwd(): Promise<string> {
   throw new Error('No `rolldown.config` configuration file found.');
 }
 
-export async function loadTsConfig(configFile: string): Promise<ConfigExport> {
+async function loadTsConfig(configFile: string): Promise<ConfigExport> {
   const isEsm = isFilePathESM(configFile);
   const file = await bundleTsConfig(configFile, isEsm);
   try {
@@ -94,7 +94,7 @@ export async function loadTsConfig(configFile: string): Promise<ConfigExport> {
   }
 }
 
-export function isFilePathESM(filePath: string): boolean {
+function isFilePathESM(filePath: string): boolean {
   if (/\.m[jt]s$/.test(filePath)) {
     return true;
   } else if (/\.c[jt]s$/.test(filePath)) {
@@ -110,7 +110,7 @@ export function isFilePathESM(filePath: string): boolean {
   }
 }
 
-export function findNearestPackageData(basedir: string): any | null {
+function findNearestPackageData(basedir: string): any | null {
   while (basedir) {
     const pkgPath = path.join(basedir, 'package.json');
     if (tryStatSync(pkgPath)?.isFile()) {

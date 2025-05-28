@@ -101,7 +101,7 @@ function transformFilterMatcherToFilterExprs(
   return ret;
 }
 
-export function bindingifyGeneralHookFilter<
+function bindingifyGeneralHookFilter<
   T extends StringOrRegExp,
   F extends GeneralHookFilter<T>,
 >(stringKind: 'code' | 'id', pattern: F): BindingHookFilter | undefined {

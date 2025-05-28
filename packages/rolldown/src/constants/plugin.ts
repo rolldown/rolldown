@@ -15,7 +15,7 @@ export const ENUMERATED_INPUT_PLUGIN_HOOK_NAMES = [
   'watchChange',
 ] as const;
 
-export const ENUMERATED_OUTPUT_PLUGIN_HOOK_NAMES = [
+const ENUMERATED_OUTPUT_PLUGIN_HOOK_NAMES = [
   'augmentChunkHash',
   'outputOptions',
   'renderChunk',

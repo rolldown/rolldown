@@ -35,6 +35,7 @@
         "src/rolldown-binding.wasi-browser.js",
         "src/{wasi,webcontainer}-*.*",
       ],
+      "ignore": ["src/binding.js", "src/rolldown-binding.wasi.cjs"], // lots of unused exports
     },
     "packages/rolldown/tests": {
       "entry": ["*/**"],

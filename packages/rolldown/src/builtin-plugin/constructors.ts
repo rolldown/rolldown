@@ -128,7 +128,7 @@ export function assetPlugin(
   return new BuiltinPlugin('builtin:asset', config);
 }
 
-export function assetImportMetaUrlPlugin(): BuiltinPlugin {
+function assetImportMetaUrlPlugin(): BuiltinPlugin {
   return new BuiltinPlugin('builtin:asset-import-meta-url');
 }
 

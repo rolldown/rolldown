@@ -13,7 +13,7 @@ import {
 
 const objectSchema = getJsonSchema();
 
-export const flattenedSchema: Record<string, Schema> = flattenSchema(
+const flattenedSchema: Record<string, Schema> = flattenSchema(
   objectSchema.properties,
 );
 

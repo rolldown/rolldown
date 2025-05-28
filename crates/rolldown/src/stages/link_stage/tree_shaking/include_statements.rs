@@ -264,7 +264,7 @@ impl LinkStage<'_> {
 
   /// Note:
   /// this function determine if a dynamic_entry is still alive, return the unused dynamic
-  /// import record idxs(due to limination of rustc borrow checker) if it is unused.
+  /// import record idxs(due to limitation of rustc borrow checker) if it is unused.
   fn is_dynamic_entry_alive(
     &self,
     item: &EntryPoint,

@@ -1,0 +1,28 @@
+# https://github.com/crate-ci/typos
+# cargo install typos-cli
+# typos
+
+[files]
+extend-exclude = [
+  "*.snap",
+  "*.json",
+  "/CHANGELOG-*.md",
+  "/CHANGELOG.md",
+  "/packages/rollup-tests/test",
+  "/crates/rolldown/tests/esbuild/splitting/ignore-test.md",
+  "/packages/rollup-tests/src/ignored-by-unsupported-features.md",
+  "/packages/rollup-tests/src/ignored-passed-snapshot-different-tests.js",
+  "/packages/rollup-tests/src/ignored-tests.js",
+  "/rollup",
+  "crates/rolldown/tests/esbuild/**/*",
+  "packages/rolldown/src/binding.cjs",
+  "packages/rolldown/src/binding.js",
+  "packages/rolldown/tests/fixtures/",
+  "packages/rolldown/tests/stability/",
+  "scripts/snap-diff/**/*.{txt,md}",
+]
+
+[default.extend-words]
+splitted = "splitted"
+
+[default.extend-identifiers]

@@ -10,7 +10,7 @@ setup:
     just check-setup-prerequisites
     # Rust related setup
     cargo install cargo-binstall
-    cargo binstall cargo-insta cargo-deny cargo-shear -y
+    cargo binstall cargo-insta cargo-deny cargo-shear typos-cli -y
     # Node.js related setup
     corepack enable
     pnpm install
@@ -108,7 +108,7 @@ lint-node:
     pnpm lint-code
 
 lint-repo:
-    pnpm lint-repo
+    typos
     cargo ls-lint
 
 # Fix formatting and some linting issues

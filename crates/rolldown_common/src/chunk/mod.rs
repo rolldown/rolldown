@@ -85,7 +85,7 @@ impl Chunk {
     if self.modules.len() == 1 && self.modules[0] == runtime_id {
       return false;
     }
-    // TODO: Wether a chunk has side effect is determined by wether it's module has side effect
+    // TODO: Whether a chunk has side effect is determined by whether it's module has side effect
     // Now we just return `true`
     true
   }

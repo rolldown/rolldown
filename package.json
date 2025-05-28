@@ -8,8 +8,6 @@
   },
   "scripts": {
     "lint-code": "oxlint -c .oxlintrc.json --ignore-path=.oxlintignore --deny-warnings",
-    "lint-spell": "cspell \"**\" --no-progress  --gitignore",
-    "lint-repo": "pnpm run --stream --color '/^fmt|lint-spell$/'",
     "fmt": "dprint fmt",
     "build": "echo \"Use just build\"",
     "build:release": "echo \"Use just build native release\"",
@@ -32,7 +30,6 @@
     "@types/node": "22.15.18",
     "cjs-module-lexer": "^2.0.0",
     "conventional-changelog-cli": "^5.0.0",
-    "cspell": "^9.0.0",
     "dprint": "^0.49.1",
     "husky": "^9.0.0",
     "lint-staged": "^16.0.0",
@@ -58,6 +55,6 @@
     "*.@(js|ts|tsx)": [
       "pnpm lint-code -- --fix"
     ],
-    "*": "cspell --no-progress --gitignore --no-must-find-files"
+    "*": "typos"
   }
 }

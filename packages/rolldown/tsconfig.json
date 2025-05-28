@@ -12,7 +12,7 @@
   "compilerOptions": {
     "composite": true,
     "rootDir": "./src",
-    "outDir": "./dist/types",
+    "outDir": "./dist",
     "resolveJsonModule": true,
     "noEmit": false,
     "emitDeclarationOnly": true,

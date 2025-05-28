@@ -39,6 +39,10 @@ async fn filename_with_hash() {
     let TestConfig { config: mut options, meta, config_variants: _not_supported } =
       read_test_config(config_path);
 
+    if meta.skip_windows && cfg!(target_os = "windows") {
+      return;
+    }
+
     if options.cwd.is_none() {
       options.cwd = Some(fixture_path.to_path_buf());
     }

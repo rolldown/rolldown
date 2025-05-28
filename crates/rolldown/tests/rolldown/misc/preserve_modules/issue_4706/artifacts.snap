@@ -1,0 +1,60 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## _virtual/rolldown_runtime.js
+
+```js
+
+export { __commonJS };
+```
+## child.js
+
+```js
+import { require_cjs } from "./cjs.js";
+
+//#region child.js
+const m = require_cjs();
+console.log(m);
+
+//#endregion
+```
+## cjs.js
+
+```js
+import { __commonJS } from "./_virtual/rolldown_runtime.js";
+
+//#region cjs.js
+var require_cjs = __commonJS({ "cjs.js"(exports, module) {
+	module.exports = 1e4;
+} });
+
+//#endregion
+export default require_cjs();
+
+export { require_cjs };
+```
+## dynamic.js
+
+```js
+//#region dynamic.js
+console.log("dynamic");
+
+//#endregion
+```
+## main.js
+
+```js
+import "./child.js";
+import "./reexport.js";
+
+```
+## reexport.js
+
+```js
+//#region reexport.js
+import("./dynamic.js");
+
+//#endregion
+```

@@ -32,6 +32,10 @@ impl Fixture {
     let TestConfig { config: mut options, meta, config_variants } =
       read_test_config(&self.config_path);
 
+    if meta.skip_windows && cfg!(target_os = "windows") {
+      return;
+    }
+
     if options.cwd.is_none() {
       options.cwd = Some(self.fixture_path.clone());
     }

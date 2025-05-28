@@ -1,5 +1,3 @@
-import type { Plugin } from '../plugin';
-
 export const ENUMERATED_INPUT_PLUGIN_HOOK_NAMES = [
   'options',
   'buildStart',

@@ -1,6 +1,6 @@
 import { a_exports, name as name$1 } from "./a2.js";
-import { b_exports, name$1 as name$2 } from "./b2.js";
-import { modules_exports, name$2 as name$3 } from "./modules2.js";
+import { b_exports, name as name$2 } from "./b2.js";
+import { modules_exports, name as name$3 } from "./modules2.js";
 import { a_default } from "./a4.js";
 import { b_default } from "./b4.js";
 

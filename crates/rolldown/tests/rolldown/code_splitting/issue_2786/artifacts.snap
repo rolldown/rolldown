@@ -7,7 +7,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```js
 import { share_default } from "./share2.js";
-import { share_default$1 } from "./share4.js";
+import { share_default as share_default$1 } from "./share4.js";
 
 //#region main.js
 console.log(share_default, share_default$1);
@@ -35,7 +35,7 @@ export { share_default };
 ## share3.js
 
 ```js
-import { share_default$1 as share_default } from "./share4.js";
+import { share_default } from "./share4.js";
 
 export { share_default as default };
 ```
@@ -46,5 +46,5 @@ export { share_default as default };
 var share_default = {};
 
 //#endregion
-export { share_default as share_default$1 };
+export { share_default };
 ```

@@ -7,8 +7,8 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```js
 import { clear } from "./repro12.js";
-import { clear$1, clear$1$1 } from "./repro22.js";
-import { clear$1$2, clear$2 as clear$2$1, clear$3 as clear$2 } from "./repro32.js";
+import { clear as clear$1, clear$1 as clear$1$1 } from "./repro22.js";
+import { clear as clear$2, clear$1 as clear$1$2, clear$2 as clear$2$1 } from "./repro32.js";
 
 //#region main.js
 var main_default = [
@@ -45,7 +45,7 @@ export { clear };
 ## repro2.js
 
 ```js
-import { clear$1 as clear, clear$1$1 as clear$1 } from "./repro22.js";
+import { clear, clear$1 } from "./repro22.js";
 
 export { clear, clear$1 };
 ```
@@ -57,12 +57,12 @@ const clear$1 = "repro2_clear$1";
 const clear = "repro2_clear";
 
 //#endregion
-export { clear as clear$1, clear$1 as clear$1$1 };
+export { clear, clear$1 };
 ```
 ## repro3.js
 
 ```js
-import { clear$1$2 as clear$1, clear$2, clear$3 as clear } from "./repro32.js";
+import { clear, clear$1, clear$2 } from "./repro32.js";
 
 export { clear, clear$1, clear$2 };
 ```
@@ -75,5 +75,5 @@ const clear$1 = "repro3_clear$1";
 const clear = "repro3_clear";
 
 //#endregion
-export { clear$1 as clear$1$2, clear$2, clear as clear$3 };
+export { clear, clear$1, clear$2 };
 ```

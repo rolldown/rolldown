@@ -3835,11 +3835,11 @@ expression: output
 
 # tests/rolldown/code_splitting/issue_2786
 
-- main-!~{000}~.js => main-DMfLfpW7.js
-- share-!~{007}~.js => share-C5nb9-cM.js
+- main-!~{000}~.js => main-B7jq-oW0.js
+- share-!~{005}~.js => share-0pk_LKAe.js
+- share-!~{007}~.js => share-BHp_w4um.js
 - share-!~{003}~.js => share-Dt2p-BNK.js
 - share-!~{001}~.js => share-DyQhD9RN.js
-- share-!~{005}~.js => share-rRZDRwa0.js
 
 # tests/rolldown/dce/conditional_exports
 
@@ -4662,13 +4662,13 @@ expression: output
 
 # tests/rolldown/issues/3438
 
-- main-!~{000}~.js => main-DeOwicSS.js
+- main-!~{000}~.js => main-DT8feizy.js
 - repro1-!~{003}~.js => repro1-C2egieRJ.js
 - repro1-!~{001}~.js => repro1-DpFyQUSD.js
-- repro2-!~{007}~.js => repro2-ConQOs64.js
-- repro2-!~{005}~.js => repro2-VC8WBNxQ.js
-- repro3-!~{009}~.js => repro3-Bkc-1-TS.js
-- repro3-!~{00b}~.js => repro3-DTSyGhTl.js
+- repro2-!~{005}~.js => repro2-2ZzljHIE.js
+- repro2-!~{007}~.js => repro2-NY6EXoxf.js
+- repro3-!~{009}~.js => repro3-BuKsv5jH.js
+- repro3-!~{00b}~.js => repro3-DZYQEA0N.js
 
 # tests/rolldown/issues/3456
 
@@ -4680,10 +4680,10 @@ expression: output
 
 # tests/rolldown/issues/3650
 
-- main-!~{000}~.js => main-B9BdFReq.js
-- first-!~{005}~.js => first-BtNyylCt.js
+- main-!~{000}~.js => main-CC6Z5TkW.js
+- first-!~{005}~.js => first-DRp5dWf1.js
 - rolldown-runtime-!~{001}~.js => rolldown-runtime-BvgZlyOU.js
-- second-!~{003}~.js => second-DhdkmuDo.js
+- second-!~{003}~.js => second-BmolHkdL.js
 
 # tests/rolldown/issues/3746/a
 
@@ -4838,6 +4838,13 @@ expression: output
 - dynamic-!~{006}~.js => dynamic-15A52uWR.js
 - dynamic2-!~{002}~.js => dynamic2-RmRtogxQ.js
 - mod-!~{004}~.js => mod-BUtkwoP6.js
+
+# tests/rolldown/misc/preserve_modules/issue_4698
+
+- entrya-!~{000}~.js => entrya-BxVvbd2p.js
+- entryb-!~{001}~.js => entryb-B4vF9Taw.js
+- a-!~{002}~.js => a-C3oW5wmu.js
+- b-!~{004}~.js => b-BZyKveQf.js
 
 # tests/rolldown/misc/preserve_modules/issue_4700
 

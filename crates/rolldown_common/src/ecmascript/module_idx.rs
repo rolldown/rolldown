@@ -3,9 +3,19 @@ oxc_index::define_index_type! {
     pub struct ModuleIdx = u32;
 }
 
-// Preserved module idx used for representing a module that is not in the module graph.
-// e.g.
-// create a module idx for `ImportRecord` for `require` ExpressionIdentifier
+/// Preserved `ModuleIdx` that used for representing a module that is not in the module graph.
+/// e.g.
+/// We need to create a record for this `require()`, so that we could
+/// polyfill it in ast finalization.
+/// ```js
+/// require();
+/// ```
+/// needs to be rewriten as:
+/// ```js
+/// import { __require } from 'rolldown-runtime';
+/// __require();
+/// ```
+/// when `platform: 'node'` and `format: 'esm'`
 pub const DUMMY_MODULE_IDX: ModuleIdx = ModuleIdx::from_usize_unchecked(u32::MAX as usize);
 
 impl ModuleIdx {

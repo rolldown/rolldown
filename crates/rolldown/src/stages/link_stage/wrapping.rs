@@ -32,7 +32,7 @@ fn wrap_module_recursively(ctx: &mut Context, target: ModuleIdx) {
     }
   }
 
-  module.import_records.iter().filter(|item| !item.is_dummy()).for_each(|importee| {
+  module.import_records.iter().filter_map(|item| item.as_normal()).for_each(|importee| {
     wrap_module_recursively(ctx, importee.resolved_module);
   });
 }
@@ -112,7 +112,7 @@ impl LinkStage<'_> {
         );
       } else {
         // Make sure depended cjs modules got wrapped.
-        module.import_records.iter().filter(|rec| !rec.is_dummy()).for_each(|rec| {
+        module.import_records.iter().filter_map(|rec| rec.as_normal()).for_each(|rec| {
           let Module::Normal(importee) = &self.module_table.modules[rec.resolved_module] else {
             return;
           };

@@ -7,8 +7,9 @@ use petgraph::prelude::DiGraphMap;
 use rolldown_common::{
   EcmaViewMeta, EntryPoint, EntryPointKind, ExportsKind, ImportKind, ImportRecordIdx,
   ImportRecordMeta, IndexModules, Module, ModuleIdx, ModuleType, NormalModule,
-  NormalizedBundlerOptions, StmtInfoIdx, SymbolOrMemberExprRef, SymbolRef, SymbolRefDb,
-  dynamic_import_usage::DynamicImportExportsUsage, side_effects::DeterminedSideEffects,
+  NormalizedBundlerOptions, ResolvedImportRecord, StmtInfoIdx, SymbolOrMemberExprRef, SymbolRef,
+  SymbolRefDb, dynamic_import_usage::DynamicImportExportsUsage,
+  side_effects::DeterminedSideEffects,
 };
 use rolldown_utils::rayon::{IntoParallelRefMutIterator, ParallelIterator};
 use rustc_hash::{FxHashMap, FxHashSet};
@@ -128,7 +129,7 @@ impl LinkStage<'_> {
         self.module_table.modules[mi].as_normal_mut().expect("should be a normal module");
       for record_idx in record_idxs {
         let rec = &mut module.import_records[record_idx];
-        rec.meta.insert(ImportRecordMeta::DEAD_DYNAMIC_IMPORT);
+        rec.meta_mut().insert(ImportRecordMeta::DEAD_DYNAMIC_IMPORT);
       }
     }
 
@@ -239,7 +240,7 @@ impl LinkStage<'_> {
     }
     visited.insert(cur_node);
     let module = self.module_table.modules[cur_node].as_normal()?;
-    for ele in module.import_records.iter().filter(|item| !item.is_dummy()) {
+    for ele in module.import_records.iter().filter_map(|item| item.as_normal()) {
       if ele.kind == ImportKind::DynamicImport {
         let seen = g.contains_node(ele.resolved_module);
         if *root_node != ele.resolved_module {
@@ -286,10 +287,11 @@ impl LinkStage<'_> {
           let mut dead_pure_dynamic_import_record_idx = vec![];
           let all_dead_pure_dynamic_import =
             stmt_info.import_records.iter().all(|import_record_idx| {
-              let import_record = &module.import_records[*import_record_idx];
-              if import_record.resolved_module.is_dummy() {
+              let ResolvedImportRecord::Normal(import_record) =
+                &module.import_records[*import_record_idx]
+              else {
                 return true;
-              }
+              };
               let importee_side_effects = self.module_table.modules[import_record.resolved_module]
                 .side_effects()
                 .has_side_effects();

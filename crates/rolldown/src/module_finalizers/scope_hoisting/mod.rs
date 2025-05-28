@@ -101,7 +101,7 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
     stmt: &mut Statement<'ast>,
     rec_id: ImportRecordIdx,
   ) -> bool {
-    let rec = &self.ctx.module.import_records[rec_id];
+    let rec = &self.ctx.module.import_records[rec_id].inner();
     let Module::Normal(importee) = &self.ctx.modules[rec.resolved_module] else {
       return true;
     };
@@ -347,40 +347,43 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
       let re_export_fn_ref = self.finalized_expr_for_runtime_symbol("__reExport");
       match self.ctx.options.format {
         OutputFormat::Esm => {
-          let stmts = export_all_externals_rec_ids.iter().copied().flat_map(|idx| {
-            let rec = &self.ctx.module.import_records[idx];
-            // importee_exports
-            let importee_namespace_name = self.canonical_name_for(rec.namespace_ref);
-            let m = self.ctx.modules.get(rec.resolved_module);
-            let Some(Module::External(module)) = m else {
-              return vec![];
-            };
-            let importer_chunk = &self.ctx.chunk_graph.chunk_table[self.ctx.chunk_id];
-            let importee_name = &module.get_import_path(importer_chunk);
-            vec![
-              // Insert `import * as ns from 'ext'`external module in esm format
-              self.snippet.import_star_stmt(importee_name, importee_namespace_name),
-              // Insert `__reExport(foo_exports, ns)`
-              self.snippet.builder.statement_expression(
-                SPAN,
-                self.snippet.call_expr_with_2arg_expr(
-                  re_export_fn_ref.clone_in(self.alloc),
-                  self.snippet.id_ref_expr(binding_name_for_namespace_object_ref, SPAN),
-                  self.snippet.id_ref_expr(importee_namespace_name, SPAN),
+          let stmts = export_all_externals_rec_ids
+            .iter()
+            .copied()
+            .filter_map(|idx| self.ctx.module.import_records[idx].as_normal())
+            .flat_map(|rec| {
+              // importee_exports
+              let importee_namespace_name = self.canonical_name_for(rec.namespace_ref);
+              let m = self.ctx.modules.get(rec.resolved_module);
+              let Some(Module::External(module)) = m else {
+                return vec![];
+              };
+              let importer_chunk = &self.ctx.chunk_graph.chunk_table[self.ctx.chunk_id];
+              let importee_name = &module.get_import_path(importer_chunk);
+              vec![
+                // Insert `import * as ns from 'ext'`external module in esm format
+                self.snippet.import_star_stmt(importee_name, importee_namespace_name),
+                // Insert `__reExport(foo_exports, ns)`
+                self.snippet.builder.statement_expression(
+                  SPAN,
+                  self.snippet.call_expr_with_2arg_expr(
+                    re_export_fn_ref.clone_in(self.alloc),
+                    self.snippet.id_ref_expr(binding_name_for_namespace_object_ref, SPAN),
+                    self.snippet.id_ref_expr(importee_namespace_name, SPAN),
+                  ),
                 ),
-              ),
-            ]
-          });
+              ]
+            });
           re_export_external_stmts = Some(stmts.collect::<Vec<_>>());
         }
         OutputFormat::Cjs | OutputFormat::Iife | OutputFormat::Umd => {
-          let stmts = export_all_externals_rec_ids.iter().copied().map(|idx| {
+          let stmts = export_all_externals_rec_ids.iter().copied().filter_map(|idx| {
             // Insert `__reExport(importer_exports, require('ext'))`
             let re_export_fn_ref = self.finalized_expr_for_runtime_symbol("__reExport");
             // importer_exports
             let importer_namespace_ref_expr =
               self.finalized_expr_for_symbol_ref(self.ctx.module.namespace_object_ref, false, None);
-            let rec = &self.ctx.module.import_records[idx];
+            let rec = self.ctx.module.import_records[idx].as_normal()?;
             let importee = &self.ctx.modules[rec.resolved_module];
             let expression = self.snippet.call_expr_with_2arg_expr(
               re_export_fn_ref,
@@ -390,9 +393,9 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
                 self.snippet.string_literal_expr(importee.id(), SPAN),
               ),
             );
-            ast::Statement::ExpressionStatement(
+            Some(ast::Statement::ExpressionStatement(
               ast::ExpressionStatement { span: expression.span(), expression }.into_in(self.alloc),
-            )
+            ))
           });
           re_export_external_stmts = Some(stmts.collect());
         }
@@ -581,7 +584,7 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
     expr: &mut ast::NewExpression<'ast>,
   ) -> Option<()> {
     let &rec_idx = self.ctx.module.new_url_references.get(&expr.span())?;
-    let rec = &self.ctx.module.import_records[rec_idx];
+    let rec = &self.ctx.module.import_records[rec_idx].as_normal()?;
     let is_callee_global_url = matches!(expr.callee.as_identifier(), Some(ident) if ident.name == "URL" && self.is_global_identifier_reference(ident));
 
     if !is_callee_global_url {
@@ -735,7 +738,7 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
       //  `require` calls that can't be recognized by rolldown are ignored in scanning, so they were not stored in `NormalModule#imports`.
       //  we just keep these `require` calls as it is
       if let Some(rec_id) = self.ctx.module.imports.get(&call_expr.span).copied() {
-        let rec = &self.ctx.module.import_records[rec_id];
+        let rec = &self.ctx.module.import_records[rec_id].inner();
         // use `__require` instead of `require`
         if rec.meta.contains(ImportRecordMeta::CALL_RUNTIME_REQUIRE) {
           *call_expr.callee.get_inner_expression_mut() =
@@ -856,7 +859,7 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
     import_expr: &ImportExpression<'ast>,
   ) -> Option<Expression<'ast>> {
     let rec_id = self.ctx.module.imports.get(&import_expr.span)?;
-    let rec = &self.ctx.module.import_records[*rec_id];
+    let rec = self.ctx.module.import_records[*rec_id].as_normal()?;
     let importee_id = rec.resolved_module;
 
     if rec.meta.contains(ImportRecordMeta::DEAD_DYNAMIC_IMPORT) {
@@ -949,7 +952,7 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
     if matches!(self.ctx.options.format, OutputFormat::Cjs) {
       // Convert `import('./foo.mjs')` to `Promise.resolve().then(function() { return require('foo.mjs') })`
       let rec_id = self.ctx.module.imports.get(&import_expr.span)?;
-      let rec = &self.ctx.module.import_records[*rec_id];
+      let rec = self.ctx.module.import_records[*rec_id].as_normal()?;
       let importee_id = rec.resolved_module;
       match &self.ctx.modules[importee_id] {
         Module::Normal(_importee) => {
@@ -1010,7 +1013,7 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
             }
           } else {
             // "export * from 'path'"
-            let rec = &self.ctx.module.import_records[rec_id];
+            let rec = &self.ctx.module.import_records[rec_id].inner();
             match &self.ctx.modules[rec.resolved_module] {
               Module::Normal(importee) => {
                 let importee_linking_info = &self.ctx.linking_infos[importee.idx];

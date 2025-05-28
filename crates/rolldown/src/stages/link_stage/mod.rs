@@ -73,12 +73,15 @@ impl<'a> LinkStage<'a> {
           dependencies: module
             .import_records()
             .iter()
-            .filter_map(|rec| match rec.kind {
-              ImportKind::DynamicImport => {
-                options.inline_dynamic_imports.then_some(rec.resolved_module)
+            .filter_map(|rec| {
+              let rec = rec.as_normal()?;
+              match rec.kind {
+                ImportKind::DynamicImport => {
+                  options.inline_dynamic_imports.then_some(rec.resolved_module)
+                }
+                ImportKind::Require => None,
+                _ => Some(rec.resolved_module),
               }
-              ImportKind::Require => None,
-              _ => Some(rec.resolved_module),
             })
             .collect(),
           star_exports_from_external_modules: module.as_normal().map_or(vec![], |inner| {

@@ -121,6 +121,7 @@ pub use crate::{
   types::import_kind::ImportKind,
   types::import_record::{
     ImportRecordIdx, ImportRecordMeta, RawImportRecord, ResolvedImportRecord,
+    ResolvedImportRecordInner,
   },
   types::importer_record::ImporterRecord,
   types::instantiated_chunk::InstantiatedChunk,

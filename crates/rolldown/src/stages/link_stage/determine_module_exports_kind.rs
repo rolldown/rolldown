@@ -11,7 +11,7 @@ impl LinkStage<'_> {
     let entry_ids_set = self.entries.iter().map(|e| e.id).collect::<FxHashSet<_>>();
     self.module_table.modules.iter().filter_map(Module::as_normal).for_each(|importer| {
       // TODO(hyf0): should check if importer is a js module
-      importer.import_records.iter().filter(|rec| !rec.is_dummy()).for_each(|rec| {
+      importer.import_records.iter().filter_map(|rec| rec.as_normal()).for_each(|rec| {
         let importee_id = rec.resolved_module;
         let Module::Normal(importee) = &self.module_table.modules[importee_id] else {
           return;

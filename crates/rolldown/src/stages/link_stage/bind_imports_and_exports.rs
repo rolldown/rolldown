@@ -260,7 +260,7 @@ impl LinkStage<'_> {
       }
       let module = module_tables[module_idx].as_normal().unwrap();
       let v = if module.ast_usage.contains(EcmaModuleAstUsage::IsCjsReexport) {
-        module.import_records.iter().filter(|item| !item.is_dummy()).all(|item| {
+        module.import_records.iter().filter_map(|item| item.as_normal()).all(|item| {
           let Some(importee) = module_tables[item.resolved_module].as_normal() else {
             return false;
           };
@@ -544,7 +544,7 @@ impl BindImportsAndExportsContext<'_> {
       );
       let _enter = match_import_span.enter();
 
-      let rec = &module.import_records[named_import.record_id];
+      let rec = &module.import_records[named_import.record_id].inner();
       let is_external = matches!(self.index_modules[rec.resolved_module], Module::External(_));
 
       if is_esm
@@ -666,7 +666,7 @@ impl BindImportsAndExportsContext<'_> {
     let named_import = &importer.named_imports[&tracker.imported_as];
 
     // Is this an external file?
-    let importee_id = importer.import_records[named_import.record_id].resolved_module;
+    let importee_id = importer.import_records[named_import.record_id].inner().resolved_module;
     let importee = match &self.index_modules[importee_id] {
       Module::Normal(importee) => importee.as_ref(),
       Module::External(external) => return ImportStatus::External(external.namespace_ref),
@@ -745,7 +745,8 @@ impl BindImportsAndExportsContext<'_> {
       tracing::trace!("Got import_status {:?}", import_status);
       let importer = &self.index_modules[tracker.importer];
       let named_import = &importer.as_normal().unwrap().named_imports[&tracker.imported_as];
-      let importer_record = &importer.as_normal().unwrap().import_records[named_import.record_id];
+      let importer_record =
+        &importer.as_normal().unwrap().import_records[named_import.record_id].inner();
 
       let kind = match import_status {
         ImportStatus::CommonJS => match &tracker.imported {
@@ -772,7 +773,8 @@ impl BindImportsAndExportsContext<'_> {
             match ambiguous_ref_owner.as_normal().unwrap().named_imports.get(ambiguous_ref) {
               Some(another_named_import) => {
                 let rec = &ambiguous_ref_owner.as_normal().unwrap().import_records
-                  [another_named_import.record_id];
+                  [another_named_import.record_id]
+                  .inner();
                 let ambiguous_result = self.match_import_with_export(
                   index_modules,
                   &mut MatchingContext { tracker_stack: ctx.tracker_stack.clone() },
@@ -799,7 +801,8 @@ impl BindImportsAndExportsContext<'_> {
           let owner = &index_modules[symbol.owner];
           if let Some(another_named_import) = owner.as_normal().unwrap().named_imports.get(&symbol)
           {
-            let rec = &owner.as_normal().unwrap().import_records[another_named_import.record_id];
+            let rec =
+              &owner.as_normal().unwrap().import_records[another_named_import.record_id].inner();
             match &self.index_modules[rec.resolved_module] {
               Module::External(_) => {
                 break MatchImportKind::Normal(MatchImportKindNormal {

@@ -12,7 +12,7 @@ use oxc::{
   span::{SPAN, Span},
 };
 
-use rolldown_common::{IndexModules, Module, ModuleIdx, NormalModule};
+use rolldown_common::{IndexModules, Module, ModuleIdx, NormalModule, ResolvedImportRecord};
 use rolldown_ecmascript_utils::{
   AstSnippet, BindingIdentifierExt, ExpressionExt, quote_expr, quote_stmts,
 };
@@ -122,8 +122,11 @@ impl<'ast> HmrAstFinalizer<'_, 'ast> {
     match &mut call_expr.arguments[0] {
       ast::Argument::StringLiteral(string_literal) => {
         // `import.meta.hot.accept('./dep.js', ...)`
-        let import_record = &self.module.import_records
-          [self.module.hmr_info.module_request_to_import_record_idx[string_literal.value.as_str()]];
+        let ResolvedImportRecord::Normal(import_record) = &self.module.import_records
+          [self.module.hmr_info.module_request_to_import_record_idx[string_literal.value.as_str()]]
+        else {
+          return;
+        };
         string_literal.value =
           self.snippet.builder.atom(self.modules[import_record.resolved_module].stable_id());
       }
@@ -131,9 +134,12 @@ impl<'ast> HmrAstFinalizer<'_, 'ast> {
         // `import.meta.hot.accept(['./dep1.js', './dep2.js'], ...)`
         array_expression.elements.iter_mut().for_each(|element| {
           if let ast::ArrayExpressionElement::StringLiteral(string_literal) = element {
-            let import_record =
+            let ResolvedImportRecord::Normal(import_record) =
               &self.module.import_records[self.module.hmr_info.module_request_to_import_record_idx
-                [string_literal.value.as_str()]];
+                [string_literal.value.as_str()]]
+            else {
+              return;
+            };
             string_literal.value =
               self.snippet.builder.atom(self.modules[import_record.resolved_module].stable_id());
           }
@@ -332,7 +338,9 @@ impl<'ast> VisitMut<'ast> for HmrAstFinalizer<'_, 'ast> {
           // console.log(import_foo.default, import_foo.bar);
           // ```
           let rec_id = self.module.imports[&import_decl.span];
-          let rec = &self.module.import_records[rec_id];
+          let ResolvedImportRecord::Normal(rec) = &self.module.import_records[rec_id] else {
+            return;
+          };
           let importee = &self.modules[rec.resolved_module];
           self.dependencies.insert(rec.resolved_module);
 
@@ -374,7 +382,9 @@ impl<'ast> VisitMut<'ast> for HmrAstFinalizer<'_, 'ast> {
           if let Some(_source) = &decl.source {
             // export {} from '...'
             let rec_id = self.module.imports[&decl.span];
-            let rec = &self.module.import_records[rec_id];
+            let ResolvedImportRecord::Normal(rec) = &self.module.import_records[rec_id] else {
+              return;
+            };
             let importee = &self.modules[rec.resolved_module];
             self.dependencies.insert(rec.resolved_module);
 

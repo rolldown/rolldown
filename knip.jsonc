@@ -17,13 +17,7 @@
       ],
     },
     "packages/bench": {
-      "entry": [
-        "benches/*.js", // oxnode is not yet recognized (first positional arg is entry file)
-        "vue-entry.js",
-      ],
-    },
-    "packages/pluginutils": {
-      "entry": ["src/index.ts", "tsdown.config.ts"], // no tsdown plugin yet
+      "entry": ["vue-entry.js"],
     },
     "packages/rolldown": {
       "entry": [
@@ -48,11 +42,7 @@
       "entry": ["src/**/*.js", "test/**/*.{js,ts}"],
     },
     "scripts": {
-      "entry": [
-        "misc/**",
-        "src/gen-debug-action-types.ts", // oxnode
-        "snap-diff/*.ts", // oxnode
-      ],
+      "entry": ["misc/**"],
     },
     "packages/test-dev-server/tests/fixtures/basic": {
       "entry": ["dev.config.mjs", "src/*.js"], // no @rolldown/test-dev-server plugin

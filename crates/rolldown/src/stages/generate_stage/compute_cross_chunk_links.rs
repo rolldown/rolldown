@@ -332,19 +332,46 @@ impl GenerateStage<'_> {
 
       // If this is an entry point, make sure we import all chunks belonging to this entry point, even if there are no imports. We need to make sure these chunks are evaluated for their side effects too.
       if let ChunkKind::EntryPoint { bit: importer_chunk_bit, .. } = &chunk.kind {
-        chunk_graph
-          .chunk_table
-          .iter_enumerated()
-          .filter(|(id, _)| *id != chunk_id)
-          .filter(|(_, importee_chunk)| {
-            importee_chunk.bits.has_bit(*importer_chunk_bit)
-              && importee_chunk.has_side_effect(self.link_output.runtime.id())
-          })
-          .for_each(|(importee_chunk_id, _)| {
-            index_cross_chunk_imports[chunk_id].insert(importee_chunk_id);
-            let imports_from_other_chunks = &mut index_imports_from_other_chunks[chunk_id];
-            imports_from_other_chunks.entry(importee_chunk_id).or_default();
-          });
+        if self.options.preserve_modules {
+          let entry_module =
+            chunk.entry_module(&self.link_output.module_table).expect("Should have entry module");
+          entry_module
+            .import_records
+            .iter()
+            .filter_map(|rec| {
+              let rec = rec.as_normal()?;
+              (rec.kind != ImportKind::DynamicImport).then_some(rec)
+            })
+            .for_each(|item| {
+              if !self.link_output.module_table.modules[item.resolved_module]
+                .side_effects()
+                .has_side_effects()
+              {
+                return;
+              }
+              let Some(importee_chunk_idx) = chunk_graph.module_to_chunk[item.resolved_module]
+              else {
+                return;
+              };
+              index_cross_chunk_imports[chunk_id].insert(importee_chunk_idx);
+              let imports_from_other_chunks = &mut index_imports_from_other_chunks[chunk_id];
+              imports_from_other_chunks.entry(importee_chunk_idx).or_default();
+            });
+        } else {
+          chunk_graph
+            .chunk_table
+            .iter_enumerated()
+            .filter(|(id, _)| *id != chunk_id)
+            .filter(|(_, importee_chunk)| {
+              importee_chunk.bits.has_bit(*importer_chunk_bit)
+                && importee_chunk.has_side_effect(self.link_output.runtime.id())
+            })
+            .for_each(|(importee_chunk_id, _)| {
+              index_cross_chunk_imports[chunk_id].insert(importee_chunk_id);
+              let imports_from_other_chunks = &mut index_imports_from_other_chunks[chunk_id];
+              imports_from_other_chunks.entry(importee_chunk_id).or_default();
+            });
+        }
       }
 
       // Make sure the runtime module is imported at hmr.

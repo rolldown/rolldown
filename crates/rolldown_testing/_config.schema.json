@@ -37,6 +37,11 @@
       "default": true,
       "type": "boolean"
     },
+    "skipWindows": {
+      "description": "Sometimes, it is cumbersome to handle some windows-specific path issue in tests. Usually it is related tests of `preserve_modules`.We can't just replace all `\\\\` into '/', in path, because the Windows format path will also affect the hash, which leads `filename_with_hash.rs` tests failed.",
+      "default": false,
+      "type": "boolean"
+    },
     "snapshotBytes": {
       "description": "If `true`, bytes source will be snapshot.",
       "default": false,

@@ -4844,6 +4844,15 @@ expression: output
 - main-!~{000}~.js => main-DU_32bj7.js
 - child-!~{001}~.js => child-CJAl-cV8.js
 
+# tests/rolldown/misc/preserve_modules/issue_4706
+
+- main-!~{000}~.js => main-DqIwZUp2.js
+- _virtual/rolldown_runtime-!~{001}~.js => _virtual/rolldown_runtime-BSGde8dd.js
+- child-!~{005}~.js => child-CvLkkv13.js
+- cjs-!~{003}~.js => cjs-CxB2_RCR.js
+- dynamic-!~{009}~.js => dynamic-DWvPx7n8.js
+- reexport-!~{007}~.js => reexport-YxtQ6YDY.js
+
 # tests/rolldown/misc/preserve_modules/multi_entry
 
 - a-!~{001}~.js => a-9EeU3Xa2.js

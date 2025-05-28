@@ -193,16 +193,16 @@ napi-derive = { version = "3.0.0-beta.1", default-features = false, features = [
 
 # oxc crates with the same version
 
-oxc = { version = "0.72.0", features = ["ast_visit", "transformer", "minifier", "mangler", "semantic", "codegen", "serialize", "isolated_declarations", "regular_expression", "cfg"] }
-oxc_parser_napi = { version = "0.72.0" }
-oxc_transform_napi = { version = "0.72.0" }
+oxc = { version = "0.72.1", features = ["ast_visit", "transformer", "minifier", "mangler", "semantic", "codegen", "serialize", "isolated_declarations", "regular_expression", "cfg"] }
+oxc_parser_napi = { version = "0.72.1" }
+oxc_transform_napi = { version = "0.72.1" }
 
 # oxc crates in their own repos
 # Versions must be relaxed for usage in oxc.
 # Please update with `cargo update oxc_resolver oxc_resolver_napi oxc_sourcemap oxc_index`
 oxc_index = { version = "3", features = ["rayon", "serde"] } # https://github.com/oxc-project/oxc-index-vec
-oxc_resolver = { version = "10", features = ["package_json_raw_json_api"] } # https://github.com/oxc-project/oxc-resolver
-oxc_resolver_napi = { version = "10" }
+oxc_resolver = { version = "11", features = ["package_json_raw_json_api"] } # https://github.com/oxc-project/oxc-resolver
+oxc_resolver_napi = { version = "11" }
 oxc_sourcemap = { version = "3" } # https://github.com/oxc-project/oxc-sourcemap
 
 [profile.dev]

@@ -33,6 +33,7 @@
     "knip": "^5.58.1",
     "lint-staged": "^16.0.0",
     "oxlint": "^0.16.0",
+    "remove-unused-vars": "^0.0.6",
     "rolldown": "workspace:*",
     "typescript": "^5.6.3"
   },

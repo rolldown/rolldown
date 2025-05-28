@@ -13,8 +13,8 @@ catalogs:
       specifier: ^0.0.27
       version: 0.0.27
     '@oxc-project/runtime':
-      specifier: 0.72.0
-      version: 0.72.0
+      specifier: 0.72.1
+      version: 0.72.1
     '@oxc-project/types':
       specifier: 0.72.1
       version: 0.72.1
@@ -62,6 +62,9 @@ importers:
       oxlint:
         specifier: ^0.16.0
         version: 0.16.11
+      remove-unused-vars:
+        specifier: ^0.0.6
+        version: 0.0.6
       rolldown:
         specifier: workspace:*
         version: link:packages/rolldown
@@ -279,7 +282,7 @@ importers:
     dependencies:
       '@oxc-project/runtime':
         specifier: 'catalog:'
-        version: 0.72.0
+        version: 0.72.1
       '@oxc-project/types':
         specifier: 'catalog:'
         version: 0.72.1
@@ -2304,6 +2307,10 @@ packages:
 
   '@oxc-project/runtime@0.72.0':
     resolution: {integrity: sha512-HSL4xYOb6/ntJqBFPmtTABdtk4tBbyTDuPi/I9VSmJcp9HVZSOdCDZxxeVXu0QeikjZyFbuNRUVugvoGfC3qFw==}
+    engines: {node: '>=6.9.0'}
+
+  '@oxc-project/runtime@0.72.1':
+    resolution: {integrity: sha512-8nU/WPeJWF6QJrT8HtEEIojz26bXn677deDX8BDVpjcz97CVKORVAvFhE2/lfjnBYE0+aqmjFeD17YnJQpCyqg==}
     engines: {node: '>=6.9.0'}
 
   '@oxc-project/types@0.37.0':
@@ -5064,6 +5071,10 @@ packages:
   remeda@2.21.6:
     resolution: {integrity: sha512-W8G06/lTo6RzCBuMnjzsAi5UwN21+/Ff29HvpnBecvERP5qGw2dOdiXsgzv4jWT2n02mF+HMsmeoOjm5VRK3lw==}
 
+  remove-unused-vars@0.0.6:
+    resolution: {integrity: sha512-KIryn/vo5AGQoslHPUvrSNaeC++de0xshGC98baH9i3V/eci/nycpp5GdR+W+wvPbyI9XDDcgkTZpsiqgb2Q2w==}
+    hasBin: true
+
   require-directory@2.1.1:
     resolution: {integrity: sha512-fGxEI7+wsG9xrvdjsrlmL22OMTTiHRwAMroiEeMgq8gzoLC/PQr7RsRDSTLUg/bZAZtF+TVIkHc6/4RIKrui+Q==}
     engines: {node: '>=0.10.0'}
@@ -7630,6 +7641,8 @@ snapshots:
     optional: true
 
   '@oxc-project/runtime@0.72.0': {}
+
+  '@oxc-project/runtime@0.72.1': {}
 
   '@oxc-project/types@0.37.0': {}
 
@@ -10500,6 +10513,10 @@ snapshots:
   remeda@2.21.6:
     dependencies:
       type-fest: 4.41.0
+
+  remove-unused-vars@0.0.6:
+    dependencies:
+      typescript: 5.8.3
 
   require-directory@2.1.1: {}
 

@@ -1,3 +1,83 @@
+## [1.0.0-beta.10](https://github.com/rolldown/rolldown/compare/v1.0.0-beta.9...v1.0.0-beta.10) (2025-05-28)
+
+### ⚠ BREAKING CHANGES
+
+* "feat!: always make the default value of `platform` as `browser`" (#4720)
+* **resolve:** add `module` to resolve conditions by default (#4703)
+* **types/resolve:** use literal `'import-statement'` to refer to static import statements instead of `'import'` (#4689)
+* **rust:** merge `target` option into `transform` (#4665)
+* **rust:** merge `jsx` option into `transform` (#4654)
+* always make the default value of `platform` as `browser` (#4611)
+
+### Features
+
+* add preserveEntrySignatures option ([#4640](https://github.com/rolldown/rolldown/issues/4640)) ([3979e2a](https://github.com/rolldown/rolldown/commit/3979e2a5a1e89482a2b1c287fbdc42b238db18c6))
+* always make the default value of `platform` as `browser` ([#4611](https://github.com/rolldown/rolldown/issues/4611)) ([43425a0](https://github.com/rolldown/rolldown/commit/43425a01b4a5549f2b47746aff2385fb23f2bfd0))
+* **binding:** preserveModulesRoot ([#4631](https://github.com/rolldown/rolldown/issues/4631)) ([51df2b7](https://github.com/rolldown/rolldown/commit/51df2b737e941084ede9763b9e0d061bb2fc78d3))
+* **ci:** apply `cargo shear --fix` correctly in autofix ([#4677](https://github.com/rolldown/rolldown/issues/4677)) ([15934eb](https://github.com/rolldown/rolldown/commit/15934eb25e0db4d73cccd2e9418a828f766e2073))
+* **debug:** add `StmtSideEffect` to record the specific reason why a stmt has side effect ([#4671](https://github.com/rolldown/rolldown/issues/4671)) ([5982115](https://github.com/rolldown/rolldown/commit/5982115ae4db2851f231f30c74aadbe5e8a2c2c1))
+* **debug:** emit more details for `Module[#imports](https://github.com/rolldown/rolldown/issues/imports)` ([#4619](https://github.com/rolldown/rolldown/issues/4619)) ([42afd5a](https://github.com/rolldown/rolldown/commit/42afd5aa4f8f8edab142a4b42a277854a4f9a1dd))
+* enable cjs ns merge for react ([#4621](https://github.com/rolldown/rolldown/issues/4621)) ([ddf8da8](https://github.com/rolldown/rolldown/commit/ddf8da885f6999a68bad876df4b1a6db2a6930d4))
+* enable loose mode validate option and give warning ([#4638](https://github.com/rolldown/rolldown/issues/4638)) ([080ce4e](https://github.com/rolldown/rolldown/commit/080ce4eedaf5803a4da09a84e1f9c18498c38df4))
+* **on_demand_wrapping:** don't wrap modules that don't rely on others and have side effect ([#4670](https://github.com/rolldown/rolldown/issues/4670)) ([326e6f5](https://github.com/rolldown/rolldown/commit/326e6f5bd17cac7ef68173d80cb19b67e521bd93))
+* **plugin/json:** only transform module with `moduleType: 'json'` ([#4554](https://github.com/rolldown/rolldown/issues/4554)) ([c69e332](https://github.com/rolldown/rolldown/commit/c69e33224e2f41701acf7fc5a861f398d8a4ddc2))
+* **rolldown_plugin_oxc_runtime:** support automatic resolution of oxc runtime helpers ([#4641](https://github.com/rolldown/rolldown/issues/4641)) ([b09c035](https://github.com/rolldown/rolldown/commit/b09c0350d91cb7da1f5d40a53a94a5300fba5118)), closes [#4597](https://github.com/rolldown/rolldown/issues/4597)
+* **rolldown_plugin_utils:** extract `check_public_file` from `rolldown_plugin_asset` ([#4660](https://github.com/rolldown/rolldown/issues/4660)) ([1b3b8c3](https://github.com/rolldown/rolldown/commit/1b3b8c3e757795a58f709e4a4b57f9fa6a6aafe9))
+* **rolldown_plugin_utils:** extract `file_to_url` from `rolldown_plugin_asset` ([#4663](https://github.com/rolldown/rolldown/issues/4663)) ([40290b5](https://github.com/rolldown/rolldown/commit/40290b573e7434bfe59be1aaff5ec18b5cd896c9))
+* **rolldown_plugin_utils:** support `create_to_import_meta_url_based_relative_runtime` ([#4657](https://github.com/rolldown/rolldown/issues/4657)) ([d77354f](https://github.com/rolldown/rolldown/commit/d77354f590ee89015bb5c042d29a489b7f37b81a))
+* **rolldown_plugin_utils:** support `to_output_file_path_in_js` ([#4659](https://github.com/rolldown/rolldown/issues/4659)) ([9e8c677](https://github.com/rolldown/rolldown/commit/9e8c677d1a60ef8a5198f473dcf44a32f03dbf20))
+* **rolldown:** oxc v0.71.0 and napi beta ([#4618](https://github.com/rolldown/rolldown/issues/4618)) ([76c39c6](https://github.com/rolldown/rolldown/commit/76c39c68177af95243714e375536728ee3de06f4)), closes [#4614](https://github.com/rolldown/rolldown/issues/4614)
+* **rolldown:** oxc v0.72.0 ([#4658](https://github.com/rolldown/rolldown/issues/4658)) ([8371a90](https://github.com/rolldown/rolldown/commit/8371a909a6d27c4ba7ea45adf8ba6982f70131ff))
+* **rolldown:** oxc v0.72.1 and oxc-resolver v11 ([#4718](https://github.com/rolldown/rolldown/issues/4718)) ([79a47fc](https://github.com/rolldown/rolldown/commit/79a47fcda9dd236bad3ba5edc489adc394a3ae89))
+* **rust:** merge `jsx` option into `transform` ([#4654](https://github.com/rolldown/rolldown/issues/4654)) ([4872097](https://github.com/rolldown/rolldown/commit/48720977fa6ff5a1a42522141a779edbef025e14)), closes [#4447](https://github.com/rolldown/rolldown/issues/4447)
+* **rust:** merge `target` option into `transform` ([#4665](https://github.com/rolldown/rolldown/issues/4665)) ([f9aa33a](https://github.com/rolldown/rolldown/commit/f9aa33a83915020468b9901cc9703003389e0979)), closes [#4651](https://github.com/rolldown/rolldown/issues/4651)
+* **rust:** preserveModulesRoot ([#4630](https://github.com/rolldown/rolldown/issues/4630)) ([9f62c77](https://github.com/rolldown/rolldown/commit/9f62c772f7d55d92b94d6ff4f74c8d50e4297e67))
+* support to attach chunk debug information in output ([#4633](https://github.com/rolldown/rolldown/issues/4633)) ([1079582](https://github.com/rolldown/rolldown/commit/10795828dba9cf129c5764381017b766e6cbc9ef))
+
+### Bug Fixes
+
+* `chunk.name` is not sanitized when the chunk is a common chunk ([#4712](https://github.com/rolldown/rolldown/issues/4712)) ([5949f2a](https://github.com/rolldown/rolldown/commit/5949f2a3307192a44b534f6c700dae6f78e84b48)), closes [#4709](https://github.com/rolldown/rolldown/issues/4709)
+* `preserveModules` co exists with multi entrypoints ([#4626](https://github.com/rolldown/rolldown/issues/4626)) ([b46bdea](https://github.com/rolldown/rolldown/commit/b46bdea5d5e80bf82d3e4f94eda0260b6c71c4af)), closes [#4624](https://github.com/rolldown/rolldown/issues/4624)
+* `preserveModules` don't respect relative path ([#4629](https://github.com/rolldown/rolldown/issues/4629)) ([9727493](https://github.com/rolldown/rolldown/commit/972749302ca84d2317d261f88eedd1835d866bb6))
+* **browser:** disable oxc runtime plugin ([#4708](https://github.com/rolldown/rolldown/issues/4708)) ([0ec9e7d](https://github.com/rolldown/rolldown/commit/0ec9e7ddef4df61f017800308be9226426ffef16)), closes [#4707](https://github.com/rolldown/rolldown/issues/4707)
+* **ci:** add missing `just` in warmup workflow ([c6a1eb1](https://github.com/rolldown/rolldown/commit/c6a1eb110f48dbca6b06be7bd83bb9e6fc15de24))
+* **ci:** cache release builds to a different cache key ([a002b24](https://github.com/rolldown/rolldown/commit/a002b2406f2b27065f093e2f6cad407fa82438dd))
+* **ci:** cache warmup should include build artifacts ([#4675](https://github.com/rolldown/rolldown/issues/4675)) ([0f2c3b5](https://github.com/rolldown/rolldown/commit/0f2c3b5951123ff1c102df05abfa074ea53d36a5))
+* **ci:** fix double pnpm cache from `setup-node` ([#4685](https://github.com/rolldown/rolldown/issues/4685)) ([db25788](https://github.com/rolldown/rolldown/commit/db25788e67c3cfaff8989ec467788eaa5444956c))
+* **ci:** fix release build ([#4691](https://github.com/rolldown/rolldown/issues/4691)) ([82620b9](https://github.com/rolldown/rolldown/commit/82620b916544a35dab613141a78e45c598859637))
+* **ci:** fix template-injection in benchmark-rust ([57b2792](https://github.com/rolldown/rolldown/commit/57b27922a3a9ad7c8f5a46335ce676a7d1f9a155))
+* **ci:** fix template-injection in publish-to-npm-for-nightly-canary.yml ([352340f](https://github.com/rolldown/rolldown/commit/352340faa336226a526d993f3a393f7c2ed369c2))
+* **ci:** in metrics, use cache instead of `cargo fetch` ([937eae9](https://github.com/rolldown/rolldown/commit/937eae93c25b0abd05f67ffda2f02b01216bf23d))
+* **ci:** pnpm install --ignore-scripts ([#4696](https://github.com/rolldown/rolldown/issues/4696)) ([e040112](https://github.com/rolldown/rolldown/commit/e0401125b588f74dd9b4164292a83a41146594f1))
+* cjs namespace merge in incremental build ([#4613](https://github.com/rolldown/rolldown/issues/4613)) ([b1c500e](https://github.com/rolldown/rolldown/commit/b1c500e11a9d8b8132e02027d43487e48b5a5e86))
+* dynamic chunk not exported when using preserveModules ([#4650](https://github.com/rolldown/rolldown/issues/4650)) ([d91dfb5](https://github.com/rolldown/rolldown/commit/d91dfb553598b445875e495f9c5ad70ea9e5824c))
+* exported dynamic import is treated as unused ([#4648](https://github.com/rolldown/rolldown/issues/4648)) ([edf5b4e](https://github.com/rolldown/rolldown/commit/edf5b4e1652a7b241ab7f214d29777593f4f8096)), closes [#4646](https://github.com/rolldown/rolldown/issues/4646)
+* generated wrapper stmt info should be always included on demand ([#4639](https://github.com/rolldown/rolldown/issues/4639)) ([ed553e1](https://github.com/rolldown/rolldown/commit/ed553e1e4c8d5a88a3e103307c60c1b6eae2e228))
+* index out of bounds panic at oxc_index-3.0.0 with recent canary version ([#4713](https://github.com/rolldown/rolldown/issues/4713)) ([3fad6f4](https://github.com/rolldown/rolldown/commit/3fad6f497b55345fe2c626692b6e8cc402a31967))
+* **inlineDynamicImports:** ensure tla module execution correctly ([#4627](https://github.com/rolldown/rolldown/issues/4627)) ([e9ef28c](https://github.com/rolldown/rolldown/commit/e9ef28c1c54add876596a31edd8f4137484b6fca))
+* partial cjs namespace merge with chunk split ([#4598](https://github.com/rolldown/rolldown/issues/4598)) ([83a0b40](https://github.com/rolldown/rolldown/commit/83a0b401873c1c57bc38f5f59b870163a9370371))
+* partial merge cjs namespace ([#4595](https://github.com/rolldown/rolldown/issues/4595)) ([0085f4a](https://github.com/rolldown/rolldown/commit/0085f4a4d5d2d25cd33f58a430c591c2c05404a9))
+* removing unused dynamic imported chunks ([#4655](https://github.com/rolldown/rolldown/issues/4655)) ([fe21db7](https://github.com/rolldown/rolldown/commit/fe21db75b99622d62d6bc3db85a99531418f0f5e))
+* **resolve:** add `module` to resolve conditions by default ([#4703](https://github.com/rolldown/rolldown/issues/4703)) ([9727531](https://github.com/rolldown/rolldown/commit/97275318e6f37756509a8f185bf51759e597394f))
+* **rolldown/browser:** auto-resolve oxc runtime helpers ([#4645](https://github.com/rolldown/rolldown/issues/4645)) ([701bbc3](https://github.com/rolldown/rolldown/commit/701bbc3d342e8821a3efef3bc6ef09b7709b475f)), closes [#4641](https://github.com/rolldown/rolldown/issues/4641)
+* **rust:** avoid panic in `into_assignment_target` ([#4688](https://github.com/rolldown/rolldown/issues/4688)) ([6c806ea](https://github.com/rolldown/rolldown/commit/6c806ea2c4310f0b14563aa30573bb87cadc7e22)), closes [#4304](https://github.com/rolldown/rolldown/issues/4304)
+* sort dynamic entires with topological order before tree shake. ([#4694](https://github.com/rolldown/rolldown/issues/4694)) ([bc96622](https://github.com/rolldown/rolldown/commit/bc966224d226f80da7a294fe9befba605f508f24))
+* **strict_execution_order:** runtime module should not be wrapped by default ([#4692](https://github.com/rolldown/rolldown/issues/4692)) ([4008ac0](https://github.com/rolldown/rolldown/commit/4008ac0aa1172ade61174b6d0183e584f60f8b24))
+* **strict_execution_order:** wrapped module should be included on demand ([#4687](https://github.com/rolldown/rolldown/issues/4687)) ([7c21036](https://github.com/rolldown/rolldown/commit/7c210364a7d2bf34f175714a8f015c230f3f054f))
+* strip path for require identifier with `preserveModules` ([#4704](https://github.com/rolldown/rolldown/issues/4704)) ([2ba8e28](https://github.com/rolldown/rolldown/commit/2ba8e2836baa95074e1ba0d07622b867a22b9317)), closes [#4700](https://github.com/rolldown/rolldown/issues/4700)
+* **types/resolve:** use literal `'import-statement'` to refer to static import statements instead of `'import'` ([#4689](https://github.com/rolldown/rolldown/issues/4689)) ([eee51d8](https://github.com/rolldown/rolldown/commit/eee51d8756d2d957445d804f5240a5461b93eba9))
+* **watch:** watch linux path at windows ([#4625](https://github.com/rolldown/rolldown/issues/4625)) ([ed594aa](https://github.com/rolldown/rolldown/commit/ed594aa6b5ae83ff52ae8727568fefbc977971d4))
+
+### Performance Improvements
+
+* change `profile.dev.debug` to improve rust compile times ([#4623](https://github.com/rolldown/rolldown/issues/4623)) ([0312f66](https://github.com/rolldown/rolldown/commit/0312f66401f70a0de261c8a88953f1e6c3227a38))
+* **rolldown:** prevent duplicate text embedding with `include_str!` ([#4664](https://github.com/rolldown/rolldown/issues/4664)) ([8fee5af](https://github.com/rolldown/rolldown/commit/8fee5afe0c6a7870e24f1395e62ca05001554a9b)), closes [#4354](https://github.com/rolldown/rolldown/issues/4354)
+
+### Reverts
+
+* "feat!: always make the default value of `platform` as `browser`" ([#4720](https://github.com/rolldown/rolldown/issues/4720)) ([4021325](https://github.com/rolldown/rolldown/commit/4021325f2b6a5fbf10ed8ed2bfcfa50f33781cfd)), closes [rolldown/rolldown#4611](https://github.com/rolldown/rolldown/issues/4611)
+* "refactor(rolldown_sourcemap): remove unused `SourceJoiner[#prepend](https://github.com/rolldown/rolldown/issues/prepend)_source`" ([#4632](https://github.com/rolldown/rolldown/issues/4632)) ([719ec89](https://github.com/rolldown/rolldown/commit/719ec89f74e2dc1d86c4b3357ba26cdf36c9ecc4)), closes [rolldown/rolldown#4431](https://github.com/rolldown/rolldown/issues/4431)
+* `feat(on_demand_wrapping): don't wrap modules that don't rely on others and have side effect [#4670](https://github.com/rolldown/rolldown/issues/4670)` ([#4686](https://github.com/rolldown/rolldown/issues/4686)) ([8a77ce9](https://github.com/rolldown/rolldown/commit/8a77ce9a7bc3f5dd3f3af56c90b836362b840a8b))
 ## [1.0.0-beta.9](https://github.com/rolldown/rolldown/compare/v1.0.0-beta.8...v1.0.0-beta.9) (2025-05-19)
 
 ### ⚠ BREAKING CHANGES

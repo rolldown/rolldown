@@ -1,0 +1,59 @@
+{
+  "$schema": "https://unpkg.com/knip@5/schema.json",
+  "ignoreWorkspaces": ["examples/**"], // no rolldown plugin yet
+  "workspaces": {
+    ".": {
+      "project": [],
+    },
+    "crates/rolldown/tests/rolldown/topics/npm_packages": {
+      "entry": ["util_deprecate/main.js"],
+    },
+    "docs": {
+      "entry": [
+        ".vitepress/config.ts", // no Vitepress plugin yet
+        ".vitepress/theme/index.js",
+        ".vitepress/theme/components/overrides/VPHero.vue",
+        "data-loading/*.data.{js,ts}",
+      ],
+    },
+    "packages/bench": {
+      "entry": [
+        "benches/*.js", // oxnode is not yet recognized (first positional arg is entry file)
+        "vue-entry.js",
+      ],
+    },
+    "packages/pluginutils": {
+      "entry": ["src/index.ts", "tsdown.config.ts"], // no tsdown plugin yet
+    },
+    "packages/rolldown": {
+      "entry": [
+        "build.ts", // oxnode
+        "build-binding.mts", // oxnode
+        "src/browser.js",
+        "src/cli/index.ts",
+        "src/log/locate-character/index.d.ts",
+        "src/rolldown-binding.wasi-browser.js",
+        "src/{wasi,webcontainer}-*.*",
+      ],
+    },
+    "packages/rolldown/tests": {
+      "entry": ["*/**"],
+    },
+    "packages/rolldown/tests/module-federation": {
+      "entry": ["*.js"],
+    },
+    "packages/rollup-tests": {
+      "entry": ["src/**/*.js", "test/**/*.{js,ts}"],
+    },
+    "scripts": {
+      "entry": [
+        "misc/**",
+        "src/gen-debug-action-types.ts", // oxnode
+        "snap-diff/*.ts", // oxnode
+      ],
+    },
+    "packages/test-dev-server/tests/fixtures/basic": {
+      "entry": ["dev.config.mjs", "src/*.js"], // no @rolldown/test-dev-server plugin
+    },
+  },
+}

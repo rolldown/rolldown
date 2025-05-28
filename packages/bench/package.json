@@ -7,6 +7,8 @@
     "bench-ci": "oxnode ./benches/ci.js"
   },
   "dependencies": {
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0",
     "vue": "^3.4.27",
     "vue-router": "^4.3.2"
   },

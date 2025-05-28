@@ -217,6 +217,12 @@ importers:
 
   packages/bench:
     dependencies:
+      react:
+        specifier: ^19.0.0
+        version: 19.1.0
+      react-dom:
+        specifier: ^19.0.0
+        version: 19.1.0(react@19.1.0)
       vue:
         specifier: ^3.4.27
         version: 3.5.14(typescript@5.8.3)

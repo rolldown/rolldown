@@ -7,7 +7,9 @@ use oxc::{
   ast_visit::{VisitMut, walk_mut},
   span::{GetSpan, SPAN, Span},
 };
-use rolldown_common::{ExportsKind, Module, StmtInfoIdx, SymbolRef, ThisExprReplaceKind, WrapKind};
+use rolldown_common::{
+  ExportsKind, Module, ResolvedImportRecord, StmtInfoIdx, SymbolRef, ThisExprReplaceKind, WrapKind,
+};
 use rolldown_ecmascript_utils::{ExpressionExt, JsxExt};
 use rustc_hash::FxHashSet;
 
@@ -30,7 +32,8 @@ impl<'ast> VisitMut<'ast> for ScopeHoistingFinalizer<'_, 'ast> {
       .iter()
       .filter_map(|(symbol_ref, v)| {
         let rec_id = v.record_id;
-        let importee_idx = self.ctx.module.ecma_view.import_records[rec_id].resolved_module;
+        let importee_idx =
+          self.ctx.module.ecma_view.import_records[rec_id].as_normal()?.resolved_module;
         // bailout if the importee is a external module
         // see rollup/test/function/samples/side-effects-only-default-exports/ as an
         // example
@@ -414,7 +417,9 @@ impl<'ast> VisitMut<'ast> for ScopeHoistingFinalizer<'_, 'ast> {
       // Make sure the import expression is in correct form. If it's not, we should leave it as it is.
       if let Some(str) = expr.source.as_static_module_request() {
         let rec_id = self.ctx.module.imports[&expr.span];
-        let rec = &self.ctx.module.import_records[rec_id];
+        let ResolvedImportRecord::Normal(rec) = &self.ctx.module.import_records[rec_id] else {
+          return;
+        };
         let importee_id = rec.resolved_module;
         let importer_chunk = &self.ctx.chunk_graph.chunk_table[self.ctx.chunk_id];
         match &self.ctx.modules[importee_id] {

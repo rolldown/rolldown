@@ -162,7 +162,7 @@ impl GenerateStage<'_> {
           module
             .import_records
             .iter()
-            .filter(|rec| !rec.is_dummy())
+            .filter_map(|rec| rec.as_normal())
             .inspect(|rec| {
               if let Module::Normal(importee_module) =
                 &self.link_output.module_table.modules[rec.resolved_module]
@@ -192,7 +192,7 @@ impl GenerateStage<'_> {
             });
 
           module.named_imports.iter().for_each(|(_, import)| {
-            let rec = &module.import_records[import.record_id];
+            let rec = &module.import_records[import.record_id].inner();
             if let Module::External(importee) =
               &self.link_output.module_table.modules[rec.resolved_module]
             {

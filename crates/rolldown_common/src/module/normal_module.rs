@@ -44,8 +44,8 @@ impl NormalModule {
           .ecma_view
           .import_records
           .iter()
-          .filter(|&rec| rec.meta.contains(ImportRecordMeta::IS_EXPORT_STAR))
-          .map(|rec| rec.resolved_module),
+          .filter(|&rec| rec.inner().meta.contains(ImportRecordMeta::IS_EXPORT_STAR))
+          .map(|rec| rec.inner().resolved_module),
       )
     } else {
       itertools::Either::Right(std::iter::empty())
@@ -104,7 +104,10 @@ impl NormalModule {
               .ecma_view
               .import_records
               .iter()
-              .filter(|&rec| rec.meta.contains(ImportRecordMeta::IS_EXPORT_STAR))
+              .filter_map(|rec| {
+                let rec = rec.as_normal()?;
+                Some(rec.meta.contains(ImportRecordMeta::IS_EXPORT_STAR))
+              })
               .map(|_| Rstr::from("*")),
           );
         }
@@ -173,9 +176,8 @@ impl NormalModule {
     modules: &'me IndexModules,
   ) -> impl Iterator<Item = ImportRecordIdx> + 'me {
     self.ecma_view.import_records.iter_enumerated().filter_map(move |(rec_id, rec)| {
-      if !rec.meta.contains(ImportRecordMeta::IS_EXPORT_STAR)
-        || rec.meta.contains(ImportRecordMeta::IS_DUMMY)
-      {
+      let rec = rec.as_normal()?;
+      if !rec.meta.contains(ImportRecordMeta::IS_EXPORT_STAR) {
         return None;
       }
       match modules[rec.resolved_module] {

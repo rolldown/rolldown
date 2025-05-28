@@ -80,8 +80,12 @@ impl LinkStage<'_> {
             match self.options.format {
               OutputFormat::Esm => {
                 meta.star_exports_from_external_modules.iter().copied().for_each(|rec_idx| {
-                  referenced_symbols.push(ecma_module.import_records[rec_idx].namespace_ref.into());
-                  declared_symbols.push(ecma_module.import_records[rec_idx].namespace_ref);
+                  // It is safe to call `inner`, because `star_exports_from_external_modules`
+                  // already filtered out all dummy records.
+                  //
+                  referenced_symbols
+                    .push(ecma_module.import_records[rec_idx].inner().namespace_ref.into());
+                  declared_symbols.push(ecma_module.import_records[rec_idx].inner().namespace_ref);
                 });
               }
               OutputFormat::Cjs | OutputFormat::Iife | OutputFormat::Umd | OutputFormat::App => {}

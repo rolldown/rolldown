@@ -81,7 +81,7 @@ export function viteResolvePlugin(
   return makeBuiltinPluginCallable(builtinPlugin);
 }
 
-export type ModuleFederationPluginOption =
+type ModuleFederationPluginOption =
   & Omit<
     BindingModuleFederationPluginOption,
     'remotes'

@@ -32,7 +32,7 @@ export type AssetFileNamesFunction = (chunkInfo: PreRenderedAsset) => string;
 
 export type GlobalsFunction = (name: string) => string;
 
-export type ESTarget =
+type ESTarget =
   | 'es6'
   | 'es2015'
   | 'es2016'

@@ -4,7 +4,7 @@ export type TypeAssert<T extends true> = T;
 
 export type HasProperty<T, K extends string> = K extends keyof T ? true : false;
 
-export type IsPropertyEqual<A, B, Key extends keyof A & keyof B> = IsEqual<
+type IsPropertyEqual<A, B, Key extends keyof A & keyof B> = IsEqual<
   A[Key],
   B[Key]
 >;
@@ -14,12 +14,12 @@ type IsValuesOfObjectAllTrue<T> = {
 }[keyof T] extends true ? true
   : false;
 
-export type ShowPropertiesEqualStatus<A, B> = {
+type ShowPropertiesEqualStatus<A, B> = {
   // If `K` only exists in `A`, we consider they are equal.
   [K in keyof A]: K extends keyof B ? IsEqual<A[K], B[K]> : true;
 };
 
-export type IsPropertiesEqual<A, B> = IsValuesOfObjectAllTrue<
+type IsPropertiesEqual<A, B> = IsValuesOfObjectAllTrue<
   ShowPropertiesEqualStatus<A, B>
 >;
 

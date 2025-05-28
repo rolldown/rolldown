@@ -60,7 +60,7 @@ export interface WatcherOptions {
   exclude?: StringOrRegExp | StringOrRegExp[];
 }
 
-export type MakeAbsoluteExternalsRelative = boolean | 'ifRelativeSource';
+type MakeAbsoluteExternalsRelative = boolean | 'ifRelativeSource';
 
 export type HmrOptions = boolean | {
   host?: string;

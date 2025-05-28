@@ -1,7 +1,7 @@
 // Auto-generated code, DO NOT EDIT DIRECTLY!
 // To edit this generated file you have to edit `tasks/generator/src/generators/hook_usage.rs`
 
-export enum HookUsageKind {
+enum HookUsageKind {
   buildStart = 1 << 0,
   resolveId = 1 << 1,
   resolveDynamicImport = 1 << 2,

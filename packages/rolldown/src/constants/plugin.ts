@@ -47,7 +47,7 @@ export const ENUMERATED_PLUGIN_HOOK_NAMES: [
 /**
  * Names of all properties in a `Plugin` object. Includes `name` and `api`.
  */
-export type PluginProps = keyof Plugin;
+type PluginProps = keyof Plugin;
 
 type EnumeratedPluginHookNames = typeof ENUMERATED_PLUGIN_HOOK_NAMES;
 /**

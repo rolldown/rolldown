@@ -1,6 +1,6 @@
 export type LogLevel = 'info' | 'debug' | 'warn';
 export type LogLevelOption = LogLevel | 'silent';
-export type LogLevelWithError = LogLevel | 'error';
+type LogLevelWithError = LogLevel | 'error';
 
 export interface RollupLog {
   binding?: string;

@@ -267,7 +267,11 @@ importers:
         specifier: ^4.0.0
         version: 4.0.1
 
-  packages/browser: {}
+  packages/browser:
+    dependencies:
+      '@napi-rs/wasm-runtime':
+        specifier: ^0.2.8
+        version: 0.2.10
 
   packages/debug:
     devDependencies:

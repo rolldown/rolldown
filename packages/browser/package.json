@@ -61,5 +61,7 @@
     "build-node": "BROWSER_PKG=1 pnpm run --filter rolldown build-node",
     "preinstall": "npx only-allow pnpm"
   },
-  "dependencies": {}
+  "dependencies": {
+    "@napi-rs/wasm-runtime": "^0.2.8"
+  }
 }

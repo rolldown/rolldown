@@ -203,9 +203,11 @@ impl<'a> GenerateStage<'a> {
               let (chunk_name, absolute_chunk_file_name) =
                 representative_file_name_for_preserve_modules(module_id.as_path());
 
-              let sanitized_filename =
+              let sanitized_absolute_filename =
                 sanitize_filename.call(absolute_chunk_file_name.as_ref()).await?;
-              (ArcStr::from(chunk_name), sanitized_filename)
+
+              let sanitized_chunk_name = sanitize_filename.call(&chunk_name).await?;
+              (sanitized_chunk_name, sanitized_absolute_filename)
             } else if is_user_defined {
               // try extract meaningful input name from path
               if let Some(file_stem) = module.id().as_path().file_stem().and_then(|f| f.to_str()) {
@@ -233,7 +235,7 @@ impl<'a> GenerateStage<'a> {
               let module_id = module.id();
               let name = module_id.as_path().representative_file_name();
               let sanitized_filename = sanitize_filename.call(&name).await?;
-              Ok((ArcStr::from(name), sanitized_filename))
+              Ok((sanitized_filename.clone(), sanitized_filename))
             } else {
               let name = arcstr::literal!("chunk");
               Ok((name.clone(), name))

@@ -2,7 +2,7 @@ import * as acorn from 'acorn';
 import * as gen from 'astring';
 import { builders as b, NodePath, Scope, traverse } from 'estree-toolkit';
 
-export type RewriteConfig = {
+type RewriteConfig = {
   topLevelVar: boolean;
 };
 export const defaultRewriteConfig: RewriteConfig = {

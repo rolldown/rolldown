@@ -140,7 +140,7 @@ pub fn render_chunk_exports(
       match chunk.kind {
         ChunkKind::EntryPoint { module, .. } => {
           let module =
-            &link_output.module_table.modules[module].as_normal().expect("should be normal module");
+            &link_output.module_table[module].as_normal().expect("should be normal module");
           if matches!(module.exports_kind, ExportsKind::Esm) {
             let rendered_items = export_items
               .into_iter()
@@ -155,7 +155,7 @@ pub fn render_chunk_exports(
                     Cow::Owned(property_access_str(canonical_ns_name, property_name).into())
                   }
                   _ => {
-                    if link_output.module_table.modules[canonical_ref.owner].is_external() {
+                    if link_output.module_table[canonical_ref.owner].is_external() {
                       let namespace = &chunk.canonical_names[&canonical_ref];
                       Cow::Owned(namespace.as_str().into())
                     } else {
@@ -225,7 +225,7 @@ pub fn render_chunk_exports(
             .imports_from_external_modules
             .iter()
             .map(|(idx, _)| {
-              let external = &ctx.link_output.module_table.modules[*idx]
+              let external = &ctx.link_output.module_table[*idx]
                 .as_external()
                 .expect("Should be external module here");
               external.namespace_ref
@@ -233,7 +233,7 @@ pub fn render_chunk_exports(
             .collect();
 
           external_modules.iter().for_each(|idx| {
-          let external = &ctx.link_output.module_table.modules[*idx].as_external().expect("Should be external module here");
+          let external = &ctx.link_output.module_table[*idx].as_external().expect("Should be external module here");
           let binding_ref_name =
           &ctx.chunk.canonical_names[&external.namespace_ref];
             let import_stmt =
@@ -322,7 +322,7 @@ pub fn get_export_items(
   match chunk.kind {
     ChunkKind::EntryPoint { module: module_idx, is_user_defined, .. } => {
       let module =
-        graph.module_table.modules[module_idx].as_normal().expect("should be normal module");
+        graph.module_table[module_idx].as_normal().expect("should be normal module");
       // Check if the module is dynamically imported. This ensures that entry points with
       // dynamic import references are not folded into a common chunk when `preserveModules` is enabled.
       let is_dynamic_imported = !module.ecma_view.dynamic_importers.is_empty();

@@ -113,7 +113,7 @@ impl LinkStage<'_> {
       } else {
         // Make sure depended cjs modules got wrapped.
         module.import_records.iter().for_each(|rec| {
-          let Module::Normal(importee) = &self.module_table.modules[rec.resolved_module] else {
+          let Module::Normal(importee) = &self.module_table[rec.resolved_module] else {
             return;
           };
           // Commonjs as a dependency must be wrapped. The wrapper is like a commonjs runtime to help initialize the commonjs module correctly.

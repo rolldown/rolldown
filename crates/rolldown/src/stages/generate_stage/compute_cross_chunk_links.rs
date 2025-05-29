@@ -67,7 +67,7 @@ impl GenerateStage<'_> {
           let mut module_ids = chunk_graph.chunk_table[*chunk_id]
             .modules
             .iter()
-            .map(|id| self.link_output.module_table.modules[*id].id())
+            .map(|id| self.link_output.module_table[*id].id())
             .collect::<Vec<_>>();
           module_ids.sort_unstable();
           module_ids
@@ -96,7 +96,7 @@ impl GenerateStage<'_> {
         imports_from_external_modules
           .into_iter()
           .sorted_by_key(|(external_module_id, _)| {
-            self.link_output.module_table.modules[*external_module_id].exec_order()
+            self.link_output.module_table[*external_module_id].exec_order()
           })
           .collect_vec()
       })
@@ -156,7 +156,7 @@ impl GenerateStage<'_> {
       )| {
         let mut symbol_needs_to_assign = vec![];
         chunk.modules.iter().copied().for_each(|module_id| {
-          let Module::Normal(module) = &self.link_output.module_table.modules[module_id] else {
+          let Module::Normal(module) = &self.link_output.module_table[module_id] else {
             return;
           };
           module
@@ -164,7 +164,7 @@ impl GenerateStage<'_> {
             .iter()
             .inspect(|rec| {
               if let Module::Normal(importee_module) =
-                &self.link_output.module_table.modules[rec.resolved_module]
+                &self.link_output.module_table[rec.resolved_module]
               {
                 // the the resolved module is not included in module graph, skip
                 // TODO: Is that possible that the module of the record is a external module?
@@ -183,7 +183,7 @@ impl GenerateStage<'_> {
                 && !rec.meta.contains(ImportRecordMeta::IS_EXPORT_STAR)
             })
             .filter_map(|rec| {
-              self.link_output.module_table.modules[rec.resolved_module].as_external()
+              self.link_output.module_table[rec.resolved_module].as_external()
             })
             .for_each(|importee| {
               // Ensure the external module is imported in case it has side effects.
@@ -193,7 +193,7 @@ impl GenerateStage<'_> {
           module.named_imports.iter().for_each(|(_, import)| {
             let rec = &module.import_records[import.record_id];
             if let Module::External(importee) =
-              &self.link_output.module_table.modules[rec.resolved_module]
+              &self.link_output.module_table[rec.resolved_module]
             {
               imports_from_external_modules.entry(importee.idx).or_default().push(import.clone());
             }
@@ -240,7 +240,7 @@ impl GenerateStage<'_> {
         });
 
         if let Some(entry_id) = &chunk.entry_module_idx() {
-          let entry = &self.link_output.module_table.modules[*entry_id].as_normal().unwrap();
+          let entry = &self.link_output.module_table[*entry_id].as_normal().unwrap();
           let entry_meta = &self.link_output.metas[entry.idx];
 
           if !matches!(entry_meta.wrap_kind, WrapKind::Cjs) {
@@ -280,7 +280,7 @@ impl GenerateStage<'_> {
             "Symbol: {:?}, {:?} in {:?} should only belong to one chunk. Existed {:?}, new {chunk_id:?}",
             declared.name(symbols),
             declared,
-            self.link_output.module_table.modules[declared.owner].id(),
+            self.link_output.module_table[declared.owner].id(),
             symbol_data.chunk_id,
           );
         }
@@ -308,12 +308,12 @@ impl GenerateStage<'_> {
           continue;
         }
         // If the symbol from external, we don't need to include it.
-        if self.link_output.module_table.modules[import_ref.owner].is_external() {
+        if self.link_output.module_table[import_ref.owner].is_external() {
           continue;
         }
         let import_symbol = self.link_output.symbol_db.get(import_ref);
         let importee_chunk_id = import_symbol.chunk_id.unwrap_or_else(|| {
-          let symbol_owner = &self.link_output.module_table.modules[import_ref.owner];
+          let symbol_owner = &self.link_output.module_table[import_ref.owner];
           let symbol_name = import_ref.name(&self.link_output.symbol_db);
           panic!("Symbol {:?} in {:?} should belong to a chunk", symbol_name, symbol_owner.id())
         });
@@ -339,7 +339,7 @@ impl GenerateStage<'_> {
             .iter()
             .filter(|rec| rec.kind != ImportKind::DynamicImport)
             .for_each(|item| {
-              if !self.link_output.module_table.modules[item.resolved_module]
+              if !self.link_output.module_table[item.resolved_module]
                 .side_effects()
                 .has_side_effects()
               {
@@ -400,7 +400,7 @@ impl GenerateStage<'_> {
         .sorted_by_cached_key(|symbol_ref| {
           // same deconflict order in deconflict_chunk_symbols.rs
           // https://github.com/rolldown/rolldown/blob/504ea76c00563eb7db7a49c2b6e04b2fbe61bdc1/crates/rolldown/src/utils/chunk/deconflict_chunk_symbols.rs?plain=1#L86-L102
-          Reverse::<u32>(self.link_output.module_table.modules[symbol_ref.owner].exec_order())
+          Reverse::<u32>(self.link_output.module_table[symbol_ref.owner].exec_order())
         })
         .copied()
       {

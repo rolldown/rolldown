@@ -19,7 +19,7 @@ impl LinkStage<'_> {
       let module_idx = ModuleIdx::new(idx);
       let side_effects =
         self.determine_side_effects_for_module(module_idx, &mut index_side_effects_cache);
-      if let Module::Normal(module) = &mut self.module_table.modules[module_idx] {
+      if let Module::Normal(module) = &mut self.module_table[module_idx] {
         module.side_effects = side_effects;
       }
     }
@@ -30,7 +30,7 @@ impl LinkStage<'_> {
     module_idx: ModuleIdx,
     cache: &mut IndexVec<ModuleIdx, SideEffectCache>,
   ) -> DeterminedSideEffects {
-    let module = &self.module_table.modules[module_idx];
+    let module = &self.module_table[module_idx];
 
     match cache[module_idx] {
       SideEffectCache::None => {

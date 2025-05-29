@@ -67,7 +67,7 @@ impl LinkStage<'_> {
       .iter()
       .filter(|entry| matches!(entry.kind, EntryPointKind::UserDefined))
       .for_each(|entry| {
-        let module = match &self.module_table.modules[entry.id] {
+        let module = match &self.module_table[entry.id] {
           Module::Normal(module) => module,
           Module::External(_module) => {
             // Case: import('external').
@@ -84,7 +84,7 @@ impl LinkStage<'_> {
     if self.options.is_hmr_enabled() {
       // HMR runtime contains statements with side effects, they are referenced by other modules via global variables.
       // So we need to manually include them here.
-      if let Some(runtime_module) = self.module_table.modules[self.runtime.id()].as_normal() {
+      if let Some(runtime_module) = self.module_table[self.runtime.id()].as_normal() {
         runtime_module.stmt_infos.iter_enumerated().for_each(|(stmt_info_id, stmt_info)| {
           if stmt_info.side_effect {
             include_statement(context, runtime_module, stmt_info_id);
@@ -103,7 +103,7 @@ impl LinkStage<'_> {
           return false;
         }
       }
-      let module = match &self.module_table.modules[entry.id] {
+      let module = match &self.module_table[entry.id] {
         Module::Normal(module) => module,
         Module::External(_module) => {
           // Case: import('external').
@@ -125,7 +125,7 @@ impl LinkStage<'_> {
     // visitor.
     for (mi, record_idxs) in unused_record_idxs {
       let module =
-        self.module_table.modules[mi].as_normal_mut().expect("should be a normal module");
+        self.module_table[mi].as_normal_mut().expect("should be a normal module");
       for record_idx in record_idxs {
         let rec = &mut module.import_records[record_idx];
         rec.meta.insert(ImportRecordMeta::DEAD_DYNAMIC_IMPORT);
@@ -238,7 +238,7 @@ impl LinkStage<'_> {
       return Some(());
     }
     visited.insert(cur_node);
-    let module = self.module_table.modules[cur_node].as_normal()?;
+    let module = self.module_table[cur_node].as_normal()?;
     for rec in &module.import_records {
       if rec.kind == ImportKind::DynamicImport {
         let seen = g.contains_node(rec.resolved_module);
@@ -281,13 +281,13 @@ impl LinkStage<'_> {
         // Mark the dynamic entry as lived if at least one statement that create this entry is included
         item.related_stmt_infos.iter().any(|(module_idx, stmt_idx)| {
           let module =
-            &self.module_table.modules[*module_idx].as_normal().expect("should be a normal module");
+            &self.module_table[*module_idx].as_normal().expect("should be a normal module");
           let stmt_info = &module.stmt_infos[*stmt_idx];
           let mut dead_pure_dynamic_import_record_idx = vec![];
           let all_dead_pure_dynamic_import =
             stmt_info.import_records.iter().all(|import_record_idx| {
               let import_record = &module.import_records[*import_record_idx];
-              let importee_side_effects = self.module_table.modules[import_record.resolved_module]
+              let importee_side_effects = self.module_table[import_record.resolved_module]
                 .side_effects()
                 .has_side_effects();
               let ret = !importee_side_effects;

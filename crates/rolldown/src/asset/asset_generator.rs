@@ -14,7 +14,7 @@ impl Generator for AssetGenerator {
       .chunk
       .modules
       .iter()
-      .filter_map(|&id| ctx.link_output.module_table.modules[id].as_normal())
+      .filter_map(|&id| ctx.link_output.module_table[id].as_normal())
       .filter(|m| m.asset_view.is_some())
       .collect::<Vec<_>>();
 

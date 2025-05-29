@@ -49,7 +49,7 @@ impl LinkStage<'_> {
           }
           stmt_info.import_records.iter().for_each(|rec_id| {
             let rec = &importer.import_records[*rec_id];
-            let rec_resolved_module = &self.module_table.modules[rec.resolved_module];
+            let rec_resolved_module = &self.module_table[rec.resolved_module];
             if !rec_resolved_module.is_normal()
               || is_external_dynamic_import(&self.module_table, rec, importer_idx)
             {
@@ -256,7 +256,7 @@ impl LinkStage<'_> {
 
     // merge import_record.meta
     for (module_idx, record_meta_pairs) in record_meta_update_pending_pairs_list {
-      let Some(module) = self.module_table.modules[module_idx].as_normal_mut() else {
+      let Some(module) = self.module_table[module_idx].as_normal_mut() else {
         continue;
       };
       for (rec_id, meta) in record_meta_pairs {

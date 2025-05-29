@@ -110,7 +110,7 @@ impl GenerateStage<'_> {
     // Sort modules in each chunk by execution order
     chunk_graph.chunk_table.iter_mut().for_each(|chunk| {
       chunk.modules.sort_unstable_by_key(|module_id| {
-        self.link_output.module_table.modules[*module_id].exec_order()
+        self.link_output.module_table[*module_id].exec_order()
       });
     });
 
@@ -125,14 +125,14 @@ impl GenerateStage<'_> {
           (
             ChunkKind::EntryPoint { module: a_module_id, .. },
             ChunkKind::EntryPoint { module: b_module_id, .. },
-          ) => self.link_output.module_table.modules[*a_module_id]
+          ) => self.link_output.module_table[*a_module_id]
             .exec_order()
-            .cmp(&self.link_output.module_table.modules[*b_module_id].exec_order()),
+            .cmp(&self.link_output.module_table[*b_module_id].exec_order()),
           (ChunkKind::EntryPoint { module: a_module_id, .. }, ChunkKind::Common) => {
             let a_module_exec_order =
-              self.link_output.module_table.modules[*a_module_id].exec_order();
+              self.link_output.module_table[*a_module_id].exec_order();
             let b_chunk_first_module_exec_order =
-              self.link_output.module_table.modules[b.modules[0]].exec_order();
+              self.link_output.module_table[b.modules[0]].exec_order();
             if a_module_exec_order == b_chunk_first_module_exec_order {
               a_should_be_first
             } else {
@@ -141,9 +141,9 @@ impl GenerateStage<'_> {
           }
           (ChunkKind::Common, ChunkKind::EntryPoint { module: b_module_id, .. }) => {
             let b_module_exec_order =
-              self.link_output.module_table.modules[*b_module_id].exec_order();
+              self.link_output.module_table[*b_module_id].exec_order();
             let a_chunk_first_module_exec_order =
-              self.link_output.module_table.modules[a.modules[0]].exec_order();
+              self.link_output.module_table[a.modules[0]].exec_order();
             if a_chunk_first_module_exec_order == b_module_exec_order {
               b_should_be_first
             } else {
@@ -152,9 +152,9 @@ impl GenerateStage<'_> {
           }
           (ChunkKind::Common, ChunkKind::Common) => {
             let a_chunk_first_module_exec_order =
-              self.link_output.module_table.modules[a.modules[0]].exec_order();
+              self.link_output.module_table[a.modules[0]].exec_order();
             let b_chunk_first_module_exec_order =
-              self.link_output.module_table.modules[b.modules[0]].exec_order();
+              self.link_output.module_table[b.modules[0]].exec_order();
             a_chunk_first_module_exec_order.cmp(&b_chunk_first_module_exec_order)
           }
         }
@@ -194,12 +194,12 @@ impl GenerateStage<'_> {
       for symbol_ref in v
         .iter()
         .filter(|item| {
-          self.link_output.module_table.modules[item.owner].as_normal().unwrap().is_included()
+          self.link_output.module_table[item.owner].as_normal().unwrap().is_included()
             && self.link_output.metas[item.owner].wrap_kind.is_none()
         })
         // Determine safely merged cjs ns binding should put in where
         // We should put it in the importRecord which first reference the cjs ns binding.
-        .sorted_by_key(|item| self.link_output.module_table.modules[item.owner].exec_order())
+        .sorted_by_key(|item| self.link_output.module_table[item.owner].exec_order())
       {
         let owner = symbol_ref.owner;
         let chunk_idx = chunk_graph.module_to_chunk[owner].expect("Module should be in chunk");
@@ -280,7 +280,7 @@ impl GenerateStage<'_> {
       let count: u32 = entry_index.try_into().expect("Too many entries, u32 overflowed.");
       let mut bits = BitSet::new(entries_len);
       bits.set_bit(count);
-      let Module::Normal(module) = &self.link_output.module_table.modules[entry_point.id] else {
+      let Module::Normal(module) = &self.link_output.module_table[entry_point.id] else {
         continue;
       };
       let mut chunk = Chunk::new(
@@ -389,7 +389,7 @@ impl GenerateStage<'_> {
     let mut q = VecDeque::from([entry_module_idx]);
 
     while let Some(module_idx) = q.pop_front() {
-      let Module::Normal(module) = &self.link_output.module_table.modules[module_idx] else {
+      let Module::Normal(module) = &self.link_output.module_table[module_idx] else {
         continue;
       };
 

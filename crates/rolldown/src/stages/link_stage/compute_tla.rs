@@ -16,7 +16,7 @@ impl LinkStage<'_> {
         memorized.unwrap_or(false)
       } else {
         visited_map.insert(module_idx, None);
-        let module = &module_table.modules[module_idx];
+        let module = &module_table[module_idx];
         let is_self_tla = module
           .as_normal()
           .is_some_and(|module| module.ast_usage.contains(EcmaModuleAstUsage::TopLevelAwait));
@@ -32,7 +32,7 @@ impl LinkStage<'_> {
           // TODO: require TLA module should give a error
           .filter(|rec| matches!(rec.kind, ImportKind::Import))
           .any(|rec| {
-            let importee = &module_table.modules[rec.resolved_module];
+            let importee = &module_table[rec.resolved_module];
             is_tla(importee.idx(), module_table, visited_map)
           });
 

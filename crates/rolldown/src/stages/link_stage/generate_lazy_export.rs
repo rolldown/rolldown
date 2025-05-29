@@ -70,7 +70,7 @@ impl LinkStage<'_> {
           continue;
         }
         // if json is not a ObjectExpression, we will fallback to normal esm lazy export transform
-        let module = &mut self.module_table.modules[module_idx];
+        let module = &mut self.module_table[module_idx];
         let module = module.as_normal_mut().unwrap();
         update_module_default_export_info(module, module.default_export_ref, 1.into());
       }
@@ -111,7 +111,7 @@ fn json_object_expr_to_esm(
   module_idx: ModuleIdx,
   ast_idx: EcmaAstIdx,
 ) -> bool {
-  let module = &mut link_staged.module_table.modules[module_idx];
+  let module = &mut link_staged.module_table[module_idx];
   let Module::Normal(module) = module else {
     return false;
   };

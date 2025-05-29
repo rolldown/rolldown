@@ -125,8 +125,7 @@ impl<'ast> ScopeHoistingFinalizer<'_, 'ast> {
           .ctx
           .module
           .hmr_info
-          .module_request_to_import_record_idx[string_literal.value.as_str()]]
-        .inner();
+          .module_request_to_import_record_idx[string_literal.value.as_str()]];
         string_literal.value =
           self.snippet.builder.atom(self.ctx.modules[import_record.resolved_module].stable_id());
       }
@@ -138,8 +137,7 @@ impl<'ast> ScopeHoistingFinalizer<'_, 'ast> {
               .ctx
               .module
               .hmr_info
-              .module_request_to_import_record_idx[string_literal.value.as_str()]]
-            .inner();
+              .module_request_to_import_record_idx[string_literal.value.as_str()]];
             string_literal.value = self
               .snippet
               .builder

@@ -1,7 +1,7 @@
 use oxc::semantic::SymbolId;
 use rolldown_std_utils::OptionExt;
 
-use crate::{IndexModules, Module, ModuleIdx, ResolvedImportRecord, SymbolRefDb, SymbolRefFlags};
+use crate::{IndexModules, Module, ModuleIdx, SymbolRefDb, SymbolRefFlags};
 
 use super::symbol_ref_db::{GetLocalDb, GetLocalDbMut};
 
@@ -77,9 +77,7 @@ impl SymbolRef {
       return false;
     };
 
-    let ResolvedImportRecord::Normal(rec) = &owner.import_records[named_import.record_id] else {
-      return false;
-    };
+    let rec = &owner.import_records[named_import.record_id];
 
     match &modules[rec.resolved_module] {
       Module::Normal(_) => {

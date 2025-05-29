@@ -30,10 +30,7 @@ impl LinkStage<'_> {
           .import_records()
           .iter()
           // TODO: require TLA module should give a error
-          .filter_map(|rec| {
-            let rec = rec.as_normal()?;
-            matches!(rec.kind, ImportKind::Import).then_some(rec)
-          })
+          .filter(|rec| matches!(rec.kind, ImportKind::Import))
           .any(|rec| {
             let importee = &module_table.modules[rec.resolved_module];
             is_tla(importee.idx(), module_table, visited_map)

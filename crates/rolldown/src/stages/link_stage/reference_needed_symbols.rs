@@ -2,7 +2,7 @@ use std::{ptr::addr_of, sync::Mutex};
 
 use rolldown_common::{
   ImportKind, ImportRecordIdx, ImportRecordMeta, Module, ModuleIdx, ModuleTable, OutputFormat,
-  ResolvedImportRecordInner, StmtInfoMeta, WrapKind, side_effects::DeterminedSideEffects,
+  ResolvedImportRecord, StmtInfoMeta, WrapKind, side_effects::DeterminedSideEffects,
 };
 use rolldown_utils::{
   concat_string,
@@ -13,7 +13,7 @@ use super::LinkStage;
 
 fn is_external_dynamic_import(
   table: &ModuleTable,
-  record: &ResolvedImportRecordInner,
+  record: &ResolvedImportRecord,
   module_idx: ModuleIdx,
 ) -> bool {
   record.kind == ImportKind::DynamicImport
@@ -45,8 +45,8 @@ impl LinkStage<'_> {
 
         stmt_infos.infos.iter_mut_enumerated().for_each(|(stmt_info_idx, stmt_info)| {
           stmt_info.import_records.iter().for_each(|rec_id| {
-            let rec = &importer.import_records[*rec_id].inner();
-            if rec.resolved_module.is_dummy() {
+            let rec = &importer.import_records[*rec_id];
+            if rec.is_dummy() {
               if matches!(rec.kind, ImportKind::Require) {
                 if self.options.format.should_call_runtime_require()
                   && self.options.polyfill_require_for_esm_format_with_node_platform()
@@ -270,7 +270,7 @@ impl LinkStage<'_> {
         continue;
       };
       for (rec_id, meta) in record_meta_pairs {
-        *module.import_records[rec_id].meta_mut() |= meta;
+        module.import_records[rec_id].meta |= meta;
       }
     }
   }

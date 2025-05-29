@@ -83,11 +83,10 @@ impl LinkStage<'_> {
               self.module_table.modules[id]
                 .import_records()
                 .iter()
-                .filter_map(|rec| {
-                  let rec = rec.as_normal()?;
+                .filter(|rec| {
                   (rec.kind.is_static()
                     || rec.meta.contains(ImportRecordMeta::IS_TOP_LEVEL_AWAIT_DYNAMIC_IMPORT))
-                  .then_some(rec)
+                    && !rec.is_dummy()
                 })
                 .map(|rec| rec.resolved_module)
                 .rev()

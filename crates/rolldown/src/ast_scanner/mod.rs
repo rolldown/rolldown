@@ -62,6 +62,7 @@ pub struct ScanResult {
   /// Represents [Module Namespace Object](https://tc39.es/ecma262/#sec-module-namespace-exotic-objects)
   pub namespace_object_ref: SymbolRef,
   pub imports: FxHashMap<Span, ImportRecordIdx>,
+  pub dummy_record_set: FxHashSet<Span>,
   pub exports_kind: ExportsKind,
   pub warnings: Vec<BuildDiagnostic>,
   pub errors: Vec<BuildDiagnostic>,
@@ -174,6 +175,7 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
       hmr_info: HmrInfo::default(),
       hmr_hot_ref,
       directive_range: vec![],
+      dummy_record_set: FxHashSet::default(),
     };
 
     Self {

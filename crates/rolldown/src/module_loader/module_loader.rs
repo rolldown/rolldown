@@ -14,11 +14,11 @@ use oxc_index::IndexVec;
 use rolldown_common::dynamic_import_usage::DynamicImportExportsUsage;
 use rolldown_common::side_effects::{DeterminedSideEffects, HookSideEffects};
 use rolldown_common::{
-  DUMMY_MODULE_IDX, EcmaRelated, EntryPoint, EntryPointKind, ExternalModule,
-  ExternalModuleTaskResult, HybridIndexVec, ImportKind, ImportRecordIdx, ImportRecordMeta,
-  ImporterRecord, Module, ModuleId, ModuleIdx, ModuleLoaderMsg, ModuleType, NormalModuleTaskResult,
-  RUNTIME_MODULE_KEY, ResolvedId, RuntimeModuleBrief, RuntimeModuleTaskResult, StmtInfoIdx,
-  SymbolRef, SymbolRefDb, SymbolRefDbForModule,
+  EcmaRelated, EntryPoint, EntryPointKind, ExternalModule, ExternalModuleTaskResult,
+  HybridIndexVec, ImportKind, ImportRecordIdx, ImportRecordMeta, ImporterRecord, Module, ModuleId,
+  ModuleIdx, ModuleLoaderMsg, ModuleType, NormalModuleTaskResult, RUNTIME_MODULE_KEY, ResolvedId,
+  RuntimeModuleBrief, RuntimeModuleTaskResult, StmtInfoIdx, SymbolRef, SymbolRefDb,
+  SymbolRefDbForModule,
 };
 use rolldown_error::{BuildDiagnostic, BuildResult};
 use rolldown_fs::OsFileSystem;
@@ -324,10 +324,6 @@ impl ModuleLoader {
           for ((rec_idx, raw_rec), info) in
             raw_import_records.into_iter_enumerated().zip(resolved_deps)
           {
-            if raw_rec.meta.contains(ImportRecordMeta::IS_DUMMY) {
-              import_records.push(raw_rec.into_resolved(DUMMY_MODULE_IDX));
-              continue;
-            }
             let idx = if let Some(idx) = self.try_spawn_with_cache(&info) {
               idx
             } else {

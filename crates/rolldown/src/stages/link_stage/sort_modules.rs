@@ -84,9 +84,8 @@ impl LinkStage<'_> {
                 .import_records()
                 .iter()
                 .filter(|rec| {
-                  (rec.kind.is_static()
-                    || rec.meta.contains(ImportRecordMeta::IS_TOP_LEVEL_AWAIT_DYNAMIC_IMPORT))
-                    && !rec.is_dummy()
+                  rec.kind.is_static()
+                    || rec.meta.contains(ImportRecordMeta::IS_TOP_LEVEL_AWAIT_DYNAMIC_IMPORT)
                 })
                 .map(|rec| rec.resolved_module)
                 .rev()

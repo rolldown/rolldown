@@ -260,7 +260,7 @@ impl LinkStage<'_> {
       }
       let module = module_tables[module_idx].as_normal().unwrap();
       let v = if module.ast_usage.contains(EcmaModuleAstUsage::IsCjsReexport) {
-        module.import_records.iter().filter(|item| !item.is_dummy()).all(|item| {
+        module.import_records.iter().all(|item| {
           let Some(importee) = module_tables[item.resolved_module].as_normal() else {
             return false;
           };

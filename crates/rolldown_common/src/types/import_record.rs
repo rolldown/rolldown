@@ -6,7 +6,7 @@ use std::{
 use oxc::span::Span;
 use rolldown_rstr::Rstr;
 
-use crate::{DUMMY_MODULE_IDX, ImportKind, ModuleIdx, ModuleType, StmtInfoIdx, SymbolRef};
+use crate::{ImportKind, ModuleIdx, ModuleType, StmtInfoIdx, SymbolRef};
 
 oxc_index::define_index_type! {
   pub struct ImportRecordIdx = u32;
@@ -37,12 +37,8 @@ bitflags::bitflags! {
     const CALL_RUNTIME_REQUIRE = 1 << 3;
     ///  `require('mod')` is used to load the module only
     const IS_REQUIRE_UNUSED = 1 << 4;
-    /// If the import is a dummy import, it should be ignored during linking, e.g.
-    /// `require` ExpressionIdentifier should be considering as a import record,
-    /// but it did not import any module.
-    const IS_DUMMY = 1 << 5;
     /// if the import record is in a try-catch block
-    const IN_TRY_CATCH_BLOCK = 1 << 6;
+    const IN_TRY_CATCH_BLOCK = 1 << 5;
     /// Whether it is a pure dynamic import, aka a dynamic import only reference a module without using
     /// its exports e.g.
     /// ```js
@@ -50,16 +46,16 @@ bitflags::bitflags! {
     /// import('mod').then(mod => {});
     /// const a = await import('mod'); // the a is never be referenced
     /// ```
-    const PURE_DYNAMIC_IMPORT = 1 << 7;
+    const PURE_DYNAMIC_IMPORT = 1 << 6;
     /// Whether it is a pure dynamic import referenced a side effect free module
-    const DEAD_DYNAMIC_IMPORT = 1 << 8;
+    const DEAD_DYNAMIC_IMPORT = 1 << 7;
     /// Whether the import is a top level import
-    const IS_TOP_LEVEL = 1 << 9;
+    const IS_TOP_LEVEL = 1 << 8;
     /// Mark namespace of a record could be merged safely
-    const SAFELY_MERGE_CJS_NS = 1 << 10;
+    const SAFELY_MERGE_CJS_NS = 1 << 9;
     const TOP_LEVEL_PURE_DYNAMIC_IMPORT = Self::IS_TOP_LEVEL.bits() | Self::PURE_DYNAMIC_IMPORT.bits();
     /// Whether the import is a top level await import
-    const IS_TOP_LEVEL_AWAIT_DYNAMIC_IMPORT = 1 << 11;
+    const IS_TOP_LEVEL_AWAIT_DYNAMIC_IMPORT = 1 << 10;
   }
 }
 
@@ -135,9 +131,3 @@ impl RawImportRecord {
 }
 
 pub type ResolvedImportRecord = ImportRecord<ImportRecordStateResolved>;
-
-impl ResolvedImportRecord {
-  pub fn is_dummy(&self) -> bool {
-    self.state.resolved_module == DUMMY_MODULE_IDX
-  }
-}

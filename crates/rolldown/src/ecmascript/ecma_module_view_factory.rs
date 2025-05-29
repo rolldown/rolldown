@@ -71,6 +71,7 @@ pub async fn create_ecma_view(
     hmr_info,
     hmr_hot_ref,
     directive_range,
+    dummy_record_set,
   } = scanner.scan(ast.program())?;
 
   if !errors.is_empty() {
@@ -124,6 +125,7 @@ pub async fn create_ecma_view(
     hmr_info,
     hmr_hot_ref,
     directive_range,
+    dummy_record_set,
   };
 
   let ecma_related = EcmaRelated { ast, symbols, dynamic_import_rec_exports_usage };

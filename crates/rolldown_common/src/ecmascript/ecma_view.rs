@@ -58,6 +58,7 @@ impl EcmaViewMeta {
 
 #[derive(Debug, Clone)]
 pub struct EcmaView {
+  pub dummy_record_set: FxHashSet<Span>,
   pub source: ArcStr,
   pub ecma_ast_idx: Option<EcmaAstIdx>,
   pub def_format: ModuleDefFormat,

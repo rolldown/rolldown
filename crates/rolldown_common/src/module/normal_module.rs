@@ -173,9 +173,7 @@ impl NormalModule {
     modules: &'me IndexModules,
   ) -> impl Iterator<Item = ImportRecordIdx> + 'me {
     self.ecma_view.import_records.iter_enumerated().filter_map(move |(rec_id, rec)| {
-      if !rec.meta.contains(ImportRecordMeta::IS_EXPORT_STAR)
-        || rec.meta.contains(ImportRecordMeta::IS_DUMMY)
-      {
+      if !rec.meta.contains(ImportRecordMeta::IS_EXPORT_STAR) {
         return None;
       }
       match modules[rec.resolved_module] {

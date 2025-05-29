@@ -319,15 +319,13 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
               _ => false,
             };
             // should not replace require in `runtime` code
-            if is_dummy_record && self.id.as_ref() != RUNTIME_MODULE_KEY {
-              let import_rec_idx = self.add_import_record(
-                "",
-                ImportKind::Require,
-                ident_ref.span,
-                ImportRecordMeta::IS_DUMMY,
-              );
-
-              self.result.imports.insert(ident_ref.span, import_rec_idx);
+            if is_dummy_record
+              && self.id.as_ref() != RUNTIME_MODULE_KEY
+              && self.options.format.should_call_runtime_require()
+              && self.options.polyfill_require_for_esm_format_with_node_platform()
+            {
+              self.current_stmt_info.meta.insert(StmtInfoMeta::HasDummyRecord);
+              self.result.dummy_record_set.insert(ident_ref.span);
             }
           }
           _ => {}

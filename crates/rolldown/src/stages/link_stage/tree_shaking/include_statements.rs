@@ -239,24 +239,24 @@ impl LinkStage<'_> {
     }
     visited.insert(cur_node);
     let module = self.module_table.modules[cur_node].as_normal()?;
-    for ele in module.import_records.iter().filter(|item| !item.is_dummy()) {
-      if ele.kind == ImportKind::DynamicImport {
-        let seen = g.contains_node(ele.resolved_module);
-        if *root_node != ele.resolved_module {
-          g.add_edge(*root_node, ele.resolved_module, ());
+    for rec in &module.import_records {
+      if rec.kind == ImportKind::DynamicImport {
+        let seen = g.contains_node(rec.resolved_module);
+        if *root_node != rec.resolved_module {
+          g.add_edge(*root_node, rec.resolved_module, ());
           // Even it is visited before, we still needs to connect the edge
           if seen {
             continue;
           }
         }
         let previous = *root_node;
-        *root_node = ele.resolved_module;
-        self.construct_dynamic_entry_graph(g, visited, root_node, ele.resolved_module);
+        *root_node = rec.resolved_module;
+        self.construct_dynamic_entry_graph(g, visited, root_node, rec.resolved_module);
         *root_node = previous;
         continue;
       }
       // Can't put it at the beginning of the loop,
-      self.construct_dynamic_entry_graph(g, visited, root_node, ele.resolved_module);
+      self.construct_dynamic_entry_graph(g, visited, root_node, rec.resolved_module);
     }
     Some(())
   }
@@ -287,9 +287,6 @@ impl LinkStage<'_> {
           let all_dead_pure_dynamic_import =
             stmt_info.import_records.iter().all(|import_record_idx| {
               let import_record = &module.import_records[*import_record_idx];
-              if import_record.resolved_module.is_dummy() {
-                return true;
-              }
               let importee_side_effects = self.module_table.modules[import_record.resolved_module]
                 .side_effects()
                 .has_side_effects();

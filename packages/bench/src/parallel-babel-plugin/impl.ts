@@ -63,4 +63,5 @@ const impl: ParallelPluginImplementation = defineParallelPluginImplementation(
   },
 );
 
+/** @public referenced by ./index.ts */
 export default impl;

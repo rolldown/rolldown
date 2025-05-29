@@ -1,1 +1,1 @@
-require.resolve
+require.resolve;

@@ -1,6 +1,5 @@
-require.resolve
-
+require.resolve;
 
 Promise.then(() => {
-  console.log('feafeaw')
-})
+  console.log('feafeaw');
+});

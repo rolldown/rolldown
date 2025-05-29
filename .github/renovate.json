@@ -11,9 +11,22 @@
   ],
   "packageRules": [
     {
-      "matchDepNames": ["oxlint"],
-      "rangeStrategy": "replace",
-      "groupName": "oxlint"
+      "groupName": "tsdown",
+      "matchManagers": ["npm"],
+      "matchPackageNames": ["tsdown"],
+      "schedule": ["at any time"]
+    },
+    {
+      "groupName": "rolldown-plugin-dts",
+      "matchManagers": ["npm"],
+      "matchPackageNames": ["rolldown-plugin-dts"],
+      "schedule": ["at any time"]
+    },
+    {
+      "groupName": "oxc-node",
+      "matchManagers": ["npm"],
+      "matchPackageNames": ["oxc-node"],
+      "schedule": ["at any time"]
     }
   ]
 }

@@ -19,7 +19,7 @@
     "docs:build": "pnpm --filter rolldown-docs run build",
     "docs:preview": "pnpm --filter rolldown-docs run preview",
     "changelog": "conventional-changelog -p angular -i CHANGELOG.md -s",
-    "prepare": "husky prepare",
+    "prepare": "husky",
     "preinstall": "npx only-allow pnpm"
   },
   "license": "MIT",
@@ -27,10 +27,10 @@
     "@actions/core": "^1.11.1",
     "@oxc-node/core": "catalog:",
     "@oxc-project/runtime": "catalog:",
-    "@types/node": "22.15.18",
+    "@types/node": "22.15.24",
     "cjs-module-lexer": "^2.0.0",
     "conventional-changelog-cli": "^5.0.0",
-    "dprint": "^0.49.1",
+    "dprint": "^0.50.0",
     "husky": "^9.0.0",
     "knip": "^5.59.0",
     "lint-staged": "^16.0.0",
@@ -52,7 +52,7 @@
   },
   "lint-staged": {
     "*.@(js|ts|tsx|yml|yaml|md|json|html|toml)": [
-      "dprint fmt"
+      "dprint fmt --staged"
     ],
     "*.@(js|ts|tsx)": [
       "pnpm lint-code -- --fix"

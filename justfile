@@ -43,7 +43,7 @@ roll-repo: lint-repo
 check: check-rust check-node
 
 check-rust:
-    cargo check --workspace
+    cargo ck
 
 check-node:
     pnpm type-check

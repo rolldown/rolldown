@@ -52,7 +52,7 @@
   },
   "lint-staged": {
     "*.@(js|ts|tsx|yml|yaml|md|json|html|toml)": [
-      "dprint fmt"
+      "dprint fmt --staged"
     ],
     "*.@(js|ts|tsx)": [
       "pnpm lint-code -- --fix"

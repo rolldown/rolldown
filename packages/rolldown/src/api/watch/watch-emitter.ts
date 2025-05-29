@@ -2,12 +2,12 @@ import { BindingWatcherEvent, Bundler } from '../../binding';
 import type { MaybePromise } from '../../types/utils';
 import { normalizeErrors } from '../../utils/error';
 
-export type WatcherEvent = 'close' | 'event' | 'restart' | 'change';
+type WatcherEvent = 'close' | 'event' | 'restart' | 'change';
 
-export type ChangeEvent = 'create' | 'update' | 'delete';
+type ChangeEvent = 'create' | 'update' | 'delete';
 
 // TODO: find a way use `RolldownBuild` instead of `Bundler`.
-export type RolldownWatchBuild = Bundler;
+type RolldownWatchBuild = Bundler;
 
 export type RolldownWatcherEvent =
   | { code: 'START' }

@@ -1,10 +1,10 @@
-export interface ModuleSideEffectsRule {
+interface ModuleSideEffectsRule {
   test?: RegExp;
   external?: boolean;
   sideEffects: boolean;
 }
 
-export type ModuleSideEffectsOption =
+type ModuleSideEffectsOption =
   | boolean
   | ModuleSideEffectsRule[]
   | ((id: string, isResolved: boolean) => boolean | undefined)

@@ -10,7 +10,7 @@ import {
 import { arraify } from '../../utils/misc';
 import { WatcherEmitter } from './watch-emitter';
 
-export class Watcher {
+class Watcher {
   closed: boolean;
   inner: BindingWatcher;
   emitter: WatcherEmitter;

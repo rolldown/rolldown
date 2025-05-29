@@ -1,5 +1,3 @@
-import type { Plugin } from '../plugin';
-
 export const ENUMERATED_INPUT_PLUGIN_HOOK_NAMES = [
   'options',
   'buildStart',
@@ -15,7 +13,7 @@ export const ENUMERATED_INPUT_PLUGIN_HOOK_NAMES = [
   'watchChange',
 ] as const;
 
-export const ENUMERATED_OUTPUT_PLUGIN_HOOK_NAMES = [
+const ENUMERATED_OUTPUT_PLUGIN_HOOK_NAMES = [
   'augmentChunkHash',
   'outputOptions',
   'renderChunk',
@@ -43,11 +41,6 @@ export const ENUMERATED_PLUGIN_HOOK_NAMES: [
   'intro',
   'outro',
 ] as const;
-
-/**
- * Names of all properties in a `Plugin` object. Includes `name` and `api`.
- */
-export type PluginProps = keyof Plugin;
 
 type EnumeratedPluginHookNames = typeof ENUMERATED_PLUGIN_HOOK_NAMES;
 /**

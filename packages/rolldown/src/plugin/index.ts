@@ -217,7 +217,7 @@ export type PluginOrder = 'pre' | 'post' | null;
 export type ObjectHookMeta = { order?: PluginOrder };
 
 export type ObjectHook<T, O = {}> = T | ({ handler: T } & ObjectHookMeta & O);
-export type SyncPluginHooks = DefinedHookNames[
+type SyncPluginHooks = DefinedHookNames[
   | 'augmentChunkHash'
   | 'onLog'
   | 'outputOptions'
@@ -231,7 +231,7 @@ export type AsyncPluginHooks = Exclude<
   SyncPluginHooks
 >;
 
-export type FirstPluginHooks = DefinedHookNames[
+type FirstPluginHooks = DefinedHookNames[
   | 'load'
   // | 'renderDynamicImport'
   | 'resolveDynamicImport'
@@ -241,7 +241,7 @@ export type FirstPluginHooks = DefinedHookNames[
 // | 'resolveImportMeta'
 // | 'shouldTransformCachedModule'
 
-export type SequentialPluginHooks = DefinedHookNames[
+type SequentialPluginHooks = DefinedHookNames[
   | 'augmentChunkHash'
   | 'generateBundle'
   | 'onLog'
@@ -251,14 +251,14 @@ export type SequentialPluginHooks = DefinedHookNames[
   | 'transform'
 ];
 
-export type AddonHooks = DefinedHookNames[
+type AddonHooks = DefinedHookNames[
   | 'banner'
   | 'footer'
   | 'intro'
   | 'outro'
 ];
 
-export type OutputPluginHooks = DefinedHookNames[
+type OutputPluginHooks = DefinedHookNames[
   | 'augmentChunkHash'
   | 'generateBundle'
   | 'outputOptions'
@@ -310,14 +310,14 @@ export type PluginHooks = {
   >;
 };
 
-export type AddonHookFunction = (
+type AddonHookFunction = (
   this: PluginContext,
   chunk: RenderedChunk,
 ) => string | Promise<string>;
 
-export type AddonHook = string | AddonHookFunction;
+type AddonHook = string | AddonHookFunction;
 
-export interface OutputPlugin
+interface OutputPlugin
   extends
     Partial<{ [K in OutputPluginHooks]: PluginHooks[K] }>,
     Partial<{ [K in AddonHooks]: ObjectHook<AddonHook> }>

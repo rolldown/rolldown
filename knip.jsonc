@@ -1,0 +1,51 @@
+{
+  "$schema": "https://unpkg.com/knip@5/schema.json",
+  "ignoreWorkspaces": ["examples/**"], // no rolldown plugin yet
+  "workspaces": {
+    ".": {
+      "project": [],
+    },
+    "crates/rolldown/tests/rolldown/topics/npm_packages": {
+      "entry": ["util_deprecate/main.js"],
+    },
+    "docs": {
+      "entry": [
+        ".vitepress/config.ts", // no Vitepress plugin yet
+        ".vitepress/theme/index.js",
+        ".vitepress/theme/components/overrides/VPHero.vue",
+        "data-loading/*.data.{js,ts}",
+      ],
+    },
+    "packages/bench": {
+      "entry": ["vue-entry.js"],
+    },
+    "packages/rolldown": {
+      "entry": [
+        "build.ts", // oxnode
+        "build-binding.mts", // oxnode
+        "src/browser.js",
+        "src/cli/index.ts",
+        "src/log/locate-character/index.d.ts",
+        "src/rolldown-binding.wasi-browser.js",
+        "src/{wasi,webcontainer}-*.*",
+      ],
+      "ignore": ["src/binding.js", "src/rolldown-binding.wasi.cjs"], // lots of unused exports
+    },
+    "packages/rolldown/tests": {
+      "entry": ["*/**"],
+      "ignore": ["{cli,fixtures,module-federation,stability}/**"], // lots of unlisted dependencies
+    },
+    "packages/rolldown/tests/module-federation": {
+      "entry": ["*.js"],
+    },
+    "packages/rollup-tests": {
+      "entry": ["src/**/*.js", "test/**/*.{js,ts}"],
+    },
+    "scripts": {
+      "entry": ["misc/**"],
+    },
+    "packages/test-dev-server/tests/fixtures/basic": {
+      "entry": ["dev.config.mjs", "src/*.js"], // no @rolldown/test-dev-server plugin
+    },
+  },
+}

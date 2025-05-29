@@ -81,7 +81,7 @@ export function viteResolvePlugin(
   return makeBuiltinPluginCallable(builtinPlugin);
 }
 
-export type ModuleFederationPluginOption =
+type ModuleFederationPluginOption =
   & Omit<
     BindingModuleFederationPluginOption,
     'remotes'
@@ -126,10 +126,6 @@ export function assetPlugin(
   config?: BindingAssetPluginConfig,
 ): BuiltinPlugin {
   return new BuiltinPlugin('builtin:asset', config);
-}
-
-export function assetImportMetaUrlPlugin(): BuiltinPlugin {
-  return new BuiltinPlugin('builtin:asset-import-meta-url');
 }
 
 export function webWorkerPostPlugin(): BuiltinPlugin {

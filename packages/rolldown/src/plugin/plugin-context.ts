@@ -32,7 +32,7 @@ export interface EmittedAsset {
   source: AssetSource;
 }
 
-export interface EmittedChunk {
+interface EmittedChunk {
   type: 'chunk';
   name?: string;
   fileName?: string;

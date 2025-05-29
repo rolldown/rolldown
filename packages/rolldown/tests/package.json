@@ -17,7 +17,6 @@
   },
   "devDependencies": {
     "@types/node": "22.15.18",
-    "@oxc-node/core": "catalog:",
     "tsx": "^4.19.4"
   },
   "exports": {

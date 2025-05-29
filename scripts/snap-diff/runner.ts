@@ -9,7 +9,7 @@ const esbuildTestDir = path.join(
   '../../crates/rolldown/tests/esbuild',
 );
 
-export function getEsbuildSnapFile(
+function getEsbuildSnapFile(
   includeList: string[],
 ): Array<{ normalizedName: string; content: string }> {
   let dirname = path.resolve(import.meta.dirname, './esbuild-snapshots/');

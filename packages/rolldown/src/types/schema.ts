@@ -1,4 +1,4 @@
-export interface JsonSchema {
+interface JsonSchema {
   type: string;
   description?: string;
 }
@@ -10,28 +10,28 @@ export interface ObjectSchema extends JsonSchema {
   additionalProperties?: boolean | { type: 'string' };
 }
 
-export interface ArraySchema extends JsonSchema {
+interface ArraySchema extends JsonSchema {
   type: 'array';
   items: Schema;
 }
 
-export interface StringConstantSchema extends JsonSchema {
+interface StringConstantSchema extends JsonSchema {
   type: 'string';
   const: string;
 }
 
-export interface StringEnumSchema extends JsonSchema {
+interface StringEnumSchema extends JsonSchema {
   type: 'string';
   enum: string[];
 }
 
-export interface BooleanSchema extends JsonSchema {
+interface BooleanSchema extends JsonSchema {
   type: 'boolean';
 }
 
-export type StringSchema = StringConstantSchema | StringEnumSchema;
+type StringSchema = StringConstantSchema | StringEnumSchema;
 
-export interface AnyOfSchema {
+interface AnyOfSchema {
   anyOf: (StringSchema | ObjectSchema | BooleanSchema | ArraySchema)[];
   description?: string;
 }

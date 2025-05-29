@@ -12,7 +12,7 @@ function rangeContains(range, index) {
  * @param {string} source
  * @param {import('./types').Options} [options]
  */
-export function getLocator(source, options = {}) {
+function getLocator(source, options = {}) {
   const { offsetLine = 0, offsetColumn = 0 } = options;
 
   let start = 0;

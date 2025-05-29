@@ -4,7 +4,7 @@ import * as path from 'node:path';
 import remarkParse from 'remark-parse';
 import { unified } from 'unified';
 
-export function extractReason(source: string) {
+function extractReason(source: string) {
   const processor = unified().use(remarkParse);
 
   const parseTree = processor.parse(source);
@@ -44,9 +44,9 @@ export function extractReason(source: string) {
   return ret;
 }
 
-export const workspaceDir = path.join(import.meta.dirname, '../..');
+const workspaceDir = path.join(import.meta.dirname, '../..');
 
-export type AggregateReasonEntries = [string, string[]][];
+type AggregateReasonEntries = [string, string[]][];
 
 export function aggregateReason(): AggregateReasonEntries {
   const entries = fg.globSync(['crates/rolldown/tests/esbuild/**/diff.md'], {

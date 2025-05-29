@@ -8,7 +8,6 @@
     "preview": "ROLLDOWN_OPTIONS_VALIDATION=loose vitepress preview"
   },
   "devDependencies": {
-    "@iconify-json/vscode-icons": "^1.1.37",
     "vitepress": "^1.5.0",
     "vitepress-plugin-group-icons": "^1.0.0",
     "vitepress-plugin-llms": "^1.1.0",

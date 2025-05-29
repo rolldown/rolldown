@@ -1,10 +1,6 @@
 import babel from '@babel/core';
 import nodePath from 'node:path';
 import type { Plugin } from 'rolldown';
-import {
-  defineParallelPluginImplementation,
-  type ParallelPluginImplementation,
-} from 'rolldown/parallelPlugin';
 
 export const babelPlugin = (): Plugin => {
   const partialConfig = babel.loadPartialConfig({
@@ -56,11 +52,3 @@ export const babelPlugin = (): Plugin => {
     },
   };
 };
-
-const impl: ParallelPluginImplementation = defineParallelPluginImplementation(
-  (_options, _context) => {
-    return babelPlugin();
-  },
-);
-
-export default impl;

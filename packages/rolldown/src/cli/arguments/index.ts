@@ -13,7 +13,7 @@ import {
 
 const objectSchema = getJsonSchema();
 
-export const flattenedSchema: Record<string, Schema> = flattenSchema(
+const flattenedSchema: Record<string, Schema> = flattenSchema(
   objectSchema.properties,
 );
 
@@ -65,8 +65,6 @@ export const options: {
     return [config?.reverse ? `no-${key}` : key, result];
   }),
 );
-
-export type ParseArgsOptions = typeof options;
 
 export function parseCliArguments(): NormalizedCliOptions {
   const { values, tokens, positionals } = parseArgs({

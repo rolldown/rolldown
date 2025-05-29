@@ -153,6 +153,14 @@ describe('config', () => {
     expect(status.exitCode).toBe(0)
     expect(cleanStdout(status.stdout)).toMatchSnapshot()
   })
+  it('should allow loading external config', async () => {
+    const cwd = cliFixturesDir('external-config')
+    const status = await $({
+      cwd,
+    })`rolldown -c rolldown-config`
+    expect(status.exitCode).toBe(0)
+    expect(cleanStdout(status.stdout)).toMatchSnapshot()
+  })
   it('should allow loading mts config', async () => {
     const cwd = cliFixturesDir('ext-mts')
     const status = await $({

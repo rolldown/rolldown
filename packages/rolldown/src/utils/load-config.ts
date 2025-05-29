@@ -136,9 +136,18 @@ function tryStatSync(file: string): fs.Stats | undefined {
   }
 }
 
+function tryToResolveAsPackage(configPath: string): string {
+  try {
+    return require.resolve(configPath, { paths: [cwd()] });
+  } catch {
+    return configPath;
+  }
+}
+
 export async function loadConfig(configPath: string): Promise<ConfigExport> {
   const ext = path.extname(
-    configPath = configPath || (await findConfigFileNameInCwd()),
+    configPath = tryToResolveAsPackage(configPath) ||
+      (await findConfigFileNameInCwd()),
   );
 
   try {

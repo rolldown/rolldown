@@ -215,10 +215,7 @@ pub fn render_chunk_exports(
           let external_modules = meta
             .star_exports_from_external_modules
             .iter()
-            .filter_map(|rec_idx| {
-              let rec = &module.ecma_view.import_records[*rec_idx].as_normal()?;
-              Some(rec.resolved_module)
-            })
+            .map(|rec_idx| module.ecma_view.import_records[*rec_idx].resolved_module)
             .collect::<FxIndexSet<ModuleIdx>>();
 
           // Track already imported external modules to avoid duplicates

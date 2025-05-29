@@ -85,7 +85,7 @@ impl<'ast> ScopeHoistingFinalizer<'_, 'ast> {
   ) -> Option<Expression<'ast>> {
     if let Some(rec_id) = self.ctx.module.imports.get(&ident_ref.span) {
       // use `__require` instead of `require`
-      let rec = self.ctx.module.import_records[*rec_id].inner();
+      let rec = &self.ctx.module.import_records[*rec_id];
       if rec.meta.contains(ImportRecordMeta::CALL_RUNTIME_REQUIRE) {
         return Some(self.finalized_expr_for_runtime_symbol("__require"));
       }

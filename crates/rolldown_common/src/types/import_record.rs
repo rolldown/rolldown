@@ -6,7 +6,7 @@ use std::{
 use oxc::span::Span;
 use rolldown_rstr::Rstr;
 
-use crate::{ImportKind, ModuleIdx, ModuleType, StmtInfoIdx, SymbolRef};
+use crate::{DUMMY_MODULE_IDX, ImportKind, ModuleIdx, ModuleType, StmtInfoIdx, SymbolRef};
 
 oxc_index::define_index_type! {
   pub struct ImportRecordIdx = u32;
@@ -123,56 +123,21 @@ impl RawImportRecord {
   }
 
   pub fn into_resolved(self, resolved_module: ModuleIdx) -> ResolvedImportRecord {
-    let rec = ImportRecord {
+    ResolvedImportRecord {
       state: ImportRecordStateResolved { resolved_module },
       module_request: self.module_request,
       kind: self.kind,
       namespace_ref: self.namespace_ref,
       meta: self.meta,
       related_stmt_info_idx: self.related_stmt_info_idx,
-    };
-    // more details about `is_dummy` please refer: https://github.com/rolldown/rolldown/blob/1c8352a6d0fc79f737f160cefe2eaedb476047ca/crates/rolldown_common/src/ecmascript/module_idx.rs?plain=1#L6-L18
-    if resolved_module.is_dummy() {
-      ResolvedImportRecord::Dummy(rec)
-    } else {
-      ResolvedImportRecord::Normal(rec)
     }
   }
 }
 
-#[derive(Debug, Clone)]
-/// Always check if it is a `Normal` ImportRecord before use `record.resolved_module`
-pub enum ResolvedImportRecord {
-  Normal(ResolvedImportRecordInner),
-  Dummy(ResolvedImportRecordInner),
-}
-
-pub type ResolvedImportRecordInner = ImportRecord<ImportRecordStateResolved>;
+pub type ResolvedImportRecord = ImportRecord<ImportRecordStateResolved>;
 
 impl ResolvedImportRecord {
-  pub fn as_normal(&self) -> Option<&ImportRecord<ImportRecordStateResolved>> {
-    match self {
-      ResolvedImportRecord::Normal(rec) => Some(rec),
-      ResolvedImportRecord::Dummy(_) => None,
-    }
-  }
-
-  #[inline]
-  pub fn inner(&self) -> &ImportRecord<ImportRecordStateResolved> {
-    match self {
-      ResolvedImportRecord::Normal(rec) | ResolvedImportRecord::Dummy(rec) => rec,
-    }
-  }
-
-  pub fn meta_mut(&mut self) -> &mut ImportRecordMeta {
-    match self {
-      ResolvedImportRecord::Normal(rec) | ResolvedImportRecord::Dummy(rec) => &mut rec.meta,
-    }
-  }
-
-  pub fn meta(&mut self) -> &ImportRecordMeta {
-    match self {
-      ResolvedImportRecord::Normal(rec) | ResolvedImportRecord::Dummy(rec) => &rec.meta,
-    }
+  pub fn is_dummy(&self) -> bool {
+    self.state.resolved_module == DUMMY_MODULE_IDX
   }
 }

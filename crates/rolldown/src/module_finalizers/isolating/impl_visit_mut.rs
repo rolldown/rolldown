@@ -4,7 +4,7 @@ use oxc::{
   ast_visit::{VisitMut, walk_mut},
   span::{CompactStr, SPAN, Span},
 };
-use rolldown_common::{Interop, Module, ResolvedImportRecord, SymbolRef};
+use rolldown_common::{Interop, Module, SymbolRef};
 use rolldown_ecmascript_utils::CallExpressionExt;
 
 use super::IsolatingModuleFinalizer;
@@ -81,11 +81,7 @@ impl<'ast> VisitMut<'ast> for IsolatingModuleFinalizer<'_, 'ast> {
         .map(|symbol_id| (self.ctx.module.idx, symbol_id).into())
         .and_then(|symbol_ref: SymbolRef| self.ctx.module.named_imports.get(&symbol_ref))
       {
-        let ResolvedImportRecord::Normal(rec) =
-          &self.ctx.module.import_records[named_import.record_id]
-        else {
-          return;
-        };
+        let rec = &self.ctx.module.import_records[named_import.record_id];
 
         let namespace_object_ref =
           self.create_namespace_object_ref_for_module(&self.ctx.modules[rec.resolved_module]);
@@ -390,7 +386,7 @@ impl<'ast> IsolatingModuleFinalizer<'_, 'ast> {
 
   fn get_importee_module(&self, span: Span) -> &Module {
     let rec_id = self.ctx.module.imports[&span];
-    let rec = &self.ctx.module.import_records[rec_id].inner();
+    let rec = &self.ctx.module.import_records[rec_id];
     &self.ctx.modules[rec.resolved_module]
   }
 

@@ -60,9 +60,6 @@ jobs:
       pull-requests: read
 
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
       - name: Create Issue from PR
         uses: dacbd/create-issue-action@fec641442c0897e734fad173cfe83ae21a2284a3
         with:

@@ -16,7 +16,7 @@
     "vitest": "^3.0.1"
   },
   "devDependencies": {
-    "@types/node": "22.15.18",
+    "@types/node": "22.15.24",
     "tsx": "^4.19.4"
   },
   "exports": {

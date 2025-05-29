@@ -128,7 +128,7 @@
     "oxc-parser": "catalog:",
     "remeda": "^2.10.0",
     "rolldown": "workspace:*",
-    "rolldown-plugin-dts": "^0.7.12",
+    "rolldown-plugin-dts": "0.7.12",
     "rollup": "^4.18.0",
     "signal-exit": "4.1.0",
     "source-map": "^0.7.4",

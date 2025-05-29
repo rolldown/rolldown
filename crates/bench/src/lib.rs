@@ -9,7 +9,7 @@ pub fn join_by_workspace_root(path: &str) -> PathBuf {
 
 pub struct BenchItem {
   pub name: String,
-  pub options: Box<dyn Fn() -> BundlerOptions + 'static>,
+  pub options: BundlerOptions,
 }
 
 pub struct DeriveOptions {
@@ -19,45 +19,42 @@ pub struct DeriveOptions {
 
 pub fn derive_benchmark_items(
   derive_options: &DeriveOptions,
-  name: String,
-  create_bundler_options: impl Fn() -> BundlerOptions + 'static + Clone,
+  name: &str,
+  options: BundlerOptions,
 ) -> Vec<BenchItem> {
-  let mut ret =
-    vec![BenchItem { name: name.clone(), options: Box::new(create_bundler_options.clone()) }];
+  let mut ret = vec![BenchItem { name: name.to_string(), options: options.clone() }];
 
   if derive_options.sourcemap {
-    let create_bundler_options = create_bundler_options.clone();
     ret.push(BenchItem {
       name: format!("{}-sourcemap", name),
-      options: Box::new(move || {
-        let mut options = create_bundler_options();
+      options: {
+        let mut options = options.clone();
         options.sourcemap = Some(rolldown::SourceMapType::File);
         options
-      }),
+      },
     });
   }
 
   if derive_options.minify {
-    let create_bundler_options = create_bundler_options.clone();
     ret.push(BenchItem {
       name: format!("{}-minify", name),
-      options: Box::new(move || {
-        let mut options = create_bundler_options();
+      options: {
+        let mut options = options.clone();
         options.minify = Some(true.into());
         options
-      }),
+      },
     });
   }
 
   if derive_options.sourcemap && derive_options.minify {
     ret.push(BenchItem {
       name: format!("{}-minify-sourcemap", name),
-      options: Box::new(move || {
-        let mut options = create_bundler_options();
+      options: {
+        let mut options = options.clone();
         options.sourcemap = Some(rolldown::SourceMapType::File);
         options.minify = Some(true.into());
         options
-      }),
+      },
     });
   }
 

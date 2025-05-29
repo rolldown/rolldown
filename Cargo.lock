@@ -158,9 +158,8 @@ name = "bench"
 version = "0.1.0"
 dependencies = [
  "criterion2",
- "oxc",
  "rolldown",
- "rolldown_sourcemap",
+ "rolldown_common",
  "rolldown_testing",
  "rolldown_workspace",
  "tokio",
@@ -457,6 +456,7 @@ dependencies = [
  "oorandom",
  "serde",
  "serde_json",
+ "tokio",
  "walkdir",
 ]
 

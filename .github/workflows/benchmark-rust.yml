@@ -41,6 +41,7 @@ jobs:
         with:
           tools: just, cargo-codspeed
           cache-key: codspeed
+          save-cache: ${{ github.ref_name == 'main' }}
 
       - name: Setup Benchmark Input
         run: just setup-bench

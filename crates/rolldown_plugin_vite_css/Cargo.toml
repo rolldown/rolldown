@@ -6,8 +6,11 @@ homepage.workspace = true
 license.workspace = true
 repository.workspace = true
 
-[dependencies]
-rolldown_plugin = { workspace = true }
+[lib]
+doctest = false
 
 [lints]
 workspace = true
+
+[dependencies]
+rolldown_plugin = { workspace = true }

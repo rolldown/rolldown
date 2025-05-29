@@ -6,6 +6,12 @@ homepage.workspace = true
 license.workspace = true
 repository.workspace = true
 
+[lints]
+workspace = true
+
+[lib]
+doctest = false
+
 [dependencies]
 oxc = { workspace = true }
 regex = { workspace = true }
@@ -18,6 +24,3 @@ string_wizard = { workspace = true }
 rolldown = { workspace = true }
 rolldown_testing = { workspace = true }
 tokio = { workspace = true, features = ["rt", "macros", "sync", "rt-multi-thread"] }
-
-[lints]
-workspace = true

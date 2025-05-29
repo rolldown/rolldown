@@ -6,7 +6,8 @@ homepage.workspace = true
 license.workspace = true
 repository.workspace = true
 
-[dependencies]
+[lib]
+doctest = false
 
 [lints]
 workspace = true

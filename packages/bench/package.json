@@ -4,7 +4,8 @@
   "type": "module",
   "scripts": {
     "bench": "oxnode ./benches/compare.js",
-    "bench-ci": "oxnode ./benches/ci.js"
+    "bench-ci": "oxnode ./benches/ci.js",
+    "bench-par": "oxnode ./benches/par.js"
   },
   "dependencies": {
     "react": "^19.0.0",
@@ -14,6 +15,8 @@
   },
   "devDependencies": {
     "@babel/core": "^7.24.7",
+    "@babel/preset-env": "^7.24.7",
+    "@babel/preset-typescript": "^7.24.7",
     "@oxc-node/cli": "catalog:",
     "@rollup/plugin-commonjs": "^28.0.0",
     "@rollup/plugin-node-resolve": "^16.0.0",

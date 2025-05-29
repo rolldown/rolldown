@@ -233,6 +233,12 @@ importers:
       '@babel/core':
         specifier: ^7.24.7
         version: 7.27.1
+      '@babel/preset-env':
+        specifier: ^7.24.7
+        version: 7.27.2(@babel/core@7.27.1)
+      '@babel/preset-typescript':
+        specifier: ^7.24.7
+        version: 7.27.1(@babel/core@7.27.1)
       '@oxc-node/cli':
         specifier: 'catalog:'
         version: 0.0.27

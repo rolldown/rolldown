@@ -125,7 +125,7 @@ impl LinkStage<'_> {
   pub(super) fn bind_imports_and_exports(&mut self) {
     // Initialize `resolved_exports` to prepare for matching imports with exports
     self.metas.par_iter_mut_enumerated().for_each(|(module_id, meta)| {
-      let Module::Normal(module) = &self.module_table.modules[module_id] else {
+      let Module::Normal(module) = &self.module_table[module_id] else {
         return;
       };
       let mut resolved_exports = module
@@ -400,7 +400,7 @@ impl LinkStage<'_> {
                 // First get the canonical ref of `foo_ns`, then we get the `NormalModule#namespace_object_ref` of `foo.js`.
                 let mut canonical_ref = self.symbols.canonical_ref_for(member_expr_ref.object_ref);
                 let mut canonical_ref_owner: &NormalModule =
-                  match &self.module_table.modules[canonical_ref.owner] {
+                  match &self.module_table[canonical_ref.owner] {
                     Module::Normal(module) => module,
                     Module::External(_) => return,
                   };
@@ -451,7 +451,7 @@ impl LinkStage<'_> {
                   }
 
                   // TODO(hyf0): suspicious cjs might just fallback to dynamic lookup?
-                  if !self.module_table.modules[export_symbol.symbol_ref.owner]
+                  if !self.module_table[export_symbol.symbol_ref.owner]
                     .as_normal()
                     .unwrap()
                     .exports_kind
@@ -472,8 +472,7 @@ impl LinkStage<'_> {
                   }
                   ns_symbol_list.push((canonical_ref, name.to_rstr()));
                   canonical_ref = self.symbols.canonical_ref_for(export_symbol.symbol_ref);
-                  canonical_ref_owner =
-                    self.module_table.modules[canonical_ref.owner].as_normal().unwrap();
+                  canonical_ref_owner = self.module_table[canonical_ref.owner].as_normal().unwrap();
                   cursor += 1;
                   is_namespace_ref = canonical_ref_owner.namespace_object_ref == canonical_ref;
                 }

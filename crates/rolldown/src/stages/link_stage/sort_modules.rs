@@ -80,7 +80,7 @@ impl LinkStage<'_> {
 
             // top level await module should be sorted.
             execution_stack.extend(
-              self.module_table.modules[id]
+              self.module_table[id]
                 .import_records()
                 .iter()
                 .filter(|rec| {
@@ -94,7 +94,7 @@ impl LinkStage<'_> {
           }
         }
         Status::WaitForExit(id) => {
-          match &mut self.module_table.modules[id] {
+          match &mut self.module_table[id] {
             Module::Normal(module) => {
               debug_assert!(module.exec_order == u32::MAX);
               module.exec_order = next_exec_order;
@@ -116,9 +116,7 @@ impl LinkStage<'_> {
       for cycle in circular_dependencies {
         let paths = cycle
           .iter()
-          .filter_map(|id| {
-            self.module_table.modules[*id].as_normal().map(|module| module.id.to_string())
-          })
+          .filter_map(|id| self.module_table[*id].as_normal().map(|module| module.id.to_string()))
           .collect::<Vec<_>>();
         self.warnings.push(BuildDiagnostic::circular_dependency(paths).with_severity_warning());
       }

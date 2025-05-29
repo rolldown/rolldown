@@ -13,7 +13,7 @@ impl LinkStage<'_> {
       // TODO(hyf0): should check if importer is a js module
       importer.import_records.iter().for_each(|rec| {
         let importee_id = rec.resolved_module;
-        let Module::Normal(importee) = &self.module_table.modules[importee_id] else {
+        let Module::Normal(importee) = &self.module_table[importee_id] else {
           return;
         };
 

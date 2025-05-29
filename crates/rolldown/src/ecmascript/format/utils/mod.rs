@@ -32,7 +32,7 @@ pub fn render_chunk_external_imports<'a>(
     .imports_from_external_modules
     .iter()
     .filter_map(|(importee_id, _)| {
-      let importee = ctx.link_output.module_table.modules[*importee_id]
+      let importee = ctx.link_output.module_table[*importee_id]
         .as_external()
         .expect("Should be external module here");
 

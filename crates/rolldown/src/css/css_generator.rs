@@ -15,7 +15,7 @@ impl Generator for CssGenerator {
       .chunk
       .modules
       .iter()
-      .filter_map(|&id| ctx.link_output.module_table.modules[id].as_normal())
+      .filter_map(|&id| ctx.link_output.module_table[id].as_normal())
       .filter(|m| m.css_view.is_some())
       .collect::<Vec<_>>();
 

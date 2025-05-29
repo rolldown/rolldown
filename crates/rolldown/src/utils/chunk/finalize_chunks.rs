@@ -170,7 +170,7 @@ pub fn finalize_assets(
           chunk
             .imports_from_external_modules
             .iter()
-            .map(|(idx, _)| link_output.module_table.modules[*idx].id().into()),
+            .map(|(idx, _)| link_output.module_table[*idx].id().into()),
         )
         .collect();
 

@@ -31,14 +31,14 @@ impl ModuleGroup {
   #[allow(clippy::cast_precision_loss)] // We consider `usize` to `f64` is safe here
   pub fn add_module(&mut self, module_idx: ModuleIdx, module_table: &ModuleTable) {
     if self.modules.insert(module_idx) {
-      self.sizes += module_table.modules[module_idx].size() as f64;
+      self.sizes += module_table[module_idx].size() as f64;
     }
   }
 
   #[allow(clippy::cast_precision_loss)] // We consider `usize` to `f64` is safe here
   pub fn remove_module(&mut self, module_idx: ModuleIdx, module_table: &ModuleTable) {
     if self.modules.remove(&module_idx) {
-      self.sizes -= module_table.modules[module_idx].size() as f64;
+      self.sizes -= module_table[module_idx].size() as f64;
       self.sizes = f64::max(self.sizes, 0.0);
     }
   }
@@ -151,8 +151,7 @@ impl GenerateStage<'_> {
 
     // Manually pull out the module `rolldown:runtime` into a standalone chunk.
     let runtime_module_idx = self.link_output.runtime.id();
-    let Module::Normal(runtime_module) = &self.link_output.module_table.modules[runtime_module_idx]
-    else {
+    let Module::Normal(runtime_module) = &self.link_output.module_table[runtime_module_idx] else {
       unreachable!("`rolldown:runtime` is always a normal module");
     };
 
@@ -199,9 +198,9 @@ impl GenerateStage<'_> {
           modules.sort_by_key(|module_idx| {
             (
               // smaller size goes first
-              self.link_output.module_table.modules[*module_idx].size(),
-              self.link_output.module_table.modules[*module_idx].stable_id(),
-              self.link_output.module_table.modules[*module_idx].exec_order(),
+              self.link_output.module_table[*module_idx].size(),
+              self.link_output.module_table[*module_idx].stable_id(),
+              self.link_output.module_table[*module_idx].exec_order(),
             )
           });
           // Make sure we sort the modules based on size in the end. Since we compute new group size from left to right, if a giant
@@ -214,14 +213,14 @@ impl GenerateStage<'_> {
           let modules_len = modules.len() as isize;
 
           while left_size < allow_min_size && next_left_index < modules_len {
-            left_size += self.link_output.module_table.modules[modules[next_left_index as usize]]
-              .size() as f64;
+            left_size +=
+              self.link_output.module_table[modules[next_left_index as usize]].size() as f64;
             next_left_index += 1;
           }
 
           while right_size < allow_min_size && next_right_index >= 0 {
-            right_size += self.link_output.module_table.modules[modules[next_right_index as usize]]
-              .size() as f64;
+            right_size +=
+              self.link_output.module_table[modules[next_right_index as usize]].size() as f64;
             next_right_index -= 1;
           }
           if next_right_index + 1 < next_left_index {
@@ -321,7 +320,7 @@ fn add_module_and_dependencies_to_group_recursively(
     return;
   }
 
-  let Module::Normal(module) = &module_table.modules[module_idx] else {
+  let Module::Normal(module) = &module_table[module_idx] else {
     return;
   };
 

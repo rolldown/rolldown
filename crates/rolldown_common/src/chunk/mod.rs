@@ -261,7 +261,7 @@ impl Chunk {
     &self,
     module_table: &'module ModuleTable,
   ) -> Option<&'module NormalModule> {
-    self.user_defined_entry_module_idx().and_then(|idx| module_table.modules[idx].as_normal())
+    self.user_defined_entry_module_idx().and_then(|idx| module_table[idx].as_normal())
   }
 
   pub fn entry_module_idx(&self) -> Option<ModuleIdx> {
@@ -275,6 +275,6 @@ impl Chunk {
     &self,
     module_table: &'module ModuleTable,
   ) -> Option<&'module NormalModule> {
-    self.entry_module_idx().and_then(|idx| module_table.modules[idx].as_normal())
+    self.entry_module_idx().and_then(|idx| module_table[idx].as_normal())
   }
 }

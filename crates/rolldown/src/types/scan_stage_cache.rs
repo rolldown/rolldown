@@ -78,9 +78,9 @@ impl ScanStageCache {
         cache.module_table.modules.push(new_module);
         continue;
       } else {
-        std::mem::replace(&mut cache.module_table.modules[idx], new_module)
+        std::mem::replace(&mut cache.module_table[idx], new_module)
       };
-      let Some(new_module) = cache.module_table.modules[idx].as_normal_mut() else {
+      let Some(new_module) = cache.module_table[idx].as_normal_mut() else {
         continue;
       };
       let old_module = old_module.as_normal().unwrap();

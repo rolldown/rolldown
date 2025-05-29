@@ -114,7 +114,7 @@ fn render_cjs_chunk_imports(ctx: &GenerateContext<'_>) -> String {
 
   // render external imports
   ctx.chunk.imports_from_external_modules.iter().for_each(|(importee_id, _)| {
-    let importee = ctx.link_output.module_table.modules[*importee_id]
+    let importee = ctx.link_output.module_table[*importee_id]
       .as_external()
       .expect("Should be external module here");
 

@@ -25,7 +25,7 @@ pub fn deconflict_chunk_symbols(
     chunk
       .imports_from_external_modules
       .iter()
-      .filter_map(|(idx, _)| link_output.module_table.modules[*idx].as_external())
+      .filter_map(|(idx, _)| link_output.module_table[*idx].as_external())
       .for_each(|external_module| {
         renamer.add_symbol_in_root_scope(external_module.namespace_ref);
       });
@@ -33,11 +33,11 @@ pub fn deconflict_chunk_symbols(
     match chunk.entry_module_idx() {
       Some(module) => {
         let entry_module =
-          link_output.module_table.modules[module].as_normal().expect("should be normal module");
+          link_output.module_table[module].as_normal().expect("should be normal module");
         link_output.metas[entry_module.idx].star_exports_from_external_modules.iter().for_each(
           |rec_idx| {
             let rec = &entry_module.ecma_view.import_records[*rec_idx];
-            let external_module = &link_output.module_table.modules[rec.resolved_module]
+            let external_module = &link_output.module_table[rec.resolved_module]
               .as_external()
               .expect("Should be external module here");
             renamer.add_symbol_in_root_scope(external_module.namespace_ref);
@@ -52,7 +52,7 @@ pub fn deconflict_chunk_symbols(
     .modules
     .iter()
     .copied()
-    .filter_map(|id| link_output.module_table.modules[id].as_normal())
+    .filter_map(|id| link_output.module_table[id].as_normal())
     .flat_map(|m| {
       link_output.symbol_db[m.idx]
         .as_ref()
@@ -124,7 +124,7 @@ pub fn deconflict_chunk_symbols(
     .copied()
     // Starts with entry module
     .rev()
-    .filter_map(|id| link_output.module_table.modules[id].as_normal())
+    .filter_map(|id| link_output.module_table[id].as_normal())
     .for_each(|module| {
       if let Some(hmr_hot_ref) = module.hmr_hot_ref {
         renamer.add_symbol_in_root_scope(hmr_hot_ref);

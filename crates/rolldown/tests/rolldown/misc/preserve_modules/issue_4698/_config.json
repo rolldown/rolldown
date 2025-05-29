@@ -1,0 +1,16 @@
+{
+  "config": {
+    "input": [
+      {
+        "name": "entrya",
+        "import": "./entrya.js"
+      },
+      {
+        "name": "entryb",
+        "import": "./entryb.js"
+      }
+    ],
+    "preserveModules": true
+  },
+  "expectExecuted": false
+}

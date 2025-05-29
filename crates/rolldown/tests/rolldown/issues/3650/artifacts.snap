@@ -7,7 +7,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```js
 import { __esm, __export } from "./rolldown-runtime.js";
-import { init_second, value$1 as value } from "./second.js";
+import { init_second, value } from "./second.js";
 
 //#region first.js
 var first_exports = {};
@@ -60,5 +60,5 @@ var init_second = __esm({ "second.js"() {
 } });
 
 //#endregion
-export { init_second, second_exports, value$1 };
+export { init_second, second_exports, value$1 as value };
 ```

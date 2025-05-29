@@ -392,10 +392,9 @@ impl GenerateStage<'_> {
     // Generate cross-chunk exports. These must be computed before cross-chunk
     // imports because of export alias renaming, which must consider all export
     // aliases simultaneously to avoid collisions.
-    let mut name_count =
-      FxHashMap::with_capacity(index_chunk_exported_symbols.iter().map(FxHashSet::len).sum());
 
     for (chunk_id, chunk) in chunk_graph.chunk_table.iter_mut_enumerated() {
+      let mut name_count = FxHashMap::with_capacity(index_chunk_exported_symbols[chunk_id].len());
       for chunk_export in index_chunk_exported_symbols[chunk_id]
         .iter()
         .sorted_by_cached_key(|symbol_ref| {

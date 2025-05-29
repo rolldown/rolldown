@@ -19,11 +19,8 @@
     "packages/bench": {
       "entry": [
         "vue-entry.js",
-        "src/parallel-babel-plugin/impl.ts", // imported from src/parallel-babel-plugin/index.ts
       ],
-      "babel": {
-        "config": "src/parallel-babel-plugin/impl.ts",
-      },
+      "ignoreDependencies": ["@babel/@preset-.+"],
     },
     "packages/rolldown": {
       "entry": [

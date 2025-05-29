@@ -20,7 +20,7 @@
       "entry": [
         "vue-entry.js",
       ],
-      "ignoreDependencies": ["@babel/@preset-.+"],
+      "ignoreDependencies": ["@babel/preset-.+"],
     },
     "packages/rolldown": {
       "entry": [

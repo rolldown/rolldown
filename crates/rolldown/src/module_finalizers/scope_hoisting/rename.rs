@@ -1,5 +1,5 @@
 use oxc::ast::ast::{self, Expression, IdentifierReference};
-use rolldown_common::{ImportRecordMeta, SymbolRef};
+use rolldown_common::SymbolRef;
 use rolldown_ecmascript_utils::ExpressionExt;
 
 use super::ScopeHoistingFinalizer;
@@ -83,13 +83,11 @@ impl<'ast> ScopeHoistingFinalizer<'_, 'ast> {
     ident_ref: &ast::IdentifierReference<'ast>,
     is_callee: bool,
   ) -> Option<Expression<'ast>> {
-    if let Some(rec_id) = self.ctx.module.imports.get(&ident_ref.span) {
+    if self.ctx.module.dummy_record_set.contains(&ident_ref.span) {
       // use `__require` instead of `require`
-      let rec = &self.ctx.module.import_records[*rec_id];
-      if rec.meta.contains(ImportRecordMeta::CALL_RUNTIME_REQUIRE) {
-        return Some(self.finalized_expr_for_runtime_symbol("__require"));
-      }
+      return Some(self.finalized_expr_for_runtime_symbol("__require"));
     }
+
     if let Some(new_expr) = self.generate_finalized_expr_for_reference(ident_ref, is_callee) {
       Some(new_expr)
     } else {

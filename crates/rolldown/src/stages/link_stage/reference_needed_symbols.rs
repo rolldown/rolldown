@@ -44,21 +44,11 @@ impl LinkStage<'_> {
         let mut symbols_to_be_declared = vec![];
 
         stmt_infos.infos.iter_mut_enumerated().for_each(|(stmt_info_idx, stmt_info)| {
+          if stmt_info.meta.contains(StmtInfoMeta::HasDummyRecord) {
+            stmt_info.referenced_symbols.push(self.runtime.resolve_symbol("__require").into());
+          }
           stmt_info.import_records.iter().for_each(|rec_id| {
             let rec = &importer.import_records[*rec_id];
-            if rec.is_dummy() {
-              if matches!(rec.kind, ImportKind::Require) {
-                if self.options.format.should_call_runtime_require()
-                  && self.options.polyfill_require_for_esm_format_with_node_platform()
-                {
-                  stmt_info
-                    .referenced_symbols
-                    .push(self.runtime.resolve_symbol("__require").into());
-                  record_meta_pairs.push((*rec_id, ImportRecordMeta::CALL_RUNTIME_REQUIRE));
-                }
-              }
-              return;
-            }
             let rec_resolved_module = &self.module_table.modules[rec.resolved_module];
             if !rec_resolved_module.is_normal()
               || is_external_dynamic_import(&self.module_table, rec, importer_idx)

@@ -162,7 +162,6 @@ impl GenerateStage<'_> {
           module
             .import_records
             .iter()
-            .filter(|rec| !rec.is_dummy())
             .inspect(|rec| {
               if let Module::Normal(importee_module) =
                 &self.link_output.module_table.modules[rec.resolved_module]
@@ -338,7 +337,7 @@ impl GenerateStage<'_> {
           entry_module
             .import_records
             .iter()
-            .filter(|rec| rec.kind != ImportKind::DynamicImport && !rec.is_dummy())
+            .filter(|rec| rec.kind != ImportKind::DynamicImport)
             .for_each(|item| {
               if !self.link_output.module_table.modules[item.resolved_module]
                 .side_effects()

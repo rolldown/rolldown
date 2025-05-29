@@ -181,11 +181,7 @@ impl ModuleTask {
       .await?;
 
     if css_view.is_none() {
-      for (record, info) in raw_import_records
-        .iter()
-        .filter(|rec| !rec.meta.contains(ImportRecordMeta::IS_DUMMY))
-        .zip(&resolved_deps)
-      {
+      for (record, info) in raw_import_records.iter().zip(&resolved_deps) {
         match record.kind {
           ImportKind::Import | ImportKind::Require | ImportKind::NewUrl => {
             ecma_view.imported_ids.insert(ArcStr::clone(&info.id).into());
@@ -353,10 +349,6 @@ impl ModuleTask {
       let kind = item.kind;
       async move {
         // TODO: We should early return when `async closure is stable`
-        // Can't use `module_request.is_empty()` to check, see https://github.com/rolldown/rolldown/actions/runs/12980744296/job/36198187669?pr=3428
-        if item.meta.contains(ImportRecordMeta::IS_DUMMY) {
-          return Ok((item.module_request.clone(), idx, Ok(ResolvedId::make_dummy())));
-        }
         Self::resolve_id(&bundle_options, &resolver, &plugin_driver, importer, &specifier, kind)
           .await
           .map(|id| (specifier, idx, id))

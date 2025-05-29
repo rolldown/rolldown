@@ -54,13 +54,12 @@ impl LinkStage<'_> {
       // this branch means the side effects of the module is analyzed `false`
       DeterminedSideEffects::Analyzed(false) => match module {
         Module::Normal(module) => {
-          let side_effects = DeterminedSideEffects::Analyzed(
-            module.import_records.iter().filter(|rec| !rec.is_dummy()).any(|import_record| {
+          let side_effects =
+            DeterminedSideEffects::Analyzed(module.import_records.iter().any(|import_record| {
               self
                 .determine_side_effects_for_module(import_record.resolved_module, cache)
                 .has_side_effects()
-            }),
-          );
+            }));
 
           cache[module_idx] = SideEffectCache::Cache(side_effects);
 

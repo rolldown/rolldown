@@ -111,6 +111,7 @@ impl RuntimeModuleTask {
       symbol_ref_db,
       has_star_exports,
       new_url_references,
+      dummy_record_set,
       ..
     } = scan_result;
 
@@ -161,6 +162,7 @@ impl RuntimeModuleTask {
         hmr_info: scan_result.hmr_info,
         hmr_hot_ref: None,
         directive_range: vec![],
+        dummy_record_set,
       },
       css_view: None,
       asset_view: None,

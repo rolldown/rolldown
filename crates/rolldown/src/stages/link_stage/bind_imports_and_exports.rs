@@ -472,8 +472,7 @@ impl LinkStage<'_> {
                   }
                   ns_symbol_list.push((canonical_ref, name.to_rstr()));
                   canonical_ref = self.symbols.canonical_ref_for(export_symbol.symbol_ref);
-                  canonical_ref_owner =
-                    self.module_table[canonical_ref.owner].as_normal().unwrap();
+                  canonical_ref_owner = self.module_table[canonical_ref.owner].as_normal().unwrap();
                   cursor += 1;
                   is_namespace_ref = canonical_ref_owner.namespace_object_ref == canonical_ref;
                 }

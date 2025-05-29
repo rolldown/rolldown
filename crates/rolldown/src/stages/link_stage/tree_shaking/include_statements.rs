@@ -124,8 +124,7 @@ impl LinkStage<'_> {
     // mark those dynamic import records as dead, in case we could eliminate them later in ast
     // visitor.
     for (mi, record_idxs) in unused_record_idxs {
-      let module =
-        self.module_table[mi].as_normal_mut().expect("should be a normal module");
+      let module = self.module_table[mi].as_normal_mut().expect("should be a normal module");
       for record_idx in record_idxs {
         let rec = &mut module.import_records[record_idx];
         rec.meta.insert(ImportRecordMeta::DEAD_DYNAMIC_IMPORT);
@@ -287,9 +286,8 @@ impl LinkStage<'_> {
           let all_dead_pure_dynamic_import =
             stmt_info.import_records.iter().all(|import_record_idx| {
               let import_record = &module.import_records[*import_record_idx];
-              let importee_side_effects = self.module_table[import_record.resolved_module]
-                .side_effects()
-                .has_side_effects();
+              let importee_side_effects =
+                self.module_table[import_record.resolved_module].side_effects().has_side_effects();
               let ret = !importee_side_effects;
               if ret {
                 dead_pure_dynamic_import_record_idx.push(*import_record_idx);

@@ -321,8 +321,7 @@ pub fn get_export_items(
 
   match chunk.kind {
     ChunkKind::EntryPoint { module: module_idx, is_user_defined, .. } => {
-      let module =
-        graph.module_table[module_idx].as_normal().expect("should be normal module");
+      let module = graph.module_table[module_idx].as_normal().expect("should be normal module");
       // Check if the module is dynamically imported. This ensures that entry points with
       // dynamic import references are not folded into a common chunk when `preserveModules` is enabled.
       let is_dynamic_imported = !module.ecma_view.dynamic_importers.is_empty();

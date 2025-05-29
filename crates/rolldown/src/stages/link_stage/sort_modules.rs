@@ -116,9 +116,7 @@ impl LinkStage<'_> {
       for cycle in circular_dependencies {
         let paths = cycle
           .iter()
-          .filter_map(|id| {
-            self.module_table[*id].as_normal().map(|module| module.id.to_string())
-          })
+          .filter_map(|id| self.module_table[*id].as_normal().map(|module| module.id.to_string()))
           .collect::<Vec<_>>();
         self.warnings.push(BuildDiagnostic::circular_dependency(paths).with_severity_warning());
       }

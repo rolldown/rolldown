@@ -28,11 +28,7 @@ pub fn generate_pre_rendered_chunk(
       ChunkKind::EntryPoint { module, .. } => Some(graph.module_table[*module].id().into()),
       ChunkKind::Common => None,
     },
-    module_ids: chunk
-      .modules
-      .iter()
-      .map(|id| graph.module_table[*id].id().into())
-      .collect(),
+    module_ids: chunk.modules.iter().map(|id| graph.module_table[*id].id().into()).collect(),
     exports: get_chunk_export_names(chunk, graph, options),
   }
 }

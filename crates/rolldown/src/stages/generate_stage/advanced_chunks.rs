@@ -151,8 +151,7 @@ impl GenerateStage<'_> {
 
     // Manually pull out the module `rolldown:runtime` into a standalone chunk.
     let runtime_module_idx = self.link_output.runtime.id();
-    let Module::Normal(runtime_module) = &self.link_output.module_table[runtime_module_idx]
-    else {
+    let Module::Normal(runtime_module) = &self.link_output.module_table[runtime_module_idx] else {
       unreachable!("`rolldown:runtime` is always a normal module");
     };
 
@@ -214,14 +213,14 @@ impl GenerateStage<'_> {
           let modules_len = modules.len() as isize;
 
           while left_size < allow_min_size && next_left_index < modules_len {
-            left_size += self.link_output.module_table[modules[next_left_index as usize]]
-              .size() as f64;
+            left_size +=
+              self.link_output.module_table[modules[next_left_index as usize]].size() as f64;
             next_left_index += 1;
           }
 
           while right_size < allow_min_size && next_right_index >= 0 {
-            right_size += self.link_output.module_table[modules[next_right_index as usize]]
-              .size() as f64;
+            right_size +=
+              self.link_output.module_table[modules[next_right_index as usize]].size() as f64;
             next_right_index -= 1;
           }
           if next_right_index + 1 < next_left_index {

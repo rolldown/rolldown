@@ -182,9 +182,7 @@ impl GenerateStage<'_> {
               matches!(rec.kind, ImportKind::Import)
                 && !rec.meta.contains(ImportRecordMeta::IS_EXPORT_STAR)
             })
-            .filter_map(|rec| {
-              self.link_output.module_table[rec.resolved_module].as_external()
-            })
+            .filter_map(|rec| self.link_output.module_table[rec.resolved_module].as_external())
             .for_each(|importee| {
               // Ensure the external module is imported in case it has side effects.
               imports_from_external_modules.entry(importee.idx).or_default();
@@ -192,8 +190,7 @@ impl GenerateStage<'_> {
 
           module.named_imports.iter().for_each(|(_, import)| {
             let rec = &module.import_records[import.record_id];
-            if let Module::External(importee) =
-              &self.link_output.module_table[rec.resolved_module]
+            if let Module::External(importee) = &self.link_output.module_table[rec.resolved_module]
             {
               imports_from_external_modules.entry(importee.idx).or_default().push(import.clone());
             }

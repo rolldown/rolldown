@@ -1,5 +1,3 @@
-require.resolve;
+import { createApp } from 'vue';
 
-Promise.then(() => {
-  console.log('feafeaw');
-});
+export default createApp({});

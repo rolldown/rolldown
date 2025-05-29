@@ -3,7 +3,7 @@ use schemars::JsonSchema;
 #[cfg(feature = "deserialize_bundler_options")]
 use serde::Deserialize;
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 #[cfg_attr(feature = "deserialize_bundler_options", derive(Deserialize, JsonSchema))]
 #[cfg_attr(feature = "deserialize_bundler_options", serde(rename_all = "camelCase"))]
 pub enum Platform {

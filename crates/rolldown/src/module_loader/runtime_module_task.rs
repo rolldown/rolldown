@@ -1,3 +1,5 @@
+use std::sync::Arc;
+
 use arcstr::ArcStr;
 use oxc::ast_visit::VisitMut;
 use oxc::span::SourceType;
@@ -8,7 +10,7 @@ use rolldown_common::{
 };
 use rolldown_common::{
   ModuleLoaderMsg, Platform, RUNTIME_MODULE_ID, RUNTIME_MODULE_KEY, ResolvedId, RuntimeModuleBrief,
-  RuntimeModuleTaskResult, SharedNormalizedBundlerOptions,
+  RuntimeModuleTaskResult,
 };
 use rolldown_ecmascript::{EcmaAst, EcmaCompiler};
 use rolldown_error::BuildResult;
@@ -19,6 +21,9 @@ use crate::{
   ast_scanner::{AstScanner, ScanResult},
   utils::tweak_ast_for_scanning::PreProcessor,
 };
+
+use super::resolve_utils::resolve_dependencies;
+use super::task_context::TaskContext;
 
 const RUNTIME_BASE_JS: &str = include_str!("../runtime/runtime-base.js");
 const RUNTIME_TAIL_JS: &str = include_str!("../runtime/runtime-tail.js");
@@ -43,24 +48,20 @@ fn get_runtime_js_with_node_platform() -> String {
 }
 
 pub struct RuntimeModuleTask {
-  tx: tokio::sync::mpsc::Sender<ModuleLoaderMsg>,
   module_idx: ModuleIdx,
-  options: SharedNormalizedBundlerOptions,
+  ctx: Arc<TaskContext>,
 }
 
 impl RuntimeModuleTask {
-  pub fn new(
-    module_idx: ModuleIdx,
-    tx: tokio::sync::mpsc::Sender<ModuleLoaderMsg>,
-    options: SharedNormalizedBundlerOptions,
-  ) -> Self {
-    Self { module_idx, tx, options }
+  pub fn new(module_idx: ModuleIdx, shared_context: Arc<TaskContext>) -> Self {
+    Self { module_idx, ctx: shared_context }
   }
 
   #[tracing::instrument(name = "RuntimeNormalModuleTaskResult::run", level = "debug", skip_all)]
-  pub fn run(self) {
-    if let Err(errs) = self.run_inner() {
+  pub async fn run(self) {
+    if let Err(errs) = self.run_inner().await {
       self
+        .ctx
         .tx
         .try_send(ModuleLoaderMsg::BuildErrors(errs.into_vec().into_boxed_slice()))
         .expect("Send should not fail");
@@ -68,10 +69,10 @@ impl RuntimeModuleTask {
   }
 
   #[expect(clippy::too_many_lines)]
-  fn run_inner(&self) -> BuildResult<()> {
-    let source = if let Some(hmr_options) = &self.options.experimental.hmr {
+  async fn run_inner(&self) -> BuildResult<()> {
+    let source = if let Some(hmr_options) = &self.ctx.options.experimental.hmr {
       let mut runtime_source = String::new();
-      match self.options.platform {
+      match self.ctx.options.platform {
         Platform::Node => {
           runtime_source.push_str("import { WebSocket } from 'ws';\n");
         }
@@ -90,7 +91,7 @@ impl RuntimeModuleTask {
         runtime_source.push_str(&content.replace("$ADDR", &addr));
       }
       ArcStr::from(runtime_source)
-    } else if self.options.is_esm_format_with_node_platform() {
+    } else if self.ctx.options.is_esm_format_with_node_platform() {
       get_runtime_js_with_node_platform().into()
     } else {
       get_runtime_js().into()
@@ -115,6 +116,37 @@ impl RuntimeModuleTask {
       ..
     } = scan_result;
 
+    let mut resolved_id = ResolvedId::make_dummy();
+    resolved_id.id = RUNTIME_MODULE_ID.resource_id().clone();
+    let module_type = ModuleType::Js;
+
+    let needs_ws_dep =
+      self.ctx.options.is_hmr_enabled() && self.ctx.options.platform == Platform::Node;
+
+    // Special case handling for `ws` in HMR runtime.
+    // TODO(hyf0): we need move hmr related runtime code into a separate module.
+    let resolved_deps = if needs_ws_dep {
+      raw_import_records
+        .iter()
+        .map(|rec| {
+          // We assume the runtime module only has external dependencies.
+          ResolvedId::new_external_without_side_effects(rec.module_request.as_str().into())
+        })
+        .collect()
+    } else {
+      resolve_dependencies(
+        &resolved_id,
+        &self.ctx.options,
+        &self.ctx.resolver,
+        &self.ctx.plugin_driver,
+        &raw_import_records,
+        source.clone(),
+        &mut vec![],
+        &module_type,
+      )
+      .await?
+    };
+
     let module = NormalModule {
       idx: self.module_idx,
       repr_name: "rolldown_runtime".to_string(),
@@ -124,7 +156,7 @@ impl RuntimeModuleTask {
       debug_id: RUNTIME_MODULE_KEY.to_string(),
       exec_order: u32::MAX,
       is_user_defined_entry: false,
-      module_type: ModuleType::Js,
+      module_type,
 
       ecma_view: EcmaView {
         ecma_ast_idx: None,
@@ -167,16 +199,8 @@ impl RuntimeModuleTask {
       css_view: None,
       asset_view: None,
       // TODO(hyf0/hmr): We might need to find a better way to handle this.
-      originative_resolved_id: ResolvedId::make_dummy(),
+      originative_resolved_id: resolved_id,
     };
-
-    let resolved_deps = raw_import_records
-      .iter()
-      .map(|rec| {
-        // We assume the runtime module only has external dependencies.
-        ResolvedId::new_external_without_side_effects(rec.module_request.as_str().into())
-      })
-      .collect();
 
     let runtime = RuntimeModuleBrief::new(self.module_idx, &symbol_ref_db.ast_scopes);
     let result = ModuleLoaderMsg::RuntimeNormalModuleDone(Box::new(RuntimeModuleTaskResult {
@@ -189,7 +213,7 @@ impl RuntimeModuleTask {
     }));
 
     // If the main thread is dead, nothing we can do to handle these send failures.
-    let _ = self.tx.try_send(result);
+    let _ = self.ctx.tx.try_send(result);
 
     Ok(())
   }
@@ -214,7 +238,7 @@ impl RuntimeModuleTask {
       source,
       &facade_path,
       ast.comments(),
-      &self.options,
+      &self.ctx.options,
     );
     let scan_result = scanner.scan(ast.program())?;
 

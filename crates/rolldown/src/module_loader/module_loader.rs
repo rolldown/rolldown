@@ -161,9 +161,9 @@ impl ModuleLoader {
       intermediate_normal_modules.reset_ecma_module_idx();
       0
     } else {
-      let task = RuntimeModuleTask::new(runtime_id, tx.clone(), Arc::clone(&options));
+      let task = RuntimeModuleTask::new(runtime_id, Arc::clone(&shared_context));
 
-      tokio::spawn(async { task.run() });
+      tokio::spawn(task.run());
       cache.module_id_to_idx.insert(RUNTIME_MODULE_KEY.into(), VisitState::Seen(runtime_id));
       1
     };

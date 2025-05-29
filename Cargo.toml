@@ -210,6 +210,11 @@ oxc_sourcemap = { version = "3" } # https://github.com/oxc-project/oxc-sourcemap
 # and we don't rely on it for debugging that much.
 debug = false
 
+[profile.test]
+# Disabling debug info speeds up local and CI builds,
+# and we don't rely on it for debugging that much.
+debug = false
+
 [profile.release]
 codegen-units = 1
 debug = false # Set to `true` for debug information

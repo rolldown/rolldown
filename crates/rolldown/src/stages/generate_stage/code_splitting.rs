@@ -20,7 +20,7 @@ pub type IndexSplittingInfo = IndexVec<ModuleIdx, SplittingInfo>;
 
 impl GenerateStage<'_> {
   #[tracing::instrument(level = "debug", skip_all)]
-  pub async fn generate_chunks(&mut self) -> ChunkGraph {
+  pub async fn generate_chunks(&mut self) -> anyhow::Result<ChunkGraph> {
     if matches!(self.options.format, OutputFormat::Iife | OutputFormat::Umd) {
       let user_defined_entry_count =
         self.link_output.entries.iter().filter(|entry| entry.kind.is_user_defined()).count();
@@ -99,12 +99,9 @@ impl GenerateStage<'_> {
         entries_len,
         &input_base,
       );
-      self.split_chunks(
-        &mut index_splitting_info,
-        &mut chunk_graph,
-        &mut bits_to_chunk,
-        &input_base,
-      );
+      self
+        .split_chunks(&mut index_splitting_info, &mut chunk_graph, &mut bits_to_chunk, &input_base)
+        .await?;
     }
 
     // Sort modules in each chunk by execution order
@@ -184,7 +181,7 @@ impl GenerateStage<'_> {
     chunk_graph.sorted_chunk_idx_vec = sorted_chunk_idx_vec;
     chunk_graph.entry_module_to_entry_chunk = entry_module_to_entry_chunk;
     self.merge_cjs_namespace(&mut chunk_graph);
-    chunk_graph
+    Ok(chunk_graph)
   }
 
   fn merge_cjs_namespace(&mut self, chunk_graph: &mut ChunkGraph) {
@@ -307,13 +304,13 @@ impl GenerateStage<'_> {
       entry_module_to_entry_chunk.insert(entry_point.id, chunk);
     }
   }
-  fn split_chunks(
+  async fn split_chunks(
     &self,
     index_splitting_info: &mut IndexSplittingInfo,
     chunk_graph: &mut ChunkGraph,
     bits_to_chunk: &mut FxHashMap<BitSet, ChunkIdx>,
     input_base: &ArcStr,
-  ) {
+  ) -> anyhow::Result<()> {
     // Determine which modules belong to which chunk. A module could belong to multiple chunks.
     self.link_output.entries.iter().enumerate().for_each(|(i, entry_point)| {
       if self.options.is_hmr_enabled() {
@@ -334,12 +331,9 @@ impl GenerateStage<'_> {
     let mut module_to_assigned: IndexVec<ModuleIdx, bool> =
       oxc_index::index_vec![false; self.link_output.module_table.modules.len()];
 
-    self.apply_advanced_chunks(
-      index_splitting_info,
-      &mut module_to_assigned,
-      chunk_graph,
-      input_base,
-    );
+    self
+      .apply_advanced_chunks(index_splitting_info, &mut module_to_assigned, chunk_graph, input_base)
+      .await?;
 
     // 1. Assign modules to corresponding chunks
     // 2. Create shared chunks to store modules that belong to multiple chunks.
@@ -376,6 +370,7 @@ impl GenerateStage<'_> {
         bits_to_chunk.insert(bits.clone(), chunk_id);
       }
     }
+    Ok(())
   }
 
   fn determine_reachable_modules_for_entry(

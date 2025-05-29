@@ -115,15 +115,16 @@ export interface OutputOptions {
        */
       name: string;
       /**
-       * - Type: `string | RegExp`
+       * - Type: `string | RegExp | ((id: string) => boolean | undefined | void);`
        *
        * Controls which modules are captured in this group.
        *
        * If `test` is a string, the module whose id contains the string will be captured.
        * If `test` is a regular expression, the module whose id matches the regular expression will be captured.
+       * If `test` is a function, modules for which `test(id)` returns `true` will be captured.
        * if `test` is empty, any module will be considered as matched.
        */
-      test?: StringOrRegExp;
+      test?: StringOrRegExp | ((id: string) => boolean | undefined | void);
       /**
        * - Type: `number`
        *

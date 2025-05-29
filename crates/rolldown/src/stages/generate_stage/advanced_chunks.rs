@@ -2,7 +2,7 @@ use std::cmp::Reverse;
 
 use arcstr::ArcStr;
 use oxc_index::IndexVec;
-use rolldown_common::{Chunk, ChunkKind, Module, ModuleIdx, ModuleTable};
+use rolldown_common::{Chunk, ChunkKind, MatchGroupTest, Module, ModuleIdx, ModuleTable};
 use rustc_hash::{FxHashMap, FxHashSet};
 
 use crate::{chunk_graph::ChunkGraph, types::linking_metadata::LinkingMetadataVec};
@@ -51,25 +51,25 @@ impl GenerateStage<'_> {
     clippy::cast_sign_loss,
     clippy::cast_possible_wrap
   )] // TODO(hyf0): refactor
-  pub fn apply_advanced_chunks(
+  pub async fn apply_advanced_chunks(
     &self,
     index_splitting_info: &IndexSplittingInfo,
     module_to_assigned: &mut IndexVec<ModuleIdx, bool>,
     chunk_graph: &mut ChunkGraph,
     input_base: &ArcStr,
-  ) {
+  ) -> anyhow::Result<()> {
     let Some(chunking_options) = &self.options.advanced_chunks else {
-      return;
+      return Ok(());
     };
 
     let Some(match_groups) =
       chunking_options.groups.as_ref().map(|inner| inner.iter().collect::<Vec<_>>())
     else {
-      return;
+      return Ok(());
     };
 
     if match_groups.is_empty() {
-      return;
+      return Ok(());
     }
 
     let mut index_module_groups: IndexVec<ModuleGroupIdx, ModuleGroup> = IndexVec::new();
@@ -88,8 +88,13 @@ impl GenerateStage<'_> {
       let splitting_info = &index_splitting_info[normal_module.idx];
 
       for (match_group_index, match_group) in match_groups.iter().copied().enumerate() {
-        let is_matched =
-          match_group.test.as_ref().is_none_or(|test| test.matches(&normal_module.id));
+        let is_matched = match &match_group.test {
+          None => true,
+          Some(MatchGroupTest::Regex(reg)) => reg.matches(&normal_module.id),
+          Some(MatchGroupTest::Function(func)) => {
+            func(&normal_module.id).await?.unwrap_or_default()
+          }
+        };
 
         if !is_matched {
           continue;
@@ -303,6 +308,7 @@ impl GenerateStage<'_> {
         module_to_assigned[module_idx] = true;
       });
     }
+    Ok(())
   }
 }
 

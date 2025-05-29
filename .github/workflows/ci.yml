@@ -79,8 +79,9 @@ jobs:
           cache-key: debug-build
           components: clippy
 
-      - name: Lint
-        run: just lint-rust
+      - run: just check-rust
+
+      - run: just lint-rust
 
   cargo-test:
     needs: changes

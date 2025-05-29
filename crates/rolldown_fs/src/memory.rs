@@ -114,7 +114,7 @@ impl OxcResolverFileSystem for MemoryFileSystem {
     })
   }
 
-  fn canonicalize(&self, _path: &Path) -> io::Result<PathBuf> {
+  fn read_link(&self, _path: &Path) -> io::Result<PathBuf> {
     Err(io::Error::new(io::ErrorKind::NotFound, "not a symlink"))
   }
 }

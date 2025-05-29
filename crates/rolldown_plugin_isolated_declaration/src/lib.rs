@@ -1,5 +1,7 @@
 use std::{borrow::Cow, path::Path};
 
+use arcstr::ArcStr;
+use itertools::Itertools as _;
 use oxc::{
   allocator::IntoIn,
   ast_visit::VisitMut,
@@ -7,7 +9,9 @@ use oxc::{
   isolated_declarations::{IsolatedDeclarations, IsolatedDeclarationsOptions},
 };
 use rolldown_common::{ModuleType, ResolvedExternal};
+use rolldown_error::{BuildDiagnostic, Severity};
 use rolldown_plugin::{HookUsage, Plugin, PluginHookMeta, PluginOrder};
+use rolldown_utils::stabilize_id::stabilize_id;
 use sugar_path::SugarPath;
 use type_import_visitor::TypeImportVisitor;
 
@@ -50,9 +54,17 @@ impl Plugin for IsolatedDeclarationPlugin {
         .build(fields.program)
       });
 
-      // TODO BuildDiagnostic error
       if !ret.errors.is_empty() {
-        return Err(anyhow::anyhow!("IsolatedDeclarations error"));
+        let errors = BuildDiagnostic::from_oxc_diagnostics(
+          ret.errors,
+          &ArcStr::from(ret.program.source_text),
+          &stabilize_id(args.id, ctx.cwd()),
+          &Severity::Error,
+        )
+        .iter()
+        .map(|error| error.to_diagnostic().with_kind(self.name().into_owned()).to_color_string())
+        .join("\n\n");
+        return Err(anyhow::anyhow!("\n{errors}"));
       }
 
       let codegen_ret = Codegen::new().build(&ret.program);

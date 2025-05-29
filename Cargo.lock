@@ -2777,10 +2777,14 @@ name = "rolldown_plugin_isolated_declaration"
 version = "0.1.0"
 dependencies = [
  "anyhow",
+ "arcstr",
+ "itertools",
  "oxc",
  "rolldown_common",
+ "rolldown_error",
  "rolldown_plugin",
  "rolldown_testing",
+ "rolldown_utils",
  "sugar_path",
  "testing_macros",
 ]

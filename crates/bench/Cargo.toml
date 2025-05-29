@@ -14,10 +14,9 @@ doctest = false
 test = false
 
 [dependencies]
-criterion2 = { workspace = true }
-oxc = { workspace = true }
+criterion2 = { workspace = true, features = ["async_tokio"] }
 rolldown = { workspace = true }
-rolldown_sourcemap = { workspace = true }
+rolldown_common = { workspace = true }
 rolldown_testing = { workspace = true }
 rolldown_workspace = { workspace = true }
 tokio = { workspace = true, features = ["full"] }
@@ -29,10 +28,6 @@ name = "bundle"
 [[bench]]
 harness = false
 name = "scan"
-
-[[bench]]
-harness = false
-name = "remapping"
 
 [features]
 codspeed = ["criterion2/codspeed"]

@@ -3,10 +3,14 @@ use criterion::{Criterion, criterion_group, criterion_main};
 use rolldown_testing::utils::assert_bundled;
 
 use rolldown_common::BundlerOptions;
-use rolldown_testing::bundler_options_presets::{rome_ts, threejs};
+use rolldown_testing::bundler_options_presets::{multi_duplicated_symbol, rome_ts, threejs};
 
 fn items() -> Vec<(&'static str, BundlerOptions)> {
-  let mut result = vec![("threejs", threejs()), ("rome_ts", rome_ts())];
+  let mut result = vec![
+    ("threejs", threejs()),
+    ("rome_ts", rome_ts()),
+    ("multi-duplicated-top-level-symbol", multi_duplicated_symbol()),
+  ];
   #[cfg(not(feature = "codspeed"))]
   {
     result.push(("threejs10x", rolldown_testing::bundler_options_presets::threejs10x()));

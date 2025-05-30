@@ -18,9 +18,11 @@ impl Plugin for LoadFallbackPlugin {
     }
 
     let path = memchr::memchr2(b'?', b'#', args.id.as_bytes()).map_or(args.id, |i| &args.id[..i]);
-    let code = std::fs::read_to_string(path).or_else(|err| {
-      if path.len() == args.id.len() { Err(err) } else { std::fs::read_to_string(args.id) }
-    })?;
+    let code = std::fs::read_to_string(path)
+      .or_else(|err| {
+        if path.len() == args.id.len() { Err(err) } else { std::fs::read_to_string(args.id) }
+      })?
+      .into();
 
     ctx.add_watch_file(path);
 

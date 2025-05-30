@@ -5,6 +5,7 @@ mod manifest;
 mod option;
 mod utils;
 use arcstr::ArcStr;
+use cow_utils::CowUtils;
 use manifest::generate_manifest;
 pub use option::{Manifest, ModuleFederationPluginOption, Remote, Shared};
 use oxc::{
@@ -76,7 +77,7 @@ impl ModuleFederationPlugin {
     )
   }
 
-  pub fn generate_remote_entry_code(&self) -> String {
+  pub fn generate_remote_entry_code(&self) -> ArcStr {
     let expose = self
       .options
       .exposes
@@ -97,14 +98,16 @@ impl ModuleFederationPlugin {
           .join(", ")
       })
       .unwrap_or_default();
-    include_str!("runtime/remote-entry.js")
-      .replace("__EXPOSES_MAP__", &concat_string!("{", expose, "}"))
-      .replace("__PLUGINS__", &self.generate_runtime_plugins())
-      .replace("__SHARED__", &self.generate_shared_modules())
-      .replace("__NAME__", &concat_string!("'", &self.options.name, "'"))
+    ArcStr::from(
+      include_str!("runtime/remote-entry.js")
+        .cow_replace("__EXPOSES_MAP__", &concat_string!("{", expose, "}"))
+        .cow_replace("__PLUGINS__", &self.generate_runtime_plugins())
+        .cow_replace("__SHARED__", &self.generate_shared_modules())
+        .cow_replace("__NAME__", &concat_string!("'", &self.options.name, "'")),
+    )
   }
 
-  pub fn generate_init_host_code(&self) -> String {
+  pub fn generate_init_host_code(&self) -> ArcStr {
     let remotes = self
       .options
       .remotes
@@ -129,11 +132,13 @@ impl ModuleFederationPlugin {
           .join(", ")
       })
       .unwrap_or_default();
-    include_str!("runtime/init-host.js")
-      .replace("__REMOTES__", &concat_string!("[", remotes, "]"))
-      .replace("__PLUGINS__", &self.generate_runtime_plugins())
-      .replace("__NAME__", &concat_string!("'", &self.options.name, "'"))
-      .replace("__SHARED__", &self.generate_shared_modules())
+    ArcStr::from(
+      include_str!("runtime/init-host.js")
+        .cow_replace("__REMOTES__", &concat_string!("[", remotes, "]"))
+        .cow_replace("__PLUGINS__", &self.generate_runtime_plugins())
+        .cow_replace("__NAME__", &concat_string!("'", &self.options.name, "'"))
+        .cow_replace("__SHARED__", &self.generate_shared_modules()),
+    )
   }
 
   pub fn generate_runtime_plugins(&self) -> String {
@@ -321,31 +326,37 @@ impl Plugin for ModuleFederationPlugin {
     }
     if args.id == REMOTE_MODULE_REGISTRY {
       return Ok(Some(rolldown_plugin::HookLoadOutput {
-        code: include_str!("runtime/remote-module-registry.js").to_string(),
+        code: arcstr::literal!(include_str!("runtime/remote-module-registry.js")),
         ..Default::default()
       }));
     }
     if args.id.starts_with(INIT_REMOTE_MODULE_PREFIX) {
       let remote_module_id = &args.id[INIT_REMOTE_MODULE_PREFIX.len()..];
       return Ok(Some(rolldown_plugin::HookLoadOutput {
-        code: include_str!("runtime/init-remote-module.js")
-          .replace("__MODULE_ID__", &concat_string!("'", remote_module_id, "'"))
-          .replace("__IS__SHARED__", "false"),
+        code: ArcStr::from(
+          include_str!("runtime/init-remote-module.js")
+            .cow_replace("__MODULE_ID__", &concat_string!("'", remote_module_id, "'"))
+            .cow_replace("__IS__SHARED__", "false"),
+        ),
         ..Default::default()
       }));
     }
     if args.id.starts_with(INIT_SHARED_MODULE_PREFIX) {
       let remote_module_id = &args.id[INIT_SHARED_MODULE_PREFIX.len()..];
       return Ok(Some(rolldown_plugin::HookLoadOutput {
-        code: include_str!("runtime/init-remote-module.js")
-          .replace("__MODULE_ID__", &concat_string!("'", remote_module_id, "'"))
-          .replace("__IS__SHARED__", "true"),
+        code: ArcStr::from(
+          include_str!("runtime/init-remote-module.js")
+            .cow_replace("__MODULE_ID__", &concat_string!("'", remote_module_id, "'"))
+            .cow_replace("__IS__SHARED__", "true"),
+        ),
         ..Default::default()
       }));
     }
     if detect_remote_module_type(args.id, &self.options).is_some() {
       return Ok(Some(rolldown_plugin::HookLoadOutput {
-        code: include_str!("runtime/remote-module.js").replace("__REMOTE__MODULE__ID__", args.id),
+        code: ArcStr::from(
+          include_str!("runtime/remote-module.js").cow_replace("__REMOTE__MODULE__ID__", args.id),
+        ),
         ..Default::default()
       }));
     }

@@ -17,7 +17,7 @@ impl TryFrom<BindingHookLoadOutput> for rolldown_plugin::HookLoadOutput {
 
   fn try_from(value: BindingHookLoadOutput) -> Result<Self, Self::Error> {
     Ok(rolldown_plugin::HookLoadOutput {
-      code: value.code,
+      code: value.code.into(),
       map: value.map.map(TryInto::try_into).transpose()?,
       side_effects: value.side_effects.map(Into::into),
       module_type: value.module_type.map(|ty| ModuleType::from_str_with_fallback(ty.as_str())),

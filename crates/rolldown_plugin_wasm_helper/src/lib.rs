@@ -30,7 +30,7 @@ impl Plugin for WasmHelperPlugin {
   async fn load(&self, ctx: &PluginContext, args: &HookLoadArgs<'_>) -> HookLoadReturn {
     if args.id == WASM_HELPER_ID {
       return Ok(Some(HookLoadOutput {
-        code: include_str!("wasm-runtime.js").to_string(),
+        code: arcstr::literal!(include_str!("wasm-runtime.js")),
         ..Default::default()
       }));
     }
@@ -42,7 +42,7 @@ impl Plugin for WasmHelperPlugin {
 
       let id = ctx.emit_file_async(EmittedAsset { name, source, ..Default::default() }).await?;
       return Ok(Some(HookLoadOutput {
-        code: format!(
+        code: arcstr::format!(
           r#"import initWasm from "{WASM_HELPER_ID}"; 
           export default opts => initWasm(opts, "{}")"#,
           ctx.get_file_name(&id)?

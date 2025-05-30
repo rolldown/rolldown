@@ -19,6 +19,7 @@ use crate::{
   },
 };
 use anyhow::anyhow;
+use arcstr::ArcStr;
 use derive_more::Debug;
 use rolldown_common::{ImportKind, WatcherChangeKind, side_effects::HookSideEffects};
 use rolldown_plugin::{
@@ -344,7 +345,7 @@ impl Plugin for ViteResolvePlugin {
           // rolldown treats missing export as an error, and will break build.
           // So use cjs to avoid it.
           return Ok(Some(HookLoadOutput {
-            code: "module.exports = {}".to_string(),
+            code: arcstr::literal!("module.exports = {}"),
             ..Default::default()
           }));
         } else {
@@ -363,7 +364,7 @@ impl Plugin for ViteResolvePlugin {
       } else if self.resolve_options.is_production {
         // in dev, needs to return esm
         return Ok(Some(HookLoadOutput {
-          code: "export default {}".to_string(),
+          code: arcstr::literal!("export default {}"),
           ..Default::default()
         }));
       } else {
@@ -380,7 +381,7 @@ impl Plugin for ViteResolvePlugin {
     if args.id.starts_with(OPTIONAL_PEER_DEP_ID) {
       if self.resolve_options.is_production {
         return Ok(Some(HookLoadOutput {
-          code: "export default {}".to_string(),
+          code: arcstr::literal!("export default {}"),
           ..Default::default()
         }));
       } else {
@@ -421,8 +422,8 @@ impl Plugin for ViteResolvePlugin {
 }
 
 // rolldown uses esbuild interop helper, so copy the proxy module from https://github.com/vitejs/vite/blob/main/packages/vite/src/node/optimizer/esbuildDepPlugin.ts#L259
-fn get_development_build_browser_external_module_code(id_without_prefix: &str) -> String {
-  format!(
+fn get_development_build_browser_external_module_code(id_without_prefix: &str) -> ArcStr {
+  arcstr::format!(
     "\
 module.exports = Object.create(new Proxy({{}}, {{
   get(_, key) {{
@@ -439,8 +440,8 @@ module.exports = Object.create(new Proxy({{}}, {{
     "
   )
 }
-fn get_development_dev_browser_external_module_code(id_without_prefix: &str) -> String {
-  format!(
+fn get_development_dev_browser_external_module_code(id_without_prefix: &str) -> ArcStr {
+  arcstr::format!(
     "\
 export default new Proxy({{}}, {{
   get(_, key) {{
@@ -450,8 +451,8 @@ export default new Proxy({{}}, {{
     "
   )
 }
-fn get_development_optional_peer_dep_module_code(peer_dep: &str, parent_dep: &str) -> String {
-  format!(
+fn get_development_optional_peer_dep_module_code(peer_dep: &str, parent_dep: &str) -> ArcStr {
+  arcstr::format!(
     "\
 throw new Error(`Could not resolve \"{peer_dep}\" imported by \"{parent_dep}\". Is it installed?`)\
     "

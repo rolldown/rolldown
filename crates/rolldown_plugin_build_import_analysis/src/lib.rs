@@ -3,6 +3,7 @@ mod ast_visit;
 
 use std::borrow::Cow;
 
+use arcstr::ArcStr;
 use oxc::ast::AstBuilder;
 use oxc::ast_visit::VisitMut;
 use oxc::codegen::{self, Codegen, CodegenOptions, Gen};
@@ -20,7 +21,7 @@ const PRELOAD_HELPER_ID: &str = "\0vite/preload-helper.js";
 #[derive(Debug)]
 #[allow(clippy::struct_excessive_bools)]
 pub struct BuildImportAnalysisPlugin {
-  pub preload_code: String,
+  pub preload_code: ArcStr,
   pub insert_preload: bool,
   pub render_built_url: bool,
   pub is_relative_base: bool,

@@ -9,7 +9,7 @@ use oxc::{
   span::SPAN,
 };
 
-use crate::IS_MODERN_FLAG;
+const IS_MODERN_FLAG: &str = "__VITE_IS_MODERN__";
 
 pub fn construct_snippet_from_await_decl<'a>(
   ast_builder: AstBuilder<'a>,

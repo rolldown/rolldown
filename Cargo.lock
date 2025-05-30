@@ -2727,8 +2727,8 @@ dependencies = [
 name = "rolldown_plugin_build_import_analysis"
 version = "0.1.0"
 dependencies = [
- "anyhow",
  "oxc",
+ "rolldown_common",
  "rolldown_plugin",
  "rustc-hash",
 ]

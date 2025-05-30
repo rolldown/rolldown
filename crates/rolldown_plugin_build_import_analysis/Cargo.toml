@@ -15,7 +15,7 @@ doctest = false
 workspace = true
 
 [dependencies]
-anyhow = { workspace = true }
 oxc = { workspace = true }
+rolldown_common = { workspace = true }
 rolldown_plugin = { workspace = true }
 rustc-hash = { workspace = true }

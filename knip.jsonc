@@ -1,9 +1,15 @@
 {
   "$schema": "https://unpkg.com/knip@5/schema.json",
+  "ignoreBinaries": ["only-allow", "typos"],
   "ignoreWorkspaces": ["examples/**"], // no rolldown plugin yet
   "workspaces": {
     ".": {
       "project": [],
+      "ignoreDependencies": [
+        "@oxc-project/runtime",
+        "cjs-module-lexer",
+        "remove-unused-vars",
+      ],
     },
     "crates/rolldown/tests/rolldown/topics/npm_packages": {
       "entry": ["util_deprecate/main.js"],
@@ -17,32 +23,49 @@
       ],
     },
     "packages/bench": {
-      "entry": [
-        "vue-entry.js",
-      ],
-      "ignoreDependencies": ["@babel/preset-.+"],
+      "entry": ["vue-entry.js"],
+      "ignoreDependencies": ["@babel/preset-.+", "react", "react-dom"],
+    },
+    "packages/browser": {
+      "ignoreDependencies": ["@napi-rs/wasm-runtime"],
     },
     "packages/rolldown": {
       "entry": [
-        "build.ts", // oxnode
-        "build-binding.mts", // oxnode
         "src/browser.js",
         "src/cli/index.ts",
         "src/log/locate-character/index.d.ts",
         "src/rolldown-binding.wasi-browser.js",
         "src/{wasi,webcontainer}-*.*",
       ],
-      "ignore": ["src/binding.js", "src/rolldown-binding.wasi.cjs"], // lots of unused exports
+      "ignore": [
+        "src/binding.js",
+        "src/rolldown-binding.wasi.cjs",
+        "src/plugin/generated/hook-usage.ts",
+      ],
+      "ignoreDependencies": [
+        "@oxc-project/runtime",
+        "@rollup/plugin-json",
+        "buble",
+      ],
     },
     "packages/rolldown/tests": {
       "entry": ["*/**"],
       "ignore": ["{cli,fixtures,module-federation,stability}/**"], // lots of unlisted dependencies
+      "ignoreUnresolved": ["./world"],
     },
     "packages/rolldown/tests/module-federation": {
       "entry": ["*.js"],
     },
     "packages/rollup-tests": {
       "entry": ["src/**/*.js", "test/**/*.{js,ts}"],
+      "ignoreDependencies": [
+        "acorn",
+        "locate-character",
+        "requirejs",
+        "terser",
+        "weak-napi",
+      ],
+      "ignoreUnresolved": ["/types$"],
     },
     "scripts": {
       "entry": ["misc/**"],

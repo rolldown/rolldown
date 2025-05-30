@@ -1,6 +1,7 @@
+mod utils;
+
 use std::borrow::Cow;
 
-use anyhow::Ok;
 use oxc::ast::ast::{
   Argument, BindingPattern, BindingPatternKind, CallExpression, Expression, ImportOrExportKind,
   PropertyKey, Statement, StaticMemberExpression, VariableDeclaration, VariableDeclarationKind,
@@ -10,6 +11,7 @@ use oxc::ast_visit::{VisitMut, walk_mut};
 use oxc::codegen::{self, Codegen, CodegenOptions, Gen};
 use oxc::semantic::ScopeFlags;
 use oxc::span::{Atom, SPAN};
+use rolldown_common::side_effects::HookSideEffects;
 use rolldown_plugin::{
   HookLoadArgs, HookLoadOutput, HookLoadReturn, HookResolveIdArgs, HookResolveIdOutput,
   HookResolveIdReturn, HookTransformAstArgs, HookTransformAstReturn, HookUsage, Plugin,
@@ -18,7 +20,6 @@ use rolldown_plugin::{
 use rustc_hash::FxHashMap;
 
 use self::utils::{construct_snippet_for_expression, construct_snippet_from_await_decl};
-mod utils;
 
 #[derive(Debug)]
 #[allow(clippy::struct_excessive_bools)]
@@ -41,6 +42,7 @@ enum ImportPattern<'a> {
   /// const {foo} = await import('foo')
   Decl(Atom<'a>, Vec<Atom<'a>>),
 }
+
 impl Plugin for BuildImportAnalysisPlugin {
   fn name(&self) -> Cow<'static, str> {
     Cow::Borrowed("builtin:build-import-analysis")
@@ -51,17 +53,18 @@ impl Plugin for BuildImportAnalysisPlugin {
     _ctx: &PluginContext,
     args: &HookResolveIdArgs<'_>,
   ) -> HookResolveIdReturn {
-    if args.specifier == PRELOAD_HELPER_ID {
-      return Ok(Some(HookResolveIdOutput { id: args.specifier.into(), ..Default::default() }));
-    }
-    Ok(None)
+    Ok(
+      (args.specifier == PRELOAD_HELPER_ID)
+        .then_some(HookResolveIdOutput { id: args.specifier.into(), ..Default::default() }),
+    )
   }
 
   async fn load(&self, _ctx: &PluginContext, args: &HookLoadArgs<'_>) -> HookLoadReturn {
-    if args.id == PRELOAD_HELPER_ID {
-      return Ok(Some(HookLoadOutput { code: self.preload_code.clone(), ..Default::default() }));
-    }
-    Ok(None)
+    Ok((args.id == PRELOAD_HELPER_ID).then_some(HookLoadOutput {
+      code: self.preload_code.clone(),
+      side_effects: Some(HookSideEffects::False),
+      ..Default::default()
+    }))
   }
 
   async fn transform_ast(

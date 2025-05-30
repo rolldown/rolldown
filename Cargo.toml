@@ -205,6 +205,9 @@ oxc_resolver = { version = "11", features = ["package_json_raw_json_api"] } # ht
 oxc_resolver_napi = { version = "11" }
 oxc_sourcemap = { version = "3" } # https://github.com/oxc-project/oxc-sourcemap
 
+[patch.crates-io]
+napi-derive = { git = "https://github.com/napi-rs/napi-rs", branch = "05-30-fix_napi-derive_add_file_lock_to_tmp_typedef_file" }
+
 [profile.dev]
 # Disabling debug info speeds up local and CI builds,
 # and we don't rely on it for debugging that much.

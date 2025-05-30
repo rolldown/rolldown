@@ -697,6 +697,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "fd-lock"
+version = "4.0.4"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "0ce92ff622d6dadf7349484f42c93271a0d49b7cc4d466a936405bacbe10aa78"
+dependencies = [
+ "cfg-if",
+ "rustix",
+ "windows-sys 0.52.0",
+]
+
+[[package]]
 name = "filetime"
 version = "0.2.25"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1374,12 +1385,12 @@ checksum = "03acbfa4f156a32188bfa09b86dc11a431b5725253fc1fc6f6df5bed273382c4"
 
 [[package]]
 name = "napi-derive"
-version = "3.0.0-beta.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "cb71c236fe23004d7abf4a00ad5e86332ea3468f6c48935d283a5d71aa7cca0c"
+version = "3.0.0-beta.3"
+source = "git+https://github.com/napi-rs/napi-rs?branch=05-30-fix_napi-derive_add_file_lock_to_tmp_typedef_file#b16ffd1b6dd801d9321337b29d9e69d71b0e9fb4"
 dependencies = [
  "convert_case",
  "ctor",
+ "fd-lock",
  "napi-derive-backend",
  "proc-macro2",
  "quote",
@@ -1388,9 +1399,8 @@ dependencies = [
 
 [[package]]
 name = "napi-derive-backend"
-version = "2.0.0-beta.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "6aeebae33f1d5d0ad2b65d97e4fa1266d46454dd1a74dc4a9f1f406e7358f5eb"
+version = "2.0.0-beta.3"
+source = "git+https://github.com/napi-rs/napi-rs?branch=05-30-fix_napi-derive_add_file_lock_to_tmp_typedef_file#b16ffd1b6dd801d9321337b29d9e69d71b0e9fb4"
 dependencies = [
  "convert_case",
  "proc-macro2",

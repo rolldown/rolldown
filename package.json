@@ -32,7 +32,7 @@
     "conventional-changelog-cli": "^5.0.0",
     "dprint": "^0.50.0",
     "husky": "^9.0.0",
-    "knip": "^5.59.0",
+    "knip": "^5.59.1",
     "lint-staged": "^16.0.0",
     "oxlint": "^0.16.0",
     "remove-unused-vars": "^0.0.6",

@@ -3740,6 +3740,10 @@ expression: output
 
 - main-!~{000}~.js => main-mbEkR_Bu.js
 
+# tests/rolldown/cjs_compat/partial_cjs_ns_merge_2
+
+- main-!~{000}~.js => main-BWcMr11Q.js
+
 # tests/rolldown/cjs_compat/partial_cjs_ns_merge_optimize
 
 - main-!~{000}~.js => main-B3J4C0DR.js

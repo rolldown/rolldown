@@ -1,0 +1,42 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## main.js
+
+```js
+
+//#region react.js
+var require_react = __commonJS({ "react.js"(exports, module) {
+	module.exports = 1e4;
+} });
+
+//#endregion
+//#region lib.js
+var lib_exports = {};
+__export(lib_exports, { default: () => toArray$1 });
+function toArray$1(children) {
+	import_react$1.default.Children.forEach(children, function(child) {});
+	return ret;
+}
+var import_react$1;
+var init_lib = __esm({ "lib.js"() {
+	import_react$1 = __toESM(require_react());
+} });
+
+//#endregion
+//#region cjs.js
+var require_cjs = __commonJS({ "cjs.js"(exports, module) {
+	const a = (init_lib(), __toCommonJS(lib_exports));
+	module.exports = a;
+} });
+
+//#endregion
+//#region main.js
+var import_react = __toESM(require_react());
+var import_cjs = __toESM(require_cjs());
+console.log("r", import_react, Typography, import_cjs.default);
+
+//#endregion
+```

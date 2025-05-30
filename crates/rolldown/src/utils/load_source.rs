@@ -25,7 +25,7 @@ pub async fn load_source(
           *side_effects = Some(v);
         }
 
-        (Some(load_hook_output.code), load_hook_output.module_type)
+        (Some(load_hook_output.code.to_string()), load_hook_output.module_type)
       }
       _ => {
         if resolved_id.ignored {

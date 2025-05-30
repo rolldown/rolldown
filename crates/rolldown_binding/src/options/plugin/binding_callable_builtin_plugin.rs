@@ -116,7 +116,7 @@ pub struct BindingHookJsLoadOutput {
 impl From<HookLoadOutput> for BindingHookJsLoadOutput {
   fn from(value: HookLoadOutput) -> Self {
     Self {
-      code: value.code,
+      code: value.code.to_string(),
       map: value.map.map(|map| map.to_json_string()),
       side_effects: get_side_effects_binding(value.side_effects),
     }

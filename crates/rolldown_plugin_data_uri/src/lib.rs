@@ -1,5 +1,6 @@
 use std::borrow::Cow;
 
+use arcstr::ArcStr;
 use rolldown_common::ModuleType;
 use rolldown_plugin::{
   HookLoadArgs, HookLoadOutput, HookLoadReturn, HookResolveIdArgs, HookResolveIdOutput,
@@ -12,7 +13,7 @@ use rolldown_utils::{
 
 #[derive(Debug)]
 pub struct ResolvedDataUri {
-  pub data: String,
+  pub data: ArcStr,
   pub module_type: ModuleType,
 }
 
@@ -47,9 +48,9 @@ impl Plugin for DataUriPlugin {
 
       let data = if parsed.is_base64 {
         let data = base64_simd::STANDARD.decode_to_vec(parsed.data)?;
-        String::from_utf8_lossy(data.as_ref()).to_string()
+        String::from_utf8_lossy(data.as_ref()).as_ref().into()
       } else {
-        urlencoding::decode(parsed.data)?.into_owned()
+        urlencoding::decode(parsed.data)?.as_ref().into()
       };
 
       self

@@ -2707,6 +2707,7 @@ dependencies = [
 name = "rolldown_plugin_asset"
 version = "0.1.0"
 dependencies = [
+ "arcstr",
  "cow-utils",
  "rolldown_common",
  "rolldown_plugin",
@@ -2727,6 +2728,7 @@ dependencies = [
 name = "rolldown_plugin_build_import_analysis"
 version = "0.1.0"
 dependencies = [
+ "arcstr",
  "oxc",
  "rolldown_common",
  "rolldown_plugin",
@@ -2737,6 +2739,7 @@ dependencies = [
 name = "rolldown_plugin_data_uri"
 version = "0.1.0"
 dependencies = [
+ "arcstr",
  "base64-simd",
  "rolldown_common",
  "rolldown_plugin",
@@ -2829,6 +2832,7 @@ version = "0.1.0"
 dependencies = [
  "anyhow",
  "arcstr",
+ "cow-utils",
  "oxc",
  "rolldown_common",
  "rolldown_plugin",

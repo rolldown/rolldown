@@ -16,7 +16,7 @@ impl TryFrom<BindingBuildImportAnalysisPluginConfig> for BuildImportAnalysisPlug
 
   fn try_from(value: BindingBuildImportAnalysisPluginConfig) -> Result<Self, Self::Error> {
     Ok(Self {
-      preload_code: value.preload_code,
+      preload_code: value.preload_code.into(),
       insert_preload: value.insert_preload,
       render_built_url: value.render_built_url,
       is_relative_base: value.is_relative_base,

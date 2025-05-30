@@ -22,4 +22,4 @@ catalog:
   '@oxc-project/types': '0.72.1'
   'oxc-parser': '0.72.1'
   'oxc-transform': '0.72.1'
-  'tsdown': '0.12.4'
+  'tsdown': '0.12.5'

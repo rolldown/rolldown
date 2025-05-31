@@ -99,7 +99,7 @@ jobs:
         shell: bash
         env:
           VERSION: ${{ steps.rolldown-version.outputs.content }}
-        run: node --import @oxc-node/core/register ./scripts/misc/bump-version.js ${VERSION}
+        run: pnpm tsx ./scripts/misc/bump-version.js ${VERSION}
 
       - name: Copy Licenses
         run: |
@@ -116,4 +116,4 @@ jobs:
         env:
           TAG: ${{ needs.plan.outputs.npm-tag }}
           NPM_CONFIG_PROVENANCE: true # https://github.com/pnpm/pnpm/issues/6435
-        run: node --import @oxc-node/core/register ./scripts/ci/publish-rolldown-to-npm.js ${TAG}
+        run: pnpm tsx ./scripts/ci/publish-rolldown-to-npm.js ${TAG}

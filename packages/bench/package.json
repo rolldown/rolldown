@@ -3,9 +3,9 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "bench": "oxnode ./benches/compare.js",
-    "bench-ci": "oxnode ./benches/ci.js",
-    "bench-par": "oxnode ./benches/par.js"
+    "bench": "tsx ./benches/compare.js",
+    "bench-ci": "tsx ./benches/ci.js",
+    "bench-par": "tsx ./benches/par.js"
   },
   "dependencies": {
     "react": "^19.0.0",
@@ -17,7 +17,6 @@
     "@babel/core": "^7.24.7",
     "@babel/preset-env": "^7.24.7",
     "@babel/preset-typescript": "^7.24.7",
-    "@oxc-node/cli": "catalog:",
     "@rollup/plugin-commonjs": "^28.0.0",
     "@rollup/plugin-node-resolve": "^16.0.0",
     "@types/babel__core": "7.20.5",

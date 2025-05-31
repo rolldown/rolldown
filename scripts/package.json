@@ -4,8 +4,8 @@
   "type": "module",
   "scripts": {
     "type-check": "tsc -b",
-    "setup-bench": "oxnode ./misc/setup-benchmark-input/index.js",
-    "esbuild-snap-diff": "oxnode ./snap-diff/index.ts"
+    "setup-bench": "tsx ./misc/setup-benchmark-input/index.js",
+    "esbuild-snap-diff": "tsx ./snap-diff/index.ts"
   },
   "dependencies": {
     "@pnpm/find-workspace-packages": "^6.0.9",
@@ -24,7 +24,6 @@
     "zx": "^8.1.2"
   },
   "devDependencies": {
-    "@oxc-node/cli": "catalog:",
     "acorn": "^8.12.1",
     "astring": "^1.9.0",
     "diff": "^8.0.0",

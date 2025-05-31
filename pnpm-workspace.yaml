@@ -16,8 +16,6 @@ shellEmulator: true
 
 # Define a catalog of version ranges.
 catalog:
-  '@oxc-node/cli': '^0.0.27'
-  '@oxc-node/core': '^0.0.27'
   '@oxc-project/runtime': '0.72.1'
   '@oxc-project/types': '0.72.1'
   'oxc-parser': '0.72.1'

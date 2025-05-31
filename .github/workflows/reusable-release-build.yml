@@ -201,7 +201,7 @@ jobs:
 
       - name: Determine Version
         if: ${{ inputs.version != 'noop' }}
-        run: node --import @oxc-node/core/register ./scripts/misc/bump-version.js ${ROLLDOWN_VERSION}
+        run: pnpm tsx ./scripts/misc/bump-version.js ${ROLLDOWN_VERSION}
         env:
           ROLLDOWN_VERSION: ${{ inputs.version }}
 
@@ -258,7 +258,7 @@ jobs:
 
       - name: Determine Version
         if: ${{ inputs.version != 'noop' }}
-        run: node --import @oxc-node/core/register ./scripts/misc/bump-version.js ${ROLLDOWN_VERSION}
+        run: pnpm tsx ./scripts/misc/bump-version.js ${ROLLDOWN_VERSION}
         env:
           ROLLDOWN_VERSION: ${{ inputs.version }}
 

@@ -21,12 +21,6 @@
       "matchManagers": ["npm"],
       "matchPackageNames": ["rolldown-plugin-dts"],
       "schedule": ["at any time"]
-    },
-    {
-      "groupName": "oxc-node",
-      "matchManagers": ["npm"],
-      "matchPackageNames": ["oxc-node"],
-      "schedule": ["at any time"]
     }
   ]
 }

@@ -18,7 +18,7 @@ on:
       - 'pnpm-lock.yaml'
       - '.github/workflows/publish-to-pkg.pr.new.yml'
 
-# Cancell all previous workflows on main.
+# Cancel all previous workflows on main.
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }}
@@ -122,7 +122,7 @@ jobs:
           path: rolldown-version.txt
 
       - name: Canary/Nightly Versioning
-        run: node --import @oxc-node/core/register ./scripts/misc/bump-version.js ${ROLLDOWN_VERSION}
+        run: pnpm tsx ./scripts/misc/bump-version.js ${ROLLDOWN_VERSION}
         env:
           ROLLDOWN_VERSION: ${{ steps.rolldown-version.outputs.content }}
 

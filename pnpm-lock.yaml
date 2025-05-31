@@ -6,12 +6,6 @@ settings:
 
 catalogs:
   default:
-    '@oxc-node/cli':
-      specifier: ^0.0.27
-      version: 0.0.27
-    '@oxc-node/core':
-      specifier: ^0.0.27
-      version: 0.0.27
     '@oxc-project/runtime':
       specifier: 0.72.1
       version: 0.72.1
@@ -42,7 +36,7 @@ importers:
         specifier: ^1.11.1
         version: 1.11.1
       '@oxc-node/core':
-        specifier: 'catalog:'
+        specifier: ^0.0.27
         version: 0.0.27
       '@oxc-project/runtime':
         specifier: 'catalog:'
@@ -242,9 +236,6 @@ importers:
       '@babel/preset-typescript':
         specifier: ^7.24.7
         version: 7.27.1(@babel/core@7.27.1)
-      '@oxc-node/cli':
-        specifier: 'catalog:'
-        version: 0.0.27
       '@rollup/plugin-commonjs':
         specifier: ^28.0.0
         version: 28.0.3(rollup@4.41.0)
@@ -282,11 +273,7 @@ importers:
         specifier: ^0.2.8
         version: 0.2.10
 
-  packages/debug:
-    devDependencies:
-      '@oxc-node/cli':
-        specifier: 'catalog:'
-        version: 0.0.27
+  packages/debug: {}
 
   packages/pluginutils:
     devDependencies:
@@ -324,9 +311,6 @@ importers:
       '@napi-rs/wasm-runtime':
         specifier: ^0.2.10
         version: 0.2.10
-      '@oxc-node/cli':
-        specifier: 'catalog:'
-        version: 0.0.27
       '@rolldown/testing':
         specifier: workspace:*
         version: link:../testing
@@ -613,9 +597,6 @@ importers:
         specifier: ^8.1.2
         version: 8.5.4
     devDependencies:
-      '@oxc-node/cli':
-        specifier: 'catalog:'
-        version: 0.0.27
       acorn:
         specifier: ^8.12.1
         version: 8.14.1
@@ -2081,10 +2062,6 @@ packages:
 
   '@octokit/types@14.1.0':
     resolution: {integrity: sha512-1y6DgTy8Jomcpu33N+p5w58l6xyt55Ar2I91RPiIA0xCJBXyUAhXCcmZaDWSANiha7R9a6qJJ2CRomGPZ6f46g==}
-
-  '@oxc-node/cli@0.0.27':
-    resolution: {integrity: sha512-q+vIGUKEJDOv/LdrQgDSjaBMyvbfXdjEgG7H5lKziUj/WtZwF0OXIf4Kq8q+62IEZrwCyimi5YEL3o/0Q/3bog==}
-    hasBin: true
 
   '@oxc-node/core-android-arm-eabi@0.0.27':
     resolution: {integrity: sha512-59Joq76Y8FfoyRYyEf7A1cPhht/vzhkdFQQMmx7iRam253xQRyO9ae6mejgHa7je7uPtJhGwF0eDgo1prJU84A==}
@@ -7468,10 +7445,6 @@ snapshots:
   '@octokit/types@14.1.0':
     dependencies:
       '@octokit/openapi-types': 25.1.0
-
-  '@oxc-node/cli@0.0.27':
-    dependencies:
-      '@oxc-node/core': 0.0.27
 
   '@oxc-node/core-android-arm-eabi@0.0.27':
     optional: true

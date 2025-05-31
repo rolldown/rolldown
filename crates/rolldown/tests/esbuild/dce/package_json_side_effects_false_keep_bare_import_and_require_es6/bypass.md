@@ -27,9 +27,8 @@ console.log("unused import");
 //#region node_modules/demo-pkg/index.js
 var demo_pkg_exports = {};
 __export(demo_pkg_exports, { foo: () => foo });
-var foo;
+const foo = 123;
 var init_demo_pkg = __esm({ "node_modules/demo-pkg/index.js"() {
-	foo = 123;
 	console.log("hello");
 } });
 
@@ -45,16 +44,20 @@ console.log("unused import");
 ===================================================================
 --- esbuild	/out.js
 +++ rolldown	src_entry.js
-@@ -3,9 +3,9 @@
+@@ -1,12 +1,11 @@
+ var demo_pkg_exports = {};
+ __export(demo_pkg_exports, {
      foo: () => foo
  });
- var foo;
+-var foo;
++var foo = 123;
  var init_demo_pkg = __esm({
 -    "Users/user/project/node_modules/demo-pkg/index.js"() {
+-        foo = 123;
 +    "node_modules/demo-pkg/index.js"() {
-         foo = 123;
          console.log("hello");
      }
  });
+ init_demo_pkg();
 
 ```

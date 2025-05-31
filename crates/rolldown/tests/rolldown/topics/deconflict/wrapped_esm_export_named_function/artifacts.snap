@@ -12,13 +12,11 @@ import assert from "assert";
 //#region foo.js
 var foo_exports = {};
 __export(foo_exports, { foo: () => foo$1 });
+const a$1 = 1;
 function foo$1(a$1$1) {
 	console.log(a$1$1, a$1);
 }
-var a$1;
-var init_foo = __esm({ "foo.js"() {
-	a$1 = 1;
-} });
+var init_foo = __esm({ "foo.js"() {} });
 
 //#endregion
 //#region bar.js
@@ -40,38 +38,39 @@ init_foo();
 
 ```
 - ../foo.js
-(2:0) "export function " --> (19:0) "function "
-(2:16) "foo(" --> (19:9) "foo$1("
-(2:20) "a$1) " --> (19:15) "a$1$1) "
-(2:25) "{\n" --> (19:22) "{\n"
-(3:4) "console." --> (20:0) "\tconsole."
-(3:12) "log(" --> (20:9) "log("
-(3:16) "a$1, " --> (20:13) "a$1$1, "
-(3:21) "a)" --> (20:20) "a$1)"
-(3:23) "\n" --> (20:24) ";\n"
-(4:1) [invalid] --> (21:0)
-(0:6) "a = " --> (24:1) "a$1 = "
-(0:10) "1;\n" --> (24:7) "1;\n"
+(0:0) "const " --> (19:0) "const "
+(0:6) "a = " --> (19:6) "a$1 = "
+(0:10) "1;\n" --> (19:12) "1;\n"
+(2:0) "export function " --> (20:0) "function "
+(2:16) "foo(" --> (20:9) "foo$1("
+(2:20) "a$1) " --> (20:15) "a$1$1) "
+(2:25) "{\n" --> (20:22) "{\n"
+(3:4) "console." --> (21:0) "\tconsole."
+(3:12) "log(" --> (21:9) "log("
+(3:16) "a$1, " --> (21:13) "a$1$1, "
+(3:21) "a)" --> (21:20) "a$1)"
+(3:23) "\n" --> (21:24) ";\n"
+(4:1) [invalid] --> (22:0)
 - ../bar.js
-(0:0) "import { foo } from './foo'" --> (29:0) "init_foo()"
-(0:27) "\n" --> (29:10) ";\n"
-(2:0) "export default " --> (30:0) "var bar_default = "
-(2:15) "{ " --> (30:18) "{ "
-(2:17) "foo }" --> (30:20) "foo: foo$1 "
-(2:22) [invalid] --> (30:31)
+(0:0) "import { foo } from './foo'" --> (27:0) "init_foo()"
+(0:27) "\n" --> (27:10) ";\n"
+(2:0) "export default " --> (28:0) "var bar_default = "
+(2:15) "{ " --> (28:18) "{ "
+(2:17) "foo }" --> (28:20) "foo: foo$1 "
+(2:22) [invalid] --> (28:31)
 - ../main.js
-(3:0) "const " --> (34:0) "const "
-(3:6) "a = " --> (34:6) "a = "
-(3:10) "2; // make foo `a` conflict\n" --> (34:10) "2;\n"
-(5:0) "const " --> (35:0) "const "
-(5:6) "{ " --> (35:6) "{ "
-(5:8) "foo }" --> (35:8) "foo }"
-(5:13) " = " --> (35:13) " = "
-(5:16) "bar\n" --> (35:16) "bar_default;\n"
-(7:0) "assert." --> (36:0) "assert."
-(7:7) "strictEqual(typeof " --> (36:7) "strictEqual(typeof "
-(7:26) "foo, " --> (36:26) "foo, "
-(7:31) "'function')" --> (36:31) "\"function\")"
-(7:42) "\n" --> (36:42) ";\n"
-(9:0) "require('./foo')" --> (37:0) "init_foo();\n"
+(3:0) "const " --> (32:0) "const "
+(3:6) "a = " --> (32:6) "a = "
+(3:10) "2; // make foo `a` conflict\n" --> (32:10) "2;\n"
+(5:0) "const " --> (33:0) "const "
+(5:6) "{ " --> (33:6) "{ "
+(5:8) "foo }" --> (33:8) "foo }"
+(5:13) " = " --> (33:13) " = "
+(5:16) "bar\n" --> (33:16) "bar_default;\n"
+(7:0) "assert." --> (34:0) "assert."
+(7:7) "strictEqual(typeof " --> (34:7) "strictEqual(typeof "
+(7:26) "foo, " --> (34:26) "foo, "
+(7:31) "'function')" --> (34:31) "\"function\")"
+(7:42) "\n" --> (34:42) ";\n"
+(9:0) "require('./foo')" --> (35:0) "init_foo();\n"
 ```

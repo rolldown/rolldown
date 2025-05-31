@@ -29,9 +29,8 @@ console.log("unused import");
 //#region node_modules/demo-pkg/index-module.js
 var index_module_exports = {};
 __export(index_module_exports, { foo: () => foo });
-var foo;
+const foo = 123;
 var init_index_module = __esm({ "node_modules/demo-pkg/index-module.js"() {
-	foo = 123;
 	console.log("TEST FAILED");
 } });
 
@@ -51,20 +50,21 @@ console.log("unused import");
 ===================================================================
 --- esbuild	/out.js
 +++ rolldown	src_entry.js
-@@ -1,13 +1,14 @@
+@@ -1,13 +1,13 @@
 -var index_main_exports = {};
 -__export(index_main_exports, {
 +var index_module_exports = {};
 +__export(index_module_exports, {
      foo: () => foo
  });
- var foo;
+-var foo;
 -var init_index_main = __esm({
 -    "Users/user/project/node_modules/demo-pkg/index-main.js"() {
+-        foo = 123;
+-        console.log("this should be kept");
++var foo = 123;
 +var init_index_module = __esm({
 +    "node_modules/demo-pkg/index-module.js"() {
-         foo = 123;
--        console.log("this should be kept");
 +        console.log("TEST FAILED");
      }
  });

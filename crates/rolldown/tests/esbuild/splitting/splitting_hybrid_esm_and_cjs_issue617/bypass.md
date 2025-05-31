@@ -96,7 +96,7 @@ export {
 //#region a.js
 var a_exports = {};
 __export(a_exports, { foo: () => foo });
-var foo;
+let foo;
 var init_a = __esm({ "a.js"() {} });
 
 //#endregion
@@ -115,12 +115,13 @@ export { __toCommonJS, a_exports, foo, init_a };
 -__export(a_exports, {
 -  foo: () => foo
 -});
-+__export(a_exports, { foo: () => foo });
- var foo;
+-var foo;
 -var init_a = __esm({
 -  "a.js"() {
 -  }
 -});
++__export(a_exports, { foo: () => foo });
++let foo;
 +var init_a = __esm({ "a.js"() {} });
  
 -export {

@@ -8,10 +8,9 @@ source: crates/rolldown_testing/src/integration_test.rs
 ```js
 
 //#region foo.js
-var foo;
+const foo = 123;
 var init_foo = __esm({ async "foo.js"() {
 	await 1e3;
-	foo = 123;
 } });
 
 //#endregion

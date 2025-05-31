@@ -10,10 +10,8 @@ source: crates/rolldown_testing/src/integration_test.rs
 //#region esm.js
 var esm_exports = {};
 __export(esm_exports, { esm_foo_: () => esm_foo_ });
-var esm_foo_;
-var init_esm = __esm({ "esm.js"() {
-	esm_foo_ = "foo";
-} });
+let esm_foo_ = "foo";
+var init_esm = __esm({ "esm.js"() {} });
 
 //#endregion
 //#region cjs.js

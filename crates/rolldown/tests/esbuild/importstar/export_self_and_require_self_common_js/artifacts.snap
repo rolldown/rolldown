@@ -11,9 +11,8 @@ source: crates/rolldown_testing/src/integration_test.rs
 //#region entry.js
 var entry_exports = {};
 __export(entry_exports, { foo: () => foo });
-var foo;
+const foo = 123;
 var init_entry = __esm({ "entry.js"() {
-	foo = 123;
 	console.log((init_entry(), __toCommonJS(entry_exports)));
 } });
 

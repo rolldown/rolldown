@@ -152,10 +152,8 @@ var init_a = __esm({ "a.js"() {
 //#region b.js
 var b_exports = {};
 __export(b_exports, { xyz: () => xyz });
-var xyz;
-var init_b = __esm({ "b.js"() {
-	xyz = null;
-} });
+const xyz = null;
+var init_b = __esm({ "b.js"() {} });
 
 //#endregion
 //#region commonjs.js
@@ -171,15 +169,15 @@ __export(commonjs_exports, {
 	l: () => l,
 	v: () => v
 });
+var commonjs_default = 123;
+var v = 234;
+let l = 234;
+const c = 234;
 function Fn() {}
-var commonjs_default, v, l, c, Class;
+var Class;
 var init_commonjs = __esm({ "commonjs.js"() {
 	init_a();
 	init_b();
-	commonjs_default = 123;
-	v = 234;
-	l = 234;
-	c = 234;
 	Class = class {};
 } });
 
@@ -251,7 +249,47 @@ init_h();
 ===================================================================
 --- esbuild	/out.js
 +++ rolldown	entry.js
-@@ -69,14 +69,14 @@
+@@ -7,13 +7,11 @@
+ var b_exports = {};
+ __export(b_exports, {
+     xyz: () => xyz
+ });
+-var xyz;
++var xyz = null;
+ var init_b = __esm({
+-    "b.js"() {
+-        xyz = null;
+-    }
++    "b.js"() {}
+ });
+ var commonjs_exports = {};
+ __export(commonjs_exports, {
+     C: () => Class,
+@@ -25,18 +23,18 @@
+     default: () => commonjs_default,
+     l: () => l,
+     v: () => v
+ });
++var commonjs_default = 123;
++var v = 234;
++var l = 234;
++var c = 234;
+ function Fn() {}
+-var commonjs_default, v, l, c, Class;
++var Class;
+ var init_commonjs = __esm({
+     "commonjs.js"() {
+         init_a();
+         init_b();
+-        commonjs_default = 123;
+-        v = 234;
+-        l = 234;
+-        c = 234;
+         Class = class {};
+     }
+ });
+ var c_exports = {};
+@@ -69,14 +67,14 @@
      "e.js"() {}
  });
  var f_exports = {};
@@ -269,7 +307,7 @@ init_h();
  });
  var g_exports = {};
  __export(g_exports, {
-@@ -87,14 +87,14 @@
+@@ -87,14 +85,14 @@
      "g.js"() {}
  });
  var h_exports = {};

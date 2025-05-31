@@ -1,6 +1,5 @@
 ---
 source: crates/rolldown_testing/src/integration_test.rs
-snapshot_kind: text
 ---
 # warnings
 
@@ -28,10 +27,8 @@ Promise.resolve().then(function() {
 //#region lib.js
 var lib_exports = {};
 __export(lib_exports, { default: () => lib_default });
-var lib_default;
-var init_lib = __esm({ "lib.js"() {
-	lib_default = 2;
-} });
+var lib_default = 2;
+var init_lib = __esm({ "lib.js"() {} });
 
 //#endregion
 })();

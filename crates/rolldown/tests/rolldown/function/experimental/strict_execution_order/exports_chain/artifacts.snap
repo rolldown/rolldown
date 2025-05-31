@@ -34,10 +34,8 @@ import nodeAssert from "node:assert";
 
 
 //#region dep.js
-var value$1;
-var init_dep = __esm({ "dep.js"() {
-	value$1 = "";
-} });
+const value$1 = "";
+var init_dep = __esm({ "dep.js"() {} });
 
 //#endregion
 //#region lib-foo.js

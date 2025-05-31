@@ -10,11 +10,11 @@ source: crates/rolldown_testing/src/integration_test.rs
 //#region entry.js
 var entry_exports = {};
 __export(entry_exports, { default: () => entry_default });
-var entry, entry_default;
+var entry_default = 123;
+var entry;
 var init_entry = __esm({ "entry.js"() {
 	entry = (init_entry(), __toCommonJS(entry_exports));
 	input.works = entry.__esModule === true;
-	entry_default = 123;
 } });
 
 //#endregion
@@ -35,11 +35,11 @@ Variant: (format: Cjs)
 //#region entry.js
 var entry_exports = {};
 __export(entry_exports, { default: () => entry_default });
-var entry, entry_default;
+var entry_default = 123;
+var entry;
 var init_entry = __esm({ "entry.js"() {
 	entry = (init_entry(), __toCommonJS(entry_exports));
 	input.works = entry.__esModule === true;
-	entry_default = 123;
 } });
 
 //#endregion
@@ -62,11 +62,11 @@ var exports = (function() {
 //#region entry.js
 var entry_exports = {};
 __export(entry_exports, { default: () => entry_default });
-var entry, entry_default;
+var entry_default = 123;
+var entry;
 var init_entry = __esm({ "entry.js"() {
 	entry = (init_entry(), __toCommonJS(entry_exports));
 	input.works = entry.__esModule === true;
-	entry_default = 123;
 } });
 
 //#endregion
@@ -93,11 +93,11 @@ Variant: (format: Umd)
 //#region entry.js
 var entry_exports = {};
 __export(entry_exports, { default: () => entry_default });
-var entry, entry_default;
+var entry_default = 123;
+var entry;
 var init_entry = __esm({ "entry.js"() {
 	entry = (init_entry(), __toCommonJS(entry_exports));
 	input.works = entry.__esModule === true;
-	entry_default = 123;
 } });
 
 //#endregion

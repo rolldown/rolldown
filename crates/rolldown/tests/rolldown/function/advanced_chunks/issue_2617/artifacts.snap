@@ -30,10 +30,8 @@ export { __esm };
 import { __esm } from "./rolldown-runtime.js";
 
 //#region lib.js
-var lib_default;
-var init_lib = __esm({ "lib.js"() {
-	lib_default = "hello, world";
-} });
+var lib_default = "hello, world";
+var init_lib = __esm({ "lib.js"() {} });
 
 //#endregion
 export { init_lib, lib_default };

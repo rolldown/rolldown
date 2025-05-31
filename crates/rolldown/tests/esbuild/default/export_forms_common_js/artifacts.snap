@@ -17,10 +17,8 @@ var init_a = __esm({ "a.js"() {
 //#region b.js
 var b_exports = {};
 __export(b_exports, { xyz: () => xyz });
-var xyz;
-var init_b = __esm({ "b.js"() {
-	xyz = null;
-} });
+const xyz = null;
+var init_b = __esm({ "b.js"() {} });
 
 //#endregion
 //#region commonjs.js
@@ -36,15 +34,15 @@ __export(commonjs_exports, {
 	l: () => l,
 	v: () => v
 });
+var commonjs_default = 123;
+var v = 234;
+let l = 234;
+const c = 234;
 function Fn() {}
-var commonjs_default, v, l, c, Class;
+var Class;
 var init_commonjs = __esm({ "commonjs.js"() {
 	init_a();
 	init_b();
-	commonjs_default = 123;
-	v = 234;
-	l = 234;
-	c = 234;
 	Class = class {};
 } });
 

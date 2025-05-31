@@ -12,10 +12,8 @@ import assert from "node:assert";
 //#region foo.js
 var foo_exports = {};
 __export(foo_exports, { foo: () => foo });
-var foo;
-var init_foo = __esm({ "foo.js"() {
-	foo = 123;
-} });
+const foo = 123;
+var init_foo = __esm({ "foo.js"() {} });
 
 //#endregion
 //#region entry.js

@@ -56,7 +56,6 @@
     ],
     "*.@(js|ts|tsx)": [
       "pnpm lint-code -- --fix"
-    ],
-    "*": "typos --force-exclude"
+    ]
   }
 }

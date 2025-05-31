@@ -69,10 +69,8 @@ input.works = Promise.resolve().then(function() {
 //#region foo.js
 var foo_exports = {};
 __export(foo_exports, { default: () => foo_default });
-var foo_default;
-var init_foo = __esm({ "foo.js"() {
-	foo_default = 123;
-} });
+var foo_default = 123;
+var init_foo = __esm({ "foo.js"() {} });
 
 //#endregion
 })();
@@ -102,10 +100,8 @@ input.works = Promise.resolve().then(function() {
 //#region foo.js
 var foo_exports = {};
 __export(foo_exports, { default: () => foo_default });
-var foo_default;
-var init_foo = __esm({ "foo.js"() {
-	foo_default = 123;
-} });
+var foo_default = 123;
+var init_foo = __esm({ "foo.js"() {} });
 
 //#endregion
 });

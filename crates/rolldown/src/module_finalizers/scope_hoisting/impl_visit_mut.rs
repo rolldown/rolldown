@@ -129,13 +129,20 @@ impl<'ast> VisitMut<'ast> for ScopeHoistingFinalizer<'_, 'ast> {
           let esm_ref_expr = self.finalized_expr_for_symbol_ref(esm_ref, false, None);
           let old_body = program.body.take_in(self.alloc);
 
-          let mut fn_stmts = allocator::Vec::new_in(self.alloc);
+          let mut hoisted_stmts = allocator::Vec::new_in(self.alloc);
           let mut hoisted_names = vec![];
           let mut stmts_inside_closure = allocator::Vec::new_in(self.alloc);
 
           // Hoist all top-level "var" and "function" declarations out of the closure
           old_body.into_iter().for_each(|mut stmt| match &mut stmt {
-            ast::Statement::VariableDeclaration(_) => {
+            ast::Statement::VariableDeclaration(decl) => {
+              // If all declarations are literals, we can hoist them out of the closure
+              if decl.declarations.iter().all(|declarator| declarator.init.as_ref().is_none_or( |expr| {
+                expr.is_literal()
+              })) {
+                hoisted_stmts.push(stmt);
+                return;
+              }
               if let Some(converted) =
                 self.convert_decl_to_assignment(stmt.to_declaration_mut(), &mut hoisted_names)
               {
@@ -143,7 +150,7 @@ impl<'ast> VisitMut<'ast> for ScopeHoistingFinalizer<'_, 'ast> {
               }
             }
             ast::Statement::FunctionDeclaration(_) => {
-              fn_stmts.push(stmt);
+              hoisted_stmts.push(stmt);
             }
             ast::match_module_declaration!(Statement) => {
               if stmt.is_typescript_syntax() {
@@ -159,7 +166,7 @@ impl<'ast> VisitMut<'ast> for ScopeHoistingFinalizer<'_, 'ast> {
           });
           program.body.extend(declaration_of_module_namespace_object);
           program.body.extend(hmr_header);
-          program.body.extend(fn_stmts);
+          program.body.extend(hoisted_stmts);
           if !hoisted_names.is_empty() {
             let mut declarators = allocator::Vec::new_in(self.alloc);
             declarators.reserve_exact(hoisted_names.len());

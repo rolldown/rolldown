@@ -14,9 +14,8 @@ var main_exports = {};
 __export(main_exports, { main: () => main });
 import * as import_node_fs from "node:fs";
 __reExport(main_exports, import_node_fs);
-var main;
+const main = "main";
 var init_main = __esm({ "main.js"() {
-	main = "main";
 	console.log((init_main(), __toCommonJS(main_exports)));
 } });
 

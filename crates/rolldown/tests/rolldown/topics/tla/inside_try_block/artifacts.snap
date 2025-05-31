@@ -26,7 +26,7 @@ Variant: (strict_execution_order: true)
 ```js
 
 //#region lib.js
-var foo;
+let foo;
 var init_lib = __esm({ async "lib.js"() {
 	try {
 		foo = await Promise.resolve("foo");

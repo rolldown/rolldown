@@ -31,26 +31,32 @@
   "types": "./dist/index.d.cts",
   "exports": {
     ".": {
+      "dev": "./src/index.ts",
       "require": "./dist/index.cjs",
       "import": "./dist/index.mjs"
     },
     "./config": {
+      "dev": "./src/config.ts",
       "require": "./dist/config.cjs",
       "import": "./dist/config.mjs"
     },
     "./experimental": {
+      "dev": "./src/experimental-index.ts",
       "require": "./dist/experimental-index.cjs",
       "import": "./dist/experimental-index.mjs"
     },
     "./filter": {
+      "dev": "./src/filter-index.ts",
       "require": "./dist/filter-index.cjs",
       "import": "./dist/filter-index.mjs"
     },
     "./parallelPlugin": {
+      "dev": "./src/parallel-plugin-index.ts",
       "require": "./dist/parallel-plugin.cjs",
       "import": "./dist/parallel-plugin.mjs"
     },
     "./parseAst": {
+      "dev": "./src/parse-ast-index.ts",
       "require": "./dist/parse-ast-index.cjs",
       "import": "./dist/parse-ast-index.mjs"
     },
@@ -61,7 +67,34 @@
   },
   "publishConfig": {
     "registry": "https://registry.npmjs.org/",
-    "access": "public"
+    "access": "public",
+    "exports": {
+      ".": {
+        "require": "./dist/index.cjs",
+        "import": "./dist/index.mjs"
+      },
+      "./config": {
+        "require": "./dist/config.cjs",
+        "import": "./dist/config.mjs"
+      },
+      "./experimental": {
+        "require": "./dist/experimental-index.cjs",
+        "import": "./dist/experimental-index.mjs"
+      },
+      "./filter": {
+        "require": "./dist/filter-index.cjs",
+        "import": "./dist/filter-index.mjs"
+      },
+      "./parallelPlugin": {
+        "require": "./dist/parallel-plugin.cjs",
+        "import": "./dist/parallel-plugin.mjs"
+      },
+      "./parseAst": {
+        "require": "./dist/parse-ast-index.cjs",
+        "import": "./dist/parse-ast-index.mjs"
+      },
+      "./package.json": "./package.json"
+    }
   },
   "scripts": {
     "# Scrips for binding #": "_",
@@ -71,7 +104,7 @@
     "build-binding:wasi": "pnpm build-binding --target wasm32-wasip1-threads",
     "build-binding:wasi:release": "pnpm build-binding --profile release-wasi --target wasm32-wasip1-threads",
     "# Scrips for node #": "_",
-    "build-node": "oxnode ./build.ts",
+    "build-node": "tsx -C dev ./build.ts",
     "build-types-check": "tsc -p ./tsconfig.check.json",
     "build-js-glue": "pnpm run --sequential '/^build-(types|node|types-check)$/'",
     "build-native:debug": "pnpm run --sequential '/^build-(binding|js-glue)$/'",
@@ -128,10 +161,11 @@
     "oxc-parser": "catalog:",
     "remeda": "^2.10.0",
     "rolldown": "workspace:*",
-    "rolldown-plugin-dts": "0.7.12",
+    "rolldown-plugin-dts": "catalog:",
     "rollup": "^4.18.0",
     "signal-exit": "4.1.0",
     "source-map": "^0.7.4",
+    "tsx": "^4.19.4",
     "type-fest": "^4.20.0",
     "typedoc": "^0.28.0",
     "typescript": "^5.7.3",

@@ -19,7 +19,7 @@ export default function myPlugin() {
         // early return
         return
       }
-      // preform actual transform
+      // perform actual transform
       return transformedCode
     },
   }
@@ -41,7 +41,7 @@ export default function myPlugin() {
         id: /\.data$/
       },
       handler (code) {
-        // preform actual transform
+        // perform actual transform
         return transformedCode
       },
     }

@@ -24,7 +24,6 @@ const pkgJson = JSON.parse(
 );
 
 const bindingFile = nodePath.resolve('src/binding.js');
-const bindingDtsFile = nodePath.resolve('src/binding.d.ts');
 const bindingFileWasi = nodePath.resolve('src/rolldown-binding.wasi.cjs');
 const bindingFileWasiBrowser = nodePath.resolve(
   'src/rolldown-binding.wasi-browser.js',
@@ -103,6 +102,13 @@ function withShared(
     platform: isBrowserBuild ? 'browser' : 'node',
     resolve: {
       extensions: ['.js', '.cjs', '.mjs', '.ts'],
+      alias: isBrowserPkg
+        ? {
+          [bindingFile]: isBrowserBuild
+            ? bindingFileWasiBrowser
+            : bindingFileWasi,
+        }
+        : {},
     },
     external: [
       /rolldown-binding\..*\.node/,
@@ -110,49 +116,17 @@ function withShared(
       /@rolldown\/binding-.*/,
       /\.\/rolldown-binding\.wasi\.cjs/,
       ...Object.keys(pkgJson.dependencies ?? {}),
+      bindingFileWasi,
+      bindingFileWasiBrowser,
     ],
     define: {
       'import.meta.browserBuild': String(isBrowserBuild),
     },
     ...options,
     plugins: [
-      isBrowserPkg && resolveWasiBinding(isBrowserBuild),
       isBrowserBuild && removeBuiltModules(),
       options.plugins,
     ],
-  };
-}
-
-// browser package only
-// alias binding file to rolldown-binding.wasi.js and mark it as external
-// alias its dts file to rolldown-binding.d.ts without external
-function resolveWasiBinding(isBrowserBuild?: boolean): Plugin {
-  return {
-    name: 'resolve-wasi-binding',
-    resolveId: {
-      filter: { id: /\bbinding\b/ },
-      async handler(id, importer, options) {
-        const resolution = await this.resolve(id, importer, options);
-
-        if (resolution?.id === bindingFile) {
-          const mod = importer && this.getModuleInfo(importer);
-          // if importer is a dts file
-          const dtsFile = mod ? mod.meta?.dtsFile : false;
-
-          if (dtsFile) {
-            // link to src/binding.d.ts
-            return { id: bindingDtsFile };
-          } else {
-            const id = isBrowserBuild
-              ? bindingFileWasiBrowser
-              : bindingFileWasi;
-            return { id, external: 'relative' };
-          }
-        }
-
-        return resolution;
-      },
-    },
   };
 }
 

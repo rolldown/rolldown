@@ -30,7 +30,6 @@
   "devDependencies": {
     "@types/picomatch": "^4.0.0",
     "picomatch": "^4.0.2",
-    "tsdown": "catalog:",
     "vitest": "^3.0.1"
   }
 }

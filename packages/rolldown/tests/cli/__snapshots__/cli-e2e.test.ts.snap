@@ -241,6 +241,12 @@ exports[`config > should allow loading cts config 1`] = `
 "
 `;
 
+exports[`config > should allow loading external config 1`] = `
+"<DIR>/index.js  chunk │ size: 0.13 kB
+
+"
+`;
+
 exports[`config > should allow loading mts config 1`] = `
 "<DIR>/index.js  chunk │ size: 0.11 kB
 

@@ -1,0 +1,9 @@
+{
+  "name": "rolldown-outer-config",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "dependencies": {
+    "rolldown-config": "0.0.0"
+  }
+}

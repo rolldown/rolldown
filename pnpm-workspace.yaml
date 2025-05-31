@@ -23,5 +23,4 @@ catalog:
   'oxc-parser': '0.72.1'
   'oxc-transform': '0.72.1'
   'tsdown': '0.12.5'
-  'rolldown': 'npm:rolldown@nightly'
   'rolldown-plugin-dts': '^0.13.6'

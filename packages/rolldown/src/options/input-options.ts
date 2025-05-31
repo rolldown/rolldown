@@ -68,6 +68,14 @@ export type HmrOptions = boolean | {
   implement?: string;
 };
 
+export interface RollupJsxOptions {
+  mode?: 'classic' | 'automatic' | 'preserve';
+  factory?: string;
+  fragment?: string;
+  importSource?: string;
+  jsxImportSource?: string;
+}
+
 export interface InputOptions {
   input?: InputOption;
   plugins?: RolldownPluginOption;
@@ -210,7 +218,7 @@ export interface InputOptions {
    *
    * @default runtime = "automatic"
    */
-  jsx?: false | 'react' | 'react-jsx' | 'preserve';
+  jsx?: false | 'react' | 'react-jsx' | 'preserve' | RollupJsxOptions;
   transform?: OxcTransformOption;
   watch?: WatcherOptions | false;
   dropLabels?: string[];

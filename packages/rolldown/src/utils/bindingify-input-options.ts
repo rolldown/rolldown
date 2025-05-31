@@ -49,6 +49,9 @@ export function bindingifyInputOptions(
     );
   });
 
+  const { jsx, jsxTransform } = bindingifyJsx(inputOptions.jsx);
+  const transform = inputOptions.transform || jsxTransform;
+
   return {
     input: bindingifyInput(inputOptions.input),
     plugins,
@@ -77,8 +80,8 @@ export function bindingifyInputOptions(
       attachDebugInfo: inputOptions.experimental?.attachDebugInfo,
     },
     profilerNames: inputOptions?.profilerNames,
-    jsx: bindingifyJsx(inputOptions.jsx),
-    transform: inputOptions.transform,
+    jsx,
+    transform,
     watch: bindingifyWatch(inputOptions.watch),
     dropLabels: inputOptions.dropLabels,
     keepNames: inputOptions.keepNames,
@@ -249,18 +252,41 @@ function bindingifyInput(
 }
 
 // The `automatic` is most user usages, so it is different rollup's default value `false`
-function bindingifyJsx(input: InputOptions['jsx']): BindingInputOptions['jsx'] {
+function bindingifyJsx(input: InputOptions['jsx']): {
+  jsx?: BindingInputOptions['jsx'];
+  jsxTransform?: BindingInputOptions['transform'];
+} {
+  if (typeof input === 'object') {
+    if (input.mode === 'preserve') {
+      return { jsx: BindingJsx.Preserve };
+    }
+    const mode = input.mode ?? 'automatic';
+    return {
+      jsxTransform: {
+        jsx: {
+          runtime: mode,
+          pragma: input.factory,
+          pragmaFrag: input.fragment,
+          importSource: mode === 'classic'
+            ? input.importSource
+            : mode === 'automatic'
+            ? input.jsxImportSource
+            : undefined,
+        },
+      },
+    };
+  }
   switch (input) {
     case false:
-      return BindingJsx.Disable;
+      return { jsx: BindingJsx.Disable };
     case 'react':
-      return BindingJsx.React;
+      return { jsx: BindingJsx.React };
     case 'react-jsx':
-      return BindingJsx.ReactJsx;
+      return { jsx: BindingJsx.ReactJsx };
     case 'preserve':
-      return BindingJsx.Preserve;
+      return { jsx: BindingJsx.Preserve };
     default:
-      return undefined;
+      return { jsx: undefined };
   }
 }
 

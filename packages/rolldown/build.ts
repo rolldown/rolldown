@@ -24,7 +24,6 @@ const pkgJson = JSON.parse(
 );
 
 const bindingFile = nodePath.resolve('src/binding.js');
-const bindingDtsFile = nodePath.resolve('src/binding.d.ts');
 const bindingFileWasi = nodePath.resolve('src/rolldown-binding.wasi.cjs');
 const bindingFileWasiBrowser = nodePath.resolve(
   'src/rolldown-binding.wasi-browser.js',
@@ -135,19 +134,10 @@ function resolveWasiBinding(isBrowserBuild?: boolean): Plugin {
         const resolution = await this.resolve(id, importer, options);
 
         if (resolution?.id === bindingFile) {
-          const mod = importer && this.getModuleInfo(importer);
-          // if importer is a dts file
-          const dtsFile = mod ? mod.meta?.dtsFile : false;
-
-          if (dtsFile) {
-            // link to src/binding.d.ts
-            return { id: bindingDtsFile };
-          } else {
-            const id = isBrowserBuild
-              ? bindingFileWasiBrowser
-              : bindingFileWasi;
-            return { id, external: 'relative' };
-          }
+          const id = isBrowserBuild
+            ? bindingFileWasiBrowser
+            : bindingFileWasi;
+          return { id, external: 'relative' };
         }
 
         return resolution;

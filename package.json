@@ -35,11 +35,14 @@
     "oxlint": "^1.0.0",
     "remove-unused-vars": "^0.0.6",
     "rolldown": "workspace:*",
+    "tsdown": "catalog:",
+    "tsx": "^4.19.4",
     "typescript": "^5.6.3"
   },
   "pnpm": {
     "overrides": {
-      "vitepress>vite": "npm:rolldown-vite@latest"
+      "vitepress>vite": "npm:rolldown-vite@latest",
+      "rolldown": "workspace:*"
     },
     "onlyBuiltDependencies": [
       "@parcel/watcher",

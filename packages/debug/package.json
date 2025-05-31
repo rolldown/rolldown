@@ -14,18 +14,16 @@
   "devDependencies": {
     "@oxc-node/cli": "catalog:"
   },
+  "types": "dist/index.d.ts",
   "exports": {
-    ".": {
-      "import": "./dist/index.js",
-      "types": "./dist/index.d.ts"
-    }
+    ".": "./dist/index.js"
   },
   "files": [
     "dist"
   ],
   "scripts": {
     "gen-action-types": "oxnode ../../scripts/src/gen-debug-action-types.ts",
-    "build": "pnpm run gen-action-types && tsc -b",
+    "build": "pnpm run gen-action-types && tsdown",
     "test": "echo \"Error: no test specified\" && exit 1"
   }
 }

@@ -8,6 +8,5 @@
     ],
     "preserveModules": true
   },
-  "expectExecuted": false,
-  "skipWindows": true
+  "expectExecuted": false
 }

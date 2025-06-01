@@ -208,7 +208,7 @@ impl Chunk {
       let p = p.relative(self.input_base.as_str());
       Cow::Owned(p.to_slash_lossy().to_string())
     } else {
-      Cow::Owned(PathBuf::from(&options.virtual_dirname).join(p).to_string_lossy().to_string())
+      Cow::Owned(PathBuf::from(&options.virtual_dirname).join(p).to_slash_lossy().to_string())
     }
   }
 

@@ -1,254 +1,90 @@
 {
-  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
   "title": "TestConfig",
   "type": "object",
   "properties": {
-    "_comment": {
-      "description": "A workaround for writing comments in JSON.",
-      "default": "",
-      "type": "string"
-    },
     "config": {
-      "$ref": "#/definitions/BundlerOptions"
+      "$ref": "#/$defs/BundlerOptions"
     },
     "configVariants": {
       "type": "array",
       "items": {
-        "$ref": "#/definitions/ConfigVariant"
+        "$ref": "#/$defs/ConfigVariant"
       }
-    },
-    "expectError": {
-      "description": "If `true`, the fixture are expected to fail to compile/build.",
-      "default": false,
-      "type": "boolean"
     },
     "expectExecuted": {
       "description": "If `false`, the compiled artifacts won't be executed, but `_test.mjs` will be still executed if exists.",
-      "default": true,
-      "type": "boolean"
+      "type": "boolean",
+      "default": true
     },
-    "hashInFilename": {
-      "description": "If `true`, the `[hash]` pattern will be inserted in the `xxxxFilenames`.",
-      "default": false,
-      "type": "boolean"
+    "expectError": {
+      "description": "If `true`, the fixture are expected to fail to compile/build.",
+      "type": "boolean",
+      "default": false
     },
-    "hiddenRuntimeModule": {
-      "description": "Default is `true`. If `false`, the runtime module will not be hidden.",
-      "default": true,
-      "type": "boolean"
-    },
-    "snapshotBytes": {
-      "description": "If `true`, bytes source will be snapshot.",
-      "default": false,
-      "type": "boolean"
+    "_comment": {
+      "description": "A workaround for writing comments in JSON.",
+      "type": "string",
+      "default": ""
     },
     "snapshotOutputStats": {
       "description": "If `true`, the fixture output stats will be snapshot.",
-      "default": false,
-      "type": "boolean"
+      "type": "boolean",
+      "default": false
     },
     "visualizeSourcemap": {
       "description": "If `true`, the sourcemap visualizer will be snapshot.",
-      "default": false,
-      "type": "boolean"
+      "type": "boolean",
+      "default": false
+    },
+    "snapshotBytes": {
+      "description": "If `true`, bytes source will be snapshot.",
+      "type": "boolean",
+      "default": false
+    },
+    "hiddenRuntimeModule": {
+      "description": "Default is `true`. If `false`, the runtime module will not be hidden.",
+      "type": "boolean",
+      "default": true
+    },
+    "hashInFilename": {
+      "description": "If `true`, the `[hash]` pattern will be inserted in the `xxxxFilenames`.",
+      "type": "boolean",
+      "default": false
     },
     "writeToDisk": {
       "description": "If `true`, the bundle will be called with `write()` instead of `generate()`.",
-      "default": true,
-      "type": "boolean"
+      "type": "boolean",
+      "default": true
     }
   },
   "additionalProperties": false,
-  "definitions": {
-    "AdvancedChunksOptions": {
+  "$defs": {
+    "BundlerOptions": {
       "type": "object",
       "properties": {
-        "groups": {
+        "format": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/OutputFormat"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "input": {
           "type": [
             "array",
             "null"
           ],
           "items": {
-            "$ref": "#/definitions/MatchGroup"
+            "$ref": "#/$defs/InputItem"
           }
-        },
-        "includeDependenciesRecursively": {
-          "type": [
-            "boolean",
-            "null"
-          ]
-        },
-        "maxModuleSize": {
-          "type": [
-            "number",
-            "null"
-          ],
-          "format": "double"
-        },
-        "maxSize": {
-          "type": [
-            "number",
-            "null"
-          ],
-          "format": "double"
-        },
-        "minModuleSize": {
-          "type": [
-            "number",
-            "null"
-          ],
-          "format": "double"
-        },
-        "minShareCount": {
-          "type": [
-            "integer",
-            "null"
-          ],
-          "format": "uint32",
-          "minimum": 0.0
-        },
-        "minSize": {
-          "type": [
-            "number",
-            "null"
-          ],
-          "format": "double"
-        }
-      },
-      "additionalProperties": false
-    },
-    "BundlerOptions": {
-      "type": "object",
-      "properties": {
-        "advancedChunks": {
-          "anyOf": [
-            {
-              "$ref": "#/definitions/AdvancedChunksOptions"
-            },
-            {
-              "type": "null"
-            }
-          ]
-        },
-        "assetFilenames": {
-          "type": [
-            "string",
-            "null"
-          ]
-        },
-        "banner": {
-          "type": [
-            "string",
-            "null"
-          ]
-        },
-        "checks": {
-          "anyOf": [
-            {
-              "$ref": "#/definitions/ChecksOptions"
-            },
-            {
-              "type": "null"
-            }
-          ]
-        },
-        "chunkFilenames": {
-          "type": [
-            "string",
-            "null"
-          ]
-        },
-        "cssChunkFilenames": {
-          "type": [
-            "string",
-            "null"
-          ]
-        },
-        "cssEntryFilenames": {
-          "type": [
-            "string",
-            "null"
-          ]
         },
         "cwd": {
           "type": [
             "string",
-            "null"
-          ]
-        },
-        "debug": {
-          "anyOf": [
-            {
-              "$ref": "#/definitions/DebugOptions"
-            },
-            {
-              "type": "null"
-            }
-          ]
-        },
-        "define": {
-          "type": [
-            "object",
-            "null"
-          ],
-          "additionalProperties": {
-            "type": "string"
-          }
-        },
-        "dir": {
-          "type": [
-            "string",
-            "null"
-          ]
-        },
-        "dropLabels": {
-          "type": [
-            "array",
-            "null"
-          ],
-          "items": {
-            "type": "string"
-          }
-        },
-        "entryFilenames": {
-          "type": [
-            "string",
-            "null"
-          ]
-        },
-        "esModule": {
-          "anyOf": [
-            {
-              "$ref": "#/definitions/EsModuleFlag"
-            },
-            {
-              "type": "null"
-            }
-          ]
-        },
-        "experimental": {
-          "anyOf": [
-            {
-              "$ref": "#/definitions/ExperimentalOptions"
-            },
-            {
-              "type": "null"
-            }
-          ]
-        },
-        "exports": {
-          "anyOf": [
-            {
-              "$ref": "#/definitions/OutputExports"
-            },
-            {
-              "type": "null"
-            }
-          ]
-        },
-        "extend": {
-          "type": [
-            "boolean",
             "null"
           ]
         },
@@ -261,9 +97,67 @@
             "type": "string"
           }
         },
-        "externalLiveBindings": {
+        "platform": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Platform"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "shimMissingExports": {
           "type": [
             "boolean",
+            "null"
+          ]
+        },
+        "name": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "entryFilenames": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "chunkFilenames": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "cssEntryFilenames": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "cssChunkFilenames": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "assetFilenames": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "sanitizeFilename": {
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
+        "dir": {
+          "type": [
+            "string",
             "null"
           ]
         },
@@ -273,16 +167,10 @@
             "null"
           ]
         },
-        "footer": {
-          "type": [
-            "string",
-            "null"
-          ]
-        },
-        "format": {
+        "exports": {
           "anyOf": [
             {
-              "$ref": "#/definitions/OutputFormat"
+              "$ref": "#/$defs/OutputExports"
             },
             {
               "type": "null"
@@ -298,103 +186,58 @@
             "type": "string"
           }
         },
-        "hashCharacters": {
+        "sourcemap": {
           "anyOf": [
             {
-              "$ref": "#/definitions/HashCharacters"
+              "$ref": "#/$defs/SourceMapType"
             },
             {
               "type": "null"
             }
           ]
         },
-        "inject": {
-          "type": [
-            "array",
-            "null"
-          ],
-          "items": {
-            "$ref": "#/definitions/InjectImport"
-          }
-        },
-        "inlineDynamicImports": {
-          "type": [
-            "boolean",
-            "null"
+        "esModule": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/EsModuleFlag"
+            },
+            {
+              "type": "null"
+            }
           ]
         },
-        "input": {
+        "dropLabels": {
           "type": [
             "array",
             "null"
           ],
           "items": {
-            "$ref": "#/definitions/InputItem"
+            "type": "string"
           }
         },
-        "intro": {
+        "hashCharacters": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/HashCharacters"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "banner": {
           "type": [
             "string",
             "null"
           ]
         },
-        "keepNames": {
+        "footer": {
           "type": [
-            "boolean",
+            "string",
             "null"
           ]
         },
-        "legalComments": {
-          "anyOf": [
-            {
-              "$ref": "#/definitions/LegalComments"
-            },
-            {
-              "type": "null"
-            }
-          ]
-        },
-        "logLevel": {
-          "anyOf": [
-            {
-              "$ref": "#/definitions/LogLevel"
-            },
-            {
-              "type": "null"
-            }
-          ]
-        },
-        "makeAbsoluteExternalsRelative": {
-          "anyOf": [
-            {
-              "$ref": "#/definitions/MakeAbsoluteExternalsRelative"
-            },
-            {
-              "type": "null"
-            }
-          ]
-        },
-        "minify": {
-          "anyOf": [
-            {
-              "$ref": "#/definitions/RawMinifyOptions"
-            },
-            {
-              "type": "null"
-            }
-          ]
-        },
-        "moduleTypes": {
-          "description": "Key is the file extension. The extension should start with a `.`. E.g. `\".txt\"`.",
-          "type": [
-            "object",
-            "null"
-          ],
-          "additionalProperties": {
-            "$ref": "#/definitions/ModuleType"
-          }
-        },
-        "name": {
+        "intro": {
           "type": [
             "string",
             "null"
@@ -406,10 +249,144 @@
             "null"
           ]
         },
-        "platform": {
+        "sourcemapDebugIds": {
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
+        "moduleTypes": {
+          "description": "Key is the file extension. The extension should start with a `.`. E.g. `\".txt\"`.",
+          "type": [
+            "object",
+            "null"
+          ],
+          "additionalProperties": {
+            "$ref": "#/$defs/ModuleType"
+          }
+        },
+        "resolve": {
           "anyOf": [
             {
-              "$ref": "#/definitions/Platform"
+              "$ref": "#/$defs/ResolveOptions"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "treeshake": {
+          "$ref": "#/$defs/TreeshakeOptions"
+        },
+        "experimental": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/ExperimentalOptions"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "minify": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/RawMinifyOptions"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "define": {
+          "type": [
+            "object",
+            "null"
+          ],
+          "additionalProperties": {
+            "type": "string"
+          }
+        },
+        "extend": {
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
+        "profilerNames": {
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
+        "keepNames": {
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
+        "inject": {
+          "type": [
+            "array",
+            "null"
+          ],
+          "items": {
+            "$ref": "#/$defs/InjectImport"
+          }
+        },
+        "externalLiveBindings": {
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
+        "inlineDynamicImports": {
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
+        "advancedChunks": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/AdvancedChunksOptions"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "checks": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/ChecksOptions"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "transform": {
+          "type": [
+            "object",
+            "null"
+          ],
+          "additionalProperties": true
+        },
+        "watch": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/WatchOption"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "legalComments": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/LegalComments"
             },
             {
               "type": "null"
@@ -422,10 +399,30 @@
             "null"
           ]
         },
-        "preserveEntrySignatures": {
+        "makeAbsoluteExternalsRelative": {
           "anyOf": [
             {
-              "$ref": "#/definitions/PreserveEntrySignatures"
+              "$ref": "#/$defs/MakeAbsoluteExternalsRelative"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "debug": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/DebugOptions"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "logLevel": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/LogLevel"
             },
             {
               "type": "null"
@@ -438,296 +435,110 @@
             "null"
           ]
         },
-        "preserveModulesRoot": {
-          "type": [
-            "string",
-            "null"
-          ]
-        },
-        "profilerNames": {
-          "type": [
-            "boolean",
-            "null"
-          ]
-        },
-        "resolve": {
-          "anyOf": [
-            {
-              "$ref": "#/definitions/ResolveOptions"
-            },
-            {
-              "type": "null"
-            }
-          ]
-        },
-        "sanitizeFilename": {
-          "type": [
-            "boolean",
-            "null"
-          ]
-        },
-        "shimMissingExports": {
-          "type": [
-            "boolean",
-            "null"
-          ]
-        },
-        "sourcemap": {
-          "anyOf": [
-            {
-              "$ref": "#/definitions/SourceMapType"
-            },
-            {
-              "type": "null"
-            }
-          ]
-        },
-        "sourcemapDebugIds": {
-          "type": [
-            "boolean",
-            "null"
-          ]
-        },
-        "transform": {
-          "type": [
-            "object",
-            "null"
-          ],
-          "additionalProperties": true
-        },
-        "treeshake": {
-          "$ref": "#/definitions/TreeshakeOptions"
-        },
         "virtualDirname": {
           "type": [
             "string",
             "null"
           ]
         },
-        "watch": {
-          "anyOf": [
-            {
-              "$ref": "#/definitions/WatchOption"
-            },
-            {
-              "type": "null"
-            }
-          ]
-        }
-      },
-      "additionalProperties": false
-    },
-    "ChecksOptions": {
-      "type": "object",
-      "properties": {
-        "circularDependency": {
-          "type": [
-            "boolean",
-            "null"
-          ]
-        },
-        "commonJsVariableInEsm": {
-          "type": [
-            "boolean",
-            "null"
-          ]
-        },
-        "configurationFieldConflict": {
-          "type": [
-            "boolean",
-            "null"
-          ]
-        },
-        "eval": {
-          "type": [
-            "boolean",
-            "null"
-          ]
-        },
-        "filenameConflict": {
-          "type": [
-            "boolean",
-            "null"
-          ]
-        },
-        "importIsUndefined": {
-          "type": [
-            "boolean",
-            "null"
-          ]
-        },
-        "missingGlobalName": {
-          "type": [
-            "boolean",
-            "null"
-          ]
-        },
-        "missingNameOptionForIifeExport": {
-          "type": [
-            "boolean",
-            "null"
-          ]
-        },
-        "mixedExport": {
-          "type": [
-            "boolean",
-            "null"
-          ]
-        },
-        "unresolvedEntry": {
-          "type": [
-            "boolean",
-            "null"
-          ]
-        },
-        "unresolvedImport": {
-          "type": [
-            "boolean",
-            "null"
-          ]
-        }
-      },
-      "additionalProperties": false
-    },
-    "ConfigVariant": {
-      "type": "object",
-      "properties": {
-        "entryFilenames": {
+        "preserveModulesRoot": {
           "type": [
             "string",
             "null"
           ]
         },
-        "exports": {
+        "preserveEntrySignatures": {
           "anyOf": [
             {
-              "$ref": "#/definitions/OutputExports"
+              "$ref": "#/$defs/PreserveEntrySignatures"
             },
             {
               "type": "null"
             }
           ]
-        },
-        "extend": {
-          "type": [
-            "boolean",
-            "null"
-          ]
-        },
-        "format": {
-          "anyOf": [
-            {
-              "$ref": "#/definitions/OutputFormat"
-            },
-            {
-              "type": "null"
-            }
-          ]
-        },
+        }
+      },
+      "additionalProperties": false
+    },
+    "InputItem": {
+      "type": "object",
+      "properties": {
         "name": {
           "type": [
             "string",
             "null"
           ]
         },
-        "strictExecutionOrder": {
-          "type": [
-            "boolean",
-            "null"
-          ]
+        "import": {
+          "type": "string"
         }
       },
-      "additionalProperties": false
+      "required": [
+        "import"
+      ]
     },
-    "DebugOptions": {
-      "type": "object",
-      "properties": {
-        "sessionId": {
-          "type": [
-            "string",
-            "null"
-          ]
-        }
-      },
-      "additionalProperties": false
-    },
-    "EsModuleFlag": {
-      "description": "This configuration determines how the bundler should handle the synthetic `__esModule` property in the CJS and IIFE format. It is rollup-capable, and the rollup default is `IfDefaultProp`. You may find rollup explanation [here](https://rollupjs.org/configuration-options/#output-esmodule).\n\n> Whether to add a `__esModule: true` property when generating exports for non-ES formats. > This property signifies that the exported value is the namespace of an ES module and that the default > export of this module corresponds to the `.default` property of the exported object. > > *From rollupjs.org*",
+    "Platform": {
       "oneOf": [
         {
-          "description": "Always generate `Object.defineProperty(exports, \"__esModule\", { value: true });` in the CJS and IIFE format. It is similar to other bundlers' behavior.",
           "type": "string",
           "enum": [
-            "always"
+            "browser",
+            "neutral"
           ]
+        },
+        {
+          "description": "Represents the Node.js platform.",
+          "type": "string",
+          "const": "node"
+        }
+      ]
+    },
+    "OutputFormat": {
+      "type": "string",
+      "enum": [
+        "esm",
+        "cjs",
+        "app",
+        "iife",
+        "umd"
+      ]
+    },
+    "OutputExports": {
+      "type": "string",
+      "enum": [
+        "auto",
+        "default",
+        "named",
+        "none"
+      ]
+    },
+    "SourceMapType": {
+      "type": "string",
+      "enum": [
+        "File",
+        "Inline",
+        "Hidden"
+      ]
+    },
+    "EsModuleFlag": {
+      "description": "This configuration determines how the bundler should handle the synthetic `__esModule` property in the CJS and IIFE format.\n It is rollup-capable, and the rollup default is `IfDefaultProp`.\n You may find rollup explanation [here](https://rollupjs.org/configuration-options/#output-esmodule).\n\n > Whether to add a `__esModule: true` property when generating exports for non-ES formats.\n > This property signifies that the exported value is the namespace of an ES module and that the default\n > export of this module corresponds to the `.default` property of the exported object.\n >\n > *From rollupjs.org*",
+      "oneOf": [
+        {
+          "description": "Always generate `Object.defineProperty(exports, \"__esModule\", { value: true });`\n in the CJS and IIFE format. It is similar to other bundlers' behavior.",
+          "type": "string",
+          "const": "always"
         },
         {
           "description": "Never generate the synthetic `__esModule` property in the CJS and IIFE format.",
           "type": "string",
-          "enum": [
-            "never"
-          ]
+          "const": "never"
         },
         {
-          "description": "Generate the synthetic `__esModule` property in the CJS and IIFE format only if the module has a default export.\n\n> It will only add the property when using named exports mode and there also is a default export. > The subtle difference is that if there is no default export, > consumers of the CommonJS version of your library will get all named exports as > default export instead of an error or `undefined`. > We chose to make this the default value as the `__esModule` property is not a standard > followed by any JavaScript runtime and leads to many interop issues, > so we want to limit its use to the cases where it is really needed. > > *From rollupjs.org*\n\nFor example, rolldown will define the `__esModule` property in the following entry code:\n\n```js export default function() {} export const a = 1; // For this module, rolldown will automatically regard it as the `named` export mode. ```\n\nAnd rolldown won't generate the `__esModule` property in the following entry code:\n\n```js export const a = 1; ```",
+          "description": "Generate the synthetic `__esModule` property in the CJS and IIFE format only\n if the module has a default export.\n\n > It will only add the property when using named exports mode and there also is a default export.\n > The subtle difference is that if there is no default export,\n > consumers of the CommonJS version of your library will get all named exports as\n > default export instead of an error or `undefined`.\n > We chose to make this the default value as the `__esModule` property is not a standard\n > followed by any JavaScript runtime and leads to many interop issues,\n > so we want to limit its use to the cases where it is really needed.\n >\n > *From rollupjs.org*\n\n For example, rolldown will define the `__esModule` property in the following entry code:\n\n ```js\n export default function() {}\n export const a = 1; // For this module, rolldown will automatically regard it as the `named` export mode.\n ```\n\n And rolldown won't generate the `__esModule` property in the following entry code:\n\n ```js\n export const a = 1;\n ```",
           "type": "string",
-          "enum": [
-            "if-default-prop"
-          ]
+          "const": "if-default-prop"
         }
       ]
-    },
-    "ExperimentalOptions": {
-      "type": "object",
-      "properties": {
-        "attachDebugInfo": {
-          "type": [
-            "boolean",
-            "null"
-          ]
-        },
-        "disableLiveBindings": {
-          "type": [
-            "boolean",
-            "null"
-          ]
-        },
-        "hmr": {
-          "anyOf": [
-            {
-              "$ref": "#/definitions/HmrOptions"
-            },
-            {
-              "type": "null"
-            }
-          ]
-        },
-        "incrementalBuild": {
-          "type": [
-            "boolean",
-            "null"
-          ]
-        },
-        "resolveNewUrlToAsset": {
-          "type": [
-            "boolean",
-            "null"
-          ]
-        },
-        "strictExecutionOrder": {
-          "type": [
-            "boolean",
-            "null"
-          ]
-        },
-        "viteMode": {
-          "type": [
-            "boolean",
-            "null"
-          ]
-        }
-      },
-      "additionalProperties": false
     },
     "HashCharacters": {
       "type": "string",
@@ -736,275 +547,6 @@
         "base36",
         "hex"
       ]
-    },
-    "HmrOptions": {
-      "type": "object",
-      "properties": {
-        "host": {
-          "description": "IP addresses that `DevRuntime` will connect to using WebSocket.",
-          "type": [
-            "string",
-            "null"
-          ]
-        },
-        "implement": {
-          "description": "Custom hmr runtime implementation.",
-          "type": [
-            "string",
-            "null"
-          ]
-        },
-        "port": {
-          "description": "Port that `DevRuntime` will connect to using WebSocket.",
-          "type": [
-            "integer",
-            "null"
-          ],
-          "format": "uint16",
-          "minimum": 0.0
-        }
-      },
-      "additionalProperties": false
-    },
-    "InjectImport": {
-      "title": "Usage",
-      "description": "- `import { Promise } from 'es6-promise'` => `InjectImport::named(\"Promise\", None,\"es6-promise\")` - `import { Promise as P } from 'es6-promise'` => `InjectImport::named(\"Promise\", Some(\"P\"), \"es6-promise\")` - `import $ from 'jquery'` => `InjectImport::named(\"default\", Some(\"$\"), \"jquery\")` - `import $ from 'jquery'` => `InjectImport::default(\"$\", \"jquery\")` - `import * as fs from 'node:fs'` => `InjectImport::namespace(\"fs\", \"node:fs\")`\n\n---\n\n- `InjectImport::named(\"default\", Some(\"Object.assign\"), \"es6-object-assign\")` - `InjectImport::default(\"Object.assign\", \"es6-object-assign\")`\n\nare special forms to inject shims to the following code: ```js console.log(Object.assign({ a: 1 }, { b: 2 })); ```\n\nwill be, after the injection, transformed to:\n\n```js import object_assign from \"es6-object-assign\"; console.log(object_assign({ a: 1 }, { b: 2 })); ```",
-      "oneOf": [
-        {
-          "type": "object",
-          "required": [
-            "from",
-            "imported",
-            "type"
-          ],
-          "properties": {
-            "alias": {
-              "type": [
-                "string",
-                "null"
-              ]
-            },
-            "from": {
-              "type": "string"
-            },
-            "imported": {
-              "type": "string"
-            },
-            "type": {
-              "type": "string",
-              "enum": [
-                "named"
-              ]
-            }
-          },
-          "additionalProperties": false
-        },
-        {
-          "type": "object",
-          "required": [
-            "alias",
-            "from",
-            "type"
-          ],
-          "properties": {
-            "alias": {
-              "type": "string"
-            },
-            "from": {
-              "type": "string"
-            },
-            "type": {
-              "type": "string",
-              "enum": [
-                "namespace"
-              ]
-            }
-          },
-          "additionalProperties": false
-        }
-      ]
-    },
-    "InnerOptions": {
-      "type": "object",
-      "properties": {
-        "annotations": {
-          "type": [
-            "boolean",
-            "null"
-          ]
-        },
-        "manualPureFunctions": {
-          "type": [
-            "array",
-            "null"
-          ],
-          "items": {
-            "type": "string"
-          },
-          "uniqueItems": true
-        },
-        "moduleSideEffects": {
-          "type": [
-            "boolean",
-            "null"
-          ]
-        },
-        "unknownGlobalSideEffects": {
-          "type": [
-            "boolean",
-            "null"
-          ]
-        }
-      },
-      "additionalProperties": false
-    },
-    "InputItem": {
-      "type": "object",
-      "required": [
-        "import"
-      ],
-      "properties": {
-        "import": {
-          "type": "string"
-        },
-        "name": {
-          "type": [
-            "string",
-            "null"
-          ]
-        }
-      }
-    },
-    "LegalComments": {
-      "oneOf": [
-        {
-          "description": "Don't preserve any comment",
-          "type": "string",
-          "enum": [
-            "none"
-          ]
-        },
-        {
-          "description": "Preserve all legal comments",
-          "type": "string",
-          "enum": [
-            "inline"
-          ]
-        }
-      ]
-    },
-    "LogLevel": {
-      "type": "string",
-      "enum": [
-        "silent",
-        "warn",
-        "info",
-        "debug"
-      ]
-    },
-    "MakeAbsoluteExternalsRelative": {
-      "oneOf": [
-        {
-          "type": "string",
-          "enum": [
-            "IfRelativeSource"
-          ]
-        },
-        {
-          "type": "object",
-          "required": [
-            "Bool"
-          ],
-          "properties": {
-            "Bool": {
-              "type": "boolean"
-            }
-          },
-          "additionalProperties": false
-        }
-      ]
-    },
-    "MatchGroup": {
-      "type": "object",
-      "required": [
-        "name"
-      ],
-      "properties": {
-        "maxModuleSize": {
-          "type": [
-            "number",
-            "null"
-          ],
-          "format": "double"
-        },
-        "maxSize": {
-          "type": [
-            "number",
-            "null"
-          ],
-          "format": "double"
-        },
-        "minModuleSize": {
-          "type": [
-            "number",
-            "null"
-          ],
-          "format": "double"
-        },
-        "minShareCount": {
-          "type": [
-            "integer",
-            "null"
-          ],
-          "format": "uint32",
-          "minimum": 0.0
-        },
-        "minSize": {
-          "type": [
-            "number",
-            "null"
-          ],
-          "format": "double"
-        },
-        "name": {
-          "type": "string"
-        },
-        "priority": {
-          "type": [
-            "integer",
-            "null"
-          ],
-          "format": "uint32",
-          "minimum": 0.0
-        },
-        "test": {
-          "type": [
-            "string",
-            "null"
-          ]
-        }
-      },
-      "additionalProperties": false
-    },
-    "MinifyOptionsObject": {
-      "type": "object",
-      "required": [
-        "compress",
-        "mangle",
-        "removeWhitespace"
-      ],
-      "properties": {
-        "compress": {
-          "type": "boolean"
-        },
-        "mangle": {
-          "type": "boolean"
-        },
-        "removeWhitespace": {
-          "type": "boolean"
-        }
-      },
-      "additionalProperties": false
     },
     "ModuleType": {
       "oneOf": [
@@ -1027,79 +569,20 @@
         },
         {
           "type": "object",
-          "required": [
-            "custom"
-          ],
           "properties": {
             "custom": {
               "type": "string"
             }
           },
+          "required": [
+            "custom"
+          ],
           "additionalProperties": false
         }
       ]
     },
-    "OutputExports": {
-      "type": "string",
-      "enum": [
-        "auto",
-        "default",
-        "named",
-        "none"
-      ]
-    },
-    "OutputFormat": {
-      "type": "string",
-      "enum": [
-        "esm",
-        "cjs",
-        "app",
-        "iife",
-        "umd"
-      ]
-    },
-    "Platform": {
-      "oneOf": [
-        {
-          "type": "string",
-          "enum": [
-            "browser",
-            "neutral"
-          ]
-        },
-        {
-          "description": "Represents the Node.js platform.",
-          "type": "string",
-          "enum": [
-            "node"
-          ]
-        }
-      ]
-    },
-    "PreserveEntrySignatures": {
-      "type": "string",
-      "enum": [
-        "allow-extension",
-        "strict",
-        "exports-only",
-        "false"
-      ]
-    },
-    "RawMinifyOptions": {
-      "anyOf": [
-        {
-          "type": "boolean"
-        },
-        {
-          "type": "null"
-        },
-        {
-          "$ref": "#/definitions/MinifyOptionsObject"
-        }
-      ]
-    },
     "ResolveOptions": {
-      "description": "A simple wrapper around `oxc_resolver::ResolveOptions` to make it easier to use in the `rolldown_resolver` crate. See [oxc_resolver::ResolveOptions](https://docs.rs/oxc_resolver/latest/oxc_resolver/struct.ResolveOptions.html) for more information.",
+      "description": "A simple wrapper around `oxc_resolver::ResolveOptions` to make it easier to use in the `rolldown_resolver` crate.\n See [oxc_resolver::ResolveOptions](https://docs.rs/oxc_resolver/latest/oxc_resolver/struct.ResolveOptions.html) for more information.",
       "type": "object",
       "properties": {
         "alias": {
@@ -1109,7 +592,7 @@
           ],
           "items": {
             "type": "array",
-            "items": [
+            "prefixItems": [
               {
                 "type": "string"
               },
@@ -1120,8 +603,8 @@
                 }
               }
             ],
-            "maxItems": 2,
-            "minItems": 2
+            "minItems": 2,
+            "maxItems": 2
           }
         },
         "aliasFields": {
@@ -1157,6 +640,15 @@
             }
           }
         },
+        "extensions": {
+          "type": [
+            "array",
+            "null"
+          ],
+          "items": {
+            "type": "string"
+          }
+        },
         "extensionAlias": {
           "type": [
             "array",
@@ -1164,7 +656,7 @@
           ],
           "items": {
             "type": "array",
-            "items": [
+            "prefixItems": [
               {
                 "type": "string"
               },
@@ -1175,17 +667,8 @@
                 }
               }
             ],
-            "maxItems": 2,
-            "minItems": 2
-          }
-        },
-        "extensions": {
-          "type": [
-            "array",
-            "null"
-          ],
-          "items": {
-            "type": "string"
+            "minItems": 2,
+            "maxItems": 2
           }
         },
         "mainFields": {
@@ -1221,46 +704,423 @@
       },
       "additionalProperties": false
     },
-    "SourceMapType": {
-      "type": "string",
-      "enum": [
-        "File",
-        "Inline",
-        "Hidden"
-      ]
-    },
     "TreeshakeOptions": {
       "anyOf": [
         {
           "type": "boolean"
         },
         {
-          "$ref": "#/definitions/InnerOptions"
+          "$ref": "#/$defs/InnerOptions"
         }
       ]
     },
+    "InnerOptions": {
+      "type": "object",
+      "properties": {
+        "moduleSideEffects": {
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
+        "annotations": {
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
+        "manualPureFunctions": {
+          "type": [
+            "array",
+            "null"
+          ],
+          "uniqueItems": true,
+          "items": {
+            "type": "string"
+          }
+        },
+        "unknownGlobalSideEffects": {
+          "type": [
+            "boolean",
+            "null"
+          ]
+        }
+      },
+      "additionalProperties": false
+    },
+    "ExperimentalOptions": {
+      "type": "object",
+      "properties": {
+        "strictExecutionOrder": {
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
+        "disableLiveBindings": {
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
+        "viteMode": {
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
+        "resolveNewUrlToAsset": {
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
+        "incrementalBuild": {
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
+        "hmr": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/HmrOptions"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "attachDebugInfo": {
+          "type": [
+            "boolean",
+            "null"
+          ]
+        }
+      },
+      "additionalProperties": false
+    },
+    "HmrOptions": {
+      "type": "object",
+      "properties": {
+        "host": {
+          "description": "IP addresses that `DevRuntime` will connect to using WebSocket.",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "port": {
+          "description": "Port that `DevRuntime` will connect to using WebSocket.",
+          "type": [
+            "integer",
+            "null"
+          ],
+          "format": "uint16",
+          "minimum": 0,
+          "maximum": 65535
+        },
+        "implement": {
+          "description": "Custom hmr runtime implementation.",
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      },
+      "additionalProperties": false
+    },
+    "RawMinifyOptions": {
+      "anyOf": [
+        {
+          "type": "boolean"
+        },
+        {
+          "type": "null"
+        },
+        {
+          "$ref": "#/$defs/MinifyOptionsObject"
+        }
+      ]
+    },
+    "MinifyOptionsObject": {
+      "type": "object",
+      "properties": {
+        "mangle": {
+          "type": "boolean"
+        },
+        "compress": {
+          "type": "boolean"
+        },
+        "removeWhitespace": {
+          "type": "boolean"
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "mangle",
+        "compress",
+        "removeWhitespace"
+      ]
+    },
+    "InjectImport": {
+      "title": "Usage",
+      "description": "- `import { Promise } from 'es6-promise'` => `InjectImport::named(\"Promise\", None,\"es6-promise\")`\n - `import { Promise as P } from 'es6-promise'` => `InjectImport::named(\"Promise\", Some(\"P\"), \"es6-promise\")`\n - `import $ from 'jquery'` => `InjectImport::named(\"default\", Some(\"$\"), \"jquery\")`\n - `import $ from 'jquery'` => `InjectImport::default(\"$\", \"jquery\")`\n - `import * as fs from 'node:fs'` => `InjectImport::namespace(\"fs\", \"node:fs\")`\n\n ---\n\n - `InjectImport::named(\"default\", Some(\"Object.assign\"), \"es6-object-assign\")`\n - `InjectImport::default(\"Object.assign\", \"es6-object-assign\")`\n\n are special forms to inject shims to the following code:\n ```js\n console.log(Object.assign({ a: 1 }, { b: 2 }));\n ```\n\n will be, after the injection, transformed to:\n\n ```js\n import object_assign from \"es6-object-assign\";\n console.log(object_assign({ a: 1 }, { b: 2 }));\n```",
+      "oneOf": [
+        {
+          "type": "object",
+          "properties": {
+            "type": {
+              "type": "string",
+              "const": "named"
+            },
+            "imported": {
+              "type": "string"
+            },
+            "alias": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "from": {
+              "type": "string"
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "type",
+            "imported",
+            "from"
+          ]
+        },
+        {
+          "type": "object",
+          "properties": {
+            "type": {
+              "type": "string",
+              "const": "namespace"
+            },
+            "alias": {
+              "type": "string"
+            },
+            "from": {
+              "type": "string"
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "type",
+            "alias",
+            "from"
+          ]
+        }
+      ]
+    },
+    "AdvancedChunksOptions": {
+      "type": "object",
+      "properties": {
+        "minShareCount": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "format": "uint32",
+          "minimum": 0
+        },
+        "minSize": {
+          "type": [
+            "number",
+            "null"
+          ],
+          "format": "double"
+        },
+        "maxSize": {
+          "type": [
+            "number",
+            "null"
+          ],
+          "format": "double"
+        },
+        "minModuleSize": {
+          "type": [
+            "number",
+            "null"
+          ],
+          "format": "double"
+        },
+        "maxModuleSize": {
+          "type": [
+            "number",
+            "null"
+          ],
+          "format": "double"
+        },
+        "includeDependenciesRecursively": {
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
+        "groups": {
+          "type": [
+            "array",
+            "null"
+          ],
+          "items": {
+            "$ref": "#/$defs/MatchGroup"
+          }
+        }
+      },
+      "additionalProperties": false
+    },
+    "MatchGroup": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string"
+        },
+        "test": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "priority": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "format": "uint32",
+          "minimum": 0
+        },
+        "minSize": {
+          "type": [
+            "number",
+            "null"
+          ],
+          "format": "double"
+        },
+        "maxSize": {
+          "type": [
+            "number",
+            "null"
+          ],
+          "format": "double"
+        },
+        "minShareCount": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "format": "uint32",
+          "minimum": 0
+        },
+        "minModuleSize": {
+          "type": [
+            "number",
+            "null"
+          ],
+          "format": "double"
+        },
+        "maxModuleSize": {
+          "type": [
+            "number",
+            "null"
+          ],
+          "format": "double"
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "name"
+      ]
+    },
+    "ChecksOptions": {
+      "type": "object",
+      "properties": {
+        "circularDependency": {
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
+        "eval": {
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
+        "missingGlobalName": {
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
+        "missingNameOptionForIifeExport": {
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
+        "mixedExport": {
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
+        "unresolvedEntry": {
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
+        "unresolvedImport": {
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
+        "filenameConflict": {
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
+        "commonJsVariableInEsm": {
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
+        "importIsUndefined": {
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
+        "configurationFieldConflict": {
+          "type": [
+            "boolean",
+            "null"
+          ]
+        }
+      },
+      "additionalProperties": false
+    },
     "WatchOption": {
       "type": "object",
-      "required": [
-        "skipWrite"
-      ],
       "properties": {
+        "skipWrite": {
+          "type": "boolean"
+        },
         "buildDelay": {
           "type": [
             "integer",
             "null"
           ],
           "format": "uint32",
-          "minimum": 0.0
-        },
-        "exclude": {
-          "type": [
-            "array",
-            "null"
-          ],
-          "items": {
-            "type": "string"
-          }
+          "minimum": 0
         },
         "include": {
           "type": [
@@ -1271,8 +1131,133 @@
             "type": "string"
           }
         },
-        "skipWrite": {
-          "type": "boolean"
+        "exclude": {
+          "type": [
+            "array",
+            "null"
+          ],
+          "items": {
+            "type": "string"
+          }
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "skipWrite"
+      ]
+    },
+    "LegalComments": {
+      "oneOf": [
+        {
+          "description": "Don't preserve any comment",
+          "type": "string",
+          "const": "none"
+        },
+        {
+          "description": "Preserve all legal comments",
+          "type": "string",
+          "const": "inline"
+        }
+      ]
+    },
+    "MakeAbsoluteExternalsRelative": {
+      "oneOf": [
+        {
+          "type": "string",
+          "enum": [
+            "IfRelativeSource"
+          ]
+        },
+        {
+          "type": "object",
+          "properties": {
+            "Bool": {
+              "type": "boolean"
+            }
+          },
+          "required": [
+            "Bool"
+          ],
+          "additionalProperties": false
+        }
+      ]
+    },
+    "DebugOptions": {
+      "type": "object",
+      "properties": {
+        "sessionId": {
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      },
+      "additionalProperties": false
+    },
+    "LogLevel": {
+      "type": "string",
+      "enum": [
+        "silent",
+        "warn",
+        "info",
+        "debug"
+      ]
+    },
+    "PreserveEntrySignatures": {
+      "type": "string",
+      "enum": [
+        "allow-extension",
+        "strict",
+        "exports-only",
+        "false"
+      ]
+    },
+    "ConfigVariant": {
+      "type": "object",
+      "properties": {
+        "format": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/OutputFormat"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "extend": {
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
+        "name": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "exports": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/OutputExports"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "strictExecutionOrder": {
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
+        "entryFilenames": {
+          "type": [
+            "string",
+            "null"
+          ]
         }
       },
       "additionalProperties": false

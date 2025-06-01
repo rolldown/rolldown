@@ -56,6 +56,7 @@ OPTIONS
   --keep-names                Keep function/class name.
   --legal-comments <legal-comments>Control comments in the output.
   --log-level <log-level>     Log level (silent, info, debug, warn).
+  --make-absolute-externals-relative Prevent normalization of external imports.
   --module-types <types>      Module types for customized extensions.
   --no-external-live-bindings Disable external live bindings.
   --no-treeshake              Disable treeshaking.

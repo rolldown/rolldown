@@ -18,7 +18,7 @@ pub fn is_data_url(s: &str) -> bool {
 pub async fn resolve_id_with_plugins(
   resolver: &Resolver,
   plugin_driver: &PluginDriver,
-  request: &str,
+  specifier: &str,
   importer: Option<&str>,
   is_entry: bool,
   import_kind: ImportKind,
@@ -31,7 +31,7 @@ pub async fn resolve_id_with_plugins(
       .resolve_dynamic_import(
         &HookResolveIdArgs {
           importer: importer.map(std::convert::AsRef::as_ref),
-          specifier: request,
+          specifier,
           is_entry,
           kind: import_kind,
           custom: Arc::clone(&custom),
@@ -42,8 +42,8 @@ pub async fn resolve_id_with_plugins(
     {
       return Ok(Ok(ResolvedId {
         module_def_format: ModuleDefFormat::from_path(r.id.as_str()),
-        ignored: false,
         id: r.id,
+        ignored: false,
         external: r.external.unwrap_or_default(),
         normalize_external_id: r.normalize_external_id,
         package_json: None,
@@ -56,8 +56,8 @@ pub async fn resolve_id_with_plugins(
   if let Some(r) = plugin_driver
     .resolve_id(
       &HookResolveIdArgs {
-        importer: importer.map(std::convert::AsRef::as_ref),
-        specifier: request,
+        specifier,
+        importer,
         is_entry,
         kind: import_kind,
         custom: Arc::clone(&custom),
@@ -68,8 +68,8 @@ pub async fn resolve_id_with_plugins(
   {
     return Ok(Ok(ResolvedId {
       module_def_format: ModuleDefFormat::from_path(r.id.as_str()),
-      ignored: false,
       id: r.id,
+      ignored: false,
       external: r.external.unwrap_or_default(),
       normalize_external_id: r.normalize_external_id,
       package_json: None,
@@ -79,9 +79,9 @@ pub async fn resolve_id_with_plugins(
   }
 
   // Auto external http url or data url
-  if is_http_url(request) || is_data_url(request) {
+  if is_http_url(specifier) || is_data_url(specifier) {
     return Ok(Ok(ResolvedId {
-      id: request.into(),
+      id: specifier.into(),
       module_def_format: ModuleDefFormat::Unknown,
       ignored: false,
       external: true.into(),
@@ -92,18 +92,18 @@ pub async fn resolve_id_with_plugins(
     }));
   }
 
-  Ok(resolve_id(resolver, request, importer, import_kind, is_user_defined_entry))
+  Ok(resolve_id(resolver, specifier, importer, import_kind, is_user_defined_entry))
 }
 
 fn resolve_id(
   resolver: &Resolver,
-  request: &str,
+  specifier: &str,
   importer: Option<&str>,
   import_kind: ImportKind,
   is_user_defined_entry: bool,
 ) -> Result<ResolvedId, ResolveError> {
   let resolved =
-    resolver.resolve(importer.map(Path::new), request, import_kind, is_user_defined_entry);
+    resolver.resolve(importer.map(Path::new), specifier, import_kind, is_user_defined_entry);
 
   match resolved {
     Ok(resolved) => Ok(ResolvedId::from(resolved)),

@@ -30,13 +30,8 @@ pub(crate) async fn resolve_id(
   if specifier == RUNTIME_MODULE_KEY {
     return Ok(Ok(ResolvedId {
       id: specifier.into(),
-      ignored: false,
       module_def_format: ModuleDefFormat::EsmMjs,
-      external: false.into(),
-      normalize_external_id: None,
-      package_json: None,
-      side_effects: None,
-      is_external_without_side_effects: false,
+      ..Default::default()
     }));
   }
 
@@ -137,13 +132,8 @@ pub async fn resolve_dependencies(
             }
             ret.push(ResolvedId {
               id: specifier.as_str().into(),
-              ignored: false,
-              module_def_format: ModuleDefFormat::Unknown,
               external: true.into(),
-              normalize_external_id: None,
-              package_json: None,
-              side_effects: None,
-              is_external_without_side_effects: false,
+              ..Default::default()
             });
           }
           ResolveError::MatchedAliasNotFound(..) => {

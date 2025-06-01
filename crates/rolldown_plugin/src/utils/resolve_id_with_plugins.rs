@@ -43,12 +43,10 @@ pub async fn resolve_id_with_plugins(
       return Ok(Ok(ResolvedId {
         module_def_format: ModuleDefFormat::from_path(r.id.as_str()),
         id: r.id,
-        ignored: false,
         external: r.external.unwrap_or_default(),
         normalize_external_id: r.normalize_external_id,
-        package_json: None,
         side_effects: r.side_effects,
-        is_external_without_side_effects: false,
+        ..Default::default()
       }));
     }
   }
@@ -69,12 +67,10 @@ pub async fn resolve_id_with_plugins(
     return Ok(Ok(ResolvedId {
       module_def_format: ModuleDefFormat::from_path(r.id.as_str()),
       id: r.id,
-      ignored: false,
       external: r.external.unwrap_or_default(),
       normalize_external_id: r.normalize_external_id,
-      package_json: None,
       side_effects: r.side_effects,
-      is_external_without_side_effects: false,
+      ..Default::default()
     }));
   }
 
@@ -82,13 +78,8 @@ pub async fn resolve_id_with_plugins(
   if is_http_url(specifier) || is_data_url(specifier) {
     return Ok(Ok(ResolvedId {
       id: specifier.into(),
-      module_def_format: ModuleDefFormat::Unknown,
-      ignored: false,
       external: true.into(),
-      normalize_external_id: None,
-      package_json: None,
-      side_effects: None,
-      is_external_without_side_effects: false,
+      ..Default::default()
     }));
   }
 
@@ -117,23 +108,14 @@ fn resolve_id(
         } else {
           resolved.into()
         },
-        ignored: false,
         external: true.into(),
-        normalize_external_id: None,
-        module_def_format: ModuleDefFormat::Unknown,
-        package_json: None,
-        side_effects: None,
+        ..Default::default()
       }),
       ResolveError::Ignored(p) => Ok(ResolvedId {
         //(hyf0) TODO: This `p` doesn't seem to contains `query` or `fragment` of the input. We need to make sure this is ok
         id: p.to_str().expect("Should be valid utf8").into(),
         ignored: true,
-        external: false.into(),
-        normalize_external_id: None,
-        module_def_format: ModuleDefFormat::Unknown,
-        package_json: None,
-        side_effects: None,
-        is_external_without_side_effects: false,
+        ..Default::default()
       }),
       _ => Err(err),
     },

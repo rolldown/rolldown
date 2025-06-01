@@ -178,13 +178,9 @@ impl From<ResolveReturn> for ResolvedId {
   fn from(resolved_return: ResolveReturn) -> Self {
     ResolvedId {
       id: resolved_return.path,
-      ignored: false,
       module_def_format: resolved_return.module_def_format,
-      external: false.into(),
-      normalize_external_id: None,
       package_json: resolved_return.package_json,
-      side_effects: None,
-      is_external_without_side_effects: false,
+      ..Default::default()
     }
   }
 }

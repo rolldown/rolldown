@@ -60,12 +60,6 @@ Variant: (format: Iife)
 
 
 
-//#region entry.js
-input.works = Promise.resolve().then(function() {
-	return init_foo(), foo_exports;
-}).then((foo) => foo[Math.random() < 1 && "default"] === 123 && foo[Math.random() < 1 && "__esModule"] === void 0);
-
-//#endregion
 //#region foo.js
 var foo_exports = {};
 __export(foo_exports, { default: () => foo_default });
@@ -73,6 +67,12 @@ var foo_default;
 var init_foo = __esm({ "foo.js"() {
 	foo_default = 123;
 } });
+
+//#endregion
+//#region entry.js
+input.works = Promise.resolve().then(function() {
+	return init_foo(), foo_exports;
+}).then((foo) => foo[Math.random() < 1 && "default"] === 123 && foo[Math.random() < 1 && "__esModule"] === void 0);
 
 //#endregion
 })();
@@ -93,12 +93,6 @@ Variant: (format: Umd)
 })(function() {
 
 
-//#region entry.js
-input.works = Promise.resolve().then(function() {
-	return init_foo(), foo_exports;
-}).then((foo) => foo[Math.random() < 1 && "default"] === 123 && foo[Math.random() < 1 && "__esModule"] === void 0);
-
-//#endregion
 //#region foo.js
 var foo_exports = {};
 __export(foo_exports, { default: () => foo_default });
@@ -106,6 +100,12 @@ var foo_default;
 var init_foo = __esm({ "foo.js"() {
 	foo_default = 123;
 } });
+
+//#endregion
+//#region entry.js
+input.works = Promise.resolve().then(function() {
+	return init_foo(), foo_exports;
+}).then((foo) => foo[Math.random() < 1 && "default"] === 123 && foo[Math.random() < 1 && "__esModule"] === void 0);
 
 //#endregion
 });

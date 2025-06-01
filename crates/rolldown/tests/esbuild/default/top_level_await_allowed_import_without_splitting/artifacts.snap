@@ -7,28 +7,9 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```js
 
-//#region entry.js
-var require_entry = __commonJS({ "entry.js"() {
-	Promise.resolve().then(function() {
-		return init_a(), a_exports;
-	});
-	Promise.resolve().then(function() {
-		return init_b(), b_exports;
-	});
-	Promise.resolve().then(function() {
-		return __toESM(require_c());
-	});
-	Promise.resolve().then(function() {
-		return __toESM(require_entry());
-	});
+//#region c.js
+var require_c = __commonJS({ "c.js"() {
 	await 0;
-} });
-
-//#endregion
-//#region a.js
-var a_exports = {};
-var init_a = __esm({ async "a.js"() {
-	await init_b();
 } });
 
 //#endregion
@@ -40,8 +21,27 @@ var init_b = __esm({ async "b.js"() {
 } });
 
 //#endregion
-//#region c.js
-var require_c = __commonJS({ "c.js"() {
+//#region a.js
+var a_exports = {};
+var init_a = __esm({ async "a.js"() {
+	await init_b();
+} });
+
+//#endregion
+//#region entry.js
+var require_entry = __commonJS({ "entry.js"() {
+	init_a().then(function() {
+		return a_exports;
+	});
+	init_b().then(function() {
+		return b_exports;
+	});
+	Promise.resolve().then(function() {
+		return __toESM(require_c());
+	});
+	Promise.resolve().then(function() {
+		return __toESM(require_entry());
+	});
 	await 0;
 } });
 

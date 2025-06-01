@@ -21,6 +21,10 @@ impl ImportKind {
   pub fn is_static(&self) -> bool {
     matches!(self, Self::Import | Self::Require | Self::AtImport | Self::UrlImport)
   }
+
+  pub fn is_dynamic(&self) -> bool {
+    matches!(self, Self::DynamicImport)
+  }
 }
 
 impl TryFrom<&str> for ImportKind {

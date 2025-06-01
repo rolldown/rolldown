@@ -11,9 +11,8 @@ use oxc::{
   span::{Atom, GetSpan, GetSpanMut, SPAN},
 };
 use rolldown_common::{
-  AstScopes, EcmaModuleAstUsage, ExportsKind, ImportRecordIdx, ImportRecordMeta,
-  MemberExprRefResolution, Module, ModuleIdx, ModuleType, OutputFormat, Platform, SymbolRef,
-  WrapKind,
+  AstScopes, ExportsKind, ImportRecordIdx, ImportRecordMeta, MemberExprRefResolution, Module,
+  ModuleIdx, ModuleType, OutputFormat, Platform, SymbolRef, WrapKind,
 };
 use rolldown_ecmascript_utils::{
   AstSnippet, BindingPatternExt, CallExpressionExt, ExpressionExt, StatementExt,
@@ -888,7 +887,7 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
               // `foo_exports`
               let importee_namespace_name = self.canonical_name_for(importee.namespace_object_ref);
 
-              if importee.ecma_view.ast_usage.contains(EcmaModuleAstUsage::TopLevelAwait) {
+              if importee_linking_info.is_tla_or_contains_tla_dependency {
                 // `init_foo().then(function() { return foo_exports })`
                 Some(
                   self.snippet.callee_then_call_expr(

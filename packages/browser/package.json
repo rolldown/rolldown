@@ -62,6 +62,6 @@
     "preinstall": "npx only-allow pnpm"
   },
   "dependencies": {
-    "@napi-rs/wasm-runtime": "^0.2.8"
+    "@napi-rs/wasm-runtime": "^0.2.10"
   }
 }

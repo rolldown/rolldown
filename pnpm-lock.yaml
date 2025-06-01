@@ -279,7 +279,7 @@ importers:
   packages/browser:
     dependencies:
       '@napi-rs/wasm-runtime':
-        specifier: ^0.2.8
+        specifier: ^0.2.10
         version: 0.2.10
 
   packages/debug:
@@ -441,7 +441,11 @@ importers:
 
   packages/rolldown/npm/linux-x64-musl: {}
 
-  packages/rolldown/npm/wasm32-wasi: {}
+  packages/rolldown/npm/wasm32-wasi:
+    dependencies:
+      '@napi-rs/wasm-runtime':
+        specifier: ^0.2.10
+        version: 0.2.10
 
   packages/rolldown/npm/win32-arm64-msvc: {}
 

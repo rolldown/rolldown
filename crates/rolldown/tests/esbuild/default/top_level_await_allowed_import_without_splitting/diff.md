@@ -67,18 +67,10 @@ var init_a = __esm({ async "a.js"() {
 //#endregion
 //#region entry.js
 var require_entry = __commonJS({ "entry.js"() {
-	init_a().then(function() {
-		return a_exports;
-	});
-	init_b().then(function() {
-		return b_exports;
-	});
-	Promise.resolve().then(function() {
-		return __toESM(require_c());
-	});
-	Promise.resolve().then(function() {
-		return __toESM(require_entry());
-	});
+	init_a().then(() => a_exports);
+	init_b().then(() => b_exports);
+	Promise.resolve().then(() => __toESM(require_c()));
+	Promise.resolve().then(() => __toESM(require_entry()));
 	await 0;
 } });
 
@@ -91,7 +83,7 @@ export default require_entry();
 ===================================================================
 --- esbuild	/out.js
 +++ rolldown	entry.js
-@@ -1,29 +1,41 @@
+@@ -1,29 +1,33 @@
 -var c_exports = {};
 -var init_c = __esm({
 -    async "c.js"() {
@@ -143,18 +135,10 @@ export default require_entry();
 +//#endregion
 +//#region entry.js
 +var require_entry = __commonJS({ "entry.js"() {
-+	init_a().then(function() {
-+		return a_exports;
-+	});
-+	init_b().then(function() {
-+		return b_exports;
-+	});
-+	Promise.resolve().then(function() {
-+		return __toESM(require_c());
-+	});
-+	Promise.resolve().then(function() {
-+		return __toESM(require_entry());
-+	});
++	init_a().then(() => a_exports);
++	init_b().then(() => b_exports);
++	Promise.resolve().then(() => __toESM(require_c()));
++	Promise.resolve().then(() => __toESM(require_entry()));
 +	await 0;
 +} });
 +

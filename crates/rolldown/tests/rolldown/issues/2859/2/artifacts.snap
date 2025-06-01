@@ -48,9 +48,7 @@ const foo = "foo";
 let bar = "";
 bar = "bar";
 var main_default = "default";
-Promise.resolve().then(function() {
-	return require("./main.js");
-}).then((exports$1) => assert.default.deepStrictEqual({ ...exports$1 }, {
+Promise.resolve().then(() => require("./main.js")).then((exports$1) => assert.default.deepStrictEqual({ ...exports$1 }, {
 	foo: "foo",
 	bar: "bar",
 	default: "default"

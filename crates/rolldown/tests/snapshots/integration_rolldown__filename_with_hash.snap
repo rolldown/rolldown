@@ -765,7 +765,7 @@ expression: output
 
 # tests/esbuild/default/dynamic_import_with_template_iife
 
-- a-!~{000}~.js => a-DBSzSY5k.js
+- a-!~{000}~.js => a-DV6Afevb.js
 
 # tests/esbuild/default/empty_export_clause_bundle_as_common_js_issue910
 
@@ -1681,7 +1681,7 @@ expression: output
 
 # tests/esbuild/default/top_level_await_allowed_import_without_splitting
 
-- entry-!~{000}~.js => entry-DenbVBck.js
+- entry-!~{000}~.js => entry-CSaRxcnm.js
 
 # tests/esbuild/default/top_level_await_cjs_dead_branch
 
@@ -4351,15 +4351,15 @@ expression: output
 
 # tests/rolldown/function/inline_dynamic_imports/cjs
 
-- main-!~{000}~.js => main-B2fdVpdn.js
+- main-!~{000}~.js => main-CMFwXJc-.js
 
 # tests/rolldown/function/inline_dynamic_imports/esm
 
-- main-!~{000}~.js => main-CPDJLNEK.js
+- main-!~{000}~.js => main-kNFV32VN.js
 
 # tests/rolldown/function/inline_dynamic_imports/iife
 
-- main-!~{000}~.js => main-BLQa4u04.js
+- main-!~{000}~.js => main-BflUkjtX.js
 
 # tests/rolldown/function/intro/cjs
 
@@ -5370,7 +5370,7 @@ expression: output
 
 # tests/rolldown/topics/live_bindings/default_export_binding_in_common_chunks_cjs
 
-- main-!~{000}~.js => main-CZx5brOf.js
+- main-!~{000}~.js => main-LUYnBTMi.js
 - async-entry-!~{001}~.js => async-entry-DKKrYZuD.js
 
 # tests/rolldown/topics/live_bindings/default_export_decl
@@ -5393,7 +5393,7 @@ expression: output
 
 # tests/rolldown/topics/live_bindings/default_export_expr_in_common_chunks_cjs
 
-- main-!~{000}~.js => main-Cy8VbQqI.js
+- main-!~{000}~.js => main-9uy801aV.js
 - async-entry-!~{001}~.js => async-entry-D6foZElf.js
 
 # tests/rolldown/topics/live_bindings/named_exports
@@ -5412,7 +5412,7 @@ expression: output
 
 # tests/rolldown/topics/live_bindings/named_exports_in_common_chunks_cjs
 
-- main-!~{000}~.js => main-D9IdznfO.js
+- main-!~{000}~.js => main-IMNdm2ip.js
 - async-entry-!~{003}~.js => async-entry-DXj3pnzb.js
 - shared-!~{001}~.js => shared-DlT5txJr.js
 
@@ -5492,7 +5492,7 @@ expression: output
 
 # tests/rolldown/topics/tla/inline_dynamic_import
 
-- main-!~{000}~.js => main-sHy55_9F.js
+- main-!~{000}~.js => main-D0p688Y7.js
 
 # tests/rolldown/topics/tla/inside_try_block
 
@@ -5552,7 +5552,7 @@ expression: output
 
 # tests/rolldown/tree_shaking/dynamic_import_then_destructur
 
-- main-!~{000}~.js => main--_w5viou.js
+- main-!~{000}~.js => main-BBze83cI.js
 
 # tests/rolldown/tree_shaking/dynamic_import_then_destructur_unused
 
@@ -5626,7 +5626,7 @@ expression: output
 
 # tests/rolldown/tree_shaking/side_effect_free_dynamic_importee
 
-- main-!~{000}~.js => main-BtSA6cHk.js
+- main-!~{000}~.js => main-vb0jrLmM.js
 
 # tests/rolldown/tree_shaking/unused_dynamic_imported_chunk
 
@@ -5666,7 +5666,7 @@ expression: output
 
 # tests/rolldown/warnings/invalid_option/unsupported_code_splitting_format
 
-- main-!~{000}~.js => main-ShR1x56W.js
+- main-!~{000}~.js => main-Dy0cF1Ft.js
 
 # tests/rolldown/warnings/minified-with-eval
 

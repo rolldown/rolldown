@@ -862,13 +862,9 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
 
     if rec.meta.contains(ImportRecordMeta::DEAD_DYNAMIC_IMPORT) {
       return Some(
-        self.snippet.promise_resolve_then_call_expr(
-          SPAN,
-          self
-            .snippet
-            .builder
-            .vec1(self.snippet.return_stmt(self.snippet.object_freeze_dynamic_import_polyfill())),
-        ),
+        self
+          .snippet
+          .promise_resolve_then_call_expr(self.snippet.object_freeze_dynamic_import_polyfill()),
       );
     }
     if self.ctx.options.inline_dynamic_imports {
@@ -889,28 +885,16 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
 
               if importee_linking_info.is_tla_or_contains_tla_dependency {
                 // `init_foo().then(function() { return foo_exports })`
-                Some(
-                  self.snippet.callee_then_call_expr(
-                    import_expr.span,
-                    self.snippet.call_expr_expr(importee_wrapper_ref_name),
-                    self.snippet.builder.vec1(
-                      self
-                        .snippet
-                        .return_stmt(self.snippet.id_ref_expr(importee_namespace_name, SPAN)),
-                    ),
-                  ),
-                )
+                Some(self.snippet.callee_then_call_expr(
+                  self.snippet.call_expr_expr(importee_wrapper_ref_name),
+                  self.snippet.id_ref_expr(importee_namespace_name, SPAN),
+                ))
               } else {
                 //  Promise.resolve().then(function() { return (init_foo(), foo_exports) })
-                Some(self.snippet.promise_resolve_then_call_expr(
-                  import_expr.span,
-                  self.snippet.builder.vec1(self.snippet.return_stmt(
-                    self.snippet.seq2_in_paren_expr(
-                      self.snippet.call_expr_expr(importee_wrapper_ref_name),
-                      self.snippet.id_ref_expr(importee_namespace_name, SPAN),
-                    ),
-                  )),
-                ))
+                Some(self.snippet.promise_resolve_then_call_expr(self.snippet.seq2_in_paren_expr(
+                  self.snippet.call_expr_expr(importee_wrapper_ref_name),
+                  self.snippet.id_ref_expr(importee_namespace_name, SPAN),
+                )))
               }
             }
             WrapKind::Cjs => {
@@ -920,15 +904,14 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
                 self.canonical_name_for(importee_linking_info.wrapper_ref.unwrap());
 
               Some(self.snippet.promise_resolve_then_call_expr(
-                import_expr.span,
-                self.snippet.builder.vec1(self.snippet.return_stmt(self.snippet.wrap_with_to_esm(
+                self.snippet.wrap_with_to_esm(
                   self.snippet.builder.expression_identifier(
                     SPAN,
                     self.snippet.builder.atom(to_esm_fn_name.as_str()),
                   ),
                   self.snippet.call_expr_expr(importee_wrapper_ref_name),
                   self.ctx.module.should_consider_node_esm_spec(),
-                ))),
+                ),
               ))
             }
             WrapKind::None => {
@@ -949,9 +932,6 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
     }
     if matches!(self.ctx.options.format, OutputFormat::Cjs) {
       // Convert `import('./foo.mjs')` to `Promise.resolve().then(function() { return require('foo.mjs') })`
-      let rec_id = self.ctx.module.imports.get(&import_expr.span)?;
-      let rec = &self.ctx.module.import_records[*rec_id];
-      let importee_id = rec.resolved_module;
       match &self.ctx.modules[importee_id] {
         Module::Normal(_importee) => {
           let importer_chunk = &self.ctx.chunk_graph.chunk_table[self.ctx.chunk_id];
@@ -959,20 +939,14 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
           let importee_chunk = &self.ctx.chunk_graph.chunk_table[importee_chunk_id];
           let import_path = importer_chunk.import_path_for(importee_chunk);
           let new_expr = self.snippet.promise_resolve_then_call_expr(
-            import_expr.span,
-            self.snippet.builder.vec1(ast::Statement::ReturnStatement(
-              self.snippet.builder.alloc_return_statement(
-                SPAN,
-                Some(ast::Expression::CallExpression(self.snippet.builder.alloc_call_expression(
-                  SPAN,
-                  self.snippet.builder.expression_identifier(SPAN, "require"),
-                  NONE,
-                  self.snippet.builder.vec1(ast::Argument::StringLiteral(
-                    self.snippet.alloc_string_literal(&import_path, import_expr.span),
-                  )),
-                  false,
-                ))),
-              ),
+            ast::Expression::CallExpression(self.snippet.builder.alloc_call_expression(
+              SPAN,
+              self.snippet.builder.expression_identifier(SPAN, "require"),
+              NONE,
+              self.snippet.builder.vec1(ast::Argument::StringLiteral(
+                self.snippet.alloc_string_literal(&import_path, import_expr.span),
+              )),
+              false,
             )),
           );
           return Some(new_expr);

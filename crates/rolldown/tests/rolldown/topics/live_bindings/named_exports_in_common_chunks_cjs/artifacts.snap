@@ -29,9 +29,7 @@ node_assert.default.strictEqual(require_shared.count, require_shared.count);
 const require_shared = require('./shared.js');
 
 //#region main.js
-Promise.resolve().then(function() {
-	return require("./async-entry.js");
-});
+Promise.resolve().then(() => require("./async-entry.js"));
 
 //#endregion
 Object.defineProperty(exports, 'count', {

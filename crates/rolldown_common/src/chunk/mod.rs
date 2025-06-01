@@ -188,28 +188,25 @@ impl Chunk {
     Ok(PreliminaryFilename::new(name, hash_placeholder))
   }
 
-  pub fn get_preserve_modules_chunk_name(
+  pub fn get_preserve_modules_chunk_name<'a>(
     &self,
     options: &NormalizedBundlerOptions,
-    chunk_name: &str,
-  ) -> Cow<str> {
+    chunk_name: &'a str,
+  ) -> Cow<'a, str> {
     let p = PathBuf::from(chunk_name);
-    if p.is_absolute() {
+    let p = if p.is_absolute() {
       if let Some(ref preserve_modules_root) = options.preserve_modules_root {
         if chunk_name.starts_with(preserve_modules_root) {
-          return Cow::Owned(
-            chunk_name[preserve_modules_root.len()..]
-              .trim_start_matches('/')
-              .trim_start_matches('\\')
-              .to_string(),
+          return Cow::Borrowed(
+            chunk_name[preserve_modules_root.len()..].trim_start_matches(['/', '\\']),
           );
         }
       }
-      let p = p.relative(self.input_base.as_str());
-      Cow::Owned(p.to_slash_lossy().to_string())
+      p.relative(self.input_base.as_str())
     } else {
-      Cow::Owned(PathBuf::from(&options.virtual_dirname).join(p).to_slash_lossy().to_string())
-    }
+      PathBuf::from(&options.virtual_dirname).join(p)
+    };
+    Cow::Owned(p.to_slash_lossy().into_owned())
   }
 
   pub async fn generate_css_preliminary_filename(

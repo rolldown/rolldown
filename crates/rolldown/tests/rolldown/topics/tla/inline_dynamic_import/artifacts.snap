@@ -29,9 +29,7 @@ async function getEnv() {
 var ccc;
 var init_b = __esm({ async "b.js"() {
 	await init_c();
-	ccc = await Promise.resolve().then(function() {
-		return init_c(), c_exports;
-	});
+	ccc = await Promise.resolve().then(() => (init_c(), c_exports));
 } });
 
 //#endregion
@@ -49,9 +47,7 @@ var init_a = __esm({ async "a.js"() {
 //#endregion
 //#region main.js
 var main_default = async () => {
-	return await init_a().then(function() {
-		return a_exports;
-	}).then(({ buildDevConfig: buildDevConfig$1 }) => buildDevConfig$1());
+	return await init_a().then(() => a_exports).then(({ buildDevConfig: buildDevConfig$1 }) => buildDevConfig$1());
 };
 
 //#endregion

@@ -52,9 +52,7 @@ const require_foo = require('./foo.js');
 //#region entry.js
 require_foo.init_foo();
 const foo = (require_foo.init_foo(), require_foo.__toCommonJS(require_foo.foo_exports));
-input.works = Promise.resolve().then(function() {
-	return require("./foo2.js");
-}).then((foo3) => foo.bar === 123 && require_foo.bar === 123 && foo3.bar === 123 && foo[Math.random() < 1 && "__esModule"] === true && require_foo.foo_exports[Math.random() < 1 && "__esModule"] === void 0 && foo3[Math.random() < 1 && "__esModule"] === void 0);
+input.works = Promise.resolve().then(() => require("./foo2.js")).then((foo3) => foo.bar === 123 && require_foo.bar === 123 && foo3.bar === 123 && foo[Math.random() < 1 && "__esModule"] === true && require_foo.foo_exports[Math.random() < 1 && "__esModule"] === void 0 && foo3[Math.random() < 1 && "__esModule"] === void 0);
 
 //#endregion
 ```
@@ -130,9 +128,7 @@ var init_foo = __esm({ "foo.js"() {
 //#region entry.js
 init_foo();
 const foo = (init_foo(), __toCommonJS(foo_exports));
-input.works = Promise.resolve().then(function() {
-	return init_foo(), foo_exports;
-}).then((foo3) => foo.bar === 123 && bar === 123 && foo3.bar === 123 && foo[Math.random() < 1 && "__esModule"] === true && foo_exports[Math.random() < 1 && "__esModule"] === void 0 && foo3[Math.random() < 1 && "__esModule"] === void 0);
+input.works = Promise.resolve().then(() => (init_foo(), foo_exports)).then((foo3) => foo.bar === 123 && bar === 123 && foo3.bar === 123 && foo[Math.random() < 1 && "__esModule"] === true && foo_exports[Math.random() < 1 && "__esModule"] === void 0 && foo3[Math.random() < 1 && "__esModule"] === void 0);
 
 //#endregion
 })();
@@ -165,9 +161,7 @@ var init_foo = __esm({ "foo.js"() {
 //#region entry.js
 init_foo();
 const foo = (init_foo(), __toCommonJS(foo_exports));
-input.works = Promise.resolve().then(function() {
-	return init_foo(), foo_exports;
-}).then((foo3) => foo.bar === 123 && bar === 123 && foo3.bar === 123 && foo[Math.random() < 1 && "__esModule"] === true && foo_exports[Math.random() < 1 && "__esModule"] === void 0 && foo3[Math.random() < 1 && "__esModule"] === void 0);
+input.works = Promise.resolve().then(() => (init_foo(), foo_exports)).then((foo3) => foo.bar === 123 && bar === 123 && foo3.bar === 123 && foo[Math.random() < 1 && "__esModule"] === true && foo_exports[Math.random() < 1 && "__esModule"] === void 0 && foo3[Math.random() < 1 && "__esModule"] === void 0);
 
 //#endregion
 });

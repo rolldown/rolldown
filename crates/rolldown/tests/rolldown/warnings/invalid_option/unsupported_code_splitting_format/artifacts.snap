@@ -28,9 +28,7 @@ var init_lib = __esm({ "lib.js"() {
 
 //#endregion
 //#region main.js
-Promise.resolve().then(function() {
-	return init_lib(), lib_exports;
-}).then(console.log);
+Promise.resolve().then(() => (init_lib(), lib_exports)).then(console.log);
 
 //#endregion
 })();

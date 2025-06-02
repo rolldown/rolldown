@@ -3,9 +3,8 @@ use oxc::{
   ast::{
     AstBuilder, NONE,
     ast::{
-      self, Argument, BindingIdentifier, ClassElement, Declaration, Expression, FunctionType,
-      ImportOrExportKind, NumberBase, ObjectPropertyKind, PropertyKind, Statement,
-      VariableDeclarationKind,
+      self, Argument, ClassElement, Declaration, Expression, FunctionType, ImportOrExportKind,
+      NumberBase, ObjectPropertyKind, PropertyKind, Statement, VariableDeclarationKind,
     },
   },
   span::{Atom, CompactStr, SPAN, Span},
@@ -718,32 +717,13 @@ impl<'ast> AstSnippet<'ast> {
     ))
   }
 
-  /// Promise.resolve().then(function() {})
+  /// Promise.resolve().then(() => expr))
   pub fn promise_resolve_then_call_expr(
     &self,
-    span: Span,
-    statements: allocator::Vec<'ast, Statement<'ast>>,
+    expr: ast::Expression<'ast>,
   ) -> ast::Expression<'ast> {
-    let arguments = self.builder.vec1(Argument::FunctionExpression(self.builder.alloc_function(
+    ast::Expression::CallExpression(self.builder.alloc_call_expression(
       SPAN,
-      ast::FunctionType::FunctionExpression,
-      None::<BindingIdentifier>,
-      false,
-      false,
-      false,
-      NONE,
-      NONE,
-      self.builder.formal_parameters(
-        SPAN,
-        ast::FormalParameterKind::Signature,
-        self.builder.vec_with_capacity(2),
-        NONE,
-      ),
-      NONE,
-      Some(self.builder.function_body(SPAN, self.builder.vec(), statements)),
-    )));
-
-    let callee =
       ast::Expression::StaticMemberExpression(self.builder.alloc_static_member_expression(
         SPAN,
         ast::Expression::CallExpression(self.builder.alloc_call_expression(
@@ -760,47 +740,30 @@ impl<'ast> AstSnippet<'ast> {
         )),
         self.id_name("then", SPAN),
         false,
-      ));
-    ast::Expression::CallExpression(
-      self.builder.alloc_call_expression(span, callee, NONE, arguments, false),
-    )
+      )),
+      NONE,
+      self.builder.vec1(Argument::from(self.only_return_arrow_expr(expr))),
+      false,
+    ))
   }
 
   pub fn callee_then_call_expr(
     &self,
-    span: Span,
-    call_expr: Expression<'ast>,
-    statements: allocator::Vec<'ast, Statement<'ast>>,
+    call_expr: ast::Expression<'ast>,
+    return_expr: ast::Expression<'ast>,
   ) -> ast::Expression<'ast> {
-    let arguments = self.builder.vec1(Argument::FunctionExpression(self.builder.alloc_function(
+    ast::Expression::CallExpression(self.builder.alloc_call_expression(
       SPAN,
-      ast::FunctionType::FunctionExpression,
-      None::<BindingIdentifier>,
-      false,
-      false,
-      false,
-      NONE,
-      NONE,
-      self.builder.formal_parameters(
-        SPAN,
-        ast::FormalParameterKind::Signature,
-        self.builder.vec_with_capacity(2),
-        NONE,
-      ),
-      NONE,
-      Some(self.builder.function_body(SPAN, self.builder.vec(), statements)),
-    )));
-
-    let callee =
       ast::Expression::StaticMemberExpression(self.builder.alloc_static_member_expression(
         SPAN,
         call_expr,
         self.id_name("then", SPAN),
         false,
-      ));
-    ast::Expression::CallExpression(
-      self.builder.alloc_call_expression(span, callee, NONE, arguments, false),
-    )
+      )),
+      NONE,
+      self.builder.vec1(Argument::from(self.only_return_arrow_expr(return_expr))),
+      false,
+    ))
   }
 
   // return xxx

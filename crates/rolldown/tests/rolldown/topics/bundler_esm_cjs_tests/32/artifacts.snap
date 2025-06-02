@@ -31,9 +31,7 @@ Variant: (format: Cjs)
 ```js
 
 //#region entry.js
-input.works = Promise.resolve().then(function() {
-	return require("./foo.js");
-}).then((foo) => foo.default === 123 && foo.__esModule === void 0);
+input.works = Promise.resolve().then(() => require("./foo.js")).then((foo) => foo.default === 123 && foo.__esModule === void 0);
 
 //#endregion
 ```
@@ -70,9 +68,7 @@ var init_foo = __esm({ "foo.js"() {
 
 //#endregion
 //#region entry.js
-input.works = Promise.resolve().then(function() {
-	return init_foo(), foo_exports;
-}).then((foo) => foo.default === 123 && foo.__esModule === void 0);
+input.works = Promise.resolve().then(() => (init_foo(), foo_exports)).then((foo) => foo.default === 123 && foo.__esModule === void 0);
 
 //#endregion
 })();
@@ -103,9 +99,7 @@ var init_foo = __esm({ "foo.js"() {
 
 //#endregion
 //#region entry.js
-input.works = Promise.resolve().then(function() {
-	return init_foo(), foo_exports;
-}).then((foo) => foo.default === 123 && foo.__esModule === void 0);
+input.works = Promise.resolve().then(() => (init_foo(), foo_exports)).then((foo) => foo.default === 123 && foo.__esModule === void 0);
 
 //#endregion
 });

@@ -31,7 +31,9 @@
     "pnpm-lock.yaml",
     "rollup",
     "scripts/snap-diff/stats",
-    "scripts/snap-diff/summary"
+    "scripts/snap-diff/summary",
+    "**/diff.md",
+    "**/bypass.md"
   ],
   "plugins": [
     "https://plugins.dprint.dev/typescript-0.94.0.wasm",

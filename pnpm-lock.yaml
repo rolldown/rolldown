@@ -6,6 +6,9 @@ settings:
 
 catalogs:
   default:
+    '@napi-rs/wasm-runtime':
+      specifier: ^0.2.10
+      version: 0.2.10
     '@oxc-node/cli':
       specifier: ^0.0.27
       version: 0.0.27
@@ -279,7 +282,7 @@ importers:
   packages/browser:
     dependencies:
       '@napi-rs/wasm-runtime':
-        specifier: ^0.2.10
+        specifier: 'catalog:'
         version: 0.2.10
 
   packages/debug:
@@ -444,7 +447,7 @@ importers:
   packages/rolldown/npm/wasm32-wasi:
     dependencies:
       '@napi-rs/wasm-runtime':
-        specifier: ^0.2.10
+        specifier: 'catalog:'
         version: 0.2.10
 
   packages/rolldown/npm/win32-arm64-msvc: {}

@@ -1,6 +1,7 @@
 # Failed Cases
+## [ts_import_star_and_common_js](../../../crates/rolldown/tests/esbuild/importstar_ts/ts_import_star_and_common_js/diff.md)
+  diff
 # Passed Cases
-## [ts_import_star_and_common_js](../../../crates/rolldown/tests/esbuild/importstar_ts/ts_import_star_and_common_js)
 ## [ts_import_star_common_js_unused](../../../crates/rolldown/tests/esbuild/importstar_ts/ts_import_star_common_js_unused)
 ## [ts_import_star_export_import_star_unused](../../../crates/rolldown/tests/esbuild/importstar_ts/ts_import_star_export_import_star_unused)
 ## [ts_import_star_export_star_as_unused](../../../crates/rolldown/tests/esbuild/importstar_ts/ts_import_star_export_star_as_unused)

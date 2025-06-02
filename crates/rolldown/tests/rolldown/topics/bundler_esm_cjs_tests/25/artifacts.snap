@@ -8,10 +8,8 @@ source: crates/rolldown_testing/src/integration_test.rs
 ```js
 
 //#region bar.js
-var baz;
-var init_bar = __esm({ "bar.js"() {
-	baz = 123;
-} });
+let baz = 123;
+var init_bar = __esm({ "bar.js"() {} });
 
 //#endregion
 //#region foo.js
@@ -40,10 +38,8 @@ Variant: (format: Cjs)
 
 
 //#region bar.js
-var baz;
-var init_bar = __esm({ "bar.js"() {
-	baz = 123;
-} });
+let baz = 123;
+var init_bar = __esm({ "bar.js"() {} });
 
 //#endregion
 //#region foo.js
@@ -74,10 +70,8 @@ Variant: (format: Iife)
 
 
 //#region bar.js
-var baz;
-var init_bar = __esm({ "bar.js"() {
-	baz = 123;
-} });
+let baz = 123;
+var init_bar = __esm({ "bar.js"() {} });
 
 //#endregion
 //#region foo.js
@@ -112,10 +106,8 @@ Variant: (format: Umd)
 
 
 //#region bar.js
-var baz;
-var init_bar = __esm({ "bar.js"() {
-	baz = 123;
-} });
+let baz = 123;
+var init_bar = __esm({ "bar.js"() {} });
 
 //#endregion
 //#region foo.js

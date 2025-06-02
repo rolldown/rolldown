@@ -31,10 +31,8 @@ import assert from "node:assert";
 //#region node_modules/demo-pkg/module.js
 var module_exports = {};
 __export(module_exports, { default: () => module_default });
-var module_default;
-var init_module = __esm({ "node_modules/demo-pkg/module.js"() {
-	module_default = "module";
-} });
+var module_default = "module";
+var init_module = __esm({ "node_modules/demo-pkg/module.js"() {} });
 
 //#endregion
 //#region src/test-main.js
@@ -52,15 +50,18 @@ assert.equal(module_default, "module");
 ===================================================================
 --- esbuild	/Users/user/project/out.js
 +++ rolldown	entry.js
-@@ -3,11 +3,11 @@
+@@ -1,13 +1,11 @@
+ var module_exports = {};
+ __export(module_exports, {
      default: () => module_default
  });
- var module_default;
+-var module_default;
++var module_default = "module";
  var init_module = __esm({
 -    "Users/user/project/node_modules/demo-pkg/module.js"() {
-+    "node_modules/demo-pkg/module.js"() {
-         module_default = "module";
-     }
+-        module_default = "module";
+-    }
++    "node_modules/demo-pkg/module.js"() {}
  });
 -console.log((init_module(), __toCommonJS(module_exports)));
 +console.log((init_module(), __toCommonJS(module_exports)), module_default);

@@ -36,10 +36,8 @@ input.works = import("./foo2.js").then((foo3) => foo.bar === 123 && foo.__esModu
 //#region foo.js
 var foo_exports = {};
 __export(foo_exports, { bar: () => bar });
-var bar;
-var init_foo = __esm({ "foo.js"() {
-	bar = 123;
-} });
+let bar = 123;
+var init_foo = __esm({ "foo.js"() {} });
 
 //#endregion
 export { __toCommonJS, bar, foo_exports, init_foo };
@@ -94,10 +92,8 @@ input.works = Promise.resolve().then(function() {
 //#region foo.js
 var foo_exports = {};
 __export(foo_exports, { bar: () => bar });
-var bar;
-var init_foo = __esm({ "foo.js"() {
-	bar = 123;
-} });
+let bar = 123;
+var init_foo = __esm({ "foo.js"() {} });
 
 //#endregion
 Object.defineProperty(exports, '__toCommonJS', {
@@ -163,10 +159,8 @@ Variant: (format: Iife)
 //#region foo.js
 var foo_exports = {};
 __export(foo_exports, { bar: () => bar });
-var bar;
-var init_foo = __esm({ "foo.js"() {
-	bar = 123;
-} });
+let bar = 123;
+var init_foo = __esm({ "foo.js"() {} });
 
 //#endregion
 //#region entry.js
@@ -212,10 +206,8 @@ Variant: (format: Umd)
 //#region foo.js
 var foo_exports = {};
 __export(foo_exports, { bar: () => bar });
-var bar;
-var init_foo = __esm({ "foo.js"() {
-	bar = 123;
-} });
+let bar = 123;
+var init_foo = __esm({ "foo.js"() {} });
 
 //#endregion
 //#region entry.js

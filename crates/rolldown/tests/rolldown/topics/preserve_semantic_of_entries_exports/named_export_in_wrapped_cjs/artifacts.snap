@@ -15,10 +15,9 @@ __export(main_exports, {
 	default: () => main_default,
 	foo: () => foo
 });
-var foo, main_default;
+const foo = "foo";
+var main_default = "main";
 var init_main = __esm({ "main.js"() {
-	foo = "foo";
-	main_default = "main";
 	console.log((init_main(), __toCommonJS(main_exports)));
 } });
 

@@ -147,10 +147,7 @@ export function bindingifyResolveId(
         };
       }
       if (typeof ret === 'string') {
-        return {
-          id: ret,
-          normalizeExternalId: true,
-        };
+        return { id: ret, normalizeExternalId: false };
       }
 
       // Make sure the `moduleSideEffects` is update to date

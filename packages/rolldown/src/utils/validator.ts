@@ -344,6 +344,9 @@ const InputOptionsSchema = v.strictObject({
   input: v.optional(InputOptionSchema),
   plugins: v.optional(v.custom<RolldownPluginOption>(() => true)),
   external: v.optional(ExternalSchema),
+  makeAbsoluteExternalsRelative: v.optional(
+    v.union([v.boolean(), v.literal('ifRelativeSource')]),
+  ),
   resolve: v.optional(ResolveOptionsSchema),
   cwd: v.pipe(
     v.optional(v.string()),
@@ -450,6 +453,10 @@ const InputCliOverrideSchema = v.strictObject({
   treeshake: v.pipe(
     v.optional(v.boolean()),
     v.description('enable treeshaking'),
+  ),
+  makeAbsoluteExternalsRelative: v.pipe(
+    v.optional(v.boolean()),
+    v.description('Prevent normalization of external imports'),
   ),
   jsx: v.pipe(
     v.optional(

@@ -38,7 +38,7 @@ pub struct NormalizedBundlerOptions {
   // --- Input
   pub input: Vec<InputItem>,
   pub cwd: PathBuf,
-  pub external: Option<IsExternal>,
+  pub external: IsExternal,
   /// corresponding to `false | NormalizedTreeshakeOption`
   pub treeshake: NormalizedTreeshakeOptions,
   pub platform: Platform,

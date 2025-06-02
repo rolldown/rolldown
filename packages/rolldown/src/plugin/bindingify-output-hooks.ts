@@ -188,17 +188,18 @@ export function bindingifyGenerateBundle(
         updated: new Set(),
         deleted: new Set(),
       } as ChangedOutputs;
-      const output = transformToOutputBundle(bundle, changed);
+      const context = new PluginContextImpl(
+        args.outputOptions,
+        ctx,
+        args.plugin,
+        args.pluginContextData,
+        args.onLog,
+        args.logLevel,
+        args.watchMode,
+      );
+      const output = transformToOutputBundle(context, bundle, changed);
       await handler.call(
-        new PluginContextImpl(
-          args.outputOptions,
-          ctx,
-          args.plugin,
-          args.pluginContextData,
-          args.onLog,
-          args.logLevel,
-          args.watchMode,
-        ),
+        context,
         new NormalizedOutputOptionsImpl(
           opts,
           args.outputOptions,
@@ -228,17 +229,18 @@ export function bindingifyWriteBundle(
         updated: new Set(),
         deleted: new Set(),
       } as ChangedOutputs;
-      const output = transformToOutputBundle(bundle, changed);
+      const context = new PluginContextImpl(
+        args.outputOptions,
+        ctx,
+        args.plugin,
+        args.pluginContextData,
+        args.onLog,
+        args.logLevel,
+        args.watchMode,
+      );
+      const output = transformToOutputBundle(context, bundle, changed);
       await handler.call(
-        new PluginContextImpl(
-          args.outputOptions,
-          ctx,
-          args.plugin,
-          args.pluginContextData,
-          args.onLog,
-          args.logLevel,
-          args.watchMode,
-        ),
+        context,
         new NormalizedOutputOptionsImpl(
           opts,
           args.outputOptions,

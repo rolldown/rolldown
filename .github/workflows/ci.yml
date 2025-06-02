@@ -43,7 +43,8 @@ jobs:
               - 'Cargo.toml'
               - 'Cargo.lock'
               - 'rust-toolchain.toml'
-              - 'deny.toml'
+              - 'pnpm-lock.yaml'
+              - 'pnpm-workspace.yaml'
               - '.gitattributes'
             node-changes:
               - *rust-changes
@@ -51,8 +52,6 @@ jobs:
               - 'examples/**'
               - 'scripts/**'
               - 'package.json'
-              - 'pnpm-lock.yaml'
-              - 'pnpm-workspace.yaml'
             pluginutils-changes:
               - 'packages/pluginutils/**'
               - 'package.json'

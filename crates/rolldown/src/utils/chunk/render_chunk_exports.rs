@@ -3,7 +3,7 @@ use std::fmt::Write as _;
 
 use itertools::Itertools;
 use rolldown_common::{
-  Chunk, ChunkKind, EntryPointKind, ExportsKind, IndexModules, ModuleIdx, NormalizedBundlerOptions,
+  Chunk, ChunkKind, ExportsKind, IndexModules, ModuleIdx, NormalizedBundlerOptions,
   OutputExports, OutputFormat, SymbolRef, SymbolRefDb, WrapKind,
 };
 use rolldown_rstr::Rstr;
@@ -105,7 +105,12 @@ pub fn render_chunk_exports(
         .map(|(exported_name, export_ref)| {
           let canonical_ref = link_output.symbol_db.canonical_ref_for(export_ref);
           let symbol = link_output.symbol_db.get(canonical_ref);
-          let canonical_name = &chunk.canonical_names[&canonical_ref];
+          let canonical_name = &chunk.canonical_names.get(&canonical_ref).unwrap_or_else(|| {
+            panic!(
+              "Canonical name not found for {:?} in chunk {:?} kind: {:?} for name {}",
+              canonical_ref, chunk.name, chunk.kind, exported_name
+            )
+          });
           if let Some(ns_alias) = &symbol.namespace_alias {
             let canonical_ns_name = &chunk.canonical_names[&ns_alias.namespace_ref];
             let property_name = &ns_alias.property_name;
@@ -120,7 +125,7 @@ pub fn render_chunk_exports(
             ));
           }
 
-          if canonical_name == &exported_name {
+          if canonical_name == &&exported_name {
             Cow::Borrowed(canonical_name.as_str())
           } else {
             Cow::Owned(concat_string!(
@@ -300,51 +305,21 @@ pub fn render_object_define_property(key: &str, value: &str) -> String {
   )
 }
 
-pub fn get_export_items(
-  chunk: &Chunk,
-  graph: &LinkStageOutput,
-  options: &NormalizedBundlerOptions,
-) -> Vec<(Rstr, SymbolRef)> {
-  let get_exports_items_from_common_chunk = |chunk: &Chunk| {
-    let mut tmp = chunk
-      .exports_to_other_chunks
-      .iter()
-      .map(|(export_ref, alias)| (alias.clone(), *export_ref))
-      .collect::<Vec<_>>();
+pub fn get_export_items(chunk: &Chunk) -> Vec<(Rstr, SymbolRef)> {
+  let mut export_items = chunk
+    .exports_to_other_chunks
+    .iter()
+    .flat_map(|(export_ref, alias_list)| {
+      alias_list.iter().map(|alias| (alias.clone(), *export_ref))
+    })
+    .collect::<Vec<_>>();
 
-    tmp.sort_unstable_by(|a, b| a.0.as_str().cmp(b.0.as_str()));
+  export_items.sort_unstable_by(|a, b| a.0.as_str().cmp(b.0.as_str()));
 
-    tmp
-  };
-
-  match chunk.kind {
-    ChunkKind::EntryPoint { module: module_idx, is_user_defined, .. } => {
-      let module = graph.module_table[module_idx].as_normal().expect("should be normal module");
-      // Check if the module is dynamically imported. This ensures that entry points with
-      // dynamic import references are not folded into a common chunk when `preserveModules` is enabled.
-      let is_dynamic_imported = !module.ecma_view.dynamic_importers.is_empty();
-      if options.preserve_modules && !is_user_defined && !is_dynamic_imported {
-        return get_exports_items_from_common_chunk(chunk);
-      }
-      let meta = &graph.metas[module_idx];
-      meta
-        .referenced_canonical_exports_symbols(
-          module_idx,
-          if is_user_defined { EntryPointKind::UserDefined } else { EntryPointKind::DynamicImport },
-          &graph.dynamic_import_exports_usage_map,
-        )
-        .map(|(name, export)| (name.clone(), export.symbol_ref))
-        .collect::<Vec<_>>()
-    }
-    ChunkKind::Common => get_exports_items_from_common_chunk(chunk),
-  }
+  export_items
 }
 
-pub fn get_chunk_export_names(
-  chunk: &Chunk,
-  graph: &LinkStageOutput,
-  options: &NormalizedBundlerOptions,
-) -> Vec<Rstr> {
+pub fn get_chunk_export_names(chunk: &Chunk, graph: &LinkStageOutput) -> Vec<Rstr> {
   if let ChunkKind::EntryPoint { module: entry_id, .. } = &chunk.kind {
     let entry_meta = &graph.metas[*entry_id];
     if matches!(entry_meta.wrap_kind, WrapKind::Cjs) {
@@ -352,10 +327,7 @@ pub fn get_chunk_export_names(
     }
   }
 
-  get_export_items(chunk, graph, options)
-    .into_iter()
-    .map(|(exported_name, _)| exported_name)
-    .collect::<Vec<_>>()
+  get_export_items(chunk).into_iter().map(|(exported_name, _)| exported_name).collect::<Vec<_>>()
 }
 
 pub fn get_chunk_export_names_with_ctx(ctx: &GenerateContext<'_>) -> Vec<Rstr> {

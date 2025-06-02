@@ -191,7 +191,7 @@ impl GenerateStage<'_> {
       .iter()
       .map(|item| {
         let mut map: FxIndexMap<SymbolRef, Vec<Rstr>> = FxIndexMap::default();
-        get_export_items(item, self.link_output, self.options).into_iter().for_each(|(k, v)| {
+        get_export_items(item).into_iter().for_each(|(k, v)| {
           map.entry(v).or_default().push(k);
         });
         map

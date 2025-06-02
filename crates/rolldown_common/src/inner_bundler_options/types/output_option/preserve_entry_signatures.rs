@@ -16,3 +16,13 @@ pub enum PreserveEntrySignatures {
   #[default]
   False,
 }
+
+impl PreserveEntrySignatures {
+  /// Returns `true` if the preserve entry signatures is [`AllowExtension`].
+  ///
+  /// [`AllowExtension`]: PreserveEntrySignatures::AllowExtension
+  #[must_use]
+  pub fn is_allow_extension(&self) -> bool {
+    matches!(self, Self::AllowExtension)
+  }
+}

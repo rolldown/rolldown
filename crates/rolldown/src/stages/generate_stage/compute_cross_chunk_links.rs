@@ -6,8 +6,8 @@ use crate::chunk_graph::ChunkGraph;
 use itertools::{Itertools, multizip};
 use oxc_index::{IndexVec, index_vec};
 use rolldown_common::{
-  ChunkIdx, ChunkKind, CrossChunkImportItem, ExportsKind, ImportKind, ImportRecordMeta, Module,
-  ModuleIdx, NamedImport, OutputFormat, SymbolRef, WrapKind,
+  ChunkIdx, ChunkKind, CrossChunkImportItem, EntryPointKind, ExportsKind, ImportKind,
+  ImportRecordMeta, Module, ModuleIdx, NamedImport, OutputFormat, SymbolRef, WrapKind,
 };
 use rolldown_rstr::{Rstr, ToRstr};
 use rolldown_utils::concat_string;
@@ -20,7 +20,7 @@ use rustc_hash::{FxHashMap, FxHashSet};
 type IndexChunkDependedSymbols = IndexVec<ChunkIdx, FxIndexSet<SymbolRef>>;
 type IndexChunkImportsFromExternalModules =
   IndexVec<ChunkIdx, FxHashMap<ModuleIdx, Vec<NamedImport>>>;
-type IndexChunkExportedSymbols = IndexVec<ChunkIdx, FxHashSet<SymbolRef>>;
+type IndexChunkExportedSymbols = IndexVec<ChunkIdx, FxHashMap<SymbolRef, Vec<Rstr>>>;
 type IndexCrossChunkImports = IndexVec<ChunkIdx, FxHashSet<ChunkIdx>>;
 type IndexCrossChunkDynamicImports = IndexVec<ChunkIdx, FxIndexSet<ChunkIdx>>;
 type IndexImportsFromOtherChunks =
@@ -33,7 +33,7 @@ impl GenerateStage<'_> {
     let mut index_chunk_depended_symbols: IndexChunkDependedSymbols =
       index_vec![FxIndexSet::<SymbolRef>::default(); chunk_graph.chunk_table.len()];
     let mut index_chunk_exported_symbols: IndexChunkExportedSymbols =
-      index_vec![FxHashSet::<SymbolRef>::default(); chunk_graph.chunk_table.len()];
+      index_vec![FxHashMap::<SymbolRef, Vec<Rstr>>::default(); chunk_graph.chunk_table.len()];
     let mut index_chunk_imports_from_external_modules: IndexChunkImportsFromExternalModules = index_vec![FxHashMap::<ModuleIdx, Vec<NamedImport>>::default(); chunk_graph.chunk_table.len()];
 
     let mut index_imports_from_other_chunks: IndexImportsFromOtherChunks = index_vec![FxHashMap::<ChunkIdx, Vec<CrossChunkImportItem>>::default(); chunk_graph.chunk_table.len()];
@@ -56,7 +56,6 @@ impl GenerateStage<'_> {
       &mut index_cross_chunk_imports,
       &mut index_imports_from_other_chunks,
     );
-
     self.deconflict_exported_names(chunk_graph, &index_chunk_exported_symbols);
 
     let index_sorted_cross_chunk_imports = index_cross_chunk_imports
@@ -290,6 +289,7 @@ impl GenerateStage<'_> {
 
   /// - Filter out depended symbols to come from other chunks
   /// - Mark exports of importee chunks
+  #[allow(clippy::too_many_lines)]
   fn compute_chunk_imports(
     &self,
     chunk_graph: &ChunkGraph,
@@ -299,6 +299,34 @@ impl GenerateStage<'_> {
     index_imports_from_other_chunks: &mut IndexImportsFromOtherChunks,
   ) {
     chunk_graph.chunk_table.iter_enumerated().for_each(|(chunk_id, chunk)| {
+      match chunk.kind {
+        ChunkKind::EntryPoint { module: module_idx, is_user_defined, .. } => {
+          let module = &self.link_output.module_table[module_idx]
+            .as_normal()
+            .expect("Should be normal module");
+          let is_dynamic_imported = !module.ecma_view.dynamic_importers.is_empty();
+          if !(self.options.preserve_modules && !is_user_defined && !is_dynamic_imported) {
+            // If the entry point is external, we don't need to compute exports.
+            let meta = &self.link_output.metas[module_idx];
+            for (name, symbol) in meta
+              .referenced_canonical_exports_symbols(
+                module_idx,
+                if is_user_defined {
+                  EntryPointKind::UserDefined
+                } else {
+                  EntryPointKind::DynamicImport
+                },
+                &self.link_output.dynamic_import_exports_usage_map,
+              )
+              .map(|(name, export)| (name, export.symbol_ref))
+            {
+              index_chunk_exported_symbols[chunk_id].entry(symbol).or_default().push(name.clone());
+            }
+          }
+        }
+        ChunkKind::Common => {}
+      }
+
       let chunk_meta_imports = &index_chunk_depended_symbols[chunk_id];
       for import_ref in chunk_meta_imports.iter().copied() {
         if !self.link_output.used_symbol_refs.contains(&import_ref) {
@@ -322,7 +350,7 @@ impl GenerateStage<'_> {
             .entry(importee_chunk_id)
             .or_default()
             .push(CrossChunkImportItem { import_ref });
-          index_chunk_exported_symbols[importee_chunk_id].insert(import_ref);
+          index_chunk_exported_symbols[importee_chunk_id].entry(import_ref).or_default();
         }
       }
 
@@ -389,20 +417,27 @@ impl GenerateStage<'_> {
     // Generate cross-chunk exports. These must be computed before cross-chunk
     // imports because of export alias renaming, which must consider all export
     // aliases simultaneously to avoid collisions.
-
     for (chunk_id, chunk) in chunk_graph.chunk_table.iter_mut_enumerated() {
       let mut name_count = FxHashMap::with_capacity(index_chunk_exported_symbols[chunk_id].len());
-      for chunk_export in index_chunk_exported_symbols[chunk_id]
+      for (chunk_export, predefined_names) in index_chunk_exported_symbols[chunk_id]
         .iter()
-        .sorted_by_cached_key(|symbol_ref| {
+        .sorted_by_cached_key(|(symbol_ref, _predefined_names)| {
           // same deconflict order in deconflict_chunk_symbols.rs
           // https://github.com/rolldown/rolldown/blob/504ea76c00563eb7db7a49c2b6e04b2fbe61bdc1/crates/rolldown/src/utils/chunk/deconflict_chunk_symbols.rs?plain=1#L86-L102
           Reverse::<u32>(self.link_output.module_table[symbol_ref.owner].exec_order())
         })
-        .copied()
       {
-        let original_name: rolldown_rstr::Rstr =
-          chunk_export.name(&self.link_output.symbol_db).to_rstr();
+        let original_name: rolldown_rstr::Rstr = match predefined_names.as_slice() {
+          [] => chunk_export.name(&self.link_output.symbol_db).to_rstr(),
+          lst => {
+            for item in lst {
+              name_count.insert(Cow::Borrowed(item), 0);
+            }
+
+            chunk.exports_to_other_chunks.entry(*chunk_export).or_default().extend_from_slice(lst);
+            continue;
+          }
+        };
         let mut candidate_name = original_name.clone();
         loop {
           let key: Cow<'_, Rstr> = Cow::Owned(candidate_name.clone());
@@ -420,7 +455,11 @@ impl GenerateStage<'_> {
             }
           }
         }
-        chunk.exports_to_other_chunks.insert(chunk_export, candidate_name.clone());
+        chunk
+          .exports_to_other_chunks
+          .entry(*chunk_export)
+          .or_default()
+          .push(candidate_name.clone());
       }
     }
   }

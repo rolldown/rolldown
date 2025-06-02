@@ -1,4 +1,7 @@
 // MULTIPLE ENTRY MODULES
-import hyperCube from './hyper-cube.js';
+import { value as shared } from './lib.js';
+import('./dynamic.js');
 
-console.log(hyperCube(5));
+console.log(`shared: `, shared);
+
+export const value = `feafeaw ${shared}`;

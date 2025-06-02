@@ -6,6 +6,7 @@ import type {
   JsOutputAsset,
   JsOutputChunk,
 } from '../binding';
+import type { PluginContext } from '../plugin/plugin-context';
 import type { OutputBundle } from '../types/output-bundle';
 import type {
   OutputAsset,
@@ -150,6 +151,7 @@ export function handleOutputErrors(output: BindingOutputs): void {
 }
 
 export function transformToOutputBundle(
+  context: PluginContext,
   output: BindingOutputs,
   changed: ChangedOutputs,
 ): OutputBundle {
@@ -160,6 +162,20 @@ export function transformToOutputBundle(
     ]),
   );
   return new Proxy(bundle, {
+    set(_target, _p, _newValue, _receiver) {
+      const originalStackTraceLimit = Error.stackTraceLimit;
+      Error.stackTraceLimit = 2;
+      const message =
+        'This plugin assigns to bundle variable. This is discouraged by Rollup and is not supported by Rolldown. This will be ignored.';
+      const stack = new Error(message).stack ?? message;
+      Error.stackTraceLimit = originalStackTraceLimit;
+
+      context.warn({
+        message: stack,
+        code: 'UNSUPPORTED_BUNDLE_ASSIGNMENT',
+      });
+      return true;
+    },
     deleteProperty(target, property): boolean {
       if (typeof property === 'string') {
         changed.deleted.add(property);

@@ -32,7 +32,7 @@
 
 <div align="center">
 
-[![rolldown-starter-stackblitz](https://developer.stackblitz.com/img/open_in_stackblitz.svg)](https://stackblitz.com/github/rolldown/rolldown-starter-stackblitz)
+[![rolldown-starter-stackblitz](https://developer.stackblitz.com/img/open_in_stackblitz.svg)](https://stackblitz.com/fork/github/rolldown/rolldown-starter-stackblitz)
 
 </div>
 

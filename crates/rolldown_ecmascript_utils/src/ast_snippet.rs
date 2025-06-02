@@ -1,5 +1,5 @@
 use oxc::{
-  allocator::{self, Allocator, Box, Dummy, IntoIn, TakeIn},
+  allocator::{self, Allocator, Box, IntoIn, TakeIn},
   ast::{
     AstBuilder, NONE,
     ast::{
@@ -116,18 +116,6 @@ impl<'ast> AstSnippet<'ast> {
   }
 
   /// `name()`
-  #[inline]
-  pub fn call_expr(&self, name: PassedStr) -> ast::CallExpression<'ast> {
-    self.builder.call_expression(
-      SPAN,
-      self.builder.expression_identifier(SPAN, self.builder.atom(name)),
-      NONE,
-      self.builder.vec(),
-      false,
-    )
-  }
-
-  /// `name()`
   pub fn call_expr_expr(&self, name: PassedStr) -> ast::Expression<'ast> {
     self.builder.expression_call(
       SPAN,
@@ -158,7 +146,13 @@ impl<'ast> AstSnippet<'ast> {
     arg: ast::Expression<'ast>,
   ) -> ast::Expression<'ast> {
     let arg = ast::Argument::from(arg);
-    let mut call_expr = self.call_expr(name);
+    let mut call_expr = self.builder.call_expression(
+      SPAN,
+      self.builder.expression_identifier(SPAN, self.builder.atom(name)),
+      NONE,
+      self.builder.vec(),
+      false,
+    );
     call_expr.arguments.push(arg);
     ast::Expression::CallExpression(call_expr.into_in(self.alloc()))
   }
@@ -215,21 +209,11 @@ impl<'ast> AstSnippet<'ast> {
   }
 
   /// `var [name] = [init]`
-  #[inline]
   pub fn var_decl_stmt(
     &self,
     name: PassedStr,
     init: ast::Expression<'ast>,
   ) -> ast::Statement<'ast> {
-    ast::Statement::from(self.decl_var_decl(name, init))
-  }
-
-  /// `var [name] = [init]`
-  pub fn decl_var_decl(
-    &self,
-    name: PassedStr,
-    init: ast::Expression<'ast>,
-  ) -> ast::Declaration<'ast> {
     let declarations = self.builder.vec1(self.builder.variable_declarator(
       SPAN,
       ast::VariableDeclarationKind::Var,
@@ -242,100 +226,14 @@ impl<'ast> AstSnippet<'ast> {
       false,
     ));
 
-    ast::Declaration::VariableDeclaration(self.builder.alloc_variable_declaration(
-      SPAN,
-      ast::VariableDeclarationKind::Var,
-      declarations,
-      false,
-    ))
-  }
-
-  /// `var [name] = [init]`
-  pub fn var_decl(
-    &self,
-    name: PassedStr,
-    init: ast::Expression<'ast>,
-  ) -> Box<'ast, ast::VariableDeclaration<'ast>> {
-    let declarations = self.builder.vec1(self.builder.variable_declarator(
-      SPAN,
-      ast::VariableDeclarationKind::Var,
-      self.builder.binding_pattern(
-        self.builder.binding_pattern_kind_binding_identifier(SPAN, self.builder.atom(name)),
-        NONE,
-        false,
-      ),
-      Some(init),
-      false,
-    ));
-    self.builder.alloc_variable_declaration(
-      SPAN,
-      ast::VariableDeclarationKind::Var,
-      declarations,
-      false,
-    )
-  }
-
-  /// `var [name];`
-  pub fn var_decl_without_init(
-    &self,
-    name: PassedStr,
-  ) -> Box<'ast, ast::VariableDeclaration<'ast>> {
-    let declarations = self.builder.vec1(self.builder.variable_declarator(
-      SPAN,
-      ast::VariableDeclarationKind::Var,
-      self.builder.binding_pattern(
-        self.builder.binding_pattern_kind_binding_identifier(SPAN, self.builder.atom(name)),
-        NONE,
-        false,
-      ),
-      None,
-      false,
-    ));
-    self.builder.alloc_variable_declaration(
-      SPAN,
-      ast::VariableDeclarationKind::Var,
-      declarations,
-      false,
-    )
-  }
-
-  pub fn var_decl_multiple_names(
-    &self,
-    names: &[(&str, &str)],
-    init: ast::Expression<'ast>,
-  ) -> Box<'ast, ast::VariableDeclaration<'ast>> {
-    let mut declarations = self.builder.vec_with_capacity(1);
-    let mut properties = self.builder.vec();
-    names.iter().for_each(|(imported, local)| {
-      properties.push(self.builder.binding_property(
+    ast::Statement::from(ast::Declaration::VariableDeclaration(
+      self.builder.alloc_variable_declaration(
         SPAN,
-        self.builder.property_key_static_identifier(SPAN, self.builder.atom(imported)),
-        self.builder.binding_pattern(
-          self.builder.binding_pattern_kind_binding_identifier(SPAN, self.builder.atom(local)),
-          NONE,
-          false,
-        ),
+        ast::VariableDeclarationKind::Var,
+        declarations,
         false,
-        false,
-      ));
-    });
-    declarations.push(ast::VariableDeclarator {
-      id: ast::BindingPattern {
-        kind: ast::BindingPatternKind::ObjectPattern(
-          ast::ObjectPattern { properties, ..ast::ObjectPattern::dummy(self.alloc()) }
-            .into_in(self.alloc()),
-        ),
-        ..ast::BindingPattern::dummy(self.alloc())
-      },
-      init: Some(init),
-      ..ast::VariableDeclarator::dummy(self.alloc())
-    });
-    self.builder.alloc_variable_declaration(
-      SPAN,
-      ast::VariableDeclarationKind::Var,
-      declarations,
-      false,
-    )
+      ),
+    ))
   }
 
   /// ```js
@@ -603,81 +501,6 @@ impl<'ast> AstSnippet<'ast> {
     ))
   }
 
-  pub fn app_static_import_star_call_stmt(
-    &self,
-    as_name: &str,
-    importee_source: &str,
-  ) -> ast::Statement<'ast> {
-    let mut declarations = allocator::Vec::new_in(self.alloc());
-
-    let mut call_expr = self.call_expr("__static_import");
-    call_expr
-      .arguments
-      .push(ast::Argument::StringLiteral(self.alloc_string_literal(importee_source, SPAN)));
-    declarations.push(self.builder.variable_declarator(
-      SPAN,
-      ast::VariableDeclarationKind::Var,
-      self.builder.binding_pattern(
-        self.builder.binding_pattern_kind_binding_identifier(SPAN, self.builder.atom(as_name)),
-        NONE,
-        false,
-      ),
-      Some(ast::Expression::CallExpression(call_expr.into_in(self.alloc()))),
-      false,
-    ));
-
-    ast::Statement::VariableDeclaration(self.builder.alloc_variable_declaration(
-      SPAN,
-      ast::VariableDeclarationKind::Var,
-      declarations,
-      false,
-    ))
-  }
-
-  pub fn app_static_import_call_multiple_specifiers_stmt(
-    &self,
-    names: &[(&str, &str)],
-    importee_source: &str,
-  ) -> ast::Statement<'ast> {
-    let mut declarations = self.builder.vec();
-    let mut properties = self.builder.vec();
-    names.iter().for_each(|(imported, local)| {
-      properties.push(self.builder.binding_property(
-        SPAN,
-        self.builder.property_key_static_identifier(SPAN, self.builder.atom(imported)),
-        self.builder.binding_pattern(
-          self.builder.binding_pattern_kind_binding_identifier(SPAN, self.builder.atom(local)),
-          NONE,
-          false,
-        ),
-        false,
-        false,
-      ));
-    });
-    let mut call_expr = self.call_expr("__static_import");
-    call_expr
-      .arguments
-      .push(ast::Argument::StringLiteral(self.alloc_string_literal(importee_source, SPAN)));
-    declarations.push(self.builder.variable_declarator(
-      SPAN,
-      ast::VariableDeclarationKind::Var,
-      self.builder.binding_pattern(
-        self.builder.binding_pattern_kind_object_pattern(SPAN, properties, NONE),
-        NONE,
-        false,
-      ),
-      Some(ast::Expression::CallExpression(call_expr.into_in(self.alloc()))),
-      false,
-    ));
-
-    ast::Statement::VariableDeclaration(self.builder.alloc_variable_declaration(
-      SPAN,
-      ast::VariableDeclarationKind::Var,
-      declarations,
-      false,
-    ))
-  }
-
   pub fn require_call_expr(&self, source: &str) -> Expression<'ast> {
     self.builder.expression_call(
       SPAN,
@@ -764,17 +587,6 @@ impl<'ast> AstSnippet<'ast> {
       self.builder.vec1(Argument::from(self.only_return_arrow_expr(return_expr))),
       false,
     ))
-  }
-
-  // return xxx
-  pub fn return_stmt(&self, argument: ast::Expression<'ast>) -> ast::Statement<'ast> {
-    ast::Statement::ReturnStatement(
-      ast::ReturnStatement {
-        argument: Some(argument),
-        ..ast::ReturnStatement::dummy(self.alloc())
-      }
-      .into_in(self.alloc()),
-    )
   }
 
   // create `a: () => expr` for  `{ a: () => expr }``
@@ -989,6 +801,7 @@ impl<'ast> AstSnippet<'ast> {
   pub fn simple_call_expr(&self, callee: Expression<'ast>) -> ast::CallExpression<'ast> {
     self.builder.call_expression(SPAN, callee, NONE, self.builder.vec(), false)
   }
+
   pub fn alloc_simple_call_expr(
     &self,
     callee: Expression<'ast>,

@@ -27,6 +27,19 @@ impl BitSet {
       self.entries[i] |= e;
     }
   }
+  // It is safe to convert `usize` to `u32` here because we ensure that the bitset is created with a maximum bit count that fits within `u32`.
+  #[allow(clippy::cast_possible_truncation)]
+  pub fn index_of_one(&self) -> Vec<u32> {
+    let mut result = Vec::new();
+    for (i, &e) in self.entries.iter().enumerate() {
+      for j in 0..8 {
+        if e & (1 << j) != 0 {
+          result.push((i * 8 + j) as u32);
+        }
+      }
+    }
+    result
+  }
 }
 
 impl Display for BitSet {
@@ -88,5 +101,18 @@ mod tests {
     //
     bs.union(&bs2);
     assert_eq!(bs.to_string(), "10000001_10000011");
+  }
+
+  #[test]
+  fn index_of_one() {
+    let mut bits = BitSet::new(16);
+    bits.set_bit(1);
+    bits.set_bit(5);
+    bits.set_bit(8);
+    bits.set_bit(10);
+    bits.set_bit(13);
+    bits.set_bit(15);
+
+    assert_eq!(bits.index_of_one(), vec![1, 5, 8, 10, 13, 15]);
   }
 }

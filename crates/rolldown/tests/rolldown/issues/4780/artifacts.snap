@@ -1,0 +1,18 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## main.js
+
+```js
+//#region colors.js
+const red = { 500: 500 };
+
+//#endregion
+//#region main.js
+const foo = { bar: red["500"] };
+
+//#endregion
+export { foo };
+```

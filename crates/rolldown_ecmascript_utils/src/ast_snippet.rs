@@ -8,6 +8,7 @@ use oxc::{
     },
   },
   span::{Atom, CompactStr, SPAN, Span},
+  syntax::identifier,
 };
 use rolldown_common::{EcmaModuleAstUsage, Interop};
 
@@ -64,12 +65,25 @@ impl<'ast> AstSnippet<'ast> {
   ) -> ast::Expression<'ast> {
     match names {
       [] => object,
-      _ => ast::Expression::StaticMemberExpression(self.builder.alloc_static_member_expression(
-        span,
-        self.member_expr_or_ident_ref(object, &names[0..names.len() - 1], span),
-        self.id_name(names[names.len() - 1].as_str(), span),
-        false,
-      )),
+      _ => {
+        let prop_name = names[names.len() - 1].as_str();
+        let is_valid_ident = identifier::is_identifier_name(prop_name);
+        if is_valid_ident {
+          ast::Expression::StaticMemberExpression(self.builder.alloc_static_member_expression(
+            span,
+            object,
+            self.id_name(prop_name, span),
+            false,
+          ))
+        } else {
+          ast::Expression::ComputedMemberExpression(self.builder.alloc_computed_member_expression(
+            span,
+            object,
+            self.builder.expression_string_literal(span, self.builder.atom(prop_name), None),
+            false,
+          ))
+        }
+      }
     }
   }
 

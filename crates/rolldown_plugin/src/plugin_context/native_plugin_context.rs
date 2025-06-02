@@ -7,8 +7,8 @@ use anyhow::Context;
 use arcstr::ArcStr;
 use derive_more::Debug;
 use rolldown_common::{
-  ModuleDefFormat, ModuleInfo, ModuleLoaderMsg, ResolvedId, SharedFileEmitter,
-  SharedNormalizedBundlerOptions, side_effects::HookSideEffects,
+  ModuleInfo, ModuleLoaderMsg, ResolvedId, SharedFileEmitter, SharedNormalizedBundlerOptions,
+  side_effects::HookSideEffects,
 };
 use rolldown_resolver::{ResolveError, Resolver};
 use rolldown_utils::dashmap::{FxDashMap, FxDashSet};
@@ -52,13 +52,8 @@ impl NativePluginContextImpl {
     sender
       .send(ModuleLoaderMsg::FetchModule(Box::new(ResolvedId {
         id: specifier.into(),
-        ignored: false,
-        module_def_format: ModuleDefFormat::Unknown,
-        external: false.into(),
-        normalize_external_id: None,
-        package_json: None,
         side_effects,
-        is_external_without_side_effects: false,
+        ..Default::default()
       })))
       .await?;
     Ok(())

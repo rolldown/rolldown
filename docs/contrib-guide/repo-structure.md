@@ -17,6 +17,7 @@ We store all the Node.js packages in this directory.
 - `/rolldown` Node.js package for the project.
 - `/bench` Benchmark programs for Node.js side of the project.
 - `/rollup-tests` Adapter for running rollup tests with rolldown.
+- `/vite-tests` Script to run tests in rolldown-vite repo with local rolldown.
 
 # `/examples`
 

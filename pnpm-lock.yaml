@@ -575,6 +575,18 @@ importers:
 
   packages/testing: {}
 
+  packages/vite-tests:
+    devDependencies:
+      '@oxc-node/cli':
+        specifier: 'catalog:'
+        version: 0.0.27
+      picocolors:
+        specifier: ^1.1.1
+        version: 1.1.1
+      tinyexec:
+        specifier: ^1.0.1
+        version: 1.0.1
+
   scripts:
     dependencies:
       '@pnpm/find-workspace-packages':

@@ -31,6 +31,7 @@
     "packages/rolldown/npm/**",
     "packages/rolldown/tests/fixtures/**/_config.ts",
     "packages/rolldown/**/__snapshots__",
+    "packages/vite-tests/repo/**",
     "docs/**",
     "examples/hmr-raw/**"
   ]

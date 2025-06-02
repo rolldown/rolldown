@@ -36,5 +36,7 @@
     "directory": "packages/rolldown"
   },
   "browser": "rolldown-binding.wasi-browser.js",
-  "dependencies": {}
+  "dependencies": {
+    "@napi-rs/wasm-runtime": "^0.2.10"
+  }
 }

@@ -48,6 +48,9 @@
         "buble",
       ],
     },
+    "packages/rolldown/npm/wasm32-wasi": {
+      "ignoreDependencies": ["@napi-rs/wasm-runtime"],
+    },
     "packages/rolldown/tests": {
       "entry": ["*/**"],
       "ignore": ["{cli,fixtures,module-federation,stability}/**"], // lots of unlisted dependencies

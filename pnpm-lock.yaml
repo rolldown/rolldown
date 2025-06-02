@@ -13,16 +13,16 @@ catalogs:
       specifier: ^0.0.27
       version: 0.0.27
     '@oxc-project/runtime':
-      specifier: 0.72.2
+      specifier: '=0.72.2'
       version: 0.72.2
     '@oxc-project/types':
-      specifier: 0.72.2
+      specifier: '=0.72.2'
       version: 0.72.2
     oxc-parser:
-      specifier: 0.72.2
+      specifier: '=0.72.2'
       version: 0.72.2
     oxc-transform:
-      specifier: 0.72.2
+      specifier: '=0.72.2'
       version: 0.72.2
     rolldown-plugin-dts:
       specifier: ^0.13.6

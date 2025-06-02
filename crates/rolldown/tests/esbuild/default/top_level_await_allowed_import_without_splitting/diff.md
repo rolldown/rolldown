@@ -44,28 +44,9 @@ await init_entry();
 ### rolldown
 ```js
 
-//#region entry.js
-var require_entry = __commonJS({ "entry.js"() {
-	Promise.resolve().then(function() {
-		return init_a(), a_exports;
-	});
-	Promise.resolve().then(function() {
-		return init_b(), b_exports;
-	});
-	Promise.resolve().then(function() {
-		return __toESM(require_c());
-	});
-	Promise.resolve().then(function() {
-		return __toESM(require_entry());
-	});
+//#region c.js
+var require_c = __commonJS({ "c.js"() {
 	await 0;
-} });
-
-//#endregion
-//#region a.js
-var a_exports = {};
-var init_a = __esm({ async "a.js"() {
-	await init_b();
 } });
 
 //#endregion
@@ -77,8 +58,27 @@ var init_b = __esm({ async "b.js"() {
 } });
 
 //#endregion
-//#region c.js
-var require_c = __commonJS({ "c.js"() {
+//#region a.js
+var a_exports = {};
+var init_a = __esm({ async "a.js"() {
+	await init_b();
+} });
+
+//#endregion
+//#region entry.js
+var require_entry = __commonJS({ "entry.js"() {
+	init_a().then(function() {
+		return a_exports;
+	});
+	init_b().then(function() {
+		return b_exports;
+	});
+	Promise.resolve().then(function() {
+		return __toESM(require_c());
+	});
+	Promise.resolve().then(function() {
+		return __toESM(require_entry());
+	});
 	await 0;
 } });
 
@@ -98,28 +98,23 @@ export default require_entry();
 -        await 0;
 -    }
 -});
--var b_exports = {};
++
++//#region c.js
++var require_c = __commonJS({ "c.js"() {
++	await 0;
++} });
++
++//#endregion
++//#region b.js
+ var b_exports = {};
 -var init_b = __esm({
 -    async "b.js"() {
 -        await init_c();
 -    }
 -});
-+
-+//#region entry.js
-+var require_entry = __commonJS({ "entry.js"() {
-+	Promise.resolve().then(function() {
-+		return init_a(), a_exports;
-+	});
-+	Promise.resolve().then(function() {
-+		return init_b(), b_exports;
-+	});
-+	Promise.resolve().then(function() {
-+		return __toESM(require_c());
-+	});
-+	Promise.resolve().then(function() {
-+		return __toESM(require_entry());
-+	});
-+	await 0;
++var import_c;
++var init_b = __esm({ async "b.js"() {
++	import_c = __toESM(require_c());
 +} });
 +
 +//#endregion
@@ -146,16 +141,20 @@ export default require_entry();
 +} });
 +
 +//#endregion
-+//#region b.js
-+var b_exports = {};
-+var import_c;
-+var init_b = __esm({ async "b.js"() {
-+	import_c = __toESM(require_c());
-+} });
-+
-+//#endregion
-+//#region c.js
-+var require_c = __commonJS({ "c.js"() {
++//#region entry.js
++var require_entry = __commonJS({ "entry.js"() {
++	init_a().then(function() {
++		return a_exports;
++	});
++	init_b().then(function() {
++		return b_exports;
++	});
++	Promise.resolve().then(function() {
++		return __toESM(require_c());
++	});
++	Promise.resolve().then(function() {
++		return __toESM(require_entry());
++	});
 +	await 0;
 +} });
 +

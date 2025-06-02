@@ -7,6 +7,12 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```js
 
+//#region b.js
+var require_b = __commonJS({ "b.js"(exports) {
+	exports.x = 123;
+} });
+
+//#endregion
 //#region a.js
 Promise.resolve().then(function() {
 	return __toESM(require_b());
@@ -14,12 +20,6 @@ Promise.resolve().then(function() {
 Promise.resolve().then(function() {
 	return __toESM(require_b());
 }).then((ns) => console.log(ns));
-
-//#endregion
-//#region b.js
-var require_b = __commonJS({ "b.js"(exports) {
-	exports.x = 123;
-} });
 
 //#endregion
 ```

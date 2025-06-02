@@ -1,4 +1,3 @@
-
-const { foo } = await import('./lib.js');
-
-export { foo };
+export default async () => {
+  return await import('./a.js').then(({buildDevConfig}) => buildDevConfig());
+};

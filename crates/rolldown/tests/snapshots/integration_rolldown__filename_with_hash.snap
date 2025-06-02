@@ -765,7 +765,7 @@ expression: output
 
 # tests/esbuild/default/dynamic_import_with_template_iife
 
-- a-!~{000}~.js => a-C_FjWz6g.js
+- a-!~{000}~.js => a-DBSzSY5k.js
 
 # tests/esbuild/default/empty_export_clause_bundle_as_common_js_issue910
 
@@ -1681,7 +1681,7 @@ expression: output
 
 # tests/esbuild/default/top_level_await_allowed_import_without_splitting
 
-- entry-!~{000}~.js => entry-C0I-TKF4.js
+- entry-!~{000}~.js => entry-DenbVBck.js
 
 # tests/esbuild/default/top_level_await_cjs_dead_branch
 
@@ -4351,15 +4351,15 @@ expression: output
 
 # tests/rolldown/function/inline_dynamic_imports/cjs
 
-- main-!~{000}~.js => main-gx9gCwGt.js
+- main-!~{000}~.js => main-B2fdVpdn.js
 
 # tests/rolldown/function/inline_dynamic_imports/esm
 
-- main-!~{000}~.js => main-BzFv8jGP.js
+- main-!~{000}~.js => main-CPDJLNEK.js
 
 # tests/rolldown/function/inline_dynamic_imports/iife
 
-- main-!~{000}~.js => main-CmCweJ2y.js
+- main-!~{000}~.js => main-BLQa4u04.js
 
 # tests/rolldown/function/intro/cjs
 
@@ -4837,11 +4837,11 @@ expression: output
 
 # tests/rolldown/misc/preserve_modules/issue-4647-2
 
-- entry2-!~{001}~.js => entry2-CnM-PEQ2.js
-- main-!~{000}~.js => main-uyUq6J4Y.js
-- dynamic-!~{006}~.js => dynamic-15A52uWR.js
-- dynamic2-!~{002}~.js => dynamic2-RmRtogxQ.js
-- mod-!~{004}~.js => mod-BUtkwoP6.js
+- entry2-!~{001}~.js => entry2-Ccv3f697.js
+- main-!~{000}~.js => main-BFv5l3uF.js
+- dynamic-!~{004}~.js => dynamic-CKqFO4dm.js
+- dynamic2-!~{006}~.js => dynamic2-BDHwtB9a.js
+- mod-!~{002}~.js => mod-VMeMVxRG.js
 
 # tests/rolldown/misc/preserve_modules/issue_4698
 
@@ -5492,7 +5492,7 @@ expression: output
 
 # tests/rolldown/topics/tla/inline_dynamic_import
 
-- main-!~{000}~.js => main-DPC8V41u.js
+- main-!~{000}~.js => main-sHy55_9F.js
 
 # tests/rolldown/topics/tla/inside_try_block
 
@@ -5666,7 +5666,7 @@ expression: output
 
 # tests/rolldown/warnings/invalid_option/unsupported_code_splitting_format
 
-- main-!~{000}~.js => main-Bo8v6kU9.js
+- main-!~{000}~.js => main-ShR1x56W.js
 
 # tests/rolldown/warnings/minified-with-eval
 

@@ -171,11 +171,6 @@ impl<'me, 'ast: 'me> Visit<'ast> for AstScanner<'me, 'ast> {
           let mut meta = ImportRecordMeta::empty();
           meta.set(ImportRecordMeta::IS_TOP_LEVEL, self.is_root_scope());
           meta.set(ImportRecordMeta::IS_UNSPANNED_IMPORT, expr.source.span().is_empty());
-          if let Some(parent_kind) = self.visit_path.last() {
-            if self.is_root_scope() && matches!(parent_kind, AstKind::AwaitExpression(_)) {
-              meta.set(ImportRecordMeta::IS_TOP_LEVEL_AWAIT_DYNAMIC_IMPORT, true);
-            }
-          }
           meta
         });
       self.init_dynamic_import_binding_usage_info(import_rec_idx);

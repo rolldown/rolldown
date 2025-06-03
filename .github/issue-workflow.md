@@ -31,9 +31,9 @@ flowchart TD
         certain amount
         of users?}
     frmaj --YES--> p32["Set
-        p3: significant"]
+        p2: significant"]
     frmaj --NO--> p22["Set
-        p4: nice-to-have"]
+        p3: nice-to-have"]
     unusable --YES--> maj{Does the bug
         affect the majority
         of Rolldown users?}
@@ -54,11 +54,11 @@ flowchart TD
         workarounds for
         the bug?}
     workarounds --NO--> p3[Set
-        p3: minor bug]
+        p2: minor bug]
     workarounds --YES--> regression{
         Is it a regression?
     }
     regression --YES--> p3
     regression --NO--> p2[Set
-        p4: edge case]
+        p3: edge case]
 ```

@@ -23,7 +23,7 @@ mod impl_visit_mut;
 pub use finalizer_context::ScopeHoistingFinalizerContext;
 use rolldown_rstr::Rstr;
 use rolldown_utils::ecmascript::is_validate_identifier_name;
-use rustc_hash::FxHashSet;
+use rustc_hash::{FxHashMap, FxHashSet};
 use sugar_path::SugarPath;
 
 mod hmr;
@@ -38,7 +38,7 @@ pub struct ScopeHoistingFinalizer<'me, 'ast> {
   pub comments: oxc::allocator::Vec<'ast, Comment>,
   /// `SymbolRef` imported from a cjs module which has `namespace_alias`
   /// more details please refer [`rolldown_common::types::symbol_ref_db::SymbolRefDataClassic`].
-  pub namespace_alias_symbol_id: FxHashSet<SymbolId>,
+  pub namespace_alias_symbol_id_to_resolved_module: FxHashMap<SymbolId, ModuleIdx>,
   /// All `ReferenceId` of `IdentifierReference` we are interested, the `IdentifierReference` should be the object of `MemberExpression` and the property is not
   /// a `"default"` property access
   pub interested_namespace_alias_ref_id: FxHashSet<ReferenceId>,
@@ -88,7 +88,7 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
 
     let reference_id = ident_ref.reference_id.get()?;
     let symbol_id = self.scope.symbol_id_for(reference_id)?;
-    if !self.namespace_alias_symbol_id.contains(&symbol_id) {
+    if !self.namespace_alias_symbol_id_to_resolved_module.contains_key(&symbol_id) {
       return None;
     }
     Some(reference_id)
@@ -259,8 +259,13 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
     };
 
     if let Some(ns_alias) = namespace_alias {
-      let meta = &self.ctx.linking_infos[ns_alias.namespace_ref.owner];
-      expr = if meta.safe_cjs_to_eliminate_interop_default
+      let is_safe_cjs_to_eliminate_interop_default = self
+        .namespace_alias_symbol_id_to_resolved_module
+        .get(&symbol_ref.symbol)
+        .is_some_and(|resolved_module| {
+          self.ctx.linking_infos[*resolved_module].safe_cjs_to_eliminate_interop_default
+        });
+      expr = if is_safe_cjs_to_eliminate_interop_default
         && original_reference_id
           .is_some_and(|item| self.interested_namespace_alias_ref_id.contains(&item))
       {

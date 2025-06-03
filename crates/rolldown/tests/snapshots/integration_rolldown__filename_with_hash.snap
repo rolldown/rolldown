@@ -3756,7 +3756,7 @@ expression: output
 
 # tests/rolldown/cjs_compat/react-like
 
-- main-!~{000}~.js => main-ClpAChLm.js
+- main-!~{000}~.js => main-CI7vFg_S.js
 
 # tests/rolldown/cjs_compat/reexport_commonjs
 

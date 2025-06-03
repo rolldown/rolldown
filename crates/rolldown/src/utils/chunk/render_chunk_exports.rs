@@ -3,8 +3,8 @@ use std::fmt::Write as _;
 
 use itertools::Itertools;
 use rolldown_common::{
-  Chunk, ChunkKind, ExportsKind, IndexModules, ModuleIdx, NormalizedBundlerOptions,
-  OutputExports, OutputFormat, SymbolRef, SymbolRefDb, WrapKind,
+  Chunk, ChunkKind, ExportsKind, IndexModules, ModuleIdx, NormalizedBundlerOptions, OutputExports,
+  OutputFormat, SymbolRef, SymbolRefDb, WrapKind,
 };
 use rolldown_rstr::Rstr;
 use rolldown_utils::{

@@ -1,7 +1,6 @@
 use self::render_chunk_exports::get_chunk_export_names;
 use rolldown_common::{
-  Chunk, ChunkKind, ModuleId, RenderedModule, RollupPreRenderedChunk,
-  RollupRenderedChunk,
+  Chunk, ChunkKind, ModuleId, RenderedModule, RollupPreRenderedChunk, RollupRenderedChunk,
 };
 use rustc_hash::FxHashMap;
 

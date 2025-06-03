@@ -9,7 +9,7 @@ use oxc::{
 };
 use rolldown_common::{ExportsKind, Module, StmtInfoIdx, SymbolRef, ThisExprReplaceKind, WrapKind};
 use rolldown_ecmascript_utils::{ExpressionExt, JsxExt};
-use rustc_hash::FxHashSet;
+use rustc_hash::FxHashMap;
 
 use super::ScopeHoistingFinalizer;
 
@@ -22,7 +22,7 @@ impl<'ast> VisitMut<'ast> for ScopeHoistingFinalizer<'_, 'ast> {
     program.hashbang.take();
     program.directives.clear();
     // init namespace_alias_symbol_id
-    self.namespace_alias_symbol_id = self
+    self.namespace_alias_symbol_id_to_resolved_module = self
       .ctx
       .module
       .ecma_view
@@ -36,12 +36,11 @@ impl<'ast> VisitMut<'ast> for ScopeHoistingFinalizer<'_, 'ast> {
         // example
         // TODO: maybe we could relex the restriction if `platform: node` and the external module
         // is a node builtin module
-        self.ctx.modules[importee_idx].as_normal()?;
-        self.ctx.symbol_db.get(*symbol_ref).namespace_alias.as_ref().and_then(|alias| {
-          (alias.property_name.as_str() == "default").then_some(symbol_ref.symbol)
-        })
+        let module = self.ctx.modules[importee_idx].as_normal()?;
+        self.ctx.symbol_db.get(*symbol_ref).namespace_alias.as_ref()?;
+        module.exports_kind.is_commonjs().then_some((symbol_ref.symbol, importee_idx))
       })
-      .collect::<FxHashSet<_>>();
+      .collect::<FxHashMap<_, _>>();
 
     let is_namespace_referenced = matches!(self.ctx.module.exports_kind, ExportsKind::Esm)
       && self.ctx.module.stmt_infos[StmtInfoIdx::new(0)].is_included;

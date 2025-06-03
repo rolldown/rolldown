@@ -287,10 +287,8 @@ impl LinkStage<'_> {
       .modules
       .iter()
       .filter_map(|module| {
-        let Module::Normal(module) = module else {
-          return None;
-        };
-        if module.exports_kind.is_commonjs() { Some(module.idx) } else { None }
+        let module = module.as_normal()?;
+        module.exports_kind.is_commonjs().then_some(module.idx)
       })
       .collect::<Vec<_>>();
     for module_idx in cjs_exports_type_modules {

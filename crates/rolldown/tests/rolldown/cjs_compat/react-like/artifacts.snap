@@ -25,7 +25,7 @@ var require_commonjs = __commonJS({ "commonjs.js"(exports, module) {
 //#endregion
 //#region main.js
 var import_commonjs = __toESM(require_commonjs());
-assert.equal(import_commonjs.default.createReactElement(), "div");
+assert.equal(import_commonjs.createReactElement(), "div");
 
 //#endregion
 ```

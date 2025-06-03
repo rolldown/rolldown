@@ -84,7 +84,7 @@ impl LinkStage<'_> {
                   declared_symbols.push(ecma_module.import_records[rec_idx].namespace_ref);
                 });
               }
-              OutputFormat::Cjs | OutputFormat::Iife | OutputFormat::Umd | OutputFormat::App => {}
+              OutputFormat::Cjs | OutputFormat::Iife | OutputFormat::Umd => {}
             }
           }
           // Create a StmtInfo to represent the statement that declares and constructs the Module Namespace Object.

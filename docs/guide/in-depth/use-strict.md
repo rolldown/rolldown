@@ -40,7 +40,3 @@ Otherwise, it will not add `"use strict"` in the chunk. Notice that, this change
 With `format: 'cjs'`, rolldown will first parse your code in strict mode, and will re-parse it in non-strict mode if it throws an error in the first parsing.
 
 See here for more details about what are affected by `"use strict"` [link](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Strict_mode#changes_in_strict_mode).
-
-## `format: 'app'`
-
-With every module being wrapped within a function, rolldown could choose if to emit `"use strict"` per function by respecting what the original module is.

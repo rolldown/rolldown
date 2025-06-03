@@ -49,9 +49,7 @@ pub fn normalize_options(mut raw_options: crate::BundlerOptions) -> NormalizeOpt
 
   let platform = raw_options.platform.unwrap_or(match format {
     OutputFormat::Cjs => Platform::Node,
-    OutputFormat::Esm | OutputFormat::App | OutputFormat::Iife | OutputFormat::Umd => {
-      Platform::Browser
-    }
+    OutputFormat::Esm | OutputFormat::Iife | OutputFormat::Umd => Platform::Browser,
   });
 
   let minify: MinifyOptions = raw_options.minify.unwrap_or_default().into();

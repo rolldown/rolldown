@@ -18,9 +18,7 @@ use rolldown_utils::rayon::IndexedParallelIterator;
 use rolldown_utils::rayon::{IntoParallelRefIterator, ParallelIterator};
 use rustc_hash::FxHashMap;
 
-use super::format::{
-  app::render_app, cjs::render_cjs, esm::render_esm, iife::render_iife, umd::render_umd,
-};
+use super::format::{cjs::render_cjs, esm::render_esm, iife::render_iife, umd::render_umd};
 
 pub type RenderedModuleSources = Vec<RenderedModuleSource>;
 
@@ -176,7 +174,6 @@ impl Generator for EcmaGenerator {
           Err(errors) => return Ok(Err(errors)),
         }
       }
-      OutputFormat::App => render_app(ctx, addon_render_context, &rendered_module_sources),
       OutputFormat::Iife => {
         match render_iife(ctx, addon_render_context, &rendered_module_sources, &mut warnings).await
         {

@@ -1,0 +1,14 @@
+{
+  "name": "vite-tests",
+  "type": "module",
+  "private": true,
+  "scripts": {
+    "test": "oxnode ./run.ts"
+  },
+  "license": "MIT",
+  "devDependencies": {
+    "@oxc-node/cli": "catalog:",
+    "picocolors": "^1.1.1",
+    "tinyexec": "^1.0.1"
+  }
+}

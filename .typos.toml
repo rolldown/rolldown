@@ -13,6 +13,7 @@ extend-exclude = [
   "/packages/rollup-tests/src/ignored-by-unsupported-features.md",
   "/packages/rollup-tests/src/ignored-passed-snapshot-different-tests.js",
   "/packages/rollup-tests/src/ignored-tests.js",
+  "/packages/vite-tests/repo",
   "/rollup",
   "crates/rolldown/tests/esbuild/**/*",
   "packages/rolldown/src/binding.cjs",

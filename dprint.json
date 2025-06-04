@@ -28,6 +28,7 @@
     "packages/rolldown/tests",
     "packages/rollup-tests",
     "packages/rollup/test",
+    "packages/vite-tests",
     "pnpm-lock.yaml",
     "rollup",
     "scripts/snap-diff/stats",

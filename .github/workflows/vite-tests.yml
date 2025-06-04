@@ -1,0 +1,55 @@
+name: Vite tests
+
+permissions: {}
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - '.github/workflows/**'
+      - 'crates/**'
+      - 'Cargo.toml'
+      - 'Cargo.lock'
+      - 'rust-toolchain.toml'
+      - '.gitattributes'
+      - 'packages/**'
+      - 'package.json'
+      - 'pnpm-lock.yaml'
+      - 'pnpm-workspace.yaml'
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.sha }}
+  cancel-in-progress: ${{ github.ref_name != 'main' }}
+
+jobs:
+  vite-tests:
+    name: Vite Tests
+    strategy:
+      matrix:
+        target: [ubuntu-latest, windows-latest]
+      fail-fast: false
+    runs-on: ${{ matrix.target }}
+    timeout-minutes: 15
+
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          submodules: true # Pull submodules for additional files
+          persist-credentials: false
+
+      - name: Setup Rust
+        uses: oxc-project/setup-rust@cd82e1efec7fef815e2c23d296756f31c7cdc03d # v1.0.0
+        with:
+          tools: just
+          cache-key: debug-build
+
+      - name: Setup Node For Development
+        uses: ./.github/actions/setup-node
+
+      - name: Build Native Rolldown
+        run: just build native debug
+
+      - name: Rollup Test For Node20
+        run: pnpm run --filter vite-tests test

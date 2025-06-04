@@ -438,7 +438,21 @@ impl GenerateStage<'_> {
             continue;
           }
         };
-        let mut candidate_name = original_name.clone();
+        // A special case for `default` export when setting `preserve_modules`.
+        // When `preserve_modules` is enabled, we need to ensure that the default export is
+        // correctly named as `default`.
+        // Otherwise, we just use the default_export_ref representative name
+        let mut candidate_name = if self.options.preserve_modules {
+          let module = chunk.entry_module(&self.link_output.module_table).unwrap();
+          // If `preserve_modules` is enabled, there should have only one default export per chunk.
+          if module.default_export_ref == *chunk_export {
+            "default".into()
+          } else {
+            original_name.clone()
+          }
+        } else {
+          original_name.clone()
+        };
         loop {
           let key: Cow<'_, Rstr> = Cow::Owned(candidate_name.clone());
           match name_count.entry(key) {
@@ -455,11 +469,7 @@ impl GenerateStage<'_> {
             }
           }
         }
-        chunk
-          .exports_to_other_chunks
-          .entry(*chunk_export)
-          .or_default()
-          .push(candidate_name.clone());
+        chunk.exports_to_other_chunks.entry(*chunk_export).or_default().push(candidate_name);
       }
     }
   }

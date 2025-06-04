@@ -4841,6 +4841,11 @@ expression: output
 - b-!~{002}~.js => b-_WUCLyHa.js
 - main-!~{000}~.js => main-Bq02Itoe.js
 
+# tests/rolldown/misc/preserve_modules/preserve_default_export_instead_of_named_export
+
+- main-!~{000}~.js => main-CJuQKNbv.js
+- default-!~{001}~.js => default-CiW_VLjV.js
+
 # tests/rolldown/misc/reexport_star
 
 - entry-!~{001}~.js => entry-9pAfnsAm.js

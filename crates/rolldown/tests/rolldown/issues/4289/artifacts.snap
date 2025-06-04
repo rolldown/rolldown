@@ -127,3 +127,43 @@ main();
 
 //#endregion
 ```
+---
+
+Variant: (inline_dynamic_imports: true)
+
+# Assets
+
+## main.js
+
+```js
+import nodeAssert from "node:assert";
+
+
+//#region lib.js
+var require_lib = __commonJS({ "lib.js"(exports) {
+	Object.defineProperty(exports, "__esModule", { value: true });
+	exports.parse = "parse";
+} });
+
+//#endregion
+//#region non-node-mode.js
+async function main$1() {
+	const exports$1 = await Promise.resolve().then(() => __toESM(require_lib()));
+	nodeAssert.deepEqual(Object.keys(exports$1).sort(), ["parse"]);
+	nodeAssert.strictEqual(exports$1.parse, "parse", "Expected export exists and is correct");
+	nodeAssert.strictEqual(exports$1.default, void 0, "Target has __esModule, so no auto-generated default export");
+}
+main$1();
+
+//#endregion
+//#region node-mode-by-mjs-extension.mjs
+async function main() {
+	const exports$1 = await Promise.resolve().then(() => __toESM(require_lib(), 1));
+	nodeAssert.deepEqual(Object.keys(exports$1).sort(), ["default", "parse"]);
+	nodeAssert.strictEqual(exports$1.parse, "parse", "Expected export exists and is correct");
+	nodeAssert.strictEqual(exports$1.default.parse, "parse", "Target has __esModule, but this file triggered node compat mode");
+}
+main();
+
+//#endregion
+```

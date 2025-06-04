@@ -234,7 +234,7 @@ impl<'a> GenerateStage<'a> {
       // Notice we didn't used deconflict name here, chunk names are allowed to be duplicated.
       chunk.name = Some(pre_generated_chunk_name.0.clone());
       index_chunk_id_to_name.insert(*chunk_id, pre_generated_chunk_name.0.clone());
-      let pre_rendered_chunk = generate_pre_rendered_chunk(chunk, self.link_output, self.options);
+      let pre_rendered_chunk = generate_pre_rendered_chunk(chunk, self.link_output);
 
       let preliminary_filename = chunk
         .generate_preliminary_filename(

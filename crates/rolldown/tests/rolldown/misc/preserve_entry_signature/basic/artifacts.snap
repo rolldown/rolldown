@@ -1,0 +1,30 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## dynamic.js
+
+```js
+import { value$1 as value } from "./main.js";
+
+//#region dynamic.js
+console.log(`shared: `, value);
+
+//#endregion
+```
+## main.js
+
+```js
+//#region lib.js
+const value$1 = 100;
+
+//#endregion
+//#region main.js
+import("./dynamic.js");
+console.log(`shared: `, value$1);
+const value = `feafeaw ${value$1}`;
+
+//#endregion
+export { value, value$1 };
+```

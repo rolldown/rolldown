@@ -244,7 +244,7 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
             // instead of keeping `console.log(foo)` as we did in esm output. The reason here is we need to keep live binding in cjs output.
 
             let exported_name = &self.ctx.chunk_graph.chunk_table[chunk_idx_of_canonical_symbol]
-              .exports_to_other_chunks[&canonical_ref];
+              .exports_to_other_chunks[&canonical_ref][0];
 
             let require_binding = &self.ctx.chunk_graph.chunk_table[cur_chunk_idx]
               .require_binding_names_for_other_chunks[&chunk_idx_of_canonical_symbol];

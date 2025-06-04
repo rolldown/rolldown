@@ -4790,6 +4790,11 @@ expression: output
 
 - main-!~{000}~.js => main-Cv6xMI1a.js
 
+# tests/rolldown/misc/preserve_entry_signature/basic
+
+- main-!~{000}~.js => main-BlPgCM1C.js
+- dynamic-!~{001}~.js => dynamic-BF22dcES.js
+
 # tests/rolldown/misc/preserve_modules/issue-4622
 
 - src/index-!~{000}~.js => src/index-Bg1j_4g8.js

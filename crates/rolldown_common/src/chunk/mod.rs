@@ -51,7 +51,7 @@ pub struct Chunk {
   pub require_binding_names_for_other_chunks: FxHashMap<ChunkIdx, String>,
   pub imports_from_external_modules: Vec<(ModuleIdx, Vec<NamedImport>)>,
   // meaningless if the chunk is an entrypoint
-  pub exports_to_other_chunks: FxHashMap<SymbolRef, Rstr>,
+  pub exports_to_other_chunks: FxHashMap<SymbolRef, Vec<Rstr>>,
   pub input_base: ArcStr,
   pub create_reasons: Vec<String>,
 }

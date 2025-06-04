@@ -365,7 +365,6 @@ impl GenerateStage<'_> {
         "Empty bits means the module is not reachable, so it should bail out with `is_included: false` {:?}",
         normal_module.stable_id
       );
-
       if let Some(chunk_id) = bits_to_chunk.get(bits).copied() {
         chunk_graph.add_module_to_chunk(normal_module.idx, chunk_id);
       } else if is_allow_extension {
@@ -501,12 +500,16 @@ impl GenerateStage<'_> {
     chunk_graph: &ChunkGraph,
   ) -> FxHashMap<ChunkIdx, FxHashSet<ChunkIdx>> {
     let mut ret: FxHashMap<ChunkIdx, FxHashSet<ChunkIdx>> = FxHashMap::default();
-    let dynamic_entry_modules = self
-      .link_output
-      .entries
-      .iter()
-      .filter_map(|item| (!item.kind.is_user_defined()).then_some(item.id))
-      .collect::<FxHashSet<ModuleIdx>>();
+    let dynamic_entry_modules = chunk_graph
+      .chunk_table
+      .iter_enumerated()
+      .filter_map(|(idx, chunk)| match chunk.kind {
+        ChunkKind::EntryPoint { is_user_defined, module, .. } => {
+          (!is_user_defined).then_some((module, idx))
+        }
+        ChunkKind::Common => None,
+      })
+      .collect::<FxHashMap<ModuleIdx, ChunkIdx>>();
     for entry in self.link_output.entries.iter().filter(|item| item.kind.is_user_defined()) {
       let Some(entry_chunk_idx) = chunk_graph.module_to_chunk[entry.id] else {
         continue;
@@ -524,12 +527,10 @@ impl GenerateStage<'_> {
 
         for rec in &module.import_records {
           // Can't put it at the beginning of the loop,
-          if dynamic_entry_modules.contains(&rec.resolved_module) {
-            let Some(chunk_idx) = chunk_graph.module_to_chunk[rec.resolved_module] else {
-              continue;
-            };
-            ret.entry(entry_chunk_idx).or_default().insert(chunk_idx);
+          if let Some(chunk_idx) = dynamic_entry_modules.get(&rec.resolved_module) {
+            ret.entry(entry_chunk_idx).or_default().insert(*chunk_idx);
           }
+          q.push_back(rec.resolved_module);
         }
       }
     }
@@ -543,7 +544,6 @@ impl GenerateStage<'_> {
     index_splitting_info: &mut IndexSplittingInfo,
   ) {
     let mut q = VecDeque::from([entry_module_idx]);
-
     while let Some(module_idx) = q.pop_front() {
       let Module::Normal(module) = &self.link_output.module_table[module_idx] else {
         continue;

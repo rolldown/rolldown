@@ -1192,4 +1192,38 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
     let original_name: Rstr = original_name.into();
     Some(self.snippet.static_block_keep_name_helper(&original_name))
   }
+
+  fn try_rewrite_import_expression(&self, node: &mut ast::Expression<'ast>) {
+    if let ast::Expression::ImportExpression(expr) = node {
+      if expr.options.is_none() {
+        // Make sure the import expression is in correct form. If it's not, we should leave it as it is.
+        if let Some(str) = expr.source.as_static_module_request() {
+          let rec_id = self.ctx.module.imports[&expr.span];
+          let rec = &self.ctx.module.import_records[rec_id];
+          let importee_id = rec.resolved_module;
+          let importer_chunk = &self.ctx.chunk_graph.chunk_table[self.ctx.chunk_id];
+          match &self.ctx.modules[importee_id] {
+            Module::Normal(_importee) => {
+              let importee_chunk_id =
+                self.ctx.chunk_graph.entry_module_to_entry_chunk[&importee_id];
+              let importee_chunk = &self.ctx.chunk_graph.chunk_table[importee_chunk_id];
+
+              let import_path = importer_chunk.import_path_for(importee_chunk);
+              expr.source = Expression::StringLiteral(
+                self.snippet.alloc_string_literal(&import_path, expr.source.span()),
+              );
+            }
+            Module::External(importee) => {
+              let import_path = importee.get_import_path(importer_chunk);
+              if str != import_path {
+                expr.source = Expression::StringLiteral(
+                  self.snippet.alloc_string_literal(&import_path, expr.source.span()),
+                );
+              }
+            }
+          }
+        }
+      }
+    }
+  }
 }

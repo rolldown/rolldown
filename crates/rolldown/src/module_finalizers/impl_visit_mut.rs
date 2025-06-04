@@ -5,9 +5,9 @@ use oxc::{
     match_member_expression,
   },
   ast_visit::{VisitMut, walk_mut},
-  span::{GetSpan, SPAN, Span},
+  span::{SPAN, Span},
 };
-use rolldown_common::{ExportsKind, Module, StmtInfoIdx, SymbolRef, ThisExprReplaceKind, WrapKind};
+use rolldown_common::{ExportsKind, StmtInfoIdx, SymbolRef, ThisExprReplaceKind, WrapKind};
 use rolldown_ecmascript_utils::{ExpressionExt, JsxExt};
 use rustc_hash::FxHashMap;
 
@@ -282,6 +282,7 @@ impl<'ast> VisitMut<'ast> for ScopeHoistingFinalizer<'_, 'ast> {
         if let Some(new_expr) = self.try_rewrite_inline_dynamic_import_expr(import_expr) {
           *expr = new_expr;
         }
+        self.try_rewrite_import_expression(expr);
       }
       ast::Expression::NewExpression(new_expr) => {
         self.handle_new_url_with_string_literal_and_import_meta_url(new_expr);
@@ -406,39 +407,6 @@ impl<'ast> VisitMut<'ast> for ScopeHoistingFinalizer<'_, 'ast> {
     self.rewrite_object_pat_shorthand(pat);
 
     walk_mut::walk_object_pattern(self, pat);
-  }
-
-  fn visit_import_expression(&mut self, expr: &mut ast::ImportExpression<'ast>) {
-    if expr.options.is_none() {
-      // Make sure the import expression is in correct form. If it's not, we should leave it as it is.
-      if let Some(str) = expr.source.as_static_module_request() {
-        let rec_id = self.ctx.module.imports[&expr.span];
-        let rec = &self.ctx.module.import_records[rec_id];
-        let importee_id = rec.resolved_module;
-        let importer_chunk = &self.ctx.chunk_graph.chunk_table[self.ctx.chunk_id];
-        match &self.ctx.modules[importee_id] {
-          Module::Normal(_importee) => {
-            let importee_chunk_id = self.ctx.chunk_graph.entry_module_to_entry_chunk[&importee_id];
-            let importee_chunk = &self.ctx.chunk_graph.chunk_table[importee_chunk_id];
-
-            let import_path = importer_chunk.import_path_for(importee_chunk);
-            expr.source = Expression::StringLiteral(
-              self.snippet.alloc_string_literal(&import_path, expr.source.span()),
-            );
-          }
-          Module::External(importee) => {
-            let import_path = importee.get_import_path(importer_chunk);
-            if str != import_path {
-              expr.source = Expression::StringLiteral(
-                self.snippet.alloc_string_literal(&import_path, expr.source.span()),
-              );
-            }
-          }
-        }
-      }
-    }
-
-    walk_mut::walk_import_expression(self, expr);
   }
 
   fn visit_assignment_target_property(

@@ -13,6 +13,7 @@ pub struct ConfigVariant {
   pub exports: Option<OutputExports>,
   pub strict_execution_order: Option<bool>,
   pub entry_filenames: Option<String>,
+  pub inline_dynamic_imports: Option<bool>,
 }
 
 impl ConfigVariant {
@@ -37,6 +38,9 @@ impl ConfigVariant {
     if let Some(entry_filenames) = &self.entry_filenames {
       config.entry_filenames = Some(entry_filenames.to_string().into());
     }
+    if let Some(inline_dynamic_imports) = &self.inline_dynamic_imports {
+      config.inline_dynamic_imports = Some(*inline_dynamic_imports);
+    }
     config
   }
 }
@@ -58,6 +62,9 @@ impl Display for ConfigVariant {
     }
     if let Some(strict_execution_order) = &self.strict_execution_order {
       fields.push(format!("strict_execution_order: {strict_execution_order:?}"));
+    }
+    if let Some(inline_dynamic_imports) = &self.inline_dynamic_imports {
+      fields.push(format!("inline_dynamic_imports: {inline_dynamic_imports:?}"));
     }
     fields.sort();
     if fields.is_empty() { write!(f, "()") } else { write!(f, "({})", fields.join(", ")) }

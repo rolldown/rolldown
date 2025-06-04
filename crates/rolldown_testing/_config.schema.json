@@ -1257,6 +1257,12 @@
             "string",
             "null"
           ]
+        },
+        "inlineDynamicImports": {
+          "type": [
+            "boolean",
+            "null"
+          ]
         }
       },
       "additionalProperties": false

@@ -187,9 +187,9 @@ quote = "1"
 syn = { version = "2", default-features = false }
 
 # napi
-napi = { version = "3.0.0-beta.4", features = ["async", "anyhow"] }
+napi = { version = "3.0.0-beta.7", features = ["async", "anyhow"] }
 napi-build = { version = "2.2.0" }
-napi-derive = { version = "3.0.0-beta.4", default-features = false, features = ["type-def"] }
+napi-derive = { version = "3.0.0-beta.6", default-features = false, features = ["type-def"] }
 
 # oxc crates with the same version
 

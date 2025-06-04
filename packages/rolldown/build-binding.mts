@@ -11,7 +11,6 @@ const args = process.argv.slice(2);
 const napiArgs = [
   'napi',
   'build',
-  ...(process.env.CI ? ['--no-dts-cache'] : []),
   '-o=./src',
   '--manifest-path',
   '../../crates/rolldown_binding/Cargo.toml',

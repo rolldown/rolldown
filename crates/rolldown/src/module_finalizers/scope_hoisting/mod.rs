@@ -402,7 +402,6 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
           });
           re_export_external_stmts = Some(stmts.collect());
         }
-        OutputFormat::App => unreachable!(),
       }
     }
 
@@ -1085,9 +1084,6 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
                   | rolldown_common::OutputFormat::Cjs => {
                     // Just remove the statement
                     return;
-                  }
-                  rolldown_common::OutputFormat::App => {
-                    unreachable!()
                   }
                 }
               }

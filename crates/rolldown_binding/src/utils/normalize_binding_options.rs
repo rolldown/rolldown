@@ -345,7 +345,6 @@ pub fn normalize_binding_options(
     format: output_options.format.map(|format_str| match format_str.as_str() {
       "es" => OutputFormat::Esm,
       "cjs" => OutputFormat::Cjs,
-      "app" => OutputFormat::App,
       "iife" => OutputFormat::Iife,
       "umd" => OutputFormat::Umd,
       _ => panic!("Invalid format: {format_str}"),

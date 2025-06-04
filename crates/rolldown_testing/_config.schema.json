@@ -498,7 +498,6 @@
       "enum": [
         "esm",
         "cjs",
-        "app",
         "iife",
         "umd"
       ]

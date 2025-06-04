@@ -43,7 +43,7 @@ impl<'name> Renamer<'name> {
   pub fn new(symbols: &'name SymbolRefDb, format: OutputFormat) -> Self {
     // Port from https://github.com/rollup/rollup/blob/master/src/Chunk.ts#L1377-L1394.
     let mut manual_reserved = match format {
-      OutputFormat::Esm | OutputFormat::App => vec![],
+      OutputFormat::Esm => vec![],
       OutputFormat::Cjs => vec!["module", "require", "__filename", "__dirname", "exports"],
       OutputFormat::Iife | OutputFormat::Umd => vec!["exports"], // Also for  AMD, but we don't support them yet.
     };

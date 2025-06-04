@@ -13,7 +13,6 @@ use std::fmt::Display;
 pub enum OutputFormat {
   Esm,
   Cjs,
-  App,
   Iife,
   Umd,
 }
@@ -30,9 +29,9 @@ impl OutputFormat {
 
   #[inline]
   /// https://github.com/evanw/esbuild/blob/d34e79e2a998c21bb71d57b92b0017ca11756912/internal/config/config.go#L664-L666
-  /// Since we have different implementation for `IIFE` and extra implementation of `UMD` and `App` omit them as well
+  /// Since we have different implementation for `IIFE` and extra implementation of `UMD` omit them as well
   pub fn should_call_runtime_require(&self) -> bool {
-    !matches!(self, Self::Cjs | Self::Umd | Self::Iife | Self::App)
+    !matches!(self, Self::Cjs | Self::Umd | Self::Iife)
   }
 }
 
@@ -41,7 +40,6 @@ impl Display for OutputFormat {
     match self {
       Self::Esm => write!(f, "esm"),
       Self::Cjs => write!(f, "cjs"),
-      Self::App => write!(f, "app"),
       Self::Iife => write!(f, "iife"),
       Self::Umd => write!(f, "umd"),
     }

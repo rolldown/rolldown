@@ -73,7 +73,6 @@ pub fn render_wrapped_entry_chunk(
               Some(concat_string!("return ", wrapper_ref_name, "();\n"))
             }
           }
-          OutputFormat::App => unreachable!(),
         }
       }
       WrapKind::None => None,
@@ -282,7 +281,6 @@ pub fn render_chunk_exports(
       }
       Some(s)
     }
-    OutputFormat::App => None,
   }
 }
 

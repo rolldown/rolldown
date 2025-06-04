@@ -1123,7 +1123,7 @@ export declare class BindingNormalizedOptions {
   get assetFilenames(): string | undefined
   get dir(): string | null
   get file(): string | null
-  get format(): 'es' | 'cjs' | 'app' | 'iife' | 'umd'
+  get format(): 'es' | 'cjs' | 'iife' | 'umd'
   get exports(): 'default' | 'named' | 'none' | 'auto'
   get esModule(): boolean | 'if-default-prop'
   get inlineDynamicImports(): boolean
@@ -1647,7 +1647,7 @@ export interface BindingOutputOptions {
   extend?: boolean
   externalLiveBindings?: boolean
   footer?: (chunk: BindingRenderedChunk) => MaybePromise<VoidNullable<string>>
-  format?: 'es' | 'cjs' | 'iife' | 'umd' | 'app'
+  format?: 'es' | 'cjs' | 'iife' | 'umd'
   globals?: Record<string, string> | ((name: string) => string)
   hashCharacters?: 'base64' | 'base36' | 'hex'
   inlineDynamicImports?: boolean

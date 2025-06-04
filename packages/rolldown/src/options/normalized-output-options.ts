@@ -16,7 +16,7 @@ import type {
   OutputOptions,
 } from './output-options';
 
-export type InternalModuleFormat = 'es' | 'cjs' | 'iife' | 'umd' | 'app';
+export type InternalModuleFormat = 'es' | 'cjs' | 'iife' | 'umd';
 
 export interface NormalizedOutputOptions {
   name: string | undefined;
@@ -76,7 +76,7 @@ export class NormalizedOutputOptionsImpl implements NormalizedOutputOptions {
     return this.inner.assetFilenames || this.outputOptions.assetFileNames!;
   }
 
-  get format(): 'es' | 'cjs' | 'app' | 'iife' | 'umd' {
+  get format(): 'es' | 'cjs' | 'iife' | 'umd' {
     return this.inner.format;
   }
 

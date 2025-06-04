@@ -69,7 +69,7 @@ pub struct BindingOutputOptions<'env> {
   #[debug(skip)]
   #[napi(ts_type = "(chunk: BindingRenderedChunk) => MaybePromise<VoidNullable<string>>")]
   pub footer: Option<AddonOutputOption>,
-  #[napi(ts_type = "'es' | 'cjs' | 'iife' | 'umd' | 'app'")]
+  #[napi(ts_type = "'es' | 'cjs' | 'iife' | 'umd'")]
   pub format: Option<String>,
   // freeze: boolean;
   // generatedCode: NormalizedGeneratedCodeOptions;

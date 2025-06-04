@@ -1,5 +1,0 @@
-# https://github.com/actions/labeler
-
-# Add 'needs-triage' label to any PR that is opened against the `main` branch
-needs-triage:
-  - base-branch: 'main'

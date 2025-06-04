@@ -3,46 +3,19 @@ name: 'Automate Jobs'
 permissions: {}
 
 on:
-  pull_request_target: # zizmor: ignore[dangerous-triggers]
-    types: [opened, assigned]
   issues:
     types: [assigned]
 
 jobs:
-  # Label the PR based on the configuration in `.github/labeler.yml` using https://github.com/actions/labeler
-  labeler:
-    if: github.event.action == 'opened'
-    permissions:
-      contents: read
-      pull-requests: write
-
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/labeler@8558fd74291d67161a8a78ce36a881fa63b766a9 # v5
-
-  # Apply both to PRs and issues
   remove-needs-triage-when-assigned:
     if: github.event.action == 'assigned'
     runs-on: ubuntu-latest
     permissions:
-      pull-requests: write
       issues: write
     steps:
       - uses: actions-cool/issues-helper@a610082f8ac0cf03e357eb8dd0d5e2ba075e017e # v3.6.0
         with:
           actions: 'remove-labels'
           token: ${{ secrets.GITHUB_TOKEN }}
-          issue-number: ${{ github.event.pull_request.number || github.event.issue.number }}
+          issue-number: ${{ github.event.issue.number }}
           labels: 'needs-triage'
-
-  approval-if-self-assigned:
-    # Requirements:
-    # - The PR is created by the actor
-    # - The PR is assigned to the actor
-    # - The operation is done by the actor
-    if: github.event.action == 'assigned' && github.event.assignee.login == github.actor && github.event.pull_request.user.login == github.actor
-    runs-on: ubuntu-latest
-    permissions:
-      pull-requests: write
-    steps:
-      - uses: hmarr/auto-approve-action@f0939ea97e9205ef24d872e76833fa908a770363 # v4.0.0

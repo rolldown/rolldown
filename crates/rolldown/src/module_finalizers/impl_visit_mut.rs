@@ -282,7 +282,11 @@ impl<'ast> VisitMut<'ast> for ScopeHoistingFinalizer<'_, 'ast> {
         if let Some(new_expr) = self.try_rewrite_inline_dynamic_import_expr(import_expr) {
           *expr = new_expr;
         }
-        self.try_rewrite_import_expression(expr);
+        if self.try_rewrite_import_expression(expr) {
+          // If the import expression is rewritten, we don't need to walk it again.
+          // Otherwise, it might cause infinite recursion in some cases.
+          return;
+        }
       }
       ast::Expression::NewExpression(new_expr) => {
         self.handle_new_url_with_string_literal_and_import_meta_url(new_expr);

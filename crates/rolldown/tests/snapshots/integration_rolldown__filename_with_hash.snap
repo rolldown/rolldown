@@ -681,9 +681,10 @@ expression: output
 
 # tests/esbuild/default/conditional_import
 
-- a-!~{000}~.js => a-Bzl8UrDM.js
-- b-!~{001}~.js => b-rJqDEGY3.js
-- import-!~{002}~.js => import-D0zHpf5m.js
+- a-!~{000}~.js => a-BOwfNhCg.js
+- b-!~{001}~.js => b-BhIOeOq5.js
+- chunk-!~{002}~.js => chunk-FGKrBk_Z.js
+- import-!~{004}~.js => import-Cr2ZHUMa.js
 
 # tests/esbuild/default/conditional_require
 
@@ -3230,9 +3231,9 @@ expression: output
 
 # tests/esbuild/splitting/splitting_dynamic_and_not_dynamic_common_js_into_es6
 
-- entry-!~{000}~.js => entry-ChkLeB88.js
-- foo-!~{001}~.js => foo-BL6CYe_C.js
-- foo-!~{003}~.js => foo-kEDKCF_G.js
+- entry-!~{000}~.js => entry-B_wCMh4Y.js
+- foo-!~{003}~.js => foo-BbEHRZbb.js
+- foo-!~{001}~.js => foo-DC0lft_o.js
 
 # tests/esbuild/splitting/splitting_dynamic_and_not_dynamic_es6_into_es6
 
@@ -3242,8 +3243,9 @@ expression: output
 
 # tests/esbuild/splitting/splitting_dynamic_common_js_into_es6
 
-- entry-!~{000}~.js => entry-7gQjPrW3.js
-- foo-!~{001}~.js => foo-FwXlMbwT.js
+- entry-!~{000}~.js => entry-Dh5n53yM.js
+- chunk-!~{001}~.js => chunk-BAbtX2hM.js
+- foo-!~{003}~.js => foo-D_TXuouE.js
 
 # tests/esbuild/splitting/splitting_dynamic_es6_into_es6
 
@@ -3668,8 +3670,9 @@ expression: output
 
 # tests/rolldown/cjs_compat/dynamic_cjs_entry
 
-- main-!~{000}~.js => main-C4gJLaiK.js
-- cjs-!~{001}~.js => cjs-ClJrtm5H.js
+- main-!~{000}~.js => main-DYuEBBgS.js
+- chunk-!~{001}~.js => chunk-BAbtX2hM.js
+- cjs-!~{003}~.js => cjs-CJLicVRG.js
 
 # tests/rolldown/cjs_compat/esm_require_cjs
 
@@ -4680,6 +4683,12 @@ expression: output
 # tests/rolldown/issues/4274
 
 - main-!~{000}~.js => main-BSwanBDJ.js
+
+# tests/rolldown/issues/4289
+
+- main-!~{000}~.js => main-BRpkZFvs.js
+- chunk-!~{001}~.js => chunk-BAbtX2hM.js
+- lib-!~{003}~.js => lib-DsLjAtIi.js
 
 # tests/rolldown/issues/4390
 

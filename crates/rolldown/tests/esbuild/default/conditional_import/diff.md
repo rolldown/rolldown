@@ -16,8 +16,10 @@ x ? import("a") : y ? Promise.resolve().then(() => __toESM(require_import())) : 
 ```
 ### rolldown
 ```js
+import { __toDynamicImportESM } from "./chunk.js";
+
 //#region a.js
-x ? import("a") : y ? import("./import.js") : import("c");
+x ? import("a") : y ? import("./import.js").then(__toDynamicImportESM()) : import("c");
 
 //#endregion
 ```
@@ -26,14 +28,15 @@ x ? import("a") : y ? import("./import.js") : import("c");
 ===================================================================
 --- esbuild	/out/a.js
 +++ rolldown	a.js
-@@ -1,6 +1,1 @@
+@@ -1,6 +1,2 @@
 -var require_import = __commonJS({
 -    "import.js"(exports) {
 -        exports.foo = 213;
 -    }
 -});
 -x ? import("a") : y ? Promise.resolve().then(() => __toESM(require_import())) : import("c");
-+x ? import("a") : y ? import("./import.js") : import("c");
++import {__toDynamicImportESM} from "./chunk.js";
++x ? import("a") : y ? import("./import.js").then(__toDynamicImportESM()) : import("c");
 
 ```
 ## /out/b.js
@@ -51,8 +54,10 @@ x ? y ? import("a") : Promise.resolve().then(() => __toESM(require_import())) : 
 ```
 ### rolldown
 ```js
+import { __toDynamicImportESM } from "./chunk.js";
+
 //#region b.js
-x ? y ? import("a") : import("./import.js") : import(c);
+x ? y ? import("a") : import("./import.js").then(__toDynamicImportESM()) : import(c);
 
 //#endregion
 ```
@@ -61,13 +66,14 @@ x ? y ? import("a") : import("./import.js") : import(c);
 ===================================================================
 --- esbuild	/out/b.js
 +++ rolldown	b.js
-@@ -1,6 +1,1 @@
+@@ -1,6 +1,2 @@
 -var require_import = __commonJS({
 -    "import.js"(exports) {
 -        exports.foo = 213;
 -    }
 -});
 -x ? y ? import("a") : Promise.resolve().then(() => __toESM(require_import())) : import(c);
-+x ? y ? import("a") : import("./import.js") : import(c);
++import {__toDynamicImportESM} from "./chunk.js";
++x ? y ? import("a") : import("./import.js").then(__toDynamicImportESM()) : import(c);
 
 ```

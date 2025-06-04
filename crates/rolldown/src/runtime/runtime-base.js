@@ -56,3 +56,6 @@ export var __toBinary = /* @__PURE__ */ (() => {
     return bytes
   }
 })()
+
+// Rolldown uses this to convert the return value of `import('./some-cjs-module.js')` to a more sensible ESM module namespace.
+export var __toDynamicImportESM = (isNodeMode) => (mod) => __toESM(mod.default, isNodeMode)

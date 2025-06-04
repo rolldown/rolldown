@@ -67,8 +67,8 @@ impl<'ast> AstSnippet<'ast> {
       [] => object,
       _ => {
         let prop_name = names[names.len() - 1].as_str();
-        let is_valid_ident = identifier::is_identifier_name(prop_name);
-        if is_valid_ident {
+        let object = self.member_expr_or_ident_ref(object, &names[0..names.len() - 1], span);
+        if identifier::is_identifier_name(prop_name) {
           ast::Expression::StaticMemberExpression(self.builder.alloc_static_member_expression(
             span,
             object,

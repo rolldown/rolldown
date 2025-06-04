@@ -4712,7 +4712,7 @@ expression: output
 
 # tests/rolldown/issues/4780
 
-- main-!~{000}~.js => main-DggObuqQ.js
+- main-!~{000}~.js => main-D_pxn1_z.js
 
 # tests/rolldown/misc/ambiguous_star_export
 

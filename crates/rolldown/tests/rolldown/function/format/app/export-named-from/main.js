@@ -1,1 +1,0 @@
-export { foo, "bar" as "bar2", "abc", ddd as "ddd2" } from 'external';

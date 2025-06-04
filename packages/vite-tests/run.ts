@@ -51,7 +51,7 @@ fs.writeFileSync(packageJsonPath, JSON.stringify(packageJson, null, 2));
 
 await runCmdAndPipe(
   '# Running `pnpm install`...',
-  ['pnpm', ['install'], { nodeOptions: { cwd: REPO_PATH } }],
+  ['pnpm', ['install', '--no-frozen-lockfile'], { nodeOptions: { cwd: REPO_PATH } }],
 );
 await runCmdAndPipe(
   '# Running `pnpm run build`...',

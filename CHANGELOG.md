@@ -1,3 +1,27 @@
+## [1.0.0-beta.11](https://github.com/rolldown/rolldown/compare/v1.0.0-beta.10...v1.0.0-beta.11) (2025-06-04)
+
+### Features
+
+* add `index_of_one` utils for `Bitset` ([#4779](https://github.com/rolldown/rolldown/issues/4779)) ([16aff17](https://github.com/rolldown/rolldown/commit/16aff17677e8afa62a829dbda40c6c34181093f2))
+* **advancedChunks:** support function for `output.advancedChunks.groups[].test` ([#4644](https://github.com/rolldown/rolldown/issues/4644)) ([0a177d4](https://github.com/rolldown/rolldown/commit/0a177d4fcdc6a135d100462233cdfa9c17c2503f)), closes [#4477](https://github.com/rolldown/rolldown/issues/4477)
+* **node:** support Rollup-style JSX options ([#4756](https://github.com/rolldown/rolldown/issues/4756)) ([2c4c2a8](https://github.com/rolldown/rolldown/commit/2c4c2a8188e36ddcd9cac4bd5d5cf60f96566edc)), closes [#4752](https://github.com/rolldown/rolldown/issues/4752)
+* **rolldown_plugin_isolated_declaration:** improve diagnostic messages ([#4731](https://github.com/rolldown/rolldown/issues/4731)) ([87188ed](https://github.com/rolldown/rolldown/commit/87188edbcf5520a2a8552b870f348109c8c41875)), closes [#4040](https://github.com/rolldown/rolldown/issues/4040)
+* warn when assignment to bundle is detected ([#4792](https://github.com/rolldown/rolldown/issues/4792)) ([833c4e0](https://github.com/rolldown/rolldown/commit/833c4e0c7cfe8cc30fd590302a2efcd49d8fcb8c))
+
+### Bug Fixes
+
+* allow user call `resolveId` hook in deps of internal runtime module ([#4733](https://github.com/rolldown/rolldown/issues/4733)) ([1995519](https://github.com/rolldown/rolldown/commit/1995519633a5602400b89f3c1bf4d94f08ab6d68))
+* **browser:** fix binding types ([#4488](https://github.com/rolldown/rolldown/issues/4488)) ([287a573](https://github.com/rolldown/rolldown/commit/287a57391a7115a726cb1cfb0dec624153f33ccc)), closes [#4753](https://github.com/rolldown/rolldown/issues/4753) [#4754](https://github.com/rolldown/rolldown/issues/4754) [#4724](https://github.com/rolldown/rolldown/issues/4724)
+* built file references undeclared import_foo$n ([#4745](https://github.com/rolldown/rolldown/issues/4745)) ([cb30e40](https://github.com/rolldown/rolldown/commit/cb30e400570dc1100c0ef983633119b3034ae699)), closes [#4740](https://github.com/rolldown/rolldown/issues/4740)
+* cjs namespace access property optimization ([#4803](https://github.com/rolldown/rolldown/issues/4803)) ([08bf380](https://github.com/rolldown/rolldown/commit/08bf380f2673c44812984641d1bc354a0697ec53))
+* computed property access is converted to static property access when using namespace import ([#4781](https://github.com/rolldown/rolldown/issues/4781)) ([e692385](https://github.com/rolldown/rolldown/commit/e69238501a705cd1e08bbe47559df7bfe1b6378f))
+* include side-effect modules in preserveModules mode ([#4710](https://github.com/rolldown/rolldown/issues/4710)) ([ac4e5db](https://github.com/rolldown/rolldown/commit/ac4e5db3df010c44b3e85337660e66c050bb7157))
+* **infra:** fails to load wasm fallback on WebContainer ([#4770](https://github.com/rolldown/rolldown/issues/4770)) ([5cb498e](https://github.com/rolldown/rolldown/commit/5cb498ea139e066c7b9ed2b1333e33aea1ae11e0)), closes [#4762](https://github.com/rolldown/rolldown/issues/4762)
+* **inlineDynamicImports:** ensure tla module execution correctly ([#4764](https://github.com/rolldown/rolldown/issues/4764)) ([92851ea](https://github.com/rolldown/rolldown/commit/92851eaedf3e2d5eaa612ce6634dac2878a35bc7)), closes [#4610](https://github.com/rolldown/rolldown/issues/4610)
+* **package.json:** fix husky not working ([98c54a1](https://github.com/rolldown/rolldown/commit/98c54a11839a6480d30c9ddcf0ab04fc8b245dc0))
+* renamed exports when enabled preserveModules ([#4728](https://github.com/rolldown/rolldown/issues/4728)) ([4da8973](https://github.com/rolldown/rolldown/commit/4da89732d145a8552a2cc01034c6ca12ae6fc90f)), closes [#4698](https://github.com/rolldown/rolldown/issues/4698)
+* **rolldown_plugin_build_import_analysis:** align `load` hook ([#4742](https://github.com/rolldown/rolldown/issues/4742)) ([10f8e10](https://github.com/rolldown/rolldown/commit/10f8e10afd5f8c057926ef504a598ef84af218bf)), closes [#3983](https://github.com/rolldown/rolldown/issues/3983)
+* test napi-derive file lock ([#4751](https://github.com/rolldown/rolldown/issues/4751)) ([2203f74](https://github.com/rolldown/rolldown/commit/2203f74b8055464b8f450307b3372ce97c1b910d))
 ## [1.0.0-beta.10](https://github.com/rolldown/rolldown/compare/v1.0.0-beta.9...v1.0.0-beta.10) (2025-05-28)
 
 ### ⚠ BREAKING CHANGES

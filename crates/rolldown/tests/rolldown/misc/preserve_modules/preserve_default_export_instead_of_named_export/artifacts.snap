@@ -1,0 +1,25 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## default.js
+
+```js
+//#region default.js
+const foo = 42;
+var default_default = foo;
+
+//#endregion
+export { default_default as default };
+```
+## main.js
+
+```js
+import default_default from "./default.js";
+
+//#region main.js
+console.log(default_default);
+
+//#endregion
+```

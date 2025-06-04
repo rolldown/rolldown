@@ -515,20 +515,6 @@ impl<'ast> AstSnippet<'ast> {
     ))
   }
 
-  pub fn require_call_expr(&self, source: &str) -> Expression<'ast> {
-    self.builder.expression_call(
-      SPAN,
-      self.builder.expression_identifier(SPAN, "require"),
-      NONE,
-      self.builder.vec1(Argument::from(self.builder.expression_string_literal(
-        SPAN,
-        self.builder.atom(source),
-        None,
-      ))),
-      false,
-    )
-  }
-
   /// var [assignee] = require([source]);
   pub fn variable_declarator_require_call_stmt(
     &self,

@@ -1,12 +1,3 @@
-use oxc::{allocator::TakeIn, ast_visit::VisitMut};
-use rolldown_common::AstScopes;
-use rolldown_ecmascript::EcmaAst;
-use rolldown_ecmascript_utils::AstSnippet;
-use rustc_hash::{FxHashMap, FxHashSet};
-
-use super::module_finalizers::scope_hoisting::{
-  ScopeHoistingFinalizer, ScopeHoistingFinalizerContext,
-};
 pub mod apply_inner_plugins;
 pub mod augment_chunk_hash;
 pub mod chunk;
@@ -24,6 +15,14 @@ pub mod resolve_id;
 pub mod transform_source;
 pub mod tweak_ast_for_scanning;
 pub mod uuid;
+
+use oxc::{allocator::TakeIn, ast_visit::VisitMut};
+use rolldown_common::AstScopes;
+use rolldown_ecmascript::EcmaAst;
+use rolldown_ecmascript_utils::AstSnippet;
+use rustc_hash::{FxHashMap, FxHashSet};
+
+use super::module_finalizers::{ScopeHoistingFinalizer, ScopeHoistingFinalizerContext};
 
 #[tracing::instrument(level = "trace", skip_all)]
 pub fn finalize_normal_module(

@@ -2,16 +2,12 @@ use std::sync::Arc;
 
 use arcstr::ArcStr;
 use futures::future::try_join_all;
-use oxc::{
-  ast_visit::VisitMut,
-  semantic::{ScopeId, SymbolId},
-};
+use oxc::semantic::{ScopeId, SymbolId};
 use oxc_index::IndexVec;
 use render_chunk_to_assets::set_emitted_chunk_preliminary_filenames;
-use rolldown_ecmascript_utils::AstSnippet;
 use rolldown_error::BuildResult;
 use rolldown_std_utils::OptionExt;
-use rustc_hash::{FxHashMap, FxHashSet};
+use rustc_hash::FxHashMap;
 
 use rolldown_common::{
   ChunkIdx, ChunkKind, CssAssetNameReplacer, ImportMetaRolldownAssetReplacer, Module, ModuleIdx,
@@ -31,10 +27,7 @@ use sugar_path::SugarPath;
 use crate::{
   BundleOutput, SharedOptions,
   chunk_graph::ChunkGraph,
-  module_finalizers::{
-    isolating::{IsolatingModuleFinalizer, IsolatingModuleFinalizerContext},
-    scope_hoisting::ScopeHoistingFinalizerContext,
-  },
+  module_finalizers::ScopeHoistingFinalizerContext,
   stages::link_stage::LinkStageOutput,
   utils::{
     chunk::{
@@ -129,46 +122,26 @@ impl<'a> GenerateStage<'a> {
         let chunk_id = chunk_graph.module_to_chunk[module.idx].unwrap();
         let chunk = &chunk_graph.chunk_table[chunk_id];
         let linking_info = &self.link_output.metas[module.idx];
-        if self.options.format.requires_scope_hoisting() {
-          finalize_normal_module(
-            ScopeHoistingFinalizerContext {
-              canonical_names: &chunk.canonical_names,
-              id: module.idx,
-              chunk_id,
-              symbol_db: &self.link_output.symbol_db,
-              linking_info,
-              module,
-              modules: &self.link_output.module_table.modules,
-              linking_infos: &self.link_output.metas,
-              runtime: &self.link_output.runtime,
-              chunk_graph: &chunk_graph,
-              options: self.options,
-              cur_stmt_index: 0,
-              keep_name_statement_to_insert: Vec::new(),
-              file_emitter: &self.plugin_driver.file_emitter,
-            },
-            ast,
-            ast_scope,
-          );
-        } else {
-          ast.program.with_mut(|fields| {
-            let (oxc_program, alloc) = (fields.program, fields.allocator);
-            let mut finalizer = IsolatingModuleFinalizer {
-              alloc,
-              scope: ast_scope,
-              ctx: &IsolatingModuleFinalizerContext {
-                module,
-                modules: &self.link_output.module_table.modules,
-                symbol_db: &self.link_output.symbol_db,
-              },
-              snippet: AstSnippet::new(alloc),
-              generated_imports_set: FxHashSet::default(),
-              generated_imports: oxc::allocator::Vec::new_in(alloc),
-              generated_exports: oxc::allocator::Vec::new_in(alloc),
-            };
-            finalizer.visit_program(oxc_program);
-          });
-        }
+        finalize_normal_module(
+          ScopeHoistingFinalizerContext {
+            canonical_names: &chunk.canonical_names,
+            id: module.idx,
+            chunk_id,
+            symbol_db: &self.link_output.symbol_db,
+            linking_info,
+            module,
+            modules: &self.link_output.module_table.modules,
+            linking_infos: &self.link_output.metas,
+            runtime: &self.link_output.runtime,
+            chunk_graph: &chunk_graph,
+            options: self.options,
+            cur_stmt_index: 0,
+            keep_name_statement_to_insert: Vec::new(),
+            file_emitter: &self.plugin_driver.file_emitter,
+          },
+          ast,
+          ast_scope,
+        );
       });
 
     self.render_chunk_to_assets(&mut chunk_graph).await

@@ -15,11 +15,11 @@ import("./foo-BJYZ44Z3.js").then(({ default: { bar: b } }) => console.log(import
 ```
 ### rolldown
 ```js
-import { __toESM, require_foo } from "./foo.js";
+import { __toDynamicImportESM, __toESM, require_foo } from "./foo.js";
 
 //#region entry.js
 var import_foo = __toESM(require_foo());
-import("./foo2.js").then(({ default: { bar: b } }) => console.log(import_foo.bar, b));
+import("./foo2.js").then(__toDynamicImportESM()).then(({ default: { bar: b } }) => console.log(import_foo.bar, b));
 
 //#endregion
 ```
@@ -30,10 +30,10 @@ import("./foo2.js").then(({ default: { bar: b } }) => console.log(import_foo.bar
 +++ rolldown	entry.js
 @@ -1,3 +1,3 @@
 -import {__toESM, require_foo} from "./chunk-X3UWZZCR.js";
-+import {__toESM, require_foo} from "./foo.js";
++import {__toDynamicImportESM, __toESM, require_foo} from "./foo.js";
  var import_foo = __toESM(require_foo());
 -import("./foo-BJYZ44Z3.js").then(({default: {bar: b}}) => console.log(import_foo.bar, b));
-+import("./foo2.js").then(({default: {bar: b}}) => console.log(import_foo.bar, b));
++import("./foo2.js").then(__toDynamicImportESM()).then(({default: {bar: b}}) => console.log(import_foo.bar, b));
 
 ```
 ## /out/foo-BJYZ44Z3.js
@@ -53,7 +53,7 @@ var require_foo = __commonJS({ "foo.js"(exports) {
 } });
 
 //#endregion
-export { __toESM, require_foo };
+export { __toDynamicImportESM, __toESM, require_foo };
 ```
 ### diff
 ```diff
@@ -70,7 +70,7 @@ export { __toESM, require_foo };
 +} });
 +
 +//#endregion
-+export { __toESM, require_foo };
++export { __toDynamicImportESM, __toESM, require_foo };
 \ No newline at end of file
 
 ```

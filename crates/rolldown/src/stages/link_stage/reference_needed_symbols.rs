@@ -1,8 +1,8 @@
 use std::{ptr::addr_of, sync::Mutex};
 
 use rolldown_common::{
-  ImportKind, ImportRecordIdx, ImportRecordMeta, Module, ModuleIdx, ModuleTable, OutputFormat,
-  ResolvedImportRecord, StmtInfoMeta, WrapKind, side_effects::DeterminedSideEffects,
+  ExportsKind, ImportKind, ImportRecordIdx, ImportRecordMeta, Module, ModuleIdx, ModuleTable,
+  OutputFormat, ResolvedImportRecord, StmtInfoMeta, WrapKind, side_effects::DeterminedSideEffects,
 };
 use rolldown_utils::{
   concat_string,
@@ -227,6 +227,17 @@ impl LinkStage<'_> {
                             .push(importee_linking_info.wrapper_ref.unwrap().into());
                           stmt_info.referenced_symbols.push(importee.namespace_object_ref.into());
                         }
+                      }
+                    } else {
+                      match &importee.exports_kind {
+                        ExportsKind::CommonJs => {
+                          // `import('./some-cjs-module.js')` would be converted to
+                          // `import('./some-cjs-module.js').then(__toDynamicImportESM(isNodeMode))`
+                          stmt_info
+                            .referenced_symbols
+                            .push(self.runtime.resolve_symbol("__toDynamicImportESM").into());
+                        }
+                        ExportsKind::Esm | ExportsKind::None => {}
                       }
                     }
                   }

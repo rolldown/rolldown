@@ -1,0 +1,20 @@
+name: Auto Approve
+
+permissions: {}
+
+on:
+  pull_request:
+    types: [assigned]
+
+jobs:
+  approval-if-self-assigned:
+    # Requirements:
+    # - The PR is created by the actor
+    # - The PR is assigned to the actor
+    # - The operation is done by the actor
+    if: github.event.action == 'assigned' && github.event.assignee.login == github.actor && github.event.pull_request.user.login == github.actor
+    runs-on: ubuntu-latest
+    permissions:
+      pull-requests: write
+    steps:
+      - uses: hmarr/auto-approve-action@f0939ea97e9205ef24d872e76833fa908a770363 # v4.0.0

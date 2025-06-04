@@ -153,7 +153,7 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
               self.snippet.builder.vec(),
               false,
             ),
-            self.ctx.module.should_consider_node_esm_spec(),
+            self.ctx.module.should_consider_node_esm_spec_for_static_import(),
           ),
         );
         return false;
@@ -914,7 +914,7 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
                     self.snippet.builder.atom(to_esm_fn_name.as_str()),
                   ),
                   self.snippet.call_expr_expr(importee_wrapper_ref_name),
-                  self.ctx.module.should_consider_node_esm_spec(),
+                  self.ctx.module.should_consider_node_esm_spec_for_dynamic_import(),
                 ),
               ))
             }
@@ -961,7 +961,7 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
               self.finalized_expr_for_runtime_symbol("__toDynamicImportESM");
 
             let mut arguments = self.snippet.builder.vec();
-            if self.ctx.module.should_consider_node_esm_spec() {
+            if self.ctx.module.should_consider_node_esm_spec_for_dynamic_import() {
               arguments.push(ast::Argument::from(self.snippet.builder.expression_numeric_literal(
                 SPAN,
                 1.0,
@@ -1105,7 +1105,7 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
                                 false,
                               ),
                             ),
-                            self.ctx.module.should_consider_node_esm_spec(),
+                            self.ctx.module.should_consider_node_esm_spec_for_static_import(),
                           ),
                         ),
                       }
@@ -1274,7 +1274,7 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
               self.finalized_expr_for_runtime_symbol("__toDynamicImportESM");
 
             let mut arguments = self.snippet.builder.vec();
-            if self.ctx.module.should_consider_node_esm_spec() {
+            if self.ctx.module.should_consider_node_esm_spec_for_dynamic_import() {
               arguments.push(ast::Argument::from(self.snippet.builder.expression_numeric_literal(
                 SPAN,
                 1.0,

@@ -34,7 +34,7 @@ impl ModuleDefFormat {
 
   /// Compared to `EcmaView::exports_kind == ExportKind::Esm`, this method ensures that not only the
   /// module is esm, but also satisfies the conditions how node.js determines if a module is esm.
-  /// We use this method to determine if we want to stimulate node.js's ESM execution behavior.
+  /// We use this method to determine if we want to simulate node.js's ESM execution behavior.
   pub fn is_esm(&self) -> bool {
     matches!(self, Self::EsmMjs | Self::EsmPackageJson | Self::EsmMts)
   }

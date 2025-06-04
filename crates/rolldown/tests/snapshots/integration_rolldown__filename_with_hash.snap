@@ -4686,9 +4686,9 @@ expression: output
 
 # tests/rolldown/issues/4289
 
-- main-!~{000}~.js => main-BRpkZFvs.js
-- chunk-!~{001}~.js => chunk-BAbtX2hM.js
-- lib-!~{003}~.js => lib-DsLjAtIi.js
+- main-!~{000}~.js => main-BjZFiMIo.js
+- chunk-!~{001}~.js => chunk-e6zvK7dF.js
+- lib-!~{003}~.js => lib-DXD_OL-7.js
 
 # tests/rolldown/issues/4390
 

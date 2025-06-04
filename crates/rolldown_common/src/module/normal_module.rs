@@ -200,8 +200,15 @@ impl NormalModule {
   // - `package.json` has `"type": "module"`
   // , we need to consider to stimulate the Node.js ESM behavior for maximum compatibility.
   #[inline]
-  pub fn should_consider_node_esm_spec(&self) -> bool {
+  pub fn should_consider_node_esm_spec_for_static_import(&self) -> bool {
     self.ecma_view.def_format.is_esm()
+  }
+
+  #[inline]
+  pub fn should_consider_node_esm_spec_for_dynamic_import(&self) -> bool {
+    // Dynamic imports in cjs must be written targeting node platform.
+    // So we always consider Node.js ESM spec for dynamic imports in cjs modules, even if modules aren't explicitly marked as cjs.
+    self.ecma_view.def_format.is_esm() || self.ecma_view.def_format.is_commonjs()
   }
 
   pub fn render(

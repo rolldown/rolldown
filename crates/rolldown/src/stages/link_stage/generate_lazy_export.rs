@@ -7,14 +7,13 @@ use oxc::{
   transformer::ESTarget,
 };
 use rolldown_common::{
-  EcmaAstIdx, EcmaModuleAstUsage, ExportsKind, LocalExport, Module, ModuleIdx, ModuleType,
-  NormalModule, StmtInfo, StmtInfoIdx, SymbolOrMemberExprRef, SymbolRef, SymbolRefDbForModule,
-  WrapKind,
+  EcmaAstIdx, EcmaModuleAstUsage, ExportsKind, GetLocalDbMut, LocalExport, Module, ModuleIdx,
+  ModuleType, NormalModule, StmtInfo, StmtInfoIdx, SymbolOrMemberExprRef, SymbolRef,
+  SymbolRefDbForModule, WrapKind,
 };
 use rolldown_ecmascript_utils::AstSnippet;
 use rolldown_rstr::{Rstr, ToRstr};
 use rolldown_utils::{
-  concat_string,
   ecmascript::legitimize_identifier_name,
   indexmap::FxIndexMap,
   rayon::{IntoParallelRefMutIterator, ParallelIterator},
@@ -211,7 +210,8 @@ fn json_object_expr_to_esm(
   if !transformed {
     return false;
   }
-
+  let original_symbol_ref_db = std::mem::take(link_staged.symbols.local_db_mut(module_idx));
+  let (_, facade_scope) = original_symbol_ref_db.ast_scopes.into_inner();
   // recreate semantic data
   #[allow(clippy::cast_possible_truncation)]
   let scoping = ecma_ast.make_symbol_table_and_scope_tree_with_semantic_builder(
@@ -227,20 +227,10 @@ fn json_object_expr_to_esm(
   // update semantic data of module
   let root_scope_id = scoping.root_scope_id();
   let mut symbol_ref_db = SymbolRefDbForModule::new(scoping, module_idx, root_scope_id);
+  symbol_ref_db.set_facade_scope(facade_scope);
 
-  let legitimized_repr_name = legitimize_identifier_name(&module.repr_name);
-  let default_export_ref =
-    symbol_ref_db.create_facade_root_symbol_ref(&concat_string!(legitimized_repr_name, "_default"));
-
-  let hmr_hot_ref = link_staged.options.experimental.hmr.as_ref().map(|_| {
-    symbol_ref_db.create_facade_root_symbol_ref(&concat_string!(legitimized_repr_name, "_hot"))
-  });
-
-  let name = concat_string!(legitimized_repr_name, "_exports");
-  let namespace_object_ref = symbol_ref_db.create_facade_root_symbol_ref(&name);
-  module.namespace_object_ref = namespace_object_ref;
-  module.default_export_ref = default_export_ref;
-  module.hmr_hot_ref = hmr_hot_ref;
+  let namespace_object_ref = module.namespace_object_ref;
+  let default_export_ref = module.default_export_ref;
 
   // update module stmts info
   // clear stmt info, since we need to split `ObjectExpression` into multiple decl, the original stmt info is invalid.

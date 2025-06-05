@@ -265,9 +265,11 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
         .is_some_and(|resolved_module| {
           self.ctx.linking_infos[*resolved_module].safe_cjs_to_eliminate_interop_default
         });
+
       expr = if is_safe_cjs_to_eliminate_interop_default
         && original_reference_id
           .is_some_and(|item| self.interested_namespace_alias_ref_id.contains(&item))
+        && ns_alias.property_name.as_str() == "default"
       {
         expr
       } else {

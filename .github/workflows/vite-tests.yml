@@ -17,6 +17,9 @@ on:
       - 'package.json'
       - 'pnpm-lock.yaml'
       - 'pnpm-workspace.yaml'
+      - '!packages/bench/**'
+      - '!packages/debug/**'
+      - '!packages/testing/**'
   workflow_dispatch:
 
 concurrency:
@@ -51,5 +54,5 @@ jobs:
       - name: Build Native Rolldown
         run: just build native debug
 
-      - name: Rollup Test For Node20
+      - name: Run Vite Tests
         run: pnpm run --filter vite-tests test

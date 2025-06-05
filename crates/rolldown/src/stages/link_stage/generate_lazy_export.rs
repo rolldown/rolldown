@@ -232,10 +232,15 @@ fn json_object_expr_to_esm(
   let default_export_ref =
     symbol_ref_db.create_facade_root_symbol_ref(&concat_string!(legitimized_repr_name, "_default"));
 
+  let hmr_hot_ref = link_staged.options.experimental.hmr.as_ref().map(|_| {
+    symbol_ref_db.create_facade_root_symbol_ref(&concat_string!(legitimized_repr_name, "_hot"))
+  });
+
   let name = concat_string!(legitimized_repr_name, "_exports");
   let namespace_object_ref = symbol_ref_db.create_facade_root_symbol_ref(&name);
   module.namespace_object_ref = namespace_object_ref;
   module.default_export_ref = default_export_ref;
+  module.hmr_hot_ref = hmr_hot_ref;
 
   // update module stmts info
   // clear stmt info, since we need to split `ObjectExpression` into multiple decl, the original stmt info is invalid.

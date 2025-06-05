@@ -1,6 +1,48 @@
-#[napi_derive::napi(object)]
+use napi_derive::napi;
+use rolldown_error::BuildDiagnostic;
+
+use crate::types::binding_outputs::{BindingError, to_js_diagnostic};
+
+#[napi]
 #[derive(Debug)]
 pub struct BindingHmrOutput {
+  patch: Option<BindingHmrOutputPatch>,
+  errors: Option<rolldown_common::OutputsDiagnostics>,
+}
+
+#[napi]
+impl BindingHmrOutput {
+  #[napi(getter)]
+  pub fn patch(&mut self) -> Option<BindingHmrOutputPatch> {
+    self.patch.take()
+  }
+
+  #[napi(getter)]
+  pub fn errors(&mut self) -> Vec<napi::Either<napi::JsError, BindingError>> {
+    if let Some(rolldown_common::OutputsDiagnostics { diagnostics, cwd }) = self.errors.as_ref() {
+      return diagnostics
+        .iter()
+        .map(|diagnostic| to_js_diagnostic(diagnostic, cwd.clone()))
+        .collect();
+    }
+    vec![]
+  }
+
+  pub fn from_errors(diagnostics: Vec<BuildDiagnostic>, cwd: std::path::PathBuf) -> Self {
+    let errors = rolldown_common::OutputsDiagnostics { diagnostics, cwd };
+    Self { patch: None, errors: Some(errors) }
+  }
+}
+
+impl From<rolldown_common::HmrOutput> for BindingHmrOutput {
+  fn from(value: rolldown_common::HmrOutput) -> Self {
+    Self { patch: Some(value.into()), errors: None }
+  }
+}
+
+#[napi_derive::napi(object)]
+#[derive(Debug)]
+pub struct BindingHmrOutputPatch {
   pub code: String,
   pub filename: String,
   pub sourcemap: Option<String>,
@@ -12,7 +54,7 @@ pub struct BindingHmrOutput {
   pub full_reload_reason: Option<String>,
 }
 
-impl From<rolldown_common::HmrOutput> for BindingHmrOutput {
+impl From<rolldown_common::HmrOutput> for BindingHmrOutputPatch {
   fn from(value: rolldown_common::HmrOutput) -> Self {
     Self {
       code: value.code,

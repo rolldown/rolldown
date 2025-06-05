@@ -28,7 +28,7 @@ jobs:
       - name: Setup Rust
         uses: oxc-project/setup-rust@cd82e1efec7fef815e2c23d296756f31c7cdc03d # v1.0.0
         with:
-          save-cache: false # ${{ github.ref_name == 'main' }}
+          save-cache: ${{ github.ref_name == 'main' }}
           cache-key: debug-build
           tools: just
 
@@ -52,7 +52,7 @@ jobs:
         uses: oxc-project/setup-rust@cd82e1efec7fef815e2c23d296756f31c7cdc03d # v1.0.0
         with:
           cache-key: release-build
-          save-cache: false # ${{ github.ref_name == 'main' }}
+          save-cache: ${{ github.ref_name == 'main' }}
           tools: just
 
       - name: Setup Node For Development

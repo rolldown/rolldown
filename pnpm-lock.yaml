@@ -322,8 +322,8 @@ importers:
         version: 4.1.0
     devDependencies:
       '@napi-rs/cli':
-        specifier: 3.0.0-alpha.84
-        version: 3.0.0-alpha.84(@emnapi/runtime@1.4.3)(@types/node@22.15.29)(emnapi@1.4.3)
+        specifier: 3.0.0-alpha.86
+        version: 3.0.0-alpha.86(@emnapi/runtime@1.4.3)(@types/node@22.15.29)(emnapi@1.4.3)
       '@napi-rs/wasm-runtime':
         specifier: ^0.2.10
         version: 0.2.10
@@ -1694,8 +1694,8 @@ packages:
   '@module-federation/sdk@0.8.12':
     resolution: {integrity: sha512-zFgXYBHbzwIqlrLfn6ewIRXDZCctDDQT2nFhbsZr29yWQgpmW1fm2kJCxQsG0DENGGN1KpzfDoxjjvSKJS/ZHA==}
 
-  '@napi-rs/cli@3.0.0-alpha.84':
-    resolution: {integrity: sha512-KOhe4oHd5SGCXU5e9looAMDJkwyLQ1s0yOzQQK5P1jvIKP/Pk3tybqjiEqJzXTXixI5zVWlt/D48+kz7EyWH+A==}
+  '@napi-rs/cli@3.0.0-alpha.86':
+    resolution: {integrity: sha512-sY4X2FIy7L+5ma67Ktc80xa5WmvUlDAsRsu3aVcyf1mUImNcfxPFabcNqb+evcdMQFrsFoTbMDP67waxSsh/eg==}
     engines: {node: '>= 16'}
     hasBin: true
     peerDependencies:
@@ -7133,7 +7133,7 @@ snapshots:
     dependencies:
       isomorphic-rslog: 0.0.7
 
-  '@napi-rs/cli@3.0.0-alpha.84(@emnapi/runtime@1.4.3)(@types/node@22.15.29)(emnapi@1.4.3)':
+  '@napi-rs/cli@3.0.0-alpha.86(@emnapi/runtime@1.4.3)(@types/node@22.15.29)(emnapi@1.4.3)':
     dependencies:
       '@inquirer/prompts': 7.5.3(@types/node@22.15.29)
       '@napi-rs/cross-toolchain': 0.0.19

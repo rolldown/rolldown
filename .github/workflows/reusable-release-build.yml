@@ -74,7 +74,7 @@ jobs:
         uses: oxc-project/setup-rust@cd82e1efec7fef815e2c23d296756f31c7cdc03d # v1.0.0
         with:
           cache-key: release-${{ matrix.target }}
-          save-cache: false # ${{ github.ref_name == 'main' }}
+          save-cache: ${{ github.ref_name == 'main' }}
 
       - name: Rustup Adds Target
         run: rustup target add ${{ matrix.target }}
@@ -244,7 +244,7 @@ jobs:
         uses: oxc-project/setup-rust@cd82e1efec7fef815e2c23d296756f31c7cdc03d # v1.0.0
         with:
           cache-key: release-wasm32-wasip1-threads
-          save-cache: false # ${{ github.ref_name == 'main' }}
+          save-cache: ${{ github.ref_name == 'main' }}
 
       - name: Add WASI target
         run: rustup target add wasm32-wasip1-threads

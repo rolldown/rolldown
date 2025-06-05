@@ -15,7 +15,6 @@ pub fn create_to_import_meta_url_based_relative_runtime(
     "es" => es,
     "iife" => iife,
     "umd" => umd,
-    "app" => app,
     "worker-iife" => worker_iife,
     _ => unreachable!("Invalid format: {}", format),
   };
@@ -47,10 +46,6 @@ fn umd(path: &str) -> String {
     get_file_url_from_relative_path(path),
     get_relative_url_from_document(path, true)
   )
-}
-
-fn app(path: &str) -> String {
-  format!(r#"new Error('Cannot resolve {path} in output format "app".')"#)
 }
 
 fn worker_iife(path: &str) -> String {

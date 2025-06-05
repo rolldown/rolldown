@@ -74,13 +74,6 @@ impl SymbolRefDbForModule {
     SymbolRef::from((self.owner_idx, symbol_id))
   }
 
-  /// This method is used to hide the `SymbolTable::create_symbol` method since
-  /// `SymbolRefDbForModule` impl `Deref` for `SymbolTable`.
-  #[deprecated = "Use `create_facade_root_symbol_ref` instead"]
-  pub fn create_symbol(&mut self) {
-    panic!("Use `create_facade_root_symbol_ref` instead");
-  }
-
   /// # Panics
   /// - If the symbol is not declared in the module.
   pub fn get_classic_data(&self, symbol_id: SymbolId) -> &SymbolRefDataClassic {

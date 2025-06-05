@@ -7,6 +7,8 @@ export default defineTest({
     },
   },
   afterTest: async () => {
+    // polyfill for node.js `Websocket`
+    (global as any).WebSocket = class {}
     await import('./assert.mjs')
   },
 })

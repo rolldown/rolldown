@@ -53,6 +53,10 @@ impl AstScopes {
     self.scoping = scoping;
   }
 
+  pub fn set_facade_scope(&mut self, facade_scoping: FacadeScoping) {
+    self.facade_scoping = facade_scoping;
+  }
+
   pub fn is_unresolved(&self, reference_id: ReferenceId) -> bool {
     self.scoping.get_reference(reference_id).symbol_id().is_none()
   }

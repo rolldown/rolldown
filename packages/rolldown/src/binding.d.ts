@@ -1099,6 +1099,11 @@ export declare class BindingError {
   message: string
 }
 
+export declare class BindingHmrOutput {
+  get patch(): BindingHmrOutputPatch | null
+  get errors(): Array<Error | BindingError>
+}
+
 export declare class BindingModuleInfo {
   id: string
   importers: Array<string>
@@ -1392,7 +1397,7 @@ export interface BindingHmrBoundaryOutput {
   acceptedVia: string
 }
 
-export interface BindingHmrOutput {
+export interface BindingHmrOutputPatch {
   code: string
   filename: string
   sourcemap?: string

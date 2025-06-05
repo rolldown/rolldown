@@ -106,13 +106,18 @@ impl Bundler {
   }
 
   #[napi]
-  pub async fn generate_hmr_patch(&self, changed_files: Vec<String>) -> BindingHmrOutput {
+  pub async fn generate_hmr_patch(
+    &self,
+    changed_files: Vec<String>,
+  ) -> napi::Result<BindingHmrOutput> {
     let mut bundler_core = self.inner.lock().await;
-    bundler_core
-      .generate_hmr_patch(changed_files)
-      .await
-      .expect("Failed to generate HMR patch")
-      .into()
+    let result = bundler_core.generate_hmr_patch(changed_files).await;
+    match result {
+      Ok(output) => Ok(output.into()),
+      Err(errs) => {
+        Ok(BindingHmrOutput::from_errors(errs.into_vec(), bundler_core.options().cwd.clone()))
+      }
+    }
   }
 
   #[napi]

@@ -4,11 +4,12 @@ import {
 } from '../../utils/create-bundler';
 import { transformToRollupOutput } from '../../utils/transform-to-rollup-output';
 
-import type { BindingHmrOutput } from '../../binding';
+import type { BindingHmrOutput, BindingHmrOutputPatch } from '../../binding';
 import type { InputOptions } from '../../options/input-options';
 import type { OutputOptions } from '../../options/output-options';
 import type { HasProperty, TypeAssert } from '../../types/assert';
 import type { RolldownOutput } from '../../types/rolldown-output';
+import { transformHmrPatchOutput } from '../../utils/transform-hmr-patch-output';
 import { validateOption } from '../../utils/validator';
 
 // @ts-expect-error TS2540: the polyfill of `asyncDispose`.
@@ -72,8 +73,9 @@ export class RolldownBuild {
 
   async generateHmrPatch(
     changedFiles: string[],
-  ): Promise<BindingHmrOutput | undefined> {
-    return this.#bundler?.bundler.generateHmrPatch(changedFiles);
+  ): Promise<BindingHmrOutputPatch | undefined> {
+    const output = await this.#bundler!.bundler.generateHmrPatch(changedFiles);
+    return transformHmrPatchOutput(output);
   }
 
   async hmrInvalidate(

@@ -1,0 +1,38 @@
+{
+  "name": "@rolldown/wasip2",
+  "version": "0.1.0",
+  "description": "Rolldown bundler with WASI Preview 2 support",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": {
+        "types": "./dist/index.d.ts",
+        "default": "./dist/index.js"
+      }
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build:debug": "tsx ./scripts/build.ts",
+    "build:release": "WASIP2_RELEASE=1 tsx ./scripts/build.ts"
+  },
+  "keywords": [
+    "rolldown",
+    "bundler",
+    "wasi",
+    "wasip2",
+    "component-model"
+  ],
+  "author": "Rolldown Team",
+  "license": "MIT",
+  "dependencies": {
+    "@rolldown/binding-wasm32-wasip2": "workspace:*"
+  },
+  "devDependencies": {
+    "tsx": "^4.0.0"
+  }
+} 

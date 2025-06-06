@@ -1,0 +1,3 @@
+cargo:rustc-check-cfg=cfg(doc_cfg)
+cargo:rustc-check-cfg=cfg(const_mut_refs)
+cargo:rustc-cfg=const_mut_refs

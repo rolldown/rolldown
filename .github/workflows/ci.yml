@@ -112,6 +112,15 @@ jobs:
   # os: ${{ matrix.target }}
   # changed: ${{ needs.changes.outputs.node-changes == 'true' }}
 
+  wasip2-test:
+    name: WASI Preview 2 Test
+    needs: changes
+    if: ${{ needs.changes.outputs.node-changes == 'true' }}
+    uses: ./.github/workflows/reusable-wasip2-test.yml
+    with:
+      os: ubuntu-latest
+      changed: 'true'
+
   pluginutils-test:
     name: Pluginutils Test
     needs: changes

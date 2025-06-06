@@ -1,0 +1,10 @@
+/Users/Work/Improve WASI support #898/rolldown/packages/rolldown/./target-wasm/release-wasip2/deps/version_check-4c912945853cf9d4.d: /Users/loverthherrera/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/version_check-0.9.5/src/lib.rs /Users/loverthherrera/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/version_check-0.9.5/src/version.rs /Users/loverthherrera/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/version_check-0.9.5/src/channel.rs /Users/loverthherrera/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/version_check-0.9.5/src/date.rs
+
+/Users/Work/Improve WASI support #898/rolldown/packages/rolldown/./target-wasm/release-wasip2/deps/libversion_check-4c912945853cf9d4.rlib: /Users/loverthherrera/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/version_check-0.9.5/src/lib.rs /Users/loverthherrera/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/version_check-0.9.5/src/version.rs /Users/loverthherrera/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/version_check-0.9.5/src/channel.rs /Users/loverthherrera/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/version_check-0.9.5/src/date.rs
+
+/Users/Work/Improve WASI support #898/rolldown/packages/rolldown/./target-wasm/release-wasip2/deps/libversion_check-4c912945853cf9d4.rmeta: /Users/loverthherrera/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/version_check-0.9.5/src/lib.rs /Users/loverthherrera/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/version_check-0.9.5/src/version.rs /Users/loverthherrera/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/version_check-0.9.5/src/channel.rs /Users/loverthherrera/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/version_check-0.9.5/src/date.rs
+
+/Users/loverthherrera/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/version_check-0.9.5/src/lib.rs:
+/Users/loverthherrera/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/version_check-0.9.5/src/version.rs:
+/Users/loverthherrera/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/version_check-0.9.5/src/channel.rs:
+/Users/loverthherrera/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/version_check-0.9.5/src/date.rs:

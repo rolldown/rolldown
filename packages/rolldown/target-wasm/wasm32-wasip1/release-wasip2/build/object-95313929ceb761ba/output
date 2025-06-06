@@ -1,0 +1,2 @@
+cargo:rustc-cfg=core_error
+cargo:rustc-check-cfg=cfg(core_error)

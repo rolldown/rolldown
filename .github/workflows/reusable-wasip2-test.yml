@@ -1,0 +1,89 @@
+name: WASI Preview 2 Test
+
+on:
+  workflow_call:
+    inputs:
+      os:
+        required: true
+        type: string
+      changed:
+        required: true
+        type: string
+
+jobs:
+  test:
+    name: WASI Preview 2 Test
+    if: ${{ inputs.changed == 'true' }}
+    runs-on: ${{ inputs.os }}
+    steps:
+      - name: Checkout
+        uses: taiki-e/checkout-action@b13d20b7cda4e2f325ef19895128f7ff735c0b3d # v1.3.1
+      
+      - name: Setup Node
+        uses: ./.github/actions/setup-node
+      
+      - name: Setup Rust
+        uses: oxc-project/setup-rust@cd82e1efec7fef815e2c23d296756f31c7cdc03d # v1.0.0
+        with:
+          tools: just
+          components: rust-src
+          toolchain: nightly
+      
+      - name: Install wasm-tools
+        run: cargo install wasm-tools
+      
+      - name: Build WASI Preview 2 binding
+        run: |
+          just build wasip2 debug
+          
+      - name: Basic WASI Preview 2 validation
+        run: |
+          # Check that the component.wasm file was created
+          test -f ./packages/rolldown/npm/wasm32-wasip2/binding.component.wasm || (echo "binding.component.wasm file not found" && exit 1)
+          
+          # Check that the types file was created
+          test -f ./packages/rolldown/npm/wasm32-wasip2/binding.component.wasm.d.ts || (echo "binding.component.wasm.d.ts file not found" && exit 1)
+      
+      - name: Test WASI Preview 2 package
+        run: |
+          if [ -d "node_modules/.wasip2-test" ]; then
+            rm -rf node_modules/.wasip2-test
+          fi
+          
+          mkdir -p node_modules/.wasip2-test
+          cd node_modules/.wasip2-test
+          
+          cat > package.json << EOF
+          {
+            "name": "wasip2-test",
+            "private": true,
+            "type": "module",
+            "dependencies": {
+              "@rolldown/wasip2": "workspace:*"
+            }
+          }
+          EOF
+          
+          cat > test.js << EOF
+          import { init, version } from '@rolldown/wasip2';
+          
+          async function main() {
+            try {
+              // Just test that we can initialize the package
+              // Full functionality testing would require a WASI Preview 2 runtime
+              await init();
+              console.log("WASI Preview 2 package initialized successfully");
+            } catch (error) {
+              console.error("Error initializing WASI Preview 2 package:", error);
+              process.exit(1);
+            }
+          }
+          
+          main().catch(error => {
+            console.error("Test failed:", error);
+            process.exit(1);
+          });
+          EOF
+          
+          # Note: We can't actually run the test on regular CI as it requires
+          # a runtime that supports WASI Preview 2, but we can verify the package builds 

@@ -12,6 +12,7 @@ mod stages;
 mod type_alias;
 mod types;
 mod utils;
+mod wasi_config;
 mod watch;
 mod watcher;
 use std::sync::Arc;
@@ -35,3 +36,12 @@ pub use rolldown_common::bundler_options::*;
 pub use rolldown_resolver::ResolveOptions;
 
 pub use rolldown_plugin as plugin;
+
+// Export WASI-specific configuration functions
+pub use crate::wasi_config::{
+  configure_wasi_resolve_options,
+  get_wasi_output_extension,
+  get_wasi_linker_command,
+  needs_wasi_filesystem_capabilities,
+  add_wasi_environment_settings,
+};

@@ -125,7 +125,7 @@ fix-repo:
     pnpm lint-code -- --fix
     just fmt-repo
 
-# Support `just build [native|browser] [debug|release]`
+# Support `just build [native|browser|wasip2] [debug|release]`
 build target="native" mode="debug": build-pluginutils
     pnpm run --filter rolldown build-{{ target }}:{{ mode }}
 
@@ -139,6 +139,10 @@ build-js-glue:
 # This will build the package `@rolldown/browser`.
 build-browser mode="debug":
     pnpm run --filter "@rolldown/browser" build:{{ mode }}
+
+# This will build the package `@rolldown/wasip2`.
+build-wasip2 mode="debug":
+    pnpm run --filter "@rolldown/wasip2" build:{{ mode }}
 
 # This will build the package `@rolldown/pluginutils`.
 build-pluginutils:

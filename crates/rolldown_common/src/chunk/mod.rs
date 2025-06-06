@@ -5,7 +5,7 @@ use std::{
 
 use crate::{
   ChunkIdx, ChunkKind, FilenameTemplate, ModuleIdx, ModuleTable, NamedImport, NormalModule,
-  NormalizedBundlerOptions, RollupPreRenderedChunk, SymbolRef,
+  NormalizedBundlerOptions, PreserveEntrySignatures, RollupPreRenderedChunk, SymbolRef,
 };
 pub mod chunk_table;
 pub mod types;
@@ -53,6 +53,7 @@ pub struct Chunk {
   pub exports_to_other_chunks: FxHashMap<SymbolRef, Vec<Rstr>>,
   pub input_base: ArcStr,
   pub create_reasons: Vec<String>,
+  pub preserve_entry_signature: Option<PreserveEntrySignatures>,
 }
 
 impl Chunk {
@@ -65,6 +66,7 @@ impl Chunk {
     modules: Vec<ModuleIdx>,
     kind: ChunkKind,
     input_base: ArcStr,
+    preserve_entry_signature: Option<PreserveEntrySignatures>,
   ) -> Self {
     Self {
       exec_order: u32::MAX,
@@ -75,6 +77,7 @@ impl Chunk {
       bits,
       kind,
       input_base,
+      preserve_entry_signature,
       ..Self::default()
     }
   }

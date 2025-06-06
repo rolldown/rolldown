@@ -87,6 +87,8 @@ impl GenerateStage<'_> {
             module: module.idx,
           },
           input_base.clone(),
+          // The preserve_entry_signatures has no effect when `preserve_modules` is enabled.
+          None,
         );
         chunk.add_creation_reason(
           ChunkCreationReason::PreserveModules {
@@ -287,6 +289,24 @@ impl GenerateStage<'_> {
       let Module::Normal(module) = &self.link_output.module_table[entry_point.id] else {
         continue;
       };
+
+      let preserve_entry_signature = if module.is_user_defined_entry {
+        match self.options.preserve_entry_signatures {
+          PreserveEntrySignatures::AllowExtension
+          | PreserveEntrySignatures::Strict
+          | PreserveEntrySignatures::False => Some(self.options.preserve_entry_signatures),
+          PreserveEntrySignatures::ExportsOnly => {
+            let meta = &self.link_output.metas[module.idx];
+            if meta.sorted_and_non_ambiguous_resolved_exports.is_empty() {
+              Some(PreserveEntrySignatures::AllowExtension)
+            } else {
+              Some(PreserveEntrySignatures::Strict)
+            }
+          }
+        }
+      } else {
+        None
+      };
       let mut chunk = Chunk::new(
         entry_point.name.clone(),
         entry_point.reference_id.clone(),
@@ -299,6 +319,7 @@ impl GenerateStage<'_> {
           module: entry_point.id,
         },
         input_base.clone(),
+        preserve_entry_signature,
       );
       chunk.add_creation_reason(
         ChunkCreationReason::UserDefinedEntry {
@@ -348,10 +369,8 @@ impl GenerateStage<'_> {
     let mut pending_common_chunks: FxIndexMap<BitSet, Vec<ModuleIdx>> = FxIndexMap::default();
     // If it is allow to allow that entry chunks have the different exports as the underlying entry module.
     // This is used to generate less chunks when possible.
-    let allow_extension_optimize = matches!(
-      self.options.preserve_entry_signatures,
-      PreserveEntrySignatures::AllowExtension | PreserveEntrySignatures::False
-    );
+    let allow_extension_optimize =
+      !matches!(self.options.preserve_entry_signatures, PreserveEntrySignatures::Strict);
     // 1. Assign modules to corresponding chunks
     // 2. Create shared chunks to store modules that belong to multiple chunks.
     for normal_module in self.link_output.module_table.modules.iter().filter_map(Module::as_normal)
@@ -377,8 +396,16 @@ impl GenerateStage<'_> {
       } else if allow_extension_optimize {
         pending_common_chunks.entry(bits.clone()).or_default().push(normal_module.idx);
       } else {
-        let mut chunk =
-          Chunk::new(None, None, None, bits.clone(), vec![], ChunkKind::Common, input_base.clone());
+        let mut chunk = Chunk::new(
+          None,
+          None,
+          None,
+          bits.clone(),
+          vec![],
+          ChunkKind::Common,
+          input_base.clone(),
+          None,
+        );
         chunk.add_creation_reason(
           ChunkCreationReason::CommonChunk { bits, link_output: self.link_output },
           self.options,
@@ -418,27 +445,36 @@ impl GenerateStage<'_> {
         chunk_graph,
       );
       match item {
-        CombineChunkRet::DynamicVec(_) | CombineChunkRet::None => {
+        CombineChunkRet::Entry(chunk_idx)
+          if !matches!(
+            chunk_graph.chunk_table[chunk_idx].preserve_entry_signature,
+            Some(PreserveEntrySignatures::Strict)
+          ) =>
+        {
+          for m in modules {
+            chunk_graph.add_module_to_chunk(m, chunk_idx);
+          }
+        }
+        CombineChunkRet::DynamicVec(_) | CombineChunkRet::None | CombineChunkRet::Entry(_) => {
           let mut chunk = Chunk::new(
             None,
             None,
             None,
             bits.clone(),
-            modules,
+            vec![],
             ChunkKind::Common,
             input_base.clone(),
+            None,
           );
           chunk.add_creation_reason(
             ChunkCreationReason::CommonChunk { bits: &bits, link_output: self.link_output },
             self.options,
           );
           let chunk_id = chunk_graph.add_chunk(chunk);
-          bits_to_chunk.insert(bits, chunk_id);
-        }
-        CombineChunkRet::Entry(chunk_idx) => {
-          for m in modules {
-            chunk_graph.add_module_to_chunk(m, chunk_idx);
+          for module_idx in modules {
+            chunk_graph.add_module_to_chunk(module_idx, chunk_id);
           }
+          bits_to_chunk.insert(bits, chunk_id);
         }
       }
     }

@@ -1,0 +1,15 @@
+{
+  "config": {
+    "preserveEntrySignatures": "exports-only",
+    "input": [
+      {
+        "name": "main",
+        "import": "./main.js"
+      },
+      {
+        "name": "main2",
+        "import": "./main2.js"
+      }
+    ]
+  }
+}

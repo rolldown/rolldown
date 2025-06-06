@@ -96,8 +96,6 @@ pub struct BindingOutputOptions<'env> {
   #[napi(ts_type = "(BindingBuiltinPlugin | BindingPluginOptions | undefined)[]")]
   pub plugins: Vec<BindingPluginOrParallelJsPluginPlaceholder<'env>>,
   // preferConst: boolean;
-  // preserveModules: boolean;
-  // preserveModulesRoot: string | undefined;
   #[napi(ts_type = "'file' | 'inline' | 'hidden'")]
   pub sourcemap: Option<String>,
   #[debug(skip)]

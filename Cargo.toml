@@ -193,9 +193,9 @@ napi-derive = { version = "3.0.0-beta.6", default-features = false, features = [
 
 # oxc crates with the same version
 
-oxc = { version = "=0.72.2", features = ["ast_visit", "transformer", "minifier", "mangler", "semantic", "codegen", "serialize", "isolated_declarations", "regular_expression", "cfg"] }
-oxc_parser_napi = { version = "=0.72.2" }
-oxc_transform_napi = { version = "=0.72.2" }
+oxc = { version = "=0.72.3", features = ["ast_visit", "transformer", "minifier", "mangler", "semantic", "codegen", "serialize", "isolated_declarations", "regular_expression", "cfg"] }
+oxc_parser_napi = { version = "=0.72.3" }
+oxc_transform_napi = { version = "=0.72.3" }
 
 # oxc crates in their own repos
 # Versions must be relaxed for usage in oxc.

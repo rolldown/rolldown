@@ -1,3 +1,28 @@
+## [1.0.0-beta.12](https://github.com/rolldown/rolldown/compare/v1.0.0-beta.11...v1.0.0-beta.12) (2025-06-06)
+
+### Features
+
+* `preseveEntrySignature: allow-extension` ([#4800](https://github.com/rolldown/rolldown/issues/4800)) ([83d4d62](https://github.com/rolldown/rolldown/commit/83d4d62121182f3f9f54193d722a73b1dd8290de))
+* **advancedChunks:** only move the captured module itself if `preserveEntrySignatures` is `allow-extension` ([#4847](https://github.com/rolldown/rolldown/issues/4847)) ([57e7f8b](https://github.com/rolldown/rolldown/commit/57e7f8b72bb418cc966c1724d74a820a6433020f))
+* interop `import('some-cjs-module.js')` ([#4816](https://github.com/rolldown/rolldown/issues/4816)) ([b9ac5f0](https://github.com/rolldown/rolldown/commit/b9ac5f03d681dd5e92a71920330506218f2dea65))
+* **rolldown:** oxc v0.72.3 ([#4845](https://github.com/rolldown/rolldown/issues/4845)) ([759525d](https://github.com/rolldown/rolldown/commit/759525d8ef0c674df66e1229413709ce67564287)), closes [#4796](https://github.com/rolldown/rolldown/issues/4796) [#4846](https://github.com/rolldown/rolldown/issues/4846)
+* support preserveEntrySignatures: exports-only ([#4848](https://github.com/rolldown/rolldown/issues/4848)) ([63dc546](https://github.com/rolldown/rolldown/commit/63dc54624124b98fe5ad04c66eb0e0605bb8e852))
+* support preserveEntrySignatures: false ([#4844](https://github.com/rolldown/rolldown/issues/4844)) ([e4e90e9](https://github.com/rolldown/rolldown/commit/e4e90e9373e8a1e9b60003a016d57907cc88b188))
+* take node esm spec into account for dynamic imports in cjs modules that satisfy nodejs ([#4819](https://github.com/rolldown/rolldown/issues/4819)) ([640af3a](https://github.com/rolldown/rolldown/commit/640af3aac4654379766e035ebc420b59536d3281)), closes [#4289](https://github.com/rolldown/rolldown/issues/4289)
+
+### Bug Fixes
+
+* 4818 ([#4828](https://github.com/rolldown/rolldown/issues/4828)) ([c6aaebe](https://github.com/rolldown/rolldown/commit/c6aaebef4772830efb90302847760ebca18a3f60)), closes [#4818](https://github.com/rolldown/rolldown/issues/4818)
+* **bindings:** cargo cache with napi typedef issues ([#4820](https://github.com/rolldown/rolldown/issues/4820)) ([a733205](https://github.com/rolldown/rolldown/commit/a7332057c88f054c7fe93b1123b4b33f17a501e5))
+* **bindings:** update @napi-rs/cli ([#4830](https://github.com/rolldown/rolldown/issues/4830)) ([052fb45](https://github.com/rolldown/rolldown/commit/052fb458abeb71830920a0c7bc3db96a08a44355))
+* **ci:** fix prepare-release permission ([b04b74e](https://github.com/rolldown/rolldown/commit/b04b74e6af4c6ed2744cce636f228775d81a47e6))
+* cjs namespace property optimization access should only apply to ns_alias prop `default` ([#4836](https://github.com/rolldown/rolldown/issues/4836)) ([d811ec5](https://github.com/rolldown/rolldown/commit/d811ec5d9e83f28c059c196ed688c8b0c217b2da))
+* handle error in `generateHmrPatch` ([#4837](https://github.com/rolldown/rolldown/issues/4837)) ([4a9af95](https://github.com/rolldown/rolldown/commit/4a9af950feacfb6a628ef1faa51369aef57d3c42))
+* **hmr:** generate unique import binding ([#4849](https://github.com/rolldown/rolldown/issues/4849)) ([56a2214](https://github.com/rolldown/rolldown/commit/56a22145c32c9eb963dc4aeca3c0b0b88a513145))
+* Preserve default export for preserveModules ([#4814](https://github.com/rolldown/rolldown/issues/4814)) ([b30ab1f](https://github.com/rolldown/rolldown/commit/b30ab1f6899640ff61421ef81ed5d19f76e5ce06)), closes [#4758](https://github.com/rolldown/rolldown/issues/4758)
+* regression with namespace import ([#4825](https://github.com/rolldown/rolldown/issues/4825)) ([f051675](https://github.com/rolldown/rolldown/commit/f0516754de1d3ef107247255f7b8511444f76d5a)), closes [#4824](https://github.com/rolldown/rolldown/issues/4824)
+* **rolldown:** fix double initialization of tracing subscriber ([#4831](https://github.com/rolldown/rolldown/issues/4831)) ([ac2f6bf](https://github.com/rolldown/rolldown/commit/ac2f6bf2eaf54f205a1074ed636d6f3a8e742929))
+* should leave all file extensions (even double) unchanged. ([#4822](https://github.com/rolldown/rolldown/issues/4822)) ([9abc457](https://github.com/rolldown/rolldown/commit/9abc457f4e8e571267b2c59f8b7d5d5902c1c455)), closes [#4702](https://github.com/rolldown/rolldown/issues/4702)
 ## [1.0.0-beta.11](https://github.com/rolldown/rolldown/compare/v1.0.0-beta.10...v1.0.0-beta.11) (2025-06-04)
 
 ### Features

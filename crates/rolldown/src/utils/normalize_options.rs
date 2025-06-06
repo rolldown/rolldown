@@ -3,7 +3,7 @@ use std::{borrow::Cow, path::Path};
 use oxc::transformer_plugins::InjectGlobalVariablesConfig;
 use rolldown_common::{
   GlobalsOutputOption, InjectImport, LegalComments, MinifyOptions, ModuleType,
-  NormalizedBundlerOptions, OutputFormat, Platform,
+  NormalizedBundlerOptions, OutputFormat, Platform, PreserveEntrySignatures,
 };
 use rolldown_error::{BuildDiagnostic, InvalidOptionType};
 use rustc_hash::{FxHashMap, FxHashSet};
@@ -46,6 +46,7 @@ pub fn normalize_options(mut raw_options: crate::BundlerOptions) -> NormalizeOpt
   let warnings = verify_raw_options(&raw_options);
 
   let format = raw_options.format.unwrap_or(crate::OutputFormat::Esm);
+  let preserve_entry_signatures = raw_options.preserve_entry_signatures.unwrap_or_default();
 
   let platform = raw_options.platform.unwrap_or(match format {
     OutputFormat::Cjs => Platform::Node,
@@ -159,6 +160,17 @@ pub fn normalize_options(mut raw_options: crate::BundlerOptions) -> NormalizeOpt
     experimental.strict_execution_order = Some(true);
   }
 
+  if let Some(advanced_chunks) = raw_options.advanced_chunks.as_mut() {
+    let allow_extension =
+      matches!(preserve_entry_signatures, PreserveEntrySignatures::AllowExtension);
+
+    // If entry module's exports shape could be modified by the bundler, we don't need to include captured modules' dependencies recursively.
+    // It allows the bundler to only specific module without pulling its' dependencies.
+    if advanced_chunks.include_dependencies_recursively.is_none() {
+      advanced_chunks.include_dependencies_recursively = Some(!allow_extension);
+    }
+  }
+
   let inline_dynamic_imports = match format {
     OutputFormat::Umd | OutputFormat::Iife => true,
     _ => raw_options.inline_dynamic_imports.unwrap_or(false),
@@ -252,7 +264,7 @@ pub fn normalize_options(mut raw_options: crate::BundlerOptions) -> NormalizeOpt
       }
     }),
     cwd,
-    preserve_entry_signatures: raw_options.preserve_entry_signatures.unwrap_or_default(),
+    preserve_entry_signatures,
   };
 
   NormalizeOptionsReturn { options: normalized, resolve_options: raw_resolve, warnings }

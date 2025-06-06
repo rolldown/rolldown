@@ -3863,6 +3863,12 @@ expression: output
 - common-!~{004}~.js => common-CHGMauua.js
 - rolldown-runtime-!~{002}~.js => rolldown-runtime-F0QY5PnL.js
 
+# tests/rolldown/function/advanced_chunks/include_dependencies_recursively
+
+- main-!~{000}~.js => main-jUCZAWno.js
+- rolldown-runtime-!~{001}~.js => rolldown-runtime-BjtMze0h.js
+- vendor-!~{003}~.js => vendor-DjTUrGY6.js
+
 # tests/rolldown/function/advanced_chunks/issue_2617
 
 - main-!~{000}~.js => main-CgB9jNWY.js

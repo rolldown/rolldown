@@ -166,7 +166,7 @@ export function transformToOutputBundle(
       const originalStackTraceLimit = Error.stackTraceLimit;
       Error.stackTraceLimit = 2;
       const message =
-        'This plugin assigns to bundle variable. This is discouraged by Rollup and is not supported by Rolldown. This will be ignored.';
+        'This plugin assigns to bundle variable. This is discouraged by Rollup and is not supported by Rolldown. This will be ignored. https://rollupjs.org/plugin-development/#generatebundle:~:text=DANGER,this.emitFile.';
       const stack = new Error(message).stack ?? message;
       Error.stackTraceLimit = originalStackTraceLimit;
 

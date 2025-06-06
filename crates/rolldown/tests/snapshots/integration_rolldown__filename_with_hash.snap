@@ -4810,6 +4810,14 @@ expression: output
 - main-!~{000}~.js => main-BprC3gAF.js
 - dynamic-!~{001}~.js => dynamic-D3xOeHId.js
 
+# tests/rolldown/misc/preserve_entry_signature/exports-only
+
+- main-!~{000}~.js => main-DIX5ZFCW.js
+- main2-!~{001}~.js => main2-CP6yUZAb.js
+- dynamic-!~{004}~.js => dynamic-DBHbx_t1.js
+- dynamic2-!~{006}~.js => dynamic2-DBL8pqW5.js
+- lib2-!~{002}~.js => lib2-B8LDz-cx.js
+
 # tests/rolldown/misc/preserve_modules/issue-4622
 
 - src/index-!~{000}~.js => src/index-Bg1j_4g8.js

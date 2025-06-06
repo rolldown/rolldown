@@ -169,6 +169,7 @@ impl GenerateStage<'_> {
         vec![],
         ChunkKind::Common,
         input_base.clone(),
+        None,
       );
       let chunk_idx = chunk_graph.add_chunk(runtime_chunk);
       module_groups.iter_mut().for_each(|group| {
@@ -291,6 +292,7 @@ impl GenerateStage<'_> {
         vec![],
         ChunkKind::Common,
         input_base.clone(),
+        None,
       );
       chunk.add_creation_reason(
         ChunkCreationReason::AdvancedChunkGroup(&this_module_group.name),

@@ -1,0 +1,60 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## dynamic.js
+
+```js
+import { value } from "./main.js";
+
+//#region dynamic.js
+console.log(`shared: `, value);
+
+//#endregion
+```
+## dynamic2.js
+
+```js
+import { value } from "./lib2.js";
+
+//#region dynamic2.js
+console.log(`shared: `, value);
+
+//#endregion
+```
+## lib2.js
+
+```js
+//#region lib2.js
+const value = "lib2";
+
+//#endregion
+export { value };
+```
+## main.js
+
+```js
+//#region lib.js
+const value = "lib";
+
+//#endregion
+//#region main.js
+import("./dynamic.js");
+console.log(`shared: `, value);
+
+//#endregion
+export { value };
+```
+## main2.js
+
+```js
+import { value } from "./lib2.js";
+
+//#region main2.js
+import("./dynamic2.js");
+const unused = value;
+
+//#endregion
+export { unused };
+```

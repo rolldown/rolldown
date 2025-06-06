@@ -128,4 +128,3 @@ jobs:
           draft: false
           tag_name: v${{ needs.check.outputs.version }} # tags the current commit
           target_commitish: ${{ github.sha }}
-          generate_release_notes: true

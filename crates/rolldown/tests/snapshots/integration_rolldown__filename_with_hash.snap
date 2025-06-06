@@ -4801,8 +4801,8 @@ expression: output
 
 # tests/rolldown/misc/preserve_entry_signature/basic
 
-- main-!~{000}~.js => main-BlPgCM1C.js
-- dynamic-!~{001}~.js => dynamic-BF22dcES.js
+- main-!~{000}~.js => main-BprC3gAF.js
+- dynamic-!~{001}~.js => dynamic-D3xOeHId.js
 
 # tests/rolldown/misc/preserve_modules/issue-4622
 

@@ -1,5 +1,6 @@
 use rolldown_common::{
-  EntryPoint, ExportsKind, ModuleIdx, OutputFormat, StmtInfo, StmtInfoMeta, WrapKind,
+  EntryPoint, ExportsKind, ModuleIdx, OutputFormat, PreserveEntrySignatures,
+  SharedNormalizedBundlerOptions, StmtInfo, StmtInfoMeta, WrapKind,
   dynamic_import_usage::DynamicImportExportsUsage,
 };
 use rustc_hash::FxHashMap;
@@ -12,6 +13,7 @@ fn init_entry_point_stmt_info(
   meta: &mut LinkingMetadata,
   entry: &EntryPoint,
   dynamic_import_exports_usage_map: &FxHashMap<ModuleIdx, DynamicImportExportsUsage>,
+  options: &SharedNormalizedBundlerOptions,
 ) {
   let mut referenced_symbols = vec![];
 
@@ -22,11 +24,17 @@ fn init_entry_point_stmt_info(
     referenced_symbols.push(meta.wrapper_ref.unwrap());
   }
 
-  referenced_symbols.extend(
-    meta
-      .referenced_canonical_exports_symbols(entry.id, entry.kind, dynamic_import_exports_usage_map)
-      .map(|(_, resolved_export)| resolved_export.symbol_ref),
-  );
+  if !matches!(options.preserve_entry_signatures, PreserveEntrySignatures::False) {
+    referenced_symbols.extend(
+      meta
+        .referenced_canonical_exports_symbols(
+          entry.id,
+          entry.kind,
+          dynamic_import_exports_usage_map,
+        )
+        .map(|(_, resolved_export)| resolved_export.symbol_ref),
+    );
+  }
   // Entry chunk need to generate exports, so we need reference to all exports to make sure they are included in tree-shaking.
 
   meta.referenced_symbols_by_entry_point_chunk.extend(referenced_symbols);
@@ -39,7 +47,12 @@ impl LinkStage<'_> {
         let linking_info = &mut self.metas[ecma_module.idx];
 
         if let Some(entry) = self.entries.iter().find(|entry| entry.id == ecma_module.idx) {
-          init_entry_point_stmt_info(linking_info, entry, &self.dynamic_import_exports_usage_map);
+          init_entry_point_stmt_info(
+            linking_info,
+            entry,
+            &self.dynamic_import_exports_usage_map,
+            self.options,
+          );
         }
 
         // Create facade StmtInfo that declares variables based on the missing exports, so they can participate in the symbol de-conflict and

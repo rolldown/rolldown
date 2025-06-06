@@ -6,7 +6,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## dynamic.js
 
 ```js
-import { value$1 as value } from "./main.js";
+import { value } from "./main.js";
 
 //#region dynamic.js
 console.log(`shared: `, value);
@@ -17,20 +17,20 @@ console.log(`shared: `, value);
 
 ```js
 //#region lib.js
-const value$1 = 100;
+const value = 100;
 
 //#endregion
 //#region main.js
 import("./dynamic.js");
-console.log(`shared: `, value$1);
-const value = `feafeaw ${value$1}`;
+console.log(`shared: `, value);
+const unused = value;
 
 //#endregion
-export { value, value$1 };
+export { unused, value };
 ```
 ---
 
-Variant: (name: "preserveEntrySignatures/strict")
+Variant: (preserve_entry_signatures: Strict)
 
 # Assets
 
@@ -61,8 +61,38 @@ import { value } from "./lib.js";
 //#region main.js
 import("./dynamic.js");
 console.log(`shared: `, value);
-const value$1 = `feafeaw ${value}`;
+const unused = value;
 
 //#endregion
-export { value$1 as value };
+export { unused };
+```
+---
+
+Variant: (preserve_entry_signatures: False)
+
+# Assets
+
+## dynamic.js
+
+```js
+import { value } from "./main.js";
+
+//#region dynamic.js
+console.log(`shared: `, value);
+
+//#endregion
+```
+## main.js
+
+```js
+//#region lib.js
+const value = 100;
+
+//#endregion
+//#region main.js
+import("./dynamic.js");
+console.log(`shared: `, value);
+
+//#endregion
+export { value };
 ```

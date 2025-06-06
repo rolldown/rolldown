@@ -12,7 +12,7 @@ use oxc::{
   span::{SPAN, Span},
 };
 
-use rolldown_common::{IndexModules, Module, ModuleIdx, NormalModule};
+use rolldown_common::{ImportRecordIdx, IndexModules, Module, ModuleIdx, NormalModule};
 use rolldown_ecmascript_utils::{
   AstSnippet, BindingIdentifierExt, ExpressionExt, quote_expr, quote_stmts,
 };
@@ -150,8 +150,8 @@ impl<'ast> HmrAstFinalizer<'_, 'ast> {
     }
   }
 
-  fn create_binding_name(importee: &Module) -> String {
-    format!("import_{}", importee.repr_name())
+  fn create_binding_name(importee: &Module, rec_id: ImportRecordIdx) -> String {
+    format!("import_{}_{}", importee.repr_name(), rec_id.raw())
   }
 
   fn create_load_exports_call_stmt(
@@ -336,7 +336,7 @@ impl<'ast> VisitMut<'ast> for HmrAstFinalizer<'_, 'ast> {
           let importee = &self.modules[rec.resolved_module];
           self.dependencies.insert(rec.resolved_module);
 
-          let binding_name = Self::create_binding_name(importee);
+          let binding_name = Self::create_binding_name(importee, rec_id);
           import_decl.specifiers.as_ref().inspect(|specifiers| {
             specifiers.iter().for_each(|spec| match spec {
               ast::ImportDeclarationSpecifier::ImportSpecifier(import_specifier) => {
@@ -378,7 +378,7 @@ impl<'ast> VisitMut<'ast> for HmrAstFinalizer<'_, 'ast> {
             let importee = &self.modules[rec.resolved_module];
             self.dependencies.insert(rec.resolved_module);
 
-            let binding_name = Self::create_binding_name(importee);
+            let binding_name = Self::create_binding_name(importee, rec_id);
             self.exports.extend(decl.specifiers.iter().map(|specifier| {
               self.snippet.object_property_kind_object_property(
                 &specifier.exported.name(),

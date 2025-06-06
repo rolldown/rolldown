@@ -4,7 +4,9 @@ use crate::{chunk_graph::ChunkGraph, stages::generate_stage::chunk_ext::ChunkDeb
 use arcstr::ArcStr;
 use itertools::Itertools;
 use oxc_index::IndexVec;
-use rolldown_common::{Chunk, ChunkIdx, ChunkKind, Module, ModuleIdx, OutputFormat};
+use rolldown_common::{
+  Chunk, ChunkIdx, ChunkKind, Module, ModuleIdx, OutputFormat, PreserveEntrySignatures,
+};
 use rolldown_utils::{BitSet, commondir, indexmap::FxIndexMap, rustc_hash::FxHashMapExt};
 use rustc_hash::{FxHashMap, FxHashSet};
 
@@ -344,7 +346,12 @@ impl GenerateStage<'_> {
       .await?;
 
     let mut pending_common_chunks: FxIndexMap<BitSet, Vec<ModuleIdx>> = FxIndexMap::default();
-    let is_allow_extension = self.options.preserve_entry_signatures.is_allow_extension();
+    // If it is allow to allow that entry chunks have the different exports as the underlying entry module.
+    // This is used to generate less chunks when possible.
+    let allow_extension_optimize = matches!(
+      self.options.preserve_entry_signatures,
+      PreserveEntrySignatures::AllowExtension | PreserveEntrySignatures::False
+    );
     // 1. Assign modules to corresponding chunks
     // 2. Create shared chunks to store modules that belong to multiple chunks.
     for normal_module in self.link_output.module_table.modules.iter().filter_map(Module::as_normal)
@@ -367,7 +374,7 @@ impl GenerateStage<'_> {
       );
       if let Some(chunk_id) = bits_to_chunk.get(bits).copied() {
         chunk_graph.add_module_to_chunk(normal_module.idx, chunk_id);
-      } else if is_allow_extension {
+      } else if allow_extension_optimize {
         pending_common_chunks.entry(bits.clone()).or_default().push(normal_module.idx);
       } else {
         let mut chunk =
@@ -382,7 +389,7 @@ impl GenerateStage<'_> {
       }
     }
 
-    if is_allow_extension {
+    if allow_extension_optimize {
       self.try_insert_common_module_to_exist_chunk(
         chunk_graph,
         bits_to_chunk,

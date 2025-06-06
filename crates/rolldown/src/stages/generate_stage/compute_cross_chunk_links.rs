@@ -7,7 +7,8 @@ use itertools::{Itertools, multizip};
 use oxc_index::{IndexVec, index_vec};
 use rolldown_common::{
   ChunkIdx, ChunkKind, CrossChunkImportItem, EntryPointKind, ExportsKind, ImportKind,
-  ImportRecordMeta, Module, ModuleIdx, NamedImport, OutputFormat, SymbolRef, WrapKind,
+  ImportRecordMeta, Module, ModuleIdx, NamedImport, OutputFormat, PreserveEntrySignatures,
+  SymbolRef, WrapKind,
 };
 use rolldown_rstr::{Rstr, ToRstr};
 use rolldown_utils::concat_string;
@@ -305,7 +306,10 @@ impl GenerateStage<'_> {
             .as_normal()
             .expect("Should be normal module");
           let is_dynamic_imported = !module.ecma_view.dynamic_importers.is_empty();
-          if !(self.options.preserve_modules && !is_user_defined && !is_dynamic_imported) {
+          #[allow(clippy::nonminimal_bool)]
+          if !(self.options.preserve_modules && !is_user_defined && !is_dynamic_imported)
+            && !matches!(self.options.preserve_entry_signatures, PreserveEntrySignatures::False)
+          {
             // If the entry point is external, we don't need to compute exports.
             let meta = &self.link_output.metas[module_idx];
             for (name, symbol) in meta

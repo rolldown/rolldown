@@ -70,6 +70,9 @@ impl Display for ConfigVariant {
     if let Some(inline_dynamic_imports) = &self.inline_dynamic_imports {
       fields.push(format!("inline_dynamic_imports: {inline_dynamic_imports:?}"));
     }
+    if let Some(preserve_entry_signatures) = &self.preserve_entry_signatures {
+      fields.push(format!("preserve_entry_signatures: {preserve_entry_signatures:?}"));
+    }
     fields.sort();
     if fields.is_empty() { write!(f, "()") } else { write!(f, "({})", fields.join(", ")) }
   }

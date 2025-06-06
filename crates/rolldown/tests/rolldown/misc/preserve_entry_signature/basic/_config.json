@@ -4,8 +4,10 @@
   },
   "configVariants": [
     {
-      "name": "preserveEntrySignatures/strict",
       "preserveEntrySignatures": "strict"
+    },
+    {
+      "preserveEntrySignatures": "false"
     }
   ]
 }

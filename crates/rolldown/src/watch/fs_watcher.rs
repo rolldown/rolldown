@@ -1,7 +1,8 @@
 // https://github.com/autozimu/LanguageClient-neovim/blob/cf6dd11baf62fb6ce18308e96c0ab43428b7c686/src/watcher.rs
 
 use anyhow::{Result, anyhow};
-use notify::{DebouncedEvent, RecursiveMode, Watcher};
+use notify::event::{DataChange, ModifyKind};
+use notify::{Config, Event, EventKind, RecursiveMode, Watcher};
 use std::collections::{HashMap, HashSet};
 use std::path::{Path, PathBuf};
 use std::sync::mpsc;
@@ -46,8 +47,8 @@ fn interested(dirs: &Arc<Mutex<HashMap<PathBuf, DirWatch>>>, path: &Path) -> Res
 }
 
 fn fswatch_service(
-  rx: mpsc::Receiver<DebouncedEvent>,
-  tx: mpsc::Sender<DebouncedEvent>,
+  rx: mpsc::Receiver<Event>,
+  tx: mpsc::Sender<Event>,
   dirs: Arc<Mutex<HashMap<PathBuf, DirWatch>>>,
 ) -> Result<()> {
   let mut notice_remove = HashSet::new();
@@ -62,93 +63,70 @@ fn fswatch_service(
   // - Then, if we're interested in a path, we handle and push through the event, possibly
   //   modified by the knowledge that we caught a NoticeRemove earlier.
   for event in rx {
-    match &event {
-      DebouncedEvent::NoticeWrite(path) => {
-        notice_remove.remove(path);
-        if !interested(&dirs, path)? {
-          continue;
-        }
-        tx.send(event)?;
-      }
-
-      DebouncedEvent::NoticeRemove(path) => {
-        if !interested(&dirs, path)? {
-          continue;
-        }
-        notice_remove.insert(path.to_owned());
-      }
-
-      DebouncedEvent::Create(path) => {
-        let interest = interested(&dirs, path)?;
-        // Detect and handle Vim's write-via-rename trick
-        if notice_remove.remove(path) {
-          if interest {
-            tx.send(DebouncedEvent::Write(path.to_owned()))?;
-          }
-        } else if interest {
-          tx.send(event)?;
-        }
-      }
-
-      DebouncedEvent::Write(path) => {
-        notice_remove.remove(path);
-        if !interested(&dirs, path)? {
-          continue;
-        }
-        tx.send(event)?;
-      }
-
-      DebouncedEvent::Chmod(path) => {
-        notice_remove.remove(path);
-        if !interested(&dirs, path)? {
-          continue;
-        }
-        tx.send(event)?;
-      }
-
-      DebouncedEvent::Remove(path) => {
-        notice_remove.remove(path);
-        if !interested(&dirs, path)? {
-          continue;
-        }
-        tx.send(event)?;
-      }
-
-      DebouncedEvent::Rename(from, to) => {
-        notice_remove.remove(from);
-        let interest_from = interested(&dirs, from)?;
-        let interest_to = interested(&dirs, to)?;
-        // TODO: is this the right behaviour?
-        if notice_remove.remove(to) && interest_to {
-          tx.send(DebouncedEvent::Remove(to.clone()))?;
-        }
-        if interest_from {
-          if interest_to {
-            tx.send(event)?;
-          } else {
-            tx.send(DebouncedEvent::Remove(from.to_owned()))?;
-          }
-        } else if interest_to {
-          tx.send(DebouncedEvent::Create(to.to_owned()))?;
-        }
-      }
-
-      DebouncedEvent::Rescan => {
-        tx.send(event)?;
-      }
-
-      DebouncedEvent::Error(_, optpath) => {
-        // TODO: is this the right behaviour?
-        if let Some(path) = optpath {
-          let interest = interested(&dirs, path)?;
-          if notice_remove.remove(path) && interest {
-            tx.send(DebouncedEvent::Remove(path.to_owned()))?;
-          }
-          if !interest {
+    for path in event.paths {
+      let mut event = Event { kind: event.kind, paths: vec![path], attrs: event.attrs.clone() };
+      let path = event.paths[0].as_path();
+      match &event.kind {
+        EventKind::Modify(_) => {
+          notice_remove.remove(path);
+          if !interested(&dirs, path)? {
             continue;
           }
+          tx.send(event)?;
         }
-        tx.send(event)?;
+        EventKind::Remove(_) => {
+          if !interested(&dirs, path)? {
+            continue;
+          }
+          notice_remove.insert(path.to_owned());
+        }
+        EventKind::Create(_) => {
+          let interest = interested(&dirs, path)?;
+          // Detect and handle Vim's write-via-rename trick
+          if notice_remove.remove(path) {
+            if interest {
+              event.kind = EventKind::Modify(ModifyKind::Data(DataChange::Content));
+              tx.send(event)?;
+            }
+          } else if interest {
+            tx.send(event)?;
+          }
+        }
+        EventKind::Modify(_) => {
+          notice_remove.remove(path);
+          if !interested(&dirs, path)? {
+            continue;
+          }
+          tx.send(event)?;
+        }
+        EventKind::Other => {
+          notice_remove.remove(path);
+          if !interested(&dirs, path)? {
+            continue;
+          }
+          tx.send(event)?;
+        }
+        EventKind::Remove(_) => {
+          notice_remove.remove(path);
+          if !interested(&dirs, path)? {
+            continue;
+          }
+          tx.send(event)?;
+        }
+        EventKind::Any => {
+          notice_remove.remove(path);
+          if !interested(&dirs, path)? {
+            continue;
+          }
+          tx.send(event)?;
+        }
+        EventKind::Access(_) => {
+          notice_remove.remove(path);
+          if !interested(&dirs, path)? {
+            continue;
+          }
+          tx.send(event)?;
+        }
       }
     }
   }
@@ -169,26 +147,26 @@ pub struct FSWatch {
 
   // Used for recursive directory watches; is connected directly to the event sink.
   recursive_watcher: Option<notify::RecommendedWatcher>,
-  event_sink: mpsc::Sender<DebouncedEvent>,
-  delay: Duration,
+  event_sink: mpsc::Sender<Event>,
+  config: Config,
 
   unwatch_info: HashMap<PathBuf, UnwatchInfo>,
 }
 
 impl FSWatch {
-  pub fn new(event_sink: mpsc::Sender<DebouncedEvent>, delay: Duration) -> Result<Self> {
+  pub fn new(event_sink: mpsc::Sender<Event>, config: Config) -> Result<Self> {
     let (funnel_tx, funnel_rx) = mpsc::channel();
     let dirs = Arc::new(Mutex::new(HashMap::new()));
     let dirs_clone = dirs.clone();
     let event_sink_clone = event_sink.clone();
     thread::spawn(move || fswatch_service(funnel_rx, event_sink_clone, dirs_clone));
-    let watcher = notify::watcher(funnel_tx, delay)?;
+    let watcher = notify::RecommendedWatcher::new(funnel_tx, config)?;
     Ok(Self {
       dirs,
       watcher,
       recursive_watcher: None,
       event_sink,
-      delay,
+      config,
       unwatch_info: HashMap::new(),
     })
   }
@@ -236,7 +214,8 @@ impl FSWatch {
     path: P,
     recurse: RecursiveMode,
   ) -> Result<()> {
-    self.unwatch_info.insert(path.as_ref().to_owned(), UnwatchInfo::Directory(recurse));
+    let path = path.as_ref();
+    self.unwatch_info.insert(path.to_owned(), UnwatchInfo::Directory(recurse));
 
     match recurse {
       RecursiveMode::Recursive => match &mut self.recursive_watcher {
@@ -245,7 +224,7 @@ impl FSWatch {
           Ok(())
         }
         None => {
-          let mut w = notify::watcher(self.event_sink.clone(), self.delay)?;
+          let mut w = notify::RecommendedWatcher::new(self.event_sink.clone(), self.config)?;
           w.watch(path, RecursiveMode::Recursive)?;
           self.recursive_watcher = Some(w);
           Ok(())
@@ -264,10 +243,7 @@ impl FSWatch {
             // watch first; if this throws an error, don't insert into the 'dirs' structure
             self.watcher.watch(&path, RecursiveMode::NonRecursive)?;
 
-            dirs.insert(
-              path.as_ref().to_owned(),
-              DirWatch { full_directory: true, files: HashSet::new() },
-            );
+            dirs.insert(path.to_owned(), DirWatch { full_directory: true, files: HashSet::new() });
             Ok(())
           }
         }
@@ -276,14 +252,15 @@ impl FSWatch {
   }
 
   pub fn unwatch<P: AsRef<Path>>(&mut self, path: P) -> Result<()> {
-    let info = match self.unwatch_info.get(path.as_ref()) {
+    let path = path.as_ref();
+    let info = match self.unwatch_info.get(path) {
       Some(info) => info,
       None => return Err(anyhow!("FSWatch::unwatch on a non-watched path")),
     };
 
     let (key, filename): (&Path, Option<&str>) = match info {
       UnwatchInfo::File(key, filename) => (&key, Some(filename)),
-      UnwatchInfo::Directory(RecursiveMode::NonRecursive) => (path.as_ref(), None),
+      UnwatchInfo::Directory(RecursiveMode::NonRecursive) => (path, None),
       UnwatchInfo::Directory(RecursiveMode::Recursive) => {
         self
           .recursive_watcher

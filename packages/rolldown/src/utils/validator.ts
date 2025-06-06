@@ -700,6 +700,14 @@ const OutputOptionsSchema = v.strictObject({
     v.optional(v.string()),
     v.description('Put preserved modules under this path at root level'),
   ),
+  preserveEntrySignatures: v.pipe(
+    v.optional(v.union([
+      v.literal('strict'),
+      v.literal('allow-extension'),
+      v.literal('exports-only'),
+      v.literal(false),
+    ])),
+  ),
   virtualDirname: v.optional(v.string()),
 });
 
@@ -787,6 +795,12 @@ const OutputCliOverrideSchema = v.strictObject({
   minify: v.pipe(
     v.optional(v.boolean()),
     v.description('Minify the bundled file'),
+  ),
+  preserveEntrySignatures: v.pipe(
+    v.optional(v.union([
+      v.literal(false),
+    ])),
+    v.description('Avoid facade chunks for entry points'),
   ),
 });
 

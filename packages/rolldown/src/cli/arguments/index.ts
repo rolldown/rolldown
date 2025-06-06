@@ -56,7 +56,7 @@ export const options: {
     if (config && config.reverse) {
       if (result.description.startsWith('enable')) {
         result.description = result.description.replace('enable', 'disable');
-      } else {
+      } else if (!result.description.startsWith('Avoid')) {
         result.description = `disable ${result.description}`;
       }
     }

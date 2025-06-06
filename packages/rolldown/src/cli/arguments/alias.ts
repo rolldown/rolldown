@@ -75,6 +75,10 @@ export const alias: Partial<Record<keyof CliOptions, OptionConfig>> = {
     default: true,
     reverse: true,
   },
+  preserveEntrySignatures: {
+    default: 'strict',
+    reverse: true,
+  },
   moduleTypes: {
     hint: 'types',
   },

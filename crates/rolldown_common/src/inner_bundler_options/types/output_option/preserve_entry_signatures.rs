@@ -11,9 +11,9 @@ use serde::Deserialize;
 )]
 pub enum PreserveEntrySignatures {
   AllowExtension,
+  #[default]
   Strict,
   ExportsOnly,
-  #[default]
   False,
 }
 

@@ -1,0 +1,17 @@
+{
+  "config": {
+    "advancedChunks": {
+      "groups": [
+        {
+          "test": "foo\\.js",
+          "name": "vendor"
+        }
+      ]
+    }
+  },
+  "configVariants": [
+    {
+      "preserveEntrySignatures": "allow-extension"
+    }
+  ]
+}

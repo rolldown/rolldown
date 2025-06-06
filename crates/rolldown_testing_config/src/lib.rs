@@ -1,6 +1,6 @@
 use std::fmt::Display;
 
-use rolldown_common::{BundlerOptions, OutputExports, OutputFormat};
+use rolldown_common::{BundlerOptions, OutputExports, OutputFormat, PreserveEntrySignatures};
 use schemars::JsonSchema;
 use serde::Deserialize;
 
@@ -14,6 +14,7 @@ pub struct ConfigVariant {
   pub strict_execution_order: Option<bool>,
   pub entry_filenames: Option<String>,
   pub inline_dynamic_imports: Option<bool>,
+  pub preserve_entry_signatures: Option<PreserveEntrySignatures>,
 }
 
 impl ConfigVariant {
@@ -40,6 +41,9 @@ impl ConfigVariant {
     }
     if let Some(inline_dynamic_imports) = &self.inline_dynamic_imports {
       config.inline_dynamic_imports = Some(*inline_dynamic_imports);
+    }
+    if let Some(preserve_entry_signatures) = &self.preserve_entry_signatures {
+      config.preserve_entry_signatures = Some(*preserve_entry_signatures);
     }
     config
   }

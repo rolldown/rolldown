@@ -28,3 +28,41 @@ const value = `feafeaw ${value$1}`;
 //#endregion
 export { value, value$1 };
 ```
+---
+
+Variant: (name: "preserveEntrySignatures/strict")
+
+# Assets
+
+## dynamic.js
+
+```js
+import { value } from "./lib.js";
+
+//#region dynamic.js
+console.log(`shared: `, value);
+
+//#endregion
+```
+## lib.js
+
+```js
+//#region lib.js
+const value = 100;
+
+//#endregion
+export { value };
+```
+## main.js
+
+```js
+import { value } from "./lib.js";
+
+//#region main.js
+import("./dynamic.js");
+console.log(`shared: `, value);
+const value$1 = `feafeaw ${value}`;
+
+//#endregion
+export { value$1 as value };
+```

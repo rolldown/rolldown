@@ -1263,6 +1263,16 @@
             "boolean",
             "null"
           ]
+        },
+        "preserveEntrySignatures": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/PreserveEntrySignatures"
+            },
+            {
+              "type": "null"
+            }
+          ]
         }
       },
       "additionalProperties": false

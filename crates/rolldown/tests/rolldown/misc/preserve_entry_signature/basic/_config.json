@@ -1,5 +1,11 @@
 {
   "config": {
     "preserveEntrySignatures": "allow-extension"
-  }
+  },
+  "configVariants": [
+    {
+      "name": "preserveEntrySignatures/strict",
+      "preserveEntrySignatures": "strict"
+    }
+  ]
 }

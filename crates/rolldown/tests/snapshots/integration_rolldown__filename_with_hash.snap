@@ -843,7 +843,7 @@ expression: output
 
 # tests/esbuild/default/external_es6_converted_to_common_js
 
-- entry-!~{000}~.js => entry-BmDksj4Q.js
+- entry-!~{000}~.js => entry-C5L-ji0D.js
 
 # tests/esbuild/default/external_module_exclusion_package
 
@@ -915,11 +915,11 @@ expression: output
 
 # tests/esbuild/default/import_forms_with_minify_identifiers_and_no_bundle
 
-- entry-!~{000}~.js => entry-qpFBF9v6.js
+- entry-!~{000}~.js => entry-ONEZmqML.js
 
 # tests/esbuild/default/import_forms_with_no_bundle
 
-- entry-!~{000}~.js => entry-COyv-4Wz.js
+- entry-!~{000}~.js => entry-CjRqtT4p.js
 
 # tests/esbuild/default/import_fs_browser
 
@@ -4188,7 +4188,7 @@ expression: output
 
 # tests/rolldown/function/external/export_external
 
-- main-!~{000}~.js => main-bboG_iKl.js
+- main-!~{000}~.js => main-5sPV7EtM.js
 
 # tests/rolldown/function/external/implicit_import_external
 
@@ -4196,7 +4196,7 @@ expression: output
 
 # tests/rolldown/function/external/import_external
 
-- main-!~{000}~.js => main-B3SOe15B.js
+- main-!~{000}~.js => main-De65fPUh.js
 
 # tests/rolldown/function/external/keep_import_external_order
 
@@ -4695,6 +4695,10 @@ expression: output
 - main-!~{000}~.js => main-BjZFiMIo.js
 - chunk-!~{001}~.js => chunk-e6zvK7dF.js
 - lib-!~{003}~.js => lib-DXD_OL-7.js
+
+# tests/rolldown/issues/4324
+
+- main-!~{000}~.js => main-DulOdpdR.js
 
 # tests/rolldown/issues/4390
 

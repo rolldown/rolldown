@@ -67,21 +67,19 @@ init_e();
 ```
 ### rolldown
 ```js
-import * as ns$3 from "x";
-import * as ns$2 from "x";
 import * as ns$1 from "x";
 import { ns } from "x";
 
 
 //#region a.js
 var a_exports = {};
-__export(a_exports, { ns: () => ns$3 });
+__export(a_exports, { ns: () => ns$1 });
 var init_a = __esm({ "a.js"() {} });
 
 //#endregion
 //#region b.js
 var b_exports = {};
-__export(b_exports, { ns: () => ns$2 });
+__export(b_exports, { ns: () => ns$1 });
 var init_b = __esm({ "b.js"() {} });
 
 //#endregion
@@ -118,15 +116,13 @@ init_e();
 ===================================================================
 --- esbuild	/out.js
 +++ rolldown	entry.js
-@@ -1,42 +1,41 @@
-+import * as ns$3 from "x";
-+import * as ns$2 from "x";
+@@ -1,42 +1,39 @@
 +import * as ns$1 from "x";
 +import {ns} from "x";
  var a_exports = {};
  __export(a_exports, {
 -    ns: () => ns
-+    ns: () => ns$3
++    ns: () => ns$1
  });
 -import * as ns from "x";
  var init_a = __esm({
@@ -135,7 +131,7 @@ init_e();
  var b_exports = {};
  __export(b_exports, {
 -    ns: () => ns2
-+    ns: () => ns$2
++    ns: () => ns$1
  });
 -import * as ns2 from "x";
  var init_b = __esm({

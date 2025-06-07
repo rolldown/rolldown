@@ -1,18 +1,16 @@
 ---
 source: crates/rolldown_testing/src/integration_test.rs
-snapshot_kind: text
 ---
 # Assets
 
 ## main.js
 
 ```js
-import * as ext$1 from "external";
 import * as ext from "external";
 import { a, b } from "external";
 
 //#region foo.js
-console.log(ext$1, a, b);
+console.log(ext, a, b);
 
 //#endregion
 //#region main.js

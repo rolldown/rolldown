@@ -1,3 +1,24 @@
+
+## [1.0.0-beta.13] - 2025-06-07
+
+### 🚀 Features
+
+- feat: merge same `ImportNamespaceSpecifier`  for external module by @IWANABETHATGUY in [#4373](https://github.com/rolldown/rolldown/pull/4373)
+
+### 🐛 Bug Fixes
+
+- ci: disable `generate_release_notes` by @Boshen
+
+### 📚 Documentation
+
+- docs: add MAINTENANCE.md; remove rolldown.rs/contrib-guide/release by @Boshen in [#4854](https://github.com/rolldown/rolldown/pull/4854)
+
+### ⚙️ Miscellaneous Tasks
+
+- add input description to prepare-release.yml by @Boshen
+- fix prepare-release.yml by @Boshen
+- CHANGELOG.md: ci(CHANGELOG.md): use git-cliff to generate changelogs by @Boshen in [#4858](https://github.com/rolldown/rolldown/pull/4858)
+
 ## [1.0.0-beta.12](https://github.com/rolldown/rolldown/compare/v1.0.0-beta.11...v1.0.0-beta.12) (2025-06-06)
 
 ### Features

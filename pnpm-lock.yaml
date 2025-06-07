@@ -59,6 +59,9 @@ importers:
       conventional-changelog-cli:
         specifier: ^5.0.0
         version: 5.0.0(conventional-commits-filter@5.0.0)
+      cross-env:
+        specifier: ^7.0.3
+        version: 7.0.3
       dprint:
         specifier: ^0.50.0
         version: 0.50.0
@@ -320,6 +323,43 @@ importers:
       ansis:
         specifier: ^4.0.0
         version: 4.1.0
+    optionalDependencies:
+      '@rolldown/binding-darwin-arm64':
+        specifier: workspace:*
+        version: link:npm/darwin-arm64
+      '@rolldown/binding-darwin-x64':
+        specifier: workspace:*
+        version: link:npm/darwin-x64
+      '@rolldown/binding-freebsd-x64':
+        specifier: workspace:*
+        version: link:npm/freebsd-x64
+      '@rolldown/binding-linux-arm-gnueabihf':
+        specifier: workspace:*
+        version: link:npm/linux-arm-gnueabihf
+      '@rolldown/binding-linux-arm64-gnu':
+        specifier: workspace:*
+        version: link:npm/linux-arm64-gnu
+      '@rolldown/binding-linux-arm64-musl':
+        specifier: workspace:*
+        version: link:npm/linux-arm64-musl
+      '@rolldown/binding-linux-x64-gnu':
+        specifier: workspace:*
+        version: link:npm/linux-x64-gnu
+      '@rolldown/binding-linux-x64-musl':
+        specifier: workspace:*
+        version: link:npm/linux-x64-musl
+      '@rolldown/binding-wasm32-wasi':
+        specifier: workspace:*
+        version: link:npm/wasm32-wasi
+      '@rolldown/binding-win32-arm64-msvc':
+        specifier: workspace:*
+        version: link:npm/win32-arm64-msvc
+      '@rolldown/binding-win32-ia32-msvc':
+        specifier: workspace:*
+        version: link:npm/win32-ia32-msvc
+      '@rolldown/binding-win32-x64-msvc':
+        specifier: workspace:*
+        version: link:npm/win32-x64-msvc
     devDependencies:
       '@napi-rs/cli':
         specifier: 3.0.0-alpha.87
@@ -390,43 +430,16 @@ importers:
       valibot:
         specifier: 1.1.0
         version: 1.1.0(typescript@5.8.3)
-    optionalDependencies:
-      '@rolldown/binding-darwin-arm64':
+
+  packages/rolldown-wasip2:
+    dependencies:
+      '@rolldown/binding-wasm32-wasip2':
         specifier: workspace:*
-        version: link:npm/darwin-arm64
-      '@rolldown/binding-darwin-x64':
-        specifier: workspace:*
-        version: link:npm/darwin-x64
-      '@rolldown/binding-freebsd-x64':
-        specifier: workspace:*
-        version: link:npm/freebsd-x64
-      '@rolldown/binding-linux-arm-gnueabihf':
-        specifier: workspace:*
-        version: link:npm/linux-arm-gnueabihf
-      '@rolldown/binding-linux-arm64-gnu':
-        specifier: workspace:*
-        version: link:npm/linux-arm64-gnu
-      '@rolldown/binding-linux-arm64-musl':
-        specifier: workspace:*
-        version: link:npm/linux-arm64-musl
-      '@rolldown/binding-linux-x64-gnu':
-        specifier: workspace:*
-        version: link:npm/linux-x64-gnu
-      '@rolldown/binding-linux-x64-musl':
-        specifier: workspace:*
-        version: link:npm/linux-x64-musl
-      '@rolldown/binding-wasm32-wasi':
-        specifier: workspace:*
-        version: link:npm/wasm32-wasi
-      '@rolldown/binding-win32-arm64-msvc':
-        specifier: workspace:*
-        version: link:npm/win32-arm64-msvc
-      '@rolldown/binding-win32-ia32-msvc':
-        specifier: workspace:*
-        version: link:npm/win32-ia32-msvc
-      '@rolldown/binding-win32-x64-msvc':
-        specifier: workspace:*
-        version: link:npm/win32-x64-msvc
+        version: link:../rolldown/npm/wasm32-wasip2
+    devDependencies:
+      tsx:
+        specifier: ^4.0.0
+        version: 4.19.4
 
   packages/rolldown/npm/darwin-arm64: {}
 
@@ -449,6 +462,8 @@ importers:
       '@napi-rs/wasm-runtime':
         specifier: 'catalog:'
         version: 0.2.10
+
+  packages/rolldown/npm/wasm32-wasip2: {}
 
   packages/rolldown/npm/win32-arm64-msvc: {}
 
@@ -3662,6 +3677,11 @@ packages:
   corser@2.0.1:
     resolution: {integrity: sha512-utCYNzRSQIZNPIcGZdQc92UVJYAhtGAteCFg0yRaFm8f0P+CPtyGyHXJcGXnffjCybUCEx3FQ2G7U3/o9eIkVQ==}
     engines: {node: '>= 0.4.0'}
+
+  cross-env@7.0.3:
+    resolution: {integrity: sha512-+/HKd6EgcQCJGh2PSjZuUitQBQynKor4wrFbRg4DtAgS1aWO+gU52xpH7M9ScGgXSYmAVS9bIJ8EzuaGw0oNAw==}
+    engines: {node: '>=10.14', npm: '>=6', yarn: '>=1'}
+    hasBin: true
 
   cross-spawn@7.0.6:
     resolution: {integrity: sha512-uV2QOWP2nWzsy2aMp8aRibhi9dlzF5Hgh5SHaB9OiTGEyDTiJJyx0uy51QXdyWbtAHNua4XJzUKca3OzKUd3vA==}
@@ -8955,6 +8975,10 @@ snapshots:
       browserslist: 4.25.0
 
   corser@2.0.1: {}
+
+  cross-env@7.0.3:
+    dependencies:
+      cross-spawn: 7.0.6
 
   cross-spawn@7.0.6:
     dependencies:

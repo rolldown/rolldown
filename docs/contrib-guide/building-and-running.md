@@ -50,14 +50,25 @@ They will automatically build the Rust crates and the Node.js package. So no mat
 
 ### WASI
 
-Rolldown supports WASI by considering is as a special platform. So we still use the `rolldown` package to distribute the WASI version of Rolldown.
+Rolldown supports WASI by considering it as a special platform. So we still use the `rolldown` package to distribute the WASI version of Rolldown.
 
 To build the WASI version, you can run the following command:
 
 - `just build browser`
 - `just build browser release` (**important if running benchmarks**)
 
-Building the WASI version will remove the native version of Rolldown. We designed the local build process on purpose that is you either build the native version or the WASI version. You can't mix them together, though NAPI-RS supports it.
+#### WASI Preview 2 Support
+
+Rolldown now also supports WASI Preview 2 (wasip2) with WebAssembly Component Model:
+
+- `just build wasip2`
+- `just build wasip2 release` (**important if running benchmarks**)
+
+Building for WASI Preview 2 requires a nightly Rust toolchain with component model features enabled. The build system will automatically configure this for you.
+
+#### Note on Building WASI Versions
+
+Building any WASI version will remove the native version of Rolldown. We designed the local build process on purpose so that you either build the native version or one of the WASI versions. You can't mix them together, though NAPI-RS supports it.
 
 ## Running
 

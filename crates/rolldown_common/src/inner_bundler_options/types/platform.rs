@@ -11,6 +11,10 @@ pub enum Platform {
   Node,
   Browser,
   Neutral,
+  /// Represents the WASI Preview 1 platform.
+  Wasi,
+  /// Represents the WASI Preview 2 platform.
+  WasiP2,
 }
 
 impl TryFrom<&str> for Platform {
@@ -21,6 +25,8 @@ impl TryFrom<&str> for Platform {
       "node" => Ok(Self::Node),
       "browser" => Ok(Self::Browser),
       "neutral" => Ok(Self::Neutral),
+      "wasi" | "wasip1" => Ok(Self::Wasi),
+      "wasip2" => Ok(Self::WasiP2),
       _ => Err(format!("Unknown platform: {value:?}")),
     }
   }

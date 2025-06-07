@@ -37,13 +37,25 @@ jobs:
 
       - run: rm rolldown-version.txt # created by `just bump-packages`
 
-      - run: just changelog
+      - name: Generate changelog via git cliff
+        id: changelog
+        uses: orhun/git-cliff-action@4a4a951bc43fafe41cd2348d181853f52356bee7 # v4.4.2
+        env:
+          # Used to make request to GitHub without ratelimits.
+          # `secrets.GIT_CLIFF_TOKEN` only has read permission.
+          GITHUB_TOKEN: ${{ secrets.GIT_CLIFF_TOKEN }}
+        with:
+          version: v2.9.1 # git cliff version
+          config: cliff.toml
+          args: --unreleased --prepend CHANGELOG.md ${{ inputs.version }}
 
       - uses: peter-evans/create-pull-request@271a8d0340265f705b14b6d32b9829c1cb33d45e # v7.0.8
+        if: ${{ steps.changelog.outputs.content }}
         with:
           commit-message: 'release: v${{ inputs.version }}'
           branch: release-v${{ inputs.version }}
           branch-suffix: timestamp
           base: main
           title: 'release: v${{ inputs.version }}'
+          body: ${{ steps.changelog.outputs.content }}
           assignees: Boshen

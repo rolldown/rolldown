@@ -129,6 +129,8 @@ jobs:
     permissions:
       contents: write # for softprops/action-gh-release@v1
     steps:
+      - uses: taiki-e/checkout-action@b13d20b7cda4e2f325ef19895128f7ff735c0b3d # v1.3.1
+
       - name: Get changelog from commit body
         id: changelog
         run: |

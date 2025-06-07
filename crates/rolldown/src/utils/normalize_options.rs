@@ -56,14 +56,8 @@ pub fn normalize_options(mut raw_options: crate::BundlerOptions) -> NormalizeOpt
   // Check if we're in a WebAssembly environment - if so, override platform to WASI
   #[cfg(target_family = "wasm")]
   let platform = if platform == Platform::Node || platform == Platform::Browser {
-    #[cfg(target_feature = "component-model")]
-    {
-      Platform::WasiP2
-    }
-    #[cfg(not(target_feature = "component-model"))]
-    {
-      Platform::Wasi
-    }
+    // Component model is enforced by NAPI-RS so we can use WasiP2 directly
+    Platform::WasiP2
   } else {
     platform
   };

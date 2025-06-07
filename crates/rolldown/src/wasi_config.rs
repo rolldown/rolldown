@@ -82,12 +82,9 @@ pub fn add_wasi_environment_settings(
 
   // Set appropriate target triple
   if let Some(target) = get_wasi_target_triple(platform) {
-    environment.insert("RUSTUP_TOOLCHAIN".to_string(), "nightly".to_string());
     environment.insert("TARGET".to_string(), target.to_string());
     
-    // For Preview 2, we need component model
-    if is_wasi_preview2(platform) {
-      environment.insert("RUSTFLAGS".to_string(), "-Z wasm-component-model".to_string());
-    }
+    // Note: nightly toolchain and component model flags removed as they're already
+    // handled by NAPI-RS as per review feedback
   }
 } 

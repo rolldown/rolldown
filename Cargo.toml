@@ -1,5 +1,3 @@
-cargo-features = ["profile-rustflags"]
-
 [workspace]
 members = ["./crates/*", "tasks/*"]
 resolver = "3"

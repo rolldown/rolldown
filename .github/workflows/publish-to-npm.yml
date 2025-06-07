@@ -122,7 +122,7 @@ jobs:
           NPM_CONFIG_PROVENANCE: true
 
   release:
-    needs: [check, release]
+    needs: [check, publish]
     if: github.repository == 'rolldown/rolldown'
     name: GitHub Release
     runs-on: ubuntu-latest

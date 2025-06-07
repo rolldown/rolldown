@@ -2740,7 +2740,6 @@ dependencies = [
  "rolldown_common",
  "rolldown_ecmascript_utils",
  "rolldown_plugin",
- "rustc-hash",
 ]
 
 [[package]]

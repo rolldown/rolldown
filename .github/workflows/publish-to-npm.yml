@@ -50,7 +50,6 @@ jobs:
     name: Publish npm Packages
     runs-on: ubuntu-latest
     permissions:
-      contents: write # for softprops/action-gh-release@v1
       id-token: write # for `npm publish --provenance`
     steps:
       - uses: taiki-e/checkout-action@b13d20b7cda4e2f325ef19895128f7ff735c0b3d # v1.3.1
@@ -122,9 +121,27 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           NPM_CONFIG_PROVENANCE: true
 
+  release:
+    needs: [check, release]
+    if: github.repository == 'rolldown/rolldown'
+    name: GitHub Release
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write # for softprops/action-gh-release@v1
+    steps:
+      - name: Get changelog from commit body
+        id: changelog
+        run: |
+          {
+            echo 'CHANGELOG<<EOF'
+            git show -s --format=%b
+            echo EOF
+          } >> $GITHUB_OUTPUT
+
       - name: Create GitHub Release
         uses: softprops/action-gh-release@da05d552573ad5aba039eaac05058a918a7bf631 # v2.2.2
         with:
           draft: false
           tag_name: v${{ needs.check.outputs.version }} # tags the current commit
           target_commitish: ${{ github.sha }}
+          body: ${{ steps.changelog.outputs.CHANGELOG }}

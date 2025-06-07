@@ -1,10 +1,11 @@
 use oxc::{
   allocator::{Allocator, Box, Dummy as _, IntoIn as _, TakeIn as _},
   ast::ast::{
-    ArrayAssignmentTarget, AssignmentTarget, AssignmentTargetMaybeDefault, AssignmentTargetRest,
-    AssignmentTargetWithDefault, BindingIdentifier, BindingPattern, BindingPatternKind,
-    ObjectAssignmentTarget,
+    ArrayAssignmentTarget, ArrayExpressionElement, AssignmentTarget, AssignmentTargetMaybeDefault,
+    AssignmentTargetRest, AssignmentTargetWithDefault, BindingIdentifier, BindingPattern,
+    BindingPatternKind, Expression, ObjectAssignmentTarget, ObjectPropertyKind, PropertyKind,
   },
+  span::SPAN,
 };
 use smallvec::SmallVec;
 
@@ -16,6 +17,8 @@ pub trait BindingPatternExt<'ast> {
   fn binding_identifiers(&self) -> smallvec::SmallVec<[&Box<BindingIdentifier<'ast>>; 1]>;
 
   fn into_assignment_target(self, alloc: &'ast Allocator) -> AssignmentTarget<'ast>;
+
+  fn into_expression(self, snippet: &AstSnippet<'ast>) -> Expression<'ast>;
 }
 
 impl<'ast> BindingPatternExt<'ast> for BindingPattern<'ast> {
@@ -95,6 +98,70 @@ impl<'ast> BindingPatternExt<'ast> for BindingPattern<'ast> {
       }
       BindingPatternKind::AssignmentPattern(_) => {
         unreachable!("`BindingPatternKind::AssignmentPattern` should be pre-handled in above")
+      }
+    }
+  }
+
+  fn into_expression(self, snippet: &AstSnippet<'ast>) -> Expression<'ast> {
+    match self.kind {
+      BindingPatternKind::BindingIdentifier(id) => {
+        snippet.builder.expression_identifier(SPAN, id.name)
+      }
+      BindingPatternKind::ObjectPattern(mut obj_pat) => {
+        let capacity = obj_pat.properties.len() + usize::from(obj_pat.rest.is_some());
+        let mut properties = snippet.builder.vec_with_capacity(capacity);
+        obj_pat.properties.take_in(snippet.alloc()).into_iter().for_each(|binding_prop| {
+          properties.push(ObjectPropertyKind::ObjectProperty(
+            snippet.builder.alloc_object_property(
+              SPAN,
+              PropertyKind::Init,
+              binding_prop.key,
+              binding_prop.value.into_expression(snippet),
+              false,
+              binding_prop.shorthand,
+              binding_prop.computed,
+            ),
+          ));
+        });
+        if let Some(rest) = obj_pat.rest.take() {
+          let BindingPatternKind::BindingIdentifier(ref id) = rest.argument.kind else {
+            unreachable!("The rest element should be `BindingIdentifier`")
+          };
+          properties.push(ObjectPropertyKind::ObjectProperty(
+            snippet.builder.alloc_object_property(
+              SPAN,
+              PropertyKind::Init,
+              snippet.builder.property_key_static_identifier(SPAN, id.name),
+              snippet.builder.expression_identifier(SPAN, id.name),
+              false,
+              true,
+              false,
+            ),
+          ));
+        }
+        Expression::ObjectExpression(snippet.builder.alloc_object_expression(SPAN, properties))
+      }
+      BindingPatternKind::ArrayPattern(mut arg_pat) => {
+        let capacity = arg_pat.elements.len() + usize::from(arg_pat.rest.is_some());
+        let mut elements = snippet.builder.vec_with_capacity(capacity);
+        arg_pat.elements.take_in(snippet.alloc()).into_iter().for_each(|binding_pat| {
+          elements.push(binding_pat.map_or(
+            ArrayExpressionElement::Elision(snippet.builder.elision(SPAN)),
+            |binding_pat| ArrayExpressionElement::from(binding_pat.into_expression(snippet)),
+          ));
+        });
+        if let Some(rest) = arg_pat.rest.take() {
+          let BindingPatternKind::BindingIdentifier(ref id) = rest.argument.kind else {
+            unreachable!("The rest element should be `BindingIdentifier`")
+          };
+          elements.push(ArrayExpressionElement::Identifier(
+            snippet.builder.alloc_identifier_reference(SPAN, id.name),
+          ));
+        }
+        Expression::ArrayExpression(snippet.builder.alloc_array_expression(SPAN, elements))
+      }
+      BindingPatternKind::AssignmentPattern(mut assign_pat) => {
+        assign_pat.left.take_in(snippet.alloc()).into_expression(snippet)
       }
     }
   }

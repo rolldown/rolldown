@@ -1,6 +1,0 @@
-cargo:rerun-if-changed=build.rs
-cargo:rustc-check-cfg=cfg(netbsd10)
-cargo:rustc-check-cfg=cfg(restricted_std)
-cargo:rustc-check-cfg=cfg(backtrace_in_libstd)
-cargo:rustc-cfg=backtrace_in_libstd
-cargo:rustc-env=STD_ENV_ARCH=wasm32

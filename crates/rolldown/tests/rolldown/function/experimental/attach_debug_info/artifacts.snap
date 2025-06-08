@@ -6,7 +6,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## A.js
 
 ```js
-//! User-defined Entry: input(entry-a.js), name(Some("A"))
+//! User-defined Entry: [Entry-Module-Id: entry-a.js] [Name: Some("A")]
 import { __esm } from "./rolldown-runtime.js";
 import { init_shared } from "./shared.js";
 import { init_share_splitted } from "./Splitted.js";
@@ -16,6 +16,7 @@ var init_entry_a = __esm({ "entry-a.js"() {
 	init_shared();
 	init_share_splitted();
 	console.log("entry-a");
+	import("./dyn-entry.js").then(console.log);
 } });
 
 //#endregion
@@ -24,7 +25,7 @@ init_entry_a();
 ## B.js
 
 ```js
-//! User-defined Entry: input(entry-b.js), name(Some("B"))
+//! User-defined Entry: [Entry-Module-Id: entry-b.js] [Name: Some("B")]
 import { __esm } from "./rolldown-runtime.js";
 import { init_shared } from "./shared.js";
 import { init_share_splitted } from "./Splitted.js";
@@ -42,7 +43,7 @@ init_entry_b();
 ## Splitted.js
 
 ```js
-//! AdvancedChunks: GroupName(Splitted)
+//! AdvancedChunks: [Group-Name: Splitted]
 import { __esm } from "./rolldown-runtime.js";
 
 //#region share-splitted.js
@@ -53,6 +54,22 @@ var init_share_splitted = __esm({ "share-splitted.js"() {
 //#endregion
 export { init_share_splitted };
 ```
+## dyn-entry.js
+
+```js
+//! Dynamic Entry: [Entry-Module-Id: dyn-entry.js] [Name: None]
+import { __esm } from "./rolldown-runtime.js";
+import { init_shared } from "./shared.js";
+
+//#region dyn-entry.js
+var init_dyn_entry = __esm({ "dyn-entry.js"() {
+	init_shared();
+	console.log("dyn-entry");
+} });
+
+//#endregion
+init_dyn_entry();
+```
 ## rolldown-runtime.js
 
 ```js
@@ -62,7 +79,7 @@ export { __esm };
 ## shared.js
 
 ```js
-//! Common Chunk: SharedBy(entry-a.js, entry-b.js)
+//! Common Chunk: [Shared-By: entry-a.js, entry-b.js, dyn-entry.js]
 import { __esm } from "./rolldown-runtime.js";
 
 //#region shared.js

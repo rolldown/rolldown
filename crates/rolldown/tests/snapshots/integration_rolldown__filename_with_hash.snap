@@ -4010,11 +4010,12 @@ expression: output
 
 # tests/rolldown/function/experimental/attach_debug_info
 
-- A-!~{000}~.js => A-BdptAob2.js
-- B-!~{001}~.js => B-RqteDIcd.js
-- Splitted-!~{006}~.js => Splitted-J5fVspE7.js
+- A-!~{000}~.js => A-BuGdc1K4.js
+- B-!~{001}~.js => B-Dsf2JIK7.js
+- Splitted-!~{006}~.js => Splitted-BqcNVQci.js
+- dyn-entry-!~{008}~.js => dyn-entry-C2vod8Lj.js
 - rolldown-runtime-!~{002}~.js => rolldown-runtime-F0QY5PnL.js
-- shared-!~{004}~.js => shared-BO-bWQCk.js
+- shared-!~{004}~.js => shared-D6U9QV-r.js
 
 # tests/rolldown/function/experimental/disable_live_bindings
 

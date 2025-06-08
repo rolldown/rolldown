@@ -343,9 +343,10 @@ impl GenerateStage<'_> {
         preserve_entry_signature,
       );
       chunk.add_creation_reason(
-        ChunkCreationReason::UserDefinedEntry {
-          debug_id: &module.debug_id,
-          entry_point_name: entry_point.name.as_ref(),
+        ChunkCreationReason::Entry {
+          is_user_defined_entry: module.is_user_defined_entry,
+          entry_module_id: &module.debug_id,
+          name: entry_point.name.as_ref(),
         },
         self.options,
       );

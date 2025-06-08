@@ -6,7 +6,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## indirect.js
 
 ```js
-import { read } from "./indirect2.js";
+import { b as read } from "./indirect2.js";
 
 export { read };
 ```
@@ -15,12 +15,12 @@ export { read };
 ```js
 import { read } from "node:fs";
 
-export { read };
+export { read as b };
 ```
 ## main.js
 
 ```js
-import { read } from "./indirect2.js";
+import { b as read } from "./indirect2.js";
 
 //#region read.js
 const read$1 = 1;

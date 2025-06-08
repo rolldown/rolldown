@@ -6,7 +6,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## dynamic.js
 
 ```js
-import { value } from "./main.js";
+import { b as value } from "./main.js";
 
 //#region dynamic.js
 console.log(`shared: `, value);
@@ -26,7 +26,7 @@ console.log(`shared: `, value);
 const unused = value;
 
 //#endregion
-export { unused, value };
+export { value as b, unused };
 ```
 ---
 
@@ -37,7 +37,7 @@ Variant: (preserve_entry_signatures: Strict)
 ## dynamic.js
 
 ```js
-import { value } from "./lib.js";
+import { b as value } from "./lib.js";
 
 //#region dynamic.js
 console.log(`shared: `, value);
@@ -51,12 +51,12 @@ console.log(`shared: `, value);
 const value = 100;
 
 //#endregion
-export { value };
+export { value as b };
 ```
 ## main.js
 
 ```js
-import { value } from "./lib.js";
+import { b as value } from "./lib.js";
 
 //#region main.js
 import("./dynamic.js");
@@ -75,7 +75,7 @@ Variant: (preserve_entry_signatures: False)
 ## dynamic.js
 
 ```js
-import { value } from "./main.js";
+import { b as value } from "./main.js";
 
 //#region dynamic.js
 console.log(`shared: `, value);
@@ -94,5 +94,5 @@ import("./dynamic.js");
 console.log(`shared: `, value);
 
 //#endregion
-export { value };
+export { value as b };
 ```

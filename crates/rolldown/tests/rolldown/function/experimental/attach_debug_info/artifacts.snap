@@ -7,9 +7,9 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```js
 //! User-defined Entry: input(entry-a.js), name(Some("A"))
-import { __esm } from "./rolldown-runtime.js";
-import { init_shared } from "./shared.js";
-import { init_share_splitted } from "./Splitted.js";
+import { b as __esm } from "./rolldown-runtime.js";
+import { b as init_shared } from "./shared.js";
+import { b as init_share_splitted } from "./Splitted.js";
 
 //#region entry-a.js
 var init_entry_a = __esm({ "entry-a.js"() {
@@ -25,9 +25,9 @@ init_entry_a();
 
 ```js
 //! User-defined Entry: input(entry-b.js), name(Some("B"))
-import { __esm } from "./rolldown-runtime.js";
-import { init_shared } from "./shared.js";
-import { init_share_splitted } from "./Splitted.js";
+import { b as __esm } from "./rolldown-runtime.js";
+import { b as init_shared } from "./shared.js";
+import { b as init_share_splitted } from "./Splitted.js";
 
 //#region entry-b.js
 var init_entry_b = __esm({ "entry-b.js"() {
@@ -43,7 +43,7 @@ init_entry_b();
 
 ```js
 //! AdvancedChunks: GroupName(Splitted)
-import { __esm } from "./rolldown-runtime.js";
+import { b as __esm } from "./rolldown-runtime.js";
 
 //#region share-splitted.js
 var init_share_splitted = __esm({ "share-splitted.js"() {
@@ -51,19 +51,19 @@ var init_share_splitted = __esm({ "share-splitted.js"() {
 } });
 
 //#endregion
-export { init_share_splitted };
+export { init_share_splitted as b };
 ```
 ## rolldown-runtime.js
 
 ```js
 
-export { __esm };
+export { __esm as b };
 ```
 ## shared.js
 
 ```js
 //! Common Chunk: SharedBy(entry-a.js, entry-b.js)
-import { __esm } from "./rolldown-runtime.js";
+import { b as __esm } from "./rolldown-runtime.js";
 
 //#region shared.js
 var init_shared = __esm({ "shared.js"() {
@@ -71,5 +71,5 @@ var init_shared = __esm({ "shared.js"() {
 } });
 
 //#endregion
-export { init_shared };
+export { init_shared as b };
 ```

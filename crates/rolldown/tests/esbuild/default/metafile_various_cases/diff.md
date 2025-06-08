@@ -83,7 +83,7 @@ export {
 ```
 ### rolldown
 ```js
-import default$1, { file_default } from "./copy.js";
+import { b as default$1, c as file_default } from "./copy.js";
 import a from "extern-esm";
 
 
@@ -115,7 +115,7 @@ export { exported };
 +++ rolldown	entry.js
 @@ -1,14 +1,12 @@
 -import {__commonJS, __require} from "./chunk-MQN2VSL5.js";
-+import default$1, {file_default} from "./copy.js";
++import {b as default$1, c as file_default} from "./copy.js";
 +import a from "extern-esm";
 +var esm_default = 1;
 +var json_2_default = 2;

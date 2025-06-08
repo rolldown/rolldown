@@ -7,12 +7,12 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```js
 
-export { __commonJS };
+export { __commonJS as b };
 ```
 ## child.js
 
 ```js
-import { require_cjs } from "./cjs.js";
+import { b as require_cjs } from "./cjs.js";
 
 //#region child.js
 const m = require_cjs();
@@ -23,7 +23,7 @@ console.log(m);
 ## cjs.js
 
 ```js
-import { __commonJS } from "./_virtual/rolldown_runtime.js";
+import { b as __commonJS } from "./_virtual/rolldown_runtime.js";
 
 //#region cjs.js
 var require_cjs = __commonJS({ "cjs.js"(exports, module) {
@@ -33,7 +33,7 @@ var require_cjs = __commonJS({ "cjs.js"(exports, module) {
 //#endregion
 export default require_cjs();
 
-export { require_cjs };
+export { require_cjs as b };
 ```
 ## dynamic.js
 

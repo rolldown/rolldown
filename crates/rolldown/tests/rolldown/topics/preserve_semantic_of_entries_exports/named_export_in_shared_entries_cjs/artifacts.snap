@@ -8,16 +8,16 @@ source: crates/rolldown_testing/src/integration_test.rs
 ```js
 const require_main = require('./main.js');
 
-exports.default = require_main.main_default;
-exports.foo = require_main.foo;
+exports.default = require_main.c;
+exports.foo = require_main.b;
 ```
 ## entry2.js
 
 ```js
 const require_main = require('./main.js');
 
-exports.default = require_main.main_default;
-exports.foo = require_main.foo;
+exports.default = require_main.c;
+exports.foo = require_main.b;
 ```
 ## main.js
 
@@ -28,13 +28,13 @@ const foo = "foo";
 var main_default = "main";
 
 //#endregion
-Object.defineProperty(exports, 'foo', {
+Object.defineProperty(exports, 'b', {
   enumerable: true,
   get: function () {
     return foo;
   }
 });
-Object.defineProperty(exports, 'main_default', {
+Object.defineProperty(exports, 'c', {
   enumerable: true,
   get: function () {
     return main_default;

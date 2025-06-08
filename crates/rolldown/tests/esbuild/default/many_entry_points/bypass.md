@@ -12,7 +12,7 @@ console.log(shared_default);
 ```
 ### rolldown
 ```js
-import { shared_default } from "./shared.js";
+import { b as shared_default } from "./shared.js";
 
 //#region e00.js
 console.log(shared_default);
@@ -26,7 +26,7 @@ console.log(shared_default);
 +++ rolldown	e00.js
 @@ -1,2 +1,2 @@
 -var shared_default = 123;
-+import {shared_default} from "./shared.js";
++import {b as shared_default} from "./shared.js";
  console.log(shared_default);
 
 ```
@@ -41,7 +41,7 @@ console.log(shared_default);
 ```
 ### rolldown
 ```js
-import { shared_default } from "./shared.js";
+import { b as shared_default } from "./shared.js";
 
 //#region e01.js
 console.log(shared_default);
@@ -55,7 +55,7 @@ console.log(shared_default);
 +++ rolldown	e01.js
 @@ -1,2 +1,2 @@
 -var shared_default = 123;
-+import {shared_default} from "./shared.js";
++import {b as shared_default} from "./shared.js";
  console.log(shared_default);
 
 ```
@@ -70,7 +70,7 @@ console.log(shared_default);
 ```
 ### rolldown
 ```js
-import { shared_default } from "./shared.js";
+import { b as shared_default } from "./shared.js";
 
 //#region e02.js
 console.log(shared_default);
@@ -84,7 +84,7 @@ console.log(shared_default);
 +++ rolldown	e02.js
 @@ -1,2 +1,2 @@
 -var shared_default = 123;
-+import {shared_default} from "./shared.js";
++import {b as shared_default} from "./shared.js";
  console.log(shared_default);
 
 ```
@@ -99,7 +99,7 @@ console.log(shared_default);
 ```
 ### rolldown
 ```js
-import { shared_default } from "./shared.js";
+import { b as shared_default } from "./shared.js";
 
 //#region e03.js
 console.log(shared_default);
@@ -113,7 +113,7 @@ console.log(shared_default);
 +++ rolldown	e03.js
 @@ -1,2 +1,2 @@
 -var shared_default = 123;
-+import {shared_default} from "./shared.js";
++import {b as shared_default} from "./shared.js";
  console.log(shared_default);
 
 ```
@@ -128,7 +128,7 @@ console.log(shared_default);
 ```
 ### rolldown
 ```js
-import { shared_default } from "./shared.js";
+import { b as shared_default } from "./shared.js";
 
 //#region e04.js
 console.log(shared_default);
@@ -142,7 +142,7 @@ console.log(shared_default);
 +++ rolldown	e04.js
 @@ -1,2 +1,2 @@
 -var shared_default = 123;
-+import {shared_default} from "./shared.js";
++import {b as shared_default} from "./shared.js";
  console.log(shared_default);
 
 ```
@@ -157,7 +157,7 @@ console.log(shared_default);
 ```
 ### rolldown
 ```js
-import { shared_default } from "./shared.js";
+import { b as shared_default } from "./shared.js";
 
 //#region e05.js
 console.log(shared_default);
@@ -171,7 +171,7 @@ console.log(shared_default);
 +++ rolldown	e05.js
 @@ -1,2 +1,2 @@
 -var shared_default = 123;
-+import {shared_default} from "./shared.js";
++import {b as shared_default} from "./shared.js";
  console.log(shared_default);
 
 ```
@@ -186,7 +186,7 @@ console.log(shared_default);
 ```
 ### rolldown
 ```js
-import { shared_default } from "./shared.js";
+import { b as shared_default } from "./shared.js";
 
 //#region e06.js
 console.log(shared_default);
@@ -200,7 +200,7 @@ console.log(shared_default);
 +++ rolldown	e06.js
 @@ -1,2 +1,2 @@
 -var shared_default = 123;
-+import {shared_default} from "./shared.js";
++import {b as shared_default} from "./shared.js";
  console.log(shared_default);
 
 ```
@@ -215,7 +215,7 @@ console.log(shared_default);
 ```
 ### rolldown
 ```js
-import { shared_default } from "./shared.js";
+import { b as shared_default } from "./shared.js";
 
 //#region e07.js
 console.log(shared_default);
@@ -229,7 +229,7 @@ console.log(shared_default);
 +++ rolldown	e07.js
 @@ -1,2 +1,2 @@
 -var shared_default = 123;
-+import {shared_default} from "./shared.js";
++import {b as shared_default} from "./shared.js";
  console.log(shared_default);
 
 ```
@@ -244,7 +244,7 @@ console.log(shared_default);
 ```
 ### rolldown
 ```js
-import { shared_default } from "./shared.js";
+import { b as shared_default } from "./shared.js";
 
 //#region e08.js
 console.log(shared_default);
@@ -258,7 +258,7 @@ console.log(shared_default);
 +++ rolldown	e08.js
 @@ -1,2 +1,2 @@
 -var shared_default = 123;
-+import {shared_default} from "./shared.js";
++import {b as shared_default} from "./shared.js";
  console.log(shared_default);
 
 ```
@@ -273,7 +273,7 @@ console.log(shared_default);
 ```
 ### rolldown
 ```js
-import { shared_default } from "./shared.js";
+import { b as shared_default } from "./shared.js";
 
 //#region e09.js
 console.log(shared_default);
@@ -287,7 +287,7 @@ console.log(shared_default);
 +++ rolldown	e09.js
 @@ -1,2 +1,2 @@
 -var shared_default = 123;
-+import {shared_default} from "./shared.js";
++import {b as shared_default} from "./shared.js";
  console.log(shared_default);
 
 ```
@@ -302,7 +302,7 @@ console.log(shared_default);
 ```
 ### rolldown
 ```js
-import { shared_default } from "./shared.js";
+import { b as shared_default } from "./shared.js";
 
 //#region e10.js
 console.log(shared_default);
@@ -316,7 +316,7 @@ console.log(shared_default);
 +++ rolldown	e10.js
 @@ -1,2 +1,2 @@
 -var shared_default = 123;
-+import {shared_default} from "./shared.js";
++import {b as shared_default} from "./shared.js";
  console.log(shared_default);
 
 ```
@@ -331,7 +331,7 @@ console.log(shared_default);
 ```
 ### rolldown
 ```js
-import { shared_default } from "./shared.js";
+import { b as shared_default } from "./shared.js";
 
 //#region e11.js
 console.log(shared_default);
@@ -345,7 +345,7 @@ console.log(shared_default);
 +++ rolldown	e11.js
 @@ -1,2 +1,2 @@
 -var shared_default = 123;
-+import {shared_default} from "./shared.js";
++import {b as shared_default} from "./shared.js";
  console.log(shared_default);
 
 ```
@@ -360,7 +360,7 @@ console.log(shared_default);
 ```
 ### rolldown
 ```js
-import { shared_default } from "./shared.js";
+import { b as shared_default } from "./shared.js";
 
 //#region e12.js
 console.log(shared_default);
@@ -374,7 +374,7 @@ console.log(shared_default);
 +++ rolldown	e12.js
 @@ -1,2 +1,2 @@
 -var shared_default = 123;
-+import {shared_default} from "./shared.js";
++import {b as shared_default} from "./shared.js";
  console.log(shared_default);
 
 ```
@@ -389,7 +389,7 @@ console.log(shared_default);
 ```
 ### rolldown
 ```js
-import { shared_default } from "./shared.js";
+import { b as shared_default } from "./shared.js";
 
 //#region e13.js
 console.log(shared_default);
@@ -403,7 +403,7 @@ console.log(shared_default);
 +++ rolldown	e13.js
 @@ -1,2 +1,2 @@
 -var shared_default = 123;
-+import {shared_default} from "./shared.js";
++import {b as shared_default} from "./shared.js";
  console.log(shared_default);
 
 ```
@@ -418,7 +418,7 @@ console.log(shared_default);
 ```
 ### rolldown
 ```js
-import { shared_default } from "./shared.js";
+import { b as shared_default } from "./shared.js";
 
 //#region e14.js
 console.log(shared_default);
@@ -432,7 +432,7 @@ console.log(shared_default);
 +++ rolldown	e14.js
 @@ -1,2 +1,2 @@
 -var shared_default = 123;
-+import {shared_default} from "./shared.js";
++import {b as shared_default} from "./shared.js";
  console.log(shared_default);
 
 ```
@@ -447,7 +447,7 @@ console.log(shared_default);
 ```
 ### rolldown
 ```js
-import { shared_default } from "./shared.js";
+import { b as shared_default } from "./shared.js";
 
 //#region e15.js
 console.log(shared_default);
@@ -461,7 +461,7 @@ console.log(shared_default);
 +++ rolldown	e15.js
 @@ -1,2 +1,2 @@
 -var shared_default = 123;
-+import {shared_default} from "./shared.js";
++import {b as shared_default} from "./shared.js";
  console.log(shared_default);
 
 ```
@@ -476,7 +476,7 @@ console.log(shared_default);
 ```
 ### rolldown
 ```js
-import { shared_default } from "./shared.js";
+import { b as shared_default } from "./shared.js";
 
 //#region e16.js
 console.log(shared_default);
@@ -490,7 +490,7 @@ console.log(shared_default);
 +++ rolldown	e16.js
 @@ -1,2 +1,2 @@
 -var shared_default = 123;
-+import {shared_default} from "./shared.js";
++import {b as shared_default} from "./shared.js";
  console.log(shared_default);
 
 ```
@@ -505,7 +505,7 @@ console.log(shared_default);
 ```
 ### rolldown
 ```js
-import { shared_default } from "./shared.js";
+import { b as shared_default } from "./shared.js";
 
 //#region e17.js
 console.log(shared_default);
@@ -519,7 +519,7 @@ console.log(shared_default);
 +++ rolldown	e17.js
 @@ -1,2 +1,2 @@
 -var shared_default = 123;
-+import {shared_default} from "./shared.js";
++import {b as shared_default} from "./shared.js";
  console.log(shared_default);
 
 ```
@@ -534,7 +534,7 @@ console.log(shared_default);
 ```
 ### rolldown
 ```js
-import { shared_default } from "./shared.js";
+import { b as shared_default } from "./shared.js";
 
 //#region e18.js
 console.log(shared_default);
@@ -548,7 +548,7 @@ console.log(shared_default);
 +++ rolldown	e18.js
 @@ -1,2 +1,2 @@
 -var shared_default = 123;
-+import {shared_default} from "./shared.js";
++import {b as shared_default} from "./shared.js";
  console.log(shared_default);
 
 ```
@@ -563,7 +563,7 @@ console.log(shared_default);
 ```
 ### rolldown
 ```js
-import { shared_default } from "./shared.js";
+import { b as shared_default } from "./shared.js";
 
 //#region e19.js
 console.log(shared_default);
@@ -577,7 +577,7 @@ console.log(shared_default);
 +++ rolldown	e19.js
 @@ -1,2 +1,2 @@
 -var shared_default = 123;
-+import {shared_default} from "./shared.js";
++import {b as shared_default} from "./shared.js";
  console.log(shared_default);
 
 ```
@@ -592,7 +592,7 @@ console.log(shared_default);
 ```
 ### rolldown
 ```js
-import { shared_default } from "./shared.js";
+import { b as shared_default } from "./shared.js";
 
 //#region e20.js
 console.log(shared_default);
@@ -606,7 +606,7 @@ console.log(shared_default);
 +++ rolldown	e20.js
 @@ -1,2 +1,2 @@
 -var shared_default = 123;
-+import {shared_default} from "./shared.js";
++import {b as shared_default} from "./shared.js";
  console.log(shared_default);
 
 ```
@@ -621,7 +621,7 @@ console.log(shared_default);
 ```
 ### rolldown
 ```js
-import { shared_default } from "./shared.js";
+import { b as shared_default } from "./shared.js";
 
 //#region e21.js
 console.log(shared_default);
@@ -635,7 +635,7 @@ console.log(shared_default);
 +++ rolldown	e21.js
 @@ -1,2 +1,2 @@
 -var shared_default = 123;
-+import {shared_default} from "./shared.js";
++import {b as shared_default} from "./shared.js";
  console.log(shared_default);
 
 ```
@@ -650,7 +650,7 @@ console.log(shared_default);
 ```
 ### rolldown
 ```js
-import { shared_default } from "./shared.js";
+import { b as shared_default } from "./shared.js";
 
 //#region e22.js
 console.log(shared_default);
@@ -664,7 +664,7 @@ console.log(shared_default);
 +++ rolldown	e22.js
 @@ -1,2 +1,2 @@
 -var shared_default = 123;
-+import {shared_default} from "./shared.js";
++import {b as shared_default} from "./shared.js";
  console.log(shared_default);
 
 ```
@@ -679,7 +679,7 @@ console.log(shared_default);
 ```
 ### rolldown
 ```js
-import { shared_default } from "./shared.js";
+import { b as shared_default } from "./shared.js";
 
 //#region e23.js
 console.log(shared_default);
@@ -693,7 +693,7 @@ console.log(shared_default);
 +++ rolldown	e23.js
 @@ -1,2 +1,2 @@
 -var shared_default = 123;
-+import {shared_default} from "./shared.js";
++import {b as shared_default} from "./shared.js";
  console.log(shared_default);
 
 ```
@@ -708,7 +708,7 @@ console.log(shared_default);
 ```
 ### rolldown
 ```js
-import { shared_default } from "./shared.js";
+import { b as shared_default } from "./shared.js";
 
 //#region e24.js
 console.log(shared_default);
@@ -722,7 +722,7 @@ console.log(shared_default);
 +++ rolldown	e24.js
 @@ -1,2 +1,2 @@
 -var shared_default = 123;
-+import {shared_default} from "./shared.js";
++import {b as shared_default} from "./shared.js";
  console.log(shared_default);
 
 ```
@@ -737,7 +737,7 @@ console.log(shared_default);
 ```
 ### rolldown
 ```js
-import { shared_default } from "./shared.js";
+import { b as shared_default } from "./shared.js";
 
 //#region e25.js
 console.log(shared_default);
@@ -751,7 +751,7 @@ console.log(shared_default);
 +++ rolldown	e25.js
 @@ -1,2 +1,2 @@
 -var shared_default = 123;
-+import {shared_default} from "./shared.js";
++import {b as shared_default} from "./shared.js";
  console.log(shared_default);
 
 ```
@@ -766,7 +766,7 @@ console.log(shared_default);
 ```
 ### rolldown
 ```js
-import { shared_default } from "./shared.js";
+import { b as shared_default } from "./shared.js";
 
 //#region e26.js
 console.log(shared_default);
@@ -780,7 +780,7 @@ console.log(shared_default);
 +++ rolldown	e26.js
 @@ -1,2 +1,2 @@
 -var shared_default = 123;
-+import {shared_default} from "./shared.js";
++import {b as shared_default} from "./shared.js";
  console.log(shared_default);
 
 ```
@@ -795,7 +795,7 @@ console.log(shared_default);
 ```
 ### rolldown
 ```js
-import { shared_default } from "./shared.js";
+import { b as shared_default } from "./shared.js";
 
 //#region e27.js
 console.log(shared_default);
@@ -809,7 +809,7 @@ console.log(shared_default);
 +++ rolldown	e27.js
 @@ -1,2 +1,2 @@
 -var shared_default = 123;
-+import {shared_default} from "./shared.js";
++import {b as shared_default} from "./shared.js";
  console.log(shared_default);
 
 ```
@@ -824,7 +824,7 @@ console.log(shared_default);
 ```
 ### rolldown
 ```js
-import { shared_default } from "./shared.js";
+import { b as shared_default } from "./shared.js";
 
 //#region e28.js
 console.log(shared_default);
@@ -838,7 +838,7 @@ console.log(shared_default);
 +++ rolldown	e28.js
 @@ -1,2 +1,2 @@
 -var shared_default = 123;
-+import {shared_default} from "./shared.js";
++import {b as shared_default} from "./shared.js";
  console.log(shared_default);
 
 ```
@@ -853,7 +853,7 @@ console.log(shared_default);
 ```
 ### rolldown
 ```js
-import { shared_default } from "./shared.js";
+import { b as shared_default } from "./shared.js";
 
 //#region e29.js
 console.log(shared_default);
@@ -867,7 +867,7 @@ console.log(shared_default);
 +++ rolldown	e29.js
 @@ -1,2 +1,2 @@
 -var shared_default = 123;
-+import {shared_default} from "./shared.js";
++import {b as shared_default} from "./shared.js";
  console.log(shared_default);
 
 ```
@@ -882,7 +882,7 @@ console.log(shared_default);
 ```
 ### rolldown
 ```js
-import { shared_default } from "./shared.js";
+import { b as shared_default } from "./shared.js";
 
 //#region e30.js
 console.log(shared_default);
@@ -896,7 +896,7 @@ console.log(shared_default);
 +++ rolldown	e30.js
 @@ -1,2 +1,2 @@
 -var shared_default = 123;
-+import {shared_default} from "./shared.js";
++import {b as shared_default} from "./shared.js";
  console.log(shared_default);
 
 ```
@@ -911,7 +911,7 @@ console.log(shared_default);
 ```
 ### rolldown
 ```js
-import { shared_default } from "./shared.js";
+import { b as shared_default } from "./shared.js";
 
 //#region e31.js
 console.log(shared_default);
@@ -925,7 +925,7 @@ console.log(shared_default);
 +++ rolldown	e31.js
 @@ -1,2 +1,2 @@
 -var shared_default = 123;
-+import {shared_default} from "./shared.js";
++import {b as shared_default} from "./shared.js";
  console.log(shared_default);
 
 ```
@@ -940,7 +940,7 @@ console.log(shared_default);
 ```
 ### rolldown
 ```js
-import { shared_default } from "./shared.js";
+import { b as shared_default } from "./shared.js";
 
 //#region e32.js
 console.log(shared_default);
@@ -954,7 +954,7 @@ console.log(shared_default);
 +++ rolldown	e32.js
 @@ -1,2 +1,2 @@
 -var shared_default = 123;
-+import {shared_default} from "./shared.js";
++import {b as shared_default} from "./shared.js";
  console.log(shared_default);
 
 ```
@@ -969,7 +969,7 @@ console.log(shared_default);
 ```
 ### rolldown
 ```js
-import { shared_default } from "./shared.js";
+import { b as shared_default } from "./shared.js";
 
 //#region e33.js
 console.log(shared_default);
@@ -983,7 +983,7 @@ console.log(shared_default);
 +++ rolldown	e33.js
 @@ -1,2 +1,2 @@
 -var shared_default = 123;
-+import {shared_default} from "./shared.js";
++import {b as shared_default} from "./shared.js";
  console.log(shared_default);
 
 ```
@@ -998,7 +998,7 @@ console.log(shared_default);
 ```
 ### rolldown
 ```js
-import { shared_default } from "./shared.js";
+import { b as shared_default } from "./shared.js";
 
 //#region e34.js
 console.log(shared_default);
@@ -1012,7 +1012,7 @@ console.log(shared_default);
 +++ rolldown	e34.js
 @@ -1,2 +1,2 @@
 -var shared_default = 123;
-+import {shared_default} from "./shared.js";
++import {b as shared_default} from "./shared.js";
  console.log(shared_default);
 
 ```
@@ -1027,7 +1027,7 @@ console.log(shared_default);
 ```
 ### rolldown
 ```js
-import { shared_default } from "./shared.js";
+import { b as shared_default } from "./shared.js";
 
 //#region e35.js
 console.log(shared_default);
@@ -1041,7 +1041,7 @@ console.log(shared_default);
 +++ rolldown	e35.js
 @@ -1,2 +1,2 @@
 -var shared_default = 123;
-+import {shared_default} from "./shared.js";
++import {b as shared_default} from "./shared.js";
  console.log(shared_default);
 
 ```
@@ -1056,7 +1056,7 @@ console.log(shared_default);
 ```
 ### rolldown
 ```js
-import { shared_default } from "./shared.js";
+import { b as shared_default } from "./shared.js";
 
 //#region e36.js
 console.log(shared_default);
@@ -1070,7 +1070,7 @@ console.log(shared_default);
 +++ rolldown	e36.js
 @@ -1,2 +1,2 @@
 -var shared_default = 123;
-+import {shared_default} from "./shared.js";
++import {b as shared_default} from "./shared.js";
  console.log(shared_default);
 
 ```
@@ -1085,7 +1085,7 @@ console.log(shared_default);
 ```
 ### rolldown
 ```js
-import { shared_default } from "./shared.js";
+import { b as shared_default } from "./shared.js";
 
 //#region e37.js
 console.log(shared_default);
@@ -1099,7 +1099,7 @@ console.log(shared_default);
 +++ rolldown	e37.js
 @@ -1,2 +1,2 @@
 -var shared_default = 123;
-+import {shared_default} from "./shared.js";
++import {b as shared_default} from "./shared.js";
  console.log(shared_default);
 
 ```
@@ -1114,7 +1114,7 @@ console.log(shared_default);
 ```
 ### rolldown
 ```js
-import { shared_default } from "./shared.js";
+import { b as shared_default } from "./shared.js";
 
 //#region e38.js
 console.log(shared_default);
@@ -1128,7 +1128,7 @@ console.log(shared_default);
 +++ rolldown	e38.js
 @@ -1,2 +1,2 @@
 -var shared_default = 123;
-+import {shared_default} from "./shared.js";
++import {b as shared_default} from "./shared.js";
  console.log(shared_default);
 
 ```
@@ -1143,7 +1143,7 @@ console.log(shared_default);
 ```
 ### rolldown
 ```js
-import { shared_default } from "./shared.js";
+import { b as shared_default } from "./shared.js";
 
 //#region e39.js
 console.log(shared_default);
@@ -1157,7 +1157,7 @@ console.log(shared_default);
 +++ rolldown	e39.js
 @@ -1,2 +1,2 @@
 -var shared_default = 123;
-+import {shared_default} from "./shared.js";
++import {b as shared_default} from "./shared.js";
  console.log(shared_default);
 
 ```

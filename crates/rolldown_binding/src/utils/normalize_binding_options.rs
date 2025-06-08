@@ -467,6 +467,7 @@ pub fn normalize_binding_options(
         }
       })
       .transpose()?,
+    minify_internal_exports: Some(false),
   };
 
   #[cfg(not(target_family = "wasm"))]

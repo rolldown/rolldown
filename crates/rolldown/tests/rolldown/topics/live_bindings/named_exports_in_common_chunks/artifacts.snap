@@ -6,7 +6,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## async-entry.js
 
 ```js
-import { count, inc, reset } from "./shared.js";
+import { b as count, c as inc, d as reset } from "./shared.js";
 import assert from "node:assert";
 
 //#region async-entry.js
@@ -25,7 +25,7 @@ assert.strictEqual(count, count);
 ## main.js
 
 ```js
-import { count, inc, reset } from "./shared.js";
+import { b as count, c as inc, d as reset } from "./shared.js";
 
 //#region main.js
 import("./async-entry.js");
@@ -46,5 +46,5 @@ function inc() {
 }
 
 //#endregion
-export { count, inc, reset };
+export { count as b, inc as c, reset as d };
 ```

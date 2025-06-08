@@ -6,8 +6,8 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## main.js
 
 ```js
-import { __esm } from "./rolldown-runtime.js";
-import { init_lib, lib_default } from "./splited_lib.js";
+import { b as __esm } from "./rolldown-runtime.js";
+import { b as init_lib, c as lib_default } from "./splited_lib.js";
 
 //#region main.js
 var init_main = __esm({ "main.js"() {
@@ -22,12 +22,12 @@ init_main();
 
 ```js
 
-export { __esm };
+export { __esm as b };
 ```
 ## splited_lib.js
 
 ```js
-import { __esm } from "./rolldown-runtime.js";
+import { b as __esm } from "./rolldown-runtime.js";
 
 //#region lib.js
 var lib_default;
@@ -36,5 +36,5 @@ var init_lib = __esm({ "lib.js"() {
 } });
 
 //#endregion
-export { init_lib, lib_default };
+export { init_lib as b, lib_default as c };
 ```

@@ -10,7 +10,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 const foo = __toESM(require("foo"));
 const bar = __toESM(require("bar"));
 
-Object.defineProperty(exports, 'bar', {
+Object.defineProperty(exports, 'b', {
   enumerable: true,
   get: function () {
     return bar.default;

@@ -98,6 +98,7 @@ pub struct NormalizedBundlerOptions {
   pub virtual_dirname: String,
   pub preserve_modules_root: Option<String>,
   pub preserve_entry_signatures: PreserveEntrySignatures,
+  pub minify_internal_exports: bool,
 }
 
 // This is only used for testing
@@ -162,6 +163,7 @@ impl Default for NormalizedBundlerOptions {
       virtual_dirname: "_virtual".into(),
       preserve_modules_root: Default::default(),
       preserve_entry_signatures: PreserveEntrySignatures::default(),
+      minify_internal_exports: Default::default(),
     }
   }
 }

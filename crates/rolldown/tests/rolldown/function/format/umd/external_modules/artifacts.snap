@@ -27,6 +27,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 })(this, function(node_path, node_fs) {
 
 node_path = __toESM(node_path);
+node_fs = __toESM(node_fs);
 
 //#region main.js
 console.log(node_path.default);

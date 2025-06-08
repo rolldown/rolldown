@@ -6,7 +6,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## a.js
 
 ```js
-import { foo, init_a } from "./a2.js";
+import { b as foo, d as init_a } from "./a2.js";
 
 init_a();
 export { foo };
@@ -22,12 +22,12 @@ var foo;
 var init_a = __esm({ "a.js"() {} });
 
 //#endregion
-export { __toCommonJS, a_exports, foo, init_a };
+export { foo as b, a_exports as c, init_a as d, __toCommonJS as e };
 ```
 ## b.js
 
 ```js
-import { __toCommonJS, a_exports, init_a } from "./a2.js";
+import { c as a_exports, d as init_a, e as __toCommonJS } from "./a2.js";
 
 //#region b.js
 let bar = (init_a(), __toCommonJS(a_exports));

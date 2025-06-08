@@ -22,7 +22,7 @@ var import_bar = __toESM(require("bar"));
 const foo = __toESM(require("foo"));
 const bar = __toESM(require("bar"));
 
-Object.defineProperty(exports, 'bar', {
+Object.defineProperty(exports, 'b', {
   enumerable: true,
   get: function () {
     return bar.default;
@@ -47,7 +47,7 @@ Object.defineProperty(exports, 'foo', {
 -    foo: () => import_foo.default
 +var foo = __toESM(require("foo"));
 +var bar = __toESM(require("bar"));
-+Object.defineProperty(exports, 'bar', {
++Object.defineProperty(exports, 'b', {
 +    enumerable: true,
 +    get: function () {
 +        return bar.default;

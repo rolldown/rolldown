@@ -13,7 +13,7 @@ setX();
 ```
 ### rolldown
 ```js
-import { setX } from "./x.js";
+import { c as setX } from "./x.js";
 
 //#region a.js
 setX();
@@ -27,7 +27,7 @@ setX();
 +++ rolldown	a.js
 @@ -1,2 +1,2 @@
 -import {setX} from "./chunk-NAKBUG5G.js";
-+import {setX} from "./x.js";
++import {c as setX} from "./x.js";
  setX();
 
 ```
@@ -45,7 +45,7 @@ setZ();
 ### rolldown
 ```js
 import "./x.js";
-import { setZ } from "./z.js";
+import { b as setZ } from "./z.js";
 
 //#region b.js
 setZ();
@@ -61,7 +61,7 @@ setZ();
 -import {setZ} from "./chunk-BSMDVSN6.js";
 -import "./chunk-NAKBUG5G.js";
 +import "./x.js";
-+import {setZ} from "./z.js";
++import {b as setZ} from "./z.js";
  setZ();
 
 ```
@@ -83,8 +83,8 @@ setZ2();
 ```
 ### rolldown
 ```js
-import { setX2 } from "./x.js";
-import { setY2, setZ2 } from "./z.js";
+import { b as setX2 } from "./x.js";
+import { c as setZ2, d as setY2 } from "./z.js";
 
 //#region c.js
 setX2();
@@ -101,8 +101,8 @@ setZ2();
 @@ -1,5 +1,5 @@
 -import {setY2, setZ2} from "./chunk-BSMDVSN6.js";
 -import {setX2} from "./chunk-NAKBUG5G.js";
-+import {setX2} from "./x.js";
-+import {setY2, setZ2} from "./z.js";
++import {b as setX2} from "./x.js";
++import {c as setZ2, d as setY2} from "./z.js";
  setX2();
  setY2();
  setZ2();
@@ -143,7 +143,7 @@ export {
 ```
 ### rolldown
 ```js
-import { setX } from "./x.js";
+import { c as setX } from "./x.js";
 
 //#region y.js
 let _y;
@@ -167,7 +167,7 @@ function setZ2(v) {
 }
 
 //#endregion
-export { setY2, setZ, setZ2 };
+export { setZ as b, setZ2 as c, setY2 as d };
 ```
 ### diff
 ```diff
@@ -176,10 +176,62 @@ export { setY2, setZ, setZ2 };
 +++ rolldown	z.js
 @@ -1,5 +1,5 @@
 -import {setX} from "./chunk-NAKBUG5G.js";
-+import {setX} from "./x.js";
++import {c as setX} from "./x.js";
  var _y;
  function setY(v) {
      _y = v;
  }
+@@ -14,5 +14,5 @@
+ function setZ2(v) {
+     setY(v);
+     _z = v;
+ }
+-export {setY2, setZ, setZ2};
++export {setZ as b, setZ2 as c, setY2 as d};
+
+```
+## /out/chunk-NAKBUG5G.js
+### esbuild
+```js
+// x.js
+var _x;
+function setX(v) {
+  _x = v;
+}
+function setX2(v) {
+  _x = v;
+}
+
+export {
+  setX,
+  setX2
+};
+```
+### rolldown
+```js
+//#region x.js
+let _x;
+function setX(v) {
+	_x = v;
+}
+function setX2(v) {
+	_x = v;
+}
+
+//#endregion
+export { setX2 as b, setX as c };
+```
+### diff
+```diff
+===================================================================
+--- esbuild	/out/chunk-NAKBUG5G.js
++++ rolldown	x.js
+@@ -4,5 +4,5 @@
+ }
+ function setX2(v) {
+     _x = v;
+ }
+-export {setX, setX2};
++export {setX2 as b, setX as c};
 
 ```

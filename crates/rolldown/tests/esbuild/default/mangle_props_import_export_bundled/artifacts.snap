@@ -22,12 +22,12 @@ var require_cjs = __commonJS({ "cjs.js"(exports) {
 } });
 
 //#endregion
-export { __commonJS, __toCommonJS, __toESM, esm_exports, esm_foo_, init_esm, require_cjs };
+export { require_cjs as b, init_esm as c, esm_foo_ as d, esm_exports as e, __commonJS as f, __toESM as g, __toCommonJS as h };
 ```
 ## entry-cjs.js
 
 ```js
-import { __commonJS, __toCommonJS, esm_exports, init_esm, require_cjs } from "./cjs.js";
+import { b as require_cjs, c as init_esm, e as esm_exports, f as __commonJS, h as __toCommonJS } from "./cjs.js";
 
 //#region entry-cjs.js
 var require_entry_cjs = __commonJS({ "entry-cjs.js"(exports) {
@@ -43,7 +43,7 @@ export default require_entry_cjs();
 ## entry-esm.js
 
 ```js
-import { __toESM, esm_foo_, init_esm, require_cjs } from "./cjs.js";
+import { b as require_cjs, c as init_esm, d as esm_foo_, g as __toESM } from "./cjs.js";
 
 //#region entry-esm.js
 init_esm();

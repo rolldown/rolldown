@@ -6,7 +6,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## entry.js
 
 ```js
-import { __toCommonJS, bar, foo_exports, init_foo } from "./foo.js";
+import { b as foo_exports, c as init_foo, d as bar, e as __toCommonJS } from "./foo.js";
 
 //#region entry.js
 init_foo();
@@ -28,12 +28,12 @@ var init_foo = __esm({ "foo.js"() {
 } });
 
 //#endregion
-export { __toCommonJS, bar, foo_exports, init_foo };
+export { foo_exports as b, init_foo as c, bar as d, __toCommonJS as e };
 ```
 ## foo2.js
 
 ```js
-import { bar, init_foo } from "./foo.js";
+import { c as init_foo, d as bar } from "./foo.js";
 
 init_foo();
 export { bar };
@@ -50,9 +50,9 @@ Variant: (format: Cjs)
 const require_foo = require('./foo.js');
 
 //#region entry.js
-require_foo.init_foo();
-const foo = (require_foo.init_foo(), require_foo.__toCommonJS(require_foo.foo_exports));
-input.works = Promise.resolve().then(() => require("./foo2.js")).then((foo3) => foo.bar === 123 && require_foo.bar === 123 && foo3.bar === 123 && foo[Math.random() < 1 && "__esModule"] === true && require_foo.foo_exports[Math.random() < 1 && "__esModule"] === void 0 && foo3[Math.random() < 1 && "__esModule"] === void 0);
+require_foo.c();
+const foo = (require_foo.c(), require_foo.e(require_foo.b));
+input.works = Promise.resolve().then(() => require("./foo2.js")).then((foo3) => foo.bar === 123 && require_foo.d === 123 && foo3.bar === 123 && foo[Math.random() < 1 && "__esModule"] === true && require_foo.b[Math.random() < 1 && "__esModule"] === void 0 && foo3[Math.random() < 1 && "__esModule"] === void 0);
 
 //#endregion
 ```
@@ -70,28 +70,28 @@ var init_foo = __esm({ "foo.js"() {
 } });
 
 //#endregion
-Object.defineProperty(exports, '__toCommonJS', {
-  enumerable: true,
-  get: function () {
-    return __toCommonJS;
-  }
-});
-Object.defineProperty(exports, 'bar', {
-  enumerable: true,
-  get: function () {
-    return bar;
-  }
-});
-Object.defineProperty(exports, 'foo_exports', {
+Object.defineProperty(exports, 'b', {
   enumerable: true,
   get: function () {
     return foo_exports;
   }
 });
-Object.defineProperty(exports, 'init_foo', {
+Object.defineProperty(exports, 'c', {
   enumerable: true,
   get: function () {
     return init_foo;
+  }
+});
+Object.defineProperty(exports, 'd', {
+  enumerable: true,
+  get: function () {
+    return bar;
+  }
+});
+Object.defineProperty(exports, 'e', {
+  enumerable: true,
+  get: function () {
+    return __toCommonJS;
   }
 });
 ```
@@ -100,8 +100,8 @@ Object.defineProperty(exports, 'init_foo', {
 ```js
 const require_foo = require('./foo.js');
 
-require_foo.init_foo();
-exports.bar = require_foo.bar;
+require_foo.c();
+exports.bar = require_foo.d;
 ```
 ---
 

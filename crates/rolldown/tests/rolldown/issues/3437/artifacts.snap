@@ -6,7 +6,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## main.js
 
 ```js
-import { __esm } from "./rolldown-runtime.js";
+import { b as __esm } from "./rolldown-runtime.js";
 
 //#region main.js
 var init_main = __esm({ "main.js"() {
@@ -20,12 +20,12 @@ init_main();
 
 ```js
 
-export { __esm };
+export { __esm as b };
 ```
 ## square.js
 
 ```js
-import { __esm } from "./rolldown-runtime.js";
+import { b as __esm } from "./rolldown-runtime.js";
 
 //#region square.json
 var hello = "world";

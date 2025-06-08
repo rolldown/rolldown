@@ -41,7 +41,7 @@ module.exports = foo;
 ```
 ### rolldown
 ```js
-import { __commonJS } from "./chunk.js";
+import { b as __commonJS } from "./chunk.js";
 import { foo } from "bar";
 
 //#region import-in-cjs.js
@@ -60,7 +60,7 @@ export default require_import_in_cjs();
 --- esbuild	/out/import-in-cjs.js
 +++ rolldown	import-in-cjs.js
 @@ -1,3 +1,9 @@
-+import {__commonJS} from "./chunk.js";
++import {b as __commonJS} from "./chunk.js";
  import {foo} from "bar";
 -exports.foo = foo;
 -module.exports = foo;
@@ -80,7 +80,7 @@ console.log(module, exports);
 ```
 ### rolldown
 ```js
-import { __commonJS } from "./chunk.js";
+import { b as __commonJS } from "./chunk.js";
 
 //#region no-warnings-here.js
 var require_no_warnings_here = __commonJS({ "no-warnings-here.js"(exports, module) {
@@ -98,7 +98,7 @@ export default require_no_warnings_here();
 +++ rolldown	no-warnings-here.js
 @@ -1,1 +1,7 @@
 -console.log(module, exports);
-+import {__commonJS} from "./chunk.js";
++import {b as __commonJS} from "./chunk.js";
 +var require_no_warnings_here = __commonJS({
 +    "no-warnings-here.js"(exports, module) {
 +        console.log(module, exports);

@@ -20,7 +20,7 @@ function foo() {
 import { __proto__, bar } from "foo";
 
 //#region import-computed.js
-function foo() {
+function foo$1() {
 	console.log("this must not become \"{ __proto__: ... }\":", {
 		["__proto__"]: __proto__,
 		["bar"]: bar
@@ -36,8 +36,9 @@ function foo() {
 +++ rolldown	import-computed.js
 @@ -1,7 +1,7 @@
  import {__proto__, bar} from "foo";
- function foo() {
+-function foo() {
 -    console.log('this must not become "{ __proto__: ... }":', {
++function foo$1() {
 +    console.log("this must not become \"{ __proto__: ... }\":", {
          ["__proto__"]: __proto__,
 -        bar
@@ -65,7 +66,7 @@ function foo() {
 import { __proto__, bar } from "foo";
 
 //#region import-normal.js
-function foo() {
+function foo$1() {
 	console.log("this must not become \"{ __proto__ }\":", {
 		__proto__: __proto__,
 		bar
@@ -81,8 +82,9 @@ function foo() {
 +++ rolldown	import-normal.js
 @@ -1,7 +1,7 @@
  import {__proto__, bar} from "foo";
- function foo() {
+-function foo() {
 -    console.log('this must not become "{ __proto__ }":', {
++function foo$1() {
 +    console.log("this must not become \"{ __proto__ }\":", {
          __proto__: __proto__,
          bar

@@ -6,7 +6,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## a.js
 
 ```js
-import { __toDynamicImportESM } from "./chunk.js";
+import { c as __toDynamicImportESM } from "./chunk.js";
 
 //#region a.js
 x ? import("a") : y ? import("./import.js").then(__toDynamicImportESM()) : import("c");
@@ -16,7 +16,7 @@ x ? import("a") : y ? import("./import.js").then(__toDynamicImportESM()) : impor
 ## b.js
 
 ```js
-import { __toDynamicImportESM } from "./chunk.js";
+import { c as __toDynamicImportESM } from "./chunk.js";
 
 //#region b.js
 x ? y ? import("a") : import("./import.js").then(__toDynamicImportESM()) : import(c);
@@ -27,12 +27,12 @@ x ? y ? import("a") : import("./import.js").then(__toDynamicImportESM()) : impor
 
 ```js
 
-export { __commonJS, __toDynamicImportESM };
+export { __commonJS as b, __toDynamicImportESM as c };
 ```
 ## import.js
 
 ```js
-import { __commonJS } from "./chunk.js";
+import { b as __commonJS } from "./chunk.js";
 
 //#region import.js
 var require_import = __commonJS({ "import.js"(exports) {

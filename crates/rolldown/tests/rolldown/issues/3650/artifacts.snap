@@ -6,8 +6,8 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## first.js
 
 ```js
-import { __esm, __export } from "./rolldown-runtime.js";
-import { init_second, value } from "./second.js";
+import { b as __esm, c as __export } from "./rolldown-runtime.js";
+import { b as init_second, d as value } from "./second.js";
 
 //#region first.js
 var first_exports = {};
@@ -19,14 +19,14 @@ var init_first = __esm({ "first.js"() {
 } });
 
 //#endregion
-export { first_exports, init_first, value$1 as value };
+export { init_first as b, first_exports as c, value$1 as d };
 ```
 ## main.js
 
 ```js
-import { __esm } from "./rolldown-runtime.js";
-import { init_second, second_exports } from "./second.js";
-import { first_exports, init_first } from "./first.js";
+import { b as __esm } from "./rolldown-runtime.js";
+import { b as init_second, c as second_exports } from "./second.js";
+import { b as init_first, c as first_exports } from "./first.js";
 
 //#region main.js
 var init_main = __esm({ "main.js"() {
@@ -42,13 +42,13 @@ init_main();
 
 ```js
 
-export { __esm, __export };
+export { __esm as b, __export as c };
 ```
 ## second.js
 
 ```js
-import { __esm, __export } from "./rolldown-runtime.js";
-import { init_first, value } from "./first.js";
+import { b as __esm, c as __export } from "./rolldown-runtime.js";
+import { b as init_first, d as value } from "./first.js";
 
 //#region second.js
 var second_exports = {};
@@ -60,5 +60,5 @@ var init_second = __esm({ "second.js"() {
 } });
 
 //#endregion
-export { init_second, second_exports, value$1 as value };
+export { init_second as b, second_exports as c, value$1 as d };
 ```

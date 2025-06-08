@@ -13,19 +13,19 @@ __export(a_exports, { abc: () => abc });
 const abc = void 0;
 
 //#endregion
-export { a_exports };
+export { a_exports as b };
 ```
 ## entry.js
 
 ```js
-import { a_exports } from "./a.js";
+import { b as a_exports } from "./a.js";
 
 export { a_exports as a };
 ```
 ## main.js
 
 ```js
-import { a_exports } from "./a.js";
+import { b as a_exports } from "./a.js";
 
 export { a_exports as a };
 ```

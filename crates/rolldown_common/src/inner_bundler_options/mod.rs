@@ -212,6 +212,7 @@ pub struct BundlerOptions {
   pub virtual_dirname: Option<String>,
   pub preserve_modules_root: Option<String>,
   pub preserve_entry_signatures: Option<PreserveEntrySignatures>,
+  pub minify_internal_exports: Option<bool>,
 }
 
 impl BundlerOptions {

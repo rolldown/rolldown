@@ -6,7 +6,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## a.js
 
 ```js
-import { require_shared } from "./shared.js";
+import { b as require_shared } from "./shared.js";
 
 //#region a.js
 const { foo } = require_shared();
@@ -17,7 +17,7 @@ console.log(foo);
 ## b.js
 
 ```js
-import { require_shared } from "./shared.js";
+import { b as require_shared } from "./shared.js";
 
 //#region b.js
 const { foo } = require_shared();
@@ -35,5 +35,5 @@ var require_shared = __commonJS({ "shared.js"(exports) {
 } });
 
 //#endregion
-export { require_shared };
+export { require_shared as b };
 ```

@@ -29,7 +29,7 @@ console.log(
 ```
 ### rolldown
 ```js
-import { __toESM, require_no_side_effects } from "./no-side-effects.js";
+import { b as require_no_side_effects, c as __toESM } from "./no-side-effects.js";
 
 //#region entry-nope.js
 var import_no_side_effects = __toESM(require_no_side_effects());
@@ -56,7 +56,7 @@ console.log(void 0, void 0, import_no_side_effects.nope);
 -var js = __toESM(require_no_side_effects());
 -var cjs = __toESM(require_no_side_effects2());
 -console.log(void 0, void 0, void 0);
-+import {__toESM, require_no_side_effects} from "./no-side-effects.js";
++import {b as require_no_side_effects, c as __toESM} from "./no-side-effects.js";
 +var import_no_side_effects = __toESM(require_no_side_effects());
 +console.log(void 0, void 0, import_no_side_effects.nope);
 
@@ -89,7 +89,7 @@ console.log(
 ```
 ### rolldown
 ```js
-import { __toESM, require_no_side_effects } from "./no-side-effects.js";
+import { b as require_no_side_effects, c as __toESM } from "./no-side-effects.js";
 
 //#region entry-default.js
 var import_no_side_effects = __toESM(require_no_side_effects());
@@ -116,7 +116,7 @@ console.log(void 0, void 0, import_no_side_effects.default);
 -var js = __toESM(require_no_side_effects());
 -var cjs = __toESM(require_no_side_effects2());
 -console.log(js.default, void 0, cjs.default);
-+import {__toESM, require_no_side_effects} from "./no-side-effects.js";
++import {b as require_no_side_effects, c as __toESM} from "./no-side-effects.js";
 +var import_no_side_effects = __toESM(require_no_side_effects());
 +console.log(void 0, void 0, import_no_side_effects.default);
 

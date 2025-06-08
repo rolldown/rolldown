@@ -173,7 +173,7 @@ tokio = { version = "1.45.0", default-features = false }
 tracing = "0.1.41"
 tracing-chrome = "0.7.2"
 tracing-subscriber = { version = "0.3.19", default-features = false }
-ts-rs = "10.1"
+ts-rs = "11.0"
 typedmap = "0.6.0"
 url = "2.5.4"
 urlencoding = "2.1.3"

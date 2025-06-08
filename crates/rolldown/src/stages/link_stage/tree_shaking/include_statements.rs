@@ -376,6 +376,8 @@ fn include_module(ctx: &mut Context, module: &NormalModule) {
 }
 
 fn include_symbol(ctx: &mut Context, symbol_ref: SymbolRef) {
+  ctx.used_symbol_refs.insert(symbol_ref);
+
   let mut canonical_ref = ctx.symbols.canonical_ref_for(symbol_ref);
   let canonical_ref_symbol = ctx.symbols.get(canonical_ref);
   if let Some(namespace_alias) = &canonical_ref_symbol.namespace_alias {

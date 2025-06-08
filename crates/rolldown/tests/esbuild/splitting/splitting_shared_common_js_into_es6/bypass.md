@@ -12,7 +12,7 @@ console.log(foo);
 ```
 ### rolldown
 ```js
-import { require_shared } from "./shared.js";
+import { b as require_shared } from "./shared.js";
 
 //#region a.js
 const { foo } = require_shared();
@@ -27,7 +27,7 @@ console.log(foo);
 +++ rolldown	a.js
 @@ -1,3 +1,3 @@
 -import {require_shared} from "./chunk-JQJBVS2P.js";
-+import {require_shared} from "./shared.js";
++import {b as require_shared} from "./shared.js";
  var {foo} = require_shared();
  console.log(foo);
 
@@ -45,7 +45,7 @@ console.log(foo);
 ```
 ### rolldown
 ```js
-import { require_shared } from "./shared.js";
+import { b as require_shared } from "./shared.js";
 
 //#region b.js
 const { foo } = require_shared();
@@ -60,7 +60,7 @@ console.log(foo);
 +++ rolldown	b.js
 @@ -1,3 +1,3 @@
 -import {require_shared} from "./chunk-JQJBVS2P.js";
-+import {require_shared} from "./shared.js";
++import {b as require_shared} from "./shared.js";
  var {foo} = require_shared();
  console.log(foo);
 

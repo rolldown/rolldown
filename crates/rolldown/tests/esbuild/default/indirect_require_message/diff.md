@@ -8,7 +8,7 @@
 ```
 ### rolldown
 ```js
-import { __require } from "./chunk.js";
+import { b as __require } from "./chunk.js";
 
 //#region array.js
 let x = [__require];
@@ -21,7 +21,7 @@ let x = [__require];
 --- esbuild	/out/array.js
 +++ rolldown	array.js
 @@ -0,0 +1,2 @@
-+import {__require} from "./chunk.js";
++import {b as __require} from "./chunk.js";
 +var x = [__require];
 
 ```
@@ -33,7 +33,7 @@ __require = x;
 ```
 ### rolldown
 ```js
-import { __require } from "./chunk.js";
+import { b as __require } from "./chunk.js";
 
 //#region assign.js
 require = x;
@@ -47,7 +47,7 @@ require = x;
 +++ rolldown	assign.js
 @@ -1,1 +1,2 @@
 -__require = x;
-+import {__require} from "./chunk.js";
++import {b as __require} from "./chunk.js";
 +require = x;
 
 ```
@@ -59,7 +59,7 @@ var x = __require.cache;
 ```
 ### rolldown
 ```js
-import { __require } from "./chunk.js";
+import { b as __require } from "./chunk.js";
 
 //#region dot.js
 let x = __require.cache;
@@ -72,7 +72,7 @@ let x = __require.cache;
 --- esbuild	/out/dot.js
 +++ rolldown	dot.js
 @@ -1,1 +1,2 @@
-+import {__require} from "./chunk.js";
++import {b as __require} from "./chunk.js";
  var x = __require.cache;
 
 ```
@@ -83,7 +83,7 @@ let x = __require.cache;
 ```
 ### rolldown
 ```js
-import { __require } from "./chunk.js";
+import { b as __require } from "./chunk.js";
 
 //#region ident.js
 let x = __require;
@@ -96,7 +96,7 @@ let x = __require;
 --- esbuild	/out/ident.js
 +++ rolldown	ident.js
 @@ -0,0 +1,2 @@
-+import {__require} from "./chunk.js";
++import {b as __require} from "./chunk.js";
 +var x = __require;
 
 ```
@@ -108,7 +108,7 @@ var x = __require[cache];
 ```
 ### rolldown
 ```js
-import { __require } from "./chunk.js";
+import { b as __require } from "./chunk.js";
 
 //#region index.js
 let x = __require[cache];
@@ -121,7 +121,7 @@ let x = __require[cache];
 --- esbuild	/out/index.js
 +++ rolldown	index.js
 @@ -1,1 +1,2 @@
-+import {__require} from "./chunk.js";
++import {b as __require} from "./chunk.js";
  var x = __require[cache];
 
 ```

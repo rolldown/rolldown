@@ -8,14 +8,14 @@ source: crates/rolldown_testing/src/integration_test.rs
 ```js
 const require_main = require('./main.js');
 
-exports.value = require_main.value;
+exports.value = require_main.b;
 ```
 ## entry2.js
 
 ```js
 const require_main = require('./main.js');
 
-exports.value = require_main.value;
+exports.value = require_main.b;
 ```
 ## main.js
 
@@ -25,7 +25,7 @@ exports.value = require_main.value;
 const value = "main";
 
 //#endregion
-Object.defineProperty(exports, 'value', {
+Object.defineProperty(exports, 'b', {
   enumerable: true,
   get: function () {
     return value;

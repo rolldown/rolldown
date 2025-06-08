@@ -6,7 +6,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## a.js
 
 ```js
-import { setX } from "./x.js";
+import { c as setX } from "./x.js";
 
 //#region a.js
 setX();
@@ -17,7 +17,7 @@ setX();
 
 ```js
 import "./x.js";
-import { setZ } from "./z.js";
+import { b as setZ } from "./z.js";
 
 //#region b.js
 setZ();
@@ -27,8 +27,8 @@ setZ();
 ## c.js
 
 ```js
-import { setX2 } from "./x.js";
-import { setY2, setZ2 } from "./z.js";
+import { b as setX2 } from "./x.js";
+import { c as setZ2, d as setY2 } from "./z.js";
 
 //#region c.js
 setX2();
@@ -50,12 +50,12 @@ function setX2(v) {
 }
 
 //#endregion
-export { setX, setX2 };
+export { setX2 as b, setX as c };
 ```
 ## z.js
 
 ```js
-import { setX } from "./x.js";
+import { c as setX } from "./x.js";
 
 //#region y.js
 let _y;
@@ -79,5 +79,5 @@ function setZ2(v) {
 }
 
 //#endregion
-export { setY2, setZ, setZ2 };
+export { setZ as b, setZ2 as c, setY2 as d };
 ```

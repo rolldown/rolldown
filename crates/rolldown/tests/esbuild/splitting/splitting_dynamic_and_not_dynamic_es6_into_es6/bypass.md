@@ -13,7 +13,7 @@ import("./foo-BNHN4WV6.js").then(({ bar: b }) => console.log(bar, b));
 ```
 ### rolldown
 ```js
-import { bar } from "./foo2.js";
+import { b as bar } from "./foo2.js";
 
 //#region entry.js
 import("./foo.js").then(({ bar: b }) => console.log(bar, b));
@@ -28,7 +28,7 @@ import("./foo.js").then(({ bar: b }) => console.log(bar, b));
 @@ -1,2 +1,2 @@
 -import {bar} from "./chunk-UDDKLWVZ.js";
 -import("./foo-BNHN4WV6.js").then(({bar: b}) => console.log(bar, b));
-+import {bar} from "./foo2.js";
++import {b as bar} from "./foo2.js";
 +import("./foo.js").then(({bar: b}) => console.log(bar, b));
 
 ```
@@ -44,7 +44,7 @@ export {
 ```
 ### rolldown
 ```js
-import { bar } from "./foo2.js";
+import { b as bar } from "./foo2.js";
 
 export { bar };
 ```
@@ -55,7 +55,36 @@ export { bar };
 +++ rolldown	foo.js
 @@ -1,2 +1,2 @@
 -import {bar} from "./chunk-UDDKLWVZ.js";
-+import {bar} from "./foo2.js";
++import {b as bar} from "./foo2.js";
  export {bar};
+
+```
+## /out/chunk-UDDKLWVZ.js
+### esbuild
+```js
+// foo.js
+var bar = 123;
+
+export {
+  bar
+};
+```
+### rolldown
+```js
+//#region foo.js
+let bar = 123;
+
+//#endregion
+export { bar as b };
+```
+### diff
+```diff
+===================================================================
+--- esbuild	/out/chunk-UDDKLWVZ.js
++++ rolldown	foo2.js
+@@ -1,2 +1,2 @@
+ var bar = 123;
+-export {bar};
++export {bar as b};
 
 ```

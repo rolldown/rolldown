@@ -45,7 +45,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```js
 const require_chunk = require('./chunk.js');
-const external = require_chunk.__toESM(require("external"));
+const external = require_chunk.b(require("external"));
 
 //#region a.js
 console.log(external[foo](), new external[foo]());
@@ -56,7 +56,7 @@ console.log(external[foo](), new external[foo]());
 
 ```js
 const require_chunk = require('./chunk.js');
-const external = require_chunk.__toESM(require("external"));
+const external = require_chunk.b(require("external"));
 
 //#region b.js
 console.log(external.foo(), new external.foo());
@@ -67,7 +67,7 @@ console.log(external.foo(), new external.foo());
 
 ```js
 const require_chunk = require('./chunk.js');
-const external = require_chunk.__toESM(require("external"));
+const external = require_chunk.b(require("external"));
 
 //#region c.js
 console.log((0, external.default)(), (0, external.foo)());
@@ -80,7 +80,7 @@ console.log(new external.default(), new external.foo());
 ```js
 
 
-Object.defineProperty(exports, '__toESM', {
+Object.defineProperty(exports, 'b', {
   enumerable: true,
   get: function () {
     return __toESM;

@@ -456,6 +456,12 @@
               "type": "null"
             }
           ]
+        },
+        "minifyInternalExports": {
+          "type": [
+            "boolean",
+            "null"
+          ]
         }
       },
       "additionalProperties": false

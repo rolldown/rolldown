@@ -33,7 +33,7 @@ export {
 ```
 ### rolldown
 ```js
-import { __toESM, esm_foo_, init_esm, require_cjs } from "./cjs.js";
+import { b as require_cjs, c as init_esm, d as esm_foo_, g as __toESM } from "./cjs.js";
 
 //#region entry-esm.js
 init_esm();
@@ -65,7 +65,7 @@ export { bar_ };
 -    esm_foo_: () => esm_foo_
 -});
 -var esm_foo_ = "foo";
-+import {__toESM, esm_foo_, init_esm, require_cjs} from "./cjs.js";
++import {b as require_cjs, c as init_esm, d as esm_foo_, g as __toESM} from "./cjs.js";
 +init_esm();
  var import_cjs = __toESM(require_cjs());
 -var cjs = __toESM(require_cjs());
@@ -112,7 +112,7 @@ export default require_entry_cjs();
 ```
 ### rolldown
 ```js
-import { __commonJS, __toCommonJS, esm_exports, init_esm, require_cjs } from "./cjs.js";
+import { b as require_cjs, c as init_esm, e as esm_exports, f as __commonJS, h as __toCommonJS } from "./cjs.js";
 
 //#region entry-cjs.js
 var require_entry_cjs = __commonJS({ "entry-cjs.js"(exports) {
@@ -146,7 +146,7 @@ export default require_entry_cjs();
 -        exports.a = "foo";
 -    }
 -});
-+import {__commonJS, __toCommonJS, esm_exports, init_esm, require_cjs} from "./cjs.js";
++import {b as require_cjs, c as init_esm, e as esm_exports, f as __commonJS, h as __toCommonJS} from "./cjs.js";
  var require_entry_cjs = __commonJS({
      "entry-cjs.js"(exports) {
 -        var {b: esm_foo_2} = (init_esm(), __toCommonJS(esm_exports));

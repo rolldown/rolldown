@@ -186,7 +186,7 @@ console.log(internal_default, internal_default);
 ```
 ### rolldown
 ```js
-import { internal_default } from "./internal.js";
+import { b as internal_default } from "./internal.js";
 
 //#region internal-default2.js
 console.log(internal_default, internal_default);
@@ -200,7 +200,7 @@ console.log(internal_default, internal_default);
 +++ rolldown	internal-default2.js
 @@ -1,2 +1,2 @@
 -var internal_default = 123;
-+import {internal_default} from "./internal.js";
++import {b as internal_default} from "./internal.js";
  console.log(internal_default, internal_default);
 
 ```
@@ -219,7 +219,7 @@ console.log(internal_default, internal_exports);
 ```
 ### rolldown
 ```js
-import { internal_default, internal_exports } from "./internal.js";
+import { b as internal_default, c as internal_exports } from "./internal.js";
 
 //#region internal-ns.js
 console.log(internal_default, internal_exports);
@@ -237,7 +237,7 @@ console.log(internal_default, internal_exports);
 -    default: () => internal_default
 -});
 -var internal_default = 123;
-+import {internal_default, internal_exports} from "./internal.js";
++import {b as internal_default, c as internal_exports} from "./internal.js";
  console.log(internal_default, internal_exports);
 
 ```
@@ -256,7 +256,7 @@ console.log(internal_default, internal_exports, internal_default);
 ```
 ### rolldown
 ```js
-import { internal_default, internal_exports } from "./internal.js";
+import { b as internal_default, c as internal_exports } from "./internal.js";
 
 //#region internal-ns-default.js
 console.log(internal_default, internal_exports, internal_default);
@@ -274,7 +274,7 @@ console.log(internal_default, internal_exports, internal_default);
 -    default: () => internal_default
 -});
 -var internal_default = 123;
-+import {internal_default, internal_exports} from "./internal.js";
++import {b as internal_default, c as internal_exports} from "./internal.js";
  console.log(internal_default, internal_exports, internal_default);
 
 ```
@@ -293,7 +293,7 @@ console.log(internal_default, internal_exports, void 0);
 ```
 ### rolldown
 ```js
-import { internal_default, internal_exports } from "./internal.js";
+import { b as internal_default, c as internal_exports } from "./internal.js";
 
 //#region internal-ns-def.js
 console.log(internal_default, internal_exports, void 0);
@@ -311,7 +311,7 @@ console.log(internal_default, internal_exports, void 0);
 -    default: () => internal_default
 -});
 -var internal_default = 123;
-+import {internal_default, internal_exports} from "./internal.js";
++import {b as internal_default, c as internal_exports} from "./internal.js";
  console.log(internal_default, internal_exports, void 0);
 
 ```
@@ -326,7 +326,7 @@ console.log(internal_default, internal_default);
 ```
 ### rolldown
 ```js
-import { internal_default } from "./internal.js";
+import { b as internal_default } from "./internal.js";
 
 //#region internal-default.js
 console.log(internal_default, internal_default);
@@ -340,7 +340,7 @@ console.log(internal_default, internal_default);
 +++ rolldown	internal-default.js
 @@ -1,2 +1,2 @@
 -var internal_default = 123;
-+import {internal_default} from "./internal.js";
++import {b as internal_default} from "./internal.js";
  console.log(internal_default, internal_default);
 
 ```
@@ -355,7 +355,7 @@ console.log(internal_default, void 0);
 ```
 ### rolldown
 ```js
-import { internal_default } from "./internal.js";
+import { b as internal_default } from "./internal.js";
 
 //#region internal-def.js
 console.log(internal_default, void 0);
@@ -369,7 +369,7 @@ console.log(internal_default, void 0);
 +++ rolldown	internal-def.js
 @@ -1,2 +1,2 @@
 -var internal_default = 123;
-+import {internal_default} from "./internal.js";
++import {b as internal_default} from "./internal.js";
  console.log(internal_default, void 0);
 
 ```

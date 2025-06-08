@@ -11,15 +11,15 @@ const require_shared = require('./shared.js');
 const node_assert = __toESM(require("node:assert"));
 
 //#region async-entry.js
-require_shared.reset();
-node_assert.default.strictEqual(require_shared.count, 0);
-node_assert.default.strictEqual(require_shared.count, require_shared.count);
-require_shared.inc();
-node_assert.default.strictEqual(require_shared.count, 1);
-node_assert.default.strictEqual(require_shared.count, require_shared.count);
-require_shared.inc();
-node_assert.default.strictEqual(require_shared.count, 2);
-node_assert.default.strictEqual(require_shared.count, require_shared.count);
+require_shared.d();
+node_assert.default.strictEqual(require_shared.b, 0);
+node_assert.default.strictEqual(require_shared.b, require_shared.b);
+require_shared.c();
+node_assert.default.strictEqual(require_shared.b, 1);
+node_assert.default.strictEqual(require_shared.b, require_shared.b);
+require_shared.c();
+node_assert.default.strictEqual(require_shared.b, 2);
+node_assert.default.strictEqual(require_shared.b, require_shared.b);
 
 //#endregion
 ```
@@ -35,11 +35,11 @@ Promise.resolve().then(() => require("./async-entry.js"));
 Object.defineProperty(exports, 'count', {
   enumerable: true,
   get: function () {
-    return require_shared.count;
+    return require_shared.b;
   }
 });
-exports.inc = require_shared.inc;
-exports.reset = require_shared.reset;
+exports.inc = require_shared.c;
+exports.reset = require_shared.d;
 ```
 ## shared.js
 
@@ -55,19 +55,19 @@ function inc() {
 }
 
 //#endregion
-Object.defineProperty(exports, 'count', {
+Object.defineProperty(exports, 'b', {
   enumerable: true,
   get: function () {
     return count;
   }
 });
-Object.defineProperty(exports, 'inc', {
+Object.defineProperty(exports, 'c', {
   enumerable: true,
   get: function () {
     return inc;
   }
 });
-Object.defineProperty(exports, 'reset', {
+Object.defineProperty(exports, 'd', {
   enumerable: true,
   get: function () {
     return reset;

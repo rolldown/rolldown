@@ -15,7 +15,7 @@ export {
 ```
 ### rolldown
 ```js
-import { foo, init_a } from "./a2.js";
+import { b as foo, d as init_a } from "./a2.js";
 
 init_a();
 export { foo };
@@ -27,7 +27,7 @@ export { foo };
 +++ rolldown	a.js
 @@ -1,3 +1,3 @@
 -import {foo, init_a} from "./chunk-PDZFCFBH.js";
-+import {foo, init_a} from "./a2.js";
++import {b as foo, d as init_a} from "./a2.js";
  init_a();
  export {foo};
 
@@ -49,7 +49,7 @@ export {
 ```
 ### rolldown
 ```js
-import { __toCommonJS, a_exports, init_a } from "./a2.js";
+import { c as a_exports, d as init_a, e as __toCommonJS } from "./a2.js";
 
 //#region b.js
 let bar = (init_a(), __toCommonJS(a_exports));
@@ -64,7 +64,7 @@ export { bar };
 +++ rolldown	b.js
 @@ -1,3 +1,3 @@
 -import {__toCommonJS, a_exports, init_a} from "./chunk-PDZFCFBH.js";
-+import {__toCommonJS, a_exports, init_a} from "./a2.js";
++import {c as a_exports, d as init_a, e as __toCommonJS} from "./a2.js";
  var bar = (init_a(), __toCommonJS(a_exports));
  export {bar};
 
@@ -100,7 +100,7 @@ var foo;
 var init_a = __esm({ "a.js"() {} });
 
 //#endregion
-export { __toCommonJS, a_exports, foo, init_a };
+export { foo as b, a_exports as c, init_a as d, __toCommonJS as e };
 ```
 ### diff
 ```diff
@@ -131,7 +131,7 @@ export { __toCommonJS, a_exports, foo, init_a };
 -};
 \ No newline at end of file
 +//#endregion
-+export { __toCommonJS, a_exports, foo, init_a };
++export { foo as b, a_exports as c, init_a as d, __toCommonJS as e };
 \ No newline at end of file
 
 ```

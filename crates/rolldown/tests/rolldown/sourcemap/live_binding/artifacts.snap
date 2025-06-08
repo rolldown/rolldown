@@ -10,7 +10,7 @@ const require_shared = require('./shared.js');
 
 //#region main1.js
 function main() {
-	require_shared.shared();
+	require_shared.b();
 }
 main();
 
@@ -22,7 +22,7 @@ main();
 ```js
 const require_shared = require('./shared.js');
 
-exports.shared = require_shared.shared;
+exports.shared = require_shared.b;
 ```
 ## shared.js
 
@@ -34,7 +34,7 @@ function shared() {
 }
 
 //#endregion
-Object.defineProperty(exports, 'shared', {
+Object.defineProperty(exports, 'b', {
   enumerable: true,
   get: function () {
     return shared;
@@ -50,8 +50,8 @@ Object.defineProperty(exports, 'shared', {
 (2:0) "function " --> (3:0) "function "
 (2:9) "main() " --> (3:9) "main() "
 (2:16) "{\n" --> (3:16) "{\n"
-(3:2) "shared()" --> (4:0) "\trequire_shared.shared()"
-(3:10) ";\n" --> (4:24) ";\n"
+(3:2) "shared()" --> (4:0) "\trequire_shared.b()"
+(3:10) ";\n" --> (4:19) ";\n"
 (4:1) "\n" --> (5:0) "}\n"
 (6:0) "main()" --> (6:0) "main()"
 (6:6) "\n" --> (6:6) ";\n"

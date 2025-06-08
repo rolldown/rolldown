@@ -22,7 +22,7 @@ export * as fromB from "./b";
 ```
 ### rolldown
 ```js
-import { b_exports } from "./b2.js";
+import { b as b_exports } from "./b2.js";
 
 //#region a.js
 var a_default = 123;
@@ -54,7 +54,7 @@ export { Class, Class as Cls, Class2 as Cls2, Func2 as Fn2, Func, constName, a_d
 -export class Class {}
 -export * from "./a";
 -export * as fromB from "./b";
-+import {b_exports} from "./b2.js";
++import {b as b_exports} from "./b2.js";
 +var a_default = 123;
 +var varName = 234;
 +var letName = 234;
@@ -74,7 +74,7 @@ export default function() {
 ```
 ### rolldown
 ```js
-import { b_default } from "./b2.js";
+import { c as b_default } from "./b2.js";
 
 export { b_default as default };
 ```
@@ -85,7 +85,7 @@ export { b_default as default };
 +++ rolldown	b.js
 @@ -1,1 +1,2 @@
 -export default function () {}
-+import {b_default} from "./b2.js";
++import {c as b_default} from "./b2.js";
 +export {b_default as default};
 
 ```

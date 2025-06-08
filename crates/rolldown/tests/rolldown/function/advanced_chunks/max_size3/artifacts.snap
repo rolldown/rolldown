@@ -6,7 +6,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## 42max-size.js
 
 ```js
-import { __esm } from "./rolldown-runtime.js";
+import { b as __esm } from "./rolldown-runtime.js";
 
 //#region size-15.js
 var init_size_15 = __esm({ "size-15.js"() {
@@ -27,13 +27,13 @@ var init_size_41 = __esm({ "size-41.js"() {
 } });
 
 //#endregion
-export { init_size_15, init_size_20, init_size_41 };
+export { init_size_41 as b, init_size_20 as c, init_size_15 as d };
 ```
 ## main.js
 
 ```js
-import { __esm } from "./rolldown-runtime.js";
-import { init_size_15, init_size_20, init_size_41 } from "./42max-size.js";
+import { b as __esm } from "./rolldown-runtime.js";
+import { b as init_size_41, c as init_size_20, d as init_size_15 } from "./42max-size.js";
 
 //#region main.js
 var init_main = __esm({ "main.js"() {
@@ -55,5 +55,5 @@ var __esm = (fn, res) => function() {
 };
 
 //#endregion
-export { __esm };
+export { __esm as b };
 ```

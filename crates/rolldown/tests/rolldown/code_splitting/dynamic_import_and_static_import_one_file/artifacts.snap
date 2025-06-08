@@ -13,19 +13,19 @@ __export(foo_exports, { foo: () => foo });
 const foo = 1;
 
 //#endregion
-export { foo, foo_exports };
+export { foo_exports as b, foo as c };
 ```
 ## foo2.js
 
 ```js
-import { foo } from "./foo.js";
+import { c as foo } from "./foo.js";
 
 export { foo };
 ```
 ## main.js
 
 ```js
-import { foo_exports } from "./foo.js";
+import { b as foo_exports } from "./foo.js";
 
 //#region main.js
 import("./foo2.js").then(console.log);
@@ -35,6 +35,6 @@ console.log(foo_exports);
 ```
 ## Output Stats
 
-- foo.js, is_entry false, is_dynamic_entry false, exports ["foo", "foo_exports"]
+- foo.js, is_entry false, is_dynamic_entry false, exports ["b", "c"]
 - foo2.js, is_entry false, is_dynamic_entry true, exports ["foo"]
 - main.js, is_entry true, is_dynamic_entry false, exports []

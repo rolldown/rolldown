@@ -71,6 +71,7 @@ impl LinkStage<'_> {
                 // Make sure symbols from external modules are included and de_conflicted
                 match rec.kind {
                   ImportKind::Import => {
+                    stmt_info.referenced_symbols.push(importee.namespace_ref.into());
                     let is_reexport_all = rec.meta.contains(ImportRecordMeta::IS_EXPORT_STAR);
                     if is_reexport_all {
                       // export * from 'external' would be just removed. So it references nothing.

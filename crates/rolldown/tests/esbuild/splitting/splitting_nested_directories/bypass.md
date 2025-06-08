@@ -13,7 +13,7 @@ console.log(shared_default);
 ```
 ### rolldown
 ```js
-import { shared_default } from "./shared.js";
+import { b as shared_default } from "./shared.js";
 
 //#region pageA/page.js
 console.log(shared_default);
@@ -27,7 +27,7 @@ console.log(shared_default);
 +++ rolldown	pageA_page.js
 @@ -1,2 +1,2 @@
 -import {shared_default} from "../chunk-GWC2ABNX.js";
-+import {shared_default} from "./shared.js";
++import {b as shared_default} from "./shared.js";
  console.log(shared_default);
 
 ```
@@ -43,7 +43,7 @@ console.log(-shared_default);
 ```
 ### rolldown
 ```js
-import { shared_default } from "./shared.js";
+import { b as shared_default } from "./shared.js";
 
 //#region pageB/page.js
 console.log(-shared_default);
@@ -57,7 +57,36 @@ console.log(-shared_default);
 +++ rolldown	pageB_page.js
 @@ -1,2 +1,2 @@
 -import {shared_default} from "../chunk-GWC2ABNX.js";
-+import {shared_default} from "./shared.js";
++import {b as shared_default} from "./shared.js";
  console.log(-shared_default);
+
+```
+## /Users/user/project/out/chunk-GWC2ABNX.js
+### esbuild
+```js
+// Users/user/project/src/pages/shared.js
+var shared_default = 123;
+
+export {
+  shared_default
+};
+```
+### rolldown
+```js
+//#region shared.js
+var shared_default = 123;
+
+//#endregion
+export { shared_default as b };
+```
+### diff
+```diff
+===================================================================
+--- esbuild	/Users/user/project/out/chunk-GWC2ABNX.js
++++ rolldown	shared.js
+@@ -1,2 +1,2 @@
+ var shared_default = 123;
+-export {shared_default};
++export {shared_default as b};
 
 ```

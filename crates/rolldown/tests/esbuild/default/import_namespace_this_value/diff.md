@@ -11,7 +11,7 @@ console.log(ns[foo](), new ns[foo]());
 ### rolldown
 ```js
 const require_chunk = require('./chunk.js');
-const external = require_chunk.__toESM(require("external"));
+const external = require_chunk.b(require("external"));
 
 //#region a.js
 console.log(external[foo](), new external[foo]());
@@ -27,7 +27,7 @@ console.log(external[foo](), new external[foo]());
 -var ns = __toESM(require("external"));
 -console.log(ns[foo](), new ns[foo]());
 +var require_chunk = require('./chunk.js');
-+var external = require_chunk.__toESM(require("external"));
++var external = require_chunk.b(require("external"));
 +console.log(external[foo](), new external[foo]());
 
 ```
@@ -41,7 +41,7 @@ console.log(ns.foo(), new ns.foo());
 ### rolldown
 ```js
 const require_chunk = require('./chunk.js');
-const external = require_chunk.__toESM(require("external"));
+const external = require_chunk.b(require("external"));
 
 //#region b.js
 console.log(external.foo(), new external.foo());
@@ -57,7 +57,7 @@ console.log(external.foo(), new external.foo());
 -var ns = __toESM(require("external"));
 -console.log(ns.foo(), new ns.foo());
 +var require_chunk = require('./chunk.js');
-+var external = require_chunk.__toESM(require("external"));
++var external = require_chunk.b(require("external"));
 +console.log(external.foo(), new external.foo());
 
 ```
@@ -72,7 +72,7 @@ console.log(new import_external.default(), new import_external.foo());
 ### rolldown
 ```js
 const require_chunk = require('./chunk.js');
-const external = require_chunk.__toESM(require("external"));
+const external = require_chunk.b(require("external"));
 
 //#region c.js
 console.log((0, external.default)(), (0, external.foo)());
@@ -90,7 +90,7 @@ console.log(new external.default(), new external.foo());
 -console.log((0, import_external.default)(), (0, import_external.foo)());
 -console.log(new import_external.default(), new import_external.foo());
 +var require_chunk = require('./chunk.js');
-+var external = require_chunk.__toESM(require("external"));
++var external = require_chunk.b(require("external"));
 +console.log((0, external.default)(), (0, external.foo)());
 +console.log(new external.default(), new external.foo());
 

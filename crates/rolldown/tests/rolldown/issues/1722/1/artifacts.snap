@@ -6,7 +6,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## foo.js
 
 ```js
-import { import_sub, main } from "./main2.js";
+import { b as main, c as import_sub } from "./main2.js";
 
 var sub = import_sub.sub;
 export { main, sub };
@@ -14,7 +14,7 @@ export { main, sub };
 ## main.js
 
 ```js
-import { import_sub, main } from "./main2.js";
+import { b as main, c as import_sub } from "./main2.js";
 
 var sub = import_sub.sub;
 export { main, sub };
@@ -34,5 +34,5 @@ var import_sub = __toESM(require_sub());
 const main = "main";
 
 //#endregion
-export { import_sub, main };
+export { main as b, import_sub as c };
 ```

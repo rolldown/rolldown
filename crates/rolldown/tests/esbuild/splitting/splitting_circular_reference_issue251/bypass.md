@@ -15,7 +15,7 @@ export {
 ```
 ### rolldown
 ```js
-import { p, q } from "./a2.js";
+import { b as p, c as q } from "./a2.js";
 
 export { p, q };
 ```
@@ -26,7 +26,7 @@ export { p, q };
 +++ rolldown	a.js
 @@ -1,2 +1,2 @@
 -import {p, q} from "./chunk-HK23737J.js";
-+import {p, q} from "./a2.js";
++import {b as p, c as q} from "./a2.js";
  export {p, q};
 
 ```
@@ -44,7 +44,7 @@ export {
 ```
 ### rolldown
 ```js
-import { p, q } from "./a2.js";
+import { b as p, c as q } from "./a2.js";
 
 export { p, q };
 ```
@@ -55,7 +55,7 @@ export { p, q };
 +++ rolldown	b.js
 @@ -1,2 +1,2 @@
 -import {p, q} from "./chunk-HK23737J.js";
-+import {p, q} from "./a2.js";
++import {b as p, c as q} from "./a2.js";
  export {p, q};
 
 ```
@@ -83,7 +83,7 @@ var q = 6;
 var p = 5;
 
 //#endregion
-export { p, q };
+export { p as b, q as c };
 ```
 ### diff
 ```diff
@@ -95,6 +95,6 @@ export { p, q };
  var q = 6;
 -export {q, p};
 +var p = 5;
-+export {p, q};
++export {p as b, q as c};
 
 ```

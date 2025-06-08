@@ -12,7 +12,7 @@ console.log("a:", data_default);
 ```
 ### rolldown
 ```js
-import { data_default } from "./data.js";
+import { b as data_default } from "./data.js";
 
 //#region a.js
 console.log("a:", data_default);
@@ -28,7 +28,7 @@ console.log("a:", data_default);
 -var data_default = {
 -    test: 123
 -};
-+import {data_default} from "./data.js";
++import {b as data_default} from "./data.js";
  console.log("a:", data_default);
 
 ```
@@ -43,7 +43,7 @@ console.log("b:", data_default);
 ```
 ### rolldown
 ```js
-import { data_default } from "./data.js";
+import { b as data_default } from "./data.js";
 
 //#region b.js
 console.log("b:", data_default);
@@ -59,7 +59,7 @@ console.log("b:", data_default);
 -var data_default = {
 -    test: 123
 -};
-+import {data_default} from "./data.js";
++import {b as data_default} from "./data.js";
  console.log("b:", data_default);
 
 ```

@@ -265,6 +265,7 @@ pub fn normalize_options(mut raw_options: crate::BundlerOptions) -> NormalizeOpt
     }),
     cwd,
     preserve_entry_signatures,
+    minify_internal_exports: raw_options.minify_internal_exports.unwrap_or(true),
   };
 
   NormalizeOptionsReturn { options: normalized, resolve_options: raw_resolve, warnings }

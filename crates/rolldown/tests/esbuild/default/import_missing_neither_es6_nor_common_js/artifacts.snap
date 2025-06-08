@@ -44,7 +44,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## bare.js
 
 ```js
-import { init_foo } from "./foo.js";
+import { d as init_foo } from "./foo.js";
 
 //#region bare.js
 init_foo();
@@ -66,12 +66,12 @@ var init_foo = __esm({ "foo.js"() {
 } });
 
 //#endregion
-export { __toCommonJS, default$1 as default, foo_exports, init_foo, x, y };
+export { foo_exports as b, x as c, init_foo as d, y as e, default$1 as f, __toCommonJS as g };
 ```
 ## foo2.js
 
 ```js
-import { init_foo } from "./foo.js";
+import { d as init_foo } from "./foo.js";
 
 init_foo();
 ```
@@ -86,7 +86,7 @@ console.log(import("./foo2.js"));
 ## named.js
 
 ```js
-import default$1, { init_foo, x, y } from "./foo.js";
+import { c as x, d as init_foo, e as y, f as default$1 } from "./foo.js";
 
 //#region named.js
 init_foo();
@@ -97,7 +97,7 @@ console.log(default$1(x, y));
 ## require.js
 
 ```js
-import { __toCommonJS, foo_exports, init_foo } from "./foo.js";
+import { b as foo_exports, d as init_foo, g as __toCommonJS } from "./foo.js";
 
 //#region require.js
 console.log((init_foo(), __toCommonJS(foo_exports)));
@@ -107,7 +107,7 @@ console.log((init_foo(), __toCommonJS(foo_exports)));
 ## star-capture.js
 
 ```js
-import { foo_exports, init_foo } from "./foo.js";
+import { b as foo_exports, d as init_foo } from "./foo.js";
 
 //#region star-capture.js
 init_foo();
@@ -118,7 +118,7 @@ console.log(foo_exports);
 ## star.js
 
 ```js
-import { init_foo } from "./foo.js";
+import { d as init_foo } from "./foo.js";
 
 //#region star.js
 init_foo();

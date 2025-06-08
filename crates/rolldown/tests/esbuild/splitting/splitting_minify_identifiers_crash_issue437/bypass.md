@@ -13,7 +13,7 @@ console.log(o);
 ```
 ### rolldown
 ```js
-import { foo } from "./shared.js";
+import { b as foo } from "./shared.js";
 
 //#region a.js
 console.log(foo);
@@ -28,7 +28,7 @@ console.log(foo);
 @@ -1,2 +1,2 @@
 -import {a as o} from "./chunk-7N7J6VKT.js";
 -console.log(o);
-+import {foo} from "./shared.js";
++import {b as foo} from "./shared.js";
 +console.log(foo);
 
 ```
@@ -44,7 +44,7 @@ console.log(o);
 ```
 ### rolldown
 ```js
-import { foo } from "./shared.js";
+import { b as foo } from "./shared.js";
 
 //#region b.js
 console.log(foo);
@@ -59,7 +59,7 @@ console.log(foo);
 @@ -1,2 +1,2 @@
 -import {a as o} from "./chunk-7N7J6VKT.js";
 -console.log(o);
-+import {foo} from "./shared.js";
++import {b as foo} from "./shared.js";
 +console.log(foo);
 
 ```
@@ -100,7 +100,7 @@ export {
 function foo(bar) {}
 
 //#endregion
-export { foo };
+export { foo as b };
 ```
 ### diff
 ```diff
@@ -111,6 +111,6 @@ export { foo };
 -function f(o) {}
 -export {f as a};
 +function foo(bar) {}
-+export {foo};
++export {foo as b};
 
 ```

@@ -443,7 +443,7 @@ pub fn normalize_binding_options(
     preserve_modules: output_options.preserve_modules,
     virtual_dirname: output_options.virtual_dirname,
     preserve_modules_root: output_options.preserve_modules_root,
-    preserve_entry_signatures: output_options
+    preserve_entry_signatures: input_options
       .preserve_entry_signatures
       .map(|v| match v {
         Either::A(str) => match str.as_str() {

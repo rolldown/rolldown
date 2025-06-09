@@ -14,6 +14,7 @@ use binding_debug_options::BindingDebugOptions;
 use binding_defer_sync_scan_data::BindingDeferSyncScanDataOption;
 use binding_make_absolute_externals_relative::BindingMakeAbsoluteExternalsRelative;
 use derive_more::Debug;
+use napi::Either;
 use napi::bindgen_prelude::FnArgs;
 use napi_derive::napi;
 use rustc_hash::FxBuildHasher;
@@ -106,4 +107,6 @@ pub struct BindingInputOptions<'env> {
   #[debug(skip)]
   #[napi(ts_type = "(id: string, success: boolean) => void")]
   pub mark_module_loaded: Option<JsCallback<FnArgs<(String, bool)>, ()>>,
+  #[napi(ts_type = "'strict' | 'allow-extension' | 'exports-only' | false")]
+  pub preserve_entry_signatures: Option<Either<String, bool>>,
 }

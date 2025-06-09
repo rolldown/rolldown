@@ -35,7 +35,6 @@ export function bindingifyOutputOptions(
     virtualDirname,
     legalComments,
     preserveModulesRoot,
-    preserveEntrySignatures,
   } = outputOptions;
 
   return {
@@ -74,7 +73,6 @@ export function bindingifyOutputOptions(
     virtualDirname,
     legalComments,
     preserveModulesRoot,
-    preserveEntrySignatures,
   };
 }
 

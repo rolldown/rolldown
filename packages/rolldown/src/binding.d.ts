@@ -1526,6 +1526,7 @@ export interface BindingInputOptions {
   debug?: BindingDebugOptions
   invalidateJsSideCache?: () => void
   markModuleLoaded?: (id: string, success: boolean) => void
+  preserveEntrySignatures?: 'strict' | 'allow-extension' | 'exports-only' | false
 }
 
 export interface BindingIsolatedDeclarationPluginConfig {
@@ -1670,7 +1671,6 @@ export interface BindingOutputOptions {
   preserveModules?: boolean
   virtualDirname?: string
   preserveModulesRoot?: string
-  preserveEntrySignatures?: 'strict' | 'allow-extension' | 'exports-only' | false
 }
 
 export interface BindingOxcRuntimePluginConfig {

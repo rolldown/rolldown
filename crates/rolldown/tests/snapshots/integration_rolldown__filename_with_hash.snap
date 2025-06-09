@@ -843,7 +843,7 @@ expression: output
 
 # tests/esbuild/default/external_es6_converted_to_common_js
 
-- entry-!~{000}~.js => entry-BmDksj4Q.js
+- entry-!~{000}~.js => entry-C5L-ji0D.js
 
 # tests/esbuild/default/external_module_exclusion_package
 
@@ -915,11 +915,11 @@ expression: output
 
 # tests/esbuild/default/import_forms_with_minify_identifiers_and_no_bundle
 
-- entry-!~{000}~.js => entry-qpFBF9v6.js
+- entry-!~{000}~.js => entry-ONEZmqML.js
 
 # tests/esbuild/default/import_forms_with_no_bundle
 
-- entry-!~{000}~.js => entry-COyv-4Wz.js
+- entry-!~{000}~.js => entry-CjRqtT4p.js
 
 # tests/esbuild/default/import_fs_browser
 
@@ -4010,11 +4010,12 @@ expression: output
 
 # tests/rolldown/function/experimental/attach_debug_info
 
-- A-!~{000}~.js => A-BdptAob2.js
-- B-!~{001}~.js => B-RqteDIcd.js
-- Splitted-!~{006}~.js => Splitted-J5fVspE7.js
+- A-!~{000}~.js => A-BuGdc1K4.js
+- B-!~{001}~.js => B-Dsf2JIK7.js
+- Splitted-!~{006}~.js => Splitted-BqcNVQci.js
+- dyn-entry-!~{008}~.js => dyn-entry-C2vod8Lj.js
 - rolldown-runtime-!~{002}~.js => rolldown-runtime-F0QY5PnL.js
-- shared-!~{004}~.js => shared-BO-bWQCk.js
+- shared-!~{004}~.js => shared-D6U9QV-r.js
 
 # tests/rolldown/function/experimental/disable_live_bindings
 
@@ -4188,7 +4189,7 @@ expression: output
 
 # tests/rolldown/function/external/export_external
 
-- main-!~{000}~.js => main-bboG_iKl.js
+- main-!~{000}~.js => main-5sPV7EtM.js
 
 # tests/rolldown/function/external/implicit_import_external
 
@@ -4196,7 +4197,7 @@ expression: output
 
 # tests/rolldown/function/external/import_external
 
-- main-!~{000}~.js => main-B3SOe15B.js
+- main-!~{000}~.js => main-De65fPUh.js
 
 # tests/rolldown/function/external/keep_import_external_order
 
@@ -4696,6 +4697,10 @@ expression: output
 - chunk-!~{001}~.js => chunk-e6zvK7dF.js
 - lib-!~{003}~.js => lib-DXD_OL-7.js
 
+# tests/rolldown/issues/4324
+
+- main-!~{000}~.js => main-DulOdpdR.js
+
 # tests/rolldown/issues/4390
 
 - main-!~{000}~.js => main-CoPyJv9Y.js
@@ -4817,6 +4822,16 @@ expression: output
 - dynamic-!~{004}~.js => dynamic-DBHbx_t1.js
 - dynamic2-!~{006}~.js => dynamic2-DBL8pqW5.js
 - lib2-!~{002}~.js => lib2-B8LDz-cx.js
+
+# tests/rolldown/misc/preserve_entry_signature/issue-4873
+
+- main-!~{000}~.js => main-BF70xmqH.js
+- foo-!~{001}~.js => foo-Cz3zB3do.js
+
+# tests/rolldown/misc/preserve_modules/directives
+
+- main-!~{000}~.js => main-BOE28hLL.js
+- mod-!~{001}~.js => mod-DR3Ueu23.js
 
 # tests/rolldown/misc/preserve_modules/issue-4622
 

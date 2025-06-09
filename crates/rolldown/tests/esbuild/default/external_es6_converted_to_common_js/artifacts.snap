@@ -1,27 +1,24 @@
 ---
 source: crates/rolldown_testing/src/integration_test.rs
-snapshot_kind: text
 ---
 # Assets
 
 ## entry.js
 
 ```js
-import * as ns$3 from "x";
-import * as ns$2 from "x";
 import * as ns$1 from "x";
 import { ns } from "x";
 
 
 //#region a.js
 var a_exports = {};
-__export(a_exports, { ns: () => ns$3 });
+__export(a_exports, { ns: () => ns$1 });
 var init_a = __esm({ "a.js"() {} });
 
 //#endregion
 //#region b.js
 var b_exports = {};
-__export(b_exports, { ns: () => ns$2 });
+__export(b_exports, { ns: () => ns$1 });
 var init_b = __esm({ "b.js"() {} });
 
 //#endregion

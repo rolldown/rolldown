@@ -15,6 +15,7 @@ use rolldown_rstr::{Rstr, ToRstr};
 use rolldown_utils::{
   ecmascript::{is_validate_identifier_name, legitimize_identifier_name},
   index_vec_ext::IndexVecExt,
+  indexmap::FxIndexSet,
   rayon::{IntoParallelRefIterator, IntoParallelRefMutIterator, ParallelIterator},
 };
 
@@ -169,6 +170,7 @@ impl LinkStage<'_> {
       external_import_binding_merger: FxHashMap::default(),
       side_effects_modules: &side_effects_modules,
       normal_symbol_exports_chain_map: &mut normal_symbol_exports_chain_map,
+      external_import_namespace_merger: FxHashMap::default(),
     };
     self.module_table.modules.iter().for_each(|module| {
       binding_ctx.match_imports_with_exports(module.idx());
@@ -176,6 +178,8 @@ impl LinkStage<'_> {
 
     self.errors.extend(binding_ctx.errors);
     self.warnings.extend(binding_ctx.warnings);
+
+    self.external_import_namespace_merger = binding_ctx.external_import_namespace_merger;
 
     for (module_idx, map) in &binding_ctx.external_import_binding_merger {
       for (key, symbol_set) in map {
@@ -196,6 +200,7 @@ impl LinkStage<'_> {
         }
       }
     }
+
     self.metas.par_iter_mut().for_each(|meta| {
       let mut sorted_and_non_ambiguous_resolved_exports = vec![];
       'next_export: for (exported_name, resolved_export) in &meta.resolved_exports {
@@ -522,6 +527,7 @@ struct BindImportsAndExportsContext<'a> {
   pub warnings: Vec<BuildDiagnostic>,
   pub external_import_binding_merger:
     FxHashMap<ModuleIdx, FxHashMap<CompactStr, IndexSet<SymbolRef>>>,
+  pub external_import_namespace_merger: FxHashMap<ModuleIdx, FxIndexSet<SymbolRef>>,
   pub side_effects_modules: &'a FxHashSet<ModuleIdx>,
   pub normal_symbol_exports_chain_map: &'a mut FxHashMap<SymbolRef, Vec<SymbolRef>>,
 }
@@ -544,21 +550,30 @@ impl BindImportsAndExportsContext<'_> {
       let rec = &module.import_records[named_import.record_id];
       let is_external = matches!(self.index_modules[rec.resolved_module], Module::External(_));
 
-      if is_esm
-        && is_external
-        && self.metas[module_id]
-          .resolved_exports
-          .iter()
-          .all(|(_, resolved_export)| resolved_export.symbol_ref != *imported_as_ref)
-      {
-        if let Specifier::Literal(ref name) = named_import.imported {
-          self
-            .external_import_binding_merger
-            .entry(rec.resolved_module)
-            .or_default()
-            .entry(name.inner().clone())
-            .or_default()
-            .insert(*imported_as_ref);
+      if is_esm && is_external {
+        match named_import.imported {
+          Specifier::Star => {
+            self
+              .external_import_namespace_merger
+              .entry(rec.resolved_module)
+              .or_default()
+              .insert(*imported_as_ref);
+          }
+          Specifier::Literal(ref name)
+            if self.metas[module_id]
+              .resolved_exports
+              .iter()
+              .all(|(_, resolved_export)| resolved_export.symbol_ref != *imported_as_ref) =>
+          {
+            self
+              .external_import_binding_merger
+              .entry(rec.resolved_module)
+              .or_default()
+              .entry(name.inner().clone())
+              .or_default()
+              .insert(*imported_as_ref);
+          }
+          Specifier::Literal(_) => {}
         }
       }
       let ret = self.match_import_with_export(

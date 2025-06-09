@@ -6,6 +6,7 @@ use rolldown_common::{
   dynamic_import_usage::DynamicImportExportsUsage,
 };
 use rolldown_error::BuildDiagnostic;
+use rolldown_utils::indexmap::FxIndexSet;
 use rustc_hash::{FxHashMap, FxHashSet};
 
 use crate::{
@@ -41,6 +42,7 @@ pub struct LinkStageOutput {
   pub used_symbol_refs: FxHashSet<SymbolRef>,
   pub dynamic_import_exports_usage_map: FxHashMap<ModuleIdx, DynamicImportExportsUsage>,
   pub safely_merge_cjs_ns_map: FxHashMap<ModuleIdx, Vec<SymbolRef>>,
+  pub external_import_namespace_merger: FxHashMap<ModuleIdx, FxIndexSet<SymbolRef>>,
 }
 
 #[derive(Debug)]
@@ -59,6 +61,7 @@ pub struct LinkStage<'a> {
   pub safely_merge_cjs_ns_map: FxHashMap<ModuleIdx, Vec<SymbolRef>>,
   pub dynamic_import_exports_usage_map: FxHashMap<ModuleIdx, DynamicImportExportsUsage>,
   pub normal_symbol_exports_chain_map: FxHashMap<SymbolRef, Vec<SymbolRef>>,
+  pub external_import_namespace_merger: FxHashMap<ModuleIdx, FxIndexSet<SymbolRef>>,
 }
 
 impl<'a> LinkStage<'a> {
@@ -101,6 +104,7 @@ impl<'a> LinkStage<'a> {
       used_symbol_refs: FxHashSet::default(),
       safely_merge_cjs_ns_map: scan_stage_output.safely_merge_cjs_ns_map,
       normal_symbol_exports_chain_map: FxHashMap::default(),
+      external_import_namespace_merger: FxHashMap::default(),
     }
   }
 
@@ -133,6 +137,7 @@ impl<'a> LinkStage<'a> {
       used_symbol_refs: self.used_symbol_refs,
       dynamic_import_exports_usage_map: self.dynamic_import_exports_usage_map,
       safely_merge_cjs_ns_map: self.safely_merge_cjs_ns_map,
+      external_import_namespace_merger: self.external_import_namespace_merger,
     }
   }
 

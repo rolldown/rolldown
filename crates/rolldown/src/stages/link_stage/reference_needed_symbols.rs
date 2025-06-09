@@ -22,7 +22,7 @@ fn is_external_dynamic_import(
 }
 
 impl LinkStage<'_> {
-  #[allow(clippy::collapsible_if)]
+  #[allow(clippy::collapsible_if, clippy::too_many_lines)]
   #[tracing::instrument(level = "debug", skip_all)]
   pub(super) fn reference_needed_symbols(&mut self) {
     let symbols = Mutex::new(&mut self.symbols);

@@ -1,0 +1,64 @@
+name: Prepare Release
+
+permissions: {}
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        type: string
+        required: true
+        description: without leading `v`
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref_name }}-${{ github.event.pull_request.number || github.sha }}
+  cancel-in-progress: true
+
+jobs:
+  prepare:
+    name: Prepare Release
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write # for create-pull-request
+      pull-requests: write # for create-pull-request
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          fetch-depth: 0 # for changelog
+          persist-credentials: true # for create-pull-request
+
+      - uses: taiki-e/install-action@92f69c195229fe62d58b4d697ab4bc75def98e76 # v2.52.7
+        with:
+          tool: just
+
+      - uses: ./.github/actions/setup-node
+
+      - run: just bump-packages ${VERSION}
+        env:
+          VERSION: ${{ inputs.version }}
+
+      - name: Generate changelog via git cliff
+        id: changelog
+        uses: orhun/git-cliff-action@4a4a951bc43fafe41cd2348d181853f52356bee7 # v4.4.2
+        env:
+          # Used to make request to GitHub without ratelimits.
+          # `secrets.GIT_CLIFF_TOKEN` only has read permission.
+          GITHUB_TOKEN: ${{ secrets.GIT_CLIFF_TOKEN }}
+        with:
+          version: v2.9.1 # git cliff version
+          config: cliff.toml
+          args: --unreleased --prepend CHANGELOG.md --tag ${{ inputs.version }}
+
+      - uses: peter-evans/create-pull-request@271a8d0340265f705b14b6d32b9829c1cb33d45e # v7.0.8
+        if: ${{ steps.changelog.outputs.content }}
+        with:
+          add-paths: |
+            CHANGELOG.md
+            packages/**/package.json
+          commit-message: 'release: v${{ inputs.version }}'
+          branch: release-v${{ inputs.version }}
+          branch-suffix: timestamp
+          base: main
+          title: 'release: v${{ inputs.version }}'
+          body: ${{ steps.changelog.outputs.content }}
+          assignees: Boshen

@@ -29,6 +29,7 @@ struct Context<'a> {
 }
 
 impl LinkStage<'_> {
+  #[allow(clippy::too_many_lines)]
   #[tracing::instrument(level = "debug", skip_all)]
   pub fn include_statements(&mut self) {
     let mut is_included_vec: IndexVec<ModuleIdx, IndexVec<StmtInfoIdx, bool>> = self

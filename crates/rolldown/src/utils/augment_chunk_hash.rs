@@ -8,7 +8,7 @@ use rolldown_plugin::SharedPluginDriver;
 use crate::type_alias::IndexInstantiatedChunks;
 
 #[tracing::instrument(level = "debug", skip_all)]
-pub async fn augment_chunk_hash<'a>(
+pub async fn augment_chunk_hash(
   plugin_driver: &SharedPluginDriver,
   assets: &mut IndexInstantiatedChunks,
 ) -> Result<()> {

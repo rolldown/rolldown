@@ -28,6 +28,7 @@ enum CombineChunkRet {
 pub type IndexSplittingInfo = IndexVec<ModuleIdx, SplittingInfo>;
 
 impl GenerateStage<'_> {
+  #[allow(clippy::too_many_lines)]
   #[tracing::instrument(level = "debug", skip_all)]
   pub async fn generate_chunks(&mut self) -> anyhow::Result<ChunkGraph> {
     if matches!(self.options.format, OutputFormat::Iife | OutputFormat::Umd) {
@@ -113,6 +114,27 @@ impl GenerateStage<'_> {
       self
         .split_chunks(&mut index_splitting_info, &mut chunk_graph, &mut bits_to_chunk, &input_base)
         .await?;
+    }
+    // Merge external import namespaces at chunk level.
+    for symbol_set in self.link_output.external_import_namespace_merger.values() {
+      for (_, mut group) in symbol_set
+        .iter()
+        .filter_map(|item| {
+          let module = self.link_output.module_table[item.owner].as_normal()?;
+          module.meta.is_included().then_some(item)
+        })
+        .into_group_map_by(|item| {
+          chunk_graph.module_to_chunk[item.owner].expect("should have chunk idx")
+        })
+      {
+        if group.len() <= 1 {
+          continue;
+        }
+        group.sort_unstable_by_key(|item| self.link_output.module_table[item.owner].exec_order());
+        for symbol in &group[1..] {
+          self.link_output.symbol_db.link(**symbol, *group[0]);
+        }
+      }
     }
 
     // Sort modules in each chunk by execution order
@@ -322,9 +344,10 @@ impl GenerateStage<'_> {
         preserve_entry_signature,
       );
       chunk.add_creation_reason(
-        ChunkCreationReason::UserDefinedEntry {
-          debug_id: &module.debug_id,
-          entry_point_name: entry_point.name.as_ref(),
+        ChunkCreationReason::Entry {
+          is_user_defined_entry: module.is_user_defined_entry,
+          entry_module_id: &module.debug_id,
+          name: entry_point.name.as_ref(),
         },
         self.options,
       );

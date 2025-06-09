@@ -168,10 +168,6 @@ export default defineConfig({
           text: 'Coding Style',
           link: '/contrib-guide/coding-style.md',
         },
-        {
-          text: 'Misc',
-          items: [{ text: 'Release', link: '/contrib-guide/release.md' }],
-        },
       ],
     },
     outline: 'deep',

@@ -1,0 +1,32 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## main.js
+
+```js
+'use client';
+
+
+import { MyPage } from "./mod.js";
+
+//#region main.js
+console.log(MyPage);
+
+//#endregion
+```
+## mod.js
+
+```js
+'use client';
+
+
+//#region mod.js
+function MyPage() {
+	return null;
+}
+
+//#endregion
+export { MyPage };
+```

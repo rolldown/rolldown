@@ -182,11 +182,6 @@ export interface OutputOptions {
   preserveModules?: boolean;
   virtualDirname?: string;
   preserveModulesRoot?: string;
-  preserveEntrySignatures?:
-    | false
-    | 'strict'
-    | 'allow-extension'
-    | 'exports-only';
 }
 
 interface OverwriteOutputOptionsForCli {

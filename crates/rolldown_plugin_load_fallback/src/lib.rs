@@ -17,16 +17,16 @@ impl Plugin for LoadFallbackPlugin {
       return Ok(None);
     }
 
-    let path = memchr::memchr2(b'?', b'#', args.id.as_bytes()).map_or(args.id, |i| &args.id[..i]);
-    let code = std::fs::read_to_string(path)
-      .or_else(|err| {
-        if path.len() == args.id.len() { Err(err) } else { std::fs::read_to_string(args.id) }
-      })?
-      .into();
+    let Some(index) = memchr::memchr2(b'?', b'#', args.id.as_bytes()) else {
+      return Ok(None);
+    };
+
+    let path = &args.id[..index];
+    let Ok(code) = std::fs::read_to_string(path) else { return Ok(None) };
 
     ctx.add_watch_file(path);
 
-    Ok(Some(HookLoadOutput { code, ..Default::default() }))
+    Ok(Some(HookLoadOutput { code: code.into(), ..Default::default() }))
   }
 
   fn register_hook_usage(&self) -> HookUsage {

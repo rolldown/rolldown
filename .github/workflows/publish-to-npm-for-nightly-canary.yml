@@ -5,9 +5,10 @@ permissions: {}
 on:
   # Manually released. This will publish under the canary npm tag.
   workflow_dispatch:
+  # Publish to nightly is disabled, favor pkg.pr.new.
   # Every day at midnight. This will publish under the nightly npm tag.
-  schedule:
-    - cron: '0 0 * * *'
+  # schedule:
+# - cron: '0 0 * * *'
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}

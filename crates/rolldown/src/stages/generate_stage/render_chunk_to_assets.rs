@@ -36,7 +36,7 @@ impl GenerateStage<'_> {
   #[allow(clippy::too_many_lines)]
   pub async fn render_chunk_to_assets(
     &mut self,
-    chunk_graph: &mut ChunkGraph,
+    chunk_graph: &ChunkGraph,
   ) -> BuildResult<BundleOutput> {
     let mut errors = std::mem::take(&mut self.link_output.errors);
     let mut warnings = std::mem::take(&mut self.link_output.warnings);

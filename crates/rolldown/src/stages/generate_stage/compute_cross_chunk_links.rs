@@ -306,10 +306,18 @@ impl GenerateStage<'_> {
             .as_normal()
             .expect("Should be normal module");
           let is_dynamic_imported = !module.ecma_view.dynamic_importers.is_empty();
+          let needs_export_entry_signatures = if self.options.preserve_modules {
+            if is_user_defined {
+              !matches!(self.options.preserve_entry_signatures, PreserveEntrySignatures::False)
+            } else {
+              is_dynamic_imported
+            }
+          } else {
+            !is_user_defined
+              || !matches!(self.options.preserve_entry_signatures, PreserveEntrySignatures::False)
+          };
           #[allow(clippy::nonminimal_bool)]
-          if !(self.options.preserve_modules && !is_user_defined && !is_dynamic_imported)
-            && !matches!(self.options.preserve_entry_signatures, PreserveEntrySignatures::False)
-          {
+          if needs_export_entry_signatures {
             // If the entry point is external, we don't need to compute exports.
             let meta = &self.link_output.metas[module_idx];
             for (name, symbol) in meta

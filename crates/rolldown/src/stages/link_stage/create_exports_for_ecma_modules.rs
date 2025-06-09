@@ -24,7 +24,9 @@ fn init_entry_point_stmt_info(
     referenced_symbols.push(meta.wrapper_ref.unwrap());
   }
 
-  if !matches!(options.preserve_entry_signatures, PreserveEntrySignatures::False) {
+  if !matches!(options.preserve_entry_signatures, PreserveEntrySignatures::False)
+    || !entry.kind.is_user_defined()
+  {
     referenced_symbols.extend(
       meta
         .referenced_canonical_exports_symbols(

@@ -4823,6 +4823,11 @@ expression: output
 - dynamic2-!~{006}~.js => dynamic2-DBL8pqW5.js
 - lib2-!~{002}~.js => lib2-B8LDz-cx.js
 
+# tests/rolldown/misc/preserve_entry_signature/issue-4873
+
+- main-!~{000}~.js => main-BF70xmqH.js
+- foo-!~{001}~.js => foo-Cz3zB3do.js
+
 # tests/rolldown/misc/preserve_modules/issue-4622
 
 - src/index-!~{000}~.js => src/index-Bg1j_4g8.js

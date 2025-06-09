@@ -1,0 +1,57 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## bar.js
+
+```js
+import { n } from "./shared.js";
+
+//#region bar.js
+console.log("bar" + n);
+const msg = "Bar view";
+
+//#endregion
+export { msg };
+```
+## foo.js
+
+```js
+import { n } from "./shared.js";
+
+//#region foo.js
+console.log("foo" + n);
+const msg = "Foo view";
+
+//#endregion
+export { msg };
+```
+## main.js
+
+```js
+//#region main.js
+function dy(path) {
+	switch (path) {
+		case "./foo.js": return import("./foo.js");
+		case "./bar.js": return import("./bar.js");
+	}
+}
+let view = "foo";
+const { msg } = await dy(`./${view}.js`);
+console.log(msg);
+import(`https://localhost`).catch((mod) => {
+	console.log(mod);
+});
+
+//#endregion
+```
+## shared.js
+
+```js
+//#region shared.js
+const n = 1;
+
+//#endregion
+export { n };
+```

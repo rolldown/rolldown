@@ -463,7 +463,14 @@ impl GenerateStage<'_> {
     // this means `key_chunk` also referenced all entry module in value `vec`
     for (bits, modules) in pending_common_chunks {
       let item = Self::try_insert_into_exists_chunk(
-        &bits.index_of_one().into_iter().map(ChunkIdx::from_raw).collect_vec(),
+        &bits
+          .index_of_one()
+          .into_iter()
+          .map(ChunkIdx::from_raw)
+          // Some of the bits maybe not created yet, so filter it out.
+          // refer https://github.com/rolldown/rolldown/blob/d373794f5ce5b793ac751bbfaf101cc9cdd261d9/crates/rolldown/src/stages/generate_stage/code_splitting.rs?plain=1#L311-L313
+          .filter(|idx| chunk_graph.chunk_table.get(*idx).is_some())
+          .collect_vec(),
         &static_entry_chunk_reference,
         chunk_graph,
       );
@@ -511,7 +518,13 @@ impl GenerateStage<'_> {
     match chunk_idxs.len() {
       0 => CombineChunkRet::None,
       1 => {
-        let chunk = &chunk_graph.chunk_table[chunk_idxs[0]];
+        let Some(chunk) = &chunk_graph.chunk_table.get(chunk_idxs[0]) else {
+          // Chunk idx maybe greater than the chunk table length.
+          // Largest chunk idx equals to `entry.len() -1`.
+          // But some of the bit in entry may not be created as a chunk.
+          // refer https://github.com/rolldown/rolldown/blob/d373794f5ce5b793ac751bbfaf101cc9cdd261d9/crates/rolldown/src/stages/generate_stage/code_splitting.rs?plain=1#L311-L313
+          return CombineChunkRet::None;
+        };
         match chunk.kind {
           ChunkKind::EntryPoint { is_user_defined, .. } => {
             if is_user_defined {

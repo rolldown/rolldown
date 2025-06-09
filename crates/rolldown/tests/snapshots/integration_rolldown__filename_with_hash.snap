@@ -4828,6 +4828,13 @@ expression: output
 - main-!~{000}~.js => main-BF70xmqH.js
 - foo-!~{001}~.js => foo-Cz3zB3do.js
 
+# tests/rolldown/misc/preserve_entry_signature/issue-4873-2
+
+- main-!~{000}~.js => main-Dn6cNFqG.js
+- bar-!~{003}~.js => bar-D0DzI928.js
+- foo-!~{005}~.js => foo-UM55xbSc.js
+- shared-!~{001}~.js => shared-ahT7H2GG.js
+
 # tests/rolldown/misc/preserve_modules/directives
 
 - main-!~{000}~.js => main-BOE28hLL.js

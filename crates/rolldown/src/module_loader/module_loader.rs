@@ -244,6 +244,7 @@ impl ModuleLoader {
     idx
   }
 
+  #[allow(clippy::too_many_lines)]
   #[tracing::instrument(level = "debug", skip_all)]
   pub async fn fetch_modules(
     mut self,

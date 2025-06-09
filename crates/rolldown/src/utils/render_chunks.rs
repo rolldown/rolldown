@@ -13,7 +13,7 @@ use rustc_hash::FxHashMap;
 use crate::type_alias::IndexInstantiatedChunks;
 
 #[tracing::instrument(level = "debug", skip_all)]
-pub async fn render_chunks<'a>(
+pub async fn render_chunks(
   plugin_driver: &SharedPluginDriver,
   assets: &mut IndexInstantiatedChunks,
   options: &SharedNormalizedBundlerOptions,

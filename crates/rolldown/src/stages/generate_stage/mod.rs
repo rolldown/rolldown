@@ -144,7 +144,7 @@ impl<'a> GenerateStage<'a> {
         );
       });
 
-    self.render_chunk_to_assets(&mut chunk_graph).await
+    self.render_chunk_to_assets(&chunk_graph).await
   }
 
   /// Notices:

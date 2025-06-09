@@ -9,6 +9,7 @@ use rolldown_rstr::ToRstr;
 use rolldown_utils::ecmascript::legitimize_identifier_name;
 use rustc_hash::FxHashMap;
 
+#[allow(clippy::too_many_lines)]
 #[tracing::instrument(level = "trace", skip_all)]
 pub fn deconflict_chunk_symbols(
   chunk: &mut Chunk,

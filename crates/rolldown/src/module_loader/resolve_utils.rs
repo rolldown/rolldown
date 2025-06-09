@@ -18,7 +18,7 @@ use rolldown_error::{BuildDiagnostic, BuildResult, DiagnosableArcstr, EventKind}
 use crate::{SharedOptions, SharedResolver};
 
 #[tracing::instrument(skip_all, fields(CONTEXT_hook_resolve_id_trigger = "automatic"))]
-pub(crate) async fn resolve_id(
+pub async fn resolve_id(
   bundle_options: &SharedOptions,
   resolver: &SharedResolver,
   plugin_driver: &SharedPluginDriver,

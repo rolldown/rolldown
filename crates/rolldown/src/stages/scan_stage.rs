@@ -103,11 +103,7 @@ impl ScanStage {
   }
 
   #[tracing::instrument(target = "devtool", level = "debug", skip_all)]
-  pub async fn scan(
-    &mut self,
-    mode: ScanMode,
-    cache: ScanStageCache,
-  ) -> BuildResult<ScanStageOutput> {
+  pub async fn scan(&self, mode: ScanMode, cache: ScanStageCache) -> BuildResult<ScanStageOutput> {
     if self.options.input.is_empty() {
       Err(anyhow::anyhow!("You must supply options.input to rolldown"))?;
     }
@@ -176,9 +172,7 @@ impl ScanStage {
 
   /// Resolve `InputOptions.input`
   #[tracing::instrument(target = "devtool", level = "debug", skip_all)]
-  async fn resolve_user_defined_entries(
-    &mut self,
-  ) -> BuildResult<Vec<(Option<ArcStr>, ResolvedId)>> {
+  async fn resolve_user_defined_entries(&self) -> BuildResult<Vec<(Option<ArcStr>, ResolvedId)>> {
     let resolver = &self.resolver;
     let plugin_driver = &self.plugin_driver;
 

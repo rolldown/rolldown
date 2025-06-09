@@ -25,9 +25,10 @@ use crate::{
   type_alias::{IndexAssets, IndexChunkToAssets, IndexInstantiatedChunks},
 };
 
+#[allow(clippy::too_many_lines)]
 #[tracing::instrument(level = "debug", skip_all)]
 pub fn finalize_assets(
-  chunk_graph: &mut ChunkGraph,
+  chunk_graph: &ChunkGraph,
   link_output: &LinkStageOutput,
   preliminary_assets: IndexInstantiatedChunks,
   index_chunk_to_assets: &IndexChunkToAssets,

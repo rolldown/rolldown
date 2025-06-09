@@ -28,6 +28,7 @@ enum CombineChunkRet {
 pub type IndexSplittingInfo = IndexVec<ModuleIdx, SplittingInfo>;
 
 impl GenerateStage<'_> {
+  #[allow(clippy::too_many_lines)]
   #[tracing::instrument(level = "debug", skip_all)]
   pub async fn generate_chunks(&mut self) -> anyhow::Result<ChunkGraph> {
     if matches!(self.options.format, OutputFormat::Iife | OutputFormat::Umd) {

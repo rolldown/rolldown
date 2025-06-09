@@ -4,10 +4,9 @@ mod ast_visit;
 use std::borrow::Cow;
 
 use arcstr::ArcStr;
-use oxc::ast::AstBuilder;
 use oxc::ast_visit::VisitMut;
-use oxc::codegen::{self, Codegen, CodegenOptions, Gen};
 use rolldown_common::side_effects::HookSideEffects;
+use rolldown_ecmascript_utils::AstSnippet;
 use rolldown_plugin::{
   HookLoadArgs, HookLoadOutput, HookLoadReturn, HookResolveIdArgs, HookResolveIdOutput,
   HookResolveIdReturn, HookTransformAstArgs, HookTransformAstReturn, HookUsage, Plugin,
@@ -61,7 +60,7 @@ impl Plugin for BuildImportAnalysisPlugin {
     }
     let mut ast = args.ast;
     ast.program.with_mut(|fields| {
-      let builder = AstBuilder::new(fields.allocator);
+      let builder = AstSnippet::new(fields.allocator);
       let mut visitor = BuildImportAnalysisVisitor::new(
         builder,
         self.insert_preload,
@@ -70,10 +69,6 @@ impl Plugin for BuildImportAnalysisPlugin {
       );
       visitor.visit_program(fields.program);
     });
-
-    let mut codegen =
-      Codegen::new().with_options(CodegenOptions { comments: false, ..CodegenOptions::default() });
-    ast.program().r#gen(&mut codegen, codegen::Context::default());
     Ok(ast)
   }
 

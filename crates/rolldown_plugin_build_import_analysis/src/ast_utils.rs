@@ -1,185 +1,185 @@
 use oxc::{
+  allocator::{CloneIn as _, TakeIn as _},
   ast::{
-    AstBuilder, NONE,
+    NONE,
     ast::{
-      Argument, Atom, Expression, FormalParameterKind, PropertyKind, Statement,
-      VariableDeclarationKind, VariableDeclarator,
+      Argument, BindingPattern, BindingPatternKind, CallExpression, Declaration, Expression,
+      FormalParameterKind, Statement, StaticMemberExpression, VariableDeclarationKind,
     },
   },
+  semantic::ScopeFlags,
   span::SPAN,
 };
+use rolldown_ecmascript_utils::{AstSnippet, BindingPatternExt as _};
+
+use super::ast_visit::BuildImportAnalysisVisitor;
 
 const IS_MODERN_FLAG: &str = "__VITE_IS_MODERN__";
 
-pub fn construct_snippet_from_await_decl<'a>(
-  ast_builder: AstBuilder<'a>,
-  source: Atom<'a>,
-  decls: &[Atom<'a>],
-  decl_kind: VariableDeclarationKind,
-  append_import_meta_url: bool,
-) -> VariableDeclarator<'a> {
-  ast_builder.variable_declarator(
-    SPAN,
-    decl_kind,
-    // `const {a, b}`
-    //         ^  ^
-    ast_builder.binding_pattern(
-      ast_builder.binding_pattern_kind_object_pattern(
+impl<'a> BuildImportAnalysisVisitor<'a> {
+  pub fn new(
+    snippet: AstSnippet<'a>,
+    insert_preload: bool,
+    render_built_url: bool,
+    is_relative_base: bool,
+  ) -> Self {
+    Self {
+      snippet,
+      insert_preload,
+      render_built_url,
+      is_relative_base,
+      scope_stack: vec![],
+      need_prepend_helper: false,
+      has_inserted_helper: false,
+    }
+  }
+
+  #[inline]
+  pub fn is_top_level(&self) -> bool {
+    self.scope_stack.last().is_some_and(|flags| flags.contains(ScopeFlags::Top))
+  }
+
+  /// transform `(await import('foo')).foo`
+  /// to `(await __vitePreload(async () => { let foo; return {foo} = await import('foo'); },...))).foo`
+  pub fn rewrite_member_expr(&self, member_expr: &mut StaticMemberExpression<'a>) {
+    let mut await_expr = &mut member_expr.object;
+    while let Expression::ParenthesizedExpression(member_expr) = await_expr {
+      await_expr = &mut member_expr.expression;
+    }
+    if matches!(await_expr,  Expression::AwaitExpression(expr) if matches!(expr.argument, Expression::ImportExpression(_)))
+    {
+      let property = match member_expr.property.name.as_str() {
+        "default" => self.snippet.atom("__vite_default__"),
+        _ => member_expr.property.name,
+      };
+      *await_expr = Expression::AwaitExpression(self.snippet.builder.alloc_await_expression(
         SPAN,
-        ast_builder.vec_from_iter(decls.iter().map(|&name| {
-          ast_builder.binding_property(
-            SPAN,
-            ast_builder.property_key_static_identifier(SPAN, name),
-            ast_builder.binding_pattern(
-              ast_builder.binding_pattern_kind_binding_identifier(SPAN, name),
+        self.construct_vite_preload_call(
+          self.snippet.builder.binding_pattern(
+            BindingPatternKind::ObjectPattern(self.snippet.builder.alloc_object_pattern(
+              SPAN,
+              self.snippet.builder.vec1(self.snippet.builder.binding_property(
+                SPAN,
+                self.snippet.builder.property_key_static_identifier(SPAN, property),
+                self.snippet.builder.binding_pattern(
+                  BindingPatternKind::BindingIdentifier(
+                    self.snippet.builder.alloc_binding_identifier(SPAN, property),
+                  ),
+                  NONE,
+                  false,
+                ),
+                true,
+                false,
+              )),
               NONE,
+            )),
+            NONE,
+            false,
+          ),
+          await_expr.take_in(self.snippet.alloc()),
+        ),
+      ));
+    }
+  }
+
+  /// transform `import('foo').then(({foo})=>{})`
+  /// to `__vitePreload(async () => { let foo; return {foo} = await import('foo'); },...).then(({foo})=>{})`
+  pub fn rewrite_import_expr(&self, expr: &mut CallExpression<'a>) {
+    let Expression::StaticMemberExpression(ref mut callee) = expr.callee else {
+      return;
+    };
+    if callee.property.name != "then"
+      || expr.arguments.is_empty()
+      || !matches!(callee.object, Expression::ImportExpression(_))
+    {
+      return;
+    }
+    let arg = match &expr.arguments[0] {
+      Argument::ArrowFunctionExpression(expr) if !expr.params.is_empty() => &expr.params.items[0],
+      Argument::FunctionExpression(expr) if !expr.params.is_empty() => &expr.params.items[0],
+      _ => return,
+    };
+    callee.object = self.construct_vite_preload_call(
+      arg.pattern.clone_in(self.snippet.alloc()),
+      self.snippet.builder.expression_await(SPAN, callee.object.take_in(self.snippet.alloc())),
+    );
+  }
+
+  pub fn construct_vite_preload_call(
+    &self,
+    binding_pat: BindingPattern<'a>,
+    await_expr: Expression<'a>,
+  ) -> Expression<'a> {
+    self.snippet.builder.expression_call(
+      SPAN,
+      self.snippet.id_ref_expr("__vitePreload", SPAN),
+      NONE,
+      {
+        let append_import_meta_url = self.render_built_url || self.is_relative_base;
+        let capacity = if append_import_meta_url { 3 } else { 2 };
+        let mut items = self.snippet.builder.vec_with_capacity(capacity);
+        items.push(Argument::from(Expression::ArrowFunctionExpression(
+          self.snippet.builder.alloc_arrow_function_expression(
+            SPAN,
+            false,
+            true,
+            NONE,
+            self.snippet.builder.formal_parameters(
+              SPAN,
+              FormalParameterKind::Signature,
+              self.snippet.builder.vec(),
+              NONE,
+            ),
+            NONE,
+            self.snippet.builder.function_body(SPAN, self.snippet.builder.vec(), {
+              let mut statements = self.snippet.builder.vec_with_capacity(2);
+              statements.push(Statement::from(Declaration::VariableDeclaration(
+                self.snippet.builder.alloc_variable_declaration(
+                  SPAN,
+                  VariableDeclarationKind::Const,
+                  self.snippet.builder.vec1(self.snippet.builder.variable_declarator(
+                    SPAN,
+                    VariableDeclarationKind::Const,
+                    binding_pat.clone_in(self.snippet.alloc()),
+                    Some(await_expr),
+                    false,
+                  )),
+                  false,
+                ),
+              )));
+              statements.push(Statement::ReturnStatement(
+                self
+                  .snippet
+                  .builder
+                  .alloc_return_statement(SPAN, Some(binding_pat.into_expression(&self.snippet))),
+              ));
+              statements
+            }),
+          ),
+        )));
+        items.push(Argument::from(self.snippet.builder.expression_conditional(
+          SPAN,
+          self.snippet.id_ref_expr(IS_MODERN_FLAG, SPAN),
+          self.snippet.id_ref_expr("__VITE_PRELOAD__", SPAN),
+          self.snippet.void_zero(),
+        )));
+        if append_import_meta_url {
+          items.push(Argument::from(Expression::from(
+            self.snippet.builder.member_expression_static(
+              SPAN,
+              self.snippet.builder.expression_meta_property(
+                SPAN,
+                self.snippet.id_name("import", SPAN),
+                self.snippet.id_name("meta", SPAN),
+              ),
+              self.snippet.id_name("url", SPAN),
               false,
             ),
-            true,
-            false,
-          )
-        })),
-        NONE,
-      ),
-      NONE,
-      false,
-    ),
-    Some(ast_builder.expression_await(
-      SPAN,
-      construct_vite_preload_call(ast_builder, decl_kind, decls, source, append_import_meta_url),
-    )),
-    false,
-  )
-}
-
-#[allow(clippy::too_many_lines)]
-/// generate `__vitePreload(async () => { const {foo} = await import('foo');return { foo }},...)`
-fn construct_vite_preload_call<'a>(
-  ast_builder: AstBuilder<'a>,
-  decl_kind: VariableDeclarationKind,
-  decls: &[Atom<'a>],
-  source: Atom<'a>,
-  append_import_meta_url: bool,
-) -> Expression<'a> {
-  ast_builder.expression_call(
-    SPAN,
-    ast_builder.expression_identifier(SPAN, "__vitePreload"),
-    NONE,
-    {
-      let mut items = ast_builder.vec();
-      items.push(Argument::from(ast_builder.expression_arrow_function(
-        SPAN,
-        false,
-        true,
-        NONE,
-        ast_builder.formal_parameters(
-          SPAN,
-          FormalParameterKind::ArrowFormalParameters,
-          ast_builder.vec(),
-          NONE,
-        ),
-        NONE,
-        ast_builder.function_body(SPAN, ast_builder.vec(), {
-          let mut items = ast_builder.vec();
-          items.push(Statement::from(ast_builder.declaration_variable(
-            SPAN,
-            decl_kind,
-            ast_builder.vec1(ast_builder.variable_declarator(
-              SPAN,
-              decl_kind,
-              ast_builder.binding_pattern(
-                ast_builder.binding_pattern_kind_object_pattern(
-                  SPAN,
-                  ast_builder.vec_from_iter(decls.iter().map(|&name| {
-                    ast_builder.binding_property(
-                      SPAN,
-                      ast_builder.property_key_static_identifier(SPAN, name),
-                      ast_builder.binding_pattern(
-                        ast_builder.binding_pattern_kind_binding_identifier(SPAN, name),
-                        NONE,
-                        false,
-                      ),
-                      true,
-                      false,
-                    )
-                  })),
-                  NONE,
-                ),
-                NONE,
-                false,
-              ),
-              Some(ast_builder.expression_await(
-                SPAN,
-                ast_builder.expression_import(
-                  SPAN,
-                  ast_builder.expression_string_literal(SPAN, source, None),
-                  None,
-                  None,
-                ),
-              )),
-              false,
-            )),
-            false,
           )));
-          items.push(ast_builder.statement_return(
-            SPAN,
-            Some(ast_builder.expression_object(
-              SPAN,
-              ast_builder.vec_from_iter(decls.iter().map(|&name| {
-                ast_builder.object_property_kind_object_property(
-                  SPAN,
-                  PropertyKind::Init,
-                  ast_builder.property_key_static_identifier(SPAN, name),
-                  ast_builder.expression_identifier(SPAN, name),
-                  false,
-                  true,
-                  false,
-                )
-              })),
-            )),
-          ));
-          items
-        }),
-      )));
-      items.push(Argument::from(ast_builder.expression_conditional(
-        SPAN,
-        ast_builder.expression_identifier(SPAN, IS_MODERN_FLAG),
-        ast_builder.expression_identifier(SPAN, "__VITE_PRELOAD__"),
-        ast_builder.void_0(SPAN),
-      )));
-      if append_import_meta_url {
-        items.push(Argument::from(Expression::from(ast_builder.member_expression_static(
-          SPAN,
-          ast_builder.expression_meta_property(
-            SPAN,
-            ast_builder.identifier_name(SPAN, "import"),
-            ast_builder.identifier_name(SPAN, "meta"),
-          ),
-          ast_builder.identifier_name(SPAN, "url"),
-          false,
-        ))));
-      }
-      items
-    },
-    false,
-  )
-}
-
-/// 1.transform `import('foo').then(({foo})=>{})`
-///   to `__vitePreload(async () => { const {foo} = await import('foo');return { foo }},...).then(({foo})=>{})`
-/// 2.transform `(await import('foo')).foo`
-///   to `__vitePreload(async () => { const {foo} = (await import('foo')); return { foo }},...)).foo`
-pub fn construct_snippet_for_expression<'a>(
-  ast_builder: AstBuilder<'a>,
-  source: Atom<'a>,
-  decls: &[Atom<'a>],
-  append_import_meta_url: bool,
-) -> Expression<'a> {
-  construct_vite_preload_call(
-    ast_builder,
-    VariableDeclarationKind::Const,
-    decls,
-    source,
-    append_import_meta_url,
-  )
+        }
+        items
+      },
+      false,
+    )
+  }
 }

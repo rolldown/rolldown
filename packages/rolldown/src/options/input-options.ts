@@ -228,6 +228,11 @@ export interface InputOptions {
   debug?: {
     sessionId?: string;
   };
+  preserveEntrySignatures?:
+    | false
+    | 'strict'
+    | 'allow-extension'
+    | 'exports-only';
 }
 
 interface OverwriteInputOptionsForCli {

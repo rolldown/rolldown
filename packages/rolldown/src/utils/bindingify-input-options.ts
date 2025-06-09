@@ -106,6 +106,7 @@ export function bindingifyInputOptions(
     markModuleLoaded: pluginContextData.markModuleLoaded.bind(
       pluginContextData,
     ),
+    preserveEntrySignatures: inputOptions.preserveEntrySignatures,
   };
 }
 

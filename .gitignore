@@ -175,3 +175,4 @@ packages/**/THIRD-PARTY-LICENSE
 
 # generated bindings type
 crates/rolldown_debug_action/bindings/**
+.claude

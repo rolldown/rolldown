@@ -102,6 +102,12 @@ impl Generator for EcmaGenerator {
     let directives: Vec<_> = ctx
       .chunk
       .user_defined_entry_module(&ctx.link_output.module_table)
+      .or_else(|| {
+        ctx.options.preserve_modules.then_some({
+          let first_idx = *ctx.chunk.modules.first()?;
+          ctx.link_output.module_table[first_idx].as_normal()?
+        })
+      })
       .map(|normal_module| {
         normal_module
           .ecma_view

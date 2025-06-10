@@ -6,7 +6,7 @@ use crate::chunk_graph::ChunkGraph;
 use itertools::{Itertools, multizip};
 use oxc_index::{IndexVec, index_vec};
 use rolldown_common::{
-  ChunkIdx, ChunkKind, CrossChunkImportItem, EntryPointKind, ExportsKind, ImportKind,
+  ChunkIdx, ChunkKind, ChunkMeta, CrossChunkImportItem, EntryPointKind, ExportsKind, ImportKind,
   ImportRecordMeta, Module, ModuleIdx, NamedImport, OutputFormat, PreserveEntrySignatures,
   SymbolRef, WrapKind,
 };
@@ -301,11 +301,9 @@ impl GenerateStage<'_> {
   ) {
     chunk_graph.chunk_table.iter_enumerated().for_each(|(chunk_id, chunk)| {
       match chunk.kind {
-        ChunkKind::EntryPoint { module: module_idx, is_user_defined, .. } => {
-          let module = &self.link_output.module_table[module_idx]
-            .as_normal()
-            .expect("Should be normal module");
-          let is_dynamic_imported = !module.ecma_view.dynamic_importers.is_empty();
+        ChunkKind::EntryPoint { module: module_idx, meta, .. } => {
+          let is_dynamic_imported = meta.contains(ChunkMeta::DynamicImported);
+          let is_user_defined = meta.contains(ChunkMeta::UserDefinedEntry);
           let needs_export_entry_signatures = if self.options.preserve_modules {
             if is_user_defined {
               !matches!(self.options.preserve_entry_signatures, PreserveEntrySignatures::False)

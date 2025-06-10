@@ -166,7 +166,7 @@ impl<'a> GenerateStage<'a> {
           return anyhow::Ok((name.clone(), name.clone()));
         }
         match chunk.kind {
-          ChunkKind::EntryPoint { module: entry_module_id, is_user_defined, .. } => {
+          ChunkKind::EntryPoint { module: entry_module_id, meta, .. } => {
             let module = &modules[entry_module_id];
             let generated = if self.options.preserve_modules {
               let module_id = module.id();
@@ -178,7 +178,7 @@ impl<'a> GenerateStage<'a> {
 
               let sanitized_chunk_name = sanitize_filename.call(&chunk_name).await?;
               (sanitized_chunk_name, sanitized_absolute_filename)
-            } else if is_user_defined {
+            } else if meta.contains(rolldown_common::ChunkMeta::UserDefinedEntry) {
               // try extract meaningful input name from path
               if let Some(file_stem) = module.id().as_path().file_stem().and_then(|f| f.to_str()) {
                 let name = sanitize_filename.call(file_stem).await?;

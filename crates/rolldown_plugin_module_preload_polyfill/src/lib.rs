@@ -10,8 +10,10 @@ use rolldown_plugin::{
 const MODULE_PRELOAD_POLYFILL: &str = "vite/modulepreload-polyfill";
 const RESOLVED_MODULE_PRELOAD_POLYFILL_ID: &str = "\0vite/modulepreload-polyfill.js";
 
-#[derive(Debug)]
-pub struct ModulePreloadPolyfillPlugin;
+#[derive(Debug, Default)]
+pub struct ModulePreloadPolyfillPlugin {
+  pub is_server: bool,
+}
 
 impl Plugin for ModulePreloadPolyfillPlugin {
   fn name(&self) -> Cow<'static, str> {
@@ -31,14 +33,14 @@ impl Plugin for ModulePreloadPolyfillPlugin {
 
   async fn load(&self, ctx: &PluginContext, args: &HookLoadArgs<'_>) -> HookLoadReturn {
     Ok((args.id == RESOLVED_MODULE_PRELOAD_POLYFILL_ID).then(|| {
-      if matches!(ctx.options().format, OutputFormat::Esm) {
+      if self.is_server || !matches!(ctx.options().format, OutputFormat::Esm) {
+        HookLoadOutput { code: ArcStr::new(), ..Default::default() }
+      } else {
         HookLoadOutput {
           code: arcstr::literal!(include_str!("module-preload-polyfill.js")),
           side_effects: Some(HookSideEffects::True),
           ..Default::default()
         }
-      } else {
-        HookLoadOutput { code: ArcStr::new(), ..Default::default() }
       }
     }))
   }

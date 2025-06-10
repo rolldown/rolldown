@@ -26,6 +26,8 @@ use rolldown_plugin_wasm_fallback::WasmFallbackPlugin;
 use rolldown_plugin_wasm_helper::WasmHelperPlugin;
 use rolldown_plugin_web_worker_post::WebWorkerPostPlugin;
 
+use crate::options::plugin::config::BindingModulePreloadPolyfillPluginConfig;
+
 use super::{
   config::{
     BindingAliasPluginConfig, BindingAssetPluginConfig, BindingBuildImportAnalysisPluginConfig,
@@ -143,7 +145,14 @@ impl TryFrom<BindingBuiltinPlugin<'_>> for Arc<dyn Pluginable> {
         };
         Arc::new(ModuleFederationPlugin::new(config.into()))
       }
-      BindingBuiltinPluginName::ModulePreloadPolyfill => Arc::new(ModulePreloadPolyfillPlugin),
+      BindingBuiltinPluginName::ModulePreloadPolyfill => {
+        let plugin = if let Some(options) = plugin.options {
+          BindingModulePreloadPolyfillPluginConfig::from_unknown(options)?.into()
+        } else {
+          ModulePreloadPolyfillPlugin::default()
+        };
+        Arc::new(plugin)
+      }
       BindingBuiltinPluginName::OxcRuntime => {
         let plugin = if let Some(options) = plugin.options {
           BindingOxcRuntimePluginConfig::from_unknown(options)?.into()

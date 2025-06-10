@@ -302,6 +302,7 @@ impl HmrManager {
       let enable_sourcemap = self.options.sourcemap.is_some() && !affected_module.is_virtual();
       let ecma_ast_idx = affected_module.ecma_ast_idx.unwrap();
       let modules = &self.input.module_db.modules;
+      // FIXME: ecma_ast_idx == 3, but self.input.index_ecma_ast.len() == 2
       let ast = &mut self.input.index_ecma_ast[ecma_ast_idx].0;
 
       ast.program.with_mut(|fields| {

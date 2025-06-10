@@ -40,6 +40,7 @@ main_hot.accept();
 ## Code
 
 ```js
+//#region main.js
 var init_main_0 = __rolldown_runtime__.createEsmInitializer(function() {
 	try {
 		var ns_main = {};
@@ -54,6 +55,7 @@ var init_main_0 = __rolldown_runtime__.createEsmInitializer(function() {
 	} finally {}
 });
 
+//#endregion
 init_main_0()
 __rolldown_runtime__.applyUpdates(['main.js']);
 ```

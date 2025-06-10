@@ -1,4 +1,52 @@
 
+## [1.0.0-beta.14] - 2025-06-10
+
+### 💥 BREAKING CHANGES
+
+- refactor!: move preserveEntrySignatures from output to input options by @IWANABETHATGUY in [#4871](https://github.com/rolldown/rolldown/pull/4871)
+
+### 🚀 Features
+
+- strictExecutionOrder: feat(strictExecutionOrder): no need to generate plain chunk imports for addressing side effects by @hyf0 in [#4890](https://github.com/rolldown/rolldown/pull/4890)
+- feat: make wasm fallback plugin callable in node by @shulaoda in [#4885](https://github.com/rolldown/rolldown/pull/4885)
+- rolldown_plugin_module_preload_polyfill: feat(rolldown_plugin_module_preload_polyfill): align with `rolldown-vite` by @shulaoda in [#4884](https://github.com/rolldown/rolldown/pull/4884)
+- attachDebugInfo: feat(attachDebugInfo): improve format and distinguish dynamic entries by @hyf0 in [#4861](https://github.com/rolldown/rolldown/pull/4861)
+
+### 🐛 Bug Fixes
+
+- binding: fix(binding): preserveModules infinity loop by @Brooooooklyn in [#4879](https://github.com/rolldown/rolldown/pull/4879)
+- fix: dynamic import does not return exports when preserveEntrySignatures: false is set and the importee is an entry by @IWANABETHATGUY in [#4891](https://github.com/rolldown/rolldown/pull/4891)
+- fix: preserveEntrySignatures panics with an edge case by @IWANABETHATGUY in [#4877](https://github.com/rolldown/rolldown/pull/4877)
+- fix: directives are missing with `preserveModules` by @IWANABETHATGUY in [#4876](https://github.com/rolldown/rolldown/pull/4876)
+- fix: exports from dynamically imported chunks are removed by @IWANABETHATGUY in [#4875](https://github.com/rolldown/rolldown/pull/4875)
+
+### 🚜 Refactor
+
+- refactor: clearify Chunk entry kind by @IWANABETHATGUY in [#4892](https://github.com/rolldown/rolldown/pull/4892)
+- rolldown_plugin_build_import_analysis: refactor(rolldown_plugin_build_import_analysis): align the logic with `rolldown-vite` by @shulaoda in [#4856](https://github.com/rolldown/rolldown/pull/4856)
+
+### 📚 Documentation
+
+- contrib-guide: docs(contrib-guide): add HMR testing section by @sapphi-red in [#4888](https://github.com/rolldown/rolldown/pull/4888)
+- guide: docs(guide): update release channels - remove nightly, add pkg.pr.new by @Boshen in [#4881](https://github.com/rolldown/rolldown/pull/4881)
+
+### 🧪 Testing
+
+- test: rename `rolldown/topics/hmr/mutiply-entires` to snake case by @sapphi-red in [#4889](https://github.com/rolldown/rolldown/pull/4889)
+- test: add test for #4849 by @sapphi-red in [#4887](https://github.com/rolldown/rolldown/pull/4887)
+- test: setup infra for hmr tests by @sapphi-red in [#4886](https://github.com/rolldown/rolldown/pull/4886)
+
+### ⚙️ Miscellaneous Tasks
+
+- ci: disable publish to nightly by @Boshen in [#4874](https://github.com/rolldown/rolldown/pull/4874)
+- ci: extend Vite tests timeout by @sapphi-red in [#4870](https://github.com/rolldown/rolldown/pull/4870)
+- fix publish-to-npm.yml by @Boshen
+
+### ◀️ Revert
+
+- revert: "refactor(rolldown_plugin_load_fallback): align with rolldown-vite" by @shulaoda in [#4868](https://github.com/rolldown/rolldown/pull/4868)
+
+
 ## [1.0.0-beta.13] - 2025-06-07
 
 ### 🚀 Features

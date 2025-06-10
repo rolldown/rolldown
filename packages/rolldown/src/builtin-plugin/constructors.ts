@@ -9,6 +9,7 @@ import type {
   BindingManifestPluginConfig,
   BindingMfManifest,
   BindingModuleFederationPluginOption,
+  BindingModulePreloadPolyfillPluginConfig,
   BindingOxcRuntimePluginConfig,
   BindingRemote,
   BindingReporterPluginConfig,
@@ -24,8 +25,10 @@ export class BuiltinPlugin {
   ) {}
 }
 
-export function modulePreloadPolyfillPlugin(): BuiltinPlugin {
-  return new BuiltinPlugin('builtin:module-preload-polyfill');
+export function modulePreloadPolyfillPlugin(
+  config?: BindingModulePreloadPolyfillPluginConfig,
+): BuiltinPlugin {
+  return new BuiltinPlugin('builtin:module-preload-polyfill', config);
 }
 
 export function dynamicImportVarsPlugin(

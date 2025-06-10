@@ -59,6 +59,45 @@ Rolldown uses [insta](https://insta.rs/docs/cli/) for rust snapshot testing. You
 - `cargo insta review` to review the new snapshot one by one.
 - `cargo insta accept` to accept all new snapshots at once.
 
+### HMR tests
+
+If a test case folder contains any files named `*.hmr-*.js`, the test will run in HMR enabled mode.
+
+#### HMR edit files
+
+- Files that match the pattern `*.hmr-*.js` are called **HMR edit files**.
+- These files represent changes to existing source files.
+- The part after `hmr-` indicates the **step number** of the change. For example, `main.hmr-1.js` means a change applied in **step 1**.
+
+#### How the test works
+
+1. All non-HMR files are copied to a temporary directory.
+2. An initial build is generated from these files.
+3. Then, HMR step 1 begins: files with `.hmr-1.js` are used to overwrite the corresponding files in the temporary directory, and an HMR patch is generated.
+4. This process repeats for step 2, 3, and so on. Files like `*.hmr-2.js`, `*.hmr-3.js`, etc., are applied step by step.
+
+:::details Example
+
+If the test folder has these files:
+
+- `main.js`
+- `sub.js`
+- `main.hmr-1.js`
+- `sub.hmr-1.js`
+- `sub2.hmr-2.js`
+
+The test will go through these steps:
+
+1. **Initial build**: `main.js`, `sub.js`
+2. **Step 1**:
+   - `main.js` is replaced with `main.hmr-1.js`
+   - `sub.js` is replaced with `sub.hmr-1.js`
+3. **Step 2**:
+   - `main.js` and `sub.js` remain as in Step 1
+   - `sub2.js` is added using the contents of `sub2.hmr-2.js`
+
+:::
+
 ## Node.js Tests
 
 :::tip

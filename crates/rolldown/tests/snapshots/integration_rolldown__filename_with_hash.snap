@@ -4835,6 +4835,14 @@ expression: output
 - foo-!~{005}~.js => foo-UM55xbSc.js
 - shared-!~{001}~.js => shared-ahT7H2GG.js
 
+# tests/rolldown/misc/preserve_entry_signature/issue-4880
+
+- dynamic-!~{003}~.js => dynamic-BuO4HKk2.js
+- foo-!~{001}~.js => foo-Cz3zB3do.js
+- foo2-!~{002}~.js => foo2-Bv-MyeCj.js
+- main-!~{000}~.js => main-n0johxfQ.js
+- foo2-!~{004}~.js => foo2-DI34K6gG.js
+
 # tests/rolldown/misc/preserve_modules/directives
 
 - main-!~{000}~.js => main-BOE28hLL.js

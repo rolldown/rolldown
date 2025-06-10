@@ -14,6 +14,7 @@ fn init_entry_point_stmt_info(
   entry: &EntryPoint,
   dynamic_import_exports_usage_map: &FxHashMap<ModuleIdx, DynamicImportExportsUsage>,
   options: &SharedNormalizedBundlerOptions,
+  is_dynamic_imported: bool,
 ) {
   let mut referenced_symbols = vec![];
 
@@ -25,7 +26,7 @@ fn init_entry_point_stmt_info(
   }
 
   if !matches!(options.preserve_entry_signatures, PreserveEntrySignatures::False)
-    || !entry.kind.is_user_defined()
+    || is_dynamic_imported
   {
     referenced_symbols.extend(
       meta
@@ -54,6 +55,7 @@ impl LinkStage<'_> {
             entry,
             &self.dynamic_import_exports_usage_map,
             self.options,
+            !ecma_module.dynamic_importers.is_empty(),
           );
         }
 

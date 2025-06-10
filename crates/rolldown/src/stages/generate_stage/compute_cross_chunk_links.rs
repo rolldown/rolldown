@@ -3,6 +3,7 @@ use std::cmp::Reverse;
 
 use super::GenerateStage;
 use crate::chunk_graph::ChunkGraph;
+use crate::utils::chunk::normalize_preserve_entry_signature;
 use itertools::{Itertools, multizip};
 use oxc_index::{IndexVec, index_vec};
 use rolldown_common::{
@@ -304,15 +305,21 @@ impl GenerateStage<'_> {
         ChunkKind::EntryPoint { module: module_idx, meta, .. } => {
           let is_dynamic_imported = meta.contains(ChunkMeta::DynamicImported);
           let is_user_defined = meta.contains(ChunkMeta::UserDefinedEntry);
+
+          let normalized_entry_signatures = normalize_preserve_entry_signature(
+            &self.link_output.overrode_preserve_entry_signature_map,
+            self.options,
+            module_idx,
+          );
           let needs_export_entry_signatures = if self.options.preserve_modules {
             if is_user_defined {
-              !matches!(self.options.preserve_entry_signatures, PreserveEntrySignatures::False)
+              !matches!(normalized_entry_signatures, PreserveEntrySignatures::False)
             } else {
               is_dynamic_imported
             }
           } else {
             is_dynamic_imported
-              || !matches!(self.options.preserve_entry_signatures, PreserveEntrySignatures::False)
+              || !matches!(normalized_entry_signatures, PreserveEntrySignatures::False)
           };
           #[allow(clippy::nonminimal_bool)]
           if needs_export_entry_signatures {

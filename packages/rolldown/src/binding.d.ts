@@ -1370,6 +1370,7 @@ export interface BindingEmittedChunk {
   fileName?: string
   id: string
   importer?: string
+  preserveEntrySignatures?: BindingPreserveEntrySignatures
 }
 
 export interface BindingExperimentalHmrOptions {
@@ -1526,7 +1527,7 @@ export interface BindingInputOptions {
   debug?: BindingDebugOptions
   invalidateJsSideCache?: () => void
   markModuleLoaded?: (id: string, success: boolean) => void
-  preserveEntrySignatures?: 'strict' | 'allow-extension' | 'exports-only' | false
+  preserveEntrySignatures?: BindingPreserveEntrySignatures
 }
 
 export interface BindingIsolatedDeclarationPluginConfig {
@@ -1769,6 +1770,10 @@ export interface BindingPreRenderedAsset {
   originalFileNames: Array<string>
   source: BindingAssetSource
 }
+
+export type BindingPreserveEntrySignatures =
+  | { type: 'Bool', field0: boolean }
+  | { type: 'String', field0: string }
 
 export interface BindingRemote {
   type?: string

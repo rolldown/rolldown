@@ -14,8 +14,8 @@ use oxc::transformer::ESTarget;
 use rolldown::{
   AddonOutputOption, AdvancedChunksOptions, AssetFilenamesOutputOption, BundlerOptions,
   ChunkFilenamesOutputOption, DeferSyncScanDataOption, HashCharacters, IsExternal, JsxPreset,
-  MatchGroup, ModuleType, OutputExports, OutputFormat, Platform, PreserveEntrySignatures,
-  RawMinifyOptions, SanitizeFilename, TransformOptions,
+  MatchGroup, ModuleType, OutputExports, OutputFormat, Platform, RawMinifyOptions,
+  SanitizeFilename, TransformOptions,
 };
 use rolldown_common::DeferSyncScanData;
 use rolldown_plugin::__inner::SharedPluginable;
@@ -445,27 +445,7 @@ pub fn normalize_binding_options(
     preserve_modules_root: output_options.preserve_modules_root,
     preserve_entry_signatures: input_options
       .preserve_entry_signatures
-      .map(|v| match v {
-        Either::A(str) => match str.as_str() {
-          "exports-only" => Ok(PreserveEntrySignatures::ExportsOnly),
-          "strict" => Ok(PreserveEntrySignatures::Strict),
-          "allow-extension" => Ok(PreserveEntrySignatures::AllowExtension),
-          _ => Err(napi::Error::new(
-            napi::Status::GenericFailure,
-            format!("Invalid value for `preserveEntrySignatures` option: {str}"),
-          )),
-        },
-        Either::B(bool) => {
-          if bool {
-            Err(napi::Error::new(
-              napi::Status::GenericFailure,
-              format!("Invalid value for `preserveEntrySignatures` option: {bool}"),
-            ))
-          } else {
-            Ok(PreserveEntrySignatures::False)
-          }
-        }
-      })
+      .map(std::convert::TryInto::try_into)
       .transpose()?,
   };
 

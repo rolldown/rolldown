@@ -14,6 +14,7 @@ import type { Extends, TypeAssert } from '../types/assert';
 import type { ModuleInfo } from '../types/module-info';
 import type { PartialNull } from '../types/utils';
 import { type AssetSource, bindingAssetSource } from '../utils/asset-source';
+import { bindingifyPreserveEntrySignatures } from '../utils/bindingify-input-options';
 import { unimplemented, unreachable } from '../utils/misc';
 import { bindingifySideEffects } from '../utils/transform-side-effects';
 import type {
@@ -36,6 +37,7 @@ interface EmittedChunk {
   type: 'chunk';
   name?: string;
   fileName?: string;
+  preserveSignature?: 'strict' | 'allow-extension' | 'exports-only' | false;
   id: string;
   importer?: string;
 }
@@ -185,7 +187,12 @@ export class PluginContextImpl extends MinimalPluginContextImpl {
       return unimplemented('PluginContext.emitFile with type prebuilt-chunk');
     }
     if (file.type === 'chunk') {
-      return this.context.emitChunk(file);
+      return this.context.emitChunk({
+        preserveEntrySignatures: bindingifyPreserveEntrySignatures(
+          file.preserveSignature,
+        ),
+        ...file,
+      });
     }
     const fnSanitizedFileName =
       file.fileName || typeof this.outputOptions.sanitizeFileName !== 'function'

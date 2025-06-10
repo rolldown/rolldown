@@ -1,6 +1,6 @@
 use crate::{
   AddEntryModuleMsg, FilenameTemplate, ModuleLoaderMsg, NormalizedBundlerOptions, Output,
-  OutputAsset, StrOrBytes,
+  OutputAsset, PreserveEntrySignatures, StrOrBytes,
 };
 use anyhow::Context;
 use arcstr::ArcStr;
@@ -36,6 +36,7 @@ pub struct EmittedChunk {
   pub id: String,
   // pub implicitly_loaded_after_one_of: Option<Vec<String>>,
   pub importer: Option<String>,
+  pub preserve_entry_signatures: Option<PreserveEntrySignatures>,
 }
 
 pub struct EmittedChunkInfo {
@@ -91,7 +92,7 @@ impl FileEmitter {
     .context(
       "The `PluginContext.emitFile` with `type: 'chunk'` only work at `buildStart/resolveId/load/transform/moduleParsed` hooks.",
     )?
-    .send(ModuleLoaderMsg::AddEntryModule(Box::new(AddEntryModuleMsg { chunk: Arc::clone(&chunk), reference_id: reference_id.clone() })))
+    .send(ModuleLoaderMsg::AddEntryModule(Box::new(AddEntryModuleMsg { chunk: Arc::clone(&chunk), reference_id: reference_id.clone(), preserve_entry_signatures: chunk.preserve_entry_signatures })))
     .await?;
     self.chunks.insert(reference_id.clone(), chunk);
     Ok(reference_id)

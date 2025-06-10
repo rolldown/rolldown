@@ -2,8 +2,8 @@ use oxc_index::IndexVec;
 #[cfg(debug_assertions)]
 use rolldown_common::common_debug_symbol_ref;
 use rolldown_common::{
-  EntryPoint, ImportKind, ModuleIdx, ModuleTable, RuntimeModuleBrief, SymbolRef, SymbolRefDb,
-  dynamic_import_usage::DynamicImportExportsUsage,
+  EntryPoint, ImportKind, ModuleIdx, ModuleTable, PreserveEntrySignatures, RuntimeModuleBrief,
+  SymbolRef, SymbolRefDb, dynamic_import_usage::DynamicImportExportsUsage,
 };
 use rolldown_error::BuildDiagnostic;
 use rolldown_utils::indexmap::FxIndexSet;
@@ -43,6 +43,9 @@ pub struct LinkStageOutput {
   pub dynamic_import_exports_usage_map: FxHashMap<ModuleIdx, DynamicImportExportsUsage>,
   pub safely_merge_cjs_ns_map: FxHashMap<ModuleIdx, Vec<SymbolRef>>,
   pub external_import_namespace_merger: FxHashMap<ModuleIdx, FxIndexSet<SymbolRef>>,
+  /// https://rollupjs.org/plugin-development/#this-emitfile
+  /// Used to store `preserveSignature` specified with `this.emitFile` in plugins.
+  pub overrode_preserve_entry_signature_map: FxHashMap<ModuleIdx, PreserveEntrySignatures>,
 }
 
 #[derive(Debug)]
@@ -62,6 +65,7 @@ pub struct LinkStage<'a> {
   pub dynamic_import_exports_usage_map: FxHashMap<ModuleIdx, DynamicImportExportsUsage>,
   pub normal_symbol_exports_chain_map: FxHashMap<SymbolRef, Vec<SymbolRef>>,
   pub external_import_namespace_merger: FxHashMap<ModuleIdx, FxIndexSet<SymbolRef>>,
+  pub overrode_preserve_entry_signature_map: FxHashMap<ModuleIdx, PreserveEntrySignatures>,
 }
 
 impl<'a> LinkStage<'a> {
@@ -105,6 +109,8 @@ impl<'a> LinkStage<'a> {
       safely_merge_cjs_ns_map: scan_stage_output.safely_merge_cjs_ns_map,
       normal_symbol_exports_chain_map: FxHashMap::default(),
       external_import_namespace_merger: FxHashMap::default(),
+      overrode_preserve_entry_signature_map: scan_stage_output
+        .overrode_preserve_entry_signature_map,
     }
   }
 
@@ -138,6 +144,7 @@ impl<'a> LinkStage<'a> {
       dynamic_import_exports_usage_map: self.dynamic_import_exports_usage_map,
       safely_merge_cjs_ns_map: self.safely_merge_cjs_ns_map,
       external_import_namespace_merger: self.external_import_namespace_merger,
+      overrode_preserve_entry_signature_map: self.overrode_preserve_entry_signature_map,
     }
   }
 

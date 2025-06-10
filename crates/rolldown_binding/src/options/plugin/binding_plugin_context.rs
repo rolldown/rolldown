@@ -67,7 +67,7 @@ impl BindingPluginContext {
   #[napi]
   pub fn emit_chunk(&self, file: BindingEmittedChunk) -> anyhow::Result<String> {
     futures::executor::block_on(async {
-      self.inner.emit_chunk(file.into()).await.map(|id| id.to_string())
+      self.inner.emit_chunk(file.try_into()?).await.map(|id| id.to_string())
     })
   }
 

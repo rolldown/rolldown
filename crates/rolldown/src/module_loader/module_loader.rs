@@ -16,9 +16,9 @@ use rolldown_common::side_effects::{DeterminedSideEffects, HookSideEffects};
 use rolldown_common::{
   EcmaRelated, EntryPoint, EntryPointKind, ExternalModule, ExternalModuleTaskResult,
   HybridIndexVec, ImportKind, ImportRecordIdx, ImportRecordMeta, ImporterRecord, Module, ModuleId,
-  ModuleIdx, ModuleLoaderMsg, ModuleType, NormalModuleTaskResult, RUNTIME_MODULE_KEY, ResolvedId,
-  RuntimeModuleBrief, RuntimeModuleTaskResult, StmtInfoIdx, SymbolRef, SymbolRefDb,
-  SymbolRefDbForModule,
+  ModuleIdx, ModuleLoaderMsg, ModuleType, NormalModuleTaskResult, PreserveEntrySignatures,
+  RUNTIME_MODULE_KEY, ResolvedId, RuntimeModuleBrief, RuntimeModuleTaskResult, StmtInfoIdx,
+  SymbolRef, SymbolRefDb, SymbolRefDbForModule,
 };
 use rolldown_error::{BuildDiagnostic, BuildResult};
 use rolldown_fs::OsFileSystem;
@@ -113,6 +113,7 @@ pub struct ModuleLoaderOutput {
   // Empty if it is a full scan
   pub new_added_modules_from_partial_scan: FxIndexSet<ModuleIdx>,
   pub safely_merge_cjs_ns_map: FxHashMap<ModuleIdx, Vec<SymbolRef>>,
+  pub overrode_preserve_entry_signature_map: FxHashMap<ModuleIdx, PreserveEntrySignatures>,
   pub cache: ScanStageCache,
 }
 
@@ -301,6 +302,9 @@ impl ModuleLoader {
     let mut extra_entry_points = vec![];
     let mut safely_merge_cjs_ns_map: FxHashMap<ModuleIdx, Vec<SymbolRef>> = FxHashMap::default();
     let mut runtime_brief: Option<RuntimeModuleBrief> = None;
+    let mut overrode_preserve_entry_signature_map: FxHashMap<ModuleIdx, PreserveEntrySignatures> =
+      FxHashMap::default();
+
     while self.remaining > 0 {
       let Some(msg) = self.rx.recv().await else {
         break;
@@ -500,15 +504,19 @@ impl ModuleLoader {
               continue;
             }
           };
+          let module_idx = self.try_spawn_new_task(
+            resolved_id,
+            None,
+            true,
+            None,
+            Arc::clone(&user_defined_entries),
+          );
+          if let Some(preserve_entry_signatures) = data.preserve_entry_signatures {
+            overrode_preserve_entry_signature_map.insert(module_idx, preserve_entry_signatures);
+          }
           extra_entry_points.push(EntryPoint {
             name: data.name.clone(),
-            id: self.try_spawn_new_task(
-              resolved_id,
-              None,
-              true,
-              None,
-              Arc::clone(&user_defined_entries),
-            ),
+            id: module_idx,
             kind: EntryPointKind::UserDefined,
             file_name: data.file_name.clone(),
             reference_id: Some(msg.reference_id),
@@ -670,6 +678,7 @@ impl ModuleLoader {
       new_added_modules_from_partial_scan: self.new_added_modules_from_partial_scan,
       cache: self.cache,
       safely_merge_cjs_ns_map,
+      overrode_preserve_entry_signature_map,
     })
   }
 

@@ -1,6 +1,9 @@
 use std::{cmp::Ordering, collections::VecDeque, path::Path};
 
-use crate::{chunk_graph::ChunkGraph, stages::generate_stage::chunk_ext::ChunkDebugExt};
+use crate::{
+  chunk_graph::ChunkGraph, stages::generate_stage::chunk_ext::ChunkDebugExt,
+  utils::chunk::normalize_preserve_entry_signature,
+};
 use arcstr::ArcStr;
 use itertools::Itertools;
 use oxc_index::IndexVec;
@@ -319,8 +322,16 @@ impl GenerateStage<'_> {
         continue;
       };
 
+      // Override `preserve_entry_signatures` if the entry point emitted by `this.emitFile({})` has
+      // specified `preserveSignatures`.
+      let finalized_preserve_entry_signatures = normalize_preserve_entry_signature(
+        &self.link_output.overrode_preserve_entry_signature_map,
+        self.options,
+        module.idx,
+      );
+
       let preserve_entry_signature = if module.is_user_defined_entry {
-        match self.options.preserve_entry_signatures {
+        match finalized_preserve_entry_signatures {
           PreserveEntrySignatures::AllowExtension
           | PreserveEntrySignatures::Strict
           | PreserveEntrySignatures::False => Some(self.options.preserve_entry_signatures),
@@ -405,7 +416,8 @@ impl GenerateStage<'_> {
     // If it is allow to allow that entry chunks have the different exports as the underlying entry module.
     // This is used to generate less chunks when possible.
     let allow_extension_optimize =
-      !matches!(self.options.preserve_entry_signatures, PreserveEntrySignatures::Strict);
+      !matches!(self.options.preserve_entry_signatures, PreserveEntrySignatures::Strict)
+        || !self.link_output.overrode_preserve_entry_signature_map.is_empty();
     // 1. Assign modules to corresponding chunks
     // 2. Create shared chunks to store modules that belong to multiple chunks.
     for normal_module in self.link_output.module_table.modules.iter().filter_map(Module::as_normal)

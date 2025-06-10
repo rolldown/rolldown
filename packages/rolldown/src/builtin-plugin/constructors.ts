@@ -57,7 +57,8 @@ export function wasmHelperPlugin(): BuiltinPlugin {
 }
 
 export function wasmFallbackPlugin(): BuiltinPlugin {
-  return new BuiltinPlugin('builtin:wasm-fallback');
+  const builtinPlugin = new BuiltinPlugin('builtin:wasm-fallback');
+  return makeBuiltinPluginCallable(builtinPlugin);
 }
 
 export function loadFallbackPlugin(): BuiltinPlugin {

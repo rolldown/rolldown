@@ -394,8 +394,15 @@ impl GenerateStage<'_> {
             .iter_enumerated()
             .filter(|(id, _)| *id != chunk_id)
             .filter(|(_, importee_chunk)| {
-              importee_chunk.bits.has_bit(*importer_chunk_bit)
-                && importee_chunk.has_side_effect(self.link_output.runtime.id())
+              if self.options.experimental.is_strict_execution_order_enabled() {
+                // With strict_execution_order/wrapping, modules aren't executed in loading but on-demand.
+                // So we don't need to do plain imports to address the side effects. It would be ensured
+                // by those `init_xxx()` calls.
+                false
+              } else {
+                importee_chunk.bits.has_bit(*importer_chunk_bit)
+                  && importee_chunk.has_side_effect(self.link_output.runtime.id())
+              }
             })
             .for_each(|(importee_chunk_id, _)| {
               index_cross_chunk_imports[chunk_id].insert(importee_chunk_id);

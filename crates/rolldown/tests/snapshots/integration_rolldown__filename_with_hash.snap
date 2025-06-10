@@ -4071,6 +4071,14 @@ expression: output
 
 - main-!~{000}~.js => main-DVzdOrRP.js
 
+# tests/rolldown/function/experimental/strict_execution_order/strip_plain_chunk_imports
+
+- main-!~{000}~.js => main-BtaVe3-D.js
+- chunk-!~{001}~.js => chunk--BJLk7li.js
+- common-!~{003}~.js => common-C4wqcyCT.js
+- page-a-!~{005}~.js => page-a-BF05FZf6.js
+- page-b-!~{007}~.js => page-b-BsmTzYKQ.js
+
 # tests/rolldown/function/experimental/strict_execution_order/top_level_await_syntax
 
 - main-!~{000}~.js => main-BbzIdLSS.js

@@ -1,6 +1,7 @@
 use self::render_chunk_exports::get_chunk_export_names;
 use rolldown_common::{
-  Chunk, ChunkKind, ModuleId, RenderedModule, RollupPreRenderedChunk, RollupRenderedChunk,
+  Chunk, ChunkKind, ChunkMeta, ModuleId, RenderedModule, RollupPreRenderedChunk,
+  RollupRenderedChunk,
 };
 use rustc_hash::FxHashMap;
 
@@ -20,8 +21,8 @@ pub fn generate_pre_rendered_chunk(
 ) -> RollupPreRenderedChunk {
   RollupPreRenderedChunk {
     name: chunk.name.clone().expect("should have name"),
-    is_entry: matches!(&chunk.kind, ChunkKind::EntryPoint { is_user_defined, .. } if *is_user_defined),
-    is_dynamic_entry: matches!(&chunk.kind, ChunkKind::EntryPoint { is_user_defined, .. } if !*is_user_defined),
+    is_entry: matches!(&chunk.kind, ChunkKind::EntryPoint { meta, .. } if meta.contains(ChunkMeta::UserDefinedEntry)),
+    is_dynamic_entry: matches!(&chunk.kind, ChunkKind::EntryPoint { meta, .. } if !meta.contains(ChunkMeta::UserDefinedEntry)),
     facade_module_id: match &chunk.kind {
       ChunkKind::EntryPoint { module, .. } => Some(graph.module_table[*module].id().into()),
       ChunkKind::Common => None,

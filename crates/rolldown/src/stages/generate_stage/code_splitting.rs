@@ -5,7 +5,7 @@ use arcstr::ArcStr;
 use itertools::Itertools;
 use oxc_index::IndexVec;
 use rolldown_common::{
-  Chunk, ChunkIdx, ChunkKind, Module, ModuleIdx, OutputFormat, PreserveEntrySignatures,
+  Chunk, ChunkIdx, ChunkKind, ChunkMeta, Module, ModuleIdx, OutputFormat, PreserveEntrySignatures,
 };
 use rolldown_utils::{BitSet, commondir, indexmap::FxIndexMap, rustc_hash::FxHashMapExt};
 use rustc_hash::{FxHashMap, FxHashSet};
@@ -83,7 +83,12 @@ impl GenerateStage<'_> {
           bits.clone(),
           vec![],
           ChunkKind::EntryPoint {
-            is_user_defined: module.is_user_defined_entry,
+            meta: {
+              let mut meta = ChunkMeta::default();
+              meta.set(ChunkMeta::UserDefinedEntry, module.is_user_defined_entry);
+              meta.set(ChunkMeta::DynamicImported, !module.dynamic_importers.is_empty());
+              meta
+            },
             bit: count,
             module: module.idx,
           },
@@ -205,7 +210,9 @@ impl GenerateStage<'_> {
       .chunk_table
       .iter_enumerated()
       .sorted_by_key(|(index, chunk)| match &chunk.kind {
-        ChunkKind::EntryPoint { is_user_defined, .. } if *is_user_defined => (0, index.raw()),
+        ChunkKind::EntryPoint { meta, .. } if meta.contains(ChunkMeta::UserDefinedEntry) => {
+          (0, index.raw())
+        }
         _ => (1, chunk.exec_order),
       })
       .map(|(idx, _)| idx)
@@ -336,7 +343,12 @@ impl GenerateStage<'_> {
         bits.clone(),
         vec![],
         ChunkKind::EntryPoint {
-          is_user_defined: module.is_user_defined_entry,
+          meta: {
+            let mut meta = ChunkMeta::default();
+            meta.set(ChunkMeta::UserDefinedEntry, module.is_user_defined_entry);
+            meta.set(ChunkMeta::DynamicImported, !module.dynamic_importers.is_empty());
+            meta
+          },
           bit: count,
           module: entry_point.id,
         },
@@ -526,8 +538,8 @@ impl GenerateStage<'_> {
           return CombineChunkRet::None;
         };
         match chunk.kind {
-          ChunkKind::EntryPoint { is_user_defined, .. } => {
-            if is_user_defined {
+          ChunkKind::EntryPoint { meta, .. } => {
+            if meta.contains(ChunkMeta::UserDefinedEntry) {
               CombineChunkRet::Entry(chunk_idxs[0])
             } else {
               CombineChunkRet::DynamicVec(vec![chunk_idxs[0]])
@@ -583,8 +595,8 @@ impl GenerateStage<'_> {
       .chunk_table
       .iter_enumerated()
       .filter_map(|(idx, chunk)| match chunk.kind {
-        ChunkKind::EntryPoint { is_user_defined, module, .. } => {
-          (!is_user_defined).then_some((module, idx))
+        ChunkKind::EntryPoint { meta, module, .. } => {
+          (!meta.contains(ChunkMeta::UserDefinedEntry)).then_some((module, idx))
         }
         ChunkKind::Common => None,
       })

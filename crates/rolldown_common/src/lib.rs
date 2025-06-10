@@ -63,7 +63,7 @@ pub mod bundler_options {
 pub use crate::{
   asset::asset_view::AssetView,
   chunk::{
-    Chunk,
+    Chunk, ChunkMeta,
     chunk_table::ChunkTable,
     types::{
       AddonRenderContext, cross_chunk_import_item::CrossChunkImportItem,

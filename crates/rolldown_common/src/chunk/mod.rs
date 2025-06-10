@@ -24,6 +24,15 @@ use self::types::{
   cross_chunk_import_item::CrossChunkImportItem, preliminary_filename::PreliminaryFilename,
 };
 
+bitflags::bitflags! {
+  #[derive(Debug, Clone, Copy, Default)]
+    pub struct ChunkMeta: u8 {
+        /// `true` if the chunk is dynamic imported by other modules, it would be treated as a dynamic entry if it
+        /// is not a user defined entry point.
+        const DynamicImported = 1;
+        const UserDefinedEntry = 1 << 1;
+    }
+}
 #[derive(Debug, Default)]
 pub struct Chunk {
   pub exec_order: u32,
@@ -118,7 +127,7 @@ impl Chunk {
     rollup_pre_rendered_chunk: &RollupPreRenderedChunk,
   ) -> anyhow::Result<FilenameTemplate> {
     // https://github.com/rollup/rollup/blob/061a0387c8654222620f602471d66afd3c582048/src/Chunk.ts?plain=1#L526-L529
-    let ret = if matches!(self.kind, ChunkKind::EntryPoint { is_user_defined, .. } if is_user_defined)
+    let ret = if matches!(self.kind, ChunkKind::EntryPoint { meta, .. } if meta.contains(ChunkMeta::UserDefinedEntry))
       || options.preserve_modules
     {
       options.entry_filenames.call(rollup_pre_rendered_chunk).await?
@@ -134,7 +143,7 @@ impl Chunk {
     options: &NormalizedBundlerOptions,
     rollup_pre_rendered_chunk: &RollupPreRenderedChunk,
   ) -> anyhow::Result<FilenameTemplate> {
-    let ret = if matches!(self.kind, ChunkKind::EntryPoint { is_user_defined, .. } if is_user_defined)
+    let ret = if matches!(self.kind, ChunkKind::EntryPoint { meta, .. } if meta.contains(ChunkMeta::UserDefinedEntry))
     {
       options.css_entry_filenames.call(rollup_pre_rendered_chunk).await?
     } else {
@@ -251,7 +260,9 @@ impl Chunk {
 
   pub fn user_defined_entry_module_idx(&self) -> Option<ModuleIdx> {
     match &self.kind {
-      ChunkKind::EntryPoint { module, is_user_defined, .. } if *is_user_defined => Some(*module),
+      ChunkKind::EntryPoint { module, meta, .. } if meta.contains(ChunkMeta::UserDefinedEntry) => {
+        Some(*module)
+      }
       _ => None,
     }
   }

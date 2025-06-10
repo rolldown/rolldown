@@ -5357,7 +5357,7 @@ expression: output
 
 - main-!~{000}~.js => main-CsVwbL6p.js
 
-# tests/rolldown/topics/hmr/mutiply-entires
+# tests/rolldown/topics/hmr/mutiply_entires
 
 - entry-!~{000}~.js => entry-C-wenldj.js
 - index-!~{001}~.js => index-BDVb_WKl.js

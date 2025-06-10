@@ -3021,6 +3021,7 @@ version = "0.1.0"
 dependencies = [
  "anyhow",
  "dunce",
+ "glob",
  "insta",
  "json-strip-comments",
  "jsonschema",

@@ -1,7 +1,9 @@
 use core::str;
+use std::fmt::Write as _;
 use std::{
   borrow::Cow,
   ffi::OsStr,
+  fs,
   io::{Read, Write},
   path::Path,
   process::Command,
@@ -12,14 +14,20 @@ use rolldown::{
   BundleOutput, Bundler, BundlerOptions, IsExternal, OutputFormat, Platform, SourceMapType,
   plugin::__inner::SharedPluginable,
 };
-use rolldown_common::Output;
+use rolldown_common::{HmrOutput, Output};
 use rolldown_error::{BuildDiagnostic, BuildResult, DiagnosticOptions};
 use rolldown_sourcemap::SourcemapVisualizer;
 use rolldown_testing_config::TestMeta;
 use serde_json::{Map, Value};
 use sugar_path::SugarPath;
 
-use crate::utils::RUNTIME_MODULE_OUTPUT_RE;
+use crate::{
+  hmr_files::{
+    apply_hmr_edit_files_to_hmr_temp_dir, collect_hmr_edit_files,
+    copy_non_hmr_edit_files_to_hmr_temp_dir, get_changed_files_from_hmr_edit_files,
+  },
+  utils::RUNTIME_MODULE_OUTPUT_RE,
+};
 
 #[derive(Default)]
 pub struct IntegrationTest {
@@ -120,9 +128,22 @@ impl IntegrationTest {
     test_folder_path: &Path,
     plugins: Vec<SharedPluginable>,
   ) {
+    let hmr_temp_dir_path = test_folder_path.join("hmr-temp");
+    let hmr_steps = collect_hmr_edit_files(test_folder_path, &hmr_temp_dir_path);
+    let hmr_mode_enabled = !hmr_steps.is_empty();
+
     let mut snapshot_outputs = vec![];
     for mut named_options in multiple_options {
       self.apply_test_defaults(&mut named_options.options);
+
+      if hmr_mode_enabled {
+        fs::remove_dir_all(&hmr_temp_dir_path)
+          .or_else(|err| if err.kind() == std::io::ErrorKind::NotFound { Ok(()) } else { Err(err) })
+          .unwrap();
+        copy_non_hmr_edit_files_to_hmr_temp_dir(test_folder_path, &hmr_temp_dir_path);
+
+        named_options.options.cwd = Some(hmr_temp_dir_path.clone());
+      }
 
       let mut bundler = Bundler::with_plugins(named_options.options, plugins.clone());
 
@@ -164,6 +185,32 @@ impl IntegrationTest {
             // do nothing
           } else {
             Self::execute_output_assets(&bundler, &debug_title);
+          }
+
+          for (step, hmr_edit_files) in hmr_steps.iter().enumerate() {
+            apply_hmr_edit_files_to_hmr_temp_dir(
+              test_folder_path,
+              &hmr_temp_dir_path,
+              hmr_edit_files,
+            );
+            let changed_files = get_changed_files_from_hmr_edit_files(
+              test_folder_path,
+              &hmr_temp_dir_path,
+              hmr_edit_files,
+            );
+            let hmr_output = bundler.generate_hmr_patch(changed_files).await;
+            match hmr_output {
+              Ok(output) => {
+                let snapshot_content =
+                  Self::render_hmr_output_to_string(step, &output, vec![], &cwd);
+                snapshot_outputs.push(snapshot_content);
+              }
+              Err(errs) => {
+                panic!(
+                  "Expected the hmr patch to be success, but got diagnosable errors: {errs:#?}"
+                );
+              }
+            }
           }
         }
         Err(errs) => {
@@ -420,6 +467,94 @@ impl IntegrationTest {
     .join("\n")
     .trim()
     .to_owned()
+  }
+
+  #[expect(clippy::if_not_else)]
+  fn render_hmr_output_to_string(
+    step: usize,
+    hmr_output: &HmrOutput,
+    errs: Vec<BuildDiagnostic>,
+    cwd: &Path,
+  ) -> String {
+    let mut errors = errs;
+    let errors_section = if !errors.is_empty() {
+      let mut snapshot = String::new();
+      snapshot.push_str("## Errors\n\n");
+      errors.sort_by_key(|e| e.kind().to_string());
+      let diagnostics = errors
+        .into_iter()
+        .map(|e| (e.kind(), e.to_diagnostic_with(&DiagnosticOptions { cwd: cwd.to_path_buf() })));
+
+      let mut rendered_diagnostics = diagnostics
+        .map(|(code, diagnostic)| {
+          [
+            Cow::Owned(format!("### {code}\n")),
+            "```text".into(),
+            Cow::Owned(diagnostic.to_string()),
+            "```".into(),
+          ]
+          .join("\n")
+        })
+        .collect::<Vec<_>>();
+      rendered_diagnostics.sort();
+      let rendered = rendered_diagnostics.join("\n");
+      snapshot.push_str(&rendered);
+      snapshot
+    } else {
+      String::default()
+    };
+
+    let code_section = {
+      let mut snapshot = String::new();
+      write!(snapshot, "## Code\n\n").unwrap();
+      let file_ext = hmr_output.filename.as_path().extension().and_then(OsStr::to_str).map_or(
+        "unknown",
+        |ext| match ext {
+          "mjs" | "cjs" => "js",
+          _ => ext,
+        },
+      );
+      writeln!(snapshot, "```{file_ext}").unwrap();
+      snapshot.push_str(&hmr_output.code);
+      snapshot.push_str("\n```");
+      snapshot
+    };
+
+    let meta_section = {
+      let mut snapshot = String::new();
+      snapshot.push_str("## Meta\n\n");
+      writeln!(snapshot, "- full_reload: {}", hmr_output.full_reload).unwrap();
+      writeln!(
+        snapshot,
+        "- first_invalidated_by: {}",
+        hmr_output.first_invalidated_by.as_deref().unwrap_or("None")
+      )
+      .unwrap();
+      writeln!(snapshot, "- is_self_accepting: {}", hmr_output.is_self_accepting).unwrap();
+      writeln!(
+        snapshot,
+        "- full_reload_reason: {}",
+        hmr_output.full_reload_reason.as_deref().unwrap_or("None")
+      )
+      .unwrap();
+      write!(snapshot, "### Hmr Boundaries\n\n").unwrap();
+      let meta = hmr_output
+        .hmr_boundaries
+        .iter()
+        .map(|boundary| {
+          format!(
+            "- boundary: {}, accepted_via: {}",
+            boundary.boundary.as_str(),
+            boundary.accepted_via.as_str()
+          )
+        })
+        .collect::<Vec<_>>();
+      snapshot.push_str(&meta.join("\n"));
+      snapshot
+    };
+
+    "\n".to_owned()
+      + [format!("# HMR Step {step}"), errors_section, code_section, meta_section].join("\n").trim()
   }
 
   fn snapshot_bundle_output(

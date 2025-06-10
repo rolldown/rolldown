@@ -18,6 +18,7 @@ workspace = true
 [dependencies]
 anyhow = { workspace = true }
 dunce = { workspace = true }
+glob = { workspace = true }
 insta = { workspace = true }
 json-strip-comments = { workspace = true }
 jsonschema = { workspace = true }

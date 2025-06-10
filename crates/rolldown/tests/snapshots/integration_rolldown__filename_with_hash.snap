@@ -5373,6 +5373,10 @@ expression: output
 
 - main-!~{000}~.js => main-Bsw305ma.js
 
+# tests/rolldown/topics/hmr/generate_patch_error
+
+- main-!~{000}~.js => main-dX635G9E.js
+
 # tests/rolldown/topics/hmr/mutiply_entires
 
 - entry-!~{000}~.js => entry-CBzHZYBI.js

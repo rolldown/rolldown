@@ -1,0 +1,53 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## dynamic.js
+
+```js
+import assert from "node:assert";
+
+//#region dynamic.js
+(async () => {
+	const mod = await import("./foo.js");
+	assert.strictEqual(mod.default, "foo");
+})();
+
+//#endregion
+```
+## foo.js
+
+```js
+//#region foo.js
+var foo_default = "foo";
+
+//#endregion
+export { foo_default as default };
+```
+## foo2.js
+
+```js
+import { foo2_default } from "./foo22.js";
+
+```
+## foo22.js
+
+```js
+//#region foo2.js
+var foo2_default = "foo2";
+
+//#endregion
+export { foo2_default };
+```
+## main.js
+
+```js
+import { foo2_default } from "./foo22.js";
+import assert from "node:assert";
+
+//#region main.js
+assert.strictEqual(foo2_default, "foo2");
+
+//#endregion
+```

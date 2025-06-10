@@ -1,0 +1,23 @@
+{
+  "config": {
+    "preserveEntrySignatures": "false",
+    "input": [
+      {
+        "name": "main",
+        "import": "./main.js"
+      },
+      {
+        "name": "foo",
+        "import": "./foo.js"
+      },
+      {
+        "name": "foo2",
+        "import": "./foo2.js"
+      },
+      {
+        "name": "dynamic",
+        "import": "./dynamic.js"
+      }
+    ]
+  }
+}

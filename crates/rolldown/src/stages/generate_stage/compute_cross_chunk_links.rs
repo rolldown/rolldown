@@ -313,7 +313,7 @@ impl GenerateStage<'_> {
               is_dynamic_imported
             }
           } else {
-            !is_user_defined
+            is_dynamic_imported
               || !matches!(self.options.preserve_entry_signatures, PreserveEntrySignatures::False)
           };
           #[allow(clippy::nonminimal_bool)]

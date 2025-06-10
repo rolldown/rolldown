@@ -5383,6 +5383,10 @@ expression: output
 - index-!~{001}~.js => index-D1GGCNxh.js
 - chunk-!~{002}~.js => chunk-CUsgavGH.js
 
+# tests/rolldown/topics/hmr/non_used_export
+
+- main-!~{000}~.js => main-YzWYwFZO.js
+
 # tests/rolldown/topics/hmr/register_exports
 
 - main-!~{000}~.js => main-B4-Shbiz.js

@@ -1,0 +1,68 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## main.js
+
+```js
+
+//#region foo.mjs
+var foo_exports = {};
+__export(foo_exports, { foo: () => foo$1 });
+const foo_hot$1 = __rolldown_runtime__.createModuleHotContext("foo.mjs");
+__rolldown_runtime__.__toCommonJS(foo_exports);
+__rolldown_runtime__.registerModule("foo.mjs", { exports: foo_exports });
+const foo$1 = "foo";
+
+//#endregion
+//#region foo/index.mjs
+var foo_exports$1 = {};
+__export(foo_exports$1, { foo: () => foo });
+const foo_hot = __rolldown_runtime__.createModuleHotContext("foo/index.mjs");
+__rolldown_runtime__.__toCommonJS(foo_exports$1);
+__rolldown_runtime__.registerModule("foo/index.mjs", { exports: foo_exports$1 });
+const foo = "foo";
+
+//#endregion
+//#region main.js
+var main_exports = {};
+const main_hot = __rolldown_runtime__.createModuleHotContext("main.js");
+__rolldown_runtime__.__toCommonJS(main_exports);
+__rolldown_runtime__.registerModule("main.js", { exports: main_exports });
+console.log(foo$1, foo);
+main_hot.accept();
+
+//#endregion
+```
+# HMR Step 0
+
+## Code
+
+```js
+var init_main_0 = __rolldown_runtime__.createEsmInitializer(function() {
+	try {
+		var ns_main = {};
+		__rolldown_runtime__.__export(ns_main, {});
+		__rolldown_runtime__.__toCommonJS(ns_main);
+		__rolldown_runtime__.registerModule("main.js", { exports: ns_main });
+		const hot_main = __rolldown_runtime__.createModuleHotContext("main.js");
+		var import_foo_0 = __rolldown_runtime__.loadExports("foo.mjs");
+		var import_foo_1 = __rolldown_runtime__.loadExports("foo/index.mjs");
+		console.log(import_foo_0.foo, import_foo_1.foo);
+		hot_main.accept();
+	} finally {}
+});
+
+init_main_0()
+__rolldown_runtime__.applyUpdates(['main.js']);
+```
+## Meta
+
+- full_reload: false
+- first_invalidated_by: None
+- is_self_accepting: false
+- full_reload_reason: None
+### Hmr Boundaries
+
+- boundary: main.js, accepted_via: main.js

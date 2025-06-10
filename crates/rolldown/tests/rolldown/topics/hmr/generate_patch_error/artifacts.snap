@@ -1,0 +1,301 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## main.js
+
+```js
+
+//#region hmr.js
+var hmr_exports = {};
+__export(hmr_exports, { foo: () => foo });
+const hmr_hot = __rolldown_runtime__.createModuleHotContext("hmr.js");
+__rolldown_runtime__.__toCommonJS(hmr_exports);
+__rolldown_runtime__.registerModule("hmr.js", { exports: hmr_exports });
+const foo = "hello";
+text$1(".hmr", foo);
+function text$1(el, text$2) {
+	document.querySelector(el).textContent = text$2;
+}
+hmr_hot.accept((mod) => {
+	if (mod) text$1(".hmr", mod.foo);
+});
+
+//#endregion
+//#region main.js
+var main_exports = {};
+const main_hot = __rolldown_runtime__.createModuleHotContext("main.js");
+__rolldown_runtime__.__toCommonJS(main_exports);
+__rolldown_runtime__.registerModule("main.js", { exports: main_exports });
+text(".app", "hello");
+function text(el, text$2) {
+	document.querySelector(el).textContent = text$2;
+}
+
+//#endregion
+```
+# HMR Step 0
+## Errors
+
+### PARSE_ERROR
+
+```text
+[PARSE_ERROR] Error: Unterminated string
+   ╭─[ hmr.js:1:20 ]
+   │
+ 1 │ export const foo = 'hello
+   │                    ───┬───  
+   │                       ╰───── 
+───╯
+
+```
+
+## Meta
+
+- full_reload: false
+- first_invalidated_by: None
+- is_self_accepting: false
+- full_reload_reason: None
+### Hmr Boundaries
+# HMR Step 1
+
+## Code
+
+```js
+var init_hmr_0 = __rolldown_runtime__.createEsmInitializer(function() {
+	try {
+		var ns_hmr = {};
+		__rolldown_runtime__.__export(ns_hmr, {
+			__toBinaryNode: () => __toBinaryNode,
+			__toBinary: () => __toBinary,
+			__toDynamicImportESM: () => __toDynamicImportESM,
+			__require: () => __require
+		});
+		__rolldown_runtime__.__toCommonJS(ns_hmr);
+		__rolldown_runtime__.registerModule("hmr.js", { exports: ns_hmr });
+		const hot_hmr = __rolldown_runtime__.createModuleHotContext("hmr.js");
+		var __create = Object.create;
+		var __defProp = Object.defineProperty;
+		var __name = (target, value) => __defProp(target, "name", {
+			value,
+			configurable: true
+		});
+		var __getOwnPropDesc = Object.getOwnPropertyDescriptor;
+		var __getOwnPropNames = Object.getOwnPropertyNames;
+		var __getProtoOf = Object.getPrototypeOf;
+		var __hasOwnProp = Object.prototype.hasOwnProperty;
+		var __esm = (fn, res) => function() {
+			return fn && (res = (0, fn[__getOwnPropNames(fn)[0]])(fn = 0)), res;
+		};
+		var __esmMin = (fn, res) => () => (fn && (res = fn(fn = 0)), res);
+		var __commonJS = (cb, mod) => function() {
+			return mod || (0, cb[__getOwnPropNames(cb)[0]])((mod = { exports: {} }).exports, mod), mod.exports;
+		};
+		var __commonJSMin = (cb, mod) => () => (mod || cb((mod = { exports: {} }).exports, mod), mod.exports);
+		var __export = (target, all) => {
+			for (var name in all) __defProp(target, name, {
+				get: all[name],
+				enumerable: true
+			});
+		};
+		var __copyProps = (to, from, except, desc) => {
+			if (from && typeof from === "object" || typeof from === "function") for (var keys = __getOwnPropNames(from), i = 0, n = keys.length, key; i < n; i++) {
+				key = keys[i];
+				if (!__hasOwnProp.call(to, key) && key !== except) __defProp(to, key, {
+					get: ((k) => from[k]).bind(null, key),
+					enumerable: !(desc = __getOwnPropDesc(from, key)) || desc.enumerable
+				});
+			}
+			return to;
+		};
+		var __reExport = (target, mod, secondTarget) => (__copyProps(target, mod, "default"), secondTarget && __copyProps(secondTarget, mod, "default"));
+		var __toESM = (mod, isNodeMode, target) => (target = mod != null ? __create(__getProtoOf(mod)) : {}, __copyProps(isNodeMode || !mod || !mod.__esModule ? __defProp(target, "default", {
+			value: mod,
+			enumerable: true
+		}) : target, mod));
+		var __toCommonJS = (mod) => __copyProps(__defProp({}, "__esModule", { value: true }), mod);
+		var __toBinaryNode = (base64) => new Uint8Array(Buffer.from(base64, "base64"));
+		var __toBinary = /* @__PURE__ */ (() => {
+			var table = new Uint8Array(128);
+			for (var i = 0; i < 64; i++) table[i < 26 ? i + 65 : i < 52 ? i + 71 : i < 62 ? i - 4 : i * 4 - 205] = i;
+			return (base64) => {
+				var n = base64.length, bytes = new Uint8Array((n - (base64[n - 1] == "=") - (base64[n - 2] == "=")) * 3 / 4 | 0);
+				for (var i = 0, j = 0; i < n;) {
+					var c0 = table[base64.charCodeAt(i++)], c1 = table[base64.charCodeAt(i++)];
+					var c2 = table[base64.charCodeAt(i++)], c3 = table[base64.charCodeAt(i++)];
+					bytes[j++] = c0 << 2 | c1 >> 4;
+					bytes[j++] = c1 << 4 | c2 >> 2;
+					bytes[j++] = c2 << 6 | c3;
+				}
+				return bytes;
+			};
+		})();
+		var __toDynamicImportESM = (isNodeMode) => (mod) => __toESM(mod.default, isNodeMode);
+		var __require = /* @__PURE__ */ ((x) => typeof require !== "undefined" ? require : typeof Proxy !== "undefined" ? new Proxy(x, { get: (a, b) => (typeof require !== "undefined" ? require : a)[b] }) : x)(function(x) {
+			if (typeof require !== "undefined") return require.apply(this, arguments);
+			throw Error("Calling `require` for \"" + x + "\" in an environment that doesn't expose the `require` function.");
+		});
+		class ModuleHotContext {
+			/**
+			* @type {{ deps: [string], fn: (moduleExports: Record<string, any>[]) => void }[]}
+			*/
+			acceptCallbacks = [];
+			/**
+			* 
+			* @param {string} moduleId 
+			* @param {DevRuntime} devRuntime 
+			*/
+			constructor(moduleId, devRuntime) {
+				this.moduleId = moduleId;
+				this.devRuntime = devRuntime;
+			}
+			accept(...args) {
+				if (args.length === 1) {
+					const [cb] = args;
+					const acceptingPath = this.moduleId;
+					this.acceptCallbacks.push({
+						deps: [acceptingPath],
+						fn: cb
+					});
+				} else {
+					throw new Error("Invalid arguments for `import.meta.hot.accept`");
+				}
+			}
+		}
+		class DevRuntime {
+			/**
+			* @type {Map<string, Set<(...args: any[]) => void>>}
+			*/
+			acceptPathToCallers = new Map();
+			modules = {};
+			/**
+			* @type {Map<string, ModuleHotContext>}
+			*/
+			moduleHotContexts = new Map();
+			/**
+			* @type {Map<string, ModuleHotContext>}
+			*/
+			moduleHotContextsToBeUpdated = new Map();
+			/**
+			* 
+			* @returns {DevRuntime}
+			*/
+			static getInstance() {
+				/**
+				* @type {DevRuntime | undefined}
+				*/
+				let instance = globalThis.__rolldown_runtime__;
+				if (!instance) {
+					instance = new DevRuntime();
+					globalThis.__rolldown_runtime__ = instance;
+				}
+				return instance;
+			}
+			createModuleHotContext(moduleId) {
+				const hotContext = new ModuleHotContext(moduleId, this);
+				if (this.moduleHotContexts.has(moduleId)) {
+					this.moduleHotContextsToBeUpdated.set(moduleId, hotContext);
+				} else {
+					this.moduleHotContexts.set(moduleId, hotContext);
+				}
+				return hotContext;
+			}
+			/**
+			* 
+			* @param {string[]} boundaries 
+			*/
+			applyUpdates(boundaries) {
+				for (let moduleId of boundaries) {
+					const hotContext = this.moduleHotContexts.get(moduleId);
+					if (hotContext) {
+						const acceptCallbacks = hotContext.acceptCallbacks;
+						acceptCallbacks.filter((cb) => {
+							cb.fn(this.modules[moduleId].exports);
+						});
+					}
+				}
+				this.moduleHotContextsToBeUpdated.forEach((hotContext, moduleId) => {
+					this.moduleHotContexts[moduleId] = hotContext;
+				});
+				this.moduleHotContextsToBeUpdated.clear();
+			}
+			registerModule(id, module) {
+				console.debug("Registering module", id, module);
+				this.modules[id] = module;
+			}
+			loadExports(id) {
+				const module = this.modules[id];
+				if (module) {
+					return module.exports;
+				} else {
+					console.warn(`Module ${id} not found`);
+					return {};
+				}
+			}
+			createEsmInitializer = (fn, res) => () => (fn && (res = fn(fn = 0)), res);
+			createCjsInitializer = (cb, mod) => () => (mod || cb((mod = { exports: {} }).exports, mod), mod.exports);
+			__toESM = __toESM;
+			__toCommonJS = __toCommonJS;
+			__export = __export;
+		}
+		globalThis.__rolldown_runtime__ = DevRuntime.getInstance();
+		function loadScript(url) {
+			var script = document.createElement("script");
+			script.src = url;
+			script.type = "module";
+			script.onerror = function() {
+				console.error("Failed to load script: " + url);
+			};
+			document.body.appendChild(script);
+		}
+		console.debug("HMR runtime loaded", "localhost:3000");
+		const addr = new URL("ws://localhost:3000");
+		addr.searchParams.set("from", "hmr-runtime");
+		const socket = new WebSocket(addr);
+		socket.onmessage = function(event) {
+			const data = JSON.parse(event.data);
+			console.debug("Received message:", data);
+			if (data.type === "update") {
+				if (typeof process === "object") {
+					import(data.path);
+					console.debug(`[hmr]: Importing HMR patch: ${data.path}`);
+				} else {
+					console.debug(`[hmr]: Loading HMR patch: ${data.path}`);
+					loadScript(data.url);
+				}
+			}
+		};
+	} finally {}
+});
+
+var init_hmr_1 = __rolldown_runtime__.createEsmInitializer(function() {
+	try {
+		var ns_hmr = {};
+		__rolldown_runtime__.__export(ns_hmr, { foo: () => foo });
+		__rolldown_runtime__.__toCommonJS(ns_hmr);
+		__rolldown_runtime__.registerModule("hmr.js", { exports: ns_hmr });
+		const hot_hmr = __rolldown_runtime__.createModuleHotContext("hmr.js");
+		const foo = "hello";
+		text(".hmr", foo);
+		function text(el, text) {
+			document.querySelector(el).textContent = text;
+		}
+		hot_hmr.accept((mod) => {
+			if (mod) text(".hmr", mod.foo);
+		});
+	} finally {}
+});
+
+init_hmr_0()
+__rolldown_runtime__.applyUpdates(['hmr.js']);
+```
+## Meta
+
+- full_reload: false
+- first_invalidated_by: None
+- is_self_accepting: false
+- full_reload_reason: None
+### Hmr Boundaries
+
+- boundary: hmr.js, accepted_via: hmr.js

@@ -1621,6 +1621,10 @@ export interface BindingModuleFederationPluginOption {
   getPublicPath?: string
 }
 
+export interface BindingModulePreloadPolyfillPluginConfig {
+  isServer?: boolean
+}
+
 export interface BindingModules {
   values: Array<BindingRenderedModule>
   keys: Array<string>

@@ -5353,6 +5353,10 @@ expression: output
 - main-!~{000}~.js => main-BPZcaBgY.js
 - main-BPZcaBgY.js.map
 
+# tests/rolldown/topics/hmr/deconflict_import_bindings
+
+- main-!~{000}~.js => main-CsVwbL6p.js
+
 # tests/rolldown/topics/hmr/mutiply-entires
 
 - entry-!~{000}~.js => entry-C-wenldj.js

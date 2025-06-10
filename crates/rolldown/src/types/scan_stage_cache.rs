@@ -130,6 +130,7 @@ impl ScanStageCache {
       // TODO: cache warning
       warnings: vec![],
       dynamic_import_exports_usage_map: cache.dynamic_import_exports_usage_map.clone(),
+      overrode_preserve_entry_signature_map: cache.overrode_preserve_entry_signature_map.clone(),
     }
   }
 }

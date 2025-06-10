@@ -1,7 +1,7 @@
 use self::render_chunk_exports::get_chunk_export_names;
 use rolldown_common::{
-  Chunk, ChunkKind, ChunkMeta, ModuleId, RenderedModule, RollupPreRenderedChunk,
-  RollupRenderedChunk,
+  Chunk, ChunkKind, ChunkMeta, ModuleId, ModuleIdx, PreserveEntrySignatures, RenderedModule,
+  RollupPreRenderedChunk, RollupRenderedChunk, SharedNormalizedBundlerOptions,
 };
 use rustc_hash::FxHashMap;
 
@@ -81,4 +81,15 @@ pub fn generate_rendered_chunk(
       })
       .collect(),
   }
+}
+
+pub fn normalize_preserve_entry_signature(
+  overrode_preserve_entry_signature_map: &FxHashMap<ModuleIdx, PreserveEntrySignatures>,
+  options: &SharedNormalizedBundlerOptions,
+  module_idx: ModuleIdx,
+) -> PreserveEntrySignatures {
+  overrode_preserve_entry_signature_map
+    .get(&module_idx)
+    .copied()
+    .unwrap_or(options.preserve_entry_signatures)
 }

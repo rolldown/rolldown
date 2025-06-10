@@ -3,8 +3,9 @@ use std::sync::Arc;
 use arcstr::ArcStr;
 use futures::future::join_all;
 use rolldown_common::{
-  EntryPoint, HybridIndexVec, Module, ModuleIdx, ModuleTable, ResolvedId, RuntimeModuleBrief,
-  ScanMode, SymbolRef, SymbolRefDb, dynamic_import_usage::DynamicImportExportsUsage,
+  EntryPoint, HybridIndexVec, Module, ModuleIdx, ModuleTable, PreserveEntrySignatures, ResolvedId,
+  RuntimeModuleBrief, ScanMode, SymbolRef, SymbolRefDb,
+  dynamic_import_usage::DynamicImportExportsUsage,
 };
 use rolldown_error::{BuildDiagnostic, BuildResult};
 use rolldown_fs::OsFileSystem;
@@ -37,6 +38,8 @@ pub struct NormalizedScanStageOutput {
   pub warnings: Vec<BuildDiagnostic>,
   pub safely_merge_cjs_ns_map: FxHashMap<ModuleIdx, Vec<SymbolRef>>,
   pub dynamic_import_exports_usage_map: FxHashMap<ModuleIdx, DynamicImportExportsUsage>,
+  // TODO: merge the preserve_entry_signatures_map in incremental build
+  pub overrode_preserve_entry_signature_map: FxHashMap<ModuleIdx, PreserveEntrySignatures>,
 }
 
 impl NormalizedScanStageOutput {
@@ -56,6 +59,7 @@ impl NormalizedScanStageOutput {
       warnings: vec![],
       dynamic_import_exports_usage_map: self.dynamic_import_exports_usage_map.clone(),
       safely_merge_cjs_ns_map: self.safely_merge_cjs_ns_map.clone(),
+      overrode_preserve_entry_signature_map: self.overrode_preserve_entry_signature_map.clone(),
     }
   }
 }
@@ -74,6 +78,7 @@ impl From<ScanStageOutput> for NormalizedScanStageOutput {
       warnings: value.warnings,
       dynamic_import_exports_usage_map: value.dynamic_import_exports_usage_map,
       safely_merge_cjs_ns_map: value.safely_merge_cjs_ns_map,
+      overrode_preserve_entry_signature_map: value.overrode_preserve_entry_signature_map,
     }
   }
 }
@@ -88,6 +93,7 @@ pub struct ScanStageOutput {
   pub warnings: Vec<BuildDiagnostic>,
   pub dynamic_import_exports_usage_map: FxHashMap<ModuleIdx, DynamicImportExportsUsage>,
   pub safely_merge_cjs_ns_map: FxHashMap<ModuleIdx, Vec<SymbolRef>>,
+  pub overrode_preserve_entry_signature_map: FxHashMap<ModuleIdx, PreserveEntrySignatures>,
   pub cache: ScanStageCache,
 }
 
@@ -151,6 +157,7 @@ impl ScanStage {
       new_added_modules_from_partial_scan: _,
       cache,
       safely_merge_cjs_ns_map,
+      overrode_preserve_entry_signature_map,
     } = module_loader.fetch_modules(user_entries, changed_resolved_ids).await?;
 
     self.plugin_driver.file_emitter.set_context_load_modules_tx(None).await;
@@ -167,6 +174,7 @@ impl ScanStage {
       module_table,
       cache,
       safely_merge_cjs_ns_map,
+      overrode_preserve_entry_signature_map,
     })
   }
 

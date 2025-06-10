@@ -17,3 +17,4 @@ pub mod binding_watcher_event;
 pub mod defer_sync_scan_data;
 pub mod js_callback;
 pub mod js_regex;
+pub mod preserve_entry_signatures;

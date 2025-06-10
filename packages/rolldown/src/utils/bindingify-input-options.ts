@@ -106,7 +106,9 @@ export function bindingifyInputOptions(
     markModuleLoaded: pluginContextData.markModuleLoaded.bind(
       pluginContextData,
     ),
-    preserveEntrySignatures: inputOptions.preserveEntrySignatures,
+    preserveEntrySignatures: bindingifyPreserveEntrySignatures(
+      inputOptions.preserveEntrySignatures,
+    ),
   };
 }
 
@@ -345,5 +347,17 @@ function bindingifyMakeAbsoluteExternalsRelative(
   }
   if (typeof makeAbsoluteExternalsRelative === 'boolean') {
     return { type: 'Bool', field0: makeAbsoluteExternalsRelative };
+  }
+}
+
+export function bindingifyPreserveEntrySignatures(
+  preserveEntrySignatures: InputOptions['preserveEntrySignatures'],
+): BindingInputOptions['preserveEntrySignatures'] {
+  if (preserveEntrySignatures == undefined) {
+    return undefined;
+  } else if (typeof preserveEntrySignatures === 'string') {
+    return { type: 'String', field0: preserveEntrySignatures };
+  } else {
+    return { type: 'Bool', field0: preserveEntrySignatures };
   }
 }

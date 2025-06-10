@@ -5,7 +5,9 @@ use rolldown_common::{
 };
 use rustc_hash::FxHashMap;
 
-use crate::types::linking_metadata::LinkingMetadata;
+use crate::{
+  types::linking_metadata::LinkingMetadata, utils::chunk::normalize_preserve_entry_signature,
+};
 
 use super::LinkStage;
 
@@ -14,6 +16,7 @@ fn init_entry_point_stmt_info(
   entry: &EntryPoint,
   dynamic_import_exports_usage_map: &FxHashMap<ModuleIdx, DynamicImportExportsUsage>,
   options: &SharedNormalizedBundlerOptions,
+  overrode_preserve_entry_signature_map: &FxHashMap<ModuleIdx, PreserveEntrySignatures>,
   is_dynamic_imported: bool,
 ) {
   let mut referenced_symbols = vec![];
@@ -25,9 +28,10 @@ fn init_entry_point_stmt_info(
     referenced_symbols.push(meta.wrapper_ref.unwrap());
   }
 
-  if !matches!(options.preserve_entry_signatures, PreserveEntrySignatures::False)
-    || is_dynamic_imported
-  {
+  let normalized_entry_signature =
+    normalize_preserve_entry_signature(overrode_preserve_entry_signature_map, options, entry.id);
+
+  if !matches!(normalized_entry_signature, PreserveEntrySignatures::False) || is_dynamic_imported {
     referenced_symbols.extend(
       meta
         .referenced_canonical_exports_symbols(
@@ -55,6 +59,7 @@ impl LinkStage<'_> {
             entry,
             &self.dynamic_import_exports_usage_map,
             self.options,
+            &self.overrode_preserve_entry_signature_map,
             !ecma_module.dynamic_importers.is_empty(),
           );
         }

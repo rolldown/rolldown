@@ -19,7 +19,7 @@
       ]
     },
     "experimental": {
-      "attachDebugInfo": true
+      "attachDebugInfo": "full"
     }
   }
 }

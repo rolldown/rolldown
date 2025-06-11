@@ -13,7 +13,9 @@ pub fn render_ecma_module(
     None
   } else {
     let mut sources: Vec<Box<dyn rolldown_sourcemap::Source + Send + Sync>> = vec![];
-    sources.push(Box::new(concat_string!("//#region ", module.debug_id)));
+    if options.experimental.is_attach_debug_info_enabled() {
+      sources.push(Box::new(concat_string!("//#region ", module.debug_id)));
+    }
 
     let enable_sourcemap = options.sourcemap.is_some() && !module.is_virtual();
 
@@ -44,7 +46,9 @@ pub fn render_ecma_module(
       sources.push(Box::new(render_output.code));
     }
 
-    sources.push(Box::new("//#endregion"));
+    if options.experimental.is_attach_debug_info_enabled() {
+      sources.push(Box::new("//#endregion"));
+    }
 
     Some(Arc::from(sources.into_boxed_slice()))
   }

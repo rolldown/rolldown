@@ -68,6 +68,8 @@ export type HmrOptions = boolean | {
   implement?: string;
 };
 
+export type AttachDebugOptions = 'none' | 'simple' | 'full';
+
 export interface RollupJsxOptions {
   mode?: 'classic' | 'automatic' | 'preserve';
   factory?: string;
@@ -136,7 +138,7 @@ export interface InputOptions {
     viteMode?: boolean;
     resolveNewUrlToAsset?: boolean;
     hmr?: HmrOptions;
-    attachDebugInfo?: boolean;
+    attachDebugInfo?: AttachDebugOptions;
   };
   /**
    * Replace global variables or [property accessors](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Operators/Property_accessors) with the provided values.

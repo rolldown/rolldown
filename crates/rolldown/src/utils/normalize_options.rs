@@ -2,7 +2,7 @@ use std::{borrow::Cow, path::Path};
 
 use oxc::transformer_plugins::InjectGlobalVariablesConfig;
 use rolldown_common::{
-  GlobalsOutputOption, InjectImport, LegalComments, MinifyOptions, ModuleType,
+  AttachDebugInfo, GlobalsOutputOption, InjectImport, LegalComments, MinifyOptions, ModuleType,
   NormalizedBundlerOptions, OutputFormat, Platform, PreserveEntrySignatures,
 };
 use rolldown_error::{BuildDiagnostic, InvalidOptionType};
@@ -158,6 +158,10 @@ pub fn normalize_options(mut raw_options: crate::BundlerOptions) -> NormalizeOpt
     .is_some_and(|inner| inner.groups.as_ref().is_some_and(|inner| !inner.is_empty()));
   if experimental.strict_execution_order.is_none() && is_advanced_chunks_enabled {
     experimental.strict_execution_order = Some(true);
+  }
+
+  if experimental.attach_debug_info.is_none() {
+    experimental.attach_debug_info = Some(AttachDebugInfo::Simple);
   }
 
   if let Some(advanced_chunks) = raw_options.advanced_chunks.as_mut() {

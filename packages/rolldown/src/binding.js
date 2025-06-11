@@ -415,6 +415,7 @@ module.exports.BindingWatcherChangeData = nativeBinding.BindingWatcherChangeData
 module.exports.BindingWatcherEvent = nativeBinding.BindingWatcherEvent
 module.exports.Bundler = nativeBinding.Bundler
 module.exports.ParallelJsPluginRegistry = nativeBinding.ParallelJsPluginRegistry
+module.exports.BindingAttachDebugInfo = nativeBinding.BindingAttachDebugInfo
 module.exports.BindingBuiltinPluginName = nativeBinding.BindingBuiltinPluginName
 module.exports.BindingHookSideEffects = nativeBinding.BindingHookSideEffects
 module.exports.BindingJsx = nativeBinding.BindingJsx

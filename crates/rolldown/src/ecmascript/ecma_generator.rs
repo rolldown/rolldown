@@ -197,8 +197,7 @@ impl Generator for EcmaGenerator {
 
     ctx.warnings.extend(warnings);
 
-    if ctx.options.experimental.is_attach_debug_info_enabled()
-      && !ctx.chunk.create_reasons.is_empty()
+    if ctx.options.experimental.is_attach_debug_info_full() && !ctx.chunk.create_reasons.is_empty()
     {
       source_joiner.prepend_source(format!("//! {}", ctx.chunk.create_reasons.join("\n//! ")));
     }

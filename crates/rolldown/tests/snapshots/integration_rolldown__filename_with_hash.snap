@@ -4008,7 +4008,7 @@ expression: output
 
 - main-!~{000}~.js => main-BnlFRw1j.js
 
-# tests/rolldown/function/experimental/attach_debug_info
+# tests/rolldown/function/experimental/attach_debug_info/full
 
 - A-!~{000}~.js => A-BuGdc1K4.js
 - B-!~{001}~.js => B-Dsf2JIK7.js
@@ -4016,6 +4016,10 @@ expression: output
 - dyn-entry-!~{008}~.js => dyn-entry-C2vod8Lj.js
 - rolldown-runtime-!~{002}~.js => rolldown-runtime-F0QY5PnL.js
 - shared-!~{004}~.js => shared-D6U9QV-r.js
+
+# tests/rolldown/function/experimental/attach_debug_info/none
+
+- main-!~{000}~.js => main-CKealTHV.js
 
 # tests/rolldown/function/experimental/disable_live_bindings
 

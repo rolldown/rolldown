@@ -6,7 +6,7 @@ pub struct BindingExperimentalOptions {
   pub vite_mode: Option<bool>,
   pub resolve_new_url_to_asset: Option<bool>,
   pub hmr: Option<BindingExperimentalHmrOptions>,
-  pub attach_debug_info: Option<bool>,
+  pub attach_debug_info: Option<BindingAttachDebugInfo>,
 }
 
 impl From<BindingExperimentalOptions> for rolldown_common::ExperimentalOptions {
@@ -19,7 +19,7 @@ impl From<BindingExperimentalOptions> for rolldown_common::ExperimentalOptions {
       // TODO: binding
       incremental_build: None,
       hmr: value.hmr.map(Into::into),
-      attach_debug_info: value.attach_debug_info,
+      attach_debug_info: value.attach_debug_info.map(Into::into),
     }
   }
 }
@@ -35,5 +35,23 @@ pub struct BindingExperimentalHmrOptions {
 impl From<BindingExperimentalHmrOptions> for rolldown_common::HmrOptions {
   fn from(value: BindingExperimentalHmrOptions) -> Self {
     Self { host: value.host, port: value.port, implement: value.implement }
+  }
+}
+
+#[napi_derive::napi]
+#[derive(Debug)]
+pub enum BindingAttachDebugInfo {
+  None,
+  Simple,
+  Full,
+}
+
+impl From<BindingAttachDebugInfo> for rolldown_common::AttachDebugInfo {
+  fn from(value: BindingAttachDebugInfo) -> Self {
+    match value {
+      BindingAttachDebugInfo::None => rolldown_common::AttachDebugInfo::None,
+      BindingAttachDebugInfo::Simple => rolldown_common::AttachDebugInfo::Simple,
+      BindingAttachDebugInfo::Full => rolldown_common::AttachDebugInfo::Full,
+    }
   }
 }

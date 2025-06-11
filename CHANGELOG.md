@@ -1,4 +1,30 @@
 
+## [1.0.0-beta.15] - 2025-06-11
+
+### 🚀 Features
+
+- feat: support preserveSignature in `this.emitFile` by @IWANABETHATGUY in [#4895](https://github.com/rolldown/rolldown/pull/4895)
+- rolldown_plugin_module_preload_polyfill: feat(rolldown_plugin_module_preload_polyfill): expose plugin config by @shulaoda in [#4896](https://github.com/rolldown/rolldown/pull/4896)
+
+### 🐛 Bug Fixes
+
+- fix: fail to bundle when provide entryPoint dynamiclly by @IWANABETHATGUY in [#4902](https://github.com/rolldown/rolldown/pull/4902)
+
+### 🧪 Testing
+
+- test: include error in hmr test snapshots by @sapphi-red in [#4899](https://github.com/rolldown/rolldown/pull/4899)
+
+### ⚙️ Miscellaneous Tasks
+
+- improve prepare release commit message
+
+### ❤️ New Contributors
+
+* @IWANABETHATGUY made their first contribution in [#4902](https://github.com/rolldown/rolldown/pull/4902)
+* @sapphi-red made their first contribution in [#4899](https://github.com/rolldown/rolldown/pull/4899)
+* @shulaoda made their first contribution in [#4896](https://github.com/rolldown/rolldown/pull/4896)
+
+
 ## [1.0.0-beta.14] - 2025-06-10
 
 ### 💥 BREAKING CHANGES

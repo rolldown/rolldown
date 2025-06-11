@@ -659,6 +659,10 @@ impl ModuleLoader {
     extra_entry_points.sort_unstable_by_key(|entry| modules.get(entry.id).stable_id());
     entry_points.extend(extra_entry_points);
 
+    if entry_points.is_empty() && self.is_full_scan {
+      Err(anyhow::anyhow!("You must supply options.input to rolldown"))?;
+    }
+
     self.cache.importers = self.intermediate_normal_modules.importers;
 
     Ok(ModuleLoaderOutput {

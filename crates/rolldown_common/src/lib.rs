@@ -20,6 +20,7 @@ pub mod bundler_options {
     BundlerOptions,
     types::{
       advanced_chunks_options::{AdvancedChunksOptions, MatchGroup, MatchGroupTest},
+      attach_debug_info::AttachDebugInfo,
       debug_options::DebugOptions,
       defer_sync_scan_data_option::DeferSyncScanDataOption,
       es_module_flag::EsModuleFlag,

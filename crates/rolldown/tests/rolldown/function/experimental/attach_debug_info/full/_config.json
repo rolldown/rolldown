@@ -1,0 +1,25 @@
+{
+  "config": {
+    "input": [
+      {
+      "name": "A",
+      "import": "./entry-a.js"
+      },
+      {
+        "name": "B",
+        "import": "./entry-b.js"
+      }
+    ],
+    "advancedChunks": {
+      "groups": [
+        {
+          "name": "Splitted",
+          "test": "share-splitted.js"
+        }
+      ]
+    },
+    "experimental": {
+      "attachDebugInfo": "full"
+    }
+  }
+}

@@ -791,9 +791,13 @@
           ]
         },
         "attachDebugInfo": {
-          "type": [
-            "boolean",
-            "null"
+          "anyOf": [
+            {
+              "$ref": "#/$defs/AttachDebugInfo"
+            },
+            {
+              "type": "null"
+            }
           ]
         }
       },
@@ -828,6 +832,14 @@
         }
       },
       "additionalProperties": false
+    },
+    "AttachDebugInfo": {
+      "type": "string",
+      "enum": [
+        "none",
+        "simple",
+        "full"
+      ]
     },
     "RawMinifyOptions": {
       "anyOf": [

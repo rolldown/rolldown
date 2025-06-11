@@ -1091,6 +1091,7 @@ export declare class BindingCallableBuiltinPlugin {
   constructor(plugin: BindingBuiltinPlugin)
   resolveId(id: string, importer?: string | undefined | null, options?: BindingHookJsResolveIdOptions | undefined | null): Promise<BindingHookJsResolveIdOutput | null>
   load(id: string): Promise<BindingHookJsLoadOutput | null>
+  transform(code: string, id: string, options: BindingTransformHookExtraArgs): Promise<BindingHookTransformOutput | null>
   watchChange(path: string, event: BindingJsWatchChangeEvent): Promise<void>
 }
 
@@ -1288,6 +1289,12 @@ export interface BindingAssetSource {
   inner: string | Uint8Array
 }
 
+export declare enum BindingAttachDebugInfo {
+  None = 0,
+  Simple = 1,
+  Full = 2
+}
+
 export interface BindingBuildImportAnalysisPluginConfig {
   preloadCode: string
   insertPreload: boolean
@@ -1385,7 +1392,7 @@ export interface BindingExperimentalOptions {
   viteMode?: boolean
   resolveNewUrlToAsset?: boolean
   hmr?: BindingExperimentalHmrOptions
-  attachDebugInfo?: boolean
+  attachDebugInfo?: BindingAttachDebugInfo
 }
 
 export interface BindingFilterToken {

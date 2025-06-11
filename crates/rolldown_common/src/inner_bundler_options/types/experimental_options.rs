@@ -5,6 +5,7 @@ use serde::Deserialize;
 
 use crate::ROLLDOWN_IGNORE;
 
+use super::attach_debug_info::AttachDebugInfo;
 use super::hmr_options::HmrOptions;
 
 #[derive(Debug, Default, Clone)]
@@ -20,7 +21,7 @@ pub struct ExperimentalOptions {
   pub resolve_new_url_to_asset: Option<bool>,
   pub incremental_build: Option<bool>,
   pub hmr: Option<HmrOptions>,
-  pub attach_debug_info: Option<bool>,
+  pub attach_debug_info: Option<AttachDebugInfo>,
 }
 
 impl ExperimentalOptions {
@@ -46,7 +47,8 @@ impl ExperimentalOptions {
     self.incremental_build.unwrap_or(false)
   }
 
-  pub fn is_attach_debug_info_enabled(&self) -> bool {
-    self.attach_debug_info.unwrap_or(false)
+  #[inline]
+  pub fn get_attach_debug_info(&self) -> AttachDebugInfo {
+    self.attach_debug_info.unwrap_or(AttachDebugInfo::Simple)
   }
 }

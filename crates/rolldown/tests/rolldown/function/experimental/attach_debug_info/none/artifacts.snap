@@ -1,0 +1,81 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## A.js
+
+```js
+import { __esm } from "./rolldown-runtime.js";
+import { init_shared } from "./shared.js";
+import { init_share_splitted } from "./Splitted.js";
+
+var init_entry_a = __esm({ "entry-a.js"() {
+	init_shared();
+	init_share_splitted();
+	console.log("entry-a");
+	import("./dyn-entry.js").then(console.log);
+} });
+
+init_entry_a();
+```
+## B.js
+
+```js
+import { __esm } from "./rolldown-runtime.js";
+import { init_shared } from "./shared.js";
+import { init_share_splitted } from "./Splitted.js";
+
+var init_entry_b = __esm({ "entry-b.js"() {
+	init_shared();
+	init_share_splitted();
+	console.log("entry-b");
+} });
+
+init_entry_b();
+```
+## Splitted.js
+
+```js
+import { __esm } from "./rolldown-runtime.js";
+
+var init_share_splitted = __esm({ "share-splitted.js"() {
+	console.log("share-splitted");
+} });
+
+export { init_share_splitted };
+```
+## dyn-entry.js
+
+```js
+import { __esm } from "./rolldown-runtime.js";
+import { init_shared } from "./shared.js";
+
+var init_dyn_entry = __esm({ "dyn-entry.js"() {
+	init_shared();
+	console.log("dyn-entry");
+} });
+
+init_dyn_entry();
+```
+## rolldown-runtime.js
+
+```js
+var __getOwnPropNames = Object.getOwnPropertyNames;
+var __esm = (fn, res) => function() {
+	return fn && (res = (0, fn[__getOwnPropNames(fn)[0]])(fn = 0)), res;
+};
+
+export { __esm };
+```
+## shared.js
+
+```js
+import { __esm } from "./rolldown-runtime.js";
+
+var init_shared = __esm({ "shared.js"() {
+	console.log("shared");
+} });
+
+export { init_shared };
+```

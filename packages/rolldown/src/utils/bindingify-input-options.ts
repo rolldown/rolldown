@@ -1,4 +1,8 @@
-import { BindingJsx, BindingLogLevel } from '../binding';
+import {
+  BindingAttachDebugInfo,
+  BindingJsx,
+  BindingLogLevel,
+} from '../binding';
 import type {
   BindingDeferSyncScanData,
   BindingExperimentalOptions,
@@ -10,7 +14,11 @@ import { BuiltinPlugin } from '../builtin-plugin/constructors';
 import { bindingifyBuiltInPlugin } from '../builtin-plugin/utils';
 import type { LogHandler } from '../log/log-handler';
 import type { LogLevelOption } from '../log/logging';
-import type { HmrOptions, InputOptions } from '../options/input-options';
+import type {
+  AttachDebugOptions,
+  HmrOptions,
+  InputOptions,
+} from '../options/input-options';
 import type { OutputOptions } from '../options/output-options';
 import type { RolldownPlugin } from '../plugin';
 import { bindingifyPlugin } from '../plugin/bindingify-plugin';
@@ -77,7 +85,9 @@ export function bindingifyInputOptions(
       viteMode: inputOptions.experimental?.viteMode,
       resolveNewUrlToAsset: inputOptions.experimental?.resolveNewUrlToAsset,
       hmr: bindingifyHmr(inputOptions.experimental?.hmr),
-      attachDebugInfo: inputOptions.experimental?.attachDebugInfo,
+      attachDebugInfo: bindingifyAttachDebugInfo(
+        inputOptions.experimental?.attachDebugInfo,
+      ),
     },
     profilerNames: inputOptions?.profilerNames,
     jsx,
@@ -120,6 +130,21 @@ function bindingifyHmr(
       return hmr ? {} : undefined;
     }
     return hmr;
+  }
+}
+
+function bindingifyAttachDebugInfo(
+  attachDebugInfo?: AttachDebugOptions,
+): BindingExperimentalOptions['attachDebugInfo'] {
+  switch (attachDebugInfo) {
+    case undefined:
+      return undefined;
+    case 'full':
+      return BindingAttachDebugInfo.Full;
+    case 'simple':
+      return BindingAttachDebugInfo.Simple;
+    case 'none':
+      return BindingAttachDebugInfo.None;
   }
 }
 

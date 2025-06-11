@@ -101,6 +101,7 @@ export const BindingWatcherChangeData = __napiModule.exports.BindingWatcherChang
 export const BindingWatcherEvent = __napiModule.exports.BindingWatcherEvent
 export const Bundler = __napiModule.exports.Bundler
 export const ParallelJsPluginRegistry = __napiModule.exports.ParallelJsPluginRegistry
+export const BindingAttachDebugInfo = __napiModule.exports.BindingAttachDebugInfo
 export const BindingBuiltinPluginName = __napiModule.exports.BindingBuiltinPluginName
 export const BindingHookSideEffects = __napiModule.exports.BindingHookSideEffects
 export const BindingJsx = __napiModule.exports.BindingJsx

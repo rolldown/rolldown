@@ -660,7 +660,7 @@ impl ModuleLoader {
     entry_points.extend(extra_entry_points);
 
     if entry_points.is_empty() && self.is_full_scan {
-      Err(anyhow::anyhow!("You must supply options.input to rolldown"))?;
+      Err(BuildDiagnostic::invalid_option(rolldown_error::InvalidOptionType::NoEntryPoint))?;
     }
 
     self.cache.importers = self.intermediate_normal_modules.importers;

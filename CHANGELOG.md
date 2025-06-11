@@ -1,4 +1,32 @@
 
+## [1.0.0-beta.15] - 2025-06-11
+
+### 🚀 Features
+
+- feat: make native json plugin callable by @shulaoda in [#4908](https://github.com/rolldown/rolldown/pull/4908)
+- feat: support preserveSignature in `this.emitFile` by @IWANABETHATGUY in [#4895](https://github.com/rolldown/rolldown/pull/4895)
+- rolldown_plugin_module_preload_polyfill: feat(rolldown_plugin_module_preload_polyfill): expose plugin config by @shulaoda in [#4896](https://github.com/rolldown/rolldown/pull/4896)
+
+### 🐛 Bug Fixes
+
+- fix: add missing pathe polyfill by @sxzz in [#4912](https://github.com/rolldown/rolldown/pull/4912)
+- node: fix(node): call options hook for experimental_scan by @sapphi-red in [#4911](https://github.com/rolldown/rolldown/pull/4911)
+- fix: better `NoEntryPoint` error message by @IWANABETHATGUY in [#4903](https://github.com/rolldown/rolldown/pull/4903)
+- fix: fail to bundle when provide entryPoint dynamiclly by @IWANABETHATGUY in [#4902](https://github.com/rolldown/rolldown/pull/4902)
+
+### 🧪 Testing
+
+- pluginutils: test(pluginutils): add query suffix case for `makeIdFiltersToMatchWithQuery` by @sapphi-red in [#4914](https://github.com/rolldown/rolldown/pull/4914)
+- test: copy rollup preserveEntrySignature override-via-plugin test by @IWANABETHATGUY in [#4910](https://github.com/rolldown/rolldown/pull/4910)
+- test: include error in hmr test snapshots by @sapphi-red in [#4899](https://github.com/rolldown/rolldown/pull/4899)
+
+### ⚙️ Miscellaneous Tasks
+
+- chore: update committed dts by @sapphi-red in [#4913](https://github.com/rolldown/rolldown/pull/4913)
+- chore: bump rolldown-ariadne by @IWANABETHATGUY in [#4909](https://github.com/rolldown/rolldown/pull/4909)
+- improve prepare release commit message by @Boshen
+
+
 ## [1.0.0-beta.14] - 2025-06-10
 
 ### 💥 BREAKING CHANGES

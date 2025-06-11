@@ -159,6 +159,7 @@
     "execa": "^9.2.0",
     "glob": "^11.0.0",
     "oxc-parser": "catalog:",
+    "pathe": "^2.0.3",
     "remeda": "^2.10.0",
     "rolldown": "workspace:*",
     "rolldown-plugin-dts": "catalog:",

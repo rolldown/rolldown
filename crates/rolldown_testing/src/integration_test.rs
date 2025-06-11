@@ -206,9 +206,13 @@ impl IntegrationTest {
                 snapshot_outputs.push(snapshot_content);
               }
               Err(errs) => {
-                panic!(
-                  "Expected the hmr patch to be success, but got diagnosable errors: {errs:#?}"
+                let snapshot_content = Self::render_hmr_output_to_string(
+                  step,
+                  &HmrOutput::default(),
+                  errs.into_vec(),
+                  &cwd,
                 );
+                snapshot_outputs.push(snapshot_content);
               }
             }
           }
@@ -504,7 +508,9 @@ impl IntegrationTest {
       String::default()
     };
 
-    let code_section = {
+    let code_section = if hmr_output.code.is_empty() {
+      String::new()
+    } else {
       let mut snapshot = String::new();
       write!(snapshot, "## Code\n\n").unwrap();
       let file_ext = hmr_output.filename.as_path().extension().and_then(OsStr::to_str).map_or(

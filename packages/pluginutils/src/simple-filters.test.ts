@@ -87,6 +87,7 @@ describe('makeIdFiltersToMatchWithQuery', () => {
     const matcher = picomatch(output);
     expectWithAnyQuery(matcher, '/foo/bar.js', true);
     expectWithAnyQuery(matcher, '/foo/bar.ts', false);
+    expect(matcher('/foo/bar.txt?.js')).toBe(true);
   });
 
   test('supports regex patterns without `$`', () => {
@@ -96,6 +97,7 @@ describe('makeIdFiltersToMatchWithQuery', () => {
     const matcher = (path: string) => output.test(path);
     expectWithAnyQuery(matcher, '/foo/bar.js', true);
     expectWithAnyQuery(matcher, '/bar/bar.ts', false);
+    expect(matcher('/foo/bar.txt?.js')).toBe(true);
   });
 
   test('supports regex patterns with `$`', () => {
@@ -105,6 +107,7 @@ describe('makeIdFiltersToMatchWithQuery', () => {
     const matcher = (path: string) => output.test(path);
     expectWithAnyQuery(matcher, '/foo/bar.js', true);
     expectWithAnyQuery(matcher, '/foo/bar.ts', false);
+    expect(matcher('/foo/bar.txt?.js')).toBe(true);
   });
 
   test('supports regex patterns with multiple `$`', () => {
@@ -117,6 +120,7 @@ describe('makeIdFiltersToMatchWithQuery', () => {
     expectWithAnyQuery(matcher, '/foo/bar/dist/foo.ts', false);
     expectWithAnyQuery(matcher, '/foo/bar', true);
     expectWithAnyQuery(matcher, '/foo/bar/', false);
+    expect(matcher('/foo/bar/dist/foo.txt?.js')).toBe(true);
   });
 
   test('supports regex patterns with `\\$`', () => {
@@ -126,5 +130,6 @@ describe('makeIdFiltersToMatchWithQuery', () => {
     const matcher = (path: string) => output.test(path);
     expectWithAnyQuery(matcher, '/foo/$bar.js', true);
     expectWithAnyQuery(matcher, '/foo/$bar.ts', false);
+    expect(matcher('/foo/$bar.txt?.js')).toBe(true);
   });
 });

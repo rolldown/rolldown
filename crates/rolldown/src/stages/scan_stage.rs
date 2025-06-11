@@ -110,10 +110,6 @@ impl ScanStage {
 
   #[tracing::instrument(target = "devtool", level = "debug", skip_all)]
   pub async fn scan(&self, mode: ScanMode, cache: ScanStageCache) -> BuildResult<ScanStageOutput> {
-    if self.options.input.is_empty() {
-      Err(anyhow::anyhow!("You must supply options.input to rolldown"))?;
-    }
-
     let module_loader = ModuleLoader::new(
       self.fs,
       Arc::clone(&self.options),

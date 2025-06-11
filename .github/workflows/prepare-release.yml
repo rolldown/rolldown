@@ -8,7 +8,7 @@ on:
       version:
         type: string
         required: true
-        description: without leading `v`
+        description: version without leading `v`
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref_name }}-${{ github.event.pull_request.number || github.sha }}
@@ -21,6 +21,8 @@ jobs:
     permissions:
       contents: write # for create-pull-request
       pull-requests: write # for create-pull-request
+    env:
+      VERSION: ${{ inputs.version }}
     steps:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
         with:
@@ -34,8 +36,6 @@ jobs:
       - uses: ./.github/actions/setup-node
 
       - run: just bump-packages ${VERSION}
-        env:
-          VERSION: ${{ inputs.version }}
 
       - name: Generate changelog via git cliff
         id: changelog
@@ -47,7 +47,7 @@ jobs:
         with:
           version: v2.9.1 # git cliff version
           config: cliff.toml
-          args: --unreleased --prepend CHANGELOG.md --tag ${{ inputs.version }}
+          args: --unreleased --prepend CHANGELOG.md --tag ${{ env.VERSION }}
 
       - uses: peter-evans/create-pull-request@271a8d0340265f705b14b6d32b9829c1cb33d45e # v7.0.8
         if: ${{ steps.changelog.outputs.content }}
@@ -55,10 +55,13 @@ jobs:
           add-paths: |
             CHANGELOG.md
             packages/**/package.json
-          commit-message: 'release: v${{ inputs.version }}'
-          branch: release-v${{ inputs.version }}
+          commit-message: |
+            release: v${{ env.VERSION }}
+
+            ${{ steps.changelog.outputs.content }}
+          body: ''
+          branch: release-v${{ env.VERSION }}
           branch-suffix: timestamp
           base: main
-          title: 'release: v${{ inputs.version }}'
-          body: ${{ steps.changelog.outputs.content }}
+          title: 'release: v${{ env.VERSION }}'
           assignees: Boshen

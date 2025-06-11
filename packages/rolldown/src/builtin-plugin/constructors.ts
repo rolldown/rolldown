@@ -69,7 +69,8 @@ export function loadFallbackPlugin(): BuiltinPlugin {
 }
 
 export function jsonPlugin(config?: BindingJsonPluginConfig): BuiltinPlugin {
-  return new BuiltinPlugin('builtin:json', config);
+  const builtinPlugin = new BuiltinPlugin('builtin:json', config);
+  return makeBuiltinPluginCallable(builtinPlugin);
 }
 
 export function buildImportAnalysisPlugin(

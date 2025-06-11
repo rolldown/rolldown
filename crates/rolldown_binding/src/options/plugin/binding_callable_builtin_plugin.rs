@@ -1,12 +1,21 @@
 use std::sync::Arc;
 
+use arcstr::ArcStr;
 use napi::Either;
 use napi_derive::napi;
+use rolldown::ModuleType;
 use rolldown_common::{WatcherChangeKind, side_effects};
 use rolldown_plugin::{
-  CustomField, HookLoadArgs, HookLoadOutput, HookResolveIdArgs, HookResolveIdOutput, Pluginable,
+  CustomField, HookLoadArgs, HookLoadOutput, HookResolveIdArgs, HookResolveIdOutput,
+  HookTransformArgs, Pluginable, SharedTransformPluginContext, TransformPluginContext,
 };
 use rolldown_plugin_vite_resolve::ResolveIdOptionsScan;
+use rolldown_utils::unique_arc::UniqueArc;
+
+use crate::options::plugin::types::{
+  binding_hook_transform_output::BindingHookTransformOutput,
+  binding_plugin_transform_extra_args::BindingTransformHookExtraArgs,
+};
 
 use super::{
   binding_builtin_plugin::BindingBuiltinPlugin,
@@ -16,7 +25,7 @@ use super::{
 #[napi]
 pub struct BindingCallableBuiltinPlugin {
   inner: Arc<dyn Pluginable>,
-  context: rolldown_plugin::PluginContext,
+  context: SharedTransformPluginContext,
 }
 
 #[napi]
@@ -25,7 +34,15 @@ impl BindingCallableBuiltinPlugin {
   pub fn new(plugin: BindingBuiltinPlugin) -> napi::Result<Self> {
     let inner: Arc<dyn Pluginable> = plugin.try_into()?;
 
-    Ok(Self { inner, context: rolldown_plugin::PluginContext::new_napi_context() })
+    Ok(Self {
+      inner,
+      context: Arc::new(TransformPluginContext::new(
+        rolldown_plugin::PluginContext::new_napi_context(),
+        UniqueArc::new(vec![]).weak_ref(),
+        ArcStr::default(),
+        ArcStr::default(),
+      )),
+    })
   }
 
   #[napi]
@@ -39,7 +56,7 @@ impl BindingCallableBuiltinPlugin {
       self
         .inner
         .call_resolve_id(
-          &self.context,
+          &self.context.inner,
           &HookResolveIdArgs {
             specifier: &id,
             importer: importer.as_deref(),
@@ -55,7 +72,30 @@ impl BindingCallableBuiltinPlugin {
 
   #[napi]
   pub async fn load(&self, id: String) -> napi::Result<Option<BindingHookJsLoadOutput>> {
-    Ok(self.inner.call_load(&self.context, &HookLoadArgs { id: &id }).await?.map(Into::into))
+    Ok(self.inner.call_load(&self.context.inner, &HookLoadArgs { id: &id }).await?.map(Into::into))
+  }
+
+  #[napi]
+  pub async fn transform(
+    &self,
+    code: String,
+    id: String,
+    options: BindingTransformHookExtraArgs,
+  ) -> napi::Result<Option<BindingHookTransformOutput>> {
+    Ok(
+      self
+        .inner
+        .call_transform(
+          Arc::<TransformPluginContext>::clone(&self.context),
+          &HookTransformArgs {
+            id: &id,
+            code: &code,
+            module_type: &ModuleType::from_known_str(&options.module_type)?,
+          },
+        )
+        .await?
+        .map(Into::into),
+    )
   }
 
   #[napi]
@@ -66,7 +106,7 @@ impl BindingCallableBuiltinPlugin {
   ) -> napi::Result<()> {
     self
       .inner
-      .call_watch_change(&self.context, &path, bindingify_watcher_change_kind(event.event)?)
+      .call_watch_change(&self.context.inner, &path, bindingify_watcher_change_kind(event.event)?)
       .await?;
     Ok(())
   }

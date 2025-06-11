@@ -1091,6 +1091,7 @@ export declare class BindingCallableBuiltinPlugin {
   constructor(plugin: BindingBuiltinPlugin)
   resolveId(id: string, importer?: string | undefined | null, options?: BindingHookJsResolveIdOptions | undefined | null): Promise<BindingHookJsResolveIdOutput | null>
   load(id: string): Promise<BindingHookJsLoadOutput | null>
+  transform(code: string, id: string, options: BindingTransformHookExtraArgs): Promise<BindingHookTransformOutput | null>
   watchChange(path: string, event: BindingJsWatchChangeEvent): Promise<void>
 }
 

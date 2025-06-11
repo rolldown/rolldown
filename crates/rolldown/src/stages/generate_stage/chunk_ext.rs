@@ -24,7 +24,7 @@ impl ChunkDebugExt for Chunk {
     reason: ChunkCreationReason,
     options: &NormalizedBundlerOptions,
   ) {
-    if !options.experimental.get_attach_debug_info().is_full() {
+    if !options.experimental.is_attach_debug_info_full() {
       return;
     }
 

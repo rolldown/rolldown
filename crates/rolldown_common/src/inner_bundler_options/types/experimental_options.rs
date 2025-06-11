@@ -47,8 +47,11 @@ impl ExperimentalOptions {
     self.incremental_build.unwrap_or(false)
   }
 
-  #[inline]
-  pub fn get_attach_debug_info(&self) -> AttachDebugInfo {
-    self.attach_debug_info.unwrap_or(AttachDebugInfo::Simple)
+  pub fn is_attach_debug_info_enabled(&self) -> bool {
+    self.attach_debug_info.is_some_and(|info| info.is_enabled())
+  }
+
+  pub fn is_attach_debug_info_full(&self) -> bool {
+    self.attach_debug_info.is_some_and(|info| info.is_full())
   }
 }

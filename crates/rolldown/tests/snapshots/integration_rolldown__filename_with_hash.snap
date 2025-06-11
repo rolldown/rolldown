@@ -4019,12 +4019,7 @@ expression: output
 
 # tests/rolldown/function/experimental/attach_debug_info/none
 
-- A-!~{000}~.js => A-DNyV0M66.js
-- B-!~{001}~.js => B-B8PHhMZC.js
-- Splitted-!~{006}~.js => Splitted-Dv9iGpNT.js
-- dyn-entry-!~{008}~.js => dyn-entry-B6s4PB3N.js
-- rolldown-runtime-!~{002}~.js => rolldown-runtime-DKNe4bka.js
-- shared-!~{004}~.js => shared-CbHyelvP.js
+- main-!~{000}~.js => main-CKealTHV.js
 
 # tests/rolldown/function/experimental/disable_live_bindings
 

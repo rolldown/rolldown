@@ -334,7 +334,7 @@ impl GenerateStage<'_> {
         match finalized_preserve_entry_signatures {
           PreserveEntrySignatures::AllowExtension
           | PreserveEntrySignatures::Strict
-          | PreserveEntrySignatures::False => Some(self.options.preserve_entry_signatures),
+          | PreserveEntrySignatures::False => Some(finalized_preserve_entry_signatures),
           PreserveEntrySignatures::ExportsOnly => {
             let meta = &self.link_output.metas[module.idx];
             if meta.sorted_and_non_ambiguous_resolved_exports.is_empty() {

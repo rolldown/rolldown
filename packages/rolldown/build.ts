@@ -150,7 +150,7 @@ function removeBuiltModules(): Plugin {
   return {
     name: 'remove-built-modules',
     resolveId: {
-      filter: { id: /node:/ },
+      filter: { id: /^node:/ },
       handler(id, importer) {
         if (id === 'node:path') {
           return this.resolve('pathe');

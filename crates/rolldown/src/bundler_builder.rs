@@ -1,5 +1,7 @@
 use std::sync::Arc;
 
+use oxc::transformer::ESTarget;
+
 use rolldown_common::{FileEmitter, NormalizedBundlerOptions};
 use rolldown_error::BuildDiagnostic;
 use rolldown_fs::OsFileSystem;
@@ -149,6 +151,28 @@ impl BundlerBuilder {
     // by user or by default value.
     if let Some(ref verbatim_module_syntax) = ts_config.compiler_options.verbatim_module_syntax {
       options.transform_options.typescript.only_remove_type_imports = *verbatim_module_syntax;
+    }
+    if options.transform_options.es_target == ESTarget::ES5 {
+      warning.push(
+        BuildDiagnostic::unsupport_target("rolldown.config.js", "es_target", "ES5")
+          .with_severity_warning(),
+      )
+    }
+
+    if let Some(ref target) = ts_config.compiler_options.target {
+      match target.as_str() {
+        "es5" | "ES5" => warning.push(BuildDiagnostic::unsupport_target(
+          &tsconfig_filename,
+          "target",
+          target.as_str(),
+        )),
+        _ => warning.push(BuildDiagnostic::configuration_field_conflict(
+          "rolldown.config.js",
+          "es_target",
+          &tsconfig_filename,
+          "target",
+        )),
+      }
     }
 
     Ok(())

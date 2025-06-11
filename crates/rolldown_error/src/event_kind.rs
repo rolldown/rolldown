@@ -1,6 +1,6 @@
 //! Naming convention:
 //! - All kinds that will terminate the build process should be named with a postfix "Error".
-use std::fmt::Display;
+use std::{f32::consts::E, fmt::Display};
 
 #[derive(Clone, Copy)]
 pub enum EventKind {
@@ -41,6 +41,7 @@ pub enum EventKind {
   IoError = 26,
   NapiError = 27,
   ConfigurationFieldConflict = 28,
+  UnsupportedTarget = 29,
 }
 
 impl Display for EventKind {
@@ -83,6 +84,7 @@ impl Display for EventKind {
       EventKind::IoError => write!(f, "IO_ERROR"),
       EventKind::NapiError => write!(f, "NAPI_ERROR"),
       EventKind::ConfigurationFieldConflict => write!(f, "CONFIGURATION_FIELD_CONFLICT"),
+      EventKind::UnsupportedTarget => write!(f, "UNSUPPORTED_TARGET"),
     }
   }
 }

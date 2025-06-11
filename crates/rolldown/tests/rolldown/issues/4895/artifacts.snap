@@ -1,0 +1,123 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## allow-extension.js
+
+```js
+//#region allow-extension/lib.js
+const shared = "shared";
+
+//#endregion
+//#region allow-extension/main.js
+console.log(shared);
+import("./dynamic.js");
+const unused = 42;
+
+//#endregion
+export { shared, unused };
+```
+## dynamic.js
+
+```js
+import { shared } from "./allow-extension.js";
+
+//#region allow-extension/dynamic.js
+console.log(shared);
+
+//#endregion
+```
+## dynamic2.js
+
+```js
+import { shared } from "./false.js";
+
+//#region false/dynamic.js
+console.log(shared);
+
+//#endregion
+```
+## dynamic3.js
+
+```js
+import { shared } from "./lib.js";
+
+//#region not-specified/dynamic.js
+console.log(shared);
+
+//#endregion
+```
+## dynamic4.js
+
+```js
+import { shared } from "./lib2.js";
+
+//#region strict/dynamic.js
+console.log(shared);
+
+//#endregion
+```
+## false.js
+
+```js
+//#region false/lib.js
+const shared = "shared";
+
+//#endregion
+//#region false/main.js
+console.log(shared);
+import("./dynamic2.js");
+
+//#endregion
+export { shared };
+```
+## lib.js
+
+```js
+//#region not-specified/lib.js
+const shared = "shared";
+
+//#endregion
+export { shared };
+```
+## lib2.js
+
+```js
+//#region strict/lib.js
+const shared = "shared";
+
+//#endregion
+export { shared };
+```
+## main.js
+
+```js
+
+```
+## not-specified.js
+
+```js
+import { shared } from "./lib.js";
+
+//#region not-specified/main.js
+console.log(shared);
+import("./dynamic3.js");
+const unused = 42;
+
+//#endregion
+export { unused };
+```
+## strict.js
+
+```js
+import { shared } from "./lib2.js";
+
+//#region strict/main.js
+console.log(shared);
+import("./dynamic4.js");
+const unused = 42;
+
+//#endregion
+export { unused };
+```

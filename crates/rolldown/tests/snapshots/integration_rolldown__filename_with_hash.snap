@@ -4063,7 +4063,7 @@ expression: output
 
 # tests/rolldown/function/experimental/strict_execution_order/issue_4636
 
-- main-!~{000}~.js => main-BHjcQpjN.js
+- main-!~{000}~.js => main-OC0Dohxp.js
 
 # tests/rolldown/function/experimental/strict_execution_order/issue_4684
 
@@ -4697,7 +4697,7 @@ expression: output
 
 # tests/rolldown/issues/4129
 
-- main-!~{000}~.js => main-ChUrgBBM.js
+- main-!~{000}~.js => main-BtKssRCj.js
 
 # tests/rolldown/issues/4196
 
@@ -5371,25 +5371,25 @@ expression: output
 
 # tests/rolldown/topics/hmr/deconflict_import_bindings
 
-- main-!~{000}~.js => main-Bsw305ma.js
+- main-!~{000}~.js => main-BwDR2gBS.js
 
 # tests/rolldown/topics/hmr/generate_patch_error
 
-- main-!~{000}~.js => main-dX635G9E.js
+- main-!~{000}~.js => main-bu5nhqYf.js
 
 # tests/rolldown/topics/hmr/mutiply_entires
 
-- entry-!~{000}~.js => entry-CBzHZYBI.js
-- index-!~{001}~.js => index-D1GGCNxh.js
-- chunk-!~{002}~.js => chunk-CUsgavGH.js
+- entry-!~{000}~.js => entry-BEsI0-Z_.js
+- index-!~{001}~.js => index-CgLD4SE9.js
+- chunk-!~{002}~.js => chunk-DTr7MmcB.js
 
 # tests/rolldown/topics/hmr/non_used_export
 
-- main-!~{000}~.js => main-YzWYwFZO.js
+- main-!~{000}~.js => main-CArqQ-kU.js
 
 # tests/rolldown/topics/hmr/register_exports
 
-- main-!~{000}~.js => main-B4-Shbiz.js
+- main-!~{000}~.js => main-BKyTMtgE.js
 
 # tests/rolldown/topics/import_meta_url_dirname_filename_polyfill/node_cjs
 

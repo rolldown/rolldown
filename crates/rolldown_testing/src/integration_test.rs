@@ -108,7 +108,7 @@ impl IntegrationTest {
         {
           // do nothing
         } else {
-          Self::execute_output_assets(&bundler, "");
+          Self::execute_output_assets(&bundler, "", vec![]);
         }
       }
       Err(errs) => {
@@ -121,6 +121,7 @@ impl IntegrationTest {
     }
   }
 
+  #[expect(clippy::too_many_lines)]
   #[allow(clippy::unnecessary_debug_formatting)]
   pub async fn run_multiple(
     &self,
@@ -145,6 +146,12 @@ impl IntegrationTest {
         named_options.options.cwd = Some(hmr_temp_dir_path.clone());
       }
 
+      let output_dir = format!(
+        "{}/{}",
+        named_options.options.cwd.as_ref().map_or(".", |cwd| cwd.to_str().unwrap()),
+        named_options.options.dir.as_ref().map_or("dist", |v| v)
+      );
+
       let mut bundler = Bundler::with_plugins(named_options.options, plugins.clone());
 
       let debug_title = named_options.name.clone().unwrap_or_else(String::new);
@@ -168,6 +175,10 @@ impl IntegrationTest {
         snapshot_outputs.push(format!("Variant: {debug_title}\n\n"));
       }
 
+      let execute_output = self.test_meta.expect_executed
+        && !self.test_meta.expect_error
+        && self.test_meta.write_to_disk;
+
       match bundle_output {
         Ok(bundle_output) => {
           assert!(
@@ -178,15 +189,7 @@ impl IntegrationTest {
           let snapshot_content = self.render_bundle_output_to_string(bundle_output, vec![], &cwd);
           snapshot_outputs.push(snapshot_content);
 
-          if !self.test_meta.expect_executed
-            || self.test_meta.expect_error
-            || !self.test_meta.write_to_disk
-          {
-            // do nothing
-          } else {
-            Self::execute_output_assets(&bundler, &debug_title);
-          }
-
+          let mut patch_chunks: Vec<String> = vec![];
           for (step, hmr_edit_files) in hmr_steps.iter().enumerate() {
             apply_hmr_edit_files_to_hmr_temp_dir(
               test_folder_path,
@@ -204,6 +207,16 @@ impl IntegrationTest {
                 let snapshot_content =
                   Self::render_hmr_output_to_string(step, &output, vec![], &cwd);
                 snapshot_outputs.push(snapshot_content);
+
+                if execute_output {
+                  assert!(
+                    !output.full_reload,
+                    "execute_output should be false when full reload happens"
+                  );
+                  let output_path = format!("{}/{}", &output_dir, &output.filename);
+                  fs::write(&output_path, output.code).unwrap();
+                  patch_chunks.push(format!("./{}", output.filename));
+                }
               }
               Err(errs) => {
                 let snapshot_content = Self::render_hmr_output_to_string(
@@ -215,6 +228,12 @@ impl IntegrationTest {
                 snapshot_outputs.push(snapshot_content);
               }
             }
+          }
+
+          if execute_output {
+            Self::execute_output_assets(&bundler, &debug_title, patch_chunks);
+          } else {
+            // do nothing
           }
         }
         Err(errs) => {
@@ -280,6 +299,14 @@ impl IntegrationTest {
     }
     if options.sourcemap.is_none() && self.test_meta.visualize_sourcemap {
       options.sourcemap = Some(SourceMapType::File);
+    }
+
+    if let Some(experimental) = &mut options.experimental {
+      if let Some(hmr) = &mut experimental.hmr {
+        if hmr.implement.is_none() {
+          hmr.implement = Some(include_str!("./hmr-runtime.js").to_owned());
+        }
+      }
     }
   }
 
@@ -581,7 +608,7 @@ impl IntegrationTest {
     });
   }
 
-  fn execute_output_assets(bundler: &Bundler, test_title: &str) {
+  fn execute_output_assets(bundler: &Bundler, test_title: &str, patch_chunks: Vec<String>) {
     let cwd = bundler.options().cwd.clone();
     let dist_folder = cwd.join(&bundler.options().out_dir);
 
@@ -610,6 +637,20 @@ impl IntegrationTest {
     let test_script = cwd.join("_test.mjs");
 
     let mut node_command = Command::new("node");
+
+    if !patch_chunks.is_empty() {
+      node_command.arg("--import");
+      let patch_chunks_array = patch_chunks
+        .into_iter()
+        .map(|chunk| format!("\"{}\"", chunk.replace('"', "\\\"")))
+        .collect::<Vec<_>>()
+        .join(",");
+      let patch_chunks_register_script =
+        format!("globalThis.__testPatches = [{patch_chunks_array}]");
+      let patch_chunk_register_script_url =
+        format!("data:text/javascript,{}", urlencoding::encode(&patch_chunks_register_script));
+      node_command.arg(patch_chunk_register_script_url);
+    }
 
     if test_script.exists() {
       node_command.arg(test_script);

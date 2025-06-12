@@ -81,10 +81,11 @@ impl RuntimeModuleTask {
         }
       }
       runtime_source.push_str(&get_runtime_js());
+      runtime_source.push_str(include_str!("../runtime/runtime-extra-dev-common.js"));
       if let Some(implement) = hmr_options.implement.as_deref() {
         runtime_source.push_str(implement);
       } else {
-        let content = include_str!("../runtime/runtime-extra-dev.js");
+        let content = include_str!("../runtime/runtime-extra-dev-default.js");
         let host = hmr_options.host.as_deref().unwrap_or("localhost");
         let port = hmr_options.port.unwrap_or(3000);
         let addr = format!("{host}:{port}");

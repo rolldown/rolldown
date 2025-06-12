@@ -297,7 +297,7 @@ function copy() {
 function generateRuntimeTypes() {
   const inputFile = nodePath.resolve(
     __dirname,
-    '../../crates/rolldown/src/runtime/runtime-extra-dev.js',
+    '../../crates/rolldown/src/runtime/runtime-extra-dev-common.js',
   );
   const outputFile = nodePath.resolve(
     outputDir,

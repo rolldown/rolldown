@@ -16,6 +16,7 @@
     "skipLibCheck": true
   },
   "references": [
+    { "path": "./crates/rolldown/src/runtime" },
     { "path": "./packages/bench" },
     { "path": "./packages/rolldown" },
     { "path": "./packages/rolldown/tests" },

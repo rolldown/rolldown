@@ -45,6 +45,9 @@
       "require": "./dist/experimental-index.cjs",
       "import": "./dist/experimental-index.mjs"
     },
+    "./experimental/runtime-types": {
+      "types": "./dist/experimental-runtime-types.d.ts"
+    },
     "./filter": {
       "dev": "./src/filter-index.ts",
       "require": "./dist/filter-index.cjs",

@@ -38,15 +38,7 @@ class ModuleHotContext {
   }
 }
 
-class DevRuntime {
-  /**
-   * @type {Map<string, Set<(...args: any[]) => void>>}
-   */
-  acceptPathToCallers = new Map()
-  /**
-   * @type {Record<string, { exports: any }>}
-   */
-  modules = {}
+class DefaultDevRuntime extends DevRuntime {
   /**
    * @type {Map<string, ModuleHotContext>}
    */
@@ -56,21 +48,7 @@ class DevRuntime {
    */
   moduleHotContextsToBeUpdated = new Map()
   /**
-   *
-   * @returns {DevRuntime}
-   */
-  static getInstance() {
-    /**
-     * @type {DevRuntime | undefined}
-     */
-    let instance = globalThis.__rolldown_runtime__;
-    if (!instance) {
-      instance = new DevRuntime();
-      globalThis.__rolldown_runtime__ = instance;
-    }
-    return instance
-  }
-  /**
+   * @override
    * @param {string} moduleId
    */
   createModuleHotContext(moduleId) {
@@ -83,7 +61,7 @@ class DevRuntime {
     return hotContext;
   }
   /**
-   *
+   * @override
    * @param {string[]} boundaries
    */
   applyUpdates(boundaries) {
@@ -103,53 +81,9 @@ class DevRuntime {
     this.moduleHotContextsToBeUpdated.clear()
     // swap new contexts
   }
-  /**
-   * @param {string} id
-   * @param {{ exports: any }} module
-   */
-  registerModule(id, module) {
-    console.debug('Registering module', id, module);
-    this.modules[id] = module
-  }
-  /**
-   * @param {string} id
-   */
-  loadExports(id) {
-    const module = this.modules[id];
-    if (module) {
-      return module.exports;
-    } else {
-      console.warn(`Module ${id} not found`);
-      return {};
-    }
-  }
-
-  /**
-   * __esmMin
-   *
-   * @type {<T>(fn: any, res: T) => () => T}
-   * @internal
-   */
-  createEsmInitializer = (fn, res) => () => (fn && (res = fn(fn = 0)), res)
-  /**
-   * __commonJSMin
-   *
-   * @type {<T extends { exports: any }>(cb: any, mod: { exports: any }) => () => T}
-   * @internal
-   */
-  createCjsInitializer = (cb, mod) => () => (mod || cb((mod = { exports: {} }).exports, mod), mod.exports)
-  /** @internal */
-  // @ts-expect-error it exists
-  __toESM = __toESM;
-  /** @internal */
-  // @ts-expect-error it exists
-  __toCommonJS = __toCommonJS
-  /** @internal */
-  // @ts-expect-error it exists
-  __export = __export
 }
 
-globalThis.__rolldown_runtime__ = DevRuntime.getInstance();
+;(/** @type {any} */ (globalThis)).__rolldown_runtime__ ??= new DefaultDevRuntime();
 
 /** @param {string} url */
 function loadScript(url) {

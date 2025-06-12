@@ -1,0 +1,102 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## main.js
+
+```js
+
+//#region hmr.js
+var hmr_exports = {};
+__export(hmr_exports, { foo: () => foo });
+const hmr_hot = __rolldown_runtime__.createModuleHotContext("hmr.js");
+__rolldown_runtime__.__toCommonJS(hmr_exports);
+__rolldown_runtime__.registerModule("hmr.js", { exports: hmr_exports });
+const foo = "hello";
+text$1(".hmr", foo);
+function text$1(el, text$2) {
+	document.querySelector(el).textContent = text$2;
+}
+hmr_hot.accept((mod) => {
+	if (mod) text$1(".hmr", mod.foo);
+});
+
+//#endregion
+//#region sub.js
+var sub_exports = {};
+const sub_hot = __rolldown_runtime__.createModuleHotContext("sub.js");
+__rolldown_runtime__.__toCommonJS(sub_exports);
+__rolldown_runtime__.registerModule("sub.js", { exports: sub_exports });
+text(".app", "hello");
+function text(el, text$2) {
+	document.querySelector(el).textContent = text$2;
+}
+
+//#endregion
+//#region main.js
+var main_exports = {};
+const main_hot = __rolldown_runtime__.createModuleHotContext("main.js");
+__rolldown_runtime__.__toCommonJS(main_exports);
+__rolldown_runtime__.registerModule("main.js", { exports: main_exports });
+
+//#endregion
+```
+# HMR Step 0
+## Errors
+
+### PARSE_ERROR
+
+```text
+[PARSE_ERROR] Error: Unterminated string
+   ╭─[ hmr.js:1:20 ]
+   │
+ 1 │ export const foo = 'hello
+   │                    ───┬───  
+   │                       ╰───── 
+───╯
+
+```
+
+## Meta
+
+- full_reload: false
+- first_invalidated_by: None
+- is_self_accepting: false
+- full_reload_reason: None
+### Hmr Boundaries
+# HMR Step 1
+
+## Code
+
+```js
+var init_hmr_0 = __rolldown_runtime__.createEsmInitializer(function() {
+	try {
+		var ns_hmr = {};
+		__rolldown_runtime__.__export(ns_hmr, { foo: () => foo });
+		__rolldown_runtime__.__toCommonJS(ns_hmr);
+		__rolldown_runtime__.registerModule("hmr.js", { exports: ns_hmr });
+		const hot_hmr = __rolldown_runtime__.createModuleHotContext("hmr.js");
+		const foo = "hello";
+		text(".hmr", foo);
+		function text(el, text) {
+			document.querySelector(el).textContent = text;
+		}
+		hot_hmr.accept((mod) => {
+			if (mod) text(".hmr", mod.foo);
+		});
+	} finally {}
+});
+
+init_hmr_0()
+__rolldown_runtime__.applyUpdates(['hmr.js']);
+```
+## Meta
+
+- full_reload: false
+- first_invalidated_by: None
+- is_self_accepting: false
+- full_reload_reason: None
+### Hmr Boundaries
+
+- boundary: hmr.js, accepted_via: hmr.js

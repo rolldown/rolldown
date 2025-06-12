@@ -209,16 +209,15 @@ impl HmrManager {
       })
       .collect::<Vec<_>>();
 
-    let mut scan_stage_cache = std::mem::take(&mut self.cache);
-
+    let build_span = self.session_span.clone();
     let mut module_loader = ModuleLoader::new(
       self.fs,
       Arc::clone(&self.options),
       Arc::clone(&self.resolver),
       Arc::clone(&self.plugin_driver),
-      &mut scan_stage_cache,
+      &mut self.cache,
       false,
-      self.session_span.clone(),
+      build_span,
     )?;
 
     let module_loader_output =
@@ -228,8 +227,6 @@ impl HmrManager {
     // `self.cache`, but rustc is not smart enough to infer actually we don't touch it in `drop`
     // implementation, so we need to manually drop it.
     drop(module_loader);
-
-    self.cache = scan_stage_cache;
 
     tracing::debug!(
       target: "hmr",

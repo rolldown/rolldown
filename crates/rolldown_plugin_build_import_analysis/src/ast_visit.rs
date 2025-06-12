@@ -49,12 +49,18 @@ impl<'a> VisitMut<'a> for BuildImportAnalysisVisitor<'a> {
 
   fn visit_expression(&mut self, expr: &mut Expression<'a>) {
     walk_mut::walk_expression(self, expr);
-    match expr {
-      Expression::CallExpression(expr) => self.rewrite_import_expr(expr),
-      Expression::StaticMemberExpression(expr) => self.rewrite_member_expr(expr),
-      _ => return,
+    if self.insert_preload {
+      match expr {
+        Expression::CallExpression(expr) => self.rewrite_import_expr(expr),
+        Expression::StaticMemberExpression(expr) => self.rewrite_member_expr(expr),
+        _ => return,
+      }
+      self.need_prepend_helper = true;
     }
-    self.need_prepend_helper = true;
+  }
+
+  fn visit_import_declaration(&mut self, it: &mut oxc::ast::ast::ImportDeclaration<'a>) {
+    it.with_clause.take();
   }
 
   fn visit_variable_declarator(&mut self, it: &mut oxc::ast::ast::VariableDeclarator<'a>) {
@@ -71,25 +77,27 @@ impl<'a> VisitMut<'a> for BuildImportAnalysisVisitor<'a> {
   /// to `const {foo} = await __vitePreload(async () => { let foo; return {foo} = await import('foo'); }, ...)`
   fn visit_variable_declaration(&mut self, decl: &mut VariableDeclaration<'a>) {
     walk_mut::walk_variable_declaration(self, decl);
-    for decl in &mut decl.declarations {
-      if matches!(decl.id.kind, BindingPatternKind::ObjectPattern(_))
-        && matches!(
-          &decl.init,
-          Some(Expression::AwaitExpression(expr)) if matches!(expr.argument, Expression::ImportExpression(_))
-        )
-      {
-        decl.init = Some(self.snippet.builder.expression_await(
-          SPAN,
-          self.construct_vite_preload_call(
-            self.snippet.builder.binding_pattern(
-              decl.id.kind.clone_in(self.snippet.alloc()),
-              NONE,
-              false,
+    if self.insert_preload {
+      for decl in &mut decl.declarations {
+        if matches!(decl.id.kind, BindingPatternKind::ObjectPattern(_))
+          && matches!(
+            &decl.init,
+            Some(Expression::AwaitExpression(expr)) if matches!(expr.argument, Expression::ImportExpression(_))
+          )
+        {
+          decl.init = Some(self.snippet.builder.expression_await(
+            SPAN,
+            self.construct_vite_preload_call(
+              self.snippet.builder.binding_pattern(
+                decl.id.kind.clone_in(self.snippet.alloc()),
+                NONE,
+                false,
+              ),
+              decl.init.take().unwrap(),
             ),
-            decl.init.take().unwrap(),
-          ),
-        ));
-        self.need_prepend_helper = true;
+          ));
+          self.need_prepend_helper = true;
+        }
       }
     }
   }

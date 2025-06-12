@@ -13,7 +13,5 @@
     "experimental": {
       "hmr": {}
     }
-  },
-  // Runtime currently relies on browser environment's `WebSocket`
-  "expectExecuted": false
+  }
 }

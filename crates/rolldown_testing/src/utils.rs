@@ -68,11 +68,7 @@ pub fn stringify_bundle_output(output: BundleOutput, cwd: &Path) -> String {
     .filter(|asset| !asset.filename().contains("$runtime$") && matches!(asset, Output::Chunk(_)))
     .flat_map(|asset| {
       let content = std::str::from_utf8(asset.content_as_bytes()).unwrap();
-      let content = if hidden_runtime_module {
-        RUNTIME_MODULE_OUTPUT_RE.replace_all(content, "")
-      } else {
-        Cow::Borrowed(content)
-      };
+      let content = make_js_code_snapshot_friendly(content, hidden_runtime_module);
 
       [Cow::Owned(format!("## {}\n", asset.filename())), "```js".into(), content, "```".into()]
     })
@@ -102,4 +98,15 @@ macro_rules! abs_file_dir {
   () => {
     std::path::Path::new(env!("WORKSPACE_DIR")).join(file!()).parent().unwrap().to_path_buf()
   };
+}
+
+pub fn make_js_code_snapshot_friendly<'a>(
+  content: &'a str,
+  hide_runtime_module: bool,
+) -> Cow<'a, str> {
+  if hide_runtime_module {
+    RUNTIME_MODULE_OUTPUT_RE.replace_all(content, "")
+  } else {
+    Cow::Borrowed(content)
+  }
 }

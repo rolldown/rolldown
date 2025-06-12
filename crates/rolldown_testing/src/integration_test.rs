@@ -21,6 +21,7 @@ use rolldown_testing_config::TestMeta;
 use serde_json::{Map, Value};
 use sugar_path::SugarPath;
 
+use crate::utils::make_js_code_snapshot_friendly;
 use crate::{
   hmr_files::{
     apply_hmr_edit_files_to_hmr_temp_dir, collect_hmr_edit_files,
@@ -521,7 +522,7 @@ impl IntegrationTest {
         },
       );
       writeln!(snapshot, "```{file_ext}").unwrap();
-      snapshot.push_str(&hmr_output.code);
+      snapshot.push_str(&make_js_code_snapshot_friendly(&hmr_output.code, true));
       snapshot.push_str("\n```");
       snapshot
     };

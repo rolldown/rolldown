@@ -14,7 +14,7 @@ use rolldown_error::BuildResult;
 use rolldown_fs::OsFileSystem;
 use rolldown_plugin::SharedPluginDriver;
 use rolldown_sourcemap::{SourceJoiner, SourceMapSource};
-use rolldown_utils::indexmap::FxIndexSet;
+use rolldown_utils::{concat_string, indexmap::FxIndexSet};
 use rustc_hash::{FxHashMap, FxHashSet};
 
 use crate::{
@@ -309,6 +309,7 @@ impl HmrManager {
       let enable_sourcemap = self.options.sourcemap.is_some() && !affected_module.is_virtual();
       let ecma_ast_idx = affected_module.ecma_ast_idx.unwrap();
       let modules = &self.input.module_db.modules;
+      // FIXME: ecma_ast_idx == 3, but self.input.index_ecma_ast.len() == 2
       let ast = &mut self.input.index_ecma_ast[ecma_ast_idx].0;
 
       ast.program.with_mut(|fields| {
@@ -337,11 +338,13 @@ impl HmrManager {
           print_legal_comments: false, // ignore hmr chunk comments
         },
       );
+      source_joiner.append_source(concat_string!("//#region ", affected_module.debug_id));
       if let Some(map) = codegen.map {
         source_joiner.append_source(SourceMapSource::new(codegen.code, map));
       } else {
         source_joiner.append_source(codegen.code);
       }
+      source_joiner.append_source("//#endregion");
     }
 
     hmr_boundaries.iter().for_each(|boundary| {

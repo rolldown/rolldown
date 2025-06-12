@@ -4,7 +4,7 @@ use rustc_hash::FxHashMap;
 
 use crate::{
   js_regex::HybridRegex,
-  pattern_filter::{StringOrRegex, StringOrRegexMatchKind},
+  pattern_filter::{StringOrRegex, StringOrRegexMatchKind, normalize_path},
   url::{clean_url, get_query},
 };
 
@@ -105,6 +105,8 @@ pub fn filter_exprs_interpreter(
 ) -> bool {
   let mut include_count = 0;
   let mut ctx = InterpreterCtx::default();
+  let id = id.map(|id| normalize_path(id));
+  let id = id.as_deref();
   for kind in exprs {
     match kind {
       FilterExprKind::Include(filter_expr) => {
@@ -293,6 +295,20 @@ mod test {
       ".",
       &mut InterpreterCtx::default()
     ));
+
+    #[cfg(windows)]
+    {
+      use super::FilterExprKind;
+      let expr = FilterExpr::Id(StringOrRegex::Regex("src/".into()));
+
+      assert!(filter_exprs_interpreter(
+        &[FilterExprKind::Include(expr)],
+        Some("C:\\path\\to\\src\\entry.js"),
+        None,
+        None,
+        ".",
+      ));
+    }
   }
 
   #[test]

@@ -77,7 +77,14 @@ impl LinkStage<'_> {
         };
         let meta = &self.metas[entry.id];
         meta.referenced_symbols_by_entry_point_chunk.iter().for_each(|symbol_ref| {
-          include_symbol(context, *symbol_ref);
+          if let Module::Normal(module) = &context.modules[symbol_ref.owner] {
+            module.stmt_infos.declared_stmts_by_symbol(symbol_ref).iter().copied().for_each(
+              |stmt_info_id| {
+                include_statement(context, module, stmt_info_id);
+              },
+            );
+            include_symbol(context, *symbol_ref);
+          }
         });
         include_module(context, module);
       });
@@ -113,7 +120,14 @@ impl LinkStage<'_> {
       };
       let meta = &self.metas[entry.id];
       meta.referenced_symbols_by_entry_point_chunk.iter().for_each(|symbol_ref| {
-        include_symbol(context, *symbol_ref);
+        if let Module::Normal(module) = &context.modules[symbol_ref.owner] {
+          module.stmt_infos.declared_stmts_by_symbol(symbol_ref).iter().copied().for_each(
+            |stmt_info_id| {
+              include_statement(context, module, stmt_info_id);
+            },
+          );
+          include_symbol(context, *symbol_ref);
+        }
       });
       include_module(context, module);
       true

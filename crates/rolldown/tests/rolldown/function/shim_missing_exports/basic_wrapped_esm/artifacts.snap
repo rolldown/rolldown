@@ -17,6 +17,7 @@ var init_foo = __esm({ "foo.js"() {
 //#endregion
 //#region main.js
 init_foo();
+init_foo();
 
 //#endregion
 export { missing };

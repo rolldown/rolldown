@@ -3949,10 +3949,10 @@ expression: output
 
 # tests/rolldown/function/advanced_chunks/split_node_modules
 
-- main-!~{000}~.js => main-BjmQ9ujI.js
-- other-libs-!~{005}~.js => other-libs-Bo0B-gKW.js
+- main-!~{000}~.js => main-CgintLkr.js
+- other-libs-!~{005}~.js => other-libs-9w3pul5i.js
 - rolldown-runtime-!~{001}~.js => rolldown-runtime-BvgZlyOU.js
-- ui-!~{003}~.js => ui-CMSLr63w.js
+- ui-!~{003}~.js => ui-17vXJ9Bu.js
 
 # tests/rolldown/function/define/node_env
 
@@ -4070,6 +4070,10 @@ expression: output
 - main-!~{000}~.js => main-BB2kLC1L.js
 - dynamic-!~{003}~.js => dynamic-DSCFIWqq.js
 - read-!~{001}~.js => read-C1QSWzqi.js
+
+# tests/rolldown/function/experimental/strict_execution_order/issue_4920
+
+- main-!~{000}~.js => main-Cdv0wJBe.js
 
 # tests/rolldown/function/experimental/strict_execution_order/remove_unused_no_side_effect_module
 
@@ -4522,7 +4526,7 @@ expression: output
 
 # tests/rolldown/function/shim_missing_exports/basic_wrapped_esm
 
-- main-!~{000}~.js => main-D_J4eDe5.js
+- main-!~{000}~.js => main-BBAfU8Lx.js
 
 # tests/rolldown/function/shim_missing_exports/shake_unused_shimmed_exports
 

@@ -29,9 +29,6 @@ jobs:
       - name: Setup Node
         uses: ./.github/actions/setup-node
 
-      - name: Setup Benchmark Input
-        run: just setup-bench
-
       - name: Build
         run: cargo test --workspace --exclude rolldown_binding --no-run
 

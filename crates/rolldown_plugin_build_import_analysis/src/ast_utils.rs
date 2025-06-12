@@ -41,7 +41,7 @@ impl<'a> BuildImportAnalysisVisitor<'a> {
 
   /// transform `(await import('foo')).foo`
   /// to `(await __vitePreload(async () => { let foo; return {foo} = await import('foo'); },...))).foo`
-  pub fn rewrite_member_expr(&self, member_expr: &mut StaticMemberExpression<'a>) {
+  pub fn rewrite_member_expr(&mut self, member_expr: &mut StaticMemberExpression<'a>) {
     let mut await_expr = &mut member_expr.object;
     while let Expression::ParenthesizedExpression(member_expr) = await_expr {
       await_expr = &mut member_expr.expression;
@@ -79,12 +79,13 @@ impl<'a> BuildImportAnalysisVisitor<'a> {
           await_expr.take_in(self.snippet.alloc()),
         ),
       ));
+      self.need_prepend_helper = true;
     }
   }
 
   /// transform `import('foo').then(({foo})=>{})`
   /// to `__vitePreload(async () => { let foo; return {foo} = await import('foo'); },...).then(({foo})=>{})`
-  pub fn rewrite_import_expr(&self, expr: &mut CallExpression<'a>) {
+  pub fn rewrite_import_expr(&mut self, expr: &mut CallExpression<'a>) {
     let Expression::StaticMemberExpression(ref mut callee) = expr.callee else {
       return;
     };
@@ -103,6 +104,7 @@ impl<'a> BuildImportAnalysisVisitor<'a> {
       arg.pattern.clone_in(self.snippet.alloc()),
       self.snippet.builder.expression_await(SPAN, callee.object.take_in(self.snippet.alloc())),
     );
+    self.need_prepend_helper = true;
   }
 
   pub fn construct_vite_preload_call(

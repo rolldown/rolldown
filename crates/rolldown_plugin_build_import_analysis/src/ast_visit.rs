@@ -53,9 +53,8 @@ impl<'a> VisitMut<'a> for BuildImportAnalysisVisitor<'a> {
       match expr {
         Expression::CallExpression(expr) => self.rewrite_import_expr(expr),
         Expression::StaticMemberExpression(expr) => self.rewrite_member_expr(expr),
-        _ => return,
+        _ => {}
       }
-      self.need_prepend_helper = true;
     }
   }
 

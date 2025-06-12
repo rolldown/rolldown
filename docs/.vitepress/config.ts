@@ -95,6 +95,7 @@ export default defineConfig({
       { text: 'User Guide', link: '/guide/' },
       { text: 'Reference', link: '/reference/config-options.md' },
       { text: 'Contribute', link: '/contrib-guide/' },
+      { text: 'REPL', link: 'https://repl.rolldown.rs/' },
       {
         text: 'Resources',
         items: [

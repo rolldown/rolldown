@@ -4,6 +4,7 @@ import fs from 'node:fs';
 import nodePath from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { dts } from 'rolldown-plugin-dts';
+import * as ts from 'typescript';
 import { build, BuildOptions, type Plugin } from './src/index';
 
 const isCI = !!process.env.CI;
@@ -76,6 +77,7 @@ if (isBrowserPkg) {
   for (const config of configs) {
     await build(config);
   }
+  generateRuntimeTypes();
   copy();
 })();
 
@@ -290,4 +292,60 @@ function copy() {
       });
     }
   }
+}
+
+function generateRuntimeTypes() {
+  const inputFile = nodePath.resolve(
+    __dirname,
+    '../../crates/rolldown/src/runtime/runtime-extra-dev.js',
+  );
+  const outputFile = nodePath.resolve(
+    outputDir,
+    'experimental-runtime-types.d.ts',
+  );
+
+  console.log(
+    colors.green('[build:done]'),
+    'Generating dts from',
+    inputFile,
+  );
+
+  const jsCode = fs.readFileSync(inputFile, 'utf-8');
+  const result = ts.transpileDeclaration(jsCode, {
+    compilerOptions: {
+      ...getTsconfigCompilerOptionsForFile(inputFile),
+      noEmit: false,
+      emitDeclarationOnly: true,
+    },
+    fileName: inputFile,
+  });
+
+  if (result && result.outputText) {
+    fs.writeFileSync(outputFile, result.outputText, 'utf-8');
+  } else {
+    throw new Error('Failed to generate d.ts from runtime-extra-dev.js');
+  }
+}
+
+function getTsconfigCompilerOptionsForFile(file: string) {
+  const tsconfigPath = ts.findConfigFile(file, ts.sys.fileExists);
+  let compilerOptions = ts.getDefaultCompilerOptions();
+  if (tsconfigPath) {
+    const parsedConfig = ts.getParsedCommandLineOfConfigFile(
+      tsconfigPath,
+      undefined,
+      {
+        ...ts.sys,
+        onUnRecoverableConfigFileDiagnostic(diag) {
+          console.error(diag);
+        },
+      },
+    );
+    if (!parsedConfig) throw new Error();
+    if (parsedConfig.errors.length > 0) {
+      throw new AggregateError(parsedConfig.errors);
+    }
+    compilerOptions = parsedConfig.options;
+  }
+  return compilerOptions;
 }

@@ -4063,7 +4063,7 @@ expression: output
 
 # tests/rolldown/function/experimental/strict_execution_order/issue_4636
 
-- main-!~{000}~.js => main-Ccx_HyOp.js
+- main-!~{000}~.js => main-BZtAq6v5.js
 
 # tests/rolldown/function/experimental/strict_execution_order/issue_4684
 
@@ -4697,7 +4697,7 @@ expression: output
 
 # tests/rolldown/issues/4129
 
-- main-!~{000}~.js => main-DSnfptiJ.js
+- main-!~{000}~.js => main-BO-541NT.js
 
 # tests/rolldown/issues/4196
 
@@ -5371,17 +5371,17 @@ expression: output
 
 # tests/rolldown/topics/hmr/deconflict_import_bindings
 
-- main-!~{000}~.js => main-evpwWx4a.js
+- main-!~{000}~.js => main-BQu-dzW2.js
 
 # tests/rolldown/topics/hmr/mutiply_entires
 
-- entry-!~{000}~.js => entry-C-wenldj.js
-- index-!~{001}~.js => index-BDVb_WKl.js
-- chunk-!~{002}~.js => chunk-CW_H0o01.js
+- entry-!~{000}~.js => entry-q35uSqQd.js
+- index-!~{001}~.js => index-DnJyT3wj.js
+- chunk-!~{002}~.js => chunk-DWFXkX0J.js
 
 # tests/rolldown/topics/hmr/register_exports
 
-- main-!~{000}~.js => main-CMDi0hpF.js
+- main-!~{000}~.js => main-D3RiDSio.js
 
 # tests/rolldown/topics/import_meta_url_dirname_filename_polyfill/node_cjs
 

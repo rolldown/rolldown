@@ -3,4 +3,4 @@ import * as dir from './foo/index.mjs'
 
 console.log(file.foo, dir.foo)
 
-import.meta.hot.accept()
+import.meta.hot.accept(() => {})

@@ -5367,7 +5367,7 @@ expression: output
 
 # tests/rolldown/topics/hmr/deconflict_import_bindings
 
-- main-!~{000}~.js => main-CsVwbL6p.js
+- main-!~{000}~.js => main-evpwWx4a.js
 
 # tests/rolldown/topics/hmr/mutiply_entires
 

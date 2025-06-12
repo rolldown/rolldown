@@ -31,7 +31,7 @@ const main_hot = __rolldown_runtime__.createModuleHotContext("main.js");
 __rolldown_runtime__.__toCommonJS(main_exports);
 __rolldown_runtime__.registerModule("main.js", { exports: main_exports });
 console.log(foo$1, foo);
-main_hot.accept();
+main_hot.accept(() => {});
 
 //#endregion
 ```
@@ -50,7 +50,7 @@ var init_main_0 = __rolldown_runtime__.createEsmInitializer(function() {
 		var import_foo_0 = __rolldown_runtime__.loadExports("foo.mjs");
 		var import_foo_1 = __rolldown_runtime__.loadExports("foo/index.mjs");
 		console.log(import_foo_0.foo, import_foo_1.foo);
-		hot_main.accept();
+		hot_main.accept(() => {});
 	} finally {}
 });
 

@@ -94,7 +94,6 @@ pub struct ScanStageOutput {
   pub dynamic_import_exports_usage_map: FxHashMap<ModuleIdx, DynamicImportExportsUsage>,
   pub safely_merge_cjs_ns_map: FxHashMap<ModuleIdx, Vec<SymbolRef>>,
   pub overrode_preserve_entry_signature_map: FxHashMap<ModuleIdx, PreserveEntrySignatures>,
-  pub cache: ScanStageCache,
 }
 
 impl ScanStage {
@@ -109,8 +108,12 @@ impl ScanStage {
   }
 
   #[tracing::instrument(target = "devtool", level = "debug", skip_all)]
-  pub async fn scan(&self, mode: ScanMode, cache: ScanStageCache) -> BuildResult<ScanStageOutput> {
-    let module_loader = ModuleLoader::new(
+  pub async fn scan(
+    &self,
+    mode: ScanMode,
+    cache: &mut ScanStageCache,
+  ) -> BuildResult<ScanStageOutput> {
+    let mut module_loader = ModuleLoader::new(
       self.fs,
       Arc::clone(&self.options),
       Arc::clone(&self.resolver),
@@ -142,6 +145,8 @@ impl ScanStage {
     // For `await pluginContext.load`, if support it at buildStart hook, it could be caused stuck.
     self.plugin_driver.set_context_load_modules_tx(Some(module_loader.tx.clone())).await;
 
+    let module_loader_output =
+      module_loader.fetch_modules(user_entries, &changed_resolved_ids).await?;
     let ModuleLoaderOutput {
       module_table,
       entry_points,
@@ -151,10 +156,9 @@ impl ScanStage {
       index_ecma_ast,
       dynamic_import_exports_usage_map,
       new_added_modules_from_partial_scan: _,
-      cache,
       safely_merge_cjs_ns_map,
       overrode_preserve_entry_signature_map,
-    } = module_loader.fetch_modules(user_entries, changed_resolved_ids).await?;
+    } = module_loader_output;
 
     self.plugin_driver.file_emitter.set_context_load_modules_tx(None).await;
 
@@ -168,7 +172,6 @@ impl ScanStage {
       index_ecma_ast,
       dynamic_import_exports_usage_map,
       module_table,
-      cache,
       safely_merge_cjs_ns_map,
       overrode_preserve_entry_signature_map,
     })

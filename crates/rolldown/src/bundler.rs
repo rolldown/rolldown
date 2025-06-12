@@ -104,7 +104,12 @@ impl Bundler {
         ScanMode::Partial(changed_ids)
       };
     let is_full_scan_mode = mode.is_full();
-    let cache = std::mem::take(&mut self.cache);
+
+    // Make sure the cache is reset if incremental build is not enabled.
+    let mut scan_stage_cache_guard = CacheGuard {
+      is_incremental_build_enabled: self.options.experimental.is_incremental_build_enabled(),
+      cache: &mut self.cache,
+    };
 
     let scan_stage_output = match ScanStage::new(
       Arc::clone(&self.options),
@@ -113,7 +118,7 @@ impl Bundler {
       Arc::clone(&self.resolver),
       self.session_span.clone(),
     )
-    .scan(mode, cache)
+    .scan(mode, scan_stage_cache_guard.inner())
     .await
     {
       Ok(v) => v,
@@ -127,6 +132,9 @@ impl Bundler {
       }
     };
 
+    // Manually drop it to avoid holding the mut reference.
+    drop(scan_stage_cache_guard);
+
     let scan_stage_output =
       self.normalize_scan_stage_output_and_update_cache(scan_stage_output, is_full_scan_mode);
 
@@ -138,14 +146,12 @@ impl Bundler {
 
   pub fn normalize_scan_stage_output_and_update_cache(
     &mut self,
-    mut output: ScanStageOutput,
+    output: ScanStageOutput,
     is_full_scan_mode: bool,
   ) -> NormalizedScanStageOutput {
     if !self.options.experimental.is_incremental_build_enabled() {
       return output.into();
     }
-
-    self.cache = std::mem::take(&mut output.cache);
 
     if is_full_scan_mode {
       let output: NormalizedScanStageOutput = output.into();
@@ -326,6 +332,24 @@ impl Bundler {
         })
         .collect();
       trace_action!(action::ModuleGraphReady { action: "ModuleGraphReady", modules });
+    }
+  }
+}
+
+struct CacheGuard<'a> {
+  is_incremental_build_enabled: bool,
+  cache: &'a mut ScanStageCache,
+}
+impl CacheGuard<'_> {
+  pub fn inner(&mut self) -> &mut ScanStageCache {
+    self.cache
+  }
+}
+
+impl Drop for CacheGuard<'_> {
+  fn drop(&mut self) {
+    if !self.is_incremental_build_enabled {
+      std::mem::take(self.cache);
     }
   }
 }

@@ -209,20 +209,27 @@ impl HmrManager {
       })
       .collect::<Vec<_>>();
 
-    let module_loader = ModuleLoader::new(
+    let mut scan_stage_cache = std::mem::take(&mut self.cache);
+
+    let mut module_loader = ModuleLoader::new(
       self.fs,
       Arc::clone(&self.options),
       Arc::clone(&self.resolver),
       Arc::clone(&self.plugin_driver),
-      std::mem::take(&mut self.cache),
+      &mut scan_stage_cache,
       false,
       self.session_span.clone(),
     )?;
 
     let module_loader_output =
-      module_loader.fetch_modules(vec![], module_infos_to_be_updated).await?;
+      module_loader.fetch_modules(vec![], &module_infos_to_be_updated).await?;
 
-    self.cache = module_loader_output.cache;
+    // We manually impl `Drop` for `ModuleLoader` to avoid missing assign `importers` to
+    // `self.cache`, but rustc is not smart enough to infer actually we don't touch it in `drop`
+    // implementation, so we need to manually drop it.
+    drop(module_loader);
+
+    self.cache = scan_stage_cache;
 
     tracing::debug!(
       target: "hmr",

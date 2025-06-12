@@ -85,7 +85,7 @@ impl VisitState {
 }
 
 #[allow(unused)] // `build_span` field is used but clippy fails to detect it
-pub struct ModuleLoader {
+pub struct ModuleLoader<'a> {
   options: SharedOptions,
   shared_context: Arc<TaskContext>,
   pub tx: tokio::sync::mpsc::Sender<ModuleLoaderMsg>,
@@ -96,7 +96,7 @@ pub struct ModuleLoader {
   symbol_ref_db: SymbolRefDb,
   is_full_scan: bool,
   new_added_modules_from_partial_scan: FxIndexSet<ModuleIdx>,
-  cache: ScanStageCache,
+  cache: &'a mut ScanStageCache,
   build_span: tracing::Span,
 }
 
@@ -114,16 +114,21 @@ pub struct ModuleLoaderOutput {
   pub new_added_modules_from_partial_scan: FxIndexSet<ModuleIdx>,
   pub safely_merge_cjs_ns_map: FxHashMap<ModuleIdx, Vec<SymbolRef>>,
   pub overrode_preserve_entry_signature_map: FxHashMap<ModuleIdx, PreserveEntrySignatures>,
-  pub cache: ScanStageCache,
 }
 
-impl ModuleLoader {
+impl Drop for ModuleLoader<'_> {
+  fn drop(&mut self) {
+    self.cache.importers = std::mem::take(&mut self.intermediate_normal_modules.importers);
+  }
+}
+
+impl<'a> ModuleLoader<'a> {
   pub fn new(
     fs: OsFileSystem,
     options: SharedOptions,
     resolver: SharedResolver,
     plugin_driver: SharedPluginDriver,
-    mut cache: ScanStageCache,
+    cache: &'a mut ScanStageCache,
     is_full_scan: bool,
     build_span: tracing::Span,
   ) -> BuildResult<Self> {
@@ -248,9 +253,9 @@ impl ModuleLoader {
   #[allow(clippy::too_many_lines)]
   #[tracing::instrument(level = "debug", skip_all)]
   pub async fn fetch_modules(
-    mut self,
+    &mut self,
     user_defined_entries: Vec<(Option<ArcStr>, ResolvedId)>,
-    changed_resolved_ids: Vec<ResolvedId>,
+    changed_resolved_ids: &[ResolvedId],
   ) -> BuildResult<ModuleLoaderOutput> {
     let mut errors = vec![];
     let mut all_warnings: Vec<BuildDiagnostic> = vec![];
@@ -285,6 +290,7 @@ impl ModuleLoader {
 
     // Incremental partial rebuild files
     for resolved_id in changed_resolved_ids {
+      let resolved_id = resolved_id.clone();
       if let Entry::Occupied(mut occ) = self.cache.module_id_to_idx.entry(resolved_id.id.clone()) {
         let idx = occ.get().idx();
         occ.insert(VisitState::Invalidate(idx));
@@ -598,30 +604,30 @@ impl ModuleLoader {
     let mut none_empty_importer_module = vec![];
     let is_dense_index_vec = self.intermediate_normal_modules.modules.is_index_vec();
 
-    let modules_iter =
-      self.intermediate_normal_modules.modules.into_iter_enumerated().into_iter().map(
-        |(idx, module)| {
-          let mut module = module.expect("Module tasks did't complete as expected");
+    let modules_iter = std::mem::take(&mut self.intermediate_normal_modules.modules)
+      .into_iter_enumerated()
+      .into_iter()
+      .map(|(idx, module)| {
+        let mut module = module.expect("Module tasks did't complete as expected");
 
-          if let Some(module) = module.as_normal_mut() {
-            // Note: (Compat to rollup)
-            // The `dynamic_importers/importers` should be added after `module_parsed` hook.
-            let importers = &self.intermediate_normal_modules.importers[idx];
-            for importer in importers {
-              if importer.kind.is_static() {
-                module.importers.insert(importer.importer_path.clone());
-                module.importers_idx.insert(importer.importer_idx);
-              } else {
-                module.dynamic_importers.insert(importer.importer_path.clone());
-              }
-            }
-            if !importers.is_empty() {
-              none_empty_importer_module.push(idx);
+        if let Some(module) = module.as_normal_mut() {
+          // Note: (Compat to rollup)
+          // The `dynamic_importers/importers` should be added after `module_parsed` hook.
+          let importers = &self.intermediate_normal_modules.importers[idx];
+          for importer in importers {
+            if importer.kind.is_static() {
+              module.importers.insert(importer.importer_path.clone());
+              module.importers_idx.insert(importer.importer_idx);
+            } else {
+              module.dynamic_importers.insert(importer.importer_path.clone());
             }
           }
-          (idx, module)
-        },
-      );
+          if !importers.is_empty() {
+            none_empty_importer_module.push(idx);
+          }
+        }
+        (idx, module)
+      });
     let modules = if is_dense_index_vec {
       let vec = modules_iter.map(|(_, module)| module).collect();
       HybridIndexVec::IndexVec(IndexVec::from_vec(vec))
@@ -663,12 +669,10 @@ impl ModuleLoader {
       Err(BuildDiagnostic::invalid_option(rolldown_error::InvalidOptionType::NoEntryPoint))?;
     }
 
-    self.cache.importers = self.intermediate_normal_modules.importers;
-
     Ok(ModuleLoaderOutput {
       module_table: modules,
-      symbol_ref_db: self.symbol_ref_db,
-      index_ecma_ast: self.intermediate_normal_modules.index_ecma_ast,
+      symbol_ref_db: std::mem::take(&mut self.symbol_ref_db),
+      index_ecma_ast: std::mem::take(&mut self.intermediate_normal_modules.index_ecma_ast),
       entry_points,
       // if it is in incremental mode, we skip the runtime module, since it is always there
       // so use a dummy runtime_brief as a placeholder
@@ -679,8 +683,9 @@ impl ModuleLoader {
       },
       warnings: all_warnings,
       dynamic_import_exports_usage_map,
-      new_added_modules_from_partial_scan: self.new_added_modules_from_partial_scan,
-      cache: self.cache,
+      new_added_modules_from_partial_scan: std::mem::take(
+        &mut self.new_added_modules_from_partial_scan,
+      ),
       safely_merge_cjs_ns_map,
       overrode_preserve_entry_signature_map,
     })

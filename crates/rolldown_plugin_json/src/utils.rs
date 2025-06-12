@@ -73,7 +73,7 @@ pub fn json_to_esm(data: &Value, named_exports: bool) -> String {
 
   let data = data.as_object().unwrap();
   if data.is_empty() {
-    return "export default {{}};\n".to_string();
+    return "export default {};\n".to_string();
   }
 
   let mut named_export_code = String::new();

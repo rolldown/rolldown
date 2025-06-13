@@ -220,15 +220,14 @@ impl Bundler {
   #[allow(clippy::print_stdout, unused_must_use)]
   async fn handle_warnings(
     &self,
-    mut warnings: Vec<BuildDiagnostic>,
+    warnings: Vec<BuildDiagnostic>,
     options: &NormalizedBundlerOptions,
   ) {
     if options.log_level == Some(LogLevel::Silent) {
       return;
     }
-    warnings = filter_out_disabled_diagnostics(warnings, &options.checks);
     if let Some(on_log) = options.on_log.as_ref() {
-      for warning in warnings {
+      for warning in filter_out_disabled_diagnostics(warnings, &options.checks) {
         on_log
           .call(
             LogLevel::Warn,

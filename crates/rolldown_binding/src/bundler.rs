@@ -125,13 +125,15 @@ impl Bundler {
     &self,
     file: String,
     first_invalidated_by: Option<String>,
-  ) -> BindingHmrOutput {
+  ) -> napi::Result<BindingHmrOutput> {
     let mut bundler_core = self.inner.lock().await;
-    bundler_core
-      .hmr_invalidate(file, first_invalidated_by)
-      .await
-      .expect("Failed to call hmr_invalidate")
-      .into()
+    let result = bundler_core.hmr_invalidate(file, first_invalidated_by).await;
+    match result {
+      Ok(output) => Ok(output.into()),
+      Err(errs) => {
+        Ok(BindingHmrOutput::from_errors(errs.into_vec(), bundler_core.options().cwd.clone()))
+      }
+    }
   }
 }
 

@@ -4,7 +4,7 @@ import {
 } from '../../utils/create-bundler';
 import { transformToRollupOutput } from '../../utils/transform-to-rollup-output';
 
-import type { BindingHmrOutput, BindingHmrOutputPatch } from '../../binding';
+import type { BindingHmrOutputPatch } from '../../binding';
 import type { InputOptions } from '../../options/input-options';
 import type { OutputOptions } from '../../options/output-options';
 import type { HasProperty, TypeAssert } from '../../types/assert';
@@ -81,8 +81,12 @@ export class RolldownBuild {
   async hmrInvalidate(
     file: string,
     firstInvalidatedBy?: string,
-  ): Promise<BindingHmrOutput | undefined> {
-    return this.#bundler?.bundler.hmrInvalidate(file, firstInvalidatedBy);
+  ): Promise<BindingHmrOutputPatch | undefined> {
+    const output = await this.#bundler!.bundler.hmrInvalidate(
+      file,
+      firstInvalidatedBy,
+    );
+    return transformHmrPatchOutput(output);
   }
 
   // TODO(underfin)

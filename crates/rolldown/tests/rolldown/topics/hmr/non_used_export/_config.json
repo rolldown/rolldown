@@ -1,0 +1,8 @@
+{
+  "config": {
+    "experimental": {
+      "hmr": {}
+    },
+    "treeshake": false // NOTE: tree shaking is not supported for HMR now
+  }
+}

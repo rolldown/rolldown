@@ -16,10 +16,10 @@ __rolldown_runtime__.registerModule("hmr.js", { exports: hmr_exports });
 const foo = "hello";
 text$1(".hmr", foo);
 function text$1(el, text$2) {
-	document.querySelector(el).textContent = text$2;
+	console.log(el, text$2);
 }
 hmr_hot.accept((mod) => {
-	if (mod) text$1(".hmr", mod.foo);
+	if (mod) console.log(".hmr", mod.foo);
 });
 
 //#endregion
@@ -30,7 +30,7 @@ __rolldown_runtime__.__toCommonJS(sub_exports);
 __rolldown_runtime__.registerModule("sub.js", { exports: sub_exports });
 text(".app", "hello");
 function text(el, text$2) {
-	document.querySelector(el).textContent = text$2;
+	console.log(el, text$2);
 }
 
 //#endregion
@@ -80,10 +80,10 @@ var init_hmr_0 = __rolldown_runtime__.createEsmInitializer(function() {
 		const foo = "hello";
 		text(".hmr", foo);
 		function text(el, text) {
-			document.querySelector(el).textContent = text;
+			console.log(el, text);
 		}
 		hot_hmr.accept((mod) => {
-			if (mod) text(".hmr", mod.foo);
+			if (mod) console.log(".hmr", mod.foo);
 		});
 	} finally {}
 });

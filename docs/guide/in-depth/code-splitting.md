@@ -39,7 +39,7 @@ module.exports = 'bar';
 ## `Common chunk`s
 
 - Defining entries is not the only way to create chunks. When a module gets statically imported by at least two different entries, it gets pulled into a separate chunk.
-- What **automatic chunking** tries to do here are:
+- What **`automatic chunking`** tries to do here are:
 - Ensure every JavaScript module is singleton in the final bundle output.
 - When a entry gets executed, only imported modules should get executed.
 

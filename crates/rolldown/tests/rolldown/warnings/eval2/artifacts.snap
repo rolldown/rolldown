@@ -1,0 +1,19 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# warnings
+
+## EVAL
+
+```text
+[EVAL] Warning: Use of `eval` function is strongly discouraged as it poses security risks and may cause issues with minification.
+ - Use of `eval` function here. in ../../../../../../node_modules/.pnpm/peggy@5.0.3/node_modules/peggy/browser/peggy.min.js at 102428..102432
+
+```
+# Assets
+
+## main.js
+
+```js
+
+```

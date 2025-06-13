@@ -87,6 +87,12 @@ importers:
         specifier: 1.0.2
         version: 1.0.2
 
+  crates/rolldown/tests/rolldown/warnings/eval2:
+    devDependencies:
+      peggy:
+        specifier: ^5.0.3
+        version: 5.0.3
+
   docs:
     dependencies:
       '@vueuse/core':
@@ -2499,6 +2505,10 @@ packages:
     cpu: [x64]
     os: [win32]
 
+  '@peggyjs/from-mem@2.0.0':
+    resolution: {integrity: sha512-f+pL/s2DiT+2dxwheSoJT0P/KJy/s0klzE+ZqRdXHlkeyFk/DpKtyjLZIiA79kx56g3oEPA8Zu9EzEKzAwuvhw==}
+    engines: {node: '>=20'}
+
   '@pkgjs/parseargs@0.11.0':
     resolution: {integrity: sha512-+1VkjdD0QBLPodGrJUeqarH8VAIvQODIbwh9XpP5Syisf7YoQgsJKPNFoqqLQlu+VQ/tVSshMR6loPMn8U+dPg==}
     engines: {node: '>=14'}
@@ -4754,6 +4764,11 @@ packages:
     resolution: {integrity: sha512-vE7JKRyES09KiunauX7nd2Q9/L7lhok4smP9RZTDeD4MVs72Dp2qNFVz39Nz5a0FVEW0BJR6C0DYrq6unoziZA==}
     engines: {node: '>= 14.16'}
 
+  peggy@5.0.3:
+    resolution: {integrity: sha512-QErYmLjj/ehiNNJRqx2qb36hzkanuascpMqREs2RQqaXhU3cflIRScP/u2BoobIfu/FaeI3GGxNB/vFX/Ar9lg==}
+    engines: {node: '>=20'}
+    hasBin: true
+
   perfect-debounce@1.0.0:
     resolution: {integrity: sha512-xCy9V055GLEqoFaHoC1SoLIaLmWctgCUaBaWxDZ7/Zx4CTyX7cJQLJOok/orfjZAh9kEYpjJa4d0KcJmCbctZA==}
 
@@ -5091,6 +5106,11 @@ packages:
     resolution: {integrity: sha512-BR7VvDCVHO+q2xBEWskxS6DJE1qRnb7DxzUrogb71CWoSficBxYsiAGd+Kl0mmq/MprG9yArRkyrQxTO6XjMzA==}
     hasBin: true
 
+  semver@7.7.1:
+    resolution: {integrity: sha512-hlq8tAfn0m/61p4BVRcPzIGr6LKiMwo4VM6dGi6pt4qcRkmNzTcWq6eCEjEh+qXjkMDvPlOFFSGwQjoEa6gyMA==}
+    engines: {node: '>=10'}
+    hasBin: true
+
   semver@7.7.2:
     resolution: {integrity: sha512-RF0Fw+rO5AMf9MAyaRXI4AV0Ulj5lMHqVxxdSgiVbixSCXoEmmX/jk0CuJw4+3SqroYO9VoUh+HcuJivvtJemA==}
     engines: {node: '>=10'}
@@ -5169,6 +5189,10 @@ packages:
   sort-keys@4.2.0:
     resolution: {integrity: sha512-aUYIEU/UviqPgc8mHR6IW1EGxkAXpeRETYcrzg8cLAvUPZcpAlleSXHV2mY7G12GphSH6Gzv+4MMVSSkbdteHg==}
     engines: {node: '>=8'}
+
+  source-map-generator@2.0.0:
+    resolution: {integrity: sha512-4KomB7QsJti7dFBAVF6SXHzuCNQauk4gE2CummcqPzl+eJqXz1CkkiBdVXXW3g8VGh23bxcdEVACOzrxpIqnUg==}
+    engines: {node: '>=20'}
 
   source-map-js@1.2.1:
     resolution: {integrity: sha512-UXWMKhLOwVKb728IUtQPXxfYU+usdybtUrK/8uGE8CQMvrhOpwvzDBwj0QhSL7MQc7vIsISBG8VQ8+IDQxpfQA==}
@@ -7574,6 +7598,10 @@ snapshots:
 
   '@oxlint/win32-x64@0.18.1':
     optional: true
+
+  '@peggyjs/from-mem@2.0.0':
+    dependencies:
+      semver: 7.7.1
 
   '@pkgjs/parseargs@0.11.0':
     optional: true
@@ -9988,6 +10016,12 @@ snapshots:
 
   pathval@2.0.0: {}
 
+  peggy@5.0.3:
+    dependencies:
+      '@peggyjs/from-mem': 2.0.0
+      commander: 14.0.0
+      source-map-generator: 2.0.0
+
   perfect-debounce@1.0.0: {}
 
   picocolors@1.1.1: {}
@@ -10369,6 +10403,8 @@ snapshots:
 
   semver@6.3.1: {}
 
+  semver@7.7.1: {}
+
   semver@7.7.2: {}
 
   send@1.2.0:
@@ -10472,6 +10508,8 @@ snapshots:
   sort-keys@4.2.0:
     dependencies:
       is-plain-obj: 2.1.0
+
+  source-map-generator@2.0.0: {}
 
   source-map-js@1.2.1: {}
 

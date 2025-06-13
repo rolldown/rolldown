@@ -11,6 +11,7 @@ packages:
   - examples/module-federation/*
   - scripts
   - crates/rolldown/tests/rolldown/topics/npm_packages
+  - crates/rolldown/tests/rolldown/warnings/eval2
 
 shellEmulator: true
 

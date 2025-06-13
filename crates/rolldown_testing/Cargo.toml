@@ -33,6 +33,7 @@ rustc-hash = { workspace = true }
 serde_json = { workspace = true }
 sugar_path = { workspace = true }
 tokio = { workspace = true, features = ["rt", "macros", "sync", "rt-multi-thread"] }
+urlencoding = { workspace = true }
 
 [build-dependencies]
 rolldown_testing_config = { workspace = true }

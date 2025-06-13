@@ -3037,6 +3037,7 @@ dependencies = [
  "serde_json",
  "sugar_path",
  "tokio",
+ "urlencoding",
 ]
 
 [[package]]

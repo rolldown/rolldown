@@ -1,6 +1,5 @@
 use std::cmp::Reverse;
 
-// cSpell:ignore idxs
 use itertools::Itertools;
 use oxc_index::IndexVec;
 use petgraph::prelude::DiGraphMap;

@@ -1,4 +1,3 @@
-// cSpell:disable
 const ignoreTests = [
   'rollup@function@bundle-facade-order: respects the order of entry points when there are additional facades for chunks', // https://github.com/rolldown/rolldown/issues/1842#issuecomment-2296345255
 

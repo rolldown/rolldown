@@ -1,4 +1,3 @@
-// cSpell:disable
 use oxc::span::Atom;
 
 static GLOBAL_IDENT: phf::Set<&str> = phf::phf_set![

@@ -1,4 +1,3 @@
-// @cSpell:ignore subcase
 use memchr::memmem;
 use std::{borrow::Cow, path::Path};
 
@@ -380,7 +379,6 @@ filter: {:?}, id: {id}",
         cases: vec![
           ("import.meta", FilterResult::Match(true)),
           ("import_meta", FilterResult::Match(false)),
-          // cspell:ignore importmeta
           ("importmeta", FilterResult::NoneMatch(false)),
         ],
       },

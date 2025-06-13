@@ -1,4 +1,3 @@
-// cSpell:disable
 import { expect } from 'vitest'
 import { getOutputFileNames } from 'rolldown-tests/utils'
 import { defineTest } from 'rolldown-tests'

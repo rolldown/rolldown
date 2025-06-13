@@ -1,4 +1,3 @@
-// cSpell:ignore fooa, afoo
 import picomatch from 'picomatch';
 import { describe, expect, test } from 'vitest';
 import {

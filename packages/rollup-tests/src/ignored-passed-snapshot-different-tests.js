@@ -1,4 +1,3 @@
-// cSpell:disable
 module.exports = [
     // Passed, but the output snapshot is different from rollup
     "rollup@form@make-absolute-externals-relative@make-relative-false: does not normalize external paths when set to false",

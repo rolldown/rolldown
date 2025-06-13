@@ -8,6 +8,7 @@ use crate::type_alias::IndexEcmaAst;
 use crate::types::scan_stage_cache::ScanStageCache;
 use crate::utils::load_entry_module::load_entry_module;
 use arcstr::ArcStr;
+use itertools::Itertools;
 use oxc::semantic::{ScopeId, Scoping};
 use oxc::transformer_plugins::ReplaceGlobalDefinesConfig;
 use oxc_index::IndexVec;
@@ -266,7 +267,7 @@ impl<'a> ModuleLoader<'a> {
 
     // Store the already consider as entry module
     let mut user_defined_entry_ids = FxHashSet::with_capacity(user_defined_entries.len());
-    let mut entry_points = Vec::with_capacity(user_defined_entries.len());
+    let mut entry_points: FxIndexSet<EntryPoint> = FxIndexSet::default();
     let user_defined_entries: Arc<Vec<(Option<ArcStr>, ResolvedId)>> =
       Arc::new(user_defined_entries);
     for (defined_name, resolved_id) in user_defined_entries.iter() {
@@ -278,7 +279,8 @@ impl<'a> ModuleLoader<'a> {
         Arc::clone(&user_defined_entries),
       );
       user_defined_entry_ids.insert(id);
-      entry_points.push(EntryPoint {
+
+      entry_points.insert(EntryPoint {
         name: defined_name.clone(),
         id,
         kind: EntryPointKind::UserDefined,
@@ -673,7 +675,7 @@ impl<'a> ModuleLoader<'a> {
       module_table: modules,
       symbol_ref_db: std::mem::take(&mut self.symbol_ref_db),
       index_ecma_ast: std::mem::take(&mut self.intermediate_normal_modules.index_ecma_ast),
-      entry_points,
+      entry_points: entry_points.into_iter().collect_vec(),
       // if it is in incremental mode, we skip the runtime module, since it is always there
       // so use a dummy runtime_brief as a placeholder
       runtime: if self.is_full_scan {

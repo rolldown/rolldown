@@ -3,7 +3,7 @@
 Code splitting is the process of creating chunks from modules. This chapter will describes its behavior and the principles behind it.
 
 - Code splitting is not controllable. It runs following certain rules.
-- Thus, we will also refer it as _`automatic chunking`_ against _`manual chunking`_ done by `advancedChunks`.
+- Thus, we will also refer to it as _`automatic chunking`_ against _`manual chunking`_ done by `advancedChunks`.
 
 ## `Entry chunk`s
 

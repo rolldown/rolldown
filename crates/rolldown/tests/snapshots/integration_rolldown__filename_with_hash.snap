@@ -303,10 +303,6 @@ expression: output
 - stmt-fn-!~{002}~.js => stmt-fn-Dn-10V9-.js
 - stmt-local-!~{004}~.js => stmt-local-DLmNbk_M.js
 
-# tests/esbuild/dce/no_side_effects_comment_type_script_declare
-
-- entry-!~{000}~.js => entry-DAYSpSBa.js
-
 # tests/esbuild/dce/no_side_effects_comment_unused_calls
 
 - expr-fn-!~{002}~.js => expr-fn-jeADaQci.js
@@ -2580,11 +2576,11 @@ expression: output
 
 # tests/esbuild/lower/lower_async_generator
 
-- entry-!~{000}~.js => entry-CkfwB14J.js
+- entry-!~{000}~.js => entry-Bob-qv0G.js
 
 # tests/esbuild/lower/lower_async_generator_no_await
 
-- entry-!~{000}~.js => entry-CkfwB14J.js
+- entry-!~{000}~.js => entry-Bob-qv0G.js
 
 # tests/esbuild/lower/lower_async_super_es2016_no_bundle
 
@@ -2651,7 +2647,7 @@ expression: output
 
 # tests/esbuild/lower/lower_nullish_coalescing_assignment_issue1493
 
-- entry-!~{000}~.js => entry-DngxvfaS.js
+- entry-!~{000}~.js => entry-B7wcywSa.js
 
 # tests/esbuild/lower/lower_object_spread_no_bundle
 
@@ -2839,7 +2835,7 @@ expression: output
 
 # tests/esbuild/lower/lower_using_inside_ts_namespace
 
-- entry-!~{000}~.js => entry-BNpgCtnw.js
+- entry-!~{000}~.js => entry-BqGbuuqJ.js
 
 # tests/esbuild/lower/lower_using_unsupported_async
 
@@ -3387,10 +3383,6 @@ expression: output
 - entry-!~{000}~.js => entry-CX0tZhmZ.js
 
 # tests/esbuild/ts/ts_declare_enum
-
-- entry-!~{000}~.js => entry-CX0tZhmZ.js
-
-# tests/esbuild/ts/ts_declare_function
 
 - entry-!~{000}~.js => entry-CX0tZhmZ.js
 
@@ -4968,11 +4960,11 @@ expression: output
 
 # tests/rolldown/resolve/ts_config_merge_decorator_metadata
 
-- main-!~{000}~.js => main-BE-xJjcx.js
+- main-!~{000}~.js => main-DXV2zdmd.js
 
 # tests/rolldown/resolve/ts_config_option_merge
 
-- main-!~{000}~.js => main-Dci9XGYr.js
+- main-!~{000}~.js => main-Dk6VncgY.js
 
 # tests/rolldown/resolve/wildcard_alias
 

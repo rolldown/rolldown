@@ -17,8 +17,8 @@ shellEmulator: true
 # Define a catalog of version ranges.
 catalog:
   '@napi-rs/wasm-runtime': '^0.2.10'
-  '@oxc-node/cli': '^0.0.27'
-  '@oxc-node/core': '^0.0.27'
+  '@oxc-node/cli': '^0.0.28'
+  '@oxc-node/core': '^0.0.28'
   '@oxc-project/runtime': '=0.73.0'
   '@oxc-project/types': '=0.73.0'
   'oxc-parser': '=0.73.0'

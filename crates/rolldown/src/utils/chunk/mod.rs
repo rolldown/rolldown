@@ -1,4 +1,5 @@
 use self::render_chunk_exports::get_chunk_export_names;
+use arcstr::ArcStr;
 use rolldown_common::{
   Chunk, ChunkKind, ChunkMeta, ModuleId, ModuleIdx, PreserveEntrySignatures, RenderedModule,
   RollupPreRenderedChunk, RollupRenderedChunk, SharedNormalizedBundlerOptions,
@@ -17,10 +18,11 @@ pub mod validate_options_for_multi_chunk_output;
 
 pub fn generate_pre_rendered_chunk(
   chunk: &Chunk,
+  chunk_name: &ArcStr,
   graph: &LinkStageOutput,
 ) -> RollupPreRenderedChunk {
   RollupPreRenderedChunk {
-    name: chunk.name.clone().expect("should have name"),
+    name: chunk_name.clone(),
     is_entry: matches!(&chunk.kind, ChunkKind::EntryPoint { meta, .. } if meta.contains(ChunkMeta::UserDefinedEntry)),
     is_dynamic_entry: matches!(&chunk.kind, ChunkKind::EntryPoint { meta, .. } if !meta.contains(ChunkMeta::UserDefinedEntry)),
     facade_module_id: match &chunk.kind {

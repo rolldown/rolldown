@@ -4904,6 +4904,11 @@ expression: output
 - dynamic-!~{009}~.js => dynamic-DWvPx7n8.js
 - reexport-!~{007}~.js => reexport-YxtQ6YDY.js
 
+# tests/rolldown/misc/preserve_modules/issue_4944
+
+- a/index-!~{000}~.js => a/index-3B-LdG_-.js
+- child-!~{001}~.js => child-DQOQR_U9.js
+
 # tests/rolldown/misc/preserve_modules/multi_entry
 
 - a-!~{001}~.js => a-9EeU3Xa2.js

@@ -2,10 +2,10 @@
   "config": {
     "input": [
       {
+        "name": "a/index",
         "import": "main.js"
       }
     ],
-    "format": "cjs",
     "preserveModules": true
   },
   "expectExecuted": false

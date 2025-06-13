@@ -232,9 +232,9 @@ impl<'a> GenerateStage<'a> {
 
       let pre_generated_chunk_name = &mut index_pre_generated_names[*chunk_id];
       // Notice we didn't used deconflict name here, chunk names are allowed to be duplicated.
-      chunk.name = Some(pre_generated_chunk_name.0.clone());
       index_chunk_id_to_name.insert(*chunk_id, pre_generated_chunk_name.0.clone());
-      let pre_rendered_chunk = generate_pre_rendered_chunk(chunk, self.link_output);
+      let pre_rendered_chunk =
+        generate_pre_rendered_chunk(chunk, &pre_generated_chunk_name.0, self.link_output);
 
       let preliminary_filename = chunk
         .generate_preliminary_filename(
@@ -255,6 +255,10 @@ impl<'a> GenerateStage<'a> {
           &used_name_counts,
         )
         .await?;
+
+      // Defer chunk name assignment to make sure at this point only entry chunk have a name
+      // if user provided one.
+      chunk.name = Some(pre_generated_chunk_name.0.clone());
 
       for module in chunk.modules.iter().copied().filter_map(|idx| modules[idx].as_normal()) {
         if let Some(asset_view) = module.asset_view.as_ref() {

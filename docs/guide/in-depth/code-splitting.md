@@ -221,4 +221,4 @@ console.log(globalThis.value);
   :::
 
 - There are some discussions on how to solve this problem, one way is to create more `common chunk`s once a module violates its' original order. But this will create more `common chunk`s, which is not a good idea.
-- Rolldown tries to solves this issue by `InputOptions#experimental#strictExecutionOrder`, which injects some helper code to ensure the execution order is respected with keeping esm output and not creating more `common chunk`s.
+- Rolldown tries to solve this issue by `InputOptions#experimental#strictExecutionOrder`, which injects some helper code to ensure the execution order is respected with keeping esm output and not creating more `common chunk`s.

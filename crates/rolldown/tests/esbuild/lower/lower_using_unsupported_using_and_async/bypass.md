@@ -190,7 +190,7 @@ if (nested) for (using a of b) c(() => a);
 ===================================================================
 --- esbuild	/out/loops.js
 +++ rolldown	loops.js
-@@ -1,64 +1,5 @@
+@@ -1,64 +1,2 @@
 -for (var _a of b) {
 -    var _stack = [];
 -    try {
@@ -255,12 +255,8 @@ if (nested) for (using a of b) c(() => a);
 -        }
 -    });
 -}
-+//#region loops.js
 +for (using a of b) c(() => a);
 +if (nested) for (using a of b) c(() => a);
-+
-+//#endregion
-\ No newline at end of file
 
 ```
 ## /out/switch.js
@@ -354,7 +350,7 @@ async function foo() {
 ===================================================================
 --- esbuild	/out/switch.js
 +++ rolldown	switch.js
-@@ -1,60 +1,19 @@
+@@ -1,60 +1,22 @@
 -function foo() {
 -    return __async(this, null, function* () {
 -        var _stack5 = [];
@@ -393,11 +389,12 @@ async function foo() {
 -            __callDispose(_stack5, _error5, _hasError5);
 -        }
 -    });
-+//#region switch.js
-+using x = y;
++var x = y;
 +switch (foo) {
-+	case 0: using c = d;
-+	default: using e = f;
++    case 0:
++        using c = d;
++    default:
++        using e = f;
  }
 -var _stack2 = [];
 -try {
@@ -414,24 +411,24 @@ async function foo() {
 -        var _error = _, _hasError = true;
 -    } finally {
 -        __callDispose(_stack, _error, _hasError);
--    }
++async function foo() {
++    using x$1 = y;
++    switch (foo) {
++        case 0:
++            using c = d;
++        default:
++            using e = f;
+     }
 -} catch (_2) {
 -    var _error2 = _2, _hasError2 = true;
 -} finally {
 -    __callDispose(_stack2, _error2, _hasError2);
-+async function foo() {
-+	using x$1 = y;
-+	switch (foo) {
-+		case 0: using c = d;
-+		default: using e = f;
-+	}
-+	switch (foo) {
-+		case 0: await using c = d;
-+		default: using e = f;
-+	}
++    switch (foo) {
++        case 0:
++            await using c = d;
++        default:
++            using e = f;
++    }
  }
-+
-+//#endregion
-\ No newline at end of file
 
 ```

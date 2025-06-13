@@ -88,7 +88,7 @@ if (nested) {
 ===================================================================
 --- esbuild	/out/entry.js
 +++ rolldown	entry.js
-@@ -1,66 +1,9 @@
+@@ -1,66 +1,6 @@
 -function foo() {
 -    var _stack4 = [];
 -    try {
@@ -108,12 +108,11 @@ if (nested) {
 -    } finally {
 -        __callDispose(_stack4, _error4, _hasError4);
 -    }
-+//#region entry.js
-+using a = b;
-+await using c = d;
++var a = b;
++var c = d;
 +if (nested) {
-+	using x = 1;
-+	await using y = 2;
++    using x = 1;
++    await using y = 2;
  }
 -async function bar() {
 -    var _stack4 = [];
@@ -161,9 +160,6 @@ if (nested) {
 -    var _promise2 = __callDispose(_stack2, _error2, _hasError2);
 -    _promise2 && await _promise2;
 -}
-+
-+//#endregion
-\ No newline at end of file
 
 ```
 ## /out/loops.js
@@ -346,7 +342,7 @@ if (nested) {
 ===================================================================
 --- esbuild	/out/loops.js
 +++ rolldown	loops.js
-@@ -1,155 +1,13 @@
+@@ -1,155 +1,10 @@
 -for (var _a of b) {
 -    var _stack = [];
 -    try {
@@ -393,7 +389,6 @@ if (nested) {
 -        _promise2 && await _promise2;
 -    }
 -}
-+//#region loops.js
 +for (using a of b) c(() => a);
 +for (await using d of e) f(() => d);
 +for await (using g of h) i(() => g);
@@ -445,10 +440,10 @@ if (nested) {
 -            _promise4 && await _promise4;
 -        }
 -    }
-+	for (using a of b) c(() => a);
-+	for (await using d of e) f(() => d);
-+	for await (using g of h) i(() => g);
-+	for await (await using j of k) l(() => j);
++    for (using a of b) c(() => a);
++    for (await using d of e) f(() => d);
++    for await (using g of h) i(() => g);
++    for await (await using j of k) l(() => j);
  }
 -function foo() {
 -    for (var _a of b) {
@@ -511,9 +506,6 @@ if (nested) {
 -        }
 -    }
 -}
-+
-+//#endregion
-\ No newline at end of file
 
 ```
 ## /out/switch.js
@@ -623,8 +615,21 @@ async function foo() {
 ===================================================================
 --- esbuild	/out/switch.js
 +++ rolldown	switch.js
-@@ -1,72 +1,23 @@
--async function foo() {
+@@ -1,72 +1,28 @@
++var x = y;
++switch (foo) {
++    case 0:
++        using c = d;
++    default:
++        using e = f;
++}
++switch (foo) {
++    case 0:
++        await using c = d;
++    default:
++        using e = f;
++}
+ async function foo() {
 -    var _stack6 = [];
 -    try {
 -        const x2 = __using(_stack6, y);
@@ -659,13 +664,14 @@ async function foo() {
 -        var _error6 = _6, _hasError6 = true;
 -    } finally {
 -        __callDispose(_stack6, _error6, _hasError6);
--    }
-+//#region switch.js
-+using x = y;
-+switch (foo) {
-+	case 0: using c = d;
-+	default: using e = f;
- }
++    using x$1 = y;
++    switch (foo) {
++        case 0:
++            using c = d;
++        default:
++            using e = f;
+     }
+-}
 -var _stack3 = [];
 -try {
 -    var x = __using(_stack3, y);
@@ -681,7 +687,12 @@ async function foo() {
 -        var _error = _, _hasError = true;
 -    } finally {
 -        __callDispose(_stack, _error, _hasError);
--    }
++    switch (foo) {
++        case 0:
++            await using c = d;
++        default:
++            using e = f;
+     }
 -    var _stack2 = [];
 -    try {
 -        switch (foo) {
@@ -700,23 +711,6 @@ async function foo() {
 -    var _error3 = _3, _hasError3 = true;
 -} finally {
 -    __callDispose(_stack3, _error3, _hasError3);
-+switch (foo) {
-+	case 0: await using c = d;
-+	default: using e = f;
  }
-+async function foo() {
-+	using x$1 = y;
-+	switch (foo) {
-+		case 0: using c = d;
-+		default: using e = f;
-+	}
-+	switch (foo) {
-+		case 0: await using c = d;
-+		default: using e = f;
-+	}
-+}
-+
-+//#endregion
-\ No newline at end of file
 
 ```

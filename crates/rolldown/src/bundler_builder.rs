@@ -41,8 +41,26 @@ impl BundlerBuilder {
 
     let maybe_guard = rolldown_tracing::try_init_tracing();
 
-    let NormalizeOptionsReturn { mut options, resolve_options, mut warnings } =
+    let NormalizeOptionsReturn { mut options, mut resolve_options, mut warnings } =
       normalize_options(self.options);
+    
+    // Configure WASI resolve options if needed
+    if let Err(err) = crate::wasi_config::configure_wasi_resolve_options(&mut resolve_options, options.platform) {
+      warnings.push(err);
+    }
+    
+    // If using WASI platform, adjust filename templates for WASM output
+    if let Some(extension) = crate::wasi_config::get_wasi_output_extension(options.platform) {
+      // Only adjust if the user hasn't explicitly set custom filenames
+      if self.options.entry_filenames.is_none() {
+        options.entry_filenames = format!("[name]{}", extension).to_string().into();
+      }
+      
+      if self.options.chunk_filenames.is_none() {
+        options.chunk_filenames = format!("[name]-[hash]{}", extension).to_string().into();
+      }
+    }
+    
     let tsconfig_filename = resolve_options.tsconfig_filename.clone();
     let resolver: SharedResolver =
       Resolver::new(resolve_options, options.platform, options.cwd.clone(), OsFileSystem).into();

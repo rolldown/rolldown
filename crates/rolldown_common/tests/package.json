@@ -1,0 +1,12 @@
+{
+  "name": "rolldown-common-tests",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test": "vitest run --reporter verbose --hideSkippedTests"
+  },
+  "devDependencies": {
+    "vitest": "^3.0.1",
+    "typescript": "^5.6.3"
+  }
+}

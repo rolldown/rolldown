@@ -53,6 +53,15 @@ pub fn normalize_options(mut raw_options: crate::BundlerOptions) -> NormalizeOpt
     OutputFormat::Esm | OutputFormat::Iife | OutputFormat::Umd => Platform::Browser,
   });
 
+  // Check if we're in a WebAssembly environment - if so, override platform to WASI
+  #[cfg(target_family = "wasm")]
+  let platform = if platform == Platform::Node || platform == Platform::Browser {
+    // Component model is enforced by NAPI-RS so we can use WasiP2 directly
+    Platform::WasiP2
+  } else {
+    platform
+  };
+
   let minify: MinifyOptions = raw_options.minify.unwrap_or_default().into();
 
   let mut raw_define = raw_options.define.unwrap_or_default();

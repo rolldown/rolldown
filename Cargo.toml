@@ -61,7 +61,7 @@ inconsistent_struct_constructor = "allow"
 single_match = "allow"
 single_match_else = "allow"
 
-# Though the following are nursery rules, they’re still useful.
+# Though the following are nursery rules, they're still useful.
 debug_assert_with_mut_call = "warn"
 iter_on_single_items = "warn"
 needless_pass_by_ref_mut = "warn"
@@ -233,3 +233,9 @@ opt-level = "s"
 # it will strip these information for non-debug files
 debug = "full"
 strip = "none"
+
+# New profile for WASI Preview 2 with component model support
+[profile.release-wasip2]
+inherits = "release-wasi"
+# Enable component model features - disabled for now as it requires newer nightly
+# rustflags = ["-Z", "wasm-component-model"]

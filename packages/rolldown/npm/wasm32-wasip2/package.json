@@ -1,0 +1,24 @@
+{
+  "name": "@rolldown/binding-wasm32-wasip2",
+  "version": "0.1.0",
+  "description": "Native WASI Preview 2 binding for Rolldown bundler",
+  "keywords": [
+    "wasi",
+    "wasip2",
+    "webassembly",
+    "wasm",
+    "component-model",
+    "rolldown",
+    "bundler"
+  ],
+  "license": "MIT",
+  "main": "index.js",
+  "files": [
+    "binding.component.wasm",
+    "binding.component.wasm.d.ts",
+    "index.js"
+  ],
+  "engines": {
+    "node": ">=16"
+  }
+} 

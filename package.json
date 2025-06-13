@@ -2,6 +2,7 @@
   "name": "monorepo",
   "description": "Rollup in Rust",
   "private": true,
+  "type": "module",
   "packageManager": "pnpm@10.11.0",
   "engines": {
     "node": ">=18.20.3"

@@ -10,6 +10,7 @@ mod module;
 mod module_loader;
 mod type_aliases;
 mod types;
+mod wasi_features;
 
 /// This module is to help `rolldown` crate could export types related bundler options easily.
 /// `rolldown` crate could use `pub use rolldown_common::bundler_options::*;` to export all types, so we don't need write
@@ -160,5 +161,6 @@ pub use crate::{
   },
   types::watch::WatcherChangeKind,
   types::wrap_kind::WrapKind,
+  wasi_features::{is_wasi_platform, is_wasi_preview2, get_wasi_target_triple, get_wasi_component_entry_pattern},
 };
 pub use bundler_options::*;

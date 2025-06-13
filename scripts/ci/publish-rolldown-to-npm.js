@@ -58,7 +58,6 @@ async function publish(version, tag) {
 // --- main
 
 assertRunningScriptFromRepoRoot();
-// // cspell:ignore nothrow
 $.nothrow = true;
 $.verbose = true;
 

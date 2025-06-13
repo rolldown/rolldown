@@ -1146,6 +1146,9 @@ export declare class BindingNormalizedOptions {
   get minify(): false | BindingMinifyOptions
   get polyfillRequire(): boolean
   get legalComments(): 'none' | 'inline'
+  get preserveModules(): boolean
+  get preserveModulesRoot(): string | undefined
+  get virtualDirname(): string
 }
 
 export declare class BindingOutputAsset {

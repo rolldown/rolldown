@@ -1,4 +1,3 @@
-// @Cspell:ignore tokenss
 use itertools::Itertools;
 use napi::bindgen_prelude::{Either, FnArgs};
 use rolldown_utils::filter_expression::{self, FilterExprKind};

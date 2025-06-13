@@ -18,37 +18,54 @@ pub fn is_context_too_long(
     return false;
   }
   let rope = ropey::Rope::from_str(source);
-  let has_line_feed_after = rope
-    .try_byte_to_char(span.end())
-    .ok()
-    .and_then(|end| {
-      let postfix = rope.slice(end..);
-      postfix.chars().position(|char| char == '\n').map(|offset| offset < 300)
-    })
-    // We treat EOF as a line feed
-    .unwrap_or(true);
+  // 1. If start to beginning of the file is less than 300 characters, treated as it has line feed before.
+  // 2. If end to end of the file is less than 300 characters, treated as it has line feed after.
+  let end = span.end();
+  let start = span.start();
+  let postfix = rope.slice(end..);
+  let mut has_line_feed_after = false;
+  let mut cnt = 0;
+  for ch in postfix.chars() {
+    if ch == '\n' {
+      has_line_feed_after = true;
+      break;
+    }
+    cnt += 1;
+    if cnt > 300 {
+      break;
+    }
+  }
 
-  let has_line_feed_before = rope
-    .try_byte_to_char(span.start())
-    .ok()
-    .and_then(|start| {
-      // We treat Start of the file as a line feed
-      if start < 300 {
-        return Some(true);
-      }
-      let postfix = rope.slice(..start);
-      postfix.chars().position(|char| char == '\n').map(|offset| offset < 300)
-    })
-    .unwrap_or(false);
+  if cnt < 300 {
+    has_line_feed_after = true;
+  }
+
+  let prefix = rope.slice(..start);
+
+  let mut has_line_feed_before = false;
+  let mut cnt = 0;
+  for ch in prefix.chars().reversed() {
+    if ch == '\n' {
+      has_line_feed_before = true;
+      break;
+    }
+    cnt += 1;
+    if cnt > 300 {
+      break;
+    }
+  }
+  if cnt < 300 {
+    has_line_feed_before = true;
+  }
+
   !has_line_feed_after || !has_line_feed_before
 }
 
 pub fn filter_out_disabled_diagnostics(
   diagnostics: Vec<BuildDiagnostic>,
   switcher: &EventKindSwitcher,
-) -> Vec<BuildDiagnostic> {
+) -> impl Iterator<Item = BuildDiagnostic> {
   diagnostics
     .into_iter()
     .filter(|d| switcher.contains(EventKindSwitcher::from_bits_truncate(1 << d.kind() as u32)))
-    .collect()
 }

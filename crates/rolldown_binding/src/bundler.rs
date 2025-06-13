@@ -125,13 +125,15 @@ impl Bundler {
     &self,
     file: String,
     first_invalidated_by: Option<String>,
-  ) -> BindingHmrOutput {
+  ) -> napi::Result<BindingHmrOutput> {
     let mut bundler_core = self.inner.lock().await;
-    bundler_core
-      .hmr_invalidate(file, first_invalidated_by)
-      .await
-      .expect("Failed to call hmr_invalidate")
-      .into()
+    let result = bundler_core.hmr_invalidate(file, first_invalidated_by).await;
+    match result {
+      Ok(output) => Ok(output.into()),
+      Err(errs) => {
+        Ok(BindingHmrOutput::from_errors(errs.into_vec(), bundler_core.options().cwd.clone()))
+      }
+    }
   }
 }
 
@@ -218,15 +220,14 @@ impl Bundler {
   #[allow(clippy::print_stdout, unused_must_use)]
   async fn handle_warnings(
     &self,
-    mut warnings: Vec<BuildDiagnostic>,
+    warnings: Vec<BuildDiagnostic>,
     options: &NormalizedBundlerOptions,
   ) {
     if options.log_level == Some(LogLevel::Silent) {
       return;
     }
-    warnings = filter_out_disabled_diagnostics(warnings, &options.checks);
     if let Some(on_log) = options.on_log.as_ref() {
-      for warning in warnings {
+      for warning in filter_out_disabled_diagnostics(warnings, &options.checks) {
         on_log
           .call(
             LogLevel::Warn,

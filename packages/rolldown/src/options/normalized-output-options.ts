@@ -181,15 +181,15 @@ export class NormalizedOutputOptionsImpl implements NormalizedOutputOptions {
   }
 
   get preserveModules(): boolean {
-    return this.outputOptions.preserveModules || false;
+    return this.inner.preserveModules;
   }
 
   get preserveModulesRoot(): string | undefined {
-    return this.outputOptions.preserveModulesRoot;
+    return this.inner.preserveModulesRoot;
   }
 
   get virtualDirname(): string {
-    return this.outputOptions.virtualDirname || '_virtual';
+    return this.inner.virtualDirname;
   }
 }
 

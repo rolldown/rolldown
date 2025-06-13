@@ -11,17 +11,18 @@ packages:
   - examples/module-federation/*
   - scripts
   - crates/rolldown/tests/rolldown/topics/npm_packages
+  - crates/rolldown/tests/rolldown/warnings/eval2
 
 shellEmulator: true
 
 # Define a catalog of version ranges.
 catalog:
   '@napi-rs/wasm-runtime': '^0.2.10'
-  '@oxc-node/cli': '^0.0.27'
-  '@oxc-node/core': '^0.0.27'
-  '@oxc-project/runtime': '=0.72.3'
-  '@oxc-project/types': '=0.72.3'
-  'oxc-parser': '=0.72.3'
-  'oxc-transform': '=0.72.3'
+  '@oxc-node/cli': '^0.0.28'
+  '@oxc-node/core': '^0.0.28'
+  '@oxc-project/runtime': '=0.73.0'
+  '@oxc-project/types': '=0.73.0'
+  'oxc-parser': '=0.73.0'
+  'oxc-transform': '=0.73.0'
   'tsdown': '0.12.7'
   'rolldown-plugin-dts': '^0.13.6'

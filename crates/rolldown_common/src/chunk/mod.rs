@@ -199,11 +199,17 @@ impl Chunk {
     Ok(PreliminaryFilename::new(name, hash_placeholder))
   }
 
-  pub fn get_preserve_modules_chunk_name<'a>(
-    &self,
+  pub fn get_preserve_modules_chunk_name<'a, 'b: 'a>(
+    &'b self,
     options: &NormalizedBundlerOptions,
     chunk_name: &'a str,
   ) -> Cow<'a, str> {
+    // https://github.com/rollup/rollup/blob/99d4bee3277b96b30e871fb471f6c7ed55f94850/src/Chunk.ts?plain=1#L1125-L1126
+    // TODO: We need to add `ChunkNames` to module struct
+    if let Some(ref name) = self.name {
+      return Cow::Borrowed(name.as_str());
+    }
+
     let p = PathBuf::from(chunk_name);
     let p = if p.is_absolute() {
       if let Some(ref preserve_modules_root) = options.preserve_modules_root {

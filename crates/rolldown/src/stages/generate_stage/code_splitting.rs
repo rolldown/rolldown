@@ -72,6 +72,8 @@ impl GenerateStage<'_> {
         let Module::Normal(module) = module else {
           continue;
         };
+        let matched_entry =
+          self.link_output.entries.iter().find(|entry_point| entry_point.id == module.idx);
         if !module.is_included() {
           continue;
         }
@@ -80,9 +82,9 @@ impl GenerateStage<'_> {
         let mut bits = BitSet::new(modules_len);
         bits.set_bit(count);
         let mut chunk = Chunk::new(
-          None,
-          None,
-          None,
+          matched_entry.and_then(|item| item.name.clone()),
+          matched_entry.and_then(|item| item.reference_id.clone()),
+          matched_entry.and_then(|item| item.file_name.clone()),
           bits.clone(),
           vec![],
           ChunkKind::EntryPoint {

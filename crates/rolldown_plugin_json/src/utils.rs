@@ -1,4 +1,3 @@
-// cSpell:disable
 use std::fmt::Write as _;
 
 use rolldown_utils::concat_string;

@@ -26,8 +26,7 @@ export default defineTest({
       virtualDirname: 'custom-virtual',
     }
   },
-  // cSpell:disable
-  afterTest(output) {
+    afterTest(output) {
     if (process.platform !== 'win32') {
       expect(getOutputChunkNames(output)).toStrictEqual([
         'main.js',

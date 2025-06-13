@@ -6,18 +6,27 @@ class ModuleHotContext {
    */
   acceptCallbacks = []
   /**
-   * 
-   * @param {string} moduleId 
-   * @param {DevRuntime} devRuntime 
+   *
+   * @param {string} moduleId
+   * @param {DevRuntime} devRuntime
    */
   constructor(moduleId, devRuntime) {
     this.moduleId = moduleId;
     this.devRuntime = devRuntime;
   }
 
+  /**
+   * @overload
+   * @param {(mod: Record<string, any>) => void} cb
+   * @returns {void}
+   */
+  /**
+   * @param {...any} args
+   * @returns {void}
+   */
   accept(...args) {
     if (args.length === 1) {
-      const [cb] = args;
+      const [cb] = /** @type {[(mod: Record<string, any>) => void]} */ (args);
       const acceptingPath = this.moduleId;
       this.acceptCallbacks.push({
         deps: [acceptingPath],
@@ -29,12 +38,7 @@ class ModuleHotContext {
   }
 }
 
-class DevRuntime {
-  /**
-   * @type {Map<string, Set<(...args: any[]) => void>>}
-   */
-  acceptPathToCallers = new Map()
-  modules = {}
+class DefaultDevRuntime extends DevRuntime {
   /**
    * @type {Map<string, ModuleHotContext>}
    */
@@ -44,20 +48,9 @@ class DevRuntime {
    */
   moduleHotContextsToBeUpdated = new Map()
   /**
-   * 
-   * @returns {DevRuntime}
+   * @override
+   * @param {string} moduleId
    */
-  static getInstance() {
-    /**
-     * @type {DevRuntime | undefined}
-     */
-    let instance = globalThis.__rolldown_runtime__;
-    if (!instance) {
-      instance = new DevRuntime();
-      globalThis.__rolldown_runtime__ = instance;
-    }
-    return instance
-  }
   createModuleHotContext(moduleId) {
     const hotContext = new ModuleHotContext(moduleId, this);
     if (this.moduleHotContexts.has(moduleId)) {
@@ -68,8 +61,8 @@ class DevRuntime {
     return hotContext;
   }
   /**
-   * 
-   * @param {string[]} boundaries 
+   * @override
+   * @param {string[]} boundaries
    */
   applyUpdates(boundaries) {
     // trigger callbacks of accept() correctly
@@ -83,40 +76,16 @@ class DevRuntime {
       }
     }
     this.moduleHotContextsToBeUpdated.forEach((hotContext, moduleId) => {
-      this.moduleHotContexts[moduleId] = hotContext;
+      this.moduleHotContexts.set(moduleId, hotContext);
     })
     this.moduleHotContextsToBeUpdated.clear()
     // swap new contexts
   }
-  registerModule(id, module) {
-    console.debug('Registering module', id, module);
-    this.modules[id] = module
-  }
+}
 
-  loadExports(id) {
-    const module = this.modules[id];
-    if (module) {
-      return module.exports;
-    } else {
-      console.warn(`Module ${id} not found`);
-      return {};
-    }
-  }
+;(/** @type {any} */ (globalThis)).__rolldown_runtime__ ??= new DefaultDevRuntime();
 
-  // __esmMin
-  createEsmInitializer = (fn, res) => () => (fn && (res = fn(fn = 0)), res)
-  // __commonJSMin
-  createCjsInitializer = (cb, mod) => () => (mod || cb((mod = { exports: {} }).exports, mod), mod.exports)
-  // @ts-expect-error it exists
-  __toESM = __toESM;
-  // @ts-expect-error it exists
-  __toCommonJS = __toCommonJS
-  // @ts-expect-error it exists
-  __export = __export
-} 
-
-globalThis.__rolldown_runtime__ = DevRuntime.getInstance();
-
+/** @param {string} url */
 function loadScript(url) {
   var script = document.createElement('script');
   script.src = url;
@@ -133,6 +102,7 @@ addr.searchParams.set('from', 'hmr-runtime');
 
 const socket = new WebSocket(addr)
 
+/** @param {MessageEvent} event */
 socket.onmessage = function (event) {
   const data = JSON.parse(event.data)
   console.debug('Received message:', data);

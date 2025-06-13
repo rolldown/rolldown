@@ -1,4 +1,3 @@
-// cSpell:disable
 use std::borrow::Cow;
 
 use string_wizard::IndentOptions;

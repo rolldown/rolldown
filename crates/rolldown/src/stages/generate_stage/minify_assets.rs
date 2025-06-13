@@ -57,7 +57,6 @@ fn test_d_ts_pattern(input: &str) -> bool {
   input.ends_with(".d.ts") || input.ends_with(".d.cts") || input.ends_with(".d.mts")
 }
 
-// @cspell:ignore ctsx, mtsx
 #[cfg(test)]
 mod tests {
   use super::*;

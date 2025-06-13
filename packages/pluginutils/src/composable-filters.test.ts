@@ -1,4 +1,3 @@
-// cSpell:ignore fooa, afoo
 import { describe, expect, test } from 'vitest';
 import {
   and,

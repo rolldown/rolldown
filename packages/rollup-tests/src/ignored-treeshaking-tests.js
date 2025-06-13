@@ -1,4 +1,3 @@
-// cSpell:disable
 const ignoreTests = [
   // The treeshaking is not compatible with rollup
   "rollup@form@conditional-put-parens-around-sequence: put parens around sequences if conditional simplified (#1311)",

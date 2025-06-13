@@ -1,0 +1,11 @@
+{
+  "extends": "../../../../tsconfig.json",
+  "include": ["./**/*", "../../../rolldown_testing/src/hmr-runtime.js"],
+  "compilerOptions": {
+    "noEmit": true,
+    "isolatedModules": true,
+    "verbatimModuleSyntax": true,
+    "isolatedDeclarations": false,
+    "allowJs": true
+  }
+}

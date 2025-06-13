@@ -44,6 +44,7 @@ const sharedSidebar = [
       { text: 'Top Level Await', link: '/guide/in-depth/tla-in-rolldown.md' },
       { text: 'Advanced Chunks', link: '/guide/in-depth/advanced-chunks.md' },
       { text: 'Bundling CJS', link: '/guide/in-depth/bundling-cjs.md' },
+      // { text: 'Code Splitting', link: '/guide/in-depth/code-splitting.md' },
       // { text: 'Use Strict', link: '/guide/in-depth/use-strict.md' },
     ],
   },

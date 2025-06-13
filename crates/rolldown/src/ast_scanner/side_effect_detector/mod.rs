@@ -432,7 +432,7 @@ impl<'a> SideEffectDetector<'a> {
 
       Expression::ArrayExpression(expr) => self.detect_side_effect_of_array_expr(expr),
       Expression::NewExpression(expr) => {
-        let is_pure = maybe_side_effect_free_global_constructor(self.scope, expr) || expr.pure;
+        let is_pure = expr.pure || maybe_side_effect_free_global_constructor(self.scope, expr);
         if is_pure {
           expr
             .arguments

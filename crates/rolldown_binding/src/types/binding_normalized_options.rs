@@ -247,4 +247,19 @@ impl BindingNormalizedOptions {
   pub fn legal_comments(&self) -> String {
     self.inner.legal_comments.to_string()
   }
+
+  #[napi(getter)]
+  pub fn preserve_modules(&self) -> bool {
+    self.inner.preserve_modules
+  }
+
+  #[napi(getter, ts_return_type = "string | undefined")]
+  pub fn preserve_modules_root(&self) -> Option<String> {
+    self.inner.preserve_modules_root.clone()
+  }
+
+  #[napi(getter)]
+  pub fn virtual_dirname(&self) -> String {
+    self.inner.virtual_dirname.clone()
+  }
 }

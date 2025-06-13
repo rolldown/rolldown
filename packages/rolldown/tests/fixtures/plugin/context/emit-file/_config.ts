@@ -1,4 +1,3 @@
-// cSpell:disable
 import { defineTest } from 'rolldown-tests'
 import { getOutputAsset } from 'rolldown-tests/utils'
 import { expect } from 'vitest'

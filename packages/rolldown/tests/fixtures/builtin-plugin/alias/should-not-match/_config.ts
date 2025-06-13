@@ -21,7 +21,6 @@ export default defineTest({
       onLogFn()
     },
   },
-  // cspell:ignore rolldownlib
   async afterTest() {
     expect(onLogFn).toHaveBeenCalledTimes(1)
 

@@ -36,7 +36,6 @@ jobs:
           echo $COMPILE_TIME
           echo "COMPILE_TIME=$COMPILE_TIME" >> $GITHUB_OUTPUT
 
-          # cspell:disable-next-line
           BINARY_SIZE=$(ls -l ./target/release/librolldown_binding.so | awk '{print $5}')
           echo $BINARY_SIZE
           echo "BINARY_SIZE=$BINARY_SIZE" >> $GITHUB_OUTPUT

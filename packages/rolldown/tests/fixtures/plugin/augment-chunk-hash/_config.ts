@@ -1,4 +1,3 @@
-// cSpell:disable
 import { expect, vi } from 'vitest'
 import { defineTest } from 'rolldown-tests'
 import { getOutputChunk } from 'rolldown-tests/utils'

@@ -1,5 +1,4 @@
 use oxc_sourcemap::SourcemapVisualizer;
-// cSpell:disable
 use string_wizard::{Hires, MagicString, ReplaceOptions, SourceMapOptions, UpdateOptions};
 
 #[test]

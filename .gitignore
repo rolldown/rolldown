@@ -171,6 +171,7 @@ packages/**/THIRD-PARTY-LICENSE
 !/crates/rolldown/tests/esbuild/**/pkg
 !/packages/rolldown/tests/fixtures/**/node_modules
 
+crates/rolldown/tests/rolldown/warnings/eval2/node_modules
 .spr.yml
 
 # generated bindings type

@@ -154,7 +154,6 @@ console.log(foo);
 export var foo = 'foo';
 ```
 
-
 - Rolldown will try to calculate the order by emulating the execution, starting from entries.
 - In this case, the execution order is `[foo.js, entry.js]`;
 

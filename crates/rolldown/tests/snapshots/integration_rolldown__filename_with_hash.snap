@@ -5714,6 +5714,10 @@ expression: output
 
 - main-!~{000}~.js => main-CHVi3gu4.js
 
+# tests/rolldown/warnings/eval2
+
+- main-!~{000}~.js => main-Fv4vYntb.js
+
 # tests/rolldown/warnings/invalid_option/invalid_output_dir_option
 
 - main.js => main.js

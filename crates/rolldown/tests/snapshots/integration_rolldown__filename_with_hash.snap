@@ -5375,7 +5375,7 @@ expression: output
 
 # tests/rolldown/topics/hmr/generate_patch_error
 
-- main-!~{000}~.js => main-bu5nhqYf.js
+- main-!~{000}~.js => main-CbHBADwK.js
 
 # tests/rolldown/topics/hmr/mutiply_entires
 

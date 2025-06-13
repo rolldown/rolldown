@@ -154,8 +154,10 @@ console.log(foo);
 export var foo = 'foo';
 ```
 
-- rolldown will try to calculate the order by emulating the execution, starting from entries.
+
+- Rolldown will try to calculate the order by emulating the execution, starting from entries.
 - In this case, the execution order is `[foo.js, entry.js]`;
+
 - So the bundle output will be like
 
 ```js [output.js]

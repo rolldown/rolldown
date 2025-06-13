@@ -73,7 +73,7 @@ export class RolldownBuild {
 
   async generateHmrPatch(
     changedFiles: string[],
-  ): Promise<BindingHmrOutputPatch | undefined> {
+  ): Promise<BindingHmrOutputPatch> {
     const output = await this.#bundler!.bundler.generateHmrPatch(changedFiles);
     return transformHmrPatchOutput(output);
   }
@@ -81,7 +81,7 @@ export class RolldownBuild {
   async hmrInvalidate(
     file: string,
     firstInvalidatedBy?: string,
-  ): Promise<BindingHmrOutputPatch | undefined> {
+  ): Promise<BindingHmrOutputPatch> {
     const output = await this.#bundler!.bundler.hmrInvalidate(
       file,
       firstInvalidatedBy,

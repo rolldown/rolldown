@@ -230,6 +230,22 @@ describe('config', () => {
       expect(err).not.toBeUndefined()
     }
   })
+
+  it('support windows symbolic link', async() => {
+    const cwd = cliFixturesDir('symlink-win')
+    const status  = await execa `New-Item -ItemType SymbolicLink -Path link -Target ${cwd}/rolldown.config.js`
+                                .then(() => $({ cwd })`rolldown -c link`)
+    expect(status.exitCode).toBe(0)
+    expect(cleanStdout(status.stdout)).toMatchSnapshot()
+  })
+  
+  it('support unix symbolic link', async() => {
+    const cwd = cliFixturesDir('symlink-unix')
+    const status  = await execa `ln -s link.js ${cwd}/rolldown.config.js`
+                                .then(() => $`rolldown -c link.js`)
+    expect(status.exitCode).toBe(0)
+    expect(cleanStdout(status.stdout)).toMatchSnapshot()
+  })
 })
 
 describe('watch cli', () => {
@@ -311,4 +327,6 @@ describe('watch cli', () => {
     const status = await $({ cwd })`rolldown -w -c`
     expect(cleanStdout(status.stdout)).toMatchSnapshot()
   })
+
+ 
 })

@@ -13,6 +13,7 @@ workspace = true
 doctest = false
 
 [dependencies]
+blake3 = { workspace = true }
 dashmap = { workspace = true }
 rolldown_debug_action = { workspace = true }
 rustc-hash = { workspace = true }

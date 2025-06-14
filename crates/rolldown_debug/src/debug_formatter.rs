@@ -7,7 +7,9 @@ use std::{
 
 use crate::{
   debug_data_propagate_layer::ContextData,
-  static_data::{DEFAULT_SESSION_ID, OPENED_FILE_HANDLES, OPENED_FILES_BY_SESSION},
+  static_data::{
+    DEFAULT_SESSION_ID, EXIST_HASH_BY_SESSION, OPENED_FILE_HANDLES, OPENED_FILES_BY_SESSION,
+  },
 };
 use rustc_hash::FxHashMap;
 use serde::ser::{SerializeMap, Serializer as _};
@@ -26,6 +28,7 @@ where
   S: Subscriber + for<'lookup> LookupSpan<'lookup>,
   N: for<'writer> FormatFields<'writer> + 'static,
 {
+  #[expect(clippy::too_many_lines)]
   fn format_event(
     &self,
     ctx: &FmtContext<'_, S, N>,
@@ -109,19 +112,89 @@ where
         .unwrap_or_else(|| panic!("{log_filename} not found"));
       let mut file = file.value_mut();
 
-      let mut visit = || {
+      let mut need_newline = false;
+      let mut cache_large_string = || -> Result<(), serde_json::Error> {
         // WARN: Do not use pretty print here, vite-devtool relies on the format of every line is a json object.
         let mut serializer = serde_json::Serializer::new(&mut file);
-        let mut serializer = serializer.serialize_map(None)?;
 
-        serializer.serialize_entry("timestamp", &current_utc_timestamp_ms())?;
-        serializer.serialize_entry("session_id", session_id)?;
         let serde_json::Value::Object(action_meta) = &action_meta else {
           unreachable!("action_meta should always be an object");
         };
 
+        for (_key, value) in action_meta {
+          match value {
+            serde_json::Value::String(value) if value.len() > 5 * 1024 /* 5kb */ => {
+              // we assume hash does not collide.
+              let hash = blake3::hash(value.as_bytes()).to_hex().to_string();
+              let mut exist_hash_set =
+                EXIST_HASH_BY_SESSION.entry(session_id.to_string()).or_default();
+              if !exist_hash_set.contains(&hash) {
+                exist_hash_set.insert(hash.to_string());
+                let mut map = serializer.serialize_map(None)?;
+                map.serialize_entry("action", "StringRef")?;
+                map.serialize_entry("id", &hash)?;
+                map.serialize_entry("content", value)?;
+                map.end()?;
+                need_newline = true;
+              }
+            }
+            _ => {
+            }
+          }
+        }
+        Ok(())
+      };
+
+      cache_large_string().map_err(|_| std::fmt::Error)?;
+      if need_newline {
+        writeln!(file).map_err(|_| std::fmt::Error)?;
+      }
+
+      let mut visit = || {
+        // WARN: Do not use pretty print here, vite-devtool relies on the format of every line is a json object.
+        let mut serializer = serde_json::Serializer::new(&mut file);
+
+        let serde_json::Value::Object(action_meta) = &action_meta else {
+          unreachable!("action_meta should always be an object");
+        };
+
+        for (_key, value) in action_meta {
+          match value {
+            serde_json::Value::String(value) if value.len() > 5 * 1024 /* 5kb */ => {
+              // we assume hash does not collide.
+              let hash = blake3::hash(value.as_bytes()).to_hex().to_string();
+              let mut exist_hash_set =
+                EXIST_HASH_BY_SESSION.entry(session_id.to_string()).or_default();
+              if !exist_hash_set.contains(&hash) {
+                exist_hash_set.insert(hash.to_string());
+                let mut map = serializer.serialize_map(None)?;
+                map.serialize_entry("action", "StringRef")?;
+                map.serialize_entry("id", &hash)?;
+                map.serialize_entry("content", value)?;
+                map.end()?;
+              }
+            }
+            _ => {
+            }
+          }
+        }
+
+        let mut serializer = serializer.serialize_map(None)?;
+
+        serializer.serialize_entry("timestamp", &current_utc_timestamp_ms())?;
+        serializer.serialize_entry("session_id", session_id)?;
+
         for (key, value) in action_meta {
-          serializer.serialize_entry(key, value)?;
+          match value {
+            serde_json::Value::String(value) if value.len() > 10 * 1024 /* 10kb */ => {
+              // we assume hash does not collide.
+              let hash = blake3::hash(value.as_bytes()).to_hex().to_string();
+              serializer.serialize_entry(key, &format!("$ref:{hash}"))?;
+            }
+            _ => {
+              serializer.serialize_entry(key, value)?;
+            }
+          }
         }
 
         // TODO(hyf0): we don't care about other fields for now.

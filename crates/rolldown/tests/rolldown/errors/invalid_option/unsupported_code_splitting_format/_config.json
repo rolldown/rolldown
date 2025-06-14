@@ -1,0 +1,16 @@
+{
+  "config": {
+    "format": "iife",
+    "input": [
+      {
+        "name": "test",
+        "import": "./main.js"
+      },
+      {
+        "name": "test1",
+        "import": "./main.js"
+      }
+    ]
+  },
+  "expectError": true
+}

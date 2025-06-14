@@ -131,6 +131,7 @@ impl ScanStageCache {
       warnings: vec![],
       dynamic_import_exports_usage_map: cache.dynamic_import_exports_usage_map.clone(),
       overrode_preserve_entry_signature_map: cache.overrode_preserve_entry_signature_map.clone(),
+      entry_point_to_reference_ids: cache.entry_point_to_reference_ids.clone(),
     }
   }
 }

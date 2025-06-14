@@ -1,0 +1,17 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## main.js
+
+```js
+//#region main.js
+(() => {
+	const foo = () => {
+		if (__BAR__) console.log();
+	};
+})();
+
+//#endregion
+```

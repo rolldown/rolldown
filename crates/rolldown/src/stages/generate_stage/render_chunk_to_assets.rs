@@ -330,17 +330,24 @@ pub fn set_emitted_chunk_preliminary_filenames(
   file_emitter: &SharedFileEmitter,
   chunk_graph: &ChunkGraph,
 ) {
-  let emitted_chunk_info = chunk_graph.chunk_table.chunks.iter().filter_map(|chunk| {
-    chunk.reference_id.as_ref().map(|reference_id| EmittedChunkInfo {
-      reference_id: reference_id.clone(),
-      filename: chunk
-        .preliminary_filename
-        .as_ref()
-        .expect("Emitted chunk should have filename")
-        .deref()
-        .clone(),
+  let emitted_chunk_info = chunk_graph
+    .chunk_table
+    .chunks
+    .iter_enumerated()
+    .filter_map(|(idx, chunk)| {
+      chunk_graph.chunk_idx_to_reference_ids.get(&idx).map(|reference_ids| {
+        reference_ids.iter().map(|reference_id| EmittedChunkInfo {
+          reference_id: reference_id.clone(),
+          filename: chunk
+            .preliminary_filename
+            .as_ref()
+            .expect("Emitted chunk should have filename")
+            .deref()
+            .clone(),
+        })
+      })
     })
-  });
+    .flatten();
   file_emitter.set_emitted_chunk_info(emitted_chunk_info);
 }
 
@@ -349,12 +356,16 @@ fn set_emitted_chunk_filenames(
   assets: &IndexAssets,
   chunk_graph: &ChunkGraph,
 ) {
-  let emitted_chunk_info = assets.iter().filter_map(|assets| {
-    let chunk = &chunk_graph.chunk_table.chunks[assets.origin_chunk];
-    chunk.reference_id.as_ref().map(|reference_id| EmittedChunkInfo {
-      reference_id: reference_id.clone(),
-      filename: assets.filename.clone(),
+  let emitted_chunk_info = assets
+    .iter()
+    .filter_map(|asset| {
+      chunk_graph.chunk_idx_to_reference_ids.get(&asset.origin_chunk).map(|reference_ids| {
+        reference_ids.iter().map(|reference_id| EmittedChunkInfo {
+          reference_id: reference_id.clone(),
+          filename: asset.filename.clone(),
+        })
+      })
     })
-  });
+    .flatten();
   file_emitter.set_emitted_chunk_info(emitted_chunk_info);
 }

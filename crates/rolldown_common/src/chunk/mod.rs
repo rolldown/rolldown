@@ -42,7 +42,6 @@ pub struct Chunk {
   // emitted chunk specified filename, used to generate chunk filename
   pub file_name: Option<ArcStr>,
   // emitted chunk corresponding reference_id, used to `PluginContext#getFileName` to search the emitted chunk name
-  pub reference_id: Option<ArcStr>,
   pub pre_rendered_chunk: Option<RollupPreRenderedChunk>,
   pub preliminary_filename: Option<PreliminaryFilename>,
   pub absolute_preliminary_filename: Option<String>,
@@ -69,7 +68,6 @@ impl Chunk {
   #[allow(clippy::too_many_arguments)]
   pub fn new(
     name: Option<ArcStr>,
-    reference_id: Option<ArcStr>,
     file_name: Option<ArcStr>,
     bits: BitSet,
     modules: Vec<ModuleIdx>,
@@ -82,7 +80,6 @@ impl Chunk {
       modules,
       name,
       file_name,
-      reference_id,
       bits,
       kind,
       input_base,

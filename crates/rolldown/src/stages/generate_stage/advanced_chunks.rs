@@ -164,7 +164,6 @@ impl GenerateStage<'_> {
       let runtime_chunk = Chunk::new(
         Some("rolldown-runtime".into()),
         None,
-        None,
         index_splitting_info[runtime_module_idx].bits.clone(),
         vec![],
         ChunkKind::Common,
@@ -283,7 +282,6 @@ impl GenerateStage<'_> {
       }
       let mut chunk = Chunk::new(
         Some(this_module_group.name.clone()),
-        None,
         None,
         index_splitting_info
           [this_module_group.modules.iter().next().copied().expect("must have one")]

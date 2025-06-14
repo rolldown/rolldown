@@ -83,7 +83,6 @@ impl GenerateStage<'_> {
         bits.set_bit(count);
         let mut chunk = Chunk::new(
           matched_entry.and_then(|item| item.name.clone()),
-          matched_entry.and_then(|item| item.reference_id.clone()),
           matched_entry.and_then(|item| item.file_name.clone()),
           bits.clone(),
           vec![],
@@ -108,10 +107,15 @@ impl GenerateStage<'_> {
           },
           self.options,
         );
-        let chunk = chunk_graph.add_chunk(chunk);
-        chunk_graph.add_module_to_chunk(module.idx, chunk);
+        let chunk_idx = chunk_graph.add_chunk(chunk);
+        if let Some(entry) = matched_entry {
+          if let Some(reference_ids) = self.link_output.entry_point_to_reference_ids.get(entry) {
+            chunk_graph.chunk_idx_to_reference_ids.insert(chunk_idx, reference_ids.clone());
+          }
+        }
+        chunk_graph.add_module_to_chunk(module.idx, chunk_idx);
         // bits_to_chunk.insert(bits, chunk); // This line is intentionally commented out because `bits_to_chunk` is not used in this loop. It is updated elsewhere in the `init_entry_point` and `split_chunks` methods.
-        entry_module_to_entry_chunk.insert(module.idx, chunk);
+        entry_module_to_entry_chunk.insert(module.idx, chunk_idx);
       }
     } else {
       self.init_entry_point(
@@ -351,7 +355,6 @@ impl GenerateStage<'_> {
       };
       let mut chunk = Chunk::new(
         entry_point.name.clone(),
-        entry_point.reference_id.clone(),
         entry_point.file_name.clone(),
         bits.clone(),
         vec![],
@@ -376,10 +379,13 @@ impl GenerateStage<'_> {
         },
         self.options,
       );
-      let chunk = chunk_graph.add_chunk(chunk);
+      let chunk_idx = chunk_graph.add_chunk(chunk);
+      if let Some(reference_ids) = self.link_output.entry_point_to_reference_ids.get(entry_point) {
+        chunk_graph.chunk_idx_to_reference_ids.insert(chunk_idx, reference_ids.clone());
+      }
 
-      bits_to_chunk.insert(bits, chunk);
-      entry_module_to_entry_chunk.insert(entry_point.id, chunk);
+      bits_to_chunk.insert(bits, chunk_idx);
+      entry_module_to_entry_chunk.insert(entry_point.id, chunk_idx);
     }
   }
 
@@ -445,16 +451,8 @@ impl GenerateStage<'_> {
       } else if allow_extension_optimize {
         pending_common_chunks.entry(bits.clone()).or_default().push(normal_module.idx);
       } else {
-        let mut chunk = Chunk::new(
-          None,
-          None,
-          None,
-          bits.clone(),
-          vec![],
-          ChunkKind::Common,
-          input_base.clone(),
-          None,
-        );
+        let mut chunk =
+          Chunk::new(None, None, bits.clone(), vec![], ChunkKind::Common, input_base.clone(), None);
         chunk.add_creation_reason(
           ChunkCreationReason::CommonChunk { bits, link_output: self.link_output },
           self.options,
@@ -513,7 +511,6 @@ impl GenerateStage<'_> {
         }
         CombineChunkRet::DynamicVec(_) | CombineChunkRet::None | CombineChunkRet::Entry(_) => {
           let mut chunk = Chunk::new(
-            None,
             None,
             None,
             bits.clone(),

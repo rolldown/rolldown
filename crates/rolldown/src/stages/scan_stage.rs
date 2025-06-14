@@ -40,6 +40,7 @@ pub struct NormalizedScanStageOutput {
   pub dynamic_import_exports_usage_map: FxHashMap<ModuleIdx, DynamicImportExportsUsage>,
   // TODO: merge the preserve_entry_signatures_map in incremental build
   pub overrode_preserve_entry_signature_map: FxHashMap<ModuleIdx, PreserveEntrySignatures>,
+  pub entry_point_to_reference_ids: FxHashMap<EntryPoint, Vec<ArcStr>>,
 }
 
 impl NormalizedScanStageOutput {
@@ -60,6 +61,7 @@ impl NormalizedScanStageOutput {
       dynamic_import_exports_usage_map: self.dynamic_import_exports_usage_map.clone(),
       safely_merge_cjs_ns_map: self.safely_merge_cjs_ns_map.clone(),
       overrode_preserve_entry_signature_map: self.overrode_preserve_entry_signature_map.clone(),
+      entry_point_to_reference_ids: self.entry_point_to_reference_ids.clone(),
     }
   }
 }
@@ -79,6 +81,7 @@ impl From<ScanStageOutput> for NormalizedScanStageOutput {
       dynamic_import_exports_usage_map: value.dynamic_import_exports_usage_map,
       safely_merge_cjs_ns_map: value.safely_merge_cjs_ns_map,
       overrode_preserve_entry_signature_map: value.overrode_preserve_entry_signature_map,
+      entry_point_to_reference_ids: value.entry_point_to_reference_ids,
     }
   }
 }
@@ -94,6 +97,7 @@ pub struct ScanStageOutput {
   pub dynamic_import_exports_usage_map: FxHashMap<ModuleIdx, DynamicImportExportsUsage>,
   pub safely_merge_cjs_ns_map: FxHashMap<ModuleIdx, Vec<SymbolRef>>,
   pub overrode_preserve_entry_signature_map: FxHashMap<ModuleIdx, PreserveEntrySignatures>,
+  pub entry_point_to_reference_ids: FxHashMap<EntryPoint, Vec<ArcStr>>,
 }
 
 impl ScanStage {
@@ -158,6 +162,7 @@ impl ScanStage {
       new_added_modules_from_partial_scan: _,
       safely_merge_cjs_ns_map,
       overrode_preserve_entry_signature_map,
+      entry_point_to_reference_ids,
     } = module_loader_output;
 
     self.plugin_driver.file_emitter.set_context_load_modules_tx(None).await;
@@ -174,6 +179,7 @@ impl ScanStage {
       module_table,
       safely_merge_cjs_ns_map,
       overrode_preserve_entry_signature_map,
+      entry_point_to_reference_ids,
     })
   }
 

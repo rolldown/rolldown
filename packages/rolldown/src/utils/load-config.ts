@@ -139,13 +139,14 @@ function tryStatSync(file: string): fs.Stats | undefined {
 export async function loadConfig(configPath: string): Promise<ConfigExport> {
   configPath = configPath || (await findConfigFileNameInCwd());
   try {
-    const pathStatus = fs.statSync(configPath);
+    const isSymlink = fs.lstatSync(configPath).isSymbolicLink();
 
-    if (pathStatus.isSymbolicLink()) {
-      if (pathStatus.isFile()) {
-        const targetPath = fs.readlinkSync(configPath);
-        const ext = path.extname(targetPath);
-        return await loadNormalConfig(ext, targetPath);
+    if (isSymlink) {
+      const targetPath = fs.readlinkSync(configPath);
+      const resolvedPath = path.resolve(path.dirname(configPath), targetPath);
+      if (fs.statSync(resolvedPath).isFile()) {
+        const ext = path.extname(resolvedPath);
+        return await loadNormalConfig(ext, resolvedPath);
       } else {
         throw new Error('Symbolic link target is not a file.');
       }

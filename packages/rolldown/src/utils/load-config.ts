@@ -137,28 +137,45 @@ function tryStatSync(file: string): fs.Stats | undefined {
 }
 
 export async function loadConfig(configPath: string): Promise<ConfigExport> {
-  const ext = path.extname(
-    configPath = configPath || (await findConfigFileNameInCwd()),
-  );
-
+  configPath = configPath || (await findConfigFileNameInCwd());
   try {
-    if (
-      SUPPORTED_JS_CONFIG_FORMATS.includes(ext) ||
-      (process.env.NODE_OPTIONS?.includes('--import=tsx') &&
-        SUPPORTED_TS_CONFIG_FORMATS.includes(ext))
-    ) {
-      return (await import(pathToFileURL(configPath).href)).default;
-    } else if (SUPPORTED_TS_CONFIG_FORMATS.includes(ext)) {
-      const rawConfigPath = path.resolve(configPath);
-      return await loadTsConfig(rawConfigPath);
+    const pathStatus = fs.statSync(configPath);
+
+    if (pathStatus.isSymbolicLink()) {
+      if (pathStatus.isFile()) {
+        const targetPath = fs.readlinkSync(configPath);
+        const ext = path.extname(targetPath);
+        return await loadNormalConfig(ext, targetPath);
+      } else {
+        throw new Error('Symbolic link target is not a file.');
+      }
     } else {
-      throw new Error(
-        `Unsupported config format. Expected: \`${
-          SUPPORTED_CONFIG_FORMATS.join(',')
-        }\` but got \`${ext}\``,
-      );
+      const ext = path.extname(configPath);
+      return await loadNormalConfig(ext, configPath);
     }
   } catch (err) {
     throw new Error('Error happened while loading config.', { cause: err });
+  }
+}
+
+async function loadNormalConfig(
+  ext: string,
+  configPath: string,
+): Promise<ConfigExport> {
+  if (
+    SUPPORTED_JS_CONFIG_FORMATS.includes(ext) ||
+    (process.env.NODE_OPTIONS?.includes('--import=tsx') &&
+      SUPPORTED_TS_CONFIG_FORMATS.includes(ext))
+  ) {
+    return (await import(pathToFileURL(configPath).href)).default;
+  } else if (SUPPORTED_TS_CONFIG_FORMATS.includes(ext)) {
+    const rawConfigPath = path.resolve(configPath);
+    return await loadTsConfig(rawConfigPath);
+  } else {
+    throw new Error(
+      `Unsupported config format. Expected: \`${
+        SUPPORTED_CONFIG_FORMATS.join(',')
+      }\` but got \`${ext}\``,
+    );
   }
 }

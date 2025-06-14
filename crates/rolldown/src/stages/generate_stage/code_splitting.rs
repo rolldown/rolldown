@@ -8,7 +8,7 @@ use arcstr::ArcStr;
 use itertools::Itertools;
 use oxc_index::IndexVec;
 use rolldown_common::{
-  Chunk, ChunkIdx, ChunkKind, ChunkMeta, Module, ModuleIdx, OutputFormat, PreserveEntrySignatures,
+  Chunk, ChunkIdx, ChunkKind, ChunkMeta, Module, ModuleIdx, PreserveEntrySignatures,
 };
 use rolldown_utils::{BitSet, commondir, indexmap::FxIndexMap, rustc_hash::FxHashMapExt};
 use rustc_hash::{FxHashMap, FxHashSet};
@@ -34,11 +34,6 @@ impl GenerateStage<'_> {
   #[allow(clippy::too_many_lines)]
   #[tracing::instrument(level = "debug", skip_all)]
   pub async fn generate_chunks(&mut self) -> anyhow::Result<ChunkGraph> {
-    if matches!(self.options.format, OutputFormat::Iife | OutputFormat::Umd) {
-      let user_defined_entry_count =
-        self.link_output.entries.iter().filter(|entry| entry.kind.is_user_defined()).count();
-      debug_assert!(user_defined_entry_count == 1, "IIFE/UMD format only supports one entry point");
-    }
     let entries_len: u32 =
       self.link_output.entries.len().try_into().expect("Too many entries, u32 overflowed.");
     // If we are in test environment, to make the runtime module always fall into a standalone chunk,

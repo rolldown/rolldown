@@ -5722,7 +5722,7 @@ expression: output
 
 - main.js => main.js
 
-# tests/rolldown/warnings/invalid_option/unsupported_code_splitting_format
+# tests/rolldown/warnings/invalid_option/unsupported_inline_dynamic_format
 
 - main-!~{000}~.js => main-Dy0cF1Ft.js
 

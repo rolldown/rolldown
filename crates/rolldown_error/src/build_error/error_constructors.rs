@@ -25,6 +25,7 @@ use crate::events::missing_name_option_for_umd_export::MissingNameOptionForUmdEx
 use crate::events::resolve_error::DiagnosableResolveError;
 use crate::events::unhandleable_error::UnhandleableError;
 use crate::events::unloadable_dependency::{UnloadableDependency, UnloadableDependencyContext};
+use crate::events::unsupport_target::UnsupportTarget;
 use crate::events::unsupported_feature::UnsupportedFeature;
 use crate::events::{
   ambiguous_external_namespace::{AmbiguousExternalNamespace, AmbiguousExternalNamespaceModule},
@@ -304,6 +305,14 @@ impl BuildDiagnostic {
   pub fn unhandleable_error(err: anyhow::Error) -> Self {
     downcast_napi_error_diagnostics(err)
       .unwrap_or_else(|err| Self::new_inner(UnhandleableError(err)))
+  }
+
+  pub fn unsupport_target(filename: &str, field_name: &str, target: &str) -> Self {
+    Self::new_inner(UnsupportTarget {
+      filename: filename.to_string(),
+      fieldname: field_name.to_string(),
+      target: target.to_string(),
+    })
   }
 }
 

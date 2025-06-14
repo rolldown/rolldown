@@ -133,14 +133,14 @@ This is conceptually similar to [esbuild's `loader` option](https://esbuild.gith
 
 ## Minification
 
-- ⚠️ WIP
+- ⚠️ Experimental
 - Configurable via the `output.minify` option.
 
-This is powered by [`oxc-minifier`](https://github.com/oxc-project/oxc/tree/main/crates/oxc_minifier), which is currently still work-in-progress. There is no configurability yet and the compression quality is not production ready. Expect improvements in the future!
+The minification is powered by [`oxc-minifier`](https://github.com/oxc-project/oxc/tree/main/crates/oxc_minifier), which is currently in alpha and can still have bugs. We recommend thoroughly testing your output in production environments.
 
-For now, it is recommended to use an external minifier for production use cases. Rolldown is compatible with Rollup minifier plugins:
+If you prefer an external minifier instead, Rolldown is compatible with Rollup minifier plugins, such as:
 
-With [`rollup-plugin-esbuild`](https://github.com/egoist/rollup-plugin-esbuild):
+[`rollup-plugin-esbuild`](https://github.com/egoist/rollup-plugin-esbuild):
 
 ```js [rolldown.config.js]
 import { defineConfig } from 'rolldown';
@@ -151,7 +151,7 @@ export default defineConfig({
 });
 ```
 
-With [`rollup-plugin-swc3`](https://github.com/SukkaW/rollup-plugin-swc):
+[`rollup-plugin-swc3`](https://github.com/SukkaW/rollup-plugin-swc):
 
 ```js [rolldown.config.js]
 import { defineConfig } from 'rolldown';

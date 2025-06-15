@@ -29,8 +29,7 @@ body = """
   {%- else -%}
     {%- set commit_message = commit.message -%}
   {%- endif -%}
-  - {% if commit.scope %}{{ commit.scope }}: {% endif %}\
-    {{ commit_message | split(pat="\n") | first | trim }}\
+  - {{ commit_message | split(pat="\n") | first | trim }}\
     {% if commit.remote.username %} by @{{ commit.remote.username }}{%- endif -%}
     {% if commit.remote.pr_number %} in [#{{ commit.remote.pr_number }}]({{ self::remote_url() }}/pull/{{ commit.remote.pr_number }}) {%- endif -%}
     {% raw %}\n{% endraw -%}

@@ -28,7 +28,7 @@
     "**/CHANGELOG-*.md": true,
     "**/CHANGELOG.md": true,
     "**/generated/**": true,
-    "packages/rolldown/src/*{binding,worker}*.*js": true
+    "packages/rolldown/src/*{binding,worker}*.*{j,d.t}s": true
   },
   "git.ignoreLimitWarning": true,
   "json.schemas": [

@@ -17,6 +17,7 @@ const napiArgs = [
   '--platform',
   '-p',
   'rolldown_binding',
+  '--esm',
   '--js',
   'binding.js',
   '--dts',

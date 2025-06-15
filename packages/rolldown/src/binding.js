@@ -366,11 +366,12 @@ if (!nativeBinding || process.env.NAPI_RS_FORCE_WASI) {
 
 if (!nativeBinding) {
   if (loadErrors.length > 0) {
-    // TODO Link to documentation with potential fixes
-    //  - The package owner could build/publish bindings for this arch
-    //  - The user may need to bundle the correct files
-    //  - The user may need to re-install node_modules to get new packages
-    throw new Error('Failed to load native binding', { cause: loadErrors })
+    throw new Error(
+      `Cannot find native binding. ` +
+        `npm has a bug related to optional dependencies (https://github.com/npm/cli/issues/4828). ` +
+        'Please try `npm i` again after removing both package-lock.json and node_modules directory.',
+      { cause: loadErrors }
+    )
   }
   throw new Error(`Failed to load native binding`)
 }

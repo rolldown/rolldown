@@ -70,7 +70,7 @@ export interface OutputOptions {
   externalLiveBindings?: boolean;
   inlineDynamicImports?: boolean;
   /**
-   * Allows you to do advanced chunking. Use it to reduce the number of common chunks or split out a chunk that hardly changes to obtain better caching.
+   * Allows you to do manual chunking. For deeper understanding, please refer to the in-depth [documentation](https://rolldown.rs/guide/in-depth/advanced-chunks).
    */
   advancedChunks?: {
     /**
@@ -111,6 +111,24 @@ export interface OutputOptions {
        * - Type: `string`
        *
        * Name of the group. It will be also used as the name of the chunk and replaced the `[name]` placeholder in the `chunkFileNames` option.
+       *
+       * For example,
+       *
+       * ```js
+       * import { defineConfig } from 'rolldown';
+       *
+       * export default defineConfig({
+       *   advancedChunks: {
+       *     groups: [
+       *       {
+       *         name: 'libs',
+       *         test: /node_modules/,
+       *       },
+       *     ],
+       *   },
+       * });
+       * ```
+       * will create a chunk named `libs-[hash].js` in the end.
        */
       name: string;
       /**
@@ -118,25 +136,50 @@ export interface OutputOptions {
        *
        * Controls which modules are captured in this group.
        *
-       * If `test` is a string, the module whose id contains the string will be captured.
-       * If `test` is a regular expression, the module whose id matches the regular expression will be captured.
-       * If `test` is a function, modules for which `test(id)` returns `true` will be captured.
-       * if `test` is empty, any module will be considered as matched.
+       * - If `test` is a string, the module whose id contains the string will be captured.
+       * - If `test` is a regular expression, the module whose id matches the regular expression will be captured.
+       * - If `test` is a function, modules for which `test(id)` returns `true` will be captured.
+       * - If `test` is empty, any module will be considered as matched.
        */
       test?: StringOrRegExp | ((id: string) => boolean | undefined | void);
       /**
        * - Type: `number`
+       * - Default: `0`
        *
        * Priority of the group. Group with higher priority will be chosen first to match modules and create chunks. When converting the group to a chunk, modules of that group will be removed from other groups.
        *
        * If two groups have the same priority, the group whose index is smaller will be chosen.
+       *
+       * For example,
+       *
+       * ```js
+       * import { defineConfig } from 'rolldown';
+       *
+       * export default defineConfig({
+       *  advancedChunks: {
+       *   groups: [
+       *      {
+       *        name: 'react',
+       *       test: /node_modules\/react/,
+       *       priority: 1,
+       *      },
+       *      {
+       *       name: 'other-libs',
+       *       test: /node_modules/,
+       *      priority: 2,
+       *      },
+       *   ],
+       * });
+       * ```
+       *
+       * This is a clearly __incorrect__ example. Though `react` group is defined before `other-libs`, it has a lower priority, so the modules in `react` group will be captured in `other-libs` group.
        */
       priority?: number;
       /**
        * - Type: `number`
        * - Default: `0`
        *
-       * Minimum size of the desired chunk. If accumulated size of captured modules is smaller than this value, this group will be ignored.
+       * Minimum size of the desired chunk. If the final size of this group is smaller than this value, it will be ignored. Modules in this group will fall back to the `automatic chunking` if they are not captured by any other group.
        */
       minSize?: number;
       /**
@@ -150,7 +193,7 @@ export interface OutputOptions {
        * - Type: `number`
        * - Default: `Infinity`
        *
-       * If final size of this group is larger than this value, this group will be spit into multiple groups that each has size closed to this value.
+       * If the final size of this group is larger than this value, this group will be spit into multiple groups that each has size closed to this value.
        */
       maxSize?: number;
       /**

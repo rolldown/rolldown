@@ -1,4 +1,56 @@
 
+## [1.0.0-beta.16] - 2025-06-15
+
+### 🚀 Features
+
+- rolldown: feat(rolldown): oxc v0.73.0 by @Boshen in [#4948](https://github.com/rolldown/rolldown/pull/4948)
+- types: feat(types): generate HMR runtime types by @sapphi-red in [#4928](https://github.com/rolldown/rolldown/pull/4928)
+- rolldown_plugin_build_import_analysis: feat(rolldown_plugin_build_import_analysis): align with rolldown-vite by @shulaoda in [#4931](https://github.com/rolldown/rolldown/pull/4931)
+- feat: allow to configure`experimental#attachDebugInfo: 'none'` to disable generating `#region` comments by @TheAlexLichter in [#4918](https://github.com/rolldown/rolldown/pull/4918)
+
+### 🐛 Bug Fixes
+
+- fix: deduplicate entry point by @IWANABETHATGUY in [#4956](https://github.com/rolldown/rolldown/pull/4956)
+- fix: diagnostic message on minified code is too long to be readable by @IWANABETHATGUY in [#4950](https://github.com/rolldown/rolldown/pull/4950)
+- fix: deduplicated entry points when have same `id`, `name`, and `filename` by @IWANABETHATGUY in [#4947](https://github.com/rolldown/rolldown/pull/4947)
+- fix: unbundle does not work with outExtensions by @IWANABETHATGUY in [#4945](https://github.com/rolldown/rolldown/pull/4945)
+- types: fix(types): remove `undefined` from return type of `generateHmrPatch` and `hmrInvalidate` by @sapphi-red in [#4943](https://github.com/rolldown/rolldown/pull/4943)
+- fix: handle error in `hmrInvalidate` by @sapphi-red in [#4942](https://github.com/rolldown/rolldown/pull/4942)
+- rolldown_plugin_build_import_analysis: fix(rolldown_plugin_build_import_analysis): preload helper is imported even if it’s not needed by @shulaoda in [#4936](https://github.com/rolldown/rolldown/pull/4936)
+- hmr: fix(hmr): avoid panic after syntax error by @sapphi-red in [#4898](https://github.com/rolldown/rolldown/pull/4898)
+- strictExecutionOrder: fix(strictExecutionOrder): ensure initialization chain of entry exports by @hyf0 in [#4933](https://github.com/rolldown/rolldown/pull/4933)
+- fix: should not panic when meet a syntax error in watch mode. by @IWANABETHATGUY in [#4926](https://github.com/rolldown/rolldown/pull/4926)
+- fix: regression, id filter normalization for windows is not working by @IWANABETHATGUY in [#4922](https://github.com/rolldown/rolldown/pull/4922)
+- rolldown_plugin_json: fix(rolldown_plugin_json): incorrect default JSON export by @shulaoda in [#4924](https://github.com/rolldown/rolldown/pull/4924)
+
+### 🚜 Refactor
+
+- refactor: avoid unnecessary collect by @IWANABETHATGUY in [#4949](https://github.com/rolldown/rolldown/pull/4949)
+- refactor: get normalized options via binding by @IWANABETHATGUY in [#4938](https://github.com/rolldown/rolldown/pull/4938)
+- refactor: include DevRuntime base class even if custom HMR implementation is passed by @sapphi-red in [#4929](https://github.com/rolldown/rolldown/pull/4929)
+
+### 📚 Documentation
+
+- docs: clarify minifier state by @TheAlexLichter in [#4953](https://github.com/rolldown/rolldown/pull/4953)
+- docs: drafting code splitting by @hyf0 in [#4951](https://github.com/rolldown/rolldown/pull/4951)
+- docs: add link to repl by @sxzz in [#4917](https://github.com/rolldown/rolldown/pull/4917)
+- pluginutils: docs(pluginutils): add example to simple filter functions by @sapphi-red in [#4915](https://github.com/rolldown/rolldown/pull/4915)
+
+### 🧪 Testing
+
+- test: add testcase for normalized output options by @IWANABETHATGUY in [#4939](https://github.com/rolldown/rolldown/pull/4939)
+- hmr: test(hmr): enable `expectExecuted` for `generatePatchError` test by @sapphi-red in [#4937](https://github.com/rolldown/rolldown/pull/4937)
+- test: evaluate hmr tests in node by @sapphi-red in [#4930](https://github.com/rolldown/rolldown/pull/4930)
+- test: add "non used export" hmr test by @sapphi-red in [#4900](https://github.com/rolldown/rolldown/pull/4900)
+- test: enable expectExecuted in HMR tests by @sapphi-red in [#4927](https://github.com/rolldown/rolldown/pull/4927)
+
+### ⚙️ Miscellaneous Tasks
+
+- deps: chore(deps): lock file maintenance npm packages by @renovate[bot] in [#4866](https://github.com/rolldown/rolldown/pull/4866)
+- infra: chore(infra): remove comments related to `cspell` by @shulaoda in [#4940](https://github.com/rolldown/rolldown/pull/4940)
+- ci: remove cargo bench test by @IWANABETHATGUY in [#4925](https://github.com/rolldown/rolldown/pull/4925)
+
+
 ## [1.0.0-beta.15] - 2025-06-11
 
 ### 🚀 Features

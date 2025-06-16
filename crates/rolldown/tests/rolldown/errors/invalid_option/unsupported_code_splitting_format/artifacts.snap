@@ -1,0 +1,11 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Errors
+
+## INVALID_OPTION
+
+```text
+[INVALID_OPTION] Error: Invalid value "iife" for option "output.format" - UMD and IIFE are not supported for code-splitting builds.
+
+```

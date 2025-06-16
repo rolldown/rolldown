@@ -1,6 +1,6 @@
 # Advanced Chunks
 
-`AdvancedChunks` a powerful feature that allows you to do `manual chunking` against the `automatic chunking` done by [code splitting](./code-splitting.md). This is useful when you want to optimize the loading performance of your application by splitting it into smaller, more manageable pieces.
+`AdvancedChunks` is a powerful feature that allows you to do `manual chunking` against the `automatic chunking` done by [code splitting](./code-splitting.md). This is useful when you want to optimize the loading performance of your application by splitting it into smaller, more manageable pieces.
 
 Before reading this guide, you should first understand the [code splitting](./code-splitting.md) feature of Rolldown. This guide will explain how `advancedChunks` works and how to use it effectively.
 
@@ -80,7 +80,7 @@ and naturally, you get a `output-hash1.js` file with the same content as `output
 
 Now, if you deploy this new version of your application, the browser will need to download the entire `output-hash1.js` file, even though only a small part of it has changed. This is because the hash of the file has changed, and the browser will treat it as a new file.
 
-To solve this problem, we can use `advancedChunks` to split output libiraries into separate chunks, because they don't change frequently.
+To solve this problem, we can use `advancedChunks` to split output libraries into separate chunks, because they don't change frequently.
 
 ```js [rolldown.config.js]
 export default {
@@ -348,6 +348,8 @@ export const value = 'a' + value;
 
 You could see, to make `a.js` work, we have to change the export signature of the entry chunk `entry.js` and add an additional export `value`. This totally violates the original intention of the code, which is to only export `foo` from `entry.js`.
 
-Fortunately, rolldown supports [`InputOptions.preserveEntrySignatures: 'allow-extension'`](/reference/config-options#preserveentrysignatures) to let you inform the bundler is allowed to change the export signature of the entry chunk.
 
-With enabling [`InputOptions.preserveEntrySignatures: 'allow-extension'`](/reference/config-options#preserveentrysignatures) will not capture the dependencies of the captured module anymore.
+Fortunately, rolldown supports [`InputOptions.preserveEntrySignatures: 'allow-extension'`](/reference/config-options#preserveentrysignatures) to let you inform the bundler that it is allowed to change the export signature of the entry chunk.
+
+Enabling [`InputOptions.preserveEntrySignatures: 'allow-extension'`](/reference/config-options#preserveentrysignatures) will prevent the bundler from capturing the dependencies of the captured module.
+

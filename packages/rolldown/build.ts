@@ -107,7 +107,6 @@ function withShared(
     },
     external: [
       /rolldown-binding\..*\.node/,
-      /rolldown-binding\..*\.wasm/,
       /@rolldown\/binding-.*/,
       /\.\/rolldown-binding\.wasi\.cjs/,
       ...Object.keys(pkgJson.dependencies ?? {}),
@@ -198,7 +197,7 @@ function patchBindingJs(): Plugin {
         return (
           code
             // strip off unneeded createRequire in cjs, which breaks mjs
-            .replace('require = createRequire(__filename)', '')
+            .replace('const require = createRequire(import.meta.url)', '')
             // inject binding auto download fallback for webcontainer
             .replace(
               '\nif (!nativeBinding) {',
@@ -206,7 +205,7 @@ function patchBindingJs(): Plugin {
                 `
 if (!nativeBinding && globalThis.process?.versions?.["webcontainer"]) {
   try {
-    nativeBinding = require('./webcontainer-fallback.js');
+    nativeBinding = require('./webcontainer-fallback.cjs');
   } catch (err) {
     loadErrors.push(err)
   }

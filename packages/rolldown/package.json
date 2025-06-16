@@ -2,7 +2,7 @@
   "name": "rolldown",
   "version": "1.0.0-beta.16",
   "description": "Fast JavaScript/TypeScript bundler in Rust with Rollup-compatible API.",
-  "type": "commonjs",
+  "type": "module",
   "homepage": "https://rolldown.rs/",
   "repository": {
     "type": "git",
@@ -102,7 +102,7 @@
   "scripts": {
     "# Scrips for binding #": "_",
     "artifacts": "napi artifacts --cwd ./src --package-json-path ../package.json -o=../artifacts --npm-dir ../npm",
-    "build-binding": "oxnode ./build-binding.mts",
+    "build-binding": "oxnode ./build-binding.ts",
     "build-binding:release": "pnpm build-binding --release",
     "build-binding:wasi": "pnpm build-binding --target wasm32-wasip1-threads",
     "build-binding:wasi:release": "pnpm build-binding --profile release-wasi --target wasm32-wasip1-threads",

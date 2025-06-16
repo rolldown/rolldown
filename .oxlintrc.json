@@ -6,7 +6,7 @@
     "packages/rollup-tests/**",
     "packages/rolldown/tests/fixtures/**",
     "packages/rolldown/tests/stability/**",
-    "packages/rolldown/src/binding.d.ts",
+    "packages/rolldown/src/binding.*",
     "packages/vite-tests/repo/**",
     "rollup/**"
   ],

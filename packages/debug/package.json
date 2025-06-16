@@ -23,7 +23,7 @@
   ],
   "scripts": {
     "gen-action-types": "oxnode ../../scripts/src/gen-debug-action-types.ts",
-    "build": "pnpm run gen-action-types && tsdown",
+    "build": "pnpm run gen-action-types && node ../../tsdown.mjs",
     "test": "echo \"Error: no test specified\" && exit 1"
   }
 }

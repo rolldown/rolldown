@@ -1,13 +1,13 @@
 # Advanced Chunks
 
-`AdvancedChunks` is a powerful feature that allows you to do `manual chunking` against the `automatic chunking` done by [code splitting](./code-splitting.md). This is useful when you want to optimize the loading performance of your application by splitting it into smaller, more manageable pieces.
+`AdvancedChunks` is a powerful feature that allows you to do `manual chunking` to complement the `automatic chunking` done by [code splitting](./code-splitting.md). This is useful when you want to optimize the loading performance of your application by splitting it into smaller, more manageable pieces.
 
 Before reading this guide, you should first understand the [code splitting](./code-splitting.md) feature of Rolldown. This guide will explain how `advancedChunks` works and how to use it effectively.
 
 Before we dive into the details, let's clarify some things first.
 
 - `automatic chunking` and `manual chunking` are not contradictory. Using `manual chunking` does not mean disabling `automatic chunking`.
-- A module will be either captured by `automatic chunking` or `manual chunking` depending on your configuration, but not both. If a module is not captured by `manual chunking`, it will be still put into a chunk which is created by `automatic chunking` with respecting rules we explained in the [code splitting](./code-splitting.md) guide.
+A module will be either captured by `automatic chunking` or `manual chunking` depending on your configuration, but not both. If a module is not captured by `manual chunking`, it will still be put into a chunk which is created by `automatic chunking` with respecting rules we explained in the [code splitting](./code-splitting.md) guide.
 
 ## Why use `advancedChunks`?
 
@@ -67,7 +67,7 @@ In this example,
 
 Let's talk about cache invalidation first. Cache invalidation here means that when you deploy a new version of your application, the browser will need to download the new version of the file. If the file is large, this can lead to a poor user experience.
 
-For example, you change the `app.jsx` file
+For example, if you change the `app.jsx` file:
 
 ```jsx [app.jsx]
 function App() {
@@ -76,11 +76,11 @@ function App() {
 }
 ```
 
-and naturally, you get a `output-hash1.js` file with the same content as `output-hash0.js`, except the `App` function is changed.
+then naturally, you get a `output-hash1.js` file with the same content as `output-hash0.js`, except for the change in the `App` function.
 
 Now, if you deploy this new version of your application, the browser will need to download the entire `output-hash1.js` file, even though only a small part of it has changed. This is because the hash of the file has changed, and the browser will treat it as a new file.
 
-To solve this problem, we can use `advancedChunks` to split output libraries into separate chunks, because they don't change frequently.
+To solve this problem, we can use `advancedChunks` to split output libraries into separate chunks, because they don't change frequently compared to application code.
 
 ```js [rolldown.config.js]
 export default {
@@ -300,7 +300,7 @@ With forcefully generated `runtime.js`, the bundler ensures any chunk that depen
 
 ### Why the dependencies of the captured module get captured too?
 
-When a module is captured by a group, rolldown will try to capture its dependencies recursively. This is because rolldown is only allowed to mangling exports of non-entry chunks by default.
+When a module is captured by a group, Rolldown will try to capture its dependencies recursively. This is because Rolldown is only allowed to mangle the exports of non-entry chunks by default.
 
 For example, if you have the following code:
 
@@ -320,7 +320,7 @@ export const value = 'a' + valueB;
 export const value = 'b';
 ```
 
-Let's say we want to move the `a.js` module into a separate chunk with keeping the `b.js` in the same chunk as `entry.js`. We get
+Let's say we want to move the `a.js` module into a separate chunk while keeping the `b.js` module in the same chunk as `entry.js`. We get
 
 :::code-group
 

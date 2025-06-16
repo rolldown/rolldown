@@ -33,8 +33,8 @@ pub mod resolve_error;
 pub mod unhandleable_error;
 pub mod unloadable_dependency;
 pub mod unresolved_entry;
+pub mod unsupport_target;
 pub mod unsupported_feature;
-
 pub trait BuildEvent: Debug + Sync + Send {
   fn kind(&self) -> EventKind;
 

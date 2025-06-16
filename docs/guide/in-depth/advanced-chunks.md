@@ -300,7 +300,7 @@ With forcefully generated `runtime.js`, the bundler ensures any chunk that depen
 
 ### Why the dependencies of the captured module get captured too?
 
-When a module is captured by a group, rolldown will try to capture its dependencies recursively. This is because rolldown is only allowed to mangeling exports of non-entry chunks defaultly.
+When a module is captured by a group, rolldown will try to capture its dependencies recursively. This is because rolldown is only allowed to mangling exports of non-entry chunks by default.
 
 For example, if you have the following code:
 

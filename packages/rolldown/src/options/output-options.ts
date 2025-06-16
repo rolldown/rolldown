@@ -160,13 +160,13 @@ export interface OutputOptions {
        *   groups: [
        *      {
        *        name: 'react',
-       *       test: /node_modules\/react/,
-       *       priority: 1,
+       *        test: /node_modules\/react/,
+       *        priority: 1,
        *      },
        *      {
-       *       name: 'other-libs',
-       *       test: /node_modules/,
-       *      priority: 2,
+       *        name: 'other-libs',
+       *        test: /node_modules/,
+       *        priority: 2,
        *      },
        *   ],
        * });
@@ -179,7 +179,7 @@ export interface OutputOptions {
        * - Type: `number`
        * - Default: `0`
        *
-       * Minimum size of the desired chunk. If the final size of this group is smaller than this value, it will be ignored. Modules in this group will fall back to the `automatic chunking` if they are not captured by any other group.
+       * Minimum size of the desired chunk. If the accumulated size of the captured modules by this group is smaller than this value, it will be ignored. Modules in this group will fall back to the `automatic chunking` if they are not captured by any other group.
        */
       minSize?: number;
       /**
@@ -193,7 +193,7 @@ export interface OutputOptions {
        * - Type: `number`
        * - Default: `Infinity`
        *
-       * If the final size of this group is larger than this value, this group will be split into multiple groups that each has size closed to this value.
+       * If the accumulated size of the captured modules by this group is larger than this value, this group will be split into multiple groups that each has size closed to this value.
        */
       maxSize?: number;
       /**

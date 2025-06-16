@@ -348,6 +348,6 @@ export const value = 'a' + value;
 
 You could see, to make `a.js` work, we have to change the export signature of the entry chunk `entry.js` and add an additional export `value`. This totally violates the original intention of the code, which is to only export `foo` from `entry.js`.
 
-Fortunately, rolldown supports [`InputOptions.preserveEntrySignatures: 'allow-extension'`](/reference/config-options#preserveentrysignatures) to let you inform the bundler that it is allowed to change the export signature of the entry chunk.
+Fortunately, Rolldown supports [`InputOptions.preserveEntrySignatures: 'allow-extension'`](/reference/config-options#preserveentrysignatures) to let you inform the bundler that it is allowed to change the export signature of the entry chunk.
 
 Enabling [`InputOptions.preserveEntrySignatures: 'allow-extension'`](/reference/config-options#preserveentrysignatures) will prevent the bundler from capturing the dependencies of the captured module.

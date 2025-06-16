@@ -24,5 +24,5 @@ catalog:
   '@oxc-project/types': '=0.73.0'
   'oxc-parser': '=0.73.0'
   'oxc-transform': '=0.73.0'
-  'tsdown': '0.12.7'
+  'tsdown': '0.12.8'
   'rolldown-plugin-dts': '^0.13.6'

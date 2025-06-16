@@ -108,6 +108,10 @@ impl<'ast> ScopeHoistingFinalizer<'_, 'ast> {
   }
 
   pub fn rewrite_hot_accept_call_deps(&self, call_expr: &mut ast::CallExpression<'ast>) {
+    if !self.ctx.options.is_hmr_enabled() {
+      return;
+    }
+
     // Check whether the callee is `import.meta.hot.accept`.
     if !call_expr.callee.is_import_meta_hot_accept() {
       return;

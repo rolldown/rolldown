@@ -3,6 +3,7 @@ use crate::{DiagnosticOptions, EventKind};
 
 #[derive(Debug)]
 pub enum InvalidOptionType {
+  UnsupportedInlineDynamicFormat(String),
   UnsupportedCodeSplittingFormat(String),
   InvalidOutputFile,
   InvalidOutputDirOption,
@@ -21,9 +22,12 @@ impl BuildEvent for InvalidOption {
 
   fn message(&self, _opts: &DiagnosticOptions) -> String {
     match &self.invalid_option_type {
+        InvalidOptionType::UnsupportedInlineDynamicFormat(format) => {
+          format!("Invalid value \"{format}\" for option \"output.format\" - UMD and IIFE are not supported for code-splitting builds. You may set `output.inlineDynamicImports` to `true` when using dynamic imports.")
+        }
         InvalidOptionType::UnsupportedCodeSplittingFormat(format) => {
-            format!("Invalid value \"{format}\" for option \"output.format\" - UMD and IIFE are not supported for code splitting. You may set `output.inlineDynamicImports` to `true` when using dynamic imports.")
-          }
+          format!("Invalid value \"{format}\" for option \"output.format\" - UMD and IIFE are not supported for code-splitting builds.")
+        }
         InvalidOptionType::InvalidOutputFile => "Invalid value for option \"output.file\" - When building multiple chunks, the \"output.dir\" option must be used, not \"output.file\". You may set `output.inlineDynamicImports` to `true` when using dynamic imports.".to_string(),
         InvalidOptionType::InvalidOutputDirOption => "Invalid value for option \"output.dir\" - you must set either \"output.file\" for a single-file build or \"output.dir\" when generating multiple chunks.".to_string(),
         InvalidOptionType::NoEntryPoint =>"You must supply `options.input` to rolldown, you should at least provide one entrypoint via `options.input` or `this.emitFile({type: 'chunk', ...})` (https://rollupjs.org/plugin-development/#this-emitfile)".to_string(),

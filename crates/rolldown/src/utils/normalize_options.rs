@@ -28,7 +28,7 @@ fn verify_raw_options(raw_options: &crate::BundlerOptions) -> Vec<BuildDiagnosti
     Some(format @ (OutputFormat::Umd | OutputFormat::Iife)) => {
       if matches!(raw_options.inline_dynamic_imports, Some(false)) {
         warnings.push(
-          BuildDiagnostic::invalid_option(InvalidOptionType::UnsupportedCodeSplittingFormat(
+          BuildDiagnostic::invalid_option(InvalidOptionType::UnsupportedInlineDynamicFormat(
             format.to_string(),
           ))
           .with_severity_warning(),

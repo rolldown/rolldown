@@ -193,7 +193,7 @@ export interface OutputOptions {
        * - Type: `number`
        * - Default: `Infinity`
        *
-       * If the final size of this group is larger than this value, this group will be spit into multiple groups that each has size closed to this value.
+       * If the final size of this group is larger than this value, this group will be split into multiple groups that each has size closed to this value.
        */
       maxSize?: number;
       /**

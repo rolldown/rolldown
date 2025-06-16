@@ -1,9 +1,9 @@
+import { dts } from '/Users/kevin/Developer/open-source/rolldown-plugin-dts/dist/index.js';
 import colors from 'ansis';
 import { globSync } from 'glob';
 import fs from 'node:fs';
 import nodePath from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { dts } from 'rolldown-plugin-dts';
 import * as ts from 'typescript';
 import { build, BuildOptions, type Plugin } from './src/index';
 

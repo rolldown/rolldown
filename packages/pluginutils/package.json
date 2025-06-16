@@ -24,7 +24,7 @@
     "dist"
   ],
   "scripts": {
-    "build": "node ../../tsdown.mjs",
+    "build": "../../tsdown.mjs",
     "test": "vitest --typecheck"
   },
   "devDependencies": {

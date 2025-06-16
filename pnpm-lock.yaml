@@ -27,12 +27,9 @@ catalogs:
     oxc-transform:
       specifier: '=0.73.0'
       version: 0.73.0
-    rolldown-plugin-dts:
-      specifier: ^0.13.6
-      version: 0.13.8
     tsdown:
-      specifier: 0.12.7
-      version: 0.12.7
+      specifier: 0.12.8
+      version: 0.12.8
 
 overrides:
   vitepress>vite: npm:rolldown-vite@latest
@@ -80,7 +77,7 @@ importers:
         version: link:packages/rolldown
       tsdown:
         specifier: 'catalog:'
-        version: 0.12.7(typescript@5.8.3)
+        version: 0.12.8(oxc-resolver@11.2.0)(typescript@5.8.3)
       tsx:
         specifier: ^4.19.4
         version: 4.20.3
@@ -373,9 +370,6 @@ importers:
       rolldown:
         specifier: workspace:*
         version: 'link:'
-      rolldown-plugin-dts:
-        specifier: 'catalog:'
-        version: 0.13.8(oxc-resolver@11.2.0)(rolldown@packages+rolldown)(typescript@5.8.3)
       rollup:
         specifier: ^4.18.0
         version: 4.43.0
@@ -1260,6 +1254,10 @@ packages:
 
   '@babel/types@7.27.3':
     resolution: {integrity: sha512-Y1GkI4ktrtvmawoSq+4FCVHNryea6uR+qUQy0AGxLSsjCX0nVmkYQMBLHDkXZuo5hGx7eYdnIaslsdBFm7zbUw==}
+    engines: {node: '>=6.9.0'}
+
+  '@babel/types@7.27.6':
+    resolution: {integrity: sha512-ETyHEk2VHHvl9b9jZP5IHPavHYk57EhanlRRuae9XCpb/j5bDCbPPMOBfCWhnl/7EDJz0jEMCi/RhccCE8r1+Q==}
     engines: {node: '>=6.9.0'}
 
   '@docsearch/css@3.8.2':
@@ -4839,8 +4837,8 @@ packages:
     engines: {node: 20 || >=22}
     hasBin: true
 
-  rolldown-plugin-dts@0.13.8:
-    resolution: {integrity: sha512-jib3ui3rgADoAXwyuCRid74yoi0ZGTLD0P/bQQXFeaVIdhh4ZXwU2RJ0eUmSFJX1fQVc+a3lfccrPEuV7vvRJg==}
+  rolldown-plugin-dts@0.13.11:
+    resolution: {integrity: sha512-1TScN31JImk8xcq9kdm52z2W8/QX3zeDpEjFkyZmK+GcD0u8QqSWWARBsCEdfS99NyI6D9NIbUpsABXlcpZhig==}
     engines: {node: '>=20.18.0'}
     peerDependencies:
       '@typescript/native-preview': '>=7.0.0-dev.20250601.1'
@@ -5232,8 +5230,8 @@ packages:
   trough@2.2.0:
     resolution: {integrity: sha512-tmMpK00BjZiUyVyvrBK7knerNgmgvcV/KLVyuma/SC+TQN167GrMRciANTz09+k3zW8L8t60jWO1GpfkZdjTaw==}
 
-  tsdown@0.12.7:
-    resolution: {integrity: sha512-VJjVaqJfIQuQwtOoeuEJMOJUf3MPDrfX0X7OUNx3nq5pQeuIl3h58tmdbM1IZcu8Dn2j8NQjLh+5TXa0yPb9zg==}
+  tsdown@0.12.8:
+    resolution: {integrity: sha512-niHeVcFCNjvVZYVGTeoM4BF+/DWxP8pFH2tUs71sEKYdcKtJIbkSdEmtxByaRZeMgwVbVgPb8nv9i9okVwFLAA==}
     engines: {node: '>=18.0.0'}
     hasBin: true
     peerDependencies:
@@ -6482,6 +6480,11 @@ snapshots:
       - supports-color
 
   '@babel/types@7.27.3':
+    dependencies:
+      '@babel/helper-string-parser': 7.27.1
+      '@babel/helper-validator-identifier': 7.27.1
+
+  '@babel/types@7.27.6':
     dependencies:
       '@babel/helper-string-parser': 7.27.1
       '@babel/helper-validator-identifier': 7.27.1
@@ -9984,11 +9987,11 @@ snapshots:
       glob: 11.0.3
       package-json-from-dist: 1.0.1
 
-  rolldown-plugin-dts@0.13.8(oxc-resolver@11.2.0)(rolldown@packages+rolldown)(typescript@5.8.3):
+  rolldown-plugin-dts@0.13.11(oxc-resolver@11.2.0)(rolldown@packages+rolldown)(typescript@5.8.3):
     dependencies:
       '@babel/generator': 7.27.5
       '@babel/parser': 7.27.5
-      '@babel/types': 7.27.3
+      '@babel/types': 7.27.6
       ast-kit: 2.1.0
       birpc: 2.3.0
       debug: 4.4.1(supports-color@8.1.1)
@@ -10363,7 +10366,7 @@ snapshots:
 
   trough@2.2.0: {}
 
-  tsdown@0.12.7(typescript@5.8.3):
+  tsdown@0.12.8(oxc-resolver@11.2.0)(typescript@5.8.3):
     dependencies:
       ansis: 4.1.0
       cac: 6.7.14
@@ -10373,7 +10376,7 @@ snapshots:
       empathic: 1.1.0
       hookable: 5.5.3
       rolldown: link:packages/rolldown
-      rolldown-plugin-dts: 0.13.8(oxc-resolver@11.2.0)(rolldown@packages+rolldown)(typescript@5.8.3)
+      rolldown-plugin-dts: 0.13.11(oxc-resolver@11.2.0)(rolldown@packages+rolldown)(typescript@5.8.3)
       semver: 7.7.2
       tinyexec: 1.0.1
       tinyglobby: 0.2.14

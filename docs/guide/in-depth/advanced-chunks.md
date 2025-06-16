@@ -1,13 +1,13 @@
 # Advanced Chunks
 
-`AdvancedChunks` is a powerful feature that allows you to do `manual chunking` to complement the `automatic chunking` done by [code splitting](./code-splitting.md). This is useful when you want to optimize the loading performance of your application by splitting it into smaller, more manageable pieces.
+`advancedChunks` is a powerful feature that allows you to do `manual chunking` to complement the `automatic chunking` done by [code splitting](./code-splitting.md). This is useful when you want to optimize the loading performance of your application by splitting it into smaller, more manageable pieces.
 
 Before reading this guide, you should first understand the [code splitting](./code-splitting.md) feature of Rolldown. This guide will explain how `advancedChunks` works and how to use it effectively.
 
 Before we dive into the details, let's clarify some things first.
 
 - `automatic chunking` and `manual chunking` are not contradictory. Using `manual chunking` does not mean disabling `automatic chunking`.
-  A module will be either captured by `automatic chunking` or `manual chunking` depending on your configuration, but not both. If a module is not captured by `manual chunking`, it will still be put into a chunk which is created by `automatic chunking` with respecting rules we explained in the [code splitting](./code-splitting.md) guide.
+A module will be either captured by `automatic chunking` or `manual chunking` depending on your configuration, but not both. If a module is not captured by `manual chunking`, it will still be put into a chunk which is created by `automatic chunking` while respecting the rules we explained in the [code splitting](./code-splitting.md) guide.
 
 ## Why use `advancedChunks`?
 
@@ -172,7 +172,7 @@ export { ... };
 
 ### Improve loading performance
 
-`advancedChunks` can also be used to improve the loading performance of your application by splitting it into practical amounts of chunks and take advantage of browser's parallel loading capabilities.
+`advancedChunks` can also be used to improve the loading performance of your application by splitting it into a practical number of chunks and take advantage of browser's parallel loading capabilities.
 
 In the previous example, we put all the libraries into a single chunk, which is not optimal for loading performance. If the libraries are too large, the browser will spend a long time downloading the chunk, which can lead to a poor user experience.
 

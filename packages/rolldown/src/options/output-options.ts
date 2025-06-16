@@ -193,7 +193,7 @@ export interface OutputOptions {
        * - Type: `number`
        * - Default: `Infinity`
        *
-       * If the accumulated size of the captured modules by this group is larger than this value, this group will be split into multiple groups that each has size closed to this value.
+       * If the accumulated size of the captured modules by this group is larger than this value, this group will be split into multiple groups that each has size close to this value.
        */
       maxSize?: number;
       /**

@@ -172,7 +172,7 @@ export { ... };
 
 ### Improve loading performance
 
-`advancedChunks` can also be used to improve the loading performance of your application by splitting it into a practical number of chunks and take advantage of browser's parallel loading capabilities.
+`advancedChunks` can also be used to improve the loading performance of your application by splitting it into a practical number of chunks and taking advantage of browser's parallel loading capabilities.
 
 In the previous example, we put all the libraries into a single chunk, which is not optimal for loading performance. If the libraries are too large, the browser will spend a long time downloading the chunk, which can lead to a poor user experience.
 

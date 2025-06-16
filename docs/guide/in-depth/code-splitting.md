@@ -174,7 +174,7 @@ console.log(foo);
 
 ### Respecting Execution Order doesn't take precedence
 
-However, Rolldown sometimes places modules without respecting their original order. This is because ensuring that modules are singletons takes precedence over placing modules in the order they are declared.
+However, Rolldown sometimes places modules without respecting their original order. This is because ensuring that modules are singletons takes precedence over placing them in the declared order.
 
 For the following code:
 

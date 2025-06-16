@@ -7,7 +7,7 @@ Before reading this guide, you should first understand the [code splitting](./co
 Before we dive into the details, let's clarify some things first.
 
 - `automatic chunking` and `manual chunking` are not contradictory. Using `manual chunking` does not mean disabling `automatic chunking`.
-A module will be either captured by `automatic chunking` or `manual chunking` depending on your configuration, but not both. If a module is not captured by `manual chunking`, it will still be put into a chunk which is created by `automatic chunking` with respecting rules we explained in the [code splitting](./code-splitting.md) guide.
+  A module will be either captured by `automatic chunking` or `manual chunking` depending on your configuration, but not both. If a module is not captured by `manual chunking`, it will still be put into a chunk which is created by `automatic chunking` with respecting rules we explained in the [code splitting](./code-splitting.md) guide.
 
 ## Why use `advancedChunks`?
 

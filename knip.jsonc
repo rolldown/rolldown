@@ -34,6 +34,7 @@
         "src/browser.js",
         "src/cli/index.ts",
         "src/log/locate-character/index.d.ts",
+        "src/parallel-plugin-worker.ts",
         "src/rolldown-binding.wasi-browser.js",
         "src/{wasi,webcontainer}-*.*",
       ],
@@ -48,6 +49,7 @@
         "buble",
         "pathe",
       ],
+      "ignoreUnresolved": ["#parallel-plugin-worker"], // target file is unavailable before build
     },
     "packages/rolldown/npm/wasm32-wasi": {
       "ignoreDependencies": ["@napi-rs/wasm-runtime"],

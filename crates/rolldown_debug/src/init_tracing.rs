@@ -8,6 +8,7 @@ use tracing_subscriber::prelude::*;
 
 use crate::debug_data_propagate_layer::DebugDataPropagateLayer;
 use crate::debug_formatter::DebugFormatter;
+use crate::static_data::EXIST_HASH_BY_SESSION;
 use crate::static_data::OPENED_FILE_HANDLES;
 use crate::static_data::OPENED_FILES_BY_SESSION;
 
@@ -59,5 +60,6 @@ impl Drop for DebugTracer {
         OPENED_FILE_HANDLES.remove(&file);
       }
     }
+    EXIST_HASH_BY_SESSION.remove(self.session_id.as_ref());
   }
 }

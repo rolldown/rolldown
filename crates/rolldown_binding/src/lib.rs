@@ -27,6 +27,7 @@ pub mod utils;
 pub use oxc_parser_napi;
 pub use oxc_resolver_napi;
 pub use oxc_transform_napi;
+pub mod binding_bundler;
 mod generated;
 pub mod watcher;
 pub mod worker_manager;

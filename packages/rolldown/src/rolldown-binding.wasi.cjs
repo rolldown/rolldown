@@ -107,6 +107,7 @@ module.exports.moduleRunnerTransform = __napiModule.exports.moduleRunnerTransfor
 module.exports.transform = __napiModule.exports.transform
 module.exports.BindingBundleEndEventData = __napiModule.exports.BindingBundleEndEventData
 module.exports.BindingBundleErrorEventData = __napiModule.exports.BindingBundleErrorEventData
+module.exports.BindingBundler = __napiModule.exports.BindingBundler
 module.exports.BindingBundlerImpl = __napiModule.exports.BindingBundlerImpl
 module.exports.BindingCallableBuiltinPlugin = __napiModule.exports.BindingCallableBuiltinPlugin
 module.exports.BindingError = __napiModule.exports.BindingError

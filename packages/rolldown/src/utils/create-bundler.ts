@@ -1,5 +1,6 @@
 import {
-  BindingBundlerImpl,
+  type BindingBundler,
+  type BindingBundlerImpl,
   shutdownAsyncRuntime,
   startAsyncRuntime,
 } from '../binding';
@@ -9,11 +10,12 @@ import { createBundlerOptions } from './create-bundler-option';
 
 let asyncRuntimeShutdown = false;
 
-export async function createBundler(
+export async function createBundlerImpl(
+  bundler: BindingBundler,
   inputOptions: InputOptions,
   outputOptions: OutputOptions,
   isClose?: boolean,
-): Promise<BundlerWithStopWorker> {
+): Promise<BundlerImplWithStopWorker> {
   const option = await createBundlerOptions(
     inputOptions,
     outputOptions,
@@ -27,7 +29,7 @@ export async function createBundler(
 
   try {
     return {
-      bundler: new BindingBundlerImpl(option.bundlerOptions),
+      impl: bundler.createImpl(option.bundlerOptions),
       stopWorkers: option.stopWorkers,
       shutdown: () => {
         shutdownAsyncRuntime();
@@ -40,8 +42,8 @@ export async function createBundler(
   }
 }
 
-export interface BundlerWithStopWorker {
-  bundler: BindingBundlerImpl;
+export interface BundlerImplWithStopWorker {
+  impl: BindingBundlerImpl;
   stopWorkers?: () => Promise<void>;
   shutdown: () => void;
 }

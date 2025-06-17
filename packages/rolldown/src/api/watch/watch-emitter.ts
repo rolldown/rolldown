@@ -1,4 +1,7 @@
-import { BindingBundlerImpl, BindingWatcherEvent } from '../../binding';
+import {
+  type BindingBundlerImpl,
+  type BindingWatcherEvent,
+} from '../../binding';
 import type { MaybePromise } from '../../types/utils';
 import { normalizeErrors } from '../../utils/error';
 

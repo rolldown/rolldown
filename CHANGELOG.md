@@ -1,4 +1,48 @@
 
+## [1.0.0-beta.17] - 2025-06-17
+
+### 🚀 Features
+
+- feat: add diagnostic for multiple entries with UMD/IIFE formats by @shulaoda in [#4954](https://github.com/rolldown/rolldown/pull/4954)
+
+### 🐛 Bug Fixes
+
+- plugin/vite-resolve: fix(plugin/vite-resolve): importing an optional peer dep should throw an runtime error by @sapphi-red in [#4980](https://github.com/rolldown/rolldown/pull/4980)
+- fix: upgrade napi, fix wasm url by @sxzz in [#4958](https://github.com/rolldown/rolldown/pull/4958)
+- fix: should rewrite hmr related ast after test if `experimental.hmr` is enabled. by @IWANABETHATGUY in [#4972](https://github.com/rolldown/rolldown/pull/4972)
+
+### 💼 Other
+
+- build: provide `"type": "module"` in `package.json` by @iiio2 in [#4974](https://github.com/rolldown/rolldown/pull/4974)
+
+### 🚜 Refactor
+
+- rolldown: refactor(rolldown): migrate to ESM package by @sxzz in [#4959](https://github.com/rolldown/rolldown/pull/4959)
+
+### 📚 Documentation
+
+- code-splitting: docs(code-splitting): make terms bold instead of wrapped with inline code block by @hyf0 in [#4975](https://github.com/rolldown/rolldown/pull/4975)
+- docs: improve advanced chunks by @hyf0 in [#4966](https://github.com/rolldown/rolldown/pull/4966)
+- docs: refine code splitting guide by @sapphi-red in [#4969](https://github.com/rolldown/rolldown/pull/4969)
+
+### 🧪 Testing
+
+- test: place empty `package.json` to prevent all files to be treated as node mode by @sapphi-red in [#4979](https://github.com/rolldown/rolldown/pull/4979)
+
+### ⚙️ Miscellaneous Tasks
+
+- deps: chore(deps): update dependency tsdown to v0.12.8 by @renovate[bot] in [#4977](https://github.com/rolldown/rolldown/pull/4977)
+- deps: chore(deps): update npm packages (major) by @renovate[bot] in [#4963](https://github.com/rolldown/rolldown/pull/4963)
+- deps: chore(deps): lock file maintenance npm packages by @renovate[bot] in [#4967](https://github.com/rolldown/rolldown/pull/4967)
+- deps: chore(deps): lock file maintenance rust crates by @renovate[bot] in [#4965](https://github.com/rolldown/rolldown/pull/4965)
+- deps: chore(deps): lock file maintenance npm packages by @renovate[bot] in [#4964](https://github.com/rolldown/rolldown/pull/4964)
+- deps: chore(deps): update github-actions by @renovate[bot] in [#4962](https://github.com/rolldown/rolldown/pull/4962)
+
+### ❤️ New Contributors
+
+* @iiio2 made their first contribution in [#4974](https://github.com/rolldown/rolldown/pull/4974)
+
+
 ## [1.0.0-beta.16] - 2025-06-15
 
 ### 🚀 Features

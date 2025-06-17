@@ -379,21 +379,18 @@ impl Plugin for ViteResolvePlugin {
     }
 
     if args.id.starts_with(OPTIONAL_PEER_DEP_ID) {
-      if self.resolve_options.is_production {
-        return Ok(Some(HookLoadOutput {
-          code: arcstr::literal!("export default {}"),
-          ..Default::default()
-        }));
-      } else {
-        let [_, peer_dep, parent_dep, _] = args.id.splitn(4, ":").collect::<Vec<&str>>()[..] else {
-          unreachable!()
-        };
+      let [_, peer_dep, parent_dep, _] = args.id.splitn(4, ":").collect::<Vec<&str>>()[..] else {
+        unreachable!()
+      };
 
-        return Ok(Some(HookLoadOutput {
-          code: get_development_optional_peer_dep_module_code(peer_dep, parent_dep),
-          ..Default::default()
-        }));
-      }
+      return Ok(Some(HookLoadOutput {
+        code: get_optional_peer_dep_module_code(
+          peer_dep,
+          parent_dep,
+          self.resolve_options.is_production,
+        ),
+        ..Default::default()
+      }));
     }
 
     Ok(None)
@@ -451,10 +448,16 @@ export default new Proxy({{}}, {{
     "
   )
 }
-fn get_development_optional_peer_dep_module_code(peer_dep: &str, parent_dep: &str) -> ArcStr {
+fn get_optional_peer_dep_module_code(
+  peer_dep: &str,
+  parent_dep: &str,
+  is_production: bool,
+) -> ArcStr {
+  let additional_message = if is_production { " Is it installed?" } else { "" };
   arcstr::format!(
     "\
-throw new Error(`Could not resolve \"{peer_dep}\" imported by \"{parent_dep}\". Is it installed?`)\
+export default {{}};
+throw new Error(`Could not resolve \"{peer_dep}\" imported by \"{parent_dep}\".{additional_message}`)\
     "
   )
 }

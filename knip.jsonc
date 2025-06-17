@@ -27,7 +27,7 @@
       "ignoreDependencies": ["@babel/preset-.+", "react", "react-dom"],
     },
     "packages/browser": {
-      "ignoreDependencies": ["@napi-rs/wasm-runtime"],
+      "ignoreDependencies": ["@napi-rs/wasm-runtime", "@oxc-project/runtime"],
     },
     "packages/rolldown": {
       "entry": [

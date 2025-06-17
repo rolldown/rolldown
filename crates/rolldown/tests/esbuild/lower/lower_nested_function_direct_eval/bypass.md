@@ -1,5 +1,6 @@
 # Reason
 1. pure transformation is handled by `oxc-transform`
+2. the `use strict` diff due to the original test is for transformation https://github.com/evanw/esbuild/blob/d34e79e2a998c21bb71d57b92b0017ca11756912/internal/bundler_tests/bundler_lower_test.go?plain=1#L2400
 # Diff
 ## /out/1.js
 ### esbuild
@@ -111,7 +112,6 @@ if (foo) {
 ```
 ### rolldown
 ```js
-'use strict';
 
 
 //#region 5.js
@@ -146,7 +146,6 @@ if (foo) {
 ```
 ### rolldown
 ```js
-'use strict';
 
 
 //#region 6.js
@@ -184,7 +183,6 @@ if (foo) {
 ```
 ### rolldown
 ```js
-'use strict';
 
 
 //#region 7.js
@@ -223,7 +221,6 @@ if (foo) {
 ```
 ### rolldown
 ```js
-'use strict';
 
 
 //#region 8.js

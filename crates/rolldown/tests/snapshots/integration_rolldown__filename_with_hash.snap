@@ -2640,10 +2640,10 @@ expression: output
 - 2-!~{001}~.js => 2-CE2PB3IR.js
 - 3-!~{002}~.js => 3-DzbeOeSh.js
 - 4-!~{003}~.js => 4-Xj5EgsIT.js
-- 5-!~{004}~.js => 5-CRrARUBX.js
-- 6-!~{005}~.js => 6-D6BTktOX.js
-- 7-!~{006}~.js => 7-DuK-binN.js
-- 8-!~{007}~.js => 8-DrQ0SDot.js
+- 5-!~{004}~.js => 5-CukUlVJd.js
+- 6-!~{005}~.js => 6-B73foMl5.js
+- 7-!~{006}~.js => 7-Df7UDLmG.js
+- 8-!~{007}~.js => 8-BhHOtKb5.js
 
 # tests/esbuild/lower/lower_nullish_coalescing_assignment_issue1493
 
@@ -4941,6 +4941,10 @@ expression: output
 # tests/rolldown/misc/use_strict/empty_file
 
 - main-!~{000}~.js => main-Fv4vYntb.js
+
+# tests/rolldown/misc/use_strict/esm
+
+- main-!~{000}~.js => main-m-GG56UQ.js
 
 # tests/rolldown/misc/use_strict/ignore_treeshaked_modules
 

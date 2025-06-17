@@ -45,7 +45,7 @@ const sharedSidebar = [
       { text: 'Advanced Chunks', link: '/guide/in-depth/advanced-chunks.md' },
       { text: 'Bundling CJS', link: '/guide/in-depth/bundling-cjs.md' },
       // { text: 'Code Splitting', link: '/guide/in-depth/code-splitting.md' },
-      // { text: 'Use Strict', link: '/guide/in-depth/use-strict.md' },
+      { text: 'Directives', link: '/guide/in-depth/directives.md' },
     ],
   },
 ];

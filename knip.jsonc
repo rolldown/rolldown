@@ -1,6 +1,6 @@
 {
   "$schema": "https://unpkg.com/knip@5/schema.json",
-  "ignoreBinaries": ["only-allow", "typos"],
+  "ignoreBinaries": ["only-allow"],
   "ignoreWorkspaces": ["examples/**"], // no rolldown plugin yet
   "workspaces": {
     ".": {
@@ -46,6 +46,7 @@
         "@oxc-project/runtime",
         "@rollup/plugin-json",
         "buble",
+        "pathe",
       ],
     },
     "packages/rolldown/npm/wasm32-wasi": {

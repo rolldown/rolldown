@@ -376,7 +376,7 @@ if (!nativeBinding) {
   throw new Error(`Failed to load native binding`)
 }
 
-const { Severity, ParseResult, ExportExportNameKind, ExportImportNameKind, ExportLocalNameKind, getBufferOffset, ImportNameKind, parseAsync, parseAsyncRaw, parseSync, parseSyncRaw, rawTransferSupported, ResolverFactory, EnforceExtension, ModuleType, sync, HelperMode, isolatedDeclaration, moduleRunnerTransform, transform, BindingBundleEndEventData, BindingBundleErrorEventData, BindingCallableBuiltinPlugin, BindingError, BindingHmrOutput, BindingModuleInfo, BindingNormalizedOptions, BindingOutputAsset, BindingOutputChunk, BindingOutputs, BindingPluginContext, BindingRenderedChunk, BindingRenderedChunkMeta, BindingRenderedModule, BindingTransformPluginContext, BindingWatcher, BindingWatcherChangeData, BindingWatcherEvent, Bundler, ParallelJsPluginRegistry, BindingAttachDebugInfo, BindingBuiltinPluginName, BindingHookSideEffects, BindingJsx, BindingLogLevel, BindingPluginOrder, FilterTokenKind, registerPlugins, shutdownAsyncRuntime, startAsyncRuntime } = nativeBinding
+const { Severity, ParseResult, ExportExportNameKind, ExportImportNameKind, ExportLocalNameKind, getBufferOffset, ImportNameKind, parseAsync, parseAsyncRaw, parseSync, parseSyncRaw, rawTransferSupported, ResolverFactory, EnforceExtension, ModuleType, sync, HelperMode, isolatedDeclaration, moduleRunnerTransform, transform, BindingBundleEndEventData, BindingBundleErrorEventData, BindingBundlerImpl, BindingCallableBuiltinPlugin, BindingError, BindingHmrOutput, BindingModuleInfo, BindingNormalizedOptions, BindingOutputAsset, BindingOutputChunk, BindingOutputs, BindingPluginContext, BindingRenderedChunk, BindingRenderedChunkMeta, BindingRenderedModule, BindingTransformPluginContext, BindingWatcher, BindingWatcherChangeData, BindingWatcherEvent, ParallelJsPluginRegistry, BindingAttachDebugInfo, BindingBuiltinPluginName, BindingHookSideEffects, BindingJsx, BindingLogLevel, BindingPluginOrder, FilterTokenKind, registerPlugins, shutdownAsyncRuntime, startAsyncRuntime } = nativeBinding
 export { Severity }
 export { ParseResult }
 export { ExportExportNameKind }
@@ -399,6 +399,7 @@ export { moduleRunnerTransform }
 export { transform }
 export { BindingBundleEndEventData }
 export { BindingBundleErrorEventData }
+export { BindingBundlerImpl }
 export { BindingCallableBuiltinPlugin }
 export { BindingError }
 export { BindingHmrOutput }
@@ -415,7 +416,6 @@ export { BindingTransformPluginContext }
 export { BindingWatcher }
 export { BindingWatcherChangeData }
 export { BindingWatcherEvent }
-export { Bundler }
 export { ParallelJsPluginRegistry }
 export { BindingAttachDebugInfo }
 export { BindingBuiltinPluginName }

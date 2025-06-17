@@ -1079,12 +1079,24 @@ export interface TypeScriptOptions {
 export declare class BindingBundleEndEventData {
   output: string
   duration: number
-  get result(): Bundler
+  get result(): BindingBundlerImpl
 }
 
 export declare class BindingBundleErrorEventData {
-  get result(): Bundler
+  get result(): BindingBundlerImpl
   get error(): Array<Error | BindingError>
+}
+
+export declare class BindingBundlerImpl {
+  constructor(option: BindingBundlerOptions)
+  write(): Promise<BindingOutputs>
+  generate(): Promise<BindingOutputs>
+  scan(): Promise<BindingOutputs>
+  close(): Promise<void>
+  get closed(): boolean
+  getWatchFiles(): Promise<Array<string>>
+  generateHmrPatch(changedFiles: Array<string>): Promise<BindingHmrOutput>
+  hmrInvalidate(file: string, firstInvalidatedBy?: string | undefined | null): Promise<BindingHmrOutput>
 }
 
 export declare class BindingCallableBuiltinPlugin {
@@ -1238,18 +1250,6 @@ export declare class BindingWatcherEvent {
   bundleEndData(): BindingBundleEndEventData
   bundleEventKind(): string
   bundleErrorData(): BindingBundleErrorEventData
-}
-
-export declare class Bundler {
-  constructor(option: BindingBundlerOptions)
-  write(): Promise<BindingOutputs>
-  generate(): Promise<BindingOutputs>
-  scan(): Promise<BindingOutputs>
-  close(): Promise<void>
-  get closed(): boolean
-  getWatchFiles(): Promise<Array<string>>
-  generateHmrPatch(changedFiles: Array<string>): Promise<BindingHmrOutput>
-  hmrInvalidate(file: string, firstInvalidatedBy?: string | undefined | null): Promise<BindingHmrOutput>
 }
 
 export declare class ParallelJsPluginRegistry {

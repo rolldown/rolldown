@@ -4,7 +4,7 @@ use std::time::Duration;
 use napi::bindgen_prelude::FnArgs;
 use napi_derive::napi;
 
-use crate::bundler::{BindingBundlerOptions, Bundler};
+use crate::binding_bundler_impl::{BindingBundlerImpl, BindingBundlerOptions};
 use crate::types::binding_watcher_event::BindingWatcherEvent;
 
 use napi::Env;
@@ -45,7 +45,7 @@ impl BindingWatcher {
   ) -> napi::Result<Self> {
     let bundlers = options
       .into_iter()
-      .map(|option| Bundler::new(env, option).map(Bundler::into_inner))
+      .map(|option| BindingBundlerImpl::new(env, option).map(BindingBundlerImpl::into_inner))
       .collect::<Result<Vec<_>, _>>()?;
 
     Ok(Self { inner: rolldown::Watcher::new(bundlers, notify_option.map(Into::into))? })

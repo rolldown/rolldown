@@ -1,4 +1,8 @@
-import { Bundler, shutdownAsyncRuntime, startAsyncRuntime } from '../binding';
+import {
+  BindingBundlerImpl,
+  shutdownAsyncRuntime,
+  startAsyncRuntime,
+} from '../binding';
 import type { InputOptions } from '../options/input-options';
 import type { OutputOptions } from '../options/output-options';
 import { createBundlerOptions } from './create-bundler-option';
@@ -23,7 +27,7 @@ export async function createBundler(
 
   try {
     return {
-      bundler: new Bundler(option.bundlerOptions),
+      bundler: new BindingBundlerImpl(option.bundlerOptions),
       stopWorkers: option.stopWorkers,
       shutdown: () => {
         shutdownAsyncRuntime();
@@ -37,7 +41,7 @@ export async function createBundler(
 }
 
 export interface BundlerWithStopWorker {
-  bundler: Bundler;
+  bundler: BindingBundlerImpl;
   stopWorkers?: () => Promise<void>;
   shutdown: () => void;
 }

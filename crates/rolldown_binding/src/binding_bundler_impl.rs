@@ -26,12 +26,12 @@ pub struct BindingBundlerOptions<'env> {
 }
 
 #[napi]
-pub struct Bundler {
+pub struct BindingBundlerImpl {
   inner: Arc<Mutex<NativeBundler>>,
 }
 
 #[napi]
-impl Bundler {
+impl BindingBundlerImpl {
   #[napi(constructor)]
   #[cfg_attr(target_family = "wasm", allow(unused))]
   pub fn new(env: Env, option: BindingBundlerOptions) -> napi::Result<Self> {
@@ -137,7 +137,7 @@ impl Bundler {
   }
 }
 
-impl Bundler {
+impl BindingBundlerImpl {
   #[allow(clippy::significant_drop_tightening)]
   pub async fn scan_impl(&self) -> napi::Result<BindingOutputs> {
     let mut bundler_core = self.inner.lock().await;

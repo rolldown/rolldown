@@ -821,6 +821,9 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
                   // `xxx_exports`
                   let namespace_object_ref_expr =
                     self.finalized_expr_for_symbol_ref(importee.namespace_object_ref, false, None);
+
+                  let is_json_module = rec.meta.contains(ImportRecordMeta::JSON_MODULE);
+
                   // `__toCommonJS`
                   let to_commonjs_expr = self.finalized_expr_for_runtime_symbol("__toCommonJS");
                   // `__toCommonJS(xxx_exports)`
@@ -833,8 +836,20 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
                       false,
                     ));
 
+                  let final_expr = if is_json_module {
+                    // `__toCommonJS(xxx_exports).default`
+                    Expression::from(self.snippet.builder.member_expression_static(
+                      SPAN,
+                      to_commonjs_call_expr,
+                      self.snippet.id_name("default", SPAN),
+                      false,
+                    ))
+                  } else {
+                    to_commonjs_call_expr
+                  };
+
                   // `(init_xxx(), __toCommonJS(xxx_exports))`
-                  Some(self.snippet.seq2_in_paren_expr(wrap_ref_call_expr, to_commonjs_call_expr))
+                  Some(self.snippet.seq2_in_paren_expr(wrap_ref_call_expr, final_expr))
                 }
               }
             }

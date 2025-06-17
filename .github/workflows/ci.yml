@@ -140,6 +140,9 @@ jobs:
       - name: Lint Code
         run: pnpm lint-code
 
+      - name: Lint exports & dependencies
+        run: pnpm lint-knip
+
       - name: Validate workspace package
         run: node scripts/misc/published-package-check.mjs
 

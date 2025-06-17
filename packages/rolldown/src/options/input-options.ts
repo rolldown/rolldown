@@ -221,6 +221,23 @@ export interface InputOptions {
    * @default runtime = "automatic"
    */
   jsx?: false | 'react' | 'react-jsx' | 'preserve' | RollupJsxOptions;
+  /**
+   * Configure how the code is transformed. This process happens after the `transform` hook.
+   *
+   * To transpile [legacy decorators](https://github.com/tc39/proposal-decorators/tree/4ac0f4cd31bd0f2e8170cb4c5136e51671e46c8d), you could use
+   *
+   * ```js
+   * export default defineConfig({
+   *   transform: {
+   *     decorator: {
+   *       legacy: true,
+   *     },
+   *   },
+   * })
+   * ```
+   *
+   * For latest decorators proposal, rolldown is able to bundle them but doesn't support transpiling them yet.
+   */
   transform?: OxcTransformOption;
   watch?: WatcherOptions | false;
   dropLabels?: string[];

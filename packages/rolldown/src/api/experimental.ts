@@ -1,6 +1,7 @@
+import { BindingBundler } from '../binding';
 import type { InputOptions } from '../options/input-options';
 import { PluginDriver } from '../plugin/plugin-driver';
-import { createBundler } from '../utils/create-bundler';
+import { createBundlerImpl } from '../utils/create-bundler';
 import { handleOutputErrors } from '../utils/transform-to-rollup-output';
 
 /**
@@ -10,7 +11,11 @@ import { handleOutputErrors } from '../utils/transform-to-rollup-output';
  */
 export const experimental_scan = async (input: InputOptions): Promise<void> => {
   const inputOptions = await PluginDriver.callOptionsHook(input);
-  const { bundler, stopWorkers } = await createBundler(inputOptions, {});
+  const { impl: bundler, stopWorkers } = await createBundlerImpl(
+    new BindingBundler(),
+    inputOptions,
+    {},
+  );
   const output = await bundler.scan();
   handleOutputErrors(output);
   await stopWorkers?.();

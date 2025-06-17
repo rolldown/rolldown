@@ -1,10 +1,11 @@
 import {
-  type BundlerWithStopWorker,
-  createBundler,
+  type BundlerImplWithStopWorker,
+  createBundlerImpl,
 } from '../../utils/create-bundler';
 import { transformToRollupOutput } from '../../utils/transform-to-rollup-output';
 
 import type { BindingHmrOutputPatch } from '../../binding';
+import { BindingBundler } from '../../binding';
 import type { InputOptions } from '../../options/input-options';
 import type { OutputOptions } from '../../options/output-options';
 import type { HasProperty, TypeAssert } from '../../types/assert';
@@ -17,27 +18,30 @@ Symbol.asyncDispose ??= Symbol('Symbol.asyncDispose');
 
 export class RolldownBuild {
   #inputOptions: InputOptions;
-  #bundler?: BundlerWithStopWorker;
+  #bundler: BindingBundler;
+  #bundlerImpl?: BundlerImplWithStopWorker;
 
   constructor(inputOptions: InputOptions) {
     // TODO: Check if `inputOptions.output` is set. If so, throw an warning that it is ignored.
     this.#inputOptions = inputOptions;
+    this.#bundler = new BindingBundler();
   }
 
   get closed(): boolean {
     // If the bundler has not yet been created, it is not closed.
-    return this.#bundler?.bundler.closed ?? false;
+    return this.#bundlerImpl?.impl.closed ?? false;
   }
 
   // Create bundler for each `bundle.write/generate`
   async #getBundlerWithStopWorker(
     outputOptions: OutputOptions,
     isClose?: boolean,
-  ): Promise<BundlerWithStopWorker> {
-    if (this.#bundler) {
-      await this.#bundler.stopWorkers?.();
+  ): Promise<BundlerImplWithStopWorker> {
+    if (this.#bundlerImpl) {
+      await this.#bundlerImpl.stopWorkers?.();
     }
-    return (this.#bundler = await createBundler(
+    return (this.#bundlerImpl = await createBundlerImpl(
+      this.#bundler,
       this.#inputOptions,
       outputOptions,
       isClose,
@@ -46,24 +50,27 @@ export class RolldownBuild {
 
   async generate(outputOptions: OutputOptions = {}): Promise<RolldownOutput> {
     validateOption('output', outputOptions);
-    const { bundler } = await this.#getBundlerWithStopWorker(outputOptions);
-    const output = await bundler.generate();
+    const { impl } = await this.#getBundlerWithStopWorker(outputOptions);
+    const output = await impl.generate();
     return transformToRollupOutput(output);
   }
 
   async write(outputOptions: OutputOptions = {}): Promise<RolldownOutput> {
     validateOption('output', outputOptions);
-    const { bundler } = await this.#getBundlerWithStopWorker(outputOptions);
-    const output = await bundler.write();
+    const { impl } = await this.#getBundlerWithStopWorker(outputOptions);
+    const output = await impl.write();
     return transformToRollupOutput(output);
   }
 
   async close(): Promise<void> {
     // Create new one bundler to run `closeBundle` hook, here using `isClose` flag to avoid call `outputOptions` hook.
-    const { bundler, stopWorkers, shutdown } = await this
-      .#getBundlerWithStopWorker({}, true);
+    const { impl, stopWorkers, shutdown } = await this
+      .#getBundlerWithStopWorker(
+        {},
+        true,
+      );
     await stopWorkers?.();
-    await bundler.close();
+    await impl.close();
     shutdown();
   }
 
@@ -74,7 +81,9 @@ export class RolldownBuild {
   async generateHmrPatch(
     changedFiles: string[],
   ): Promise<BindingHmrOutputPatch> {
-    const output = await this.#bundler!.bundler.generateHmrPatch(changedFiles);
+    const output = await this.#bundlerImpl!.impl.generateHmrPatch(
+      changedFiles,
+    );
     return transformHmrPatchOutput(output);
   }
 
@@ -82,7 +91,7 @@ export class RolldownBuild {
     file: string,
     firstInvalidatedBy?: string,
   ): Promise<BindingHmrOutputPatch> {
-    const output = await this.#bundler!.bundler.hmrInvalidate(
+    const output = await this.#bundlerImpl!.impl.hmrInvalidate(
       file,
       firstInvalidatedBy,
     );
@@ -93,7 +102,7 @@ export class RolldownBuild {
   // The `watchFiles` method returns a promise, but Rollup does not.
   // Converting it to a synchronous API might cause a deadlock if the user calls `write` and `watchFiles` simultaneously.
   get watchFiles(): Promise<string[]> {
-    return this.#bundler?.bundler.getWatchFiles() ?? Promise.resolve([]);
+    return this.#bundlerImpl?.impl.getWatchFiles() ?? Promise.resolve([]);
   }
 }
 

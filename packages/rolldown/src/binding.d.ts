@@ -1087,6 +1087,11 @@ export declare class BindingBundleErrorEventData {
   get error(): Array<Error | BindingError>
 }
 
+export declare class BindingBundler {
+  constructor()
+  createImpl(options: BindingBundlerOptions): BindingBundlerImpl
+}
+
 export declare class BindingBundlerImpl {
   constructor(option: BindingBundlerOptions)
   write(): Promise<BindingOutputs>

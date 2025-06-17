@@ -83,6 +83,7 @@ export const moduleRunnerTransform = __napiModule.exports.moduleRunnerTransform
 export const transform = __napiModule.exports.transform
 export const BindingBundleEndEventData = __napiModule.exports.BindingBundleEndEventData
 export const BindingBundleErrorEventData = __napiModule.exports.BindingBundleErrorEventData
+export const BindingBundler = __napiModule.exports.BindingBundler
 export const BindingBundlerImpl = __napiModule.exports.BindingBundlerImpl
 export const BindingCallableBuiltinPlugin = __napiModule.exports.BindingCallableBuiltinPlugin
 export const BindingError = __napiModule.exports.BindingError

@@ -2552,6 +2552,7 @@ dependencies = [
  "oxc_transform_napi",
  "rolldown",
  "rolldown_common",
+ "rolldown_debug",
  "rolldown_error",
  "rolldown_plugin",
  "rolldown_plugin_alias",

@@ -107,6 +107,7 @@ const CONTEXT_PREFIX: &str = "CONTEXT_";
 const CONTEXT_PREFIX_LEN: usize = CONTEXT_PREFIX.len();
 impl tracing::field::Visit for ContextDataFinder {
   fn record_str(&mut self, field: &tracing::field::Field, value: &str) {
+    // Only record context data that starts with `CONTEXT_`.
     if field.name().starts_with(CONTEXT_PREFIX) {
       let key = &field.name()[CONTEXT_PREFIX_LEN..];
       let value = value.to_string();

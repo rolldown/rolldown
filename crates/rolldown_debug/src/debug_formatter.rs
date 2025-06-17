@@ -11,7 +11,7 @@ use crate::{
     DEFAULT_SESSION_ID, EXIST_HASH_BY_SESSION, OPENED_FILE_HANDLES, OPENED_FILES_BY_SESSION,
   },
 };
-use rustc_hash::FxHashMap;
+use rustc_hash::{FxHashMap, FxHashSet};
 use serde::ser::{SerializeMap, Serializer as _};
 use tracing::{Event, Subscriber};
 use tracing_subscriber::{
@@ -40,30 +40,33 @@ where
     let action_meta = action_meta_extractor.meta;
 
     if let Some(mut action_meta) = action_meta {
-      let mut context_variables = extract_context_variables(&action_meta);
+      action_meta
+        .as_object_mut()
+        .expect("meta must be an object")
+        // Push `${build_id}` to every event, make build id get injected automatically via the context-inject mechanism.
+        .insert("build_id".to_string(), "${build_id}".into());
+
+      let mut contextual_fields = extract_fields_relied_on_context_data(&action_meta);
       let mut captured_values = FxHashMap::default();
 
       if let Some(scope) = ctx.event_scope() {
         for span in scope {
+          if contextual_fields.is_empty() {
+            // If there are no contextual fields to inject, we can break early.
+            break;
+          }
           let span_extensions = span.extensions();
           let Some(context_data) = span_extensions.get::<ContextData>() else {
             continue;
           };
-          let found_field_indexes = context_variables
-            .iter()
-            .enumerate()
-            .filter_map(|(idx, name)| {
-              if let Some(value) = context_data.get(name.as_str()) {
-                captured_values.insert(name.clone(), value.clone());
-                Some(idx)
-              } else {
-                None
-              }
-            })
-            .collect::<Vec<_>>();
-
-          found_field_indexes.iter().rev().for_each(|idx| {
-            context_variables.swap_remove(*idx);
+          contextual_fields.retain(|field_name| {
+            if let Some(value) = context_data.get(field_name.as_str()) {
+              captured_values.insert(field_name.clone(), value.clone());
+              // Remove the field that has found its value.
+              false
+            } else {
+              true
+            }
           });
         }
       }
@@ -237,8 +240,8 @@ impl tracing::field::Visit for ActionMetaExtractor {
   }
 }
 
-pub fn extract_context_variables(meta: &serde_json::Value) -> Vec<String> {
-  fn visit(meta: &serde_json::Value, context_variables: &mut Vec<String>) {
+pub fn extract_fields_relied_on_context_data(meta: &serde_json::Value) -> FxHashSet<String> {
+  fn visit(meta: &serde_json::Value, context_variables: &mut FxHashSet<String>) {
     if let serde_json::Value::Object(map) = meta {
       for (_key, value) in map {
         match value {
@@ -246,7 +249,7 @@ pub fn extract_context_variables(meta: &serde_json::Value) -> Vec<String> {
             // Check if the value is a placeholder for provided data
             {
               let var_name = &value[2..value.len() - 1];
-              context_variables.push(var_name.to_string());
+              context_variables.insert(var_name.to_string());
             }
           }
           _ => visit(value, context_variables),
@@ -255,9 +258,9 @@ pub fn extract_context_variables(meta: &serde_json::Value) -> Vec<String> {
     }
   }
 
-  let mut context_variables = vec![];
-  visit(meta, &mut context_variables);
-  context_variables
+  let mut contextual_fields = FxHashSet::default();
+  visit(meta, &mut contextual_fields);
+  contextual_fields
 }
 
 pub fn inject_context_data(meta: &mut serde_json::Value, context_data: &FxHashMap<String, String>) {

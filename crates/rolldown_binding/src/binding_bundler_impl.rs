@@ -13,7 +13,7 @@ use crate::{
 };
 use napi::{Env, tokio::sync::Mutex};
 use napi_derive::napi;
-use rolldown::{Bundler as NativeBundler, LogLevel, NormalizedBundlerOptions};
+use rolldown::{Bundler as NativeBundler, BundlerBuilder, LogLevel, NormalizedBundlerOptions};
 use rolldown_error::{
   BuildDiagnostic, BuildResult, DiagnosticOptions, filter_out_disabled_diagnostics,
 };
@@ -32,9 +32,8 @@ pub struct BindingBundlerImpl {
 
 #[napi]
 impl BindingBundlerImpl {
-  #[napi(constructor)]
   #[cfg_attr(target_family = "wasm", allow(unused))]
-  pub fn new(env: Env, option: BindingBundlerOptions) -> napi::Result<Self> {
+  pub fn new(env: Env, option: BindingBundlerOptions, session_id: Arc<str>) -> napi::Result<Self> {
     try_init_custom_trace_subscriber(env);
 
     let BindingBundlerOptions { input_options, output_options, parallel_plugins_registry } = option;
@@ -59,9 +58,12 @@ impl BindingBundlerImpl {
       worker_manager,
     )?;
 
-    Ok(Self {
-      inner: Arc::new(Mutex::new(NativeBundler::with_plugins(ret.bundler_options, ret.plugins))),
-    })
+    let bundler_builder = BundlerBuilder::default()
+      .with_options(ret.bundler_options)
+      .with_plugins(ret.plugins)
+      .with_session_id(session_id);
+
+    Ok(Self { inner: Arc::new(Mutex::new(bundler_builder.build())) })
   }
 
   pub fn new_with_bundler(inner: Arc<Mutex<NativeBundler>>) -> Self {

@@ -1093,7 +1093,6 @@ export declare class BindingBundler {
 }
 
 export declare class BindingBundlerImpl {
-  constructor(option: BindingBundlerOptions)
   write(): Promise<BindingOutputs>
   generate(): Promise<BindingOutputs>
   scan(): Promise<BindingOutputs>

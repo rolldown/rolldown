@@ -45,7 +45,10 @@ impl BindingWatcher {
   ) -> napi::Result<Self> {
     let bundlers = options
       .into_iter()
-      .map(|option| BindingBundlerImpl::new(env, option).map(BindingBundlerImpl::into_inner))
+      .map(|option| {
+        // TODO(hyf0): support emit debug data for builtin watch
+        BindingBundlerImpl::new(env, option, Arc::from("0000")).map(BindingBundlerImpl::into_inner)
+      })
       .collect::<Result<Vec<_>, _>>()?;
 
     Ok(Self { inner: rolldown::Watcher::new(bundlers, notify_option.map(Into::into))? })

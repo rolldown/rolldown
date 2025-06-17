@@ -355,6 +355,12 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
       rec.meta.insert(ImportRecordMeta::SAFELY_MERGE_CJS_NS);
     }
 
+    #[allow(clippy::case_sensitive_file_extension_comparisons)]
+    if self.options.experimental.vite_mode.unwrap_or_default() && module_request.ends_with(".json")
+    {
+      rec.meta.insert(ImportRecordMeta::JSON_MODULE);
+    }
+
     let id = self.result.import_records.push(rec);
     self.current_stmt_info.import_records.push(id);
     id

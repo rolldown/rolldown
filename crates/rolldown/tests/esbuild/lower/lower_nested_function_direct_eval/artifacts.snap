@@ -123,7 +123,6 @@ if (foo) {
 ## 5.js
 
 ```js
-'use strict';
 
 
 //#region 5.js
@@ -136,7 +135,6 @@ if (foo) {
 ## 6.js
 
 ```js
-'use strict';
 
 
 //#region 6.js
@@ -150,7 +148,6 @@ if (foo) {
 ## 7.js
 
 ```js
-'use strict';
 
 
 //#region 7.js
@@ -164,7 +161,6 @@ if (foo) {
 ## 8.js
 
 ```js
-'use strict';
 
 
 //#region 8.js

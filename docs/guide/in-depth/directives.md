@@ -1,0 +1,7 @@
+# Directive
+
+Rolldown will not add any directive for your output, here are the strategies when handling directives.
+
+- When `output.preserveModules` is disabled, only directives in user defined entry module will be preserved [repl](https://repl.rolldown.rs/#eNptkMtugzAQRX9l5A1QIVh1Q5f9hS7ZEBhit86Y2uPGEeLfO4S8FEWyLM/r3uOZ1aiaWRkaMFXfYX2Tau5xqXoJsxgQkNifso+WzGFynkGfJvSfcYcweneArKrDb+w8ytja1VLvKDiLlXX7/NacvxeFVEUYVcM+4lIq76wd3JEqmRjN/oHjRWUjwnRmGHDsomWYWwJwkafIzRYArPdStrSIm5jc4K7a98TDJ7fkyl/X8KVNADmdDQ6ClsIAO+QjIgHry0ag15F+QktPSGOkno2ji2Seig3MI0dPkOANktic6QTvTwhsxxhYLf+rRYpi)
+- When `output.preserveModules` is enabled, all directives will be preserved even the module is not user defined entry module. [repl](https://repl.rolldown.rs/#eNptkLFug0AMhl/FugWoEExd6Ni5W0cWAibQXnz0zk6IEO9eX0iTqIp0w9m/7f+zF9ObajEjdTgXXyH+yVT3ODethokEBCT25+StpvEwOc8wnCf077JD6L07QFKU4Ucaj9oWq2pqHQVnsbBun96K09csU1UHo6nYC6658c7azp2o0I5+3D9wPFE2IpwvDB32jViGpSYAJzwJV1sAMHkM6I/44TqxGCqIblFa85pWRVDnG/Gf4T3xsPmWjEuVJXwOYwB9jQ0OwqBCBzvkEyIBD9czQTsIfYea/nH2Qi2Pjq4j0znbaD2yeIIZXmBWmwud4h2VwDaMgc36CzJsksE=)
+- If the format is `esm`, `'use strict'` directive will be filtered out whatever. [repl](https://repl.rolldown.rs/#eNptj0FuhDAMRa9iZQNUCFbd0GWv0GU2DDhD2uDQxOkwQty9BtqZUVUpi3x/2/95UUY1i7LU41y9x+1PqrnrUnUisxQRIgfbcabJjpMPDMN1wvCaTggm+BGyqo6fqQ0oY9mLJk2dp+gdVs6f81tz/lwU4spiVA2HhGupgneu9xeqZMLY8wPHP85BhPPO0KNpk2NYNAH4xFPi5hAAxoexFakVxlGrrbiWmlYJl8wb62/UvfB4817czqlreBtsBHmtix7iIEYPJ+QLIgEPCEgcrtANiT6ipj+EJlHH1tPPynwuDs6AnALBDE8wS8xOJ3hfQuBaxshq/QYqso+y)

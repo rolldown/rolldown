@@ -287,6 +287,9 @@ importers:
       '@napi-rs/wasm-runtime':
         specifier: 'catalog:'
         version: 0.2.11
+      '@oxc-project/runtime':
+        specifier: 'catalog:'
+        version: 0.73.0
 
   packages/debug:
     devDependencies:

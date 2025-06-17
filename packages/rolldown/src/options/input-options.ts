@@ -70,7 +70,7 @@ export type HmrOptions = boolean | {
 
 export type AttachDebugOptions = 'none' | 'simple' | 'full';
 
-export interface RollupJsxOptions {
+interface RollupJsxOptions {
   mode?: 'classic' | 'automatic' | 'preserve';
   factory?: string;
   fragment?: string;

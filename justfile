@@ -110,6 +110,9 @@ lint-rust:
 lint-node:
     pnpm lint-code
 
+lint-knip:
+    pnpm lint-knip
+
 lint-repo:
     typos
     cargo ls-lint

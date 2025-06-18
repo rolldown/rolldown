@@ -30,7 +30,7 @@ impl Plugin for ImportGlobPlugin {
 
   async fn transform_ast(
     &self,
-    _ctx: &PluginContext,
+    ctx: &PluginContext,
     mut args: HookTransformAstArgs<'_>,
   ) -> HookTransformAstReturn {
     args.ast.program.with_mut(|fields| {
@@ -41,6 +41,7 @@ impl Plugin for ImportGlobPlugin {
       let ast_builder = AstBuilder::new(fields.allocator);
 
       let mut visitor = GlobImportVisit {
+        ctx,
         root,
         id: &id,
         ast_builder,

@@ -2802,6 +2802,7 @@ dependencies = [
  "oxc",
  "rolldown_ecmascript_utils",
  "rolldown_plugin",
+ "rolldown_utils",
  "sugar_path",
  "walkdir",
 ]
@@ -3115,6 +3116,7 @@ dependencies = [
  "serde_json",
  "simdutf8",
  "sugar_path",
+ "tokio",
  "xxhash-rust",
 ]
 

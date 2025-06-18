@@ -20,5 +20,6 @@ itoa = { workspace = true }
 oxc = { workspace = true }
 rolldown_ecmascript_utils = { workspace = true }
 rolldown_plugin = { workspace = true }
+rolldown_utils = { workspace = true }
 sugar_path = { workspace = true }
 walkdir = { workspace = true }

@@ -2,9 +2,9 @@ use crate::ast_scanner::side_effect_detector::utils::{
   extract_member_expr_chain, is_primitive_literal,
 };
 use oxc::ast::ast::{
-  self, Argument, ArrayExpressionElement, AssignmentTarget, AssignmentTargetPattern,
-  BindingPatternKind, CallExpression, ChainElement, Expression, IdentifierReference, PropertyKey,
-  UnaryOperator, VariableDeclarationKind,
+  self, Argument, ArrayExpressionElement, AssignmentTarget, BindingPatternKind, CallExpression,
+  ChainElement, Expression, IdentifierReference, PropertyKey, UnaryOperator,
+  VariableDeclarationKind,
 };
 use oxc::ast::{match_expression, match_member_expression};
 use rolldown_common::{AstScopes, SharedNormalizedBundlerOptions};
@@ -19,6 +19,8 @@ use utils::{
 };
 
 use self::utils::{PrimitiveType, known_primitive_type};
+
+use super::cjs_ast_analyzer::is_object_define_property_es_module;
 
 mod stmt_side_effect;
 mod utils;
@@ -153,27 +155,54 @@ impl<'a> SideEffectDetector<'a> {
     .into()
   }
 
-  fn detect_side_effect_of_assignment_target(expr: &AssignmentTarget) -> StmtSideEffect {
-    let Some(pattern) = expr.as_assignment_target_pattern() else {
-      return true.into();
-    };
-    (match pattern {
-      // {} = expr
-      AssignmentTargetPattern::ArrayAssignmentTarget(array_pattern) => {
-        !array_pattern.elements.is_empty() || array_pattern.rest.is_some()
+  fn detect_side_effect_of_assignment_target(&self, expr: &AssignmentTarget) -> StmtSideEffect {
+    match expr {
+      AssignmentTarget::ComputedMemberExpression(_)
+      | AssignmentTarget::StaticMemberExpression(_) => {
+        let member_expr = expr.to_member_expression();
+        match member_expr.object() {
+          Expression::Identifier(ident) => {
+            // - exports.a = ...;
+            // - exports['a'] = ...;
+            if self.is_unresolved_reference(ident)
+              && ident.name == "exports"
+              && member_expr.static_property_name().is_some()
+            {
+              StmtSideEffect::PureCjs
+            } else {
+              true.into()
+            }
+          }
+          _ => true.into(),
+        }
       }
-      // [] = expr
-      AssignmentTargetPattern::ObjectAssignmentTarget(object_pattern) => {
-        !object_pattern.properties.is_empty() || object_pattern.rest.is_some()
+
+      AssignmentTarget::AssignmentTargetIdentifier(_)
+      | AssignmentTarget::PrivateFieldExpression(_) => true.into(),
+
+      AssignmentTarget::TSAsExpression(_)
+      | AssignmentTarget::TSSatisfiesExpression(_)
+      | AssignmentTarget::TSNonNullExpression(_)
+      | AssignmentTarget::TSTypeAssertion(_) => unreachable!(),
+
+      AssignmentTarget::ArrayAssignmentTarget(array_pattern) => {
+        (!array_pattern.elements.is_empty() || array_pattern.rest.is_some()).into()
       }
-    })
-    .into()
+      AssignmentTarget::ObjectAssignmentTarget(object_pattern) => {
+        (!object_pattern.properties.is_empty() || object_pattern.rest.is_some()).into()
+      }
+    }
   }
 
   fn detect_side_effect_of_call_expr(&self, expr: &CallExpression) -> StmtSideEffect {
     if self.is_expr_manual_pure_functions(&expr.callee) {
       return false.into();
     }
+
+    if is_object_define_property_es_module(self.scope, expr).unwrap_or_default() {
+      return StmtSideEffect::PureCjs;
+    }
+
     let is_pure = !self.ignore_annotations && expr.pure;
     if is_pure {
       expr
@@ -398,9 +427,14 @@ impl<'a> SideEffectDetector<'a> {
         self.detect_side_effect_of_expr(&private_in_expr.right)
       }
       Expression::AssignmentExpression(expr) => {
-        (Self::detect_side_effect_of_assignment_target(&expr.left).has_side_effect()
-          || self.detect_side_effect_of_expr(&expr.right).has_side_effect())
-        .into()
+        match (
+          self.detect_side_effect_of_assignment_target(&expr.left),
+          self.detect_side_effect_of_expr(&expr.right).has_side_effect(),
+        ) {
+          (_, true) | (StmtSideEffect::Unknown, _) => true.into(),
+          (StmtSideEffect::PureCjs, false) => StmtSideEffect::PureCjs,
+          (StmtSideEffect::None, false) => false.into(),
+        }
       }
 
       Expression::ChainExpression(expr) => match &expr.expression {
@@ -690,11 +724,14 @@ impl<'a> SideEffectDetector<'a> {
 mod test {
   use std::sync::Arc;
 
+  use itertools::Itertools;
   use oxc::{parser::Parser, span::SourceType};
   use rolldown_common::{AstScopes, NormalizedBundlerOptions};
   use rolldown_ecmascript::{EcmaAst, EcmaCompiler};
 
   use crate::ast_scanner::side_effect_detector::SideEffectDetector;
+
+  use super::stmt_side_effect::StmtSideEffect;
 
   fn get_statements_side_effect(code: &str) -> bool {
     let source_type = SourceType::tsx();
@@ -713,6 +750,29 @@ mod test {
       .detect_side_effect_of_stmt(stmt)
       .has_side_effect()
     })
+  }
+
+  fn get_statements_side_effect_details(code: &str) -> Vec<StmtSideEffect> {
+    let source_type = SourceType::tsx();
+    let ast = EcmaCompiler::parse("<Noop>", code, source_type).unwrap();
+    let semantic = EcmaAst::make_semantic(ast.program(), false);
+    let scoping = semantic.into_scoping();
+    let ast_scopes = AstScopes::new(scoping);
+
+    ast
+      .program()
+      .body
+      .iter()
+      .map(|stmt| {
+        SideEffectDetector::new(
+          &ast_scopes,
+          false,
+          false,
+          &Arc::new(NormalizedBundlerOptions::default()),
+        )
+        .detect_side_effect_of_stmt(stmt)
+      })
+      .collect_vec()
   }
 
   #[test]
@@ -1026,6 +1086,48 @@ mod test {
     assert!(!get_statements_side_effect("let remove = { [void 0]: 'x' };"));
     assert!(get_statements_side_effect("let keep = { [void test()]: 'x' };"));
     assert!(get_statements_side_effect("const of = { [{}]: 'hi'}"));
+  }
+
+  #[test]
+  fn test_cjs_pattern() {
+    assert_eq!(
+      get_statements_side_effect_details(
+        "Object.defineProperty(exports, \"__esModule\", { value: true })"
+      ),
+      vec![StmtSideEffect::PureCjs]
+    );
+
+    assert_eq!(
+      get_statements_side_effect_details(
+        r"
+      exports.a = function test() {};
+      exports['b'] = function () {
+        console.log('b')
+      };
+      "
+      ),
+      vec![StmtSideEffect::PureCjs, StmtSideEffect::PureCjs]
+    );
+
+    assert_eq!(
+      get_statements_side_effect_details("exports.a = global()"),
+      vec![StmtSideEffect::Unknown]
+    );
+
+    assert_eq!(
+      get_statements_side_effect_details("exports[test()] = true"),
+      vec![StmtSideEffect::Unknown]
+    );
+
+    assert_eq!(
+      get_statements_side_effect_details(
+        r"
+      let a = {};
+      Object.defineProperty(a, '__esModule', { value: true });
+      "
+      ),
+      vec![StmtSideEffect::None, StmtSideEffect::Unknown]
+    );
   }
 
   #[test]

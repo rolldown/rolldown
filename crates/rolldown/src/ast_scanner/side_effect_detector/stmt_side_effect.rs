@@ -1,8 +1,15 @@
-#[derive(Debug)]
+#[derive(Debug, PartialEq, Eq)]
 pub enum StmtSideEffect {
   None,
   // TODO(hyf0): This should be removed in the future.
   Unknown,
+  /// e.g.
+  /// - Object.defineProperty(exports, "__esModule", { value: true });
+  /// - exports.a = pure_expr;
+  ///   It is treated has side effect in stmt level(to preserve the export declaration), but could be treated as side effect free in
+  ///   when determine if module has side effects.(like, the whole cjs module is not used at all, or
+  ///   cjs module only has exports, and the cjs module it self has no side effects)
+  PureCjs,
 }
 
 impl StmtSideEffect {

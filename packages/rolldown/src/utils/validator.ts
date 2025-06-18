@@ -385,6 +385,7 @@ const InputOptionsSchema = v.strictObject({
     v.strictObject({
       disableLiveBindings: v.optional(v.boolean()),
       enableComposingJsPlugins: v.optional(v.boolean()),
+      viteMode: v.optional(v.boolean()),
       resolveNewUrlToAsset: v.optional(v.boolean()),
       strictExecutionOrder: v.optional(v.boolean()),
       hmr: v.optional(HmrSchema),

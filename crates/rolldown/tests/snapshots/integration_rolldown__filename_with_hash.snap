@@ -4733,6 +4733,10 @@ expression: output
 
 - main-!~{000}~.js => main-D_pxn1_z.js
 
+# tests/rolldown/issues/4993
+
+- main-!~{000}~.js => main-BQQtZSou.js
+
 # tests/rolldown/misc/ambiguous_star_export
 
 - main-!~{000}~.js => main-Brk4weCb.js

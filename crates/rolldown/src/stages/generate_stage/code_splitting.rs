@@ -140,8 +140,16 @@ impl GenerateStage<'_> {
           continue;
         }
         group.sort_unstable_by_key(|item| self.link_output.module_table[item.owner].exec_order());
-        for symbol in &group[1..] {
-          self.link_output.symbol_db.link(**symbol, *group[0]);
+        let Some(idx) =
+          group.iter().position(|item| self.link_output.used_symbol_refs.contains(item))
+        else {
+          continue;
+        };
+        // In the extreme case, idx would eq to group.len() - 1, which means the first symbol is the only one that is used.
+        // `idx + 1` would eq to len of the group, the iteration is still safe,
+        // https://play.rust-lang.org/?version=stable&mode=debug&edition=2024&gist=38bb53e79b4f7aaa73ef9d6b4cfb3cc2
+        for symbol in &group[idx + 1..] {
+          self.link_output.symbol_db.link(**symbol, *group[idx]);
         }
       }
     }

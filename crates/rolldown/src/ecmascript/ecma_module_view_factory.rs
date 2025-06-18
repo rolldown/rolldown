@@ -1,7 +1,7 @@
 use oxc_index::IndexVec;
 use rolldown_common::{
   EcmaRelated, EcmaView, EcmaViewMeta, ImportRecordIdx, ModuleId, ModuleType, RawImportRecord,
-  ResolvedId, SharedNormalizedBundlerOptions,
+  ResolvedId, SharedNormalizedBundlerOptions, StmtSideEffect,
   side_effects::{DeterminedSideEffects, HookSideEffects},
 };
 use rolldown_error::BuildResult;
@@ -210,7 +210,10 @@ pub fn lazy_check_side_effects(
         .map(DeterminedSideEffects::UserDefined)
     })
     .unwrap_or_else(|| {
-      let analyzed_side_effects = stmt_infos.iter().any(|stmt_info| stmt_info.side_effect);
+      // when determining cjs module side effects:
+      // we don't considered `exports.a` has side effects
+      let analyzed_side_effects =
+        stmt_infos.iter().any(|stmt_info| matches!(stmt_info.side_effect, StmtSideEffect::Unknown));
       DeterminedSideEffects::Analyzed(analyzed_side_effects)
     })
 }

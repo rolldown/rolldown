@@ -1959,7 +1959,7 @@ expression: output
 
 # tests/esbuild/importstar/import_star_common_js_unused
 
-- entry-!~{000}~.js => entry-Clm_X11M.js
+- entry-!~{000}~.js => entry-Db280Wf0.js
 
 # tests/esbuild/importstar/import_star_export_import_star_capture
 

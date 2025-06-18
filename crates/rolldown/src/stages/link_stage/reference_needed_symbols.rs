@@ -85,7 +85,7 @@ impl LinkStage<'_> {
                         OutputFormat::Cjs | OutputFormat::Iife | OutputFormat::Umd
                       ) && !rec.meta.contains(ImportRecordMeta::IS_PLAIN_IMPORT)
                       {
-                        stmt_info.side_effect = true;
+                        stmt_info.side_effect = true.into();
                         stmt_info
                           .referenced_symbols
                           .push(self.runtime.resolve_symbol("__toESM").into());
@@ -119,7 +119,7 @@ impl LinkStage<'_> {
                           let meta = &self.metas[importee.idx];
                           if meta.has_dynamic_exports {
                             *importer_side_effect = DeterminedSideEffects::Analyzed(true);
-                            stmt_info.side_effect = true;
+                            stmt_info.side_effect = true.into();
                             stmt_info
                               .referenced_symbols
                               .push(self.runtime.resolve_symbol("__reExport").into());
@@ -131,7 +131,7 @@ impl LinkStage<'_> {
                       WrapKind::Cjs => {
                         if is_reexport_all {
                           *importer_side_effect = DeterminedSideEffects::Analyzed(true);
-                          stmt_info.side_effect = true;
+                          stmt_info.side_effect = true.into();
                           // Turn `export * from 'bar_cjs'` into `__reExport(foo_exports, __toESM(require_bar_cjs()))`
                           // Reference to `require_bar_cjs`
                           stmt_info
@@ -145,7 +145,7 @@ impl LinkStage<'_> {
                             .push(self.runtime.resolve_symbol("__reExport").into());
                           stmt_info.referenced_symbols.push(importer.namespace_object_ref.into());
                         } else {
-                          stmt_info.side_effect = importee.side_effects.has_side_effects();
+                          stmt_info.side_effect = importee.side_effects.has_side_effects().into();
 
                           // Turn `import * as bar from 'bar_cjs'` into `var import_bar_cjs = __toESM(require_bar_cjs())`
                           // Turn `import { prop } from 'bar_cjs'; prop;` into `var import_bar_cjs = __toESM(require_bar_cjs()); import_bar_cjs.prop;`
@@ -166,7 +166,7 @@ impl LinkStage<'_> {
                       WrapKind::Esm => {
                         // Turn `import ... from 'bar_esm'` into `init_bar_esm()`
                         stmt_info.side_effect =
-                          is_reexport_all || importee.side_effects.has_side_effects();
+                          (is_reexport_all || importee.side_effects.has_side_effects()).into();
                         // Reference to `init_foo`
                         stmt_info
                           .referenced_symbols

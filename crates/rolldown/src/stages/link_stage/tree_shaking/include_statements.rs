@@ -93,7 +93,7 @@ impl LinkStage<'_> {
       // So we need to manually include them here.
       if let Some(runtime_module) = self.module_table[self.runtime.id()].as_normal() {
         runtime_module.stmt_infos.iter_enumerated().for_each(|(stmt_info_id, stmt_info)| {
-          if stmt_info.side_effect {
+          if stmt_info.side_effect.has_side_effect() {
             include_statement(context, runtime_module, stmt_info_id);
           }
         });
@@ -344,7 +344,7 @@ fn include_module(ctx: &mut Context, module: &NormalModule) {
       let bail_eval = module.meta.has_eval()
         && !stmt_info.declared_symbols.is_empty()
         && stmt_info_id.index() != 0;
-      if stmt_info.side_effect || bail_eval {
+      if stmt_info.side_effect.has_side_effect() || bail_eval {
         include_statement(ctx, module, stmt_info_id);
       }
     });
@@ -353,7 +353,7 @@ fn include_module(ctx: &mut Context, module: &NormalModule) {
     // tree shaking is enabled or not.
     module.stmt_infos.iter_enumerated().skip(1).for_each(|(stmt_info_id, stmt_info)| {
       if stmt_info.force_tree_shaking {
-        if stmt_info.side_effect {
+        if stmt_info.side_effect.has_side_effect() {
           // If `force_tree_shaking` is true, the statement should be included either by itself having side effects
           // or by other statements referencing it.
           include_statement(ctx, module, stmt_info_id);

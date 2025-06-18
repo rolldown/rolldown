@@ -41,7 +41,7 @@ impl LinkStage<'_> {
       // generate `module.exports = expr`
       if module.exports_kind == ExportsKind::CommonJs {
         // since the wrap arguments are generate on demand, we need to insert the module ref usage here.
-        module.stmt_infos.infos[StmtInfoIdx::new(1)].side_effect = true;
+        module.stmt_infos.infos[StmtInfoIdx::new(1)].side_effect = true.into();
         module.ecma_view.ast_usage.insert(EcmaModuleAstUsage::ModuleRef);
       }
     });

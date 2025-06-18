@@ -7,12 +7,11 @@ use oxc::ast::ast::{
   VariableDeclarationKind,
 };
 use oxc::ast::{match_expression, match_member_expression};
-use rolldown_common::{AstScopes, SharedNormalizedBundlerOptions};
+use rolldown_common::{AstScopes, SharedNormalizedBundlerOptions, StmtSideEffect};
 use rolldown_utils::global_reference::{
   is_global_ident_ref, is_side_effect_free_member_expr_of_len_three,
   is_side_effect_free_member_expr_of_len_two,
 };
-use stmt_side_effect::StmtSideEffect;
 use utils::{
   can_change_strict_to_loose, is_side_effect_free_unbound_identifier_ref,
   maybe_side_effect_free_global_constructor,
@@ -22,7 +21,6 @@ use self::utils::{PrimitiveType, known_primitive_type};
 
 use super::cjs_ast_analyzer::is_object_define_property_es_module;
 
-mod stmt_side_effect;
 mod utils;
 
 /// Detect if a statement "may" have side effect.
@@ -726,12 +724,10 @@ mod test {
 
   use itertools::Itertools;
   use oxc::{parser::Parser, span::SourceType};
-  use rolldown_common::{AstScopes, NormalizedBundlerOptions};
+  use rolldown_common::{AstScopes, NormalizedBundlerOptions, StmtSideEffect};
   use rolldown_ecmascript::{EcmaAst, EcmaCompiler};
 
   use crate::ast_scanner::side_effect_detector::SideEffectDetector;
-
-  use super::stmt_side_effect::StmtSideEffect;
 
   fn get_statements_side_effect(code: &str) -> bool {
     let source_type = SourceType::tsx();

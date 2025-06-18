@@ -24,6 +24,7 @@ use rolldown_plugin::{
 };
 use rolldown_utils::dashmap::FxDashSet;
 use std::{any::Any, sync::Arc};
+use tracing::Instrument;
 
 pub struct Bundler {
   pub closed: bool,
@@ -40,6 +41,7 @@ pub struct Bundler {
   pub(crate) session_span: tracing::Span,
   // Guard for the tracing system. Responsible for cleaning up the allocated resources when the bundler gets dropped.
   pub(crate) _debug_tracer: Option<rolldown_debug::DebugTracer>,
+  pub(crate) build_count: u32,
 }
 
 impl Bundler {
@@ -55,25 +57,41 @@ impl Bundler {
 impl Bundler {
   #[tracing::instrument(level = "debug", skip_all, parent = &self.session_span)]
   pub async fn write(&mut self) -> BuildResult<BundleOutput> {
-    trace_action!(action::BuildStart { action: "BuildStart" });
-    let scan_stage_output = self.scan(vec![]).await?;
+    let build_count = self.inc_build_count();
+    async {
+      trace_action!(action::BuildStart { action: "BuildStart" });
+      let scan_stage_output = self.scan(vec![]).await?;
 
-    let ret = self.bundle_write(scan_stage_output).await;
-    trace_action!(action::BuildEnd { action: "BuildEnd" });
-    ret
+      let ret = self.bundle_write(scan_stage_output).await;
+      trace_action!(action::BuildEnd { action: "BuildEnd" });
+      ret
+    }
+    .instrument(tracing::info_span!(
+      "write",
+      CONTEXT_build_id = &*rolldown_debug::generate_build_id(build_count)
+    ))
+    .await
   }
 
   #[tracing::instrument(level = "debug", skip_all, parent = &self.session_span)]
   pub async fn generate(&mut self) -> BuildResult<BundleOutput> {
-    trace_action!(action::BuildStart { action: "BuildStart" });
-    let scan_stage_output = self.scan(vec![]).await?;
+    let build_count = self.inc_build_count();
+    async {
+      trace_action!(action::BuildStart { action: "BuildStart" });
+      let scan_stage_output = self.scan(vec![]).await?;
 
-    let ret = self.bundle_up(scan_stage_output, /* is_write */ false).await.map(|mut output| {
-      output.warnings.append(&mut self.warnings);
-      output
-    });
-    trace_action!(action::BuildEnd { action: "BuildEnd" });
-    ret
+      let ret = self.bundle_up(scan_stage_output, /* is_write */ false).await.map(|mut output| {
+        output.warnings.append(&mut self.warnings);
+        output
+      });
+      trace_action!(action::BuildEnd { action: "BuildEnd" });
+      ret
+    }
+    .instrument(tracing::info_span!(
+      "generate",
+      CONTEXT_build_id = &*rolldown_debug::generate_build_id(build_count)
+    ))
+    .await
   }
 
   #[tracing::instrument(level = "debug", skip_all)]
@@ -333,6 +351,12 @@ impl Bundler {
         .collect();
       trace_action!(action::ModuleGraphReady { action: "ModuleGraphReady", modules });
     }
+  }
+
+  fn inc_build_count(&mut self) -> u32 {
+    let count = self.build_count;
+    self.build_count += 1;
+    count
   }
 }
 

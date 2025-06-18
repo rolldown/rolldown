@@ -19,19 +19,17 @@ use crate::{
 pub struct BundlerBuilder {
   options: BundlerOptions,
   plugins: Vec<SharedPluginable>,
+  session_id: Option<Arc<str>>,
 }
 
 impl BundlerBuilder {
   pub fn build(mut self) -> Bundler {
-    let mut session_id: Arc<str> = std::time::SystemTime::now()
-      .duration_since(std::time::UNIX_EPOCH)
-      .expect("Time went backwards")
-      .as_millis()
-      .to_string()
-      .into();
-
     let mut debug_tracer = None;
+
+    let mut session_id = self.session_id.unwrap_or_else(|| Arc::from("unknown_session"));
+
     if let Some(debug_options) = &self.options.debug {
+      // TODO(hyf0): session_id shouldn't be set by user, it should be generated internally to ensure the uniqueness.
       if let Some(id) = &debug_options.session_id {
         session_id = id.to_string().into();
       }
@@ -73,6 +71,7 @@ impl BundlerBuilder {
       hmr_manager: None,
       session_span,
       _debug_tracer: debug_tracer,
+      build_count: 0,
     }
   }
 
@@ -163,6 +162,12 @@ impl BundlerBuilder {
   #[must_use]
   pub fn with_plugins(mut self, plugins: Vec<SharedPluginable>) -> Self {
     self.plugins = plugins;
+    self
+  }
+
+  #[must_use]
+  pub fn with_session_id(mut self, session_id: Arc<str>) -> Self {
+    self.session_id = Some(session_id);
     self
   }
 }

@@ -46,6 +46,7 @@ pub mod scan_mode;
 pub mod side_effects;
 pub mod source_mutation;
 pub mod stmt_info;
+pub mod stmt_side_effect;
 pub mod str_or_bytes;
 pub mod symbol_or_member_expr_ref;
 pub mod symbol_ref;

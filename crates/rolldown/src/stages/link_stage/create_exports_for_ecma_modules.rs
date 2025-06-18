@@ -71,7 +71,7 @@ impl LinkStage<'_> {
             stmt_idx: None,
             declared_symbols: vec![*symbol_ref],
             referenced_symbols: vec![],
-            side_effect: false,
+            side_effect: false.into(),
             is_included: false,
             import_records: Vec::new(),
             #[cfg(debug_assertions)]
@@ -116,7 +116,7 @@ impl LinkStage<'_> {
             stmt_idx: None,
             declared_symbols,
             referenced_symbols,
-            side_effect: false,
+            side_effect: false.into(),
             is_included: false,
             import_records: Vec::new(),
             #[cfg(debug_assertions)]

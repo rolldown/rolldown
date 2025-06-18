@@ -1,5 +1,6 @@
-#[derive(Debug, PartialEq, Eq)]
+#[derive(Debug, PartialEq, Eq, Clone, Copy, Default)]
 pub enum StmtSideEffect {
+  #[default]
   None,
   // TODO(hyf0): This should be removed in the future.
   Unknown,

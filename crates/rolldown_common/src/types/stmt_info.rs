@@ -2,7 +2,7 @@ use bitflags::bitflags;
 use oxc_index::IndexVec;
 use rustc_hash::FxHashMap;
 
-use crate::{ImportRecordIdx, SymbolOrMemberExprRef, SymbolRef};
+use crate::{ImportRecordIdx, StmtSideEffect, SymbolOrMemberExprRef, SymbolRef};
 
 #[derive(Debug, Default, Clone)]
 pub struct StmtInfos {
@@ -97,7 +97,7 @@ pub struct StmtInfo {
   // here instead of `SymbolId`.
   /// Top level symbols referenced by this statement.
   pub referenced_symbols: Vec<SymbolOrMemberExprRef>,
-  pub side_effect: bool,
+  pub side_effect: StmtSideEffect,
   pub is_included: bool,
   pub import_records: Vec<ImportRecordIdx>,
   #[cfg(debug_assertions)]
@@ -157,7 +157,7 @@ impl StmtInfo {
 #[derive(Debug)]
 pub struct DebugStmtInfoForTreeShaking {
   pub is_included: bool,
-  pub side_effect: bool,
+  pub side_effect: StmtSideEffect,
   #[cfg(debug_assertions)]
   pub source: String,
 }

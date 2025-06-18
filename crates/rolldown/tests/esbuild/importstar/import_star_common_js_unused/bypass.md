@@ -21,15 +21,7 @@ console.log(foo);
 ```js
 import assert from "node:assert";
 
-
-//#region foo.js
-var require_foo = __commonJS({ "foo.js"(exports) {
-	exports.foo = 123;
-} });
-
-//#endregion
 //#region entry.js
-var import_foo = __toESM(require_foo());
 let foo = 234;
 assert.equal(foo, 234);
 
@@ -40,13 +32,13 @@ assert.equal(foo, 234);
 ===================================================================
 --- esbuild	/out.js
 +++ rolldown	entry.js
-@@ -2,7 +2,7 @@
-     "foo.js"(exports) {
-         exports.foo = 123;
-     }
- });
+@@ -1,8 +1,2 @@
+-var require_foo = __commonJS({
+-    "foo.js"(exports) {
+-        exports.foo = 123;
+-    }
+-});
 -var ns = __toESM(require_foo());
-+var import_foo = __toESM(require_foo());
  var foo = 234;
  console.log(foo);
 

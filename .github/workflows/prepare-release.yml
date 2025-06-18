@@ -55,11 +55,8 @@ jobs:
           add-paths: |
             CHANGELOG.md
             packages/**/package.json
-          commit-message: |
-            release: v${{ env.VERSION }}
-
-            ${{ steps.changelog.outputs.content }}
-          body: ''
+          commit-message: 'release: v${{ env.VERSION }}'
+          body: ${{ steps.changelog.outputs.content }}
           branch: release-v${{ env.VERSION }}
           branch-suffix: timestamp
           base: main

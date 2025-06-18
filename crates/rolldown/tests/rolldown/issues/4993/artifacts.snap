@@ -1,0 +1,12 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## main.js
+
+```js
+import * as Rollup from "rollup";
+
+export { Rollup };
+```

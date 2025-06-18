@@ -25,7 +25,6 @@ pub struct ScanStage {
   plugin_driver: SharedPluginDriver,
   fs: OsFileSystem,
   resolver: SharedResolver,
-  build_span: tracing::Span,
 }
 
 #[derive(Debug)]
@@ -106,9 +105,8 @@ impl ScanStage {
     plugin_driver: SharedPluginDriver,
     fs: OsFileSystem,
     resolver: SharedResolver,
-    build_span: tracing::Span,
   ) -> Self {
-    Self { options, plugin_driver, fs, resolver, build_span }
+    Self { options, plugin_driver, fs, resolver }
   }
 
   #[tracing::instrument(target = "devtool", level = "debug", skip_all)]
@@ -124,7 +122,6 @@ impl ScanStage {
       Arc::clone(&self.plugin_driver),
       cache,
       mode.is_full(),
-      self.build_span.clone(),
     )?;
 
     // For `pluginContext.emitFile` with `type: chunk`, support it at buildStart hook.

@@ -35,7 +35,7 @@ impl BundlerBuilder {
       }
       debug_tracer = Some(rolldown_debug::DebugTracer::init(Arc::clone(&session_id)));
     }
-    let session_span = tracing::trace_span!("Session", session_id = &*session_id);
+    let session_span = tracing::trace_span!("Session", CONTEXT_session_id = &*session_id);
 
     let maybe_guard = rolldown_tracing::try_init_tracing();
 

@@ -19,8 +19,7 @@ pub struct ExternalModuleTask {
   module_idx: ModuleIdx,
   resolved_id: ResolvedId,
   user_defined_entries: Arc<Vec<(Option<ArcStr>, ResolvedId)>>,
-  /// The module is asserted to be this specific module type.
-  build_span: tracing::Span,
+  // The module is asserted to be this specific module type.
 }
 
 #[allow(clippy::rc_buffer)]
@@ -29,12 +28,11 @@ impl ExternalModuleTask {
     ctx: Arc<TaskContext>,
     idx: ModuleIdx,
     resolved_id: ResolvedId,
-    build_span: tracing::Span,
     user_defined_entries: Arc<Vec<(Option<ArcStr>, ResolvedId)>>,
   ) -> Self {
-    Self { ctx, module_idx: idx, resolved_id, build_span, user_defined_entries }
+    Self { ctx, module_idx: idx, resolved_id, user_defined_entries }
   }
-  #[tracing::instrument(name="ExternalModuleTask::run", parent = &self.build_span, level = "trace", skip_all, fields(module_id = ?self.resolved_id.id))]
+  #[tracing::instrument(name="ExternalModuleTask::run", level = "trace", skip_all, fields(module_id = ?self.resolved_id.id))]
   pub async fn run(self) {
     if let Err(errs) = self.run_inner().await {
       self

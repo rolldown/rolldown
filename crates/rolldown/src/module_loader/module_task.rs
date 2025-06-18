@@ -42,7 +42,6 @@ pub struct ModuleTask {
   is_user_defined_entry: bool,
   /// The module is asserted to be this specific module type.
   asserted_module_type: Option<ModuleType>,
-  build_span: tracing::Span,
 }
 
 impl ModuleTask {
@@ -53,7 +52,6 @@ impl ModuleTask {
     owner: Option<ModuleTaskOwner>,
     is_user_defined_entry: bool,
     assert_module_type: Option<ModuleType>,
-    build_span: tracing::Span,
   ) -> Self {
     Self {
       ctx,
@@ -62,11 +60,10 @@ impl ModuleTask {
       owner,
       is_user_defined_entry,
       asserted_module_type: assert_module_type,
-      build_span,
     }
   }
 
-  #[tracing::instrument(name="NormalModuleTask::run", parent = &self.build_span, level = "trace", skip_all, fields(module_id = ?self.resolved_id.id))]
+  #[tracing::instrument(name="NormalModuleTask::run", level = "trace", skip_all, fields(module_id = ?self.resolved_id.id))]
   pub async fn run(mut self) {
     if let Err(errs) = self.run_inner().await {
       self

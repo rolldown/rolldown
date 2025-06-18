@@ -19,8 +19,6 @@ use tracing_subscriber::{
   registry::LookupSpan,
 };
 
-use crate::debug_data_propagate_layer::SessionId;
-
 pub struct DebugFormatter;
 
 impl<S, N> FormatEvent<S, N> for DebugFormatter
@@ -40,11 +38,11 @@ where
     let action_meta = action_meta_extractor.meta;
 
     if let Some(mut action_meta) = action_meta {
-      action_meta
-        .as_object_mut()
-        .expect("meta must be an object")
-        // Push `${build_id}` to every event, make build id get injected automatically via the context-inject mechanism.
-        .insert("build_id".to_string(), "${build_id}".into());
+      let action_meta_as_object = action_meta.as_object_mut().expect("meta must be an object");
+
+      // Push `${build_id}` and `${session_id}` to every event, make build id get injected automatically via the context-inject mechanism.
+      action_meta_as_object.insert("build_id".to_string(), "${build_id}".into());
+      action_meta_as_object.insert("session_id".to_string(), "${session_id}".into());
 
       let mut contextual_fields = extract_fields_relied_on_context_data(&action_meta);
       let mut captured_values = FxHashMap::default();
@@ -73,23 +71,8 @@ where
 
       inject_context_data(&mut action_meta, &captured_values);
 
-      // This branch means this event is not only for normal tracing, but also for devtool tracing.
-      let session_id = if let Some(scope) = ctx.event_scope() {
-        let mut spans = scope.from_root();
-        loop {
-          if let Some(span) = spans.next() {
-            if let Some(build_id) = span.extensions().get::<SessionId>() {
-              break Some(build_id.clone());
-            }
-          } else {
-            break None;
-          }
-        }
-      } else {
-        None
-      };
-
-      let session_id = session_id.as_ref().map_or(DEFAULT_SESSION_ID, |s| &s.0);
+      let session_id =
+        captured_values.get("session_id").map(String::as_str).unwrap_or(DEFAULT_SESSION_ID);
 
       std::fs::create_dir_all(format!(".rolldown/{session_id}")).ok();
 
@@ -185,7 +168,6 @@ where
         let mut serializer = serializer.serialize_map(None)?;
 
         serializer.serialize_entry("timestamp", &current_utc_timestamp_ms())?;
-        serializer.serialize_entry("session_id", session_id)?;
 
         for (key, value) in action_meta {
           match value {

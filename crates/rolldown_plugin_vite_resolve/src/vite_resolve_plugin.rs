@@ -379,7 +379,7 @@ impl Plugin for ViteResolvePlugin {
     }
 
     if args.id.starts_with(OPTIONAL_PEER_DEP_ID) {
-      let [_, peer_dep, parent_dep, _] = args.id.splitn(4, ":").collect::<Vec<&str>>()[..] else {
+      let [_, peer_dep, parent_dep] = args.id.splitn(3, ":").collect::<Vec<&str>>()[..] else {
         unreachable!()
       };
 

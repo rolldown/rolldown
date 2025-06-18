@@ -31,7 +31,6 @@ pub struct HmrManagerInput {
   pub plugin_driver: SharedPluginDriver,
   pub index_ecma_ast: IndexEcmaAst,
   pub cache: ScanStageCache,
-  pub session_span: tracing::Span,
 }
 
 pub struct HmrManager {
@@ -209,7 +208,6 @@ impl HmrManager {
       })
       .collect::<Vec<_>>();
 
-    let build_span = self.session_span.clone();
     let mut module_loader = ModuleLoader::new(
       self.fs,
       Arc::clone(&self.options),
@@ -217,7 +215,6 @@ impl HmrManager {
       Arc::clone(&self.plugin_driver),
       &mut self.cache,
       false,
-      build_span,
     )?;
 
     let module_loader_output =

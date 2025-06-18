@@ -30,6 +30,7 @@ use rolldown_utils::rustc_hash::FxHashSetExt;
 use rustc_hash::{FxHashMap, FxHashSet};
 use std::collections::hash_map::Entry;
 use std::sync::Arc;
+use tracing::Instrument;
 
 use crate::{SharedOptions, SharedResolver};
 
@@ -98,7 +99,6 @@ pub struct ModuleLoader<'a> {
   is_full_scan: bool,
   new_added_modules_from_partial_scan: FxIndexSet<ModuleIdx>,
   cache: &'a mut ScanStageCache,
-  build_span: tracing::Span,
 }
 
 pub struct ModuleLoaderOutput {
@@ -135,7 +135,6 @@ impl<'a> ModuleLoader<'a> {
     plugin_driver: SharedPluginDriver,
     cache: &'a mut ScanStageCache,
     is_full_scan: bool,
-    build_span: tracing::Span,
   ) -> BuildResult<Self> {
     // 1024 should be enough for most cases
     // over 1024 pending tasks are insane
@@ -191,7 +190,6 @@ impl<'a> ModuleLoader<'a> {
       is_full_scan,
       new_added_modules_from_partial_scan: FxIndexSet::default(),
       cache,
-      build_span,
     })
   }
 
@@ -235,10 +233,9 @@ impl<'a> ModuleLoader<'a> {
         Arc::clone(&self.shared_context),
         idx,
         resolved_id,
-        tracing::Span::current(),
         user_defined_entries,
       );
-      tokio::spawn(task.run());
+      tokio::spawn(task.run().instrument(tracing::info_span!("external_module_task")));
     } else {
       let task = ModuleTask::new(
         Arc::clone(&self.shared_context),
@@ -247,10 +244,9 @@ impl<'a> ModuleLoader<'a> {
         owner,
         is_user_defined_entry,
         assert_module_type,
-        tracing::Span::current(),
       );
 
-      tokio::spawn(task.run());
+      tokio::spawn(task.run().instrument(tracing::info_span!("normal_module_task")));
     }
     idx
   }

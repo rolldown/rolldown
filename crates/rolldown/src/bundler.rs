@@ -134,7 +134,6 @@ impl Bundler {
       Arc::clone(&self.plugin_driver),
       self.fs,
       Arc::clone(&self.resolver),
-      self.session_span.clone(),
     )
     .scan(mode, scan_stage_cache_guard.inner())
     .await
@@ -271,7 +270,6 @@ impl Bundler {
         index_ecma_ast: link_stage_output.ast_table,
         // Don't forget to reset the cache if you want to rebuild the bundle instead hmr.
         cache: std::mem::take(&mut self.cache),
-        session_span: self.session_span.clone(),
       }));
     }
     Ok(output)

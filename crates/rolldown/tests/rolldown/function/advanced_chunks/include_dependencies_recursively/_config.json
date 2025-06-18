@@ -12,6 +12,9 @@
   "configVariants": [
     {
       "preserveEntrySignatures": "allow-extension"
+    },
+    {
+      "preserveEntrySignatures": "false"
     }
   ]
 }

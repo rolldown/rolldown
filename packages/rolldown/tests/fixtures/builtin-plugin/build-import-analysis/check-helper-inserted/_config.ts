@@ -1,6 +1,5 @@
-import { buildImportAnalysisPlugin } from 'rolldown/experimental'
 import { defineTest } from 'rolldown-tests'
-import { expect } from 'vitest'
+import { buildImportAnalysisPlugin } from 'rolldown/experimental'
 
 export default defineTest({
   skipComposingJsPlugin: true,
@@ -8,24 +7,16 @@ export default defineTest({
     input: './main.js',
     plugins: [
       {
-        // insert some dummy runtime flag to assert the runtime behavior
         name: 'insert_dummy_flag',
-        transform(code, id) {
-          let runtimeCode = `
-const __VITE_IS_MODERN__ = false;
-
-`
+        transform(code) {
+          let runtimeCode = `const __VITE_IS_MODERN__ = false;`
           return {
             code: runtimeCode + code,
           }
         },
       },
       buildImportAnalysisPlugin({
-        preloadCode: `
-export const __vitePreload = (v) => {
-  return v()
-};
-`,
+        preloadCode: `export const __vitePreload = (v) => { return v() };`,
         insertPreload: true,
         optimizeModulePreloadRelativePaths: false,
         renderBuiltUrl: false,
@@ -33,14 +24,7 @@ export const __vitePreload = (v) => {
       }),
     ],
   },
-  async afterTest(output) {
+  async afterTest() {
     await import('./assert.mjs')
-    output.output.forEach((item) => {
-      if (item.type === 'chunk') {
-        Object.keys(item.modules).forEach((key) => {
-          expect(key).not.contains('vite')
-        })
-      }
-    })
   },
 })

@@ -38,6 +38,41 @@ fn verify_raw_options(raw_options: &crate::BundlerOptions) -> Vec<BuildDiagnosti
     _ => {}
   }
 
+  if let Some(advanced_chunks) = &raw_options.advanced_chunks {
+    let has_groups = advanced_chunks.groups.as_ref().is_some_and(|groups| !groups.is_empty());
+
+    if !has_groups {
+      let mut specified_options = Vec::new();
+      if advanced_chunks.min_share_count.is_some() {
+        specified_options.push("minShareCount".to_string());
+      }
+      if advanced_chunks.min_size.is_some() {
+        specified_options.push("minSize".to_string());
+      }
+      if advanced_chunks.max_size.is_some() {
+        specified_options.push("maxSize".to_string());
+      }
+      if advanced_chunks.min_module_size.is_some() {
+        specified_options.push("minModuleSize".to_string());
+      }
+      if advanced_chunks.max_module_size.is_some() {
+        specified_options.push("maxModuleSize".to_string());
+      }
+      if advanced_chunks.include_dependencies_recursively.is_some() {
+        specified_options.push("includeDependenciesRecursively".to_string());
+      }
+
+      if !specified_options.is_empty() {
+        warnings.push(
+          BuildDiagnostic::invalid_option(InvalidOptionType::AdvancedChunksWithoutGroups(
+            specified_options,
+          ))
+          .with_severity_warning(),
+        );
+      }
+    }
+  }
+
   warnings
 }
 

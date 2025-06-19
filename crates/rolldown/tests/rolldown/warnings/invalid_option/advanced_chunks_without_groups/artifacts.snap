@@ -1,0 +1,21 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# warnings
+
+## INVALID_OPTION
+
+```text
+[INVALID_OPTION] Warning: Advanced chunks options (minShareCount, minSize, maxSize, includeDependenciesRecursively) specified without groups. These options have no effect without groups - you should either add groups to use advanced chunking or remove these options.
+
+```
+# Assets
+
+## main.js
+
+```js
+//#region main.js
+console.log("hello from main");
+
+//#endregion
+```

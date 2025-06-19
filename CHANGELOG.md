@@ -1,4 +1,37 @@
 
+## [1.0.0-beta.18] - 2025-06-19
+
+### 🚀 Features
+
+- advancedChunks: no need to include dependencies for `PreserveEntrySignatures::False` too (#5005) by @hyf0
+- analyze commonjs module side effects and remove unused module (#5003) by @IWANABETHATGUY
+- specially handling commonjs export stmt side effects (#5002) by @IWANABETHATGUY
+- rolldown: oxc v0.73.2 (#5000) by @Boshen
+- debug: attach both `session_id` and `build_id` to debug events (#4994) by @hyf0
+
+### 🐛 Bug Fixes
+
+- rolldown_plugin_import_glob: correctly handle alias glob patterns (#5007) by @shulaoda
+- rolldown_plugin_alias: correctly handle `resolved_id` (#5006) by @shulaoda
+- imported namespace is missing after external import namespace merging (#4999) by @IWANABETHATGUY
+- node: add `experimental.viteMode` to option validator (#4996) by @sapphi-red
+- plugin/vite-resolve: optional peer dep id parse error (#4995) by @sapphi-red
+
+### 🚜 Refactor
+
+- debug: remove extra mechanism for passing `session_id` and unnecessary passing of spans (#5001) by @hyf0
+
+### 📚 Documentation
+
+- update description about directive handling (#4992) by @IWANABETHATGUY
+
+### ⚙️ Miscellaneous Tasks
+
+- deps: update dependency rolldown-plugin-dts to v0.13.11 (#4863) by @renovate[bot]
+- infra: update changelog configuration in `cliff.toml` (#4961) by @shulaoda
+- infra: add knip to ci (#4991) by @webpro
+
+
 ## [1.0.0-beta.17] - 2025-06-17
 
 ### 🚀 Features

@@ -10,9 +10,11 @@ use oxc::ast::ast::{
 use oxc::ast_visit::{VisitMut, walk_mut};
 use oxc::span::{SPAN, Span};
 use rolldown_ecmascript_utils::ExpressionExt;
+use rolldown_plugin::PluginContext;
 use sugar_path::SugarPath;
 
 pub struct GlobImportVisit<'ast, 'a> {
+  pub ctx: &'a PluginContext,
   pub id: &'a str,
   pub root: &'a PathBuf,
   pub ast_builder: oxc::ast::AstBuilder<'ast>,
@@ -311,6 +313,17 @@ impl GlobImportVisit<'_, '_> {
     } else if glob.starts_with("**") {
       return Cow::Borrowed(glob);
     } else {
+      let future = self.ctx.resolve(glob, Some(self.id), None);
+      if let Ok(result) = rolldown_utils::futures::block_on(future) {
+        let id = match result {
+          Ok(resolved_id) => resolved_id.id.into(),
+          Err(_) => Cow::Borrowed(glob),
+        };
+        if Path::new(id.as_ref()).is_absolute() {
+          return id;
+        }
+      }
+
       // TODO: Needs to investigate if oxc resolver support this pattern
       // https://github.com/rolldown/vite/blob/454c8fff/packages/vite/src/node/plugins/importMetaGlob.ts#L563-L569
       panic!(

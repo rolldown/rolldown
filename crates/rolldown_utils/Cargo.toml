@@ -51,6 +51,7 @@ xxhash-rust = { workspace = true, features = ["xxh3"] }
 [target.'cfg(not(target_family = "wasm"))'.dependencies]
 async-scoped = { workspace = true, features = ["use-tokio"] }
 rayon = { workspace = true }
+tokio = { workspace = true }
 
 [dev-dependencies]
 criterion2 = { workspace = true }

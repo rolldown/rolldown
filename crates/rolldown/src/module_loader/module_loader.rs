@@ -400,6 +400,9 @@ impl<'a> ModuleLoader<'a> {
             self.symbol_ref_db.store_local_db(module_idx, symbols);
           }
 
+          if user_defined_entry_ids.contains(&module_idx) {
+            module.as_normal_mut().expect("should be normal module ").is_user_defined_entry = true;
+          }
           *self.intermediate_normal_modules.modules.get_mut(module_idx) = Some(module);
           self.remaining -= 1;
         }
@@ -523,6 +526,9 @@ impl<'a> ModuleLoader<'a> {
           if let Some(preserve_entry_signatures) = data.preserve_entry_signatures {
             overrode_preserve_entry_signature_map.insert(module_idx, preserve_entry_signatures);
           }
+
+          user_defined_entry_ids.insert(module_idx);
+
           let entry = EntryPoint {
             name: data.name.clone(),
             id: module_idx,

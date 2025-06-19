@@ -57,7 +57,7 @@ impl Bundler {
 impl Bundler {
   #[tracing::instrument(level = "debug", skip_all, parent = &self.session_span)]
   pub async fn write(&mut self) -> BuildResult<BundleOutput> {
-    let build_count = self.inc_build_count();
+    let build_count = self.build_count;
     async {
       trace_action!(action::BuildStart { action: "BuildStart" });
       let scan_stage_output = self.scan(vec![]).await?;
@@ -75,7 +75,7 @@ impl Bundler {
 
   #[tracing::instrument(level = "debug", skip_all, parent = &self.session_span)]
   pub async fn generate(&mut self) -> BuildResult<BundleOutput> {
-    let build_count = self.inc_build_count();
+    let build_count = self.build_count;
     async {
       trace_action!(action::BuildStart { action: "BuildStart" });
       let scan_stage_output = self.scan(vec![]).await?;
@@ -349,12 +349,6 @@ impl Bundler {
         .collect();
       trace_action!(action::ModuleGraphReady { action: "ModuleGraphReady", modules });
     }
-  }
-
-  fn inc_build_count(&mut self) -> u32 {
-    let count = self.build_count;
-    self.build_count += 1;
-    count
   }
 }
 

@@ -1,0 +1,16 @@
+{
+  "config": {
+    "input": [
+      {
+        "name": "main",
+        "import": "main.js"
+      }
+    ],
+    "advancedChunks": {
+      "minShareCount": 2,
+      "minSize": 1000,
+      "maxSize": 5000,
+      "includeDependenciesRecursively": true
+    }
+  }
+}

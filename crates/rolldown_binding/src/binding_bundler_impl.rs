@@ -33,7 +33,12 @@ pub struct BindingBundlerImpl {
 #[napi]
 impl BindingBundlerImpl {
   #[cfg_attr(target_family = "wasm", allow(unused))]
-  pub fn new(env: Env, option: BindingBundlerOptions, session_id: Arc<str>) -> napi::Result<Self> {
+  pub fn new(
+    env: Env,
+    option: BindingBundlerOptions,
+    session_id: Arc<str>,
+    build_count: u32,
+  ) -> napi::Result<Self> {
     try_init_custom_trace_subscriber(env);
 
     let BindingBundlerOptions { input_options, output_options, parallel_plugins_registry } = option;
@@ -61,7 +66,8 @@ impl BindingBundlerImpl {
     let bundler_builder = BundlerBuilder::default()
       .with_options(ret.bundler_options)
       .with_plugins(ret.plugins)
-      .with_session_id(session_id);
+      .with_session_id(session_id)
+      .with_build_count(build_count);
 
     Ok(Self { inner: Arc::new(Mutex::new(bundler_builder.build())) })
   }

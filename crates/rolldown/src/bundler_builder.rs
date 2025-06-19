@@ -20,6 +20,7 @@ pub struct BundlerBuilder {
   options: BundlerOptions,
   plugins: Vec<SharedPluginable>,
   session_id: Option<Arc<str>>,
+  build_count: u32,
 }
 
 impl BundlerBuilder {
@@ -71,7 +72,7 @@ impl BundlerBuilder {
       hmr_manager: None,
       session_span,
       _debug_tracer: debug_tracer,
-      build_count: 0,
+      build_count: self.build_count,
     }
   }
 
@@ -168,6 +169,12 @@ impl BundlerBuilder {
   #[must_use]
   pub fn with_session_id(mut self, session_id: Arc<str>) -> Self {
     self.session_id = Some(session_id);
+    self
+  }
+
+  #[must_use]
+  pub fn with_build_count(mut self, build_count: u32) -> Self {
+    self.build_count = build_count;
     self
   }
 }

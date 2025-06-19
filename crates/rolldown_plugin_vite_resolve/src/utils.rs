@@ -69,5 +69,5 @@ pub fn is_in_node_modules(id: &str) -> bool {
 pub fn normalize_leading_slashes(specifier: &str) -> &str {
   let trimmed = specifier.trim_start_matches('/');
   let leading_slashes = specifier.len() - trimmed.len();
-if leading_slashes <= 1 { specifier } else { &specifier[leading_slashes - 1..] }
+  if leading_slashes <= 1 { specifier } else { &specifier[leading_slashes - 1..] }
 }

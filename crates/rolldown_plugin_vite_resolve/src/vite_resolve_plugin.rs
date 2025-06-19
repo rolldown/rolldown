@@ -8,15 +8,9 @@ use std::{
 };
 
 use crate::{
-  ResolveOptionsExternal,
-  builtin::{BuiltinChecker, is_node_like_builtin},
-  external::{self, ExternalDecider, ExternalDeciderOptions},
-  file_url::file_url_str_to_path_and_postfix,
-  resolver::{self, AdditionalOptions, Resolvers},
-  utils::{
-    BROWSER_EXTERNAL_ID, OPTIONAL_PEER_DEP_ID, is_bare_import, is_in_node_modules,
-    is_windows_drive_path, normalize_path,
-  },
+  builtin::{is_node_like_builtin, BuiltinChecker}, external::{self, ExternalDecider, ExternalDeciderOptions}, file_url::file_url_str_to_path_and_postfix, resolver::{self, AdditionalOptions, Resolvers}, utils::{
+    is_bare_import, is_in_node_modules, is_windows_drive_path, normalize_leading_slashes, normalize_path, BROWSER_EXTERNAL_ID, OPTIONAL_PEER_DEP_ID
+  }, ResolveOptionsExternal
 };
 use anyhow::anyhow;
 use arcstr::ArcStr;
@@ -319,10 +313,11 @@ impl Plugin for ViteResolvePlugin {
       .importer
       .map(|i| Path::new(i).parent().and_then(|p| p.to_str()).unwrap_or(i))
       .unwrap_or(&self.resolve_options.root);
+    let specifier = normalize_leading_slashes(args.specifier);
     let resolved = resolver.normalize_oxc_resolver_result(
       args.importer,
       &self.dedupe,
-      &resolver.resolve_raw(base_dir, args.specifier),
+      &resolver.resolve_raw(base_dir, specifier),
     )?;
     if let Some(mut resolved) = resolved {
       if !scan {

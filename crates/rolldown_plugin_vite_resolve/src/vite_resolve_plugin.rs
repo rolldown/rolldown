@@ -8,9 +8,15 @@ use std::{
 };
 
 use crate::{
-  builtin::{is_node_like_builtin, BuiltinChecker}, external::{self, ExternalDecider, ExternalDeciderOptions}, file_url::file_url_str_to_path_and_postfix, resolver::{self, AdditionalOptions, Resolvers}, utils::{
-    is_bare_import, is_in_node_modules, is_windows_drive_path, normalize_leading_slashes, normalize_path, BROWSER_EXTERNAL_ID, OPTIONAL_PEER_DEP_ID
-  }, ResolveOptionsExternal
+  ResolveOptionsExternal,
+  builtin::{BuiltinChecker, is_node_like_builtin},
+  external::{self, ExternalDecider, ExternalDeciderOptions},
+  file_url::file_url_str_to_path_and_postfix,
+  resolver::{self, AdditionalOptions, Resolvers},
+  utils::{
+    BROWSER_EXTERNAL_ID, OPTIONAL_PEER_DEP_ID, is_bare_import, is_in_node_modules,
+    is_windows_drive_path, normalize_leading_slashes, normalize_path,
+  },
 };
 use anyhow::anyhow;
 use arcstr::ArcStr;

@@ -201,16 +201,8 @@ impl WatcherImpl {
         }
       }
     };
-    #[cfg(target_family = "wasm")]
-    {
-      futures::executor::block_on(future);
-    }
-    #[cfg(not(target_family = "wasm"))]
-    {
-      tokio::task::block_in_place(move || {
-        tokio::runtime::Handle::current().block_on(future);
-      });
-    }
+
+    rolldown_utils::futures::block_on(future);
   }
 }
 

@@ -1,8 +1,10 @@
 import assert from 'node:assert'
+
 const { foo } = await import('./lib.js')
-const b = (await import('./b.js')).b
-import('./a.js').then(({ a }) => {
-  assert.strictEqual(a, 1)
+const a = (await import('./lib.js')).foo
+const b = (await (() => import('./lib.js'))()).foo
+import('./lib.js').then(({ foo }) => {
+  assert.strictEqual(foo , a)
 })
 
-export { foo, b }
+export { foo, a, b }

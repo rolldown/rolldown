@@ -18,11 +18,7 @@ export default defineTest({
         },
       },
       buildImportAnalysisPlugin({
-        preloadCode: `
-export const __vitePreload = (v) => {
-  return v()
-};
-`,
+        preloadCode: `export const __vitePreload = (v) => { return v() };`,
         insertPreload: true,
         optimizeModulePreloadRelativePaths: false,
         renderBuiltUrl: true,

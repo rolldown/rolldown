@@ -48,34 +48,27 @@ impl<'a> VisitMut<'a> for BuildImportAnalysisVisitor<'a> {
   }
 
   fn visit_expression(&mut self, expr: &mut Expression<'a>) {
-    walk_mut::walk_expression(self, expr);
     if self.insert_preload {
-      match expr {
-        Expression::CallExpression(expr) => self.rewrite_import_expr(expr),
+      let is_rewritten = match expr {
+        Expression::CallExpression(expr) => self.rewrite_call_expr(expr),
         Expression::StaticMemberExpression(expr) => self.rewrite_member_expr(expr),
-        _ => {}
+        _ => self.rewrite_import_expr(expr),
+      };
+      if is_rewritten {
+        self.need_prepend_helper = true;
+        return;
       }
     }
+    walk_mut::walk_expression(self, expr);
   }
 
   fn visit_import_declaration(&mut self, it: &mut oxc::ast::ast::ImportDeclaration<'a>) {
     it.with_clause.take();
   }
 
-  fn visit_variable_declarator(&mut self, it: &mut oxc::ast::ast::VariableDeclarator<'a>) {
-    // Only check if there needs to insert helper function
-    if self.insert_preload && self.is_top_level() {
-      if let BindingPatternKind::BindingIdentifier(id) = &it.id.kind {
-        self.has_inserted_helper = id.name == PRELOAD_METHOD;
-      }
-    }
-    walk_mut::walk_variable_declarator(self, it);
-  }
-
   /// transform `const {foo} = await import('foo')`
   /// to `const {foo} = await __vitePreload(async () => { let foo; return {foo} = await import('foo'); }, ...)`
   fn visit_variable_declaration(&mut self, decl: &mut VariableDeclaration<'a>) {
-    walk_mut::walk_variable_declaration(self, decl);
     if self.insert_preload {
       for decl in &mut decl.declarations {
         if matches!(decl.id.kind, BindingPatternKind::ObjectPattern(_))
@@ -96,9 +89,23 @@ impl<'a> VisitMut<'a> for BuildImportAnalysisVisitor<'a> {
             ),
           ));
           self.need_prepend_helper = true;
+        } else {
+          walk_mut::walk_variable_declarator(self, decl);
         }
       }
+      return;
     }
+    walk_mut::walk_variable_declaration(self, decl);
+  }
+
+  fn visit_variable_declarator(&mut self, it: &mut oxc::ast::ast::VariableDeclarator<'a>) {
+    // Only check if there needs to insert helper function
+    if self.insert_preload && self.is_top_level() {
+      if let BindingPatternKind::BindingIdentifier(id) = &it.id.kind {
+        self.has_inserted_helper = id.name == PRELOAD_METHOD;
+      }
+    }
+    walk_mut::walk_variable_declarator(self, it);
   }
 
   fn enter_scope(

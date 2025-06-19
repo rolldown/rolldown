@@ -64,3 +64,10 @@ pub fn can_externalize_file(file_path: &str) -> bool {
 pub fn is_in_node_modules(id: &str) -> bool {
   id.contains("node_modules")
 }
+
+/// path.resolve normalizes the leading slashes to a single slash
+pub fn normalize_leading_slashes(specifier: &str) -> &str {
+  let trimmed = specifier.trim_start_matches('/');
+  let leading_slashes = specifier.len() - trimmed.len();
+  if leading_slashes <= 1 { specifier } else { &specifier[leading_slashes - 1..] }
+}

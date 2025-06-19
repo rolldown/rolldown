@@ -15,7 +15,7 @@ use crate::{
   resolver::{self, AdditionalOptions, Resolvers},
   utils::{
     BROWSER_EXTERNAL_ID, OPTIONAL_PEER_DEP_ID, is_bare_import, is_in_node_modules,
-    is_windows_drive_path, normalize_path,
+    is_windows_drive_path, normalize_leading_slashes, normalize_path,
   },
 };
 use anyhow::anyhow;
@@ -206,14 +206,6 @@ impl Plugin for ViteResolvePlugin {
       return Ok(None);
     }
 
-    if is_external_url(args.specifier) {
-      return Ok(Some(HookResolveIdOutput {
-        id: args.specifier.into(),
-        external: Some(true.into()),
-        ..Default::default()
-      }));
-    }
-
     let additional_options = AdditionalOptions::new(
       self.resolve_options.is_require.unwrap_or(args.kind == ImportKind::Require),
       self.resolve_options.prefer_relative || args.importer.is_some_and(|i| i.ends_with(".html")),
@@ -319,10 +311,11 @@ impl Plugin for ViteResolvePlugin {
       .importer
       .map(|i| Path::new(i).parent().and_then(|p| p.to_str()).unwrap_or(i))
       .unwrap_or(&self.resolve_options.root);
+    let specifier = normalize_leading_slashes(args.specifier);
     let resolved = resolver.normalize_oxc_resolver_result(
       args.importer,
       &self.dedupe,
-      &resolver.resolve_raw(base_dir, args.specifier),
+      &resolver.resolve_raw(base_dir, specifier),
     )?;
     if let Some(mut resolved) = resolved {
       if !scan {
@@ -333,6 +326,15 @@ impl Plugin for ViteResolvePlugin {
         }
       }
       return Ok(Some(resolved));
+    }
+
+    // `//something` may resolve to a file so this check should be done after file checks
+    if is_external_url(args.specifier) {
+      return Ok(Some(HookResolveIdOutput {
+        id: args.specifier.into(),
+        external: Some(true.into()),
+        ..Default::default()
+      }));
     }
 
     Ok(None)

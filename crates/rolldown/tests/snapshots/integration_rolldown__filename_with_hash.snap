@@ -5726,6 +5726,10 @@ expression: output
 
 - main-!~{000}~.js => main-Fv4vYntb.js
 
+# tests/rolldown/warnings/invalid_option/advanced_chunks_without_groups
+
+- main-!~{000}~.js => main-B7ZfmDK1.js
+
 # tests/rolldown/warnings/invalid_option/invalid_output_dir_option
 
 - main.js => main.js

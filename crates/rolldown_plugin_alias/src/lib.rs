@@ -49,7 +49,7 @@ impl Plugin for AliasPlugin {
           custom: Arc::clone(&args.custom),
         }),
       )
-      .await??;
+      .await?;
 
     // TODO: give an warning
     // if !Path::new(&update_id).is_absolute() {
@@ -62,7 +62,11 @@ impl Plugin for AliasPlugin {
 
     // TODO: support `viteAliasCustomResolver`
     // https://github.com/vitejs/rolldown-vite/blob/91a494c/packages/vite/src/node/plugins/index.ts#L325-L334
-    Ok(Some(HookResolveIdOutput { id: resolved_id.id, ..Default::default() }))
+
+    Ok(Some(match resolved_id {
+      Ok(resolved_id) => HookResolveIdOutput::from_resolved_id(resolved_id),
+      Err(_) => HookResolveIdOutput::from_id(specifier),
+    }))
   }
 
   fn register_hook_usage(&self) -> HookUsage {

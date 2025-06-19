@@ -206,14 +206,6 @@ impl Plugin for ViteResolvePlugin {
       return Ok(None);
     }
 
-    if is_external_url(args.specifier) {
-      return Ok(Some(HookResolveIdOutput {
-        id: args.specifier.into(),
-        external: Some(true.into()),
-        ..Default::default()
-      }));
-    }
-
     let additional_options = AdditionalOptions::new(
       self.resolve_options.is_require.unwrap_or(args.kind == ImportKind::Require),
       self.resolve_options.prefer_relative || args.importer.is_some_and(|i| i.ends_with(".html")),
@@ -334,6 +326,15 @@ impl Plugin for ViteResolvePlugin {
         }
       }
       return Ok(Some(resolved));
+    }
+
+    // `//something` may resolve to a file so this check should be done after file checks
+    if is_external_url(args.specifier) {
+      return Ok(Some(HookResolveIdOutput {
+        id: args.specifier.into(),
+        external: Some(true.into()),
+        ..Default::default()
+      }));
     }
 
     Ok(None)

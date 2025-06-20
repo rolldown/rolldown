@@ -426,9 +426,11 @@ impl GenerateStage<'_> {
     let mut pending_common_chunks: FxIndexMap<BitSet, Vec<ModuleIdx>> = FxIndexMap::default();
     // If it is allow to allow that entry chunks have the different exports as the underlying entry module.
     // This is used to generate less chunks when possible.
-    let allow_extension_optimize =
-      !matches!(self.options.preserve_entry_signatures, PreserveEntrySignatures::Strict)
-        || !self.link_output.overrode_preserve_entry_signature_map.is_empty();
+    let allow_extension_optimize = (!matches!(self.options.preserve_entry_signatures, PreserveEntrySignatures::Strict)
+        || !self.link_output.overrode_preserve_entry_signature_map.is_empty())
+          // partial workaround of https://github.com/rolldown/rolldown/issues/5026#issuecomment-2990146735
+          // TODO: maybe we could bailout peer chunk?
+        && !self.link_output.metas.iter().any(|meta| meta.is_tla_or_contains_tla_dependency);
     // 1. Assign modules to corresponding chunks
     // 2. Create shared chunks to store modules that belong to multiple chunks.
     for normal_module in self.link_output.module_table.modules.iter().filter_map(Module::as_normal)

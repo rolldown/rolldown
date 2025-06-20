@@ -1,0 +1,44 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## main.js
+
+```js
+import { createRouter } from "./router.js";
+
+//#region main.js
+const router = createRouter(() => import("./page.js"));
+await router.isReady;
+globalThis.result.push("ready");
+
+//#endregion
+```
+## page.js
+
+```js
+import { foo } from "./router.js";
+
+//#region page.mjs
+globalThis.result = [foo];
+
+//#endregion
+```
+## router.js
+
+```js
+//#region router.mjs
+const createRouter = (page) => {
+	let readyResolve;
+	const isReady = new Promise((_r) => {
+		readyResolve = _r;
+	});
+	page().then(() => readyResolve());
+	return { isReady };
+};
+const foo = "foo";
+
+//#endregion
+export { createRouter, foo };
+```

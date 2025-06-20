@@ -138,6 +138,19 @@ export interface InputOptions {
     viteMode?: boolean;
     resolveNewUrlToAsset?: boolean;
     hmr?: HmrOptions;
+    /**
+     * Attach debug information to the output bundle.
+     *
+     * - Type: `'none' | 'simple' | 'full'`
+     * - Default: `'simple'`
+     *
+     * - `none`: No debug information is attached.
+     * - `simple`: Attach comments indicating which files the bundled code comes from. These comments could be removed by the minifier.
+     * - `full`: Attach detailed debug information to the output bundle. These comments are using legal comment syntax, so they won't be removed by the minifier.
+     *
+     * > [!WARNING]
+     * > You shouldn't use `full` in the production build.
+     */
     attachDebugInfo?: AttachDebugOptions;
   };
   /**

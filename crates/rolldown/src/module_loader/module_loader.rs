@@ -616,7 +616,7 @@ impl<'a> ModuleLoader<'a> {
       },
     );
 
-    let mut none_empty_importer_module = vec![];
+    let mut idx_of_module_info_need_update = vec![];
     let is_dense_index_vec = self.intermediate_normal_modules.modules.is_index_vec();
 
     let modules_iter = std::mem::take(&mut self.intermediate_normal_modules.modules)
@@ -638,7 +638,7 @@ impl<'a> ModuleLoader<'a> {
             }
           }
           if !importers.is_empty() {
-            none_empty_importer_module.push(idx);
+            idx_of_module_info_need_update.push(idx);
           }
         }
         (idx, module)
@@ -650,7 +650,11 @@ impl<'a> ModuleLoader<'a> {
       let map = modules_iter.collect::<FxHashMap<_, _>>();
       HybridIndexVec::Map(map)
     };
-    none_empty_importer_module.into_par_iter().for_each(|idx| {
+    // Some module was not treated as an entry, but was emitted by `this.emitFile` during
+    // processing, those module info also need to be updated
+    // see https://github.com/rolldown/rolldown/issues/5030 as an example
+    idx_of_module_info_need_update.extend(extra_entry_points.iter().map(|item| item.id));
+    idx_of_module_info_need_update.into_par_iter().for_each(|idx| {
       let module = modules.get(idx);
       let Some(module) = module.as_normal() else {
         return;

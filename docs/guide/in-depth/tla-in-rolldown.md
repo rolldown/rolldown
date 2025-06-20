@@ -16,7 +16,7 @@ Current rules are:
 
 ## Concurrent to sequential
 
-One downside of TLA in rolldown is that it will change the original code's behavior from concurrent to sequential. It still ensures the relative order but indeed slows down the execution.
+One downside of TLA in rolldown is that it will change the original code's behavior from concurrent to sequential. It still ensures the relative order, but indeed slows down the execution and may break the execution if the original code relies on the concurrentness.
 
 A real-world example would looks like
 

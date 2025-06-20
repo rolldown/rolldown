@@ -179,7 +179,7 @@ export interface OutputOptions {
        * - Type: `number`
        * - Default: `0`
        *
-       * Minimum size of the desired chunk. If the accumulated size of the captured modules by this group is smaller than this value, it will be ignored. Modules in this group will fall back to the `automatic chunking` if they are not captured by any other group.
+       * Minimum size in bytes of the desired chunk. If the accumulated size of the captured modules by this group is smaller than this value, it will be ignored. Modules in this group will fall back to the `automatic chunking` if they are not captured by any other group.
        */
       minSize?: number;
       /**
@@ -193,21 +193,21 @@ export interface OutputOptions {
        * - Type: `number`
        * - Default: `Infinity`
        *
-       * If the accumulated size of the captured modules by this group is larger than this value, this group will be split into multiple groups that each has size close to this value.
+       * If the accumulated size in bytes of the captured modules by this group is larger than this value, this group will be split into multiple groups that each has size close to this value.
        */
       maxSize?: number;
       /**
        * - Type: `number`
        * - Default: `Infinity`
        *
-       * Controls a module could only be captured if its size is smaller or equal than this value.
+       * Controls a module could only be captured if its size in bytes is smaller or equal than this value.
        */
       maxModuleSize?: number;
       /**
        * - Type: `number`
        * - Default: `0`
        *
-       * Controls a module could only be captured if its size is larger or equal than this value.
+       * Controls a module could only be captured if its size in bytes is larger or equal than this value.
        */
       minModuleSize?: number;
     }[];

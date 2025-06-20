@@ -36,9 +36,9 @@
 
 </div>
 
-> 🚧 **Work in Progress**
+> 🚧 **Beta Software**
 >
-> Rolldown is currently in active development and not usable for production yet.
+> Rolldown is currently in beta status. While it can already handle most production use cases, there may still be bugs and rough edges. Most notably, the built-in minification feature is still in alpha status.
 
 # Rolldown
 

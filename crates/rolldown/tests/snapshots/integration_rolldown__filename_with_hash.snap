@@ -4855,6 +4855,12 @@ expression: output
 - main-!~{000}~.js => main-n0johxfQ.js
 - foo2-!~{004}~.js => foo2-DI34K6gG.js
 
+# tests/rolldown/misc/preserve_entry_signature/issue_5026
+
+- main-!~{000}~.js => main-CobTtn6A.js
+- page-!~{003}~.js => page-C5ekNCHn.js
+- router-!~{001}~.js => router-DhxpoWNN.js
+
 # tests/rolldown/misc/preserve_modules/directives
 
 - main-!~{000}~.js => main-BOE28hLL.js

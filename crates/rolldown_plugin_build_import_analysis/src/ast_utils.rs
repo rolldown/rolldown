@@ -111,7 +111,7 @@ impl<'a> BuildImportAnalysisVisitor<'a> {
   }
 
   /// transform `import('foo')`
-  /// to `__vitePreload(() =>import('foo'),...)`
+  /// to `__vitePreload(() => import('foo'),...)`
   pub fn rewrite_import_expr(&self, expr: &mut Expression<'a>) -> bool {
     let Expression::ImportExpression(_) = expr else { return false };
     *expr = self.vite_preload_call(Argument::from(
@@ -125,8 +125,13 @@ impl<'a> BuildImportAnalysisVisitor<'a> {
     binding_pat: BindingPattern<'a>,
     await_expr: Expression<'a>,
   ) -> Expression<'a> {
-    let argument = Argument::from(Expression::ArrowFunctionExpression(
-      self.snippet.builder.alloc_arrow_function_expression(
+    let argument = if let BindingPatternKind::BindingIdentifier(_) = binding_pat.kind {
+      let Expression::AwaitExpression(expr) = await_expr else {
+        unreachable!("The `await_expr` must be `Expression::AwaitExpression`.")
+      };
+      self.snippet.only_return_arrow_expr(expr.unbox().argument)
+    } else {
+      Expression::ArrowFunctionExpression(self.snippet.builder.alloc_arrow_function_expression(
         SPAN,
         false,
         true,
@@ -162,9 +167,9 @@ impl<'a> BuildImportAnalysisVisitor<'a> {
           ));
           statements
         }),
-      ),
-    ));
-    self.vite_preload_call(argument)
+      ))
+    };
+    self.vite_preload_call(Argument::from(argument))
   }
 
   pub fn vite_preload_call(&self, argument: Argument<'a>) -> Expression<'a> {

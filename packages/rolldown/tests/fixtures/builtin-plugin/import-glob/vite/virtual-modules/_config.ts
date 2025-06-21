@@ -32,6 +32,7 @@ export default defineTest({
             const code = [
               "export const a = import.meta.glob('/modules/*.ts')",
               "export const b = import.meta.glob(['/../b/*.ts'])",
+              "import.meta.glob(['./*.ts'], { base: '/modules' })",
             ].join('\n')
             return code
           }

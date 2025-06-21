@@ -101,3 +101,13 @@ export const cleverCwd2 = import.meta.glob([
   '../b/*.ts',
   '!**/index.ts',
 ])
+
+export const customBase = import.meta.glob('./**/*.ts', { base: './' })
+
+export const customRootBase = import.meta.glob('./**/*.ts', {
+  base: '/b',
+})
+
+export const customBaseParent = import.meta.glob('/b/**/*.ts', {
+  base: '/a',
+})

@@ -1603,7 +1603,7 @@ export interface BindingManifestPluginConfig {
 }
 
 export interface BindingMatchGroup {
-  name: string
+  name: string | ((id: string) => VoidNullable<string>)
   test?: string | RegExp | ((id: string) => VoidNullable<boolean>)
   priority?: number
   minSize?: number

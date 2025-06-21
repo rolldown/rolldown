@@ -5,7 +5,7 @@ import type {
   SourcemapPathTransformOption,
 } from '../types/misc';
 import type { RenderedChunk } from '../types/rolldown-output';
-import type { StringOrRegExp } from '../types/utils';
+import type { NullValue, StringOrRegExp } from '../types/utils';
 
 export type ModuleFormat =
   | 'es'
@@ -108,7 +108,7 @@ export interface OutputOptions {
      */
     groups?: {
       /**
-       * - Type: `string`
+       * - Type: `string | ((moduleId: string) => string | null)`
        *
        * Name of the group. It will be also used as the name of the chunk and replaced the `[name]` placeholder in the `chunkFileNames` option.
        *
@@ -129,8 +129,37 @@ export interface OutputOptions {
        * });
        * ```
        * will create a chunk named `libs-[hash].js` in the end.
+       *
+       * It's ok to have the same name for different groups. Rolldown will deduplicate the chunk names if necessary.
+       *
+       * # Dynamic `name()`
+       *
+       * If `name` is a function, it will be called with the module id as the argument. The function should return a string or `null`. If it returns `null`, the module will be ignored by this group.
+       *
+       * Notice, each returned new name will be treated as a separate group.
+       *
+       * For example,
+       *
+       * ```js
+       * import { defineConfig } from 'rolldown';
+       *
+       * export default defineConfig({
+       *   advancedChunks: {
+       *     groups: [
+       *       {
+       *         name: (moduleId) => moduleId.includes('node_modules') ? 'libs' : 'app',
+       *         minSize: 100 * 1024,
+       *       },
+       *     ],
+       *   },
+       * });
+       * ```
+       *
+       * :::warning
+       * Constraints like `minSize`, `maxSize`, etc. are applied separately for different names returned by the function.
+       * :::
        */
-      name: string;
+      name: string | ((moduleId: string) => string | NullValue);
       /**
        * - Type: `string | RegExp | ((id: string) => boolean | undefined | void);`
        *
@@ -140,6 +169,12 @@ export interface OutputOptions {
        * - If `test` is a regular expression, the module whose id matches the regular expression will be captured.
        * - If `test` is a function, modules for which `test(id)` returns `true` will be captured.
        * - If `test` is empty, any module will be considered as matched.
+       *
+       * :::warning
+       * When using regular expression, it's recommended to use `[\\/]` to match the path separator instead of `/` to avoid potential issues on Windows.
+       * - ✅ Recommended: `/node_modules[\\/]react/`
+       * - ❌ Not recommended: `/node_modules/react/`
+       * :::
        */
       test?: StringOrRegExp | ((id: string) => boolean | undefined | void);
       /**
@@ -160,7 +195,7 @@ export interface OutputOptions {
        *   groups: [
        *      {
        *        name: 'react',
-       *        test: /node_modules\/react/,
+       *        test: /node_modules[\\/]react/,
        *        priority: 1,
        *      },
        *      {

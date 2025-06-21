@@ -3,6 +3,7 @@ use std::cmp::Reverse;
 use arcstr::ArcStr;
 use oxc_index::IndexVec;
 use rolldown_common::{Chunk, ChunkKind, MatchGroupTest, Module, ModuleIdx, ModuleTable};
+use rolldown_error::BuildResult;
 use rustc_hash::{FxHashMap, FxHashSet};
 
 use crate::{chunk_graph::ChunkGraph, types::linking_metadata::LinkingMetadataVec};
@@ -57,7 +58,7 @@ impl GenerateStage<'_> {
     module_to_assigned: &mut IndexVec<ModuleIdx, bool>,
     chunk_graph: &mut ChunkGraph,
     input_base: &ArcStr,
-  ) -> anyhow::Result<()> {
+  ) -> BuildResult<()> {
     let Some(chunking_options) = &self.options.advanced_chunks else {
       return Ok(());
     };
@@ -73,7 +74,7 @@ impl GenerateStage<'_> {
     }
 
     let mut index_module_groups: IndexVec<ModuleGroupIdx, ModuleGroup> = IndexVec::new();
-    let mut name_to_module_group: FxHashMap<ArcStr, ModuleGroupIdx> = FxHashMap::default();
+    let mut name_to_module_group: FxHashMap<(usize, ArcStr), ModuleGroupIdx> = FxHashMap::default();
 
     for normal_module in self.link_output.module_table.modules.iter().filter_map(Module::as_normal)
     {
@@ -122,18 +123,23 @@ impl GenerateStage<'_> {
           }
         }
 
-        let group_name = ArcStr::from(&match_group.name);
+        let Some(group_name) = match_group.name.value(&normal_module.id).await? else {
+          // Group which doesn't have a name will be ignored.
+          continue;
+        };
+        let group_name = ArcStr::from(group_name);
 
-        let module_group_idx =
-          name_to_module_group.entry(group_name.clone()).or_insert_with(|| {
-            index_module_groups.push(ModuleGroup {
-              modules: FxHashSet::default(),
-              match_group_index,
-              priority: match_group.priority.unwrap_or(0),
-              name: group_name.clone(),
-              sizes: 0.0,
-            })
-          });
+        let unique_key = (match_group_index, group_name.clone());
+
+        let module_group_idx = name_to_module_group.entry(unique_key).or_insert_with(|| {
+          index_module_groups.push(ModuleGroup {
+            modules: FxHashSet::default(),
+            match_group_index,
+            priority: match_group.priority.unwrap_or(0),
+            name: group_name.clone(),
+            sizes: 0.0,
+          })
+        });
 
         let include_dependencies_recursively =
           chunking_options.include_dependencies_recursively.unwrap_or(true);
@@ -150,8 +156,12 @@ impl GenerateStage<'_> {
     }
 
     let mut module_groups = index_module_groups.raw;
-    module_groups.sort_by_key(|item| Reverse((Reverse(item.priority), item.match_group_index)));
-    // Higher priority group goes first. If two groups have the same priority, the one with the lower index goes first.
+    module_groups.sort_by_cached_key(|item| {
+      Reverse((Reverse(item.priority), item.match_group_index, item.name.clone()))
+    });
+    // - Higher priority group goes first.
+    // - If two groups have the same priority, the one with the lower index goes first.
+    // - If two groups have the same priority and index, we use dictionary order to sort them.
     // Outer `Reverse` is due to we're gonna use `pop` consume the vector.
 
     // Manually pull out the module `rolldown:runtime` into a standalone chunk.

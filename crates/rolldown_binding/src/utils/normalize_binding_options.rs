@@ -14,7 +14,7 @@ use oxc::transformer::ESTarget;
 use rolldown::{
   AddonOutputOption, AdvancedChunksOptions, AssetFilenamesOutputOption, BundlerOptions,
   ChunkFilenamesOutputOption, DeferSyncScanDataOption, HashCharacters, IsExternal, JsxPreset,
-  MatchGroup, ModuleType, OutputExports, OutputFormat, Platform, RawMinifyOptions,
+  MatchGroup, MatchGroupName, ModuleType, OutputExports, OutputFormat, Platform, RawMinifyOptions,
   SanitizeFilename, TransformOptions,
 };
 use rolldown_common::DeferSyncScanData;
@@ -389,7 +389,7 @@ pub fn normalize_binding_options(
         inner
           .into_iter()
           .map(|item| MatchGroup {
-            name: item.name,
+            name: MatchGroupName::Static(item.name),
             test: item.test.map(|inner| match inner {
               Either::A(reg) => {
                 rolldown::MatchGroupTest::Regex(reg.try_into().expect("Invalid regex pass to test"))

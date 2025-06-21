@@ -389,7 +389,19 @@ pub fn normalize_binding_options(
         inner
           .into_iter()
           .map(|item| MatchGroup {
-            name: MatchGroupName::Static(item.name),
+            name: match item.name {
+              Either::A(name) => MatchGroupName::Static(name),
+              Either::B(func) => {
+                let func = Arc::clone(&func);
+                MatchGroupName::Dynamic(Arc::new(move |module_id: &str| {
+                  let module_id = module_id.to_string();
+                  let func = Arc::clone(&func);
+                  Box::pin(async move {
+                    func.invoke_async((module_id,).into()).await.map_err(anyhow::Error::from)
+                  })
+                }))
+              }
+            },
             test: item.test.map(|inner| match inner {
               Either::A(reg) => {
                 rolldown::MatchGroupTest::Regex(reg.try_into().expect("Invalid regex pass to test"))

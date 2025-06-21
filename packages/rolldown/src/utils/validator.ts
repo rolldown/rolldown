@@ -567,7 +567,14 @@ const AdvancedChunksSchema = v.strictObject({
   groups: v.optional(
     v.array(
       v.strictObject({
-        name: v.string(),
+        name: v.union([
+          v.string(),
+          v.pipe(
+            v.function(),
+            v.args(v.tuple([v.string()])),
+            v.returns(v.nullish(v.string())),
+          ),
+        ]),
         test: v.optional(
           v.union([
             v.string(),

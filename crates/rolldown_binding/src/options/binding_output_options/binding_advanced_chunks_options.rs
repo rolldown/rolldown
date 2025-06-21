@@ -15,12 +15,14 @@ pub struct BindingAdvancedChunksOptions {
 }
 
 type BindingMatchGroupTest =
-  Either<BindingStringOrRegex, JsCallback<FnArgs<(String,)>, Option<bool>>>;
+  Either<BindingStringOrRegex, JsCallback<FnArgs<(/*module id*/ String,)>, Option<bool>>>;
 
 #[napi_derive::napi(object, object_to_js = false)]
 #[derive(Debug)]
 pub struct BindingMatchGroup {
-  pub name: String,
+  #[napi(ts_type = "string | ((id: string) => VoidNullable<string>)")]
+  #[debug("MatchGroupName(...)")]
+  pub name: Either<String, JsCallback<FnArgs<(String,)>, Option<String>>>,
   #[napi(ts_type = "string | RegExp | ((id: string) => VoidNullable<boolean>)")]
   #[debug("MatchGroupTest(...)")]
   pub test: Option<BindingMatchGroupTest>,

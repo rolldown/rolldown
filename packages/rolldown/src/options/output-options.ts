@@ -70,6 +70,51 @@ export interface OutputOptions {
   externalLiveBindings?: boolean;
   inlineDynamicImports?: boolean;
   /**
+   * - Type: `((moduleId: string) => string | NullValue)`
+   * - Object form is not supported.
+   *
+   * :::warning
+   * - This option is deprecated. Please use `advancedChunks` instead.
+   * - If `manualChunks` and `advancedChunks` are both specified, `manualChunks` option will be ignored.
+   * :::
+   *
+   * You could use this option for migration purpose. Under the hood,
+   *
+   * ```js
+   * {
+   *   manualChunks: (moduleId, meta) => {
+   *     if (moduleId.includes('node_modules')) {
+   *       return 'vendor';
+   *     }
+   *     return null;
+   *   }
+   * }
+   * ```
+   *
+   * will be transformed to
+   *
+   * ```js
+   * {
+   *   advancedChunks: {
+   *     groups: [
+   *       {
+   *         name(moduleId) {
+   *           if (moduleId.includes('node_modules')) {
+   *             return 'vendor';
+   *           }
+   *           return null;
+   *         },
+   *       },
+   *     ],
+   *   }
+   * }
+   *
+   * ```
+   *
+   * @deprecated Please use `advancedChunks` instead.
+   */
+  manualChunks?: (moduleId: string, meta: {}) => string | NullValue;
+  /**
    * Allows you to do manual chunking. For deeper understanding, please refer to the in-depth [documentation](https://rolldown.rs/guide/in-depth/advanced-chunks).
    */
   advancedChunks?: {
@@ -108,7 +153,7 @@ export interface OutputOptions {
      */
     groups?: {
       /**
-       * - Type: `string | ((moduleId: string) => string | null)`
+       * - Type: `string | ((moduleId: string) => string | NullValue)`
        *
        * Name of the group. It will be also used as the name of the chunk and replaced the `[name]` placeholder in the `chunkFileNames` option.
        *

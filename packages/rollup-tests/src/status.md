@@ -5,5 +5,5 @@
 | ignored | 14 |
 | ignored(unsupported features) | 407 |
 | ignored(treeshaking) | 287 |
-| ignored(behavior passed, snapshot different) | 123 |
-| passed | 716 |
+| ignored(behavior passed, snapshot different) | 124 |
+| passed | 715 |

@@ -74,6 +74,10 @@ if (isBrowserPkg) {
 }
 
 (async () => {
+  // clean up unused files that may be left from previous builds
+  fs.rmSync(outputDir, { recursive: true, force: true });
+  fs.mkdirSync(outputDir, { recursive: true });
+
   for (const config of configs) {
     await build(config);
   }

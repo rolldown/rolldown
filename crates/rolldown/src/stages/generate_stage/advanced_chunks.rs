@@ -164,6 +164,12 @@ impl GenerateStage<'_> {
     // - If two groups have the same priority and index, we use dictionary order to sort them.
     // Outer `Reverse` is due to we're gonna use `pop` consume the vector.
 
+    module_groups.retain(|group| !group.modules.is_empty());
+    if module_groups.is_empty() {
+      // If no module group is found, we just return instead of creating a unnecessary runtime chunk.
+      return Ok(());
+    }
+
     // Manually pull out the module `rolldown:runtime` into a standalone chunk.
     let runtime_module_idx = self.link_output.runtime.id();
     let Module::Normal(runtime_module) = &self.link_output.module_table[runtime_module_idx] else {

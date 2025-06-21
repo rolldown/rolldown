@@ -35,7 +35,26 @@ export function bindingifyOutputOptions(
     virtualDirname,
     legalComments,
     preserveModulesRoot,
+    manualChunks,
   } = outputOptions;
+
+  let { advancedChunks } = outputOptions;
+
+  if (manualChunks != null && advancedChunks != null) {
+    console.warn(
+      '`manualChunks` option is ignored due to `advancedChunks` option is specified.',
+    );
+  } else if (manualChunks != null) {
+    advancedChunks = {
+      groups: [
+        {
+          name(id) {
+            return manualChunks(id, {});
+          },
+        },
+      ],
+    };
+  }
 
   return {
     dir,
@@ -66,7 +85,7 @@ export function bindingifyOutputOptions(
     minify: outputOptions.minify,
     externalLiveBindings: outputOptions.externalLiveBindings,
     inlineDynamicImports: outputOptions.inlineDynamicImports,
-    advancedChunks: outputOptions.advancedChunks,
+    advancedChunks,
     polyfillRequire: outputOptions.polyfillRequire,
     sanitizeFileName,
     preserveModules,

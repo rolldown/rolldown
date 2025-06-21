@@ -19,7 +19,9 @@ pub mod bundler_options {
   pub use crate::inner_bundler_options::{
     BundlerOptions,
     types::{
-      advanced_chunks_options::{AdvancedChunksOptions, MatchGroup, MatchGroupTest},
+      advanced_chunks_options::{
+        AdvancedChunksOptions, MatchGroup, MatchGroupName, MatchGroupTest,
+      },
       attach_debug_info::AttachDebugInfo,
       debug_options::DebugOptions,
       defer_sync_scan_data_option::DeferSyncScanDataOption,

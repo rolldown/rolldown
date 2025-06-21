@@ -33,6 +33,7 @@ impl<'ast> VisitMut<'ast> for GlobImportVisit<'ast, '_> {
 #[derive(Debug, Default)]
 pub struct ImportGlobOptions {
   eager: bool,
+  base: Option<String>,
   query: Option<String>,
   import: Option<String>,
 }
@@ -75,14 +76,14 @@ impl<'ast> GlobImportVisit<'ast, '_> {
         let mut files: Vec<ImportGlobFileData> = vec![];
         let mut options = ImportGlobOptions::default();
 
-        // import.meta.glob('./dir/*.js')
-        if let Some(arg) = call_expr.arguments.first() {
-          self.eval_glob_expr(arg, &mut files);
-        }
-
         // import.meta.glob(['./dir/*.js'], { import: 'setup' })
         if let Some(arg) = call_expr.arguments.get(1) {
           Self::update_options(arg, &mut options);
+        }
+
+        // import.meta.glob('./dir/*.js')
+        if let Some(arg) = call_expr.arguments.first() {
+          self.eval_glob_expr(arg, &mut files, &options);
         }
 
         // {
@@ -305,7 +306,19 @@ impl GlobImportVisit<'_, '_> {
     self.id.starts_with("virtual:") || self.id.starts_with('\0') || !self.id.contains('/')
   }
 
-  fn to_absolute_glob<'a>(&self, glob: &'a str, dir: &Path, root: &Path) -> Cow<'a, str> {
+  fn to_absolute_glob<'a>(
+    &self,
+    glob: &'a str,
+    dir: &Path,
+    root: &Path,
+    base: Option<&str>,
+  ) -> Cow<'a, str> {
+    let dir = if let Some(base) = base {
+      if let Some(base) = base.strip_prefix('/') { root.join(base) } else { dir.join(base) }
+    } else {
+      dir.to_path_buf()
+    };
+
     let absolute_glob = if let Some(glob) = glob.strip_prefix('/') {
       root.join(glob)
     } else if glob.starts_with('.') {
@@ -357,7 +370,13 @@ impl GlobImportVisit<'_, '_> {
     (path, None)
   }
 
-  fn eval_glob_expr(&self, arg: &Argument, files: &mut Vec<ImportGlobFileData>) {
+  #[allow(clippy::too_many_lines)]
+  fn eval_glob_expr(
+    &self,
+    arg: &Argument,
+    files: &mut Vec<ImportGlobFileData>,
+    options: &ImportGlobOptions,
+  ) {
     let root = Path::new(&self.root);
     let is_virtual_module = self.is_virtual_module();
 
@@ -375,9 +394,14 @@ impl GlobImportVisit<'_, '_> {
     match arg {
       Argument::StringLiteral(str) => {
         if let Some(glob) = str.value.strip_prefix('!') {
-          negated_globs.push(self.to_absolute_glob(glob, dir, root));
+          negated_globs.push(self.to_absolute_glob(glob, dir, root, options.base.as_deref()));
         } else {
-          positive_globs.push(self.to_absolute_glob(&str.value, dir, root));
+          positive_globs.push(self.to_absolute_glob(
+            &str.value,
+            dir,
+            root,
+            options.base.as_deref(),
+          ));
           if !str.value.starts_with('.') {
             is_relative = false;
           }
@@ -387,9 +411,14 @@ impl GlobImportVisit<'_, '_> {
         for expr in &array_expr.elements {
           if let ArrayExpressionElement::StringLiteral(str) = expr {
             if let Some(glob) = str.value.strip_prefix('!') {
-              negated_globs.push(self.to_absolute_glob(glob, dir, root));
+              negated_globs.push(self.to_absolute_glob(glob, dir, root, options.base.as_deref()));
             } else {
-              positive_globs.push(self.to_absolute_glob(&str.value, dir, root));
+              positive_globs.push(self.to_absolute_glob(
+                &str.value,
+                dir,
+                root,
+                options.base.as_deref(),
+              ));
               if !str.value.starts_with('.') {
                 is_relative = false;
               }
@@ -401,7 +430,7 @@ impl GlobImportVisit<'_, '_> {
     }
 
     assert!(
-      !(is_virtual_module && is_relative),
+      !(is_virtual_module && is_relative && options.base.as_ref().is_none()),
       "In virtual modules, all globs must start with '/'"
     );
 
@@ -427,17 +456,36 @@ impl GlobImportVisit<'_, '_> {
 
         let file_path = self.relative_path(file, None);
         if is_virtual_module {
-          let path = if file_path.starts_with('/') { file_path } else { format!("/{file_path}") };
-          files.push(ImportGlobFileData { file_path: None, import_path: path });
+          let import_path =
+            if file_path.starts_with('/') { file_path } else { format!("/{file_path}") };
+          let file_path = options.base.as_ref().map(|base| {
+            self.relative_path(file, Some(&self.root.join(base.strip_prefix('/').unwrap_or(base))))
+          });
+          files.push(ImportGlobFileData { file_path, import_path });
           continue;
         }
 
-        let import_path = self.relative_path(file, Some(dir));
+        let mut import_path = self.relative_path(file, Some(dir));
         if self_path == import_path {
           continue;
         }
 
-        let file_path = if is_relative { None } else { Some(file_path) };
+        let file_path = if let Some(base) = &options.base {
+          if base.starts_with('/') {
+            import_path = self.relative_path(file, None);
+          }
+          let base_path = if let Some(base) = base.strip_prefix('/') {
+            self.root.join(base)
+          } else {
+            dir.join(base)
+          };
+          Some(self.relative_path(file, Some(&base_path)))
+        } else if is_relative {
+          None
+        } else {
+          Some(file_path)
+        };
+
         files.push(ImportGlobFileData { file_path, import_path });
       }
     }
@@ -464,6 +512,17 @@ impl GlobImportVisit<'_, '_> {
       };
 
       match key {
+        "base" => match &p.value {
+          Expression::StringLiteral(str) if !str.value.is_empty() => {
+            options.base = Some(str.value.as_str().to_string());
+          }
+          Expression::TemplateLiteral(str)
+            if str.is_no_substitution_template() && !str.quasis[0].value.raw.is_empty() =>
+          {
+            options.base = Some(str.quasis[0].value.raw.as_str().to_string());
+          }
+          _ => {}
+        },
         "import" => {
           if let Expression::StringLiteral(str) = &p.value {
             options.import = Some(str.value.as_str().to_string());

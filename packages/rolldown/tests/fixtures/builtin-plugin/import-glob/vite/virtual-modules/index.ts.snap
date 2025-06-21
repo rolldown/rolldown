@@ -9,6 +9,11 @@ const b = {
 	"/../b/b.ts": () => import("/../b/b.ts"),
 	"/../b/index.ts": () => import("/../b/index.ts")
 };
+({
+	"./a.ts": () => import("/modules/a.ts"),
+	"./b.ts": () => import("/modules/b.ts"),
+	"./index.ts": () => import("/modules/index.ts")
+});
 
 //#endregion
 //#region index.ts

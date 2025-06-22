@@ -55,7 +55,7 @@ If you are a plugin user and the plugin you use does not have hook filters speci
 ```js
 import yaml from '@rollup/plugin-yaml';
 import { defineConfig } from 'rolldown';
-import { withFilter } from 'rolldown/fitler';
+import { withFilter } from 'rolldown/filter';
 
 export default defineConfig({
   plugins: [

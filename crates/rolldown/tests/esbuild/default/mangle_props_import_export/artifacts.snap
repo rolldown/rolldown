@@ -42,6 +42,7 @@ var require_cjs = __commonJS({ "cjs.js"(exports) {
 //#endregion
 export default require_cjs();
 
+export { foo_ };
 ```
 ## esm.js
 

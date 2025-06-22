@@ -42,4 +42,5 @@ var require_import = __commonJS({ "import.js"(exports) {
 //#endregion
 export default require_import();
 
+export { foo };
 ```

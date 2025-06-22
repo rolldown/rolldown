@@ -2,6 +2,7 @@ use std::{borrow::Cow, collections::hash_map::Entry};
 
 use arcstr::ArcStr;
 use indexmap::IndexSet;
+use itertools::Itertools;
 use oxc::span::CompactStr;
 // TODO: The current implementation for matching imports is enough so far but incomplete. It needs to be refactored
 // if we want more enhancements related to exports.
@@ -15,7 +16,7 @@ use rolldown_rstr::{Rstr, ToRstr};
 use rolldown_utils::{
   ecmascript::{is_validate_identifier_name, legitimize_identifier_name},
   index_vec_ext::IndexVecExt,
-  indexmap::FxIndexSet,
+  indexmap::{FxIndexMap, FxIndexSet},
   rayon::{IntoParallelRefIterator, IntoParallelRefMutIterator, ParallelIterator},
 };
 
@@ -33,6 +34,7 @@ struct ImportTracker {
   pub imported_as: SymbolRef,
 }
 
+#[derive(Debug)]
 pub struct MatchingContext {
   tracker_stack: Vec<ImportTracker>,
 }
@@ -129,6 +131,8 @@ impl LinkStage<'_> {
       let Module::Normal(module) = &self.module_table[module_id] else {
         return;
       };
+      dbg!(&module.id);
+      dbg!(&module.named_exports);
       let mut resolved_exports = module
         .named_exports
         .iter()
@@ -221,8 +225,8 @@ impl LinkStage<'_> {
       sorted_and_non_ambiguous_resolved_exports.sort_unstable();
       meta.sorted_and_non_ambiguous_resolved_exports = sorted_and_non_ambiguous_resolved_exports;
     });
-    self.resolve_member_expr_refs(&side_effects_modules, &normal_symbol_exports_chain_map);
     self.update_cjs_module_meta();
+    self.resolve_member_expr_refs(&side_effects_modules, &normal_symbol_exports_chain_map);
     self.normal_symbol_exports_chain_map = normal_symbol_exports_chain_map;
   }
 
@@ -295,15 +299,40 @@ impl LinkStage<'_> {
         let module = module.as_normal()?;
         module.exports_kind.is_commonjs().then_some(module.idx)
       })
-      .collect::<Vec<_>>();
-    for module_idx in cjs_exports_type_modules {
+      .collect::<FxHashSet<_>>();
+    let mut module_has_cjs_import: FxHashSet<ModuleIdx> = FxHashSet::default();
+
+    for module_idx in cjs_exports_type_modules.iter() {
       let v = recursive_update_cjs_module_interop_default_removable(
         &self.module_table.modules,
-        module_idx,
+        *module_idx,
         &mut cache,
       );
-      self.metas[module_idx].safe_cjs_to_eliminate_interop_default = v;
+      self.metas[*module_idx].safe_cjs_to_eliminate_interop_default = v;
+      let cjs_module = self.module_table[*module_idx].as_normal().expect("should be normal_module");
+      module_has_cjs_import.extend(cjs_module.importers_idx.iter());
     }
+
+    self
+      .metas
+      .par_iter_mut_enumerated()
+      .filter(|(idx, _)| module_has_cjs_import.contains(idx))
+      .for_each(|(idx, meta)| {
+        // a cjs module could only be referenced by normal modules.
+        let module = self.module_table[idx].as_normal().expect("should be normal_module");
+        meta.local_facade_cjs_namespace_map = module
+          .named_imports
+          .iter()
+          .filter_map(|(_, named_import)| {
+            let rec = &module.import_records[named_import.record_id];
+            if !cjs_exports_type_modules.contains(&rec.resolved_module) {
+              None
+            } else {
+              Some((named_import.imported_as, rec.resolved_module))
+            }
+          })
+          .collect::<FxHashMap<SymbolRef, ModuleIdx>>();
+      });
   }
 
   fn add_exports_for_export_star(
@@ -394,6 +423,8 @@ impl LinkStage<'_> {
         Module::Normal(module) => {
           let mut resolved_map = FxHashMap::default();
           let mut side_effects_dependency = vec![];
+          let flag = module.is_virtual();
+          let meta = &self.metas[module.idx];
           module.stmt_infos.iter().for_each(|stmt_info| {
             stmt_info.referenced_symbols.iter().for_each(|symbol_ref| {
               // `depended_refs` is used to store necessary symbols that must be included once the resolved symbol gets included
@@ -407,14 +438,29 @@ impl LinkStage<'_> {
                     Module::Normal(module) => module,
                     Module::External(_) => return,
                   };
-                let mut is_namespace_ref =
-                  canonical_ref_owner.namespace_object_ref == canonical_ref;
+                let mut is_namespace_ref = if canonical_ref_owner.namespace_object_ref
+                  == canonical_ref
+                {
+                  true
+                } else if let Some(idx) = meta.local_facade_cjs_namespace_map.get(&canonical_ref) {
+                  // Only import binding symbol points to a cjs module would inserted into
+                  // local_facade_cjs_namespace_map, so it is safe to unwrap.
+                  let m = self.module_table[*idx].as_normal().expect("should be normal module");
+                  // for cjs import record named import binding, it link to it self, so the owner
+                  // is still the importer it self, we rewrite to apply cjs tree shaking.
+                  canonical_ref_owner = m;
+                  true
+                } else {
+                  false
+                };
+                dbg!(&is_namespace_ref);
                 let mut ns_symbol_list = vec![];
                 let mut cursor = 0;
                 while cursor < member_expr_ref.props.len() && is_namespace_ref {
                   let name = &member_expr_ref.props[cursor];
                   let meta = &self.metas[canonical_ref_owner.idx];
                   let export_symbol = meta.resolved_exports.get(&name.to_rstr());
+                  dbg!(&export_symbol);
                   let Some(export_symbol) = export_symbol else {
                     // when we try to resolve `a.b.c`, and found that `b` is not exported by module
                     // that `a` pointed to, convert the `a.b.c` into `void 0` if module `a` do not
@@ -442,6 +488,7 @@ impl LinkStage<'_> {
                     break;
                   };
                   if !meta.sorted_and_non_ambiguous_resolved_exports.contains(&name.to_rstr()) {
+                    dbg!(&export_symbol);
                     resolved_map.insert(
                       member_expr_ref.span,
                       MemberExprRefResolution {
@@ -453,15 +500,15 @@ impl LinkStage<'_> {
                     return;
                   }
 
-                  // TODO(hyf0): suspicious cjs might just fallback to dynamic lookup?
-                  if !self.module_table[export_symbol.symbol_ref.owner]
-                    .as_normal()
-                    .unwrap()
-                    .exports_kind
-                    .is_esm()
-                  {
-                    break;
-                  }
+                  // // TODO(hyf0): suspicious cjs might just fallback to dynamic lookup?
+                  // if !self.module_table[export_symbol.symbol_ref.owner]
+                  //   .as_normal()
+                  //   .unwrap()
+                  //   .exports_kind
+                  //   .is_esm()
+                  // {
+                  //   break;
+                  // }
                   depended_refs.push(export_symbol.symbol_ref);
                   if let Some(chains) =
                     normal_symbol_exports_chain_map.get(&export_symbol.symbol_ref)

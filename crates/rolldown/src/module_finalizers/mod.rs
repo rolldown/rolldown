@@ -628,7 +628,7 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
   ) -> Option<Expression<'ast>> {
     match member_expr {
       MemberExpression::ComputedMemberExpression(inner_expr) => {
-        if let Some(MemberExprRefResolution { resolved: object_ref, props, .. }) =
+        if let Some(MemberExprRefResolution { resolved: object_ref, props, depended_refs }) =
           self.ctx.linking_info.resolved_member_expr_refs.get(&inner_expr.span)
         {
           match object_ref {
@@ -648,7 +648,15 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
       }
       MemberExpression::StaticMemberExpression(inner_expr) => {
         match self.ctx.linking_info.resolved_member_expr_refs.get(&inner_expr.span) {
-          Some(MemberExprRefResolution { resolved: object_ref, props, .. }) => {
+          Some(MemberExprRefResolution { resolved: object_ref, props, depended_refs }) => {
+            if let Some(element) = depended_refs.last() {
+              if self.ctx.linking_info.local_facade_cjs_namespace_map.contains_key(element) {
+                // Don't rewrite if it is a member expr referenced a cjs namespace
+                return None;
+              }
+            }
+            dbg!(&object_ref);
+            dbg!(&depended_refs);
             match object_ref {
               Some(object_ref) => {
                 let object_ref_expr = self.finalized_expr_for_symbol_ref(*object_ref, false, None);

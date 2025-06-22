@@ -3,7 +3,7 @@ use std::borrow::Cow;
 use crate::{stages::link_stage::LinkStageOutput, utils::renamer::Renamer};
 use arcstr::ArcStr;
 use rolldown_common::{
-  Chunk, ChunkIdx, ChunkKind, GetLocalDb, ModuleScopeSymbolIdMap, OutputFormat,
+  Chunk, ChunkIdx, ChunkKind, GetLocalDb, ModuleScopeSymbolIdMap, OutputFormat, StmtSideEffect,
 };
 use rolldown_rstr::ToRstr;
 use rolldown_utils::ecmascript::legitimize_identifier_name;
@@ -134,7 +134,9 @@ pub fn deconflict_chunk_symbols(
       module
         .stmt_infos
         .iter()
-        .filter(|stmt_info| stmt_info.is_included)
+        .filter(|stmt_info| {
+          stmt_info.is_included && !matches!(stmt_info.side_effect, StmtSideEffect::PureCjs)
+        })
         .flat_map(|stmt_info| stmt_info.declared_symbols.iter().copied())
         .for_each(|symbol_ref| {
           renamer.add_symbol_in_root_scope(symbol_ref);

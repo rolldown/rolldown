@@ -6,8 +6,9 @@ use petgraph::prelude::DiGraphMap;
 use rolldown_common::{
   EcmaViewMeta, EntryPoint, EntryPointKind, ExportsKind, ImportKind, ImportRecordIdx,
   ImportRecordMeta, IndexModules, Module, ModuleIdx, ModuleType, NormalModule,
-  NormalizedBundlerOptions, StmtInfoIdx, SymbolOrMemberExprRef, SymbolRef, SymbolRefDb,
-  dynamic_import_usage::DynamicImportExportsUsage, side_effects::DeterminedSideEffects,
+  NormalizedBundlerOptions, StmtInfoIdx, StmtSideEffect, SymbolOrMemberExprRef, SymbolRef,
+  SymbolRefDb, dynamic_import_usage::DynamicImportExportsUsage,
+  side_effects::DeterminedSideEffects,
 };
 use rolldown_utils::rayon::{IntoParallelRefMutIterator, ParallelIterator};
 use rustc_hash::{FxHashMap, FxHashSet};
@@ -339,12 +340,13 @@ fn include_module(ctx: &mut Context, module: &NormalModule) {
 
   let forced_no_treeshake = matches!(module.side_effects, DeterminedSideEffects::NoTreeshake);
   if ctx.tree_shaking && !forced_no_treeshake {
+    let flag = module.is_virtual();
     module.stmt_infos.iter_enumerated().for_each(|(stmt_info_id, stmt_info)| {
       // No need to handle the first statement specially, which is the namespace object, because it doesn't have side effects and will only be included if it is used.
       let bail_eval = module.meta.has_eval()
         && !stmt_info.declared_symbols.is_empty()
         && stmt_info_id.index() != 0;
-      if stmt_info.side_effect.has_side_effect() || bail_eval {
+      if matches!(stmt_info.side_effect, StmtSideEffect::Unknown) || bail_eval {
         include_statement(ctx, module, stmt_info_id);
       }
     });

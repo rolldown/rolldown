@@ -160,6 +160,7 @@ impl GenerateStage<'_> {
           let Module::Normal(module) = &self.link_output.module_table[module_id] else {
             return;
           };
+          let meta = &self.link_output.metas[module.idx];
           module
             .import_records
             .iter()
@@ -202,6 +203,11 @@ impl GenerateStage<'_> {
               return;
             }
             stmt_info.declared_symbols.iter().for_each(|declared| {
+              // if stmt_info.side_effect == rolldown_common::StmtSideEffect::PureCjs {
+              //   dbg!(&declared);
+              //   // Pure CJS statements are not included in the final output, so we don't need to assign them to any chunk.
+              //   return;
+              // }
               symbol_needs_to_assign.push(*declared);
             });
 
@@ -215,6 +221,16 @@ impl GenerateStage<'_> {
                   depended_symbols.insert(canonical_ref);
                 }
                 rolldown_common::SymbolOrMemberExprRef::MemberExpr(member_expr) => {
+                  // Since all cjs module are wrapped in a function we don't really need to
+                  // dependend on it. e.g.
+                  // ```js
+                  // var require_cjs = __commonJS({ "cjs.js"(exports) {
+                  // 	exports.b = 1e3;
+                  // } });
+                  // ```
+                  if meta.local_facade_cjs_namespace_map.contains_key(&member_expr.object_ref) {
+                    return;
+                  }
                   match member_expr.represent_symbol_ref(
                     &self.link_output.metas[module.idx].resolved_member_expr_refs,
                   ) {
@@ -357,6 +373,7 @@ impl GenerateStage<'_> {
         let importee_chunk_id = import_symbol.chunk_id.unwrap_or_else(|| {
           let symbol_owner = &self.link_output.module_table[import_ref.owner];
           let symbol_name = import_ref.name(&self.link_output.symbol_db);
+          dbg!(&import_ref);
           panic!("Symbol {:?} in {:?} should belong to a chunk", symbol_name, symbol_owner.id())
         });
         // Check if the import is from another chunk

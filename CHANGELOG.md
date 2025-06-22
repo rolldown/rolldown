@@ -1,4 +1,46 @@
 
+## [1.0.0-beta.19] - 2025-06-22
+
+### 🚀 Features
+
+- support `OutputOptions#manualChunks` (#5037) by @hyf0
+- advanced-chunks: support `advancedChunks#gruop#name` to be function (#5035) by @hyf0
+- rolldown_plugin_import_glob: align with `vitejs/vite#20163` (#5034) by @shulaoda
+- rust/advanced-chunks: support `MatchGroup#name` to be dynamic (#5033) by @hyf0
+- rolldown_plugin_build_import_analysis: align with `vitejs/vite#20117` (#5027) by @shulaoda
+- rolldown_plugin_build_import_analysis: align with `vitejs/vite#20115` (#5020) by @shulaoda
+- add validation warning for advanced chunks options without groups (#5009) by @sapphi-red
+
+### 🐛 Bug Fixes
+
+- moduleInfo is not updated when entry module is emitted by this.emitFile (#5032) by @IWANABETHATGUY
+- preserveEntrySignatures: false generates circular imports that hangs with TLA (#5029) by @IWANABETHATGUY
+- rolldown_plugin_build_import_analysis: align pure dynamic import handling with rolldown-vite (#5016) by @shulaoda
+- plugin/vite-resolve: normalize leading slash (#5013) by @sapphi-red
+- debug: `build_id` doesn't increase (#5015) by @hyf0
+- side effects in this.emitFile({ type: 'chunk' }) is removed when preserveEntrySignatures: false is set (#5012) by @IWANABETHATGUY
+
+### 🚜 Refactor
+
+- rolldown_utils: simplify `block_on_spawn_all` (#5019) by @shulaoda
+- use `rolldown_utils::futures::block_on` for `WatcherImpl#start` (#5018) by @shulaoda
+
+### 📚 Documentation
+
+- jsdoc: document `experimental.attachDebugInfo` (#5028) by @hyf0
+- clarify that `advancedChunks` options are in bytes (#5022) by @sapphi-red
+- add a note that sequential conversion may break the code (#5024) by @sapphi-red
+
+### ⚙️ Miscellaneous Tasks
+
+- infra: clean up `dist` before building `rolldown` (#5036) by @hyf0
+- Align status notice in readme with documentation (#5021) by @rijkvanzanten
+
+### ❤️ New Contributors
+
+* @rijkvanzanten made their first contribution in [#5021](https://github.com/rolldown/rolldown/pull/5021)
+
+
 ## [1.0.0-beta.18] - 2025-06-19
 
 ### 🚀 Features

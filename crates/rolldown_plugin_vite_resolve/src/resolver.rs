@@ -448,6 +448,11 @@ impl TsconfigResolver {
   }
 
   fn find_nearest_tsconfig(&self, path: &Path) -> Option<PathBuf> {
+    // skip virtual IDs (e.g. `virtual:something`)
+    if !path.is_absolute() {
+      return None;
+    }
+
     let mut dir = path.to_path_buf();
 
     loop {

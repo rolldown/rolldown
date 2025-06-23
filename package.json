@@ -3,7 +3,7 @@
   "description": "Rollup in Rust",
   "type": "module",
   "private": true,
-  "packageManager": "pnpm@10.12.1",
+  "packageManager": "pnpm@10.12.2",
   "engines": {
     "node": ">=18.20.3"
   },
@@ -27,7 +27,7 @@
     "@actions/core": "^1.11.1",
     "@oxc-node/core": "catalog:",
     "@oxc-project/runtime": "catalog:",
-    "@types/node": "24.0.1",
+    "@types/node": "24.0.3",
     "cjs-module-lexer": "^2.0.0",
     "dprint": "^0.50.0",
     "husky": "^9.0.0",

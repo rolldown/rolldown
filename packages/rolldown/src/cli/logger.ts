@@ -31,6 +31,7 @@ function createTestingLogger() {
   ];
   const ret: Record<string, any> = Object.create(null);
   for (const type of types) {
+    // oxlint-disable-next-line no-console
     ret[type] = console.log;
   }
   return ret;

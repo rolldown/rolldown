@@ -237,18 +237,18 @@ impl Resolver {
     directory: P,
     specifier: &str,
   ) -> Result<oxc_resolver::FsResolution, oxc_resolver::ResolveError> {
-    let tsconfig = self.tsconfig_resolver.load_nearest_tsconfig(directory.as_ref());
-    let inner_resolver = if let Some(tsconfig) = tsconfig.clone() {
-      &self.inner.clone_with_options(ResolveOptions {
-        tsconfig: Some(TsconfigOptions {
-          config_file: tsconfig,
-          references: TsconfigReferences::Disabled,
-        }),
-        ..self.inner.options().clone()
-      })
-    } else {
-      &self.inner
-    };
+    let inner_resolver =
+      if let Some(tsconfig) = self.tsconfig_resolver.load_nearest_tsconfig(directory.as_ref()) {
+        &self.inner.clone_with_options(ResolveOptions {
+          tsconfig: Some(TsconfigOptions {
+            config_file: tsconfig,
+            references: TsconfigReferences::Disabled,
+          }),
+          ..self.inner.options().clone()
+        })
+      } else {
+        &self.inner
+      };
 
     let Some(try_prefix) = &self.try_prefix else {
       return inner_resolver.resolve(directory, specifier);

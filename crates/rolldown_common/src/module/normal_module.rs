@@ -143,27 +143,6 @@ impl NormalModule {
     }
   }
 
-  // // https://tc39.es/ecma262/#sec-getexportednames
-  // pub fn get_exported_names<'module>(
-  //   &'module self,
-  //   export_star_set: &mut FxHashSet<NormalModuleId>,
-  //   ret: &mut FxHashSet<&'module Rstr>,
-  //   modules: &'module IndexVec<NormalModuleId, NormalModule>,
-  // ) {
-  //   if export_star_set.contains(&self.id) {
-  //     // noop
-  //   } else {
-  //     export_star_set.insert(self.id);
-  //     ret.extend(self.named_exports.keys().filter(|name| name.as_str() != "default"));
-  //     self.star_export_modules().for_each(|importee_id| match importee_id {
-  //       ModuleId::Normal(importee_id) => {
-  //         modules[importee_id].get_exported_names(export_star_set, ret, modules)
-  //       }
-  //       ModuleId::External(_) => {}
-  //     });
-  //   }
-  // }
-
   pub fn ecma_ast_idx(&self) -> EcmaAstIdx {
     self.ecma_view.ecma_ast_idx.expect("ecma_ast_idx should be set in this stage")
   }

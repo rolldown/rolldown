@@ -38,17 +38,10 @@ impl GenerateContext<'_> {
     canonical_names: &FxHashMap<SymbolRef, Rstr>,
   ) -> String {
     let symbol_db = &self.link_output.symbol_db;
-    // let belong_to_chunk_idx =
-    // if !symbol_ref.is_declared_in_root_scope(self.ctx.symbol_db) {
-    //   // No fancy things on none root scope symbols
-    //   return self.snippet.id_ref_expr(self.canonical_name_for(symbol_ref), SPAN);
-    // }
     let canonical_ref = symbol_db.canonical_ref_for(symbol_ref);
     let canonical_symbol = symbol_db.get(canonical_ref);
     let namespace_alias = &canonical_symbol.namespace_alias;
     if let Some(_ns_alias) = namespace_alias {
-      // canonical_ref = ns_alias.namespace_ref;
-      // canonical_symbol = symbol_db.get(canonical_ref);
       // Not sure if we need to handle this case
       unreachable!("You run into a bug, please report it");
     }

@@ -154,7 +154,7 @@ nom = "8.0.0"
 notify = "8.0.0"
 num-format = "0.4"
 petgraph = "0.8.1"
-phf = "0.11.3"
+phf = "0.12.0"
 rayon = "1.10.0"
 regex = "1.11.1"
 regress = "0.10.3"
@@ -194,9 +194,9 @@ napi-derive = { version = "3.0.0-beta.6", default-features = false, features = [
 
 # oxc crates with the same version
 
-oxc = { version = "0.73.2", features = ["ast_visit", "transformer", "minifier", "mangler", "semantic", "codegen", "serialize", "isolated_declarations", "regular_expression", "cfg"] }
-oxc_parser_napi = { version = "0.73.2" }
-oxc_transform_napi = { version = "0.73.2" }
+oxc = { version = "0.74.0", features = ["ast_visit", "transformer", "minifier", "mangler", "semantic", "codegen", "serialize", "isolated_declarations", "regular_expression", "cfg"] }
+oxc_parser_napi = { version = "0.74.0" }
+oxc_transform_napi = { version = "0.74.0" }
 
 # oxc crates in their own repos
 # Versions must be relaxed for usage in oxc.

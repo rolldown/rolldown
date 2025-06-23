@@ -3,7 +3,7 @@ use std::path::Path;
 use itertools::Itertools;
 use oxc::ast_visit::VisitMut;
 use oxc::diagnostics::Severity as OxcSeverity;
-use oxc::minifier::{CompressOptions, Compressor};
+use oxc::minifier::{CompressOptions, Compressor, TreeShakeOptions};
 use oxc::semantic::{SemanticBuilder, Stats};
 use oxc::transformer::Transformer;
 use oxc::transformer_plugins::{
@@ -118,7 +118,11 @@ impl PreProcessEcmaAst {
       if bundle_options.treeshake.is_some() && !has_lazy_export {
         // Perform dead code elimination.
         // NOTE: `CompressOptions::dead_code_elimination` will remove `ParenthesizedExpression`s from the AST.
-        let compressor = Compressor::new(allocator, CompressOptions::safest());
+        let options = CompressOptions {
+          treeshake: TreeShakeOptions::from(&bundle_options.treeshake),
+          ..CompressOptions::safest()
+        };
+        let compressor = Compressor::new(allocator, options);
         if self.ast_changed {
           let semantic_ret = SemanticBuilder::new().with_stats(self.stats).build(program);
           scoping = semantic_ret.semantic.into_scoping();

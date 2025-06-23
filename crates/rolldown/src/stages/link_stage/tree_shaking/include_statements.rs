@@ -13,7 +13,10 @@ use rolldown_common::{
 use rolldown_utils::rayon::{IntoParallelRefMutIterator, ParallelIterator};
 use rustc_hash::{FxHashMap, FxHashSet};
 
-use crate::{stages::link_stage::LinkStage, types::linking_metadata::LinkingMetadataVec};
+use crate::{
+  stages::link_stage::LinkStage, types::linking_metadata::LinkingMetadataVec,
+  utils::process_code_and_sourcemap,
+};
 
 struct Context<'a> {
   modules: &'a IndexModules,
@@ -402,6 +405,9 @@ fn include_symbol(ctx: &mut Context, symbol_ref: SymbolRef) {
 
   if let Module::Normal(module) = &ctx.modules[canonical_ref.owner] {
     include_module(ctx, module);
+    if module.stmt_infos.declared_stmts_by_symbol(&canonical_ref).is_empty() {
+      include_statement(ctx, module, StmtInfoIdx::new(1));
+    }
     module.stmt_infos.declared_stmts_by_symbol(&canonical_ref).iter().copied().for_each(
       |stmt_info_id| {
         include_statement(ctx, module, stmt_info_id);

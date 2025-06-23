@@ -460,7 +460,6 @@ impl LinkStage<'_> {
                   let name = &member_expr_ref.props[cursor];
                   let meta = &self.metas[canonical_ref_owner.idx];
                   let export_symbol = meta.resolved_exports.get(&name.to_rstr());
-                  dbg!(&export_symbol);
                   let Some(export_symbol) = export_symbol else {
                     // when we try to resolve `a.b.c`, and found that `b` is not exported by module
                     // that `a` pointed to, convert the `a.b.c` into `void 0` if module `a` do not

@@ -134,9 +134,6 @@ pub fn deconflict_chunk_symbols(
       module
         .stmt_infos
         .iter()
-        .filter(|stmt_info| {
-          stmt_info.is_included && !matches!(stmt_info.side_effect, StmtSideEffect::PureCjs)
-        })
         .flat_map(|stmt_info| stmt_info.declared_symbols.iter().copied())
         .for_each(|symbol_ref| {
           renamer.add_symbol_in_root_scope(symbol_ref);

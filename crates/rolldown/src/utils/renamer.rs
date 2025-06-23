@@ -131,7 +131,6 @@ impl<'name> Renamer<'name> {
       map: &ModuleScopeSymbolIdMap<'_>,
     ) {
       let bindings = map.get(&module.idx).map(|vec| &vec[scope_id]).unwrap();
-      // let mut bindings = ast_scope.scoping().get_bindings(scope_id).iter().collect::<Vec<_>>();
       let mut used_canonical_names_for_this_scope = FxHashMap::with_capacity(bindings.len());
 
       bindings.iter().for_each(|&(symbol_id, binding_name)| {

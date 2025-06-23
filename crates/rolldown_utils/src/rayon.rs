@@ -88,6 +88,5 @@ fn _usages() {
   demo.iter_mut().par_bridge().for_each(|_| {});
   demo.clone().into_iter().par_bridge().for_each(|_| {});
   demo.par_iter().for_each(|_| {});
-  // demo.par_iter_mut().for_each(|_| {});
   demo.clone().into_par_iter().for_each(|_| {});
 }

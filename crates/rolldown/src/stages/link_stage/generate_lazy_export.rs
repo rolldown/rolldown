@@ -223,7 +223,6 @@ fn json_object_expr_to_esm(
     }),
   );
 
-  // let default_symbol_ref = module.default_export_ref;
   // update semantic data of module
   let root_scope_id = scoping.root_scope_id();
   let mut symbol_ref_db = SymbolRefDbForModule::new(scoping, module_idx, root_scope_id);

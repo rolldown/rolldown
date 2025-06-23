@@ -181,3 +181,17 @@ where
     Some(true) | None => Ok(ModuleSideEffects::Boolean(true)),
   }
 }
+
+impl From<&NormalizedTreeshakeOptions> for oxc::minifier::TreeShakeOptions {
+  fn from(value: &NormalizedTreeshakeOptions) -> Self {
+    let default = oxc::minifier::TreeShakeOptions::default();
+    oxc::minifier::TreeShakeOptions {
+      annotations: value.annotations(),
+      manual_pure_functions: value
+        .manual_pure_functions()
+        .map_or(default.manual_pure_functions, |set| set.iter().cloned().collect::<Vec<_>>()),
+      property_read_side_effects: default.property_read_side_effects,
+      unknown_global_side_effects: value.unknown_global_side_effects(),
+    }
+  }
+}

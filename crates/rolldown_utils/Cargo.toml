@@ -38,7 +38,7 @@ mime = { workspace = true }
 nom = { workspace = true }
 oxc = { workspace = true }
 oxc_index = { workspace = true }
-phf = { workspace = true }
+phf = { workspace = true, features = ["macros"] }
 regex = { workspace = true }
 regress = { workspace = true }
 rolldown_std_utils = { workspace = true }

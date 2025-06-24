@@ -67,3 +67,6 @@ mimalloc-safe = { workspace = true, features = ["skip_collect_on_exit", "local_d
 
 [build-dependencies]
 napi-build = { workspace = true }
+
+[features]
+default_global_allocator = []

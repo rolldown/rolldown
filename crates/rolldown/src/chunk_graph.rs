@@ -1,6 +1,6 @@
 use arcstr::ArcStr;
 use oxc_index::{IndexVec, index_vec};
-use rolldown_common::{Chunk, ChunkIdx, ChunkTable, ModuleIdx, ModuleTable, SymbolRef};
+use rolldown_common::{Chunk, ChunkIdx, ChunkTable, ModuleIdx, SymbolRef};
 use rustc_hash::FxHashMap;
 
 #[derive(Debug)]
@@ -16,10 +16,10 @@ pub struct ChunkGraph {
 }
 
 impl ChunkGraph {
-  pub fn new(module_table: &ModuleTable) -> Self {
+  pub fn new(modules_len: usize) -> Self {
     Self {
       chunk_table: ChunkTable::default(),
-      module_to_chunk: index_vec![None; module_table.modules.len()],
+      module_to_chunk: index_vec![None; modules_len],
       sorted_chunk_idx_vec: Vec::new(),
       entry_module_to_entry_chunk: FxHashMap::default(),
       safely_merge_cjs_ns_map_idx_vec: index_vec![],

@@ -40,7 +40,7 @@ impl GenerateStage<'_> {
     // If we are in test environment, to make the runtime module always fall into a standalone chunk,
     // we create a facade entry point for it.
 
-    let mut chunk_graph = ChunkGraph::new(&self.link_output.module_table);
+    let mut chunk_graph = ChunkGraph::new(self.link_output.module_table.modules.len());
     chunk_graph.chunk_table.chunks.reserve(self.link_output.entries.len());
 
     let mut index_splitting_info: IndexSplittingInfo = oxc_index::index_vec![SplittingInfo {

@@ -28,7 +28,7 @@ use rolldown_common::dynamic_import_usage::{DynamicImportExportsUsage, DynamicIm
 use rolldown_common::{
   EcmaModuleAstUsage, ExportsKind, HmrInfo, ImportKind, ImportRecordIdx, ImportRecordMeta,
   LocalExport, MemberExprRef, ModuleDefFormat, ModuleId, ModuleIdx, NamedImport, RawImportRecord,
-  Specifier, StmtInfo, StmtInfos, SymbolRef, SymbolRefDbForModule, SymbolRefFlags,
+  Specifier, StmtInfo, StmtInfos, SymbolRef, SymbolRefDbForModule, SymbolRefFlags, TaggedSymbolRef,
   ThisExprReplaceKind,
 };
 use rolldown_ecmascript_utils::{BindingIdentifierExt, BindingPatternExt};
@@ -281,7 +281,7 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
         .result
         .stmt_infos
         .iter()
-        .flat_map(|stmt_info| stmt_info.declared_symbols.iter())
+        .flat_map(|stmt_info| stmt_info.declared_symbols.iter().map(|item| item.inner()))
         .collect::<FxHashSet<_>>();
       for (name, symbol_id) in self
         .result
@@ -311,8 +311,12 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
     self.esm_export_keyword.get_or_insert(span);
   }
 
-  fn add_declared_id(&mut self, id: SymbolId) {
-    self.current_stmt_info.declared_symbols.push((self.idx, id).into());
+  fn declare_normal_symbol_ref(&mut self, id: SymbolId) {
+    self.current_stmt_info.declared_symbols.push(TaggedSymbolRef::Normal((self.idx, id).into()));
+  }
+
+  fn declare_link_only_symbol_ref(&mut self, id: SymbolId) {
+    self.current_stmt_info.declared_symbols.push(TaggedSymbolRef::LinkOnly((self.idx, id).into()));
   }
 
   fn get_root_binding(&self, name: &str) -> Option<SymbolId> {
@@ -336,6 +340,7 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
         itoa::Buffer::new().format(self.current_stmt_info.stmt_idx.unwrap_or_default().raw()),
         "#"
       ));
+    dbg!(&namespace_ref);
     let mut rec = RawImportRecord::new(
       Rstr::from(module_request),
       kind,
@@ -474,7 +479,10 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
     let generated_imported_as_ref =
       self.result.symbol_ref_db.create_facade_root_symbol_ref(ident.as_ref());
 
-    self.current_stmt_info.declared_symbols.push(generated_imported_as_ref);
+    self
+      .current_stmt_info
+      .declared_symbols
+      .push(rolldown_common::TaggedSymbolRef::Normal(generated_imported_as_ref));
     let name_import = NamedImport {
       imported: imported.into(),
       imported_as: generated_imported_as_ref,
@@ -498,7 +506,10 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
       .result
       .symbol_ref_db
       .create_facade_root_symbol_ref(legitimize_identifier_name(export_name).as_ref());
-    self.current_stmt_info.declared_symbols.push(generated_imported_as_ref);
+    self
+      .current_stmt_info
+      .declared_symbols
+      .push(rolldown_common::TaggedSymbolRef::Normal(generated_imported_as_ref));
     let name_import = NamedImport {
       imported: Specifier::Star,
       span_imported: span_for_export_name,
@@ -624,7 +635,7 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
     let (reference, span) = local_binding_for_default_export
       .unwrap_or((self.result.default_export_ref.symbol, Span::default()));
 
-    self.add_declared_id(reference);
+    self.declare_normal_symbol_ref(reference);
     self.add_local_default_export(reference, span);
   }
 

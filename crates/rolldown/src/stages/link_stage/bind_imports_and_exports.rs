@@ -315,15 +315,17 @@ impl LinkStage<'_> {
 
     self
       .metas
-      .par_iter_mut_enumerated()
+      .iter_mut_enumerated()
       .filter(|(idx, _)| module_has_cjs_import.contains(idx))
       .for_each(|(idx, meta)| {
         // a cjs module could only be referenced by normal modules.
         let module = self.module_table[idx].as_normal().expect("should be normal_module");
+        dbg!(&module.import_records);
         meta.local_facade_cjs_namespace_map = module
           .named_imports
           .iter()
           .filter_map(|(_, named_import)| {
+            dbg!(&named_import);
             let rec = &module.import_records[named_import.record_id];
             if !cjs_exports_type_modules.contains(&rec.resolved_module) {
               None
@@ -332,6 +334,7 @@ impl LinkStage<'_> {
             }
           })
           .collect::<FxHashMap<SymbolRef, ModuleIdx>>();
+        // dbg!(&meta.local_facade_cjs_namespace_map);
       });
   }
 

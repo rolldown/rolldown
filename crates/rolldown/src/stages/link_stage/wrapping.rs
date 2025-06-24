@@ -1,7 +1,7 @@
 use oxc_index::IndexVec;
 use rolldown_common::{
   ExportsKind, IndexModules, Module, ModuleIdx, NormalModule, NormalizedBundlerOptions,
-  RuntimeModuleBrief, StmtInfo, StmtInfoMeta, SymbolRefDb, WrapKind,
+  RuntimeModuleBrief, StmtInfo, StmtInfoMeta, SymbolRefDb, TaggedSymbolRef, WrapKind,
 };
 
 use crate::types::linking_metadata::{LinkingMetadata, LinkingMetadataVec};
@@ -160,7 +160,7 @@ pub fn create_wrapper(
 
       let stmt_info = StmtInfo {
         stmt_idx: None,
-        declared_symbols: vec![wrapper_ref],
+        declared_symbols: vec![TaggedSymbolRef::Normal(wrapper_ref)],
         referenced_symbols: vec![if options.profiler_names {
           runtime.resolve_symbol("__commonJS").into()
         } else {
@@ -193,7 +193,7 @@ pub fn create_wrapper(
 
       let stmt_info = StmtInfo {
         stmt_idx: None,
-        declared_symbols: vec![wrapper_ref],
+        declared_symbols: vec![TaggedSymbolRef::Normal(wrapper_ref)],
         referenced_symbols: vec![if options.profiler_names {
           runtime.resolve_symbol("__esm").into()
         } else {

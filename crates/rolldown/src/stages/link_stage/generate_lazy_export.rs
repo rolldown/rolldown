@@ -9,7 +9,7 @@ use oxc::{
 use rolldown_common::{
   EcmaAstIdx, EcmaModuleAstUsage, ExportsKind, GetLocalDbMut, LocalExport, Module, ModuleIdx,
   ModuleType, NormalModule, StmtInfo, StmtInfoIdx, SymbolOrMemberExprRef, SymbolRef,
-  SymbolRefDbForModule, WrapKind,
+  SymbolRefDbForModule, TaggedSymbolRef, WrapKind,
 };
 use rolldown_ecmascript_utils::AstSnippet;
 use rolldown_rstr::{Rstr, ToRstr};
@@ -100,7 +100,7 @@ fn update_module_default_export_info(
     .named_exports
     .insert("default".into(), LocalExport { span: SPAN, referenced: default_symbol_ref });
   // needs to support `preferConst`, so default statement may not be the second stmt info
-  module.stmt_infos.declare_symbol_for_stmt(idx, default_symbol_ref);
+  module.stmt_infos.declare_symbol_for_stmt(idx, TaggedSymbolRef::Normal(default_symbol_ref));
 }
 
 #[allow(clippy::too_many_lines)]
@@ -241,9 +241,11 @@ fn json_object_expr_to_esm(
   for (i, (local, exported, _)) in declaration_binding_names.iter().enumerate() {
     let symbol_id =
       symbol_ref_db.scoping().get_root_binding(local.as_str()).expect("should have binding");
-    let symbol_ref = (module_idx, symbol_id).into();
+    let symbol_ref: SymbolRef = (module_idx, symbol_id).into();
     all_declared_symbols.push(SymbolOrMemberExprRef::from(symbol_ref));
-    let stmt_info = StmtInfo::default().with_stmt_idx(i).with_declared_symbols(vec![symbol_ref]);
+    let stmt_info = StmtInfo::default()
+      .with_stmt_idx(i)
+      .with_declared_symbols(vec![TaggedSymbolRef::Normal(symbol_ref)]);
     module.stmt_infos.add_stmt_info(stmt_info);
     module
       .named_exports
@@ -252,7 +254,7 @@ fn json_object_expr_to_esm(
   // declare default export statement
   let stmt_info = StmtInfo::default()
     .with_stmt_idx(declaration_binding_names.len())
-    .with_declared_symbols(vec![default_export_ref])
+    .with_declared_symbols(vec![TaggedSymbolRef::Normal(default_export_ref)])
     .with_referenced_symbols(all_declared_symbols.clone());
 
   module.stmt_infos.add_stmt_info(stmt_info);
@@ -264,7 +266,7 @@ fn json_object_expr_to_esm(
   module.exports_kind = ExportsKind::Esm;
   module.stmt_infos.replace_namespace_stmt_info(
     StmtInfo::default()
-      .with_declared_symbols(vec![namespace_object_ref])
+      .with_declared_symbols(vec![TaggedSymbolRef::Normal(namespace_object_ref)])
       .with_referenced_symbols(all_declared_symbols),
   );
   // for a es json module it did not needs to be wrapped anyway.

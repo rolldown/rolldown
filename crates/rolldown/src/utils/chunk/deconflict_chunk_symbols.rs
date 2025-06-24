@@ -2,8 +2,10 @@ use std::borrow::Cow;
 
 use crate::{stages::link_stage::LinkStageOutput, utils::renamer::Renamer};
 use arcstr::ArcStr;
+use oxc::ast::ast::TaggedTemplateExpression;
 use rolldown_common::{
   Chunk, ChunkIdx, ChunkKind, GetLocalDb, ModuleScopeSymbolIdMap, OutputFormat, StmtSideEffect,
+  TaggedSymbolRef,
 };
 use rolldown_rstr::ToRstr;
 use rolldown_utils::ecmascript::legitimize_identifier_name;
@@ -134,9 +136,16 @@ pub fn deconflict_chunk_symbols(
       module
         .stmt_infos
         .iter()
-        .flat_map(|stmt_info| stmt_info.declared_symbols.iter().copied())
+        .filter(|stmt_info| stmt_info.is_included)
+        .flat_map(|stmt_info| {
+          stmt_info
+            .declared_symbols
+            .iter()
+            .filter(|item| matches!(item, TaggedSymbolRef::Normal(_)))
+            .copied()
+        })
         .for_each(|symbol_ref| {
-          renamer.add_symbol_in_root_scope(symbol_ref);
+          renamer.add_symbol_in_root_scope(symbol_ref.inner());
         });
     });
 

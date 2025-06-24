@@ -17,7 +17,6 @@ use rolldown_ecmascript::ToSourceString;
 use rolldown_ecmascript_utils::ExpressionExt;
 use rolldown_error::BuildDiagnostic;
 use rolldown_std_utils::OptionExt;
-use rolldown_utils::concat_string;
 
 use super::{
   AstScanner, cjs_ast_analyzer::CjsGlobalAssignmentType, side_effect_detector::SideEffectDetector,
@@ -108,7 +107,7 @@ impl<'me, 'ast: 'me> Visit<'ast> for AstScanner<'me, 'ast> {
   fn visit_binding_identifier(&mut self, ident: &ast::BindingIdentifier) {
     let symbol_id = ident.symbol_id.get().unpack();
     if self.is_root_symbol(symbol_id) {
-      self.add_declared_id(symbol_id);
+      self.declare_normal_symbol_ref(symbol_id);
     }
   }
 
@@ -197,6 +196,8 @@ impl<'me, 'ast: 'me> Visit<'ast> for AstScanner<'me, 'ast> {
                 // `exports.test = ...`
                 let exported_symbol =
                   self.result.symbol_ref_db.create_facade_root_symbol_ref(export_name);
+
+                self.declare_link_only_symbol_ref(exported_symbol.symbol);
 
                 self
                   .result

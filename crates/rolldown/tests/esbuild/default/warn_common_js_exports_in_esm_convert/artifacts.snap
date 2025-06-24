@@ -68,12 +68,16 @@ source: crates/rolldown_testing/src/integration_test.rs
 ```js
 
 //#region cjs-in-esm.js
-let foo = 1;
 exports.foo = 2;
 module.exports = 3;
 
 //#endregion
-exports.foo = foo;
+Object.defineProperty(exports, 'foo', {
+  enumerable: true,
+  get: function () {
+    return foo;
+  }
+});
 ```
 ## cjs-in-esm2.js
 

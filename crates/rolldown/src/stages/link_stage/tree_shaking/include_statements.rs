@@ -1,11 +1,12 @@
 use std::cmp::Reverse;
 
 use itertools::Itertools;
+use oxc::ast::ast::ImportOrExportKind;
 use oxc_index::IndexVec;
 use petgraph::prelude::DiGraphMap;
 use rolldown_common::{
-  EcmaViewMeta, EntryPoint, EntryPointKind, ExportsKind, ImportKind, ImportRecordIdx,
-  ImportRecordMeta, IndexModules, Module, ModuleIdx, ModuleType, NormalModule,
+  EcmaModuleAstUsage, EcmaViewMeta, EntryPoint, EntryPointKind, ExportsKind, ImportKind,
+  ImportRecordIdx, ImportRecordMeta, IndexModules, Module, ModuleIdx, ModuleType, NormalModule,
   NormalizedBundlerOptions, StmtInfoIdx, StmtSideEffect, SymbolOrMemberExprRef, SymbolRef,
   SymbolRefDb, dynamic_import_usage::DynamicImportExportsUsage,
   side_effects::DeterminedSideEffects,
@@ -349,7 +350,13 @@ fn include_module(ctx: &mut Context, module: &NormalModule) {
       let bail_eval = module.meta.has_eval()
         && !stmt_info.declared_symbols.is_empty()
         && stmt_info_id.index() != 0;
-      if matches!(stmt_info.side_effect, StmtSideEffect::Unknown) || bail_eval {
+      let has_side_effects =
+        if module.ast_usage.contains(EcmaModuleAstUsage::AllStaticExportPropertyAccess) {
+          matches!(stmt_info.side_effect, StmtSideEffect::Unknown)
+        } else {
+          stmt_info.side_effect.has_side_effect()
+        };
+      if has_side_effects || bail_eval {
         include_statement(ctx, module, stmt_info_id);
       }
     });
@@ -405,9 +412,6 @@ fn include_symbol(ctx: &mut Context, symbol_ref: SymbolRef) {
 
   if let Module::Normal(module) = &ctx.modules[canonical_ref.owner] {
     include_module(ctx, module);
-    if module.stmt_infos.declared_stmts_by_symbol(&canonical_ref).is_empty() {
-      include_statement(ctx, module, StmtInfoIdx::new(1));
-    }
     module.stmt_infos.declared_stmts_by_symbol(&canonical_ref).iter().copied().for_each(
       |stmt_info_id| {
         include_statement(ctx, module, stmt_info_id);
@@ -424,9 +428,29 @@ fn include_statement(ctx: &mut Context, module: &NormalModule, stmt_info_id: Stm
   }
 
   let stmt_info = module.stmt_infos.get(stmt_info_id);
+  // FIXME: bailout for require() import for now
+  // it is fine for now, since webpack did not support it either
+  // ```js
+  // const cjs = require('./cjs.js')
+  // ```
 
   // include the statement itself
   *is_included = true;
+
+  stmt_info.import_records.iter().for_each(|import_record_idx| {
+    let import_record = &module.import_records[*import_record_idx];
+    let module_idx = import_record.resolved_module;
+    let Some(m) = ctx.modules[module_idx].as_normal() else {
+      // If the import record is not a normal module, we don't need to include it.
+      return;
+    };
+    if m.exports_kind == ExportsKind::Esm || import_record.kind == ImportKind::Import {
+      return;
+    }
+    m.named_exports.iter().for_each(|(name, item)| {
+      include_symbol(ctx, item.referenced);
+    });
+  });
 
   stmt_info.referenced_symbols.iter().for_each(|reference_ref| {
     if let Some(member_expr_resolution) = match reference_ref {
@@ -453,6 +477,21 @@ fn include_statement(ctx: &mut Context, module: &NormalModule, stmt_info_id: Stm
       }
     } else {
       let original_ref = reference_ref.symbol_ref();
+      // For case:
+      // ```js
+      // import cjs from './cjs.js'
+      // console.log(cjs)
+      // ```
+      // We need to include all exports in `cjs.js` module since the namespace ref is used
+      ctx.metas[module.idx]
+        .local_facade_cjs_namespace_map
+        .get(original_ref)
+        .and_then(|idx| ctx.modules[*idx].as_normal())
+        .inspect(|m| {
+          m.named_exports.iter().for_each(|(name, item)| {
+            include_symbol(ctx, item.referenced);
+          });
+        });
       std::iter::once(original_ref)
         .chain(
           ctx.normal_symbol_exports_chain_map.get(original_ref).map(Vec::as_slice).unwrap_or(&[]),

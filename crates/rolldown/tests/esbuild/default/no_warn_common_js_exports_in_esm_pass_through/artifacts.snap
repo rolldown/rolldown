@@ -58,7 +58,6 @@ export { __commonJS };
 
 ```js
 //#region cjs-in-esm.js
-let foo = 1;
 exports.foo = 2;
 module.exports = 3;
 
@@ -69,17 +68,18 @@ export { foo };
 
 ```js
 import { __commonJS } from "./chunk.js";
-import { foo } from "bar";
+import { foo as foo$1 } from "bar";
 
 //#region import-in-cjs.js
 var require_import_in_cjs = __commonJS({ "import-in-cjs.js"(exports, module) {
-	exports.foo = foo;
-	module.exports = foo;
+	exports.foo = foo$1;
+	module.exports = foo$1;
 } });
 
 //#endregion
 export default require_import_in_cjs();
 
+export { foo };
 ```
 ## no-warnings-here.js
 

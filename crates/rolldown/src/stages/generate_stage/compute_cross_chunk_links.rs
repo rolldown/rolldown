@@ -287,6 +287,7 @@ impl GenerateStage<'_> {
     let symbols = &mut self.link_output.symbol_db;
     for (chunk_id, symbol_list) in chunk_id_to_symbols_vec {
       for declared in symbol_list {
+        let declared = declared.inner();
         if cfg!(debug_assertions) {
           let symbol_data = symbols.get(declared);
           debug_assert!(

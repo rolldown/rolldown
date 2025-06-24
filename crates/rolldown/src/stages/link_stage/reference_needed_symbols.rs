@@ -2,7 +2,8 @@ use std::{ptr::addr_of, sync::Mutex};
 
 use rolldown_common::{
   ExportsKind, ImportKind, ImportRecordIdx, ImportRecordMeta, Module, ModuleIdx, ModuleTable,
-  OutputFormat, ResolvedImportRecord, StmtInfoMeta, WrapKind, side_effects::DeterminedSideEffects,
+  OutputFormat, ResolvedImportRecord, StmtInfoMeta, TaggedSymbolRef, WrapKind,
+  side_effects::DeterminedSideEffects,
 };
 use rolldown_utils::{
   concat_string,
@@ -258,7 +259,7 @@ impl LinkStage<'_> {
         });
 
         symbols_to_be_declared.into_iter().for_each(|(symbol_ref, idx)| {
-          stmt_infos.declare_symbol_for_stmt(idx, symbol_ref);
+          stmt_infos.declare_symbol_for_stmt(idx, TaggedSymbolRef::Normal(symbol_ref));
         });
 
         (importer_idx, record_meta_pairs)

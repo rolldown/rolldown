@@ -15,9 +15,12 @@
 
 use napi_derive::napi;
 
-#[cfg(not(target_family = "wasm"))]
+// #[cfg(not(target_family = "wasm"))]
+// #[global_allocator]
+// static ALLOC: mimalloc_safe::MiMalloc = mimalloc_safe::MiMalloc;
+
 #[global_allocator]
-static ALLOC: mimalloc_safe::MiMalloc = mimalloc_safe::MiMalloc;
+static ALLOC: dhat::Alloc = dhat::Alloc;
 
 pub mod binding_bundler_impl;
 pub mod options;
@@ -50,4 +53,24 @@ pub fn shutdown_async_runtime() {
 pub fn start_async_runtime() {
   #[cfg(all(target_family = "wasm", tokio_unstable))]
   napi::bindgen_prelude::start_async_runtime();
+}
+
+#[napi]
+pub struct DhatProfiler {
+  profiler: Option<dhat::Profiler>,
+}
+
+#[napi]
+impl DhatProfiler {
+  #[napi(constructor)]
+  pub fn new() -> Self {
+    Self {
+      profiler: Some(dhat::Profiler::new_heap()),
+    }
+  }
+
+  #[napi]
+  pub fn close(&mut self) {
+    self.profiler.take();
+  }
 }

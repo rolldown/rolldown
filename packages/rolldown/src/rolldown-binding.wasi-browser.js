@@ -101,6 +101,7 @@ export const BindingTransformPluginContext = __napiModule.exports.BindingTransfo
 export const BindingWatcher = __napiModule.exports.BindingWatcher
 export const BindingWatcherChangeData = __napiModule.exports.BindingWatcherChangeData
 export const BindingWatcherEvent = __napiModule.exports.BindingWatcherEvent
+export const DhatProfiler = __napiModule.exports.DhatProfiler
 export const ParallelJsPluginRegistry = __napiModule.exports.ParallelJsPluginRegistry
 export const BindingAttachDebugInfo = __napiModule.exports.BindingAttachDebugInfo
 export const BindingBuiltinPluginName = __napiModule.exports.BindingBuiltinPluginName

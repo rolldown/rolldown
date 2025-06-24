@@ -376,7 +376,7 @@ if (!nativeBinding) {
   throw new Error(`Failed to load native binding`)
 }
 
-const { Severity, ParseResult, ExportExportNameKind, ExportImportNameKind, ExportLocalNameKind, getBufferOffset, ImportNameKind, parseAsync, parseAsyncRaw, parseSync, parseSyncRaw, rawTransferSupported, ResolverFactory, EnforceExtension, ModuleType, sync, HelperMode, isolatedDeclaration, moduleRunnerTransform, transform, BindingBundleEndEventData, BindingBundleErrorEventData, BindingBundler, BindingBundlerImpl, BindingCallableBuiltinPlugin, BindingError, BindingHmrOutput, BindingModuleInfo, BindingNormalizedOptions, BindingOutputAsset, BindingOutputChunk, BindingOutputs, BindingPluginContext, BindingRenderedChunk, BindingRenderedChunkMeta, BindingRenderedModule, BindingTransformPluginContext, BindingWatcher, BindingWatcherChangeData, BindingWatcherEvent, ParallelJsPluginRegistry, BindingAttachDebugInfo, BindingBuiltinPluginName, BindingHookSideEffects, BindingJsx, BindingLogLevel, BindingPluginOrder, FilterTokenKind, registerPlugins, shutdownAsyncRuntime, startAsyncRuntime } = nativeBinding
+const { Severity, ParseResult, ExportExportNameKind, ExportImportNameKind, ExportLocalNameKind, getBufferOffset, ImportNameKind, parseAsync, parseAsyncRaw, parseSync, parseSyncRaw, rawTransferSupported, ResolverFactory, EnforceExtension, ModuleType, sync, HelperMode, isolatedDeclaration, moduleRunnerTransform, transform, BindingBundleEndEventData, BindingBundleErrorEventData, BindingBundler, BindingBundlerImpl, BindingCallableBuiltinPlugin, BindingError, BindingHmrOutput, BindingModuleInfo, BindingNormalizedOptions, BindingOutputAsset, BindingOutputChunk, BindingOutputs, BindingPluginContext, BindingRenderedChunk, BindingRenderedChunkMeta, BindingRenderedModule, BindingTransformPluginContext, BindingWatcher, BindingWatcherChangeData, BindingWatcherEvent, DhatProfiler, ParallelJsPluginRegistry, BindingAttachDebugInfo, BindingBuiltinPluginName, BindingHookSideEffects, BindingJsx, BindingLogLevel, BindingPluginOrder, FilterTokenKind, registerPlugins, shutdownAsyncRuntime, startAsyncRuntime } = nativeBinding
 export { Severity }
 export { ParseResult }
 export { ExportExportNameKind }
@@ -417,6 +417,7 @@ export { BindingTransformPluginContext }
 export { BindingWatcher }
 export { BindingWatcherChangeData }
 export { BindingWatcherEvent }
+export { DhatProfiler }
 export { ParallelJsPluginRegistry }
 export { BindingAttachDebugInfo }
 export { BindingBuiltinPluginName }

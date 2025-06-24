@@ -218,10 +218,10 @@ debug = false
 
 [profile.release]
 codegen-units = 1
-debug = false # Set to `true` for debug information
+debug = true # Set to `true` for debug information
 lto = "fat"
 opt-level = 3
-strip = "symbols" # Set to `false` for debug information
+strip = false # Set to `false` for debug information
 
 [profile.release-debug]
 debug = true

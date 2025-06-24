@@ -125,6 +125,7 @@ module.exports.BindingTransformPluginContext = __napiModule.exports.BindingTrans
 module.exports.BindingWatcher = __napiModule.exports.BindingWatcher
 module.exports.BindingWatcherChangeData = __napiModule.exports.BindingWatcherChangeData
 module.exports.BindingWatcherEvent = __napiModule.exports.BindingWatcherEvent
+module.exports.DhatProfiler = __napiModule.exports.DhatProfiler
 module.exports.ParallelJsPluginRegistry = __napiModule.exports.ParallelJsPluginRegistry
 module.exports.BindingAttachDebugInfo = __napiModule.exports.BindingAttachDebugInfo
 module.exports.BindingBuiltinPluginName = __napiModule.exports.BindingBuiltinPluginName

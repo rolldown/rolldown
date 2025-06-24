@@ -177,3 +177,9 @@ export type {
   WatcherOptions,
   WatchOptions,
 };
+
+import { DhatProfiler } from './binding';
+const dhatProfiler = new DhatProfiler();
+process.on('exit', () => {
+  dhatProfiler.close();
+});

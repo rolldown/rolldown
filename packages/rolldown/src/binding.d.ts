@@ -1256,6 +1256,11 @@ export declare class BindingWatcherEvent {
   bundleErrorData(): BindingBundleErrorEventData
 }
 
+export declare class DhatProfiler {
+  constructor()
+  close(): void
+}
+
 export declare class ParallelJsPluginRegistry {
   id: number
   workerCount: number

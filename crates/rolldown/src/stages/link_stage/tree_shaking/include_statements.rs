@@ -13,6 +13,7 @@ use rolldown_common::{
 };
 use rolldown_utils::rayon::{IntoParallelRefMutIterator, ParallelIterator};
 use rustc_hash::{FxHashMap, FxHashSet};
+use tracing::instrument::WithSubscriber;
 
 use crate::{
   stages::link_stage::LinkStage, types::linking_metadata::LinkingMetadataVec,
@@ -30,6 +31,7 @@ struct Context<'a> {
   used_symbol_refs: &'a mut FxHashSet<SymbolRef>,
   options: &'a NormalizedBundlerOptions,
   normal_symbol_exports_chain_map: &'a FxHashMap<SymbolRef, Vec<SymbolRef>>,
+  bailout_cjs_tree_shaking_modules: FxHashSet<ModuleIdx>,
 }
 
 impl LinkStage<'_> {
@@ -49,7 +51,6 @@ impl LinkStage<'_> {
     let mut used_symbol_refs = FxHashSet::default();
     let mut is_module_included_vec: IndexVec<ModuleIdx, bool> =
       oxc_index::index_vec![false; self.module_table.modules.len()];
-
     let context = &mut Context {
       modules: &self.module_table.modules,
       symbols: &self.symbols,
@@ -62,6 +63,7 @@ impl LinkStage<'_> {
       used_symbol_refs: &mut used_symbol_refs,
       options: self.options,
       normal_symbol_exports_chain_map: &self.normal_symbol_exports_chain_map,
+      bailout_cjs_tree_shaking_modules: FxHashSet::default(),
     };
 
     let (user_defined_entries, mut dynamic_entries): (Vec<_>, Vec<_>) =
@@ -79,6 +81,7 @@ impl LinkStage<'_> {
             return;
           }
         };
+        context.bailout_cjs_tree_shaking_modules.insert(module.idx);
         let meta = &self.metas[entry.id];
         meta.referenced_symbols_by_entry_point_chunk.iter().for_each(|symbol_ref| {
           if let Module::Normal(module) = &context.modules[symbol_ref.owner] {
@@ -139,6 +142,19 @@ impl LinkStage<'_> {
 
     // update entries with lived only.
     self.entries = user_defined_entries.into_iter().chain(dynamic_entries).collect();
+
+    // It could be safely take since it is no more used.
+    for idx in std::mem::take(&mut context.bailout_cjs_tree_shaking_modules) {
+      let Some(module) = context.modules[idx].as_normal() else {
+        continue;
+      };
+      if module.exports_kind != ExportsKind::CommonJs {
+        continue;
+      }
+      module.named_exports.iter().for_each(|(_name, local)| {
+        include_symbol(context, local.referenced);
+      });
+    }
 
     // mark those dynamic import records as dead, in case we could eliminate them later in ast
     // visitor.
@@ -428,15 +444,15 @@ fn include_statement(ctx: &mut Context, module: &NormalModule, stmt_info_id: Stm
   }
 
   let stmt_info = module.stmt_infos.get(stmt_info_id);
+
+  // include the statement itself
+  *is_included = true;
+
   // FIXME: bailout for require() import for now
   // it is fine for now, since webpack did not support it either
   // ```js
   // const cjs = require('./cjs.js')
   // ```
-
-  // include the statement itself
-  *is_included = true;
-
   stmt_info.import_records.iter().for_each(|import_record_idx| {
     let import_record = &module.import_records[*import_record_idx];
     let module_idx = import_record.resolved_module;
@@ -444,12 +460,11 @@ fn include_statement(ctx: &mut Context, module: &NormalModule, stmt_info_id: Stm
       // If the import record is not a normal module, we don't need to include it.
       return;
     };
-    if m.exports_kind == ExportsKind::Esm || import_record.kind == ImportKind::Import {
+    if !matches!(m.exports_kind, ExportsKind::CommonJs) || import_record.kind == ImportKind::Import
+    {
       return;
     }
-    m.named_exports.iter().for_each(|(name, item)| {
-      include_symbol(ctx, item.referenced);
-    });
+    ctx.bailout_cjs_tree_shaking_modules.insert(module_idx);
   });
 
   stmt_info.referenced_symbols.iter().for_each(|reference_ref| {
@@ -483,15 +498,11 @@ fn include_statement(ctx: &mut Context, module: &NormalModule, stmt_info_id: Stm
       // console.log(cjs)
       // ```
       // We need to include all exports in `cjs.js` module since the namespace ref is used
-      ctx.metas[module.idx]
-        .local_facade_cjs_namespace_map
-        .get(original_ref)
-        .and_then(|idx| ctx.modules[*idx].as_normal())
-        .inspect(|m| {
-          m.named_exports.iter().for_each(|(name, item)| {
-            include_symbol(ctx, item.referenced);
-          });
-        });
+      ctx.metas[module.idx].local_facade_cjs_namespace_map.get(original_ref).inspect(
+        |module_idx| {
+          ctx.bailout_cjs_tree_shaking_modules.insert(**module_idx);
+        },
+      );
       std::iter::once(original_ref)
         .chain(
           ctx.normal_symbol_exports_chain_map.get(original_ref).map(Vec::as_slice).unwrap_or(&[]),

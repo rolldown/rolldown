@@ -24,10 +24,11 @@ pub struct ResolvedExport {
   // deferred to linking imports.
   pub potentially_ambiguous_symbol_refs: Option<Vec<SymbolRef>>,
   pub symbol_ref: SymbolRef,
+  pub is_facade: bool,
 }
 
 impl ResolvedExport {
-  pub fn new(symbol_ref: SymbolRef) -> Self {
-    Self { symbol_ref, potentially_ambiguous_symbol_refs: None }
+  pub fn new(symbol_ref: SymbolRef, is_facade: bool) -> Self {
+    Self { symbol_ref, potentially_ambiguous_symbol_refs: None, is_facade }
   }
 }

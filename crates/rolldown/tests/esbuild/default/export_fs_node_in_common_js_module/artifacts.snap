@@ -32,19 +32,18 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## entry.js
 
 ```js
-import * as fs$1 from "fs";
-import { readFileSync as readFileSync$1 } from "fs";
+import * as fs from "fs";
+import { readFileSync } from "fs";
 
 
 //#region entry.js
 var require_entry = __commonJS({ "entry.js"(exports) {
-	exports.fs = fs$1;
-	exports.readFileSync = readFileSync$1;
+	exports.fs = fs;
+	exports.readFileSync = readFileSync;
 	exports.foo = 123;
 } });
 
 //#endregion
 export default require_entry();
 
-export { foo, fs, readFileSync };
 ```

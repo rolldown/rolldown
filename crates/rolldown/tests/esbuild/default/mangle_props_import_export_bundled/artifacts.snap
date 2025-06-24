@@ -39,7 +39,6 @@ var require_entry_cjs = __commonJS({ "entry-cjs.js"(exports) {
 //#endregion
 export default require_entry_cjs();
 
-export { bar_ };
 ```
 ## entry-esm.js
 

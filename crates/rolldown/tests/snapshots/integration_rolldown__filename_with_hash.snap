@@ -450,7 +450,7 @@ expression: output
 
 # tests/esbuild/dce/package_json_side_effects_true_keep_common_js
 
-- src_entry-!~{000}~.js => src_entry-0GHGisx2.js
+- src_entry-!~{000}~.js => src_entry-rM7KHJ59.js
 
 # tests/esbuild/dce/package_json_side_effects_true_keep_es6
 
@@ -1493,7 +1493,7 @@ expression: output
 
 # tests/esbuild/default/re_export_common_js_as_es6
 
-- entry-!~{000}~.js => entry-DtEaGlW1.js
+- entry-!~{000}~.js => entry-Dj2y3UMf.js
 
 # tests/esbuild/default/re_export_default_external_common_js
 
@@ -1839,15 +1839,15 @@ expression: output
 
 # tests/esbuild/importstar/export_other_as_namespace_common_js
 
-- entry-!~{000}~.js => entry-BRarpRE9.js
+- entry-!~{000}~.js => entry-GqyY7GLo.js
 
 # tests/esbuild/importstar/export_other_common_js
 
-- entry-!~{000}~.js => entry-Df_h0iPD.js
+- entry-!~{000}~.js => entry-9B98HuZj.js
 
 # tests/esbuild/importstar/export_other_nested_common_js
 
-- entry-!~{000}~.js => entry-BWwlQiaO.js
+- entry-!~{000}~.js => entry-DrhBPJNM.js
 
 # tests/esbuild/importstar/export_self_and_import_self_common_js
 
@@ -1907,7 +1907,7 @@ expression: output
 
 # tests/esbuild/importstar/import_export_other_as_namespace_common_js
 
-- entry-!~{000}~.js => entry-BRarpRE9.js
+- entry-!~{000}~.js => entry-GqyY7GLo.js
 
 # tests/esbuild/importstar/import_export_self_as_namespace_es6
 
@@ -3680,7 +3680,7 @@ expression: output
 
 # tests/rolldown/cjs_compat/exoprt_star_of_cjs
 
-- main-!~{000}~.js => main-DUPb7QKB.js
+- main-!~{000}~.js => main-C9yVEzad.js
 
 # tests/rolldown/cjs_compat/import_reexport_between_esm_and_cjs/esm_import_cjs_import_star_as
 
@@ -3692,11 +3692,11 @@ expression: output
 
 # tests/rolldown/cjs_compat/import_reexport_between_esm_and_cjs/esm_import_esm_which_export_all_from_cjs_named_import
 
-- main-!~{000}~.js => main-DzxePG0p.js
+- main-!~{000}~.js => main-B40z58Mp.js
 
 # tests/rolldown/cjs_compat/import_reexport_between_esm_and_cjs/esm_import_esm_which_export_all_from_multiple_cjs_named_import
 
-- main-!~{000}~.js => main-C-Ar6s-k.js
+- main-!~{000}~.js => main-B8DXr8-0.js
 
 # tests/rolldown/cjs_compat/import_reexport_between_esm_and_cjs/esm_reexport_cjs_default
 
@@ -3704,7 +3704,7 @@ expression: output
 
 # tests/rolldown/cjs_compat/import_reexport_between_esm_and_cjs/esm_reexport_cjs_named_reexport
 
-- main-!~{000}~.js => main-7OSbBuRR.js
+- main-!~{000}~.js => main-DTr9Mob8.js
 
 # tests/rolldown/cjs_compat/import_the_same_cjs_twice
 
@@ -3712,7 +3712,7 @@ expression: output
 
 # tests/rolldown/cjs_compat/issue_3364
 
-- main-!~{000}~.js => main-CL6yJF2Y.js
+- main-!~{000}~.js => main-DHi4x7nm.js
 
 # tests/rolldown/cjs_compat/mix-cjs-esm
 
@@ -3737,7 +3737,7 @@ expression: output
 
 # tests/rolldown/cjs_compat/partial_cjs_ns_merge_2
 
-- main-!~{000}~.js => main-BWcMr11Q.js
+- main-!~{000}~.js => main-dxS21OQk.js
 
 # tests/rolldown/cjs_compat/partial_cjs_ns_merge_optimize
 
@@ -3751,7 +3751,7 @@ expression: output
 
 # tests/rolldown/cjs_compat/react-like
 
-- main-!~{000}~.js => main-8zELAbr8.js
+- main-!~{000}~.js => main-BMtp0CxZ.js
 
 # tests/rolldown/cjs_compat/reexport_commonjs
 
@@ -3781,7 +3781,7 @@ expression: output
 
 # tests/rolldown/cjs_compat/unnecessary_compat_default_property_access
 
-- main-!~{000}~.js => main-DVTiJu49.js
+- main-!~{000}~.js => main-CBQIABRR.js
 
 # tests/rolldown/code_splitting/basic
 
@@ -4573,17 +4573,17 @@ expression: output
 
 # tests/rolldown/issues/2038/b
 
-- main-!~{000}~.js => main-C1cDEFsi.js
-- a-!~{005}~.js => a-CW6T2kVl.js
-- b-!~{001}~.js => b-Cp4puIQ_.js
-- b-!~{003}~.js => b-Deb1t1ll.js
+- main-!~{000}~.js => main-DQTBAJ18.js
+- a-!~{005}~.js => a-Cymc6h0z.js
+- b-!~{001}~.js => b-BUL7cxFM.js
+- b-!~{003}~.js => b-Cc6rZumx.js
 
 # tests/rolldown/issues/2085
 
-- main-!~{000}~.js => main-bSSHm3pF.js
-- a-!~{003}~.js => a-CRN7sZVV.js
-- a-!~{001}~.js => a-D-vMO_OO.js
-- c-!~{005}~.js => c-bHL-AUMs.js
+- main-!~{000}~.js => main-CPji9zPT.js
+- a-!~{003}~.js => a-B0xdzvKN.js
+- a-!~{001}~.js => a-CpiVG6Kv.js
+- c-!~{005}~.js => c-Chk9JTfH.js
 
 # tests/rolldown/issues/2300
 
@@ -4701,9 +4701,9 @@ expression: output
 
 # tests/rolldown/issues/4289
 
-- main-!~{000}~.js => main-BjZFiMIo.js
+- main-!~{000}~.js => main-CV1W_INO.js
 - chunk-!~{001}~.js => chunk-e6zvK7dF.js
-- lib-!~{003}~.js => lib-DXD_OL-7.js
+- lib-!~{003}~.js => lib-CUzjxOD0.js
 
 # tests/rolldown/issues/4324
 
@@ -4719,7 +4719,7 @@ expression: output
 
 # tests/rolldown/issues/4443
 
-- main-!~{000}~.js => main-Bx8x2av3.js
+- main-!~{000}~.js => main-BbPMjiyU.js
 
 # tests/rolldown/issues/4459
 
@@ -4975,7 +4975,7 @@ expression: output
 
 # tests/rolldown/resolve/attach_correct_package_json
 
-- main-!~{000}~.js => main-Do9XgdS8.js
+- main-!~{000}~.js => main-BZwxZooe.js
 
 # tests/rolldown/resolve/hash_tag_as_dir_name
 
@@ -5119,11 +5119,11 @@ expression: output
 
 # tests/rolldown/topics/bundler_esm_cjs_tests/26
 
-- entry-!~{000}~.js => entry-CdO4mWdw.js
+- entry-!~{000}~.js => entry-CJbF2WDd.js
 
 # tests/rolldown/topics/bundler_esm_cjs_tests/27
 
-- entry-!~{000}~.js => entry-BOG_Tglh.js
+- entry-!~{000}~.js => entry-Bt4PmQrK.js
 
 # tests/rolldown/topics/bundler_esm_cjs_tests/28
 
@@ -5229,7 +5229,7 @@ expression: output
 
 # tests/rolldown/topics/bundler_esm_cjs_tests/50
 
-- entry-!~{000}~.js => entry-CpKn_mmy.js
+- entry-!~{000}~.js => entry-DyoLnP0L.js
 
 # tests/rolldown/topics/bundler_esm_cjs_tests/51
 
@@ -5237,7 +5237,7 @@ expression: output
 
 # tests/rolldown/topics/bundler_esm_cjs_tests/52
 
-- entry-!~{000}~.js => entry-culu5tI7.js
+- entry-!~{000}~.js => entry-Cmk7xzrP.js
 
 # tests/rolldown/topics/bundler_esm_cjs_tests/53
 
@@ -5245,7 +5245,7 @@ expression: output
 
 # tests/rolldown/topics/bundler_esm_cjs_tests/54
 
-- entry-!~{000}~.js => entry-k-irXwK3.js
+- entry-!~{000}~.js => entry-DF4_0-M4.js
 
 # tests/rolldown/topics/bundler_esm_cjs_tests/55
 

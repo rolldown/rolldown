@@ -1,6 +1,20 @@
 ---
 source: crates/rolldown_testing/src/integration_test.rs
 ---
+# warnings
+
+## IMPORT_IS_UNDEFINED
+
+```text
+[IMPORT_IS_UNDEFINED] Warning: Import `Children` will always be undefined because there is no matching export in 'react.js'
+   ╭─[ lib.js:3:3 ]
+   │
+ 3 │   React.Children.forEach(children, function (child) {
+   │   ───────────┬──────────  
+   │              ╰──────────── 
+───╯
+
+```
 # Assets
 
 ## main.js
@@ -17,7 +31,7 @@ var require_react = __commonJS({ "react.js"(exports, module) {
 var lib_exports = {};
 __export(lib_exports, { default: () => toArray$1 });
 function toArray$1(children) {
-	import_react$1.default.Children.forEach(children, function(child) {});
+	(void 0).forEach(children, function(child) {});
 	return ret;
 }
 var import_react$1;

@@ -140,6 +140,7 @@ impl LinkStage<'_> {
           let resolved_export = ResolvedExport {
             symbol_ref: local.referenced,
             potentially_ambiguous_symbol_refs: None,
+            is_facade: local.is_facade,
           };
           (name.clone(), resolved_export)
         })
@@ -208,6 +209,9 @@ impl LinkStage<'_> {
     self.metas.par_iter_mut().for_each(|meta| {
       let mut sorted_and_non_ambiguous_resolved_exports = vec![];
       'next_export: for (exported_name, resolved_export) in &meta.resolved_exports {
+        if resolved_export.is_facade {
+          continue;
+        }
         if let Some(potentially_ambiguous_symbol_refs) =
           &resolved_export.potentially_ambiguous_symbol_refs
         {
@@ -389,6 +393,7 @@ impl LinkStage<'_> {
           let resolved_export = ResolvedExport {
             symbol_ref: named_export.referenced,
             potentially_ambiguous_symbol_refs: None,
+            is_facade: named_export.is_facade,
           };
           resolve_exports.insert(exported_name.clone(), resolved_export);
         }

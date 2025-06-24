@@ -69,18 +69,17 @@ export { foo };
 
 ```js
 import { __commonJS } from "./chunk.js";
-import { foo as foo$1 } from "bar";
+import { foo } from "bar";
 
 //#region import-in-cjs.js
 var require_import_in_cjs = __commonJS({ "import-in-cjs.js"(exports, module) {
-	exports.foo = foo$1;
-	module.exports = foo$1;
+	exports.foo = foo;
+	module.exports = foo;
 } });
 
 //#endregion
 export default require_import_in_cjs();
 
-export { foo };
 ```
 ## no-warnings-here.js
 

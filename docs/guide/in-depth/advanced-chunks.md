@@ -351,3 +351,9 @@ You could see, to make `a.js` work, we have to change the export signature of th
 Fortunately, Rolldown supports [`InputOptions.preserveEntrySignatures: 'allow-extension'`](/reference/config-options#preserveentrysignatures) to let you inform the bundler that it is allowed to change the export signature of the entry chunk.
 
 Enabling [`InputOptions.preserveEntrySignatures: 'allow-extension'`](/reference/config-options#preserveentrysignatures) will prevent the bundler from capturing the dependencies of the captured module.
+
+### Why is the chunk bigger than `maxSize`?
+
+If the input has a module that is bigger than `maxSize`, the generated chunk will contain that module and thus the chunk will be bigger than `maxSize`.
+
+This can be improved by splitting a single module into multiple chunks. But this is not supported yet.

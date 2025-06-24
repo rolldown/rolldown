@@ -1,20 +1,6 @@
 ---
 source: crates/rolldown_testing/src/integration_test.rs
 ---
-# warnings
-
-## IMPORT_IS_UNDEFINED
-
-```text
-[IMPORT_IS_UNDEFINED] Warning: Import `bar` will always be undefined because there is no matching export in 'foo.js'
-   ╭─[ entry.js:4:3 ]
-   │
- 4 │   foo.bar === void 0
-   │   ───┬───  
-   │      ╰───── 
-───╯
-
-```
 # Assets
 
 ## entry.js
@@ -29,7 +15,7 @@ var require_foo = __commonJS({ "foo.js"(exports, module) {
 //#endregion
 //#region entry.js
 var import_foo = __toESM(require_foo());
-input.works = import_foo.default[Math.random() < 1 && "default"].bar === 123 && void 0 === void 0;
+input.works = import_foo.default[Math.random() < 1 && "default"].bar === 123 && import_foo.default.bar === void 0;
 
 //#endregion
 ```
@@ -37,20 +23,6 @@ input.works = import_foo.default[Math.random() < 1 && "default"].bar === 123 && 
 
 Variant: (format: Cjs)
 
-# warnings
-
-## IMPORT_IS_UNDEFINED
-
-```text
-[IMPORT_IS_UNDEFINED] Warning: Import `bar` will always be undefined because there is no matching export in 'foo.js'
-   ╭─[ entry.js:4:3 ]
-   │
- 4 │   foo.bar === void 0
-   │   ───┬───  
-   │      ╰───── 
-───╯
-
-```
 # Assets
 
 ## entry.js
@@ -66,7 +38,7 @@ var require_foo = __commonJS({ "foo.js"(exports, module) {
 //#endregion
 //#region entry.js
 var import_foo = __toESM(require_foo());
-input.works = import_foo.default[Math.random() < 1 && "default"].bar === 123 && void 0 === void 0;
+input.works = import_foo.default[Math.random() < 1 && "default"].bar === 123 && import_foo.default.bar === void 0;
 
 //#endregion
 ```
@@ -74,20 +46,6 @@ input.works = import_foo.default[Math.random() < 1 && "default"].bar === 123 && 
 
 Variant: (format: Iife)
 
-# warnings
-
-## IMPORT_IS_UNDEFINED
-
-```text
-[IMPORT_IS_UNDEFINED] Warning: Import `bar` will always be undefined because there is no matching export in 'foo.js'
-   ╭─[ entry.js:4:3 ]
-   │
- 4 │   foo.bar === void 0
-   │   ───┬───  
-   │      ╰───── 
-───╯
-
-```
 # Assets
 
 ## entry.js
@@ -105,7 +63,7 @@ var require_foo = __commonJS({ "foo.js"(exports, module) {
 //#endregion
 //#region entry.js
 var import_foo = __toESM(require_foo());
-input.works = import_foo.default[Math.random() < 1 && "default"].bar === 123 && void 0 === void 0;
+input.works = import_foo.default[Math.random() < 1 && "default"].bar === 123 && import_foo.default.bar === void 0;
 
 //#endregion
 })();
@@ -114,20 +72,6 @@ input.works = import_foo.default[Math.random() < 1 && "default"].bar === 123 && 
 
 Variant: (format: Umd)
 
-# warnings
-
-## IMPORT_IS_UNDEFINED
-
-```text
-[IMPORT_IS_UNDEFINED] Warning: Import `bar` will always be undefined because there is no matching export in 'foo.js'
-   ╭─[ entry.js:4:3 ]
-   │
- 4 │   foo.bar === void 0
-   │   ───┬───  
-   │      ╰───── 
-───╯
-
-```
 # Assets
 
 ## entry.js
@@ -148,7 +92,7 @@ var require_foo = __commonJS({ "foo.js"(exports, module) {
 //#endregion
 //#region entry.js
 var import_foo = __toESM(require_foo());
-input.works = import_foo.default[Math.random() < 1 && "default"].bar === 123 && void 0 === void 0;
+input.works = import_foo.default[Math.random() < 1 && "default"].bar === 123 && import_foo.default.bar === void 0;
 
 //#endregion
 });

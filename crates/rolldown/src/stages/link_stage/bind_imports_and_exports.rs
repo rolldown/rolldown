@@ -472,7 +472,9 @@ impl LinkStage<'_> {
                     // when we try to resolve `a.b.c`, and found that `b` is not exported by module
                     // that `a` pointed to, convert the `a.b.c` into `void 0` if module `a` do not
                     // have any dynamic exports.
-                    if !self.metas[canonical_ref_owner.idx].has_dynamic_exports {
+                    if !self.metas[canonical_ref_owner.idx].has_dynamic_exports
+                      && canonical_ref_owner.exports_kind != ExportsKind::CommonJs
+                    {
                       resolved_map.insert(
                         member_expr_ref.span,
                         MemberExprRefResolution {

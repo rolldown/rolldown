@@ -49,8 +49,9 @@ pub async fn create_ecma_view(
   );
 
   let ScanResult {
+    commonjs_exports,
     named_imports,
-    named_exports,
+    mut named_exports,
     stmt_infos,
     import_records: raw_import_records,
     default_export_ref,
@@ -73,6 +74,8 @@ pub async fn create_ecma_view(
     directive_range,
     dummy_record_set,
   } = scanner.scan(ast.program())?;
+
+  named_exports.extend(commonjs_exports);
 
   if !errors.is_empty() {
     return Err(errors.into());

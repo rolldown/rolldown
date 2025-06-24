@@ -199,10 +199,10 @@ impl<'me, 'ast: 'me> Visit<'ast> for AstScanner<'me, 'ast> {
 
                 self.declare_link_only_symbol_ref(exported_symbol.symbol);
 
-                self
-                  .result
-                  .named_exports
-                  .insert(export_name.into(), LocalExport { referenced: exported_symbol, span });
+                self.result.commonjs_exports.insert(
+                  export_name.into(),
+                  LocalExport { referenced: exported_symbol, span, is_facade: true },
+                );
               };
             };
           }

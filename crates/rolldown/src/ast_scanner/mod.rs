@@ -56,6 +56,17 @@ pub struct ScanResult {
   /// module
   pub named_imports: FxIndexMap<SymbolRef, NamedImport>,
   pub named_exports: FxHashMap<Rstr, LocalExport>,
+  /// Used to store all exports in commonjs module, why not reuse `named_exports`?
+  /// Because It is legal to use commonjs exports syntax in a es module, here is an example:
+  /// ```js
+  /// export const foo = 1;
+  /// exports.foo = 20;
+  /// ```
+  /// Although the `exports.foo` will just be treated as a global variable assign, if we reused
+  /// `named_exports`, the `foo` will be overridden by the `exports.foo` and cause a bug(Because we
+  /// may not know if it is a esm at the time, a simple case would be swap the order of two export
+  /// stmt).
+  pub commonjs_exports: FxHashMap<Rstr, LocalExport>,
   pub stmt_infos: StmtInfos,
   pub import_records: IndexVec<ImportRecordIdx, RawImportRecord>,
   pub default_export_ref: SymbolRef,
@@ -176,6 +187,7 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
       hmr_hot_ref,
       directive_range: vec![],
       dummy_record_set: FxHashSet::default(),
+      commonjs_exports: FxHashMap::default(),
     };
 
     Self {
@@ -265,6 +277,12 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
           }
         }
       }
+    }
+    // Filtering out all facade export like `exports.test = 1`,
+    // It is legal to use commonjs exports syntax in a es module, although
+    // they will be treated as normal global variable assign.
+    if matches!(exports_kind, ExportsKind::Esm) {
+      self.result.commonjs_exports.clear();
     }
 
     self.result.exports_kind = exports_kind;
@@ -418,10 +436,10 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
       ref_flags.insert(SymbolRefFlags::IS_NOT_REASSIGNED);
     }
 
-    self
-      .result
-      .named_exports
-      .insert(export_name.into(), LocalExport { referenced: (self.idx, local).into(), span });
+    self.result.named_exports.insert(
+      export_name.into(),
+      LocalExport { referenced: (self.idx, local).into(), span, is_facade: false },
+    );
   }
 
   fn add_local_default_export(&mut self, local: SymbolId, span: Span) {
@@ -432,7 +450,7 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
     self
       .result
       .named_exports
-      .insert("default".into(), LocalExport { referenced: symbol_ref, span });
+      .insert("default".into(), LocalExport { referenced: symbol_ref, span, is_facade: false });
   }
 
   /// Record `export { [imported] as [export_name] } from ...` statement.
@@ -491,7 +509,11 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
     };
     self.result.named_exports.insert(
       export_name.into(),
-      LocalExport { referenced: generated_imported_as_ref, span: name_import.span_imported },
+      LocalExport {
+        referenced: generated_imported_as_ref,
+        span: name_import.span_imported,
+        is_facade: false,
+      },
     );
     self.result.named_imports.insert(generated_imported_as_ref, name_import);
   }
@@ -519,7 +541,11 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
 
     self.result.named_exports.insert(
       export_name.into(),
-      LocalExport { referenced: generated_imported_as_ref, span: name_import.span_imported },
+      LocalExport {
+        referenced: generated_imported_as_ref,
+        span: name_import.span_imported,
+        is_facade: false,
+      },
     );
     self.result.named_imports.insert(generated_imported_as_ref, name_import);
   }

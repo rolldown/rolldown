@@ -98,7 +98,7 @@ fn update_module_default_export_info(
 ) {
   module
     .named_exports
-    .insert("default".into(), LocalExport { span: SPAN, referenced: default_symbol_ref });
+    .insert("default".into(), LocalExport { span: SPAN, referenced: default_symbol_ref, is_facade: false });
   // needs to support `preferConst`, so default statement may not be the second stmt info
   module.stmt_infos.declare_symbol_for_stmt(idx, TaggedSymbolRef::Normal(default_symbol_ref));
 }
@@ -249,7 +249,7 @@ fn json_object_expr_to_esm(
     module.stmt_infos.add_stmt_info(stmt_info);
     module
       .named_exports
-      .insert(exported.clone(), LocalExport { span: SPAN, referenced: symbol_ref });
+      .insert(exported.clone(), LocalExport { span: SPAN, referenced: symbol_ref, is_facade: false });
   }
   // declare default export statement
   let stmt_info = StmtInfo::default()
@@ -260,7 +260,7 @@ fn json_object_expr_to_esm(
   module.stmt_infos.add_stmt_info(stmt_info);
   module
     .named_exports
-    .insert("default".into(), LocalExport { span: SPAN, referenced: default_export_ref });
+    .insert("default".into(), LocalExport { span: SPAN, referenced: default_export_ref, is_facade: false });
 
   // declare namespace object statement
   module.exports_kind = ExportsKind::Esm;

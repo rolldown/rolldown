@@ -441,7 +441,7 @@ impl TsconfigResolver {
   pub fn load_nearest_tsconfig(&self, path: &Path) -> Option<PathBuf> {
     // don't load tsconfig for paths in node_modules like esbuild does
     if is_in_node_modules(path) {
-      return None
+      return None;
     }
 
     if let Some(tsconfig) = self.find_nearest_tsconfig(path) {

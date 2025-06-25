@@ -258,45 +258,45 @@ pub fn normalize_binding_options(
     module_types = Some(tmp);
   }
 
-  let transform = match input_options.transform {
-    Some(options) => {
-      let es_target = normalize_es_target(options.target.as_ref());
-      let is_preserve = matches!(&options.jsx, Some(Either::A(preset)) if preset == "preserve");
-      Some(
-        oxc::transformer::TransformOptions::try_from(options)
-          .map(|transform_options| {
-            let jsx_preset = if is_preserve {
-              JsxPreset::Preserve
-            } else if transform_options.jsx.jsx_plugin {
-              JsxPreset::Enable
-            } else {
-              JsxPreset::Disable
-            };
-            TransformOptions::new(transform_options, es_target, jsx_preset)
-          })
-          .map_err(|err| napi::Error::new(napi::Status::GenericFailure, err))?,
-      )
-    }
-    None => input_options.jsx.map(|jsx| {
-      let mut jsx_preset = JsxPreset::Enable;
-      let mut transform_options = oxc::transformer::TransformOptions::default();
+  let without_jsx = input_options.transform.as_ref().is_none_or(|v| v.jsx.is_none());
+  let mut transform = if let Some(options) = input_options.transform {
+    let es_target = normalize_es_target(options.target.as_ref());
+    let is_preserve = matches!(&options.jsx, Some(Either::A(preset)) if preset == "preserve");
+    let transform_options = oxc::transformer::TransformOptions::try_from(options)
+      .map_err(|err| napi::Error::new(napi::Status::GenericFailure, err))?;
+
+    let jsx_preset = if is_preserve {
+      JsxPreset::Preserve
+    } else if transform_options.jsx.jsx_plugin {
+      JsxPreset::Enable
+    } else {
+      JsxPreset::Disable
+    };
+
+    TransformOptions::new(transform_options, es_target, jsx_preset)
+  } else {
+    TransformOptions::default()
+  };
+
+  if without_jsx {
+    if let Some(jsx) = input_options.jsx {
+      transform.jsx_preset = JsxPreset::Enable;
       match jsx {
         BindingJsx::Disable => {
-          jsx_preset = JsxPreset::Disable;
-          transform_options.jsx.jsx_plugin = false;
+          transform.jsx_preset = JsxPreset::Disable;
+          transform.jsx.jsx_plugin = false;
         }
         BindingJsx::Preserve => {
-          jsx_preset = JsxPreset::Preserve;
-          transform_options.jsx = oxc::transformer::JsxOptions::disable();
+          transform.jsx_preset = JsxPreset::Preserve;
+          transform.jsx = oxc::transformer::JsxOptions::disable();
         }
         BindingJsx::React => {
-          transform_options.jsx.runtime = oxc::transformer::JsxRuntime::Classic;
+          transform.jsx.runtime = oxc::transformer::JsxRuntime::Classic;
         }
         BindingJsx::ReactJsx => {}
       }
-      TransformOptions::new(transform_options, ESTarget::ESNext, jsx_preset)
-    }),
-  };
+    }
+  }
 
   let bundler_options = BundlerOptions {
     input: Some(input_options.input.into_iter().map(Into::into).collect()),
@@ -443,7 +443,7 @@ pub fn normalize_binding_options(
     keep_names: input_options.keep_names,
     polyfill_require: output_options.polyfill_require,
     defer_sync_scan_data: get_defer_sync_scan_data,
-    transform,
+    transform: Some(transform),
     make_absolute_externals_relative: input_options
       .make_absolute_externals_relative
       .map(Into::into),

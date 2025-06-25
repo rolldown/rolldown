@@ -7,8 +7,7 @@ mod new_url;
 pub mod side_effect_detector;
 
 use arcstr::ArcStr;
-use oxc::ast::ast::MemberExpression;
-use oxc::ast::{AstKind, ast};
+use oxc::ast::{AstKind, MemberExpressionKind, ast};
 use oxc::semantic::{Reference, ScopeFlags, ScopeId, Scoping};
 use oxc::span::SPAN;
 use oxc::{
@@ -746,12 +745,12 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
     let mut span = SPAN;
     let mut props = vec![];
     for ancestor_ast in self.visit_path.iter().rev().take(max_len) {
-      match ancestor_ast {
-        AstKind::MemberExpression(MemberExpression::StaticMemberExpression(expr)) => {
+      match ancestor_ast.as_member_expression_kind() {
+        Some(MemberExpressionKind::Static(expr)) => {
           span = ancestor_ast.span();
           props.push(expr.property.name.as_str().into());
         }
-        AstKind::MemberExpression(MemberExpression::ComputedMemberExpression(expr)) => {
+        Some(MemberExpressionKind::Computed(expr)) => {
           if let Some(name) = expr.static_property_name() {
             span = ancestor_ast.span();
             props.push(name.into());

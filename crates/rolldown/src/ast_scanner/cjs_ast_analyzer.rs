@@ -1,4 +1,5 @@
 use oxc::allocator::GetAddress;
+use oxc::ast::MemberExpressionKind;
 use oxc::ast::{
   AstKind,
   ast::{self, Expression, PropertyKey},
@@ -24,19 +25,21 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
     let cursor = self.visit_path.len() - 1;
     let parent = self.visit_path.get(cursor)?;
     let v = match parent {
-      AstKind::MemberExpression(member_expr) => match ty {
+      kind if kind.is_member_expression_kind() => match ty {
         // two scenarios:
         // 1. module.exports.__esModule = true;
         // 2. Object.defineProperty(module.exports, "__esModule", { value: true });
         CjsGlobalAssignmentType::ModuleExportsAssignment => {
+          let member_expr = kind.as_member_expression_kind().unwrap();
           let property_name = member_expr.static_property_name()?;
           if property_name != "exports" {
             return None;
           }
           let parent_parent_kind = self.visit_path.get(cursor - 1)?;
           match parent_parent_kind {
-            AstKind::MemberExpression(parent_parent) => {
-              self.check_assignment_target_property(parent_parent, cursor - 1)
+            parent_parent_kind if parent_parent_kind.is_member_expression_kind() => {
+              let parent_parent = kind.as_member_expression_kind().unwrap();
+              self.check_assignment_target_property(&parent_parent, cursor - 1)
             }
             AstKind::Argument(arg) => self.check_object_define_property(arg, cursor - 1),
             AstKind::SimpleAssignmentTarget(target) => {
@@ -51,7 +54,8 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
         CjsGlobalAssignmentType::ExportsAssignment => {
           // one scenario:
           // 1. exports.__esModule = true;
-          self.check_assignment_target_property(member_expr, cursor)
+          let member_expr = kind.as_member_expression_kind().unwrap();
+          self.check_assignment_target_property(&member_expr, cursor)
         }
       },
       AstKind::Argument(arg) => {
@@ -86,14 +90,14 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
   /// Check if the member expression is a valid assignment target for `__esModule` flag.
   fn check_assignment_target_property(
     &mut self,
-    member_expr: &ast::MemberExpression<'_>,
+    member_expr_kind: &MemberExpressionKind<'ast>,
     base_cursor: usize,
   ) -> Option<bool> {
-    let static_property_name = member_expr.static_property_name();
+    let static_property_name = member_expr_kind.static_property_name();
     if static_property_name.is_none() {
       self.ast_usage.remove(EcmaModuleAstUsage::AllStaticExportPropertyAccess);
     }
-    if static_property_name != Some("__esModule") {
+    if static_property_name.map(|name| name.as_str()) != Some("__esModule") {
       return Some(false);
     }
 

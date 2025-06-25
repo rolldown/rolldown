@@ -1,4 +1,46 @@
 
+## [1.0.0-beta.20] - 2025-06-25
+
+### 🚀 Features
+
+- rolldown: oxc v0.75.0 (#5069) by @Boshen
+- rolldown: oxc 0.74.0 (#5047) by @Boshen
+
+### 🐛 Bug Fixes
+
+- vite-tests: avoid crash when `packageJson.pnpm` is undefined (#5066) by @shulaoda
+- JSX preset options not working correctly (#5060) by @shulaoda
+- remove improper jsdoc of  builtin define plugin (#5046) by @AliceLanniste
+
+### 🚜 Refactor
+
+- passing vec length directly (#5050) by @ShroXd
+
+### 📚 Documentation
+
+- explain that a chunk may be bigger than `maxSize` (#5014) by @sapphi-red
+- update example about `withFilter` (#5040) by @IWANABETHATGUY
+
+### ⚡ Performance
+
+- preallocate smaller vec for hash placeholder finder (#5064) by @sapphi-red
+- reduce temporary memory usage by avoiding output chunk clone until needed (#5058) by @sapphi-red
+- skip empty write bundle hook with `hook_usage` meta (#5057) by @sapphi-red
+
+### ⚙️ Miscellaneous Tasks
+
+- deps: update dependency rolldown-plugin-dts to v0.13.12 (#5065) by @renovate[bot]
+- rolldown: upgrade NAPI-RS to 3.0.0-beta.10 (#5063) by @Brooooooklyn
+- bump oxc-resolver to v11.2.1 (#5061) by @Boshen
+- deps: update dependency tsdown to v0.12.9 (#5056) by @renovate[bot]
+- deps: update dependency rolldown-plugin-dts to v0.13.12 (#5054) by @renovate[bot]
+- remove long-commented-out code (#5048) by @shulaoda
+- deps: lock file maintenance npm packages (#5042) by @renovate[bot]
+- deps: lock file maintenance rust crates (#5043) by @renovate[bot]
+- deps: update taiki-e/install-action action to v2.54.0 (#5045) by @renovate[bot]
+- deps: update taiki-e/install-action action to v2.53.2 (#5041) by @renovate[bot]
+
+
 ## [1.0.0-beta.19] - 2025-06-22
 
 ### 🚀 Features

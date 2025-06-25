@@ -1465,6 +1465,7 @@ checksum = "610a5acd306ec67f907abe5567859a3c693fb9886eb1f012ab8f2a47bef3db51"
 [[package]]
 name = "notify"
 version = "8.0.0"
+source = "git+https://github.com/branchseer/notify?branch=watch-batch#fc215862bdc328649cb8ff1f15c0917f182450e9"
 dependencies = [
  "bitflags 2.9.1",
  "filetime",
@@ -1482,6 +1483,7 @@ dependencies = [
 [[package]]
 name = "notify-types"
 version = "2.0.0"
+source = "git+https://github.com/branchseer/notify?branch=watch-batch#fc215862bdc328649cb8ff1f15c0917f182450e9"
 
 [[package]]
 name = "nu-ansi-term"

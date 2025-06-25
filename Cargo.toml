@@ -236,4 +236,4 @@ debug = "full"
 strip = "none"
 
 [patch.crates-io]
-notify = { path = "../notify/notify" }
+notify = { git = "https://github.com/branchseer/notify", branch = "watch-batch" }

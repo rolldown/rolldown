@@ -1,3 +1,5 @@
+use std::sync::Arc;
+
 use arcstr::ArcStr;
 
 use crate::{OutputChunk, StrOrBytes};
@@ -12,8 +14,8 @@ pub struct OutputAsset {
 
 #[derive(Debug, Clone)]
 pub enum Output {
-  Chunk(Box<OutputChunk>),
-  Asset(Box<OutputAsset>),
+  Chunk(Arc<OutputChunk>),
+  Asset(Arc<OutputAsset>),
 }
 
 impl Output {

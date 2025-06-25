@@ -234,3 +234,6 @@ opt-level = "s"
 # it will strip these information for non-debug files
 debug = "full"
 strip = "none"
+
+[patch.crates-io]
+notify = { path = "../notify/notify" }

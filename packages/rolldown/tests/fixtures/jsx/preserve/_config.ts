@@ -9,6 +9,6 @@ export default defineTest({
   },
   afterTest: (output) => {
     const chunk = getOutputChunk(output)[0]
-    expect(chunk.code.includes('<div>test</div>')).toBe(true)
+    expect(chunk.code.replace(/\s+/g, '')).toBe(`//#regionmain.jsxconsole.log(<div>test</div>);//#endregion`)
   },
 })

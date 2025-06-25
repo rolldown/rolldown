@@ -5407,10 +5407,6 @@ expression: output
 - main-!~{000}~.js => main-DYMHAJIA.js
 - main-DYMHAJIA.js.map
 
-# tests/rolldown/topics/jsx/preserve
-
-- main-!~{000}~.js => main-CuuG3vVZ.js
-
 # tests/rolldown/topics/keep_names/declaration
 
 - main-!~{000}~.js => main-zKjYwJAp.js

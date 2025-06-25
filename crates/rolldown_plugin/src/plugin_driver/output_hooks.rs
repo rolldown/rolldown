@@ -207,7 +207,8 @@ impl PluginDriver {
     opts: &SharedNormalizedBundlerOptions,
     warnings: &mut Vec<BuildDiagnostic>,
   ) -> HookNoopReturn {
-    for (plugin_idx, plugin, ctx) in self.iter_plugin_with_context_by_order(&self.order_by_write_bundle_meta)
+    for (plugin_idx, plugin, ctx) in
+      self.iter_plugin_with_context_by_order(&self.order_by_write_bundle_meta)
     {
       if !self.plugin_usage_vec[plugin_idx].contains(HookUsage::WriteBundle) {
         continue;

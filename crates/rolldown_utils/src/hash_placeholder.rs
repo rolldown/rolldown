@@ -14,6 +14,8 @@ const MIN_HASH_SIZE: usize = 6;
 const MAX_HASH_SIZE: usize = 21;
 const DEFAULT_HASH_SIZE: usize = 8;
 
+const MINIMUM_HASH_PLACEHOLDER_LENGTH: usize = HASH_PLACEHOLDER_OVERHEAD + MIN_HASH_SIZE;
+
 pub fn hash_placeholder_left_finder() -> Finder<'static> {
   Finder::new(HASH_PLACEHOLDER_LEFT)
 }
@@ -43,8 +45,8 @@ pub fn find_hash_placeholders<'a>(
   s: &'a str,
   finder: &Finder<'static>,
 ) -> Vec<(usize, usize, &'a str)> {
-  // pre-allocate, the max number of placeholders is s.len() / 2
-  let mut results = Vec::with_capacity(s.len() / 2);
+  // pre-allocate, the max number of placeholders
+  let mut results = Vec::with_capacity(s.len() / MINIMUM_HASH_PLACEHOLDER_LENGTH);
   let mut start = 0;
 
   while let Some(left_pos) = finder.find(&s.as_bytes()[start..]) {

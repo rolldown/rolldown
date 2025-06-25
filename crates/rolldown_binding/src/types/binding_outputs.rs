@@ -1,3 +1,5 @@
+use std::sync::Arc;
+
 use super::{
   binding_output_asset::{BindingOutputAsset, JsOutputAsset},
   binding_output_chunk::{BindingOutputChunk, JsOutputChunk, update_output_chunk},
@@ -48,10 +50,10 @@ impl From<Vec<rolldown_common::Output>> for BindingOutputs {
     let mut assets = vec![];
     outputs.into_iter().for_each(|o| match o {
       rolldown_common::Output::Chunk(chunk) => {
-        chunks.push(BindingOutputChunk::new(*chunk));
+        chunks.push(BindingOutputChunk::new(chunk));
       }
       rolldown_common::Output::Asset(asset) => {
-        assets.push(BindingOutputAsset::new(*asset));
+        assets.push(BindingOutputAsset::new(asset));
       }
     });
     Self { chunks, assets, error: None }
@@ -82,7 +84,7 @@ pub fn update_outputs(
   }
   for asset in changed.assets {
     if let Some(index) = outputs.iter().position(|o| o.filename() == asset.filename) {
-      outputs[index] = rolldown_common::Output::Asset(Box::new(asset.into()));
+      outputs[index] = rolldown_common::Output::Asset(Arc::new(asset.into()));
     }
   }
   for deleted in changed.deleted {

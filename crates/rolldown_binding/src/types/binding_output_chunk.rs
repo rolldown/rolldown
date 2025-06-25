@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use std::{collections::HashMap, sync::Arc};
 
 use arcstr::ArcStr;
 use napi_derive::napi;
@@ -14,12 +14,12 @@ use super::{
 
 #[napi]
 pub struct BindingOutputChunk {
-  inner: rolldown_common::OutputChunk,
+  inner: Arc<rolldown_common::OutputChunk>,
 }
 
 #[napi]
 impl BindingOutputChunk {
-  pub fn new(inner: rolldown_common::OutputChunk) -> Self {
+  pub fn new(inner: Arc<rolldown_common::OutputChunk>) -> Self {
     Self { inner }
   }
 
@@ -118,13 +118,17 @@ pub struct JsOutputChunk {
 }
 
 pub fn update_output_chunk(
-  chunk: &mut rolldown_common::OutputChunk,
+  chunk: &mut Arc<rolldown_common::OutputChunk>,
   js_chunk: JsOutputChunk,
 ) -> anyhow::Result<()> {
-  chunk.code = js_chunk.code;
-  chunk.map = js_chunk.map.map(TryInto::try_into).transpose()?;
-  chunk.imports = js_chunk.imports.into_iter().map(Into::into).collect();
-  chunk.dynamic_imports = js_chunk.dynamic_imports.into_iter().map(Into::into).collect();
-  chunk.is_entry = js_chunk.is_entry; // used by nuxt
+  let old_chunk = (**chunk).clone();
+  *chunk = Arc::new(rolldown_common::OutputChunk {
+    code: js_chunk.code,
+    map: js_chunk.map.map(TryInto::try_into).transpose()?,
+    imports: js_chunk.imports.into_iter().map(Into::into).collect(),
+    dynamic_imports: js_chunk.dynamic_imports.into_iter().map(Into::into).collect(),
+    is_entry: js_chunk.is_entry, // used by nuxt
+    ..old_chunk
+  });
   Ok(())
 }

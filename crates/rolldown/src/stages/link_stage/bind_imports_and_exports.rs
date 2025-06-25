@@ -1,4 +1,4 @@
-use std::{borrow::Cow, collections::hash_map::Entry};
+use std::{borrow::Cow, collections::hash_map::Entry, ops::Not};
 
 use arcstr::ArcStr;
 use indexmap::IndexSet;
@@ -15,7 +15,7 @@ use rolldown_error::{AmbiguousExternalNamespaceModule, BuildDiagnostic};
 use rolldown_rstr::{Rstr, ToRstr};
 use rolldown_utils::{
   ecmascript::{is_validate_identifier_name, legitimize_identifier_name},
-  index_vec_ext::IndexVecExt,
+  index_vec_ext::{IndexVecExt, IndexVecRefExt},
   indexmap::{FxIndexMap, FxIndexSet},
   rayon::{IntoParallelRefIterator, IntoParallelRefMutIterator, ParallelIterator},
 };
@@ -94,6 +94,7 @@ pub enum ImportStatus {
     // owner: NormalModuleId,
     symbol: SymbolRef,
     potentially_ambiguous_export_star_refs: Vec<SymbolRef>,
+    is_cjs: bool,
   },
 
   /// The imported file is CommonJS and has unknown exports
@@ -131,8 +132,10 @@ impl LinkStage<'_> {
       let Module::Normal(module) = &self.module_table[module_id] else {
         return;
       };
-      dbg!(&module.id);
-      dbg!(&module.named_exports);
+      if !module.is_virtual() {
+        dbg!(&module.id);
+        dbg!(&module.named_exports);
+      }
       let mut resolved_exports = module
         .named_exports
         .iter()
@@ -154,6 +157,7 @@ impl LinkStage<'_> {
           module_id,
           &mut module_stack,
         );
+        dbg!(&resolved_exports);
       }
       meta.resolved_exports = resolved_exports;
     });
@@ -324,12 +328,10 @@ impl LinkStage<'_> {
       .for_each(|(idx, meta)| {
         // a cjs module could only be referenced by normal modules.
         let module = self.module_table[idx].as_normal().expect("should be normal_module");
-        dbg!(&module.import_records);
         meta.local_facade_cjs_namespace_map = module
           .named_imports
           .iter()
           .filter_map(|(_, named_import)| {
-            dbg!(&named_import);
             let rec = &module.import_records[named_import.record_id];
             if !cjs_exports_type_modules.contains(&rec.resolved_module) {
               None
@@ -338,7 +340,6 @@ impl LinkStage<'_> {
             }
           })
           .collect::<FxHashMap<SymbolRef, ModuleIdx>>();
-        // dbg!(&meta.local_facade_cjs_namespace_map);
       });
   }
 
@@ -367,6 +368,7 @@ impl LinkStage<'_> {
       }
 
       for (exported_name, named_export) in &dep_module.named_exports {
+        dbg!(&named_export);
         // ES6 export star statements ignore exports named "default"
         if exported_name.as_str() == "default" {
           continue;
@@ -748,17 +750,22 @@ impl BindImportsAndExportsContext<'_> {
     );
     // TODO: Deal with https://github.com/evanw/esbuild/blob/109449e5b80886f7bc7fc7e0cee745a0221eef8d/internal/linker/linker.go#L3062-L3072
 
-    if matches!(importee.exports_kind, ExportsKind::CommonJs) {
-      return ImportStatus::CommonJS;
-    }
+    // TODO: add option to control it
+    // if matches!(importee.exports_kind, ExportsKind::CommonJs) {
+    //   return ImportStatus::CommonJS;
+    // }
 
+    let is_cjs = matches!(importee.exports_kind, ExportsKind::CommonJs);
     match &named_import.imported {
       Specifier::Star => ImportStatus::Found {
         symbol: importee.namespace_object_ref,
         // owner: importee_id,
         potentially_ambiguous_export_star_refs: vec![],
+        is_cjs,
       },
       Specifier::Literal(literal_imported) => {
+        dbg!(&literal_imported);
+        dbg!(&self.metas[importee_id].resolved_exports);
         match self.metas[importee_id].resolved_exports.get(literal_imported) {
           Some(export) => {
             ImportStatus::Found {
@@ -768,11 +775,16 @@ impl BindImportsAndExportsContext<'_> {
                 .potentially_ambiguous_symbol_refs
                 .clone()
                 .unwrap_or_default(),
+              is_cjs,
             }
           }
           _ => {
             if self.metas[importee_id].has_dynamic_exports {
               ImportStatus::DynamicFallback { namespace_ref: importee.namespace_object_ref }
+            } else if is_cjs {
+              // TDOO: Currenly we just bailout the diagnostic, we could return
+              // `ImportStatus::NoMatch` when our cjs analyzer is stable.
+              ImportStatus::CommonJS
             } else {
               ImportStatus::NoMatch {}
             }
@@ -834,7 +846,7 @@ impl BindImportsAndExportsContext<'_> {
         ImportStatus::NoMatch { .. } => {
           break MatchImportKind::NoMatch;
         }
-        ImportStatus::Found { symbol, potentially_ambiguous_export_star_refs, .. } => {
+        ImportStatus::Found { symbol, potentially_ambiguous_export_star_refs, is_cjs } => {
           for ambiguous_ref in &potentially_ambiguous_export_star_refs {
             let ambiguous_ref_owner = &index_modules[ambiguous_ref.owner];
             match ambiguous_ref_owner.as_normal().unwrap().named_imports.get(ambiguous_ref) {
@@ -886,7 +898,27 @@ impl BindImportsAndExportsContext<'_> {
             }
           }
 
-          break MatchImportKind::Normal(MatchImportKindNormal { symbol, reexports });
+          if is_cjs {
+            // Copy from MatchImportKind::CommonJS
+            // We can't directly link to the cjs facade symbol_ref, because we rely on
+            // NormalAndNamespace to generate code like:
+            // ```js
+            // var import_foo = __toESM(require_foo())
+            // import_foo.bar
+            // ```
+            self.metas[tracker.importee].included_commonjs_export_symbol.insert(symbol);
+            break match &tracker.imported {
+              Specifier::Star => {
+                MatchImportKind::Namespace { namespace_ref: importer_record.namespace_ref }
+              }
+              Specifier::Literal(alias) => MatchImportKind::NormalAndNamespace {
+                namespace_ref: importer_record.namespace_ref,
+                alias: alias.clone(),
+              },
+            };
+          } else {
+            break MatchImportKind::Normal(MatchImportKindNormal { symbol, reexports });
+          }
         }
         ImportStatus::_CommonJSWithoutExports => todo!(),
         ImportStatus::_Disabled => todo!(),

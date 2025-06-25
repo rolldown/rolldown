@@ -197,9 +197,11 @@ impl<'a> SideEffectDetector<'a> {
       return false.into();
     }
 
-    if is_object_define_property_es_module(self.scope, expr).unwrap_or_default() {
-      return StmtSideEffect::PureCjs;
-    }
+    // TODO: with cjs tree shaking remove this may cause some runtime behavior incorrect.
+    // But marking `Object.defineProperty(exports, "__esModule", { value: true })` as has side effect may incraese bundle size a little.
+    // if is_object_define_property_es_module(self.scope, expr).unwrap_or_default() {
+    //   return StmtSideEffect::Unknown;
+    // }
 
     let is_pure = !self.ignore_annotations && expr.pure;
     if is_pure {
@@ -1090,7 +1092,7 @@ mod test {
       get_statements_side_effect_details(
         "Object.defineProperty(exports, \"__esModule\", { value: true })"
       ),
-      vec![StmtSideEffect::PureCjs]
+      vec![StmtSideEffect::Unknown]
     );
 
     assert_eq!(

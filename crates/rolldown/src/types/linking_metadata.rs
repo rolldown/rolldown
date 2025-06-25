@@ -5,7 +5,7 @@ use rolldown_common::{
 };
 use rolldown_rstr::Rstr;
 use rolldown_utils::indexmap::FxIndexSet;
-use rustc_hash::FxHashMap;
+use rustc_hash::{FxHashMap, FxHashSet};
 
 /// Module metadata about linking
 #[derive(Debug, Default)]
@@ -61,6 +61,10 @@ pub struct LinkingMetadata {
   pub is_tla_or_contains_tla_dependency: bool,
   /// Used to to track a facade binding referenced cjs module
   pub local_facade_cjs_namespace_map: FxHashMap<SymbolRef, ModuleIdx>,
+  /// Currently our symbol link system could only link one symbol to another one, but for commonjs
+  /// tree shaking, when one symbol was linked it may not only link the namespace ref symbol, and
+  /// also need to link the exported facade symbol.
+  pub included_commonjs_export_symbol: FxHashSet<SymbolRef>,
 }
 
 impl LinkingMetadata {

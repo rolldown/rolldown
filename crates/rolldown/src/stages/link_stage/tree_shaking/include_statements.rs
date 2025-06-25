@@ -415,13 +415,25 @@ fn include_module(ctx: &mut Context, module: &NormalModule) {
       include_symbol(ctx, *symbol);
     });
   }
+
+  for symbol in module_meta.included_commonjs_export_symbol.iter() {
+    include_symbol(ctx, *symbol);
+  }
 }
 
 fn include_symbol(ctx: &mut Context, symbol_ref: SymbolRef) {
+  if symbol_ref.owner != 0 {
+    dbg!(&symbol_ref);
+  }
   let mut canonical_ref = ctx.symbols.canonical_ref_for(symbol_ref);
   let canonical_ref_symbol = ctx.symbols.get(canonical_ref);
   if let Some(namespace_alias) = &canonical_ref_symbol.namespace_alias {
     canonical_ref = namespace_alias.namespace_ref;
+  }
+
+  if canonical_ref.owner != 0 {
+    dbg!(&canonical_ref);
+    dbg!(&ctx.symbols.get_create_reason(&canonical_ref));
   }
 
   ctx.used_symbol_refs.insert(canonical_ref);

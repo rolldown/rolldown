@@ -302,7 +302,7 @@ function bar() {
 ```
 ### rolldown
 ```js
-//#region ../../../../../../node_modules/.pnpm/@oxc-project+runtime@0.74.0/node_modules/@oxc-project/runtime/src/helpers/esm/usingCtx.js
+//#region ../../../../../../node_modules/.pnpm/@oxc-project+runtime@0.75.0/node_modules/@oxc-project/runtime/src/helpers/esm/usingCtx.js
 function _usingCtx() {
 	var r = "function" == typeof SuppressedError ? SuppressedError : function(r$1, e$1) {
 		var n$1 = Error();
@@ -535,7 +535,7 @@ Foo = class {
 -      _promise2 && (yield new __await(_promise2));
 -    }
 -  });
-+//#region ../../../../../../node_modules/.pnpm/@oxc-project+runtime@0.74.0/node_modules/@oxc-project/runtime/src/helpers/esm/usingCtx.js
++//#region ../../../../../../node_modules/.pnpm/@oxc-project+runtime@0.75.0/node_modules/@oxc-project/runtime/src/helpers/esm/usingCtx.js
 +function _usingCtx() {
 +	var r = "function" == typeof SuppressedError ? SuppressedError : function(r$1, e$1) {
 +		var n$1 = Error();

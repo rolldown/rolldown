@@ -4,7 +4,7 @@ use oxc::{
     ast::{self, BindingPatternKind, Expression, IdentifierReference},
   },
   ast_visit::{Visit, walk},
-  semantic::SymbolId,
+  semantic::{ SymbolId},
   span::{GetSpan, Span},
 };
 use rolldown_common::{
@@ -17,6 +17,8 @@ use rolldown_ecmascript::ToSourceString;
 use rolldown_ecmascript_utils::ExpressionExt;
 use rolldown_error::BuildDiagnostic;
 use rolldown_std_utils::OptionExt;
+
+use crate::ast_scanner::cjs_ast_analyzer::CommonJsAstType;
 
 use super::{
   AstScanner, cjs_ast_analyzer::CjsGlobalAssignmentType, side_effect_detector::SideEffectDetector,
@@ -317,7 +319,28 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
             self.cjs_ast_analyzer(&CjsGlobalAssignmentType::ModuleExportsAssignment);
           }
           "exports" => {
-            self.cjs_ast_analyzer(&CjsGlobalAssignmentType::ExportsAssignment);
+            // exports = {} will not change the module.exports object, so we just ignore it;
+
+            let v = self.cjs_ast_analyzer(&CjsGlobalAssignmentType::ExportsAssignment);
+            match v {
+              // Do nothing since we need to tree shake `exports.<prop>` access
+              Some(CommonJsAstType::ExportsPropWrite) => {}
+              Some(CommonJsAstType::EsModuleFlag) => {}
+              Some(CommonJsAstType::Reexport) => {
+                unreachable!()
+              }
+              Some(CommonJsAstType::ExportsRead) => {
+                self.ast_usage.insert(EcmaModuleAstUsage::UnknownExportsRead);
+              }
+              None => match self.try_extract_parent_static_member_expr_chain(1) {
+                Some((_span, prop)) => {
+                  self.self_used_cjs_named_exports.insert(prop[0].as_str().into());
+                }
+                _ => {
+                  self.ast_usage.insert(EcmaModuleAstUsage::UnknownExportsRead);
+                }
+              },
+            }
           }
           "require" => {
             let is_dummy_record = match self.visit_path.last() {

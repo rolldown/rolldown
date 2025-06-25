@@ -28,8 +28,8 @@ use rolldown_common::dynamic_import_usage::{DynamicImportExportsUsage, DynamicIm
 use rolldown_common::{
   EcmaModuleAstUsage, ExportsKind, HmrInfo, ImportKind, ImportRecordIdx, ImportRecordMeta,
   LocalExport, MemberExprRef, ModuleDefFormat, ModuleId, ModuleIdx, NamedImport, RawImportRecord,
-  Specifier, StmtInfo, StmtInfos, SymbolRef, SymbolRefDbForModule, SymbolRefFlags, TaggedSymbolRef,
-  ThisExprReplaceKind,
+  Specifier, StmtInfo, StmtInfos, StmtSideEffect, SymbolRef, SymbolRefDbForModule, SymbolRefFlags,
+  TaggedSymbolRef, ThisExprReplaceKind,
 };
 use rolldown_ecmascript_utils::{BindingIdentifierExt, BindingPatternExt};
 use rolldown_error::{BuildDiagnostic, BuildResult, CjsExportSpan};
@@ -130,6 +130,8 @@ pub struct AstScanner<'me, 'ast> {
   top_level_this_expr_set: FxHashSet<Span>,
   /// A flag to resolve `this` appear with propertyKey in class
   is_nested_this_inside_class: bool,
+  /// Used in commonjs module it self
+  self_used_cjs_named_exports: FxHashSet<Rstr>,
 }
 
 impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
@@ -212,6 +214,7 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
       dynamic_import_usage_info: DynamicImportUsageInfo::default(),
       top_level_this_expr_set: FxHashSet::default(),
       is_nested_this_inside_class: false,
+      self_used_cjs_named_exports: FxHashSet::default(),
     }
   }
 
@@ -286,6 +289,18 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
     }
 
     self.result.exports_kind = exports_kind;
+
+    // If some commonjs module facade exports was used locally, we need to explicitly mark them as
+    // has side effects, so that they should not be removed in linking stage.
+    for name in self.self_used_cjs_named_exports.iter() {
+      if let Some(resolved) = self.result.commonjs_exports.get(name) {
+        let stmt_info_idx_list =
+          self.result.stmt_infos.declared_stmts_by_symbol(&resolved.referenced).to_vec();
+        for idx in stmt_info_idx_list {
+          self.result.stmt_infos[idx].side_effect = StmtSideEffect::Unknown;
+        }
+      }
+    }
 
     if self.options.is_hmr_enabled() && exports_kind.is_commonjs() {
       // https://github.com/rolldown/rolldown/issues/4129

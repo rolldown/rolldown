@@ -10,9 +10,18 @@ use crate::ast_scanner::IdentifierReferenceKind;
 
 use super::AstScanner;
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum CommonJsAstType {
+  // We don't need extra `module.exports` related type for now.
+  ExportsPropWrite,
+  ExportsRead,
+  EsModuleFlag,
+  Reexport,
+}
+
 impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
   #[allow(clippy::too_many_lines)]
-  pub fn cjs_ast_analyzer(&mut self, ty: &CjsGlobalAssignmentType) -> Option<()> {
+  pub fn cjs_ast_analyzer(&mut self, ty: &CjsGlobalAssignmentType) -> Option<CommonJsAstType> {
     match ty {
       CjsGlobalAssignmentType::ModuleExportsAssignment => {
         self.ast_usage.insert(EcmaModuleAstUsage::ModuleRef);
@@ -40,10 +49,11 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
             }
             AstKind::Argument(arg) => self.check_object_define_property(arg, cursor - 1),
             AstKind::SimpleAssignmentTarget(target) => {
-              if self.check_assignment_is_cjs_reexport(target, cursor - 1).unwrap_or_default() {
+              let v = self.check_assignment_is_cjs_reexport(target, cursor - 1);
+              if matches!(v, Some(CommonJsAstType::Reexport)) {
                 self.ast_usage.insert(EcmaModuleAstUsage::IsCjsReexport);
               }
-              None
+              v
             }
             _ => None,
           }
@@ -61,10 +71,10 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
       }
       _ => None,
     };
-    if v.unwrap_or_default() {
+    if matches!(v, Some(CommonJsAstType::EsModuleFlag)) {
       self.ast_usage.insert(EcmaModuleAstUsage::EsModuleFlag);
     }
-    None
+    v
   }
 
   /// Check if the argument is a valid `Object.defineProperty` call expression for `__esModule` flag.
@@ -72,13 +82,13 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
     &self,
     arg: &ast::Argument<'_>,
     base_cursor: usize,
-  ) -> Option<bool> {
+  ) -> Option<CommonJsAstType> {
     let call_expr = self.visit_path.get(base_cursor - 1)?.as_call_expression()?;
 
     let first = call_expr.arguments.first()?;
     let is_same_member_expr = arg.address() == first.address();
     if !is_same_member_expr {
-      return Some(false);
+      return None;
     }
     is_object_define_property_es_module(&self.result.symbol_ref_db.ast_scopes, call_expr)
   }
@@ -88,24 +98,33 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
     &mut self,
     member_expr: &ast::MemberExpression<'_>,
     base_cursor: usize,
-  ) -> Option<bool> {
+  ) -> Option<CommonJsAstType> {
     let static_property_name = member_expr.static_property_name();
     if static_property_name.is_none() {
       self.ast_usage.remove(EcmaModuleAstUsage::AllStaticExportPropertyAccess);
     }
-    if static_property_name != Some("__esModule") {
-      return Some(false);
-    }
+    let is_es_module_flag_prop = static_property_name == Some("__esModule");
+    // return Some(CommonJsAstType::ExportsPropWrite);
+    // }
 
-    self.visit_path.get(base_cursor - 1)?.as_simple_assignment_target()?;
+    match self.visit_path.get(base_cursor - 1)?.as_simple_assignment_target() {
+      Some(_) => {
+        if !is_es_module_flag_prop {
+          return Some(CommonJsAstType::ExportsPropWrite);
+        }
+      }
+      None => {
+        return None;
+      }
+    };
     self.visit_path.get(base_cursor - 2)?.as_assignment_target()?;
 
     let assignment_expr = self.visit_path.get(base_cursor - 3)?.as_assignment_expression()?;
 
     let ast::Expression::BooleanLiteral(bool_lit) = &assignment_expr.right else {
-      return Some(false);
+      return None;
     };
-    Some(bool_lit.value)
+    bool_lit.value.then_some(CommonJsAstType::EsModuleFlag)
   }
 
   /// check if the `module` is used as : module.exports = require('mod');
@@ -113,23 +132,29 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
     &self,
     _target: &ast::SimpleAssignmentTarget<'_>,
     base_cursor: usize,
-  ) -> Option<bool> {
+  ) -> Option<CommonJsAstType> {
     self.visit_path.get(base_cursor - 1)?.as_assignment_target()?;
 
     let assignment_expr = self.visit_path.get(base_cursor - 2)?.as_assignment_expression()?;
     let ast::Expression::CallExpression(call_expr) = &assignment_expr.right else {
-      return Some(false);
+      return None;
     };
     let Some(callee) = call_expr.callee.as_identifier() else {
-      return Some(false);
+      return None;
     };
     if !(callee.name == "require"
       && matches!(self.resolve_identifier_reference(callee), IdentifierReferenceKind::Global,)
       && call_expr.arguments.len() == 1)
     {
-      return Some(false);
+      return None;
     }
-    Some(call_expr.arguments.first()?.as_expression()?.as_string_literal().is_some())
+    call_expr
+      .arguments
+      .first()?
+      .as_expression()?
+      .as_string_literal()
+      .is_some()
+      .then_some(CommonJsAstType::Reexport)
   }
 }
 
@@ -142,22 +167,22 @@ pub enum CjsGlobalAssignmentType {
 pub fn is_object_define_property_es_module(
   scope: &AstScopes,
   call_expr: &ast::CallExpression<'_>,
-) -> Option<bool> {
+) -> Option<CommonJsAstType> {
   let callee = call_expr.callee.as_member_expression()?;
   let callee_object = callee.object().as_identifier()?;
   // Check if it is global variable `Object`.
   if !scope.is_unresolved(callee_object.reference_id()) {
-    return Some(false);
+    return None;
   }
   let key_eq_object = callee_object.name == "Object";
   let property_eq_define_property = callee.static_property_name()? == "defineProperty";
   if !(key_eq_object && property_eq_define_property) {
-    return Some(false);
+    return Some(CommonJsAstType::ExportsRead);
   }
   let first = call_expr.arguments.first()?.as_expression()?.as_identifier()?;
 
   if !scope.is_unresolved(first.reference_id()) || first.name != "exports" {
-    return Some(false);
+    return None;
   }
 
   let second = call_expr.arguments.get(1)?;
@@ -166,7 +191,7 @@ pub fn is_object_define_property_es_module(
     .and_then(|item| item.as_string_literal())
     .is_some_and(|item| item.value == "__esModule");
   if !is_es_module {
-    return Some(false);
+    return Some(CommonJsAstType::ExportsRead);
   }
   let third = call_expr.arguments.get(2)?;
   let ret = third
@@ -184,5 +209,5 @@ pub fn is_object_define_property_es_module(
       },
       _ => false,
     });
-  Some(ret)
+  if ret { Some(CommonJsAstType::EsModuleFlag) } else { Some(CommonJsAstType::ExportsRead) }
 }

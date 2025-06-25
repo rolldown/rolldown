@@ -751,9 +751,15 @@ impl BindImportsAndExportsContext<'_> {
     // TODO: Deal with https://github.com/evanw/esbuild/blob/109449e5b80886f7bc7fc7e0cee745a0221eef8d/internal/linker/linker.go#L3062-L3072
 
     // TODO: add option to control it
-    // if matches!(importee.exports_kind, ExportsKind::CommonJs) {
-    //   return ImportStatus::CommonJS;
-    // }
+    if matches!(importee.exports_kind, ExportsKind::CommonJs)
+      && !self.index_modules[importee_id]
+        .as_normal()
+        .expect("should be normal module")
+        .ast_usage
+        .contains(EcmaModuleAstUsage::AllStaticExportPropertyAccess)
+    {
+      return ImportStatus::CommonJS;
+    }
 
     let is_cjs = matches!(importee.exports_kind, ExportsKind::CommonJs);
     match &named_import.imported {

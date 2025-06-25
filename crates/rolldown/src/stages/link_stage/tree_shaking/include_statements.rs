@@ -360,18 +360,16 @@ fn include_module(ctx: &mut Context, module: &NormalModule) {
 
   let forced_no_treeshake = matches!(module.side_effects, DeterminedSideEffects::NoTreeshake);
   if ctx.tree_shaking && !forced_no_treeshake {
-    let flag = module.is_virtual();
     module.stmt_infos.iter_enumerated().for_each(|(stmt_info_id, stmt_info)| {
       // No need to handle the first statement specially, which is the namespace object, because it doesn't have side effects and will only be included if it is used.
       let bail_eval = module.meta.has_eval()
         && !stmt_info.declared_symbols.is_empty()
         && stmt_info_id.index() != 0;
-      let has_side_effects =
-        if module.ast_usage.contains(EcmaModuleAstUsage::AllStaticExportPropertyAccess) {
-          matches!(stmt_info.side_effect, StmtSideEffect::Unknown)
-        } else {
-          stmt_info.side_effect.has_side_effect()
-        };
+      let has_side_effects = if module.meta.contains(EcmaViewMeta::SAFELY_TREESHAKE_COMMONJS) {
+        matches!(stmt_info.side_effect, StmtSideEffect::Unknown)
+      } else {
+        stmt_info.side_effect.has_side_effect()
+      };
       if has_side_effects || bail_eval {
         include_statement(ctx, module, stmt_info_id);
       }

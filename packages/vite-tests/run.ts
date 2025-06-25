@@ -44,6 +44,9 @@ await runCmdAndPipe(
 printTitle('# Updating package.json to link to local rolldown...');
 const packageJsonPath = path.resolve(REPO_PATH, 'package.json');
 const packageJson = JSON.parse(fs.readFileSync(packageJsonPath, 'utf-8'));
+if (packageJson.pnpm === undefined) {
+  packageJson.pnpm = { overrides: {} }
+}
 for (const [name, value] of Object.entries(OVERRIDES)) {
   packageJson.pnpm.overrides[name] = value;
 }

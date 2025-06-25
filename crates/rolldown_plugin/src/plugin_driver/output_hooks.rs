@@ -207,10 +207,12 @@ impl PluginDriver {
     opts: &SharedNormalizedBundlerOptions,
     warnings: &mut Vec<BuildDiagnostic>,
   ) -> HookNoopReturn {
-    for (_, plugin, ctx) in self.iter_plugin_with_context_by_order(&self.order_by_write_bundle_meta)
+    for (plugin_idx, plugin, ctx) in self.iter_plugin_with_context_by_order(&self.order_by_write_bundle_meta)
     {
+      if !self.plugin_usage_vec[plugin_idx].contains(HookUsage::WriteBundle) {
+        continue;
+      }
       let mut args = crate::HookWriteBundleArgs { bundle, options: opts };
-
       plugin
         .call_write_bundle(ctx, &mut args)
         .instrument(debug_span!("write_bundle_hook", plugin_name = plugin.call_name().as_ref()))

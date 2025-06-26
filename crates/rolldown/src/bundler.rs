@@ -38,9 +38,7 @@ pub struct Bundler {
   #[allow(unused)]
   pub(crate) cache: ScanStageCache,
   pub(crate) hmr_manager: Option<HmrManager>,
-  pub(crate) session_span: tracing::Span,
-  // Guard for the tracing system. Responsible for cleaning up the allocated resources when the bundler gets dropped.
-  pub(crate) _debug_tracer: Option<rolldown_debug::DebugTracer>,
+  pub(crate) session: rolldown_debug::Session,
   pub(crate) build_count: u32,
 }
 
@@ -55,10 +53,11 @@ impl Bundler {
 }
 
 impl Bundler {
-  #[tracing::instrument(level = "debug", skip_all, parent = &self.session_span)]
+  #[tracing::instrument(level = "debug", skip_all, parent = &self.session.span)]
   pub async fn write(&mut self) -> BuildResult<BundleOutput> {
     let build_count = self.build_count;
     async {
+      self.trace_action_session_meta();
       trace_action!(action::BuildStart { action: "BuildStart" });
       let scan_stage_output = self.scan(vec![]).await?;
 
@@ -73,10 +72,11 @@ impl Bundler {
     .await
   }
 
-  #[tracing::instrument(level = "debug", skip_all, parent = &self.session_span)]
+  #[tracing::instrument(level = "debug", skip_all, parent = &self.session.span)]
   pub async fn generate(&mut self) -> BuildResult<BundleOutput> {
     let build_count = self.build_count;
     async {
+      self.trace_action_session_meta();
       trace_action!(action::BuildStart { action: "BuildStart" });
       let scan_stage_output = self.scan(vec![]).await?;
 
@@ -348,6 +348,35 @@ impl Bundler {
         })
         .collect();
       trace_action!(action::ModuleGraphReady { action: "ModuleGraphReady", modules });
+    }
+  }
+
+  fn trace_action_session_meta(&self) {
+    if tracing::enabled!(tracing::Level::DEBUG) {
+      trace_action!(action::SessionMeta {
+        action: "SessionMeta",
+        inputs: self
+          .options
+          .input
+          .iter()
+          .map(|v| action::InputItem { name: v.name.clone(), import: v.import.clone() })
+          .collect(),
+        plugins: self
+          .plugin_driver
+          .plugins()
+          .iter()
+          .enumerate()
+          .map(|(idx, p)| action::PluginItem {
+            name: p.call_name().into_owned(),
+            index: idx.try_into().unwrap()
+          })
+          .collect(),
+        cwd: self.options.cwd.to_string_lossy().to_string(),
+        platform: self.options.platform.to_string(),
+        format: self.options.format.to_string(),
+        dir: self.options.dir.clone(),
+        file: self.options.file.clone(),
+      });
     }
   }
 }

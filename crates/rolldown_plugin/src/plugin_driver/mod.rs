@@ -125,6 +125,10 @@ impl PluginDriver {
       (idx, plugin, context)
     })
   }
+
+  pub fn plugins(&self) -> &IndexPluginable {
+    &self.plugins
+  }
 }
 
 impl Deref for PluginDriver {

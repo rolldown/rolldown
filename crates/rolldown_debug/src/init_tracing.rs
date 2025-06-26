@@ -29,7 +29,7 @@ pub fn init_devtool_tracing() {
     .init();
 }
 
-#[allow(dead_code)]
+#[derive(Debug, Clone)]
 pub struct DebugTracer {
   session_id: Arc<str>,
 }
@@ -61,5 +61,23 @@ impl Drop for DebugTracer {
       }
     }
     EXIST_HASH_BY_SESSION.remove(self.session_id.as_ref());
+  }
+}
+
+#[derive(Debug, Clone)]
+
+pub struct Session {
+  pub id: Arc<str>,
+  pub span: tracing::Span,
+}
+
+impl Session {
+  pub fn new(id: Arc<str>, span: tracing::Span) -> Self {
+    Self { id, span }
+  }
+
+  pub fn dummy() -> Self {
+    let session_id = Arc::from("unknown_session");
+    Self { id: session_id, span: tracing::Span::none() }
   }
 }

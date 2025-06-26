@@ -76,7 +76,17 @@ where
 
       std::fs::create_dir_all(format!(".rolldown/{session_id}")).ok();
 
-      let log_filename: Arc<str> = format!(".rolldown/{session_id}/logs.json").into();
+      let is_session_meta = action_meta
+        .as_object()
+        .expect("action_meta should always be an object")
+        .get("action")
+        .is_some_and(|v| v == "SessionMeta");
+
+      let log_filename: Arc<str> = if is_session_meta {
+        format!(".rolldown/{session_id}/meta.json").into()
+      } else {
+        format!(".rolldown/{session_id}/logs.json").into()
+      };
 
       if !OPENED_FILE_HANDLES.contains_key(&log_filename) {
         let file = OpenOptions::new()

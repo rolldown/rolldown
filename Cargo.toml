@@ -227,6 +227,11 @@ strip = "symbols" # Set to `false` for debug information
 debug = true
 inherits = "release"
 
+[profile.memory-profile]
+debug = true
+strip = false
+inherits = "release"
+
 [profile.release-wasi]
 inherits = "release"
 opt-level = "s"

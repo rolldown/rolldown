@@ -121,6 +121,7 @@ impl<F: FileSystem + Default> Resolver<F> {
       symlinks: raw_resolve.symlinks.unwrap_or(true),
       builtin_modules,
       module_type: true,
+      allow_package_exports_in_directory_resolve: false,
     };
     let resolve_options_with_import_conditions = OxcResolverOptions {
       condition_names: import_conditions,

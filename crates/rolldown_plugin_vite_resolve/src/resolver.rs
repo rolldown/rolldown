@@ -170,6 +170,8 @@ fn get_resolve_options(
     prefer_relative: additional_options.prefer_relative,
     roots: if base_options.as_src { vec![base_options.root.into()] } else { vec![] },
     symlinks: !base_options.preserve_symlinks,
+    // This is not part of the spec, but required to align with rollup based vite.
+    allow_package_exports_in_directory_resolve: true,
     ..Default::default()
   }
 }

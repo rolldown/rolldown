@@ -353,6 +353,22 @@ export declare class ResolverFactory {
   async(directory: string, request: string): Promise<ResolveResult>
 }
 
+/** Node.js builtin module when `Options::builtin_modules` is enabled. */
+export interface Builtin {
+  /**
+   * Resolved module.
+   *
+   * Always prefixed with "node:" in compliance with the ESM specification.
+   */
+  resolved: string
+  /**
+   * Whether the request was prefixed with `node:` or not.
+   * `fs` -> `false`.
+   * `node:fs` returns `true`.
+   */
+  isRuntimeModule: boolean
+}
+
 export declare enum EnforceExtension {
   Auto = 0,
   Enabled = 1,
@@ -379,6 +395,8 @@ export interface NapiResolveOptions {
    * Default `None`
    */
   tsconfig?: TsconfigOptions
+  /** Enable Yarn Plug'n'Play */
+  yarnPnp?: boolean
   /**
    * Alias for [ResolveOptions::alias] and [ResolveOptions::fallback].
    *
@@ -529,11 +547,23 @@ export interface NapiResolveOptions {
    * Default `false`
    */
   moduleType?: boolean
+  /**
+   * Allow `exports` field in `require('../directory')`.
+   *
+   * This is not part of the spec but some vite projects rely on this behavior.
+   * See
+   * * <https://github.com/vitejs/vite/pull/20252>
+   * * <https://github.com/nodejs/node/issues/58827>
+   *
+   * Default: `false`
+   */
+  allowPackageExportsInDirectoryResolve?: boolean
 }
 
 export interface ResolveResult {
   path?: string
   error?: string
+  builtin?: Builtin
   /**
    * Module type for this path.
    *

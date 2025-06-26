@@ -65,7 +65,11 @@ impl<'name> Renamer<'name> {
     self.used_canonical_names.insert(name, 0);
   }
 
+  #[track_caller]
   pub fn add_symbol_in_root_scope(&mut self, symbol_ref: SymbolRef) {
+    if symbol_ref.owner != 0 {
+      dbg!(std::panic::Location::caller());
+    }
     let canonical_ref = symbol_ref.canonical_ref(self.symbol_db);
     let original_name = canonical_ref.name(self.symbol_db).to_rstr();
     match self.canonical_names.entry(canonical_ref) {

@@ -31,6 +31,8 @@ struct Context<'a> {
   used_symbol_refs: &'a mut FxHashSet<SymbolRef>,
   options: &'a NormalizedBundlerOptions,
   normal_symbol_exports_chain_map: &'a FxHashMap<SymbolRef, Vec<SymbolRef>>,
+  /// It is necessary since we can't mutate `module.meta` during the tree shaking process.
+  /// see [rolldown_common::ecmascript::ecma_view::EcmaViewMeta]
   bailout_cjs_tree_shaking_modules: FxHashSet<ModuleIdx>,
 }
 
@@ -83,7 +85,7 @@ impl LinkStage<'_> {
         };
         context.bailout_cjs_tree_shaking_modules.insert(module.idx);
         let meta = &self.metas[entry.id];
-        meta.referenced_symbols_by_entry_point_chunk.iter().for_each(|symbol_ref| {
+        meta.referenced_symbols_by_entry_point_chunk.iter().for_each(|(symbol_ref, _is_facade)| {
           if let Module::Normal(module) = &context.modules[symbol_ref.owner] {
             module.stmt_infos.declared_stmts_by_symbol(symbol_ref).iter().copied().for_each(
               |stmt_info_id| {
@@ -126,7 +128,7 @@ impl LinkStage<'_> {
         }
       };
       let meta = &self.metas[entry.id];
-      meta.referenced_symbols_by_entry_point_chunk.iter().for_each(|symbol_ref| {
+      meta.referenced_symbols_by_entry_point_chunk.iter().for_each(|(symbol_ref, _is_facade)| {
         if let Module::Normal(module) = &context.modules[symbol_ref.owner] {
           module.stmt_infos.declared_stmts_by_symbol(symbol_ref).iter().copied().for_each(
             |stmt_info_id| {

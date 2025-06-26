@@ -8,7 +8,10 @@ use rolldown_common::{
   TaggedSymbolRef,
 };
 use rolldown_rstr::ToRstr;
-use rolldown_utils::ecmascript::legitimize_identifier_name;
+use rolldown_utils::{
+  ecmascript::legitimize_identifier_name,
+  global_reference::is_side_effect_free_member_expr_of_len_three,
+};
 use rustc_hash::FxHashMap;
 
 #[allow(clippy::too_many_lines)]
@@ -97,8 +100,10 @@ pub fn deconflict_chunk_symbols(
   match chunk.kind {
     ChunkKind::EntryPoint { module, .. } => {
       let meta = &link_output.metas[module];
-      meta.referenced_symbols_by_entry_point_chunk.iter().for_each(|symbol_ref| {
-        renamer.add_symbol_in_root_scope(*symbol_ref);
+      meta.referenced_symbols_by_entry_point_chunk.iter().for_each(|(symbol_ref, is_facade)| {
+        if !is_facade {
+          renamer.add_symbol_in_root_scope(*symbol_ref);
+        }
       });
     }
     ChunkKind::Common => {}
@@ -145,6 +150,10 @@ pub fn deconflict_chunk_symbols(
             .copied()
         })
         .for_each(|symbol_ref| {
+          if symbol_ref.inner().owner != 0 {
+            dbg!(&symbol_ref);
+            dbg!(&symbol_ref.inner().name(&link_output.symbol_db));
+          }
           renamer.add_symbol_in_root_scope(symbol_ref.inner());
         });
     });

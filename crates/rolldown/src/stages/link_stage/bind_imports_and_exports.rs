@@ -157,7 +157,6 @@ impl LinkStage<'_> {
           module_id,
           &mut module_stack,
         );
-        dbg!(&resolved_exports);
       }
       meta.resolved_exports = resolved_exports;
     });
@@ -210,12 +209,12 @@ impl LinkStage<'_> {
       }
     }
 
-    self.metas.par_iter_mut().for_each(|meta| {
+    self.metas.iter_mut_enumerated().for_each(|(idx, meta)| {
       let mut sorted_and_non_ambiguous_resolved_exports = vec![];
       'next_export: for (exported_name, resolved_export) in &meta.resolved_exports {
-        if resolved_export.is_facade {
-          continue;
-        }
+        // if resolved_export.is_facade {
+        //   continue;
+        // }
         if let Some(potentially_ambiguous_symbol_refs) =
           &resolved_export.potentially_ambiguous_symbol_refs
         {
@@ -228,10 +227,16 @@ impl LinkStage<'_> {
             }
           }
         }
-        sorted_and_non_ambiguous_resolved_exports.push(exported_name.clone());
+        sorted_and_non_ambiguous_resolved_exports
+          .push((exported_name.clone(), resolved_export.is_facade));
       }
       sorted_and_non_ambiguous_resolved_exports.sort_unstable();
-      meta.sorted_and_non_ambiguous_resolved_exports = sorted_and_non_ambiguous_resolved_exports;
+      let id = self.module_table[idx].id();
+      dbg!(&id);
+      dbg!(&meta.resolved_exports);
+      dbg!(&sorted_and_non_ambiguous_resolved_exports);
+      meta.sorted_and_non_ambiguous_resolved_exports =
+        FxIndexMap::from_iter(sorted_and_non_ambiguous_resolved_exports);
     });
     self.update_cjs_module_meta();
     self.resolve_member_expr_refs(&side_effects_modules, &normal_symbol_exports_chain_map);
@@ -363,12 +368,11 @@ impl LinkStage<'_> {
       let Module::Normal(dep_module) = &normal_modules[dep_id] else {
         continue;
       };
-      if matches!(dep_module.exports_kind, ExportsKind::CommonJs) {
-        continue;
-      }
+      // if matches!(dep_module.exports_kind, ExportsKind::CommonJs) {
+      //   continue;
+      // }
 
       for (exported_name, named_export) in &dep_module.named_exports {
-        dbg!(&named_export);
         // ES6 export star statements ignore exports named "default"
         if exported_name.as_str() == "default" {
           continue;
@@ -498,7 +502,7 @@ impl LinkStage<'_> {
                     }
                     break;
                   };
-                  if !meta.sorted_and_non_ambiguous_resolved_exports.contains(&name.to_rstr()) {
+                  if !meta.sorted_and_non_ambiguous_resolved_exports.contains_key(&name.to_rstr()) {
                     dbg!(&export_symbol);
                     resolved_map.insert(
                       member_expr_ref.span,

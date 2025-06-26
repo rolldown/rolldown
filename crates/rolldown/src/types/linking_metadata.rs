@@ -4,7 +4,7 @@ use rolldown_common::{
   StmtInfoIdx, SymbolRef, WrapKind, dynamic_import_usage::DynamicImportExportsUsage,
 };
 use rolldown_rstr::Rstr;
-use rolldown_utils::indexmap::FxIndexSet;
+use rolldown_utils::indexmap::{FxIndexMap, FxIndexSet};
 use rustc_hash::{FxHashMap, FxHashSet};
 
 /// Module metadata about linking
@@ -39,9 +39,10 @@ pub struct LinkingMetadata {
   // Store the export info for each module, including export named declaration and export star declaration.
   pub resolved_exports: FxHashMap<Rstr, ResolvedExport>,
   // pub re_export_all_names: FxHashSet<Rstr>,
-  // Store the names of exclude ambiguous resolved exports.
-  // It will be used to generate chunk exports and module namespace binding.
-  pub sorted_and_non_ambiguous_resolved_exports: Vec<Rstr>,
+  /// Store the names of exclude ambiguous resolved exports.
+  /// It will be used to generate chunk exports and module namespace binding.
+  /// The second element means if the export is came from commonjs module.
+  pub sorted_and_non_ambiguous_resolved_exports: FxIndexMap<Rstr, bool>,
   // If a esm module has export star from commonjs, it will be marked as ESMWithDynamicFallback at linker.
   // The unknown export name will be resolved at runtime.
   // esbuild add it to `ExportKind`, but the linker shouldn't mutate the module.
@@ -50,7 +51,8 @@ pub struct LinkingMetadata {
 
   // Entry chunks need to generate code that doesn't belong to any module. This is the list of symbols are referenced by the
   // generated code. Tree-shaking will cares about these symbols to make sure they are not removed.
-  pub referenced_symbols_by_entry_point_chunk: Vec<SymbolRef>,
+  // The second element means if the symbol is a facade symbol.
+  pub referenced_symbols_by_entry_point_chunk: Vec<(SymbolRef, bool)>,
 
   /// The dependencies of the module. It means if you want include this module, you need to include these dependencies too.
   pub dependencies: FxIndexSet<ModuleIdx>,
@@ -68,11 +70,13 @@ pub struct LinkingMetadata {
 }
 
 impl LinkingMetadata {
-  pub fn canonical_exports(&self) -> impl Iterator<Item = (&Rstr, &ResolvedExport)> {
-    self
-      .sorted_and_non_ambiguous_resolved_exports
-      .iter()
-      .map(|name| (name, &self.resolved_exports[name]))
+  pub fn canonical_exports(
+    &self,
+    needs_facade: bool,
+  ) -> impl Iterator<Item = (&Rstr, &ResolvedExport)> {
+    self.sorted_and_non_ambiguous_resolved_exports.iter().filter_map(move |(name, is_facade)| {
+      (needs_facade || !is_facade).then_some((name, &self.resolved_exports[name]))
+    })
   }
 
   pub fn is_canonical_exports_empty(&self) -> bool {
@@ -84,6 +88,7 @@ impl LinkingMetadata {
     module_idx: ModuleIdx,
     entry_point_kind: EntryPointKind,
     dynamic_import_exports_usage_map: &'a FxHashMap<ModuleIdx, DynamicImportExportsUsage>,
+    needs_facade: bool,
   ) -> impl Iterator<Item = (&'b Rstr, &'b ResolvedExport)> + 'b {
     let partial_used_exports = match entry_point_kind {
       rolldown_common::EntryPointKind::UserDefined => None,
@@ -95,7 +100,7 @@ impl LinkingMetadata {
         })
       }
     };
-    self.canonical_exports().filter(move |(name, _)| match partial_used_exports {
+    self.canonical_exports(needs_facade).filter(move |(name, _)| match partial_used_exports {
       Some(set) => set.contains(name.as_str()),
       None => true,
     })

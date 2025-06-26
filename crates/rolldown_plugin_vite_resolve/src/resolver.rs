@@ -32,6 +32,7 @@ pub struct BaseOptions<'a> {
   pub as_src: bool,
   pub root: &'a str,
   pub preserve_symlinks: bool,
+  pub tsconfig_paths: bool,
 }
 
 const ADDITIONAL_OPTIONS_FIELD_COUNT: u8 = 2;
@@ -95,7 +96,7 @@ impl Resolvers {
       .map(|v| {
         Resolver::new(
           base_resolver.clone_with_options(get_resolve_options(base_options, v.into())),
-          Arc::clone(&tsconfig_resolver),
+          base_options.tsconfig_paths.then(|| Arc::clone(&tsconfig_resolver)),
           Arc::clone(&builtin_checker),
           Arc::clone(&package_json_cache),
           base_options.root.to_owned(),
@@ -111,7 +112,7 @@ impl Resolvers {
         &BaseOptions { is_production: false, conditions: external_conditions, ..*base_options },
         AdditionalOptions { is_require: false, prefer_relative: false },
       )),
-      Arc::clone(&tsconfig_resolver),
+      base_options.tsconfig_paths.then(|| Arc::clone(&tsconfig_resolver)),
       Arc::clone(&builtin_checker),
       Arc::clone(&package_json_cache),
       base_options.root.to_owned(),
@@ -213,7 +214,7 @@ fn u8_to_bools<const N: usize>(n: u8) -> [bool; N] {
 #[derive(Debug)]
 pub struct Resolver {
   inner: oxc_resolver::Resolver,
-  tsconfig_resolver: Arc<TsconfigResolver>,
+  tsconfig_resolver: Option<Arc<TsconfigResolver>>,
   built_in_checker: Arc<BuiltinChecker>,
   package_json_cache: Arc<PackageJsonCache>,
   root: String,
@@ -223,7 +224,7 @@ pub struct Resolver {
 impl Resolver {
   pub fn new(
     inner: oxc_resolver::Resolver,
-    tsconfig_resolver: Arc<TsconfigResolver>,
+    tsconfig_resolver: Option<Arc<TsconfigResolver>>,
     built_in_checker: Arc<BuiltinChecker>,
     package_json_cache: Arc<PackageJsonCache>,
     root: String,
@@ -237,18 +238,19 @@ impl Resolver {
     directory: P,
     specifier: &str,
   ) -> Result<oxc_resolver::FsResolution, oxc_resolver::ResolveError> {
-    let inner_resolver =
-      if let Some(tsconfig) = self.tsconfig_resolver.load_nearest_tsconfig(directory.as_ref()) {
-        &self.inner.clone_with_options(ResolveOptions {
-          tsconfig: Some(TsconfigOptions {
-            config_file: tsconfig,
-            references: TsconfigReferences::Disabled,
-          }),
-          ..self.inner.options().clone()
-        })
-      } else {
-        &self.inner
-      };
+    let inner_resolver = if let Some(tsconfig) =
+      self.tsconfig_resolver.as_ref().and_then(|r| r.load_nearest_tsconfig(directory.as_ref()))
+    {
+      &self.inner.clone_with_options(ResolveOptions {
+        tsconfig: Some(TsconfigOptions {
+          config_file: tsconfig,
+          references: TsconfigReferences::Disabled,
+        }),
+        ..self.inner.options().clone()
+      })
+    } else {
+      &self.inner
+    };
 
     let Some(try_prefix) = &self.try_prefix else {
       return inner_resolver.resolve(directory, specifier);

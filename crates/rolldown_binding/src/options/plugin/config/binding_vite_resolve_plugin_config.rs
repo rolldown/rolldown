@@ -113,6 +113,7 @@ pub struct BindingViteResolvePluginResolveOptions {
   pub try_index: bool,
   pub try_prefix: Option<String>,
   pub preserve_symlinks: bool,
+  pub tsconfig_paths: bool,
 }
 
 impl From<BindingViteResolvePluginResolveOptions> for ViteResolveResolveOptions {
@@ -133,6 +134,7 @@ impl From<BindingViteResolvePluginResolveOptions> for ViteResolveResolveOptions 
       try_index: value.try_index,
       try_prefix: value.try_prefix,
       preserve_symlinks: value.preserve_symlinks,
+      tsconfig_paths: value.tsconfig_paths,
     }
   }
 }

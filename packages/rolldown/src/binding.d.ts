@@ -1892,6 +1892,7 @@ export interface BindingViteResolvePluginResolveOptions {
   tryIndex: boolean
   tryPrefix?: string
   preserveSymlinks: boolean
+  tsconfigPaths: boolean
 }
 
 export interface BindingWatchOption {

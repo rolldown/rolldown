@@ -174,7 +174,7 @@ impl<'a> GenerateStage<'a> {
                 representative_file_name_for_preserve_modules(module_id.as_path());
 
               let sanitized_absolute_filename =
-                sanitize_filename.call(absolute_chunk_file_name.as_ref()).await?;
+                sanitize_filename.call(absolute_chunk_file_name.as_str()).await?;
 
               let sanitized_chunk_name = sanitize_filename.call(&chunk_name).await?;
               (sanitized_chunk_name, sanitized_absolute_filename)

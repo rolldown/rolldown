@@ -36,7 +36,7 @@ impl BindingBundlerImpl {
   pub fn new(
     env: Env,
     option: BindingBundlerOptions,
-    session_id: Arc<str>,
+    session: rolldown_debug::Session,
     build_count: u32,
   ) -> napi::Result<Self> {
     try_init_custom_trace_subscriber(env);
@@ -66,8 +66,8 @@ impl BindingBundlerImpl {
     let bundler_builder = BundlerBuilder::default()
       .with_options(ret.bundler_options)
       .with_plugins(ret.plugins)
-      .with_session_id(session_id)
-      .with_build_count(build_count);
+      .with_build_count(build_count)
+      .with_session(session);
 
     Ok(Self { inner: Arc::new(Mutex::new(bundler_builder.build())) })
   }

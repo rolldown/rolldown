@@ -293,10 +293,14 @@ impl Resolver {
         let side_effects = result
           .package_json()
           .and_then(|pkg_json| {
+            // the glob expr is based on parent path of package.json, which is package path
+            // so we should use the relative path of the module to package path
+            let module_path_relative_to_package =
+              raw_path.as_path().relative(pkg_json.path.parent()?);
             self
               .package_json_cache
               .cached_package_json_side_effects(pkg_json)
-              .check_side_effects_for(&raw_path)
+              .check_side_effects_for(module_path_relative_to_package.to_str()?)
           })
           .map(
             |side_effects| {

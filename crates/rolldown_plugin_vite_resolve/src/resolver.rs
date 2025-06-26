@@ -466,15 +466,13 @@ impl TsconfigResolver {
       if let Some(r) = self.tsconfig_dir_existence.get(&dir) {
         if *r.value() {
           return Some(dir.join("tsconfig.json"));
-        } else {
-          continue;
         }
-      }
-
-      let tsconfig_json = dir.join("tsconfig.json");
-      if tsconfig_json.exists() {
-        self.tsconfig_dir_existence.insert(dir.clone(), true);
-        return Some(tsconfig_json);
+      } else {
+        let tsconfig_json = dir.join("tsconfig.json");
+        if tsconfig_json.exists() {
+          self.tsconfig_dir_existence.insert(dir.clone(), true);
+          return Some(tsconfig_json);
+        }
       }
 
       let Some(parent) = dir.parent() else { break };

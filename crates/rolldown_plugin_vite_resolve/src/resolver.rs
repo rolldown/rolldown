@@ -5,7 +5,6 @@ use std::{
   sync::Arc,
 };
 
-use dashmap::DashMap;
 use oxc_resolver::{ResolveOptions, TsconfigOptions, TsconfigReferences};
 use rolldown_common::side_effects::HookSideEffects;
 use rolldown_plugin::{HookResolveIdOutput, HookResolveIdReturn};
@@ -437,7 +436,7 @@ pub struct TsconfigResolver {
 
 impl TsconfigResolver {
   pub fn new(inner: oxc_resolver::Resolver) -> Self {
-    Self { inner, tsconfig_dir_existence: DashMap::default() }
+    Self { inner, tsconfig_dir_existence: FxDashMap::default() }
   }
 
   pub fn load_nearest_tsconfig(&self, path: &Path) -> Option<PathBuf> {

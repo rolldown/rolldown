@@ -96,9 +96,10 @@ fn update_module_default_export_info(
   default_symbol_ref: SymbolRef,
   idx: StmtInfoIdx,
 ) {
-  module
-    .named_exports
-    .insert("default".into(), LocalExport { span: SPAN, referenced: default_symbol_ref, is_facade: false });
+  module.named_exports.insert(
+    "default".into(),
+    LocalExport { span: SPAN, referenced: default_symbol_ref, is_facade: false },
+  );
   // needs to support `preferConst`, so default statement may not be the second stmt info
   module.stmt_infos.declare_symbol_for_stmt(idx, TaggedSymbolRef::Normal(default_symbol_ref));
 }
@@ -247,9 +248,10 @@ fn json_object_expr_to_esm(
       .with_stmt_idx(i)
       .with_declared_symbols(vec![TaggedSymbolRef::Normal(symbol_ref)]);
     module.stmt_infos.add_stmt_info(stmt_info);
-    module
-      .named_exports
-      .insert(exported.clone(), LocalExport { span: SPAN, referenced: symbol_ref, is_facade: false });
+    module.named_exports.insert(
+      exported.clone(),
+      LocalExport { span: SPAN, referenced: symbol_ref, is_facade: false },
+    );
   }
   // declare default export statement
   let stmt_info = StmtInfo::default()
@@ -258,9 +260,10 @@ fn json_object_expr_to_esm(
     .with_referenced_symbols(all_declared_symbols.clone());
 
   module.stmt_infos.add_stmt_info(stmt_info);
-  module
-    .named_exports
-    .insert("default".into(), LocalExport { span: SPAN, referenced: default_export_ref, is_facade: false });
+  module.named_exports.insert(
+    "default".into(),
+    LocalExport { span: SPAN, referenced: default_export_ref, is_facade: false },
+  );
 
   // declare namespace object statement
   module.exports_kind = ExportsKind::Esm;

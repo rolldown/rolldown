@@ -373,7 +373,6 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
         itoa::Buffer::new().format(self.current_stmt_info.stmt_idx.unwrap_or_default().raw()),
         "#"
       ));
-    dbg!(&namespace_ref);
     let mut rec = RawImportRecord::new(
       Rstr::from(module_request),
       kind,

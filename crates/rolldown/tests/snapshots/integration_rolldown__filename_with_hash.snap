@@ -3680,7 +3680,7 @@ expression: output
 
 # tests/rolldown/cjs_compat/exoprt_star_of_cjs
 
-- main-!~{000}~.js => main-C9yVEzad.js
+- main-!~{000}~.js => main-BN6Xo6uG.js
 
 # tests/rolldown/cjs_compat/import_reexport_between_esm_and_cjs/esm_import_cjs_import_star_as
 
@@ -3692,11 +3692,11 @@ expression: output
 
 # tests/rolldown/cjs_compat/import_reexport_between_esm_and_cjs/esm_import_esm_which_export_all_from_cjs_named_import
 
-- main-!~{000}~.js => main-B40z58Mp.js
+- main-!~{000}~.js => main-DSwjndv6.js
 
 # tests/rolldown/cjs_compat/import_reexport_between_esm_and_cjs/esm_import_esm_which_export_all_from_multiple_cjs_named_import
 
-- main-!~{000}~.js => main-B8DXr8-0.js
+- main-!~{000}~.js => main-an2qaH9Q.js
 
 # tests/rolldown/cjs_compat/import_reexport_between_esm_and_cjs/esm_reexport_cjs_default
 

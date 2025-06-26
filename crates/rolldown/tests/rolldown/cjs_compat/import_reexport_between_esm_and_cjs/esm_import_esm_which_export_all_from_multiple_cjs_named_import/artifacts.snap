@@ -1,6 +1,5 @@
 ---
 source: crates/rolldown_testing/src/integration_test.rs
-snapshot_kind: text
 ---
 # Assets
 
@@ -17,9 +16,7 @@ var require_commonjs = __commonJS({ "commonjs.js"(exports) {
 
 //#endregion
 //#region commonjs2.js
-var require_commonjs2 = __commonJS({ "commonjs2.js"(exports) {
-	exports.a = 2;
-} });
+var require_commonjs2 = __commonJS({ "commonjs2.js"(exports) {} });
 
 //#endregion
 //#region proxy.js

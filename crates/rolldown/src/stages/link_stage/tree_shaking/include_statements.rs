@@ -415,8 +415,10 @@ fn include_module(ctx: &mut Context, module: &NormalModule) {
       include_symbol(ctx, *symbol);
     });
   }
-
+  dbg!(&module.id);
+  dbg!(&module_meta.included_commonjs_export_symbol);
   for symbol in module_meta.included_commonjs_export_symbol.iter() {
+    dbg!(&symbol);
     include_symbol(ctx, *symbol);
   }
 }
@@ -424,6 +426,7 @@ fn include_module(ctx: &mut Context, module: &NormalModule) {
 fn include_symbol(ctx: &mut Context, symbol_ref: SymbolRef) {
   if symbol_ref.owner != 0 {
     dbg!(&symbol_ref);
+    println!("{}", &ctx.symbols.get_create_reason(&symbol_ref));
   }
   let mut canonical_ref = ctx.symbols.canonical_ref_for(symbol_ref);
   let canonical_ref_symbol = ctx.symbols.get(canonical_ref);
@@ -431,10 +434,7 @@ fn include_symbol(ctx: &mut Context, symbol_ref: SymbolRef) {
     canonical_ref = namespace_alias.namespace_ref;
   }
 
-  if canonical_ref.owner != 0 {
-    dbg!(&canonical_ref);
-    dbg!(&ctx.symbols.get_create_reason(&canonical_ref));
-  }
+  if canonical_ref.owner != 0 {}
 
   ctx.used_symbol_refs.insert(canonical_ref);
 
@@ -486,6 +486,8 @@ fn include_statement(ctx: &mut Context, module: &NormalModule, stmt_info_id: Stm
         member_expr_ref.resolution(&ctx.metas[module.idx].resolved_member_expr_refs)
       }
     } {
+      dbg!(&reference_ref);
+      dbg!(&member_expr_resolution);
       // Caveat: If we can get the `MemberExprRefResolution` from the `resolved_member_expr_refs`,
       // it means this member expr definitely contains module namespace ref.
       if let Some(resolved_ref) = member_expr_resolution.resolved {

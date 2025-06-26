@@ -4,7 +4,7 @@ use oxc::{
     ast::{self, BindingPatternKind, Expression, IdentifierReference},
   },
   ast_visit::{Visit, walk},
-  semantic::{ SymbolId},
+  semantic::SymbolId,
   span::{GetSpan, Span},
 };
 use rolldown_common::{
@@ -193,7 +193,6 @@ impl<'me, 'ast: 'me> Visit<'ast> for AstScanner<'me, 'ast> {
             }
             if id.name == "exports" && self.is_global_identifier_reference(id) {
               self.cjs_exports_ident.get_or_insert(Span::new(id.span.start, id.span.start + 7));
-              dbg!(&member_expr.static_property_name());
               if let Some((span, export_name)) = member_expr.static_property_info() {
                 // `exports.test = ...`
                 let exported_symbol =

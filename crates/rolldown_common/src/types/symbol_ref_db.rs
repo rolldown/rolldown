@@ -86,7 +86,7 @@ impl SymbolRefDbForModule {
       self.create_reason.insert(
         ret,
         format!(
-          "create facade root symbol ref for {:?} -> {}, location: {}",
+          "create facade root symbol ref for {:?} -> {}.\nlocation: {}",
           self.owner_idx,
           name,
           location.to_string()

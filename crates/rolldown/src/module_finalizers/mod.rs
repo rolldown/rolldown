@@ -650,13 +650,13 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
         match self.ctx.linking_info.resolved_member_expr_refs.get(&inner_expr.span) {
           Some(MemberExprRefResolution { resolved: object_ref, props, depended_refs }) => {
             if let Some(element) = depended_refs.last() {
+              dbg!(&element);
+              dbg!(&self.ctx.linking_info.local_facade_cjs_namespace_map);
               if self.ctx.linking_info.local_facade_cjs_namespace_map.contains_key(element) {
                 // Don't rewrite if it is a member expr referenced a cjs namespace
                 return None;
               }
             }
-            dbg!(&object_ref);
-            dbg!(&depended_refs);
             match object_ref {
               Some(object_ref) => {
                 let object_ref_expr = self.finalized_expr_for_symbol_ref(*object_ref, false, None);

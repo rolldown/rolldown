@@ -150,10 +150,6 @@ pub fn deconflict_chunk_symbols(
             .copied()
         })
         .for_each(|symbol_ref| {
-          if symbol_ref.inner().owner != 0 {
-            dbg!(&symbol_ref);
-            dbg!(&symbol_ref.inner().name(&link_output.symbol_db));
-          }
           renamer.add_symbol_in_root_scope(symbol_ref.inner());
         });
     });

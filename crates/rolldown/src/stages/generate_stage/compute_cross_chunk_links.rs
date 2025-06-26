@@ -375,7 +375,6 @@ impl GenerateStage<'_> {
         let importee_chunk_id = import_symbol.chunk_id.unwrap_or_else(|| {
           let symbol_owner = &self.link_output.module_table[import_ref.owner];
           let symbol_name = import_ref.name(&self.link_output.symbol_db);
-          dbg!(&import_ref);
           panic!("Symbol {:?} in {:?} should belong to a chunk", symbol_name, symbol_owner.id())
         });
         // Check if the import is from another chunk

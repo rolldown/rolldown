@@ -472,6 +472,8 @@ impl TsconfigResolver {
         if tsconfig_json.exists() {
           self.tsconfig_dir_existence.insert(dir.clone(), true);
           return Some(tsconfig_json);
+        } else {
+          self.tsconfig_dir_existence.insert(dir.clone(), false);
         }
       }
 

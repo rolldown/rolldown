@@ -1,6 +1,6 @@
 {
   "$schema": "https://unpkg.com/knip@5/schema.json",
-  "ignoreBinaries": ["only-allow", "just"],
+  "ignoreBinaries": ["only-allow"],
   "ignoreWorkspaces": ["examples/**"], // no rolldown plugin yet
   "workspaces": {
     ".": {

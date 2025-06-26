@@ -75,6 +75,7 @@ pub struct ViteResolveResolveOptions {
   pub try_index: bool,
   pub try_prefix: Option<String>,
   pub preserve_symlinks: bool,
+  pub tsconfig_paths: bool,
 }
 
 #[derive(Hash, PartialEq, Eq)]
@@ -114,6 +115,7 @@ impl ViteResolvePlugin {
       as_src: options.resolve_options.as_src,
       root: &options.resolve_options.root,
       preserve_symlinks: options.resolve_options.preserve_symlinks,
+      tsconfig_paths: options.resolve_options.tsconfig_paths,
     };
     let builtin_checker = Arc::new(BuiltinChecker::new(options.builtins));
     let resolvers = Resolvers::new(

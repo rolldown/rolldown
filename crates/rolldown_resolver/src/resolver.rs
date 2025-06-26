@@ -121,6 +121,8 @@ impl<F: FileSystem + Default> Resolver<F> {
       symlinks: raw_resolve.symlinks.unwrap_or(true),
       builtin_modules,
       module_type: true,
+      // This is not part of the spec, but required to align with vite.
+      allow_package_exports_in_directory_resolve: true,
     };
     let resolve_options_with_import_conditions = OxcResolverOptions {
       condition_names: import_conditions,

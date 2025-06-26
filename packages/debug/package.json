@@ -25,7 +25,7 @@
   ],
   "scripts": {
     "gen-action-types": "oxnode ../../scripts/src/gen-debug-action-types.ts",
-    "build": "pnpm run gen-action-types && tsc -b && just fmt",
+    "build": "pnpm run gen-action-types && tsc -b",
     "test": "echo \"Error: no test specified\" && exit 1"
   }
 }

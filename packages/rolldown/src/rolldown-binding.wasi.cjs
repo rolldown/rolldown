@@ -110,6 +110,7 @@ module.exports.BindingBundleErrorEventData = __napiModule.exports.BindingBundleE
 module.exports.BindingBundler = __napiModule.exports.BindingBundler
 module.exports.BindingBundlerImpl = __napiModule.exports.BindingBundlerImpl
 module.exports.BindingCallableBuiltinPlugin = __napiModule.exports.BindingCallableBuiltinPlugin
+module.exports.BindingChunkingContext = __napiModule.exports.BindingChunkingContext
 module.exports.BindingError = __napiModule.exports.BindingError
 module.exports.BindingHmrOutput = __napiModule.exports.BindingHmrOutput
 module.exports.BindingModuleInfo = __napiModule.exports.BindingModuleInfo

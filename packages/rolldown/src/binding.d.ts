@@ -1149,6 +1149,10 @@ export declare class BindingCallableBuiltinPlugin {
   watchChange(path: string, event: BindingJsWatchChangeEvent): Promise<void>
 }
 
+export declare class BindingChunkingContext {
+  getModuleInfo(moduleId: string): BindingModuleInfo | null
+}
+
 export declare class BindingError {
   kind: string
   message: string
@@ -1641,7 +1645,7 @@ export interface BindingManifestPluginConfig {
 }
 
 export interface BindingMatchGroup {
-  name: string | ((id: string) => VoidNullable<string>)
+  name: string | ((id: string, ctx: BindingChunkingContext) => VoidNullable<string>)
   test?: string | RegExp | ((id: string) => VoidNullable<boolean>)
   priority?: number
   minSize?: number

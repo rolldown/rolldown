@@ -86,6 +86,7 @@ export const BindingBundleErrorEventData = __napiModule.exports.BindingBundleErr
 export const BindingBundler = __napiModule.exports.BindingBundler
 export const BindingBundlerImpl = __napiModule.exports.BindingBundlerImpl
 export const BindingCallableBuiltinPlugin = __napiModule.exports.BindingCallableBuiltinPlugin
+export const BindingChunkingContext = __napiModule.exports.BindingChunkingContext
 export const BindingError = __napiModule.exports.BindingError
 export const BindingHmrOutput = __napiModule.exports.BindingHmrOutput
 export const BindingModuleInfo = __napiModule.exports.BindingModuleInfo

@@ -132,8 +132,8 @@ pub async fn generate_manifest(
       .as_ref()
       .map(|exposes| {
         exposes
-          .iter()
-          .map(|(key, _)| {
+          .keys()
+          .map(|key| {
             let format_key = key.replace("./", "");
             RemoteModuleItem {
               id: concat_string!(options.name, ":", format_key),

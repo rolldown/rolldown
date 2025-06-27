@@ -1,3 +1,5 @@
+#![allow(clippy::ignore_without_reason)]
+
 use std::path::PathBuf;
 
 use rolldown_testing::fixture::Fixture;

@@ -1,4 +1,31 @@
 
+## [1.0.0-beta.21] - 2025-06-27
+
+### 🚀 Features
+
+- rolldown: oxc_resolver v11.3.0 (#5078) by @Boshen
+- debug: support to emit `meta.json` (#5075) by @hyf0
+- plugin/vite-resolve: support tsconfig paths (#5004) by @sapphi-red
+
+### 🐛 Bug Fixes
+
+- plugin/vite-resolve: resolve glob side effects field correctly (#5079) by @sapphi-red
+- rolldown_plugin_transform: don't load tsconfig for files in node_modules (#5074) by @sapphi-red
+- preserveModules: correctly generate absolute chunk file names (#5072) by @shulaoda
+- vite-tests: fix `pnpm install` failure (#5070) by @shulaoda
+
+### 📚 Documentation
+
+- contrib-guide: add memory profile steps (#5053) by @sapphi-red
+
+### ⚙️ Miscellaneous Tasks
+
+- remove `just lint` in `packages/debug/package.json` (#5080) by @hyf0
+- deps: update dependency rolldown-plugin-dts to v0.13.12 (#5077) by @renovate[bot]
+- repo: make `pnpm lint-knip` part of `just lint-node` (#5076) by @hyf0
+- infra: move `insta.yaml` to the workspace root (#5073) by @shulaoda
+
+
 ## [1.0.0-beta.20] - 2025-06-25
 
 ### 🚀 Features

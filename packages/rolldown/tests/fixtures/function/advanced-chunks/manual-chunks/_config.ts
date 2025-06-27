@@ -4,7 +4,10 @@ import { expect } from 'vitest';
 export default defineTest({
   config: {
     output: {
-      manualChunks(id, _meta) {
+      manualChunks(id, meta) {
+        if (id != 'rolldown:runtime') {
+          expect(meta.getModuleInfo(id), id).not.toBeNull()
+        }
         if (/node_modules[\\/]+lib-ui/.test(id)) {
           return 'ui';
         }

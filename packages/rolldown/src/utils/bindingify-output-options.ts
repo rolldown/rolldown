@@ -1,5 +1,6 @@
 import type { BindingOutputOptions } from '../binding';
 import type { OutputOptions } from '../options/output-options';
+import { ChunkingContext } from '../types/chunking-context';
 import type { SourcemapIgnoreListOption } from '../types/misc';
 import { transformAssetSource } from './asset-source';
 import { unimplemented } from './misc';
@@ -38,23 +39,10 @@ export function bindingifyOutputOptions(
     manualChunks,
   } = outputOptions;
 
-  let { advancedChunks } = outputOptions;
-
-  if (manualChunks != null && advancedChunks != null) {
-    console.warn(
-      '`manualChunks` option is ignored due to `advancedChunks` option is specified.',
-    );
-  } else if (manualChunks != null) {
-    advancedChunks = {
-      groups: [
-        {
-          name(id) {
-            return manualChunks(id, {});
-          },
-        },
-      ],
-    };
-  }
+  const advancedChunks = bindingifyAdvancedChunks(
+    outputOptions.advancedChunks,
+    manualChunks,
+  );
 
   return {
     dir,
@@ -176,4 +164,45 @@ function bindingifyAssetFilenames(
     };
   }
   return assetFileNames;
+}
+
+function bindingifyAdvancedChunks(
+  advancedChunks: OutputOptions['advancedChunks'],
+  manualChunks: OutputOptions['manualChunks'],
+): BindingOutputOptions['advancedChunks'] {
+  if (manualChunks != null && advancedChunks != null) {
+    console.warn(
+      '`manualChunks` option is ignored due to `advancedChunks` option is specified.',
+    );
+  } else if (manualChunks != null) {
+    advancedChunks = {
+      groups: [
+        {
+          name(id) {
+            return manualChunks(id, {});
+          },
+        },
+      ],
+    };
+  }
+
+  if (advancedChunks == null) {
+    return undefined;
+  }
+
+  const { groups, ...restAdvancedChunks } = advancedChunks;
+
+  return {
+    ...restAdvancedChunks,
+    groups: groups?.map((group) => {
+      const { name, ...restGroup } = group;
+
+      return {
+        ...restGroup,
+        name: typeof name === 'function'
+          ? (id, ctx) => name(id, new ChunkingContext(ctx))
+          : name,
+      };
+    }),
+  };
 }

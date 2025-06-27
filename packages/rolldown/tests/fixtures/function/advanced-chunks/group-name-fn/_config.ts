@@ -7,7 +7,10 @@ export default defineTest({
       advancedChunks: {
         groups: [
           {
-            name(id) {
+            name(id, ctx) {
+              if (id != 'rolldown:runtime') {
+                expect(ctx.getModuleInfo(id), id).not.toBeNull()
+              }
               if (/node_modules[\\/]+lib-ui/.test(id)) {
                 return 'ui';
               }

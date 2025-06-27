@@ -1,4 +1,4 @@
-mod binding_advanced_chunks_options;
+pub mod binding_advanced_chunks_options;
 mod binding_pre_rendered_asset;
 mod binding_pre_rendered_chunk;
 use binding_pre_rendered_asset::BindingPreRenderedAsset;

@@ -1,4 +1,4 @@
-use std::{borrow::Cow, pin::Pin, sync::Arc};
+use std::{borrow::Cow, ops::Deref, pin::Pin, sync::Arc};
 
 use rolldown_error::BuildResult;
 use rolldown_utils::js_regex::HybridRegex;
@@ -6,6 +6,8 @@ use rolldown_utils::js_regex::HybridRegex;
 use schemars::JsonSchema;
 #[cfg(feature = "deserialize_bundler_options")]
 use serde::{Deserialize, Deserializer};
+
+use crate::{ModuleInfo, SharedModuleInfoDashMap};
 
 #[derive(Default, Debug, Clone)]
 #[cfg_attr(
@@ -80,6 +82,7 @@ where
 
 type MatchGroupNameFn = dyn Fn(
     /* module id */ &str,
+    /* chunking context */ &ChunkingContext,
   ) -> Pin<Box<(dyn Future<Output = anyhow::Result<Option<String>>> + Send + 'static)>>
   + Send
   + Sync;
@@ -92,11 +95,15 @@ pub enum MatchGroupName {
 }
 
 impl MatchGroupName {
-  pub async fn value<'a>(&'a self, module_id: &str) -> BuildResult<Option<Cow<'a, str>>> {
+  pub async fn value<'a>(
+    &'a self,
+    ctx: &ChunkingContext,
+    module_id: &str,
+  ) -> BuildResult<Option<Cow<'a, str>>> {
     match self {
       Self::Static(name) => Ok(Some(Cow::Borrowed(name))),
       Self::Dynamic(func) => {
-        let name = func(module_id).await?;
+        let name = func(module_id, ctx).await?;
         Ok(name.map(Cow::Owned))
       }
     }
@@ -116,4 +123,32 @@ where
 {
   let deserialized = String::deserialize(deserializer)?;
   Ok(MatchGroupName::Static(deserialized))
+}
+
+#[derive(Debug, Clone)]
+pub struct ChunkingContext(Arc<ChunkingContextImpl>);
+
+impl ChunkingContext {
+  pub fn new(module_infos: SharedModuleInfoDashMap) -> Self {
+    Self(Arc::new(ChunkingContextImpl { module_infos }))
+  }
+}
+
+impl Deref for ChunkingContext {
+  type Target = ChunkingContextImpl;
+
+  fn deref(&self) -> &Self::Target {
+    &self.0
+  }
+}
+
+#[derive(Debug)]
+pub struct ChunkingContextImpl {
+  module_infos: SharedModuleInfoDashMap,
+}
+
+impl ChunkingContextImpl {
+  pub fn get_module_info(&self, module_id: &str) -> Option<Arc<ModuleInfo>> {
+    self.module_infos.get(module_id).map(|v| Arc::<ModuleInfo>::clone(v.value()))
+  }
 }

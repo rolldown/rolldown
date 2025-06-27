@@ -20,7 +20,7 @@ pub mod bundler_options {
     BundlerOptions,
     types::{
       advanced_chunks_options::{
-        AdvancedChunksOptions, MatchGroup, MatchGroupName, MatchGroupTest,
+        AdvancedChunksOptions, ChunkingContext, MatchGroup, MatchGroupName, MatchGroupTest,
       },
       attach_debug_info::AttachDebugInfo,
       debug_options::DebugOptions,
@@ -104,7 +104,7 @@ pub use crate::{
     runtime_task_result::RuntimeModuleTaskResult,
     task_result::{EcmaRelated, ExternalModuleTaskResult, NormalModuleTaskResult},
   },
-  type_aliases::MemberExprRefResolutionMap,
+  type_aliases::{MemberExprRefResolutionMap, SharedModuleInfoDashMap},
   types::asset::Asset,
   types::asset_idx::AssetIdx,
   types::asset_meta::InstantiationKind,

@@ -1,8 +1,10 @@
-use std::cmp::Reverse;
+use std::{cmp::Reverse, sync::Arc};
 
 use arcstr::ArcStr;
 use oxc_index::IndexVec;
-use rolldown_common::{Chunk, ChunkKind, MatchGroupTest, Module, ModuleIdx, ModuleTable};
+use rolldown_common::{
+  Chunk, ChunkKind, ChunkingContext, MatchGroupTest, Module, ModuleIdx, ModuleTable,
+};
 use rolldown_error::BuildResult;
 use rustc_hash::{FxHashMap, FxHashSet};
 
@@ -123,7 +125,9 @@ impl GenerateStage<'_> {
           }
         }
 
-        let Some(group_name) = match_group.name.value(&normal_module.id).await? else {
+        let ctx = ChunkingContext::new(Arc::clone(&self.plugin_driver.modules));
+
+        let Some(group_name) = match_group.name.value(&ctx, &normal_module.id).await? else {
           // Group which doesn't have a name will be ignored.
           continue;
         };

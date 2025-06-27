@@ -1,3 +1,4 @@
+use crate::options::binding_advanced_chunks_options::BindingChunkingContext;
 use crate::options::binding_jsx::BindingJsx;
 use crate::options::{AssetFileNamesOutputOption, ChunkFileNamesOutputOption, SanitizeFileName};
 use crate::{
@@ -393,11 +394,15 @@ pub fn normalize_binding_options(
               Either::A(name) => MatchGroupName::Static(name),
               Either::B(func) => {
                 let func = Arc::clone(&func);
-                MatchGroupName::Dynamic(Arc::new(move |module_id: &str| {
+                MatchGroupName::Dynamic(Arc::new(move |module_id, ctx| {
                   let module_id = module_id.to_string();
                   let func = Arc::clone(&func);
+                  let owned_ctx = ctx.clone();
                   Box::pin(async move {
-                    func.invoke_async((module_id,).into()).await.map_err(anyhow::Error::from)
+                    func
+                      .invoke_async((module_id, BindingChunkingContext::new(owned_ctx)).into())
+                      .await
+                      .map_err(anyhow::Error::from)
                   })
                 }))
               }

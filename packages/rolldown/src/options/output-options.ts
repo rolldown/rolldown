@@ -1,5 +1,6 @@
 import type { BindingMinifyOptions, PreRenderedChunk } from '../binding';
 import type { RolldownOutputPluginOption } from '../plugin';
+import type { ChunkingContext } from '../types/chunking-context';
 import type {
   SourcemapIgnoreListOption,
   SourcemapPathTransformOption,
@@ -153,7 +154,7 @@ export interface OutputOptions {
      */
     groups?: {
       /**
-       * - Type: `string | ((moduleId: string) => string | NullValue)`
+       * - Type: `string | ((moduleId: string, ctx: { getModuleInfo: (moduleId: string) => ModuleInfo | null }) => string | NullValue)`
        *
        * Name of the group. It will be also used as the name of the chunk and replaced the `[name]` placeholder in the `chunkFileNames` option.
        *
@@ -204,7 +205,12 @@ export interface OutputOptions {
        * Constraints like `minSize`, `maxSize`, etc. are applied separately for different names returned by the function.
        * :::
        */
-      name: string | ((moduleId: string) => string | NullValue);
+      name:
+        | string
+        | ((
+          moduleId: string,
+          ctx: ChunkingContext,
+        ) => string | NullValue);
       /**
        * - Type: `string | RegExp | ((id: string) => boolean | undefined | void);`
        *

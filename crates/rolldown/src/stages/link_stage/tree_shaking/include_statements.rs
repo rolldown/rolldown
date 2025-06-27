@@ -426,6 +426,7 @@ fn include_module(ctx: &mut Context, module: &NormalModule) {
 fn include_symbol(ctx: &mut Context, symbol_ref: SymbolRef) {
   if symbol_ref.owner != 0 {
     dbg!(&symbol_ref);
+    dbg!(&ctx.modules[symbol_ref.owner].as_normal().unwrap().namespace_object_ref);
     println!("{}", &ctx.symbols.get_create_reason(&symbol_ref));
   }
   let mut canonical_ref = ctx.symbols.canonical_ref_for(symbol_ref);
@@ -515,6 +516,21 @@ fn include_statement(ctx: &mut Context, module: &NormalModule, stmt_info_id: Stm
       ctx.metas[module.idx].local_facade_cjs_namespace_map.get(original_ref).inspect(
         |module_idx| {
           ctx.bailout_cjs_tree_shaking_modules.insert(**module_idx);
+          let Some(importee) = &ctx.modules[**module_idx].as_normal() else {
+            return;
+          };
+          let importee_meta = &ctx.metas[importee.idx];
+          if importee_meta.has_dynamic_exports {
+            importee_meta
+              .resolved_exports
+              .iter()
+              .filter_map(|(_name, resolved_export)| {
+                resolved_export.is_facade.then_some(resolved_export.symbol_ref)
+              })
+              .for_each(|facade_symbol_ref| {
+                include_symbol(ctx, facade_symbol_ref);
+              });
+          }
         },
       );
       std::iter::once(original_ref)

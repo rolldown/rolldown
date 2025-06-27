@@ -178,8 +178,10 @@ function bindingifyAdvancedChunks(
     advancedChunks = {
       groups: [
         {
-          name(id) {
-            return manualChunks(id, {});
+          name(moduleId, ctx) {
+            return manualChunks(moduleId, {
+              getModuleInfo: (id) => ctx.getModuleInfo(id),
+            });
           },
         },
       ],

@@ -5,6 +5,7 @@ import type {
   SourcemapIgnoreListOption,
   SourcemapPathTransformOption,
 } from '../types/misc';
+import type { ModuleInfo } from '../types/module-info';
 import type { RenderedChunk } from '../types/rolldown-output';
 import type { NullValue, StringOrRegExp } from '../types/utils';
 
@@ -71,7 +72,7 @@ export interface OutputOptions {
   externalLiveBindings?: boolean;
   inlineDynamicImports?: boolean;
   /**
-   * - Type: `((moduleId: string) => string | NullValue)`
+   * - Type: `((moduleId: string, meta: { getModuleInfo: (moduleId: string) => ModuleInfo | null }) => string | NullValue)`
    * - Object form is not supported.
    *
    * :::warning
@@ -114,7 +115,10 @@ export interface OutputOptions {
    *
    * @deprecated Please use `advancedChunks` instead.
    */
-  manualChunks?: (moduleId: string, meta: {}) => string | NullValue;
+  manualChunks?: (
+    moduleId: string,
+    meta: { getModuleInfo: (moduleId: string) => ModuleInfo | null },
+  ) => string | NullValue;
   /**
    * Allows you to do manual chunking. For deeper understanding, please refer to the in-depth [documentation](https://rolldown.rs/guide/in-depth/advanced-chunks).
    */

@@ -25,6 +25,7 @@ use rolldown_plugin_vite_resolve::ViteResolvePlugin;
 use rolldown_plugin_wasm_fallback::WasmFallbackPlugin;
 use rolldown_plugin_wasm_helper::WasmHelperPlugin;
 use rolldown_plugin_web_worker_post::WebWorkerPostPlugin;
+use rolldown_plugin_react_refresh_wrapper::ReactRefreshWrapperPlugin;
 
 use crate::options::plugin::config::BindingModulePreloadPolyfillPluginConfig;
 
@@ -160,6 +161,9 @@ impl TryFrom<BindingBuiltinPlugin<'_>> for Arc<dyn Pluginable> {
           OxcRuntimePlugin::default()
         };
         Arc::new(plugin)
+      }
+      BindingBuiltinPluginName::ReactRefreshWrapper => {
+        Arc::new(ReactRefreshWrapperPlugin::new())
       }
       BindingBuiltinPluginName::Report => {
         let plugin: ReporterPlugin = if let Some(options) = plugin.options {

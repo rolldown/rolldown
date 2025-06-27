@@ -142,3 +142,7 @@ export function oxcRuntimePlugin(
 ): BuiltinPlugin {
   return new BuiltinPlugin('builtin:oxc-runtime', config);
 }
+
+export function reactRefreshWrapperPlugin(): BuiltinPlugin {
+  return new BuiltinPlugin('builtin:react-refresh-wrapper');
+}

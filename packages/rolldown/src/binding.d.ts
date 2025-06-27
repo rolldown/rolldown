@@ -1366,6 +1366,7 @@ export type BindingBuiltinPluginName =  'builtin:alias'|
 'builtin:module-federation'|
 'builtin:module-preload-polyfill'|
 'builtin:oxc-runtime'|
+'builtin:react-refresh-wrapper'|
 'builtin:reporter'|
 'builtin:replace'|
 'builtin:transform'|

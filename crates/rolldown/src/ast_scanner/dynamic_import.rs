@@ -104,7 +104,6 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
       .skip(1)
       .rposition(|kind| !matches!(kind, AstKind::ParenthesizedExpression(_)))?;
     // ast_after_remove_paren_idx the index is find from `visit_path`
-    #[allow(clippy::match_on_vec_items)]
     match self.visit_path[ast_after_remove_paren_idx] {
       // 1. const mod = await import('mod'); console.log(mod)
       // 2. const {a} = await import('mod'); a.something;

@@ -1,3 +1,4 @@
+#![allow(clippy::ignore_without_reason)]
 use std::fmt::Write as _;
 use std::path::{Component, PathBuf};
 

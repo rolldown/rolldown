@@ -73,7 +73,7 @@ impl<'ast> VisitMut<'ast> for PreProcessor<'ast> {
     );
 
     for mut stmt in original_body {
-      let stmt_addr = Address::from_ptr(&stmt);
+      let stmt_addr = Address::from_ptr(&raw const stmt);
       self.statement_stack.push(stmt_addr);
       walk_mut::walk_statement(self, &mut stmt);
       self.statement_stack.pop();
@@ -92,7 +92,7 @@ impl<'ast> VisitMut<'ast> for PreProcessor<'ast> {
     if self.keep_names {
       let stmts = it.take_in(self.snippet.alloc());
       for mut stmt in stmts {
-        let stmt_addr = Address::from_ptr(&stmt);
+        let stmt_addr = Address::from_ptr(&raw const stmt);
         self.statement_stack.push(stmt_addr);
         walk_mut::walk_statement(self, &mut stmt);
         self.statement_stack.pop();

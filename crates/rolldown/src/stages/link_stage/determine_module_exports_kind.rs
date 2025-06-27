@@ -26,7 +26,7 @@ impl LinkStage<'_> {
               // SAFETY: If `importee` and `importer` are different, so this is safe. If they are the same, then behaviors are still expected.
               unsafe {
                 let importee_mut = addr_of!(*importee).cast_mut();
-                (*importee_mut).exports_kind = ExportsKind::Esm;
+                (&mut (*importee_mut)).exports_kind = ExportsKind::Esm;
               }
             }
           }
@@ -43,7 +43,7 @@ impl LinkStage<'_> {
               // A module with `ExportsKind::None` that `require` self should be turned into `ExportsKind::CommonJs`.
               unsafe {
                 let importee_mut = addr_of!(*importee).cast_mut();
-                (*importee_mut).exports_kind = ExportsKind::CommonJs;
+                (&mut (*importee_mut)).exports_kind = ExportsKind::CommonJs;
               }
             }
           },
@@ -64,7 +64,7 @@ impl LinkStage<'_> {
                   // A module with `ExportsKind::None` that `require` self should be turned into `ExportsKind::CommonJs`.
                   unsafe {
                     let importee_mut = addr_of!(*importee).cast_mut();
-                    (*importee_mut).exports_kind = ExportsKind::CommonJs;
+                    (&mut (*importee_mut)).exports_kind = ExportsKind::CommonJs;
                   }
                 }
               }

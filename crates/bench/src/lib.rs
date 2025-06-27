@@ -26,7 +26,7 @@ pub fn derive_benchmark_items(
 
   if derive_options.sourcemap {
     ret.push(BenchItem {
-      name: format!("{}-sourcemap", name),
+      name: format!("{name}-sourcemap"),
       options: {
         let mut options = options.clone();
         options.sourcemap = Some(rolldown::SourceMapType::File);
@@ -37,7 +37,7 @@ pub fn derive_benchmark_items(
 
   if derive_options.minify {
     ret.push(BenchItem {
-      name: format!("{}-minify", name),
+      name: format!("{name}-minify"),
       options: {
         let mut options = options.clone();
         options.minify = Some(true.into());
@@ -48,7 +48,7 @@ pub fn derive_benchmark_items(
 
   if derive_options.sourcemap && derive_options.minify {
     ret.push(BenchItem {
-      name: format!("{}-minify-sourcemap", name),
+      name: format!("{name}-minify-sourcemap"),
       options: {
         let mut options = options.clone();
         options.sourcemap = Some(rolldown::SourceMapType::File);

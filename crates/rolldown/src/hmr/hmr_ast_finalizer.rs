@@ -46,15 +46,6 @@ impl<'ast> HmrAstFinalizer<'_, 'ast> {
           ret.extend(self.generate_declaration_of_module_namespace_object(
             &binding_name_for_namespace_object_ref,
           ));
-          // Add __esModule flag
-          ret.push(self.snippet.builder.statement_expression(
-            SPAN,
-            self.snippet.call_expr_with_arg_expr(
-              self.snippet.id_ref_expr("__rolldown_runtime__.__toCommonJS", SPAN),
-              self.snippet.id_ref_expr(&binding_name_for_namespace_object_ref, SPAN),
-              false,
-            ),
-          ));
 
           // { exports: namespace }
           ast::Argument::ObjectExpression(self.snippet.builder.alloc_object_expression(

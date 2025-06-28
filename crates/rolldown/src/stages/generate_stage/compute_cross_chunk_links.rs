@@ -203,11 +203,6 @@ impl GenerateStage<'_> {
               return;
             }
             stmt_info.declared_symbols.iter().for_each(|declared| {
-              // if stmt_info.side_effect == rolldown_common::StmtSideEffect::PureCjs {
-              //   dbg!(&declared);
-              //   // Pure CJS statements are not included in the final output, so we don't need to assign them to any chunk.
-              //   return;
-              // }
               symbol_needs_to_assign.push(*declared);
             });
 
@@ -228,7 +223,7 @@ impl GenerateStage<'_> {
                   // 	exports.b = 1e3;
                   // } });
                   // ```
-                  if meta.local_facade_cjs_namespace_map.contains_key(&member_expr.object_ref) {
+                  if meta.named_import_to_cjs_module.contains_key(&member_expr.object_ref) {
                     return;
                   }
                   match member_expr.represent_symbol_ref(

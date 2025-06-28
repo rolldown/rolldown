@@ -1,4 +1,4 @@
 // MULTIPLE ENTRY MODULES
-export * as mod from './foo.js';
+import { a } from './foo.js';
 
-// console.log(`mod.another: `, mod.another.a)
+console.log(`mod.another: `, a);

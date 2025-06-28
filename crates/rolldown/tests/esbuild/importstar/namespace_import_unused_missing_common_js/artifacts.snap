@@ -10,9 +10,7 @@ import assert from "node:assert";
 
 
 //#region foo.js
-var require_foo = __commonJS({ "foo.js"(exports) {
-	exports.x = 123;
-} });
+var require_foo = __commonJS({ "foo.js"(exports) {} });
 
 //#endregion
 //#region entry.js

@@ -63,7 +63,8 @@ pub struct LinkingMetadata {
   pub is_tla_or_contains_tla_dependency: bool,
   /// Used to to track a facade binding referenced cjs module
   /// included reexport symbol from commonjs module
-  pub local_facade_cjs_namespace_map: FxHashMap<SymbolRef, ModuleIdx>,
+  pub named_import_to_cjs_module: FxHashMap<SymbolRef, ModuleIdx>,
+  pub import_record_ns_to_cjs_module: FxHashMap<SymbolRef, ModuleIdx>,
   /// Currently our symbol link system could only link one symbol to another one, but for commonjs
   /// tree shaking, when one symbol was linked it may not only link the namespace ref symbol, and
   /// also need to link the exported facade symbol.

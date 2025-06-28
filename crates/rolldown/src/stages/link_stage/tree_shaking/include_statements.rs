@@ -415,27 +415,39 @@ fn include_module(ctx: &mut Context, module: &NormalModule) {
       include_symbol(ctx, *symbol);
     });
   }
-  dbg!(&module.id);
-  dbg!(&module_meta.included_commonjs_export_symbol);
-  for symbol in module_meta.included_commonjs_export_symbol.iter() {
-    dbg!(&symbol);
-    include_symbol(ctx, *symbol);
-  }
 }
 
 fn include_symbol(ctx: &mut Context, symbol_ref: SymbolRef) {
-  if symbol_ref.owner != 0 {
-    dbg!(&symbol_ref);
-    dbg!(&ctx.modules[symbol_ref.owner].as_normal().unwrap().namespace_object_ref);
-    println!("{}", &ctx.symbols.get_create_reason(&symbol_ref));
-  }
   let mut canonical_ref = ctx.symbols.canonical_ref_for(symbol_ref);
+
+  if canonical_ref.owner != ctx.runtime_id {
+    dbg!(&symbol_ref);
+    dbg!(&canonical_ref);
+    dbg!(&ctx.symbols.get_create_reason(&canonical_ref));
+  }
   let canonical_ref_symbol = ctx.symbols.get(canonical_ref);
   if let Some(namespace_alias) = &canonical_ref_symbol.namespace_alias {
     canonical_ref = namespace_alias.namespace_ref;
-  }
 
-  if canonical_ref.owner != 0 {}
+    // handle case:
+    // ```js
+    // import {a} from './cjs.js'
+    // console.log(a)
+    // ```
+    if namespace_alias.property_name.as_str() != "default" {
+      if let Some(referenced_symbol) = ctx.metas[canonical_ref.owner]
+        .import_record_ns_to_cjs_module
+        .get(&canonical_ref)
+        .and_then(|idx| {
+          let cjs_module = &ctx.modules[*idx].as_normal()?;
+          let export_symbol = cjs_module.named_exports.get(&namespace_alias.property_name)?;
+          Some(export_symbol.referenced)
+        })
+      {
+        include_symbol(ctx, referenced_symbol);
+      }
+    }
+  }
 
   ctx.used_symbol_refs.insert(canonical_ref);
 
@@ -513,26 +525,26 @@ fn include_statement(ctx: &mut Context, module: &NormalModule, stmt_info_id: Stm
       // console.log(cjs)
       // ```
       // We need to include all exports in `cjs.js` module since the namespace ref is used
-      ctx.metas[module.idx].local_facade_cjs_namespace_map.get(original_ref).inspect(
-        |module_idx| {
-          ctx.bailout_cjs_tree_shaking_modules.insert(**module_idx);
-          let Some(importee) = &ctx.modules[**module_idx].as_normal() else {
-            return;
-          };
-          let importee_meta = &ctx.metas[importee.idx];
-          if importee_meta.has_dynamic_exports {
-            importee_meta
-              .resolved_exports
-              .iter()
-              .filter_map(|(_name, resolved_export)| {
-                resolved_export.is_facade.then_some(resolved_export.symbol_ref)
-              })
-              .for_each(|facade_symbol_ref| {
-                include_symbol(ctx, facade_symbol_ref);
-              });
-          }
-        },
-      );
+      // ctx.metas[module.idx].local_facade_cjs_namespace_map.get(original_ref).inspect(
+      //   |module_idx| {
+      //     ctx.bailout_cjs_tree_shaking_modules.insert(**module_idx);
+      //     let Some(importee) = &ctx.modules[**module_idx].as_normal() else {
+      //       return;
+      //     };
+      //     let importee_meta = &ctx.metas[importee.idx];
+      //     if importee_meta.has_dynamic_exports {
+      //       importee_meta
+      //         .resolved_exports
+      //         .iter()
+      //         .filter_map(|(_name, resolved_export)| {
+      //           resolved_export.is_facade.then_some(resolved_export.symbol_ref)
+      //         })
+      //         .for_each(|facade_symbol_ref| {
+      //           include_symbol(ctx, facade_symbol_ref);
+      //         });
+      //     }
+      //   },
+      // );
       std::iter::once(original_ref)
         .chain(
           ctx.normal_symbol_exports_chain_map.get(original_ref).map(Vec::as_slice).unwrap_or(&[]),

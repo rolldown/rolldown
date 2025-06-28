@@ -105,6 +105,11 @@ pub enum ImportStatus {
   /// The imported file is CommonJS and has unknown exports
   CommonJS,
 
+  /// The imported file is CommonJS with known exports
+  CommonJSWithSymbol {
+    symbol: SymbolRef,
+  },
+
   /// The import is missing but there is a dynamic fallback object
   DynamicFallback {
     namespace_ref: SymbolRef,
@@ -656,6 +661,7 @@ impl BindImportsAndExportsContext<'_> {
     };
     let is_esm = matches!(self.options.format, OutputFormat::Esm);
     for (imported_as_ref, named_import) in &module.named_imports {
+      dbg!(&imported_as_ref, named_import);
       let match_import_span = tracing::trace_span!(
         "MATCH_IMPORT",
         module_id = module.stable_id,
@@ -895,6 +901,19 @@ impl BindImportsAndExportsContext<'_> {
             alias: alias.clone(),
           },
         },
+        ImportStatus::CommonJSWithSymbol { symbol } => {
+          dbg!(&symbol);
+          self.metas[tracker.importee].included_commonjs_export_symbol.insert(symbol);
+          match &tracker.imported {
+            Specifier::Star => {
+              MatchImportKind::Namespace { namespace_ref: importer_record.namespace_ref }
+            }
+            Specifier::Literal(alias) => MatchImportKind::NormalAndNamespace {
+              namespace_ref: importer_record.namespace_ref,
+              alias: alias.clone(),
+            },
+          }
+        }
         ImportStatus::DynamicFallback { namespace_ref } => match &tracker.imported {
           Specifier::Star => MatchImportKind::Namespace { namespace_ref },
           Specifier::Literal(alias) => {
@@ -902,8 +921,8 @@ impl BindImportsAndExportsContext<'_> {
           }
         },
         ImportStatus::DynamicFallbackWithCommonjsReference { namespace_ref, commonjs_symbol } => {
-          dbg!(&commonjs_symbol);
           self.metas[tracker.importee].included_commonjs_export_symbol.insert(commonjs_symbol);
+          dbg!(&tracker.imported);
           match &tracker.imported {
             Specifier::Star => MatchImportKind::Namespace { namespace_ref },
             Specifier::Literal(alias) => {

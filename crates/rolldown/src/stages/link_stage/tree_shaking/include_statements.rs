@@ -436,19 +436,20 @@ fn include_symbol(ctx: &mut Context, symbol_ref: SymbolRef) {
     }
   }
 
-  // if canonical_ref.owner != ctx.runtime_id {
-  //   dbg!(&symbol_ref);
-  //   dbg!(&canonical_ref);
-  //   dbg!(&may_partial_cjs_namespace);
-  //   dbg!(&ctx.symbols.get_create_reason(&canonical_ref));
-  // }
+  if canonical_ref.owner != ctx.runtime_id {
+    dbg!(&symbol_ref);
+    dbg!(&canonical_ref);
+    dbg!(&ctx.may_partial_namespace);
+    dbg!(&ctx.symbols.get_create_reason(&canonical_ref));
+  }
   let canonical_ref_symbol = ctx.symbols.get(canonical_ref);
   if let Some(namespace_alias) = &canonical_ref_symbol.namespace_alias {
+    dbg!(&namespace_alias);
     canonical_ref = namespace_alias.namespace_ref;
     if let Some(idx) =
       ctx.metas[canonical_ref.owner].import_record_ns_to_cjs_module.get(&canonical_ref)
     {
-      if !ctx.may_partial_namespace {
+      if !ctx.may_partial_namespace && namespace_alias.property_name.as_str() == "default" {
         ctx.bailout_cjs_tree_shaking_modules.insert(*idx);
       } else {
         // handle case:

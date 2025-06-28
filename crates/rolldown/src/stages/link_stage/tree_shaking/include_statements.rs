@@ -531,32 +531,6 @@ fn include_statement(ctx: &mut Context, module: &NormalModule, stmt_info_id: Stm
       }
     } else {
       let original_ref = reference_ref.symbol_ref();
-      // For case:
-      // ```js
-      // import cjs from './cjs.js'
-      // console.log(cjs)
-      // ```
-      // We need to include all exports in `cjs.js` module since the namespace ref is used
-      // ctx.metas[module.idx].local_facade_cjs_namespace_map.get(original_ref).inspect(
-      //   |module_idx| {
-      //     ctx.bailout_cjs_tree_shaking_modules.insert(**module_idx);
-      //     let Some(importee) = &ctx.modules[**module_idx].as_normal() else {
-      //       return;
-      //     };
-      //     let importee_meta = &ctx.metas[importee.idx];
-      //     if importee_meta.has_dynamic_exports {
-      //       importee_meta
-      //         .resolved_exports
-      //         .iter()
-      //         .filter_map(|(_name, resolved_export)| {
-      //           resolved_export.is_facade.then_some(resolved_export.symbol_ref)
-      //         })
-      //         .for_each(|facade_symbol_ref| {
-      //           include_symbol(ctx, facade_symbol_ref);
-      //         });
-      //     }
-      //   },
-      // );
       std::iter::once(original_ref)
         .chain(
           ctx.normal_symbol_exports_chain_map.get(original_ref).map(Vec::as_slice).unwrap_or(&[]),

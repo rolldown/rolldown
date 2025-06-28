@@ -551,29 +551,30 @@ impl LinkStage<'_> {
                 // Although the last one may not be a namespace ref, but it may reference a cjs
                 // import record namespace, which may reference a export in commonjs module.
                 if cursor < member_expr_ref.props.len() {
-                  let maybe_import_record_namespace =
-                    depended_refs.last().unwrap_or(&member_expr_ref.object_ref);
+                  let maybe_import_record_namespace = depended_refs
+                    .last()
+                    .copied()
+                    .unwrap_or(self.symbols.canonical_ref_for(member_expr_ref.object_ref));
 
                   if let Some(m) = self.metas[maybe_import_record_namespace.owner]
                     .named_import_to_cjs_module
-                    .get(maybe_import_record_namespace)
+                    .get(&maybe_import_record_namespace)
                     .or_else(|| {
                       self.metas[maybe_import_record_namespace.owner]
-                        .named_import_to_cjs_module
-                        .get(maybe_import_record_namespace)
+                        .import_record_ns_to_cjs_module
+                        .get(&maybe_import_record_namespace)
                     })
                     .and_then(|idx| {
                       let m = self.module_table.modules[*idx].as_normal()?;
                       m.named_exports.get(member_expr_ref.props[cursor].as_str())
                     })
                   {
-                    dbg!(&m);
                     is_cjs_symbol = true;
                     depended_refs.push(m.referenced);
                   }
                 }
 
-                if cursor > 0 {
+                if cursor > 0 || is_cjs_symbol {
                   // The module namespace might be created in the other module get imported via named import instead of `import * as`.
                   // We need to include the possible export chain.
                   depended_refs.push(member_expr_ref.object_ref);
@@ -582,17 +583,16 @@ impl LinkStage<'_> {
                       depended_refs.extend(*refs);
                     },
                   );
+                  resolved_map.insert(
+                    member_expr_ref.span,
+                    MemberExprRefResolution {
+                      resolved: Some(canonical_ref),
+                      props: member_expr_ref.props[cursor..].to_vec(),
+                      depended_refs,
+                      is_cjs_symbol,
+                    },
+                  );
                 }
-
-                resolved_map.insert(
-                  member_expr_ref.span,
-                  MemberExprRefResolution {
-                    resolved: Some(canonical_ref),
-                    props: member_expr_ref.props[cursor..].to_vec(),
-                    depended_refs,
-                    is_cjs_symbol,
-                  },
-                );
               }
             });
           });

@@ -637,9 +637,6 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
         {
           match object_ref {
             Some(object_ref) => {
-              if *is_cjs_symbol {
-                return None;
-              };
               let object_ref_expr = self.finalized_expr_for_symbol_ref(*object_ref, false, None);
 
               let replaced_expr =
@@ -663,9 +660,6 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
           }) => {
             match object_ref {
               Some(object_ref) => {
-                if *is_cjs_symbol {
-                  return None;
-                };
                 let object_ref_expr = self.finalized_expr_for_symbol_ref(*object_ref, false, None);
 
                 let replaced_expr =

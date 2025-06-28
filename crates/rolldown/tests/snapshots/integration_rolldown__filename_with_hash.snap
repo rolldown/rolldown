@@ -5139,7 +5139,7 @@ expression: output
 
 # tests/rolldown/topics/bundler_esm_cjs_tests/30
 
-- entry-!~{000}~.js => entry-BVzWhuOy.js
+- entry-!~{000}~.js => entry-CcE6yyIu.js
 
 # tests/rolldown/topics/bundler_esm_cjs_tests/31
 

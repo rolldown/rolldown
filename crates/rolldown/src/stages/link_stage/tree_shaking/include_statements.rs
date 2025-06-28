@@ -516,6 +516,7 @@ fn include_statement(ctx: &mut Context, module: &NormalModule, stmt_info_id: Stm
       // Caveat: If we can get the `MemberExprRefResolution` from the `resolved_member_expr_refs`,
       // it means this member expr definitely contains module namespace ref.
       if let Some(resolved_ref) = member_expr_resolution.resolved {
+        dbg!(&ctx.symbols.get_create_reason(&resolved_ref));
         member_expr_resolution.depended_refs.iter().for_each(|sym_ref| {
           if let Module::Normal(module) = &ctx.modules[sym_ref.owner] {
             module.stmt_infos.declared_stmts_by_symbol(sym_ref).iter().copied().for_each(

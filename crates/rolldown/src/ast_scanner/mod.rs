@@ -214,7 +214,7 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
       dynamic_import_usage_info: DynamicImportUsageInfo::default(),
       top_level_this_expr_set: FxHashSet::default(),
       is_nested_this_inside_class: false,
-      self_used_cjs_named_exports: FxHashSet::default(),
+      self_used_cjs_named_exports: FxHashSet::from_iter(["__esModule".into()]),
     }
   }
 

@@ -574,7 +574,7 @@ impl LinkStage<'_> {
                   }
                 }
 
-                if cursor > 0 || is_cjs_symbol {
+                if cursor > 0 {
                   // The module namespace might be created in the other module get imported via named import instead of `import * as`.
                   // We need to include the possible export chain.
                   depended_refs.push(member_expr_ref.object_ref);
@@ -583,6 +583,9 @@ impl LinkStage<'_> {
                       depended_refs.extend(*refs);
                     },
                   );
+                }
+
+                if cursor > 0 || is_cjs_symbol {
                   resolved_map.insert(
                     member_expr_ref.span,
                     MemberExprRefResolution {
@@ -803,7 +806,7 @@ impl BindImportsAndExportsContext<'_> {
       },
       Specifier::Literal(literal_imported) => {
         match self.metas[importee_id].resolved_exports.get(literal_imported) {
-          Some(export) => {
+          Some(export) if !export.is_facade => {
             ImportStatus::Found {
               // owner: importee_id,
               symbol: export.symbol_ref,

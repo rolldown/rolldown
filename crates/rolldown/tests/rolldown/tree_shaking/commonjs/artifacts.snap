@@ -1,0 +1,31 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## main.js
+
+```js
+import assert from "node:assert";
+
+
+//#region src/basic_ns/index.js
+var require_basic_ns = __commonJS({ "src/basic_ns/index.js"(exports) {
+	exports.a = "basic-a";
+} });
+
+//#endregion
+//#region src/basic_ref_with_named_default/index.js
+var require_basic_ref_with_named_default = __commonJS({ "src/basic_ref_with_named_default/index.js"(exports) {
+	exports.a = "basic_ref_with_named_default_a";
+} });
+
+//#endregion
+//#region main.js
+var import_basic_ns = __toESM(require_basic_ns());
+var import_basic_ref_with_named_default = __toESM(require_basic_ref_with_named_default());
+assert.equal(import_basic_ns.a, "basic-a");
+assert.equal(import_basic_ref_with_named_default.default.a, "basic_ref_with_named_default_a");
+
+//#endregion
+```

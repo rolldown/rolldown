@@ -513,7 +513,7 @@ fn include_statement(ctx: &mut Context, module: &NormalModule, stmt_info_id: Stm
     ctx.bailout_cjs_tree_shaking_modules.insert(module_idx);
   });
 
-  stmt_info.referenced_symbols.iter().for_each(|reference_ref| {
+  stmt_info.referenced_symbols.iter().enumerate().for_each(|(idx, reference_ref)| {
     if let Some(member_expr_resolution) = match reference_ref {
       SymbolOrMemberExprRef::Symbol(_) => None,
       SymbolOrMemberExprRef::MemberExpr(member_expr_ref) => {

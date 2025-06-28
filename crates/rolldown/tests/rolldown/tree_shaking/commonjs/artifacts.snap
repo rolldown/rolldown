@@ -44,7 +44,6 @@ __reExport(reexport_exports, __toESM(require_cjs$1()));
 //#region src/named_import_export_star_from_cjs/cjs.js
 var require_cjs = __commonJS({ "src/named_import_export_star_from_cjs/cjs.js"(exports) {
 	exports.a = "named_import_export_star_from_cjs_a";
-	exports.b = "named_import_export_star_from_cjs_b";
 } });
 
 //#endregion

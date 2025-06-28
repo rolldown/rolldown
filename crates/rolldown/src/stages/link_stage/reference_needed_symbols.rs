@@ -131,6 +131,7 @@ impl LinkStage<'_> {
                       }
                       WrapKind::Cjs => {
                         if is_reexport_all {
+                          dbg!(&importee.id);
                           *importer_side_effect = DeterminedSideEffects::Analyzed(true);
                           stmt_info.side_effect = true.into();
                           // Turn `export * from 'bar_cjs'` into `__reExport(foo_exports, __toESM(require_bar_cjs()))`
@@ -144,7 +145,7 @@ impl LinkStage<'_> {
                           stmt_info
                             .referenced_symbols
                             .push(self.runtime.resolve_symbol("__reExport").into());
-                          stmt_info.referenced_symbols.push(importer.namespace_object_ref.into());
+                          // stmt_info.referenced_symbols.push(importer.namespace_object_ref.into());
                         } else {
                           stmt_info.side_effect = importee.side_effects.has_side_effects().into();
 

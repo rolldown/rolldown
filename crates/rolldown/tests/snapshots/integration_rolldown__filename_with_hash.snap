@@ -1843,11 +1843,11 @@ expression: output
 
 # tests/esbuild/importstar/export_other_common_js
 
-- entry-!~{000}~.js => entry-Df_h0iPD.js
+- entry-!~{000}~.js => entry-9B98HuZj.js
 
 # tests/esbuild/importstar/export_other_nested_common_js
 
-- entry-!~{000}~.js => entry-BWwlQiaO.js
+- entry-!~{000}~.js => entry-DrhBPJNM.js
 
 # tests/esbuild/importstar/export_self_and_import_self_common_js
 
@@ -5584,7 +5584,7 @@ expression: output
 
 # tests/rolldown/tree_shaking/commonjs
 
-- main-!~{000}~.js => main-BBpnAKO6.js
+- main-!~{000}~.js => main-BjkVVU_N.js
 
 # tests/rolldown/tree_shaking/derived_side_effects_should_have_high_priority
 

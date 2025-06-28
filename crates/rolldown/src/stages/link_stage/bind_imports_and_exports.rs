@@ -106,7 +106,14 @@ pub enum ImportStatus {
   CommonJS,
 
   /// The import is missing but there is a dynamic fallback object
-  DynamicFallback { namespace_ref: SymbolRef },
+  DynamicFallback {
+    namespace_ref: SymbolRef,
+  },
+
+  DynamicFallbackWithCommonjsReference {
+    namespace_ref: SymbolRef,
+    commonjs_symbol: SymbolRef,
+  },
 
   /// The import was treated as a CommonJS import but the file is known to have no exports
   _CommonJSWithoutExports,
@@ -158,6 +165,8 @@ impl LinkStage<'_> {
           module_id,
           &mut module_stack,
         );
+        dbg!(&module.id);
+        dbg!(&resolved_exports);
       }
       meta.resolved_exports = resolved_exports;
     });
@@ -401,9 +410,6 @@ impl LinkStage<'_> {
         {
           continue;
         }
-        dbg!(&exported_name);
-        dbg!(&named_export);
-        dbg!(&resolve_exports);
         // We have filled `resolve_exports` with `named_exports`. If the export is already exists, it means that the importer
         // has a named export with the same name. So the export from dep module is shadowed.
         if let Some(resolved_export) = resolve_exports.get_mut(exported_name) {
@@ -412,7 +418,6 @@ impl LinkStage<'_> {
               .potentially_ambiguous_symbol_refs
               .get_or_insert(Vec::default())
               .push(named_export.referenced);
-            dbg!(&resolved_export);
           }
         } else {
           let resolved_export = ResolvedExport {
@@ -479,8 +484,10 @@ impl LinkStage<'_> {
                 while cursor < member_expr_ref.props.len() && is_namespace_ref {
                   let name = &member_expr_ref.props[cursor];
                   let meta = &self.metas[canonical_ref_owner.idx];
-                  dbg!(&canonical_ref_owner.id);
-                  let export_symbol = meta.resolved_exports.get(&name.to_rstr());
+                  let export_symbol =
+                    meta.resolved_exports.get(&name.to_rstr()).and_then(|resolved_export| {
+                      (!resolved_export.is_facade).then_some(resolved_export)
+                    });
                   let Some(export_symbol) = export_symbol else {
                     // when we try to resolve `a.b.c`, and found that `b` is not exported by module
                     // that `a` pointed to, convert the `a.b.c` into `void 0` if module `a` do not
@@ -548,13 +555,20 @@ impl LinkStage<'_> {
                   is_namespace_ref = canonical_ref_owner.namespace_object_ref == canonical_ref;
                 }
                 let mut is_cjs_symbol = false;
+
                 // Although the last one may not be a namespace ref, but it may reference a cjs
                 // import record namespace, which may reference a export in commonjs module.
+                // TODO: we could record if a module could potential reference a cjs symbol
+                // so that we could skip this step.
                 if cursor < member_expr_ref.props.len() {
+                  dbg!(&depended_refs);
                   let maybe_import_record_namespace = depended_refs
                     .last()
                     .copied()
                     .unwrap_or(self.symbols.canonical_ref_for(member_expr_ref.object_ref));
+                  dbg!(&maybe_import_record_namespace);
+                  dbg!(&member_expr_ref.object_ref);
+                  dbg!(&self.metas[maybe_import_record_namespace.owner].has_dynamic_exports);
 
                   if let Some(m) = self.metas[maybe_import_record_namespace.owner]
                     .named_import_to_cjs_module
@@ -564,13 +578,16 @@ impl LinkStage<'_> {
                         .import_record_ns_to_cjs_module
                         .get(&maybe_import_record_namespace)
                     })
+                    .or_else(|| {
+                      (self.metas[maybe_import_record_namespace.owner].has_dynamic_exports)
+                        .then_some(&maybe_import_record_namespace.owner)
+                    })
                     .and_then(|idx| {
-                      let m = self.module_table.modules[*idx].as_normal()?;
-                      m.named_exports.get(member_expr_ref.props[cursor].as_str())
+                      self.metas[*idx].resolved_exports.get(member_expr_ref.props[cursor].as_str())
                     })
                   {
                     is_cjs_symbol = true;
-                    depended_refs.push(m.referenced);
+                    depended_refs.push(m.symbol_ref);
                   }
                 }
 
@@ -806,14 +823,21 @@ impl BindImportsAndExportsContext<'_> {
       },
       Specifier::Literal(literal_imported) => {
         match self.metas[importee_id].resolved_exports.get(literal_imported) {
-          Some(export) if !export.is_facade => {
-            ImportStatus::Found {
-              // owner: importee_id,
-              symbol: export.symbol_ref,
-              potentially_ambiguous_export_star_refs: export
-                .potentially_ambiguous_symbol_refs
-                .clone()
-                .unwrap_or_default(),
+          Some(export) => {
+            if !export.is_facade {
+              ImportStatus::Found {
+                // owner: importee_id,
+                symbol: export.symbol_ref,
+                potentially_ambiguous_export_star_refs: export
+                  .potentially_ambiguous_symbol_refs
+                  .clone()
+                  .unwrap_or_default(),
+              }
+            } else {
+              ImportStatus::DynamicFallbackWithCommonjsReference {
+                namespace_ref: importee.namespace_object_ref,
+                commonjs_symbol: export.symbol_ref,
+              }
             }
           }
           _ => {
@@ -877,6 +901,16 @@ impl BindImportsAndExportsContext<'_> {
             MatchImportKind::NormalAndNamespace { namespace_ref, alias: alias.clone() }
           }
         },
+        ImportStatus::DynamicFallbackWithCommonjsReference { namespace_ref, commonjs_symbol } => {
+          dbg!(&commonjs_symbol);
+          self.metas[tracker.importee].included_commonjs_export_symbol.insert(commonjs_symbol);
+          match &tracker.imported {
+            Specifier::Star => MatchImportKind::Namespace { namespace_ref },
+            Specifier::Literal(alias) => {
+              MatchImportKind::NormalAndNamespace { namespace_ref, alias: alias.clone() }
+            }
+          }
+        }
         ImportStatus::NoMatch { .. } => {
           break MatchImportKind::NoMatch;
         }

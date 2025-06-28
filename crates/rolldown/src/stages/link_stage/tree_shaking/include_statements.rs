@@ -415,6 +415,10 @@ fn include_module(ctx: &mut Context, module: &NormalModule) {
       include_symbol(ctx, *symbol, false);
     });
   }
+
+  ctx.metas[module.idx].included_commonjs_export_symbol.iter().for_each(|symbol_ref| {
+    include_symbol(ctx, *symbol_ref, true);
+  });
 }
 
 fn include_symbol(ctx: &mut Context, symbol_ref: SymbolRef, may_partial_cjs_namespace: bool) {

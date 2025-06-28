@@ -21,11 +21,47 @@ var require_basic_ref_with_named_default = __commonJS({ "src/basic_ref_with_name
 } });
 
 //#endregion
+//#region src/export_star_from_cjs/cjs.js
+var require_cjs$2 = __commonJS({ "src/export_star_from_cjs/cjs.js"(exports) {
+	exports.a = "export_star_from_cjs_a";
+} });
+
+//#endregion
+//#region src/export_star_from_cjs/index.js
+var export_star_from_cjs_exports = {};
+__reExport(export_star_from_cjs_exports, __toESM(require_cjs$2()));
+
+//#endregion
+//#region src/nested_export_star_from_cjs/cjs.js
+var require_cjs$1 = __commonJS({ "src/nested_export_star_from_cjs/cjs.js"(exports) {
+	exports.a = "export_star_from_cjs_a";
+} });
+
+//#endregion
+//#region src/nested_export_star_from_cjs/reexport.js
+var reexport_exports = {};
+__reExport(reexport_exports, __toESM(require_cjs$1()));
+
+//#endregion
+//#region src/named_import_export_star_from_cjs/cjs.js
+var require_cjs = __commonJS({ "src/named_import_export_star_from_cjs/cjs.js"(exports) {
+	exports.a = "named_import_export_star_from_cjs_a";
+} });
+
+//#endregion
+//#region src/named_import_export_star_from_cjs/index.js
+var named_import_export_star_from_cjs_exports = {};
+__reExport(named_import_export_star_from_cjs_exports, __toESM(require_cjs()));
+
+//#endregion
 //#region main.js
 var import_basic_ns = __toESM(require_basic_ns());
 var import_basic_ref_with_named_default = __toESM(require_basic_ref_with_named_default());
 assert.equal(import_basic_ns.a, "basic-a");
 assert.equal(import_basic_ref_with_named_default.default.a, "basic_ref_with_named_default_a");
+console.log(export_star_from_cjs_exports.a, "export_star_from_cjs_a");
+console.log(named_import_export_star_from_cjs_exports.a, "named_import_export_star_from_cjs_a");
+console.log(reexport_exports.a, "named_import_export_star_from_cjs_a");
 
 //#endregion
 ```

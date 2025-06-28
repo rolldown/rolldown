@@ -36,6 +36,12 @@ pub struct BindingViteResolvePluginConfig {
   #[debug("{}", if finalize_bare_specifier.is_some() { "Some(<finalize_other_specifiers>)" } else { "None" })]
   #[napi(ts_type = "(resolvedId: string, rawId: string) => VoidNullable<string>")]
   pub finalize_other_specifiers: Option<JsCallback<FnArgs<(String, String)>, Option<String>>>,
+  #[debug("Some(<resolve_subpath_imports>)")]
+  #[napi(
+    ts_type = "(id: string, importer: string, isRequire: boolean, scan: boolean) => VoidNullable<string>"
+  )]
+  pub resolve_subpath_imports:
+    JsCallback<FnArgs<(String, Option<String>, bool, bool)>, Option<String>>,
 }
 
 impl From<BindingViteResolvePluginConfig> for ViteResolveOptions {
@@ -87,6 +93,19 @@ impl From<BindingViteResolvePluginConfig> for ViteResolveOptions {
                 .await
                 .map_err(anyhow::Error::from)
             })
+          })
+        },
+      ),
+      resolve_subpath_imports: Arc::new(
+        move |id: &str, importer: Option<&str>, is_require: bool, scan: bool| {
+          let resolve_fn = Arc::clone(&value.resolve_subpath_imports);
+          let id = id.to_owned();
+          let importer = importer.map(std::string::ToString::to_string);
+          Box::pin(async move {
+            resolve_fn
+              .invoke_async((id, importer, is_require, scan).into())
+              .await
+              .map_err(anyhow::Error::from)
           })
         },
       ),

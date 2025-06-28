@@ -45,7 +45,10 @@ pub struct ViteResolveOptions {
   pub finalize_bare_specifier: Option<Arc<FinalizeBareSpecifierCallback>>,
   #[debug(skip)]
   pub finalize_other_specifiers: Option<Arc<FinalizeOtherSpecifiersCallback>>,
+  #[debug(skip)]
+  pub resolve_subpath_imports: Arc<ResolveSubpathImportsCallback>,
 }
+
 pub type FinalizeBareSpecifierCallback = dyn (Fn(
     &str,
     &str,
@@ -55,6 +58,15 @@ pub type FinalizeBareSpecifierCallback = dyn (Fn(
   + Sync;
 
 pub type FinalizeOtherSpecifiersCallback = dyn (Fn(&str, &str) -> Pin<Box<(dyn Future<Output = anyhow::Result<Option<String>>> + Send + Sync)>>)
+  + Send
+  + Sync;
+
+pub type ResolveSubpathImportsCallback = dyn (Fn(
+    &str,
+    Option<&str>,
+    bool,
+    bool,
+  ) -> Pin<Box<(dyn Future<Output = anyhow::Result<Option<String>>> + Send + Sync)>>)
   + Send
   + Sync;
 
@@ -97,6 +109,8 @@ pub struct ViteResolvePlugin {
   finalize_bare_specifier: Option<Arc<FinalizeBareSpecifierCallback>>,
   #[debug(skip)]
   finalize_other_specifiers: Option<Arc<FinalizeOtherSpecifiersCallback>>,
+  #[debug(skip)]
+  resolve_subpath_imports: Arc<ResolveSubpathImportsCallback>,
 
   resolvers: Resolvers,
   external_decider: ExternalDecider,
@@ -134,6 +148,7 @@ impl ViteResolvePlugin {
       environment_name: options.environment_name,
       finalize_bare_specifier: options.finalize_bare_specifier,
       finalize_other_specifiers: options.finalize_other_specifiers,
+      resolve_subpath_imports: options.resolve_subpath_imports,
       external_decider: ExternalDecider::new(
         ExternalDeciderOptions {
           external: options.external,
@@ -163,7 +178,7 @@ impl Plugin for ViteResolvePlugin {
     args: &HookResolveIdArgs<'_>,
   ) -> HookResolveIdReturn {
     let scan =
-      args.custom.get(&ResolveIdOptionsScan {}).is_some_and(|v| *v) || self.resolve_options.scan;
+      args.custom.get(&ResolveIdOptionsScan).is_some_and(|v| *v) || self.resolve_options.scan;
 
     if args.specifier.starts_with('\0')
       || args.specifier.starts_with("virtual:")
@@ -177,14 +192,35 @@ impl Plugin for ViteResolvePlugin {
       return Ok(Some(HookResolveIdOutput { id: args.specifier.into(), ..Default::default() }));
     }
 
+    let mut id = Cow::Borrowed(args.specifier);
+    if args.specifier.starts_with('#') {
+      if let Some(resolved_imports) =
+        (self.resolve_subpath_imports)(&id, args.importer, args.kind == ImportKind::Require, scan)
+          .await?
+      {
+        id = Cow::Owned(resolved_imports);
+        if args
+          .custom
+          .get(&rolldown_plugin_utils::constants::ViteImportGlob)
+          .is_some_and(|v| v.is_sub_imports_pattern())
+        {
+          let path = Path::new(&self.resolve_options.root).join(id.as_ref()).normalize();
+          return Ok(Some(HookResolveIdOutput {
+            id: path.to_slash_lossy().into(),
+            ..Default::default()
+          }));
+        }
+      }
+    }
+
     // explicit fs paths that starts with /@fs/*
-    if self.resolve_options.as_src && args.specifier.starts_with(FS_PREFIX) {
-      let mut res = fs_path_from_id(args.specifier);
+    if self.resolve_options.as_src && id.starts_with(FS_PREFIX) {
+      let mut res = fs_path_from_id(&id);
       // We don't need to resolve these paths since they are already resolved
       // always return here even if res doesn't exist since /@fs/ is explicit
       // if the file doesn't exist it should be a 404.
       if let Some(finalize_other_specifiers) = &self.finalize_other_specifiers {
-        if let Some(finalized) = finalize_other_specifiers(&res, args.specifier).await? {
+        if let Some(finalized) = finalize_other_specifiers(&res, &id).await? {
           res = finalized.into();
         }
       }
@@ -192,11 +228,11 @@ impl Plugin for ViteResolvePlugin {
     }
 
     // file url as path
-    if args.specifier.starts_with("file://") {
-      let (path, postfix) = file_url_str_to_path_and_postfix(args.specifier)?;
+    if id.starts_with("file://") {
+      let (path, postfix) = file_url_str_to_path_and_postfix(&id)?;
       let mut res = normalize_path(&path).into_owned() + &postfix;
       if let Some(finalize_other_specifiers) = &self.finalize_other_specifiers {
-        if let Some(finalized) = finalize_other_specifiers(&res, args.specifier).await? {
+        if let Some(finalized) = finalize_other_specifiers(&res, &id).await? {
           res = finalized;
         }
       }
@@ -204,7 +240,7 @@ impl Plugin for ViteResolvePlugin {
     }
 
     // data uri: pass through (this only happens during build and will be handled by rolldown)
-    if args.specifier.trim_start().starts_with("data:") {
+    if id.trim_start().starts_with("data:") {
       return Ok(None);
     }
 
@@ -214,16 +250,15 @@ impl Plugin for ViteResolvePlugin {
     );
     let resolver = self.resolvers.get(additional_options);
 
-    if is_bare_import(args.specifier) {
+    if is_bare_import(&id) {
       let external = self.resolve_options.is_build
         && self.environment_consumer == "server"
-        && self.external_decider.is_external(args.specifier, args.importer);
-      let result =
-        resolver.resolve_bare_import(args.specifier, args.importer, external, &self.dedupe)?;
+        && self.external_decider.is_external(&id, args.importer);
+      let result = resolver.resolve_bare_import(&id, args.importer, external, &self.dedupe)?;
       if let Some(mut result) = result {
         if let Some(finalize_bare_specifier) = &self.finalize_bare_specifier {
           if !scan && is_in_node_modules(&result.id) {
-            let finalized = finalize_bare_specifier(&result.id, args.specifier, args.importer)
+            let finalized = finalize_bare_specifier(&result.id, &id, args.importer)
               .await?
               .map(Into::into)
               .unwrap_or(result.id);
@@ -236,20 +271,20 @@ impl Plugin for ViteResolvePlugin {
 
       // built-ins
       // externalize if building for a server environment, otherwise redirect to an empty module
-      if self.environment_consumer == "server" && self.builtin_checker.is_builtin(args.specifier) {
+      if self.environment_consumer == "server" && self.builtin_checker.is_builtin(&id) {
         return Ok(Some(HookResolveIdOutput {
-          id: args.specifier.into(),
+          id: id.into(),
           external: Some(true.into()),
           side_effects: Some(HookSideEffects::False),
           ..Default::default()
         }));
-      } else if self.environment_consumer == "server" && is_node_like_builtin(args.specifier) {
+      } else if self.environment_consumer == "server" && is_node_like_builtin(&id) {
         if !(matches!(self.external, ResolveOptionsExternal::True)
-          || self.external.is_external_explicitly(args.specifier))
+          || self.external.is_external_explicitly(&id))
         {
           // TODO(sapphi-red): warn log
           // let mut message =
-          //   format!("Automatically externalized node built-in module \"{}\"", &args.specifier);
+          //   format!("Automatically externalized node built-in module \"{}\"", &id);
           // if let Some(importer) = args.importer {
           //   let current_dir =
           //     env::current_dir().unwrap_or(PathBuf::from(&self.resolve_options.root));
@@ -265,19 +300,19 @@ impl Plugin for ViteResolvePlugin {
         }
 
         return Ok(Some(HookResolveIdOutput {
-          id: args.specifier.into(),
+          id: id.into(),
           external: Some(true.into()),
           side_effects: Some(HookSideEffects::False),
           ..Default::default()
         }));
-      } else if self.environment_consumer == "client" && is_node_like_builtin(args.specifier) {
+      } else if self.environment_consumer == "client" && is_node_like_builtin(&id) {
         if self.no_external.is_true()
             // if both noExternal and external are true, noExternal will take the higher priority and bundle it.
             // only if the id is explicitly listed in external, we will externalize it and skip this error.
             &&(matches!(self.external, ResolveOptionsExternal::True)
-            || !self.external.is_external_explicitly(args.specifier))
+            || !self.external.is_external_explicitly(&id))
         {
-          let mut message = format!("Cannot bundle Node.js built-in \"{}\"", args.specifier);
+          let mut message = format!("Cannot bundle Node.js built-in \"{id}\"");
           if let Some(importer) = args.importer {
             let current_dir =
               env::current_dir().unwrap_or(PathBuf::from(&self.resolve_options.root));
@@ -302,7 +337,7 @@ impl Plugin for ViteResolvePlugin {
           id: if self.resolve_options.is_production {
             arcstr::literal!(BROWSER_EXTERNAL_ID)
           } else {
-            format!("{BROWSER_EXTERNAL_ID}:{}", args.specifier).into()
+            format!("{BROWSER_EXTERNAL_ID}:{id}").into()
           },
           ..Default::default()
         }));
@@ -313,7 +348,7 @@ impl Plugin for ViteResolvePlugin {
       .importer
       .map(|i| Path::new(i).parent().and_then(|p| p.to_str()).unwrap_or(i))
       .unwrap_or(&self.resolve_options.root);
-    let specifier = normalize_leading_slashes(args.specifier);
+    let specifier = normalize_leading_slashes(&id);
     let resolved = resolver.normalize_oxc_resolver_result(
       args.importer,
       &self.dedupe,
@@ -322,7 +357,7 @@ impl Plugin for ViteResolvePlugin {
     if let Some(mut resolved) = resolved {
       if !scan {
         if let Some(finalize_other_specifiers) = &self.finalize_other_specifiers {
-          if let Some(finalized) = finalize_other_specifiers(&resolved.id, args.specifier).await? {
+          if let Some(finalized) = finalize_other_specifiers(&resolved.id, &id).await? {
             resolved.id = finalized.into();
           }
         }
@@ -331,9 +366,9 @@ impl Plugin for ViteResolvePlugin {
     }
 
     // `//something` may resolve to a file so this check should be done after file checks
-    if is_external_url(args.specifier) {
+    if is_external_url(&id) {
       return Ok(Some(HookResolveIdOutput {
-        id: args.specifier.into(),
+        id: id.into(),
         external: Some(true.into()),
         ..Default::default()
       }));

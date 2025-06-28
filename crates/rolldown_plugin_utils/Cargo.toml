@@ -18,5 +18,6 @@ workspace = true
 anyhow = { workspace = true }
 cow-utils = { workspace = true }
 itertools = { workspace = true }
+rolldown_plugin = { workspace = true }
 rolldown_utils = { workspace = true }
 sugar_path = { workspace = true }

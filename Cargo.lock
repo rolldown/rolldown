@@ -2934,6 +2934,7 @@ dependencies = [
  "anyhow",
  "cow-utils",
  "itertools",
+ "rolldown_plugin",
  "rolldown_utils",
  "sugar_path",
 ]
@@ -2958,6 +2959,7 @@ dependencies = [
  "oxc_resolver",
  "rolldown_common",
  "rolldown_plugin",
+ "rolldown_plugin_utils",
  "rolldown_utils",
  "rustc-hash",
  "serde",

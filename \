@@ -2,7 +2,7 @@ use std::{any::Any, cmp::Reverse};
 
 use itertools::Itertools;
 use oxc::ast::ast::ImportOrExportKind;
-use oxc_index::{Idx, IndexVec};
+use oxc_index::IndexVec;
 use petgraph::prelude::DiGraphMap;
 use rolldown_common::{
   EcmaModuleAstUsage, EcmaViewMeta, EntryPoint, EntryPointKind, ExportsKind, ImportKind,
@@ -34,7 +34,6 @@ struct Context<'a> {
   /// It is necessary since we can't mutate `module.meta` during the tree shaking process.
   /// see [rolldown_common::ecmascript::ecma_view::EcmaViewMeta]
   bailout_cjs_tree_shaking_modules: FxHashSet<ModuleIdx>,
-  may_partial_namespace: bool,
 }
 
 impl LinkStage<'_> {
@@ -67,7 +66,6 @@ impl LinkStage<'_> {
       options: self.options,
       normal_symbol_exports_chain_map: &self.normal_symbol_exports_chain_map,
       bailout_cjs_tree_shaking_modules: FxHashSet::default(),
-      may_partial_namespace: false,
     };
 
     let (user_defined_entries, mut dynamic_entries): (Vec<_>, Vec<_>) =
@@ -94,7 +92,7 @@ impl LinkStage<'_> {
                 include_statement(context, module, stmt_info_id);
               },
             );
-            include_symbol(context, *symbol_ref);
+            include_symbol(context, *symbol_ref, false);
           }
         });
         include_module(context, module);
@@ -137,7 +135,7 @@ impl LinkStage<'_> {
               include_statement(context, module, stmt_info_id);
             },
           );
-          include_symbol(context, *symbol_ref);
+          include_symbol(context, *symbol_ref, false);
         }
       });
       include_module(context, module);
@@ -149,13 +147,12 @@ impl LinkStage<'_> {
 
     // It could be safely take since it is no more used.
     for idx in std::mem::take(&mut context.bailout_cjs_tree_shaking_modules) {
-      self.metas[idx]
-        .resolved_exports
-        .iter()
-        .filter_map(|(_name, local)| local.is_facade.then_some(local))
-        .for_each(|local| {
-          include_symbol(context, local.symbol_ref);
-        });
+      let Some(module) = context.modules[idx].as_normal() else {
+        continue;
+      };
+      module.named_exports.iter().filter_map(|(_name, local)| local.is_facade).for_each(|local| {
+        include_symbol(context, local.referenced, true);
+      });
     }
 
     // mark those dynamic import records as dead, in case we could eliminate them later in ast
@@ -185,6 +182,9 @@ impl LinkStage<'_> {
     });
 
     self.used_symbol_refs = used_symbol_refs;
+    for item in self.module_table.iter() {
+      dbg!(&item.id());
+    }
     tracing::trace!(
       "included statements {:#?}",
       self
@@ -361,7 +361,7 @@ fn include_module(ctx: &mut Context, module: &NormalModule) {
 
   let forced_no_treeshake = matches!(module.side_effects, DeterminedSideEffects::NoTreeshake);
   if ctx.tree_shaking && !forced_no_treeshake {
-    module.stmt_infos.iter_enumerated().skip(1).for_each(|(stmt_info_id, stmt_info)| {
+    module.stmt_infos.iter_enumerated().for_each(|(stmt_info_id, stmt_info)| {
       // No need to handle the first statement specially, which is the namespace object, because it doesn't have side effects and will only be included if it is used.
       let bail_eval = module.meta.has_eval()
         && !stmt_info.declared_symbols.is_empty()
@@ -411,28 +411,23 @@ fn include_module(ctx: &mut Context, module: &NormalModule) {
   );
   if module.meta.has_eval() && matches!(module.module_type, ModuleType::Js | ModuleType::Jsx) {
     module.named_imports.keys().for_each(|symbol| {
-      include_symbol(ctx, *symbol);
+      include_symbol(ctx, *symbol, false);
     });
   }
 
   ctx.metas[module.idx].included_commonjs_export_symbol.iter().for_each(|symbol_ref| {
-    include_symbol(ctx, *symbol_ref);
+    include_symbol(ctx, *symbol_ref, true);
   });
 }
 
-#[track_caller]
-fn include_symbol(ctx: &mut Context, symbol_ref: SymbolRef) {
+fn include_symbol(ctx: &mut Context, symbol_ref: SymbolRef, may_partial_cjs_namespace: bool) {
   let mut canonical_ref = ctx.symbols.canonical_ref_for(symbol_ref);
-  if !ctx.may_partial_namespace {
+
+  if !may_partial_cjs_namespace {
     if let Some(idx) =
       ctx.metas[canonical_ref.owner].import_record_ns_to_cjs_module.get(&canonical_ref)
     {
       ctx.bailout_cjs_tree_shaking_modules.insert(*idx);
-    }
-    if ctx.modules[canonical_ref.owner].as_normal().map(|m| m.namespace_object_ref)
-      == Some(canonical_ref)
-    {
-      ctx.bailout_cjs_tree_shaking_modules.insert(canonical_ref.owner);
     }
   }
 
@@ -448,7 +443,8 @@ fn include_symbol(ctx: &mut Context, symbol_ref: SymbolRef) {
     if let Some(idx) =
       ctx.metas[canonical_ref.owner].import_record_ns_to_cjs_module.get(&canonical_ref)
     {
-      if !ctx.may_partial_namespace {
+      dbg!(&namespace_alias, may_partial_cjs_namespace);
+      if !may_partial_cjs_namespace {
         ctx.bailout_cjs_tree_shaking_modules.insert(*idx);
       } else {
         // handle case:
@@ -461,7 +457,7 @@ fn include_symbol(ctx: &mut Context, symbol_ref: SymbolRef) {
             return;
           };
           if namespace_alias.property_name.as_str() != "default" {
-            include_symbol(ctx, export_symbol.referenced);
+            include_symbol(ctx, export_symbol.referenced, true);
           }
         });
       }
@@ -480,7 +476,6 @@ fn include_symbol(ctx: &mut Context, symbol_ref: SymbolRef) {
   }
 }
 
-#[track_caller]
 fn include_statement(ctx: &mut Context, module: &NormalModule, stmt_info_id: StmtInfoIdx) {
   let is_included = &mut ctx.is_included_vec[module.idx][stmt_info_id];
 
@@ -524,8 +519,8 @@ fn include_statement(ctx: &mut Context, module: &NormalModule, stmt_info_id: Stm
       // Caveat: If we can get the `MemberExprRefResolution` from the `resolved_member_expr_refs`,
       // it means this member expr definitely contains module namespace ref.
       if let Some(resolved_ref) = member_expr_resolution.resolved {
-        let pre = ctx.may_partial_namespace;
-        ctx.may_partial_namespace = member_expr_resolution.is_cjs_symbol;
+        dbg!(&ctx.symbols.get_create_reason(&resolved_ref));
+        dbg!(&ctx.modules[resolved_ref.owner]);
         member_expr_resolution.depended_refs.iter().for_each(|sym_ref| {
           if let Module::Normal(module) = &ctx.modules[sym_ref.owner] {
             module.stmt_infos.declared_stmts_by_symbol(sym_ref).iter().copied().for_each(
@@ -535,10 +530,7 @@ fn include_statement(ctx: &mut Context, module: &NormalModule, stmt_info_id: Stm
             );
           }
         });
-        dbg!(&resolved_ref);
-        dbg!(&member_expr_resolution.is_cjs_symbol);
-        include_symbol(ctx, resolved_ref);
-        ctx.may_partial_namespace = pre;
+        include_symbol(ctx, resolved_ref, member_expr_resolution.is_cjs_symbol);
       } else {
         // If it points to nothing, the expression will be rewritten as `void 0` and there's nothing we need to include
       }
@@ -557,7 +549,7 @@ fn include_statement(ctx: &mut Context, module: &NormalModule, stmt_info_id: Stm
             );
           }
         });
-      include_symbol(ctx, *original_ref);
+      include_symbol(ctx, *original_ref, false);
     }
   });
 }

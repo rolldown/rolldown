@@ -165,8 +165,6 @@ impl LinkStage<'_> {
           module_id,
           &mut module_stack,
         );
-        dbg!(&module.id);
-        dbg!(&resolved_exports);
       }
       meta.resolved_exports = resolved_exports;
     });
@@ -560,6 +558,8 @@ impl LinkStage<'_> {
                 // import record namespace, which may reference a export in commonjs module.
                 // TODO: we could record if a module could potential reference a cjs symbol
                 // so that we could skip this step.
+                dbg!(&cursor);
+                dbg!(&member_expr_ref);
                 if cursor < member_expr_ref.props.len() {
                   dbg!(&depended_refs);
                   let maybe_import_record_namespace = depended_refs

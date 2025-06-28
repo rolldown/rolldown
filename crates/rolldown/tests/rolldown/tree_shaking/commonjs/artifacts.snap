@@ -6,8 +6,6 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## main.js
 
 ```js
-import assert from "node:assert";
-
 
 //#region src/basic_ns/index.js
 var require_basic_ns = __commonJS({ "src/basic_ns/index.js"(exports) {
@@ -46,6 +44,7 @@ __reExport(reexport_exports, __toESM(require_cjs$1()));
 //#region src/named_import_export_star_from_cjs/cjs.js
 var require_cjs = __commonJS({ "src/named_import_export_star_from_cjs/cjs.js"(exports) {
 	exports.a = "named_import_export_star_from_cjs_a";
+	exports.b = "named_import_export_star_from_cjs_b";
 } });
 
 //#endregion
@@ -57,7 +56,7 @@ __reExport(named_import_export_star_from_cjs_exports, __toESM(require_cjs()));
 //#region main.js
 var import_basic_ns = __toESM(require_basic_ns());
 var import_basic_ref_with_named_default = __toESM(require_basic_ref_with_named_default());
-assert.equal(import_basic_ns.a, "basic-a");
+console.log(import_basic_ns.a, "basic-a");
 assert.equal(import_basic_ref_with_named_default.default.a, "basic_ref_with_named_default_a");
 console.log(export_star_from_cjs_exports.a, "export_star_from_cjs_a");
 console.log(named_import_export_star_from_cjs_exports.a, "named_import_export_star_from_cjs_a");

@@ -5584,7 +5584,7 @@ expression: output
 
 # tests/rolldown/tree_shaking/commonjs
 
-- main-!~{000}~.js => main-BjkVVU_N.js
+- main-!~{000}~.js => main-BBpnAKO6.js
 
 # tests/rolldown/tree_shaking/derived_side_effects_should_have_high_priority
 

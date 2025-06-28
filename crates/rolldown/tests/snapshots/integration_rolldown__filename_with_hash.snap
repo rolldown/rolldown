@@ -1839,15 +1839,15 @@ expression: output
 
 # tests/esbuild/importstar/export_other_as_namespace_common_js
 
-- entry-!~{000}~.js => entry-GqyY7GLo.js
+- entry-!~{000}~.js => entry-BRarpRE9.js
 
 # tests/esbuild/importstar/export_other_common_js
 
-- entry-!~{000}~.js => entry-9B98HuZj.js
+- entry-!~{000}~.js => entry-Df_h0iPD.js
 
 # tests/esbuild/importstar/export_other_nested_common_js
 
-- entry-!~{000}~.js => entry-DrhBPJNM.js
+- entry-!~{000}~.js => entry-BWwlQiaO.js
 
 # tests/esbuild/importstar/export_self_and_import_self_common_js
 
@@ -1907,7 +1907,7 @@ expression: output
 
 # tests/esbuild/importstar/import_export_other_as_namespace_common_js
 
-- entry-!~{000}~.js => entry-GqyY7GLo.js
+- entry-!~{000}~.js => entry-BRarpRE9.js
 
 # tests/esbuild/importstar/import_export_self_as_namespace_es6
 
@@ -3692,11 +3692,11 @@ expression: output
 
 # tests/rolldown/cjs_compat/import_reexport_between_esm_and_cjs/esm_import_esm_which_export_all_from_cjs_named_import
 
-- main-!~{000}~.js => main-DSwjndv6.js
+- main-!~{000}~.js => main-BFiR0kWv.js
 
 # tests/rolldown/cjs_compat/import_reexport_between_esm_and_cjs/esm_import_esm_which_export_all_from_multiple_cjs_named_import
 
-- main-!~{000}~.js => main-an2qaH9Q.js
+- main-!~{000}~.js => main-DqJRJaRM.js
 
 # tests/rolldown/cjs_compat/import_reexport_between_esm_and_cjs/esm_reexport_cjs_default
 

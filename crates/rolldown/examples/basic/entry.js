@@ -1,4 +1,5 @@
 // MULTIPLE ENTRY MODULES
-import { a } from './foo.js';
+import another from './foo.js';
+console.log(another.a);
 
-console.log(`mod.another: `, a);
+// console.log(`mod.another: `, mod);

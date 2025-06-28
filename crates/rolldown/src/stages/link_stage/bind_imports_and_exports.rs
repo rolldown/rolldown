@@ -1,4 +1,4 @@
-use std::{borrow::Cow, collections::hash_map::Entry, ops::Not};
+use std::{any::Any, borrow::Cow, collections::hash_map::Entry, ops::Not};
 
 use arcstr::ArcStr;
 use indexmap::IndexSet;
@@ -480,7 +480,6 @@ impl LinkStage<'_> {
                   let name = &member_expr_ref.props[cursor];
                   let meta = &self.metas[canonical_ref_owner.idx];
                   dbg!(&canonical_ref_owner.id);
-                  dbg!(&meta.resolved_exports);
                   let export_symbol = meta.resolved_exports.get(&name.to_rstr());
                   let Some(export_symbol) = export_symbol else {
                     // when we try to resolve `a.b.c`, and found that `b` is not exported by module
@@ -493,6 +492,7 @@ impl LinkStage<'_> {
                           resolved: None,
                           props: member_expr_ref.props[cursor..].to_vec(),
                           depended_refs: vec![],
+                          is_cjs_symbol: false,
                         },
                       );
                       warnings.push(
@@ -515,6 +515,7 @@ impl LinkStage<'_> {
                         resolved: None,
                         props: member_expr_ref.props[cursor..].to_vec(),
                         depended_refs: vec![],
+                        is_cjs_symbol: false,
                       },
                     );
                     return;
@@ -546,6 +547,32 @@ impl LinkStage<'_> {
                   cursor += 1;
                   is_namespace_ref = canonical_ref_owner.namespace_object_ref == canonical_ref;
                 }
+                let mut is_cjs_symbol = false;
+                // Although the last one may not be a namespace ref, but it may reference a cjs
+                // import record namespace, which may reference a export in commonjs module.
+                if cursor < member_expr_ref.props.len() {
+                  let maybe_import_record_namespace =
+                    depended_refs.last().unwrap_or(&member_expr_ref.object_ref);
+
+                  if let Some(m) = self.metas[maybe_import_record_namespace.owner]
+                    .named_import_to_cjs_module
+                    .get(maybe_import_record_namespace)
+                    .or_else(|| {
+                      self.metas[maybe_import_record_namespace.owner]
+                        .named_import_to_cjs_module
+                        .get(maybe_import_record_namespace)
+                    })
+                    .and_then(|idx| {
+                      let m = self.module_table.modules[*idx].as_normal()?;
+                      m.named_exports.get(member_expr_ref.props[cursor].as_str())
+                    })
+                  {
+                    dbg!(&m);
+                    is_cjs_symbol = true;
+                    depended_refs.push(m.referenced);
+                  }
+                }
+
                 if cursor > 0 {
                   // The module namespace might be created in the other module get imported via named import instead of `import * as`.
                   // We need to include the possible export chain.
@@ -555,15 +582,17 @@ impl LinkStage<'_> {
                       depended_refs.extend(*refs);
                     },
                   );
-                  resolved_map.insert(
-                    member_expr_ref.span,
-                    MemberExprRefResolution {
-                      resolved: Some(canonical_ref),
-                      props: member_expr_ref.props[cursor..].to_vec(),
-                      depended_refs,
-                    },
-                  );
                 }
+
+                resolved_map.insert(
+                  member_expr_ref.span,
+                  MemberExprRefResolution {
+                    resolved: Some(canonical_ref),
+                    props: member_expr_ref.props[cursor..].to_vec(),
+                    depended_refs,
+                    is_cjs_symbol,
+                  },
+                );
               }
             });
           });

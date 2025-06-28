@@ -628,11 +628,18 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
   ) -> Option<Expression<'ast>> {
     match member_expr {
       MemberExpression::ComputedMemberExpression(inner_expr) => {
-        if let Some(MemberExprRefResolution { resolved: object_ref, props, depended_refs }) =
-          self.ctx.linking_info.resolved_member_expr_refs.get(&inner_expr.span)
+        if let Some(MemberExprRefResolution {
+          resolved: object_ref,
+          props,
+          depended_refs,
+          is_cjs_symbol,
+        }) = self.ctx.linking_info.resolved_member_expr_refs.get(&inner_expr.span)
         {
           match object_ref {
             Some(object_ref) => {
+              if *is_cjs_symbol {
+                return None;
+              };
               let object_ref_expr = self.finalized_expr_for_symbol_ref(*object_ref, false, None);
 
               let replaced_expr =
@@ -648,13 +655,15 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
       }
       MemberExpression::StaticMemberExpression(inner_expr) => {
         match self.ctx.linking_info.resolved_member_expr_refs.get(&inner_expr.span) {
-          Some(MemberExprRefResolution { resolved: object_ref, props, depended_refs }) => {
+          Some(MemberExprRefResolution {
+            resolved: object_ref,
+            props,
+            depended_refs,
+            is_cjs_symbol,
+          }) => {
             match object_ref {
               Some(object_ref) => {
-                if matches!(
-                  self.ctx.modules[object_ref.owner].as_normal().map(|m| m.exports_kind),
-                  Some(ExportsKind::CommonJs)
-                ) {
+                if *is_cjs_symbol {
                   return None;
                 };
                 let object_ref_expr = self.finalized_expr_for_symbol_ref(*object_ref, false, None);

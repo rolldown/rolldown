@@ -1,4 +1,4 @@
-use std::cmp::Reverse;
+use std::{any::Any, cmp::Reverse};
 
 use itertools::Itertools;
 use oxc::ast::ast::ImportOrExportKind;
@@ -92,7 +92,7 @@ impl LinkStage<'_> {
                 include_statement(context, module, stmt_info_id);
               },
             );
-            include_symbol(context, *symbol_ref);
+            include_symbol(context, *symbol_ref, false);
           }
         });
         include_module(context, module);
@@ -135,7 +135,7 @@ impl LinkStage<'_> {
               include_statement(context, module, stmt_info_id);
             },
           );
-          include_symbol(context, *symbol_ref);
+          include_symbol(context, *symbol_ref, false);
         }
       });
       include_module(context, module);
@@ -154,7 +154,7 @@ impl LinkStage<'_> {
         continue;
       }
       module.named_exports.iter().for_each(|(_name, local)| {
-        include_symbol(context, local.referenced);
+        include_symbol(context, local.referenced, true);
       });
     }
 
@@ -412,39 +412,51 @@ fn include_module(ctx: &mut Context, module: &NormalModule) {
   );
   if module.meta.has_eval() && matches!(module.module_type, ModuleType::Js | ModuleType::Jsx) {
     module.named_imports.keys().for_each(|symbol| {
-      include_symbol(ctx, *symbol);
+      include_symbol(ctx, *symbol, false);
     });
   }
 }
 
-fn include_symbol(ctx: &mut Context, symbol_ref: SymbolRef) {
+fn include_symbol(ctx: &mut Context, symbol_ref: SymbolRef, may_partial_cjs_namespace: bool) {
   let mut canonical_ref = ctx.symbols.canonical_ref_for(symbol_ref);
 
-  if canonical_ref.owner != ctx.runtime_id {
-    dbg!(&symbol_ref);
-    dbg!(&canonical_ref);
-    dbg!(&ctx.symbols.get_create_reason(&canonical_ref));
+  if let Some(idx) =
+    ctx.metas[canonical_ref.owner].import_record_ns_to_cjs_module.get(&canonical_ref)
+  {
+    if !may_partial_cjs_namespace {
+      ctx.bailout_cjs_tree_shaking_modules.insert(*idx);
+    }
   }
+
+  // if canonical_ref.owner != ctx.runtime_id {
+  //   dbg!(&symbol_ref);
+  //   dbg!(&canonical_ref);
+  //   dbg!(&may_partial_cjs_namespace);
+  //   dbg!(&ctx.symbols.get_create_reason(&canonical_ref));
+  // }
   let canonical_ref_symbol = ctx.symbols.get(canonical_ref);
   if let Some(namespace_alias) = &canonical_ref_symbol.namespace_alias {
     canonical_ref = namespace_alias.namespace_ref;
-
-    // handle case:
-    // ```js
-    // import {a} from './cjs.js'
-    // console.log(a)
-    // ```
-    if namespace_alias.property_name.as_str() != "default" {
-      if let Some(referenced_symbol) = ctx.metas[canonical_ref.owner]
-        .import_record_ns_to_cjs_module
-        .get(&canonical_ref)
-        .and_then(|idx| {
-          let cjs_module = &ctx.modules[*idx].as_normal()?;
-          let export_symbol = cjs_module.named_exports.get(&namespace_alias.property_name)?;
-          Some(export_symbol.referenced)
-        })
-      {
-        include_symbol(ctx, referenced_symbol);
+    if let Some(idx) =
+      ctx.metas[canonical_ref.owner].import_record_ns_to_cjs_module.get(&canonical_ref)
+    {
+      dbg!(&namespace_alias, may_partial_cjs_namespace);
+      if !may_partial_cjs_namespace {
+        ctx.bailout_cjs_tree_shaking_modules.insert(*idx);
+      } else {
+        // handle case:
+        // ```js
+        // import {a} from './cjs.js'
+        // console.log(a)
+        // ```
+        ctx.modules[*idx].as_normal().inspect(|m| {
+          let Some(export_symbol) = m.named_exports.get(&namespace_alias.property_name) else {
+            return;
+          };
+          if namespace_alias.property_name.as_str() != "default" {
+            include_symbol(ctx, export_symbol.referenced, true);
+          }
+        });
       }
     }
   }
@@ -513,7 +525,7 @@ fn include_statement(ctx: &mut Context, module: &NormalModule, stmt_info_id: Stm
             );
           }
         });
-        include_symbol(ctx, resolved_ref);
+        include_symbol(ctx, resolved_ref, member_expr_resolution.is_cjs_symbol);
       } else {
         // If it points to nothing, the expression will be rewritten as `void 0` and there's nothing we need to include
       }
@@ -558,7 +570,7 @@ fn include_statement(ctx: &mut Context, module: &NormalModule, stmt_info_id: Stm
             );
           }
         });
-      include_symbol(ctx, *original_ref);
+      include_symbol(ctx, *original_ref, false);
     }
   });
 }

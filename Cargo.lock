@@ -2686,7 +2686,6 @@ name = "rolldown_loader_utils"
 version = "0.1.0"
 dependencies = [
  "anyhow",
- "rolldown_common",
  "serde_json",
 ]
 

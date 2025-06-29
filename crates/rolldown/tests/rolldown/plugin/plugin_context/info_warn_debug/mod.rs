@@ -4,7 +4,6 @@ use std::{
 };
 
 use rolldown::{BundlerOptions, InputItem, Log, LogLevel, OnLog};
-use rolldown_error::BuildDiagnostic;
 use rolldown_plugin::{HookUsage, Plugin, PluginContext};
 use rolldown_testing::{abs_file_dir, integration_test::IntegrationTest, test_config::TestMeta};
 
@@ -21,9 +20,9 @@ impl Plugin for TestPlugin {
     ctx: &PluginContext,
     _args: &rolldown_plugin::HookBuildStartArgs<'_>,
   ) -> rolldown_plugin::HookNoopReturn {
-    ctx.info(&BuildDiagnostic::unhandleable_error(anyhow::anyhow!("info")));
-    ctx.warn(&BuildDiagnostic::unhandleable_error(anyhow::anyhow!("warn")));
-    ctx.debug(&BuildDiagnostic::unhandleable_error(anyhow::anyhow!("debug")));
+    ctx.info(Log { code: String::new(), message: "info".to_owned(), id: None, exporter: None });
+    ctx.warn(Log { code: String::new(), message: "warn".to_owned(), id: None, exporter: None });
+    ctx.debug(Log { code: String::new(), message: "debug".to_owned(), id: None, exporter: None });
     Ok(())
   }
 
@@ -43,9 +42,9 @@ async fn allow_pass_custom_arg() {
     Box::pin(async move {
       let mut guard = temp.lock().unwrap();
       match log_level {
-        LogLevel::Info if log.message.contains("info") => *guard ^= 1 << 0,
-        LogLevel::Warn if log.message.contains("warn") => *guard ^= 1 << 1,
-        LogLevel::Debug if log.message.contains("debug") => *guard ^= 1 << 2,
+        LogLevel::Info if log.message == "info" => *guard ^= 1 << 0,
+        LogLevel::Warn if log.message == "warn" => *guard ^= 1 << 1,
+        LogLevel::Debug if log.message == "debug" => *guard ^= 1 << 2,
         _ => unreachable!(),
       }
       Ok(())

@@ -5,8 +5,7 @@ use std::{
 
 use arcstr::ArcStr;
 use derive_more::Debug;
-use rolldown_common::{ResolvedId, side_effects::HookSideEffects};
-use rolldown_error::BuildDiagnostic;
+use rolldown_common::{Log, ResolvedId, side_effects::HookSideEffects};
 
 use crate::{PluginContextResolveOptions, types::hook_resolve_id_skipped::HookResolveIdSkipped};
 
@@ -169,7 +168,7 @@ impl PluginContext {
   }
 
   #[inline]
-  pub fn info(&self, log: &BuildDiagnostic) {
+  pub fn info(&self, log: Log) {
     match self {
       PluginContext::Napi(_) => {
         unimplemented!("Can't call `info` on PluginContext::Napi")
@@ -179,7 +178,7 @@ impl PluginContext {
   }
 
   #[inline]
-  pub fn warn(&self, log: &BuildDiagnostic) {
+  pub fn warn(&self, log: Log) {
     match self {
       PluginContext::Napi(_) => {
         unimplemented!("Can't call `warn` on PluginContext::Napi")
@@ -189,7 +188,7 @@ impl PluginContext {
   }
 
   #[inline]
-  pub fn debug(&self, log: &BuildDiagnostic) {
+  pub fn debug(&self, log: Log) {
     match self {
       PluginContext::Napi(_) => {
         unimplemented!("Can't call `debug` on PluginContext::Napi")

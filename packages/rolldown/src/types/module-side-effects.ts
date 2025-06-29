@@ -16,5 +16,6 @@ export type TreeshakingOptions =
     annotations?: boolean;
     manualPureFunctions?: string[];
     unknownGlobalSideEffects?: boolean;
+    commonjs?: boolean;
   }
   | boolean;

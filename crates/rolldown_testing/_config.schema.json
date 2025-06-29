@@ -743,6 +743,12 @@
             "boolean",
             "null"
           ]
+        },
+        "commonjs": {
+          "type": [
+            "boolean",
+            "null"
+          ]
         }
       },
       "additionalProperties": false

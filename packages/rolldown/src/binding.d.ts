@@ -1905,6 +1905,7 @@ export interface BindingTreeshake {
   annotations?: boolean
   manualPureFunctions?: Array<string>
   unknownGlobalSideEffects?: boolean
+  commonjs?: boolean
 }
 
 export interface BindingViteResolvePluginConfig {

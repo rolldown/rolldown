@@ -157,6 +157,7 @@ pub struct InnerOptions {
   pub annotations: Option<bool>,
   pub manual_pure_functions: Option<FxHashSet<String>>,
   pub unknown_global_side_effects: Option<bool>,
+  pub commonjs: Option<bool>,
 }
 
 impl Default for InnerOptions {
@@ -166,6 +167,7 @@ impl Default for InnerOptions {
       annotations: Some(true),
       manual_pure_functions: None,
       unknown_global_side_effects: None,
+      commonjs: None,
     }
   }
 }

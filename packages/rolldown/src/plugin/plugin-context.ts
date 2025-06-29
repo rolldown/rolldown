@@ -1,5 +1,9 @@
 import type { Program } from '@oxc-project/types';
-import type { BindingPluginContext, ParserOptions } from '../binding';
+import type {
+  BindingPluginContext,
+  BindingVitePluginCustom,
+  ParserOptions,
+} from '../binding';
 import { SYMBOL_FOR_RESOLVE_CALLER_THAT_SKIP_SELF } from '../constants/plugin-context';
 import type { LogHandler } from '../log/log-handler';
 import { LOG_LEVEL_WARN, type LogLevelOption } from '../log/logging';
@@ -160,9 +164,19 @@ export class PluginContextImpl extends MinimalPluginContextImpl {
     if (options != null) {
       receipt = this.data.saveResolveOptions(options);
     }
+    const vitePluginCustom = Object.entries(options?.custom ?? {}).reduce(
+      (acc, [key, value]) => {
+        if (key.startsWith('vite:')) {
+          (acc ??= {})[key as keyof BindingVitePluginCustom] = value;
+        }
+        return acc;
+      },
+      undefined as BindingVitePluginCustom | undefined,
+    );
     const res = await this.context.resolve(source, importer, {
       custom: receipt,
       skipSelf: options?.skipSelf,
+      vitePluginCustom,
     });
     if (receipt != null) {
       this.data.removeSavedResolveOptions(receipt);

@@ -1478,6 +1478,7 @@ export interface BindingHookJsLoadOutput {
 
 export interface BindingHookJsResolveIdOptions {
   scan?: boolean
+  custom?: BindingVitePluginCustom
 }
 
 export interface BindingHookJsResolveIdOutput {
@@ -1756,6 +1757,7 @@ export interface BindingPluginContextResolveOptions {
   importKind?: 'import-statement' | 'dynamic-import' | 'require-call' | 'import-rule' | 'url-token' | 'new-url' | 'hot-accept'
   skipSelf?: boolean
   custom?: number
+  vitePluginCustom?: BindingVitePluginCustom
 }
 
 export interface BindingPluginHookMeta {
@@ -1908,6 +1910,10 @@ export interface BindingTreeshake {
   commonjs?: boolean
 }
 
+export interface BindingVitePluginCustom {
+  'vite:import-glob'?: ViteImportGlobMeta
+}
+
 export interface BindingViteResolvePluginConfig {
   resolveOptions: BindingViteResolvePluginResolveOptions
   environmentConsumer: string
@@ -2019,3 +2025,7 @@ export declare function shutdownAsyncRuntime(): void
  * Usually it's used in test.
  */
 export declare function startAsyncRuntime(): void
+
+export interface ViteImportGlobMeta {
+  isSubImportsPattern?: boolean
+}

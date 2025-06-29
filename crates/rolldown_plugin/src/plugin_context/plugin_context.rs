@@ -6,6 +6,7 @@ use std::{
 use arcstr::ArcStr;
 use derive_more::Debug;
 use rolldown_common::{ResolvedId, side_effects::HookSideEffects};
+use rolldown_error::BuildDiagnostic;
 
 use crate::{PluginContextResolveOptions, types::hook_resolve_id_skipped::HookResolveIdSkipped};
 
@@ -164,6 +165,36 @@ impl PluginContext {
         unimplemented!("Can't call `file_emitter` on PluginContext::Napi")
       }
       PluginContext::Native(ctx) => &ctx.file_emitter,
+    }
+  }
+
+  #[inline]
+  pub fn info(&self, log: &BuildDiagnostic) {
+    match self {
+      PluginContext::Napi(_) => {
+        unimplemented!("Can't call `info` on PluginContext::Napi")
+      }
+      PluginContext::Native(ctx) => ctx.info(log),
+    }
+  }
+
+  #[inline]
+  pub fn warn(&self, log: &BuildDiagnostic) {
+    match self {
+      PluginContext::Napi(_) => {
+        unimplemented!("Can't call `warn` on PluginContext::Napi")
+      }
+      PluginContext::Native(ctx) => ctx.warn(log),
+    }
+  }
+
+  #[inline]
+  pub fn debug(&self, log: &BuildDiagnostic) {
+    match self {
+      PluginContext::Napi(_) => {
+        unimplemented!("Can't call `debug` on PluginContext::Napi")
+      }
+      PluginContext::Native(ctx) => ctx.debug(log),
     }
   }
 }

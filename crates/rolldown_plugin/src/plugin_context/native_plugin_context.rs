@@ -7,9 +7,10 @@ use anyhow::Context;
 use arcstr::ArcStr;
 use derive_more::Debug;
 use rolldown_common::{
-  ModuleInfo, ModuleLoaderMsg, ResolvedId, SharedFileEmitter, SharedNormalizedBundlerOptions,
-  side_effects::HookSideEffects,
+  LogLevel, ModuleInfo, ModuleLoaderMsg, ResolvedId, SharedFileEmitter,
+  SharedNormalizedBundlerOptions, side_effects::HookSideEffects,
 };
+use rolldown_error::{BuildDiagnostic, DiagnosticOptions};
 use rolldown_resolver::{ResolveError, Resolver};
 use rolldown_utils::dashmap::{FxDashMap, FxDashSet};
 use tokio::sync::Mutex;
@@ -149,5 +150,37 @@ impl NativePluginContextImpl {
 
   pub fn add_watch_file(&self, file: &str) {
     self.watch_files.insert(file.into());
+  }
+
+  fn log(&self, level: LogLevel, log: &BuildDiagnostic) {
+    if let Some(on_log) = &self.options.on_log {
+      let on_log = on_log.clone();
+      let log = rolldown_common::Log {
+        id: log.id(),
+        exporter: log.exporter(),
+        code: log.kind().to_string(),
+        message: log
+          .to_diagnostic_with(&DiagnosticOptions { cwd: self.options.cwd.clone() })
+          .to_color_string(),
+      };
+      rolldown_utils::futures::spawn(async move {
+        let _ = on_log.call(level, log).await;
+      });
+    }
+  }
+
+  #[inline]
+  pub fn info(&self, log: &BuildDiagnostic) {
+    self.log(LogLevel::Info, log);
+  }
+
+  #[inline]
+  pub fn warn(&self, log: &BuildDiagnostic) {
+    self.log(LogLevel::Warn, log);
+  }
+
+  #[inline]
+  pub fn debug(&self, log: &BuildDiagnostic) {
+    self.log(LogLevel::Debug, log);
   }
 }

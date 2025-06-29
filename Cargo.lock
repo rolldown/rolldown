@@ -2795,6 +2795,7 @@ dependencies = [
  "oxc",
  "rolldown_ecmascript_utils",
  "rolldown_plugin",
+ "rolldown_plugin_utils",
  "rolldown_utils",
  "sugar_path",
  "walkdir",

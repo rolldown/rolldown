@@ -1,6 +1,7 @@
 use std::borrow::Cow;
 use std::fmt::Write as _;
 use std::path::{Path, PathBuf};
+use std::sync::Arc;
 
 use oxc::ast::NONE;
 use oxc::ast::ast::{
@@ -11,6 +12,7 @@ use oxc::ast_visit::{VisitMut, walk_mut};
 use oxc::span::{SPAN, Span};
 use rolldown_ecmascript_utils::ExpressionExt;
 use rolldown_plugin::PluginContext;
+use rolldown_plugin_utils::constants::{ViteImportGlob, ViteImportGlobValue};
 use sugar_path::SugarPath;
 
 pub struct GlobImportVisit<'ast, 'a> {
@@ -326,7 +328,16 @@ impl GlobImportVisit<'_, '_> {
     } else if glob.starts_with("**") {
       return Cow::Borrowed(glob);
     } else {
-      let future = self.ctx.resolve(glob, Some(self.id), None);
+      let is_sub_imports_pattern = glob.starts_with('#') && glob.contains('*');
+      let future = self.ctx.resolve(
+        glob,
+        Some(self.id),
+        is_sub_imports_pattern.then(|| {
+          let custom = Arc::new(rolldown_plugin::CustomField::new());
+          custom.insert(ViteImportGlob, ViteImportGlobValue(true));
+          rolldown_plugin::PluginContextResolveOptions { custom, ..Default::default() }
+        }),
+      );
       if let Ok(result) = rolldown_utils::futures::block_on(future) {
         let id = match result {
           Ok(resolved_id) => resolved_id.id.into(),
@@ -337,8 +348,6 @@ impl GlobImportVisit<'_, '_> {
         }
       }
 
-      // TODO: Needs to investigate if oxc resolver support this pattern
-      // https://github.com/rolldown/vite/blob/454c8fff/packages/vite/src/node/plugins/importMetaGlob.ts#L563-L569
       panic!(
         "Invalid glob pattern: {glob} (resolved: '{}'), it must start with '/' or './'.",
         self.id
@@ -356,6 +365,32 @@ impl GlobImportVisit<'_, '_> {
       let prefix = if to.is_none() { "/" } else { "./" };
       format!("{prefix}{path}")
     }
+  }
+
+  fn get_common_base(globs: &[Cow<str>]) -> usize {
+    if globs.is_empty() {
+      return 0;
+    }
+
+    let first = globs[0].as_bytes();
+    let mut end = first.len();
+    for s in &globs[1..] {
+      let s_bytes = s.as_bytes();
+      let max_len = end.min(s_bytes.len());
+
+      let mut i = 0;
+      while i < max_len && first[i] == s_bytes[i] {
+        i += 1;
+      }
+
+      end = i;
+      if end == 0 {
+        break;
+      }
+    }
+
+    let common_glob_expr = &globs[0][..end];
+    Self::split_path_and_glob(common_glob_expr).0.len()
   }
 
   fn split_path_and_glob(path: &str) -> (&str, Option<&str>) {
@@ -434,6 +469,7 @@ impl GlobImportVisit<'_, '_> {
       "In virtual modules, all globs must start with '/'"
     );
 
+    let common = Self::get_common_base(&positive_globs);
     let self_path = self.relative_path(Path::new(self.id), Some(dir));
     for glob_expr in positive_globs {
       let (path, glob) = Self::split_path_and_glob(&glob_expr);
@@ -447,6 +483,10 @@ impl GlobImportVisit<'_, '_> {
       for entry in entries {
         let file = entry.path();
         let path = file.to_string_lossy();
+
+        if fast_glob::glob_match("**/node_modules/**", &path[common..]) {
+          continue;
+        }
 
         if glob.as_ref().is_some_and(|glob| !fast_glob::glob_match(glob, &path[p..]))
           || negated_globs.iter().any(|g| fast_glob::glob_match(&**g, &*path))

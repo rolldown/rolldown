@@ -349,6 +349,7 @@ function bindingifyTreeshakeOptions(
     annotations: config.annotations,
     manualPureFunctions: config.manualPureFunctions,
     unknownGlobalSideEffects: config.unknownGlobalSideEffects,
+    commonjs: config.commonjs,
   };
   if (config.moduleSideEffects === undefined) {
     normalizedConfig.moduleSideEffects = true;

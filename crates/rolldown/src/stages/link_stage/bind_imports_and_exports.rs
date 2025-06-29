@@ -163,13 +163,15 @@ impl LinkStage<'_> {
         .collect::<FxHashMap<_, _>>();
 
       let mut module_stack = vec![];
-      if module.has_star_export() {
+      if module.has_star_export() || module.ast_usage.contains(EcmaModuleAstUsage::IsCjsReexport) {
         Self::add_exports_for_export_star(
           &self.module_table.modules,
           &mut resolved_exports,
           module_id,
           &mut module_stack,
         );
+        dbg!(&module.id);
+        dbg!(&resolved_exports);
       }
       meta.resolved_exports = resolved_exports;
     });
@@ -392,7 +394,12 @@ impl LinkStage<'_> {
       return;
     };
 
-    for dep_id in module.star_export_module_ids() {
+    let cjs_reexports = if module.ast_usage.contains(EcmaModuleAstUsage::IsCjsReexport) {
+      vec![module.import_records.first().unwrap().resolved_module]
+    } else {
+      vec![]
+    };
+    for dep_id in module.star_export_module_ids().chain(cjs_reexports) {
       let Module::Normal(dep_module) = &normal_modules[dep_id] else {
         continue;
       };
@@ -431,7 +438,6 @@ impl LinkStage<'_> {
           resolve_exports.insert(exported_name.clone(), resolved_export);
         }
       }
-      dbg!(&resolve_exports);
 
       Self::add_exports_for_export_star(normal_modules, resolve_exports, dep_id, module_stack);
     }
@@ -558,23 +564,16 @@ impl LinkStage<'_> {
                   is_namespace_ref = canonical_ref_owner.namespace_object_ref == canonical_ref;
                 }
                 let mut is_cjs_symbol = false;
-
                 // Although the last one may not be a namespace ref, but it may reference a cjs
                 // import record namespace, which may reference a export in commonjs module.
                 // TODO: we could record if a module could potential reference a cjs symbol
                 // so that we could skip this step.
-                dbg!(&cursor);
-                dbg!(&member_expr_ref);
                 if cursor < member_expr_ref.props.len() {
-                  dbg!(&depended_refs);
                   let maybe_import_record_namespace = depended_refs
                     .last()
                     .copied()
                     .unwrap_or(self.symbols.canonical_ref_for(member_expr_ref.object_ref));
                   dbg!(&maybe_import_record_namespace);
-                  dbg!(&member_expr_ref.object_ref);
-                  dbg!(&self.metas[maybe_import_record_namespace.owner].has_dynamic_exports);
-
                   if let Some(m) = self.metas[maybe_import_record_namespace.owner]
                     .named_import_to_cjs_module
                     .get(&maybe_import_record_namespace)
@@ -661,7 +660,6 @@ impl BindImportsAndExportsContext<'_> {
     };
     let is_esm = matches!(self.options.format, OutputFormat::Esm);
     for (imported_as_ref, named_import) in &module.named_imports {
-      dbg!(&imported_as_ref, named_import);
       let match_import_span = tracing::trace_span!(
         "MATCH_IMPORT",
         module_id = module.stable_id,
@@ -820,7 +818,6 @@ impl BindImportsAndExportsContext<'_> {
     }
 
     let is_cjs = matches!(importee.exports_kind, ExportsKind::CommonJs);
-    dbg!(&named_import.imported);
     match &named_import.imported {
       Specifier::Star => ImportStatus::Found {
         symbol: importee.namespace_object_ref,
@@ -902,7 +899,6 @@ impl BindImportsAndExportsContext<'_> {
           },
         },
         ImportStatus::CommonJSWithSymbol { symbol } => {
-          dbg!(&symbol);
           self.metas[tracker.importee].included_commonjs_export_symbol.insert(symbol);
           match &tracker.imported {
             Specifier::Star => {
@@ -922,7 +918,6 @@ impl BindImportsAndExportsContext<'_> {
         },
         ImportStatus::DynamicFallbackWithCommonjsReference { namespace_ref, commonjs_symbol } => {
           self.metas[tracker.importee].included_commonjs_export_symbol.insert(commonjs_symbol);
-          dbg!(&tracker.imported);
           match &tracker.imported {
             Specifier::Star => MatchImportKind::Namespace { namespace_ref },
             Specifier::Literal(alias) => {

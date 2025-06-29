@@ -423,6 +423,12 @@ fn include_module(ctx: &mut Context, module: &NormalModule) {
 #[track_caller]
 fn include_symbol(ctx: &mut Context, symbol_ref: SymbolRef) {
   let mut canonical_ref = ctx.symbols.canonical_ref_for(symbol_ref);
+
+  // if canonical_ref.owner != ctx.runtime_id {
+  //   dbg!(&ctx.may_partial_namespace);
+  //   dbg!(&canonical_ref);
+  //   dbg!(&ctx.symbols.get_create_reason(&canonical_ref));
+  // }
   if !ctx.may_partial_namespace {
     if let Some(idx) =
       ctx.metas[canonical_ref.owner].import_record_ns_to_cjs_module.get(&canonical_ref)
@@ -436,15 +442,8 @@ fn include_symbol(ctx: &mut Context, symbol_ref: SymbolRef) {
     }
   }
 
-  if canonical_ref.owner != ctx.runtime_id {
-    dbg!(&symbol_ref);
-    dbg!(&canonical_ref);
-    dbg!(&ctx.may_partial_namespace);
-    dbg!(&ctx.symbols.get_create_reason(&canonical_ref));
-  }
   let canonical_ref_symbol = ctx.symbols.get(canonical_ref);
   if let Some(namespace_alias) = &canonical_ref_symbol.namespace_alias {
-    dbg!(&namespace_alias);
     canonical_ref = namespace_alias.namespace_ref;
     if let Some(idx) =
       ctx.metas[canonical_ref.owner].import_record_ns_to_cjs_module.get(&canonical_ref)
@@ -510,7 +509,9 @@ fn include_statement(ctx: &mut Context, module: &NormalModule, stmt_info_id: Stm
     {
       return;
     }
-    ctx.bailout_cjs_tree_shaking_modules.insert(module_idx);
+    if !module.ast_usage.contains(EcmaModuleAstUsage::IsCjsReexport) {
+      ctx.bailout_cjs_tree_shaking_modules.insert(module_idx);
+    }
   });
 
   stmt_info.referenced_symbols.iter().enumerate().for_each(|(idx, reference_ref)| {
@@ -520,8 +521,6 @@ fn include_statement(ctx: &mut Context, module: &NormalModule, stmt_info_id: Stm
         member_expr_ref.resolution(&ctx.metas[module.idx].resolved_member_expr_refs)
       }
     } {
-      dbg!(&reference_ref);
-      dbg!(&member_expr_resolution);
       // Caveat: If we can get the `MemberExprRefResolution` from the `resolved_member_expr_refs`,
       // it means this member expr definitely contains module namespace ref.
       if let Some(resolved_ref) = member_expr_resolution.resolved {
@@ -536,8 +535,6 @@ fn include_statement(ctx: &mut Context, module: &NormalModule, stmt_info_id: Stm
             );
           }
         });
-        dbg!(&resolved_ref);
-        dbg!(&member_expr_resolution.is_cjs_symbol);
         include_symbol(ctx, resolved_ref);
         ctx.may_partial_namespace = pre;
       } else {

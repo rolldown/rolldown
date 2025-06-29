@@ -7,59 +7,21 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```js
 
-//#region src/basic_ns/index.js
-var require_basic_ns = __commonJS({ "src/basic_ns/index.js"(exports) {
+//#region src/indirect_common_js/lib.js
+var require_lib = __commonJS({ "src/indirect_common_js/lib.js"(exports) {
 	exports.a = "basic-a";
 } });
 
 //#endregion
-//#region src/basic_ref_with_named_default/index.js
-var require_basic_ref_with_named_default = __commonJS({ "src/basic_ref_with_named_default/index.js"(exports) {
-	exports.a = "basic_ref_with_named_default_a";
+//#region src/indirect_common_js/index.js
+var require_indirect_common_js = __commonJS({ "src/indirect_common_js/index.js"(exports, module) {
+	module.exports = require_lib();
 } });
-
-//#endregion
-//#region src/export_star_from_cjs/cjs.js
-var require_cjs$2 = __commonJS({ "src/export_star_from_cjs/cjs.js"(exports) {
-	exports.a = "export_star_from_cjs_a";
-} });
-
-//#endregion
-//#region src/export_star_from_cjs/index.js
-var export_star_from_cjs_exports = {};
-__reExport(export_star_from_cjs_exports, __toESM(require_cjs$2()));
-
-//#endregion
-//#region src/nested_export_star_from_cjs/cjs.js
-var require_cjs$1 = __commonJS({ "src/nested_export_star_from_cjs/cjs.js"(exports) {
-	exports.a = "export_star_from_cjs_a";
-} });
-
-//#endregion
-//#region src/nested_export_star_from_cjs/reexport.js
-var reexport_exports = {};
-__reExport(reexport_exports, __toESM(require_cjs$1()));
-
-//#endregion
-//#region src/named_import_export_star_from_cjs/cjs.js
-var require_cjs = __commonJS({ "src/named_import_export_star_from_cjs/cjs.js"(exports) {
-	exports.a = "named_import_export_star_from_cjs_a";
-} });
-
-//#endregion
-//#region src/named_import_export_star_from_cjs/index.js
-var named_import_export_star_from_cjs_exports = {};
-__reExport(named_import_export_star_from_cjs_exports, __toESM(require_cjs()));
 
 //#endregion
 //#region main.js
-var import_basic_ns = __toESM(require_basic_ns());
-var import_basic_ref_with_named_default = __toESM(require_basic_ref_with_named_default());
-console.log(import_basic_ns.a, "basic-a");
-assert.equal(import_basic_ref_with_named_default.default.a, "basic_ref_with_named_default_a");
-console.log(export_star_from_cjs_exports.a, "export_star_from_cjs_a");
-console.log(named_import_export_star_from_cjs_exports.a, "named_import_export_star_from_cjs_a");
-console.log(reexport_exports.a, "named_import_export_star_from_cjs_a");
+var import_indirect_common_js = __toESM(require_indirect_common_js());
+assert.equal(import_indirect_common_js.default.a, "basic-a");
 
 //#endregion
 ```

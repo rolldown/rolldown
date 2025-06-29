@@ -63,16 +63,6 @@
     "BundlerOptions": {
       "type": "object",
       "properties": {
-        "format": {
-          "anyOf": [
-            {
-              "$ref": "#/$defs/OutputFormat"
-            },
-            {
-              "type": "null"
-            }
-          ]
-        },
         "input": {
           "type": [
             "array",
@@ -165,6 +155,16 @@
           "type": [
             "string",
             "null"
+          ]
+        },
+        "format": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/OutputFormat"
+            },
+            {
+              "type": "null"
+            }
           ]
         },
         "exports": {
@@ -520,10 +520,10 @@
       ]
     },
     "EsModuleFlag": {
-      "description": "This configuration determines how the bundler should handle the synthetic `__esModule` property in the CJS and IIFE format.\n It is rollup-capable, and the rollup default is `IfDefaultProp`.\n You may find rollup explanation [here](https://rollupjs.org/configuration-options/#output-esmodule).\n\n > Whether to add a `__esModule: true` property when generating exports for non-ES formats.\n > This property signifies that the exported value is the namespace of an ES module and that the default\n > export of this module corresponds to the `.default` property of the exported object.\n >\n > *From rollupjs.org*",
+      "description": "This configuration determines how the bundler should handle the synthetic `__esModule` property in the CJS and IIFE format.\nIt is rollup-capable, and the rollup default is `IfDefaultProp`.\nYou may find rollup explanation [here](https://rollupjs.org/configuration-options/#output-esmodule).\n\n> Whether to add a `__esModule: true` property when generating exports for non-ES formats.\n> This property signifies that the exported value is the namespace of an ES module and that the default\n> export of this module corresponds to the `.default` property of the exported object.\n>\n> *From rollupjs.org*",
       "oneOf": [
         {
-          "description": "Always generate `Object.defineProperty(exports, \"__esModule\", { value: true });`\n in the CJS and IIFE format. It is similar to other bundlers' behavior.",
+          "description": "Always generate `Object.defineProperty(exports, \"__esModule\", { value: true });`\nin the CJS and IIFE format. It is similar to other bundlers' behavior.",
           "type": "string",
           "const": "always"
         },
@@ -533,7 +533,7 @@
           "const": "never"
         },
         {
-          "description": "Generate the synthetic `__esModule` property in the CJS and IIFE format only\n if the module has a default export.\n\n > It will only add the property when using named exports mode and there also is a default export.\n > The subtle difference is that if there is no default export,\n > consumers of the CommonJS version of your library will get all named exports as\n > default export instead of an error or `undefined`.\n > We chose to make this the default value as the `__esModule` property is not a standard\n > followed by any JavaScript runtime and leads to many interop issues,\n > so we want to limit its use to the cases where it is really needed.\n >\n > *From rollupjs.org*\n\n For example, rolldown will define the `__esModule` property in the following entry code:\n\n ```js\n export default function() {}\n export const a = 1; // For this module, rolldown will automatically regard it as the `named` export mode.\n ```\n\n And rolldown won't generate the `__esModule` property in the following entry code:\n\n ```js\n export const a = 1;\n ```",
+          "description": "Generate the synthetic `__esModule` property in the CJS and IIFE format only\nif the module has a default export.\n\n> It will only add the property when using named exports mode and there also is a default export.\n> The subtle difference is that if there is no default export,\n> consumers of the CommonJS version of your library will get all named exports as\n> default export instead of an error or `undefined`.\n> We chose to make this the default value as the `__esModule` property is not a standard\n> followed by any JavaScript runtime and leads to many interop issues,\n> so we want to limit its use to the cases where it is really needed.\n>\n> *From rollupjs.org*\n\nFor example, rolldown will define the `__esModule` property in the following entry code:\n\n```js\nexport default function() {}\nexport const a = 1; // For this module, rolldown will automatically regard it as the `named` export mode.\n```\n\nAnd rolldown won't generate the `__esModule` property in the following entry code:\n\n```js\nexport const a = 1;\n```",
           "type": "string",
           "const": "if-default-prop"
         }
@@ -581,7 +581,7 @@
       ]
     },
     "ResolveOptions": {
-      "description": "A simple wrapper around `oxc_resolver::ResolveOptions` to make it easier to use in the `rolldown_resolver` crate.\n See [oxc_resolver::ResolveOptions](https://docs.rs/oxc_resolver/latest/oxc_resolver/struct.ResolveOptions.html) for more information.",
+      "description": "A simple wrapper around `oxc_resolver::ResolveOptions` to make it easier to use in the `rolldown_resolver` crate.\nSee [oxc_resolver::ResolveOptions](https://docs.rs/oxc_resolver/latest/oxc_resolver/struct.ResolveOptions.html) for more information.",
       "type": "object",
       "properties": {
         "alias": {
@@ -882,15 +882,11 @@
     },
     "InjectImport": {
       "title": "Usage",
-      "description": "- `import { Promise } from 'es6-promise'` => `InjectImport::named(\"Promise\", None,\"es6-promise\")`\n - `import { Promise as P } from 'es6-promise'` => `InjectImport::named(\"Promise\", Some(\"P\"), \"es6-promise\")`\n - `import $ from 'jquery'` => `InjectImport::named(\"default\", Some(\"$\"), \"jquery\")`\n - `import $ from 'jquery'` => `InjectImport::default(\"$\", \"jquery\")`\n - `import * as fs from 'node:fs'` => `InjectImport::namespace(\"fs\", \"node:fs\")`\n\n ---\n\n - `InjectImport::named(\"default\", Some(\"Object.assign\"), \"es6-object-assign\")`\n - `InjectImport::default(\"Object.assign\", \"es6-object-assign\")`\n\n are special forms to inject shims to the following code:\n ```js\n console.log(Object.assign({ a: 1 }, { b: 2 }));\n ```\n\n will be, after the injection, transformed to:\n\n ```js\n import object_assign from \"es6-object-assign\";\n console.log(object_assign({ a: 1 }, { b: 2 }));\n```",
+      "description": "- `import { Promise } from 'es6-promise'` => `InjectImport::named(\"Promise\", None,\"es6-promise\")`\n- `import { Promise as P } from 'es6-promise'` => `InjectImport::named(\"Promise\", Some(\"P\"), \"es6-promise\")`\n- `import $ from 'jquery'` => `InjectImport::named(\"default\", Some(\"$\"), \"jquery\")`\n- `import $ from 'jquery'` => `InjectImport::default(\"$\", \"jquery\")`\n- `import * as fs from 'node:fs'` => `InjectImport::namespace(\"fs\", \"node:fs\")`\n\n---\n\n- `InjectImport::named(\"default\", Some(\"Object.assign\"), \"es6-object-assign\")`\n- `InjectImport::default(\"Object.assign\", \"es6-object-assign\")`\n\nare special forms to inject shims to the following code:\n```js\nconsole.log(Object.assign({ a: 1 }, { b: 2 }));\n```\n\nwill be, after the injection, transformed to:\n\n```js\nimport object_assign from \"es6-object-assign\";\nconsole.log(object_assign({ a: 1 }, { b: 2 }));\n```",
       "oneOf": [
         {
           "type": "object",
           "properties": {
-            "type": {
-              "type": "string",
-              "const": "named"
-            },
             "imported": {
               "type": "string"
             },
@@ -902,6 +898,10 @@
             },
             "from": {
               "type": "string"
+            },
+            "type": {
+              "type": "string",
+              "const": "named"
             }
           },
           "additionalProperties": false,
@@ -914,15 +914,15 @@
         {
           "type": "object",
           "properties": {
-            "type": {
-              "type": "string",
-              "const": "namespace"
-            },
             "alias": {
               "type": "string"
             },
             "from": {
               "type": "string"
+            },
+            "type": {
+              "type": "string",
+              "const": "namespace"
             }
           },
           "additionalProperties": false,
@@ -974,7 +974,7 @@
           "format": "double"
         },
         "includeDependenciesRecursively": {
-          "description": "Whether to include the captured module's dependencies recursively.\n - If `true`, the dependencies would be included this group forcefully unless they are already included in another group.\n - This option would forcefully `true`, if `preserve_entry_signatures` is not `allow-extension`.",
+          "description": "Whether to include the captured module's dependencies recursively.\n- If `true`, the dependencies would be included this group forcefully unless they are already included in another group.\n- This option would forcefully `true`, if `preserve_entry_signatures` is not `allow-extension`.",
           "type": [
             "boolean",
             "null"

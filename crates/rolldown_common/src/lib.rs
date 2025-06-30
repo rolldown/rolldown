@@ -69,8 +69,8 @@ pub use crate::{
     Chunk, ChunkMeta,
     chunk_table::ChunkTable,
     types::{
-      AddonRenderContext, cross_chunk_import_item::CrossChunkImportItem,
-      preliminary_filename::PreliminaryFilename,
+      AddonRenderContext, chunk_reason_type::ChunkReasonType,
+      cross_chunk_import_item::CrossChunkImportItem, preliminary_filename::PreliminaryFilename,
     },
   },
   css::{

@@ -313,7 +313,10 @@ impl GenerateStage<'_> {
         None,
       );
       chunk.add_creation_reason(
-        ChunkCreationReason::AdvancedChunkGroup(&this_module_group.name),
+        ChunkCreationReason::AdvancedChunkGroup(
+          &this_module_group.name,
+          this_module_group.match_group_index.try_into().unwrap(),
+        ),
         self.options,
       );
 

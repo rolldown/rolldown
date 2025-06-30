@@ -308,6 +308,7 @@ pub fn normalize_options(mut raw_options: crate::BundlerOptions) -> NormalizeOpt
     }),
     cwd,
     preserve_entry_signatures,
+    debug: raw_options.debug.is_some(),
   };
 
   NormalizeOptionsReturn { options: normalized, resolve_options: raw_resolve, warnings }

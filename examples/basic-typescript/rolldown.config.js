@@ -11,4 +11,12 @@ export default defineConfig({
     conditionNames: ['import'],
   },
   debug: {},
+  plugins: [
+    {
+      name: 'test',
+      renderChunk(code) {
+        return code + '\n// test';
+      },
+    },
+  ],
 });

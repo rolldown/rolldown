@@ -39,6 +39,8 @@ pub struct SymbolRefDbForModule {
   // Only some symbols would be cared about, so we use a hashmap to store the flags.
   pub flags: FxHashMap<SymbolId, SymbolRefFlags>,
   pub classic_data: IndexVec<SymbolId, SymbolRefDataClassic>,
+  #[cfg(debug_assertions)]
+  create_reason: FxHashMap<SymbolRef, String>,
 }
 
 impl Default for SymbolRefDbForModule {
@@ -49,6 +51,8 @@ impl Default for SymbolRefDbForModule {
       ast_scopes: AstScopes::new(Scoping::default()),
       flags: FxHashMap::default(),
       classic_data: IndexVec::default(),
+      #[cfg(debug_assertions)]
+      create_reason: FxHashMap::default(),
     }
   }
 }
@@ -64,14 +68,29 @@ impl SymbolRefDbForModule {
       ]),
       ast_scopes: AstScopes::new(scoping),
       flags: FxHashMap::default(),
+      #[cfg(debug_assertions)]
+      create_reason: FxHashMap::default(),
     }
   }
 
   /// The `facade` means the symbol is actually not exist in the AST.
+  #[cfg_attr(debug_assertions, track_caller)]
   pub fn create_facade_root_symbol_ref(&mut self, name: &str) -> SymbolRef {
     let symbol_id = self.ast_scopes.create_facade_root_symbol_ref(name);
 
-    SymbolRef::from((self.owner_idx, symbol_id))
+    let ret = SymbolRef::from((self.owner_idx, symbol_id));
+    #[cfg(debug_assertions)]
+    {
+      let location = std::panic::Location::caller();
+      self.create_reason.insert(
+        ret,
+        format!(
+          "create facade root symbol ref for {:?} -> {}.\nlocation: {}",
+          self.owner_idx, name, location
+        ),
+      );
+    }
+    ret
   }
 
   /// # Panics
@@ -127,6 +146,8 @@ impl SymbolRefDb {
         ast_scopes: inner.clone_facade_only(),
         flags: inner.flags.clone(),
         classic_data: inner.classic_data.clone(),
+        #[cfg(debug_assertions)]
+        create_reason: inner.create_reason.clone(),
       }));
     }
     Self { inner: vec }
@@ -232,6 +253,16 @@ impl SymbolRefDb {
   pub fn is_declared_in_root_scope(&self, refer: SymbolRef) -> bool {
     let local_db = self.inner[refer.owner].unpack_ref();
     local_db.ast_scopes.symbol_scope_id(refer.symbol) == local_db.root_scope_id
+  }
+
+  #[cfg(debug_assertions)]
+  /// If it is not a facade symbol, `No create reason found` will be returned.
+  pub fn get_create_reason(&self, symbol_ref: &SymbolRef) -> &str {
+    self
+      .local_db(symbol_ref.owner)
+      .create_reason
+      .get(symbol_ref)
+      .map_or("No create reason found", |reason| reason.as_str())
   }
 }
 

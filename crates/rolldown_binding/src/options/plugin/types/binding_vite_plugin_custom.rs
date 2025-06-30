@@ -7,6 +7,6 @@ pub struct ViteImportGlobMeta {
 #[derive(Debug)]
 #[napi_derive::napi(object, object_to_js = false)]
 pub struct BindingVitePluginCustom {
-  #[napi(js_name = "'vite:import-glob'")]
+  #[napi(js_name = "vite:import-glob")]
   pub vite_import_glob: Option<ViteImportGlobMeta>,
 }

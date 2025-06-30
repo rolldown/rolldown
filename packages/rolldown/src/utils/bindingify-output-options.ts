@@ -1,6 +1,6 @@
 import type { BindingOutputOptions } from '../binding';
 import type { OutputOptions } from '../options/output-options';
-import { ChunkingContext } from '../types/chunking-context';
+import { ChunkingContextImpl } from '../types/chunking-context';
 import type { SourcemapIgnoreListOption } from '../types/misc';
 import { transformAssetSource } from './asset-source';
 import { unimplemented } from './misc';
@@ -202,7 +202,7 @@ function bindingifyAdvancedChunks(
       return {
         ...restGroup,
         name: typeof name === 'function'
-          ? (id, ctx) => name(id, new ChunkingContext(ctx))
+          ? (id, ctx) => name(id, new ChunkingContextImpl(ctx))
           : name,
       };
     }),

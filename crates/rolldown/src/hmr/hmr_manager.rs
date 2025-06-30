@@ -115,9 +115,7 @@ impl HmrManager {
         Some(module_idx) => {
           changed_modules.insert(*module_idx);
         }
-        _ => {
-           ;
-        }
+        _ => {}
       }
     }
     tracing::debug!(

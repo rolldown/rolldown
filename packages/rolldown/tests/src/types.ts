@@ -16,6 +16,7 @@ type OutputOptsToOutput<OutputOpts extends WithoutValue | undefined | OutputOpti
 
 export interface TestConfig<OutputOpts extends WithoutValue | undefined | OutputOptions | OutputOptions[] = undefined | OutputOptions | OutputOptions[]> {
   skip?: boolean
+  only?: boolean
   skipComposingJsPlugin?: boolean
   config?: RolldownOptions & { output?: OutputOpts }
   beforeTest?: (testKind: TestKind) => Promise<void> | void

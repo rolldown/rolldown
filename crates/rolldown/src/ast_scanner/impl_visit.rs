@@ -18,6 +18,8 @@ use rolldown_ecmascript_utils::ExpressionExt;
 use rolldown_error::BuildDiagnostic;
 use rolldown_std_utils::OptionExt;
 
+use crate::ast_scanner::cjs_ast_analyzer::CommonJsAstType;
+
 use super::{
   AstScanner, cjs_ast_analyzer::CjsGlobalAssignmentType, side_effect_detector::SideEffectDetector,
 };
@@ -107,7 +109,7 @@ impl<'me, 'ast: 'me> Visit<'ast> for AstScanner<'me, 'ast> {
   fn visit_binding_identifier(&mut self, ident: &ast::BindingIdentifier) {
     let symbol_id = ident.symbol_id.get().unpack();
     if self.is_root_symbol(symbol_id) {
-      self.add_declared_id(symbol_id);
+      self.declare_normal_symbol_ref(symbol_id);
     }
   }
 
@@ -179,35 +181,50 @@ impl<'me, 'ast: 'me> Visit<'ast> for AstScanner<'me, 'ast> {
   }
 
   fn visit_assignment_expression(&mut self, node: &ast::AssignmentExpression<'ast>) {
-    match &node.left {
-      // Detect `module.exports` and `exports.ANY`
-      ast::AssignmentTarget::StaticMemberExpression(member_expr) => match member_expr.object {
-        Expression::Identifier(ref id) => {
-          if id.name == "module"
-            && self.is_global_identifier_reference(id)
-            && member_expr.property.name == "exports"
-          {
-            self.cjs_module_ident.get_or_insert(Span::new(id.span.start, id.span.start + 6));
-          }
-          if id.name == "exports" && self.is_global_identifier_reference(id) {
-            self.cjs_exports_ident.get_or_insert(Span::new(id.span.start, id.span.start + 7));
-          }
-        }
-        // `module.exports.test` is also considered as commonjs keyword
-        Expression::StaticMemberExpression(ref member_expr) => {
-          if let Expression::Identifier(ref id) = member_expr.object {
+    match node.left.as_member_expression() {
+      Some(member_expr) => {
+        match member_expr.object() {
+          Expression::Identifier(id) => {
             if id.name == "module"
               && self.is_global_identifier_reference(id)
-              && member_expr.property.name == "exports"
+              && member_expr.static_property_name() == Some("exports")
             {
               self.cjs_module_ident.get_or_insert(Span::new(id.span.start, id.span.start + 6));
             }
+            if id.name == "exports" && self.is_global_identifier_reference(id) {
+              self.cjs_exports_ident.get_or_insert(Span::new(id.span.start, id.span.start + 7));
+              if let Some((_span, export_name)) = member_expr.static_property_info() {
+                // `exports.test = ...`
+                let exported_symbol =
+                  self.result.symbol_ref_db.create_facade_root_symbol_ref(export_name);
+
+                self.declare_link_only_symbol_ref(exported_symbol.symbol);
+
+                // TODO: use in next pr
+                // self.result.commonjs_exports.insert(
+                //   export_name.into(),
+                //   LocalExport { referenced: exported_symbol, span, came_from_commonjs: true },
+                // );
+              }
+            }
           }
+          // `module.exports.test` is also considered as commonjs keyword
+          Expression::StaticMemberExpression(member_expr) => {
+            if let Expression::Identifier(ref id) = member_expr.object {
+              if id.name == "module"
+                && self.is_global_identifier_reference(id)
+                && member_expr.property.name == "exports"
+              {
+                self.cjs_module_ident.get_or_insert(Span::new(id.span.start, id.span.start + 6));
+              }
+            }
+          }
+          _ => {}
         }
-        _ => {}
-      },
-      _ => {}
+      }
+      None => {}
     }
+
     walk::walk_assignment_expression(self, node);
   }
 
@@ -302,7 +319,28 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
             self.cjs_ast_analyzer(&CjsGlobalAssignmentType::ModuleExportsAssignment);
           }
           "exports" => {
-            self.cjs_ast_analyzer(&CjsGlobalAssignmentType::ExportsAssignment);
+            // exports = {} will not change the module.exports object, so we just ignore it;
+            let v = self.cjs_ast_analyzer(&CjsGlobalAssignmentType::ExportsAssignment);
+            match v {
+              // Do nothing since we need to tree shake `exports.<prop>` access
+              Some(CommonJsAstType::ExportsPropWrite | CommonJsAstType::EsModuleFlag) => {}
+              Some(CommonJsAstType::Reexport) => {
+                // This is only usd for `module.exports = require('mod')`
+                // should only reached when `ident_ref` is `exports`
+                unreachable!()
+              }
+              Some(CommonJsAstType::ExportsRead) => {
+                self.ast_usage.insert(EcmaModuleAstUsage::UnknownExportsRead);
+              }
+              None => match self.try_extract_parent_static_member_expr_chain(1) {
+                Some((_span, prop)) => {
+                  self.self_used_cjs_named_exports.insert(prop[0].as_str().into());
+                }
+                _ => {
+                  self.ast_usage.insert(EcmaModuleAstUsage::UnknownExportsRead);
+                }
+              },
+            }
           }
           "require" => {
             let is_dummy_record = match self.visit_path.last() {

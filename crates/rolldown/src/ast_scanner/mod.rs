@@ -7,7 +7,7 @@ mod new_url;
 pub mod side_effect_detector;
 
 use arcstr::ArcStr;
-use oxc::ast::{AstKind, MemberExpressionKind, ast};
+use oxc::ast::{AstKind, ast};
 use oxc::semantic::{Reference, ScopeFlags, ScopeId, Scoping};
 use oxc::span::SPAN;
 use oxc::{
@@ -27,8 +27,8 @@ use rolldown_common::dynamic_import_usage::{DynamicImportExportsUsage, DynamicIm
 use rolldown_common::{
   EcmaModuleAstUsage, ExportsKind, HmrInfo, ImportKind, ImportRecordIdx, ImportRecordMeta,
   LocalExport, MemberExprRef, ModuleDefFormat, ModuleId, ModuleIdx, NamedImport, RawImportRecord,
-  Specifier, StmtInfo, StmtInfos, SymbolRef, SymbolRefDbForModule, SymbolRefFlags,
-  ThisExprReplaceKind,
+  Specifier, StmtInfo, StmtInfos, StmtSideEffect, SymbolRef, SymbolRefDbForModule, SymbolRefFlags,
+  TaggedSymbolRef, ThisExprReplaceKind,
 };
 use rolldown_ecmascript_utils::{BindingIdentifierExt, BindingPatternExt};
 use rolldown_error::{BuildDiagnostic, BuildResult, CjsExportSpan};
@@ -55,6 +55,17 @@ pub struct ScanResult {
   /// module
   pub named_imports: FxIndexMap<SymbolRef, NamedImport>,
   pub named_exports: FxHashMap<Rstr, LocalExport>,
+  /// Used to store all exports in commonjs module, why not reuse `named_exports`?
+  /// Because It is legal to use commonjs exports syntax in a es module, here is an example:
+  /// ```js
+  /// export const foo = 1;
+  /// exports.foo = 20;
+  /// ```
+  /// Although the `exports.foo` will just be treated as a global variable assign, if we reused
+  /// `named_exports`, the `foo` will be overridden by the `exports.foo` and cause a bug(Because we
+  /// may not know if it is a esm at the time, a simple case would be swap the order of two export
+  /// stmt).
+  pub commonjs_exports: FxHashMap<Rstr, LocalExport>,
   pub stmt_infos: StmtInfos,
   pub import_records: IndexVec<ImportRecordIdx, RawImportRecord>,
   pub default_export_ref: SymbolRef,
@@ -118,6 +129,8 @@ pub struct AstScanner<'me, 'ast> {
   top_level_this_expr_set: FxHashSet<Span>,
   /// A flag to resolve `this` appear with propertyKey in class
   is_nested_this_inside_class: bool,
+  /// Used in commonjs module it self
+  self_used_cjs_named_exports: FxHashSet<Rstr>,
 }
 
 impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
@@ -175,6 +188,7 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
       hmr_hot_ref,
       directive_range: vec![],
       dummy_record_set: FxHashSet::default(),
+      commonjs_exports: FxHashMap::default(),
     };
 
     Self {
@@ -199,6 +213,7 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
       dynamic_import_usage_info: DynamicImportUsageInfo::default(),
       top_level_this_expr_set: FxHashSet::default(),
       is_nested_this_inside_class: false,
+      self_used_cjs_named_exports: FxHashSet::from_iter(["__esModule".into()]),
     }
   }
 
@@ -265,8 +280,26 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
         }
       }
     }
+    // Filtering out all facade export like `exports.test = 1`,
+    // It is legal to use commonjs exports syntax in a es module, although
+    // they will be treated as normal global variable assign.
+    if matches!(exports_kind, ExportsKind::Esm) {
+      self.result.commonjs_exports.clear();
+    }
 
     self.result.exports_kind = exports_kind;
+
+    // If some commonjs module facade exports was used locally, we need to explicitly mark them as
+    // has side effects, so that they should not be removed in linking stage.
+    for name in &self.self_used_cjs_named_exports {
+      if let Some(resolved) = self.result.commonjs_exports.get(name) {
+        let stmt_info_idx_list =
+          self.result.stmt_infos.declared_stmts_by_symbol(&resolved.referenced).to_vec();
+        for idx in stmt_info_idx_list {
+          self.result.stmt_infos[idx].side_effect = StmtSideEffect::Unknown;
+        }
+      }
+    }
 
     if self.options.is_hmr_enabled() && exports_kind.is_commonjs() {
       // https://github.com/rolldown/rolldown/issues/4129
@@ -280,7 +313,9 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
         .result
         .stmt_infos
         .iter()
-        .flat_map(|stmt_info| stmt_info.declared_symbols.iter())
+        .flat_map(|stmt_info| {
+          stmt_info.declared_symbols.iter().map(rolldown_common::TaggedSymbolRef::inner)
+        })
         .collect::<FxHashSet<_>>();
       for (name, symbol_id) in self
         .result
@@ -305,8 +340,12 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
     self.esm_export_keyword.get_or_insert(span);
   }
 
-  fn add_declared_id(&mut self, id: SymbolId) {
-    self.current_stmt_info.declared_symbols.push((self.idx, id).into());
+  fn declare_normal_symbol_ref(&mut self, id: SymbolId) {
+    self.current_stmt_info.declared_symbols.push(TaggedSymbolRef::Normal((self.idx, id).into()));
+  }
+
+  fn declare_link_only_symbol_ref(&mut self, id: SymbolId) {
+    self.current_stmt_info.declared_symbols.push(TaggedSymbolRef::LinkOnly((self.idx, id).into()));
   }
 
   fn get_root_binding(&self, name: &str) -> Option<SymbolId> {
@@ -407,10 +446,10 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
       ref_flags.insert(SymbolRefFlags::IS_NOT_REASSIGNED);
     }
 
-    self
-      .result
-      .named_exports
-      .insert(export_name.into(), LocalExport { referenced: (self.idx, local).into(), span });
+    self.result.named_exports.insert(
+      export_name.into(),
+      LocalExport { referenced: (self.idx, local).into(), span, came_from_commonjs: false },
+    );
   }
 
   fn add_local_default_export(&mut self, local: SymbolId, span: Span) {
@@ -418,10 +457,10 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
     let symbol_ref: SymbolRef = (self.idx, local).into();
     symbol_ref.flags_mut(&mut self.result.symbol_ref_db).insert(SymbolRefFlags::IS_NOT_REASSIGNED);
 
-    self
-      .result
-      .named_exports
-      .insert("default".into(), LocalExport { referenced: symbol_ref, span });
+    self.result.named_exports.insert(
+      "default".into(),
+      LocalExport { referenced: symbol_ref, span, came_from_commonjs: false },
+    );
   }
 
   /// Record `export { [imported] as [export_name] } from ...` statement.
@@ -468,7 +507,10 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
     let generated_imported_as_ref =
       self.result.symbol_ref_db.create_facade_root_symbol_ref(ident.as_ref());
 
-    self.current_stmt_info.declared_symbols.push(generated_imported_as_ref);
+    self
+      .current_stmt_info
+      .declared_symbols
+      .push(rolldown_common::TaggedSymbolRef::Normal(generated_imported_as_ref));
     let name_import = NamedImport {
       imported: imported.into(),
       imported_as: generated_imported_as_ref,
@@ -477,7 +519,11 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
     };
     self.result.named_exports.insert(
       export_name.into(),
-      LocalExport { referenced: generated_imported_as_ref, span: name_import.span_imported },
+      LocalExport {
+        referenced: generated_imported_as_ref,
+        span: name_import.span_imported,
+        came_from_commonjs: false,
+      },
     );
     self.result.named_imports.insert(generated_imported_as_ref, name_import);
   }
@@ -492,7 +538,10 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
       .result
       .symbol_ref_db
       .create_facade_root_symbol_ref(legitimize_identifier_name(export_name).as_ref());
-    self.current_stmt_info.declared_symbols.push(generated_imported_as_ref);
+    self
+      .current_stmt_info
+      .declared_symbols
+      .push(rolldown_common::TaggedSymbolRef::Normal(generated_imported_as_ref));
     let name_import = NamedImport {
       imported: Specifier::Star,
       span_imported: span_for_export_name,
@@ -502,7 +551,11 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
 
     self.result.named_exports.insert(
       export_name.into(),
-      LocalExport { referenced: generated_imported_as_ref, span: name_import.span_imported },
+      LocalExport {
+        referenced: generated_imported_as_ref,
+        span: name_import.span_imported,
+        came_from_commonjs: false,
+      },
     );
     self.result.named_imports.insert(generated_imported_as_ref, name_import);
   }
@@ -618,7 +671,7 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
     let (reference, span) = local_binding_for_default_export
       .unwrap_or((self.result.default_export_ref.symbol, Span::default()));
 
-    self.add_declared_id(reference);
+    self.declare_normal_symbol_ref(reference);
     self.add_local_default_export(reference, span);
   }
 
@@ -676,6 +729,7 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
         match &decl.declaration {
           ast::ExportDefaultDeclarationKind::ClassDeclaration(class) => {
             self.visit_class(class);
+            // walk::walk_declaration(self, &ast::Declaration::ClassDeclaration(func));
           }
           _ => {}
         }
@@ -745,12 +799,12 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
     let mut span = SPAN;
     let mut props = vec![];
     for ancestor_ast in self.visit_path.iter().rev().take(max_len) {
-      match ancestor_ast.as_member_expression_kind() {
-        Some(MemberExpressionKind::Static(expr)) => {
+      match ancestor_ast {
+        AstKind::StaticMemberExpression(expr) => {
           span = ancestor_ast.span();
           props.push(expr.property.name.as_str().into());
         }
-        Some(MemberExpressionKind::Computed(expr)) => {
+        AstKind::ComputedMemberExpression(expr) => {
           if let Some(name) = expr.static_property_name() {
             span = ancestor_ast.span();
             props.push(name.into());

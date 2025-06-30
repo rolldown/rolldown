@@ -4,6 +4,8 @@ use rustc_hash::FxHashMap;
 
 use crate::{ImportRecordIdx, StmtSideEffect, SymbolOrMemberExprRef, SymbolRef};
 
+use super::symbol_or_member_expr_ref::TaggedSymbolRef;
+
 #[derive(Debug, Default, Clone)]
 pub struct StmtInfos {
   pub infos: IndexVec<StmtInfoIdx, StmtInfo>,
@@ -23,23 +25,27 @@ impl StmtInfos {
   pub fn add_stmt_info(&mut self, info: StmtInfo) -> StmtInfoIdx {
     let id = self.infos.push(info);
     for symbol_ref in &*self.infos[id].declared_symbols {
-      self.symbol_ref_to_declared_stmt_idx.entry(*symbol_ref).or_default().push(id);
+      self.symbol_ref_to_declared_stmt_idx.entry(symbol_ref.inner()).or_default().push(id);
     }
     id
   }
 
   /// # Panic
   /// Caller should guarantee the stmt is included in `stmts` before, or it will panic.
-  pub fn declare_symbol_for_stmt(&mut self, id: StmtInfoIdx, symbol_ref: SymbolRef) {
+  pub fn declare_symbol_for_stmt(&mut self, id: StmtInfoIdx, symbol_ref: TaggedSymbolRef) {
     self.infos[id].declared_symbols.push(symbol_ref);
-    self.symbol_ref_to_declared_stmt_idx.entry(symbol_ref).or_default().push(id);
+    self.symbol_ref_to_declared_stmt_idx.entry(symbol_ref.inner()).or_default().push(id);
   }
 
   pub fn replace_namespace_stmt_info(&mut self, info: StmtInfo) -> StmtInfoIdx {
     let idx = StmtInfoIdx::from_raw(0);
     self.infos[idx] = info;
-    for symbol_ref in &*self.infos[idx].declared_symbols {
-      self.symbol_ref_to_declared_stmt_idx.entry(*symbol_ref).or_default().push(idx);
+    for symbol_ref in self.infos[idx]
+      .declared_symbols
+      .iter()
+      .filter(|item| matches!(item, TaggedSymbolRef::Normal(_)))
+    {
+      self.symbol_ref_to_declared_stmt_idx.entry(symbol_ref.inner()).or_default().push(idx);
     }
     idx
   }
@@ -92,7 +98,7 @@ pub struct StmtInfo {
   /// `stmt_idx` will be `None`.
   pub stmt_idx: Option<StmtInfoIdx>,
   // currently, we only store top level symbols
-  pub declared_symbols: Vec<SymbolRef>,
+  pub declared_symbols: Vec<TaggedSymbolRef>,
   // We will add symbols of other modules to `referenced_symbols`, so we need `SymbolRef`
   // here instead of `SymbolId`.
   /// Top level symbols referenced by this statement.
@@ -130,7 +136,7 @@ impl StmtInfo {
   }
 
   #[must_use]
-  pub fn with_declared_symbols(mut self, declared_symbols: Vec<SymbolRef>) -> Self {
+  pub fn with_declared_symbols(mut self, declared_symbols: Vec<TaggedSymbolRef>) -> Self {
     self.declared_symbols = declared_symbols;
     self
   }

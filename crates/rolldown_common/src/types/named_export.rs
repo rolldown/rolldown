@@ -9,4 +9,9 @@ use oxc::span::Span;
 pub struct LocalExport {
   pub span: Span,
   pub referenced: SymbolRef,
+  /// `true` if the export came from a commonjs module
+  /// ```js
+  /// exports.foo = 1;
+  /// ```
+  pub came_from_commonjs: bool,
 }

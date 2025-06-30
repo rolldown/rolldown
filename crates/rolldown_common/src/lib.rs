@@ -156,7 +156,7 @@ pub use crate::{
   types::stmt_info::{DebugStmtInfoForTreeShaking, StmtInfo, StmtInfoIdx, StmtInfoMeta, StmtInfos},
   types::stmt_side_effect::StmtSideEffect,
   types::str_or_bytes::StrOrBytes,
-  types::symbol_or_member_expr_ref::SymbolOrMemberExprRef,
+  types::symbol_or_member_expr_ref::{SymbolOrMemberExprRef, TaggedSymbolRef},
   types::symbol_ref::{SymbolRef, common_debug_symbol_ref},
   types::symbol_ref_db::{
     GetLocalDb, GetLocalDbMut, SymbolRefDb, SymbolRefDbForModule, SymbolRefFlags,

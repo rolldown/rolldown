@@ -1,7 +1,7 @@
 use std::cmp::Reverse;
 
 use itertools::Itertools;
-use oxc_index::{Idx, IndexVec};
+use oxc_index::IndexVec;
 use petgraph::prelude::DiGraphMap;
 use rolldown_common::{
   EcmaModuleAstUsage, EcmaViewMeta, EntryPoint, EntryPointKind, ExportsKind, ImportKind,
@@ -82,16 +82,18 @@ impl LinkStage<'_> {
         };
         context.bailout_cjs_tree_shaking_modules.insert(module.idx);
         let meta = &self.metas[entry.id];
-        meta.referenced_symbols_by_entry_point_chunk.iter().for_each(|(symbol_ref, _is_facade)| {
-          if let Module::Normal(module) = &context.modules[symbol_ref.owner] {
-            module.stmt_infos.declared_stmts_by_symbol(symbol_ref).iter().copied().for_each(
-              |stmt_info_id| {
-                include_statement(context, module, stmt_info_id);
-              },
-            );
-            include_symbol(context, *symbol_ref);
-          }
-        });
+        meta.referenced_symbols_by_entry_point_chunk.iter().for_each(
+          |(symbol_ref, _came_from_cjs)| {
+            if let Module::Normal(module) = &context.modules[symbol_ref.owner] {
+              module.stmt_infos.declared_stmts_by_symbol(symbol_ref).iter().copied().for_each(
+                |stmt_info_id| {
+                  include_statement(context, module, stmt_info_id);
+                },
+              );
+              include_symbol(context, *symbol_ref);
+            }
+          },
+        );
         include_module(context, module);
       });
 
@@ -125,16 +127,18 @@ impl LinkStage<'_> {
         }
       };
       let meta = &self.metas[entry.id];
-      meta.referenced_symbols_by_entry_point_chunk.iter().for_each(|(symbol_ref, _is_facade)| {
-        if let Module::Normal(module) = &context.modules[symbol_ref.owner] {
-          module.stmt_infos.declared_stmts_by_symbol(symbol_ref).iter().copied().for_each(
-            |stmt_info_id| {
-              include_statement(context, module, stmt_info_id);
-            },
-          );
-          include_symbol(context, *symbol_ref);
-        }
-      });
+      meta.referenced_symbols_by_entry_point_chunk.iter().for_each(
+        |(symbol_ref, _came_from_cjs)| {
+          if let Module::Normal(module) = &context.modules[symbol_ref.owner] {
+            module.stmt_infos.declared_stmts_by_symbol(symbol_ref).iter().copied().for_each(
+              |stmt_info_id| {
+                include_statement(context, module, stmt_info_id);
+              },
+            );
+            include_symbol(context, *symbol_ref);
+          }
+        },
+      );
       include_module(context, module);
       true
     });
@@ -147,7 +151,7 @@ impl LinkStage<'_> {
       self.metas[idx]
         .resolved_exports
         .iter()
-        .filter_map(|(_name, local)| local.is_facade.then_some(local))
+        .filter_map(|(_name, local)| local.came_from_cjs.then_some(local))
         .for_each(|local| {
           include_symbol(context, local.symbol_ref);
         });
@@ -508,7 +512,7 @@ fn include_statement(ctx: &mut Context, module: &NormalModule, stmt_info_id: Stm
     }
   });
 
-  stmt_info.referenced_symbols.iter().enumerate().for_each(|(idx, reference_ref)| {
+  stmt_info.referenced_symbols.iter().for_each(|reference_ref| {
     if let Some(member_expr_resolution) = match reference_ref {
       SymbolOrMemberExprRef::Symbol(_) => None,
       SymbolOrMemberExprRef::MemberExpr(member_expr_ref) => {

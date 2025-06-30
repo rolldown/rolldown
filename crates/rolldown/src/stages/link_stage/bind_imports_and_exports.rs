@@ -2,7 +2,6 @@ use std::{borrow::Cow, collections::hash_map::Entry};
 
 use arcstr::ArcStr;
 use indexmap::IndexSet;
-use itertools::Itertools;
 use oxc::span::CompactStr;
 // TODO: The current implementation for matching imports is enough so far but incomplete. It needs to be refactored
 // if we want more enhancements related to exports.
@@ -150,7 +149,7 @@ impl LinkStage<'_> {
           let resolved_export = ResolvedExport {
             symbol_ref: local.referenced,
             potentially_ambiguous_symbol_refs: None,
-            is_facade: local.came_from_commonjs,
+            came_from_cjs: local.came_from_commonjs,
           };
           (name.clone(), resolved_export)
         })
@@ -164,8 +163,6 @@ impl LinkStage<'_> {
           module_id,
           &mut module_stack,
         );
-        &module.id;
-        &resolved_exports;
       }
       meta.resolved_exports = resolved_exports;
     });
@@ -218,12 +215,9 @@ impl LinkStage<'_> {
       }
     }
 
-    self.metas.iter_mut_enumerated().for_each(|(idx, meta)| {
+    self.metas.iter_mut().for_each(|meta| {
       let mut sorted_and_non_ambiguous_resolved_exports = vec![];
       'next_export: for (exported_name, resolved_export) in &meta.resolved_exports {
-        // if resolved_export.is_facade {
-        //   continue;
-        // }
         if let Some(potentially_ambiguous_symbol_refs) =
           &resolved_export.potentially_ambiguous_symbol_refs
         {
@@ -237,7 +231,7 @@ impl LinkStage<'_> {
           }
         }
         sorted_and_non_ambiguous_resolved_exports
-          .push((exported_name.clone(), resolved_export.is_facade));
+          .push((exported_name.clone(), resolved_export.came_from_cjs));
       }
       sorted_and_non_ambiguous_resolved_exports.sort_unstable();
       meta.sorted_and_non_ambiguous_resolved_exports =
@@ -417,7 +411,8 @@ impl LinkStage<'_> {
         // We have filled `resolve_exports` with `named_exports`. If the export is already exists, it means that the importer
         // has a named export with the same name. So the export from dep module is shadowed.
         if let Some(resolved_export) = resolve_exports.get_mut(exported_name) {
-          if named_export.referenced != resolved_export.symbol_ref && !resolved_export.is_facade {
+          if named_export.referenced != resolved_export.symbol_ref && !resolved_export.came_from_cjs
+          {
             resolved_export
               .potentially_ambiguous_symbol_refs
               .get_or_insert(Vec::default())
@@ -427,7 +422,7 @@ impl LinkStage<'_> {
           let resolved_export = ResolvedExport {
             symbol_ref: named_export.referenced,
             potentially_ambiguous_symbol_refs: None,
-            is_facade: named_export.came_from_commonjs,
+            came_from_cjs: named_export.came_from_commonjs,
           };
           resolve_exports.insert(exported_name.clone(), resolved_export);
         }
@@ -487,7 +482,7 @@ impl LinkStage<'_> {
                   let meta = &self.metas[canonical_ref_owner.idx];
                   let export_symbol =
                     meta.resolved_exports.get(&name.to_rstr()).and_then(|resolved_export| {
-                      (!resolved_export.is_facade).then_some(resolved_export)
+                      (!resolved_export.came_from_cjs).then_some(resolved_export)
                     });
                   let Some(export_symbol) = export_symbol else {
                     // when we try to resolve `a.b.c`, and found that `b` is not exported by module
@@ -561,29 +556,29 @@ impl LinkStage<'_> {
                 // TODO: we could record if a module could potential reference a cjs symbol
                 // so that we could skip this step.
                 if cursor < member_expr_ref.props.len() {
-                  let maybed_namespace = depended_refs
+                  let maybe_namespace = depended_refs
                     .last()
                     .copied()
                     .unwrap_or(self.symbols.canonical_ref_for(member_expr_ref.object_ref));
 
-                  if let Some(m) = self.metas[maybed_namespace.owner]
+                  if let Some(m) = self.metas[maybe_namespace.owner]
                     .named_import_to_cjs_module
-                    .get(&maybed_namespace)
+                    .get(&maybe_namespace)
                     .or_else(|| {
-                      self.metas[maybed_namespace.owner]
+                      self.metas[maybe_namespace.owner]
                         .import_record_ns_to_cjs_module
-                        .get(&maybed_namespace)
+                        .get(&maybe_namespace)
                     })
                     .or_else(|| {
-                      (self.metas[maybed_namespace.owner].has_dynamic_exports)
-                        .then_some(&maybed_namespace.owner)
+                      (self.metas[maybe_namespace.owner].has_dynamic_exports)
+                        .then_some(&maybe_namespace.owner)
                     })
                     .and_then(|idx| {
                       self.metas[*idx]
                         .resolved_exports
                         .get(member_expr_ref.props[cursor].as_str())
                         .and_then(|resolved_export| {
-                          resolved_export.is_facade.then_some(resolved_export)
+                          resolved_export.came_from_cjs.then_some(resolved_export)
                         })
                     })
                   {
@@ -814,7 +809,6 @@ impl BindImportsAndExportsContext<'_> {
       return ImportStatus::CommonJS;
     }
 
-    let is_cjs = matches!(importee.exports_kind, ExportsKind::CommonJs);
     match &named_import.imported {
       Specifier::Star => ImportStatus::Found {
         symbol: importee.namespace_object_ref,
@@ -824,7 +818,7 @@ impl BindImportsAndExportsContext<'_> {
       Specifier::Literal(literal_imported) => {
         match self.metas[importee_id].resolved_exports.get(literal_imported) {
           Some(export) => {
-            if export.is_facade {
+            if export.came_from_cjs {
               ImportStatus::DynamicFallbackWithCommonjsReference {
                 namespace_ref: importee.namespace_object_ref,
                 commonjs_symbol: export.symbol_ref,

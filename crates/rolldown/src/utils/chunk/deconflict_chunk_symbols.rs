@@ -95,11 +95,13 @@ pub fn deconflict_chunk_symbols(
   match chunk.kind {
     ChunkKind::EntryPoint { module, .. } => {
       let meta = &link_output.metas[module];
-      meta.referenced_symbols_by_entry_point_chunk.iter().for_each(|(symbol_ref, is_facade)| {
-        if !is_facade {
-          renamer.add_symbol_in_root_scope(*symbol_ref);
-        }
-      });
+      meta.referenced_symbols_by_entry_point_chunk.iter().for_each(
+        |(symbol_ref, came_from_cjs)| {
+          if !came_from_cjs {
+            renamer.add_symbol_in_root_scope(*symbol_ref);
+          }
+        },
+      );
     }
     ChunkKind::Common => {}
   }

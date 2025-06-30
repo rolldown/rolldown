@@ -40,7 +40,7 @@ fn init_entry_point_stmt_info(
           dynamic_import_exports_usage_map,
           true,
         )
-        .map(|(_, resolved_export)| (resolved_export.symbol_ref, resolved_export.is_facade)),
+        .map(|(_, resolved_export)| (resolved_export.symbol_ref, resolved_export.came_from_cjs)),
     );
   }
   // Entry chunk need to generate exports, so we need reference to all exports to make sure they are included in tree-shaking.

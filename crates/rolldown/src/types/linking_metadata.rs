@@ -76,9 +76,11 @@ impl LinkingMetadata {
     &self,
     needs_facade: bool,
   ) -> impl Iterator<Item = (&Rstr, &ResolvedExport)> {
-    self.sorted_and_non_ambiguous_resolved_exports.iter().filter_map(move |(name, is_facade)| {
-      (needs_facade || !is_facade).then_some((name, &self.resolved_exports[name]))
-    })
+    self.sorted_and_non_ambiguous_resolved_exports.iter().filter_map(
+      move |(name, came_from_cjs)| {
+        (needs_facade || !came_from_cjs).then_some((name, &self.resolved_exports[name]))
+      },
+    )
   }
 
   pub fn is_canonical_exports_empty(&self) -> bool {

@@ -74,11 +74,11 @@ pub struct LinkingMetadata {
 impl LinkingMetadata {
   pub fn canonical_exports(
     &self,
-    needs_facade: bool,
+    needs_commonjs_export: bool,
   ) -> impl Iterator<Item = (&Rstr, &ResolvedExport)> {
     self.sorted_and_non_ambiguous_resolved_exports.iter().filter_map(
       move |(name, came_from_cjs)| {
-        (needs_facade || !came_from_cjs).then_some((name, &self.resolved_exports[name]))
+        (needs_commonjs_export || !came_from_cjs).then_some((name, &self.resolved_exports[name]))
       },
     )
   }
@@ -92,7 +92,7 @@ impl LinkingMetadata {
     module_idx: ModuleIdx,
     entry_point_kind: EntryPointKind,
     dynamic_import_exports_usage_map: &'a FxHashMap<ModuleIdx, DynamicImportExportsUsage>,
-    needs_facade: bool,
+    needs_commonjs_export: bool,
   ) -> impl Iterator<Item = (&'b Rstr, &'b ResolvedExport)> + 'b {
     let partial_used_exports = match entry_point_kind {
       rolldown_common::EntryPointKind::UserDefined => None,
@@ -104,10 +104,12 @@ impl LinkingMetadata {
         })
       }
     };
-    self.canonical_exports(needs_facade).filter(move |(name, _)| match partial_used_exports {
-      Some(set) => set.contains(name.as_str()),
-      None => true,
-    })
+    self.canonical_exports(needs_commonjs_export).filter(
+      move |(name, _)| match partial_used_exports {
+        Some(set) => set.contains(name.as_str()),
+        None => true,
+      },
+    )
   }
 }
 

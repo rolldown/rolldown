@@ -23,6 +23,7 @@ impl OnLog {
   }
 }
 
+#[derive(Debug, Default)]
 pub struct Log {
   pub code: String,
   pub message: String,

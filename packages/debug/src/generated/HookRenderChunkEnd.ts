@@ -2,7 +2,6 @@
 
 export type HookRenderChunkEnd = {
   action: 'HookRenderChunkEnd';
-  transform_source: string | null;
   plugin_name: string;
   /**
    * The index of the plugin in the plugin list. It's unique to each plugin.

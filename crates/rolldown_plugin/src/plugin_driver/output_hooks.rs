@@ -128,7 +128,6 @@ impl PluginDriver {
       async {
         trace_action!(action::HookRenderChunkStart {
           action: "HookRenderChunkStart",
-          source: args.code.clone(),
           plugin_name: plugin.call_name().to_string(),
           plugin_index: plugin_idx.raw(),
           call_id: "${call_id}",
@@ -142,22 +141,13 @@ impl PluginDriver {
           if let Some(map) = r.map {
             sourcemap_chain.push(map);
           }
-          trace_action!(action::HookRenderChunkEnd {
-            action: "HookRenderChunkEnd",
-            transform_source: Some(args.code.clone()),
-            plugin_name: plugin.call_name().to_string(),
-            plugin_index: plugin_idx.raw(),
-            call_id: "${call_id}",
-          });
-        } else {
-          trace_action!(action::HookRenderChunkEnd {
-            action: "HookRenderChunkEnd",
-            transform_source: None,
-            plugin_name: plugin.call_name().to_string(),
-            plugin_index: plugin_idx.raw(),
-            call_id: "${call_id}",
-          });
         }
+        trace_action!(action::HookRenderChunkEnd {
+          action: "HookRenderChunkEnd",
+          plugin_name: plugin.call_name().to_string(),
+          plugin_index: plugin_idx.raw(),
+          call_id: "${call_id}",
+        });
 
         Ok(())
       }

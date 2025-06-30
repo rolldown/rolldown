@@ -3,7 +3,6 @@
 pub struct HookRenderChunkStart {
   #[ts(type = "'HookRenderChunkStart'")]
   pub action: &'static str,
-  pub source: String,
   pub plugin_name: String,
   /// The index of the plugin in the plugin list. It's unique to each plugin.
   pub plugin_index: u32,

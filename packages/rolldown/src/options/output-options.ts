@@ -1,6 +1,5 @@
 import type { BindingMinifyOptions, PreRenderedChunk } from '../binding';
 import type { RolldownOutputPluginOption } from '../plugin';
-import type { ChunkingContext } from '../types/chunking-context';
 import type {
   SourcemapIgnoreListOption,
   SourcemapPathTransformOption,
@@ -34,6 +33,10 @@ export type AssetFileNamesFunction = (chunkInfo: PreRenderedAsset) => string;
 export type GlobalsFunction = (name: string) => string;
 
 export type MinifyOptions = BindingMinifyOptions;
+
+export interface ChunkingContext {
+  getModuleInfo(moduleId: string): ModuleInfo | null;
+}
 
 export interface OutputOptions {
   dir?: string;

@@ -2,7 +2,7 @@ import type { BindingChunkingContext } from '../binding';
 import { transformModuleInfo } from '../utils/transform-module-info';
 import type { ModuleInfo } from './module-info';
 
-export class ChunkingContext {
+export class ChunkingContextImpl {
   constructor(private context: BindingChunkingContext) {}
   getModuleInfo(moduleId: string): ModuleInfo | null {
     const bindingInfo = this.context.getModuleInfo(moduleId);

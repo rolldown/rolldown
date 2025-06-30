@@ -16,7 +16,7 @@ use rolldown_common::{
   GetLocalDbMut, HmrOutput, Module, NormalizedBundlerOptions, ScanMode, SharedFileEmitter,
   SymbolRefDb,
 };
-use rolldown_debug::{action, trace_action};
+use rolldown_debug::{action, trace_action, trace_action_enabled};
 use rolldown_error::{BuildDiagnostic, BuildResult};
 use rolldown_fs::{FileSystem, OsFileSystem};
 use rolldown_plugin::{
@@ -317,7 +317,7 @@ impl Bundler {
   }
 
   fn trace_action_module_graph_ready(scan_stage_output: &NormalizedScanStageOutput) {
-    if tracing::enabled!(tracing::Level::TRACE) {
+    if trace_action_enabled!() {
       let modules = scan_stage_output
         .module_table
         .modules
@@ -352,7 +352,7 @@ impl Bundler {
   }
 
   fn trace_action_session_meta(&self) {
-    if tracing::enabled!(tracing::Level::DEBUG) {
+    if trace_action_enabled!() {
       trace_action!(action::SessionMeta {
         action: "SessionMeta",
         inputs: self

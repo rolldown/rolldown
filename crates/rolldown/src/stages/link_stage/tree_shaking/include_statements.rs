@@ -1,7 +1,6 @@
-use std::{any::Any, cmp::Reverse};
+use std::cmp::Reverse;
 
 use itertools::Itertools;
-use oxc::ast::ast::ImportOrExportKind;
 use oxc_index::{Idx, IndexVec};
 use petgraph::prelude::DiGraphMap;
 use rolldown_common::{
@@ -13,12 +12,8 @@ use rolldown_common::{
 };
 use rolldown_utils::rayon::{IntoParallelRefMutIterator, ParallelIterator};
 use rustc_hash::{FxHashMap, FxHashSet};
-use tracing::instrument::WithSubscriber;
 
-use crate::{
-  stages::link_stage::LinkStage, types::linking_metadata::LinkingMetadataVec,
-  utils::process_code_and_sourcemap,
-};
+use crate::{stages::link_stage::LinkStage, types::linking_metadata::LinkingMetadataVec};
 
 struct Context<'a> {
   modules: &'a IndexModules,
@@ -424,11 +419,6 @@ fn include_module(ctx: &mut Context, module: &NormalModule) {
 fn include_symbol(ctx: &mut Context, symbol_ref: SymbolRef) {
   let mut canonical_ref = ctx.symbols.canonical_ref_for(symbol_ref);
 
-  // if canonical_ref.owner != ctx.runtime_id {
-  //   dbg!(&ctx.may_partial_namespace);
-  //   dbg!(&canonical_ref);
-  //   dbg!(&ctx.symbols.get_create_reason(&canonical_ref));
-  // }
   if !ctx.may_partial_namespace {
     if let Some(idx) =
       ctx.metas[canonical_ref.owner].import_record_ns_to_cjs_module.get(&canonical_ref)
@@ -456,12 +446,14 @@ fn include_symbol(ctx: &mut Context, symbol_ref: SymbolRef) {
         // import {a} from './cjs.js'
         // console.log(a)
         // ```
-        ctx.modules[*idx].as_normal().inspect(|m| {
-          let Some(export_symbol) = m.named_exports.get(&namespace_alias.property_name) else {
+        ctx.modules[*idx].as_normal().inspect(|_| {
+          let Some(export_symbol) =
+            ctx.metas[*idx].resolved_exports.get(&namespace_alias.property_name)
+          else {
             return;
           };
           if namespace_alias.property_name.as_str() != "default" {
-            include_symbol(ctx, export_symbol.referenced);
+            include_symbol(ctx, export_symbol.symbol_ref);
           }
         });
       }

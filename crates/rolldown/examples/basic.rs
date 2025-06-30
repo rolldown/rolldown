@@ -1,4 +1,4 @@
-use rolldown::{Bundler, BundlerOptions, InputItem, SourceMapType};
+use rolldown::{Bundler, BundlerOptions, SourceMapType};
 use rolldown_workspace as workspace;
 use sugar_path::SugarPath;
 

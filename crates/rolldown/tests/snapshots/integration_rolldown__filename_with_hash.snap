@@ -3751,7 +3751,7 @@ expression: output
 
 # tests/rolldown/cjs_compat/react-like
 
-- main-!~{000}~.js => main-8zELAbr8.js
+- main-!~{000}~.js => main-CwUlZpM3.js
 
 # tests/rolldown/cjs_compat/reexport_commonjs
 
@@ -5580,7 +5580,7 @@ expression: output
 
 # tests/rolldown/tree_shaking/commonjs
 
-- main-!~{000}~.js => main-BjkVVU_N.js
+- main-!~{000}~.js => main-BtVed3bj.js
 
 # tests/rolldown/tree_shaking/derived_side_effects_should_have_high_priority
 

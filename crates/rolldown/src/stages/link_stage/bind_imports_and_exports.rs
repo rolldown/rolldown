@@ -1,10 +1,9 @@
-use std::{any::Any, borrow::Cow, collections::hash_map::Entry, ops::Not};
+use std::{borrow::Cow, collections::hash_map::Entry};
 
 use arcstr::ArcStr;
 use indexmap::IndexSet;
 use itertools::Itertools;
 use oxc::span::CompactStr;
-use oxc_index::{IndexVec, index_vec};
 // TODO: The current implementation for matching imports is enough so far but incomplete. It needs to be refactored
 // if we want more enhancements related to exports.
 use rolldown_common::{
@@ -18,7 +17,7 @@ use rolldown_utils::{
   ecmascript::{is_validate_identifier_name, legitimize_identifier_name},
   index_vec_ext::{IndexVecExt, IndexVecRefExt},
   indexmap::{FxIndexMap, FxIndexSet},
-  rayon::{IntoParallelRefIterator, IntoParallelRefMutIterator, ParallelIterator},
+  rayon::{IntoParallelRefIterator, ParallelIterator},
 };
 
 use rustc_hash::{FxHashMap, FxHashSet};
@@ -105,11 +104,6 @@ pub enum ImportStatus {
   /// The imported file is CommonJS and has unknown exports
   CommonJS,
 
-  /// The imported file is CommonJS with known exports
-  CommonJSWithSymbol {
-    symbol: SymbolRef,
-  },
-
   /// The import is missing but there is a dynamic fallback object
   DynamicFallback {
     namespace_ref: SymbolRef,
@@ -156,7 +150,7 @@ impl LinkStage<'_> {
           let resolved_export = ResolvedExport {
             symbol_ref: local.referenced,
             potentially_ambiguous_symbol_refs: None,
-            is_facade: local.is_facade,
+            is_facade: local.came_from_commonjs,
           };
           (name.clone(), resolved_export)
         })
@@ -170,8 +164,8 @@ impl LinkStage<'_> {
           module_id,
           &mut module_stack,
         );
-        dbg!(&module.id);
-        dbg!(&resolved_exports);
+        &module.id;
+        &resolved_exports;
       }
       meta.resolved_exports = resolved_exports;
     });
@@ -433,7 +427,7 @@ impl LinkStage<'_> {
           let resolved_export = ResolvedExport {
             symbol_ref: named_export.referenced,
             potentially_ambiguous_symbol_refs: None,
-            is_facade: named_export.is_facade,
+            is_facade: named_export.came_from_commonjs,
           };
           resolve_exports.insert(exported_name.clone(), resolved_export);
         }
@@ -471,8 +465,6 @@ impl LinkStage<'_> {
         Module::Normal(module) => {
           let mut resolved_map = FxHashMap::default();
           let mut side_effects_dependency = vec![];
-          let flag = module.is_virtual();
-          let meta = &self.metas[module.idx];
           module.stmt_infos.iter().for_each(|stmt_info| {
             stmt_info.referenced_symbols.iter().for_each(|symbol_ref| {
               // `depended_refs` is used to store necessary symbols that must be included once the resolved symbol gets included
@@ -573,7 +565,7 @@ impl LinkStage<'_> {
                     .last()
                     .copied()
                     .unwrap_or(self.symbols.canonical_ref_for(member_expr_ref.object_ref));
-                  dbg!(&maybe_import_record_namespace);
+                  &maybe_import_record_namespace;
                   if let Some(m) = self.metas[maybe_import_record_namespace.owner]
                     .named_import_to_cjs_module
                     .get(&maybe_import_record_namespace)
@@ -827,7 +819,12 @@ impl BindImportsAndExportsContext<'_> {
       Specifier::Literal(literal_imported) => {
         match self.metas[importee_id].resolved_exports.get(literal_imported) {
           Some(export) => {
-            if !export.is_facade {
+            if export.is_facade {
+              ImportStatus::DynamicFallbackWithCommonjsReference {
+                namespace_ref: importee.namespace_object_ref,
+                commonjs_symbol: export.symbol_ref,
+              }
+            } else {
               ImportStatus::Found {
                 // owner: importee_id,
                 symbol: export.symbol_ref,
@@ -835,11 +832,6 @@ impl BindImportsAndExportsContext<'_> {
                   .potentially_ambiguous_symbol_refs
                   .clone()
                   .unwrap_or_default(),
-              }
-            } else {
-              ImportStatus::DynamicFallbackWithCommonjsReference {
-                namespace_ref: importee.namespace_object_ref,
-                commonjs_symbol: export.symbol_ref,
               }
             }
           }
@@ -898,18 +890,6 @@ impl BindImportsAndExportsContext<'_> {
             alias: alias.clone(),
           },
         },
-        ImportStatus::CommonJSWithSymbol { symbol } => {
-          self.metas[tracker.importee].included_commonjs_export_symbol.insert(symbol);
-          match &tracker.imported {
-            Specifier::Star => {
-              MatchImportKind::Namespace { namespace_ref: importer_record.namespace_ref }
-            }
-            Specifier::Literal(alias) => MatchImportKind::NormalAndNamespace {
-              namespace_ref: importer_record.namespace_ref,
-              alias: alias.clone(),
-            },
-          }
-        }
         ImportStatus::DynamicFallback { namespace_ref } => match &tracker.imported {
           Specifier::Star => MatchImportKind::Namespace { namespace_ref },
           Specifier::Literal(alias) => {

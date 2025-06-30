@@ -2,16 +2,11 @@ use std::borrow::Cow;
 
 use crate::{stages::link_stage::LinkStageOutput, utils::renamer::Renamer};
 use arcstr::ArcStr;
-use oxc::ast::ast::TaggedTemplateExpression;
 use rolldown_common::{
-  Chunk, ChunkIdx, ChunkKind, GetLocalDb, ModuleScopeSymbolIdMap, OutputFormat, StmtSideEffect,
-  TaggedSymbolRef,
+  Chunk, ChunkIdx, ChunkKind, GetLocalDb, ModuleScopeSymbolIdMap, OutputFormat, TaggedSymbolRef,
 };
 use rolldown_rstr::ToRstr;
-use rolldown_utils::{
-  ecmascript::legitimize_identifier_name,
-  global_reference::is_side_effect_free_member_expr_of_len_three,
-};
+use rolldown_utils::ecmascript::legitimize_identifier_name;
 use rustc_hash::FxHashMap;
 
 #[allow(clippy::too_many_lines)]

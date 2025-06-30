@@ -1,4 +1,3 @@
-use oxc::regular_expression::ast;
 use oxc_index::IndexVec;
 use rolldown_common::{
   EcmaModuleAstUsage, EcmaRelated, EcmaView, EcmaViewMeta, ImportRecordIdx, ModuleId, ModuleType,

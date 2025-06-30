@@ -117,6 +117,7 @@ impl WatcherTask {
     options: &SharedOptions,
   ) -> BuildResult<()> {
     let mut notify_watcher = self.notify_watcher.lock().await;
+    let mut watcher_paths = notify_watcher.paths_mut();
 
     for file in files.iter() {
       if self.watch_files.contains(file.as_str()) {
@@ -143,11 +144,12 @@ impl WatcherTask {
         let path = Path::new(file.as_str());
         if path.exists() {
           tracing::debug!(name= "notify watch ", path = ?path);
-          notify_watcher.watch(path, RecursiveMode::Recursive).map_err_to_unhandleable()?;
+          watcher_paths.add(path, RecursiveMode::Recursive).map_err_to_unhandleable()?;
           self.notify_watch_files.insert(file.clone());
         }
       }
     }
+    watcher_paths.commit().map_err_to_unhandleable()?;
 
     // The inner mutex should be dropped to avoid deadlock with bundler lock at `Watcher::close`
     std::mem::drop(notify_watcher);

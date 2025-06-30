@@ -239,3 +239,6 @@ opt-level = "s"
 # it will strip these information for non-debug files
 debug = "full"
 strip = "none"
+
+[patch.crates-io]
+notify = { git = "https://github.com/branchseer/notify", branch = "watch-batch" }

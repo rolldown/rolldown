@@ -145,9 +145,9 @@ impl LinkStage<'_> {
                           stmt_info
                             .referenced_symbols
                             .push(self.runtime.resolve_symbol("__reExport").into());
-                          // if !commonjs_treeshake {
-                          //   stmt_info.referenced_symbols.push(importer.namespace_object_ref.into());
-                          // }
+                          if !commonjs_treeshake {
+                            stmt_info.referenced_symbols.push(importer.namespace_object_ref.into());
+                          }
                         } else {
                           stmt_info.side_effect = importee.side_effects.has_side_effects().into();
 

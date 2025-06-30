@@ -5,7 +5,7 @@ use futures::future::try_join_all;
 use oxc::semantic::{ScopeId, SymbolId};
 use oxc_index::IndexVec;
 use render_chunk_to_assets::set_emitted_chunk_preliminary_filenames;
-use rolldown_debug::{action, trace_action};
+use rolldown_debug::{action, trace_action, trace_action_enabled};
 use rolldown_error::BuildResult;
 use rolldown_std_utils::OptionExt;
 use rustc_hash::FxHashMap;
@@ -360,7 +360,7 @@ impl<'a> GenerateStage<'a> {
   }
 
   fn trace_action_chunks_infos(&self, chunk_graph: &ChunkGraph) {
-    if tracing::enabled!(tracing::Level::DEBUG) {
+    if trace_action_enabled!() {
       let mut chunk_infos = Vec::new();
       for (idx, chunk) in chunk_graph.chunk_table.iter_enumerated() {
         chunk_infos.push(action::Chunk {

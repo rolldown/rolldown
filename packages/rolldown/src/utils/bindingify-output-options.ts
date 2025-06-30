@@ -1,5 +1,6 @@
 import type { BindingOutputOptions } from '../binding';
 import type { OutputOptions } from '../options/output-options';
+import { ChunkingContextImpl } from '../types/chunking-context';
 import type { SourcemapIgnoreListOption } from '../types/misc';
 import { transformAssetSource } from './asset-source';
 import { unimplemented } from './misc';
@@ -35,7 +36,13 @@ export function bindingifyOutputOptions(
     virtualDirname,
     legalComments,
     preserveModulesRoot,
+    manualChunks,
   } = outputOptions;
+
+  const advancedChunks = bindingifyAdvancedChunks(
+    outputOptions.advancedChunks,
+    manualChunks,
+  );
 
   return {
     dir,
@@ -66,7 +73,7 @@ export function bindingifyOutputOptions(
     minify: outputOptions.minify,
     externalLiveBindings: outputOptions.externalLiveBindings,
     inlineDynamicImports: outputOptions.inlineDynamicImports,
-    advancedChunks: outputOptions.advancedChunks,
+    advancedChunks,
     polyfillRequire: outputOptions.polyfillRequire,
     sanitizeFileName,
     preserveModules,
@@ -157,4 +164,47 @@ function bindingifyAssetFilenames(
     };
   }
   return assetFileNames;
+}
+
+function bindingifyAdvancedChunks(
+  advancedChunks: OutputOptions['advancedChunks'],
+  manualChunks: OutputOptions['manualChunks'],
+): BindingOutputOptions['advancedChunks'] {
+  if (manualChunks != null && advancedChunks != null) {
+    console.warn(
+      '`manualChunks` option is ignored due to `advancedChunks` option is specified.',
+    );
+  } else if (manualChunks != null) {
+    advancedChunks = {
+      groups: [
+        {
+          name(moduleId, ctx) {
+            return manualChunks(moduleId, {
+              getModuleInfo: (id) => ctx.getModuleInfo(id),
+            });
+          },
+        },
+      ],
+    };
+  }
+
+  if (advancedChunks == null) {
+    return undefined;
+  }
+
+  const { groups, ...restAdvancedChunks } = advancedChunks;
+
+  return {
+    ...restAdvancedChunks,
+    groups: groups?.map((group) => {
+      const { name, ...restGroup } = group;
+
+      return {
+        ...restGroup,
+        name: typeof name === 'function'
+          ? (id, ctx) => name(id, new ChunkingContextImpl(ctx))
+          : name,
+      };
+    }),
+  };
 }

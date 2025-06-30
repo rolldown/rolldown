@@ -193,19 +193,20 @@ impl<'me, 'ast: 'me> Visit<'ast> for AstScanner<'me, 'ast> {
             }
             if id.name == "exports" && self.is_global_identifier_reference(id) {
               self.cjs_exports_ident.get_or_insert(Span::new(id.span.start, id.span.start + 7));
-              if let Some((span, export_name)) = member_expr.static_property_info() {
+              if let Some((_span, export_name)) = member_expr.static_property_info() {
                 // `exports.test = ...`
                 let exported_symbol =
                   self.result.symbol_ref_db.create_facade_root_symbol_ref(export_name);
 
                 self.declare_link_only_symbol_ref(exported_symbol.symbol);
 
-                self.result.commonjs_exports.insert(
-                  export_name.into(),
-                  LocalExport { referenced: exported_symbol, span, is_facade: true },
-                );
-              };
-            };
+                // TODO: use in next pr
+                // self.result.commonjs_exports.insert(
+                //   export_name.into(),
+                //   LocalExport { referenced: exported_symbol, span, came_from_commonjs: true },
+                // );
+              }
+            }
           }
           // `module.exports.test` is also considered as commonjs keyword
           Expression::StaticMemberExpression(member_expr) => {
@@ -222,7 +223,7 @@ impl<'me, 'ast: 'me> Visit<'ast> for AstScanner<'me, 'ast> {
         }
       }
       None => {}
-    };
+    }
 
     walk::walk_assignment_expression(self, node);
   }
@@ -319,13 +320,13 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
           }
           "exports" => {
             // exports = {} will not change the module.exports object, so we just ignore it;
-
             let v = self.cjs_ast_analyzer(&CjsGlobalAssignmentType::ExportsAssignment);
             match v {
               // Do nothing since we need to tree shake `exports.<prop>` access
-              Some(CommonJsAstType::ExportsPropWrite) => {}
-              Some(CommonJsAstType::EsModuleFlag) => {}
+              Some(CommonJsAstType::ExportsPropWrite | CommonJsAstType::EsModuleFlag) => {}
               Some(CommonJsAstType::Reexport) => {
+                // This is only usd for `module.exports = require('mod')`
+                // should only reached when `ident_ref` is `exports`
                 unreachable!()
               }
               Some(CommonJsAstType::ExportsRead) => {

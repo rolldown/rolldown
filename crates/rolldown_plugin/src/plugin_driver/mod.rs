@@ -8,10 +8,11 @@ use arcstr::ArcStr;
 use dashmap::{DashMap, DashSet};
 use oxc_index::IndexVec;
 use rolldown_common::{
-  ModuleId, ModuleInfo, ModuleLoaderMsg, SharedFileEmitter, SharedNormalizedBundlerOptions,
+  ModuleId, ModuleInfo, ModuleLoaderMsg, SharedFileEmitter, SharedModuleInfoDashMap,
+  SharedNormalizedBundlerOptions,
 };
 use rolldown_resolver::Resolver;
-use rolldown_utils::dashmap::{FxDashMap, FxDashSet};
+use rolldown_utils::dashmap::FxDashSet;
 use tokio::sync::Mutex;
 
 use crate::{
@@ -34,7 +35,7 @@ pub struct PluginDriver {
   order_indicates: HookOrderIndicates,
   pub file_emitter: SharedFileEmitter,
   pub watch_files: Arc<FxDashSet<ArcStr>>,
-  pub modules: Arc<FxDashMap<ArcStr, Arc<ModuleInfo>>>,
+  pub modules: SharedModuleInfoDashMap,
   pub(crate) tx: Arc<Mutex<Option<tokio::sync::mpsc::Sender<ModuleLoaderMsg>>>>,
   pub(crate) plugin_usage_vec: IndexVec<PluginIdx, HookUsage>,
   options: SharedNormalizedBundlerOptions,
@@ -124,6 +125,10 @@ impl PluginDriver {
       let context = &self.contexts[idx];
       (idx, plugin, context)
     })
+  }
+
+  pub fn plugins(&self) -> &IndexPluginable {
+    &self.plugins
   }
 }
 

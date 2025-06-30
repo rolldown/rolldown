@@ -1,4 +1,4 @@
-use std::ops::Deref;
+use std::{ops::Deref, sync::Arc};
 
 use futures::future::try_join_all;
 use oxc_index::{IndexVec, index_vec};
@@ -88,7 +88,7 @@ impl GenerateStage<'_> {
             )
             .await?
             {
-              output_assets.push(Output::Asset(Box::new(sourcemap_asset)));
+              output_assets.push(Output::Asset(Arc::new(sourcemap_asset)));
             }
           }
 
@@ -98,7 +98,7 @@ impl GenerateStage<'_> {
             } else {
               Some(concat_string!(filename, ".map"))
             };
-          output.push(Output::Chunk(Box::new(OutputChunk {
+          output.push(Output::Chunk(Arc::new(OutputChunk {
             name: rendered_chunk.name.clone(),
             filename: filename.clone(),
             code,
@@ -129,11 +129,11 @@ impl GenerateStage<'_> {
             )
             .await?
             {
-              output_assets.push(Output::Asset(Box::new(sourcemap_asset)));
+              output_assets.push(Output::Asset(Arc::new(sourcemap_asset)));
             }
           }
 
-          output.push(Output::Asset(Box::new(OutputAsset {
+          output.push(Output::Asset(Arc::new(OutputAsset {
             filename: filename.clone(),
             source: code.into(),
             original_file_names: vec![],
@@ -141,7 +141,7 @@ impl GenerateStage<'_> {
           })));
         }
         InstantiationKind::None => {
-          output.push(Output::Asset(Box::new(OutputAsset {
+          output.push(Output::Asset(Arc::new(OutputAsset {
             filename: filename.clone(),
             source: code,
             original_file_names: vec![],

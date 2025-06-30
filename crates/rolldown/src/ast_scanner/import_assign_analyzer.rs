@@ -1,7 +1,7 @@
 use oxc::{
   ast::{
-    AstKind,
-    ast::{IdentifierReference, UnaryOperator},
+    AstKind, MemberExpressionKind,
+    ast::{Expression, IdentifierReference, UnaryOperator},
   },
   semantic::{SymbolFlags, SymbolId},
   span::Span,
@@ -48,7 +48,7 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
   pub fn get_span_if_namespace_specifier_updated(&self) -> Option<(Span, &'ast str)> {
     let ancestor_cursor = self.visit_path.len() - 1;
     let parent_node = self.visit_path.get(ancestor_cursor)?;
-    if let AstKind::MemberExpression(expr) = parent_node {
+    if let Some(member_expr_kind) = parent_node.as_member_expression_kind() {
       let parent_parent_node = self.visit_path.get(ancestor_cursor - 1)?;
       let is_unary_expression_with_delete_operator = |kind| matches!(kind, AstKind::UnaryExpression(expr) if expr.operator == UnaryOperator::Delete);
       let parent_parent_kind = *parent_parent_node;
@@ -60,7 +60,23 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
           is_unary_expression_with_delete_operator(*item)
         }))
       {
-        return expr.static_property_info();
+        return match member_expr_kind {
+          MemberExpressionKind::Computed(expr) => match &expr.expression {
+            Expression::StringLiteral(lit) => Some((lit.span, lit.value.as_str())),
+            Expression::TemplateLiteral(lit) => {
+              if lit.quasis.len() == 1 {
+                lit.quasis[0].value.cooked.map(|cooked| (lit.span, cooked.as_str()))
+              } else {
+                None
+              }
+            }
+            _ => None,
+          },
+          MemberExpressionKind::Static(expr) => {
+            Some((expr.property.span, expr.property.name.as_str()))
+          }
+          MemberExpressionKind::PrivateField(_) => None,
+        };
       }
     }
     None

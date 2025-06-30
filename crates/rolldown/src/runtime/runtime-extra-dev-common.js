@@ -24,7 +24,6 @@ class DevRuntime {
    * @param {{ exports: any }} module
    */
   registerModule(id, module) {
-    console.debug('Registering module', id, module);
     this.modules[id] = module
   }
   /**

@@ -19,7 +19,9 @@ pub mod bundler_options {
   pub use crate::inner_bundler_options::{
     BundlerOptions,
     types::{
-      advanced_chunks_options::{AdvancedChunksOptions, MatchGroup, MatchGroupTest},
+      advanced_chunks_options::{
+        AdvancedChunksOptions, ChunkingContext, MatchGroup, MatchGroupName, MatchGroupTest,
+      },
       attach_debug_info::AttachDebugInfo,
       debug_options::DebugOptions,
       defer_sync_scan_data_option::DeferSyncScanDataOption,
@@ -67,8 +69,8 @@ pub use crate::{
     Chunk, ChunkMeta,
     chunk_table::ChunkTable,
     types::{
-      AddonRenderContext, cross_chunk_import_item::CrossChunkImportItem,
-      preliminary_filename::PreliminaryFilename,
+      AddonRenderContext, chunk_reason_type::ChunkReasonType,
+      cross_chunk_import_item::CrossChunkImportItem, preliminary_filename::PreliminaryFilename,
     },
   },
   css::{
@@ -102,7 +104,7 @@ pub use crate::{
     runtime_task_result::RuntimeModuleTaskResult,
     task_result::{EcmaRelated, ExternalModuleTaskResult, NormalModuleTaskResult},
   },
-  type_aliases::MemberExprRefResolutionMap,
+  type_aliases::{MemberExprRefResolutionMap, SharedModuleInfoDashMap},
   types::asset::Asset,
   types::asset_idx::AssetIdx,
   types::asset_meta::InstantiationKind,

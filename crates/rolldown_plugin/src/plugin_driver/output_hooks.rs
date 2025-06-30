@@ -5,6 +5,7 @@ use crate::{HookAddonArgs, HookUsage, PluginDriver};
 use crate::{HookAugmentChunkHashReturn, HookNoopReturn, HookRenderChunkArgs};
 use anyhow::{Ok, Result};
 use rolldown_common::{Output, RollupRenderedChunk, SharedNormalizedBundlerOptions};
+use rolldown_debug::{action, trace_action};
 use rolldown_error::BuildDiagnostic;
 use rolldown_sourcemap::SourceMap;
 use tracing::{Instrument, debug_span};
@@ -124,16 +125,37 @@ impl PluginDriver {
       if !self.plugin_usage_vec[plugin_idx].contains(HookUsage::RenderChunk) {
         continue;
       }
-      if let Some(r) = plugin
-        .call_render_chunk(ctx, &args)
-        .instrument(debug_span!("render_chunk_hook", plugin_name = plugin.call_name().as_ref()))
-        .await?
-      {
-        args.code = r.code;
-        if let Some(map) = r.map {
-          sourcemap_chain.push(map);
+      async {
+        trace_action!(action::HookRenderChunkStart {
+          action: "HookRenderChunkStart",
+          plugin_name: plugin.call_name().to_string(),
+          plugin_index: plugin_idx.raw(),
+          call_id: "${call_id}",
+        });
+        if let Some(r) = plugin
+          .call_render_chunk(ctx, &args)
+          .instrument(debug_span!("render_chunk_hook", plugin_name = plugin.call_name().as_ref()))
+          .await?
+        {
+          args.code = r.code;
+          if let Some(map) = r.map {
+            sourcemap_chain.push(map);
+          }
         }
+        trace_action!(action::HookRenderChunkEnd {
+          action: "HookRenderChunkEnd",
+          plugin_name: plugin.call_name().to_string(),
+          plugin_index: plugin_idx.raw(),
+          call_id: "${call_id}",
+        });
+
+        Ok(())
       }
+      .instrument(debug_span!(
+        "render_chunk_hook",
+        CONTEXT_call_id = rolldown_utils::time::current_utc_timestamp_ms()
+      ))
+      .await?;
     }
     Ok((args.code, sourcemap_chain))
   }
@@ -207,10 +229,13 @@ impl PluginDriver {
     opts: &SharedNormalizedBundlerOptions,
     warnings: &mut Vec<BuildDiagnostic>,
   ) -> HookNoopReturn {
-    for (_, plugin, ctx) in self.iter_plugin_with_context_by_order(&self.order_by_write_bundle_meta)
+    for (plugin_idx, plugin, ctx) in
+      self.iter_plugin_with_context_by_order(&self.order_by_write_bundle_meta)
     {
+      if !self.plugin_usage_vec[plugin_idx].contains(HookUsage::WriteBundle) {
+        continue;
+      }
       let mut args = crate::HookWriteBundleArgs { bundle, options: opts };
-
       plugin
         .call_write_bundle(ctx, &mut args)
         .instrument(debug_span!("write_bundle_hook", plugin_name = plugin.call_name().as_ref()))

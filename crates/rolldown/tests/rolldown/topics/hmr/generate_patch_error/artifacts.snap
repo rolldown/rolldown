@@ -11,7 +11,6 @@ source: crates/rolldown_testing/src/integration_test.rs
 var hmr_exports = {};
 __export(hmr_exports, { foo: () => foo });
 const hmr_hot = __rolldown_runtime__.createModuleHotContext("hmr.js");
-__rolldown_runtime__.__toCommonJS(hmr_exports);
 __rolldown_runtime__.registerModule("hmr.js", { exports: hmr_exports });
 const foo = "hello";
 text$1(".hmr", foo);
@@ -26,7 +25,6 @@ hmr_hot.accept((mod) => {
 //#region sub.js
 var sub_exports = {};
 const sub_hot = __rolldown_runtime__.createModuleHotContext("sub.js");
-__rolldown_runtime__.__toCommonJS(sub_exports);
 __rolldown_runtime__.registerModule("sub.js", { exports: sub_exports });
 text(".app", "hello");
 function text(el, text$2) {
@@ -37,7 +35,6 @@ function text(el, text$2) {
 //#region main.js
 var main_exports = {};
 const main_hot = __rolldown_runtime__.createModuleHotContext("main.js");
-__rolldown_runtime__.__toCommonJS(main_exports);
 __rolldown_runtime__.registerModule("main.js", { exports: main_exports });
 
 //#endregion
@@ -74,7 +71,6 @@ var init_hmr_0 = __rolldown_runtime__.createEsmInitializer(function() {
 	try {
 		var ns_hmr = {};
 		__rolldown_runtime__.__export(ns_hmr, { foo: () => foo });
-		__rolldown_runtime__.__toCommonJS(ns_hmr);
 		__rolldown_runtime__.registerModule("hmr.js", { exports: ns_hmr });
 		const hot_hmr = __rolldown_runtime__.createModuleHotContext("hmr.js");
 		const foo = "hello";

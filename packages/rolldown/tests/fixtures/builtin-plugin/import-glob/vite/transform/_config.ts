@@ -19,6 +19,11 @@ export default defineTest({
       importGlobPlugin({ root }),
       {
         name: 'load-file-with-query',
+        resolveId(id) {
+          if (id.startsWith('/')) {
+            return path.join(root, id)
+          }
+        },
         load(id: string) {
           if (id.endsWith('?raw')) {
             const res = fs.readFileSync(id.slice(0, -4), 'utf-8')

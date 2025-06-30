@@ -1,5 +1,17 @@
-import type { ModuleOptions } from '..';
-import { BindingPluginContext } from '../binding';
+import type {
+  ModuleOptions,
+  NormalizedInputOptions,
+  NormalizedOutputOptions,
+  OutputOptions,
+  RolldownPlugin,
+} from '..';
+import {
+  type BindingNormalizedOptions,
+  BindingPluginContext,
+} from '../binding';
+import type { LogHandler } from '../log/log-handler';
+import { NormalizedInputOptionsImpl } from '../options/normalized-input-options';
+import { NormalizedOutputOptionsImpl } from '../options/normalized-output-options';
 import type { ModuleInfo } from '../types/module-info';
 import { transformModuleInfo } from '../utils/transform-module-info';
 import type { RenderedChunkMeta } from '.';
@@ -11,6 +23,14 @@ export class PluginContextData {
   loadModulePromiseMap: Map<string, Promise<void>> = new Map();
   loadModulePromiseResolveFnMap: Map<string, () => void> = new Map();
   renderedChunkMeta: RenderedChunkMeta | null = null;
+  normalizedInputOptions: NormalizedInputOptions | null = null;
+  normalizedOutputOptions: NormalizedOutputOptions | null = null;
+
+  constructor(
+    private onLog: LogHandler,
+    private outputOptions: OutputOptions,
+    private normalizedOutputPlugins: RolldownPlugin[],
+  ) {}
 
   updateModuleOption(id: string, option: ModuleOptions): ModuleOptions {
     const existing = this.moduleOptionMap.get(id);
@@ -98,6 +118,23 @@ export class PluginContextData {
 
   getRenderChunkMeta(): RenderedChunkMeta | null {
     return this.renderedChunkMeta;
+  }
+
+  getInputOptions(opts: BindingNormalizedOptions): NormalizedInputOptions {
+    this.normalizedInputOptions ??= new NormalizedInputOptionsImpl(
+      opts,
+      this.onLog,
+    );
+    return this.normalizedInputOptions;
+  }
+
+  getOutputOptions(opts: BindingNormalizedOptions): NormalizedOutputOptions {
+    this.normalizedOutputOptions ??= new NormalizedOutputOptionsImpl(
+      opts,
+      this.outputOptions,
+      this.normalizedOutputPlugins,
+    );
+    return this.normalizedOutputOptions;
   }
 
   markModuleLoaded(id: string, _success: boolean): void {

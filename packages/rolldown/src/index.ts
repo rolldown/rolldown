@@ -35,6 +35,7 @@ import type {
 import type {
   AddonFunction,
   ChunkFileNamesFunction,
+  ChunkingContext,
   GlobalsFunction,
   MinifyOptions,
   ModuleFormat,
@@ -106,6 +107,7 @@ export type {
   AsyncPluginHooks,
   BuildOptions,
   ChunkFileNamesFunction,
+  ChunkingContext,
   ConfigExport,
   CustomPluginOptions,
   DefineParallelPluginResult,

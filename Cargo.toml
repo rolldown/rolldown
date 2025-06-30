@@ -154,13 +154,13 @@ nom = "8.0.0"
 notify = "8.0.0"
 num-format = "0.4"
 petgraph = "0.8.1"
-phf = "0.11.3"
+phf = "0.12.0"
 rayon = "1.10.0"
 regex = "1.11.1"
 regress = "0.10.3"
 ropey = "1.6.1"
 rustc-hash = "2.1.1"
-schemars = "0.9.0"
+schemars = "1.0.0"
 self_cell = "1.2.0"
 serde = { version = "1.0.219", features = ["derive"] }
 serde_json = "1.0.140"
@@ -188,15 +188,15 @@ quote = "1"
 syn = { version = "2", default-features = false }
 
 # napi
-napi = { version = "3.0.0-beta.7", features = ["async", "anyhow"] }
-napi-build = { version = "2.2.0" }
-napi-derive = { version = "3.0.0-beta.6", default-features = false, features = ["type-def"] }
+napi = { version = "3.0.0-beta.11", features = ["async", "anyhow"] }
+napi-build = { version = "2.2.1" }
+napi-derive = { version = "3.0.0-beta.11", default-features = false, features = ["type-def"] }
 
 # oxc crates with the same version
 
-oxc = { version = "0.73.2", features = ["ast_visit", "transformer", "minifier", "mangler", "semantic", "codegen", "serialize", "isolated_declarations", "regular_expression", "cfg"] }
-oxc_parser_napi = { version = "0.73.2" }
-oxc_transform_napi = { version = "0.73.2" }
+oxc = { version = "0.75.0", features = ["ast_visit", "transformer", "minifier", "mangler", "semantic", "codegen", "serialize", "isolated_declarations", "regular_expression", "cfg"] }
+oxc_parser_napi = { version = "0.75.0" }
+oxc_transform_napi = { version = "0.75.0" }
 
 # oxc crates in their own repos
 # Versions must be relaxed for usage in oxc.
@@ -225,6 +225,11 @@ strip = "symbols" # Set to `false` for debug information
 
 [profile.release-debug]
 debug = true
+inherits = "release"
+
+[profile.memory-profile]
+debug = true
+strip = false
 inherits = "release"
 
 [profile.release-wasi]

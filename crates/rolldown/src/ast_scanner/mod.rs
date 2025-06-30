@@ -7,7 +7,6 @@ mod new_url;
 pub mod side_effect_detector;
 
 use arcstr::ArcStr;
-use oxc::ast::ast::MemberExpression;
 use oxc::ast::{AstKind, ast};
 use oxc::semantic::{Reference, ScopeFlags, ScopeId, Scoping};
 use oxc::span::SPAN;
@@ -292,7 +291,7 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
 
     // If some commonjs module facade exports was used locally, we need to explicitly mark them as
     // has side effects, so that they should not be removed in linking stage.
-    for name in self.self_used_cjs_named_exports.iter() {
+    for name in &self.self_used_cjs_named_exports {
       if let Some(resolved) = self.result.commonjs_exports.get(name) {
         let stmt_info_idx_list =
           self.result.stmt_infos.declared_stmts_by_symbol(&resolved.referenced).to_vec();
@@ -314,7 +313,9 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
         .result
         .stmt_infos
         .iter()
-        .flat_map(|stmt_info| stmt_info.declared_symbols.iter().map(|item| item.inner()))
+        .flat_map(|stmt_info| {
+          stmt_info.declared_symbols.iter().map(rolldown_common::TaggedSymbolRef::inner)
+        })
         .collect::<FxHashSet<_>>();
       for (name, symbol_id) in self
         .result
@@ -330,11 +331,6 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
           ))?;
         }
       }
-      // if !scanned_top_level_symbols.is_empty() {
-      //   return Err(anyhow::format_err!(
-      //     "Some top-level symbols are scanned by the scanner but not declared in the top-level scope: {scanned_top_level_symbols:?}",
-      //   ));
-      // }
     }
     self.result.ast_usage = self.ast_usage;
     Ok(self.result)
@@ -452,7 +448,7 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
 
     self.result.named_exports.insert(
       export_name.into(),
-      LocalExport { referenced: (self.idx, local).into(), span, is_facade: false },
+      LocalExport { referenced: (self.idx, local).into(), span, came_from_commonjs: false },
     );
   }
 
@@ -461,10 +457,10 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
     let symbol_ref: SymbolRef = (self.idx, local).into();
     symbol_ref.flags_mut(&mut self.result.symbol_ref_db).insert(SymbolRefFlags::IS_NOT_REASSIGNED);
 
-    self
-      .result
-      .named_exports
-      .insert("default".into(), LocalExport { referenced: symbol_ref, span, is_facade: false });
+    self.result.named_exports.insert(
+      "default".into(),
+      LocalExport { referenced: symbol_ref, span, came_from_commonjs: false },
+    );
   }
 
   /// Record `export { [imported] as [export_name] } from ...` statement.
@@ -526,7 +522,7 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
       LocalExport {
         referenced: generated_imported_as_ref,
         span: name_import.span_imported,
-        is_facade: false,
+        came_from_commonjs: false,
       },
     );
     self.result.named_imports.insert(generated_imported_as_ref, name_import);
@@ -558,7 +554,7 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
       LocalExport {
         referenced: generated_imported_as_ref,
         span: name_import.span_imported,
-        is_facade: false,
+        came_from_commonjs: false,
       },
     );
     self.result.named_imports.insert(generated_imported_as_ref, name_import);
@@ -804,11 +800,11 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
     let mut props = vec![];
     for ancestor_ast in self.visit_path.iter().rev().take(max_len) {
       match ancestor_ast {
-        AstKind::MemberExpression(MemberExpression::StaticMemberExpression(expr)) => {
+        AstKind::StaticMemberExpression(expr) => {
           span = ancestor_ast.span();
           props.push(expr.property.name.as_str().into());
         }
-        AstKind::MemberExpression(MemberExpression::ComputedMemberExpression(expr)) => {
+        AstKind::ComputedMemberExpression(expr) => {
           if let Some(name) = expr.static_property_name() {
             span = ancestor_ast.span();
             props.push(name.into());

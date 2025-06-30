@@ -181,6 +181,14 @@ export interface ParserOptions {
    */
   astType?: 'js' | 'ts'
   /**
+   * Controls whether the `range` property is included on AST nodes.
+   * The `range` property is a `[number, number]` which indicates the start/end offsets
+   * of the node in the file contents.
+   *
+   * @default false
+   */
+  range?: boolean
+  /**
    * Emit `ParenthesizedExpression` and `TSParenthesizedType` in AST.
    *
    * If this option is true, parenthesized expressions are represented by
@@ -345,6 +353,22 @@ export declare class ResolverFactory {
   async(directory: string, request: string): Promise<ResolveResult>
 }
 
+/** Node.js builtin module when `Options::builtin_modules` is enabled. */
+export interface Builtin {
+  /**
+   * Resolved module.
+   *
+   * Always prefixed with "node:" in compliance with the ESM specification.
+   */
+  resolved: string
+  /**
+   * Whether the request was prefixed with `node:` or not.
+   * `fs` -> `false`.
+   * `node:fs` returns `true`.
+   */
+  isRuntimeModule: boolean
+}
+
 export declare enum EnforceExtension {
   Auto = 0,
   Enabled = 1,
@@ -371,6 +395,8 @@ export interface NapiResolveOptions {
    * Default `None`
    */
   tsconfig?: TsconfigOptions
+  /** Enable Yarn Plug'n'Play */
+  yarnPnp?: boolean
   /**
    * Alias for [ResolveOptions::alias] and [ResolveOptions::fallback].
    *
@@ -521,11 +547,23 @@ export interface NapiResolveOptions {
    * Default `false`
    */
   moduleType?: boolean
+  /**
+   * Allow `exports` field in `require('../directory')`.
+   *
+   * This is not part of the spec but some vite projects rely on this behavior.
+   * See
+   * * <https://github.com/vitejs/vite/pull/20252>
+   * * <https://github.com/nodejs/node/issues/58827>
+   *
+   * Default: `false`
+   */
+  allowPackageExportsInDirectoryResolve?: boolean
 }
 
 export interface ResolveResult {
   path?: string
   error?: string
+  builtin?: Builtin
   /**
    * Module type for this path.
    *
@@ -1111,6 +1149,10 @@ export declare class BindingCallableBuiltinPlugin {
   watchChange(path: string, event: BindingJsWatchChangeEvent): Promise<void>
 }
 
+export declare class BindingChunkingContext {
+  getModuleInfo(moduleId: string): BindingModuleInfo | null
+}
+
 export declare class BindingError {
   kind: string
   message: string
@@ -1436,6 +1478,7 @@ export interface BindingHookJsLoadOutput {
 
 export interface BindingHookJsResolveIdOptions {
   scan?: boolean
+  custom?: BindingVitePluginCustom
 }
 
 export interface BindingHookJsResolveIdOutput {
@@ -1603,7 +1646,7 @@ export interface BindingManifestPluginConfig {
 }
 
 export interface BindingMatchGroup {
-  name: string
+  name: string | ((id: string, ctx: BindingChunkingContext) => VoidNullable<string>)
   test?: string | RegExp | ((id: string) => VoidNullable<boolean>)
   priority?: number
   minSize?: number
@@ -1714,6 +1757,7 @@ export interface BindingPluginContextResolveOptions {
   importKind?: 'import-statement' | 'dynamic-import' | 'require-call' | 'import-rule' | 'url-token' | 'new-url' | 'hot-accept'
   skipSelf?: boolean
   custom?: number
+  vitePluginCustom?: BindingVitePluginCustom
 }
 
 export interface BindingPluginHookMeta {
@@ -1863,6 +1907,11 @@ export interface BindingTreeshake {
   annotations?: boolean
   manualPureFunctions?: Array<string>
   unknownGlobalSideEffects?: boolean
+  commonjs?: boolean
+}
+
+export interface BindingVitePluginCustom {
+  'vite:import-glob'?: ViteImportGlobMeta
 }
 
 export interface BindingViteResolvePluginConfig {
@@ -1875,6 +1924,7 @@ export interface BindingViteResolvePluginConfig {
   dedupe: Array<string>
   finalizeBareSpecifier?: (resolvedId: string, rawId: string, importer: string | null | undefined) => VoidNullable<string>
   finalizeOtherSpecifiers?: (resolvedId: string, rawId: string) => VoidNullable<string>
+  resolveSubpathImports: (id: string, importer: string, isRequire: boolean, scan: boolean) => VoidNullable<string>
 }
 
 export interface BindingViteResolvePluginResolveOptions {
@@ -1892,6 +1942,7 @@ export interface BindingViteResolvePluginResolveOptions {
   tryIndex: boolean
   tryPrefix?: string
   preserveSymlinks: boolean
+  tsconfigPaths: boolean
 }
 
 export interface BindingWatchOption {
@@ -1974,3 +2025,7 @@ export declare function shutdownAsyncRuntime(): void
  * Usually it's used in test.
  */
 export declare function startAsyncRuntime(): void
+
+export interface ViteImportGlobMeta {
+  isSubImportsPattern?: boolean
+}

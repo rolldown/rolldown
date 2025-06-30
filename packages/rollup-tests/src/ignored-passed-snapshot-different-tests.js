@@ -1,5 +1,6 @@
 module.exports = [
     // Passed, but the output snapshot is different from rollup
+    "rollup@form@external-modules-could-not-be-passed-to-the-manualChunks: External modules couldn't be passed to the manualChunks.", // Rolldown produces the same result as rollup, but with enabling `experimental.strictExecutionOrder`
     "rollup@form@make-absolute-externals-relative@make-relative-false: does not normalize external paths when set to false",
     "rollup@function@transform-without-code: allows using the transform hook for annotations only without returning a code property and breaking sourcemaps",
     "rollup@form@catch-parameter-shadowing: the parameter of a catch block should correctly shadow an import (#1391)",// rollup not deconflict

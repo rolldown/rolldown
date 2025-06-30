@@ -305,6 +305,7 @@ where
         annotations: Some(true),
         manual_pure_functions: None,
         unknown_global_side_effects: None,
+        commonjs: Some(true),
       }))
     }
     Some(Value::Object(obj)) => {
@@ -320,6 +321,13 @@ where
         |v| match v {
           Value::Bool(b) => Ok(Some(*b)),
           _ => Err(serde::de::Error::custom("annotations should be a `true` or `false`")),
+        },
+      )?;
+      let commonjs = obj.get("commonjs").map_or_else(
+        || Ok(Some(true)),
+        |v| match v {
+          Value::Bool(b) => Ok(Some(*b)),
+          _ => Err(serde::de::Error::custom("commonjs should be a `true` or `false`")),
         },
       )?;
       let unknown_global_side_effects = obj.get("unknown_global_side_effects").map_or_else(
@@ -349,6 +357,7 @@ where
         annotations,
         manual_pure_functions: Some(manual_pure_functions),
         unknown_global_side_effects,
+        commonjs,
       }))
     }
     _ => Err(serde::de::Error::custom("treeshake should be a boolean or an object")),

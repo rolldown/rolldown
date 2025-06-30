@@ -1,8 +1,11 @@
 use std::sync::Arc;
 
 use rolldown_plugin::{CustomField, PluginContextResolveOptions};
+use rolldown_plugin_utils::constants::{ViteImportGlob, ViteImportGlobValue};
 
-use crate::options::plugin::JsPluginContextResolveCustomArgId;
+use crate::options::plugin::{
+  JsPluginContextResolveCustomArgId, types::binding_vite_plugin_custom::BindingVitePluginCustom,
+};
 
 #[napi_derive::napi(object, object_to_js = false)]
 #[derive(Debug, Default)]
@@ -21,6 +24,7 @@ pub struct BindingPluginContextResolveOptions {
   pub import_kind: Option<String>,
   pub skip_self: Option<bool>,
   pub custom: Option<u32>,
+  pub vite_plugin_custom: Option<BindingVitePluginCustom>,
 }
 
 impl TryFrom<BindingPluginContextResolveOptions> for PluginContextResolveOptions {
@@ -30,6 +34,12 @@ impl TryFrom<BindingPluginContextResolveOptions> for PluginContextResolveOptions
     let custom = CustomField::new();
     if let Some(js_custom_id) = value.custom {
       custom.insert(JsPluginContextResolveCustomArgId, js_custom_id);
+    }
+    if let Some(is_sub_imports_pattern) = value
+      .vite_plugin_custom
+      .and_then(|v| v.vite_import_glob.and_then(|v| v.is_sub_imports_pattern))
+    {
+      custom.insert(ViteImportGlob, ViteImportGlobValue(is_sub_imports_pattern));
     }
     Ok(Self {
       import_kind: value.import_kind.as_deref().unwrap_or("import-statement").try_into()?,

@@ -1,13 +1,14 @@
 use std::{
   ffi::OsString,
   fs,
-  path::{self, Path},
+  path::{self, Path, PathBuf},
   sync::Arc,
 };
 
+use oxc_resolver::{ResolveOptions, TsconfigOptions, TsconfigReferences};
 use rolldown_common::side_effects::HookSideEffects;
 use rolldown_plugin::{HookResolveIdOutput, HookResolveIdReturn};
-use rolldown_utils::url::clean_url;
+use rolldown_utils::{dashmap::FxDashMap, url::clean_url};
 use rustc_hash::FxHashSet;
 use sugar_path::SugarPath;
 
@@ -30,6 +31,7 @@ pub struct BaseOptions<'a> {
   pub as_src: bool,
   pub root: &'a str,
   pub preserve_symlinks: bool,
+  pub tsconfig_paths: bool,
 }
 
 const ADDITIONAL_OPTIONS_FIELD_COUNT: u8 = 2;
@@ -73,6 +75,7 @@ impl From<u8> for AdditionalOptions {
 pub struct Resolvers {
   resolvers: [Resolver; RESOLVER_COUNT as usize],
   external_resolver: Arc<Resolver>,
+  tsconfig_resolver: Arc<TsconfigResolver>,
 }
 
 impl Resolvers {
@@ -85,10 +88,14 @@ impl Resolvers {
 
     let base_resolver = oxc_resolver::Resolver::new(oxc_resolver::ResolveOptions::default());
 
+    let tsconfig_resolver =
+      Arc::new(TsconfigResolver::new(base_resolver.clone_with_options(ResolveOptions::default())));
+
     let resolvers = (0..RESOLVER_COUNT)
       .map(|v| {
         Resolver::new(
           base_resolver.clone_with_options(get_resolve_options(base_options, v.into())),
+          base_options.tsconfig_paths.then(|| Arc::clone(&tsconfig_resolver)),
           Arc::clone(&builtin_checker),
           Arc::clone(&package_json_cache),
           base_options.root.to_owned(),
@@ -104,13 +111,14 @@ impl Resolvers {
         &BaseOptions { is_production: false, conditions: external_conditions, ..*base_options },
         AdditionalOptions { is_require: false, prefer_relative: false },
       )),
+      base_options.tsconfig_paths.then(|| Arc::clone(&tsconfig_resolver)),
       Arc::clone(&builtin_checker),
       Arc::clone(&package_json_cache),
       base_options.root.to_owned(),
       base_options.try_prefix.to_owned(),
     );
 
-    Self { resolvers, external_resolver: Arc::new(external_resolver) }
+    Self { resolvers, external_resolver: Arc::new(external_resolver), tsconfig_resolver }
   }
 
   pub fn get(&self, additional_options: AdditionalOptions) -> &Resolver {
@@ -124,6 +132,7 @@ impl Resolvers {
   pub fn clear_cache(&self) {
     self.resolvers.iter().for_each(|v| v.clear_cache());
     self.external_resolver.clear_cache();
+    self.tsconfig_resolver.clear_cache();
   }
 }
 
@@ -161,6 +170,8 @@ fn get_resolve_options(
     prefer_relative: additional_options.prefer_relative,
     roots: if base_options.as_src { vec![base_options.root.into()] } else { vec![] },
     symlinks: !base_options.preserve_symlinks,
+    // This is not part of the spec, but required to align with rollup based vite.
+    allow_package_exports_in_directory_resolve: true,
     ..Default::default()
   }
 }
@@ -204,6 +215,7 @@ fn u8_to_bools<const N: usize>(n: u8) -> [bool; N] {
 #[derive(Debug)]
 pub struct Resolver {
   inner: oxc_resolver::Resolver,
+  tsconfig_resolver: Option<Arc<TsconfigResolver>>,
   built_in_checker: Arc<BuiltinChecker>,
   package_json_cache: Arc<PackageJsonCache>,
   root: String,
@@ -213,12 +225,13 @@ pub struct Resolver {
 impl Resolver {
   pub fn new(
     inner: oxc_resolver::Resolver,
+    tsconfig_resolver: Option<Arc<TsconfigResolver>>,
     built_in_checker: Arc<BuiltinChecker>,
     package_json_cache: Arc<PackageJsonCache>,
     root: String,
     try_prefix: Option<String>,
   ) -> Self {
-    Self { inner, built_in_checker, package_json_cache, root, try_prefix }
+    Self { inner, tsconfig_resolver, built_in_checker, package_json_cache, root, try_prefix }
   }
 
   pub fn resolve_raw<P: AsRef<Path>>(
@@ -226,13 +239,27 @@ impl Resolver {
     directory: P,
     specifier: &str,
   ) -> Result<oxc_resolver::FsResolution, oxc_resolver::ResolveError> {
+    let inner_resolver = if let Some(tsconfig) =
+      self.tsconfig_resolver.as_ref().and_then(|r| r.load_nearest_tsconfig(directory.as_ref()))
+    {
+      &self.inner.clone_with_options(ResolveOptions {
+        tsconfig: Some(TsconfigOptions {
+          config_file: tsconfig,
+          references: TsconfigReferences::Disabled,
+        }),
+        ..self.inner.options().clone()
+      })
+    } else {
+      &self.inner
+    };
+
     let Some(try_prefix) = &self.try_prefix else {
-      return self.inner.resolve(directory, specifier);
+      return inner_resolver.resolve(directory, specifier);
     };
 
     let mut path = Path::new(specifier).components();
     let Some(path::Component::Normal(filename)) = path.next_back() else {
-      return self.inner.resolve(directory, specifier);
+      return inner_resolver.resolve(directory, specifier);
     };
 
     let mut filename_with_prefix = OsString::with_capacity(try_prefix.len() + filename.len());
@@ -241,15 +268,15 @@ impl Resolver {
 
     let path_with_prefix = path.as_path().join(filename_with_prefix);
     let Some(path_with_prefix) = path_with_prefix.to_str() else {
-      return self.inner.resolve(directory, specifier);
+      return inner_resolver.resolve(directory, specifier);
     };
 
-    let result_with_prefix = self.inner.resolve(directory.as_ref(), path_with_prefix);
+    let result_with_prefix = inner_resolver.resolve(directory.as_ref(), path_with_prefix);
     match result_with_prefix {
       Err(
         oxc_resolver::ResolveError::NotFound(_)
         | oxc_resolver::ResolveError::ExtensionAlias(_, _, _),
-      ) => self.inner.resolve(directory, specifier),
+      ) => inner_resolver.resolve(directory, specifier),
       _ => result_with_prefix,
     }
   }
@@ -268,10 +295,14 @@ impl Resolver {
         let side_effects = result
           .package_json()
           .and_then(|pkg_json| {
+            // the glob expr is based on parent path of package.json, which is package path
+            // so we should use the relative path of the module to package path
+            let module_path_relative_to_package =
+              raw_path.as_path().relative(pkg_json.path.parent()?);
             self
               .package_json_cache
               .cached_package_json_side_effects(pkg_json)
-              .check_side_effects_for(&raw_path)
+              .check_side_effects_for(module_path_relative_to_package.to_str()?)
           })
           .map(
             |side_effects| {
@@ -401,4 +432,68 @@ fn should_dedupe(specifier: &str, dedupe: &FxHashSet<String>) -> bool {
 
   let pkg_id = get_npm_package_name(specifier).unwrap_or(clean_url(specifier));
   dedupe.contains(pkg_id)
+}
+
+#[derive(Debug)]
+pub struct TsconfigResolver {
+  inner: oxc_resolver::Resolver,
+  tsconfig_dir_existence: FxDashMap<PathBuf, bool>,
+}
+
+impl TsconfigResolver {
+  pub fn new(inner: oxc_resolver::Resolver) -> Self {
+    Self { inner, tsconfig_dir_existence: FxDashMap::default() }
+  }
+
+  pub fn load_nearest_tsconfig(&self, path: &Path) -> Option<PathBuf> {
+    // don't load tsconfig for paths in node_modules like esbuild does
+    if is_in_node_modules(path) {
+      return None;
+    }
+
+    if let Some(tsconfig) = self.find_nearest_tsconfig(path) {
+      // TODO: need to handle references and include/exclude
+      self.inner.resolve_tsconfig(&tsconfig).ok().map(|_| tsconfig)
+    } else {
+      None
+    }
+  }
+
+  fn find_nearest_tsconfig(&self, path: &Path) -> Option<PathBuf> {
+    // skip virtual IDs (e.g. `virtual:something`)
+    if !path.is_absolute() {
+      return None;
+    }
+
+    let mut dir = path.to_path_buf();
+
+    loop {
+      if let Some(r) = self.tsconfig_dir_existence.get(&dir) {
+        if *r.value() {
+          return Some(dir.join("tsconfig.json"));
+        }
+      } else {
+        let tsconfig_json = dir.join("tsconfig.json");
+        if tsconfig_json.exists() {
+          self.tsconfig_dir_existence.insert(dir.clone(), true);
+          return Some(tsconfig_json);
+        } else {
+          self.tsconfig_dir_existence.insert(dir.clone(), false);
+        }
+      }
+
+      let Some(parent) = dir.parent() else { break };
+      dir = parent.to_path_buf();
+    }
+    None
+  }
+
+  pub fn clear_cache(&self) {
+    self.inner.clear_cache();
+    self.tsconfig_dir_existence.clear();
+  }
+}
+
+fn is_in_node_modules(id: &Path) -> bool {
+  id.components().any(|comp| comp.as_os_str() == "node_modules")
 }

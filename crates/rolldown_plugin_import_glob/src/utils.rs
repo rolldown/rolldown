@@ -1,6 +1,7 @@
 use std::borrow::Cow;
 use std::fmt::Write as _;
 use std::path::{Path, PathBuf};
+use std::sync::Arc;
 
 use oxc::ast::NONE;
 use oxc::ast::ast::{
@@ -11,6 +12,7 @@ use oxc::ast_visit::{VisitMut, walk_mut};
 use oxc::span::{SPAN, Span};
 use rolldown_ecmascript_utils::ExpressionExt;
 use rolldown_plugin::PluginContext;
+use rolldown_plugin_utils::constants::{ViteImportGlob, ViteImportGlobValue};
 use sugar_path::SugarPath;
 
 pub struct GlobImportVisit<'ast, 'a> {
@@ -33,6 +35,7 @@ impl<'ast> VisitMut<'ast> for GlobImportVisit<'ast, '_> {
 #[derive(Debug, Default)]
 pub struct ImportGlobOptions {
   eager: bool,
+  base: Option<String>,
   query: Option<String>,
   import: Option<String>,
 }
@@ -75,14 +78,14 @@ impl<'ast> GlobImportVisit<'ast, '_> {
         let mut files: Vec<ImportGlobFileData> = vec![];
         let mut options = ImportGlobOptions::default();
 
-        // import.meta.glob('./dir/*.js')
-        if let Some(arg) = call_expr.arguments.first() {
-          self.eval_glob_expr(arg, &mut files);
-        }
-
         // import.meta.glob(['./dir/*.js'], { import: 'setup' })
         if let Some(arg) = call_expr.arguments.get(1) {
           Self::update_options(arg, &mut options);
+        }
+
+        // import.meta.glob('./dir/*.js')
+        if let Some(arg) = call_expr.arguments.first() {
+          self.eval_glob_expr(arg, &mut files, &options);
         }
 
         // {
@@ -305,7 +308,19 @@ impl GlobImportVisit<'_, '_> {
     self.id.starts_with("virtual:") || self.id.starts_with('\0') || !self.id.contains('/')
   }
 
-  fn to_absolute_glob<'a>(&self, glob: &'a str, dir: &Path, root: &Path) -> Cow<'a, str> {
+  fn to_absolute_glob<'a>(
+    &self,
+    glob: &'a str,
+    dir: &Path,
+    root: &Path,
+    base: Option<&str>,
+  ) -> Cow<'a, str> {
+    let dir = if let Some(base) = base {
+      if let Some(base) = base.strip_prefix('/') { root.join(base) } else { dir.join(base) }
+    } else {
+      dir.to_path_buf()
+    };
+
     let absolute_glob = if let Some(glob) = glob.strip_prefix('/') {
       root.join(glob)
     } else if glob.starts_with('.') {
@@ -313,7 +328,16 @@ impl GlobImportVisit<'_, '_> {
     } else if glob.starts_with("**") {
       return Cow::Borrowed(glob);
     } else {
-      let future = self.ctx.resolve(glob, Some(self.id), None);
+      let is_sub_imports_pattern = glob.starts_with('#') && glob.contains('*');
+      let future = self.ctx.resolve(
+        glob,
+        Some(self.id),
+        is_sub_imports_pattern.then(|| {
+          let custom = Arc::new(rolldown_plugin::CustomField::new());
+          custom.insert(ViteImportGlob, ViteImportGlobValue(true));
+          rolldown_plugin::PluginContextResolveOptions { custom, ..Default::default() }
+        }),
+      );
       if let Ok(result) = rolldown_utils::futures::block_on(future) {
         let id = match result {
           Ok(resolved_id) => resolved_id.id.into(),
@@ -324,8 +348,6 @@ impl GlobImportVisit<'_, '_> {
         }
       }
 
-      // TODO: Needs to investigate if oxc resolver support this pattern
-      // https://github.com/rolldown/vite/blob/454c8fff/packages/vite/src/node/plugins/importMetaGlob.ts#L563-L569
       panic!(
         "Invalid glob pattern: {glob} (resolved: '{}'), it must start with '/' or './'.",
         self.id
@@ -345,6 +367,32 @@ impl GlobImportVisit<'_, '_> {
     }
   }
 
+  fn get_common_base(globs: &[Cow<str>]) -> usize {
+    if globs.is_empty() {
+      return 0;
+    }
+
+    let first = globs[0].as_bytes();
+    let mut end = first.len();
+    for s in &globs[1..] {
+      let s_bytes = s.as_bytes();
+      let max_len = end.min(s_bytes.len());
+
+      let mut i = 0;
+      while i < max_len && first[i] == s_bytes[i] {
+        i += 1;
+      }
+
+      end = i;
+      if end == 0 {
+        break;
+      }
+    }
+
+    let common_glob_expr = &globs[0][..end];
+    Self::split_path_and_glob(common_glob_expr).0.len()
+  }
+
   fn split_path_and_glob(path: &str) -> (&str, Option<&str>) {
     let mut last_slash = 0;
     for (i, b) in path.as_bytes().iter().enumerate() {
@@ -357,7 +405,13 @@ impl GlobImportVisit<'_, '_> {
     (path, None)
   }
 
-  fn eval_glob_expr(&self, arg: &Argument, files: &mut Vec<ImportGlobFileData>) {
+  #[allow(clippy::too_many_lines)]
+  fn eval_glob_expr(
+    &self,
+    arg: &Argument,
+    files: &mut Vec<ImportGlobFileData>,
+    options: &ImportGlobOptions,
+  ) {
     let root = Path::new(&self.root);
     let is_virtual_module = self.is_virtual_module();
 
@@ -375,9 +429,14 @@ impl GlobImportVisit<'_, '_> {
     match arg {
       Argument::StringLiteral(str) => {
         if let Some(glob) = str.value.strip_prefix('!') {
-          negated_globs.push(self.to_absolute_glob(glob, dir, root));
+          negated_globs.push(self.to_absolute_glob(glob, dir, root, options.base.as_deref()));
         } else {
-          positive_globs.push(self.to_absolute_glob(&str.value, dir, root));
+          positive_globs.push(self.to_absolute_glob(
+            &str.value,
+            dir,
+            root,
+            options.base.as_deref(),
+          ));
           if !str.value.starts_with('.') {
             is_relative = false;
           }
@@ -387,9 +446,14 @@ impl GlobImportVisit<'_, '_> {
         for expr in &array_expr.elements {
           if let ArrayExpressionElement::StringLiteral(str) = expr {
             if let Some(glob) = str.value.strip_prefix('!') {
-              negated_globs.push(self.to_absolute_glob(glob, dir, root));
+              negated_globs.push(self.to_absolute_glob(glob, dir, root, options.base.as_deref()));
             } else {
-              positive_globs.push(self.to_absolute_glob(&str.value, dir, root));
+              positive_globs.push(self.to_absolute_glob(
+                &str.value,
+                dir,
+                root,
+                options.base.as_deref(),
+              ));
               if !str.value.starts_with('.') {
                 is_relative = false;
               }
@@ -401,10 +465,11 @@ impl GlobImportVisit<'_, '_> {
     }
 
     assert!(
-      !(is_virtual_module && is_relative),
+      !(is_virtual_module && is_relative && options.base.as_ref().is_none()),
       "In virtual modules, all globs must start with '/'"
     );
 
+    let common = Self::get_common_base(&positive_globs);
     let self_path = self.relative_path(Path::new(self.id), Some(dir));
     for glob_expr in positive_globs {
       let (path, glob) = Self::split_path_and_glob(&glob_expr);
@@ -419,6 +484,10 @@ impl GlobImportVisit<'_, '_> {
         let file = entry.path();
         let path = file.to_string_lossy();
 
+        if fast_glob::glob_match("**/node_modules/**", &path[common..]) {
+          continue;
+        }
+
         if glob.as_ref().is_some_and(|glob| !fast_glob::glob_match(glob, &path[p..]))
           || negated_globs.iter().any(|g| fast_glob::glob_match(&**g, &*path))
         {
@@ -427,17 +496,36 @@ impl GlobImportVisit<'_, '_> {
 
         let file_path = self.relative_path(file, None);
         if is_virtual_module {
-          let path = if file_path.starts_with('/') { file_path } else { format!("/{file_path}") };
-          files.push(ImportGlobFileData { file_path: None, import_path: path });
+          let import_path =
+            if file_path.starts_with('/') { file_path } else { format!("/{file_path}") };
+          let file_path = options.base.as_ref().map(|base| {
+            self.relative_path(file, Some(&self.root.join(base.strip_prefix('/').unwrap_or(base))))
+          });
+          files.push(ImportGlobFileData { file_path, import_path });
           continue;
         }
 
-        let import_path = self.relative_path(file, Some(dir));
+        let mut import_path = self.relative_path(file, Some(dir));
         if self_path == import_path {
           continue;
         }
 
-        let file_path = if is_relative { None } else { Some(file_path) };
+        let file_path = if let Some(base) = &options.base {
+          if base.starts_with('/') {
+            import_path = self.relative_path(file, None);
+          }
+          let base_path = if let Some(base) = base.strip_prefix('/') {
+            self.root.join(base)
+          } else {
+            dir.join(base)
+          };
+          Some(self.relative_path(file, Some(&base_path)))
+        } else if is_relative {
+          None
+        } else {
+          Some(file_path)
+        };
+
         files.push(ImportGlobFileData { file_path, import_path });
       }
     }
@@ -464,6 +552,17 @@ impl GlobImportVisit<'_, '_> {
       };
 
       match key {
+        "base" => match &p.value {
+          Expression::StringLiteral(str) if !str.value.is_empty() => {
+            options.base = Some(str.value.as_str().to_string());
+          }
+          Expression::TemplateLiteral(str)
+            if str.is_no_substitution_template() && !str.quasis[0].value.raw.is_empty() =>
+          {
+            options.base = Some(str.quasis[0].value.raw.as_str().to_string());
+          }
+          _ => {}
+        },
         "import" => {
           if let Expression::StringLiteral(str) = &p.value {
             options.import = Some(str.value.as_str().to_string());

@@ -48,8 +48,7 @@ pub enum TaggedSymbolRef {
 impl TaggedSymbolRef {
   pub fn inner(&self) -> SymbolRef {
     match self {
-      TaggedSymbolRef::LinkOnly(s) => *s,
-      TaggedSymbolRef::Normal(s) => *s,
+      TaggedSymbolRef::LinkOnly(s) | TaggedSymbolRef::Normal(s) => *s,
     }
   }
 }

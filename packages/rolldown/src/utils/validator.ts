@@ -294,6 +294,7 @@ const TreeshakingOptionsSchema = v.union([
     annotations: v.optional(v.boolean()),
     manualPureFunctions: v.optional(v.array(v.string())),
     unknownGlobalSideEffects: v.optional(v.boolean()),
+    commonjs: v.optional(v.boolean()),
   }),
 ]);
 
@@ -567,7 +568,14 @@ const AdvancedChunksSchema = v.strictObject({
   groups: v.optional(
     v.array(
       v.strictObject({
-        name: v.string(),
+        name: v.union([
+          v.string(),
+          v.pipe(
+            v.function(),
+            v.args(v.tuple([v.string()])),
+            v.returns(v.nullish(v.string())),
+          ),
+        ]),
         test: v.optional(
           v.union([
             v.string(),
@@ -691,7 +699,11 @@ const OutputOptionsSchema = v.strictObject({
     v.description('Inline dynamic imports'),
   ),
   manualChunks: v.optional(
-    v.never('manualChunks is not supported. Please use advancedChunks instead'),
+    v.pipe(
+      v.function(),
+      v.args(v.tuple([v.string(), v.object({})])),
+      v.returns(v.union([v.string(), v.nullish(v.string())])),
+    ),
   ),
   advancedChunks: v.optional(AdvancedChunksSchema),
   legalComments: v.pipe(

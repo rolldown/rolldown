@@ -13,5 +13,5 @@ pub struct LocalExport {
   /// ```js
   /// exports.foo = 1;
   /// ```
-  pub is_facade: bool,
+  pub came_from_commonjs: bool,
 }

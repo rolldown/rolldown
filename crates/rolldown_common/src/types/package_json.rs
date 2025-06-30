@@ -40,6 +40,7 @@ impl PackageJson {
     self.r#type.as_deref()
   }
 
+  /// * `module_path`: relative path to the module from `package.json` path
   pub fn check_side_effects_for(&self, module_path: &str) -> Option<bool> {
     let side_effects = self.side_effects.as_ref()?;
     // Is it necessary to convert module_path to relative path?

@@ -226,7 +226,7 @@ impl FileEmitter {
 
       let mut original_file_names = std::mem::take(&mut value.original_file_names);
       original_file_names.sort_unstable();
-      bundle.push(Output::Asset(Box::new(OutputAsset {
+      bundle.push(Output::Asset(Arc::new(OutputAsset {
         filename: value.filename.clone(),
         names,
         original_file_names,

@@ -157,6 +157,7 @@ pub struct InnerOptions {
   pub annotations: Option<bool>,
   pub manual_pure_functions: Option<FxHashSet<String>>,
   pub unknown_global_side_effects: Option<bool>,
+  pub commonjs: Option<bool>,
 }
 
 impl Default for InnerOptions {
@@ -166,6 +167,7 @@ impl Default for InnerOptions {
       annotations: Some(true),
       manual_pure_functions: None,
       unknown_global_side_effects: None,
+      commonjs: None,
     }
   }
 }
@@ -179,5 +181,19 @@ where
   match deserialized {
     Some(false) => Ok(ModuleSideEffects::Boolean(false)),
     Some(true) | None => Ok(ModuleSideEffects::Boolean(true)),
+  }
+}
+
+impl From<&NormalizedTreeshakeOptions> for oxc::minifier::TreeShakeOptions {
+  fn from(value: &NormalizedTreeshakeOptions) -> Self {
+    let default = oxc::minifier::TreeShakeOptions::default();
+    oxc::minifier::TreeShakeOptions {
+      annotations: value.annotations(),
+      manual_pure_functions: value
+        .manual_pure_functions()
+        .map_or(default.manual_pure_functions, |set| set.iter().cloned().collect::<Vec<_>>()),
+      property_read_side_effects: default.property_read_side_effects,
+      unknown_global_side_effects: value.unknown_global_side_effects(),
+    }
   }
 }

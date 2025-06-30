@@ -98,6 +98,22 @@ const cleverCwd2 = {
 	"../b/a.ts": () => import("./a5.js"),
 	"../b/b.ts": () => import("./b5.js")
 };
+const customBase = {
+	"./modules/a.ts": () => import("./a.js"),
+	"./modules/b.ts": () => import("./b.js"),
+	"./modules/index.ts": () => import("./modules.js"),
+	"./sibling.ts": () => import("./sibling.js")
+};
+const customRootBase = {
+	"./a.ts": () => import("./a5.js"),
+	"./b.ts": () => import("./b5.js"),
+	"./index.ts": () => import("./b7.js")
+};
+const customBaseParent = {
+	"../b/a.ts": () => import("./a5.js"),
+	"../b/b.ts": () => import("./b5.js"),
+	"../b/index.ts": () => import("./b7.js")
+};
 
 //#endregion
-export { basic, basicEager, basicEagerWithObjectKeys, basicEagerWithObjectValues, basicWithObjectKeys, basicWithObjectValues, cleverCwd1, cleverCwd2, customQueryString, eagerAs, excludeSelf, excludeSelfRaw, ignore, ignoreWithObjectKeys, ignoreWithObjectValues, namedDefault, namedDefaultWithObjectKeys, namedDefaultWithObjectValues, namedEager, namedEagerWithObjectKeys, namedEagerWithObjectValues, parent, rawImportModule, rootMixedRelative };
+export { basic, basicEager, basicEagerWithObjectKeys, basicEagerWithObjectValues, basicWithObjectKeys, basicWithObjectValues, cleverCwd1, cleverCwd2, customBase, customBaseParent, customQueryString, customRootBase, eagerAs, excludeSelf, excludeSelfRaw, ignore, ignoreWithObjectKeys, ignoreWithObjectValues, namedDefault, namedDefaultWithObjectKeys, namedDefaultWithObjectValues, namedEager, namedEagerWithObjectKeys, namedEagerWithObjectValues, parent, rawImportModule, rootMixedRelative };

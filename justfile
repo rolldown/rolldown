@@ -109,8 +109,6 @@ lint-rust:
 
 lint-node:
     pnpm lint-code
-
-lint-knip:
     pnpm lint-knip
 
 lint-repo:
@@ -131,6 +129,9 @@ fix-repo:
 # Support `just build [native|browser] [debug|release]`
 build target="native" mode="debug": pnpm-install build-pluginutils
     pnpm run --filter rolldown build-{{ target }}:{{ mode }}
+
+build-memory-profile: pnpm-install build-pluginutils
+    pnpm run --filter rolldown build-native:memory-profile
 
 _build-native-debug:
     just build native debug

@@ -268,10 +268,6 @@ impl IntegrationTest {
       options.input = Some(vec![default_test_input_item()]);
     }
 
-    // if options.cwd.is_none() {
-    //   options.cwd = Some(fixture_path.to_path_buf());
-    // }
-
     let output_ext = "js";
 
     if options.entry_filenames.is_none() {

@@ -74,7 +74,6 @@ impl SymbolRefDbForModule {
   }
 
   /// The `facade` means the symbol is actually not exist in the AST.
-
   #[cfg_attr(debug_assertions, track_caller)]
   pub fn create_facade_root_symbol_ref(&mut self, name: &str) -> SymbolRef {
     let symbol_id = self.ast_scopes.create_facade_root_symbol_ref(name);
@@ -87,9 +86,7 @@ impl SymbolRefDbForModule {
         ret,
         format!(
           "create facade root symbol ref for {:?} -> {}.\nlocation: {}",
-          self.owner_idx,
-          name,
-          location.to_string()
+          self.owner_idx, name, location
         ),
       );
     }
@@ -261,11 +258,11 @@ impl SymbolRefDb {
   #[cfg(debug_assertions)]
   /// If it is not a facade symbol, `No create reason found` will be returned.
   pub fn get_create_reason(&self, symbol_ref: &SymbolRef) -> &str {
-    return self
+    self
       .local_db(symbol_ref.owner)
       .create_reason
-      .get(&symbol_ref)
-      .map_or("No create reason found", |reason| reason.as_str());
+      .get(symbol_ref)
+      .map_or("No create reason found", |reason| reason.as_str())
   }
 }
 

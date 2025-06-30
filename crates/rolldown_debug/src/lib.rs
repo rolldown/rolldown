@@ -9,6 +9,6 @@ mod utils;
 pub use rolldown_debug_action as action;
 
 pub use {
-  init_tracing::{DebugTracer, init_devtool_tracing},
+  init_tracing::{DebugTracer, Session, init_devtool_tracing},
   utils::{generate_build_id, generate_session_id},
 };

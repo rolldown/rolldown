@@ -1,6 +1,6 @@
 use oxc::{
   ast::{
-    AstKind,
+    AstKind, MemberExpressionKind,
     ast::{self, Argument, IdentifierReference},
   },
   span::CompactStr,
@@ -34,10 +34,8 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
     // a.b // static
     // a.['b'] // static
     // a[b] // dynamic
-    let partial_name = match parent {
-      AstKind::MemberExpression(expr) => expr.static_property_name(),
-      _ => None,
-    };
+    let partial_name =
+      parent.as_member_expression_kind().and_then(|expr| expr.static_property_name());
     let rec_idx =
       *self.dynamic_import_usage_info.dynamic_import_binding_to_import_record_id.get(&symbol_id)?;
 
@@ -65,8 +63,8 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
   ) -> Option<()> {
     let ancestor_len = self.visit_path.len();
     let init_set = match self.visit_path.last()? {
-      AstKind::MemberExpression(member_expr) => self.init_dynamic_import_usage_with_member_expr(
-        member_expr,
+      kind if kind.is_member_expression_kind() => self.init_dynamic_import_usage_with_member_expr(
+        &kind.as_member_expression_kind().unwrap(),
         ancestor_len,
         import_record_idx,
       ),
@@ -106,7 +104,6 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
       .skip(1)
       .rposition(|kind| !matches!(kind, AstKind::ParenthesizedExpression(_)))?;
     // ast_after_remove_paren_idx the index is find from `visit_path`
-    #[allow(clippy::match_on_vec_items)]
     match self.visit_path[ast_after_remove_paren_idx] {
       // 1. const mod = await import('mod'); console.log(mod)
       // 2. const {a} = await import('mod'); a.something;
@@ -127,9 +124,11 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
       // only side effects from `mod` is triggered
       AstKind::ExpressionStatement(_) => Some(FxHashSet::default()),
       // 4. (await import('mod')).a
-      AstKind::MemberExpression(expr) => {
-        Some(FxHashSet::from_iter([expr.static_property_name()?.into()]))
-      }
+      kind if kind.is_member_expression_kind() => Some(FxHashSet::from_iter([kind
+        .as_member_expression_kind()
+        .unwrap()
+        .static_property_name()?
+        .into()])),
       // for rest of the cases, just bailout, until we find other optimization could apply
       _ => None,
     }
@@ -137,11 +136,11 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
 
   fn init_dynamic_import_usage_with_member_expr(
     &mut self,
-    parent: &ast::MemberExpression<'ast>,
+    parent: &MemberExpressionKind<'ast>,
     ancestor_len: usize,
     import_record_id: ImportRecordIdx,
   ) -> Option<FxHashSet<CompactStr>> {
-    let ast::MemberExpression::StaticMemberExpression(parent) = parent else {
+    let MemberExpressionKind::Static(parent) = parent else {
       return None;
     };
     if parent.property.name != "then" {

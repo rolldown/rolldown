@@ -19,8 +19,6 @@ use utils::{
 
 use self::utils::{PrimitiveType, known_primitive_type};
 
-use super::cjs_ast_analyzer::is_object_define_property_es_module;
-
 mod utils;
 
 /// Detect if a statement "may" have side effect.

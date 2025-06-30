@@ -1,10 +1,13 @@
-use std::{pin::Pin, sync::Arc};
+use std::{borrow::Cow, ops::Deref, pin::Pin, sync::Arc};
 
+use rolldown_error::BuildResult;
 use rolldown_utils::js_regex::HybridRegex;
 #[cfg(feature = "deserialize_bundler_options")]
 use schemars::JsonSchema;
 #[cfg(feature = "deserialize_bundler_options")]
 use serde::{Deserialize, Deserializer};
+
+use crate::{ModuleInfo, SharedModuleInfoDashMap};
 
 #[derive(Default, Debug, Clone)]
 #[cfg_attr(
@@ -32,7 +35,12 @@ pub struct AdvancedChunksOptions {
   serde(rename_all = "camelCase", deny_unknown_fields)
 )]
 pub struct MatchGroup {
-  pub name: String,
+  #[cfg_attr(
+    feature = "deserialize_bundler_options",
+    serde(deserialize_with = "deserialize_match_group_name"),
+    schemars(with = "String")
+  )]
+  pub name: MatchGroupName,
   #[cfg_attr(
     feature = "deserialize_bundler_options",
     serde(deserialize_with = "deserialize_test", default),
@@ -70,4 +78,77 @@ where
     .transpose()
     .map_err(|e| serde::de::Error::custom(format!("failed to deserialize {e:?} to HybridRegex")))?;
   Ok(transformed.map(MatchGroupTest::Regex))
+}
+
+type MatchGroupNameFn = dyn Fn(
+    /* module id */ &str,
+    /* chunking context */ &ChunkingContext,
+  ) -> Pin<Box<(dyn Future<Output = anyhow::Result<Option<String>>> + Send + 'static)>>
+  + Send
+  + Sync;
+
+#[derive(derive_more::Debug, Clone)]
+pub enum MatchGroupName {
+  Static(String),
+  #[debug("Function")]
+  Dynamic(Arc<MatchGroupNameFn>),
+}
+
+impl MatchGroupName {
+  pub async fn value<'a>(
+    &'a self,
+    ctx: &ChunkingContext,
+    module_id: &str,
+  ) -> BuildResult<Option<Cow<'a, str>>> {
+    match self {
+      Self::Static(name) => Ok(Some(Cow::Borrowed(name))),
+      Self::Dynamic(func) => {
+        let name = func(module_id, ctx).await?;
+        Ok(name.map(Cow::Owned))
+      }
+    }
+  }
+}
+
+impl Default for MatchGroupName {
+  fn default() -> Self {
+    Self::Static(String::new())
+  }
+}
+
+#[cfg(feature = "deserialize_bundler_options")]
+fn deserialize_match_group_name<'de, D>(deserializer: D) -> Result<MatchGroupName, D::Error>
+where
+  D: Deserializer<'de>,
+{
+  let deserialized = String::deserialize(deserializer)?;
+  Ok(MatchGroupName::Static(deserialized))
+}
+
+#[derive(Debug, Clone)]
+pub struct ChunkingContext(Arc<ChunkingContextImpl>);
+
+impl ChunkingContext {
+  pub fn new(module_infos: SharedModuleInfoDashMap) -> Self {
+    Self(Arc::new(ChunkingContextImpl { module_infos }))
+  }
+}
+
+impl Deref for ChunkingContext {
+  type Target = ChunkingContextImpl;
+
+  fn deref(&self) -> &Self::Target {
+    &self.0
+  }
+}
+
+#[derive(Debug)]
+pub struct ChunkingContextImpl {
+  module_infos: SharedModuleInfoDashMap,
+}
+
+impl ChunkingContextImpl {
+  pub fn get_module_info(&self, module_id: &str) -> Option<Arc<ModuleInfo>> {
+    self.module_infos.get(module_id).map(|v| Arc::<ModuleInfo>::clone(v.value()))
+  }
 }

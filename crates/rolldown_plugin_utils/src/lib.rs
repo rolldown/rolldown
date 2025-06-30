@@ -5,6 +5,8 @@ mod join_url_segments;
 mod to_output_file_path_in_js;
 mod to_relative_runtime_path;
 
+pub mod constants;
+
 pub use check_public_file::check_public_file;
 pub use file_to_url::{FileToUrlEnv, file_to_url};
 pub use find_special_query::find_special_query;

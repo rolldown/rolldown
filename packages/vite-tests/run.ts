@@ -4,10 +4,10 @@ import colors from 'picocolors';
 import { x } from 'tinyexec';
 
 const REPO_PATH = path.resolve(import.meta.dirname, './repo');
-const OVERRIDES: Record<string, string> = {
-  rolldown: path.resolve(import.meta.dirname, '../rolldown'),
-  '@rolldown/pluginutils': path.resolve(import.meta.dirname, '../pluginutils'),
-};
+const OVERRIDES = [
+  `  rolldown: ${path.resolve(import.meta.dirname, '../rolldown')}`,
+  `  "@rolldown/pluginutils": ${path.resolve(import.meta.dirname, '../pluginutils')}`
+];
 
 function printTitle(title: string) {
   console.info(colors.cyan(colors.bold(title)));
@@ -41,13 +41,14 @@ await runCmdAndPipe(
   ['git', ['clone', 'https://github.com/vitejs/rolldown-vite.git', REPO_PATH]],
 );
 
-printTitle('# Updating package.json to link to local rolldown...');
-const packageJsonPath = path.resolve(REPO_PATH, 'package.json');
-const packageJson = JSON.parse(fs.readFileSync(packageJsonPath, 'utf-8'));
-for (const [name, value] of Object.entries(OVERRIDES)) {
-  packageJson.pnpm.overrides[name] = value;
-}
-fs.writeFileSync(packageJsonPath, JSON.stringify(packageJson, null, 2));
+printTitle('# Updating pnpm-workspace.yaml to link to local rolldown...');
+const pnpmWorkspace = path.resolve(REPO_PATH, 'pnpm-workspace.yaml');
+const pnpmWorkspaceYaml = fs.readFileSync(pnpmWorkspace, 'utf-8');
+const newPnpmWorkspaceYaml = pnpmWorkspaceYaml.replace(
+  /overrides:\n/,
+  `overrides:\n${OVERRIDES.join('\n')}\n`
+);
+fs.writeFileSync(pnpmWorkspace, newPnpmWorkspaceYaml, 'utf-8');
 
 await runCmdAndPipe(
   '# Running `pnpm install`...',

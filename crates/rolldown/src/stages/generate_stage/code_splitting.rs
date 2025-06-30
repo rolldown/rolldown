@@ -10,6 +10,7 @@ use oxc_index::IndexVec;
 use rolldown_common::{
   Chunk, ChunkIdx, ChunkKind, ChunkMeta, Module, ModuleIdx, PreserveEntrySignatures,
 };
+use rolldown_error::BuildResult;
 use rolldown_utils::{BitSet, commondir, indexmap::FxIndexMap, rustc_hash::FxHashMapExt};
 use rustc_hash::{FxHashMap, FxHashSet};
 
@@ -33,13 +34,13 @@ pub type IndexSplittingInfo = IndexVec<ModuleIdx, SplittingInfo>;
 impl GenerateStage<'_> {
   #[allow(clippy::too_many_lines)]
   #[tracing::instrument(level = "debug", skip_all)]
-  pub async fn generate_chunks(&mut self) -> anyhow::Result<ChunkGraph> {
+  pub async fn generate_chunks(&mut self) -> BuildResult<ChunkGraph> {
     let entries_len: u32 =
       self.link_output.entries.len().try_into().expect("Too many entries, u32 overflowed.");
     // If we are in test environment, to make the runtime module always fall into a standalone chunk,
     // we create a facade entry point for it.
 
-    let mut chunk_graph = ChunkGraph::new(&self.link_output.module_table);
+    let mut chunk_graph = ChunkGraph::new(self.link_output.module_table.modules.len());
     chunk_graph.chunk_table.chunks.reserve(self.link_output.entries.len());
 
     let mut index_splitting_info: IndexSplittingInfo = oxc_index::index_vec![SplittingInfo {
@@ -398,7 +399,7 @@ impl GenerateStage<'_> {
     chunk_graph: &mut ChunkGraph,
     bits_to_chunk: &mut FxHashMap<BitSet, ChunkIdx>,
     input_base: &ArcStr,
-  ) -> anyhow::Result<()> {
+  ) -> BuildResult<()> {
     // Determine which modules belong to which chunk. A module could belong to multiple chunks.
     self.link_output.entries.iter().enumerate().for_each(|(i, entry_point)| {
       if self.options.is_hmr_enabled() {

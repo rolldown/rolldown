@@ -1,6 +1,6 @@
 use oxc::{
   mangler::{MangleOptions, MangleOptionsKeepNames},
-  minifier::{CompressOptions, CompressOptionsKeepNames},
+  minifier::{CompressOptions, CompressOptionsKeepNames, TreeShakeOptions},
 };
 #[cfg(feature = "deserialize_bundler_options")]
 use schemars::JsonSchema;
@@ -103,6 +103,7 @@ impl MinifyOptionsObject {
         drop_debugger: false,
         drop_console: false,
         keep_names: CompressOptionsKeepNames { function: keep_names, class: keep_names },
+        treeshake: TreeShakeOptions::from(&option.treeshake),
       })
       .filter(|_| self.compress),
     }

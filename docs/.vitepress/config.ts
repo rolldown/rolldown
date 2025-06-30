@@ -163,6 +163,10 @@ export default defineConfig({
               text: 'Tracing/Logging',
               link: '/contrib-guide/tracing-logging.md',
             },
+            {
+              text: 'Profiling',
+              link: '/contrib-guide/profiling.md',
+            },
             { text: 'Docs', link: '/contrib-guide/docs.md' },
           ],
         },

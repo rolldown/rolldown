@@ -36,7 +36,11 @@ export function bindingifyInputOptions(
   logLevel: LogLevelOption,
   watchMode: boolean,
 ): BindingInputOptions {
-  const pluginContextData = new PluginContextData();
+  const pluginContextData = new PluginContextData(
+    onLog,
+    outputOptions,
+    normalizedOutputPlugins,
+  );
 
   const plugins = rawPlugins.map((plugin) => {
     if ('_parallel' in plugin) {
@@ -349,6 +353,7 @@ function bindingifyTreeshakeOptions(
     annotations: config.annotations,
     manualPureFunctions: config.manualPureFunctions,
     unknownGlobalSideEffects: config.unknownGlobalSideEffects,
+    commonjs: config.commonjs,
   };
   if (config.moduleSideEffects === undefined) {
     normalizedConfig.moduleSideEffects = true;

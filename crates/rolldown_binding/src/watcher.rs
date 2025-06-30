@@ -47,7 +47,7 @@ impl BindingWatcher {
       .into_iter()
       .map(|option| {
         // TODO(hyf0): support emit debug data for builtin watch
-        BindingBundlerImpl::new(env, option, Arc::from("0000"), 0)
+        BindingBundlerImpl::new(env, option, rolldown_debug::Session::dummy(), 0)
           .map(BindingBundlerImpl::into_inner)
       })
       .collect::<Result<Vec<_>, _>>()?;

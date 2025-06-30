@@ -7,8 +7,8 @@ use anyhow::Context;
 use arcstr::ArcStr;
 use derive_more::Debug;
 use rolldown_common::{
-  ModuleInfo, ModuleLoaderMsg, ResolvedId, SharedFileEmitter, SharedNormalizedBundlerOptions,
-  side_effects::HookSideEffects,
+  Log, LogLevel, ModuleInfo, ModuleLoaderMsg, ResolvedId, SharedFileEmitter,
+  SharedNormalizedBundlerOptions, side_effects::HookSideEffects,
 };
 use rolldown_resolver::{ResolveError, Resolver};
 use rolldown_utils::dashmap::{FxDashMap, FxDashSet};
@@ -149,5 +149,29 @@ impl NativePluginContextImpl {
 
   pub fn add_watch_file(&self, file: &str) {
     self.watch_files.insert(file.into());
+  }
+
+  fn log(&self, level: LogLevel, log: Log) {
+    if let Some(on_log) = &self.options.on_log {
+      let on_log = on_log.clone();
+      rolldown_utils::futures::spawn(async move {
+        let _ = on_log.call(level, log).await;
+      });
+    }
+  }
+
+  #[inline]
+  pub fn info(&self, log: Log) {
+    self.log(LogLevel::Info, log);
+  }
+
+  #[inline]
+  pub fn warn(&self, log: Log) {
+    self.log(LogLevel::Warn, log);
+  }
+
+  #[inline]
+  pub fn debug(&self, log: Log) {
+    self.log(LogLevel::Debug, log);
   }
 }

@@ -28,6 +28,7 @@ pub struct BindingTreeshake {
   pub annotations: Option<bool>,
   pub manual_pure_functions: Option<Vec<String>>,
   pub unknown_global_side_effects: Option<bool>,
+  pub commonjs: Option<bool>,
 }
 
 #[napi_derive::napi(object, object_to_js = false)]
@@ -75,6 +76,8 @@ impl TryFrom<BindingTreeshake> for rolldown::TreeshakeOptions {
       annotations: value.annotations,
       manual_pure_functions: value.manual_pure_functions.map(FxHashSet::from_iter),
       unknown_global_side_effects: value.unknown_global_side_effects,
+      // By default disable commonjs tree shake, since it is not stable
+      commonjs: value.commonjs,
     }))
   }
 

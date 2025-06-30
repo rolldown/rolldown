@@ -1,6 +1,6 @@
 {
   "name": "rolldown",
-  "version": "1.0.0-beta.18",
+  "version": "1.0.0-beta.22",
   "description": "Fast JavaScript/TypeScript bundler in Rust with Rollup-compatible API.",
   "type": "module",
   "homepage": "https://rolldown.rs/",
@@ -104,6 +104,7 @@
     "artifacts": "napi artifacts --cwd ./src --package-json-path ../package.json -o=../artifacts --npm-dir ../npm",
     "build-binding": "oxnode ./build-binding.ts",
     "build-binding:release": "pnpm build-binding --release",
+    "build-binding:memory-profile": "pnpm build-binding --profile memory-profile --features default_global_allocator",
     "build-binding:wasi": "pnpm build-binding --target wasm32-wasip1-threads",
     "build-binding:wasi:release": "pnpm build-binding --profile release-wasi --target wasm32-wasip1-threads",
     "# Scrips for node #": "_",
@@ -112,6 +113,7 @@
     "build-js-glue": "pnpm run --sequential '/^build-(types|node|types-check)$/'",
     "build-native:debug": "pnpm run --sequential '/^build-(binding|js-glue)$/'",
     "build-native:release": "pnpm run --sequential '/^build-(binding:release|js-glue)$/'",
+    "build-native:memory-profile": "pnpm run --sequential '/^build-(binding:memory-profile|js-glue)$/'",
     "build-browser:debug": "BROWSER_PKG=1 pnpm run --sequential '/^build-(binding|binding:wasi|node)$/'",
     "build-browser:release": "BROWSER_PKG=1 pnpm run --sequential '/^build-(binding|binding:wasi:release|node)$/'",
     "# Scrips for docs #": "_",
@@ -150,7 +152,7 @@
     "ansis": "^4.0.0"
   },
   "devDependencies": {
-    "@napi-rs/cli": "3.0.0-alpha.89",
+    "@napi-rs/cli": "3.0.0-alpha.91",
     "@napi-rs/wasm-runtime": "^0.2.10",
     "@oxc-node/cli": "catalog:",
     "@rolldown/testing": "workspace:*",

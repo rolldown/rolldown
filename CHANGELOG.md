@@ -1,4 +1,148 @@
 
+## [1.0.0-beta.22] - 2025-06-30
+
+### 🚀 Features
+
+- plugin: use `Log` instead of `BuildDiagnostic` for `PluginContext#log` (#5099) by @shulaoda
+- plugin: support info/warn/debug in native plugin context (#5098) by @shulaoda
+- plugin: support vite plugin custom in `PluginContext#resolve` (#5097) by @shulaoda
+- rolldown_plugin_import_glob: align edge cases with `rolldown-vite` (#5094) by @shulaoda
+- rolldown_plugin_vite_resolve: align subpath import resolution (#5093) by @shulaoda
+- add commonjs tree shake option (#5096) by @IWANABETHATGUY
+- rolldown_plugin_web_worker_post: align with `rolldown-vite` (#5092) by @shulaoda
+- manual-chunks: support `getModuleInfo` (#5087) by @hyf0
+- advanced-chunks: support `getModuleInfo` in `groups.{group}.name` (#5086) by @hyf0
+
+### 🚜 Refactor
+
+- rolldown_loader_utils: inline unnecessary `binary_to_esm` (#5100) by @shulaoda
+
+### ⚡ Performance
+
+- hmr: remove `console.debug` in `runtime.registerModule` (#5091) by @sapphi-red
+- hmr: remove no-op `runtime.__toCommonJS` call (#5089) by @sapphi-red
+
+### ⚙️ Miscellaneous Tasks
+
+- deps: lock file maintenance rust crates (#5105) by @renovate[bot]
+- deps: lock file maintenance npm packages (#5104) by @renovate[bot]
+- deps: update rust crate schemars to v1 (#5103) by @renovate[bot]
+- deps: update dependency vite to v7 (#5102) by @renovate[bot]
+- deps: update github-actions (#5101) by @renovate[bot]
+- deps: update dependency rolldown-plugin-dts to v0.13.12 (#5088) by @renovate[bot]
+
+
+## [1.0.0-beta.21] - 2025-06-27
+
+### 🚀 Features
+
+- rolldown: oxc_resolver v11.3.0 (#5078) by @Boshen
+- debug: support to emit `meta.json` (#5075) by @hyf0
+- plugin/vite-resolve: support tsconfig paths (#5004) by @sapphi-red
+
+### 🐛 Bug Fixes
+
+- plugin/vite-resolve: resolve glob side effects field correctly (#5079) by @sapphi-red
+- rolldown_plugin_transform: don't load tsconfig for files in node_modules (#5074) by @sapphi-red
+- preserveModules: correctly generate absolute chunk file names (#5072) by @shulaoda
+- vite-tests: fix `pnpm install` failure (#5070) by @shulaoda
+
+### 📚 Documentation
+
+- contrib-guide: add memory profile steps (#5053) by @sapphi-red
+
+### ⚙️ Miscellaneous Tasks
+
+- remove `just lint` in `packages/debug/package.json` (#5080) by @hyf0
+- deps: update dependency rolldown-plugin-dts to v0.13.12 (#5077) by @renovate[bot]
+- repo: make `pnpm lint-knip` part of `just lint-node` (#5076) by @hyf0
+- infra: move `insta.yaml` to the workspace root (#5073) by @shulaoda
+
+
+## [1.0.0-beta.20] - 2025-06-25
+
+### 🚀 Features
+
+- rolldown: oxc v0.75.0 (#5069) by @Boshen
+- rolldown: oxc 0.74.0 (#5047) by @Boshen
+
+### 🐛 Bug Fixes
+
+- vite-tests: avoid crash when `packageJson.pnpm` is undefined (#5066) by @shulaoda
+- JSX preset options not working correctly (#5060) by @shulaoda
+- remove improper jsdoc of  builtin define plugin (#5046) by @AliceLanniste
+
+### 🚜 Refactor
+
+- passing vec length directly (#5050) by @ShroXd
+
+### 📚 Documentation
+
+- explain that a chunk may be bigger than `maxSize` (#5014) by @sapphi-red
+- update example about `withFilter` (#5040) by @IWANABETHATGUY
+
+### ⚡ Performance
+
+- preallocate smaller vec for hash placeholder finder (#5064) by @sapphi-red
+- reduce temporary memory usage by avoiding output chunk clone until needed (#5058) by @sapphi-red
+- skip empty write bundle hook with `hook_usage` meta (#5057) by @sapphi-red
+
+### ⚙️ Miscellaneous Tasks
+
+- deps: update dependency rolldown-plugin-dts to v0.13.12 (#5065) by @renovate[bot]
+- rolldown: upgrade NAPI-RS to 3.0.0-beta.10 (#5063) by @Brooooooklyn
+- bump oxc-resolver to v11.2.1 (#5061) by @Boshen
+- deps: update dependency tsdown to v0.12.9 (#5056) by @renovate[bot]
+- deps: update dependency rolldown-plugin-dts to v0.13.12 (#5054) by @renovate[bot]
+- remove long-commented-out code (#5048) by @shulaoda
+- deps: lock file maintenance npm packages (#5042) by @renovate[bot]
+- deps: lock file maintenance rust crates (#5043) by @renovate[bot]
+- deps: update taiki-e/install-action action to v2.54.0 (#5045) by @renovate[bot]
+- deps: update taiki-e/install-action action to v2.53.2 (#5041) by @renovate[bot]
+
+
+## [1.0.0-beta.19] - 2025-06-22
+
+### 🚀 Features
+
+- support `OutputOptions#manualChunks` (#5037) by @hyf0
+- advanced-chunks: support `advancedChunks#gruop#name` to be function (#5035) by @hyf0
+- rolldown_plugin_import_glob: align with `vitejs/vite#20163` (#5034) by @shulaoda
+- rust/advanced-chunks: support `MatchGroup#name` to be dynamic (#5033) by @hyf0
+- rolldown_plugin_build_import_analysis: align with `vitejs/vite#20117` (#5027) by @shulaoda
+- rolldown_plugin_build_import_analysis: align with `vitejs/vite#20115` (#5020) by @shulaoda
+- add validation warning for advanced chunks options without groups (#5009) by @sapphi-red
+
+### 🐛 Bug Fixes
+
+- moduleInfo is not updated when entry module is emitted by this.emitFile (#5032) by @IWANABETHATGUY
+- preserveEntrySignatures: false generates circular imports that hangs with TLA (#5029) by @IWANABETHATGUY
+- rolldown_plugin_build_import_analysis: align pure dynamic import handling with rolldown-vite (#5016) by @shulaoda
+- plugin/vite-resolve: normalize leading slash (#5013) by @sapphi-red
+- debug: `build_id` doesn't increase (#5015) by @hyf0
+- side effects in this.emitFile({ type: 'chunk' }) is removed when preserveEntrySignatures: false is set (#5012) by @IWANABETHATGUY
+
+### 🚜 Refactor
+
+- rolldown_utils: simplify `block_on_spawn_all` (#5019) by @shulaoda
+- use `rolldown_utils::futures::block_on` for `WatcherImpl#start` (#5018) by @shulaoda
+
+### 📚 Documentation
+
+- jsdoc: document `experimental.attachDebugInfo` (#5028) by @hyf0
+- clarify that `advancedChunks` options are in bytes (#5022) by @sapphi-red
+- add a note that sequential conversion may break the code (#5024) by @sapphi-red
+
+### ⚙️ Miscellaneous Tasks
+
+- infra: clean up `dist` before building `rolldown` (#5036) by @hyf0
+- Align status notice in readme with documentation (#5021) by @rijkvanzanten
+
+### ❤️ New Contributors
+
+* @rijkvanzanten made their first contribution in [#5021](https://github.com/rolldown/rolldown/pull/5021)
+
+
 ## [1.0.0-beta.18] - 2025-06-19
 
 ### 🚀 Features

@@ -27,4 +27,6 @@ pub enum Meta {
   ModuleGraphReady(module_graph_ready::ModuleGraphReady),
   SessionMeta(session_meta::SessionMeta),
   ChunksInfos(chunk_graph_ready::ChunkGraphReady),
+  HookRenderChunkStart(hook_render_chunk_start::HookRenderChunkStart),
+  HookRenderChunkEnd(hook_render_chunk_end::HookRenderChunkEnd),
 }

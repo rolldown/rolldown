@@ -4,6 +4,8 @@ import type { BuildStart } from './BuildStart';
 import type { ChunkGraphReady } from './ChunkGraphReady';
 import type { HookLoadCallEnd } from './HookLoadCallEnd';
 import type { HookLoadCallStart } from './HookLoadCallStart';
+import type { HookRenderChunkEnd } from './HookRenderChunkEnd';
+import type { HookRenderChunkStart } from './HookRenderChunkStart';
 import type { HookResolveIdCallEnd } from './HookResolveIdCallEnd';
 import type { HookResolveIdCallStart } from './HookResolveIdCallStart';
 import type { HookTransformCallEnd } from './HookTransformCallEnd';
@@ -22,4 +24,6 @@ export type Meta =
   | HookResolveIdCallEnd
   | ModuleGraphReady
   | SessionMeta
-  | ChunkGraphReady;
+  | ChunkGraphReady
+  | HookRenderChunkStart
+  | HookRenderChunkEnd;

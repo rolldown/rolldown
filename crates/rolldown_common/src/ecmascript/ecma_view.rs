@@ -19,6 +19,7 @@ bitflags! {
         const INCLUDED = 1 << 1;
         const HAS_LAZY_EXPORT = 1 << 2;
         const HAS_STAR_EXPORT = 1 << 3;
+        const SAFELY_TREESHAKE_COMMONJS = 1 << 4;
     }
 }
 
@@ -105,12 +106,14 @@ bitflags! {
     pub struct EcmaModuleAstUsage: u8 {
         const ModuleRef = 1;
         const ExportsRef = 1 << 1;
+        /// If the module has `Object.defineProperty(module.exports, "__esModule", { value: true })` or it's variant
         const EsModuleFlag = 1 << 2;
         const AllStaticExportPropertyAccess = 1 << 3;
         /// module.exports = require('mod');
         const IsCjsReexport = 1 << 4;
         const TopLevelAwait = 1 << 5;
         const HmrSelfAccept = 1 << 6;
+        const UnknownExportsRead = 1 << 7;
         const ModuleOrExports = Self::ModuleRef.bits() | Self::ExportsRef.bits();
     }
 }

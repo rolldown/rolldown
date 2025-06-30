@@ -1,6 +1,6 @@
 use rolldown_common::{
   EntryPoint, ExportsKind, ModuleIdx, OutputFormat, PreserveEntrySignatures,
-  SharedNormalizedBundlerOptions, StmtInfo, StmtInfoMeta, WrapKind,
+  SharedNormalizedBundlerOptions, StmtInfo, StmtInfoMeta, TaggedSymbolRef, WrapKind,
   dynamic_import_usage::DynamicImportExportsUsage,
 };
 use rustc_hash::FxHashMap;
@@ -69,7 +69,7 @@ impl LinkStage<'_> {
         linking_info.shimmed_missing_exports.iter().for_each(|(_name, symbol_ref)| {
           let stmt_info = StmtInfo {
             stmt_idx: None,
-            declared_symbols: vec![*symbol_ref],
+            declared_symbols: vec![TaggedSymbolRef::Normal(*symbol_ref)],
             referenced_symbols: vec![],
             side_effect: false.into(),
             is_included: false,
@@ -103,7 +103,9 @@ impl LinkStage<'_> {
               OutputFormat::Esm => {
                 meta.star_exports_from_external_modules.iter().copied().for_each(|rec_idx| {
                   referenced_symbols.push(ecma_module.import_records[rec_idx].namespace_ref.into());
-                  declared_symbols.push(ecma_module.import_records[rec_idx].namespace_ref);
+                  declared_symbols.push(TaggedSymbolRef::Normal(
+                    ecma_module.import_records[rec_idx].namespace_ref,
+                  ));
                 });
               }
               OutputFormat::Cjs | OutputFormat::Iife | OutputFormat::Umd => {}
@@ -111,7 +113,7 @@ impl LinkStage<'_> {
           }
           // Create a StmtInfo to represent the statement that declares and constructs the Module Namespace Object.
           // Corresponding AST for this statement will be created by the finalizer.
-          declared_symbols.push(ecma_module.namespace_object_ref);
+          declared_symbols.push(TaggedSymbolRef::Normal(ecma_module.namespace_object_ref));
           let namespace_stmt_info = StmtInfo {
             stmt_idx: None,
             declared_symbols,

@@ -1,7 +1,7 @@
 use oxc_index::IndexVec;
 use rolldown_common::{
-  EcmaRelated, EcmaView, EcmaViewMeta, ImportRecordIdx, ModuleId, ModuleType, RawImportRecord,
-  ResolvedId, SharedNormalizedBundlerOptions, StmtSideEffect,
+  EcmaModuleAstUsage, EcmaRelated, EcmaView, EcmaViewMeta, ImportRecordIdx, ModuleId, ModuleType,
+  RawImportRecord, ResolvedId, SharedNormalizedBundlerOptions, StmtSideEffect,
   side_effects::{DeterminedSideEffects, HookSideEffects},
 };
 use rolldown_error::BuildResult;
@@ -49,8 +49,9 @@ pub async fn create_ecma_view(
   );
 
   let ScanResult {
+    commonjs_exports,
     named_imports,
-    named_exports,
+    mut named_exports,
     stmt_infos,
     import_records: raw_import_records,
     default_export_ref,
@@ -73,6 +74,8 @@ pub async fn create_ecma_view(
     directive_range,
     dummy_record_set,
   } = scanner.scan(ast.program())?;
+
+  named_exports.extend(commonjs_exports);
 
   if !errors.is_empty() {
     return Err(errors.into());
@@ -109,16 +112,21 @@ pub async fn create_ecma_view(
     imported_ids: FxIndexSet::default(),
     dynamically_imported_ids: FxIndexSet::default(),
     side_effects,
-    ast_usage,
-    self_referenced_class_decl_symbol_ids,
-    hashbang_range,
     meta: {
       let mut meta = EcmaViewMeta::default();
       meta.set(EcmaViewMeta::EVAL, has_eval);
       meta.set(EcmaViewMeta::HAS_LAZY_EXPORT, has_lazy_export);
       meta.set(EcmaViewMeta::HAS_STAR_EXPORT, has_star_exports);
+      meta.set(
+        EcmaViewMeta::SAFELY_TREESHAKE_COMMONJS,
+        ast_usage.contains(EcmaModuleAstUsage::AllStaticExportPropertyAccess)
+          && !ast_usage.contains(EcmaModuleAstUsage::UnknownExportsRead),
+      );
       meta
     },
+    ast_usage,
+    self_referenced_class_decl_symbol_ids,
+    hashbang_range,
     mutations: vec![],
     new_url_references: new_url_imports,
     this_expr_replace_map,

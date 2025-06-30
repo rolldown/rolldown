@@ -16,7 +16,7 @@ use rolldown_utils::{
   ecmascript::{is_validate_identifier_name, legitimize_identifier_name},
   index_vec_ext::{IndexVecExt, IndexVecRefExt},
   indexmap::{FxIndexMap, FxIndexSet},
-  rayon::{IntoParallelRefIterator, ParallelIterator},
+  rayon::{IntoParallelRefIterator, IntoParallelRefMutIterator, ParallelIterator},
 };
 
 use rustc_hash::{FxHashMap, FxHashSet};
@@ -215,7 +215,7 @@ impl LinkStage<'_> {
       }
     }
 
-    self.metas.iter_mut().for_each(|meta| {
+    self.metas.par_iter_mut().for_each(|meta| {
       let mut sorted_and_non_ambiguous_resolved_exports = vec![];
       'next_export: for (exported_name, resolved_export) in &meta.resolved_exports {
         if let Some(potentially_ambiguous_symbol_refs) =
@@ -382,11 +382,11 @@ impl LinkStage<'_> {
       return;
     };
 
-    let cjs_reexports = if module.ast_usage.contains(EcmaModuleAstUsage::IsCjsReexport) {
-      vec![module.import_records.first().unwrap().resolved_module]
-    } else {
-      vec![]
-    };
+    let cjs_reexports = module
+      .ast_usage
+      .contains(EcmaModuleAstUsage::IsCjsReexport)
+      .then_some(module.import_records.first().unwrap().resolved_module);
+
     for dep_id in module.star_export_module_ids().chain(cjs_reexports) {
       let Module::Normal(dep_module) = &normal_modules[dep_id] else {
         continue;
@@ -524,15 +524,6 @@ impl LinkStage<'_> {
                     return;
                   }
 
-                  // // TODO(hyf0): suspicious cjs might just fallback to dynamic lookup?
-                  // if !self.module_table[export_symbol.symbol_ref.owner]
-                  //   .as_normal()
-                  //   .unwrap()
-                  //   .exports_kind
-                  //   .is_esm()
-                  // {
-                  //   break;
-                  // }
                   depended_refs.push(export_symbol.symbol_ref);
                   if let Some(chains) =
                     normal_symbol_exports_chain_map.get(&export_symbol.symbol_ref)
@@ -804,7 +795,6 @@ impl BindImportsAndExportsContext<'_> {
     );
     // TODO: Deal with https://github.com/evanw/esbuild/blob/109449e5b80886f7bc7fc7e0cee745a0221eef8d/internal/linker/linker.go#L3062-L3072
 
-    // TODO: add option to control it
     if matches!(importee.exports_kind, ExportsKind::CommonJs) {
       return ImportStatus::CommonJS;
     }

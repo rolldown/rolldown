@@ -1,6 +1,4 @@
 import type { BindingHookFilter, BindingPluginOptions } from '../binding';
-import { NormalizedInputOptionsImpl } from '../options/normalized-input-options';
-import { NormalizedOutputOptionsImpl } from '../options/normalized-output-options';
 import { bindingifySourcemap } from '../types/sourcemap';
 import { normalizeErrors } from '../utils/error';
 import { normalizeHook } from '../utils/normalize-hook';
@@ -39,12 +37,8 @@ export function bindingifyRenderStart(
           args.logLevel,
           args.watchMode,
         ),
-        new NormalizedOutputOptionsImpl(
-          opts,
-          args.outputOptions,
-          args.normalizedOutputPlugins,
-        ),
-        new NormalizedInputOptionsImpl(opts, args.onLog),
+        args.pluginContextData.getOutputOptions(opts),
+        args.pluginContextData.getInputOptions(opts),
       );
     },
     meta: bindingifyPluginHookMeta(meta),
@@ -87,11 +81,7 @@ export function bindingifyRenderChunk(
         ),
         code,
         transformRenderedChunk(chunk),
-        new NormalizedOutputOptionsImpl(
-          opts,
-          args.outputOptions,
-          args.normalizedOutputPlugins,
-        ),
+        args.pluginContextData.getOutputOptions(opts),
         args.pluginContextData.getRenderChunkMeta()!,
       );
 
@@ -200,11 +190,7 @@ export function bindingifyGenerateBundle(
       const output = transformToOutputBundle(context, bundle, changed);
       await handler.call(
         context,
-        new NormalizedOutputOptionsImpl(
-          opts,
-          args.outputOptions,
-          args.normalizedOutputPlugins,
-        ),
+        args.pluginContextData.getOutputOptions(opts),
         output,
         isWrite,
       );
@@ -241,11 +227,7 @@ export function bindingifyWriteBundle(
       const output = transformToOutputBundle(context, bundle, changed);
       await handler.call(
         context,
-        new NormalizedOutputOptionsImpl(
-          opts,
-          args.outputOptions,
-          args.normalizedOutputPlugins,
-        ),
+        args.pluginContextData.getOutputOptions(opts),
         output,
       );
       return collectChangedBundle(changed, output);

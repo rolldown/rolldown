@@ -36,7 +36,11 @@ export function bindingifyInputOptions(
   logLevel: LogLevelOption,
   watchMode: boolean,
 ): BindingInputOptions {
-  const pluginContextData = new PluginContextData();
+  const pluginContextData = new PluginContextData(
+    onLog,
+    outputOptions,
+    normalizedOutputPlugins,
+  );
 
   const plugins = rawPlugins.map((plugin) => {
     if ('_parallel' in plugin) {

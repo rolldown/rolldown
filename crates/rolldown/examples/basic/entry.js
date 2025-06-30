@@ -1,5 +1,4 @@
 // MULTIPLE ENTRY MODULES
-import { another } from './foo.js';
-console.log(another.a);
+import hyperCube from './hyper-cube.js';
 
-// console.log(`mod.another: `, mod);
+console.log(hyperCube(5));

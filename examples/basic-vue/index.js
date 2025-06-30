@@ -1,5 +1,3 @@
-// MULTIPLE ENTRY MODULES
-import mod from './cjs.js';
-// import * as mod2 from './esm.js';
+import { createApp } from 'vue';
 
-console.log(mod.a.b);
+export default createApp({});

@@ -115,7 +115,9 @@ impl HmrManager {
         Some(module_idx) => {
           changed_modules.insert(*module_idx);
         }
-        _ => {}
+        _ => {
+          dbg!("No corresponding module found for changed file path: {:?}", changed_file_path);
+        }
       }
     }
     tracing::debug!(

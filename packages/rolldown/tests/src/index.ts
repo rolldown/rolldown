@@ -1,5 +1,8 @@
-import type { TestConfig } from './types'
+import type { OutputOptions } from 'rolldown'
+import type { TestConfig, WithoutValue } from './types'
 
-export function defineTest(testConfig: TestConfig): TestConfig {
+export function defineTest<OutputOpts extends WithoutValue | undefined | OutputOptions | OutputOptions[]>(
+  testConfig: TestConfig<OutputOpts>
+): TestConfig<OutputOpts> {
   return testConfig
 }

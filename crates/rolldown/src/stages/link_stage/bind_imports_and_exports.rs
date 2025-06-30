@@ -385,7 +385,7 @@ impl LinkStage<'_> {
     let cjs_reexports = module
       .ast_usage
       .contains(EcmaModuleAstUsage::IsCjsReexport)
-      .then_some(module.import_records.first().unwrap().resolved_module);
+      .then(|| module.import_records.first().unwrap().resolved_module);
 
     for dep_id in module.star_export_module_ids().chain(cjs_reexports) {
       let Module::Normal(dep_module) = &normal_modules[dep_id] else {
@@ -552,6 +552,8 @@ impl LinkStage<'_> {
                     .copied()
                     .unwrap_or(self.symbols.canonical_ref_for(member_expr_ref.object_ref));
 
+                  // corresponding to cases in:
+                  // https://github.com/rolldown/rolldown/blob/30a5a2fc8fa6785821153922e21dc0273cc00c7a/crates/rolldown/tests/rolldown/tree_shaking/commonjs/main.js?plain=1#L3-L10
                   if let Some(m) = self.metas[maybe_namespace.owner]
                     .named_import_to_cjs_module
                     .get(&maybe_namespace)

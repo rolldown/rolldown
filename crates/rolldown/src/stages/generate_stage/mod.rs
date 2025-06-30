@@ -5,6 +5,7 @@ use futures::future::try_join_all;
 use oxc::semantic::{ScopeId, SymbolId};
 use oxc_index::IndexVec;
 use render_chunk_to_assets::set_emitted_chunk_preliminary_filenames;
+use rolldown_debug::{action, trace_action};
 use rolldown_error::BuildResult;
 use rolldown_std_utils::OptionExt;
 use rustc_hash::FxHashMap;
@@ -65,6 +66,8 @@ impl<'a> GenerateStage<'a> {
     self.plugin_driver.render_start(self.options).await?;
 
     let mut chunk_graph = self.generate_chunks().await?;
+    self.trace_action_chunks_infos(&chunk_graph);
+
     if chunk_graph.chunk_table.len() > 1 {
       validate_options_for_multi_chunk_output(self.options)?;
     }
@@ -354,5 +357,39 @@ impl<'a> GenerateStage<'a> {
         }
       });
     });
+  }
+
+  fn trace_action_chunks_infos(&self, chunk_graph: &ChunkGraph) {
+    if tracing::enabled!(tracing::Level::DEBUG) {
+      let mut chunk_infos = Vec::new();
+      for (idx, chunk) in chunk_graph.chunk_table.iter_enumerated() {
+        chunk_infos.push(action::Chunk {
+          is_user_defined_entry: chunk.is_user_defined_entry(),
+          is_async_entry: chunk.is_async_entry(),
+          entry_module: chunk
+            .entry_module_idx()
+            .map(|idx| self.link_output.module_table[idx].id().to_string()),
+          modules: chunk
+            .modules
+            .iter()
+            .map(|idx| self.link_output.module_table[*idx].id().to_string())
+            .collect(),
+          reason: chunk.chunk_reason_type.as_static_str(),
+          group_index: chunk.chunk_reason_type.group_index(),
+          id: idx.raw(),
+          name: chunk.name.as_ref().map(ArcStr::to_string),
+          // TODO(hyf0): add dynamic importees
+          imports: chunk
+            .imports_from_other_chunks
+            .iter()
+            .map(|(importee_idx, _imports)| action::ChunkImport {
+              id: importee_idx.raw(),
+              kind: "import-statement",
+            })
+            .collect(),
+        });
+      }
+      trace_action!(action::ChunkGraphReady { action: "ChunkGraphReady", chunks: chunk_infos });
+    }
   }
 }

@@ -6,6 +6,7 @@ use std::{
 use crate::{
   ChunkIdx, ChunkKind, FilenameTemplate, ModuleIdx, ModuleTable, NamedImport, NormalModule,
   NormalizedBundlerOptions, PreserveEntrySignatures, RollupPreRenderedChunk, SymbolRef,
+  chunk::types::chunk_reason_type::ChunkReasonType,
 };
 pub mod chunk_table;
 pub mod types;
@@ -61,6 +62,7 @@ pub struct Chunk {
   pub exports_to_other_chunks: FxHashMap<SymbolRef, Vec<Rstr>>,
   pub input_base: ArcStr,
   pub create_reasons: Vec<String>,
+  pub chunk_reason_type: Box<ChunkReasonType>,
   pub preserve_entry_signature: Option<PreserveEntrySignatures>,
 }
 
@@ -289,5 +291,13 @@ impl Chunk {
     module_table: &'module ModuleTable,
   ) -> Option<&'module NormalModule> {
     self.entry_module_idx().and_then(|idx| module_table[idx].as_normal())
+  }
+
+  pub fn is_user_defined_entry(&self) -> bool {
+    matches!(&self.kind, ChunkKind::EntryPoint { meta, .. } if meta.contains(ChunkMeta::UserDefinedEntry))
+  }
+
+  pub fn is_async_entry(&self) -> bool {
+    matches!(&self.kind, ChunkKind::EntryPoint { meta, .. } if meta.contains(ChunkMeta::DynamicImported))
   }
 }

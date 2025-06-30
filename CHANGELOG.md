@@ -1,4 +1,37 @@
 
+## [1.0.0-beta.22] - 2025-06-30
+
+### 🚀 Features
+
+- plugin: use `Log` instead of `BuildDiagnostic` for `PluginContext#log` (#5099) by @shulaoda
+- plugin: support info/warn/debug in native plugin context (#5098) by @shulaoda
+- plugin: support vite plugin custom in `PluginContext#resolve` (#5097) by @shulaoda
+- rolldown_plugin_import_glob: align edge cases with `rolldown-vite` (#5094) by @shulaoda
+- rolldown_plugin_vite_resolve: align subpath import resolution (#5093) by @shulaoda
+- add commonjs tree shake option (#5096) by @IWANABETHATGUY
+- rolldown_plugin_web_worker_post: align with `rolldown-vite` (#5092) by @shulaoda
+- manual-chunks: support `getModuleInfo` (#5087) by @hyf0
+- advanced-chunks: support `getModuleInfo` in `groups.{group}.name` (#5086) by @hyf0
+
+### 🚜 Refactor
+
+- rolldown_loader_utils: inline unnecessary `binary_to_esm` (#5100) by @shulaoda
+
+### ⚡ Performance
+
+- hmr: remove `console.debug` in `runtime.registerModule` (#5091) by @sapphi-red
+- hmr: remove no-op `runtime.__toCommonJS` call (#5089) by @sapphi-red
+
+### ⚙️ Miscellaneous Tasks
+
+- deps: lock file maintenance rust crates (#5105) by @renovate[bot]
+- deps: lock file maintenance npm packages (#5104) by @renovate[bot]
+- deps: update rust crate schemars to v1 (#5103) by @renovate[bot]
+- deps: update dependency vite to v7 (#5102) by @renovate[bot]
+- deps: update github-actions (#5101) by @renovate[bot]
+- deps: update dependency rolldown-plugin-dts to v0.13.12 (#5088) by @renovate[bot]
+
+
 ## [1.0.0-beta.21] - 2025-06-27
 
 ### 🚀 Features

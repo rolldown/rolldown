@@ -7,7 +7,6 @@ import { normalizeHook } from '../utils/normalize-hook';
 
 import path from 'node:path';
 import { SYMBOL_FOR_RESOLVE_CALLER_THAT_SKIP_SELF } from '../constants/plugin-context';
-import { NormalizedInputOptionsImpl } from '../options/normalized-input-options';
 import {
   bindingifySourcemap,
   type ExistingRawSourceMap,
@@ -61,7 +60,7 @@ export function bindingifyBuildStart(
           args.logLevel,
           args.watchMode,
         ),
-        new NormalizedInputOptionsImpl(opts, args.onLog),
+        args.pluginContextData.getInputOptions(opts),
       );
     },
     meta: bindingifyPluginHookMeta(meta),

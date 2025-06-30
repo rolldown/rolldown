@@ -27,7 +27,7 @@ const { registryId, pluginInfos, threadNumber } = workerData as WorkerData;
             {} as InputOptions,
             {} as OutputOptions,
             // TODO need to find a way to share pluginContextData
-            new PluginContextData(),
+            new PluginContextData(() => {}, {} as OutputOptions, []),
             [],
             () => {},
             'info' as const,

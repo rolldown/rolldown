@@ -9,7 +9,9 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 
 //#region foo.js
-var require_foo = __commonJS({ "foo.js"(exports) {} });
+var require_foo = __commonJS({ "foo.js"(exports) {
+	exports.foo = 123;
+} });
 
 //#endregion
 //#region bar.js

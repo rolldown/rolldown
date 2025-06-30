@@ -1,2 +1,2 @@
-exports.a = 'basic_ref_with_named_default_a'
-exports.b = 'basic_ref_with_named_default_b'
+exports.a = 'basic-ref-with-named-default-a'
+exports.b = 'basic-ref-with-named-default-unused'

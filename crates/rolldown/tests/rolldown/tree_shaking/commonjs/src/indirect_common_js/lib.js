@@ -1,2 +1,2 @@
-exports.a = 'basic-a'
-exports.b = 'basic-b'
+exports.a = 'react-like-a'
+exports.b = 'react-like-unused'

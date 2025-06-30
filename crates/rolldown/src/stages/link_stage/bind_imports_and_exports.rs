@@ -561,25 +561,30 @@ impl LinkStage<'_> {
                 // TODO: we could record if a module could potential reference a cjs symbol
                 // so that we could skip this step.
                 if cursor < member_expr_ref.props.len() {
-                  let maybe_import_record_namespace = depended_refs
+                  let maybed_namespace = depended_refs
                     .last()
                     .copied()
                     .unwrap_or(self.symbols.canonical_ref_for(member_expr_ref.object_ref));
-                  &maybe_import_record_namespace;
-                  if let Some(m) = self.metas[maybe_import_record_namespace.owner]
+
+                  if let Some(m) = self.metas[maybed_namespace.owner]
                     .named_import_to_cjs_module
-                    .get(&maybe_import_record_namespace)
+                    .get(&maybed_namespace)
                     .or_else(|| {
-                      self.metas[maybe_import_record_namespace.owner]
+                      self.metas[maybed_namespace.owner]
                         .import_record_ns_to_cjs_module
-                        .get(&maybe_import_record_namespace)
+                        .get(&maybed_namespace)
                     })
                     .or_else(|| {
-                      (self.metas[maybe_import_record_namespace.owner].has_dynamic_exports)
-                        .then_some(&maybe_import_record_namespace.owner)
+                      (self.metas[maybed_namespace.owner].has_dynamic_exports)
+                        .then_some(&maybed_namespace.owner)
                     })
                     .and_then(|idx| {
-                      self.metas[*idx].resolved_exports.get(member_expr_ref.props[cursor].as_str())
+                      self.metas[*idx]
+                        .resolved_exports
+                        .get(member_expr_ref.props[cursor].as_str())
+                        .and_then(|resolved_export| {
+                          resolved_export.is_facade.then_some(resolved_export)
+                        })
                     })
                   {
                     is_cjs_symbol = true;

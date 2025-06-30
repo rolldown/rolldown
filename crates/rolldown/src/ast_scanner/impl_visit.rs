@@ -193,14 +193,15 @@ impl<'me, 'ast: 'me> Visit<'ast> for AstScanner<'me, 'ast> {
             }
             if id.name == "exports" && self.is_global_identifier_reference(id) {
               self.cjs_exports_ident.get_or_insert(Span::new(id.span.start, id.span.start + 7));
-              if let Some((span, export_name)) = member_expr.static_property_info() {
+              if self.options.treeshake.commonjs()
+                && let Some((span, export_name)) = member_expr.static_property_info()
+              {
                 // `exports.test = ...`
                 let exported_symbol =
                   self.result.symbol_ref_db.create_facade_root_symbol_ref(export_name);
 
                 self.declare_link_only_symbol_ref(exported_symbol.symbol);
 
-                // TODO: use in next pr
                 self.result.commonjs_exports.insert(
                   export_name.into(),
                   LocalExport { referenced: exported_symbol, span, came_from_commonjs: true },

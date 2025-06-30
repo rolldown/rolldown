@@ -1,2 +1,2 @@
-exports.a = 'export_star_from_cjs_a'
-exports.b = 'export_star_from_cjs_b'
+exports.a = 'nested-export-star-from-cjs-a'
+exports.b = 'nested-export-star-from-cjs-unused'

@@ -1,1 +1,7 @@
-{}
+{
+  "config": {
+    "treeshake": {
+      "commonjs": true
+    }
+  }
+}

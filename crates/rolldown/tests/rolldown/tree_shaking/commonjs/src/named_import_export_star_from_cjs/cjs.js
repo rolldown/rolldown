@@ -1,2 +1,2 @@
-exports.a = 'named_import_export_star_from_cjs_a'
-exports.b = 'named_import_export_star_from_cjs_b'
+exports.a = 'named-import-export-star-from-cjs-a'
+exports.b = 'named-import-export-star-from-cjs-unused'

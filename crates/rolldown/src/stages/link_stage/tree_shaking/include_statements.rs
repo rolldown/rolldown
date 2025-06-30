@@ -361,7 +361,9 @@ fn include_module(ctx: &mut Context, module: &NormalModule) {
       let bail_eval = module.meta.has_eval()
         && !stmt_info.declared_symbols.is_empty()
         && stmt_info_id.index() != 0;
-      let has_side_effects = if module.meta.contains(EcmaViewMeta::SAFELY_TREESHAKE_COMMONJS) {
+      let has_side_effects = if module.meta.contains(EcmaViewMeta::SAFELY_TREESHAKE_COMMONJS)
+        && ctx.options.treeshake.commonjs()
+      {
         matches!(stmt_info.side_effect, StmtSideEffect::Unknown)
       } else {
         stmt_info.side_effect.has_side_effect()

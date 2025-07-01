@@ -5566,6 +5566,10 @@ expression: output
 
 - main-!~{000}~.js => main-D31a1HHT.js
 
+# tests/rolldown/topics/unit_test_only
+
+- main-!~{000}~.js => main-P8j0SBqD.js
+
 # tests/rolldown/tree_shaking/advanced_barrel_exports
 
 - main-!~{000}~.js => main-BdBlLzB5.js

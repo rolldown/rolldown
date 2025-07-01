@@ -1,0 +1,7 @@
+{
+  "config": {
+    "platform":"node",
+    "format": "cjs"
+  },
+  "snapshot": false
+}

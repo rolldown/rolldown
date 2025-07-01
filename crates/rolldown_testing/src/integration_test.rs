@@ -247,16 +247,17 @@ impl IntegrationTest {
         }
       }
     }
-
-    // Configure insta to use the fixture path as the snapshot path
-    let mut settings = insta::Settings::clone_current();
-    settings.set_snapshot_path(test_folder_path);
-    settings.set_prepend_module_to_snapshot(false);
-    settings.remove_input_file();
-    settings.set_omit_expression(true);
-    settings.bind(|| {
-      insta::assert_snapshot!("artifacts", snapshot_outputs.concat());
-    });
+    if self.test_meta.snapshot {
+      // Configure insta to use the fixture path as the snapshot path
+      let mut settings = insta::Settings::clone_current();
+      settings.set_snapshot_path(test_folder_path);
+      settings.set_prepend_module_to_snapshot(false);
+      settings.remove_input_file();
+      settings.set_omit_expression(true);
+      settings.bind(|| {
+        insta::assert_snapshot!("artifacts", snapshot_outputs.concat());
+      });
+    }
   }
 
   fn apply_test_defaults(&self, options: &mut BundlerOptions) {

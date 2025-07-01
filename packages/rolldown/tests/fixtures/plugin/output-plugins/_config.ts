@@ -7,7 +7,6 @@ const renderStartFn = vi.fn()
 const onLogFn = vi.fn()
 
 export default defineTest({
-  skipComposingJsPlugin: true, // Here mutate the test config at non-skipComposingJsPlugin test will be next skipComposingJsPlugin test failed.
   config: {
     output: {
       plugins: [

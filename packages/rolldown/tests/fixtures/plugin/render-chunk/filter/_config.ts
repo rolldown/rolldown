@@ -4,7 +4,6 @@ import { defineTest } from 'rolldown-tests'
 const renderChunkFn = vi.fn()
 
 export default defineTest({
-  skipComposingJsPlugin: true,
   config: {
     plugins: [
       {

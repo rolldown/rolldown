@@ -7,7 +7,6 @@ const transformFn2 = vi.fn();
 const transformFn3 = vi.fn();
 
 export default defineTest({
-	skipComposingJsPlugin: true,
 	config: {
 		plugins: [
 			withFilter(

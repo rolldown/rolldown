@@ -4,7 +4,7 @@ use anyhow::Result;
 use arcstr::ArcStr;
 use futures::future::try_join_all;
 use rolldown_common::{
-  AssetIdx, InstantiationKind, RollupRenderedChunk, SharedNormalizedBundlerOptions,
+  InsChunkIdx, InstantiationKind, RollupRenderedChunk, SharedNormalizedBundlerOptions,
 };
 use rolldown_plugin::{HookRenderChunkArgs, SharedPluginDriver};
 use rolldown_sourcemap::{SourceMap, collapse_sourcemaps};
@@ -48,7 +48,7 @@ pub async fn render_chunks(
         return Ok(Some((index.into(), render_chunk_ret)));
       }
 
-      Ok::<Option<(AssetIdx, (String, Vec<SourceMap>))>, anyhow::Error>(None)
+      Ok::<Option<(InsChunkIdx, (String, Vec<SourceMap>))>, anyhow::Error>(None)
     }
   }))
   .await?;

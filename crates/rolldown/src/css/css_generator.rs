@@ -80,7 +80,7 @@ impl Generator for CssGenerator {
 
     Ok(Ok(GenerateOutput {
       chunks: vec![InstantiatedChunk {
-        origin_chunk: ctx.chunk_idx,
+        originate_from: ctx.chunk_idx,
         content: content.into(),
         map,
         kind: InstantiationKind::from(css_asset_meta),

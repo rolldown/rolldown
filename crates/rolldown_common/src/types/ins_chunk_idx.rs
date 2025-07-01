@@ -1,3 +1,3 @@
 oxc_index::define_index_type! {
-  pub struct AssetIdx = u32;
+  pub struct InsChunkIdx = u32;
 }

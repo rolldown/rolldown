@@ -1,3 +1,4 @@
+pub mod assets_ready;
 pub mod build_end;
 pub mod build_start;
 pub mod chunk_graph_ready;
@@ -29,4 +30,5 @@ pub enum Meta {
   ChunksInfos(chunk_graph_ready::ChunkGraphReady),
   HookRenderChunkStart(hook_render_chunk_start::HookRenderChunkStart),
   HookRenderChunkEnd(hook_render_chunk_end::HookRenderChunkEnd),
+  AssetsReady(assets_ready::AssetsReady),
 }

@@ -6,6 +6,7 @@ use rolldown_common::{
   Asset, EmittedChunkInfo, InstantiationKind, ModuleRenderArgs, ModuleRenderOutput, Output,
   OutputAsset, OutputChunk, SharedFileEmitter, SourceMapType, SymbolRef,
 };
+use rolldown_debug::{action, trace_action, trace_action_enabled};
 use rolldown_error::{BuildDiagnostic, BuildResult};
 use rolldown_rstr::Rstr;
 use rolldown_utils::{
@@ -59,6 +60,8 @@ impl GenerateStage<'_> {
 
     // Set emitted chunk info for file emitter, it should be set before call generate_bundle hook
     set_emitted_chunk_filenames(&self.plugin_driver.file_emitter, &assets, chunk_graph);
+
+    Self::trace_action_assets_ready(&assets);
 
     let mut output = Vec::with_capacity(assets.len());
     let mut output_assets = vec![];
@@ -303,6 +306,21 @@ impl GenerateStage<'_> {
           .collect::<Vec<_>>()
       })
       .collect::<Vec<_>>()
+  }
+
+  fn trace_action_assets_ready(index_assets: &IndexAssets) {
+    if trace_action_enabled!() {
+      let mut assets = vec![];
+      for asset in index_assets {
+        assets.push(action::Asset {
+          originate_from: Some(asset.origin_chunk.raw()),
+          size: asset.content.as_bytes().len().try_into().unwrap(),
+          filename: asset.filename.to_string(),
+        });
+      }
+      let assets_ready = action::AssetsReady { action: "AssetsReady", assets };
+      trace_action!(assets_ready);
+    }
   }
 }
 

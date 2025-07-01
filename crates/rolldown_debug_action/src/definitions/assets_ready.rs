@@ -9,8 +9,8 @@ pub struct AssetsReady {
 #[derive(ts_rs::TS, serde::Serialize)]
 #[ts(export)]
 pub struct Asset {
-  /// If the asset is created from a chunk, this field will be the chunk id.
-  pub originate_from: Option<u32>,
+  /// The id of the chunk that the asset is created from. Empty means the asset is not created from a chunk.
+  pub chunk_id: Option<u32>,
 
   /// The size of the asset in bytes.
   pub size: u32,

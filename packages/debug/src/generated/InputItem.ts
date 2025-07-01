@@ -6,5 +6,8 @@ export type InputItem = {
    * For `input: ['./main.js']`, `./main.js` doesn't have a name.
    */
   name: string | null;
-  import: string;
+  /**
+   * For `input: { main: './main.js' }`, `./main.js` is the filename.
+   */
+  filename: string;
 };

@@ -2,7 +2,7 @@
 import type { ChunkImport } from './ChunkImport';
 
 export type Chunk = {
-  id: number;
+  chunk_id: number;
   /**
    * ```js
    * import { defineConfig } from 'rolldown';
@@ -45,9 +45,9 @@ export type Chunk = {
    *   },
    * });
    * ```
-   * - `group_index` will be `0` if this chunk is created by `output.advancedChunks`.
+   * - `advanced_chunk_group_id` will be `0` if this chunk is created by `output.advancedChunks`.
    */
-  group_index: number | null;
+  advanced_chunk_group_id: number | null;
   is_user_defined_entry: boolean;
   /**
    * A entry could be both user-defined and async.

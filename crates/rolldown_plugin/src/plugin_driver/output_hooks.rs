@@ -129,7 +129,7 @@ impl PluginDriver {
         trace_action!(action::HookRenderChunkStart {
           action: "HookRenderChunkStart",
           plugin_name: plugin.call_name().to_string(),
-          plugin_index: plugin_idx.raw(),
+          plugin_id: plugin_idx.raw(),
           call_id: "${call_id}",
         });
         if let Some(r) = plugin
@@ -145,7 +145,7 @@ impl PluginDriver {
         trace_action!(action::HookRenderChunkEnd {
           action: "HookRenderChunkEnd",
           plugin_name: plugin.call_name().to_string(),
-          plugin_index: plugin_idx.raw(),
+          plugin_id: plugin_idx.raw(),
           call_id: "${call_id}",
         });
 

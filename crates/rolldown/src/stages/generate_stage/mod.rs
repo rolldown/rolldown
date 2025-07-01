@@ -375,15 +375,15 @@ impl<'a> GenerateStage<'a> {
             .map(|idx| self.link_output.module_table[*idx].id().to_string())
             .collect(),
           reason: chunk.chunk_reason_type.as_static_str(),
-          group_index: chunk.chunk_reason_type.group_index(),
-          id: idx.raw(),
+          advanced_chunk_group_id: chunk.chunk_reason_type.group_index(),
+          chunk_id: idx.raw(),
           name: chunk.name.as_ref().map(ArcStr::to_string),
           // TODO(hyf0): add dynamic importees
           imports: chunk
             .imports_from_other_chunks
             .iter()
             .map(|(importee_idx, _imports)| action::ChunkImport {
-              id: importee_idx.raw(),
+              chunk_id: importee_idx.raw(),
               kind: "import-statement",
             })
             .collect(),

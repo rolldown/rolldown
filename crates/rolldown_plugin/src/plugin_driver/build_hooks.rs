@@ -79,7 +79,7 @@ impl PluginDriver {
           module_request: args.specifier.to_string(),
           import_kind: args.kind.to_string(),
           plugin_name: plugin.call_name().to_string(),
-          plugin_index: plugin_idx.raw(),
+          plugin_id: plugin_idx.raw(),
           trigger: "${hook_resolve_id_trigger}",
           call_id: "${call_id}",
         });
@@ -104,7 +104,7 @@ impl PluginDriver {
             resolved_id: Some(r.id.to_string()),
             is_external: r.external.map(|v| v.is_external()),
             plugin_name: plugin.call_name().to_string(),
-            plugin_index: plugin_idx.raw(),
+            plugin_id: plugin_idx.raw(),
             trigger: "${hook_resolve_id_trigger}",
             call_id: "${call_id}",
           });
@@ -115,7 +115,7 @@ impl PluginDriver {
             resolved_id: None,
             is_external: None,
             plugin_name: plugin.call_name().to_string(),
-            plugin_index: plugin_idx.raw(),
+            plugin_id: plugin_idx.raw(),
             trigger: "${hook_resolve_id_trigger}",
             call_id: "${call_id}",
           });
@@ -190,7 +190,7 @@ impl PluginDriver {
           action: "HookLoadCallStart",
           module_id: args.id.to_string(),
           plugin_name: plugin.call_name().to_string(),
-          plugin_index: plugin_idx.raw(),
+          plugin_id: plugin_idx.raw(),
           call_id: "${call_id}",
         });
         if let Some(r) = plugin
@@ -203,7 +203,7 @@ impl PluginDriver {
             module_id: args.id.to_string(),
             source: Some(r.code.to_string()),
             plugin_name: plugin.call_name().to_string(),
-            plugin_index: plugin_idx.raw(),
+            plugin_id: plugin_idx.raw(),
             call_id: "${call_id}",
           });
           anyhow::Ok(Some(r))
@@ -213,7 +213,7 @@ impl PluginDriver {
             module_id: args.id.to_string(),
             source: None,
             plugin_name: plugin.call_name().to_string(),
-            plugin_index: plugin_idx.raw(),
+            plugin_id: plugin_idx.raw(),
             call_id: "${call_id}",
           });
           Ok(None)
@@ -262,7 +262,7 @@ impl PluginDriver {
         module_id: id.to_string(),
         source: code.clone(),
         plugin_name: plugin.call_name().to_string(),
-        plugin_index: plugin_idx.raw(),
+        plugin_id: plugin_idx.raw(),
         call_id: call_id.clone().unwrap_or_default(),
       });
       if let Some(r) = plugin
@@ -293,7 +293,7 @@ impl PluginDriver {
             module_id: id.to_string(),
             transformed_source: Some(code.to_string()),
             plugin_name: plugin.call_name().to_string(),
-            plugin_index: plugin_idx.raw(),
+            plugin_id: plugin_idx.raw(),
             call_id: call_id.unwrap_or_default()
           });
         }
@@ -306,7 +306,7 @@ impl PluginDriver {
           module_id: id.to_string(),
           transformed_source: Some(code.to_string()),
           plugin_name: plugin.call_name().to_string(),
-          plugin_index: plugin_idx.raw(),
+          plugin_id: plugin_idx.raw(),
           call_id: call_id.unwrap_or_default()
         });
       }

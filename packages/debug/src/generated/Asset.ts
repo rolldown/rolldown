@@ -2,9 +2,9 @@
 
 export type Asset = {
   /**
-   * If the asset is created from a chunk, this field will be the chunk id.
+   * The id of the chunk that the asset is created from. Empty means the asset is not created from a chunk.
    */
-  originate_from: number | null;
+  chunk_id: number | null;
   /**
    * The size of the asset in bytes.
    */

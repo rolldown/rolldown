@@ -25,10 +25,10 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
   pub fn cjs_ast_analyzer(&mut self, ty: &CjsGlobalAssignmentType) -> Option<CommonJsAstType> {
     match ty {
       CjsGlobalAssignmentType::ModuleExportsAssignment => {
-        self.ast_usage.insert(EcmaModuleAstUsage::ModuleRef);
+        self.result.ast_usage.insert(EcmaModuleAstUsage::ModuleRef);
       }
       CjsGlobalAssignmentType::ExportsAssignment => {
-        self.ast_usage.insert(EcmaModuleAstUsage::ExportsRef);
+        self.result.ast_usage.insert(EcmaModuleAstUsage::ExportsRef);
       }
     }
     let cursor = self.visit_path.len() - 1;
@@ -54,7 +54,7 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
             AstKind::SimpleAssignmentTarget(target) => {
               let v = self.check_assignment_is_cjs_reexport(target, cursor - 1);
               if matches!(v, Some(CommonJsAstType::Reexport)) {
-                self.ast_usage.insert(EcmaModuleAstUsage::IsCjsReexport);
+                self.result.ast_usage.insert(EcmaModuleAstUsage::IsCjsReexport);
               }
               v
             }
@@ -76,7 +76,7 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
       _ => None,
     };
     if matches!(v, Some(CommonJsAstType::EsModuleFlag)) {
-      self.ast_usage.insert(EcmaModuleAstUsage::EsModuleFlag);
+      self.result.ast_usage.insert(EcmaModuleAstUsage::EsModuleFlag);
     }
     v
   }
@@ -105,7 +105,7 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
   ) -> Option<CommonJsAstType> {
     let static_property_name = member_expr.static_property_name();
     if static_property_name.is_none() {
-      self.ast_usage.remove(EcmaModuleAstUsage::AllStaticExportPropertyAccess);
+      self.result.ast_usage.remove(EcmaModuleAstUsage::AllStaticExportPropertyAccess);
     }
     let is_es_module_flag_prop =
       static_property_name.is_some_and(|atom| atom.as_str() == "__esModule");

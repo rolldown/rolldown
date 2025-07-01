@@ -77,6 +77,11 @@ pub struct ScanResult {
   pub warnings: Vec<BuildDiagnostic>,
   pub errors: Vec<BuildDiagnostic>,
   pub has_eval: bool,
+  /// Whether the module is a commonjs module
+  /// The reason why we can't reuse `cjs_exports_ident` and `cjs_module_ident` is that
+  /// any `module` or `exports` in the top-level scope should be treated as a commonjs module.
+  /// `cjs_exports_ident` and `cjs_module_ident` only only recorded when they are appear in
+  /// lhs of AssignmentExpression
   pub ast_usage: EcmaModuleAstUsage,
   pub symbol_ref_db: SymbolRefDbForModule,
   /// https://github.com/evanw/esbuild/blob/d34e79e2a998c21bb71d57b92b0017ca11756912/internal/js_parser/js_parser_lower_class.go#L2277-L2283
@@ -113,12 +118,6 @@ pub struct AstScanner<'me, 'ast> {
   /// cjs ident span used for emit `commonjs_variable_in_esm` warning
   cjs_exports_ident: Option<Span>,
   cjs_module_ident: Option<Span>,
-  /// Whether the module is a commonjs module
-  /// The reason why we can't reuse `cjs_exports_ident` and `cjs_module_ident` is that
-  /// any `module` or `exports` in the top-level scope should be treated as a commonjs module.
-  /// `cjs_exports_ident` and `cjs_module_ident` only only recorded when they are appear in
-  /// lhs of AssignmentExpression
-  ast_usage: EcmaModuleAstUsage,
   cur_class_decl: Option<SymbolId>,
   visit_path: Vec<AstKind<'ast>>,
   scope_stack: Vec<Option<ScopeId>>,
@@ -176,7 +175,8 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
       warnings: Vec::new(),
       has_eval: false,
       errors: Vec::new(),
-      ast_usage: EcmaModuleAstUsage::empty(),
+      ast_usage: EcmaModuleAstUsage::empty()
+        .union(EcmaModuleAstUsage::AllStaticExportPropertyAccess),
       symbol_ref_db,
       self_referenced_class_decl_symbol_ids: FxHashSet::default(),
       hashbang_range: None,
@@ -203,8 +203,6 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
       source,
       id: file_path,
       comments,
-      ast_usage: EcmaModuleAstUsage::empty()
-        .union(EcmaModuleAstUsage::AllStaticExportPropertyAccess),
       cur_class_decl: None,
       visit_path: vec![],
       ignore_comment: options.experimental.get_ignore_comment(),
@@ -262,7 +260,7 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
           .with_severity_warning(),
         );
       }
-    } else if self.ast_usage.intersects(EcmaModuleAstUsage::ModuleOrExports) {
+    } else if self.result.ast_usage.intersects(EcmaModuleAstUsage::ModuleOrExports) {
       exports_kind = ExportsKind::CommonJs;
     } else {
       // TODO(hyf0): Should add warnings if the module type doesn't satisfy the exports kind.
@@ -304,7 +302,7 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
     if self.options.is_hmr_enabled() && exports_kind.is_commonjs() {
       // https://github.com/rolldown/rolldown/issues/4129
       // For cjs module with hmr enabled, bundler will generates code that references `module`.
-      self.ast_usage.insert(EcmaModuleAstUsage::ModuleRef);
+      self.result.ast_usage.insert(EcmaModuleAstUsage::ModuleRef);
     }
 
     if cfg!(debug_assertions) {
@@ -332,7 +330,6 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
         }
       }
     }
-    self.result.ast_usage = self.ast_usage;
     Ok(self.result)
   }
 

@@ -298,9 +298,9 @@ When we run `node ./main.js`, the traversal order of the modules would be `main.
 
 With forcefully generated `runtime.js`, the bundler ensures any chunk that depends on runtime code would first load `runtime.js` before executing itself. This guarantees that the runtime code is always executed before any other chunks, preventing circular import issues.
 
-### Why the dependencies of the captured module get captured too?
+### Why the group contains modules that doesn't satisfy the constraints?
 
-When a module is captured by a group, Rolldown will try to capture its dependencies recursively. This is because Rolldown is only allowed to mangle the exports of non-entry chunks by default.
+When a module is captured by a group, Rolldown will try to capture its dependencies recursively without considering constraints. This is because Rolldown is only allowed to mangle the exports of non-entry chunks by default.
 
 For example, if you have the following code:
 
@@ -348,9 +348,9 @@ export const value = 'a' + value;
 
 You could see, to make `a.js` work, we have to change the export signature of the entry chunk `entry.js` and add an additional export `value`. This totally violates the original intention of the code, which is to only export `foo` from `entry.js`.
 
-Fortunately, Rolldown supports [`InputOptions.preserveEntrySignatures: 'allow-extension'`](/reference/config-options#preserveentrysignatures) to let you inform the bundler that it is allowed to change the export signature of the entry chunk.
+Fortunately, Rolldown supports [`InputOptions.preserveEntrySignatures`](/reference/config-options#preserveentrysignatures) to let you inform the bundler that it is allowed to change the export signature of the entry chunk.
 
-Enabling [`InputOptions.preserveEntrySignatures: 'allow-extension'`](/reference/config-options#preserveentrysignatures) will prevent the bundler from capturing the dependencies of the captured module.
+Enabling [`InputOptions.preserveEntrySignatures: false | 'allow-extension'`](/reference/config-options#preserveentrysignatures) will prevent the bundler from capturing the dependencies of the captured module.
 
 ### Why is the chunk bigger than `maxSize`?
 

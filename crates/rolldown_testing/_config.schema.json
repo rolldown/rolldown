@@ -56,6 +56,11 @@
       "description": "If `true`, the bundle will be called with `write()` instead of `generate()`.",
       "type": "boolean",
       "default": true
+    },
+    "snapshot": {
+      "description": "Whether need to write snapshot",
+      "type": "boolean",
+      "default": true
     }
   },
   "additionalProperties": false,

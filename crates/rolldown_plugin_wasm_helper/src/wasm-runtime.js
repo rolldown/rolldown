@@ -1,4 +1,4 @@
-export default async function wasmHelper(opts, url) {
+export default async function wasmHelper(opts = {}, url) {
   let result;
   if (url.startsWith('data:')) {
     const urlContent = url.replace(/^data:.*?base64,/, '');

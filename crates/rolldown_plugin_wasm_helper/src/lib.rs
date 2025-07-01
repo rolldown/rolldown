@@ -8,8 +8,10 @@ use rolldown_plugin::{
 
 const WASM_HELPER_ID: &str = "\0vite/wasm-helper.js";
 
-#[derive(Debug)]
-pub struct WasmHelperPlugin;
+#[derive(Debug, Default)]
+pub struct WasmHelperPlugin {
+  pub decoded_base: String,
+}
 
 impl Plugin for WasmHelperPlugin {
   fn name(&self) -> Cow<'static, str> {
@@ -38,14 +40,23 @@ impl Plugin for WasmHelperPlugin {
     if args.id.ends_with(".wasm?init") {
       let file_path = Path::new(&args.id[..args.id.len() - 5]);
       let source = StrOrBytes::Bytes(fs::read(file_path)?);
-      let name = file_path.file_name().map(|x| x.to_string_lossy().to_string());
 
-      let id = ctx.emit_file_async(EmittedAsset { name, source, ..Default::default() }).await?;
+      let referenced_id = ctx
+        .emit_file_async(EmittedAsset {
+          name: file_path.file_name().map(|x| x.to_string_lossy().to_string()),
+          source,
+          ..Default::default()
+        })
+        .await?;
+
       return Ok(Some(HookLoadOutput {
         code: arcstr::format!(
           r#"import initWasm from "{WASM_HELPER_ID}"; 
           export default opts => initWasm(opts, "{}")"#,
-          ctx.get_file_name(&id)?
+          rolldown_plugin_utils::join_url_segments(
+            &self.decoded_base,
+            &ctx.get_file_name(&referenced_id)?
+          )
         ),
         module_type: Some(ModuleType::Js),
         ..Default::default()

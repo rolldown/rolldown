@@ -122,7 +122,7 @@ pub struct TestMeta {
   /// If `true`, the bundle will be called with `write()` instead of `generate()`.
   #[serde(default = "true_by_default")]
   pub write_to_disk: bool,
-  /// Whether need to write snapshot
+  /// Controls whether snapshots should be generated
   #[serde(default = "true_by_default")]
   pub snapshot: bool,
 }

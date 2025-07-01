@@ -58,7 +58,7 @@
       "default": true
     },
     "snapshot": {
-      "description": "Whether need to write snapshot",
+      "description": "Controls whether snapshots should be generated",
       "type": "boolean",
       "default": true
     }

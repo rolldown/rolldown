@@ -1,4 +1,49 @@
 
+## [1.0.0-beta.23] - 2025-07-01
+
+### 💥 BREAKING CHANGES
+
+- debug: rename debug logs fields to be consitent (#5125) by @antfu
+
+### 🚀 Features
+
+- debug: append `content` for asset data and unify `source` field to `content`. (#5130) by @hyf0
+- debug: emit asset-related data (#5124) by @hyf0
+- commonjs tree shaking. (#5095) by @IWANABETHATGUY
+- rolldown_plugin_wasm_helper: align behaviors for expected functionality (#5120) by @shulaoda
+- remove `experimental.enableComposingJsPlugins` (#5122) by @shulaoda
+- use same option object reference (#5114) by @sapphi-red
+- add util function to inspect why the facade symbol is created (#5115) by @IWANABETHATGUY
+- types: expose `ChunkingContext` type (#5112) by @sapphi-red
+- scan commonjs exports (#5111) by @IWANABETHATGUY
+- debug: remove unneeded source info of render chunk events (#5109) by @hyf0
+- debug: only emit debug information for trace level (#5108) by @hyf0
+- debug: emit chunk related informations (#5106) by @hyf0
+
+### 🐛 Bug Fixes
+
+- debug: add hook render chunk start and end events to Meta enum (#5117) by @hyf0
+
+### 🚜 Refactor
+
+- rust: unify outdated namings (#5127) by @hyf0
+
+### 📚 Documentation
+
+- advanced-chunks: clarify module capturing behavior (#5129) by @hyf0
+
+### 🧪 Testing
+
+- support array output options (#5113) by @sapphi-red
+
+### ⚙️ Miscellaneous Tasks
+
+- remove unused code (#5128) by @IWANABETHATGUY
+- remove unnecessary `skipComposingJsPlugin` (#5123) by @shulaoda
+- deps: update crate-ci/typos action to v1.34.0 (#5119) by @renovate[bot]
+- deps: update NAPI-RS to 3.0.0-beta.11 (#5110) by @shulaoda
+
+
 ## [1.0.0-beta.22] - 2025-06-30
 
 ### 🚀 Features

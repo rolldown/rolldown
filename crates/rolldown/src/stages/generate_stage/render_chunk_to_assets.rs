@@ -314,6 +314,7 @@ impl GenerateStage<'_> {
       for asset in index_assets {
         assets.push(action::Asset {
           chunk_id: Some(asset.originate_from.raw()),
+          content: asset.content.try_as_inner_str().ok().map(str::to_string),
           size: asset.content.as_bytes().len().try_into().unwrap(),
           filename: asset.filename.to_string(),
         });

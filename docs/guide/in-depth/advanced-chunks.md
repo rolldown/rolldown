@@ -298,7 +298,7 @@ When we run `node ./main.js`, the traversal order of the modules would be `main.
 
 With forcefully generated `runtime.js`, the bundler ensures any chunk that depends on runtime code would first load `runtime.js` before executing itself. This guarantees that the runtime code is always executed before any other chunks, preventing circular import issues.
 
-### Why the group contains modules that don't satisfy the constraints?
+### Why does the group contain modules that don't satisfy the constraints?
 
 When a module is captured by a group, Rolldown will try to capture its dependencies recursively without considering constraints. This is because Rolldown is only allowed to mangle the exports of non-entry chunks by default.
 

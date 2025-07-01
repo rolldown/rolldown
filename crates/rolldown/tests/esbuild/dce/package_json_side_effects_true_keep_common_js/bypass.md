@@ -1,6 +1,6 @@
 # Reason
 1. different file system
-2. rolldown now support commonjs tree shaking 
+2. rolldown now support commonjs tree shaking
 # Diff
 ## /out.js
 ### esbuild

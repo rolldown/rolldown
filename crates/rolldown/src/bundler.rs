@@ -331,7 +331,7 @@ impl Bundler {
                 .import_records
                 .iter()
                 .map(|r| action::ModuleImport {
-                  id: scan_stage_output.module_table[r.resolved_module].id().to_string(),
+                  module_id: scan_stage_output.module_table[r.resolved_module].id().to_string(),
                   kind: r.kind.to_string(),
                   module_request: r.module_request.to_string(),
                 })
@@ -359,7 +359,7 @@ impl Bundler {
           .options
           .input
           .iter()
-          .map(|v| action::InputItem { name: v.name.clone(), import: v.import.clone() })
+          .map(|v| action::InputItem { name: v.name.clone(), filename: v.import.clone() })
           .collect(),
         plugins: self
           .plugin_driver
@@ -368,7 +368,7 @@ impl Bundler {
           .enumerate()
           .map(|(idx, p)| action::PluginItem {
             name: p.call_name().into_owned(),
-            index: idx.try_into().unwrap()
+            plugin_id: idx.try_into().unwrap()
           })
           .collect(),
         cwd: self.options.cwd.to_string_lossy().to_string(),

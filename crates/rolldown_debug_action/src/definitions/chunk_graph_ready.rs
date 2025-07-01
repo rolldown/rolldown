@@ -9,7 +9,7 @@ pub struct ChunkGraphReady {
 #[derive(ts_rs::TS, serde::Serialize)]
 #[ts(export)]
 pub struct Chunk {
-  pub id: u32,
+  pub chunk_id: u32,
   /// ```js
   /// import { defineConfig } from 'rolldown';
   /// export default defineConfig({
@@ -50,8 +50,8 @@ pub struct Chunk {
   ///   },
   /// });
   /// ```
-  /// - `group_index` will be `0` if this chunk is created by `output.advancedChunks`.
-  pub group_index: Option<u32>,
+  /// - `advanced_chunk_group_id` will be `0` if this chunk is created by `output.advancedChunks`.
+  pub advanced_chunk_group_id: Option<u32>,
   pub is_user_defined_entry: bool,
   /// A entry could be both user-defined and async.
   pub is_async_entry: bool,
@@ -66,7 +66,7 @@ pub struct Chunk {
 #[ts(export)]
 pub struct ChunkImport {
   /// Id of the imported chunk
-  pub id: u32,
+  pub chunk_id: u32,
   #[ts(type = "'import-statement' | 'dynamic-import'")]
   pub kind: &'static str,
 }

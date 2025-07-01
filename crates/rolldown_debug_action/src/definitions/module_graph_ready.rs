@@ -18,7 +18,7 @@ pub struct Module {
 #[derive(ts_rs::TS, serde::Serialize)]
 #[ts(export)]
 pub struct ModuleImport {
-  pub id: String,
+  pub module_id: String,
   // Refer to crates/rolldown_common/src/types/import_kind.rs
   /// - `import-statement`: `import { foo } from './lib.js';`
   /// - `dynamic-import`: `import('./lib.js')`

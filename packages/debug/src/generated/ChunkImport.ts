@@ -4,6 +4,6 @@ export type ChunkImport = {
   /**
    * Id of the imported chunk
    */
-  id: number;
+  chunk_id: number;
   kind: 'import-statement' | 'dynamic-import';
 };

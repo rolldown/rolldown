@@ -313,7 +313,7 @@ impl GenerateStage<'_> {
       let mut assets = vec![];
       for asset in index_assets {
         assets.push(action::Asset {
-          originate_from: Some(asset.originate_from.raw()),
+          chunk_id: Some(asset.originate_from.raw()),
           size: asset.content.as_bytes().len().try_into().unwrap(),
           filename: asset.filename.to_string(),
         });

@@ -14,6 +14,7 @@ import type {
   BindingRemote,
   BindingReporterPluginConfig,
   BindingViteResolvePluginConfig,
+  BindingWasmHelperPluginConfig,
 } from '../binding';
 import { makeBuiltinPluginCallable } from './utils';
 
@@ -55,8 +56,10 @@ export function manifestPlugin(
   return new BuiltinPlugin('builtin:manifest', config);
 }
 
-export function wasmHelperPlugin(): BuiltinPlugin {
-  return new BuiltinPlugin('builtin:wasm-helper');
+export function wasmHelperPlugin(
+  config?: BindingWasmHelperPluginConfig,
+): BuiltinPlugin {
+  return new BuiltinPlugin('builtin:wasm-helper', config);
 }
 
 export function wasmFallbackPlugin(): BuiltinPlugin {

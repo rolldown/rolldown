@@ -26,7 +26,9 @@ use rolldown_plugin_wasm_fallback::WasmFallbackPlugin;
 use rolldown_plugin_wasm_helper::WasmHelperPlugin;
 use rolldown_plugin_web_worker_post::WebWorkerPostPlugin;
 
-use crate::options::plugin::config::BindingModulePreloadPolyfillPluginConfig;
+use crate::options::plugin::config::{
+  BindingModulePreloadPolyfillPluginConfig, BindingWasmHelperPluginConfig,
+};
 
 use super::{
   config::{
@@ -200,7 +202,14 @@ impl TryFrom<BindingBuiltinPlugin<'_>> for Arc<dyn Pluginable> {
         Arc::new(ViteResolvePlugin::new(config.into()))
       }
       BindingBuiltinPluginName::WasmFallback => Arc::new(WasmFallbackPlugin),
-      BindingBuiltinPluginName::WasmHelper => Arc::new(WasmHelperPlugin),
+      BindingBuiltinPluginName::WasmHelper => {
+        let plugin = if let Some(options) = plugin.options {
+          BindingWasmHelperPluginConfig::from_unknown(options)?.into()
+        } else {
+          WasmHelperPlugin::default()
+        };
+        Arc::new(plugin)
+      }
       BindingBuiltinPluginName::WebWorkerPost => Arc::new(WebWorkerPostPlugin),
     })
   }

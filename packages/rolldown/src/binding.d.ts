@@ -1945,6 +1945,10 @@ export interface BindingViteResolvePluginResolveOptions {
   tsconfigPaths: boolean
 }
 
+export interface BindingWasmHelperPluginConfig {
+  decodedBase: string
+}
+
 export interface BindingWatchOption {
   skipWrite?: boolean
   include?: Array<BindingStringOrRegex>

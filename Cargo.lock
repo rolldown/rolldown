@@ -2985,6 +2985,7 @@ dependencies = [
  "arcstr",
  "rolldown_common",
  "rolldown_plugin",
+ "rolldown_plugin_utils",
 ]
 
 [[package]]

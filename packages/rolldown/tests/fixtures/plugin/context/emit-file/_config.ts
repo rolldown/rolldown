@@ -10,7 +10,6 @@ let referenceId: string
 const ORIGINAL_FILE_NAME = 'original.txt'
 
 export default defineTest({
-  skipComposingJsPlugin: true,
   config: {
     output: {
       assetFileNames: '[name]-[hash].[ext]',

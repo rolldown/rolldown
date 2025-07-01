@@ -70,7 +70,6 @@ export default defineTest({
       },
     ],
   },
-  skipComposingJsPlugin: true,
   afterTest: () => {
     for (const hook of hooks) {
       expect(calledHooks[hook]).toStrictEqual([

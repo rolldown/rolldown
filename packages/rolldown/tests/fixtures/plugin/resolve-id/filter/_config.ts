@@ -4,8 +4,6 @@ import { expect, vi } from 'vitest'
 const resolveIdFn = vi.fn()
 
 export default defineTest({
-  beforeTest() {},
-  skipComposingJsPlugin: true,
   config: {
     input: './main.js',
     plugins: [

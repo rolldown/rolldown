@@ -2,7 +2,6 @@ import { defineTest } from 'rolldown-tests'
 import { buildImportAnalysisPlugin } from 'rolldown/experimental'
 
 export default defineTest({
-  skipComposingJsPlugin: true,
   config: {
     input: './main.js',
     plugins: [

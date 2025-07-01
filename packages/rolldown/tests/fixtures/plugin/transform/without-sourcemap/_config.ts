@@ -8,7 +8,6 @@ import {
 import { SourceMapConsumer } from 'source-map'
 
 export default defineTest({
-  skipComposingJsPlugin: true,
   config: {
     plugins: [
       {

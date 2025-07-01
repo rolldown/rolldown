@@ -8,7 +8,6 @@ const emittedChunkPreliminaryFilenames: string[] = [],
   emittedChunkFilenames: string[] = []
 
 export default defineTest({
-  skipComposingJsPlugin: true,
   config: {
     output: {
       entryFileNames: '[name].[hash].js',

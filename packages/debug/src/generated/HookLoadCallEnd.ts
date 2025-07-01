@@ -3,7 +3,7 @@
 export type HookLoadCallEnd = {
   action: 'HookLoadCallEnd';
   module_id: string;
-  source: string | null;
+  content: string | null;
   plugin_name: string;
   /**
    * The index of the plugin in the plugin list. It's unique to each plugin.

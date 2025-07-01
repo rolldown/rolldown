@@ -201,7 +201,7 @@ impl PluginDriver {
           trace_action!(action::HookLoadCallEnd {
             action: "HookLoadCallEnd",
             module_id: args.id.to_string(),
-            source: Some(r.code.to_string()),
+            content: Some(r.code.to_string()),
             plugin_name: plugin.call_name().to_string(),
             plugin_id: plugin_idx.raw(),
             call_id: "${call_id}",
@@ -211,7 +211,7 @@ impl PluginDriver {
           trace_action!(action::HookLoadCallEnd {
             action: "HookLoadCallEnd",
             module_id: args.id.to_string(),
-            source: None,
+            content: None,
             plugin_name: plugin.call_name().to_string(),
             plugin_id: plugin_idx.raw(),
             call_id: "${call_id}",
@@ -260,7 +260,7 @@ impl PluginDriver {
       trace_action!(action::HookTransformCallStart {
         action: "HookTransformCallStart",
         module_id: id.to_string(),
-        source: code.clone(),
+        content: code.clone(),
         plugin_name: plugin.call_name().to_string(),
         plugin_id: plugin_idx.raw(),
         call_id: call_id.clone().unwrap_or_default(),
@@ -291,7 +291,7 @@ impl PluginDriver {
           trace_action!(action::HookTransformCallEnd {
             action: "HookTransformCallEnd",
             module_id: id.to_string(),
-            transformed_source: Some(code.to_string()),
+            content: Some(code.to_string()),
             plugin_name: plugin.call_name().to_string(),
             plugin_id: plugin_idx.raw(),
             call_id: call_id.unwrap_or_default()
@@ -304,7 +304,7 @@ impl PluginDriver {
         trace_action!(action::HookTransformCallEnd {
           action: "HookTransformCallEnd",
           module_id: id.to_string(),
-          transformed_source: Some(code.to_string()),
+          content: Some(code.to_string()),
           plugin_name: plugin.call_name().to_string(),
           plugin_id: plugin_idx.raw(),
           call_id: call_id.unwrap_or_default()

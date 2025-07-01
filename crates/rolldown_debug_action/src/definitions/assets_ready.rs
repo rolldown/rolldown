@@ -12,6 +12,8 @@ pub struct Asset {
   /// The id of the chunk that the asset is created from. Empty means the asset is not created from a chunk.
   pub chunk_id: Option<u32>,
 
+  pub content: Option<String>,
+
   /// The size of the asset in bytes.
   pub size: u32,
 

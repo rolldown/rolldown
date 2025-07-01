@@ -3,7 +3,10 @@
 export type HookTransformCallEnd = {
   action: 'HookTransformCallEnd';
   module_id: string;
-  transformed_source: string | null;
+  /**
+   * Result after transform. Empty means the transform hook returns nothing.
+   */
+  content: string | null;
   plugin_name: string;
   /**
    * The index of the plugin in the plugin list. It's unique to each plugin.

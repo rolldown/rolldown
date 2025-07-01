@@ -7,7 +7,8 @@ const INVALID_LOG_POSITION = 'INVALID_LOG_POSITION',
   INPUT_HOOK_IN_OUTPUT_PLUGIN = 'INPUT_HOOK_IN_OUTPUT_PLUGIN',
   CYCLE_LOADING = 'CYCLE_LOADING',
   MULTIPLY_NOTIFY_OPTION = 'MULTIPLY_NOTIFY_OPTION',
-  PARSE_ERROR = 'PARSE_ERROR';
+  PARSE_ERROR = 'PARSE_ERROR',
+  DUPLICATE_JSX_CONFIG = 'DUPLICATE_JSX_CONFIG';
 
 export function logParseError(message: string): RollupLog {
   return {
@@ -51,6 +52,14 @@ export function logMultiplyNotifyOption(): RollupLog {
     code: MULTIPLY_NOTIFY_OPTION,
     message:
       `Found multiply notify option at watch options, using first one to start notify watcher.`,
+  };
+}
+
+export function logDuplicateJsxConfig(): RollupLog {
+  return {
+    code: DUPLICATE_JSX_CONFIG,
+    message:
+      'Both `options.jsx` and `options.transform.jsx` are set so `options.jsx` is ignored',
   };
 }
 

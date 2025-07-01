@@ -9,7 +9,7 @@ use crate::{Asset, ChunkIdx, InstantiationKind, PreliminaryFilename, StrOrBytes}
 /// by different `Generator`s.
 #[derive(Debug)]
 pub struct InstantiatedChunk {
-  pub origin_chunk: ChunkIdx,
+  pub originate_from: ChunkIdx,
   pub content: StrOrBytes,
   pub map: Option<SourceMap>,
   pub kind: InstantiationKind,
@@ -21,7 +21,7 @@ pub struct InstantiatedChunk {
 impl InstantiatedChunk {
   pub fn finalize(self, filename: ArcStr) -> Asset {
     Asset {
-      origin_chunk: self.origin_chunk,
+      originate_from: self.originate_from,
       content: self.content,
       map: self.map,
       meta: self.kind,

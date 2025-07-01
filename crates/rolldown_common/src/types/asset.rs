@@ -8,7 +8,7 @@ use crate::{ChunkIdx, InstantiationKind, PreliminaryFilename, StrOrBytes};
 #[derive(Debug)]
 /// Assets is final output of the bundling process. Inputs -> Modules -> Chunks -> Assets
 pub struct Asset {
-  pub origin_chunk: ChunkIdx,
+  pub originate_from: ChunkIdx,
   pub content: StrOrBytes,
   pub map: Option<SourceMap>,
   pub meta: InstantiationKind,

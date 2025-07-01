@@ -21,7 +21,7 @@ use crate::{
   chunk_graph::ChunkGraph,
   css::css_generator::CssGenerator,
   ecmascript::ecma_generator::EcmaGenerator,
-  type_alias::{IndexAssets, IndexChunkToAssets, IndexInstantiatedChunks},
+  type_alias::{IndexAssets, IndexChunkToInstances, IndexInstantiatedChunks},
   types::generator::{GenerateContext, Generator},
   utils::{
     augment_chunk_hash::augment_chunk_hash,
@@ -41,7 +41,7 @@ impl GenerateStage<'_> {
   ) -> BuildResult<BundleOutput> {
     let mut errors = std::mem::take(&mut self.link_output.errors);
     let mut warnings = std::mem::take(&mut self.link_output.warnings);
-    let (mut instantiated_chunks, index_chunk_to_assets) =
+    let (mut instantiated_chunks, index_chunk_to_instances) =
       self.instantiate_chunks(chunk_graph, &mut errors, &mut warnings).await?;
 
     render_chunks(self.plugin_driver, &mut instantiated_chunks, self.options).await?;
@@ -52,7 +52,7 @@ impl GenerateStage<'_> {
       chunk_graph,
       self.link_output,
       instantiated_chunks,
-      &index_chunk_to_assets,
+      &index_chunk_to_instances,
       self.options.hash_characters,
     );
 
@@ -182,10 +182,10 @@ impl GenerateStage<'_> {
     chunk_graph: &ChunkGraph,
     errors: &mut Vec<BuildDiagnostic>,
     warnings: &mut Vec<BuildDiagnostic>,
-  ) -> BuildResult<(IndexInstantiatedChunks, IndexChunkToAssets)> {
-    let mut index_chunk_to_assets: IndexChunkToAssets =
+  ) -> BuildResult<(IndexInstantiatedChunks, IndexChunkToInstances)> {
+    let mut index_chunk_to_instances: IndexChunkToInstances =
       index_vec![FxIndexSet::default(); chunk_graph.chunk_table.len()];
-    let mut index_preliminary_assets: IndexInstantiatedChunks =
+    let mut index_instantiated_chunks: IndexInstantiatedChunks =
       IndexVec::with_capacity(chunk_graph.chunk_table.len());
     let chunk_index_to_codegen_rets = self.create_chunk_to_codegen_ret_map(chunk_graph);
     let render_export_items_index_vec = &chunk_graph
@@ -258,23 +258,23 @@ impl GenerateStage<'_> {
     .flatten()
     .for_each(|result| match result {
       Ok(generate_output) => {
-        generate_output.chunks.into_iter().for_each(|asset| {
-          let origin_chunk = asset.origin_chunk;
-          let asset_idx = index_preliminary_assets.push(asset);
-          index_chunk_to_assets[origin_chunk].insert(asset_idx);
+        generate_output.chunks.into_iter().for_each(|ins_chunk| {
+          let base_chunk_idx = ins_chunk.originate_from;
+          let ins_chunk_idx = index_instantiated_chunks.push(ins_chunk);
+          index_chunk_to_instances[base_chunk_idx].insert(ins_chunk_idx);
         });
         warnings.extend(generate_output.warnings);
       }
       Err(e) => errors.extend(e.into_vec()),
     });
 
-    index_chunk_to_assets.iter_mut().for_each(|assets| {
-      assets.sort_by_cached_key(|asset_idx| {
-        index_preliminary_assets[*asset_idx].preliminary_filename.as_str()
+    index_chunk_to_instances.iter_mut().for_each(|instances| {
+      instances.sort_by_cached_key(|ins_chunk_idx| {
+        index_instantiated_chunks[*ins_chunk_idx].preliminary_filename.as_str()
       });
     });
 
-    Ok((index_preliminary_assets, index_chunk_to_assets))
+    Ok((index_instantiated_chunks, index_chunk_to_instances))
   }
 
   /// Create a IndexVecMap from chunk index to related modules codegen return list.
@@ -313,7 +313,7 @@ impl GenerateStage<'_> {
       let mut assets = vec![];
       for asset in index_assets {
         assets.push(action::Asset {
-          originate_from: Some(asset.origin_chunk.raw()),
+          originate_from: Some(asset.originate_from.raw()),
           size: asset.content.as_bytes().len().try_into().unwrap(),
           filename: asset.filename.to_string(),
         });
@@ -377,7 +377,7 @@ fn set_emitted_chunk_filenames(
   let emitted_chunk_info = assets
     .iter()
     .filter_map(|asset| {
-      chunk_graph.chunk_idx_to_reference_ids.get(&asset.origin_chunk).map(|reference_ids| {
+      chunk_graph.chunk_idx_to_reference_ids.get(&asset.originate_from).map(|reference_ids| {
         reference_ids.iter().map(|reference_id| EmittedChunkInfo {
           reference_id: reference_id.clone(),
           filename: asset.filename.clone(),

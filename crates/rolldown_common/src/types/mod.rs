@@ -1,5 +1,4 @@
 pub mod asset;
-pub mod asset_idx;
 pub mod asset_meta;
 pub mod ast_scope_idx;
 pub mod ast_scopes;
@@ -17,6 +16,7 @@ pub mod hybrid_index_vec;
 pub mod import_kind;
 pub mod import_record;
 pub mod importer_record;
+pub mod ins_chunk_idx;
 pub mod instantiated_chunk;
 pub mod interop;
 pub mod member_expr_ref;

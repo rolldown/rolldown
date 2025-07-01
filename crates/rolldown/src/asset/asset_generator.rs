@@ -28,7 +28,7 @@ impl Generator for AssetGenerator {
         ctx.options.cwd.as_path().join(&ctx.options.out_dir).join(preliminary_filename.as_str());
       let file_dir = file_path.parent().expect("chunk file name should have a parent");
       instantiated_chunks.push(InstantiatedChunk {
-        origin_chunk: ctx.chunk_idx,
+        originate_from: ctx.chunk_idx,
         content: StrOrBytes::Bytes(asset_view.source.to_vec()),
         map: None,
         kind: InstantiationKind::None,

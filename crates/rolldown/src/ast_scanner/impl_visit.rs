@@ -99,10 +99,10 @@ impl<'me, 'ast: 'me> Visit<'ast> for AstScanner<'me, 'ast> {
     // check if the module is a reexport cjs module e.g.
     // module.exports = require('a');
     // normalize ast usage flag
-    if self.ast_usage.contains(EcmaModuleAstUsage::ModuleRef)
-      || !self.ast_usage.contains(EcmaModuleAstUsage::ExportsRef)
+    if self.result.ast_usage.contains(EcmaModuleAstUsage::ModuleRef)
+      || !self.result.ast_usage.contains(EcmaModuleAstUsage::ExportsRef)
     {
-      self.ast_usage.remove(EcmaModuleAstUsage::AllStaticExportPropertyAccess);
+      self.result.ast_usage.remove(EcmaModuleAstUsage::AllStaticExportPropertyAccess);
     }
   }
 
@@ -127,7 +127,7 @@ impl<'me, 'ast: 'me> Visit<'ast> for AstScanner<'me, 'ast> {
       ));
     }
     if is_top_level_await {
-      self.ast_usage.insert(EcmaModuleAstUsage::TopLevelAwait);
+      self.result.ast_usage.insert(EcmaModuleAstUsage::TopLevelAwait);
     }
 
     walk::walk_for_of_statement(self, it);
@@ -147,7 +147,7 @@ impl<'me, 'ast: 'me> Visit<'ast> for AstScanner<'me, 'ast> {
       ));
     }
     if is_top_level_await {
-      self.ast_usage.insert(EcmaModuleAstUsage::TopLevelAwait);
+      self.result.ast_usage.insert(EcmaModuleAstUsage::TopLevelAwait);
     }
     walk::walk_await_expression(self, it);
   }
@@ -331,14 +331,14 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
                 unreachable!()
               }
               Some(CommonJsAstType::ExportsRead) => {
-                self.ast_usage.insert(EcmaModuleAstUsage::UnknownExportsRead);
+                self.result.ast_usage.insert(EcmaModuleAstUsage::UnknownExportsRead);
               }
               None => match self.try_extract_parent_static_member_expr_chain(1) {
                 Some((_span, prop)) => {
                   self.self_used_cjs_named_exports.insert(prop[0].as_str().into());
                 }
                 _ => {
-                  self.ast_usage.insert(EcmaModuleAstUsage::UnknownExportsRead);
+                  self.result.ast_usage.insert(EcmaModuleAstUsage::UnknownExportsRead);
                 }
               },
             }

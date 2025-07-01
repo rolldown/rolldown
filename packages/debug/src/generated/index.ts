@@ -1,3 +1,5 @@
+export * from './Asset.js';
+export * from './AssetsReady.js';
 export * from './BuildEnd.js';
 export * from './BuildStart.js';
 export * from './Chunk.js';

@@ -4,6 +4,7 @@ mod types;
 pub use {
   definitions::{
     Meta,
+    assets_ready::{Asset, AssetsReady},
     build_end::BuildEnd,
     build_start::BuildStart,
     chunk_graph_ready::{Chunk, ChunkGraphReady, ChunkImport},

@@ -475,7 +475,6 @@ impl LinkStage<'_> {
                   };
                 let mut is_namespace_ref =
                   canonical_ref_owner.namespace_object_ref == canonical_ref;
-                let mut ns_symbol_list = vec![];
                 let mut cursor = 0;
                 while cursor < member_expr_ref.props.len() && is_namespace_ref {
                   let name = &member_expr_ref.props[cursor];
@@ -535,7 +534,6 @@ impl LinkStage<'_> {
                       }
                     }
                   }
-                  ns_symbol_list.push((canonical_ref, name.to_rstr()));
                   canonical_ref = self.symbols.canonical_ref_for(export_symbol.symbol_ref);
                   canonical_ref_owner = self.module_table[canonical_ref.owner].as_normal().unwrap();
                   cursor += 1;

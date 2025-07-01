@@ -1,7 +1,5 @@
 import type { OutputOptions, RolldownOptions, RolldownOutput } from 'rolldown'
 
-export type TestKind = 'default' | 'compose-js-plugin'
-
 export type WithoutValue = 0
 type OutputOptsToOutputInner<OutputOpts extends undefined | OutputOptions | OutputOptions[]> =
   OutputOpts extends OutputOptions[]
@@ -18,7 +16,7 @@ export interface TestConfig<OutputOpts extends WithoutValue | undefined | Output
   skip?: boolean
   skipComposingJsPlugin?: boolean
   config?: RolldownOptions & { output?: OutputOpts }
-  beforeTest?: (testKind: TestKind) => Promise<void> | void
+  beforeTest?: () => Promise<void> | void
   afterTest?: (output: OutputOptsToOutput<OutputOpts>) => Promise<void> | void
   catchError?: (err: unknown) => Promise<void> | void
 }

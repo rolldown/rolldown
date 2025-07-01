@@ -132,7 +132,6 @@ export interface InputOptions {
   ) => void;
   moduleTypes?: ModuleTypes;
   experimental?: {
-    enableComposingJsPlugins?: boolean;
     strictExecutionOrder?: boolean;
     disableLiveBindings?: boolean;
     viteMode?: boolean;

@@ -4,7 +4,6 @@ import type {
   BindingVitePluginCustom,
   ParserOptions,
 } from '../binding';
-import { SYMBOL_FOR_RESOLVE_CALLER_THAT_SKIP_SELF } from '../constants/plugin-context';
 import type { LogHandler } from '../log/log-handler';
 import { LOG_LEVEL_WARN, type LogLevelOption } from '../log/logging';
 import { logCycleLoading } from '../log/logs';
@@ -51,12 +50,6 @@ export type EmittedFile = EmittedAsset | EmittedChunk;
 export interface PluginContextResolveOptions {
   skipSelf?: boolean;
   custom?: CustomPluginOptions;
-}
-
-export interface PrivatePluginContextResolveOptions
-  extends PluginContextResolveOptions
-{
-  [SYMBOL_FOR_RESOLVE_CALLER_THAT_SKIP_SELF]?: symbol;
 }
 
 export type GetModuleInfo = (moduleId: string) => ModuleInfo | null;

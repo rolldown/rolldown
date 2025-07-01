@@ -8,7 +8,6 @@ import { PluginDriver } from '../plugin/plugin-driver';
 import { getObjectPlugins } from '../plugin/plugin-driver';
 import { bindingifyInputOptions } from './bindingify-input-options';
 import { bindingifyOutputOptions } from './bindingify-output-options';
-import { composeJsPlugins } from './compose-js-plugins';
 import { initializeParallelPlugins } from './initialize-parallel-plugins';
 import {
   ANONYMOUS_OUTPUT_PLUGIN_PREFIX,
@@ -59,10 +58,6 @@ export async function createBundlerOptions(
       onLog,
     ),
   ];
-
-  if (inputOptions.experimental?.enableComposingJsPlugins ?? false) {
-    plugins = composeJsPlugins(plugins);
-  }
 
   const parallelPluginInitResult = import.meta.browserBuild
     ? undefined

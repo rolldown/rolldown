@@ -6,7 +6,6 @@ import type {
 import type { BuiltinPlugin } from '../builtin-plugin/constructors';
 import type { DefinedHookNames } from '../constants/plugin';
 import type { DEFINED_HOOK_NAMES } from '../constants/plugin';
-import type { SYMBOL_FOR_RESOLVE_CALLER_THAT_SKIP_SELF } from '../constants/plugin-context';
 import type { LogLevel, RollupLog } from '../log/logging';
 import type { NormalizedInputOptions } from '../options/normalized-input-options';
 import type { NormalizedOutputOptions } from '../options/normalized-output-options';
@@ -81,10 +80,6 @@ export interface ResolveIdExtraOptions {
   custom?: CustomPluginOptions;
   isEntry: boolean;
   kind: BindingHookResolveIdExtraArgs['kind'];
-}
-
-export interface PrivateResolveIdExtraOptions extends ResolveIdExtraOptions {
-  [SYMBOL_FOR_RESOLVE_CALLER_THAT_SKIP_SELF]?: symbol;
 }
 
 export type ResolveIdResult = string | NullValue | false | PartialResolvedId;

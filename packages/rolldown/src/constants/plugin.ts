@@ -23,7 +23,7 @@ const ENUMERATED_OUTPUT_PLUGIN_HOOK_NAMES = [
   'generateBundle',
 ] as const;
 
-export const ENUMERATED_PLUGIN_HOOK_NAMES: [
+const ENUMERATED_PLUGIN_HOOK_NAMES: [
   ...typeof ENUMERATED_INPUT_PLUGIN_HOOK_NAMES,
   ...typeof ENUMERATED_OUTPUT_PLUGIN_HOOK_NAMES,
   'footer',
@@ -42,12 +42,6 @@ export const ENUMERATED_PLUGIN_HOOK_NAMES: [
   'outro',
 ] as const;
 
-type EnumeratedPluginHookNames = typeof ENUMERATED_PLUGIN_HOOK_NAMES;
-/**
- * Names of all hooks in a `Plugin` object. Does not include `name` and `api`, since they are not hooks.
- */
-export type PluginHookNames = EnumeratedPluginHookNames[number];
-
 /**
  * Names of all defined hooks. It's like
  * ```ts
@@ -59,7 +53,7 @@ export type PluginHookNames = EnumeratedPluginHookNames[number];
  * ```
  */
 export type DefinedHookNames = {
-  readonly [K in PluginHookNames]: K;
+  readonly [K in typeof ENUMERATED_PLUGIN_HOOK_NAMES[number]]: K;
 };
 
 /**

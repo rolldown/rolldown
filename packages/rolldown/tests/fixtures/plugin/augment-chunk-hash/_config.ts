@@ -1,15 +1,11 @@
+import path from 'node:path'
 import { expect, vi } from 'vitest'
 import { defineTest } from 'rolldown-tests'
 import { getOutputChunk } from 'rolldown-tests/utils'
-import path from 'node:path'
 
 const fn = vi.fn()
 
-let isComposingJs = false
 export default defineTest({
-  beforeTest(testKind) {
-    isComposingJs = testKind === 'compose-js-plugin'
-  },
   config: {
     input: ['main.js', 'entry.js'],
     output: {
@@ -38,19 +34,11 @@ export default defineTest({
     for (const chunk of chunks) {
       switch (chunk.facadeModuleId) {
         case path.join(__dirname, 'main.js'):
-          isComposingJs
-            ? expect(chunk.fileName).toMatchInlineSnapshot(`"main-BTVONCL2.js"`)
-            : expect(chunk.fileName).toMatchInlineSnapshot(`"main-BTVONCL2.js"`)
+          expect(chunk.fileName).toMatchInlineSnapshot(`"main-BTVONCL2.js"`)
           break
 
         case path.join(__dirname, 'entry.js'):
-          isComposingJs
-            ? expect(chunk.fileName).toMatchInlineSnapshot(
-                `"entry-BS2ltxwY.js"`,
-              )
-            : expect(chunk.fileName).toMatchInlineSnapshot(
-                `"entry-BS2ltxwY.js"`,
-              )
+          expect(chunk.fileName).toMatchInlineSnapshot(`"entry-BS2ltxwY.js"`)
           break
 
         default:

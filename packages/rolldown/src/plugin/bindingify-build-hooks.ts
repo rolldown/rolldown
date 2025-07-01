@@ -6,7 +6,6 @@ import type {
 import { normalizeHook } from '../utils/normalize-hook';
 
 import path from 'node:path';
-import { SYMBOL_FOR_RESOLVE_CALLER_THAT_SKIP_SELF } from '../constants/plugin-context';
 import {
   bindingifySourcemap,
   type ExistingRawSourceMap,
@@ -28,15 +27,8 @@ import {
   bindingifyPluginHookMeta,
   type PluginHookWithBindingExt,
 } from './bindingify-plugin-hook-meta';
-import type {
-  PluginHooks,
-  PrivateResolveIdExtraOptions,
-  SourceDescription,
-} from './index';
-import {
-  PluginContextImpl,
-  type PrivatePluginContextResolveOptions,
-} from './plugin-context';
+import type { PluginHooks, SourceDescription } from './index';
+import { PluginContextImpl } from './plugin-context';
 import { TransformPluginContextImpl } from './transform-plugin-context';
 
 export function bindingifyBuildStart(
@@ -109,17 +101,10 @@ export function bindingifyResolveId(
   return {
     plugin: async (ctx, specifier, importer, extraOptions) => {
       const contextResolveOptions = extraOptions.custom != null
-        ? (args.pluginContextData.getSavedResolveOptions(
+        ? args.pluginContextData.getSavedResolveOptions(
           extraOptions.custom,
-        ) as PrivatePluginContextResolveOptions)
+        )
         : undefined;
-
-      const newExtraOptions: PrivateResolveIdExtraOptions = {
-        ...extraOptions,
-        custom: contextResolveOptions?.custom,
-        [SYMBOL_FOR_RESOLVE_CALLER_THAT_SKIP_SELF]: contextResolveOptions
-          ?.[SYMBOL_FOR_RESOLVE_CALLER_THAT_SKIP_SELF],
-      };
 
       const ret = await handler.call(
         new PluginContextImpl(
@@ -133,7 +118,10 @@ export function bindingifyResolveId(
         ),
         specifier,
         importer ?? undefined,
-        newExtraOptions,
+        {
+          ...extraOptions,
+          custom: contextResolveOptions?.custom,
+        },
       );
       if (ret == null) {
         return;

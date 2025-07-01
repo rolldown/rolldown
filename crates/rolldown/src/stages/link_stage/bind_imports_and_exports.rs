@@ -14,8 +14,8 @@ use rolldown_error::{AmbiguousExternalNamespaceModule, BuildDiagnostic};
 use rolldown_rstr::{Rstr, ToRstr};
 use rolldown_utils::{
   ecmascript::{is_validate_identifier_name, legitimize_identifier_name},
-  index_vec_ext::IndexVecExt,
-  indexmap::FxIndexSet,
+  index_vec_ext::{IndexVecExt, IndexVecRefExt},
+  indexmap::{FxIndexMap, FxIndexSet},
   rayon::{IntoParallelRefIterator, IntoParallelRefMutIterator, ParallelIterator},
 };
 
@@ -33,6 +33,7 @@ struct ImportTracker {
   pub imported_as: SymbolRef,
 }
 
+#[derive(Debug)]
 pub struct MatchingContext {
   tracker_stack: Vec<ImportTracker>,
 }
@@ -47,6 +48,11 @@ impl MatchingContext {
 pub struct MatchImportKindNormal {
   symbol: SymbolRef,
   reexports: Vec<SymbolRef>,
+}
+
+pub enum RelationWithCommonjs {
+  Commonjs,
+  IndirectDependOnCommonjs,
 }
 
 impl PartialEq for MatchImportKindNormal {
@@ -98,7 +104,14 @@ pub enum ImportStatus {
   CommonJS,
 
   /// The import is missing but there is a dynamic fallback object
-  DynamicFallback { namespace_ref: SymbolRef },
+  DynamicFallback {
+    namespace_ref: SymbolRef,
+  },
+
+  DynamicFallbackWithCommonjsReference {
+    namespace_ref: SymbolRef,
+    commonjs_symbol: SymbolRef,
+  },
 
   /// The import was treated as a CommonJS import but the file is known to have no exports
   _CommonJSWithoutExports,
@@ -136,13 +149,14 @@ impl LinkStage<'_> {
           let resolved_export = ResolvedExport {
             symbol_ref: local.referenced,
             potentially_ambiguous_symbol_refs: None,
+            came_from_cjs: local.came_from_commonjs,
           };
           (name.clone(), resolved_export)
         })
         .collect::<FxHashMap<_, _>>();
 
       let mut module_stack = vec![];
-      if module.has_star_export() {
+      if module.has_star_export() || module.ast_usage.contains(EcmaModuleAstUsage::IsCjsReexport) {
         Self::add_exports_for_export_star(
           &self.module_table.modules,
           &mut resolved_exports,
@@ -216,13 +230,15 @@ impl LinkStage<'_> {
             }
           }
         }
-        sorted_and_non_ambiguous_resolved_exports.push(exported_name.clone());
+        sorted_and_non_ambiguous_resolved_exports
+          .push((exported_name.clone(), resolved_export.came_from_cjs));
       }
       sorted_and_non_ambiguous_resolved_exports.sort_unstable();
-      meta.sorted_and_non_ambiguous_resolved_exports = sorted_and_non_ambiguous_resolved_exports;
+      meta.sorted_and_non_ambiguous_resolved_exports =
+        FxIndexMap::from_iter(sorted_and_non_ambiguous_resolved_exports);
     });
-    self.resolve_member_expr_refs(&side_effects_modules, &normal_symbol_exports_chain_map);
     self.update_cjs_module_meta();
+    self.resolve_member_expr_refs(&side_effects_modules, &normal_symbol_exports_chain_map);
     self.normal_symbol_exports_chain_map = normal_symbol_exports_chain_map;
   }
 
@@ -287,22 +303,66 @@ impl LinkStage<'_> {
     }
 
     let mut cache = FxHashMap::default();
-    let cjs_exports_type_modules = self
+    let relation_with_commonjs_map = self
       .module_table
       .modules
       .iter()
       .filter_map(|module| {
         let module = module.as_normal()?;
-        module.exports_kind.is_commonjs().then_some(module.idx)
+        if module.exports_kind.is_commonjs() {
+          Some((module.idx, RelationWithCommonjs::Commonjs))
+        } else if self.metas[module.idx].has_dynamic_exports {
+          Some((module.idx, RelationWithCommonjs::IndirectDependOnCommonjs))
+        } else {
+          None
+        }
       })
-      .collect::<Vec<_>>();
-    for module_idx in cjs_exports_type_modules {
+      .collect::<FxHashMap<ModuleIdx, RelationWithCommonjs>>();
+
+    let mut module_has_cjs_import: FxHashSet<ModuleIdx> = FxHashSet::default();
+
+    for module_idx in relation_with_commonjs_map
+      .iter()
+      .filter_map(|item| matches!(item.1, RelationWithCommonjs::Commonjs).then_some(item.0))
+    {
       let v = recursive_update_cjs_module_interop_default_removable(
         &self.module_table.modules,
-        module_idx,
+        *module_idx,
         &mut cache,
       );
-      self.metas[module_idx].safe_cjs_to_eliminate_interop_default = v;
+      self.metas[*module_idx].safe_cjs_to_eliminate_interop_default = v;
+      let cjs_module = self.module_table[*module_idx].as_normal().expect("should be normal_module");
+      module_has_cjs_import.extend(cjs_module.importers_idx.iter());
+    }
+
+    let idx_to_symbol_ref_to_module_idx_map = self
+      .module_table
+      .par_iter_enumerated()
+      .filter_map(|(idx, module)| {
+        // a cjs module could only be referenced by normal modules.
+        let module = module.as_normal()?;
+        let mut named_import_to_cjs_module = FxHashMap::default();
+        let mut import_record_ns_to_cjs_module = FxHashMap::default();
+        module.named_imports.iter().for_each(|(_, named_import)| {
+          let rec = &module.import_records[named_import.record_id];
+          if relation_with_commonjs_map.contains_key(&rec.resolved_module) {
+            named_import_to_cjs_module.insert(named_import.imported_as, rec.resolved_module);
+          }
+        });
+        module.import_records.iter().for_each(|item| {
+          if let Some(RelationWithCommonjs::Commonjs) = relation_with_commonjs_map.get(&item.resolved_module) {
+            import_record_ns_to_cjs_module.insert(item.namespace_ref, item.resolved_module);
+          }
+        });
+        (!named_import_to_cjs_module.is_empty() || !import_record_ns_to_cjs_module.is_empty()).then_some((idx, (named_import_to_cjs_module, import_record_ns_to_cjs_module)))
+      })
+      .collect::<FxHashMap<ModuleIdx, (FxHashMap<SymbolRef, ModuleIdx>, FxHashMap<SymbolRef, ModuleIdx>)>>();
+    for (k, (named_import_to_cjs_module, import_record_ns_to_cjs_module)) in
+      idx_to_symbol_ref_to_module_idx_map
+    {
+      let meta = &mut self.metas[k];
+      meta.named_import_to_cjs_module = named_import_to_cjs_module;
+      meta.import_record_ns_to_cjs_module = import_record_ns_to_cjs_module;
     }
   }
 
@@ -322,13 +382,18 @@ impl LinkStage<'_> {
       return;
     };
 
-    for dep_id in module.star_export_module_ids() {
+    let cjs_reexports = module
+      .ast_usage
+      .contains(EcmaModuleAstUsage::IsCjsReexport)
+      .then(|| module.import_records.first().unwrap().resolved_module);
+
+    for dep_id in module.star_export_module_ids().chain(cjs_reexports) {
       let Module::Normal(dep_module) = &normal_modules[dep_id] else {
         continue;
       };
-      if matches!(dep_module.exports_kind, ExportsKind::CommonJs) {
-        continue;
-      }
+      // if matches!(dep_module.exports_kind, ExportsKind::CommonJs) {
+      //   continue;
+      // }
 
       for (exported_name, named_export) in &dep_module.named_exports {
         // ES6 export star statements ignore exports named "default"
@@ -343,11 +408,11 @@ impl LinkStage<'_> {
         {
           continue;
         }
-
         // We have filled `resolve_exports` with `named_exports`. If the export is already exists, it means that the importer
         // has a named export with the same name. So the export from dep module is shadowed.
         if let Some(resolved_export) = resolve_exports.get_mut(exported_name) {
-          if named_export.referenced != resolved_export.symbol_ref {
+          if named_export.referenced != resolved_export.symbol_ref && !resolved_export.came_from_cjs
+          {
             resolved_export
               .potentially_ambiguous_symbol_refs
               .get_or_insert(Vec::default())
@@ -357,6 +422,7 @@ impl LinkStage<'_> {
           let resolved_export = ResolvedExport {
             symbol_ref: named_export.referenced,
             potentially_ambiguous_symbol_refs: None,
+            came_from_cjs: named_export.came_from_commonjs,
           };
           resolve_exports.insert(exported_name.clone(), resolved_export);
         }
@@ -414,7 +480,10 @@ impl LinkStage<'_> {
                 while cursor < member_expr_ref.props.len() && is_namespace_ref {
                   let name = &member_expr_ref.props[cursor];
                   let meta = &self.metas[canonical_ref_owner.idx];
-                  let export_symbol = meta.resolved_exports.get(&name.to_rstr());
+                  let export_symbol =
+                    meta.resolved_exports.get(&name.to_rstr()).and_then(|resolved_export| {
+                      (!resolved_export.came_from_cjs).then_some(resolved_export)
+                    });
                   let Some(export_symbol) = export_symbol else {
                     // when we try to resolve `a.b.c`, and found that `b` is not exported by module
                     // that `a` pointed to, convert the `a.b.c` into `void 0` if module `a` do not
@@ -426,6 +495,7 @@ impl LinkStage<'_> {
                           resolved: None,
                           props: member_expr_ref.props[cursor..].to_vec(),
                           depended_refs: vec![],
+                          is_cjs_symbol: false,
                         },
                       );
                       warnings.push(
@@ -441,27 +511,19 @@ impl LinkStage<'_> {
                     }
                     break;
                   };
-                  if !meta.sorted_and_non_ambiguous_resolved_exports.contains(&name.to_rstr()) {
+                  if !meta.sorted_and_non_ambiguous_resolved_exports.contains_key(&name.to_rstr()) {
                     resolved_map.insert(
                       member_expr_ref.span,
                       MemberExprRefResolution {
                         resolved: None,
                         props: member_expr_ref.props[cursor..].to_vec(),
                         depended_refs: vec![],
+                        is_cjs_symbol: false,
                       },
                     );
                     return;
                   }
 
-                  // TODO(hyf0): suspicious cjs might just fallback to dynamic lookup?
-                  if !self.module_table[export_symbol.symbol_ref.owner]
-                    .as_normal()
-                    .unwrap()
-                    .exports_kind
-                    .is_esm()
-                  {
-                    break;
-                  }
                   depended_refs.push(export_symbol.symbol_ref);
                   if let Some(chains) =
                     normal_symbol_exports_chain_map.get(&export_symbol.symbol_ref)
@@ -479,6 +541,45 @@ impl LinkStage<'_> {
                   cursor += 1;
                   is_namespace_ref = canonical_ref_owner.namespace_object_ref == canonical_ref;
                 }
+                let mut is_cjs_symbol = false;
+                // Although the last one may not be a namespace ref, but it may reference a cjs
+                // import record namespace, which may reference a export in commonjs module.
+                // TODO: we could record if a module could potential reference a cjs symbol
+                // so that we could skip this step.
+                if cursor < member_expr_ref.props.len() {
+                  let maybe_namespace = depended_refs
+                    .last()
+                    .copied()
+                    .unwrap_or(self.symbols.canonical_ref_for(member_expr_ref.object_ref));
+
+                  // corresponding to cases in:
+                  // https://github.com/rolldown/rolldown/blob/30a5a2fc8fa6785821153922e21dc0273cc00c7a/crates/rolldown/tests/rolldown/tree_shaking/commonjs/main.js?plain=1#L3-L10
+                  if let Some(m) = self.metas[maybe_namespace.owner]
+                    .named_import_to_cjs_module
+                    .get(&maybe_namespace)
+                    .or_else(|| {
+                      self.metas[maybe_namespace.owner]
+                        .import_record_ns_to_cjs_module
+                        .get(&maybe_namespace)
+                    })
+                    .or_else(|| {
+                      (self.metas[maybe_namespace.owner].has_dynamic_exports)
+                        .then_some(&maybe_namespace.owner)
+                    })
+                    .and_then(|idx| {
+                      self.metas[*idx]
+                        .resolved_exports
+                        .get(member_expr_ref.props[cursor].as_str())
+                        .and_then(|resolved_export| {
+                          resolved_export.came_from_cjs.then_some(resolved_export)
+                        })
+                    })
+                  {
+                    is_cjs_symbol = true;
+                    depended_refs.push(m.symbol_ref);
+                  }
+                }
+
                 if cursor > 0 {
                   // The module namespace might be created in the other module get imported via named import instead of `import * as`.
                   // We need to include the possible export chain.
@@ -488,12 +589,16 @@ impl LinkStage<'_> {
                       depended_refs.extend(*refs);
                     },
                   );
+                }
+
+                if cursor > 0 || is_cjs_symbol {
                   resolved_map.insert(
                     member_expr_ref.span,
                     MemberExprRefResolution {
                       resolved: Some(canonical_ref),
                       props: member_expr_ref.props[cursor..].to_vec(),
                       depended_refs,
+                      is_cjs_symbol,
                     },
                   );
                 }
@@ -705,13 +810,20 @@ impl BindImportsAndExportsContext<'_> {
       Specifier::Literal(literal_imported) => {
         match self.metas[importee_id].resolved_exports.get(literal_imported) {
           Some(export) => {
-            ImportStatus::Found {
-              // owner: importee_id,
-              symbol: export.symbol_ref,
-              potentially_ambiguous_export_star_refs: export
-                .potentially_ambiguous_symbol_refs
-                .clone()
-                .unwrap_or_default(),
+            if export.came_from_cjs {
+              ImportStatus::DynamicFallbackWithCommonjsReference {
+                namespace_ref: importee.namespace_object_ref,
+                commonjs_symbol: export.symbol_ref,
+              }
+            } else {
+              ImportStatus::Found {
+                // owner: importee_id,
+                symbol: export.symbol_ref,
+                potentially_ambiguous_export_star_refs: export
+                  .potentially_ambiguous_symbol_refs
+                  .clone()
+                  .unwrap_or_default(),
+              }
             }
           }
           _ => {
@@ -775,10 +887,19 @@ impl BindImportsAndExportsContext<'_> {
             MatchImportKind::NormalAndNamespace { namespace_ref, alias: alias.clone() }
           }
         },
+        ImportStatus::DynamicFallbackWithCommonjsReference { namespace_ref, commonjs_symbol } => {
+          self.metas[tracker.importee].included_commonjs_export_symbol.insert(commonjs_symbol);
+          match &tracker.imported {
+            Specifier::Star => MatchImportKind::Namespace { namespace_ref },
+            Specifier::Literal(alias) => {
+              MatchImportKind::NormalAndNamespace { namespace_ref, alias: alias.clone() }
+            }
+          }
+        }
         ImportStatus::NoMatch { .. } => {
           break MatchImportKind::NoMatch;
         }
-        ImportStatus::Found { symbol, potentially_ambiguous_export_star_refs, .. } => {
+        ImportStatus::Found { symbol, potentially_ambiguous_export_star_refs } => {
           for ambiguous_ref in &potentially_ambiguous_export_star_refs {
             let ambiguous_ref_owner = &index_modules[ambiguous_ref.owner];
             match ambiguous_ref_owner.as_normal().unwrap().named_imports.get(ambiguous_ref) {

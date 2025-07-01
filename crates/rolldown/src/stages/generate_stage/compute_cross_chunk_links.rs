@@ -335,6 +335,7 @@ impl GenerateStage<'_> {
                   EntryPointKind::DynamicImport
                 },
                 &self.link_output.dynamic_import_exports_usage_map,
+                false,
               )
               .map(|(name, export)| (name, export.symbol_ref))
             {

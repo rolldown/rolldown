@@ -47,6 +47,10 @@ impl NormalizedTreeshakeOptions {
     self.as_ref().and_then(|item| item.unknown_global_side_effects).unwrap_or(true)
   }
 
+  pub fn commonjs(&self) -> bool {
+    self.as_ref().and_then(|item| item.commonjs).unwrap_or(false)
+  }
+
   // TODO: optimize this
   pub fn manual_pure_functions(&self) -> Option<&FxHashSet<String>> {
     self.as_ref().and_then(|item| item.manual_pure_functions.as_ref())

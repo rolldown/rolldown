@@ -1,5 +1,6 @@
 # Reason
 1. different file system
+2. rolldown now support commonjs tree shaking
 # Diff
 ## /out.js
 ### esbuild
@@ -21,7 +22,6 @@ console.log("unused import");
 
 //#region node_modules/demo-pkg/index.js
 var require_demo_pkg = __commonJS({ "node_modules/demo-pkg/index.js"(exports) {
-	exports.foo = 123;
 	console.log("hello");
 } });
 
@@ -37,13 +37,14 @@ console.log("unused import");
 ===================================================================
 --- esbuild	/out.js
 +++ rolldown	src_entry.js
-@@ -1,6 +1,6 @@
+@@ -1,7 +1,6 @@
  var require_demo_pkg = __commonJS({
 -    "Users/user/project/node_modules/demo-pkg/index.js"(exports) {
+-        exports.foo = 123;
 +    "node_modules/demo-pkg/index.js"(exports) {
-         exports.foo = 123;
          console.log("hello");
      }
  });
+ var import_demo_pkg = __toESM(require_demo_pkg());
 
 ```

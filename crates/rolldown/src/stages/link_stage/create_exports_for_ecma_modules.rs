@@ -25,7 +25,7 @@ fn init_entry_point_stmt_info(
   if !matches!(meta.wrap_kind, WrapKind::None) {
     // If a commonjs module becomes an entry point while targeting esm, we need to at least add a `export default require_foo();`
     // statement as some kind of syntax sugar. So users won't need to manually create a proxy file with `export default require('./foo.cjs')` in it.
-    referenced_symbols.push(meta.wrapper_ref.unwrap());
+    referenced_symbols.push((meta.wrapper_ref.unwrap(), false));
   }
 
   let normalized_entry_signature =
@@ -38,8 +38,9 @@ fn init_entry_point_stmt_info(
           entry.id,
           entry.kind,
           dynamic_import_exports_usage_map,
+          true,
         )
-        .map(|(_, resolved_export)| resolved_export.symbol_ref),
+        .map(|(_, resolved_export)| (resolved_export.symbol_ref, resolved_export.came_from_cjs)),
     );
   }
   // Entry chunk need to generate exports, so we need reference to all exports to make sure they are included in tree-shaking.
@@ -95,7 +96,7 @@ impl LinkStage<'_> {
           if !meta.is_canonical_exports_empty() {
             referenced_symbols.push(self.runtime.resolve_symbol("__export").into());
             referenced_symbols
-              .extend(meta.canonical_exports().map(|(_, export)| export.symbol_ref.into()));
+              .extend(meta.canonical_exports(false).map(|(_, export)| export.symbol_ref.into()));
           }
           if !meta.star_exports_from_external_modules.is_empty() {
             referenced_symbols.push(self.runtime.resolve_symbol("__reExport").into());

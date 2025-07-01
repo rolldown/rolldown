@@ -450,7 +450,7 @@ expression: output
 
 # tests/esbuild/dce/package_json_side_effects_true_keep_common_js
 
-- src_entry-!~{000}~.js => src_entry-0GHGisx2.js
+- src_entry-!~{000}~.js => src_entry-rM7KHJ59.js
 
 # tests/esbuild/dce/package_json_side_effects_true_keep_es6
 
@@ -5577,6 +5577,10 @@ expression: output
 # tests/rolldown/tree_shaking/advanced_barrel_exports_bailout_dynamic_key
 
 - main-!~{000}~.js => main-CYJiKP4y.js
+
+# tests/rolldown/tree_shaking/commonjs
+
+- main-!~{000}~.js => main-BspEEEut.js
 
 # tests/rolldown/tree_shaking/derived_side_effects_should_have_high_priority
 

@@ -71,11 +71,11 @@ var import_basic_ns = __toESM(require_basic_ns());
 var import_basic_ref_with_named_default = __toESM(require_basic_ref_with_named_default());
 var import_indirect_common_js = __toESM(require_indirect_common_js());
 assert.equal(import_basic_ns.a, "basic-a");
-assert.equal(import_basic_ref_with_named_default.default.a, "basic-ref-with-named-default-a");
+assert.equal(import_basic_ref_with_named_default.a, "basic-ref-with-named-default-a");
 assert.equal(export_star_from_cjs_exports.a, "export-star-from-cjs-a");
 assert.equal(named_import_export_star_from_cjs_exports.a, "named-import-export-star-from-cjs-a");
 assert.equal(reexport_exports.a, "nested-export-star-from-cjs-a");
-assert.equal(import_indirect_common_js.default.a, "react-like-a");
+assert.equal(import_indirect_common_js.a, "react-like-a");
 
 //#endregion
 ```

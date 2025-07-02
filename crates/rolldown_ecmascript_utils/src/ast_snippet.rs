@@ -752,12 +752,13 @@ impl<'ast> AstSnippet<'ast> {
     &self,
     original_name: PassedStr,
     new_name: PassedStr,
+    canonical_runtime_name: PassedStr<'ast>,
   ) -> Statement<'ast> {
     self.builder.statement_expression(
       SPAN,
       self.builder.expression_call(
         SPAN,
-        self.builder.expression_identifier(SPAN, "__name"),
+        self.builder.expression_identifier(SPAN, canonical_runtime_name),
         NONE,
         {
           let mut items = self.builder.vec_with_capacity(2);
@@ -775,14 +776,18 @@ impl<'ast> AstSnippet<'ast> {
     )
   }
 
-  pub fn static_block_keep_name_helper(&self, name: PassedStr) -> ClassElement<'ast> {
+  pub fn static_block_keep_name_helper(
+    &self,
+    name: PassedStr,
+    canonical_runtime_name: PassedStr<'ast>,
+  ) -> ClassElement<'ast> {
     self.builder.class_element_static_block(
       SPAN,
       self.builder.vec1(self.builder.statement_expression(
         SPAN,
         self.builder.expression_call(
           SPAN,
-          self.builder.expression_identifier(SPAN, "__name"),
+          self.builder.expression_identifier(SPAN, canonical_runtime_name),
           NONE,
           {
             let mut items = self.builder.vec_with_capacity(2);

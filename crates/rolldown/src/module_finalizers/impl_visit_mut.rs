@@ -240,7 +240,11 @@ impl<'ast> VisitMut<'ast> for ScopeHoistingFinalizer<'_, 'ast> {
     // TODO: perf it
     for (stmt_index, original_name, new_name) in self.ctx.keep_name_statement_to_insert.iter().rev()
     {
-      it.insert(*stmt_index, self.snippet.keep_name_call_expr_stmt(original_name, new_name));
+      let finalized_name = self.snippet.atom(self.canonical_name_for_runtime("__name"));
+      it.insert(
+        *stmt_index,
+        self.snippet.keep_name_call_expr_stmt(original_name, new_name, finalized_name.as_str()),
+      );
     }
     self.ctx.cur_stmt_index = previous_stmt_index;
     self.ctx.keep_name_statement_to_insert = previous_keep_name_statement;

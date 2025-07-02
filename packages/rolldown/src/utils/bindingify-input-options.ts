@@ -13,7 +13,8 @@ import type {
 import { BuiltinPlugin } from '../builtin-plugin/constructors';
 import { bindingifyBuiltInPlugin } from '../builtin-plugin/utils';
 import type { LogHandler } from '../log/log-handler';
-import type { LogLevelOption } from '../log/logging';
+import { LOG_LEVEL_WARN, type LogLevelOption } from '../log/logging';
+import { logDuplicateJsxConfig } from '../log/logs';
 import type {
   AttachDebugOptions,
   HmrOptions,
@@ -61,8 +62,11 @@ export function bindingifyInputOptions(
     );
   });
 
-  const { jsx, jsxTransform } = bindingifyJsx(inputOptions.jsx);
-  const transform = inputOptions.transform || jsxTransform;
+  const { jsx, transform } = bindingifyJsx(
+    onLog,
+    inputOptions.jsx,
+    inputOptions.transform,
+  );
 
   return {
     input: bindingifyInput(inputOptions.input),
@@ -284,42 +288,54 @@ function bindingifyInput(
 }
 
 // The `automatic` is most user usages, so it is different rollup's default value `false`
-function bindingifyJsx(input: InputOptions['jsx']): {
+function bindingifyJsx(
+  onLog: LogHandler,
+  input: InputOptions['jsx'],
+  transform: BindingInputOptions['transform'],
+): {
   jsx?: BindingInputOptions['jsx'];
-  jsxTransform?: BindingInputOptions['transform'];
+  transform: BindingInputOptions['transform'];
 } {
+  if (transform?.jsx) {
+    if (input !== undefined) {
+      onLog(LOG_LEVEL_WARN, logDuplicateJsxConfig());
+    }
+    return { transform };
+  }
   if (typeof input === 'object') {
     if (input.mode === 'preserve') {
-      return { jsx: BindingJsx.Preserve };
+      return { jsx: BindingJsx.Preserve, transform };
     }
     const mode = input.mode ?? 'automatic';
-    return {
-      jsxTransform: {
-        jsx: {
-          runtime: mode,
-          pragma: input.factory,
-          pragmaFrag: input.fragment,
-          importSource: mode === 'classic'
-            ? input.importSource
-            : mode === 'automatic'
-            ? input.jsxImportSource
-            : undefined,
-        },
-      },
+    transform ??= {};
+    transform.jsx = {
+      runtime: mode,
+      pragma: input.factory,
+      pragmaFrag: input.fragment,
+      importSource: mode === 'classic'
+        ? input.importSource
+        : mode === 'automatic'
+        ? input.jsxImportSource
+        : undefined,
     };
+    return { transform };
   }
+  let jsx: BindingInputOptions['jsx'] | undefined;
   switch (input) {
     case false:
-      return { jsx: BindingJsx.Disable };
+      jsx = BindingJsx.Disable;
+      break;
     case 'react':
-      return { jsx: BindingJsx.React };
+      jsx = BindingJsx.React;
+      break;
     case 'react-jsx':
-      return { jsx: BindingJsx.ReactJsx };
+      jsx = BindingJsx.ReactJsx;
+      break;
     case 'preserve':
-      return { jsx: BindingJsx.Preserve };
-    default:
-      return { jsx: undefined };
+      jsx = BindingJsx.Preserve;
+      break;
   }
+  return { jsx, transform };
 }
 
 function bindingifyWatch(

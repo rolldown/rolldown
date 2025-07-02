@@ -82,8 +82,7 @@ impl<'ast> VisitMut<'ast> for ScopeHoistingFinalizer<'_, 'ast> {
             self.canonical_ref_for_runtime("__commonJSMin")
           };
 
-          let commonjs_ref_expr =
-            self.finalized_expr_for_symbol_ref(commonjs_ref, false, None, false);
+          let commonjs_ref_expr = self.finalized_expr_for_symbol_ref(commonjs_ref, false, false);
 
           let mut stmts_inside_closure = allocator::Vec::new_in(self.alloc);
           stmts_inside_closure.extend(hmr_header);
@@ -106,7 +105,7 @@ impl<'ast> VisitMut<'ast> for ScopeHoistingFinalizer<'_, 'ast> {
           } else {
             self.canonical_ref_for_runtime("__esmMin")
           };
-          let esm_ref_expr = self.finalized_expr_for_symbol_ref(esm_ref, false, None, false);
+          let esm_ref_expr = self.finalized_expr_for_symbol_ref(esm_ref, false, false);
           let old_body = program.body.take_in(self.alloc);
 
           let mut fn_stmts = allocator::Vec::new_in(self.alloc);
@@ -366,9 +365,6 @@ impl<'ast> VisitMut<'ast> for ScopeHoistingFinalizer<'_, 'ast> {
         }
       }
     } else {
-      if let Some(ref_id) = self.try_get_valid_namespace_alias_ref_id_from_member_expr(expr) {
-        self.interested_namespace_alias_ref_id.insert(ref_id);
-      }
       walk_mut::walk_member_expression(self, expr);
     }
   }

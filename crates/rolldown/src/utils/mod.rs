@@ -20,7 +20,7 @@ use oxc::{allocator::TakeIn, ast_visit::VisitMut};
 use rolldown_common::AstScopes;
 use rolldown_ecmascript::EcmaAst;
 use rolldown_ecmascript_utils::AstSnippet;
-use rustc_hash::{FxHashMap, FxHashSet};
+use rustc_hash::FxHashSet;
 
 use super::module_finalizers::{ScopeHoistingFinalizer, ScopeHoistingFinalizerContext};
 
@@ -38,8 +38,6 @@ pub fn finalize_normal_module(
       scope: ast_scope,
       snippet: AstSnippet::new(alloc),
       comments: oxc_program.comments.take_in(alloc),
-      namespace_alias_symbol_id_to_resolved_module: FxHashMap::default(),
-      interested_namespace_alias_ref_id: FxHashSet::default(),
       generated_init_esm_importee_ids: FxHashSet::default(),
     };
     finalizer.visit_program(oxc_program);

@@ -4741,6 +4741,10 @@ expression: output
 
 - main-!~{000}~.js => main-_kxx8NhO.js
 
+# tests/rolldown/issues/rolldown_vite_289
+
+- main-!~{000}~.js => main-Rqhn1GZY.js
+
 # tests/rolldown/misc/ambiguous_star_export
 
 - main-!~{000}~.js => main-Brk4weCb.js

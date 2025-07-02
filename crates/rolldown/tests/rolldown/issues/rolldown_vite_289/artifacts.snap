@@ -1,0 +1,36 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## main.js
+
+```js
+import nodeAssert from "node:assert";
+
+
+//#region lib-impl.js
+var lib_impl_exports = {};
+__export(lib_impl_exports, { foo: () => foo });
+function foo() {
+	return fn();
+}
+var fn;
+var init_lib_impl = __esm({ "lib-impl.js"() {
+	fn = () => 1;
+} });
+
+//#endregion
+//#region lib-index.js
+init_lib_impl();
+
+//#endregion
+//#region trigger-error.js
+nodeAssert(foo() === 1, "foo() should return 1");
+
+//#endregion
+//#region trigger-wrapping.js
+console.log((init_lib_impl(), __toCommonJS(lib_impl_exports)));
+
+//#endregion
+```

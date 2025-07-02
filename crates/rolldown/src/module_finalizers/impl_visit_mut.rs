@@ -9,7 +9,6 @@ use oxc::{
 };
 use rolldown_common::{ExportsKind, StmtInfoIdx, SymbolRef, ThisExprReplaceKind, WrapKind};
 use rolldown_ecmascript_utils::{ExpressionExt, JsxExt};
-use rustc_hash::FxHashMap;
 
 use super::ScopeHoistingFinalizer;
 
@@ -22,25 +21,6 @@ impl<'ast> VisitMut<'ast> for ScopeHoistingFinalizer<'_, 'ast> {
     program.hashbang.take();
     program.directives.clear();
     // init namespace_alias_symbol_id
-    self.namespace_alias_symbol_id_to_resolved_module = self
-      .ctx
-      .module
-      .ecma_view
-      .named_imports
-      .iter()
-      .filter_map(|(symbol_ref, v)| {
-        let rec_id = v.record_id;
-        let importee_idx = self.ctx.module.ecma_view.import_records[rec_id].resolved_module;
-        // bailout if the importee is a external module
-        // see rollup/test/function/samples/side-effects-only-default-exports/ as an
-        // example
-        // TODO: maybe we could relex the restriction if `platform: node` and the external module
-        // is a node builtin module
-        let module = self.ctx.modules[importee_idx].as_normal()?;
-        self.ctx.symbol_db.get(*symbol_ref).namespace_alias.as_ref()?;
-        module.exports_kind.is_commonjs().then_some((symbol_ref.symbol, importee_idx))
-      })
-      .collect::<FxHashMap<_, _>>();
 
     let is_namespace_referenced = matches!(self.ctx.module.exports_kind, ExportsKind::Esm)
       && self.ctx.module.stmt_infos[StmtInfoIdx::new(0)].is_included;
@@ -102,7 +82,8 @@ impl<'ast> VisitMut<'ast> for ScopeHoistingFinalizer<'_, 'ast> {
             self.canonical_ref_for_runtime("__commonJSMin")
           };
 
-          let commonjs_ref_expr = self.finalized_expr_for_symbol_ref(commonjs_ref, false, None);
+          let commonjs_ref_expr =
+            self.finalized_expr_for_symbol_ref(commonjs_ref, false, None, false);
 
           let mut stmts_inside_closure = allocator::Vec::new_in(self.alloc);
           stmts_inside_closure.extend(hmr_header);
@@ -125,7 +106,7 @@ impl<'ast> VisitMut<'ast> for ScopeHoistingFinalizer<'_, 'ast> {
           } else {
             self.canonical_ref_for_runtime("__esmMin")
           };
-          let esm_ref_expr = self.finalized_expr_for_symbol_ref(esm_ref, false, None);
+          let esm_ref_expr = self.finalized_expr_for_symbol_ref(esm_ref, false, None, false);
           let old_body = program.body.take_in(self.alloc);
 
           let mut fn_stmts = allocator::Vec::new_in(self.alloc);

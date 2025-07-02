@@ -3680,7 +3680,7 @@ expression: output
 
 # tests/rolldown/cjs_compat/exoprt_star_of_cjs
 
-- main-!~{000}~.js => main-DUPb7QKB.js
+- main-!~{000}~.js => main-BN6Xo6uG.js
 
 # tests/rolldown/cjs_compat/import_reexport_between_esm_and_cjs/esm_import_cjs_import_star_as
 
@@ -3692,11 +3692,11 @@ expression: output
 
 # tests/rolldown/cjs_compat/import_reexport_between_esm_and_cjs/esm_import_esm_which_export_all_from_cjs_named_import
 
-- main-!~{000}~.js => main-DzxePG0p.js
+- main-!~{000}~.js => main-DSwjndv6.js
 
 # tests/rolldown/cjs_compat/import_reexport_between_esm_and_cjs/esm_import_esm_which_export_all_from_multiple_cjs_named_import
 
-- main-!~{000}~.js => main-C-Ar6s-k.js
+- main-!~{000}~.js => main-7K977-SZ.js
 
 # tests/rolldown/cjs_compat/import_reexport_between_esm_and_cjs/esm_reexport_cjs_default
 
@@ -3731,6 +3731,14 @@ expression: output
 - main-!~{000}~.js => main-BBmiVxOv.js
 - commonjs-!~{002}~.js => commonjs-B78pQZVM.js
 
+# tests/rolldown/cjs_compat/optimize_interop_default_with_cjs_bailout
+
+- main-!~{000}~.js => main-DdwjAanb.js
+
+# tests/rolldown/cjs_compat/optimize_interop_default_with_cjs_bailout2
+
+- main-!~{000}~.js => main-Dbo94Yvl.js
+
 # tests/rolldown/cjs_compat/partial_cjs_ns_merge
 
 - main-!~{000}~.js => main-mbEkR_Bu.js
@@ -3751,7 +3759,7 @@ expression: output
 
 # tests/rolldown/cjs_compat/react-like
 
-- main-!~{000}~.js => main-8zELAbr8.js
+- main-!~{000}~.js => main-DmMz4LJv.js
 
 # tests/rolldown/cjs_compat/reexport_commonjs
 
@@ -5592,7 +5600,7 @@ expression: output
 
 # tests/rolldown/tree_shaking/commonjs
 
-- main-!~{000}~.js => main-BspEEEut.js
+- main-!~{000}~.js => main-96eP_Brs.js
 
 # tests/rolldown/tree_shaking/derived_side_effects_should_have_high_priority
 

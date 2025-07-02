@@ -1,0 +1,27 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## main.js
+
+```js
+import assert from "node:assert";
+
+
+//#region commonjs.js
+var require_commonjs = __commonJS({ "commonjs.js"(exports, module) {
+	module.exports = {
+		foo: 1,
+		bar: 2
+	};
+} });
+
+//#endregion
+//#region main.js
+var import_commonjs = __toESM(require_commonjs());
+assert.equal(import_commonjs.default.foo, 1);
+assert.equal(import_commonjs.default.bar, 2);
+
+//#endregion
+```

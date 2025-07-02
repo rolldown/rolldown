@@ -12,6 +12,7 @@ packages:
   - scripts
   - crates/rolldown/tests/rolldown/topics/npm_packages
   - crates/rolldown/tests/rolldown/warnings/eval2
+  - '!examples/yarn-pnp'
 
 shellEmulator: true
 

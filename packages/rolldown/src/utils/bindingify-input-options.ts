@@ -182,9 +182,9 @@ function bindingifyExternal(
 function bindingifyResolve(
   resolve: InputOptions['resolve'],
 ): BindingInputOptions['resolve'] {
+  const yarnPnp = !!process.versions.pnp;
   if (resolve) {
     const { alias, extensionAlias, ...rest } = resolve;
-
     return {
       alias: alias
         ? Object.entries(alias).map(([name, replacement]) => ({
@@ -198,7 +198,12 @@ function bindingifyResolve(
           replacements: value,
         }))
         : undefined,
+      yarnPnp,
       ...rest,
+    };
+  } else {
+    return {
+      yarnPnp,
     };
   }
 }

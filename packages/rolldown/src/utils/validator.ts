@@ -285,6 +285,7 @@ const ResolveOptionsSchema = v.strictObject({
   modules: v.optional(v.array(v.string())),
   symlinks: v.optional(v.boolean()),
   tsconfigFilename: v.optional(v.string()),
+  yarnPnp: v.optional(v.boolean()),
 });
 
 // TODO: moduleSideEffects

@@ -204,8 +204,8 @@ oxc_transform_napi = { version = "0.75.1" }
 # Versions must be relaxed for usage in oxc.
 # Please update with `cargo update oxc_resolver oxc_resolver_napi oxc_sourcemap oxc_index`
 oxc_index = { version = "3", features = ["rayon", "serde"] } # https://github.com/oxc-project/oxc-index-vec
-oxc_resolver = { version = "11.3", features = ["package_json_raw_json_api"] } # https://github.com/oxc-project/oxc-resolver
-oxc_resolver_napi = { version = "11.3", default-features = false }
+oxc_resolver = { version = "11.5.0", features = ["package_json_raw_json_api", "yarn_pnp"] } # https://github.com/oxc-project/oxc-resolver
+oxc_resolver_napi = { version = "11.5.0", default-features = false, features = ["yarn_pnp"] }
 oxc_sourcemap = { version = "3" } # https://github.com/oxc-project/oxc-sourcemap
 
 [profile.dev]

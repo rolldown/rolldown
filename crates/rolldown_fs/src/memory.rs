@@ -88,6 +88,10 @@ impl FileSystem for MemoryFileSystem {
 }
 
 impl OxcResolverFileSystem for MemoryFileSystem {
+  fn new(_yarn_pnp: bool) -> Self {
+    Self::default()
+  }
+
   fn read_to_string(&self, path: &Path) -> io::Result<String> {
     let mut buf = String::new();
     self

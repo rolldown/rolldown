@@ -1246,7 +1246,8 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
     }
     let (original_name, _) = self.get_conflicted_info(id.as_ref()?)?;
     let original_name: Rstr = original_name.into();
-    Some(self.snippet.static_block_keep_name_helper(&original_name))
+    let canonical_name = self.snippet.atom(self.canonical_name_for_runtime("__name"));
+    Some(self.snippet.static_block_keep_name_helper(&original_name, canonical_name.as_str()))
   }
 
   fn try_rewrite_import_expression(&self, node: &mut ast::Expression<'ast>) -> bool {

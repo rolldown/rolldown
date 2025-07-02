@@ -1,0 +1,31 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## main.js
+
+```js
+
+//#region foo.js
+var Foo = class {};
+function foo() {}
+const baz = function() {};
+function __name() {}
+__name();
+
+//#endregion
+//#region main.js
+var Foo$1 = class {
+	static {
+		__name$1(this, "Foo");
+	}
+};
+function foo$1() {}
+__name$1(foo$1, "foo");
+const baz$1 = function() {};
+__name$1(baz$1, "baz");
+
+//#endregion
+export { Foo as Bar, Foo$1 as Foo, baz as b, foo as bar, baz$1 as baz, foo$1 as foo };
+```

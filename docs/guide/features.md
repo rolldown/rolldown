@@ -26,8 +26,8 @@ Rolldown supports the following transforms out of the box, powered by [Oxc](http
 - TypeScript
 - JSX
   - Configurable via the `jsx` option, aligned with [Rollup's `jsx` option](https://rollupjs.org/configuration-options/#jsx)
-- Syntax lowering transforms <sup>WIP</sup>
-  - Landing soon, configurable via the `target` option
+- Syntax lowering transforms
+  - Automatically transforms modern syntax to be compatible with your defined [target](https://rolldown.rs/reference/config-options#transform).
 
 ## ESM / CJS Interop
 

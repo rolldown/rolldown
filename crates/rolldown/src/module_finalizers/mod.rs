@@ -591,57 +591,24 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
     &self,
     member_expr: &ast::MemberExpression<'ast>,
   ) -> Option<Expression<'ast>> {
-    match member_expr {
-      MemberExpression::ComputedMemberExpression(inner_expr) => {
-        if let Some(MemberExprRefResolution {
-          resolved: object_ref, props, is_cjs_symbol, ..
-        }) = self.ctx.linking_info.resolved_member_expr_refs.get(&inner_expr.span)
-        {
-          match object_ref {
-            Some(object_ref) => {
-              let object_ref_expr =
-                self.finalized_expr_for_symbol_ref(*object_ref, false, *is_cjs_symbol);
-
-              let replaced_expr =
-                self.snippet.member_expr_or_ident_ref(object_ref_expr, props, inner_expr.span);
-              return Some(replaced_expr);
-            }
-            None => {
-              return Some(self.snippet.member_expr_with_void_zero_object(props, inner_expr.span));
-            }
-          }
-        }
-        None
+    let span = member_expr.span();
+    match self.ctx.linking_info.resolved_member_expr_refs.get(&span) {
+      Some(MemberExprRefResolution { resolved: object_ref, props, is_cjs_symbol, .. }) => {
+        object_ref
+          .map(|object_ref| {
+            let object_ref_expr =
+              self.finalized_expr_for_symbol_ref(object_ref, false, *is_cjs_symbol);
+            self.snippet.member_expr_or_ident_ref(object_ref_expr, props, span)
+          })
+          .or_else(|| Some(self.snippet.member_expr_with_void_zero_object(props, span)))
+        // return Some();
       }
-      MemberExpression::StaticMemberExpression(inner_expr) => {
-        match self.ctx.linking_info.resolved_member_expr_refs.get(&inner_expr.span) {
-          Some(MemberExprRefResolution { resolved: object_ref, props, is_cjs_symbol, .. }) => {
-            match object_ref {
-              Some(object_ref) => {
-                let object_ref_expr =
-                  self.finalized_expr_for_symbol_ref(*object_ref, false, *is_cjs_symbol);
-
-                let replaced_expr =
-                  self.snippet.member_expr_or_ident_ref(object_ref_expr, props, inner_expr.span);
-                return Some(replaced_expr);
-              }
-              None => {
-                return Some(
-                  self.snippet.member_expr_with_void_zero_object(props, inner_expr.span),
-                );
-              }
-            }
-            // these two branch are exclusive since `import.meta` is a global member_expr
-          }
-          _ => {
-            if let Some(new_expr) = self.try_rewrite_import_meta_prop_expr(inner_expr) {
-              return Some(new_expr);
-            }
-          }
-        }
-        None
+      _ => {
+        let MemberExpression::StaticMemberExpression(static_member_expr) = member_expr else {
+          return None;
+        };
+        self.try_rewrite_import_meta_prop_expr(static_member_expr)
       }
-      MemberExpression::PrivateFieldExpression(_) => None,
     }
   }
 

@@ -134,6 +134,7 @@
       "aarch64-apple-darwin",
       "aarch64-unknown-linux-musl",
       "aarch64-pc-windows-msvc",
+      "aarch64-linux-android",
       "wasm32-wasip1-threads"
     ],
     "wasm": {

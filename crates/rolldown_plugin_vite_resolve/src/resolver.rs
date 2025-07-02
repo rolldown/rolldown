@@ -238,7 +238,7 @@ impl Resolver {
     &self,
     directory: P,
     specifier: &str,
-  ) -> Result<oxc_resolver::FsResolution, oxc_resolver::ResolveError> {
+  ) -> Result<oxc_resolver::Resolution, oxc_resolver::ResolveError> {
     let inner_resolver = if let Some(tsconfig) =
       self.tsconfig_resolver.as_ref().and_then(|r| r.load_nearest_tsconfig(directory.as_ref()))
     {
@@ -285,7 +285,7 @@ impl Resolver {
     &self,
     importer: Option<&str>,
     dedupe: &FxHashSet<String>,
-    result: &Result<oxc_resolver::FsResolution, oxc_resolver::ResolveError>,
+    result: &Result<oxc_resolver::Resolution, oxc_resolver::ResolveError>,
   ) -> Result<Option<HookResolveIdOutput>, oxc_resolver::ResolveError> {
     match result {
       Ok(result) => {

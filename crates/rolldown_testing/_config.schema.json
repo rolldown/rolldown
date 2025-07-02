@@ -714,6 +714,12 @@
             "string",
             "null"
           ]
+        },
+        "yarnPnp": {
+          "type": [
+            "boolean",
+            "null"
+          ]
         }
       },
       "additionalProperties": false

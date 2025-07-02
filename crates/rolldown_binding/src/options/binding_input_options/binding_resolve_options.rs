@@ -16,6 +16,7 @@ pub struct BindingResolveOptions {
   pub modules: Option<Vec<String>>,
   pub symlinks: Option<bool>,
   pub tsconfig_filename: Option<String>,
+  pub yarn_pnp: Option<bool>,
 }
 
 impl From<BindingResolveOptions> for rolldown::ResolveOptions {
@@ -38,6 +39,7 @@ impl From<BindingResolveOptions> for rolldown::ResolveOptions {
       main_files: value.main_files,
       symlinks: value.symlinks,
       tsconfig_filename: value.tsconfig_filename,
+      yarn_pnp: value.yarn_pnp,
     }
   }
 }

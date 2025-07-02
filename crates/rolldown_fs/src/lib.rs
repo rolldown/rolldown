@@ -8,3 +8,4 @@ mod os;
 pub use crate::file_system::FileSystem;
 #[cfg(feature = "os")]
 pub use os::OsFileSystem;
+pub use oxc_resolver::FileSystem as OxcResolverFileSystem;

@@ -175,6 +175,13 @@ impl LinkStage<'_> {
                         stmt_info
                           .referenced_symbols
                           .push(importee_linking_info.wrapper_ref.unwrap().into());
+
+                        if is_reexport_all {
+                          // This branch means this module contains code like `export * from './some-wrapped-module.js'`.
+                          // We need to mark this module as having side effects, so it could be included forcefully and
+                          // responsible for generating `init_xxx_dep` calls to ensure deps got initialized correctly.
+                          *importer_side_effect = DeterminedSideEffects::Analyzed(true);
+                        }
                         if is_reexport_all && importee_linking_info.has_dynamic_exports {
                           // Turn `export * from 'bar_esm'` into `init_bar_esm();__reExport(foo_exports, bar_esm_exports);`
                           // something like `__reExport(foo_exports, other_exports)`

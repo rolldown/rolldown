@@ -4,6 +4,6 @@ use rolldown_ecmascript::EcmaAst;
 use rolldown_utils::indexmap::FxIndexSet;
 
 pub type IndexChunkToInstances = IndexVec<ChunkIdx, FxIndexSet<InsChunkIdx>>;
-pub type IndexAssets = IndexVec<InsChunkIdx, Asset>;
+pub type AssetVec = Vec<Asset>;
 pub type IndexInstantiatedChunks = IndexVec<InsChunkIdx, InstantiatedChunk>;
 pub type IndexEcmaAst = IndexVec<EcmaAstIdx, (EcmaAst, ModuleIdx)>;

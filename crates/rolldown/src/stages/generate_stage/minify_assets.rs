@@ -5,12 +5,12 @@ use rolldown_error::BuildResult;
 use rolldown_sourcemap::collapse_sourcemaps;
 use rolldown_utils::rayon::{IntoParallelRefMutIterator, ParallelIterator};
 
-use crate::type_alias::IndexAssets;
+use crate::type_alias::AssetVec;
 
 use super::GenerateStage;
 
 impl GenerateStage<'_> {
-  pub fn minify_assets(&self, assets: &mut IndexAssets) -> BuildResult<()> {
+  pub fn minify_assets(&self, assets: &mut AssetVec) -> BuildResult<()> {
     if let MinifyOptions::Enabled(minify_options) = &self.options.minify {
       assets.par_iter_mut().try_for_each(|asset| -> anyhow::Result<()> {
         if test_d_ts_pattern(&asset.filename) {

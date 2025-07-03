@@ -21,7 +21,7 @@ use crate::{
   chunk_graph::ChunkGraph,
   css::css_generator::CssGenerator,
   ecmascript::ecma_generator::EcmaGenerator,
-  type_alias::{IndexAssets, IndexChunkToInstances, IndexInstantiatedChunks},
+  type_alias::{AssetVec, IndexChunkToInstances, IndexInstantiatedChunks},
   types::generator::{GenerateContext, Generator},
   utils::{
     augment_chunk_hash::augment_chunk_hash,
@@ -308,7 +308,7 @@ impl GenerateStage<'_> {
       .collect::<Vec<_>>()
   }
 
-  fn trace_action_assets_ready(index_assets: &IndexAssets) {
+  fn trace_action_assets_ready(index_assets: &AssetVec) {
     if trace_action_enabled!() {
       let mut assets = vec![];
       for asset in index_assets {
@@ -372,7 +372,7 @@ pub fn set_emitted_chunk_preliminary_filenames(
 
 fn set_emitted_chunk_filenames(
   file_emitter: &SharedFileEmitter,
-  assets: &IndexAssets,
+  assets: &AssetVec,
   chunk_graph: &ChunkGraph,
 ) {
   let emitted_chunk_info = assets

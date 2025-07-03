@@ -22,7 +22,7 @@ use xxhash_rust::xxh3::Xxh3;
 use crate::{
   chunk_graph::ChunkGraph,
   stages::link_stage::LinkStageOutput,
-  type_alias::{IndexAssets, IndexChunkToInstances, IndexInstantiatedChunks},
+  type_alias::{AssetVec, IndexChunkToInstances, IndexInstantiatedChunks},
 };
 
 #[allow(clippy::too_many_lines)]
@@ -33,7 +33,7 @@ pub fn finalize_assets(
   index_instantiated_chunks: IndexInstantiatedChunks,
   index_chunk_to_instances: &IndexChunkToInstances,
   hash_characters: HashCharacters,
-) -> IndexAssets {
+) -> AssetVec {
   let finder = hash_placeholder_left_finder();
 
   let ins_chunk_idx_by_placeholder = index_instantiated_chunks
@@ -116,7 +116,7 @@ pub fn finalize_assets(
     .flatten()
     .collect::<FxHashMap<_, _>>();
 
-  let mut assets: IndexAssets = index_instantiated_chunks
+  let mut assets: AssetVec = index_instantiated_chunks
     .into_par_iter()
     .enumerate()
     .map(|(asset_idx, mut instantiated_chunk)| {
@@ -154,8 +154,7 @@ pub fn finalize_assets(
 
       instantiated_chunk.finalize(filename)
     })
-    .collect::<Vec<_>>()
-    .into();
+    .collect::<Vec<_>>();
 
   let index_ins_chunk_to_filename: IndexVec<InsChunkIdx, ArcStr> =
     assets.iter().map(|ins_chunk| ins_chunk.filename.clone()).collect::<Vec<_>>().into();

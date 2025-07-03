@@ -106,7 +106,7 @@ pub use crate::{
   },
   type_aliases::{MemberExprRefResolutionMap, SharedModuleInfoDashMap},
   types::asset::Asset,
-  types::asset_meta::InstantiationKind,
+  types::asset_meta::{InstantiationKind, SourcemapAssetMeta},
   types::ast_scope_idx::AstScopeIdx,
   types::ast_scopes::AstScopes,
   types::bundler_file_system::BundlerFileSystem,

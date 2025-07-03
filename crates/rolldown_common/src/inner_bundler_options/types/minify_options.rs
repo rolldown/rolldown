@@ -7,7 +7,7 @@ use schemars::JsonSchema;
 #[cfg(feature = "deserialize_bundler_options")]
 use serde::Deserialize;
 
-use crate::{OutputFormat, SharedNormalizedBundlerOptions};
+use crate::{NormalizedBundlerOptions, OutputFormat};
 
 #[derive(Debug, Clone)]
 #[cfg_attr(
@@ -88,7 +88,7 @@ pub struct MinifyOptionsObject {
 impl MinifyOptionsObject {
   pub fn to_oxc_minifier_options(
     &self,
-    option: &SharedNormalizedBundlerOptions,
+    option: &NormalizedBundlerOptions,
   ) -> oxc::minifier::MinifierOptions {
     let keep_names = option.keep_names;
     oxc::minifier::MinifierOptions {

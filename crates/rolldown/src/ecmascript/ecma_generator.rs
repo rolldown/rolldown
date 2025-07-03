@@ -226,6 +226,7 @@ impl Generator for EcmaGenerator {
           debug_id: 0,
           imports: vec![],
           dynamic_imports: vec![],
+          sourcemap_filename: None,
         }),
         augment_chunk_hash: None,
         file_dir: file_dir.to_path_buf(),

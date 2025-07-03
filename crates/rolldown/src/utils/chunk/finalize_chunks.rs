@@ -209,7 +209,7 @@ pub async fn finalize_assets(
             options,
             &mut code,
             map,
-            &asset.file_dir,
+            &ecma_meta.file_dir,
             asset.filename.as_str(),
             ecma_meta.debug_id,
             /*is_css*/ false,
@@ -225,10 +225,6 @@ pub async fn finalize_assets(
                 names: sourcemap_asset.names,
                 original_file_names: sourcemap_asset.original_file_names,
               })),
-              augment_chunk_hash: None,
-              // FIXME:
-              file_dir: asset.file_dir.clone(),
-              preliminary_filename: asset.preliminary_filename.clone(),
             });
           }
         }
@@ -250,7 +246,7 @@ pub async fn finalize_assets(
             options,
             &mut code,
             map,
-            &asset.file_dir,
+            &css_meta.file_dir,
             asset.filename.as_str(),
             css_meta.debug_id,
             /*is_css*/ true,
@@ -263,10 +259,6 @@ pub async fn finalize_assets(
               filename: sourcemap_asset.filename.clone(),
               map: None,
               meta: InstantiationKind::None,
-              augment_chunk_hash: None,
-              // FIXME:
-              file_dir: asset.file_dir.clone(),
-              preliminary_filename: asset.preliminary_filename.clone(),
             });
           }
         }

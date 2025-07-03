@@ -63,10 +63,7 @@ impl GenerateStage<'_> {
 
     let mut output = Vec::with_capacity(assets.len());
     let mut output_assets: Vec<Output> = vec![];
-    for Asset {
-      map, meta: rendered_chunk, content: code, preliminary_filename, filename, ..
-    } in assets
-    {
+    for Asset { map, meta: rendered_chunk, content: code, filename, .. } in assets {
       match rendered_chunk {
         InstantiationKind::Ecma(ecma_meta) => {
           let code = code.try_into_string()?;
@@ -85,7 +82,7 @@ impl GenerateStage<'_> {
             dynamic_imports: ecma_meta.dynamic_imports,
             map,
             sourcemap_filename: ecma_meta.sourcemap_filename,
-            preliminary_filename: preliminary_filename.to_string(),
+            preliminary_filename: ecma_meta.preliminary_filename.to_string(),
           })));
         }
         InstantiationKind::Css(_css_meta) => {

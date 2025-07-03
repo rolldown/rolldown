@@ -226,15 +226,20 @@ impl Generator for EcmaGenerator {
           debug_id: 0,
           imports: vec![],
           dynamic_imports: vec![],
+          file_dir: file_dir.to_path_buf(),
           sourcemap_filename: None,
+          preliminary_filename: ctx
+            .chunk
+            .preliminary_filename
+            .clone()
+            .expect("should have preliminary filename"),
         }),
-        augment_chunk_hash: None,
-        file_dir: file_dir.to_path_buf(),
         preliminary_filename: ctx
           .chunk
           .preliminary_filename
           .clone()
           .expect("should have preliminary filename"),
+        augment_chunk_hash: None,
       }],
       warnings: std::mem::take(&mut ctx.warnings),
     }))

@@ -76,6 +76,12 @@ impl Generator for CssGenerator {
         .expect("should have preliminary_filename")
         .clone(),
       debug_id: 0,
+      file_dir: file_dir.to_path_buf(),
+      preliminary_filename: ctx
+        .chunk
+        .css_preliminary_filename
+        .clone()
+        .expect("should have preliminary filename"),
     };
 
     Ok(Ok(GenerateOutput {
@@ -85,7 +91,6 @@ impl Generator for CssGenerator {
         map,
         kind: InstantiationKind::from(css_asset_meta),
         augment_chunk_hash: None,
-        file_dir: file_dir.to_path_buf(),
         preliminary_filename: ctx
           .chunk
           .css_preliminary_filename

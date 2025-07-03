@@ -21,7 +21,7 @@ pub struct InstantiatedChunk {
 impl InstantiatedChunk {
   pub fn finalize(self, filename: ArcStr) -> Asset {
     Asset {
-      originate_from: self.originate_from,
+      originate_from: Some(self.originate_from),
       content: self.content,
       map: self.map,
       meta: self.kind,

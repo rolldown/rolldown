@@ -3,8 +3,8 @@ use std::{ops::Deref, sync::Arc};
 use futures::future::try_join_all;
 use oxc_index::{IndexVec, index_vec};
 use rolldown_common::{
-  Asset, EmittedChunkInfo, InstantiationKind, ModuleRenderArgs, ModuleRenderOutput, Output,
-  OutputAsset, OutputChunk, SharedFileEmitter, SymbolRef,
+  Asset, ChunkIdx, EmittedChunkInfo, InstantiationKind, ModuleRenderArgs, ModuleRenderOutput,
+  Output, OutputAsset, OutputChunk, SharedFileEmitter, SymbolRef,
 };
 use rolldown_debug::{action, trace_action, trace_action_enabled};
 use rolldown_error::{BuildDiagnostic, BuildResult};
@@ -275,7 +275,7 @@ impl GenerateStage<'_> {
       let mut assets = vec![];
       for asset in index_assets {
         assets.push(action::Asset {
-          chunk_id: Some(asset.originate_from.raw()),
+          chunk_id: asset.originate_from.map(ChunkIdx::raw),
           content: asset.content.try_as_inner_str().ok().map(str::to_string),
           size: asset.content.as_bytes().len().try_into().unwrap(),
           filename: asset.filename.to_string(),
@@ -340,10 +340,12 @@ fn set_emitted_chunk_filenames(
   let emitted_chunk_info = assets
     .iter()
     .filter_map(|asset| {
-      chunk_graph.chunk_idx_to_reference_ids.get(&asset.originate_from).map(|reference_ids| {
-        reference_ids.iter().map(|reference_id| EmittedChunkInfo {
-          reference_id: reference_id.clone(),
-          filename: asset.filename.clone(),
+      asset.originate_from.and_then(|originate_from| {
+        chunk_graph.chunk_idx_to_reference_ids.get(&originate_from).map(|reference_ids| {
+          reference_ids.iter().map(|reference_id| EmittedChunkInfo {
+            reference_id: reference_id.clone(),
+            filename: asset.filename.clone(),
+          })
         })
       })
     })

@@ -12,4 +12,5 @@ pub struct EcmaAssetMeta {
   // The updated fields of rendered_chunk after the final render
   pub imports: Vec<ArcStr>,
   pub dynamic_imports: Vec<ArcStr>,
+  pub sourcemap_filename: Option<String>,
 }

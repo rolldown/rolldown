@@ -167,8 +167,10 @@ pub async fn finalize_assets(
     assets.iter().map(|ins_chunk| ins_chunk.filename.clone()).collect::<Vec<_>>().into();
 
   assets.par_iter_mut().for_each(|ins_chunk| {
-    if let InstantiationKind::Ecma(ecma_meta) = &mut ins_chunk.meta {
-      let chunk = &chunk_graph.chunk_table[ins_chunk.originate_from];
+    if let (InstantiationKind::Ecma(ecma_meta), Some(originate_from)) =
+      (&mut ins_chunk.meta, ins_chunk.originate_from)
+    {
+      let chunk = &chunk_graph.chunk_table[originate_from];
       ecma_meta.imports = chunk
         .cross_chunk_imports
         .iter()
@@ -215,7 +217,7 @@ pub async fn finalize_assets(
           .await?
           {
             derived_assets.push(Asset {
-              originate_from: asset.originate_from,
+              originate_from: None,
               content: sourcemap_asset.source,
               filename: sourcemap_asset.filename.clone(),
               map: None,
@@ -256,7 +258,7 @@ pub async fn finalize_assets(
           .await?
           {
             derived_assets.push(Asset {
-              originate_from: asset.originate_from,
+              originate_from: None,
               content: sourcemap_asset.source,
               filename: sourcemap_asset.filename.clone(),
               map: None,

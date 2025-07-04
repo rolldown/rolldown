@@ -464,6 +464,8 @@ pub fn normalize_binding_options(
       .preserve_entry_signatures
       .map(std::convert::TryInto::try_into)
       .transpose()?,
+    // TODO:
+    optimization: None,
   };
 
   #[cfg(not(target_family = "wasm"))]

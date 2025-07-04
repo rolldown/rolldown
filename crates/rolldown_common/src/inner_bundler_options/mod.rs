@@ -11,6 +11,7 @@ use types::make_absolute_externals_relative::MakeAbsoluteExternalsRelative;
 use types::mark_module_loaded::MarkModuleLoaded;
 use types::minify_options::RawMinifyOptions;
 use types::on_log::OnLog;
+use types::optimization::OptimizationOption;
 use types::output_option::{
   AssetFilenamesOutputOption, GlobalsOutputOption, PreserveEntrySignatures,
 };
@@ -212,6 +213,7 @@ pub struct BundlerOptions {
   pub virtual_dirname: Option<String>,
   pub preserve_modules_root: Option<String>,
   pub preserve_entry_signatures: Option<PreserveEntrySignatures>,
+  pub optimization: Option<OptimizationOption>,
 }
 
 impl BundlerOptions {

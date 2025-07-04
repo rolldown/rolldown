@@ -171,3 +171,7 @@ jobs:
       - uses: crate-ci/typos@392b78fe18a52790c53f42456e46124f77346842 # v1.34.0
         with:
           files: .
+
+  test-release-build:
+    name: Test Release build
+    uses: ./.github/workflows/reusable-release-build.yml

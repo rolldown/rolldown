@@ -9,7 +9,7 @@ use rolldown_common::{
   side_effects::DeterminedSideEffects,
 };
 use rolldown_common::{
-  ModuleLoaderMsg, Platform, RUNTIME_MODULE_ID, RUNTIME_MODULE_KEY, ResolvedId, RuntimeModuleBrief,
+  ModuleLoaderMsg, RUNTIME_MODULE_ID, RUNTIME_MODULE_KEY, ResolvedId, RuntimeModuleBrief,
   RuntimeModuleTaskResult,
 };
 use rolldown_ecmascript::{EcmaAst, EcmaCompiler};
@@ -68,7 +68,6 @@ impl RuntimeModuleTask {
     }
   }
 
-  #[expect(clippy::too_many_lines)]
   async fn run_inner(&self) -> BuildResult<()> {
     let source = if self.ctx.options.is_esm_format_with_node_platform() {
       get_runtime_js_with_node_platform().into()
@@ -99,32 +98,17 @@ impl RuntimeModuleTask {
     resolved_id.id = RUNTIME_MODULE_ID.resource_id().clone();
     let module_type = ModuleType::Js;
 
-    let needs_ws_dep =
-      self.ctx.options.is_hmr_enabled() && self.ctx.options.platform == Platform::Node;
-
-    // Special case handling for `ws` in HMR runtime.
-    // TODO(hyf0): we need move hmr related runtime code into a separate module.
-    let resolved_deps = if needs_ws_dep {
-      raw_import_records
-        .iter()
-        .map(|rec| {
-          // We assume the runtime module only has external dependencies.
-          ResolvedId::new_external_without_side_effects(rec.module_request.as_str().into())
-        })
-        .collect()
-    } else {
-      resolve_dependencies(
-        &resolved_id,
-        &self.ctx.options,
-        &self.ctx.resolver,
-        &self.ctx.plugin_driver,
-        &raw_import_records,
-        source.clone(),
-        &mut vec![],
-        &module_type,
-      )
-      .await?
-    };
+    let resolved_deps = resolve_dependencies(
+      &resolved_id,
+      &self.ctx.options,
+      &self.ctx.resolver,
+      &self.ctx.plugin_driver,
+      &raw_import_records,
+      source.clone(),
+      &mut vec![],
+      &module_type,
+    )
+    .await?;
 
     let module = NormalModule {
       idx: self.module_idx,

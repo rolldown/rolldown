@@ -402,14 +402,6 @@ impl GenerateStage<'_> {
   ) -> BuildResult<()> {
     // Determine which modules belong to which chunk. A module could belong to multiple chunks.
     self.link_output.entries.iter().enumerate().for_each(|(i, entry_point)| {
-      if self.options.is_hmr_enabled() {
-        // If HMR is enabled, we need to make sure it belongs to at least one chunk even if no module reaches it.
-        self.determine_reachable_modules_for_entry(
-          self.link_output.runtime.id(),
-          i.try_into().expect("Too many entries, u32 overflowed."),
-          index_splitting_info,
-        );
-      }
       self.determine_reachable_modules_for_entry(
         entry_point.id,
         i.try_into().expect("Too many entries, u32 overflowed."),

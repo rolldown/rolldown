@@ -23,6 +23,7 @@ const napiArgs = [
   '--dts',
   'binding.d.ts',
   '--no-const-enum',
+  '-v',
   ...args,
 ];
 console.info('args:', napiArgs);

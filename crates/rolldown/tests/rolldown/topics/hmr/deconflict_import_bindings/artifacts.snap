@@ -7,13 +7,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```js
 
-//#region rolldown:hmr
-var rolldown_hmr_exports = {};
-const rolldown_hmr_hot = __rolldown_runtime__.createModuleHotContext("rolldown:hmr");
-__rolldown_runtime__.registerModule("rolldown:hmr", { exports: rolldown_hmr_exports });
-globalThis.__rolldown_hmr__ ??= true;
-
-//#endregion
+// HIDDEN [rolldown:hmr]
 //#region foo.mjs
 var foo_exports = {};
 __export(foo_exports, { foo: () => foo$1 });

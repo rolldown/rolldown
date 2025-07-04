@@ -21,13 +21,11 @@ use rolldown_testing_config::TestMeta;
 use serde_json::{Map, Value};
 use sugar_path::SugarPath;
 
-use crate::{
-  hmr_files::{
-    apply_hmr_edit_files_to_hmr_temp_dir, collect_hmr_edit_files,
-    copy_non_hmr_edit_files_to_hmr_temp_dir, get_changed_files_from_hmr_edit_files,
-  },
-  utils::RUNTIME_MODULE_OUTPUT_RE,
+use crate::hmr_files::{
+  apply_hmr_edit_files_to_hmr_temp_dir, collect_hmr_edit_files,
+  copy_non_hmr_edit_files_to_hmr_temp_dir, get_changed_files_from_hmr_edit_files,
 };
+use crate::utils::tweak_snapshot;
 
 #[derive(Default)]
 pub struct IntegrationTest {
@@ -391,11 +389,7 @@ impl IntegrationTest {
           match asset {
             Output::Chunk(output_chunk) => {
               let content = &output_chunk.code;
-              let content = if self.test_meta.hidden_runtime_module {
-                RUNTIME_MODULE_OUTPUT_RE.replace_all(content, "")
-              } else {
-                Cow::Borrowed(content.as_str())
-              };
+              let content = tweak_snapshot(content, self.test_meta.hidden_runtime_module, true);
 
               Some(vec![
                 Cow::Owned(format!("## {}\n", asset.filename())),

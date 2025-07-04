@@ -14,6 +14,7 @@ use super::advanced_chunks_options::AdvancedChunksOptions;
 use super::experimental_options::ExperimentalOptions;
 use super::legal_comments::LegalComments;
 use super::minify_options::MinifyOptions;
+use super::optimization::OptimizationOption;
 use super::output_option::{
   AssetFilenamesOutputOption, ChunkFilenamesOutputOption, PreserveEntrySignatures,
 };
@@ -99,6 +100,7 @@ pub struct NormalizedBundlerOptions {
   pub preserve_modules_root: Option<String>,
   pub preserve_entry_signatures: PreserveEntrySignatures,
   pub debug: bool,
+  pub optimization: OptimizationOption,
 }
 
 // This is only used for testing
@@ -164,6 +166,7 @@ impl Default for NormalizedBundlerOptions {
       preserve_modules_root: Default::default(),
       preserve_entry_signatures: PreserveEntrySignatures::default(),
       debug: false,
+      optimization: OptimizationOption::default(),
     }
   }
 }

@@ -19,6 +19,7 @@ pub mod minify_options;
 pub mod module_type;
 pub mod normalized_bundler_options;
 pub mod on_log;
+pub mod optimization;
 pub mod output_exports;
 pub mod output_format;
 pub mod output_option;

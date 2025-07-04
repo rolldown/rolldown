@@ -461,6 +461,16 @@
               "type": "null"
             }
           ]
+        },
+        "optimization": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/OptimizationOption"
+            },
+            {
+              "type": "null"
+            }
+          ]
         }
       },
       "additionalProperties": false
@@ -1234,6 +1244,19 @@
         "exports-only",
         "false"
       ]
+    },
+    "OptimizationOption": {
+      "type": "object",
+      "properties": {
+        "inlineConst": {
+          "description": "TODO: make the inline_const option more fine grained, e.g. `inline_const: false | true |\n\"on-demand\"`.\nInline constant everywhere not always generate smaller bundle, e.g.\n```js\n// index.js\nimport {long_string} from './foo.js'\nconsole.log(long_string);\nconsole.log(long_string);\nconsole.log(long_string);\nconsole.log(long_string);\nconsole.log(long_string);\n// foo.js\nexport const long_string = 'this is a very long string that will be inlined everywhere';\n```",
+          "type": [
+            "boolean",
+            "null"
+          ]
+        }
+      },
+      "additionalProperties": false
     },
     "ConfigVariant": {
       "type": "object",

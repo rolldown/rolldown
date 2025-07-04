@@ -9,15 +9,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 import nodeAssert from "node:assert";
 
 
-//#region rolldown:hmr
-var rolldown_hmr_exports = {};
-const rolldown_hmr_hot = __rolldown_runtime__.createModuleHotContext("rolldown:hmr");
-__rolldown_runtime__.registerModule("rolldown:hmr", { exports: rolldown_hmr_exports });
-var init_rolldown_hmr = __esm({ "rolldown:hmr"() {
-	globalThis.__rolldown_hmr__ ??= true;
-} });
-
-//#endregion
+// HIDDEN [rolldown:hmr]
 //#region foo.cjs
 var require_foo = __commonJS({ "foo.cjs"(exports, module) {
 	const foo_hot = __rolldown_runtime__.createModuleHotContext("foo.cjs");

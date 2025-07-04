@@ -49,9 +49,10 @@ impl<'a> BuildImportAnalysisVisitor<'a> {
     }
     if matches!(await_expr,  Expression::AwaitExpression(expr) if matches!(expr.argument, Expression::ImportExpression(_)))
     {
-      let property = match member_expr.property.name.as_str() {
-        "default" => self.snippet.atom("__vite_default__"),
-        _ => member_expr.property.name,
+      let (key, value) = match member_expr.property.name.as_str() {
+        // avoid `default` keyword error
+        key @ "default" => (key, "__vite_default__"),
+        _ => (member_expr.property.name.as_str(), member_expr.property.name.as_str()),
       };
       *await_expr = Expression::AwaitExpression(self.snippet.builder.alloc_await_expression(
         SPAN,
@@ -61,10 +62,10 @@ impl<'a> BuildImportAnalysisVisitor<'a> {
               SPAN,
               self.snippet.builder.vec1(self.snippet.builder.binding_property(
                 SPAN,
-                self.snippet.builder.property_key_static_identifier(SPAN, property),
+                self.snippet.builder.property_key_static_identifier(SPAN, key),
                 self.snippet.builder.binding_pattern(
                   BindingPatternKind::BindingIdentifier(
-                    self.snippet.builder.alloc_binding_identifier(SPAN, property),
+                    self.snippet.builder.alloc_binding_identifier(SPAN, value),
                   ),
                   NONE,
                   false,

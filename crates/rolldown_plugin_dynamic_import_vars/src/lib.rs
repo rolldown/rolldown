@@ -3,7 +3,6 @@ mod dynamic_import_to_glob;
 
 use std::{borrow::Cow, path::Path, pin::Pin, sync::Arc};
 
-use ast_visit::DynamicImportVarsVisitConfig;
 use derive_more::Debug;
 use oxc::{ast::AstBuilder, ast_visit::VisitMut};
 use rolldown_plugin::{
@@ -12,10 +11,10 @@ use rolldown_plugin::{
   PluginContext,
 };
 use rolldown_utils::{
-  futures::block_on_spawn_all,
+  futures::{block_on, block_on_spawn_all},
   pattern_filter::{StringOrRegex, filter as pattern_filter},
 };
-use sugar_path::SugarPath;
+use sugar_path::SugarPath as _;
 
 pub const DYNAMIC_IMPORT_HELPER: &str = "\0rolldown_dynamic_import_helper.js";
 
@@ -74,63 +73,53 @@ impl Plugin for DynamicImportVarsPlugin {
     if !self.filter(args.id, args.cwd) {
       return Ok(args.ast);
     }
-
-    let mut config = None;
-
-    // TODO: Ignore if includes a marker like "/* @rolldown-ignore */"
     args.ast.program.with_mut(|fields| {
       let source_text = fields.source.as_str();
       let ast_builder = AstBuilder::new(fields.allocator);
       let mut visitor = ast_visit::DynamicImportVarsVisit {
-        ast_builder,
         source_text,
-        config: DynamicImportVarsVisitConfig {
-          async_enabled: self.resolver.is_some(),
-          ..Default::default()
-        },
+        ast_builder,
+        root: args.cwd,
+        importer: args.id.as_path(),
+        need_helper: false,
+        async_imports: Vec::default(),
+        async_imports_addrs: Vec::default(),
       };
 
       visitor.visit_program(fields.program);
 
-      if visitor.config.async_enabled && !visitor.config.async_imports.is_empty() {
-        visitor.config.current = 0;
-        config = Some(visitor.config);
-      } else if visitor.config.need_helper {
-        fields.program.body.push(visitor.import_helper());
+      if !visitor.async_imports.is_empty()
+        && let Some(resolver) = &self.resolver
+      {
+        let async_imports = std::mem::take(&mut visitor.async_imports);
+        let task = async_imports
+          .into_iter()
+          .map(|glob| async { resolver(glob, args.id.to_string()).await.ok()? });
+
+        let importer = args.id.as_path().parent().unwrap();
+        let result = block_on(block_on_spawn_all(task));
+        for (i, item) in result.into_iter().enumerate() {
+          if let Some(id) = item {
+            let id = id.relative(importer);
+            let id = id.to_slash_lossy();
+            let id = if id.is_empty() {
+              continue;
+            } else if id.as_bytes()[0] == b'.' {
+              id.into_owned()
+            } else {
+              rolldown_utils::concat_string!("./", id)
+            };
+
+            let addr = visitor.async_imports_addrs[i];
+            visitor.rewrite_variable_dynamic_import(unsafe { &mut *addr }, Some(&id));
+          }
+        }
+      }
+
+      if visitor.need_helper {
+        fields.program.body.push(visitor.variable_dynamic_import_runtime_helper());
       }
     });
-
-    if let Some(mut config) = config {
-      let resolver = self.resolver.as_ref().unwrap();
-      let iter = config.async_imports.into_iter().map(async |source| {
-        let importer = args.id.as_path().parent().unwrap();
-        resolver(source.unwrap(), args.id.to_string()).await.ok()?.and_then(|id| {
-          let id = id.relative(importer);
-          let id = id.to_slash_lossy();
-          if id.is_empty() {
-            None
-          } else if id.as_bytes()[0] != b'.' {
-            Some(rolldown_utils::concat_string!("./", id))
-          } else {
-            Some(id.into_owned())
-          }
-        })
-      });
-
-      config.async_imports = block_on_spawn_all(iter).await;
-
-      args.ast.program.with_mut(|fields| {
-        let source_text = fields.source.as_str();
-        let ast_builder = AstBuilder::new(fields.allocator);
-        let mut visitor = ast_visit::DynamicImportVarsVisit { ast_builder, source_text, config };
-
-        visitor.visit_program(fields.program);
-
-        if visitor.config.need_helper {
-          fields.program.body.push(visitor.import_helper());
-        }
-      });
-    }
 
     Ok(args.ast)
   }

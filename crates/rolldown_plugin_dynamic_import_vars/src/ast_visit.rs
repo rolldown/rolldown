@@ -1,4 +1,4 @@
-use std::borrow::Cow;
+use std::{borrow::Cow, path::Path};
 
 use cow_utils::CowUtils;
 use oxc::{
@@ -6,10 +6,11 @@ use oxc::{
     AstBuilder, NONE,
     ast::{Argument, Expression, ImportOrExportKind, PropertyKind, Statement},
   },
-  ast_visit::VisitMut,
-  span::{Atom, SPAN, Span},
+  ast_visit::{VisitMut, walk_mut},
+  span::SPAN,
   syntax::number::NumberBase,
 };
+use sugar_path::SugarPath as _;
 
 use super::DYNAMIC_IMPORT_HELPER;
 use super::dynamic_import_to_glob::{
@@ -22,165 +23,181 @@ struct DynamicImportRequest<'a> {
   pub import: bool,
 }
 
-#[derive(Default)]
-pub struct DynamicImportVarsVisitConfig {
-  pub current: usize,
-  pub need_helper: bool,
-  pub async_enabled: bool,
-  pub async_imports: Vec<Option<String>>,
-}
-
-pub struct DynamicImportVarsVisit<'ast> {
-  pub config: DynamicImportVarsVisitConfig,
+pub struct DynamicImportVarsVisit<'ast, 'b> {
   pub source_text: &'ast str,
   pub ast_builder: AstBuilder<'ast>,
+  pub root: &'b Path,
+  pub importer: &'b Path,
+  pub need_helper: bool,
+  pub async_imports: Vec<String>,
+  pub async_imports_addrs: Vec<*mut Expression<'ast>>,
 }
 
-impl<'ast> VisitMut<'ast> for DynamicImportVarsVisit<'ast> {
-  #[allow(clippy::too_many_lines)]
+impl<'ast> VisitMut<'ast> for DynamicImportVarsVisit<'ast, '_> {
   fn visit_expression(&mut self, expr: &mut Expression<'ast>) {
-    let Expression::ImportExpression(import_expr) = expr else { return };
-    let Expression::TemplateLiteral(source) = &mut import_expr.source else { return };
-    if source.is_no_substitution_template() {
-      return;
+    if self.rewrite_variable_dynamic_import(expr, None) {
+      walk_mut::walk_expression(self, expr);
     }
-
-    let prev = self.config.current;
-    let (glob, is_async) = if prev < self.config.async_imports.len() {
-      self.config.current += 1;
-      if let Some(glob) = &self.config.async_imports[prev] {
-        (Cow::Borrowed(glob.as_str()), true)
-      } else {
-        return;
-      }
-    } else {
-      let glob = template_literal_to_glob(source).unwrap();
-      let byte = source.quasis[0].value.raw.as_bytes();
-      if self.config.async_enabled && byte.first().is_some_and(|&b| b != b'.' && b != b'/') {
-        self.config.current += 1;
-        self.config.async_imports.push(Some(glob.into_owned()));
-        return;
-      }
-      (glob, false)
-    };
-
-    if should_ignore(&glob) {
-      return;
-    }
-
-    let Some(index) = memchr::memchr(b'*', glob.as_bytes()) else { return };
-
-    let glob = glob.cow_replace("**", "*");
-    let source_text = source.span.source_text(self.source_text);
-
-    let (pattern, glob_params) = {
-      let index = glob.rfind('/').unwrap_or(0);
-      let index = glob[index..].find('?').map_or(glob.len(), |i| i + index);
-
-      let (glob, query) = glob.split_at(index);
-
-      let glob = to_valid_glob(glob, source_text).unwrap();
-      let glob_params = (!query.is_empty())
-        .then_some(DynamicImportRequest { query, import: has_special_query_param(query) });
-
-      (glob, glob_params)
-    };
-
-    self.config.need_helper = true;
-
-    if is_async && &glob[..index] != source.quasis[0].value.raw {
-      let glob = self.ast_builder.allocator.alloc_str(&glob[..index]);
-      source.quasis[0].value.raw = Atom::from(glob);
-      source.quasis[0].value.cooked = None;
-    }
-
-    *expr = self.call_helper(
-      import_expr.span,
-      &pattern,
-      std::mem::replace(&mut import_expr.source, self.ast_builder.expression_null_literal(SPAN)),
-      glob_params,
-    );
   }
 }
 
-impl<'ast> DynamicImportVarsVisit<'ast> {
-  /// generates:
+impl<'ast> DynamicImportVarsVisit<'ast, '_> {
+  pub fn rewrite_variable_dynamic_import(
+    &mut self,
+    expr: &mut Expression<'ast>,
+    async_imports: Option<&str>,
+  ) -> bool {
+    if let Expression::ImportExpression(import_expr) = expr
+      && let Expression::TemplateLiteral(source) = &mut import_expr.source
+    {
+      let glob = match async_imports {
+        Some(glob) => Cow::Borrowed(glob),
+        None => {
+          if source.is_no_substitution_template() {
+            return false;
+          }
+
+          // TODO(shulaoda): handle this error
+          let glob = template_literal_to_glob(source).unwrap();
+          if memchr::memchr(b'*', glob.as_bytes()).is_none() || should_ignore(&glob) {
+            return false;
+          }
+
+          if glob.as_bytes()[0] != b'.' && glob.as_bytes()[0] != b'/' {
+            self.async_imports.push(glob.into_owned());
+            self.async_imports_addrs.push(std::ptr::from_mut(expr));
+            return false;
+          }
+
+          glob
+        }
+      };
+
+      let base = self.importer.parent().unwrap_or(self.root);
+      let normalized = if glob.as_bytes()[0] == b'/' {
+        self.root.join(&glob[1..]).relative(base)
+      } else {
+        base.join(glob.as_ref()).relative(base)
+      };
+
+      let glob = normalized.to_slash_lossy();
+      let glob = if glob.as_bytes()[0] == b'.' {
+        glob.into_owned()
+      } else {
+        rolldown_utils::concat_string!("./", glob)
+      };
+
+      let Some(index) = memchr::memchr(b'*', glob.as_bytes()) else {
+        return false;
+      };
+      if &glob[..index] != source.quasis[0].value.raw {
+        source.quasis[0].value.raw = self.ast_builder.atom(&glob[..index]);
+        source.quasis[0].value.cooked = None;
+      }
+
+      let glob = glob.cow_replace("**", "*");
+      let source_text = source.span.source_text(self.source_text);
+
+      let (pattern, glob_params) = {
+        let index = glob.rfind('/').unwrap_or(0);
+        let index = glob[index..].find('?').map_or(glob.len(), |i| i + index);
+
+        let (glob, query) = glob.split_at(index);
+
+        let glob = to_valid_glob(glob, source_text).unwrap();
+        let params = (!query.is_empty())
+          .then_some(DynamicImportRequest { query, import: has_special_query_param(query) });
+
+        (glob, params)
+      };
+
+      *expr = self.variable_dynamic_import_runtime_helper_call(
+        &pattern,
+        std::mem::replace(&mut import_expr.source, self.ast_builder.expression_null_literal(SPAN)),
+        glob_params,
+      );
+
+      self.need_helper = true;
+      return false;
+    }
+    true
+  }
+
   /// ```js
   /// __variableDynamicImportRuntimeHelper((import.meta.glob(pattern, params)), expr, segments)
   /// ```
   #[allow(clippy::cast_precision_loss)]
-  fn call_helper(
+  fn variable_dynamic_import_runtime_helper_call(
     &self,
-    span: Span,
     pattern: &str,
-    expr: Expression<'ast>,
-    params: Option<DynamicImportRequest>,
+    raw_expr: Expression<'ast>,
+    glob_params: Option<DynamicImportRequest>,
   ) -> Expression<'ast> {
     let segments = pattern.split('/').count();
     self.ast_builder.expression_call(
-      span,
+      SPAN,
       self.ast_builder.expression_identifier(SPAN, "__variableDynamicImportRuntimeHelper"),
       NONE,
       {
-        let mut items = self.ast_builder.vec();
-        items.push(Argument::from(self.ast_builder.expression_parenthesized(
+        let mut items = self.ast_builder.vec_with_capacity(3);
+        items.push(Argument::from(self.ast_builder.expression_call(
           SPAN,
-          self.ast_builder.expression_call(
+          Expression::from(self.ast_builder.member_expression_static(
             SPAN,
-            Expression::from(self.ast_builder.member_expression_static(
+            self.ast_builder.expression_meta_property(
               SPAN,
-              self.ast_builder.expression_meta_property(
-                SPAN,
-                self.ast_builder.identifier_name(SPAN, "import"),
-                self.ast_builder.identifier_name(SPAN, "meta"),
-              ),
-              self.ast_builder.identifier_name(SPAN, "glob"),
-              false,
-            )),
-            NONE,
-            {
-              let mut arguments =
-                self.ast_builder.vec1(Argument::from(self.ast_builder.expression_string_literal(
-                  SPAN,
-                  self.ast_builder.atom(pattern),
-                  None,
-                )));
-              if let Some(params) = params {
-                arguments.push(Argument::from(self.ast_builder.expression_object(SPAN, {
-                  let mut items =
-                    self.ast_builder.vec1(self.ast_builder.object_property_kind_object_property(
-                      SPAN,
-                      PropertyKind::Init,
-                      self.ast_builder.property_key_static_identifier(SPAN, "query"),
-                      self.ast_builder.expression_string_literal(
-                        SPAN,
-                        self.ast_builder.atom(params.query),
-                        None,
-                      ),
-                      false,
-                      false,
-                      false,
-                    ));
-                  if params.import {
-                    items.push(self.ast_builder.object_property_kind_object_property(
-                      SPAN,
-                      PropertyKind::Init,
-                      self.ast_builder.property_key_static_identifier(SPAN, "import"),
-                      self.ast_builder.expression_string_literal(SPAN, "*", None),
-                      false,
-                      false,
-                      false,
-                    ));
-                  }
-                  items
-                })));
-              }
-              arguments
-            },
+              self.ast_builder.identifier_name(SPAN, "import"),
+              self.ast_builder.identifier_name(SPAN, "meta"),
+            ),
+            self.ast_builder.identifier_name(SPAN, "glob"),
             false,
-          ),
+          )),
+          NONE,
+          {
+            let mut arguments =
+              self.ast_builder.vec_with_capacity(if glob_params.is_some() { 2 } else { 1 });
+            arguments.push(Argument::from(self.ast_builder.expression_string_literal(
+              SPAN,
+              self.ast_builder.atom(pattern),
+              None,
+            )));
+
+            if let Some(params) = glob_params {
+              arguments.push(Argument::from(self.ast_builder.expression_object(SPAN, {
+                let mut items =
+                  self.ast_builder.vec_with_capacity(if params.import { 2 } else { 1 });
+                items.push(self.ast_builder.object_property_kind_object_property(
+                  SPAN,
+                  PropertyKind::Init,
+                  self.ast_builder.property_key_static_identifier(SPAN, "query"),
+                  self.ast_builder.expression_string_literal(
+                    SPAN,
+                    self.ast_builder.atom(params.query),
+                    None,
+                  ),
+                  false,
+                  false,
+                  false,
+                ));
+                if params.import {
+                  items.push(self.ast_builder.object_property_kind_object_property(
+                    SPAN,
+                    PropertyKind::Init,
+                    self.ast_builder.property_key_static_identifier(SPAN, "import"),
+                    self.ast_builder.expression_string_literal(SPAN, "*", None),
+                    false,
+                    false,
+                    false,
+                  ));
+                }
+                items
+              })));
+            }
+            arguments
+          },
+          false,
         )));
-        items.push(Argument::from(expr));
+        items.push(Argument::from(raw_expr));
         items.push(Argument::from(self.ast_builder.expression_numeric_literal(
           SPAN,
           segments as f64,
@@ -193,11 +210,10 @@ impl<'ast> DynamicImportVarsVisit<'ast> {
     )
   }
 
-  /// generates:
   /// ```js
   /// import __variableDynamicImportRuntimeHelper from "${dynamicImportHelperId}";
   /// ```
-  pub fn import_helper(&self) -> Statement<'ast> {
+  pub fn variable_dynamic_import_runtime_helper(&self) -> Statement<'ast> {
     Statement::from(self.ast_builder.module_declaration_import_declaration(
       SPAN,
       Some(self.ast_builder.vec1(

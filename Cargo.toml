@@ -153,6 +153,7 @@ mimalloc-safe = "0.1.52"
 mime = "0.3.17"
 nom = "8.0.0"
 notify = "8.1.0"
+num-bigint = "0.4.6"
 num-format = "0.4"
 petgraph = "0.8.1"
 phf = "0.12.0"
@@ -160,7 +161,7 @@ rayon = "1.10.0"
 regex = "1.11.1"
 regress = "0.10.3"
 ropey = "1.6.1"
-rustc-hash = "2.1.1"
+rustc-hash = { version = "2.1.1" }
 schemars = "1.0.0"
 self_cell = "1.2.0"
 serde = { version = "1.0.219", features = ["derive"] }
@@ -196,6 +197,7 @@ napi-derive = { version = "3.0.0-beta.11", default-features = false, features = 
 # oxc crates with the same version
 
 oxc = { version = "0.75.1", features = ["ast_visit", "transformer", "minifier", "mangler", "semantic", "codegen", "serialize", "isolated_declarations", "regular_expression", "cfg"] }
+oxc_ecmascript = { version = "0.75.1" }
 oxc_parser_napi = { version = "0.75.1" }
 oxc_transform_napi = { version = "0.75.1" }
 

@@ -112,6 +112,7 @@ pub use crate::{
   types::bundler_file_system::BundlerFileSystem,
   types::chunk_idx::ChunkIdx,
   types::chunk_kind::ChunkKind,
+  types::constant_value::{ConstExportMeta, ConstantValue},
   types::deconflict::ModuleScopeSymbolIdMap,
   types::defer_sync_scan_data::DeferSyncScanData,
   types::ecma_ast_idx::EcmaAstIdx,

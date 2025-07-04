@@ -4985,6 +4985,19 @@ expression: output
 - main-!~{000}~.js => main-DrOlrm86.js
 - main-DrOlrm86.js.map
 
+# tests/rolldown/optimization/inline_const/basic
+
+- main-!~{000}~.js => main-e8OGQxlo.js
+
+# tests/rolldown/optimization/inline_const/issue_4786
+
+- page-a-!~{000}~.js => page-a-CEB9NEBh.js
+- page-b-!~{001}~.js => page-b-CatnFucT.js
+
+# tests/rolldown/optimization/inline_const/ns_chain
+
+- main-!~{000}~.js => main-Brb9u1JP.js
+
 # tests/rolldown/resolve/add_module_condition_by_default
 
 - main-!~{000}~.js => main-PHNGJQWh.js

@@ -4,10 +4,10 @@ use itertools::Itertools;
 use oxc_index::IndexVec;
 use petgraph::prelude::DiGraphMap;
 use rolldown_common::{
-  EcmaModuleAstUsage, EcmaViewMeta, EntryPoint, EntryPointKind, ExportsKind, ImportKind,
-  ImportRecordIdx, ImportRecordMeta, IndexModules, Module, ModuleIdx, ModuleType, NormalModule,
-  NormalizedBundlerOptions, StmtInfoIdx, StmtSideEffect, SymbolOrMemberExprRef, SymbolRef,
-  SymbolRefDb, dynamic_import_usage::DynamicImportExportsUsage,
+  ConstExportMeta, EcmaModuleAstUsage, EcmaViewMeta, EntryPoint, EntryPointKind, ExportsKind,
+  ImportKind, ImportRecordIdx, ImportRecordMeta, IndexModules, Module, ModuleIdx, ModuleType,
+  NormalModule, NormalizedBundlerOptions, StmtInfoIdx, StmtSideEffect, SymbolOrMemberExprRef,
+  SymbolRef, SymbolRefDb, dynamic_import_usage::DynamicImportExportsUsage,
   side_effects::DeterminedSideEffects,
 };
 use rolldown_utils::rayon::{IntoParallelRefMutIterator, ParallelIterator};
@@ -24,6 +24,7 @@ struct Context<'a> {
   runtime_id: ModuleIdx,
   metas: &'a LinkingMetadataVec,
   used_symbol_refs: &'a mut FxHashSet<SymbolRef>,
+  constant_symbol_map: &'a FxHashMap<SymbolRef, ConstExportMeta>,
   options: &'a NormalizedBundlerOptions,
   normal_symbol_exports_chain_map: &'a FxHashMap<SymbolRef, Vec<SymbolRef>>,
   /// It is necessary since we can't mutate `module.meta` during the tree shaking process.
@@ -59,6 +60,7 @@ impl LinkStage<'_> {
       // used_exports_info_vec: &mut used_exports_info_vec,
       metas: &self.metas,
       used_symbol_refs: &mut used_symbol_refs,
+      constant_symbol_map: &self.constant_symbol_map,
       options: self.options,
       normal_symbol_exports_chain_map: &self.normal_symbol_exports_chain_map,
       bailout_cjs_tree_shaking_modules: FxHashSet::default(),
@@ -425,6 +427,15 @@ fn include_module(ctx: &mut Context, module: &NormalModule) {
 fn include_symbol(ctx: &mut Context, symbol_ref: SymbolRef) {
   let mut canonical_ref = ctx.symbols.canonical_ref_for(symbol_ref);
 
+  if let Some(v) = ctx.constant_symbol_map.get(&canonical_ref)
+    && !v.commonjs_export
+  {
+    // If the symbol is a constant value and it is not a commonjs module export , we don't need to include it since it would be always inline
+    // We don't need to add anyflag since if `inlineConst` is disabled, the test expr will always
+    // return `false`
+    return;
+  }
+
   if !ctx.may_partial_namespace {
     if let Some(idx) =
       ctx.metas[canonical_ref.owner].import_record_ns_to_cjs_module.get(&canonical_ref)
@@ -523,7 +534,8 @@ fn include_statement(ctx: &mut Context, module: &NormalModule, stmt_info_id: Stm
       // it means this member expr definitely contains module namespace ref.
       if let Some(resolved_ref) = member_expr_resolution.resolved {
         let pre = ctx.may_partial_namespace;
-        ctx.may_partial_namespace = member_expr_resolution.is_cjs_symbol;
+        ctx.may_partial_namespace =
+          member_expr_resolution.target_commonjs_exported_symbol.is_some();
         member_expr_resolution.depended_refs.iter().for_each(|sym_ref| {
           if let Module::Normal(module) = &ctx.modules[sym_ref.owner] {
             module.stmt_infos.declared_stmts_by_symbol(sym_ref).iter().copied().for_each(

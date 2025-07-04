@@ -8,9 +8,9 @@ use oxc::{
   span::{GetSpan, Span},
 };
 use rolldown_common::{
-  EcmaModuleAstUsage, ImportKind, ImportRecordMeta, LocalExport, RUNTIME_MODULE_KEY, StmtInfoMeta,
-  ThisExprReplaceKind, dynamic_import_usage::DynamicImportExportsUsage,
-  generate_replace_this_expr_map,
+  ConstExportMeta, EcmaModuleAstUsage, ImportKind, ImportRecordMeta, LocalExport,
+  RUNTIME_MODULE_KEY, StmtInfoMeta, ThisExprReplaceKind,
+  dynamic_import_usage::DynamicImportExportsUsage, generate_replace_this_expr_map,
 };
 #[cfg(debug_assertions)]
 use rolldown_ecmascript::ToSourceString;
@@ -200,6 +200,13 @@ impl<'me, 'ast: 'me> Visit<'ast> for AstScanner<'me, 'ast> {
                   self.result.symbol_ref_db.create_facade_root_symbol_ref(export_name);
 
                 self.declare_link_only_symbol_ref(exported_symbol.symbol);
+
+                if let Some(value) = self.extract_constant_value_from_expr(Some(&node.right)) {
+                  self
+                    .result
+                    .constant_export_map
+                    .insert(exported_symbol.symbol, ConstExportMeta::new(value, true));
+                }
 
                 self.result.commonjs_exports.insert(
                   export_name.into(),

@@ -494,7 +494,7 @@ impl LinkStage<'_> {
                           resolved: None,
                           props: member_expr_ref.props[cursor..].to_vec(),
                           depended_refs: vec![],
-                          is_cjs_symbol: false,
+                          target_commonjs_exported_symbol: None,
                         },
                       );
                       warnings.push(
@@ -517,7 +517,7 @@ impl LinkStage<'_> {
                         resolved: None,
                         props: member_expr_ref.props[cursor..].to_vec(),
                         depended_refs: vec![],
-                        is_cjs_symbol: false,
+                        target_commonjs_exported_symbol: None,
                       },
                     );
                     return;
@@ -539,7 +539,7 @@ impl LinkStage<'_> {
                   cursor += 1;
                   is_namespace_ref = canonical_ref_owner.namespace_object_ref == canonical_ref;
                 }
-                let mut is_cjs_symbol = false;
+                let mut target_commonjs_exported_symbol = None;
                 // Although the last one may not be a namespace ref, but it may reference a cjs
                 // import record namespace, which may reference a export in commonjs module.
                 // TODO: we could record if a module could potential reference a cjs symbol
@@ -573,7 +573,7 @@ impl LinkStage<'_> {
                         })
                     })
                   {
-                    is_cjs_symbol = true;
+                    target_commonjs_exported_symbol = Some(m.symbol_ref);
                     depended_refs.push(m.symbol_ref);
                   }
                 }
@@ -589,14 +589,14 @@ impl LinkStage<'_> {
                   );
                 }
 
-                if cursor > 0 || is_cjs_symbol {
+                if cursor > 0 || target_commonjs_exported_symbol.is_some() {
                   resolved_map.insert(
                     member_expr_ref.span,
                     MemberExprRefResolution {
                       resolved: Some(canonical_ref),
                       props: member_expr_ref.props[cursor..].to_vec(),
                       depended_refs,
-                      is_cjs_symbol,
+                      target_commonjs_exported_symbol,
                     },
                   );
                 }

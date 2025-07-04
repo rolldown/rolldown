@@ -1,4 +1,5 @@
 mod cjs_ast_analyzer;
+mod const_eval;
 pub mod dynamic_import;
 mod hmr;
 pub mod impl_visit;
@@ -7,6 +8,8 @@ mod new_url;
 pub mod side_effect_detector;
 
 use arcstr::ArcStr;
+use const_eval::{ConstEvalCtx, try_extract_const_literal};
+use oxc::ast::ast::{BindingPatternKind, Expression};
 use oxc::ast::{AstKind, ast};
 use oxc::semantic::{Reference, ScopeFlags, ScopeId, Scoping};
 use oxc::span::SPAN;
@@ -25,10 +28,10 @@ use oxc::{
 use oxc_index::IndexVec;
 use rolldown_common::dynamic_import_usage::{DynamicImportExportsUsage, DynamicImportUsageInfo};
 use rolldown_common::{
-  EcmaModuleAstUsage, ExportsKind, HmrInfo, ImportKind, ImportRecordIdx, ImportRecordMeta,
-  LocalExport, MemberExprRef, ModuleDefFormat, ModuleId, ModuleIdx, NamedImport, RawImportRecord,
-  Specifier, StmtInfo, StmtInfos, StmtSideEffect, SymbolRef, SymbolRefDbForModule, SymbolRefFlags,
-  TaggedSymbolRef, ThisExprReplaceKind,
+  ConstExportMeta, ConstantValue, EcmaModuleAstUsage, ExportsKind, HmrInfo, ImportKind,
+  ImportRecordIdx, ImportRecordMeta, LocalExport, MemberExprRef, ModuleDefFormat, ModuleId,
+  ModuleIdx, NamedImport, RawImportRecord, Specifier, StmtInfo, StmtInfos, StmtSideEffect,
+  SymbolRef, SymbolRefDbForModule, SymbolRefFlags, TaggedSymbolRef, ThisExprReplaceKind,
 };
 use rolldown_ecmascript_utils::{BindingIdentifierExt, BindingPatternExt};
 use rolldown_error::{BuildDiagnostic, BuildResult, CjsExportSpan};
@@ -103,6 +106,7 @@ pub struct ScanResult {
   pub hmr_info: HmrInfo,
   pub hmr_hot_ref: Option<SymbolRef>,
   pub directive_range: Vec<Span>,
+  pub constant_export_map: FxHashMap<SymbolId, ConstExportMeta>,
 }
 
 pub struct AstScanner<'me, 'ast> {
@@ -130,6 +134,7 @@ pub struct AstScanner<'me, 'ast> {
   is_nested_this_inside_class: bool,
   /// Used in commonjs module it self
   self_used_cjs_named_exports: FxHashSet<Rstr>,
+  allocator: &'ast oxc::allocator::Allocator,
 }
 
 impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
@@ -143,6 +148,7 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
     file_path: &'me ModuleId,
     comments: &'me oxc::allocator::Vec<'me, Comment>,
     options: &'me SharedOptions,
+    allocator: &'ast oxc::allocator::Allocator,
   ) -> Self {
     let root_scope_id = scoping.root_scope_id();
     let mut symbol_ref_db = SymbolRefDbForModule::new(scoping, idx, root_scope_id);
@@ -189,9 +195,11 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
       directive_range: vec![],
       dummy_record_set: FxHashSet::default(),
       commonjs_exports: FxHashMap::default(),
+      constant_export_map: FxHashMap::default(),
     };
 
     Self {
+      allocator,
       idx,
       current_stmt_info: StmtInfo::default(),
       result,
@@ -624,6 +632,14 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
               decl.id.binding_identifiers().into_iter().for_each(|id| {
                 self.add_local_export(&id.name, id.expect_symbol_id(), id.span);
               });
+              if let BindingPatternKind::BindingIdentifier(ref binding) = decl.id.kind
+                && let Some(value) = self.extract_constant_value_from_expr(decl.init.as_ref())
+              {
+                self
+                  .result
+                  .constant_export_map
+                  .insert(binding.symbol_id(), ConstExportMeta::new(value, false));
+              }
             });
           }
           ast::Declaration::FunctionDeclaration(fn_decl) => {
@@ -664,9 +680,12 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
         .map(|id| (rolldown_ecmascript_utils::BindingIdentifierExt::expect_symbol_id(id), id.span)),
       ast::ExportDefaultDeclarationKind::TSInterfaceDeclaration(_) => unreachable!(),
     };
-
     let (reference, span) = local_binding_for_default_export
       .unwrap_or((self.result.default_export_ref.symbol, Span::default()));
+
+    if let Some(v) = self.extract_constant_value_from_expr(decl.declaration.as_expression()) {
+      self.result.constant_export_map.insert(reference, ConstExportMeta::new(v, false));
+    }
 
     self.declare_normal_symbol_ref(reference);
     self.add_local_default_export(reference, span);
@@ -843,6 +862,24 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
       }
     }
     false
+  }
+
+  #[inline]
+  pub fn create_constant_eval_ctx(&'me self) -> ConstEvalCtx<'me, 'ast> {
+    ConstEvalCtx {
+      ast: oxc::ast::AstBuilder::new(self.allocator),
+      scope: self.result.symbol_ref_db.scoping(),
+    }
+  }
+
+  pub fn extract_constant_value_from_expr(
+    &self,
+    expr: Option<&Expression<'ast>>,
+  ) -> Option<ConstantValue> {
+    if !self.options.optimization.is_inline_const_enabled() {
+      return None;
+    }
+    expr.and_then(|expr| try_extract_const_literal(&self.create_constant_eval_ctx(), expr))
   }
 }
 

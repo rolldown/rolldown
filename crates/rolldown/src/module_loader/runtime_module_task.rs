@@ -196,6 +196,7 @@ impl RuntimeModuleTask {
         hmr_hot_ref: None,
         directive_range: vec![],
         dummy_record_set,
+        constant_export_map: FxHashMap::default(),
       },
       css_view: None,
       asset_view: None,
@@ -240,6 +241,7 @@ impl RuntimeModuleTask {
       &facade_path,
       ast.comments(),
       &self.ctx.options,
+      ast.allocator(),
     );
     let scan_result = scanner.scan(ast.program())?;
 

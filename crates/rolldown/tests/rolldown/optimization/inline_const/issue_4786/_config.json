@@ -1,0 +1,17 @@
+{
+  "config": {
+    "input": [
+      {
+        "import": "./page-a.js"
+      },
+      {
+        "import": "./page-b.js"
+      }
+    ],
+    "optimization": {
+      "inlineConst": true
+    },
+    "minify": true
+  },
+  "snapshot": false
+}

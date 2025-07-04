@@ -1,6 +1,6 @@
 use rolldown_common::{
-  ChunkIdx, IndexModules, ModuleIdx, NormalModule, RuntimeModuleBrief, SharedFileEmitter,
-  SymbolRef, SymbolRefDb,
+  ChunkIdx, ConstExportMeta, IndexModules, ModuleIdx, NormalModule, RuntimeModuleBrief,
+  SharedFileEmitter, SymbolRef, SymbolRefDb,
 };
 
 use rolldown_rstr::Rstr;
@@ -27,4 +27,5 @@ pub struct ScopeHoistingFinalizerContext<'me> {
   pub cur_stmt_index: usize,
   pub keep_name_statement_to_insert: Vec<(usize, Rstr, Rstr)>,
   pub file_emitter: &'me SharedFileEmitter,
+  pub constant_value_map: &'me FxHashMap<SymbolRef, ConstExportMeta>,
 }

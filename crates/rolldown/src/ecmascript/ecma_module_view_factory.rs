@@ -46,6 +46,7 @@ pub async fn create_ecma_view(
     &module_id,
     ast.comments(),
     ctx.options,
+    ast.allocator(),
   );
 
   let ScanResult {
@@ -73,6 +74,7 @@ pub async fn create_ecma_view(
     hmr_hot_ref,
     directive_range,
     dummy_record_set,
+    constant_export_map,
   } = scanner.scan(ast.program())?;
 
   named_exports.extend(commonjs_exports);
@@ -134,6 +136,7 @@ pub async fn create_ecma_view(
     hmr_hot_ref,
     directive_range,
     dummy_record_set,
+    constant_export_map,
   };
 
   let ecma_related = EcmaRelated { ast, symbols, dynamic_import_rec_exports_usage };

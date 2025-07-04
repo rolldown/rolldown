@@ -26,3 +26,10 @@ pub struct OptimizationOption {
   /// ```
   pub inline_const: Option<bool>,
 }
+
+impl OptimizationOption {
+  #[inline]
+  pub fn is_inline_const_enabled(&self) -> bool {
+    self.inline_const.unwrap_or(false)
+  }
+}

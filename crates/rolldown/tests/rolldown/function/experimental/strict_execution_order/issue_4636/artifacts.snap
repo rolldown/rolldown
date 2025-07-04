@@ -9,6 +9,15 @@ source: crates/rolldown_testing/src/integration_test.rs
 import nodeAssert from "node:assert";
 
 
+//#region rolldown:hmr
+var rolldown_hmr_exports = {};
+const rolldown_hmr_hot = __rolldown_runtime__.createModuleHotContext("rolldown:hmr");
+__rolldown_runtime__.registerModule("rolldown:hmr", { exports: rolldown_hmr_exports });
+var init_rolldown_hmr = __esm({ "rolldown:hmr"() {
+	globalThis.__rolldown_hmr__ ??= true;
+} });
+
+//#endregion
 //#region foo.cjs
 var require_foo = __commonJS({ "foo.cjs"(exports, module) {
 	const foo_hot = __rolldown_runtime__.createModuleHotContext("foo.cjs");
@@ -23,6 +32,7 @@ const main_hot = __rolldown_runtime__.createModuleHotContext("main.js");
 __rolldown_runtime__.registerModule("main.js", { exports: main_exports });
 var import_foo;
 var init_main = __esm({ "main.js"() {
+	init_rolldown_hmr();
 	import_foo = __toESM(require_foo());
 	nodeAssert.strictEqual(import_foo.value, "foo");
 } });

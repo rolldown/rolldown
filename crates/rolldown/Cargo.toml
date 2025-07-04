@@ -43,6 +43,7 @@ rolldown_fs = { workspace = true, features = ["os"] }
 rolldown_loader_utils = { workspace = true }
 rolldown_plugin = { workspace = true }
 rolldown_plugin_data_uri = { workspace = true }
+rolldown_plugin_hmr = { workspace = true }
 rolldown_resolver = { workspace = true }
 rolldown_rstr = { workspace = true }
 rolldown_sourcemap = { workspace = true }

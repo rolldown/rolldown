@@ -9,6 +9,13 @@ source: crates/rolldown_testing/src/integration_test.rs
 import assert from "node:assert";
 
 
+//#region rolldown:hmr
+var rolldown_hmr_exports = {};
+const rolldown_hmr_hot = __rolldown_runtime__.createModuleHotContext("rolldown:hmr");
+__rolldown_runtime__.registerModule("rolldown:hmr", { exports: rolldown_hmr_exports });
+globalThis.__rolldown_hmr__ ??= true;
+
+//#endregion
 //#region lib.js
 var require_lib = __commonJS({ "lib.js"(exports, module) {
 	const lib_hot = __rolldown_runtime__.createModuleHotContext("lib.js");

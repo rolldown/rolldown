@@ -1109,20 +1109,20 @@ expression: output
 
 # tests/esbuild/default/legal_comments_avoid_slash_tag_end_of_file
 
+- entry-!~{000}~.js => entry-BTd9lvOr.js
 - entry-!~{001}~.js => entry-DC4KoLXg.js
-- entry-!~{000}~.js => entry-DNZPsB0q.js
 - entry2.css
 
 # tests/esbuild/default/legal_comments_avoid_slash_tag_external
 
+- entry-!~{000}~.js => entry-BTd9lvOr.js
 - entry-!~{001}~.js => entry-DC4KoLXg.js
-- entry-!~{000}~.js => entry-DNZPsB0q.js
 - entry2.css
 
 # tests/esbuild/default/legal_comments_avoid_slash_tag_inline
 
+- entry-!~{000}~.js => entry-BTd9lvOr.js
 - entry-!~{001}~.js => entry-DC4KoLXg.js
-- entry-!~{000}~.js => entry-DNZPsB0q.js
 - entry2.css
 
 # tests/esbuild/default/legal_comments_end_of_file
@@ -1134,13 +1134,13 @@ expression: output
 # tests/esbuild/default/legal_comments_escape_slash_script_and_style_end_of_file
 
 - entry-!~{001}~.js => entry-DC4KoLXg.js
-- entry-!~{000}~.js => entry-gn-5TdV3.js
+- entry-!~{000}~.js => entry-LU-wjSii.js
 - entry2.css
 
 # tests/esbuild/default/legal_comments_escape_slash_script_and_style_external
 
 - entry-!~{001}~.js => entry-DC4KoLXg.js
-- entry-!~{000}~.js => entry-gn-5TdV3.js
+- entry-!~{000}~.js => entry-LU-wjSii.js
 - entry2.css
 
 # tests/esbuild/default/legal_comments_external
@@ -1182,13 +1182,13 @@ expression: output
 # tests/esbuild/default/legal_comments_no_escape_slash_script_end_of_file
 
 - entry-!~{001}~.js => entry-DC4KoLXg.js
-- entry-!~{000}~.js => entry-gn-5TdV3.js
+- entry-!~{000}~.js => entry-LU-wjSii.js
 - entry2.css
 
 # tests/esbuild/default/legal_comments_no_escape_slash_style_end_of_file
 
 - entry-!~{001}~.js => entry-DC4KoLXg.js
-- entry-!~{000}~.js => entry-gn-5TdV3.js
+- entry-!~{000}~.js => entry-LU-wjSii.js
 - entry2.css
 
 # tests/esbuild/default/legal_comments_none
@@ -2576,11 +2576,11 @@ expression: output
 
 # tests/esbuild/lower/lower_async_generator
 
-- entry-!~{000}~.js => entry-Cwkv4jO6.js
+- entry-!~{000}~.js => entry-jmJ-bwwt.js
 
 # tests/esbuild/lower/lower_async_generator_no_await
 
-- entry-!~{000}~.js => entry-Cwkv4jO6.js
+- entry-!~{000}~.js => entry-jmJ-bwwt.js
 
 # tests/esbuild/lower/lower_async_super_es2016_no_bundle
 
@@ -2647,7 +2647,7 @@ expression: output
 
 # tests/esbuild/lower/lower_nullish_coalescing_assignment_issue1493
 
-- entry-!~{000}~.js => entry-HhKbnZW_.js
+- entry-!~{000}~.js => entry-D0PbYMgx.js
 
 # tests/esbuild/lower/lower_object_spread_no_bundle
 
@@ -2835,7 +2835,7 @@ expression: output
 
 # tests/esbuild/lower/lower_using_inside_ts_namespace
 
-- entry-!~{000}~.js => entry-zFb4JUKm.js
+- entry-!~{000}~.js => entry-TOimP_ux.js
 
 # tests/esbuild/lower/lower_using_unsupported_async
 
@@ -4999,11 +4999,11 @@ expression: output
 
 # tests/rolldown/resolve/ts_config_merge_decorator_metadata
 
-- main-!~{000}~.js => main-B_lLahwW.js
+- main-!~{000}~.js => main-BvowiVz7.js
 
 # tests/rolldown/resolve/ts_config_option_merge
 
-- main-!~{000}~.js => main-Do-fIn7O.js
+- main-!~{000}~.js => main-BsadEk-E.js
 
 # tests/rolldown/resolve/wildcard_alias
 

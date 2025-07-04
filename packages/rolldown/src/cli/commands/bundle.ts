@@ -9,6 +9,7 @@ import { loadConfig } from '../../utils/load-config';
 import { arraify } from '../../utils/misc';
 import type { NormalizedCliOptions } from '../arguments/normalize';
 import { logger } from '../logger';
+import { version } from '../../../package.json';
 
 export async function bundleWithConfig(
   configPath: string,
@@ -169,7 +170,7 @@ async function bundleInner(
   const endTime = performance.now();
   const duration = endTime - startTime;
   // If the build time is more than 1s, we should display it in seconds.
-  logger.success(`Finished in ${colors.green(ms(duration))}`);
+  logger.success(`rollldown v${version} Finished in ${colors.green(ms(duration))}`);
 }
 
 function printBundleOutputPretty(output: RolldownOutput) {

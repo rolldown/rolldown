@@ -25,7 +25,18 @@ impl<'ast> VisitMut<'ast> for ScopeHoistingFinalizer<'_, 'ast> {
     let is_namespace_referenced = matches!(self.ctx.module.exports_kind, ExportsKind::Esm)
       && self.ctx.module.stmt_infos[StmtInfoIdx::new(0)].is_included;
 
-    self.remove_unused_top_level_stmt(program);
+    let last_import_stmt_idx = self.remove_unused_top_level_stmt(program);
+
+    if self.ctx.options.is_hmr_enabled() {
+      let hmr_header = if self.ctx.runtime.id() == self.ctx.module.idx {
+        vec![]
+      } else {
+        // FIXME(hyf0): Module register relies on runtime module, this causes a runtime error for registering runtime module.
+        // Let's skip it for now.
+        self.generate_hmr_header()
+      };
+      program.body.splice(last_import_stmt_idx..last_import_stmt_idx, hmr_header);
+    }
 
     // check if we need to add wrapper
     let needs_wrapper = self
@@ -63,13 +74,6 @@ impl<'ast> VisitMut<'ast> for ScopeHoistingFinalizer<'_, 'ast> {
       }
     });
 
-    let hmr_header = if self.ctx.runtime.id() == self.ctx.module.idx {
-      vec![]
-    } else {
-      // FIXME(hyf0): Module register relies on runtime module, this causes a runtime error for registering runtime module.
-      // Let's skip it for now.
-      self.generate_hmr_header()
-    };
     walk_mut::walk_program(self, program);
 
     if needs_wrapper {
@@ -85,7 +89,6 @@ impl<'ast> VisitMut<'ast> for ScopeHoistingFinalizer<'_, 'ast> {
           let commonjs_ref_expr = self.finalized_expr_for_symbol_ref(commonjs_ref, false, false);
 
           let mut stmts_inside_closure = allocator::Vec::new_in(self.alloc);
-          stmts_inside_closure.extend(hmr_header);
           stmts_inside_closure.append(&mut program.body);
 
           program.body.push(self.snippet.commonjs_wrapper_stmt(
@@ -137,7 +140,6 @@ impl<'ast> VisitMut<'ast> for ScopeHoistingFinalizer<'_, 'ast> {
             }
           });
           program.body.extend(declaration_of_module_namespace_object);
-          program.body.extend(hmr_header);
           program.body.extend(fn_stmts);
           if !hoisted_names.is_empty() {
             let mut declarators = allocator::Vec::new_in(self.alloc);
@@ -175,9 +177,7 @@ impl<'ast> VisitMut<'ast> for ScopeHoistingFinalizer<'_, 'ast> {
         WrapKind::None => {}
       }
     } else {
-      program
-        .body
-        .splice(0..0, declaration_of_module_namespace_object.into_iter().chain(hmr_header));
+      program.body.splice(0..0, declaration_of_module_namespace_object);
     }
   }
 

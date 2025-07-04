@@ -70,29 +70,7 @@ impl RuntimeModuleTask {
 
   #[expect(clippy::too_many_lines)]
   async fn run_inner(&self) -> BuildResult<()> {
-    let source = if let Some(hmr_options) = &self.ctx.options.experimental.hmr {
-      let mut runtime_source = String::new();
-      match self.ctx.options.platform {
-        Platform::Node => {
-          runtime_source.push_str("import { WebSocket } from 'ws';\n");
-        }
-        Platform::Browser | Platform::Neutral => {
-          // Browser platform should use the native WebSocket and neutral platform doesn't have any assumptions.
-        }
-      }
-      runtime_source.push_str(&get_runtime_js());
-      runtime_source.push_str(include_str!("../runtime/runtime-extra-dev-common.js"));
-      if let Some(implement) = hmr_options.implement.as_deref() {
-        runtime_source.push_str(implement);
-      } else {
-        let content = include_str!("../runtime/runtime-extra-dev-default.js");
-        let host = hmr_options.host.as_deref().unwrap_or("localhost");
-        let port = hmr_options.port.unwrap_or(3000);
-        let addr = format!("{host}:{port}");
-        runtime_source.push_str(&content.replace("$ADDR", &addr));
-      }
-      ArcStr::from(runtime_source)
-    } else if self.ctx.options.is_esm_format_with_node_platform() {
+    let source = if self.ctx.options.is_esm_format_with_node_platform() {
       get_runtime_js_with_node_platform().into()
     } else {
       get_runtime_js().into()

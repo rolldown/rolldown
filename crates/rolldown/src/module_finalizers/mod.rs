@@ -955,7 +955,9 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
   }
 
   #[allow(clippy::too_many_lines)]
-  fn remove_unused_top_level_stmt(&mut self, program: &mut ast::Program<'ast>) {
+  fn remove_unused_top_level_stmt(&mut self, program: &mut ast::Program<'ast>) -> usize {
+    let mut last_import_stmt_idx = None;
+
     let old_body = program.body.take_in(self.alloc);
     // the first statement info is the namespace variable declaration
     // skip first statement info to make sure `program.body` has same index as `stmt_infos`
@@ -965,6 +967,8 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
         if !stmt_info.is_included {
           return;
         }
+
+        let is_module_decl = top_stmt.is_module_declaration_with_source();
 
         if let Some(import_decl) = top_stmt.as_import_declaration() {
           let rec_id = self.ctx.module.imports[&import_decl.span];
@@ -1149,10 +1153,13 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
             }
           }
         }
-
         program.body.push(top_stmt);
+        if is_module_decl {
+          last_import_stmt_idx = Some(program.body.len());
+        }
       },
     );
+    last_import_stmt_idx.unwrap_or(0)
   }
 
   fn process_fn(

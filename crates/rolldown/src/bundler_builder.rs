@@ -47,7 +47,8 @@ impl BundlerBuilder {
 
     let file_emitter = Arc::new(FileEmitter::new(Arc::clone(&options)));
 
-    apply_inner_plugins(&mut self.plugins);
+    apply_inner_plugins(&options, &mut self.plugins);
+
     Bundler {
       closed: false,
       plugin_driver: PluginDriver::new_shared(self.plugins, &resolver, &file_emitter, &options),

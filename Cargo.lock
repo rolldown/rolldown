@@ -2494,6 +2494,7 @@ dependencies = [
  "rolldown_loader_utils",
  "rolldown_plugin",
  "rolldown_plugin_data_uri",
+ "rolldown_plugin_hmr",
  "rolldown_resolver",
  "rolldown_rstr",
  "rolldown_sourcemap",
@@ -2784,6 +2785,15 @@ dependencies = [
  "rolldown_plugin",
  "rolldown_utils",
  "sugar_path",
+]
+
+[[package]]
+name = "rolldown_plugin_hmr"
+version = "0.1.0"
+dependencies = [
+ "arcstr",
+ "oxc",
+ "rolldown_plugin",
 ]
 
 [[package]]

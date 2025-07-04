@@ -171,8 +171,9 @@ async function bundleInner(
   const duration = endTime - startTime;
   // If the build time is more than 1s, we should display it in seconds.
 
-  logger.success(`rolldown v${version} Finished in ${colors.green(ms(duration))}`);
-
+  logger.success(
+    `rolldown v${version} Finished in ${colors.green(ms(duration))}`,
+  );
 }
 
 function printBundleOutputPretty(output: RolldownOutput) {

@@ -118,7 +118,7 @@ async function watchInner(
         await event.result.close();
         logger.success(
           `Rebuilt ${colors.bold(relativeId(event.output[0]))} in ${
-            colors.bold(ms(event.duration))
+            colors.green(ms(event.duration))
           }.`,
         );
         break;
@@ -169,7 +169,7 @@ async function bundleInner(
   const endTime = performance.now();
   const duration = endTime - startTime;
   // If the build time is more than 1s, we should display it in seconds.
-  logger.success(`Finished in ${colors.bold(ms(duration))}`);
+  logger.success(`Finished in ${colors.green(ms(duration))}`);
 }
 
 function printBundleOutputPretty(output: RolldownOutput) {

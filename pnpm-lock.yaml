@@ -579,12 +579,6 @@ importers:
         specifier: workspace:*
         version: link:../../..
 
-  packages/test-dev-server/tests/tmp/fixtures/basic:
-    devDependencies:
-      '@rolldown/test-dev-server':
-        specifier: workspace:*
-        version: link:../../../..
-
   packages/testing: {}
 
   packages/vite-tests:

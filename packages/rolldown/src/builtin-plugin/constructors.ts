@@ -16,6 +16,8 @@ import type {
   BindingViteResolvePluginConfig,
   BindingWasmHelperPluginConfig,
 } from '../binding';
+import type { StringOrRegExp } from '../types/utils';
+import { normalizedStringOrRegex } from '../utils/normalize-string-or-regex';
 import { makeBuiltinPluginCallable } from './utils';
 
 export class BuiltinPlugin {
@@ -32,9 +34,23 @@ export function modulePreloadPolyfillPlugin(
   return new BuiltinPlugin('builtin:module-preload-polyfill', config);
 }
 
+type DynamicImportVarsPluginConfig =
+  & Omit<
+    BindingDynamicImportVarsPluginConfig,
+    'include' | 'exclude'
+  >
+  & {
+    include?: StringOrRegExp | StringOrRegExp[];
+    exclude?: StringOrRegExp | StringOrRegExp[];
+  };
+
 export function dynamicImportVarsPlugin(
-  config?: BindingDynamicImportVarsPluginConfig,
+  config?: DynamicImportVarsPluginConfig,
 ): BuiltinPlugin {
+  if (config) {
+    config.include = normalizedStringOrRegex(config.include);
+    config.exclude = normalizedStringOrRegex(config.exclude);
+  }
   return new BuiltinPlugin('builtin:dynamic-import-vars', config);
 }
 

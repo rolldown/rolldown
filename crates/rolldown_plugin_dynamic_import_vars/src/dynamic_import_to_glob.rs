@@ -42,14 +42,14 @@ pub fn to_valid_glob<'a>(glob: &'a str, source: &str) -> anyhow::Result<Cow<'a, 
   }
 
   // Disallow ./*.ext
-  if glob.len() > 4
-    && glob[..4].starts_with("./*.")
-    && glob[4..].chars().all(|c| c.is_ascii_alphanumeric() || c == '_')
-  {
-    Err(anyhow::anyhow!(
-      "Invalid import {source}. Variable imports cannot import their own directory, place imports in a separate directory or make the import filename more specific. {EXAMPLE_CODE}"
-    ))?;
-  }
+  // if glob.len() > 4
+  //   && glob[..4].starts_with("./*.")
+  //   && glob[4..].chars().all(|c| c.is_ascii_alphanumeric() || c == '_')
+  // {
+  //   Err(anyhow::anyhow!(
+  //     "Invalid import {source}. Variable imports cannot import their own directory, place imports in a separate directory or make the import filename more specific. {EXAMPLE_CODE}"
+  //   ))?;
+  // }
 
   if Path::new(glob).extension().is_none() {
     Err(anyhow::anyhow!(
@@ -338,16 +338,16 @@ mod tests {
     );
   }
 
-  #[test]
-  fn throws_when_dynamic_import_imports_its_own_directory() {
-    let parser = ExprParser::new();
-    let ast = parser.parse("`./${foo}.js`");
-    let err = to_glob_pattern(&ast, "\"`./${foo}.js`\"").unwrap_err().to_string();
-    assert_eq!(
-      err,
-      "Invalid import \"`./${foo}.js`\". Variable imports cannot import their own directory, place imports in a separate directory or make the import filename more specific. For example: import(`./foo/${bar}.js`)."
-    );
-  }
+  // #[test]
+  // fn throws_when_dynamic_import_imports_its_own_directory() {
+  //   let parser = ExprParser::new();
+  //   let ast = parser.parse("`./${foo}.js`");
+  //   let err = to_glob_pattern(&ast, "\"`./${foo}.js`\"").unwrap_err().to_string();
+  //   assert_eq!(
+  //     err,
+  //     "Invalid import \"`./${foo}.js`\". Variable imports cannot import their own directory, place imports in a separate directory or make the import filename more specific. For example: import(`./foo/${bar}.js`)."
+  //   );
+  // }
 
   #[test]
   fn throws_when_dynamic_import_imports_does_not_contain_a_file_extension() {

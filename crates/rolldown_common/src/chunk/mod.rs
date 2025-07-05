@@ -185,24 +185,24 @@ impl Chunk {
         hash
       }
     });
-    let chunk_name = if options.preserve_modules {
-      self.get_preserve_modules_chunk_name(options, chunk_name.as_str())
-    } else {
-      Cow::Borrowed(chunk_name.as_str())
-    };
+    let chunk_name = self.get_preserve_modules_chunk_name(options, chunk_name.as_str());
 
-    let filename = filename_template.render(Some(chunk_name.as_ref()), None, hash_replacer).into();
+    let filename = filename_template.render(Some(&chunk_name), None, hash_replacer).into();
 
     let name = make_unique_name(&filename, used_name_counts);
 
     Ok(PreliminaryFilename::new(name, hash_placeholder))
   }
 
-  pub fn get_preserve_modules_chunk_name<'a, 'b: 'a>(
+  fn get_preserve_modules_chunk_name<'a, 'b: 'a>(
     &'b self,
     options: &NormalizedBundlerOptions,
     chunk_name: &'a str,
   ) -> Cow<'a, str> {
+    if !options.preserve_modules {
+      return Cow::Borrowed(chunk_name);
+    }
+
     // https://github.com/rollup/rollup/blob/99d4bee3277b96b30e871fb471f6c7ed55f94850/src/Chunk.ts?plain=1#L1125-L1126
     // TODO: We need to add `ChunkNames` to module struct
     if let Some(ref name) = self.name {
@@ -255,8 +255,9 @@ impl Chunk {
         hash
       }
     });
+    let chunk_name = self.get_preserve_modules_chunk_name(options, chunk_name.as_str());
 
-    let filename = filename_template.render(Some(chunk_name), None, hash_replacer).into();
+    let filename = filename_template.render(Some(&chunk_name), None, hash_replacer).into();
 
     let name = make_unique_name(&filename, used_name_counts);
 

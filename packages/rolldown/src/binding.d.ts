@@ -1517,6 +1517,7 @@ export interface BindingInputOptions {
   invalidateJsSideCache?: () => void
   markModuleLoaded?: (id: string, success: boolean) => void
   preserveEntrySignatures?: BindingPreserveEntrySignatures
+  optimization?: BindingOptimization
 }
 
 export interface BindingIsolatedDeclarationPluginConfig {
@@ -1629,6 +1630,10 @@ export interface BindingModuleSideEffectsRule {
 export interface BindingNotifyOption {
   pollInterval?: number
   compareContents?: boolean
+}
+
+export interface BindingOptimization {
+  inlineConst?: boolean
 }
 
 export interface BindingOutputOptions {

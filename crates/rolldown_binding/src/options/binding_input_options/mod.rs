@@ -3,6 +3,7 @@ mod binding_defer_sync_scan_data;
 mod binding_experimental_options;
 mod binding_input_item;
 mod binding_make_absolute_externals_relative;
+mod binding_optimization;
 mod binding_resolve_options;
 mod binding_treeshake;
 mod binding_watch_option;
@@ -13,6 +14,7 @@ pub mod binding_jsx;
 use binding_debug_options::BindingDebugOptions;
 use binding_defer_sync_scan_data::BindingDeferSyncScanDataOption;
 use binding_make_absolute_externals_relative::BindingMakeAbsoluteExternalsRelative;
+use binding_optimization::BindingOptimization;
 use derive_more::Debug;
 use napi::bindgen_prelude::FnArgs;
 use napi_derive::napi;
@@ -108,4 +110,5 @@ pub struct BindingInputOptions<'env> {
   #[napi(ts_type = "(id: string, success: boolean) => void")]
   pub mark_module_loaded: Option<JsCallback<FnArgs<(String, bool)>, ()>>,
   pub preserve_entry_signatures: Option<BindingPreserveEntrySignatures>,
+  pub optimization: Option<BindingOptimization>,
 }

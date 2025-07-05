@@ -298,6 +298,13 @@ const TreeshakingOptionsSchema = v.union([
   }),
 ]);
 
+const OptimizationOptionsSchema = v.strictObject({
+  inlineConst: v.pipe(
+    v.optional(v.boolean()),
+    v.description('Enable crossmodule constant inlining'),
+  ),
+});
+
 const OnLogSchema = v.pipe(
   v.function(),
   v.args(
@@ -368,6 +375,7 @@ const InputOptionsSchema = v.strictObject({
     v.description('Create shim variables for missing exports'),
   ),
   treeshake: v.optional(TreeshakingOptionsSchema),
+  optimization: v.optional(OptimizationOptionsSchema),
   logLevel: v.pipe(
     v.optional(LogLevelOptionSchema),
     v.description(

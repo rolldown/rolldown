@@ -15,8 +15,8 @@ use oxc::transformer::ESTarget;
 use rolldown::{
   AddonOutputOption, AdvancedChunksOptions, AssetFilenamesOutputOption, BundlerOptions,
   ChunkFilenamesOutputOption, DeferSyncScanDataOption, HashCharacters, IsExternal, JsxPreset,
-  MatchGroup, MatchGroupName, ModuleType, OutputExports, OutputFormat, Platform, RawMinifyOptions,
-  SanitizeFilename, TransformOptions,
+  MatchGroup, MatchGroupName, ModuleType, OptimizationOption, OutputExports, OutputFormat,
+  Platform, RawMinifyOptions, SanitizeFilename, TransformOptions,
 };
 use rolldown_common::DeferSyncScanData;
 use rolldown_plugin::__inner::SharedPluginable;
@@ -464,8 +464,7 @@ pub fn normalize_binding_options(
       .preserve_entry_signatures
       .map(std::convert::TryInto::try_into)
       .transpose()?,
-    // TODO:
-    optimization: None,
+    optimization: input_options.optimization.map(OptimizationOption::from),
   };
 
   #[cfg(not(target_family = "wasm"))]

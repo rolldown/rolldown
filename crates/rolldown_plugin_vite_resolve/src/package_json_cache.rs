@@ -14,7 +14,7 @@ pub struct PackageJsonCache {
 impl PackageJsonCache {
   pub fn cached_package_json_side_effects(
     &self,
-    oxc_pkg_json: &oxc_resolver::PackageJsonSerde,
+    oxc_pkg_json: &oxc_resolver::PackageJson,
   ) -> Arc<PackageJson> {
     match self.side_effects_cache.get(&oxc_pkg_json.realpath) {
       Some(v) => Arc::clone(v.value()),
@@ -31,7 +31,7 @@ impl PackageJsonCache {
 
   pub fn cached_package_json_optional_peer_dep(
     &self,
-    oxc_pkg_json: &oxc_resolver::PackageJsonSerde,
+    oxc_pkg_json: &oxc_resolver::PackageJson,
   ) -> Arc<PackageJsonWithOptionalPeerDependencies> {
     match self.optional_peer_dep_cache.get(&oxc_pkg_json.realpath) {
       Some(v) => Arc::clone(v.value()),

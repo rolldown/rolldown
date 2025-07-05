@@ -3,15 +3,16 @@ use std::{borrow::Cow, path::Path};
 use rolldown_common::{
   ModuleType, NormalizedBundlerOptions, ResolvedId, StrOrBytes, side_effects::HookSideEffects,
 };
+use rolldown_fs::FileSystem;
 use rolldown_plugin::{HookLoadArgs, PluginDriver};
 use rolldown_sourcemap::SourceMap;
 use rustc_hash::FxHashMap;
 use sugar_path::SugarPath;
 
-pub async fn load_source(
+pub async fn load_source<Fs: FileSystem>(
   plugin_driver: &PluginDriver,
   resolved_id: &ResolvedId,
-  fs: &dyn rolldown_fs::FileSystem,
+  fs: &Fs,
   sourcemap_chain: &mut Vec<SourceMap>,
   side_effects: &mut Option<HookSideEffects>,
   options: &NormalizedBundlerOptions,
@@ -112,10 +113,10 @@ fn get_module_loader_from_file_extension<S: AsRef<str>>(
   None
 }
 
-fn read_file_by_module_type(
+fn read_file_by_module_type<Fs: FileSystem>(
   path: impl AsRef<Path>,
   ty: &ModuleType,
-  fs: &dyn rolldown_fs::FileSystem,
+  fs: &Fs,
 ) -> anyhow::Result<StrOrBytes> {
   let path = path.as_ref();
   match ty {

@@ -133,7 +133,7 @@ exports[`cli options for bundling > cli default options 1`] = `
 output cli default options {}
 <DIR>/index.js  chunk │ size: 0.13 kB
 
-rolldown v1.0.0-beta.23 "
+"
 `;
 
 exports[`cli options for bundling > should handle \`--input\` and positional args as entries 1`] = `
@@ -198,37 +198,37 @@ exports[`cli options for bundling > should handle pass \`-s\` options 1`] = `
 "<DIR>/index.js.map  asset │ size: 0.21 kB
 <DIR>/index.js      chunk │ size: 0.19 kB
 
-rolldown v1.0.0-beta.23 "
+"
 `;
 
 exports[`cli options for bundling > should handle single array options 1`] = `
 "<DIR>/index.js  chunk │ size: 0.14 kB
 
-rolldown v1.0.0-beta.23 "
+"
 `;
 
 exports[`cli options for bundling > should handle single boolean option 1`] = `
 "<DIR>/index.js  chunk │ size: 0.04 kB
 
-rolldown v1.0.0-beta.23 "
+"
 `;
 
 exports[`cli options for bundling > should handle single boolean short options 1`] = `
 "<DIR>/index.js  chunk │ size: 0.04 kB
 
-rolldown v1.0.0-beta.23 "
+"
 `;
 
 exports[`cli options for bundling > should handle single object options 1`] = `
 "<DIR>/index.js  chunk │ size: 0.27 kB
 
-rolldown v1.0.0-beta.23 "
+"
 `;
 
 exports[`cli options for bundling > should handle single string options 1`] = `
 "<DIR>/index.js  chunk │ size: 0.13 kB
 
-rolldown v1.0.0-beta.23 "
+"
 `;
 
 exports[`cli options for bundling > validate cli options 1`] = `
@@ -240,44 +240,44 @@ Invalid value for option format: Invalid type: Expected ("es" | "cjs" | "esm" | 
 exports[`config > should allow loading cts config 1`] = `
 "<DIR>/index.js  chunk │ size: 0.11 kB
 
-rolldown v1.0.0-beta.23 "
+"
 `;
 
 exports[`config > should allow loading mts config 1`] = `
 "<DIR>/index.js  chunk │ size: 0.11 kB
 
-rolldown v1.0.0-beta.23 "
+"
 `;
 
 exports[`config > should allow loading ts config 1`] = `
 "<DIR>/index.js  chunk │ size: 0.11 kB
 
-rolldown v1.0.0-beta.23 "
+"
 `;
 
 exports[`config > should allow loading ts config from non-working dir 1`] = `
 "<DIR>/index.js  chunk │ size: 0.11 kB
 
-rolldown v1.0.0-beta.23 "
+"
 `;
 
 exports[`config > should allow loading ts config with oxnode 1`] = `
 "<DIR>/index.js  chunk │ size: 0.11 kB
 
-rolldown v1.0.0-beta.23 "
+"
 `;
 
 exports[`config > should allow loading ts config with tsx 1`] = `
 "<DIR>/index.js  chunk │ size: 0.11 kB
 
-rolldown v1.0.0-beta.23 "
+"
 `;
 
 exports[`config > should allow multiply options 1`] = `
 "<DIR>/esm.js  chunk │ size: 0.14 kB
 <DIR>/cjs.js  chunk │ size: 0.14 kB
 
-rolldown v1.0.0-beta.23 "
+"
 `;
 
 exports[`config > should allow multiply output + call options hook once  + call outputOptions hook 1`] = `
@@ -287,26 +287,26 @@ called output options hook
 <DIR>/esm.js  chunk │ size: 0.18 kB
 <DIR>/cjs.js  chunk │ size: 0.17 kB
 
-rolldown v1.0.0-beta.23 "
+"
 `;
 
 exports[`config > should allow multiply output 1`] = `
 "<DIR>/esm.js  chunk │ size: 0.14 kB
 <DIR>/cjs.js  chunk │ size: 0.14 kB
 
-rolldown v1.0.0-beta.23 "
+"
 `;
 
 exports[`config > should bundle in ext-js-syntax-cjs 1`] = `
 "<DIR>/index.js  chunk │ size: 0.13 kB
 
-rolldown v1.0.0-beta.23 "
+"
 `;
 
 exports[`config > should resolve rolldown.config.cjs 1`] = `
 "<DIR>/index.js  chunk │ size: 0.13 kB
 
-rolldown v1.0.0-beta.23 "
+"
 `;
 
 exports[`watch cli > should allow multiply output + call options hook once + call outputOptions hook 1`] = `
@@ -316,7 +316,7 @@ called output options hook
 <DIR>/esm.js  chunk │ size: 0.18 kB
 <DIR>/cjs.js  chunk │ size: 0.17 kB
 
-rolldown v1.0.0-beta.23 "
+"
 `;
 
 exports[`watch cli > should require both ROLLDOWN_WATCH and this.meta.watchMode to be false 1`] = `

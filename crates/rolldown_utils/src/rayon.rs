@@ -1,9 +1,25 @@
 #[cfg(target_family = "wasm")]
 mod wasm_shims {
+  use std::iter::Flatten;
   pub use std::iter::Iterator as ParallelIterator;
 
   pub trait ParallelBridge: Sized {
     fn par_bridge(self) -> Self;
+  }
+
+  pub trait IteratorExt: Sized {
+    fn flatten_iter(self) -> Flatten<Self>
+    where
+      Self: Iterator<Item: IntoIterator>;
+  }
+
+  impl<T: Iterator + Send> IteratorExt for T {
+    fn flatten_iter(self) -> Flatten<Self>
+    where
+      Self: Iterator<Item: IntoIterator>,
+    {
+      self.flatten()
+    }
   }
 
   impl<T: Iterator + Send> ParallelBridge for T {
@@ -72,8 +88,8 @@ mod wasm_shims {
 
 #[cfg(target_family = "wasm")]
 pub use wasm_shims::{
-  IntoParallelIterator, IntoParallelRefIterator, IntoParallelRefMutIterator, ParallelBridge,
-  ParallelIterator,
+  IntoParallelIterator, IntoParallelRefIterator, IntoParallelRefMutIterator, IteratorExt,
+  ParallelBridge, ParallelIterator,
 };
 
 #[cfg(not(target_family = "wasm"))]

@@ -52,6 +52,7 @@ async fn allow_pass_custom_arg() {
   }));
 
   IntegrationTest::new(TestMeta {
+    snapshot: false,
     write_to_disk: false,
     expect_executed: false,
     ..Default::default()

@@ -98,7 +98,10 @@ impl IntegrationTest {
           "Expected the bundling to be failed with diagnosable errors, but got success"
         );
 
-        self.snapshot_bundle_output(bundle_output, vec![], &cwd);
+        self.snapshot_bundle_output(
+          &cwd,
+          &self.render_bundle_output_to_string(bundle_output, vec![], &cwd),
+        );
 
         if !self.test_meta.expect_executed
           || self.test_meta.expect_error
@@ -114,7 +117,11 @@ impl IntegrationTest {
           self.test_meta.expect_error,
           "Expected the bundling to be success, but got diagnosable errors: {errs:#?}"
         );
-        self.snapshot_bundle_output(BundleOutput::default(), errs.into_vec(), &cwd);
+
+        self.snapshot_bundle_output(
+          &cwd,
+          &self.render_bundle_output_to_string(BundleOutput::default(), errs.into_vec(), &cwd),
+        );
       }
     }
   }
@@ -245,17 +252,7 @@ impl IntegrationTest {
         }
       }
     }
-    if self.test_meta.snapshot {
-      // Configure insta to use the fixture path as the snapshot path
-      let mut settings = insta::Settings::clone_current();
-      settings.set_snapshot_path(test_folder_path);
-      settings.set_prepend_module_to_snapshot(false);
-      settings.remove_input_file();
-      settings.set_omit_expression(true);
-      settings.bind(|| {
-        insta::assert_snapshot!("artifacts", snapshot_outputs.concat());
-      });
-    }
+    self.snapshot_bundle_output(test_folder_path, &snapshot_outputs.concat());
   }
 
   fn apply_test_defaults(&self, options: &mut BundlerOptions) {
@@ -581,22 +578,18 @@ impl IntegrationTest {
       + [format!("# HMR Step {step}"), errors_section, code_section, meta_section].join("\n").trim()
   }
 
-  fn snapshot_bundle_output(
-    &self,
-    bundle_output: BundleOutput,
-    errs: Vec<BuildDiagnostic>,
-    cwd: &Path,
-  ) {
-    let content = self.render_bundle_output_to_string(bundle_output, errs, cwd);
+  fn snapshot_bundle_output(&self, path: &Path, content: &str) {
     // Configure insta to use the fixture path as the snapshot path
-    let mut settings = insta::Settings::clone_current();
-    settings.set_snapshot_path(cwd);
-    settings.set_prepend_module_to_snapshot(false);
-    settings.remove_input_file();
-    settings.set_omit_expression(true);
-    settings.bind(|| {
-      insta::assert_snapshot!("artifacts", content);
-    });
+    if self.test_meta.snapshot {
+      let mut settings = insta::Settings::clone_current();
+      settings.set_snapshot_path(path);
+      settings.set_prepend_module_to_snapshot(false);
+      settings.remove_input_file();
+      settings.set_omit_expression(true);
+      settings.bind(|| {
+        insta::assert_snapshot!("artifacts", content);
+      });
+    }
   }
 
   fn execute_output_assets(bundler: &Bundler, test_title: &str, patch_chunks: Vec<String>) {

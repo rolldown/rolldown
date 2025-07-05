@@ -5412,7 +5412,7 @@ expression: output
 
 # tests/rolldown/topics/hmr/non_used_export
 
-- main-!~{000}~.js => main-CtghUp8F.js
+- main-!~{000}~.js => main-Dw16TOM_.js
 
 # tests/rolldown/topics/hmr/register_exports
 

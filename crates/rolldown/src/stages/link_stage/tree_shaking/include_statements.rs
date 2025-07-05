@@ -97,18 +97,6 @@ impl LinkStage<'_> {
         include_module(context, module);
       });
 
-    if self.options.is_hmr_enabled() {
-      // HMR runtime contains statements with side effects, they are referenced by other modules via global variables.
-      // So we need to manually include them here.
-      if let Some(runtime_module) = self.module_table[self.runtime.id()].as_normal() {
-        runtime_module.stmt_infos.iter_enumerated().for_each(|(stmt_info_id, stmt_info)| {
-          if stmt_info.side_effect.has_side_effect() {
-            include_statement(context, runtime_module, stmt_info_id);
-          }
-        });
-      }
-    }
-
     let mut unused_record_idxs = vec![];
     let cycled_idx = self.sort_dynamic_entries_by_topological_order(&mut dynamic_entries);
 
@@ -352,7 +340,7 @@ fn include_module(ctx: &mut Context, module: &NormalModule) {
 
   ctx.is_module_included_vec[module.idx] = true;
 
-  if module.idx == ctx.runtime_id && !ctx.options.is_hmr_enabled() {
+  if module.idx == ctx.runtime_id {
     // runtime module has no side effects and it's statements should be included
     // by other modules's references.
     return;

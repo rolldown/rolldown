@@ -18,5 +18,6 @@
       "format": "umd",
       "name": "module"
     }
-  ]
+  ],
+  "snapshot": false
 }

@@ -2491,7 +2491,6 @@ dependencies = [
  "rolldown_ecmascript_utils",
  "rolldown_error",
  "rolldown_fs",
- "rolldown_loader_utils",
  "rolldown_plugin",
  "rolldown_plugin_data_uri",
  "rolldown_plugin_hmr",
@@ -2681,14 +2680,6 @@ version = "0.1.0"
 dependencies = [
  "oxc_resolver",
  "vfs",
-]
-
-[[package]]
-name = "rolldown_loader_utils"
-version = "0.1.0"
-dependencies = [
- "anyhow",
- "serde_json",
 ]
 
 [[package]]

@@ -12,6 +12,7 @@ pub mod renamer;
 pub mod render_chunks;
 pub mod render_ecma_module;
 pub mod resolve_id;
+pub mod text_to_esm;
 pub mod transform_source;
 pub mod tweak_ast_for_scanning;
 pub mod uuid;

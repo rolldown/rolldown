@@ -1,7 +1,7 @@
 use oxc::{
   allocator::{self, Allocator, Box as ArenaBox, CloneIn, Dummy, IntoIn, TakeIn},
   ast::{
-    Comment, NONE,
+    AstBuilder, Comment, NONE,
     ast::{
       self, BindingIdentifier, ClassElement, Expression, IdentifierReference, ImportExpression,
       MemberExpression, NumberBase, ObjectExpression, Statement, VariableDeclarationKind,
@@ -193,6 +193,9 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
     if let Some(ns_alias) = namespace_alias {
       canonical_ref = ns_alias.namespace_ref;
       canonical_symbol = self.ctx.symbol_db.get(canonical_ref);
+    }
+    if let Some(meta) = self.ctx.constant_value_map.get(&canonical_ref) {
+      return meta.value.to_expression(AstBuilder::new(self.alloc));
     }
 
     let mut expr = if self.ctx.modules[canonical_ref.owner].is_external() {
@@ -593,11 +596,24 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
   ) -> Option<Expression<'ast>> {
     let span = member_expr.span();
     match self.ctx.linking_info.resolved_member_expr_refs.get(&span) {
-      Some(MemberExprRefResolution { resolved: object_ref, props, is_cjs_symbol, .. }) => {
+      Some(MemberExprRefResolution {
+        resolved: object_ref,
+        props,
+        target_commonjs_exported_symbol,
+        ..
+      }) => {
         object_ref
           .map(|object_ref| {
-            let object_ref_expr =
-              self.finalized_expr_for_symbol_ref(object_ref, false, *is_cjs_symbol);
+            if let Some(export_meta) = target_commonjs_exported_symbol
+              .and_then(|item| self.ctx.constant_value_map.get(&item))
+            {
+              return export_meta.value.to_expression(AstBuilder::new(self.alloc));
+            }
+            let object_ref_expr = self.finalized_expr_for_symbol_ref(
+              object_ref,
+              false,
+              target_commonjs_exported_symbol.is_some(),
+            );
             self.snippet.member_expr_or_ident_ref(object_ref_expr, props, span)
           })
           .or_else(|| Some(self.snippet.member_expr_with_void_zero_object(props, span)))

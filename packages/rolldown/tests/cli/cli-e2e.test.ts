@@ -12,7 +12,7 @@ function cliFixturesDir(...joined: string[]) {
 // remove `Finished in x ms` since it is not deterministic
 // remove Ansi colors for snapshot testing
 function cleanStdout(stdout: string) {
-  return stripAnsi(stdout).replace(/Finished in \d+(\.\d+)? (s|ms|us|ns)/g, '')
+  return stripAnsi(stdout).replace(/rolldown v(?<version>\S+) Finished in \d+(\.\d+)? (s|ms|us|ns)/g, '')
 }
 
 describe('should not hang after running', () => {

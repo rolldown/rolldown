@@ -2,6 +2,7 @@ import colors from 'ansis';
 import path from 'node:path';
 import { performance } from 'node:perf_hooks';
 import { onExit } from 'signal-exit';
+import { version } from '../../../package.json';
 import type { ConfigExport, RolldownOutput } from '../..';
 import { rolldown } from '../../api/rolldown';
 import { watch as rolldownWatch } from '../../api/watch';
@@ -169,7 +170,10 @@ async function bundleInner(
   const endTime = performance.now();
   const duration = endTime - startTime;
   // If the build time is more than 1s, we should display it in seconds.
-  logger.success(`Finished in ${colors.green(ms(duration))}`);
+
+  logger.success(
+    `rolldown v${version} Finished in ${colors.green(ms(duration))}`,
+  );
 }
 
 function printBundleOutputPretty(output: RolldownOutput) {

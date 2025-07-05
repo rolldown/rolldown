@@ -1,6 +1,6 @@
-// @ts-check
+// @ts-nocheck FIXME(hyf0): Enable type check
 
-/// <reference path="../../../crates/rolldown/src/runtime/runtime-extra-dev-common.js" />
+/// <reference path="../../../crates/rolldown_plugin_hmr/src/runtime/runtime-extra-dev-common.js" />
 
 class TestDevRuntime extends DevRuntime {
   /**

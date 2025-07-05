@@ -12,6 +12,7 @@ struct Context<'a> {
   pub visited_modules: &'a mut IndexVec<ModuleIdx, bool>,
   pub linking_infos: &'a mut LinkingMetadataVec,
   pub modules: &'a IndexModules,
+  pub runtime_idx: ModuleIdx,
 }
 
 fn wrap_module_recursively(ctx: &mut Context, target: ModuleIdx) {
@@ -24,6 +25,12 @@ fn wrap_module_recursively(ctx: &mut Context, target: ModuleIdx) {
     return;
   }
   ctx.visited_modules[target] = true;
+
+  if target == ctx.runtime_idx {
+    // Runtime module should not be wrapped.
+    // FIXME(hyf0): Currently, only hmr situation will fall into this branch, we should find a better way to handle this.
+    return;
+  }
 
   if matches!(ctx.linking_infos[target].wrap_kind, WrapKind::None) {
     ctx.linking_infos[target].wrap_kind = match module.exports_kind {
@@ -107,6 +114,7 @@ impl LinkStage<'_> {
             visited_modules: &mut visited_modules_for_wrapping,
             linking_infos: &mut self.metas,
             modules: &self.module_table.modules,
+            runtime_idx: self.runtime.id(),
           },
           module_id,
         );
@@ -123,6 +131,7 @@ impl LinkStage<'_> {
                 visited_modules: &mut visited_modules_for_wrapping,
                 linking_infos: &mut self.metas,
                 modules: &self.module_table.modules,
+                runtime_idx: self.runtime.id(),
               },
               importee.idx,
             );

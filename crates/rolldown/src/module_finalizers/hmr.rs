@@ -12,7 +12,9 @@ use super::ScopeHoistingFinalizer;
 impl<'ast> ScopeHoistingFinalizer<'_, 'ast> {
   pub fn generate_hmr_header(&self) -> Vec<ast::Statement<'ast>> {
     let mut ret = vec![];
-    if !self.ctx.options.is_hmr_enabled() {
+    if !self.ctx.options.is_hmr_enabled()
+      || self.ctx.module.id.as_ref() == rolldown_plugin_hmr::HMR_RUNTIME_MODULE_SPECIFIER
+    {
       return ret;
     }
 

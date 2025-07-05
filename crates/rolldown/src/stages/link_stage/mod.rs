@@ -7,10 +7,13 @@ use rolldown_common::{
   RuntimeModuleBrief, SymbolRef, SymbolRefDb, dynamic_import_usage::DynamicImportExportsUsage,
 };
 use rolldown_error::BuildDiagnostic;
+#[cfg(target_family = "wasm")]
+use rolldown_utils::rayon::IteratorExt as _;
 use rolldown_utils::{
   indexmap::FxIndexSet,
   rayon::{IntoParallelRefMutIterator, ParallelIterator},
 };
+
 use rustc_hash::{FxHashMap, FxHashSet};
 
 use crate::{
@@ -80,21 +83,19 @@ impl<'a> LinkStage<'a> {
   pub fn new(mut scan_stage_output: NormalizedScanStageOutput, options: &'a SharedOptions) -> Self {
     // since constant export is spared in most of time, aggregate them would make searching more efficient
     let constant_symbol_map = if options.optimization.is_inline_const_enabled() {
-      let iter = scan_stage_output.module_table.modules.par_iter_mut().filter_map(|m| {
-        let m = m.as_normal_mut()?;
-        Some(std::mem::take(&mut m.constant_export_map).into_iter().map(|(symbol_id, v)| {
-          let symbol_ref = SymbolRef { owner: m.idx, symbol: symbol_id };
-          (symbol_ref, v)
-        }))
-      });
-      #[cfg(not(target_family = "wasm"))]
-      {
-        iter.flatten_iter().collect::<FxHashMap<SymbolRef, ConstExportMeta>>()
-      }
-      #[cfg(target_family = "wasm")]
-      {
-        iter.flatten().collect::<FxHashMap<SymbolRef, ConstExportMeta>>()
-      }
+      scan_stage_output
+        .module_table
+        .modules
+        .par_iter_mut()
+        .filter_map(|m| {
+          let m = m.as_normal_mut()?;
+          Some(std::mem::take(&mut m.constant_export_map).into_iter().map(|(symbol_id, v)| {
+            let symbol_ref = SymbolRef { owner: m.idx, symbol: symbol_id };
+            (symbol_ref, v)
+          }))
+        })
+        .flatten_iter()
+        .collect::<FxHashMap<SymbolRef, ConstExportMeta>>()
     } else {
       FxHashMap::default()
     };

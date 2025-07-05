@@ -68,6 +68,10 @@ export type HmrOptions = boolean | {
   implement?: string;
 };
 
+export type OptimizationOptions = {
+  inlineConst?: boolean;
+};
+
 export type AttachDebugOptions = 'none' | 'simple' | 'full';
 
 interface RollupJsxOptions {
@@ -264,6 +268,7 @@ export interface InputOptions {
     | 'strict'
     | 'allow-extension'
     | 'exports-only';
+  optimization?: OptimizationOptions;
 }
 
 interface OverwriteInputOptionsForCli {

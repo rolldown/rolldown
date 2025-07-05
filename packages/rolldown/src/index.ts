@@ -25,6 +25,7 @@ import type {
   InputOption,
   InputOptions,
   ModuleTypes,
+  OptimizationOptions,
   WatcherOptions,
 } from './options/input-options';
 import type { NormalizedInputOptions } from './options/normalized-input-options';
@@ -141,6 +142,7 @@ export type {
   NormalizedInputOptions,
   NormalizedOutputOptions,
   ObjectHook,
+  OptimizationOptions,
   OutputAsset,
   OutputBundle,
   OutputChunk,

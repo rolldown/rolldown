@@ -152,7 +152,7 @@
     "ansis": "^4.0.0"
   },
   "devDependencies": {
-    "@napi-rs/cli": "3.0.0-alpha.91",
+    "@napi-rs/cli": "3.0.0-alpha.92",
     "@napi-rs/wasm-runtime": "^0.2.10",
     "@oxc-node/cli": "catalog:",
     "@rolldown/testing": "workspace:*",

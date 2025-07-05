@@ -1,4 +1,62 @@
 
+## [1.0.0-beta.24] - 2025-07-05
+
+### 🚀 Features
+
+- support `inlineConst` for imported variable (#5165) by @IWANABETHATGUY
+- rust: skip transform hook for modules starts with `rolldown:` (#5169) by @hyf0
+- print rolldown version (#5163) by @btea
+- add optimization.inlineConst option (#5164) by @IWANABETHATGUY
+- hmr: introduce `rolldown_plugin_hmr` to inject runtime code (#5159) by @hyf0
+- rolldown: oxc v0.75.1 (#5157) by @Boshen
+
+### 🐛 Bug Fixes
+
+- generate correct CSS filename in `preserveModules` mode (#5175) by @shulaoda
+- rolldown_plugin_build_import_analysis: avoid `default` keyword error (#5166) by @shulaoda
+- watch: add paths to watcher in batch (#5068) by @branchseer
+- debug: should emit chunk data after computing cross chunk links (#5156) by @hyf0
+- simplify commonjs interop `default` prop optimization  (#5142) by @IWANABETHATGUY
+- should include modules contain `exports * from '...'` forcefully if they reexport any wrapped module (#5143) by @hyf0
+- use canonical runtime time for `__name` (#5140) by @IWANABETHATGUY
+- `options.jsx` is ignored when `options.transform` is set (#5137) by @shulaoda
+
+### 🚜 Refactor
+
+- polyfill `flatten_iter` for wasm target (#5180) by @IWANABETHATGUY
+- rolldown_plugin_dynamic_import_vars: remove unnecessary validity checks (#5172) by @shulaoda
+- hmr: remove hmr-related hacky hard-code (#5168) by @hyf0
+- rolldown_plugin_dynamic_import_vars: align with rolldown-vite (#5171) by @shulaoda
+- hmr: use `rolldown:hmr` to load hmr runtime code (#5162) by @hyf0
+- rust: remove special fields of `Asset` (#5155) by @hyf0
+- rust: make `Asset#originate_from` optional (#5153) by @hyf0
+- rust: isolate mutations on assets data (#5152) by @hyf0
+- rust: remove unnecessary usage of index vec on assets (#5151) by @hyf0
+- merge different member expr in `try_rewrite_member_expr` (#5146) by @IWANABETHATGUY
+- remove unused code (#5144) by @IWANABETHATGUY
+- use `self.result.ast_usage` directly (#5135) by @IWANABETHATGUY
+
+### 📚 Documentation
+
+- update syntax lowering transform info (#5145) by @TheAlexLichter
+
+### 🧪 Testing
+
+- rust/hmr: hide hmr runtime code in snapshots (#5160) by @hyf0
+
+### ⚙️ Miscellaneous Tasks
+
+- rolldown_testing: avoid unnecessary snapshots (#5181) by @shulaoda
+- fix `flatten_iter` compile error (#5179) by @IWANABETHATGUY
+- expose `optimization.inlineConst` option (#5177) by @IWANABETHATGUY
+- infra: update `pnpm-lock.yaml` (#5178) by @shulaoda
+- rust: remove unnecessary crate `rolldown_loader_utils` (#5173) by @shulaoda
+- print build time use green color (#5158) by @btea
+- deps: update dependency rolldown-plugin-dts to v0.13.13 (#5148) by @renovate[bot]
+- deps: update dependency rolldown-plugin-dts to v0.13.13 (#5138) by @renovate[bot]
+- allow only test without generate snapshot (#5134) by @IWANABETHATGUY
+
+
 ## [1.0.0-beta.23] - 2025-07-01
 
 ### 💥 BREAKING CHANGES

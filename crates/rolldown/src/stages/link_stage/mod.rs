@@ -80,19 +80,21 @@ impl<'a> LinkStage<'a> {
   pub fn new(mut scan_stage_output: NormalizedScanStageOutput, options: &'a SharedOptions) -> Self {
     // since constant export is spared in most of time, aggregate them would make searching more efficient
     let constant_symbol_map = if options.optimization.is_inline_const_enabled() {
-      scan_stage_output
-        .module_table
-        .modules
-        .par_iter_mut()
-        .filter_map(|m| {
-          let m = m.as_normal_mut()?;
-          Some(std::mem::take(&mut m.constant_export_map).into_iter().map(|(symbol_id, v)| {
-            let symbol_ref = SymbolRef { owner: m.idx, symbol: symbol_id };
-            (symbol_ref, v)
-          }))
-        })
-        .flatten_iter()
-        .collect::<FxHashMap<SymbolRef, ConstExportMeta>>()
+      let iter = scan_stage_output.module_table.modules.par_iter_mut().filter_map(|m| {
+        let m = m.as_normal_mut()?;
+        Some(std::mem::take(&mut m.constant_export_map).into_iter().map(|(symbol_id, v)| {
+          let symbol_ref = SymbolRef { owner: m.idx, symbol: symbol_id };
+          (symbol_ref, v)
+        }))
+      });
+      #[cfg(not(target_family = "wasm"))]
+      {
+        iter.flatten_iter().collect::<FxHashMap<SymbolRef, ConstExportMeta>>()
+      }
+      #[cfg(target_family = "wasm")]
+      {
+        iter.flatten().collect::<FxHashMap<SymbolRef, ConstExportMeta>>()
+      }
     } else {
       FxHashMap::default()
     };

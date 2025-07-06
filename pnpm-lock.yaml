@@ -513,6 +513,9 @@ importers:
       execa:
         specifier: ^9.2.0
         version: 9.6.0
+      fast-glob:
+        specifier: 'catalog:'
+        version: 3.3.3
       kill-port:
         specifier: ^2.0.1
         version: 2.0.1

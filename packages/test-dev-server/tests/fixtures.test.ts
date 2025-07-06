@@ -1,11 +1,12 @@
 import { execa, ExecaError, execaSync } from 'execa';
+import glob from 'fast-glob';
 import killPort from 'kill-port';
 import nodeFs from 'node:fs';
 import nodeFsPromise from 'node:fs/promises';
 import nodeOs from 'node:os';
 import nodePath from 'node:path';
 import { rimrafSync } from 'rimraf';
-import { test } from 'vitest';
+import { afterAll, test } from 'vitest';
 
 function removeDirSync(path: string) {
   if (nodeOs.platform() === 'win32') {
@@ -27,6 +28,10 @@ function main() {
   const tmpFixturesPath = nodePath.resolve(__dirname, 'tmp/fixtures');
 
   removeDirSync(tmpFixturesPath);
+
+  afterAll(() => {
+    removeDirSync(tmpFixturesPath);
+  });
 
   test('basic', async () => {
     const projectName = 'basic';
@@ -68,26 +73,21 @@ function main() {
       setTimeout(rsl, 4000);
     });
 
-    const originalFilePath = nodePath.resolve(
-      tmpProjectPath,
-      'src/hmr-boundary.js',
-    );
+    const hmrEditFiles = await collectHmrEditFiles(tmpProjectPath);
 
-    await nodeFsPromise.writeFile(
-      originalFilePath,
-      `import { value as depValue } from './new-dep';
-  export const value = depValue;
-  
-  import.meta.hot.accept((newExports) => {
-    globalThis.hmrChange(newExports);
-  });
-  console.log('HMR boundary file changed');
-  `,
-    );
+    for (const hmrEditFile of hmrEditFiles) {
+      const newContent = await nodeFsPromise.readFile(
+        hmrEditFile.path,
+        'utf-8',
+      );
+      await nodeFsPromise.writeFile(hmrEditFile.targetPath, newContent);
+      console.debug(
+        `Waiting for HMR to be triggered... ${hmrEditFile.targetPath}`,
+      );
+      await ensurePathExists(nodePath.join(tmpProjectPath, 'ok-1'));
+      console.debug(`Successfully triggered HMR ${hmrEditFile.targetPath}`);
+    }
 
-    console.debug('Waiting for HMR to be triggered...');
-    await ensurePathExists(nodePath.join(tmpProjectPath, 'ok'));
-    console.debug('Successfully triggered HMR');
     try {
       runningArtifactProcess.kill('SIGTERM');
       await runningArtifactProcess;
@@ -162,3 +162,53 @@ function ensurePathExists(path: string, timeout = 10000) {
 }
 
 main();
+
+interface HmrEditFile {
+  path: string;
+  targetPath: string;
+  step: number;
+}
+
+async function collectHmrEditFiles(
+  projectPath: string,
+): Promise<HmrEditFile[]> {
+  const hmrEditFiles = await glob(
+    nodePath.join(projectPath, '/src/**/*.hmr-*.*'),
+    {
+      absolute: true,
+    },
+  );
+  const files = hmrEditFiles.map((path): HmrEditFile => {
+    // path: /xxx/xxx/example.hmr-1.js
+
+    // .js
+    const ext = nodePath.extname(path);
+
+    // example.hmr-1
+    const basenameWithoutExt = nodePath.basename(path, ext);
+
+    // 1
+    const step = parseInt(basenameWithoutExt.slice(
+      basenameWithoutExt.lastIndexOf('-') + 1,
+    ));
+
+    const originalBasename = basenameWithoutExt.slice(
+      0,
+      basenameWithoutExt.lastIndexOf('.'),
+    );
+
+    // /xxx/xxx/example.js
+    const targetPath = nodePath.join(
+      nodePath.dirname(path),
+      originalBasename,
+    ) + ext;
+
+    return {
+      path,
+      targetPath,
+      step: step,
+    };
+  });
+
+  return files.sort((a, b) => a.step - b.step);
+}

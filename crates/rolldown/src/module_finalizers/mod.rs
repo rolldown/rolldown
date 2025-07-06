@@ -1168,6 +1168,14 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
               return;
             }
           }
+        } else if self.ctx.options.top_level_var {
+          // Here we should find if it's a "VariableDeclaration" and switch it to "Var."
+          if let Statement::VariableDeclaration(var_decl) = &mut top_stmt {
+            var_decl.kind = ast::VariableDeclarationKind::Var;
+            for decl in &mut var_decl.declarations {
+              decl.kind = VariableDeclarationKind::Var;
+            }
+          }
         }
         program.body.push(top_stmt);
         if is_module_decl {

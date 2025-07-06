@@ -471,6 +471,12 @@
               "type": "null"
             }
           ]
+        },
+        "topLevelVar": {
+          "type": [
+            "boolean",
+            "null"
+          ]
         }
       },
       "additionalProperties": false

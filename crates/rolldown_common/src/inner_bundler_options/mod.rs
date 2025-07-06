@@ -214,6 +214,7 @@ pub struct BundlerOptions {
   pub preserve_modules_root: Option<String>,
   pub preserve_entry_signatures: Option<PreserveEntrySignatures>,
   pub optimization: Option<OptimizationOption>,
+  pub top_level_var: Option<bool>,
 }
 
 impl BundlerOptions {

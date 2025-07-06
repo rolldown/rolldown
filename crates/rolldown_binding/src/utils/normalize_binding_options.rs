@@ -465,6 +465,7 @@ pub fn normalize_binding_options(
       .map(std::convert::TryInto::try_into)
       .transpose()?,
     optimization: input_options.optimization.map(OptimizationOption::from),
+    top_level_var: output_options.top_level_var,
   };
 
   #[cfg(not(target_family = "wasm"))]

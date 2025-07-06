@@ -262,4 +262,9 @@ impl BindingNormalizedOptions {
   pub fn virtual_dirname(&self) -> String {
     self.inner.virtual_dirname.clone()
   }
+
+  #[napi(getter)]
+  pub fn top_level_var(&self) -> bool {
+    self.inner.top_level_var
+  }
 }

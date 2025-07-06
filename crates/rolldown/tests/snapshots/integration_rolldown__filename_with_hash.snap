@@ -4532,6 +4532,14 @@ expression: output
 
 - main-!~{000}~.js => main-CtDOBbCK.js
 
+# tests/rolldown/function/top_level_var/disabled
+
+- main-!~{000}~.js => main-B2ph_ftT.js
+
+# tests/rolldown/function/top_level_var/enabled
+
+- main-!~{000}~.js => main-DI5elA6b.js
+
 # tests/rolldown/hash/content_include_placeholder
 
 - main-!~{000}~.js => main-BseYZ4a0.js

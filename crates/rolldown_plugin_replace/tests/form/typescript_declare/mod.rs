@@ -38,11 +38,10 @@ async fn typescript_declare() {
   let cwd = abs_file_dir!();
   let code = Arc::new(Mutex::new(None));
 
-  IntegrationTest::new(TestMeta {
-    expect_executed: false,
-    visualize_sourcemap: true,
-    ..Default::default()
-  })
+  IntegrationTest::new(
+    TestMeta { expect_executed: false, visualize_sourcemap: true, ..Default::default() },
+    abs_file_dir!(),
+  )
   .run_with_plugins(
     BundlerOptions {
       input: Some(vec!["./input.ts".to_string().into()]),

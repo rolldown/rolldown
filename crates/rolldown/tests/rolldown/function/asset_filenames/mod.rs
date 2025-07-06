@@ -42,7 +42,7 @@ impl Plugin for TestPlugin {
 async fn test() {
   let cwd = abs_file_dir!();
 
-  IntegrationTest::new(TestMeta { expect_error: false, ..Default::default() })
+  IntegrationTest::new(TestMeta { expect_error: false, ..Default::default() }, abs_file_dir!())
     .run_with_plugins(
       BundlerOptions {
         input: Some(vec![InputItem {

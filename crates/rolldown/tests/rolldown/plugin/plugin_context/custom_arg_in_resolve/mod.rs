@@ -87,7 +87,7 @@ impl Plugin for TestPluginReceiver {
 async fn allow_pass_custom_arg() {
   let cwd = abs_file_dir!();
 
-  IntegrationTest::new(TestMeta { expect_executed: false, ..Default::default() })
+  IntegrationTest::new(TestMeta { expect_executed: false, ..Default::default() }, abs_file_dir!())
     .run_with_plugins(
       BundlerOptions {
         input: Some(vec![InputItem {

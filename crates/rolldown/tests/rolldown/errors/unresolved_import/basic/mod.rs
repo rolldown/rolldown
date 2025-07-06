@@ -39,7 +39,7 @@ impl Plugin for UnresolvedImport {
 async fn should_failed_to_resolve_the_module_with_diagnostic() {
   let cwd = abs_file_dir!();
 
-  IntegrationTest::new(TestMeta { expect_error: true, ..Default::default() })
+  IntegrationTest::new(TestMeta { expect_error: true, ..Default::default() }, abs_file_dir!())
     .run_with_plugins(
       BundlerOptions {
         input: Some(vec![InputItem {

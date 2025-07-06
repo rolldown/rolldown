@@ -1,5 +1,6 @@
 use core::str;
 use std::fmt::Write as _;
+use std::path::PathBuf;
 use std::{
   borrow::Cow,
   ffi::OsStr,
@@ -30,6 +31,8 @@ use crate::utils::tweak_snapshot;
 #[derive(Default)]
 pub struct IntegrationTest {
   test_meta: TestMeta,
+  // Absolute path of the test folder. It may or may not contain the `_config.json` file.
+  test_folder_path: PathBuf,
 }
 
 pub struct NamedBundlerOptions {
@@ -42,8 +45,8 @@ fn default_test_input_item() -> rolldown::InputItem {
 }
 
 impl IntegrationTest {
-  pub fn new(test_meta: TestMeta) -> Self {
-    Self { test_meta }
+  pub fn new(test_meta: TestMeta, test_folder_path: PathBuf) -> Self {
+    Self { test_meta, test_folder_path }
   }
 
   pub async fn bundle(&self, mut options: BundlerOptions) -> BuildResult<BundleOutput> {
@@ -68,62 +71,8 @@ impl IntegrationTest {
   }
 
   #[allow(clippy::unnecessary_debug_formatting)]
-  pub async fn run_with_plugins(
-    &self,
-    mut options: BundlerOptions,
-    plugins: Vec<SharedPluginable>,
-  ) {
-    self.apply_test_defaults(&mut options);
-
-    let mut bundler = Bundler::with_plugins(options, plugins);
-
-    let cwd = bundler.options().cwd.clone();
-
-    let bundle_output = if self.test_meta.write_to_disk {
-      let abs_output_dir = cwd.join(&bundler.options().out_dir);
-      if abs_output_dir.is_dir() {
-        std::fs::remove_dir_all(&abs_output_dir)
-          .context(format!("{abs_output_dir:?}"))
-          .expect("Failed to clean the output directory");
-      }
-      bundler.write().await
-    } else {
-      bundler.generate().await
-    };
-
-    match bundle_output {
-      Ok(bundle_output) => {
-        assert!(
-          !self.test_meta.expect_error,
-          "Expected the bundling to be failed with diagnosable errors, but got success"
-        );
-
-        self.snapshot_bundle_output(
-          &cwd,
-          &self.render_bundle_output_to_string(bundle_output, vec![], &cwd),
-        );
-
-        if !self.test_meta.expect_executed
-          || self.test_meta.expect_error
-          || !self.test_meta.write_to_disk
-        {
-          // do nothing
-        } else {
-          Self::execute_output_assets(&bundler, "", vec![]);
-        }
-      }
-      Err(errs) => {
-        assert!(
-          self.test_meta.expect_error,
-          "Expected the bundling to be success, but got diagnosable errors: {errs:#?}"
-        );
-
-        self.snapshot_bundle_output(
-          &cwd,
-          &self.render_bundle_output_to_string(BundleOutput::default(), errs.into_vec(), &cwd),
-        );
-      }
-    }
+  pub async fn run_with_plugins(&self, options: BundlerOptions, plugins: Vec<SharedPluginable>) {
+    self.run_multiple(vec![NamedBundlerOptions { options, name: None }], plugins).await;
   }
 
   #[expect(clippy::too_many_lines)]
@@ -131,9 +80,10 @@ impl IntegrationTest {
   pub async fn run_multiple(
     &self,
     multiple_options: Vec<NamedBundlerOptions>,
-    test_folder_path: &Path,
     plugins: Vec<SharedPluginable>,
   ) {
+    let test_folder_path = &self.test_folder_path;
+
     let hmr_temp_dir_path = test_folder_path.join("hmr-temp");
     let hmr_steps = collect_hmr_edit_files(test_folder_path, &hmr_temp_dir_path);
     let hmr_mode_enabled = !hmr_steps.is_empty();

@@ -51,12 +51,15 @@ async fn allow_pass_custom_arg() {
     })
   }));
 
-  IntegrationTest::new(TestMeta {
-    snapshot: false,
-    write_to_disk: false,
-    expect_executed: false,
-    ..Default::default()
-  })
+  IntegrationTest::new(
+    TestMeta {
+      snapshot: false,
+      write_to_disk: false,
+      expect_executed: false,
+      ..Default::default()
+    },
+    abs_file_dir!(),
+  )
   .run_with_plugins(
     BundlerOptions {
       input: Some(vec![InputItem {

@@ -7,7 +7,7 @@ use rolldown_testing::{abs_file_dir, integration_test::IntegrationTest, test_con
 async fn test() {
   let cwd = abs_file_dir!();
 
-  IntegrationTest::new(TestMeta { expect_error: false, ..Default::default() })
+  IntegrationTest::new(TestMeta { expect_error: false, ..Default::default() }, abs_file_dir!())
     .run(BundlerOptions {
       input: Some(vec![InputItem {
         name: Some("entry".to_string()),

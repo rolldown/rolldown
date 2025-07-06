@@ -38,7 +38,7 @@ impl Plugin for TestPlugin {
 async fn test() {
   let cwd = abs_file_dir!();
 
-  IntegrationTest::new(TestMeta { expect_error: true, ..Default::default() })
+  IntegrationTest::new(TestMeta { expect_error: true, ..Default::default() }, abs_file_dir!())
     .run_with_plugins(
       BundlerOptions {
         input: Some(vec![InputItem { name: Some("ext".to_string()), import: "ext".to_string() }]),

@@ -45,6 +45,6 @@ impl Fixture {
       }))
       .collect::<Vec<_>>();
 
-    IntegrationTest::new(meta).run_multiple(configs, &self.fixture_path, plugins).await;
+    IntegrationTest::new(meta, self.fixture_path.clone()).run_multiple(configs, plugins).await;
   }
 }

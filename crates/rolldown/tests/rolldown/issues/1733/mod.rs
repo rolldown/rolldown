@@ -40,7 +40,7 @@ impl Plugin for ExternalCss {
 async fn should_rewrite_dynamic_imports_that_import_external_modules() {
   let cwd = abs_file_dir!();
 
-  IntegrationTest::new(TestMeta { expect_executed: false, ..Default::default() })
+  IntegrationTest::new(TestMeta { expect_executed: false, ..Default::default() }, abs_file_dir!())
     .run_with_plugins(
       BundlerOptions {
         input: Some(vec![InputItem {

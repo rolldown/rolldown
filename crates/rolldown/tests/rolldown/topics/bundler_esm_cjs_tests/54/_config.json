@@ -17,5 +17,6 @@
     {
       "format": "umd"
     }
-  ]
+  ],
+  "snapshot": false
 }

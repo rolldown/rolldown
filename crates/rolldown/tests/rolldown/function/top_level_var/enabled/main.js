@@ -1,19 +1,21 @@
-let hello = "world"
-var world = "hello"
-const greeting = "hi"
+let firstLevelLet = "let"
+var firstLevelVar = "var"
+const firstLevelConst = "const"
+class FirstLevelClass {}
+console.log(firstLevelLet, firstLevelVar, firstLevelConst, new FirstLevelClass());
 
-assert(hello === "world");
-assert(world === "hello");
-assert(greeting === "hi");
-
-function second_level() {
-    let secondLevelHello = "second level world"
-    var secondLevelWorld = "second level hello"
-    const secondLevelGreeting = "second level hi"
-
-    assert(secondLevelHello === "second level world");
-    assert(secondLevelWorld === "second level hello");
-    assert(secondLevelGreeting === "second level hi");
+if (true) {
+    let shouldNotBeSubstitutedLet = "let";
+    console.log(shouldNotBeSubstitutedLet)
 }
 
-second_level()
+function second_level() {
+    let secondLevelLet = "let";
+    var secondLevelVar = "var";
+    const secondLevelConst = "const";
+    class SecondLevelClass {}
+
+    console.log(secondLevelLet, secondLevelVar, secondLevelConst, new SecondLevelClass());
+}
+
+second_level();

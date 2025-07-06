@@ -4534,11 +4534,11 @@ expression: output
 
 # tests/rolldown/function/top_level_var/disabled
 
-- main-!~{000}~.js => main-B2ph_ftT.js
+- main-!~{000}~.js => main-BVqXSZLa.js
 
 # tests/rolldown/function/top_level_var/enabled
 
-- main-!~{000}~.js => main-DI5elA6b.js
+- main-!~{000}~.js => main-DiDXXKF1.js
 
 # tests/rolldown/hash/content_include_placeholder
 

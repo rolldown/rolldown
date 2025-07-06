@@ -341,6 +341,12 @@ dependencies = [
 ]
 
 [[package]]
+name = "clean-path"
+version = "0.2.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "aaa6b4b263a5d737e9bf6b7c09b72c41a5480aec4d7219af827f6564e950b6a5"
+
+[[package]]
 name = "cmake"
 version = "0.1.54"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -412,6 +418,15 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "4ca0197aee26d1ae37445ee532fefce43251d24cc7c166799f4d46817f1d3973"
 dependencies = [
  "crossbeam-utils",
+]
+
+[[package]]
+name = "concurrent_lru"
+version = "0.2.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "7feb5cb312f774e8a24540e27206db4e890f7d488563671d24a16389cf4c2e4e"
+dependencies = [
+ "once_cell",
 ]
 
 [[package]]
@@ -663,6 +678,12 @@ name = "encode_unicode"
 version = "1.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "34aa73646ffb006b8f5147f3dc182bd4bcb190227ce861fc4a4844bf8e3cb2c0"
+
+[[package]]
+name = "endian-type"
+version = "0.1.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "c34f04666d835ff5d62e058c3995147c06f42fe86ff053337632bca83e42702d"
 
 [[package]]
 name = "equivalent"
@@ -1442,6 +1463,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "nibble_vec"
+version = "0.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "77a5d83df9f36fe23f0c3648c6bbb8b0298bb5f1939c8f2704431371f4b84d43"
+dependencies = [
+ "smallvec",
+]
+
+[[package]]
 name = "nohash-hasher"
 version = "0.2.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1969,15 +1999,16 @@ dependencies = [
 
 [[package]]
 name = "oxc_resolver"
-version = "11.3.0"
+version = "11.5.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f19b3db1f043a341055dd99281c9a59f2a91f6bd15e32ce5b8d13c719abb25d6"
+checksum = "e300c931167c1f902f8029a7aac00372cc1742c6a0c9f625a8b67dd337f557c7"
 dependencies = [
  "cfg-if",
  "indexmap",
  "json-strip-comments",
  "once_cell",
  "papaya",
+ "pnp",
  "rustc-hash",
  "serde",
  "serde_json",
@@ -1988,9 +2019,9 @@ dependencies = [
 
 [[package]]
 name = "oxc_resolver_napi"
-version = "11.3.0"
+version = "11.5.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "af1e32d2595071319373211600f11364a9f7be806312e5c8bbe23a0398b66192"
+checksum = "11b089660bc124ce7b24ebe3eecaf5242ceae182332b114b7daf061fb171a3d5"
 dependencies = [
  "napi",
  "napi-build",
@@ -2200,6 +2231,18 @@ dependencies = [
 ]
 
 [[package]]
+name = "path-slash"
+version = "0.2.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "1e91099d4268b0e11973f036e885d652fb0b21fedcf69738c627f94db6a44f42"
+
+[[package]]
+name = "pathdiff"
+version = "0.2.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "df94ce210e5bc13cb6651479fa48d14f601d9858cfe0467f43ae157023b938d3"
+
+[[package]]
 name = "percent-encoding"
 version = "2.3.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2293,6 +2336,26 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "8b870d8c151b6f2fb93e84a13146138f05d02ed11c7e7c54f8826aaaf7c9f184"
 
 [[package]]
+name = "pnp"
+version = "0.11.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "bc6da10bf83fe58dfcd4ab14ab45c8d3a375663cfd8f44e924c54379b431dbd3"
+dependencies = [
+ "byteorder",
+ "clean-path",
+ "concurrent_lru",
+ "fancy-regex",
+ "miniz_oxide",
+ "path-slash",
+ "pathdiff",
+ "radix_trie",
+ "rustc-hash",
+ "serde",
+ "serde_json",
+ "thiserror 2.0.12",
+]
+
+[[package]]
 name = "potential_utf"
 version = "0.1.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2340,6 +2403,16 @@ name = "r-efi"
 version = "5.3.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "69cdb34c158ceb288df11e18b4bd39de994f6657d83847bdffdbd7f346754b0f"
+
+[[package]]
+name = "radix_trie"
+version = "0.2.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "c069c179fcdc6a2fe24d8d18305cf085fdbd4f922c041943e203685d6a1c58fd"
+dependencies = [
+ "endian-type",
+ "nibble_vec",
+]
 
 [[package]]
 name = "rayon"

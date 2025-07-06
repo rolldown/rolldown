@@ -116,7 +116,7 @@ impl ScanStage {
     cache: &mut ScanStageCache,
   ) -> BuildResult<ScanStageOutput> {
     let mut module_loader = ModuleLoader::new(
-      self.fs,
+      self.fs.clone(),
       Arc::clone(&self.options),
       Arc::clone(&self.resolver),
       Arc::clone(&self.plugin_driver),

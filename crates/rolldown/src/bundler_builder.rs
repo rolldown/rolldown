@@ -2,7 +2,7 @@ use std::sync::Arc;
 
 use rolldown_common::{FileEmitter, NormalizedBundlerOptions};
 use rolldown_error::BuildDiagnostic;
-use rolldown_fs::OsFileSystem;
+use rolldown_fs::{OsFileSystem, OxcResolverFileSystem};
 use rolldown_plugin::{__inner::SharedPluginable, PluginDriver};
 use rolldown_resolver::{ResolveError, Resolver};
 
@@ -32,8 +32,9 @@ impl BundlerBuilder {
     let NormalizeOptionsReturn { mut options, resolve_options, mut warnings } =
       normalize_options(self.options);
     let tsconfig_filename = resolve_options.tsconfig_filename.clone();
+    let fs = OsFileSystem::new(resolve_options.yarn_pnp.is_some_and(|b| b));
     let resolver: SharedResolver =
-      Resolver::new(resolve_options, options.platform, options.cwd.clone(), OsFileSystem).into();
+      Resolver::new(resolve_options, options.platform, options.cwd.clone(), fs.clone()).into();
 
     // TODO: error handling
     Self::merge_transform_config_from_ts_config(
@@ -55,7 +56,7 @@ impl BundlerBuilder {
       file_emitter,
       resolver,
       options,
-      fs: OsFileSystem,
+      fs,
       warnings,
       _log_guard: maybe_guard,
       cache: ScanStageCache::default(),

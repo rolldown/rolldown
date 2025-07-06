@@ -327,8 +327,6 @@ export interface NapiResolveOptions {
    * Default `None`
    */
   tsconfig?: TsconfigOptions
-  /** Enable Yarn Plug'n'Play */
-  yarnPnp?: boolean
   /**
    * Alias for [ResolveOptions::alias] and [ResolveOptions::fallback].
    *
@@ -1810,6 +1808,7 @@ export interface BindingResolveOptions {
   modules?: Array<string>
   symlinks?: boolean
   tsconfigFilename?: string
+  yarnPnp?: boolean
 }
 
 export interface BindingShared {

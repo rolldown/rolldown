@@ -4,7 +4,7 @@ use anyhow::Ok;
 use rolldown::{AssetFilenamesOutputOption, BundlerOptions, InputItem};
 use rolldown_common::EmittedAsset;
 use rolldown_plugin::{HookUsage, Plugin, PluginContext};
-use rolldown_testing::{abs_file_dir, integration_test::IntegrationTest, test_config::TestMeta};
+use rolldown_testing::{manual_integration_test, test_config::TestMeta};
 
 #[derive(Debug)]
 struct TestPlugin;
@@ -40,16 +40,14 @@ impl Plugin for TestPlugin {
 
 #[tokio::test(flavor = "multi_thread")]
 async fn test() {
-  let cwd = abs_file_dir!();
-
-  IntegrationTest::new(TestMeta { expect_error: false, ..Default::default() }, abs_file_dir!())
+  manual_integration_test!()
+    .build(TestMeta { expect_error: false, ..Default::default() })
     .run_with_plugins(
       BundlerOptions {
         input: Some(vec![InputItem {
           name: Some("entry".to_string()),
           import: "entry.js".to_string(),
         }]),
-        cwd: Some(cwd),
         asset_filenames: Some(AssetFilenamesOutputOption::String(
           "[name]-[hash]-[hash:1]-[hash:23].js".into(),
         )),

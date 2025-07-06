@@ -3,7 +3,7 @@ use std::{borrow::Cow, sync::Arc};
 use rolldown::{BundlerOptions, InputItem, PreserveEntrySignatures};
 use rolldown_common::EmittedChunk;
 use rolldown_plugin::{HookUsage, Plugin};
-use rolldown_testing::{abs_file_dir, integration_test::IntegrationTest, test_config::TestMeta};
+use rolldown_testing::{manual_integration_test, test_config::TestMeta};
 
 #[derive(Debug)]
 struct Test;
@@ -38,12 +38,10 @@ impl Plugin for Test {
 
 #[tokio::test(flavor = "multi_thread")]
 async fn should_rewrite_dynamic_imports_that_import_external_modules() {
-  let cwd = abs_file_dir!();
-
-  IntegrationTest::new(TestMeta { expect_executed: false, ..Default::default() }, abs_file_dir!())
+  manual_integration_test!()
+    .build(TestMeta { expect_executed: false, ..Default::default() })
     .run_with_plugins(
       BundlerOptions {
-        cwd: Some(cwd),
         input: Some(vec![InputItem {
           name: Some("entry".into()),
           import: "./src/entry.js".into(),

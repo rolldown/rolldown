@@ -206,6 +206,10 @@ impl IntegrationTest {
   }
 
   fn apply_test_defaults(&self, options: &mut BundlerOptions) {
+    if options.cwd.is_none() {
+      options.cwd = Some(self.test_folder_path.clone());
+    }
+
     if options.external.is_none() {
       options.external = Some(IsExternal::from_vec(vec!["node:assert".to_string()]));
     }

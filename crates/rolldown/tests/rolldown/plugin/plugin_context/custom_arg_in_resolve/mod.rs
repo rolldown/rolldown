@@ -5,7 +5,7 @@ use rolldown_plugin::{
   CustomField, HookResolveIdArgs, HookResolveIdOutput, HookResolveIdReturn, HookUsage, Plugin,
   PluginContext, PluginContextResolveOptions, typedmap::TypedMapKey,
 };
-use rolldown_testing::{abs_file_dir, integration_test::IntegrationTest, test_config::TestMeta};
+use rolldown_testing::{manual_integration_test, test_config::TestMeta};
 #[derive(Debug)]
 struct TestPluginCaller;
 
@@ -85,16 +85,14 @@ impl Plugin for TestPluginReceiver {
 
 #[tokio::test(flavor = "multi_thread")]
 async fn allow_pass_custom_arg() {
-  let cwd = abs_file_dir!();
-
-  IntegrationTest::new(TestMeta { expect_executed: false, ..Default::default() }, abs_file_dir!())
+  manual_integration_test!()
+    .build(TestMeta { expect_executed: false, ..Default::default() })
     .run_with_plugins(
       BundlerOptions {
         input: Some(vec![InputItem {
           name: Some("entry".to_string()),
           import: "./entry.js".to_string(),
         }]),
-        cwd: Some(cwd),
         ..Default::default()
       },
       vec![Arc::new(TestPluginCaller), Arc::new(TestPluginReceiver)],

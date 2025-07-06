@@ -5002,6 +5002,12 @@ expression: output
 - page-a-!~{000}~.js => page-a-CEB9NEBh.js
 - page-b-!~{001}~.js => page-b-CatnFucT.js
 
+# tests/rolldown/optimization/inline_const/multi_pass
+
+- page-a-!~{000}~.js => page-a-Bvlf9BIV.js
+- page-b-!~{001}~.js => page-b-ZuQ_Twpw.js
+- foo-!~{002}~.js => foo-834KDxQ3.js
+
 # tests/rolldown/optimization/inline_const/ns_chain
 
 - main-!~{000}~.js => main-Brb9u1JP.js

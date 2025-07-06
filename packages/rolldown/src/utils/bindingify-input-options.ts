@@ -127,7 +127,7 @@ export function bindingifyInputOptions(
     preserveEntrySignatures: bindingifyPreserveEntrySignatures(
       inputOptions.preserveEntrySignatures,
     ),
-    optimization: inputOptions.optimization,
+    optimization: bindingifyOptimization(inputOptions.optimization),
   };
 }
 
@@ -412,4 +412,23 @@ export function bindingifyPreserveEntrySignatures(
   } else {
     return { type: 'Bool', field0: preserveEntrySignatures };
   }
+}
+
+function bindingifyOptimization(
+  optimization: InputOptions['optimization'],
+): BindingInputOptions['optimization'] {
+  if (optimization === undefined) {
+    return undefined;
+  }
+  let inlineConst = {
+    pass: 1,
+  };
+  if (typeof optimization?.inlineConst === 'object') {
+    inlineConst = {
+      pass: optimization.inlineConst?.pass ?? 1,
+    };
+  }
+  return {
+    inlineConst,
+  };
 }

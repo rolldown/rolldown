@@ -299,9 +299,16 @@ const TreeshakingOptionsSchema = v.union([
   }),
 ]);
 
+const InlineConstSchema = v.looseObject({
+  pass: v.optional(v.pipe(v.number(), v.toMaxValue(255), v.toMinValue(0))),
+});
+
 const OptimizationOptionsSchema = v.strictObject({
   inlineConst: v.pipe(
-    v.optional(v.boolean()),
+    v.optional(v.union([
+      v.boolean(),
+      InlineConstSchema,
+    ])),
     v.description('Enable crossmodule constant inlining'),
   ),
 });
@@ -513,6 +520,7 @@ const InputCliOptionsSchema = v.omit(
     'experimental',
     'profilerNames',
     'watch',
+    'optimization',
   ],
 );
 

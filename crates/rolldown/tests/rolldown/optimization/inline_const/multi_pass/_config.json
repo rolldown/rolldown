@@ -1,0 +1,29 @@
+{
+  "config": {
+    "input": [
+      {
+        "import": "./page-a.js"
+      },
+      {
+        "import": "./page-b.js"
+      }
+    ],
+    "minify": true,
+    "optimization": {
+      "inlineConst": {
+        "pass": 1
+      }
+    }
+  },
+  "configVariants": [
+    {
+      "configName": "inlineConstPass2",
+      "optimization": {
+        "inlineConst": {
+          "pass": 2
+        }
+      }
+    }
+  ],
+  "snapshot": false
+}

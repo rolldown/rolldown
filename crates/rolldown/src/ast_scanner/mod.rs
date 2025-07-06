@@ -1,5 +1,5 @@
 mod cjs_ast_analyzer;
-mod const_eval;
+pub mod const_eval;
 pub mod dynamic_import;
 mod hmr;
 pub mod impl_visit;
@@ -869,6 +869,8 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
     ConstEvalCtx {
       ast: oxc::ast::AstBuilder::new(self.allocator),
       scope: self.result.symbol_ref_db.scoping(),
+      module_idx: self.idx,
+      f: &|_, _| None,
     }
   }
 

@@ -39,6 +39,18 @@ impl From<constant_evaluation::ConstantValue<'_>> for ConstantValue {
     }
   }
 }
+impl From<ConstantValue> for constant_evaluation::ConstantValue<'_> {
+  fn from(value: ConstantValue) -> Self {
+    match value {
+      ConstantValue::Number(n) => constant_evaluation::ConstantValue::Number(n),
+      ConstantValue::BigInt(b) => constant_evaluation::ConstantValue::BigInt(b),
+      ConstantValue::String(s) => constant_evaluation::ConstantValue::String(s.into()),
+      ConstantValue::Boolean(b) => constant_evaluation::ConstantValue::Boolean(b),
+      ConstantValue::Undefined => constant_evaluation::ConstantValue::Undefined,
+      ConstantValue::Null => constant_evaluation::ConstantValue::Null,
+    }
+  }
+}
 
 impl ConstantValue {
   pub fn to_expression<'ast>(&self, ast: oxc::ast::AstBuilder<'ast>) -> Expression<'ast> {

@@ -1261,14 +1261,43 @@
       "type": "object",
       "properties": {
         "inlineConst": {
-          "description": "TODO: make the inline_const option more fine grained, e.g. `inline_const: false | true |\n\"on-demand\"`.\nInline constant everywhere not always generate smaller bundle, e.g.\n```js\n// index.js\nimport {long_string} from './foo.js'\nconsole.log(long_string);\nconsole.log(long_string);\nconsole.log(long_string);\nconsole.log(long_string);\nconsole.log(long_string);\n// foo.js\nexport const long_string = 'this is a very long string that will be inlined everywhere';\n```",
-          "type": [
-            "boolean",
-            "null"
+          "description": "TODO: make the inline_const option more fine grained, e.g. `inline_const: false | true |\n\"on-demand\"`.\nInline constant everywhere not always generate smaller bundle, e.g.\n```js\n// index.js\nimport {long_string} from './foo.js'\nconsole.log(long_string);\nconsole.log(long_string);\nconsole.log(long_string);\n// foo.js\nexport const long_string = 'this is a very long string that will be inlined everywhere';\n```",
+          "anyOf": [
+            {
+              "$ref": "#/$defs/InlineConstOption"
+            },
+            {
+              "type": "null"
+            }
           ]
         }
       },
       "additionalProperties": false
+    },
+    "InlineConstOption": {
+      "anyOf": [
+        {
+          "type": "boolean"
+        },
+        {
+          "$ref": "#/$defs/InlineConstOptionInner"
+        }
+      ]
+    },
+    "InlineConstOptionInner": {
+      "type": "object",
+      "properties": {
+        "pass": {
+          "type": "integer",
+          "format": "uint8",
+          "minimum": 0,
+          "maximum": 255
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "pass"
+      ]
     },
     "ConfigVariant": {
       "type": "object",
@@ -1343,6 +1372,16 @@
           "anyOf": [
             {
               "$ref": "#/$defs/TreeshakeOptions"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "optimization": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/OptimizationOption"
             },
             {
               "type": "null"

@@ -27,6 +27,8 @@
   diff
 ## [export_forms_with_minify_identifiers_and_no_bundle](../../../crates/rolldown/tests/esbuild/default/export_forms_with_minify_identifiers_and_no_bundle/diff.md)
   diff
+## [export_fs_node_in_common_js_module](../../../crates/rolldown/tests/esbuild/default/export_fs_node_in_common_js_module/diff.md)
+  diff
 ## [external_es6_converted_to_common_js](../../../crates/rolldown/tests/esbuild/default/external_es6_converted_to_common_js/diff.md)
   diff
 ## [false_require](../../../crates/rolldown/tests/esbuild/default/false_require/diff.md)
@@ -153,7 +155,6 @@
 ## [export_chain](../../../crates/rolldown/tests/esbuild/default/export_chain)
 ## [export_forms_es6](../../../crates/rolldown/tests/esbuild/default/export_forms_es6)
 ## [export_fs_node](../../../crates/rolldown/tests/esbuild/default/export_fs_node)
-## [export_fs_node_in_common_js_module](../../../crates/rolldown/tests/esbuild/default/export_fs_node_in_common_js_module)
 ## [external_module_exclusion_package](../../../crates/rolldown/tests/esbuild/default/external_module_exclusion_package)
 ## [external_packages](../../../crates/rolldown/tests/esbuild/default/external_packages)
 ## [external_wildcard_does_not_match_entry_point](../../../crates/rolldown/tests/esbuild/default/external_wildcard_does_not_match_entry_point)

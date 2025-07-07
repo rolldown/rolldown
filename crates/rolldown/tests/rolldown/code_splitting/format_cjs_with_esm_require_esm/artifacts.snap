@@ -31,7 +31,7 @@ Object.defineProperty(exports, '__toESM', {
 
 ```js
 const require_chunk = require('./chunk.js');
-require("node:assert");
+const node_assert = require_chunk.__toESM(require("node:assert"));
 
 ```
 ## main2.js

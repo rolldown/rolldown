@@ -1,6 +1,5 @@
 ---
 source: crates/rolldown_testing/src/integration_test.rs
-snapshot_kind: text
 ---
 # warnings
 
@@ -57,11 +56,11 @@ snapshot_kind: text
 ## entry.js
 
 ```js
-import * as fs from "fs";
+import * as fs$1 from "fs";
 import defaultValue, { readFileSync } from "fs";
 
 //#region entry.js
-console.log(fs, readFileSync, defaultValue);
+console.log(fs$1, readFileSync, defaultValue);
 
 //#endregion
 ```

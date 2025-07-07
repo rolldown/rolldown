@@ -27,6 +27,8 @@
   diff
 ## [package_json_side_effects_false_one_fork](../../../crates/rolldown/tests/esbuild/dce/package_json_side_effects_false_one_fork/diff.md)
   diff
+## [remove_unused_imports_eval](../../../crates/rolldown/tests/esbuild/dce/remove_unused_imports_eval/diff.md)
+  diff
 ## [remove_unused_no_side_effects_tagged_templates](../../../crates/rolldown/tests/esbuild/dce/remove_unused_no_side_effects_tagged_templates/diff.md)
   diff
 ## [tree_shaking_lowered_class_static_field](../../../crates/rolldown/tests/esbuild/dce/tree_shaking_lowered_class_static_field/diff.md)
@@ -73,7 +75,6 @@
 ## [pure_calls_with_spread](../../../crates/rolldown/tests/esbuild/dce/pure_calls_with_spread)
 ## [remove_unused_import_meta](../../../crates/rolldown/tests/esbuild/dce/remove_unused_import_meta)
 ## [remove_unused_imports](../../../crates/rolldown/tests/esbuild/dce/remove_unused_imports)
-## [remove_unused_imports_eval](../../../crates/rolldown/tests/esbuild/dce/remove_unused_imports_eval)
 ## [remove_unused_imports_eval_ts](../../../crates/rolldown/tests/esbuild/dce/remove_unused_imports_eval_ts)
 ## [remove_unused_pure_comment_calls](../../../crates/rolldown/tests/esbuild/dce/remove_unused_pure_comment_calls)
 ## [text_loader_remove_unused](../../../crates/rolldown/tests/esbuild/dce/text_loader_remove_unused)

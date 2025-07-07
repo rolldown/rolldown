@@ -490,7 +490,7 @@ expression: output
 
 # tests/esbuild/dce/remove_unused_imports_eval
 
-- entry-!~{000}~.js => entry-D-jBHDix.js
+- entry-!~{000}~.js => entry-BT1-3u2e.js
 
 # tests/esbuild/dce/remove_unused_imports_eval_ts
 
@@ -815,7 +815,7 @@ expression: output
 
 # tests/esbuild/default/export_fs_node_in_common_js_module
 
-- entry-!~{000}~.js => entry-BF79_2C9.js
+- entry-!~{000}~.js => entry-CLnbTaKL.js
 
 # tests/esbuild/default/export_infinite_cycle1
 
@@ -919,7 +919,7 @@ expression: output
 
 # tests/esbuild/default/import_fs_browser
 
-- entry-!~{000}~.js => entry-DsPy1xXO.js
+- entry-!~{000}~.js => entry-pQyfNGiK.js
 
 # tests/esbuild/default/import_fs_node_common_js
 
@@ -927,7 +927,7 @@ expression: output
 
 # tests/esbuild/default/import_fs_node_es6
 
-- entry-!~{000}~.js => entry-DsPy1xXO.js
+- entry-!~{000}~.js => entry-pQyfNGiK.js
 
 # tests/esbuild/default/import_inside_try
 
@@ -1454,15 +1454,15 @@ expression: output
 
 # tests/esbuild/default/object_literal_proto_setter_edge_cases
 
-- import-normal-!~{001}~.js => import-normal-Dr2j1jhc.js
-- import-shorthand-!~{000}~.js => import-shorthand-BWfr8P8I.js
+- import-normal-!~{001}~.js => import-normal-DmbJbkcc.js
+- import-shorthand-!~{000}~.js => import-shorthand-VMtEyk0E.js
 - local-normal-!~{003}~.js => local-normal-BjK55sL0.js
 - local-shorthand-!~{002}~.js => local-shorthand-D4DM9P-6.js
 
 # tests/esbuild/default/object_literal_proto_setter_edge_cases_minify_syntax
 
-- import-computed-!~{000}~.js => import-computed-76Ws7WAo.js
-- import-normal-!~{001}~.js => import-normal-Dr2j1jhc.js
+- import-computed-!~{000}~.js => import-computed-B5eVzUQW.js
+- import-normal-!~{001}~.js => import-normal-DmbJbkcc.js
 - local-computed-!~{002}~.js => local-computed-DBk-D7Oa.js
 - local-normal-!~{003}~.js => local-normal-BjK55sL0.js
 
@@ -2003,11 +2003,11 @@ expression: output
 
 # tests/esbuild/importstar/import_star_mangle_no_bundle_capture
 
-- entry-!~{000}~.js => entry-ClWrecWs.js
+- entry-!~{000}~.js => entry-BNGlcA5h.js
 
 # tests/esbuild/importstar/import_star_mangle_no_bundle_no_capture
 
-- entry-!~{000}~.js => entry-Bavoi1v4.js
+- entry-!~{000}~.js => entry-CDQ9q1Dl.js
 
 # tests/esbuild/importstar/import_star_mangle_no_bundle_unused
 
@@ -2015,11 +2015,11 @@ expression: output
 
 # tests/esbuild/importstar/import_star_no_bundle_capture
 
-- entry-!~{000}~.js => entry-ClWrecWs.js
+- entry-!~{000}~.js => entry-BNGlcA5h.js
 
 # tests/esbuild/importstar/import_star_no_bundle_no_capture
 
-- entry-!~{000}~.js => entry-Bavoi1v4.js
+- entry-!~{000}~.js => entry-CDQ9q1Dl.js
 
 # tests/esbuild/importstar/import_star_no_bundle_unused
 
@@ -2215,11 +2215,11 @@ expression: output
 
 # tests/esbuild/importstar_ts/ts_import_star_mangle_no_bundle_capture
 
-- entry-!~{000}~.js => entry-57O2ow5h.js
+- entry-!~{000}~.js => entry-CzXZbypS.js
 
 # tests/esbuild/importstar_ts/ts_import_star_mangle_no_bundle_no_capture
 
-- entry-!~{000}~.js => entry-BsfMeeMt.js
+- entry-!~{000}~.js => entry-DtiAtNB7.js
 
 # tests/esbuild/importstar_ts/ts_import_star_mangle_no_bundle_unused
 
@@ -2227,11 +2227,11 @@ expression: output
 
 # tests/esbuild/importstar_ts/ts_import_star_no_bundle_capture
 
-- entry-!~{000}~.js => entry-57O2ow5h.js
+- entry-!~{000}~.js => entry-CzXZbypS.js
 
 # tests/esbuild/importstar_ts/ts_import_star_no_bundle_no_capture
 
-- entry-!~{000}~.js => entry-BsfMeeMt.js
+- entry-!~{000}~.js => entry-DtiAtNB7.js
 
 # tests/esbuild/importstar_ts/ts_import_star_no_bundle_unused
 
@@ -3828,7 +3828,7 @@ expression: output
 
 # tests/rolldown/code_splitting/format_cjs_with_esm_require_esm
 
-- main1-!~{000}~.js => main1-ClScYW9f.js
+- main1-!~{000}~.js => main1-g9F9GoqK.js
 - main2-!~{001}~.js => main2-DOPnS-XR.js
 - chunk-!~{002}~.js => chunk-BMlwYAFk.js
 
@@ -4291,7 +4291,7 @@ expression: output
 
 # tests/rolldown/function/format/iife/external_modules
 
-- main-!~{000}~.js => main-CRmb7lkJ.js
+- main-!~{000}~.js => main-D0FQJFMP.js
 
 # tests/rolldown/function/format/iife/external_modules_with_globals
 
@@ -4323,7 +4323,7 @@ expression: output
 
 # tests/rolldown/function/format/umd/external_modules
 
-- main-!~{000}~.js => main-DlpkQm4c.js
+- main-!~{000}~.js => main-UYHAMpZU.js
 
 # tests/rolldown/function/format/umd/external_modules_with_complex_globals
 
@@ -4498,7 +4498,7 @@ expression: output
 
 # tests/rolldown/function/platform/node/should_not_throw_warnings_for_import_builtin_modules/basic
 
-- main-!~{000}~.js => main-BJ5nqhB1.js
+- main-!~{000}~.js => main-Bl8pb0Ja.js
 
 # tests/rolldown/function/resolve/alias_to_node_builtin_module
 

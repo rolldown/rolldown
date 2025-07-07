@@ -35,7 +35,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 import { __proto__, bar } from "foo";
 
 //#region import-normal.js
-function foo() {
+function foo$1() {
 	console.log("this must not become \"{ __proto__ }\":", {
 		__proto__: __proto__,
 		bar
@@ -50,7 +50,7 @@ function foo() {
 import { __proto__, bar } from "foo";
 
 //#region import-shorthand.js
-function foo() {
+function foo$1() {
 	console.log("this must not become \"{ __proto__: ... }\":", {
 		__proto__: __proto__,
 		bar

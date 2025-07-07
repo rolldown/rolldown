@@ -477,6 +477,12 @@
             "boolean",
             "null"
           ]
+        },
+        "minifyInternalExports": {
+          "type": [
+            "boolean",
+            "null"
+          ]
         }
       },
       "additionalProperties": false

@@ -1,6 +1,5 @@
 ---
 source: crates/rolldown_testing/src/integration_test.rs
-snapshot_kind: text
 ---
 # warnings
 
@@ -33,13 +32,13 @@ snapshot_kind: text
 ## entry.js
 
 ```js
-import * as fs from "fs";
+import * as fs$1 from "fs";
 import { readFileSync } from "fs";
 
 
 //#region entry.js
 var require_entry = __commonJS({ "entry.js"(exports) {
-	exports.fs = fs;
+	exports.fs = fs$1;
 	exports.readFileSync = readFileSync;
 	exports.foo = 123;
 } });

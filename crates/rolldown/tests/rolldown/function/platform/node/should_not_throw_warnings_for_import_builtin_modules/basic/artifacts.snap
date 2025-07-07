@@ -7,12 +7,12 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```js
 import { createRequire } from "node:module";
-import * as fs from "fs";
+import * as fs$1 from "fs";
 import * as nodeFs from "node:fs";
 
 
 //#region main.js
-console.log(fs, nodeFs, __require("path"), __require("node:path"));
+console.log(fs$1, nodeFs, __require("path"), __require("node:path"));
 
 //#endregion
 ```

@@ -21,7 +21,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```js
 import a from "a";
-import * as b from "b";
+import * as b$1 from "b";
 import { c } from "c";
 
 //#region entry.js

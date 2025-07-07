@@ -41,7 +41,7 @@ impl Fixture {
     let configs = std::iter::once(NamedBundlerOptions { options: options.clone(), name: None })
       .chain(config_variants.into_iter().map(|variant| NamedBundlerOptions {
         options: variant.apply(&options),
-        name: Some(variant.to_string()),
+        name: Some(variant.config_name.clone().unwrap_or(variant.to_string())),
       }))
       .collect::<Vec<_>>();
 

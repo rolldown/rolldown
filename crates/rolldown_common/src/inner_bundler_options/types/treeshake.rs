@@ -138,7 +138,7 @@ impl TreeshakeOptions {
 
   pub fn into_normalized_options(self) -> NormalizedTreeshakeOptions {
     match self {
-      TreeshakeOptions::Boolean(true) => NormalizedTreeshakeOptions::default(),
+      TreeshakeOptions::Boolean(true) => InnerOptions::default().into(),
       TreeshakeOptions::Boolean(false) => NormalizedTreeshakeOptions::new(None),
       TreeshakeOptions::Option(inner_options) => inner_options.into(),
     }

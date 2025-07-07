@@ -1,6 +1,8 @@
 use std::fmt::Display;
 
-use rolldown_common::{BundlerOptions, OutputExports, OutputFormat, PreserveEntrySignatures};
+use rolldown_common::{
+  BundlerOptions, OutputExports, OutputFormat, PreserveEntrySignatures, TreeshakeOptions,
+};
 use schemars::JsonSchema;
 use serde::Deserialize;
 
@@ -10,11 +12,13 @@ pub struct ConfigVariant {
   pub format: Option<OutputFormat>,
   pub extend: Option<bool>,
   pub name: Option<String>,
+  pub config_name: Option<String>,
   pub exports: Option<OutputExports>,
   pub strict_execution_order: Option<bool>,
   pub entry_filenames: Option<String>,
   pub inline_dynamic_imports: Option<bool>,
   pub preserve_entry_signatures: Option<PreserveEntrySignatures>,
+  pub treeshake: Option<TreeshakeOptions>,
 }
 
 impl ConfigVariant {
@@ -45,6 +49,9 @@ impl ConfigVariant {
     if let Some(preserve_entry_signatures) = &self.preserve_entry_signatures {
       config.preserve_entry_signatures = Some(*preserve_entry_signatures);
     }
+    if let Some(treeshake) = &self.treeshake {
+      config.treeshake = treeshake.clone();
+    }
     config
   }
 }
@@ -72,6 +79,9 @@ impl Display for ConfigVariant {
     }
     if let Some(preserve_entry_signatures) = &self.preserve_entry_signatures {
       fields.push(format!("preserve_entry_signatures: {preserve_entry_signatures:?}"));
+    }
+    if let Some(treeshake) = &self.treeshake {
+      fields.push(format!("treeshake: {treeshake:?}"));
     }
     fields.sort();
     if fields.is_empty() { write!(f, "()") } else { write!(f, "({})", fields.join(", ")) }

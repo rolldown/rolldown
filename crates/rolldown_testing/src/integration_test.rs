@@ -186,7 +186,12 @@ impl IntegrationTest {
           }
 
           if execute_output {
-            Self::execute_output_assets(&bundler, &debug_title, patch_chunks);
+            Self::execute_output_assets(
+              &bundler,
+              &debug_title,
+              patch_chunks,
+              named_options.name.as_deref(),
+            );
           } else {
             // do nothing
           }
@@ -546,7 +551,12 @@ impl IntegrationTest {
     }
   }
 
-  fn execute_output_assets(bundler: &Bundler, test_title: &str, patch_chunks: Vec<String>) {
+  fn execute_output_assets(
+    bundler: &Bundler,
+    test_title: &str,
+    patch_chunks: Vec<String>,
+    name: Option<&str>,
+  ) {
     let cwd = bundler.options().cwd.clone();
     let dist_folder = cwd.join(&bundler.options().out_dir);
 
@@ -575,6 +585,20 @@ impl IntegrationTest {
     let test_script = cwd.join("_test.mjs");
 
     let mut node_command = Command::new("node");
+
+    if let Some(name) = name {
+      node_command.arg("--import");
+      let normalized_name = name
+        .trim_start_matches('(')
+        .trim_start_matches("name:")
+        .trim()
+        .trim_end_matches(')')
+        .trim_matches('"');
+      let injected_script = format!("globalThis.__testName = `{normalized_name}`",);
+      let inject_script_url =
+        format!("data:text/javascript,{}", urlencoding::encode(&injected_script));
+      node_command.arg(inject_script_url);
+    }
 
     if !patch_chunks.is_empty() {
       node_command.arg("--import");

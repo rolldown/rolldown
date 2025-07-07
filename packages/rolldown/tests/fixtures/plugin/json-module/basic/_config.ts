@@ -2,16 +2,17 @@ import { defineTest } from "rolldown-tests";
 
 export default defineTest({
 	config: {
-    experimental: {
-      viteMode: true
-    },
+		experimental: {
+			viteMode: true,
+		},
 		plugins: [
 			{
 				name: "custom-json",
 				load(id) {
 					if (id.endsWith(".json")) {
 						return {
-							code: 'export default {200: "ok"}',
+							code:
+								'export const foo = "bar";' + 'export default {200: "ok", foo}',
 							moduleType: "js",
 						};
 					}

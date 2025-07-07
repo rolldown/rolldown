@@ -318,6 +318,7 @@ export interface OutputOptions {
   preserveModules?: boolean;
   virtualDirname?: string;
   preserveModulesRoot?: string;
+  topLevelVar?: boolean;
 }
 
 interface OverwriteOutputOptionsForCli {

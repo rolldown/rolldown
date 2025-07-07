@@ -101,6 +101,7 @@ pub struct NormalizedBundlerOptions {
   pub preserve_entry_signatures: PreserveEntrySignatures,
   pub debug: bool,
   pub optimization: OptimizationOption,
+  pub top_level_var: bool,
 }
 
 // This is only used for testing
@@ -167,6 +168,7 @@ impl Default for NormalizedBundlerOptions {
       preserve_entry_signatures: PreserveEntrySignatures::default(),
       debug: false,
       optimization: OptimizationOption::default(),
+      top_level_var: false,
     }
   }
 }

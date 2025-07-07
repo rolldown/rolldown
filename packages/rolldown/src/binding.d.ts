@@ -1137,6 +1137,7 @@ export declare class BindingNormalizedOptions {
   get preserveModules(): boolean
   get preserveModulesRoot(): string | undefined
   get virtualDirname(): string
+  get topLevelVar(): boolean
 }
 
 export declare class BindingOutputAsset {
@@ -1668,6 +1669,7 @@ export interface BindingOutputOptions {
   preserveModules?: boolean
   virtualDirname?: string
   preserveModulesRoot?: string
+  topLevelVar?: boolean
 }
 
 export interface BindingOxcRuntimePluginConfig {

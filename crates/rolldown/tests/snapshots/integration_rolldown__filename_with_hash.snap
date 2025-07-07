@@ -3739,6 +3739,10 @@ expression: output
 
 - main-!~{000}~.js => main-Dbo94Yvl.js
 
+# tests/rolldown/cjs_compat/optimize_interop_default_with_none_default_ns_property_name
+
+- main-!~{000}~.js => main-Cvm9aBU7.js
+
 # tests/rolldown/cjs_compat/partial_cjs_ns_merge
 
 - main-!~{000}~.js => main-mbEkR_Bu.js

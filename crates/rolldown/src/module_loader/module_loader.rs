@@ -335,10 +335,17 @@ impl<'a> ModuleLoader<'a> {
 
           let mut import_records: IndexVec<ImportRecordIdx, rolldown_common::ResolvedImportRecord> =
             IndexVec::with_capacity(raw_import_records.len());
-          for ((rec_idx, raw_rec), info) in
+          for ((rec_idx, mut raw_rec), resolved_id) in
             raw_import_records.into_iter_enumerated().zip(resolved_deps)
           {
-            let idx = if let Some(idx) = self.try_spawn_with_cache(&info) {
+            #[allow(clippy::case_sensitive_file_extension_comparisons)]
+            if self.options.experimental.vite_mode.unwrap_or_default()
+              && resolved_id.id.as_str().ends_with(".json")
+            {
+              raw_rec.meta.insert(ImportRecordMeta::JSON_MODULE);
+            }
+
+            let idx = if let Some(idx) = self.try_spawn_with_cache(&resolved_id) {
               idx
             } else {
               let normal_module = module.as_normal().unwrap();
@@ -348,13 +355,14 @@ impl<'a> ModuleLoader<'a> {
                 raw_rec.span,
               );
               self.try_spawn_new_task(
-                info,
+                resolved_id,
                 Some(owner),
                 false,
                 raw_rec.asserted_module_type.clone(),
                 Arc::clone(&user_defined_entries),
               )
             };
+
             if raw_rec.meta.contains(ImportRecordMeta::SAFELY_MERGE_CJS_NS) {
               safely_merge_cjs_ns_map.entry(idx).or_default().push(raw_rec.namespace_ref);
             }

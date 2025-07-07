@@ -1,3 +1,4 @@
-const messages = require("./code.json");
-
-module.exports = { messages };
+module.exports = {
+	code1: require("./code1"),
+	code2: require("./code2.json"),
+};

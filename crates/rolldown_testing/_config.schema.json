@@ -1295,6 +1295,12 @@
             "null"
           ]
         },
+        "configName": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
         "exports": {
           "anyOf": [
             {
@@ -1327,6 +1333,16 @@
           "anyOf": [
             {
               "$ref": "#/$defs/PreserveEntrySignatures"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "treeshake": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/TreeshakeOptions"
             },
             {
               "type": "null"

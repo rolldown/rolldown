@@ -5074,6 +5074,10 @@ expression: output
 - main1-DuhB17iW.js.map
 - shared-Bisfm5lw.js.map
 
+# tests/rolldown/topics/allow_different_variant_unit_test
+
+- main-!~{000}~.js => main-BFTacv6h.js
+
 # tests/rolldown/topics/bundler_esm_cjs_tests/0
 
 - entry-!~{000}~.js => entry-BM0IqEBl.js

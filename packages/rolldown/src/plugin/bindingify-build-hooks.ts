@@ -12,7 +12,6 @@ import {
 } from '../types/sourcemap';
 import { normalizeErrors } from '../utils/error';
 import { transformModuleInfo } from '../utils/transform-module-info';
-import { bindingifySideEffects } from '../utils/transform-side-effects';
 import {
   isEmptySourcemapFiled,
   normalizeTransformHookSourcemap,
@@ -148,7 +147,7 @@ export function bindingifyResolveId(
         id: ret.id,
         external: ret.external,
         normalizeExternalId: false,
-        sideEffects: bindingifySideEffects(exist.moduleSideEffects),
+        sideEffects: exist.moduleSideEffects ?? undefined,
       };
     },
     meta: bindingifyPluginHookMeta(meta),
@@ -201,7 +200,7 @@ export function bindingifyResolveDynamicImport(
       };
 
       if (ret.moduleSideEffects !== null) {
-        result.sideEffects = bindingifySideEffects(ret.moduleSideEffects);
+        result.sideEffects = ret.moduleSideEffects;
       }
 
       args.pluginContextData.updateModuleOption(ret.id, {
@@ -267,7 +266,7 @@ export function bindingifyTransform(
         map: bindingifySourcemap(
           normalizeTransformHookSourcemap(id, code, ret.map),
         ),
-        sideEffects: bindingifySideEffects(moduleOption.moduleSideEffects),
+        sideEffects: moduleOption.moduleSideEffects ?? undefined,
         moduleType: ret.moduleType,
       };
     },
@@ -324,7 +323,7 @@ export function bindingifyLoad(
         code: ret.code,
         map: bindingifySourcemap(map),
         moduleType: ret.moduleType,
-        sideEffects: bindingifySideEffects(moduleOption.moduleSideEffects),
+        sideEffects: moduleOption.moduleSideEffects ?? undefined,
       };
     },
     meta: bindingifyPluginHookMeta(meta),

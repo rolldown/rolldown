@@ -26,7 +26,6 @@ import { bindingifyPlugin } from '../plugin/bindingify-plugin';
 import { PluginContextData } from '../plugin/plugin-context-data';
 import { arraify } from './misc';
 import { normalizedStringOrRegex } from './normalize-string-or-regex';
-import { bindingifySideEffects } from './transform-side-effects';
 
 export function bindingifyInputOptions(
   rawPlugins: RolldownPlugin[],
@@ -110,7 +109,7 @@ export function bindingifyInputOptions(
         if (value.invalidate) {
           ret.push({
             id: key,
-            sideEffects: bindingifySideEffects(value.moduleSideEffects),
+            sideEffects: value.moduleSideEffects ?? undefined,
           });
         }
       });

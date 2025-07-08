@@ -1173,7 +1173,7 @@ export declare class BindingOutputs {
 }
 
 export declare class BindingPluginContext {
-  load(specifier: string, sideEffects: BindingHookSideEffects | undefined): Promise<void>
+  load(specifier: string, sideEffects: boolean | 'no-treeshake' | undefined): Promise<void>
   resolve(specifier: string, importer?: string | undefined | null, extraOptions?: BindingPluginContextResolveOptions | undefined | null): Promise<BindingPluginContextResolvedId | null>
   emitFile(file: BindingEmittedAsset, assetFilename?: string | undefined | null, fnSanitizedFileName?: string | undefined | null): string
   emitChunk(file: BindingEmittedChunk): string
@@ -1336,7 +1336,7 @@ export interface BindingDebugOptions {
 export interface BindingDeferSyncScanData {
   /** ModuleId */
   id: string
-  sideEffects?: BindingHookSideEffects
+  sideEffects?: boolean | 'no-treeshake'
 }
 
 export interface BindingDynamicImportVarsPluginConfig {
@@ -1420,7 +1420,7 @@ export interface BindingHookJsResolveIdOutput {
 
 export interface BindingHookLoadOutput {
   code: string
-  sideEffects?: BindingHookSideEffects
+  sideEffects?: boolean | 'no-treeshake'
   map?: BindingSourcemap
   moduleType?: string
 }
@@ -1449,14 +1449,11 @@ export interface BindingHookResolveIdOutput {
   id: string
   external?: BindingResolvedExternal
   normalizeExternalId?: boolean
-  sideEffects?: BindingHookSideEffects
+  sideEffects?: boolean | 'no-treeshake'
 }
 
-export declare enum BindingHookSideEffects {
-  True = 0,
-  False = 1,
-  NoTreeshake = 2
-}
+export type BindingHookSideEffects =
+  boolean | string
 
 export interface BindingHookTransformOutput {
   code?: string

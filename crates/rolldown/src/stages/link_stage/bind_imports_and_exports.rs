@@ -1,4 +1,4 @@
-use std::{borrow::Cow, collections::hash_map::Entry};
+use std::borrow::Cow;
 
 use arcstr::ArcStr;
 use indexmap::IndexSet;
@@ -257,52 +257,6 @@ impl LinkStage<'_> {
   /// exports.something = 1
   /// ```
   fn update_cjs_module_meta(&mut self) {
-    enum CacheStatus {
-      Seen,
-      Value(bool),
-    }
-    /// caller should guarantee that the idx of module belongs to a normal module
-    fn recursive_update_cjs_module_interop_default_removable(
-      module_tables: &IndexModules,
-      module_idx: ModuleIdx,
-      cache: &mut FxHashMap<ModuleIdx, CacheStatus>,
-    ) -> bool {
-      match cache.entry(module_idx) {
-        Entry::Occupied(mut occ) => {
-          match occ.get_mut() {
-            // Find a cycle
-            CacheStatus::Seen => return false,
-            CacheStatus::Value(v) => return *v,
-          }
-        }
-        Entry::Vacant(vac) => {
-          vac.insert(CacheStatus::Seen);
-        }
-      }
-      let module = module_tables[module_idx].as_normal().unwrap();
-      let v = if module.ast_usage.contains(EcmaModuleAstUsage::IsCjsReexport) {
-        module.import_records.iter().all(|item| {
-          let Some(importee) = module_tables[item.resolved_module].as_normal() else {
-            return false;
-          };
-          if importee.exports_kind.is_commonjs() {
-            recursive_update_cjs_module_interop_default_removable(
-              module_tables,
-              importee.idx,
-              cache,
-            )
-          } else {
-            false
-          }
-        })
-      } else {
-        module.ast_usage.contains(EcmaModuleAstUsage::AllStaticExportPropertyAccess)
-      };
-      cache.insert(module_idx, CacheStatus::Value(v));
-      v
-    }
-
-    let mut cache = FxHashMap::default();
     let relation_with_commonjs_map = self
       .module_table
       .modules
@@ -318,22 +272,6 @@ impl LinkStage<'_> {
         }
       })
       .collect::<FxHashMap<ModuleIdx, RelationWithCommonjs>>();
-
-    let mut module_has_cjs_import: FxHashSet<ModuleIdx> = FxHashSet::default();
-
-    for module_idx in relation_with_commonjs_map
-      .iter()
-      .filter_map(|item| matches!(item.1, RelationWithCommonjs::Commonjs).then_some(item.0))
-    {
-      let v = recursive_update_cjs_module_interop_default_removable(
-        &self.module_table.modules,
-        *module_idx,
-        &mut cache,
-      );
-      self.metas[*module_idx].safe_cjs_to_eliminate_interop_default = v;
-      let cjs_module = self.module_table[*module_idx].as_normal().expect("should be normal_module");
-      module_has_cjs_import.extend(cjs_module.importers_idx.iter());
-    }
 
     let idx_to_symbol_ref_to_module_idx_map = self
       .module_table

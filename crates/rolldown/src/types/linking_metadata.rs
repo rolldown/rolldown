@@ -59,7 +59,6 @@ pub struct LinkingMetadata {
   // `None` the member expression resolve to a ambiguous export.
   pub resolved_member_expr_refs: MemberExprRefResolutionMap,
   pub star_exports_from_external_modules: Vec<ImportRecordIdx>,
-  pub safe_cjs_to_eliminate_interop_default: bool,
   pub is_tla_or_contains_tla_dependency: bool,
   /// Used to to track a facade binding referenced cjs module
   /// included reexport symbol from commonjs module

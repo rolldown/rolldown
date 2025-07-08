@@ -6,7 +6,7 @@ use std::path::Path;
 
 use arcstr::ArcStr;
 use itertools::Itertools;
-use oxc::codegen::{Codegen, CodegenOptions, CodegenReturn};
+use oxc::codegen::{Codegen, CodegenOptions, CodegenReturn, CommentOptions};
 use oxc::parser::Parser;
 use oxc::semantic::SemanticBuilder;
 use oxc::transformer::Transformer;
@@ -89,7 +89,7 @@ impl Plugin for TransformPlugin {
 
     let ret = Codegen::new()
       .with_options(CodegenOptions {
-        comments: false,
+        comments: CommentOptions { normal: false, ..CommentOptions::default() },
         source_map_path: Some(args.id.into()),
         ..CodegenOptions::default()
       })

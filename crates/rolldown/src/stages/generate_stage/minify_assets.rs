@@ -1,4 +1,4 @@
-use oxc::codegen::CodegenOptions;
+use oxc::codegen::{CodegenOptions, CommentOptions};
 use rolldown_common::{LegalComments, MinifyOptions, NormalizedBundlerOptions};
 use rolldown_ecmascript::EcmaCompiler;
 use rolldown_error::BuildResult;
@@ -31,7 +31,10 @@ impl GenerateStage<'_> {
               if minify_options.remove_whitespace {
                 CodegenOptions::minify()
               } else {
-                CodegenOptions { comments: false, ..CodegenOptions::default() }
+                CodegenOptions {
+                  comments: CommentOptions { normal: false, ..CommentOptions::default() },
+                  ..CodegenOptions::default()
+                }
               },
               matches!(options.legal_comments, LegalComments::Inline),
             );

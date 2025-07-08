@@ -82,6 +82,7 @@ export function bindingifyOutputOptions(
     legalComments,
     preserveModulesRoot,
     topLevelVar,
+    minifyInternalExports: outputOptions.minifyInternalExports,
   };
 }
 

@@ -741,6 +741,10 @@ const OutputOptionsSchema = v.strictObject({
     v.description('Put preserved modules under this path at root level'),
   ),
   virtualDirname: v.optional(v.string()),
+  minifyInternalExports: v.pipe(
+    v.optional(v.boolean()),
+    v.description('Minify internal exports'),
+  ),
 });
 
 const getAddonDescription = (

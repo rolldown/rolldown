@@ -319,6 +319,13 @@ export interface OutputOptions {
   virtualDirname?: string;
   preserveModulesRoot?: string;
   topLevelVar?: boolean;
+  /**
+   * - Type: `boolean`
+   * - Default: `false`
+   *
+   * Whether to minify internal exports.
+   */
+  minifyInternalExports?: boolean;
 }
 
 interface OverwriteOutputOptionsForCli {

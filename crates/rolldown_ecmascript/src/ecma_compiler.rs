@@ -4,7 +4,7 @@ use arcstr::ArcStr;
 use oxc::{
   allocator::Allocator,
   ast::{AstBuilder, ast::Program},
-  codegen::{Codegen, CodegenOptions, CodegenReturn, LegalComment},
+  codegen::{Codegen, CodegenOptions, CodegenReturn, CommentOptions, LegalComment},
   mangler::Mangler,
   minifier::{CompressOptions, Compressor, MinifierOptions, MinifierReturn},
   parser::{ParseOptions, Parser},
@@ -82,15 +82,18 @@ impl EcmaCompiler {
   }
 
   pub fn print_with(ast: &EcmaAst, options: PrintOptions) -> CodegenReturn {
-    let legal_comments =
+    let legal =
       if options.print_legal_comments { LegalComment::Inline } else { LegalComment::None };
     Codegen::new()
       .with_options(CodegenOptions {
-        comments: false,
-        // This option will be configurable when we begin to support `ignore-annotations`
-        // https://esbuild.github.io/api/#ignore-annotations
-        annotation_comments: true,
-        legal_comments,
+        comments: CommentOptions {
+          normal: false,
+          legal,
+          // These option will be configurable when we begin to support `ignore-annotations`
+          // https://esbuild.github.io/api/#ignore-annotations
+          jsdoc: true,
+          annotation: true,
+        },
         source_map_path: options.sourcemap.then(|| PathBuf::from(options.filename)),
         ..CodegenOptions::default()
       })
@@ -114,11 +117,11 @@ impl EcmaCompiler {
     let ret = Self::minify_impl(minifier_options, run_compress, &allocator, program);
     let ret = Codegen::new()
       .with_options(CodegenOptions {
-        comments: false,
-        legal_comments: if print_legal_comments {
-          LegalComment::Inline
-        } else {
-          LegalComment::None
+        comments: CommentOptions {
+          annotation: false,
+          jsdoc: false,
+          normal: false,
+          legal: if print_legal_comments { LegalComment::Inline } else { LegalComment::None },
         },
         source_map_path: enable_sourcemap.then(|| PathBuf::from(filename)),
         ..codegen_options

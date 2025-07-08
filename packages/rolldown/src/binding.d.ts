@@ -1676,6 +1676,7 @@ export interface BindingOxcRuntimePluginConfig {
 export interface BindingPluginContextResolvedId {
   id: string
   external: boolean | 'absolute' | 'relative'
+  moduleSideEffects?: boolean | 'no-treeshake'
 }
 
 export interface BindingPluginContextResolveOptions {

@@ -16,6 +16,7 @@
     "vitest": "^3.0.1"
   },
   "devDependencies": {
+    "@rolldown/test-side-effects-field": "link:./package-fixtures/test-side-effects-field",
     "@types/node": "24.0.10",
     "tsx": "^4.19.4"
   },

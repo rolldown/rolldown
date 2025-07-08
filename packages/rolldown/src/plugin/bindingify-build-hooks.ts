@@ -147,7 +147,7 @@ export function bindingifyResolveId(
         id: ret.id,
         external: ret.external,
         normalizeExternalId: false,
-        sideEffects: exist.moduleSideEffects ?? undefined,
+        moduleSideEffects: exist.moduleSideEffects ?? undefined,
       };
     },
     meta: bindingifyPluginHookMeta(meta),
@@ -200,7 +200,7 @@ export function bindingifyResolveDynamicImport(
       };
 
       if (ret.moduleSideEffects !== null) {
-        result.sideEffects = ret.moduleSideEffects;
+        result.moduleSideEffects = ret.moduleSideEffects;
       }
 
       args.pluginContextData.updateModuleOption(ret.id, {
@@ -266,7 +266,7 @@ export function bindingifyTransform(
         map: bindingifySourcemap(
           normalizeTransformHookSourcemap(id, code, ret.map),
         ),
-        sideEffects: moduleOption.moduleSideEffects ?? undefined,
+        moduleSideEffects: moduleOption.moduleSideEffects ?? undefined,
         moduleType: ret.moduleType,
       };
     },
@@ -323,7 +323,7 @@ export function bindingifyLoad(
         code: ret.code,
         map: bindingifySourcemap(map),
         moduleType: ret.moduleType,
-        sideEffects: moduleOption.moduleSideEffects ?? undefined,
+        moduleSideEffects: moduleOption.moduleSideEffects ?? undefined,
       };
     },
     meta: bindingifyPluginHookMeta(meta),

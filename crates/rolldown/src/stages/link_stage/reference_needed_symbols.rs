@@ -81,6 +81,9 @@ impl LinkStage<'_> {
                         &concat_string!("import_", &importee.identifier_name),
                       );
                     } else {
+                      // stmt_info.referenced_symbols.push(importee.namespace_ref.into());
+                      // external module's facade namespace object is referenced by `__reExport`
+
                       // import ... from 'external' or export ... from 'external'
                       if matches!(
                         self.options.format,

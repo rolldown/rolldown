@@ -424,6 +424,9 @@ fn include_symbol(ctx: &mut Context, symbol_ref: SymbolRef) {
     return;
   }
 
+  // Also include the symbol that points to the canonical ref.
+  ctx.used_symbol_refs.insert(symbol_ref);
+
   if !ctx.may_partial_namespace {
     if let Some(idx) =
       ctx.metas[canonical_ref.owner].import_record_ns_to_cjs_module.get(&canonical_ref)

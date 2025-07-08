@@ -1,10 +1,9 @@
 use std::sync::Arc;
 
 use arcstr::ArcStr;
-use napi::Either;
 use napi_derive::napi;
 use rolldown::ModuleType;
-use rolldown_common::{WatcherChangeKind, side_effects};
+use rolldown_common::WatcherChangeKind;
 use rolldown_plugin::{
   CustomField, HookLoadArgs, HookLoadOutput, HookResolveIdArgs, HookResolveIdOutput,
   HookTransformArgs, Pluginable, SharedTransformPluginContext, TransformPluginContext,
@@ -13,6 +12,7 @@ use rolldown_plugin_vite_resolve::ResolveIdOptionsScan;
 use rolldown_utils::unique_arc::UniqueArc;
 
 use crate::options::plugin::types::{
+  binding_hook_side_effects::BindingHookSideEffects,
   binding_hook_transform_output::BindingHookTransformOutput,
   binding_plugin_transform_extra_args::BindingTransformHookExtraArgs,
 };
@@ -141,7 +141,7 @@ pub struct BindingHookJsResolveIdOutput {
   #[napi(ts_type = "boolean | 'absolute' | 'relative'")]
   pub external: Option<BindingResolvedExternal>,
   #[napi(ts_type = "boolean | 'no-treeshake'")]
-  pub side_effects: BindingJsSideEffects,
+  pub side_effects: Option<BindingHookSideEffects>,
 }
 
 impl From<HookResolveIdOutput> for BindingHookJsResolveIdOutput {
@@ -149,7 +149,7 @@ impl From<HookResolveIdOutput> for BindingHookJsResolveIdOutput {
     Self {
       id: value.id.to_string(),
       external: value.external.map(Into::into),
-      side_effects: get_side_effects_binding(value.side_effects),
+      side_effects: value.side_effects.map(Into::into),
     }
   }
 }
@@ -159,7 +159,7 @@ pub struct BindingHookJsLoadOutput {
   pub code: String,
   pub map: Option<String>,
   #[napi(ts_type = "boolean | 'no-treeshake'")]
-  pub side_effects: BindingJsSideEffects,
+  pub side_effects: Option<BindingHookSideEffects>,
 }
 
 impl From<HookLoadOutput> for BindingHookJsLoadOutput {
@@ -167,19 +167,9 @@ impl From<HookLoadOutput> for BindingHookJsLoadOutput {
     Self {
       code: value.code.to_string(),
       map: value.map.map(|map| map.to_json_string()),
-      side_effects: get_side_effects_binding(value.side_effects),
+      side_effects: value.side_effects.map(Into::into),
     }
   }
-}
-
-type BindingJsSideEffects = Option<Either<bool, String>>;
-
-fn get_side_effects_binding(value: Option<side_effects::HookSideEffects>) -> BindingJsSideEffects {
-  value.map(|side_effects| match side_effects {
-    side_effects::HookSideEffects::False => Either::A(false),
-    side_effects::HookSideEffects::True => Either::A(true),
-    side_effects::HookSideEffects::NoTreeshake => Either::B("no-treeshake".to_string()),
-  })
 }
 
 #[napi(object)]

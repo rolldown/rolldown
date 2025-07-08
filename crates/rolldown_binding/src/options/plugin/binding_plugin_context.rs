@@ -51,6 +51,7 @@ impl BindingPluginContext {
     Ok(ret.map(|info| BindingPluginContextResolvedId {
       id: info.id.to_string(),
       external: info.external.into(),
+      module_side_effects: info.side_effects.map(Into::into),
     }))
   }
 
@@ -105,4 +106,6 @@ pub struct BindingPluginContextResolvedId {
   pub id: String,
   #[napi(ts_type = "boolean | 'absolute' | 'relative'")]
   pub external: BindingResolvedExternal,
+  #[napi(ts_type = "boolean | 'no-treeshake'")]
+  pub module_side_effects: Option<BindingHookSideEffects>,
 }

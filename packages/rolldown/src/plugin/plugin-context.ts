@@ -184,6 +184,8 @@ export class PluginContextImpl extends MinimalPluginContextImpl {
         )
         : res.external,
       ...info,
+      moduleSideEffects: info.moduleSideEffects ?? res.moduleSideEffects ??
+        null,
     };
   }
 

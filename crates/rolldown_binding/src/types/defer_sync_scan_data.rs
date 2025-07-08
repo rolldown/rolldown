@@ -7,11 +7,14 @@ use crate::options::plugin::types::binding_hook_side_effects::BindingHookSideEff
 pub struct BindingDeferSyncScanData {
   /// ModuleId
   pub id: String,
+  #[napi(ts_type = "boolean | 'no-treeshake'")]
   pub side_effects: Option<BindingHookSideEffects>,
 }
 
-impl From<BindingDeferSyncScanData> for DeferSyncScanData {
-  fn from(data: BindingDeferSyncScanData) -> Self {
-    DeferSyncScanData { id: data.id, side_effects: data.side_effects.map(Into::into) }
+impl TryFrom<BindingDeferSyncScanData> for DeferSyncScanData {
+  type Error = napi::Error;
+
+  fn try_from(data: BindingDeferSyncScanData) -> Result<Self, Self::Error> {
+    Ok(Self { id: data.id, side_effects: data.side_effects.map(TryInto::try_into).transpose()? })
   }
 }

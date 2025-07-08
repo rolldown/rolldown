@@ -149,7 +149,6 @@ module.exports.BindingWatcherEvent = __napiModule.exports.BindingWatcherEvent
 module.exports.ParallelJsPluginRegistry = __napiModule.exports.ParallelJsPluginRegistry
 module.exports.BindingAttachDebugInfo = __napiModule.exports.BindingAttachDebugInfo
 module.exports.BindingBuiltinPluginName = __napiModule.exports.BindingBuiltinPluginName
-module.exports.BindingHookSideEffects = __napiModule.exports.BindingHookSideEffects
 module.exports.BindingJsx = __napiModule.exports.BindingJsx
 module.exports.BindingLogLevel = __napiModule.exports.BindingLogLevel
 module.exports.BindingPluginOrder = __napiModule.exports.BindingPluginOrder

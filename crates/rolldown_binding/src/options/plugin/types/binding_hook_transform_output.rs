@@ -20,7 +20,7 @@ impl TryFrom<BindingHookTransformOutput> for HookTransformOutput {
     Ok(Self {
       code: value.code,
       map: value.map.map(TryInto::try_into).transpose()?,
-      side_effects: value.side_effects.map(Into::into),
+      side_effects: value.side_effects.map(TryInto::try_into).transpose()?,
       module_type: value.module_type.map(|ty| ModuleType::from_str_with_fallback(ty.as_str())),
     })
   }

@@ -19,7 +19,6 @@ import type { PartialNull } from '../types/utils';
 import { type AssetSource, bindingAssetSource } from '../utils/asset-source';
 import { bindingifyPreserveEntrySignatures } from '../utils/bindingify-input-options';
 import { unimplemented, unreachable } from '../utils/misc';
-import { bindingifySideEffects } from '../utils/transform-side-effects';
 import type {
   CustomPluginOptions,
   ModuleOptions,
@@ -132,7 +131,7 @@ export class PluginContextImpl extends MinimalPluginContextImpl {
       try {
         await context.load(
           id,
-          bindingifySideEffects(options.moduleSideEffects),
+          options.moduleSideEffects ?? undefined,
         );
       } catch (e) {
         // If the load module has failed, avoid it re-load using unresolved promise.

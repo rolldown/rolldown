@@ -189,8 +189,10 @@ pub fn normalize_binding_options(
         ts_fn
           .invoke_async(())
           .await
+          .and_then(|ret| {
+            ret.into_iter().map(TryInto::try_into).collect::<Result<Vec<DeferSyncScanData>, _>>()
+          })
           .map_err(anyhow::Error::from)
-          .map(|ret| ret.into_iter().map(Into::into).collect::<Vec<DeferSyncScanData>>())
       })
     })
   });

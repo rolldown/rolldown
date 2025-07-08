@@ -5,7 +5,7 @@ use rolldown_common::{
 use rolldown_error::{BuildDiagnostic, BuildResult};
 use rolldown_plugin::SharedPluginDriver;
 use rolldown_rstr::Rstr;
-use rolldown_utils::indexmap::FxIndexMap;
+use rolldown_utils::{ecmascript::property_access_str, indexmap::FxIndexMap};
 use rustc_hash::FxHashMap;
 
 use crate::{chunk_graph::ChunkGraph, stages::link_stage::LinkStageOutput};
@@ -38,12 +38,23 @@ impl GenerateContext<'_> {
     canonical_names: &FxHashMap<SymbolRef, Rstr>,
   ) -> String {
     let symbol_db = &self.link_output.symbol_db;
+    if !symbol_ref.is_declared_in_root_scope(symbol_db) {
+      // No fancy things on none root scope symbols
+      return symbol_db.canonical_name_for(symbol_ref, canonical_names).to_string();
+    }
+
     let canonical_ref = symbol_db.canonical_ref_for(symbol_ref);
     let canonical_symbol = symbol_db.get(canonical_ref);
     let namespace_alias = &canonical_symbol.namespace_alias;
-    if let Some(_ns_alias) = namespace_alias {
-      // Not sure if we need to handle this case
-      unreachable!("You run into a bug, please report it");
+    if let Some(ns_alias) = namespace_alias {
+      let canonical_ns_name = &canonical_names[&ns_alias.namespace_ref];
+      let property_name = &ns_alias.property_name;
+      return property_access_str(canonical_ns_name, property_name);
+    }
+
+    if self.link_output.module_table[canonical_ref.owner].is_external() {
+      let namespace = &canonical_names[&canonical_ref];
+      return namespace.to_string();
     }
 
     match self.options.format {

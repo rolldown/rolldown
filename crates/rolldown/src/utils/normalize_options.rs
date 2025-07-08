@@ -311,6 +311,7 @@ pub fn normalize_options(mut raw_options: crate::BundlerOptions) -> NormalizeOpt
     debug: raw_options.debug.is_some(),
     optimization: raw_options.optimization.unwrap_or_default(),
     top_level_var: raw_options.top_level_var.unwrap_or(false),
+    minify_internal_exports: raw_options.minify_internal_exports.unwrap_or(false),
   };
 
   NormalizeOptionsReturn { options: normalized, resolve_options: raw_resolve, warnings }

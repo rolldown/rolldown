@@ -57,6 +57,7 @@ OPTIONS
   --legal-comments <legal-comments>Control comments in the output.
   --log-level <log-level>     Log level (silent, info, debug, warn).
   --make-absolute-externals-relative Prevent normalization of external imports.
+  --minify-internal-exports   Minify internal exports.
   --module-types <types>      Module types for customized extensions.
   --no-external-live-bindings Disable external live bindings.
   --no-preserve-entry-signatures Avoid facade chunks for entry points.

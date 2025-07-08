@@ -44,6 +44,7 @@ export default defineTest({
       preserveModules: true,
       preserveModulesRoot: "src",
       virtualDirname: "virtual",
+      minifyInternalExports: true,
     },
     plugins: [
       {
@@ -107,6 +108,7 @@ export default defineTest({
       expect(option.preserveModules).toBe(true)
       expect(option.preserveModulesRoot).toStrictEqual(path.join(__dirname, "src"))
       expect(option.virtualDirname).toBe('virtual')
+      expect(option.minifyInternalExports).toBe(true)
     })
   },
 })

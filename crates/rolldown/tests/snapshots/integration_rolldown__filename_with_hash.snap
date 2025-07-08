@@ -4386,6 +4386,12 @@ expression: output
 
 - main-!~{000}~.js => main-CihG9yyg.js
 
+# tests/rolldown/function/minify_internal_exports/basic
+
+- main-!~{000}~.js => main-Dlg1NF9r.js
+- main2-!~{001}~.js => main2-CEYgtBPX.js
+- internal-!~{002}~.js => internal-DjTmYc72.js
+
 # tests/rolldown/function/module_types/asset
 
 - main-!~{000}~.js => main-BYCQS-ki.js

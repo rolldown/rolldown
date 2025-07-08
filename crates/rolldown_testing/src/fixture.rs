@@ -4,8 +4,8 @@ use crate::{
   integration_test::{IntegrationTest, NamedBundlerOptions},
   test_config::read_test_config,
 };
-use rolldown::plugin::__inner::SharedPluginable;
-use rolldown_testing_config::TestConfig;
+use rolldown::{BundlerOptions, plugin::__inner::SharedPluginable};
+use rolldown_testing_config::{ConfigVariant, TestConfig, TestMeta};
 
 pub struct Fixture {
   config_path: PathBuf,
@@ -29,7 +29,7 @@ impl Fixture {
   }
 
   async fn run_inner(self, plugins: Vec<SharedPluginable>) {
-    let TestConfig { config: mut options, meta, config_variants } =
+    let TestConfig { config: mut options, meta, mut config_variants } =
       read_test_config(&self.config_path);
 
     if options.cwd.is_none() {
@@ -38,13 +38,35 @@ impl Fixture {
 
     options.canonicalize_option_path();
 
-    let configs = std::iter::once(NamedBundlerOptions { options: options.clone(), name: None })
-      .chain(config_variants.into_iter().map(|variant| NamedBundlerOptions {
-        options: variant.apply(&options),
-        name: Some(variant.config_name.clone().unwrap_or(variant.to_string())),
-      }))
-      .collect::<Vec<_>>();
+    Self::apply_extended_tests(&meta, &options, &mut config_variants);
+
+    let configs =
+      std::iter::once(NamedBundlerOptions { options: options.clone(), name: None, snapshot: None })
+        .chain(config_variants.into_iter().map(|variant| NamedBundlerOptions {
+          options: variant.apply(&options),
+          name: Some(variant.config_name.clone().unwrap_or(variant.to_string())),
+          snapshot: variant.snapshot,
+        }))
+        .collect::<Vec<_>>();
 
     IntegrationTest::new(meta, self.fixture_path.clone()).run_multiple(configs, plugins).await;
+  }
+
+  fn apply_extended_tests(
+    meta: &TestMeta,
+    options: &BundlerOptions,
+    config_variants: &mut Vec<ConfigVariant>,
+  ) {
+    if meta.extended_tests.minify_internal_exports && options.minify_internal_exports.is_none() {
+      config_variants.push(ConfigVariant {
+        config_name: Some(format!(
+          "Extended Test: (minify_internal_exports: {})",
+          meta.extended_tests.minify_internal_exports
+        )),
+        minify_internal_exports: Some(true),
+        snapshot: Some(false),
+        ..Default::default()
+      });
+    }
   }
 }

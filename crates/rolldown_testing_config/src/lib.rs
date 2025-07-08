@@ -19,6 +19,11 @@ pub struct ConfigVariant {
   pub inline_dynamic_imports: Option<bool>,
   pub preserve_entry_signatures: Option<PreserveEntrySignatures>,
   pub treeshake: Option<TreeshakeOptions>,
+  pub minify_internal_exports: Option<bool>,
+  // --- non-bundler options are start with `_`
+  // Whether to include the output in the snapshot for this config variant.
+  #[serde(rename = "_snapshot")]
+  pub snapshot: Option<bool>,
 }
 
 impl ConfigVariant {
@@ -51,6 +56,9 @@ impl ConfigVariant {
     }
     if let Some(treeshake) = &self.treeshake {
       config.treeshake = treeshake.clone();
+    }
+    if let Some(minify_internal_exports) = &self.minify_internal_exports {
+      config.minify_internal_exports = Some(*minify_internal_exports);
     }
     config
   }
@@ -135,6 +143,8 @@ pub struct TestMeta {
   /// Controls whether snapshots should be generated
   #[serde(default = "true_by_default")]
   pub snapshot: bool,
+  #[serde(default)]
+  pub extended_tests: ExtendedTests,
 }
 
 impl Default for TestMeta {
@@ -145,4 +155,19 @@ impl Default for TestMeta {
 
 fn true_by_default() -> bool {
   true
+}
+
+#[derive(Deserialize, JsonSchema)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+#[allow(clippy::struct_excessive_bools, clippy::pub_underscore_fields)]
+pub struct ExtendedTests {
+  /// Run the test case with `minifyInternalExports` enabled in addition to the default config.
+  #[serde(default = "true_by_default")]
+  pub minify_internal_exports: bool,
+}
+
+impl Default for ExtendedTests {
+  fn default() -> Self {
+    serde_json::from_str("{}").unwrap()
+  }
 }

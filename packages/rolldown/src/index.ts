@@ -22,6 +22,7 @@ import type {
 } from './log/logging';
 import type {
   ExternalOption,
+  InlineConstOptions,
   InputOption,
   InputOptions,
   ModuleTypes,
@@ -123,6 +124,7 @@ export type {
   HookFilter,
   HookFilterExtension,
   ImportKind,
+  InlineConstOptions,
   InputOption,
   InputOptions,
   InternalModuleFormat,

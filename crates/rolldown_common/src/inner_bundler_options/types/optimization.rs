@@ -19,17 +19,53 @@ pub struct OptimizationOption {
   /// console.log(long_string);
   /// console.log(long_string);
   /// console.log(long_string);
-  /// console.log(long_string);
-  /// console.log(long_string);
   /// // foo.js
   /// export const long_string = 'this is a very long string that will be inlined everywhere';
   /// ```
-  pub inline_const: Option<bool>,
+  pub inline_const: Option<InlineConstOption>,
+}
+
+#[derive(Debug, Clone)]
+#[cfg_attr(
+  feature = "deserialize_bundler_options",
+  derive(Deserialize, JsonSchema),
+  serde(rename_all = "camelCase", deny_unknown_fields, untagged)
+)]
+pub enum InlineConstOption {
+  Bool(bool),
+  Option(InlineConstOptionInner),
+}
+
+#[derive(Debug, Clone)]
+#[cfg_attr(
+  feature = "deserialize_bundler_options",
+  derive(Deserialize, JsonSchema),
+  serde(rename_all = "camelCase", deny_unknown_fields)
+)]
+pub struct InlineConstOptionInner {
+  pub pass: u8,
+}
+
+impl Default for InlineConstOption {
+  fn default() -> Self {
+    Self::Bool(false)
+  }
 }
 
 impl OptimizationOption {
   #[inline]
   pub fn is_inline_const_enabled(&self) -> bool {
-    self.inline_const.unwrap_or(false)
+    matches!(
+      self.inline_const,
+      Some(InlineConstOption::Bool(true) | InlineConstOption::Option { .. })
+    )
+  }
+
+  pub fn inline_const_pass(&self) -> u8 {
+    match self.inline_const {
+      Some(InlineConstOption::Bool(true)) => 1,
+      Some(InlineConstOption::Option(ref inner)) => inner.pass,
+      _ => 0,
+    }
   }
 }

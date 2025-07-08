@@ -69,7 +69,11 @@ export type HmrOptions = boolean | {
 };
 
 export type OptimizationOptions = {
-  inlineConst?: boolean;
+  inlineConst?: boolean | InlineConstOptions;
+};
+
+export type InlineConstOptions = {
+  pass?: number;
 };
 
 export type AttachDebugOptions = 'none' | 'simple' | 'full';

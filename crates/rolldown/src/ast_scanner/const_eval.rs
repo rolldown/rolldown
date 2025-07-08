@@ -1,14 +1,20 @@
-use oxc::{ast::ast::Expression, minifier::PropertyReadSideEffects, semantic::Scoping};
+use oxc::{
+  ast::ast::Expression,
+  minifier::PropertyReadSideEffects,
+  semantic::{ReferenceId, Scoping},
+};
 use oxc_ecmascript::{
   constant_evaluation::{ConstantEvaluation, ConstantEvaluationCtx},
   is_global_reference::IsGlobalReference,
   side_effects::MayHaveSideEffectsContext,
 };
-use rolldown_common::ConstantValue;
+use rolldown_common::{ConstantValue, ModuleIdx};
 
 pub struct ConstEvalCtx<'me, 'ast: 'me> {
   pub ast: oxc::ast::AstBuilder<'ast>,
   pub scope: &'me Scoping,
+  pub module_idx: ModuleIdx,
+  pub f: &'me dyn Fn(ReferenceId, ModuleIdx) -> Option<ConstantValue>,
 }
 
 impl<'ast> ConstantEvaluationCtx<'ast> for ConstEvalCtx<'_, 'ast> {
@@ -24,6 +30,14 @@ impl<'ast> IsGlobalReference<'ast> for ConstEvalCtx<'_, 'ast> {
   ) -> Option<bool> {
     let item = self.scope.get_reference(reference.reference_id());
     Some(item.symbol_id().is_none())
+  }
+
+  fn get_constant_value_for_reference_id(
+    &self,
+    reference_id: ReferenceId,
+  ) -> Option<oxc_ecmascript::constant_evaluation::ConstantValue<'ast>> {
+    (self.f)(reference_id, self.module_idx)
+      .map(oxc_ecmascript::constant_evaluation::ConstantValue::from)
   }
 }
 

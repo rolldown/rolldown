@@ -27,6 +27,7 @@ use super::scan_stage::NormalizedScanStageOutput;
 mod bind_imports_and_exports;
 mod compute_tla;
 mod create_exports_for_ecma_modules;
+mod cross_module_optimization;
 mod determine_module_exports_kind;
 mod generate_lazy_export;
 mod patch_module_dependencies;
@@ -156,6 +157,7 @@ impl<'a> LinkStage<'a> {
     self.bind_imports_and_exports();
     self.create_exports_for_ecma_modules();
     self.reference_needed_symbols();
+    self.cross_module_optimization();
     self.include_statements();
     self.patch_module_dependencies();
 

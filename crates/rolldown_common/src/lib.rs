@@ -42,7 +42,7 @@ pub mod bundler_options {
       module_type::ModuleType,
       normalized_bundler_options::{NormalizedBundlerOptions, SharedNormalizedBundlerOptions},
       on_log::{Log, OnLog},
-      optimization::OptimizationOption,
+      optimization::{InlineConstOption, InlineConstOptionInner, OptimizationOption},
       output_exports::OutputExports,
       output_format::OutputFormat,
       output_option::{

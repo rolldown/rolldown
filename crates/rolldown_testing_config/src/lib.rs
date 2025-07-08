@@ -1,7 +1,8 @@
 use std::fmt::Display;
 
 use rolldown_common::{
-  BundlerOptions, OutputExports, OutputFormat, PreserveEntrySignatures, TreeshakeOptions,
+  BundlerOptions, OptimizationOption, OutputExports, OutputFormat, PreserveEntrySignatures,
+  TreeshakeOptions,
 };
 use schemars::JsonSchema;
 use serde::Deserialize;
@@ -19,6 +20,7 @@ pub struct ConfigVariant {
   pub inline_dynamic_imports: Option<bool>,
   pub preserve_entry_signatures: Option<PreserveEntrySignatures>,
   pub treeshake: Option<TreeshakeOptions>,
+  pub optimization: Option<OptimizationOption>,
 }
 
 impl ConfigVariant {
@@ -51,6 +53,9 @@ impl ConfigVariant {
     }
     if let Some(treeshake) = &self.treeshake {
       config.treeshake = treeshake.clone();
+    }
+    if let Some(optimization) = &self.optimization {
+      config.optimization = Some(optimization.clone());
     }
     config
   }

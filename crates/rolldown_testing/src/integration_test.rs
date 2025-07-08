@@ -38,6 +38,8 @@ pub struct IntegrationTest {
 pub struct NamedBundlerOptions {
   pub name: Option<String>,
   pub options: BundlerOptions,
+  // Whether to include the output in the snapshot for this config variant. If not specified, `TestMeta.snapshot` will be used.
+  pub snapshot: Option<bool>,
 }
 
 fn default_test_input_item() -> rolldown::InputItem {
@@ -72,7 +74,9 @@ impl IntegrationTest {
 
   #[allow(clippy::unnecessary_debug_formatting)]
   pub async fn run_with_plugins(&self, options: BundlerOptions, plugins: Vec<SharedPluginable>) {
-    self.run_multiple(vec![NamedBundlerOptions { options, name: None }], plugins).await;
+    self
+      .run_multiple(vec![NamedBundlerOptions { options, name: None, snapshot: None }], plugins)
+      .await;
   }
 
   #[expect(clippy::too_many_lines)]
@@ -91,6 +95,12 @@ impl IntegrationTest {
     let mut snapshot_outputs = vec![];
     for mut named_options in multiple_options {
       self.apply_test_defaults(&mut named_options.options);
+      let allow_to_collect_snapshot = named_options.snapshot.unwrap_or(self.test_meta.snapshot);
+      let mut collect_snapshot = |content: String| {
+        if allow_to_collect_snapshot {
+          snapshot_outputs.push(content);
+        }
+      };
 
       if hmr_mode_enabled {
         fs::remove_dir_all(&hmr_temp_dir_path)
@@ -126,8 +136,8 @@ impl IntegrationTest {
       };
 
       if !debug_title.is_empty() {
-        snapshot_outputs.push("\n---\n\n".to_string());
-        snapshot_outputs.push(format!("Variant: {debug_title}\n\n"));
+        collect_snapshot("\n---\n\n".to_string());
+        collect_snapshot(format!("Variant: {debug_title}\n\n"));
       }
 
       let execute_output = self.test_meta.expect_executed
@@ -142,7 +152,7 @@ impl IntegrationTest {
           );
 
           let snapshot_content = self.render_bundle_output_to_string(bundle_output, vec![], &cwd);
-          snapshot_outputs.push(snapshot_content);
+          collect_snapshot(snapshot_content);
 
           let mut patch_chunks: Vec<String> = vec![];
           for (step, hmr_edit_files) in hmr_steps.iter().enumerate() {
@@ -161,7 +171,7 @@ impl IntegrationTest {
               Ok(output) => {
                 let snapshot_content =
                   Self::render_hmr_output_to_string(step, &output, vec![], &cwd);
-                snapshot_outputs.push(snapshot_content);
+                collect_snapshot(snapshot_content);
 
                 if execute_output {
                   assert!(
@@ -180,7 +190,7 @@ impl IntegrationTest {
                   errs.into_vec(),
                   &cwd,
                 );
-                snapshot_outputs.push(snapshot_content);
+                collect_snapshot(snapshot_content);
               }
             }
           }
@@ -203,7 +213,7 @@ impl IntegrationTest {
           );
           let snapshot_content =
             self.render_bundle_output_to_string(BundleOutput::default(), errs.into_vec(), &cwd);
-          snapshot_outputs.push(snapshot_content);
+          collect_snapshot(snapshot_content);
         }
       }
     }

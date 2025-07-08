@@ -61,6 +61,9 @@
       "description": "Controls whether snapshots should be generated",
       "type": "boolean",
       "default": true
+    },
+    "extendedTests": {
+      "$ref": "#/$defs/ExtendedTests"
     }
   },
   "additionalProperties": false,
@@ -1354,6 +1357,29 @@
               "type": "null"
             }
           ]
+        },
+        "minifyInternalExports": {
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
+        "_snapshot": {
+          "type": [
+            "boolean",
+            "null"
+          ]
+        }
+      },
+      "additionalProperties": false
+    },
+    "ExtendedTests": {
+      "type": "object",
+      "properties": {
+        "minifyInternalExports": {
+          "description": "Run the test case with `minifyInternalExports` enabled in addition to the default config.",
+          "type": "boolean",
+          "default": true
         }
       },
       "additionalProperties": false

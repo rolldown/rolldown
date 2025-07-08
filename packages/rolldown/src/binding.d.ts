@@ -1404,7 +1404,7 @@ export interface BindingHookFilter {
 export interface BindingHookJsLoadOutput {
   code: string
   map?: string
-  sideEffects?: boolean | 'no-treeshake'
+  moduleSideEffects?: boolean | 'no-treeshake'
 }
 
 export interface BindingHookJsResolveIdOptions {
@@ -1415,12 +1415,12 @@ export interface BindingHookJsResolveIdOptions {
 export interface BindingHookJsResolveIdOutput {
   id: string
   external?: boolean | 'absolute' | 'relative'
-  sideEffects?: boolean | 'no-treeshake'
+  moduleSideEffects?: boolean | 'no-treeshake'
 }
 
 export interface BindingHookLoadOutput {
   code: string
-  sideEffects?: boolean | 'no-treeshake'
+  moduleSideEffects?: boolean | 'no-treeshake'
   map?: BindingSourcemap
   moduleType?: string
 }
@@ -1449,7 +1449,7 @@ export interface BindingHookResolveIdOutput {
   id: string
   external?: BindingResolvedExternal
   normalizeExternalId?: boolean
-  sideEffects?: boolean | 'no-treeshake'
+  moduleSideEffects?: boolean | 'no-treeshake'
 }
 
 export type BindingHookSideEffects =
@@ -1457,7 +1457,7 @@ export type BindingHookSideEffects =
 
 export interface BindingHookTransformOutput {
   code?: string
-  sideEffects?: BindingHookSideEffects
+  moduleSideEffects?: BindingHookSideEffects
   map?: BindingSourcemap
   moduleType?: string
 }

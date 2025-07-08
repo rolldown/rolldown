@@ -27,3 +27,4 @@ catalog:
   'oxc-transform': '=0.75.1'
   'tsdown': '0.12.9'
   'rolldown-plugin-dts': '^0.13.6'
+  'fast-glob': '^3.3.3'

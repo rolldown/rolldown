@@ -4,9 +4,10 @@ import { value } from './hmr-boundary';
 
 assert.equal(value, 1);
 
-globalThis.hmrChange = (exports) => {
+globalThis.hmrChange = async (exports) => {
   console.log('HMR change detected');
-  assert.equal(exports.value, 2);
-  nodeFs.writeFileSync('./ok', '');
+  if (exports.value === 2) {
+    nodeFs.writeFileSync('./ok-1', '');
+  }
   process.exit(0);
 };

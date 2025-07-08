@@ -21,6 +21,9 @@ catalogs:
     '@oxc-project/types':
       specifier: '=0.75.1'
       version: 0.75.1
+    fast-glob:
+      specifier: ^3.3.3
+      version: 3.3.3
     oxc-parser:
       specifier: '=0.75.1'
       version: 0.75.1
@@ -566,6 +569,9 @@ importers:
       execa:
         specifier: ^9.2.0
         version: 9.6.0
+      fast-glob:
+        specifier: 'catalog:'
+        version: 3.3.3
       kill-port:
         specifier: ^2.0.1
         version: 2.0.1

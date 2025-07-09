@@ -1,6 +1,11 @@
 // @ts-check
-// @ts-expect-error
-import { __export, __toCommonJS, __toESM } from 'rolldown:runtime';
+import {
+  __export,
+  __toCommonJS,
+  __toDynamicImportESM,
+  __toESM,
+  // @ts-expect-error
+} from 'rolldown:runtime';
 
 // oxlint-disable-next-line no-unused-vars
 export class DevRuntime {
@@ -62,4 +67,6 @@ export class DevRuntime {
   __toCommonJS = __toCommonJS;
   /** @internal */
   __export = __export;
+  /** @internal */
+  __toDynamicImportESM = __toDynamicImportESM;
 }

@@ -84,7 +84,7 @@ impl Plugin for ReporterPlugin {
         utils::write_line(&format!(
           "transforming ({}) \x1b[2m{}\x1b[22m",
           itoa::Buffer::new().format(transformed_count),
-          Path::new(args.id).relative(ctx.inner.cwd()).to_string_lossy()
+          Path::new(args.id).relative(ctx.cwd()).to_string_lossy()
         ));
 
         *self.latest_checkpoint.write().unwrap() = now;

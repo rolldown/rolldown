@@ -22,6 +22,7 @@ pub struct BindingPluginContextResolveOptions {
     ts_type = "'import-statement' | 'dynamic-import' | 'require-call' | 'import-rule' | 'url-token' | 'new-url' | 'hot-accept'"
   )]
   pub import_kind: Option<String>,
+  pub is_entry: Option<bool>,
   pub skip_self: Option<bool>,
   pub custom: Option<u32>,
   pub vite_plugin_custom: Option<BindingVitePluginCustom>,
@@ -43,6 +44,7 @@ impl TryFrom<BindingPluginContextResolveOptions> for PluginContextResolveOptions
     }
     Ok(Self {
       import_kind: value.import_kind.as_deref().unwrap_or("import-statement").try_into()?,
+      is_entry: value.is_entry.unwrap_or_default(),
       skip_self: value.skip_self.unwrap_or(true),
       custom: Arc::new(custom),
     })

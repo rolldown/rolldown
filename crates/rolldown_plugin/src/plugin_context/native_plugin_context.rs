@@ -92,7 +92,7 @@ impl NativePluginContextImpl {
       &plugin_driver,
       specifier,
       importer,
-      false,
+      normalized_extra_options.is_entry,
       normalized_extra_options.import_kind,
       skipped_resolve_calls,
       normalized_extra_options.custom,

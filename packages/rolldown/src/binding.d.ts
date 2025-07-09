@@ -1692,6 +1692,7 @@ export interface BindingPluginContextResolveOptions {
    * - `hot-accept`: `import.meta.hot.accept('./lib.js', () => {})`
    */
   importKind?: 'import-statement' | 'dynamic-import' | 'require-call' | 'import-rule' | 'url-token' | 'new-url' | 'hot-accept'
+  isEntry?: boolean
   skipSelf?: boolean
   custom?: number
   vitePluginCustom?: BindingVitePluginCustom

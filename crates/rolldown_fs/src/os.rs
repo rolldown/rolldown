@@ -4,7 +4,7 @@ use std::{
   sync::Arc,
 };
 
-use oxc_resolver::{FileMetadata, FileSystem as OxcResolverFileSystem, FileSystemOs};
+use oxc_resolver::{FileMetadata, FileSystem as OxcResolverFileSystem, FileSystemOs, ResolveError};
 
 use crate::file_system::FileSystem;
 
@@ -57,7 +57,7 @@ impl OxcResolverFileSystem for OsFileSystem {
     self.0.symlink_metadata(path)
   }
 
-  fn read_link(&self, path: &Path) -> io::Result<PathBuf> {
+  fn read_link(&self, path: &Path) -> Result<PathBuf, ResolveError> {
     self.0.read_link(path)
   }
 }

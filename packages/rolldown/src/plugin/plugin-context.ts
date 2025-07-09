@@ -47,6 +47,7 @@ interface EmittedChunk {
 export type EmittedFile = EmittedAsset | EmittedChunk;
 
 export interface PluginContextResolveOptions {
+  isEntry?: boolean;
   skipSelf?: boolean;
   custom?: CustomPluginOptions;
 }
@@ -167,6 +168,7 @@ export class PluginContextImpl extends MinimalPluginContextImpl {
     );
     const res = await this.context.resolve(source, importer, {
       custom: receipt,
+      isEntry: options?.isEntry,
       skipSelf: options?.skipSelf,
       vitePluginCustom,
     });

@@ -28,10 +28,11 @@ use oxc::{
 use oxc_index::IndexVec;
 use rolldown_common::dynamic_import_usage::{DynamicImportExportsUsage, DynamicImportUsageInfo};
 use rolldown_common::{
-  ConstExportMeta, ConstantValue, EcmaModuleAstUsage, ExportsKind, HmrInfo, ImportKind,
-  ImportRecordIdx, ImportRecordMeta, LocalExport, MemberExprRef, ModuleDefFormat, ModuleId,
-  ModuleIdx, NamedImport, RawImportRecord, Specifier, StmtInfo, StmtInfos, StmtSideEffect,
-  SymbolRef, SymbolRefDbForModule, SymbolRefFlags, TaggedSymbolRef, ThisExprReplaceKind,
+  ConstExportMeta, ConstantValue, EcmaModuleAstUsage, EcmaViewMeta, ExportsKind, HmrInfo,
+  ImportKind, ImportRecordIdx, ImportRecordMeta, LocalExport, MemberExprRef, ModuleDefFormat,
+  ModuleId, ModuleIdx, NamedImport, RawImportRecord, Specifier, StmtInfo, StmtInfos,
+  StmtSideEffect, SymbolRef, SymbolRefDbForModule, SymbolRefFlags, TaggedSymbolRef,
+  ThisExprReplaceKind,
 };
 use rolldown_ecmascript_utils::{BindingIdentifierExt, BindingPatternExt};
 use rolldown_error::{BuildDiagnostic, BuildResult, CjsExportSpan};
@@ -79,7 +80,7 @@ pub struct ScanResult {
   pub exports_kind: ExportsKind,
   pub warnings: Vec<BuildDiagnostic>,
   pub errors: Vec<BuildDiagnostic>,
-  pub has_eval: bool,
+  pub ecma_view_meta: EcmaViewMeta,
   /// Whether the module is a commonjs module
   /// The reason why we can't reuse `cjs_exports_ident` and `cjs_module_ident` is that
   /// any `module` or `exports` in the top-level scope should be treated as a commonjs module.
@@ -96,7 +97,6 @@ pub struct ScanResult {
   /// level rather than module level, or a syntax error will be raised if there are multi modules
   /// has hashbang. Storing the span of hashbang used for hashbang codegen in chunk level
   pub hashbang_range: Option<Span>,
-  pub has_star_exports: bool,
   /// we don't know the ImportRecord related ModuleIdx yet, so use ImportRecordIdx as key
   /// temporarily
   pub dynamic_import_rec_exports_usage: FxHashMap<ImportRecordIdx, DynamicImportExportsUsage>,
@@ -179,14 +179,12 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
       imports: FxHashMap::default(),
       exports_kind: ExportsKind::None,
       warnings: Vec::new(),
-      has_eval: false,
       errors: Vec::new(),
       ast_usage: EcmaModuleAstUsage::empty()
         .union(EcmaModuleAstUsage::AllStaticExportPropertyAccess),
       symbol_ref_db,
       self_referenced_class_decl_symbol_ids: FxHashSet::default(),
       hashbang_range: None,
-      has_star_exports: false,
       dynamic_import_rec_exports_usage: FxHashMap::default(),
       new_url_references: FxHashMap::default(),
       this_expr_replace_map: FxHashMap::default(),
@@ -196,6 +194,7 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
       dummy_record_set: FxHashSet::default(),
       commonjs_exports: FxHashMap::default(),
       constant_export_map: FxHashMap::default(),
+      ecma_view_meta: EcmaViewMeta::default(),
     };
 
     Self {
@@ -576,7 +575,7 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
     } else {
       // export * from '...'
       self.result.import_records[id].meta.insert(ImportRecordMeta::IS_EXPORT_STAR);
-      self.result.has_star_exports = true;
+      self.result.ecma_view_meta.insert(EcmaViewMeta::HAS_STAR_EXPORT);
     }
     self.result.imports.insert(decl.span, id);
   }

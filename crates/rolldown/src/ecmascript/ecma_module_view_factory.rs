@@ -60,13 +60,12 @@ pub async fn create_ecma_view(
     imports,
     exports_kind,
     warnings: scan_warnings,
-    has_eval,
     errors,
     ast_usage,
     symbol_ref_db: symbols,
     self_referenced_class_decl_symbol_ids,
     hashbang_range,
-    has_star_exports,
+    ecma_view_meta,
     dynamic_import_rec_exports_usage,
     new_url_references: new_url_imports,
     this_expr_replace_map,
@@ -115,10 +114,8 @@ pub async fn create_ecma_view(
     dynamically_imported_ids: FxIndexSet::default(),
     side_effects,
     meta: {
-      let mut meta = EcmaViewMeta::default();
-      meta.set(EcmaViewMeta::EVAL, has_eval);
+      let mut meta = ecma_view_meta;
       meta.set(EcmaViewMeta::HAS_LAZY_EXPORT, has_lazy_export);
-      meta.set(EcmaViewMeta::HAS_STAR_EXPORT, has_star_exports);
       meta.set(
         EcmaViewMeta::SAFELY_TREESHAKE_COMMONJS,
         ast_usage.contains(EcmaModuleAstUsage::AllStaticExportPropertyAccess)

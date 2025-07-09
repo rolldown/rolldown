@@ -5,7 +5,7 @@ use oxc::ast_visit::VisitMut;
 use oxc::span::SourceType;
 use oxc_index::IndexVec;
 use rolldown_common::{
-  EcmaView, EcmaViewMeta, ExportsKind, ModuleDefFormat, ModuleIdx, ModuleType, NormalModule,
+  EcmaView, ExportsKind, ModuleDefFormat, ModuleIdx, ModuleType, NormalModule,
   side_effects::DeterminedSideEffects,
 };
 use rolldown_common::{
@@ -85,12 +85,11 @@ impl RuntimeModuleTask {
       namespace_object_ref,
       imports,
       import_records: raw_import_records,
-      has_eval,
       ast_usage,
       symbol_ref_db,
-      has_star_exports,
       new_url_references,
       dummy_record_set,
+      ecma_view_meta,
       ..
     } = scan_result;
 
@@ -145,12 +144,7 @@ impl RuntimeModuleTask {
         ast_usage,
         self_referenced_class_decl_symbol_ids: FxHashSet::default(),
         hashbang_range: None,
-        meta: {
-          let mut meta = EcmaViewMeta::default();
-          meta.set(self::EcmaViewMeta::EVAL, has_eval);
-          meta.set(self::EcmaViewMeta::HAS_STAR_EXPORT, has_star_exports);
-          meta
-        },
+        meta: ecma_view_meta,
         mutations: vec![],
         new_url_references,
         this_expr_replace_map: FxHashMap::default(),

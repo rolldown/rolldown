@@ -21,6 +21,7 @@ bitflags! {
         const HAS_LAZY_EXPORT = 1 << 2;
         const HAS_STAR_EXPORT = 1 << 3;
         const SAFELY_TREESHAKE_COMMONJS = 1 << 4;
+        const HAS_ANALYZED_SIDE_EFFECT = 1 << 5;
     }
 }
 

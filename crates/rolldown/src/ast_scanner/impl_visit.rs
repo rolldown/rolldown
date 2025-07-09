@@ -8,8 +8,8 @@ use oxc::{
   span::{GetSpan, Span},
 };
 use rolldown_common::{
-  ConstExportMeta, EcmaModuleAstUsage, ImportKind, ImportRecordMeta, LocalExport,
-  RUNTIME_MODULE_KEY, StmtInfoMeta, ThisExprReplaceKind,
+  ConstExportMeta, EcmaModuleAstUsage, EcmaViewMeta, ImportKind, ImportRecordMeta, LocalExport,
+  RUNTIME_MODULE_KEY, StmtInfoMeta, StmtSideEffect, ThisExprReplaceKind,
   dynamic_import_usage::DynamicImportExportsUsage, generate_replace_this_expr_map,
 };
 #[cfg(debug_assertions)]
@@ -66,6 +66,9 @@ impl<'me, 'ast: 'me> Visit<'ast> for AstScanner<'me, 'ast> {
       }
 
       self.visit_statement(stmt);
+      if matches!(self.current_stmt_info.side_effect, StmtSideEffect::Unknown) {
+        self.result.ecma_view_meta.insert(EcmaViewMeta::HAS_ANALYZED_SIDE_EFFECT);
+      }
       self.result.stmt_infos.add_stmt_info(std::mem::take(&mut self.current_stmt_info));
     }
 
@@ -73,7 +76,7 @@ impl<'me, 'ast: 'me> Visit<'ast> for AstScanner<'me, 'ast> {
     self.result.directive_range = program.directives.iter().map(GetSpan::span).collect();
     self.result.dynamic_import_rec_exports_usage =
       std::mem::take(&mut self.dynamic_import_usage_info.dynamic_import_exports_usage);
-    if self.result.has_eval {
+    if self.result.ecma_view_meta.contains(EcmaViewMeta::EVAL) {
       // if there exists `eval` in current module, assume all dynamic import are completely used;
       for usage in self.result.dynamic_import_rec_exports_usage.values_mut() {
         *usage = DynamicImportExportsUsage::Complete;
@@ -410,7 +413,7 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
       if ident_ref.name == "eval" {
         // TODO: esbuild track has_eval for each scope, this could reduce bailout range, and may
         // improve treeshaking performance. https://github.com/evanw/esbuild/blob/360d47230813e67d0312ad754cad2b6ee09b151b/internal/js_ast/js_ast.go#L1288-L1291
-        self.result.has_eval = true;
+        self.result.ecma_view_meta.insert(EcmaViewMeta::EVAL);
         self.result.warnings.push(
           BuildDiagnostic::eval(self.id.to_string(), self.source.clone(), ident_ref.span)
             .with_severity_warning(),

@@ -80,7 +80,7 @@ export class RolldownBuild {
 
   async generateHmrPatch(
     changedFiles: string[],
-  ): Promise<BindingHmrOutputPatch> {
+  ): Promise<BindingHmrOutputPatch | undefined> {
     const output = await this.#bundlerImpl!.impl.generateHmrPatch(
       changedFiles,
     );
@@ -95,7 +95,7 @@ export class RolldownBuild {
       file,
       firstInvalidatedBy,
     );
-    return transformHmrPatchOutput(output);
+    return transformHmrPatchOutput(output)!;
   }
 
   // TODO(underfin)

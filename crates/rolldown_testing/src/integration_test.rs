@@ -169,18 +169,20 @@ impl IntegrationTest {
             let hmr_output = bundler.generate_hmr_patch(changed_files).await;
             match hmr_output {
               Ok(output) => {
-                let snapshot_content =
-                  Self::render_hmr_output_to_string(step, &output, vec![], &cwd);
-                collect_snapshot(snapshot_content);
+                if let Some(output) = output {
+                  let snapshot_content =
+                    Self::render_hmr_output_to_string(step, &output, vec![], &cwd);
+                  collect_snapshot(snapshot_content);
 
-                if execute_output {
-                  assert!(
-                    !output.full_reload,
-                    "execute_output should be false when full reload happens"
-                  );
-                  let output_path = format!("{}/{}", &output_dir, &output.filename);
-                  fs::write(&output_path, output.code).unwrap();
-                  patch_chunks.push(format!("./{}", output.filename));
+                  if execute_output {
+                    assert!(
+                      !output.full_reload,
+                      "execute_output should be false when full reload happens"
+                    );
+                    let output_path = format!("{}/{}", &output_dir, &output.filename);
+                    fs::write(&output_path, output.code).unwrap();
+                    patch_chunks.push(format!("./{}", output.filename));
+                  }
                 }
               }
               Err(errs) => {

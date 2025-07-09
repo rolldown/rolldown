@@ -284,7 +284,10 @@ impl Bundler {
     &self.plugin_driver.watch_files
   }
 
-  pub async fn generate_hmr_patch(&mut self, changed_files: Vec<String>) -> BuildResult<HmrOutput> {
+  pub async fn generate_hmr_patch(
+    &mut self,
+    changed_files: Vec<String>,
+  ) -> BuildResult<Option<HmrOutput>> {
     self.hmr_manager.as_mut().expect("HMR manager is not initialized").hmr(changed_files).await
   }
 

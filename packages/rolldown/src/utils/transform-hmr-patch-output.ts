@@ -3,10 +3,10 @@ import { normalizeErrors } from './error';
 
 export function transformHmrPatchOutput(
   output: BindingHmrOutput,
-): BindingHmrOutputPatch {
+): BindingHmrOutputPatch | undefined {
   handleHmrPatchOutputErrors(output);
   const { patch } = output;
-  return patch!;
+  return patch ?? undefined;
 }
 
 function handleHmrPatchOutputErrors(output: BindingHmrOutput): void {

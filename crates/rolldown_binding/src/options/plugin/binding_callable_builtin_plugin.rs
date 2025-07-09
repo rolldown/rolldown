@@ -61,7 +61,7 @@ impl BindingCallableBuiltinPlugin {
           &HookResolveIdArgs {
             specifier: &id,
             importer: importer.as_deref(),
-            is_entry: false,
+            is_entry: options.as_ref().is_some_and(|options| options.is_entry.unwrap_or_default()),
             kind: rolldown_common::ImportKind::Import,
             custom: options.map(Into::into).unwrap_or_default(),
           },
@@ -115,6 +115,7 @@ impl BindingCallableBuiltinPlugin {
 #[derive(Debug)]
 #[napi(object, object_to_js = false)]
 pub struct BindingHookJsResolveIdOptions {
+  pub is_entry: Option<bool>,
   pub scan: Option<bool>,
   pub custom: Option<BindingVitePluginCustom>,
 }

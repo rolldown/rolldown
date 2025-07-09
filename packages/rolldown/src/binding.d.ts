@@ -1409,6 +1409,7 @@ export interface BindingHookJsLoadOutput {
 }
 
 export interface BindingHookJsResolveIdOptions {
+  isEntry?: boolean
   scan?: boolean
   custom?: BindingVitePluginCustom
 }

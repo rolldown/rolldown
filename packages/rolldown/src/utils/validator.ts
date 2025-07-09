@@ -404,6 +404,10 @@ const InputOptionsSchema = v.strictObject({
         v.literal('simple'),
         v.literal('full'),
       ])),
+      chunkModulesOrder: v.optional(v.union([
+        v.literal('module-id'),
+        v.literal('exec-order'),
+      ])),
     }),
   ),
   define: v.pipe(

@@ -841,6 +841,16 @@
               "type": "null"
             }
           ]
+        },
+        "chunkModulesOrder": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/ChunkModulesOrderBy"
+            },
+            {
+              "type": "null"
+            }
+          ]
         }
       },
       "additionalProperties": false
@@ -881,6 +891,13 @@
         "none",
         "simple",
         "full"
+      ]
+    },
+    "ChunkModulesOrderBy": {
+      "type": "string",
+      "enum": [
+        "execOrder",
+        "moduleId"
       ]
     },
     "RawMinifyOptions": {

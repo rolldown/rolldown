@@ -6,6 +6,7 @@ use serde::Deserialize;
 use crate::ROLLDOWN_IGNORE;
 
 use super::attach_debug_info::AttachDebugInfo;
+use super::chunk_modules_order::ChunkModulesOrderBy;
 use super::hmr_options::HmrOptions;
 
 #[derive(Debug, Default, Clone)]
@@ -22,6 +23,7 @@ pub struct ExperimentalOptions {
   pub incremental_build: Option<bool>,
   pub hmr: Option<HmrOptions>,
   pub attach_debug_info: Option<AttachDebugInfo>,
+  pub chunk_modules_order: Option<ChunkModulesOrderBy>,
 }
 
 impl ExperimentalOptions {

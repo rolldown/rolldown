@@ -376,7 +376,7 @@ if (!nativeBinding) {
   throw new Error(`Failed to load native binding`)
 }
 
-const { Severity, ParseResult, ExportExportNameKind, ExportImportNameKind, ExportLocalNameKind, ImportNameKind, parseAsync, parseSync, rawTransferSupported, ResolverFactory, EnforceExtension, ModuleType, sync, HelperMode, isolatedDeclaration, moduleRunnerTransform, transform, BindingBundleEndEventData, BindingBundleErrorEventData, BindingBundler, BindingBundlerImpl, BindingCallableBuiltinPlugin, BindingChunkingContext, BindingError, BindingHmrOutput, BindingModuleInfo, BindingNormalizedOptions, BindingOutputAsset, BindingOutputChunk, BindingOutputs, BindingPluginContext, BindingRenderedChunk, BindingRenderedChunkMeta, BindingRenderedModule, BindingTransformPluginContext, BindingWatcher, BindingWatcherChangeData, BindingWatcherEvent, ParallelJsPluginRegistry, BindingAttachDebugInfo, BindingBuiltinPluginName, BindingJsx, BindingLogLevel, BindingPluginOrder, FilterTokenKind, registerPlugins, shutdownAsyncRuntime, startAsyncRuntime } = nativeBinding
+const { Severity, ParseResult, ExportExportNameKind, ExportImportNameKind, ExportLocalNameKind, ImportNameKind, parseAsync, parseSync, rawTransferSupported, ResolverFactory, EnforceExtension, ModuleType, sync, HelperMode, isolatedDeclaration, moduleRunnerTransform, transform, BindingBundleEndEventData, BindingBundleErrorEventData, BindingBundler, BindingBundlerImpl, BindingCallableBuiltinPlugin, BindingChunkingContext, BindingError, BindingHmrOutput, BindingModuleInfo, BindingNormalizedOptions, BindingOutputAsset, BindingOutputChunk, BindingOutputs, BindingPluginContext, BindingRenderedChunk, BindingRenderedChunkMeta, BindingRenderedModule, BindingTransformPluginContext, BindingWatcher, BindingWatcherChangeData, BindingWatcherEvent, ParallelJsPluginRegistry, BindingAttachDebugInfo, BindingBuiltinPluginName, BindingChunkModuleOrderBy, BindingJsx, BindingLogLevel, BindingPluginOrder, FilterTokenKind, registerPlugins, shutdownAsyncRuntime, startAsyncRuntime } = nativeBinding
 export { Severity }
 export { ParseResult }
 export { ExportExportNameKind }
@@ -418,6 +418,7 @@ export { BindingWatcherEvent }
 export { ParallelJsPluginRegistry }
 export { BindingAttachDebugInfo }
 export { BindingBuiltinPluginName }
+export { BindingChunkModuleOrderBy }
 export { BindingJsx }
 export { BindingLogLevel }
 export { BindingPluginOrder }

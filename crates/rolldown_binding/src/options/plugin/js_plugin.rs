@@ -198,7 +198,7 @@ impl Plugin for JsPlugin {
         Some(args.id),
         Some(args.code),
         Some(args.module_type.to_string().as_ref()),
-        ctx.inner.cwd().to_string_lossy().as_ref(),
+        ctx.cwd().to_string_lossy().as_ref(),
       ) {
         return Ok(None);
       }

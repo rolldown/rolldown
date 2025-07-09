@@ -43,7 +43,7 @@ impl Plugin for TransformPlugin {
     ctx: SharedTransformPluginContext,
     args: &rolldown_plugin::HookTransformArgs<'_>,
   ) -> rolldown_plugin::HookTransformReturn {
-    let cwd = ctx.inner.cwd().to_string_lossy();
+    let cwd = ctx.cwd().to_string_lossy();
     let extension = Path::new(args.id).extension().map(|s| s.to_string_lossy());
     let extension = extension.as_ref().map(|s| clean_url(s));
     let module_type = extension.map(ModuleType::from_str_with_fallback);
@@ -60,7 +60,7 @@ impl Plugin for TransformPlugin {
       let errors = BuildDiagnostic::from_oxc_diagnostics(
         ret.errors,
         &ArcStr::from(args.code.as_str()),
-        &stabilize_id(args.id, ctx.inner.cwd()),
+        &stabilize_id(args.id, ctx.cwd()),
         &Severity::Error,
       )
       .iter()
@@ -78,7 +78,7 @@ impl Plugin for TransformPlugin {
       let errors = BuildDiagnostic::from_oxc_diagnostics(
         transformer_return.errors,
         &ArcStr::from(args.code.as_str()),
-        &stabilize_id(args.id, ctx.inner.cwd()),
+        &stabilize_id(args.id, ctx.cwd()),
         &Severity::Error,
       )
       .iter()

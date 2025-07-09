@@ -100,13 +100,13 @@ impl TransformPlugin {
 
     if source_type.is_typescript() {
       let path = Path::new(id).parent().and_then(find_tsconfig_json_for_file);
-      let tsconfig = path.and_then(|path| ctx.inner.resolver().resolve_tsconfig(&path).ok());
+      let tsconfig = path.and_then(|path| ctx.resolver().resolve_tsconfig(&path).ok());
 
       if let Some(tsconfig) = tsconfig {
         // Tsconfig could be out of root, make sure it is watched
         let tsconfig_path = tsconfig.path.to_string_lossy();
         if !tsconfig_path.starts_with(cwd) {
-          ctx.inner.add_watch_file(&tsconfig_path);
+          ctx.add_watch_file(&tsconfig_path);
         }
 
         let compiler_options = &tsconfig.compiler_options;

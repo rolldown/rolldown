@@ -1,4 +1,4 @@
-use std::sync::Arc;
+use std::{ops::Deref, sync::Arc};
 
 use crate::PluginContext;
 use arcstr::ArcStr;
@@ -46,6 +46,14 @@ impl TransformPluginContext {
       include_content: true,
       source: self.id.as_str().into(),
     })
+  }
+}
+
+impl Deref for TransformPluginContext {
+  type Target = PluginContext;
+
+  fn deref(&self) -> &Self::Target {
+    &self.inner
   }
 }
 

@@ -14,6 +14,11 @@ pub struct PluginContextResolveOptions {
 
 impl Default for PluginContextResolveOptions {
   fn default() -> Self {
-    Self { import_kind: ImportKind::Import, is_entry: false, skip_self: true, custom: Arc::default() }
+    Self {
+      import_kind: ImportKind::Import,
+      is_entry: false,
+      skip_self: true,
+      custom: Arc::default(),
+    }
   }
 }

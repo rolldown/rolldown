@@ -106,18 +106,12 @@ impl HmrManager {
     Ok(ret)
   }
 
-  #[expect(clippy::dbg_macro)] // FIXME: Remove dbg! macro once the feature is stable
-  pub async fn hmr(&mut self, changed_file_paths: Vec<String>) -> BuildResult<HmrOutput> {
+  pub async fn hmr(&mut self, changed_file_paths: Vec<String>) -> BuildResult<Option<HmrOutput>> {
     let mut changed_modules = FxIndexSet::default();
     for changed_file_path in changed_file_paths {
       let changed_file_path = ArcStr::from(changed_file_path);
-      match self.module_idx_by_abs_path.get(&changed_file_path) {
-        Some(module_idx) => {
-          changed_modules.insert(*module_idx);
-        }
-        _ => {
-          dbg!("No corresponding module found for changed file path: {:?}", changed_file_path);
-        }
+      if let Some(module_idx) = self.module_idx_by_abs_path.get(&changed_file_path) {
+        changed_modules.insert(*module_idx);
       }
     }
     tracing::debug!(
@@ -128,7 +122,11 @@ impl HmrManager {
         .collect::<Vec<_>>(),
     );
 
-    self.generate_hmr_patch(changed_modules, None).await
+    if changed_modules.is_empty() {
+      return Ok(None);
+    }
+
+    Ok(Some(self.generate_hmr_patch(changed_modules, None).await?))
   }
 
   #[expect(clippy::too_many_lines)]

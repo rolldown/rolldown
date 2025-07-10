@@ -5435,6 +5435,10 @@ expression: output
 
 - main-!~{000}~.js => main-BgBqOpSC.js
 
+# tests/rolldown/topics/hmr/dynamic_import
+
+- main-!~{000}~.js => main-D5MSSgFu.js
+
 # tests/rolldown/topics/hmr/generate_patch_error
 
 - main-!~{000}~.js => main-DdmvPD9K.js

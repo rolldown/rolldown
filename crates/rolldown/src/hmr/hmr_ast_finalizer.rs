@@ -209,6 +209,70 @@ impl<'ast> HmrAstFinalizer<'_, 'ast> {
 
     vec![decl_stmt, export_call_stmt]
   }
+
+  // Rewrite `import(...)` to sensible form.
+  fn try_rewrite_dynamic_import(&self, it: &mut ast::Expression<'ast>) {
+    let ast::Expression::ImportExpression(import_expr) = it else {
+      return;
+    };
+
+    let Some(rec_idx) = self.module.imports.get(&import_expr.span) else {
+      return;
+    };
+
+    let importee_idx = &self.module.import_records[*rec_idx].resolved_module;
+
+    let Module::Normal(importee) = &self.modules[*importee_idx] else {
+      // Not a normal module, skip
+      return;
+    };
+    // FIXME: consider about CommonJS interop
+    // let is_importee_cjs = importee.exports_kind == rolldown_common::ExportsKind::CommonJs;
+
+    // Turn `import('./foo.js')` into `(init_foo(), Promise.resolve().then(() => __rolldown_runtime__.loadExports('./foo.js')))`
+
+    let init_fn_name = &self.affected_module_idx_to_init_fn_name[importee_idx];
+
+    // init_foo()
+    let init_fn_call = self.snippet.builder.alloc_call_expression(
+      SPAN,
+      self.snippet.id_ref_expr(init_fn_name, SPAN),
+      NONE,
+      self.snippet.builder.vec(),
+      false,
+    );
+
+    // __rolldown_runtime__.loadExports('./foo.js')
+    let load_exports_call_expr =
+      ast::Expression::CallExpression(self.snippet.builder.alloc_call_expression(
+        SPAN,
+        self.snippet.id_ref_expr("__rolldown_runtime__.loadExports", SPAN),
+        NONE,
+        self.snippet.builder.vec1(ast::Argument::StringLiteral(
+          self.snippet.builder.alloc_string_literal(
+            SPAN,
+            self.snippet.builder.atom(&importee.stable_id),
+            None,
+          ),
+        )),
+        false,
+      ));
+
+    // Promise.resolve().then(() => __rolldown_runtime__.loadExports('./foo.js'))
+    let promise_resolve_then_load_exports =
+      self.snippet.promise_resolve_then_call_expr(load_exports_call_expr);
+
+    // (init_foo(), Promise.resolve().then(() => __rolldown_runtime__.loadExports('./foo.js')))
+    let ret_expr =
+      ast::Expression::SequenceExpression(self.snippet.builder.alloc_sequence_expression(
+        SPAN,
+        self.snippet.builder.vec_from_array([
+          ast::Expression::CallExpression(init_fn_call),
+          promise_resolve_then_load_exports,
+        ]),
+      ));
+    *it = ret_expr;
+  }
 }
 
 impl<'ast> VisitMut<'ast> for HmrAstFinalizer<'_, 'ast> {
@@ -536,18 +600,6 @@ impl<'ast> VisitMut<'ast> for HmrAstFinalizer<'_, 'ast> {
     // console.log(foo);
     // ```
 
-    // For `import()` statements
-    // Transform
-    // ```js
-    // const foo = await import('./foo.js');
-    // console.log(foo);
-    // ```
-    // to
-    // ```js
-    // const foo = await Promise.resolve(__rolldown_runtime__.loadExports('./foo.js'));
-    // console.log(foo);
-    // ```
-
     walk_mut::walk_statement(self, node);
   }
 
@@ -563,6 +615,8 @@ impl<'ast> VisitMut<'ast> for HmrAstFinalizer<'_, 'ast> {
         }
       }
     }
+
+    self.try_rewrite_dynamic_import(it);
 
     self.rewrite_import_meta_hot(it);
 

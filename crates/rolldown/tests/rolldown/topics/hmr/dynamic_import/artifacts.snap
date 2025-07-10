@@ -1,0 +1,69 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## main.js
+
+```js
+
+// HIDDEN [rolldown:hmr]
+//#region hmr.js
+var hmr_exports = {};
+const hmr_hot = __rolldown_runtime__.createModuleHotContext("hmr.js");
+__rolldown_runtime__.registerModule("hmr.js", { exports: hmr_exports });
+hmr_hot.accept((mod) => {
+	if (mod) console.log(".hmr", mod.foo);
+});
+
+//#endregion
+//#region main.js
+var main_exports = {};
+const main_hot = __rolldown_runtime__.createModuleHotContext("main.js");
+__rolldown_runtime__.registerModule("main.js", { exports: main_exports });
+
+//#endregion
+```
+# HMR Step 0
+
+## Code
+
+```js
+var init_hmr_0 = __rolldown_runtime__.createEsmInitializer(function() {
+	try {
+		var ns_hmr = {};
+		__rolldown_runtime__.__export(ns_hmr, { foo: () => foo });
+		__rolldown_runtime__.registerModule("hmr.js", { exports: ns_hmr });
+		const hot_hmr = __rolldown_runtime__.createModuleHotContext("hmr.js");
+		hot_hmr.accept((mod) => {
+			if (mod) console.log(".hmr", mod.foo);
+		});
+		async function foo() {
+			const mod = await (init_new_dep_1(), Promise.resolve().then(() => __rolldown_runtime__.loadExports("new-dep.js")));
+			console.log(mod.value);
+		}
+	} finally {}
+});
+
+var init_new_dep_1 = __rolldown_runtime__.createEsmInitializer(function() {
+	try {
+		var ns_new_dep = {};
+		__rolldown_runtime__.__export(ns_new_dep, { value: () => value });
+		__rolldown_runtime__.registerModule("new-dep.js", { exports: ns_new_dep });
+		const hot_new_dep = __rolldown_runtime__.createModuleHotContext("new-dep.js");
+		const value = "hello";
+	} finally {}
+});
+
+init_hmr_0()
+__rolldown_runtime__.applyUpdates(['hmr.js']);
+```
+## Meta
+
+- full_reload: false
+- first_invalidated_by: None
+- is_self_accepting: false
+- full_reload_reason: None
+### Hmr Boundaries
+
+- boundary: hmr.js, accepted_via: hmr.js

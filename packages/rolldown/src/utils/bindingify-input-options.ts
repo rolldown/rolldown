@@ -204,7 +204,8 @@ function bindingifyExperimental(
 function bindingifyResolve(
   resolve: InputOptions['resolve'],
 ): BindingInputOptions['resolve'] {
-  const yarnPnp = !!process.versions.pnp;
+  // process is undefined for browser build
+  const yarnPnp = typeof process === 'object' && !!process.versions.pnp;
   if (resolve) {
     const { alias, extensionAlias, ...rest } = resolve;
     return {

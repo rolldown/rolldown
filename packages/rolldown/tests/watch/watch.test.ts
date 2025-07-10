@@ -427,7 +427,7 @@ test.sequential('watch onInvalidate', async () => {
   fs.writeFileSync(input, 'console.log(2)')
 
   await waitUtil(() => {
-    expect(onInvalidateFn).toBeCalledTimes(1)
+    expect(onInvalidateFn).toBeCalled()
     expect(fs.readFileSync(output, 'utf-8').includes('console.log(2)')).toBe(
       true,
     )

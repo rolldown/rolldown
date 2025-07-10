@@ -360,6 +360,26 @@ impl<'ast> VisitMut<'ast> for HmrAstFinalizer<'_, 'ast> {
         )),
       ));
 
+    let initializer_call = if self.module.exports_kind.is_commonjs() {
+      // __rolldown__runtime.createCjsInitializer(function () { [user code] })
+      self.snippet.builder.alloc_call_expression(
+        SPAN,
+        self.snippet.id_ref_expr("__rolldown_runtime__.createCjsInitializer", SPAN),
+        NONE,
+        self.snippet.builder.vec1(ast::Argument::from(user_code_wrapper)),
+        false,
+      )
+    } else {
+      // __rolldown__runtime.createEsmInitializer(function () { [user code] })
+      self.snippet.builder.alloc_call_expression(
+        SPAN,
+        self.snippet.id_ref_expr("__rolldown_runtime__.createEsmInitializer", SPAN),
+        NONE,
+        self.snippet.builder.vec1(ast::Argument::from(user_code_wrapper)),
+        false,
+      )
+    };
+
     // var init_foo = __rolldown__runtime.createEsmInitializer(function () { [user code] })
     let var_decl = self.snippet.builder.alloc_variable_declaration(
       SPAN,
@@ -378,13 +398,7 @@ impl<'ast> VisitMut<'ast> for HmrAstFinalizer<'_, 'ast> {
             NONE,
             false,
           ),
-          Some(ast::Expression::CallExpression(self.snippet.builder.alloc_call_expression(
-            SPAN,
-            self.snippet.id_ref_expr("__rolldown_runtime__.createEsmInitializer", SPAN),
-            NONE,
-            self.snippet.builder.vec1(ast::Argument::from(user_code_wrapper)),
-            false,
-          ))),
+          Some(ast::Expression::CallExpression(initializer_call)),
           false,
         ),
       ),

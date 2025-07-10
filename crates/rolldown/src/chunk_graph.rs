@@ -55,7 +55,7 @@ impl ChunkGraph {
         options.experimental.chunk_modules_order.unwrap_or_default(),
         ChunkModulesOrderBy::ExecOrder
       ) {
-        chunk.modules.sort_by_cached_key(|idx| link_output.module_table[*idx].exec_order());
+        chunk.modules.sort_unstable_by_key(|idx| link_output.module_table[*idx].exec_order());
         return;
       }
 
@@ -78,9 +78,9 @@ impl ChunkGraph {
           rest.push(module_idx);
         }
       }
-      side_effects_free_leaf_modules.sort_by_cached_key(|idx| link_output.module_table[*idx].id());
-      rest.sort_by_cached_key(|idx| link_output.module_table[*idx].exec_order());
-      runtime_related.sort_by_cached_key(|idx| link_output.module_table[*idx].exec_order());
+      side_effects_free_leaf_modules.sort_by_key(|idx| link_output.module_table[*idx].id());
+      rest.sort_unstable_by_key(|idx| link_output.module_table[*idx].exec_order());
+      runtime_related.sort_unstable_by_key(|idx| link_output.module_table[*idx].exec_order());
 
       chunk.modules = runtime_related
         .into_iter()

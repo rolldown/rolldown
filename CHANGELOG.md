@@ -1,4 +1,16 @@
 
+## [1.0.0-beta.26] - 2025-07-10
+
+### 🐛 Bug Fixes
+
+- browser: process is not defined error (#5241) by @sapphi-red
+- plugin/vite-resolve: allow resolving bare specifiers to relative paths for entries (#5230) by @sapphi-red
+
+### ⚙️ Miscellaneous Tasks
+
+- deps: do not enable `full` feature for `tokio` (#5238) by @Boshen
+
+
 ## [1.0.0-beta.25] - 2025-07-10
 
 ### 🚀 Features

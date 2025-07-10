@@ -4,6 +4,7 @@ import.meta.hot.accept((mod) => {
   }
 })
 export async function foo() {
-  const mod = await import('./new-dep.js')
-  console.log(mod.value)
+  const esm = await import('./new-dep-esm.js')
+  const cjs = await import('./new-dep-cjs.js')
+  console.log(esm, cjs)
 }

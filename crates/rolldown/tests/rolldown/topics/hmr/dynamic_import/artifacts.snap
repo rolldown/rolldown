@@ -39,19 +39,28 @@ var init_hmr_0 = __rolldown_runtime__.createEsmInitializer(function() {
 			if (mod) console.log(".hmr", mod.foo);
 		});
 		async function foo() {
-			const mod = await (init_new_dep_1(), Promise.resolve().then(() => __rolldown_runtime__.loadExports("new-dep.js")));
-			console.log(mod.value);
+			const esm = await (init_new_dep_esm_1(), Promise.resolve().then(() => __rolldown_runtime__.loadExports("new-dep-esm.js")));
+			const cjs = await (init_new_dep_cjs_2(), Promise.resolve().then(() => __rolldown_runtime__.__toDynamicImportESM(__rolldown_runtime__.loadExports("new-dep-cjs.js"))));
+			console.log(esm, cjs);
 		}
 	} finally {}
 });
 
-var init_new_dep_1 = __rolldown_runtime__.createEsmInitializer(function() {
+var init_new_dep_esm_1 = __rolldown_runtime__.createEsmInitializer(function() {
 	try {
-		var ns_new_dep = {};
-		__rolldown_runtime__.__export(ns_new_dep, { value: () => value });
-		__rolldown_runtime__.registerModule("new-dep.js", { exports: ns_new_dep });
-		const hot_new_dep = __rolldown_runtime__.createModuleHotContext("new-dep.js");
+		var ns_new_dep_esm = {};
+		__rolldown_runtime__.__export(ns_new_dep_esm, { value: () => value });
+		__rolldown_runtime__.registerModule("new-dep-esm.js", { exports: ns_new_dep_esm });
+		const hot_new_dep_esm = __rolldown_runtime__.createModuleHotContext("new-dep-esm.js");
 		const value = "hello";
+	} finally {}
+});
+
+var init_new_dep_cjs_2 = __rolldown_runtime__.createEsmInitializer(function() {
+	try {
+		__rolldown_runtime__.registerModule("new-dep-cjs.js", module);
+		const hot_new_dep_cjs = __rolldown_runtime__.createModuleHotContext("new-dep-cjs.js");
+		exports.value = "hello";
 	} finally {}
 });
 

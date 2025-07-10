@@ -227,7 +227,7 @@ impl<'ast> HmrAstFinalizer<'_, 'ast> {
       return;
     };
     // FIXME: consider about CommonJS interop
-    // let is_importee_cjs = importee.exports_kind == rolldown_common::ExportsKind::CommonJs;
+    let is_importee_cjs = importee.exports_kind == rolldown_common::ExportsKind::CommonJs;
 
     // Turn `import('./foo.js')` into `(init_foo(), Promise.resolve().then(() => __rolldown_runtime__.loadExports('./foo.js')))`
 
@@ -243,7 +243,7 @@ impl<'ast> HmrAstFinalizer<'_, 'ast> {
     );
 
     // __rolldown_runtime__.loadExports('./foo.js')
-    let load_exports_call_expr =
+    let mut load_exports_call_expr =
       ast::Expression::CallExpression(self.snippet.builder.alloc_call_expression(
         SPAN,
         self.snippet.id_ref_expr("__rolldown_runtime__.loadExports", SPAN),
@@ -257,6 +257,29 @@ impl<'ast> HmrAstFinalizer<'_, 'ast> {
         )),
         false,
       ));
+
+    if is_importee_cjs {
+      let is_node_cjs = importee.def_format.is_commonjs();
+
+      let mut args = self.snippet.builder.vec1(ast::Argument::from(load_exports_call_expr));
+      if is_node_cjs {
+        args.push(ast::Argument::from(self.snippet.builder.expression_numeric_literal(
+          SPAN,
+          1.0,
+          None,
+          ast::NumberBase::Decimal,
+        )));
+      }
+
+      // __rolldown_runtime__.__toDynamicImportESM(__rolldown_runtime__.loadExports('./foo.js'), node_mode)
+      load_exports_call_expr = self.snippet.builder.expression_call(
+        SPAN,
+        self.snippet.id_ref_expr("__rolldown_runtime__.__toDynamicImportESM", SPAN),
+        NONE,
+        args,
+        false,
+      );
+    }
 
     // Promise.resolve().then(() => __rolldown_runtime__.loadExports('./foo.js'))
     let promise_resolve_then_load_exports =

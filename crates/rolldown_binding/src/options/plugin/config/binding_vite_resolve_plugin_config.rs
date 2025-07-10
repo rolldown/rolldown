@@ -8,10 +8,15 @@ use rolldown_plugin_vite_resolve::{
 };
 
 use crate::{
-  options::plugin::types::binding_limited_boolean::BindingTrueValue,
+  options::plugin::types::{
+    binding_hook_resolve_id_output::BindingHookResolveIdOutput,
+    binding_limited_boolean::BindingTrueValue,
+  },
   types::{
     binding_string_or_regex::{BindingStringOrRegex, bindingify_string_or_regex_array},
-    js_callback::{JsCallback, JsCallbackExt as _},
+    js_callback::{
+      JsCallback, JsCallbackExt as _, MaybeAsyncJsCallback, MaybeAsyncJsCallbackExt as _,
+    },
   },
 };
 
@@ -27,13 +32,17 @@ pub struct BindingViteResolvePluginConfig {
   #[napi(ts_type = "true | Array<string | RegExp>")]
   pub no_external: napi::Either<BindingTrueValue, Vec<BindingStringOrRegex>>,
   pub dedupe: Vec<String>,
-  #[debug("{}", if finalize_bare_specifier.is_some() { "Some(<finalize_bare_specifier>)" } else { "None" })]
+  #[debug("{}", if finalize_other_specifiers.is_some() { "Some(<finalize_bare_specifier>)" } else { "None" })]
   #[napi(
-    ts_type = "(resolvedId: string, rawId: string, importer: string | null | undefined) => VoidNullable<string>"
+    ts_type = "(id: string, importer: string | undefined, scan: boolean) => MaybePromise<BindingHookResolveIdOutput | undefined>"
   )]
-  pub finalize_bare_specifier:
-    Option<JsCallback<FnArgs<(String, String, Option<String>)>, Option<String>>>,
-  #[debug("{}", if finalize_bare_specifier.is_some() { "Some(<finalize_other_specifiers>)" } else { "None" })]
+  pub finalize_bare_specifier: Option<
+    MaybeAsyncJsCallback<
+      FnArgs<(String, Option<String>, bool)>,
+      Option<BindingHookResolveIdOutput>,
+    >,
+  >,
+  #[debug("{}", if finalize_other_specifiers.is_some() { "Some(<finalize_other_specifiers>)" } else { "None" })]
   #[napi(ts_type = "(resolvedId: string, rawId: string) => VoidNullable<string>")]
   pub finalize_other_specifiers: Option<JsCallback<FnArgs<(String, String)>, Option<String>>>,
   #[debug("Some(<resolve_subpath_imports>)")]
@@ -66,16 +75,16 @@ impl From<BindingViteResolvePluginConfig> for ViteResolveOptions {
       no_external,
       dedupe: value.dedupe,
       finalize_bare_specifier: value.finalize_bare_specifier.map(
-        |finalizer_fn| -> Arc<FinalizeBareSpecifierCallback> {
-          Arc::new(move |resolved_id: &str, raw_id: &str, importer: Option<&str>| {
-            let finalizer_fn = Arc::clone(&finalizer_fn);
-            let resolved_id = resolved_id.to_owned();
-            let raw_id = raw_id.to_owned();
+        |finalize_bare_specifier| -> Arc<FinalizeBareSpecifierCallback> {
+          Arc::new(move |id: &str, importer: Option<&str>, scan: bool| {
+            let id = id.to_owned();
             let importer = importer.map(ToString::to_string);
+            let finalizer_fn = Arc::clone(&finalize_bare_specifier);
             Box::pin(async move {
               finalizer_fn
-                .invoke_async((resolved_id, raw_id, importer).into())
+                .await_call((id, importer, scan).into())
                 .await
+                .map(|v| v.and_then(|v| v.try_into().ok()))
                 .map_err(anyhow::Error::from)
             })
           })

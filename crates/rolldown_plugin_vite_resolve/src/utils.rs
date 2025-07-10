@@ -14,21 +14,6 @@ pub fn is_bare_import(id: &str) -> bool {
   id.starts_with(|c| is_regex_w_character_class(c) || c == '@') && !id.contains("://")
 }
 
-// check for deep import, e.g. "my-lib/foo"
-// deepImportRE.test(id)
-pub fn is_deep_import(id: &str) -> bool {
-  if id.starts_with('@') {
-    let split: Vec<&str> = id.splitn(3, '/').collect();
-    split.len() == 3 && split[0].len() >= 2 && !split[1].is_empty()
-  } else {
-    id[1..].contains('/')
-  }
-}
-
-pub fn get_extension(id: &str) -> &str {
-  id.rsplit_once('.').map_or("", |(_, ext)| ext)
-}
-
 // https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Regular_expressions/Character_class_escape#w
 fn is_regex_w_character_class(c: char) -> bool {
   c.is_ascii_alphanumeric() || c == '_'
@@ -54,15 +39,6 @@ pub fn get_npm_package_name(id: &str) -> Option<&str> {
   } else {
     id.split('/').next()
   }
-}
-
-pub fn can_externalize_file(file_path: &str) -> bool {
-  let ext = get_extension(file_path);
-  ext.is_empty() || ext == "js" || ext == "mjs" || ext == "cjs"
-}
-
-pub fn is_in_node_modules(id: &str) -> bool {
-  id.contains("node_modules")
 }
 
 /// path.resolve normalizes the leading slashes to a single slash

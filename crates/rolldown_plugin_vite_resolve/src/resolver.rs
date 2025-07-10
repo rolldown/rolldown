@@ -7,7 +7,7 @@ use std::{
 
 use oxc_resolver::{ResolveOptions, TsconfigOptions, TsconfigReferences};
 use rolldown_common::side_effects::HookSideEffects;
-use rolldown_plugin::{HookResolveIdOutput, HookResolveIdReturn};
+use rolldown_plugin::HookResolveIdOutput;
 use rolldown_utils::{dashmap::FxDashMap, url::clean_url};
 use rustc_hash::FxHashSet;
 use sugar_path::SugarPath;
@@ -16,8 +16,7 @@ use crate::{
   builtin::BuiltinChecker,
   package_json_cache::{PackageJsonCache, PackageJsonWithOptionalPeerDependencies},
   utils::{
-    BROWSER_EXTERNAL_ID, OPTIONAL_PEER_DEP_ID, can_externalize_file, get_extension,
-    get_npm_package_name, is_bare_import, is_deep_import, normalize_path,
+    BROWSER_EXTERNAL_ID, OPTIONAL_PEER_DEP_ID, get_npm_package_name, is_bare_import, normalize_path,
   },
 };
 
@@ -123,10 +122,6 @@ impl Resolvers {
 
   pub fn get(&self, additional_options: AdditionalOptions) -> &Resolver {
     &self.resolvers[additional_options.as_u8() as usize]
-  }
-
-  pub fn get_for_external(&self) -> Arc<Resolver> {
-    Arc::clone(&self.external_resolver)
   }
 
   pub fn clear_cache(&self) {
@@ -357,44 +352,6 @@ impl Resolver {
     result
       .package_json()
       .map(|pj| self.package_json_cache.cached_package_json_optional_peer_dep(pj))
-  }
-
-  pub fn resolve_bare_import(
-    &self,
-    specifier: &str,
-    importer: Option<&str>,
-    external: bool,
-    dedupe: &FxHashSet<String>,
-  ) -> HookResolveIdReturn {
-    let base_dir = get_base_dir(specifier, importer, dedupe).unwrap_or(&self.root);
-
-    let oxc_resolved_result = self.resolve_raw(base_dir, specifier);
-    let resolved = self.normalize_oxc_resolver_result(importer, dedupe, &oxc_resolved_result)?;
-    if let Some(mut resolved) = resolved {
-      if !external || !can_externalize_file(&resolved.id) {
-        return Ok(Some(resolved));
-      }
-
-      let id = specifier;
-      let mut resolved_id = id;
-      if is_deep_import(id) && get_extension(id) != get_extension(&resolved.id) {
-        if let Some(pkg_json) = oxc_resolved_result.unwrap().package_json() {
-          let has_exports_field = pkg_json.raw_json().as_object().unwrap().get("exports").is_some();
-          if !has_exports_field {
-            // id date-fns/locale
-            // resolve.id ...date-fns/esm/locale/index.js
-            if let Some(index) = resolved.id.find(id) {
-              resolved_id = &resolved.id[index..];
-            }
-          }
-        }
-      }
-      resolved.id = resolved_id.into();
-      resolved.external = Some(true.into());
-
-      return Ok(Some(resolved));
-    }
-    Ok(None)
   }
 
   pub fn clear_cache(&self) {

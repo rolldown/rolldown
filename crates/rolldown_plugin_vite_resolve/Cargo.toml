@@ -12,7 +12,6 @@ anyhow = { workspace = true }
 # NOTE: IDNA support is turned off: https://docs.rs/crate/idna_adapter/latest#:~:text=Turning%20off%20IDNA%20support
 arcstr = { workspace = true }
 cow-utils = { workspace = true }
-dashmap = { workspace = true }
 derive_more = { workspace = true }
 fast-glob = { workspace = true }
 oxc_resolver = { workspace = true, features = ["package_json_raw_json_api"] }

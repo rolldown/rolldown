@@ -10,12 +10,12 @@ use std::{
 use crate::{
   ResolveOptionsExternal,
   builtin::{BuiltinChecker, is_node_like_builtin},
-  external::{self, ExternalDecider, ExternalDeciderOptions},
+  external::{self},
   file_url::file_url_str_to_path_and_postfix,
   resolver::{self, AdditionalOptions, Resolvers},
   utils::{
-    BROWSER_EXTERNAL_ID, OPTIONAL_PEER_DEP_ID, is_bare_import, is_in_node_modules,
-    is_windows_drive_path, normalize_leading_slashes, normalize_path,
+    BROWSER_EXTERNAL_ID, OPTIONAL_PEER_DEP_ID, is_bare_import, is_windows_drive_path,
+    normalize_leading_slashes, normalize_path,
   },
 };
 use anyhow::anyhow;
@@ -49,11 +49,11 @@ pub struct ViteResolveOptions {
   pub resolve_subpath_imports: Arc<ResolveSubpathImportsCallback>,
 }
 
-pub type FinalizeBareSpecifierCallback = dyn (Fn(
-    &str,
+pub type FinalizeBareSpecifierCallback = dyn Fn(
     &str,
     Option<&str>,
-  ) -> Pin<Box<(dyn Future<Output = anyhow::Result<Option<String>>> + Send + Sync)>>)
+    bool,
+  ) -> Pin<Box<(dyn Future<Output = anyhow::Result<Option<HookResolveIdOutput>>> + Send)>>
   + Send
   + Sync;
 
@@ -113,7 +113,6 @@ pub struct ViteResolvePlugin {
   resolve_subpath_imports: Arc<ResolveSubpathImportsCallback>,
 
   resolvers: Resolvers,
-  external_decider: ExternalDecider,
   builtin_checker: Arc<BuiltinChecker>,
 }
 
@@ -149,16 +148,6 @@ impl ViteResolvePlugin {
       finalize_bare_specifier: options.finalize_bare_specifier,
       finalize_other_specifiers: options.finalize_other_specifiers,
       resolve_subpath_imports: options.resolve_subpath_imports,
-      external_decider: ExternalDecider::new(
-        ExternalDeciderOptions {
-          external: options.external,
-          no_external: Arc::clone(&no_external),
-          dedupe,
-          is_build: options.resolve_options.is_build,
-        },
-        resolvers.get_for_external(),
-        Arc::clone(&builtin_checker),
-      ),
       builtin_checker,
 
       resolvers,
@@ -253,22 +242,10 @@ impl Plugin for ViteResolvePlugin {
     let resolver = self.resolvers.get(additional_options);
 
     if is_bare_import(&id) {
-      let external = self.resolve_options.is_build
-        && self.environment_consumer == "server"
-        && self.external_decider.is_external(&id, args.importer);
-      let result = resolver.resolve_bare_import(&id, args.importer, external, &self.dedupe)?;
-      if let Some(mut result) = result {
-        if let Some(finalize_bare_specifier) = &self.finalize_bare_specifier {
-          if !scan && is_in_node_modules(&result.id) {
-            let finalized = finalize_bare_specifier(&result.id, &id, args.importer)
-              .await?
-              .map(Into::into)
-              .unwrap_or(result.id);
-            result.id = finalized;
-          }
+      if let Some(finalize_bare_specifier) = &self.finalize_bare_specifier {
+        if let Some(resolved_id) = finalize_bare_specifier(&id, args.importer, scan).await? {
+          return Ok(Some(resolved_id));
         }
-
-        return Ok(Some(result));
       }
 
       // built-ins

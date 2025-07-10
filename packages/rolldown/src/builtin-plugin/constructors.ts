@@ -1,8 +1,10 @@
+import type { PartialResolvedId } from '..';
 import type {
   BindingAssetPluginConfig,
   BindingBuildImportAnalysisPluginConfig,
   BindingBuiltinPluginName,
   BindingDynamicImportVarsPluginConfig,
+  BindingHookResolveIdOutput,
   BindingImportGlobPluginConfig,
   BindingIsolatedDeclarationPluginConfig,
   BindingJsonPluginConfig,
@@ -98,9 +100,47 @@ export function buildImportAnalysisPlugin(
   return new BuiltinPlugin('builtin:build-import-analysis', config);
 }
 
+type ViteResolvePluginConfig =
+  & Omit<
+    BindingViteResolvePluginConfig,
+    'finalizeBareSpecifier'
+  >
+  & {
+    finalizeBareSpecifier?: (
+      id: string,
+      importer: string | undefined,
+      scan: boolean,
+    ) => Promise<PartialResolvedId>;
+  };
+
 export function viteResolvePlugin(
-  config: BindingViteResolvePluginConfig,
+  config: ViteResolvePluginConfig,
 ): BuiltinPlugin {
+  if (config.finalizeBareSpecifier) {
+    const finalizeBareSpecifier = config.finalizeBareSpecifier;
+    const newFinalizeBareSpecifier = async (
+      id: string,
+      importer: string | undefined,
+      scan: boolean,
+    ) => {
+      const ret = await finalizeBareSpecifier(id, importer, scan);
+
+      if (typeof ret === 'string') {
+        return { id: ret };
+      }
+      const result: BindingHookResolveIdOutput = {
+        id: ret.id,
+        external: ret.external,
+      };
+
+      if (ret.moduleSideEffects !== null) {
+        result.moduleSideEffects = ret.moduleSideEffects;
+      }
+
+      return result;
+    };
+    config.finalizeBareSpecifier = newFinalizeBareSpecifier as any;
+  }
   const builtinPlugin = new BuiltinPlugin('builtin:vite-resolve', config);
   return makeBuiltinPluginCallable(builtinPlugin);
 }

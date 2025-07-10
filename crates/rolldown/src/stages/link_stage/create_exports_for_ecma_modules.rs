@@ -94,9 +94,19 @@ impl LinkStage<'_> {
           let mut referenced_symbols = vec![];
           let mut declared_symbols = vec![];
           if !meta.is_canonical_exports_empty() {
+            // Always reference the helper so that the namespace object can be populated at
+            // runtime, but only reference individual export symbols when HMR is *disabled*.
+            // When HMR is enabled we keep the namespace object itself (see include_statements)
+            // yet allow tree-shaking to eliminate export bindings that are never used.
             referenced_symbols.push(self.runtime.resolve_symbol("__export").into());
-            referenced_symbols
-              .extend(meta.canonical_exports(false).map(|(_, export)| export.symbol_ref.into()));
+
+            if !self.options.is_hmr_enabled() {
+              referenced_symbols.extend(
+                meta
+                  .canonical_exports(false)
+                  .map(|(_, export)| export.symbol_ref.into()),
+              );
+            }
           }
           if !meta.star_exports_from_external_modules.is_empty() {
             referenced_symbols.push(self.runtime.resolve_symbol("__reExport").into());

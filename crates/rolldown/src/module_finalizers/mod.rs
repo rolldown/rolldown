@@ -310,7 +310,28 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
       )),
     );
 
-    let exports_len = self.ctx.linking_info.canonical_exports(false).count();
+    // Collect exports whose declaring statements survive tree-shaking. This ensures that we don't
+    // generate getters for bindings that were already removed, which would otherwise keep them
+    // alive when HMR is enabled.
+    let included_exports: Vec<_> = self
+      .ctx
+      .linking_info
+      .canonical_exports(false)
+      .filter(|(_name, resolved_export)| {
+        let owner_idx = resolved_export.symbol_ref.owner;
+        match &self.ctx.modules[owner_idx] {
+          Module::Normal(m) => m
+            .stmt_infos
+            .declared_stmts_by_symbol(&resolved_export.symbol_ref)
+            .iter()
+            .any(|id| m.stmt_infos[*id].is_included),
+          // For external modules we conservatively keep the export binding.
+          Module::External(_) => true,
+        }
+      })
+      .collect();
+
+    let exports_len = included_exports.len();
 
     let export_all_externals_rec_ids = &self.ctx.linking_info.star_exports_from_external_modules;
 
@@ -385,7 +406,7 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
     let mut arg_obj_expr = ast::ObjectExpression::dummy(self.alloc);
     arg_obj_expr.properties.reserve_exact(exports_len);
 
-    self.ctx.linking_info.canonical_exports(false).for_each(|(export, resolved_export)| {
+    included_exports.into_iter().for_each(|(export, resolved_export)| {
       // prop_name: () => returned
       let prop_name = export;
       let returned = self.finalized_expr_for_symbol_ref(resolved_export.symbol_ref, false, false);

@@ -18,10 +18,8 @@ var require_cjs = __commonJS({ "cjs.js"(exports, module) {
 //#endregion
 //#region esm.js
 var esm_exports = {};
-__export(esm_exports, { value: () => value });
 const esm_hot = __rolldown_runtime__.createModuleHotContext("esm.js");
 __rolldown_runtime__.registerModule("esm.js", { exports: esm_exports });
-const value = "main";
 
 //#endregion
 //#region main.js

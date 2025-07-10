@@ -375,6 +375,7 @@ function bindingifyWatch(
       skipWrite: watch.skipWrite,
       include: normalizedStringOrRegex(watch.include),
       exclude: normalizedStringOrRegex(watch.exclude),
+      onInvalidate: (...args) => watch.onInvalidate?.(...args),
     };
   }
 }

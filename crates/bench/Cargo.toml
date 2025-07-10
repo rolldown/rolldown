@@ -19,7 +19,7 @@ rolldown = { workspace = true }
 rolldown_common = { workspace = true }
 rolldown_testing = { workspace = true }
 rolldown_workspace = { workspace = true }
-tokio = { workspace = true, features = ["full"] }
+tokio = { workspace = true, features = ["rt"] }
 
 [[bench]]
 harness = false

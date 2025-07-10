@@ -521,7 +521,8 @@ impl LinkStage<'_> {
                           })
                       })
                   {
-                    target_commonjs_exported_symbol = Some(m.symbol_ref);
+                    target_commonjs_exported_symbol =
+                      Some((m.symbol_ref, member_expr_ref.props[cursor] == "default"));
                     depended_refs.push(m.symbol_ref);
                   }
                 }

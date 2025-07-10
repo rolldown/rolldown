@@ -1330,6 +1330,11 @@ export interface BindingChecksOptions {
   configurationFieldConflict?: boolean
 }
 
+export declare enum BindingChunkModuleOrderBy {
+  ModuleId = 0,
+  ExecOrder = 1
+}
+
 export interface BindingDebugOptions {
   sessionId?: string
 }
@@ -1374,6 +1379,7 @@ export interface BindingExperimentalOptions {
   resolveNewUrlToAsset?: boolean
   hmr?: BindingExperimentalHmrOptions
   attachDebugInfo?: BindingAttachDebugInfo
+  chunkModulesOrder?: BindingChunkModuleOrderBy
 }
 
 export interface BindingFilterToken {

@@ -5350,6 +5350,10 @@ expression: output
 
 - entry-!~{000}~.js => entry-OEtcTgKT.js
 
+# tests/rolldown/topics/chunk_modules_order/basic
+
+- main-!~{000}~.js => main-CR3sFzVE.js
+
 # tests/rolldown/topics/cjs_module_lexer_compat/export_star_from_external
 
 - main-!~{000}~.js => main-mcqoN11I.js

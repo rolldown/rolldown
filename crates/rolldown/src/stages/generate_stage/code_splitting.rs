@@ -155,12 +155,7 @@ impl GenerateStage<'_> {
       }
     }
 
-    // Sort modules in each chunk by execution order
-    chunk_graph.chunk_table.iter_mut().for_each(|chunk| {
-      chunk
-        .modules
-        .sort_unstable_by_key(|module_id| self.link_output.module_table[*module_id].exec_order());
-    });
+    chunk_graph.sort_chunk_modules(self.link_output, self.options);
 
     chunk_graph
       .chunk_table

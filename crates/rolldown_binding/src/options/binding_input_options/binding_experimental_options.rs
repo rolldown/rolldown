@@ -7,6 +7,7 @@ pub struct BindingExperimentalOptions {
   pub resolve_new_url_to_asset: Option<bool>,
   pub hmr: Option<BindingExperimentalHmrOptions>,
   pub attach_debug_info: Option<BindingAttachDebugInfo>,
+  pub chunk_modules_order: Option<BindingChunkModuleOrderBy>,
 }
 
 impl From<BindingExperimentalOptions> for rolldown_common::ExperimentalOptions {
@@ -20,6 +21,7 @@ impl From<BindingExperimentalOptions> for rolldown_common::ExperimentalOptions {
       incremental_build: None,
       hmr: value.hmr.map(Into::into),
       attach_debug_info: value.attach_debug_info.map(Into::into),
+      chunk_modules_order: value.chunk_modules_order.map(Into::into),
     }
   }
 }
@@ -52,6 +54,22 @@ impl From<BindingAttachDebugInfo> for rolldown_common::AttachDebugInfo {
       BindingAttachDebugInfo::None => rolldown_common::AttachDebugInfo::None,
       BindingAttachDebugInfo::Simple => rolldown_common::AttachDebugInfo::Simple,
       BindingAttachDebugInfo::Full => rolldown_common::AttachDebugInfo::Full,
+    }
+  }
+}
+
+#[derive(Debug)]
+#[napi_derive::napi]
+pub enum BindingChunkModuleOrderBy {
+  ModuleId,
+  ExecOrder,
+}
+
+impl From<BindingChunkModuleOrderBy> for rolldown_common::ChunkModulesOrderBy {
+  fn from(value: BindingChunkModuleOrderBy) -> Self {
+    match value {
+      BindingChunkModuleOrderBy::ModuleId => rolldown_common::ChunkModulesOrderBy::ModuleId,
+      BindingChunkModuleOrderBy::ExecOrder => rolldown_common::ChunkModulesOrderBy::ExecOrder,
     }
   }
 }

@@ -23,6 +23,7 @@ pub mod bundler_options {
         AdvancedChunksOptions, ChunkingContext, MatchGroup, MatchGroupName, MatchGroupTest,
       },
       attach_debug_info::AttachDebugInfo,
+      chunk_modules_order::ChunkModulesOrderBy,
       debug_options::DebugOptions,
       defer_sync_scan_data_option::DeferSyncScanDataOption,
       es_module_flag::EsModuleFlag,

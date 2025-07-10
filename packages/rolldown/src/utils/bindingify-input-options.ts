@@ -1,5 +1,6 @@
 import {
   BindingAttachDebugInfo,
+  BindingChunkModuleOrderBy,
   BindingJsx,
   BindingLogLevel,
 } from '../binding';
@@ -86,16 +87,7 @@ export function bindingifyInputOptions(
       ? Object.entries(inputOptions.define)
       : undefined,
     inject: bindingifyInject(inputOptions.inject),
-    experimental: {
-      strictExecutionOrder: inputOptions.experimental?.strictExecutionOrder,
-      disableLiveBindings: inputOptions.experimental?.disableLiveBindings,
-      viteMode: inputOptions.experimental?.viteMode,
-      resolveNewUrlToAsset: inputOptions.experimental?.resolveNewUrlToAsset,
-      hmr: bindingifyHmr(inputOptions.experimental?.hmr),
-      attachDebugInfo: bindingifyAttachDebugInfo(
-        inputOptions.experimental?.attachDebugInfo,
-      ),
-    },
+    experimental: bindingifyExperimental(inputOptions.experimental),
     profilerNames: inputOptions?.profilerNames,
     jsx,
     transform,
@@ -176,6 +168,37 @@ function bindingifyExternal(
       });
     };
   }
+}
+
+function bindingifyExperimental(
+  experimental: InputOptions['experimental'],
+): BindingInputOptions['experimental'] {
+  let chunkModulesOrder = BindingChunkModuleOrderBy.ExecOrder;
+  if (experimental?.chunkModulesOrder) {
+    switch (experimental.chunkModulesOrder) {
+      case 'exec-order':
+        chunkModulesOrder = BindingChunkModuleOrderBy.ExecOrder;
+        break;
+      case 'module-id':
+        chunkModulesOrder = BindingChunkModuleOrderBy.ModuleId;
+        break;
+      default:
+        throw new Error(
+          `Unexpected chunkModulesOrder: ${experimental.chunkModulesOrder}`,
+        );
+    }
+  }
+  return {
+    strictExecutionOrder: experimental?.strictExecutionOrder,
+    disableLiveBindings: experimental?.disableLiveBindings,
+    viteMode: experimental?.viteMode,
+    resolveNewUrlToAsset: experimental?.resolveNewUrlToAsset,
+    hmr: bindingifyHmr(experimental?.hmr),
+    attachDebugInfo: bindingifyAttachDebugInfo(
+      experimental?.attachDebugInfo,
+    ),
+    chunkModulesOrder,
+  };
 }
 
 function bindingifyResolve(

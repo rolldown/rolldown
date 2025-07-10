@@ -114,7 +114,6 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
 
         // `import_foo`
         let binding_name_for_wrapper_call_ret = self.canonical_name_for(rec.namespace_ref);
-
         *stmt = self.snippet.var_decl_stmt(
           binding_name_for_wrapper_call_ret,
           self.snippet.wrap_with_to_esm(
@@ -600,20 +599,23 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
       Some(MemberExprRefResolution {
         resolved: object_ref,
         props,
-        target_commonjs_exported_symbol,
+        target_commonjs_exported_symbol: target_commonjs_exported_symbol_meta,
         ..
       }) => {
         object_ref
           .map(|object_ref| {
-            if let Some(export_meta) = target_commonjs_exported_symbol
-              .and_then(|item| self.ctx.constant_value_map.get(&item))
-            {
+            if let Some(export_meta) = target_commonjs_exported_symbol_meta.and_then(
+              |target_commonjs_exported_symbol_meta| {
+                self.ctx.constant_value_map.get(&target_commonjs_exported_symbol_meta.0)
+              },
+            ) {
               return export_meta.value.to_expression(AstBuilder::new(self.alloc));
             }
             let object_ref_expr = self.finalized_expr_for_symbol_ref(
               object_ref,
               false,
-              target_commonjs_exported_symbol.is_some(),
+              target_commonjs_exported_symbol_meta
+                .is_some_and(|(_symbol, is_exports_default)| !is_exports_default),
             );
             self.snippet.member_expr_or_ident_ref(object_ref_expr, props, span)
           })
@@ -875,7 +877,6 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
               let to_esm_fn_name = self.canonical_name_for_runtime("__toESM");
               let importee_wrapper_ref_name =
                 self.canonical_name_for(importee_linking_info.wrapper_ref.unwrap());
-
               Some(self.snippet.promise_resolve_then_call_expr(
                 self.snippet.wrap_with_to_esm(
                   self.snippet.builder.expression_identifier(

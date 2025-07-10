@@ -1,4 +1,60 @@
 
+## [1.0.0-beta.25] - 2025-07-10
+
+### 🚀 Features
+
+- hmr: should initialize cjs with correct initializer (#5234) by @hyf0
+- hmr: handle `import(..)` on cjs modules (#5225) by @hyf0
+- support `chunkModulesOrder`  (#5227) by @IWANABETHATGUY
+- add `export`s to `rolldown:runtime` (#5224) by @hyf0
+- hmr: support `import(..)` (#5223) by @hyf0
+- add analyzed source code side effects field in ecmaMeta (#5226) by @IWANABETHATGUY
+- hmr: return `undefined` from `generateHmrPatch` when there is no patch (#5218) by @sapphi-red
+- pass `isEntry` to resolveId hook of CallableBuiltinPlugin (#5215) by @sapphi-red
+- pass `isEntry` from `this.resolve` (#5214) by @sapphi-red
+- node: support `OutputOptions#minifyInternalExports` (#5210) by @hyf0
+- rolldown: oxc v0.76.0 (#5212) by @Boshen
+- rust: support `minify_internal_exports` (#5208) by @hyf0
+- support opt-in `topLevelVar` (#5188) by @7086cmd
+- rolldown: oxc-resolver v11.5.0 (yarn pnp) (#5147) by @Boshen
+
+### 🐛 Bug Fixes
+
+- do not optimize interop code for `mod.default` if mod bind from default import (#5232) by @IWANABETHATGUY
+- return `moduleSideEffects` instead of `sideEffects` from callable plugins (#5206) by @sapphi-red
+- return `moduleSideEffects` set by native plugins from `this.resolve` (#5205) by @sapphi-red
+- incorrect output when importing CJS package (#5201) by @IWANABETHATGUY
+- use resolved id instead of module_request when analysis if a module is a json module (#5200) by @IWANABETHATGUY
+
+### 🚜 Refactor
+
+- use `sort_unstable_by_key` for simple property access (#5233) by @IWANABETHATGUY
+- add Deref impl for TransformPluginContext to access PluginContext (#5221) by @sapphi-red
+- use `BindingHookSideEffects` in CallableBuiltinPlugin (#5204) by @sapphi-red
+- move side effects type bindings logic to rust side (#5203) by @sapphi-red
+- test: improve experience of writing manual integration test (#5186) by @hyf0
+- rust: unify logic of `IntegrationTest` (#5185) by @hyf0
+
+### 🧪 Testing
+
+- rust: automatically run extented test for `minify_internal_exports: true` (#5213) by @hyf0
+- rust: add basic tests for minifying internal exports (#5211) by @hyf0
+
+### ⚙️ Miscellaneous Tasks
+
+- deps: oxc-browserslist v2.0.10 and oxc-resolver v11.5.2 (#5222) by @Boshen
+- use jsonc schema for knip config (#5207) by @sapphi-red
+- rust: remove unused code related to `safe_cjs_to_eliminate_interop_default` (#5202) by @shulaoda
+- inject test variant name to rust unit test script (#5195) by @IWANABETHATGUY
+- change CC => TARGET_CC (#5194) by @Brooooooklyn
+- deps: lock file maintenance npm packages (#5191) by @renovate[bot]
+- deps: lock file maintenance (#5193) by @renovate[bot]
+- deps: lock file maintenance rust crates (#5192) by @renovate[bot]
+- deps: update github-actions (#5190) by @renovate[bot]
+- test: remove unnecessary test snapshots (#5183) by @shulaoda
+- rolldown: upgrade to NAPI-RS 3.0.0-beta.12 (#5184) by @Brooooooklyn
+
+
 ## [1.0.0-beta.24] - 2025-07-05
 
 ### 🚀 Features

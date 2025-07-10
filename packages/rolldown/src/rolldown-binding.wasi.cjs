@@ -82,7 +82,7 @@ const { instance: __napiInstance, module: __wasiModule, napiModule: __napiModule
       const kHandle = Object.getOwnPropertySymbols(worker).find(s =>
         s.toString().includes("kHandle")
       );
-      if (kPublicPort) {
+      if (kHandle) {
         worker[kHandle].ref = () => {};
       }
 

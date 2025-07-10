@@ -40,7 +40,7 @@ var init_hmr_0 = __rolldown_runtime__.createEsmInitializer(function() {
 		});
 		async function foo() {
 			const esm = await (init_new_dep_esm_1(), Promise.resolve().then(() => __rolldown_runtime__.loadExports("new-dep-esm.js")));
-			const cjs = await (init_new_dep_cjs_2(), Promise.resolve().then(() => __rolldown_runtime__.__toDynamicImportESM(__rolldown_runtime__.loadExports("new-dep-cjs.js"))));
+			const cjs = await (require_new_dep_cjs_2(), Promise.resolve().then(() => __rolldown_runtime__.__toDynamicImportESM(__rolldown_runtime__.loadExports("new-dep-cjs.js"))));
 			console.log(esm, cjs);
 		}
 	} finally {}
@@ -56,7 +56,7 @@ var init_new_dep_esm_1 = __rolldown_runtime__.createEsmInitializer(function() {
 	} finally {}
 });
 
-var init_new_dep_cjs_2 = __rolldown_runtime__.createEsmInitializer(function() {
+var require_new_dep_cjs_2 = __rolldown_runtime__.createCjsInitializer(function() {
 	try {
 		__rolldown_runtime__.registerModule("new-dep-cjs.js", module);
 		const hot_new_dep_cjs = __rolldown_runtime__.createModuleHotContext("new-dep-cjs.js");

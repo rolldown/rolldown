@@ -285,8 +285,10 @@ impl HmrManager {
             self.module_db.modules[*module_idx].id()
           );
         };
+        let prefix = if module.exports_kind.is_commonjs() { "require" } else { "init" };
 
-        (*module_idx, format!("init_{}_{}", module.repr_name, index))
+        // We use `index` as a part of the function name to avoid name collision without needing to deconflict.
+        (*module_idx, format!("{}_{}_{}", prefix, module.repr_name, index))
       })
       .collect::<FxHashMap<_, _>>();
 

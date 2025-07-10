@@ -29,6 +29,8 @@
   diff
 ## [remove_unused_no_side_effects_tagged_templates](../../../crates/rolldown/tests/esbuild/dce/remove_unused_no_side_effects_tagged_templates/diff.md)
   diff
+## [tree_shaking_in_esm_wrapper](../../../crates/rolldown/tests/esbuild/dce/tree_shaking_in_esm_wrapper/diff.md)
+  diff
 ## [tree_shaking_lowered_class_static_field](../../../crates/rolldown/tests/esbuild/dce/tree_shaking_lowered_class_static_field/diff.md)
   diff
 ## [tree_shaking_lowered_class_static_field_assignment](../../../crates/rolldown/tests/esbuild/dce/tree_shaking_lowered_class_static_field_assignment/diff.md)
@@ -80,7 +82,6 @@
 ## [tree_shaking_class_property](../../../crates/rolldown/tests/esbuild/dce/tree_shaking_class_property)
 ## [tree_shaking_class_static_property](../../../crates/rolldown/tests/esbuild/dce/tree_shaking_class_static_property)
 ## [tree_shaking_import_identifier](../../../crates/rolldown/tests/esbuild/dce/tree_shaking_import_identifier)
-## [tree_shaking_in_esm_wrapper](../../../crates/rolldown/tests/esbuild/dce/tree_shaking_in_esm_wrapper)
 ## [tree_shaking_object_property](../../../crates/rolldown/tests/esbuild/dce/tree_shaking_object_property)
 # Bypassed Cases
 ## [const_value_inlining_bundle](../../../crates/rolldown/tests/esbuild/dce/const_value_inlining_bundle/bypass.md)

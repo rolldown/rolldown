@@ -1,7 +1,8 @@
 use oxc_index::IndexVec;
 use rolldown_common::{
-  ExportsKind, IndexModules, Module, ModuleIdx, NormalModule, NormalizedBundlerOptions,
-  RuntimeModuleBrief, StmtInfo, StmtInfoMeta, SymbolRefDb, TaggedSymbolRef, WrapKind,
+  EcmaViewMeta, ExportsKind, IndexModules, Module, ModuleIdx, NormalModule,
+  NormalizedBundlerOptions, RuntimeModuleBrief, StmtInfo, StmtInfoMeta, SymbolRefDb,
+  TaggedSymbolRef, WrapKind,
 };
 
 use crate::types::linking_metadata::{LinkingMetadata, LinkingMetadataVec};
@@ -32,6 +33,17 @@ fn wrap_module_recursively(ctx: &mut Context, target: ModuleIdx) {
     return;
   }
 
+  // Check if the module really needs to be wrapped
+  match module.exports_kind {
+    ExportsKind::Esm | ExportsKind::None => {
+      if !module.meta.contains(EcmaViewMeta::HAS_ANALYZED_SIDE_EFFECT)
+        && module.import_records.is_empty()
+      {
+        return;
+      }
+    }
+    ExportsKind::CommonJs => {}
+  }
   if matches!(ctx.linking_infos[target].wrap_kind, WrapKind::None) {
     ctx.linking_infos[target].wrap_kind = match module.exports_kind {
       ExportsKind::Esm | ExportsKind::None => WrapKind::Esm,

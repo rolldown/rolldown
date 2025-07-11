@@ -153,7 +153,7 @@
     "ansis": "^4.0.0"
   },
   "devDependencies": {
-    "@napi-rs/cli": "3.0.0-alpha.93",
+    "@napi-rs/cli": "catalog:",
     "@napi-rs/wasm-runtime": "^0.2.10",
     "@oxc-node/cli": "catalog:",
     "@rolldown/testing": "workspace:*",
@@ -176,19 +176,5 @@
     "typedoc": "^0.28.0",
     "typescript": "^5.7.3",
     "valibot": "1.1.0"
-  },
-  "optionalDependencies": {
-    "@rolldown/binding-darwin-arm64": "workspace:*",
-    "@rolldown/binding-darwin-x64": "workspace:*",
-    "@rolldown/binding-freebsd-x64": "workspace:*",
-    "@rolldown/binding-linux-arm-gnueabihf": "workspace:*",
-    "@rolldown/binding-linux-arm64-gnu": "workspace:*",
-    "@rolldown/binding-linux-arm64-musl": "workspace:*",
-    "@rolldown/binding-linux-x64-gnu": "workspace:*",
-    "@rolldown/binding-linux-x64-musl": "workspace:*",
-    "@rolldown/binding-wasm32-wasi": "workspace:*",
-    "@rolldown/binding-win32-arm64-msvc": "workspace:*",
-    "@rolldown/binding-win32-ia32-msvc": "workspace:*",
-    "@rolldown/binding-win32-x64-msvc": "workspace:*"
   }
 }

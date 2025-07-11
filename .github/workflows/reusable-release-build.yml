@@ -81,7 +81,7 @@ jobs:
       - uses: goto-bus-stop/setup-zig@abea47f85e598557f500fa1fd2ab7464fcb39406 # v2.2.1
         if: ${{ contains(matrix.target, 'musl') }}
         with:
-          version: 0.13.0
+          version: 0.14.1
 
       - uses: taiki-e/install-action@cb148fe1fce8758fff4870f9a63060b1d1a117ac # v2.56.6
         if: ${{ contains(matrix.target, 'musl') }}

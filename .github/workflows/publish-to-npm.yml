@@ -65,6 +65,9 @@ jobs:
         with:
           path: packages/rolldown/artifacts
 
+      - name: Create rolldown/npm dirs
+        run: pnpm --filter rolldown exec napi create-npm-dirs
+
       - name: Move Binding Artifacts
         run: pnpm --filter rolldown artifacts
 

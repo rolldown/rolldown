@@ -250,7 +250,7 @@ impl<F: FileSystem> Resolver<F> {
       Some(v) => Arc::clone(v.value()),
       _ => {
         let pkg_json = Arc::new(
-          PackageJson::new(oxc_pkg_json.path.clone())
+          PackageJson::new(oxc_pkg_json.realpath.clone())
             .with_type(oxc_pkg_json.r#type.map(|t| match t {
               PackageType::CommonJs => "commonjs",
               PackageType::Module => "module",

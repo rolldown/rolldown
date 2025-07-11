@@ -20,7 +20,7 @@ impl PackageJsonCache {
       Some(v) => Arc::clone(v.value()),
       _ => {
         let pkg_json = Arc::new(
-          PackageJson::new(oxc_pkg_json.path.clone())
+          PackageJson::new(oxc_pkg_json.realpath.clone())
             .with_side_effects(oxc_pkg_json.side_effects.as_ref()),
         );
         self.side_effects_cache.insert(oxc_pkg_json.realpath.clone(), Arc::clone(&pkg_json));

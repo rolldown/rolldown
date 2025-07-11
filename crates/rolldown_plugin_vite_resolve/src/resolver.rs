@@ -298,7 +298,7 @@ impl Resolver {
             // the glob expr is based on parent path of package.json, which is package path
             // so we should use the relative path of the module to package path
             let module_path_relative_to_package =
-              raw_path.as_path().relative(pkg_json.path.parent()?);
+              raw_path.as_path().relative(pkg_json.realpath.parent()?);
             self
               .package_json_cache
               .cached_package_json_side_effects(pkg_json)

@@ -32,7 +32,7 @@ use rolldown_common::{
   ImportKind, ImportRecordIdx, ImportRecordMeta, LocalExport, MemberExprRef, ModuleDefFormat,
   ModuleId, ModuleIdx, NamedImport, RawImportRecord, Specifier, StmtInfo, StmtInfos,
   StmtSideEffect, SymbolRef, SymbolRefDbForModule, SymbolRefFlags, TaggedSymbolRef,
-  ThisExprReplaceKind,
+  ThisExprReplaceKind, generate_replace_this_expr_map,
 };
 use rolldown_ecmascript_utils::{BindingIdentifierExt, BindingPatternExt};
 use rolldown_error::{BuildDiagnostic, BuildResult, CjsExportSpan};
@@ -290,6 +290,19 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
     // they will be treated as normal global variable assign.
     if matches!(exports_kind, ExportsKind::Esm) {
       self.result.commonjs_exports.clear();
+    }
+
+    // https://github.com/evanw/esbuild/blob/d34e79e2a998c21bb71d57b92b0017ca11756912/internal/js_parser/js_parser.go#L12551-L12604
+    // Since AstScan is immutable, we defer transformation in module finalizer
+    if !self.top_level_this_expr_set.is_empty() {
+      self.result.this_expr_replace_map = generate_replace_this_expr_map(
+        &self.top_level_this_expr_set,
+        if exports_kind.is_commonjs() {
+          ThisExprReplaceKind::Exports
+        } else {
+          ThisExprReplaceKind::Undefined
+        },
+      );
     }
 
     self.result.exports_kind = exports_kind;

@@ -20,7 +20,7 @@ var init_json = __esm({ "json.js"() {
 //#endregion
 //#region commonjs.js
 var require_commonjs = __commonJS({ "commonjs.js"(exports) {
-	var __importDefault = void 0 && (void 0).__importDefault || function(mod$1) {
+	var __importDefault = exports && exports.__importDefault || function(mod$1) {
 		return mod$1 && mod$1.__esModule ? mod$1 : { "default": mod$1 };
 	};
 	Object.defineProperty(exports, "__esModule", { value: true });

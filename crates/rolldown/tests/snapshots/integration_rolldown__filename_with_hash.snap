@@ -2592,7 +2592,7 @@ expression: output
 
 # tests/esbuild/lower/lower_async_this2016_common_js
 
-- entry-!~{000}~.js => entry-EgdW9AG-.js
+- entry-!~{000}~.js => entry-ZqZxE5sf.js
 
 # tests/esbuild/lower/lower_async_this2016_es6
 
@@ -3733,7 +3733,7 @@ expression: output
 
 # tests/rolldown/cjs_compat/optimize_interop_default_with_cjs_bailout
 
-- main-!~{000}~.js => main-DdwjAanb.js
+- main-!~{000}~.js => main-D7n1tfSL.js
 
 # tests/rolldown/cjs_compat/optimize_interop_default_with_cjs_bailout2
 
@@ -4769,6 +4769,10 @@ expression: output
 # tests/rolldown/issues/5209
 
 - main-!~{000}~.js => main-KldUa5Im.js
+
+# tests/rolldown/issues/5242
+
+- main-!~{000}~.js => main-BZ0ZtUKQ.js
 
 # tests/rolldown/issues/rolldown_vite_289
 

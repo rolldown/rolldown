@@ -118,7 +118,7 @@
     "build-browser:release": "BROWSER_PKG=1 pnpm run --sequential '/^build-(binding|binding:wasi:release|node)$/'",
     "# Scrips for docs #": "_",
     "extract-options-doc": "typedoc",
-    "prepublishOnly": "napi pre-publish -t npm"
+    "prepublishOnly": "napi pre-publish -t npm  --no-gh-release --skip-optional-publish"
   },
   "napi": {
     "binaryName": "rolldown-binding",

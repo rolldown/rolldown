@@ -40,8 +40,11 @@ const myPlugin = {
 
 ### Composable Filters
 
+> [!WARNING] Composable filters are not yet supported in Vite, Rolldown-Vite or unplugin. They can be used in Rolldown plugins only.
+
+
 ```ts
-import { and, moduleType, query } from '@rolldown/pluginutils';
+import { and, id, moduleType, query, include } from '@rolldown/pluginutils';
 
 // Build a filter expression
 const filterExpr = and(
@@ -53,7 +56,7 @@ const filterExpr = and(
 // Usage in a plugin to define a hook filter
 const myPlugin = {
  transform: {
-    filter: filterExpr,
+    filter: [include(filterExpr)],
     handler(code, id, options) {
       // Your code here
     },
@@ -73,7 +76,7 @@ const myPlugin = {
 
 - `and(...exprs)` / `or(...exprs)` / `not(expr)` — Logical composition of filter expressions.
 - `id(pattern, params?)` — Filter by id (string or RegExp).
-- `moduleType(type)` — Filter by module type (e.g. 'js', 'ts').
+- `moduleType(type)` — Filter by module type (e.g. 'js', 'tsx', or 'json').
 - `code(pattern)` — Filter by code content.
 - `query(key, pattern)` — Filter by query parameter.
 - `include(expr)` / `exclude(expr)` — Top-level include/exclude wrappers.

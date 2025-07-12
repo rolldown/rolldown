@@ -42,6 +42,7 @@
         "src/binding.js",
         "src/rolldown-binding.wasi.cjs",
         "src/plugin/generated/hook-usage.ts",
+        "src/browser.js",
       ],
       "ignoreDependencies": [
         "@oxc-project/runtime",

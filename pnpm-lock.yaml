@@ -335,7 +335,7 @@ importers:
         version: 3.0.0-alpha.95(@emnapi/runtime@1.4.3)(@types/node@24.0.10)(emnapi@1.4.3)
       '@napi-rs/wasm-runtime':
         specifier: ^0.2.10
-        version: 0.2.11
+        version: 0.2.12
       '@oxc-node/cli':
         specifier: 'catalog:'
         version: 0.0.29
@@ -1883,9 +1883,6 @@ packages:
     resolution: {integrity: sha512-skgWKcpjtUqJUk1jwhVl8vXYCXQlFC532KiryU3hQBr6ZIJk0E0qD9FG99hUqtPko8mIMS5HDPO+uSnvHfgRVg==}
     engines: {node: '>= 10'}
 
-  '@napi-rs/wasm-runtime@0.2.11':
-    resolution: {integrity: sha512-9DPkXtvHydrcOsopiYpUgPHpmj0HWZKMUnL2dZqpvC42lsratuBG06V5ipyno0fUek5VlFsNQ+AcFATSrJXgMA==}
-
   '@napi-rs/wasm-runtime@0.2.12':
     resolution: {integrity: sha512-ZVWUcfwY4E/yPitQJl481FjFo3K22D6qF0DuFH6Y/nbnE11GY5uguDxZMGXPQ8WQ0128MXQD7TnfHyK4oWoIJQ==}
 
@@ -2861,9 +2858,6 @@ packages:
 
   '@tybys/wasm-util@0.10.0':
     resolution: {integrity: sha512-VyyPYFlOMNylG45GoAe0xDoLwWuowvf92F9kySqzYh8vmYm7D2u4iUJKa1tOUpS70Ku13ASrOkS4ScXFsTaCNQ==}
-
-  '@tybys/wasm-util@0.9.0':
-    resolution: {integrity: sha512-6+7nlbMVX/PVDCwaIQ8nTOPveOcFLSt8GcXdx8hD0bt39uWxYT88uXzqTd4fTvqta7oeUJqudepapKNt2DYJFw==}
 
   '@types/babel__core@7.20.5':
     resolution: {integrity: sha512-qoQprZvz5wQFJwMDqeseRXWv3rqMvhgpbXFfVyWhbx9X47POIA6i/+dXefEmZKoAgOaTdaIgNSMqMIU61yRyzA==}
@@ -7101,12 +7095,6 @@ snapshots:
       '@napi-rs/tar-win32-ia32-msvc': 0.1.5
       '@napi-rs/tar-win32-x64-msvc': 0.1.5
 
-  '@napi-rs/wasm-runtime@0.2.11':
-    dependencies:
-      '@emnapi/core': 1.4.3
-      '@emnapi/runtime': 1.4.3
-      '@tybys/wasm-util': 0.9.0
-
   '@napi-rs/wasm-runtime@0.2.12':
     dependencies:
       '@emnapi/core': 1.4.3
@@ -7958,10 +7946,6 @@ snapshots:
   '@sindresorhus/merge-streams@4.0.0': {}
 
   '@tybys/wasm-util@0.10.0':
-    dependencies:
-      tslib: 2.8.1
-
-  '@tybys/wasm-util@0.9.0':
     dependencies:
       tslib: 2.8.1
 

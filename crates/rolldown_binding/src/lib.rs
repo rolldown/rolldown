@@ -15,7 +15,11 @@
 
 use napi_derive::napi;
 
-#[cfg(all(not(target_family = "wasm"), not(feature = "default_global_allocator")))]
+#[cfg(all(
+  not(target_family = "wasm"),
+  not(feature = "default_global_allocator"),
+  not(target_env = "ohos")
+))]
 #[global_allocator]
 static ALLOC: mimalloc_safe::MiMalloc = mimalloc_safe::MiMalloc;
 

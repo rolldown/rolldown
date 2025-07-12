@@ -48,6 +48,10 @@ jobs:
             build: pnpm ci:build-release-binding --use-napi-cross --target aarch64-unknown-linux-gnu
 
           - os: ubuntu-latest
+            target: aarch64-unknown-linux-ohos
+            build: pnpm ci:build-release-binding --target aarch64-unknown-linux-ohos
+
+          - os: ubuntu-latest
             target: armv7-unknown-linux-gnueabihf
             build: pnpm ci:build-release-binding --target armv7-unknown-linux-gnueabihf --use-napi-cross
 
@@ -82,6 +86,10 @@ jobs:
         if: ${{ contains(matrix.target, 'musl') }}
         with:
           version: 0.14.1
+
+      - name: Setup OpenHarmony SDK
+        if: ${{ contains(matrix.target, 'ohos') }}
+        uses: openharmony-rs/setup-ohos-sdk@10564ad8040178be4aa02e0d3a2c25c32779fa3f # v0.2
 
       - uses: taiki-e/install-action@cb148fe1fce8758fff4870f9a63060b1d1a117ac # v2.56.6
         if: ${{ contains(matrix.target, 'musl') }}

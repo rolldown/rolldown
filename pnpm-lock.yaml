@@ -7,8 +7,8 @@ settings:
 catalogs:
   default:
     '@napi-rs/cli':
-      specifier: ^3.0.0-alpha.95
-      version: 3.0.0-alpha.95
+      specifier: ^3.0.0-alpha.99
+      version: 3.0.0-alpha.99
     '@napi-rs/wasm-runtime':
       specifier: ^0.2.10
       version: 0.2.12
@@ -332,7 +332,7 @@ importers:
     devDependencies:
       '@napi-rs/cli':
         specifier: 'catalog:'
-        version: 3.0.0-alpha.95(@emnapi/runtime@1.4.3)(@types/node@24.0.10)(emnapi@1.4.3)
+        version: 3.0.0-alpha.99(@emnapi/runtime@1.4.3)(@types/node@24.0.10)(emnapi@1.4.3)
       '@napi-rs/wasm-runtime':
         specifier: ^0.2.10
         version: 0.2.12
@@ -399,8 +399,6 @@ importers:
       valibot:
         specifier: 1.1.0
         version: 1.1.0(typescript@5.8.3)
-
-  packages/rolldown/npm/android-arm64: {}
 
   packages/rolldown/tests:
     dependencies:
@@ -1643,8 +1641,8 @@ packages:
   '@module-federation/sdk@0.8.12':
     resolution: {integrity: sha512-zFgXYBHbzwIqlrLfn6ewIRXDZCctDDQT2nFhbsZr29yWQgpmW1fm2kJCxQsG0DENGGN1KpzfDoxjjvSKJS/ZHA==}
 
-  '@napi-rs/cli@3.0.0-alpha.95':
-    resolution: {integrity: sha512-MYCRh/mVgnNlba1sk5Az9YrlYaFJR7onsSf+MxiUSO7U7UK2UPhmjXc04EAdawSZc3j8734nVOwl8H+J0aNeGA==}
+  '@napi-rs/cli@3.0.0-alpha.99':
+    resolution: {integrity: sha512-g+a+r+7wbK3f7jKWGPEpjTxClFYJfAsUfhaW06AoqnhUidrMOEwbPLKqYg+kApYfhR2+PRiV5mImZNFBTLx3uQ==}
     engines: {node: '>= 16'}
     hasBin: true
     peerDependencies:
@@ -6917,7 +6915,7 @@ snapshots:
     dependencies:
       isomorphic-rslog: 0.0.7
 
-  '@napi-rs/cli@3.0.0-alpha.95(@emnapi/runtime@1.4.3)(@types/node@24.0.10)(emnapi@1.4.3)':
+  '@napi-rs/cli@3.0.0-alpha.99(@emnapi/runtime@1.4.3)(@types/node@24.0.10)(emnapi@1.4.3)':
     dependencies:
       '@inquirer/prompts': 7.6.0(@types/node@24.0.10)
       '@napi-rs/cross-toolchain': 0.0.19

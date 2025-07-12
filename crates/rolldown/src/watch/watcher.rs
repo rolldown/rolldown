@@ -189,7 +189,7 @@ impl WatcherImpl {
             for change in &watch_changes {
               for task in &self.tasks {
                 task.on_change(change.path.as_str(), change.kind).await;
-                task.invalidate(change.path.as_str());
+                task.invalidate(change.path.as_str()).await;
               }
               self.watch_changes.remove(change);
             }

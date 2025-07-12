@@ -164,10 +164,15 @@ impl WatcherTask {
     Ok(())
   }
 
-  pub fn invalidate(&self, path: &str) {
+  pub async fn invalidate(&self, path: &str) {
     // invalidate the watcher task if the changed file is in the watch list
     if self.watch_files.contains(path) {
       self.invalidate_flag.store(true, Ordering::Relaxed);
+
+      let bundler = self.bundler.lock().await;
+      if let Some(on_invalidate) = &bundler.options.watch.on_invalidate {
+        on_invalidate.call(path);
+      }
     }
 
     // #4385 watch linux path at windows, notify will give an `C:/xxx\\main.js` path
@@ -175,6 +180,11 @@ impl WatcherTask {
     {
       if self.watch_files.contains(path.replace('\\', "/").as_str()) {
         self.invalidate_flag.store(true, Ordering::Relaxed);
+
+        let bundler = self.bundler.lock().await;
+        if let Some(on_invalidate) = &bundler.options.watch.on_invalidate {
+          on_invalidate.call(path);
+        }
       }
     }
   }

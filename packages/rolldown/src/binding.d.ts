@@ -1985,6 +1985,7 @@ export interface BindingWatchOption {
   include?: Array<BindingStringOrRegex>
   exclude?: Array<BindingStringOrRegex>
   buildDelay?: number
+  onInvalidate?: ((id: string) => void) | undefined
 }
 
 export interface ExtensionAliasItem {

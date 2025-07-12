@@ -406,6 +406,36 @@ test.sequential('watch include/exclude', async () => {
   await watcher.close()
 })
 
+test.sequential('watch onInvalidate', async () => {
+  const { input, output } = await createTestInputAndOutput('on-invalidate')
+
+  const onInvalidateFn = vi.fn()
+  const watcher = watch({
+    input,
+    output: { file: output },
+    watch: {
+      onInvalidate: (id) =>{
+        expect(id).toBe(input)
+        onInvalidateFn(id)
+      },
+    },
+  })
+
+  await waitBuildFinished(watcher)
+
+  // edit file
+  fs.writeFileSync(input, 'console.log(2)')
+
+  await waitUtil(() => {
+    expect(onInvalidateFn).toBeCalled()
+    expect(fs.readFileSync(output, 'utf-8').includes('console.log(2)')).toBe(
+      true,
+    )
+  })
+
+  await watcher.close()
+})
+
 test.sequential('error handling', async () => {
   // first build error, the watching could be work with recover error
   const { input, output } = await createTestInputAndOutput(

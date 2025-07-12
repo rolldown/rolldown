@@ -1,4 +1,6 @@
-use std::time::Duration;
+use std::{sync::Arc, time::Duration};
+
+use derive_more::Debug;
 
 use rolldown_utils::pattern_filter::StringOrRegex;
 #[cfg(feature = "deserialize_bundler_options")]
@@ -27,6 +29,9 @@ pub struct WatchOption {
     schemars(with = "Option<Vec<String>>")
   )]
   pub exclude: Option<Vec<StringOrRegex>>,
+  #[debug("Function")]
+  #[cfg_attr(feature = "deserialize_bundler_options", serde(skip_serializing, skip_deserializing))]
+  pub on_invalidate: Option<OnInvalidate>,
 }
 
 #[cfg(feature = "deserialize_bundler_options")]
@@ -49,4 +54,21 @@ where
 pub struct NotifyOption {
   pub poll_interval: Option<Duration>,
   pub compare_contents: bool,
+}
+
+// TODO should it be just placed here?
+type OnInvalidateFn = dyn Fn(&str) + Send + Sync;
+
+#[derive(Clone, Debug)]
+#[debug("OnInvalidateFn::Fn(...)")]
+pub struct OnInvalidate(Arc<OnInvalidateFn>);
+
+impl OnInvalidate {
+  pub fn new(f: Arc<OnInvalidateFn>) -> Self {
+    Self(f)
+  }
+
+  pub fn call(&self, path: &str) {
+    (self.0)(path);
+  }
 }

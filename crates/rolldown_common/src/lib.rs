@@ -59,7 +59,7 @@ pub mod bundler_options {
       target::ESTarget,
       transform_options::{JsxPreset, TransformOptions},
       treeshake::{InnerOptions, ModuleSideEffects, ModuleSideEffectsRule, TreeshakeOptions},
-      watch_option::{NotifyOption, WatchOption},
+      watch_option::{NotifyOption, OnInvalidate, WatchOption},
     },
   };
 }

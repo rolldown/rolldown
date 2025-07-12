@@ -1,4 +1,4 @@
-use std::{borrow::Cow, collections::hash_map::Entry};
+use std::borrow::Cow;
 
 use arcstr::ArcStr;
 use indexmap::IndexSet;
@@ -257,52 +257,6 @@ impl LinkStage<'_> {
   /// exports.something = 1
   /// ```
   fn update_cjs_module_meta(&mut self) {
-    enum CacheStatus {
-      Seen,
-      Value(bool),
-    }
-    /// caller should guarantee that the idx of module belongs to a normal module
-    fn recursive_update_cjs_module_interop_default_removable(
-      module_tables: &IndexModules,
-      module_idx: ModuleIdx,
-      cache: &mut FxHashMap<ModuleIdx, CacheStatus>,
-    ) -> bool {
-      match cache.entry(module_idx) {
-        Entry::Occupied(mut occ) => {
-          match occ.get_mut() {
-            // Find a cycle
-            CacheStatus::Seen => return false,
-            CacheStatus::Value(v) => return *v,
-          }
-        }
-        Entry::Vacant(vac) => {
-          vac.insert(CacheStatus::Seen);
-        }
-      }
-      let module = module_tables[module_idx].as_normal().unwrap();
-      let v = if module.ast_usage.contains(EcmaModuleAstUsage::IsCjsReexport) {
-        module.import_records.iter().all(|item| {
-          let Some(importee) = module_tables[item.resolved_module].as_normal() else {
-            return false;
-          };
-          if importee.exports_kind.is_commonjs() {
-            recursive_update_cjs_module_interop_default_removable(
-              module_tables,
-              importee.idx,
-              cache,
-            )
-          } else {
-            false
-          }
-        })
-      } else {
-        module.ast_usage.contains(EcmaModuleAstUsage::AllStaticExportPropertyAccess)
-      };
-      cache.insert(module_idx, CacheStatus::Value(v));
-      v
-    }
-
-    let mut cache = FxHashMap::default();
     let relation_with_commonjs_map = self
       .module_table
       .modules
@@ -318,22 +272,6 @@ impl LinkStage<'_> {
         }
       })
       .collect::<FxHashMap<ModuleIdx, RelationWithCommonjs>>();
-
-    let mut module_has_cjs_import: FxHashSet<ModuleIdx> = FxHashSet::default();
-
-    for module_idx in relation_with_commonjs_map
-      .iter()
-      .filter_map(|item| matches!(item.1, RelationWithCommonjs::Commonjs).then_some(item.0))
-    {
-      let v = recursive_update_cjs_module_interop_default_removable(
-        &self.module_table.modules,
-        *module_idx,
-        &mut cache,
-      );
-      self.metas[*module_idx].safe_cjs_to_eliminate_interop_default = v;
-      let cjs_module = self.module_table[*module_idx].as_normal().expect("should be normal_module");
-      module_has_cjs_import.extend(cjs_module.importers_idx.iter());
-    }
 
     let idx_to_symbol_ref_to_module_idx_map = self
       .module_table
@@ -494,7 +432,7 @@ impl LinkStage<'_> {
                           resolved: None,
                           props: member_expr_ref.props[cursor..].to_vec(),
                           depended_refs: vec![],
-                          is_cjs_symbol: false,
+                          target_commonjs_exported_symbol: None,
                         },
                       );
                       warnings.push(
@@ -517,7 +455,7 @@ impl LinkStage<'_> {
                         resolved: None,
                         props: member_expr_ref.props[cursor..].to_vec(),
                         depended_refs: vec![],
-                        is_cjs_symbol: false,
+                        target_commonjs_exported_symbol: None,
                       },
                     );
                     return;
@@ -539,7 +477,7 @@ impl LinkStage<'_> {
                   cursor += 1;
                   is_namespace_ref = canonical_ref_owner.namespace_object_ref == canonical_ref;
                 }
-                let mut is_cjs_symbol = false;
+                let mut target_commonjs_exported_symbol = None;
                 // Although the last one may not be a namespace ref, but it may reference a cjs
                 // import record namespace, which may reference a export in commonjs module.
                 // TODO: we could record if a module could potential reference a cjs symbol
@@ -549,31 +487,42 @@ impl LinkStage<'_> {
                     .last()
                     .copied()
                     .unwrap_or(self.symbols.canonical_ref_for(member_expr_ref.object_ref));
-
+                  let maybe_namespace_symbol = self.symbols.get(maybe_namespace);
+                  let continue_resolve =
+                    if let Some(ref ns) = maybe_namespace_symbol.namespace_alias {
+                      // If the property_name is not "default", it means the symbol reference a imported binding
+                      // rather than a namespace object.
+                      // e.g. import { foo } from './cjs'
+                      ns.property_name.as_str() == "default"
+                    } else {
+                      true
+                    };
                   // corresponding to cases in:
                   // https://github.com/rolldown/rolldown/blob/30a5a2fc8fa6785821153922e21dc0273cc00c7a/crates/rolldown/tests/rolldown/tree_shaking/commonjs/main.js?plain=1#L3-L10
-                  if let Some(m) = self.metas[maybe_namespace.owner]
-                    .named_import_to_cjs_module
-                    .get(&maybe_namespace)
-                    .or_else(|| {
-                      self.metas[maybe_namespace.owner]
-                        .import_record_ns_to_cjs_module
-                        .get(&maybe_namespace)
-                    })
-                    .or_else(|| {
-                      (self.metas[maybe_namespace.owner].has_dynamic_exports)
-                        .then_some(&maybe_namespace.owner)
-                    })
-                    .and_then(|idx| {
-                      self.metas[*idx]
-                        .resolved_exports
-                        .get(member_expr_ref.props[cursor].as_str())
-                        .and_then(|resolved_export| {
-                          resolved_export.came_from_cjs.then_some(resolved_export)
-                        })
-                    })
+                  if continue_resolve
+                    && let Some(m) = self.metas[maybe_namespace.owner]
+                      .named_import_to_cjs_module
+                      .get(&maybe_namespace)
+                      .or_else(|| {
+                        self.metas[maybe_namespace.owner]
+                          .import_record_ns_to_cjs_module
+                          .get(&maybe_namespace)
+                      })
+                      .or_else(|| {
+                        (self.metas[maybe_namespace.owner].has_dynamic_exports)
+                          .then_some(&maybe_namespace.owner)
+                      })
+                      .and_then(|idx| {
+                        self.metas[*idx]
+                          .resolved_exports
+                          .get(member_expr_ref.props[cursor].as_str())
+                          .and_then(|resolved_export| {
+                            resolved_export.came_from_cjs.then_some(resolved_export)
+                          })
+                      })
                   {
-                    is_cjs_symbol = true;
+                    target_commonjs_exported_symbol =
+                      Some((m.symbol_ref, member_expr_ref.props[cursor] == "default"));
                     depended_refs.push(m.symbol_ref);
                   }
                 }
@@ -589,14 +538,14 @@ impl LinkStage<'_> {
                   );
                 }
 
-                if cursor > 0 || is_cjs_symbol {
+                if cursor > 0 || target_commonjs_exported_symbol.is_some() {
                   resolved_map.insert(
                     member_expr_ref.span,
                     MemberExprRefResolution {
                       resolved: Some(canonical_ref),
                       props: member_expr_ref.props[cursor..].to_vec(),
                       depended_refs,
-                      is_cjs_symbol,
+                      target_commonjs_exported_symbol,
                     },
                   );
                 }

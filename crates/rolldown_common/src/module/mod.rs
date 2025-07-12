@@ -23,6 +23,7 @@ impl Module {
     }
   }
 
+  #[inline]
   pub fn exec_order(&self) -> u32 {
     match self {
       Module::Normal(v) => v.exec_order,

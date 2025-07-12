@@ -1,0 +1,78 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## main.js
+
+```js
+
+// HIDDEN [rolldown:hmr]
+//#region hmr.js
+var hmr_exports = {};
+const hmr_hot = __rolldown_runtime__.createModuleHotContext("hmr.js");
+__rolldown_runtime__.registerModule("hmr.js", { exports: hmr_exports });
+hmr_hot.accept((mod) => {
+	if (mod) console.log(".hmr", mod.foo);
+});
+
+//#endregion
+//#region main.js
+var main_exports = {};
+const main_hot = __rolldown_runtime__.createModuleHotContext("main.js");
+__rolldown_runtime__.registerModule("main.js", { exports: main_exports });
+
+//#endregion
+```
+# HMR Step 0
+
+## Code
+
+```js
+var init_hmr_0 = __rolldown_runtime__.createEsmInitializer(function() {
+	try {
+		var ns_hmr = {};
+		__rolldown_runtime__.__export(ns_hmr, { foo: () => foo });
+		__rolldown_runtime__.registerModule("hmr.js", { exports: ns_hmr });
+		const hot_hmr = __rolldown_runtime__.createModuleHotContext("hmr.js");
+		hot_hmr.accept((mod) => {
+			if (mod) console.log(".hmr", mod.foo);
+		});
+		async function foo() {
+			const esm = await (init_new_dep_esm_1(), Promise.resolve().then(() => __rolldown_runtime__.loadExports("new-dep-esm.js")));
+			const cjs = await (require_new_dep_cjs_2(), Promise.resolve().then(() => __rolldown_runtime__.__toDynamicImportESM(__rolldown_runtime__.loadExports("new-dep-cjs.js"))));
+			console.log(esm, cjs);
+		}
+	} finally {}
+});
+
+var init_new_dep_esm_1 = __rolldown_runtime__.createEsmInitializer(function() {
+	try {
+		var ns_new_dep_esm = {};
+		__rolldown_runtime__.__export(ns_new_dep_esm, { value: () => value });
+		__rolldown_runtime__.registerModule("new-dep-esm.js", { exports: ns_new_dep_esm });
+		const hot_new_dep_esm = __rolldown_runtime__.createModuleHotContext("new-dep-esm.js");
+		const value = "hello";
+	} finally {}
+});
+
+var require_new_dep_cjs_2 = __rolldown_runtime__.createCjsInitializer(function() {
+	try {
+		__rolldown_runtime__.registerModule("new-dep-cjs.js", module);
+		const hot_new_dep_cjs = __rolldown_runtime__.createModuleHotContext("new-dep-cjs.js");
+		exports.value = "hello";
+	} finally {}
+});
+
+init_hmr_0()
+__rolldown_runtime__.applyUpdates(['hmr.js']);
+```
+## Meta
+
+- full_reload: false
+- first_invalidated_by: None
+- is_self_accepting: false
+- full_reload_reason: None
+### Hmr Boundaries
+
+- boundary: hmr.js, accepted_via: hmr.js

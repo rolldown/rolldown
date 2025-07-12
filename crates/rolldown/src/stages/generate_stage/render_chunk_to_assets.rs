@@ -3,14 +3,13 @@ use std::{ops::Deref, sync::Arc};
 use futures::future::try_join_all;
 use oxc_index::{IndexVec, index_vec};
 use rolldown_common::{
-  Asset, EmittedChunkInfo, InstantiationKind, ModuleRenderArgs, ModuleRenderOutput, Output,
-  OutputAsset, OutputChunk, SharedFileEmitter, SourceMapType, SymbolRef,
+  Asset, ChunkIdx, EmittedChunkInfo, InstantiationKind, ModuleRenderArgs, ModuleRenderOutput,
+  Output, OutputAsset, OutputChunk, SharedFileEmitter, SymbolRef,
 };
 use rolldown_debug::{action, trace_action, trace_action_enabled};
 use rolldown_error::{BuildDiagnostic, BuildResult};
 use rolldown_rstr::Rstr;
 use rolldown_utils::{
-  concat_string,
   indexmap::{FxIndexMap, FxIndexSet},
   rayon::{IntoParallelRefIterator, ParallelIterator},
 };
@@ -21,12 +20,11 @@ use crate::{
   chunk_graph::ChunkGraph,
   css::css_generator::CssGenerator,
   ecmascript::ecma_generator::EcmaGenerator,
-  type_alias::{IndexAssets, IndexChunkToInstances, IndexInstantiatedChunks},
+  type_alias::{AssetVec, IndexChunkToInstances, IndexInstantiatedChunks},
   types::generator::{GenerateContext, Generator},
   utils::{
     augment_chunk_hash::augment_chunk_hash,
     chunk::{finalize_chunks::finalize_assets, render_chunk_exports::get_export_items},
-    process_code_and_sourcemap::process_code_and_sourcemap,
     render_chunks::render_chunks,
   },
 };
@@ -48,15 +46,15 @@ impl GenerateStage<'_> {
 
     augment_chunk_hash(self.plugin_driver, &mut instantiated_chunks).await?;
 
-    let mut assets = finalize_assets(
+    let assets = finalize_assets(
       chunk_graph,
       self.link_output,
       instantiated_chunks,
       &index_chunk_to_instances,
       self.options.hash_characters,
-    );
-
-    self.minify_assets(&mut assets)?;
+      self.options,
+    )
+    .await?;
 
     // Set emitted chunk info for file emitter, it should be set before call generate_bundle hook
     set_emitted_chunk_filenames(&self.plugin_driver.file_emitter, &assets, chunk_graph);
@@ -64,43 +62,12 @@ impl GenerateStage<'_> {
     Self::trace_action_assets_ready(&assets);
 
     let mut output = Vec::with_capacity(assets.len());
-    let mut output_assets = vec![];
-    for Asset {
-      mut map,
-      meta: rendered_chunk,
-      content: code,
-      file_dir,
-      preliminary_filename,
-      filename,
-      ..
-    } in assets
-    {
+    let mut output_assets: Vec<Output> = vec![];
+    for Asset { map, meta: rendered_chunk, content: code, filename, .. } in assets {
       match rendered_chunk {
         InstantiationKind::Ecma(ecma_meta) => {
-          let mut code = code.try_into_string()?;
+          let code = code.try_into_string()?;
           let rendered_chunk = ecma_meta.rendered_chunk;
-          if let Some(map) = map.as_mut() {
-            if let Some(sourcemap_asset) = process_code_and_sourcemap(
-              self.options,
-              &mut code,
-              map,
-              &file_dir,
-              filename.as_str(),
-              ecma_meta.debug_id,
-              /*is_css*/ false,
-            )
-            .await?
-            {
-              output_assets.push(Output::Asset(Arc::new(sourcemap_asset)));
-            }
-          }
-
-          let sourcemap_filename =
-            if matches!(self.options.sourcemap, Some(SourceMapType::Inline) | None) {
-              None
-            } else {
-              Some(concat_string!(filename, ".map"))
-            };
           output.push(Output::Chunk(Arc::new(OutputChunk {
             name: rendered_chunk.name.clone(),
             filename: filename.clone(),
@@ -114,33 +81,25 @@ impl GenerateStage<'_> {
             imports: ecma_meta.imports,
             dynamic_imports: ecma_meta.dynamic_imports,
             map,
-            sourcemap_filename,
-            preliminary_filename: preliminary_filename.to_string(),
+            sourcemap_filename: ecma_meta.sourcemap_filename,
+            preliminary_filename: ecma_meta.preliminary_filename.to_string(),
           })));
         }
-        InstantiationKind::Css(css_meta) => {
-          let mut code = code.try_into_string()?;
-          if let Some(map) = map.as_mut() {
-            if let Some(sourcemap_asset) = process_code_and_sourcemap(
-              self.options,
-              &mut code,
-              map,
-              &file_dir,
-              filename.as_str(),
-              css_meta.debug_id,
-              /*is_css*/ true,
-            )
-            .await?
-            {
-              output_assets.push(Output::Asset(Arc::new(sourcemap_asset)));
-            }
-          }
-
+        InstantiationKind::Css(_css_meta) => {
+          let code = code.try_into_string()?;
           output.push(Output::Asset(Arc::new(OutputAsset {
             filename: filename.clone(),
             source: code.into(),
             original_file_names: vec![],
             names: vec![],
+          })));
+        }
+        InstantiationKind::Sourcemap(sourcemap_meta) => {
+          output.push(Output::Asset(Arc::new(OutputAsset {
+            filename: filename.clone(),
+            source: code,
+            original_file_names: sourcemap_meta.original_file_names,
+            names: sourcemap_meta.names,
           })));
         }
         InstantiationKind::None => {
@@ -308,12 +267,12 @@ impl GenerateStage<'_> {
       .collect::<Vec<_>>()
   }
 
-  fn trace_action_assets_ready(index_assets: &IndexAssets) {
+  fn trace_action_assets_ready(index_assets: &AssetVec) {
     if trace_action_enabled!() {
       let mut assets = vec![];
       for asset in index_assets {
         assets.push(action::Asset {
-          chunk_id: Some(asset.originate_from.raw()),
+          chunk_id: asset.originate_from.map(ChunkIdx::raw),
           content: asset.content.try_as_inner_str().ok().map(str::to_string),
           size: asset.content.as_bytes().len().try_into().unwrap(),
           filename: asset.filename.to_string(),
@@ -372,16 +331,18 @@ pub fn set_emitted_chunk_preliminary_filenames(
 
 fn set_emitted_chunk_filenames(
   file_emitter: &SharedFileEmitter,
-  assets: &IndexAssets,
+  assets: &AssetVec,
   chunk_graph: &ChunkGraph,
 ) {
   let emitted_chunk_info = assets
     .iter()
     .filter_map(|asset| {
-      chunk_graph.chunk_idx_to_reference_ids.get(&asset.originate_from).map(|reference_ids| {
-        reference_ids.iter().map(|reference_id| EmittedChunkInfo {
-          reference_id: reference_id.clone(),
-          filename: asset.filename.clone(),
+      asset.originate_from.and_then(|originate_from| {
+        chunk_graph.chunk_idx_to_reference_ids.get(&originate_from).map(|reference_ids| {
+          reference_ids.iter().map(|reference_id| EmittedChunkInfo {
+            reference_id: reference_id.clone(),
+            filename: asset.filename.clone(),
+          })
         })
       })
     })

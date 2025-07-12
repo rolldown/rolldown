@@ -246,7 +246,9 @@ impl Plugin for ViteResolvePlugin {
 
     let additional_options = AdditionalOptions::new(
       self.resolve_options.is_require.unwrap_or(args.kind == ImportKind::Require),
-      self.resolve_options.prefer_relative || args.importer.is_some_and(|i| i.ends_with(".html")),
+      self.resolve_options.prefer_relative
+        || args.is_entry
+        || args.importer.is_some_and(|i| i.ends_with(".html")),
     );
     let resolver = self.resolvers.get(additional_options);
 

@@ -1,4 +1,5 @@
 mod cjs_ast_analyzer;
+mod const_eval;
 pub mod dynamic_import;
 mod hmr;
 pub mod impl_visit;
@@ -7,6 +8,8 @@ mod new_url;
 pub mod side_effect_detector;
 
 use arcstr::ArcStr;
+use const_eval::{ConstEvalCtx, try_extract_const_literal};
+use oxc::ast::ast::{BindingPatternKind, Expression};
 use oxc::ast::{AstKind, ast};
 use oxc::semantic::{Reference, ScopeFlags, ScopeId, Scoping};
 use oxc::span::SPAN;
@@ -25,10 +28,11 @@ use oxc::{
 use oxc_index::IndexVec;
 use rolldown_common::dynamic_import_usage::{DynamicImportExportsUsage, DynamicImportUsageInfo};
 use rolldown_common::{
-  EcmaModuleAstUsage, ExportsKind, HmrInfo, ImportKind, ImportRecordIdx, ImportRecordMeta,
-  LocalExport, MemberExprRef, ModuleDefFormat, ModuleId, ModuleIdx, NamedImport, RawImportRecord,
-  Specifier, StmtInfo, StmtInfos, StmtSideEffect, SymbolRef, SymbolRefDbForModule, SymbolRefFlags,
-  TaggedSymbolRef, ThisExprReplaceKind,
+  ConstExportMeta, ConstantValue, EcmaModuleAstUsage, EcmaViewMeta, ExportsKind, HmrInfo,
+  ImportKind, ImportRecordIdx, ImportRecordMeta, LocalExport, MemberExprRef, ModuleDefFormat,
+  ModuleId, ModuleIdx, NamedImport, RawImportRecord, Specifier, StmtInfo, StmtInfos,
+  StmtSideEffect, SymbolRef, SymbolRefDbForModule, SymbolRefFlags, TaggedSymbolRef,
+  ThisExprReplaceKind, generate_replace_this_expr_map,
 };
 use rolldown_ecmascript_utils::{BindingIdentifierExt, BindingPatternExt};
 use rolldown_error::{BuildDiagnostic, BuildResult, CjsExportSpan};
@@ -76,7 +80,7 @@ pub struct ScanResult {
   pub exports_kind: ExportsKind,
   pub warnings: Vec<BuildDiagnostic>,
   pub errors: Vec<BuildDiagnostic>,
-  pub has_eval: bool,
+  pub ecma_view_meta: EcmaViewMeta,
   /// Whether the module is a commonjs module
   /// The reason why we can't reuse `cjs_exports_ident` and `cjs_module_ident` is that
   /// any `module` or `exports` in the top-level scope should be treated as a commonjs module.
@@ -93,7 +97,6 @@ pub struct ScanResult {
   /// level rather than module level, or a syntax error will be raised if there are multi modules
   /// has hashbang. Storing the span of hashbang used for hashbang codegen in chunk level
   pub hashbang_range: Option<Span>,
-  pub has_star_exports: bool,
   /// we don't know the ImportRecord related ModuleIdx yet, so use ImportRecordIdx as key
   /// temporarily
   pub dynamic_import_rec_exports_usage: FxHashMap<ImportRecordIdx, DynamicImportExportsUsage>,
@@ -103,6 +106,7 @@ pub struct ScanResult {
   pub hmr_info: HmrInfo,
   pub hmr_hot_ref: Option<SymbolRef>,
   pub directive_range: Vec<Span>,
+  pub constant_export_map: FxHashMap<SymbolId, ConstExportMeta>,
 }
 
 pub struct AstScanner<'me, 'ast> {
@@ -130,6 +134,7 @@ pub struct AstScanner<'me, 'ast> {
   is_nested_this_inside_class: bool,
   /// Used in commonjs module it self
   self_used_cjs_named_exports: FxHashSet<Rstr>,
+  allocator: &'ast oxc::allocator::Allocator,
 }
 
 impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
@@ -143,6 +148,7 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
     file_path: &'me ModuleId,
     comments: &'me oxc::allocator::Vec<'me, Comment>,
     options: &'me SharedOptions,
+    allocator: &'ast oxc::allocator::Allocator,
   ) -> Self {
     let root_scope_id = scoping.root_scope_id();
     let mut symbol_ref_db = SymbolRefDbForModule::new(scoping, idx, root_scope_id);
@@ -173,14 +179,12 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
       imports: FxHashMap::default(),
       exports_kind: ExportsKind::None,
       warnings: Vec::new(),
-      has_eval: false,
       errors: Vec::new(),
       ast_usage: EcmaModuleAstUsage::empty()
         .union(EcmaModuleAstUsage::AllStaticExportPropertyAccess),
       symbol_ref_db,
       self_referenced_class_decl_symbol_ids: FxHashSet::default(),
       hashbang_range: None,
-      has_star_exports: false,
       dynamic_import_rec_exports_usage: FxHashMap::default(),
       new_url_references: FxHashMap::default(),
       this_expr_replace_map: FxHashMap::default(),
@@ -189,9 +193,12 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
       directive_range: vec![],
       dummy_record_set: FxHashSet::default(),
       commonjs_exports: FxHashMap::default(),
+      constant_export_map: FxHashMap::default(),
+      ecma_view_meta: EcmaViewMeta::default(),
     };
 
     Self {
+      allocator,
       idx,
       current_stmt_info: StmtInfo::default(),
       result,
@@ -283,6 +290,19 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
     // they will be treated as normal global variable assign.
     if matches!(exports_kind, ExportsKind::Esm) {
       self.result.commonjs_exports.clear();
+    }
+
+    // https://github.com/evanw/esbuild/blob/d34e79e2a998c21bb71d57b92b0017ca11756912/internal/js_parser/js_parser.go#L12551-L12604
+    // Since AstScan is immutable, we defer transformation in module finalizer
+    if !self.top_level_this_expr_set.is_empty() {
+      self.result.this_expr_replace_map = generate_replace_this_expr_map(
+        &self.top_level_this_expr_set,
+        if exports_kind.is_commonjs() {
+          ThisExprReplaceKind::Exports
+        } else {
+          ThisExprReplaceKind::Undefined
+        },
+      );
     }
 
     self.result.exports_kind = exports_kind;
@@ -383,12 +403,6 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
       && ENABLED_CJS_NAMESPACE_MERGING_MODULE_REQUEST.contains(&module_request)
     {
       rec.meta.insert(ImportRecordMeta::SAFELY_MERGE_CJS_NS);
-    }
-
-    #[allow(clippy::case_sensitive_file_extension_comparisons)]
-    if self.options.experimental.vite_mode.unwrap_or_default() && module_request.ends_with(".json")
-    {
-      rec.meta.insert(ImportRecordMeta::JSON_MODULE);
     }
 
     let id = self.result.import_records.push(rec);
@@ -574,7 +588,7 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
     } else {
       // export * from '...'
       self.result.import_records[id].meta.insert(ImportRecordMeta::IS_EXPORT_STAR);
-      self.result.has_star_exports = true;
+      self.result.ecma_view_meta.insert(EcmaViewMeta::HAS_STAR_EXPORT);
     }
     self.result.imports.insert(decl.span, id);
   }
@@ -624,6 +638,14 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
               decl.id.binding_identifiers().into_iter().for_each(|id| {
                 self.add_local_export(&id.name, id.expect_symbol_id(), id.span);
               });
+              if let BindingPatternKind::BindingIdentifier(ref binding) = decl.id.kind
+                && let Some(value) = self.extract_constant_value_from_expr(decl.init.as_ref())
+              {
+                self
+                  .result
+                  .constant_export_map
+                  .insert(binding.symbol_id(), ConstExportMeta::new(value, false));
+              }
             });
           }
           ast::Declaration::FunctionDeclaration(fn_decl) => {
@@ -664,9 +686,12 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
         .map(|id| (rolldown_ecmascript_utils::BindingIdentifierExt::expect_symbol_id(id), id.span)),
       ast::ExportDefaultDeclarationKind::TSInterfaceDeclaration(_) => unreachable!(),
     };
-
     let (reference, span) = local_binding_for_default_export
       .unwrap_or((self.result.default_export_ref.symbol, Span::default()));
+
+    if let Some(v) = self.extract_constant_value_from_expr(decl.declaration.as_expression()) {
+      self.result.constant_export_map.insert(reference, ConstExportMeta::new(v, false));
+    }
 
     self.declare_normal_symbol_ref(reference);
     self.add_local_default_export(reference, span);
@@ -843,6 +868,24 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
       }
     }
     false
+  }
+
+  #[inline]
+  pub fn create_constant_eval_ctx(&'me self) -> ConstEvalCtx<'me, 'ast> {
+    ConstEvalCtx {
+      ast: oxc::ast::AstBuilder::new(self.allocator),
+      scope: self.result.symbol_ref_db.scoping(),
+    }
+  }
+
+  pub fn extract_constant_value_from_expr(
+    &self,
+    expr: Option<&Expression<'ast>>,
+  ) -> Option<ConstantValue> {
+    if !self.options.optimization.is_inline_const_enabled() {
+      return None;
+    }
+    expr.and_then(|expr| try_extract_const_literal(&self.create_constant_eval_ctx(), expr))
   }
 }
 

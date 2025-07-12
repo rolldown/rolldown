@@ -7,6 +7,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```js
 
+// HIDDEN [rolldown:hmr]
 //#region hmr.js
 var hmr_exports = {};
 __export(hmr_exports, { foo: () => foo });

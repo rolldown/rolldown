@@ -3,10 +3,15 @@ use std::{hash::Hash, mem};
 use arcstr::ArcStr;
 use itertools::Itertools;
 use oxc_index::{IndexVec, index_vec};
-use rolldown_common::{HashCharacters, InsChunkIdx, InstantiationKind, StrOrBytes};
+use rolldown_common::{
+  Asset, HashCharacters, InsChunkIdx, InstantiationKind, NormalizedBundlerOptions, SourceMapType,
+  StrOrBytes,
+};
+use rolldown_error::BuildResult;
 #[cfg(not(target_family = "wasm"))]
 use rolldown_utils::rayon::IndexedParallelIterator;
 use rolldown_utils::{
+  concat_string,
   hash_placeholder::{
     extract_hash_placeholders, hash_placeholder_left_finder, replace_placeholder_with_hash,
   },
@@ -21,19 +26,21 @@ use xxhash_rust::xxh3::Xxh3;
 
 use crate::{
   chunk_graph::ChunkGraph,
-  stages::link_stage::LinkStageOutput,
-  type_alias::{IndexAssets, IndexChunkToInstances, IndexInstantiatedChunks},
+  stages::{generate_stage::GenerateStage, link_stage::LinkStageOutput},
+  type_alias::{AssetVec, IndexChunkToInstances, IndexInstantiatedChunks},
+  utils::process_code_and_sourcemap::process_code_and_sourcemap,
 };
 
 #[allow(clippy::too_many_lines)]
 #[tracing::instrument(level = "debug", skip_all)]
-pub fn finalize_assets(
+pub async fn finalize_assets(
   chunk_graph: &ChunkGraph,
   link_output: &LinkStageOutput,
   index_instantiated_chunks: IndexInstantiatedChunks,
   index_chunk_to_instances: &IndexChunkToInstances,
   hash_characters: HashCharacters,
-) -> IndexAssets {
+  options: &NormalizedBundlerOptions,
+) -> BuildResult<AssetVec> {
   let finder = hash_placeholder_left_finder();
 
   let ins_chunk_idx_by_placeholder = index_instantiated_chunks
@@ -116,7 +123,7 @@ pub fn finalize_assets(
     .flatten()
     .collect::<FxHashMap<_, _>>();
 
-  let mut assets: IndexAssets = index_instantiated_chunks
+  let mut assets: AssetVec = index_instantiated_chunks
     .into_par_iter()
     .enumerate()
     .map(|(asset_idx, mut instantiated_chunk)| {
@@ -154,15 +161,16 @@ pub fn finalize_assets(
 
       instantiated_chunk.finalize(filename)
     })
-    .collect::<Vec<_>>()
-    .into();
+    .collect::<Vec<_>>();
 
   let index_ins_chunk_to_filename: IndexVec<InsChunkIdx, ArcStr> =
     assets.iter().map(|ins_chunk| ins_chunk.filename.clone()).collect::<Vec<_>>().into();
 
   assets.par_iter_mut().for_each(|ins_chunk| {
-    if let InstantiationKind::Ecma(ecma_meta) = &mut ins_chunk.meta {
-      let chunk = &chunk_graph.chunk_table[ins_chunk.originate_from];
+    if let (InstantiationKind::Ecma(ecma_meta), Some(originate_from)) =
+      (&mut ins_chunk.meta, ins_chunk.originate_from)
+    {
+      let chunk = &chunk_graph.chunk_table[originate_from];
       ecma_meta.imports = chunk
         .cross_chunk_imports
         .iter()
@@ -185,7 +193,85 @@ pub fn finalize_assets(
     }
   });
 
-  assets
+  GenerateStage::minify_assets(options, &mut assets)?;
+
+  // apply sourcemap related logic
+
+  let mut derived_assets = vec![];
+
+  for asset in &mut assets {
+    match &mut asset.meta {
+      InstantiationKind::Ecma(ecma_meta) => {
+        let asset_code = mem::take(&mut asset.content);
+        let mut code = asset_code.try_into_string()?;
+        if let Some(map) = asset.map.as_mut() {
+          if let Some(sourcemap_asset) = process_code_and_sourcemap(
+            options,
+            &mut code,
+            map,
+            &ecma_meta.file_dir,
+            asset.filename.as_str(),
+            ecma_meta.debug_id,
+            /*is_css*/ false,
+          )
+          .await?
+          {
+            derived_assets.push(Asset {
+              originate_from: None,
+              content: sourcemap_asset.source,
+              filename: sourcemap_asset.filename.clone(),
+              map: None,
+              meta: InstantiationKind::Sourcemap(Box::new(rolldown_common::SourcemapAssetMeta {
+                names: sourcemap_asset.names,
+                original_file_names: sourcemap_asset.original_file_names,
+              })),
+            });
+          }
+        }
+
+        let sourcemap_filename = if matches!(options.sourcemap, Some(SourceMapType::Inline) | None)
+        {
+          None
+        } else {
+          Some(concat_string!(asset.filename, ".map"))
+        };
+        ecma_meta.sourcemap_filename = sourcemap_filename;
+        asset.content = code.into();
+      }
+      InstantiationKind::Css(css_meta) => {
+        let asset_code = mem::take(&mut asset.content);
+        let mut code = asset_code.try_into_string()?;
+        if let Some(map) = asset.map.as_mut() {
+          if let Some(sourcemap_asset) = process_code_and_sourcemap(
+            options,
+            &mut code,
+            map,
+            &css_meta.file_dir,
+            asset.filename.as_str(),
+            css_meta.debug_id,
+            /*is_css*/ true,
+          )
+          .await?
+          {
+            derived_assets.push(Asset {
+              originate_from: None,
+              content: sourcemap_asset.source,
+              filename: sourcemap_asset.filename.clone(),
+              map: None,
+              meta: InstantiationKind::None,
+            });
+          }
+        }
+
+        asset.content = code.into();
+      }
+      InstantiationKind::None | InstantiationKind::Sourcemap(_) => {}
+    }
+  }
+
+  assets.extend(derived_assets);
+
+  Ok(assets)
 }
 
 fn collect_transitive_dependencies(

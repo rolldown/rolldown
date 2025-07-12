@@ -1,7 +1,12 @@
 use arcstr::ArcStr;
+use itertools::Itertools;
 use oxc_index::{IndexVec, index_vec};
-use rolldown_common::{Chunk, ChunkIdx, ChunkTable, ModuleIdx, SymbolRef};
+use rolldown_common::{
+  Chunk, ChunkIdx, ChunkModulesOrderBy, ChunkTable, EcmaViewMeta, ModuleIdx, SymbolRef,
+};
 use rustc_hash::FxHashMap;
+
+use crate::{SharedOptions, stages::link_stage::LinkStageOutput};
 
 #[derive(Debug)]
 pub struct ChunkGraph {
@@ -41,5 +46,46 @@ impl ChunkGraph {
   pub fn add_module_to_chunk(&mut self, module_idx: ModuleIdx, chunk_idx: ChunkIdx) {
     self.chunk_table.chunks[chunk_idx].modules.push(module_idx);
     self.module_to_chunk[module_idx] = Some(chunk_idx);
+  }
+
+  pub fn sort_chunk_modules(&mut self, link_output: &LinkStageOutput, options: &SharedOptions) {
+    // Sort modules in each chunk by execution order
+    self.chunk_table.iter_mut().for_each(|chunk| {
+      if matches!(
+        options.experimental.chunk_modules_order.unwrap_or_default(),
+        ChunkModulesOrderBy::ExecOrder
+      ) {
+        chunk.modules.sort_unstable_by_key(|idx| link_output.module_table[*idx].exec_order());
+        return;
+      }
+
+      // group those leaf module that has no side effects together.
+      let mut side_effects_free_leaf_modules = vec![];
+      let mut rest = vec![];
+      let mut runtime_related = vec![];
+      for &module_idx in &chunk.modules {
+        let module = &link_output.module_table[module_idx];
+        if module.id().starts_with("rolldown:") {
+          runtime_related.push(module_idx);
+          continue;
+        }
+        if let Some(normal) = module.as_normal()
+          && normal.import_records.is_empty()
+          && !normal.meta.contains(EcmaViewMeta::HAS_ANALYZED_SIDE_EFFECT)
+        {
+          side_effects_free_leaf_modules.push(module_idx);
+        } else {
+          rest.push(module_idx);
+        }
+      }
+      side_effects_free_leaf_modules.sort_by_key(|idx| link_output.module_table[*idx].id());
+      rest.sort_unstable_by_key(|idx| link_output.module_table[*idx].exec_order());
+      runtime_related.sort_unstable_by_key(|idx| link_output.module_table[*idx].exec_order());
+
+      chunk.modules = runtime_related
+        .into_iter()
+        .chain(side_effects_free_leaf_modules.into_iter().chain(rest))
+        .collect_vec();
+    });
   }
 }

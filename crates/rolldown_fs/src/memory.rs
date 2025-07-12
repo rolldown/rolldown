@@ -4,7 +4,7 @@ use std::{
   sync::Arc,
 };
 
-use oxc_resolver::{FileMetadata, FileSystem as OxcResolverFileSystem};
+use oxc_resolver::{FileMetadata, FileSystem as OxcResolverFileSystem, ResolveError};
 use vfs::{FileSystem as _, MemoryFS};
 
 use crate::file_system::FileSystem;
@@ -88,6 +88,10 @@ impl FileSystem for MemoryFileSystem {
 }
 
 impl OxcResolverFileSystem for MemoryFileSystem {
+  fn new(_yarn_pnp: bool) -> Self {
+    Self::default()
+  }
+
   fn read_to_string(&self, path: &Path) -> io::Result<String> {
     let mut buf = String::new();
     self
@@ -114,8 +118,8 @@ impl OxcResolverFileSystem for MemoryFileSystem {
     })
   }
 
-  fn read_link(&self, _path: &Path) -> io::Result<PathBuf> {
-    Err(io::Error::new(io::ErrorKind::NotFound, "not a symlink"))
+  fn read_link(&self, _path: &Path) -> Result<PathBuf, ResolveError> {
+    Err(ResolveError::from(io::Error::new(io::ErrorKind::NotFound, "not a symlink")))
   }
 }
 

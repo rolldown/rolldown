@@ -5,6 +5,7 @@ pub mod ast_scopes;
 pub mod bundler_file_system;
 pub mod chunk_idx;
 pub mod chunk_kind;
+pub mod constant_value;
 pub mod deconflict;
 pub mod defer_sync_scan_data;
 pub mod ecma_ast_idx;

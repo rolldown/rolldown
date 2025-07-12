@@ -3,11 +3,17 @@ use oxc_index::IndexVec;
 #[cfg(debug_assertions)]
 use rolldown_common::common_debug_symbol_ref;
 use rolldown_common::{
-  EntryPoint, ImportKind, ModuleIdx, ModuleTable, PreserveEntrySignatures, RuntimeModuleBrief,
-  SymbolRef, SymbolRefDb, dynamic_import_usage::DynamicImportExportsUsage,
+  ConstExportMeta, EntryPoint, ImportKind, ModuleIdx, ModuleTable, PreserveEntrySignatures,
+  RuntimeModuleBrief, SymbolRef, SymbolRefDb, dynamic_import_usage::DynamicImportExportsUsage,
 };
 use rolldown_error::BuildDiagnostic;
-use rolldown_utils::indexmap::FxIndexSet;
+#[cfg(target_family = "wasm")]
+use rolldown_utils::rayon::IteratorExt as _;
+use rolldown_utils::{
+  indexmap::FxIndexSet,
+  rayon::{IntoParallelRefMutIterator, ParallelIterator},
+};
+
 use rustc_hash::{FxHashMap, FxHashSet};
 
 use crate::{
@@ -48,6 +54,7 @@ pub struct LinkStageOutput {
   /// Used to store `preserveSignature` specified with `this.emitFile` in plugins.
   pub overrode_preserve_entry_signature_map: FxHashMap<ModuleIdx, PreserveEntrySignatures>,
   pub entry_point_to_reference_ids: FxHashMap<EntryPoint, Vec<ArcStr>>,
+  pub constant_symbol_map: FxHashMap<SymbolRef, ConstExportMeta>,
 }
 
 #[derive(Debug)]
@@ -69,12 +76,32 @@ pub struct LinkStage<'a> {
   pub external_import_namespace_merger: FxHashMap<ModuleIdx, FxIndexSet<SymbolRef>>,
   pub overrode_preserve_entry_signature_map: FxHashMap<ModuleIdx, PreserveEntrySignatures>,
   pub entry_point_to_reference_ids: FxHashMap<EntryPoint, Vec<ArcStr>>,
+  pub constant_symbol_map: FxHashMap<SymbolRef, ConstExportMeta>,
 }
 
 impl<'a> LinkStage<'a> {
-  pub fn new(scan_stage_output: NormalizedScanStageOutput, options: &'a SharedOptions) -> Self {
+  pub fn new(mut scan_stage_output: NormalizedScanStageOutput, options: &'a SharedOptions) -> Self {
+    // since constant export is spared in most of time, aggregate them would make searching more efficient
+    let constant_symbol_map = if options.optimization.is_inline_const_enabled() {
+      scan_stage_output
+        .module_table
+        .modules
+        .par_iter_mut()
+        .filter_map(|m| {
+          let m = m.as_normal_mut()?;
+          Some(std::mem::take(&mut m.constant_export_map).into_iter().map(|(symbol_id, v)| {
+            let symbol_ref = SymbolRef { owner: m.idx, symbol: symbol_id };
+            (symbol_ref, v)
+          }))
+        })
+        .flatten_iter()
+        .collect::<FxHashMap<SymbolRef, ConstExportMeta>>()
+    } else {
+      FxHashMap::default()
+    };
     Self {
       sorted_modules: Vec::new(),
+      constant_symbol_map,
       metas: scan_stage_output
         .module_table
         .modules
@@ -150,6 +177,7 @@ impl<'a> LinkStage<'a> {
       external_import_namespace_merger: self.external_import_namespace_merger,
       overrode_preserve_entry_signature_map: self.overrode_preserve_entry_signature_map,
       entry_point_to_reference_ids: self.entry_point_to_reference_ids,
+      constant_symbol_map: self.constant_symbol_map,
     }
   }
 

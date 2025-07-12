@@ -4,7 +4,7 @@ use rolldown::{BundlerOptions, InputItem};
 use rolldown_plugin::{
   HookResolveIdArgs, HookResolveIdOutput, HookResolveIdReturn, HookUsage, Plugin, PluginContext,
 };
-use rolldown_testing::{abs_file_dir, integration_test::IntegrationTest, test_config::TestMeta};
+use rolldown_testing::{manual_integration_test, test_config::TestMeta};
 
 #[derive(Debug)]
 struct TestPlugin;
@@ -36,13 +36,11 @@ impl Plugin for TestPlugin {
 
 #[tokio::test(flavor = "multi_thread")]
 async fn test() {
-  let cwd = abs_file_dir!();
-
-  IntegrationTest::new(TestMeta { expect_error: true, ..Default::default() })
+  manual_integration_test!()
+    .build(TestMeta { expect_error: true, ..Default::default() })
     .run_with_plugins(
       BundlerOptions {
         input: Some(vec![InputItem { name: Some("ext".to_string()), import: "ext".to_string() }]),
-        cwd: Some(cwd),
         ..Default::default()
       },
       vec![Arc::new(TestPlugin)],

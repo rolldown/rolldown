@@ -3,19 +3,15 @@ source: crates/rolldown_testing/src/integration_test.rs
 ---
 # Assets
 
-## chunk.js
-
-```js
-
-```
 ## entry.js
 
 ```js
-import "./chunk.js";
+import "./rolldown_hmr.js";
 
 //#region entry.js
+var entry_exports = {};
 const entry_hot = __rolldown_runtime__.createModuleHotContext("entry.js");
-__rolldown_runtime__.registerModule("entry.js", {});
+__rolldown_runtime__.registerModule("entry.js", { exports: entry_exports });
 console.log("entry");
 
 //#endregion
@@ -23,12 +19,19 @@ console.log("entry");
 ## index.js
 
 ```js
-import "./chunk.js";
+import "./rolldown_hmr.js";
 
 //#region index.js
+var mutiply_entires_exports = {};
 const mutiply_entires_hot = __rolldown_runtime__.createModuleHotContext("index.js");
-__rolldown_runtime__.registerModule("index.js", {});
+__rolldown_runtime__.registerModule("index.js", { exports: mutiply_entires_exports });
 console.log("index");
 
 //#endregion
+```
+## rolldown_hmr.js
+
+```js
+
+// HIDDEN [rolldown:hmr]
 ```

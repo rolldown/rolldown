@@ -1,0 +1,32 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## main.js
+
+```js
+
+//#region commonjs.js
+var require_commonjs = __commonJS({ "commonjs.js"(exports) {
+	let elements = {
+		ObjectElement: {},
+		refract: {}
+	};
+	exports.ObjectElement = elements.ObjectElement;
+	exports.refract = elements.refract;
+} });
+
+//#endregion
+//#region refactor.mjs
+var refactor_default = (a) => a;
+
+//#endregion
+//#region main.js
+var import_commonjs = __toESM(require_commonjs());
+import_commonjs.ObjectElement.refract = refactor_default(import_commonjs.ObjectElement);
+
+//#endregion
+var ObjectElement = import_commonjs.ObjectElement;
+export { ObjectElement };
+```

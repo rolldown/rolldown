@@ -34,6 +34,7 @@ var require_commonjs2 = __commonJS({ "commonjs2.js"(exports, module) {
 var import_commonjs = __toESM(require_commonjs());
 var import_commonjs2 = __toESM(require_commonjs2());
 assert.equal(import_commonjs.createReactElement(), "div");
+assert.equal(import_commonjs.version.toString(), "1");
 assert.equal(import_commonjs2.version.toString(), "1");
 
 //#endregion

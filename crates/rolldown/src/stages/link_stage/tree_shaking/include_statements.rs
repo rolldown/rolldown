@@ -4,10 +4,10 @@ use itertools::Itertools;
 use oxc_index::IndexVec;
 use petgraph::prelude::DiGraphMap;
 use rolldown_common::{
-  EcmaModuleAstUsage, EcmaViewMeta, EntryPoint, EntryPointKind, ExportsKind, ImportKind,
-  ImportRecordIdx, ImportRecordMeta, IndexModules, Module, ModuleIdx, ModuleType, NormalModule,
-  NormalizedBundlerOptions, StmtInfoIdx, StmtSideEffect, SymbolOrMemberExprRef, SymbolRef,
-  SymbolRefDb, dynamic_import_usage::DynamicImportExportsUsage,
+  ConstExportMeta, EcmaModuleAstUsage, EcmaViewMeta, EntryPoint, EntryPointKind, ExportsKind,
+  ImportKind, ImportRecordIdx, ImportRecordMeta, IndexModules, Module, ModuleIdx, ModuleType,
+  NormalModule, NormalizedBundlerOptions, StmtInfoIdx, StmtSideEffect, SymbolOrMemberExprRef,
+  SymbolRef, SymbolRefDb, dynamic_import_usage::DynamicImportExportsUsage,
   side_effects::DeterminedSideEffects,
 };
 use rolldown_utils::rayon::{IntoParallelRefMutIterator, ParallelIterator};
@@ -24,6 +24,7 @@ struct Context<'a> {
   runtime_id: ModuleIdx,
   metas: &'a LinkingMetadataVec,
   used_symbol_refs: &'a mut FxHashSet<SymbolRef>,
+  constant_symbol_map: &'a FxHashMap<SymbolRef, ConstExportMeta>,
   options: &'a NormalizedBundlerOptions,
   normal_symbol_exports_chain_map: &'a FxHashMap<SymbolRef, Vec<SymbolRef>>,
   /// It is necessary since we can't mutate `module.meta` during the tree shaking process.
@@ -59,6 +60,7 @@ impl LinkStage<'_> {
       // used_exports_info_vec: &mut used_exports_info_vec,
       metas: &self.metas,
       used_symbol_refs: &mut used_symbol_refs,
+      constant_symbol_map: &self.constant_symbol_map,
       options: self.options,
       normal_symbol_exports_chain_map: &self.normal_symbol_exports_chain_map,
       bailout_cjs_tree_shaking_modules: FxHashSet::default(),
@@ -96,18 +98,6 @@ impl LinkStage<'_> {
         );
         include_module(context, module);
       });
-
-    if self.options.is_hmr_enabled() {
-      // HMR runtime contains statements with side effects, they are referenced by other modules via global variables.
-      // So we need to manually include them here.
-      if let Some(runtime_module) = self.module_table[self.runtime.id()].as_normal() {
-        runtime_module.stmt_infos.iter_enumerated().for_each(|(stmt_info_id, stmt_info)| {
-          if stmt_info.side_effect.has_side_effect() {
-            include_statement(context, runtime_module, stmt_info_id);
-          }
-        });
-      }
-    }
 
     let mut unused_record_idxs = vec![];
     let cycled_idx = self.sort_dynamic_entries_by_topological_order(&mut dynamic_entries);
@@ -352,7 +342,7 @@ fn include_module(ctx: &mut Context, module: &NormalModule) {
 
   ctx.is_module_included_vec[module.idx] = true;
 
-  if module.idx == ctx.runtime_id && !ctx.options.is_hmr_enabled() {
+  if module.idx == ctx.runtime_id {
     // runtime module has no side effects and it's statements should be included
     // by other modules's references.
     return;
@@ -424,6 +414,18 @@ fn include_module(ctx: &mut Context, module: &NormalModule) {
 #[track_caller]
 fn include_symbol(ctx: &mut Context, symbol_ref: SymbolRef) {
   let mut canonical_ref = ctx.symbols.canonical_ref_for(symbol_ref);
+
+  if let Some(v) = ctx.constant_symbol_map.get(&canonical_ref)
+    && !v.commonjs_export
+  {
+    // If the symbol is a constant value and it is not a commonjs module export , we don't need to include it since it would be always inline
+    // We don't need to add anyflag since if `inlineConst` is disabled, the test expr will always
+    // return `false`
+    return;
+  }
+
+  // Also include the symbol that points to the canonical ref.
+  ctx.used_symbol_refs.insert(symbol_ref);
 
   if !ctx.may_partial_namespace {
     if let Some(idx) =
@@ -523,7 +525,8 @@ fn include_statement(ctx: &mut Context, module: &NormalModule, stmt_info_id: Stm
       // it means this member expr definitely contains module namespace ref.
       if let Some(resolved_ref) = member_expr_resolution.resolved {
         let pre = ctx.may_partial_namespace;
-        ctx.may_partial_namespace = member_expr_resolution.is_cjs_symbol;
+        ctx.may_partial_namespace =
+          member_expr_resolution.target_commonjs_exported_symbol.is_some();
         member_expr_resolution.depended_refs.iter().for_each(|sym_ref| {
           if let Module::Normal(module) = &ctx.modules[sym_ref.owner] {
             module.stmt_infos.declared_stmts_by_symbol(sym_ref).iter().copied().for_each(

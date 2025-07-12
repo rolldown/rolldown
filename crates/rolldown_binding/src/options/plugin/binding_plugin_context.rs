@@ -18,7 +18,7 @@ pub struct BindingPluginContext {
 
 #[napi]
 impl BindingPluginContext {
-  #[napi(ts_args_type = "specifier: string, sideEffects: BindingHookSideEffects | undefined")]
+  #[napi(ts_args_type = "specifier: string, sideEffects: boolean | 'no-treeshake' | undefined")]
   pub async fn load(
     &self,
     specifier: String,
@@ -26,7 +26,7 @@ impl BindingPluginContext {
   ) -> napi::Result<()> {
     self
       .inner
-      .load(&specifier, side_effects.map(Into::into))
+      .load(&specifier, side_effects.map(TryInto::try_into).transpose()?)
       .await
       .map_err(|program_err| napi_error::load_error(&specifier, program_err))
   }
@@ -51,6 +51,7 @@ impl BindingPluginContext {
     Ok(ret.map(|info| BindingPluginContextResolvedId {
       id: info.id.to_string(),
       external: info.external.into(),
+      module_side_effects: info.side_effects.map(Into::into),
     }))
   }
 
@@ -105,4 +106,6 @@ pub struct BindingPluginContextResolvedId {
   pub id: String,
   #[napi(ts_type = "boolean | 'absolute' | 'relative'")]
   pub external: BindingResolvedExternal,
+  #[napi(ts_type = "boolean | 'no-treeshake'")]
+  pub module_side_effects: Option<BindingHookSideEffects>,
 }

@@ -18,5 +18,14 @@ pub struct MemberExprRefResolution {
   /// The barrel exports from commonjs is different from es module.
   /// If a symbol is reexport multiple times, we need to store the import record namespace, which
   /// link to the wrapper symbol, unlike es module, we could directly link to exported symbol.
-  pub is_cjs_symbol: bool,
+  /// the first element is resolved commonjs export symbol
+  /// the second element is whether the exported symbol binds on `exports.default`
+  /// This is used to optimize interop between ESM and CommonJS.
+  /// e.g.
+  /// ```js
+  /// import mod from './cjs.js'
+  /// console.log(mod.default) // we will not optimize this member expr to generate same interop
+  /// code as esbuild  
+  /// ```
+  pub target_commonjs_exported_symbol: Option<(SymbolRef, bool)>,
 }

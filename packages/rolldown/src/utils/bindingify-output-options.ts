@@ -37,6 +37,7 @@ export function bindingifyOutputOptions(
     legalComments,
     preserveModulesRoot,
     manualChunks,
+    topLevelVar,
   } = outputOptions;
 
   const advancedChunks = bindingifyAdvancedChunks(
@@ -80,6 +81,8 @@ export function bindingifyOutputOptions(
     virtualDirname,
     legalComments,
     preserveModulesRoot,
+    topLevelVar,
+    minifyInternalExports: outputOptions.minifyInternalExports,
   };
 }
 

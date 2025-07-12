@@ -1,18 +1,16 @@
 use std::path::Path;
 
 use oxc::ast::CommentKind;
-use rolldown_common::{OutputAsset, SourceMapType};
+use rolldown_common::{NormalizedBundlerOptions, OutputAsset, SourceMapType};
 use rolldown_error::BuildResult;
 use rolldown_sourcemap::SourceMap;
 use sugar_path::SugarPath;
-
-use crate::SharedOptions;
 
 use super::uuid::uuid_v4_string_from_u128;
 
 #[allow(clippy::too_many_arguments)]
 pub async fn process_code_and_sourcemap(
-  options: &SharedOptions,
+  options: &NormalizedBundlerOptions,
   code: &mut String,
   map: &mut SourceMap,
   file_dir: &Path,

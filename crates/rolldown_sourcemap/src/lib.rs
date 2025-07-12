@@ -78,7 +78,7 @@ fn test_collapse_sourcemaps() {
   use crate::{SourceJoiner, SourceMapSource, collapse_sourcemaps};
   use oxc::{
     allocator::Allocator,
-    codegen::{Codegen, CodegenOptions, CodegenReturn},
+    codegen::{Codegen, CodegenOptions, CodegenReturn, CommentOptions},
     parser::Parser,
     span::SourceType,
   };
@@ -94,7 +94,7 @@ fn test_collapse_sourcemaps() {
   let ret1 = Parser::new(&allocator, &source_text, source_type).parse();
   let CodegenReturn { map, code, .. } = Codegen::new()
     .with_options(CodegenOptions {
-      comments: false,
+      comments: CommentOptions { normal: false, ..CommentOptions::default() },
       source_map_path: Some(filename.into()),
       ..CodegenOptions::default()
     })
@@ -122,7 +122,7 @@ fn test_collapse_sourcemaps() {
   let ret3 = Parser::new(&allocator, &source_text, source_type).parse();
   let CodegenReturn { map, code, .. } = Codegen::new()
     .with_options(CodegenOptions {
-      comments: false,
+      comments: CommentOptions { normal: false, ..CommentOptions::default() },
       source_map_path: Some(filename.into()),
       ..CodegenOptions::default()
     })

@@ -9,6 +9,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 import assert from "node:assert";
 
 
+// HIDDEN [rolldown:hmr]
 //#region lib.js
 var require_lib = __commonJS({ "lib.js"(exports, module) {
 	const lib_hot = __rolldown_runtime__.createModuleHotContext("lib.js");
@@ -19,9 +20,9 @@ var require_lib = __commonJS({ "lib.js"(exports, module) {
 //#endregion
 //#region main.js
 var main_exports = {};
+var import_lib = __toESM(require_lib());
 const main_hot = __rolldown_runtime__.createModuleHotContext("main.js");
 __rolldown_runtime__.registerModule("main.js", { exports: main_exports });
-var import_lib = __toESM(require_lib());
 assert.strictEqual(import_lib.a, 1);
 
 //#endregion

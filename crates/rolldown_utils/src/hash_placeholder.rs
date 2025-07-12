@@ -71,7 +71,7 @@ pub fn find_hash_placeholders<'a>(
 const CHARS: &[u8] = b"0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ_$";
 const BASE: u32 = 64;
 
-fn to_base64(mut value: u32) -> String {
+pub fn to_base64(mut value: u32) -> String {
   let mut buffer = vec![];
 
   loop {

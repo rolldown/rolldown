@@ -1,5 +1,6 @@
 use core::str;
 use std::fmt::Write as _;
+use std::path::PathBuf;
 use std::{
   borrow::Cow,
   ffi::OsStr,
@@ -21,22 +22,24 @@ use rolldown_testing_config::TestMeta;
 use serde_json::{Map, Value};
 use sugar_path::SugarPath;
 
-use crate::{
-  hmr_files::{
-    apply_hmr_edit_files_to_hmr_temp_dir, collect_hmr_edit_files,
-    copy_non_hmr_edit_files_to_hmr_temp_dir, get_changed_files_from_hmr_edit_files,
-  },
-  utils::RUNTIME_MODULE_OUTPUT_RE,
+use crate::hmr_files::{
+  apply_hmr_edit_files_to_hmr_temp_dir, collect_hmr_edit_files,
+  copy_non_hmr_edit_files_to_hmr_temp_dir, get_changed_files_from_hmr_edit_files,
 };
+use crate::utils::tweak_snapshot;
 
 #[derive(Default)]
 pub struct IntegrationTest {
   test_meta: TestMeta,
+  // Absolute path of the test folder. It may or may not contain the `_config.json` file.
+  test_folder_path: PathBuf,
 }
 
 pub struct NamedBundlerOptions {
   pub name: Option<String>,
   pub options: BundlerOptions,
+  // Whether to include the output in the snapshot for this config variant. If not specified, `TestMeta.snapshot` will be used.
+  pub snapshot: Option<bool>,
 }
 
 fn default_test_input_item() -> rolldown::InputItem {
@@ -44,8 +47,8 @@ fn default_test_input_item() -> rolldown::InputItem {
 }
 
 impl IntegrationTest {
-  pub fn new(test_meta: TestMeta) -> Self {
-    Self { test_meta }
+  pub fn new(test_meta: TestMeta, test_folder_path: PathBuf) -> Self {
+    Self { test_meta, test_folder_path }
   }
 
   pub async fn bundle(&self, mut options: BundlerOptions) -> BuildResult<BundleOutput> {
@@ -70,55 +73,10 @@ impl IntegrationTest {
   }
 
   #[allow(clippy::unnecessary_debug_formatting)]
-  pub async fn run_with_plugins(
-    &self,
-    mut options: BundlerOptions,
-    plugins: Vec<SharedPluginable>,
-  ) {
-    self.apply_test_defaults(&mut options);
-
-    let mut bundler = Bundler::with_plugins(options, plugins);
-
-    let cwd = bundler.options().cwd.clone();
-
-    let bundle_output = if self.test_meta.write_to_disk {
-      let abs_output_dir = cwd.join(&bundler.options().out_dir);
-      if abs_output_dir.is_dir() {
-        std::fs::remove_dir_all(&abs_output_dir)
-          .context(format!("{abs_output_dir:?}"))
-          .expect("Failed to clean the output directory");
-      }
-      bundler.write().await
-    } else {
-      bundler.generate().await
-    };
-
-    match bundle_output {
-      Ok(bundle_output) => {
-        assert!(
-          !self.test_meta.expect_error,
-          "Expected the bundling to be failed with diagnosable errors, but got success"
-        );
-
-        self.snapshot_bundle_output(bundle_output, vec![], &cwd);
-
-        if !self.test_meta.expect_executed
-          || self.test_meta.expect_error
-          || !self.test_meta.write_to_disk
-        {
-          // do nothing
-        } else {
-          Self::execute_output_assets(&bundler, "", vec![]);
-        }
-      }
-      Err(errs) => {
-        assert!(
-          self.test_meta.expect_error,
-          "Expected the bundling to be success, but got diagnosable errors: {errs:#?}"
-        );
-        self.snapshot_bundle_output(BundleOutput::default(), errs.into_vec(), &cwd);
-      }
-    }
+  pub async fn run_with_plugins(&self, options: BundlerOptions, plugins: Vec<SharedPluginable>) {
+    self
+      .run_multiple(vec![NamedBundlerOptions { options, name: None, snapshot: None }], plugins)
+      .await;
   }
 
   #[expect(clippy::too_many_lines)]
@@ -126,9 +84,10 @@ impl IntegrationTest {
   pub async fn run_multiple(
     &self,
     multiple_options: Vec<NamedBundlerOptions>,
-    test_folder_path: &Path,
     plugins: Vec<SharedPluginable>,
   ) {
+    let test_folder_path = &self.test_folder_path;
+
     let hmr_temp_dir_path = test_folder_path.join("hmr-temp");
     let hmr_steps = collect_hmr_edit_files(test_folder_path, &hmr_temp_dir_path);
     let hmr_mode_enabled = !hmr_steps.is_empty();
@@ -136,6 +95,12 @@ impl IntegrationTest {
     let mut snapshot_outputs = vec![];
     for mut named_options in multiple_options {
       self.apply_test_defaults(&mut named_options.options);
+      let allow_to_collect_snapshot = named_options.snapshot.unwrap_or(self.test_meta.snapshot);
+      let mut collect_snapshot = |content: String| {
+        if allow_to_collect_snapshot {
+          snapshot_outputs.push(content);
+        }
+      };
 
       if hmr_mode_enabled {
         fs::remove_dir_all(&hmr_temp_dir_path)
@@ -171,8 +136,8 @@ impl IntegrationTest {
       };
 
       if !debug_title.is_empty() {
-        snapshot_outputs.push("\n---\n\n".to_string());
-        snapshot_outputs.push(format!("Variant: {debug_title}\n\n"));
+        collect_snapshot("\n---\n\n".to_string());
+        collect_snapshot(format!("Variant: {debug_title}\n\n"));
       }
 
       let execute_output = self.test_meta.expect_executed
@@ -187,7 +152,7 @@ impl IntegrationTest {
           );
 
           let snapshot_content = self.render_bundle_output_to_string(bundle_output, vec![], &cwd);
-          snapshot_outputs.push(snapshot_content);
+          collect_snapshot(snapshot_content);
 
           let mut patch_chunks: Vec<String> = vec![];
           for (step, hmr_edit_files) in hmr_steps.iter().enumerate() {
@@ -204,18 +169,20 @@ impl IntegrationTest {
             let hmr_output = bundler.generate_hmr_patch(changed_files).await;
             match hmr_output {
               Ok(output) => {
-                let snapshot_content =
-                  Self::render_hmr_output_to_string(step, &output, vec![], &cwd);
-                snapshot_outputs.push(snapshot_content);
+                if let Some(output) = output {
+                  let snapshot_content =
+                    Self::render_hmr_output_to_string(step, &output, vec![], &cwd);
+                  collect_snapshot(snapshot_content);
 
-                if execute_output {
-                  assert!(
-                    !output.full_reload,
-                    "execute_output should be false when full reload happens"
-                  );
-                  let output_path = format!("{}/{}", &output_dir, &output.filename);
-                  fs::write(&output_path, output.code).unwrap();
-                  patch_chunks.push(format!("./{}", output.filename));
+                  if execute_output {
+                    assert!(
+                      !output.full_reload,
+                      "execute_output should be false when full reload happens"
+                    );
+                    let output_path = format!("{}/{}", &output_dir, &output.filename);
+                    fs::write(&output_path, output.code).unwrap();
+                    patch_chunks.push(format!("./{}", output.filename));
+                  }
                 }
               }
               Err(errs) => {
@@ -225,13 +192,18 @@ impl IntegrationTest {
                   errs.into_vec(),
                   &cwd,
                 );
-                snapshot_outputs.push(snapshot_content);
+                collect_snapshot(snapshot_content);
               }
             }
           }
 
           if execute_output {
-            Self::execute_output_assets(&bundler, &debug_title, patch_chunks);
+            Self::execute_output_assets(
+              &bundler,
+              &debug_title,
+              patch_chunks,
+              named_options.name.as_deref(),
+            );
           } else {
             // do nothing
           }
@@ -243,24 +215,18 @@ impl IntegrationTest {
           );
           let snapshot_content =
             self.render_bundle_output_to_string(BundleOutput::default(), errs.into_vec(), &cwd);
-          snapshot_outputs.push(snapshot_content);
+          collect_snapshot(snapshot_content);
         }
       }
     }
-    if self.test_meta.snapshot {
-      // Configure insta to use the fixture path as the snapshot path
-      let mut settings = insta::Settings::clone_current();
-      settings.set_snapshot_path(test_folder_path);
-      settings.set_prepend_module_to_snapshot(false);
-      settings.remove_input_file();
-      settings.set_omit_expression(true);
-      settings.bind(|| {
-        insta::assert_snapshot!("artifacts", snapshot_outputs.concat());
-      });
-    }
+    self.snapshot_bundle_output(test_folder_path, &snapshot_outputs.concat());
   }
 
   fn apply_test_defaults(&self, options: &mut BundlerOptions) {
+    if options.cwd.is_none() {
+      options.cwd = Some(self.test_folder_path.clone());
+    }
+
     if options.external.is_none() {
       options.external = Some(IsExternal::from_vec(vec!["node:assert".to_string()]));
     }
@@ -391,11 +357,7 @@ impl IntegrationTest {
           match asset {
             Output::Chunk(output_chunk) => {
               let content = &output_chunk.code;
-              let content = if self.test_meta.hidden_runtime_module {
-                RUNTIME_MODULE_OUTPUT_RE.replace_all(content, "")
-              } else {
-                Cow::Borrowed(content.as_str())
-              };
+              let content = tweak_snapshot(content, self.test_meta.hidden_runtime_module, true);
 
               Some(vec![
                 Cow::Owned(format!("## {}\n", asset.filename())),
@@ -587,25 +549,26 @@ impl IntegrationTest {
       + [format!("# HMR Step {step}"), errors_section, code_section, meta_section].join("\n").trim()
   }
 
-  fn snapshot_bundle_output(
-    &self,
-    bundle_output: BundleOutput,
-    errs: Vec<BuildDiagnostic>,
-    cwd: &Path,
-  ) {
-    let content = self.render_bundle_output_to_string(bundle_output, errs, cwd);
+  fn snapshot_bundle_output(&self, path: &Path, content: &str) {
     // Configure insta to use the fixture path as the snapshot path
-    let mut settings = insta::Settings::clone_current();
-    settings.set_snapshot_path(cwd);
-    settings.set_prepend_module_to_snapshot(false);
-    settings.remove_input_file();
-    settings.set_omit_expression(true);
-    settings.bind(|| {
-      insta::assert_snapshot!("artifacts", content);
-    });
+    if self.test_meta.snapshot {
+      let mut settings = insta::Settings::clone_current();
+      settings.set_snapshot_path(path);
+      settings.set_prepend_module_to_snapshot(false);
+      settings.remove_input_file();
+      settings.set_omit_expression(true);
+      settings.bind(|| {
+        insta::assert_snapshot!("artifacts", content);
+      });
+    }
   }
 
-  fn execute_output_assets(bundler: &Bundler, test_title: &str, patch_chunks: Vec<String>) {
+  fn execute_output_assets(
+    bundler: &Bundler,
+    test_title: &str,
+    patch_chunks: Vec<String>,
+    name: Option<&str>,
+  ) {
     let cwd = bundler.options().cwd.clone();
     let dist_folder = cwd.join(&bundler.options().out_dir);
 
@@ -634,6 +597,20 @@ impl IntegrationTest {
     let test_script = cwd.join("_test.mjs");
 
     let mut node_command = Command::new("node");
+
+    if let Some(name) = name {
+      node_command.arg("--import");
+      let normalized_name = name
+        .trim_start_matches('(')
+        .trim_start_matches("name:")
+        .trim()
+        .trim_end_matches(')')
+        .trim_matches('"');
+      let injected_script = format!("globalThis.__testName = `{normalized_name}`",);
+      let inject_script_url =
+        format!("data:text/javascript,{}", urlencoding::encode(&injected_script));
+      node_command.arg(inject_script_url);
+    }
 
     if !patch_chunks.is_empty() {
       node_command.arg("--import");

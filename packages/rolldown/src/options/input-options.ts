@@ -68,7 +68,13 @@ export type HmrOptions = boolean | {
   implement?: string;
 };
 
+export type OptimizationOptions = {
+  inlineConst?: boolean;
+};
+
 export type AttachDebugOptions = 'none' | 'simple' | 'full';
+
+type ChunkModulesOrder = 'exec-order' | 'module-id';
 
 interface RollupJsxOptions {
   mode?: 'classic' | 'automatic' | 'preserve';
@@ -137,6 +143,18 @@ export interface InputOptions {
     viteMode?: boolean;
     resolveNewUrlToAsset?: boolean;
     hmr?: HmrOptions;
+    /**
+     * Control which order should use when rendering modules in chunk
+     *
+     * - Type: `'exec-order' | 'module-id'
+     * - Default: `'exec-order'`
+     *
+     * - `exec-order`: Almost equivalent to the topological order of the module graph, but specially handling when module graph has cycle.
+     * - `module-id`: This is more friendly for gzip compression, especially for some javascript static asset lib (e.g. icon library)
+     * > [!NOTE]
+     * > Try to sort the modules by their module id if possible(Since rolldown scope hoist all modules in the chunk, we only try to sort those modules by module id if we could ensure runtime behavior is correct after sorting).
+     */
+    chunkModulesOrder?: ChunkModulesOrder;
     /**
      * Attach debug information to the output bundle.
      *
@@ -264,6 +282,7 @@ export interface InputOptions {
     | 'strict'
     | 'allow-extension'
     | 'exports-only';
+  optimization?: OptimizationOptions;
 }
 
 interface OverwriteInputOptionsForCli {

@@ -16,7 +16,9 @@
     "vitest": "^3.0.1"
   },
   "devDependencies": {
-    "@types/node": "24.0.7",
+    "@rolldown/test-side-effects-field": "link:./package-fixtures/test-side-effects-field",
+    "@rolldown/test-side-effects-field-glob": "file:./package-fixtures/test-side-effects-field-glob",
+    "@types/node": "24.0.10",
     "tsx": "^4.19.4"
   },
   "exports": {

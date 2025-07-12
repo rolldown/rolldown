@@ -5,14 +5,16 @@ use oxc::{semantic::Scoping, span::SourceType as OxcSourceType};
 use rolldown_common::{ModuleType, NormalizedBundlerOptions, RUNTIME_MODULE_KEY, StrOrBytes};
 use rolldown_ecmascript::{EcmaAst, EcmaCompiler};
 use rolldown_error::{BuildDiagnostic, BuildResult};
-use rolldown_loader_utils::text_to_string_literal;
 use rolldown_plugin::HookTransformAstArgs;
 use rolldown_utils::mime::guess_mime;
 use sugar_path::SugarPath;
 
 use super::pre_process_ecma_ast::PreProcessEcmaAst;
 
-use crate::types::{module_factory::CreateModuleContext, oxc_parse_type::OxcParseType};
+use crate::{
+  types::{module_factory::CreateModuleContext, oxc_parse_type::OxcParseType},
+  utils::text_to_esm::text_to_string_literal,
+};
 
 fn pure_esm_js_oxc_source_type() -> OxcSourceType {
   let pure_esm_js = OxcSourceType::default().with_module(true);

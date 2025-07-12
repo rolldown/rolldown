@@ -1,0 +1,36 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## internal.js
+
+```js
+//#region internal.js
+const internal = "internal";
+
+//#endregion
+export { internal as b };
+```
+## main.js
+
+```js
+import { b as internal } from "./internal.js";
+
+//#region main.js
+const main = internal;
+
+//#endregion
+export { main };
+```
+## main2.js
+
+```js
+import { b as internal } from "./internal.js";
+
+//#region main2.js
+const main2 = internal;
+
+//#endregion
+export { main2 };
+```

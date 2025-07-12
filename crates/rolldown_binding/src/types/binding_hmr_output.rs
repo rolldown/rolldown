@@ -40,6 +40,12 @@ impl From<rolldown_common::HmrOutput> for BindingHmrOutput {
   }
 }
 
+impl From<Option<rolldown_common::HmrOutput>> for BindingHmrOutput {
+  fn from(value: Option<rolldown_common::HmrOutput>) -> Self {
+    Self { patch: value.map(Into::into), errors: None }
+  }
+}
+
 #[napi_derive::napi(object)]
 #[derive(Debug)]
 pub struct BindingHmrOutputPatch {

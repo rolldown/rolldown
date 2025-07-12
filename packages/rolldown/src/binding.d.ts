@@ -106,14 +106,6 @@ export type ExportLocalNameKind = /** `export { name } */
  */
 'None';
 
-/**
- * Get offset within a `Uint8Array` which is aligned on 4 GiB.
- *
- * Does not check that the offset is within bounds of `buffer`.
- * To ensure it always is, provide a `Uint8Array` of at least 4 GiB size.
- */
-export declare function getBufferOffset(buffer: Uint8Array): number
-
 export interface ImportName {
   kind: ImportNameKind
   name?: string
@@ -135,41 +127,9 @@ export type ImportNameKind = /** `import { x } from "mod"` */
  */
 export declare function parseAsync(filename: string, sourceText: string, options?: ParserOptions | undefined | null): Promise<ParseResult>
 
-/**
- * Parse AST into provided `Uint8Array` buffer, asynchronously.
- *
- * Note: This function can be slower than `parseSyncRaw` due to the overhead of spawning a thread.
- *
- * Source text must be written into the start of the buffer, and its length (in UTF-8 bytes)
- * provided as `source_len`.
- *
- * This function will parse the source, and write the AST into the buffer, starting at the end.
- *
- * It also writes to the very end of the buffer the offset of `Program` within the buffer.
- *
- * Caller can deserialize data from the buffer on JS side.
- *
- * # SAFETY
- *
- * Caller must ensure:
- * * Source text is written into start of the buffer.
- * * Source text's UTF-8 byte length is `source_len`.
- * * The 1st `source_len` bytes of the buffer comprises a valid UTF-8 string.
- * * Contents of buffer must not be mutated by caller until the `AsyncTask` returned by this
- *   function resolves.
- *
- * If source text is originally a JS string on JS side, and converted to a buffer with
- * `Buffer.from(str)` or `new TextEncoder().encode(str)`, this guarantees it's valid UTF-8.
- *
- * # Panics
- *
- * Panics if source text is too long, or AST takes more memory than is available in the buffer.
- */
-export declare function parseAsyncRaw(filename: string, buffer: Uint8Array, sourceLen: number, options?: ParserOptions | undefined | null): Promise<unknown>
-
 export interface ParserOptions {
-  /** Treat the source text as `js`, `jsx`, `ts`, or `tsx`. */
-  lang?: 'js' | 'jsx' | 'ts' | 'tsx'
+  /** Treat the source text as `js`, `jsx`, `ts`, `tsx` or `dts`. */
+  lang?: 'js' | 'jsx' | 'ts' | 'tsx' | 'dts'
   /** Treat the source text as `script` or `module` code. */
   sourceType?: 'script' | 'module' | 'unambiguous' | undefined
   /**
@@ -210,34 +170,6 @@ export interface ParserOptions {
 
 /** Parse synchronously. */
 export declare function parseSync(filename: string, sourceText: string, options?: ParserOptions | undefined | null): ParseResult
-
-/**
- * Parse AST into provided `Uint8Array` buffer, synchronously.
- *
- * Source text must be written into the start of the buffer, and its length (in UTF-8 bytes)
- * provided as `source_len`.
- *
- * This function will parse the source, and write the AST into the buffer, starting at the end.
- *
- * It also writes to the very end of the buffer the offset of `Program` within the buffer.
- *
- * Caller can deserialize data from the buffer on JS side.
- *
- * # SAFETY
- *
- * Caller must ensure:
- * * Source text is written into start of the buffer.
- * * Source text's UTF-8 byte length is `source_len`.
- * * The 1st `source_len` bytes of the buffer comprises a valid UTF-8 string.
- *
- * If source text is originally a JS string on JS side, and converted to a buffer with
- * `Buffer.from(str)` or `new TextEncoder().encode(str)`, this guarantees it's valid UTF-8.
- *
- * # Panics
- *
- * Panics if source text is too long, or AST takes more memory than is available in the buffer.
- */
-export declare function parseSyncRaw(filename: string, buffer: Uint8Array, sourceLen: number, options?: ParserOptions | undefined | null): void
 
 /** Returns `true` if raw transfer is supported on this platform. */
 export declare function rawTransferSupported(): boolean
@@ -395,8 +327,6 @@ export interface NapiResolveOptions {
    * Default `None`
    */
   tsconfig?: TsconfigOptions
-  /** Enable Yarn Plug'n'Play */
-  yarnPnp?: boolean
   /**
    * Alias for [ResolveOptions::alias] and [ResolveOptions::fallback].
    *
@@ -905,6 +835,10 @@ export interface ModuleRunnerTransformResult {
   errors: Array<OxcError>
 }
 
+export interface PluginsOptions {
+  styledComponents?: StyledComponentsOptions
+}
+
 export interface ReactRefreshOptions {
   /**
    * Specify the identifier of the refresh registration variable.
@@ -919,6 +853,85 @@ export interface ReactRefreshOptions {
    */
   refreshSig?: string
   emitFullSignatures?: boolean
+}
+
+/**
+ * Configure how styled-components are transformed.
+ *
+ * @see {@link https://styled-components.com/docs/tooling#babel-plugin}
+ */
+export interface StyledComponentsOptions {
+  /**
+   * Enhances the attached CSS class name on each component with richer output to help
+   * identify your components in the DOM without React DevTools.
+   *
+   * @default true
+   */
+  displayName?: boolean
+  /**
+   * Controls whether the `displayName` of a component will be prefixed with the filename
+   * to make the component name as unique as possible.
+   *
+   * @default true
+   */
+  fileName?: boolean
+  /**
+   * Adds a unique identifier to every styled component to avoid checksum mismatches
+   * due to different class generation on the client and server during server-side rendering.
+   *
+   * @default true
+   */
+  ssr?: boolean
+  /**
+   * Transpiles styled-components tagged template literals to a smaller representation
+   * than what Babel normally creates, helping to reduce bundle size.
+   *
+   * @default true
+   */
+  transpileTemplateLiterals?: boolean
+  /**
+   * Minifies CSS content by removing all whitespace and comments from your CSS,
+   * keeping valuable bytes out of your bundles.
+   *
+   * @default true
+   */
+  minify?: boolean
+  /**
+   * Enables transformation of JSX `css` prop when using styled-components.
+   *
+   * **Note: This feature is not yet implemented in oxc.**
+   *
+   * @default true
+   */
+  cssProp?: boolean
+  /**
+   * Enables "pure annotation" to aid dead code elimination by bundlers.
+   *
+   * @default false
+   */
+  pure?: boolean
+  /**
+   * Adds a namespace prefix to component identifiers to ensure class names are unique.
+   *
+   * Example: With `namespace: "my-app"`, generates `componentId: "my-app__sc-3rfj0a-1"`
+   */
+  namespace?: string
+  /**
+   * List of file names that are considered meaningless for component naming purposes.
+   *
+   * When the `fileName` option is enabled and a component is in a file with a name
+   * from this list, the directory name will be used instead of the file name for
+   * the component's display name.
+   *
+   * @default ["index"]
+   */
+  meaninglessFileNames?: Array<string>
+  /**
+   * Import paths to be considered as styled-components imports at the top level.
+   *
+   * **Note: This feature is not yet implemented in oxc.**
+   */
+  topLevelImportPaths?: Array<string>
 }
 
 /**
@@ -941,8 +954,8 @@ export declare function transform(filename: string, sourceText: string, options?
  * @see {@link transform}
  */
 export interface TransformOptions {
-  /** Treat the source text as `js`, `jsx`, `ts`, or `tsx`. */
-  lang?: 'js' | 'jsx' | 'ts' | 'tsx'
+  /** Treat the source text as `js`, `jsx`, `ts`, `tsx`, or `dts`. */
+  lang?: 'js' | 'jsx' | 'ts' | 'tsx' | 'dts'
   /** Treat the source text as `script` or `module` code. */
   sourceType?: 'script' | 'module' | 'unambiguous' | undefined
   /**
@@ -989,6 +1002,8 @@ export interface TransformOptions {
   inject?: Record<string, string | [string, string]>
   /** Decorator plugin */
   decorator?: DecoratorOptions
+  /** Third-party plugins to use. */
+  plugins?: PluginsOptions
 }
 
 export interface TransformResult {
@@ -1207,6 +1222,8 @@ export declare class BindingNormalizedOptions {
   get preserveModules(): boolean
   get preserveModulesRoot(): string | undefined
   get virtualDirname(): string
+  get topLevelVar(): boolean
+  get minifyInternalExports(): boolean
 }
 
 export declare class BindingOutputAsset {
@@ -1242,7 +1259,7 @@ export declare class BindingOutputs {
 }
 
 export declare class BindingPluginContext {
-  load(specifier: string, sideEffects: BindingHookSideEffects | undefined): Promise<void>
+  load(specifier: string, sideEffects: boolean | 'no-treeshake' | undefined): Promise<void>
   resolve(specifier: string, importer?: string | undefined | null, extraOptions?: BindingPluginContextResolveOptions | undefined | null): Promise<BindingPluginContextResolvedId | null>
   emitFile(file: BindingEmittedAsset, assetFilename?: string | undefined | null, fnSanitizedFileName?: string | undefined | null): string
   emitChunk(file: BindingEmittedChunk): string
@@ -1398,6 +1415,11 @@ export interface BindingChecksOptions {
   configurationFieldConflict?: boolean
 }
 
+export declare enum BindingChunkModuleOrderBy {
+  ModuleId = 0,
+  ExecOrder = 1
+}
+
 export interface BindingDebugOptions {
   sessionId?: string
 }
@@ -1405,7 +1427,7 @@ export interface BindingDebugOptions {
 export interface BindingDeferSyncScanData {
   /** ModuleId */
   id: string
-  sideEffects?: BindingHookSideEffects
+  sideEffects?: boolean | 'no-treeshake'
 }
 
 export interface BindingDynamicImportVarsPluginConfig {
@@ -1442,6 +1464,7 @@ export interface BindingExperimentalOptions {
   resolveNewUrlToAsset?: boolean
   hmr?: BindingExperimentalHmrOptions
   attachDebugInfo?: BindingAttachDebugInfo
+  chunkModulesOrder?: BindingChunkModuleOrderBy
 }
 
 export interface BindingFilterToken {
@@ -1473,10 +1496,11 @@ export interface BindingHookFilter {
 export interface BindingHookJsLoadOutput {
   code: string
   map?: string
-  sideEffects: boolean | 'no-treeshake'
+  moduleSideEffects?: boolean | 'no-treeshake'
 }
 
 export interface BindingHookJsResolveIdOptions {
+  isEntry?: boolean
   scan?: boolean
   custom?: BindingVitePluginCustom
 }
@@ -1484,12 +1508,12 @@ export interface BindingHookJsResolveIdOptions {
 export interface BindingHookJsResolveIdOutput {
   id: string
   external?: boolean | 'absolute' | 'relative'
-  sideEffects: boolean | 'no-treeshake'
+  moduleSideEffects?: boolean | 'no-treeshake'
 }
 
 export interface BindingHookLoadOutput {
   code: string
-  sideEffects?: BindingHookSideEffects
+  moduleSideEffects?: boolean | 'no-treeshake'
   map?: BindingSourcemap
   moduleType?: string
 }
@@ -1518,18 +1542,15 @@ export interface BindingHookResolveIdOutput {
   id: string
   external?: BindingResolvedExternal
   normalizeExternalId?: boolean
-  sideEffects?: BindingHookSideEffects
+  moduleSideEffects?: boolean | 'no-treeshake'
 }
 
-export declare enum BindingHookSideEffects {
-  True = 0,
-  False = 1,
-  NoTreeshake = 2
-}
+export type BindingHookSideEffects =
+  boolean | string
 
 export interface BindingHookTransformOutput {
   code?: string
-  sideEffects?: BindingHookSideEffects
+  moduleSideEffects?: BindingHookSideEffects
   map?: BindingSourcemap
   moduleType?: string
 }
@@ -1585,6 +1606,7 @@ export interface BindingInputOptions {
   invalidateJsSideCache?: () => void
   markModuleLoaded?: (id: string, success: boolean) => void
   preserveEntrySignatures?: BindingPreserveEntrySignatures
+  optimization?: BindingOptimization
 }
 
 export interface BindingIsolatedDeclarationPluginConfig {
@@ -1699,6 +1721,10 @@ export interface BindingNotifyOption {
   compareContents?: boolean
 }
 
+export interface BindingOptimization {
+  inlineConst?: boolean
+}
+
 export interface BindingOutputOptions {
   name?: string
   assetFileNames?: string | ((chunk: BindingPreRenderedAsset) => string)
@@ -1733,6 +1759,8 @@ export interface BindingOutputOptions {
   preserveModules?: boolean
   virtualDirname?: string
   preserveModulesRoot?: string
+  topLevelVar?: boolean
+  minifyInternalExports?: boolean
 }
 
 export interface BindingOxcRuntimePluginConfig {
@@ -1742,6 +1770,7 @@ export interface BindingOxcRuntimePluginConfig {
 export interface BindingPluginContextResolvedId {
   id: string
   external: boolean | 'absolute' | 'relative'
+  moduleSideEffects?: boolean | 'no-treeshake'
 }
 
 export interface BindingPluginContextResolveOptions {
@@ -1755,6 +1784,7 @@ export interface BindingPluginContextResolveOptions {
    * - `hot-accept`: `import.meta.hot.accept('./lib.js', () => {})`
    */
   importKind?: 'import-statement' | 'dynamic-import' | 'require-call' | 'import-rule' | 'url-token' | 'new-url' | 'hot-accept'
+  isEntry?: boolean
   skipSelf?: boolean
   custom?: number
   vitePluginCustom?: BindingVitePluginCustom
@@ -1873,6 +1903,7 @@ export interface BindingResolveOptions {
   modules?: Array<string>
   symlinks?: boolean
   tsconfigFilename?: string
+  yarnPnp?: boolean
 }
 
 export interface BindingShared {

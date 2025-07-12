@@ -15,8 +15,8 @@ use oxc::transformer::ESTarget;
 use rolldown::{
   AddonOutputOption, AdvancedChunksOptions, AssetFilenamesOutputOption, BundlerOptions,
   ChunkFilenamesOutputOption, DeferSyncScanDataOption, HashCharacters, IsExternal, JsxPreset,
-  MatchGroup, MatchGroupName, ModuleType, OutputExports, OutputFormat, Platform, RawMinifyOptions,
-  SanitizeFilename, TransformOptions,
+  MatchGroup, MatchGroupName, ModuleType, OptimizationOption, OutputExports, OutputFormat,
+  Platform, RawMinifyOptions, SanitizeFilename, TransformOptions,
 };
 use rolldown_common::DeferSyncScanData;
 use rolldown_plugin::__inner::SharedPluginable;
@@ -189,8 +189,10 @@ pub fn normalize_binding_options(
         ts_fn
           .invoke_async(())
           .await
+          .and_then(|ret| {
+            ret.into_iter().map(TryInto::try_into).collect::<Result<Vec<DeferSyncScanData>, _>>()
+          })
           .map_err(anyhow::Error::from)
-          .map(|ret| ret.into_iter().map(Into::into).collect::<Vec<DeferSyncScanData>>())
       })
     })
   });
@@ -464,6 +466,9 @@ pub fn normalize_binding_options(
       .preserve_entry_signatures
       .map(std::convert::TryInto::try_into)
       .transpose()?,
+    optimization: input_options.optimization.map(OptimizationOption::from),
+    top_level_var: output_options.top_level_var,
+    minify_internal_exports: output_options.minify_internal_exports,
   };
 
   #[cfg(not(target_family = "wasm"))]

@@ -1,0 +1,39 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## main.js
+
+```js
+import assert from "node:assert";
+
+
+//#region json.js
+var json_exports = {};
+__export(json_exports, { default: () => json_default });
+var json_default;
+var init_json = __esm({ "json.js"() {
+	json_default = JSON.parse("[1, 2, 3]");
+} });
+
+//#endregion
+//#region commonjs.js
+var require_commonjs = __commonJS({ "commonjs.js"(exports) {
+	var __importDefault = exports && exports.__importDefault || function(mod$1) {
+		return mod$1 && mod$1.__esModule ? mod$1 : { "default": mod$1 };
+	};
+	Object.defineProperty(exports, "__esModule", { value: true });
+	const timezones_json_1 = __importDefault((init_json(), __toCommonJS(json_exports)));
+	exports.default = timezones_json_1.default;
+	exports.foo = 1;
+} });
+
+//#endregion
+//#region main.js
+var import_commonjs = __toESM(require_commonjs());
+assert.deepEqual(import_commonjs.default.slice(1), [2, 3], "should import JSON file as expected");
+assert.equal(import_commonjs.foo, 1);
+
+//#endregion
+```

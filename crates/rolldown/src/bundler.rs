@@ -132,7 +132,7 @@ impl Bundler {
     let scan_stage_output = match ScanStage::new(
       Arc::clone(&self.options),
       Arc::clone(&self.plugin_driver),
-      self.fs,
+      self.fs.clone(),
       Arc::clone(&self.resolver),
     )
     .scan(mode, scan_stage_cache_guard.inner())
@@ -263,7 +263,7 @@ impl Bundler {
     if self.options.is_hmr_enabled() {
       self.hmr_manager = Some(HmrManager::new(HmrManagerInput {
         module_db: link_stage_output.module_table,
-        fs: self.fs,
+        fs: self.fs.clone(),
         options: Arc::clone(&self.options),
         resolver: Arc::clone(&self.resolver),
         plugin_driver: Arc::clone(&self.plugin_driver),
@@ -284,7 +284,10 @@ impl Bundler {
     &self.plugin_driver.watch_files
   }
 
-  pub async fn generate_hmr_patch(&mut self, changed_files: Vec<String>) -> BuildResult<HmrOutput> {
+  pub async fn generate_hmr_patch(
+    &mut self,
+    changed_files: Vec<String>,
+  ) -> BuildResult<Option<HmrOutput>> {
     self.hmr_manager.as_mut().expect("HMR manager is not initialized").hmr(changed_files).await
   }
 

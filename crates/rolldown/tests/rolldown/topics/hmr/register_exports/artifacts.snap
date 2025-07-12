@@ -7,6 +7,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```js
 
+// HIDDEN [rolldown:hmr]
 //#region cjs.js
 var require_cjs = __commonJS({ "cjs.js"(exports, module) {
 	const cjs_hot = __rolldown_runtime__.createModuleHotContext("cjs.js");
@@ -25,9 +26,9 @@ const value = "main";
 //#endregion
 //#region main.js
 var main_exports = {};
+var import_cjs = __toESM(require_cjs());
 const main_hot = __rolldown_runtime__.createModuleHotContext("main.js");
 __rolldown_runtime__.registerModule("main.js", { exports: main_exports });
-var import_cjs = __toESM(require_cjs());
 console.log(import_cjs, esm_exports);
 
 //#endregion

@@ -84,7 +84,6 @@ rolldown_ecmascript = { version = "0.1.0", path = "./crates/rolldown_ecmascript"
 rolldown_ecmascript_utils = { version = "0.1.0", path = "./crates/rolldown_ecmascript_utils" }
 rolldown_error = { version = "0.1.0", path = "./crates/rolldown_error" }
 rolldown_fs = { version = "0.1.0", path = "./crates/rolldown_fs" }
-rolldown_loader_utils = { version = "0.1.0", path = "./crates/rolldown_loader_utils" }
 rolldown_plugin = { version = "0.1.0", path = "./crates/rolldown_plugin" }
 rolldown_plugin_alias = { version = "0.1.0", path = "./crates/rolldown_plugin_alias" }
 rolldown_plugin_asset = { version = "0.1.0", path = "./crates/rolldown_plugin_asset" }
@@ -92,6 +91,7 @@ rolldown_plugin_asset_import_meta_url = { version = "0.1.0", path = "./crates/ro
 rolldown_plugin_build_import_analysis = { version = "0.1.0", path = "./crates/rolldown_plugin_build_import_analysis" }
 rolldown_plugin_data_uri = { version = "0.1.0", path = "./crates/rolldown_plugin_data_uri" }
 rolldown_plugin_dynamic_import_vars = { version = "0.0.1", path = "./crates/rolldown_plugin_dynamic_import_vars" }
+rolldown_plugin_hmr = { version = "0.1.0", path = "./crates/rolldown_plugin_hmr" }
 rolldown_plugin_import_glob = { version = "0.1.0", path = "./crates/rolldown_plugin_import_glob" }
 rolldown_plugin_isolated_declaration = { version = "0.1.0", path = "./crates/rolldown_plugin_isolated_declaration" }
 rolldown_plugin_json = { version = "0.1.0", path = "./crates/rolldown_plugin_json" }
@@ -151,7 +151,8 @@ memchr = "2.7.4"
 mimalloc-safe = "0.1.52"
 mime = "0.3.17"
 nom = "8.0.0"
-notify = "8.0.0"
+notify = "8.1.0"
+num-bigint = "0.4.6"
 num-format = "0.4"
 petgraph = "0.8.1"
 phf = "0.12.0"
@@ -159,7 +160,7 @@ rayon = "1.10.0"
 regex = "1.11.1"
 regress = "0.10.3"
 ropey = "1.6.1"
-rustc-hash = "2.1.1"
+rustc-hash = { version = "2.1.1" }
 schemars = "1.0.0"
 self_cell = "1.2.0"
 serde = { version = "1.0.219", features = ["derive"] }
@@ -188,22 +189,23 @@ quote = "1"
 syn = { version = "2", default-features = false }
 
 # napi
-napi = { version = "3.0.0-beta.11", features = ["async", "anyhow"] }
+napi = { version = "3.0.0-beta.12", features = ["async", "anyhow"] }
 napi-build = { version = "2.2.1" }
-napi-derive = { version = "3.0.0-beta.11", default-features = false, features = ["type-def"] }
+napi-derive = { version = "3.0.0-beta.12", default-features = false, features = ["type-def"] }
 
 # oxc crates with the same version
 
-oxc = { version = "0.75.0", features = ["ast_visit", "transformer", "minifier", "mangler", "semantic", "codegen", "serialize", "isolated_declarations", "regular_expression", "cfg"] }
-oxc_parser_napi = { version = "0.75.0" }
-oxc_transform_napi = { version = "0.75.0" }
+oxc = { version = "0.77.0", features = ["ast_visit", "transformer", "minifier", "mangler", "semantic", "codegen", "serialize", "isolated_declarations", "regular_expression", "cfg"] }
+oxc_ecmascript = { version = "0.77.0" }
+oxc_parser_napi = { version = "0.77.0" }
+oxc_transform_napi = { version = "0.77.0" }
 
 # oxc crates in their own repos
 # Versions must be relaxed for usage in oxc.
 # Please update with `cargo update oxc_resolver oxc_resolver_napi oxc_sourcemap oxc_index`
 oxc_index = { version = "3", features = ["rayon", "serde"] } # https://github.com/oxc-project/oxc-index-vec
-oxc_resolver = { version = "11", features = ["package_json_raw_json_api"] } # https://github.com/oxc-project/oxc-resolver
-oxc_resolver_napi = { version = "11", default-features = false }
+oxc_resolver = { version = "11.5.0", features = ["package_json_raw_json_api", "yarn_pnp"] } # https://github.com/oxc-project/oxc-resolver
+oxc_resolver_napi = { version = "11.5.0", default-features = false, features = ["yarn_pnp"] }
 oxc_sourcemap = { version = "3" } # https://github.com/oxc-project/oxc-sourcemap
 
 [profile.dev]

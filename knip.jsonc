@@ -1,5 +1,5 @@
 {
-  "$schema": "https://unpkg.com/knip@5/schema.json",
+  "$schema": "https://unpkg.com/knip@5/schema-jsonc.json",
   "ignoreBinaries": ["only-allow"],
   "ignoreWorkspaces": ["examples/**"], // no rolldown plugin yet
   "workspaces": {
@@ -42,6 +42,7 @@
         "src/binding.js",
         "src/rolldown-binding.wasi.cjs",
         "src/plugin/generated/hook-usage.ts",
+        "src/browser.js",
       ],
       "ignoreDependencies": [
         "@oxc-project/runtime",
@@ -58,6 +59,9 @@
       "entry": ["*/**"],
       "ignore": ["{cli,fixtures,module-federation,stability}/**"], // lots of unlisted dependencies
       "ignoreUnresolved": ["./world"],
+      "ignoreDependencies": [
+        "@rolldown/test-side-effects-field", // used in packages/rolldown/tests/fixtures/plugin/context/resolve-side-effects
+      ],
     },
     "packages/rolldown/tests/module-federation": {
       "entry": ["*.js"],

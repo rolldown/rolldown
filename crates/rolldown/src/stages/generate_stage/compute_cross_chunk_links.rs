@@ -13,6 +13,7 @@ use rolldown_common::{
 };
 use rolldown_rstr::{Rstr, ToRstr};
 use rolldown_utils::concat_string;
+use rolldown_utils::hash_placeholder::to_base64;
 use rolldown_utils::indexmap::FxIndexSet;
 use rolldown_utils::rayon::IntoParallelIterator;
 use rolldown_utils::rayon::{ParallelBridge, ParallelIterator};
@@ -420,18 +421,6 @@ impl GenerateStage<'_> {
             });
         }
       }
-
-      // Make sure the runtime module is imported at hmr.
-      if self.options.is_hmr_enabled() {
-        if let Some(importee_chunk_id) = chunk_graph.module_to_chunk[self.link_output.runtime.id()]
-        {
-          if importee_chunk_id != chunk_id {
-            index_cross_chunk_imports[chunk_id].insert(importee_chunk_id);
-            let imports_from_other_chunks = &mut index_imports_from_other_chunks[chunk_id];
-            imports_from_other_chunks.entry(importee_chunk_id).or_default();
-          }
-        }
-      }
     });
   }
 
@@ -440,10 +429,66 @@ impl GenerateStage<'_> {
     chunk_graph: &mut ChunkGraph,
     index_chunk_exported_symbols: &IndexChunkExportedSymbols,
   ) {
+    let is_preserve_modules_enabled = self.options.preserve_modules;
+    let allow_to_minify_internal_exports =
+      !is_preserve_modules_enabled && self.options.minify_internal_exports;
+
     // Generate cross-chunk exports. These must be computed before cross-chunk
     // imports because of export alias renaming, which must consider all export
     // aliases simultaneously to avoid collisions.
     for (chunk_id, chunk) in chunk_graph.chunk_table.iter_mut_enumerated() {
+      if allow_to_minify_internal_exports {
+        // Reference: https://github.com/rollup/rollup/blob/f76339428586620ff3e4c32fce48f923e7be7b05/src/utils/exportNames.ts#L5
+        let mut named_index = 0;
+        let mut used_names = FxHashSet::default();
+
+        let mut processed_entry_exports = FxHashSet::default();
+        if let Some(entry_module_idx) = chunk.entry_module_idx() {
+          // If this's an entry point, we need to make sure the entry modules' exports are not minified.
+          let entry_module = &self.link_output.metas[entry_module_idx];
+          entry_module.canonical_exports(false).for_each(|(name, export)| {
+            let export_ref = self.link_output.symbol_db.canonical_ref_for(export.symbol_ref);
+            if !self.link_output.used_symbol_refs.contains(&export_ref) {
+              // Rolldown supports tree-shaking on dynamic entries, so not all exports are used.
+              return;
+            }
+            used_names.insert(name.clone());
+            chunk.exports_to_other_chunks.entry(export_ref).or_default().push(name.clone());
+            processed_entry_exports.insert(export_ref);
+          });
+        }
+        for (chunk_export, _predefined_names) in index_chunk_exported_symbols[chunk_id]
+          .iter()
+          .sorted_by_cached_key(|(symbol_ref, _predefined_names)| {
+            // same deconflict order in deconflict_chunk_symbols.rs
+            // https://github.com/rolldown/rolldown/blob/504ea76c00563eb7db7a49c2b6e04b2fbe61bdc1/crates/rolldown/src/utils/chunk/deconflict_chunk_symbols.rs?plain=1#L86-L102
+            Reverse::<u32>(self.link_output.module_table[symbol_ref.owner].exec_order())
+          })
+        {
+          let export_ref = self.link_output.symbol_db.canonical_ref_for(*chunk_export);
+          if processed_entry_exports.contains(&export_ref) {
+            continue;
+          }
+
+          let mut export_name: Rstr;
+          loop {
+            named_index += 1;
+            export_name = to_base64(named_index).into();
+            if export_name.starts_with('1') {
+              named_index += 9 * 64u32.pow(u32::try_from(export_name.len() - 1).unwrap());
+              continue;
+            }
+            if !used_names.contains(&export_name) {
+              break;
+            }
+          }
+          used_names.insert(export_name.clone());
+          chunk.exports_to_other_chunks.entry(export_ref).or_default().push(export_name);
+        }
+
+        continue;
+      }
+
       let mut name_count = FxHashMap::with_capacity(index_chunk_exported_symbols[chunk_id].len());
       for (chunk_export, predefined_names) in index_chunk_exported_symbols[chunk_id]
         .iter()

@@ -66,13 +66,13 @@ impl<'a> GenerateStage<'a> {
     self.plugin_driver.render_start(self.options).await?;
 
     let mut chunk_graph = self.generate_chunks().await?;
-    self.trace_action_chunks_infos(&chunk_graph);
 
     if chunk_graph.chunk_table.len() > 1 {
       validate_options_for_multi_chunk_output(self.options)?;
     }
 
     self.compute_cross_chunk_links(&mut chunk_graph);
+    self.trace_action_chunks_infos(&chunk_graph);
 
     let index_chunk_id_to_name =
       self.generate_chunk_name_and_preliminary_filenames(&mut chunk_graph).await?;
@@ -141,6 +141,7 @@ impl<'a> GenerateStage<'a> {
             cur_stmt_index: 0,
             keep_name_statement_to_insert: Vec::new(),
             file_emitter: &self.plugin_driver.file_emitter,
+            constant_value_map: &self.link_output.constant_symbol_map,
           },
           ast,
           ast_scope,

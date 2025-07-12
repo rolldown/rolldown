@@ -8,9 +8,9 @@ use oxc::{
   span::{GetSpan, Span},
 };
 use rolldown_common::{
-  EcmaModuleAstUsage, ImportKind, ImportRecordMeta, LocalExport, RUNTIME_MODULE_KEY, StmtInfoMeta,
-  ThisExprReplaceKind, dynamic_import_usage::DynamicImportExportsUsage,
-  generate_replace_this_expr_map,
+  ConstExportMeta, EcmaModuleAstUsage, EcmaViewMeta, ImportKind, ImportRecordMeta, LocalExport,
+  RUNTIME_MODULE_KEY, StmtInfoMeta, StmtSideEffect,
+  dynamic_import_usage::DynamicImportExportsUsage,
 };
 #[cfg(debug_assertions)]
 use rolldown_ecmascript::ToSourceString;
@@ -66,6 +66,9 @@ impl<'me, 'ast: 'me> Visit<'ast> for AstScanner<'me, 'ast> {
       }
 
       self.visit_statement(stmt);
+      if matches!(self.current_stmt_info.side_effect, StmtSideEffect::Unknown) {
+        self.result.ecma_view_meta.insert(EcmaViewMeta::HAS_ANALYZED_SIDE_EFFECT);
+      }
       self.result.stmt_infos.add_stmt_info(std::mem::take(&mut self.current_stmt_info));
     }
 
@@ -73,7 +76,7 @@ impl<'me, 'ast: 'me> Visit<'ast> for AstScanner<'me, 'ast> {
     self.result.directive_range = program.directives.iter().map(GetSpan::span).collect();
     self.result.dynamic_import_rec_exports_usage =
       std::mem::take(&mut self.dynamic_import_usage_info.dynamic_import_exports_usage);
-    if self.result.has_eval {
+    if self.result.ecma_view_meta.contains(EcmaViewMeta::EVAL) {
       // if there exists `eval` in current module, assume all dynamic import are completely used;
       for usage in self.result.dynamic_import_rec_exports_usage.values_mut() {
         *usage = DynamicImportExportsUsage::Complete;
@@ -85,15 +88,6 @@ impl<'me, 'ast: 'me> Visit<'ast> for AstScanner<'me, 'ast> {
       if matches!(usage, DynamicImportExportsUsage::Partial(set) if set.is_empty()) {
         self.result.import_records[*rec_idx].meta.insert(ImportRecordMeta::PURE_DYNAMIC_IMPORT);
       }
-    }
-
-    // https://github.com/evanw/esbuild/blob/d34e79e2a998c21bb71d57b92b0017ca11756912/internal/js_parser/js_parser.go#L12551-L12604
-    // Since AstScan is immutable, we defer transformation in module finalizer
-    if !self.top_level_this_expr_set.is_empty() {
-      self.result.this_expr_replace_map = generate_replace_this_expr_map(
-        &self.top_level_this_expr_set,
-        ThisExprReplaceKind::Undefined,
-      );
     }
 
     // check if the module is a reexport cjs module e.g.
@@ -193,14 +187,20 @@ impl<'me, 'ast: 'me> Visit<'ast> for AstScanner<'me, 'ast> {
             }
             if id.name == "exports" && self.is_global_identifier_reference(id) {
               self.cjs_exports_ident.get_or_insert(Span::new(id.span.start, id.span.start + 7));
-              if self.options.treeshake.commonjs()
-                && let Some((span, export_name)) = member_expr.static_property_info()
-              {
+
+              if let Some((span, export_name)) = member_expr.static_property_info() {
                 // `exports.test = ...`
                 let exported_symbol =
                   self.result.symbol_ref_db.create_facade_root_symbol_ref(export_name);
 
                 self.declare_link_only_symbol_ref(exported_symbol.symbol);
+
+                if let Some(value) = self.extract_constant_value_from_expr(Some(&node.right)) {
+                  self
+                    .result
+                    .constant_export_map
+                    .insert(exported_symbol.symbol, ConstExportMeta::new(value, true));
+                }
 
                 self.result.commonjs_exports.insert(
                   export_name.into(),
@@ -404,7 +404,7 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
       if ident_ref.name == "eval" {
         // TODO: esbuild track has_eval for each scope, this could reduce bailout range, and may
         // improve treeshaking performance. https://github.com/evanw/esbuild/blob/360d47230813e67d0312ad754cad2b6ee09b151b/internal/js_ast/js_ast.go#L1288-L1291
-        self.result.has_eval = true;
+        self.result.ecma_view_meta.insert(EcmaViewMeta::EVAL);
         self.result.warnings.push(
           BuildDiagnostic::eval(self.id.to_string(), self.source.clone(), ident_ref.span)
             .with_severity_warning(),

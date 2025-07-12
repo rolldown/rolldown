@@ -1,8 +1,8 @@
-use std::sync::Arc;
+use std::{path::PathBuf, sync::Arc};
 
 use arcstr::ArcStr;
 
-use crate::RollupRenderedChunk;
+use crate::{PreliminaryFilename, RollupRenderedChunk};
 
 #[derive(Debug)]
 
@@ -12,4 +12,7 @@ pub struct EcmaAssetMeta {
   // The updated fields of rendered_chunk after the final render
   pub imports: Vec<ArcStr>,
   pub dynamic_imports: Vec<ArcStr>,
+  pub sourcemap_filename: Option<String>,
+  pub file_dir: PathBuf,
+  pub preliminary_filename: PreliminaryFilename,
 }

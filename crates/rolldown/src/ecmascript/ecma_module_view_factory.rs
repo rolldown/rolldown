@@ -46,6 +46,7 @@ pub async fn create_ecma_view(
     &module_id,
     ast.comments(),
     ctx.options,
+    ast.allocator(),
   );
 
   let ScanResult {
@@ -59,13 +60,12 @@ pub async fn create_ecma_view(
     imports,
     exports_kind,
     warnings: scan_warnings,
-    has_eval,
     errors,
     ast_usage,
     symbol_ref_db: symbols,
     self_referenced_class_decl_symbol_ids,
     hashbang_range,
-    has_star_exports,
+    ecma_view_meta,
     dynamic_import_rec_exports_usage,
     new_url_references: new_url_imports,
     this_expr_replace_map,
@@ -73,6 +73,7 @@ pub async fn create_ecma_view(
     hmr_hot_ref,
     directive_range,
     dummy_record_set,
+    constant_export_map,
   } = scanner.scan(ast.program())?;
 
   named_exports.extend(commonjs_exports);
@@ -113,10 +114,8 @@ pub async fn create_ecma_view(
     dynamically_imported_ids: FxIndexSet::default(),
     side_effects,
     meta: {
-      let mut meta = EcmaViewMeta::default();
-      meta.set(EcmaViewMeta::EVAL, has_eval);
+      let mut meta = ecma_view_meta;
       meta.set(EcmaViewMeta::HAS_LAZY_EXPORT, has_lazy_export);
-      meta.set(EcmaViewMeta::HAS_STAR_EXPORT, has_star_exports);
       meta.set(
         EcmaViewMeta::SAFELY_TREESHAKE_COMMONJS,
         ast_usage.contains(EcmaModuleAstUsage::AllStaticExportPropertyAccess)
@@ -134,6 +133,7 @@ pub async fn create_ecma_view(
     hmr_hot_ref,
     directive_range,
     dummy_record_set,
+    constant_export_map,
   };
 
   let ecma_related = EcmaRelated { ast, symbols, dynamic_import_rec_exports_usage };
@@ -213,7 +213,7 @@ pub fn lazy_check_side_effects(
     .and_then(|p| {
       // the glob expr is based on parent path of package.json, which is package path
       // so we should use the relative path of the module to package path
-      let module_path_relative_to_package = resolved_id.id.as_path().relative(p.path.parent()?);
+      let module_path_relative_to_package = resolved_id.id.as_path().relative(p.realpath.parent()?);
       p.check_side_effects_for(&module_path_relative_to_package.to_string_lossy())
         .map(DeterminedSideEffects::UserDefined)
     })

@@ -285,6 +285,7 @@ const ResolveOptionsSchema = v.strictObject({
   modules: v.optional(v.array(v.string())),
   symlinks: v.optional(v.boolean()),
   tsconfigFilename: v.optional(v.string()),
+  yarnPnp: v.optional(v.boolean()),
 });
 
 // TODO: moduleSideEffects
@@ -297,6 +298,13 @@ const TreeshakingOptionsSchema = v.union([
     commonjs: v.optional(v.boolean()),
   }),
 ]);
+
+const OptimizationOptionsSchema = v.strictObject({
+  inlineConst: v.pipe(
+    v.optional(v.boolean()),
+    v.description('Enable crossmodule constant inlining'),
+  ),
+});
 
 const OnLogSchema = v.pipe(
   v.function(),
@@ -368,6 +376,7 @@ const InputOptionsSchema = v.strictObject({
     v.description('Create shim variables for missing exports'),
   ),
   treeshake: v.optional(TreeshakingOptionsSchema),
+  optimization: v.optional(OptimizationOptionsSchema),
   logLevel: v.pipe(
     v.optional(LogLevelOptionSchema),
     v.description(
@@ -394,6 +403,10 @@ const InputOptionsSchema = v.strictObject({
         v.literal('none'),
         v.literal('simple'),
         v.literal('full'),
+      ])),
+      chunkModulesOrder: v.optional(v.union([
+        v.literal('module-id'),
+        v.literal('exec-order'),
       ])),
     }),
   ),
@@ -732,6 +745,10 @@ const OutputOptionsSchema = v.strictObject({
     v.description('Put preserved modules under this path at root level'),
   ),
   virtualDirname: v.optional(v.string()),
+  minifyInternalExports: v.pipe(
+    v.optional(v.boolean()),
+    v.description('Minify internal exports'),
+  ),
 });
 
 const getAddonDescription = (

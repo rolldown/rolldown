@@ -1,15 +1,22 @@
-use oxc_resolver::{FileMetadata, FileSystem as OxcResolverFileSystem, FileSystemOs};
-
 use std::{
-  io,
+  fmt, io,
   path::{Path, PathBuf},
+  sync::Arc,
 };
+
+use oxc_resolver::{FileMetadata, FileSystem as OxcResolverFileSystem, FileSystemOs, ResolveError};
 
 use crate::file_system::FileSystem;
 
 /// Operating System
-#[derive(Default, Clone, Copy, Debug)]
-pub struct OsFileSystem;
+#[derive(Clone)]
+pub struct OsFileSystem(Arc<FileSystemOs>);
+
+impl fmt::Debug for OsFileSystem {
+  fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+    write!(f, "OsFileSystem")
+  }
+}
 
 impl FileSystem for OsFileSystem {
   fn remove_dir_all(&self, path: &Path) -> io::Result<()> {
@@ -34,19 +41,23 @@ impl FileSystem for OsFileSystem {
 }
 
 impl OxcResolverFileSystem for OsFileSystem {
+  fn new(yarn_pnp: bool) -> Self {
+    Self(Arc::new(FileSystemOs::new(yarn_pnp)))
+  }
+
   fn read_to_string(&self, path: &Path) -> io::Result<String> {
-    FileSystemOs::read_to_string(path)
+    self.0.read_to_string(path)
   }
 
   fn metadata(&self, path: &Path) -> io::Result<FileMetadata> {
-    FileSystemOs::metadata(path)
+    self.0.metadata(path)
   }
 
   fn symlink_metadata(&self, path: &Path) -> io::Result<FileMetadata> {
-    FileSystemOs::symlink_metadata(path)
+    self.0.symlink_metadata(path)
   }
 
-  fn read_link(&self, path: &Path) -> io::Result<PathBuf> {
-    FileSystemOs::read_link(path)
+  fn read_link(&self, path: &Path) -> Result<PathBuf, ResolveError> {
+    self.0.read_link(path)
   }
 }

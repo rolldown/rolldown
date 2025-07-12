@@ -1,3 +1,4 @@
+use crate::ConstExportMeta;
 use arcstr::ArcStr;
 use bitflags::bitflags;
 use oxc::{semantic::SymbolId, span::Span};
@@ -20,6 +21,7 @@ bitflags! {
         const HAS_LAZY_EXPORT = 1 << 2;
         const HAS_STAR_EXPORT = 1 << 3;
         const SAFELY_TREESHAKE_COMMONJS = 1 << 4;
+        const HAS_ANALYZED_SIDE_EFFECT = 1 << 5;
     }
 }
 
@@ -99,6 +101,7 @@ pub struct EcmaView {
 
   pub hmr_hot_ref: Option<SymbolRef>,
   pub hmr_info: HmrInfo,
+  pub constant_export_map: FxHashMap<SymbolId, ConstExportMeta>,
 }
 
 bitflags! {

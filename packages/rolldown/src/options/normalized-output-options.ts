@@ -50,6 +50,8 @@ export interface NormalizedOutputOptions {
   preserveModules: boolean;
   virtualDirname: string;
   preserveModulesRoot?: string;
+  topLevelVar?: boolean;
+  minifyInternalExports?: boolean;
 }
 
 // TODO: I guess we make these getters enumerable so it act more like a plain object
@@ -190,6 +192,14 @@ export class NormalizedOutputOptionsImpl implements NormalizedOutputOptions {
 
   get virtualDirname(): string {
     return this.inner.virtualDirname;
+  }
+
+  get topLevelVar(): boolean {
+    return this.inner.topLevelVar ?? false;
+  }
+
+  get minifyInternalExports(): boolean {
+    return this.inner.minifyInternalExports ?? false;
   }
 }
 

@@ -1,0 +1,21 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## main.js
+
+```js
+import assert from "node:assert";
+
+
+//#region main.js
+var require_main = __commonJS({ "main.js"(exports) {
+	exports.foo = "foo";
+	assert.strictEqual(exports.foo, "foo");
+} });
+
+//#endregion
+export default require_main();
+
+```

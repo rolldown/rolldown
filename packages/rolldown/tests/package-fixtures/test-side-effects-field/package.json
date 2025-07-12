@@ -1,0 +1,6 @@
+{
+  "name": "@rolldown/test-side-effects-field",
+  "type": "module",
+  "main": "index.js",
+  "sideEffects": false
+}

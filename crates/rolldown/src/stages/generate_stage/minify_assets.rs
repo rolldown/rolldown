@@ -1,17 +1,20 @@
-use oxc::codegen::CodegenOptions;
-use rolldown_common::{LegalComments, MinifyOptions};
+use oxc::codegen::{CodegenOptions, CommentOptions};
+use rolldown_common::{LegalComments, MinifyOptions, NormalizedBundlerOptions};
 use rolldown_ecmascript::EcmaCompiler;
 use rolldown_error::BuildResult;
 use rolldown_sourcemap::collapse_sourcemaps;
 use rolldown_utils::rayon::{IntoParallelRefMutIterator, ParallelIterator};
 
-use crate::type_alias::IndexAssets;
+use crate::type_alias::AssetVec;
 
 use super::GenerateStage;
 
 impl GenerateStage<'_> {
-  pub fn minify_assets(&self, assets: &mut IndexAssets) -> BuildResult<()> {
-    if let MinifyOptions::Enabled(minify_options) = &self.options.minify {
+  pub fn minify_assets(
+    options: &NormalizedBundlerOptions,
+    assets: &mut AssetVec,
+  ) -> BuildResult<()> {
+    if let MinifyOptions::Enabled(minify_options) = &options.minify {
       assets.par_iter_mut().try_for_each(|asset| -> anyhow::Result<()> {
         if test_d_ts_pattern(&asset.filename) {
           return Ok(());
@@ -23,14 +26,17 @@ impl GenerateStage<'_> {
               asset.content.try_as_inner_str()?,
               asset.map.is_some(),
               &asset.filename,
-              minify_options.to_oxc_minifier_options(self.options),
+              minify_options.to_oxc_minifier_options(options),
               minify_options.compress,
               if minify_options.remove_whitespace {
                 CodegenOptions::minify()
               } else {
-                CodegenOptions { comments: false, ..CodegenOptions::default() }
+                CodegenOptions {
+                  comments: CommentOptions { normal: false, ..CommentOptions::default() },
+                  ..CodegenOptions::default()
+                }
               },
-              matches!(self.options.legal_comments, LegalComments::Inline),
+              matches!(options.legal_comments, LegalComments::Inline),
             );
             asset.content = minified_content.into();
             match (&asset.map, &new_map) {
@@ -42,8 +48,9 @@ impl GenerateStage<'_> {
               }
             }
           }
-          rolldown_common::InstantiationKind::Css(_) | rolldown_common::InstantiationKind::None => {
-          }
+          rolldown_common::InstantiationKind::Css(_)
+          | rolldown_common::InstantiationKind::None
+          | rolldown_common::InstantiationKind::Sourcemap(_) => {}
         }
         Ok(())
       })?;

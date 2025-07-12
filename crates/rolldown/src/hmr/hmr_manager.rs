@@ -106,18 +106,12 @@ impl HmrManager {
     Ok(ret)
   }
 
-  #[expect(clippy::dbg_macro)] // FIXME: Remove dbg! macro once the feature is stable
-  pub async fn hmr(&mut self, changed_file_paths: Vec<String>) -> BuildResult<HmrOutput> {
+  pub async fn hmr(&mut self, changed_file_paths: Vec<String>) -> BuildResult<Option<HmrOutput>> {
     let mut changed_modules = FxIndexSet::default();
     for changed_file_path in changed_file_paths {
       let changed_file_path = ArcStr::from(changed_file_path);
-      match self.module_idx_by_abs_path.get(&changed_file_path) {
-        Some(module_idx) => {
-          changed_modules.insert(*module_idx);
-        }
-        _ => {
-          dbg!("No corresponding module found for changed file path: {:?}", changed_file_path);
-        }
+      if let Some(module_idx) = self.module_idx_by_abs_path.get(&changed_file_path) {
+        changed_modules.insert(*module_idx);
       }
     }
     tracing::debug!(
@@ -128,7 +122,11 @@ impl HmrManager {
         .collect::<Vec<_>>(),
     );
 
-    self.generate_hmr_patch(changed_modules, None).await
+    if changed_modules.is_empty() {
+      return Ok(None);
+    }
+
+    Ok(Some(self.generate_hmr_patch(changed_modules, None).await?))
   }
 
   #[expect(clippy::too_many_lines)]
@@ -209,7 +207,7 @@ impl HmrManager {
       .collect::<Vec<_>>();
 
     let mut module_loader = ModuleLoader::new(
-      self.fs,
+      self.fs.clone(),
       Arc::clone(&self.options),
       Arc::clone(&self.resolver),
       Arc::clone(&self.plugin_driver),
@@ -287,8 +285,10 @@ impl HmrManager {
             self.module_db.modules[*module_idx].id()
           );
         };
+        let prefix = if module.exports_kind.is_commonjs() { "require" } else { "init" };
 
-        (*module_idx, format!("init_{}_{}", module.repr_name, index))
+        // We use `index` as a part of the function name to avoid name collision without needing to deconflict.
+        (*module_idx, format!("{}_{}_{}", prefix, module.repr_name, index))
       })
       .collect::<FxHashMap<_, _>>();
 

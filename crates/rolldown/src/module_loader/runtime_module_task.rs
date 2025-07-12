@@ -5,11 +5,11 @@ use oxc::ast_visit::VisitMut;
 use oxc::span::SourceType;
 use oxc_index::IndexVec;
 use rolldown_common::{
-  EcmaView, EcmaViewMeta, ExportsKind, ModuleDefFormat, ModuleIdx, ModuleType, NormalModule,
+  EcmaView, ExportsKind, ModuleDefFormat, ModuleIdx, ModuleType, NormalModule,
   side_effects::DeterminedSideEffects,
 };
 use rolldown_common::{
-  ModuleLoaderMsg, Platform, RUNTIME_MODULE_ID, RUNTIME_MODULE_KEY, ResolvedId, RuntimeModuleBrief,
+  ModuleLoaderMsg, RUNTIME_MODULE_ID, RUNTIME_MODULE_KEY, ResolvedId, RuntimeModuleBrief,
   RuntimeModuleTaskResult,
 };
 use rolldown_ecmascript::{EcmaAst, EcmaCompiler};
@@ -68,31 +68,8 @@ impl RuntimeModuleTask {
     }
   }
 
-  #[expect(clippy::too_many_lines)]
   async fn run_inner(&self) -> BuildResult<()> {
-    let source = if let Some(hmr_options) = &self.ctx.options.experimental.hmr {
-      let mut runtime_source = String::new();
-      match self.ctx.options.platform {
-        Platform::Node => {
-          runtime_source.push_str("import { WebSocket } from 'ws';\n");
-        }
-        Platform::Browser | Platform::Neutral => {
-          // Browser platform should use the native WebSocket and neutral platform doesn't have any assumptions.
-        }
-      }
-      runtime_source.push_str(&get_runtime_js());
-      runtime_source.push_str(include_str!("../runtime/runtime-extra-dev-common.js"));
-      if let Some(implement) = hmr_options.implement.as_deref() {
-        runtime_source.push_str(implement);
-      } else {
-        let content = include_str!("../runtime/runtime-extra-dev-default.js");
-        let host = hmr_options.host.as_deref().unwrap_or("localhost");
-        let port = hmr_options.port.unwrap_or(3000);
-        let addr = format!("{host}:{port}");
-        runtime_source.push_str(&content.replace("$ADDR", &addr));
-      }
-      ArcStr::from(runtime_source)
-    } else if self.ctx.options.is_esm_format_with_node_platform() {
+    let source = if self.ctx.options.is_esm_format_with_node_platform() {
       get_runtime_js_with_node_platform().into()
     } else {
       get_runtime_js().into()
@@ -108,12 +85,11 @@ impl RuntimeModuleTask {
       namespace_object_ref,
       imports,
       import_records: raw_import_records,
-      has_eval,
       ast_usage,
       symbol_ref_db,
-      has_star_exports,
       new_url_references,
       dummy_record_set,
+      ecma_view_meta,
       ..
     } = scan_result;
 
@@ -121,32 +97,17 @@ impl RuntimeModuleTask {
     resolved_id.id = RUNTIME_MODULE_ID.resource_id().clone();
     let module_type = ModuleType::Js;
 
-    let needs_ws_dep =
-      self.ctx.options.is_hmr_enabled() && self.ctx.options.platform == Platform::Node;
-
-    // Special case handling for `ws` in HMR runtime.
-    // TODO(hyf0): we need move hmr related runtime code into a separate module.
-    let resolved_deps = if needs_ws_dep {
-      raw_import_records
-        .iter()
-        .map(|rec| {
-          // We assume the runtime module only has external dependencies.
-          ResolvedId::new_external_without_side_effects(rec.module_request.as_str().into())
-        })
-        .collect()
-    } else {
-      resolve_dependencies(
-        &resolved_id,
-        &self.ctx.options,
-        &self.ctx.resolver,
-        &self.ctx.plugin_driver,
-        &raw_import_records,
-        source.clone(),
-        &mut vec![],
-        &module_type,
-      )
-      .await?
-    };
+    let resolved_deps = resolve_dependencies(
+      &resolved_id,
+      &self.ctx.options,
+      &self.ctx.resolver,
+      &self.ctx.plugin_driver,
+      &raw_import_records,
+      source.clone(),
+      &mut vec![],
+      &module_type,
+    )
+    .await?;
 
     let module = NormalModule {
       idx: self.module_idx,
@@ -183,12 +144,7 @@ impl RuntimeModuleTask {
         ast_usage,
         self_referenced_class_decl_symbol_ids: FxHashSet::default(),
         hashbang_range: None,
-        meta: {
-          let mut meta = EcmaViewMeta::default();
-          meta.set(self::EcmaViewMeta::EVAL, has_eval);
-          meta.set(self::EcmaViewMeta::HAS_STAR_EXPORT, has_star_exports);
-          meta
-        },
+        meta: ecma_view_meta,
         mutations: vec![],
         new_url_references,
         this_expr_replace_map: FxHashMap::default(),
@@ -196,6 +152,7 @@ impl RuntimeModuleTask {
         hmr_hot_ref: None,
         directive_range: vec![],
         dummy_record_set,
+        constant_export_map: FxHashMap::default(),
       },
       css_view: None,
       asset_view: None,
@@ -240,6 +197,7 @@ impl RuntimeModuleTask {
       &facade_path,
       ast.comments(),
       &self.ctx.options,
+      ast.allocator(),
     );
     let scan_result = scanner.scan(ast.program())?;
 

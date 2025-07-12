@@ -1,0 +1,16 @@
+[package]
+name = "rolldown_plugin_hmr"
+version = "0.1.0"
+edition.workspace = true
+homepage.workspace = true
+license.workspace = true
+repository.workspace = true
+
+[dependencies]
+arcstr = { workspace = true }
+oxc = { workspace = true }
+rolldown_common = { workspace = true }
+rolldown_plugin = { workspace = true }
+
+[lints]
+workspace = true

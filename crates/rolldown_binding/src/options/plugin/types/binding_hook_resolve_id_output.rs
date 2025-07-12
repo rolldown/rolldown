@@ -9,7 +9,8 @@ pub struct BindingHookResolveIdOutput {
   pub id: String,
   pub external: Option<BindingResolvedExternal>,
   pub normalize_external_id: Option<bool>,
-  pub side_effects: Option<BindingHookSideEffects>,
+  #[napi(ts_type = "boolean | 'no-treeshake'")]
+  pub module_side_effects: Option<BindingHookSideEffects>,
 }
 
 impl TryFrom<BindingHookResolveIdOutput> for rolldown_plugin::HookResolveIdOutput {
@@ -20,7 +21,7 @@ impl TryFrom<BindingHookResolveIdOutput> for rolldown_plugin::HookResolveIdOutpu
       id: value.id.into(),
       external: value.external.map(TryInto::try_into).transpose()?,
       normalize_external_id: value.normalize_external_id,
-      side_effects: value.side_effects.map(Into::into),
+      side_effects: value.module_side_effects.map(TryInto::try_into).transpose()?,
     })
   }
 }

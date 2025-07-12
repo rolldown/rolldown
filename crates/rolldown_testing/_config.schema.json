@@ -61,6 +61,9 @@
       "description": "Controls whether snapshots should be generated",
       "type": "boolean",
       "default": true
+    },
+    "extendedTests": {
+      "$ref": "#/$defs/ExtendedTests"
     }
   },
   "additionalProperties": false,
@@ -461,6 +464,28 @@
               "type": "null"
             }
           ]
+        },
+        "optimization": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/OptimizationOption"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "topLevelVar": {
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
+        "minifyInternalExports": {
+          "type": [
+            "boolean",
+            "null"
+          ]
         }
       },
       "additionalProperties": false
@@ -704,6 +729,12 @@
             "string",
             "null"
           ]
+        },
+        "yarnPnp": {
+          "type": [
+            "boolean",
+            "null"
+          ]
         }
       },
       "additionalProperties": false
@@ -810,6 +841,16 @@
               "type": "null"
             }
           ]
+        },
+        "chunkModulesOrder": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/ChunkModulesOrderBy"
+            },
+            {
+              "type": "null"
+            }
+          ]
         }
       },
       "additionalProperties": false
@@ -850,6 +891,13 @@
         "none",
         "simple",
         "full"
+      ]
+    },
+    "ChunkModulesOrderBy": {
+      "type": "string",
+      "enum": [
+        "execOrder",
+        "moduleId"
       ]
     },
     "RawMinifyOptions": {
@@ -1235,6 +1283,19 @@
         "false"
       ]
     },
+    "OptimizationOption": {
+      "type": "object",
+      "properties": {
+        "inlineConst": {
+          "description": "TODO: make the inline_const option more fine grained, e.g. `inline_const: false | true |\n\"on-demand\"`.\nInline constant everywhere not always generate smaller bundle, e.g.\n```js\n// index.js\nimport {long_string} from './foo.js'\nconsole.log(long_string);\nconsole.log(long_string);\nconsole.log(long_string);\nconsole.log(long_string);\nconsole.log(long_string);\n// foo.js\nexport const long_string = 'this is a very long string that will be inlined everywhere';\n```",
+          "type": [
+            "boolean",
+            "null"
+          ]
+        }
+      },
+      "additionalProperties": false
+    },
     "ConfigVariant": {
       "type": "object",
       "properties": {
@@ -1255,6 +1316,12 @@
           ]
         },
         "name": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "configName": {
           "type": [
             "string",
             "null"
@@ -1297,6 +1364,39 @@
               "type": "null"
             }
           ]
+        },
+        "treeshake": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/TreeshakeOptions"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "minifyInternalExports": {
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
+        "_snapshot": {
+          "type": [
+            "boolean",
+            "null"
+          ]
+        }
+      },
+      "additionalProperties": false
+    },
+    "ExtendedTests": {
+      "type": "object",
+      "properties": {
+        "minifyInternalExports": {
+          "description": "Run the test case with `minifyInternalExports` enabled in addition to the default config.",
+          "type": "boolean",
+          "default": true
         }
       },
       "additionalProperties": false

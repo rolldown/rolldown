@@ -19,7 +19,6 @@ import type { PartialNull } from '../types/utils';
 import { type AssetSource, bindingAssetSource } from '../utils/asset-source';
 import { bindingifyPreserveEntrySignatures } from '../utils/bindingify-input-options';
 import { unimplemented, unreachable } from '../utils/misc';
-import { bindingifySideEffects } from '../utils/transform-side-effects';
 import type {
   CustomPluginOptions,
   ModuleOptions,
@@ -48,6 +47,7 @@ interface EmittedChunk {
 export type EmittedFile = EmittedAsset | EmittedChunk;
 
 export interface PluginContextResolveOptions {
+  isEntry?: boolean;
   skipSelf?: boolean;
   custom?: CustomPluginOptions;
 }
@@ -132,7 +132,7 @@ export class PluginContextImpl extends MinimalPluginContextImpl {
       try {
         await context.load(
           id,
-          bindingifySideEffects(options.moduleSideEffects),
+          options.moduleSideEffects ?? undefined,
         );
       } catch (e) {
         // If the load module has failed, avoid it re-load using unresolved promise.
@@ -168,6 +168,7 @@ export class PluginContextImpl extends MinimalPluginContextImpl {
     );
     const res = await this.context.resolve(source, importer, {
       custom: receipt,
+      isEntry: options?.isEntry,
       skipSelf: options?.skipSelf,
       vitePluginCustom,
     });
@@ -185,6 +186,8 @@ export class PluginContextImpl extends MinimalPluginContextImpl {
         )
         : res.external,
       ...info,
+      moduleSideEffects: info.moduleSideEffects ?? res.moduleSideEffects ??
+        null,
     };
   }
 

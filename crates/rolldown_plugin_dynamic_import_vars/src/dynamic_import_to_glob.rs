@@ -23,31 +23,9 @@ pub fn should_ignore(glob: &str) -> bool {
 }
 
 pub fn to_valid_glob<'a>(glob: &'a str, source: &str) -> anyhow::Result<Cow<'a, str>> {
-  if glob.starts_with('*') {
-    Err(anyhow::anyhow!(
-      "Invalid import {source}. It cannot be statically analyzed. Variable dynamic imports must start with ./ and be limited to a specific directory. {EXAMPLE_CODE}"
-    ))?;
-  }
-
-  if glob.starts_with('/') {
-    Err(anyhow::anyhow!(
-      "Invalid import {source}. Variable absolute imports are not supported, imports must start with ./ in the static part of the import. {EXAMPLE_CODE}"
-    ))?;
-  }
-
   if !glob.starts_with("./") && !glob.starts_with("../") {
     Err(anyhow::anyhow!(
       "Invalid import {source}. Variable bare imports are not supported, imports must start with ./ in the static part of the import. {EXAMPLE_CODE}"
-    ))?;
-  }
-
-  // Disallow ./*.ext
-  if glob.len() > 4
-    && glob[..4].starts_with("./*.")
-    && glob[4..].chars().all(|c| c.is_ascii_alphanumeric() || c == '_')
-  {
-    Err(anyhow::anyhow!(
-      "Invalid import {source}. Variable imports cannot import their own directory, place imports in a separate directory or make the import filename more specific. {EXAMPLE_CODE}"
     ))?;
   }
 
@@ -292,61 +270,6 @@ mod tests {
     let ast = parser.parse("'foo' - 'bar.js'");
     let err = to_glob_pattern(&ast, "").unwrap_err().to_string();
     assert_eq!(err, "\"-\" operator is not supported.");
-  }
-
-  #[test]
-  fn throws_when_dynamic_import_is_a_single_variable() {
-    let parser = ExprParser::new();
-    let ast = parser.parse("foo");
-    let err = to_glob_pattern(&ast, "\"foo\"").unwrap_err().to_string();
-    assert_eq!(
-      err,
-      "Invalid import \"foo\". It cannot be statically analyzed. Variable dynamic imports must start with ./ and be limited to a specific directory. For example: import(`./foo/${bar}.js`)."
-    );
-  }
-
-  #[test]
-  fn throws_when_dynamic_import_starts_with_a_variable() {
-    let parser = ExprParser::new();
-    let ast = parser.parse("`${folder}/foo.js`");
-    let err = to_glob_pattern(&ast, "\"`${folder}/foo.js`\"").unwrap_err().to_string();
-    assert_eq!(
-      err,
-      "Invalid import \"`${folder}/foo.js`\". It cannot be statically analyzed. Variable dynamic imports must start with ./ and be limited to a specific directory. For example: import(`./foo/${bar}.js`)."
-    );
-  }
-
-  #[test]
-  fn throws_when_dynamic_import_starts_with_a_slash() {
-    let parser = ExprParser::new();
-    let ast = parser.parse("`/foo/${bar}.js`");
-    let err = to_glob_pattern(&ast, "\"`/foo/${bar}.js`\"").unwrap_err().to_string();
-    assert_eq!(
-      err,
-      "Invalid import \"`/foo/${bar}.js`\". Variable absolute imports are not supported, imports must start with ./ in the static part of the import. For example: import(`./foo/${bar}.js`)."
-    );
-  }
-
-  #[test]
-  fn throws_when_dynamic_import_does_not_start_with_dot_slash() {
-    let parser = ExprParser::new();
-    let ast = parser.parse("`foo/${bar}.js`");
-    let err = to_glob_pattern(&ast, "\"`foo/${bar}.js`\"").unwrap_err().to_string();
-    assert_eq!(
-      err,
-      "Invalid import \"`foo/${bar}.js`\". Variable bare imports are not supported, imports must start with ./ in the static part of the import. For example: import(`./foo/${bar}.js`)."
-    );
-  }
-
-  #[test]
-  fn throws_when_dynamic_import_imports_its_own_directory() {
-    let parser = ExprParser::new();
-    let ast = parser.parse("`./${foo}.js`");
-    let err = to_glob_pattern(&ast, "\"`./${foo}.js`\"").unwrap_err().to_string();
-    assert_eq!(
-      err,
-      "Invalid import \"`./${foo}.js`\". Variable imports cannot import their own directory, place imports in a separate directory or make the import filename more specific. For example: import(`./foo/${bar}.js`)."
-    );
   }
 
   #[test]

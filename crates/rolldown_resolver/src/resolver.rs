@@ -13,28 +13,27 @@ use std::{
 use sugar_path::SugarPath;
 
 use oxc_resolver::{
-  EnforceExtension, FsCache, ModuleType, PackageJsonSerde as OxcPackageJson, PackageType,
-  Resolution, ResolveError, ResolveOptions as OxcResolverOptions, ResolverGeneric, TsConfigSerde,
-  TsconfigOptions,
+  EnforceExtension, ModuleType, PackageJson as OxcPackageJson, PackageType, Resolution,
+  ResolveError, ResolveOptions as OxcResolverOptions, ResolverGeneric, TsConfig, TsconfigOptions,
 };
 
 #[derive(Debug)]
 #[allow(dead_code, clippy::struct_field_names)]
-pub struct Resolver<T: FileSystem + Default = OsFileSystem> {
+pub struct Resolver<T: FileSystem = OsFileSystem> {
   cwd: PathBuf,
-  default_resolver: ResolverGeneric<FsCache<T>>,
+  default_resolver: ResolverGeneric<T>,
   // Resolver for `import '...'` and `import(...)`
-  import_resolver: ResolverGeneric<FsCache<T>>,
+  import_resolver: ResolverGeneric<T>,
   // Resolver for `require('...')`
-  require_resolver: ResolverGeneric<FsCache<T>>,
+  require_resolver: ResolverGeneric<T>,
   // Resolver for `@import '...'` and `url('...')`
-  css_resolver: ResolverGeneric<FsCache<T>>,
+  css_resolver: ResolverGeneric<T>,
   // Resolver for `new URL(..., import.meta.url)`
-  new_url_resolver: ResolverGeneric<FsCache<T>>,
+  new_url_resolver: ResolverGeneric<T>,
   package_json_cache: FxDashMap<PathBuf, Arc<PackageJson>>,
 }
 
-impl<F: FileSystem + Default> Resolver<F> {
+impl<F: FileSystem> Resolver<F> {
   #[allow(clippy::too_many_lines)]
   pub fn new(raw_resolve: ResolveOptions, platform: Platform, cwd: PathBuf, fs: F) -> Self {
     let mut default_conditions = vec!["default".to_string()];
@@ -79,6 +78,7 @@ impl<F: FileSystem + Default> Resolver<F> {
     impl_rewritten_file_extensions_via_extension_alias(&mut extension_alias);
 
     let resolve_options_with_default_conditions = OxcResolverOptions {
+      cwd: Some(cwd.clone()),
       tsconfig: raw_resolve.tsconfig_filename.map(|p| {
         let path = PathBuf::from(&p);
         TsconfigOptions {
@@ -122,6 +122,7 @@ impl<F: FileSystem + Default> Resolver<F> {
       builtin_modules,
       module_type: true,
       allow_package_exports_in_directory_resolve: false,
+      yarn_pnp: raw_resolve.yarn_pnp.unwrap_or(false),
     };
     let resolve_options_with_import_conditions = OxcResolverOptions {
       condition_names: import_conditions,
@@ -142,10 +143,8 @@ impl<F: FileSystem + Default> Resolver<F> {
       ..resolve_options_with_default_conditions.clone()
     };
 
-    let default_resolver = ResolverGeneric::new_with_cache(
-      Arc::new(FsCache::new(fs)),
-      resolve_options_with_default_conditions,
-    );
+    let default_resolver =
+      ResolverGeneric::new_with_file_system(fs, resolve_options_with_default_conditions);
     let import_resolver =
       default_resolver.clone_with_options(resolve_options_with_import_conditions);
     let require_resolver =
@@ -186,7 +185,7 @@ impl From<ResolveReturn> for ResolvedId {
   }
 }
 
-impl<F: FileSystem + Default> Resolver<F> {
+impl<F: FileSystem> Resolver<F> {
   pub fn resolve(
     &self,
     importer: Option<&Path>,
@@ -251,7 +250,7 @@ impl<F: FileSystem + Default> Resolver<F> {
       Some(v) => Arc::clone(v.value()),
       _ => {
         let pkg_json = Arc::new(
-          PackageJson::new(oxc_pkg_json.path.clone())
+          PackageJson::new(oxc_pkg_json.realpath.clone())
             .with_type(oxc_pkg_json.r#type.map(|t| match t {
               PackageType::CommonJs => "commonjs",
               PackageType::Module => "module",
@@ -265,18 +264,13 @@ impl<F: FileSystem + Default> Resolver<F> {
     }
   }
 
-  pub fn resolve_tsconfig<T: AsRef<Path>>(
-    &self,
-    path: &T,
-  ) -> Result<Arc<TsConfigSerde>, ResolveError> {
+  pub fn resolve_tsconfig<T: AsRef<Path>>(&self, path: &T) -> Result<Arc<TsConfig>, ResolveError> {
     self.default_resolver.resolve_tsconfig(path)
   }
 }
 
 /// https://github.com/evanw/esbuild/blob/d34e79e2a998c21bb71d57b92b0017ca11756912/internal/bundler/bundler.go#L1446-L1460
-fn infer_module_def_format<F: FileSystem + Default>(
-  info: &Resolution<FsCache<F>>,
-) -> ModuleDefFormat {
+fn infer_module_def_format(info: &Resolution) -> ModuleDefFormat {
   let fmt = ModuleDefFormat::from_path(info.path());
 
   if !matches!(fmt, ModuleDefFormat::Unknown) {

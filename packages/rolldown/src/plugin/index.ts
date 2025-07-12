@@ -29,7 +29,7 @@ import type { ParallelPlugin } from './parallel-plugin';
 import type { PluginContext } from './plugin-context';
 import type { TransformPluginContext } from './transform-plugin-context';
 
-export type ModuleSideEffects = boolean | 'no-treeshake' | null;
+type ModuleSideEffects = boolean | 'no-treeshake' | null;
 export { withFilter } from './with-filter';
 
 // ref: https://github.com/microsoft/TypeScript/issues/33471#issuecomment-1376364329

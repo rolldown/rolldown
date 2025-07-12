@@ -68,11 +68,7 @@ pub fn stringify_bundle_output(output: BundleOutput, cwd: &Path) -> String {
     .filter(|asset| !asset.filename().contains("$runtime$") && matches!(asset, Output::Chunk(_)))
     .flat_map(|asset| {
       let content = std::str::from_utf8(asset.content_as_bytes()).unwrap();
-      let content = if hidden_runtime_module {
-        RUNTIME_MODULE_OUTPUT_RE.replace_all(content, "")
-      } else {
-        Cow::Borrowed(content)
-      };
+      let content = tweak_snapshot(content, hidden_runtime_module, true);
 
       [Cow::Owned(format!("## {}\n", asset.filename())), "```js".into(), content, "```".into()]
     })
@@ -86,6 +82,11 @@ pub fn stringify_bundle_output(output: BundleOutput, cwd: &Path) -> String {
 pub(crate) static RUNTIME_MODULE_OUTPUT_RE: LazyLock<Regex> = LazyLock::new(|| {
   Regex::new(r"(//#region rolldown:runtime[\s\S]*?//#endregion)")
     .expect("invalid runtime module output regex")
+});
+
+pub(crate) static HMR_RUNTIME_MODULE_OUTPUT_RE: LazyLock<Regex> = LazyLock::new(|| {
+  Regex::new(r"(//#region rolldown:hmr[\s\S]*?//#endregion)")
+    .expect("invalid hmr runtime module output regex")
 });
 
 #[macro_export]
@@ -102,4 +103,28 @@ macro_rules! abs_file_dir {
   () => {
     std::path::Path::new(env!("WORKSPACE_DIR")).join(file!()).parent().unwrap().to_path_buf()
   };
+}
+
+// Some content of snapshot is considered as noise, so we need to tweak them.
+pub fn tweak_snapshot(
+  content: &str,
+  hide_runtime_module: bool,
+  hide_hmr_runtime: bool,
+) -> Cow<str> {
+  if !hide_runtime_module && !hide_hmr_runtime {
+    return Cow::Borrowed(content);
+  }
+
+  let mut result = content.to_string();
+
+  if hide_runtime_module {
+    result = RUNTIME_MODULE_OUTPUT_RE.replace_all(&result, "").into_owned();
+  }
+
+  if hide_hmr_runtime {
+    result =
+      HMR_RUNTIME_MODULE_OUTPUT_RE.replace_all(&result, "// HIDDEN [rolldown:hmr]").into_owned();
+  }
+
+  Cow::Owned(result)
 }

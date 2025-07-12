@@ -30,11 +30,14 @@ export default defineTest({
     `)
     expect(output.output[2].fileName).toMatchInlineSnapshot(`"src/index.js"`);
     expect((output.output[2] as OutputChunk).code).toMatchInlineSnapshot(`
-      "//#region src/index.js
+      "import "./module.js";
+      
+      //#region src/index.js
       const a = 100;
 
       //#endregion
       export { a };"
     `)
+    expect(output.output[4].fileName).toMatch(/^src\/module-[a-zA-Z0-9]+\.css$/)
   },
 })

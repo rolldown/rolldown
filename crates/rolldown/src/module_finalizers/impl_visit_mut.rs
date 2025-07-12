@@ -9,7 +9,6 @@ use oxc::{
 };
 use rolldown_common::{ExportsKind, StmtInfoIdx, SymbolRef, ThisExprReplaceKind, WrapKind};
 use rolldown_ecmascript_utils::{ExpressionExt, JsxExt};
-use rustc_hash::FxHashMap;
 
 use super::ScopeHoistingFinalizer;
 
@@ -22,30 +21,22 @@ impl<'ast> VisitMut<'ast> for ScopeHoistingFinalizer<'_, 'ast> {
     program.hashbang.take();
     program.directives.clear();
     // init namespace_alias_symbol_id
-    self.namespace_alias_symbol_id_to_resolved_module = self
-      .ctx
-      .module
-      .ecma_view
-      .named_imports
-      .iter()
-      .filter_map(|(symbol_ref, v)| {
-        let rec_id = v.record_id;
-        let importee_idx = self.ctx.module.ecma_view.import_records[rec_id].resolved_module;
-        // bailout if the importee is a external module
-        // see rollup/test/function/samples/side-effects-only-default-exports/ as an
-        // example
-        // TODO: maybe we could relex the restriction if `platform: node` and the external module
-        // is a node builtin module
-        let module = self.ctx.modules[importee_idx].as_normal()?;
-        self.ctx.symbol_db.get(*symbol_ref).namespace_alias.as_ref()?;
-        module.exports_kind.is_commonjs().then_some((symbol_ref.symbol, importee_idx))
-      })
-      .collect::<FxHashMap<_, _>>();
 
     let is_namespace_referenced = matches!(self.ctx.module.exports_kind, ExportsKind::Esm)
       && self.ctx.module.stmt_infos[StmtInfoIdx::new(0)].is_included;
 
-    self.remove_unused_top_level_stmt(program);
+    let last_import_stmt_idx = self.remove_unused_top_level_stmt(program);
+
+    if self.ctx.options.is_hmr_enabled() {
+      let hmr_header = if self.ctx.runtime.id() == self.ctx.module.idx {
+        vec![]
+      } else {
+        // FIXME(hyf0): Module register relies on runtime module, this causes a runtime error for registering runtime module.
+        // Let's skip it for now.
+        self.generate_hmr_header()
+      };
+      program.body.splice(last_import_stmt_idx..last_import_stmt_idx, hmr_header);
+    }
 
     // check if we need to add wrapper
     let needs_wrapper = self
@@ -83,13 +74,6 @@ impl<'ast> VisitMut<'ast> for ScopeHoistingFinalizer<'_, 'ast> {
       }
     });
 
-    let hmr_header = if self.ctx.runtime.id() == self.ctx.module.idx {
-      vec![]
-    } else {
-      // FIXME(hyf0): Module register relies on runtime module, this causes a runtime error for registering runtime module.
-      // Let's skip it for now.
-      self.generate_hmr_header()
-    };
     walk_mut::walk_program(self, program);
 
     if needs_wrapper {
@@ -102,10 +86,9 @@ impl<'ast> VisitMut<'ast> for ScopeHoistingFinalizer<'_, 'ast> {
             self.canonical_ref_for_runtime("__commonJSMin")
           };
 
-          let commonjs_ref_expr = self.finalized_expr_for_symbol_ref(commonjs_ref, false, None);
+          let commonjs_ref_expr = self.finalized_expr_for_symbol_ref(commonjs_ref, false, false);
 
           let mut stmts_inside_closure = allocator::Vec::new_in(self.alloc);
-          stmts_inside_closure.extend(hmr_header);
           stmts_inside_closure.append(&mut program.body);
 
           program.body.push(self.snippet.commonjs_wrapper_stmt(
@@ -125,7 +108,7 @@ impl<'ast> VisitMut<'ast> for ScopeHoistingFinalizer<'_, 'ast> {
           } else {
             self.canonical_ref_for_runtime("__esmMin")
           };
-          let esm_ref_expr = self.finalized_expr_for_symbol_ref(esm_ref, false, None);
+          let esm_ref_expr = self.finalized_expr_for_symbol_ref(esm_ref, false, false);
           let old_body = program.body.take_in(self.alloc);
 
           let mut fn_stmts = allocator::Vec::new_in(self.alloc);
@@ -157,7 +140,6 @@ impl<'ast> VisitMut<'ast> for ScopeHoistingFinalizer<'_, 'ast> {
             }
           });
           program.body.extend(declaration_of_module_namespace_object);
-          program.body.extend(hmr_header);
           program.body.extend(fn_stmts);
           if !hoisted_names.is_empty() {
             let mut declarators = allocator::Vec::new_in(self.alloc);
@@ -195,9 +177,7 @@ impl<'ast> VisitMut<'ast> for ScopeHoistingFinalizer<'_, 'ast> {
         WrapKind::None => {}
       }
     } else {
-      program
-        .body
-        .splice(0..0, declaration_of_module_namespace_object.into_iter().chain(hmr_header));
+      program.body.splice(0..0, declaration_of_module_namespace_object);
     }
   }
 
@@ -385,9 +365,6 @@ impl<'ast> VisitMut<'ast> for ScopeHoistingFinalizer<'_, 'ast> {
         }
       }
     } else {
-      if let Some(ref_id) = self.try_get_valid_namespace_alias_ref_id_from_member_expr(expr) {
-        self.interested_namespace_alias_ref_id.insert(ref_id);
-      }
       walk_mut::walk_member_expression(self, expr);
     }
   }

@@ -46,8 +46,10 @@ async fn filename_with_hash() {
 
     options.canonicalize_option_path();
 
-    let integration_test =
-      IntegrationTest::new(TestMeta { write_to_disk: false, hash_in_filename: true, ..meta });
+    let integration_test = IntegrationTest::new(
+      TestMeta { write_to_disk: false, hash_in_filename: true, ..meta },
+      fixture_path.to_path_buf(),
+    );
     if meta.expect_error {
       // Output is expected to be dirty. No need to record.
       continue;

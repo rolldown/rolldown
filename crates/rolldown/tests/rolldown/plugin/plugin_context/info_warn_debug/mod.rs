@@ -5,7 +5,7 @@ use std::{
 
 use rolldown::{BundlerOptions, InputItem, Log, LogLevel, OnLog};
 use rolldown_plugin::{HookUsage, Plugin, PluginContext};
-use rolldown_testing::{abs_file_dir, integration_test::IntegrationTest, test_config::TestMeta};
+use rolldown_testing::{manual_integration_test, test_config::TestMeta};
 
 #[derive(Debug)]
 struct TestPlugin;
@@ -33,7 +33,6 @@ impl Plugin for TestPlugin {
 
 #[tokio::test(flavor = "multi_thread")]
 async fn allow_pass_custom_arg() {
-  let cwd = abs_file_dir!();
   let count = Arc::new(Mutex::new(0_usize));
 
   let temp = Arc::<std::sync::Mutex<usize>>::clone(&count);
@@ -51,24 +50,25 @@ async fn allow_pass_custom_arg() {
     })
   }));
 
-  IntegrationTest::new(TestMeta {
-    write_to_disk: false,
-    expect_executed: false,
-    ..Default::default()
-  })
-  .run_with_plugins(
-    BundlerOptions {
-      input: Some(vec![InputItem {
-        name: Some("entry".to_string()),
-        import: "./entry.js".to_string(),
-      }]),
-      cwd: Some(cwd),
-      on_log: Some(on_log),
+  manual_integration_test!()
+    .build(TestMeta {
+      snapshot: false,
+      write_to_disk: false,
+      expect_executed: false,
       ..Default::default()
-    },
-    vec![Arc::new(TestPlugin)],
-  )
-  .await;
+    })
+    .run_with_plugins(
+      BundlerOptions {
+        input: Some(vec![InputItem {
+          name: Some("entry".to_string()),
+          import: "./entry.js".to_string(),
+        }]),
+        on_log: Some(on_log),
+        ..Default::default()
+      },
+      vec![Arc::new(TestPlugin)],
+    )
+    .await;
 
   assert_eq!(*count.lock().unwrap(), 7);
 }

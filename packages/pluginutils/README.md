@@ -10,11 +10,14 @@ pnpm add @rolldown/pluginutils
 
 ## Usage
 
-
 ### Simple Filters
 
 ```ts
-import { exactRegex, prefixRegex, makeIdFiltersToMatchWithQuery } from '@rolldown/pluginutils';
+import {
+  exactRegex,
+  makeIdFiltersToMatchWithQuery,
+  prefixRegex,
+} from '@rolldown/pluginutils';
 
 // Match exactly 'foo.js'
 const filter = exactRegex('foo.js');
@@ -27,7 +30,7 @@ const idFilters = makeIdFiltersToMatchWithQuery(['**/*.js', /\.ts$/]);
 
 // Usage in a plugin to define a hook filter
 const myPlugin = {
- resolveId: {
+  resolveId: {
     filter: {
       id: [exactRegex('MY_ID_TO_CHECK'), /some-other-regex/],
     },
@@ -35,33 +38,32 @@ const myPlugin = {
       // Your code here
     },
   },
-},
+};
 ```
 
 ### Composable Filters
 
 > [!WARNING] Composable filters are not yet supported in Vite, Rolldown-Vite or unplugin. They can be used in Rolldown plugins only.
 
-
 ```ts
-import { and, id, moduleType, query, include } from '@rolldown/pluginutils';
+import { and, id, include, moduleType, query } from '@rolldown/pluginutils';
 
 // Build a filter expression
 const filterExpr = and(
   id(/\.ts$/),
   moduleType('ts'),
-  query('foo', true)
+  query('foo', true),
 );
 
 // Usage in a plugin to define a hook filter
 const myPlugin = {
- transform: {
+  transform: {
     filter: [include(filterExpr)],
     handler(code, id, options) {
       // Your code here
     },
   },
-},
+};
 ```
 
 ## API Reference

@@ -1,4 +1,26 @@
 
+## [1.0.0-beta.27] - 2025-07-13
+
+### 🚀 Features
+
+- rolldown: support linux-arm64-ohos (#5258) by @Brooooooklyn
+- napi: add `aarch64-linux-android` target (#5141) by @Boshen
+- rolldown: oxc v0.77.0 (#5255) by @Boshen
+
+### 🐛 Bug Fixes
+
+- `this` in CJS is replaced with undefined but should be `exports` (#5244) by @IWANABETHATGUY
+- normalize path from package.json's realpath before matching sideEffects field (#5250) by @sapphi-red
+
+### ⚡ Performance
+
+- don't wrap module if it is leaf module and side effects free when enable `strictExecutionOrder` (#5240) by @IWANABETHATGUY
+
+### ⚙️ Miscellaneous Tasks
+
+- upgrade NAPI-RS cli to 3.0.0-alpha.93 (#5243) by @Brooooooklyn
+
+
 ## [1.0.0-beta.26] - 2025-07-10
 
 ### 🐛 Bug Fixes

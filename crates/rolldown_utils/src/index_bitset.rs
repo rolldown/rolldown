@@ -3,7 +3,7 @@ use std::{fmt, marker::PhantomData};
 
 use oxc_index::{Idx, IndexVec};
 
-use crate::{bitset::BitSetIter, BitSet};
+use crate::{BitSet, bitset::BitSetIter};
 
 type Enumerated<Iter, I, T> = iter::Map<iter::Enumerate<Iter>, fn((usize, T)) -> (I, T)>;
 

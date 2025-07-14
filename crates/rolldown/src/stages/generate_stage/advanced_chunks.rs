@@ -58,7 +58,7 @@ impl GenerateStage<'_> {
   pub async fn apply_advanced_chunks(
     &self,
     index_splitting_info: &IndexSplittingInfo,
-    module_to_assigned: &mut IndexBitSet::<ModuleIdx>,
+    module_to_assigned: &mut IndexBitSet<ModuleIdx>,
     chunk_graph: &mut ChunkGraph,
     input_base: &ArcStr,
   ) -> BuildResult<()> {

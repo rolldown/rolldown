@@ -69,7 +69,7 @@ impl Debug for BitSet {
 
 pub struct BitSetIter<'a> {
   bitset: &'a BitSet,
-  curr: u32
+  curr: u32,
 }
 
 impl<'a> BitSetIter<'a> {
@@ -91,7 +91,6 @@ impl Iterator for BitSetIter<'_> {
     Some(val)
   }
 }
-
 
 #[cfg(test)]
 mod tests {

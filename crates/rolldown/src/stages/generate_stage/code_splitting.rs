@@ -421,8 +421,10 @@ impl GenerateStage<'_> {
         && !self.link_output.metas.iter().any(|meta| meta.is_tla_or_contains_tla_dependency);
     // 1. Assign modules to corresponding chunks
     // 2. Create shared chunks to store modules that belong to multiple chunks.
-    for normal_module in self.link_output.module_table.modules.iter().filter_map(Module::as_normal)
-    {
+    for idx in &self.link_output.sorted_modules {
+      let Some(normal_module) = self.link_output.module_table[*idx].as_normal() else {
+        continue;
+      };
       if !normal_module.meta.is_included() {
         continue;
       }

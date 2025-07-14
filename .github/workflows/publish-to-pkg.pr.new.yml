@@ -79,6 +79,9 @@ jobs:
         with:
           path: packages/rolldown/artifacts
 
+      - name: Create rolldown/npm dirs
+        run: pnpm --filter rolldown exec napi create-npm-dirs
+
       - name: Move Binding Artifacts
         run: pnpm --filter rolldown artifacts
 
@@ -122,7 +125,9 @@ jobs:
           path: rolldown-version.txt
 
       - name: Canary/Nightly Versioning
-        run: node --import @oxc-node/core/register ./scripts/misc/bump-version.js ${ROLLDOWN_VERSION}
+        run: |
+          node --import @oxc-node/core/register ./scripts/misc/bump-version.js ${ROLLDOWN_VERSION}
+          pnpm --filter rolldown prepublishOnly
         env:
           ROLLDOWN_VERSION: ${{ steps.rolldown-version.outputs.content }}
 

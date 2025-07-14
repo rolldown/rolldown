@@ -6,16 +6,16 @@ use crate::side_effects::{SideEffects, glob_match_with_normalized_pattern};
 
 #[derive(Debug, Clone)]
 pub struct PackageJson {
-  /// Path to `package.json`. Contains the `package.json` filename.
-  pub path: PathBuf,
+  /// Realpath to `package.json`. Contains the `package.json` filename.
+  pub realpath: PathBuf,
   pub r#type: Option<String>,
   pub side_effects: Option<SideEffects>,
   pub version: Option<ArcStr>,
 }
 
 impl PackageJson {
-  pub fn new(path: PathBuf) -> Self {
-    Self { path, r#type: None, side_effects: None, version: None }
+  pub fn new(realpath: PathBuf) -> Self {
+    Self { realpath, r#type: None, side_effects: None, version: None }
   }
 
   #[must_use]

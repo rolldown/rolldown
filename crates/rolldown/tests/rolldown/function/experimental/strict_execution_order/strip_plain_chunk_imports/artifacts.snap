@@ -12,20 +12,15 @@ export { __esm };
 ## common.js
 
 ```js
-import { __esm } from "./chunk.js";
-
 //#region common.js
+const common = "common";
 function foo() {
 	globalThis.value = typeof globalThis.value === "number" ? globalThis.value + 1 : 0;
 }
-var common, _;
-var init_common = __esm({ "common.js"() {
-	common = "common";
-	_ = /* @__PURE__ */ foo();
-} });
+const _ = /* @__PURE__ */ foo();
 
 //#endregion
-export { _, common, init_common };
+export { _, common };
 ```
 ## main.js
 
@@ -45,7 +40,7 @@ await init_main();
 
 ```js
 import { __esm } from "./chunk.js";
-import { _, common, init_common } from "./common.js";
+import { _, common } from "./common.js";
 import nodeAssert from "node:assert";
 
 //#region page-a.js
@@ -53,7 +48,6 @@ function render() {
 	console.log(common, _);
 }
 var init_page_a = __esm({ "page-a.js"() {
-	init_common();
 	nodeAssert.strictEqual(globalThis.value, 0);
 } });
 

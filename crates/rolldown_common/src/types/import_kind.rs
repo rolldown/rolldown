@@ -19,7 +19,7 @@ pub enum ImportKind {
 
 impl ImportKind {
   pub fn is_static(&self) -> bool {
-    matches!(self, Self::Import | Self::Require | Self::AtImport | Self::UrlImport)
+    matches!(self, Self::Import | Self::Require | Self::AtImport | Self::UrlImport | Self::NewUrl)
   }
 
   pub fn is_dynamic(&self) -> bool {

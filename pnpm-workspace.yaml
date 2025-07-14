@@ -19,11 +19,12 @@ shellEmulator: true
 # Define a catalog of version ranges.
 catalog:
   '@napi-rs/wasm-runtime': '^0.2.10'
+  '@napi-rs/cli': '^3.0.0-alpha.99'
   '@oxc-node/cli': '^0.0.29'
   '@oxc-node/core': '^0.0.29'
-  '@oxc-project/runtime': '=0.76.0'
-  '@oxc-project/types': '=0.76.0'
-  'oxc-parser': '=0.76.0'
-  'oxc-transform': '=0.76.0'
+  '@oxc-project/runtime': '=0.77.0'
+  '@oxc-project/types': '=0.77.0'
+  'oxc-parser': '=0.77.0'
+  'oxc-transform': '=0.77.0'
   'tsdown': '0.12.9'
   'rolldown-plugin-dts': '^0.13.6'

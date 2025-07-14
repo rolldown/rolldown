@@ -5556,10 +5556,10 @@ expression: output
 
 # tests/rolldown/topics/new_url/nested_dirs
 
-- main-!~{000}~.js => main-BBkIkIJt.js
-- chunks/dep-!~{001}~.js => chunks/dep-COwn5G1W.js
-- chunks/foo-!~{003}~.js => chunks/foo-23jbt4VV.js
-- assets/foo-CKjbHaRM.txt
+- main-!~{000}~.js => main-DvSIyMBH.js
+- chunks/dep-!~{004}~.js => chunks/dep-hG8MVcAZ.js
+- chunks/foo-!~{001}~.js => chunks/foo-C1IWJA8i.js
+- assets/foo-BEmL3U_T.txt
 
 # tests/rolldown/topics/new_url/opt-out
 
@@ -5571,7 +5571,7 @@ expression: output
 
 # tests/rolldown/topics/new_url/should_prefer_relative
 
-- main-!~{000}~.js => main-DaLi9F1d.js
+- main-!~{000}~.js => main-Cu4rSWtb.js
 - assets/index-D25jITRo.txt
 
 # tests/rolldown/topics/new_url/template_literal_with_expression

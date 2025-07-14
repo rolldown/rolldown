@@ -334,6 +334,7 @@ export interface NapiResolveOptions {
    * AliasValue::Path(String)`
    * Create aliases to import or require certain modules more easily.
    * A trailing $ can also be added to the given object's keys to signify an exact match.
+   * Default `{}`
    */
   alias?: Record<string, Array<string | undefined | null>>
   /**
@@ -396,7 +397,7 @@ export interface NapiResolveOptions {
   /**
    * Redirect module requests when normal resolving fails.
    *
-   * Default `[]`
+   * Default `{}`
    */
   fallback?: Record<string, Array<string | undefined | null>>
   /**

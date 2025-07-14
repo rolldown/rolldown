@@ -310,7 +310,7 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
       )),
     );
 
-    let exports_len = self.ctx.linking_info.canonical_exports(false).count();
+    let has_exports = self.ctx.linking_info.canonical_exports(false).next().is_some();
 
     let export_all_externals_rec_ids = &self.ctx.linking_info.star_exports_from_external_modules;
 
@@ -375,7 +375,7 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
       }
     }
 
-    if exports_len == 0 {
+    if !has_exports {
       let mut ret = vec![decl_stmt];
       ret.extend(re_export_external_stmts.unwrap_or_default());
       return ret;
@@ -383,27 +383,28 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
 
     // construct `{ prop_name: () => returned, ... }`
     let mut arg_obj_expr = ast::ObjectExpression::dummy(self.alloc);
-    arg_obj_expr.properties.reserve_exact(exports_len);
 
-    self.ctx.linking_info.canonical_exports(false).for_each(|(export, resolved_export)| {
-      // prop_name: () => returned
-      let prop_name = export;
-      let returned = self.finalized_expr_for_symbol_ref(resolved_export.symbol_ref, false, false);
-      arg_obj_expr.properties.push(ast::ObjectPropertyKind::ObjectProperty(
-        ast::ObjectProperty {
-          key: if is_validate_identifier_name(prop_name) {
-            ast::PropertyKey::StaticIdentifier(
-              self.snippet.id_name(prop_name, SPAN).into_in(self.alloc),
-            )
-          } else {
-            ast::PropertyKey::StringLiteral(self.snippet.alloc_string_literal(prop_name, SPAN))
-          },
-          value: self.snippet.only_return_arrow_expr(returned),
-          ..ast::ObjectProperty::dummy(self.alloc)
-        }
-        .into_in(self.alloc),
-      ));
-    });
+    arg_obj_expr.properties.extend(self.ctx.linking_info.canonical_exports(false).map(
+      |(export, resolved_export)| {
+        // prop_name: () => returned
+        let prop_name = export;
+        let returned = self.finalized_expr_for_symbol_ref(resolved_export.symbol_ref, false, false);
+        ast::ObjectPropertyKind::ObjectProperty(
+          ast::ObjectProperty {
+            key: if is_validate_identifier_name(prop_name) {
+              ast::PropertyKey::StaticIdentifier(
+                self.snippet.id_name(prop_name, SPAN).into_in(self.alloc),
+              )
+            } else {
+              ast::PropertyKey::StringLiteral(self.snippet.alloc_string_literal(prop_name, SPAN))
+            },
+            value: self.snippet.only_return_arrow_expr(returned),
+            ..ast::ObjectProperty::dummy(self.alloc)
+          }
+          .into_in(self.alloc),
+        )
+      },
+    ));
 
     // construct `__export(ns_name, { prop_name: () => returned, ... })`
     let export_call_expr = self.snippet.builder.expression_call(

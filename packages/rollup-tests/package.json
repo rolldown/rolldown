@@ -17,7 +17,7 @@
   },
   "devDependencies": {
     "@types/mocha": "10.0.10",
-    "@types/node": "24.0.10",
+    "@types/node": "24.0.13",
     "@types/strip-comments": "^2.0.4",
     "source-map": "^0.7.4",
     "strip-comments": "^2.0.1",

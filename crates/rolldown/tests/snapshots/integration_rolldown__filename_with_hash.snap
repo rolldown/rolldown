@@ -3852,6 +3852,14 @@ expression: output
 - share-!~{003}~.js => share-Dt2p-BNK.js
 - share-!~{001}~.js => share-DyQhD9RN.js
 
+# tests/rolldown/code_splitting/unused-in-chunk
+
+- main-!~{000}~.js => main-6lSCOZM6.js
+- bar-!~{005}~.js => bar-BtEqOTAV.js
+- chunk-!~{001}~.js => chunk-H37MHKgK.js
+- foo-!~{007}~.js => foo-RyfnpTYd.js
+- string-!~{003}~.js => string-DcHNXTtJ.js
+
 # tests/rolldown/dce/conditional_exports
 
 - main-!~{000}~.js => main-C_Ssu_r3.js
@@ -5765,6 +5773,10 @@ expression: output
 # tests/rolldown/tree_shaking/side_effect_free_dynamic_importee
 
 - main-!~{000}~.js => main-vb0jrLmM.js
+
+# tests/rolldown/tree_shaking/unused-export-barrel-hmr-issue5235
+
+- main-!~{000}~.js => main-BW7EcPO7.js
 
 # tests/rolldown/tree_shaking/unused_dynamic_imported_chunk
 

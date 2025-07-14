@@ -1,0 +1,31 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## main.js
+
+```js
+
+// HIDDEN [rolldown:hmr]
+//#region foo.js
+var foo_exports = {};
+__export(foo_exports, {
+	foo: () => foo,
+	unused: () => unused
+});
+const foo_hot = __rolldown_runtime__.createModuleHotContext("foo.js");
+__rolldown_runtime__.registerModule("foo.js", { exports: foo_exports });
+function foo() {
+	return "foo";
+}
+
+//#endregion
+//#region entry.js
+var entry_exports = {};
+const entry_hot = __rolldown_runtime__.createModuleHotContext("entry.js");
+__rolldown_runtime__.registerModule("entry.js", { exports: entry_exports });
+console.log(foo);
+
+//#endregion
+```

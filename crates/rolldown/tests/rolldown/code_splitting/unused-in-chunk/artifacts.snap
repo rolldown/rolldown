@@ -1,0 +1,85 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## bar.js
+
+```js
+import { __export } from "./chunk.js";
+import { trim } from "./string.js";
+
+//#region bar.js
+var bar_exports = {};
+__export(bar_exports, { default: () => bar });
+const bar_hot = __rolldown_runtime__.createModuleHotContext("bar.js");
+__rolldown_runtime__.registerModule("bar.js", { exports: bar_exports });
+function bar() {
+	return trim("bar");
+}
+
+//#endregion
+export { bar as default };
+```
+## chunk.js
+
+```js
+
+export { __export, __toCommonJS, __toDynamicImportESM, __toESM };
+```
+## foo.js
+
+```js
+import { __export } from "./chunk.js";
+import { trim } from "./string.js";
+
+//#region foo.js
+var foo_exports = {};
+__export(foo_exports, { default: () => foo });
+const foo_hot = __rolldown_runtime__.createModuleHotContext("foo.js");
+__rolldown_runtime__.registerModule("foo.js", { exports: foo_exports });
+function foo() {
+	return trim("foo");
+}
+
+//#endregion
+export { foo as default };
+```
+## main.js
+
+```js
+import { __export, __toCommonJS, __toDynamicImportESM, __toESM } from "./chunk.js";
+
+// HIDDEN [rolldown:hmr]
+//#region main.js
+var main_exports = {};
+const main_hot = __rolldown_runtime__.createModuleHotContext("main.js");
+__rolldown_runtime__.registerModule("main.js", { exports: main_exports });
+const templates = {
+	foo: () => import("./foo.js"),
+	bar: () => import("./bar.js")
+};
+console.log(templates);
+
+//#endregion
+```
+## string.js
+
+```js
+import { __export } from "./chunk.js";
+
+//#region utils/string.js
+var string_exports = {};
+__export(string_exports, {
+	trim: () => trim,
+	unused: () => unused
+});
+const string_hot = __rolldown_runtime__.createModuleHotContext("utils/string.js");
+__rolldown_runtime__.registerModule("utils/string.js", { exports: string_exports });
+function trim(s) {
+	return s.trim();
+}
+
+//#endregion
+export { trim };
+```

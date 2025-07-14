@@ -133,6 +133,15 @@ pub fn deconflict_chunk_symbols(
     .for_each(|module| {
       if let Some(hmr_hot_ref) = module.hmr_hot_ref {
         renamer.add_symbol_in_root_scope(hmr_hot_ref);
+        
+        // make sure every *exported* symbol gets a canonical name. Without this, HMR-specific code paths
+        // that access those exports can panic.
+        link_output
+          .metas[module.idx]
+          .canonical_exports(false)
+          .for_each(|(_export_name, resolved_export)| {
+            renamer.add_symbol_in_root_scope(resolved_export.symbol_ref);
+          });
       }
 
       module

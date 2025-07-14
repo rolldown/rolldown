@@ -21,6 +21,7 @@ pub mod commondir;
 pub mod concat_string;
 pub mod filter_expression;
 pub mod hash_placeholder;
+pub mod index_bitset;
 pub mod index_vec_ext;
 pub mod js_regex;
 pub mod make_unique_name;

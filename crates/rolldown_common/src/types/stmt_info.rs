@@ -72,6 +72,7 @@ impl std::ops::DerefMut for StmtInfos {
 oxc_index::define_index_type! {
   #[derive(Default)]
   pub struct StmtInfoIdx = u32;
+  IMPL_RAW_CONVERSIONS = true;
 }
 
 bitflags! {

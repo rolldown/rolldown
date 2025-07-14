@@ -6,6 +6,7 @@ use rolldown_common::{
   Chunk, ChunkKind, ChunkingContext, MatchGroupTest, Module, ModuleIdx, ModuleTable,
 };
 use rolldown_error::BuildResult;
+use rolldown_utils::index_bitset::IndexBitSet;
 use rustc_hash::{FxHashMap, FxHashSet};
 
 use crate::{chunk_graph::ChunkGraph, types::linking_metadata::LinkingMetadataVec};
@@ -57,7 +58,7 @@ impl GenerateStage<'_> {
   pub async fn apply_advanced_chunks(
     &self,
     index_splitting_info: &IndexSplittingInfo,
-    module_to_assigned: &mut IndexVec<ModuleIdx, bool>,
+    module_to_assigned: &mut IndexBitSet::<ModuleIdx>,
     chunk_graph: &mut ChunkGraph,
     input_base: &ArcStr,
   ) -> BuildResult<()> {
@@ -84,7 +85,7 @@ impl GenerateStage<'_> {
         continue;
       }
 
-      if module_to_assigned[normal_module.idx] {
+      if module_to_assigned.has_bit(normal_module.idx) {
         continue;
       }
 
@@ -196,7 +197,7 @@ impl GenerateStage<'_> {
       });
       chunk_graph.chunk_table[chunk_idx].bits.union(&index_splitting_info[runtime_module_idx].bits);
       chunk_graph.add_module_to_chunk(runtime_module_idx, chunk_idx);
-      module_to_assigned[runtime_module_idx] = true;
+      module_to_assigned.set_bit(runtime_module_idx);
     }
 
     while let Some(this_module_group) = module_groups.pop() {
@@ -328,7 +329,7 @@ impl GenerateStage<'_> {
         });
         chunk_graph.chunk_table[chunk_idx].bits.union(&index_splitting_info[module_idx].bits);
         chunk_graph.add_module_to_chunk(module_idx, chunk_idx);
-        module_to_assigned[module_idx] = true;
+        module_to_assigned.set_bit(module_idx);
       });
     }
     Ok(())

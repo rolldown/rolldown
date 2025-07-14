@@ -1,16 +1,16 @@
-use oxc_index::IndexVec;
 use rolldown_common::{
   EcmaViewMeta, ExportsKind, IndexModules, Module, ModuleIdx, NormalModule,
   NormalizedBundlerOptions, RuntimeModuleBrief, StmtInfo, StmtInfoMeta, SymbolRefDb,
   TaggedSymbolRef, WrapKind,
 };
+use rolldown_utils::index_bitset::IndexBitSet;
 
 use crate::types::linking_metadata::{LinkingMetadata, LinkingMetadataVec};
 
 use super::LinkStage;
 
 struct Context<'a> {
-  pub visited_modules: &'a mut IndexVec<ModuleIdx, bool>,
+  pub visited_modules: &'a mut IndexBitSet<ModuleIdx>,
   pub linking_infos: &'a mut LinkingMetadataVec,
   pub modules: &'a IndexModules,
   pub runtime_idx: ModuleIdx,
@@ -22,10 +22,10 @@ fn wrap_module_recursively(ctx: &mut Context, target: ModuleIdx) {
   };
 
   // Only consider `NormalModule`
-  if ctx.visited_modules[target] {
+  if ctx.visited_modules.has_bit(target) {
     return;
   }
-  ctx.visited_modules[target] = true;
+  ctx.visited_modules.set_bit(target);
 
   if target == ctx.runtime_idx {
     // Runtime module should not be wrapped.
@@ -60,12 +60,12 @@ fn has_dynamic_exports_due_to_export_star(
   target: ModuleIdx,
   modules: &IndexModules,
   linking_infos: &mut LinkingMetadataVec,
-  visited_modules: &mut IndexVec<ModuleIdx, bool>,
+  visited_modules: &mut IndexBitSet<ModuleIdx>,
 ) -> bool {
-  if visited_modules[target] {
+  if visited_modules.has_bit(target) {
     return linking_infos[target].has_dynamic_exports;
   }
-  visited_modules[target] = true;
+  visited_modules.set_bit(target);
 
   let has_dynamic_exports = match &modules[target] {
     Module::Normal(module) => {
@@ -95,10 +95,10 @@ fn has_dynamic_exports_due_to_export_star(
 impl LinkStage<'_> {
   #[tracing::instrument(level = "debug", skip_all)]
   pub(super) fn wrap_modules(&mut self) {
-    let mut visited_modules_for_wrapping =
-      oxc_index::index_vec![false; self.module_table.modules.len()];
-    let mut visited_modules_for_dynamic_exports =
-      oxc_index::index_vec![false; self.module_table.modules.len()];
+    let module_len =
+      self.module_table.modules.len().try_into().expect("Too many modules, u32 overflowed.");
+    let mut visited_modules_for_wrapping = IndexBitSet::<ModuleIdx>::new(module_len);
+    let mut visited_modules_for_dynamic_exports = IndexBitSet::<ModuleIdx>::new(module_len);
 
     for module in self.module_table.modules.iter().filter_map(Module::as_normal) {
       let module_id = module.idx;

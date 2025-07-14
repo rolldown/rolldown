@@ -11,7 +11,9 @@ use rolldown_common::{
   Chunk, ChunkIdx, ChunkKind, ChunkMeta, Module, ModuleIdx, PreserveEntrySignatures,
 };
 use rolldown_error::BuildResult;
-use rolldown_utils::{BitSet, commondir, indexmap::FxIndexMap, rustc_hash::FxHashMapExt};
+use rolldown_utils::{
+  BitSet, commondir, index_bitset::IndexBitSet, indexmap::FxIndexMap, rustc_hash::FxHashMapExt,
+};
 use rustc_hash::{FxHashMap, FxHashSet};
 
 use super::{GenerateStage, chunk_ext::ChunkCreationReason};
@@ -404,8 +406,15 @@ impl GenerateStage<'_> {
       );
     });
 
-    let mut module_to_assigned: IndexVec<ModuleIdx, bool> =
-      oxc_index::index_vec![false; self.link_output.module_table.modules.len()];
+    let mut module_to_assigned = IndexBitSet::<ModuleIdx>::new(
+      self
+        .link_output
+        .module_table
+        .modules
+        .len()
+        .try_into()
+        .expect("Too many modules, u32 overflowed."),
+    );
 
     self
       .apply_advanced_chunks(index_splitting_info, &mut module_to_assigned, chunk_graph, input_base)
@@ -427,11 +436,11 @@ impl GenerateStage<'_> {
         continue;
       }
 
-      if module_to_assigned[normal_module.idx] {
+      if module_to_assigned.has_bit(normal_module.idx) {
         continue;
       }
 
-      module_to_assigned[normal_module.idx] = true;
+      module_to_assigned.set_bit(normal_module.idx);
 
       let bits = &index_splitting_info[normal_module.idx].bits;
       debug_assert!(

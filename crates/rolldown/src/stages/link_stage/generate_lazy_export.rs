@@ -34,7 +34,7 @@ impl LinkStage<'_> {
       let default_symbol_ref = module.default_export_ref;
       let is_json = matches!(module.module_type, ModuleType::Json);
       if !is_json || module.exports_kind == ExportsKind::CommonJs {
-        update_module_default_export_info(module, default_symbol_ref, 1.into());
+        update_module_default_export_info(module, default_symbol_ref, 1u32.into());
       }
       module_idx_to_exports_kind.push((module.ecma_ast_idx(), module.exports_kind, is_json));
 
@@ -71,7 +71,7 @@ impl LinkStage<'_> {
         // if json is not a ObjectExpression, we will fallback to normal esm lazy export transform
         let module = &mut self.module_table[module_idx];
         let module = module.as_normal_mut().unwrap();
-        update_module_default_export_info(module, module.default_export_ref, 1.into());
+        update_module_default_export_info(module, module.default_export_ref, 1u32.into());
       }
 
       // shadowing the previous mutable ref, to avoid reference mutable ref twice at the same time.
@@ -236,7 +236,7 @@ fn json_object_expr_to_esm(
   // update module stmts info
   // clear stmt info, since we need to split `ObjectExpression` into multiple decl, the original stmt info is invalid.
   // preserve the first one, which is `NamespaceRef`
-  let stmt_info = module.stmt_infos.drain(1.into()..);
+  let stmt_info = module.stmt_infos.drain(1u32.into()..);
   let mut all_declared_symbols =
     stmt_info.flat_map(|info| info.referenced_symbols).collect::<Vec<_>>();
   for (i, (local, exported, _)) in declaration_binding_names.iter().enumerate() {

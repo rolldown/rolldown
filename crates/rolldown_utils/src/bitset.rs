@@ -3,11 +3,12 @@ use std::fmt::{Debug, Display};
 #[derive(Clone, PartialEq, Eq, Default, Hash, PartialOrd, Ord)]
 pub struct BitSet {
   entries: Vec<u8>,
+  length: u32,
 }
 
 impl BitSet {
   pub fn new(max_bit_count: u32) -> Self {
-    Self { entries: vec![0; max_bit_count.div_ceil(8) as usize] }
+    Self { entries: vec![0; max_bit_count.div_ceil(8) as usize], length: max_bit_count }
   }
 
   pub fn has_bit(&self, bit: u32) -> bool {
@@ -20,6 +21,11 @@ impl BitSet {
 
   pub fn is_empty(&self) -> bool {
     self.entries.iter().all(|&e| e == 0)
+  }
+
+  #[expect(clippy::iter_without_into_iter)]
+  pub fn iter(&self) -> BitSetIter {
+    BitSetIter::new(self)
   }
 
   pub fn union(&mut self, other: &Self) {
@@ -60,6 +66,32 @@ impl Debug for BitSet {
     f.debug_tuple("BitSet").field(&self.to_string()).finish()
   }
 }
+
+pub struct BitSetIter<'a> {
+  bitset: &'a BitSet,
+  curr: u32
+}
+
+impl<'a> BitSetIter<'a> {
+  fn new(bitset: &'a BitSet) -> Self {
+    Self { bitset, curr: 0 }
+  }
+}
+
+impl Iterator for BitSetIter<'_> {
+  type Item = bool;
+
+  fn next(&mut self) -> Option<Self::Item> {
+    if self.curr >= self.bitset.length {
+      return None;
+    }
+
+    let val = self.bitset.has_bit(self.curr);
+    self.curr += 1;
+    Some(val)
+  }
+}
+
 
 #[cfg(test)]
 mod tests {

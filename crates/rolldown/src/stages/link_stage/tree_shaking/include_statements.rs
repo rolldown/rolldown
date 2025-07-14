@@ -10,7 +10,10 @@ use rolldown_common::{
   SymbolRef, SymbolRefDb, dynamic_import_usage::DynamicImportExportsUsage,
   side_effects::DeterminedSideEffects,
 };
-use rolldown_utils::rayon::{IntoParallelRefMutIterator, ParallelIterator};
+use rolldown_utils::{
+  index_bitset::IndexBitSet,
+  rayon::{IntoParallelRefMutIterator, ParallelIterator},
+};
 use rustc_hash::{FxHashMap, FxHashSet};
 
 use crate::{stages::link_stage::LinkStage, types::linking_metadata::LinkingMetadataVec};
@@ -18,8 +21,8 @@ use crate::{stages::link_stage::LinkStage, types::linking_metadata::LinkingMetad
 struct Context<'a> {
   modules: &'a IndexModules,
   symbols: &'a SymbolRefDb,
-  is_included_vec: &'a mut IndexVec<ModuleIdx, IndexVec<StmtInfoIdx, bool>>,
-  is_module_included_vec: &'a mut IndexVec<ModuleIdx, bool>,
+  is_included_vec: &'a mut IndexVec<ModuleIdx, IndexBitSet<StmtInfoIdx>>,
+  is_module_included_vec: &'a mut IndexBitSet<ModuleIdx>,
   tree_shaking: bool,
   runtime_id: ModuleIdx,
   metas: &'a LinkingMetadataVec,
@@ -37,19 +40,22 @@ impl LinkStage<'_> {
   #[allow(clippy::too_many_lines)]
   #[tracing::instrument(level = "debug", skip_all)]
   pub fn include_statements(&mut self) {
-    let mut is_included_vec: IndexVec<ModuleIdx, IndexVec<StmtInfoIdx, bool>> = self
+    let mut is_included_vec: IndexVec<ModuleIdx, IndexBitSet<StmtInfoIdx>> = self
       .module_table
       .modules
       .iter()
       .map(|m| {
-        m.as_normal().map_or(IndexVec::default(), |m| {
-          m.stmt_infos.iter().map(|_| false).collect::<IndexVec<StmtInfoIdx, _>>()
+        m.as_normal().map_or(IndexBitSet::default(), |m| {
+          IndexBitSet::<StmtInfoIdx>::new(
+            m.stmt_infos.len().try_into().expect("Too many statements, u32 overflowed."),
+          )
         })
       })
       .collect::<IndexVec<ModuleIdx, _>>();
     let mut used_symbol_refs = FxHashSet::default();
-    let mut is_module_included_vec: IndexVec<ModuleIdx, bool> =
-      oxc_index::index_vec![false; self.module_table.modules.len()];
+    let mut is_module_included_vec = IndexBitSet::<ModuleIdx>::new(
+      self.module_table.modules.len().try_into().expect("Too many modules, u32 overflowed."),
+    );
     let context = &mut Context {
       modules: &self.module_table.modules,
       symbols: &self.symbols,
@@ -159,9 +165,9 @@ impl LinkStage<'_> {
 
     self.module_table.modules.par_iter_mut().filter_map(Module::as_normal_mut).for_each(|module| {
       let idx = module.idx;
-      module.meta.set(EcmaViewMeta::INCLUDED, is_module_included_vec[idx]);
+      module.meta.set(EcmaViewMeta::INCLUDED, is_module_included_vec.has_bit(idx));
       is_included_vec[module.idx].iter_enumerated().for_each(|(stmt_info_id, is_included)| {
-        module.stmt_infos.get_mut(stmt_info_id).is_included = *is_included;
+        module.stmt_infos.get_mut(stmt_info_id).is_included = is_included;
       });
 
       // The hmr need to create module namespace object to store exports.
@@ -291,7 +297,7 @@ impl LinkStage<'_> {
   fn is_dynamic_entry_alive(
     &self,
     item: &EntryPoint,
-    is_stmt_included_vec: &IndexVec<ModuleIdx, IndexVec<StmtInfoIdx, bool>>,
+    is_stmt_included_vec: &IndexVec<ModuleIdx, IndexBitSet<StmtInfoIdx>>,
   ) -> Option<Vec<(ModuleIdx, Vec<ImportRecordIdx>)>> {
     let mut ret = vec![];
     let is_lived = match item.kind {
@@ -319,7 +325,7 @@ impl LinkStage<'_> {
               }
               ret
             });
-          let is_stmt_included = is_stmt_included_vec[*module_idx][*stmt_idx];
+          let is_stmt_included = is_stmt_included_vec[*module_idx].has_bit(*stmt_idx);
           let lived = is_stmt_included
             && (!is_dynamic_imported_module_exports_unused || !all_dead_pure_dynamic_import);
 
@@ -336,11 +342,11 @@ impl LinkStage<'_> {
 
 /// if no export is used, and the module has no side effects, the module should not be included
 fn include_module(ctx: &mut Context, module: &NormalModule) {
-  if ctx.is_module_included_vec[module.idx] {
+  if ctx.is_module_included_vec.has_bit(module.idx) {
     return;
   }
 
-  ctx.is_module_included_vec[module.idx] = true;
+  ctx.is_module_included_vec.set_bit(module.idx);
 
   if module.idx == ctx.runtime_id {
     // runtime module has no side effects and it's statements should be included
@@ -482,16 +488,18 @@ fn include_symbol(ctx: &mut Context, symbol_ref: SymbolRef) {
 
 #[track_caller]
 fn include_statement(ctx: &mut Context, module: &NormalModule, stmt_info_id: StmtInfoIdx) {
-  let is_included = &mut ctx.is_included_vec[module.idx][stmt_info_id];
+  let is_included_for_module = &mut ctx.is_included_vec[module.idx];
 
-  if *is_included {
+  let is_included = is_included_for_module.has_bit(stmt_info_id);
+
+  if is_included {
     return;
   }
 
   let stmt_info = module.stmt_infos.get(stmt_info_id);
 
   // include the statement itself
-  *is_included = true;
+  is_included_for_module.set_bit(stmt_info_id);
 
   // FIXME: bailout for require() import for now
   // it is fine for now, since webpack did not support it either

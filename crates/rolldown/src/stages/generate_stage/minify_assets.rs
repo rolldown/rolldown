@@ -26,8 +26,10 @@ impl GenerateStage<'_> {
               comments: CommentOptions {
                 normal: false,
                 jsdoc: false,
-                annotation: false,
-                legal: if matches!(options.legal_comments, LegalComments::Inline) {
+                annotation: !minify_options.remove_whitespace,
+                legal: if matches!(options.legal_comments, LegalComments::Inline)
+                  || !minify_options.remove_whitespace
+                {
                   codegen::LegalComment::Inline
                 } else {
                   codegen::LegalComment::None

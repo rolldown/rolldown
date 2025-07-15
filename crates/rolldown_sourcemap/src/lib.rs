@@ -2,7 +2,6 @@ mod source;
 mod source_joiner;
 
 use oxc_sourcemap::Token;
-use rolldown_utils::rayon::{IntoParallelRefIterator, ParallelIterator};
 use rustc_hash::FxHashMap;
 
 pub use oxc_sourcemap::SourceMapBuilder;
@@ -18,7 +17,7 @@ pub fn collapse_sourcemaps(mut sourcemap_chain: Vec<&SourceMap>) -> SourceMap {
   let first_map = sourcemap_chain.first().expect("sourcemap_chain should not be empty");
 
   let sourcemap_and_lookup_table = sourcemap_chain
-    .par_iter()
+    .iter()
     .map(|sourcemap| (sourcemap, sourcemap.generate_lookup_table()))
     .collect::<Vec<_>>();
 
@@ -31,7 +30,7 @@ pub fn collapse_sourcemaps(mut sourcemap_chain: Vec<&SourceMap>) -> SourceMap {
     FxHashMap::from_iter(first_map.get_sources().enumerate().map(|(i, source)| (source, i as u32)));
 
   let tokens = source_view_tokens
-    .par_iter()
+    .iter()
     .filter_map(|token| {
       let original_token = sourcemap_and_lookup_table.iter().rev().try_fold(
         *token,

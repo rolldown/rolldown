@@ -414,12 +414,10 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
   fn process_global_require_call(&mut self, expr: &ast::CallExpression<'ast>) -> bool {
     let (value, span) = match expr.arguments.first() {
       Some(ast::Argument::StringLiteral(request)) => (request.value, request.span),
-      Some(ast::Argument::TemplateLiteral(request)) if request.is_no_substitution_template() => {
-        match request.quasi() {
-          Some(value) => (value, request.span),
-          None => return false,
-        }
-      }
+      Some(ast::Argument::TemplateLiteral(request)) => match request.single_quasi() {
+        Some(value) => (value, request.span),
+        None => return false,
+      },
       _ => return false,
     };
     let mut init_meta = if span.is_empty() {

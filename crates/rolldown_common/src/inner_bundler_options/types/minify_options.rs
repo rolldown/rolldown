@@ -102,6 +102,7 @@ impl MinifyOptionsObject {
         target: option.transform_options.es_target,
         drop_debugger: false,
         drop_console: false,
+        unused: oxc::minifier::CompressOptionsUnused::Remove,
         keep_names: CompressOptionsKeepNames { function: keep_names, class: keep_names },
         treeshake: TreeShakeOptions::from(&option.treeshake),
       })

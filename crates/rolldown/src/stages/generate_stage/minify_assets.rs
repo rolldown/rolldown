@@ -1,4 +1,4 @@
-use oxc::codegen::{CodegenOptions, CommentOptions};
+use oxc::codegen::{self, CodegenOptions, CommentOptions};
 use rolldown_common::{LegalComments, MinifyOptions, NormalizedBundlerOptions};
 use rolldown_ecmascript::EcmaCompiler;
 use rolldown_error::BuildResult;
@@ -21,6 +21,21 @@ impl GenerateStage<'_> {
         }
         match asset.meta {
           rolldown_common::InstantiationKind::Ecma(_) => {
+            let codegen_options = CodegenOptions {
+              minify: minify_options.remove_whitespace,
+              comments: CommentOptions {
+                normal: false,
+                jsdoc: false,
+                annotation: false,
+                legal: if matches!(options.legal_comments, LegalComments::Inline) {
+                  codegen::LegalComment::Inline
+                } else {
+                  codegen::LegalComment::None
+                },
+              },
+              ..CodegenOptions::default()
+            };
+
             // TODO: Do we need to ensure `asset.filename` to be absolute path?
             let (minified_content, new_map) = EcmaCompiler::minify(
               asset.content.try_as_inner_str()?,
@@ -28,15 +43,7 @@ impl GenerateStage<'_> {
               &asset.filename,
               minify_options.to_oxc_minifier_options(options),
               minify_options.compress,
-              if minify_options.remove_whitespace {
-                CodegenOptions::minify()
-              } else {
-                CodegenOptions {
-                  comments: CommentOptions { normal: false, ..CommentOptions::default() },
-                  ..CodegenOptions::default()
-                }
-              },
-              matches!(options.legal_comments, LegalComments::Inline),
+              codegen_options,
             );
             asset.content = minified_content.into();
             match (&asset.map, &new_map) {

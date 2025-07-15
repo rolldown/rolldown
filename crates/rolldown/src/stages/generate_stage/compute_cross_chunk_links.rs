@@ -459,10 +459,13 @@ impl GenerateStage<'_> {
         }
         for (chunk_export, _predefined_names) in index_chunk_exported_symbols[chunk_id]
           .iter()
-          .sorted_by_cached_key(|(symbol_ref, _predefined_names)| {
-            // same deconflict order in deconflict_chunk_symbols.rs
+          .sorted_unstable_by_key(|(symbol_ref, _predefined_names)| {
+            let symbol_owner = &self.link_output.module_table[symbol_ref.owner];
+            let symbol_name = symbol_ref.name(&self.link_output.symbol_db);
+            // `Reverse(symbol_owner.exec_order()` is used to follow the same deconflict order as in
             // https://github.com/rolldown/rolldown/blob/504ea76c00563eb7db7a49c2b6e04b2fbe61bdc1/crates/rolldown/src/utils/chunk/deconflict_chunk_symbols.rs?plain=1#L86-L102
-            Reverse::<u32>(self.link_output.module_table[symbol_ref.owner].exec_order())
+            // Then we sort by the symbol name to ensure a stable order within the same module.
+            (Reverse(symbol_owner.exec_order()), symbol_name)
           })
         {
           let export_ref = self.link_output.symbol_db.canonical_ref_for(*chunk_export);

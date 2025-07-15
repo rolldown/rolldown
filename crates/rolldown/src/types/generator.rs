@@ -40,7 +40,7 @@ impl GenerateContext<'_> {
     let symbol_db = &self.link_output.symbol_db;
     if !symbol_ref.is_declared_in_root_scope(symbol_db) {
       // No fancy things on none root scope symbols
-      return symbol_db.canonical_name_for(symbol_ref, canonical_names).to_string();
+      return self.canonical_name_for(canonical_names, symbol_ref).to_string();
     }
 
     let canonical_ref = symbol_db.canonical_ref_for(symbol_ref);
@@ -79,11 +79,26 @@ impl GenerateContext<'_> {
             .require_binding_names_for_other_chunks[&chunk_idx_of_canonical_symbol];
           rolldown_utils::ecmascript::property_access_str(require_binding, exported_name)
         } else {
-          symbol_db.canonical_name_for(canonical_ref, canonical_names).to_string()
+          self.canonical_name_for(canonical_names, canonical_ref).to_string()
         }
       }
-      _ => symbol_db.canonical_name_for(canonical_ref, canonical_names).to_string(),
+      _ => self.canonical_name_for(canonical_names, canonical_ref).to_string(),
     }
+  }
+
+  fn canonical_name_for<'name>(
+    &self,
+    canonical_names: &'name FxHashMap<SymbolRef, Rstr>,
+    symbol: SymbolRef,
+  ) -> &'name Rstr {
+    let symbol_db = &self.link_output.symbol_db;
+    symbol_db.canonical_name_for(symbol, canonical_names).unwrap_or_else(|| {
+      panic!(
+        "canonical name not found for {symbol:?}, original_name: {:?} in module {:?}",
+        symbol.name(symbol_db),
+        self.link_output.module_table.get(symbol.owner).map_or("unknown", |module| module.id())
+      );
+    })
   }
 }
 

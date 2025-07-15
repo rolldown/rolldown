@@ -210,14 +210,9 @@ impl SymbolRefDb {
     &self,
     refer: SymbolRef,
     canonical_names: &'name FxHashMap<SymbolRef, Rstr>,
-  ) -> &'name Rstr {
+  ) -> Option<&'name Rstr> {
     let canonical_ref = self.canonical_ref_for(refer);
-    canonical_names.get(&canonical_ref).unwrap_or_else(|| {
-      panic!(
-        "canonical name not found for {canonical_ref:?}, original_name: {:?}",
-        refer.name(self)
-      );
-    })
+    canonical_names.get(&canonical_ref)
   }
 
   pub fn get(&self, refer: SymbolRef) -> &SymbolRefDataClassic {

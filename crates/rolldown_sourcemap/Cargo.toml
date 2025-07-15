@@ -20,6 +20,7 @@ doctest = false
 memchr = { workspace = true }
 oxc = { workspace = true }
 oxc_sourcemap = { workspace = true }
+rolldown_utils = { workspace = true }
 rustc-hash = { workspace = true }
 
 [dev-dependencies]

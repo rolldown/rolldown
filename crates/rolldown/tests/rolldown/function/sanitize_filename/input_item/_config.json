@@ -1,0 +1,11 @@
+{
+  "config": {
+    "input": [
+      {
+        "name": "+main",
+        "import": "./+main.js"
+      }
+    ]
+  },
+  "snapshot": false
+}

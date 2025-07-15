@@ -167,7 +167,8 @@ impl<'a> GenerateStage<'a> {
       let sanitize_filename = self.options.sanitize_filename.clone();
       async move {
         if let Some(name) = &chunk.name {
-          return anyhow::Ok((name.clone(), name.clone()));
+          let name = sanitize_filename.call(name).await?;
+          return anyhow::Ok((name.clone(), name));
         }
         match chunk.kind {
           ChunkKind::EntryPoint { module: entry_module_id, meta, .. } => {

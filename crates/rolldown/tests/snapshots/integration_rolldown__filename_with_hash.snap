@@ -4529,6 +4529,10 @@ expression: output
 
 - main-!~{000}~.js => main-B6-pEDQ-.js
 
+# tests/rolldown/function/sanitize_filename/input_item
+
+- _main-!~{000}~.js => _main-BM70Q1_h.js
+
 # tests/rolldown/function/shim_missing_exports/basic
 
 - main-!~{000}~.js => main-CtDOBbCK.js

@@ -2855,6 +2855,13 @@ dependencies = [
 ]
 
 [[package]]
+name = "rolldown_plugin_chunk_import_map"
+version = "0.1.0"
+dependencies = [
+ "rolldown_plugin",
+]
+
+[[package]]
 name = "rolldown_plugin_data_uri"
 version = "0.1.0"
 dependencies = [

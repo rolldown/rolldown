@@ -22,6 +22,8 @@ impl From<BindingExperimentalOptions> for rolldown_common::ExperimentalOptions {
       hmr: value.hmr.map(Into::into),
       attach_debug_info: value.attach_debug_info.map(Into::into),
       chunk_modules_order: value.chunk_modules_order.map(Into::into),
+      // TODO: binding
+      on_demand_wrapping: None,
     }
   }
 }

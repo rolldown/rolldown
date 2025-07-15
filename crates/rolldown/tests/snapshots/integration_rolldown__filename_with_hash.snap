@@ -4074,9 +4074,19 @@ expression: output
 - dynamic-!~{003}~.js => dynamic-DSCFIWqq.js
 - read-!~{001}~.js => read-C1QSWzqi.js
 
+# tests/rolldown/function/experimental/strict_execution_order/issue_4782
+
+- main-!~{000}~.js => main-BxP4-wPl.js
+
 # tests/rolldown/function/experimental/strict_execution_order/issue_4920
 
 - main-!~{000}~.js => main-D_6630tm.js
+
+# tests/rolldown/function/experimental/strict_execution_order/on_demand_wrapping
+
+- dynamic-!~{001}~.js => dynamic-Dcip84AS.js
+- main-!~{000}~.js => main-DNATrWyE.js
+- dynamic-!~{002}~.js => dynamic-CtvQ-3Wv.js
 
 # tests/rolldown/function/experimental/strict_execution_order/remove_unused_no_side_effect_module
 

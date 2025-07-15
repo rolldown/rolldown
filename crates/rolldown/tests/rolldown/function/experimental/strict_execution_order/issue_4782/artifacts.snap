@@ -1,0 +1,67 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## main.js
+
+```js
+
+//#region dep-a.js
+var require_dep_a = __commonJS({ "dep-a.js"(exports, module) {
+	const sideEffect$1 = {};
+	globalThis.sideEffect = {};
+	module.exports = sideEffect$1;
+} });
+
+//#endregion
+//#region dep-b.js
+var init_dep_b = __esm({ "dep-b.js"() {
+	sideEffect.touched = true;
+} });
+
+//#endregion
+//#region main.js
+var import_dep_a;
+var init_main = __esm({ "main.js"() {
+	import_dep_a = __toESM(require_dep_a());
+	init_dep_b();
+} });
+
+//#endregion
+init_main();
+```
+---
+
+Variant: (on_demand_wrapping: true)
+
+# Assets
+
+## main.js
+
+```js
+
+//#region dep-a.js
+var require_dep_a = __commonJS({ "dep-a.js"(exports, module) {
+	const sideEffect$1 = {};
+	globalThis.sideEffect = {};
+	module.exports = sideEffect$1;
+} });
+
+//#endregion
+//#region dep-b.js
+var init_dep_b = __esm({ "dep-b.js"() {
+	sideEffect.touched = true;
+} });
+
+//#endregion
+//#region main.js
+var import_dep_a;
+var init_main = __esm({ "main.js"() {
+	import_dep_a = __toESM(require_dep_a());
+	init_dep_b();
+} });
+
+//#endregion
+init_main();
+```

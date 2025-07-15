@@ -1,7 +1,8 @@
 use std::fmt::Display;
 
 use rolldown_common::{
-  BundlerOptions, OutputExports, OutputFormat, PreserveEntrySignatures, TreeshakeOptions,
+  BundlerOptions, ExperimentalOptions, OutputExports, OutputFormat, PreserveEntrySignatures,
+  TreeshakeOptions,
 };
 use schemars::JsonSchema;
 use serde::Deserialize;
@@ -20,6 +21,7 @@ pub struct ConfigVariant {
   pub preserve_entry_signatures: Option<PreserveEntrySignatures>,
   pub treeshake: Option<TreeshakeOptions>,
   pub minify_internal_exports: Option<bool>,
+  pub on_demand_wrapping: Option<bool>,
   // --- non-bundler options are start with `_`
   // Whether to include the output in the snapshot for this config variant.
   #[serde(rename = "_snapshot")]
@@ -60,6 +62,12 @@ impl ConfigVariant {
     if let Some(minify_internal_exports) = &self.minify_internal_exports {
       config.minify_internal_exports = Some(*minify_internal_exports);
     }
+    if let Some(on_demand_wrapping) = &self.on_demand_wrapping {
+      config.experimental = Some(ExperimentalOptions {
+        on_demand_wrapping: Some(*on_demand_wrapping),
+        ..config.experimental.unwrap_or_default()
+      });
+    }
     config
   }
 }
@@ -90,6 +98,9 @@ impl Display for ConfigVariant {
     }
     if let Some(treeshake) = &self.treeshake {
       fields.push(format!("treeshake: {treeshake:?}"));
+    }
+    if let Some(on_demand_wrapping) = &self.on_demand_wrapping {
+      fields.push(format!("on_demand_wrapping: {on_demand_wrapping:?}"));
     }
     fields.sort();
     if fields.is_empty() { write!(f, "()") } else { write!(f, "({})", fields.join(", ")) }

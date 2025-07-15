@@ -77,3 +77,28 @@ var init_main = __esm({ "main.js"() {
 //#endregion
 init_main();
 ```
+---
+
+Variant: (on_demand_wrapping: true, strict_execution_order: true)
+
+# Assets
+
+## main.js
+
+```js
+import nodeAssert from "node:assert";
+
+
+//#region dep.js
+const value$1 = "";
+
+//#endregion
+//#region lib-foo.js
+const value = "foo" + value$1;
+
+//#endregion
+//#region main.js
+nodeAssert.equal(value, "foo");
+
+//#endregion
+```

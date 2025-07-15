@@ -50,7 +50,13 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
   }
 
   pub fn canonical_name_for(&self, symbol: SymbolRef) -> &'me Rstr {
-    self.ctx.symbol_db.canonical_name_for(symbol, self.ctx.canonical_names)
+    self.ctx.symbol_db.canonical_name_for(symbol, self.ctx.canonical_names).unwrap_or_else(|| {
+      panic!(
+        "canonical name not found for {symbol:?}, original_name: {:?} in module {:?}",
+        symbol.name(self.ctx.symbol_db),
+        self.ctx.modules.get(symbol.owner).map_or("unknown", |module| module.id())
+      );
+    })
   }
 
   pub fn canonical_name_for_runtime(&self, name: &str) -> &Rstr {

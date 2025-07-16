@@ -24,6 +24,7 @@ pub struct ExperimentalOptions {
   pub hmr: Option<HmrOptions>,
   pub attach_debug_info: Option<AttachDebugInfo>,
   pub chunk_modules_order: Option<ChunkModulesOrderBy>,
+  pub on_demand_wrapping: Option<bool>,
 }
 
 impl ExperimentalOptions {
@@ -33,6 +34,10 @@ impl ExperimentalOptions {
 
   pub fn is_disable_live_bindings_enabled(&self) -> bool {
     self.disable_live_bindings.unwrap_or(false)
+  }
+
+  pub fn is_on_demand_wrapping_enabled(&self) -> bool {
+    self.on_demand_wrapping.unwrap_or(false)
   }
 
   #[inline]

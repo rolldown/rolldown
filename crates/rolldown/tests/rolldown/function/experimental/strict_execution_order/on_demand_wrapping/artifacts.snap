@@ -1,0 +1,60 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## dynamic.js
+
+```js
+import { require_dynamic } from "./dynamic2.js";
+
+export default require_dynamic();
+
+```
+## dynamic2.js
+
+```js
+
+//#region dynamic.js
+var require_dynamic = __commonJS({ "dynamic.js"(exports, module) {
+	module.exports = 1e3;
+	globalThis.a = 1e3;
+} });
+
+//#endregion
+export { __esm, __toESM, require_dynamic };
+```
+## main.js
+
+```js
+import { __esm, __toESM, require_dynamic } from "./dynamic2.js";
+import { strictEqual } from "node:assert";
+
+//#region sideeffects.js
+var init_sideeffects = __esm({ "sideeffects.js"() {
+	globalThis.a = 2;
+} });
+
+//#endregion
+//#region esm.js
+var import_dynamic, a;
+var init_esm = __esm({ "esm.js"() {
+	import_dynamic = __toESM(require_dynamic());
+	init_sideeffects();
+	a = globalThis.a;
+	strictEqual(a, 2);
+} });
+
+//#endregion
+//#region cjs.js
+init_esm();
+function foo() {
+	return 100;
+}
+
+//#endregion
+//#region main.js
+console.log(`mod.foo: `, foo);
+
+//#endregion
+```

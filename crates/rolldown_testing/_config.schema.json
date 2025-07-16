@@ -851,6 +851,12 @@
               "type": "null"
             }
           ]
+        },
+        "onDemandWrapping": {
+          "type": [
+            "boolean",
+            "null"
+          ]
         }
       },
       "additionalProperties": false
@@ -1376,6 +1382,12 @@
           ]
         },
         "minifyInternalExports": {
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
+        "onDemandWrapping": {
           "type": [
             "boolean",
             "null"

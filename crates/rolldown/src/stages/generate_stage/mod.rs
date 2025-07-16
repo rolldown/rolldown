@@ -44,6 +44,7 @@ mod chunk_ext;
 mod code_splitting;
 mod compute_cross_chunk_links;
 mod minify_assets;
+mod on_demand_wrapping;
 mod render_chunk_to_assets;
 
 pub struct GenerateStage<'a> {
@@ -72,6 +73,9 @@ impl<'a> GenerateStage<'a> {
     }
 
     self.compute_cross_chunk_links(&mut chunk_graph);
+
+    self.on_demand_wrapping(&mut chunk_graph);
+
     self.trace_action_chunks_infos(&chunk_graph);
 
     let index_chunk_id_to_name =

@@ -99,6 +99,27 @@ impl ScanStageCache {
         scan_stage_output.symbol_ref_db.local_db_mut(new_idx),
       );
     }
+
+    // merge entries
+    for entry_point in scan_stage_output.entry_points {
+      if let Some(old_entry_point) = cache
+        .entry_points
+        .iter_mut()
+        .find(|old_entry| old_entry.kind == entry_point.kind && old_entry.id == entry_point.id)
+      {
+        let removed_module_idxs = entry_point
+          .related_stmt_infos
+          .iter()
+          .map(|(module_idx, _)| *module_idx)
+          .collect::<FxHashSet<_>>();
+        _ = old_entry_point
+          .related_stmt_infos
+          .extract_if(.., |(module_idx, _stmt_info_idx)| removed_module_idxs.contains(module_idx));
+        old_entry_point.related_stmt_infos.extend(entry_point.related_stmt_infos);
+      } else {
+        cache.entry_points.push(entry_point);
+      }
+    }
   }
 
   /// # Panic

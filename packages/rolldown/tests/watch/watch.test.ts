@@ -315,6 +315,32 @@ test.sequential('watch skipWrite', async () => {
   await watcher.close()
 })
 
+test.sequential('#5260', async () => {
+  createTestWithMultiFiles('issue-5260', {
+    'main.js':`import './foo.js'`,
+    'foo.js': `console.log('foo')`
+  });
+  const cwd = path.join(import.meta.dirname, 'temp', 'issue-5260');
+  const watcher = watch({
+    cwd,
+    input: 'main.js',
+    watch: {
+      buildDelay: 50,
+    },
+    experimental: {
+      incrementalBuild: true
+    }
+  })
+  await waitBuildFinished(watcher)
+
+  watcher.clear('event')
+
+  fs.writeFileSync(path.join(cwd, 'main.js'), `import('./foo.js')`)
+
+  await waitBuildFinished(watcher)
+  await watcher.close()
+})
+
 test.sequential('watch buildDelay', async () => {
   const { input, output } = await createTestInputAndOutput('watch-buildDelay')
   const watcher = watch({
@@ -661,6 +687,15 @@ async function createTestInputAndOutput(dirname: string, content?: string) {
   const outputDir = path.join(dir, './dist')
   const output = path.join(outputDir, 'main.js')
   return { input, output, dir, outputDir }
+}
+
+async function createTestWithMultiFiles(dirname: string, files: Record<string, string>) {
+  const dir = path.join(import.meta.dirname, 'temp', dirname)
+  fs.mkdirSync(dir, { recursive: true })
+  for (const [fileName, content] of Object.entries(files)) {
+    const filePath = path.join(dir, fileName)
+    fs.writeFileSync(filePath, content)
+  }
 }
 
 async function waitBuildFinished(

@@ -82,6 +82,12 @@ export class WatcherEmitter {
     return this;
   }
 
+  clear(event: WatcherEvent): void {
+    if (this.listeners.has(event)) {
+      this.listeners.delete(event);
+    }
+  }
+
   async onEvent(event: BindingWatcherEvent): Promise<void> {
     const listeners = this.listeners.get(event.eventKind() as WatcherEvent);
     if (listeners) {

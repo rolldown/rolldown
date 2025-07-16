@@ -246,6 +246,7 @@ impl<'me, 'ast: 'me> Visit<'ast> for AstScanner<'me, 'ast> {
   fn visit_class(&mut self, it: &ast::Class<'ast>) {
     let previous_class_decl_id = self.cur_class_decl.take();
     self.cur_class_decl = self.get_class_id(it);
+    self.current_stmt_info.meta.insert(StmtInfoMeta::ClassDecl);
     walk::walk_class(self, it);
     self.cur_class_decl = previous_class_decl_id;
   }
@@ -266,35 +267,30 @@ impl<'me, 'ast: 'me> Visit<'ast> for AstScanner<'me, 'ast> {
     self.is_nested_this_inside_class = pre_is_nested_this_inside_class;
   }
 
-  fn visit_declaration(&mut self, it: &ast::Declaration<'ast>) {
-    match it {
-      ast::Declaration::VariableDeclaration(decl) => match decl.declarations.as_slice() {
-        [decl] => {
-          if let (BindingPatternKind::BindingIdentifier(_), Some(init)) =
-            (&decl.id.kind, &decl.init)
-          {
-            match init {
-              ast::Expression::ClassExpression(_) => {
-                self.current_stmt_info.meta.insert(StmtInfoMeta::ClassExpr);
-              }
-              ast::Expression::FunctionExpression(_) => {
-                self.current_stmt_info.meta.insert(StmtInfoMeta::FnExpr);
-              }
-              _ => {}
+  fn visit_variable_declaration(&mut self, decl: &ast::VariableDeclaration<'ast>) {
+    match decl.declarations.as_slice() {
+      [decl] => {
+        if let (BindingPatternKind::BindingIdentifier(_), Some(init)) = (&decl.id.kind, &decl.init)
+        {
+          match init {
+            ast::Expression::ClassExpression(_) => {
+              self.current_stmt_info.meta.insert(StmtInfoMeta::ClassExpr);
             }
+            ast::Expression::FunctionExpression(_) => {
+              self.current_stmt_info.meta.insert(StmtInfoMeta::FnExpr);
+            }
+            _ => {}
           }
         }
-        _ => {}
-      },
-      ast::Declaration::FunctionDeclaration(_) => {
-        self.current_stmt_info.meta.insert(StmtInfoMeta::FnDecl);
-      }
-      ast::Declaration::ClassDeclaration(_) => {
-        self.current_stmt_info.meta.insert(StmtInfoMeta::ClassDecl);
       }
       _ => {}
     }
-    walk::walk_declaration(self, it);
+    walk::walk_variable_declaration(self, decl);
+  }
+
+  fn visit_function(&mut self, it: &ast::Function<'ast>, flags: oxc::semantic::ScopeFlags) {
+    self.current_stmt_info.meta.insert(StmtInfoMeta::FnDecl);
+    walk::walk_function(self, it, flags);
   }
 
   fn visit_call_expression(&mut self, it: &ast::CallExpression<'ast>) {

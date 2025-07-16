@@ -169,6 +169,7 @@ export interface InputOptions {
      * > You shouldn't use `full` in the production build.
      */
     attachDebugInfo?: AttachDebugOptions;
+    chunkImportMap?: boolean;
     onDemandWrapping?: boolean;
     /**
      * Required to be used with `watch` mode.

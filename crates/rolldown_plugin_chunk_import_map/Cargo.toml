@@ -8,4 +8,8 @@ license = "MIT"
 doctest = false
 
 [dependencies]
+arcstr = { workspace = true }
 rolldown_plugin = { workspace = true }
+rolldown_utils = { workspace = true }
+rustc-hash = { workspace = true }
+xxhash-rust = { workspace = true, features = ["xxh3"] }

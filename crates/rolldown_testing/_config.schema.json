@@ -852,6 +852,12 @@
             }
           ]
         },
+        "chunkImportMap": {
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
         "onDemandWrapping": {
           "type": [
             "boolean",

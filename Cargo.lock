@@ -2593,6 +2593,7 @@ dependencies = [
  "rolldown_error",
  "rolldown_fs",
  "rolldown_plugin",
+ "rolldown_plugin_chunk_import_map",
  "rolldown_plugin_data_uri",
  "rolldown_plugin_hmr",
  "rolldown_resolver",
@@ -2858,7 +2859,11 @@ dependencies = [
 name = "rolldown_plugin_chunk_import_map"
 version = "0.1.0"
 dependencies = [
+ "arcstr",
  "rolldown_plugin",
+ "rolldown_utils",
+ "rustc-hash",
+ "xxhash-rust",
 ]
 
 [[package]]

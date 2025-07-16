@@ -1466,6 +1466,7 @@ export interface BindingExperimentalOptions {
   hmr?: BindingExperimentalHmrOptions
   attachDebugInfo?: BindingAttachDebugInfo
   chunkModulesOrder?: BindingChunkModuleOrderBy
+  onDemandWrapping?: boolean
 }
 
 export interface BindingFilterToken {

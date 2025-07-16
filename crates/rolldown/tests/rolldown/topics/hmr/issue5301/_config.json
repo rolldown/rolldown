@@ -1,0 +1,15 @@
+{
+  "config": {
+    "experimental": {
+      "hmr": {}
+    },
+    "advancedChunks": {
+      "groups": [
+        {
+          "name": "foo",
+          "test": "foo(?:_\\w+)?\\.js"
+        }
+      ]
+    }
+  }
+}

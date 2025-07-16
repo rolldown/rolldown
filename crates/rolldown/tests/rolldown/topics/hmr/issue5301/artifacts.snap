@@ -1,0 +1,60 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## foo.js
+
+```js
+import { __esm, __export } from "./rolldown-runtime.js";
+
+//#region foo_inner.js
+var foo_inner_exports = {};
+__export(foo_inner_exports, { default: () => foo_inner_default });
+var foo_inner_hot, foo_inner_default;
+var init_foo_inner = __esm({ "foo_inner.js"() {
+	foo_inner_hot = __rolldown_runtime__.createModuleHotContext("foo_inner.js");
+	__rolldown_runtime__.registerModule("foo_inner.js", { exports: foo_inner_exports });
+	foo_inner_default = { foo: 1 };
+} });
+
+//#endregion
+//#region foo.js
+var foo_exports = {};
+var foo_hot;
+var init_foo = __esm({ "foo.js"() {
+	init_foo_inner();
+	foo_hot = __rolldown_runtime__.createModuleHotContext("foo.js");
+	__rolldown_runtime__.registerModule("foo.js", { exports: foo_exports });
+	console.log(foo_inner_default);
+} });
+
+//#endregion
+export { init_foo };
+```
+## main.js
+
+```js
+import { __esm, __export, __toCommonJS, __toDynamicImportESM, __toESM } from "./rolldown-runtime.js";
+import { init_foo } from "./foo.js";
+
+// HIDDEN [rolldown:hmr]
+//#region main.js
+var main_exports = {};
+var main_hot;
+var init_main = __esm({ "main.js"() {
+	init_rolldown_hmr();
+	init_foo();
+	main_hot = __rolldown_runtime__.createModuleHotContext("main.js");
+	__rolldown_runtime__.registerModule("main.js", { exports: main_exports });
+} });
+
+//#endregion
+init_main();
+```
+## rolldown-runtime.js
+
+```js
+
+export { __esm, __export, __toCommonJS, __toDynamicImportESM, __toESM };
+```

@@ -8,12 +8,31 @@ source: crates/rolldown_testing/src/integration_test.rs
 ```js
 
 // HIDDEN [rolldown:hmr]
+//#region exist-dep-cjs.js
+var require_exist_dep_cjs = __commonJS({ "exist-dep-cjs.js"(exports, module) {
+	const exist_dep_cjs_hot = __rolldown_runtime__.createModuleHotContext("exist-dep-cjs.js");
+	__rolldown_runtime__.registerModule("exist-dep-cjs.js", module);
+	exports.value = "exist-cjs";
+} });
+
+//#endregion
+//#region exist-dep-esm.js
+var exist_dep_esm_exports = {};
+__export(exist_dep_esm_exports, { value: () => value });
+const exist_dep_esm_hot = __rolldown_runtime__.createModuleHotContext("exist-dep-esm.js");
+__rolldown_runtime__.registerModule("exist-dep-esm.js", { exports: exist_dep_esm_exports });
+const value = "exist-esm";
+
+//#endregion
 //#region hmr.js
 var hmr_exports = {};
+var import_exist_dep_cjs = __toESM(require_exist_dep_cjs());
 const hmr_hot = __rolldown_runtime__.createModuleHotContext("hmr.js");
 __rolldown_runtime__.registerModule("hmr.js", { exports: hmr_exports });
 hmr_hot.accept((mod) => {
-	if (mod) console.log(".hmr", mod.foo);
+	if (mod) {
+		console.log(".hmr", mod.foo);
+	}
 });
 
 //#endregion
@@ -42,7 +61,9 @@ var init_hmr_0 = __rolldown_runtime__.createEsmInitializer(function() {
 		var import_new_dep_cjs_2 = __rolldown_runtime__.__toESM(__rolldown_runtime__.loadExports("new-dep-cjs.js"));
 		var import_new_dep_esm_3 = __rolldown_runtime__.loadExports("new-dep-esm.js");
 		hot_hmr.accept((mod) => {
-			if (mod) console.log(".hmr", mod.foo);
+			if (mod) {
+				console.log(".hmr", mod.foo);
+			}
 		});
 	} finally {}
 });

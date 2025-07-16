@@ -3,7 +3,7 @@ use std::{borrow::Cow, path::Path};
 use oxc::transformer_plugins::InjectGlobalVariablesConfig;
 use rolldown_common::{
   AttachDebugInfo, GlobalsOutputOption, InjectImport, LegalComments, MinifyOptions, ModuleType,
-  NormalizedBundlerOptions, OutputFormat, Platform, PreserveEntrySignatures,
+  NormalizedBundlerOptions, OutputFormat, Platform, PreserveEntrySignatures, TreeshakeOptions,
 };
 use rolldown_error::{BuildDiagnostic, InvalidOptionType};
 use rustc_hash::{FxHashMap, FxHashSet};
@@ -232,10 +232,17 @@ pub fn normalize_options(mut raw_options: crate::BundlerOptions) -> NormalizeOpt
   );
   let cwd =
     raw_options.cwd.unwrap_or_else(|| std::env::current_dir().expect("Failed to get current dir"));
+
+  let mut raw_treeshake = raw_options.treeshake;
+  if experimental.hmr.is_some() {
+    // HMR requires treeshaking to be disabled
+    raw_treeshake = TreeshakeOptions::Boolean(false);
+  }
+
   let normalized = NormalizedBundlerOptions {
     input: raw_options.input.unwrap_or_default(),
     external: raw_options.external.unwrap_or_default(),
-    treeshake: raw_options.treeshake.into_normalized_options(),
+    treeshake: raw_treeshake.into_normalized_options(),
     platform,
     name: raw_options.name,
     entry_filenames: raw_options.entry_filenames.unwrap_or_else(|| "[name].js".to_string().into()),

@@ -33,7 +33,7 @@ impl GenerateStage<'_> {
   /// };
   /// init_entry_module();
   /// ```
-  /// We could inline all reachable modules of the entry chunk, except module is a bundry module.
+  /// We could inline all reachable modules of the entry chunk, except module is a boundary module.
   /// Here is the definition of boundary module:
   /// - A module that has symbol used by other chunk, we can't safely eager eval it.
   /// - A module imported side effects module that has WrapKind::Cjs

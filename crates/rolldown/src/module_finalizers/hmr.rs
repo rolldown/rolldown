@@ -1,11 +1,10 @@
 use oxc::{
-  ast::{
-    NONE,
-    ast::{self, PropertyKind},
-  },
+  ast::ast::{self},
   span::SPAN,
 };
 use rolldown_ecmascript_utils::ExpressionExt;
+
+use crate::hmr::utils::HmrAstBuilder;
 
 use super::ScopeHoistingFinalizer;
 
@@ -18,74 +17,10 @@ impl<'ast> ScopeHoistingFinalizer<'_, 'ast> {
       return ret;
     }
 
-    // `import.meta.hot = __rolldown_runtime__.createModuleHotContext(moduleId);`
-    let hot_name = self.canonical_name_for(self.ctx.module.ecma_view.hmr_hot_ref.unwrap());
-    ret.push(self.snippet.stmt_of_init_module_hot_context(hot_name, &self.ctx.module.stable_id));
+    // `var $hot = __rolldown_runtime__.createModuleHotContext(moduleId);`
+    ret.push(self.create_module_hot_context_initializer_stmt());
 
-    ret.extend(self.generate_runtime_module_register_for_hmr());
-
-    ret
-  }
-
-  fn generate_runtime_module_register_for_hmr(&self) -> Vec<ast::Statement<'ast>> {
-    let mut ret = vec![];
-    if !self.ctx.options.is_hmr_enabled() {
-      return ret;
-    }
-
-    let module_exports = match self.ctx.module.exports_kind {
-      rolldown_common::ExportsKind::Esm => {
-        let binding_name_for_namespace_object_ref =
-          self.canonical_name_for(self.ctx.module.namespace_object_ref);
-
-        // { exports: namespace }
-        ast::Argument::ObjectExpression(self.snippet.builder.alloc_object_expression(
-          SPAN,
-          self.snippet.builder.vec1(self.snippet.builder.object_property_kind_object_property(
-            SPAN,
-            PropertyKind::Init,
-            self.snippet.builder.property_key_static_identifier(SPAN, "exports"),
-            self.snippet.id_ref_expr(binding_name_for_namespace_object_ref, SPAN),
-            true,
-            false,
-            false,
-          )),
-        ))
-      }
-      rolldown_common::ExportsKind::CommonJs => {
-        // `module`
-        ast::Argument::Identifier(self.snippet.builder.alloc_identifier_reference(SPAN, "module"))
-      }
-      rolldown_common::ExportsKind::None => ast::Argument::ObjectExpression(
-        // `{}`
-        self.snippet.builder.alloc_object_expression(SPAN, self.snippet.builder.vec()),
-      ),
-    };
-
-    // __rolldown_runtime__.registerModule(moduleId, module)
-    let arguments = self.snippet.builder.vec_from_array([
-      ast::Argument::StringLiteral(self.snippet.builder.alloc_string_literal(
-        SPAN,
-        self.snippet.builder.atom(&self.ctx.module.stable_id),
-        None,
-      )),
-      module_exports,
-    ]);
-
-    let register_call = self.snippet.builder.alloc_call_expression(
-      SPAN,
-      self.snippet.id_ref_expr("__rolldown_runtime__.registerModule", SPAN),
-      NONE,
-      arguments,
-      false,
-    );
-
-    ret.push(ast::Statement::ExpressionStatement(
-      self
-        .snippet
-        .builder
-        .alloc_expression_statement(SPAN, ast::Expression::CallExpression(register_call)),
-    ));
+    ret.push(self.create_register_module_stmt());
 
     ret
   }

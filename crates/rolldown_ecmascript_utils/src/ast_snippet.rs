@@ -833,39 +833,4 @@ impl<'ast> AstSnippet<'ast> {
       true,
     )
   }
-
-  pub fn stmt_of_init_module_hot_context(
-    &self,
-    hot_name: &str,
-    stable_id: &str,
-  ) -> ast::Statement<'ast> {
-    // import.meta.hot = __rolldown_runtime__.createModuleHotContext(moduleId);
-    ast::Statement::VariableDeclaration(
-      self.builder.alloc_variable_declaration(
-        SPAN,
-        VariableDeclarationKind::Const,
-        self.builder.vec1(
-          self.builder.variable_declarator(
-            SPAN,
-            VariableDeclarationKind::Const,
-            self.builder.binding_pattern(
-              self.builder.binding_pattern_kind_binding_identifier(
-                SPAN,
-                self.builder.atom(hot_name).as_str(),
-              ),
-              NONE,
-              false,
-            ),
-            Some(self.call_expr_with_arg_expr(
-              self.id_ref_expr("__rolldown_runtime__.createModuleHotContext", SPAN),
-              self.builder.expression_string_literal(SPAN, self.builder.atom(stable_id), None),
-              false,
-            )),
-            false,
-          ),
-        ),
-        false,
-      ),
-    )
-  }
 }

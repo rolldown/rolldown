@@ -5,13 +5,15 @@ use std::{
 };
 
 use arcstr::ArcStr;
+use rolldown_common::{EmittedAsset, Output};
 use rolldown_plugin::{HookRenderChunkOutput, HookUsage, Plugin};
 use rolldown_utils::{
   dashmap::FxDashMap,
   hash_placeholder::{find_hash_placeholders, hash_placeholder_left_finder},
+  rustc_hash::FxHashMapExt as _,
   xxhash::xxhash_with_base,
 };
-use rustc_hash::FxHashSet;
+use rustc_hash::{FxHashMap, FxHashSet};
 use xxhash_rust::xxh3::Xxh3;
 
 #[derive(Debug, Default)]
@@ -98,9 +100,29 @@ impl Plugin for ChunkImportMapPlugin {
 
   async fn generate_bundle(
     &self,
-    _ctx: &rolldown_plugin::PluginContext,
-    _args: &mut rolldown_plugin::HookGenerateBundleArgs<'_>,
+    ctx: &rolldown_plugin::PluginContext,
+    args: &mut rolldown_plugin::HookGenerateBundleArgs<'_>,
   ) -> rolldown_plugin::HookNoopReturn {
+    if self.chunk_import_map.is_empty() {
+      return Ok(());
+    }
+
+    let mut chunk_import_map = FxHashMap::with_capacity(self.chunk_import_map.len() / 2);
+    for output in args.bundle.iter() {
+      let Output::Chunk(chunk) = output else { continue };
+      if let Some(v) = self.chunk_import_map.get(chunk.preliminary_filename.as_str()) {
+        chunk_import_map.insert(v.to_string(), chunk.filename.to_string());
+      }
+    }
+
+    ctx
+      .emit_file_async(EmittedAsset {
+        file_name: Some(arcstr::literal!(".importmap.json")),
+        source: (serde_json::to_string_pretty(&chunk_import_map)?).into(),
+        ..Default::default()
+      })
+      .await?;
+
     Ok(())
   }
 

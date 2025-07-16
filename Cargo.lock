@@ -2860,9 +2860,11 @@ name = "rolldown_plugin_chunk_import_map"
 version = "0.1.0"
 dependencies = [
  "arcstr",
+ "rolldown_common",
  "rolldown_plugin",
  "rolldown_utils",
  "rustc-hash",
+ "serde_json",
  "xxhash-rust",
 ]
 

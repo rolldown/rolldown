@@ -205,7 +205,7 @@ function bindingifyResolve(
   resolve: InputOptions['resolve'],
 ): BindingInputOptions['resolve'] {
   // process is undefined for browser build
-  const yarnPnp = typeof process === 'object' && !!process.versions.pnp;
+  const yarnPnp = typeof process === 'object' && !!process.versions?.pnp;
   if (resolve) {
     const { alias, extensionAlias, ...rest } = resolve;
     return {

@@ -19,7 +19,9 @@ function text$1(el, text$2) {
 	console.log(el, text$2);
 }
 hmr_hot.accept((mod) => {
-	if (mod) console.log(".hmr", mod.foo);
+	if (mod) {
+		console.log(".hmr", mod.foo);
+	}
 });
 
 //#endregion
@@ -80,7 +82,9 @@ var init_hmr_0 = __rolldown_runtime__.createEsmInitializer(function() {
 			console.log(el, text);
 		}
 		hot_hmr.accept((mod) => {
-			if (mod) console.log(".hmr", mod.foo);
+			if (mod) {
+				console.log(".hmr", mod.foo);
+			}
 		});
 	} finally {}
 });

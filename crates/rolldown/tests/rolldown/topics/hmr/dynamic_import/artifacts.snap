@@ -13,7 +13,9 @@ var hmr_exports = {};
 const hmr_hot = __rolldown_runtime__.createModuleHotContext("hmr.js");
 __rolldown_runtime__.registerModule("hmr.js", { exports: hmr_exports });
 hmr_hot.accept((mod) => {
-	if (mod) console.log(".hmr", mod.foo);
+	if (mod) {
+		console.log(".hmr", mod.foo);
+	}
 });
 
 //#endregion
@@ -40,7 +42,9 @@ var init_hmr_0 = __rolldown_runtime__.createEsmInitializer(function() {
 			await (init_new_dep_esm_2(), Promise.resolve().then(() => __rolldown_runtime__.loadExports("new-dep-esm.js"))).then(console.log);
 		}
 		hot_hmr.accept((mod) => {
-			if (mod) console.log(".hmr", mod.foo);
+			if (mod) {
+				console.log(".hmr", mod.foo);
+			}
 		});
 	} finally {}
 });

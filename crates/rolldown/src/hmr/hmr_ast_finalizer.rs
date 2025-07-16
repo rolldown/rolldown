@@ -1,10 +1,10 @@
 use oxc::{
   allocator::{Allocator, Box as ArenaBox, Dummy, IntoIn, TakeIn},
   ast::{
-    NONE,
+    AstBuilder, NONE,
     ast::{
       self, ExportDefaultDeclarationKind, Expression, ObjectExpression, ObjectPropertyKind,
-      PropertyKind, Statement,
+      Statement,
     },
   },
   ast_visit::{VisitMut, walk_mut},
@@ -19,10 +19,13 @@ use rolldown_ecmascript_utils::{
 use rolldown_utils::indexmap::FxIndexSet;
 use rustc_hash::{FxHashMap, FxHashSet};
 
+use crate::hmr::utils::HmrAstBuilder;
+
 pub struct HmrAstFinalizer<'me, 'ast> {
   // Outside input
   pub alloc: &'ast Allocator,
   pub snippet: AstSnippet<'ast>,
+  pub builder: &'me AstBuilder<'ast>,
   pub scoping: &'me Scoping,
   pub modules: &'me IndexModules,
   pub module: &'me NormalModule,
@@ -37,64 +40,71 @@ pub struct HmrAstFinalizer<'me, 'ast> {
 impl<'ast> HmrAstFinalizer<'_, 'ast> {
   pub fn generate_runtime_module_register_for_hmr(&mut self) -> Vec<ast::Statement<'ast>> {
     let mut ret = vec![];
+    if self.module.exports_kind == rolldown_common::ExportsKind::Esm {
+      let binding_name_for_namespace_object_ref = format!("ns_{}", self.module.repr_name);
 
-    let module_exports =
-      match self.module.exports_kind {
-        rolldown_common::ExportsKind::Esm => {
-          let binding_name_for_namespace_object_ref = format!("ns_{}", self.module.repr_name);
+      ret.extend(
+        self
+          .generate_declaration_of_module_namespace_object(&binding_name_for_namespace_object_ref),
+      );
+    }
+    ret.push(self.create_register_module_stmt());
 
-          ret.extend(self.generate_declaration_of_module_namespace_object(
-            &binding_name_for_namespace_object_ref,
-          ));
+    // let module_exports =
+    //   match self.module.exports_kind {
+    //     rolldown_common::ExportsKind::Esm => {
+    //       ret.extend(self.generate_declaration_of_module_namespace_object(
+    //         &binding_name_for_namespace_object_ref,
+    //       ));
 
-          // { exports: namespace }
-          ast::Argument::ObjectExpression(self.snippet.builder.alloc_object_expression(
-            SPAN,
-            self.snippet.builder.vec1(self.snippet.builder.object_property_kind_object_property(
-              SPAN,
-              PropertyKind::Init,
-              self.snippet.builder.property_key_static_identifier(SPAN, "exports"),
-              self.snippet.id_ref_expr(&binding_name_for_namespace_object_ref, SPAN),
-              true,
-              false,
-              false,
-            )),
-          ))
-        }
-        rolldown_common::ExportsKind::CommonJs => {
-          // `module`
-          ast::Argument::Identifier(self.snippet.builder.alloc_identifier_reference(SPAN, "module"))
-        }
-        rolldown_common::ExportsKind::None => ast::Argument::ObjectExpression(
-          // `{}`
-          self.snippet.builder.alloc_object_expression(SPAN, self.snippet.builder.vec()),
-        ),
-      };
+    //       // { exports: namespace }
+    //       ast::Argument::ObjectExpression(self.snippet.builder.alloc_object_expression(
+    //         SPAN,
+    //         self.snippet.builder.vec1(self.snippet.builder.object_property_kind_object_property(
+    //           SPAN,
+    //           PropertyKind::Init,
+    //           self.snippet.builder.property_key_static_identifier(SPAN, "exports"),
+    //           self.snippet.id_ref_expr(&binding_name_for_namespace_object_ref, SPAN),
+    //           true,
+    //           false,
+    //           false,
+    //         )),
+    //       ))
+    //     }
+    //     rolldown_common::ExportsKind::CommonJs => {
+    //       // `module`
+    //       ast::Argument::Identifier(self.snippet.builder.alloc_identifier_reference(SPAN, "module"))
+    //     }
+    //     rolldown_common::ExportsKind::None => ast::Argument::ObjectExpression(
+    //       // `{}`
+    //       self.snippet.builder.alloc_object_expression(SPAN, self.snippet.builder.vec()),
+    //     ),
+    //   };
 
-    // __rolldown_runtime__.registerModule(moduleId, module)
-    let arguments = self.snippet.builder.vec_from_array([
-      ast::Argument::StringLiteral(self.snippet.builder.alloc_string_literal(
-        SPAN,
-        self.snippet.builder.atom(&self.module.stable_id),
-        None,
-      )),
-      module_exports,
-    ]);
+    // // __rolldown_runtime__.registerModule(moduleId, module)
+    // let arguments = self.snippet.builder.vec_from_array([
+    //   ast::Argument::StringLiteral(self.snippet.builder.alloc_string_literal(
+    //     SPAN,
+    //     self.snippet.builder.atom(&self.module.stable_id),
+    //     None,
+    //   )),
+    //   module_exports,
+    // ]);
 
-    let register_call = self.snippet.builder.alloc_call_expression(
-      SPAN,
-      self.snippet.id_ref_expr("__rolldown_runtime__.registerModule", SPAN),
-      NONE,
-      arguments,
-      false,
-    );
+    // let register_call = self.snippet.builder.alloc_call_expression(
+    //   SPAN,
+    //   self.snippet.id_ref_expr("__rolldown_runtime__.registerModule", SPAN),
+    //   NONE,
+    //   arguments,
+    //   false,
+    // );
 
-    ret.push(ast::Statement::ExpressionStatement(
-      self
-        .snippet
-        .builder
-        .alloc_expression_statement(SPAN, ast::Expression::CallExpression(register_call)),
-    ));
+    // ret.push(ast::Statement::ExpressionStatement(
+    //   self
+    //     .snippet
+    //     .builder
+    //     .alloc_expression_statement(SPAN, ast::Expression::CallExpression(register_call)),
+    // ));
 
     ret
   }
@@ -322,10 +332,7 @@ impl<'ast> VisitMut<'ast> for HmrAstFinalizer<'_, 'ast> {
     );
     try_block.body.extend(runtime_module_register);
     try_block.body.extend(dependencies_init_fn_stmts);
-    try_block.body.push(self.snippet.stmt_of_init_module_hot_context(
-      &format!("hot_{}", self.module.repr_name),
-      &self.module.stable_id,
-    ));
+    try_block.body.push(self.create_module_hot_context_initializer_stmt());
     try_block.body.extend(it.body.take_in(self.alloc));
 
     let final_block = self.snippet.builder.alloc_block_statement(SPAN, self.snippet.builder.vec());

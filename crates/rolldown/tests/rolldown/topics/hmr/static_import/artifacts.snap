@@ -32,13 +32,15 @@ __rolldown_runtime__.registerModule("main.js", { exports: main_exports });
 var init_hmr_0 = __rolldown_runtime__.createEsmInitializer(function() {
 	try {
 		var ns_hmr = {};
-		__rolldown_runtime__.__export(ns_hmr, { bar: () => bar });
+		__rolldown_runtime__.__export(ns_hmr, {});
 		__rolldown_runtime__.registerModule("hmr.js", { exports: ns_hmr });
+		require_new_dep_cjs_1();
+		init_new_dep_esm_2();
 		const hot_hmr = __rolldown_runtime__.createModuleHotContext("hmr.js");
-		async function bar() {
-			await (require_new_dep_cjs_1(), Promise.resolve().then(() => __rolldown_runtime__.__toDynamicImportESM(__rolldown_runtime__.loadExports("new-dep-cjs.js")))).then(console.log);
-			await (init_new_dep_esm_2(), Promise.resolve().then(() => __rolldown_runtime__.loadExports("new-dep-esm.js"))).then(console.log);
-		}
+		var import_exist_dep_cjs_0 = __rolldown_runtime__.__toESM(__rolldown_runtime__.loadExports("exist-dep-cjs.js"));
+		var import_exist_dep_esm_1 = __rolldown_runtime__.loadExports("exist-dep-esm.js");
+		var import_new_dep_cjs_2 = __rolldown_runtime__.__toESM(__rolldown_runtime__.loadExports("new-dep-cjs.js"));
+		var import_new_dep_esm_3 = __rolldown_runtime__.loadExports("new-dep-esm.js");
 		hot_hmr.accept((mod) => {
 			if (mod) console.log(".hmr", mod.foo);
 		});

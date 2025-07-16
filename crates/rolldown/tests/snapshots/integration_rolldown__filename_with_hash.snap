@@ -5483,6 +5483,10 @@ expression: output
 
 - main-!~{000}~.js => main-RmX4Jh6e.js
 
+# tests/rolldown/topics/hmr/static_import
+
+- main-!~{000}~.js => main-duM8i50F.js
+
 # tests/rolldown/topics/import_meta_url_dirname_filename_polyfill/node_cjs
 
 - main-!~{000}~.js => main-DYMHAJIA.js

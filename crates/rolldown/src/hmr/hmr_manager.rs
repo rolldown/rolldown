@@ -311,6 +311,7 @@ impl HmrManager {
           modules,
           alloc: fields.allocator,
           snippet: AstSnippet::new(fields.allocator),
+          builder: &oxc::ast::AstBuilder::new(fields.allocator),
           scoping: &scoping,
           import_binding: FxHashMap::default(),
           module: affected_module,

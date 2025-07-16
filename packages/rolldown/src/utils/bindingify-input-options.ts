@@ -198,6 +198,7 @@ function bindingifyExperimental(
       experimental?.attachDebugInfo,
     ),
     chunkModulesOrder,
+    onDemandWrapping: experimental?.onDemandWrapping,
   };
 }
 

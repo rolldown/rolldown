@@ -10,7 +10,10 @@ pub use source_joiner::SourceJoiner;
 
 pub use crate::source::{Source, SourceMapSource};
 
-#[allow(clippy::from_iter_instead_of_collect, clippy::cast_possible_truncation)]
+use rolldown_utils::rustc_hash::FxHashMapExt;
+
+// <https://github.com/rollup/rollup/blob/master/src/utils/collapseSourcemaps.ts>
+#[allow(clippy::cast_possible_truncation)]
 pub fn collapse_sourcemaps(mut sourcemap_chain: Vec<&SourceMap>) -> SourceMap {
   debug_assert!(sourcemap_chain.len() > 1);
   let last_map = sourcemap_chain.pop().expect("sourcemap_chain should not be empty");
@@ -23,11 +26,20 @@ pub fn collapse_sourcemaps(mut sourcemap_chain: Vec<&SourceMap>) -> SourceMap {
 
   let source_view_tokens = last_map.get_source_view_tokens().collect::<Vec<_>>();
 
-  let names_map =
-    FxHashMap::from_iter(first_map.get_names().enumerate().map(|(i, name)| (name, i as u32)));
+  let names_map = first_map
+    .get_names()
+    .enumerate()
+    .map(|(i, name)| (name, i as u32))
+    .collect::<FxHashMap<_, _>>();
 
-  let sources_map =
-    FxHashMap::from_iter(first_map.get_sources().enumerate().map(|(i, source)| (source, i as u32)));
+  let sources_map = first_map
+    .get_sources()
+    .enumerate()
+    .map(|(i, source)| (source, i as u32))
+    .collect::<FxHashMap<_, _>>();
+
+  // Avoid hashing the source text for every token.
+  let mut sources_cache = FxHashMap::with_capacity(sources_map.len());
 
   let tokens = source_view_tokens
     .iter()
@@ -48,10 +60,14 @@ pub fn collapse_sourcemaps(mut sourcemap_chain: Vec<&SourceMap>) -> SourceMap {
           token.get_dst_col(),
           original_token.get_src_line(),
           original_token.get_src_col(),
-          original_token
-            .get_source_id()
-            .and_then(|source_id| first_map.get_source(source_id))
-            .and_then(|source| sources_map.get(source).copied()),
+          original_token.get_source_id().and_then(|source_id| {
+            sources_cache
+              .entry(source_id)
+              .or_insert_with(|| {
+                first_map.get_source(source_id).and_then(|source| sources_map.get(source))
+              })
+              .copied()
+          }),
           original_token
             .get_name_id()
             .and_then(|name_id| first_map.get_name(name_id))

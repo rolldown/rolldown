@@ -399,6 +399,7 @@ const InputOptionsSchema = v.strictObject({
       resolveNewUrlToAsset: v.optional(v.boolean()),
       strictExecutionOrder: v.optional(v.boolean()),
       onDemandWrapping: v.optional(v.boolean()),
+      incrementalBuild: v.optional(v.boolean()),
       hmr: v.optional(HmrSchema),
       attachDebugInfo: v.optional(v.union([
         v.literal('none'),

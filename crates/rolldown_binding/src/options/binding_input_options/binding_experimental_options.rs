@@ -9,6 +9,7 @@ pub struct BindingExperimentalOptions {
   pub attach_debug_info: Option<BindingAttachDebugInfo>,
   pub chunk_modules_order: Option<BindingChunkModuleOrderBy>,
   pub on_demand_wrapping: Option<bool>,
+  pub incremental_build: Option<bool>,
 }
 
 impl From<BindingExperimentalOptions> for rolldown_common::ExperimentalOptions {
@@ -18,8 +19,7 @@ impl From<BindingExperimentalOptions> for rolldown_common::ExperimentalOptions {
       disable_live_bindings: value.disable_live_bindings,
       vite_mode: value.vite_mode,
       resolve_new_url_to_asset: value.resolve_new_url_to_asset,
-      // TODO: binding
-      incremental_build: None,
+      incremental_build: value.incremental_build,
       hmr: value.hmr.map(Into::into),
       attach_debug_info: value.attach_debug_info.map(Into::into),
       chunk_modules_order: value.chunk_modules_order.map(Into::into),

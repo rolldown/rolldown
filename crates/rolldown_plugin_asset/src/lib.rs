@@ -16,6 +16,7 @@ pub struct AssetPlugin {
   pub url_base: String,
   pub public_dir: String,
   pub assets_include: Vec<StringOrRegex>,
+  pub assert_inline_limit: Option<usize>,
 }
 
 #[allow(dead_code)]
@@ -86,15 +87,33 @@ impl Plugin for AssetPlugin {
 
     let id = rolldown_plugin_utils::remove_url_query(args.id);
     // TODO(shulaoda): finish below logic
-    let env = FileToUrlEnv {
-      ctx,
-      root: &ctx.cwd().to_string_lossy(),
-      url_base: &self.url_base,
-      public_dir: &self.public_dir,
-    };
-    let url = env.file_to_url(&id)?;
+    let mut url = file_to_url(
+      &FileToUrlEnv {
+        root: &ctx.cwd().to_string_lossy(),
+        command: "serve",
+        url_base: &self.url_base,
+        public_dir: &self.public_dir,
+        asset_inline_limit: self.asset_inline_limit.unwrap_or(4096),
+        ctx: Some(&ctx),
+      },
+      &id,
+    )?;
 
-    let url = rolldown_plugin_utils::encode_uri_path(url);
+    // TODO(shulaoda): align below logic
+    // Inherit HMR timestamp if this asset was invalidated
+    // if (!url.startsWith('data:') && this.environment.mode === 'dev') {
+    //   const mod = this.environment.moduleGraph.getModuleById(id)
+    //   if (mod && mod.lastHMRTimestamp > 0) {
+    //     url = injectQuery(url, `t=${mod.lastHMRTimestamp}`)
+    //   }
+    // }
+
+    if !url.starts_with("data:") {
+      if let Some(value) = encode_as_percent_escaped(url.as_bytes()) {
+        url = value;
+      }
+    }
+
     let code = arcstr::format!("export default {}", serde_json::to_string(&Value::String(url))?);
     Ok(Some(rolldown_plugin::HookLoadOutput {
       code,

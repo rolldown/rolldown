@@ -1467,6 +1467,7 @@ export interface BindingExperimentalOptions {
   attachDebugInfo?: BindingAttachDebugInfo
   chunkModulesOrder?: BindingChunkModuleOrderBy
   onDemandWrapping?: boolean
+  incrementalBuild?: boolean
 }
 
 export interface BindingFilterToken {

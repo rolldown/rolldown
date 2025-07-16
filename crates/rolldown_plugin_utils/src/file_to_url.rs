@@ -1,6 +1,8 @@
 use std::borrow::Cow;
 use std::path::Path;
+use std::sync::LazyLock;
 
+use rolldown_plugin::PluginContext;
 use rolldown_utils::{
   dataurl::encode_as_shortest_dataurl, mime::guess_mime, pattern_filter::normalize_path,
   url::clean_url,
@@ -10,11 +12,15 @@ use sugar_path::SugarPath as _;
 use super::check_public_file::check_public_file;
 use super::find_special_query::find_special_query;
 
+static NO_INLINE_RE: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"[?&]no-inline\b").unwrap());
+static INLINE_RE: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"[?&]inline\b").unwrap());
 pub struct FileToUrlEnv<'a> {
   pub root: &'a str,
   pub command: &'a str,
   pub url_base: &'a str,
   pub public_dir: &'a str,
+  pub asset_inline_limit: usize,
+  pub ctx: Option<&'a PluginContext>,
 }
 
 // TODO(shulaoda): improve it
@@ -49,10 +55,15 @@ pub fn file_to_dev_url(
     return asset_to_data_url(file.as_path(), content.as_bytes());
   }
 
-  // TODO(shulaoda): align below logic
-  // If is svg and it's inlined in build, also inline it in dev to match
-  // the behavior in build due to quote handling differences.
-  // if cleaned_id.ends_with(".svg") {}
+  let cleaned_id = clean_url(id);
+  if cleaned_id.ends_with(".svg") {
+    let temp_file = Cow::Borrowed(cleaned_id);
+    let file = public_file.as_ref().unwrap_or(&temp_file);
+    let content = std::fs::read_to_string(&*file)?;
+    if should_inline(env, file, id, content.as_bytes(), None, None) {
+      return asset_to_data_url(file.as_path(), content.as_bytes());
+    }
+  }
 
   let url = if public_file.is_some() {
     id /* must start with '/', see check_public_file */
@@ -79,4 +90,47 @@ pub fn file_to_dev_url(
 
 fn file_to_built_url(_env: &FileToUrlEnv<'_>) -> anyhow::Result<String> {
   todo!()
+}
+
+fn should_inline(
+  env: FileToUrlEnv<'_>,
+  file: &str,
+  id: &str,
+  content: &[u8],
+  ctx: Option<&PluginContext>,
+  force_inline: Option<bool>,
+) -> bool {
+  if NO_INLINE_RE.is_match(id) {
+    return false;
+  }
+  if INLINE_RE.is_match(id) {
+    return true;
+  }
+
+  if let Some(ctx) = ctx {
+    if ctx.get_module_info(id).is_entry {
+      return false;
+    }
+  }
+
+  if force_inline.is_some() {
+    return force_inline.unwrap();
+  }
+
+  if file.ends_with(".html") {
+    return false;
+  }
+  if file.ends_with(".svg") && id.contains("#") {
+    return false;
+  }
+
+  return content.len() < env.asset_inline_limit;
+}
+
+fn is_git_lfs_placeholder(content: &[u8]) -> bool {
+  let git_lfs = b"version https://git-lfs.github.com";
+  if content.len() < git_lfs.len() {
+    return false;
+  }
+  return content[0..git_lfs.len()] == git_lfs;
 }

@@ -5489,6 +5489,10 @@ expression: output
 
 - main-!~{000}~.js => main-32o5VT06.js
 
+# tests/rolldown/topics/keep_names/issue_5294
+
+- decorator-!~{000}~.js => decorator-CvurVfst.js
+
 # tests/rolldown/topics/live_bindings/default_export_binding
 
 - main-!~{000}~.js => main-DPODtWAZ.js

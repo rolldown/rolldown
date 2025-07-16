@@ -1,0 +1,11 @@
+{
+  "config": {
+    "input": [
+      {
+        "name": "decorator",
+        "import": "./decorator.js"
+      }
+    ],
+    "keepNames": true
+  }
+}

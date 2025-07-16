@@ -1,0 +1,28 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## decorator.js
+
+```js
+import { strictEqual } from "node:assert";
+
+
+//#region main.js
+function foo$1() {
+	console.log("foo");
+}
+__name(foo$1, "foo");
+
+//#endregion
+//#region decorator.js
+function foo() {
+	strictEqual(foo$1.name, "foo");
+	foo$1();
+}
+strictEqual(foo.name, "foo");
+
+//#endregion
+export { foo as default };
+```

@@ -753,6 +753,9 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
             self.visit_class(class);
             // walk::walk_declaration(self, &ast::Declaration::ClassDeclaration(func));
           }
+          ast::ExportDefaultDeclarationKind::FunctionDeclaration(func) => {
+            self.visit_function(func, ScopeFlags::Top);
+          }
           _ => {}
         }
       }

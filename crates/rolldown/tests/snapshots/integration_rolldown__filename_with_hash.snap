@@ -531,7 +531,7 @@ expression: output
 
 # tests/esbuild/dce/tree_shaking_in_esm_wrapper
 
-- entry-!~{000}~.js => entry-Dpt3CcKB.js
+- entry-!~{000}~.js => entry-B-uR5lyc.js
 
 # tests/esbuild/dce/tree_shaking_js_with_associated_css
 
@@ -786,7 +786,7 @@ expression: output
 
 # tests/esbuild/default/export_forms_common_js
 
-- entry-!~{000}~.js => entry-B3QIko0i.js
+- entry-!~{000}~.js => entry-BC6ZIWDt.js
 
 # tests/esbuild/default/export_forms_es6
 
@@ -3862,15 +3862,16 @@ expression: output
 
 # tests/rolldown/function/advanced_chunks/basic
 
-- a-!~{000}~.js => a-CcaBLJp5.js
-- b-!~{001}~.js => b-aQ857t6g.js
-- common-!~{002}~.js => common-DfGFFFKe.js
+- a-!~{000}~.js => a-Duokw3jp.js
+- b-!~{001}~.js => b-GanGBqOK.js
+- common-!~{004}~.js => common-CHGMauua.js
+- rolldown-runtime-!~{002}~.js => rolldown-runtime-F0QY5PnL.js
 
 # tests/rolldown/function/advanced_chunks/include_dependencies_recursively
 
-- main-!~{000}~.js => main-Br645W7P.js
+- main-!~{000}~.js => main-jUCZAWno.js
 - rolldown-runtime-!~{001}~.js => rolldown-runtime-BjtMze0h.js
-- vendor-!~{003}~.js => vendor-3RAmRUua.js
+- vendor-!~{003}~.js => vendor-DjTUrGY6.js
 
 # tests/rolldown/function/advanced_chunks/issue_2617
 
@@ -3952,10 +3953,10 @@ expression: output
 
 # tests/rolldown/function/advanced_chunks/split_node_modules
 
-- main-!~{000}~.js => main-C5l1SOxR.js
-- other-libs-!~{005}~.js => other-libs-DDYt6ifN.js
+- main-!~{000}~.js => main-CgintLkr.js
+- other-libs-!~{005}~.js => other-libs-9w3pul5i.js
 - rolldown-runtime-!~{001}~.js => rolldown-runtime-BvgZlyOU.js
-- ui-!~{003}~.js => ui-Bub0P6Va.js
+- ui-!~{003}~.js => ui-17vXJ9Bu.js
 
 # tests/rolldown/function/define/node_env
 
@@ -4080,7 +4081,7 @@ expression: output
 
 # tests/rolldown/function/experimental/strict_execution_order/issue_4920
 
-- main-!~{000}~.js => main-D_6630tm.js
+- main-!~{000}~.js => main-Cdv0wJBe.js
 
 # tests/rolldown/function/experimental/strict_execution_order/on_demand_wrapping
 
@@ -4094,10 +4095,10 @@ expression: output
 
 # tests/rolldown/function/experimental/strict_execution_order/strip_plain_chunk_imports
 
-- main-!~{000}~.js => main-DF9t_3Og.js
+- main-!~{000}~.js => main-BtaVe3-D.js
 - chunk-!~{001}~.js => chunk--BJLk7li.js
-- common-!~{003}~.js => common-DQykhs6I.js
-- page-a-!~{005}~.js => page-a-Ds9Vh_wU.js
+- common-!~{003}~.js => common-C4wqcyCT.js
+- page-a-!~{005}~.js => page-a-BF05FZf6.js
 - page-b-!~{007}~.js => page-b-BsmTzYKQ.js
 
 # tests/rolldown/function/experimental/strict_execution_order/top_level_await_syntax
@@ -4106,7 +4107,7 @@ expression: output
 
 # tests/rolldown/function/experimental/strict_execution_order/top_level_await_syntax_minify
 
-- main-!~{000}~.js => main-C4BCfZuJ.js
+- main-!~{000}~.js => main-Buo6YqrV.js
 
 # tests/rolldown/function/export_mode/cjs/auto/default
 
@@ -4679,9 +4680,9 @@ expression: output
 
 # tests/rolldown/issues/3437
 
-- main-!~{000}~.js => main-CYMnVwR9.js
+- main-!~{000}~.js => main-Ds1QWccq.js
 - rolldown-runtime-!~{001}~.js => rolldown-runtime-BjtMze0h.js
-- square-!~{003}~.js => square-DKKPtQr6.js
+- square-!~{003}~.js => square-yFcIWcT3.js
 
 # tests/rolldown/issues/3438
 
@@ -5183,11 +5184,11 @@ expression: output
 
 # tests/rolldown/topics/bundler_esm_cjs_tests/24
 
-- entry-!~{000}~.js => entry-BoIys9GA.js
+- entry-!~{000}~.js => entry-BIe4XfGi.js
 
 # tests/rolldown/topics/bundler_esm_cjs_tests/25
 
-- entry-!~{000}~.js => entry-D1c0Z96Y.js
+- entry-!~{000}~.js => entry-BJlV_0iA.js
 
 # tests/rolldown/topics/bundler_esm_cjs_tests/26
 

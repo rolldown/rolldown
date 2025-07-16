@@ -14,6 +14,7 @@ struct Context<'a> {
   pub linking_infos: &'a mut LinkingMetadataVec,
   pub modules: &'a IndexModules,
   pub runtime_idx: ModuleIdx,
+  pub on_demand_wrapping: bool,
 }
 
 fn wrap_module_recursively(ctx: &mut Context, target: ModuleIdx) {
@@ -34,15 +35,12 @@ fn wrap_module_recursively(ctx: &mut Context, target: ModuleIdx) {
   }
 
   // Check if the module really needs to be wrapped
-  match module.exports_kind {
-    ExportsKind::Esm | ExportsKind::None => {
-      if !module.meta.contains(EcmaViewMeta::HAS_ANALYZED_SIDE_EFFECT)
-        && module.import_records.is_empty()
-      {
-        return;
-      }
-    }
-    ExportsKind::CommonJs => {}
+  if ctx.on_demand_wrapping
+    && matches!(module.exports_kind, ExportsKind::Esm | ExportsKind::None)
+    && !module.meta.contains(EcmaViewMeta::HAS_ANALYZED_SIDE_EFFECT)
+    && module.import_records.is_empty()
+  {
+    return;
   }
   if matches!(ctx.linking_infos[target].wrap_kind, WrapKind::None) {
     ctx.linking_infos[target].wrap_kind = match module.exports_kind {
@@ -127,6 +125,7 @@ impl LinkStage<'_> {
             linking_infos: &mut self.metas,
             modules: &self.module_table.modules,
             runtime_idx: self.runtime.id(),
+            on_demand_wrapping: self.options.experimental.is_on_demand_wrapping_enabled(),
           },
           module_id,
         );
@@ -144,6 +143,7 @@ impl LinkStage<'_> {
                 linking_infos: &mut self.metas,
                 modules: &self.module_table.modules,
                 runtime_idx: self.runtime.id(),
+                on_demand_wrapping: self.options.experimental.is_on_demand_wrapping_enabled(),
               },
               importee.idx,
             );

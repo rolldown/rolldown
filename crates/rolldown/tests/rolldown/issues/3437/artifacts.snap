@@ -25,6 +25,8 @@ export { __esm };
 ## square.js
 
 ```js
+import { __esm } from "./rolldown-runtime.js";
+
 //#region square.json
 var hello = "world";
 var square_default = { hello };

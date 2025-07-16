@@ -31,12 +31,16 @@ export { __esm };
 import { __esm } from "./rolldown-runtime.js";
 
 //#region bar.js
-const bar = "bar";
+var bar;
+var init_bar = __esm({ "bar.js"() {
+	bar = "bar";
+} });
 
 //#endregion
 //#region foo.js
 var foo;
 var init_foo = __esm({ "foo.js"() {
+	init_bar();
 	foo = "foo " + bar;
 } });
 
@@ -57,7 +61,10 @@ import { foo, init_foo } from "./vendor.js";
 import nodeAssert from "node:assert";
 
 //#region bar.js
-const bar = "bar";
+var bar;
+var init_bar = __esm({ "bar.js"() {
+	bar = "bar";
+} });
 
 //#endregion
 //#region main.js
@@ -68,7 +75,7 @@ var init_main = __esm({ "main.js"() {
 
 //#endregion
 init_main();
-export { bar };
+export { bar, init_bar };
 ```
 ## rolldown-runtime.js
 
@@ -80,11 +87,12 @@ export { __esm };
 
 ```js
 import { __esm } from "./rolldown-runtime.js";
-import { bar } from "./main.js";
+import { bar, init_bar } from "./main.js";
 
 //#region foo.js
 var foo;
 var init_foo = __esm({ "foo.js"() {
+	init_bar();
 	foo = "foo " + bar;
 } });
 
@@ -105,7 +113,10 @@ import { foo, init_foo } from "./vendor.js";
 import nodeAssert from "node:assert";
 
 //#region bar.js
-const bar = "bar";
+var bar;
+var init_bar = __esm({ "bar.js"() {
+	bar = "bar";
+} });
 
 //#endregion
 //#region main.js
@@ -116,7 +127,7 @@ var init_main = __esm({ "main.js"() {
 
 //#endregion
 init_main();
-export { bar };
+export { bar, init_bar };
 ```
 ## rolldown-runtime.js
 
@@ -128,11 +139,12 @@ export { __esm };
 
 ```js
 import { __esm } from "./rolldown-runtime.js";
-import { bar } from "./main.js";
+import { bar, init_bar } from "./main.js";
 
 //#region foo.js
 var foo;
 var init_foo = __esm({ "foo.js"() {
+	init_bar();
 	foo = "foo " + bar;
 } });
 

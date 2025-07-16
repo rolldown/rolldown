@@ -10,8 +10,11 @@ import assert from "node:assert";
 
 
 //#region lib.js
-let keep1 = () => "keep1";
-let keep2 = () => "keep2";
+var keep1, keep2;
+var init_lib = __esm({ "lib.js"() {
+	keep1 = () => "keep1";
+	keep2 = () => "keep2";
+} });
 
 //#endregion
 //#region cjs.js
@@ -19,11 +22,13 @@ var cjs_exports = {};
 __export(cjs_exports, { default: () => cjs_default });
 var cjs_default;
 var init_cjs = __esm({ "cjs.js"() {
+	init_lib();
 	cjs_default = keep2();
 } });
 
 //#endregion
 //#region entry.js
+init_lib();
 assert.equal(keep1(), "keep1");
 assert.deepEqual((init_cjs(), __toCommonJS(cjs_exports)), { default: "keep2" });
 

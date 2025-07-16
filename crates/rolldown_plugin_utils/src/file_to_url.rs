@@ -124,7 +124,7 @@ fn should_inline(
     return false;
   }
 
-  return content.len() < env.asset_inline_limit;
+  return content.len() < env.asset_inline_limit && !is_git_lfs_placeholder(content);
 }
 
 fn is_git_lfs_placeholder(content: &[u8]) -> bool {

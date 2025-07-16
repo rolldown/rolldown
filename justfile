@@ -59,7 +59,7 @@ test-update:
     just test-rust
     just test-node all --update
 
-test-rust:
+test-rust: pnpm-install
     cargo test --workspace --exclude rolldown_binding
 
 update-generated-code:

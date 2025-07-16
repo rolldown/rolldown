@@ -52,9 +52,7 @@ impl<'ast> ExpressionExt<'ast> for ast::Expression<'ast> {
   fn as_static_module_request(&self) -> Option<Atom<'ast>> {
     match &self {
       ast::Expression::StringLiteral(request) => Some(request.value),
-      ast::Expression::TemplateLiteral(request) if request.is_no_substitution_template() => {
-        request.quasi()
-      }
+      ast::Expression::TemplateLiteral(request) => request.single_quasi(),
       _ => None,
     }
   }

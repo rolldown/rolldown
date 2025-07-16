@@ -120,7 +120,14 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
         return None;
       }
     }
-    self.visit_path.get(base_cursor - 2)?.as_assignment_target()?;
+    if !matches!(
+      self.visit_path.get(base_cursor - 2)?,
+      AstKind::SimpleAssignmentTarget(_)
+        | AstKind::ArrayAssignmentTarget(_)
+        | AstKind::ObjectAssignmentTarget(_)
+    ) {
+      return None;
+    }
 
     let assignment_expr = self.visit_path.get(base_cursor - 3)?.as_assignment_expression()?;
 
@@ -136,9 +143,7 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
     _target: &ast::SimpleAssignmentTarget<'_>,
     base_cursor: usize,
   ) -> Option<CommonJsAstType> {
-    self.visit_path.get(base_cursor - 1)?.as_assignment_target()?;
-
-    let assignment_expr = self.visit_path.get(base_cursor - 2)?.as_assignment_expression()?;
+    let assignment_expr = self.visit_path.get(base_cursor - 1)?.as_assignment_expression()?;
     let ast::Expression::CallExpression(call_expr) = &assignment_expr.right else {
       return None;
     };

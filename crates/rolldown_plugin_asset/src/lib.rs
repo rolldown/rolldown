@@ -16,7 +16,7 @@ pub struct AssetPlugin {
   pub url_base: String,
   pub public_dir: String,
   pub assets_include: Vec<StringOrRegex>,
-  pub assert_inline_limit: Option<usize>,
+  pub asset_inline_limit: Option<usize>,
 }
 
 #[allow(dead_code)]

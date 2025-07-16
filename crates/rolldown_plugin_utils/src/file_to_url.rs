@@ -2,6 +2,8 @@ use std::borrow::Cow;
 use std::path::Path;
 use std::sync::LazyLock;
 
+use regex::Regex;
+
 use rolldown_plugin::PluginContext;
 use rolldown_utils::{
   dataurl::encode_as_shortest_dataurl, mime::guess_mime, pattern_filter::normalize_path,
@@ -57,7 +59,7 @@ pub fn file_to_dev_url(
   if cleaned_id.ends_with(".svg") {
     let temp_file = Cow::Borrowed(cleaned_id);
     let file = public_file.as_ref().unwrap_or(&temp_file);
-    let content = std::fs::read_to_string(&*file)?;
+    let content = std::fs::read_to_string(&**file)?;
     if should_inline(env, file, id, content.as_bytes(), None, None) {
       return asset_to_data_url(file.as_path(), content.as_bytes());
     }
@@ -91,7 +93,7 @@ fn file_to_built_url(_env: &FileToUrlEnv<'_>) -> anyhow::Result<String> {
 }
 
 fn should_inline(
-  env: FileToUrlEnv<'_>,
+  env: &FileToUrlEnv<'_>,
   file: &str,
   id: &str,
   content: &[u8],
@@ -106,7 +108,7 @@ fn should_inline(
   }
 
   if let Some(ctx) = ctx {
-    if ctx.get_module_info(id).is_entry {
+    if ctx.get_module_info(id).unwrap().is_entry {
       return false;
     }
   }
@@ -130,5 +132,12 @@ fn is_git_lfs_placeholder(content: &[u8]) -> bool {
   if content.len() < git_lfs.len() {
     return false;
   }
-  return content[0..git_lfs.len()] == git_lfs;
+  return content[..git_lfs.len()] == *git_lfs;
+}
+
+#[test]
+fn test_is_git_lfs_placeholder() {
+  assert!(is_git_lfs_placeholder(b"version https://git-lfs.github.com/spec/v1"));
+  assert!(!is_git_lfs_placeholder(b"version https:"));
+  assert!(!is_git_lfs_placeholder(b"https://www.xgz.com/spec./yyy"));
 }

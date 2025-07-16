@@ -22,3 +22,4 @@ percent-encoding = { workspace = true }
 rolldown_plugin = { workspace = true }
 rolldown_utils = { workspace = true }
 sugar_path = { workspace = true }
+regex = { workspace = true }

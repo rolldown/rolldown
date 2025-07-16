@@ -20,6 +20,11 @@ pub fn apply_inner_plugins(
     before_user_plugins.push(Arc::new(rolldown_plugin_hmr::HmrPlugin));
   }
 
+  if options.experimental.is_chunk_import_map_enabled() {
+    before_user_plugins
+      .push(Arc::new(rolldown_plugin_chunk_import_map::ChunkImportMapPlugin::default()));
+  }
+
   if !before_user_plugins.is_empty() {
     user_plugins.splice(0..0, before_user_plugins);
   }

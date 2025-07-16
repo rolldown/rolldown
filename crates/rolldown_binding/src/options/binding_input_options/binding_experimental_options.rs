@@ -8,6 +8,7 @@ pub struct BindingExperimentalOptions {
   pub hmr: Option<BindingExperimentalHmrOptions>,
   pub attach_debug_info: Option<BindingAttachDebugInfo>,
   pub chunk_modules_order: Option<BindingChunkModuleOrderBy>,
+  pub chunk_import_map: Option<bool>,
   pub on_demand_wrapping: Option<bool>,
   pub incremental_build: Option<bool>,
 }
@@ -23,6 +24,7 @@ impl From<BindingExperimentalOptions> for rolldown_common::ExperimentalOptions {
       hmr: value.hmr.map(Into::into),
       attach_debug_info: value.attach_debug_info.map(Into::into),
       chunk_modules_order: value.chunk_modules_order.map(Into::into),
+      chunk_import_map: value.chunk_import_map,
       on_demand_wrapping: value.on_demand_wrapping,
     }
   }

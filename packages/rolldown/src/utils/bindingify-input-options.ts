@@ -198,6 +198,7 @@ function bindingifyExperimental(
       experimental?.attachDebugInfo,
     ),
     chunkModulesOrder,
+    chunkImportMap: experimental?.chunkImportMap,
     onDemandWrapping: experimental?.onDemandWrapping,
     incrementalBuild: experimental?.incrementalBuild,
   };

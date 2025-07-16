@@ -42,6 +42,7 @@ rolldown_ecmascript_utils = { workspace = true }
 rolldown_error = { workspace = true }
 rolldown_fs = { workspace = true, features = ["os"] }
 rolldown_plugin = { workspace = true }
+rolldown_plugin_chunk_import_map = { workspace = true }
 rolldown_plugin_data_uri = { workspace = true }
 rolldown_plugin_hmr = { workspace = true }
 rolldown_resolver = { workspace = true }

@@ -12,6 +12,7 @@ import assert from "node:assert";
 // HIDDEN [rolldown:hmr]
 //#region lib.js
 var require_lib = __commonJS({ "lib.js"(exports, module) {
+	init_rolldown_hmr();
 	const lib_hot = __rolldown_runtime__.createModuleHotContext("lib.js");
 	__rolldown_runtime__.registerModule("lib.js", module);
 	exports.a = 1;
@@ -20,6 +21,7 @@ var require_lib = __commonJS({ "lib.js"(exports, module) {
 //#endregion
 //#region main.js
 var main_exports = {};
+init_rolldown_hmr();
 var import_lib = __toESM(require_lib());
 const main_hot = __rolldown_runtime__.createModuleHotContext("main.js");
 __rolldown_runtime__.registerModule("main.js", { exports: main_exports });

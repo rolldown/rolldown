@@ -4066,7 +4066,7 @@ expression: output
 
 # tests/rolldown/function/experimental/strict_execution_order/issue_4636
 
-- main-!~{000}~.js => main-DtFrwtjK.js
+- main-!~{000}~.js => main-cBni8d6G.js
 
 # tests/rolldown/function/experimental/strict_execution_order/issue_4684
 
@@ -4718,7 +4718,7 @@ expression: output
 
 # tests/rolldown/issues/4129
 
-- main-!~{000}~.js => main-B4CPmt68.js
+- main-!~{000}~.js => main-DmO4he8E.js
 
 # tests/rolldown/issues/4196
 
@@ -5470,7 +5470,7 @@ expression: output
 
 # tests/rolldown/topics/hmr/register_exports
 
-- main-!~{000}~.js => main-RmX4Jh6e.js
+- main-!~{000}~.js => main-D3BFYdsD.js
 
 # tests/rolldown/topics/import_meta_url_dirname_filename_polyfill/node_cjs
 

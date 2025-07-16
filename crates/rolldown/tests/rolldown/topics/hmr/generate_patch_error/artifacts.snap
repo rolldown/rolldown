@@ -74,6 +74,7 @@ var init_hmr_0 = __rolldown_runtime__.createEsmInitializer(function() {
 		__rolldown_runtime__.__export(ns_hmr, { foo: () => foo });
 		__rolldown_runtime__.registerModule("hmr.js", { exports: ns_hmr });
 		const hot_hmr = __rolldown_runtime__.createModuleHotContext("hmr.js");
+		var import_rolldown_hmr_0 = __rolldown_runtime__.loadExports("rolldown:hmr");
 		const foo = "hello";
 		text(".hmr", foo);
 		function text(el, text) {

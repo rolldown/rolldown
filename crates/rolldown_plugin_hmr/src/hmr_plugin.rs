@@ -92,7 +92,9 @@ impl Plugin for HmrPlugin {
     _ctx: &rolldown_plugin::PluginContext,
     mut args: rolldown_plugin::HookTransformAstArgs<'_>,
   ) -> rolldown_plugin::HookTransformAstReturn {
-    if args.is_user_defined_entry {
+    // We need to inject `import 'rolldown:hmr';` to every module to ensure the HMR runtime is loaded when the module is executed.
+    // No need to worry about `rolldown:runtime` , which doesn't go through the `transform_ast` hook.
+    if args.id != HMR_RUNTIME_MODULE_SPECIFIER {
       // Inject `import 'rolldown:hmr';` to all user defined entry points to ensure the HMR runtime is loaded.
       args.ast.program.with_mut(|fields| {
         let ast_builder = AstBuilder::new(fields.allocator);

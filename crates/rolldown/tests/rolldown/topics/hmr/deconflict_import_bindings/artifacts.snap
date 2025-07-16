@@ -44,9 +44,10 @@ var init_main_0 = __rolldown_runtime__.createEsmInitializer(function() {
 		__rolldown_runtime__.__export(ns_main, {});
 		__rolldown_runtime__.registerModule("main.js", { exports: ns_main });
 		const hot_main = __rolldown_runtime__.createModuleHotContext("main.js");
-		var import_foo_0 = __rolldown_runtime__.loadExports("foo.mjs");
-		var import_foo_1 = __rolldown_runtime__.loadExports("foo/index.mjs");
-		console.log(import_foo_0.foo, import_foo_1.foo);
+		var import_rolldown_hmr_0 = __rolldown_runtime__.loadExports("rolldown:hmr");
+		var import_foo_1 = __rolldown_runtime__.loadExports("foo.mjs");
+		var import_foo_2 = __rolldown_runtime__.loadExports("foo/index.mjs");
+		console.log(import_foo_1.foo, import_foo_2.foo);
 		hot_main.accept(() => {});
 	} finally {}
 });

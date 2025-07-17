@@ -1,4 +1,71 @@
 
+## [1.0.0-beta.28] - 2025-07-17
+
+### 🚀 Features
+
+- rolldown: oxc v0.77.2 (#5328) by @Boshen
+- hmr: add `module` and `exports` parameters to CJS initializer functions (#5322) by @hyf0
+- rolldown_plugin_transform: align with `vitejs/rolldown-vite#318` (#5318) by @shulaoda
+- rolldown_plugin_transform: align with `vitejs/rolldown-vite#315` (#5315) by @shulaoda
+- hmr: automatically disable treeshaking in hmr (#5311) by @hyf0
+- hmr: use `trait HmrAstBuilder` to unify ast construction (#5310) by @hyf0
+- rolldown_plugin_chunk_import_map: basic implementation (#5307) by @shulaoda
+- add `watch.onInvalidate` (#5239) by @situ2001
+- rolldown_plugin_chunk_import_map: implement initial `render_chunk` logic (#5306) by @shulaoda
+- rolldown: oxc v0.77.1 (#5304) by @Boshen
+- js: expose `experimental.incrementalBuild` option (#5300) by @IWANABETHATGUY
+- js: support `experimental.onDemandWrapping` option (#5299) by @IWANABETHATGUY
+- support on demand wrapping for entry chunk (#5291) by @IWANABETHATGUY
+- rolldown_plugin_chunk_import_map: initialize (#5289) by @shulaoda
+- show owner module id for "canonical name not found for" errors (#5288) by @sapphi-red
+
+### 🐛 Bug Fixes
+
+- only transform VarDeclaration when enable `keepNames` (#5323) by @IWANABETHATGUY
+- keepNames with special Ifstmt (#5320) by @IWANABETHATGUY
+- incremental watch panic when adding dynamic import (#5309) by @IWANABETHATGUY
+- make leaf module wrapping optimization opt-in (#5305) by @IWANABETHATGUY
+- `keepNames` should consider exportNamed function declaration (#5298) by @IWANABETHATGUY
+- undefined `process.versions` for browser build (#5295) by @sxzz
+- sanitizeFileName: entry name should be sanitized (#5283) by @shulaoda
+- minify-internal-exports: ensure minifying internal exports stably (#5281) by @hyf0
+- keep legal and annotation comments for `minify: 'dce-only'` (#5280) by @sapphi-red
+- unstable chunk generation when `preserveEntrySignatures: false` is used (#5274) by @IWANABETHATGUY
+
+### 🚜 Refactor
+
+- pass the while CodegenOptions to `EcmaCompiler::minify` (#5279) by @sapphi-red
+- avoid iterate `canonical_exports` twice (#5276) by @IWANABETHATGUY
+
+### 📚 Documentation
+
+- pluginutils: add README file (#5262) by @TheAlexLichter
+
+### ⚡ Performance
+
+- inline function expression when rewriting `name` property with `keepNames` enabled (#5321) by @IWANABETHATGUY
+- rolldown_sourcemap: cache source id -> source text mapping (#5285) by @Boshen
+- rolldown_sourcemap: disable rayon (#5284) by @Boshen
+
+### 🧪 Testing
+
+- rust: prevent meaningless snapshot change from bumping oxc runtime versions (#5312) by @hyf0
+
+### ⚙️ Miscellaneous Tasks
+
+- upgrade to NAPI-RS 3.0 stable (#5324) by @Brooooooklyn
+- infra: add onlyBuiltDependencies (#5287) by @situ2001
+- improve the order of import keys in the exports field (#5314) by @btea
+- deps: update dependency rolldown-plugin-dts to v0.13.14 (#5293) by @renovate[bot]
+- deps: lock file maintenance rust crates (#5267) by @renovate[bot]
+- deps: lock file maintenance npm packages (#5266) by @renovate[bot]
+- deps: update github-actions (#5265) by @renovate[bot]
+
+### ❤️ New Contributors
+
+* @situ2001 made their first contribution in [#5287](https://github.com/rolldown/rolldown/pull/5287)
+
+
 ## [1.0.0-beta.27] - 2025-07-13
 
 ### 🚀 Features

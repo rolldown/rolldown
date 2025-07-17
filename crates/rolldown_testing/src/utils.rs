@@ -79,16 +79,6 @@ pub fn stringify_bundle_output(output: BundleOutput, cwd: &Path) -> String {
   ret
 }
 
-pub(crate) static RUNTIME_MODULE_OUTPUT_RE: LazyLock<Regex> = LazyLock::new(|| {
-  Regex::new(r"(//#region rolldown:runtime[\s\S]*?//#endregion)")
-    .expect("invalid runtime module output regex")
-});
-
-pub(crate) static HMR_RUNTIME_MODULE_OUTPUT_RE: LazyLock<Regex> = LazyLock::new(|| {
-  Regex::new(r"(//#region rolldown:hmr[\s\S]*?//#endregion)")
-    .expect("invalid hmr runtime module output regex")
-});
-
 #[macro_export]
 /// `std::file!` alternative that returns an absolute path.
 macro_rules! abs_file {
@@ -105,7 +95,23 @@ macro_rules! abs_file_dir {
   };
 }
 
-// Some content of snapshot is considered as noise, so we need to tweak them.
+pub(crate) static RUNTIME_MODULE_OUTPUT_RE: LazyLock<Regex> = LazyLock::new(|| {
+  Regex::new(r"(//#region rolldown:runtime[\s\S]*?//#endregion)")
+    .expect("invalid runtime module output regex")
+});
+
+pub(crate) static HMR_RUNTIME_MODULE_OUTPUT_RE: LazyLock<Regex> = LazyLock::new(|| {
+  Regex::new(r"(//#region rolldown:hmr[\s\S]*?//#endregion)")
+    .expect("invalid hmr runtime module output regex")
+});
+
+// Match pattern like `@oxc-project+runtime@0.77.0`
+pub(crate) static OXC_PROJECT_RUNTIME_RE: LazyLock<Regex> = LazyLock::new(|| {
+  Regex::new(r"(@oxc-project\+runtime@\d+\.\d+\.\d+)")
+    .expect("invalid hmr runtime module output regex")
+});
+
+// Some content of snapshot are meaningless, we'd like to remove them to reduce the noise when reviewing snapshots.
 pub fn tweak_snapshot(
   content: &str,
   hide_runtime_module: bool,
@@ -125,6 +131,9 @@ pub fn tweak_snapshot(
     result =
       HMR_RUNTIME_MODULE_OUTPUT_RE.replace_all(&result, "// HIDDEN [rolldown:hmr]").into_owned();
   }
+
+  // Replace pattern `@oxc-project+runtime@0.77.0` with `@oxc-project+runtime@VERSION` to avoid unnecessary changes in bumping version.
+  result = OXC_PROJECT_RUNTIME_RE.replace_all(&result, "@oxc-project+runtime@VERSION").into_owned();
 
   Cow::Owned(result)
 }

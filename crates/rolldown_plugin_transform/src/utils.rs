@@ -164,6 +164,10 @@ impl TransformPlugin {
             decorator.legacy = compiler_options.experimental_decorators;
           }
 
+          if compiler_options.emit_decorator_metadata.is_some() {
+            decorator.emit_decorator_metadata = compiler_options.emit_decorator_metadata;
+          }
+
           transform_options.decorator = Some(decorator);
         }
 

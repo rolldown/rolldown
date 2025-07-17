@@ -1465,6 +1465,12 @@
             "null"
           ]
         },
+        "profilerNames": {
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
         "_snapshot": {
           "type": [
             "boolean",

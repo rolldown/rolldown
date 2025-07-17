@@ -6,5 +6,5 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## main.js
 
 ```js
-var e=(e,t)=>()=>(e&&(t=e(e=0)),t);async function t(){console.log(`foo`)}var n=e(()=>{}),r=e(async()=>{await n(),await t()});await r();
+var e=(e,t)=>()=>(e&&(t=e(e=0)),t);async function t(){console.log(`foo`)}var n=e((()=>{})),r=e((async()=>{await n(),await t()}));await r();
 ```

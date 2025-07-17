@@ -68,7 +68,7 @@ var init_hmr_0 = __rolldown_runtime__.createEsmInitializer(function() {
 	} finally {}
 });
 
-var require_new_dep_cjs_1 = __rolldown_runtime__.createCjsInitializer(function() {
+var require_new_dep_cjs_1 = __rolldown_runtime__.createCjsInitializer(function(module, exports) {
 	try {
 		__rolldown_runtime__.registerModule("new-dep-cjs.js", module);
 		const hot_new_dep_cjs = __rolldown_runtime__.createModuleHotContext("new-dep-cjs.js");

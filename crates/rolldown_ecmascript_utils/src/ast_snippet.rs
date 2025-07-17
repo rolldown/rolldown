@@ -352,7 +352,7 @@ impl<'ast> AstSnippet<'ast> {
   }
 
   /// ```js
-  /// var init_foo = __esm(() => { ... });
+  /// var init_foo = __esm((() => { ... }));
   /// ```
   pub fn esm_wrapper_stmt(
     &self,
@@ -407,9 +407,10 @@ impl<'ast> AstSnippet<'ast> {
       );
       esm_call_expr.arguments.push(ast::Argument::ObjectExpression(obj_expr));
     } else {
-      let arrow_expr = self
+      let mut arrow_expr = self
         .builder
         .alloc_arrow_function_expression(SPAN, false, is_async, NONE, params, NONE, body);
+      arrow_expr.pife = true;
       esm_call_expr.arguments.push(ast::Argument::ArrowFunctionExpression(arrow_expr));
     }
 

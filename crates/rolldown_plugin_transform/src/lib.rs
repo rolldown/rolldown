@@ -52,7 +52,7 @@ impl Plugin for TransformPlugin {
     }
 
     let (source_type, transform_options) =
-      self.get_modified_transform_options(&ctx, args.id, &cwd, extension)?;
+      self.get_modified_transform_options(&ctx, args.id, &cwd, extension, args.code)?;
 
     let allocator = oxc::allocator::Allocator::default();
     let ret = Parser::new(&allocator, args.code, source_type).parse();

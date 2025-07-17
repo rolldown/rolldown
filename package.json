@@ -46,6 +46,7 @@
       "@parcel/watcher",
       "dprint",
       "esbuild",
+      "oxc-resolver",
       "tree-sitter"
     ]
   },

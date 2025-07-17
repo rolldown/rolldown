@@ -309,6 +309,7 @@ impl<'ast> HmrAstFinalizer<'_, 'ast> {
 }
 
 impl<'ast> VisitMut<'ast> for HmrAstFinalizer<'_, 'ast> {
+  #[expect(clippy::too_many_lines)]
   fn visit_program(&mut self, it: &mut ast::Program<'ast>) {
     walk_mut::walk_program(self, it);
     // Move the original program body to a try catch block to unlock the ability to be error-tolerant
@@ -342,6 +343,52 @@ impl<'ast> VisitMut<'ast> for HmrAstFinalizer<'_, 'ast> {
 
     let init_fn_name = &self.affected_module_idx_to_init_fn_name[&self.module.idx];
 
+    let mut params = self.snippet.builder.formal_parameters(
+      SPAN,
+      ast::FormalParameterKind::Signature,
+      self.snippet.builder.vec_with_capacity(2),
+      NONE,
+    );
+    if self.module.exports_kind.is_commonjs() {
+      params.items.push(
+        self.snippet.builder.formal_parameter(
+          SPAN,
+          self.builder.vec(),
+          self.snippet.builder.binding_pattern(
+            ast::BindingPatternKind::BindingIdentifier(
+              self
+                .snippet
+                .builder
+                .alloc_binding_identifier(SPAN, self.snippet.builder.atom("module")),
+            ),
+            NONE,
+            false,
+          ),
+          None,
+          false,
+          false,
+        ),
+      );
+      params.items.push(
+        self.snippet.builder.formal_parameter(
+          SPAN,
+          self.builder.vec(),
+          self.snippet.builder.binding_pattern(
+            ast::BindingPatternKind::BindingIdentifier(
+              self
+                .snippet
+                .builder
+                .alloc_binding_identifier(SPAN, self.snippet.builder.atom("exports")),
+            ),
+            NONE,
+            false,
+          ),
+          None,
+          false,
+          false,
+        ),
+      );
+    }
     // function () { [user code] }
     let user_code_wrapper =
       ast::Expression::FunctionExpression(self.snippet.builder.alloc_function(
@@ -353,12 +400,7 @@ impl<'ast> VisitMut<'ast> for HmrAstFinalizer<'_, 'ast> {
         false,
         NONE,
         NONE,
-        self.snippet.builder.formal_parameters(
-          SPAN,
-          ast::FormalParameterKind::Signature,
-          self.snippet.builder.vec_with_capacity(2),
-          NONE,
-        ),
+        params,
         NONE,
         Some(self.snippet.builder.function_body(
           SPAN,
@@ -368,7 +410,7 @@ impl<'ast> VisitMut<'ast> for HmrAstFinalizer<'_, 'ast> {
       ));
 
     let initializer_call = if self.module.exports_kind.is_commonjs() {
-      // __rolldown__runtime.createCjsInitializer(function () { [user code] })
+      // __rolldown__runtime.createCjsInitializer(function (module, exports) { [user code] })
       self.snippet.builder.alloc_call_expression(
         SPAN,
         self.snippet.id_ref_expr("__rolldown_runtime__.createCjsInitializer", SPAN),

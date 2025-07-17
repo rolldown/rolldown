@@ -98,15 +98,22 @@ impl<'ast> VisitMut<'ast> for PreProcessor<'ast> {
   /// Will not reach `visit_statements`, so we need to handle it separately.
   /// Since we already intercept `visit_statements`, these two visitor now are mutually exclusive.
   fn visit_statement(&mut self, it: &mut Statement<'ast>) {
-    let stmt_addr = Address::from_ptr(&raw const it);
-    self.statement_stack.push(stmt_addr);
-    walk_mut::walk_statement(self, it);
-    self.statement_stack.pop();
+    if self.keep_names {
+      let stmt_addr = Address::from_ptr(&raw const it);
+      self.statement_stack.push(stmt_addr);
+      walk_mut::walk_statement(self, it);
+      self.statement_stack.pop();
 
-    if let Some(stmts) = self.statement_replace_map.remove(&stmt_addr) {
-      *it = Statement::BlockStatement(
-        self.snippet.builder.alloc_block_statement(SPAN, self.snippet.builder.vec_from_iter(stmts)),
-      );
+      if let Some(stmts) = self.statement_replace_map.remove(&stmt_addr) {
+        *it = Statement::BlockStatement(
+          self
+            .snippet
+            .builder
+            .alloc_block_statement(SPAN, self.snippet.builder.vec_from_iter(stmts)),
+        );
+      }
+    } else {
+      walk_mut::walk_statement(self, it);
     }
   }
 

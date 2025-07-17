@@ -11,7 +11,7 @@ use arcstr::ArcStr;
 use const_eval::{ConstEvalCtx, try_extract_const_literal};
 use oxc::ast::ast::{BindingPatternKind, Expression};
 use oxc::ast::{AstKind, ast};
-use oxc::semantic::{Reference, ScopeFlags, ScopeId, Scoping};
+use oxc::semantic::{Reference, ScopeFlags, Scoping};
 use oxc::span::SPAN;
 use oxc::{
   ast::{
@@ -124,7 +124,7 @@ pub struct AstScanner<'me, 'ast> {
   cjs_module_ident: Option<Span>,
   cur_class_decl: Option<SymbolId>,
   visit_path: Vec<AstKind<'ast>>,
-  scope_stack: Vec<Option<ScopeId>>,
+  scope_stack: Vec<ScopeFlags>,
   options: &'me SharedOptions,
   dynamic_import_usage_info: DynamicImportUsageInfo,
   ignore_comment: &'static str,
@@ -224,17 +224,11 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
 
   /// if current visit path is top level
   pub fn is_valid_tla_scope(&self) -> bool {
-    self.scope_stack.iter().rev().filter_map(|item| *item).all(|scope| {
-      let flag = self.result.symbol_ref_db.scoping().scope_flags(scope);
-      flag.is_block() || flag.is_top()
-    })
+    self.scope_stack.iter().rev().all(|flag| flag.is_block() || flag.is_top())
   }
 
   pub fn is_root_scope(&self) -> bool {
-    self.scope_stack.iter().rev().filter_map(|item| *item).all(|scope| {
-      let flag = self.result.symbol_ref_db.scoping().scope_flags(scope);
-      flag.is_top()
-    })
+    self.scope_stack.iter().rev().all(|flag| flag.is_top())
   }
 
   pub fn scan(mut self, program: &Program<'ast>) -> BuildResult<ScanResult> {
@@ -754,7 +748,7 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
             // walk::walk_declaration(self, &ast::Declaration::ClassDeclaration(func));
           }
           ast::ExportDefaultDeclarationKind::FunctionDeclaration(func) => {
-            self.visit_function(func, ScopeFlags::Top);
+            self.visit_function(func, ScopeFlags::Function);
           }
           _ => {}
         }
@@ -852,12 +846,10 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
   /// If it is not a top level `this` reference visit position
   pub fn is_this_nested(&self) -> bool {
     self.is_nested_this_inside_class
-      || self.scope_stack.iter().any(|scope| {
-        scope.is_some_and(|scope| {
-          let flags = self.result.symbol_ref_db.ast_scopes.scoping().scope_flags(scope);
-          flags.contains(ScopeFlags::Function) && !flags.contains(ScopeFlags::Arrow)
-        })
-      })
+      || self
+        .scope_stack
+        .iter()
+        .any(|flags| flags.contains(ScopeFlags::Function) && !flags.contains(ScopeFlags::Arrow))
   }
 
   pub fn in_side_try_catch_block(&self) -> bool {

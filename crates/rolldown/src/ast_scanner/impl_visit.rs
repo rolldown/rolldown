@@ -4,7 +4,7 @@ use oxc::{
     ast::{self, BindingPatternKind, Expression, IdentifierReference},
   },
   ast_visit::{Visit, walk},
-  semantic::SymbolId,
+  semantic::{ScopeFlags, SymbolId},
   span::{GetSpan, Span},
 };
 use rolldown_common::{
@@ -27,10 +27,10 @@ use super::{
 impl<'me, 'ast: 'me> Visit<'ast> for AstScanner<'me, 'ast> {
   fn enter_scope(
     &mut self,
-    _flags: oxc::semantic::ScopeFlags,
-    scope_id: &std::cell::Cell<Option<oxc::semantic::ScopeId>>,
+    flags: oxc::semantic::ScopeFlags,
+    _scope_id: &std::cell::Cell<Option<oxc::semantic::ScopeId>>,
   ) {
-    self.scope_stack.push(scope_id.get());
+    self.scope_stack.push(flags);
   }
 
   fn leave_scope(&mut self) {
@@ -46,6 +46,16 @@ impl<'me, 'ast: 'me> Visit<'ast> for AstScanner<'me, 'ast> {
   }
 
   fn visit_program(&mut self, program: &ast::Program<'ast>) {
+    self.enter_scope(
+      {
+        let mut flags = ScopeFlags::Top;
+        if program.source_type.is_strict() || program.has_use_strict_directive() {
+          flags |= ScopeFlags::StrictMode;
+        }
+        flags
+      },
+      &program.scope_id,
+    );
     // Custom visit
     for (idx, stmt) in program.body.iter().enumerate() {
       self.current_stmt_info.stmt_idx = Some(idx.into());
@@ -98,6 +108,7 @@ impl<'me, 'ast: 'me> Visit<'ast> for AstScanner<'me, 'ast> {
     {
       self.result.ast_usage.remove(EcmaModuleAstUsage::AllStaticExportPropertyAccess);
     }
+    self.leave_scope();
   }
 
   fn visit_binding_identifier(&mut self, ident: &ast::BindingIdentifier) {

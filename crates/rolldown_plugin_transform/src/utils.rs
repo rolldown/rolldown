@@ -59,12 +59,10 @@ impl TransformPlugin {
     id: &str,
     cwd: &str,
     ext: Option<&str>,
+    code: &str,
   ) -> anyhow::Result<(SourceType, TransformOptions)> {
     let is_jsx_refresh_lang = matches!(self.jsx_refresh_filter(id, cwd), JsxRefreshFilter::True)
       && ext.is_none_or(|ext| ["js", "jsx", "mjs", "ts", "tsx"].binary_search(&ext).is_err());
-
-    let is_refresh_disabled = self.is_server_consumer
-      || matches!(self.jsx_refresh_filter(id, cwd), JsxRefreshFilter::False);
 
     let source_type = if is_jsx_refresh_lang {
       SourceType::mjs()
@@ -90,11 +88,36 @@ impl TransformPlugin {
 
     let mut transform_options = self.transform_options.clone();
 
-    if is_refresh_disabled {
-      if let Some(Either::Right(jsx)) = &mut transform_options.jsx {
-        if jsx.refresh.is_some() {
-          jsx.refresh = None;
-        }
+    if let Some(Either::Right(jsx)) = &mut transform_options.jsx {
+      let is_refresh_disabled = self.is_server_consumer
+        || matches!(self.jsx_refresh_filter(id, cwd), JsxRefreshFilter::False)
+        || !(ext.is_some_and(|v| v.ends_with('x')) || {
+          let jsx_import_source = self
+            .transform_options
+            .jsx
+            .as_ref()
+            .and_then(|v| match v {
+              Either::Right(jsx) => jsx.import_source.as_deref(),
+              Either::Left(_) => None,
+            })
+            .unwrap_or("react");
+
+          let bytes = code.as_bytes();
+          let prefix = jsx_import_source.as_bytes();
+
+          let mut found = false;
+          for pos in memchr::memmem::find_iter(bytes, prefix) {
+            let rest = &bytes[pos + prefix.len()..];
+            if rest.starts_with(b"/jsx-runtime") || rest.starts_with(b"/jsx-dev-runtime") {
+              found = true;
+              break;
+            }
+          }
+          found
+        });
+
+      if is_refresh_disabled && jsx.refresh.is_some() {
+        jsx.refresh = None;
       }
     }
 

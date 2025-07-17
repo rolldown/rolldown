@@ -3040,6 +3040,7 @@ dependencies = [
  "anyhow",
  "arcstr",
  "itertools",
+ "memchr",
  "oxc",
  "rolldown_common",
  "rolldown_error",

@@ -73,28 +73,28 @@
     "access": "public",
     "exports": {
       ".": {
-        "require": "./dist/index.cjs",
-        "import": "./dist/index.mjs"
+        "import": "./dist/index.mjs",
+        "require": "./dist/index.cjs"
       },
       "./config": {
-        "require": "./dist/config.cjs",
-        "import": "./dist/config.mjs"
+        "import": "./dist/config.mjs",
+        "require": "./dist/config.cjs"
       },
       "./experimental": {
-        "require": "./dist/experimental-index.cjs",
-        "import": "./dist/experimental-index.mjs"
+        "import": "./dist/experimental-index.mjs",
+        "require": "./dist/experimental-index.cjs"
       },
       "./filter": {
-        "require": "./dist/filter-index.cjs",
-        "import": "./dist/filter-index.mjs"
+        "import": "./dist/filter-index.mjs",
+        "require": "./dist/filter-index.cjs"
       },
       "./parallelPlugin": {
-        "require": "./dist/parallel-plugin.cjs",
-        "import": "./dist/parallel-plugin.mjs"
+        "import": "./dist/parallel-plugin.mjs",
+        "require": "./dist/parallel-plugin.cjs"
       },
       "./parseAst": {
-        "require": "./dist/parse-ast-index.cjs",
-        "import": "./dist/parse-ast-index.mjs"
+        "import": "./dist/parse-ast-index.mjs",
+        "require": "./dist/parse-ast-index.cjs"
       },
       "./package.json": "./package.json"
     }

@@ -446,41 +446,34 @@ impl<'ast> VisitMut<'ast> for ScopeHoistingFinalizer<'_, 'ast> {
   fn visit_declaration(&mut self, it: &mut ast::Declaration<'ast>) {
     match it {
       ast::Declaration::VariableDeclaration(decl) => {
-        match decl.declarations.as_mut_slice() {
-          [decl] => {
-            if let (BindingPatternKind::BindingIdentifier(id), Some(init)) =
-              (&decl.id.kind, decl.init.as_mut())
-            {
-              match init {
-                ast::Expression::ClassExpression(class_expression) => {
-                  if let Some(element) = self.keep_name_helper_for_class(Some(
-                    class_expression.id.as_ref().unwrap_or_else(|| id),
-                  )) {
-                    class_expression.body.body.insert(0, element);
-                  }
-                }
-                ast::Expression::FunctionExpression(fn_expression) => {
-                  // The `var fn = function foo() {}` should generate `__name(fn, 'foo')` to keep the name
-                  if let Some((_insert_position, original_name, _)) =
-                    self.process_fn(Some(id), Some(fn_expression.id.as_ref().unwrap_or_else(|| id)))
-                  {
-                    let fn_expr = init.take_in(self.alloc);
-
-                    let finalized_name =
-                      self.snippet.atom(self.canonical_name_for_runtime("__name"));
-                    *init = self.snippet.keep_name_call_expr(
-                      &original_name,
-                      fn_expr,
-                      finalized_name,
-                      true,
-                    );
-                  }
-                }
-                _ => {}
+        for decl in &mut decl.declarations {
+          let (BindingPatternKind::BindingIdentifier(id), Some(init)) =
+            (&decl.id.kind, decl.init.as_mut())
+          else {
+            continue;
+          };
+          match init {
+            ast::Expression::ClassExpression(class_expression) => {
+              if let Some(element) = self.keep_name_helper_for_class(Some(
+                class_expression.id.as_ref().unwrap_or_else(|| id),
+              )) {
+                class_expression.body.body.insert(0, element);
               }
             }
+            ast::Expression::FunctionExpression(fn_expression) => {
+              // The `var fn = function foo() {}` should generate `__name(fn, 'foo')` to keep the name
+              if let Some((_insert_position, original_name, _)) =
+                self.process_fn(Some(id), Some(fn_expression.id.as_ref().unwrap_or_else(|| id)))
+              {
+                let fn_expr = init.take_in(self.alloc);
+
+                let finalized_name = self.snippet.atom(self.canonical_name_for_runtime("__name"));
+                *init =
+                  self.snippet.keep_name_call_expr(&original_name, fn_expr, finalized_name, true);
+              }
+            }
+            _ => {}
           }
-          _ => {}
         }
       }
       ast::Declaration::FunctionDeclaration(decl) => {

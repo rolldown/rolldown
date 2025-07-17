@@ -122,12 +122,12 @@ impl PreProcessEcmaAst {
           treeshake: TreeShakeOptions::from(&bundle_options.treeshake),
           ..CompressOptions::safest()
         };
-        let compressor = Compressor::new(allocator, options);
+        let compressor = Compressor::new(allocator);
         if self.ast_changed {
           let semantic_ret = SemanticBuilder::new().with_stats(self.stats).build(program);
           scoping = semantic_ret.semantic.into_scoping();
         }
-        compressor.dead_code_elimination_with_scoping(scoping, program);
+        compressor.dead_code_elimination_with_scoping(program, scoping, options);
       }
     });
 

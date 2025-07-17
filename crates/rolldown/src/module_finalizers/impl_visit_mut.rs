@@ -221,9 +221,14 @@ impl<'ast> VisitMut<'ast> for ScopeHoistingFinalizer<'_, 'ast> {
     for (stmt_index, original_name, new_name) in self.ctx.keep_name_statement_to_insert.iter().rev()
     {
       let finalized_name = self.snippet.atom(self.canonical_name_for_runtime("__name"));
+      let target =
+        self.snippet.builder.expression_identifier(SPAN, self.snippet.builder.atom(new_name));
       it.insert(
         *stmt_index,
-        self.snippet.keep_name_call_expr_stmt(original_name, new_name, finalized_name.as_str()),
+        self.snippet.builder.statement_expression(
+          SPAN,
+          self.snippet.keep_name_call_expr(original_name, target, finalized_name, false),
+        ),
       );
     }
     self.ctx.cur_stmt_index = previous_stmt_index;
@@ -456,7 +461,20 @@ impl<'ast> VisitMut<'ast> for ScopeHoistingFinalizer<'_, 'ast> {
                 }
                 ast::Expression::FunctionExpression(fn_expression) => {
                   // The `var fn = function foo() {}` should generate `__name(fn, 'foo')` to keep the name
-                  self.process_fn(Some(id), Some(fn_expression.id.as_ref().unwrap_or_else(|| id)));
+                  if let Some((_insert_position, original_name, _)) =
+                    self.process_fn(Some(id), Some(fn_expression.id.as_ref().unwrap_or_else(|| id)))
+                  {
+                    let fn_expr = init.take_in(self.alloc);
+
+                    let finalized_name =
+                      self.snippet.atom(self.canonical_name_for_runtime("__name"));
+                    *init = self.snippet.keep_name_call_expr(
+                      &original_name,
+                      fn_expr,
+                      finalized_name,
+                      true,
+                    );
+                  }
                 }
                 _ => {}
               }
@@ -466,7 +484,11 @@ impl<'ast> VisitMut<'ast> for ScopeHoistingFinalizer<'_, 'ast> {
         }
       }
       ast::Declaration::FunctionDeclaration(decl) => {
-        self.process_fn(decl.id.as_ref(), decl.id.as_ref());
+        if let Some((insert_position, original_name, new_name)) =
+          self.process_fn(decl.id.as_ref(), decl.id.as_ref())
+        {
+          self.ctx.keep_name_statement_to_insert.push((insert_position, original_name, new_name));
+        }
       }
       ast::Declaration::ClassDeclaration(decl) => {
         // need to insert `keep_names` helper, because `get_transformed_class_decl`

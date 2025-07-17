@@ -748,31 +748,27 @@ impl<'ast> AstSnippet<'ast> {
     ))
   }
 
-  pub fn keep_name_call_expr_stmt(
+  pub fn keep_name_call_expr(
     &self,
     original_name: PassedStr,
-    new_name: PassedStr,
-    canonical_runtime_name: PassedStr<'ast>,
-  ) -> Statement<'ast> {
-    self.builder.statement_expression(
+    target: Expression<'ast>,
+    canonical_runtime_name: Atom<'ast>,
+    pure: bool,
+  ) -> Expression<'ast> {
+    self.builder.expression_call_with_pure(
       SPAN,
-      self.builder.expression_call(
-        SPAN,
-        self.builder.expression_identifier(SPAN, canonical_runtime_name),
-        NONE,
-        {
-          let mut items = self.builder.vec_with_capacity(2);
-          items.push(self.builder.expression_identifier(SPAN, self.builder.atom(new_name)).into());
-          items.push(
-            self
-              .builder
-              .expression_string_literal(SPAN, self.builder.atom(original_name), None)
-              .into(),
-          );
-          items
-        },
-        false,
-      ),
+      self.builder.expression_identifier(SPAN, canonical_runtime_name),
+      NONE,
+      {
+        let mut items = self.builder.vec_with_capacity(2);
+        items.push(target.into());
+        items.push(
+          self.builder.expression_string_literal(SPAN, self.atom(original_name), None).into(),
+        );
+        items
+      },
+      false,
+      pure,
     )
   }
 

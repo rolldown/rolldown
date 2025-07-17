@@ -96,7 +96,7 @@ impl<'ast> VisitMut<'ast> for PreProcessor<'ast> {
   /// }
   /// ```
   /// Will not reach `visit_statements`, so we need to handle it separately.
-  /// Since we already intercpet `visit_statements`, these two visitor now are mutually exclusive.
+  /// Since we already intercept `visit_statements`, these two visitor now are mutually exclusive.
   fn visit_statement(&mut self, it: &mut Statement<'ast>) {
     let stmt_addr = Address::from_ptr(&raw const it);
     self.statement_stack.push(stmt_addr);

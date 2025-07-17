@@ -9,10 +9,10 @@ source: crates/rolldown_testing/src/integration_test.rs
 import { __esm, foo, init_user_lib } from "./user-lib.js";
 
 //#region lazy-chunk.js
-var init_lazy_chunk = __esm({ "lazy-chunk.js"() {
+var init_lazy_chunk = __esm({ "lazy-chunk.js": (() => {
 	init_user_lib();
 	foo();
-} });
+}) });
 
 //#endregion
 init_lazy_chunk();
@@ -23,17 +23,17 @@ init_lazy_chunk();
 import { __esm, foo, init_user_lib } from "./user-lib.js";
 
 //#region polyfill.js
-var init_polyfill = __esm({ "polyfill.js"() {
+var init_polyfill = __esm({ "polyfill.js": (() => {
 	Object.somePolyfilledFunction = () => {};
-} });
+}) });
 
 //#endregion
 //#region main.js
-var init_main = __esm({ "main.js"() {
+var init_main = __esm({ "main.js": (() => {
 	init_polyfill();
 	init_user_lib();
 	foo();
-} });
+}) });
 
 //#endregion
 init_main();
@@ -46,9 +46,9 @@ init_main();
 async function foo() {
 	return import("./lazy-chunk.js");
 }
-var init_user_lib = __esm({ "user-lib.js"() {
+var init_user_lib = __esm({ "user-lib.js": (() => {
 	Object.somePolyfilledFunction();
-} });
+}) });
 
 //#endregion
 export { __esm, foo, init_user_lib };

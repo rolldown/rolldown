@@ -19,10 +19,10 @@ function foo() {
 	globalThis.value = typeof globalThis.value === "number" ? globalThis.value + 1 : 0;
 }
 var common, _;
-var init_common = __esm({ "common.js"() {
+var init_common = __esm({ "common.js": (() => {
 	common = "common";
 	_ = /* @__PURE__ */ foo();
-} });
+}) });
 
 //#endregion
 export { _, common, init_common };
@@ -33,10 +33,10 @@ export { _, common, init_common };
 import { __esm } from "./chunk.js";
 
 //#region main.js
-var init_main = __esm({ async "main.js"() {
+var init_main = __esm({ "main.js": (async () => {
 	await import("./page-a.js").then(console.log);
 	await import("./page-b.js").then(console.log);
-} });
+}) });
 
 //#endregion
 await init_main();
@@ -52,10 +52,10 @@ import nodeAssert from "node:assert";
 function render() {
 	console.log(common, _);
 }
-var init_page_a = __esm({ "page-a.js"() {
+var init_page_a = __esm({ "page-a.js": (() => {
 	init_common();
 	nodeAssert.strictEqual(globalThis.value, 0);
-} });
+}) });
 
 //#endregion
 init_page_a();
@@ -69,9 +69,9 @@ import nodeAssert from "node:assert";
 
 //#region page-b.js
 function render() {}
-var init_page_b = __esm({ "page-b.js"() {
+var init_page_b = __esm({ "page-b.js": (() => {
 	nodeAssert.strictEqual(globalThis.value, 0);
-} });
+}) });
 
 //#endregion
 init_page_b();

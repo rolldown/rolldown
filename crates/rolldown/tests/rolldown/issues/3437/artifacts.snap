@@ -9,9 +9,9 @@ source: crates/rolldown_testing/src/integration_test.rs
 import { __esm } from "./rolldown-runtime.js";
 
 //#region main.js
-var init_main = __esm({ "main.js"() {
+var init_main = __esm({ "main.js": (() => {
 	import("./square.js").then(console.log);
-} });
+}) });
 
 //#endregion
 init_main();

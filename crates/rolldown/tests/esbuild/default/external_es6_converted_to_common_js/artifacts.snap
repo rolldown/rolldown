@@ -13,32 +13,32 @@ import { ns } from "x";
 //#region a.js
 var a_exports = {};
 __export(a_exports, { ns: () => ns$1 });
-var init_a = __esm({ "a.js"() {} });
+var init_a = __esm({ "a.js": (() => {}) });
 
 //#endregion
 //#region b.js
 var b_exports = {};
 __export(b_exports, { ns: () => ns$1 });
-var init_b = __esm({ "b.js"() {} });
+var init_b = __esm({ "b.js": (() => {}) });
 
 //#endregion
 //#region c.js
 var c_exports = {};
 __export(c_exports, { ns: () => ns$1 });
-var init_c = __esm({ "c.js"() {} });
+var init_c = __esm({ "c.js": (() => {}) });
 
 //#endregion
 //#region d.js
 var d_exports = {};
 __export(d_exports, { ns: () => ns });
-var init_d = __esm({ "d.js"() {} });
+var init_d = __esm({ "d.js": (() => {}) });
 
 //#endregion
 //#region e.js
 var e_exports = {};
 import * as import_x from "x";
 __reExport(e_exports, import_x);
-var init_e = __esm({ "e.js"() {} });
+var init_e = __esm({ "e.js": (() => {}) });
 
 //#endregion
 //#region entry.js

@@ -11,10 +11,10 @@ import { foo, init_foo } from "./vendor.js";
 import nodeAssert from "node:assert";
 
 //#region main.js
-var init_main = __esm({ "main.js"() {
+var init_main = __esm({ "main.js": (() => {
 	init_foo();
 	nodeAssert.strictEqual(foo, "foo bar");
-} });
+}) });
 
 //#endregion
 init_main();
@@ -32,17 +32,17 @@ import { __esm } from "./rolldown-runtime.js";
 
 //#region bar.js
 var bar;
-var init_bar = __esm({ "bar.js"() {
+var init_bar = __esm({ "bar.js": (() => {
 	bar = "bar";
-} });
+}) });
 
 //#endregion
 //#region foo.js
 var foo;
-var init_foo = __esm({ "foo.js"() {
+var init_foo = __esm({ "foo.js": (() => {
 	init_bar();
 	foo = "foo " + bar;
-} });
+}) });
 
 //#endregion
 export { foo, init_foo };
@@ -62,16 +62,16 @@ import nodeAssert from "node:assert";
 
 //#region bar.js
 var bar;
-var init_bar = __esm({ "bar.js"() {
+var init_bar = __esm({ "bar.js": (() => {
 	bar = "bar";
-} });
+}) });
 
 //#endregion
 //#region main.js
-var init_main = __esm({ "main.js"() {
+var init_main = __esm({ "main.js": (() => {
 	init_foo();
 	nodeAssert.strictEqual(foo, "foo bar");
-} });
+}) });
 
 //#endregion
 init_main();
@@ -91,10 +91,10 @@ import { bar, init_bar } from "./main.js";
 
 //#region foo.js
 var foo;
-var init_foo = __esm({ "foo.js"() {
+var init_foo = __esm({ "foo.js": (() => {
 	init_bar();
 	foo = "foo " + bar;
-} });
+}) });
 
 //#endregion
 export { foo, init_foo };
@@ -114,16 +114,16 @@ import nodeAssert from "node:assert";
 
 //#region bar.js
 var bar;
-var init_bar = __esm({ "bar.js"() {
+var init_bar = __esm({ "bar.js": (() => {
 	bar = "bar";
-} });
+}) });
 
 //#endregion
 //#region main.js
-var init_main = __esm({ "main.js"() {
+var init_main = __esm({ "main.js": (() => {
 	init_foo();
 	nodeAssert.strictEqual(foo, "foo bar");
-} });
+}) });
 
 //#endregion
 init_main();
@@ -143,10 +143,10 @@ import { bar, init_bar } from "./main.js";
 
 //#region foo.js
 var foo;
-var init_foo = __esm({ "foo.js"() {
+var init_foo = __esm({ "foo.js": (() => {
 	init_bar();
 	foo = "foo " + bar;
-} });
+}) });
 
 //#endregion
 export { foo, init_foo };

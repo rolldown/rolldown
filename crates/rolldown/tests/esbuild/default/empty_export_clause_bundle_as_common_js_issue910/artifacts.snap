@@ -11,7 +11,7 @@ import assert from "node:assert";
 // HIDDEN [rolldown:runtime]
 //#region types.mjs
 var types_exports = {};
-var init_types = __esm({ "types.mjs"() {} });
+var init_types = __esm({ "types.mjs": (() => {}) });
 
 //#endregion
 //#region entry.js

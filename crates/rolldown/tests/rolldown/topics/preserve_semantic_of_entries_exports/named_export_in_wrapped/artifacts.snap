@@ -14,11 +14,11 @@ __export(main_exports, {
 	foo: () => foo
 });
 var foo, main_default;
-var init_main = __esm({ "main.js"() {
+var init_main = __esm({ "main.js": (() => {
 	foo = "foo";
 	main_default = "main";
 	console.log((init_main(), __toCommonJS(main_exports)));
-} });
+}) });
 
 //#endregion
 init_main();

@@ -11,7 +11,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 var foo_exports = {};
 import * as import_external from "external";
 __reExport(foo_exports, import_external);
-var init_foo = __esm({ "foo.js"() {} });
+var init_foo = __esm({ "foo.js": (() => {}) });
 
 //#endregion
 //#region main.js

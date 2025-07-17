@@ -24,15 +24,15 @@ Variant: (strict_execution_order: true)
 // HIDDEN [rolldown:runtime]
 //#region lib.js
 var foo;
-var init_lib = __esm({ async "lib.js"() {
+var init_lib = __esm({ "lib.js": (async () => {
 	foo = await Promise.resolve("foo");
-} });
+}) });
 
 //#endregion
 //#region main.js
-var init_main = __esm({ async "main.js"() {
+var init_main = __esm({ "main.js": (async () => {
 	await init_lib();
-} });
+}) });
 
 //#endregion
 await init_main();

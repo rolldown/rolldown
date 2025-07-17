@@ -9,17 +9,17 @@ source: crates/rolldown_testing/src/integration_test.rs
 // HIDDEN [rolldown:runtime]
 //#region foo.js
 var foo;
-var init_foo = __esm({ async "foo.js"() {
+var init_foo = __esm({ "foo.js": (async () => {
 	await 1e3;
 	foo = 123;
-} });
+}) });
 
 //#endregion
 //#region main.js
-var init_main = __esm({ async "main.js"() {
+var init_main = __esm({ "main.js": (async () => {
 	await init_foo();
 	console.log(foo);
-} });
+}) });
 
 //#endregion
 await init_main();

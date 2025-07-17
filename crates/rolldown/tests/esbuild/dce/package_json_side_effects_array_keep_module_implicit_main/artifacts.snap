@@ -11,10 +11,10 @@ source: crates/rolldown_testing/src/integration_test.rs
 var index_module_exports = {};
 __export(index_module_exports, { foo: () => foo });
 var foo;
-var init_index_module = __esm({ "node_modules/demo-pkg/index-module.js"() {
+var init_index_module = __esm({ "node_modules/demo-pkg/index-module.js": (() => {
 	foo = 123;
 	console.log("TEST FAILED");
-} });
+}) });
 
 //#endregion
 //#region src/require-demo-pkg.js

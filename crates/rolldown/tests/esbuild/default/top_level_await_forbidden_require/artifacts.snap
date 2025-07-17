@@ -16,16 +16,16 @@ var require_c = /* @__PURE__ */ __commonJS({ "c.js"() {
 //#region b.js
 var b_exports = {};
 var import_c;
-var init_b = __esm({ async "b.js"() {
+var init_b = __esm({ "b.js": (async () => {
 	import_c = __toESM(require_c());
-} });
+}) });
 
 //#endregion
 //#region a.js
 var a_exports = {};
-var init_a = __esm({ async "a.js"() {
+var init_a = __esm({ "a.js": (async () => {
 	await init_b();
-} });
+}) });
 
 //#endregion
 //#region entry.js

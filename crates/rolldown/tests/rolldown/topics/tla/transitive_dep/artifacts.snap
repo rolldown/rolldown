@@ -28,23 +28,23 @@ Variant: (strict_execution_order: true)
 // HIDDEN [rolldown:runtime]
 //#region tla.js
 var value$1;
-var init_tla = __esm({ async "tla.js"() {
+var init_tla = __esm({ "tla.js": (async () => {
 	value$1 = await Promise.resolve("tla");
-} });
+}) });
 
 //#endregion
 //#region lib.js
 var value;
-var init_lib = __esm({ async "lib.js"() {
+var init_lib = __esm({ "lib.js": (async () => {
 	await init_tla();
 	value = value$1 + "+lib";
-} });
+}) });
 
 //#endregion
 //#region main.js
-var init_main = __esm({ async "main.js"() {
+var init_main = __esm({ "main.js": (async () => {
 	await init_lib();
-} });
+}) });
 
 //#endregion
 await init_main();

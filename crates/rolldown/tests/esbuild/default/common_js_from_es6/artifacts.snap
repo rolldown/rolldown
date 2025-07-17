@@ -15,7 +15,7 @@ __export(foo_exports, { foo: () => foo$1 });
 function foo$1() {
 	return "foo";
 }
-var init_foo = __esm({ "foo.js"() {} });
+var init_foo = __esm({ "foo.js": (() => {}) });
 
 //#endregion
 //#region bar.js
@@ -24,7 +24,7 @@ __export(bar_exports, { bar: () => bar$1 });
 function bar$1() {
 	return "bar";
 }
-var init_bar = __esm({ "bar.js"() {} });
+var init_bar = __esm({ "bar.js": (() => {}) });
 
 //#endregion
 //#region entry.js

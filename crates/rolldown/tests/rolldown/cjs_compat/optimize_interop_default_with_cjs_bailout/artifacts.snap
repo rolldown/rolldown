@@ -13,9 +13,9 @@ import assert from "node:assert";
 var json_exports = {};
 __export(json_exports, { default: () => json_default });
 var json_default;
-var init_json = __esm({ "json.js"() {
+var init_json = __esm({ "json.js": (() => {
 	json_default = JSON.parse("[1, 2, 3]");
-} });
+}) });
 
 //#endregion
 //#region commonjs.js

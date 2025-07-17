@@ -7,8 +7,8 @@ settings:
 catalogs:
   default:
     '@napi-rs/cli':
-      specifier: ^3.0.0-alpha.99
-      version: 3.0.0-alpha.99
+      specifier: ^3.0.0
+      version: 3.0.0
     '@napi-rs/wasm-runtime':
       specifier: ^0.2.10
       version: 0.2.12
@@ -332,7 +332,7 @@ importers:
     devDependencies:
       '@napi-rs/cli':
         specifier: 'catalog:'
-        version: 3.0.0-alpha.99(@emnapi/runtime@1.4.4)(@types/node@24.0.13)(emnapi@1.4.4)
+        version: 3.0.0(@emnapi/runtime@1.4.4)(@types/node@24.0.13)(emnapi@1.4.4)
       '@napi-rs/wasm-runtime':
         specifier: ^0.2.10
         version: 0.2.12
@@ -1647,8 +1647,8 @@ packages:
   '@module-federation/sdk@0.8.12':
     resolution: {integrity: sha512-zFgXYBHbzwIqlrLfn6ewIRXDZCctDDQT2nFhbsZr29yWQgpmW1fm2kJCxQsG0DENGGN1KpzfDoxjjvSKJS/ZHA==}
 
-  '@napi-rs/cli@3.0.0-alpha.99':
-    resolution: {integrity: sha512-g+a+r+7wbK3f7jKWGPEpjTxClFYJfAsUfhaW06AoqnhUidrMOEwbPLKqYg+kApYfhR2+PRiV5mImZNFBTLx3uQ==}
+  '@napi-rs/cli@3.0.0':
+    resolution: {integrity: sha512-V4xSbP4AnS+1POtAGVRhCt0erOTEyLAsZ2+MJOcI1NXCwgsKZGjp8cf/UmVo8e2jUE8tTkyxvnIPCqzVkT3RjQ==}
     engines: {node: '>= 16'}
     hasBin: true
     peerDependencies:
@@ -6969,7 +6969,7 @@ snapshots:
     dependencies:
       isomorphic-rslog: 0.0.7
 
-  '@napi-rs/cli@3.0.0-alpha.99(@emnapi/runtime@1.4.4)(@types/node@24.0.13)(emnapi@1.4.4)':
+  '@napi-rs/cli@3.0.0(@emnapi/runtime@1.4.4)(@types/node@24.0.13)(emnapi@1.4.4)':
     dependencies:
       '@inquirer/prompts': 7.6.0(@types/node@24.0.13)
       '@napi-rs/cross-toolchain': 0.0.19

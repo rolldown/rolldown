@@ -23,8 +23,7 @@ var Foo$1 = class {
 };
 function foo$1() {}
 __name$1(foo$1, "foo");
-const baz$1 = function() {};
-__name$1(baz$1, "baz");
+const baz$1 = /* @__PURE__ */ __name$1(function() {}, "baz");
 
 //#endregion
 export { Foo as Bar, Foo$1 as Foo, baz as b, foo as bar, baz$1 as baz, foo$1 as foo };

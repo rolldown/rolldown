@@ -1,6 +1,5 @@
 ---
 source: crates/rolldown_testing/src/integration_test.rs
-snapshot_kind: text
 ---
 # Assets
 
@@ -23,10 +22,8 @@ var Bar$1 = class {
 };
 assert.strictEqual(Foo$2.name, "Foo");
 assert.strictEqual(Bar$1.name, "Bar");
-var fn$2 = function() {};
-__name(fn$2, "fn");
-var fn2$1 = function() {};
-__name(fn2$1, "fn2");
+var fn$2 = /* @__PURE__ */ __name(function() {}, "fn");
+var fn2$1 = /* @__PURE__ */ __name(function() {}, "fn2");
 assert.strictEqual(fn$2.name, "fn");
 assert.strictEqual(fn2$1.name, "fn2");
 
@@ -40,8 +37,7 @@ var Foo$1 = class Foo$3 {
 var Bar = class {};
 assert.strictEqual(Foo$1.name, "Foo");
 assert.strictEqual(Bar.name, "Bar");
-var fn$1 = function fn$3() {};
-__name(fn$1, "fn");
+var fn$1 = /* @__PURE__ */ __name(function fn$3() {}, "fn");
 var fn2 = function() {};
 assert.strictEqual(fn$1.name, "fn");
 assert.strictEqual(fn2.name, "fn2");

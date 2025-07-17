@@ -1231,10 +1231,10 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
   }
 
   fn process_fn(
-    &mut self,
+    &self,
     symbol_binding_id: Option<&BindingIdentifier<'ast>>,
     name_binding_id: Option<&BindingIdentifier<'ast>>,
-  ) -> Option<()> {
+  ) -> Option<(usize, Rstr, Rstr)> {
     if !self.ctx.options.keep_names {
       return None;
     }
@@ -1243,8 +1243,7 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
     let original_name: Rstr = original_name.into();
     let new_name = canonical_name.clone();
     let insert_position = self.ctx.cur_stmt_index + 1;
-    self.ctx.keep_name_statement_to_insert.push((insert_position, original_name, new_name));
-    None
+    Some((insert_position, original_name, new_name))
   }
 
   fn keep_name_helper_for_class(

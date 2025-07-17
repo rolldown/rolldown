@@ -15,8 +15,7 @@ __export(a_exports, {
 	delay: () => delay$1,
 	random64: () => random64$1
 });
-var delay$1 = function(time) {};
-__name(delay$1, "delay");
+var delay$1 = /* @__PURE__ */ __name(function(time) {}, "delay");
 function random64$1() {
 	return BigInt(Math.random() * 4294967295 & 4294967295) << 32n & BigInt(Math.random() * 4294967295 & 4294967295);
 }

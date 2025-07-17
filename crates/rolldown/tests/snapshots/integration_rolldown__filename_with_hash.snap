@@ -4779,7 +4779,7 @@ expression: output
 
 # tests/rolldown/issues/5139
 
-- main-!~{000}~.js => main-_kxx8NhO.js
+- main-!~{000}~.js => main-EYneYeAf.js
 
 # tests/rolldown/issues/5209
 
@@ -5498,11 +5498,11 @@ expression: output
 
 # tests/rolldown/topics/keep_names/declaration2
 
-- main-!~{000}~.js => main-CgMAi6lp.js
+- main-!~{000}~.js => main-CsBPgQXn.js
 
 # tests/rolldown/topics/keep_names/expression
 
-- main-!~{000}~.js => main-32o5VT06.js
+- main-!~{000}~.js => main-DouU07fz.js
 
 # tests/rolldown/topics/keep_names/if_stmt
 

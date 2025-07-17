@@ -5504,6 +5504,10 @@ expression: output
 
 - main-!~{000}~.js => main-32o5VT06.js
 
+# tests/rolldown/topics/keep_names/if_stmt
+
+- main-!~{000}~.js => main-B17ybir6.js
+
 # tests/rolldown/topics/keep_names/issue_5294
 
 - decorator-!~{000}~.js => decorator-CvurVfst.js

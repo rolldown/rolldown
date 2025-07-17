@@ -88,6 +88,29 @@ impl<'ast> VisitMut<'ast> for PreProcessor<'ast> {
     program.body.extend(std::mem::take(&mut self.top_level_stmt_temp_storage));
   }
 
+  /// Some declaration like:
+  /// ```js
+  /// if var a = function() {}
+  /// else {
+  ///   somethingElse();
+  /// }
+  /// ```
+  /// Will not reach `visit_statements`, so we need to handle it separately.
+  /// Since we already intercpet `visit_statements`, these two visitor now are mutually exclusive.
+  fn visit_statement(&mut self, it: &mut Statement<'ast>) {
+    let stmt_addr = Address::from_ptr(&raw const it);
+    self.statement_stack.push(stmt_addr);
+    walk_mut::walk_statement(self, it);
+    self.statement_stack.pop();
+
+    if let Some(stmts) = self.statement_replace_map.remove(&stmt_addr) {
+      *it = Statement::BlockStatement(
+        self.snippet.builder.alloc_block_statement(SPAN, self.snippet.builder.vec_from_iter(stmts)),
+      );
+    }
+  }
+
+  /// If `keep_names` is true, we will keep the names of (function/class) variable declarations even it is not top level.
   fn visit_statements(&mut self, it: &mut oxc::allocator::Vec<'ast, Statement<'ast>>) {
     if self.keep_names {
       let stmts = it.take_in(self.snippet.alloc());

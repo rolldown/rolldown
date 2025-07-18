@@ -4,7 +4,7 @@ use std::borrow::Cow;
 
 use oxc::ast_visit::VisitMut;
 use rolldown_ecmascript_utils::AstSnippet;
-use rolldown_plugin::{HookUsage, Plugin};
+use rolldown_plugin::{HookUsage, Plugin, PluginHookMeta, PluginOrder};
 
 use crate::ast_visitor::WebWorkerPostVisitor;
 
@@ -31,5 +31,9 @@ impl Plugin for WebWorkerPostPlugin {
       visitor.visit_program(fields.program);
     });
     Ok(args.ast)
+  }
+
+  fn transform_ast_meta(&self) -> Option<PluginHookMeta> {
+    Some(PluginHookMeta { order: Some(PluginOrder::Post) })
   }
 }

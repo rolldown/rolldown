@@ -13,7 +13,6 @@ setup:
     cargo binstall cargo-insta cargo-deny cargo-shear typos-cli -y
     # Node.js related setup
     corepack enable
-    pnpm install
     just setup-submodule
     just setup-bench
     @echo "✅✅✅ Setup complete!"
@@ -30,13 +29,13 @@ update-submodule:
 
 # `roll` command almost run all ci checks locally. It's useful to run this before pushing your changes.
 
-roll: pnpm-install roll-rust roll-node roll-repo update-esbuild-diff
+roll: roll-rust roll-node roll-repo update-esbuild-diff
 
-roll-rust: pnpm-install check-rust test-rust lint-rust
+roll-rust: check-rust test-rust lint-rust
 
-roll-node: pnpm-install test-node check-node lint-node
+roll-node: test-node check-node lint-node
 
-roll-repo: pnpm-install lint-repo
+roll-repo: lint-repo
 
 # CHECKING
 
@@ -59,7 +58,7 @@ test-update:
     just test-rust
     just test-node all --update
 
-test-rust: pnpm-install
+test-rust:
     cargo test --workspace --exclude rolldown_binding
 
 update-generated-code:
@@ -127,10 +126,10 @@ fix-repo:
     just fmt-repo
 
 # Support `just build [native|browser] [debug|release]`
-build target="native" mode="debug": pnpm-install build-pluginutils
+build target="native" mode="debug": build-pluginutils
     pnpm run --filter rolldown build-{{ target }}:{{ mode }}
 
-build-memory-profile: pnpm-install build-pluginutils
+build-memory-profile: build-pluginutils
     pnpm run --filter rolldown build-native:memory-profile
 
 _build-native-debug:
@@ -169,6 +168,3 @@ bump-packages *args:
 
 check-setup-prerequisites:
     node ./scripts/misc/setup-prerequisites/node.js
-
-pnpm-install:
-    pnpm install

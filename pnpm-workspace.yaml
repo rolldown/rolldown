@@ -15,6 +15,7 @@ packages:
   - '!examples/yarn-pnp'
 
 shellEmulator: true
+verifyDepsBeforeRun: install
 
 # Define a catalog of version ranges.
 catalog:

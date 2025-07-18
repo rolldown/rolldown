@@ -4,7 +4,6 @@ use super::runtime_module_task::RuntimeModuleTask;
 use super::task_context::TaskContextMeta;
 use crate::ecmascript::ecma_module_view_factory::normalize_side_effects;
 use crate::module_loader::task_context::TaskContext;
-use crate::type_alias::IndexEcmaAst;
 use crate::types::scan_stage_cache::ScanStageCache;
 use crate::utils::load_entry_module::load_entry_module;
 use arcstr::ArcStr;
@@ -21,6 +20,7 @@ use rolldown_common::{
   RUNTIME_MODULE_KEY, ResolvedId, RuntimeModuleBrief, RuntimeModuleTaskResult, StmtInfoIdx,
   SymbolRef, SymbolRefDb, SymbolRefDbForModule,
 };
+use rolldown_ecmascript::EcmaAst;
 use rolldown_error::{BuildDiagnostic, BuildResult};
 use rolldown_fs::OsFileSystem;
 use rolldown_plugin::SharedPluginDriver;
@@ -37,7 +37,7 @@ use crate::{SharedOptions, SharedResolver};
 pub struct IntermediateNormalModules {
   pub modules: HybridIndexVec<ModuleIdx, Option<Module>>,
   pub importers: IndexVec<ModuleIdx, Vec<ImporterRecord>>,
-  pub index_ecma_ast: IndexEcmaAst,
+  pub index_ecma_ast: HybridIndexVec<ModuleIdx, Option<EcmaAst>>,
 }
 
 impl IntermediateNormalModules {
@@ -49,18 +49,24 @@ impl IntermediateNormalModules {
         HybridIndexVec::Map(FxHashMap::default())
       },
       importers,
-      index_ecma_ast: IndexVec::default(),
+      index_ecma_ast: if is_full_scan {
+        HybridIndexVec::IndexVec(IndexVec::default())
+      } else {
+        HybridIndexVec::Map(FxHashMap::default())
+      },
     }
   }
 
   pub fn alloc_ecma_module_idx(&mut self) -> ModuleIdx {
     let id = self.modules.push(None);
+    self.index_ecma_ast.push(None);
     self.importers.push(Vec::new());
     id
   }
 
   pub fn alloc_ecma_module_idx_sparse(&mut self, i: ModuleIdx) -> ModuleIdx {
     self.modules.insert(i, None);
+    self.index_ecma_ast.insert(i, None);
     if i >= self.importers.len() {
       self.importers.push(Vec::new());
     }
@@ -69,6 +75,7 @@ impl IntermediateNormalModules {
 
   pub fn reset_ecma_module_idx(&mut self) {
     self.modules.clear();
+    self.index_ecma_ast.clear();
   }
 }
 
@@ -104,7 +111,7 @@ pub struct ModuleLoader<'a> {
 pub struct ModuleLoaderOutput {
   // Stored all modules
   pub module_table: HybridIndexVec<ModuleIdx, Module>,
-  pub index_ecma_ast: IndexEcmaAst,
+  pub index_ecma_ast: HybridIndexVec<ModuleIdx, Option<EcmaAst>>,
   pub symbol_ref_db: SymbolRefDb,
   // Entries that user defined + dynamic import entries
   pub entry_points: Vec<EntryPoint>,
@@ -403,8 +410,7 @@ impl<'a> ModuleLoader<'a> {
 
           let module_idx = module.idx();
           if let Some(EcmaRelated { ast, symbols, .. }) = ecma_related {
-            let ast_idx = self.intermediate_normal_modules.index_ecma_ast.push((ast, module_idx));
-            module.set_ecma_ast_idx(ast_idx);
+            *self.intermediate_normal_modules.index_ecma_ast.get_mut(module_idx) = Some(ast);
             self.symbol_ref_db.store_local_db(module_idx, symbols);
           }
 
@@ -490,10 +496,9 @@ impl<'a> ModuleLoader<'a> {
 
             import_records.push(raw_rec.into_resolved(id));
           }
-          let ast_idx = self.intermediate_normal_modules.index_ecma_ast.push((ast, module.idx));
-          module.ecma_ast_idx = Some(ast_idx);
           module.import_records = import_records;
           *self.intermediate_normal_modules.modules.get_mut(self.runtime_id) = Some(module.into());
+          *self.intermediate_normal_modules.index_ecma_ast.get_mut(self.runtime_id) = Some(ast);
 
           self.symbol_ref_db.store_local_db(self.runtime_id, local_symbol_ref_db);
           runtime_brief = Some(runtime);

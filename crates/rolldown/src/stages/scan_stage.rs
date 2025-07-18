@@ -7,6 +7,7 @@ use rolldown_common::{
   RuntimeModuleBrief, ScanMode, SymbolRef, SymbolRefDb,
   dynamic_import_usage::DynamicImportExportsUsage,
 };
+use rolldown_ecmascript::EcmaAst;
 use rolldown_error::{BuildDiagnostic, BuildResult};
 use rolldown_fs::OsFileSystem;
 use rolldown_plugin::SharedPluginDriver;
@@ -51,7 +52,7 @@ impl NormalizedScanStageOutput {
       index_ecma_ast: self
         .index_ecma_ast
         .iter()
-        .map(|(ast, module_idx)| (ast.clone_with_another_arena(), *module_idx))
+        .map(|ast| ast.as_ref().map(rolldown_ecmascript::EcmaAst::clone_with_another_arena))
         .collect(),
       entry_points: self.entry_points.clone(),
       symbol_ref_db: self.symbol_ref_db.clone_without_scoping(),
@@ -72,7 +73,10 @@ impl From<ScanStageOutput> for NormalizedScanStageOutput {
         HybridIndexVec::IndexVec(modules) => ModuleTable { modules },
         HybridIndexVec::Map(_) => unreachable!("Please normalized first"),
       },
-      index_ecma_ast: value.index_ecma_ast,
+      index_ecma_ast: match value.index_ecma_ast {
+        HybridIndexVec::IndexVec(ast) => ast,
+        HybridIndexVec::Map(_) => unreachable!("Please normalized first"),
+      },
       entry_points: value.entry_points,
       symbol_ref_db: value.symbol_ref_db,
       runtime: value.runtime,
@@ -88,7 +92,7 @@ impl From<ScanStageOutput> for NormalizedScanStageOutput {
 #[derive(Debug)]
 pub struct ScanStageOutput {
   pub module_table: HybridIndexVec<ModuleIdx, Module>,
-  pub index_ecma_ast: IndexEcmaAst,
+  pub index_ecma_ast: HybridIndexVec<ModuleIdx, Option<EcmaAst>>,
   pub entry_points: Vec<EntryPoint>,
   pub symbol_ref_db: SymbolRefDb,
   pub runtime: RuntimeModuleBrief,

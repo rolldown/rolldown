@@ -257,7 +257,7 @@ impl GenerateStage<'_> {
           .par_iter()
           .map(|&module_idx| match self.link_output.module_table[module_idx].as_normal() {
             Some(module) => {
-              let ast = &self.link_output.ast_table[module.ecma_ast_idx()].0;
+              let ast = self.link_output.ast_table[module.idx].as_ref().expect("should have ast");
               module.render(self.options, &ModuleRenderArgs::Ecma { ast })
             }
             _ => None,

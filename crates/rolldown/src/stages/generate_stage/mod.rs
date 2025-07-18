@@ -19,7 +19,7 @@ use rolldown_std_utils::{PathBufExt, PathExt, representative_file_name_for_prese
 use rolldown_utils::{
   dashmap::FxDashMap,
   hash_placeholder::HashPlaceholderGenerator,
-  index_vec_ext::IndexVecRefExt,
+  index_vec_ext::{IndexVecExt, IndexVecRefExt},
   make_unique_name::make_unique_name,
   rayon::{IntoParallelRefMutIterator, ParallelIterator},
 };
@@ -116,23 +116,24 @@ impl<'a> GenerateStage<'a> {
       );
     });
 
-    let ast_table_iter = self.link_output.ast_table.par_iter_mut();
+    let ast_table_iter = self.link_output.ast_table.par_iter_mut_enumerated();
     ast_table_iter
-      .filter(|(_ast, owner)| {
-        self.link_output.module_table[*owner].as_normal().is_some_and(|m| m.meta.is_included())
+      .filter(|(idx, _ast)| {
+        self.link_output.module_table[*idx].as_normal().is_some_and(|m| m.meta.is_included())
       })
-      .for_each(|(ast, owner)| {
-        let Module::Normal(module) = &self.link_output.module_table[*owner] else {
+      .for_each(|(idx, ast)| {
+        let Some(ast) = ast else {
           return;
         };
-        let ast_scope = &self.link_output.symbol_db[module.idx].as_ref().unwrap().ast_scopes;
-        let chunk_id = chunk_graph.module_to_chunk[module.idx].unwrap();
+        let module = self.link_output.module_table[idx].as_normal().unwrap();
+        let ast_scope = &self.link_output.symbol_db[idx].as_ref().unwrap().ast_scopes;
+        let chunk_id = chunk_graph.module_to_chunk[idx].unwrap();
         let chunk = &chunk_graph.chunk_table[chunk_id];
         let linking_info = &self.link_output.metas[module.idx];
         finalize_normal_module(
           ScopeHoistingFinalizerContext {
             canonical_names: &chunk.canonical_names,
-            id: module.idx,
+            id: idx,
             chunk_id,
             symbol_db: &self.link_output.symbol_db,
             linking_info,

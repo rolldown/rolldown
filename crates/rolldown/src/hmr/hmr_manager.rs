@@ -215,7 +215,7 @@ impl HmrManager {
       false,
     )?;
 
-    let module_loader_output =
+    let mut module_loader_output =
       module_loader.fetch_modules(vec![], &module_infos_to_be_updated).await?;
 
     // We manually impl `Drop` for `ModuleLoader` to avoid missing assign `importers` to
@@ -251,10 +251,12 @@ impl HmrManager {
       if idx.index() >= self.module_db.modules.len() {
         // This module is newly added, we need to insert it into the module db.
         let generated_id = self.module_db.modules.push(module);
+        self.index_ecma_ast.push(module_loader_output.index_ecma_ast.get_mut(idx).take());
         assert_eq!(generated_id, idx, "Module index mismatch");
       } else {
         // This module is already in the module db, we need to update it.
         self.module_db.modules[idx] = module;
+        self.index_ecma_ast[idx] = module_loader_output.index_ecma_ast.get_mut(idx).take();
       }
     }
     tracing::debug!(
@@ -265,7 +267,6 @@ impl HmrManager {
         .map(|module_idx| self.module_db.modules[*module_idx].stable_id())
         .collect::<Vec<_>>(),
     );
-    self.index_ecma_ast = module_loader_output.index_ecma_ast;
 
     // Remove external modules from affected_modules.
     affected_modules.retain(|idx| {
@@ -301,9 +302,10 @@ impl HmrManager {
       };
 
       let enable_sourcemap = self.options.sourcemap.is_some() && !affected_module.is_virtual();
-      let ecma_ast_idx = affected_module.ecma_ast_idx.unwrap();
       let modules = &self.input.module_db.modules;
-      let ast = &mut self.input.index_ecma_ast[ecma_ast_idx].0;
+      let ast = self.input.index_ecma_ast[affected_module_idx]
+        .as_mut()
+        .expect("Normal module should have an AST");
 
       ast.program.with_mut(|fields| {
         let scoping = EcmaAst::make_semantic(fields.program, /*with_cfg*/ false).into_scoping();

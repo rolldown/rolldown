@@ -7,10 +7,28 @@ import {
   // @ts-expect-error
 } from 'rolldown:runtime';
 
+class Module {
+  /**
+   * @type {any}
+   */
+  exports = null;
+  /**
+   * @type {string}
+   */
+  id;
+
+  /**
+   * @param {string} id
+   */
+  constructor(id) {
+    this.id = id;
+  }
+}
+
 // oxlint-disable-next-line no-unused-vars
 export class DevRuntime {
   /**
-   * @type {Record<string, { exports: any }>}
+   * @type {Record<string, Module>}
    */
   modules = {};
   /**
@@ -27,9 +45,11 @@ export class DevRuntime {
   }
   /**
    * @param {string} id
-   * @param {{ exports: any }} module
+   * @param {{ exports: any }} meta
    */
-  registerModule(id, module) {
+  registerModule(id, meta) {
+    const module = new Module(id);
+    module.exports = meta.exports;
     this.modules[id] = module;
   }
   /**

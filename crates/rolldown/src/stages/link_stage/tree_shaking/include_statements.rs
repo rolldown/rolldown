@@ -313,7 +313,12 @@ impl LinkStage<'_> {
               let import_record = &module.import_records[*import_record_idx];
               let importee_side_effects =
                 self.module_table[import_record.resolved_module].side_effects().has_side_effects();
-              let ret = !importee_side_effects;
+
+              let ret = !importee_side_effects
+                && import_record.meta.contains(ImportRecordMeta::TOP_LEVEL_PURE_DYNAMIC_IMPORT);
+
+              // Only consider it is unused if it is a top level pure dynamic import and the
+              // importee module has no side effects.
               if ret {
                 dead_pure_dynamic_import_record_idx.push(*import_record_idx);
               }

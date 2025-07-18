@@ -121,8 +121,22 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
         )
       }
       // 3. await import('mod');
+      //   - return await import('mod'); // should consider it is completely used
+      //   - () => await import('mod'); // should consider it is completely used
       // only side effects from `mod` is triggered
-      AstKind::ExpressionStatement(_) => Some(FxHashSet::default()),
+      AstKind::ExpressionStatement(_) => {
+        // if the import is used in a function, we should consider it is completely used
+        match self.visit_path.get(ast_after_remove_paren_idx.saturating_sub(1))? {
+          AstKind::ReturnStatement(_) => None,
+          AstKind::FunctionBody(_) => {
+            match self.visit_path.get(ast_after_remove_paren_idx.saturating_sub(2))? {
+              AstKind::ArrowFunctionExpression(expr) if expr.expression => None,
+              _ => Some(FxHashSet::default()),
+            }
+          }
+          _ => Some(FxHashSet::default()),
+        }
+      }
       // 4. (await import('mod')).a
       kind if kind.is_member_expression_kind() => Some(FxHashSet::from_iter([kind
         .as_member_expression_kind()

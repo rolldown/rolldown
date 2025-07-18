@@ -6,7 +6,7 @@ use rustc_hash::{FxHashMap, FxHashSet};
 
 use crate::ImportRecordIdx;
 
-#[derive(Default)]
+#[derive(Default, Debug)]
 pub struct DynamicImportUsageInfo {
   /// e.g
   /// ```js

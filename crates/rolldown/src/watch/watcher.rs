@@ -65,7 +65,7 @@ impl WatcherImpl {
         }
         config.with_compare_contents(notify.compare_contents);
       }
-      Config::default()
+      config
     };
     let notify_watcher = Arc::new(Mutex::new(RecommendedWatcher::new(
       move |res| {

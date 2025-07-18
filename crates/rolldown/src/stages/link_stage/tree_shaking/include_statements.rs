@@ -335,7 +335,7 @@ impl LinkStage<'_> {
         })
       }
     };
-    if is_lived { None } else { Some(ret) }
+    (!is_lived).then_some(ret)
   }
 }
 

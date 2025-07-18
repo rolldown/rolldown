@@ -1469,6 +1469,7 @@ export interface BindingExperimentalOptions {
   chunkImportMap?: boolean
   onDemandWrapping?: boolean
   incrementalBuild?: boolean
+  transformHiresSourcemap?: boolean | 'boundary'
 }
 
 export interface BindingFilterToken {

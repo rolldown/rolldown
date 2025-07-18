@@ -2,6 +2,7 @@ use std::{ops::Deref, sync::Arc};
 
 use crate::PluginContext;
 use arcstr::ArcStr;
+use rolldown_common::SourcemapHires;
 use rolldown_sourcemap::{SourceMap, collapse_sourcemaps};
 use rolldown_utils::unique_arc::WeakRef;
 use string_wizard::{MagicString, SourceMapOptions};
@@ -41,8 +42,14 @@ impl TransformPluginContext {
 
   fn create_sourcemap(&self) -> SourceMap {
     let magic_string = MagicString::new(self.original_code.as_str());
+    let hires = self
+      .inner
+      .options()
+      .experimental
+      .transform_hires_sourcemap
+      .unwrap_or(SourcemapHires::Boolean(true));
     magic_string.source_map(SourceMapOptions {
-      hires: string_wizard::Hires::True,
+      hires: hires.into(),
       include_content: true,
       source: self.id.as_str().into(),
     })

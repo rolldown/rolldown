@@ -1,4 +1,6 @@
-#[napi_derive::napi(object)]
+use napi::bindgen_prelude::Either;
+
+#[napi_derive::napi(object, object_to_js = false)]
 #[derive(Debug, Default)]
 pub struct BindingExperimentalOptions {
   pub strict_execution_order: Option<bool>,
@@ -11,11 +13,15 @@ pub struct BindingExperimentalOptions {
   pub chunk_import_map: Option<bool>,
   pub on_demand_wrapping: Option<bool>,
   pub incremental_build: Option<bool>,
+  #[napi(ts_type = "boolean | 'boundary'")]
+  pub transform_hires_sourcemap: Option<Either<bool, String>>,
 }
 
-impl From<BindingExperimentalOptions> for rolldown_common::ExperimentalOptions {
-  fn from(value: BindingExperimentalOptions) -> Self {
-    Self {
+impl TryFrom<BindingExperimentalOptions> for rolldown_common::ExperimentalOptions {
+  type Error = napi::Error;
+
+  fn try_from(value: BindingExperimentalOptions) -> Result<Self, Self::Error> {
+    Ok(Self {
       strict_execution_order: value.strict_execution_order,
       disable_live_bindings: value.disable_live_bindings,
       vite_mode: value.vite_mode,
@@ -26,7 +32,24 @@ impl From<BindingExperimentalOptions> for rolldown_common::ExperimentalOptions {
       chunk_modules_order: value.chunk_modules_order.map(Into::into),
       chunk_import_map: value.chunk_import_map,
       on_demand_wrapping: value.on_demand_wrapping,
-    }
+      transform_hires_sourcemap: if let Some(v) = value.transform_hires_sourcemap {
+        match v {
+          Either::A(v) => Some(rolldown_common::SourcemapHires::Boolean(v)),
+          Either::B(v) => {
+            if v == "boundary" {
+              Some(rolldown_common::SourcemapHires::Boundary)
+            } else {
+              return Err(napi::Error::new(
+                napi::Status::InvalidArg,
+                format!("Invalid transform hires sourcemap: {v}"),
+              ));
+            }
+          }
+        }
+      } else {
+        None
+      },
+    })
   }
 }
 

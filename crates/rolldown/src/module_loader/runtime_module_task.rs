@@ -121,7 +121,6 @@ impl RuntimeModuleTask {
       module_type,
 
       ecma_view: EcmaView {
-        ecma_ast_idx: None,
         source,
 
         import_records: IndexVec::default(),

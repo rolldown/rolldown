@@ -5,9 +5,7 @@ use arcstr::ArcStr;
 use oxc_index::IndexVec;
 use rolldown_std_utils::OptionExt;
 
-use crate::{
-  EcmaAstIdx, ExternalModule, ImportRecordIdx, ModuleIdx, NormalModule, ResolvedImportRecord,
-};
+use crate::{ExternalModule, ImportRecordIdx, ModuleIdx, NormalModule, ResolvedImportRecord};
 
 #[derive(Debug, Clone)]
 pub enum Module {
@@ -119,13 +117,6 @@ impl Module {
         _ => v.ecma_view.import_records = records,
       },
       Module::External(v) => v.import_records = records,
-    }
-  }
-
-  pub fn set_ecma_ast_idx(&mut self, idx: EcmaAstIdx) {
-    match self {
-      Module::Normal(v) => v.ecma_ast_idx = Some(idx),
-      Module::External(_) => panic!("set_ecma_ast_idx should be called on EcmaModule"),
     }
   }
 

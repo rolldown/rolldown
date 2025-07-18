@@ -7,9 +7,9 @@ use oxc::{
   transformer::ESTarget,
 };
 use rolldown_common::{
-  EcmaAstIdx, EcmaModuleAstUsage, ExportsKind, GetLocalDbMut, LocalExport, Module, ModuleIdx,
-  ModuleType, NormalModule, StmtInfo, StmtInfoIdx, SymbolOrMemberExprRef, SymbolRef,
-  SymbolRefDbForModule, TaggedSymbolRef, WrapKind,
+  EcmaModuleAstUsage, ExportsKind, GetLocalDbMut, LocalExport, Module, ModuleIdx, ModuleType,
+  NormalModule, StmtInfo, StmtInfoIdx, SymbolOrMemberExprRef, SymbolRef, SymbolRefDbForModule,
+  TaggedSymbolRef, WrapKind,
 };
 use rolldown_ecmascript_utils::AstSnippet;
 use rolldown_rstr::{Rstr, ToRstr};
@@ -36,7 +36,7 @@ impl LinkStage<'_> {
       if !is_json || module.exports_kind == ExportsKind::CommonJs {
         update_module_default_export_info(module, default_symbol_ref, 1.into());
       }
-      module_idx_to_exports_kind.push((module.ecma_ast_idx(), module.exports_kind, is_json));
+      module_idx_to_exports_kind.push((module.idx, module.exports_kind, is_json));
 
       // generate `module.exports = expr`
       if module.exports_kind == ExportsKind::CommonJs {
@@ -46,9 +46,8 @@ impl LinkStage<'_> {
       }
     });
 
-    for (ast_idx, exports_kind, is_json_module) in module_idx_to_exports_kind {
-      let Some((ecma_ast, module_idx)) = self.ast_table.get_mut(ast_idx) else { unreachable!() };
-      let module_idx = *module_idx;
+    for (module_idx, exports_kind, is_json_module) in module_idx_to_exports_kind {
+      let Some(ecma_ast) = &mut self.ast_table[module_idx] else { unreachable!() };
       if matches!(exports_kind, ExportsKind::CommonJs) {
         ecma_ast.program.with_mut(|fields| {
           let snippet = AstSnippet::new(fields.allocator);
@@ -65,7 +64,7 @@ impl LinkStage<'_> {
       }
       // ExportsKind == Esm && ModuleType == Json
       if is_json_module {
-        if json_object_expr_to_esm(self, module_idx, ast_idx) {
+        if json_object_expr_to_esm(self, module_idx) {
           continue;
         }
         // if json is not a ObjectExpression, we will fallback to normal esm lazy export transform
@@ -75,7 +74,7 @@ impl LinkStage<'_> {
       }
 
       // shadowing the previous mutable ref, to avoid reference mutable ref twice at the same time.
-      let Some((ecma_ast, _)) = self.ast_table.get_mut(ast_idx) else { unreachable!() };
+      let Some(ecma_ast) = &mut self.ast_table[module_idx] else { unreachable!() };
       ecma_ast.program.with_mut(|fields| {
         let snippet = AstSnippet::new(fields.allocator);
         let Some(stmt) = fields.program.body.first_mut() else { unreachable!() };
@@ -106,17 +105,13 @@ fn update_module_default_export_info(
 
 #[allow(clippy::too_many_lines)]
 /// return true if the json is a ObjectExpression
-fn json_object_expr_to_esm(
-  link_staged: &mut LinkStage,
-  module_idx: ModuleIdx,
-  ast_idx: EcmaAstIdx,
-) -> bool {
+fn json_object_expr_to_esm(link_staged: &mut LinkStage, module_idx: ModuleIdx) -> bool {
   let module = &mut link_staged.module_table[module_idx];
   let Module::Normal(module) = module else {
     return false;
   };
 
-  let (ecma_ast, _) = &mut link_staged.ast_table[ast_idx];
+  let ecma_ast = link_staged.ast_table[module_idx].as_mut().unwrap();
   // (local, exported, legal_ident)
   let mut declaration_binding_names: Vec<(Rstr, Rstr, bool)> = vec![];
   let transformed = ecma_ast.program.with_mut(|fields| {

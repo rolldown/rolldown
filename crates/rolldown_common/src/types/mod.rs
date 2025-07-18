@@ -8,7 +8,6 @@ pub mod chunk_kind;
 pub mod constant_value;
 pub mod deconflict;
 pub mod defer_sync_scan_data;
-pub mod ecma_ast_idx;
 pub mod entry_point;
 pub mod exports_kind;
 pub mod external_module_idx;

@@ -7,7 +7,7 @@ use crate::{
   LegalComments, ModuleId, ModuleIdx, ModuleInfo, NormalizedBundlerOptions, RawImportRecord,
   ResolvedId, StmtInfo,
 };
-use crate::{EcmaAstIdx, EcmaView, IndexModules, Interop, Module, ModuleType};
+use crate::{EcmaView, IndexModules, Interop, Module, ModuleType};
 use std::ops::{Deref, DerefMut};
 
 use itertools::Itertools;
@@ -141,10 +141,6 @@ impl NormalModule {
     } else {
       ret.extend(self.ecma_view.named_exports.keys().filter(|name| name.as_str() != "default"));
     }
-  }
-
-  pub fn ecma_ast_idx(&self) -> EcmaAstIdx {
-    self.ecma_view.ecma_ast_idx.expect("ecma_ast_idx should be set in this stage")
   }
 
   pub fn star_exports_from_external_modules<'me>(

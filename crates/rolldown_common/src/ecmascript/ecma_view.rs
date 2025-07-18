@@ -8,8 +8,8 @@ use rolldown_utils::indexmap::{FxIndexMap, FxIndexSet};
 use rustc_hash::{FxHashMap, FxHashSet};
 
 use crate::{
-  EcmaAstIdx, ExportsKind, HmrInfo, ImportRecordIdx, LocalExport, ModuleDefFormat, ModuleId,
-  ModuleIdx, NamedImport, ResolvedImportRecord, SourceMutation, StmtInfos, SymbolRef,
+  ExportsKind, HmrInfo, ImportRecordIdx, LocalExport, ModuleDefFormat, ModuleId, ModuleIdx,
+  NamedImport, ResolvedImportRecord, SourceMutation, StmtInfos, SymbolRef,
   side_effects::DeterminedSideEffects, types::source_mutation::ArcSourceMutation,
 };
 
@@ -63,7 +63,6 @@ impl EcmaViewMeta {
 pub struct EcmaView {
   pub dummy_record_set: FxHashSet<Span>,
   pub source: ArcStr,
-  pub ecma_ast_idx: Option<EcmaAstIdx>,
   pub def_format: ModuleDefFormat,
   /// Represents [Module Namespace Object](https://tc39.es/ecma262/#sec-module-namespace-exotic-objects)
   pub namespace_object_ref: SymbolRef,

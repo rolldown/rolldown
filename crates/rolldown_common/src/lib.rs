@@ -117,7 +117,6 @@ pub use crate::{
   types::constant_value::{ConstExportMeta, ConstantValue},
   types::deconflict::ModuleScopeSymbolIdMap,
   types::defer_sync_scan_data::DeferSyncScanData,
-  types::ecma_ast_idx::EcmaAstIdx,
   types::entry_point::{EntryPoint, EntryPointKind},
   types::exports_kind::ExportsKind,
   types::external_module_idx::ExternalModuleIdx,

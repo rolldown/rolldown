@@ -96,7 +96,6 @@ pub async fn create_ecma_view(
   // TODO: Should we check if there are `check_side_effects_for` returns false but there are side effects in the module?
   let ecma_view = EcmaView {
     source: ast.source().clone(),
-    ecma_ast_idx: None,
     named_imports,
     named_exports,
     stmt_infos,

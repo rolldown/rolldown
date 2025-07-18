@@ -1,0 +1,23 @@
+{
+  "config": {
+    "minify": true,
+    "format": "esm"
+  },
+  "snapshot": false,
+  "configVariants": [
+    {
+      "configName": "cjs",
+      "format": "cjs"
+    },
+    {
+      "configName": "umd",
+      "format": "umd",
+      "name": "lib"
+    },
+    {
+      "configName": "iife",
+      "format": "iife",
+      "name": "lib"
+    }
+  ]
+}

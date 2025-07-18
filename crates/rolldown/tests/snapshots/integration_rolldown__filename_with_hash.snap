@@ -4392,6 +4392,10 @@ expression: output
 - main-!~{000}~.js => main-CG4zlDFv.js
 - main-CG4zlDFv.js.map
 
+# tests/rolldown/function/minify/exports
+
+- main-!~{000}~.js => main-D2tiPUbr.js
+
 # tests/rolldown/function/minify/inject_node_env
 
 - main-!~{000}~.js => main-CihG9yyg.js

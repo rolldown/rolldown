@@ -5714,6 +5714,11 @@ expression: output
 - lib-!~{001}~.js => lib-0r7ITeKp.js
 - lib2-!~{003}~.js => lib2-BymMAv4E.js
 
+# tests/rolldown/tree_shaking/dynamic_import_issue_5340
+
+- main-!~{000}~.js => main-CM-lSrIJ.js
+- dagre-!~{001}~.js => dagre-BDn171hC.js
+
 # tests/rolldown/tree_shaking/dynamic_import_then
 
 - main-!~{000}~.js => main-Dz5iy-f_.js

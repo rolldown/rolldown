@@ -1,0 +1,25 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## dagre.js
+
+```js
+//#region dagre.mjs
+const render = async () => {
+	return "render";
+};
+
+//#endregion
+export { render };
+```
+## main.js
+
+```js
+//#region main.js
+const foo = async () => await import("./dagre.js");
+
+//#endregion
+export { foo };
+```

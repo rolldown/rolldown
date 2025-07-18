@@ -9,6 +9,30 @@ use super::attach_debug_info::AttachDebugInfo;
 use super::chunk_modules_order::ChunkModulesOrderBy;
 use super::hmr_options::HmrOptions;
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[cfg_attr(feature = "deserialize_bundler_options", derive(Deserialize, JsonSchema))]
+#[cfg_attr(feature = "deserialize_bundler_options", serde(rename_all = "camelCase"))]
+pub enum SourcemapHires {
+  #[cfg_attr(feature = "deserialize_bundler_options", schemars(with = "bool"))]
+  Boolean(bool),
+  Boundary,
+}
+
+impl From<SourcemapHires> for string_wizard::Hires {
+  fn from(value: SourcemapHires) -> Self {
+    match value {
+      SourcemapHires::Boolean(value) => {
+        if value {
+          string_wizard::Hires::True
+        } else {
+          string_wizard::Hires::False
+        }
+      }
+      SourcemapHires::Boundary => string_wizard::Hires::Boundary,
+    }
+  }
+}
+
 #[derive(Debug, Default, Clone)]
 #[cfg_attr(
   feature = "deserialize_bundler_options",
@@ -26,6 +50,7 @@ pub struct ExperimentalOptions {
   pub chunk_modules_order: Option<ChunkModulesOrderBy>,
   pub chunk_import_map: Option<bool>,
   pub on_demand_wrapping: Option<bool>,
+  pub transform_hires_sourcemap: Option<SourcemapHires>,
 }
 
 impl ExperimentalOptions {

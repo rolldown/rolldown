@@ -176,6 +176,7 @@ export interface InputOptions {
      * Required to be used with `watch` mode.
      */
     incrementalBuild?: boolean;
+    transformHiresSourcemap?: boolean | 'boundary';
   };
   /**
    * Replace global variables or [property accessors](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Operators/Property_accessors) with the provided values.

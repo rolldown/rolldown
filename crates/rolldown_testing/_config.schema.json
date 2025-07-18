@@ -863,6 +863,16 @@
             "boolean",
             "null"
           ]
+        },
+        "transformHiresSourcemap": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/SourcemapHires"
+            },
+            {
+              "type": "null"
+            }
+          ]
         }
       },
       "additionalProperties": false
@@ -910,6 +920,28 @@
       "enum": [
         "execOrder",
         "moduleId"
+      ]
+    },
+    "SourcemapHires": {
+      "oneOf": [
+        {
+          "type": "string",
+          "enum": [
+            "boundary"
+          ]
+        },
+        {
+          "type": "object",
+          "properties": {
+            "boolean": {
+              "type": "boolean"
+            }
+          },
+          "required": [
+            "boolean"
+          ],
+          "additionalProperties": false
+        }
       ]
     },
     "RawMinifyOptions": {

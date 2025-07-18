@@ -12,7 +12,7 @@ use crate::{
 };
 use anyhow::Result;
 use rolldown_common::{
-  ModuleInfo, ModuleType, NormalModule, SharedNormalizedBundlerOptions,
+  ModuleInfo, ModuleType, NormalModule, SharedNormalizedBundlerOptions, SourcemapHires,
   side_effects::HookSideEffects,
 };
 use rolldown_debug::{action, trace_action};
@@ -279,7 +279,7 @@ impl PluginDriver {
         .await?
       {
         original_sourcemap_chain = plugin_sourcemap_chain.into_inner();
-        if let Some(map) = Self::normalize_transform_sourcemap(r.map, id, &code, r.code.as_ref()) {
+        if let Some(map) = self.normalize_transform_sourcemap(r.map, id, &code, r.code.as_ref()) {
           original_sourcemap_chain.push(map);
         }
         plugin_sourcemap_chain = UniqueArc::new(original_sourcemap_chain);
@@ -317,6 +317,7 @@ impl PluginDriver {
 
   #[inline]
   fn normalize_transform_sourcemap(
+    &self,
     map: Option<SourceMap>,
     id: &str,
     original_code: &str,
@@ -340,11 +341,14 @@ impl PluginDriver {
         None
       } else {
         // If sourcemap is empty and code has changed, need to create one remapping original code.
-        // Here using `hires: true` to get more accurate column information, but it has more overhead.
-        // TODO: maybe it should be add a option to control hires.
         let magic_string = MagicString::new(original_code);
+        let hires = self
+          .options
+          .experimental
+          .transform_hires_sourcemap
+          .unwrap_or(SourcemapHires::Boolean(true));
         Some(magic_string.source_map(SourceMapOptions {
-          hires: string_wizard::Hires::True,
+          hires: hires.into(),
           include_content: true,
           source: id.into(),
         }))

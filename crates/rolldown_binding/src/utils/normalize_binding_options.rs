@@ -360,7 +360,11 @@ pub fn normalize_binding_options(
     }),
     globals: normalize_globals_option(output_options.globals),
     module_types,
-    experimental: input_options.experimental.map(Into::into),
+    experimental: if let Some(experimental) = input_options.experimental {
+      Some(experimental.try_into()?)
+    } else {
+      None
+    },
     minify: output_options
       .minify
       .map(|opts| match opts {

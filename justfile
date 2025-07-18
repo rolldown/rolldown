@@ -30,13 +30,13 @@ update-submodule:
 
 # `roll` command almost run all ci checks locally. It's useful to run this before pushing your changes.
 
-roll: pnpm-install roll-rust roll-node roll-repo update-esbuild-diff
+roll: roll-rust roll-node roll-repo update-esbuild-diff
 
 roll-rust: pnpm-install check-rust test-rust lint-rust
 
-roll-node: pnpm-install test-node check-node lint-node
+roll-node: test-node check-node lint-node
 
-roll-repo: pnpm-install lint-repo
+roll-repo: lint-repo
 
 # CHECKING
 
@@ -127,10 +127,10 @@ fix-repo:
     just fmt-repo
 
 # Support `just build [native|browser] [debug|release]`
-build target="native" mode="debug": pnpm-install build-pluginutils
+build target="native" mode="debug": build-pluginutils
     pnpm run --filter rolldown build-{{ target }}:{{ mode }}
 
-build-memory-profile: pnpm-install build-pluginutils
+build-memory-profile: build-pluginutils
     pnpm run --filter rolldown build-native:memory-profile
 
 _build-native-debug:

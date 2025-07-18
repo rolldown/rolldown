@@ -13,6 +13,7 @@ setup:
     cargo binstall cargo-insta cargo-deny cargo-shear typos-cli -y
     # Node.js related setup
     corepack enable
+    pnpm install
     just setup-submodule
     just setup-bench
     @echo "✅✅✅ Setup complete!"
@@ -31,7 +32,7 @@ update-submodule:
 
 roll: roll-rust roll-node roll-repo update-esbuild-diff
 
-roll-rust: check-rust test-rust lint-rust
+roll-rust: pnpm-install check-rust test-rust lint-rust
 
 roll-node: test-node check-node lint-node
 
@@ -58,7 +59,7 @@ test-update:
     just test-rust
     just test-node all --update
 
-test-rust:
+test-rust: pnpm-install
     cargo test --workspace --exclude rolldown_binding
 
 update-generated-code:
@@ -168,3 +169,6 @@ bump-packages *args:
 
 check-setup-prerequisites:
     node ./scripts/misc/setup-prerequisites/node.js
+
+pnpm-install:
+    pnpm install

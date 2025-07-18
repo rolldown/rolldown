@@ -1,3 +1,4 @@
+use oxc::span::SourceType;
 #[cfg(feature = "deserialize_bundler_options")]
 use schemars::JsonSchema;
 #[cfg(feature = "deserialize_bundler_options")]
@@ -28,6 +29,14 @@ impl OutputFormat {
   /// Since we have different implementation for `IIFE` and extra implementation of `UMD` omit them as well
   pub fn should_call_runtime_require(&self) -> bool {
     !matches!(self, Self::Cjs | Self::Umd | Self::Iife)
+  }
+
+  #[inline]
+  pub fn source_type(&self) -> SourceType {
+    match self {
+      Self::Esm => SourceType::mjs(),
+      Self::Cjs | Self::Iife | Self::Umd => SourceType::cjs(),
+    }
   }
 }
 

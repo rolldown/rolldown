@@ -110,7 +110,7 @@
     "# Scrips for node #": "_",
     "build-node": "tsx -C dev ./build.ts",
     "build-types-check": "tsc -p ./tsconfig.check.json",
-    "build-js-glue": "pnpm run --sequential '/^build-(types|node|types-check)$/'",
+    "build-js-glue": "pnpm run --sequential '/^build-(node|types-check)$/'",
     "build-native:debug": "pnpm run --sequential '/^build-(binding|js-glue)$/'",
     "build-native:release": "pnpm run --sequential '/^build-(binding:release|js-glue)$/'",
     "build-native:memory-profile": "pnpm run --sequential '/^build-(binding:memory-profile|js-glue)$/'",

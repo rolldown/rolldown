@@ -127,7 +127,7 @@ jobs:
       - name: Canary/Nightly Versioning
         run: |
           node --import @oxc-node/core/register ./scripts/misc/bump-version.js ${ROLLDOWN_VERSION}
-          pnpm --filter rolldown prepublishOnly
+          pnpm --filter rolldown prepublishOnly --skip-optional-publish
         env:
           ROLLDOWN_VERSION: ${{ steps.rolldown-version.outputs.content }}
 

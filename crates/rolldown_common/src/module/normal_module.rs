@@ -220,7 +220,7 @@ impl NormalModule {
             ..Default::default()
           });
           let map =
-            render_output.map.map(|original| collapse_sourcemaps(vec![&original, &mutated_map]));
+            render_output.map.map(|original| collapse_sourcemaps(&[&original, &mutated_map]));
           return Some(ModuleRenderOutput { code, map });
         }
         Some(ModuleRenderOutput { code: render_output.code, map: render_output.map })

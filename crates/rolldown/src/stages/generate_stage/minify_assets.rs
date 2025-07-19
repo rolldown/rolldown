@@ -51,7 +51,7 @@ impl GenerateStage<'_> {
             asset.content = minified_content.into();
             match (&asset.map, &new_map) {
               (Some(origin_map), Some(new_map)) => {
-                asset.map = Some(collapse_sourcemaps(vec![origin_map, new_map]));
+                asset.map = Some(collapse_sourcemaps(&[origin_map, new_map]));
               }
               _ => {
                 // TODO: Map is dirty. Should we reset the `asset.map` to `None`?

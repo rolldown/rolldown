@@ -35,7 +35,7 @@ impl TransformPluginContext {
       } else {
         let sourcemap_chain = sourcemap_chain.iter().collect::<Vec<_>>();
         // TODO Here could be cache result for pervious sourcemap_chain, only remapping new sourcemap chain
-        collapse_sourcemaps(sourcemap_chain)
+        collapse_sourcemaps(&sourcemap_chain)
       }
     })
   }

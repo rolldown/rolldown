@@ -14,9 +14,9 @@ use rolldown_utils::rustc_hash::FxHashMapExt;
 
 // <https://github.com/rollup/rollup/blob/master/src/utils/collapseSourcemaps.ts>
 #[allow(clippy::cast_possible_truncation)]
-pub fn collapse_sourcemaps(mut sourcemap_chain: Vec<&SourceMap>) -> SourceMap {
+pub fn collapse_sourcemaps(sourcemap_chain: &[&SourceMap]) -> SourceMap {
   debug_assert!(sourcemap_chain.len() > 1);
-  let last_map = sourcemap_chain.pop().expect("sourcemap_chain should not be empty");
+  let last_map = sourcemap_chain.last().expect("sourcemap_chain should not be empty");
   let first_map = sourcemap_chain.first().expect("sourcemap_chain should not be empty");
 
   let sourcemap_and_lookup_table = sourcemap_chain
@@ -144,7 +144,7 @@ fn test_collapse_sourcemaps() {
     .build(&ret3.program);
   sourcemap_chain.push(map.as_ref().unwrap());
 
-  let map = collapse_sourcemaps(sourcemap_chain);
+  let map = collapse_sourcemaps(&sourcemap_chain);
   assert_eq!(
     SourcemapVisualizer::new(&code, &map).into_visualizer_text(),
     r#"- foo.js

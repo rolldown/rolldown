@@ -110,16 +110,15 @@ impl EcmaCompiler {
     codegen_options: CodegenOptions,
   ) -> (String, Option<SourceMap>) {
     let allocator = Allocator::default();
-    let program = Parser::new(&allocator, source_text, source_type).parse().program;
-    let program = allocator.alloc(program);
-    let ret = Self::minify_impl(minifier_options, run_compress, &allocator, program);
+    let mut program = Parser::new(&allocator, source_text, source_type).parse().program;
+    let ret = Self::minify_impl(minifier_options, run_compress, &allocator, &mut program);
     let ret = Codegen::new()
       .with_options(CodegenOptions {
         source_map_path: enable_sourcemap.then(|| PathBuf::from(filename)),
         ..codegen_options
       })
       .with_scoping(ret.scoping)
-      .build(program);
+      .build(&program);
     (ret.code, ret.map)
   }
 

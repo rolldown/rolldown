@@ -5467,7 +5467,10 @@ expression: output
 
 # tests/rolldown/topics/hmr/dynamic_import
 
-- main-!~{000}~.js => main-BQUKp0js.js
+- main-!~{000}~.js => main-CaCo5ESO.js
+- chunk-!~{001}~.js => chunk-8OODDWbD.js
+- exist-dep-cjs-!~{003}~.js => exist-dep-cjs-73N58i3V.js
+- exist-dep-esm-!~{005}~.js => exist-dep-esm-CbY1ke2_.js
 
 # tests/rolldown/topics/hmr/generate_patch_error
 

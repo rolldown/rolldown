@@ -139,6 +139,8 @@ impl HmrManager {
     let mut hmr_boundaries = FxIndexSet::default();
     let mut need_to_full_reload = false;
     let mut full_reload_reason = None;
+
+    // We're checking if this change could be handled by hmr. If so, we need to find the HMR boundaries.
     while let Some(changed_module_idx) = changed_modules.pop() {
       if need_to_full_reload {
         break;
@@ -172,6 +174,11 @@ impl HmrManager {
       hmr_boundaries.extend(boundaries);
     }
 
+    // The HMR process will execute the code starting from the HMR boundaries. The HMR process expects all dependencies
+    // of the HMR boundaries to be re-executed. We collect them here to include them in the HMR output.
+    affected_modules
+      .extend(Self::collect_affected_modules_from_boundaries(&self.module_db, &hmr_boundaries));
+
     if need_to_full_reload {
       return Ok(HmrOutput {
         full_reload_reason,
@@ -191,9 +198,25 @@ impl HmrManager {
 
     let mut modules_to_invalidate = changed_modules.clone();
     // FIXME(hyf0): In general, only modules got edited need to be invalidated, because we need to refetch their latest content.
-    // For those modules that are not edited, we should be able to reuse their AST. But currently we don't have a good way to do that
-    // due to architecture limitation.
+    // For those modules that are not edited but affected, we should be able to reuse their previous AST instead of going through the whole
+    // module loading process again. But currently we don't have a good way to do that due to architecture limitation.
     modules_to_invalidate.extend(affected_modules.clone());
+
+    // FIXME: It's expected that `rolldown:runtime` appears in the `affected_modules`. But the module loader can't handle it properly, it'll
+    // report an error that disk doesn't exist file called `rolldown:runtime`.
+    self.module_db.iter().find_map(|m| (m.id() == "rolldown:runtime").then_some(m.idx())).inspect(
+      |runtime_idx| {
+        modules_to_invalidate.shift_remove(runtime_idx);
+      },
+    );
+
+    tracing::debug!(
+      target: "hmr",
+      "modules_to_invalidate` {:?}",
+      modules_to_invalidate.iter()
+        .map(|module_idx| self.module_db.modules[*module_idx].stable_id())
+        .collect::<Vec<_>>(),
+    );
 
     let module_infos_to_be_updated = modules_to_invalidate
       .iter()
@@ -443,5 +466,39 @@ impl HmrManager {
     }
 
     false
+  }
+
+  fn collect_affected_modules_from_boundaries(
+    modules: &ModuleTable,
+    hmr_boundaries: &FxIndexSet<HmrBoundary>,
+  ) -> impl IntoIterator<Item = ModuleIdx> {
+    fn collect_dependencies(
+      modules: &ModuleTable,
+      module_idx: ModuleIdx,
+      visited: &mut FxHashSet<ModuleIdx>,
+    ) {
+      if visited.contains(&module_idx) {
+        return;
+      }
+      visited.insert(module_idx);
+
+      let module = &modules[module_idx];
+      match module {
+        Module::Normal(normal_module) => {
+          normal_module.import_records.iter().for_each(|import_record| {
+            collect_dependencies(modules, import_record.resolved_module, visited);
+          });
+        }
+        Module::External(_external_module) => {
+          // No need to deal with external modules in HMR.
+        }
+      }
+    }
+    let mut visited = FxHashSet::default();
+    hmr_boundaries.iter().for_each(|boundary| {
+      collect_dependencies(modules, boundary.boundary, &mut visited);
+    });
+
+    visited
   }
 }

@@ -43,11 +43,182 @@ var init_main_0 = __rolldown_runtime__.createEsmInitializer(function() {
 		var ns_main = {};
 		__rolldown_runtime__.__export(ns_main, {});
 		__rolldown_runtime__.registerModule("main.js", { exports: ns_main });
+		init_foo_2();
+		init_foo_3();
 		const hot_main = __rolldown_runtime__.createModuleHotContext("main.js");
 		var import_foo_0 = __rolldown_runtime__.loadExports("foo.mjs");
 		var import_foo_1 = __rolldown_runtime__.loadExports("foo/index.mjs");
 		console.log(import_foo_0.foo, import_foo_1.foo);
 		hot_main.accept(() => {});
+	} finally {}
+});
+
+var init_rolldown_runtime_1 = __rolldown_runtime__.createEsmInitializer(function() {
+	try {
+		var ns_rolldown_runtime = {};
+		__rolldown_runtime__.__export(ns_rolldown_runtime, {});
+		__rolldown_runtime__.registerModule("rolldown:runtime", { exports: ns_rolldown_runtime });
+		const hot_rolldown_runtime = __rolldown_runtime__.createModuleHotContext("rolldown:runtime");
+		var __create = Object.create;
+		var __defProp = Object.defineProperty;
+		var __getOwnPropDesc = Object.getOwnPropertyDescriptor;
+		var __getOwnPropNames = Object.getOwnPropertyNames;
+		var __getProtoOf = Object.getPrototypeOf;
+		var __hasOwnProp = Object.prototype.hasOwnProperty;
+		var __export = (target, all) => {
+			for (var name in all) __defProp(target, name, {
+				get: all[name],
+				enumerable: true
+			});
+		};
+		var __copyProps = (to, from, except, desc) => {
+			if (from && typeof from === "object" || typeof from === "function") for (var keys = __getOwnPropNames(from), i = 0, n = keys.length, key; i < n; i++) {
+				key = keys[i];
+				if (!__hasOwnProp.call(to, key) && key !== except) __defProp(to, key, {
+					get: ((k) => from[k]).bind(null, key),
+					enumerable: !(desc = __getOwnPropDesc(from, key)) || desc.enumerable
+				});
+			}
+			return to;
+		};
+		var __toESM = (mod, isNodeMode, target) => (target = mod != null ? __create(__getProtoOf(mod)) : {}, __copyProps(isNodeMode || !mod || !mod.__esModule ? __defProp(target, "default", {
+			value: mod,
+			enumerable: true
+		}) : target, mod));
+		var __toCommonJS = (mod) => __copyProps(__defProp({}, "__esModule", { value: true }), mod);
+		var __toDynamicImportESM = (isNodeMode) => (mod) => __toESM(mod.default, isNodeMode);
+	} finally {}
+});
+
+var init_foo_2 = __rolldown_runtime__.createEsmInitializer(function() {
+	try {
+		var ns_foo = {};
+		__rolldown_runtime__.__export(ns_foo, { foo: () => foo });
+		__rolldown_runtime__.registerModule("foo.mjs", { exports: ns_foo });
+		const hot_foo = __rolldown_runtime__.createModuleHotContext("foo.mjs");
+		const foo = "foo";
+	} finally {}
+});
+
+var init_foo_3 = __rolldown_runtime__.createEsmInitializer(function() {
+	try {
+		var ns_foo = {};
+		__rolldown_runtime__.__export(ns_foo, { foo: () => foo });
+		__rolldown_runtime__.registerModule("foo/index.mjs", { exports: ns_foo });
+		const hot_foo = __rolldown_runtime__.createModuleHotContext("foo/index.mjs");
+		const foo = "foo";
+	} finally {}
+});
+
+var init_rolldown_hmr_4 = __rolldown_runtime__.createEsmInitializer(function() {
+	try {
+		var ns_rolldown_hmr = {};
+		__rolldown_runtime__.__export(ns_rolldown_hmr, { DevRuntime: () => DevRuntime });
+		__rolldown_runtime__.registerModule("rolldown:hmr", { exports: ns_rolldown_hmr });
+		init_rolldown_runtime_1();
+		const hot_rolldown_hmr = __rolldown_runtime__.createModuleHotContext("rolldown:hmr");
+		var import_rolldown_runtime_0 = __rolldown_runtime__.loadExports("rolldown:runtime");
+		class Module {
+			/**
+			* @type {any}
+			*/
+			exports = null;
+			/**
+			* @type {string}
+			*/
+			id;
+			/**
+			* @param {string} id
+			*/
+			constructor(id) {
+				this.id = id;
+			}
+		}
+		class DevRuntime {
+			/**
+			* @type {Record<string, Module>}
+			*/
+			modules = {};
+			/**
+			* @param {string} _moduleId
+			*/
+			createModuleHotContext(_moduleId) {
+				throw new Error("createModuleHotContext should be implemented");
+			}
+			/**
+			* @param {string[]} _boundaries
+			*/
+			applyUpdates(_boundaries) {
+				throw new Error("applyUpdates should be implemented");
+			}
+			/**
+			* @param {string} id
+			* @param {{ exports: any }} meta
+			*/
+			registerModule(id, meta) {
+				const module = new Module(id);
+				module.exports = meta.exports;
+				this.modules[id] = module;
+			}
+			/**
+			* @param {string} id
+			*/
+			loadExports(id) {
+				const module = this.modules[id];
+				if (module) {
+					return module.exports;
+				} else {
+					console.warn(`Module ${id} not found`);
+					return {};
+				}
+			}
+			/**
+			* __esmMin
+			*
+			* @type {<T>(fn: any, res: T) => () => T}
+			* @internal
+			*/
+			createEsmInitializer = (fn, res) => () => (fn && (res = fn(fn = 0)), res);
+			/**
+			* __commonJSMin
+			*
+			* @type {<T extends { exports: any }>(cb: any, mod: { exports: any }) => () => T}
+			* @internal
+			*/
+			createCjsInitializer = (cb, mod) => () => (mod || cb((mod = { exports: {} }).exports, mod), mod.exports);
+			/** @internal */
+			__toESM = import_rolldown_runtime_0.__toESM;
+			/** @internal */
+			__toCommonJS = import_rolldown_runtime_0.__toCommonJS;
+			/** @internal */
+			__export = import_rolldown_runtime_0.__export;
+			/** @internal */
+			__toDynamicImportESM = import_rolldown_runtime_0.__toDynamicImportESM;
+		}
+		class TestDevRuntime extends DevRuntime {
+			/**
+			* @override
+			* @param {string} _moduleId
+			*/
+			createModuleHotContext(_moduleId) {
+				return { accept() {} };
+			}
+			/**
+			* @override
+			* @param {string[]} _boundaries
+			*/
+			applyUpdates(_boundaries) {}
+		}
+		globalThis.__rolldown_runtime__ ??= new TestDevRuntime();
+		/** @type {string[]} */
+		const testPatches = globalThis.__testPatches;
+		if (testPatches) {
+			setTimeout(async () => {
+				for (const patchChunk of testPatches) {
+					await import(patchChunk);
+				}
+			}, 0);
+		}
 	} finally {}
 });
 

@@ -295,7 +295,7 @@ pub fn normalize_options(mut raw_options: crate::BundlerOptions) -> NormalizeOpt
     keep_names: raw_options.keep_names.unwrap_or_default(),
     polyfill_require: raw_options.polyfill_require.unwrap_or(true),
     defer_sync_scan_data: raw_options.defer_sync_scan_data,
-    transform_options: raw_options.transform.unwrap_or_default(),
+    transform_options: Box::new(raw_options.transform.unwrap_or_default()),
     make_absolute_externals_relative: raw_options
       .make_absolute_externals_relative
       .unwrap_or_default(),

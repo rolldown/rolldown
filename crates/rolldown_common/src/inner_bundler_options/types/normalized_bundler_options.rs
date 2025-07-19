@@ -89,7 +89,7 @@ pub struct NormalizedBundlerOptions {
   pub drop_labels: FxHashSet<String>,
   pub polyfill_require: bool,
   pub defer_sync_scan_data: Option<DeferSyncScanDataOption>,
-  pub transform_options: TransformOptions,
+  pub transform_options: Box<TransformOptions>,
   pub make_absolute_externals_relative: MakeAbsoluteExternalsRelative,
   pub invalidate_js_side_cache: Option<InvalidateJsSideCache>,
   pub mark_module_loaded: Option<MarkModuleLoaded>,

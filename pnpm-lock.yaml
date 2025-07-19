@@ -32,7 +32,7 @@ catalogs:
       version: 0.77.2
     rolldown-plugin-dts:
       specifier: ^0.14.0
-      version: 0.14.0
+      version: 0.14.1
     tsdown:
       specifier: 0.12.9
       version: 0.12.9
@@ -377,7 +377,7 @@ importers:
         version: 'link:'
       rolldown-plugin-dts:
         specifier: 'catalog:'
-        version: 0.14.0(oxc-resolver@11.5.2)(rolldown@packages+rolldown)(typescript@5.8.3)
+        version: 0.14.1(oxc-resolver@11.5.2)(rolldown@packages+rolldown)(typescript@5.8.3)
       rollup:
         specifier: ^4.18.0
         version: 4.45.0
@@ -4953,14 +4953,14 @@ packages:
       vue-tsc:
         optional: true
 
-  rolldown-plugin-dts@0.14.0:
-    resolution: {integrity: sha512-cSO3H63Xwrt48IOMm5P7D747ssux0GRjXwJIuV4xO9MUoYS2OcunyOGR/WFzHVY5G6akmnlDGy2OuFExgL1j6Q==}
+  rolldown-plugin-dts@0.14.1:
+    resolution: {integrity: sha512-M++jFiiI0dwd9jNnta5vfxc058wwoibgeBzNMZw0QRm8jPJYxy4P3nQYlBtwQagKUDQVR0LXHSrRgXTezELEhw==}
     engines: {node: '>=20.18.0'}
     peerDependencies:
       '@typescript/native-preview': '>=7.0.0-dev.20250601.1'
       rolldown: ^1.0.0-beta.9
       typescript: ^5.0.0
-      vue-tsc: ^2.2.0 || ^3.0.0
+      vue-tsc: ~3.0.3
     peerDependenciesMeta:
       '@typescript/native-preview':
         optional: true
@@ -10249,7 +10249,7 @@ snapshots:
       - oxc-resolver
       - supports-color
 
-  rolldown-plugin-dts@0.14.0(oxc-resolver@11.5.2)(rolldown@packages+rolldown)(typescript@5.8.3):
+  rolldown-plugin-dts@0.14.1(oxc-resolver@11.5.2)(rolldown@packages+rolldown)(typescript@5.8.3):
     dependencies:
       '@babel/generator': 7.28.0
       '@babel/parser': 7.28.0

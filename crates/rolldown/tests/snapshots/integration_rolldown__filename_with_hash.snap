@@ -5473,6 +5473,12 @@ expression: output
 
 - main-!~{000}~.js => main-Cm3C6mQH.js
 
+# tests/rolldown/topics/hmr/issue5301
+
+- main-!~{000}~.js => main-BNIZxg1q.js
+- foo-!~{003}~.js => foo-DElhI6x-.js
+- rolldown-runtime-!~{001}~.js => rolldown-runtime-Dci-lWEj.js
+
 # tests/rolldown/topics/hmr/mutiply_entires
 
 - entry-!~{000}~.js => entry-BPZIs1mk.js

@@ -3054,6 +3054,7 @@ dependencies = [
  "anyhow",
  "cow-utils",
  "itertools",
+ "regex",
  "rolldown_plugin",
  "rolldown_utils",
  "sugar_path",

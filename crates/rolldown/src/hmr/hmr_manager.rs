@@ -195,6 +195,14 @@ impl HmrManager {
     // due to architecture limitation.
     modules_to_invalidate.extend(affected_modules.clone());
 
+    tracing::debug!(
+      target: "hmr",
+      "modules_to_invalidate` {:?}",
+      modules_to_invalidate.iter()
+        .map(|module_idx| self.module_db.modules[*module_idx].stable_id())
+        .collect::<Vec<_>>(),
+    );
+
     let module_infos_to_be_updated = modules_to_invalidate
       .iter()
       .map(|module_idx| {

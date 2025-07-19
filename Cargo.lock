@@ -2833,7 +2833,6 @@ dependencies = [
  "rolldown_plugin_utils",
  "rolldown_utils",
  "serde_json",
- "sugar_path",
 ]
 
 [[package]]

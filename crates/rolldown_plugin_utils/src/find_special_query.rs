@@ -1,4 +1,3 @@
-#[inline]
 pub fn find_special_query(query: &str, param: &[u8]) -> Option<usize> {
   let param_len = param.len();
   if query.len() < param_len + 2 {

@@ -1,0 +1,14 @@
+{
+  "config": {
+    "input": [
+      {
+        "name": "main",
+        "import": "./entry.js"
+      }
+    ],
+    "experimental": {
+      "hmr": {}
+    },
+    "treeshake": true
+  }
+}

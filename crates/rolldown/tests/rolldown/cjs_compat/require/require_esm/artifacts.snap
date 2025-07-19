@@ -24,7 +24,6 @@ var esm = (init_esm(), __toCommonJS(esm_exports));
 
 ```
 - ../main.js
-(0:0) "require('./esm.js');\n" --> (27:0) "init_esm();\n"
 (1:0) "var " --> (28:0) "var "
 (1:4) "esm = require('./esm.js');\n" --> (28:4) "esm = (init_esm(), __toCommonJS(esm_exports));\n"
 ```

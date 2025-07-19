@@ -315,7 +315,7 @@ impl PluginDriver {
         map.set_sources(vec![id]);
       }
       // If sourcemap hasn't `sourcesContent`, using original code to fill it.
-      if map.get_source_content(0).is_none_or(str::is_empty) {
+      if map.get_source_content(0).is_none_or(|s| s.is_empty()) {
         map.set_source_contents(vec![Some(original_code)]);
       }
       Some(map)

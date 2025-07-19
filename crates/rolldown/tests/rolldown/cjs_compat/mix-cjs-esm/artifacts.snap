@@ -70,20 +70,18 @@ var import_esm_import_cjs_export = __toESM(require_esm_import_cjs_export());
 (0:0) "module." --> (29:0) "module."
 (0:7) "exports = " --> (29:7) "exports = "
 (0:17) "1;\n" --> (29:17) "1;\n"
-- ../esm-export-cjs-require.js
-(0:0) "require('./foo')\n" --> (37:0) "require_foo();\n"
 - ../esm-import-cjs-export.js
-(1:0) "module." --> (42:0) "\tmodule."
+(1:0) "module." --> (42:1) "module."
 (1:7) "exports = " --> (42:8) "exports = "
 (1:17) "1" --> (42:18) "1;\n"
 - ../cjs.js
-(0:0) "module." --> (48:0) "\tmodule."
+(0:0) "module." --> (48:1) "module."
 (0:7) "exports = " --> (48:8) "exports = "
 (0:17) "1;" --> (48:18) "1;\n"
 - ../esm-import-cjs-require.js
-(2:0) "require('./foo')\n" --> (54:0) "require_foo();\n"
 (3:0) "assert." --> (55:0) "assert."
 (3:7) "equal(" --> (55:7) "equal("
-(3:13) "a, undefined)" --> (55:13) "import_cjs.a, void 0)"
+(3:13) "a, " --> (55:13) "import_cjs.a, "
+(3:16) "undefined)" --> (55:27) "void 0)"
 (3:26) "\n" --> (55:34) ";\n"
 ```

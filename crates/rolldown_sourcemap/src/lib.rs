@@ -1,11 +1,12 @@
 mod source;
 mod source_joiner;
 
+use std::sync::Arc;
+
 use oxc_sourcemap::Token;
 use rustc_hash::FxHashMap;
 
-pub use oxc_sourcemap::SourceMapBuilder;
-pub use oxc_sourcemap::{JSONSourceMap, SourceMap, SourcemapVisualizer};
+pub use oxc_sourcemap::{JSONSourceMap, SourceMap, SourceMapBuilder, SourcemapVisualizer};
 pub use source_joiner::SourceJoiner;
 
 pub use crate::source::{Source, SourceMapSource};
@@ -82,7 +83,7 @@ pub fn collapse_sourcemaps(mut sourcemap_chain: Vec<&SourceMap>) -> SourceMap {
     first_map.get_names().map(Into::into).collect::<Vec<_>>(),
     None,
     first_map.get_sources().map(Into::into).collect::<Vec<_>>(),
-    first_map.get_source_contents().map(|x| x.map(Into::into)).collect::<Vec<_>>(),
+    first_map.get_source_contents().map(|x| x.map(Arc::clone)).collect::<Vec<_>>(),
     tokens,
     None,
   )

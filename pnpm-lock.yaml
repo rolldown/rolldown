@@ -31,8 +31,8 @@ catalogs:
       specifier: '=0.77.2'
       version: 0.77.2
     rolldown-plugin-dts:
-      specifier: ^0.13.6
-      version: 0.13.14
+      specifier: ^0.14.0
+      version: 0.14.0
     tsdown:
       specifier: 0.12.9
       version: 0.12.9
@@ -310,7 +310,7 @@ importers:
         version: 4.0.3
       tsdown:
         specifier: 'catalog:'
-        version: 0.12.9(typescript@5.8.3)
+        version: 0.12.9(oxc-resolver@11.5.2)(typescript@5.8.3)
       vitest:
         specifier: ^3.0.1
         version: 3.2.4(@types/debug@4.1.12)(@types/node@24.0.13)(jiti@2.4.2)(lightningcss@1.30.1)(terser@5.43.1)(tsx@4.20.3)(yaml@2.8.0)
@@ -377,7 +377,7 @@ importers:
         version: 'link:'
       rolldown-plugin-dts:
         specifier: 'catalog:'
-        version: 0.13.14(oxc-resolver@11.5.2)(rolldown@packages+rolldown)(typescript@5.8.3)
+        version: 0.14.0(oxc-resolver@11.5.2)(rolldown@packages+rolldown)(typescript@5.8.3)
       rollup:
         specifier: ^4.18.0
         version: 4.45.0
@@ -4939,6 +4939,22 @@ packages:
 
   rolldown-plugin-dts@0.13.14:
     resolution: {integrity: sha512-wjNhHZz9dlN6PTIXyizB6u/mAg1wEFMW9yw7imEVe3CxHSRnNHVyycIX0yDEOVJfDNISLPbkCIPEpFpizy5+PQ==}
+    engines: {node: '>=20.18.0'}
+    peerDependencies:
+      '@typescript/native-preview': '>=7.0.0-dev.20250601.1'
+      rolldown: ^1.0.0-beta.9
+      typescript: ^5.0.0
+      vue-tsc: ^2.2.0 || ^3.0.0
+    peerDependenciesMeta:
+      '@typescript/native-preview':
+        optional: true
+      typescript:
+        optional: true
+      vue-tsc:
+        optional: true
+
+  rolldown-plugin-dts@0.14.0:
+    resolution: {integrity: sha512-cSO3H63Xwrt48IOMm5P7D747ssux0GRjXwJIuV4xO9MUoYS2OcunyOGR/WFzHVY5G6akmnlDGy2OuFExgL1j6Q==}
     engines: {node: '>=20.18.0'}
     peerDependencies:
       '@typescript/native-preview': '>=7.0.0-dev.20250601.1'
@@ -10216,24 +10232,7 @@ snapshots:
       glob: 11.0.3
       package-json-from-dist: 1.0.1
 
-  rolldown-plugin-dts@0.13.14(oxc-resolver@11.5.2)(rolldown@packages+rolldown)(typescript@5.8.3):
-    dependencies:
-      '@babel/generator': 7.28.0
-      '@babel/parser': 7.28.0
-      '@babel/types': 7.28.1
-      ast-kit: 2.1.1
-      birpc: 2.5.0
-      debug: 4.4.1(supports-color@8.1.1)
-      dts-resolver: 2.1.1(oxc-resolver@11.5.2)
-      get-tsconfig: 4.10.1
-      rolldown: link:packages/rolldown
-    optionalDependencies:
-      typescript: 5.8.3
-    transitivePeerDependencies:
-      - oxc-resolver
-      - supports-color
-
-  rolldown-plugin-dts@0.13.14(rolldown@1.0.0-beta.27)(typescript@5.8.3):
+  rolldown-plugin-dts@0.13.14(oxc-resolver@11.5.2)(rolldown@1.0.0-beta.27)(typescript@5.8.3):
     dependencies:
       '@babel/generator': 7.28.0
       '@babel/parser': 7.28.0
@@ -10244,6 +10243,23 @@ snapshots:
       dts-resolver: 2.1.1(oxc-resolver@11.5.2)
       get-tsconfig: 4.10.1
       rolldown: 1.0.0-beta.27
+    optionalDependencies:
+      typescript: 5.8.3
+    transitivePeerDependencies:
+      - oxc-resolver
+      - supports-color
+
+  rolldown-plugin-dts@0.14.0(oxc-resolver@11.5.2)(rolldown@packages+rolldown)(typescript@5.8.3):
+    dependencies:
+      '@babel/generator': 7.28.0
+      '@babel/parser': 7.28.0
+      '@babel/types': 7.28.1
+      ast-kit: 2.1.1
+      birpc: 2.5.0
+      debug: 4.4.1(supports-color@8.1.1)
+      dts-resolver: 2.1.1(oxc-resolver@11.5.2)
+      get-tsconfig: 4.10.1
+      rolldown: link:packages/rolldown
     optionalDependencies:
       typescript: 5.8.3
     transitivePeerDependencies:
@@ -10631,7 +10647,7 @@ snapshots:
 
   trough@2.2.0: {}
 
-  tsdown@0.12.9(typescript@5.8.3):
+  tsdown@0.12.9(oxc-resolver@11.5.2)(typescript@5.8.3):
     dependencies:
       ansis: 4.1.0
       cac: 6.7.14
@@ -10641,7 +10657,7 @@ snapshots:
       empathic: 2.0.0
       hookable: 5.5.3
       rolldown: 1.0.0-beta.27
-      rolldown-plugin-dts: 0.13.14(rolldown@1.0.0-beta.27)(typescript@5.8.3)
+      rolldown-plugin-dts: 0.13.14(oxc-resolver@11.5.2)(rolldown@1.0.0-beta.27)(typescript@5.8.3)
       semver: 7.7.2
       tinyexec: 1.0.1
       tinyglobby: 0.2.14

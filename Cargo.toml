@@ -210,14 +210,12 @@ oxc_resolver_napi = { version = "11.5.0", default-features = false, features = [
 oxc_sourcemap = "4" # https://github.com/oxc-project/oxc-sourcemap
 
 [profile.dev]
-# Disabling debug info speeds up local and CI builds,
-# and we don't rely on it for debugging that much.
-debug = false
+# Minimal debug info to speed up local and CI builds.
+debug = "line-tables-only"
 
 [profile.test]
-# Disabling debug info speeds up local and CI builds,
-# and we don't rely on it for debugging that much.
-debug = false
+# Minimal debug info to speed up local and CI builds.
+debug = "line-tables-only"
 
 [profile.release]
 codegen-units = 1

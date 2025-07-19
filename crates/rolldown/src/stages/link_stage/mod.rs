@@ -1,10 +1,12 @@
 use arcstr::ArcStr;
+use itertools::Itertools;
 use oxc_index::IndexVec;
 #[cfg(debug_assertions)]
 use rolldown_common::common_debug_symbol_ref;
 use rolldown_common::{
-  ConstExportMeta, EntryPoint, ImportKind, ModuleIdx, ModuleTable, PreserveEntrySignatures,
-  RuntimeModuleBrief, SymbolRef, SymbolRefDb, dynamic_import_usage::DynamicImportExportsUsage,
+  ConstExportMeta, EntryPoint, EntryPointKind, ImportKind, ModuleIdx, ModuleTable,
+  PreserveEntrySignatures, RuntimeModuleBrief, SymbolRef, SymbolRefDb,
+  dynamic_import_usage::DynamicImportExportsUsage,
 };
 use rolldown_error::BuildDiagnostic;
 #[cfg(target_family = "wasm")]
@@ -99,6 +101,18 @@ impl<'a> LinkStage<'a> {
     } else {
       FxHashMap::default()
     };
+
+    // We need to preserve the original order of user defined entry points.
+    let mut rest = scan_stage_output
+      .entry_points
+      .extract_if(0.., |item| !matches!(item.kind, EntryPointKind::UserDefined))
+      .collect_vec();
+
+    rest
+      .sort_by_cached_key(|item| (item.kind, scan_stage_output.module_table.modules[item.id].id()));
+
+    scan_stage_output.entry_points.extend(rest);
+
     Self {
       sorted_modules: Vec::new(),
       constant_symbol_map,

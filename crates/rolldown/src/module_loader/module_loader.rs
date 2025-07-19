@@ -545,7 +545,7 @@ impl<'a> ModuleLoader<'a> {
           let entry = EntryPoint {
             name: data.name.clone(),
             id: module_idx,
-            kind: EntryPointKind::UserDefined,
+            kind: EntryPointKind::EmittedUserDefined,
             file_name: data.file_name.clone(),
             related_stmt_infos: vec![],
           };
@@ -679,8 +679,7 @@ impl<'a> ModuleLoader<'a> {
     });
     // if `inline_dynamic_imports` is set to be true, here we should not put dynamic imports to entries
     if !self.options.inline_dynamic_imports {
-      let mut dynamic_import_entry_ids = dynamic_import_entry_ids.into_iter().collect::<Vec<_>>();
-      dynamic_import_entry_ids.sort_unstable_by_key(|(idx, _)| modules.get(*idx).stable_id());
+      let dynamic_import_entry_ids = dynamic_import_entry_ids.into_iter().collect::<Vec<_>>();
 
       entry_points.extend(dynamic_import_entry_ids.into_iter().map(|(id, related_stmt_infos)| {
         EntryPoint {
@@ -693,7 +692,6 @@ impl<'a> ModuleLoader<'a> {
       }));
     }
 
-    extra_entry_points.sort_unstable_by_key(|entry| modules.get(entry.id).stable_id());
     entry_points.extend(extra_entry_points);
 
     if entry_points.is_empty() && self.is_full_scan {

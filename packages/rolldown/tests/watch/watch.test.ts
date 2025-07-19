@@ -341,6 +341,34 @@ test.sequential('#5260', async () => {
   await watcher.close()
 })
 
+
+test.sequential('watch sync ast of newly added ast', async () => {
+  createTestWithMultiFiles('sync-ast-of-newly-added-modules', {
+    'main.js':`import ('./d1.js').then(console.log)`,
+    'd1.js': `export const a = 1`,
+    'd2.js': `export const b = 2`
+  });
+  const cwd = path.join(import.meta.dirname, 'temp', 'sync-ast-of-newly-added-modules');
+  const watcher = watch({
+    cwd,
+    input: 'main.js',
+    watch: {
+      buildDelay: 50,
+    },
+    experimental: {
+      incrementalBuild: true
+    }
+  })
+  await waitBuildFinished(watcher)
+
+  watcher.clear('event')
+
+  fs.writeFileSync(path.join(cwd, 'main.js'), `import ('./d1.js').then(console.log);import ('./d2.js').then(console.log)`)
+
+  await waitBuildFinished(watcher)
+  await watcher.close()
+})
+
 test.sequential('watch buildDelay', async () => {
   const { input, output } = await createTestInputAndOutput('watch-buildDelay')
   const watcher = watch({

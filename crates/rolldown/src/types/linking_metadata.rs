@@ -94,7 +94,8 @@ impl LinkingMetadata {
     needs_commonjs_export: bool,
   ) -> impl Iterator<Item = (&'b Rstr, &'b ResolvedExport)> + 'b {
     let partial_used_exports = match entry_point_kind {
-      rolldown_common::EntryPointKind::UserDefined => None,
+      rolldown_common::EntryPointKind::UserDefined
+      | rolldown_common::EntryPointKind::EmittedUserDefined => None,
       rolldown_common::EntryPointKind::DynamicImport => {
         dynamic_import_exports_usage_map.get(&module_idx).and_then(|usage| match usage {
           DynamicImportExportsUsage::Complete => None,

@@ -68,36 +68,31 @@ impl LinkStage<'_> {
     };
 
     let (user_defined_entries, mut dynamic_entries): (Vec<_>, Vec<_>) =
-      std::mem::take(&mut self.entries)
-        .into_iter()
-        .partition(|item| matches!(item.kind, EntryPointKind::UserDefined));
-    user_defined_entries
-      .iter()
-      .filter(|entry| matches!(entry.kind, EntryPointKind::UserDefined))
-      .for_each(|entry| {
-        let module = match &self.module_table[entry.id] {
-          Module::Normal(module) => module,
-          Module::External(_module) => {
-            // Case: import('external').
-            return;
+      std::mem::take(&mut self.entries).into_iter().partition(|item| item.kind.is_user_defined());
+    user_defined_entries.iter().filter(|entry| entry.kind.is_user_defined()).for_each(|entry| {
+      let module = match &self.module_table[entry.id] {
+        Module::Normal(module) => module,
+        Module::External(_module) => {
+          // Case: import('external').
+          return;
+        }
+      };
+      context.bailout_cjs_tree_shaking_modules.insert(module.idx);
+      let meta = &self.metas[entry.id];
+      meta.referenced_symbols_by_entry_point_chunk.iter().for_each(
+        |(symbol_ref, _came_from_cjs)| {
+          if let Module::Normal(module) = &context.modules[symbol_ref.owner] {
+            module.stmt_infos.declared_stmts_by_symbol(symbol_ref).iter().copied().for_each(
+              |stmt_info_id| {
+                include_statement(context, module, stmt_info_id);
+              },
+            );
+            include_symbol(context, *symbol_ref);
           }
-        };
-        context.bailout_cjs_tree_shaking_modules.insert(module.idx);
-        let meta = &self.metas[entry.id];
-        meta.referenced_symbols_by_entry_point_chunk.iter().for_each(
-          |(symbol_ref, _came_from_cjs)| {
-            if let Module::Normal(module) = &context.modules[symbol_ref.owner] {
-              module.stmt_infos.declared_stmts_by_symbol(symbol_ref).iter().copied().for_each(
-                |stmt_info_id| {
-                  include_statement(context, module, stmt_info_id);
-                },
-              );
-              include_symbol(context, *symbol_ref);
-            }
-          },
-        );
-        include_module(context, module);
-      });
+        },
+      );
+      include_module(context, module);
+    });
 
     let mut unused_record_idxs = vec![];
     let cycled_idx = self.sort_dynamic_entries_by_topological_order(&mut dynamic_entries);
@@ -295,7 +290,7 @@ impl LinkStage<'_> {
   ) -> Option<Vec<(ModuleIdx, Vec<ImportRecordIdx>)>> {
     let mut ret = vec![];
     let is_lived = match item.kind {
-      EntryPointKind::UserDefined => true,
+      EntryPointKind::UserDefined | EntryPointKind::EmittedUserDefined => true,
       EntryPointKind::DynamicImport => {
         let is_dynamic_imported_module_exports_unused =
           self.dynamic_import_exports_usage_map.get(&item.id).is_some_and(

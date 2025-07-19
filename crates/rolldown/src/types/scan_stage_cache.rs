@@ -69,6 +69,7 @@ impl ScanStageCache {
           std::mem::take(scan_stage_output.symbol_ref_db.local_db_mut(new_idx)),
         );
         cache.module_table.modules.push(new_module);
+        cache.index_ecma_ast.push(scan_stage_output.index_ecma_ast.get_mut(new_idx).take());
         continue;
       }
       cache.module_table[idx] = new_module;

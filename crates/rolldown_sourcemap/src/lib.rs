@@ -16,10 +16,16 @@ use rolldown_utils::rustc_hash::FxHashMapExt;
 #[allow(clippy::cast_possible_truncation)]
 pub fn collapse_sourcemaps(sourcemap_chain: &[&SourceMap]) -> SourceMap {
   debug_assert!(sourcemap_chain.len() > 1);
+  if sourcemap_chain.len() == 1 {
+    // If there's only one sourcemap, return it as is.
+    return sourcemap_chain[0].clone();
+  }
+
   let last_map = sourcemap_chain.last().expect("sourcemap_chain should not be empty");
   let first_map = sourcemap_chain.first().expect("sourcemap_chain should not be empty");
+  let chain_without_last = &sourcemap_chain[..sourcemap_chain.len() - 1];
 
-  let sourcemap_and_lookup_table = sourcemap_chain
+  let sourcemap_and_lookup_table = chain_without_last
     .iter()
     .map(|sourcemap| (sourcemap, sourcemap.generate_lookup_table()))
     .collect::<Vec<_>>();

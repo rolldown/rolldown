@@ -25,12 +25,11 @@ var cjs = require_cjs();
 
 ```
 - ../cjs.js
-(0:0) "module." --> (9:0) "\tmodule."
+(0:0) "module." --> (9:1) "module."
 (0:7) "exports = " --> (9:8) "exports = "
 (0:17) "{}" --> (9:18) "{"
 (0:19) "\n" --> (9:19) "};\n"
 - ../main.js
-(0:0) "require('./cjs.js');\n" --> (14:0) "require_cjs();\n"
 (1:0) "var " --> (15:0) "var "
 (1:4) "cjs = require('./cjs.js');\n" --> (15:4) "cjs = require_cjs();\n"
 ```

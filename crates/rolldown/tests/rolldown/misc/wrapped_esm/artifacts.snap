@@ -110,6 +110,4 @@ init_foo();
 (5:0) "export default class baz " --> (43:7) "class "
 (5:25) "{ }" --> (43:13) "{"
 (5:28) "\n" --> (43:14) "};\n"
-- ../main.js
-(0:0) "require('./foo')\n" --> (48:0) "init_foo();\n"
 ```

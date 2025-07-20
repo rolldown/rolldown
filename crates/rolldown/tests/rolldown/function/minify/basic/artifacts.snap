@@ -20,7 +20,6 @@ import e from"node:assert";const t=`shared.js`,n=`index.js`;e.equal(n,`index.js`
 - ../main.js
 (2:6) "a = " --> (0:47) "n="
 (2:10) "'index.js'\n" --> (0:49) "`index.js`;"
-(4:0) "assert.equal(a2, 'shared.js')\n" --> (0:60) ""
 (3:0) "assert." --> (0:60) "e."
 (3:7) "equal(" --> (0:62) "equal("
 (3:13) "a, " --> (0:68) "n,"

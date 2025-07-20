@@ -16,6 +16,7 @@ use tokio::sync::Mutex;
 
 use crate::{
   PluginDriver,
+  plugin_context::PluginContextMeta,
   types::{
     hook_resolve_id_skipped::HookResolveIdSkipped,
     plugin_context_resolve_options::PluginContextResolveOptions, plugin_idx::PluginIdx,
@@ -30,6 +31,7 @@ pub struct NativePluginContextImpl {
   pub(crate) skipped_resolve_calls: Vec<Arc<HookResolveIdSkipped>>,
   pub(crate) plugin_idx: PluginIdx,
   pub(crate) resolver: Arc<Resolver>,
+  pub(crate) meta: Arc<PluginContextMeta>,
   pub(crate) plugin_driver: Weak<PluginDriver>,
   pub(crate) file_emitter: SharedFileEmitter,
   pub(crate) options: SharedNormalizedBundlerOptions,

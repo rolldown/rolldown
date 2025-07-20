@@ -23,7 +23,7 @@ use tokio::sync::Mutex;
 use crate::{
   __inner::SharedPluginable,
   PluginContext,
-  plugin_context::NativePluginContextImpl,
+  plugin_context::{NativePluginContextImpl, PluginContextMeta},
   plugin_driver::hook_orders::PluginHookOrders,
   type_aliases::{IndexPluginContext, IndexPluginable},
   types::plugin_idx::PluginIdx,
@@ -51,6 +51,7 @@ impl PluginDriver {
   ) -> SharedPluginDriver {
     let watch_files = Arc::new(DashSet::default());
     let modules = Arc::new(DashMap::default());
+    let meta = Arc::new(PluginContextMeta::default());
     let tx = Arc::new(Mutex::new(None));
     let mut plugin_usage_vec = IndexVec::new();
 
@@ -65,6 +66,7 @@ impl PluginDriver {
           skipped_resolve_calls: vec![],
           plugin_idx,
           plugin_driver: Weak::clone(plugin_driver),
+          meta: Arc::clone(&meta),
           resolver: Arc::clone(resolver),
           file_emitter: Arc::clone(file_emitter),
           modules: Arc::clone(&modules),

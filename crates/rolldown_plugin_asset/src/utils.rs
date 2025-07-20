@@ -6,7 +6,6 @@ use rolldown_utils::{
   pattern_filter::{StringOrRegex, filter as pattern_filter},
   url::clean_url,
 };
-use sugar_path::SugarPath as _;
 
 pub const KNOWN_ASSET_TYPES: [&str; 34] = [
   // images
@@ -51,24 +50,28 @@ pub const KNOWN_ASSET_TYPES: [&str; 34] = [
 
 impl super::AssetPlugin {
   pub fn is_assets_include(&self, cwd: &Path, cleaned_id: &str) -> bool {
-    cleaned_id.as_path().extension().is_some_and(|ext| {
-      let ext = ext.to_string_lossy();
-      let ext = ext.cow_to_ascii_lowercase();
-      KNOWN_ASSET_TYPES.contains(&ext.as_ref())
-    }) || (!self.assets_include.is_empty()
-      && pattern_filter(
-        None::<&[StringOrRegex]>,
-        Some(&self.assets_include),
-        cleaned_id,
-        cwd.to_string_lossy().as_ref(),
-      )
-      .inner())
+    if let Some(ext) = Path::new(cleaned_id).extension().and_then(|e| e.to_str()) {
+      if KNOWN_ASSET_TYPES.contains(&ext.cow_to_ascii_lowercase().as_ref()) {
+        return true;
+      }
+    }
+    if self.assets_include.is_empty() {
+      return false;
+    }
+    pattern_filter(
+      None::<&[StringOrRegex]>,
+      Some(&self.assets_include),
+      cleaned_id,
+      cwd.to_string_lossy().as_ref(),
+    )
+    .inner()
   }
 
   pub fn is_not_valid_assets(&self, cwd: &Path, id: &str) -> bool {
-    let cleaned_id = clean_url(id);
-    (cleaned_id.len() == id.len() || find_special_query(id, b"url").is_none())
-      && !self.is_assets_include(cwd, cleaned_id)
+    if find_special_query(id, b"url").is_some() {
+      return false;
+    }
+    !self.is_assets_include(cwd, clean_url(id))
   }
 }
 

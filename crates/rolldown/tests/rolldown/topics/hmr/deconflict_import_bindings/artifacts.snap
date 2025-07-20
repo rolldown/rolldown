@@ -38,6 +38,7 @@ main_hot.accept(() => {});
 ## Code
 
 ```js
+//#region main.js
 var init_main_0 = __rolldown_runtime__.createEsmInitializer(function() {
 	try {
 		var ns_main = {};
@@ -53,6 +54,8 @@ var init_main_0 = __rolldown_runtime__.createEsmInitializer(function() {
 	} finally {}
 });
 
+//#endregion
+//#region rolldown:runtime
 var init_rolldown_runtime_1 = __rolldown_runtime__.createEsmInitializer(function() {
 	try {
 		var ns_rolldown_runtime = {};
@@ -90,6 +93,8 @@ var init_rolldown_runtime_1 = __rolldown_runtime__.createEsmInitializer(function
 	} finally {}
 });
 
+//#endregion
+//#region foo.mjs
 var init_foo_2 = __rolldown_runtime__.createEsmInitializer(function() {
 	try {
 		var ns_foo = {};
@@ -100,6 +105,8 @@ var init_foo_2 = __rolldown_runtime__.createEsmInitializer(function() {
 	} finally {}
 });
 
+//#endregion
+//#region foo/index.mjs
 var init_foo_3 = __rolldown_runtime__.createEsmInitializer(function() {
 	try {
 		var ns_foo = {};
@@ -110,6 +117,8 @@ var init_foo_3 = __rolldown_runtime__.createEsmInitializer(function() {
 	} finally {}
 });
 
+//#endregion
+//#region rolldown:hmr
 var init_rolldown_hmr_4 = __rolldown_runtime__.createEsmInitializer(function() {
 	try {
 		var ns_rolldown_hmr = {};
@@ -222,6 +231,7 @@ var init_rolldown_hmr_4 = __rolldown_runtime__.createEsmInitializer(function() {
 	} finally {}
 });
 
+//#endregion
 init_main_0()
 __rolldown_runtime__.applyUpdates(['main.js']);
 ```

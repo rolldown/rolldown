@@ -21,7 +21,6 @@ pub struct Shared {
   pub strict_version: Option<bool>,
 }
 
-#[allow(unused)]
 #[derive(Debug)]
 pub struct Manifest {
   pub file_path: Option<String>,

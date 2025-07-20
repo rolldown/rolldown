@@ -35,7 +35,6 @@ pub struct Bundler {
   pub(crate) plugin_driver: SharedPluginDriver,
   pub(crate) warnings: Vec<BuildDiagnostic>,
   pub(crate) _log_guard: Option<Box<dyn Any + Send>>,
-  #[allow(unused)]
   pub(crate) cache: ScanStageCache,
   pub(crate) hmr_manager: Option<HmrManager>,
   pub(crate) session: rolldown_debug::Session,

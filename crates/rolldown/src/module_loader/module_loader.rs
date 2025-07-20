@@ -93,7 +93,6 @@ impl VisitState {
   }
 }
 
-#[allow(unused)] // `build_span` field is used but clippy fails to detect it
 pub struct ModuleLoader<'a> {
   options: SharedOptions,
   shared_context: Arc<TaskContext>,

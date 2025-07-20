@@ -8,7 +8,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ```js
 import assert from "node:assert";
 
-
+// HIDDEN [rolldown:runtime]
 //#region src/basic_ns/index.js
 var require_basic_ns = __commonJS({ "src/basic_ns/index.js"(exports) {
 	exports.a = "basic-a";

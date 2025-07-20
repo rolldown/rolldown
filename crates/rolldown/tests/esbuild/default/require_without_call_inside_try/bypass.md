@@ -16,7 +16,7 @@ var aliasedRequire;
 ```
 ### rolldown
 ```js
-
+// HIDDEN [rolldown:runtime]
 //#region entry.js
 try {
 	oldLocale = globalLocale._abbr;

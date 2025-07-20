@@ -28,7 +28,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ```js
 var mod = (function(exports, foo) {
 
-
+// HIDDEN [rolldown:runtime]
 foo = __toESM(foo);
 
 Object.defineProperty(exports, 'out', {

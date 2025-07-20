@@ -6,7 +6,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## main.js
 
 ```js
-
+// HIDDEN [rolldown:runtime]
 //#region second.js
 var second_exports = {};
 import * as import_external from "external";

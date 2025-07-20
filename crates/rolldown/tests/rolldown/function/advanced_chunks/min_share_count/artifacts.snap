@@ -76,6 +76,6 @@ init_c();
 ## rolldown-runtime.js
 
 ```js
-
+// HIDDEN [rolldown:runtime]
 export { __esm };
 ```

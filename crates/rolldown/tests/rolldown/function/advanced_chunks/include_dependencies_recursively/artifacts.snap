@@ -22,7 +22,7 @@ init_main();
 ## rolldown-runtime.js
 
 ```js
-
+// HIDDEN [rolldown:runtime]
 export { __esm };
 ```
 ## vendor.js
@@ -80,7 +80,7 @@ export { bar, init_bar };
 ## rolldown-runtime.js
 
 ```js
-
+// HIDDEN [rolldown:runtime]
 export { __esm };
 ```
 ## vendor.js
@@ -132,7 +132,7 @@ export { bar, init_bar };
 ## rolldown-runtime.js
 
 ```js
-
+// HIDDEN [rolldown:runtime]
 export { __esm };
 ```
 ## vendor.js

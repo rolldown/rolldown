@@ -6,7 +6,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## main.js
 
 ```js
-
+// HIDDEN [rolldown:runtime]
 //#region main.js
 const __require = "test";
 var main_default = () => __require$1("test-dep") || __require$1("test-dep666");

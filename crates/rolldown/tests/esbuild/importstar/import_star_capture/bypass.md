@@ -19,7 +19,7 @@ console.log(foo_exports, foo, foo2);
 ```js
 import assert from "node:assert";
 
-
+// HIDDEN [rolldown:runtime]
 //#region foo.js
 var foo_exports = {};
 __export(foo_exports, { foo: () => foo$1 });

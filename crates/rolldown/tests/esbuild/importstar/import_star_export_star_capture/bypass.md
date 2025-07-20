@@ -21,7 +21,7 @@ console.log(bar_exports, foo, foo2);
 ```js
 import assert from "node:assert";
 
-
+// HIDDEN [rolldown:runtime]
 //#region foo.js
 const foo$1 = 123;
 

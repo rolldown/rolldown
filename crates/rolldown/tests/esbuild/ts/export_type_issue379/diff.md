@@ -37,7 +37,7 @@ console.log(a_exports, b_exports, c_exports, d_exports);
 ```
 ### rolldown
 ```js
-
+// HIDDEN [rolldown:runtime]
 //#region a.ts
 var a_exports = {};
 __export(a_exports, { foo: () => foo$3 });

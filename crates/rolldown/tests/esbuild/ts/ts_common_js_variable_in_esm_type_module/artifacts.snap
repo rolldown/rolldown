@@ -6,7 +6,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## entry.js
 
 ```js
-
+// HIDDEN [rolldown:runtime]
 //#region entry.ts
 var require_entry = __commonJS({ "entry.ts"(exports, module) {
 	module.exports = null;

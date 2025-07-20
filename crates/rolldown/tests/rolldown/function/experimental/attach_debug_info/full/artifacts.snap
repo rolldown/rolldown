@@ -73,7 +73,7 @@ init_dyn_entry();
 ## rolldown-runtime.js
 
 ```js
-
+// HIDDEN [rolldown:runtime]
 export { __esm };
 ```
 ## shared.js

@@ -40,7 +40,7 @@ console.log(re_export2);
 ```
 ### rolldown
 ```js
-
+// HIDDEN [rolldown:runtime]
 const external_pkg = __toESM(require("external-pkg"));
 const external_pkg2 = __toESM(require("external-pkg2"));
 

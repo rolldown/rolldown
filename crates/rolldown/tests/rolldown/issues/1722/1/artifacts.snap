@@ -22,7 +22,7 @@ export { main, sub };
 ## main2.js
 
 ```js
-
+// HIDDEN [rolldown:runtime]
 //#region sub.cjs
 var require_sub = __commonJS({ "sub.cjs"(exports, module) {
 	module.exports.sub = "sub";

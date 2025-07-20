@@ -32,7 +32,7 @@ Variant: (strict_execution_order: true)
 ```js
 import nodeAssert from "node:assert";
 
-
+// HIDDEN [rolldown:runtime]
 //#region dep.js
 var value$1;
 var init_dep = __esm({ "dep.js"() {
@@ -92,7 +92,7 @@ Variant: (on_demand_wrapping: true, strict_execution_order: true)
 ```js
 import nodeAssert from "node:assert";
 
-
+// HIDDEN [rolldown:runtime]
 //#region dep.js
 const value$1 = "";
 

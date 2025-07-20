@@ -48,7 +48,7 @@
 ```js
 (function() {
 
-
+// HIDDEN [rolldown:runtime]
 
 //#region c.js
 var require_c = __commonJS({ "c.js"() {} });

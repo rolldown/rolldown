@@ -25,7 +25,7 @@ Variant: (strict_execution_order: true)
 ## main.js
 
 ```js
-
+// HIDDEN [rolldown:runtime]
 //#region tla.js
 var value$1;
 var init_tla = __esm({ async "tla.js"() {

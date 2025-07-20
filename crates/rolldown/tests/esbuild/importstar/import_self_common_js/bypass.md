@@ -16,7 +16,7 @@ module.exports = require_entry();
 ```
 ### rolldown
 ```js
-
+// HIDDEN [rolldown:runtime]
 const node_assert = __toESM(require("node:assert"));
 
 //#region entry.js

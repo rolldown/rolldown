@@ -70,7 +70,7 @@ init_e();
 import * as ns$1 from "x";
 import { ns } from "x";
 
-
+// HIDDEN [rolldown:runtime]
 //#region a.js
 var a_exports = {};
 __export(a_exports, { ns: () => ns$1 });

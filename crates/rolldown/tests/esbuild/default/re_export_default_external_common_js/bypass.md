@@ -18,7 +18,7 @@ var import_bar = __toESM(require("bar"));
 ```
 ### rolldown
 ```js
-
+// HIDDEN [rolldown:runtime]
 const foo = __toESM(require("foo"));
 const bar = __toESM(require("bar"));
 

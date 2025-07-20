@@ -15,7 +15,7 @@ console.log(import_demo_pkg.default, require_main());
 ```
 ### rolldown
 ```js
-
+// HIDDEN [rolldown:runtime]
 //#region node_modules/demo-pkg/module.js
 var module_exports = {};
 __export(module_exports, { default: () => module_default });

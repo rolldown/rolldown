@@ -23,7 +23,7 @@ require_foo();
 ```
 ### rolldown
 ```js
-
+// HIDDEN [rolldown:runtime]
 //#region src/node_modules/sub/bar.js
 var require_bar = __commonJS({ "src/node_modules/sub/bar.js"() {
 	works();

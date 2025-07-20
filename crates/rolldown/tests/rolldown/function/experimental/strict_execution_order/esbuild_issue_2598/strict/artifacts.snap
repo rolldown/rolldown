@@ -41,7 +41,7 @@ init_main();
 ## user-lib.js
 
 ```js
-
+// HIDDEN [rolldown:runtime]
 //#region user-lib.js
 async function foo() {
 	return import("./lazy-chunk.js");

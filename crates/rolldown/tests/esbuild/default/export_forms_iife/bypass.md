@@ -47,7 +47,7 @@ var globalName = (() => {
 var globalName = (function(exports) {
 
 Object.defineProperty(exports, '__esModule', { value: true });
-
+// HIDDEN [rolldown:runtime]
 
 //#region a.js
 const abc = void 0;

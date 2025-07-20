@@ -15,7 +15,7 @@ var foo = 123;
 ```
 ### rolldown
 ```js
-
+// HIDDEN [rolldown:runtime]
 
 //#region entry.js
 var entry_exports = {};

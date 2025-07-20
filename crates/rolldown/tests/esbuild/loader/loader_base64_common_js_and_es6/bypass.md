@@ -22,7 +22,7 @@ console.log(x_b64, y_default);
 ```js
 import assert from "node:assert";
 
-
+// HIDDEN [rolldown:runtime]
 //#region y.b64
 var y_default = "eQ==";
 

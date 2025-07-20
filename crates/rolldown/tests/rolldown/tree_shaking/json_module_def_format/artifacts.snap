@@ -6,7 +6,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## main.js
 
 ```js
-
+// HIDDEN [rolldown:runtime]
 //#region test.json
 var require_test = __commonJS({ "test.json"(exports, module) {
 	module.exports = { "a": 1 };

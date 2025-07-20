@@ -46,7 +46,7 @@ export default require_foo();
 ```
 ### rolldown
 ```js
-
+// HIDDEN [rolldown:runtime]
 //#region foo.js
 var require_foo = __commonJS({ "foo.js"(exports) {
 	exports.bar = 123;
@@ -63,7 +63,7 @@ export { __toDynamicImportESM, __toESM, require_foo };
 @@ -1,2 +1,8 @@
 -import {require_foo} from "./chunk-X3UWZZCR.js";
 -export default require_foo();
-+
++// HIDDEN [rolldown:runtime]
 +//#region foo.js
 +var require_foo = __commonJS({ "foo.js"(exports) {
 +	exports.bar = 123;

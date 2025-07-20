@@ -36,7 +36,7 @@ var i=r((t,e)=>{e.exports=123});var s=i();console.log(s,"no identifier in this f
 ```
 ### rolldown
 ```js
-
+// HIDDEN [rolldown:runtime]
 //#region AAAAAAAAAABBBBBBBBBBCCCCCCCCCCDDDDDDDDDD.js
 var require_AAAAAAAAAABBBBBBBBBBCCCCCCCCCCDDDDDDDDDD = __commonJS({ "AAAAAAAAAABBBBBBBBBBCCCCCCCCCCDDDDDDDDDD.js"(exports, module) {
 	module.exports = 123;

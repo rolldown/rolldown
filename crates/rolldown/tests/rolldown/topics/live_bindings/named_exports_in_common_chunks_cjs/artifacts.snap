@@ -6,7 +6,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## async-entry.js
 
 ```js
-
+// HIDDEN [rolldown:runtime]
 const require_shared = require('./shared.js');
 const node_assert = __toESM(require("node:assert"));
 

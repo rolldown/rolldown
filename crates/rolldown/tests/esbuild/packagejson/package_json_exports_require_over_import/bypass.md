@@ -16,7 +16,7 @@ require_require();
 ```
 ### rolldown
 ```js
-
+// HIDDEN [rolldown:runtime]
 //#region node_modules/pkg/require.js
 var require_require = __commonJS({ "node_modules/pkg/require.js"() {
 	console.log("SUCCESS");

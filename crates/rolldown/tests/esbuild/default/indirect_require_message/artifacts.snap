@@ -26,7 +26,7 @@ require = x;
 ## chunk.js
 
 ```js
-
+// HIDDEN [rolldown:runtime]
 export { __require };
 ```
 ## dot.js

@@ -10,7 +10,7 @@ console.log(ns.mustBeUnquoted, ns["mustBeQuoted"]);
 ```
 ### rolldown
 ```js
-
+// HIDDEN [rolldown:runtime]
 const ext = __toESM(require("ext"));
 
 //#region entry.js

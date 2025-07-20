@@ -31,7 +31,7 @@ export { b_default as default };
 ## b2.js
 
 ```js
-
+// HIDDEN [rolldown:runtime]
 //#region b.js
 var b_exports = {};
 __export(b_exports, { default: () => b_default });

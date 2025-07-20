@@ -14,7 +14,7 @@ export default require_a();
 ## a2.js
 
 ```js
-
+// HIDDEN [rolldown:runtime]
 //#region b.js
 var require_b = __commonJS({ "b.js"(exports, module) {
 	var import_a = __toESM(require_a());

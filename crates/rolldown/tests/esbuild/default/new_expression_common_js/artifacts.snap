@@ -6,7 +6,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## entry.js
 
 ```js
-
+// HIDDEN [rolldown:runtime]
 //#region foo.js
 var require_foo = __commonJS({ "foo.js"(exports, module) {
 	var Foo = class {};

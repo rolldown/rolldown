@@ -17,7 +17,7 @@ export { a };
 ## b.js
 
 ```js
-
+// HIDDEN [rolldown:runtime]
 //#region c.js
 var require_c = __commonJS({ "c.js"(exports) {
 	const test$1 = 1e3;

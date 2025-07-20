@@ -19,7 +19,7 @@ Variant: (format: Cjs)
 ## main.js
 
 ```js
-
+// HIDDEN [rolldown:runtime]
 const external = __toESM(require("external"));
 
 exports["\n\"\\'"] = external["\n\"\\'"];

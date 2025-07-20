@@ -6,7 +6,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## _virtual/rolldown_runtime.js
 
 ```js
-
+// HIDDEN [rolldown:runtime]
 export { __commonJS };
 ```
 ## child.js

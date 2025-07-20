@@ -15,7 +15,7 @@ console.log(foo);
 ```
 ### rolldown
 ```js
-
+// HIDDEN [rolldown:runtime]
 //#region import.ts
 var import_exports = {};
 __export(import_exports, { value: () => value });

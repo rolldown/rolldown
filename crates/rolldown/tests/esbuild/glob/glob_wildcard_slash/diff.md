@@ -63,7 +63,7 @@ console.log({
 ```
 ### rolldown
 ```js
-
+// HIDDEN [rolldown:runtime]
 //#region entry.js
 const ab = Math.random() < .5 ? "a.js" : "b.js";
 console.log({

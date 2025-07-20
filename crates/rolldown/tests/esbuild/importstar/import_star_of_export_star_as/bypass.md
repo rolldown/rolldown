@@ -24,7 +24,7 @@ console.log(foo_exports);
 ```js
 import assert from "node:assert";
 
-
+// HIDDEN [rolldown:runtime]
 //#region bar.js
 var bar_exports = {};
 __export(bar_exports, { bar: () => bar });

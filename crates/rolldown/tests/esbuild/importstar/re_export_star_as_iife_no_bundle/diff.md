@@ -17,7 +17,7 @@ var mod = (() => {
 ```js
 var mod = (function(exports, foo) {
 
-
+// HIDDEN [rolldown:runtime]
 foo = __toESM(foo);
 
 Object.defineProperty(exports, 'out', {

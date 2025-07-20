@@ -6,7 +6,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## entry.js
 
 ```js
-
+// HIDDEN [rolldown:runtime]
 //#region y.json
 var y1 = true;
 var y2 = false;

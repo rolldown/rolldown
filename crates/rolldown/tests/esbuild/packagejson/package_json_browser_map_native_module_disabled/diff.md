@@ -24,7 +24,7 @@ console.log((0, import_demo_pkg.default)());
 ```
 ### rolldown
 ```js
-
+// HIDDEN [rolldown:runtime]
 //#region (ignored) node_modules/demo-pkg
 var require_demo_pkg$1 = __commonJS({ "node_modules/demo-pkg"() {} });
 

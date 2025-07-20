@@ -51,6 +51,6 @@ export default require_c();
 ## chunk.js
 
 ```js
-
+// HIDDEN [rolldown:runtime]
 export { __commonJS };
 ```

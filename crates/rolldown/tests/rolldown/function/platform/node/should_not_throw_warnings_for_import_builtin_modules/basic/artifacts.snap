@@ -10,7 +10,7 @@ import { createRequire } from "node:module";
 import * as fs from "fs";
 import * as nodeFs from "node:fs";
 
-
+// HIDDEN [rolldown:runtime]
 //#region main.js
 console.log(fs, nodeFs, __require("path"), __require("node:path"));
 

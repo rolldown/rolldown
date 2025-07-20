@@ -141,7 +141,7 @@ init_h();
 ```
 ### rolldown
 ```js
-
+// HIDDEN [rolldown:runtime]
 //#region a.js
 var abc;
 var init_a = __esm({ "a.js"() {

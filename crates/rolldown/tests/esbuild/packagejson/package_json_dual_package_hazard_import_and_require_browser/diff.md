@@ -20,7 +20,7 @@ console.log(import_demo_pkg.default);
 ```js
 import assert from "node:assert";
 
-
+// HIDDEN [rolldown:runtime]
 //#region node_modules/demo-pkg/module.browser.js
 var module_browser_exports = {};
 __export(module_browser_exports, { default: () => module_browser_default });

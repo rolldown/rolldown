@@ -21,7 +21,7 @@ console.log(invalid_identifier, test2_exports);
 ```
 ### rolldown
 ```js
-
+// HIDDEN [rolldown:runtime]
 //#region test.json
 var invalid_identifier$1 = true;
 

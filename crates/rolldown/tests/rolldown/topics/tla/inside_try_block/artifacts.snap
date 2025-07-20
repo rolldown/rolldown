@@ -24,7 +24,7 @@ Variant: (strict_execution_order: true)
 ## main.js
 
 ```js
-
+// HIDDEN [rolldown:runtime]
 //#region lib.js
 var foo;
 var init_lib = __esm({ async "lib.js"() {

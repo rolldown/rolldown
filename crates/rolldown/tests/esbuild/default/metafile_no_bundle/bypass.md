@@ -21,7 +21,7 @@ let exported;
 import a from "pkg";
 import b from "./file";
 
-
+// HIDDEN [rolldown:runtime]
 //#region entry.js
 console.log(a, b, __require("pkg2"), __require("./file2"), import("./dynamic"));
 let exported;

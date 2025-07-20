@@ -19,7 +19,7 @@ console.log(require_src());
 ```js
 import assert from "node:assert";
 
-
+// HIDDEN [rolldown:runtime]
 //#region index.js
 var require_require_parent_dir_common_js = __commonJS({ "index.js"(exports, module) {
 	module.exports = 123;

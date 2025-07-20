@@ -229,7 +229,7 @@ console.log(internal_default, internal_exports);
 ## internal.js
 
 ```js
-
+// HIDDEN [rolldown:runtime]
 //#region internal.js
 var internal_exports = {};
 __export(internal_exports, { default: () => internal_default });

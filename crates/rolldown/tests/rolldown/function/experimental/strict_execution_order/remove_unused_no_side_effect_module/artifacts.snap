@@ -24,7 +24,7 @@ Variant: (strict_execution_order: true)
 ```js
 import nodeAssert from "node:assert";
 
-
+// HIDDEN [rolldown:runtime]
 //#region main.js
 var init_main = __esm({ "main.js"() {
 	nodeAssert.equal(globalThis.value, void 0, "Unused no side effect module should be removed");

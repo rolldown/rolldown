@@ -6,7 +6,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## entry.js
 
 ```js
-
+// HIDDEN [rolldown:runtime]
 //#region test.custom
 var require_test = __commonJS({ "test.custom"(exports, module) {
 	module.exports = "YQBigGP/ZA==";

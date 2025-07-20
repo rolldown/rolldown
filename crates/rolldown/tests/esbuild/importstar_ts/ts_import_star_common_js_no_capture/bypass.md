@@ -19,7 +19,7 @@ console.log(ns.foo, ns.foo, foo2);
 ```
 ### rolldown
 ```js
-
+// HIDDEN [rolldown:runtime]
 //#region foo.ts
 var require_foo = __commonJS({ "foo.ts"(exports) {
 	exports.foo = 123;

@@ -18,7 +18,7 @@ __reExport(inner_exports, require("b"));
 ```
 ### rolldown
 ```js
-
+// HIDDEN [rolldown:runtime]
 
 //#region inner.js
 var inner_exports = {};

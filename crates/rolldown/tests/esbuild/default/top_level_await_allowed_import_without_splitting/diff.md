@@ -43,7 +43,7 @@ await init_entry();
 ```
 ### rolldown
 ```js
-
+// HIDDEN [rolldown:runtime]
 //#region c.js
 var require_c = __commonJS({ "c.js"() {
 	await 0;
@@ -90,7 +90,7 @@ export default require_entry();
 -        await 0;
 -    }
 -});
-+
++// HIDDEN [rolldown:runtime]
 +//#region c.js
 +var require_c = __commonJS({ "c.js"() {
 +	await 0;

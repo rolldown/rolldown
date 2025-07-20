@@ -86,7 +86,7 @@ export {
 import default$1, { file_default } from "./copy.js";
 import a from "extern-esm";
 
-
+// HIDDEN [rolldown:runtime]
 //#region esm.js
 var esm_default = 1;
 

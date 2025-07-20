@@ -1,6 +1,5 @@
 ---
 source: crates/rolldown_testing/src/integration_test.rs
-snapshot_kind: text
 ---
 # Assets
 
@@ -9,7 +8,7 @@ snapshot_kind: text
 ```js
 import assert from "node:assert";
 
-
+// HIDDEN [rolldown:runtime]
 //#region index.js
 var require_require_parent_dir_common_js = __commonJS({ "index.js"(exports, module) {
 	module.exports = 123;

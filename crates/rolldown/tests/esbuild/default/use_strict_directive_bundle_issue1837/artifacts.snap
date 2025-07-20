@@ -16,7 +16,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ```js
 (function(node_assert) {
 
-
+// HIDDEN [rolldown:runtime]
 node_assert = __toESM(node_assert);
 
 //#region cjs.js

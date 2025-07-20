@@ -20,7 +20,7 @@ console.log(ns.foo);
 ```js
 import assert from "node:assert";
 
-
+// HIDDEN [rolldown:runtime]
 //#region foo.js
 var require_foo = __commonJS({ "foo.js"(exports) {
 	exports.x = 123;

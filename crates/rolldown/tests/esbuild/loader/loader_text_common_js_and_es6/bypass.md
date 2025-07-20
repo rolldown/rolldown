@@ -22,7 +22,7 @@ console.log(x_txt, y_default);
 ```js
 import assert from "node:assert";
 
-
+// HIDDEN [rolldown:runtime]
 //#region y.txt
 var y_default = "y";
 

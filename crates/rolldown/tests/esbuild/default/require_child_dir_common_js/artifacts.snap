@@ -6,7 +6,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## entry.js
 
 ```js
-
+// HIDDEN [rolldown:runtime]
 //#region dir/index.js
 var require_dir = __commonJS({ "dir/index.js"(exports, module) {
 	module.exports = 123;

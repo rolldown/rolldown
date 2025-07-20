@@ -46,7 +46,7 @@ init_entry2();
 ## run-dep.js
 
 ```js
-
+// HIDDEN [rolldown:runtime]
 //#region run-dep.js
 var init_run_dep = __esm({ "run-dep.js"() {
 	global.foo.log();

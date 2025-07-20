@@ -6,7 +6,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## entry.js
 
 ```js
-
+// HIDDEN [rolldown:runtime]
 const external_pkg = __toESM(require("external-pkg"));
 const external_pkg2 = __toESM(require("external-pkg2"));
 

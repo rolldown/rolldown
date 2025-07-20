@@ -90,7 +90,7 @@ module.exports.bar = import_bar.foo;
 ```
 ### rolldown
 ```js
-
+// HIDDEN [rolldown:runtime]
 const bar = __toESM(require("bar"));
 
 //#region import-in-cjs.js

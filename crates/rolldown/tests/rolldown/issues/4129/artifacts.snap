@@ -8,7 +8,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ```js
 import assert from "node:assert";
 
-
+// HIDDEN [rolldown:runtime]
 // HIDDEN [rolldown:hmr]
 //#region lib.js
 var require_lib = __commonJS({ "lib.js"(exports, module) {

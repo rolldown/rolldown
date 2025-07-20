@@ -30,7 +30,7 @@ console.log((0, import_demo_pkg.default)());
 ```js
 import assert from "node:assert";
 
-
+// HIDDEN [rolldown:runtime]
 //#region node_modules/demo-pkg/lib/util-browser.js
 var require_util_browser = __commonJS({ "node_modules/demo-pkg/lib/util-browser.js"(exports, module) {
 	module.exports = "util-browser";

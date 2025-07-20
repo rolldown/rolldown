@@ -21,7 +21,7 @@ console.log(import_foo.default);
 ```js
 import assert from "node:assert";
 
-
+// HIDDEN [rolldown:runtime]
 //#region node_modules/pkg/foo.js
 var require_foo = __commonJS({ "node_modules/pkg/foo.js"(exports, module) {
 	module.exports = 123;

@@ -20,7 +20,7 @@ render(/* @__PURE__ */ React.createElement(Button, null));
 ```
 ### rolldown
 ```js
-
+// HIDDEN [rolldown:runtime]
 //#region node_modules/pkg/button.css
 var require_button = __commonJS({ "node_modules/pkg/button.css"(exports, module) {
 	module.exports = {};

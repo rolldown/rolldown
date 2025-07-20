@@ -118,7 +118,8 @@ pub fn tweak_snapshot(
   let mut result = content.to_string();
 
   if hide_runtime_module {
-    result = RUNTIME_MODULE_OUTPUT_RE.replace_all(&result, "").into_owned();
+    result =
+      RUNTIME_MODULE_OUTPUT_RE.replace_all(&result, "// HIDDEN [rolldown:runtime]").into_owned();
   }
 
   if hide_hmr_runtime {

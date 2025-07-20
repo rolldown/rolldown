@@ -58,7 +58,7 @@ exports.foo = foo;
 ## main.js
 
 ```js
-
+// HIDDEN [rolldown:runtime]
 const assert = __toESM(require("assert"));
 
 //#region main.js

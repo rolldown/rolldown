@@ -6,7 +6,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## chunk.js
 
 ```js
-
+// HIDDEN [rolldown:runtime]
 export { __commonJS, __toDynamicImportESM, __toESM };
 ```
 ## lib.js
@@ -77,7 +77,7 @@ Variant: (format: Cjs)
 ## chunk.js
 
 ```js
-
+// HIDDEN [rolldown:runtime]
 
 Object.defineProperty(exports, '__commonJS', {
   enumerable: true,
@@ -172,7 +172,7 @@ Variant: (inline_dynamic_imports: true)
 ```js
 import nodeAssert from "node:assert";
 
-
+// HIDDEN [rolldown:runtime]
 //#region lib.js
 var require_lib = __commonJS({ "lib.js"(exports) {
 	Object.defineProperty(exports, "__esModule", { value: true });

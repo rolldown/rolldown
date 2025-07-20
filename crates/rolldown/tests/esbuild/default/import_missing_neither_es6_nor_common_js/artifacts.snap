@@ -54,7 +54,7 @@ init_foo();
 ## foo.js
 
 ```js
-
+// HIDDEN [rolldown:runtime]
 //#region foo.js
 var foo_exports = {};
 var default$1, x, y;

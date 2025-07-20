@@ -56,12 +56,12 @@ pub async fn render_chunks(
   for (index, (code, sourcemaps)) in result.into_iter().flatten() {
     let asset = &mut assets[index];
     asset.content = code.into();
-    if let Some(asset_map) = &asset.map {
-      if !sourcemaps.is_empty() {
+    if !sourcemaps.is_empty() {
+      if let Some(asset_map) = &asset.map {
         let mut sourcemap_chain = Vec::with_capacity(sourcemaps.len() + 1);
         sourcemap_chain.push(asset_map);
         sourcemap_chain.extend(sourcemaps.iter());
-        asset.map = Some(collapse_sourcemaps(sourcemap_chain));
+        asset.map = Some(collapse_sourcemaps(&sourcemap_chain));
       }
     }
   }

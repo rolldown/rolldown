@@ -1,8 +1,7 @@
-// FIXME(hyf0): panic
-// export async function foo() {
-//   await import('./exist-dep-cjs').then(console.log)
-//   await import('./exist-dep-esm').then(console.log)
-// }
+export async function foo() {
+  await import('./exist-dep-cjs').then(console.log)
+  await import('./exist-dep-esm').then(console.log)
+}
 
 export async function bar() {
   await import('./new-dep-cjs.js').then(console.log)

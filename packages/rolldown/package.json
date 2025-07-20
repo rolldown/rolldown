@@ -156,7 +156,7 @@
   },
   "devDependencies": {
     "@napi-rs/cli": "catalog:",
-    "@napi-rs/wasm-runtime": "^0.2.10",
+    "@napi-rs/wasm-runtime": "^1.0.0",
     "@oxc-node/cli": "catalog:",
     "@rolldown/testing": "workspace:*",
     "@rollup/plugin-json": "^6.1.0",

@@ -7,7 +7,6 @@ use rolldown_sourcemap::{SourceMap, collapse_sourcemaps};
 use rolldown_utils::unique_arc::WeakRef;
 use string_wizard::{MagicString, SourceMapOptions};
 
-#[allow(unused)]
 #[derive(Debug)]
 pub struct TransformPluginContext {
   pub inner: PluginContext,

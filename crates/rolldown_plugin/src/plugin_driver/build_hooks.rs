@@ -2,8 +2,7 @@ use std::sync::Arc;
 
 use crate::{
   HookBuildEndArgs, HookLoadArgs, HookLoadReturn, HookNoopReturn, HookResolveIdArgs,
-  HookResolveIdReturn, HookTransformArgs, HookUsage, PluginContext, PluginDriver,
-  TransformPluginContext,
+  HookResolveIdReturn, HookTransformArgs, PluginContext, PluginDriver, TransformPluginContext,
   pluginable::HookTransformAstReturn,
   types::{
     hook_resolve_id_skipped::HookResolveIdSkipped, hook_transform_ast_args::HookTransformAstArgs,
@@ -24,12 +23,8 @@ use tracing::{Instrument, debug_span};
 impl PluginDriver {
   #[tracing::instrument(level = "trace", skip_all)]
   pub async fn build_start(&self, opts: &SharedNormalizedBundlerOptions) -> HookNoopReturn {
-    for (plugin_idx, plugin, ctx) in
-      self.iter_plugin_with_context_by_order(&self.order_by_build_start_meta)
+    for (_, plugin, ctx) in self.iter_plugin_with_context_by_order(&self.order_by_build_start_meta)
     {
-      if !self.plugin_usage_vec[plugin_idx].contains(HookUsage::BuildStart) {
-        continue;
-      }
       plugin.call_build_start(ctx, &crate::HookBuildStartArgs { options: opts }).await?;
     }
 
@@ -65,9 +60,6 @@ impl PluginDriver {
     for (plugin_idx, plugin, ctx) in
       self.iter_plugin_with_context_by_order(&self.order_by_resolve_id_meta)
     {
-      if !self.plugin_usage_vec[plugin_idx].contains(HookUsage::ResolveId) {
-        continue;
-      }
       // TODO: Maybe we could optimize this a little
       if skipped_plugins.contains(&plugin_idx) {
         continue;
@@ -147,9 +139,6 @@ impl PluginDriver {
     for (plugin_idx, plugin, ctx) in
       self.iter_plugin_with_context_by_order(&self.order_by_resolve_dynamic_import_meta)
     {
-      if !self.plugin_usage_vec[plugin_idx].contains(HookUsage::ResolveDynamicImport) {
-        continue;
-      }
       if skipped_plugins.contains(&plugin_idx) {
         continue;
       }
@@ -182,9 +171,6 @@ impl PluginDriver {
     for (plugin_idx, plugin, ctx) in
       self.iter_plugin_with_context_by_order(&self.order_by_load_meta)
     {
-      if !self.plugin_usage_vec[plugin_idx].contains(HookUsage::Load) {
-        continue;
-      }
       let ret = async {
         trace_action!(action::HookLoadCallStart {
           action: "HookLoadCallStart",
@@ -246,9 +232,6 @@ impl PluginDriver {
     for (plugin_idx, plugin, ctx) in
       self.iter_plugin_with_context_by_order(&self.order_by_transform_meta)
     {
-      if !self.plugin_usage_vec[plugin_idx].contains(HookUsage::Transform) {
-        continue;
-      }
       let call_id = tracing::enabled!(tracing::Level::TRACE).then(|| {
         format!(
           "transform_{}_{}",
@@ -359,12 +342,9 @@ impl PluginDriver {
   }
 
   pub async fn transform_ast(&self, mut args: HookTransformAstArgs<'_>) -> HookTransformAstReturn {
-    for (plugin_idx, plugin, ctx) in
+    for (_, plugin, ctx) in
       self.iter_plugin_with_context_by_order(&self.order_by_transform_ast_meta)
     {
-      if !self.plugin_usage_vec[plugin_idx].contains(HookUsage::TransformAst) {
-        continue;
-      }
       args.ast = plugin
         .call_transform_ast(
           ctx,
@@ -388,12 +368,9 @@ impl PluginDriver {
     module_info: Arc<ModuleInfo>,
     normal_module: &NormalModule,
   ) -> HookNoopReturn {
-    for (plugin_idx, plugin, ctx) in
+    for (_, plugin, ctx) in
       self.iter_plugin_with_context_by_order(&self.order_by_module_parsed_meta)
     {
-      if !self.plugin_usage_vec[plugin_idx].contains(HookUsage::ModuleParsed) {
-        continue;
-      }
       plugin
         .call_module_parsed(ctx, Arc::clone(&module_info), normal_module)
         .instrument(debug_span!("module_parsed_hook", plugin_name = plugin.call_name().as_ref()))
@@ -403,12 +380,7 @@ impl PluginDriver {
   }
 
   pub async fn build_end(&self, args: Option<&HookBuildEndArgs<'_>>) -> HookNoopReturn {
-    for (plugin_idx, plugin, ctx) in
-      self.iter_plugin_with_context_by_order(&self.order_by_build_end_meta)
-    {
-      if !self.plugin_usage_vec[plugin_idx].contains(HookUsage::BuildEnd) {
-        continue;
-      }
+    for (_, plugin, ctx) in self.iter_plugin_with_context_by_order(&self.order_by_build_end_meta) {
       plugin
         .call_build_end(ctx, args)
         .instrument(debug_span!("build_end_hook", plugin_name = plugin.call_name().as_ref()))

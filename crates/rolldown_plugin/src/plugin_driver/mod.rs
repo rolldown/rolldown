@@ -22,9 +22,9 @@ use tokio::sync::Mutex;
 
 use crate::{
   __inner::SharedPluginable,
-  HookUsage, PluginContext,
+  PluginContext,
   plugin_context::NativePluginContextImpl,
-  plugin_driver::hook_orders::HookOrderIndicates,
+  plugin_driver::hook_orders::PluginHookOrders,
   type_aliases::{IndexPluginContext, IndexPluginable},
   types::plugin_idx::PluginIdx,
 };
@@ -34,13 +34,12 @@ pub type SharedPluginDriver = Arc<PluginDriver>;
 pub struct PluginDriver {
   plugins: IndexPluginable,
   contexts: IndexPluginContext,
-  order_indicates: HookOrderIndicates,
+  hook_orders: PluginHookOrders,
+  options: SharedNormalizedBundlerOptions,
   pub file_emitter: SharedFileEmitter,
   pub watch_files: Arc<FxDashSet<ArcStr>>,
   pub modules: SharedModuleInfoDashMap,
   pub(crate) tx: Arc<Mutex<Option<tokio::sync::mpsc::Sender<ModuleLoaderMsg>>>>,
-  pub(crate) plugin_usage_vec: IndexVec<PluginIdx, HookUsage>,
-  options: SharedNormalizedBundlerOptions,
 }
 
 impl PluginDriver {
@@ -76,14 +75,13 @@ impl PluginDriver {
       });
 
       Self {
-        order_indicates: HookOrderIndicates::new(&index_plugins),
+        hook_orders: PluginHookOrders::new(&index_plugins, &plugin_usage_vec),
         plugins: index_plugins,
         contexts: index_contexts,
         file_emitter: Arc::clone(file_emitter),
         watch_files,
         modules,
         tx,
-        plugin_usage_vec,
         options: Arc::clone(options),
       }
     })
@@ -135,8 +133,8 @@ impl PluginDriver {
 }
 
 impl Deref for PluginDriver {
-  type Target = HookOrderIndicates;
+  type Target = PluginHookOrders;
   fn deref(&self) -> &Self::Target {
-    &self.order_indicates
+    &self.hook_orders
   }
 }

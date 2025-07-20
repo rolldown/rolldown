@@ -6,7 +6,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## main.js
 
 ```js
-
+// HIDDEN [rolldown:runtime]
 //#region react-dom.js
 var require_react_dom = __commonJS({ "react-dom.js"(exports, module) {
 	module.exports = "react-dom";

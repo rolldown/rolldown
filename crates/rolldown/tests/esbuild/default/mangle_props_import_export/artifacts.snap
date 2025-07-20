@@ -32,7 +32,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## cjs.js
 
 ```js
-
+// HIDDEN [rolldown:runtime]
 //#region cjs.js
 var require_cjs = __commonJS({ "cjs.js"(exports) {
 	exports.foo_ = 123;

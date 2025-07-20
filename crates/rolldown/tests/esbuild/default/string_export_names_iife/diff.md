@@ -20,7 +20,7 @@ var global;
 ```js
 (function(exports, foo) {
 
-
+// HIDDEN [rolldown:runtime]
 foo = __toESM(foo);
 
 Object.defineProperty(exports, 'all the stuff', {

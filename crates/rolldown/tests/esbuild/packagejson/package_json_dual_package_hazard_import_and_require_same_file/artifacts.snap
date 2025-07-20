@@ -6,7 +6,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## entry.js
 
 ```js
-
+// HIDDEN [rolldown:runtime]
 //#region node_modules/demo-pkg/module.js
 var module_exports = {};
 __export(module_exports, { default: () => module_default });

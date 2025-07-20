@@ -49,7 +49,7 @@ init_main();
 ## read.js
 
 ```js
-
+// HIDDEN [rolldown:runtime]
 //#region read.js
 var foo, read;
 var init_read = __esm({ "read.js"() {

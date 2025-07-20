@@ -15,7 +15,7 @@ var all_the_stuff = __toESM(require("./foo"));
 ```
 ### rolldown
 ```js
-
+// HIDDEN [rolldown:runtime]
 const foo = __toESM(require("./foo"));
 
 Object.defineProperty(exports, 'all the stuff', {

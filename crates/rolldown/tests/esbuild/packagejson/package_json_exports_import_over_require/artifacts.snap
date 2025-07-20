@@ -6,7 +6,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## entry.js
 
 ```js
-
+// HIDDEN [rolldown:runtime]
 //#region node_modules/pkg/require.js
 var require_require = __commonJS({ "node_modules/pkg/require.js"() {
 	console.log("FAILURE");

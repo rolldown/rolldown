@@ -19,7 +19,7 @@ console.log(bar_exports, foo, foo2);
 ```
 ### rolldown
 ```js
-
+// HIDDEN [rolldown:runtime]
 //#region foo.ts
 const foo$1 = 123;
 

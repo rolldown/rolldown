@@ -21,7 +21,7 @@ console.log((0, import_demo_pkg.default)());
 ```js
 import assert from "node:assert";
 
-
+// HIDDEN [rolldown:runtime]
 //#region node_modules/demo-pkg/index.js
 var require_demo_pkg = __commonJS({ "node_modules/demo-pkg/index.js"(exports, module) {
 	module.exports = function() {

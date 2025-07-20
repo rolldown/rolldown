@@ -78,7 +78,7 @@ console.log(new external.default(), new external.foo());
 ## chunk.js
 
 ```js
-
+// HIDDEN [rolldown:runtime]
 
 Object.defineProperty(exports, '__toESM', {
   enumerable: true,

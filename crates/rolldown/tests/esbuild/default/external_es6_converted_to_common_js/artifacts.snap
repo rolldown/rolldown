@@ -9,7 +9,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 import * as ns$1 from "x";
 import { ns } from "x";
 
-
+// HIDDEN [rolldown:runtime]
 //#region a.js
 var a_exports = {};
 __export(a_exports, { ns: () => ns$1 });

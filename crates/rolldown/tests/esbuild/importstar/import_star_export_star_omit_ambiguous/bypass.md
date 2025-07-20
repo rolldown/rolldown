@@ -24,7 +24,7 @@ console.log(common_exports);
 ```js
 import assert from "node:assert";
 
-
+// HIDDEN [rolldown:runtime]
 //#region foo.js
 const x = 1;
 

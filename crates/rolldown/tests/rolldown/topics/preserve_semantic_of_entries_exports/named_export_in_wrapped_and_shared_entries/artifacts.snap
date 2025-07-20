@@ -22,7 +22,7 @@ export { main_default as default, foo };
 ## main.js
 
 ```js
-
+// HIDDEN [rolldown:runtime]
 //#region main.js
 var main_exports = {};
 __export(main_exports, {

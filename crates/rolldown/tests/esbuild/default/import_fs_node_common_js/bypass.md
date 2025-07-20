@@ -12,7 +12,7 @@ console.log(fs, import_fs2.readFileSync, import_fs.default);
 ```
 ### rolldown
 ```js
-
+// HIDDEN [rolldown:runtime]
 const fs = __toESM(require("fs"));
 
 //#region entry.js

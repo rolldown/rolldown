@@ -29,7 +29,7 @@ export default require_main2();
 ## main22.js
 
 ```js
-
+// HIDDEN [rolldown:runtime]
 //#region main2.js
 var require_main2 = __commonJS({ "main2.js"(exports, module) {
 	module.exports = {};

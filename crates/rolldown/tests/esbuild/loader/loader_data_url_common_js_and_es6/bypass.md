@@ -20,7 +20,7 @@ console.log(x_url, y_default);
 ```
 ### rolldown
 ```js
-
+// HIDDEN [rolldown:runtime]
 //#region y.txt
 var y_default = "data:text/plain;charset=utf-8,y";
 

@@ -19,7 +19,7 @@ source: crates/rolldown_testing/src/integration_test.rs
   typeof define === 'function' && define.amd ? define(['exports', 'es-toolkit'], factory) :
   (global = typeof globalThis !== 'undefined' ? globalThis : global || self, factory((global.Lib = {}), global.es_toolkit));
 })(this, function(exports, es_toolkit) {
-
+// HIDDEN [rolldown:runtime]
 es_toolkit = __toESM(es_toolkit);
 
 //#region main.js

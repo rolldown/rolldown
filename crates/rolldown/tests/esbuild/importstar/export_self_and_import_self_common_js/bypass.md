@@ -15,7 +15,7 @@ console.log(entry_exports);
 ```
 ### rolldown
 ```js
-
+// HIDDEN [rolldown:runtime]
 
 //#region entry.js
 var entry_exports = {};

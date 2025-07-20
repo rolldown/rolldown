@@ -1,6 +1,5 @@
 ---
 source: crates/rolldown_testing/src/integration_test.rs
-snapshot_kind: text
 ---
 # Assets
 
@@ -9,7 +8,7 @@ snapshot_kind: text
 ```js
 import "rewritten-./static.css";
 
-
+// HIDDEN [rolldown:runtime]
 //#region entry.js
 import("rewritten-./dynamic.css");
 __require("rewritten-./some.css");

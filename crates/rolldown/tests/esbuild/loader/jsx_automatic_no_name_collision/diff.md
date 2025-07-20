@@ -10,7 +10,7 @@ const x = /* @__PURE__ */ (0, import_react.createElement)(import_react2.Link, { 
 ```
 ### rolldown
 ```js
-
+// HIDDEN [rolldown:runtime]
 const __remix_run_react = __toESM(require("@remix-run/react"));
 const react = __toESM(require("react"));
 

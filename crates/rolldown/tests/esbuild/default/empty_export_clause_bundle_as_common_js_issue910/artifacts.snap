@@ -8,7 +8,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ```js
 import assert from "node:assert";
 
-
+// HIDDEN [rolldown:runtime]
 //#region types.mjs
 var types_exports = {};
 var init_types = __esm({ "types.mjs"() {} });

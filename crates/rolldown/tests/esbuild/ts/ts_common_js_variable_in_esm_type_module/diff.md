@@ -10,7 +10,7 @@ module.exports = null;
 ```
 ### rolldown
 ```js
-
+// HIDDEN [rolldown:runtime]
 //#region entry.ts
 var require_entry = __commonJS({ "entry.ts"(exports, module) {
 	module.exports = null;

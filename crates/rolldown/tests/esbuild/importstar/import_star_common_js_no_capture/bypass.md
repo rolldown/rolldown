@@ -19,7 +19,7 @@ console.log(ns.foo, ns.foo, foo2);
 ```
 ### rolldown
 ```js
-
+// HIDDEN [rolldown:runtime]
 const node_assert = __toESM(require("node:assert"));
 
 //#region foo.js

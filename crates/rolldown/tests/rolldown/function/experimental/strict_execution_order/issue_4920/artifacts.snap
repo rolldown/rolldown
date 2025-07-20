@@ -8,7 +8,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ```js
 import nodeAssert from "node:assert";
 
-
+// HIDDEN [rolldown:runtime]
 //#region dep.js
 function foo() {
 	globalThis.value = 1;
@@ -40,7 +40,7 @@ Variant: (on_demand_wrapping: true)
 ```js
 import nodeAssert from "node:assert";
 
-
+// HIDDEN [rolldown:runtime]
 //#region dep.js
 function foo() {
 	globalThis.value = 1;

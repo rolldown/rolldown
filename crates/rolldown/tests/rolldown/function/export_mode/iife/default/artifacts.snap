@@ -8,7 +8,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ```js
 var module = (function() {
 
-
+// HIDDEN [rolldown:runtime]
 
 //#region mod.js
 var default_exports = {};

@@ -23,7 +23,7 @@ var import_foo = __toESM(require_foo());
 ```js
 import assert from "node:assert";
 
-
+// HIDDEN [rolldown:runtime]
 //#region foo.js
 var require_foo = __commonJS({ "foo.js"(exports) {
 	exports.fn = function() {

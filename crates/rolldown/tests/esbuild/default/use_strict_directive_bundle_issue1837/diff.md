@@ -31,7 +31,7 @@
 ```js
 (function(node_assert) {
 
-
+// HIDDEN [rolldown:runtime]
 node_assert = __toESM(node_assert);
 
 //#region cjs.js

@@ -17,7 +17,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 var globalName = (function(exports) {
 
 Object.defineProperty(exports, '__esModule', { value: true });
-
+// HIDDEN [rolldown:runtime]
 
 //#region a.js
 const abc = void 0;

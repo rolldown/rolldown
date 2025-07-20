@@ -8,7 +8,7 @@ var t=e(r=>{r.foo=function(){return 123}});var n=e((l,c)=>{c.exports={test:!0}})
 ```
 ### rolldown
 ```js
-
+// HIDDEN [rolldown:runtime]
 //#region a.ts
 var require_a = __commonJS({ "a.ts"(exports) {
 	exports.foo = function() {

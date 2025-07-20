@@ -32,6 +32,6 @@ console.log("index");
 ## rolldown_hmr.js
 
 ```js
-
+// HIDDEN [rolldown:runtime]
 // HIDDEN [rolldown:hmr]
 ```

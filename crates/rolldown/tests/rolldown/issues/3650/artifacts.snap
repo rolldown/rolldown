@@ -41,7 +41,7 @@ init_main();
 ## rolldown-runtime.js
 
 ```js
-
+// HIDDEN [rolldown:runtime]
 export { __esm, __export };
 ```
 ## second.js

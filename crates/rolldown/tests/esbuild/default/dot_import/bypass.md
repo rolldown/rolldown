@@ -19,7 +19,7 @@ console.log(import__.x);
 ```js
 import assert from "node:assert";
 
-
+// HIDDEN [rolldown:runtime]
 //#region index.js
 var require_dot_import = __commonJS({ "index.js"(exports) {
 	exports.x = 123;

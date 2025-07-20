@@ -8,7 +8,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ```js
 import assert from "node:assert";
 
-
+// HIDDEN [rolldown:runtime]
 //#region react.js
 var require_react = __commonJS({ "react.js"(exports) {
 	exports.createReactElement = function() {

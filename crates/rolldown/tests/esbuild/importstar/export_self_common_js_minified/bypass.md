@@ -13,7 +13,7 @@ module.exports = r();
 ```
 ### rolldown
 ```js
-
+// HIDDEN [rolldown:runtime]
 
 //#region entry.js
 var require_entry = __commonJS({ "entry.js"(exports, module) {

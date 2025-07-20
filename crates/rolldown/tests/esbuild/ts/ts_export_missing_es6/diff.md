@@ -12,7 +12,7 @@ console.log(foo_exports);
 ```
 ### rolldown
 ```js
-
+// HIDDEN [rolldown:runtime]
 //#region bar.js
 var nope = void 0;
 

@@ -20,7 +20,7 @@ console.log(/* @__PURE__ */ jsx2("div", { jsx: import_custom_react.jsx }), /* @_
 ```js
 import { Fragment, jsx } from "react/jsx-runtime";
 
-
+// HIDDEN [rolldown:runtime]
 //#region custom-react.js
 var require_custom_react = __commonJS({ "custom-react.js"(exports, module) {
 	module.exports = {};

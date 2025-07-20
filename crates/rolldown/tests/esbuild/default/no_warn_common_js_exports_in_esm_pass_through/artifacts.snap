@@ -51,7 +51,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## chunk.js
 
 ```js
-
+// HIDDEN [rolldown:runtime]
 export { __commonJS };
 ```
 ## cjs-in-esm.js

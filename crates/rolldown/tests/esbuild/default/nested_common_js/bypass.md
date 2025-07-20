@@ -24,7 +24,7 @@ nestedScope();
 ```js
 import assert from "node:assert";
 
-
+// HIDDEN [rolldown:runtime]
 //#region foo.js
 var require_foo = __commonJS({ "foo.js"(exports, module) {
 	module.exports = function() {

@@ -20,7 +20,7 @@ export {
 ```
 ### rolldown
 ```js
-
+// HIDDEN [rolldown:runtime]
 //#region foo.js
 var require_foo = __commonJS({ "foo.js"(exports) {
 	exports.bar = 123;

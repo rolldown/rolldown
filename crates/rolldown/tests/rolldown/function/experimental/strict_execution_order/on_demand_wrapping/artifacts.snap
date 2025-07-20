@@ -14,7 +14,7 @@ export default require_dynamic();
 ## dynamic2.js
 
 ```js
-
+// HIDDEN [rolldown:runtime]
 //#region dynamic.js
 var require_dynamic = __commonJS({ "dynamic.js"(exports, module) {
 	module.exports = 1e3;

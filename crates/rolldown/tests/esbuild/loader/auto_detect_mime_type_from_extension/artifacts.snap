@@ -6,7 +6,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## entry.js
 
 ```js
-
+// HIDDEN [rolldown:runtime]
 //#region test.svg
 var require_test = __commonJS({ "test.svg"(exports, module) {
 	module.exports = "data:image/svg+xml;base64,YQBigGP/ZA==";

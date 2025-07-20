@@ -25,7 +25,7 @@ console.log(x_json, y_default, small, if2);
 ```
 ### rolldown
 ```js
-
+// HIDDEN [rolldown:runtime]
 //#region y.json
 var y1 = true;
 var y2 = false;

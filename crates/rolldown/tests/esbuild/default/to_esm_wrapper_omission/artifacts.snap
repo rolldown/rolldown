@@ -140,7 +140,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## entry.js
 
 ```js
-
+// HIDDEN [rolldown:runtime]
 require("a_nowrap");
 const b_nowrap = __toESM(require("b_nowrap"));
 const d_WRAP = __toESM(require("d_WRAP"));

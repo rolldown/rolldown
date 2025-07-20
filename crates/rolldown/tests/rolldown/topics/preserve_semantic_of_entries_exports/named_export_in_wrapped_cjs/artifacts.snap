@@ -7,7 +7,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```js
 Object.defineProperty(exports, '__esModule', { value: true });
-
+// HIDDEN [rolldown:runtime]
 
 //#region main.js
 var main_exports = {};

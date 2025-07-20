@@ -24,7 +24,7 @@ console.log(exports, module.exports, o, r);
 ```
 ### rolldown
 ```js
-
+// HIDDEN [rolldown:runtime]
 
 //#region foo/test.js
 var test_exports = {};

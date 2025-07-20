@@ -23,7 +23,7 @@ console.log(exports, module.exports, test_exports, test_exports2);
 ```
 ### rolldown
 ```js
-
+// HIDDEN [rolldown:runtime]
 const node_assert = __toESM(require("node:assert"));
 
 //#region foo/test.js

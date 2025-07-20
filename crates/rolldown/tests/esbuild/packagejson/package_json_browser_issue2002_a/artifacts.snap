@@ -6,7 +6,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## entry.js
 
 ```js
-
+// HIDDEN [rolldown:runtime]
 //#region src/node_modules/sub/bar.js
 var require_bar = __commonJS({ "src/node_modules/sub/bar.js"() {
 	works();

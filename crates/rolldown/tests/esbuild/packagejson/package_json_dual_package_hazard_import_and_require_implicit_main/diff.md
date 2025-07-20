@@ -20,7 +20,7 @@ console.log(import_demo_pkg.default);
 ```js
 import assert, { deepEqual } from "node:assert";
 
-
+// HIDDEN [rolldown:runtime]
 //#region node_modules/demo-pkg/module.js
 var module_exports = {};
 __export(module_exports, { default: () => module_default });

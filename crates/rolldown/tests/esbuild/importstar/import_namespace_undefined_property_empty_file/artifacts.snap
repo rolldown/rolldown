@@ -56,7 +56,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## empty.js
 
 ```js
-
+// HIDDEN [rolldown:runtime]
 //#region empty.cjs
 var require_empty = __commonJS({ "empty.cjs"() {} });
 

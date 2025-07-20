@@ -6,7 +6,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## main.js
 
 ```js
-
+// HIDDEN [rolldown:runtime]
 //#region esm.js
 var esm_exports = {};
 var init_esm = __esm({ "esm.js"() {} });

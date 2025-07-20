@@ -6,7 +6,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## entry.js
 
 ```js
-
+// HIDDEN [rolldown:runtime]
 //#region a.ts
 var a_exports = {};
 __export(a_exports, { foo: () => foo$3 });

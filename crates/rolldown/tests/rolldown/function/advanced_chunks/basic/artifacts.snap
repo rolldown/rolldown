@@ -43,6 +43,6 @@ export { a, b, init_a, init_b };
 ## rolldown-runtime.js
 
 ```js
-
+// HIDDEN [rolldown:runtime]
 export { __esm };
 ```

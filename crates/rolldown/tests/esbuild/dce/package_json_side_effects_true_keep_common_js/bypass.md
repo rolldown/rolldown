@@ -19,7 +19,7 @@ console.log("unused import");
 ```
 ### rolldown
 ```js
-
+// HIDDEN [rolldown:runtime]
 //#region node_modules/demo-pkg/index.js
 var require_demo_pkg = __commonJS({ "node_modules/demo-pkg/index.js"(exports) {
 	console.log("hello");

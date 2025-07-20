@@ -1,13 +1,12 @@
 ---
 source: crates/rolldown_testing/src/integration_test.rs
-snapshot_kind: text
 ---
 # Assets
 
 ## entry.js
 
 ```js
-
+// HIDDEN [rolldown:runtime]
 
 //#region node_modules/fs/abc.js
 var require_abc = __commonJS({ "node_modules/fs/abc.js"() {

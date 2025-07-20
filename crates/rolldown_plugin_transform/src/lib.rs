@@ -87,14 +87,13 @@ impl Plugin for TransformPlugin {
       Err(anyhow::anyhow!("\n{errors}"))?;
     }
 
-    let ret = Codegen::new()
+    let CodegenReturn { mut code, map, .. } = Codegen::new()
       .with_options(CodegenOptions {
         comments: CommentOptions { normal: false, ..CommentOptions::default() },
-        source_map_path: Some(args.id.into()),
+        source_map_path: self.sourcemap.then(|| args.id.into()),
         ..CodegenOptions::default()
       })
       .build(&program);
-    let CodegenReturn { mut code, map, .. } = ret;
 
     if let Some(inject) = &self.jsx_inject {
       let mut new_code = String::with_capacity(inject.len() + 1 + code.len());

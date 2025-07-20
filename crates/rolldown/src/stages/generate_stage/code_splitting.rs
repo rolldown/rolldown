@@ -478,21 +478,22 @@ impl GenerateStage<'_> {
   ) {
     let static_entry_chunk_reference: FxHashMap<ChunkIdx, FxHashSet<ChunkIdx>> =
       self.construct_static_entry_to_reached_dynamic_entries_map(chunk_graph);
+
+    let entry_chunk_idx =
+      chunk_graph.chunk_table.iter_enumerated().map(|(idx, _)| idx).collect::<FxHashSet<_>>();
     // extract entry chunk module relation
     // this means `key_chunk` also referenced all entry module in value `vec`
     for (bits, modules) in pending_common_chunks {
-      let item = Self::try_insert_into_exists_chunk(
-        &bits
-          .index_of_one()
-          .into_iter()
-          .map(ChunkIdx::from_raw)
-          // Some of the bits maybe not created yet, so filter it out.
-          // refer https://github.com/rolldown/rolldown/blob/d373794f5ce5b793ac751bbfaf101cc9cdd261d9/crates/rolldown/src/stages/generate_stage/code_splitting.rs?plain=1#L311-L313
-          .filter(|idx| chunk_graph.chunk_table.get(*idx).is_some())
-          .collect_vec(),
-        &static_entry_chunk_reference,
-        chunk_graph,
-      );
+      let chunk_idxs = bits
+        .index_of_one()
+        .into_iter()
+        .map(ChunkIdx::from_raw)
+        // Some of the bits maybe not created yet, so filter it out.
+        // refer https://github.com/rolldown/rolldown/blob/d373794f5ce5b793ac751bbfaf101cc9cdd261d9/crates/rolldown/src/stages/generate_stage/code_splitting.rs?plain=1#L311-L313
+        .filter(|idx| entry_chunk_idx.contains(idx))
+        .collect_vec();
+      let item =
+        Self::try_insert_into_exists_chunk(&chunk_idxs, &static_entry_chunk_reference, chunk_graph);
       match item {
         CombineChunkRet::Entry(chunk_idx)
           if !matches!(

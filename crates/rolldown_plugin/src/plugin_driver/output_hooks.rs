@@ -246,8 +246,12 @@ impl PluginDriver {
   }
 
   pub async fn close_bundle(&self) -> HookNoopReturn {
-    for (_, plugin, ctx) in self.iter_plugin_with_context_by_order(&self.order_by_close_bundle_meta)
+    for (plugin_idx, plugin, ctx) in
+      self.iter_plugin_with_context_by_order(&self.order_by_close_bundle_meta)
     {
+      if !self.plugin_usage_vec[plugin_idx].contains(HookUsage::CloseBundle) {
+        continue;
+      }
       plugin
         .call_close_bundle(ctx)
         .instrument(debug_span!("close_bundle_hook", plugin_name = plugin.call_name().as_ref(),))

@@ -111,13 +111,16 @@ impl Plugin for ChunkImportMapPlugin {
     for output in args.bundle.iter() {
       let Output::Chunk(chunk) = output else { continue };
       if let Some(v) = self.chunk_import_map.get(chunk.preliminary_filename.as_str()) {
-        chunk_import_map.insert(v.to_string(), chunk.filename.to_string());
+        chunk_import_map.insert(
+          rolldown_utils::concat_string!("./", v.as_str()),
+          rolldown_utils::concat_string!("./", chunk.filename),
+        );
       }
     }
 
     ctx
       .emit_file_async(EmittedAsset {
-        file_name: Some(arcstr::literal!(".importmap.json")),
+        file_name: Some(arcstr::literal!(".chunk-import-map.json")),
         source: (serde_json::to_string_pretty(&chunk_import_map)?).into(),
         ..Default::default()
       })

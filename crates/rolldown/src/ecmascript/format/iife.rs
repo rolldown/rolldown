@@ -37,7 +37,7 @@ use crate::{
 use rolldown_common::{AddonRenderContext, ExternalModule, OutputExports};
 use rolldown_error::{BuildDiagnostic, BuildResult};
 use rolldown_sourcemap::SourceJoiner;
-use rolldown_utils::{concat_string, ecmascript::legitimize_identifier_name};
+use rolldown_utils::concat_string;
 
 use super::utils::{
   render_chunk_directives, render_chunk_external_imports, render_factory_parameters,
@@ -188,7 +188,7 @@ async fn render_iife_factory_arguments(
   for external in externals {
     let global = globals.call(external.id.as_str()).await;
     let target = match &global {
-      Some(global_name) => legitimize_identifier_name(global_name).to_string(),
+      Some(global_name) => global_name.to_string(),
       None => {
         warnings.push(
           BuildDiagnostic::missing_global_name(

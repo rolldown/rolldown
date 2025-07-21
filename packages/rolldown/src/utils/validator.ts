@@ -414,6 +414,7 @@ const InputOptionsSchema = v.strictObject({
         v.boolean(),
         v.object({
           baseUrl: v.optional(v.string()),
+          fileName: v.optional(v.string()),
         }),
       ])),
     }),

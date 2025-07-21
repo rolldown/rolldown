@@ -108,10 +108,11 @@ impl From<BindingChunkModuleOrderBy> for rolldown_common::ChunkModulesOrderBy {
 #[derive(Debug, Default)]
 pub struct BindingChunkImportMap {
   pub base_url: Option<String>,
+  pub file_name: Option<String>,
 }
 
 impl From<BindingChunkImportMap> for rolldown_common::ChunkImportMap {
   fn from(value: BindingChunkImportMap) -> Self {
-    Self { base_url: value.base_url }
+    Self { base_url: value.base_url, file_name: value.file_name }
   }
 }

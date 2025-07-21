@@ -19,6 +19,7 @@ use xxhash_rust::xxh3::Xxh3;
 #[derive(Debug, Default)]
 pub struct ChunkImportMapPlugin {
   pub base_url: Option<String>,
+  pub file_name: Option<String>,
   pub initialized: AtomicBool,
   pub chunk_import_map: FxDashMap<ArcStr, String>,
 }
@@ -122,10 +123,12 @@ impl Plugin for ChunkImportMapPlugin {
 
     ctx
       .emit_file_async(EmittedAsset {
-        file_name: Some(arcstr::literal!("importmap.json")),
-        source: (serde_json::to_string_pretty(&serde_json::json!({
-            "imports": chunk_import_map
-        }))?)
+        file_name: Some(
+          self.file_name.as_ref().map_or(arcstr::literal!("importmap.json"), ArcStr::from),
+        ),
+        source: (serde_json::to_string_pretty(
+          &serde_json::json!({ "imports": chunk_import_map }),
+        )?)
         .into(),
         ..Default::default()
       })

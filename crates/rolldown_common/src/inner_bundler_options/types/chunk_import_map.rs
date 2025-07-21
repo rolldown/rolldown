@@ -11,4 +11,5 @@ use serde::Deserialize;
 )]
 pub struct ChunkImportMap {
   pub base_url: Option<String>,
+  pub file_name: Option<String>,
 }

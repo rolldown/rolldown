@@ -1418,6 +1418,7 @@ export interface BindingChecksOptions {
 
 export interface BindingChunkImportMap {
   baseUrl?: string
+  fileName?: string
 }
 
 export declare enum BindingChunkModuleOrderBy {

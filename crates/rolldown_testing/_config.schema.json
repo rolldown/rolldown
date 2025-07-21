@@ -927,6 +927,12 @@
             "string",
             "null"
           ]
+        },
+        "fileName": {
+          "type": [
+            "string",
+            "null"
+          ]
         }
       },
       "additionalProperties": false

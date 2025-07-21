@@ -1416,6 +1416,10 @@ export interface BindingChecksOptions {
   configurationFieldConflict?: boolean
 }
 
+export interface BindingChunkImportMap {
+  baseUrl?: string
+}
+
 export declare enum BindingChunkModuleOrderBy {
   ModuleId = 0,
   ExecOrder = 1
@@ -1466,7 +1470,7 @@ export interface BindingExperimentalOptions {
   hmr?: BindingExperimentalHmrOptions
   attachDebugInfo?: BindingAttachDebugInfo
   chunkModulesOrder?: BindingChunkModuleOrderBy
-  chunkImportMap?: boolean
+  chunkImportMap?: boolean | BindingChunkImportMap
   onDemandWrapping?: boolean
   incrementalBuild?: boolean
   transformHiresSourcemap?: boolean | 'boundary'

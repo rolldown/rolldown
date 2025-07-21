@@ -215,7 +215,7 @@ export interface InputOptions {
      * > [!NOTE]
      * > If you want to learn more, you can check out the example here: [examples/chunk-import-map](https://github.com/rolldown/rolldown/tree/main/examples/chunk-import-map)
      */
-    chunkImportMap?: boolean;
+    chunkImportMap?: boolean | { baseUrl?: string };
     onDemandWrapping?: boolean;
     /**
      * Required to be used with `watch` mode.

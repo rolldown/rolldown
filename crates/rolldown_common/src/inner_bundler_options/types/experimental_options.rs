@@ -4,6 +4,7 @@ use schemars::JsonSchema;
 use serde::Deserialize;
 
 use crate::ROLLDOWN_IGNORE;
+use crate::inner_bundler_options::types::chunk_import_map::ChunkImportMap;
 
 use super::attach_debug_info::AttachDebugInfo;
 use super::chunk_modules_order::ChunkModulesOrderBy;
@@ -47,8 +48,8 @@ pub struct ExperimentalOptions {
   pub incremental_build: Option<bool>,
   pub hmr: Option<HmrOptions>,
   pub attach_debug_info: Option<AttachDebugInfo>,
+  pub chunk_import_map: Option<ChunkImportMap>,
   pub chunk_modules_order: Option<ChunkModulesOrderBy>,
-  pub chunk_import_map: Option<bool>,
   pub on_demand_wrapping: Option<bool>,
   pub transform_hires_sourcemap: Option<SourcemapHires>,
 }
@@ -86,9 +87,5 @@ impl ExperimentalOptions {
 
   pub fn is_attach_debug_info_full(&self) -> bool {
     self.attach_debug_info.is_some_and(|info| info.is_full())
-  }
-
-  pub fn is_chunk_import_map_enabled(&self) -> bool {
-    self.chunk_import_map.unwrap_or(false)
   }
 }

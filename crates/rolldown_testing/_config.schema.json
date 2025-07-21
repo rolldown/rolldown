@@ -842,6 +842,16 @@
             }
           ]
         },
+        "chunkImportMap": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/ChunkImportMap"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
         "chunkModulesOrder": {
           "anyOf": [
             {
@@ -850,12 +860,6 @@
             {
               "type": "null"
             }
-          ]
-        },
-        "chunkImportMap": {
-          "type": [
-            "boolean",
-            "null"
           ]
         },
         "onDemandWrapping": {
@@ -914,6 +918,18 @@
         "simple",
         "full"
       ]
+    },
+    "ChunkImportMap": {
+      "type": "object",
+      "properties": {
+        "baseUrl": {
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      },
+      "additionalProperties": false
     },
     "ChunkModulesOrderBy": {
       "type": "string",

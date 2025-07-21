@@ -18,8 +18,9 @@ use xxhash_rust::xxh3::Xxh3;
 
 #[derive(Debug, Default)]
 pub struct ChunkImportMapPlugin {
-  initialized: AtomicBool,
-  chunk_import_map: FxDashMap<ArcStr, String>,
+  pub base_url: Option<String>,
+  pub initialized: AtomicBool,
+  pub chunk_import_map: FxDashMap<ArcStr, String>,
 }
 
 impl Plugin for ChunkImportMapPlugin {
@@ -107,13 +108,14 @@ impl Plugin for ChunkImportMapPlugin {
       return Ok(());
     }
 
+    let base_url = self.base_url.as_deref().unwrap_or("/");
     let mut chunk_import_map = FxHashMap::with_capacity(self.chunk_import_map.len() / 2);
     for output in args.bundle.iter() {
       let Output::Chunk(chunk) = output else { continue };
       if let Some(v) = self.chunk_import_map.get(chunk.preliminary_filename.as_str()) {
         chunk_import_map.insert(
-          rolldown_utils::concat_string!("./", v.as_str()),
-          rolldown_utils::concat_string!("./", chunk.filename),
+          rolldown_utils::concat_string!(base_url, v.as_str()),
+          rolldown_utils::concat_string!(base_url, chunk.filename),
         );
       }
     }

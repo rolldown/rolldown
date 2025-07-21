@@ -6,11 +6,5 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## entry.js
 
 ```js
-//#region entry.ts
-var Foo = class {
-	method1(@dec(foo) foo = 2) {}
-	method2(@dec(() => foo) foo = 3) {}
-};
 
-//#endregion
 ```

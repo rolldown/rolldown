@@ -189,20 +189,20 @@ function foo() {
 ### rolldown
 ```js
 //#region switch.js
-using x = y;
+y;
 switch (foo) {
-	case 0: using c = d;
-	default: using e = f;
+	case 0: d;
+	default: f;
 }
 async function foo() {
-	using x$1 = y;
+	y;
 	switch (foo) {
-		case 0: using c = d;
-		default: using e = f;
+		case 0: d;
+		default: f;
 	}
 	switch (foo) {
-		case 0: await using c = d;
-		default: using e = f;
+		case 0: d;
+		default: f;
 	}
 }
 
@@ -215,12 +215,14 @@ async function foo() {
 +++ rolldown	switch.js
 @@ -1,32 +1,22 @@
 -using x = y;
-+var x = y;
++y;
  switch (foo) {
      case 0:
-         using c = d;
+-        using c = d;
++        d;
      default:
-         using e = f;
+-        using e = f;
++        f;
  }
 -function foo() {
 -    return __async(this, null, function* () {
@@ -247,18 +249,18 @@ async function foo() {
 -        }
 -    });
 +async function foo() {
-+    using x$1 = y;
++    y;
 +    switch (foo) {
 +        case 0:
-+            using c = d;
++            d;
 +        default:
-+            using e = f;
++            f;
 +    }
 +    switch (foo) {
 +        case 0:
-+            await using c = d;
++            d;
 +        default:
-+            using e = f;
++            f;
 +    }
  }
 

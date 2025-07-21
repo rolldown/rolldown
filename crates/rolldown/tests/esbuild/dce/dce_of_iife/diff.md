@@ -12,7 +12,7 @@ keepThisButRemoveTheIIFE;
 (() => {})(keepThisButRemoveTheIIFE);
 var someVar;
 ((x) => {})(someVar);
-var removeThis2 = (() => 123)();
+(() => 123)();
 
 //#endregion
 ```
@@ -26,7 +26,7 @@ var removeThis2 = (() => 123)();
 +(() => {})(keepThisButRemoveTheIIFE);
 +var someVar;
 +(x => {})(someVar);
-+var removeThis2 = (() => 123)();
++(() => 123)();
 
 ```
 ## /out/keep-these.js

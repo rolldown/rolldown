@@ -46,9 +46,7 @@ DROP();
 
 ```js
 //#region empty-first.js
-function keep() {
-	return;
-}
+function keep() {}
 function keep() {
 	return x;
 }
@@ -89,9 +87,7 @@ if (foo) {
 function DROP() {
 	return x;
 }
-function DROP() {
-	return;
-}
+function DROP() {}
 console.log(DROP());
 DROP();
 

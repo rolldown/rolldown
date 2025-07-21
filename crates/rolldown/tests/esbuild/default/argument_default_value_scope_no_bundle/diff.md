@@ -39,31 +39,25 @@ export let c = [
 ```js
 //#region entry.js
 function a(x = foo) {
-	var foo$1;
 	return x;
 }
 var b = class {
 	fn(x = foo) {
-		var foo$1;
 		return x;
 	}
 };
 let c = [
 	function(x = foo) {
-		var foo$1;
 		return x;
 	},
 	(x = foo) => {
-		var foo$1;
 		return x;
 	},
 	{ fn(x = foo) {
-		var foo$1;
 		return x;
 	} },
 	class {
 		fn(x = foo) {
-			var foo$1;
 			return x;
 		}
 	}
@@ -77,12 +71,11 @@ export { a, b, c };
 ===================================================================
 --- esbuild	/out.js
 +++ rolldown	entry.js
-@@ -1,27 +1,28 @@
+@@ -1,27 +1,22 @@
 -export function a(o = foo) {
 -    var r;
 -    return o;
 +function a(x = foo) {
-+    var foo$1;
 +    return x;
  }
 -export class b {
@@ -91,7 +84,6 @@ export { a, b, c };
 -        return r;
 +var b = class {
 +    fn(x = foo) {
-+        var foo$1;
 +        return x;
      }
 -}
@@ -103,17 +95,14 @@ export { a, b, c };
 -    return o;
 +};
 +var c = [function (x = foo) {
-+    var foo$1;
 +    return x;
 +}, (x = foo) => {
-+    var foo$1;
 +    return x;
  }, {
 -    fn(o = foo) {
 -        var r;
 -        return o;
 +    fn(x = foo) {
-+        var foo$1;
 +        return x;
      }
  }, class {
@@ -121,7 +110,6 @@ export { a, b, c };
 -        var r;
 -        return o;
 +    fn(x = foo) {
-+        var foo$1;
 +        return x;
      }
  }];

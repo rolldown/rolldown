@@ -42,18 +42,11 @@ const fn = () => {
 
 //#endregion
 //#region keep-these.js
-var Class = @fn class {};
 var Field = class {
 	@fn field;
 };
-var Method = class {
-	@fn method() {}
-};
 var StaticField = class {
 	@fn static field;
-};
-var StaticMethod = class {
-	@fn static method() {}
 };
 
 //#endregion
@@ -63,7 +56,7 @@ var StaticMethod = class {
 ===================================================================
 --- esbuild	/out/keep-these.js
 +++ rolldown	keep-these.js
-@@ -1,28 +1,22 @@
+@@ -1,28 +1,15 @@
 -// decorator.js
 -var fn = () => {
 -  console.log("side effect");
@@ -77,16 +70,14 @@ var StaticMethod = class {
 -};
 +//#endregion
 +//#region keep-these.js
-+var Class = @fn class {};
  var Field = class {
 -  @fn field;
 +	@fn field;
  };
- var Method = class {
+-var Method = class {
 -  @fn method() {
 -  }
-+	@fn method() {}
- };
+-};
 -var Accessor = class {
 -  @fn accessor accessor;
 -};
@@ -94,11 +85,10 @@ var StaticMethod = class {
 -  @fn static field;
 +	@fn static field;
  };
- var StaticMethod = class {
+-var StaticMethod = class {
 -  @fn static method() {
 -  }
-+	@fn static method() {}
- };
+-};
 -var StaticAccessor = class {
 -  @fn static accessor accessor;
 -};

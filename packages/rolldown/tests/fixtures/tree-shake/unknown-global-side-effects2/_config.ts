@@ -12,7 +12,7 @@ export default defineTest({
 
     expect(code).toMatchInlineSnapshot(`
       "//#region main.js
-      const element = angular.element;
+      angular.element;
 
       //#endregion"
     `)

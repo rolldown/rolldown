@@ -9,7 +9,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 import { __require } from "./chunk.js";
 
 //#region array.js
-let x = [__require];
+[__require];
 
 //#endregion
 ```
@@ -35,7 +35,7 @@ export { __require };
 import { __require } from "./chunk.js";
 
 //#region dot.js
-let x = __require.cache;
+__require.cache;
 
 //#endregion
 ```
@@ -45,7 +45,7 @@ let x = __require.cache;
 import { __require } from "./chunk.js";
 
 //#region ident.js
-let x = __require;
+__require;
 
 //#endregion
 ```
@@ -55,7 +55,7 @@ let x = __require;
 import { __require } from "./chunk.js";
 
 //#region index.js
-let x = __require[cache];
+__require[cache];
 
 //#endregion
 ```

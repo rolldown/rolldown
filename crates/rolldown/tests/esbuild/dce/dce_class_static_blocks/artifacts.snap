@@ -26,9 +26,7 @@ var C_keep = class {
 };
 var D_keep = class {
 	static {
-		{
-			foo;
-		}
+		foo;
 	}
 };
 

@@ -1,67 +1,10 @@
 ---
 source: crates/rolldown_testing/src/integration_test.rs
 ---
-# warnings
-
-## EVAL
-
-```text
-[EVAL] Warning: Use of `eval` function is strongly discouraged as it poses security risks and may cause issues with minification.
-    ╭─[ entry.js:29:34 ]
-    │
- 29 │     function containsDirectEval() { eval() }
-    │                                     ──┬─  
-    │                                       ╰─── Use of `eval` function here.
-────╯
-
-```
-## EVAL
-
-```text
-[EVAL] Warning: Use of `eval` function is strongly discouraged as it poses security risks and may cause issues with minification.
-   ╭─[ entry.js:5:2 ]
-   │
- 5 │     eval('add(1, 2)')
-   │     ──┬─  
-   │       ╰─── Use of `eval` function here.
-───╯
-
-```
 # Assets
 
 ## entry.js
 
 ```js
-//#region entry.js
-function test1() {
-	function add(first, second) {
-		return first + second;
-	}
-	eval("add(1, 2)");
-}
-function test2() {
-	function add(first, second) {
-		return first + second;
-	}
-	(0, eval)("add(1, 2)");
-}
-function test3() {
-	function add(first, second) {
-		return first + second;
-	}
-}
-function test4(eval$1) {
-	function add(first, second) {
-		return first + second;
-	}
-	eval$1("add(1, 2)");
-}
-function test5() {
-	function containsDirectEval() {
-		eval();
-	}
-	var shouldNotBeRenamed;
-}
 
-//#endregion
 ```

@@ -22,10 +22,10 @@ console.log(new Foo());
 //#region b.ts
 var Foo = class {};
 (function(_Foo) {
-	let foo = _Foo.foo = 1;
+	_Foo.foo = 1;
 })(Foo || (Foo = {}));
 (function(_Foo2) {
-	let bar = _Foo2.bar = 2;
+	_Foo2.bar = 2;
 })(Foo || (Foo = {}));
 
 //#endregion
@@ -44,12 +44,12 @@ console.log(new Foo());
 -(Foo2 => {
 -    Foo2.foo = 1;
 +(function (_Foo) {
-+    let foo = _Foo.foo = 1;
++    _Foo.foo = 1;
  })(Foo || (Foo = {}));
 -(Foo2 => {
 -    Foo2.bar = 2;
 +(function (_Foo2) {
-+    let bar = _Foo2.bar = 2;
++    _Foo2.bar = 2;
  })(Foo || (Foo = {}));
  console.log(new Foo());
 

@@ -24,7 +24,7 @@ let jsx = [
 import { jsx } from "react/jsx-runtime";
 
 //#region entry.jsx
-let tests = [
+[
 	{
 		...a,
 		...b
@@ -57,7 +57,7 @@ let tests = [
 		j
 	}
 ];
-let jsx$1 = [
+[
 	/* @__PURE__ */ jsx("div", {
 		...a,
 		...b
@@ -101,7 +101,7 @@ let jsx$1 = [
 @@ -1,40 +1,55 @@
 -let tests = [__spreadValues(__spreadValues({}, a), b), __spreadValues({
 +import {jsx} from "react/jsx-runtime";
-+var tests = [{
++[{
 +    ...a,
 +    ...b
 +}, {
@@ -140,7 +140,7 @@ let jsx$1 = [
 -})];
 -let jsx = [React.createElement("div", __spreadValues(__spreadValues({}, a), b)), React.createElement("div", __spreadValues({
 +}];
-+var jsx$1 = [jsx("div", {
++[jsx("div", {
 +    ...a,
 +    ...b
 +}), jsx("div", {

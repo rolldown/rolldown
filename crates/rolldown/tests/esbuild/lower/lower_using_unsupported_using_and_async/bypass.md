@@ -326,20 +326,20 @@ try {
 ### rolldown
 ```js
 //#region switch.js
-using x = y;
+y;
 switch (foo) {
-	case 0: using c = d;
-	default: using e = f;
+	case 0: d;
+	default: f;
 }
 async function foo() {
-	using x$1 = y;
+	y;
 	switch (foo) {
-		case 0: using c = d;
-		default: using e = f;
+		case 0: d;
+		default: f;
 	}
 	switch (foo) {
-		case 0: await using c = d;
-		default: using e = f;
+		case 0: d;
+		default: f;
 	}
 }
 
@@ -389,12 +389,12 @@ async function foo() {
 -            __callDispose(_stack5, _error5, _hasError5);
 -        }
 -    });
-+var x = y;
++y;
 +switch (foo) {
 +    case 0:
-+        using c = d;
++        d;
 +    default:
-+        using e = f;
++        f;
  }
 -var _stack2 = [];
 -try {
@@ -412,12 +412,12 @@ async function foo() {
 -    } finally {
 -        __callDispose(_stack, _error, _hasError);
 +async function foo() {
-+    using x$1 = y;
++    y;
 +    switch (foo) {
 +        case 0:
-+            using c = d;
++            d;
 +        default:
-+            using e = f;
++            f;
      }
 -} catch (_2) {
 -    var _error2 = _2, _hasError2 = true;
@@ -425,9 +425,9 @@ async function foo() {
 -    __callDispose(_stack2, _error2, _hasError2);
 +    switch (foo) {
 +        case 0:
-+            await using c = d;
++            d;
 +        default:
-+            using e = f;
++            f;
 +    }
  }
 

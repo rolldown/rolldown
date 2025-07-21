@@ -7,9 +7,15 @@
   diff
 ## [dce_of_decorators](../../../crates/rolldown/tests/esbuild/dce/dce_of_decorators/diff.md)
   diff
+## [dce_of_destructuring](../../../crates/rolldown/tests/esbuild/dce/dce_of_destructuring/diff.md)
+  diff
 ## [dce_of_experimental_decorators](../../../crates/rolldown/tests/esbuild/dce/dce_of_experimental_decorators/diff.md)
   diff
 ## [dce_of_iife](../../../crates/rolldown/tests/esbuild/dce/dce_of_iife/diff.md)
+  diff
+## [dce_of_symbol_instances](../../../crates/rolldown/tests/esbuild/dce/dce_of_symbol_instances/diff.md)
+  diff
+## [dce_template_literal](../../../crates/rolldown/tests/esbuild/dce/dce_template_literal/diff.md)
   diff
 ## [no_side_effects_comment](../../../crates/rolldown/tests/esbuild/dce/no_side_effects_comment/diff.md)
   diff
@@ -29,11 +35,19 @@
   diff
 ## [remove_unused_no_side_effects_tagged_templates](../../../crates/rolldown/tests/esbuild/dce/remove_unused_no_side_effects_tagged_templates/diff.md)
   diff
+## [remove_unused_pure_comment_calls](../../../crates/rolldown/tests/esbuild/dce/remove_unused_pure_comment_calls/diff.md)
+  diff
+## [tree_shaking_class_property](../../../crates/rolldown/tests/esbuild/dce/tree_shaking_class_property/diff.md)
+  diff
+## [tree_shaking_class_static_property](../../../crates/rolldown/tests/esbuild/dce/tree_shaking_class_static_property/diff.md)
+  diff
 ## [tree_shaking_lowered_class_static_field](../../../crates/rolldown/tests/esbuild/dce/tree_shaking_lowered_class_static_field/diff.md)
   diff
 ## [tree_shaking_lowered_class_static_field_assignment](../../../crates/rolldown/tests/esbuild/dce/tree_shaking_lowered_class_static_field_assignment/diff.md)
   diff
 ## [tree_shaking_lowered_class_static_field_minified](../../../crates/rolldown/tests/esbuild/dce/tree_shaking_lowered_class_static_field_minified/diff.md)
+  diff
+## [tree_shaking_object_property](../../../crates/rolldown/tests/esbuild/dce/tree_shaking_object_property/diff.md)
   diff
 ## [tree_shaking_react_elements](../../../crates/rolldown/tests/esbuild/dce/tree_shaking_react_elements/diff.md)
   diff
@@ -42,9 +56,6 @@
 # Passed Cases
 ## [base64_loader_remove_unused](../../../crates/rolldown/tests/esbuild/dce/base64_loader_remove_unused)
 ## [data_url_loader_remove_unused](../../../crates/rolldown/tests/esbuild/dce/data_url_loader_remove_unused)
-## [dce_of_destructuring](../../../crates/rolldown/tests/esbuild/dce/dce_of_destructuring)
-## [dce_of_symbol_instances](../../../crates/rolldown/tests/esbuild/dce/dce_of_symbol_instances)
-## [dce_template_literal](../../../crates/rolldown/tests/esbuild/dce/dce_template_literal)
 ## [dce_type_of](../../../crates/rolldown/tests/esbuild/dce/dce_type_of)
 ## [file_loader_remove_unused](../../../crates/rolldown/tests/esbuild/dce/file_loader_remove_unused)
 ## [json_loader_remove_unused](../../../crates/rolldown/tests/esbuild/dce/json_loader_remove_unused)
@@ -75,13 +86,9 @@
 ## [remove_unused_imports](../../../crates/rolldown/tests/esbuild/dce/remove_unused_imports)
 ## [remove_unused_imports_eval](../../../crates/rolldown/tests/esbuild/dce/remove_unused_imports_eval)
 ## [remove_unused_imports_eval_ts](../../../crates/rolldown/tests/esbuild/dce/remove_unused_imports_eval_ts)
-## [remove_unused_pure_comment_calls](../../../crates/rolldown/tests/esbuild/dce/remove_unused_pure_comment_calls)
 ## [text_loader_remove_unused](../../../crates/rolldown/tests/esbuild/dce/text_loader_remove_unused)
-## [tree_shaking_class_property](../../../crates/rolldown/tests/esbuild/dce/tree_shaking_class_property)
-## [tree_shaking_class_static_property](../../../crates/rolldown/tests/esbuild/dce/tree_shaking_class_static_property)
 ## [tree_shaking_import_identifier](../../../crates/rolldown/tests/esbuild/dce/tree_shaking_import_identifier)
 ## [tree_shaking_in_esm_wrapper](../../../crates/rolldown/tests/esbuild/dce/tree_shaking_in_esm_wrapper)
-## [tree_shaking_object_property](../../../crates/rolldown/tests/esbuild/dce/tree_shaking_object_property)
 # Bypassed Cases
 ## [const_value_inlining_bundle](../../../crates/rolldown/tests/esbuild/dce/const_value_inlining_bundle/bypass.md)
 ## [const_value_inlining_direct_eval](../../../crates/rolldown/tests/esbuild/dce/const_value_inlining_direct_eval/bypass.md)

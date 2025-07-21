@@ -21,9 +21,23 @@
   diff
 ## [ts_const_enum_comments](../../../crates/rolldown/tests/esbuild/ts/ts_const_enum_comments/diff.md)
   diff
+## [ts_declare_class](../../../crates/rolldown/tests/esbuild/ts/ts_declare_class/diff.md)
+  diff
 ## [ts_declare_class_fields](../../../crates/rolldown/tests/esbuild/ts/ts_declare_class_fields/diff.md)
   diff
+## [ts_declare_const](../../../crates/rolldown/tests/esbuild/ts/ts_declare_const/diff.md)
+  diff
+## [ts_declare_const_enum](../../../crates/rolldown/tests/esbuild/ts/ts_declare_const_enum/diff.md)
+  diff
+## [ts_declare_enum](../../../crates/rolldown/tests/esbuild/ts/ts_declare_enum/diff.md)
+  diff
 ## [ts_declare_function](../../../crates/rolldown/tests/esbuild/ts/ts_declare_function/diff.md)
+  diff
+## [ts_declare_let](../../../crates/rolldown/tests/esbuild/ts/ts_declare_let/diff.md)
+  diff
+## [ts_declare_namespace](../../../crates/rolldown/tests/esbuild/ts/ts_declare_namespace/diff.md)
+  diff
+## [ts_declare_var](../../../crates/rolldown/tests/esbuild/ts/ts_declare_var/diff.md)
   diff
 ## [ts_enum_cross_module_inlining_access](../../../crates/rolldown/tests/esbuild/ts/ts_enum_cross_module_inlining_access/diff.md)
   diff
@@ -73,6 +87,8 @@
   diff
 ## [ts_import_in_node_modules_name_collision_with_css](../../../crates/rolldown/tests/esbuild/ts/ts_import_in_node_modules_name_collision_with_css/diff.md)
   diff
+## [ts_import_type_only_file](../../../crates/rolldown/tests/esbuild/ts/ts_import_type_only_file/diff.md)
+  diff
 ## [ts_minify_derived_class](../../../crates/rolldown/tests/esbuild/ts/ts_minify_derived_class/diff.md)
   diff
 ## [ts_minify_enum_cross_file_inline_strings_into_templates](../../../crates/rolldown/tests/esbuild/ts/ts_minify_enum_cross_file_inline_strings_into_templates/diff.md)
@@ -90,20 +106,12 @@
 ## [ts_this_is_undefined_warning](../../../crates/rolldown/tests/esbuild/ts/ts_this_is_undefined_warning/diff.md)
   diff
 # Passed Cases
-## [ts_declare_class](../../../crates/rolldown/tests/esbuild/ts/ts_declare_class)
-## [ts_declare_const](../../../crates/rolldown/tests/esbuild/ts/ts_declare_const)
-## [ts_declare_const_enum](../../../crates/rolldown/tests/esbuild/ts/ts_declare_const_enum)
-## [ts_declare_enum](../../../crates/rolldown/tests/esbuild/ts/ts_declare_enum)
-## [ts_declare_let](../../../crates/rolldown/tests/esbuild/ts/ts_declare_let)
-## [ts_declare_namespace](../../../crates/rolldown/tests/esbuild/ts/ts_declare_namespace)
-## [ts_declare_var](../../../crates/rolldown/tests/esbuild/ts/ts_declare_var)
 ## [ts_implicit_extensions](../../../crates/rolldown/tests/esbuild/ts/ts_implicit_extensions)
 ## [ts_import_cts](../../../crates/rolldown/tests/esbuild/ts/ts_import_cts)
 ## [ts_import_empty_namespace](../../../crates/rolldown/tests/esbuild/ts/ts_import_empty_namespace)
 ## [ts_import_equals_bundle](../../../crates/rolldown/tests/esbuild/ts/ts_import_equals_bundle)
 ## [ts_import_missing_unused_es6](../../../crates/rolldown/tests/esbuild/ts/ts_import_missing_unused_es6)
 ## [ts_import_mts](../../../crates/rolldown/tests/esbuild/ts/ts_import_mts)
-## [ts_import_type_only_file](../../../crates/rolldown/tests/esbuild/ts/ts_import_type_only_file)
 ## [ts_import_vs_local_collision_all_types](../../../crates/rolldown/tests/esbuild/ts/ts_import_vs_local_collision_all_types)
 ## [ts_import_vs_local_collision_mixed](../../../crates/rolldown/tests/esbuild/ts/ts_import_vs_local_collision_mixed)
 ## [ts_side_effects_false_warning_type_declarations](../../../crates/rolldown/tests/esbuild/ts/ts_side_effects_false_warning_type_declarations)

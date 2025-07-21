@@ -361,19 +361,7 @@ function nested() {
 ```js
 //#region exprs-before.js
 function nested() {
-	const x = [
-		,
-		"",
-		{},
-		0n,
-		/./,
-		function() {},
-		() => {}
-	];
 	const y_REMOVE = 1;
-	function foo() {
-		return y_REMOVE;
-	}
 }
 assert(nested() !== void 0);
 
@@ -384,14 +372,13 @@ assert(nested() !== void 0);
 ===================================================================
 --- esbuild	/out/exprs-before.js
 +++ rolldown	exprs-before.js
-@@ -1,6 +1,8 @@
+@@ -1,6 +1,4 @@
  function nested() {
-     const x = [, "", {}, 0n, /./, function () {}, () => {}];
-+    const y_REMOVE = 1;
-     function foo() {
+-    const x = [, "", {}, 0n, /./, function () {}, () => {}];
+-    function foo() {
 -        return 1;
-+        return y_REMOVE;
-     }
+-    }
++    const y_REMOVE = 1;
  }
 +assert(nested() !== void 0);
 

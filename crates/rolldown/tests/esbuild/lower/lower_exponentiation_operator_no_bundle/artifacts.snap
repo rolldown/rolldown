@@ -7,7 +7,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```js
 //#region entry.js
-let tests = {
+({
 	0: a ** b ** c,
 	1: (a ** b) ** c,
 	2: a **= b,
@@ -28,7 +28,7 @@ let tests = {
 	17: a[[]] **= b,
 	18: a[() => {}] **= b,
 	19: a[function() {}] **= b
-};
+});
 
 //#endregion
 ```

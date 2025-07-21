@@ -13,24 +13,11 @@ const fn = () => {
 
 //#endregion
 //#region keep-these.ts
-var Class = @fn class {};
 var Field = class {
 	@fn field;
 };
-var Method = class {
-	@fn method() {}
-};
-var Parameter = class {
-	foo(@fn bar) {}
-};
 var StaticField = class {
 	@fn static field;
-};
-var StaticMethod = class {
-	@fn static method() {}
-};
-var StaticParameter = class {
-	static foo(@fn bar) {}
 };
 
 //#endregion

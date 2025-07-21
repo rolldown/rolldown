@@ -20,7 +20,7 @@ var ns;
 ```
 ### rolldown
 ```js
-//#region ../../../../../../node_modules/.pnpm/@oxc-project+runtime@0.77.3/node_modules/@oxc-project/runtime/src/helpers/esm/usingCtx.js
+//#region ../../../../../../node_modules/.pnpm/@oxc-project+runtime@0.78.0/node_modules/@oxc-project/runtime/src/helpers/esm/usingCtx.js
 function _usingCtx() {
 	var r = "function" == typeof SuppressedError ? SuppressedError : function(r$1, e$1) {
 		var n$1 = Error();
@@ -82,9 +82,9 @@ let ns;
 (function(_ns) {
 	try {
 		var _usingCtx$1 = _usingCtx();
-		let a = _ns.a = b;
-		const c = _usingCtx$1.u(d);
-		let e = _ns.e = f;
+		_ns.a = b;
+		_usingCtx$1.u(d);
+		_ns.e = f;
 	} catch (_) {
 		_usingCtx$1.e = _;
 	} finally {
@@ -163,9 +163,9 @@ let ns;
 -        const c = __using(_stack, d);
 -        ns2.e = f;
 +        var _usingCtx$1 = _usingCtx();
-+        let a = _ns.a = b;
-+        const c = _usingCtx$1.u(d);
-+        let e = _ns.e = f;
++        _ns.a = b;
++        _usingCtx$1.u(d);
++        _ns.e = f;
      } catch (_) {
 -        var _error = _, _hasError = true;
 +        _usingCtx$1.e = _;

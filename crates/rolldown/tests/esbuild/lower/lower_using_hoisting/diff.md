@@ -28,7 +28,7 @@ try {
 
 
 //#region hoist-use-strict.js
-using a = b;
+b;
 
 //#endregion
 ```
@@ -58,7 +58,7 @@ using a = b;
 -} finally {
 -    __callDispose(_stack, _error, _hasError);
 -}
-+var a = b;
++b;
 
 ```
 ## /out/hoist-directive.js
@@ -91,7 +91,7 @@ try {
 
 
 //#region hoist-directive.js
-using a = b;
+b;
 
 //#endregion
 ```
@@ -121,7 +121,7 @@ using a = b;
 -} finally {
 -    __callDispose(_stack, _error, _hasError);
 -}
-+var a = b;
++b;
 
 ```
 ## /out/hoist-import.js
@@ -143,8 +143,8 @@ try {
 import "./foo";
 
 //#region hoist-import.js
-using a = b;
-using c = d;
+b;
+d;
 
 //#endregion
 ```
@@ -164,8 +164,8 @@ using c = d;
 -} finally {
 -    __callDispose(_stack, _error, _hasError);
 -}
-+var a = b;
-+var c = d;
++b;
++d;
 
 ```
 ## /out/hoist-export-star.js
@@ -187,8 +187,8 @@ try {
 export * from "./foo"
 
 //#region hoist-export-star.js
-using a = b;
-using c = d;
+b;
+d;
 
 //#endregion
 ```
@@ -208,8 +208,8 @@ using c = d;
 -} finally {
 -    __callDispose(_stack, _error, _hasError);
 -}
-+var a = b;
-+var c = d;
++b;
++d;
 
 ```
 ## /out/hoist-export-from.js
@@ -231,8 +231,8 @@ try {
 import { x, y } from "./foo";
 
 //#region hoist-export-from.js
-using a = b;
-using c = d;
+b;
+d;
 
 //#endregion
 export { x, y };
@@ -254,8 +254,8 @@ export { x, y };
 -    __callDispose(_stack, _error, _hasError);
 -}
 +import {x, y} from "./foo";
-+var a = b;
-+var c = d;
++b;
++d;
 +export {x, y};
 
 ```
@@ -342,9 +342,9 @@ let a1 = a;
 let { y: [y1] } = foo;
 const c1 = c;
 const { z: [z1] } = foo;
-var ac2 = [a, c], { x: [x2] } = foo;
-let a2 = a, { y: [y2] } = foo;
-const c2 = c, { z: [z2] } = foo;
+var { x: [x2] } = foo;
+let { y: [y2] } = foo;
+const { z: [z2] } = foo;
 using c = d;
 
 //#endregion
@@ -379,9 +379,9 @@ export { a1, ac1, c1, x1, y1, z1 };
 +var {y: [y1]} = foo;
 +var c1 = c;
 +var {z: [z1]} = foo;
-+var ac2 = [a, c], {x: [x2]} = foo;
-+var a2 = a, {y: [y2]} = foo;
-+var c2 = c, {z: [z2]} = foo;
++var {x: [x2]} = foo;
++var {y: [y2]} = foo;
++var {z: [z2]} = foo;
 +var c = d;
 +export {a1, ac1, c1, x1, y1, z1};
 
@@ -414,12 +414,12 @@ export {
 ```js
 //#region hoist-export-local-indirect.js
 using a = b;
-var ac1 = [a, c], { x: [x1] } = foo;
-let a1 = a, { y: [y1] } = foo;
-const c1 = c, { z: [z1] } = foo;
-var ac2 = [a, c], { x: [x2] } = foo;
-let a2 = a, { y: [y2] } = foo;
-const c2 = c, { z: [z2] } = foo;
+var { x: [x1] } = foo;
+let { y: [y1] } = foo;
+const { z: [z1] } = foo;
+var { x: [x2] } = foo;
+let { y: [y2] } = foo;
+const { z: [z2] } = foo;
 using c = d;
 
 //#endregion
@@ -447,12 +447,12 @@ export { x1, y1, z1 };
 -    __callDispose(_stack, _error, _hasError);
 -}
 +var a = b;
-+var ac1 = [a, c], {x: [x1]} = foo;
-+var a1 = a, {y: [y1]} = foo;
-+var c1 = c, {z: [z1]} = foo;
-+var ac2 = [a, c], {x: [x2]} = foo;
-+var a2 = a, {y: [y2]} = foo;
-+var c2 = c, {z: [z2]} = foo;
++var {x: [x1]} = foo;
++var {y: [y1]} = foo;
++var {z: [z1]} = foo;
++var {x: [x2]} = foo;
++var {y: [y2]} = foo;
++var {z: [z2]} = foo;
 +var c = d;
  export {x1, y1, z1};
 

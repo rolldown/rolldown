@@ -43,7 +43,7 @@ let bar_ = require("xyz").b;
 //#region cjs.js
 var require_cjs = /* @__PURE__ */ __commonJS({ "cjs.js"(exports) {
 	exports.foo_ = 123;
-	let bar_ = __require("xyz").bar_;
+	__require("xyz").bar_;
 } });
 
 //#endregion
@@ -61,7 +61,7 @@ export default require_cjs();
 +var require_cjs = __commonJS({
 +    "cjs.js"(exports) {
 +        exports.foo_ = 123;
-+        let bar_ = __require("xyz").bar_;
++        __require("xyz").bar_;
 +    }
 +});
 +export default require_cjs();

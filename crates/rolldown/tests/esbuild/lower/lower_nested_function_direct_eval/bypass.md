@@ -14,9 +14,7 @@ if (foo) {
 ### rolldown
 ```js
 //#region 1.js
-if (foo) {
-	function x() {}
-}
+if (foo) {}
 
 //#endregion
 ```
@@ -25,12 +23,41 @@ if (foo) {
 ===================================================================
 --- esbuild	/out/1.js
 +++ rolldown	1.js
-@@ -1,4 +1,3 @@
- if (foo) {
+@@ -1,4 +1,1 @@
+-if (foo) {
 -    let x2 = function () {};
 -    var x = x2;
-+    function x() {}
- }
+-}
++if (foo) {}
+
+```
+## /out/2.js
+### esbuild
+```js
+if (foo) {
+  function x() {
+  }
+  eval("");
+}
+```
+### rolldown
+```js
+//#region 2.js
+if (foo) eval("");
+
+//#endregion
+```
+### diff
+```diff
+===================================================================
+--- esbuild	/out/2.js
++++ rolldown	2.js
+@@ -1,4 +1,1 @@
+-if (foo) {
+-    function x() {}
+-    eval("");
+-}
++if (foo) eval("");
 
 ```
 ## /out/3.js
@@ -48,7 +75,6 @@ if (foo) {
 ```js
 //#region 3.js
 if (foo) {
-	function x() {}
 	if (bar) eval("");
 }
 
@@ -59,9 +85,9 @@ if (foo) {
 ===================================================================
 --- esbuild	/out/3.js
 +++ rolldown	3.js
-@@ -1,6 +1,4 @@
+@@ -1,6 +1,3 @@
  if (foo) {
-     function x() {}
+-    function x() {}
 -    if (bar) {
 -        eval("");
 -    }
@@ -81,10 +107,7 @@ if (foo) {
 ### rolldown
 ```js
 //#region 4.js
-if (foo) {
-	eval("");
-	function x() {}
-}
+if (foo) eval("");
 
 //#endregion
 ```
@@ -93,12 +116,12 @@ if (foo) {
 ===================================================================
 --- esbuild	/out/4.js
 +++ rolldown	4.js
-@@ -1,4 +1,4 @@
- if (foo) {
+@@ -1,4 +1,1 @@
+-if (foo) {
 -    function x() {}
-     eval("");
-+    function x() {}
- }
+-    eval("");
+-}
++if (foo) eval("");
 
 ```
 ## /out/5.js
@@ -115,9 +138,7 @@ if (foo) {
 
 
 //#region 5.js
-if (foo) {
-	function x() {}
-}
+if (foo) {}
 
 //#endregion
 ```
@@ -126,12 +147,12 @@ if (foo) {
 ===================================================================
 --- esbuild	/out/5.js
 +++ rolldown	5.js
-@@ -1,4 +1,3 @@
+@@ -1,4 +1,1 @@
 -"use strict";
- if (foo) {
+-if (foo) {
 -    let x = function () {};
-+    function x() {}
- }
+-}
++if (foo) {}
 
 ```
 ## /out/6.js
@@ -149,10 +170,7 @@ if (foo) {
 
 
 //#region 6.js
-if (foo) {
-	function x() {}
-	eval("");
-}
+if (foo) eval("");
 
 //#endregion
 ```
@@ -161,12 +179,13 @@ if (foo) {
 ===================================================================
 --- esbuild	/out/6.js
 +++ rolldown	6.js
-@@ -1,5 +1,4 @@
+@@ -1,5 +1,1 @@
 -"use strict";
- if (foo) {
-     function x() {}
-     eval("");
- }
+-if (foo) {
+-    function x() {}
+-    eval("");
+-}
++if (foo) eval("");
 
 ```
 ## /out/7.js
@@ -187,7 +206,6 @@ if (foo) {
 
 //#region 7.js
 if (foo) {
-	function x() {}
 	if (bar) eval("");
 }
 
@@ -198,10 +216,10 @@ if (foo) {
 ===================================================================
 --- esbuild	/out/7.js
 +++ rolldown	7.js
-@@ -1,7 +1,4 @@
+@@ -1,7 +1,3 @@
 -"use strict";
  if (foo) {
-     function x() {}
+-    function x() {}
 -    if (bar) {
 -        eval("");
 -    }
@@ -224,10 +242,7 @@ if (foo) {
 
 
 //#region 8.js
-if (foo) {
-	eval("");
-	function x() {}
-}
+if (foo) eval("");
 
 //#endregion
 ```
@@ -236,12 +251,12 @@ if (foo) {
 ===================================================================
 --- esbuild	/out/8.js
 +++ rolldown	8.js
-@@ -1,5 +1,4 @@
+@@ -1,5 +1,1 @@
 -"use strict";
- if (foo) {
+-if (foo) {
 -    function x() {}
-     eval("");
-+    function x() {}
- }
+-    eval("");
+-}
++if (foo) eval("");
 
 ```

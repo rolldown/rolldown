@@ -37,14 +37,14 @@ var A = class A {
 		super.superField++;
 	}
 };
-let B = class {
+(class {
 	static {}
 	static {
 		this.thisField++;
 		super.superField = super.superField + 1;
 		super.superField++;
 	}
-};
+});
 
 //#endregion
 ```
@@ -53,7 +53,7 @@ let B = class {
 ===================================================================
 --- esbuild	/out.js
 +++ rolldown	entry.js
-@@ -1,9 +1,9 @@
+@@ -1,17 +1,17 @@
 -var A = class _A {
 +var A = class A {
      static {}
@@ -65,5 +65,15 @@ let B = class {
          super.superField++;
      }
  };
+-var B = class {
++(class {
+     static {}
+     static {
+         this.thisField++;
+         super.superField = super.superField + 1;
+         super.superField++;
+     }
+-};
++});
 
 ```

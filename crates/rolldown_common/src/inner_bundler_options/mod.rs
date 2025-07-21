@@ -375,7 +375,9 @@ fn deserialize_transform_options<'de, D>(
 where
   D: Deserializer<'de>,
 {
-  use oxc::transformer::{EnvOptions, JsxOptions, JsxRuntime};
+  use std::str::FromStr;
+
+  use oxc::transformer::{ESTarget, EnvOptions, JsxOptions, JsxRuntime};
   use serde_json::Value;
 
   use crate::JsxPreset;
@@ -390,8 +392,10 @@ where
             let target = v
               .as_str()
               .ok_or_else(|| serde::de::Error::custom("transform.target should be a string"))?;
-            transform_options.es_target = std::str::FromStr::from_str(target).map_err(|_| {
-              serde::de::Error::custom("transform.target should be a valid es target")
+            transform_options.es_target = ESTarget::from_str(target).map_err(|err| {
+              serde::de::Error::custom(format!(
+                "transform.target should be a valid es target. {err}"
+              ))
             })?;
             transform_options.env = EnvOptions::from_target(target).unwrap();
           }

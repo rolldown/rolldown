@@ -77,24 +77,11 @@ const fn = () => {
 
 //#endregion
 //#region keep-these.ts
-var Class = @fn class {};
 var Field = class {
 	@fn field;
 };
-var Method = class {
-	@fn method() {}
-};
-var Parameter = class {
-	foo(@fn bar) {}
-};
 var StaticField = class {
 	@fn static field;
-};
-var StaticMethod = class {
-	@fn static method() {}
-};
-var StaticParameter = class {
-	static foo(@fn bar) {}
 };
 
 //#endregion
@@ -104,7 +91,7 @@ var StaticParameter = class {
 ===================================================================
 --- esbuild	/out/keep-these.js
 +++ rolldown	keep-these.js
-@@ -1,63 +1,28 @@
+@@ -1,63 +1,15 @@
 -// decorator.ts
 -var fn = () => {
 -  console.log("side effect");
@@ -121,7 +108,6 @@ var StaticParameter = class {
 -], Class);
 +//#endregion
 +//#region keep-these.ts
-+var Class = @fn class {};
  var Field = class {
 -  field;
 +	@fn field;
@@ -129,11 +115,10 @@ var StaticParameter = class {
 -__decorateClass([
 -  fn
 -], Field.prototype, "field", 2);
- var Method = class {
+-var Method = class {
 -  method() {
 -  }
-+	@fn method() {}
- };
+-};
 -__decorateClass([
 -  fn
 -], Method.prototype, "method", 1);
@@ -143,11 +128,10 @@ var StaticParameter = class {
 -__decorateClass([
 -  fn
 -], Accessor.prototype, "accessor", 1);
- var Parameter = class {
+-var Parameter = class {
 -  foo(bar) {
 -  }
-+	foo(@fn bar) {}
- };
+-};
 -__decorateClass([
 -  __decorateParam(0, fn)
 -], Parameter.prototype, "foo", 1);
@@ -158,11 +142,10 @@ var StaticParameter = class {
 -__decorateClass([
 -  fn
 -], StaticField, "field", 2);
- var StaticMethod = class {
+-var StaticMethod = class {
 -  static method() {
 -  }
-+	@fn static method() {}
- };
+-};
 -__decorateClass([
 -  fn
 -], StaticMethod, "method", 1);
@@ -172,11 +155,10 @@ var StaticParameter = class {
 -__decorateClass([
 -  fn
 -], StaticAccessor, "accessor", 1);
- var StaticParameter = class {
+-var StaticParameter = class {
 -  static foo(bar) {
 -  }
-+	static foo(@fn bar) {}
- };
+-};
 -__decorateClass([
 -  __decorateParam(0, fn)
 -], StaticParameter, "foo", 1);

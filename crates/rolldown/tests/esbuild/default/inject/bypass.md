@@ -51,11 +51,11 @@ let replace2 = { test() {} };
 //#endregion
 //#region inject.js
 let obj = {};
-let sideEffects$1 = console.log("side effects");
+let sideEffects = console.log("side effects");
 
 //#endregion
 //#region entry.js
-let sideEffects = console.log("this should be renamed");
+console.log("this should be renamed");
 let collide = 123;
 console.log(obj.prop);
 console.log("defined");
@@ -90,8 +90,8 @@ console.log(external_pkg2.re.export);
 -var import_external_pkg2 = require("external-pkg2");
 -var sideEffects2 = console.log("this should be renamed");
 +var obj = {};
-+var sideEffects$1 = console.log("side effects");
-+var sideEffects = console.log("this should be renamed");
++var sideEffects = console.log("side effects");
++console.log("this should be renamed");
  var collide = 123;
  console.log(obj.prop);
  console.log("defined");

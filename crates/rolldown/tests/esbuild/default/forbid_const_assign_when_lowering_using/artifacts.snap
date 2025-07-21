@@ -1,6 +1,5 @@
 ---
 source: crates/rolldown_testing/src/integration_test.rs
-snapshot_kind: text
 ---
 # Errors
 
@@ -17,22 +16,6 @@ snapshot_kind: text
  3 │ x = 3
    │ ┬  
    │ ╰── `x` is re-assigned here
-───╯
-
-```
-## ILLEGAL_REASSIGNMENT
-
-```text
-[ILLEGAL_REASSIGNMENT] Error: Unexpected re-assignment of const variable `y`
-   ╭─[ entry.js:7:2 ]
-   │
- 5 │     const y = 1
-   │           ┬  
-   │           ╰── `y` is declared here as const
-   │ 
- 7 │     y = 3
-   │     ┬  
-   │     ╰── `y` is re-assigned here
 ───╯
 
 ```

@@ -202,12 +202,12 @@ var baz2_default = class extends x {
 
 //#endregion
 //#region outer.js
-var outer_default = async function() {
+var outer_default = (async function() {
 	class y extends z {
 		foo = async () => super.foo();
 	}
 	await new y().foo()();
-}();
+})();
 
 //#endregion
 export { bar1_default as bar1, bar2_default as bar2, bar3_default as bar3, bar4_default as bar4, baz1_default as baz1, baz2_default as baz2, foo1_default as foo1, foo2_default as foo2, foo3_default as foo3, foo4_default as foo4 };

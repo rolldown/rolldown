@@ -257,6 +257,7 @@ impl<'me, 'ast: 'me> Visit<'ast> for AstScanner<'me, 'ast> {
           let static_name = member_expr.static_property_name().unwrap_or(Atom::from(""));
           static_name == "url" || static_name == "dirname" || static_name == "filename"
         })
+        // Here we need to set it to `false` to emit warnings when leaving `import.meta` alone along with the logic `not` head of this.
         .unwrap_or(false)
         && !self.options.format.keep_esm_import_export_syntax()
         && it.meta.name == "import"

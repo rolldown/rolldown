@@ -257,6 +257,12 @@ const ChecksOptionsSchema = v.strictObject({
       'Whether to emit warning when detecting import is undefined',
     ),
   ),
+  emptyImportMeta: v.pipe(
+    v.optional(v.boolean()),
+    v.description(
+      'Whether to emit warning when detecting empty import meta',
+    ),
+  ),
   configurationFieldConflict: v.pipe(
     v.optional(v.boolean()),
     v.description(

@@ -502,19 +502,9 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
             self.snippet.builder.alloc_identifier_reference(SPAN, name),
           ));
         }
-        _ if property_name.starts_with("ROLLUP_FILE_URL_") => {
-          return self.rewrite_rollup_file_url(property_name);
-        }
-        _ => {
-          return self
-            .ctx
-            .options
-            .format
-            .keep_esm_import_export_syntax()
-            .not()
-            .then_some(self.snippet.builder.expression_object(SPAN, self.snippet.builder.vec()));
-        }
+        _ => {}
       }
+      return self.rewrite_rollup_file_url(property_name);
     }
     None
   }

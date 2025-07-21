@@ -1413,6 +1413,7 @@ export interface BindingChecksOptions {
   filenameConflict?: boolean
   commonJsVariableInEsm?: boolean
   importIsUndefined?: boolean
+  emptyImportMeta?: boolean
   configurationFieldConflict?: boolean
 }
 

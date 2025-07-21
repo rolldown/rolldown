@@ -13,7 +13,7 @@ console.log(import_meta.url, import_meta.path);
 ```js
 
 //#region entry.js
-console.log(require("url").pathToFileURL(__filename).href, void 0);
+console.log(require("url").pathToFileURL(__filename).href, {});
 
 //#endregion
 ```
@@ -25,6 +25,6 @@ console.log(require("url").pathToFileURL(__filename).href, void 0);
 @@ -1,2 +1,1 @@
 -var import_meta = {};
 -console.log(import_meta.url, import_meta.path);
-+console.log(require("url").pathToFileURL(__filename).href, void 0);
++console.log(require("url").pathToFileURL(__filename).href, {});
 
 ```

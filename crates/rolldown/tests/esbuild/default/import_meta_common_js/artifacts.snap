@@ -1,7 +1,20 @@
 ---
 source: crates/rolldown_testing/src/integration_test.rs
-snapshot_kind: text
 ---
+# warnings
+
+## EMPTY_IMPORT_META
+
+```text
+[EMPTY_IMPORT_META] Warning: `import.meta` is unavailable with the "cjs" output format and will be empty.
+   ╭─[ entry.js:1:30 ]
+   │
+ 1 │ console.log(import.meta.url, import.meta.path)
+   │                              ─────┬─────  
+   │                                   ╰─────── Avoid using `import.meta` in this context, or set the output format to `esm` instead.
+───╯
+
+```
 # Assets
 
 ## entry.js
@@ -9,7 +22,7 @@ snapshot_kind: text
 ```js
 
 //#region entry.js
-console.log(require("url").pathToFileURL(__filename).href, void 0);
+console.log(require("url").pathToFileURL(__filename).href, {});
 
 //#endregion
 ```

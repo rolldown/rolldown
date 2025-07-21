@@ -1,3 +1,5 @@
+use oxc::ast::ast::MetaProperty;
+use oxc::span::Atom;
 use oxc::{
   ast::{
     AstKind,
@@ -245,6 +247,32 @@ impl<'me, 'ast: 'me> Visit<'ast> for AstScanner<'me, 'ast> {
       self.handle_new_url_with_string_literal_and_import_meta_url(it);
     }
     walk::walk_new_expression(self, it);
+  }
+
+  fn visit_meta_property(&mut self, it: &MetaProperty<'ast>) {
+    if let Some(parent) = self.visit_path.last() {
+      if !parent
+        .as_member_expression_kind()
+        .map(|member_expr| {
+          let static_name = member_expr.static_property_name().unwrap_or(Atom::from(""));
+          static_name == "url" || static_name == "dirname" || static_name == "filename"
+        })
+        .unwrap_or(false)
+        && !self.options.format.keep_esm_import_export_syntax()
+        && it.meta.name == "import"
+        && it.property.name == "meta"
+      {
+        self.result.warnings.push(
+          BuildDiagnostic::empty_import_meta(
+            self.id.resource_id().clone().parse().expect("should be a valid resource id"),
+            self.source.clone(),
+            it.span(),
+            self.options.format.to_string().parse().expect("should be a valid format"),
+          )
+          .with_severity_warning(),
+        );
+      }
+    }
   }
 
   fn visit_this_expression(&mut self, it: &ast::ThisExpression) {

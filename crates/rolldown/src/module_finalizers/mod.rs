@@ -17,6 +17,7 @@ use rolldown_common::{
 use rolldown_ecmascript_utils::{
   AstSnippet, BindingPatternExt, CallExpressionExt, ExpressionExt, StatementExt,
 };
+use std::ops::Not;
 
 mod finalizer_context;
 mod impl_visit_mut;
@@ -501,9 +502,19 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
             self.snippet.builder.alloc_identifier_reference(SPAN, name),
           ));
         }
-        _ => {}
+        _ if property_name.starts_with("ROLLUP_FILE_URL_") => {
+          return self.rewrite_rollup_file_url(property_name);
+        }
+        _ => {
+          return self
+            .ctx
+            .options
+            .format
+            .keep_esm_import_export_syntax()
+            .not()
+            .then_some(self.snippet.builder.expression_object(SPAN, self.snippet.builder.vec()));
+        }
       }
-      return self.rewrite_rollup_file_url(property_name);
     }
     None
   }
@@ -626,6 +637,7 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
             );
             self.snippet.member_expr_or_ident_ref(object_ref_expr, props, span)
           })
+          // .or(None)
           .or_else(|| Some(self.snippet.member_expr_with_void_zero_object(props, span)))
         // return Some();
       }

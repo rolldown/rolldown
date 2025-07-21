@@ -29,18 +29,19 @@ pub enum EventKind {
   ExportUndefinedVariableError = 17,
   ImportIsUndefined = 18,
   UnsupportedFeatureError = 19,
+  EmptyImportMeta = 20,
 
   // --- These kinds are rolldown specific
-  JsonParseError = 20,
-  IllegalReassignmentError = 21,
-  InvalidDefineConfigError = 22,
-  ResolveError = 23,
-  UnhandleableError = 24,
-  UnloadableDependencyError = 25,
+  JsonParseError = 21,
+  IllegalReassignmentError = 22,
+  InvalidDefineConfigError = 23,
+  ResolveError = 24,
+  UnhandleableError = 25,
+  UnloadableDependencyError = 26,
 
-  IoError = 26,
-  NapiError = 27,
-  ConfigurationFieldConflict = 28,
+  IoError = 27,
+  NapiError = 28,
+  ConfigurationFieldConflict = 29,
 }
 
 impl Display for EventKind {
@@ -71,6 +72,7 @@ impl Display for EventKind {
       EventKind::ExportUndefinedVariableError => write!(f, "EXPORT_UNDEFINED_VARIABLE"),
       EventKind::ImportIsUndefined => write!(f, "IMPORT_IS_UNDEFINED"),
       EventKind::UnsupportedFeatureError => write!(f, "UNSUPPORTED_FEATURE"),
+      EventKind::EmptyImportMeta => write!(f, "EMPTY_IMPORT_META"),
 
       // --- Rolldown specific
       EventKind::JsonParseError => write!(f, "JSON_PARSE"),

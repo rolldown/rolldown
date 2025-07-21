@@ -134,6 +134,12 @@ importers:
         specifier: workspace:*
         version: link:../../packages/rolldown
 
+  examples/chunk-import-map:
+    devDependencies:
+      rolldown:
+        specifier: workspace:*
+        version: link:../../packages/rolldown
+
   examples/hmr-raw:
     dependencies:
       react:

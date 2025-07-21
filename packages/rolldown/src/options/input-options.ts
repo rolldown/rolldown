@@ -170,6 +170,48 @@ export interface InputOptions {
      * > You shouldn't use `full` in the production build.
      */
     attachDebugInfo?: AttachDebugOptions;
+    /**
+     * Enables automatic generation of a chunk import map asset (`.chunk-import-map.json`) during build.
+     *
+     * This map only includes chunks with hashed filenames, where keys are derived from the facade module
+     * name or primary chunk name. It produces stable and reasonably unique hash-based filenames,
+     * effectively preventing cascading cache invalidation caused by content hashes and maximizing
+     * browser cache reuse.
+     *
+     * Typical usage reads `.chunk-import-map.json` from the build output, optionally prefixes paths
+     * with a base URL (default `"./"`), and injects the resulting import map JSON into an HTML
+     * `<script type="importmap">` tag.
+     *
+     * Example configuration snippet:
+     *
+     * ```js
+     * {
+     *   experimental: {
+     *     chunkImportMap: true
+     *   },
+     *   plugins: [
+     *     {
+     *       name: 'inject-import-map',
+     *       generateBundle(_, bundle) {
+     *         const chunkImportMap = bundle['.chunk-import-map.json'];
+     *         if (chunkImportMap?.type === 'asset') {
+     *           const htmlPath = path.resolve('index.html');
+     *           const importMap = JSON.stringify({ imports: JSON.parse(chunkImportMap.source) });
+     *
+     *           let html = fs.readFileSync(htmlPath, 'utf-8');
+     *           html = html.replace(
+     *             /<script\s+type="importmap"[^>]*>[\s\S]*?<\/script>/i,
+     *             `<script type="importmap">${importMap}</script>`
+     *           );
+     *           fs.writeFileSync(htmlPath, html);
+     *           delete bundle['.chunk-import-map.json'];
+     *         }
+     *       }
+     *     }
+     *   ]
+     * }
+     * ```
+     */
     chunkImportMap?: boolean;
     onDemandWrapping?: boolean;
     /**

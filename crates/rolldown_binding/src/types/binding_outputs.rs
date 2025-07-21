@@ -17,6 +17,10 @@ pub struct BindingOutputs {
 
 #[napi]
 impl BindingOutputs {
+  pub(crate) fn chunk_len(&self) -> usize {
+    self.chunks.len()
+  }
+
   #[napi(getter)]
   pub fn chunks(&mut self) -> Vec<BindingOutputChunk> {
     std::mem::take(&mut self.chunks)

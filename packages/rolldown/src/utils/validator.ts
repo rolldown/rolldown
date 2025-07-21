@@ -410,7 +410,12 @@ const InputOptionsSchema = v.strictObject({
         v.literal('module-id'),
         v.literal('exec-order'),
       ])),
-      chunkImportMap: v.optional(v.boolean()),
+      chunkImportMap: v.optional(v.union([
+        v.boolean(),
+        v.object({
+          baseUrl: v.optional(v.string()),
+        }),
+      ])),
     }),
   ),
   define: v.pipe(

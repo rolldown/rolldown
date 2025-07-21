@@ -10,7 +10,7 @@ pub struct BindingExperimentalOptions {
   pub hmr: Option<BindingExperimentalHmrOptions>,
   pub attach_debug_info: Option<BindingAttachDebugInfo>,
   pub chunk_modules_order: Option<BindingChunkModuleOrderBy>,
-  pub chunk_import_map: Option<bool>,
+  pub chunk_import_map: Option<Either<bool, BindingChunkImportMap>>,
   pub on_demand_wrapping: Option<bool>,
   pub incremental_build: Option<bool>,
   #[napi(ts_type = "boolean | 'boundary'")]
@@ -30,7 +30,10 @@ impl TryFrom<BindingExperimentalOptions> for rolldown_common::ExperimentalOption
       hmr: value.hmr.map(Into::into),
       attach_debug_info: value.attach_debug_info.map(Into::into),
       chunk_modules_order: value.chunk_modules_order.map(Into::into),
-      chunk_import_map: value.chunk_import_map,
+      chunk_import_map: value.chunk_import_map.and_then(|v| match v {
+        Either::A(v) => v.then_some(rolldown_common::ChunkImportMap::default()),
+        Either::B(v) => Some(v.into()),
+      }),
       on_demand_wrapping: value.on_demand_wrapping,
       transform_hires_sourcemap: if let Some(v) = value.transform_hires_sourcemap {
         match v {
@@ -98,5 +101,17 @@ impl From<BindingChunkModuleOrderBy> for rolldown_common::ChunkModulesOrderBy {
       BindingChunkModuleOrderBy::ModuleId => rolldown_common::ChunkModulesOrderBy::ModuleId,
       BindingChunkModuleOrderBy::ExecOrder => rolldown_common::ChunkModulesOrderBy::ExecOrder,
     }
+  }
+}
+
+#[napi_derive::napi(object)]
+#[derive(Debug, Default)]
+pub struct BindingChunkImportMap {
+  pub base_url: Option<String>,
+}
+
+impl From<BindingChunkImportMap> for rolldown_common::ChunkImportMap {
+  fn from(value: BindingChunkImportMap) -> Self {
+    Self { base_url: value.base_url }
   }
 }

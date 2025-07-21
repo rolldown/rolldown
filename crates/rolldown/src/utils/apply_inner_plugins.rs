@@ -20,9 +20,11 @@ pub fn apply_inner_plugins(
     before_user_plugins.push(Arc::new(rolldown_plugin_hmr::HmrPlugin));
   }
 
-  if options.experimental.is_chunk_import_map_enabled() {
-    before_user_plugins
-      .push(Arc::new(rolldown_plugin_chunk_import_map::ChunkImportMapPlugin::default()));
+  if let Some(config) = &options.experimental.chunk_import_map {
+    before_user_plugins.push(Arc::new(rolldown_plugin_chunk_import_map::ChunkImportMapPlugin {
+      base_url: config.base_url.clone(),
+      ..Default::default()
+    }));
   }
 
   if !before_user_plugins.is_empty() {

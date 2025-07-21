@@ -171,40 +171,42 @@ export interface InputOptions {
      */
     attachDebugInfo?: AttachDebugOptions;
     /**
-     * Enables automatic generation of a chunk import map asset (`.chunk-import-map.json`) during build.
+     * Enables automatic generation of a chunk import map asset during build.
      *
      * This map only includes chunks with hashed filenames, where keys are derived from the facade module
-     * name or primary chunk name. It produces stable and reasonably unique hash-based filenames,
-     * effectively preventing cascading cache invalidation caused by content hashes and maximizing
-     * browser cache reuse.
+     * name or primary chunk name. It produces stable and unique hash-based filenames, effectively preventing
+     * cascading cache invalidation caused by content hashes and maximizing browser cache reuse.
      *
-     * Typical usage reads `.chunk-import-map.json` from the build output, optionally prefixes paths
-     * with a base URL (default `"./"`), and injects the resulting import map JSON into an HTML
-     * `<script type="importmap">` tag.
+     * The output defaults to `importmap.json` unless overridden via `fileName`. A base URL prefix
+     * (default `"/"`) can be applied to all paths. The resulting JSON is a valid import map and can be
+     * directly injected into HTML via `<script type="importmap">`.
      *
      * Example configuration snippet:
      *
      * ```js
      * {
      *   experimental: {
-     *     chunkImportMap: true
+     *     chunkImportMap: {
+     *       baseUrl: '/',
+     *       fileName: 'importmap.json'
+     *     }
      *   },
      *   plugins: [
      *     {
      *       name: 'inject-import-map',
      *       generateBundle(_, bundle) {
-     *         const chunkImportMap = bundle['.chunk-import-map.json'];
+     *         const chunkImportMap = bundle['importmap.json'];
      *         if (chunkImportMap?.type === 'asset') {
      *           const htmlPath = path.resolve('index.html');
-     *           const importMap = JSON.stringify({ imports: JSON.parse(chunkImportMap.source) });
-     *
      *           let html = fs.readFileSync(htmlPath, 'utf-8');
+     *
      *           html = html.replace(
      *             /<script\s+type="importmap"[^>]*>[\s\S]*?<\/script>/i,
-     *             `<script type="importmap">${importMap}</script>`
+     *             `<script type="importmap">${chunkImportMap.source}</script>`
      *           );
+     *
      *           fs.writeFileSync(htmlPath, html);
-     *           delete bundle['.chunk-import-map.json'];
+     *           delete bundle['importmap.json'];
      *         }
      *       }
      *     }

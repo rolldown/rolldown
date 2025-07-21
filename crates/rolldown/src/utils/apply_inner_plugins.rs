@@ -23,6 +23,7 @@ pub fn apply_inner_plugins(
   if let Some(config) = &options.experimental.chunk_import_map {
     before_user_plugins.push(Arc::new(rolldown_plugin_chunk_import_map::ChunkImportMapPlugin {
       base_url: config.base_url.clone(),
+      file_name: config.file_name.clone(),
       ..Default::default()
     }));
   }

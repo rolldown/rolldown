@@ -6,12 +6,12 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## EMPTY_IMPORT_META
 
 ```text
-[EMPTY_IMPORT_META] Warning: `import.meta` is unavailable with the "cjs" output format and will be empty.
+[EMPTY_IMPORT_META] Warning: `import.meta` is not available with the `cjs` output format and will be empty.
    ╭─[ entry.js:1:30 ]
    │
  1 │ console.log(import.meta.url, import.meta.path)
    │                              ─────┬─────  
-   │                                   ╰─────── Avoid using `import.meta` in this context, or set the output format to `esm` instead.
+   │                                   ╰─────── You need to set the output format to `esm` for `import.meta` to work correctly.
 ───╯
 
 ```
@@ -22,7 +22,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ```js
 
 //#region entry.js
-console.log(require("url").pathToFileURL(__filename).href, {});
+console.log(require("url").pathToFileURL(__filename).href, {}.path);
 
 //#endregion
 ```

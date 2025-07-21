@@ -23,7 +23,7 @@ impl BuildEvent for EmptyImportMeta {
 
   fn message(&self, _opts: &DiagnosticOptions) -> String {
     format!(
-      "`import.meta` is unavailable with the `{}` output format and will be empty.",
+      "`import.meta` is not available with the `{}` output format and will be empty.",
       self.format
     )
   }
@@ -33,7 +33,7 @@ impl BuildEvent for EmptyImportMeta {
     let file_id = diagnostic.add_file(filename, self.source.clone());
 
     diagnostic.title = format!(
-      "`import.meta` is unavailable with the \"{}\" output format and will be empty.",
+      "`import.meta` is not available with the `{}` output format and will be empty.",
       self.format
     );
 
@@ -41,7 +41,7 @@ impl BuildEvent for EmptyImportMeta {
       &file_id,
       self.span.start..self.span.end,
       String::from(
-        "Avoid using `import.meta` in this context, or set the output format to `esm` instead.",
+        "You need to set the output format to `esm` for `import.meta` to work correctly.",
       ),
     );
   }

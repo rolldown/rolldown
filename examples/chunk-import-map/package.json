@@ -1,0 +1,12 @@
+{
+  "name": "@example/typescript",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "serve": "npx serve .",
+    "build": "pnpm rolldown -c ./rolldown.config.js"
+  },
+  "devDependencies": {
+    "rolldown": "workspace:*"
+  }
+}

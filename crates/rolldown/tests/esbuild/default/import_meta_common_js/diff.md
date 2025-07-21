@@ -13,7 +13,7 @@ console.log(import_meta.url, import_meta.path);
 ```js
 
 //#region entry.js
-console.log(require("url").pathToFileURL(__filename).href, ({}).path);
+console.log(require("url").pathToFileURL(__filename).href, {}.path);
 
 //#endregion
 ```

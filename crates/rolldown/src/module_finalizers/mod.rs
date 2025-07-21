@@ -17,7 +17,6 @@ use rolldown_common::{
 use rolldown_ecmascript_utils::{
   AstSnippet, BindingPatternExt, CallExpressionExt, ExpressionExt, StatementExt,
 };
-use std::ops::Not;
 
 mod finalizer_context;
 mod impl_visit_mut;

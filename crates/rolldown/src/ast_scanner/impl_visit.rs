@@ -1,5 +1,3 @@
-use oxc::ast::ast::MetaProperty;
-use oxc::span::Atom;
 use oxc::{
   ast::{
     AstKind,
@@ -249,12 +247,12 @@ impl<'me, 'ast: 'me> Visit<'ast> for AstScanner<'me, 'ast> {
     walk::walk_new_expression(self, it);
   }
 
-  fn visit_meta_property(&mut self, it: &MetaProperty<'ast>) {
+  fn visit_meta_property(&mut self, it: &ast::MetaProperty<'ast>) {
     if let Some(parent) = self.visit_path.last() {
       if !parent
         .as_member_expression_kind()
         .map(|member_expr| {
-          let static_name = member_expr.static_property_name().unwrap_or(Atom::from(""));
+          let static_name = member_expr.static_property_name().unwrap_or(ast::Atom::from(""));
           static_name == "url" || static_name == "dirname" || static_name == "filename"
         })
         // Here we need to set it to `false` to emit warnings when leaving `import.meta` alone along with the logic `not` head of this.

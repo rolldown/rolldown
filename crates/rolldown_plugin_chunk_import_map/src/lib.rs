@@ -122,8 +122,11 @@ impl Plugin for ChunkImportMapPlugin {
 
     ctx
       .emit_file_async(EmittedAsset {
-        file_name: Some(arcstr::literal!(".chunk-import-map.json")),
-        source: (serde_json::to_string_pretty(&chunk_import_map)?).into(),
+        file_name: Some(arcstr::literal!("importmap.json")),
+        source: (serde_json::to_string_pretty(&serde_json::json!({
+            "imports": chunk_import_map
+        }))?)
+        .into(),
         ..Default::default()
       })
       .await?;

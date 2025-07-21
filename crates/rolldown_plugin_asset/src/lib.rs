@@ -1,12 +1,13 @@
 mod utils;
 
-use std::borrow::Cow;
+use std::{borrow::Cow, sync::Arc};
 
 use rolldown_common::ModuleType;
 use rolldown_plugin::{HookUsage, Plugin};
 use rolldown_plugin_utils::{FileToUrlEnv, check_public_file, file_to_url, find_special_query};
 use rolldown_utils::{
-  pattern_filter::StringOrRegex, percent_encoding::encode_as_percent_escaped, url::clean_url,
+  dashmap::FxDashMap, pattern_filter::StringOrRegex, percent_encoding::encode_as_percent_escaped,
+  url::clean_url,
 };
 use serde_json::Value;
 
@@ -18,9 +19,26 @@ pub struct AssetPlugin {
   pub assets_include: Vec<StringOrRegex>,
 }
 
+#[allow(dead_code)]
+#[derive(Default)]
+struct AssetCache(pub FxDashMap<String, String>);
+
 impl Plugin for AssetPlugin {
   fn name(&self) -> Cow<'static, str> {
     Cow::Borrowed("builtin:asset")
+  }
+
+  fn register_hook_usage(&self) -> HookUsage {
+    HookUsage::BuildStart | HookUsage::ResolveId | HookUsage::Load
+  }
+
+  async fn build_start(
+    &self,
+    ctx: &rolldown_plugin::PluginContext,
+    _args: &rolldown_plugin::HookBuildStartArgs<'_>,
+  ) -> rolldown_plugin::HookNoopReturn {
+    ctx.meta().insert(Arc::new(AssetCache::default()));
+    Ok(())
   }
 
   async fn resolve_id(
@@ -100,9 +118,5 @@ impl Plugin for AssetPlugin {
       module_type: Some(ModuleType::Js),
       ..Default::default()
     }))
-  }
-
-  fn register_hook_usage(&self) -> HookUsage {
-    HookUsage::ResolveId | HookUsage::Load
   }
 }

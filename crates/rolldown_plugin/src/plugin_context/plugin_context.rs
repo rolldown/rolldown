@@ -7,7 +7,10 @@ use arcstr::ArcStr;
 use derive_more::Debug;
 use rolldown_common::{Log, ResolvedId, side_effects::HookSideEffects};
 
-use crate::{PluginContextResolveOptions, types::hook_resolve_id_skipped::HookResolveIdSkipped};
+use crate::{
+  PluginContextResolveOptions, plugin_context::PluginContextMeta,
+  types::hook_resolve_id_skipped::HookResolveIdSkipped,
+};
 
 use super::NativePluginContextImpl;
 
@@ -37,6 +40,7 @@ impl PluginContext {
         skipped_resolve_calls,
         plugin_idx: ctx.plugin_idx,
         plugin_driver: Weak::clone(&ctx.plugin_driver),
+        meta: Arc::clone(&ctx.meta),
         resolver: Arc::clone(&ctx.resolver),
         file_emitter: Arc::clone(&ctx.file_emitter),
         options: Arc::clone(&ctx.options),
@@ -141,6 +145,13 @@ impl PluginContext {
         unimplemented!("Can't call `add_watch_file` on PluginContext::Napi")
       }
       PluginContext::Native(ctx) => ctx.add_watch_file(file),
+    }
+  }
+
+  pub fn meta(&self) -> &PluginContextMeta {
+    match self {
+      PluginContext::Napi(_) => unimplemented!("Can't call `meta` on PluginContext::Napi"),
+      PluginContext::Native(ctx) => &ctx.meta,
     }
   }
 

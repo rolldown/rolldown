@@ -38,25 +38,8 @@ main_hot.accept(() => {});
 ## Code
 
 ```js
-//#region main.js
-var init_main_0 = __rolldown_runtime__.createEsmInitializer(function() {
-	try {
-		var ns_main = {};
-		__rolldown_runtime__.__export(ns_main, {});
-		__rolldown_runtime__.registerModule("main.js", { exports: ns_main });
-		init_foo_2();
-		init_foo_3();
-		const hot_main = __rolldown_runtime__.createModuleHotContext("main.js");
-		var import_foo_0 = __rolldown_runtime__.loadExports("foo.mjs");
-		var import_foo_1 = __rolldown_runtime__.loadExports("foo/index.mjs");
-		console.log(import_foo_0.foo, import_foo_1.foo);
-		hot_main.accept(() => {});
-	} finally {}
-});
-
-//#endregion
 //#region rolldown:runtime
-var init_rolldown_runtime_1 = __rolldown_runtime__.createEsmInitializer(function() {
+var init_rolldown_runtime_0 = __rolldown_runtime__.createEsmInitializer(function() {
 	try {
 		var ns_rolldown_runtime = {};
 		__rolldown_runtime__.__export(ns_rolldown_runtime, {});
@@ -95,13 +78,30 @@ var init_rolldown_runtime_1 = __rolldown_runtime__.createEsmInitializer(function
 
 //#endregion
 //#region foo.mjs
-var init_foo_2 = __rolldown_runtime__.createEsmInitializer(function() {
+var init_foo_1 = __rolldown_runtime__.createEsmInitializer(function() {
 	try {
 		var ns_foo = {};
 		__rolldown_runtime__.__export(ns_foo, { foo: () => foo });
 		__rolldown_runtime__.registerModule("foo.mjs", { exports: ns_foo });
 		const hot_foo = __rolldown_runtime__.createModuleHotContext("foo.mjs");
 		const foo = "foo";
+	} finally {}
+});
+
+//#endregion
+//#region main.js
+var init_main_2 = __rolldown_runtime__.createEsmInitializer(function() {
+	try {
+		var ns_main = {};
+		__rolldown_runtime__.__export(ns_main, {});
+		__rolldown_runtime__.registerModule("main.js", { exports: ns_main });
+		init_foo_1();
+		init_foo_3();
+		const hot_main = __rolldown_runtime__.createModuleHotContext("main.js");
+		var import_foo_0 = __rolldown_runtime__.loadExports("foo.mjs");
+		var import_foo_1 = __rolldown_runtime__.loadExports("foo/index.mjs");
+		console.log(import_foo_0.foo, import_foo_1.foo);
+		hot_main.accept(() => {});
 	} finally {}
 });
 
@@ -124,7 +124,7 @@ var init_rolldown_hmr_4 = __rolldown_runtime__.createEsmInitializer(function() {
 		var ns_rolldown_hmr = {};
 		__rolldown_runtime__.__export(ns_rolldown_hmr, { DevRuntime: () => DevRuntime });
 		__rolldown_runtime__.registerModule("rolldown:hmr", { exports: ns_rolldown_hmr });
-		init_rolldown_runtime_1();
+		init_rolldown_runtime_0();
 		const hot_rolldown_hmr = __rolldown_runtime__.createModuleHotContext("rolldown:hmr");
 		var import_rolldown_runtime_0 = __rolldown_runtime__.loadExports("rolldown:runtime");
 		class Module {
@@ -232,7 +232,7 @@ var init_rolldown_hmr_4 = __rolldown_runtime__.createEsmInitializer(function() {
 });
 
 //#endregion
-init_main_0()
+init_main_2()
 __rolldown_runtime__.applyUpdates(['main.js']);
 ```
 ## Meta

@@ -4,6 +4,7 @@ use std::{
 };
 
 use arcstr::ArcStr;
+use indexmap::IndexSet;
 use oxc::ast_visit::VisitMut;
 use rolldown_common::{
   EcmaModuleAstUsage, HmrBoundary, HmrBoundaryOutput, HmrOutput, Module, ModuleIdx, ModuleTable,
@@ -132,47 +133,28 @@ impl HmrManager {
   #[expect(clippy::too_many_lines)]
   pub async fn generate_hmr_patch(
     &mut self,
-    mut changed_modules: FxIndexSet<ModuleIdx>,
+    changed_modules: FxIndexSet<ModuleIdx>,
     first_invalidated_by: Option<String>,
   ) -> BuildResult<HmrOutput> {
     let mut affected_modules = FxIndexSet::default();
-    let mut hmr_boundaries = FxIndexSet::default();
     let mut need_to_full_reload = false;
     let mut full_reload_reason = None;
 
     // We're checking if this change could be handled by hmr. If so, we need to find the HMR boundaries.
-    while let Some(changed_module_idx) = changed_modules.pop() {
-      if need_to_full_reload {
-        break;
-      }
-      let mut visited_modules = FxHashSet::default();
-      let mut boundaries = FxIndexSet::default();
-      let is_reach_to_hmr_root_boundary = self.propagate_update(
-        changed_module_idx,
-        &mut visited_modules,
-        &mut boundaries,
-        &mut affected_modules,
-      );
+    let hmr_boundaries = self.compute_out_hmr_boundaries(
+      &changed_modules,
+      &mut need_to_full_reload,
+      first_invalidated_by.as_deref(),
+      &mut full_reload_reason,
+    );
 
-      if is_reach_to_hmr_root_boundary {
-        need_to_full_reload = true;
-        continue;
-      }
-
-      // If import.meta.hot.invalidate was called already on that module for the same update,
-      // it means any importer of that module can't hot update. We should fallback to full reload.
-      if let Some(first_invalidated_by) = first_invalidated_by.as_ref() {
-        if boundaries.iter().any(|boundary| {
-          self.module_db.modules[boundary.accepted_via].stable_id() == first_invalidated_by
-        }) {
-          need_to_full_reload = true;
-          full_reload_reason = Some("circular import invalidate".to_string());
-          continue;
-        }
-      }
-
-      hmr_boundaries.extend(boundaries);
-    }
+    tracing::debug!(
+      target: "hmr",
+      "computed out `hmr_boundaries` {:?}",
+      hmr_boundaries.iter()
+        .map(|boundary| self.module_db.modules[boundary.boundary].stable_id())
+        .collect::<Vec<_>>(),
+    );
 
     // The HMR process will execute the code starting from the HMR boundaries. The HMR process expects all dependencies
     // of the HMR boundaries to be re-executed. We collect them here to include them in the HMR output.
@@ -430,11 +412,38 @@ impl HmrManager {
     visited_modules: &mut FxHashSet<ModuleIdx>,
     hmr_boundaries: &mut FxIndexSet<HmrBoundary>,
     affected_modules: &mut FxIndexSet<ModuleIdx>,
-  ) -> bool /* is reached to hmr boundary  */ {
-    let Module::Normal(module) = &self.module_db.modules[module_idx] else { return false };
+    stack: &mut Vec<ModuleIdx>,
+  ) -> PropagateUpdateStatus {
+    let Module::Normal(module) = &self.module_db.modules[module_idx] else {
+      // We consider reaching external modules as a boundary.
+      return PropagateUpdateStatus::ReachedBoundary;
+    };
+
+    if let Some(circular_start_index) = stack
+      .iter()
+      .enumerate()
+      .find_map(|(index, each_module_idx)| (module_idx == *each_module_idx).then_some(index))
+    {
+      // Jumping into this branch means we have a circular dependency.
+      // X -> Y means X imports Y. and we have
+      // A -> B -> C -> D(edited)
+      // C -> B
+      // When we reach to C again, the stack contains [D, C, B]
+      let cycle_chain = stack[circular_start_index..]
+        .iter()
+        .copied()
+        .chain(std::iter::once(module_idx))
+        // Notice, our traversal is done by reaching `importers`, so the vec order is opposite to the import order.
+        .rev()
+        .collect::<Vec<_>>();
+
+      return PropagateUpdateStatus::Circular(cycle_chain);
+    }
+
     if visited_modules.contains(&module_idx) {
-      // At this point, we consider circular dependencies as a full reload. We can improve this later.
-      return true;
+      // This branch means this process has been processed before. We consider it as reaching a boundary too.
+      // Because its real status already been returned by the previous call.
+      return PropagateUpdateStatus::ReachedBoundary;
     }
 
     visited_modules.insert(module_idx);
@@ -443,31 +452,42 @@ impl HmrManager {
 
     if module.ast_usage.contains(EcmaModuleAstUsage::HmrSelfAccept) {
       hmr_boundaries.insert(HmrBoundary { boundary: module_idx, accepted_via: module_idx });
-      return false;
+      return PropagateUpdateStatus::ReachedBoundary;
+    } else if module.importers_idx.is_empty() {
+      // This module is not self-aceepting and don't have any potential importer that might accepts its update
+      return PropagateUpdateStatus::NoBoundary(module_idx);
     }
 
-    // If the module is not imported by one module, it should be a hmr root boundary.
-    if module.importers_idx.is_empty() {
-      return true;
-    }
+    let mut importers_idx = module.importers_idx.iter().copied().collect::<Vec<_>>();
+    // FIXME(hyf0): In practice, the order of importers doesn't matter since we gonna traverse all of them.
+    // However, non-deterministic order causes unstable snapshots.
+    importers_idx.sort_by_key(|importer_idx| self.module_db.modules[*importer_idx].stable_id());
 
-    for importer_idx in &module.importers_idx {
-      let Module::Normal(importer) = &self.module_db.modules[*importer_idx] else {
+    for importer_idx in importers_idx {
+      let Module::Normal(importer) = &self.module_db.modules[importer_idx] else {
         continue;
       };
 
-      if importer.hmr_info.deps.contains(&module.id) {
-        affected_modules.insert(*importer_idx);
-        hmr_boundaries.insert(HmrBoundary { boundary: *importer_idx, accepted_via: module_idx });
+      if importer.is_hmr_boundary_for(&module.id) {
+        hmr_boundaries.insert(HmrBoundary { boundary: importer_idx, accepted_via: module_idx });
         continue;
       }
 
-      if self.propagate_update(*importer_idx, visited_modules, hmr_boundaries, affected_modules) {
-        return true;
+      stack.push(module_idx);
+      let status = self.propagate_update(
+        importer_idx,
+        visited_modules,
+        hmr_boundaries,
+        affected_modules,
+        stack,
+      );
+      stack.pop();
+      if !status.is_reached_boundary() {
+        return status;
       }
     }
 
-    false
+    PropagateUpdateStatus::ReachedBoundary
   }
 
   fn collect_affected_modules_from_boundaries(
@@ -502,5 +522,80 @@ impl HmrManager {
     });
 
     visited
+  }
+
+  fn compute_out_hmr_boundaries(
+    &self,
+    changed_modules: &FxIndexSet<ModuleIdx>,
+    need_to_full_reload: &mut bool,
+    first_invalidated_by: Option<&str>,
+    reason: &mut Option<String>,
+  ) -> FxIndexSet<HmrBoundary> {
+    let mut hmr_boundaries = FxIndexSet::default();
+
+    for changed_module_idx in changed_modules.iter().copied() {
+      if *need_to_full_reload {
+        break;
+      }
+      let mut visited_modules = FxHashSet::default();
+      let mut boundaries = FxIndexSet::default();
+      let propagate_status = self.propagate_update(
+        changed_module_idx,
+        &mut visited_modules,
+        &mut boundaries,
+        &mut IndexSet::default(),
+        &mut vec![],
+      );
+
+      match propagate_status {
+        PropagateUpdateStatus::Circular(cycle_chain) => {
+          *need_to_full_reload = true;
+          *reason = Some(format!(
+            "circular import chain: {}",
+            cycle_chain
+              .iter()
+              .map(|module_idx| self.module_db.modules[*module_idx].stable_id())
+              .collect::<Vec<_>>()
+              .join(" -> ")
+          ));
+          break;
+        }
+        PropagateUpdateStatus::NoBoundary(idx) => {
+          *need_to_full_reload = true;
+          let module = &self.module_db.modules[idx];
+          *reason = Some(format!("no hmr boundary found for module `{}`", module.stable_id()));
+          break;
+        }
+        PropagateUpdateStatus::ReachedBoundary => {}
+      }
+
+      // If import.meta.hot.invalidate was called already on that module for the same update,
+      // it means any importer of that module can't hot update. We should fallback to full reload.
+      if let Some(first_invalidated_by) = first_invalidated_by.as_ref() {
+        if boundaries.iter().any(|boundary| {
+          self.module_db.modules[boundary.accepted_via].stable_id() == *first_invalidated_by
+        }) {
+          *need_to_full_reload = true;
+          // full_reload_reason = Some("circular import invalidate".to_string());
+          continue;
+        }
+      }
+
+      hmr_boundaries.extend(boundaries);
+    }
+
+    hmr_boundaries
+  }
+}
+
+enum PropagateUpdateStatus {
+  Circular(Vec<ModuleIdx>), // The circular dependency chain
+  ReachedBoundary,
+  NoBoundary(ModuleIdx),
+}
+
+impl PropagateUpdateStatus {
+  pub fn is_reached_boundary(&self) -> bool {
+    matches!(self, Self::ReachedBoundary)
   }
 }

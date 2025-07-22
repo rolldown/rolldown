@@ -99,27 +99,6 @@ pub fn normalize_options(mut raw_options: crate::BundlerOptions) -> NormalizeOpt
     }
   }
 
-  // replace all `import.meta.*` with `undefined` for none `esm` format
-  // note: Any definition more specific than `import.meta.*` will be replace first
-  if !matches!(format, OutputFormat::Esm) {
-    match raw_define.entry("import.meta.*".to_string()) {
-      indexmap::map::Entry::Occupied(_occupied_entry) => {}
-      indexmap::map::Entry::Vacant(vacant_entry) => {
-        vacant_entry.insert("undefined".to_string());
-        // comment out when https://github.com/rolldown/rolldown/issues/3301 is finished
-        raw_define
-          .entry("import.meta.url".to_string())
-          .or_insert_with(|| "import.meta.url".to_string());
-        raw_define
-          .entry("import.meta.dirname".to_string())
-          .or_insert_with(|| "import.meta.dirname".to_string());
-        raw_define
-          .entry("import.meta.filename".to_string())
-          .or_insert_with(|| "import.meta.filename".to_string());
-      }
-    }
-  }
-
   let define = raw_define.into_iter().collect();
 
   // Take out resolve options

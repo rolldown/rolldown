@@ -192,6 +192,15 @@ impl BuildDiagnostic {
     Self::new_inner(UnsupportedFeature { filename, source, span, error_message })
   }
 
+  pub fn empty_import_meta(filename: String, source: ArcStr, span: Span, format: ArcStr) -> Self {
+    Self::new_inner(crate::events::empty_import_meta::EmptyImportMeta {
+      filename,
+      source,
+      span,
+      format,
+    })
+  }
+
   // --- Rolldown related
 
   pub fn oxc_parse_error(

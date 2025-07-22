@@ -247,6 +247,33 @@ impl<'me, 'ast: 'me> Visit<'ast> for AstScanner<'me, 'ast> {
     walk::walk_new_expression(self, it);
   }
 
+  fn visit_meta_property(&mut self, it: &ast::MetaProperty<'ast>) {
+    if let Some(parent) = self.visit_path.last() {
+      if !parent
+        .as_member_expression_kind()
+        .map(|member_expr| {
+          let static_name = member_expr.static_property_name().unwrap_or(ast::Atom::from(""));
+          static_name == "url" || static_name == "dirname" || static_name == "filename"
+        })
+        // Here we need to set it to `false` to emit warnings when leaving `import.meta` alone along with the logic `not` head of this.
+        .unwrap_or(false)
+        && !self.options.format.keep_esm_import_export_syntax()
+        && it.meta.name == "import"
+        && it.property.name == "meta"
+      {
+        self.result.warnings.push(
+          BuildDiagnostic::empty_import_meta(
+            self.id.resource_id().clone().parse().expect("should be a valid resource id"),
+            self.source.clone(),
+            it.span(),
+            self.options.format.to_string().parse().expect("should be a valid format"),
+          )
+          .with_severity_warning(),
+        );
+      }
+    }
+  }
+
   fn visit_this_expression(&mut self, it: &ast::ThisExpression) {
     if !self.is_this_nested() {
       self.top_level_this_expr_set.insert(it.span);

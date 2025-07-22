@@ -63,6 +63,12 @@ export interface ChecksOptions {
   importIsUndefined?: boolean;
 
   /**
+   * Whether to emit warning when detecting empty import meta
+   * @default true
+   */
+  emptyImportMeta?: boolean;
+
+  /**
    * Whether to emit warning when detecting configuration field conflict
    * @default true
    */

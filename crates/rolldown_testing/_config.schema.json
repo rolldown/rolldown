@@ -1236,6 +1236,12 @@
             "null"
           ]
         },
+        "emptyImportMeta": {
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
         "configurationFieldConflict": {
           "type": [
             "boolean",

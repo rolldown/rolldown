@@ -626,6 +626,7 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
             );
             self.snippet.member_expr_or_ident_ref(object_ref_expr, props, span)
           })
+          // .or(None)
           .or_else(|| Some(self.snippet.member_expr_with_void_zero_object(props, span)))
         // return Some();
       }

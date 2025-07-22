@@ -25,14 +25,15 @@ bitflags! {
     const ExportUndefinedVariableError = 1 << 17;
     const ImportIsUndefined = 1 << 18;
     const UnsupportedFeatureError = 1 << 19;
-    const JsonParseError = 1 << 20;
-    const IllegalReassignmentError = 1 << 21;
-    const InvalidDefineConfigError = 1 << 22;
-    const ResolveError = 1 << 23;
-    const UnhandleableError = 1 << 24;
-    const UnloadableDependencyError = 1 << 25;
-    const IoError = 1 << 26;
-    const NapiError = 1 << 27;
-    const ConfigurationFieldConflict = 1 << 28;
+    const EmptyImportMeta = 1 << 20;
+    const JsonParseError = 1 << 21;
+    const IllegalReassignmentError = 1 << 22;
+    const InvalidDefineConfigError = 1 << 23;
+    const ResolveError = 1 << 24;
+    const UnhandleableError = 1 << 25;
+    const UnloadableDependencyError = 1 << 26;
+    const IoError = 1 << 27;
+    const NapiError = 1 << 28;
+    const ConfigurationFieldConflict = 1 << 29;
   }
 }

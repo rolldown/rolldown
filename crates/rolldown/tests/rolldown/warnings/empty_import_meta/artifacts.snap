@@ -1,0 +1,43 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# warnings
+
+## EMPTY_IMPORT_META
+
+```text
+[EMPTY_IMPORT_META] Warning: `import.meta` is not available with the `cjs` output format and will be empty.
+   ╭─[ main.js:1:13 ]
+   │
+ 1 │ console.log(import.meta.hello);
+   │             ─────┬─────  
+   │                  ╰─────── You need to set the output format to `esm` for `import.meta` to work correctly.
+───╯
+
+```
+## EMPTY_IMPORT_META
+
+```text
+[EMPTY_IMPORT_META] Warning: `import.meta` is not available with the `cjs` output format and will be empty.
+   ╭─[ main.js:4:13 ]
+   │
+ 4 │ console.log(import.meta);
+   │             ─────┬─────  
+   │                  ╰─────── You need to set the output format to `esm` for `import.meta` to work correctly.
+───╯
+
+```
+# Assets
+
+## main.js
+
+```js
+
+//#region main.js
+console.log({}.hello);
+console.log(__filename);
+console.log(require("url").pathToFileURL(__filename).href);
+console.log({});
+
+//#endregion
+```

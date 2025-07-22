@@ -935,7 +935,7 @@ expression: output
 
 # tests/esbuild/default/import_meta_common_js
 
-- entry-!~{000}~.js => entry-BmVN66cq.js
+- entry-!~{000}~.js => entry-Cjrrr93N.js
 
 # tests/esbuild/default/import_meta_es6
 
@@ -5832,6 +5832,10 @@ expression: output
 # tests/rolldown/warnings/configuration_field_conflict
 
 - main-!~{000}~.js => main-5X8T5evH.js
+
+# tests/rolldown/warnings/empty_import_meta
+
+- main-!~{000}~.js => main-DfcONHmG.js
 
 # tests/rolldown/warnings/eval
 

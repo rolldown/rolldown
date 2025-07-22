@@ -5,14 +5,31 @@ use oxc::{
     match_member_expression,
   },
   ast_visit::{VisitMut, walk_mut},
+  semantic::ScopeFlags,
   span::{SPAN, Span},
 };
 use rolldown_common::{ExportsKind, StmtInfoIdx, SymbolRef, ThisExprReplaceKind, WrapKind};
 use rolldown_ecmascript_utils::{ExpressionExt, JsxExt};
 
+use crate::hmr::utils::HmrAstBuilder;
+
 use super::ScopeHoistingFinalizer;
 
 impl<'ast> VisitMut<'ast> for ScopeHoistingFinalizer<'_, 'ast> {
+  fn enter_scope(
+    &mut self,
+    flags: oxc::semantic::ScopeFlags,
+    _scope_id: &std::cell::Cell<Option<oxc::semantic::ScopeId>>,
+  ) {
+    self.scope_stack.push(flags);
+    self.is_top_level = self.scope_stack.iter().rev().all(|flag| flag.is_block() || flag.is_top());
+  }
+
+  fn leave_scope(&mut self) {
+    self.scope_stack.pop();
+    self.is_top_level = self.scope_stack.iter().rev().all(|flag| flag.is_block() || flag.is_top());
+  }
+
   #[allow(clippy::too_many_lines)]
   fn visit_program(&mut self, program: &mut ast::Program<'ast>) {
     // Drop the hashbang since we already store them in ast_scan phase and
@@ -39,11 +56,14 @@ impl<'ast> VisitMut<'ast> for ScopeHoistingFinalizer<'_, 'ast> {
     }
 
     // check if we need to add wrapper
-    let needs_wrapper = self
+    let included_wrap_kind = self
       .ctx
       .linking_info
       .wrapper_stmt_info
-      .is_some_and(|idx| self.ctx.module.stmt_infos[idx].is_included);
+      .is_some_and(|idx| self.ctx.module.stmt_infos[idx].is_included)
+      .then_some(self.ctx.linking_info.wrap_kind);
+
+    self.ctx.needs_hosted_top_level_binding = matches!(included_wrap_kind, Some(WrapKind::Esm));
 
     // the order should be
     // 1. module namespace object declaration
@@ -74,56 +94,58 @@ impl<'ast> VisitMut<'ast> for ScopeHoistingFinalizer<'_, 'ast> {
       }
     });
 
-    walk_mut::walk_program(self, program);
-
-    if needs_wrapper {
-      match self.ctx.linking_info.wrap_kind {
-        WrapKind::Cjs => {
-          let wrap_ref_name = self.canonical_name_for(self.ctx.linking_info.wrapper_ref.unwrap());
-          let commonjs_ref = if self.ctx.options.profiler_names {
-            self.canonical_ref_for_runtime("__commonJS")
-          } else {
-            self.canonical_ref_for_runtime("__commonJSMin")
-          };
-
-          let commonjs_ref_expr = self.finalized_expr_for_symbol_ref(commonjs_ref, false, false);
-
-          let mut stmts_inside_closure = allocator::Vec::new_in(self.alloc);
-          stmts_inside_closure.append(&mut program.body);
-
-          program.body.push(self.snippet.commonjs_wrapper_stmt(
-            wrap_ref_name,
-            commonjs_ref_expr,
-            stmts_inside_closure,
-            self.ctx.module.ast_usage,
-            self.ctx.options.profiler_names,
-            &self.ctx.module.stable_id,
-          ));
+    self.enter_scope(
+      {
+        let mut flags = ScopeFlags::Top;
+        if program.source_type.is_strict() || program.has_use_strict_directive() {
+          flags |= ScopeFlags::StrictMode;
         }
-        WrapKind::Esm => {
-          use ast::Statement;
-          let wrap_ref_name = self.canonical_name_for(self.ctx.linking_info.wrapper_ref.unwrap());
-          let esm_ref = if self.ctx.options.profiler_names {
-            self.canonical_ref_for_runtime("__esm")
-          } else {
-            self.canonical_ref_for_runtime("__esmMin")
-          };
-          let esm_ref_expr = self.finalized_expr_for_symbol_ref(esm_ref, false, false);
-          let old_body = program.body.take_in(self.alloc);
+        flags
+      },
+      &program.scope_id,
+    );
+    walk_mut::walk_program(self, program);
+    self.leave_scope();
 
-          let mut fn_stmts = allocator::Vec::new_in(self.alloc);
-          let mut hoisted_names = vec![];
-          let mut stmts_inside_closure = allocator::Vec::new_in(self.alloc);
+    match included_wrap_kind {
+      Some(WrapKind::Cjs) => {
+        let wrap_ref_name = self.canonical_name_for(self.ctx.linking_info.wrapper_ref.unwrap());
+        let commonjs_ref = if self.ctx.options.profiler_names {
+          self.canonical_ref_for_runtime("__commonJS")
+        } else {
+          self.canonical_ref_for_runtime("__commonJSMin")
+        };
 
-          // Hoist all top-level "var" and "function" declarations out of the closure
-          old_body.into_iter().for_each(|mut stmt| match &mut stmt {
-            ast::Statement::VariableDeclaration(_) => {
-              if let Some(converted) =
-                self.convert_decl_to_assignment(stmt.to_declaration_mut(), &mut hoisted_names)
-              {
-                stmts_inside_closure.push(converted);
-              }
-            }
+        let commonjs_ref_expr = self.finalized_expr_for_symbol_ref(commonjs_ref, false, false);
+
+        let mut stmts_inside_closure = allocator::Vec::new_in(self.alloc);
+        stmts_inside_closure.append(&mut program.body);
+
+        program.body.push(self.snippet.commonjs_wrapper_stmt(
+          wrap_ref_name,
+          commonjs_ref_expr,
+          stmts_inside_closure,
+          self.ctx.module.ast_usage,
+          self.ctx.options.profiler_names,
+          &self.ctx.module.stable_id,
+        ));
+      }
+      Some(WrapKind::Esm) => {
+        use ast::Statement;
+        let wrap_ref_name = self.canonical_name_for(self.ctx.linking_info.wrapper_ref.unwrap());
+        let esm_ref = if self.ctx.options.profiler_names {
+          self.canonical_ref_for_runtime("__esm")
+        } else {
+          self.canonical_ref_for_runtime("__esmMin")
+        };
+        let esm_ref_expr = self.finalized_expr_for_symbol_ref(esm_ref, false, false);
+        let old_body = program.body.take_in(self.alloc);
+
+        let mut fn_stmts = allocator::Vec::new_in(self.alloc);
+        let mut stmts_inside_closure = allocator::Vec::new_in(self.alloc);
+
+        // Hoist all top-level "var" and "function" declarations out of the closure
+        old_body.into_iter().for_each(|mut stmt| match &mut stmt {
             ast::Statement::FunctionDeclaration(_) => {
               fn_stmts.push(stmt);
             }
@@ -139,45 +161,45 @@ impl<'ast> VisitMut<'ast> for ScopeHoistingFinalizer<'_, 'ast> {
               stmts_inside_closure.push(stmt);
             }
           });
-          program.body.extend(declaration_of_module_namespace_object);
-          program.body.extend(fn_stmts);
-          if !hoisted_names.is_empty() {
-            let mut declarators = allocator::Vec::new_in(self.alloc);
-            declarators.reserve_exact(hoisted_names.len());
-            hoisted_names.into_iter().for_each(|var_name| {
-              declarators.push(ast::VariableDeclarator {
-                id: ast::BindingPattern {
-                  kind: ast::BindingPatternKind::BindingIdentifier(
-                    self.snippet.id(&var_name, SPAN).into_in(self.alloc),
-                  ),
-                  ..ast::BindingPattern::dummy(self.alloc)
-                },
-                kind: ast::VariableDeclarationKind::Var,
-                ..ast::VariableDeclarator::dummy(self.alloc)
-              });
+        program.body.extend(declaration_of_module_namespace_object);
+        program.body.extend(fn_stmts);
+        if !self.top_level_var_bindings.is_empty() {
+          let mut declarators = allocator::Vec::new_in(self.alloc);
+          declarators.reserve_exact(self.top_level_var_bindings.len());
+          self.top_level_var_bindings.iter().for_each(|var_name| {
+            declarators.push(ast::VariableDeclarator {
+              id: ast::BindingPattern {
+                kind: ast::BindingPatternKind::BindingIdentifier(
+                  self.snippet.id(var_name, SPAN).into_in(self.alloc),
+                ),
+                ..ast::BindingPattern::dummy(self.alloc)
+              },
+              kind: ast::VariableDeclarationKind::Var,
+              ..ast::VariableDeclarator::dummy(self.alloc)
             });
-            program.body.push(ast::Statement::VariableDeclaration(
-              ast::VariableDeclaration {
-                declarations: declarators,
-                kind: ast::VariableDeclarationKind::Var,
-                ..ast::VariableDeclaration::dummy(self.alloc)
-              }
-              .into_in(self.alloc),
-            ));
-          }
-          program.body.push(self.snippet.esm_wrapper_stmt(
-            wrap_ref_name,
-            esm_ref_expr,
-            stmts_inside_closure,
-            self.ctx.options.profiler_names,
-            &self.ctx.module.stable_id,
-            self.ctx.linking_info.is_tla_or_contains_tla_dependency,
+          });
+          program.body.push(ast::Statement::VariableDeclaration(
+            ast::VariableDeclaration {
+              declarations: declarators,
+              kind: ast::VariableDeclarationKind::Var,
+              ..ast::VariableDeclaration::dummy(self.alloc)
+            }
+            .into_in(self.alloc),
           ));
         }
-        WrapKind::None => {}
+        program.body.push(self.snippet.esm_wrapper_stmt(
+          wrap_ref_name,
+          esm_ref_expr,
+          stmts_inside_closure,
+          self.ctx.options.profiler_names,
+          &self.ctx.module.stable_id,
+          self.ctx.linking_info.is_tla_or_contains_tla_dependency,
+        ));
       }
-    } else {
-      program.body.splice(0..0, declaration_of_module_namespace_object);
+      Some(WrapKind::None) => {}
+      None => {
+        program.body.splice(0..0, declaration_of_module_namespace_object);
+      }
     }
   }
 
@@ -207,6 +229,18 @@ impl<'ast> VisitMut<'ast> for ScopeHoistingFinalizer<'_, 'ast> {
       }
     }
     walk_mut::walk_statement(self, it);
+    // transform top level `var a = 1, b = 1;` to `a = 1, b = 1`
+    // for `__esm(() => {})` wrapping VariableDeclaration hoist
+    if self.is_top_level
+      && self.ctx.needs_hosted_top_level_binding
+      && let ast::Statement::VariableDeclaration(decl) = it
+    {
+      let (expr, bindings) =
+        self.var_declaration_to_expr_seq_and_bindings(decl.take_in(self.alloc));
+      self.top_level_var_bindings.extend(bindings);
+      *it =
+        ast::Statement::ExpressionStatement(self.builder().alloc_expression_statement(SPAN, expr));
+    }
   }
 
   fn visit_statements(&mut self, it: &mut allocator::Vec<'ast, ast::Statement<'ast>>) {
@@ -451,7 +485,21 @@ impl<'ast> VisitMut<'ast> for ScopeHoistingFinalizer<'_, 'ast> {
     walk_mut::walk_simple_assignment_target(self, target);
   }
 
+  fn visit_for_statement_init(&mut self, it: &mut ast::ForStatementInit<'ast>) {
+    walk_mut::walk_for_statement_init(self, it);
+    if self.is_top_level
+      && self.ctx.needs_hosted_top_level_binding
+      && let ast::ForStatementInit::VariableDeclaration(decl) = it
+    {
+      let (expr, bindings) =
+        self.var_declaration_to_expr_seq_and_bindings(decl.take_in(self.alloc));
+      self.top_level_var_bindings.extend(bindings);
+      *it = ast::ForStatementInit::from(expr);
+    }
+  }
+
   fn visit_declaration(&mut self, it: &mut ast::Declaration<'ast>) {
+    // keep_name transformation
     match it {
       ast::Declaration::VariableDeclaration(decl) => {
         for decl in &mut decl.declarations {
@@ -508,6 +556,7 @@ impl<'ast> VisitMut<'ast> for ScopeHoistingFinalizer<'_, 'ast> {
       | ast::Declaration::TSModuleDeclaration(_)
       | ast::Declaration::TSImportEqualsDeclaration(_) => unreachable!(),
     }
+
     walk_mut::walk_declaration(self, it);
   }
 }

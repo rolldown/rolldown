@@ -1,4 +1,5 @@
 use oxc::ast::ast::{BindingPatternKind, ClassType};
+use oxc::semantic::ScopeFlags;
 use oxc::{
   allocator::{self, Allocator, Box as ArenaBox, CloneIn, Dummy, IntoIn, TakeIn},
   ast::{
@@ -23,8 +24,11 @@ mod impl_visit_mut;
 pub use finalizer_context::ScopeHoistingFinalizerContext;
 use rolldown_rstr::Rstr;
 use rolldown_utils::ecmascript::is_validate_identifier_name;
+use rolldown_utils::indexmap::FxIndexSet;
 use rustc_hash::FxHashSet;
 use sugar_path::SugarPath;
+
+use crate::hmr::utils::HmrAstBuilder;
 
 mod hmr;
 mod rename;
@@ -37,6 +41,9 @@ pub struct ScopeHoistingFinalizer<'me, 'ast> {
   pub snippet: AstSnippet<'ast>,
   pub comments: oxc::allocator::Vec<'ast, Comment>,
   pub generated_init_esm_importee_ids: FxHashSet<ModuleIdx>,
+  pub scope_stack: Vec<ScopeFlags>,
+  pub is_top_level: bool,
+  pub top_level_var_bindings: FxIndexSet<Atom<'ast>>,
 }
 
 impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
@@ -262,45 +269,30 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
     expr
   }
 
-  fn convert_decl_to_assignment(
+  fn var_declaration_to_expr_seq_and_bindings(
     &self,
-    decl: &mut ast::Declaration<'ast>,
-    hoisted_names: &mut Vec<Atom<'ast>>,
-  ) -> Option<ast::Statement<'ast>> {
-    match decl {
-      ast::Declaration::VariableDeclaration(var_decl) => {
-        let mut seq_expr = ast::SequenceExpression::dummy(self.alloc);
-        var_decl.declarations.iter_mut().for_each(|var_decl| {
-          var_decl.id.binding_identifiers().iter().for_each(|id| {
-            hoisted_names.push(id.name);
-          });
-          // Turn `var ... = ...` to `... = ...`
-          if let Some(init_expr) = &mut var_decl.init {
-            let left = var_decl.id.take_in(self.alloc).into_assignment_target(self.alloc);
-            seq_expr.expressions.push(ast::Expression::AssignmentExpression(
-              ast::AssignmentExpression {
-                left,
-                right: init_expr.take_in(self.alloc),
-                ..ast::AssignmentExpression::dummy(self.alloc)
-              }
-              .into_in(self.alloc),
-            ));
+    decl: ast::VariableDeclaration<'ast>,
+  ) -> (Expression<'ast>, Vec<Atom<'ast>>) {
+    let mut ret = vec![];
+    let exprs = decl.declarations.into_iter().filter_map(|mut var_decl| {
+      ret.extend(var_decl.id.binding_identifiers().iter().map(|item| item.name));
+      // Turn `var ... = ...` to `... = ...`
+      if let Some(mut init_expr) = var_decl.init {
+        let left = var_decl.id.take_in(self.alloc).into_assignment_target(self.alloc);
+        Some(ast::Expression::AssignmentExpression(
+          ast::AssignmentExpression {
+            left,
+            right: init_expr.take_in(self.alloc),
+            ..ast::AssignmentExpression::dummy(self.alloc)
           }
-        });
-        if seq_expr.expressions.is_empty() {
-          None
-        } else {
-          Some(ast::Statement::ExpressionStatement(
-            ast::ExpressionStatement {
-              expression: ast::Expression::SequenceExpression(seq_expr.into_in(self.alloc)),
-              ..ast::ExpressionStatement::dummy(self.alloc)
-            }
-            .into_in(self.alloc),
-          ))
-        }
+          .into_in(self.alloc),
+        ))
+      } else {
+        None
       }
-      _ => unreachable!("TypeScript code should be preprocessed"),
-    }
+    });
+
+    (self.builder().expression_sequence(SPAN, self.builder().vec_from_iter(exprs)), ret)
   }
 
   #[expect(clippy::too_many_lines)]

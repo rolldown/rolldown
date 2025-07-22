@@ -281,6 +281,10 @@ impl HmrManager {
       !matches!(module, Module::External(_))
     });
 
+    // It's actually unnecessary to sort `affected_modules` here, but sorting it:
+    // - Makes the snapshot less changeable when we change logic that affects the order of modules.
+    affected_modules.sort_by_cached_key(|module_idx| self.module_db.modules[*module_idx].id());
+
     let module_idx_to_init_fn_name = affected_modules
       .iter()
       .enumerate()

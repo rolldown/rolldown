@@ -38,52 +38,25 @@ main_hot.accept(() => {});
 ## Code
 
 ```js
-//#region rolldown:runtime
-var init_rolldown_runtime_0 = __rolldown_runtime__.createEsmInitializer(function() {
-	try {
-		var ns_rolldown_runtime = {};
-		__rolldown_runtime__.__export(ns_rolldown_runtime, {});
-		__rolldown_runtime__.registerModule("rolldown:runtime", { exports: ns_rolldown_runtime });
-		const hot_rolldown_runtime = __rolldown_runtime__.createModuleHotContext("rolldown:runtime");
-		var __create = Object.create;
-		var __defProp = Object.defineProperty;
-		var __getOwnPropDesc = Object.getOwnPropertyDescriptor;
-		var __getOwnPropNames = Object.getOwnPropertyNames;
-		var __getProtoOf = Object.getPrototypeOf;
-		var __hasOwnProp = Object.prototype.hasOwnProperty;
-		var __export = (target, all) => {
-			for (var name in all) __defProp(target, name, {
-				get: all[name],
-				enumerable: true
-			});
-		};
-		var __copyProps = (to, from, except, desc) => {
-			if (from && typeof from === "object" || typeof from === "function") for (var keys = __getOwnPropNames(from), i = 0, n = keys.length, key; i < n; i++) {
-				key = keys[i];
-				if (!__hasOwnProp.call(to, key) && key !== except) __defProp(to, key, {
-					get: ((k) => from[k]).bind(null, key),
-					enumerable: !(desc = __getOwnPropDesc(from, key)) || desc.enumerable
-				});
-			}
-			return to;
-		};
-		var __toESM = (mod, isNodeMode, target) => (target = mod != null ? __create(__getProtoOf(mod)) : {}, __copyProps(isNodeMode || !mod || !mod.__esModule ? __defProp(target, "default", {
-			value: mod,
-			enumerable: true
-		}) : target, mod));
-		var __toCommonJS = (mod) => __copyProps(__defProp({}, "__esModule", { value: true }), mod);
-		var __toDynamicImportESM = (isNodeMode) => (mod) => __toESM(mod.default, isNodeMode);
-	} finally {}
-});
-
-//#endregion
 //#region foo.mjs
-var init_foo_1 = __rolldown_runtime__.createEsmInitializer(function() {
+var init_foo_0 = __rolldown_runtime__.createEsmInitializer(function() {
 	try {
 		var ns_foo = {};
 		__rolldown_runtime__.__export(ns_foo, { foo: () => foo });
 		__rolldown_runtime__.registerModule("foo.mjs", { exports: ns_foo });
 		const hot_foo = __rolldown_runtime__.createModuleHotContext("foo.mjs");
+		const foo = "foo";
+	} finally {}
+});
+
+//#endregion
+//#region foo/index.mjs
+var init_foo_1 = __rolldown_runtime__.createEsmInitializer(function() {
+	try {
+		var ns_foo = {};
+		__rolldown_runtime__.__export(ns_foo, { foo: () => foo });
+		__rolldown_runtime__.registerModule("foo/index.mjs", { exports: ns_foo });
+		const hot_foo = __rolldown_runtime__.createModuleHotContext("foo/index.mjs");
 		const foo = "foo";
 	} finally {}
 });
@@ -95,8 +68,8 @@ var init_main_2 = __rolldown_runtime__.createEsmInitializer(function() {
 		var ns_main = {};
 		__rolldown_runtime__.__export(ns_main, {});
 		__rolldown_runtime__.registerModule("main.js", { exports: ns_main });
+		init_foo_0();
 		init_foo_1();
-		init_foo_3();
 		const hot_main = __rolldown_runtime__.createModuleHotContext("main.js");
 		var import_foo_0 = __rolldown_runtime__.loadExports("foo.mjs");
 		var import_foo_1 = __rolldown_runtime__.loadExports("foo/index.mjs");
@@ -106,25 +79,13 @@ var init_main_2 = __rolldown_runtime__.createEsmInitializer(function() {
 });
 
 //#endregion
-//#region foo/index.mjs
-var init_foo_3 = __rolldown_runtime__.createEsmInitializer(function() {
-	try {
-		var ns_foo = {};
-		__rolldown_runtime__.__export(ns_foo, { foo: () => foo });
-		__rolldown_runtime__.registerModule("foo/index.mjs", { exports: ns_foo });
-		const hot_foo = __rolldown_runtime__.createModuleHotContext("foo/index.mjs");
-		const foo = "foo";
-	} finally {}
-});
-
-//#endregion
 //#region rolldown:hmr
-var init_rolldown_hmr_4 = __rolldown_runtime__.createEsmInitializer(function() {
+var init_rolldown_hmr_3 = __rolldown_runtime__.createEsmInitializer(function() {
 	try {
 		var ns_rolldown_hmr = {};
 		__rolldown_runtime__.__export(ns_rolldown_hmr, { DevRuntime: () => DevRuntime });
 		__rolldown_runtime__.registerModule("rolldown:hmr", { exports: ns_rolldown_hmr });
-		init_rolldown_runtime_0();
+		init_rolldown_runtime_4();
 		const hot_rolldown_hmr = __rolldown_runtime__.createModuleHotContext("rolldown:hmr");
 		var import_rolldown_runtime_0 = __rolldown_runtime__.loadExports("rolldown:runtime");
 		class Module {
@@ -228,6 +189,45 @@ var init_rolldown_hmr_4 = __rolldown_runtime__.createEsmInitializer(function() {
 				}
 			}, 0);
 		}
+	} finally {}
+});
+
+//#endregion
+//#region rolldown:runtime
+var init_rolldown_runtime_4 = __rolldown_runtime__.createEsmInitializer(function() {
+	try {
+		var ns_rolldown_runtime = {};
+		__rolldown_runtime__.__export(ns_rolldown_runtime, {});
+		__rolldown_runtime__.registerModule("rolldown:runtime", { exports: ns_rolldown_runtime });
+		const hot_rolldown_runtime = __rolldown_runtime__.createModuleHotContext("rolldown:runtime");
+		var __create = Object.create;
+		var __defProp = Object.defineProperty;
+		var __getOwnPropDesc = Object.getOwnPropertyDescriptor;
+		var __getOwnPropNames = Object.getOwnPropertyNames;
+		var __getProtoOf = Object.getPrototypeOf;
+		var __hasOwnProp = Object.prototype.hasOwnProperty;
+		var __export = (target, all) => {
+			for (var name in all) __defProp(target, name, {
+				get: all[name],
+				enumerable: true
+			});
+		};
+		var __copyProps = (to, from, except, desc) => {
+			if (from && typeof from === "object" || typeof from === "function") for (var keys = __getOwnPropNames(from), i = 0, n = keys.length, key; i < n; i++) {
+				key = keys[i];
+				if (!__hasOwnProp.call(to, key) && key !== except) __defProp(to, key, {
+					get: ((k) => from[k]).bind(null, key),
+					enumerable: !(desc = __getOwnPropDesc(from, key)) || desc.enumerable
+				});
+			}
+			return to;
+		};
+		var __toESM = (mod, isNodeMode, target) => (target = mod != null ? __create(__getProtoOf(mod)) : {}, __copyProps(isNodeMode || !mod || !mod.__esModule ? __defProp(target, "default", {
+			value: mod,
+			enumerable: true
+		}) : target, mod));
+		var __toCommonJS = (mod) => __copyProps(__defProp({}, "__esModule", { value: true }), mod);
+		var __toDynamicImportESM = (isNodeMode) => (mod) => __toESM(mod.default, isNodeMode);
 	} finally {}
 });
 

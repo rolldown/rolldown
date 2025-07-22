@@ -248,6 +248,10 @@ impl<'me, 'ast: 'me> Visit<'ast> for AstScanner<'me, 'ast> {
   }
 
   fn visit_meta_property(&mut self, it: &ast::MetaProperty<'ast>) {
+    if self.options.format.keep_esm_import_export_syntax() {
+      walk::walk_meta_property(self, it);
+      return;
+    }
     if let Some(parent) = self.visit_path.last() {
       if !parent
         .as_member_expression_kind()
@@ -257,7 +261,6 @@ impl<'me, 'ast: 'me> Visit<'ast> for AstScanner<'me, 'ast> {
         })
         // Here we need to set it to `false` to emit warnings when leaving `import.meta` alone along with the logic `not` head of this.
         .unwrap_or(false)
-        && !self.options.format.keep_esm_import_export_syntax()
         && it.meta.name == "import"
         && it.property.name == "meta"
       {

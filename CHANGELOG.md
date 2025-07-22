@@ -1,4 +1,84 @@
 
+## [1.0.0-beta.29] - 2025-07-22
+
+### 🚀 Features
+
+- rolldown_plugin_chunk_import_map: support custom file name (#5383) by @shulaoda
+- rolldown_plugin_chunk_import_map: emit standard import map (#5382) by @shulaoda
+- rolldown_plugin_chunk_import_map: support custom base url (#5381) by @shulaoda
+- support plugin context meta for native plugins (#5371) by @shulaoda
+- rolldown: oxc v0.77.3 (#5367) by @Boshen
+- rolldown_plugin_transform: align sourcemap enable logic (#5348) by @shulaoda
+- plugin_driver: use hook usage for `close_bundle` (#5361) by @shulaoda
+- hmr: attach region comments for hmr patch (#5358) by @hyf0
+- rolldown: add transformHiresSourcemap option (#5346) by @Brooooooklyn
+- rolldown_plugin_web_worker_post: align `transform_ast` hook metadata order to `post` (#5339) by @shulaoda
+
+### 🐛 Bug Fixes
+
+- when preserveEntrySignatures: false is set, output includes a circular import (#5365) by @IWANABETHATGUY
+- do not normalize iife global names (#5228) by @redstonekasi
+- hmr: should not panic for editing modules that contain `import(..)` (#5351) by @hyf0
+- sync ast for newly added modules (#5354) by @IWANABETHATGUY
+- used exports from dynamic imported module are removed incorrectly (#5341) by @IWANABETHATGUY
+- keep top level variables for non-esm format when minify is enabled (#5332) by @sapphi-red
+- rust: correctly return watch option (#5334) by @HigherOrderLogic
+
+### 🚜 Refactor
+
+- rolldown_plugin_chunk_import_map: clarify import map paths and output filename (#5376) by @shulaoda
+- rolldown: `collapse_sourcemaps` does not need to own a Vec (#5352) by @Boshen
+- rolldown_plugin_asset: improve readability for easier maintenance (#5359) by @shulaoda
+- ecmascript: remove unnecessary `allocator.alloc(program)` call (#5350) by @Boshen
+- store ast with same shape as module_table (#5345) by @IWANABETHATGUY
+- simplify `is_dynamic_entry_alive` (#5342) by @IWANABETHATGUY
+- rolldown_plugin_web_worker_post: tweak code organization (#5338) by @shulaoda
+- store `ScopeFlags` instead of `ScopeId` when traverse ast (#5330) by @IWANABETHATGUY
+- simplify `keep_names` VarDeclaration rewrite (#5325) by @IWANABETHATGUY
+
+### 📚 Documentation
+
+- experimental: update the description of `chunkImportMap` (#5384) by @shulaoda
+- experiment: add usage documentation for `chunkImportMap` (#5379) by @shulaoda
+
+### ⚡ Performance
+
+- plugin_driver: skip unused hooks early based on hook usage meta (#5363) by @shulaoda
+- rolldown: box `TransformOptions` (#5353) by @Boshen
+
+### 🧪 Testing
+
+- rust: hide runtime module output in snapshots to improve clarity (#5366) by @hyf0
+- node: put minify related tests in a single directory (#5333) by @sapphi-red
+
+### ⚙️ Miscellaneous Tasks
+
+- examples: update `chunk-import-map` (#5385) by @shulaoda
+- add `examples/chunk-import-map` (#5380) by @shulaoda
+- deps: lock file maintenance (#5373) by @renovate[bot]
+- deps: lock file maintenance rust crates (#5372) by @renovate[bot]
+- deps: lock file maintenance npm packages (#5370) by @renovate[bot]
+- deps: update dependency @napi-rs/wasm-runtime to v1 (#5369) by @renovate[bot]
+- deps: update taiki-e/install-action action to v2.56.19 (#5368) by @renovate[bot]
+- extract `HookOrderIndicates` logic (#5362) by @shulaoda
+- rust: remove unnecessary `#[allow(unused)]` (#5360) by @shulaoda
+- deps: update dependency rolldown-plugin-dts to v0.14.1 (#5357) by @renovate[bot]
+- use `debug=1` for profile.dev and profile.test (#5355) by @IWANABETHATGUY
+- deps: update dependency rolldown-plugin-dts to ^0.14.0 (#5349) by @renovate[bot]
+- remove packages/rolldown/npm/* from workspace config (#5347) by @Brooooooklyn
+- pnpm,justfile: enable pnpm `verifyDepsBeforeRun: install` (#5331) by @Boshen
+- update `build-js-glue` script (#5335) by @btea
+
+### ◀️ Revert
+
+- `test(rust): prevent meaningless snapshot change from bumping oxc runtime versions #5312` (#5336) by @hyf0
+
+### ❤️ New Contributors
+
+* @redstonekasi made their first contribution in [#5228](https://github.com/rolldown/rolldown/pull/5228)
+* @HigherOrderLogic made their first contribution in [#5334](https://github.com/rolldown/rolldown/pull/5334)
+
+
 ## [1.0.0-beta.28] - 2025-07-17
 
 ### 🚀 Features

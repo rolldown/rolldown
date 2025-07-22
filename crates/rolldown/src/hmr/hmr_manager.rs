@@ -4,7 +4,6 @@ use std::{
 };
 
 use arcstr::ArcStr;
-use indexmap::IndexSet;
 use oxc::ast_visit::VisitMut;
 use rolldown_common::{
   EcmaModuleAstUsage, HmrBoundary, HmrBoundaryOutput, HmrOutput, Module, ModuleIdx, ModuleTable,
@@ -413,17 +412,15 @@ impl HmrManager {
   fn propagate_update(
     &self,
     module_idx: ModuleIdx,
-    visited_modules: &mut FxHashSet<ModuleIdx>,
     hmr_boundaries: &mut FxIndexSet<HmrBoundary>,
-    affected_modules: &mut FxIndexSet<ModuleIdx>,
-    stack: &mut Vec<ModuleIdx>,
+    propagate_stack: &mut Vec<ModuleIdx>,
   ) -> PropagateUpdateStatus {
     let Module::Normal(module) = &self.module_db.modules[module_idx] else {
       // We consider reaching external modules as a boundary.
       return PropagateUpdateStatus::ReachedBoundary;
     };
 
-    if let Some(circular_start_index) = stack
+    if let Some(circular_start_index) = propagate_stack
       .iter()
       .enumerate()
       .find_map(|(index, each_module_idx)| (module_idx == *each_module_idx).then_some(index))
@@ -433,7 +430,7 @@ impl HmrManager {
       // A -> B -> C -> D(edited)
       // C -> B
       // When we reach to C again, the stack contains [D, C, B]
-      let cycle_chain = stack[circular_start_index..]
+      let cycle_chain = propagate_stack[circular_start_index..]
         .iter()
         .copied()
         .chain(std::iter::once(module_idx))
@@ -443,16 +440,6 @@ impl HmrManager {
 
       return PropagateUpdateStatus::Circular(cycle_chain);
     }
-
-    if visited_modules.contains(&module_idx) {
-      // This branch means this process has been processed before. We consider it as reaching a boundary too.
-      // Because its real status already been returned by the previous call.
-      return PropagateUpdateStatus::ReachedBoundary;
-    }
-
-    visited_modules.insert(module_idx);
-
-    affected_modules.insert(module_idx);
 
     if module.ast_usage.contains(EcmaModuleAstUsage::HmrSelfAccept) {
       hmr_boundaries.insert(HmrBoundary { boundary: module_idx, accepted_via: module_idx });
@@ -477,15 +464,9 @@ impl HmrManager {
         continue;
       }
 
-      stack.push(module_idx);
-      let status = self.propagate_update(
-        importer_idx,
-        visited_modules,
-        hmr_boundaries,
-        affected_modules,
-        stack,
-      );
-      stack.pop();
+      propagate_stack.push(module_idx);
+      let status = self.propagate_update(importer_idx, hmr_boundaries, propagate_stack);
+      propagate_stack.pop();
       if !status.is_reached_boundary() {
         return status;
       }
@@ -541,15 +522,9 @@ impl HmrManager {
       if *need_to_full_reload {
         break;
       }
-      let mut visited_modules = FxHashSet::default();
       let mut boundaries = FxIndexSet::default();
-      let propagate_status = self.propagate_update(
-        changed_module_idx,
-        &mut visited_modules,
-        &mut boundaries,
-        &mut IndexSet::default(),
-        &mut vec![],
-      );
+      let propagate_status =
+        self.propagate_update(changed_module_idx, &mut boundaries, &mut vec![]);
 
       match propagate_status {
         PropagateUpdateStatus::Circular(cycle_chain) => {

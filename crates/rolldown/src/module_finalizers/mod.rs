@@ -608,28 +608,24 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
         props,
         target_commonjs_exported_symbol: target_commonjs_exported_symbol_meta,
         ..
-      }) => {
-        object_ref
-          .map(|object_ref| {
-            if let Some(export_meta) = target_commonjs_exported_symbol_meta.and_then(
-              |target_commonjs_exported_symbol_meta| {
-                self.ctx.constant_value_map.get(&target_commonjs_exported_symbol_meta.0)
-              },
-            ) {
-              return export_meta.value.to_expression(AstBuilder::new(self.alloc));
-            }
-            let object_ref_expr = self.finalized_expr_for_symbol_ref(
-              object_ref,
-              false,
-              target_commonjs_exported_symbol_meta
-                .is_some_and(|(_symbol, is_exports_default)| !is_exports_default),
-            );
-            self.snippet.member_expr_or_ident_ref(object_ref_expr, props, span)
-          })
-          // .or(None)
-          .or_else(|| Some(self.snippet.member_expr_with_void_zero_object(props, span)))
-        // return Some();
-      }
+      }) => object_ref
+        .map(|object_ref| {
+          if let Some(export_meta) =
+            target_commonjs_exported_symbol_meta.and_then(|target_commonjs_exported_symbol_meta| {
+              self.ctx.constant_value_map.get(&target_commonjs_exported_symbol_meta.0)
+            })
+          {
+            return export_meta.value.to_expression(AstBuilder::new(self.alloc));
+          }
+          let object_ref_expr = self.finalized_expr_for_symbol_ref(
+            object_ref,
+            false,
+            target_commonjs_exported_symbol_meta
+              .is_some_and(|(_symbol, is_exports_default)| !is_exports_default),
+          );
+          self.snippet.member_expr_or_ident_ref(object_ref_expr, props, span)
+        })
+        .or_else(|| Some(self.snippet.member_expr_with_void_zero_object(props, span))),
       _ => {
         let MemberExpression::StaticMemberExpression(static_member_expr) = member_expr else {
           return None;

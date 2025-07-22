@@ -298,9 +298,9 @@ impl<'ast> VisitMut<'ast> for ScopeHoistingFinalizer<'_, 'ast> {
         }
       }
       ast::Expression::MetaProperty(meta) => {
-        if meta.meta.name == "import"
+        if !self.ctx.options.format.keep_esm_import_export_syntax()
+          && meta.meta.name == "import"
           && meta.property.name == "meta"
-          && !self.ctx.options.format.keep_esm_import_export_syntax()
         {
           *expr = self.snippet.builder.expression_object(SPAN, self.snippet.builder.vec());
         }

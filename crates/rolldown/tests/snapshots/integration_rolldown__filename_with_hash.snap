@@ -5029,6 +5029,12 @@ expression: output
 - main-!~{000}~.js => main-Yu-eGArm.js
 - main-Yu-eGArm.js.map
 
+# tests/rolldown/optimization/inline_const/5197
+
+- main-!~{000}~.js => main-C1_Ucsch.js
+- bar-!~{003}~.js => bar-BTstUsfv.js
+- bar-!~{001}~.js => bar-BpbuVh-Q.js
+
 # tests/rolldown/optimization/inline_const/basic
 
 - main-!~{000}~.js => main-e8OGQxlo.js

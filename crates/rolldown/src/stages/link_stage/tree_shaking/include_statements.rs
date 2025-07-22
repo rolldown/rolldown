@@ -15,6 +15,12 @@ use rustc_hash::{FxHashMap, FxHashSet};
 
 use crate::{stages::link_stage::LinkStage, types::linking_metadata::LinkingMetadataVec};
 
+#[derive(Debug, Clone, Copy)]
+enum IncludeKind {
+  Normal,
+  DynamicImport,
+}
+
 struct Context<'a> {
   modules: &'a IndexModules,
   symbols: &'a SymbolRefDb,
@@ -87,7 +93,7 @@ impl LinkStage<'_> {
                 include_statement(context, module, stmt_info_id);
               },
             );
-            include_symbol(context, *symbol_ref);
+            include_symbol(context, *symbol_ref, IncludeKind::Normal);
           }
         },
       );
@@ -120,7 +126,7 @@ impl LinkStage<'_> {
                 include_statement(context, module, stmt_info_id);
               },
             );
-            include_symbol(context, *symbol_ref);
+            include_symbol(context, *symbol_ref, IncludeKind::DynamicImport);
           }
         },
       );
@@ -138,7 +144,7 @@ impl LinkStage<'_> {
         .iter()
         .filter_map(|(_name, local)| local.came_from_cjs.then_some(local))
         .for_each(|local| {
-          include_symbol(context, local.symbol_ref);
+          include_symbol(context, local.symbol_ref, IncludeKind::Normal);
         });
     }
 
@@ -402,20 +408,21 @@ fn include_module(ctx: &mut Context, module: &NormalModule) {
   );
   if module.meta.has_eval() && matches!(module.module_type, ModuleType::Js | ModuleType::Jsx) {
     module.named_imports.keys().for_each(|symbol| {
-      include_symbol(ctx, *symbol);
+      include_symbol(ctx, *symbol, IncludeKind::Normal);
     });
   }
 
   ctx.metas[module.idx].included_commonjs_export_symbol.iter().for_each(|symbol_ref| {
-    include_symbol(ctx, *symbol_ref);
+    include_symbol(ctx, *symbol_ref, IncludeKind::Normal);
   });
 }
 
 #[track_caller]
-fn include_symbol(ctx: &mut Context, symbol_ref: SymbolRef) {
+fn include_symbol(ctx: &mut Context, symbol_ref: SymbolRef, include_kind: IncludeKind) {
   let mut canonical_ref = ctx.symbols.canonical_ref_for(symbol_ref);
 
   if let Some(v) = ctx.constant_symbol_map.get(&canonical_ref)
+    && !matches!(include_kind, IncludeKind::DynamicImport)
     && !v.commonjs_export
   {
     // If the symbol is a constant value and it is not a commonjs module export , we don't need to include it since it would be always inline
@@ -461,7 +468,7 @@ fn include_symbol(ctx: &mut Context, symbol_ref: SymbolRef) {
             return;
           };
           if namespace_alias.property_name.as_str() != "default" {
-            include_symbol(ctx, export_symbol.symbol_ref);
+            include_symbol(ctx, export_symbol.symbol_ref, IncludeKind::Normal);
           }
         });
       }
@@ -536,7 +543,7 @@ fn include_statement(ctx: &mut Context, module: &NormalModule, stmt_info_id: Stm
             );
           }
         });
-        include_symbol(ctx, resolved_ref);
+        include_symbol(ctx, resolved_ref, IncludeKind::Normal);
         ctx.may_partial_namespace = pre;
       } else {
         // If it points to nothing, the expression will be rewritten as `void 0` and there's nothing we need to include
@@ -556,7 +563,7 @@ fn include_statement(ctx: &mut Context, module: &NormalModule, stmt_info_id: Stm
             );
           }
         });
-      include_symbol(ctx, *original_ref);
+      include_symbol(ctx, *original_ref, IncludeKind::Normal);
     }
   });
 }

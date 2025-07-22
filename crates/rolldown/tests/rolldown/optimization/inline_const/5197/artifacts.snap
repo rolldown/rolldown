@@ -25,11 +25,16 @@ export { bar_default };
 import { bar_default } from "./bar2.js";
 import assert from "node:assert";
 
+//#region export_all.mjs
+const a = "a";
+const b = "b";
+
+//#endregion
 //#region main.js
 const glob = { "./bar.css": () => import("./bar.js") };
 const globEager = { "./bar.css": "bar" };
 assert.strictEqual(globEager["./bar.css"], "bar");
 
 //#endregion
-export { glob };
+export { a, b, glob };
 ```

@@ -147,6 +147,7 @@ impl<'a> GenerateStage<'a> {
             keep_name_statement_to_insert: Vec::new(),
             file_emitter: &self.plugin_driver.file_emitter,
             constant_value_map: &self.link_output.constant_symbol_map,
+            needs_hosted_top_level_binding: false,
           },
           ast,
           ast_scope,

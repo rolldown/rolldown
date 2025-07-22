@@ -28,4 +28,5 @@ pub struct ScopeHoistingFinalizerContext<'me> {
   pub keep_name_statement_to_insert: Vec<(usize, Rstr, Rstr)>,
   pub file_emitter: &'me SharedFileEmitter,
   pub constant_value_map: &'me FxHashMap<SymbolRef, ConstExportMeta>,
+  pub needs_hosted_top_level_binding: bool,
 }

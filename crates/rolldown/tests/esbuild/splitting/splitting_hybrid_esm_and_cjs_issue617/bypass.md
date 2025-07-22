@@ -97,7 +97,9 @@ export {
 var a_exports = {};
 __export(a_exports, { foo: () => foo });
 var foo;
-var init_a = __esm({ "a.js"() {} });
+var init_a = __esm({ "a.js"() {
+	;
+} });
 
 //#endregion
 export { __toCommonJS, a_exports, foo, init_a };
@@ -107,7 +109,7 @@ export { __toCommonJS, a_exports, foo, init_a };
 ===================================================================
 --- esbuild	/out/chunk-PDZFCFBH.js
 +++ rolldown	a2.js
-@@ -1,17 +1,9 @@
+@@ -1,17 +1,11 @@
 -// a.js
 +// HIDDEN [rolldown:runtime]
 +//#region a.js
@@ -121,7 +123,9 @@ export { __toCommonJS, a_exports, foo, init_a };
 -  "a.js"() {
 -  }
 -});
-+var init_a = __esm({ "a.js"() {} });
++var init_a = __esm({ "a.js"() {
++	;
++} });
  
 -export {
 -  __toCommonJS,

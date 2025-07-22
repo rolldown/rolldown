@@ -3261,9 +3261,9 @@ expression: output
 
 # tests/esbuild/splitting/splitting_hybrid_esm_and_cjs_issue617
 
-- a-!~{000}~.js => a-CDW3I2e0.js
-- b-!~{001}~.js => b-mae_9_mH.js
-- a-!~{002}~.js => a-jS-Khp--.js
+- a-!~{000}~.js => a-C16g_SNF.js
+- b-!~{001}~.js => b-Be26uoD_.js
+- a-!~{002}~.js => a-CyQn3RXw.js
 
 # tests/esbuild/splitting/splitting_minify_identifiers_crash_issue437
 
@@ -5026,8 +5026,8 @@ expression: output
 
 # tests/rolldown/misc/wrapped_esm
 
-- main-!~{000}~.js => main-DrOlrm86.js
-- main-DrOlrm86.js.map
+- main-!~{000}~.js => main-Yu-eGArm.js
+- main-Yu-eGArm.js.map
 
 # tests/rolldown/optimization/inline_const/basic
 

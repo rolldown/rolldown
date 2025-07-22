@@ -21,6 +21,7 @@ use oxc::{allocator::TakeIn, ast_visit::VisitMut};
 use rolldown_common::AstScopes;
 use rolldown_ecmascript::EcmaAst;
 use rolldown_ecmascript_utils::AstSnippet;
+use rolldown_utils::indexmap::FxIndexSet;
 use rustc_hash::FxHashSet;
 
 use super::module_finalizers::{ScopeHoistingFinalizer, ScopeHoistingFinalizerContext};
@@ -40,6 +41,9 @@ pub fn finalize_normal_module(
       snippet: AstSnippet::new(alloc),
       comments: oxc_program.comments.take_in(alloc),
       generated_init_esm_importee_ids: FxHashSet::default(),
+      scope_stack: vec![],
+      top_level_var_bindings: FxIndexSet::default(),
+      is_top_level: false,
     };
     finalizer.visit_program(oxc_program);
     oxc_program.comments = finalizer.comments.take_in(alloc);

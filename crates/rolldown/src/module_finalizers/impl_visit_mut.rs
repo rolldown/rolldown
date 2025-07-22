@@ -1,6 +1,7 @@
 use oxc::{
-  allocator::{self, Dummy, IntoIn, TakeIn},
+  allocator::{self, IntoIn, TakeIn},
   ast::{
+    NONE,
     ast::{self, BindingPatternKind, Expression, SimpleAssignmentTarget},
     match_member_expression,
   },
@@ -164,28 +165,28 @@ impl<'ast> VisitMut<'ast> for ScopeHoistingFinalizer<'_, 'ast> {
         program.body.extend(declaration_of_module_namespace_object);
         program.body.extend(fn_stmts);
         if !self.top_level_var_bindings.is_empty() {
-          let mut declarators = allocator::Vec::new_in(self.alloc);
-          declarators.reserve_exact(self.top_level_var_bindings.len());
-          self.top_level_var_bindings.iter().for_each(|var_name| {
-            declarators.push(ast::VariableDeclarator {
-              id: ast::BindingPattern {
-                kind: ast::BindingPatternKind::BindingIdentifier(
-                  self.snippet.id(var_name, SPAN).into_in(self.alloc),
+          let builder = self.builder();
+          let decorations = self.top_level_var_bindings.iter().map(|var_name| {
+            builder.variable_declarator(
+              SPAN,
+              ast::VariableDeclarationKind::Var,
+              builder.binding_pattern(
+                BindingPatternKind::BindingIdentifier(
+                  builder.alloc_binding_identifier(SPAN, *var_name),
                 ),
-                ..ast::BindingPattern::dummy(self.alloc)
-              },
-              kind: ast::VariableDeclarationKind::Var,
-              ..ast::VariableDeclarator::dummy(self.alloc)
-            });
+                NONE,
+                false,
+              ),
+              None,
+              false,
+            )
           });
-          program.body.push(ast::Statement::VariableDeclaration(
-            ast::VariableDeclaration {
-              declarations: declarators,
-              kind: ast::VariableDeclarationKind::Var,
-              ..ast::VariableDeclaration::dummy(self.alloc)
-            }
-            .into_in(self.alloc),
-          ));
+          program.body.push(Statement::VariableDeclaration(builder.alloc_variable_declaration(
+            SPAN,
+            ast::VariableDeclarationKind::Var,
+            builder.vec_from_iter(decorations),
+            false,
+          )));
         }
         program.body.push(self.snippet.esm_wrapper_stmt(
           wrap_ref_name,

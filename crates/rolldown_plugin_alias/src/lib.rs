@@ -35,8 +35,8 @@ impl Plugin for AliasPlugin {
 
     let Some(matched_entry) = matched_entry else { return Ok(None) };
     let specifier = match &matched_entry.find {
-      StringOrRegex::String(find) => importee.cow_replace(find, &matched_entry.replacement),
-      StringOrRegex::Regex(find) => find.replace_all(importee, &matched_entry.replacement),
+      StringOrRegex::String(find) => importee.cow_replacen(find, &matched_entry.replacement, 1),
+      StringOrRegex::Regex(find) => find.replace(importee, &matched_entry.replacement),
     };
 
     let resolved_id = ctx

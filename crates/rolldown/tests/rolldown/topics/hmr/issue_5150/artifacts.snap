@@ -1,0 +1,167 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## main.js
+
+```js
+// HIDDEN [rolldown:runtime]
+// HIDDEN [rolldown:hmr]
+//#region common.js
+var common_exports = {};
+__export(common_exports, { prefix: () => prefix });
+const common_hot = __rolldown_runtime__.createModuleHotContext("common.js");
+__rolldown_runtime__.registerModule("common.js", { exports: common_exports });
+const prefix = "prefix:";
+
+//#endregion
+//#region foo.js
+var foo_exports = {};
+__export(foo_exports, { foo: () => foo });
+const foo_hot = __rolldown_runtime__.createModuleHotContext("foo.js");
+__rolldown_runtime__.registerModule("foo.js", { exports: foo_exports });
+const foo = prefix + "foo";
+
+//#endregion
+//#region bar.js
+var bar_exports = {};
+__export(bar_exports, { bar: () => bar });
+const bar_hot = __rolldown_runtime__.createModuleHotContext("bar.js");
+__rolldown_runtime__.registerModule("bar.js", { exports: bar_exports });
+const bar = prefix + "bar";
+
+//#endregion
+//#region messenger.js
+var messenger_exports = {};
+__export(messenger_exports, {
+	msg: () => msg,
+	sayMessage: () => sayMessage
+});
+const messenger_hot = __rolldown_runtime__.createModuleHotContext("messenger.js");
+__rolldown_runtime__.registerModule("messenger.js", { exports: messenger_exports });
+let msg = [
+	prefix,
+	foo,
+	bar,
+	prefix,
+	prefix
+].join(",");
+function sayMessage() {
+	console.log(msg);
+}
+if (messenger_hot) {
+	messenger_hot.accept((mod) => {
+		console.log("replaced with new msg: ", mod.msg);
+		msg = mod.msg;
+	});
+}
+
+//#endregion
+//#region main.js
+var main_exports = {};
+const main_hot = __rolldown_runtime__.createModuleHotContext("main.js");
+__rolldown_runtime__.registerModule("main.js", { exports: main_exports });
+setInterval(sayMessage, 1e3);
+
+//#endregion
+```
+# HMR Step 0
+
+## Code
+
+```js
+//#region messenger.js
+var init_messenger_0 = __rolldown_runtime__.createEsmInitializer(function() {
+	try {
+		var ns_messenger = {};
+		__rolldown_runtime__.__export(ns_messenger, {
+			msg: () => msg,
+			sayMessage: () => sayMessage
+		});
+		__rolldown_runtime__.registerModule("messenger.js", { exports: ns_messenger });
+		init_foo_3();
+		init_bar_1();
+		init_common_2();
+		const hot_messenger = __rolldown_runtime__.createModuleHotContext("messenger.js");
+		var import_foo_0 = __rolldown_runtime__.loadExports("foo.js");
+		var import_bar_1 = __rolldown_runtime__.loadExports("bar.js");
+		var import_common_2 = __rolldown_runtime__.loadExports("common.js");
+		;
+		;
+		let msg = [
+			import_common_2.prefix,
+			import_foo_0.foo,
+			import_bar_1.bar,
+			import_common_3.prefix,
+			import_common_4.prefix
+		].join(",");
+		function sayMessage() {
+			console.log(msg);
+		}
+		if (hot_messenger) {
+			hot_messenger.accept((mod) => {
+				console.log("replaced with new msg: ", mod.msg);
+				msg = mod.msg;
+			});
+		}
+	} finally {}
+});
+
+//#endregion
+//#region bar.js
+var init_bar_1 = __rolldown_runtime__.createEsmInitializer(function() {
+	try {
+		var ns_bar = {};
+		__rolldown_runtime__.__export(ns_bar, { bar: () => bar });
+		__rolldown_runtime__.registerModule("bar.js", { exports: ns_bar });
+		init_common_2();
+		const hot_bar = __rolldown_runtime__.createModuleHotContext("bar.js");
+		var import_common_0 = __rolldown_runtime__.loadExports("common.js");
+		const bar = import_common_0.prefix + "bar";
+	} finally {}
+});
+
+//#endregion
+//#region common.js
+var init_common_2 = __rolldown_runtime__.createEsmInitializer(function() {
+	try {
+		var ns_common = {};
+		__rolldown_runtime__.__export(ns_common, { prefix: () => prefix });
+		__rolldown_runtime__.registerModule("common.js", { exports: ns_common });
+		const hot_common = __rolldown_runtime__.createModuleHotContext("common.js");
+		const prefix = "prefix-new:";
+	} finally {}
+});
+
+//#endregion
+//#region foo.js
+var init_foo_3 = __rolldown_runtime__.createEsmInitializer(function() {
+	try {
+		var ns_foo = {};
+		__rolldown_runtime__.__export(ns_foo, { foo: () => foo });
+		__rolldown_runtime__.registerModule("foo.js", { exports: ns_foo });
+		init_common_2();
+		const hot_foo = __rolldown_runtime__.createModuleHotContext("foo.js");
+		var import_common_0 = __rolldown_runtime__.loadExports("common.js");
+		const foo = import_common_0.prefix + "foo";
+	} finally {}
+});
+
+//#endregion
+init_messenger_0()
+init_messenger_0()
+init_messenger_0()
+__rolldown_runtime__.applyUpdates(['messenger.js','messenger.js','messenger.js']);
+```
+## Meta
+
+- full_reload: false
+- first_invalidated_by: None
+- is_self_accepting: false
+- full_reload_reason: None
+### Hmr Boundaries
+
+- boundary: messenger.js, accepted_via: bar.js
+- boundary: messenger.js, accepted_via: foo.js
+- boundary: messenger.js, accepted_via: common.js

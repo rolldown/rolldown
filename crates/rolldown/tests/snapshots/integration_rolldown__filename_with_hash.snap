@@ -5482,6 +5482,10 @@ expression: output
 
 - main-!~{000}~.js => main-Cm3C6mQH.js
 
+# tests/rolldown/topics/hmr/issue_5150
+
+- main-!~{000}~.js => main-DqRBvpQT.js
+
 # tests/rolldown/topics/hmr/mutiply_entires
 
 - entry-!~{000}~.js => entry-BPZIs1mk.js

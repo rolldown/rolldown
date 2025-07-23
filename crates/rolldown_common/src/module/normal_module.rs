@@ -3,9 +3,9 @@ use std::{fmt::Debug, sync::Arc};
 use crate::css::css_view::CssView;
 use crate::types::module_render_output::ModuleRenderOutput;
 use crate::{
-  AssetView, DebugStmtInfoForTreeShaking, ExportsKind, ImportRecordIdx, ImportRecordMeta,
-  LegalComments, ModuleId, ModuleIdx, ModuleInfo, NormalizedBundlerOptions, RawImportRecord,
-  ResolvedId, StmtInfo,
+  AssetView, DebugStmtInfoForTreeShaking, EcmaModuleAstUsage, ExportsKind, ImportRecordIdx,
+  ImportRecordMeta, LegalComments, ModuleId, ModuleIdx, ModuleInfo, NormalizedBundlerOptions,
+  RawImportRecord, ResolvedId, StmtInfo,
 };
 use crate::{EcmaView, IndexModules, Interop, Module, ModuleType};
 use std::ops::{Deref, DerefMut};
@@ -235,6 +235,15 @@ impl NormalModule {
   #[expect(clippy::cast_precision_loss)]
   pub fn size(&self) -> f64 {
     self.ecma_view.source.len() as f64
+  }
+
+  fn is_self_accepting(&self) -> bool {
+    // FIXME(hyf0): Recognizing self-accepting should not care about the length of deps
+    self.ast_usage.contains(EcmaModuleAstUsage::HmrSelfAccept) && self.hmr_info.deps.is_empty()
+  }
+
+  pub fn is_hmr_boundary_for(&self, module_id: &ModuleId) -> bool {
+    self.is_self_accepting() || self.hmr_info.deps.contains(module_id)
   }
 }
 

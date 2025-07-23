@@ -48,14 +48,26 @@ __rolldown_runtime__.registerModule("main.js", { exports: main_exports });
 ## Code
 
 ```js
+//#region exist-dep-esm.js
+var init_exist_dep_esm_0 = __rolldown_runtime__.createEsmInitializer(function() {
+	try {
+		var ns_exist_dep_esm = {};
+		__rolldown_runtime__.__export(ns_exist_dep_esm, { value: () => value });
+		__rolldown_runtime__.registerModule("exist-dep-esm.js", { exports: ns_exist_dep_esm });
+		const hot_exist_dep_esm = __rolldown_runtime__.createModuleHotContext("exist-dep-esm.js");
+		const value = "exist-esm";
+	} finally {}
+});
+
+//#endregion
 //#region hmr.js
-var init_hmr_0 = __rolldown_runtime__.createEsmInitializer(function() {
+var init_hmr_1 = __rolldown_runtime__.createEsmInitializer(function() {
 	try {
 		var ns_hmr = {};
 		__rolldown_runtime__.__export(ns_hmr, {});
 		__rolldown_runtime__.registerModule("hmr.js", { exports: ns_hmr });
 		require_exist_dep_cjs_2();
-		init_exist_dep_esm_1();
+		init_exist_dep_esm_0();
 		require_new_dep_cjs_3();
 		init_new_dep_esm_4();
 		const hot_hmr = __rolldown_runtime__.createModuleHotContext("hmr.js");
@@ -68,18 +80,6 @@ var init_hmr_0 = __rolldown_runtime__.createEsmInitializer(function() {
 				console.log(".hmr", mod.foo);
 			}
 		});
-	} finally {}
-});
-
-//#endregion
-//#region exist-dep-esm.js
-var init_exist_dep_esm_1 = __rolldown_runtime__.createEsmInitializer(function() {
-	try {
-		var ns_exist_dep_esm = {};
-		__rolldown_runtime__.__export(ns_exist_dep_esm, { value: () => value });
-		__rolldown_runtime__.registerModule("exist-dep-esm.js", { exports: ns_exist_dep_esm });
-		const hot_exist_dep_esm = __rolldown_runtime__.createModuleHotContext("exist-dep-esm.js");
-		const value = "exist-esm";
 	} finally {}
 });
 
@@ -116,7 +116,7 @@ var init_new_dep_esm_4 = __rolldown_runtime__.createEsmInitializer(function() {
 });
 
 //#endregion
-init_hmr_0()
+init_hmr_1()
 __rolldown_runtime__.applyUpdates(['hmr.js']);
 ```
 ## Meta

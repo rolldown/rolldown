@@ -70,6 +70,7 @@ OPTIONS
   --preserve-modules-root <preserve-modules-root>Put preserved modules under this path at root level.
   --sanitize-file-name        Sanitize file name.
   --shim-missing-exports      Create shim variables for missing exports.
+  --sourcemap-base-url <sourcemap-base-url>Base URL used to prefix sourcemap paths.
   --sourcemap-debug-ids       Inject sourcemap debug IDs.
   --transform.assumptions.ignore-function-length .
   --transform.assumptions.no-document-all .

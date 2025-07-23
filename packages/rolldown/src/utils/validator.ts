@@ -673,6 +673,10 @@ const OutputOptionsSchema = v.strictObject({
       })`,
     ),
   ),
+  sourcemapBaseUrl: v.pipe(
+    v.optional(v.string()),
+    v.description('Base URL used to prefix sourcemap paths'),
+  ),
   sourcemapDebugIds: v.pipe(
     v.optional(v.boolean()),
     v.description('Inject sourcemap debug IDs'),

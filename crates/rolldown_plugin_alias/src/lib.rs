@@ -31,7 +31,15 @@ impl Plugin for AliasPlugin {
     args: &rolldown_plugin::HookResolveIdArgs<'_>,
   ) -> rolldown_plugin::HookResolveIdReturn {
     let importee = args.specifier;
-    let matched_entry = self.entries.iter().find(|alias| matches(&alias.find, importee));
+    let matched_entry = self.entries.iter().find(|alias| match &alias.find {
+      StringOrRegex::String(p) => {
+        if importee.len() < p.len() {
+          return false;
+        }
+        importee == p || (importee.starts_with(p) && importee.as_bytes()[p.len()] == b'/')
+      }
+      StringOrRegex::Regex(regex) => regex.matches(importee),
+    });
 
     let Some(matched_entry) = matched_entry else { return Ok(None) };
     let specifier = match &matched_entry.find {
@@ -52,9 +60,6 @@ impl Plugin for AliasPlugin {
       )
       .await?;
 
-    // TODO: support `viteAliasCustomResolver`
-    // https://github.com/vitejs/rolldown-vite/blob/91a494c/packages/vite/src/node/plugins/index.ts#L325-L334
-
     Ok(Some(match resolved_id {
       Ok(resolved_id) => HookResolveIdOutput::from_resolved_id(resolved_id),
       Err(_) => {
@@ -71,17 +76,5 @@ impl Plugin for AliasPlugin {
 
   fn register_hook_usage(&self) -> HookUsage {
     HookUsage::ResolveId
-  }
-}
-
-fn matches(pattern: &StringOrRegex, importee: &str) -> bool {
-  match pattern {
-    StringOrRegex::String(p) => {
-      if importee.len() < p.len() {
-        return false;
-      }
-      importee == p || (importee.starts_with(p) && importee.as_bytes()[p.len()] == b'/')
-    }
-    StringOrRegex::Regex(regex) => regex.matches(importee),
   }
 }

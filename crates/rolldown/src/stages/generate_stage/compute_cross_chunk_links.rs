@@ -459,11 +459,8 @@ impl GenerateStage<'_> {
             }
             chunk.exports_to_other_chunks.entry(export_ref).or_default().push(name.clone());
             processed_entry_exports.insert(export_ref);
-            sorted_chars = char_frequency
-              .iter()
-              .sorted_by(|a, b| b.1.cmp(a.1))
-              .map(|(char, _)| *char)
-              .collect::<Vec<_>>();
+            sorted_chars =
+              char_frequency.iter().sorted().map(|(char, _)| *char).collect::<Vec<_>>();
           });
         }
         for (chunk_export, _predefined_names) in index_chunk_exported_symbols[chunk_id]

@@ -441,7 +441,7 @@ impl HmrManager {
       return PropagateUpdateStatus::Circular(cycle_chain);
     }
 
-    if module.ast_usage.contains(EcmaModuleAstUsage::HmrSelfAccept) {
+    if module.is_hmr_self_accepting_module() {
       hmr_boundaries.insert(HmrBoundary { boundary: module_idx, accepted_via: module_idx });
       return PropagateUpdateStatus::ReachedBoundary;
     } else if module.importers_idx.is_empty() {
@@ -459,7 +459,7 @@ impl HmrManager {
         continue;
       };
 
-      if importer.is_hmr_boundary_for(&module.id) {
+      if importer.can_accept_hmr_dependency_for(&module.id) {
         hmr_boundaries.insert(HmrBoundary { boundary: importer_idx, accepted_via: module_idx });
         continue;
       }

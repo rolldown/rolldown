@@ -43,7 +43,7 @@ export default require_foo();
 import { __commonJS } from "./chunk.js";
 
 //#region foo.js
-var require_foo = __commonJS({ "foo.js"(exports) {
+var require_foo = /* @__PURE__ */ __commonJS({ "foo.js"(exports) {
 	exports.bar = 123;
 } });
 

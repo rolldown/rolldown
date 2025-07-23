@@ -15,7 +15,7 @@ export { __commonJS, __toDynamicImportESM };
 import { __commonJS } from "./chunk.js";
 
 //#region cjs.js
-var require_cjs = __commonJS({ "cjs.js"(exports, module) {
+var require_cjs = /* @__PURE__ */ __commonJS({ "cjs.js"(exports, module) {
 	module.exports = "cjs";
 } });
 

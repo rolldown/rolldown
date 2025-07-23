@@ -22,7 +22,7 @@ console.log(require_test());
 ```js
 // HIDDEN [rolldown:runtime]
 //#region test.json
-var require_test = __commonJS({ "test.json"(exports, module) {
+var require_test = /* @__PURE__ */ __commonJS({ "test.json"(exports, module) {
 	module.exports = {
 		"a": true,
 		"b": 123,

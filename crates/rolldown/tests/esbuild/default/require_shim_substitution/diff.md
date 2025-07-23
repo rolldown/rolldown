@@ -32,13 +32,13 @@ console.log([
 ```js
 // HIDDEN [rolldown:runtime]
 //#region example.json
-var require_example = __commonJS({ "example.json"(exports, module) {
+var require_example = /* @__PURE__ */ __commonJS({ "example.json"(exports, module) {
 	module.exports = { "works": true };
 } });
 
 //#endregion
 //#region entry.js
-var require_entry = __commonJS({ "entry.js"(exports, module) {
+var require_entry = /* @__PURE__ */ __commonJS({ "entry.js"(exports, module) {
 	console.log([
 		__require,
 		typeof __require,

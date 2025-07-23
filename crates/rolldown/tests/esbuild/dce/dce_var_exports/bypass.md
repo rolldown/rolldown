@@ -18,7 +18,7 @@ export default require_a();
 import { __commonJS } from "./chunk.js";
 
 //#region a.js
-var require_a = __commonJS({ "a.js"(exports, module) {
+var require_a = /* @__PURE__ */ __commonJS({ "a.js"(exports, module) {
 	var foo = { bar: 123 };
 	module.exports = foo;
 } });
@@ -57,7 +57,7 @@ export default require_b();
 import { __commonJS } from "./chunk.js";
 
 //#region b.js
-var require_b = __commonJS({ "b.js"(exports, module) {
+var require_b = /* @__PURE__ */ __commonJS({ "b.js"(exports, module) {
 	var exports = { bar: 123 };
 	module.exports = exports;
 } });
@@ -96,7 +96,7 @@ export default require_c();
 import { __commonJS } from "./chunk.js";
 
 //#region c.js
-var require_c = __commonJS({ "c.js"(exports) {
+var require_c = /* @__PURE__ */ __commonJS({ "c.js"(exports) {
 	var module = { bar: 123 };
 	exports.foo = module;
 } });

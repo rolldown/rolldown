@@ -17,7 +17,7 @@ var init_lib_prod = __esm({ "lib.prod.js"() {
 
 //#endregion
 //#region lib.js
-var require_lib = __commonJS({ "lib.js"(exports, module) {
+var require_lib = /* @__PURE__ */ __commonJS({ "lib.js"(exports, module) {
 	module.exports = (init_lib_prod(), __toCommonJS(lib_prod_exports));
 } });
 

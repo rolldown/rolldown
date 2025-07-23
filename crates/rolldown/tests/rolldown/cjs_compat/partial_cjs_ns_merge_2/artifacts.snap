@@ -8,7 +8,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ```js
 // HIDDEN [rolldown:runtime]
 //#region react.js
-var require_react = __commonJS({ "react.js"(exports, module) {
+var require_react = /* @__PURE__ */ __commonJS({ "react.js"(exports, module) {
 	module.exports = 1e4;
 } });
 
@@ -27,7 +27,7 @@ var init_lib = __esm({ "lib.js"() {
 
 //#endregion
 //#region cjs.js
-var require_cjs = __commonJS({ "cjs.js"(exports, module) {
+var require_cjs = /* @__PURE__ */ __commonJS({ "cjs.js"(exports, module) {
 	const a = (init_lib(), __toCommonJS(lib_exports));
 	module.exports = a;
 } });

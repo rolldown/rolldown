@@ -10,7 +10,7 @@ import assert from "node:assert";
 
 // HIDDEN [rolldown:runtime]
 //#region c.js
-var require_c = __commonJS({ "c.js"(exports, module) {
+var require_c = /* @__PURE__ */ __commonJS({ "c.js"(exports, module) {
 	function Router$1() {}
 	__name(Router$1, "Router");
 	module.exports = function() {
@@ -20,7 +20,7 @@ var require_c = __commonJS({ "c.js"(exports, module) {
 
 //#endregion
 //#region cjs.js
-var require_cjs = __commonJS({ "cjs.js"(exports, module) {
+var require_cjs = /* @__PURE__ */ __commonJS({ "cjs.js"(exports, module) {
 	if (0) {
 		var ReactIs;
 		var a;

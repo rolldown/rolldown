@@ -16,7 +16,7 @@ module.exports = r();
 // HIDDEN [rolldown:runtime]
 
 //#region entry.js
-var require_entry = __commonJS({ "entry.js"(exports, module) {
+var require_entry = /* @__PURE__ */ __commonJS({ "entry.js"(exports, module) {
 	module.exports = { foo: 123 };
 	console.log(require_entry());
 } });

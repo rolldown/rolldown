@@ -8,7 +8,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ```js
 // HIDDEN [rolldown:runtime]
 //#region b.cjs
-var require_b = __commonJS({ "b.cjs"(exports, module) {
+var require_b = /* @__PURE__ */ __commonJS({ "b.cjs"(exports, module) {
 	const a$1 = require_a();
 	Object.defineProperty(module.exports, "b", {
 		enumerable: true,
@@ -18,7 +18,7 @@ var require_b = __commonJS({ "b.cjs"(exports, module) {
 
 //#endregion
 //#region a.cjs
-var require_a = __commonJS({ "a.cjs"(exports, module) {
+var require_a = /* @__PURE__ */ __commonJS({ "a.cjs"(exports, module) {
 	const b$1 = require_b();
 	Object.defineProperty(module.exports, "a", {
 		enumerable: true,

@@ -23,7 +23,7 @@ console.log(ns.foo, ns.foo, foo2);
 const node_assert = __toESM(require("node:assert"));
 
 //#region foo.js
-var require_foo = __commonJS({ "foo.js"(exports) {
+var require_foo = /* @__PURE__ */ __commonJS({ "foo.js"(exports) {
 	exports.foo = 123;
 } });
 

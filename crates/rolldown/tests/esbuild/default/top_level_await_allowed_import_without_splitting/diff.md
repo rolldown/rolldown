@@ -45,7 +45,7 @@ await init_entry();
 ```js
 // HIDDEN [rolldown:runtime]
 //#region c.js
-var require_c = __commonJS({ "c.js"() {
+var require_c = /* @__PURE__ */ __commonJS({ "c.js"() {
 	await 0;
 } });
 
@@ -66,7 +66,7 @@ var init_a = __esm({ async "a.js"() {
 
 //#endregion
 //#region entry.js
-var require_entry = __commonJS({ "entry.js"() {
+var require_entry = /* @__PURE__ */ __commonJS({ "entry.js"() {
 	init_a().then(() => a_exports);
 	init_b().then(() => b_exports);
 	Promise.resolve().then(() => __toESM(require_c()));
@@ -92,7 +92,7 @@ export default require_entry();
 -});
 +// HIDDEN [rolldown:runtime]
 +//#region c.js
-+var require_c = __commonJS({ "c.js"() {
++var require_c = /* @__PURE__ */ __commonJS({ "c.js"() {
 +	await 0;
 +} });
 +
@@ -134,7 +134,7 @@ export default require_entry();
 +
 +//#endregion
 +//#region entry.js
-+var require_entry = __commonJS({ "entry.js"() {
++var require_entry = /* @__PURE__ */ __commonJS({ "entry.js"() {
 +	init_a().then(() => a_exports);
 +	init_b().then(() => b_exports);
 +	Promise.resolve().then(() => __toESM(require_c()));

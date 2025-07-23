@@ -24,7 +24,7 @@ export { foo };
 ```js
 // HIDDEN [rolldown:runtime]
 //#region foo.js
-var require_foo = __commonJS({ "foo.js"(exports, module) {
+var require_foo = /* @__PURE__ */ __commonJS({ "foo.js"(exports, module) {
 	module.exports.foo = "foo";
 } });
 

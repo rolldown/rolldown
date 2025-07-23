@@ -35,7 +35,7 @@
 node_assert = __toESM(node_assert);
 
 //#region cjs.js
-var require_cjs = __commonJS({ "cjs.js"(exports) {
+var require_cjs = /* @__PURE__ */ __commonJS({ "cjs.js"(exports) {
 	exports.foo = process;
 } });
 

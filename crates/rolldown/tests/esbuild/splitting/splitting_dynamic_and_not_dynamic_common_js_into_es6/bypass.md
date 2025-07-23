@@ -48,7 +48,7 @@ export default require_foo();
 ```js
 // HIDDEN [rolldown:runtime]
 //#region foo.js
-var require_foo = __commonJS({ "foo.js"(exports) {
+var require_foo = /* @__PURE__ */ __commonJS({ "foo.js"(exports) {
 	exports.bar = 123;
 } });
 
@@ -65,7 +65,7 @@ export { __toDynamicImportESM, __toESM, require_foo };
 -export default require_foo();
 +// HIDDEN [rolldown:runtime]
 +//#region foo.js
-+var require_foo = __commonJS({ "foo.js"(exports) {
++var require_foo = /* @__PURE__ */ __commonJS({ "foo.js"(exports) {
 +	exports.bar = 123;
 +} });
 +

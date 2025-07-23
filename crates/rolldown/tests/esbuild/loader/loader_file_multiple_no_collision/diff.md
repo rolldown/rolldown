@@ -29,13 +29,13 @@ console.log(
 ```js
 // HIDDEN [rolldown:runtime]
 //#region a/test.txt
-var require_test$1 = __commonJS({ "a/test.txt"(exports, module) {
+var require_test$1 = /* @__PURE__ */ __commonJS({ "a/test.txt"(exports, module) {
 	module.exports = "assets/test-BrHGE6Cv.txt";
 } });
 
 //#endregion
 //#region b/test.txt
-var require_test = __commonJS({ "b/test.txt"(exports, module) {
+var require_test = /* @__PURE__ */ __commonJS({ "b/test.txt"(exports, module) {
 	module.exports = "assets/test-1P-S1VxP.txt";
 } });
 

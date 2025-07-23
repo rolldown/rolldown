@@ -9,7 +9,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 // HIDDEN [rolldown:runtime]
 // HIDDEN [rolldown:hmr]
 //#region cjs.js
-var require_cjs = __commonJS({ "cjs.js"(exports, module) {
+var require_cjs = /* @__PURE__ */ __commonJS({ "cjs.js"(exports, module) {
 	const cjs_hot = __rolldown_runtime__.createModuleHotContext("cjs.js");
 	__rolldown_runtime__.registerModule("cjs.js", module);
 	module.exports.value = "cjs";

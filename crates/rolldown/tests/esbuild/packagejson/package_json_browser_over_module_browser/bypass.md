@@ -24,7 +24,7 @@ import assert from "node:assert";
 
 // HIDDEN [rolldown:runtime]
 //#region node_modules/demo-pkg/main.browser.js
-var require_main_browser = __commonJS({ "node_modules/demo-pkg/main.browser.js"(exports, module) {
+var require_main_browser = /* @__PURE__ */ __commonJS({ "node_modules/demo-pkg/main.browser.js"(exports, module) {
 	module.exports = function() {
 		return 123;
 	};

@@ -51,7 +51,7 @@
 // HIDDEN [rolldown:runtime]
 
 //#region c.js
-var require_c = __commonJS({ "c.js"() {} });
+var require_c = /* @__PURE__ */ __commonJS({ "c.js"() {} });
 
 //#endregion
 //#region b.js
@@ -65,7 +65,7 @@ var init_a = __esm({ "a.js"() {} });
 
 //#endregion
 //#region entry.js
-var require_entry = __commonJS({ "entry.js"() {
+var require_entry = /* @__PURE__ */ __commonJS({ "entry.js"() {
 	init_a();
 	init_b();
 	require_c();

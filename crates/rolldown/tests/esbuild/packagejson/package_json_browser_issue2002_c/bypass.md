@@ -25,13 +25,13 @@ require_foo();
 ```js
 // HIDDEN [rolldown:runtime]
 //#region src/node_modules/sub/index.js
-var require_sub = __commonJS({ "src/node_modules/sub/index.js"() {
+var require_sub = /* @__PURE__ */ __commonJS({ "src/node_modules/sub/index.js"() {
 	works();
 } });
 
 //#endregion
 //#region src/node_modules/pkg/sub/foo.js
-var require_foo = __commonJS({ "src/node_modules/pkg/sub/foo.js"() {
+var require_foo = /* @__PURE__ */ __commonJS({ "src/node_modules/pkg/sub/foo.js"() {
 	require_sub();
 } });
 

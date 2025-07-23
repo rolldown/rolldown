@@ -45,7 +45,7 @@ import { __commonJS } from "./chunk.js";
 import { foo } from "bar";
 
 //#region import-in-cjs.js
-var require_import_in_cjs = __commonJS({ "import-in-cjs.js"(exports, module) {
+var require_import_in_cjs = /* @__PURE__ */ __commonJS({ "import-in-cjs.js"(exports, module) {
 	exports.foo = foo;
 	module.exports = foo;
 } });
@@ -83,7 +83,7 @@ console.log(module, exports);
 import { __commonJS } from "./chunk.js";
 
 //#region no-warnings-here.js
-var require_no_warnings_here = __commonJS({ "no-warnings-here.js"(exports, module) {
+var require_no_warnings_here = /* @__PURE__ */ __commonJS({ "no-warnings-here.js"(exports, module) {
 	console.log(module, exports);
 } });
 

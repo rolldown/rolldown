@@ -33,7 +33,7 @@ node_assert.default.equal((0, import_share.share)(), 1);
 // HIDDEN [rolldown:runtime]
 
 //#region share.js
-var require_share = __commonJS({ "share.js"(exports) {
+var require_share = /* @__PURE__ */ __commonJS({ "share.js"(exports) {
 	exports.share = function share() {
 		return 1;
 	};

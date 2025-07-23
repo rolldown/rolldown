@@ -8,7 +8,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ```js
 // HIDDEN [rolldown:runtime]
 //#region b.js
-var require_b = __commonJS({ "b.js"(exports) {
+var require_b = /* @__PURE__ */ __commonJS({ "b.js"(exports) {
 	exports.x = 123;
 } });
 

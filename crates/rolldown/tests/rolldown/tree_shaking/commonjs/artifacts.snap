@@ -10,19 +10,19 @@ import assert from "node:assert";
 
 // HIDDEN [rolldown:runtime]
 //#region src/basic_ns/index.js
-var require_basic_ns = __commonJS({ "src/basic_ns/index.js"(exports) {
+var require_basic_ns = /* @__PURE__ */ __commonJS({ "src/basic_ns/index.js"(exports) {
 	exports.a = "basic-a";
 } });
 
 //#endregion
 //#region src/basic_ref_with_named_default/index.js
-var require_basic_ref_with_named_default = __commonJS({ "src/basic_ref_with_named_default/index.js"(exports) {
+var require_basic_ref_with_named_default = /* @__PURE__ */ __commonJS({ "src/basic_ref_with_named_default/index.js"(exports) {
 	exports.a = "basic-ref-with-named-default-a";
 } });
 
 //#endregion
 //#region src/export_star_from_cjs/cjs.js
-var require_cjs$2 = __commonJS({ "src/export_star_from_cjs/cjs.js"(exports) {
+var require_cjs$2 = /* @__PURE__ */ __commonJS({ "src/export_star_from_cjs/cjs.js"(exports) {
 	exports.a = "export-star-from-cjs-a";
 } });
 
@@ -33,7 +33,7 @@ __reExport(export_star_from_cjs_exports, __toESM(require_cjs$2()));
 
 //#endregion
 //#region src/nested_export_star_from_cjs/cjs.js
-var require_cjs$1 = __commonJS({ "src/nested_export_star_from_cjs/cjs.js"(exports) {
+var require_cjs$1 = /* @__PURE__ */ __commonJS({ "src/nested_export_star_from_cjs/cjs.js"(exports) {
 	exports.a = "nested-export-star-from-cjs-a";
 } });
 
@@ -44,7 +44,7 @@ __reExport(reexport_exports, __toESM(require_cjs$1()));
 
 //#endregion
 //#region src/named_import_export_star_from_cjs/cjs.js
-var require_cjs = __commonJS({ "src/named_import_export_star_from_cjs/cjs.js"(exports) {
+var require_cjs = /* @__PURE__ */ __commonJS({ "src/named_import_export_star_from_cjs/cjs.js"(exports) {
 	exports.a = "named-import-export-star-from-cjs-a";
 } });
 
@@ -55,13 +55,13 @@ __reExport(named_import_export_star_from_cjs_exports, __toESM(require_cjs()));
 
 //#endregion
 //#region src/indirect_common_js/lib.js
-var require_lib = __commonJS({ "src/indirect_common_js/lib.js"(exports) {
+var require_lib = /* @__PURE__ */ __commonJS({ "src/indirect_common_js/lib.js"(exports) {
 	exports.a = "react-like-a";
 } });
 
 //#endregion
 //#region src/indirect_common_js/index.js
-var require_indirect_common_js = __commonJS({ "src/indirect_common_js/index.js"(exports, module) {
+var require_indirect_common_js = /* @__PURE__ */ __commonJS({ "src/indirect_common_js/index.js"(exports, module) {
 	module.exports = require_lib();
 } });
 

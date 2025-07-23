@@ -18,7 +18,7 @@ console.log(require_dir());
 ```js
 // HIDDEN [rolldown:runtime]
 //#region dir/index.js
-var require_dir = __commonJS({ "dir/index.js"(exports, module) {
+var require_dir = /* @__PURE__ */ __commonJS({ "dir/index.js"(exports, module) {
 	module.exports = 123;
 } });
 

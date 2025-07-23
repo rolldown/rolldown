@@ -8,7 +8,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ```js
 // HIDDEN [rolldown:runtime]
 //#region a.js
-var require_a = __commonJS({ "a.js"(exports, module) {
+var require_a = /* @__PURE__ */ __commonJS({ "a.js"(exports, module) {
 	module.exports = function test(a, b) {
 		return a + b;
 	};
@@ -16,7 +16,7 @@ var require_a = __commonJS({ "a.js"(exports, module) {
 
 //#endregion
 //#region b.js
-var require_b = __commonJS({ "b.js"(exports, module) {
+var require_b = /* @__PURE__ */ __commonJS({ "b.js"(exports, module) {
 	module.exports = function test(a, b) {
 		return a + b;
 	};
@@ -24,7 +24,7 @@ var require_b = __commonJS({ "b.js"(exports, module) {
 
 //#endregion
 //#region commonjs.js
-var require_commonjs = __commonJS({ "commonjs.js"(exports, module) {
+var require_commonjs = /* @__PURE__ */ __commonJS({ "commonjs.js"(exports, module) {
 	module.exports = Math.random() < .5 ? require_a() : require_b();
 } });
 

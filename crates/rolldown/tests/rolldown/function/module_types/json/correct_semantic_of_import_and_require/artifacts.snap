@@ -10,7 +10,7 @@ import assert from "node:assert";
 
 // HIDDEN [rolldown:runtime]
 //#region codes.json
-var require_codes = __commonJS({ "codes.json"(exports, module) {
+var require_codes = /* @__PURE__ */ __commonJS({ "codes.json"(exports, module) {
 	module.exports = { "foo": "bar" };
 } });
 

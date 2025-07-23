@@ -11,7 +11,7 @@ var t=e(r=>{r.foo=function(){return 123}});var n=e((l,c)=>{c.exports={test:!0}})
 ```js
 // HIDDEN [rolldown:runtime]
 //#region a.js
-var require_a = __commonJS({ "a.js"(exports) {
+var require_a = /* @__PURE__ */ __commonJS({ "a.js"(exports) {
 	exports.foo = function() {
 		return 123;
 	};
@@ -19,7 +19,7 @@ var require_a = __commonJS({ "a.js"(exports) {
 
 //#endregion
 //#region j.json
-var require_j = __commonJS({ "j.json"(exports, module) {
+var require_j = /* @__PURE__ */ __commonJS({ "j.json"(exports, module) {
 	module.exports = { "test": true };
 } });
 

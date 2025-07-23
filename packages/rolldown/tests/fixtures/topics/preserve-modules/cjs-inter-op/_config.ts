@@ -19,7 +19,7 @@ export default defineTest({
       "import { __commonJS } from "./_virtual/rolldown_runtime.js";
 
       //#region lib.js
-      var require_lib = __commonJS({ "lib.js"(exports, module) {
+      var require_lib = /* @__PURE__ */ __commonJS({ "lib.js"(exports, module) {
       	module.exports = 1e3;
       } });
 

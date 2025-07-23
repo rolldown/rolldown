@@ -1,0 +1,30 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## main.js
+
+```js
+import assert from "node:assert";
+
+// HIDDEN [rolldown:runtime]
+//#region lib/fromTokenFile.js
+var require_fromTokenFile = __commonJS({ "lib/fromTokenFile.js"(exports, module) {
+	module.exports = { a: 100 };
+} });
+
+//#endregion
+//#region lib/fromWebToken.js
+const fromWebToken = (init) => async () => {
+	return 1;
+};
+
+//#endregion
+//#region main.js
+(async () => {
+	assert.strictEqual(await fromWebToken()(), 1);
+})();
+
+//#endregion
+```

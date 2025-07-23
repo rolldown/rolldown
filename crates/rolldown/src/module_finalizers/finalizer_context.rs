@@ -29,4 +29,5 @@ pub struct ScopeHoistingFinalizerContext<'me> {
   pub file_emitter: &'me SharedFileEmitter,
   pub constant_value_map: &'me FxHashMap<SymbolRef, ConstExportMeta>,
   pub needs_hosted_top_level_binding: bool,
+  pub module_namespace_included: bool,
 }

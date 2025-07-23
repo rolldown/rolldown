@@ -46,6 +46,17 @@ impl HybridRegex {
     }
   }
 
+  pub fn replace<'a>(&self, haystack: &'a str, replacement: &str) -> Cow<'a, str> {
+    match self {
+      HybridRegex::Optimize(r) => r.replace(haystack, replacement),
+      HybridRegex::Ecma(reg) => {
+        let next = reg.find_iter(haystack).next();
+        let Some(m) = next else { return Cow::Borrowed(haystack) };
+        Cow::Owned(concat_string!(&haystack[..m.start()], replacement, &haystack[m.end()..]))
+      }
+    }
+  }
+
   pub fn replace_all<'a>(&self, haystack: &'a str, replacement: &str) -> Cow<'a, str> {
     match self {
       HybridRegex::Optimize(r) => r.replace_all(haystack, replacement),

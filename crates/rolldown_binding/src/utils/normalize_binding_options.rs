@@ -337,16 +337,12 @@ pub fn normalize_binding_options(
     intro: normalize_addon_option(output_options.intro),
     outro: normalize_addon_option(output_options.outro),
     sourcemap_base_url: output_options.sourcemap_base_url.map(|maybe_url| {
-      let url = Url::parse(&maybe_url);
-
-      if let Ok(mut url) = url {
+      if let Ok(mut url) = Url::parse(&maybe_url) {
         if !url.path().ends_with('/') {
-          url.set_path(&format!("{}/", url.path()));
+          url.set_path(&rolldown_utils::concat_string!(url.path(), "/"));
         }
-
         return url.to_string();
       }
-
       panic!("Invalid sourcemapBaseUrl: {maybe_url}");
     }),
     sourcemap_ignore_list,

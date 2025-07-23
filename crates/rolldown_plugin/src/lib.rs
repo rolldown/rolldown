@@ -7,6 +7,9 @@ mod type_aliases;
 mod types;
 mod utils;
 
+pub use rolldown_common::Log;
+pub use typedmap;
+
 /// Only for usage by the rolldown's crate. Do not use this directly.
 #[doc(hidden)]
 pub mod __inner {
@@ -47,5 +50,3 @@ pub use crate::{
   types::plugin_context_resolve_options::PluginContextResolveOptions,
   types::plugin_hook_meta::{PluginHookMeta, PluginOrder},
 };
-
-pub use typedmap;

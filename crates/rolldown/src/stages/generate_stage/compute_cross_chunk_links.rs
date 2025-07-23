@@ -243,7 +243,13 @@ impl GenerateStage<'_> {
           let entry_meta = &self.link_output.metas[entry.idx];
 
           if !matches!(entry_meta.wrap_kind, WrapKind::Cjs) {
-            for export_ref in entry_meta.resolved_exports.values() {
+            for export_ref in entry_meta
+              .resolved_exports
+              .values()
+              // A chunk should always consume a cjs export symbol by property access, so filter
+              // out a exported symbol that came from a cjs module.
+              .filter(|resolved_export| !resolved_export.came_from_cjs)
+            {
               let mut canonical_ref = symbols.canonical_ref_for(export_ref.symbol_ref);
               let symbol = symbols.get(canonical_ref);
               if let Some(ns_alias) = &symbol.namespace_alias {

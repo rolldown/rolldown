@@ -25,8 +25,8 @@ impl OnLog {
 
 #[derive(Debug, Default)]
 pub struct Log {
-  pub code: String,
   pub message: String,
   pub id: Option<String>,
+  pub code: Option<String>,
   pub exporter: Option<String>,
 }

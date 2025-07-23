@@ -4793,6 +4793,13 @@ expression: output
 
 - main-!~{000}~.js => main-BZ0ZtUKQ.js
 
+# tests/rolldown/issues/5387
+
+- main-!~{000}~.js => main-wh785Iyi.js
+- _virtual/rolldown_runtime-!~{001}~.js => _virtual/rolldown_runtime-li4Svopq.js
+- liblib/index-!~{005}~.js => liblib/index-BFLw0Iov.js
+- liblib/lib-!~{003}~.js => liblib/lib-C4t-go8q.js
+
 # tests/rolldown/issues/rolldown_vite_289
 
 - main-!~{000}~.js => main-Rqhn1GZY.js

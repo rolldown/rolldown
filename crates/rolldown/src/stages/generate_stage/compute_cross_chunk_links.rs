@@ -459,8 +459,12 @@ impl GenerateStage<'_> {
             }
             chunk.exports_to_other_chunks.entry(export_ref).or_default().push(name.clone());
             processed_entry_exports.insert(export_ref);
-            sorted_chars =
-              char_frequency.iter().sorted().map(|(char, _)| *char).collect::<Vec<_>>();
+            sorted_chars = char_frequency
+              .iter()
+              .sorted()
+              .map(|(char, _)| *char)
+              .filter(|char| char.is_ascii())
+              .collect::<Vec<_>>();
           });
         }
         for (chunk_export, _predefined_names) in index_chunk_exported_symbols[chunk_id]
@@ -487,6 +491,7 @@ impl GenerateStage<'_> {
               named_index += 1;
               export_name = to_base64(named_index).into();
             }
+
             if export_name.starts_with('1') {
               named_index += 9 * 64u32.pow(u32::try_from(export_name.len() - 1).unwrap());
               continue;

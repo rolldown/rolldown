@@ -135,6 +135,7 @@ pub struct BundlerOptions {
     schemars(with = "Option<String>")
   )]
   pub outro: Option<AddonOutputOption>,
+  pub sourcemap_base_url: Option<String>,
   #[cfg_attr(
     feature = "deserialize_bundler_options",
     serde(default, skip_deserializing),

@@ -24,6 +24,7 @@ use rolldown_utils::indexmap::FxIndexMap;
 use rolldown_utils::rustc_hash::FxHashMapExt;
 use rustc_hash::FxHashMap;
 use std::path::PathBuf;
+use url::Url;
 
 #[cfg(not(target_family = "wasm"))]
 use crate::{options::plugin::ParallelJsPlugin, worker_manager::WorkerManager};
@@ -335,6 +336,21 @@ pub fn normalize_binding_options(
     footer: normalize_addon_option(output_options.footer),
     intro: normalize_addon_option(output_options.intro),
     outro: normalize_addon_option(output_options.outro),
+    sourcemap_base_url: output_options.sourcemap_base_url.map(|maybe_url| {
+      // reference: src/utils/options/normalizeOutputOptions.ts#getSourcemapBaseUrl
+      // TODO should parse URL on the Rust side?
+      let url = Url::parse(&maybe_url);
+
+      if let Ok(mut url) = url {
+        if !url.path().ends_with('/') {
+          url.set_path(&format!("{}/", url.path()));
+        }
+
+        return url.to_string();
+      } else {
+        panic!("Invalid sourcemapBaseUrl: {maybe_url}");
+      }
+    }),
     sourcemap_ignore_list,
     sourcemap_path_transform,
     sourcemap_debug_ids: output_options.sourcemap_debug_ids,

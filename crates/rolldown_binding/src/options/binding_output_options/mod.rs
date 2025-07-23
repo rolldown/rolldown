@@ -98,6 +98,7 @@ pub struct BindingOutputOptions<'env> {
   // preferConst: boolean;
   #[napi(ts_type = "'file' | 'inline' | 'hidden'")]
   pub sourcemap: Option<String>,
+  pub sourcemap_base_url: Option<String>,
   #[debug(skip)]
   #[napi(ts_type = "(source: string, sourcemapPath: string) => boolean")]
   pub sourcemap_ignore_list: Option<JsCallback<FnArgs<(String, String)>, bool>>,

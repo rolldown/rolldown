@@ -257,6 +257,12 @@
             "null"
           ]
         },
+        "sourcemapBaseUrl": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
         "sourcemapDebugIds": {
           "type": [
             "boolean",

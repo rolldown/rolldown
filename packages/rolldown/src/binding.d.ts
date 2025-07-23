@@ -1760,6 +1760,7 @@ export interface BindingOutputOptions {
   outro?: (chunk: BindingRenderedChunk) => MaybePromise<VoidNullable<string>>
   plugins: (BindingBuiltinPlugin | BindingPluginOptions | undefined)[]
   sourcemap?: 'file' | 'inline' | 'hidden'
+  sourcemapBaseUrl?: string
   sourcemapIgnoreList?: (source: string, sourcemapPath: string) => boolean
   sourcemapDebugIds?: boolean
   sourcemapPathTransform?: (source: string, sourcemapPath: string) => string

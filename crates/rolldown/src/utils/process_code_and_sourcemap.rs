@@ -5,6 +5,7 @@ use rolldown_common::{NormalizedBundlerOptions, OutputAsset, SourceMapType};
 use rolldown_error::BuildResult;
 use rolldown_sourcemap::SourceMap;
 use sugar_path::SugarPath;
+use url::Url;
 
 use super::uuid::uuid_v4_string_from_u128;
 
@@ -80,12 +81,24 @@ pub async fn process_code_and_sourcemap(
             code,
             |source| {
               source.push_str("# sourceMappingURL=");
-              source.push_str(
-                &Path::new(&map_filename)
-                  .file_name()
-                  .expect("should have filename")
-                  .to_string_lossy(),
-              );
+
+              match options.sourcemap_base_url.clone() {
+                Some(url_string) => {
+                  let url = Url::parse(&url_string)
+                    .and_then(|base| base.join(&map_filename))
+                    .expect("invalid URL")
+                    .to_string();
+                  source.push_str(&url);
+                }
+                None => {
+                  source.push_str(
+                    &Path::new(&map_filename)
+                      .file_name()
+                      .expect("should have filename")
+                      .to_string_lossy(),
+                  );
+                }
+              };
             },
             source_map_link_comment_kind,
           );

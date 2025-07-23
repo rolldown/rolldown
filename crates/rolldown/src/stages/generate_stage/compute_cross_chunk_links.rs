@@ -466,7 +466,6 @@ impl GenerateStage<'_> {
               .collect::<Vec<_>>();
           });
         }
-        //根据字符出现频率来进行排序
         for (chunk_export, _predefined_names) in index_chunk_exported_symbols[chunk_id]
           .iter()
           .sorted_unstable_by_key(|(symbol_ref, _predefined_names)| {

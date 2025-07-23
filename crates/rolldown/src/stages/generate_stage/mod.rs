@@ -148,6 +148,10 @@ impl<'a> GenerateStage<'a> {
             file_emitter: &self.plugin_driver.file_emitter,
             constant_value_map: &self.link_output.constant_symbol_map,
             needs_hosted_top_level_binding: false,
+            module_namespace_included: self
+              .link_output
+              .used_symbol_refs
+              .contains(&module.namespace_object_ref),
           },
           ast,
           ast_scope,

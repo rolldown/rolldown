@@ -5696,6 +5696,10 @@ expression: output
 
 - main-!~{000}~.js => main-96eP_Brs.js
 
+# tests/rolldown/tree_shaking/commonjs_mixed
+
+- main-!~{000}~.js => main-BpDjSEdn.js
+
 # tests/rolldown/tree_shaking/derived_side_effects_should_have_high_priority
 
 - main-!~{000}~.js => main-DiUzpIWs.js

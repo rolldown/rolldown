@@ -1,8 +1,9 @@
 use std::path::Path;
 
+use anyhow::anyhow;
 use oxc::ast::CommentKind;
 use rolldown_common::{NormalizedBundlerOptions, OutputAsset, SourceMapType};
-use rolldown_error::BuildResult;
+use rolldown_error::{BuildDiagnostic, BuildResult, ResultExt};
 use rolldown_sourcemap::SourceMap;
 use sugar_path::SugarPath;
 use url::Url;
@@ -86,7 +87,8 @@ pub async fn process_code_and_sourcemap(
                 Some(url_string) => {
                   let url = Url::parse(&url_string)
                     .and_then(|base| base.join(&map_filename))
-                    .expect("invalid URL")
+                    .map_err_to_unhandleable()
+                    .unwrap()
                     .to_string();
                   source.push_str(&url);
                 }
@@ -94,7 +96,8 @@ pub async fn process_code_and_sourcemap(
                   source.push_str(
                     &Path::new(&map_filename)
                       .file_name()
-                      .expect("should have filename")
+                      .ok_or(BuildDiagnostic::unhandleable_error(anyhow!("should have filename")))
+                      .unwrap()
                       .to_string_lossy(),
                   );
                 }

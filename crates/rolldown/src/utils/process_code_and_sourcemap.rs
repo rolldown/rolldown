@@ -98,7 +98,7 @@ pub async fn process_code_and_sourcemap(
                       .to_string_lossy(),
                   );
                 }
-              };
+              }
             },
             source_map_link_comment_kind,
           );

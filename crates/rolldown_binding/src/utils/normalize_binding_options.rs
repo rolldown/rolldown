@@ -347,9 +347,9 @@ pub fn normalize_binding_options(
         }
 
         return url.to_string();
-      } else {
-        panic!("Invalid sourcemapBaseUrl: {maybe_url}");
       }
+
+      panic!("Invalid sourcemapBaseUrl: {maybe_url}");
     }),
     sourcemap_ignore_list,
     sourcemap_path_transform,

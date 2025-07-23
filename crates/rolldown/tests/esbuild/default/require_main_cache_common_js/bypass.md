@@ -21,7 +21,7 @@ console.log("cache:", require.cache);
 // HIDDEN [rolldown:runtime]
 
 //#region is-main.js
-var require_is_main = __commonJS({ "is-main.js"(exports, module) {
+var require_is_main = /* @__PURE__ */ __commonJS({ "is-main.js"(exports, module) {
 	module.exports = require.main === module;
 } });
 

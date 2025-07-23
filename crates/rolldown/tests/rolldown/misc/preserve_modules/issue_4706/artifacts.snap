@@ -26,7 +26,7 @@ console.log(m);
 import { __commonJS } from "./_virtual/rolldown_runtime.js";
 
 //#region cjs.js
-var require_cjs = __commonJS({ "cjs.js"(exports, module) {
+var require_cjs = /* @__PURE__ */ __commonJS({ "cjs.js"(exports, module) {
 	module.exports = 1e4;
 } });
 

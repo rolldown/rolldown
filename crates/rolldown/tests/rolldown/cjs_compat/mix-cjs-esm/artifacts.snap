@@ -31,7 +31,7 @@ module.exports = 1;
 
 //#endregion
 //#region foo.js
-var require_foo = __commonJS({ "foo.js"() {} });
+var require_foo = /* @__PURE__ */ __commonJS({ "foo.js"() {} });
 
 //#endregion
 //#region esm-export-cjs-require.js
@@ -39,13 +39,13 @@ require_foo();
 
 //#endregion
 //#region esm-import-cjs-export.js
-var require_esm_import_cjs_export = __commonJS({ "esm-import-cjs-export.js"(exports, module) {
+var require_esm_import_cjs_export = /* @__PURE__ */ __commonJS({ "esm-import-cjs-export.js"(exports, module) {
 	module.exports = 1;
 } });
 
 //#endregion
 //#region cjs.js
-var require_cjs = __commonJS({ "cjs.js"(exports, module) {
+var require_cjs = /* @__PURE__ */ __commonJS({ "cjs.js"(exports, module) {
 	module.exports = 1;
 } });
 

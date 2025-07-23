@@ -115,7 +115,7 @@ export default require_entry_cjs();
 import { __commonJS, __toCommonJS, esm_exports, init_esm, require_cjs } from "./cjs.js";
 
 //#region entry-cjs.js
-var require_entry_cjs = __commonJS({ "entry-cjs.js"(exports) {
+var require_entry_cjs = /* @__PURE__ */ __commonJS({ "entry-cjs.js"(exports) {
 	let { esm_foo_ } = (init_esm(), __toCommonJS(esm_exports));
 	let { cjs_foo_ } = require_cjs();
 	exports.bar_ = [esm_foo_, cjs_foo_];

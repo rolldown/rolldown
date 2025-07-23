@@ -27,7 +27,7 @@ var index;
 ```js
 // HIDDEN [rolldown:runtime]
 //#region node_modules/component-indexof/index.js
-var require_component_indexof = __commonJS({ "node_modules/component-indexof/index.js"(exports, module) {
+var require_component_indexof = /* @__PURE__ */ __commonJS({ "node_modules/component-indexof/index.js"(exports, module) {
 	module.exports = function() {
 		return 234;
 	};

@@ -22,7 +22,7 @@ var if$1 = "test keyword imports";
 
 //#endregion
 //#region x.json
-var require_x = __commonJS({ "x.json"(exports, module) {
+var require_x = /* @__PURE__ */ __commonJS({ "x.json"(exports, module) {
 	module.exports = { "x": true };
 } });
 

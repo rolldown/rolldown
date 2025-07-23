@@ -8,7 +8,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ```js
 // HIDDEN [rolldown:runtime]
 //#region dep-a.js
-var require_dep_a = __commonJS({ "dep-a.js"(exports, module) {
+var require_dep_a = /* @__PURE__ */ __commonJS({ "dep-a.js"(exports, module) {
 	const sideEffect$1 = {};
 	globalThis.sideEffect = {};
 	module.exports = sideEffect$1;
@@ -42,7 +42,7 @@ Variant: (on_demand_wrapping: true)
 ```js
 // HIDDEN [rolldown:runtime]
 //#region dep-a.js
-var require_dep_a = __commonJS({ "dep-a.js"(exports, module) {
+var require_dep_a = /* @__PURE__ */ __commonJS({ "dep-a.js"(exports, module) {
 	const sideEffect$1 = {};
 	globalThis.sideEffect = {};
 	module.exports = sideEffect$1;

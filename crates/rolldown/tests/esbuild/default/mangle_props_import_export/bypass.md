@@ -41,7 +41,7 @@ let bar_ = require("xyz").b;
 ```js
 // HIDDEN [rolldown:runtime]
 //#region cjs.js
-var require_cjs = __commonJS({ "cjs.js"(exports) {
+var require_cjs = /* @__PURE__ */ __commonJS({ "cjs.js"(exports) {
 	exports.foo_ = 123;
 	let bar_ = __require("xyz").bar_;
 } });

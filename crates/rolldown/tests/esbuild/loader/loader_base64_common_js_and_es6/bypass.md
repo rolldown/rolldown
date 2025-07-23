@@ -28,7 +28,7 @@ var y_default = "eQ==";
 
 //#endregion
 //#region x.b64
-var require_x = __commonJS({ "x.b64"(exports, module) {
+var require_x = /* @__PURE__ */ __commonJS({ "x.b64"(exports, module) {
 	module.exports = "eA==";
 } });
 

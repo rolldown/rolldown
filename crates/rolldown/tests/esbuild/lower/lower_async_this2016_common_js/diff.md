@@ -16,7 +16,7 @@ export default require_entry();
 ```js
 // HIDDEN [rolldown:runtime]
 //#region entry.js
-var require_entry = __commonJS({ "entry.js"(exports) {
+var require_entry = /* @__PURE__ */ __commonJS({ "entry.js"(exports) {
 	exports.foo = async () => exports;
 } });
 

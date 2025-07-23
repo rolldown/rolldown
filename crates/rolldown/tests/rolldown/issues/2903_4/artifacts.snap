@@ -27,7 +27,7 @@ Object.defineProperty(exports, '__toESM', {
 const require_chunk = require('./chunk.js');
 
 //#region cjs-dep.js
-var require_cjs_dep = require_chunk.__commonJS({ "cjs-dep.js"(exports, module) {
+var require_cjs_dep = /* @__PURE__ */ require_chunk.__commonJS({ "cjs-dep.js"(exports, module) {
 	module.exports = console.log("cjs-dep");
 } });
 
@@ -43,7 +43,7 @@ var import_cjs_dep = require_chunk.__toESM(require_cjs_dep());
 const require_chunk = require('./chunk.js');
 
 //#region cjs-dep2.js
-var require_cjs_dep2 = require_chunk.__commonJS({ "cjs-dep2.js"(exports, module) {
+var require_cjs_dep2 = /* @__PURE__ */ require_chunk.__commonJS({ "cjs-dep2.js"(exports, module) {
 	module.exports = console.log("cjs-dep2");
 } });
 

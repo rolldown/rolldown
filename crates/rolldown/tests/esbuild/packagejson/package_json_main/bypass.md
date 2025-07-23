@@ -24,7 +24,7 @@ import assert from "node:assert";
 
 // HIDDEN [rolldown:runtime]
 //#region node_modules/demo-pkg/custom-main.js
-var require_custom_main = __commonJS({ "node_modules/demo-pkg/custom-main.js"(exports, module) {
+var require_custom_main = /* @__PURE__ */ __commonJS({ "node_modules/demo-pkg/custom-main.js"(exports, module) {
 	module.exports = function() {
 		return 123;
 	};

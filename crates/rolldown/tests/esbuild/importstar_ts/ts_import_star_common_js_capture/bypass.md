@@ -21,7 +21,7 @@ console.log(ns, ns.foo, foo2);
 ```js
 // HIDDEN [rolldown:runtime]
 //#region foo.ts
-var require_foo = __commonJS({ "foo.ts"(exports) {
+var require_foo = /* @__PURE__ */ __commonJS({ "foo.ts"(exports) {
 	exports.foo = 123;
 } });
 

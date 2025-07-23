@@ -9,13 +9,13 @@ source: crates/rolldown_testing/src/integration_test.rs
 // HIDDEN [rolldown:runtime]
 
 //#region node_modules/fs/abc.js
-var require_abc = __commonJS({ "node_modules/fs/abc.js"() {
+var require_abc = /* @__PURE__ */ __commonJS({ "node_modules/fs/abc.js"() {
 	console.log("include this");
 } });
 
 //#endregion
 //#region node_modules/fs/index.js
-var require_fs = __commonJS({ "node_modules/fs/index.js"() {
+var require_fs = /* @__PURE__ */ __commonJS({ "node_modules/fs/index.js"() {
 	console.log("include this too");
 } });
 

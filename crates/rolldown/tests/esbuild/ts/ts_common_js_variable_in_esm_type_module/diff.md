@@ -12,7 +12,7 @@ module.exports = null;
 ```js
 // HIDDEN [rolldown:runtime]
 //#region entry.ts
-var require_entry = __commonJS({ "entry.ts"(exports, module) {
+var require_entry = /* @__PURE__ */ __commonJS({ "entry.ts"(exports, module) {
 	module.exports = null;
 } });
 

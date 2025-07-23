@@ -22,7 +22,7 @@ export {
 ```js
 // HIDDEN [rolldown:runtime]
 //#region foo.js
-var require_foo = __commonJS({ "foo.js"(exports) {
+var require_foo = /* @__PURE__ */ __commonJS({ "foo.js"(exports) {
 	exports.bar = 123;
 } });
 

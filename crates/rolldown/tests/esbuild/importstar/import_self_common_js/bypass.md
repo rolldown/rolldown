@@ -20,7 +20,7 @@ module.exports = require_entry();
 const node_assert = __toESM(require("node:assert"));
 
 //#region entry.js
-var require_entry = __commonJS({ "entry.js"(exports) {
+var require_entry = /* @__PURE__ */ __commonJS({ "entry.js"(exports) {
 	var import_entry = __toESM(require_entry());
 	exports.foo = 123;
 	node_assert.default.equal(import_entry.foo, void 0);

@@ -21,7 +21,7 @@ console.log("unused import");
 ```js
 // HIDDEN [rolldown:runtime]
 //#region node_modules/demo-pkg/index.js
-var require_demo_pkg = __commonJS({ "node_modules/demo-pkg/index.js"(exports) {
+var require_demo_pkg = /* @__PURE__ */ __commonJS({ "node_modules/demo-pkg/index.js"(exports) {
 	console.log("hello");
 } });
 

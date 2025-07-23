@@ -21,7 +21,7 @@ console.log(import_b.default);
 ```js
 // HIDDEN [rolldown:runtime]
 //#region b.ts
-var require_b = __commonJS({ "b.ts"(exports, module) {
+var require_b = /* @__PURE__ */ __commonJS({ "b.ts"(exports, module) {
 	module.exports = [123, foo];
 	function foo() {}
 } });

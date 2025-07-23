@@ -22,7 +22,7 @@ import assert from "node:assert";
 
 // HIDDEN [rolldown:runtime]
 //#region node_modules/demo-pkg/a.js
-var require_a = __commonJS({ "node_modules/demo-pkg/a.js"(exports, module) {
+var require_a = /* @__PURE__ */ __commonJS({ "node_modules/demo-pkg/a.js"(exports, module) {
 	module.exports = "a";
 } });
 

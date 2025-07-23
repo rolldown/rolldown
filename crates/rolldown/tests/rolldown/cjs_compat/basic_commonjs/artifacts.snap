@@ -30,7 +30,7 @@ var init_esm = __esm({ "esm.js"() {
 
 //#endregion
 //#region commonjs.js
-var require_commonjs$1 = __commonJS({ "commonjs.js"(exports, module) {
+var require_commonjs$1 = /* @__PURE__ */ __commonJS({ "commonjs.js"(exports, module) {
 	var value = (init_esm(), __toCommonJS(esm_exports));
 	module.exports = value;
 } });

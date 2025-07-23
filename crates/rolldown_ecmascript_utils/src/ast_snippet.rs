@@ -306,8 +306,14 @@ impl<'ast> AstSnippet<'ast> {
     }
 
     //  __commonJS(...)
-    let mut commonjs_call_expr =
-      self.builder.call_expression(SPAN, commonjs_expr, NONE, self.builder.vec(), false);
+    let mut commonjs_call_expr = self.builder.call_expression_with_pure(
+      SPAN,
+      commonjs_expr,
+      NONE,
+      self.builder.vec(),
+      false,
+      true,
+    );
     if profiler_names {
       let obj_expr = self.builder.alloc_object_expression(
         SPAN,

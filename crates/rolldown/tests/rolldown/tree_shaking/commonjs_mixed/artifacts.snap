@@ -10,7 +10,7 @@ import assert from "node:assert";
 
 // HIDDEN [rolldown:runtime]
 //#region lib/fromTokenFile.js
-var require_fromTokenFile = __commonJS({ "lib/fromTokenFile.js"(exports, module) {
+var require_fromTokenFile = /* @__PURE__ */ __commonJS({ "lib/fromTokenFile.js"(exports, module) {
 	module.exports = { a: 100 };
 } });
 

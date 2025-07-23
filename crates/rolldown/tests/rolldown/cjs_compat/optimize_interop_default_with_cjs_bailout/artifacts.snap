@@ -19,7 +19,7 @@ var init_json = __esm({ "json.js"() {
 
 //#endregion
 //#region commonjs.js
-var require_commonjs = __commonJS({ "commonjs.js"(exports) {
+var require_commonjs = /* @__PURE__ */ __commonJS({ "commonjs.js"(exports) {
 	var __importDefault = exports && exports.__importDefault || function(mod$1) {
 		return mod$1 && mod$1.__esModule ? mod$1 : { "default": mod$1 };
 	};

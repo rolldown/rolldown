@@ -11,7 +11,7 @@ import nodeAssert from "node:assert";
 // HIDDEN [rolldown:runtime]
 // HIDDEN [rolldown:hmr]
 //#region foo.cjs
-var require_foo = __commonJS({ "foo.cjs"(exports, module) {
+var require_foo = /* @__PURE__ */ __commonJS({ "foo.cjs"(exports, module) {
 	const foo_hot = __rolldown_runtime__.createModuleHotContext("foo.cjs");
 	__rolldown_runtime__.registerModule("foo.cjs", module);
 	module.exports.value = "foo";

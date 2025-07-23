@@ -10,13 +10,13 @@ import assert from "node:assert";
 
 // HIDDEN [rolldown:runtime]
 //#region node_modules/demo-pkg/lib/util-browser.js
-var require_util_browser = __commonJS({ "node_modules/demo-pkg/lib/util-browser.js"(exports, module) {
+var require_util_browser = /* @__PURE__ */ __commonJS({ "node_modules/demo-pkg/lib/util-browser.js"(exports, module) {
 	module.exports = "util-browser";
 } });
 
 //#endregion
 //#region node_modules/demo-pkg/main-browser.js
-var require_main_browser = __commonJS({ "node_modules/demo-pkg/main-browser.js"(exports, module) {
+var require_main_browser = /* @__PURE__ */ __commonJS({ "node_modules/demo-pkg/main-browser.js"(exports, module) {
 	const util = require_util_browser();
 	module.exports = function() {
 		return ["main-browser", util];

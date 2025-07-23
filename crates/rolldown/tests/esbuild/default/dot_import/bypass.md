@@ -21,7 +21,7 @@ import assert from "node:assert";
 
 // HIDDEN [rolldown:runtime]
 //#region index.js
-var require_dot_import = __commonJS({ "index.js"(exports) {
+var require_dot_import = /* @__PURE__ */ __commonJS({ "index.js"(exports) {
 	exports.x = 123;
 } });
 

@@ -8,13 +8,13 @@ source: crates/rolldown_testing/src/integration_test.rs
 ```js
 // HIDDEN [rolldown:runtime]
 //#region cjs.js
-var require_cjs = __commonJS({ "cjs.js"(exports, module) {
+var require_cjs = /* @__PURE__ */ __commonJS({ "cjs.js"(exports, module) {
 	module.exports = 1e4;
 } });
 
 //#endregion
 //#region util.js
-var require_util = __commonJS({ "util.js"(exports, module) {
+var require_util = /* @__PURE__ */ __commonJS({ "util.js"(exports, module) {
 	module.exports = function() {
 		console.log("util");
 	};

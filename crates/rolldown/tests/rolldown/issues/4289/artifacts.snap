@@ -15,7 +15,7 @@ export { __commonJS, __toDynamicImportESM, __toESM };
 import { __commonJS } from "./chunk.js";
 
 //#region lib.js
-var require_lib = __commonJS({ "lib.js"(exports) {
+var require_lib = /* @__PURE__ */ __commonJS({ "lib.js"(exports) {
 	Object.defineProperty(exports, "__esModule", { value: true });
 	exports.parse = "parse";
 } });
@@ -51,7 +51,7 @@ main$1();
 
 //#endregion
 //#region node-mode-by-cjs-extension.cjs
-var require_node_mode_by_cjs_extension = __commonJS({ "node-mode-by-cjs-extension.cjs"(exports, module) {
+var require_node_mode_by_cjs_extension = /* @__PURE__ */ __commonJS({ "node-mode-by-cjs-extension.cjs"(exports, module) {
 	async function main() {
 		const exports = await import("./lib.js").then(__toDynamicImportESM(1));
 		nodeAssert.deepEqual(Object.keys(exports).sort(), ["default", "parse"]);
@@ -104,7 +104,7 @@ Object.defineProperty(exports, '__toESM', {
 const require_chunk = require('./chunk.js');
 
 //#region lib.js
-var require_lib = require_chunk.__commonJS({ "lib.js"(exports) {
+var require_lib = /* @__PURE__ */ require_chunk.__commonJS({ "lib.js"(exports) {
 	Object.defineProperty(exports, "__esModule", { value: true });
 	exports.parse = "parse";
 } });
@@ -144,7 +144,7 @@ main$1();
 
 //#endregion
 //#region node-mode-by-cjs-extension.cjs
-var require_node_mode_by_cjs_extension = require_chunk.__commonJS({ "node-mode-by-cjs-extension.cjs"(exports, module) {
+var require_node_mode_by_cjs_extension = /* @__PURE__ */ require_chunk.__commonJS({ "node-mode-by-cjs-extension.cjs"(exports, module) {
 	async function main() {
 		const exports$1 = await Promise.resolve().then(() => require_chunk.__toDynamicImportESM(1)(require("./lib.js")));
 		node_assert.default.deepEqual(Object.keys(exports$1).sort(), ["default", "parse"]);
@@ -174,7 +174,7 @@ import nodeAssert from "node:assert";
 
 // HIDDEN [rolldown:runtime]
 //#region lib.js
-var require_lib = __commonJS({ "lib.js"(exports) {
+var require_lib = /* @__PURE__ */ __commonJS({ "lib.js"(exports) {
 	Object.defineProperty(exports, "__esModule", { value: true });
 	exports.parse = "parse";
 } });
@@ -201,7 +201,7 @@ main$1();
 
 //#endregion
 //#region node-mode-by-cjs-extension.cjs
-var require_node_mode_by_cjs_extension = __commonJS({ "node-mode-by-cjs-extension.cjs"(exports, module) {
+var require_node_mode_by_cjs_extension = /* @__PURE__ */ __commonJS({ "node-mode-by-cjs-extension.cjs"(exports, module) {
 	async function main() {
 		const exports$1 = await Promise.resolve().then(() => __toESM(require_lib(), 1));
 		nodeAssert.deepEqual(Object.keys(exports$1).sort(), ["default", "parse"]);

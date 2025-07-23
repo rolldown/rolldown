@@ -9,7 +9,7 @@ console.log("SUCCESS");
 ```js
 // HIDDEN [rolldown:runtime]
 //#region node_modules/pkg/require.js
-var require_require = __commonJS({ "node_modules/pkg/require.js"() {
+var require_require = /* @__PURE__ */ __commonJS({ "node_modules/pkg/require.js"() {
 	console.log("FAILURE");
 } });
 

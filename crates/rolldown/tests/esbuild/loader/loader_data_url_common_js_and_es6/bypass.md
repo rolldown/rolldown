@@ -26,7 +26,7 @@ var y_default = "data:text/plain;charset=utf-8,y";
 
 //#endregion
 //#region x.txt
-var require_x = __commonJS({ "x.txt"(exports, module) {
+var require_x = /* @__PURE__ */ __commonJS({ "x.txt"(exports, module) {
 	module.exports = "data:text/plain;charset=utf-8,x";
 } });
 

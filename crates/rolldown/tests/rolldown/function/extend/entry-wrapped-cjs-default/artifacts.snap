@@ -8,7 +8,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ```js
 // HIDDEN [rolldown:runtime]
 //#region main.js
-var require_main = __commonJS({ "main.js"() {
+var require_main = /* @__PURE__ */ __commonJS({ "main.js"() {
 	require_main();
 } });
 
@@ -28,7 +28,7 @@ Variant: (format: Cjs)
 // HIDDEN [rolldown:runtime]
 
 //#region main.js
-var require_main = __commonJS({ "main.js"() {
+var require_main = /* @__PURE__ */ __commonJS({ "main.js"() {
 	require_main();
 } });
 
@@ -50,7 +50,7 @@ this.module = (function() {
 // HIDDEN [rolldown:runtime]
 
 //#region main.js
-var require_main = __commonJS({ "main.js"() {
+var require_main = /* @__PURE__ */ __commonJS({ "main.js"() {
 	require_main();
 } });
 
@@ -76,7 +76,7 @@ Variant: (extend: true, format: Umd, name: "module")
 // HIDDEN [rolldown:runtime]
 
 //#region main.js
-var require_main = __commonJS({ "main.js"() {
+var require_main = /* @__PURE__ */ __commonJS({ "main.js"() {
 	require_main();
 } });
 

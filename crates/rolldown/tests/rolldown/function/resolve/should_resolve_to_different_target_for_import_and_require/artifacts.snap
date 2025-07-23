@@ -12,7 +12,7 @@ const output = "esm";
 
 //#endregion
 //#region node_modules/package/cjs-output.js
-var require_cjs_output = __commonJS({ "node_modules/package/cjs-output.js"(exports, module) {
+var require_cjs_output = /* @__PURE__ */ __commonJS({ "node_modules/package/cjs-output.js"(exports, module) {
 	module.exports.output = "cjs";
 } });
 

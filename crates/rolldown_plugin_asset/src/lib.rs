@@ -93,15 +93,6 @@ impl Plugin for AssetPlugin {
       &id,
     )?;
 
-    // TODO(shulaoda): align below logic
-    // Inherit HMR timestamp if this asset was invalidated
-    // if (!url.startsWith('data:') && this.environment.mode === 'dev') {
-    //   const mod = this.environment.moduleGraph.getModuleById(id)
-    //   if (mod && mod.lastHMRTimestamp > 0) {
-    //     url = injectQuery(url, `t=${mod.lastHMRTimestamp}`)
-    //   }
-    // }
-
     let url = rolldown_plugin_utils::encode_uri_path(url);
     let code = arcstr::format!("export default {}", serde_json::to_string(&Value::String(url))?);
     Ok(Some(rolldown_plugin::HookLoadOutput {

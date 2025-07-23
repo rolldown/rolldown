@@ -1656,9 +1656,9 @@ export declare enum BindingJsx {
 }
 
 export interface BindingLog {
-  code: string
   message: string
   id?: string
+  code?: string
   exporter?: string
 }
 

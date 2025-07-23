@@ -337,8 +337,6 @@ pub fn normalize_binding_options(
     intro: normalize_addon_option(output_options.intro),
     outro: normalize_addon_option(output_options.outro),
     sourcemap_base_url: output_options.sourcemap_base_url.map(|maybe_url| {
-      // reference: src/utils/options/normalizeOutputOptions.ts#getSourcemapBaseUrl
-      // TODO should parse URL on the Rust side?
       let url = Url::parse(&maybe_url);
 
       if let Ok(mut url) = url {

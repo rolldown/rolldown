@@ -237,13 +237,13 @@ impl NormalModule {
     self.ecma_view.source.len() as f64
   }
 
-  fn is_self_accepting(&self) -> bool {
+  pub fn is_hmr_self_accepting_module(&self) -> bool {
     // FIXME(hyf0): Recognizing self-accepting should not care about the length of deps
     self.ast_usage.contains(EcmaModuleAstUsage::HmrSelfAccept) && self.hmr_info.deps.is_empty()
   }
 
-  pub fn is_hmr_boundary_for(&self, module_id: &ModuleId) -> bool {
-    self.is_self_accepting() || self.hmr_info.deps.contains(module_id)
+  pub fn can_accept_hmr_dependency_for(&self, module_id: &ModuleId) -> bool {
+    self.hmr_info.deps.contains(module_id)
   }
 }
 

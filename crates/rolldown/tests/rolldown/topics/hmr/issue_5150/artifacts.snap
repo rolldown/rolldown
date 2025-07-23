@@ -150,9 +150,7 @@ var init_messenger_3 = __rolldown_runtime__.createEsmInitializer(function() {
 
 //#endregion
 init_messenger_3()
-init_messenger_3()
-init_messenger_3()
-__rolldown_runtime__.applyUpdates(['messenger.js','messenger.js','messenger.js']);
+__rolldown_runtime__.applyUpdates(['messenger.js']);
 ```
 ## Meta
 
@@ -162,6 +160,4 @@ __rolldown_runtime__.applyUpdates(['messenger.js','messenger.js','messenger.js']
 - full_reload_reason: None
 ### Hmr Boundaries
 
-- boundary: messenger.js, accepted_via: bar.js
-- boundary: messenger.js, accepted_via: foo.js
-- boundary: messenger.js, accepted_via: common.js
+- boundary: messenger.js, accepted_via: messenger.js

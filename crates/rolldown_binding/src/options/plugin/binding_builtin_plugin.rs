@@ -2,8 +2,8 @@ use std::sync::Arc;
 
 use napi::{Unknown, bindgen_prelude::FromNapiValue};
 use napi_derive::napi;
+use rolldown_plugin_manifest::ManifestPlugin;
 use rolldown_plugin_oxc_runtime::OxcRuntimePlugin;
-use rustc_hash::FxHashSet;
 
 use rolldown_plugin::__inner::Pluginable;
 use rolldown_plugin_alias::AliasPlugin;
@@ -15,7 +15,6 @@ use rolldown_plugin_import_glob::ImportGlobPlugin;
 use rolldown_plugin_isolated_declaration::IsolatedDeclarationPlugin;
 use rolldown_plugin_json::JsonPlugin;
 use rolldown_plugin_load_fallback::LoadFallbackPlugin;
-use rolldown_plugin_manifest::{ManifestPlugin, ManifestPluginConfig};
 use rolldown_plugin_module_federation::ModuleFederationPlugin;
 use rolldown_plugin_module_preload_polyfill::ModulePreloadPolyfillPlugin;
 use rolldown_plugin_replace::ReplacePlugin;
@@ -129,12 +128,12 @@ impl TryFrom<BindingBuiltinPlugin<'_>> for Arc<dyn Pluginable> {
       }
       BindingBuiltinPluginName::LoadFallback => Arc::new(LoadFallbackPlugin),
       BindingBuiltinPluginName::Manifest => {
-        let config = if let Some(options) = plugin.options {
+        let plugin = if let Some(options) = plugin.options {
           BindingManifestPluginConfig::from_unknown(options)?.into()
         } else {
-          ManifestPluginConfig::default()
+          ManifestPlugin::default()
         };
-        Arc::new(ManifestPlugin { config, entry_css_asset_file_names: FxHashSet::default() })
+        Arc::new(plugin)
       }
       BindingBuiltinPluginName::ModuleFederation => {
         let config = if let Some(options) = plugin.options {

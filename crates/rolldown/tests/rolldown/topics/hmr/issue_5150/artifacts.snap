@@ -71,8 +71,48 @@ setInterval(sayMessage, 1e3);
 ## Code
 
 ```js
+//#region bar.js
+var init_bar_0 = __rolldown_runtime__.createEsmInitializer(function() {
+	try {
+		var ns_bar = {};
+		__rolldown_runtime__.__export(ns_bar, { bar: () => bar });
+		__rolldown_runtime__.registerModule("bar.js", { exports: ns_bar });
+		init_common_1();
+		const hot_bar = __rolldown_runtime__.createModuleHotContext("bar.js");
+		var import_common_0 = __rolldown_runtime__.loadExports("common.js");
+		const bar = import_common_0.prefix + "bar";
+	} finally {}
+});
+
+//#endregion
+//#region common.js
+var init_common_1 = __rolldown_runtime__.createEsmInitializer(function() {
+	try {
+		var ns_common = {};
+		__rolldown_runtime__.__export(ns_common, { prefix: () => prefix });
+		__rolldown_runtime__.registerModule("common.js", { exports: ns_common });
+		const hot_common = __rolldown_runtime__.createModuleHotContext("common.js");
+		const prefix = "prefix-new:";
+	} finally {}
+});
+
+//#endregion
+//#region foo.js
+var init_foo_2 = __rolldown_runtime__.createEsmInitializer(function() {
+	try {
+		var ns_foo = {};
+		__rolldown_runtime__.__export(ns_foo, { foo: () => foo });
+		__rolldown_runtime__.registerModule("foo.js", { exports: ns_foo });
+		init_common_1();
+		const hot_foo = __rolldown_runtime__.createModuleHotContext("foo.js");
+		var import_common_0 = __rolldown_runtime__.loadExports("common.js");
+		const foo = import_common_0.prefix + "foo";
+	} finally {}
+});
+
+//#endregion
 //#region messenger.js
-var init_messenger_0 = __rolldown_runtime__.createEsmInitializer(function() {
+var init_messenger_3 = __rolldown_runtime__.createEsmInitializer(function() {
 	try {
 		var ns_messenger = {};
 		__rolldown_runtime__.__export(ns_messenger, {
@@ -80,9 +120,9 @@ var init_messenger_0 = __rolldown_runtime__.createEsmInitializer(function() {
 			sayMessage: () => sayMessage
 		});
 		__rolldown_runtime__.registerModule("messenger.js", { exports: ns_messenger });
-		init_foo_3();
-		init_bar_1();
-		init_common_2();
+		init_foo_2();
+		init_bar_0();
+		init_common_1();
 		const hot_messenger = __rolldown_runtime__.createModuleHotContext("messenger.js");
 		var import_foo_0 = __rolldown_runtime__.loadExports("foo.js");
 		var import_bar_1 = __rolldown_runtime__.loadExports("bar.js");
@@ -109,49 +149,9 @@ var init_messenger_0 = __rolldown_runtime__.createEsmInitializer(function() {
 });
 
 //#endregion
-//#region bar.js
-var init_bar_1 = __rolldown_runtime__.createEsmInitializer(function() {
-	try {
-		var ns_bar = {};
-		__rolldown_runtime__.__export(ns_bar, { bar: () => bar });
-		__rolldown_runtime__.registerModule("bar.js", { exports: ns_bar });
-		init_common_2();
-		const hot_bar = __rolldown_runtime__.createModuleHotContext("bar.js");
-		var import_common_0 = __rolldown_runtime__.loadExports("common.js");
-		const bar = import_common_0.prefix + "bar";
-	} finally {}
-});
-
-//#endregion
-//#region common.js
-var init_common_2 = __rolldown_runtime__.createEsmInitializer(function() {
-	try {
-		var ns_common = {};
-		__rolldown_runtime__.__export(ns_common, { prefix: () => prefix });
-		__rolldown_runtime__.registerModule("common.js", { exports: ns_common });
-		const hot_common = __rolldown_runtime__.createModuleHotContext("common.js");
-		const prefix = "prefix-new:";
-	} finally {}
-});
-
-//#endregion
-//#region foo.js
-var init_foo_3 = __rolldown_runtime__.createEsmInitializer(function() {
-	try {
-		var ns_foo = {};
-		__rolldown_runtime__.__export(ns_foo, { foo: () => foo });
-		__rolldown_runtime__.registerModule("foo.js", { exports: ns_foo });
-		init_common_2();
-		const hot_foo = __rolldown_runtime__.createModuleHotContext("foo.js");
-		var import_common_0 = __rolldown_runtime__.loadExports("common.js");
-		const foo = import_common_0.prefix + "foo";
-	} finally {}
-});
-
-//#endregion
-init_messenger_0()
-init_messenger_0()
-init_messenger_0()
+init_messenger_3()
+init_messenger_3()
+init_messenger_3()
 __rolldown_runtime__.applyUpdates(['messenger.js','messenger.js','messenger.js']);
 ```
 ## Meta

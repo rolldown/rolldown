@@ -12,28 +12,27 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
     if !self.options.is_hmr_enabled() {
       return;
     }
-
-    // Check whether the callee is `import.meta.hot.accept`.
-    if !call_expr.callee.is_import_meta_hot_accept() {
-      return;
-    }
-
     // Possible call patterns for `import.meta.hot.accept`:
     // - `import.meta.hot.accept()`
     // - `import.meta.hot.accept((newModule) => {})`
     // - `import.meta.hot.accept('./dep.js', ...)`
     // - `import.meta.hot.accept(['./dep1.js', './dep2.js'], ...)`
 
-    if call_expr.arguments.is_empty() {
-      // `import.meta.hot.accept()`
-      self.result.ast_usage.insert(EcmaModuleAstUsage::HmrSelfAccept);
+    // Check whether the callee is `import.meta.hot.accept`.
+    if !call_expr.callee.is_import_meta_hot_accept() {
       return;
     }
 
     let mut module_request_to_import_record_idx = FxHashMap::default();
-    match &call_expr.arguments[0] {
-      ast::Argument::StringLiteral(string_literal) => {
-        // `import.meta.hot.accept('./dep.js', ...)`
+
+    match call_expr.arguments.as_slice() {
+      // `import.meta.hot.accept()`
+      // `import.meta.hot.accept(<any expression>)`
+      [] | [_] => {
+        self.result.ast_usage.insert(EcmaModuleAstUsage::HmrSelfAccept);
+      }
+      // `import.meta.hot.accept('./dep.js', <any expression>)`
+      [ast::Argument::StringLiteral(string_literal), _] => {
         module_request_to_import_record_idx.insert(
           string_literal.value.as_str().into(),
           self.add_import_record(
@@ -44,8 +43,8 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
           ),
         );
       }
-      ast::Argument::ArrayExpression(array_expression) => {
-        // `import.meta.hot.accept(['./dep1.js', './dep2.js'], ...)`
+      // `import.meta.hot.accept(['./dep1.js', './dep2.js'], <any expression>)`
+      [ast::Argument::ArrayExpression(array_expression), _] => {
         module_request_to_import_record_idx.extend(
           array_expression
             .elements
@@ -70,9 +69,11 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
             }),
         );
       }
-      _ => {}
+      _ => {
+        // TODO(hyf0): Unsupported call pattern, maybe we should raise a warning here?
+      }
     }
-    self.result.ast_usage.insert(EcmaModuleAstUsage::HmrSelfAccept);
+
     self
       .result
       .hmr_info

@@ -3053,6 +3053,7 @@ dependencies = [
  "anyhow",
  "cow-utils",
  "itertools",
+ "percent-encoding",
  "rolldown_plugin",
  "rolldown_utils",
  "sugar_path",

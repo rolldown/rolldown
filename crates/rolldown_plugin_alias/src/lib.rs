@@ -1,5 +1,5 @@
-use std::borrow::Cow;
 use std::sync::Arc;
+use std::{borrow::Cow, path::Path};
 
 use cow_utils::CowUtils;
 use rolldown_plugin::{
@@ -52,21 +52,20 @@ impl Plugin for AliasPlugin {
       )
       .await?;
 
-    // TODO: give an warning
-    // if !Path::new(&update_id).is_absolute() {
-    //   this.warn(
-    //     `rewrote ${importee} to ${updatedId} but was not an absolute path and was not handled by other plugins. ` +
-    //       `This will lead to duplicated modules for the same path. ` +
-    //       `To avoid duplicating modules, you should resolve to an absolute path.`
-    //   );
-    // }
-
     // TODO: support `viteAliasCustomResolver`
     // https://github.com/vitejs/rolldown-vite/blob/91a494c/packages/vite/src/node/plugins/index.ts#L325-L334
 
     Ok(Some(match resolved_id {
       Ok(resolved_id) => HookResolveIdOutput::from_resolved_id(resolved_id),
-      Err(_) => HookResolveIdOutput::from_id(specifier),
+      Err(_) => {
+        if !Path::new(specifier.as_ref()).is_absolute() {
+          let message = format!(
+            "rewrote {importee} to {specifier} but was not an absolute path and was not handled by other plugins. This will lead to duplicated modules for the same path. To avoid duplicating modules, you should resolve to an absolute path."
+          );
+          ctx.warn(rolldown_plugin::Log { message, code: None, id: None, exporter: None });
+        }
+        HookResolveIdOutput::from_id(specifier)
+      }
     }))
   }
 

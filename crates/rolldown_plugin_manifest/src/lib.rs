@@ -4,17 +4,9 @@ use std::{borrow::Cow, collections::BTreeMap, path::Path, sync::Arc};
 
 use rolldown_common::{EmittedAsset, Output};
 use rolldown_plugin::{HookNoopReturn, HookUsage, Plugin, PluginContext};
-use rolldown_utils::rustc_hash::FxHashSetExt;
-use rustc_hash::FxHashSet;
-
-#[derive(Debug)]
-pub struct ManifestPlugin {
-  pub config: ManifestPluginConfig,
-  pub entry_css_asset_file_names: FxHashSet<String>,
-}
 
 #[derive(Debug, Default)]
-pub struct ManifestPluginConfig {
+pub struct ManifestPlugin {
   pub root: String,
   pub out_path: String,
 }
@@ -32,21 +24,6 @@ impl Plugin for ManifestPlugin {
   ) -> HookNoopReturn {
     // Use BTreeMap to make the result sorted
     let mut manifest = BTreeMap::default();
-
-    let entry_css_reference_ids = &self.entry_css_asset_file_names;
-    let mut entry_css_asset_file_names = FxHashSet::with_capacity(entry_css_reference_ids.len());
-
-    for reference_id in entry_css_reference_ids {
-      match ctx.get_file_name(reference_id) {
-        Ok(file_name) => {
-          entry_css_asset_file_names.insert(file_name);
-        }
-        _ => {
-          // The asset was generated as part of a different output option.
-          // It was already handled during the previous run of this plugin.
-        }
-      }
-    }
 
     for file in args.bundle.iter() {
       match file {
@@ -68,8 +45,7 @@ impl Plugin for ManifestPlugin {
               Cow::Borrowed,
             );
 
-            let is_entry = entry_css_asset_file_names.contains(&asset.filename);
-            let asset_manifest = Arc::new(Self::create_asset(asset, file.to_string(), is_entry));
+            let asset_manifest = Arc::new(Self::create_asset(asset, file.to_string(), false));
 
             // If JS chunk and asset chunk are both generated from the same source file,
             // prioritize JS chunk as it contains more information
@@ -94,7 +70,7 @@ impl Plugin for ManifestPlugin {
     // if output_count >= outputLength {
     ctx
       .emit_file_async(EmittedAsset {
-        file_name: Some(self.config.out_path.as_str().into()),
+        file_name: Some(self.out_path.as_str().into()),
         source: (serde_json::to_string_pretty(&manifest)?).into(),
         ..Default::default()
       })

@@ -33,7 +33,7 @@ impl ManifestPlugin {
   pub fn get_chunk_name(&self, chunk: &OutputChunk) -> String {
     match &chunk.facade_module_id {
       Some(module_id) => {
-        let name = module_id.relative_path(&self.config.root);
+        let name = module_id.relative_path(&self.root);
         let name = name.to_string_lossy();
         let name = normalize_path(&name);
         // TODO: Support System format

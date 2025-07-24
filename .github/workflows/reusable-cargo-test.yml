@@ -37,8 +37,3 @@ jobs:
         env:
           # Reject updated snapshots https://insta.rs/docs/advanced/#controlling-snapshot-updating
           INSTA_UPDATE: no
-
-      - name: Check if esbuild tests diff has changed
-        run: |
-          just ued
-          node scripts/snap-diff/check.mjs

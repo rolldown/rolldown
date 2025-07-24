@@ -4103,7 +4103,7 @@ expression: output
 
 # tests/rolldown/function/experimental/strict_execution_order/top_level_await_syntax_minify
 
-- main-!~{000}~.js => main-Buo6YqrV.js
+- main-!~{000}~.js => main-LH9tIU3F.js
 
 # tests/rolldown/function/export_mode/cjs/auto/default
 

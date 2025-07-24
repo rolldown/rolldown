@@ -18,5 +18,11 @@
         }
       ]
     }
-  }
+  },
+  "configVariants": [
+    {
+      "configName": "no-profiler-names",
+      "profilerNames": false
+    }
+  ]
 }

@@ -22,6 +22,7 @@ pub struct ConfigVariant {
   pub treeshake: Option<TreeshakeOptions>,
   pub minify_internal_exports: Option<bool>,
   pub on_demand_wrapping: Option<bool>,
+  pub profiler_names: Option<bool>,
   // --- non-bundler options are start with `_`
   // Whether to include the output in the snapshot for this config variant.
   #[serde(rename = "_snapshot")]
@@ -68,6 +69,9 @@ impl ConfigVariant {
         ..config.experimental.unwrap_or_default()
       });
     }
+    if let Some(profiler_names) = &self.profiler_names {
+      config.profiler_names = Some(*profiler_names);
+    }
     config
   }
 }
@@ -101,6 +105,9 @@ impl Display for ConfigVariant {
     }
     if let Some(on_demand_wrapping) = &self.on_demand_wrapping {
       fields.push(format!("on_demand_wrapping: {on_demand_wrapping:?}"));
+    }
+    if let Some(profiler_names) = &self.profiler_names {
+      fields.push(format!("profiler_names: {profiler_names:?}"));
     }
     fields.sort();
     if fields.is_empty() { write!(f, "()") } else { write!(f, "({})", fields.join(", ")) }

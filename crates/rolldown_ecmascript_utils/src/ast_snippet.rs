@@ -358,7 +358,7 @@ impl<'ast> AstSnippet<'ast> {
   }
 
   /// ```js
-  /// var init_foo = __esm(() => { ... });
+  /// var init_foo = __esm((() => { ... }));
   /// ```
   pub fn esm_wrapper_stmt(
     &self,
@@ -382,6 +382,8 @@ impl<'ast> AstSnippet<'ast> {
     let mut esm_call_expr =
       self.builder.call_expression(SPAN, esm_fn_expr, NONE, self.builder.vec(), false);
 
+    // the callback is marked as PIFE because dynamically imported modules are split into a separate chunk
+    // and the statically imported modules are evaluated in the initial load
     if profiler_names {
       let obj_expr = self.builder.alloc_object_expression(
         SPAN,
@@ -413,9 +415,10 @@ impl<'ast> AstSnippet<'ast> {
       );
       esm_call_expr.arguments.push(ast::Argument::ObjectExpression(obj_expr));
     } else {
-      let arrow_expr = self
+      let mut arrow_expr = self
         .builder
         .alloc_arrow_function_expression(SPAN, false, is_async, NONE, params, NONE, body);
+      arrow_expr.pife = true;
       esm_call_expr.arguments.push(ast::Argument::ArrowFunctionExpression(arrow_expr));
     }
 

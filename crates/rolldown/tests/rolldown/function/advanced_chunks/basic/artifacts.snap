@@ -46,3 +46,52 @@ export { a, b, init_a, init_b };
 // HIDDEN [rolldown:runtime]
 export { __esm };
 ```
+---
+
+Variant: no-profiler-names
+
+# Assets
+
+## a.js
+
+```js
+import { a, init_a } from "./common.js";
+
+init_a();
+export { a };
+```
+## b.js
+
+```js
+import { b, init_b } from "./common.js";
+
+init_b();
+export { b };
+```
+## common.js
+
+```js
+import { __esmMin } from "./rolldown-runtime.js";
+
+//#region a.js
+var a;
+var init_a = __esmMin((() => {
+	a = "a";
+}));
+
+//#endregion
+//#region b.js
+var b;
+var init_b = __esmMin((() => {
+	b = "a";
+}));
+
+//#endregion
+export { a, b, init_a, init_b };
+```
+## rolldown-runtime.js
+
+```js
+// HIDDEN [rolldown:runtime]
+export { __esmMin };
+```

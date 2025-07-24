@@ -10,6 +10,7 @@
 [![NPM version][badge-npm-version]][url-npm]
 [![CodSpeed Badge](https://img.shields.io/endpoint?url=https://codspeed.io/badge.json)](https://codspeed.io/rolldown/rolldown)
 [![Discord chat][badge-discord]][discord-url]
+[![Ask DeepWiki](https://deepwiki.com/badge.svg)](https://deepwiki.com/rolldown/rolldown)
 
 </div>
 

@@ -72,7 +72,7 @@ setInterval(sayMessage, 1e3);
 
 ```js
 //#region bar.js
-var init_bar_0 = __rolldown_runtime__.createEsmInitializer(function() {
+var init_bar_0 = __rolldown_runtime__.createEsmInitializer((function() {
 	try {
 		var ns_bar = {};
 		__rolldown_runtime__.__export(ns_bar, { bar: () => bar });
@@ -82,11 +82,11 @@ var init_bar_0 = __rolldown_runtime__.createEsmInitializer(function() {
 		var import_common_0 = __rolldown_runtime__.loadExports("common.js");
 		const bar = import_common_0.prefix + "bar";
 	} finally {}
-});
+}));
 
 //#endregion
 //#region common.js
-var init_common_1 = __rolldown_runtime__.createEsmInitializer(function() {
+var init_common_1 = __rolldown_runtime__.createEsmInitializer((function() {
 	try {
 		var ns_common = {};
 		__rolldown_runtime__.__export(ns_common, { prefix: () => prefix });
@@ -94,11 +94,11 @@ var init_common_1 = __rolldown_runtime__.createEsmInitializer(function() {
 		const hot_common = __rolldown_runtime__.createModuleHotContext("common.js");
 		const prefix = "prefix-new:";
 	} finally {}
-});
+}));
 
 //#endregion
 //#region foo.js
-var init_foo_2 = __rolldown_runtime__.createEsmInitializer(function() {
+var init_foo_2 = __rolldown_runtime__.createEsmInitializer((function() {
 	try {
 		var ns_foo = {};
 		__rolldown_runtime__.__export(ns_foo, { foo: () => foo });
@@ -108,11 +108,11 @@ var init_foo_2 = __rolldown_runtime__.createEsmInitializer(function() {
 		var import_common_0 = __rolldown_runtime__.loadExports("common.js");
 		const foo = import_common_0.prefix + "foo";
 	} finally {}
-});
+}));
 
 //#endregion
 //#region messenger.js
-var init_messenger_3 = __rolldown_runtime__.createEsmInitializer(function() {
+var init_messenger_3 = __rolldown_runtime__.createEsmInitializer((function() {
 	try {
 		var ns_messenger = {};
 		__rolldown_runtime__.__export(ns_messenger, {
@@ -146,7 +146,7 @@ var init_messenger_3 = __rolldown_runtime__.createEsmInitializer(function() {
 			});
 		}
 	} finally {}
-});
+}));
 
 //#endregion
 init_messenger_3()

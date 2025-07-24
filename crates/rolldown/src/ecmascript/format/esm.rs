@@ -130,7 +130,7 @@ fn render_esm_chunk_imports(ctx: &GenerateContext<'_>) -> Option<String> {
   });
   let mut rendered_external_import_namespace_modules = FxHashSet::default();
   // render external imports
-  ctx.chunk.imports_from_external_modules.iter().for_each(|(importee_id, named_imports)| {
+  ctx.chunk.direct_imports_from_external_modules.iter().for_each(|(importee_id, named_imports)| {
     let importee = &ctx.link_output.module_table[*importee_id]
       .as_external()
       .expect("Should be external module here");

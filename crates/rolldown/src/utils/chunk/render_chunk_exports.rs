@@ -200,7 +200,7 @@ pub fn render_chunk_exports(
           // First check if any of these external modules have already been imported elsewhere in the chunk
           let mut imported_external_modules: FxHashSet<SymbolRef> = ctx
             .chunk
-            .imports_from_external_modules
+            .direct_imports_from_external_modules
             .iter()
             .map(|(idx, _)| {
               let external = &ctx.link_output.module_table[*idx]

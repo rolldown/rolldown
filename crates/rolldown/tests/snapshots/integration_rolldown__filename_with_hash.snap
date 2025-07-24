@@ -4769,6 +4769,10 @@ expression: output
 
 - main-!~{000}~.js => main-BOUZhfES.js
 
+# tests/rolldown/issues/4585
+
+- main-!~{000}~.js => main-CGW9A3zc.js
+
 # tests/rolldown/issues/4780
 
 - main-!~{000}~.js => main-D_pxn1_z.js
@@ -4776,6 +4780,13 @@ expression: output
 # tests/rolldown/issues/4993
 
 - main-!~{000}~.js => main-BQQtZSou.js
+
+# tests/rolldown/issues/5044
+
+- main-!~{000}~.js => main-D8gvDh02.js
+- _virtual/rolldown_runtime-!~{001}~.js => _virtual/rolldown_runtime-mwmJao_F.js
+- cube-!~{003}~.js => cube-BCmsXstN.js
+- lib-!~{005}~.js => lib-BPbv7Y41.js
 
 # tests/rolldown/issues/5139
 

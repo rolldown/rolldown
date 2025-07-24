@@ -1,0 +1,8 @@
+{
+  "config": {
+    "preserveModules": true,
+    "external": ["preact"],
+    "format": "cjs",
+  },
+  "expectExecuted": false
+}

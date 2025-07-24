@@ -1,0 +1,39 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## _virtual/rolldown_runtime.js
+
+```js
+// HIDDEN [rolldown:runtime]
+
+exports.__toESM = __toESM;
+```
+## cube.js
+
+```js
+const require_rolldown_runtime = require('./_virtual/rolldown_runtime.js');
+const preact = require_rolldown_runtime.__toESM(require("preact"));
+
+```
+## lib.js
+
+```js
+require('./cube.js');
+const preact = require("preact");
+
+```
+## main.js
+
+```js
+require('./lib.js');
+const preact = require("preact");
+
+Object.defineProperty(exports, 'createContext', {
+  enumerable: true,
+  get: function () {
+    return preact.createContext;
+  }
+});
+```

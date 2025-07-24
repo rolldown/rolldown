@@ -1,0 +1,25 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## main.js
+
+```js
+// HIDDEN [rolldown:runtime]
+const node_process = __toESM(require("node:process"));
+
+//#region lib.js
+var VFile = class {
+	constructor() {
+		console.log(node_process.default);
+	}
+};
+
+//#endregion
+//#region main.js
+const file = new VFile();
+
+//#endregion
+exports.file = file;
+```

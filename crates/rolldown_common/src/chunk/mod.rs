@@ -15,7 +15,10 @@ use arcstr::ArcStr;
 use rolldown_rstr::Rstr;
 use rolldown_std_utils::PathExt;
 use rolldown_utils::{
-  BitSet, dashmap::FxDashMap, hash_placeholder::HashPlaceholderGenerator, indexmap::FxIndexMap,
+  BitSet,
+  dashmap::FxDashMap,
+  hash_placeholder::HashPlaceholderGenerator,
+  indexmap::{FxIndexMap, FxIndexSet},
   make_unique_name::make_unique_name,
 };
 use rustc_hash::FxHashMap;
@@ -58,7 +61,10 @@ pub struct Chunk {
   pub imports_from_other_chunks: Vec<(ChunkIdx, Vec<CrossChunkImportItem>)>,
   // Only meaningful for cjs format
   pub require_binding_names_for_other_chunks: FxHashMap<ChunkIdx, String>,
-  pub imports_from_external_modules: Vec<(ModuleIdx, Vec<NamedImport>)>,
+  pub direct_imports_from_external_modules: Vec<(ModuleIdx, Vec<NamedImport>)>,
+  /// Used for cjs, umd, iife
+  /// The module directly imported symbol actually came from external modules.
+  pub import_symbol_from_external_modules: FxIndexSet<ModuleIdx>,
   pub exports_to_other_chunks: FxHashMap<SymbolRef, Vec<Rstr>>,
   pub input_base: ArcStr,
   pub create_reasons: Vec<String>,

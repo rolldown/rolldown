@@ -178,7 +178,7 @@ pub async fn finalize_assets(
         .map(|importee_asset_idx| index_ins_chunk_to_filename[*importee_asset_idx].clone())
         .chain(
           chunk
-            .imports_from_external_modules
+            .direct_imports_from_external_modules
             .iter()
             .map(|(idx, _)| link_output.module_table[*idx].id().into()),
         )

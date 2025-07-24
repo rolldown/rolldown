@@ -23,6 +23,7 @@ use rustc_hash::{FxHashMap, FxHashSet};
 type IndexChunkDependedSymbols = IndexVec<ChunkIdx, FxIndexSet<SymbolRef>>;
 type IndexChunkImportsFromExternalModules =
   IndexVec<ChunkIdx, FxHashMap<ModuleIdx, Vec<NamedImport>>>;
+type IndexChunkAllImportsFromExternalModules = IndexVec<ChunkIdx, FxIndexSet<ModuleIdx>>;
 type IndexChunkExportedSymbols = IndexVec<ChunkIdx, FxHashMap<SymbolRef, Vec<Rstr>>>;
 type IndexCrossChunkImports = IndexVec<ChunkIdx, FxHashSet<ChunkIdx>>;
 type IndexCrossChunkDynamicImports = IndexVec<ChunkIdx, FxIndexSet<ChunkIdx>>;
@@ -37,7 +38,11 @@ impl GenerateStage<'_> {
       index_vec![FxIndexSet::<SymbolRef>::default(); chunk_graph.chunk_table.len()];
     let mut index_chunk_exported_symbols: IndexChunkExportedSymbols =
       index_vec![FxHashMap::<SymbolRef, Vec<Rstr>>::default(); chunk_graph.chunk_table.len()];
-    let mut index_chunk_imports_from_external_modules: IndexChunkImportsFromExternalModules = index_vec![FxHashMap::<ModuleIdx, Vec<NamedImport>>::default(); chunk_graph.chunk_table.len()];
+    let mut index_chunk_direct_imports_from_external_modules: IndexChunkImportsFromExternalModules =
+      index_vec![FxHashMap::<ModuleIdx, Vec<NamedImport>>::default(); chunk_graph.chunk_table.len()];
+    // Used for cjs,umd,iife only
+    let mut index_chunk_import_symbols_from_external_modules: IndexChunkAllImportsFromExternalModules =
+      index_vec![FxIndexSet::<ModuleIdx>::default(); chunk_graph.chunk_table.len()];
 
     let mut index_imports_from_other_chunks: IndexImportsFromOtherChunks = index_vec![FxHashMap::<ChunkIdx, Vec<CrossChunkImportItem>>::default(); chunk_graph.chunk_table.len()];
     let mut index_cross_chunk_imports: IndexCrossChunkImports =
@@ -48,7 +53,7 @@ impl GenerateStage<'_> {
     self.collect_depended_symbols(
       chunk_graph,
       &mut index_chunk_depended_symbols,
-      &mut index_chunk_imports_from_external_modules,
+      &mut index_chunk_direct_imports_from_external_modules,
       &mut index_cross_chunk_dynamic_imports,
     );
 
@@ -58,6 +63,7 @@ impl GenerateStage<'_> {
       &mut index_chunk_exported_symbols,
       &mut index_cross_chunk_imports,
       &mut index_imports_from_other_chunks,
+      &mut index_chunk_import_symbols_from_external_modules,
     );
     self.deconflict_exported_names(chunk_graph, &index_chunk_exported_symbols);
 
@@ -92,17 +98,18 @@ impl GenerateStage<'_> {
       })
       .collect::<Vec<_>>();
 
-    let index_sorted_imports_from_external_modules = index_chunk_imports_from_external_modules
-      .into_iter()
-      .map(|imports_from_external_modules| {
-        imports_from_external_modules
-          .into_iter()
-          .sorted_by_key(|(external_module_id, _)| {
-            self.link_output.module_table[*external_module_id].exec_order()
-          })
-          .collect_vec()
-      })
-      .collect::<Vec<_>>();
+    let index_sorted_imports_from_external_modules =
+      index_chunk_direct_imports_from_external_modules
+        .into_iter()
+        .map(|imports_from_external_modules| {
+          imports_from_external_modules
+            .into_iter()
+            .sorted_by_key(|(external_module_id, _)| {
+              self.link_output.module_table[*external_module_id].exec_order()
+            })
+            .collect_vec()
+        })
+        .collect::<Vec<_>>();
 
     multizip((
       chunk_graph.chunk_table.iter_mut(),
@@ -110,6 +117,7 @@ impl GenerateStage<'_> {
       index_sorted_imports_from_external_modules,
       index_sorted_cross_chunk_imports,
       index_cross_chunk_dynamic_imports,
+      index_chunk_import_symbols_from_external_modules,
     ))
     .par_bridge()
     .for_each(
@@ -119,12 +127,18 @@ impl GenerateStage<'_> {
         imports_from_external_modules,
         cross_chunk_imports,
         cross_chunk_dynamic_imports,
+        mut all_imports_from_external_modules,
       )| {
+        // deduplicated
+        for (module_idx, _) in &imports_from_external_modules {
+          all_imports_from_external_modules.shift_remove(module_idx);
+        }
         chunk.imports_from_other_chunks = sorted_imports_from_other_chunks;
-        chunk.imports_from_external_modules = imports_from_external_modules;
+        chunk.direct_imports_from_external_modules = imports_from_external_modules;
         chunk.cross_chunk_imports = cross_chunk_imports;
         chunk.cross_chunk_dynamic_imports =
           cross_chunk_dynamic_imports.into_iter().collect::<Vec<_>>();
+        chunk.import_symbol_from_external_modules = all_imports_from_external_modules;
       },
     );
   }
@@ -197,7 +211,6 @@ impl GenerateStage<'_> {
               imports_from_external_modules.entry(importee.idx).or_default().push(import.clone());
             }
           });
-
           module.stmt_infos.iter().for_each(|stmt_info| {
             if !stmt_info.is_included {
               return;
@@ -307,6 +320,7 @@ impl GenerateStage<'_> {
     index_chunk_exported_symbols: &mut IndexChunkExportedSymbols,
     index_cross_chunk_imports: &mut IndexCrossChunkImports,
     index_imports_from_other_chunks: &mut IndexImportsFromOtherChunks,
+    index_chunk_all_imports_from_external_modules: &mut IndexChunkAllImportsFromExternalModules,
   ) {
     chunk_graph.chunk_table.iter_enumerated().for_each(|(chunk_id, chunk)| {
       match chunk.kind {
@@ -360,6 +374,7 @@ impl GenerateStage<'_> {
         }
         // If the symbol from external, we don't need to include it.
         if self.link_output.module_table[import_ref.owner].is_external() {
+          index_chunk_all_imports_from_external_modules[chunk_id].insert(import_ref.owner);
           continue;
         }
         let import_symbol = self.link_output.symbol_db.get(import_ref);

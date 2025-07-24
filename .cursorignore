@@ -1,0 +1,10 @@
+# Add directories or file patterns to ignore during indexing (e.g. foo/ or *.csv)
+
+# Snapshot files
+*.snap
+
+# Test cases
+crates/rolldown/tests
+packages/rolldown/tests
+
+rollup/

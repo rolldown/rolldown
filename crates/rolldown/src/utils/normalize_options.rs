@@ -251,6 +251,7 @@ pub fn normalize_options(mut raw_options: crate::BundlerOptions) -> NormalizeOpt
     hash_characters: raw_options.hash_characters.unwrap_or(crate::HashCharacters::Base64),
     globals,
     sourcemap: raw_options.sourcemap,
+    sourcemap_base_url: raw_options.sourcemap_base_url,
     sourcemap_ignore_list: raw_options.sourcemap_ignore_list,
     sourcemap_path_transform: raw_options.sourcemap_path_transform,
     sourcemap_debug_ids: raw_options.sourcemap_debug_ids.unwrap_or(false),

@@ -2612,6 +2612,7 @@ dependencies = [
  "testing_macros",
  "tokio",
  "tracing",
+ "url",
  "xxhash-rust",
 ]
 
@@ -2675,6 +2676,7 @@ dependencies = [
  "rolldown_utils",
  "rustc-hash",
  "tracing",
+ "url",
 ]
 
 [[package]]

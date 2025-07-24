@@ -2,9 +2,10 @@ use std::path::Path;
 
 use oxc::ast::CommentKind;
 use rolldown_common::{NormalizedBundlerOptions, OutputAsset, SourceMapType};
-use rolldown_error::BuildResult;
+use rolldown_error::{BuildResult, ResultExt};
 use rolldown_sourcemap::SourceMap;
 use sugar_path::SugarPath;
+use url::Url;
 
 use super::uuid::uuid_v4_string_from_u128;
 
@@ -62,9 +63,10 @@ pub async fn process_code_and_sourcemap(
       |source| {
         source.push_str("# debugId=");
         source.push_str(debug_id_str.as_str());
+        Ok(())
       },
       source_map_link_comment_kind,
-    );
+    )?;
   }
 
   // Normalize the windows path at final.
@@ -80,15 +82,27 @@ pub async fn process_code_and_sourcemap(
             code,
             |source| {
               source.push_str("# sourceMappingURL=");
-              source.push_str(
-                &Path::new(&map_filename)
-                  .file_name()
-                  .expect("should have filename")
-                  .to_string_lossy(),
-              );
+
+              match &options.sourcemap_base_url {
+                Some(url_string) => {
+                  let url = Url::parse(url_string)
+                    .and_then(|base| base.join(&map_filename))
+                    .map_err_to_unhandleable()?;
+                  source.push_str(url.as_str());
+                }
+                None => {
+                  source.push_str(
+                    &Path::new(&map_filename)
+                      .file_name()
+                      .ok_or(anyhow::anyhow!("should have filename"))?
+                      .to_string_lossy(),
+                  );
+                }
+              }
+              Ok(())
             },
             source_map_link_comment_kind,
-          );
+          )?;
         }
         return Ok(Some(OutputAsset {
           filename: map_filename.as_str().into(),
@@ -104,9 +118,10 @@ pub async fn process_code_and_sourcemap(
           |source| {
             source.push_str("# sourceMappingURL=");
             source.push_str(&data_url);
+            Ok(())
           },
           source_map_link_comment_kind,
-        );
+        )?;
       }
     }
   }
@@ -116,19 +131,20 @@ pub async fn process_code_and_sourcemap(
 
 fn process_sourcemap_related_reference(
   source: &mut String,
-  mut reference_body_processor: impl FnMut(&mut String),
+  mut reference_body_processor: impl FnMut(&mut String) -> BuildResult<()>,
   comment_kind: CommentKind,
-) {
+) -> BuildResult<()> {
   source.push('\n');
   match comment_kind {
     CommentKind::Line => {
       source.push_str("//");
-      reference_body_processor(source);
+      reference_body_processor(source)?;
     }
     CommentKind::Block => {
       source.push_str("/*");
-      reference_body_processor(source);
+      reference_body_processor(source)?;
       source.push_str("*/");
     }
   }
+  Ok(())
 }

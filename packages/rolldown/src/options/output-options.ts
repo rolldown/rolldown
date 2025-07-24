@@ -54,6 +54,7 @@ export interface OutputOptions {
    */
   format?: ModuleFormat;
   sourcemap?: boolean | 'inline' | 'hidden';
+  sourcemapBaseUrl?: string;
   sourcemapDebugIds?: boolean;
   sourcemapIgnoreList?: boolean | SourcemapIgnoreListOption;
   sourcemapPathTransform?: SourcemapPathTransformOption;

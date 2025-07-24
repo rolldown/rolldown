@@ -21,7 +21,6 @@ Here is some details about how to choose test technique [details](#how-to-choose
 - `just test-node` for running all Node.js tests.
 - `just test-node rolldown` for running only Rolldown's Node.js tests.
 - `just test-node rollup` for running only Rollup's tests.
-- `just update-esbuild-diff` or `just ued` for update diff in esbuild test suite
 
 ## Rust Tests
 

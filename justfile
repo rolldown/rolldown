@@ -1,8 +1,6 @@
 set windows-shell := ["powershell"]
 set shell := ["bash", "-cu"]
 
-alias ued := update-esbuild-diff
-
 _default:
     just --list -u
 
@@ -30,7 +28,7 @@ update-submodule:
 
 # `roll` command almost run all ci checks locally. It's useful to run this before pushing your changes.
 
-roll: roll-rust roll-node roll-repo update-esbuild-diff
+roll: roll-rust roll-node roll-repo
 
 roll-rust: pnpm-install check-rust test-rust lint-rust
 
@@ -47,9 +45,6 @@ check-rust:
 
 check-node:
     pnpm type-check
-
-update-esbuild-diff *args="":
-    pnpm --filter=scripts esbuild-snap-diff {{ args }}
 
 # run tests for both Rust and Node.js
 test: test-rust test-node update-generated-code

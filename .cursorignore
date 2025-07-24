@@ -7,4 +7,5 @@
 crates/rolldown/tests
 packages/rolldown/tests
 
+# Submodules
 rollup/

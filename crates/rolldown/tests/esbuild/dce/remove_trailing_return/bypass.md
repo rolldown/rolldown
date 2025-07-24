@@ -34,7 +34,6 @@ export {
 //#region entry.js
 function foo() {
 	if (a) b();
-	return;
 }
 function bar() {
 	if (a) b();
@@ -45,7 +44,6 @@ var entry_default = [
 	bar,
 	function() {
 		if (a) b();
-		return;
 	},
 	function() {
 		if (a) b();
@@ -53,7 +51,6 @@ var entry_default = [
 	},
 	() => {
 		if (a) b();
-		return;
 	},
 	() => {
 		if (a) b();
@@ -69,11 +66,10 @@ export { entry_default as default };
 ===================================================================
 --- esbuild	/out.js
 +++ rolldown	entry.js
-@@ -1,14 +1,22 @@
+@@ -1,14 +1,19 @@
  function foo() {
 -    a && b();
 +    if (a) b();
-+    return;
  }
  function bar() {
 -    return (a && b(), KEEP_ME);
@@ -83,7 +79,6 @@ export { entry_default as default };
  var entry_default = [foo, bar, function () {
 -    a && b();
 +    if (a) b();
-+    return;
  }, function () {
 -    return (a && b(), KEEP_ME);
 +    if (a) b();
@@ -92,7 +87,6 @@ export { entry_default as default };
 -    a && b();
 -}, () => (a && b(), KEEP_ME)];
 +    if (a) b();
-+    return;
 +}, () => {
 +    if (a) b();
 +    return KEEP_ME;

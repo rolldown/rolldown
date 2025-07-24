@@ -139,7 +139,6 @@ fn normalize_es_target(target: Option<&Either<String, Vec<String>>>) -> ESTarget
       }
       if let Ok(n) = target[2..].parse::<usize>() {
         return match n {
-          5 => ESTarget::ES5,
           6 | 2015 => ESTarget::ES2015,
           2016 => ESTarget::ES2016,
           2017 => ESTarget::ES2017,

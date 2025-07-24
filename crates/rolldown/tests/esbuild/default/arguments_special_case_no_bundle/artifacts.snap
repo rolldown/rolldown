@@ -9,18 +9,6 @@ source: crates/rolldown_testing/src/integration_test.rs
 //#region entry.js
 (() => {
 	var arguments;
-	function foo(x = arguments) {
-		return arguments;
-	}
-	class Foo {
-		foo(x = arguments) {
-			return arguments;
-		}
-	}
-	function foo(x = arguments) {
-		var arguments$1;
-		return arguments$1;
-	}
 })();
 
 //#endregion

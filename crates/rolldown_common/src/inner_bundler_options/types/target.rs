@@ -24,10 +24,11 @@ pub enum ESTarget {
   ESNext,
 }
 
-impl From<ESTarget> for OxcESTarget {
-  fn from(value: ESTarget) -> OxcESTarget {
-    match value {
-      ESTarget::ES5 => OxcESTarget::ES5,
+impl TryFrom<ESTarget> for OxcESTarget {
+  type Error = &'static str;
+  fn try_from(value: ESTarget) -> Result<Self, Self::Error> {
+    Ok(match value {
+      ESTarget::ES5 => return Err("ES5 is not yet supported."),
       ESTarget::ES2015 => OxcESTarget::ES2015,
       ESTarget::ES2016 => OxcESTarget::ES2016,
       ESTarget::ES2017 => OxcESTarget::ES2017,
@@ -39,6 +40,6 @@ impl From<ESTarget> for OxcESTarget {
       ESTarget::ES2023 => OxcESTarget::ES2023,
       ESTarget::ES2024 => OxcESTarget::ES2024,
       ESTarget::ESNext => OxcESTarget::ESNext,
-    }
+    })
   }
 }

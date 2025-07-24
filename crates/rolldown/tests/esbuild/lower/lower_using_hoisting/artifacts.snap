@@ -10,7 +10,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 
 //#region hoist-directive.js
-using a = b;
+b;
 
 //#endregion
 ```
@@ -167,8 +167,8 @@ export { foo as default };
 import { x, y } from "./foo";
 
 //#region hoist-export-from.js
-using a = b;
-using c = d;
+b;
+d;
 
 //#endregion
 export { x, y };
@@ -224,9 +224,9 @@ let a1 = a;
 let { y: [y1] } = foo;
 const c1 = c;
 const { z: [z1] } = foo;
-var ac2 = [a, c], { x: [x2] } = foo;
-let a2 = a, { y: [y2] } = foo;
-const c2 = c, { z: [z2] } = foo;
+var { x: [x2] } = foo;
+let { y: [y2] } = foo;
+const { z: [z2] } = foo;
 using c = d;
 
 //#endregion
@@ -237,12 +237,12 @@ export { a1, ac1, c1, x1, y1, z1 };
 ```js
 //#region hoist-export-local-indirect.js
 using a = b;
-var ac1 = [a, c], { x: [x1] } = foo;
-let a1 = a, { y: [y1] } = foo;
-const c1 = c, { z: [z1] } = foo;
-var ac2 = [a, c], { x: [x2] } = foo;
-let a2 = a, { y: [y2] } = foo;
-const c2 = c, { z: [z2] } = foo;
+var { x: [x1] } = foo;
+let { y: [y1] } = foo;
+const { z: [z1] } = foo;
+var { x: [x2] } = foo;
+let { y: [y2] } = foo;
+const { z: [z2] } = foo;
 using c = d;
 
 //#endregion
@@ -254,8 +254,8 @@ export { x1, y1, z1 };
 export * from "./foo"
 
 //#region hoist-export-star.js
-using a = b;
-using c = d;
+b;
+d;
 
 //#endregion
 ```
@@ -265,8 +265,8 @@ using c = d;
 import "./foo";
 
 //#region hoist-import.js
-using a = b;
-using c = d;
+b;
+d;
 
 //#endregion
 ```
@@ -276,7 +276,7 @@ using c = d;
 
 
 //#region hoist-use-strict.js
-using a = b;
+b;
 
 //#endregion
 ```

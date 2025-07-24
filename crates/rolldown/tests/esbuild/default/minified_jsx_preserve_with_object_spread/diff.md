@@ -29,12 +29,12 @@ var obj = {
 import "react/jsx-runtime";
 
 //#region entry.jsx
-const obj = {
+({
 	before,
 	[key]: value,
 	key: value,
 	after
-};
+});
 Foo, key, value, value;
 Bar, a, b, c, { ...d }, e;
 
@@ -52,15 +52,7 @@ Bar, a, b, c, { ...d }, e;
 -  [key]: value,
 -  key: value,
 -  after
-+import "react/jsx-runtime";
-+
-+//#region entry.jsx
-+const obj = {
-+	before,
-+	[key]: value,
-+	key: value,
-+	after
- };
+-};
 -<Foo
 -  before
 -  {...{ [key]: value }}
@@ -74,6 +66,15 @@ Bar, a, b, c, { ...d }, e;
 -  e={e}
 -/>;
 \ No newline at end of file
++import "react/jsx-runtime";
++
++//#region entry.jsx
++({
++	before,
++	[key]: value,
++	key: value,
++	after
++});
 +Foo, key, value, value;
 +Bar, a, b, c, { ...d }, e;
 +

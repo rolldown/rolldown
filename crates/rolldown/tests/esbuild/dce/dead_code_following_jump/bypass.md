@@ -85,10 +85,8 @@ function testThrow() {
 }
 function testBreak() {
 	while (true) {
-		{
-			y + z();
-			break;
-		}
+		y + z();
+		break;
 		function z() {
 			KEEP_ME();
 		}
@@ -97,10 +95,8 @@ function testBreak() {
 }
 function testContinue() {
 	while (true) {
-		{
-			y + z();
-			continue;
-		}
+		y + z();
+		continue;
 		function z() {
 			KEEP_ME();
 		}
@@ -134,7 +130,7 @@ testStmts();
 ===================================================================
 --- esbuild	/out.js
 +++ rolldown	entry.js
-@@ -1,50 +1,45 @@
+@@ -1,50 +1,41 @@
  function testReturn() {
      return y + z();
 -    if (x) var y;
@@ -154,18 +150,16 @@ testStmts();
  function testBreak() {
 -    for (; ; ) {
 -        let z2 = function () {
-+    while (true) {
-+        {
-+            y + z();
-+            break;
-+        }
-+        function z() {
-             KEEP_ME();
+-            KEEP_ME();
 -        };
 -        var z = z2;
 -        y + z2();
--        break;
++    while (true) {
++        y + z();
+         break;
 -        if (x) var y;
++        function z() {
++            KEEP_ME();
 +        }
 +        var y;
      }
@@ -173,18 +167,16 @@ testStmts();
  function testContinue() {
 -    for (; ; ) {
 -        let z2 = function () {
-+    while (true) {
-+        {
-+            y + z();
-+            continue;
-+        }
-+        function z() {
-             KEEP_ME();
+-            KEEP_ME();
 -        };
 -        var z = z2;
 -        y + z2();
--        continue;
++    while (true) {
++        y + z();
+         continue;
 -        if (x) var y;
++        function z() {
++            KEEP_ME();
 +        }
 +        var y;
      }

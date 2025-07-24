@@ -17,9 +17,9 @@ var require_component_indexof = /* @__PURE__ */ __commonJS({ "node_modules/compo
 //#endregion
 //#region node_modules/component-classes/index.js
 try {
-	var index = require_component_indexof();
+	require_component_indexof();
 } catch (err) {
-	var index = require_component_indexof();
+	require_component_indexof();
 }
 
 //#endregion

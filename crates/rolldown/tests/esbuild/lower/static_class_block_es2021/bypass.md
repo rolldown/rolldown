@@ -28,14 +28,14 @@ var A = class A {
 		super.superField++;
 	}
 };
-let B = class {
+(class {
 	static {}
 	static {
 		this.thisField++;
 		super.superField = super.superField + 1;
 		super.superField++;
 	}
-};
+});
 
 //#endregion
 ```
@@ -62,13 +62,13 @@ let B = class {
 +        super.superField++;
 +    }
 +};
-+var B = class {
++(class {
 +    static {}
 +    static {
 +        this.thisField++;
 +        super.superField = super.superField + 1;
 +        super.superField++;
 +    }
-+};
++});
 
 ```

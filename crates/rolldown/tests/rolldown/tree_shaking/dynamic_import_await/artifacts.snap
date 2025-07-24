@@ -20,7 +20,7 @@ export { bar, baz, foo };
 //#region main.js
 const lib = await import("./lib.js");
 lib.foo;
-const lib2 = await import("./lib.js");
+await import("./lib.js");
 lib.bar;
 (await import("./lib.js"))["baz"];
 await import("./lib.js");

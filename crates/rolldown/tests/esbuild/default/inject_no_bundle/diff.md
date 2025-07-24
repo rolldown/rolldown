@@ -41,11 +41,11 @@ let replaceDot = { test() {} };
 //#endregion
 //#region inject.js
 let obj = {};
-let sideEffects$1 = console.log("this should be renamed");
+let sideEffects = console.log("this should be renamed");
 
 //#endregion
 //#region entry.js
-let sideEffects = console.log("side effects");
+console.log("side effects");
 let collide = 123;
 console.log(obj.prop);
 console.log("defined");
@@ -83,8 +83,8 @@ console.log(reexpo_rt);
 -let collide = 123;
 -console.log(obj2.prop);
 +var obj = {};
-+var sideEffects$1 = console.log("this should be renamed");
-+var sideEffects = console.log("side effects");
++var sideEffects = console.log("this should be renamed");
++console.log("side effects");
 +var collide = 123;
 +console.log(obj.prop);
  console.log("defined");

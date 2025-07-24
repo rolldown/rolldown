@@ -45,7 +45,7 @@ exports.test.res = 1e3;
 exports.a = 1e3;
 module.test = {};
 module.exports = {};
-let res = typeof module === "object" ? module.exports : exports;
+typeof module === "object" ? module.exports : exports;
 const a = 1;
 const e = 1;
 

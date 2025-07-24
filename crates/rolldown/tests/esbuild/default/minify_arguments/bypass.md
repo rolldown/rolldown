@@ -26,15 +26,9 @@
 
 
 //#region entry.js
-function a(x = arguments) {
-	let arguments$1;
-}
-function b(x = arguments) {
-	let arguments$1;
-}
-function c(x = arguments) {
-	let arguments$1;
-}
+function a(x = arguments) {}
+function b(x = arguments) {}
+function c(x = arguments) {}
 a();
 b();
 c();
@@ -47,26 +41,23 @@ c();
 ===================================================================
 --- esbuild	/out.js
 +++ rolldown	entry.js
-@@ -1,14 +1,14 @@
+@@ -1,14 +1,8 @@
 -(() => {
 -    function e(n = arguments) {
 -        let t;
-+(function () {
-+    function a(x = arguments) {
-+        let arguments$1;
-     }
+-    }
 -    function u(n = arguments) {
 -        let t;
-+    function b(x = arguments) {
-+        let arguments$1;
-     }
+-    }
 -    function a(n = arguments) {
 -        let t;
-+    function c(x = arguments) {
-+        let arguments$1;
-     }
+-    }
 -    e();
 -    u();
++(function () {
++    function a(x = arguments) {}
++    function b(x = arguments) {}
++    function c(x = arguments) {}
      a();
 +    b();
 +    c();

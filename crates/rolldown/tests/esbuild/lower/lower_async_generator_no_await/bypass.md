@@ -302,7 +302,7 @@ function bar() {
 ```
 ### rolldown
 ```js
-//#region ../../../../../../node_modules/.pnpm/@oxc-project+runtime@0.77.3/node_modules/@oxc-project/runtime/src/helpers/esm/usingCtx.js
+//#region ../../../../../../node_modules/.pnpm/@oxc-project+runtime@0.78.0/node_modules/@oxc-project/runtime/src/helpers/esm/usingCtx.js
 function _usingCtx() {
 	var r = "function" == typeof SuppressedError ? SuppressedError : function(r$1, e$1) {
 		var n$1 = Error();
@@ -370,7 +370,7 @@ async function* foo() {
 		for await (let x$1 of y);
 		for await (const _x of y) try {
 			var _usingCtx3 = _usingCtx();
-			const x$1 = _usingCtx3.a(_x);
+			_usingCtx3.a(_x);
 		} catch (_) {
 			_usingCtx3.e = _;
 		} finally {
@@ -392,7 +392,7 @@ foo = async function* () {
 		for await (let x$1 of y);
 		for await (const _x2 of y) try {
 			var _usingCtx5 = _usingCtx();
-			const x$1 = _usingCtx5.a(_x2);
+			_usingCtx5.a(_x2);
 		} catch (_) {
 			_usingCtx5.e = _;
 		} finally {
@@ -414,7 +414,7 @@ foo = { async *bar() {
 		for await (let x$1 of y);
 		for await (const _x3 of y) try {
 			var _usingCtx7 = _usingCtx();
-			const x$1 = _usingCtx7.a(_x3);
+			_usingCtx7.a(_x3);
 		} catch (_) {
 			_usingCtx7.e = _;
 		} finally {
@@ -437,7 +437,7 @@ var Foo = class {
 			for await (let x$1 of y);
 			for await (const _x4 of y) try {
 				var _usingCtx9 = _usingCtx();
-				const x$1 = _usingCtx9.a(_x4);
+				_usingCtx9.a(_x4);
 			} catch (_) {
 				_usingCtx9.e = _;
 			} finally {
@@ -461,7 +461,7 @@ Foo = class {
 			for await (let x$1 of y);
 			for await (const _x5 of y) try {
 				var _usingCtx11 = _usingCtx();
-				const x$1 = _usingCtx11.a(_x5);
+				_usingCtx11.a(_x5);
 			} catch (_) {
 				_usingCtx11.e = _;
 			} finally {
@@ -535,7 +535,7 @@ Foo = class {
 -      _promise2 && (yield new __await(_promise2));
 -    }
 -  });
-+//#region ../../../../../../node_modules/.pnpm/@oxc-project+runtime@0.77.3/node_modules/@oxc-project/runtime/src/helpers/esm/usingCtx.js
++//#region ../../../../../../node_modules/.pnpm/@oxc-project+runtime@0.78.0/node_modules/@oxc-project/runtime/src/helpers/esm/usingCtx.js
 +function _usingCtx() {
 +	var r = "function" == typeof SuppressedError ? SuppressedError : function(r$1, e$1) {
 +		var n$1 = Error();
@@ -655,7 +655,7 @@ Foo = class {
 +		for await (let x$1 of y);
 +		for await (const _x of y) try {
 +			var _usingCtx3 = _usingCtx();
-+			const x$1 = _usingCtx3.a(_x);
++			_usingCtx3.a(_x);
 +		} catch (_) {
 +			_usingCtx3.e = _;
 +		} finally {
@@ -677,7 +677,7 @@ Foo = class {
 +		for await (let x$1 of y);
 +		for await (const _x2 of y) try {
 +			var _usingCtx5 = _usingCtx();
-+			const x$1 = _usingCtx5.a(_x2);
++			_usingCtx5.a(_x2);
 +		} catch (_) {
 +			_usingCtx5.e = _;
 +		} finally {
@@ -751,7 +751,7 @@ Foo = class {
 +		for await (let x$1 of y);
 +		for await (const _x3 of y) try {
 +			var _usingCtx7 = _usingCtx();
-+			const x$1 = _usingCtx7.a(_x3);
++			_usingCtx7.a(_x3);
 +		} catch (_) {
 +			_usingCtx7.e = _;
 +		} finally {
@@ -829,7 +829,7 @@ Foo = class {
 +			for await (let x$1 of y);
 +			for await (const _x4 of y) try {
 +				var _usingCtx9 = _usingCtx();
-+				const x$1 = _usingCtx9.a(_x4);
++				_usingCtx9.a(_x4);
 +			} catch (_) {
 +				_usingCtx9.e = _;
 +			} finally {
@@ -906,7 +906,7 @@ Foo = class {
 +			for await (let x$1 of y);
 +			for await (const _x5 of y) try {
 +				var _usingCtx11 = _usingCtx();
-+				const x$1 = _usingCtx11.a(_x5);
++				_usingCtx11.a(_x5);
 +			} catch (_) {
 +				_usingCtx11.e = _;
 +			} finally {

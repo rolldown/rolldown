@@ -7,8 +7,8 @@ export default defineTest({
 
     expect(code).toMatchInlineSnapshot(`
       "//#region main.js
-      const jQuery = $;
-      const element = angular.element;
+      $;
+      angular.element;
 
       //#endregion"
     `)

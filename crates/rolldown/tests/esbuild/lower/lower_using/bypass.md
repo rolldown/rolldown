@@ -74,12 +74,9 @@ try {
 ### rolldown
 ```js
 //#region entry.js
-using a = b;
-await using c = d;
-if (nested) {
-	using x = 1;
-	await using y = 2;
-}
+b;
+d;
+if (nested) {}
 
 //#endregion
 ```
@@ -88,7 +85,7 @@ if (nested) {
 ===================================================================
 --- esbuild	/out/entry.js
 +++ rolldown	entry.js
-@@ -1,66 +1,6 @@
+@@ -1,66 +1,3 @@
 -function foo() {
 -    var _stack4 = [];
 -    try {
@@ -108,12 +105,7 @@ if (nested) {
 -    } finally {
 -        __callDispose(_stack4, _error4, _hasError4);
 -    }
-+var a = b;
-+var c = d;
-+if (nested) {
-+    using x = 1;
-+    await using y = 2;
- }
+-}
 -async function bar() {
 -    var _stack4 = [];
 -    try {
@@ -160,6 +152,9 @@ if (nested) {
 -    var _promise2 = __callDispose(_stack2, _error2, _hasError2);
 -    _promise2 && await _promise2;
 -}
++b;
++d;
++if (nested) {}
 
 ```
 ## /out/loops.js
@@ -587,24 +582,24 @@ try {
 ### rolldown
 ```js
 //#region switch.js
-using x = y;
+y;
 switch (foo) {
-	case 0: using c = d;
-	default: using e = f;
+	case 0: d;
+	default: f;
 }
 switch (foo) {
-	case 0: await using c = d;
-	default: using e = f;
+	case 0: d;
+	default: f;
 }
 async function foo() {
-	using x$1 = y;
+	y;
 	switch (foo) {
-		case 0: using c = d;
-		default: using e = f;
+		case 0: d;
+		default: f;
 	}
 	switch (foo) {
-		case 0: await using c = d;
-		default: using e = f;
+		case 0: d;
+		default: f;
 	}
 }
 
@@ -616,18 +611,18 @@ async function foo() {
 --- esbuild	/out/switch.js
 +++ rolldown	switch.js
 @@ -1,72 +1,28 @@
-+var x = y;
++y;
 +switch (foo) {
 +    case 0:
-+        using c = d;
++        d;
 +    default:
-+        using e = f;
++        f;
 +}
 +switch (foo) {
 +    case 0:
-+        await using c = d;
++        d;
 +    default:
-+        using e = f;
++        f;
 +}
  async function foo() {
 -    var _stack6 = [];
@@ -664,12 +659,12 @@ async function foo() {
 -        var _error6 = _6, _hasError6 = true;
 -    } finally {
 -        __callDispose(_stack6, _error6, _hasError6);
-+    using x$1 = y;
++    y;
 +    switch (foo) {
 +        case 0:
-+            using c = d;
++            d;
 +        default:
-+            using e = f;
++            f;
      }
 -}
 -var _stack3 = [];
@@ -689,9 +684,9 @@ async function foo() {
 -        __callDispose(_stack, _error, _hasError);
 +    switch (foo) {
 +        case 0:
-+            await using c = d;
++            d;
 +        default:
-+            using e = f;
++            f;
      }
 -    var _stack2 = [];
 -    try {

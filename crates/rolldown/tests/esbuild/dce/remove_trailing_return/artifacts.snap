@@ -9,7 +9,6 @@ source: crates/rolldown_testing/src/integration_test.rs
 //#region entry.js
 function foo() {
 	if (a) b();
-	return;
 }
 function bar() {
 	if (a) b();
@@ -20,7 +19,6 @@ var entry_default = [
 	bar,
 	function() {
 		if (a) b();
-		return;
 	},
 	function() {
 		if (a) b();
@@ -28,7 +26,6 @@ var entry_default = [
 	},
 	() => {
 		if (a) b();
-		return;
 	},
 	() => {
 		if (a) b();

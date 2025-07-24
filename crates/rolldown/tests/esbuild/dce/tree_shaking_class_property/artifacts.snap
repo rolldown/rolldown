@@ -7,24 +7,21 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```js
 //#region entry.js
-let keep1 = class {
+(class {
 	[x] = "x";
-};
-let keep2 = class {
+});
+(class {
 	[x]() {}
-};
-let keep3 = class {
+});
+(class {
 	get [x]() {}
-};
-let keep4 = class {
+});
+(class {
 	set [x](_) {}
-};
-let keep5 = class {
+});
+(class {
 	async [x]() {}
-};
-let keep6 = class {
-	[{ toString() {} }] = "x";
-};
+});
 
 //#endregion
 ```

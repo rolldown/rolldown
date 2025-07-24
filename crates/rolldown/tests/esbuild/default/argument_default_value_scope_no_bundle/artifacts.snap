@@ -8,31 +8,25 @@ source: crates/rolldown_testing/src/integration_test.rs
 ```js
 //#region entry.js
 function a(x = foo) {
-	var foo$1;
 	return x;
 }
 var b = class {
 	fn(x = foo) {
-		var foo$1;
 		return x;
 	}
 };
 let c = [
 	function(x = foo) {
-		var foo$1;
 		return x;
 	},
 	(x = foo) => {
-		var foo$1;
 		return x;
 	},
 	{ fn(x = foo) {
-		var foo$1;
 		return x;
 	} },
 	class {
 		fn(x = foo) {
-			var foo$1;
 			return x;
 		}
 	}

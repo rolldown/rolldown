@@ -156,9 +156,7 @@ console.log(void 0);
 function DROP() {
 	return x;
 }
-function DROP() {
-	return;
-}
+function DROP() {}
 console.log(DROP());
 DROP();
 
@@ -169,15 +167,13 @@ DROP();
 ===================================================================
 --- esbuild	/out/empty-last.js
 +++ rolldown	empty-last.js
-@@ -1,1 +1,11 @@
+@@ -1,1 +1,9 @@
 -console.log(void 0);
 +//#region empty-last.js
 +function DROP() {
 +	return x;
 +}
-+function DROP() {
-+	return;
-+}
++function DROP() {}
 +console.log(DROP());
 +DROP();
 +
@@ -229,9 +225,7 @@ keep(1);
 ### rolldown
 ```js
 //#region empty-first.js
-function keep() {
-	return;
-}
+function keep() {}
 function keep() {
 	return x;
 }
@@ -246,15 +240,13 @@ keep(1);
 ===================================================================
 --- esbuild	/out/empty-first.js
 +++ rolldown	empty-first.js
-@@ -1,6 +1,12 @@
+@@ -1,6 +1,10 @@
 +//#region empty-first.js
++function keep() {}
  function keep() {
 -    return x;
-+	return;
- }
-+function keep() {
 +	return x;
-+}
+ }
  console.log(keep());
  keep(foo());
  keep(1);

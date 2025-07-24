@@ -22,13 +22,13 @@ var keepMe6 = some.fn();
 ```js
 //#region entry.jsx
 function KeepMe1() {}
-let keepMe2 = /* @__PURE__ */ React.createElement(KeepMe1, null);
+/* @__PURE__ */ React.createElement(KeepMe1, null);
 function keepMe3() {
 	console.log("side effects");
 }
-let keepMe4 = /* @__PURE__ */ keepMe3();
-let keepMe5 = pure();
-let keepMe6 = some.fn();
+/* @__PURE__ */ keepMe3();
+pure();
+some.fn();
 
 //#endregion
 ```
@@ -37,11 +37,19 @@ let keepMe6 = some.fn();
 ===================================================================
 --- esbuild	/out.js
 +++ rolldown	entry.js
-@@ -1,5 +1,4 @@
+@@ -1,9 +1,8 @@
 -console.log("side effects");
  function KeepMe1() {}
- var keepMe2 = React.createElement(KeepMe1, null);
+-var keepMe2 = React.createElement(KeepMe1, null);
++React.createElement(KeepMe1, null);
  function keepMe3() {
      console.log("side effects");
+ }
+-var keepMe4 = keepMe3();
+-var keepMe5 = pure();
+-var keepMe6 = some.fn();
++keepMe3();
++pure();
++some.fn();
 
 ```

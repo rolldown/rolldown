@@ -58,20 +58,14 @@ class Bar {
 ```
 ### rolldown
 ```js
-//#region entry.ts
-var Foo = class {
-	method1(@dec(foo) foo = 2) {}
-	method2(@dec(() => foo) foo = 3) {}
-};
 
-//#endregion
 ```
 ### diff
 ```diff
 ===================================================================
 --- esbuild	/out.js
 +++ rolldown	entry.js
-@@ -1,30 +1,7 @@
+@@ -1,30 +0,0 @@
 -let foo = 1;
 -class Foo {
 -    method1(foo2 = 2) {}
@@ -102,13 +96,5 @@ var Foo = class {
 -        };
 -    }
 -}
-+//#region entry.ts
-+var Foo = class {
-+	method1(@dec(foo) foo = 2) {}
-+	method2(@dec(() => foo) foo = 3) {}
-+};
-+
-+//#endregion
-\ No newline at end of file
 
 ```

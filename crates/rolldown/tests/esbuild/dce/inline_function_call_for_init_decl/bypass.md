@@ -17,8 +17,8 @@ function empty() {}
 function id(x) {
 	return x;
 }
-var y = empty();
-var z = id(123);
+empty();
+id(123);
 
 //#endregion
 ```
@@ -36,7 +36,7 @@ var z = id(123);
 +function id(x) {
 +    return x;
 +}
-+var y = empty();
-+var z = id(123);
++empty();
++id(123);
 
 ```

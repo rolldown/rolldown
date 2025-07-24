@@ -1,4 +1,0 @@
-{
-	"": "The property below should NOT be converted to a computed property for ES5:",
-	"__proto__": { "foo": "bar" }
-}

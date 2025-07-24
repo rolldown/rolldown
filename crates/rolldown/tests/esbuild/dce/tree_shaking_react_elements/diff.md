@@ -18,7 +18,7 @@ console.log(f);
 function Foo() {}
 let a = /* @__PURE__ */ React.createElement("div", null);
 let b = /* @__PURE__ */ React.createElement(Foo, null, a);
-let c = /* @__PURE__ */ React.createElement(React.Fragment, null, b);
+/* @__PURE__ */ React.createElement(React.Fragment, null, b);
 let d = /* @__PURE__ */ React.createElement("div", null);
 let e = /* @__PURE__ */ React.createElement(Foo, null, d);
 let f = /* @__PURE__ */ React.createElement(React.Fragment, null, e);
@@ -35,7 +35,7 @@ console.log(f);
  function Foo() {}
 +var a = React.createElement("div", null);
 +var b = React.createElement(Foo, null, a);
-+var c = React.createElement(React.Fragment, null, b);
++React.createElement(React.Fragment, null, b);
  var d = React.createElement("div", null);
  var e = React.createElement(Foo, null, d);
  var f = React.createElement(React.Fragment, null, e);

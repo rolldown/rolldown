@@ -85,18 +85,6 @@
 //#region entry.js
 (() => {
 	var arguments;
-	function foo(x = arguments) {
-		return arguments;
-	}
-	class Foo {
-		foo(x = arguments) {
-			return arguments;
-		}
-	}
-	function foo(x = arguments) {
-		var arguments$1;
-		return arguments$1;
-	}
 })();
 
 //#endregion
@@ -106,7 +94,7 @@
 ===================================================================
 --- esbuild	/out.js
 +++ rolldown	entry.js
-@@ -1,74 +1,18 @@
+@@ -1,74 +1,6 @@
 -/* @__PURE__ */ (() => {
 -  var r;
 -  function t(n = arguments) {
@@ -185,18 +173,6 @@
 +//#region entry.js
 +(() => {
 +	var arguments;
-+	function foo(x = arguments) {
-+		return arguments;
-+	}
-+	class Foo {
-+		foo(x = arguments) {
-+			return arguments;
-+		}
-+	}
-+	function foo(x = arguments) {
-+		var arguments$1;
-+		return arguments$1;
-+	}
 +})();
 +
 +//#endregion

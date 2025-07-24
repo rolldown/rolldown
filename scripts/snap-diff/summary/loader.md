@@ -71,6 +71,8 @@
   diff
 ## [loader_json_no_bundle_iife](../../../crates/rolldown/tests/esbuild/loader/loader_json_no_bundle_iife/diff.md)
   diff
+## loader_json_prototype_es5
+  missing
 ## [with_type_json_override_loader](../../../crates/rolldown/tests/esbuild/loader/with_type_json_override_loader/diff.md)
   diff
 ## with_type_json_override_loader_glob
@@ -103,6 +105,5 @@
 ## [loader_json_invalid_identifier_es6](../../../crates/rolldown/tests/esbuild/loader/loader_json_invalid_identifier_es6/bypass.md)
 ## [loader_json_no_bundle_es6](../../../crates/rolldown/tests/esbuild/loader/loader_json_no_bundle_es6/bypass.md)
 ## [loader_json_prototype](../../../crates/rolldown/tests/esbuild/loader/loader_json_prototype/bypass.md)
-## [loader_json_prototype_es5](../../../crates/rolldown/tests/esbuild/loader/loader_json_prototype_es5/bypass.md)
 ## [loader_json_shared_with_multiple_entries_issue413](../../../crates/rolldown/tests/esbuild/loader/loader_json_shared_with_multiple_entries_issue413/bypass.md)
 ## [loader_text_common_js_and_es6](../../../crates/rolldown/tests/esbuild/loader/loader_text_common_js_and_es6/bypass.md)

@@ -21,20 +21,20 @@ if (nested) for (using a of b) c(() => a);
 
 ```js
 //#region switch.js
-using x = y;
+y;
 switch (foo) {
-	case 0: using c = d;
-	default: using e = f;
+	case 0: d;
+	default: f;
 }
 async function foo() {
-	using x$1 = y;
+	y;
 	switch (foo) {
-		case 0: using c = d;
-		default: using e = f;
+		case 0: d;
+		default: f;
 	}
 	switch (foo) {
-		case 0: await using c = d;
-		default: using e = f;
+		case 0: d;
+		default: f;
 	}
 }
 

@@ -15,7 +15,7 @@ const __remix_run_react = __toESM(require("@remix-run/react"));
 const react = __toESM(require("react"));
 
 //#region entry.jsx
-const x = /* @__PURE__ */ (0, react.createElement)(__remix_run_react.Link, {
+/* @__PURE__ */ (0, react.createElement)(__remix_run_react.Link, {
 	...y,
 	key: z
 });
@@ -33,7 +33,7 @@ const x = /* @__PURE__ */ (0, react.createElement)(__remix_run_react.Link, {
 -const x = (0, import_react.createElement)(import_react2.Link, {
 +var __remix_run_react = __toESM(require("@remix-run/react"));
 +var react = __toESM(require("react"));
-+var x = (0, react.createElement)(__remix_run_react.Link, {
++(0, react.createElement)(__remix_run_react.Link, {
      ...y,
      key: z
  });

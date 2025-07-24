@@ -27,7 +27,7 @@ var ns;
 //#region entry.ts
 let ns;
 (function(_ns) {
-	let foo = _ns.foo = () => {};
+	_ns.foo = () => {};
 	function bar() {}
 	_ns.bar = bar;
 	class Baz {}
@@ -46,7 +46,7 @@ let ns;
 -(ns2 => {
 -    ns2.foo = __name(() => {}, "foo");
 +(function (_ns) {
-+    let foo = _ns.foo = () => {};
++    _ns.foo = () => {};
      function bar() {}
 -    ns2.bar = bar;
 -    __name(bar, "bar");

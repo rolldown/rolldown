@@ -224,12 +224,18 @@ var ns;(ns2=>{ns2.v0=function(){};ns2.v1=function(){};ns2.l0=function(){};ns2.l1
 //#region ns-export-local.ts
 let ns;
 (function(_ns) {
-	var v0 = _ns.v0 = function() {}, v1 = _ns.v1 = function() {};
-	let l0 = _ns.l0 = function() {}, l1 = _ns.l1 = function() {};
-	const c0 = _ns.c0 = /* @__NO_SIDE_EFFECTS__ */ function() {}, c1 = _ns.c1 = function() {};
-	var v2 = _ns.v2 = () => {}, v3 = _ns.v3 = () => {};
-	let l2 = _ns.l2 = () => {}, l3 = _ns.l3 = () => {};
-	const c2 = _ns.c2 = /* @__NO_SIDE_EFFECTS__ */ () => {}, c3 = _ns.c3 = () => {};
+	_ns.v0 = function() {};
+	_ns.v1 = function() {};
+	_ns.l0 = function() {};
+	_ns.l1 = function() {};
+	_ns.c0 = /* @__NO_SIDE_EFFECTS__ */ function() {};
+	_ns.c1 = function() {};
+	_ns.v2 = () => {};
+	_ns.v3 = () => {};
+	_ns.l2 = () => {};
+	_ns.l3 = () => {};
+	_ns.c2 = /* @__NO_SIDE_EFFECTS__ */ () => {};
+	_ns.c3 = () => {};
 })(ns || (ns = {}));
 
 //#endregion
@@ -239,7 +245,7 @@ let ns;
 ===================================================================
 --- esbuild	/out/ns-export-local.js
 +++ rolldown	ns-export-local.js
-@@ -1,15 +1,9 @@
+@@ -1,15 +1,15 @@
  var ns;
 -(ns2 => {
 -    ns2.v0 = function () {};
@@ -255,12 +261,18 @@ let ns;
 -    ns2.c2 = () => {};
 -    ns2.c3 = () => {};
 +(function (_ns) {
-+    var v0 = _ns.v0 = function () {}, v1 = _ns.v1 = function () {};
-+    let l0 = _ns.l0 = function () {}, l1 = _ns.l1 = function () {};
-+    const c0 = _ns.c0 = function () {}, c1 = _ns.c1 = function () {};
-+    var v2 = _ns.v2 = () => {}, v3 = _ns.v3 = () => {};
-+    let l2 = _ns.l2 = () => {}, l3 = _ns.l3 = () => {};
-+    const c2 = _ns.c2 = () => {}, c3 = _ns.c3 = () => {};
++    _ns.v0 = function () {};
++    _ns.v1 = function () {};
++    _ns.l0 = function () {};
++    _ns.l1 = function () {};
++    _ns.c0 = function () {};
++    _ns.c1 = function () {};
++    _ns.v2 = () => {};
++    _ns.v3 = () => {};
++    _ns.l2 = () => {};
++    _ns.l3 = () => {};
++    _ns.c2 = () => {};
++    _ns.c3 = () => {};
  })(ns || (ns = {}));
 
 ```

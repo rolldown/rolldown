@@ -17,10 +17,10 @@ export var x;
 //#region let.ts
 let x;
 (function(_x) {
-	let y$1 = _x.y = 123;
+	_x.y = 123;
 })(x || (x = {}));
 (function(_x2) {
-	let z = _x2.z = y;
+	_x2.z = y;
 })(x || (x = {}));
 
 //#endregion
@@ -37,12 +37,12 @@ export { x };
 -    x2.y = 123;
 +var x;
 +(function (_x) {
-+    let y$1 = _x.y = 123;
++    _x.y = 123;
  })(x || (x = {}));
 -(x2 => {
 -    x2.z = x2.y;
 +(function (_x2) {
-+    let z = _x2.z = y;
++    _x2.z = y;
  })(x || (x = {}));
 +export {x};
 
@@ -69,7 +69,7 @@ let x;
 	_x.y = y$1;
 })(x || (x = {}));
 (function(_x2) {
-	let z = _x2.z = y;
+	_x2.z = y;
 })(x || (x = {}));
 
 //#endregion
@@ -93,7 +93,7 @@ export { x };
 -(x2 => {
 -    x2.z = x2.y;
 +(function (_x2) {
-+    let z = _x2.z = y;
++    _x2.z = y;
  })(x || (x = {}));
 +export {x};
 
@@ -120,7 +120,7 @@ let x;
 	_x.y = y$1;
 })(x || (x = {}));
 (function(_x2) {
-	let z = _x2.z = y;
+	_x2.z = y;
 })(x || (x = {}));
 
 //#endregion
@@ -144,7 +144,7 @@ export { x };
 -(x2 => {
 -    x2.z = x2.y;
 +(function (_x2) {
-+    let z = _x2.z = y;
++    _x2.z = y;
  })(x || (x = {}));
 +export {x};
 
@@ -172,7 +172,7 @@ let x;
 	(function(_y) {})(y$1 || (y$1 = _x.y || (_x.y = {})));
 })(x || (x = {}));
 (function(_x2) {
-	let z = _x2.z = y;
+	_x2.z = y;
 })(x || (x = {}));
 
 //#endregion
@@ -198,7 +198,7 @@ export { x };
 -(x2 => {
 -    x2.z = x2.y;
 +(function (_x2) {
-+    let z = _x2.z = y;
++    _x2.z = y;
  })(x || (x = {}));
 +export {x};
 
@@ -227,7 +227,7 @@ let x;
 	_x.y = y$1;
 })(x || (x = {}));
 (function(_x2) {
-	let z = _x2.z = y;
+	_x2.z = y;
 })(x || (x = {}));
 
 //#endregion
@@ -253,7 +253,7 @@ export { x };
 -(x2 => {
 -    x2.z = x2.y;
 +(function (_x2) {
-+    let z = _x2.z = y;
++    _x2.z = y;
  })(x || (x = {}));
 +export {x};
 

@@ -8,9 +8,9 @@ source: crates/rolldown_testing/src/integration_test.rs
 ```js
 // HIDDEN [rolldown:runtime]
 //#region test.custom
-var require_test = /* @__PURE__ */ __commonJS({ "test.custom"(exports, module) {
+var require_test = /* @__PURE__ */ __commonJS({ "test.custom": ((exports, module) => {
 	module.exports = "data:application/octet-stream;base64,YQBigGP/ZA==";
-} });
+}) });
 
 //#endregion
 //#region entry.js

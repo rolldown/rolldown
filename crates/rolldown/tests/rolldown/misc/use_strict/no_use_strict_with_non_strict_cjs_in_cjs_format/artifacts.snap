@@ -10,10 +10,10 @@ source: crates/rolldown_testing/src/integration_test.rs
 const node_assert = __toESM(require("node:assert"));
 
 //#region cjs.js
-var require_cjs = /* @__PURE__ */ __commonJS({ "cjs.js"(exports, module) {
+var require_cjs = /* @__PURE__ */ __commonJS({ "cjs.js": ((exports, module) => {
 	console.log("This chunk should not have \"use strict\" at the top.");
 	module.exports = {};
-} });
+}) });
 
 //#endregion
 //#region main.js

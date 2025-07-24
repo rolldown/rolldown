@@ -8,15 +8,15 @@ source: crates/rolldown_testing/src/integration_test.rs
 ```js
 // HIDDEN [rolldown:runtime]
 //#region src/node_modules/sub/index.js
-var require_sub = /* @__PURE__ */ __commonJS({ "src/node_modules/sub/index.js"() {
+var require_sub = /* @__PURE__ */ __commonJS({ "src/node_modules/sub/index.js": (() => {
 	works();
-} });
+}) });
 
 //#endregion
 //#region src/node_modules/pkg/sub/foo.js
-var require_foo = /* @__PURE__ */ __commonJS({ "src/node_modules/pkg/sub/foo.js"() {
+var require_foo = /* @__PURE__ */ __commonJS({ "src/node_modules/pkg/sub/foo.js": (() => {
 	require_sub();
-} });
+}) });
 
 //#endregion
 //#region src/entry.js

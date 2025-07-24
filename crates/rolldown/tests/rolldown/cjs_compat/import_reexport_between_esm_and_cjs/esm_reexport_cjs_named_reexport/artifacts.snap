@@ -8,9 +8,9 @@ source: crates/rolldown_testing/src/integration_test.rs
 ```js
 // HIDDEN [rolldown:runtime]
 //#region commonjs.js
-var require_commonjs = /* @__PURE__ */ __commonJS({ "commonjs.js"(exports) {
+var require_commonjs = /* @__PURE__ */ __commonJS({ "commonjs.js": ((exports) => {
 	exports.a = 1;
-} });
+}) });
 
 //#endregion
 //#region main.js

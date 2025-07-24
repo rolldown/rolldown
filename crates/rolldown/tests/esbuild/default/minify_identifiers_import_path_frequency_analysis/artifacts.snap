@@ -20,9 +20,9 @@ console.log(WWWWWWWWWWXXXXXXXXXXYYYYYYYYYYZZZZZZZZZZ_default, "no identifier in 
 ```js
 // HIDDEN [rolldown:runtime]
 //#region AAAAAAAAAABBBBBBBBBBCCCCCCCCCCDDDDDDDDDD.js
-var require_AAAAAAAAAABBBBBBBBBBCCCCCCCCCCDDDDDDDDDD = /* @__PURE__ */ __commonJS({ "AAAAAAAAAABBBBBBBBBBCCCCCCCCCCDDDDDDDDDD.js"(exports, module) {
+var require_AAAAAAAAAABBBBBBBBBBCCCCCCCCCCDDDDDDDDDD = /* @__PURE__ */ __commonJS({ "AAAAAAAAAABBBBBBBBBBCCCCCCCCCCDDDDDDDDDD.js": ((exports, module) => {
 	module.exports = 123;
-} });
+}) });
 
 //#endregion
 //#region require.js

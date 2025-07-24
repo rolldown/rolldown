@@ -1,0 +1,93 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## a.js
+
+```js
+import { require_a } from "./common.js";
+
+export default require_a();
+
+```
+## b.js
+
+```js
+import { require_b } from "./common.js";
+
+export default require_b();
+
+```
+## common.js
+
+```js
+import { __commonJS } from "./rolldown-runtime.js";
+
+//#region a.cjs
+var require_a = /* @__PURE__ */ __commonJS({ "a.cjs": ((exports) => {
+	exports.a = "a";
+}) });
+
+//#endregion
+//#region b.cjs
+var require_b = /* @__PURE__ */ __commonJS({ "b.cjs": ((exports) => {
+	exports.b = "b";
+}) });
+
+//#endregion
+export { require_a, require_b };
+```
+## rolldown-runtime.js
+
+```js
+// HIDDEN [rolldown:runtime]
+export { __commonJS };
+```
+---
+
+Variant: no-profiler-names
+
+# Assets
+
+## a.js
+
+```js
+import { require_a } from "./common.js";
+
+export default require_a();
+
+```
+## b.js
+
+```js
+import { require_b } from "./common.js";
+
+export default require_b();
+
+```
+## common.js
+
+```js
+import { __commonJSMin } from "./rolldown-runtime.js";
+
+//#region a.cjs
+var require_a = /* @__PURE__ */ __commonJSMin(((exports) => {
+	exports.a = "a";
+}));
+
+//#endregion
+//#region b.cjs
+var require_b = /* @__PURE__ */ __commonJSMin(((exports) => {
+	exports.b = "b";
+}));
+
+//#endregion
+export { require_a, require_b };
+```
+## rolldown-runtime.js
+
+```js
+// HIDDEN [rolldown:runtime]
+export { __commonJSMin };
+```

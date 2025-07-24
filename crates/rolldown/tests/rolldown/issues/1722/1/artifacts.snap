@@ -24,9 +24,9 @@ export { main, sub };
 ```js
 // HIDDEN [rolldown:runtime]
 //#region sub.cjs
-var require_sub = /* @__PURE__ */ __commonJS({ "sub.cjs"(exports, module) {
+var require_sub = /* @__PURE__ */ __commonJS({ "sub.cjs": ((exports, module) => {
 	module.exports.sub = "sub";
-} });
+}) });
 
 //#endregion
 //#region main.js

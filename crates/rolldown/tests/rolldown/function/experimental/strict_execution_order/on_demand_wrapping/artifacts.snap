@@ -16,10 +16,10 @@ export default require_dynamic();
 ```js
 // HIDDEN [rolldown:runtime]
 //#region dynamic.js
-var require_dynamic = /* @__PURE__ */ __commonJS({ "dynamic.js"(exports, module) {
+var require_dynamic = /* @__PURE__ */ __commonJS({ "dynamic.js": ((exports, module) => {
 	module.exports = 1e3;
 	globalThis.a = 1e3;
-} });
+}) });
 
 //#endregion
 export { __esm, __toESM, require_dynamic };

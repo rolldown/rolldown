@@ -10,20 +10,20 @@ import assert from "node:assert";
 
 // HIDDEN [rolldown:runtime]
 //#region node_modules/demo-pkg/node-pkg-browser.js
-var require_node_pkg_browser = /* @__PURE__ */ __commonJS({ "node_modules/demo-pkg/node-pkg-browser.js"(exports, module) {
+var require_node_pkg_browser = /* @__PURE__ */ __commonJS({ "node_modules/demo-pkg/node-pkg-browser.js": ((exports, module) => {
 	module.exports = function() {
 		return 123;
 	};
-} });
+}) });
 
 //#endregion
 //#region node_modules/demo-pkg/index.js
-var require_demo_pkg = /* @__PURE__ */ __commonJS({ "node_modules/demo-pkg/index.js"(exports, module) {
+var require_demo_pkg = /* @__PURE__ */ __commonJS({ "node_modules/demo-pkg/index.js": ((exports, module) => {
 	const fn$1 = require_node_pkg_browser();
 	module.exports = function() {
 		return fn$1();
 	};
-} });
+}) });
 
 //#endregion
 //#region src/entry.js

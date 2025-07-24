@@ -19,10 +19,10 @@ export { a };
 ```js
 // HIDDEN [rolldown:runtime]
 //#region c.js
-var require_c = /* @__PURE__ */ __commonJS({ "c.js"(exports) {
+var require_c = /* @__PURE__ */ __commonJS({ "c.js": ((exports) => {
 	const test$1 = 1e3;
 	exports.test = test$1;
-} });
+}) });
 
 //#endregion
 //#region b.js

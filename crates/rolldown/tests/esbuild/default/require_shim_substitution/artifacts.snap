@@ -22,13 +22,13 @@ source: crates/rolldown_testing/src/integration_test.rs
 ```js
 // HIDDEN [rolldown:runtime]
 //#region example.json
-var require_example = /* @__PURE__ */ __commonJS({ "example.json"(exports, module) {
+var require_example = /* @__PURE__ */ __commonJS({ "example.json": ((exports, module) => {
 	module.exports = { "works": true };
-} });
+}) });
 
 //#endregion
 //#region entry.js
-var require_entry = /* @__PURE__ */ __commonJS({ "entry.js"(exports, module) {
+var require_entry = /* @__PURE__ */ __commonJS({ "entry.js": ((exports, module) => {
 	console.log([
 		__require,
 		typeof __require,
@@ -43,7 +43,7 @@ var require_entry = /* @__PURE__ */ __commonJS({ "entry.js"(exports, module) {
 		import("some-path"),
 		import(window.SOME_PATH)
 	]);
-} });
+}) });
 
 //#endregion
 export default require_entry();

@@ -8,9 +8,9 @@ source: crates/rolldown_testing/src/integration_test.rs
 ```js
 // HIDDEN [rolldown:runtime]
 //#region required.cjs
-var require_required = /* @__PURE__ */ __commonJS({ "required.cjs"() {
+var require_required = /* @__PURE__ */ __commonJS({ "required.cjs": (() => {
 	console.log("works");
-} });
+}) });
 
 //#endregion
 //#region entry.ts

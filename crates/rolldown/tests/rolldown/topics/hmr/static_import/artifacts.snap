@@ -9,11 +9,11 @@ source: crates/rolldown_testing/src/integration_test.rs
 // HIDDEN [rolldown:runtime]
 // HIDDEN [rolldown:hmr]
 //#region exist-dep-cjs.js
-var require_exist_dep_cjs = /* @__PURE__ */ __commonJS({ "exist-dep-cjs.js"(exports, module) {
+var require_exist_dep_cjs = /* @__PURE__ */ __commonJS({ "exist-dep-cjs.js": ((exports, module) => {
 	const exist_dep_cjs_hot = __rolldown_runtime__.createModuleHotContext("exist-dep-cjs.js");
 	__rolldown_runtime__.registerModule("exist-dep-cjs.js", module);
 	exports.value = "exist-cjs";
-} });
+}) });
 
 //#endregion
 //#region exist-dep-esm.js

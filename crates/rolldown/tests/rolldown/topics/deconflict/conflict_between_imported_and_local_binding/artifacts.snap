@@ -10,11 +10,11 @@ import assert from "node:assert";
 
 // HIDDEN [rolldown:runtime]
 //#region main.js
-var require_main = /* @__PURE__ */ __commonJS$1({ "main.js"(exports, module) {
+var require_main = /* @__PURE__ */ __commonJS$1({ "main.js": ((exports, module) => {
 	module.exports = "main";
 	const __commonJS = 1;
 	assert.equal(__commonJS, 1);
-} });
+}) });
 
 //#endregion
 export default require_main();

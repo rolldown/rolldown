@@ -14,9 +14,9 @@ var y_default = "y";
 
 //#endregion
 //#region x.txt
-var require_x = /* @__PURE__ */ __commonJS({ "x.txt"(exports, module) {
+var require_x = /* @__PURE__ */ __commonJS({ "x.txt": ((exports, module) => {
 	module.exports = "x";
-} });
+}) });
 
 //#endregion
 //#region entry.js

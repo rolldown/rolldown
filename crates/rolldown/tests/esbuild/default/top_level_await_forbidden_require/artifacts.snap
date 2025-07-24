@@ -8,9 +8,9 @@ source: crates/rolldown_testing/src/integration_test.rs
 ```js
 // HIDDEN [rolldown:runtime]
 //#region c.js
-var require_c = /* @__PURE__ */ __commonJS({ "c.js"() {
+var require_c = /* @__PURE__ */ __commonJS({ "c.js": (() => {
 	await 0;
-} });
+}) });
 
 //#endregion
 //#region b.js
@@ -29,13 +29,13 @@ var init_a = __esm({ "a.js": (async () => {
 
 //#endregion
 //#region entry.js
-var require_entry = /* @__PURE__ */ __commonJS({ "entry.js"() {
+var require_entry = /* @__PURE__ */ __commonJS({ "entry.js": (() => {
 	init_a();
 	init_b();
 	require_c();
 	require_entry();
 	await 0;
-} });
+}) });
 
 //#endregion
 export default require_entry();

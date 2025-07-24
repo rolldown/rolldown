@@ -30,9 +30,9 @@ console.log(foo);
 ```js
 // HIDDEN [rolldown:runtime]
 //#region shared.js
-var require_shared = /* @__PURE__ */ __commonJS({ "shared.js"(exports) {
+var require_shared = /* @__PURE__ */ __commonJS({ "shared.js": ((exports) => {
 	exports.foo = 123;
-} });
+}) });
 
 //#endregion
 export { require_shared };

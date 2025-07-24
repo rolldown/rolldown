@@ -10,15 +10,15 @@ import assert from "node:assert";
 
 // HIDDEN [rolldown:runtime]
 //#region commonjs.js
-var require_commonjs = /* @__PURE__ */ __commonJS({ "commonjs.js"(exports) {
+var require_commonjs = /* @__PURE__ */ __commonJS({ "commonjs.js": ((exports) => {
 	exports.a = 1;
-} });
+}) });
 
 //#endregion
 //#region commonjs2.js
-var require_commonjs2 = /* @__PURE__ */ __commonJS({ "commonjs2.js"(exports) {
+var require_commonjs2 = /* @__PURE__ */ __commonJS({ "commonjs2.js": ((exports) => {
 	exports.a = 2;
-} });
+}) });
 
 //#endregion
 //#region proxy.js

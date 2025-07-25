@@ -71,7 +71,7 @@ __rolldown_runtime__.registerModule("main.js", { exports: main_exports });
 
 ```js
 //#region hmr.js
-var init_hmr_0 = __rolldown_runtime__.createEsmInitializer(function() {
+var init_hmr_0 = __rolldown_runtime__.createEsmInitializer((function() {
 	try {
 		var ns_hmr = {};
 		__rolldown_runtime__.__export(ns_hmr, { foo: () => foo });
@@ -88,7 +88,7 @@ var init_hmr_0 = __rolldown_runtime__.createEsmInitializer(function() {
 			}
 		});
 	} finally {}
-});
+}));
 
 //#endregion
 init_hmr_0()

@@ -39,7 +39,7 @@ main_hot.accept(() => {});
 
 ```js
 //#region foo.mjs
-var init_foo_0 = __rolldown_runtime__.createEsmInitializer(function() {
+var init_foo_0 = __rolldown_runtime__.createEsmInitializer((function() {
 	try {
 		var ns_foo = {};
 		__rolldown_runtime__.__export(ns_foo, { foo: () => foo });
@@ -47,11 +47,11 @@ var init_foo_0 = __rolldown_runtime__.createEsmInitializer(function() {
 		const hot_foo = __rolldown_runtime__.createModuleHotContext("foo.mjs");
 		const foo = "foo";
 	} finally {}
-});
+}));
 
 //#endregion
 //#region foo/index.mjs
-var init_foo_1 = __rolldown_runtime__.createEsmInitializer(function() {
+var init_foo_1 = __rolldown_runtime__.createEsmInitializer((function() {
 	try {
 		var ns_foo = {};
 		__rolldown_runtime__.__export(ns_foo, { foo: () => foo });
@@ -59,11 +59,11 @@ var init_foo_1 = __rolldown_runtime__.createEsmInitializer(function() {
 		const hot_foo = __rolldown_runtime__.createModuleHotContext("foo/index.mjs");
 		const foo = "foo";
 	} finally {}
-});
+}));
 
 //#endregion
 //#region main.js
-var init_main_2 = __rolldown_runtime__.createEsmInitializer(function() {
+var init_main_2 = __rolldown_runtime__.createEsmInitializer((function() {
 	try {
 		var ns_main = {};
 		__rolldown_runtime__.__export(ns_main, {});
@@ -76,11 +76,11 @@ var init_main_2 = __rolldown_runtime__.createEsmInitializer(function() {
 		console.log(import_foo_0.foo, import_foo_1.foo);
 		hot_main.accept(() => {});
 	} finally {}
-});
+}));
 
 //#endregion
 //#region rolldown:hmr
-var init_rolldown_hmr_3 = __rolldown_runtime__.createEsmInitializer(function() {
+var init_rolldown_hmr_3 = __rolldown_runtime__.createEsmInitializer((function() {
 	try {
 		var ns_rolldown_hmr = {};
 		__rolldown_runtime__.__export(ns_rolldown_hmr, { DevRuntime: () => DevRuntime });
@@ -190,11 +190,11 @@ var init_rolldown_hmr_3 = __rolldown_runtime__.createEsmInitializer(function() {
 			}, 0);
 		}
 	} finally {}
-});
+}));
 
 //#endregion
 //#region rolldown:runtime
-var init_rolldown_runtime_4 = __rolldown_runtime__.createEsmInitializer(function() {
+var init_rolldown_runtime_4 = __rolldown_runtime__.createEsmInitializer((function() {
 	try {
 		var ns_rolldown_runtime = {};
 		__rolldown_runtime__.__export(ns_rolldown_runtime, {});
@@ -229,7 +229,7 @@ var init_rolldown_runtime_4 = __rolldown_runtime__.createEsmInitializer(function
 		var __toCommonJS = (mod) => __copyProps(__defProp({}, "__esModule", { value: true }), mod);
 		var __toDynamicImportESM = (isNodeMode) => (mod) => __toESM(mod.default, isNodeMode);
 	} finally {}
-});
+}));
 
 //#endregion
 init_main_2()

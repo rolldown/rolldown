@@ -10,9 +10,9 @@ source: crates/rolldown_testing/src/integration_test.rs
 //#region foo.js
 var foo_exports = {};
 var missing;
-var init_foo = __esm({ "foo.js"() {
+var init_foo = __esm({ "foo.js": (() => {
 	missing = void 0;
-} });
+}) });
 
 //#endregion
 //#region main.js

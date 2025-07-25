@@ -58,12 +58,12 @@ init_foo();
 //#region foo.js
 var foo_exports = {};
 var default$1, x, y;
-var init_foo = __esm({ "foo.js"() {
+var init_foo = __esm({ "foo.js": (() => {
 	console.log("no exports here");
 	default$1 = void 0;
 	x = void 0;
 	y = void 0;
-} });
+}) });
 
 //#endregion
 export { __toCommonJS, default$1 as default, foo_exports, init_foo, x, y };

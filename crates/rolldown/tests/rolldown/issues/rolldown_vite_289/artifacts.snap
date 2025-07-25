@@ -16,9 +16,9 @@ function foo() {
 	return fn();
 }
 var fn;
-var init_lib_impl = __esm({ "lib-impl.js"() {
+var init_lib_impl = __esm({ "lib-impl.js": (() => {
 	fn = () => 1;
-} });
+}) });
 
 //#endregion
 //#region lib-index.js

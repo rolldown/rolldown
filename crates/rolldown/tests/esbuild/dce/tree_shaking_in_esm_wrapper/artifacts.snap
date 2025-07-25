@@ -11,20 +11,20 @@ import assert from "node:assert";
 // HIDDEN [rolldown:runtime]
 //#region lib.js
 var keep1, keep2;
-var init_lib = __esm({ "lib.js"() {
+var init_lib = __esm({ "lib.js": (() => {
 	keep1 = () => "keep1";
 	keep2 = () => "keep2";
-} });
+}) });
 
 //#endregion
 //#region cjs.js
 var cjs_exports = {};
 __export(cjs_exports, { default: () => cjs_default });
 var cjs_default;
-var init_cjs = __esm({ "cjs.js"() {
+var init_cjs = __esm({ "cjs.js": (() => {
 	init_lib();
 	cjs_default = keep2();
-} });
+}) });
 
 //#endregion
 //#region entry.js

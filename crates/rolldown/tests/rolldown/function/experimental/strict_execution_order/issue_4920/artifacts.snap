@@ -14,16 +14,16 @@ function foo() {
 	globalThis.value = 1;
 }
 var dep_default;
-var init_dep = __esm({ "dep.js"() {
+var init_dep = __esm({ "dep.js": (() => {
 	dep_default = /* @__PURE__ */ foo();
-} });
+}) });
 
 //#endregion
 //#region main.js
-var init_main = __esm({ "main.js"() {
+var init_main = __esm({ "main.js": (() => {
 	init_dep();
 	nodeAssert.strictEqual(globalThis.value, 1);
-} });
+}) });
 
 //#endregion
 init_main();

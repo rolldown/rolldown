@@ -22,9 +22,9 @@ source: crates/rolldown_testing/src/integration_test.rs
 var lib_exports = {};
 __export(lib_exports, { default: () => lib_default });
 var lib_default;
-var init_lib = __esm({ "lib.js"() {
+var init_lib = __esm({ "lib.js": (() => {
 	lib_default = 2;
-} });
+}) });
 
 //#endregion
 //#region main.js

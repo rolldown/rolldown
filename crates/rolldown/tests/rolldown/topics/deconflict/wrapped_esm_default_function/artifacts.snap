@@ -17,9 +17,9 @@ function foo$1(a$1$1) {
 	assert.equal(a$1, 1);
 }
 var a$1;
-var init_foo = __esm({ "foo.js"() {
+var init_foo = __esm({ "foo.js": (() => {
 	a$1 = 1;
-} });
+}) });
 
 //#endregion
 //#region bar.js

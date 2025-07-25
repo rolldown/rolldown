@@ -13,9 +13,9 @@ import assert from "node:assert";
 var module_browser_exports = {};
 __export(module_browser_exports, { default: () => module_browser_default });
 var module_browser_default;
-var init_module_browser = __esm({ "node_modules/demo-pkg/module.browser.js"() {
+var init_module_browser = __esm({ "node_modules/demo-pkg/module.browser.js": (() => {
 	module_browser_default = "browser module";
-} });
+}) });
 
 //#endregion
 //#region src/test-main.js

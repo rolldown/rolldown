@@ -9,16 +9,16 @@ source: crates/rolldown_testing/src/integration_test.rs
 import { __esm, init_run_dep } from "./run-dep.js";
 
 //#region init-dep-1.js
-var init_init_dep_1 = __esm({ "init-dep-1.js"() {
+var init_init_dep_1 = __esm({ "init-dep-1.js": (() => {
 	global.foo = { log: () => console.log("foo.log() (from entry 1) called") };
-} });
+}) });
 
 //#endregion
 //#region entry1.js
-var init_entry1 = __esm({ "entry1.js"() {
+var init_entry1 = __esm({ "entry1.js": (() => {
 	init_init_dep_1();
 	init_run_dep();
-} });
+}) });
 
 //#endregion
 init_entry1();
@@ -29,16 +29,16 @@ init_entry1();
 import { __esm, init_run_dep } from "./run-dep.js";
 
 //#region init-dep-2.js
-var init_init_dep_2 = __esm({ "init-dep-2.js"() {
+var init_init_dep_2 = __esm({ "init-dep-2.js": (() => {
 	global.foo = { log: () => console.log("foo.log() (from entry 2) called") };
-} });
+}) });
 
 //#endregion
 //#region entry2.js
-var init_entry2 = __esm({ "entry2.js"() {
+var init_entry2 = __esm({ "entry2.js": (() => {
 	init_init_dep_2();
 	init_run_dep();
-} });
+}) });
 
 //#endregion
 init_entry2();
@@ -48,9 +48,9 @@ init_entry2();
 ```js
 // HIDDEN [rolldown:runtime]
 //#region run-dep.js
-var init_run_dep = __esm({ "run-dep.js"() {
+var init_run_dep = __esm({ "run-dep.js": (() => {
 	global.foo.log();
-} });
+}) });
 
 //#endregion
 export { __esm, init_run_dep };

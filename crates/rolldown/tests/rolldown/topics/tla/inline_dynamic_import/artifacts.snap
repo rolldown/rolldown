@@ -11,14 +11,14 @@ source: crates/rolldown_testing/src/integration_test.rs
 var c_exports = {};
 __export(c_exports, { default: () => c_default });
 var _default, c_default;
-var init_c = __esm({ "c.js"() {
+var init_c = __esm({ "c.js": (() => {
 	_default = { aaa: { bbb: [
 		"/demo/",
 		"b",
 		"c"
 	] } };
 	c_default = _default;
-} });
+}) });
 
 //#endregion
 //#region b.js
@@ -27,22 +27,22 @@ async function getEnv() {
 	return c_default.aaa.bbb[0];
 }
 var ccc;
-var init_b = __esm({ async "b.js"() {
+var init_b = __esm({ "b.js": (async () => {
 	await init_c();
 	ccc = await Promise.resolve().then(() => (init_c(), c_exports));
-} });
+}) });
 
 //#endregion
 //#region a.js
 var a_exports = {};
 __export(a_exports, { buildDevConfig: () => buildDevConfig });
 var buildDevConfig;
-var init_a = __esm({ async "a.js"() {
+var init_a = __esm({ "a.js": (async () => {
 	await init_b();
 	buildDevConfig = async () => {
 		return await getEnv();
 	};
-} });
+}) });
 
 //#endregion
 //#region main.js

@@ -21,13 +21,13 @@ var require_foo = /* @__PURE__ */ __commonJS({ "foo.cjs"(exports, module) {
 //#region main.js
 var main_exports = {};
 var import_foo, main_hot;
-var init_main = __esm({ "main.js"() {
+var init_main = __esm({ "main.js": (() => {
 	init_rolldown_hmr();
 	import_foo = __toESM(require_foo());
 	main_hot = __rolldown_runtime__.createModuleHotContext("main.js");
 	__rolldown_runtime__.registerModule("main.js", { exports: main_exports });
 	nodeAssert.strictEqual(import_foo.value, "foo");
-} });
+}) });
 
 //#endregion
 init_main();

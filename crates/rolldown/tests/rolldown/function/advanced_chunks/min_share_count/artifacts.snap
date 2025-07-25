@@ -10,17 +10,17 @@ import { __esm } from "./rolldown-runtime.js";
 import { init_share_by_2, init_share_by_3 } from "./at_least_share_by_2.js";
 
 //#region share-by-1.js
-var init_share_by_1 = __esm({ "share-by-1.js"() {
+var init_share_by_1 = __esm({ "share-by-1.js": (() => {
 	console.log("share-by-1");
-} });
+}) });
 
 //#endregion
 //#region a.js
-var init_a = __esm({ "a.js"() {
+var init_a = __esm({ "a.js": (() => {
 	init_share_by_1();
 	init_share_by_2();
 	init_share_by_3();
-} });
+}) });
 
 //#endregion
 init_a();
@@ -31,15 +31,15 @@ init_a();
 import { __esm } from "./rolldown-runtime.js";
 
 //#region share-by-2.js
-var init_share_by_2 = __esm({ "share-by-2.js"() {
+var init_share_by_2 = __esm({ "share-by-2.js": (() => {
 	console.log("share-by-2");
-} });
+}) });
 
 //#endregion
 //#region share-by-3.js
-var init_share_by_3 = __esm({ "share-by-3.js"() {
+var init_share_by_3 = __esm({ "share-by-3.js": (() => {
 	console.log("share-by-3");
-} });
+}) });
 
 //#endregion
 export { init_share_by_2, init_share_by_3 };
@@ -51,10 +51,10 @@ import { __esm } from "./rolldown-runtime.js";
 import { init_share_by_2, init_share_by_3 } from "./at_least_share_by_2.js";
 
 //#region b.js
-var init_b = __esm({ "b.js"() {
+var init_b = __esm({ "b.js": (() => {
 	init_share_by_2();
 	init_share_by_3();
-} });
+}) });
 
 //#endregion
 init_b();
@@ -66,9 +66,9 @@ import { __esm } from "./rolldown-runtime.js";
 import { init_share_by_3 } from "./at_least_share_by_2.js";
 
 //#region c.js
-var init_c = __esm({ "c.js"() {
+var init_c = __esm({ "c.js": (() => {
 	init_share_by_3();
-} });
+}) });
 
 //#endregion
 init_c();

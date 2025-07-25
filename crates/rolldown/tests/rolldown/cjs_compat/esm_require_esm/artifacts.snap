@@ -11,9 +11,9 @@ source: crates/rolldown_testing/src/integration_test.rs
 var esm_exports = {};
 __export(esm_exports, { default: () => esm_default });
 var esm_default;
-var init_esm = __esm({ "esm.js"() {
+var init_esm = __esm({ "esm.js": (() => {
 	esm_default = "esm";
-} });
+}) });
 
 //#endregion
 //#region main.js

@@ -21,12 +21,12 @@ function hoisted_fn() {
 	const bar = 1;
 }
 var esm_named_var, esm_named_class, hoisted_var, hoisted_class;
-var init_esm = __esm({ "esm.js"() {
+var init_esm = __esm({ "esm.js": (() => {
 	esm_named_var = 1;
 	esm_named_class = class {};
 	hoisted_var = 1;
 	hoisted_class = class {};
-} });
+}) });
 
 //#endregion
 //#region commonjs.js

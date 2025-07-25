@@ -13,10 +13,10 @@ import { init_second, value } from "./second.js";
 var first_exports = {};
 __export(first_exports, { value: () => value$1 });
 var value$1;
-var init_first = __esm({ "first.js"() {
+var init_first = __esm({ "first.js": (() => {
 	init_second();
 	value$1 = "first" + value;
-} });
+}) });
 
 //#endregion
 export { first_exports, init_first, value$1 as value };
@@ -29,11 +29,11 @@ import { init_second, second_exports } from "./second.js";
 import { first_exports, init_first } from "./first.js";
 
 //#region main.js
-var init_main = __esm({ "main.js"() {
+var init_main = __esm({ "main.js": (() => {
 	init_first();
 	init_second();
 	console.log(first_exports, second_exports);
-} });
+}) });
 
 //#endregion
 init_main();
@@ -54,10 +54,10 @@ import { init_first, value } from "./first.js";
 var second_exports = {};
 __export(second_exports, { value: () => value$1 });
 var value$1;
-var init_second = __esm({ "second.js"() {
+var init_second = __esm({ "second.js": (() => {
 	init_first();
 	value$1 = "second" + value;
-} });
+}) });
 
 //#endregion
 export { init_second, second_exports, value$1 as value };

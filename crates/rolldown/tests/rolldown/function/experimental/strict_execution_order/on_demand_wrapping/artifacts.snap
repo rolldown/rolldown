@@ -31,19 +31,19 @@ import { __esm, __toESM, require_dynamic } from "./dynamic2.js";
 import { strictEqual } from "node:assert";
 
 //#region sideeffects.js
-var init_sideeffects = __esm({ "sideeffects.js"() {
+var init_sideeffects = __esm({ "sideeffects.js": (() => {
 	globalThis.a = 2;
-} });
+}) });
 
 //#endregion
 //#region esm.js
 var import_dynamic, a;
-var init_esm = __esm({ "esm.js"() {
+var init_esm = __esm({ "esm.js": (() => {
 	import_dynamic = __toESM(require_dynamic());
 	init_sideeffects();
 	a = globalThis.a;
 	strictEqual(a, 2);
-} });
+}) });
 
 //#endregion
 //#region cjs.js

@@ -10,10 +10,10 @@ import { __esm } from "./rolldown-runtime.js";
 import { init_lib, lib_default } from "./splited_lib.js";
 
 //#region main.js
-var init_main = __esm({ "main.js"() {
+var init_main = __esm({ "main.js": (() => {
 	init_lib();
 	console.log("lib", lib_default);
-} });
+}) });
 
 //#endregion
 init_main();
@@ -31,9 +31,9 @@ import { __esm } from "./rolldown-runtime.js";
 
 //#region lib.js
 var lib_default;
-var init_lib = __esm({ "lib.js"() {
+var init_lib = __esm({ "lib.js": (() => {
 	lib_default = "hello, world";
-} });
+}) });
 
 //#endregion
 export { init_lib, lib_default };

@@ -12,10 +12,10 @@ source: crates/rolldown_testing/src/integration_test.rs
 var entry_exports = {};
 __export(entry_exports, { foo: () => foo });
 var foo;
-var init_entry = __esm({ "entry.js"() {
+var init_entry = __esm({ "entry.js": (() => {
 	foo = 123;
 	console.log((init_entry(), __toCommonJS(entry_exports)));
-} });
+}) });
 
 //#endregion
 init_entry();

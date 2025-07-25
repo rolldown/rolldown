@@ -33,7 +33,7 @@ __export(foo_exports, {
 });
 function foo$1() {}
 var a, b, c, d, e, g, x, y, z, k, bar, baz, a1, a2, index, a3, destructuring;
-var init_foo = __esm({ "foo.js"() {
+var init_foo = __esm({ "foo.js": (() => {
 	;
 	[b] = [];
 	[c = 1] = [];
@@ -55,7 +55,7 @@ var init_foo = __esm({ "foo.js"() {
 	}
 	for (index = 0; index < 10; index++) a3 = 1e3;
 	({destructuring} = { destructuring: "destructuring" });
-} });
+}) });
 
 //#endregion
 //#region main.js

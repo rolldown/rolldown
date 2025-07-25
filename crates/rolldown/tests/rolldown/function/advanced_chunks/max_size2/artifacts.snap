@@ -9,9 +9,9 @@ source: crates/rolldown_testing/src/integration_test.rs
 import { __esm } from "./rolldown-runtime.js";
 
 //#region size-15.js
-var init_size_15 = __esm({ "size-15.js"() {
+var init_size_15 = __esm({ "size-15.js": (() => {
 	console.log(10);
-} });
+}) });
 
 //#endregion
 export { init_size_15 };
@@ -22,9 +22,9 @@ export { init_size_15 };
 import { __esm } from "./rolldown-runtime.js";
 
 //#region size-20.js
-var init_size_20 = __esm({ "size-20.js"() {
+var init_size_20 = __esm({ "size-20.js": (() => {
 	console.log(1e6);
-} });
+}) });
 
 //#endregion
 export { init_size_20 };
@@ -35,10 +35,10 @@ export { init_size_20 };
 import { __esm } from "./rolldown-runtime.js";
 
 //#region size-41.js
-var init_size_41 = __esm({ "size-41.js"() {
+var init_size_41 = __esm({ "size-41.js": (() => {
 	console.log(1e6);
 	console.log(1e6);
-} });
+}) });
 
 //#endregion
 export { init_size_41 };
@@ -52,11 +52,11 @@ import { init_size_20 } from "./14max-size2.js";
 import { init_size_41 } from "./14max-size3.js";
 
 //#region main.js
-var init_main = __esm({ "main.js"() {
+var init_main = __esm({ "main.js": (() => {
 	init_size_15();
 	init_size_20();
 	init_size_41();
-} });
+}) });
 
 //#endregion
 init_main();

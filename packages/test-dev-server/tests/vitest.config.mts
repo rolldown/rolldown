@@ -3,7 +3,7 @@ import { defineConfig } from 'vitest/config';
 
 export default defineConfig({
   test: {
-    testTimeout: 40000,
+    testTimeout: 90000, // Increased from 40000 to 90000 for Windows compatibility
     // Disabled, Because the error printed by rust cannot be seen
     disableConsoleIntercept: true,
     // https://vitest.dev/api/mock.html#mockreset, since we run each test twice, so we need to reset the mockReset for each run

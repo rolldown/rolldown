@@ -16,7 +16,8 @@
   },
   "scripts": {
     "build": "tsc -b",
-    "dev": "tsc -b --watch"
+    "dev": "tsc -b --watch",
+    "test": "pnpm run --filter @rolldown/test-dev-server-tests test"
   },
   "dependencies": {
     "@types/ws": "^8.18.0",

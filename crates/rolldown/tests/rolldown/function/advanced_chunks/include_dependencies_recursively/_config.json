@@ -1,5 +1,8 @@
 {
   "config": {
+    "experimental": {
+      "strictExecutionOrder": true
+    },
     "advancedChunks": {
       "groups": [
         {

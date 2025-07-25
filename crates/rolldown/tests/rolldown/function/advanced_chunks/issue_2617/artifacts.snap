@@ -6,35 +6,19 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## main.js
 
 ```js
-import { __esm } from "./rolldown-runtime.js";
-import { init_lib, lib_default } from "./splited_lib.js";
+import { lib_default } from "./splited_lib.js";
 
 //#region main.js
-var init_main = __esm({ "main.js": (() => {
-	init_lib();
-	console.log("lib", lib_default);
-}) });
+console.log("lib", lib_default);
 
 //#endregion
-init_main();
-```
-## rolldown-runtime.js
-
-```js
-// HIDDEN [rolldown:runtime]
-export { __esm };
 ```
 ## splited_lib.js
 
 ```js
-import { __esm } from "./rolldown-runtime.js";
-
 //#region lib.js
-var lib_default;
-var init_lib = __esm({ "lib.js": (() => {
-	lib_default = "hello, world";
-}) });
+var lib_default = "hello, world";
 
 //#endregion
-export { init_lib, lib_default };
+export { lib_default };
 ```

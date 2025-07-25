@@ -7,86 +7,53 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```js
 //! User-defined Entry: [Entry-Module-Id: entry-a.js] [Name: Some("A")]
-import { __esm } from "./rolldown-runtime.js";
-import { init_shared } from "./shared.js";
-import { init_share_splitted } from "./Splitted.js";
+import "./shared.js";
+import "./Splitted.js";
 
 //#region entry-a.js
-var init_entry_a = __esm({ "entry-a.js": (() => {
-	init_shared();
-	init_share_splitted();
-	console.log("entry-a");
-	import("./dyn-entry.js").then(console.log);
-}) });
+console.log("entry-a");
+import("./dyn-entry.js").then(console.log);
 
 //#endregion
-init_entry_a();
 ```
 ## B.js
 
 ```js
 //! User-defined Entry: [Entry-Module-Id: entry-b.js] [Name: Some("B")]
-import { __esm } from "./rolldown-runtime.js";
-import { init_shared } from "./shared.js";
-import { init_share_splitted } from "./Splitted.js";
+import "./shared.js";
+import "./Splitted.js";
 
 //#region entry-b.js
-var init_entry_b = __esm({ "entry-b.js": (() => {
-	init_shared();
-	init_share_splitted();
-	console.log("entry-b");
-}) });
+console.log("entry-b");
 
 //#endregion
-init_entry_b();
 ```
 ## Splitted.js
 
 ```js
 //! AdvancedChunks: [Group-Name: Splitted]
-import { __esm } from "./rolldown-runtime.js";
-
 //#region share-splitted.js
-var init_share_splitted = __esm({ "share-splitted.js": (() => {
-	console.log("share-splitted");
-}) });
+console.log("share-splitted");
 
 //#endregion
-export { init_share_splitted };
 ```
 ## dyn-entry.js
 
 ```js
 //! Dynamic Entry: [Entry-Module-Id: dyn-entry.js] [Name: None]
-import { __esm } from "./rolldown-runtime.js";
-import { init_shared } from "./shared.js";
+import "./shared.js";
 
 //#region dyn-entry.js
-var init_dyn_entry = __esm({ "dyn-entry.js": (() => {
-	init_shared();
-	console.log("dyn-entry");
-}) });
+console.log("dyn-entry");
 
 //#endregion
-init_dyn_entry();
-```
-## rolldown-runtime.js
-
-```js
-// HIDDEN [rolldown:runtime]
-export { __esm };
 ```
 ## shared.js
 
 ```js
 //! Common Chunk: [Shared-By: entry-a.js, entry-b.js, dyn-entry.js]
-import { __esm } from "./rolldown-runtime.js";
-
 //#region shared.js
-var init_shared = __esm({ "shared.js": (() => {
-	console.log("shared");
-}) });
+console.log("shared");
 
 //#endregion
-export { init_shared };
 ```

@@ -170,6 +170,14 @@ impl<'me, 'ast: 'me> Visit<'ast> for AstScanner<'me, 'ast> {
     walk::walk_statement(self, stmt);
   }
 
+  fn visit_return_statement(&mut self, stmt: &ast::ReturnStatement<'ast>) {
+    // Top-level return statements are only valid in CommonJS modules
+    if self.is_valid_tla_scope() {
+      self.result.ast_usage.insert(EcmaModuleAstUsage::TopLevelReturn);
+    }
+    walk::walk_return_statement(self, stmt);
+  }
+
   fn visit_import_expression(&mut self, expr: &ast::ImportExpression<'ast>) {
     if let Some(request) = expr.source.as_static_module_request() {
       let import_rec_idx =

@@ -105,7 +105,7 @@ pub struct EcmaView {
 
 bitflags! {
     #[derive(Debug, Clone, Copy)]
-    pub struct EcmaModuleAstUsage: u8 {
+    pub struct EcmaModuleAstUsage: u16 {
         const ModuleRef = 1;
         const ExportsRef = 1 << 1;
         /// If the module has `Object.defineProperty(module.exports, "__esModule", { value: true })` or it's variant
@@ -116,6 +116,8 @@ bitflags! {
         const TopLevelAwait = 1 << 5;
         const HmrSelfAccept = 1 << 6;
         const UnknownExportsRead = 1 << 7;
+        /// Top-level return statement (only valid in CommonJS)
+        const TopLevelReturn = 1 << 8;
         const ModuleOrExports = Self::ModuleRef.bits() | Self::ExportsRef.bits();
     }
 }

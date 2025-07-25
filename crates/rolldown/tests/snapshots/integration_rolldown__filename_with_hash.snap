@@ -1742,11 +1742,11 @@ expression: output
 
 # tests/esbuild/default/top_level_return_forbidden_import
 
-- entry-!~{000}~.js => entry-BD1soJCO.js
+- entry-!~{000}~.js => entry-C5-vCVdv.js
 
 # tests/esbuild/default/top_level_return_forbidden_tla
 
-- entry-!~{000}~.js => entry-5T_NRs54.js
+- entry-!~{000}~.js => entry-2jIdra4l.js
 
 # tests/esbuild/default/use_strict_directive_bundle_cjs_issue2264
 

@@ -10,18 +10,18 @@ import assert from "node:assert";
 
 // HIDDEN [rolldown:runtime]
 //#region node_modules/util-browser/index.js
-var require_util_browser = /* @__PURE__ */ __commonJS({ "node_modules/util-browser/index.js"(exports, module) {
+var require_util_browser = /* @__PURE__ */ __commonJS({ "node_modules/util-browser/index.js": ((exports, module) => {
 	module.exports = "util-browser";
-} });
+}) });
 
 //#endregion
 //#region node_modules/demo-pkg/main.js
-var require_main = /* @__PURE__ */ __commonJS({ "node_modules/demo-pkg/main.js"(exports, module) {
+var require_main = /* @__PURE__ */ __commonJS({ "node_modules/demo-pkg/main.js": ((exports, module) => {
 	const util = require_util_browser();
 	module.exports = function() {
 		return ["main", util];
 	};
-} });
+}) });
 
 //#endregion
 //#region src/entry.js

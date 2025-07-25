@@ -11,11 +11,11 @@ import assert from "node:assert";
 // HIDDEN [rolldown:runtime]
 // HIDDEN [rolldown:hmr]
 //#region lib.js
-var require_lib = /* @__PURE__ */ __commonJS({ "lib.js"(exports, module) {
+var require_lib = /* @__PURE__ */ __commonJS({ "lib.js": ((exports, module) => {
 	const lib_hot = __rolldown_runtime__.createModuleHotContext("lib.js");
 	__rolldown_runtime__.registerModule("lib.js", module);
 	exports.a = 1;
-} });
+}) });
 
 //#endregion
 //#region main.js

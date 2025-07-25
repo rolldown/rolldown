@@ -1,0 +1,28 @@
+{
+  "config": {
+    "input": [
+      {
+        "name": "a",
+        "import": "./a.cjs"
+      },
+      {
+        "name": "b",
+        "import": "./b.cjs"
+      }
+    ],
+    "advancedChunks": {
+      "groups": [
+        {
+          "test": "[ab]\\.cjs",
+          "name": "common"
+        }
+      ]
+    }
+  },
+  "configVariants": [
+    {
+      "configName": "no-profiler-names",
+      "profilerNames": false
+    }
+  ]
+}

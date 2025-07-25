@@ -10,13 +10,13 @@ import assert from "node:assert";
 
 // HIDDEN [rolldown:runtime]
 //#region node_modules/demo-lib/index.js
-var require_demo_lib = /* @__PURE__ */ __commonJS({ "node_modules/demo-lib/index.js"(exports, module) {
+var require_demo_lib = /* @__PURE__ */ __commonJS({ "node_modules/demo-lib/index.js": ((exports, module) => {
 	module.exports = { value: "yes" };
 	Object.defineProperty(module.exports, "__esModule", {
 		value: true,
 		enumerable: false
 	});
-} });
+}) });
 
 //#endregion
 //#region node_modules/demo-lib/nested-lib/index.js

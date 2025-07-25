@@ -85,6 +85,8 @@
   diff
 ## [ts_export_missing_es6](../../../crates/rolldown/tests/esbuild/ts/ts_export_missing_es6/diff.md)
   diff
+## [ts_import_cts](../../../crates/rolldown/tests/esbuild/ts/ts_import_cts/diff.md)
+  diff
 ## [ts_import_in_node_modules_name_collision_with_css](../../../crates/rolldown/tests/esbuild/ts/ts_import_in_node_modules_name_collision_with_css/diff.md)
   diff
 ## [ts_import_type_only_file](../../../crates/rolldown/tests/esbuild/ts/ts_import_type_only_file/diff.md)
@@ -107,7 +109,6 @@
   diff
 # Passed Cases
 ## [ts_implicit_extensions](../../../crates/rolldown/tests/esbuild/ts/ts_implicit_extensions)
-## [ts_import_cts](../../../crates/rolldown/tests/esbuild/ts/ts_import_cts)
 ## [ts_import_empty_namespace](../../../crates/rolldown/tests/esbuild/ts/ts_import_empty_namespace)
 ## [ts_import_equals_bundle](../../../crates/rolldown/tests/esbuild/ts/ts_import_equals_bundle)
 ## [ts_import_missing_unused_es6](../../../crates/rolldown/tests/esbuild/ts/ts_import_missing_unused_es6)

@@ -8,15 +8,15 @@ source: crates/rolldown_testing/src/integration_test.rs
 ```js
 // HIDDEN [rolldown:runtime]
 //#region test.txt
-var require_test = /* @__PURE__ */ __commonJS({ "test.txt"(exports, module) {
+var require_test = /* @__PURE__ */ __commonJS({ "test.txt": ((exports, module) => {
 	module.exports = "test.txt";
-} });
+}) });
 
 //#endregion
 //#region test.base64.txt
-var require_test_base64 = /* @__PURE__ */ __commonJS({ "test.base64.txt"(exports, module) {
+var require_test_base64 = /* @__PURE__ */ __commonJS({ "test.base64.txt": ((exports, module) => {
 	module.exports = "dGVzdC5iYXNlNjQudHh0";
-} });
+}) });
 
 //#endregion
 //#region entry.js

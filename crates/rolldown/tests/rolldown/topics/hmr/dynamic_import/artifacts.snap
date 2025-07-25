@@ -15,11 +15,11 @@ export { __commonJS, __export, __toCommonJS, __toDynamicImportESM, __toESM };
 import { __commonJS } from "./chunk.js";
 
 //#region exist-dep-cjs.js
-var require_exist_dep_cjs = /* @__PURE__ */ __commonJS({ "exist-dep-cjs.js"(exports, module) {
+var require_exist_dep_cjs = /* @__PURE__ */ __commonJS({ "exist-dep-cjs.js": ((exports, module) => {
 	const exist_dep_cjs_hot = __rolldown_runtime__.createModuleHotContext("exist-dep-cjs.js");
 	__rolldown_runtime__.registerModule("exist-dep-cjs.js", module);
 	exports.value = "exist-cjs";
-} });
+}) });
 
 //#endregion
 export default require_exist_dep_cjs();

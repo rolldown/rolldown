@@ -35,9 +35,9 @@ export { __commonJS, __toDynamicImportESM };
 import { __commonJS } from "./chunk.js";
 
 //#region import.js
-var require_import = /* @__PURE__ */ __commonJS({ "import.js"(exports) {
+var require_import = /* @__PURE__ */ __commonJS({ "import.js": ((exports) => {
 	exports.foo = 213;
-} });
+}) });
 
 //#endregion
 export default require_import();

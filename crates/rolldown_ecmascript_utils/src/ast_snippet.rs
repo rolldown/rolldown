@@ -3,8 +3,8 @@ use oxc::{
   ast::{
     AstBuilder, NONE,
     ast::{
-      self, Argument, ClassElement, Declaration, Expression, FunctionType, ImportOrExportKind,
-      NumberBase, ObjectPropertyKind, PropertyKind, Statement, VariableDeclarationKind,
+      self, Argument, ClassElement, Declaration, Expression, ImportOrExportKind, NumberBase,
+      ObjectPropertyKind, PropertyKind, Statement, VariableDeclarationKind,
     },
   },
   span::{Atom, CompactStr, SPAN, Span},
@@ -251,9 +251,9 @@ impl<'ast> AstSnippet<'ast> {
   }
 
   /// ```js
-  ///  var require_foo = __commonJS((exports, module) => {
+  ///  var require_foo = __commonJS(((exports, module) => {
   ///    ...
-  ///  });
+  ///  }));
   ///  or
   ///  __commonJSMin when `options.profiler_names` is false
   /// ```
@@ -314,6 +314,12 @@ impl<'ast> AstSnippet<'ast> {
       false,
       true,
     );
+
+    // the callback is marked as PIFE because most require calls are evaluated in the initial load
+    let mut arrow_expr =
+      self.builder.alloc_arrow_function_expression(SPAN, false, false, NONE, params, NONE, body);
+    arrow_expr.pife = true;
+
     if profiler_names {
       let obj_expr = self.builder.alloc_object_expression(
         SPAN,
@@ -325,19 +331,7 @@ impl<'ast> AstSnippet<'ast> {
             self.builder.atom(stable_id),
             None,
           )),
-          self.builder.expression_function(
-            SPAN,
-            FunctionType::FunctionExpression,
-            None,
-            false,
-            false,
-            false,
-            NONE,
-            NONE,
-            params,
-            NONE,
-            Some(body),
-          ),
+          Expression::ArrowFunctionExpression(arrow_expr),
           true,
           false,
           false,
@@ -345,8 +339,6 @@ impl<'ast> AstSnippet<'ast> {
       );
       commonjs_call_expr.arguments.push(ast::Argument::ObjectExpression(obj_expr));
     } else {
-      let arrow_expr =
-        self.builder.alloc_arrow_function_expression(SPAN, false, false, NONE, params, NONE, body);
       commonjs_call_expr.arguments.push(ast::Argument::ArrowFunctionExpression(arrow_expr));
     }
 

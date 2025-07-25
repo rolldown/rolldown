@@ -10,19 +10,19 @@ import assert from "node:assert";
 
 // HIDDEN [rolldown:runtime]
 //#region foo.js
-var require_foo = /* @__PURE__ */ __commonJS({ "foo.js"(exports) {
+var require_foo = /* @__PURE__ */ __commonJS({ "foo.js": ((exports) => {
 	exports.foo = function() {
 		return "foo";
 	};
-} });
+}) });
 
 //#endregion
 //#region bar.js
-var require_bar = /* @__PURE__ */ __commonJS({ "bar.js"(exports) {
+var require_bar = /* @__PURE__ */ __commonJS({ "bar.js": ((exports) => {
 	exports.bar = function() {
 		return "bar";
 	};
-} });
+}) });
 
 //#endregion
 //#region entry.js

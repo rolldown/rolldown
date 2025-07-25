@@ -17,9 +17,9 @@ var init_esm = __esm({ "esm.js": (() => {
 
 //#endregion
 //#region cjs.js
-var require_cjs = /* @__PURE__ */ __commonJS({ "cjs.js"(exports) {
+var require_cjs = /* @__PURE__ */ __commonJS({ "cjs.js": ((exports) => {
 	exports.cjs_foo_ = "foo";
-} });
+}) });
 
 //#endregion
 export { __commonJS, __toCommonJS, __toESM, esm_exports, esm_foo_, init_esm, require_cjs };
@@ -30,11 +30,11 @@ export { __commonJS, __toCommonJS, __toESM, esm_exports, esm_foo_, init_esm, req
 import { __commonJS, __toCommonJS, esm_exports, init_esm, require_cjs } from "./cjs.js";
 
 //#region entry-cjs.js
-var require_entry_cjs = /* @__PURE__ */ __commonJS({ "entry-cjs.js"(exports) {
+var require_entry_cjs = /* @__PURE__ */ __commonJS({ "entry-cjs.js": ((exports) => {
 	let { esm_foo_ } = (init_esm(), __toCommonJS(esm_exports));
 	let { cjs_foo_ } = require_cjs();
 	exports.bar_ = [esm_foo_, cjs_foo_];
-} });
+}) });
 
 //#endregion
 export default require_entry_cjs();

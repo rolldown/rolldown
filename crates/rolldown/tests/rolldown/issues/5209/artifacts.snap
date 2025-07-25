@@ -10,12 +10,12 @@ import assert from "node:assert";
 
 // HIDDEN [rolldown:runtime]
 //#region cjs.js
-var require_cjs = /* @__PURE__ */ __commonJS({ "cjs.js"(exports) {
+var require_cjs = /* @__PURE__ */ __commonJS({ "cjs.js": ((exports) => {
 	exports.default = function() {
 		return 123;
 	};
 	exports.__esModule = true;
-} });
+}) });
 
 //#endregion
 //#region main.js

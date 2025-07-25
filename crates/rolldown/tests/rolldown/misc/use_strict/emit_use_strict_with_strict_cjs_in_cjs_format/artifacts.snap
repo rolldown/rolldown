@@ -9,10 +9,10 @@ source: crates/rolldown_testing/src/integration_test.rs
 // HIDDEN [rolldown:runtime]
 
 //#region cjs.js
-var require_cjs = /* @__PURE__ */ __commonJS({ "cjs.js"(exports, module) {
+var require_cjs = /* @__PURE__ */ __commonJS({ "cjs.js": ((exports, module) => {
 	console.log("This chunk should have \"use strict\" at the top.");
 	module.exports = {};
-} });
+}) });
 
 //#endregion
 //#region main.js

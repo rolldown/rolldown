@@ -10,9 +10,9 @@ import assert from "node:assert";
 
 // HIDDEN [rolldown:runtime]
 //#region index.js
-var require_require_parent_dir_common_js = /* @__PURE__ */ __commonJS({ "index.js"(exports, module) {
+var require_require_parent_dir_common_js = /* @__PURE__ */ __commonJS({ "index.js": ((exports, module) => {
 	module.exports = 123;
-} });
+}) });
 
 //#endregion
 //#region dir/entry.js

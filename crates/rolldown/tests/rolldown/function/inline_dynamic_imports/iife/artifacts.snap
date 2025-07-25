@@ -11,13 +11,13 @@ source: crates/rolldown_testing/src/integration_test.rs
 // HIDDEN [rolldown:runtime]
 
 //#region foo.js
-var require_foo = /* @__PURE__ */ __commonJS({ "foo.js"() {} });
+var require_foo = /* @__PURE__ */ __commonJS({ "foo.js": (() => {}) });
 
 //#endregion
 //#region cjs.js
-var require_cjs = /* @__PURE__ */ __commonJS({ "cjs.js"(exports, module) {
+var require_cjs = /* @__PURE__ */ __commonJS({ "cjs.js": ((exports, module) => {
 	module.exports = 1;
-} });
+}) });
 
 //#endregion
 //#region esm.js

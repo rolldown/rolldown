@@ -10,9 +10,9 @@ import assert from "node:assert";
 
 // HIDDEN [rolldown:runtime]
 //#region node_modules/pkg/foo.js
-var require_foo = /* @__PURE__ */ __commonJS({ "node_modules/pkg/foo.js"(exports, module) {
+var require_foo = /* @__PURE__ */ __commonJS({ "node_modules/pkg/foo.js": ((exports, module) => {
 	module.exports = 123;
-} });
+}) });
 
 //#endregion
 //#region node_modules/pkg/index.js

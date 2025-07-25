@@ -8,38 +8,38 @@ source: crates/rolldown_testing/src/integration_test.rs
 ```js
 // HIDDEN [rolldown:runtime]
 //#region cjs_esmodule_flag1.js
-var require_cjs_esmodule_flag1 = /* @__PURE__ */ __commonJS({ "cjs_esmodule_flag1.js"(exports) {
+var require_cjs_esmodule_flag1 = /* @__PURE__ */ __commonJS({ "cjs_esmodule_flag1.js": ((exports) => {
 	exports.foo = 1e3;
 	exports.__esModule = true;
-} });
+}) });
 
 //#endregion
 //#region cjs_esmodule_flag2.js
-var require_cjs_esmodule_flag2 = /* @__PURE__ */ __commonJS({ "cjs_esmodule_flag2.js"(exports) {
+var require_cjs_esmodule_flag2 = /* @__PURE__ */ __commonJS({ "cjs_esmodule_flag2.js": ((exports) => {
 	exports.foo = 1e3;
 	Object.defineProperty(exports, "__esModule", { value: true });
-} });
+}) });
 
 //#endregion
 //#region cjs_esmodule_flag3.js
-var require_cjs_esmodule_flag3 = /* @__PURE__ */ __commonJS({ "cjs_esmodule_flag3.js"(exports, module) {
+var require_cjs_esmodule_flag3 = /* @__PURE__ */ __commonJS({ "cjs_esmodule_flag3.js": ((exports, module) => {
 	exports.foo = 1e3;
 	Object.defineProperty(module.exports, "__esModule", { value: true });
-} });
+}) });
 
 //#endregion
 //#region cjs_esmodule_flag4.js
-var require_cjs_esmodule_flag4 = /* @__PURE__ */ __commonJS({ "cjs_esmodule_flag4.js"(exports, module) {
+var require_cjs_esmodule_flag4 = /* @__PURE__ */ __commonJS({ "cjs_esmodule_flag4.js": ((exports, module) => {
 	exports.foo = 1e3;
 	module.exports.__esModule = true;
-} });
+}) });
 
 //#endregion
 //#region commonjs_without_module_exports.js
-var require_commonjs_without_module_exports = /* @__PURE__ */ __commonJS({ "commonjs_without_module_exports.js"(exports) {
+var require_commonjs_without_module_exports = /* @__PURE__ */ __commonJS({ "commonjs_without_module_exports.js": ((exports) => {
 	exports.default = 1e3;
 	exports.foo = 1e3;
-} });
+}) });
 
 //#endregion
 //#region main.js

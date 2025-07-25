@@ -1,0 +1,25 @@
+{
+  "config": {
+    "input": [
+      {
+        "name": "a",
+        "import": "./a.js"
+      },
+      {
+        "name": "b",
+        "import": "./b.js"
+      }
+    ],
+    "advancedChunks": {
+      "groups": [
+        {
+          "test": "[ab]\\.js",
+          "name": "common"
+        }
+      ]
+    },
+    "optimization": {
+      "pifeForModuleWrappers": true
+    }
+  }
+}

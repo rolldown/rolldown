@@ -5054,6 +5054,18 @@ expression: output
 
 - main-!~{000}~.js => main-Brb9u1JP.js
 
+# tests/rolldown/optimization/pife_for_module_wrappers/basic
+
+- a-!~{000}~.js => a-CcaBLJp5.js
+- b-!~{001}~.js => b-aQ857t6g.js
+- common-!~{002}~.js => common-DfGFFFKe.js
+
+# tests/rolldown/optimization/pife_for_module_wrappers/disabled
+
+- a-!~{000}~.js => a-CcaBLJp5.js
+- b-!~{001}~.js => b-aQ857t6g.js
+- common-!~{002}~.js => common-DfGFFFKe.js
+
 # tests/rolldown/resolve/add_module_condition_by_default
 
 - main-!~{000}~.js => main-PHNGJQWh.js

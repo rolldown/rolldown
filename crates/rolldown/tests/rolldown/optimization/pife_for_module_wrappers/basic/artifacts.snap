@@ -1,0 +1,32 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## a.js
+
+```js
+import { a } from "./common.js";
+
+export { a };
+```
+## b.js
+
+```js
+import { b } from "./common.js";
+
+export { b };
+```
+## common.js
+
+```js
+//#region a.js
+const a = "a";
+
+//#endregion
+//#region b.js
+const b = "a";
+
+//#endregion
+export { a, b };
+```

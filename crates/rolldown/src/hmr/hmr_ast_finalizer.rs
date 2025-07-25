@@ -30,6 +30,7 @@ pub struct HmrAstFinalizer<'me, 'ast> {
   pub modules: &'me IndexModules,
   pub module: &'me NormalModule,
   pub affected_module_idx_to_init_fn_name: &'me FxHashMap<ModuleIdx, String>,
+  pub use_pife_for_module_wrappers: bool,
   //Internal state
   pub import_binding: FxHashMap<SymbolId, String>,
   pub exports: oxc::allocator::Vec<'ast, ObjectPropertyKind<'ast>>,
@@ -408,7 +409,7 @@ impl<'ast> VisitMut<'ast> for HmrAstFinalizer<'_, 'ast> {
       )),
     );
     // mark the callback as PIFE because the callback is executed when this chunk is loaded
-    user_code_wrapper.pife = true;
+    user_code_wrapper.pife = self.use_pife_for_module_wrappers;
 
     let initializer_call = if self.module.exports_kind.is_commonjs() {
       // __rolldown__runtime.createCjsInitializer((function (module, exports) { [user code] }))

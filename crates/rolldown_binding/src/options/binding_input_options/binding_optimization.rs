@@ -6,6 +6,6 @@ pub struct BindingOptimization {
 
 impl From<BindingOptimization> for rolldown_common::OptimizationOption {
   fn from(value: BindingOptimization) -> Self {
-    Self { inline_const: value.inline_const }
+    Self { inline_const: value.inline_const, pife_for_module_wrappers: None /* TODO */ }
   }
 }

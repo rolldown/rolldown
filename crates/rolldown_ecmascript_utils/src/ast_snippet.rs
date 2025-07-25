@@ -352,12 +352,14 @@ impl<'ast> AstSnippet<'ast> {
   /// ```js
   /// var init_foo = __esm((() => { ... }));
   /// ```
+  #[expect(clippy::too_many_arguments)]
   pub fn esm_wrapper_stmt(
     &self,
     binding_name: PassedStr,
     esm_fn_expr: ast::Expression<'ast>,
     statements: allocator::Vec<'ast, Statement<'ast>>,
     profiler_names: bool,
+    use_pife: bool,
     stable_id: &str,
     is_async: bool,
   ) -> ast::Statement<'ast> {
@@ -378,7 +380,7 @@ impl<'ast> AstSnippet<'ast> {
     // and the statically imported modules are evaluated in the initial load
     let mut arrow_expr =
       self.builder.alloc_arrow_function_expression(SPAN, false, is_async, NONE, params, NONE, body);
-    arrow_expr.pife = true;
+    arrow_expr.pife = use_pife;
 
     if profiler_names {
       let obj_expr = self.builder.alloc_object_expression(

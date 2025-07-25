@@ -310,6 +310,8 @@ impl HmrManager {
       };
 
       let enable_sourcemap = self.options.sourcemap.is_some() && !affected_module.is_virtual();
+      let use_pife_for_module_wrappers =
+        self.options.optimization.is_pife_for_module_wrappers_enabled();
       let modules = &self.input.module_db.modules;
       let ast = self.input.index_ecma_ast[affected_module_idx]
         .as_mut()
@@ -327,6 +329,7 @@ impl HmrManager {
           module: affected_module,
           exports: oxc::allocator::Vec::new_in(fields.allocator),
           affected_module_idx_to_init_fn_name: &module_idx_to_init_fn_name,
+          use_pife_for_module_wrappers,
           dependencies: FxIndexSet::default(),
           imports: FxHashSet::default(),
         };

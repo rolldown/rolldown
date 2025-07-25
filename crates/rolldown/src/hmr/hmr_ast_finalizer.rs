@@ -407,9 +407,11 @@ impl<'ast> VisitMut<'ast> for HmrAstFinalizer<'_, 'ast> {
         self.snippet.builder.vec1(ast::Statement::TryStatement(try_stmt)),
       )),
     );
+    // mark the callback as PIFE because the callback is executed when this chunk is loaded
+    user_code_wrapper.pife = true;
 
     let initializer_call = if self.module.exports_kind.is_commonjs() {
-      // __rolldown__runtime.createCjsInitializer(function (module, exports) { [user code] })
+      // __rolldown__runtime.createCjsInitializer((function (module, exports) { [user code] }))
       self.snippet.builder.alloc_call_expression(
         SPAN,
         self.snippet.id_ref_expr("__rolldown_runtime__.createCjsInitializer", SPAN),
@@ -421,8 +423,6 @@ impl<'ast> VisitMut<'ast> for HmrAstFinalizer<'_, 'ast> {
         false,
       )
     } else {
-      // mark the callback as PIFE because the callback is executed when this chunk is loaded
-      user_code_wrapper.pife = true;
       // __rolldown__runtime.createEsmInitializer((function () { [user code] }))
       self.snippet.builder.alloc_call_expression(
         SPAN,

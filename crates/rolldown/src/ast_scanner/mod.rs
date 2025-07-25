@@ -261,8 +261,9 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
           .with_severity_warning(),
         );
       }
-    } else if self.result.ast_usage.intersects(EcmaModuleAstUsage::ModuleOrExports) 
-      || self.result.ast_usage.contains(EcmaModuleAstUsage::TopLevelReturn) {
+    } else if self.result.ast_usage.intersects(EcmaModuleAstUsage::ModuleOrExports)
+      || self.result.ast_usage.contains(EcmaModuleAstUsage::TopLevelReturn)
+    {
       exports_kind = ExportsKind::CommonJs;
     } else {
       // TODO(hyf0): Should add warnings if the module type doesn't satisfy the exports kind.

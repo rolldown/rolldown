@@ -24,13 +24,20 @@ pub fn deconflict_chunk_symbols(
     // deconflict iife introduce symbols by external
     // Also AMD, but we don't support them yet.
     chunk
-      .imports_from_external_modules
+      .direct_imports_from_external_modules
       .iter()
       .filter_map(|(idx, _)| link_output.module_table[*idx].as_external())
       .for_each(|external_module| {
         renamer.add_symbol_in_root_scope(external_module.namespace_ref);
       });
 
+    chunk
+      .import_symbol_from_external_modules
+      .iter()
+      .filter_map(|idx| link_output.module_table[*idx].as_external())
+      .for_each(|external_module| {
+        renamer.add_symbol_in_root_scope(external_module.namespace_ref);
+      });
     match chunk.entry_module_idx() {
       Some(module) => {
         let entry_module =
@@ -106,7 +113,7 @@ pub fn deconflict_chunk_symbols(
     ChunkKind::Common => {}
   }
   if matches!(format, OutputFormat::Esm) {
-    chunk.imports_from_external_modules.iter().for_each(|(module, _)| {
+    chunk.direct_imports_from_external_modules.iter().for_each(|(module, _)| {
       let db = link_output.symbol_db.local_db(*module);
       db.classic_data.iter_enumerated().for_each(|(symbol, _)| {
         let symbol_ref = (*module, symbol).into();

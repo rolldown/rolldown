@@ -166,13 +166,6 @@ pub fn normalize_options(mut raw_options: crate::BundlerOptions) -> NormalizeOpt
   if experimental.hmr.is_some() {
     experimental.incremental_build = Some(true);
   }
-  let is_advanced_chunks_enabled = raw_options
-    .advanced_chunks
-    .as_ref()
-    .is_some_and(|inner| inner.groups.as_ref().is_some_and(|inner| !inner.is_empty()));
-  if experimental.strict_execution_order.is_none() && is_advanced_chunks_enabled {
-    experimental.strict_execution_order = Some(true);
-  }
 
   if experimental.attach_debug_info.is_none() {
     experimental.attach_debug_info = Some(AttachDebugInfo::Simple);

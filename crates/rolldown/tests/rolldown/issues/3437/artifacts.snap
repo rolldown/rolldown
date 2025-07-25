@@ -6,27 +6,14 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## main.js
 
 ```js
-import { __esm } from "./rolldown-runtime.js";
-
 //#region main.js
-var init_main = __esm({ "main.js": (() => {
-	import("./square.js").then(console.log);
-}) });
+import("./square.js").then(console.log);
 
 //#endregion
-init_main();
-```
-## rolldown-runtime.js
-
-```js
-// HIDDEN [rolldown:runtime]
-export { __esm };
 ```
 ## square.js
 
 ```js
-import { __esm } from "./rolldown-runtime.js";
-
 //#region square.json
 var hello = "world";
 var square_default = { hello };

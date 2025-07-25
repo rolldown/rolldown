@@ -3858,10 +3858,9 @@ expression: output
 
 # tests/rolldown/function/advanced_chunks/basic
 
-- a-!~{000}~.js => a-DNITETpd.js
-- b-!~{001}~.js => b-DZnKGVL3.js
-- common-!~{004}~.js => common-Bm8DNlf5.js
-- rolldown-runtime-!~{002}~.js => rolldown-runtime-F0QY5PnL.js
+- a-!~{000}~.js => a-CcaBLJp5.js
+- b-!~{001}~.js => b-aQ857t6g.js
+- common-!~{002}~.js => common-DfGFFFKe.js
 
 # tests/rolldown/function/advanced_chunks/include_dependencies_recursively
 
@@ -3871,88 +3870,76 @@ expression: output
 
 # tests/rolldown/function/advanced_chunks/issue_2617
 
-- main-!~{000}~.js => main-yhKF5rf6.js
-- rolldown-runtime-!~{001}~.js => rolldown-runtime-BjtMze0h.js
-- splited_lib-!~{003}~.js => splited_lib-CTPBN4vr.js
+- main-!~{000}~.js => main-Y4jDuhbs.js
+- splited_lib-!~{001}~.js => splited_lib-D9Ok3EWH.js
 
 # tests/rolldown/function/advanced_chunks/max_module_size
 
-- main-!~{000}~.js => main-Cn5FH8GY.js
-- rolldown-runtime-!~{001}~.js => rolldown-runtime-BjtMze0h.js
-- smaller-than-20-!~{003}~.js => smaller-than-20-B6x42K26.js
+- main-!~{000}~.js => main-sj8FI5cd.js
+- smaller-than-20-!~{001}~.js => smaller-than-20-CLTqii4X.js
 
 # tests/rolldown/function/advanced_chunks/max_module_size_fallback
 
-- main-!~{000}~.js => main-Cn5FH8GY.js
-- rolldown-runtime-!~{001}~.js => rolldown-runtime-BjtMze0h.js
-- smaller-than-20-!~{003}~.js => smaller-than-20-B6x42K26.js
+- main-!~{000}~.js => main-sj8FI5cd.js
+- smaller-than-20-!~{001}~.js => smaller-than-20-CLTqii4X.js
 
 # tests/rolldown/function/advanced_chunks/max_size
 
-- main-!~{000}~.js => main-gXhGicGc.js
-- 40max-size-!~{003}~.js => 40max-size-CoMcVqSZ.js
-- rolldown-runtime-!~{001}~.js => rolldown-runtime-BjtMze0h.js
+- main-!~{000}~.js => main-CtCvKpFG.js
+- 40max-size-!~{001}~.js => 40max-size-DW0VEBit.js
 
 # tests/rolldown/function/advanced_chunks/max_size2
 
-- main-!~{000}~.js => main-Cc1Gmf1M.js
-- 14max-size-!~{007}~.js => 14max-size-B2HuKsaK.js
-- 14max-size-!~{003}~.js => 14max-size-HNZ6d6Kc.js
-- 14max-size-!~{005}~.js => 14max-size-LepFf43R.js
-- rolldown-runtime-!~{001}~.js => rolldown-runtime-BjtMze0h.js
+- main-!~{000}~.js => main-B_35uKNH.js
+- 14max-size-!~{003}~.js => 14max-size-8-E80nVA.js
+- 14max-size-!~{005}~.js => 14max-size-BGm-JqJO.js
+- 14max-size-!~{001}~.js => 14max-size-ajeqPEkY.js
 
 # tests/rolldown/function/advanced_chunks/max_size3
 
-- main-!~{000}~.js => main-CDjFWAOF.js
-- 42max-size-!~{003}~.js => 42max-size-D_vSUOEP.js
-- rolldown-runtime-!~{001}~.js => rolldown-runtime-BjtMze0h.js
+- main-!~{000}~.js => main-Bl-mjDB_.js
+- 42max-size-!~{001}~.js => 42max-size-CyNLMSnx.js
 
 # tests/rolldown/function/advanced_chunks/min_module_size
 
-- main-!~{000}~.js => main-4Jt5EwtK.js
-- bigger-than-20-!~{003}~.js => bigger-than-20-Cfa1NFzY.js
-- rolldown-runtime-!~{001}~.js => rolldown-runtime-BjtMze0h.js
+- main-!~{000}~.js => main-BcaT5Pf5.js
+- bigger-than-20-!~{001}~.js => bigger-than-20-CicLSCT8.js
 
 # tests/rolldown/function/advanced_chunks/min_module_size_fallback
 
-- main-!~{000}~.js => main-4Jt5EwtK.js
-- bigger-than-20-!~{003}~.js => bigger-than-20-Cfa1NFzY.js
-- rolldown-runtime-!~{001}~.js => rolldown-runtime-BjtMze0h.js
+- main-!~{000}~.js => main-BcaT5Pf5.js
+- bigger-than-20-!~{001}~.js => bigger-than-20-CicLSCT8.js
 
 # tests/rolldown/function/advanced_chunks/min_share_count
 
-- a-!~{000}~.js => a-DzaESFxC.js
-- b-!~{001}~.js => b-Da9iadjA.js
-- c-!~{002}~.js => c-qEkKipp5.js
-- at_least_share_by_2-!~{005}~.js => at_least_share_by_2-C6OWhsUQ.js
-- rolldown-runtime-!~{003}~.js => rolldown-runtime-CEM9C-6R.js
+- a-!~{000}~.js => a-B9rTPcpe.js
+- b-!~{001}~.js => b-CgYq6QIH.js
+- c-!~{002}~.js => c-B4Uq3VDU.js
+- at_least_share_by_2-!~{003}~.js => at_least_share_by_2-C7eeWwQE.js
 
 # tests/rolldown/function/advanced_chunks/min_share_count_fallback
 
-- a-!~{000}~.js => a-DzaESFxC.js
-- b-!~{001}~.js => b-Da9iadjA.js
-- c-!~{002}~.js => c-qEkKipp5.js
-- at_least_share_by_2-!~{005}~.js => at_least_share_by_2-C6OWhsUQ.js
-- rolldown-runtime-!~{003}~.js => rolldown-runtime-CEM9C-6R.js
+- a-!~{000}~.js => a-B9rTPcpe.js
+- b-!~{001}~.js => b-CgYq6QIH.js
+- c-!~{002}~.js => c-B4Uq3VDU.js
+- at_least_share_by_2-!~{003}~.js => at_least_share_by_2-C7eeWwQE.js
 
 # tests/rolldown/function/advanced_chunks/min_size
 
-- main-!~{000}~.js => main-1Uilt4IQ.js
-- common_b-!~{003}~.js => common_b-Dwg4tyfR.js
-- rolldown-runtime-!~{001}~.js => rolldown-runtime-BjtMze0h.js
+- main-!~{000}~.js => main-D94g3AZq.js
+- common_b-!~{001}~.js => common_b-C19ByyLz.js
 
 # tests/rolldown/function/advanced_chunks/min_size_fallback
 
-- main-!~{000}~.js => main-1Uilt4IQ.js
-- common_b-!~{003}~.js => common_b-Dwg4tyfR.js
-- rolldown-runtime-!~{001}~.js => rolldown-runtime-BjtMze0h.js
+- main-!~{000}~.js => main-D94g3AZq.js
+- common_b-!~{001}~.js => common_b-C19ByyLz.js
 
 # tests/rolldown/function/advanced_chunks/split_node_modules
 
-- main-!~{000}~.js => main-DKTcob0k.js
-- other-libs-!~{005}~.js => other-libs-s3RVy6RC.js
-- rolldown-runtime-!~{001}~.js => rolldown-runtime-BvgZlyOU.js
-- ui-!~{003}~.js => ui-BNVDfnGg.js
+- main-!~{000}~.js => main-CKBEWSQT.js
+- other-libs-!~{005}~.js => other-libs-aMYKRBbT.js
+- rolldown-runtime-!~{001}~.js => rolldown-runtime-BFxWfBIB.js
+- ui-!~{003}~.js => ui-BOaO4aOi.js
 
 # tests/rolldown/function/define/node_env
 
@@ -4010,12 +3997,11 @@ expression: output
 
 # tests/rolldown/function/experimental/attach_debug_info/full
 
-- A-!~{000}~.js => A-DohRvmYL.js
-- B-!~{001}~.js => B-DxLS9bcw.js
-- Splitted-!~{006}~.js => Splitted-Dmq5PlQT.js
-- dyn-entry-!~{008}~.js => dyn-entry-tuBIzlFp.js
-- rolldown-runtime-!~{002}~.js => rolldown-runtime-F0QY5PnL.js
-- shared-!~{004}~.js => shared-Bl1mxOH6.js
+- A-!~{000}~.js => A-BgXOerCN.js
+- B-!~{001}~.js => B-Dn8nRiS7.js
+- Splitted-!~{004}~.js => Splitted-CYdnxWY9.js
+- dyn-entry-!~{006}~.js => dyn-entry-DRif6-yu.js
+- shared-!~{002}~.js => shared-DDQk-Tql.js
 
 # tests/rolldown/function/experimental/attach_debug_info/none
 
@@ -4680,9 +4666,8 @@ expression: output
 
 # tests/rolldown/issues/3437
 
-- main-!~{000}~.js => main-CE49iTAo.js
-- rolldown-runtime-!~{001}~.js => rolldown-runtime-BjtMze0h.js
-- square-!~{003}~.js => square-yFcIWcT3.js
+- main-!~{000}~.js => main-8AkgXppA.js
+- square-!~{001}~.js => square-njfS-kTw.js
 
 # tests/rolldown/issues/3438
 

@@ -11,7 +11,7 @@ var a = foo.a;
 var b = a.b;
 var c = b.c;
 var x = foo.x;
-x.y;
+var y = x.y;
 let bar = c;
 
 //#endregion

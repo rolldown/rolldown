@@ -38,7 +38,7 @@ use(isNotPure);
 (() => {})(keepThisButRemoveTheIIFE);
 var someVar;
 ((x) => {})(someVar);
-(() => 123)();
+var removeThis2 = (() => 123)();
 
 //#endregion
 ```

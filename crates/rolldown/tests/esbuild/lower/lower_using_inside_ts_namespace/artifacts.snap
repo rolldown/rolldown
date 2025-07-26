@@ -68,9 +68,9 @@ let ns;
 (function(_ns) {
 	try {
 		var _usingCtx$1 = _usingCtx();
-		_ns.a = b;
-		_usingCtx$1.u(d);
-		_ns.e = f;
+		let a = _ns.a = b;
+		const c = _usingCtx$1.u(d);
+		let e = _ns.e = f;
 	} catch (_) {
 		_usingCtx$1.e = _;
 	} finally {

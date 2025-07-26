@@ -17,11 +17,11 @@ let replace2 = { test() {} };
 //#endregion
 //#region inject.js
 let obj = {};
-let sideEffects = console.log("side effects");
+let sideEffects$1 = console.log("side effects");
 
 //#endregion
 //#region entry.js
-console.log("this should be renamed");
+let sideEffects = console.log("this should be renamed");
 let collide = 123;
 console.log(obj.prop);
 console.log("defined");

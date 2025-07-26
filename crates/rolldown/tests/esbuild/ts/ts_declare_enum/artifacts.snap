@@ -24,7 +24,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```js
 //#region entry.ts
-bar();
+let foo = bar();
 
 //#endregion
 ```

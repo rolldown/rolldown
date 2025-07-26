@@ -9,12 +9,12 @@ source: crates/rolldown_testing/src/integration_test.rs
 import assert from "assert";
 
 //#region main.js
-var x = "value";
+var e = "failed1", x = "value";
 (function() {
-	try {} catch (e) {
-		var e;
+	try {} catch (e$1) {
+		var e$1;
 	}
-	assert.strictEqual(e, void 0);
+	assert.strictEqual(e$1, void 0);
 	assert.strictEqual(x$1, void 0);
 	x$1 = "failed3";
 	return;

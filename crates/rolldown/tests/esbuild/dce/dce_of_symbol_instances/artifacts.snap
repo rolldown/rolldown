@@ -25,15 +25,15 @@ var Keep3 = class {
 
 ```js
 //#region object.js
-({
+let keep1 = {
 	*[Symbol.iterator]() {},
 	[keep]: null
-});
-({
+};
+let keep2 = {
 	[keep]: null,
 	*[Symbol.iterator]() {}
-});
-({ *[Symbol.wtf]() {} });
+};
+let keep3 = { *[Symbol.wtf]() {} };
 
 //#endregion
 ```

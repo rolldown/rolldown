@@ -14,7 +14,7 @@ var init_esm = __esm({ "esm.js": (() => {}) });
 //#endregion
 //#region main.js
 init_esm();
-init_esm();
+var esm = (init_esm(), __toCommonJS(esm_exports));
 
 //#endregion
 //# sourceMappingURL=main.js.map
@@ -23,4 +23,7 @@ init_esm();
 # Sourcemap Visualizer
 
 ```
+- ../main.js
+(1:0) "var " --> (28:0) "var "
+(1:4) "esm = require('./esm.js');\n" --> (28:4) "esm = (init_esm(), __toCommonJS(esm_exports));\n"
 ```

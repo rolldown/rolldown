@@ -18,6 +18,7 @@ let def = "PASS2";
 try {
 	throw ["FAIL2", "PASS1"];
 } catch ({ [a]: b, 3: d = def }) {
+	let a$1 = 0, def$1 = "FAIL3";
 	assert.strictEqual(b, "PASS1");
 	assert.strictEqual(d, "PASS2");
 }

@@ -120,7 +120,9 @@ impl PreProcessEcmaAst {
         // NOTE: `CompressOptions::dead_code_elimination` will remove `ParenthesizedExpression`s from the AST.
         let options = CompressOptions {
           treeshake: TreeShakeOptions::from(&bundle_options.treeshake),
-          ..CompressOptions::dce()
+          join_vars: false,
+          sequences: false,
+          ..CompressOptions::safest()
         };
         let compressor = Compressor::new(allocator);
         if self.ast_changed {

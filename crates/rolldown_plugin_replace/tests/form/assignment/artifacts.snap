@@ -9,7 +9,10 @@ source: crates/rolldown_testing/src/integration_test.rs
 //#region input.js
 process.env.DEBUG = "test";
 if (replaced === "production") console.log("");
-if (world == "world") console.log(world);
+if (world == "world") {
+	let hello = "world";
+	console.log(world);
+}
 
 //#endregion
 //# sourceMappingURL=input.js.map
@@ -32,9 +35,14 @@ if (world == "world") console.log(world);
 (3:17) ";\n" --> (2:46) ";\n"
 (6:0) "if (" --> (3:0) "if ("
 (6:4) "hello == " --> (3:4) "world == "
-(6:13) "'world') {\n" --> (3:13) "\"world\") "
-(8:2) "console." --> (3:22) "console."
-(8:10) "log(" --> (3:30) "log("
-(8:14) "hello)" --> (3:34) "world)"
-(8:20) ";\n" --> (3:40) ";\n"
+(6:13) "'world') " --> (3:13) "\"world\") "
+(6:22) "{\n" --> (3:22) "{\n"
+(7:2) "let " --> (4:1) "let "
+(7:6) "hello = " --> (4:5) "hello = "
+(7:14) "'world';\n" --> (4:13) "\"world\";\n"
+(8:2) "console." --> (5:1) "console."
+(8:10) "log(" --> (5:9) "log("
+(8:14) "hello)" --> (5:13) "world)"
+(8:20) ";\n" --> (5:19) ";\n"
+(9:0) "}\n" --> (6:0) "}\n"
 ```

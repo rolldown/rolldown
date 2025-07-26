@@ -9,7 +9,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 //#region entry.ts
 let ns;
 (function(_ns) {
-	_ns.foo = () => {};
+	let foo = _ns.foo = () => {};
 	function bar() {}
 	_ns.bar = bar;
 	class Baz {}

@@ -36,7 +36,7 @@ __decorate([
 	__decorateMetadata("design:paramtypes", [Number]),
 	__decorateMetadata("design:returntype", void 0)
 ], Demo.prototype, "foo", null);
-new Demo();
+const demo = new Demo();
 
 //#endregion
 ```

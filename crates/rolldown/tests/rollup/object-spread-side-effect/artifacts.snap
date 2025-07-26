@@ -10,9 +10,9 @@ import assert from "assert";
 
 //#region main.js
 let result = "FAIL";
-({ ...{ get prop() {
+const unused = { ...{ get prop() {
 	result = "PASS";
-} } });
+} } };
 assert.strictEqual(result, "PASS");
 
 //#endregion

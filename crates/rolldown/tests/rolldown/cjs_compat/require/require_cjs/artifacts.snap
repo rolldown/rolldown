@@ -15,7 +15,7 @@ var require_cjs = /* @__PURE__ */ __commonJS({ "cjs.js": ((exports, module) => {
 //#endregion
 //#region main.js
 require_cjs();
-require_cjs();
+var cjs = require_cjs();
 
 //#endregion
 //# sourceMappingURL=main.js.map
@@ -29,4 +29,7 @@ require_cjs();
 (0:7) "exports = " --> (9:8) "exports = "
 (0:17) "{}" --> (9:18) "{"
 (0:19) "\n" --> (9:19) "};\n"
+- ../main.js
+(1:0) "var " --> (15:0) "var "
+(1:4) "cjs = require('./cjs.js');\n" --> (15:4) "cjs = require_cjs();\n"
 ```

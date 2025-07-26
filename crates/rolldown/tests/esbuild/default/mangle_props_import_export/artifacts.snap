@@ -36,7 +36,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 //#region cjs.js
 var require_cjs = /* @__PURE__ */ __commonJS({ "cjs.js": ((exports) => {
 	exports.foo_ = 123;
-	__require("xyz").bar_;
+	let bar_ = __require("xyz").bar_;
 }) });
 
 //#endregion

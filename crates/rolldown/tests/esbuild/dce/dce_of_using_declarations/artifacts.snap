@@ -8,13 +8,16 @@ source: crates/rolldown_testing/src/integration_test.rs
 ```js
 //#region entry.js
 using null_keep = null;
-({ [Symbol.dispose]() {
+await using await_null_keep = null;
+using throw_keep = {};
+using dispose_keep = { [Symbol.dispose]() {
 	console.log("side effect");
-} });
-({ [Symbol.asyncDispose]() {
+} };
+await using await_asyncDispose_keep = { [Symbol.asyncDispose]() {
 	console.log("side effect");
-} });
+} };
 using undef_keep = void 0;
+await using await_undef_keep = void 0;
 console.log(null_keep, undef_keep);
 
 //#endregion

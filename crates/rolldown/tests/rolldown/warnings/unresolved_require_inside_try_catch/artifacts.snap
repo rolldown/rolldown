@@ -18,6 +18,18 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## UNRESOLVED_IMPORT
 
 ```text
+[UNRESOLVED_IMPORT] Error: Could not resolve './unresolved2' in main.js
+   ╭─[ main.js:8:13 ]
+   │
+ 8 │     require('./unresolved2')
+   │             ───────┬───────  
+   │                    ╰───────── Module not found.
+───╯
+
+```
+## UNRESOLVED_IMPORT
+
+```text
 [UNRESOLVED_IMPORT] Error: Could not resolve './unresolved3' in main.js
     ╭─[ main.js:12:15 ]
     │

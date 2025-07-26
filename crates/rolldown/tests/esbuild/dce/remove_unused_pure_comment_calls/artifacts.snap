@@ -8,37 +8,37 @@ source: crates/rolldown_testing/src/integration_test.rs
 ```js
 //#region entry.js
 function bar() {}
-foo(bar);
-/* @__PURE__ */ foo(bar());
-/* @__PURE__ */ new foo(bar());
-/* @__PURE__ */ foo(bar());
-/* @__PURE__ */ new foo(bar());
-/* @__PURE__ */ foo(bar());
-/* @__PURE__ */ new foo(bar());
-/* @__PURE__ */ foo(bar());
-/* @__PURE__ */ new foo(bar());
-/* @__PURE__ */ foo(sideEffect()).dot(bar());
-/* @__PURE__ */ new foo(sideEffect()).dot(bar());
-[
+let bare = foo(bar);
+let at_no = /* @__PURE__ */ foo(bar());
+let new_at_no = /* @__PURE__ */ new foo(bar());
+let nospace_at_no = /* @__PURE__ */ foo(bar());
+let nospace_new_at_no = /* @__PURE__ */ new foo(bar());
+let num_no = /* @__PURE__ */ foo(bar());
+let new_num_no = /* @__PURE__ */ new foo(bar());
+let nospace_num_no = /* @__PURE__ */ foo(bar());
+let nospace_new_num_no = /* @__PURE__ */ new foo(bar());
+let dot_no = /* @__PURE__ */ foo(sideEffect()).dot(bar());
+let new_dot_no = /* @__PURE__ */ new foo(sideEffect()).dot(bar());
+let nested_no = [
 	1,
 	/* @__PURE__ */ foo(bar()),
 	2
 ];
-[
+let new_nested_no = [
 	1,
 	/* @__PURE__ */ new foo(bar()),
 	2
 ];
-/* @__PURE__ */ foo(bar());
-/* @__PURE__ */ new foo(bar());
-/* @__PURE__ */ foo(bar());
-/* @__PURE__ */ new foo(bar());
-foo(bar);
-new foo(bar);
-foo(bar);
-new foo(bar);
-/* @__PURE__ */ foo() ** foo();
-/* @__PURE__ */ new foo() ** foo();
+let single_at_no = /* @__PURE__ */ foo(bar());
+let new_single_at_no = /* @__PURE__ */ new foo(bar());
+let single_num_no = /* @__PURE__ */ foo(bar());
+let new_single_num_no = /* @__PURE__ */ new foo(bar());
+let bad_no = foo(bar);
+let new_bad_no = new foo(bar);
+let parens_no = foo(bar);
+let new_parens_no = new foo(bar);
+let exp_no = /* @__PURE__ */ foo() ** foo();
+let new_exp_no = /* @__PURE__ */ new foo() ** foo();
 
 //#endregion
 ```

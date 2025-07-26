@@ -44,7 +44,7 @@ pub mod bundler_options {
       module_type::ModuleType,
       normalized_bundler_options::{NormalizedBundlerOptions, SharedNormalizedBundlerOptions},
       on_log::{Log, OnLog},
-      optimization::OptimizationOption,
+      optimization::{OptimizationOption, normalize_optimization_option},
       output_exports::OutputExports,
       output_format::OutputFormat,
       output_option::{

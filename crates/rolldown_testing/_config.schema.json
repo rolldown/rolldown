@@ -1370,6 +1370,13 @@
             "boolean",
             "null"
           ]
+        },
+        "pifeForModuleWrappers": {
+          "description": "Use PIFE patterns for module wrappers so that JS engines can compile the functions eagerly.\nThis improves the initial execution performance.\nSee <https://v8.dev/blog/preparser#pife> for more details about the optimization.",
+          "type": [
+            "boolean",
+            "null"
+          ]
         }
       },
       "additionalProperties": false

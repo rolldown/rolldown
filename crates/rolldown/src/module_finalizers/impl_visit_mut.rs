@@ -193,6 +193,7 @@ impl<'ast> VisitMut<'ast> for ScopeHoistingFinalizer<'_, 'ast> {
           esm_ref_expr,
           stmts_inside_closure,
           self.ctx.options.profiler_names,
+          self.ctx.options.optimization.is_pife_for_module_wrappers_enabled(),
           &self.ctx.module.stable_id,
           self.ctx.linking_info.is_tla_or_contains_tla_dependency,
         ));

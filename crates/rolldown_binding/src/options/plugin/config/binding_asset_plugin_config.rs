@@ -24,7 +24,7 @@ impl From<BindingAssetPluginConfig> for AssetPlugin {
         .assets_include
         .map(bindingify_string_or_regex_array)
         .unwrap_or_default(),
-      asset_inline_limit: config.asset_inline_limit.map(|limit| limit as usize),
+      asset_inline_limit: config.asset_inline_limit.unwrap_or(4096) as usize,
     }
   }
 }

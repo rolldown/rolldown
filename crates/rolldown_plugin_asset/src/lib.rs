@@ -16,7 +16,7 @@ pub struct AssetPlugin {
   pub url_base: String,
   pub public_dir: String,
   pub assets_include: Vec<StringOrRegex>,
-  pub asset_inline_limit: Option<usize>,
+  pub asset_inline_limit: usize,
 }
 
 impl Plugin for AssetPlugin {
@@ -87,7 +87,7 @@ impl Plugin for AssetPlugin {
       is_lib: false,
       url_base: &self.url_base,
       public_dir: &self.public_dir,
-      asset_inline_limit: self.asset_inline_limit.unwrap_or(4096),
+      asset_inline_limit: self.asset_inline_limit,
     };
     let url = env.file_to_url(&id)?;
 

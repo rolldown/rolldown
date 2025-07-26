@@ -11,7 +11,6 @@ use crate::PublicFileToBuiltUrlEnv;
 use super::check_public_file::check_public_file;
 use super::find_special_query::find_special_query;
 
-#[allow(dead_code)]
 #[derive(Default)]
 pub struct AssetCache(pub FxDashMap<String, String>);
 
@@ -28,7 +27,6 @@ impl FileToUrlEnv<'_> {
     self.file_to_built_url(id, false, false)
   }
 
-  #[allow(unused_assignments)]
   fn file_to_built_url(
     &self,
     id: &str,
@@ -66,7 +64,6 @@ impl FileToUrlEnv<'_> {
     Ok(url)
   }
 
-  #[allow(dead_code)]
   #[allow(clippy::case_sensitive_file_extension_comparisons)]
   fn should_inline(
     &self,

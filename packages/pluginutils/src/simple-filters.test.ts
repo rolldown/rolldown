@@ -4,6 +4,7 @@ import {
   exactRegex,
   makeIdFiltersToMatchWithQuery,
   prefixRegex,
+  suffixRegex,
 } from './simple-filters.js';
 
 describe('exactRegex', () => {
@@ -16,6 +17,15 @@ describe('exactRegex', () => {
     expect(regex.test('afoo')).toBe(false);
   });
 
+  test('supports with array input without flag paramenter', () => {
+    const regex = exactRegex(['foo', 'bar']);
+    expect(regex).toStrictEqual(/^(?:foo|bar)$/);
+
+    expect(regex.test('foo')).toBe(true);
+    expect(regex.test('bar')).toBe(true);
+    expect(regex.test('baz')).toBe(false);
+  });
+
   test('supports with flag parameter', () => {
     const regex = exactRegex('foo', 'i');
     expect(regex).toStrictEqual(/^foo$/i);
@@ -26,6 +36,17 @@ describe('exactRegex', () => {
     expect(regex.test('aFoo')).toBe(false);
   });
 
+  test('supports with array input with flag parameter', () => {
+    const regex = exactRegex(['foo', 'bar'], 'i');
+    expect(regex).toStrictEqual(/^(?:foo|bar)$/i);
+
+    expect(regex.test('foo')).toBe(true);
+    expect(regex.test('bar')).toBe(true);
+    expect(regex.test('baz')).toBe(false);
+    expect(regex.test('Foo')).toBe(true);
+    expect(regex.test('Bar')).toBe(true);
+  });
+
   test('escapes special characters for Regex', () => {
     const regex = exactRegex('foo(bar)');
     expect(regex).toStrictEqual(/^foo\(bar\)$/);
@@ -34,6 +55,16 @@ describe('exactRegex', () => {
     expect(regex.test('foo(bar\\)')).toBe(false);
     expect(regex.test('foo(bar)a')).toBe(false);
     expect(regex.test('afoo(bar)')).toBe(false);
+  });
+
+  test('escape special characters for array input', () => {
+    const regex = exactRegex(['foo(bar)', 'baz']);
+    expect(regex).toStrictEqual(/^(?:foo\(bar\)|baz)$/);
+
+    expect(regex.test('foo(bar)')).toBe(true);
+    expect(regex.test('baz')).toBe(true);
+    expect(regex.test('foo(baz)')).toBe(false);
+    expect(regex.test('baz(foo)')).toBe(false);
   });
 });
 
@@ -47,6 +78,15 @@ describe('prefixRegex', () => {
     expect(regex.test('afoo')).toBe(false);
   });
 
+  test('supports with array input without flag parameter', () => {
+    const regex = prefixRegex(['foo', 'bar']);
+    expect(regex).toStrictEqual(/^(?:foo|bar)/);
+
+    expect(regex.test('foo')).toBe(true);
+    expect(regex.test('bar')).toBe(true);
+    expect(regex.test('baz')).toBe(false);
+  });
+
   test('supports with flag parameter', () => {
     const regex = prefixRegex('foo', 'i');
     expect(regex).toStrictEqual(/^foo/i);
@@ -57,6 +97,17 @@ describe('prefixRegex', () => {
     expect(regex.test('aFoo')).toBe(false);
   });
 
+  test('supports with array input with flag parameter', () => {
+    const regex = prefixRegex(['foo', 'bar'], 'i');
+    expect(regex).toStrictEqual(/^(?:foo|bar)/i);
+
+    expect(regex.test('foo')).toBe(true);
+    expect(regex.test('bar')).toBe(true);
+    expect(regex.test('baz')).toBe(false);
+    expect(regex.test('Foo')).toBe(true);
+    expect(regex.test('Bar')).toBe(true);
+  });
+
   test('escapes special characters for Regex', () => {
     const regex = prefixRegex('foo(bar)');
     expect(regex).toStrictEqual(/^foo\(bar\)/);
@@ -65,6 +116,77 @@ describe('prefixRegex', () => {
     expect(regex.test('foo(bar\\)')).toBe(false);
     expect(regex.test('foo(bar)a')).toBe(true);
     expect(regex.test('afoo(bar)')).toBe(false);
+  });
+
+  test('escape special characters for array input', () => {
+    const regex = prefixRegex(['foo(bar)', 'baz']);
+    expect(regex).toStrictEqual(/^(?:foo\(bar\)|baz)/);
+
+    expect(regex.test('foo(bar)')).toBe(true);
+    expect(regex.test('baz')).toBe(true);
+    expect(regex.test('foo(baz)')).toBe(false);
+    expect(regex.test('baz(foo)')).toBe(true);
+  });
+});
+
+describe('suffixRegex', () => {
+  test('supports without flag parameter', () => {
+    const regex = suffixRegex('foo');
+    expect(regex).toStrictEqual(/foo$/);
+
+    expect(regex.test('foo')).toBe(true);
+    expect(regex.test('fooa')).toBe(false);
+    expect(regex.test('afoo')).toBe(true);
+  });
+
+  test('supports with array input without flag parameter', () => {
+    const regex = suffixRegex(['foo', 'bar']);
+    expect(regex).toStrictEqual(/(?:foo|bar)$/);
+
+    expect(regex.test('foo')).toBe(true);
+    expect(regex.test('bar')).toBe(true);
+    expect(regex.test('baz')).toBe(false);
+  });
+
+  test('supports with flag parameter', () => {
+    const regex = suffixRegex('foo', 'i');
+    expect(regex).toStrictEqual(/foo$/i);
+
+    expect(regex.test('foo')).toBe(true);
+    expect(regex.test('Foo')).toBe(true);
+    expect(regex.test('Fooa')).toBe(false);
+    expect(regex.test('aFoo')).toBe(true);
+  });
+
+  test('supports with array input with flag parameter', () => {
+    const regex = suffixRegex(['foo', 'bar'], 'i');
+    expect(regex).toStrictEqual(/(?:foo|bar)$/i);
+
+    expect(regex.test('foo')).toBe(true);
+    expect(regex.test('bar')).toBe(true);
+    expect(regex.test('baz')).toBe(false);
+    expect(regex.test('Foo')).toBe(true);
+    expect(regex.test('Bar')).toBe(true);
+  });
+
+  test('escapes special characters for Regex', () => {
+    const regex = suffixRegex('foo(bar)');
+    expect(regex).toStrictEqual(/foo\(bar\)$/);
+
+    expect(regex.test('foo(bar)')).toBe(true);
+    expect(regex.test('foo(bar\\)')).toBe(false);
+    expect(regex.test('foo(bar)a')).toBe(false);
+    expect(regex.test('afoo(bar)')).toBe(true);
+  });
+
+  test('escape special characters for array input', () => {
+    const regex = suffixRegex(['foo(bar)', 'baz']);
+    expect(regex).toStrictEqual(/(?:foo\(bar\)|baz)$/);
+
+    expect(regex.test('foo(bar)')).toBe(true);
+    expect(regex.test('baz')).toBe(true);
+    expect(regex.test('foo(baz)')).toBe(false);
+    expect(regex.test('baz(foo)')).toBe(false);
   });
 });
 

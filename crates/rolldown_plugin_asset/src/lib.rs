@@ -4,7 +4,9 @@ use std::{borrow::Cow, sync::Arc};
 
 use rolldown_common::ModuleType;
 use rolldown_plugin::{HookUsage, Plugin};
-use rolldown_plugin_utils::{FileToUrlEnv, check_public_file, file_to_url, find_special_query};
+use rolldown_plugin_utils::{
+  FileToUrlEnv, PublicAssetUrlCache, check_public_file, find_special_query,
+};
 use rolldown_utils::{dashmap::FxDashMap, pattern_filter::StringOrRegex, url::clean_url};
 use serde_json::Value;
 
@@ -35,6 +37,7 @@ impl Plugin for AssetPlugin {
     _args: &rolldown_plugin::HookBuildStartArgs<'_>,
   ) -> rolldown_plugin::HookNoopReturn {
     ctx.meta().insert(Arc::new(AssetCache::default()));
+    ctx.meta().insert(Arc::new(PublicAssetUrlCache::default()));
     Ok(())
   }
 
@@ -83,15 +86,13 @@ impl Plugin for AssetPlugin {
 
     let id = rolldown_plugin_utils::remove_url_query(args.id);
     // TODO(shulaoda): finish below logic
-    let url = file_to_url(
-      &FileToUrlEnv {
-        root: &ctx.cwd().to_string_lossy(),
-        command: "serve",
-        url_base: &self.url_base,
-        public_dir: &self.public_dir,
-      },
-      &id,
-    )?;
+    let env = FileToUrlEnv {
+      ctx,
+      root: &ctx.cwd().to_string_lossy(),
+      url_base: &self.url_base,
+      public_dir: &self.public_dir,
+    };
+    let url = env.file_to_url(&id)?;
 
     let url = rolldown_plugin_utils::encode_uri_path(url);
     let code = arcstr::format!("export default {}", serde_json::to_string(&Value::String(url))?);

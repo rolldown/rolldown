@@ -81,7 +81,7 @@ impl Plugin for AssetPlugin {
       return Ok(None);
     }
 
-    let id = utils::remove_url_query(args.id);
+    let id = rolldown_plugin_utils::remove_url_query(args.id);
     // TODO(shulaoda): finish below logic
     let url = file_to_url(
       &FileToUrlEnv {

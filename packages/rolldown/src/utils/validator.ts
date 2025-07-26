@@ -310,6 +310,10 @@ const OptimizationOptionsSchema = v.strictObject({
     v.optional(v.boolean()),
     v.description('Enable crossmodule constant inlining'),
   ),
+  pifeForModuleWrappers: v.pipe(
+    v.optional(v.boolean()),
+    v.description('Use PIFE pattern for module wrappers'),
+  ),
 });
 
 const OnLogSchema = v.pipe(

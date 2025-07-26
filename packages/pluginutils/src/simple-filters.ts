@@ -80,7 +80,7 @@ function combineMultipleStrings(
   if (Array.isArray(str)) {
     const escapeStr = str.map(escapeRegex).join('|');
     if (escapeStr && str.length > 1) {
-      return `${escapeRegex('(?:')}${escapeStr}${escapeRegex(')')}`;
+      return `(?:${escapeStr})`;
     }
     return escapeStr;
   }

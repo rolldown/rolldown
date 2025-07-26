@@ -1350,6 +1350,7 @@ export interface BindingAssetPluginConfig {
   urlBase?: string
   publicDir?: string
   assetsInclude?: Array<BindingStringOrRegex>
+  assetInlineLimit?: number
 }
 
 export interface BindingAssetSource {

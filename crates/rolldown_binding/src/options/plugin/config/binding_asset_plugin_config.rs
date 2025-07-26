@@ -11,6 +11,7 @@ pub struct BindingAssetPluginConfig {
   pub url_base: Option<String>,
   pub public_dir: Option<String>,
   pub assets_include: Option<Vec<BindingStringOrRegex>>,
+  pub asset_inline_limit: Option<u32>,
 }
 
 impl From<BindingAssetPluginConfig> for AssetPlugin {
@@ -23,6 +24,7 @@ impl From<BindingAssetPluginConfig> for AssetPlugin {
         .assets_include
         .map(bindingify_string_or_regex_array)
         .unwrap_or_default(),
+      asset_inline_limit: config.asset_inline_limit.unwrap_or(4096) as usize,
     }
   }
 }

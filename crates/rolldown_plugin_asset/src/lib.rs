@@ -5,9 +5,9 @@ use std::{borrow::Cow, sync::Arc};
 use rolldown_common::ModuleType;
 use rolldown_plugin::{HookUsage, Plugin};
 use rolldown_plugin_utils::{
-  FileToUrlEnv, PublicAssetUrlCache, check_public_file, find_special_query,
+  AssetCache, FileToUrlEnv, PublicAssetUrlCache, check_public_file, find_special_query,
 };
-use rolldown_utils::{dashmap::FxDashMap, pattern_filter::StringOrRegex, url::clean_url};
+use rolldown_utils::{pattern_filter::StringOrRegex, url::clean_url};
 use serde_json::Value;
 
 #[derive(Debug, Default)]
@@ -16,11 +16,8 @@ pub struct AssetPlugin {
   pub url_base: String,
   pub public_dir: String,
   pub assets_include: Vec<StringOrRegex>,
+  pub asset_inline_limit: usize,
 }
-
-#[allow(dead_code)]
-#[derive(Default)]
-struct AssetCache(pub FxDashMap<String, String>);
 
 impl Plugin for AssetPlugin {
   fn name(&self) -> Cow<'static, str> {
@@ -85,12 +82,12 @@ impl Plugin for AssetPlugin {
     }
 
     let id = rolldown_plugin_utils::remove_url_query(args.id);
-    // TODO(shulaoda): finish below logic
     let env = FileToUrlEnv {
       ctx,
-      root: &ctx.cwd().to_string_lossy(),
+      is_lib: false,
       url_base: &self.url_base,
       public_dir: &self.public_dir,
+      asset_inline_limit: self.asset_inline_limit,
     };
     let url = env.file_to_url(&id)?;
 

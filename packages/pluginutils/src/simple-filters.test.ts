@@ -17,6 +17,16 @@ describe('exactRegex', () => {
     expect(regex.test('afoo')).toBe(false);
   });
 
+  test('supports without flag parameter with empty string', () => {
+    const regex = exactRegex('');
+    expect(regex).toStrictEqual(/^(?!)$/);
+
+    expect(regex.test('')).toBe(false);
+    expect(regex.test('foo')).toBe(false);
+    expect(regex.test('fooa')).toBe(false);
+    expect(regex.test('afoo')).toBe(false);
+  });
+
   test('supports with array input without flag parameter', () => {
     const regex = exactRegex(['foo', 'bar']);
     expect(regex).toStrictEqual(/^(?:foo|bar)$/);
@@ -24,6 +34,16 @@ describe('exactRegex', () => {
     expect(regex.test('foo')).toBe(true);
     expect(regex.test('bar')).toBe(true);
     expect(regex.test('baz')).toBe(false);
+  });
+
+  test('supports with empty array input without flag parameter', () => {
+    const regex = exactRegex(['']);
+    expect(regex).toStrictEqual(/^(?!)$/);
+
+    expect(regex.test('')).toBe(false);
+    expect(regex.test('foo')).toBe(false);
+    expect(regex.test('fooa')).toBe(false);
+    expect(regex.test('afoo')).toBe(false);
   });
 
   test('supports with flag parameter', () => {

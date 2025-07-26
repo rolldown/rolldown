@@ -77,14 +77,15 @@ function escapeRegex(str: string): string {
 function combineMultipleStrings(
   str: string | string[],
 ): string {
-  if (Array.isArray(str)) {
-    const escapeStr = str.map(escapeRegex).join('|');
-    if (escapeStr && str.length > 1) {
-      return `(?:${escapeStr})`;
-    }
-    return escapeStr;
+  str = Array.isArray(str) ? str : [str];
+  if (str.filter(Boolean).length === 0) {
+    return '(?!)'; // matches nothing
   }
-  return escapeRegex(str);
+  const escapeStr = str.map(escapeRegex).join('|');
+  if (escapeStr && str.length > 1) {
+    return `(?:${escapeStr})`;
+  }
+  return escapeStr;
 }
 
 type WidenString<T> = T extends string ? string : T;

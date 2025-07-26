@@ -17,7 +17,7 @@ describe('exactRegex', () => {
     expect(regex.test('afoo')).toBe(false);
   });
 
-  test('supports with array input without flag paramenter', () => {
+  test('supports with array input without flag parameter', () => {
     const regex = exactRegex(['foo', 'bar']);
     expect(regex).toStrictEqual(/^(?:foo|bar)$/);
 

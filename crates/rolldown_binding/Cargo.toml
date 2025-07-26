@@ -64,8 +64,11 @@ url = { workspace = true }
 [target.'cfg(all(not(target_os = "linux"), not(target_os = "freebsd"), not(target_family = "wasm")))'.dependencies]
 mimalloc-safe = { workspace = true, features = ["skip_collect_on_exit"] }
 
-[target.'cfg(all(any(target_os = "linux", target_os = "freebsd"), not(target_env = "ohos")))'.dependencies]
+[target.'cfg(all(any(target_os = "linux", target_os = "freebsd"), not(target_arch = "aarch64"), not(target_env = "ohos")))'.dependencies]
 mimalloc-safe = { workspace = true, features = ["skip_collect_on_exit", "local_dynamic_tls"] }
+
+[target.'cfg(all(target_os = "linux", target_arch = "aarch64"))'.dependencies]
+mimalloc-safe = { workspace = true, features = ["skip_collect_on_exit", "no_opt_arch", "local_dynamic_tls"] }
 
 [build-dependencies]
 napi-build = { workspace = true }

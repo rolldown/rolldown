@@ -5,9 +5,9 @@ use std::{borrow::Cow, sync::Arc};
 use rolldown_common::ModuleType;
 use rolldown_plugin::{HookUsage, Plugin};
 use rolldown_plugin_utils::{
-  FileToUrlEnv, PublicAssetUrlCache, check_public_file, find_special_query,
+  AssetCache, FileToUrlEnv, PublicAssetUrlCache, check_public_file, find_special_query,
 };
-use rolldown_utils::{dashmap::FxDashMap, pattern_filter::StringOrRegex, url::clean_url};
+use rolldown_utils::{pattern_filter::StringOrRegex, url::clean_url};
 use serde_json::Value;
 
 #[derive(Debug, Default)]
@@ -18,10 +18,6 @@ pub struct AssetPlugin {
   pub assets_include: Vec<StringOrRegex>,
   pub asset_inline_limit: Option<usize>,
 }
-
-#[allow(dead_code)]
-#[derive(Default)]
-struct AssetCache(pub FxDashMap<String, String>);
 
 impl Plugin for AssetPlugin {
   fn name(&self) -> Cow<'static, str> {
@@ -86,34 +82,16 @@ impl Plugin for AssetPlugin {
     }
 
     let id = rolldown_plugin_utils::remove_url_query(args.id);
-    // TODO(shulaoda): finish below logic
-    let mut url = file_to_url(
-      &FileToUrlEnv {
-        root: &ctx.cwd().to_string_lossy(),
-        command: "serve",
-        url_base: &self.url_base,
-        public_dir: &self.public_dir,
-        asset_inline_limit: self.asset_inline_limit.unwrap_or(4096),
-        ctx: Some(&ctx),
-      },
-      &id,
-    )?;
+    let env = FileToUrlEnv {
+      ctx,
+      is_lib: false,
+      url_base: &self.url_base,
+      public_dir: &self.public_dir,
+      asset_inline_limit: self.asset_inline_limit.unwrap_or(4096),
+    };
+    let url = env.file_to_url(&id)?;
 
-    // TODO(shulaoda): align below logic
-    // Inherit HMR timestamp if this asset was invalidated
-    // if (!url.startsWith('data:') && this.environment.mode === 'dev') {
-    //   const mod = this.environment.moduleGraph.getModuleById(id)
-    //   if (mod && mod.lastHMRTimestamp > 0) {
-    //     url = injectQuery(url, `t=${mod.lastHMRTimestamp}`)
-    //   }
-    // }
-
-    if !url.starts_with("data:") {
-      if let Some(value) = encode_as_percent_escaped(url.as_bytes()) {
-        url = value;
-      }
-    }
-
+    let url = rolldown_plugin_utils::encode_uri_path(url);
     let code = arcstr::format!("export default {}", serde_json::to_string(&Value::String(url))?);
     Ok(Some(rolldown_plugin::HookLoadOutput {
       code,

@@ -18,8 +18,8 @@
  * }
  * ```
  */
-export function exactRegex(str: string, flags?: string): RegExp {
-  return new RegExp(`^${escapeRegex(str)}$`, flags);
+export function exactRegex(str: string | string[], flags?: string): RegExp {
+  return new RegExp(`^${combineMultipleStrings(str)}$`, flags);
 }
 
 /**
@@ -42,13 +42,49 @@ export function exactRegex(str: string, flags?: string): RegExp {
  * }
  * ```
  */
-export function prefixRegex(str: string, flags?: string): RegExp {
-  return new RegExp(`^${escapeRegex(str)}`, flags);
+export function prefixRegex(str: string | string[], flags?: string): RegExp {
+  return new RegExp(`^${combineMultipleStrings(str)}`, flags);
+}
+
+/**
+ * Constructs a RegExp that matches a value that has the specified suffix.
+ *
+ * This is useful for plugin hook filters.
+ *
+ * @param str the string to match.
+ * @param flags flags for the RegExp.
+ *
+ * @example
+ * ```ts
+ * import { suffixRegex } from '@rolldown/pluginutils';
+ * const plugin = {
+ *   name: 'plugin',
+ *   resolveId: {
+ *     filter: { id: suffixRegex('.vue') },
+ *     handler(id) {} // will only be called for IDs ending with `.vue`
+ *   }
+ * }
+ * ```
+ */
+export function suffixRegex(str: string | string[], flags?: string): RegExp {
+  return new RegExp(`${combineMultipleStrings(str)}$`, flags);
 }
 
 const escapeRegexRE = /[-/\\^$*+?.()|[\]{}]/g;
 function escapeRegex(str: string): string {
   return str.replace(escapeRegexRE, '\\$&');
+}
+function combineMultipleStrings(
+  str: string | string[],
+): string {
+  if (Array.isArray(str)) {
+    const escapeStr = str.map(escapeRegex).join('|');
+    if (escapeStr && str.length > 1) {
+      return `${escapeRegex('(?:')}(${escapeStr})${escapeRegex(')')}`;
+    }
+    return escapeStr;
+  }
+  return escapeRegex(str);
 }
 
 type WidenString<T> = T extends string ? string : T;

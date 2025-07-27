@@ -300,14 +300,14 @@ impl Bundler {
 
   pub async fn hmr_invalidate(
     &mut self,
-    file: String,
+    caller: String,
     first_invalidated_by: Option<String>,
   ) -> BuildResult<HmrOutput> {
     self
       .hmr_manager
       .as_mut()
       .expect("HMR manager is not initialized")
-      .hmr_invalidate(file, first_invalidated_by)
+      .compute_update_for_calling_invalidate(caller, first_invalidated_by)
       .await
   }
 

@@ -287,7 +287,15 @@ impl Bundler {
     &mut self,
     changed_files: Vec<String>,
   ) -> BuildResult<Option<HmrOutput>> {
-    self.hmr_manager.as_mut().expect("HMR manager is not initialized").hmr(changed_files).await
+    let mut updates = self
+      .hmr_manager
+      .as_mut()
+      .expect("HMR manager is not initialized")
+      .compute_hmr_update_for_file_changes(changed_files)
+      .await?;
+
+    // FIXME(hyf0): We should return all updates instead of the last one.
+    Ok(updates.pop())
   }
 
   pub async fn hmr_invalidate(

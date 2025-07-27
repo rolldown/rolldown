@@ -3055,6 +3055,7 @@ dependencies = [
  "cow-utils",
  "itertools",
  "percent-encoding",
+ "rolldown_common",
  "rolldown_plugin",
  "rolldown_utils",
  "sugar_path",

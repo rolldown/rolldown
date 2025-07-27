@@ -1,32 +1,47 @@
-import { execa, ExecaError, execaSync } from 'execa';
+import { execa, ExecaError } from 'execa';
+import glob from 'fast-glob';
 import killPort from 'kill-port';
 import nodeFs from 'node:fs';
 import nodeFsPromise from 'node:fs/promises';
-import nodeOs from 'node:os';
 import nodePath from 'node:path';
-import { rimrafSync } from 'rimraf';
-import { test } from 'vitest';
-
-function removeDirSync(path: string) {
-  if (nodeOs.platform() === 'win32') {
-    // 1. Seems any nodejs-based solution to remove a directory resulted to EBUSY error on Windows
-    // 2. Check if the path exists before trying to remove it, otherwise it will throw an error
-    execaSync(
-      `if exist "${path}" rmdir /s /q "${path}"`,
-      {
-        shell: true,
-        stdio: 'inherit',
-      },
-    );
-  } else {
-    rimrafSync(path);
-  }
-}
+import { afterAll, beforeAll, test } from 'vitest';
+import { removeDirSync } from './src/utils';
 
 function main() {
+  const fixturesPath = nodePath.resolve(__dirname, 'fixtures');
   const tmpFixturesPath = nodePath.resolve(__dirname, 'tmp/fixtures');
 
+  async function updateNodeModules() {
+    await execa('pnpm install --no-frozen-lockfile', {
+      cwd: fixturesPath,
+      shell: true,
+      stdio: 'inherit',
+    });
+  }
+
   removeDirSync(tmpFixturesPath);
+  // Copy project to temp directory. Remember to filter out `node_modules` and `dist` directories
+  nodeFs.mkdirSync(tmpFixturesPath, { recursive: true });
+  nodeFs.cpSync(fixturesPath, tmpFixturesPath, {
+    recursive: true,
+    filter: (src) => {
+      return !src.includes('node_modules') && !src.includes('dist');
+    },
+  });
+
+  beforeAll(async () => {
+    await updateNodeModules();
+  }, 30 * 1000);
+
+  afterAll(async () => {
+    if (!process.env.CI) {
+      console.log('🔄 - Cleaning up tmp/fixtures directory...');
+      console.log('🔄 - Resetting node_modules...');
+      removeDirSync(tmpFixturesPath);
+      await updateNodeModules();
+      console.log('✅ - Cleanup completed');
+    }
+  }, 30 * 1000);
 
   test('basic', async () => {
     const projectName = 'basic';
@@ -34,12 +49,6 @@ function main() {
       tmpFixturesPath,
       projectName,
     );
-    copyProjectToTmp(projectName);
-    await execa('pnpm install --no-frozen-lockfile', {
-      cwd: tmpProjectPath,
-      shell: true,
-      stdio: 'inherit',
-    });
 
     await killPort(3000).catch(err =>
       console.debug(`kill-port: ${err?.message}`)
@@ -59,72 +68,58 @@ function main() {
 
     const nodeScriptPath = nodePath.join(tmpProjectPath, 'dist/main.js');
 
+    console.log('🔄 Starting Node.js process: ', nodeScriptPath);
     const runningArtifactProcess = execa(
       `node ${nodeScriptPath}`,
       { cwd: tmpProjectPath, shell: true, stdio: 'inherit' },
     );
 
     await new Promise<void>((rsl, _rej) => {
-      setTimeout(rsl, 4000);
+      setTimeout(rsl, 5000);
     });
 
-    const originalFilePath = nodePath.resolve(
-      tmpProjectPath,
-      'src/hmr-boundary.js',
-    );
+    console.log('🔄 Collecting HMR edit files...');
+    const hmrEditFiles = await collectHmrEditFiles(tmpProjectPath);
 
-    await nodeFsPromise.writeFile(
-      originalFilePath,
-      `import { value as depValue } from './new-dep';
-  export const value = depValue;
-  
-  import.meta.hot.accept((newExports) => {
-    globalThis.hmrChange(newExports);
-  });
-  console.log('HMR boundary file changed');
-  `,
-    );
+    console.log('🔄 Processing HMR edit files...');
+    for (const hmrEditFile of hmrEditFiles) {
+      console.log(`🔄 Processing HMR edit file: ${hmrEditFile.path}`);
+      const newContent = await nodeFsPromise.readFile(
+        hmrEditFile.path,
+        'utf-8',
+      );
+      await nodeFsPromise.writeFile(hmrEditFile.targetPath, newContent);
+      console.log(
+        `📝 Written content to: ${hmrEditFile.targetPath}`,
+      );
+      console.log(
+        `⏳ Waiting for HMR to be triggered... ${hmrEditFile.targetPath}`,
+      );
+      await ensurePathExists(nodePath.join(tmpProjectPath, 'ok-1'));
+      console.log(`✅ Successfully triggered HMR ${hmrEditFile.targetPath}`);
+    }
 
-    console.debug('Waiting for HMR to be triggered...');
-    await ensurePathExists(nodePath.join(tmpProjectPath, 'ok'));
-    console.debug('Successfully triggered HMR');
-    try {
-      runningArtifactProcess.kill('SIGTERM');
-      await runningArtifactProcess;
-    } catch (err) {
+    const catchRunningArtifactProcess = runningArtifactProcess.catch(err => {
       if (err instanceof ExecaError && err.signal === 'SIGTERM') {
         console.log('Process killed normally with SIGTERM, ignoring error.');
       } else {
         throw err;
       }
-    }
-    try {
-      devServeProcess.kill('SIGTERM');
-      await devServeProcess;
-    } catch (err: any) {
+    });
+
+    const catchDevServeProcess = devServeProcess.catch(err => {
       if (err instanceof ExecaError && err.signal === 'SIGTERM') {
         console.log('Process killed normally with SIGTERM, ignoring error.');
       } else {
         throw err;
       }
-    }
-  });
-}
+    });
 
-function copyProjectToTmp(projectName: string) {
-  const projectPath = nodePath.resolve(__dirname, `fixtures/${projectName}`);
-  const tmpProjectPath = nodePath.resolve(
-    __dirname,
-    `tmp/fixtures/${projectName}`,
-  );
+    runningArtifactProcess.kill('SIGTERM');
+    await catchRunningArtifactProcess;
 
-  // Copy project to temp directory. Remember to filter out `node_modules` and `dist` directories
-  nodeFs.mkdirSync(tmpProjectPath, { recursive: true });
-  nodeFs.cpSync(projectPath, tmpProjectPath, {
-    recursive: true,
-    filter: (src) => {
-      return !src.includes('node_modules') && !src.includes('dist');
-    },
+    devServeProcess.kill('SIGTERM');
+    await catchDevServeProcess;
   });
 }
 
@@ -162,3 +157,54 @@ function ensurePathExists(path: string, timeout = 10000) {
 }
 
 main();
+
+interface HmrEditFile {
+  path: string;
+  targetPath: string;
+  step: number;
+}
+
+async function collectHmrEditFiles(
+  projectPath: string,
+): Promise<HmrEditFile[]> {
+  const hmrEditFiles = await glob(
+    nodePath.join(projectPath, '/src/**/*.hmr-*.*'),
+    {
+      ignore: ['**/node_modules/**', '**/dist/**'],
+      absolute: true,
+    },
+  );
+  const files = hmrEditFiles.map((path): HmrEditFile => {
+    // path: /xxx/xxx/example.hmr-1.js
+
+    // .js
+    const ext = nodePath.extname(path);
+
+    // example.hmr-1
+    const basenameWithoutExt = nodePath.basename(path, ext);
+
+    // 1
+    const step = parseInt(basenameWithoutExt.slice(
+      basenameWithoutExt.lastIndexOf('-') + 1,
+    ));
+
+    const originalBasename = basenameWithoutExt.slice(
+      0,
+      basenameWithoutExt.lastIndexOf('.'),
+    );
+
+    // /xxx/xxx/example.js
+    const targetPath = nodePath.join(
+      nodePath.dirname(path),
+      originalBasename,
+    ) + ext;
+
+    return {
+      path,
+      targetPath,
+      step: step,
+    };
+  });
+
+  return files.sort((a, b) => a.step - b.step);
+}

@@ -2,21 +2,22 @@ mod utils;
 
 use std::{borrow::Cow, sync::Arc};
 
-use rolldown_common::ModuleType;
+use rolldown_common::{ModuleType, side_effects::HookSideEffects};
 use rolldown_plugin::{HookUsage, Plugin};
 use rolldown_plugin_utils::{
   AssetCache, FileToUrlEnv, PublicAssetUrlCache, check_public_file, find_special_query,
 };
-use rolldown_utils::{pattern_filter::StringOrRegex, url::clean_url};
+use rolldown_utils::{dashmap::FxDashSet, pattern_filter::StringOrRegex, url::clean_url};
 use serde_json::Value;
 
 #[derive(Debug, Default)]
 pub struct AssetPlugin {
-  pub is_server: bool,
+  pub is_lib: bool,
   pub url_base: String,
   pub public_dir: String,
   pub assets_include: Vec<StringOrRegex>,
   pub asset_inline_limit: usize,
+  pub handled_ids: FxDashSet<String>,
 }
 
 impl Plugin for AssetPlugin {
@@ -81,20 +82,29 @@ impl Plugin for AssetPlugin {
       return Ok(None);
     }
 
+    self.handled_ids.insert(args.id.to_string());
+
     let id = rolldown_plugin_utils::remove_special_query(args.id, b"url");
     let env = FileToUrlEnv {
       ctx,
       root: ctx.cwd(),
-      is_lib: false,
+      is_lib: self.is_lib,
       url_base: &self.url_base,
       public_dir: &self.public_dir,
       asset_inline_limit: self.asset_inline_limit,
+    };
+
+    let side_effects = if ctx.get_module_info(&id).is_some_and(|v| v.is_entry) {
+      HookSideEffects::NoTreeshake
+    } else {
+      HookSideEffects::False
     };
 
     let url = rolldown_plugin_utils::encode_uri_path(env.file_to_url(&id).await?);
     let code = arcstr::format!("export default {}", serde_json::to_string(&Value::String(url))?);
     Ok(Some(rolldown_plugin::HookLoadOutput {
       code,
+      side_effects: Some(side_effects),
       module_type: Some(ModuleType::Js),
       ..Default::default()
     }))

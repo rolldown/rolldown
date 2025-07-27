@@ -116,14 +116,10 @@ fn render_cjs_chunk_imports(ctx: &GenerateContext<'_>) -> String {
     .chunk
     .direct_imports_from_external_modules
     .iter()
-    .map(|(importee_id, _)| (importee_id, true))
-    .chain(
-      // Due to architecture limitation we can't add `__toESM` reference after linking(more specifically, reference_needed_symbol)
-      // TODO: add wrapping for indirect imported external module
-      ctx.chunk.import_symbol_from_external_modules.iter().map(|importee_id| (importee_id, false)),
-    )
-    .for_each(|(importee_id, needs_esm_wrapper)| {
-      let importee = ctx.link_output.module_table[*importee_id]
+    .map(|(importee_id, _)| importee_id)
+    .chain(ctx.chunk.import_symbol_from_external_modules.iter())
+    .for_each(|importee_idx| {
+      let importee = ctx.link_output.module_table[*importee_idx]
         .as_external()
         .expect("Should be external module here");
 
@@ -135,21 +131,16 @@ fn render_cjs_chunk_imports(ctx: &GenerateContext<'_>) -> String {
         s.push_str("const ");
         s.push_str(external_module_symbol_name);
         s.push_str(" = ");
-        if needs_esm_wrapper {
-          let to_esm_fn_name = ctx.finalized_string_pattern_for_symbol_ref(
-            ctx.link_output.runtime.resolve_symbol("__toESM"),
-            ctx.chunk_idx,
-            &ctx.chunk.canonical_names,
-          );
-          s.push_str(&to_esm_fn_name);
-          s.push('(');
-        }
+
+        let to_esm_fn_name = ctx.finalized_string_pattern_for_symbol_ref(
+          ctx.link_output.runtime.resolve_symbol("__toESM"),
+          ctx.chunk_idx,
+          &ctx.chunk.canonical_names,
+        );
+        s.push_str(&to_esm_fn_name);
+        s.push('(');
         s.push_str(&require_path_str);
-        if needs_esm_wrapper {
-          s.push_str(");\n");
-        } else {
-          s.push_str(";\n");
-        }
+        s.push_str(");\n");
       } else if importee.side_effects.has_side_effects() {
         s.push_str(&require_path_str);
         s.push_str(";\n");

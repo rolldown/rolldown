@@ -2,7 +2,7 @@
   "config": {
     "preserveModules": true,
     "external": ["preact"],
-    "format": "cjs",
+    "format": "cjs"
   },
   "expectExecuted": false
 }

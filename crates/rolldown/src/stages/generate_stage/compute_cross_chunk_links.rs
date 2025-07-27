@@ -320,7 +320,7 @@ impl GenerateStage<'_> {
     index_chunk_exported_symbols: &mut IndexChunkExportedSymbols,
     index_cross_chunk_imports: &mut IndexCrossChunkImports,
     index_imports_from_other_chunks: &mut IndexImportsFromOtherChunks,
-    index_chunk_all_imports_from_external_modules: &mut IndexChunkAllImportsFromExternalModules,
+    index_chunk_indirect_imports_from_external_modules: &mut IndexChunkAllImportsFromExternalModules,
   ) {
     chunk_graph.chunk_table.iter_enumerated().for_each(|(chunk_id, chunk)| {
       match chunk.kind {
@@ -372,11 +372,24 @@ impl GenerateStage<'_> {
         if !self.link_output.used_symbol_refs.contains(&import_ref) {
           continue;
         }
-        // If the symbol from external, we don't need to include it.
-        if self.link_output.module_table[import_ref.owner].is_external() {
-          index_chunk_all_imports_from_external_modules[chunk_id].insert(import_ref.owner);
-          continue;
-        }
+        // If the symbol from external module and the format is commonjs, we need to insert runtime
+        // symbol ref `__toESM`
+        // related to https://github.com/rolldown/rolldown/blob/c100a53c6cfc67b4f92e230da072eef8494862ef/crates/rolldown/src/ecmascript/format/cjs.rs?plain=1#L120-L124
+        let import_ref = if self.link_output.module_table[import_ref.owner].is_external() {
+          index_chunk_indirect_imports_from_external_modules[chunk_id].insert(import_ref.owner);
+          if matches!(self.options.format, OutputFormat::Esm) {
+            continue;
+          }
+
+          // Note: the `__toESM` should always referenced before during `collect_depended_symbols` phase
+          // Before deduplicated the indirect_imports_from_external_modules, there should exists
+          // two scenarios:
+          // 1. The symbol is directly imported from an external modules, then it should be referenced in https://github.com/rolldown/rolldown/blob/c100a53c6cfc67b4f92e230da072eef8494862ef/crates/rolldown/src/stages/link_stage/reference_needed_symbols.rs?plain=1#L85-L94,
+          // 2. The symbol indirectly imported from an external module, then the `__toESM` should be referenced in other modules, see also **1**
+          self.link_output.runtime.resolve_symbol("__toESM")
+        } else {
+          import_ref
+        };
         let import_symbol = self.link_output.symbol_db.get(import_ref);
         let importee_chunk_id = import_symbol.chunk_id.unwrap_or_else(|| {
           let symbol_owner = &self.link_output.module_table[import_ref.owner];

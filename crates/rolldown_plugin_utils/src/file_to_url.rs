@@ -1,12 +1,12 @@
 use std::borrow::Cow;
-use std::path::Path;
+use std::path::{Path, PathBuf};
 
 use rolldown_utils::dashmap::FxDashMap;
 use rolldown_utils::url::clean_url;
 use rolldown_utils::{dataurl::encode_as_shortest_dataurl, mime::guess_mime};
-use sugar_path::SugarPath as _;
+use sugar_path::SugarPath;
 
-use crate::PublicFileToBuiltUrlEnv;
+use crate::{PublicFileToBuiltUrlEnv, remove_special_query};
 
 use super::check_public_file::check_public_file;
 use super::find_special_query::find_special_query;
@@ -15,6 +15,7 @@ use super::find_special_query::find_special_query;
 pub struct AssetCache(pub FxDashMap<String, String>);
 
 pub struct FileToUrlEnv<'a> {
+  pub root: &'a PathBuf,
   pub is_lib: bool,
   pub url_base: &'a str,
   pub public_dir: &'a str,
@@ -23,15 +24,15 @@ pub struct FileToUrlEnv<'a> {
 }
 
 impl FileToUrlEnv<'_> {
-  pub fn file_to_url(&self, id: &str) -> anyhow::Result<String> {
-    self.file_to_built_url(id, false, false)
+  pub async fn file_to_url(&self, id: &str) -> anyhow::Result<String> {
+    self.file_to_built_url(id, false, None).await
   }
 
-  fn file_to_built_url(
+  async fn file_to_built_url(
     &self,
     id: &str,
     skip_public_check: bool,
-    _force_inline: bool,
+    force_inline: Option<bool>,
   ) -> anyhow::Result<String> {
     let mut id = Cow::Borrowed(id);
     if !skip_public_check {
@@ -54,10 +55,27 @@ impl FileToUrlEnv<'_> {
     let file = clean_url(&id);
     let content = std::fs::read(file)?;
 
-    let url = if self.should_inline(file, &id, &content, None) {
+    let url = if self.should_inline(file, &id, &content, force_inline) {
       asset_to_data_url(file.as_path(), &content)?
     } else {
-      todo!()
+      let path = Path::new(file);
+      let name = path.file_name().map(|v| v.to_string_lossy().into());
+      let original_file_name = path.relative(self.root).to_string_lossy().into_owned();
+      let emitted_asset = rolldown_common::EmittedAsset {
+        name,
+        source: content.into(),
+        original_file_name: Some(original_file_name),
+        ..Default::default()
+      };
+
+      let reference_id = self.ctx.emit_file_async(emitted_asset).await?;
+      let postfix = if file.len() == id.len() {
+        ""
+      } else {
+        let postfix = remove_special_query(&id[file.len()..], b"no-inline");
+        &rolldown_utils::concat_string!("$_", postfix, "__")
+      };
+      rolldown_utils::concat_string!("__VITE_ASSET__", reference_id, "__", postfix)
     };
 
     cache.0.insert(id.to_string(), url.clone());

@@ -1,10 +1,10 @@
 pub fn find_special_query(query: &str, param: &[u8]) -> Option<usize> {
   let param_len = param.len();
-  if query.len() < param_len + 2 {
+  if query.len() < param_len + 1 {
     return None;
   }
   for (index, _) in query.match_indices('?') {
-    if index == 0 || index + param_len >= query.len() {
+    if index + param_len >= query.len() {
       return None;
     }
     let bytes = &query.as_bytes()[index..];
@@ -27,6 +27,7 @@ pub fn find_special_query(query: &str, param: &[u8]) -> Option<usize> {
 #[test]
 fn test_find_special_query() {
   let url = b"url";
+  assert_eq!(find_special_query("?url", url), Some(1));
   assert_eq!(find_special_query("a?a=1&url", url), Some(6));
   assert_eq!(find_special_query("a?a=1&url&b=2", url), Some(6));
   assert_eq!(find_special_query("a?a=1&url=value", url), None);
@@ -34,7 +35,6 @@ fn test_find_special_query() {
   assert_eq!(find_special_query("a&url", url), None);
   assert_eq!(find_special_query("a&url&", url), None);
   assert_eq!(find_special_query("a&url=value", url), None);
-  assert_eq!(find_special_query("?url", url), None);
   assert_eq!(find_special_query("url=value", url), None);
   assert_eq!(find_special_query("a?curl=123", url), None);
   assert_eq!(find_special_query("a?file=url.svg", url), None);

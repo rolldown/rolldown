@@ -81,17 +81,17 @@ impl Plugin for AssetPlugin {
       return Ok(None);
     }
 
-    let id = rolldown_plugin_utils::remove_url_query(args.id);
+    let id = rolldown_plugin_utils::remove_special_query(args.id, b"url");
     let env = FileToUrlEnv {
       ctx,
+      root: ctx.cwd(),
       is_lib: false,
       url_base: &self.url_base,
       public_dir: &self.public_dir,
       asset_inline_limit: self.asset_inline_limit,
     };
-    let url = env.file_to_url(&id)?;
 
-    let url = rolldown_plugin_utils::encode_uri_path(url);
+    let url = rolldown_plugin_utils::encode_uri_path(env.file_to_url(&id).await?);
     let code = arcstr::format!("export default {}", serde_json::to_string(&Value::String(url))?);
     Ok(Some(rolldown_plugin::HookLoadOutput {
       code,

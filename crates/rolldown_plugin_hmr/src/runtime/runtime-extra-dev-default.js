@@ -31,9 +31,17 @@ class ModuleHotContext {
         deps: [acceptingPath],
         fn: cb,
       });
-    } else {
+    } else if (args.length === 0) {}
+    else {
       throw new Error('Invalid arguments for `import.meta.hot.accept`');
     }
+  }
+
+  invalidate() {
+    socket.send(JSON.stringify({
+      type: 'hmr:invalidate',
+      moduleId: this.moduleId,
+    }));
   }
 }
 

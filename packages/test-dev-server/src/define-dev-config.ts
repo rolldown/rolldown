@@ -1,6 +1,6 @@
 import type { BuildOptions } from 'rolldown';
 
-interface ServeOptions {}
+export interface ServeOptions {}
 
 export interface DevConfig {
   build?: BuildOptions;

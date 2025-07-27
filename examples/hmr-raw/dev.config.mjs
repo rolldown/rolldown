@@ -5,6 +5,7 @@ export default defineDevConfig({
     input: 'src/main.js',
     experimental: {
       hmr: true,
+      strictExecutionOrder: true,
     },
     treeshake: false,
   },

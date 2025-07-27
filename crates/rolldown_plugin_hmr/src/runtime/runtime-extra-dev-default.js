@@ -106,7 +106,6 @@ function loadScript(url) {
 
 console.debug('HMR runtime loaded', '$ADDR');
 const addr = new URL('ws://$ADDR');
-addr.searchParams.set('from', 'hmr-runtime');
 
 const socket = new WebSocket(addr);
 

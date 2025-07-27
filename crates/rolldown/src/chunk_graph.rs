@@ -2,7 +2,8 @@ use arcstr::ArcStr;
 use itertools::Itertools;
 use oxc_index::{IndexVec, index_vec};
 use rolldown_common::{
-  Chunk, ChunkIdx, ChunkModulesOrderBy, ChunkTable, EcmaViewMeta, ModuleIdx, SymbolRef,
+  Chunk, ChunkIdx, ChunkModulesOrderBy, ChunkTable, EcmaViewMeta, ModuleIdx, RuntimeHelper,
+  SymbolRef,
 };
 use rustc_hash::FxHashMap;
 
@@ -43,9 +44,15 @@ impl ChunkGraph {
     idx
   }
 
-  pub fn add_module_to_chunk(&mut self, module_idx: ModuleIdx, chunk_idx: ChunkIdx) {
+  pub fn add_module_to_chunk(
+    &mut self,
+    module_idx: ModuleIdx,
+    chunk_idx: ChunkIdx,
+    depended_runtime_helper: RuntimeHelper,
+  ) {
     self.chunk_table.chunks[chunk_idx].modules.push(module_idx);
     self.module_to_chunk[module_idx] = Some(chunk_idx);
+    self.chunk_table.chunks[chunk_idx].depended_runtime_helper.insert(depended_runtime_helper);
   }
 
   pub fn sort_chunk_modules(&mut self, link_output: &LinkStageOutput, options: &SharedOptions) {

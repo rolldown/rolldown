@@ -5,8 +5,8 @@ use std::{
 
 use crate::{
   ChunkIdx, ChunkKind, FilenameTemplate, ModuleIdx, ModuleTable, NamedImport, NormalModule,
-  NormalizedBundlerOptions, PreserveEntrySignatures, RollupPreRenderedChunk, SymbolRef,
-  chunk::types::chunk_reason_type::ChunkReasonType,
+  NormalizedBundlerOptions, PreserveEntrySignatures, RollupPreRenderedChunk, RuntimeHelper,
+  SymbolRef, chunk::types::chunk_reason_type::ChunkReasonType,
 };
 pub mod chunk_table;
 pub mod types;
@@ -70,6 +70,7 @@ pub struct Chunk {
   pub create_reasons: Vec<String>,
   pub chunk_reason_type: Box<ChunkReasonType>,
   pub preserve_entry_signature: Option<PreserveEntrySignatures>,
+  pub depended_runtime_helper: RuntimeHelper,
 }
 
 impl Chunk {

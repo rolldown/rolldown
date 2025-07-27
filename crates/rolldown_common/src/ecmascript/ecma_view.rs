@@ -1,4 +1,4 @@
-use crate::ConstExportMeta;
+use crate::{ConstExportMeta, RUNTIME_HELPER_NAMES, StmtInfoIdx};
 use arcstr::ArcStr;
 use bitflags::bitflags;
 use oxc::{semantic::SymbolId, span::Span};
@@ -97,6 +97,7 @@ pub struct EcmaView {
   /// `Span` of `new URL('path', import.meta.url)` -> `ImportRecordIdx`
   pub new_url_references: FxHashMap<Span, ImportRecordIdx>,
   pub this_expr_replace_map: FxHashMap<Span, ThisExprReplaceKind>,
+  pub depended_runtime_helper: Box<[Vec<StmtInfoIdx>; RUNTIME_HELPER_NAMES.len()]>,
 
   pub hmr_hot_ref: Option<SymbolRef>,
   pub hmr_info: HmrInfo,

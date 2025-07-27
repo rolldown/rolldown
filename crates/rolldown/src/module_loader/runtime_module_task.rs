@@ -152,6 +152,7 @@ impl RuntimeModuleTask {
         directive_range: vec![],
         dummy_record_set,
         constant_export_map: FxHashMap::default(),
+        depended_runtime_helper: Box::default(),
       },
       css_view: None,
       asset_view: None,

@@ -90,7 +90,7 @@ impl LinkStage<'_> {
         // real statement to construct the Module Namespace Object and assign it to a variable.
         // This is only a concept of esm, so no need to care about this in commonjs.
         if matches!(ecma_module.exports_kind, ExportsKind::Esm) {
-          let meta = &self.metas[ecma_module.idx];
+          let meta = &mut self.metas[ecma_module.idx];
           let mut referenced_symbols = vec![];
           let mut declared_symbols = vec![];
           if !meta.is_canonical_exports_empty() {

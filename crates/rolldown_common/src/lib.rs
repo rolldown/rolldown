@@ -153,6 +153,7 @@ pub use crate::{
   types::rollup_pre_rendered_asset::RollupPreRenderedAsset,
   types::rollup_pre_rendered_chunk::RollupPreRenderedChunk,
   types::rollup_rendered_chunk::RollupRenderedChunk,
+  types::runtime_helper::{RUNTIME_HELPER_NAMES, RuntimeHelper},
   types::scan_mode::ScanMode,
   types::side_effects,
   types::source_mutation::SourceMutation,

@@ -2,7 +2,7 @@ use std::{ptr::addr_of, sync::Mutex};
 
 use rolldown_common::{
   ExportsKind, ImportKind, ImportRecordIdx, ImportRecordMeta, Module, ModuleIdx, ModuleTable,
-  OutputFormat, ResolvedImportRecord, StmtInfoMeta, TaggedSymbolRef, WrapKind,
+  OutputFormat, ResolvedImportRecord, RuntimeHelper, StmtInfoMeta, TaggedSymbolRef, WrapKind,
   side_effects::DeterminedSideEffects,
 };
 use rolldown_utils::{
@@ -42,12 +42,15 @@ impl LinkStage<'_> {
         // - Mutating on `stmt_infos` doesn't rely on other mutating operations of other modules
         // - Mutating and parallel reading is in different memory locations
         let stmt_infos = unsafe { &mut *(addr_of!(importer.stmt_infos).cast_mut()) };
+        let depended_runtime_helper_map =
+          unsafe { &mut *(addr_of!(importer.depended_runtime_helper).cast_mut()) };
         let importer_side_effect = unsafe { &mut *(addr_of!(importer.side_effects).cast_mut()) };
         let mut symbols_to_be_declared = vec![];
 
         stmt_infos.infos.iter_mut_enumerated().for_each(|(stmt_info_idx, stmt_info)| {
           if stmt_info.meta.contains(StmtInfoMeta::HasDummyRecord) {
-            stmt_info.referenced_symbols.push(self.runtime.resolve_symbol("__require").into());
+            depended_runtime_helper_map[RuntimeHelper::Require.bits().trailing_zeros() as usize]
+              .push(stmt_info_idx);
           }
           stmt_info.import_records.iter().for_each(|rec_id| {
             let rec = &importer.import_records[*rec_id];
@@ -88,9 +91,9 @@ impl LinkStage<'_> {
                       ) && !rec.meta.contains(ImportRecordMeta::IS_PLAIN_IMPORT)
                       {
                         stmt_info.side_effect = true.into();
-                        stmt_info
-                          .referenced_symbols
-                          .push(self.runtime.resolve_symbol("__toESM").into());
+                        depended_runtime_helper_map
+                          [RuntimeHelper::ToEsm.bits().trailing_zeros() as usize]
+                          .push(stmt_info_idx);
                       }
                     }
                   }
@@ -122,9 +125,9 @@ impl LinkStage<'_> {
                           if meta.has_dynamic_exports {
                             *importer_side_effect = DeterminedSideEffects::Analyzed(true);
                             stmt_info.side_effect = true.into();
-                            stmt_info
-                              .referenced_symbols
-                              .push(self.runtime.resolve_symbol("__reExport").into());
+                            depended_runtime_helper_map
+                              [RuntimeHelper::ReExport.bits().trailing_zeros() as usize]
+                              .push(stmt_info_idx);
                             stmt_info.referenced_symbols.push(importer.namespace_object_ref.into());
                             stmt_info.referenced_symbols.push(importee.namespace_object_ref.into());
                           }
@@ -139,12 +142,12 @@ impl LinkStage<'_> {
                           stmt_info
                             .referenced_symbols
                             .push(importee_linking_info.wrapper_ref.unwrap().into());
-                          stmt_info
-                            .referenced_symbols
-                            .push(self.runtime.resolve_symbol("__toESM").into());
-                          stmt_info
-                            .referenced_symbols
-                            .push(self.runtime.resolve_symbol("__reExport").into());
+                          depended_runtime_helper_map
+                            [RuntimeHelper::ToEsm.bits().trailing_zeros() as usize]
+                            .push(stmt_info_idx);
+                          depended_runtime_helper_map
+                            [RuntimeHelper::ReExport.bits().trailing_zeros() as usize]
+                            .push(stmt_info_idx);
                           if !commonjs_treeshake {
                             stmt_info.referenced_symbols.push(importer.namespace_object_ref.into());
                           }
@@ -157,9 +160,9 @@ impl LinkStage<'_> {
                           stmt_info
                             .referenced_symbols
                             .push(importee_linking_info.wrapper_ref.unwrap().into());
-                          stmt_info
-                            .referenced_symbols
-                            .push(self.runtime.resolve_symbol("__toESM").into());
+                          depended_runtime_helper_map
+                            [RuntimeHelper::ToEsm.bits().trailing_zeros() as usize]
+                            .push(stmt_info_idx);
                           symbols_to_be_declared.push((rec.namespace_ref, stmt_info_idx));
                           rec.namespace_ref.set_name(
                             &mut symbols.lock().unwrap(),
@@ -185,9 +188,9 @@ impl LinkStage<'_> {
                         if is_reexport_all && importee_linking_info.has_dynamic_exports {
                           // Turn `export * from 'bar_esm'` into `init_bar_esm();__reExport(foo_exports, bar_esm_exports);`
                           // something like `__reExport(foo_exports, other_exports)`
-                          stmt_info
-                            .referenced_symbols
-                            .push(self.runtime.resolve_symbol("__reExport").into());
+                          depended_runtime_helper_map
+                            [RuntimeHelper::ReExport.bits().trailing_zeros() as usize]
+                            .push(stmt_info_idx);
                           stmt_info.referenced_symbols.push(importer.namespace_object_ref.into());
                           stmt_info.referenced_symbols.push(importee.namespace_object_ref.into());
                         }
@@ -212,9 +215,9 @@ impl LinkStage<'_> {
                       stmt_info.referenced_symbols.push(importee.namespace_object_ref.into());
 
                       if !rec.meta.contains(ImportRecordMeta::IS_REQUIRE_UNUSED) {
-                        stmt_info
-                          .referenced_symbols
-                          .push(self.runtime.resolve_symbol("__toCommonJS").into());
+                        depended_runtime_helper_map
+                          [RuntimeHelper::ToCommonJs.bits().trailing_zeros() as usize]
+                          .push(stmt_info_idx);
                       }
                     }
                   },
@@ -227,9 +230,9 @@ impl LinkStage<'_> {
                           stmt_info
                             .referenced_symbols
                             .push(importee_linking_info.wrapper_ref.unwrap().into());
-                          stmt_info
-                            .referenced_symbols
-                            .push(self.runtime.resolve_symbol("__toESM").into());
+                          depended_runtime_helper_map
+                            [RuntimeHelper::ToEsm.bits().trailing_zeros() as usize]
+                            .push(stmt_info_idx);
                         }
                         WrapKind::Esm => {
                           // `(init_foo(), foo_exports)`
@@ -244,9 +247,9 @@ impl LinkStage<'_> {
                         ExportsKind::CommonJs => {
                           // `import('./some-cjs-module.js')` would be converted to
                           // `import('./some-cjs-module.js').then(__toDynamicImportESM(isNodeMode))`
-                          stmt_info
-                            .referenced_symbols
-                            .push(self.runtime.resolve_symbol("__toDynamicImportESM").into());
+                          depended_runtime_helper_map
+                            [RuntimeHelper::ToDynamicImportEsm.bits().trailing_zeros() as usize]
+                            .push(stmt_info_idx);
                         }
                         ExportsKind::Esm | ExportsKind::None => {}
                       }
@@ -264,7 +267,8 @@ impl LinkStage<'_> {
             }
           });
           if keep_names && stmt_info.meta.intersects(StmtInfoMeta::KeepNamesType) {
-            stmt_info.referenced_symbols.push(self.runtime.resolve_symbol("__name").into());
+            depended_runtime_helper_map[RuntimeHelper::Name.bits().trailing_zeros() as usize]
+              .push(stmt_info_idx);
           }
         });
 

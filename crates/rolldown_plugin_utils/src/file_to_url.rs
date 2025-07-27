@@ -1,5 +1,8 @@
 use std::borrow::Cow;
+use std::fmt;
 use std::path::{Path, PathBuf};
+use std::pin::Pin;
+use std::sync::Arc;
 
 use rolldown_utils::dashmap::FxDashMap;
 use rolldown_utils::url::clean_url;
@@ -16,17 +19,41 @@ const GIT_LFS_PREFIX: &[u8; 34] = b"version https://git-lfs.github.com";
 #[derive(Default)]
 pub struct AssetCache(pub FxDashMap<String, String>);
 
+type FuncInner = dyn (Fn(&str, &[u8]) -> Pin<Box<(dyn Future<Output = anyhow::Result<Option<usize>>> + Send + Sync)>>)
+  + Send
+  + Sync;
+const DEFAULT_ASSETS_INLINE_LIMIT: usize = 4096;
+pub enum UsizeOrFunction {
+  Number(usize),
+  Function(Arc<FuncInner>),
+}
+
+impl fmt::Debug for UsizeOrFunction {
+  fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+    match self {
+      UsizeOrFunction::Number(n) => write!(f, "Number({})", n),
+      UsizeOrFunction::Function(_) => write!(f, "Function(<fn(&str, &[u8]) -> usize>)"),
+    }
+  }
+}
+
+impl Default for UsizeOrFunction {
+  fn default() -> Self {
+    UsizeOrFunction::Number(0)
+  }
+}
+
 pub struct FileToUrlEnv<'a> {
   pub root: &'a PathBuf,
   pub is_lib: bool,
   pub public_dir: &'a str,
-  pub asset_inline_limit: usize,
+  pub asset_inline_limit: &'a UsizeOrFunction,
   pub ctx: &'a rolldown_plugin::PluginContext,
 }
 
 impl FileToUrlEnv<'_> {
-  pub async fn file_to_url(&self, id: &str) -> anyhow::Result<String> {
-    self.file_to_built_url(id, false, None).await
+  pub async async fn file_to_url(&self, id: &str) -> anyhow::Result<String> {
+    self.file_to_built_url(id, false, None).await.await
   }
 
   async fn file_to_built_url(
@@ -56,7 +83,7 @@ impl FileToUrlEnv<'_> {
     let file = clean_url(&id);
     let content = std::fs::read(file)?;
 
-    let url = if self.should_inline(file, &id, &content, force_inline) {
+    let url = if self.should_inline(file, &id, &content, force_inline).await {
       self.asset_to_data_url(file.as_path(), &content)?
     } else {
       let path = Path::new(file);
@@ -84,7 +111,7 @@ impl FileToUrlEnv<'_> {
   }
 
   #[allow(clippy::case_sensitive_file_extension_comparisons)]
-  fn should_inline(
+  async fn should_inline(
     &self,
     file: &str,
     id: &str,
@@ -108,8 +135,16 @@ impl FileToUrlEnv<'_> {
     if file.ends_with(".html") || (file.ends_with(".svg") && id.contains('#')) {
       return false;
     }
-    // TODO(shulaoda): support function for asset_inline_limit
-    content.len() < self.asset_inline_limit && !content.starts_with(GIT_LFS_PREFIX)
+    let limit = match self.asset_inline_limit {
+      UsizeOrFunction::Number(limit) => *limit,
+      UsizeOrFunction::Function(func) => match (func)(file, content).await {
+        Ok(Some(limit)) => limit,
+        Ok(None) => DEFAULT_ASSETS_INLINE_LIMIT,
+        Err(_) => DEFAULT_ASSETS_INLINE_LIMIT,
+      },
+    };
+
+    content.len() < limit && !content.starts_with(GIT_LFS_PREFIX)
   }
 
   fn asset_to_data_url(&self, path: &Path, content: &[u8]) -> anyhow::Result<String> {

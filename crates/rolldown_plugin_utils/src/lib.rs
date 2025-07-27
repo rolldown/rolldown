@@ -13,7 +13,7 @@ pub mod constants;
 
 pub use check_public_file::check_public_file;
 pub use encode_uri_path::encode_uri_path;
-pub use file_to_url::{AssetCache, FileToUrlEnv};
+pub use file_to_url::{AssetCache, FileToUrlEnv, UsizeOrFunction};
 pub use find_special_query::find_special_query;
 pub use join_url_segments::join_url_segments;
 pub use public_file_to_built_url::{PublicAssetUrlCache, PublicFileToBuiltUrlEnv};

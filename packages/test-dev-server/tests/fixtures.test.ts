@@ -4,7 +4,7 @@ import killPort from 'kill-port';
 import nodeFs from 'node:fs';
 import nodeFsPromise from 'node:fs/promises';
 import nodePath from 'node:path';
-import { afterAll, beforeAll, test } from 'vitest';
+import { afterAll, beforeAll, describe, test } from 'vitest';
 import { removeDirSync } from './src/utils';
 
 function main() {
@@ -43,83 +43,96 @@ function main() {
     }
   }, 30 * 1000);
 
-  test('basic', async () => {
-    const projectName = 'basic';
-    const tmpProjectPath = nodePath.join(
-      tmpFixturesPath,
-      projectName,
-    );
+  const fixtureNames = nodeFs.readdirSync(fixturesPath);
+  describe('fixtures', () => {
+    for (const fixtureName of fixtureNames) {
+      test.sequential(`fixture: ${fixtureName}`, async () => {
+        const projectName = fixtureName;
+        const tmpProjectPath = nodePath.join(
+          tmpFixturesPath,
+          projectName,
+        );
 
-    await killPort(3000).catch(err =>
-      console.debug(`kill-port: ${err?.message}`)
-    ); // Kill any process running on port 3000
+        await killPort(3000).catch(err =>
+          console.debug(`kill-port: ${err?.message}`)
+        ); // Kill any process running on port 3000
 
-    const devServeProcess = execa('pnpm serve', {
-      cwd: tmpProjectPath,
-      shell: true,
-      stdio: 'inherit',
-      env: {
-        RUST_BACKTRACE: 'FULL',
-        RD_LOG: 'hmr=debug',
-      },
-    });
+        const devServeProcess = execa('pnpm serve', {
+          cwd: tmpProjectPath,
+          shell: true,
+          stdio: 'inherit',
+          env: {
+            RUST_BACKTRACE: 'FULL',
+            RD_LOG: 'hmr=debug',
+          },
+        });
 
-    await ensurePathExists(nodePath.join(tmpProjectPath, 'dist/main.js'));
+        await ensurePathExists(nodePath.join(tmpProjectPath, 'dist/main.js'));
 
-    const nodeScriptPath = nodePath.join(tmpProjectPath, 'dist/main.js');
+        const nodeScriptPath = nodePath.join(tmpProjectPath, 'dist/main.js');
 
-    console.log('🔄 Starting Node.js process: ', nodeScriptPath);
-    const runningArtifactProcess = execa(
-      `node ${nodeScriptPath}`,
-      { cwd: tmpProjectPath, shell: true, stdio: 'inherit' },
-    );
+        console.log('🔄 Starting Node.js process: ', nodeScriptPath);
+        const runningArtifactProcess = execa(
+          `node ${nodeScriptPath}`,
+          { cwd: tmpProjectPath, shell: true, stdio: 'inherit' },
+        );
 
-    await new Promise<void>((rsl, _rej) => {
-      setTimeout(rsl, 5000);
-    });
+        await new Promise<void>((rsl, _rej) => {
+          setTimeout(rsl, 5000);
+        });
 
-    console.log('🔄 Collecting HMR edit files...');
-    const hmrEditFiles = await collectHmrEditFiles(tmpProjectPath);
+        console.log('🔄 Collecting HMR edit files...');
+        const hmrEditFiles = await collectHmrEditFiles(tmpProjectPath);
 
-    console.log('🔄 Processing HMR edit files...');
-    for (const hmrEditFile of hmrEditFiles) {
-      console.log(`🔄 Processing HMR edit file: ${hmrEditFile.path}`);
-      const newContent = await nodeFsPromise.readFile(
-        hmrEditFile.path,
-        'utf-8',
-      );
-      await nodeFsPromise.writeFile(hmrEditFile.targetPath, newContent);
-      console.log(
-        `📝 Written content to: ${hmrEditFile.targetPath}`,
-      );
-      console.log(
-        `⏳ Waiting for HMR to be triggered... ${hmrEditFile.targetPath}`,
-      );
-      await ensurePathExists(nodePath.join(tmpProjectPath, 'ok-1'));
-      console.log(`✅ Successfully triggered HMR ${hmrEditFile.targetPath}`);
+        console.log('🔄 Processing HMR edit files...');
+        for (const hmrEditFile of hmrEditFiles) {
+          console.log(`🔄 Processing HMR edit file: ${hmrEditFile.path}`);
+          const newContent = await nodeFsPromise.readFile(
+            hmrEditFile.path,
+            'utf-8',
+          );
+          await nodeFsPromise.writeFile(hmrEditFile.targetPath, newContent);
+          console.log(
+            `📝 Written content to: ${hmrEditFile.targetPath}`,
+          );
+          console.log(
+            `⏳ Waiting for HMR to be triggered... ${hmrEditFile.targetPath}`,
+          );
+          await ensurePathExists(nodePath.join(tmpProjectPath, 'ok-1'));
+          console.log(
+            `✅ Successfully triggered HMR ${hmrEditFile.targetPath}`,
+          );
+        }
+
+        const catchRunningArtifactProcess = runningArtifactProcess.catch(
+          err => {
+            if (err instanceof ExecaError && err.signal === 'SIGTERM') {
+              console.log(
+                'Process killed normally with SIGTERM, ignoring error.',
+              );
+            } else {
+              throw err;
+            }
+          },
+        );
+
+        const catchDevServeProcess = devServeProcess.catch(err => {
+          if (err instanceof ExecaError && err.signal === 'SIGTERM') {
+            console.log(
+              'Process killed normally with SIGTERM, ignoring error.',
+            );
+          } else {
+            throw err;
+          }
+        });
+
+        runningArtifactProcess.kill('SIGTERM');
+        await catchRunningArtifactProcess;
+
+        devServeProcess.kill('SIGTERM');
+        await catchDevServeProcess;
+      });
     }
-
-    const catchRunningArtifactProcess = runningArtifactProcess.catch(err => {
-      if (err instanceof ExecaError && err.signal === 'SIGTERM') {
-        console.log('Process killed normally with SIGTERM, ignoring error.');
-      } else {
-        throw err;
-      }
-    });
-
-    const catchDevServeProcess = devServeProcess.catch(err => {
-      if (err instanceof ExecaError && err.signal === 'SIGTERM') {
-        console.log('Process killed normally with SIGTERM, ignoring error.');
-      } else {
-        throw err;
-      }
-    });
-
-    runningArtifactProcess.kill('SIGTERM');
-    await catchRunningArtifactProcess;
-
-    devServeProcess.kill('SIGTERM');
-    await catchDevServeProcess;
   });
 }
 

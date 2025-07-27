@@ -83,5 +83,8 @@
     "packages/test-dev-server/tests/fixtures/basic": {
       "entry": ["dev.config.mjs", "src/*.js"], // no @rolldown/test-dev-server plugin
     },
+    "packages/test-dev-server/tests/fixtures/basic2": {
+      "entry": ["dev.config.mjs", "src/*.js"], // no @rolldown/test-dev-server plugin
+    },
   },
 }

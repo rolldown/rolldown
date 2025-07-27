@@ -22,7 +22,7 @@ function toArray$1(children) {
 }
 var import_react$1;
 var init_lib = __esm({ "lib.js": (() => {
-	import_react$1 = __toESM(require_react());
+	import_react$1 = /* @__PURE__ */ __toESM(require_react());
 }) });
 
 //#endregion
@@ -34,8 +34,8 @@ var require_cjs = /* @__PURE__ */ __commonJS({ "cjs.js": ((exports, module) => {
 
 //#endregion
 //#region main.js
-var import_react = __toESM(require_react());
-var import_cjs = __toESM(require_cjs());
+var import_react = /* @__PURE__ */ __toESM(require_react());
+var import_cjs = /* @__PURE__ */ __toESM(require_cjs());
 console.log("r", import_react, Typography, import_cjs.default);
 
 //#endregion

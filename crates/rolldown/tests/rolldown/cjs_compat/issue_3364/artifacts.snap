@@ -30,7 +30,7 @@ var require_commonjs = /* @__PURE__ */ __commonJS({ "commonjs.js": ((exports, mo
 
 //#endregion
 //#region main.js
-var import_commonjs = __toESM(require_commonjs());
+var import_commonjs = /* @__PURE__ */ __toESM(require_commonjs());
 assert.equal(import_commonjs.default.call({}, 1, 2), 3);
 
 //#endregion

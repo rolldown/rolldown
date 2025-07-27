@@ -16,7 +16,7 @@ var require_dot_import = /* @__PURE__ */ __commonJS({ "index.js": ((exports) => 
 
 //#endregion
 //#region entry.js
-var import_dot_import = __toESM(require_dot_import());
+var import_dot_import = /* @__PURE__ */ __toESM(require_dot_import());
 assert.equal(import_dot_import.x, 123);
 
 //#endregion

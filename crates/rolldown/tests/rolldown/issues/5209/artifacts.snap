@@ -19,7 +19,7 @@ var require_cjs = /* @__PURE__ */ __commonJS({ "cjs.js": ((exports) => {
 
 //#endregion
 //#region main.js
-var import_cjs = __toESM(require_cjs());
+var import_cjs = /* @__PURE__ */ __toESM(require_cjs());
 var accepts = typeof import_cjs.default === "function" ? import_cjs.default : import_cjs.default.default;
 assert.strictEqual(accepts(), 123);
 

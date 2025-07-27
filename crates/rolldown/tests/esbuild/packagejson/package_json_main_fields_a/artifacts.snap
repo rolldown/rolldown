@@ -16,7 +16,7 @@ var require_a = /* @__PURE__ */ __commonJS({ "node_modules/demo-pkg/a.js": ((exp
 
 //#endregion
 //#region src/entry.js
-var import_a = __toESM(require_a());
+var import_a = /* @__PURE__ */ __toESM(require_a());
 assert.equal(import_a.default, "a");
 
 //#endregion

@@ -51,13 +51,13 @@ var require_cjs = /* @__PURE__ */ __commonJS({ "cjs.js": ((exports, module) => {
 
 //#endregion
 //#region esm-import-cjs-require.js
-var import_cjs = __toESM(require_cjs());
+var import_cjs = /* @__PURE__ */ __toESM(require_cjs());
 require_foo();
 assert.equal(import_cjs.a, void 0);
 
 //#endregion
 //#region main.js
-var import_esm_import_cjs_export = __toESM(require_esm_import_cjs_export());
+var import_esm_import_cjs_export = /* @__PURE__ */ __toESM(require_esm_import_cjs_export());
 
 //#endregion
 //# sourceMappingURL=main.js.map

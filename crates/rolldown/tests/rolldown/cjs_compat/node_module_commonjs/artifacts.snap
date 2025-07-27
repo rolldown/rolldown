@@ -21,7 +21,7 @@ export { __reExport, __toESM, require_commonjs };
 import { __toESM, require_commonjs } from "./commonjs.js";
 
 //#region entry.js
-var import_commonjs = __toESM(require_commonjs(), 1);
+var import_commonjs = /* @__PURE__ */ __toESM(require_commonjs(), 1);
 console.log(import_commonjs.default);
 
 //#endregion
@@ -33,11 +33,11 @@ import { __reExport, __toESM, require_commonjs } from "./commonjs.js";
 
 //#region star-export.js
 var star_export_exports = {};
-__reExport(star_export_exports, __toESM(require_commonjs(), 1));
+__reExport(star_export_exports, /* @__PURE__ */ __toESM(require_commonjs(), 1));
 
 //#endregion
 //#region main.mjs
-var import_commonjs = __toESM(require_commonjs(), 1);
+var import_commonjs = /* @__PURE__ */ __toESM(require_commonjs(), 1);
 console.log(import_commonjs.default, star_export_exports);
 
 //#endregion

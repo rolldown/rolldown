@@ -26,7 +26,7 @@ const value = "exist-esm";
 //#endregion
 //#region hmr.js
 var hmr_exports = {};
-var import_exist_dep_cjs = __toESM(require_exist_dep_cjs());
+var import_exist_dep_cjs = /* @__PURE__ */ __toESM(require_exist_dep_cjs());
 const hmr_hot = __rolldown_runtime__.createModuleHotContext("hmr.js");
 __rolldown_runtime__.registerModule("hmr.js", { exports: hmr_exports });
 hmr_hot.accept((mod) => {

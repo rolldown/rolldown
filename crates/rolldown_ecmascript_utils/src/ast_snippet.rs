@@ -649,12 +649,13 @@ impl<'ast> AstSnippet<'ast> {
     } else {
       self.builder.vec1(Argument::from(expr))
     };
-    ast::Expression::CallExpression(self.builder.alloc_call_expression(
+    ast::Expression::CallExpression(self.builder.alloc_call_expression_with_pure(
       SPAN,
       to_esm_fn_expr,
       NONE,
       args,
       false,
+      true,
     ))
   }
 

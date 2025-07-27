@@ -16,7 +16,7 @@ var require_commonjs = /* @__PURE__ */ __commonJS({ "commonjs.js": ((exports) =>
 
 //#endregion
 //#region main.js
-var import_commonjs = __toESM(require_commonjs());
+var import_commonjs = /* @__PURE__ */ __toESM(require_commonjs());
 assert.deepEqual(import_commonjs, {
 	default: { a: 1 },
 	a: 1

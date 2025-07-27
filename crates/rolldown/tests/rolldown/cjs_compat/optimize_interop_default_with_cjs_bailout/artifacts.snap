@@ -31,7 +31,7 @@ var require_commonjs = /* @__PURE__ */ __commonJS({ "commonjs.js": ((exports) =>
 
 //#endregion
 //#region main.js
-var import_commonjs = __toESM(require_commonjs());
+var import_commonjs = /* @__PURE__ */ __toESM(require_commonjs());
 assert.deepEqual(import_commonjs.default.slice(1), [2, 3], "should import JSON file as expected");
 assert.equal(import_commonjs.foo, 1);
 

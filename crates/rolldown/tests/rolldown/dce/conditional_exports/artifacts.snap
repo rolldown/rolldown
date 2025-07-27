@@ -23,7 +23,7 @@ var require_lib = /* @__PURE__ */ __commonJS({ "lib.js": ((exports, module) => {
 
 //#endregion
 //#region main.js
-var import_lib = __toESM(require_lib());
+var import_lib = /* @__PURE__ */ __toESM(require_lib());
 
 //#endregion
 var lib = import_lib.default;

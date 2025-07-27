@@ -24,7 +24,7 @@ var init_dep_b = __esm({ "dep-b.js": (() => {
 //#region main.js
 var import_dep_a;
 var init_main = __esm({ "main.js": (() => {
-	import_dep_a = __toESM(require_dep_a());
+	import_dep_a = /* @__PURE__ */ __toESM(require_dep_a());
 	init_dep_b();
 }) });
 
@@ -58,7 +58,7 @@ var init_dep_b = __esm({ "dep-b.js": (() => {
 //#region main.js
 var import_dep_a;
 var init_main = __esm({ "main.js": (() => {
-	import_dep_a = __toESM(require_dep_a());
+	import_dep_a = /* @__PURE__ */ __toESM(require_dep_a());
 	init_dep_b();
 }) });
 

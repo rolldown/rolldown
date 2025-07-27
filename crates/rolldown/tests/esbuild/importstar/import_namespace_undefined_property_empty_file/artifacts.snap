@@ -69,7 +69,7 @@ export { __toESM, require_empty };
 import { __toESM, require_empty } from "./empty.js";
 
 //#region entry-default.js
-var import_empty = __toESM(require_empty());
+var import_empty = /* @__PURE__ */ __toESM(require_empty());
 console.log(void 0, void 0, import_empty.default);
 
 //#endregion
@@ -80,7 +80,7 @@ console.log(void 0, void 0, import_empty.default);
 import { __toESM, require_empty } from "./empty.js";
 
 //#region entry-nope.js
-var import_empty = __toESM(require_empty());
+var import_empty = /* @__PURE__ */ __toESM(require_empty());
 console.log(void 0, void 0, import_empty.nope);
 
 //#endregion

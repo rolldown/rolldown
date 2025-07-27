@@ -15,7 +15,7 @@ var require_c = /* @__PURE__ */ __commonJS({ "c.js": ((exports) => {
 //#endregion
 //#region b.js
 var b_exports = {};
-__reExport(b_exports, __toESM(require_c()));
+__reExport(b_exports, /* @__PURE__ */ __toESM(require_c()));
 
 //#endregion
 //#region a.js

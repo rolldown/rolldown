@@ -27,7 +27,7 @@ var require_demo_pkg = /* @__PURE__ */ __commonJS({ "node_modules/demo-pkg/index
 
 //#endregion
 //#region src/entry.js
-var import_demo_pkg = __toESM(require_demo_pkg());
+var import_demo_pkg = /* @__PURE__ */ __toESM(require_demo_pkg());
 assert.equal((0, import_demo_pkg.default)(), 123);
 
 //#endregion

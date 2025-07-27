@@ -39,7 +39,7 @@ var init_sideeffects = __esm({ "sideeffects.js": (() => {
 //#region esm.js
 var import_dynamic, a;
 var init_esm = __esm({ "esm.js": (() => {
-	import_dynamic = __toESM(require_dynamic());
+	import_dynamic = /* @__PURE__ */ __toESM(require_dynamic());
 	init_sideeffects();
 	a = globalThis.a;
 	strictEqual(a, 2);

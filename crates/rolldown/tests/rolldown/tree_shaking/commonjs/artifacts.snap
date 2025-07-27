@@ -29,7 +29,7 @@ var require_cjs$2 = /* @__PURE__ */ __commonJS({ "src/export_star_from_cjs/cjs.j
 //#endregion
 //#region src/export_star_from_cjs/index.js
 var export_star_from_cjs_exports = {};
-__reExport(export_star_from_cjs_exports, __toESM(require_cjs$2()));
+__reExport(export_star_from_cjs_exports, /* @__PURE__ */ __toESM(require_cjs$2()));
 
 //#endregion
 //#region src/nested_export_star_from_cjs/cjs.js
@@ -40,7 +40,7 @@ var require_cjs$1 = /* @__PURE__ */ __commonJS({ "src/nested_export_star_from_cj
 //#endregion
 //#region src/nested_export_star_from_cjs/reexport.js
 var reexport_exports = {};
-__reExport(reexport_exports, __toESM(require_cjs$1()));
+__reExport(reexport_exports, /* @__PURE__ */ __toESM(require_cjs$1()));
 
 //#endregion
 //#region src/named_import_export_star_from_cjs/cjs.js
@@ -51,7 +51,7 @@ var require_cjs = /* @__PURE__ */ __commonJS({ "src/named_import_export_star_fro
 //#endregion
 //#region src/named_import_export_star_from_cjs/index.js
 var named_import_export_star_from_cjs_exports = {};
-__reExport(named_import_export_star_from_cjs_exports, __toESM(require_cjs()));
+__reExport(named_import_export_star_from_cjs_exports, /* @__PURE__ */ __toESM(require_cjs()));
 
 //#endregion
 //#region src/indirect_common_js/lib.js
@@ -67,9 +67,9 @@ var require_indirect_common_js = /* @__PURE__ */ __commonJS({ "src/indirect_comm
 
 //#endregion
 //#region main.js
-var import_basic_ns = __toESM(require_basic_ns());
-var import_basic_ref_with_named_default = __toESM(require_basic_ref_with_named_default());
-var import_indirect_common_js = __toESM(require_indirect_common_js());
+var import_basic_ns = /* @__PURE__ */ __toESM(require_basic_ns());
+var import_basic_ref_with_named_default = /* @__PURE__ */ __toESM(require_basic_ref_with_named_default());
+var import_indirect_common_js = /* @__PURE__ */ __toESM(require_indirect_common_js());
 assert.equal(import_basic_ns.a, "basic-a");
 assert.equal(import_basic_ref_with_named_default.a, "basic-ref-with-named-default-a");
 assert.equal(export_star_from_cjs_exports.a, "export-star-from-cjs-a");

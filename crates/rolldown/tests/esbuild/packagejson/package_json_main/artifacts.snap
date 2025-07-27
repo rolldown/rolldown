@@ -18,7 +18,7 @@ var require_custom_main = /* @__PURE__ */ __commonJS({ "node_modules/demo-pkg/cu
 
 //#endregion
 //#region src/entry.js
-var import_custom_main = __toESM(require_custom_main());
+var import_custom_main = /* @__PURE__ */ __toESM(require_custom_main());
 assert.equal((0, import_custom_main.default)(), 123);
 
 //#endregion

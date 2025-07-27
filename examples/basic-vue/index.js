@@ -1,3 +1,3 @@
-import { createApp } from 'vue';
+import { createApp } from 'react';
 
 export default createApp({});

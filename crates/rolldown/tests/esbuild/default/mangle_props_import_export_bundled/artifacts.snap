@@ -47,8 +47,8 @@ import { __toESM, esm_foo_, init_esm, require_cjs } from "./cjs.js";
 
 //#region entry-esm.js
 init_esm();
-var import_cjs = __toESM(require_cjs());
-var import_cjs$1 = __toESM(require_cjs());
+var import_cjs = /* @__PURE__ */ __toESM(require_cjs());
+var import_cjs$1 = /* @__PURE__ */ __toESM(require_cjs());
 let bar_ = [
 	esm_foo_,
 	import_cjs.cjs_foo_,

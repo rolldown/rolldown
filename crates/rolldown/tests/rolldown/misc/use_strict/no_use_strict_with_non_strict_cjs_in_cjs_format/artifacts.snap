@@ -17,7 +17,7 @@ var require_cjs = /* @__PURE__ */ __commonJS({ "cjs.js": ((exports, module) => {
 
 //#endregion
 //#region main.js
-var import_cjs = __toESM(require_cjs());
+var import_cjs = /* @__PURE__ */ __toESM(require_cjs());
 node_assert.default.deepEqual(import_cjs.default, { default: {} });
 
 //#endregion

@@ -14,7 +14,7 @@ var require_foo = /* @__PURE__ */ __commonJS({ "foo.js": ((exports) => {
 
 //#endregion
 //#region entry.js
-var import_foo = __toESM(require_foo());
+var import_foo = /* @__PURE__ */ __toESM(require_foo());
 console.log((0, import_foo.default)(import_foo.x, import_foo.y));
 
 //#endregion

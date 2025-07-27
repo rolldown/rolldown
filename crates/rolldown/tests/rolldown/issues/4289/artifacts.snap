@@ -64,7 +64,7 @@ var require_node_mode_by_cjs_extension = /* @__PURE__ */ __commonJS({ "node-mode
 
 //#endregion
 //#region main.js
-var import_node_mode_by_cjs_extension = __toESM(require_node_mode_by_cjs_extension());
+var import_node_mode_by_cjs_extension = /* @__PURE__ */ __toESM(require_node_mode_by_cjs_extension());
 
 //#endregion
 ```
@@ -157,7 +157,7 @@ var require_node_mode_by_cjs_extension = /* @__PURE__ */ require_chunk.__commonJ
 
 //#endregion
 //#region main.js
-var import_node_mode_by_cjs_extension = require_chunk.__toESM(require_node_mode_by_cjs_extension());
+var import_node_mode_by_cjs_extension = /* @__PURE__ */ require_chunk.__toESM(require_node_mode_by_cjs_extension());
 
 //#endregion
 ```
@@ -182,7 +182,7 @@ var require_lib = /* @__PURE__ */ __commonJS({ "lib.js": ((exports) => {
 //#endregion
 //#region non-node-mode.js
 async function main$2() {
-	const exports$1 = await Promise.resolve().then(() => __toESM(require_lib()));
+	const exports$1 = await Promise.resolve().then(() => /* @__PURE__ */ __toESM(require_lib()));
 	nodeAssert.deepEqual(Object.keys(exports$1).sort(), ["parse"]);
 	nodeAssert.strictEqual(exports$1.parse, "parse", "Expected export exists and is correct");
 	nodeAssert.strictEqual(exports$1.default, void 0, "Target has __esModule, so no auto-generated default export");
@@ -192,7 +192,7 @@ main$2();
 //#endregion
 //#region node-mode-by-mjs-extension.mjs
 async function main$1() {
-	const exports$1 = await Promise.resolve().then(() => __toESM(require_lib(), 1));
+	const exports$1 = await Promise.resolve().then(() => /* @__PURE__ */ __toESM(require_lib(), 1));
 	nodeAssert.deepEqual(Object.keys(exports$1).sort(), ["default", "parse"]);
 	nodeAssert.strictEqual(exports$1.parse, "parse", "Expected export exists and is correct");
 	nodeAssert.strictEqual(exports$1.default.parse, "parse", "Target has __esModule, but this file triggered node compat mode");
@@ -203,7 +203,7 @@ main$1();
 //#region node-mode-by-cjs-extension.cjs
 var require_node_mode_by_cjs_extension = /* @__PURE__ */ __commonJS({ "node-mode-by-cjs-extension.cjs": ((exports, module) => {
 	async function main() {
-		const exports$1 = await Promise.resolve().then(() => __toESM(require_lib(), 1));
+		const exports$1 = await Promise.resolve().then(() => /* @__PURE__ */ __toESM(require_lib(), 1));
 		nodeAssert.deepEqual(Object.keys(exports$1).sort(), ["default", "parse"]);
 		nodeAssert.strictEqual(exports$1.parse, "parse", "Expected export exists and is correct");
 		nodeAssert.strictEqual(exports$1.default.parse, "parse", "Target has __esModule, but this file triggered node compat mode");
@@ -214,7 +214,7 @@ var require_node_mode_by_cjs_extension = /* @__PURE__ */ __commonJS({ "node-mode
 
 //#endregion
 //#region main.js
-var import_node_mode_by_cjs_extension = __toESM(require_node_mode_by_cjs_extension());
+var import_node_mode_by_cjs_extension = /* @__PURE__ */ __toESM(require_node_mode_by_cjs_extension());
 
 //#endregion
 ```

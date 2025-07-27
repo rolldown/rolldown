@@ -18,7 +18,7 @@ var require_browser = /* @__PURE__ */ __commonJS({ "node_modules/demo-pkg/browse
 
 //#endregion
 //#region src/entry.js
-var import_browser = __toESM(require_browser());
+var import_browser = /* @__PURE__ */ __toESM(require_browser());
 assert.equal((0, import_browser.default)(), 123);
 
 //#endregion

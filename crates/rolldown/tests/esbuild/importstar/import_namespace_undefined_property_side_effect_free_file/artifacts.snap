@@ -59,7 +59,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 import { __toESM, require_no_side_effects } from "./no-side-effects.js";
 
 //#region entry-default.js
-var import_no_side_effects = __toESM(require_no_side_effects());
+var import_no_side_effects = /* @__PURE__ */ __toESM(require_no_side_effects());
 console.log(void 0, void 0, import_no_side_effects.default);
 
 //#endregion
@@ -70,7 +70,7 @@ console.log(void 0, void 0, import_no_side_effects.default);
 import { __toESM, require_no_side_effects } from "./no-side-effects.js";
 
 //#region entry-nope.js
-var import_no_side_effects = __toESM(require_no_side_effects());
+var import_no_side_effects = /* @__PURE__ */ __toESM(require_no_side_effects());
 console.log(void 0, void 0, import_no_side_effects.nope);
 
 //#endregion

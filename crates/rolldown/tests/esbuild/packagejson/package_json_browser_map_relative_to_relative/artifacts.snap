@@ -25,7 +25,7 @@ var require_main_browser = /* @__PURE__ */ __commonJS({ "node_modules/demo-pkg/m
 
 //#endregion
 //#region src/entry.js
-var import_main_browser = __toESM(require_main_browser());
+var import_main_browser = /* @__PURE__ */ __toESM(require_main_browser());
 assert.deepEqual((0, import_main_browser.default)(), ["main-browser", "util-browser"]);
 
 //#endregion

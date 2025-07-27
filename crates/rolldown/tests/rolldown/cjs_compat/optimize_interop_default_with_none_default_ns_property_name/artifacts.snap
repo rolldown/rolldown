@@ -23,7 +23,7 @@ var refactor_default = (a) => a;
 
 //#endregion
 //#region main.js
-var import_commonjs = __toESM(require_commonjs());
+var import_commonjs = /* @__PURE__ */ __toESM(require_commonjs());
 import_commonjs.ObjectElement.refract = refactor_default(import_commonjs.ObjectElement);
 
 //#endregion

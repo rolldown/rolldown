@@ -14,7 +14,7 @@ var require_cjs = /* @__PURE__ */ __commonJS({ "cjs.js": ((exports, module) => {
 
 //#endregion
 //#region a.js
-var import_cjs = __toESM(require_cjs());
+var import_cjs = /* @__PURE__ */ __toESM(require_cjs());
 function test() {
 	return import_cjs.default;
 }
@@ -39,7 +39,7 @@ export { entry };
 import { __toESM, require_cjs, test } from "./a.js";
 
 //#region b.js
-var import_cjs = __toESM(require_cjs());
+var import_cjs = /* @__PURE__ */ __toESM(require_cjs());
 function test$1() {
 	return import_cjs.default;
 }

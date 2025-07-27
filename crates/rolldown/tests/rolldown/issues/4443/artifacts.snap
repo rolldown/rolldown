@@ -17,7 +17,7 @@ var require_foo = /* @__PURE__ */ __commonJS({ "foo.js": ((exports) => {
 
 //#endregion
 //#region main.js
-var import_foo = __toESM(require_foo());
+var import_foo = /* @__PURE__ */ __toESM(require_foo());
 assert.strictEqual(globalThis.value, "foo", "globalThis.value should be \"foo\"");
 
 //#endregion

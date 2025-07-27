@@ -17,8 +17,8 @@ var require_commonjs = /* @__PURE__ */ __commonJS({ "commonjs.js": ((exports, mo
 //#endregion
 //#region reexports.mjs
 var reexports_exports = {};
-var import_commonjs = __toESM(require_commonjs(), 1);
-__reExport(reexports_exports, __toESM(require_commonjs(), 1));
+var import_commonjs = /* @__PURE__ */ __toESM(require_commonjs(), 1);
+__reExport(reexports_exports, /* @__PURE__ */ __toESM(require_commonjs(), 1));
 assert.equal(import_commonjs.bar, 1);
 
 //#endregion

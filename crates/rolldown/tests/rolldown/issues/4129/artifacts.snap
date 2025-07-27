@@ -20,7 +20,7 @@ var require_lib = /* @__PURE__ */ __commonJS({ "lib.js": ((exports, module) => {
 //#endregion
 //#region main.js
 var main_exports = {};
-var import_lib = __toESM(require_lib());
+var import_lib = /* @__PURE__ */ __toESM(require_lib());
 const main_hot = __rolldown_runtime__.createModuleHotContext("main.js");
 __rolldown_runtime__.registerModule("main.js", { exports: main_exports });
 assert.strictEqual(import_lib.a, 1);

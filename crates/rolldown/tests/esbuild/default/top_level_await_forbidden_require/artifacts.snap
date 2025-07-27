@@ -17,7 +17,7 @@ var require_c = /* @__PURE__ */ __commonJS({ "c.js": (() => {
 var b_exports = {};
 var import_c;
 var init_b = __esm({ "b.js": (async () => {
-	import_c = __toESM(require_c());
+	import_c = /* @__PURE__ */ __toESM(require_c());
 }) });
 
 //#endregion

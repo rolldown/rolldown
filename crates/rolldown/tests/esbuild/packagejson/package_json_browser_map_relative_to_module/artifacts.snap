@@ -25,7 +25,7 @@ var require_main = /* @__PURE__ */ __commonJS({ "node_modules/demo-pkg/main.js":
 
 //#endregion
 //#region src/entry.js
-var import_main = __toESM(require_main());
+var import_main = /* @__PURE__ */ __toESM(require_main());
 assert.deepEqual((0, import_main.default)(), ["main", "util-browser"]);
 
 //#endregion

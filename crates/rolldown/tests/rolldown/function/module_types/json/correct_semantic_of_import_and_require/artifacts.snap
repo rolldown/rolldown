@@ -16,7 +16,7 @@ var require_codes = /* @__PURE__ */ __commonJS({ "codes.json": ((exports, module
 
 //#endregion
 //#region main.js
-var import_codes = __toESM(require_codes());
+var import_codes = /* @__PURE__ */ __toESM(require_codes());
 const codes2 = require_codes();
 assert.strictEqual(import_codes.default, codes2);
 

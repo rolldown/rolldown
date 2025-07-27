@@ -30,7 +30,7 @@ var require_foo = /* @__PURE__ */ __commonJS({ "foo.js": ((exports, module) => {
 
 //#endregion
 //#region main.js
-var import_foo = __toESM(require_foo());
+var import_foo = /* @__PURE__ */ __toESM(require_foo());
 
 //#endregion
 export { import_foo };

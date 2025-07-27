@@ -23,8 +23,8 @@ var require_commonjs2 = /* @__PURE__ */ __commonJS({ "commonjs2.js": ((exports) 
 //#endregion
 //#region proxy.js
 var proxy_exports = {};
-__reExport(proxy_exports, __toESM(require_commonjs()));
-__reExport(proxy_exports, __toESM(require_commonjs2()));
+__reExport(proxy_exports, /* @__PURE__ */ __toESM(require_commonjs()));
+__reExport(proxy_exports, /* @__PURE__ */ __toESM(require_commonjs2()));
 
 //#endregion
 //#region main.js

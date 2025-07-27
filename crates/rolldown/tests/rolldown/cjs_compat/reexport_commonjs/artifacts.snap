@@ -25,12 +25,12 @@ __export(foo_exports, {
 	bar: () => import_commonjs$1.bar,
 	value: () => value
 });
-__reExport(foo_exports, __toESM(require_commonjs()));
-var import_commonjs$1 = __toESM(require_commonjs());
+__reExport(foo_exports, /* @__PURE__ */ __toESM(require_commonjs()));
+var import_commonjs$1 = /* @__PURE__ */ __toESM(require_commonjs());
 
 //#endregion
 //#region main.js
-var import_commonjs = __toESM(require_commonjs());
+var import_commonjs = /* @__PURE__ */ __toESM(require_commonjs());
 assert.equal(import_commonjs$1.bar, 1);
 assert.equal(value, 1);
 assert.equal(foo_exports.foo, void 0);

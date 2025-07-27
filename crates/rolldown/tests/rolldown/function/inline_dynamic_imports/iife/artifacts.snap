@@ -30,8 +30,8 @@ var init_esm = __esm({ "esm.js": (() => {
 
 //#endregion
 //#region main.js
-Promise.resolve().then(() => __toESM(require_foo()));
-Promise.resolve().then(() => __toESM(require_cjs()));
+Promise.resolve().then(() => /* @__PURE__ */ __toESM(require_foo()));
+Promise.resolve().then(() => /* @__PURE__ */ __toESM(require_cjs()));
 Promise.resolve().then(() => (init_esm(), esm_exports));
 
 //#endregion

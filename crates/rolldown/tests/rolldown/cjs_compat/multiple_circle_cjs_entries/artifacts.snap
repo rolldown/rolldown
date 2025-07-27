@@ -17,14 +17,14 @@ export default require_a();
 // HIDDEN [rolldown:runtime]
 //#region b.js
 var require_b = /* @__PURE__ */ __commonJS({ "b.js": ((exports, module) => {
-	var import_a = __toESM(require_a());
+	var import_a = /* @__PURE__ */ __toESM(require_a());
 	module.exports = "b";
 }) });
 
 //#endregion
 //#region a.js
 var require_a = /* @__PURE__ */ __commonJS({ "a.js": ((exports, module) => {
-	var import_b = __toESM(require_b());
+	var import_b = /* @__PURE__ */ __toESM(require_b());
 	module.exports = "a";
 }) });
 

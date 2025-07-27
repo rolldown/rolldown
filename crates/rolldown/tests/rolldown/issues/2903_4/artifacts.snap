@@ -33,7 +33,7 @@ var require_cjs_dep = /* @__PURE__ */ require_chunk.__commonJS({ "cjs-dep.js": (
 
 //#endregion
 //#region main.js
-var import_cjs_dep = require_chunk.__toESM(require_cjs_dep());
+var import_cjs_dep = /* @__PURE__ */ require_chunk.__toESM(require_cjs_dep());
 
 //#endregion
 ```
@@ -49,7 +49,7 @@ var require_cjs_dep2 = /* @__PURE__ */ require_chunk.__commonJS({ "cjs-dep2.js":
 
 //#endregion
 //#region main2.js
-var import_cjs_dep2 = require_chunk.__toESM(require_cjs_dep2());
+var import_cjs_dep2 = /* @__PURE__ */ require_chunk.__toESM(require_cjs_dep2());
 
 //#endregion
 ```

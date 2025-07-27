@@ -18,7 +18,7 @@
   "devDependencies": {
     "@rolldown/test-side-effects-field": "link:./package-fixtures/test-side-effects-field",
     "@rolldown/test-side-effects-field-glob": "file:./package-fixtures/test-side-effects-field-glob",
-    "@types/node": "24.0.15",
+    "@types/node": "24.1.0",
     "tsx": "^4.19.4"
   },
   "exports": {

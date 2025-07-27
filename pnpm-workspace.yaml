@@ -20,8 +20,8 @@ verifyDepsBeforeRun: install
 catalog:
   '@napi-rs/wasm-runtime': '^1.0.0'
   '@napi-rs/cli': '^3.0.0'
-  '@oxc-node/cli': '^0.0.29'
-  '@oxc-node/core': '^0.0.29'
+  '@oxc-node/cli': '^0.0.30'
+  '@oxc-node/core': '^0.0.30'
   '@oxc-project/runtime': '=0.78.0'
   '@oxc-project/types': '=0.78.0'
   'oxc-parser': '=0.78.0'

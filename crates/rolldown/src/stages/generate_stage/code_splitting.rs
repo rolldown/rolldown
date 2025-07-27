@@ -109,7 +109,11 @@ impl GenerateStage<'_> {
             chunk_graph.chunk_idx_to_reference_ids.insert(chunk_idx, reference_ids.clone());
           }
         }
-        chunk_graph.add_module_to_chunk(module.idx, chunk_idx);
+        chunk_graph.add_module_to_chunk(
+          module.idx,
+          chunk_idx,
+          self.link_output.metas[module.idx].depended_runtime_helper,
+        );
         // bits_to_chunk.insert(bits, chunk); // This line is intentionally commented out because `bits_to_chunk` is not used in this loop. It is updated elsewhere in the `init_entry_point` and `split_chunks` methods.
         entry_module_to_entry_chunk.insert(module.idx, chunk_idx);
       }
@@ -442,7 +446,11 @@ impl GenerateStage<'_> {
         normal_module.stable_id
       );
       if let Some(chunk_id) = bits_to_chunk.get(bits).copied() {
-        chunk_graph.add_module_to_chunk(normal_module.idx, chunk_id);
+        chunk_graph.add_module_to_chunk(
+          normal_module.idx,
+          chunk_id,
+          self.link_output.metas[normal_module.idx].depended_runtime_helper,
+        );
       } else if allow_extension_optimize {
         pending_common_chunks.entry(bits.clone()).or_default().push(normal_module.idx);
       } else {
@@ -453,7 +461,11 @@ impl GenerateStage<'_> {
           self.options,
         );
         let chunk_id = chunk_graph.add_chunk(chunk);
-        chunk_graph.add_module_to_chunk(normal_module.idx, chunk_id);
+        chunk_graph.add_module_to_chunk(
+          normal_module.idx,
+          chunk_id,
+          self.link_output.metas[normal_module.idx].depended_runtime_helper,
+        );
         bits_to_chunk.insert(bits.clone(), chunk_id);
       }
     }
@@ -501,8 +513,12 @@ impl GenerateStage<'_> {
             Some(PreserveEntrySignatures::Strict)
           ) =>
         {
-          for m in modules {
-            chunk_graph.add_module_to_chunk(m, chunk_idx);
+          for module_idx in modules {
+            chunk_graph.add_module_to_chunk(
+              module_idx,
+              chunk_idx,
+              self.link_output.metas[module_idx].depended_runtime_helper,
+            );
           }
         }
         CombineChunkRet::DynamicVec(_) | CombineChunkRet::None | CombineChunkRet::Entry(_) => {
@@ -521,7 +537,11 @@ impl GenerateStage<'_> {
           );
           let chunk_id = chunk_graph.add_chunk(chunk);
           for module_idx in modules {
-            chunk_graph.add_module_to_chunk(module_idx, chunk_id);
+            chunk_graph.add_module_to_chunk(
+              module_idx,
+              chunk_id,
+              self.link_output.metas[module_idx].depended_runtime_helper,
+            );
           }
           bits_to_chunk.insert(bits, chunk_id);
         }
@@ -659,7 +679,6 @@ impl GenerateStage<'_> {
 
       index_splitting_info[module_idx].bits.set_bit(entry_index);
       index_splitting_info[module_idx].share_count += 1;
-
       meta.dependencies.iter().copied().for_each(|dep_idx| {
         q.push_back(dep_idx);
       });

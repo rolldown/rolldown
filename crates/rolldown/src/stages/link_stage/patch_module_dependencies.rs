@@ -6,6 +6,9 @@ use super::LinkStage;
 impl LinkStage<'_> {
   pub(super) fn patch_module_dependencies(&mut self) {
     self.metas.par_iter_mut_enumerated().for_each(|(module_idx, meta)| {
+      if !meta.depended_runtime_helper.is_empty() {
+        meta.dependencies.insert(self.runtime.id());
+      }
       // Symbols from runtime are referenced by bundler not import statements.
       meta.referenced_symbols_by_entry_point_chunk.iter().for_each(
         |(symbol_ref, _came_from_cjs)| {

@@ -6,11 +6,13 @@ use petgraph::prelude::DiGraphMap;
 use rolldown_common::{
   ConstExportMeta, EcmaModuleAstUsage, EcmaViewMeta, EntryPoint, EntryPointKind, ExportsKind,
   ImportKind, ImportRecordIdx, ImportRecordMeta, IndexModules, Module, ModuleIdx, ModuleType,
-  NormalModule, NormalizedBundlerOptions, StmtInfoIdx, StmtSideEffect, SymbolOrMemberExprRef,
-  SymbolRef, SymbolRefDb, dynamic_import_usage::DynamicImportExportsUsage,
-  side_effects::DeterminedSideEffects,
+  NormalModule, NormalizedBundlerOptions, RUNTIME_HELPER_NAMES, RuntimeHelper, StmtInfoIdx,
+  StmtSideEffect, SymbolOrMemberExprRef, SymbolRef, SymbolRefDb,
+  dynamic_import_usage::DynamicImportExportsUsage, side_effects::DeterminedSideEffects,
 };
-use rolldown_utils::rayon::{IntoParallelRefMutIterator, ParallelIterator};
+use rolldown_utils::rayon::{
+  IndexedParallelIterator, IntoParallelRefIterator, IntoParallelRefMutIterator, ParallelIterator,
+};
 use rustc_hash::{FxHashMap, FxHashSet};
 
 use crate::{stages::link_stage::LinkStage, types::linking_metadata::LinkingMetadataVec};
@@ -158,22 +160,45 @@ impl LinkStage<'_> {
       }
     }
 
-    self.module_table.modules.par_iter_mut().filter_map(Module::as_normal_mut).for_each(|module| {
-      let idx = module.idx;
-      module.meta.set(EcmaViewMeta::INCLUDED, is_module_included_vec[idx]);
-      is_included_vec[module.idx].iter_enumerated().for_each(|(stmt_info_id, is_included)| {
-        module.stmt_infos.get_mut(stmt_info_id).is_included = *is_included;
+    self
+      .module_table
+      .modules
+      .par_iter_mut()
+      .zip_eq(self.metas.par_iter_mut())
+      .filter_map(|(m, meta)| m.as_normal_mut().map(|m| (m, meta)))
+      .for_each(|(module, meta)| {
+        let idx = module.idx;
+        module.meta.set(EcmaViewMeta::INCLUDED, is_module_included_vec[idx]);
+        is_included_vec[module.idx].iter_enumerated().for_each(|(stmt_info_id, is_included)| {
+          module.stmt_infos.get_mut(stmt_info_id).is_included = *is_included;
+        });
+        let mut normalized_runtime_helper = RuntimeHelper::default();
+        for (index, stmt_info_idxs) in module.depended_runtime_helper.iter().enumerate() {
+          if stmt_info_idxs.is_empty() {
+            continue;
+          }
+          let any_included =
+            stmt_info_idxs.iter().any(|stmt_info_idx| is_included_vec[module.idx][*stmt_info_idx]);
+          #[allow(clippy::cast_possible_truncation)]
+          // It is alright, since the `RuntimeHelper` is a bitmask and the index is guaranteed to be less than 32.
+          normalized_runtime_helper
+            .set(RuntimeHelper::from_bits(1 << index as u32).unwrap(), any_included);
+        }
+        meta.depended_runtime_helper = normalized_runtime_helper;
+
+        // The hmr need to create module namespace object to store exports.
+        if self.options.is_hmr_enabled()
+          && module.idx != self.runtime.id()
+          && matches!(module.exports_kind, ExportsKind::Esm)
+        {
+          module.stmt_infos.get_mut(StmtInfoIdx::new(0)).is_included = true;
+        }
       });
-
-      // The hmr need to create module namespace object to store exports.
-      if self.options.is_hmr_enabled()
-        && module.idx != self.runtime.id()
-        && matches!(module.exports_kind, ExportsKind::Esm)
-      {
-        module.stmt_infos.get_mut(StmtInfoIdx::new(0)).is_included = true;
-      }
-    });
-
+    self.include_runtime_symbol(
+      &mut is_included_vec,
+      &mut is_module_included_vec,
+      &mut used_symbol_refs,
+    );
     self.used_symbol_refs = used_symbol_refs;
     tracing::trace!(
       "included statements {:#?}",
@@ -337,6 +362,55 @@ impl LinkStage<'_> {
       }
     };
     (!is_lived).then_some(ret)
+  }
+
+  fn include_runtime_symbol(
+    &mut self,
+    is_stmt_included_vec: &mut IndexVec<ModuleIdx, IndexVec<StmtInfoIdx, bool>>,
+    is_module_included_vec: &mut IndexVec<ModuleIdx, bool>,
+    used_symbol_refs: &mut FxHashSet<SymbolRef>,
+  ) {
+    // Including all depended runtime symbol
+    let depended_runtime_helper = self
+      .metas
+      .par_iter()
+      .map(|item| item.depended_runtime_helper)
+      .reduce(RuntimeHelper::default, |a, b| a | b);
+
+    if depended_runtime_helper.is_empty() {
+      return;
+    }
+
+    let context = &mut Context {
+      modules: &self.module_table.modules,
+      symbols: &self.symbols,
+      is_included_vec: is_stmt_included_vec,
+      is_module_included_vec,
+      tree_shaking: self.options.treeshake.is_some(),
+      runtime_id: self.runtime.id(),
+      // used_exports_info_vec: &mut used_exports_info_vec,
+      metas: &self.metas,
+      used_symbol_refs,
+      constant_symbol_map: &self.constant_symbol_map,
+      options: self.options,
+      normal_symbol_exports_chain_map: &self.normal_symbol_exports_chain_map,
+      bailout_cjs_tree_shaking_modules: FxHashSet::default(),
+      may_partial_namespace: false,
+    };
+
+    for helper in depended_runtime_helper {
+      let index = helper.bits().trailing_zeros() as usize;
+      let name = RUNTIME_HELPER_NAMES[index];
+      include_symbol(context, self.runtime.resolve_symbol(name), IncludeKind::Normal);
+    }
+
+    let module =
+      self.module_table[self.runtime.id()].as_normal_mut().expect("should be a normal module");
+    module.meta.set(EcmaViewMeta::INCLUDED, true);
+
+    for (stmt_idx, included) in is_stmt_included_vec[self.runtime.id()].iter_enumerated() {
+      module.stmt_infos.get_mut(stmt_idx).is_included = *included;
+    }
   }
 }
 

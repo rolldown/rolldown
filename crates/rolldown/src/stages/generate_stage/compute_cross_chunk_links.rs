@@ -9,7 +9,7 @@ use oxc_index::{IndexVec, index_vec};
 use rolldown_common::{
   ChunkIdx, ChunkKind, ChunkMeta, CrossChunkImportItem, EntryPointKind, ExportsKind, ImportKind,
   ImportRecordMeta, Module, ModuleIdx, NamedImport, OutputFormat, PreserveEntrySignatures,
-  SymbolRef, WrapKind,
+  RUNTIME_HELPER_NAMES, SymbolRef, WrapKind,
 };
 use rolldown_rstr::{Rstr, ToRstr};
 use rolldown_utils::concat_string;
@@ -284,6 +284,14 @@ impl GenerateStage<'_> {
             depended_symbols.insert(entry.namespace_object_ref);
           }
         }
+
+        // Depending runtime helpers
+        for helper in chunk.depended_runtime_helper {
+          let index = helper.bits().trailing_zeros() as usize;
+          let name = RUNTIME_HELPER_NAMES[index];
+          depended_symbols.insert(self.link_output.runtime.resolve_symbol(name));
+        }
+
         chunk_id_to_symbols_vec.push((chunk_id, symbol_needs_to_assign));
       },
     );

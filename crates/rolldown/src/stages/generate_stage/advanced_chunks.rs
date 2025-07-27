@@ -195,7 +195,11 @@ impl GenerateStage<'_> {
         group.remove_module(runtime_module_idx, &self.link_output.module_table);
       });
       chunk_graph.chunk_table[chunk_idx].bits.union(&index_splitting_info[runtime_module_idx].bits);
-      chunk_graph.add_module_to_chunk(runtime_module_idx, chunk_idx);
+      chunk_graph.add_module_to_chunk(
+        runtime_module_idx,
+        chunk_idx,
+        self.link_output.metas[runtime_module_idx].depended_runtime_helper,
+      );
       module_to_assigned[runtime_module_idx] = true;
     }
 
@@ -327,7 +331,11 @@ impl GenerateStage<'_> {
           group.remove_module(module_idx, &self.link_output.module_table);
         });
         chunk_graph.chunk_table[chunk_idx].bits.union(&index_splitting_info[module_idx].bits);
-        chunk_graph.add_module_to_chunk(module_idx, chunk_idx);
+        chunk_graph.add_module_to_chunk(
+          module_idx,
+          chunk_idx,
+          self.link_output.metas[module_idx].depended_runtime_helper,
+        );
         module_to_assigned[module_idx] = true;
       });
     }

@@ -1,7 +1,7 @@
 use oxc_index::IndexVec;
 use rolldown_common::{
   EntryPointKind, ImportRecordIdx, MemberExprRefResolutionMap, ModuleIdx, ResolvedExport,
-  StmtInfoIdx, SymbolRef, WrapKind, dynamic_import_usage::DynamicImportExportsUsage,
+  RuntimeHelper, StmtInfoIdx, SymbolRef, WrapKind, dynamic_import_usage::DynamicImportExportsUsage,
 };
 use rolldown_rstr::Rstr;
 use rolldown_utils::indexmap::{FxIndexMap, FxIndexSet};
@@ -68,6 +68,7 @@ pub struct LinkingMetadata {
   /// tree shaking, when one symbol was linked it may not only link the namespace ref symbol, and
   /// also need to link the exported facade symbol.
   pub included_commonjs_export_symbol: FxHashSet<SymbolRef>,
+  pub depended_runtime_helper: RuntimeHelper,
 }
 
 impl LinkingMetadata {

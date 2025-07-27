@@ -1346,7 +1346,7 @@ export interface BindingAliasPluginConfig {
 }
 
 export interface BindingAssetPluginConfig {
-  isServer?: boolean
+  isLib?: boolean
   urlBase?: string
   publicDir?: string
   assetsInclude?: Array<BindingStringOrRegex>

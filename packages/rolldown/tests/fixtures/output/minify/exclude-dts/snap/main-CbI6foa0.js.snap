@@ -1,1 +1,1 @@
-function e(){let e=1;return e}export{e as hello};
+function e(){return 1}export{e as hello};

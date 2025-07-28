@@ -42,7 +42,6 @@ pub mod resolved_request_info;
 pub mod rollup_pre_rendered_asset;
 pub mod rollup_pre_rendered_chunk;
 pub mod rollup_rendered_chunk;
-pub mod runtime_helper;
 pub mod scan_mode;
 pub mod side_effects;
 pub mod source_mutation;

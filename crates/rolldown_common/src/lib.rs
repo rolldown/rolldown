@@ -15,7 +15,10 @@ mod types;
 /// `rolldown` crate could use `pub use rolldown_common::bundler_options::*;` to export all types, so we don't need write
 /// the same code in `rolldown` crate again.
 pub mod bundler_options {
-  pub use crate::generated::checks_options::ChecksOptions;
+  pub use crate::generated::{
+    checks_options::ChecksOptions,
+    runtime_helper::{RUNTIME_HELPER_NAMES, RuntimeHelper},
+  };
   pub use crate::inner_bundler_options::{
     BundlerOptions,
     types::{
@@ -153,7 +156,6 @@ pub use crate::{
   types::rollup_pre_rendered_asset::RollupPreRenderedAsset,
   types::rollup_pre_rendered_chunk::RollupPreRenderedChunk,
   types::rollup_rendered_chunk::RollupRenderedChunk,
-  types::runtime_helper::{RUNTIME_HELPER_NAMES, RuntimeHelper},
   types::scan_mode::ScanMode,
   types::side_effects,
   types::source_mutation::SourceMutation,

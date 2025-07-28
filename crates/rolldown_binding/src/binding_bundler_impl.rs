@@ -131,11 +131,11 @@ impl BindingBundlerImpl {
   #[napi]
   pub async fn hmr_invalidate(
     &self,
-    file: String,
+    caller: String,
     first_invalidated_by: Option<String>,
   ) -> napi::Result<BindingHmrOutput> {
     let mut bundler_core = self.inner.lock().await;
-    let result = bundler_core.hmr_invalidate(file, first_invalidated_by).await;
+    let result = bundler_core.hmr_invalidate(caller, first_invalidated_by).await;
     match result {
       Ok(output) => Ok(output.into()),
       Err(errs) => {

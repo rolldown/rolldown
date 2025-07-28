@@ -71,16 +71,18 @@ impl HmrManager {
     Self { input, module_idx_by_abs_path, module_idx_by_stable_id }
   }
 
-  pub async fn hmr_invalidate(
+  /// Compute hmr update caused by `import.meta.hot.invalidate()`.
+  pub async fn compute_update_for_calling_invalidate(
     &mut self,
-    file: String,
+    // The parameter is the stable id of the module that called `import.meta.hot.invalidate()`.
+    caller: String,
     first_invalidated_by: Option<String>,
   ) -> BuildResult<HmrOutput> {
     let module_idx = self
       .module_idx_by_stable_id
-      .get(&file)
+      .get(&caller)
       .copied()
-      .unwrap_or_else(|| panic!("Not found modules for file: {file}"));
+      .unwrap_or_else(|| panic!("Not found modules for file: {caller}"));
     let module = self.module_db.modules[module_idx].as_normal().unwrap();
 
     // only self accept modules can be invalidated
@@ -149,7 +151,7 @@ impl HmrManager {
   }
 
   #[expect(clippy::too_many_lines)]
-  pub async fn compute_hmr_update(
+  async fn compute_hmr_update(
     &mut self,
     start_points: FxIndexSet<ModuleIdx>,
     first_invalidated_by: Option<String>,

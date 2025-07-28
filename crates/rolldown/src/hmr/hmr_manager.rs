@@ -36,6 +36,7 @@ pub struct HmrManagerInput {
 pub struct HmrManager {
   input: HmrManagerInput,
   module_idx_by_abs_path: FxHashMap<ArcStr, ModuleIdx>,
+  module_idx_by_stable_id: FxHashMap<String, ModuleIdx>,
 }
 
 impl Deref for HmrManager {
@@ -65,7 +66,9 @@ impl HmrManager {
         (filename, module_idx)
       })
       .collect();
-    Self { input, module_idx_by_abs_path }
+    let module_idx_by_stable_id =
+      input.module_db.modules.iter().map(|m| (m.stable_id().to_string(), m.idx())).collect();
+    Self { input, module_idx_by_abs_path, module_idx_by_stable_id }
   }
 
   pub async fn hmr_invalidate(
@@ -74,11 +77,10 @@ impl HmrManager {
     first_invalidated_by: Option<String>,
   ) -> BuildResult<HmrOutput> {
     let module_idx = self
-      .cache
-      .module_id_to_idx
-      .get(&ArcStr::from(file))
-      .expect("Not found hmr invalidate module")
-      .idx();
+      .module_idx_by_stable_id
+      .get(&file)
+      .copied()
+      .unwrap_or_else(|| panic!("Not found modules for file: {file}"));
     let module = self.module_db.modules[module_idx].as_normal().unwrap();
 
     // only self accept modules can be invalidated
@@ -201,12 +203,14 @@ impl HmrManager {
 
     let module_infos_to_be_updated = modules_to_invalidate
       .iter()
-      .map(|module_idx| {
+      .filter_map(|module_idx| {
         let module = &self.module_db.modules[*module_idx];
-        let Module::Normal(module) = module else {
-          unreachable!("HMR only supports normal module");
-        };
-        module.originative_resolved_id.clone()
+        if let Module::Normal(module) = module {
+          Some(module.originative_resolved_id.clone())
+        } else {
+          // unreachable!("HMR only supports normal module. Got {:?}", module.id());
+          None
+        }
       })
       .collect::<Vec<_>>();
 

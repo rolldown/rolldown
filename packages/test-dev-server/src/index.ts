@@ -7,6 +7,10 @@ import nodeUrl from 'node:url';
 import * as rolldown from 'rolldown';
 import serveStatic from 'serve-static';
 import { WebSocket, WebSocketServer } from 'ws';
+import {
+  decodeClientMessageFrom,
+  HmrInvalidateMessage,
+} from './client-message.js';
 import { createDevServerPlugin } from './create-dev-server-plugin.js';
 import { defineDevConfig, DevConfig } from './define-dev-config.js';
 
@@ -87,6 +91,14 @@ class DevServer {
           `Websocket connection closed. Current live connections: ${this.numberOfLiveConnections}`,
         );
       });
+      ws.on('message', (message) => {
+        const clientMessage = decodeClientMessageFrom(message.toString());
+        switch (clientMessage.type) {
+          case 'hmr:invalidate':
+            this.handleHmrInvalidate(build, clientMessage);
+            break;
+        }
+      });
     });
     watcher.on('change', async (path) => {
       console.log(`File ${path} has been changed`);
@@ -138,6 +150,48 @@ class DevServer {
         if (s.readyState === WebSocket.OPEN) {
           s.send(JSON.stringify(message));
         }
+      }
+    }
+  }
+
+  async handleHmrInvalidate(
+    build: rolldown.RolldownBuild,
+    msg: HmrInvalidateMessage,
+  ) {
+    console.log('Invalidating...');
+    if (this.hasLiveConnections) {
+      const output = await build.hmrInvalidate(msg.moduleId);
+      if (output.code) {
+        console.log('Patching...');
+        if (this.hasLiveConnections) {
+          const path = `${seed}.js`;
+          seed++;
+          nodeFs.writeFileSync(
+            nodePath.join(process.cwd(), 'dist', path),
+            output.code,
+          );
+          const patchUriForBrowser = `/${path}`;
+          const patchUriForFile = nodeUrl.pathToFileURL(
+            nodePath.join(process.cwd(), 'dist', path),
+          ).toString();
+          console.log(
+            'Patch:',
+            JSON.stringify({
+              type: 'update',
+              url: patchUriForBrowser,
+              path: patchUriForFile,
+            }),
+          );
+          this.sendMessage({
+            type: 'update',
+            url: patchUriForBrowser,
+            path: patchUriForFile,
+          });
+        } else {
+          console.log('No socket connected');
+        }
+      } else {
+        console.log('No patch found');
       }
     }
   }

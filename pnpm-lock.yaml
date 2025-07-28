@@ -535,7 +535,7 @@ importers:
         specifier: workspace:*
         version: link:../../..
 
-  packages/test-dev-server/tests/fixtures/basic2:
+  packages/test-dev-server/tests/fixtures/invalidation:
     devDependencies:
       '@rolldown/test-dev-server':
         specifier: workspace:*

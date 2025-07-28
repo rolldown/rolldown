@@ -1937,6 +1937,8 @@ export interface BindingViteResolvePluginConfig {
   finalizeBareSpecifier?: (resolvedId: string, rawId: string, importer: string | null | undefined) => VoidNullable<string>
   finalizeOtherSpecifiers?: (resolvedId: string, rawId: string) => VoidNullable<string>
   resolveSubpathImports: (id: string, importer: string, isRequire: boolean, scan: boolean) => VoidNullable<string>
+  onWarn?: (message: string) => void
+  onDebug?: (message: string) => void
 }
 
 export interface BindingViteResolvePluginResolveOptions {

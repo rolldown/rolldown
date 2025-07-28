@@ -15,6 +15,7 @@ cow-utils = { workspace = true }
 dashmap = { workspace = true }
 derive_more = { workspace = true }
 fast-glob = { workspace = true }
+owo-colors = { workspace = true }
 oxc_resolver = { workspace = true, features = ["package_json_raw_json_api"] }
 rolldown_common = { workspace = true }
 rolldown_plugin = { workspace = true }

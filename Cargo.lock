@@ -3060,6 +3060,7 @@ dependencies = [
  "dashmap",
  "derive_more",
  "fast-glob",
+ "owo-colors",
  "oxc_resolver",
  "rolldown_common",
  "rolldown_plugin",

@@ -10,9 +10,12 @@ use rolldown_common::{
   StmtSideEffect, SymbolOrMemberExprRef, SymbolRef, SymbolRefDb,
   dynamic_import_usage::DynamicImportExportsUsage, side_effects::DeterminedSideEffects,
 };
+#[cfg(not(target_family = "wasm"))]
+use rolldown_utils::rayon::IndexedParallelIterator;
 use rolldown_utils::rayon::{
-  IndexedParallelIterator, IntoParallelRefIterator, IntoParallelRefMutIterator, ParallelIterator,
+  IntoParallelRefIterator, IntoParallelRefMutIterator, ParallelIterator,
 };
+
 use rustc_hash::{FxHashMap, FxHashSet};
 
 use crate::{stages::link_stage::LinkStage, types::linking_metadata::LinkingMetadataVec};
@@ -371,11 +374,12 @@ impl LinkStage<'_> {
     used_symbol_refs: &mut FxHashSet<SymbolRef>,
   ) {
     // Including all depended runtime symbol
-    let depended_runtime_helper = self
-      .metas
-      .par_iter()
-      .map(|item| item.depended_runtime_helper)
-      .reduce(RuntimeHelper::default, |a, b| a | b);
+    let iter = self.metas.par_iter().map(|item| item.depended_runtime_helper);
+
+    #[cfg(not(target_family = "wasm"))]
+    let depended_runtime_helper = iter.reduce(RuntimeHelper::default, |a, b| a | b);
+    #[cfg(target_family = "wasm")]
+    let depended_runtime_helper = iter.reduce(|a, b| a | b).unwrap_or_default();
 
     if depended_runtime_helper.is_empty() {
       return;

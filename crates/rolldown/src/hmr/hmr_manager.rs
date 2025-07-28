@@ -102,13 +102,19 @@ impl HmrManager {
       });
     }
 
-    let mut ret =
-      self.generate_hmr_patch(module.importers_idx.clone(), first_invalidated_by).await?;
+    // Notice this update is caused by `import.meta.hot.invalidate` call, not by module changes.
+    // We know that the hmr boundaries relationships are not changed, because there're no real edits happened.
+    // It's safe to just pass the whole importers as start points to compute the hmr update.
+    let start_points = module.importers_idx.clone();
+    let mut ret = self.compute_hmr_update(start_points, first_invalidated_by).await?;
     ret.is_self_accepting = true;
     Ok(ret)
   }
 
-  pub async fn hmr(&mut self, changed_file_paths: Vec<String>) -> BuildResult<Option<HmrOutput>> {
+  pub async fn compute_hmr_update_for_file_changes(
+    &mut self,
+    changed_file_paths: Vec<String>,
+  ) -> BuildResult<Vec<HmrOutput>> {
     let mut changed_modules = FxIndexSet::default();
     for changed_file_path in changed_file_paths {
       let changed_file_path = ArcStr::from(changed_file_path);
@@ -116,6 +122,7 @@ impl HmrManager {
         changed_modules.insert(*module_idx);
       }
     }
+
     tracing::debug!(
       target: "hmr",
       "initial changed modules {:?}",
@@ -125,16 +132,26 @@ impl HmrManager {
     );
 
     if changed_modules.is_empty() {
-      return Ok(None);
+      return Ok(vec![]);
     }
 
-    Ok(Some(self.generate_hmr_patch(changed_modules, None).await?))
+    let mut updates = vec![];
+    for changed_module_idx in changed_modules.iter().copied() {
+      // Notice we don't just pass the whole changed modules, because each change might contains editing `import.meta.accept`.
+      // Editing `import.meta.accept will change the hmr boundaries relationships. We need to ensure the subsequent change could observe
+      // this possible behavior of the previous change.
+      let start_points = FxIndexSet::from_iter([changed_module_idx]);
+      let update = self.compute_hmr_update(FxIndexSet::from_iter(start_points), None).await?;
+      updates.push(update);
+    }
+
+    Ok(updates)
   }
 
   #[expect(clippy::too_many_lines)]
-  pub async fn generate_hmr_patch(
+  pub async fn compute_hmr_update(
     &mut self,
-    changed_modules: FxIndexSet<ModuleIdx>,
+    start_points: FxIndexSet<ModuleIdx>,
     first_invalidated_by: Option<String>,
   ) -> BuildResult<HmrOutput> {
     let mut affected_modules = FxIndexSet::default();
@@ -143,7 +160,7 @@ impl HmrManager {
 
     // We're checking if this change could be handled by hmr. If so, we need to find the HMR boundaries.
     let hmr_boundaries = self.compute_out_hmr_boundaries(
-      &changed_modules,
+      &start_points,
       &mut need_to_full_reload,
       first_invalidated_by.as_deref(),
       &mut full_reload_reason,
@@ -179,7 +196,7 @@ impl HmrManager {
         .collect::<Vec<_>>(),
     );
 
-    let mut modules_to_invalidate = changed_modules.clone();
+    let mut modules_to_invalidate = start_points.clone();
     // FIXME(hyf0): In general, only modules got edited need to be invalidated, because we need to refetch their latest content.
     // For those modules that are not edited but affected, we should be able to reuse their previous AST instead of going through the whole
     // module loading process again. But currently we don't have a good way to do that due to architecture limitation.
@@ -518,20 +535,19 @@ impl HmrManager {
 
   fn compute_out_hmr_boundaries(
     &self,
-    changed_modules: &FxIndexSet<ModuleIdx>,
+    start_points: &FxIndexSet<ModuleIdx>,
     need_to_full_reload: &mut bool,
     first_invalidated_by: Option<&str>,
     reason: &mut Option<String>,
   ) -> FxIndexSet<HmrBoundary> {
     let mut hmr_boundaries = FxIndexSet::default();
 
-    for changed_module_idx in changed_modules.iter().copied() {
+    for start_point in start_points.iter().copied() {
       if *need_to_full_reload {
         break;
       }
       let mut boundaries = FxIndexSet::default();
-      let propagate_status =
-        self.propagate_update(changed_module_idx, &mut boundaries, &mut vec![]);
+      let propagate_status = self.propagate_update(start_point, &mut boundaries, &mut vec![]);
 
       match propagate_status {
         PropagateUpdateStatus::Circular(cycle_chain) => {

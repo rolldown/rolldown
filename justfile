@@ -86,6 +86,11 @@ _test-node-rollup command="":
 _test-node-vite:
     pnpm run --filter vite-tests test
 
+test-node-hmr:
+    just build
+    pnpm run --filter @rolldown/test-dev-server-tests build
+    pnpm run --filter @rolldown/test-dev-server-tests test
+
 # Fix formatting issues both for Rust, Node.js and all files in the repository
 fmt: fmt-rust fmt-repo
 

@@ -1008,6 +1008,18 @@
         "compress": {
           "type": "boolean"
         },
+        "dropConsole": {
+          "type": "boolean"
+        },
+        "dropDebugger": {
+          "type": "boolean"
+        },
+        "joinVars": {
+          "type": "boolean"
+        },
+        "sequences": {
+          "type": "boolean"
+        },
         "removeWhitespace": {
           "type": "boolean"
         }
@@ -1016,6 +1028,10 @@
       "required": [
         "mangle",
         "compress",
+        "dropConsole",
+        "dropDebugger",
+        "joinVars",
+        "sequences",
         "removeWhitespace"
       ]
     },

@@ -6,5 +6,5 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## main.js
 
 ```js
-const e=``;function t(){}const n=``;var r=class{foo(){console.log(e,t,n)}bar(){console.log(`bar`)}};export{r as default};
+function e(){}var t=class{foo(){console.log(``,e,``)}bar(){console.log(`bar`)}};export{t as default};
 ```

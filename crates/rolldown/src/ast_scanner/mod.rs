@@ -310,7 +310,7 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
         let stmt_info_idx_list =
           self.result.stmt_infos.declared_stmts_by_symbol(&resolved.referenced).to_vec();
         for idx in stmt_info_idx_list {
-          self.result.stmt_infos[idx].side_effect = SideEffectDetail::Unknown;
+          self.result.stmt_infos[idx].side_effect |= SideEffectDetail::Unknown;
         }
       }
     }

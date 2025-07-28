@@ -222,7 +222,7 @@ pub fn lazy_check_side_effects(
       // we don't considered `exports.a` has side effects
       let analyzed_side_effects = stmt_infos
         .iter()
-        .any(|stmt_info| matches!(stmt_info.side_effect, SideEffectDetail::Unknown));
+        .any(|stmt_info| stmt_info.side_effect.contains(SideEffectDetail::Unknown));
       DeterminedSideEffects::Analyzed(analyzed_side_effects)
     })
 }

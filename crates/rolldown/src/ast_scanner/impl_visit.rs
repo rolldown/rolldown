@@ -76,7 +76,7 @@ impl<'me, 'ast: 'me> Visit<'ast> for AstScanner<'me, 'ast> {
       }
 
       self.visit_statement(stmt);
-      if matches!(self.current_stmt_info.side_effect, SideEffectDetail::Unknown) {
+      if self.current_stmt_info.side_effect.contains(SideEffectDetail::Unknown) {
         self.result.ecma_view_meta.insert(EcmaViewMeta::HAS_ANALYZED_SIDE_EFFECT);
       }
       self.result.stmt_infos.add_stmt_info(std::mem::take(&mut self.current_stmt_info));

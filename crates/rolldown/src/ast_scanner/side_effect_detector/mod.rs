@@ -7,7 +7,7 @@ use oxc::ast::ast::{
   VariableDeclarationKind,
 };
 use oxc::ast::{match_expression, match_member_expression};
-use rolldown_common::{AstScopes, SharedNormalizedBundlerOptions, StmtSideEffect};
+use rolldown_common::{AstScopes, SharedNormalizedBundlerOptions, SideEffectDetail};
 use rolldown_utils::global_reference::{
   is_global_ident_ref, is_side_effect_free_member_expr_of_len_three,
   is_side_effect_free_member_expr_of_len_two,
@@ -54,7 +54,7 @@ impl<'a> SideEffectDetector<'a> {
     &self,
     key: &PropertyKey,
     is_computed: bool,
-  ) -> StmtSideEffect {
+  ) -> SideEffectDetail {
     match key {
       PropertyKey::StaticIdentifier(_) | PropertyKey::PrivateIdentifier(_) => false.into(),
       key @ oxc::ast::match_expression!(PropertyKey) => (is_computed && {
@@ -77,7 +77,7 @@ impl<'a> SideEffectDetector<'a> {
   }
 
   /// ref: https://github.com/evanw/esbuild/blob/360d47230813e67d0312ad754cad2b6ee09b151b/internal/js_ast/js_ast_helpers.go#L2298-L2393
-  fn detect_side_effect_of_class(&self, cls: &ast::Class) -> StmtSideEffect {
+  fn detect_side_effect_of_class(&self, cls: &ast::Class) -> SideEffectDetail {
     use oxc::ast::ast::ClassElement;
     if !cls.decorators.is_empty() {
       return true.into();
@@ -131,7 +131,7 @@ impl<'a> SideEffectDetector<'a> {
       .into()
   }
 
-  fn detect_side_effect_of_member_expr(&self, expr: &ast::MemberExpression) -> StmtSideEffect {
+  fn detect_side_effect_of_member_expr(&self, expr: &ast::MemberExpression) -> SideEffectDetail {
     if self.is_expr_manual_pure_functions(expr.object()) {
       return false.into();
     }
@@ -151,7 +151,7 @@ impl<'a> SideEffectDetector<'a> {
     .into()
   }
 
-  fn detect_side_effect_of_assignment_target(&self, expr: &AssignmentTarget) -> StmtSideEffect {
+  fn detect_side_effect_of_assignment_target(&self, expr: &AssignmentTarget) -> SideEffectDetail {
     match expr {
       AssignmentTarget::ComputedMemberExpression(_)
       | AssignmentTarget::StaticMemberExpression(_) => {
@@ -164,7 +164,7 @@ impl<'a> SideEffectDetector<'a> {
               && ident.name == "exports"
               && member_expr.static_property_name().is_some()
             {
-              StmtSideEffect::PureCjs
+              SideEffectDetail::PureCjs
             } else {
               true.into()
             }
@@ -190,7 +190,7 @@ impl<'a> SideEffectDetector<'a> {
     }
   }
 
-  fn detect_side_effect_of_call_expr(&self, expr: &CallExpression) -> StmtSideEffect {
+  fn detect_side_effect_of_call_expr(&self, expr: &CallExpression) -> SideEffectDetail {
     if self.is_expr_manual_pure_functions(&expr.callee) {
       return false.into();
     }
@@ -261,7 +261,7 @@ impl<'a> SideEffectDetector<'a> {
   }
 
   #[allow(clippy::too_many_lines)]
-  fn detect_side_effect_of_expr(&self, expr: &Expression) -> StmtSideEffect {
+  fn detect_side_effect_of_expr(&self, expr: &Expression) -> SideEffectDetail {
     match expr {
       Expression::BooleanLiteral(_)
       | Expression::NullLiteral(_)
@@ -479,7 +479,7 @@ impl<'a> SideEffectDetector<'a> {
     }
   }
 
-  fn detect_side_effect_of_array_expr(&self, expr: &ast::ArrayExpression<'_>) -> StmtSideEffect {
+  fn detect_side_effect_of_array_expr(&self, expr: &ast::ArrayExpression<'_>) -> SideEffectDetail {
     expr
       .elements
       .iter()
@@ -502,7 +502,10 @@ impl<'a> SideEffectDetector<'a> {
       .into()
   }
 
-  fn detect_side_effect_of_var_decl(&self, var_decl: &ast::VariableDeclaration) -> StmtSideEffect {
+  fn detect_side_effect_of_var_decl(
+    &self,
+    var_decl: &ast::VariableDeclaration,
+  ) -> SideEffectDetail {
     match var_decl.kind {
       VariableDeclarationKind::AwaitUsing => true.into(),
       VariableDeclarationKind::Using => {
@@ -548,7 +551,7 @@ impl<'a> SideEffectDetector<'a> {
     }
   }
 
-  fn detect_side_effect_of_decl(&self, decl: &ast::Declaration) -> StmtSideEffect {
+  fn detect_side_effect_of_decl(&self, decl: &ast::Declaration) -> SideEffectDetail {
     use oxc::ast::ast::Declaration;
     match decl {
       Declaration::VariableDeclaration(var_decl) => self.detect_side_effect_of_var_decl(var_decl),
@@ -565,7 +568,7 @@ impl<'a> SideEffectDetector<'a> {
   fn detect_side_effect_of_using_declarators(
     &self,
     declarators: &[ast::VariableDeclarator],
-  ) -> StmtSideEffect {
+  ) -> SideEffectDetail {
     declarators
       .iter()
       .any(|decl| {
@@ -586,19 +589,19 @@ impl<'a> SideEffectDetector<'a> {
   }
 
   #[inline]
-  fn detect_side_effect_of_identifier(&self, ident_ref: &IdentifierReference) -> StmtSideEffect {
+  fn detect_side_effect_of_identifier(&self, ident_ref: &IdentifierReference) -> SideEffectDetail {
     if self.is_unresolved_reference(ident_ref)
       && self.options.treeshake.unknown_global_side_effects()
       && !is_global_ident_ref(&ident_ref.name)
     {
-      StmtSideEffect::Unknown
+      SideEffectDetail::Unknown
     } else {
-      StmtSideEffect::empty()
+      SideEffectDetail::empty()
     }
   }
 
   #[allow(clippy::too_many_lines)]
-  pub fn detect_side_effect_of_stmt(&self, stmt: &ast::Statement) -> StmtSideEffect {
+  pub fn detect_side_effect_of_stmt(&self, stmt: &ast::Statement) -> SideEffectDetail {
     use oxc::ast::ast::Statement;
     match stmt {
       oxc::ast::match_declaration!(Statement) => {
@@ -710,7 +713,7 @@ impl<'a> SideEffectDetector<'a> {
     }
   }
 
-  fn detect_side_effect_of_block(&self, block: &ast::BlockStatement) -> StmtSideEffect {
+  fn detect_side_effect_of_block(&self, block: &ast::BlockStatement) -> SideEffectDetail {
     block.body.iter().any(|stmt| self.detect_side_effect_of_stmt(stmt).has_side_effect()).into()
   }
 }
@@ -721,7 +724,7 @@ mod test {
 
   use itertools::Itertools;
   use oxc::{parser::Parser, span::SourceType};
-  use rolldown_common::{AstScopes, NormalizedBundlerOptions, StmtSideEffect};
+  use rolldown_common::{AstScopes, NormalizedBundlerOptions, SideEffectDetail};
   use rolldown_ecmascript::{EcmaAst, EcmaCompiler};
 
   use crate::ast_scanner::side_effect_detector::SideEffectDetector;
@@ -745,7 +748,7 @@ mod test {
     })
   }
 
-  fn get_statements_side_effect_details(code: &str) -> Vec<StmtSideEffect> {
+  fn get_statements_side_effect_details(code: &str) -> Vec<SideEffectDetail> {
     let source_type = SourceType::tsx();
     let ast = EcmaCompiler::parse("<Noop>", code, source_type).unwrap();
     let semantic = EcmaAst::make_semantic(ast.program(), false);
@@ -1087,7 +1090,7 @@ mod test {
       get_statements_side_effect_details(
         "Object.defineProperty(exports, \"__esModule\", { value: true })"
       ),
-      vec![StmtSideEffect::Unknown]
+      vec![SideEffectDetail::Unknown]
     );
 
     assert_eq!(
@@ -1099,17 +1102,17 @@ mod test {
       };
       "
       ),
-      vec![StmtSideEffect::PureCjs, StmtSideEffect::PureCjs]
+      vec![SideEffectDetail::PureCjs, SideEffectDetail::PureCjs]
     );
 
     assert_eq!(
       get_statements_side_effect_details("exports.a = global()"),
-      vec![StmtSideEffect::Unknown | StmtSideEffect::PureCjs]
+      vec![SideEffectDetail::Unknown | SideEffectDetail::PureCjs]
     );
 
     assert_eq!(
       get_statements_side_effect_details("exports[test()] = true"),
-      vec![StmtSideEffect::Unknown]
+      vec![SideEffectDetail::Unknown]
     );
 
     assert_eq!(
@@ -1119,7 +1122,7 @@ mod test {
       Object.defineProperty(a, '__esModule', { value: true });
       "
       ),
-      vec![StmtSideEffect::empty(), StmtSideEffect::Unknown]
+      vec![SideEffectDetail::empty(), SideEffectDetail::Unknown]
     );
   }
 

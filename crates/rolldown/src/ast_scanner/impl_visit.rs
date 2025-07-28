@@ -9,7 +9,7 @@ use oxc::{
 };
 use rolldown_common::{
   ConstExportMeta, EcmaModuleAstUsage, EcmaViewMeta, ImportKind, ImportRecordMeta, LocalExport,
-  RUNTIME_MODULE_KEY, StmtInfoMeta, StmtSideEffect,
+  RUNTIME_MODULE_KEY, SideEffectDetail, StmtInfoMeta,
   dynamic_import_usage::DynamicImportExportsUsage,
 };
 #[cfg(debug_assertions)]
@@ -76,7 +76,7 @@ impl<'me, 'ast: 'me> Visit<'ast> for AstScanner<'me, 'ast> {
       }
 
       self.visit_statement(stmt);
-      if matches!(self.current_stmt_info.side_effect, StmtSideEffect::Unknown) {
+      if matches!(self.current_stmt_info.side_effect, SideEffectDetail::Unknown) {
         self.result.ecma_view_meta.insert(EcmaViewMeta::HAS_ANALYZED_SIDE_EFFECT);
       }
       self.result.stmt_infos.add_stmt_info(std::mem::take(&mut self.current_stmt_info));

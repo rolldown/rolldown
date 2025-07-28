@@ -6,8 +6,8 @@ use petgraph::prelude::DiGraphMap;
 use rolldown_common::{
   ConstExportMeta, EcmaModuleAstUsage, EcmaViewMeta, EntryPoint, EntryPointKind, ExportsKind,
   ImportKind, ImportRecordIdx, ImportRecordMeta, IndexModules, Module, ModuleIdx, ModuleType,
-  NormalModule, NormalizedBundlerOptions, RUNTIME_HELPER_NAMES, RuntimeHelper, StmtInfoIdx,
-  StmtSideEffect, SymbolOrMemberExprRef, SymbolRef, SymbolRefDb,
+  NormalModule, NormalizedBundlerOptions, RUNTIME_HELPER_NAMES, RuntimeHelper, SideEffectDetail,
+  StmtInfoIdx, SymbolOrMemberExprRef, SymbolRef, SymbolRefDb,
   dynamic_import_usage::DynamicImportExportsUsage, side_effects::DeterminedSideEffects,
 };
 #[cfg(not(target_family = "wasm"))]
@@ -442,7 +442,7 @@ fn include_module(ctx: &mut Context, module: &NormalModule) {
       let has_side_effects = if module.meta.contains(EcmaViewMeta::SAFELY_TREESHAKE_COMMONJS)
         && ctx.options.treeshake.commonjs()
       {
-        stmt_info.side_effect.contains(StmtSideEffect::Unknown)
+        stmt_info.side_effect.contains(SideEffectDetail::Unknown)
       } else {
         stmt_info.side_effect.has_side_effect()
       };

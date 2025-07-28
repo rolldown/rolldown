@@ -157,7 +157,7 @@ pub use crate::{
   types::rollup_pre_rendered_chunk::RollupPreRenderedChunk,
   types::rollup_rendered_chunk::RollupRenderedChunk,
   types::scan_mode::ScanMode,
-  types::side_effect_detail::StmtSideEffect,
+  types::side_effect_detail::SideEffectDetail,
   types::side_effects,
   types::source_mutation::SourceMutation,
   types::stmt_info::{DebugStmtInfoForTreeShaking, StmtInfo, StmtInfoIdx, StmtInfoMeta, StmtInfos},

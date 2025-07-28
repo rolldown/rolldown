@@ -30,9 +30,9 @@ use rolldown_common::dynamic_import_usage::{DynamicImportExportsUsage, DynamicIm
 use rolldown_common::{
   ConstExportMeta, ConstantValue, EcmaModuleAstUsage, EcmaViewMeta, ExportsKind, HmrInfo,
   ImportKind, ImportRecordIdx, ImportRecordMeta, LocalExport, MemberExprRef, ModuleDefFormat,
-  ModuleId, ModuleIdx, NamedImport, RawImportRecord, Specifier, StmtInfo, StmtInfos,
-  StmtSideEffect, SymbolRef, SymbolRefDbForModule, SymbolRefFlags, TaggedSymbolRef,
-  ThisExprReplaceKind, generate_replace_this_expr_map,
+  ModuleId, ModuleIdx, NamedImport, RawImportRecord, SideEffectDetail, Specifier, StmtInfo,
+  StmtInfos, SymbolRef, SymbolRefDbForModule, SymbolRefFlags, TaggedSymbolRef, ThisExprReplaceKind,
+  generate_replace_this_expr_map,
 };
 use rolldown_ecmascript_utils::{BindingIdentifierExt, BindingPatternExt};
 use rolldown_error::{BuildDiagnostic, BuildResult, CjsExportSpan};
@@ -310,7 +310,7 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
         let stmt_info_idx_list =
           self.result.stmt_infos.declared_stmts_by_symbol(&resolved.referenced).to_vec();
         for idx in stmt_info_idx_list {
-          self.result.stmt_infos[idx].side_effect = StmtSideEffect::Unknown;
+          self.result.stmt_infos[idx].side_effect = SideEffectDetail::Unknown;
         }
       }
     }

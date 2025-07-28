@@ -48,6 +48,18 @@ pub const KNOWN_ASSET_TYPES: [&str; 34] = [
   "txt",
 ];
 
+pub enum InvalidAsset {
+  True,
+  False,
+  Special,
+}
+
+impl InvalidAsset {
+  pub fn is(&self) -> bool {
+    matches!(self, Self::False | Self::Special)
+  }
+}
+
 impl super::AssetPlugin {
   pub fn is_assets_include(&self, cwd: &Path, cleaned_id: &str) -> bool {
     if let Some(ext) = Path::new(cleaned_id).extension().and_then(|e| e.to_str()) {
@@ -67,10 +79,13 @@ impl super::AssetPlugin {
     .inner()
   }
 
-  pub fn is_not_valid_assets(&self, cwd: &Path, id: &str) -> bool {
+  pub fn check_invalid_assets(&self, cwd: &Path, id: &str) -> InvalidAsset {
     if find_special_query(id, b"url").is_some() {
-      return false;
+      InvalidAsset::False
+    } else if self.is_assets_include(cwd, clean_url(id)) {
+      InvalidAsset::Special
+    } else {
+      InvalidAsset::True
     }
-    !self.is_assets_include(cwd, clean_url(id))
   }
 }

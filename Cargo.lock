@@ -2659,7 +2659,6 @@ dependencies = [
  "rolldown_plugin_json",
  "rolldown_plugin_load_fallback",
  "rolldown_plugin_manifest",
- "rolldown_plugin_module_federation",
  "rolldown_plugin_module_preload_polyfill",
  "rolldown_plugin_oxc_runtime",
  "rolldown_plugin_replace",
@@ -2968,23 +2967,6 @@ dependencies = [
  "rolldown_utils",
  "serde",
  "serde_json",
-]
-
-[[package]]
-name = "rolldown_plugin_module_federation"
-version = "0.1.0"
-dependencies = [
- "anyhow",
- "arcstr",
- "cow-utils",
- "oxc",
- "rolldown_common",
- "rolldown_plugin",
- "rolldown_utils",
- "rustc-hash",
- "serde",
- "serde_json",
- "sugar_path",
 ]
 
 [[package]]

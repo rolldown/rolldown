@@ -23,8 +23,6 @@ pub enum BindingBuiltinPluginName {
   LoadFallback,
   #[napi(value = "builtin:manifest")]
   Manifest,
-  #[napi(value = "builtin:module-federation")]
-  ModuleFederation,
   #[napi(value = "builtin:module-preload-polyfill")]
   ModulePreloadPolyfill,
   #[napi(value = "builtin:oxc-runtime")]

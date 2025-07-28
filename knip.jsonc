@@ -9,6 +9,7 @@
         "@oxc-project/runtime",
         "cjs-module-lexer",
         "remove-unused-vars",
+        "rolldown",
       ],
     },
     "crates/rolldown/tests/rolldown/topics/npm_packages": {
@@ -57,14 +58,11 @@
     },
     "packages/rolldown/tests": {
       "entry": ["*/**"],
-      "ignore": ["{cli,fixtures,module-federation,stability}/**"], // lots of unlisted dependencies
+      "ignore": ["{cli,fixtures,stability}/**"], // lots of unlisted dependencies
       "ignoreUnresolved": ["./world"],
       "ignoreDependencies": [
         "@rolldown/test-side-effects-field", // used in packages/rolldown/tests/fixtures/plugin/context/resolve-side-effects
       ],
-    },
-    "packages/rolldown/tests/module-federation": {
-      "entry": ["*.js"],
     },
     "packages/rollup-tests": {
       "entry": ["src/**/*.js", "test/**/*.{js,ts}"],

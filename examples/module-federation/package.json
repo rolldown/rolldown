@@ -1,9 +1,0 @@
-{
-  "name": "@example/module-federation",
-  "private": true,
-  "scripts": {
-    "dev:host": "pnpm --filter @example/module-federation-host run dev",
-    "dev:remote": "pnpm --filter @example/module-federation-remote run dev",
-    "dev": "pnpm run --stream --color \"/^dev:(remote|host)/\""
-  }
-}

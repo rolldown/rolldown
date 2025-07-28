@@ -1386,7 +1386,6 @@ export type BindingBuiltinPluginName =  'builtin:alias'|
 'builtin:json'|
 'builtin:load-fallback'|
 'builtin:manifest'|
-'builtin:module-federation'|
 'builtin:module-preload-polyfill'|
 'builtin:oxc-runtime'|
 'builtin:reporter'|
@@ -1690,27 +1689,10 @@ export interface BindingMatchGroup {
   maxSize?: number
 }
 
-export interface BindingMfManifest {
-  filePath?: string
-  disableAssetsAnalyze?: boolean
-  fileName?: string
-}
-
 export interface BindingMinifyOptions {
   mangle?: boolean
   compress?: boolean
   removeWhitespace?: boolean
-}
-
-export interface BindingModuleFederationPluginOption {
-  name: string
-  filename?: string
-  exposes?: Record<string, string>
-  remotes?: Array<BindingRemote>
-  shared?: Record<string, BindingShared>
-  runtimePlugins?: Array<string>
-  manifest?: BindingMfManifest
-  getPublicPath?: string
 }
 
 export interface BindingModulePreloadPolyfillPluginConfig {
@@ -1877,14 +1859,6 @@ export type BindingPreserveEntrySignatures =
   | { type: 'Bool', field0: boolean }
   | { type: 'String', field0: string }
 
-export interface BindingRemote {
-  type?: string
-  entry: string
-  name: string
-  entryGlobalName?: string
-  shareScope?: string
-}
-
 export interface BindingReplacePluginConfig {
   values: Record<string, string>
   delimiters?: [string, string]
@@ -1918,14 +1892,6 @@ export interface BindingResolveOptions {
   symlinks?: boolean
   tsconfigFilename?: string
   yarnPnp?: boolean
-}
-
-export interface BindingShared {
-  version?: string
-  shareScope?: string
-  singleton?: boolean
-  requiredVersion?: string
-  strictVersion?: boolean
 }
 
 export interface BindingSourcemap {

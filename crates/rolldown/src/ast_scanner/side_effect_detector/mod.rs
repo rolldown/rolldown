@@ -425,14 +425,11 @@ impl<'a> SideEffectDetector<'a> {
         self.detect_side_effect_of_expr(&private_in_expr.right)
       }
       Expression::AssignmentExpression(expr) => {
-        match (
+        let (lhs, rhs) = (
           self.detect_side_effect_of_assignment_target(&expr.left),
-          self.detect_side_effect_of_expr(&expr.right).has_side_effect(),
-        ) {
-          (_, true) | (StmtSideEffect::Unknown, _) => true.into(),
-          (StmtSideEffect::PureCjs, false) => StmtSideEffect::PureCjs,
-          (StmtSideEffect::None, false) => false.into(),
-        }
+          self.detect_side_effect_of_expr(&expr.right),
+        );
+        lhs | rhs
       }
 
       Expression::ChainExpression(expr) => match &expr.expression {
@@ -596,7 +593,7 @@ impl<'a> SideEffectDetector<'a> {
     {
       StmtSideEffect::Unknown
     } else {
-      StmtSideEffect::None
+      StmtSideEffect::empty()
     }
   }
 
@@ -1107,7 +1104,7 @@ mod test {
 
     assert_eq!(
       get_statements_side_effect_details("exports.a = global()"),
-      vec![StmtSideEffect::Unknown]
+      vec![StmtSideEffect::Unknown | StmtSideEffect::PureCjs]
     );
 
     assert_eq!(
@@ -1122,7 +1119,7 @@ mod test {
       Object.defineProperty(a, '__esModule', { value: true });
       "
       ),
-      vec![StmtSideEffect::None, StmtSideEffect::Unknown]
+      vec![StmtSideEffect::empty(), StmtSideEffect::Unknown]
     );
   }
 

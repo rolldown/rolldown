@@ -12,7 +12,11 @@ import {
   HmrInvalidateMessage,
 } from './client-message.js';
 import { createDevServerPlugin } from './create-dev-server-plugin.js';
-import { defineDevConfig, DevConfig } from './define-dev-config.js';
+import {
+  defineDevConfig,
+  DevConfig,
+  ServeOptions,
+} from './define-dev-config.js';
 
 let seed = 0;
 
@@ -24,65 +28,62 @@ async function loadDevConfig(): Promise<DevConfig> {
   return exports.default;
 }
 
-class DevServer {
-  private config: DevConfig;
-  private numberOfLiveConnections = 0;
-  private sockets: Set<WebSocket> = new Set();
+export async function serve(): Promise<void> {
+  console.log('Starting dev server...');
+  const devConfig = await loadDevConfig();
 
-  constructor(config: DevConfig) {
-    this.config = config;
+  const buildOptions = devConfig.build ?? {};
+  if (buildOptions.plugins == null || Array.isArray(buildOptions.plugins)) {
+    buildOptions.plugins = [
+      ...(buildOptions.plugins || []),
+      createDevServerPlugin(),
+    ];
+  } else {
+    throw new Error('Plugins must be an array');
   }
 
-  get hasLiveConnections() {
-    return this.numberOfLiveConnections > 0;
+  console.log('Build options:', buildOptions);
+
+  const connectServer = connect();
+
+  const server = http.createServer(connectServer);
+  const wsServer = new WebSocketServer({ server });
+
+  const build = await rolldown.rolldown(buildOptions);
+
+  const devServer = new DevServer(
+    buildOptions,
+    devConfig.serve ?? {},
+    connectServer,
+    server,
+    wsServer,
+    build,
+  );
+  await devServer.serve();
+}
+
+class DevServer {
+  private numberOfLiveConnections = 0;
+  private sockets: Set<WebSocket> = new Set();
+  private currentBuildingPromise: Promise<rolldown.RolldownOutput> | null =
+    null;
+
+  constructor(
+    private buildOptions: rolldown.BuildOptions,
+    private serveOptions: ServeOptions,
+    private connectServer: connect.Server,
+    private httpServer: http.Server,
+    private wsServer: WebSocketServer,
+    private build: rolldown.RolldownBuild,
+  ) {
   }
 
   async serve() {
-    const buildOptions = this.config.build ?? {};
-    if (buildOptions.plugins == null || Array.isArray(buildOptions.plugins)) {
-      buildOptions.plugins = [
-        ...(buildOptions.plugins || []),
-        createDevServerPlugin(),
-      ];
-    } else {
-      throw new Error('Plugins must be an array');
-    }
-    // buildOptions.write = true
-    console.log('Build options:', buildOptions);
-    // const build = await rolldown.build(buildOptions)
-    const build = await rolldown.rolldown(buildOptions);
-    await build.write(buildOptions.output);
-
-    const app = connect();
-
-    console.log(`Serving ${nodePath.join(process.cwd(), 'dist')}`);
-    const watcher = chokidar.watch(nodePath.join(process.cwd(), 'src'), {
-      usePolling: true,
-      interval: 100,
-    });
-
-    app.use(
-      serveStatic(nodePath.join(process.cwd(), 'dist'), {
-        index: ['index.html'],
-        extensions: ['html'],
-      }),
-    );
-
-    // create node.js http server and listen on port
-    const server = http.createServer(app);
-    const wsServer = new WebSocketServer({ server });
-    wsServer.on('connection', (ws, req) => {
-      const url = new URL(req.url!, `http://${req.headers.host}`);
-      const from = url.searchParams.get('from');
-      if (from === 'hmr-runtime') {
-        this.sendMessage({ type: 'connected-from-hmr-runtime' });
-      }
-
+    this.wsServer.on('connection', (ws, _req) => {
       this.numberOfLiveConnections += 1;
       console.debug(
         `Detected new Websocket connection. Current live connections: ${this.numberOfLiveConnections}`,
       );
-
       this.sockets.add(ws);
       ws.on('error', console.error);
       ws.on('close', () => {
@@ -95,62 +96,123 @@ class DevServer {
         const clientMessage = decodeClientMessageFrom(message.toString());
         switch (clientMessage.type) {
           case 'hmr:invalidate':
-            this.handleHmrInvalidate(build, clientMessage);
+            this.handleHmrInvalidate(this.build, clientMessage);
             break;
         }
       });
     });
+    const initialBuildPromise = this.triggerBuild();
+    this.connectServer.use(async function(req, _res, next) {
+      if (req.url === '/' || req.url === '/index.html') {
+        console.info('Detected requests. Waiting for initial build...');
+        await initialBuildPromise;
+        next();
+      } else {
+        next();
+      }
+    });
+    this.connectServer.use(
+      serveStatic(nodePath.join(process.cwd(), 'dist'), {
+        index: ['index.html'],
+        extensions: ['html'],
+      }),
+    );
+
+    this.httpServer.listen(3000, () => {
+      console.log(`Serving ${nodePath.join(process.cwd(), 'dist')}`);
+      console.log('Server listening on http://localhost:3000');
+    });
+
+    const watcher = chokidar.watch(nodePath.join(process.cwd(), 'src'), {
+      usePolling: true,
+      interval: 100,
+    });
+
     watcher.on('change', async (path) => {
       console.log(`File ${path} has been changed`);
       if (this.hasLiveConnections) {
-        const output = (await build.generateHmrPatch([path]))!;
-        if (output.code) {
-          console.log('Patching...');
-          if (this.hasLiveConnections) {
-            const path = `${seed}.js`;
-            seed++;
-            nodeFs.writeFileSync(
-              nodePath.join(process.cwd(), 'dist', path),
-              output.code,
-            );
-            const patchUriForBrowser = `/${path}`;
-            const patchUriForFile = nodeUrl.pathToFileURL(
-              nodePath.join(process.cwd(), 'dist', path),
-            ).toString();
-            console.log(
-              'Patch:',
-              JSON.stringify({
-                type: 'update',
-                url: patchUriForBrowser,
-                path: patchUriForFile,
-              }),
-            );
-            this.sendMessage({
-              type: 'update',
-              url: patchUriForBrowser,
-              path: patchUriForFile,
-            });
-          } else {
-            console.log('No socket connected');
-          }
-        } else {
-          console.log('No patch found');
-        }
+        const output = (await this.build.generateHmrPatch([path]))!;
+        this.sendUpdateToClient(output);
       }
       // Invoke the build process again to ensure if users reload the page, they get the latest changes
-      await build.write(buildOptions.output);
+      await this.triggerBuild();
     });
-    server.listen(3000);
-    console.log('Server listening on http://localhost:3000');
   }
 
-  sendMessage(message: ConnectedFromHmrRuntime | UpdateMessage) {
+  get hasLiveConnections() {
+    return this.numberOfLiveConnections > 0;
+  }
+
+  async triggerBuild() {
+    if (this.currentBuildingPromise != null) {
+      await this.currentBuildingPromise;
+    }
+    const buildingPromise = this.build.write(this.buildOptions.output).finally(
+      () => {
+        if (this.currentBuildingPromise === buildingPromise) {
+          this.currentBuildingPromise = null;
+        }
+      },
+    );
+    this.currentBuildingPromise = buildingPromise;
+    await buildingPromise;
+  }
+
+  get isInBuilding() {
+    return this.currentBuildingPromise != null;
+  }
+
+  sendMessage(message: UpdateMessage) {
     if (this.hasLiveConnections) {
       for (const s of this.sockets) {
         if (s.readyState === WebSocket.OPEN) {
           s.send(JSON.stringify(message));
         }
       }
+    }
+  }
+
+  sendUpdateToClient(
+    output: Awaited<ReturnType<rolldown.RolldownBuild['hmrInvalidate']>>,
+  ) {
+    if (this.hasLiveConnections && output.code) {
+      console.log('Patching...');
+      const path = `${seed}.js`;
+      seed++;
+      nodeFs.writeFileSync(
+        nodePath.join(process.cwd(), 'dist', path),
+        output.code,
+      );
+      const patchUriForBrowser = `/${path}`;
+      const patchUriForFile = nodeUrl.pathToFileURL(
+        nodePath.join(process.cwd(), 'dist', path),
+      ).toString();
+      console.log(
+        'Patch:',
+        JSON.stringify({
+          type: 'update',
+          url: patchUriForBrowser,
+          path: patchUriForFile,
+        }),
+      );
+      this.sendMessage({
+        type: 'update',
+        url: patchUriForBrowser,
+        path: patchUriForFile,
+      });
+    } else {
+      console.debug(
+        `Failed to send update to client due to ${
+          JSON.stringify(
+            {
+              hasLiveConnections: this.hasLiveConnections,
+              hasCode: output.code != null,
+            },
+            null,
+            2,
+          )
+        }`,
+      );
     }
   }
 
@@ -161,54 +223,12 @@ class DevServer {
     console.log('Invalidating...');
     if (this.hasLiveConnections) {
       const output = await build.hmrInvalidate(msg.moduleId);
-      if (output.code) {
-        console.log('Patching...');
-        if (this.hasLiveConnections) {
-          const path = `${seed}.js`;
-          seed++;
-          nodeFs.writeFileSync(
-            nodePath.join(process.cwd(), 'dist', path),
-            output.code,
-          );
-          const patchUriForBrowser = `/${path}`;
-          const patchUriForFile = nodeUrl.pathToFileURL(
-            nodePath.join(process.cwd(), 'dist', path),
-          ).toString();
-          console.log(
-            'Patch:',
-            JSON.stringify({
-              type: 'update',
-              url: patchUriForBrowser,
-              path: patchUriForFile,
-            }),
-          );
-          this.sendMessage({
-            type: 'update',
-            url: patchUriForBrowser,
-            path: patchUriForFile,
-          });
-        } else {
-          console.log('No socket connected');
-        }
-      } else {
-        console.log('No patch found');
-      }
+      this.sendUpdateToClient(output);
     }
   }
 }
 
-export async function serve(): Promise<void> {
-  console.log('Starting dev server...');
-  const devConfig = await loadDevConfig();
-  const devServer = new DevServer(devConfig);
-  await devServer.serve();
-}
-
 export { defineDevConfig };
-
-interface ConnectedFromHmrRuntime {
-  type: 'connected-from-hmr-runtime';
-}
 
 interface UpdateMessage {
   type: 'update';

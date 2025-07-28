@@ -22,7 +22,6 @@ export {
   jsonPlugin,
   loadFallbackPlugin,
   manifestPlugin,
-  moduleFederationPlugin,
   modulePreloadPolyfillPlugin,
   reporterPlugin,
   viteResolvePlugin,

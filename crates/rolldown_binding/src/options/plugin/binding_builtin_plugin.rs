@@ -15,7 +15,6 @@ use rolldown_plugin_import_glob::ImportGlobPlugin;
 use rolldown_plugin_isolated_declaration::IsolatedDeclarationPlugin;
 use rolldown_plugin_json::JsonPlugin;
 use rolldown_plugin_load_fallback::LoadFallbackPlugin;
-use rolldown_plugin_module_federation::ModuleFederationPlugin;
 use rolldown_plugin_module_preload_polyfill::ModulePreloadPolyfillPlugin;
 use rolldown_plugin_replace::ReplacePlugin;
 use rolldown_plugin_reporter::ReporterPlugin;
@@ -37,10 +36,7 @@ use super::{
     BindingOxcRuntimePluginConfig, BindingReplacePluginConfig, BindingReporterPluginConfig,
     BindingTransformPluginConfig, BindingViteResolvePluginConfig,
   },
-  types::{
-    binding_builtin_plugin_name::BindingBuiltinPluginName,
-    binding_module_federation_plugin_option::BindingModuleFederationPluginOption,
-  },
+  types::binding_builtin_plugin_name::BindingBuiltinPluginName,
 };
 
 #[allow(clippy::pub_underscore_fields)]
@@ -134,17 +130,6 @@ impl TryFrom<BindingBuiltinPlugin<'_>> for Arc<dyn Pluginable> {
           ManifestPlugin::default()
         };
         Arc::new(plugin)
-      }
-      BindingBuiltinPluginName::ModuleFederation => {
-        let config = if let Some(options) = plugin.options {
-          BindingModuleFederationPluginOption::from_unknown(options)?
-        } else {
-          return Err(napi::Error::new(
-            napi::Status::InvalidArg,
-            "Missing options for ModuleFederationPlugin",
-          ));
-        };
-        Arc::new(ModuleFederationPlugin::new(config.into()))
       }
       BindingBuiltinPluginName::ModulePreloadPolyfill => {
         let plugin = if let Some(options) = plugin.options {

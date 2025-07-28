@@ -7,11 +7,8 @@ import type {
   BindingIsolatedDeclarationPluginConfig,
   BindingJsonPluginConfig,
   BindingManifestPluginConfig,
-  BindingMfManifest,
-  BindingModuleFederationPluginOption,
   BindingModulePreloadPolyfillPluginConfig,
   BindingOxcRuntimePluginConfig,
-  BindingRemote,
   BindingReporterPluginConfig,
   BindingViteResolvePluginConfig,
   BindingWasmHelperPluginConfig,
@@ -103,41 +100,6 @@ export function viteResolvePlugin(
 ): BuiltinPlugin {
   const builtinPlugin = new BuiltinPlugin('builtin:vite-resolve', config);
   return makeBuiltinPluginCallable(builtinPlugin);
-}
-
-type ModuleFederationPluginOption =
-  & Omit<
-    BindingModuleFederationPluginOption,
-    'remotes'
-  >
-  & {
-    remotes?: Record<string, string | BindingRemote>;
-    manifest?: boolean | BindingMfManifest;
-  };
-
-export function moduleFederationPlugin(
-  config: ModuleFederationPluginOption,
-): BuiltinPlugin {
-  return new BuiltinPlugin('builtin:module-federation', {
-    ...config,
-    remotes: config.remotes &&
-      Object.entries(config.remotes).map(([name, remote]) => {
-        if (typeof remote === 'string') {
-          const [entryGlobalName] = remote.split('@');
-          const entry = remote.replace(entryGlobalName + '@', '');
-          return { entry, name, entryGlobalName };
-        }
-        return {
-          ...remote,
-          name: remote.name ?? name,
-        };
-      }),
-    manifest: config.manifest === false
-      ? undefined
-      : config.manifest === true
-      ? {}
-      : config.manifest,
-  });
 }
 
 export function isolatedDeclarationPlugin(

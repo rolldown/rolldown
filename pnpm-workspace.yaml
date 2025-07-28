@@ -1,13 +1,11 @@
 packages:
   - packages/*
   - packages/rolldown/tests
-  - packages/rolldown/tests/module-federation
   - packages/test-dev-server/tests
   - packages/test-dev-server/tests/fixtures/*
   - packages/test-dev-server/tests/tmp/fixtures/*
   - docs
   - examples/*
-  - examples/module-federation/*
   - scripts
   - crates/rolldown/tests/rolldown/topics/npm_packages
   - crates/rolldown/tests/rolldown/warnings/eval2

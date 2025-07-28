@@ -19,6 +19,7 @@ import type { PartialNull } from '../types/utils';
 import { type AssetSource, bindingAssetSource } from '../utils/asset-source';
 import { bindingifyPreserveEntrySignatures } from '../utils/bindingify-input-options';
 import { unimplemented, unreachable } from '../utils/misc';
+import { fsModule, type RolldownFsModule } from './fs';
 import type {
   CustomPluginOptions,
   ModuleOptions,
@@ -55,6 +56,7 @@ export interface PluginContextResolveOptions {
 export type GetModuleInfo = (moduleId: string) => ModuleInfo | null;
 
 export interface PluginContext extends MinimalPluginContext {
+  fs: RolldownFsModule;
   emitFile(file: EmittedFile): string;
   getFileName(referenceId: string): string;
   getModuleIds(): IterableIterator<string>;
@@ -76,6 +78,7 @@ export interface PluginContext extends MinimalPluginContext {
 }
 
 export class PluginContextImpl extends MinimalPluginContextImpl {
+  fs: RolldownFsModule = fsModule;
   getModuleInfo: GetModuleInfo;
   constructor(
     private outputOptions: OutputOptions,

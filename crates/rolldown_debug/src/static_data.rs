@@ -12,4 +12,4 @@ pub static OPENED_FILES_BY_SESSION: std::sync::LazyLock<DashMap<String, FxHashSe
 pub static EXIST_HASH_BY_SESSION: std::sync::LazyLock<DashMap<String, FxHashSet<String>>> =
   std::sync::LazyLock::new(DashMap::new);
 
-pub static DEFAULT_SESSION_ID: &str = "0000000000000";
+pub static DEFAULT_SESSION_ID: &str = "unknown-session";

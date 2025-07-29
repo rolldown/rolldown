@@ -18,3 +18,10 @@ export function removeDirSync(path: string) {
     rimrafSync(path);
   }
 }
+
+export function sensibleTimeoutInSeconds(seconds: number) {
+  const ms = seconds * 1000;
+  return new Promise((rsl) => {
+    setTimeout(rsl, process.env.CI ? ms * 3 : ms);
+  });
+}

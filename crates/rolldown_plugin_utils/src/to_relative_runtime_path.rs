@@ -1,22 +1,26 @@
 use std::{borrow::Cow, path::Path};
 
 use cow_utils::CowUtils as _;
+use rolldown_common::OutputFormat;
 use sugar_path::SugarPath as _;
 
 const CURRENT_SCRIPT_URL_OR_BASE_URI: &str = "typeof document === 'undefined' ? location.href : document.currentScript && document.currentScript.tagName.toUpperCase() === 'SCRIPT' && document.currentScript.src || document.baseURI";
 
 pub fn create_to_import_meta_url_based_relative_runtime(
-  format: &str,
+  format: OutputFormat,
   is_worker: bool,
 ) -> impl Fn(&Path, &Path) -> String {
-  let format = if is_worker && format == "iife" { "worker-iife" } else { format };
   let to_relative_path = match format {
-    "cjs" => cjs,
-    "es" => es,
-    "iife" => iife,
-    "umd" => umd,
-    "worker-iife" => worker_iife,
-    _ => unreachable!("Invalid format: {}", format),
+    OutputFormat::Esm => es,
+    OutputFormat::Cjs => cjs,
+    OutputFormat::Umd => umd,
+    OutputFormat::Iife => {
+      if is_worker {
+        worker_iife
+      } else {
+        iife
+      }
+    }
   };
   move |filename: &Path, importer: &Path| -> String {
     let path = filename.relative(importer.parent().unwrap_or(importer));

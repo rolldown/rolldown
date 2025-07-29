@@ -1,4 +1,5 @@
 use rolldown_plugin::typedmap::TypedMapKey;
+use rolldown_utils::dashmap::FxDashSet;
 
 #[derive(Hash, PartialEq, Eq)]
 pub struct ViteImportGlob;
@@ -12,4 +13,9 @@ impl ViteImportGlobValue {
 
 impl TypedMapKey for ViteImportGlob {
   type Value = ViteImportGlobValue;
+}
+
+#[derive(Debug, Default)]
+pub struct ViteMetadata {
+  pub imported_assets: FxDashSet<String>,
 }

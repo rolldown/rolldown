@@ -4,12 +4,14 @@ use cow_utils::CowUtils as _;
 use rolldown_common::OutputFormat;
 use sugar_path::SugarPath as _;
 
+use crate::to_output_file_path_in_js::AssetUrlResult;
+
 const CURRENT_SCRIPT_URL_OR_BASE_URI: &str = "typeof document === 'undefined' ? location.href : document.currentScript && document.currentScript.tagName.toUpperCase() === 'SCRIPT' && document.currentScript.src || document.baseURI";
 
 pub fn create_to_import_meta_url_based_relative_runtime(
   format: OutputFormat,
   is_worker: bool,
-) -> impl Fn(&Path, &Path) -> String {
+) -> impl Fn(&Path, &Path) -> AssetUrlResult {
   let to_relative_path = match format {
     OutputFormat::Esm => es,
     OutputFormat::Cjs => cjs,
@@ -22,9 +24,9 @@ pub fn create_to_import_meta_url_based_relative_runtime(
       }
     }
   };
-  move |filename: &Path, importer: &Path| -> String {
+  move |filename: &Path, importer: &Path| -> AssetUrlResult {
     let path = filename.relative(importer.parent().unwrap_or(importer));
-    to_relative_path(&path.to_slash_lossy())
+    AssetUrlResult::WithoutRuntime(to_relative_path(&path.to_slash_lossy()))
   }
 }
 

@@ -75,6 +75,9 @@
       ],
       "ignoreUnresolved": ["/types$"],
     },
+    "packages/test-dev-server": {
+      "entry": [],
+    },
     "scripts": {
       "entry": ["misc/**"],
     },

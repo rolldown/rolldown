@@ -2,7 +2,7 @@ mod utils;
 
 use std::{borrow::Cow, sync::Arc};
 
-use rolldown_common::{ModuleType, side_effects::HookSideEffects};
+use rolldown_common::{ModuleType, Output, side_effects::HookSideEffects};
 use rolldown_plugin::{HookUsage, Plugin};
 use rolldown_plugin_utils::{
   AssetCache, FileToUrlEnv, PublicAssetUrlCache, check_public_file, find_special_query,
@@ -15,9 +15,10 @@ pub struct AssetPlugin {
   pub is_lib: bool,
   pub url_base: String,
   pub public_dir: String,
+  pub is_skip_assets: bool,
   pub assets_include: Vec<StringOrRegex>,
   pub asset_inline_limit: usize,
-  pub handled_ids: FxDashSet<String>,
+  pub handled_asset_ids: FxDashSet<String>,
 }
 
 impl Plugin for AssetPlugin {
@@ -26,7 +27,7 @@ impl Plugin for AssetPlugin {
   }
 
   fn register_hook_usage(&self) -> HookUsage {
-    HookUsage::BuildStart | HookUsage::ResolveId | HookUsage::Load
+    HookUsage::BuildStart | HookUsage::ResolveId | HookUsage::Load | HookUsage::GenerateBundle
   }
 
   async fn build_start(
@@ -44,7 +45,7 @@ impl Plugin for AssetPlugin {
     ctx: &rolldown_plugin::PluginContext,
     args: &rolldown_plugin::HookResolveIdArgs<'_>,
   ) -> rolldown_plugin::HookResolveIdReturn {
-    if self.is_not_valid_assets(ctx.cwd(), args.specifier) {
+    if self.check_invalid_assets(ctx.cwd(), args.specifier).is() {
       return Ok(None);
     }
     Ok(check_public_file(clean_url(args.specifier), &self.public_dir).map(|_| {
@@ -78,11 +79,13 @@ impl Plugin for AssetPlugin {
       }));
     }
 
-    if self.is_not_valid_assets(ctx.cwd(), args.id) {
-      return Ok(None);
+    match self.check_invalid_assets(ctx.cwd(), args.id) {
+      utils::InvalidAsset::True => return Ok(None),
+      utils::InvalidAsset::False => {}
+      utils::InvalidAsset::Special => {
+        self.handled_asset_ids.insert(args.id.to_string());
+      }
     }
-
-    self.handled_ids.insert(args.id.to_string());
 
     let id = rolldown_plugin_utils::remove_special_query(args.id, b"url");
     let env = FileToUrlEnv {
@@ -108,5 +111,55 @@ impl Plugin for AssetPlugin {
       module_type: Some(ModuleType::Js),
       ..Default::default()
     }))
+  }
+
+  async fn generate_bundle(
+    &self,
+    _ctx: &rolldown_plugin::PluginContext,
+    args: &mut rolldown_plugin::HookGenerateBundleArgs<'_>,
+  ) -> rolldown_plugin::HookNoopReturn {
+    let mut deleted_files = vec![0u8; args.bundle.len().div_ceil(8)];
+    for (index, file) in args.bundle.iter().enumerate() {
+      match file {
+        Output::Chunk(chunk) => {
+          if chunk.is_entry
+            && chunk.module_ids.len() == 1
+            && self.handled_asset_ids.contains(&*chunk.module_ids[0])
+          {
+            deleted_files[index / 8] |= 1 << (index & 7);
+          }
+        }
+        Output::Asset(asset) => {
+          if self.is_skip_assets
+            && !asset.filename.ends_with("ssr-manifest.json")
+            && !asset.filename.ends_with(".js.map")
+            && !asset.filename.ends_with(".cjs.map")
+            && !asset.filename.ends_with(".mjs.map")
+          {
+            deleted_files[index / 8] |= 1 << (index & 7);
+          }
+        }
+      }
+    }
+    for (i, e) in deleted_files.into_iter().rev().enumerate() {
+      'outer: for j in (0..8).rev() {
+        if e & (1 << j) != 0 {
+          let index = i * 8 + j;
+          if let Output::Chunk(item) = &args.bundle[index] {
+            for file in args.bundle.iter() {
+              if let Output::Chunk(chunk) = file {
+                if chunk.imports.contains(&item.filename)
+                  || chunk.dynamic_imports.contains(&item.filename)
+                {
+                  continue 'outer;
+                }
+              }
+            }
+          }
+          args.bundle.remove(index);
+        }
+      }
+    }
+    Ok(())
   }
 }

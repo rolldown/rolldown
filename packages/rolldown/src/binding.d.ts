@@ -1349,6 +1349,7 @@ export interface BindingAssetPluginConfig {
   isLib?: boolean
   urlBase?: string
   publicDir?: string
+  isSkipAssets?: boolean
   assetsInclude?: Array<BindingStringOrRegex>
   assetInlineLimit?: number
 }

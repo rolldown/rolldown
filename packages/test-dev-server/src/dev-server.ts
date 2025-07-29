@@ -129,6 +129,9 @@ export class DevServer {
   sendUpdateToClient(
     output: Awaited<ReturnType<rolldown.RolldownBuild['hmrInvalidate']>>,
   ): void {
+    if (output.type !== 'Patch') {
+      return;
+    }
     if (this.hasLiveConnections && output.code) {
       console.log('Patching...');
       const path = `${seed}.js`;

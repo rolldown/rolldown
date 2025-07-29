@@ -4,7 +4,7 @@ import {
 } from '../../utils/create-bundler';
 import { transformToRollupOutput } from '../../utils/transform-to-rollup-output';
 
-import type { BindingHmrOutputPatch } from '../../binding';
+import type { BindingHmrUpdate } from '../../binding';
 import { BindingBundler } from '../../binding';
 import type { InputOptions } from '../../options/input-options';
 import type { OutputOptions } from '../../options/output-options';
@@ -80,7 +80,7 @@ export class RolldownBuild {
 
   async generateHmrPatch(
     changedFiles: string[],
-  ): Promise<BindingHmrOutputPatch | undefined> {
+  ): Promise<BindingHmrUpdate | undefined> {
     const output = await this.#bundlerImpl!.impl.generateHmrPatch(
       changedFiles,
     );
@@ -90,7 +90,7 @@ export class RolldownBuild {
   async hmrInvalidate(
     file: string,
     firstInvalidatedBy?: string,
-  ): Promise<BindingHmrOutputPatch> {
+  ): Promise<BindingHmrUpdate> {
     const output = await this.#bundlerImpl!.impl.hmrInvalidate(
       file,
       firstInvalidatedBy,

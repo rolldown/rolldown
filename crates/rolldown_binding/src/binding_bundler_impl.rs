@@ -5,7 +5,10 @@ use crate::worker_manager::WorkerManager;
 use crate::{
   options::{BindingInputOptions, BindingOutputOptions},
   parallel_js_plugin_registry::ParallelJsPluginRegistry,
-  types::{binding_hmr_output::BindingHmrOutput, binding_outputs::BindingOutputs},
+  types::{
+    binding_hmr_output::{BindingHmrOutput, BindingHmrUpdate},
+    binding_outputs::BindingOutputs,
+  },
   utils::{
     handle_result, normalize_binding_options::normalize_binding_options,
     try_init_custom_trace_subscriber,
@@ -121,7 +124,7 @@ impl BindingBundlerImpl {
     let mut bundler_core = self.inner.lock().await;
     let result = bundler_core.generate_hmr_patch(changed_files).await;
     match result {
-      Ok(output) => Ok(output.into()),
+      Ok(output) => Ok(BindingHmrOutput::new(output.map(BindingHmrUpdate::from), None)),
       Err(errs) => {
         Ok(BindingHmrOutput::from_errors(errs.into_vec(), bundler_core.options().cwd.clone()))
       }
@@ -137,7 +140,7 @@ impl BindingBundlerImpl {
     let mut bundler_core = self.inner.lock().await;
     let result = bundler_core.hmr_invalidate(caller, first_invalidated_by).await;
     match result {
-      Ok(output) => Ok(output.into()),
+      Ok(output) => Ok(BindingHmrOutput::new(Some(output.into()), None)),
       Err(errs) => {
         Ok(BindingHmrOutput::from_errors(errs.into_vec(), bundler_core.options().cwd.clone()))
       }

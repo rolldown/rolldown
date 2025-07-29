@@ -1175,7 +1175,7 @@ export declare class BindingError {
 }
 
 export declare class BindingHmrOutput {
-  get patch(): BindingHmrOutputPatch | null
+  get patch(): BindingHmrUpdate | null
   get errors(): Array<Error | BindingError>
 }
 
@@ -1489,17 +1489,10 @@ export interface BindingHmrBoundaryOutput {
   acceptedVia: string
 }
 
-export interface BindingHmrOutputPatch {
-  code: string
-  filename: string
-  sourcemap?: string
-  sourcemapFilename?: string
-  hmrBoundaries: Array<BindingHmrBoundaryOutput>
-  fullReload: boolean
-  firstInvalidatedBy?: string
-  isSelfAccepting: boolean
-  fullReloadReason?: string
-}
+export type BindingHmrUpdate =
+  | { type: 'Patch', code: string, filename: string, sourcemap?: string, sourcemapFilename?: string, hmrBoundaries: Array<BindingHmrBoundaryOutput> }
+  | { type: 'FullReload', reason?: string }
+  | { type: 'Noop' }
 
 export interface BindingHookFilter {
   value?: Array<Array<BindingFilterToken>>

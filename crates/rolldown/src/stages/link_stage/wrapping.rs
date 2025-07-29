@@ -37,7 +37,7 @@ fn wrap_module_recursively(ctx: &mut Context, target: ModuleIdx) {
   // Check if the module really needs to be wrapped
   if ctx.on_demand_wrapping
     && matches!(module.exports_kind, ExportsKind::Esm | ExportsKind::None)
-    && !module.meta.contains(EcmaViewMeta::HasAnalyzedSideEffect)
+    && !module.meta.contains(EcmaViewMeta::ExecutionOrderSensitive)
     && module.import_records.is_empty()
   {
     return;

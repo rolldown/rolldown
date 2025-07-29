@@ -1,0 +1,47 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## main.js
+
+```js
+import { __esm } from "./rolldown-runtime.js";
+import { init_foo } from "./test.js";
+
+//#region setup.js
+globalThis.globalValue = "foo";
+
+//#endregion
+//#region main.js
+init_foo();
+
+//#endregion
+```
+## rolldown-runtime.js
+
+```js
+// HIDDEN [rolldown:runtime]
+export { __esm };
+```
+## test.js
+
+```js
+import { __esm } from "./rolldown-runtime.js";
+
+//#region foo_inner.js
+var foo_inner_default;
+var init_foo_inner = __esm({ "foo_inner.js": (() => {
+	foo_inner_default = { foo: /* @__PURE__ */ (() => globalValue)() };
+}) });
+
+//#endregion
+//#region foo.js
+var init_foo = __esm({ "foo.js": (() => {
+	init_foo_inner();
+	console.log(foo_inner_default);
+}) });
+
+//#endregion
+export { init_foo };
+```

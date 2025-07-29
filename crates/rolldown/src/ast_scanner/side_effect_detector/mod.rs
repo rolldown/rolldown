@@ -206,13 +206,16 @@ impl<'a> SideEffectDetector<'a> {
     if is_pure {
       // Even it is pure, we also wants to know if the callee has access global var
       // But we need to ignore the `Unknown` flag, since it is already marked as `pure`.
-      let mut detail = self.detect_side_effect_of_expr(&expr.callee);
-      detail.remove(SideEffectDetail::Unknown);
+      let mut detail = SideEffectDetail::PureAnnotation;
+      detail |= self.detect_side_effect_of_expr(&expr.callee) - SideEffectDetail::Unknown;
       for arg in &expr.arguments {
         detail |= match arg {
           Argument::SpreadElement(_) => true.into(),
           _ => self.detect_side_effect_of_expr(arg.to_expression()),
         };
+        if detail.has_side_effect() {
+          break;
+        }
       }
       detail
     } else {
@@ -495,6 +498,7 @@ impl<'a> SideEffectDetector<'a> {
         let mut detail = SideEffectDetail::empty();
         detail.set(SideEffectDetail::GlobalVarAccess, is_side_effect_free_global_constructor);
         detail.set(SideEffectDetail::Unknown, !is_pure);
+        detail.set(SideEffectDetail::PureAnnotation, expr.pure);
 
         for arg in &expr.arguments {
           detail |= match arg {
@@ -1147,7 +1151,7 @@ mod test {
     // sideEffectful Global variable access with pure annotation
     assert_eq!(
       get_statements_side_effect_details("let a = /*@__PURE__ */ Reflect.something()"),
-      vec![SideEffectDetail::GlobalVarAccess]
+      vec![SideEffectDetail::GlobalVarAccess | SideEffectDetail::PureAnnotation]
     );
   }
 

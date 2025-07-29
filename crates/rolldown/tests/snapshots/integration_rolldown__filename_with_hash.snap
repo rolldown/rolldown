@@ -4076,6 +4076,12 @@ expression: output
 
 - main-!~{000}~.js => main-CBIwaCKA.js
 
+# tests/rolldown/function/experimental/strict_execution_order/issue_5303
+
+- main-!~{000}~.js => main-BgGCfDml.js
+- rolldown-runtime-!~{001}~.js => rolldown-runtime-BjtMze0h.js
+- test-!~{003}~.js => test-CBuTnx82.js
+
 # tests/rolldown/function/experimental/strict_execution_order/on_demand_wrapping
 
 - dynamic-!~{001}~.js => dynamic-BhqYqd04.js

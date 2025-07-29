@@ -76,8 +76,12 @@ impl<'me, 'ast: 'me> Visit<'ast> for AstScanner<'me, 'ast> {
       }
 
       self.visit_statement(stmt);
-      if self.current_stmt_info.side_effect.contains(SideEffectDetail::Unknown) {
-        self.result.ecma_view_meta.insert(EcmaViewMeta::HasAnalyzedSideEffect);
+      if self.current_stmt_info.side_effect.intersects(
+        SideEffectDetail::Unknown
+          | SideEffectDetail::GlobalVarAccess
+          | SideEffectDetail::PureAnnotation,
+      ) {
+        self.result.ecma_view_meta.insert(EcmaViewMeta::ExecutionOrderSensitive);
       }
       self.result.stmt_infos.add_stmt_info(std::mem::take(&mut self.current_stmt_info));
     }

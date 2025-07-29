@@ -78,7 +78,7 @@ impl ChunkGraph {
         }
         if let Some(normal) = module.as_normal()
           && normal.import_records.is_empty()
-          && !normal.meta.contains(EcmaViewMeta::HasAnalyzedSideEffect)
+          && !normal.meta.contains(EcmaViewMeta::ExecutionOrderSensitive)
         {
           side_effects_free_leaf_modules.push(module_idx);
         } else {

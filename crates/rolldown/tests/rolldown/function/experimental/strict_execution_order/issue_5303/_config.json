@@ -1,0 +1,17 @@
+{
+  "config": {
+    "external": ["node:assert"],
+    "experimental": {
+      "strictExecutionOrder": true,
+      "onDemandWrapping": true
+    },
+    "advancedChunks": {
+      "groups": [
+        {
+          "name": "test",
+          "test": "foo(?:_\\w+)?\\.js"
+        }
+      ]
+    }
+  }
+}

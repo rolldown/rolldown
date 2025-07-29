@@ -1,10 +1,9 @@
 import type { BuildOptions } from 'rolldown';
-
-export interface ServeOptions {}
+import { DevOptions } from '../types/dev-options';
 
 export interface DevConfig {
   build?: BuildOptions;
-  serve?: ServeOptions;
+  dev?: DevOptions;
 }
 
 export function defineDevConfig(config: DevConfig): DevConfig {

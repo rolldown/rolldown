@@ -161,7 +161,8 @@ function removeBuiltModules(): Plugin {
           return this.resolve('pathe');
         }
         if (
-          id === 'node:os' || id === 'node:worker_threads' || id === 'node:url'
+          id === 'node:os' || id === 'node:worker_threads' ||
+          id === 'node:url' || id === 'node:fs/promises'
         ) {
           // conditional import
           return { id, external: true, moduleSideEffects: false };

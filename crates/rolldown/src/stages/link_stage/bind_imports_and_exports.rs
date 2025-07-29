@@ -711,12 +711,14 @@ impl BindImportsAndExportsContext<'_> {
             named_import.imported.to_string(),
             named_import.span_imported,
           );
-          if let Some(importee) = importee.as_normal() {
-            if matches!(importee.module_type, ModuleType::Ts | ModuleType::Tsx) {
-              diagnostic = diagnostic.with_severity_warning();
-            }
+          if let Some(importee) = importee.as_normal()
+            && matches!(importee.module_type, ModuleType::Ts | ModuleType::Tsx)
+          {
+            diagnostic = diagnostic.with_severity_warning();
+            self.warnings.push(diagnostic);
+          } else {
+            self.errors.push(diagnostic);
           }
-          self.errors.push(diagnostic);
         }
       }
     }

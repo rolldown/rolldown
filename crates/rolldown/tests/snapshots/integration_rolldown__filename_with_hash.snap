@@ -3484,6 +3484,10 @@ expression: output
 
 - entry-!~{000}~.js => entry-B7hHkHEF.js
 
+# tests/esbuild/ts/ts_export_default_type_issue316
+
+- entry-!~{000}~.js => entry-ezzTSP9M.js
+
 # tests/esbuild/ts/ts_export_equals
 
 - a-!~{000}~.js => a-B_RtVVxo.js

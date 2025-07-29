@@ -116,8 +116,7 @@ impl PluginDriver {
       }
       .instrument(tracing::trace_span!(
         "HookResolveIdCall",
-        CONTEXT_call_id =
-          format!("{}_{}", args.specifier, rolldown_utils::time::current_utc_timestamp_ms())
+        CONTEXT_call_id = rolldown_utils::uuid::uuid_v4()
       ))
       .await?;
       if ret.is_some() {
@@ -207,7 +206,7 @@ impl PluginDriver {
       }
       .instrument(tracing::trace_span!(
         "HookLoadCall",
-        CONTEXT_call_id = format!("load_{}", rolldown_utils::time::current_utc_timestamp_ms())
+        CONTEXT_call_id = rolldown_utils::uuid::uuid_v4()
       ))
       .await?;
       if ret.is_some() {
@@ -232,13 +231,7 @@ impl PluginDriver {
     for (plugin_idx, plugin, ctx) in
       self.iter_plugin_with_context_by_order(&self.order_by_transform_meta)
     {
-      let call_id = tracing::enabled!(tracing::Level::TRACE).then(|| {
-        format!(
-          "transform_{}_{}",
-          plugin_idx.raw(),
-          rolldown_utils::time::current_utc_timestamp_ms()
-        )
-      });
+      let call_id = tracing::enabled!(tracing::Level::TRACE).then(rolldown_utils::uuid::uuid_v4);
 
       trace_action!(action::HookTransformCallStart {
         action: "HookTransformCallStart",

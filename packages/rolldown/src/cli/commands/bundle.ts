@@ -87,7 +87,7 @@ async function watchInner(
       }),
     };
   });
-  const watcher = await rolldownWatch(normalizedConfig);
+  const watcher = rolldownWatch(normalizedConfig);
 
   onExit((code: number | null | undefined) => {
     Promise.resolve(watcher.close()).finally(() => {

@@ -7,6 +7,5 @@
       }
     ]
   },
-  "expectExecuted": false,
-  "expectError": true
+  "expectExecuted": false
 }

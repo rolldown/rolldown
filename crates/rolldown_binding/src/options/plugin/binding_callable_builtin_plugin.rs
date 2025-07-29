@@ -66,14 +66,22 @@ impl BindingCallableBuiltinPlugin {
             custom: options.map(Into::into).unwrap_or_default(),
           },
         )
-        .await?
+        .await
+        .map_err(AnyHowMaybeNapiError::into_napi_error)?
         .map(Into::into),
     )
   }
 
   #[napi]
   pub async fn load(&self, id: String) -> napi::Result<Option<BindingHookJsLoadOutput>> {
-    Ok(self.inner.call_load(&self.context.inner, &HookLoadArgs { id: &id }).await?.map(Into::into))
+    Ok(
+      self
+        .inner
+        .call_load(&self.context.inner, &HookLoadArgs { id: &id })
+        .await
+        .map_err(AnyHowMaybeNapiError::into_napi_error)?
+        .map(Into::into),
+    )
   }
 
   #[napi]
@@ -94,7 +102,8 @@ impl BindingCallableBuiltinPlugin {
             module_type: &ModuleType::from_known_str(&options.module_type)?,
           },
         )
-        .await?
+        .await
+        .map_err(AnyHowMaybeNapiError::into_napi_error)?
         .map(Into::into),
     )
   }
@@ -108,7 +117,8 @@ impl BindingCallableBuiltinPlugin {
     self
       .inner
       .call_watch_change(&self.context.inner, &path, bindingify_watcher_change_kind(event.event)?)
-      .await?;
+      .await
+      .map_err(AnyHowMaybeNapiError::into_napi_error)?;
     Ok(())
   }
 }
@@ -184,5 +194,18 @@ fn bindingify_watcher_change_kind(value: String) -> napi::Result<WatcherChangeKi
     "delete" => Ok(WatcherChangeKind::Delete),
     "update" => Ok(WatcherChangeKind::Update),
     _ => Err(napi::Error::new(napi::Status::InvalidArg, "Invalid watcher change kind")),
+  }
+}
+
+trait AnyHowMaybeNapiError {
+  fn into_napi_error(self) -> napi::Error;
+}
+
+impl AnyHowMaybeNapiError for anyhow::Error {
+  fn into_napi_error(self) -> napi::Error {
+    match self.downcast::<napi::Error>() {
+      Ok(napi_error) => napi_error,
+      Err(original_error) => original_error.into(),
+    }
   }
 }

@@ -85,8 +85,8 @@ export class DevServer {
     watcher.on('change', async (path) => {
       console.log(`File ${path} has been changed`);
       if (this.hasLiveConnections) {
-        const output = (await this.build.generateHmrPatch([path]))!;
-        this.sendUpdateToClient(output);
+        const updates = (await this.build.generateHmrPatch([path]))!;
+        this.handleHmrUpdates(updates);
       }
       // Invoke the build process again to ensure if users reload the page, they get the latest changes
       await this.triggerBuild();
@@ -122,6 +122,27 @@ export class DevServer {
         if (s.readyState === WebSocket.OPEN) {
           s.send(JSON.stringify(message));
         }
+      }
+    }
+  }
+
+  handleHmrUpdates(
+    updates: Awaited<ReturnType<rolldown.RolldownBuild['generateHmrPatch']>>,
+  ): void {
+    for (const update of updates) {
+      switch (update.type) {
+        case 'Patch':
+          this.sendUpdateToClient(update);
+          break;
+        case 'FullReload':
+          if (this.devOptions.platform === 'browser') {
+            // TODO: send reload message to client
+          }
+          break;
+        case 'Noop':
+          break;
+        default:
+          throw new Error(`Unknown update type: ${update}`);
       }
     }
   }

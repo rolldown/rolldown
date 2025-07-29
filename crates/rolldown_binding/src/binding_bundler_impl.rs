@@ -9,7 +9,7 @@ use crate::{
   options::{BindingInputOptions, BindingOutputOptions},
   parallel_js_plugin_registry::ParallelJsPluginRegistry,
   types::{
-    binding_hmr_output::{BindingHmrOutput, BindingHmrUpdate},
+    binding_hmr_output::{BindingGenerateHmrPatchReturn, BindingHmrOutput},
     binding_outputs::BindingOutputs,
   },
   utils::{
@@ -158,14 +158,17 @@ impl BindingBundlerImpl {
   pub async fn generate_hmr_patch(
     &self,
     changed_files: Vec<String>,
-  ) -> napi::Result<BindingHmrOutput> {
+  ) -> napi::Result<BindingGenerateHmrPatchReturn> {
     let mut bundler_core = self.inner.lock().await;
     let result = bundler_core.generate_hmr_patch(changed_files).await;
     match result {
-      Ok(output) => Ok(BindingHmrOutput::new(output.map(BindingHmrUpdate::from), None)),
-      Err(errs) => {
-        Ok(BindingHmrOutput::from_errors(errs.into_vec(), bundler_core.options().cwd.clone()))
+      Ok(updates) => {
+        Ok(BindingGenerateHmrPatchReturn::Ok(updates.into_iter().map(Into::into).collect()))
       }
+      Err(errs) => Ok(BindingGenerateHmrPatchReturn::from_errors(
+        errs.into_vec(),
+        bundler_core.options().cwd.clone(),
+      )),
     }
   }
 

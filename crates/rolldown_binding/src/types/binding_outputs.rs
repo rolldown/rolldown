@@ -99,7 +99,7 @@ pub fn update_outputs(
   Ok(())
 }
 
-#[napi]
+#[napi(object)]
 pub struct BindingError {
   pub kind: String,
   pub message: String,

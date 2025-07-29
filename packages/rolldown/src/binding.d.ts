@@ -1153,7 +1153,7 @@ export declare class BindingBundlerImpl {
   close(): Promise<void>
   get closed(): boolean
   getWatchFiles(): Promise<Array<string>>
-  generateHmrPatch(changedFiles: Array<string>): Promise<BindingHmrOutput>
+  generateHmrPatch(changedFiles: Array<string>): Promise<BindingGenerateHmrPatchReturn>
   hmrInvalidate(caller: string, firstInvalidatedBy?: string | undefined | null): Promise<BindingHmrOutput>
 }
 
@@ -1167,11 +1167,6 @@ export declare class BindingCallableBuiltinPlugin {
 
 export declare class BindingChunkingContext {
   getModuleInfo(moduleId: string): BindingModuleInfo | null
-}
-
-export declare class BindingError {
-  kind: string
-  message: string
 }
 
 export declare class BindingHmrOutput {
@@ -1459,6 +1454,11 @@ export interface BindingEmittedChunk {
   preserveEntrySignatures?: BindingPreserveEntrySignatures
 }
 
+export interface BindingError {
+  kind: string
+  message: string
+}
+
 export interface BindingExperimentalHmrOptions {
   host?: string
   port?: number
@@ -1483,6 +1483,10 @@ export interface BindingFilterToken {
   kind: FilterTokenKind
   payload?: BindingStringOrRegex | number | boolean
 }
+
+export type BindingGenerateHmrPatchReturn =
+  | { type: 'Ok', field0: Array<BindingHmrUpdate> }
+  | { type: 'Error', field0: Array<Error | BindingError> }
 
 export interface BindingHmrBoundaryOutput {
   boundary: string

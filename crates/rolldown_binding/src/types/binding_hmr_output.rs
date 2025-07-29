@@ -87,3 +87,17 @@ impl From<rolldown_common::HmrUpdate> for BindingHmrUpdate {
     }
   }
 }
+
+#[napi(discriminant = "type", object_from_js = false)]
+pub enum BindingGenerateHmrPatchReturn {
+  Ok(Vec<BindingHmrUpdate>),
+  Error(Vec<napi::Either<napi::JsError, BindingError>>),
+}
+
+impl BindingGenerateHmrPatchReturn {
+  pub fn from_errors(diagnostics: Vec<BuildDiagnostic>, cwd: std::path::PathBuf) -> Self {
+    Self::Error(
+      diagnostics.iter().map(|diagnostic| to_js_diagnostic(diagnostic, cwd.clone())).collect(),
+    )
+  }
+}

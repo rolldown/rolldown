@@ -10,6 +10,7 @@ import type { InputOptions } from '../../options/input-options';
 import type { OutputOptions } from '../../options/output-options';
 import type { HasProperty, TypeAssert } from '../../types/assert';
 import type { RolldownOutput } from '../../types/rolldown-output';
+import { normalizeErrors } from '../../utils/error';
 import { transformHmrPatchOutput } from '../../utils/transform-hmr-patch-output';
 import { validateOption } from '../../utils/validator';
 
@@ -80,11 +81,18 @@ export class RolldownBuild {
 
   async generateHmrPatch(
     changedFiles: string[],
-  ): Promise<BindingHmrUpdate | undefined> {
-    const output = await this.#bundlerImpl!.impl.generateHmrPatch(
+  ): Promise<BindingHmrUpdate[]> {
+    const ret = await this.#bundlerImpl!.impl.generateHmrPatch(
       changedFiles,
     );
-    return transformHmrPatchOutput(output);
+    switch (ret.type) {
+      case 'Ok':
+        return ret.field0;
+      case 'Error':
+        throw normalizeErrors(ret.field0);
+      default:
+        throw new Error('Unknown error');
+    }
   }
 
   async hmrInvalidate(

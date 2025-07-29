@@ -166,10 +166,10 @@ impl IntegrationTest {
               &hmr_temp_dir_path,
               hmr_edit_files,
             );
-            let update = bundler.generate_hmr_patch(changed_files).await;
-            match update {
-              Ok(update) => {
-                if let Some(update) = update {
+            let updates = bundler.generate_hmr_patch(changed_files).await;
+            match updates {
+              Ok(updates) => {
+                for update in updates {
                   let snapshot_content =
                     Self::render_hmr_output_to_string(step, &update, vec![], &cwd);
                   collect_snapshot(snapshot_content);

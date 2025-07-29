@@ -1,4 +1,4 @@
-import { BindingError } from '../binding';
+import { type BindingError } from '../binding';
 import type { RollupError } from '../log/logging';
 
 export function normalizeErrors(rawErrors: (BindingError | Error)[]): Error {

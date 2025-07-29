@@ -1,4 +1,5 @@
 import fsp from 'node:fs/promises';
+import { error, logNoFileSystemInBrowser } from '../log/logs';
 
 export interface RolldownFsModule {
   appendFile(
@@ -95,18 +96,40 @@ export interface RolldownFileStats {
   birthtime: Date;
 }
 
-export const fsModule: RolldownFsModule = {
-  appendFile: fsp.appendFile,
-  copyFile: fsp.copyFile,
-  mkdir: fsp.mkdir as RolldownFsModule['mkdir'],
-  mkdtemp: fsp.mkdtemp,
-  readdir: fsp.readdir,
-  readFile: fsp.readFile as RolldownFsModule['readFile'],
-  realpath: fsp.realpath,
-  rename: fsp.rename,
-  rmdir: fsp.rmdir,
-  stat: fsp.stat,
-  lstat: fsp.lstat,
-  unlink: fsp.unlink,
-  writeFile: fsp.writeFile,
-};
+export const fsModule: RolldownFsModule = import.meta.browserBuild
+  ? {
+    appendFile: throwNoFileSystemError('fs.appendFile'),
+    copyFile: throwNoFileSystemError('fs.copyFile'),
+    mkdir: throwNoFileSystemError('fs.mkdir'),
+    mkdtemp: throwNoFileSystemError('fs.mkdtemp'),
+    readdir: throwNoFileSystemError('fs.readdir'),
+    readFile: throwNoFileSystemError('fs.readFile'),
+    realpath: throwNoFileSystemError('fs.realpath'),
+    rename: throwNoFileSystemError('fs.rename'),
+    rmdir: throwNoFileSystemError('fs.rmdir'),
+    stat: throwNoFileSystemError('fs.stat'),
+    lstat: throwNoFileSystemError('fs.lstat'),
+    unlink: throwNoFileSystemError('fs.unlink'),
+    writeFile: throwNoFileSystemError('fs.writeFile'),
+  }
+  : {
+    appendFile: fsp.appendFile,
+    copyFile: fsp.copyFile,
+    mkdir: fsp.mkdir as RolldownFsModule['mkdir'],
+    mkdtemp: fsp.mkdtemp,
+    readdir: fsp.readdir,
+    readFile: fsp.readFile as RolldownFsModule['readFile'],
+    realpath: fsp.realpath,
+    rename: fsp.rename,
+    rmdir: fsp.rmdir,
+    stat: fsp.stat,
+    lstat: fsp.lstat,
+    unlink: fsp.unlink,
+    writeFile: fsp.writeFile,
+  };
+
+function throwNoFileSystemError(method: string): () => never {
+  return () => {
+    error(logNoFileSystemInBrowser(method));
+  };
+}

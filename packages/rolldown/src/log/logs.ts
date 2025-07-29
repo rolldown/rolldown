@@ -8,7 +8,8 @@ const INVALID_LOG_POSITION = 'INVALID_LOG_POSITION',
   CYCLE_LOADING = 'CYCLE_LOADING',
   MULTIPLY_NOTIFY_OPTION = 'MULTIPLY_NOTIFY_OPTION',
   PARSE_ERROR = 'PARSE_ERROR',
-  DUPLICATE_JSX_CONFIG = 'DUPLICATE_JSX_CONFIG';
+  DUPLICATE_JSX_CONFIG = 'DUPLICATE_JSX_CONFIG',
+  NO_FS_IN_BROWSER = 'NO_FS_IN_BROWSER';
 
 export function logParseError(message: string): RollupLog {
   return {
@@ -60,6 +61,14 @@ export function logDuplicateJsxConfig(): RollupLog {
     code: DUPLICATE_JSX_CONFIG,
     message:
       'Both `options.jsx` and `options.transform.jsx` are set so `options.jsx` is ignored',
+  };
+}
+
+export function logNoFileSystemInBrowser(method: string): RollupLog {
+  return {
+    code: NO_FS_IN_BROWSER,
+    message:
+      `Cannot access the file system (via "${method}") when using the browser build of Rolldown.`,
   };
 }
 

@@ -1,6 +1,5 @@
-export interface UpdateMessage {
-  // (hyf0) TODO: This should be `hmr:update`
-  type: 'update';
+export interface HmrUpdateMessage {
+  type: 'hmr:update';
   url: string;
   path: string;
 }

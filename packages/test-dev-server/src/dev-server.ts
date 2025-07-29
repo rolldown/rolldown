@@ -9,7 +9,7 @@ import serveStatic from 'serve-static';
 import { WebSocket, WebSocketServer } from 'ws';
 import { HmrInvalidateMessage } from './types/client-message.js';
 import { NormalizedDevOptions } from './types/normalized-dev-options.js';
-import { UpdateMessage } from './types/server-message.js';
+import { HmrUpdateMessage } from './types/server-message.js';
 import { decodeClientMessage } from './utils/decode-client-message.js';
 
 let seed = 0;
@@ -116,7 +116,7 @@ export class DevServer {
     return this.currentBuildingPromise != null;
   }
 
-  sendMessage(message: UpdateMessage): void {
+  sendMessage(message: HmrUpdateMessage): void {
     if (this.hasLiveConnections) {
       for (const s of this.sockets) {
         if (s.readyState === WebSocket.OPEN) {
@@ -153,7 +153,7 @@ export class DevServer {
         }),
       );
       this.sendMessage({
-        type: 'update',
+        type: 'hmr:update',
         url: patchUriForBrowser,
         path: patchUriForFile,
       });

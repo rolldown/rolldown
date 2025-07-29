@@ -113,7 +113,7 @@ const socket = new WebSocket(addr);
 socket.onmessage = function(event) {
   const data = JSON.parse(event.data);
   console.debug('Received message:', data);
-  if (data.type === 'update') {
+  if (data.type === 'hmr:update') {
     if (typeof process === 'object') {
       import(data.path);
       console.debug(`[hmr]: Importing HMR patch: ${data.path}`);

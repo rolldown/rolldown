@@ -143,12 +143,13 @@ impl<'a> SideEffectDetector<'a> {
     if !self.scope.is_unresolved(ref_id) {
       return true.into();
     }
-    (match chains.len() {
-      2 => !is_side_effect_free_member_expr_of_len_two(&chains),
-      3 => !is_side_effect_free_member_expr_of_len_three(&chains),
-      _ => true,
-    })
-    .into()
+    SideEffectDetail::GlobalVarAccess
+      | (match chains.len() {
+        2 => !is_side_effect_free_member_expr_of_len_two(&chains),
+        3 => !is_side_effect_free_member_expr_of_len_three(&chains),
+        _ => true,
+      })
+      .into()
   }
 
   fn detect_side_effect_of_assignment_target(&self, expr: &AssignmentTarget) -> SideEffectDetail {
@@ -203,7 +204,10 @@ impl<'a> SideEffectDetector<'a> {
 
     let is_pure = !self.ignore_annotations && expr.pure;
     if is_pure {
-      let mut detail = SideEffectDetail::empty();
+      // Even it is pure, we also wants to know if the callee has access global var
+      // But we need to ignore the `Unknown` flag, since it is already marked as `pure`.
+      let mut detail = self.detect_side_effect_of_expr(&expr.callee);
+      detail.remove(SideEffectDetail::Unknown);
       for arg in &expr.arguments {
         detail |= match arg {
           Argument::SpreadElement(_) => true.into(),
@@ -484,22 +488,24 @@ impl<'a> SideEffectDetector<'a> {
 
       Expression::ArrayExpression(expr) => self.detect_side_effect_of_array_expr(expr),
       Expression::NewExpression(expr) => {
-        let is_pure = expr.pure || maybe_side_effect_free_global_constructor(self.scope, expr);
-        if is_pure {
-          let mut detail = SideEffectDetail::empty();
-          for arg in &expr.arguments {
-            detail |= match arg {
-              Argument::SpreadElement(_) => true.into(),
-              _ => self.detect_side_effect_of_expr(arg.to_expression()),
-            };
-            if detail.has_side_effect() {
-              break;
-            }
+        let is_side_effect_free_global_constructor =
+          maybe_side_effect_free_global_constructor(self.scope, expr);
+        let is_pure = expr.pure || is_side_effect_free_global_constructor;
+
+        let mut detail = SideEffectDetail::empty();
+        detail.set(SideEffectDetail::GlobalVarAccess, is_side_effect_free_global_constructor);
+        detail.set(SideEffectDetail::Unknown, !is_pure);
+
+        for arg in &expr.arguments {
+          detail |= match arg {
+            Argument::SpreadElement(_) => true.into(),
+            _ => self.detect_side_effect_of_expr(arg.to_expression()),
+          };
+          if detail.has_side_effect() {
+            break;
           }
-          detail
-        } else {
-          true.into()
         }
+        detail
       }
       Expression::CallExpression(expr) => self.detect_side_effect_of_call_expr(expr),
     }
@@ -625,14 +631,17 @@ impl<'a> SideEffectDetector<'a> {
 
   #[inline]
   fn detect_side_effect_of_identifier(&self, ident_ref: &IdentifierReference) -> SideEffectDetail {
-    if self.is_unresolved_reference(ident_ref)
-      && self.options.treeshake.unknown_global_side_effects()
-      && !is_global_ident_ref(&ident_ref.name)
-    {
-      SideEffectDetail::Unknown
-    } else {
-      SideEffectDetail::empty()
+    let mut detail = SideEffectDetail::empty();
+    detail.set(SideEffectDetail::GlobalVarAccess, self.is_unresolved_reference(ident_ref));
+    if detail.contains(SideEffectDetail::GlobalVarAccess) {
+      detail.set(
+        SideEffectDetail::Unknown,
+        detail.contains(SideEffectDetail::GlobalVarAccess)
+          && self.options.treeshake.unknown_global_side_effects()
+          && !is_global_ident_ref(&ident_ref.name),
+      );
     }
+    detail
   }
 
   #[allow(clippy::too_many_lines)]
@@ -1106,7 +1115,7 @@ mod test {
   }
 
   #[test]
-  fn test_side_effects_free_global_variable_ref() {
+  fn test_side_effects_of_global_variable_access() {
     assert!(!get_statements_side_effect("let a = undefined"));
     assert!(!get_statements_side_effect("let a = void 0"));
     assert!(!get_statements_side_effect("using undef_remove = void 0;"));
@@ -1121,10 +1130,25 @@ mod test {
     assert!(!get_statements_side_effect("let a = JSON.stringify"));
     assert!(!get_statements_side_effect("let a = Proxy"));
 
+    assert_eq!(
+      get_statements_side_effect_details("let a = Proxy; let a = JSON.stringify"),
+      vec![SideEffectDetail::GlobalVarAccess, SideEffectDetail::GlobalVarAccess]
+    );
     // should have side effects other global member expr access
     assert!(get_statements_side_effect("let a = Object.test"));
     assert!(get_statements_side_effect("let a = Object.prototype.two"));
     assert!(get_statements_side_effect("let a = Reflect.something"));
+
+    assert_eq!(
+      get_statements_side_effect_details("let a = Reflect.something"),
+      vec![SideEffectDetail::Unknown | SideEffectDetail::GlobalVarAccess]
+    );
+
+    // sideEffectful Global variable access with pure annotation
+    assert_eq!(
+      get_statements_side_effect_details("let a = /*@__PURE__ */ Reflect.something()"),
+      vec![SideEffectDetail::GlobalVarAccess]
+    );
   }
 
   #[test]

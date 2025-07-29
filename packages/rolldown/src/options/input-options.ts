@@ -59,6 +59,7 @@ export interface WatcherOptions {
   include?: StringOrRegExp | StringOrRegExp[];
   exclude?: StringOrRegExp | StringOrRegExp[];
   onInvalidate?: (id: string) => void;
+  clearScreen?: boolean;
 }
 
 type MakeAbsoluteExternalsRelative = boolean | 'ifRelativeSource';

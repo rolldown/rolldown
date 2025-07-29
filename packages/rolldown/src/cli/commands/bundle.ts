@@ -6,6 +6,7 @@ import { version } from '../../../package.json';
 import type { ConfigExport, RolldownOutput } from '../..';
 import { rolldown } from '../../api/rolldown';
 import { watch as rolldownWatch } from '../../api/watch';
+import { getClearScreenFunction } from '../../utils/clear-screen';
 import { loadConfig } from '../../utils/load-config';
 import { arraify } from '../../utils/misc';
 import type { NormalizedCliOptions } from '../arguments/normalize';
@@ -102,8 +103,14 @@ async function watchInner(
       changedFile.push(id);
     }
   });
+
+  const mayClearScreen = getClearScreenFunction(normalizedConfig);
   watcher.on('event', async (event) => {
     switch (event.code) {
+      case 'START':
+        mayClearScreen();
+        break;
+
       case 'BUNDLE_START':
         if (changedFile.length > 0) {
           logger.log(

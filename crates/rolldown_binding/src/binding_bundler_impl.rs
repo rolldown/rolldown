@@ -1,4 +1,7 @@
-use std::sync::Arc;
+use std::sync::{
+  Arc,
+  atomic::{AtomicI64, Ordering},
+};
 
 #[cfg(not(target_family = "wasm"))]
 use crate::worker_manager::WorkerManager;
@@ -14,7 +17,11 @@ use crate::{
     try_init_custom_trace_subscriber,
   },
 };
-use napi::{Env, tokio::sync::Mutex};
+use napi::{
+  Env,
+  bindgen_prelude::{ObjectFinalize, PromiseRaw},
+  tokio::sync::Mutex,
+};
 use napi_derive::napi;
 use rolldown::{Bundler as NativeBundler, BundlerBuilder, LogLevel, NormalizedBundlerOptions};
 use rolldown_error::{
@@ -28,9 +35,20 @@ pub struct BindingBundlerOptions<'env> {
   pub parallel_plugins_registry: Option<ParallelJsPluginRegistry>,
 }
 
-#[napi]
+#[napi(custom_finalize)]
 pub struct BindingBundlerImpl {
   inner: Arc<Mutex<NativeBundler>>,
+  memory_adjustment: Arc<AtomicI64>,
+}
+
+impl ObjectFinalize for BindingBundlerImpl {
+  fn finalize(self, env: Env) -> napi::Result<()> {
+    let memory_adjustment = self.memory_adjustment.load(Ordering::Relaxed);
+    if memory_adjustment > 0 {
+      env.adjust_external_memory(-memory_adjustment)?;
+    }
+    Ok(())
+  }
 }
 
 #[napi]
@@ -72,17 +90,37 @@ impl BindingBundlerImpl {
       .with_build_count(build_count)
       .with_session(session);
 
-    Ok(Self { inner: Arc::new(Mutex::new(bundler_builder.build())) })
+    Ok(Self {
+      inner: Arc::new(Mutex::new(bundler_builder.build())),
+      memory_adjustment: Arc::new(AtomicI64::new(0)),
+    })
   }
 
   pub fn new_with_bundler(inner: Arc<Mutex<NativeBundler>>) -> Self {
-    Self { inner }
+    Self { inner, memory_adjustment: Arc::new(AtomicI64::new(0)) }
   }
 
   #[napi]
   #[tracing::instrument(level = "debug", skip_all)]
-  pub async fn write(&self) -> napi::Result<BindingOutputs> {
-    self.write_impl().await
+  pub fn write<'env>(&self, env: &'env Env) -> napi::Result<PromiseRaw<'env, BindingOutputs>> {
+    let inner = Arc::clone(&self.inner);
+    let memory_adjustment = Arc::clone(&self.memory_adjustment);
+
+    env.spawn_future_with_callback(
+      async move {
+        let outputs = Self::write_impl(inner).await?;
+        Ok(outputs)
+      },
+      move |env, outputs| {
+        let chunk_size = outputs.chunk_len();
+        // 16mb per chunk, it's just a hint, so it doesn't need to be accurate
+        #[allow(clippy::cast_possible_wrap)]
+        let memory_consumption = chunk_size as i64 * 1024 * 1024 * 16;
+        memory_adjustment.fetch_add(memory_consumption, Ordering::Relaxed);
+        env.adjust_external_memory(memory_consumption)?;
+        Ok(outputs)
+      },
+    )
   }
 
   #[napi]
@@ -156,7 +194,7 @@ impl BindingBundlerImpl {
 
     match output {
       Ok(output) => {
-        self.handle_warnings(output.warnings, bundler_core.options()).await;
+        Self::handle_warnings(output.warnings, bundler_core.options()).await;
       }
       Err(outputs) => {
         return Ok(outputs);
@@ -167,15 +205,15 @@ impl BindingBundlerImpl {
   }
 
   #[allow(clippy::significant_drop_tightening)]
-  pub async fn write_impl(&self) -> napi::Result<BindingOutputs> {
-    let mut bundler_core = self.inner.lock().await;
+  pub async fn write_impl(bundler: Arc<Mutex<NativeBundler>>) -> napi::Result<BindingOutputs> {
+    let mut bundler_core = bundler.lock().await;
 
     let outputs = match bundler_core.write().await {
       Ok(outputs) => outputs,
       Err(errs) => return Ok(Self::handle_errors(errs.into_vec(), bundler_core.options())),
     };
 
-    self.handle_warnings(outputs.warnings, bundler_core.options()).await;
+    Self::handle_warnings(outputs.warnings, bundler_core.options()).await;
 
     Ok(outputs.assets.into())
   }
@@ -189,7 +227,7 @@ impl BindingBundlerImpl {
       Err(errs) => return Ok(Self::handle_errors(errs.into_vec(), bundler_core.options())),
     };
 
-    self.handle_warnings(bundle_output.warnings, bundler_core.options()).await;
+    Self::handle_warnings(bundle_output.warnings, bundler_core.options()).await;
 
     Ok(bundle_output.assets.into())
   }
@@ -229,11 +267,7 @@ impl BindingBundlerImpl {
   }
 
   #[allow(clippy::print_stdout, unused_must_use)]
-  async fn handle_warnings(
-    &self,
-    warnings: Vec<BuildDiagnostic>,
-    options: &NormalizedBundlerOptions,
-  ) {
+  async fn handle_warnings(warnings: Vec<BuildDiagnostic>, options: &NormalizedBundlerOptions) {
     if options.log_level == Some(LogLevel::Silent) {
       return;
     }

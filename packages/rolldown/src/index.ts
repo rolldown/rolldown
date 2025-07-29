@@ -66,6 +66,12 @@ import type {
   TransformResult,
 } from './plugin';
 import type {
+  BufferEncoding,
+  RolldownDirectoryEntry,
+  RolldownFileStats,
+  RolldownFsModule,
+} from './plugin/fs';
+import type {
   GeneralHookFilter,
   HookFilter,
   ModuleTypeFilter,
@@ -106,6 +112,7 @@ export const VERSION: string = version;
 export type {
   AddonFunction,
   AsyncPluginHooks,
+  BufferEncoding,
   BuildOptions,
   ChunkFileNamesFunction,
   ChunkingContext,
@@ -161,6 +168,9 @@ export type {
   ResolveIdExtraOptions,
   ResolveIdResult,
   RolldownBuild,
+  RolldownDirectoryEntry,
+  RolldownFileStats,
+  RolldownFsModule,
   RolldownOptions,
   RolldownOutput,
   RolldownPlugin,

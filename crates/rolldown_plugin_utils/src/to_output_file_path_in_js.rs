@@ -14,10 +14,10 @@ pub type RenderBuiltUrl = dyn Fn(
   + Sync;
 
 pub struct RenderBuiltUrlConfig<'a> {
+  pub is_ssr: bool,
   pub r#type: &'a str,
   pub host_id: &'a str,
   pub host_type: &'a str,
-  pub is_server: bool,
 }
 
 pub struct RenderBuiltUrlRet {
@@ -59,9 +59,10 @@ impl ToOutputFilePathInJSEnv<'_> {
         }
       }
     }
-    if relative && !self.render_built_url_config.is_server {
-      return Ok(to_relative(filename.as_path(), self.render_built_url_config.host_id.as_path()));
-    }
-    Ok(AssetUrlResult::WithoutRuntime(join_url_segments(self.decoded_base, filename).into_owned()))
+    Ok(if relative && !self.render_built_url_config.is_ssr {
+      to_relative(filename.as_path(), self.render_built_url_config.host_id.as_path())
+    } else {
+      AssetUrlResult::WithoutRuntime(join_url_segments(self.decoded_base, filename).into_owned())
+    })
   }
 }

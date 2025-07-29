@@ -11,6 +11,8 @@ use crate::{PublicFileToBuiltUrlEnv, remove_special_query};
 use super::check_public_file::check_public_file;
 use super::find_special_query::find_special_query;
 
+const GIT_LFS_PREFIX: &[u8; 34] = b"version https://git-lfs.github.com";
+
 #[derive(Default)]
 pub struct AssetCache(pub FxDashMap<String, String>);
 
@@ -56,7 +58,7 @@ impl FileToUrlEnv<'_> {
     let content = std::fs::read(file)?;
 
     let url = if self.should_inline(file, &id, &content, force_inline) {
-      asset_to_data_url(file.as_path(), &content)?
+      self.asset_to_data_url(file.as_path(), &content)?
     } else {
       let path = Path::new(file);
       let name = path.file_name().map(|v| v.to_string_lossy().into());
@@ -108,34 +110,20 @@ impl FileToUrlEnv<'_> {
       return false;
     }
     // TODO(shulaoda): support function for asset_inline_limit
-    content.len() < self.asset_inline_limit && !is_git_lfs_placeholder(content)
+    content.len() < self.asset_inline_limit && !content.starts_with(GIT_LFS_PREFIX)
   }
-}
 
-// TODO(shulaoda): improve it
-#[allow(dead_code)]
-fn asset_to_data_url(path: &Path, content: &[u8]) -> anyhow::Result<String> {
-  // TODO(shulaoda): should throw an warning
-  // if (environment.config.build.lib && isGitLfsPlaceholder(content)) {
-  //   environment.logger.warn(
-  //     colors.yellow(`Inlined file ${file} was not downloaded via Git LFS`),
-  //   )
-  // }
-  let guessed_mime = guess_mime(path, content)?;
-  Ok(encode_as_shortest_dataurl(&guessed_mime, content))
-}
-
-const GIT_LFS_PREFIX: &[u8; 34] = b"version https://git-lfs.github.com";
-fn is_git_lfs_placeholder(content: &[u8]) -> bool {
-  if content.len() < GIT_LFS_PREFIX.len() {
-    return false;
+  fn asset_to_data_url(&self, path: &Path, content: &[u8]) -> anyhow::Result<String> {
+    if self.is_lib && content.starts_with(GIT_LFS_PREFIX) {
+      self.ctx.warn(rolldown_plugin::Log {
+        message: format!("Inlined file {} was not downloaded via Git LFS", path.display()),
+        ..Default::default()
+      });
+    }
+    // TODO: It needs to be validated during subsequent usage
+    // https://github.com/vitejs/vite/pull/14643/files#r1376247460
+    // https://github.com/vitejs/rolldown-vite/blob/c252dee/packages/vite/src/node/plugins/asset.ts#L533-L539
+    let guessed_mime = guess_mime(path, content)?;
+    Ok(encode_as_shortest_dataurl(&guessed_mime, content))
   }
-  content[..GIT_LFS_PREFIX.len()] == *GIT_LFS_PREFIX
-}
-
-#[test]
-fn test_is_git_lfs_placeholder() {
-  assert!(is_git_lfs_placeholder(b"version https://git-lfs.github.com/spec/v1"));
-  assert!(!is_git_lfs_placeholder(b"version https:"));
-  assert!(!is_git_lfs_placeholder(b"https://www.xgz.com/spec./yyy"));
 }

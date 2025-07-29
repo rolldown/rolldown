@@ -69,7 +69,7 @@ impl GenerateStage<'_> {
           continue;
         };
         if self.link_output.metas[normal.idx].wrap_kind == WrapKind::Cjs
-          && normal.meta.contains(EcmaViewMeta::HAS_ANALYZED_SIDE_EFFECT)
+          && normal.meta.contains(EcmaViewMeta::HasAnalyzedSideEffect)
         {
           bailout_importer = true;
         }

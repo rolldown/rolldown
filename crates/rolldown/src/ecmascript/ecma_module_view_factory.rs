@@ -114,9 +114,9 @@ pub async fn create_ecma_view(
     side_effects,
     meta: {
       let mut meta = ecma_view_meta;
-      meta.set(EcmaViewMeta::HAS_LAZY_EXPORT, has_lazy_export);
+      meta.set(EcmaViewMeta::HasLazyExport, has_lazy_export);
       meta.set(
-        EcmaViewMeta::SAFELY_TREESHAKE_COMMONJS,
+        EcmaViewMeta::SafelyTreeshakeCommonjs,
         ast_usage.contains(EcmaModuleAstUsage::AllStaticExportPropertyAccess)
           && !ast_usage.contains(EcmaModuleAstUsage::UnknownExportsRead),
       );

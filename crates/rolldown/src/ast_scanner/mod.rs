@@ -447,10 +447,10 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
 
     let ref_flags = symbol_ref.flags_mut(&mut self.result.symbol_ref_db);
     if is_const {
-      ref_flags.insert(SymbolRefFlags::IS_CONST);
+      ref_flags.insert(SymbolRefFlags::IsConst);
     }
     if !is_reassigned {
-      ref_flags.insert(SymbolRefFlags::IS_NOT_REASSIGNED);
+      ref_flags.insert(SymbolRefFlags::IsNotReassigned);
     }
 
     self.result.named_exports.insert(
@@ -462,7 +462,7 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
   fn add_local_default_export(&mut self, local: SymbolId, span: Span) {
     // The default symbol ref never get reassigned.
     let symbol_ref: SymbolRef = (self.idx, local).into();
-    symbol_ref.flags_mut(&mut self.result.symbol_ref_db).insert(SymbolRefFlags::IS_NOT_REASSIGNED);
+    symbol_ref.flags_mut(&mut self.result.symbol_ref_db).insert(SymbolRefFlags::IsNotReassigned);
 
     self.result.named_exports.insert(
       "default".into(),
@@ -584,7 +584,7 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
     } else {
       // export * from '...'
       self.result.import_records[id].meta.insert(ImportRecordMeta::IS_EXPORT_STAR);
-      self.result.ecma_view_meta.insert(EcmaViewMeta::HAS_STAR_EXPORT);
+      self.result.ecma_view_meta.insert(EcmaViewMeta::HasStarExport);
     }
     self.result.imports.insert(decl.span, id);
   }

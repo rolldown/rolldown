@@ -10,6 +10,7 @@ bitflags! {
         const GlobalVarAccess = 1;
         const PureCjs = 1 << 1;
         const Unknown = 1 << 2;
+        const PureAnnotation = 1 << 3;
     }
 }
 

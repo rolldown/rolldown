@@ -21,7 +21,8 @@ bitflags! {
         const HasLazyExport = 1 << 2;
         const HasStarExport = 1 << 3;
         const SafelyTreeshakeCommonjs = 1 << 4;
-        const HasAnalyzedSideEffect = 1 << 5;
+        /// If a module has side effects or has top-level global variable access
+        const ExecutionOrderSensitive = 1 << 5;
     }
 }
 

@@ -1,9 +1,9 @@
-import type { BindingHmrOutput, BindingHmrOutputPatch } from '../binding';
+import type { BindingHmrOutput, BindingHmrUpdate } from '../binding';
 import { normalizeErrors } from './error';
 
 export function transformHmrPatchOutput(
   output: BindingHmrOutput,
-): BindingHmrOutputPatch | undefined {
+): BindingHmrUpdate | undefined {
   handleHmrPatchOutputErrors(output);
   const { patch } = output;
   return patch ?? undefined;

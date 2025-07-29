@@ -6,14 +6,21 @@ use crate::types::binding_outputs::{BindingError, to_js_diagnostic};
 #[napi]
 #[derive(Debug)]
 pub struct BindingHmrOutput {
-  patch: Option<BindingHmrOutputPatch>,
+  patch: Option<BindingHmrUpdate>,
   errors: Option<rolldown_common::OutputsDiagnostics>,
 }
 
 #[napi]
 impl BindingHmrOutput {
+  pub fn new(
+    patch: Option<BindingHmrUpdate>,
+    errors: Option<rolldown_common::OutputsDiagnostics>,
+  ) -> Self {
+    Self { patch, errors }
+  }
+
   #[napi(getter)]
-  pub fn patch(&mut self) -> Option<BindingHmrOutputPatch> {
+  pub fn patch(&mut self) -> Option<BindingHmrUpdate> {
     self.patch.take()
   }
 
@@ -34,48 +41,6 @@ impl BindingHmrOutput {
   }
 }
 
-impl From<rolldown_common::HmrOutput> for BindingHmrOutput {
-  fn from(value: rolldown_common::HmrOutput) -> Self {
-    Self { patch: Some(value.into()), errors: None }
-  }
-}
-
-impl From<Option<rolldown_common::HmrOutput>> for BindingHmrOutput {
-  fn from(value: Option<rolldown_common::HmrOutput>) -> Self {
-    Self { patch: value.map(Into::into), errors: None }
-  }
-}
-
-#[napi_derive::napi(object)]
-#[derive(Debug)]
-pub struct BindingHmrOutputPatch {
-  pub code: String,
-  pub filename: String,
-  pub sourcemap: Option<String>,
-  pub sourcemap_filename: Option<String>,
-  pub hmr_boundaries: Vec<BindingHmrBoundaryOutput>,
-  pub full_reload: bool,
-  pub first_invalidated_by: Option<String>,
-  pub is_self_accepting: bool,
-  pub full_reload_reason: Option<String>,
-}
-
-impl From<rolldown_common::HmrOutput> for BindingHmrOutputPatch {
-  fn from(value: rolldown_common::HmrOutput) -> Self {
-    Self {
-      code: value.code,
-      filename: value.filename,
-      sourcemap: value.sourcemap,
-      sourcemap_filename: value.sourcemap_filename,
-      hmr_boundaries: value.hmr_boundaries.into_iter().map(Into::into).collect(),
-      full_reload: value.full_reload,
-      first_invalidated_by: value.first_invalidated_by,
-      is_self_accepting: value.is_self_accepting,
-      full_reload_reason: value.full_reload_reason,
-    }
-  }
-}
-
 #[napi_derive::napi(object)]
 #[derive(Debug)]
 pub struct BindingHmrBoundaryOutput {
@@ -86,5 +51,39 @@ pub struct BindingHmrBoundaryOutput {
 impl From<rolldown_common::HmrBoundaryOutput> for BindingHmrBoundaryOutput {
   fn from(value: rolldown_common::HmrBoundaryOutput) -> Self {
     Self { boundary: value.boundary.to_string(), accepted_via: value.accepted_via.to_string() }
+  }
+}
+
+#[napi(discriminant = "type")]
+#[derive(Debug)]
+pub enum BindingHmrUpdate {
+  Patch {
+    code: String,
+    filename: String,
+    sourcemap: Option<String>,
+    sourcemap_filename: Option<String>,
+    hmr_boundaries: Vec<BindingHmrBoundaryOutput>,
+  },
+  FullReload {
+    reason: Option<String>,
+  },
+  Noop,
+}
+
+impl From<rolldown_common::HmrUpdate> for BindingHmrUpdate {
+  fn from(value: rolldown_common::HmrUpdate) -> Self {
+    match value {
+      rolldown_common::HmrUpdate::Patch(patch) => Self::Patch {
+        code: patch.code,
+        filename: patch.filename,
+        sourcemap: patch.sourcemap,
+        sourcemap_filename: patch.sourcemap_filename,
+        hmr_boundaries: patch.hmr_boundaries.into_iter().map(Into::into).collect(),
+      },
+      rolldown_common::HmrUpdate::FullReload { reason } => {
+        Self::FullReload { reason: Some(reason) }
+      }
+      rolldown_common::HmrUpdate::Noop => Self::Noop,
+    }
   }
 }

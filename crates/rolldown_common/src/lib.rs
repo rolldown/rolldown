@@ -97,7 +97,7 @@ pub use crate::{
   file_emitter::{EmittedAsset, EmittedChunk, EmittedChunkInfo, FileEmitter, SharedFileEmitter},
   hmr::{
     hmr_boundary::HmrBoundary,
-    hmr_output::{HmrBoundaryOutput, HmrOutput},
+    hmr_output::{HmrBoundaryOutput, HmrPatch, HmrUpdate},
   },
   module::{
     Module,

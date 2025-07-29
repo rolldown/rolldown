@@ -150,10 +150,7 @@ __rolldown_runtime__.applyUpdates(['hmr.js']);
 ```
 ## Meta
 
-- full_reload: false
-- first_invalidated_by: None
-- is_self_accepting: false
-- full_reload_reason: None
+- update type: patch
 ### Hmr Boundaries
 
 - boundary: hmr.js, accepted_via: hmr.js

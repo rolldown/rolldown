@@ -6,7 +6,8 @@ use std::{
 use arcstr::ArcStr;
 use oxc::ast_visit::VisitMut;
 use rolldown_common::{
-  EcmaModuleAstUsage, HmrBoundary, HmrBoundaryOutput, HmrOutput, Module, ModuleIdx, ModuleTable,
+  EcmaModuleAstUsage, HmrBoundary, HmrBoundaryOutput, HmrPatch, HmrUpdate, Module, ModuleIdx,
+  ModuleTable,
 };
 use rolldown_ecmascript::{EcmaAst, EcmaCompiler, PrintOptions};
 use rolldown_ecmascript_utils::AstSnippet;
@@ -77,7 +78,7 @@ impl HmrManager {
     // The parameter is the stable id of the module that called `import.meta.hot.invalidate()`.
     caller: String,
     first_invalidated_by: Option<String>,
-  ) -> BuildResult<HmrOutput> {
+  ) -> BuildResult<HmrUpdate> {
     let module_idx = self
       .module_idx_by_stable_id
       .get(&caller)
@@ -87,20 +88,15 @@ impl HmrManager {
 
     // only self accept modules can be invalidated
     if !module.ast_usage.contains(EcmaModuleAstUsage::HmrSelfAccept) {
-      return Ok(HmrOutput {
-        is_self_accepting: false,
-        first_invalidated_by,
-        ..Default::default()
+      return Ok(HmrUpdate::FullReload {
+        reason: "not self accepting for this invalidation".to_string(),
       });
     }
 
     // Modules could be empty if a root module is invalidated via import.meta.hot.invalidate()
     if module.importers_idx.is_empty() {
-      return Ok(HmrOutput {
-        is_self_accepting: true,
-        first_invalidated_by,
-        full_reload: true,
-        ..Default::default()
+      return Ok(HmrUpdate::FullReload {
+        reason: "no importers for this invalidation".to_string(),
       });
     }
 
@@ -108,15 +104,15 @@ impl HmrManager {
     // We know that the hmr boundaries relationships are not changed, because there're no real edits happened.
     // It's safe to just pass the whole importers as start points to compute the hmr update.
     let start_points = module.importers_idx.clone();
-    let mut ret = self.compute_hmr_update(start_points, first_invalidated_by).await?;
-    ret.is_self_accepting = true;
+    let ret = self.compute_hmr_update(start_points, first_invalidated_by).await?;
+    // ret.is_self_accepting = true; // (hyf0) TODO: what's this for?
     Ok(ret)
   }
 
   pub async fn compute_hmr_update_for_file_changes(
     &mut self,
     changed_file_paths: Vec<String>,
-  ) -> BuildResult<Vec<HmrOutput>> {
+  ) -> BuildResult<Vec<HmrUpdate>> {
     let mut changed_modules = FxIndexSet::default();
     for changed_file_path in changed_file_paths {
       let changed_file_path = ArcStr::from(changed_file_path);
@@ -134,7 +130,7 @@ impl HmrManager {
     );
 
     if changed_modules.is_empty() {
-      return Ok(vec![]);
+      return Ok(vec![HmrUpdate::Noop]);
     }
 
     let mut updates = vec![];
@@ -155,7 +151,7 @@ impl HmrManager {
     &mut self,
     start_points: FxIndexSet<ModuleIdx>,
     first_invalidated_by: Option<String>,
-  ) -> BuildResult<HmrOutput> {
+  ) -> BuildResult<HmrUpdate> {
     let mut affected_modules = FxIndexSet::default();
     let mut need_to_full_reload = false;
     let mut full_reload_reason = None;
@@ -182,11 +178,8 @@ impl HmrManager {
       .extend(Self::collect_affected_modules_from_boundaries(&self.module_db, &hmr_boundaries));
 
     if need_to_full_reload {
-      return Ok(HmrOutput {
-        full_reload_reason,
-        first_invalidated_by,
-        full_reload: true,
-        ..Default::default()
+      return Ok(HmrUpdate::FullReload {
+        reason: full_reload_reason.unwrap_or_else(|| "Unknown reason".to_string()),
       });
     }
 
@@ -418,12 +411,11 @@ impl HmrManager {
       None
     };
 
-    Ok(HmrOutput {
+    Ok(HmrUpdate::Patch(HmrPatch {
       code,
       filename,
       sourcemap_filename: sourcemap_asset.as_ref().map(|asset| asset.filename.to_string()),
       sourcemap: sourcemap_asset.map(|asset| asset.source.try_into_string()).transpose()?,
-      first_invalidated_by,
       hmr_boundaries: hmr_boundaries
         .into_iter()
         .map(|boundary| HmrBoundaryOutput {
@@ -431,8 +423,7 @@ impl HmrManager {
           accepted_via: self.module_db.modules[boundary.accepted_via].stable_id().into(),
         })
         .collect(),
-      ..Default::default()
-    })
+    }))
   }
 
   fn propagate_update(

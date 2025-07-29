@@ -1,16 +1,27 @@
 use arcstr::ArcStr;
 
-#[derive(Default)]
-pub struct HmrOutput {
+#[derive(Debug)]
+pub struct HmrPatch {
   pub code: String,
   pub filename: String,
   pub sourcemap: Option<String>,
   pub sourcemap_filename: Option<String>,
   pub hmr_boundaries: Vec<HmrBoundaryOutput>,
-  pub full_reload: bool,
-  pub first_invalidated_by: Option<String>,
-  pub is_self_accepting: bool,            // only for hmr invalidate
-  pub full_reload_reason: Option<String>, // only for hmr invalidate
+}
+
+pub enum HmrUpdate {
+  Patch(HmrPatch),
+  FullReload {
+    reason: String,
+  },
+  /// For the hmr request, there're no actual actions that need to be done.
+  Noop,
+}
+
+impl HmrUpdate {
+  pub fn is_full_reload(&self) -> bool {
+    matches!(self, Self::FullReload { .. })
+  }
 }
 
 #[derive(Debug)]

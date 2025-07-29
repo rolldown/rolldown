@@ -13,7 +13,7 @@ use anyhow::Result;
 
 use arcstr::ArcStr;
 use rolldown_common::{
-  GetLocalDbMut, HmrOutput, Module, NormalizedBundlerOptions, ScanMode, SharedFileEmitter,
+  GetLocalDbMut, HmrUpdate, Module, NormalizedBundlerOptions, ScanMode, SharedFileEmitter,
   SymbolRefDb,
 };
 use rolldown_debug::{action, trace_action, trace_action_enabled};
@@ -286,7 +286,7 @@ impl Bundler {
   pub async fn generate_hmr_patch(
     &mut self,
     changed_files: Vec<String>,
-  ) -> BuildResult<Option<HmrOutput>> {
+  ) -> BuildResult<Option<HmrUpdate>> {
     let mut updates = self
       .hmr_manager
       .as_mut()
@@ -302,7 +302,7 @@ impl Bundler {
     &mut self,
     caller: String,
     first_invalidated_by: Option<String>,
-  ) -> BuildResult<HmrOutput> {
+  ) -> BuildResult<HmrUpdate> {
     self
       .hmr_manager
       .as_mut()

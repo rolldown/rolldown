@@ -15,7 +15,7 @@ use rolldown::{
   BundleOutput, Bundler, BundlerOptions, IsExternal, OutputFormat, Platform, SourceMapType,
   plugin::__inner::SharedPluginable,
 };
-use rolldown_common::{HmrOutput, Output};
+use rolldown_common::{HmrUpdate, Output};
 use rolldown_error::{BuildDiagnostic, BuildResult, DiagnosticOptions};
 use rolldown_sourcemap::SourcemapVisualizer;
 use rolldown_testing_config::TestMeta;
@@ -166,32 +166,32 @@ impl IntegrationTest {
               &hmr_temp_dir_path,
               hmr_edit_files,
             );
-            let hmr_output = bundler.generate_hmr_patch(changed_files).await;
-            match hmr_output {
-              Ok(output) => {
-                if let Some(output) = output {
+            let update = bundler.generate_hmr_patch(changed_files).await;
+            match update {
+              Ok(update) => {
+                if let Some(update) = update {
                   let snapshot_content =
-                    Self::render_hmr_output_to_string(step, &output, vec![], &cwd);
+                    Self::render_hmr_output_to_string(step, &update, vec![], &cwd);
                   collect_snapshot(snapshot_content);
-
-                  if execute_output {
-                    assert!(
-                      !output.full_reload,
-                      "execute_output should be false when full reload happens"
-                    );
-                    let output_path = format!("{}/{}", &output_dir, &output.filename);
-                    fs::write(&output_path, output.code).unwrap();
-                    patch_chunks.push(format!("./{}", output.filename));
+                  match update {
+                    rolldown_common::HmrUpdate::Patch(patch) => {
+                      let output_path = format!("{}/{}", &output_dir, &patch.filename);
+                      fs::write(&output_path, patch.code).unwrap();
+                      patch_chunks.push(format!("./{}", patch.filename));
+                    }
+                    rolldown_common::HmrUpdate::FullReload { reason } => {
+                      assert!(
+                        !execute_output,
+                        "execute_output should be false when full reload happens; reason: {reason:?}"
+                      );
+                    }
+                    rolldown_common::HmrUpdate::Noop => {}
                   }
                 }
               }
               Err(errs) => {
-                let snapshot_content = Self::render_hmr_output_to_string(
-                  step,
-                  &HmrOutput::default(),
-                  errs.into_vec(),
-                  &cwd,
-                );
+                let snapshot_content =
+                  Self::render_hmr_output_to_string(step, &HmrUpdate::Noop, errs.into_vec(), &cwd);
                 collect_snapshot(snapshot_content);
               }
             }
@@ -462,7 +462,7 @@ impl IntegrationTest {
   #[expect(clippy::if_not_else)]
   fn render_hmr_output_to_string(
     step: usize,
-    hmr_output: &HmrOutput,
+    hmr_update: &HmrUpdate,
     errs: Vec<BuildDiagnostic>,
     cwd: &Path,
   ) -> String {
@@ -494,54 +494,61 @@ impl IntegrationTest {
       String::default()
     };
 
-    let code_section = if hmr_output.code.is_empty() {
-      String::new()
-    } else {
-      let mut snapshot = String::new();
-      write!(snapshot, "## Code\n\n").unwrap();
-      let file_ext = hmr_output.filename.as_path().extension().and_then(OsStr::to_str).map_or(
-        "unknown",
-        |ext| match ext {
-          "mjs" | "cjs" => "js",
-          _ => ext,
-        },
-      );
-      writeln!(snapshot, "```{file_ext}").unwrap();
-      snapshot.push_str(&hmr_output.code);
-      snapshot.push_str("\n```");
-      snapshot
+    let code_section = match hmr_update {
+      HmrUpdate::Patch(hmr_patch) if !hmr_patch.code.is_empty() => {
+        let mut snapshot = String::new();
+        write!(snapshot, "## Code\n\n").unwrap();
+        let file_ext = hmr_patch.filename.as_path().extension().and_then(OsStr::to_str).map_or(
+          "unknown",
+          |ext| match ext {
+            "mjs" | "cjs" => "js",
+            _ => ext,
+          },
+        );
+        writeln!(snapshot, "```{file_ext}").unwrap();
+        snapshot.push_str(&hmr_patch.code);
+        snapshot.push_str("\n```");
+        snapshot
+      }
+      _ => String::new(),
     };
 
     let meta_section = {
       let mut snapshot = String::new();
       snapshot.push_str("## Meta\n\n");
-      writeln!(snapshot, "- full_reload: {}", hmr_output.full_reload).unwrap();
       writeln!(
         snapshot,
-        "- first_invalidated_by: {}",
-        hmr_output.first_invalidated_by.as_deref().unwrap_or("None")
+        "- update type: {}",
+        match hmr_update {
+          HmrUpdate::Patch(_) => "patch",
+          HmrUpdate::FullReload { .. } => "full-reload",
+          HmrUpdate::Noop => "noop",
+        }
       )
       .unwrap();
-      writeln!(snapshot, "- is_self_accepting: {}", hmr_output.is_self_accepting).unwrap();
-      writeln!(
-        snapshot,
-        "- full_reload_reason: {}",
-        hmr_output.full_reload_reason.as_deref().unwrap_or("None")
-      )
-      .unwrap();
-      write!(snapshot, "### Hmr Boundaries\n\n").unwrap();
-      let meta = hmr_output
-        .hmr_boundaries
-        .iter()
-        .map(|boundary| {
-          format!(
-            "- boundary: {}, accepted_via: {}",
-            boundary.boundary.as_str(),
-            boundary.accepted_via.as_str()
-          )
-        })
-        .collect::<Vec<_>>();
-      snapshot.push_str(&meta.join("\n"));
+
+      match hmr_update {
+        HmrUpdate::Patch(hmr_patch) => {
+          write!(snapshot, "### Hmr Boundaries\n\n").unwrap();
+          let meta = hmr_patch
+            .hmr_boundaries
+            .iter()
+            .map(|boundary| {
+              format!(
+                "- boundary: {}, accepted_via: {}",
+                boundary.boundary.as_str(),
+                boundary.accepted_via.as_str()
+              )
+            })
+            .collect::<Vec<_>>();
+          snapshot.push_str(&meta.join("\n"));
+        }
+        HmrUpdate::FullReload { reason } => {
+          writeln!(snapshot, "- reason: {reason}").unwrap();
+        }
+        HmrUpdate::Noop => {}
+      }
+
       snapshot
     };
 

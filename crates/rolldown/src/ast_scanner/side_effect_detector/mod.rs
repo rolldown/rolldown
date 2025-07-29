@@ -203,14 +203,14 @@ impl<'a> SideEffectDetector<'a> {
 
     let is_pure = !self.ignore_annotations && expr.pure;
     if is_pure {
-      expr
-        .arguments
-        .iter()
-        .any(|arg| match arg {
-          Argument::SpreadElement(_) => true,
-          _ => self.detect_side_effect_of_expr(arg.to_expression()).has_side_effect(),
-        })
-        .into()
+      let mut detail = SideEffectDetail::empty();
+      for arg in &expr.arguments {
+        detail |= match arg {
+          Argument::SpreadElement(_) => true.into(),
+          _ => self.detect_side_effect_of_expr(arg.to_expression()),
+        };
+      }
+      detail
     } else {
       true.into()
     }
@@ -274,28 +274,24 @@ impl<'a> SideEffectDetector<'a> {
       | Expression::ThisExpression(_)
       | Expression::StringLiteral(_) => false.into(),
       Expression::ObjectExpression(obj_expr) => {
-        obj_expr
-          .properties
-          .iter()
-          .any(|obj_prop| {
-            match obj_prop {
-              ast::ObjectPropertyKind::ObjectProperty(prop) => {
-                let key_side_effect = self
-                  .detect_side_effect_of_property_key(&prop.key, prop.computed)
-                  .has_side_effect();
-                if key_side_effect {
-                  return true;
-                }
-                self.detect_side_effect_of_expr(&prop.value).has_side_effect()
-              }
-              ast::ObjectPropertyKind::SpreadProperty(_) => {
-                // ...[expression] is considered as having side effect.
-                // see crates/rolldown/tests/fixtures/rollup/object-spread-side-effect
-                true
-              }
+        let mut detail = SideEffectDetail::empty();
+        for obj_prop in &obj_expr.properties {
+          detail |= match obj_prop {
+            ast::ObjectPropertyKind::ObjectProperty(prop) => {
+              self.detect_side_effect_of_property_key(&prop.key, prop.computed)
+                | self.detect_side_effect_of_expr(&prop.value)
             }
-          })
-          .into()
+            ast::ObjectPropertyKind::SpreadProperty(_) => {
+              // ...[expression] is considered as having side effect.
+              // see crates/rolldown/tests/fixtures/rollup/object-spread-side-effect
+              true.into()
+            }
+          };
+          if detail.has_side_effect() {
+            break;
+          }
+        }
+        detail
       }
       // https://github.com/evanw/esbuild/blob/d34e79e2a998c21bb71d57b92b0017ca11756912/internal/js_ast/js_ast_helpers.go#L2533-L2539
       Expression::UnaryExpression(unary_expr) => match unary_expr.operator {
@@ -311,73 +307,99 @@ impl<'a> SideEffectDetector<'a> {
       // Accessing global variables considered as side effect.
       Expression::Identifier(ident) => self.detect_side_effect_of_identifier(ident),
       // https://github.com/evanw/esbuild/blob/360d47230813e67d0312ad754cad2b6ee09b151b/internal/js_ast/js_ast_helpers.go#L2576-L2588
-      Expression::TemplateLiteral(literal) => literal
-        .expressions
-        .iter()
-        .any(|expr| {
+      Expression::TemplateLiteral(literal) => {
+        let mut detail = SideEffectDetail::empty();
+        for expr in &literal.expressions {
           // Primitive type detection is more strict and faster than side_effects detection of
           // `Expr`, put it first to fail fast.
-          known_primitive_type(self.scope, expr) == PrimitiveType::Unknown
-            || self.detect_side_effect_of_expr(expr).has_side_effect()
-        })
-        .into(),
-      Expression::LogicalExpression(logic_expr) => (match logic_expr.operator {
+          detail |= (known_primitive_type(self.scope, expr) == PrimitiveType::Unknown).into();
+          detail |= self.detect_side_effect_of_expr(expr);
+          if detail.has_side_effect() {
+            break;
+          }
+        }
+        detail
+      }
+      Expression::LogicalExpression(logic_expr) => match logic_expr.operator {
         ast::LogicalOperator::Or => {
-          self.detect_side_effect_of_expr(&logic_expr.left).has_side_effect()
-            || (!is_side_effect_free_unbound_identifier_ref(
+          let lhs = self.detect_side_effect_of_expr(&logic_expr.left);
+          let mut rhs = self.detect_side_effect_of_expr(&logic_expr.right);
+          rhs.set(
+            SideEffectDetail::Unknown,
+            !is_side_effect_free_unbound_identifier_ref(
               self.scope,
               &logic_expr.right,
               &logic_expr.left,
               false,
             )
             .unwrap_or_default()
-              && self.detect_side_effect_of_expr(&logic_expr.right).has_side_effect())
+              && rhs.contains(SideEffectDetail::Unknown),
+          );
+          lhs | rhs
         }
         ast::LogicalOperator::And => {
-          self.detect_side_effect_of_expr(&logic_expr.left).has_side_effect()
-            || (!is_side_effect_free_unbound_identifier_ref(
+          let lhs = self.detect_side_effect_of_expr(&logic_expr.left);
+          let mut rhs = self.detect_side_effect_of_expr(&logic_expr.right);
+          rhs.set(
+            SideEffectDetail::Unknown,
+            !is_side_effect_free_unbound_identifier_ref(
               self.scope,
               &logic_expr.right,
               &logic_expr.left,
               true,
             )
             .unwrap_or_default()
-              && self.detect_side_effect_of_expr(&logic_expr.right).has_side_effect())
+              && rhs.contains(SideEffectDetail::Unknown),
+          );
+          lhs | rhs
         }
         ast::LogicalOperator::Coalesce => {
-          self.detect_side_effect_of_expr(&logic_expr.left).has_side_effect()
-            || self.detect_side_effect_of_expr(&logic_expr.right).has_side_effect()
+          self.detect_side_effect_of_expr(&logic_expr.left)
+            | self.detect_side_effect_of_expr(&logic_expr.right)
         }
-      })
-      .into(),
+      },
       Expression::ParenthesizedExpression(paren_expr) => {
         self.detect_side_effect_of_expr(&paren_expr.expression)
       }
-      Expression::SequenceExpression(seq_expr) => seq_expr
-        .expressions
-        .iter()
-        .any(|expr| self.detect_side_effect_of_expr(expr).has_side_effect())
-        .into(),
+      Expression::SequenceExpression(seq_expr) => {
+        let mut detail = SideEffectDetail::empty();
+
+        for expr in &seq_expr.expressions {
+          detail |= self.detect_side_effect_of_expr(expr);
+          if detail.has_side_effect() {
+            break;
+          }
+        }
+        detail
+      }
       // https://github.com/evanw/esbuild/blob/d34e79e2a998c21bb71d57b92b0017ca11756912/internal/js_ast/js_ast_helpers.go#L2460-L2463
       Expression::ConditionalExpression(cond_expr) => {
-        (self.detect_side_effect_of_expr(&cond_expr.test).has_side_effect()
-          || (!is_side_effect_free_unbound_identifier_ref(
+        let detail = self.detect_side_effect_of_expr(&cond_expr.test);
+        let mut consequent_detail = self.detect_side_effect_of_expr(&cond_expr.consequent);
+        consequent_detail.set(
+          SideEffectDetail::Unknown,
+          !is_side_effect_free_unbound_identifier_ref(
             self.scope,
             &cond_expr.consequent,
             &cond_expr.test,
             true,
           )
           .unwrap_or_default()
-            && self.detect_side_effect_of_expr(&cond_expr.consequent).has_side_effect())
-          || (!is_side_effect_free_unbound_identifier_ref(
+            && consequent_detail.contains(SideEffectDetail::Unknown),
+        );
+        let mut alternate_detail = self.detect_side_effect_of_expr(&cond_expr.alternate);
+        alternate_detail.set(
+          SideEffectDetail::Unknown,
+          !is_side_effect_free_unbound_identifier_ref(
             self.scope,
             &cond_expr.alternate,
             &cond_expr.test,
             false,
           )
           .unwrap_or_default()
-            && self.detect_side_effect_of_expr(&cond_expr.alternate).has_side_effect()))
-        .into()
+            && alternate_detail.contains(SideEffectDetail::Unknown),
+        );
+        detail | consequent_detail | alternate_detail
       }
       Expression::TSAsExpression(_)
       | Expression::TSSatisfiesExpression(_)
@@ -385,51 +407,52 @@ impl<'a> SideEffectDetector<'a> {
       | Expression::TSNonNullExpression(_)
       | Expression::TSInstantiationExpression(_) => unreachable!("ts should be transpiled"),
       // https://github.com/evanw/esbuild/blob/d34e79e2a998c21bb71d57b92b0017ca11756912/internal/js_ast/js_ast_helpers.go#L2541-L2574
-      Expression::BinaryExpression(binary_expr) => (match binary_expr.operator {
-        ast::BinaryOperator::StrictEquality | ast::BinaryOperator::StrictInequality => {
-          self.detect_side_effect_of_expr(&binary_expr.left).has_side_effect()
-            || self.detect_side_effect_of_expr(&binary_expr.right).has_side_effect()
-        }
-        // Special-case "<" and ">" with string, number, or bigint arguments
-        ast::BinaryOperator::GreaterThan
-        | ast::BinaryOperator::LessThan
-        | ast::BinaryOperator::GreaterEqualThan
-        | ast::BinaryOperator::LessEqualThan => {
-          let lt = known_primitive_type(self.scope, &binary_expr.left);
-          match lt {
-            PrimitiveType::Number | PrimitiveType::String | PrimitiveType::BigInt => {
-              known_primitive_type(self.scope, &binary_expr.right) != lt
-                || self.detect_side_effect_of_expr(&binary_expr.left).has_side_effect()
-                || self.detect_side_effect_of_expr(&binary_expr.right).has_side_effect()
-            }
-            _ => true,
+      Expression::BinaryExpression(binary_expr) => {
+        match binary_expr.operator {
+          ast::BinaryOperator::StrictEquality | ast::BinaryOperator::StrictInequality => {
+            self.detect_side_effect_of_expr(&binary_expr.left)
+              | self.detect_side_effect_of_expr(&binary_expr.right)
           }
-        }
+          // Special-case "<" and ">" with string, number, or bigint arguments
+          ast::BinaryOperator::GreaterThan
+          | ast::BinaryOperator::LessThan
+          | ast::BinaryOperator::GreaterEqualThan
+          | ast::BinaryOperator::LessEqualThan => {
+            let lt = known_primitive_type(self.scope, &binary_expr.left);
+            match lt {
+              PrimitiveType::Number | PrimitiveType::String | PrimitiveType::BigInt => {
+                SideEffectDetail::from(known_primitive_type(self.scope, &binary_expr.right) != lt)
+                  | self.detect_side_effect_of_expr(&binary_expr.left)
+                  | self.detect_side_effect_of_expr(&binary_expr.right)
+              }
+              _ => true.into(),
+            }
+          }
 
-        // For "==" and "!=", pretend the operator was actually "===" or "!==". If
-        // we know that we can convert it to "==" or "!=", then we can consider the
-        // operator itself to have no side effects. This matters because our mangle
-        // logic will convert "typeof x === 'object'" into "typeof x == 'object'"
-        // and since "typeof x === 'object'" is considered to be side-effect free,
-        // we must also consider "typeof x == 'object'" to be side-effect free.
-        ast::BinaryOperator::Equality | ast::BinaryOperator::Inequality => {
-          !can_change_strict_to_loose(self.scope, &binary_expr.left, &binary_expr.right)
-            || self.detect_side_effect_of_expr(&binary_expr.left).has_side_effect()
-            || self.detect_side_effect_of_expr(&binary_expr.right).has_side_effect()
-        }
+          // For "==" and "!=", pretend the operator was actually "===" or "!==". If
+          // we know that we can convert it to "==" or "!=", then we can consider the
+          // operator itself to have no side effects. This matters because our mangle
+          // logic will convert "typeof x === 'object'" into "typeof x == 'object'"
+          // and since "typeof x === 'object'" is considered to be side-effect free,
+          // we must also consider "typeof x == 'object'" to be side-effect free.
+          ast::BinaryOperator::Equality | ast::BinaryOperator::Inequality => {
+            SideEffectDetail::from(!can_change_strict_to_loose(
+              self.scope,
+              &binary_expr.left,
+              &binary_expr.right,
+            )) | self.detect_side_effect_of_expr(&binary_expr.left)
+              | self.detect_side_effect_of_expr(&binary_expr.right)
+          }
 
-        _ => true,
-      })
-      .into(),
+          _ => true.into(),
+        }
+      }
       Expression::PrivateInExpression(private_in_expr) => {
         self.detect_side_effect_of_expr(&private_in_expr.right)
       }
       Expression::AssignmentExpression(expr) => {
-        let (lhs, rhs) = (
-          self.detect_side_effect_of_assignment_target(&expr.left),
-          self.detect_side_effect_of_expr(&expr.right),
-        );
-        lhs | rhs
+        self.detect_side_effect_of_assignment_target(&expr.left)
+          | self.detect_side_effect_of_expr(&expr.right)
       }
 
       Expression::ChainExpression(expr) => match &expr.expression {
@@ -463,14 +486,17 @@ impl<'a> SideEffectDetector<'a> {
       Expression::NewExpression(expr) => {
         let is_pure = expr.pure || maybe_side_effect_free_global_constructor(self.scope, expr);
         if is_pure {
-          expr
-            .arguments
-            .iter()
-            .any(|arg| match arg {
-              Argument::SpreadElement(_) => true,
-              _ => self.detect_side_effect_of_expr(arg.to_expression()).has_side_effect(),
-            })
-            .into()
+          let mut detail = SideEffectDetail::empty();
+          for arg in &expr.arguments {
+            detail |= match arg {
+              Argument::SpreadElement(_) => true.into(),
+              _ => self.detect_side_effect_of_expr(arg.to_expression()),
+            };
+            if detail.has_side_effect() {
+              break;
+            }
+          }
+          detail
         } else {
           true.into()
         }
@@ -480,26 +506,25 @@ impl<'a> SideEffectDetector<'a> {
   }
 
   fn detect_side_effect_of_array_expr(&self, expr: &ast::ArrayExpression<'_>) -> SideEffectDetail {
-    expr
-      .elements
-      .iter()
-      .any(|elem| match elem {
+    let mut detail = SideEffectDetail::empty();
+    for elem in &expr.elements {
+      let cur = match elem {
         ArrayExpressionElement::SpreadElement(ele) => {
           // https://github.com/evanw/esbuild/blob/d34e79e2a998c21bb71d57b92b0017ca11756912/internal/js_ast/js_ast_helpers.go#L2466-L2477
           // Spread of an inline array such as "[...[x]]" is side-effect free
           match &ele.argument {
-            Expression::ArrayExpression(arr) => {
-              self.detect_side_effect_of_array_expr(arr).has_side_effect()
-            }
-            _ => true,
+            Expression::ArrayExpression(arr) => self.detect_side_effect_of_array_expr(arr),
+            _ => return true.into(),
           }
         }
-        ArrayExpressionElement::Elision(_) => false,
+        ArrayExpressionElement::Elision(_) => false.into(),
         match_expression!(ArrayExpressionElement) => {
-          self.detect_side_effect_of_expr(elem.to_expression()).has_side_effect()
+          self.detect_side_effect_of_expr(elem.to_expression())
         }
-      })
-      .into()
+      };
+      detail |= cur;
+    }
+    detail
   }
 
   fn detect_side_effect_of_var_decl(
@@ -511,43 +536,47 @@ impl<'a> SideEffectDetector<'a> {
       VariableDeclarationKind::Using => {
         self.detect_side_effect_of_using_declarators(&var_decl.declarations)
       }
-      _ => (var_decl.declarations.iter().any(|declarator| {
-        // Whether to destructure import.meta
-        if let BindingPatternKind::ObjectPattern(ref obj_pat) = declarator.id.kind {
-          if !obj_pat.properties.is_empty() {
-            if let Some(Expression::MetaProperty(_)) = declarator.init {
-              return true;
-            }
-          }
-        }
-        match &declarator.id.kind {
-          // Destructuring the initializer has no side effects if the
-          // initializer is an array, since we assume the iterator is then
-          // the built-in side-effect free array iterator.
-          BindingPatternKind::ObjectPattern(_) => true,
-          BindingPatternKind::ArrayPattern(pat) => {
-            for p in &pat.elements {
-              if p
-                .as_ref()
-                .is_some_and(|pat| !matches!(pat.kind, BindingPatternKind::BindingIdentifier(_)))
-              {
-                return true;
+      _ => {
+        let mut detail = SideEffectDetail::empty();
+        for declarator in &var_decl.declarations {
+          // Whether to destructure import.meta
+          if let BindingPatternKind::ObjectPattern(ref obj_pat) = declarator.id.kind {
+            if !obj_pat.properties.is_empty() {
+              if let Some(Expression::MetaProperty(_)) = declarator.init {
+                return true.into();
               }
             }
-            declarator
-              .init
-              .as_ref()
-              .is_some_and(|init| self.detect_side_effect_of_expr(init).has_side_effect())
           }
-          BindingPatternKind::BindingIdentifier(_) | BindingPatternKind::AssignmentPattern(_) => {
-            declarator
-              .init
-              .as_ref()
-              .is_some_and(|init| self.detect_side_effect_of_expr(init).has_side_effect())
-          }
+          detail |=
+            match &declarator.id.kind {
+              // Destructuring the initializer has no side effects if the
+              // initializer is an array, since we assume the iterator is then
+              // the built-in side-effect free array iterator.
+              BindingPatternKind::ObjectPattern(_) => true.into(),
+              BindingPatternKind::ArrayPattern(pat) => {
+                for p in &pat.elements {
+                  if p.as_ref().is_some_and(|pat| {
+                    !matches!(pat.kind, BindingPatternKind::BindingIdentifier(_))
+                  }) {
+                    return true.into();
+                  }
+                }
+                declarator
+                  .init
+                  .as_ref()
+                  .map(|init| self.detect_side_effect_of_expr(init))
+                  .unwrap_or(false.into())
+              }
+              BindingPatternKind::BindingIdentifier(_)
+              | BindingPatternKind::AssignmentPattern(_) => declarator
+                .init
+                .as_ref()
+                .map(|init| self.detect_side_effect_of_expr(init))
+                .unwrap_or(false.into()),
+            };
         }
-      }))
-      .into(),
+        detail
+      }
     }
   }
 
@@ -569,23 +598,29 @@ impl<'a> SideEffectDetector<'a> {
     &self,
     declarators: &[ast::VariableDeclarator],
   ) -> SideEffectDetail {
-    declarators
-      .iter()
-      .any(|decl| {
-        decl.init.as_ref().is_some_and(|init| match init {
-          Expression::NullLiteral(_) => false,
+    let mut detail = SideEffectDetail::empty();
+    for decl in declarators {
+      detail |= decl
+        .init
+        .as_ref()
+        .map(|init| match init {
+          Expression::NullLiteral(_) => false.into(),
           // Side effect detection of identifier is different with other position when as initialization of using declaration.
           // Global variable `undefined` is considered as side effect free.
           Expression::Identifier(id) => {
-            !(id.name == "undefined" && self.is_unresolved_reference(id))
+            (!(id.name == "undefined" && self.is_unresolved_reference(id))).into()
           }
           Expression::UnaryExpression(expr) if matches!(expr.operator, UnaryOperator::Void) => {
-            self.detect_side_effect_of_expr(&expr.argument).has_side_effect()
+            self.detect_side_effect_of_expr(&expr.argument)
           }
-          _ => true,
+          _ => true.into(),
         })
-      })
-      .into()
+        .unwrap_or(SideEffectDetail::empty());
+      if detail.has_side_effect() {
+        break;
+      }
+    }
+    detail
   }
 
   #[inline]
@@ -637,8 +672,8 @@ impl<'a> SideEffectDetector<'a> {
             named_decl
               .declaration
               .as_ref()
-              .is_some_and(|decl| self.detect_side_effect_of_decl(decl).has_side_effect())
-              .into()
+              .map(|decl| self.detect_side_effect_of_decl(decl))
+              .unwrap_or(false.into())
           }
         }
         ast::ModuleDeclaration::TSExportAssignment(_)
@@ -648,56 +683,67 @@ impl<'a> SideEffectDetector<'a> {
       },
       Statement::BlockStatement(block) => self.detect_side_effect_of_block(block),
       Statement::DoWhileStatement(do_while) => {
-        (self.detect_side_effect_of_stmt(&do_while.body).has_side_effect()
-          || self.detect_side_effect_of_expr(&do_while.test).has_side_effect())
-        .into()
+        self.detect_side_effect_of_stmt(&do_while.body)
+          | self.detect_side_effect_of_expr(&do_while.test)
       }
       Statement::WhileStatement(while_stmt) => {
-        (self.detect_side_effect_of_expr(&while_stmt.test).has_side_effect()
-          || self.detect_side_effect_of_stmt(&while_stmt.body).has_side_effect())
-        .into()
+        self.detect_side_effect_of_expr(&while_stmt.test)
+          | self.detect_side_effect_of_stmt(&while_stmt.body)
       }
       Statement::IfStatement(if_stmt) => {
-        (self.detect_side_effect_of_expr(&if_stmt.test).has_side_effect()
-          || self.detect_side_effect_of_stmt(&if_stmt.consequent).has_side_effect()
-          || if_stmt
+        self.detect_side_effect_of_expr(&if_stmt.test)
+          | self.detect_side_effect_of_stmt(&if_stmt.consequent)
+          | if_stmt
             .alternate
             .as_ref()
-            .is_some_and(|stmt| self.detect_side_effect_of_stmt(stmt).has_side_effect()))
-        .into()
+            .map(|stmt| self.detect_side_effect_of_stmt(stmt))
+            .unwrap_or(false.into())
       }
       Statement::ReturnStatement(ret_stmt) => ret_stmt
         .argument
         .as_ref()
-        .is_some_and(|expr| self.detect_side_effect_of_expr(expr).has_side_effect())
-        .into(),
+        .map(|expr| self.detect_side_effect_of_expr(expr))
+        .unwrap_or(false.into()),
       Statement::LabeledStatement(labeled_stmt) => {
         self.detect_side_effect_of_stmt(&labeled_stmt.body)
       }
       Statement::TryStatement(try_stmt) => {
-        (self.detect_side_effect_of_block(&try_stmt.block).has_side_effect()
-          || try_stmt.handler.as_ref().is_some_and(|handler| {
-            self.detect_side_effect_of_block(&handler.body).has_side_effect()
-          })
-          || try_stmt
-            .finalizer
-            .as_ref()
-            .is_some_and(|finalizer| self.detect_side_effect_of_block(finalizer).has_side_effect()))
-        .into()
+        let mut detail = self.detect_side_effect_of_block(&try_stmt.block);
+        detail |= try_stmt
+          .handler
+          .as_ref()
+          .map(|handler| self.detect_side_effect_of_block(&handler.body))
+          .unwrap_or(SideEffectDetail::empty());
+        detail |= try_stmt
+          .finalizer
+          .as_ref()
+          .map(|finalizer| self.detect_side_effect_of_block(finalizer))
+          .unwrap_or(SideEffectDetail::empty());
+        detail
       }
       Statement::SwitchStatement(switch_stmt) => {
-        (self.detect_side_effect_of_expr(&switch_stmt.discriminant).has_side_effect()
-          || switch_stmt.cases.iter().any(|case| {
-            case
-              .test
-              .as_ref()
-              .is_some_and(|expr| self.detect_side_effect_of_expr(expr).has_side_effect())
-              || case
-                .consequent
-                .iter()
-                .any(|stmt| self.detect_side_effect_of_stmt(stmt).has_side_effect())
-          }))
-        .into()
+        let mut detail = self.detect_side_effect_of_expr(&switch_stmt.discriminant);
+        if detail.has_side_effect() {
+          return detail;
+        }
+        'outer: for case in &switch_stmt.cases {
+          detail |= case
+            .test
+            .as_ref()
+            .map(|expr| self.detect_side_effect_of_expr(expr))
+            .unwrap_or(SideEffectDetail::empty());
+          for stmt in &case.consequent {
+            detail |= self.detect_side_effect_of_stmt(stmt);
+            if detail.has_side_effect() {
+              break 'outer;
+            }
+          }
+
+          if detail.has_side_effect() {
+            break;
+          }
+        }
+        detail
       }
 
       Statement::EmptyStatement(_)
@@ -714,7 +760,14 @@ impl<'a> SideEffectDetector<'a> {
   }
 
   fn detect_side_effect_of_block(&self, block: &ast::BlockStatement) -> SideEffectDetail {
-    block.body.iter().any(|stmt| self.detect_side_effect_of_stmt(stmt).has_side_effect()).into()
+    let mut detail = SideEffectDetail::empty();
+    for stmt in &block.body {
+      detail |= self.detect_side_effect_of_stmt(stmt);
+      if detail.has_side_effect() {
+        break;
+      }
+    }
+    detail
   }
 }
 

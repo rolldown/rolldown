@@ -1,12 +1,3 @@
-use std::{
-  borrow::Cow,
-  env,
-  future::Future,
-  path::{Path, PathBuf},
-  pin::Pin,
-  sync::Arc,
-};
-
 use crate::{
   ResolveOptionsExternal,
   builtin::{BuiltinChecker, is_node_like_builtin},
@@ -21,6 +12,7 @@ use crate::{
 use anyhow::anyhow;
 use arcstr::ArcStr;
 use derive_more::Debug;
+use owo_colors::OwoColorize;
 use rolldown_common::{ImportKind, WatcherChangeKind, side_effects::HookSideEffects};
 use rolldown_plugin::{
   HookLoadArgs, HookLoadOutput, HookLoadReturn, HookResolveIdArgs, HookResolveIdOutput,
@@ -28,6 +20,14 @@ use rolldown_plugin::{
 };
 use rolldown_utils::pattern_filter::StringOrRegex;
 use rustc_hash::FxHashSet;
+use std::{
+  borrow::Cow,
+  env,
+  future::Future,
+  path::{Path, PathBuf},
+  pin::Pin,
+  sync::Arc,
+};
 use sugar_path::SugarPath;
 
 const FS_PREFIX: &str = "/@fs/";
@@ -47,6 +47,11 @@ pub struct ViteResolveOptions {
   pub finalize_other_specifiers: Option<Arc<FinalizeOtherSpecifiersCallback>>,
   #[debug(skip)]
   pub resolve_subpath_imports: Arc<ResolveSubpathImportsCallback>,
+
+  #[debug(skip)]
+  pub on_warn: Option<Arc<OnLogCallback>>,
+  #[debug(skip)]
+  pub on_debug: Option<Arc<OnLogCallback>>,
 }
 
 pub type FinalizeBareSpecifierCallback = dyn (Fn(
@@ -67,6 +72,10 @@ pub type ResolveSubpathImportsCallback = dyn (Fn(
     bool,
     bool,
   ) -> Pin<Box<(dyn Future<Output = anyhow::Result<Option<String>>> + Send + Sync)>>)
+  + Send
+  + Sync;
+
+pub type OnLogCallback = dyn (Fn(String) -> Pin<Box<(dyn Future<Output = anyhow::Result<()>> + Send + Sync)>>)
   + Send
   + Sync;
 
@@ -112,6 +121,11 @@ pub struct ViteResolvePlugin {
   #[debug(skip)]
   resolve_subpath_imports: Arc<ResolveSubpathImportsCallback>,
 
+  #[debug(skip)]
+  on_warn: Option<Arc<OnLogCallback>>,
+  #[debug(skip)]
+  on_debug: Option<Arc<OnLogCallback>>,
+
   resolvers: Resolvers,
   external_decider: ExternalDecider,
   builtin_checker: Arc<BuiltinChecker>,
@@ -149,6 +163,10 @@ impl ViteResolvePlugin {
       finalize_bare_specifier: options.finalize_bare_specifier,
       finalize_other_specifiers: options.finalize_other_specifiers,
       resolve_subpath_imports: options.resolve_subpath_imports,
+
+      on_warn: options.on_warn,
+      on_debug: options.on_debug,
+
       external_decider: ExternalDecider::new(
         ExternalDeciderOptions {
           external: options.external,
@@ -165,6 +183,20 @@ impl ViteResolvePlugin {
       resolve_options: options.resolve_options,
     }
   }
+
+  async fn warn(&self, ctx: &PluginContext, message: String) -> anyhow::Result<()> {
+    if let Some(on_warn) = &self.on_warn {
+      on_warn(message).await
+    } else {
+      ctx.warn(rolldown_common::Log { message, id: None, code: None, exporter: None });
+      Ok(())
+    }
+  }
+
+  #[inline]
+  async fn debug_log<T: FnOnce() -> String>(&self, message: T) -> anyhow::Result<()> {
+    if let Some(on_debug) = &self.on_debug { on_debug(message()).await } else { Ok(()) }
+  }
 }
 
 impl Plugin for ViteResolvePlugin {
@@ -174,7 +206,7 @@ impl Plugin for ViteResolvePlugin {
 
   async fn resolve_id(
     &self,
-    _ctx: &PluginContext,
+    ctx: &PluginContext,
     args: &HookResolveIdArgs<'_>,
   ) -> HookResolveIdReturn {
     let scan =
@@ -224,6 +256,7 @@ impl Plugin for ViteResolvePlugin {
           res = finalized.into();
         }
       }
+      self.debug_log(|| format!("[@fs] {} -> {}", id.cyan(), res.dimmed())).await?;
       return Ok(Some(HookResolveIdOutput { id: res.into(), ..Default::default() }));
     }
 
@@ -268,6 +301,7 @@ impl Plugin for ViteResolvePlugin {
           }
         }
 
+        self.debug_log(|| format!("[bare] {} -> {}", id.cyan(), result.id.dimmed())).await?;
         return Ok(Some(result));
       }
 
@@ -284,21 +318,20 @@ impl Plugin for ViteResolvePlugin {
         if !(matches!(self.external, ResolveOptionsExternal::True)
           || self.external.is_external_explicitly(&id))
         {
-          // TODO(sapphi-red): warn log
-          // let mut message =
-          //   format!("Automatically externalized node built-in module \"{}\"", &id);
-          // if let Some(importer) = args.importer {
-          //   let current_dir =
-          //     env::current_dir().unwrap_or(PathBuf::from(&self.resolve_options.root));
-          //   message.push_str(&format!(
-          //     " imported from \"{}\"",
-          //     Path::new(importer).relative(current_dir).to_string_lossy()
-          //   ));
-          // }
-          // message.push_str(&format!(
-          //   ". Consider adding it to environments.{}.external if it is intended.",
-          //   self.environment_name
-          // ));
+          let mut message = format!("Automatically externalized node built-in module \"{}\"", &id);
+          if let Some(importer) = args.importer {
+            let current_dir =
+              env::current_dir().unwrap_or(PathBuf::from(&self.resolve_options.root));
+            message.push_str(&format!(
+              " imported from \"{}\"",
+              Path::new(importer).relative(current_dir).to_string_lossy()
+            ));
+          }
+          message.push_str(&format!(
+            ". Consider adding it to environments.{}.external if it is intended.",
+            self.environment_name
+          ));
+          self.warn(ctx, message).await?;
         }
 
         return Ok(Some(HookResolveIdOutput {
@@ -331,9 +364,25 @@ impl Plugin for ViteResolvePlugin {
         }
 
         if !self.resolve_options.as_src {
-          // TODO(sapphi-red): debug log
+          self
+            .debug_log(|| {
+              let mut message = format!("externalized node built-in \"{id}\" to empty module.");
+              if let Some(importer) = args.importer {
+                message.push_str(&format!(" (imported by: {})", importer.dimmed().white()));
+              }
+              message
+            })
+            .await?;
         } else if self.resolve_options.is_production {
-          // TODO(sapphi-red): warn log
+          let mut message =
+            format!("Module \"{id}\" has been externalized for browser compatibility");
+          if let Some(importer) = args.importer {
+            message.push_str(&format!(", imported by \"{importer}\"",));
+          }
+          message.push_str(
+              ". See https://vite.dev/guide/troubleshooting.html#module-externalized-for-browser-compatibility for more details."
+          );
+          self.warn(ctx, message).await?;
         }
         return Ok(Some(HookResolveIdOutput {
           id: if self.resolve_options.is_production {
@@ -364,6 +413,7 @@ impl Plugin for ViteResolvePlugin {
           }
         }
       }
+      self.debug_log(|| format!("[other] {} -> {}", id.cyan(), resolved.id.dimmed())).await?;
       return Ok(Some(resolved));
     }
 
@@ -376,6 +426,7 @@ impl Plugin for ViteResolvePlugin {
       }));
     }
 
+    self.debug_log(|| format!("[fallthrough] {}", id.dimmed())).await?;
     Ok(None)
   }
 

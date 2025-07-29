@@ -1,10 +1,10 @@
 use derive_more::Debug;
 use std::sync::Arc;
 
-use napi::bindgen_prelude::FnArgs;
+use napi::bindgen_prelude::{FnArgs, Promise};
 use rolldown_plugin_vite_resolve::{
-  FinalizeBareSpecifierCallback, FinalizeOtherSpecifiersCallback, ViteResolveOptions,
-  ViteResolveResolveOptions,
+  FinalizeBareSpecifierCallback, FinalizeOtherSpecifiersCallback, OnLogCallback,
+  ViteResolveOptions, ViteResolveResolveOptions,
 };
 
 use crate::{
@@ -42,6 +42,12 @@ pub struct BindingViteResolvePluginConfig {
   )]
   pub resolve_subpath_imports:
     JsCallback<FnArgs<(String, Option<String>, bool, bool)>, Option<String>>,
+  #[debug("{}", if on_warn.is_some() { "Some(<on_warn>)" } else { "None" })]
+  #[napi(ts_type = "(message: string) => void")]
+  pub on_warn: Option<JsCallback<FnArgs<(String,)>, Promise<()>>>,
+  #[debug("{}", if on_debug.is_some() { "Some(<on_debug>)" } else { "None" })]
+  #[napi(ts_type = "(message: string) => void")]
+  pub on_debug: Option<JsCallback<FnArgs<(String,)>, Promise<()>>>,
 }
 
 impl From<BindingViteResolvePluginConfig> for ViteResolveOptions {
@@ -109,6 +115,22 @@ impl From<BindingViteResolvePluginConfig> for ViteResolveOptions {
           })
         },
       ),
+      on_warn: value.on_warn.map(|on_warn| -> Arc<OnLogCallback> {
+        Arc::new(move |message: String| {
+          let on_warn = Arc::clone(&on_warn);
+          Box::pin(async move {
+            on_warn.invoke_async((message,).into()).await?.await.map_err(anyhow::Error::from)
+          })
+        })
+      }),
+      on_debug: value.on_debug.map(|on_debug| -> Arc<OnLogCallback> {
+        Arc::new(move |message: String| {
+          let on_debug = Arc::clone(&on_debug);
+          Box::pin(async move {
+            on_debug.invoke_async((message,).into()).await?.await.map_err(anyhow::Error::from)
+          })
+        })
+      }),
     }
   }
 }

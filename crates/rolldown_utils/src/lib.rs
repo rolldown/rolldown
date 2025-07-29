@@ -30,3 +30,4 @@ pub mod stabilize_id;
 pub mod time;
 pub mod unique_arc;
 pub mod url;
+pub mod uuid;

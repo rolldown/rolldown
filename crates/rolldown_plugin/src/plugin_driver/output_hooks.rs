@@ -126,7 +126,7 @@ impl PluginDriver {
       }
       .instrument(debug_span!(
         "render_chunk_hook",
-        CONTEXT_call_id = rolldown_utils::time::current_utc_timestamp_ms()
+        CONTEXT_call_id = rolldown_utils::uuid::uuid_v4()
       ))
       .await?;
     }

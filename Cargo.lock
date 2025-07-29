@@ -3218,6 +3218,7 @@ dependencies = [
  "simdutf8",
  "sugar_path",
  "tokio",
+ "uuid",
  "xxhash-rust",
 ]
 

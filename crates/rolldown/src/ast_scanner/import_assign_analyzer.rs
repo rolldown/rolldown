@@ -49,15 +49,14 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
     let ancestor_cursor = self.visit_path.len() - 1;
     let parent_node = self.visit_path.get(ancestor_cursor)?;
     if let Some(member_expr_kind) = parent_node.as_member_expression_kind() {
-      let parent_parent_node = self.visit_path.get(ancestor_cursor - 1)?;
-      let is_unary_expression_with_delete_operator = |kind| matches!(kind, AstKind::UnaryExpression(expr) if expr.operator == UnaryOperator::Delete);
-      let parent_parent_kind = *parent_parent_node;
-      if matches!(parent_parent_kind, AstKind::SimpleAssignmentTarget(_))
+      let parent_parent_kind = self.visit_path.get(ancestor_cursor - 1)?;
+      let is_unary_expression_with_delete_operator = |kind: &AstKind| matches!(kind, AstKind::UnaryExpression(expr) if expr.operator == UnaryOperator::Delete);
+      if member_expr_kind.is_assigned_to_in_parent(parent_parent_kind)
         // delete namespace.module
         || is_unary_expression_with_delete_operator(parent_parent_kind)
         // delete namespace?.module
         || matches!(parent_parent_kind, AstKind::ChainExpression(_) if self.visit_path.get(ancestor_cursor - 2).is_some_and(|item| {
-          is_unary_expression_with_delete_operator(*item)
+          is_unary_expression_with_delete_operator(item)
         }))
       {
         return match member_expr_kind {

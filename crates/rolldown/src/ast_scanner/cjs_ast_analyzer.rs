@@ -1,8 +1,7 @@
 use oxc::allocator::GetAddress;
-use oxc::ast::MemberExpressionKind;
 use oxc::ast::{
-  AstKind,
-  ast::{self, Expression, PropertyKey},
+  AstKind, MemberExpressionKind,
+  ast::{self, AssignmentExpression, Expression, PropertyKey},
 };
 use rolldown_common::{AstScopes, EcmaModuleAstUsage};
 use rolldown_ecmascript_utils::ExpressionExt;
@@ -51,8 +50,8 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
               self.check_assignment_target_property(&parent_parent, cursor - 1)
             }
             AstKind::Argument(arg) => self.check_object_define_property(arg, cursor - 1),
-            AstKind::SimpleAssignmentTarget(target) => {
-              let v = self.check_assignment_is_cjs_reexport(target, cursor - 1);
+            AstKind::AssignmentExpression(assignment_expr) => {
+              let v = self.check_assignment_is_cjs_reexport(assignment_expr);
               if matches!(v, Some(CommonJsAstType::Reexport)) {
                 self.result.ast_usage.insert(EcmaModuleAstUsage::IsCjsReexport);
               }
@@ -107,31 +106,21 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
     if static_property_name.is_none() {
       self.result.ast_usage.remove(EcmaModuleAstUsage::AllStaticExportPropertyAccess);
     }
-    let is_es_module_flag_prop =
-      static_property_name.is_some_and(|atom| atom.as_str() == "__esModule");
 
-    match self.visit_path.get(base_cursor - 1)?.as_simple_assignment_target() {
-      Some(_) => {
-        if !is_es_module_flag_prop {
-          return Some(CommonJsAstType::ExportsPropWrite);
-        }
-      }
-      None => {
-        return None;
-      }
-    }
-    if !matches!(
-      self.visit_path.get(base_cursor - 2)?,
-      AstKind::SimpleAssignmentTarget(_)
-        | AstKind::ArrayAssignmentTarget(_)
-        | AstKind::ObjectAssignmentTarget(_)
-    ) {
+    let parent = self.visit_path.get(base_cursor - 1)?;
+    if !member_expr.is_assigned_to_in_parent(parent) {
       return None;
     }
 
-    let assignment_expr = self.visit_path.get(base_cursor - 3)?.as_assignment_expression()?;
+    let is_es_module_flag_prop =
+      static_property_name.is_some_and(|atom| atom.as_str() == "__esModule");
+    if !is_es_module_flag_prop {
+      return Some(CommonJsAstType::ExportsPropWrite);
+    }
 
-    let ast::Expression::BooleanLiteral(bool_lit) = &assignment_expr.right else {
+    let assignment_expr = parent.as_assignment_expression()?;
+
+    let Expression::BooleanLiteral(bool_lit) = &assignment_expr.right else {
       return None;
     };
     bool_lit.value.then_some(CommonJsAstType::EsModuleFlag)
@@ -140,13 +129,9 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
   /// check if the `module` is used as : module.exports = require('mod');
   fn check_assignment_is_cjs_reexport(
     &self,
-    _target: &ast::SimpleAssignmentTarget<'_>,
-    base_cursor: usize,
+    assignment_expr: &AssignmentExpression<'ast>,
   ) -> Option<CommonJsAstType> {
-    let assignment_expr = self.visit_path.get(base_cursor - 1)?.as_assignment_expression()?;
-    let ast::Expression::CallExpression(call_expr) = &assignment_expr.right else {
-      return None;
-    };
+    let call_expr = assignment_expr.right.as_call_expression()?;
     let callee = call_expr.callee.as_identifier()?;
 
     if !(callee.name == "require"

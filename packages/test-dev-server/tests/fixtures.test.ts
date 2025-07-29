@@ -5,7 +5,7 @@ import nodeFs from 'node:fs';
 import nodeFsPromise from 'node:fs/promises';
 import nodePath from 'node:path';
 import { afterAll, beforeAll, describe, test } from 'vitest';
-import { removeDirSync } from './src/utils';
+import { removeDirSync, sensibleTimeoutInSeconds } from './src/utils';
 
 function main() {
   const fixturesPath = nodePath.resolve(__dirname, 'fixtures');
@@ -77,9 +77,8 @@ function main() {
           { cwd: tmpProjectPath, shell: true, stdio: 'inherit' },
         );
 
-        await new Promise<void>((rsl, _rej) => {
-          setTimeout(rsl, 5000);
-        });
+        // Wait for the Node.js process to start
+        await sensibleTimeoutInSeconds(1);
 
         console.log('🔄 Collecting HMR edit files...');
         const hmrEditFiles = await collectHmrEditFiles(tmpProjectPath);
@@ -136,7 +135,7 @@ function main() {
   });
 }
 
-function ensurePathExists(path: string, timeout = 10000) {
+function ensurePathExists(path: string, timeout = 6 * 1000) {
   const startTime = Date.now();
   const isTimeout = () => Date.now() - startTime > timeout;
   return new Promise<void>((resolve, reject) => {

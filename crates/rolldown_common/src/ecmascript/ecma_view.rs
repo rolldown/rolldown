@@ -16,12 +16,12 @@ use crate::{
 bitflags! {
     #[derive(Debug, Default, Clone, Copy)]
     pub struct EcmaViewMeta: u8 {
-        const EVAL = 1;
-        const INCLUDED = 1 << 1;
-        const HAS_LAZY_EXPORT = 1 << 2;
-        const HAS_STAR_EXPORT = 1 << 3;
-        const SAFELY_TREESHAKE_COMMONJS = 1 << 4;
-        const HAS_ANALYZED_SIDE_EFFECT = 1 << 5;
+        const Eval = 1;
+        const Included = 1 << 1;
+        const HasLazyExport = 1 << 2;
+        const HasStarExport = 1 << 3;
+        const SafelyTreeshakeCommonjs = 1 << 4;
+        const HasAnalyzedSideEffect = 1 << 5;
     }
 }
 
@@ -43,19 +43,19 @@ pub fn generate_replace_this_expr_map(
 impl EcmaViewMeta {
   #[inline]
   pub fn has_eval(&self) -> bool {
-    self.contains(Self::EVAL)
+    self.contains(Self::Eval)
   }
   #[inline]
   pub fn is_included(&self) -> bool {
-    self.contains(Self::INCLUDED)
+    self.contains(Self::Included)
   }
   #[inline]
   pub fn has_lazy_export(&self) -> bool {
-    self.contains(Self::HAS_LAZY_EXPORT)
+    self.contains(Self::HasLazyExport)
   }
   #[inline]
   pub fn has_star_export(&self) -> bool {
-    self.contains(Self::HAS_STAR_EXPORT)
+    self.contains(Self::HasStarExport)
   }
 }
 

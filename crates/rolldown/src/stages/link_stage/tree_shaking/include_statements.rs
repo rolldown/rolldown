@@ -171,7 +171,7 @@ impl LinkStage<'_> {
       .filter_map(|(m, meta)| m.as_normal_mut().map(|m| (m, meta)))
       .for_each(|(module, meta)| {
         let idx = module.idx;
-        module.meta.set(EcmaViewMeta::INCLUDED, is_module_included_vec[idx]);
+        module.meta.set(EcmaViewMeta::Included, is_module_included_vec[idx]);
         is_included_vec[module.idx].iter_enumerated().for_each(|(stmt_info_id, is_included)| {
           module.stmt_infos.get_mut(stmt_info_id).is_included = *is_included;
         });
@@ -410,7 +410,7 @@ impl LinkStage<'_> {
 
     let module =
       self.module_table[self.runtime.id()].as_normal_mut().expect("should be a normal module");
-    module.meta.set(EcmaViewMeta::INCLUDED, true);
+    module.meta.set(EcmaViewMeta::Included, true);
 
     for (stmt_idx, included) in is_stmt_included_vec[self.runtime.id()].iter_enumerated() {
       module.stmt_infos.get_mut(stmt_idx).is_included = *included;
@@ -439,7 +439,7 @@ fn include_module(ctx: &mut Context, module: &NormalModule) {
       let bail_eval = module.meta.has_eval()
         && !stmt_info.declared_symbols.is_empty()
         && stmt_info_id.index() != 0;
-      let has_side_effects = if module.meta.contains(EcmaViewMeta::SAFELY_TREESHAKE_COMMONJS)
+      let has_side_effects = if module.meta.contains(EcmaViewMeta::SafelyTreeshakeCommonjs)
         && ctx.options.treeshake.commonjs()
       {
         stmt_info.side_effect.contains(SideEffectDetail::Unknown)

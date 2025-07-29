@@ -41,14 +41,14 @@ impl SymbolRef {
   pub fn is_declared_by_const(&self, db: &SymbolRefDb) -> Option<bool> {
     let flags = self.flags(db)?;
     // Not having this flag means we don't know if it's declared by `const` instead of it's not declared by `const`.
-    flags.contains(SymbolRefFlags::IS_CONST).then_some(true)
+    flags.contains(SymbolRefFlags::IsConst).then_some(true)
   }
 
   /// `None` means we don't know if it gets reassigned.
   pub fn is_not_reassigned(&self, db: &SymbolRefDb) -> Option<bool> {
     let flags = self.flags(db)?;
     // Not having this flag means we don't know
-    flags.contains(SymbolRefFlags::IS_NOT_REASSIGNED).then_some(true)
+    flags.contains(SymbolRefFlags::IsNotReassigned).then_some(true)
   }
 
   pub fn is_declared_in_root_scope(&self, db: &SymbolRefDb) -> bool {

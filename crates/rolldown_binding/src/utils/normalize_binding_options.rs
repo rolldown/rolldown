@@ -335,15 +335,24 @@ pub fn normalize_binding_options(
     footer: normalize_addon_option(output_options.footer),
     intro: normalize_addon_option(output_options.intro),
     outro: normalize_addon_option(output_options.outro),
-    sourcemap_base_url: output_options.sourcemap_base_url.map(|maybe_url| {
-      if let Ok(mut url) = Url::parse(&maybe_url) {
-        if !url.path().ends_with('/') {
-          url.set_path(&rolldown_utils::concat_string!(url.path(), "/"));
+    sourcemap_base_url: output_options
+      .sourcemap_base_url
+      .map(|maybe_url| {
+        if let Ok(mut url) = Url::parse(&maybe_url) {
+          if !url.path().ends_with('/') {
+            url.set_path(&rolldown_utils::concat_string!(url.path(), "/"));
+          }
+          Ok(url.to_string())
+        } else {
+          Err(napi::Error::new(
+            napi::Status::GenericFailure,
+            format!(
+              "Invalid value for `sourcemapBaseUrl` option, should be a valid URL: {maybe_url}"
+            ),
+          ))
         }
-        return url.to_string();
-      }
-      panic!("Invalid sourcemapBaseUrl: {maybe_url}");
-    }),
+      })
+      .transpose()?,
     sourcemap_ignore_list,
     sourcemap_path_transform,
     sourcemap_debug_ids: output_options.sourcemap_debug_ids,

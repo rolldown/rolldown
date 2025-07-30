@@ -11,7 +11,7 @@ impl PublicFileToBuiltUrlEnv<'_> {
   pub fn public_file_to_built_url(&self, url: &str) -> String {
     let hash = xxhash_with_base(url.as_bytes(), 16);
     let cache = self.ctx.meta().get::<PublicAssetUrlCache>().expect("PublicAssetUrlCache missing");
-    let built_url = rolldown_utils::concat_string!("__VITE_PUBLIC_ASSET__", hash, "__");
+    let built_url = rolldown_utils::concat_string!("__VITE_ASSET_PUBLIC__", hash, "__");
     if !cache.0.contains_key(&hash) {
       cache.0.insert(hash, url.to_string());
     }

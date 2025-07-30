@@ -28,6 +28,7 @@ export interface NormalizedOutputOptions {
   format: InternalModuleFormat;
   exports: NonNullable<OutputOptions['exports']>;
   sourcemap: boolean | 'inline' | 'hidden';
+  sourcemapBaseUrl: string | undefined;
   cssEntryFileNames: string | ChunkFileNamesFunction;
   cssChunkFileNames: string | ChunkFileNamesFunction;
   inlineDynamicImports: boolean;
@@ -88,6 +89,10 @@ export class NormalizedOutputOptionsImpl implements NormalizedOutputOptions {
 
   get sourcemap(): boolean | 'inline' | 'hidden' {
     return this.inner.sourcemap;
+  }
+
+  get sourcemapBaseUrl(): string | undefined {
+    return this.inner.sourcemapBaseUrl ?? undefined;
   }
 
   get cssEntryFileNames(): string | ChunkFileNamesFunction {

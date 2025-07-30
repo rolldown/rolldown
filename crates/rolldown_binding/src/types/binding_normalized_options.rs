@@ -165,6 +165,11 @@ impl BindingNormalizedOptions {
   }
 
   #[napi(getter)]
+  pub fn sourcemap_base_url(&self) -> Option<String> {
+    self.inner.sourcemap_base_url.clone()
+  }
+
+  #[napi(getter)]
   pub fn banner(&self) -> Either<Option<String>, Undefined> {
     match &self.inner.banner {
       Some(rolldown::AddonOutputOption::String(inner)) => Either::A(inner.clone()),

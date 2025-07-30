@@ -1203,6 +1203,7 @@ export declare class BindingNormalizedOptions {
   get esModule(): boolean | 'if-default-prop'
   get inlineDynamicImports(): boolean
   get sourcemap(): boolean | 'inline' | 'hidden'
+  get sourcemapBaseUrl(): string | null
   get banner(): string | undefined | null | undefined
   get footer(): string | undefined | null | undefined
   get intro(): string | undefined | null | undefined

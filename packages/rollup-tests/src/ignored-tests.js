@@ -21,6 +21,7 @@ const ignoreTests = [
   "rollup@function@es5-class-called-without-new", // rolldown align directive rendering with esbuild
 
   "rollup@function@generate-bundle-mutation: handles adding or deleting symbols in generateBundle", // rolldown outputs a warning when assigning to bundle[foo]
+  "rollup@form@logical-expression@simplify-non-boolean: simplifies logical expressions that resolve statically to non-boolean values", // Oxc DCE is sub-optimal.
 ]
 
 module.exports = {

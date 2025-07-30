@@ -6,28 +6,22 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## main.js
 
 ```js
-import e from"node:assert";const t=`shared.js`,n=`index.js`;e.equal(n,`index.js`),e.equal(t,`shared.js`);
+import e from"node:assert";e.equal(`index.js`,`index.js`),e.equal(`shared.js`,`shared.js`);
 //# sourceMappingURL=main.js.map
 ```
 
 # Sourcemap Visualizer
 
 ```
-- ../shared.js
-(0:0) "const " --> (0:27) "const "
-(0:6) "a = " --> (0:33) "t="
-(0:10) "'shared.js'\n" --> (0:35) "`shared.js`,"
 - ../main.js
-(2:6) "a = " --> (0:47) "n="
-(2:10) "'index.js'\n" --> (0:49) "`index.js`;"
-(3:0) "assert." --> (0:60) "e."
-(3:7) "equal(" --> (0:62) "equal("
-(3:13) "a, " --> (0:68) "n,"
-(3:16) "'index.js')" --> (0:70) "`index.js`)"
-(3:27) "\n" --> (0:81) ","
-(4:0) "assert." --> (0:82) "e."
-(4:7) "equal(" --> (0:84) "equal("
-(4:13) "a2, " --> (0:90) "t,"
-(4:17) "'shared.js')" --> (0:92) "`shared.js`)"
-(4:29) "\n" --> (0:104) ";\n"
+(3:0) "assert." --> (0:27) "e."
+(3:7) "equal(" --> (0:29) "equal("
+(3:13) "a, " --> (0:35) "`index.js`,"
+(3:16) "'index.js')" --> (0:46) "`index.js`)"
+(3:27) "\n" --> (0:57) ","
+(4:0) "assert." --> (0:58) "e."
+(4:7) "equal(" --> (0:60) "equal("
+(4:13) "a2, " --> (0:66) "`shared.js`,"
+(4:17) "'shared.js')" --> (0:78) "`shared.js`)"
+(4:29) "\n" --> (0:90) ";\n"
 ```

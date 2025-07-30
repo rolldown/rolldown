@@ -6,5 +6,5 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## main.js
 
 ```js
-var module=(function(exports){let t=1;return exports.value=t,exports})({});
+var module=(function(exports){return exports.value=1,exports})({});
 ```

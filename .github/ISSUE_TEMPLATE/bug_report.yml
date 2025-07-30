@@ -29,8 +29,10 @@ body:
     attributes:
       label: Reproduction link or steps
       description: |
-        - Use [stackblitz](https://stackblitz.com/fork/github/rolldown/rolldown-starter-stackblitz) to create a minimal reproduction and share the link.
-        - Or provide a minimal repository on GitHub that can reproduce the issue. You could use [this template](https://github.com/rolldown/rolldown-starter-stackblitz).
+        Please provide a link to the minimal reproduction to one by:
+        - Using the [REPL](https://repl.rolldown.rs/), or
+        - Using the [stackblitz template](https://stackblitz.com/fork/github/rolldown/rolldown-starter-stackblitz) (in case it requires a plugin), or
+        - A minimal repository on GitHub that can reproduce the issue. You could use [this template](https://github.com/rolldown/rolldown-starter-stackblitz).
       placeholder: Reproduction link or steps
     validations:
       required: true

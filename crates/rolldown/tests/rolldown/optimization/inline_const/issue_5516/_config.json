@@ -1,0 +1,9 @@
+{
+  "config": {
+    "optimization": {
+      "inlineConst": true
+    },
+    "minifyInternalExports": true
+  },
+  "snapshot": false
+}

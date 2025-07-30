@@ -23,7 +23,7 @@ use crate::{stages::link_stage::LinkStage, types::linking_metadata::LinkingMetad
 #[derive(Debug, Clone, Copy)]
 enum IncludeKind {
   Normal,
-  DynamicImport,
+  EntryExport,
 }
 
 struct Context<'a> {
@@ -98,7 +98,7 @@ impl LinkStage<'_> {
                 include_statement(context, module, stmt_info_id);
               },
             );
-            include_symbol(context, *symbol_ref, IncludeKind::Normal);
+            include_symbol(context, *symbol_ref, IncludeKind::EntryExport);
           }
         },
       );
@@ -131,7 +131,7 @@ impl LinkStage<'_> {
                 include_statement(context, module, stmt_info_id);
               },
             );
-            include_symbol(context, *symbol_ref, IncludeKind::DynamicImport);
+            include_symbol(context, *symbol_ref, IncludeKind::EntryExport);
           }
         },
       );
@@ -500,7 +500,7 @@ fn include_symbol(ctx: &mut Context, symbol_ref: SymbolRef, include_kind: Includ
   let mut canonical_ref = ctx.symbols.canonical_ref_for(symbol_ref);
 
   if let Some(v) = ctx.constant_symbol_map.get(&canonical_ref)
-    && !matches!(include_kind, IncludeKind::DynamicImport)
+    && !matches!(include_kind, IncludeKind::EntryExport)
     && !v.commonjs_export
   {
     // If the symbol is a constant value and it is not a commonjs module export , we don't need to include it since it would be always inline

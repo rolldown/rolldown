@@ -5060,6 +5060,10 @@ expression: output
 - page-a-!~{000}~.js => page-a-CEB9NEBh.js
 - page-b-!~{001}~.js => page-b-CatnFucT.js
 
+# tests/rolldown/optimization/inline_const/issue_5516
+
+- main-!~{000}~.js => main-CbeGViBB.js
+
 # tests/rolldown/optimization/inline_const/ns_chain
 
 - main-!~{000}~.js => main-Brb9u1JP.js

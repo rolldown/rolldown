@@ -744,12 +744,12 @@ impl<'ast> AstSnippet<'ast> {
     &self,
     original_name: PassedStr,
     target: Expression<'ast>,
-    canonical_runtime_name: Atom<'ast>,
+    callee: Expression<'ast>,
     pure: bool,
   ) -> Expression<'ast> {
     self.builder.expression_call_with_pure(
       SPAN,
-      self.builder.expression_identifier(SPAN, canonical_runtime_name),
+      callee,
       NONE,
       {
         let mut items = self.builder.vec_with_capacity(2);
@@ -767,7 +767,7 @@ impl<'ast> AstSnippet<'ast> {
   pub fn static_block_keep_name_helper(
     &self,
     name: PassedStr,
-    canonical_runtime_name: PassedStr<'ast>,
+    callee: Expression<'ast>,
   ) -> ClassElement<'ast> {
     self.builder.class_element_static_block(
       SPAN,
@@ -775,7 +775,7 @@ impl<'ast> AstSnippet<'ast> {
         SPAN,
         self.builder.expression_call(
           SPAN,
-          self.builder.expression_identifier(SPAN, canonical_runtime_name),
+          callee,
           NONE,
           {
             let mut items = self.builder.vec_with_capacity(2);

@@ -5561,6 +5561,12 @@ expression: output
 
 - decorator-!~{000}~.js => decorator-CvurVfst.js
 
+# tests/rolldown/topics/keep_names/issue_5525
+
+- entry-!~{000}~.js => entry-BCzFFI04.js
+- entry2-!~{001}~.js => entry2-CA0mV8Xo.js
+- foo-!~{002}~.js => foo-DKOGr9By.js
+
 # tests/rolldown/topics/live_bindings/default_export_binding
 
 - main-!~{000}~.js => main-DPODtWAZ.js

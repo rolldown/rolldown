@@ -13,6 +13,7 @@ use oxc::transformer::Transformer;
 use rolldown_common::ModuleType;
 use rolldown_error::{BuildDiagnostic, Severity};
 use rolldown_plugin::{HookUsage, Plugin, SharedTransformPluginContext};
+use rolldown_utils::concat_string;
 use rolldown_utils::{pattern_filter::StringOrRegex, stabilize_id::stabilize_id, url::clean_url};
 
 pub use types::{
@@ -96,11 +97,7 @@ impl Plugin for TransformPlugin {
       .build(&program);
 
     if let Some(inject) = &self.jsx_inject {
-      let mut new_code = String::with_capacity(inject.len() + 1 + code.len());
-      new_code.push_str(inject);
-      new_code.push(';');
-      new_code.push_str(&code);
-      code = new_code;
+      code = concat_string!(inject, ";", code);
     }
 
     Ok(Some(rolldown_plugin::HookTransformOutput {

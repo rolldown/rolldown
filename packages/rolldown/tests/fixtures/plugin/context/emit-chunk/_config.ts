@@ -56,13 +56,13 @@ export default defineTest({
   afterTest: (output) => {
     expect(emittedChunkPreliminaryFilenames).toMatchInlineSnapshot(`
       [
-        "main-with-name.!~{001}~.js",
+        "main-with-name.!~{00t}~.js",
         "main-with-fileName.js",
       ]
     `)
     expect(emittedChunkFilenames).toMatchInlineSnapshot(`
       [
-        "main-with-name.gM07keqn.js",
+        "main-with-name.CzVPuEWg.js",
         "main-with-fileName.js",
       ]
     `)

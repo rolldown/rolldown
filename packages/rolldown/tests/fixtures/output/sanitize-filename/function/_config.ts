@@ -32,9 +32,9 @@ export default defineTest({
       [
         "assets/sanitized-+emitted-C6bBH0W1.txt",
         "assets/sanitized-asset-BIR0xpQL",
-        "sanitized-dynamic-C15w8jpw.js",
+        "sanitized-dynamic-CNl3n94J.js",
         "sanitized-main.js",
-        "sanitized-share-DR8LfMv5.js",
+        "sanitized-share-pyFgWoDz.js",
       ]
     `)
   },

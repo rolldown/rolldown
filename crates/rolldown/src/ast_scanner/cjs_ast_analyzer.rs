@@ -47,7 +47,7 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
           let parent_parent_kind = self.visit_path.get(cursor - 1)?;
           match parent_parent_kind {
             parent_parent_kind if parent_parent_kind.is_member_expression_kind() => {
-              let parent_parent = kind.as_member_expression_kind().unwrap();
+              let parent_parent = parent_parent_kind.as_member_expression_kind().unwrap();
               self.check_assignment_target_property(&parent_parent, cursor - 1)
             }
             AstKind::Argument(arg) => self.check_object_define_property(arg, cursor - 1),

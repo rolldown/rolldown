@@ -36,12 +36,8 @@
 ### The `resolveFileUrl` hook not supported
  - rollup@form@configure-file-url: allows to configure file urls@generates es
 
-### The `PluginContext.parse` is deprecated
- - rollup@function@plugin-parse-ast-remove-sourcemapping: remove source mapping comment even if code is parsed by PluginContext.parse method
+### The `PluginContext.parse` does not support `allowReturnOutsideFunction` option
  - rollup@function@parse-return-outside-function: supports parsing return statements outside functions via options
- - rollup@function@plugin-parse: plugin transform hooks can use `this.parse(code, options)`
- - rollup@function@call-marked-pure-with-plugin-parse-ast: external function calls marked with pure comment do not have effects and should be removed even if parsed by PluginContext.parse method
- - rollup@function@handle-missing-export-source: does not fail if a pre-generated AST is omitting the source property of an unused named export (#3210)
 
 ### The `PluginContext.cache` is not supported
  - rollup@function@plugin-cache@anonymous-delete: throws for anonymous plugins deleting from the cache
@@ -68,17 +64,14 @@
  - rollup@function@max-parallel-file-operations@set: maxParallelFileOps set to 3
  - rollup@function@max-parallel-file-operations@with-plugin: maxParallelFileOps with plugin
 
-### The `PluginContext.emitFile` emit chunk is not supported 
+### The `PluginContext.emitFile` emit chunk is only supported partially
  - rollup@function@emit-chunk-hash: gives access to the hashed filed name via this.getFileName in generateBundle
- - rollup@function@resolveid-is-entry: sends correct isEntry information to resolveId hooks
- - rollup@function@inline-dynamic-no-treeshake: handles inlining dynamic imports when treeshaking is disabled for modules (#4098)
  - rollup@function@implicit-dependencies@dependant-dynamic-import-no-effects: throws when a module that is loaded before an emitted chunk is fully tree-shaken
  - rollup@function@implicit-dependencies@dependant-dynamic-import-not-included: throws when a module that is loaded before an emitted chunk is only linked to the module graph via a tree-shaken dynamic import
  - rollup@function@implicit-dependencies@dependant-not-part-of-graph: throws when a module that is loaded before an emitted chunk is not part of the module graph
  - rollup@function@implicit-dependencies@external-dependant: throws when a module that is loaded before an emitted chunk does not exist
  - rollup@function@implicit-dependencies@missing-dependant: throws when a module that is loaded before an emitted chunk is external
  - rollup@function@emit-file@set-asset-source-chunk: throws when trying to set the asset source of a chunk
- - rollup@function@emit-file@no-input: It is not necessary to provide an input if a dynamic entry is emitted
  - rollup@function@emit-file@modules-loaded: Throws when adding a chunk after the modules have finished loading
  - rollup@function@emit-file@invalid-chunk-id: throws for invalid chunk ids
  - rollup@function@emit-file@chunk-not-found: Throws if an emitted entry chunk cannot be resolved
@@ -219,7 +212,7 @@
  - rollup@form@namespace-tostring@inlined-namespace-static-resolution: statically resolves Symbol.toStringTag for inlined namespaces
  - rollup@form@namespace-tostring@inlined-namespace: adds Symbol.toStringTag property to inlined namespaces@generates es
 
-### The `output.preserveModules` is not supported
+### The `output.preserveModules` is not compatible yet
  - rollup@function@preserve-modules-default-mode-namespace: import namespace from chunks with default export mode when preserving modules,
  - rollup@function@circular-preserve-modules: correctly handles circular dependencies when preserving modules
  - rollup@function@missing-export-preserve-modules: supports shimming missing exports when preserving modules
@@ -235,10 +228,7 @@
  - rollup@function@synthetic-named-exports@preserve-modules: handles a dynamic import with synthetic named exports in preserveModules mode
  - rollup@function@circular-namespace-reexport-preserve-modules: correctly handles namespace reexports with circular dependencies when preserving modules
 
-### The `output.preserveEntrySignatures` is not supported
- - rollup@function@dynamic-imports-shared-exports: allows sharing imports between dynamic chunks
-
-### The `output.manualChunks` is not supported
+### The `output.manualChunks` is not compatible
  - rollup@function@manual-chunks-conflict: Throws for conflicts between manual chunks
  - rollup@function@manual-chunks-include-external-modules3: throws an error EXTERNAL_MODULES_CANNOT_BE_TRANSFORMED_TO_MODULES for manualChunks' modules that are resolved as an external module by the 'external' option
  - rollup@function@manual-chunks-include-external-modules: throws for manualChunks' modules that are resolved as an external module by plugins
@@ -256,7 +246,7 @@
 ### The `output.sourcemapExcludeSources` is not supported
  - rollup@form@sourcemaps-excludesources: correct sourcemaps are written (excluding sourceContent)@generates es
 
-### The `output.sourcemapBaseUrl` is not supported
+### The `output.sourcemapBaseUrl` is not compatible yet
  - rollup@function@sourcemap-base-url-invalid: throws for invalid sourcemapBaseUrl
  - rollup@sourcemaps@sourcemap-base-url-without-trailing-slash: add a trailing slash automatically if it is missing@generates es
  - rollup@sourcemaps@sourcemap-base-url: adds a sourcemap base url@generates es
@@ -329,9 +319,8 @@
  - rollup@form@merge-namespaces-non-live: merges namespaces without live-bindings
  - rollup@form@merge-namespaces: merges namespaces with live-bindings
 
-### The `import.meta.url` is not supported
+### The `import.meta.url` is not compatible
  - rollup@function@import-meta-url-b: Access document.currentScript at the top level
- - rollup@function@import-meta-url: resolves import.meta.url
  - rollup@form@import-meta-url: supports import.meta.url@generates es
  - rollup@form@resolve-import-meta-url-export: correctly exports resolved import.meta.url@generates es
  - rollup@form@resolve-import-meta-url: allows to configure import.meta.url@generates es
@@ -355,7 +344,7 @@
  - rollup@form@import-attributes@removes-dynamic-attributes: keep import attributes for dynamic imports
  - rollup@form@import-attributes@removes-static-attributes: keeps any import attributes on input
 
-### The watch `BUNDLE_END` event `result` is not supported
+### watch behavior is not compatible yet
  - rollup@hooks@allows to enforce plugin hook order in watch mode
 
 ### escaping external id is not supported

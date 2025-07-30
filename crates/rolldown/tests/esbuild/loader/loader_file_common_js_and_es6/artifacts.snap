@@ -3,12 +3,12 @@ source: crates/rolldown_testing/src/integration_test.rs
 ---
 # Assets
 
-## assets/x-BA9VvU_1.txt
+## assets/x-DuJ9FQ-h.txt
 
 ```txt
 x
 ```
-## assets/y-DBJZ7rtI.txt
+## assets/y-D1bohuCj.txt
 
 ```txt
 y
@@ -18,12 +18,12 @@ y
 ```js
 // HIDDEN [rolldown:runtime]
 //#region y.txt
-var y_default = "assets/y-DBJZ7rtI.txt";
+var y_default = "assets/y-D1bohuCj.txt";
 
 //#endregion
 //#region x.txt
 var require_x = /* @__PURE__ */ __commonJS({ "x.txt": ((exports, module) => {
-	module.exports = "assets/x-BA9VvU_1.txt";
+	module.exports = "assets/x-DuJ9FQ-h.txt";
 }) });
 
 //#endregion

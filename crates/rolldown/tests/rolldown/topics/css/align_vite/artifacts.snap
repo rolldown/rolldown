@@ -3,7 +3,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ---
 # Assets
 
-## common-imported-by-js-BWCTboZO.css
+## common-imported-by-js-DrYMLsAf.css
 
 ```css
 body {
@@ -19,7 +19,7 @@ body {
 ```js
 
 ```
-## entry-a-CrhZOoNM.css
+## entry-a-D8slnpfQ.css
 
 ```css
 
@@ -42,7 +42,7 @@ console.log("entry-a");
 
 //#endregion
 ```
-## entry-b-fpA6EH7c.css
+## entry-b-D871QXAs.css
 
 ```css
 

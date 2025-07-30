@@ -68,7 +68,7 @@ pub fn find_hash_placeholders<'a>(
   results
 }
 
-const CHARS: &[u8] = b"0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ_$";
+const CHARS: &[u8] = b"etnriaoscludfpmhg_vybxSCwTEDOkAjMNPFILRzBVHUWGKqJYXZQ$1024368579";
 const BASE: u32 = 64;
 
 pub fn to_base64(mut value: u32) -> String {

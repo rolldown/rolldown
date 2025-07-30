@@ -19,7 +19,6 @@ pub struct AssetCache(pub FxDashMap<String, String>);
 pub struct FileToUrlEnv<'a> {
   pub root: &'a PathBuf,
   pub is_lib: bool,
-  pub url_base: &'a str,
   pub public_dir: &'a str,
   pub asset_inline_limit: usize,
   pub ctx: &'a rolldown_plugin::PluginContext,

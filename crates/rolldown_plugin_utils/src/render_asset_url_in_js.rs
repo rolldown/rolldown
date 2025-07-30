@@ -13,7 +13,7 @@ use crate::{
 pub struct RenderAssetUrlInJsEnvConfig<'a> {
   pub is_ssr: bool,
   pub is_worker: bool,
-  pub base: &'a str,
+  pub url_base: &'a str,
   pub decoded_base: &'a str,
   pub render_built_url: Option<&'a RenderBuiltUrl>,
 }
@@ -103,7 +103,7 @@ impl RenderAssetUrlInJsEnv<'_> {
       };
 
       let env = ToOutputFilePathInJSEnv {
-        base: self.config.base,
+        url_base: self.config.url_base,
         decoded_base: self.config.decoded_base,
         render_built_url: self.config.render_built_url,
         render_built_url_config: RenderBuiltUrlConfig {

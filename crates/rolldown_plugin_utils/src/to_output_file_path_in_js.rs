@@ -21,8 +21,8 @@ pub struct RenderBuiltUrlConfig<'a> {
 }
 
 pub struct RenderBuiltUrlRet {
-  relative: Option<bool>,
-  runtime: Option<String>,
+  pub relative: Option<bool>,
+  pub runtime: Option<String>,
 }
 
 pub enum AssetUrlResult {
@@ -31,7 +31,7 @@ pub enum AssetUrlResult {
 }
 
 pub struct ToOutputFilePathInJSEnv<'a> {
-  pub base: &'a str,
+  pub url_base: &'a str,
   pub decoded_base: &'a str,
   pub render_built_url: Option<&'a RenderBuiltUrl>,
   pub render_built_url_config: RenderBuiltUrlConfig<'a>,
@@ -43,7 +43,7 @@ impl ToOutputFilePathInJSEnv<'_> {
     filename: &str,
     to_relative: impl Fn(&Path, &Path) -> AssetUrlResult,
   ) -> anyhow::Result<AssetUrlResult> {
-    let mut relative = self.base.is_empty() || self.base.starts_with("./");
+    let mut relative = self.url_base.is_empty() || self.url_base.starts_with("./");
     if let Some(render_built_url) = self.render_built_url {
       if let Some(result) = render_built_url(filename, &self.render_built_url_config).await? {
         match result {

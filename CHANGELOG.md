@@ -1,4 +1,119 @@
 
+## [1.0.0-beta.30] - 2025-07-30
+
+### 💥 BREAKING CHANGES
+
+- rolldown: remove unfinished module federation support (#5471) by @Boshen
+- disable `strictExecutionOrder` by default (#5436) by @hyf0
+
+### 🚀 Features
+
+- hmr: multiple changes should result to multiple updates (#5500) by @hyf0
+- binding: add memory adjustment hint in fn write (#5375) by @Brooooooklyn
+- store sideEffects information about global var access (#5495) by @IWANABETHATGUY
+- merge side effects detail (#5486) by @IWANABETHATGUY
+- plugin/vite-resolve: add warn / debug logs (#5476) by @sapphi-red
+- plugin/vite-resolve: avoid wrapping errors with napi errors (#5483) by @sapphi-red
+- add `this.fs` support (#5475) by @sapphi-red
+- rolldown_plugin_asset: align `generate_bundle` logic (#5480) by @shulaoda
+- hmr: prepare to launch that batched edits should result to multiple hmr output (#5458) by @hyf0
+- hmr: support `import.meta.hot.invalidate` (#5457) by @hyf0
+- mark all `toESM` as pure (#5461) by @IWANABETHATGUY
+- rolldown_plugin_asset: align load hook logic (#5452) by @shulaoda
+- rolldown_plugin_utils: align `file_to_built_url` (#5450) by @shulaoda
+- rolldown_plugin_utils: align `should_inline` logic (#5308) by @AliceLanniste
+- rolldown_plugin_asset: add partial `file_to_built_url` support (#5445) by @shulaoda
+- expose `optimization.pifeForModuleWrappers` option (#5433) by @sapphi-red
+- add `optimization.pifeForModuleWrappers` option (#5432) by @sapphi-red
+- use PIFE for callback passed to `createCjsInitializer` (#5427) by @sapphi-red
+- use PIFE for callbacks passed to `__commonJSMin` / `_commonJS` wrapper (#5426) by @sapphi-red
+- use PIFE for callback passed to `createEsmInitializer` (#5425) by @sapphi-red
+- use PIFE for callbacks passed to `__esm` wrapper (#5424) by @sapphi-red
+- use PIFE for callbacks passed to `__esmMin` wrapper (#5319) by @sapphi-red
+- rolldown: oxc v0.78.0 (#5421) by @Boshen
+- rolldown: support `output.sourcemapBaseUrl` (#5413) by @situ2001
+- mark all `__commonJS` CallExpression as **Pure** (#5419) by @IWANABETHATGUY
+- rolldown_plugin_alias: warn if alias resolves to non-absolute path (#5417) by @shulaoda
+- rolldown_plugin_asset: align `encode_uri_path` logic (#5410) by @shulaoda
+- add warning and conversion for `import.meta` for non-`esm` output format (#5378) by @7086cmd
+
+### 🐛 Bug Fixes
+
+- use uuid_v4 to generate unique id for hook calls (#5501) by @hyf0
+- modules that are sideeffect free but relies on the execution order is not wrapped (#5498) by @IWANABETHATGUY
+- missing_export warning should not be an hard error (#5493) by @sapphi-red
+- cli: remove unnecessary `await` (#5487) by @situ2001
+- browser: stub fs/promises for browser build (#5484) by @sapphi-red
+- indirect requiring external module  is not wrapped by `__toESM` in cjs format (#5454) by @IWANABETHATGUY
+- Panic on reexport external module in  CJS format (#5430) by @IWANABETHATGUY
+- handle top-level return statements in CommonJS modules (#5437) by @hyf0
+- panic when using preserveModules: true and certain dependencies (#5415) by @IWANABETHATGUY
+- rolldown_plugin_alias: only replace the first matched alias (#5412) by @shulaoda
+- canonical name not found panic happens with treeshake.commonjs=true (#5409) by @IWANABETHATGUY
+- hmr: shouldn't consider self-accepting module as hmr boundary for its importee (#5405) by @hyf0
+- hmr: should detect hmr boundary correctly (#5400) by @hyf0
+- optimization.inlineConst: true generates invalid code when importing a module statically and dynamically (#5398) by @IWANABETHATGUY
+- top level VarDeclaration is not hoisted when wrapped in `__esm` (#5396) by @IWANABETHATGUY
+
+### 🚜 Refactor
+
+- use pascal case when naming bitflags field (#5497) by @IWANABETHATGUY
+- test/hmr: use sensible time to wait (#5490) by @hyf0
+- hmr: update message types to use 'hmr:update' (#5489) by @hyf0
+- hmr: replace `HmrOutput` with `HmrUpdate` (#5488) by @hyf0
+- node/hmr: re-organize file structures (#5485) by @hyf0
+- rolldown_plugin_utils: improve `asset_to_data_url` (#5481) by @shulaoda
+- replace pattern match for SideEffectsDetail with bitflags api (#5479) by @IWANABETHATGUY
+- rename stmtSideEffect to SideEffectDetail (#5478) by @IWANABETHATGUY
+- use bitflags store more details about side effects (#5477) by @IWANABETHATGUY
+- node/hmr: tweak package `test-dev-server` (#5462) by @hyf0
+- hmr: tweak naming and add comments (#5459) by @hyf0
+- test/hmr: remove hard-code edited content (#5189) by @hyf0
+- rust: make `Log#code` an `Option` (#5416) by @shulaoda
+- hmr: should mark self-accept module correctly (#5406) by @hyf0
+- hmr: remove unnecessary data during `propagate_update` (#5402) by @hyf0
+- hmr: make hmr patch output less changeable (#5401) by @hyf0
+- `__esm` top level bindings hoisted (#5397) by @IWANABETHATGUY
+- skip fast in  esm format when transform import.meta (#5395) by @IWANABETHATGUY
+
+### 📚 Documentation
+
+- clarify rolldown-rollup behavior difference around output generation (#5439) by @sapphi-red
+
+### ⚡ Performance
+
+- reduce runtime symbol memory usage and hashtable lookup (#5460) by @IWANABETHATGUY
+
+### 🧪 Testing
+
+- hmr: support to run mutiple test fixtures (#5456) by @hyf0
+- basic tests for `optimization.pifeForModuleWrappers` (#5435) by @sapphi-red
+
+### ⚙️ Miscellaneous Tasks
+
+- deps: update github-actions (#5509) by @renovate[bot]
+- debug: update default session ID to meaningful `unknown-session` (#5502) by @hyf0
+- deps: update dependency rolldown-plugin-dts to v0.14.2 (#5492) by @renovate[bot]
+- auto generated runtime_helper bitflags (#5474) by @IWANABETHATGUY
+- fix wasi build failed (#5470) by @IWANABETHATGUY
+- deps: lock file maintenance (#5467) by @renovate[bot]
+- deps: lock file maintenance (#5466) by @renovate[bot]
+- deps: lock file maintenance rust crates (#5465) by @renovate[bot]
+- deps: lock file maintenance npm packages (#5464) by @renovate[bot]
+- deps: update github-actions (#5463) by @renovate[bot]
+- export `__commonJSMin` in runtime-base.js (#5455) by @IWANABETHATGUY
+- rolldown_plugin_utils: remove `file_to_dev_url` temporarily (#5446) by @shulaoda
+- rolldown_plugin_asset: move `remove_url_query` into `rolldown_plugin_utils` (#5444) by @shulaoda
+- rolldown: disable aarch64 atomics (#5447) by @Brooooooklyn
+- remove diff with esbuild (#5428) by @IWANABETHATGUY
+- dx/ai: add deepwiki badge to enable automatic refresh (#5423) by @hyf0
+- dx/ai: Use `.cursorignore` to ignore meaningless files for AI (#5422) by @hyf0
+- rolldown_plugin_alias: inline matches and remove redundant comment (#5418) by @shulaoda
+- rolldown_plugin_asset: remove unnecessary comments (#5411) by @shulaoda
+- rolldown_plugin_manifest: remove unnecessary code (#5408) by @shulaoda
+- deps: update dependency tsdown to v0.13.0 (#5392) by @renovate[bot]
+
+
 ## [1.0.0-beta.29] - 2025-07-22
 
 ### 🚀 Features

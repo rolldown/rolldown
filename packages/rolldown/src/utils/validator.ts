@@ -194,6 +194,10 @@ const WatchOptionsSchema = v.strictObject({
     v.optional(v.number()),
     v.description('Throttle watch rebuilds'),
   ),
+  clearScreen: v.pipe(
+    v.optional(v.boolean()),
+    v.description('Whether to clear the screen when a rebuild is triggered'),
+  ),
 });
 
 const ChecksOptionsSchema = v.strictObject({

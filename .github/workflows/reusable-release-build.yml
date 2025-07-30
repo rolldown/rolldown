@@ -91,7 +91,7 @@ jobs:
         if: ${{ contains(matrix.target, 'ohos') }}
         uses: openharmony-rs/setup-ohos-sdk@10564ad8040178be4aa02e0d3a2c25c32779fa3f # v0.2
 
-      - uses: taiki-e/install-action@a416ddeedbd372e614cc1386e8b642692f66865e # v2.57.1
+      - uses: taiki-e/install-action@bbdef1c33cb8ed1fd122d68d8374ac79998d6960 # v2.57.2
         if: ${{ contains(matrix.target, 'musl') }}
         env:
           GITHUB_TOKEN: ${{ github.token }}

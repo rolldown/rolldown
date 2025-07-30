@@ -29,7 +29,7 @@ body:
     attributes:
       label: Reproduction link or steps
       description: |
-        Please provide a link to the minimal reproduction to one by:
+        Please provide a link to a minimal reproduction by:
         - Using the [REPL](https://repl.rolldown.rs/), or
         - Using the [stackblitz template](https://stackblitz.com/fork/github/rolldown/rolldown-starter-stackblitz) (in case it requires a plugin), or
         - A minimal repository on GitHub that can reproduce the issue. You could use [this template](https://github.com/rolldown/rolldown-starter-stackblitz).

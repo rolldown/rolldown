@@ -100,6 +100,7 @@ impl Resolvers {
           Arc::clone(&package_json_cache),
           base_options.root.to_owned(),
           base_options.try_prefix.to_owned(),
+          external_conditions.clone(),
         )
       })
       .collect::<Vec<_>>()
@@ -116,6 +117,7 @@ impl Resolvers {
       Arc::clone(&package_json_cache),
       base_options.root.to_owned(),
       base_options.try_prefix.to_owned(),
+      external_conditions.clone(),
     );
 
     Self { resolvers, external_resolver: Arc::new(external_resolver), tsconfig_resolver }
@@ -215,6 +217,7 @@ fn u8_to_bools<const N: usize>(n: u8) -> [bool; N] {
 #[derive(Debug)]
 pub struct Resolver {
   inner: oxc_resolver::Resolver,
+  inner_for_external: oxc_resolver::Resolver,
   tsconfig_resolver: Option<Arc<TsconfigResolver>>,
   built_in_checker: Arc<BuiltinChecker>,
   package_json_cache: Arc<PackageJsonCache>,
@@ -230,27 +233,42 @@ impl Resolver {
     package_json_cache: Arc<PackageJsonCache>,
     root: String,
     try_prefix: Option<String>,
+    external_conditions: Vec<String>,
   ) -> Self {
-    Self { inner, tsconfig_resolver, built_in_checker, package_json_cache, root, try_prefix }
+    let inner_for_external = inner.clone_with_options(ResolveOptions {
+      condition_names: external_conditions,
+      ..inner.options().clone()
+    });
+    Self {
+      inner,
+      inner_for_external,
+      tsconfig_resolver,
+      built_in_checker,
+      package_json_cache,
+      root,
+      try_prefix,
+    }
   }
 
   pub fn resolve_raw<P: AsRef<Path>>(
     &self,
     directory: P,
     specifier: &str,
+    external: bool,
   ) -> Result<oxc_resolver::Resolution, oxc_resolver::ResolveError> {
+    let inner_resolver = if external { &self.inner_for_external } else { &self.inner };
     let inner_resolver = if let Some(tsconfig) =
       self.tsconfig_resolver.as_ref().and_then(|r| r.load_nearest_tsconfig(directory.as_ref()))
     {
-      &self.inner.clone_with_options(ResolveOptions {
+      &inner_resolver.clone_with_options(ResolveOptions {
         tsconfig: Some(TsconfigOptions {
           config_file: tsconfig,
           references: TsconfigReferences::Disabled,
         }),
-        ..self.inner.options().clone()
+        ..inner_resolver.options().clone()
       })
     } else {
-      &self.inner
+      inner_resolver
     };
 
     let Some(try_prefix) = &self.try_prefix else {
@@ -368,7 +386,7 @@ impl Resolver {
   ) -> HookResolveIdReturn {
     let base_dir = get_base_dir(specifier, importer, dedupe).unwrap_or(&self.root);
 
-    let oxc_resolved_result = self.resolve_raw(base_dir, specifier);
+    let oxc_resolved_result = self.resolve_raw(base_dir, specifier, external);
     let resolved = self.normalize_oxc_resolver_result(importer, dedupe, &oxc_resolved_result)?;
     if let Some(mut resolved) = resolved {
       if !external || !can_externalize_file(&resolved.id) {

@@ -403,7 +403,7 @@ impl Plugin for ViteResolvePlugin {
     let resolved = resolver.normalize_oxc_resolver_result(
       args.importer,
       &self.dedupe,
-      &resolver.resolve_raw(base_dir, specifier),
+      &resolver.resolve_raw(base_dir, specifier, false),
     )?;
     if let Some(mut resolved) = resolved {
       if !scan {

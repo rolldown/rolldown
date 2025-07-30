@@ -474,7 +474,8 @@ impl GenerateStage<'_> {
     let is_preserve_modules_enabled = self.options.preserve_modules;
     let allow_to_minify_internal_exports =
       !is_preserve_modules_enabled && self.options.minify_internal_exports;
-
+    let mut char_frequency = FxHashMap::<char, u32>::default();
+    let mut sorted_chars = Vec::<char>::default();
     // Generate cross-chunk exports. These must be computed before cross-chunk
     // imports because of export alias renaming, which must consider all export
     // aliases simultaneously to avoid collisions.
@@ -495,8 +496,17 @@ impl GenerateStage<'_> {
               return;
             }
             used_names.insert(name.clone());
+            for char in name.chars() {
+              *char_frequency.entry(char).or_insert(1) += 1;
+            }
             chunk.exports_to_other_chunks.entry(export_ref).or_default().push(name.clone());
             processed_entry_exports.insert(export_ref);
+            sorted_chars = char_frequency
+              .iter()
+              .sorted()
+              .map(|(char, _)| *char)
+              .filter(|char| char.is_ascii())
+              .collect::<Vec<_>>();
           });
         }
         for (chunk_export, _predefined_names) in index_chunk_exported_symbols[chunk_id]
@@ -517,8 +527,13 @@ impl GenerateStage<'_> {
 
           let mut export_name: Rstr;
           loop {
-            named_index += 1;
-            export_name = to_base64(named_index).into();
+            if !sorted_chars.is_empty() {
+              export_name = sorted_chars.pop().unwrap().to_string().into();
+            } else {
+              named_index += 1;
+              export_name = to_base64(named_index).into();
+            }
+
             if export_name.starts_with('1') {
               named_index += 9 * 64u32.pow(u32::try_from(export_name.len() - 1).unwrap());
               continue;

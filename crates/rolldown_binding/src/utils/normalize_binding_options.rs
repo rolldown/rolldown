@@ -338,19 +338,21 @@ pub fn normalize_binding_options(
     sourcemap_base_url: output_options
       .sourcemap_base_url
       .map(|maybe_url| {
-        if let Ok(mut url) = Url::parse(&maybe_url) {
-          if !url.path().ends_with('/') {
-            url.set_path(&rolldown_utils::concat_string!(url.path(), "/"));
-          }
-          Ok(url.to_string())
-        } else {
-          Err(napi::Error::new(
-            napi::Status::GenericFailure,
-            format!(
-              "Invalid value for `sourcemapBaseUrl` option, should be a valid URL: {maybe_url}"
-            ),
-          ))
-        }
+        Url::parse(&maybe_url)
+          .map(|mut url| {
+            if !url.path().ends_with('/') {
+              url.set_path(&rolldown_utils::concat_string!(url.path(), "/"));
+            }
+            url.to_string()
+          })
+          .map_err(|_err| {
+            napi::Error::new(
+              napi::Status::GenericFailure,
+              format!(
+                "Invalid value for `sourcemapBaseUrl` option, should be a valid URL: {maybe_url}"
+              ),
+            )
+          })
       })
       .transpose()?,
     sourcemap_ignore_list,

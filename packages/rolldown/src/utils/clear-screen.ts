@@ -10,21 +10,22 @@ export function getClearScreenFunction(
 ): () => void {
   const isTTY = process.stdout.isTTY;
 
-  let isAnyConfigContainsClearScreen = arraify(rolldownOptions)
+  let isAnyOptionNotAllowingClearScreen = arraify(rolldownOptions)
     .map(
       (config) => {
         if (typeof config.watch === 'boolean') {
-          return config.watch ? true : false; // Default value for `watch.clearScreen` is `true`.
+          return config.watch ? true : false;
         }
 
+        // Default value for `watch.clearScreen` is `true`.
         return config.watch?.clearScreen ?? true;
       },
     )
     .some(
-      (clearScreen) => clearScreen === true,
+      (clearScreen) => clearScreen === false,
     );
 
-  const shouldClearScreen = isTTY && isAnyConfigContainsClearScreen;
+  const shouldClearScreen = isTTY && !isAnyOptionNotAllowingClearScreen;
 
   if (!shouldClearScreen) {
     return noop;

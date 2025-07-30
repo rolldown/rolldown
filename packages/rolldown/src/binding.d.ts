@@ -1695,6 +1695,10 @@ export interface BindingMatchGroup {
 export interface BindingMinifyOptions {
   mangle?: boolean
   compress?: boolean
+  dropConsole?: boolean
+  dropDebugger?: boolean
+  joinVars?: boolean
+  sequences?: boolean
   removeWhitespace?: boolean
 }
 

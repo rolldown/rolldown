@@ -57,6 +57,10 @@ impl From<RawMinifyOptions> for MinifyOptions {
           Self::Enabled(MinifyOptionsObject {
             mangle: true,
             compress: true,
+            drop_console: true,
+            drop_debugger: true,
+            join_vars: true,
+            sequences: true,
             remove_whitespace: true,
           })
         } else {
@@ -66,6 +70,10 @@ impl From<RawMinifyOptions> for MinifyOptions {
       RawMinifyOptions::DeadCodeEliminationOnly => Self::Enabled(MinifyOptionsObject {
         mangle: false,
         compress: false,
+        drop_console: false,
+        drop_debugger: false,
+        join_vars: false,
+        sequences: false,
         remove_whitespace: false,
       }),
       RawMinifyOptions::Object(value) => Self::Enabled(value),
@@ -83,6 +91,10 @@ impl From<RawMinifyOptions> for MinifyOptions {
 pub struct MinifyOptionsObject {
   pub mangle: bool,
   pub compress: bool,
+  pub drop_console: bool,
+  pub drop_debugger: bool,
+  pub join_vars: bool,
+  pub sequences: bool,
   pub remove_whitespace: bool,
 }
 impl MinifyOptionsObject {
@@ -102,6 +114,10 @@ impl MinifyOptionsObject {
         target: option.transform_options.es_target,
         keep_names: CompressOptionsKeepNames { function: keep_names, class: keep_names },
         treeshake: TreeShakeOptions::from(&option.treeshake),
+        drop_console: self.drop_console,
+        drop_debugger: self.drop_debugger,
+        join_vars: self.join_vars,
+        sequences: self.sequences,
         ..CompressOptions::smallest()
       })
       .filter(|_| self.compress),

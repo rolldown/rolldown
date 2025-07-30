@@ -1,31 +1,38 @@
 use std::sync::Arc;
 
-use rolldown_common::OutputFormat;
 use rolldown_utils::url::clean_url;
 
 use crate::{
+  ToOutputFilePathInJSEnv,
   constants::ViteMetadata,
+  encode_uri_path,
+  to_output_file_path_in_js::{AssetUrlResult, RenderBuiltUrl, RenderBuiltUrlConfig},
   to_relative_runtime_path::create_to_import_meta_url_based_relative_runtime,
 };
 
+pub struct RenderAssetUrlInJsEnvConfig<'a> {
+  pub is_ssr: bool,
+  pub is_worker: bool,
+  pub base: &'a str,
+  pub decoded_base: &'a str,
+  pub render_built_url: Option<&'a RenderBuiltUrl>,
+}
+
 pub struct RenderAssetUrlInJsEnv<'a> {
-  format: OutputFormat,
-  is_worker: bool,
-  code: &'a str,
-  ctx: &'a rolldown_plugin::PluginContext,
+  pub code: &'a str,
+  pub chunk_filename: &'a str,
+  pub config: RenderAssetUrlInJsEnvConfig<'a>,
+  pub ctx: &'a rolldown_plugin::PluginContext,
 }
 
 impl RenderAssetUrlInJsEnv<'_> {
-  pub fn render_asset_url_in_js(&self) -> anyhow::Result<Option<String>> {
+  pub async fn render_asset_url_in_js(&self) -> anyhow::Result<Option<String>> {
     // __VITE_ASSET__ -> 14 && __VITE_ASSET_PUBLIC__ -> 21
     let mut vite_asset_iter = self.code.match_indices("__VITE_ASSET_").peekable();
 
     if vite_asset_iter.peek().is_none() {
       return Ok(None);
     }
-
-    let _to_relative_runtime =
-      create_to_import_meta_url_based_relative_runtime(self.format, self.is_worker);
 
     let mut last = 0;
     let mut code = None;
@@ -65,7 +72,37 @@ impl RenderAssetUrlInJsEnv<'_> {
           file.to_string()
         };
 
-        (end, filename)
+        let env = ToOutputFilePathInJSEnv {
+          base: self.config.base,
+          decoded_base: self.config.decoded_base,
+          render_built_url: self.config.render_built_url,
+          render_built_url_config: RenderBuiltUrlConfig {
+            is_ssr: self.config.is_ssr,
+            r#type: "asset",
+            host_id: self.chunk_filename,
+            host_type: "js",
+          },
+        };
+
+        let result = env
+          .to_output_file_path_in_js(
+            &filename,
+            create_to_import_meta_url_based_relative_runtime(
+              self.ctx.options().format,
+              self.config.is_worker,
+            ),
+          )
+          .await?;
+
+        let replacement = match result {
+          AssetUrlResult::WithRuntime(v) => rolldown_utils::concat_string!("\"+", v, "+\""),
+          AssetUrlResult::WithoutRuntime(v) => {
+            let string = serde_json::to_string(&encode_uri_path(v))?;
+            string[1..string.len() - 1].to_string()
+          }
+        };
+
+        (end, replacement)
       } else if self.code[start + 13..].starts_with("PUBLIC__") {
         todo!()
       } else {

@@ -3040,6 +3040,7 @@ dependencies = [
  "rolldown_common",
  "rolldown_plugin",
  "rolldown_utils",
+ "serde_json",
  "sugar_path",
 ]
 

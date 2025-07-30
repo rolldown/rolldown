@@ -1343,11 +1343,15 @@ export interface BindingAliasPluginConfig {
 
 export interface BindingAssetPluginConfig {
   isLib?: boolean
+  isSsr?: boolean
+  isWorker?: boolean
   urlBase?: string
   publicDir?: string
+  decodedBase?: string
   isSkipAssets?: boolean
   assetsInclude?: Array<BindingStringOrRegex>
   assetInlineLimit?: number
+  renderBuiltUrl?: (filename: string, type: BindingRenderBuiltUrlConfig) => MaybePromise<VoidNullable<string | BindingRenderBuiltUrlRet>>
 }
 
 export interface BindingAssetSource {
@@ -1857,6 +1861,18 @@ export interface BindingPreRenderedAsset {
 export type BindingPreserveEntrySignatures =
   | { type: 'Bool', field0: boolean }
   | { type: 'String', field0: string }
+
+export interface BindingRenderBuiltUrlConfig {
+  ssr: boolean
+  type: 'asset' | 'public'
+  hostId: string
+  hostType: 'js' | 'css' | 'html'
+}
+
+export interface BindingRenderBuiltUrlRet {
+  relative?: boolean
+  runtime?: string
+}
 
 export interface BindingReplacePluginConfig {
   values: Record<string, string>

@@ -2,20 +2,28 @@ mod utils;
 
 use std::{borrow::Cow, sync::Arc};
 
+use derive_more::Debug;
 use rolldown_common::{ModuleType, Output, side_effects::HookSideEffects};
 use rolldown_plugin::{HookUsage, Plugin};
 use rolldown_plugin_utils::{
-  AssetCache, FileToUrlEnv, PublicAssetUrlCache, check_public_file, find_special_query,
+  AssetCache, FileToUrlEnv, PublicAssetUrlCache, RenderAssetUrlInJsEnv,
+  RenderAssetUrlInJsEnvConfig, RenderBuiltUrl, check_public_file, find_special_query,
 };
 use rolldown_utils::{dashmap::FxDashSet, pattern_filter::StringOrRegex, url::clean_url};
 use serde_json::Value;
 
+#[allow(clippy::struct_excessive_bools)]
 #[derive(Debug, Default)]
 pub struct AssetPlugin {
   pub is_lib: bool,
+  pub is_ssr: bool,
+  pub is_worker: bool,
+  pub is_skip_assets: bool,
   pub url_base: String,
   pub public_dir: String,
-  pub is_skip_assets: bool,
+  pub decoded_base: String,
+  #[debug(skip)]
+  pub render_built_url: Option<Arc<RenderBuiltUrl>>,
   pub assets_include: Vec<StringOrRegex>,
   pub asset_inline_limit: usize,
   pub handled_asset_ids: FxDashSet<String>,
@@ -27,7 +35,11 @@ impl Plugin for AssetPlugin {
   }
 
   fn register_hook_usage(&self) -> HookUsage {
-    HookUsage::BuildStart | HookUsage::ResolveId | HookUsage::Load | HookUsage::GenerateBundle
+    HookUsage::BuildStart
+      | HookUsage::ResolveId
+      | HookUsage::Load
+      | HookUsage::RenderChunk
+      | HookUsage::GenerateBundle
   }
 
   async fn build_start(
@@ -92,7 +104,6 @@ impl Plugin for AssetPlugin {
       ctx,
       root: ctx.cwd(),
       is_lib: self.is_lib,
-      url_base: &self.url_base,
       public_dir: &self.public_dir,
       asset_inline_limit: self.asset_inline_limit,
     };
@@ -111,6 +122,33 @@ impl Plugin for AssetPlugin {
       module_type: Some(ModuleType::Js),
       ..Default::default()
     }))
+  }
+
+  async fn render_chunk(
+    &self,
+    ctx: &rolldown_plugin::PluginContext,
+    args: &rolldown_plugin::HookRenderChunkArgs<'_>,
+  ) -> rolldown_plugin::HookRenderChunkReturn {
+    let env = RenderAssetUrlInJsEnv {
+      ctx,
+      code: &args.code,
+      chunk_filename: &args.chunk.filename,
+      config: RenderAssetUrlInJsEnvConfig {
+        is_ssr: self.is_ssr,
+        is_worker: self.is_worker,
+        url_base: &self.url_base,
+        decoded_base: &self.decoded_base,
+        render_built_url: self.render_built_url.as_deref(),
+      },
+    };
+
+    // TODO: consider using `MagicString` later
+    Ok(
+      env
+        .render_asset_url_in_js()
+        .await?
+        .map(|code| rolldown_plugin::HookRenderChunkOutput { code, map: None }),
+    )
   }
 
   async fn generate_bundle(

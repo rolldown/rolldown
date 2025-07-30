@@ -10,7 +10,7 @@ For those interested in the details, we have written a deeper analysis on [why b
 
 ## Why Rolldown
 
-Rolldown is primary designed to serve as the underlying bundler in [Vite](https://vite.dev/), with the goal to replace [esbuild](https://esbuild.github.io/) and [Rollup](https://rollupjs.org/) (which are currently used in Vite as dependencies) with one unified build tool. Here's why we are implementing a new bundler from the ground up:
+Rolldown is primarily designed to serve as the underlying bundler in [Vite](https://vite.dev/), with the goal to replace [esbuild](https://esbuild.github.io/) and [Rollup](https://rollupjs.org/) (which are currently used in Vite as dependencies) with one unified build tool. Here's why we are implementing a new bundler from the ground up:
 
 - **Performance**: Rolldown is written in Rust. It is on the same performance level with esbuild and [10~30 times faster than Rollup](https://github.com/rolldown/benchmarks). Its WASM build is also [significantly faster than esbuild's](https://x.com/youyuxi/status/1869608132386922720) (due to Go's sub-optimal WASM compilation).
 

@@ -398,7 +398,7 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
     if matches!(rec.kind, ImportKind::Import)
       && ENABLED_CJS_NAMESPACE_MERGING_MODULE_REQUEST.contains(&module_request)
     {
-      rec.meta.insert(ImportRecordMeta::SAFELY_MERGE_CJS_NS);
+      rec.meta.insert(ImportRecordMeta::SafelyMergeCjsNs);
     }
 
     let id = self.result.import_records.push(rec);
@@ -573,7 +573,7 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
       ImportKind::Import,
       decl.source.span(),
       if decl.source.span().is_empty() {
-        ImportRecordMeta::IS_UNSPANNED_IMPORT
+        ImportRecordMeta::IsUnspannedImport
       } else {
         ImportRecordMeta::empty()
       },
@@ -583,7 +583,7 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
       self.add_star_re_export(exported.name().as_str(), id, decl.span);
     } else {
       // export * from '...'
-      self.result.import_records[id].meta.insert(ImportRecordMeta::IS_EXPORT_STAR);
+      self.result.import_records[id].meta.insert(ImportRecordMeta::IsExportStar);
       self.result.ecma_view_meta.insert(EcmaViewMeta::HasStarExport);
     }
     self.result.imports.insert(decl.span, id);
@@ -596,7 +596,7 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
         ImportKind::Import,
         source.span(),
         if source.span().is_empty() {
-          ImportRecordMeta::IS_UNSPANNED_IMPORT
+          ImportRecordMeta::IsUnspannedImport
         } else {
           ImportRecordMeta::empty()
         },
@@ -612,7 +612,7 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
       self.result.imports.insert(decl.span, record_id);
       // `export {} from '...'`
       if decl.specifiers.is_empty() {
-        self.result.import_records[record_id].meta.insert(ImportRecordMeta::IS_PLAIN_IMPORT);
+        self.result.import_records[record_id].meta.insert(ImportRecordMeta::IsPlainImport);
       }
     } else {
       decl.specifiers.iter().for_each(|spec| {
@@ -699,7 +699,7 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
       ImportKind::Import,
       decl.source.span(),
       if decl.source.span().is_empty() {
-        ImportRecordMeta::IS_UNSPANNED_IMPORT
+        ImportRecordMeta::IsUnspannedImport
       } else {
         ImportRecordMeta::empty()
       },
@@ -707,7 +707,7 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
     self.result.imports.insert(decl.span, rec_id);
     // // `import '...'` or `import {} from '...'`
     if decl.specifiers.as_ref().is_none_or(|s| s.is_empty()) {
-      self.result.import_records[rec_id].meta.insert(ImportRecordMeta::IS_PLAIN_IMPORT);
+      self.result.import_records[rec_id].meta.insert(ImportRecordMeta::IsPlainImport);
     }
 
     let Some(specifiers) = &decl.specifiers else { return };

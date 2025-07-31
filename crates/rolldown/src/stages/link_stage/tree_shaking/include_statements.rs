@@ -159,7 +159,7 @@ impl LinkStage<'_> {
       let module = self.module_table[mi].as_normal_mut().expect("should be a normal module");
       for record_idx in record_idxs {
         let rec = &mut module.import_records[record_idx];
-        rec.meta.insert(ImportRecordMeta::DEAD_DYNAMIC_IMPORT);
+        rec.meta.insert(ImportRecordMeta::DeadDynamicImport);
       }
     }
 
@@ -344,7 +344,7 @@ impl LinkStage<'_> {
                 self.module_table[import_record.resolved_module].side_effects().has_side_effects();
 
               let ret = !importee_side_effects
-                && import_record.meta.contains(ImportRecordMeta::TOP_LEVEL_PURE_DYNAMIC_IMPORT);
+                && import_record.meta.contains(ImportRecordMeta::TopLevelPureDynamicImport);
 
               // Only consider it is unused if it is a top level pure dynamic import and the
               // importee module has no side effects.

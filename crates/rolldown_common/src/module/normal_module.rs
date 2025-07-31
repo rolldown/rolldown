@@ -44,7 +44,7 @@ impl NormalModule {
           .ecma_view
           .import_records
           .iter()
-          .filter(|&rec| rec.meta.contains(ImportRecordMeta::IS_EXPORT_STAR))
+          .filter(|&rec| rec.meta.contains(ImportRecordMeta::IsExportStar))
           .map(|rec| rec.resolved_module),
       )
     } else {
@@ -95,7 +95,7 @@ impl NormalModule {
         if let Some(e) = raw_import_records {
           exports.extend(
             e.iter()
-              .filter(|&rec| rec.meta.contains(ImportRecordMeta::IS_EXPORT_STAR))
+              .filter(|&rec| rec.meta.contains(ImportRecordMeta::IsExportStar))
               .map(|_| Rstr::from("*")),
           );
         } else {
@@ -104,7 +104,7 @@ impl NormalModule {
               .ecma_view
               .import_records
               .iter()
-              .filter(|&rec| rec.meta.contains(ImportRecordMeta::IS_EXPORT_STAR))
+              .filter(|&rec| rec.meta.contains(ImportRecordMeta::IsExportStar))
               .map(|_| Rstr::from("*")),
           );
         }
@@ -148,7 +148,7 @@ impl NormalModule {
     modules: &'me IndexModules,
   ) -> impl Iterator<Item = ImportRecordIdx> + 'me {
     self.ecma_view.import_records.iter_enumerated().filter_map(move |(rec_id, rec)| {
-      if !rec.meta.contains(ImportRecordMeta::IS_EXPORT_STAR) {
+      if !rec.meta.contains(ImportRecordMeta::IsExportStar) {
         return None;
       }
       match modules[rec.resolved_module] {

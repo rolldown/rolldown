@@ -189,6 +189,7 @@ impl<'me, 'ast: 'me> Visit<'ast> for AstScanner<'me, 'ast> {
           let mut meta = ImportRecordMeta::empty();
           meta.set(ImportRecordMeta::IS_TOP_LEVEL, self.is_root_scope());
           meta.set(ImportRecordMeta::IS_UNSPANNED_IMPORT, expr.source.span().is_empty());
+          meta.set(ImportRecordMeta::IN_TRY_CATCH_BLOCK, self.in_side_try_catch_block());
           meta
         });
       self.init_dynamic_import_binding_usage_info(import_rec_idx);

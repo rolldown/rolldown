@@ -229,23 +229,23 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
           let cur_chunk_idx = self.ctx.chunk_graph.module_to_chunk[self.ctx.id]
             .expect("This module should be in a chunk");
           let is_symbol_in_other_chunk = cur_chunk_idx != chunk_idx_of_canonical_symbol;
-          
+
           // Additional check: if the symbol is from an external module, don't use cross-chunk logic
           // even if it has a chunk_id, because external modules should be directly referenced
           if is_symbol_in_other_chunk {
             let is_external = self.ctx.modules[canonical_ref.owner].is_external();
             if !is_external {
-            // In cjs output, we need convert the `import { foo } from 'foo'; console.log(foo);`;
-            // If `foo` is split into another chunk, we need to convert the code `console.log(foo);` to `console.log(require_xxxx.foo);`
-            // instead of keeping `console.log(foo)` as we did in esm output. The reason here is we need to keep live binding in cjs output.
+              // In cjs output, we need convert the `import { foo } from 'foo'; console.log(foo);`;
+              // If `foo` is split into another chunk, we need to convert the code `console.log(foo);` to `console.log(require_xxxx.foo);`
+              // instead of keeping `console.log(foo)` as we did in esm output. The reason here is we need to keep live binding in cjs output.
 
-            let exported_name = &self.ctx.chunk_graph.chunk_table[chunk_idx_of_canonical_symbol]
-              .exports_to_other_chunks[&canonical_ref][0];
+              let exported_name = &self.ctx.chunk_graph.chunk_table[chunk_idx_of_canonical_symbol]
+                .exports_to_other_chunks[&canonical_ref][0];
 
-            let require_binding = &self.ctx.chunk_graph.chunk_table[cur_chunk_idx]
-              .require_binding_names_for_other_chunks[&chunk_idx_of_canonical_symbol];
+              let require_binding = &self.ctx.chunk_graph.chunk_table[cur_chunk_idx]
+                .require_binding_names_for_other_chunks[&chunk_idx_of_canonical_symbol];
 
-            self.snippet.literal_prop_access_member_expr_expr(require_binding, exported_name)
+              self.snippet.literal_prop_access_member_expr_expr(require_binding, exported_name)
             } else {
               // External module case - use direct reference
               self.snippet.id_ref_expr(self.canonical_name_for(canonical_ref), SPAN)
@@ -261,9 +261,10 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
     if let Some(ns_alias) = namespace_alias {
       // Don't apply namespace alias transformation for external modules in CJS format
       // when using preserveModules, as they should be used directly with __toESM
-      let should_skip_namespace_alias = matches!(self.ctx.options.format, rolldown_common::OutputFormat::Cjs) 
-        && self.ctx.modules[canonical_ref.owner].is_external();
-        
+      let should_skip_namespace_alias =
+        matches!(self.ctx.options.format, rolldown_common::OutputFormat::Cjs)
+          && self.ctx.modules[canonical_ref.owner].is_external();
+
       if !optimize_namespace_alias_transform && !should_skip_namespace_alias {
         expr = ast::Expression::StaticMemberExpression(
           self.snippet.builder.alloc_static_member_expression(

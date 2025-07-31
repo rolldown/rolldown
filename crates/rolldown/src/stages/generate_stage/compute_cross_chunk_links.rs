@@ -196,7 +196,7 @@ impl GenerateStage<'_> {
             })
             .filter(|rec| {
               matches!(rec.kind, ImportKind::Import)
-                && !rec.meta.contains(ImportRecordMeta::IS_EXPORT_STAR)
+                && !rec.meta.contains(ImportRecordMeta::IsExportStar)
             })
             .filter_map(|rec| self.link_output.module_table[rec.resolved_module].as_external())
             .for_each(|importee| {

@@ -100,7 +100,7 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
         // ```js
         // import React from './node_modules/react/index.js';
         // ```
-        if rec.meta.contains(ImportRecordMeta::SAFELY_MERGE_CJS_NS)
+        if rec.meta.contains(ImportRecordMeta::SafelyMergeCjsNs)
           && self.ctx.linking_infos[self.ctx.module.idx].wrap_kind.is_none()
         {
           let chunk_idx = self.ctx.chunk_id;
@@ -694,7 +694,7 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
       if let Some(rec_id) = self.ctx.module.imports.get(&call_expr.span).copied() {
         let rec = &self.ctx.module.import_records[rec_id];
         // use `__require` instead of `require`
-        if rec.meta.contains(ImportRecordMeta::CALL_RUNTIME_REQUIRE) {
+        if rec.meta.contains(ImportRecordMeta::CallRuntimeRequire) {
           *call_expr.callee.get_inner_expression_mut() =
             self.finalized_expr_for_runtime_symbol("__require");
         }
@@ -763,7 +763,7 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
                   ));
 
                 if matches!(importee.exports_kind, ExportsKind::CommonJs)
-                  || rec.meta.contains(ImportRecordMeta::IS_REQUIRE_UNUSED)
+                  || rec.meta.contains(ImportRecordMeta::IsRequireUnused)
                 {
                   // `init_xxx()`
                   Some(wrap_ref_call_expr)
@@ -772,7 +772,7 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
                   let namespace_object_ref_expr =
                     self.finalized_expr_for_symbol_ref(importee.namespace_object_ref, false, false);
 
-                  let is_json_module = rec.meta.contains(ImportRecordMeta::JSON_MODULE);
+                  let is_json_module = rec.meta.contains(ImportRecordMeta::JsonModule);
 
                   // `__toCommonJS`
                   let to_commonjs_expr = self.finalized_expr_for_runtime_symbol("__toCommonJS");
@@ -831,7 +831,7 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
     let rec = &self.ctx.module.import_records[*rec_id];
     let importee_id = rec.resolved_module;
 
-    if rec.meta.contains(ImportRecordMeta::DEAD_DYNAMIC_IMPORT) {
+    if rec.meta.contains(ImportRecordMeta::DeadDynamicImport) {
       return Some(
         self
           .snippet

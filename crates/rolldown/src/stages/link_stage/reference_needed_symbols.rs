@@ -67,7 +67,7 @@ impl LinkStage<'_> {
                   stmt_info
                     .referenced_symbols
                     .push(self.runtime.resolve_symbol("__require").into());
-                  record_meta_pairs.push((*rec_id, ImportRecordMeta::CALL_RUNTIME_REQUIRE));
+                  record_meta_pairs.push((*rec_id, ImportRecordMeta::CallRuntimeRequire));
                 }
               }
             }
@@ -76,7 +76,7 @@ impl LinkStage<'_> {
                 // Make sure symbols from external modules are included and de_conflicted
                 match rec.kind {
                   ImportKind::Import => {
-                    let is_reexport_all = rec.meta.contains(ImportRecordMeta::IS_EXPORT_STAR);
+                    let is_reexport_all = rec.meta.contains(ImportRecordMeta::IsExportStar);
                     if is_reexport_all {
                       // export * from 'external' would be just removed. So it references nothing.
                       rec.namespace_ref.set_name(
@@ -88,7 +88,7 @@ impl LinkStage<'_> {
                       if matches!(
                         self.options.format,
                         OutputFormat::Cjs | OutputFormat::Iife | OutputFormat::Umd
-                      ) && !rec.meta.contains(ImportRecordMeta::IS_PLAIN_IMPORT)
+                      ) && !rec.meta.contains(ImportRecordMeta::IsPlainImport)
                       {
                         stmt_info.side_effect = true.into();
                         depended_runtime_helper_map
@@ -105,7 +105,7 @@ impl LinkStage<'_> {
 
                 match rec.kind {
                   ImportKind::Import => {
-                    let is_reexport_all = rec.meta.contains(ImportRecordMeta::IS_EXPORT_STAR);
+                    let is_reexport_all = rec.meta.contains(ImportRecordMeta::IsExportStar);
                     match importee_linking_info.wrap_kind {
                       WrapKind::None => {
                         // for case:
@@ -214,7 +214,7 @@ impl LinkStage<'_> {
                         .push(importee_linking_info.wrapper_ref.unwrap().into());
                       stmt_info.referenced_symbols.push(importee.namespace_object_ref.into());
 
-                      if !rec.meta.contains(ImportRecordMeta::IS_REQUIRE_UNUSED) {
+                      if !rec.meta.contains(ImportRecordMeta::IsRequireUnused) {
                         depended_runtime_helper_map
                           [RuntimeHelper::ToCommonJs.bits().trailing_zeros() as usize]
                           .push(stmt_info_idx);

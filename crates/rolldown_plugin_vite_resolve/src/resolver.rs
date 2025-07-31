@@ -94,13 +94,13 @@ impl Resolvers {
     let resolvers = (0..RESOLVER_COUNT)
       .map(|v| {
         Resolver::new(
-          base_resolver.clone_with_options(get_resolve_options(base_options, v.into())),
+          &base_resolver,
+          base_options,
+          v.into(),
+          external_conditions,
           base_options.tsconfig_paths.then(|| Arc::clone(&tsconfig_resolver)),
           Arc::clone(&builtin_checker),
           Arc::clone(&package_json_cache),
-          base_options.root.to_owned(),
-          base_options.try_prefix.to_owned(),
-          external_conditions.clone(),
         )
       })
       .collect::<Vec<_>>()
@@ -108,16 +108,13 @@ impl Resolvers {
       .unwrap();
 
     let external_resolver = Resolver::new(
-      base_resolver.clone_with_options(get_resolve_options(
-        &BaseOptions { is_production: false, conditions: external_conditions, ..*base_options },
-        AdditionalOptions { is_require: false, prefer_relative: false },
-      )),
+      &base_resolver,
+      &BaseOptions { is_production: false, conditions: external_conditions, ..*base_options },
+      AdditionalOptions { is_require: false, prefer_relative: false },
+      external_conditions,
       base_options.tsconfig_paths.then(|| Arc::clone(&tsconfig_resolver)),
       Arc::clone(&builtin_checker),
       Arc::clone(&package_json_cache),
-      base_options.root.to_owned(),
-      base_options.try_prefix.to_owned(),
-      external_conditions.clone(),
     );
 
     Self { resolvers, external_resolver: Arc::new(external_resolver), tsconfig_resolver }
@@ -153,7 +150,11 @@ fn get_resolve_options(
     } else {
       vec![]
     },
-    condition_names: get_conditions(base_options, &additional_options),
+    condition_names: get_conditions(
+      base_options.conditions,
+      base_options.is_production,
+      &additional_options,
+    ),
     extensions,
     extension_alias: vec![
       (".js".to_string(), vec![".ts".to_string(), ".tsx".to_string(), ".js".to_string()]),
@@ -179,15 +180,15 @@ fn get_resolve_options(
 }
 
 fn get_conditions(
-  base_options: &BaseOptions,
+  condition_names: &[String],
+  is_production: bool,
   additional_options: &AdditionalOptions,
 ) -> Vec<String> {
-  let mut conditions = base_options
-    .conditions
+  let mut conditions = condition_names
     .iter()
     .map(|c| {
       if c == DEV_PROD_CONDITION {
-        if base_options.is_production { "production" } else { "development" }
+        if is_production { "production" } else { "development" }
       } else {
         c
       }
@@ -227,16 +228,20 @@ pub struct Resolver {
 
 impl Resolver {
   pub fn new(
-    inner: oxc_resolver::Resolver,
+    base_resolver: &oxc_resolver::Resolver,
+    base_options: &BaseOptions,
+    additional_options: AdditionalOptions,
+    external_conditions: &[String],
     tsconfig_resolver: Option<Arc<TsconfigResolver>>,
     built_in_checker: Arc<BuiltinChecker>,
     package_json_cache: Arc<PackageJsonCache>,
-    root: String,
-    try_prefix: Option<String>,
-    external_conditions: Vec<String>,
   ) -> Self {
+    let external_condition_names =
+      get_conditions(external_conditions, base_options.is_production, &additional_options);
+    let inner =
+      base_resolver.clone_with_options(get_resolve_options(base_options, additional_options));
     let inner_for_external = inner.clone_with_options(ResolveOptions {
-      condition_names: external_conditions,
+      condition_names: external_condition_names,
       ..inner.options().clone()
     });
     Self {
@@ -245,8 +250,8 @@ impl Resolver {
       tsconfig_resolver,
       built_in_checker,
       package_json_cache,
-      root,
-      try_prefix,
+      root: base_options.root.to_owned(),
+      try_prefix: base_options.try_prefix.clone(),
     }
   }
 

@@ -1,7 +1,6 @@
 {
   "recommendations": [
     "editorconfig.editorconfig",
-    "streetsidesoftware.code-spell-checker",
     "rust-lang.rust-analyzer",
     "dprint.dprint"
   ]

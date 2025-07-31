@@ -7,17 +7,9 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```js
 //#region class.js
-var Keep1 = class {
-	*[Symbol.iterator]() {}
-	[keep];
-};
-var Keep2 = class {
-	[keep];
-	*[Symbol.iterator]() {}
-};
-var Keep3 = class {
-	*[Symbol.wtf]() {}
-};
+Symbol.iterator, keep;
+keep, Symbol.iterator;
+Symbol.wtf;
 
 //#endregion
 ```

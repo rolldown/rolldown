@@ -302,8 +302,8 @@ impl PluginDriver {
     if let Some(mut map) = map {
       // If sourcemap  hasn't `sources`, using original id to fill it.
       let source = map.get_source(0);
-      if source.is_none_or(str::is_empty)
-        || (map.get_sources().count() == 1 && (source != Some(id)))
+      if source.is_none_or(|s| s.is_empty())
+        || (map.get_sources().count() == 1 && (source.map(AsRef::as_ref) != Some(id)))
       {
         map.set_sources(vec![id]);
       }

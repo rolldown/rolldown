@@ -273,8 +273,6 @@ d;
 ## hoist-use-strict.js
 
 ```js
-
-
 //#region hoist-use-strict.js
 b;
 

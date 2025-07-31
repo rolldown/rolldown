@@ -1,4 +1,5 @@
 use indexmap::map::Entry;
+use oxc::span::CompactStr;
 use oxc::{
   allocator::TakeIn,
   ast::ast::{self, Expression},
@@ -11,7 +12,6 @@ use rolldown_common::{
   TaggedSymbolRef, WrapKind,
 };
 use rolldown_ecmascript_utils::AstSnippet;
-use rolldown_rstr::{Rstr, ToRstr};
 use rolldown_utils::{
   ecmascript::legitimize_identifier_name,
   indexmap::FxIndexMap,
@@ -112,7 +112,7 @@ fn json_object_expr_to_esm(link_staged: &mut LinkStage, module_idx: ModuleIdx) -
 
   let ecma_ast = link_staged.ast_table[module_idx].as_mut().unwrap();
   // (local, exported, legal_ident)
-  let mut declaration_binding_names: Vec<(Rstr, Rstr, bool)> = vec![];
+  let mut declaration_binding_names: Vec<(CompactStr, CompactStr, bool)> = vec![];
   let transformed = ecma_ast.program.with_mut(|fields| {
     let mut index_map = FxIndexMap::default();
     let snippet = AstSnippet::new(fields.allocator);
@@ -145,11 +145,11 @@ fn json_object_expr_to_esm(link_staged: &mut LinkStage, module_idx: ModuleIdx) -
           if key.is_empty() {
             continue;
           }
-          let legitimized_ident = legitimize_identifier_name(&key).to_rstr();
+          let legitimized_ident = CompactStr::new(&legitimize_identifier_name(&key));
           let is_legal_ident = legitimized_ident.as_str() == key;
           declaration_binding_names.push((
             legitimized_ident.clone(),
-            key.to_rstr(),
+            CompactStr::new(&key),
             is_legal_ident,
           ));
 

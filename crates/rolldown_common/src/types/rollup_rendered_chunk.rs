@@ -1,5 +1,5 @@
 use arcstr::ArcStr;
-use rolldown_rstr::Rstr;
+use oxc::span::CompactStr;
 
 use crate::ModuleId;
 
@@ -14,7 +14,7 @@ pub struct RollupRenderedChunk {
   pub is_dynamic_entry: bool,
   pub facade_module_id: Option<ModuleId>,
   pub module_ids: Vec<ModuleId>,
-  pub exports: Vec<Rstr>,
+  pub exports: Vec<CompactStr>,
   // RenderedChunk
   pub filename: ArcStr,
   pub modules: Modules,

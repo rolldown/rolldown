@@ -5,13 +5,13 @@ use super::GenerateStage;
 use crate::chunk_graph::ChunkGraph;
 use crate::utils::chunk::normalize_preserve_entry_signature;
 use itertools::{Itertools, multizip};
+use oxc::span::CompactStr;
 use oxc_index::{IndexVec, index_vec};
 use rolldown_common::{
   ChunkIdx, ChunkKind, ChunkMeta, CrossChunkImportItem, EntryPointKind, ExportsKind, ImportKind,
   ImportRecordMeta, Module, ModuleIdx, NamedImport, OutputFormat, PreserveEntrySignatures,
   RUNTIME_HELPER_NAMES, SymbolRef, WrapKind,
 };
-use rolldown_rstr::{Rstr, ToRstr};
 use rolldown_utils::concat_string;
 use rolldown_utils::hash_placeholder::to_base64;
 use rolldown_utils::indexmap::FxIndexSet;
@@ -24,7 +24,7 @@ type IndexChunkDependedSymbols = IndexVec<ChunkIdx, FxIndexSet<SymbolRef>>;
 type IndexChunkImportsFromExternalModules =
   IndexVec<ChunkIdx, FxHashMap<ModuleIdx, Vec<NamedImport>>>;
 type IndexChunkAllImportsFromExternalModules = IndexVec<ChunkIdx, FxIndexSet<ModuleIdx>>;
-type IndexChunkExportedSymbols = IndexVec<ChunkIdx, FxHashMap<SymbolRef, Vec<Rstr>>>;
+type IndexChunkExportedSymbols = IndexVec<ChunkIdx, FxHashMap<SymbolRef, Vec<CompactStr>>>;
 type IndexCrossChunkImports = IndexVec<ChunkIdx, FxHashSet<ChunkIdx>>;
 type IndexCrossChunkDynamicImports = IndexVec<ChunkIdx, FxIndexSet<ChunkIdx>>;
 type IndexImportsFromOtherChunks =
@@ -37,7 +37,7 @@ impl GenerateStage<'_> {
     let mut index_chunk_depended_symbols: IndexChunkDependedSymbols =
       index_vec![FxIndexSet::<SymbolRef>::default(); chunk_graph.chunk_table.len()];
     let mut index_chunk_exported_symbols: IndexChunkExportedSymbols =
-      index_vec![FxHashMap::<SymbolRef, Vec<Rstr>>::default(); chunk_graph.chunk_table.len()];
+      index_vec![FxHashMap::<SymbolRef, Vec<CompactStr>>::default(); chunk_graph.chunk_table.len()];
     let mut index_chunk_direct_imports_from_external_modules: IndexChunkImportsFromExternalModules =
       index_vec![FxHashMap::<ModuleIdx, Vec<NamedImport>>::default(); chunk_graph.chunk_table.len()];
     // Used for cjs,umd,iife only
@@ -515,10 +515,10 @@ impl GenerateStage<'_> {
             continue;
           }
 
-          let mut export_name: Rstr;
+          let mut export_name: CompactStr;
           loop {
             named_index += 1;
-            export_name = to_base64(named_index).into();
+            export_name = CompactStr::new(&to_base64(named_index));
             if export_name.starts_with('1') {
               named_index += 9 * 64u32.pow(u32::try_from(export_name.len() - 1).unwrap());
               continue;
@@ -543,8 +543,8 @@ impl GenerateStage<'_> {
           Reverse::<u32>(self.link_output.module_table[symbol_ref.owner].exec_order())
         })
       {
-        let original_name: rolldown_rstr::Rstr = match predefined_names.as_slice() {
-          [] => chunk_export.name(&self.link_output.symbol_db).to_rstr(),
+        let original_name: CompactStr = match predefined_names.as_slice() {
+          [] => CompactStr::new(chunk_export.name(&self.link_output.symbol_db)),
           lst => {
             for item in lst {
               name_count.insert(Cow::Borrowed(item), 0);
@@ -570,14 +570,16 @@ impl GenerateStage<'_> {
           original_name.clone()
         };
         loop {
-          let key: Cow<'_, Rstr> = Cow::Owned(candidate_name.clone());
+          let key: Cow<'_, CompactStr> = Cow::Owned(candidate_name.clone());
           match name_count.entry(key) {
             std::collections::hash_map::Entry::Occupied(mut occ) => {
               let next_conflict_index = *occ.get() + 1;
               *occ.get_mut() = next_conflict_index;
-              candidate_name =
-                concat_string!(original_name, "$", itoa::Buffer::new().format(next_conflict_index))
-                  .into();
+              candidate_name = CompactStr::new(&concat_string!(
+                original_name,
+                "$",
+                itoa::Buffer::new().format(next_conflict_index)
+              ));
             }
             std::collections::hash_map::Entry::Vacant(vac) => {
               vac.insert(0);

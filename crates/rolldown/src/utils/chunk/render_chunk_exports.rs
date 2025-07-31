@@ -2,11 +2,11 @@ use std::borrow::Cow;
 use std::fmt::Write as _;
 
 use itertools::Itertools;
+use oxc::span::CompactStr;
 use rolldown_common::{
   Chunk, ChunkKind, ExportsKind, IndexModules, ModuleIdx, NormalizedBundlerOptions, OutputExports,
   OutputFormat, SymbolRef, SymbolRefDb, WrapKind,
 };
-use rolldown_rstr::Rstr;
 use rolldown_utils::{
   concat_string,
   ecmascript::{property_access_str, to_module_import_export_name},
@@ -88,7 +88,7 @@ pub fn render_chunk_exports(
   export_mode: Option<&OutputExports>,
 ) -> Option<String> {
   let GenerateContext { chunk, link_output, options, .. } = ctx;
-  let export_items: Vec<(Rstr, SymbolRef)> = ctx.render_export_items_index_vec[ctx.chunk_idx]
+  let export_items: Vec<(CompactStr, SymbolRef)> = ctx.render_export_items_index_vec[ctx.chunk_idx]
     .clone()
     .into_iter()
     .flat_map(|(symbol_ref, names)| names.into_iter().map(|name| (name, symbol_ref)).collect_vec())
@@ -279,7 +279,7 @@ pub fn render_object_define_property(key: &str, value: &str) -> String {
   )
 }
 
-pub fn get_export_items(chunk: &Chunk) -> Vec<(Rstr, SymbolRef)> {
+pub fn get_export_items(chunk: &Chunk) -> Vec<(CompactStr, SymbolRef)> {
   let mut export_items = chunk
     .exports_to_other_chunks
     .iter()
@@ -293,23 +293,23 @@ pub fn get_export_items(chunk: &Chunk) -> Vec<(Rstr, SymbolRef)> {
   export_items
 }
 
-pub fn get_chunk_export_names(chunk: &Chunk, graph: &LinkStageOutput) -> Vec<Rstr> {
+pub fn get_chunk_export_names(chunk: &Chunk, graph: &LinkStageOutput) -> Vec<CompactStr> {
   if let ChunkKind::EntryPoint { module: entry_id, .. } = &chunk.kind {
     let entry_meta = &graph.metas[*entry_id];
     if matches!(entry_meta.wrap_kind, WrapKind::Cjs) {
-      return vec![Rstr::new("default")];
+      return vec![CompactStr::new("default")];
     }
   }
 
   get_export_items(chunk).into_iter().map(|(exported_name, _)| exported_name).collect::<Vec<_>>()
 }
 
-pub fn get_chunk_export_names_with_ctx(ctx: &GenerateContext<'_>) -> Vec<Rstr> {
+pub fn get_chunk_export_names_with_ctx(ctx: &GenerateContext<'_>) -> Vec<CompactStr> {
   let GenerateContext { chunk, link_output, render_export_items_index_vec, .. } = ctx;
   if let ChunkKind::EntryPoint { module: entry_id, .. } = &chunk.kind {
     let entry_meta = &link_output.metas[*entry_id];
     if matches!(entry_meta.wrap_kind, WrapKind::Cjs) {
-      return vec![Rstr::new("default")];
+      return vec![CompactStr::new("default")];
     }
   }
   render_export_items_index_vec[ctx.chunk_idx].values().flatten().cloned().collect::<Vec<_>>()

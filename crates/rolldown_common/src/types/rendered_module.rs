@@ -1,21 +1,21 @@
 use std::sync::Arc;
 
 use derive_more::derive::Debug;
-use rolldown_rstr::Rstr;
+use oxc::span::CompactStr;
 use rolldown_sourcemap::{Source, SourceJoiner};
 
 #[derive(Clone, Default, Debug)]
 #[debug("RenderedModule")]
 pub struct RenderedModule {
   inner_code: Option<Arc<[Box<dyn Source + Send + Sync>]>>,
-  pub rendered_exports: Vec<Rstr>,
+  pub rendered_exports: Vec<CompactStr>,
   pub exec_order: u32,
 }
 
 impl RenderedModule {
   pub fn new(
     sources: Option<Arc<[Box<dyn Source + Send + Sync>]>>,
-    rendered_exports: Vec<Rstr>,
+    rendered_exports: Vec<CompactStr>,
     exec_order: u32,
   ) -> Self {
     Self { inner_code: sources, rendered_exports, exec_order }

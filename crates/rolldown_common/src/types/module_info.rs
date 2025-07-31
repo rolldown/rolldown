@@ -1,5 +1,5 @@
 use arcstr::ArcStr;
-use rolldown_rstr::Rstr;
+use oxc::span::CompactStr;
 use rolldown_utils::indexmap::FxIndexSet;
 
 use crate::ModuleId;
@@ -13,5 +13,5 @@ pub struct ModuleInfo {
   pub dynamic_importers: FxIndexSet<ModuleId>,
   pub imported_ids: FxIndexSet<ModuleId>,
   pub dynamically_imported_ids: FxIndexSet<ModuleId>,
-  pub exports: Vec<Rstr>,
+  pub exports: Vec<CompactStr>,
 }

@@ -22,7 +22,7 @@ use rolldown_ecmascript_utils::{
 mod finalizer_context;
 mod impl_visit_mut;
 pub use finalizer_context::ScopeHoistingFinalizerContext;
-use rolldown_rstr::Rstr;
+use oxc::span::CompactStr;
 use rolldown_utils::ecmascript::is_validate_identifier_name;
 use rolldown_utils::indexmap::FxIndexSet;
 use rustc_hash::FxHashSet;
@@ -56,7 +56,7 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
     self.scope.is_unresolved(reference_id)
   }
 
-  pub fn canonical_name_for(&self, symbol: SymbolRef) -> &'me Rstr {
+  pub fn canonical_name_for(&self, symbol: SymbolRef) -> &'me CompactStr {
     self.ctx.symbol_db.canonical_name_for(symbol, self.ctx.canonical_names).unwrap_or_else(|| {
       panic!(
         "canonical name not found for {symbol:?}, original_name: {:?} in module {:?} when finalizing module {:?} in chunk {:?}",
@@ -68,7 +68,7 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
     })
   }
 
-  pub fn canonical_name_for_runtime(&self, name: &str) -> &Rstr {
+  pub fn canonical_name_for_runtime(&self, name: &str) -> &CompactStr {
     let sym_ref = self.ctx.runtime.resolve_symbol(name);
     self.canonical_name_for(sym_ref)
   }
@@ -629,10 +629,7 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
     }
   }
 
-  fn get_conflicted_info(
-    &self,
-    id: &BindingIdentifier<'ast>,
-  ) -> Option<(&str, &rolldown_rstr::Rstr)> {
+  fn get_conflicted_info(&self, id: &BindingIdentifier<'ast>) -> Option<(&str, &CompactStr)> {
     let symbol_id = id.symbol_id.get()?;
     let symbol_ref: SymbolRef = (self.ctx.id, symbol_id).into();
     let original_name = symbol_ref.name(self.ctx.symbol_db);
@@ -1232,13 +1229,13 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
     &self,
     symbol_binding_id: Option<&BindingIdentifier<'ast>>,
     name_binding_id: Option<&BindingIdentifier<'ast>>,
-  ) -> Option<(usize, Rstr, Rstr)> {
+  ) -> Option<(usize, CompactStr, CompactStr)> {
     if !self.ctx.options.keep_names {
       return None;
     }
     let (original_name, _) = self.get_conflicted_info(name_binding_id.as_ref()?)?;
     let (_, canonical_name) = self.get_conflicted_info(symbol_binding_id.as_ref()?)?;
-    let original_name: Rstr = original_name.into();
+    let original_name: CompactStr = CompactStr::new(original_name);
     let new_name = canonical_name.clone();
     let insert_position = self.ctx.cur_stmt_index + 1;
     Some((insert_position, original_name, new_name))
@@ -1252,7 +1249,7 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
       return None;
     }
     let (original_name, _) = self.get_conflicted_info(id.as_ref()?)?;
-    let original_name: Rstr = original_name.into();
+    let original_name: CompactStr = CompactStr::new(original_name);
 
     let name_ref = self.canonical_ref_for_runtime("__name");
     let finalized_callee = self.finalized_expr_for_symbol_ref(name_ref, false, false);

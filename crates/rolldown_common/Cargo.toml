@@ -31,7 +31,6 @@ oxc_resolver = { workspace = true }
 rolldown_ecmascript = { workspace = true }
 rolldown_error = { workspace = true }
 rolldown_fs = { workspace = true }
-rolldown_rstr = { workspace = true }
 rolldown_sourcemap = { workspace = true }
 rolldown_std_utils = { workspace = true }
 rolldown_utils = { workspace = true }

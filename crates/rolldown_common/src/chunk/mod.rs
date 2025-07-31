@@ -12,7 +12,7 @@ pub mod chunk_table;
 pub mod types;
 
 use arcstr::ArcStr;
-use rolldown_rstr::Rstr;
+use oxc::span::CompactStr;
 use rolldown_std_utils::PathExt;
 use rolldown_utils::{
   BitSet,
@@ -53,7 +53,7 @@ pub struct Chunk {
   pub css_absolute_preliminary_filename: Option<String>,
   pub asset_preliminary_filenames: FxIndexMap<ModuleIdx, PreliminaryFilename>,
   pub asset_absolute_preliminary_filenames: FxIndexMap<ModuleIdx, String>,
-  pub canonical_names: FxHashMap<SymbolRef, Rstr>,
+  pub canonical_names: FxHashMap<SymbolRef, CompactStr>,
   // Sorted by Module#stable_id of modules in the chunk
   pub cross_chunk_imports: Vec<ChunkIdx>,
   pub cross_chunk_dynamic_imports: Vec<ChunkIdx>,
@@ -65,7 +65,7 @@ pub struct Chunk {
   /// Used for cjs, umd, iife
   /// The module directly imported symbol actually came from external modules.
   pub import_symbol_from_external_modules: FxIndexSet<ModuleIdx>,
-  pub exports_to_other_chunks: FxHashMap<SymbolRef, Vec<Rstr>>,
+  pub exports_to_other_chunks: FxHashMap<SymbolRef, Vec<CompactStr>>,
   pub input_base: ArcStr,
   pub create_reasons: Vec<String>,
   pub chunk_reason_type: Box<ChunkReasonType>,

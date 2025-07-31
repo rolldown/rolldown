@@ -3,7 +3,7 @@ use rolldown_common::{
   SharedFileEmitter, SymbolRef, SymbolRefDb,
 };
 
-use rolldown_rstr::Rstr;
+use oxc::span::CompactStr;
 use rustc_hash::FxHashMap;
 
 use crate::{
@@ -20,12 +20,12 @@ pub struct ScopeHoistingFinalizerContext<'me> {
   pub linking_info: &'me LinkingMetadata,
   pub linking_infos: &'me LinkingMetadataVec,
   pub symbol_db: &'me SymbolRefDb,
-  pub canonical_names: &'me FxHashMap<SymbolRef, Rstr>,
+  pub canonical_names: &'me FxHashMap<SymbolRef, CompactStr>,
   pub runtime: &'me RuntimeModuleBrief,
   pub chunk_graph: &'me ChunkGraph,
   pub options: &'me SharedOptions,
   pub cur_stmt_index: usize,
-  pub keep_name_statement_to_insert: Vec<(usize, Rstr, Rstr)>,
+  pub keep_name_statement_to_insert: Vec<(usize, CompactStr, CompactStr)>,
   pub file_emitter: &'me SharedFileEmitter,
   pub constant_value_map: &'me FxHashMap<SymbolRef, ConstExportMeta>,
   pub needs_hosted_top_level_binding: bool,

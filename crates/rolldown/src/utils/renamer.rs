@@ -1,9 +1,9 @@
 use oxc::semantic::ScopeId;
+use oxc::span::CompactStr;
 use oxc::syntax::keyword::{GLOBAL_OBJECTS, RESERVED_KEYWORDS};
 use rolldown_common::{
   AstScopes, ModuleIdx, ModuleScopeSymbolIdMap, NormalModule, OutputFormat, SymbolRef, SymbolRefDb,
 };
-use rolldown_rstr::{Rstr, ToRstr};
 use rolldown_utils::rustc_hash::FxHashMapExt;
 use rolldown_utils::{
   concat_string,
@@ -34,8 +34,8 @@ pub struct Renamer<'name> {
   ///                       // so we rename `a` to `a$2`
   /// ```
   ///
-  used_canonical_names: FxHashMap<Rstr, u32>,
-  canonical_names: FxHashMap<SymbolRef, Rstr>,
+  used_canonical_names: FxHashMap<CompactStr, u32>,
+  canonical_names: FxHashMap<SymbolRef, CompactStr>,
   symbol_db: &'name SymbolRefDb,
 }
 
@@ -56,18 +56,18 @@ impl<'name> Renamer<'name> {
         .iter()
         .chain(RESERVED_KEYWORDS.iter())
         .chain(GLOBAL_OBJECTS.iter())
-        .map(|s| (Rstr::new(s), 0))
+        .map(|s| (CompactStr::new(s), 0))
         .collect(),
     }
   }
 
-  pub fn reserve(&mut self, name: Rstr) {
+  pub fn reserve(&mut self, name: CompactStr) {
     self.used_canonical_names.insert(name, 0);
   }
 
   pub fn add_symbol_in_root_scope(&mut self, symbol_ref: SymbolRef) {
     let canonical_ref = symbol_ref.canonical_ref(self.symbol_db);
-    let original_name = canonical_ref.name(self.symbol_db).to_rstr();
+    let original_name = CompactStr::new(canonical_ref.name(self.symbol_db));
     match self.canonical_names.entry(canonical_ref) {
       Entry::Vacant(vacant) => {
         let mut candidate_name = original_name.clone();
@@ -95,7 +95,7 @@ impl<'name> Renamer<'name> {
   }
 
   pub fn create_conflictless_name(&mut self, hint: &str) -> String {
-    let mut conflictless_name = Rstr::new(hint);
+    let mut conflictless_name = CompactStr::new(hint);
     loop {
       match self.used_canonical_names.entry(conflictless_name.clone()) {
         Entry::Occupied(mut occ) => {
@@ -125,8 +125,8 @@ impl<'name> Renamer<'name> {
     fn rename_symbols_of_nested_scopes<'name>(
       module: &'name NormalModule,
       scope_id: ScopeId,
-      stack: &mut Vec<Cow<FxHashMap<Rstr, u32>>>,
-      canonical_names: &mut FxHashMap<SymbolRef, Rstr>,
+      stack: &mut Vec<Cow<FxHashMap<CompactStr, u32>>>,
+      canonical_names: &mut FxHashMap<SymbolRef, CompactStr>,
       ast_scope: &'name AstScopes,
       map: &ModuleScopeSymbolIdMap<'_>,
     ) {
@@ -150,7 +150,7 @@ impl<'name> Renamer<'name> {
                 Cow::Owned(concat_string!(&binding_name, "$", itoa::Buffer::new().format(count)));
               count += 1;
             } else {
-              let name = Rstr::from(candidate_name.as_ref());
+              let name = CompactStr::new(candidate_name.as_ref());
               used_canonical_names_for_this_scope.insert(name.clone(), 0);
               slot.insert(name);
               break;
@@ -212,7 +212,7 @@ impl<'name> Renamer<'name> {
   }
 
   #[inline]
-  pub fn into_canonical_names(self) -> FxHashMap<SymbolRef, Rstr> {
+  pub fn into_canonical_names(self) -> FxHashMap<SymbolRef, CompactStr> {
     self.canonical_names
   }
 }

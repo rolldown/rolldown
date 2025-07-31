@@ -1,6 +1,7 @@
 use std::{ops::Deref, sync::Arc};
 
 use futures::future::try_join_all;
+use oxc::span::CompactStr;
 use oxc_index::{IndexVec, index_vec};
 use rolldown_common::{
   Asset, ChunkIdx, EmittedChunkInfo, InstantiationKind, ModuleRenderArgs, ModuleRenderOutput,
@@ -8,7 +9,6 @@ use rolldown_common::{
 };
 use rolldown_debug::{action, trace_action, trace_action_enabled};
 use rolldown_error::{BuildDiagnostic, BuildResult};
-use rolldown_rstr::Rstr;
 use rolldown_utils::{
   indexmap::{FxIndexMap, FxIndexSet},
   rayon::{IntoParallelRefIterator, ParallelIterator},
@@ -152,7 +152,7 @@ impl GenerateStage<'_> {
       .chunks
       .iter()
       .map(|item| {
-        let mut map: FxIndexMap<SymbolRef, Vec<Rstr>> = FxIndexMap::default();
+        let mut map: FxIndexMap<SymbolRef, Vec<CompactStr>> = FxIndexMap::default();
         get_export_items(item).into_iter().for_each(|(k, v)| {
           map.entry(v).or_default().push(k);
         });

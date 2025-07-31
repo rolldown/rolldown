@@ -46,7 +46,6 @@ rolldown_plugin_chunk_import_map = { workspace = true }
 rolldown_plugin_data_uri = { workspace = true }
 rolldown_plugin_hmr = { workspace = true }
 rolldown_resolver = { workspace = true }
-rolldown_rstr = { workspace = true }
 rolldown_sourcemap = { workspace = true }
 rolldown_std_utils = { workspace = true }
 rolldown_tracing = { workspace = true }

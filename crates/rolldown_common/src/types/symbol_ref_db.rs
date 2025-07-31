@@ -1,8 +1,8 @@
 use std::ops::{Deref, DerefMut};
 
 use oxc::semantic::{ScopeId, Scoping, SymbolId};
+use oxc::span::CompactStr;
 use oxc_index::{Idx, IndexVec};
-use rolldown_rstr::Rstr;
 use rolldown_std_utils::OptionExt;
 use rustc_hash::FxHashMap;
 
@@ -209,8 +209,8 @@ impl SymbolRefDb {
   pub fn canonical_name_for<'name>(
     &self,
     refer: SymbolRef,
-    canonical_names: &'name FxHashMap<SymbolRef, Rstr>,
-  ) -> Option<&'name Rstr> {
+    canonical_names: &'name FxHashMap<SymbolRef, CompactStr>,
+  ) -> Option<&'name CompactStr> {
     let canonical_ref = self.canonical_ref_for(refer);
     canonical_names.get(&canonical_ref)
   }

@@ -17,7 +17,7 @@ use rolldown_common::{
   SymbolRefDb,
 };
 use rolldown_debug::{action, trace_action, trace_action_enabled};
-use rolldown_error::{BuildDiagnostic, BuildResult};
+use rolldown_error::{BuildDiagnostic, BuildResult, Severity};
 use rolldown_fs::{FileSystem, OsFileSystem};
 use rolldown_plugin::{
   __inner::SharedPluginable, HookBuildEndArgs, HookRenderErrorArgs, SharedPluginDriver,
@@ -139,6 +139,7 @@ impl Bundler {
     {
       Ok(v) => v,
       Err(errs) => {
+        debug_assert!(errs.iter().all(|e| e.severity() == Severity::Error));
         self
           .plugin_driver
           .build_end(Some(&HookBuildEndArgs { errors: &errs, cwd: &self.options.cwd }))
@@ -237,6 +238,7 @@ impl Bundler {
         .await; // Notice we don't use `?` to break the control flow here.
 
     if let Err(errors) = &bundle_output {
+      debug_assert!(errors.iter().all(|e| e.severity() == Severity::Error));
       self
         .plugin_driver
         .render_error(&HookRenderErrorArgs { errors, cwd: &self.options.cwd })

@@ -78,6 +78,10 @@ impl BuildDiagnostic {
     self.inner.exporter()
   }
 
+  pub fn severity(&self) -> Severity {
+    self.severity
+  }
+
   // --- private
 
   fn new_inner(inner: impl Into<Box<dyn BuildEvent>>) -> Self {

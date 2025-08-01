@@ -161,7 +161,9 @@ function bindingifyAssetFilenames(
   if (typeof assetFileNames === 'function') {
     return (asset) => {
       return assetFileNames({
+        name: asset.name,
         names: asset.names,
+        originalFileName: asset.originalFileName,
         originalFileNames: asset.originalFileNames,
         source: transformAssetSource(asset.source),
         type: 'asset',

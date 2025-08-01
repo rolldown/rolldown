@@ -22,10 +22,12 @@ export type AddonFunction = (chunk: RenderedChunk) => string | Promise<string>;
 export type ChunkFileNamesFunction = (chunkInfo: PreRenderedChunk) => string;
 
 export interface PreRenderedAsset {
+  type: 'asset';
+  name?: string;
   names: string[];
+  originalFileName?: string;
   originalFileNames: string[];
   source: string | Uint8Array;
-  type: 'asset';
 }
 
 export type AssetFileNamesFunction = (chunkInfo: PreRenderedAsset) => string;

@@ -14,4 +14,5 @@ pub type IndexChunks = IndexVec<ChunkIdx, Chunk>;
 
 pub type MemberExprRefResolutionMap = FxHashMap<Span, MemberExprRefResolution>;
 
+// Shared concurrent map for module info storage across multiple threads
 pub type SharedModuleInfoDashMap = Arc<FxDashMap<ArcStr, Arc<ModuleInfo>>>;

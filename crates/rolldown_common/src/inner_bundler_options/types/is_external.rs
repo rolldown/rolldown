@@ -13,6 +13,7 @@ type Inner = dyn Fn(
 
 #[derive(Clone, Default, Debug)]
 #[debug("IsExternal(...)")]
+// Shared async closure for determining if modules are external
 pub struct IsExternal(Option<Arc<Inner>>);
 
 impl IsExternal {

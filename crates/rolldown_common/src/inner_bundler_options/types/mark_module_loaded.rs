@@ -9,6 +9,7 @@ pub type MarkModuleLoadedFn = dyn Fn(&str, bool) -> Pin<Box<(dyn Future<Output =
 
 #[derive(Clone, Debug)]
 #[debug("MarkModuleLoadedFn::Fn(...)")]
+// Shared async callback for tracking module loading status
 pub struct MarkModuleLoaded(Arc<MarkModuleLoadedFn>);
 
 impl MarkModuleLoaded {

@@ -209,6 +209,7 @@ impl NormalModule {
           },
         );
         if !self.ecma_view.mutations.is_empty() {
+          // Source text: Arc<str> preserved for source map generation and mutations
           let original_code: Arc<str> = render_output.code.into();
           let mut magic_string = string_wizard::MagicString::new(&*original_code);
           for mutation in &self.ecma_view.mutations {
@@ -216,6 +217,7 @@ impl NormalModule {
           }
           let code = magic_string.to_string();
           let mutated_map = magic_string.source_map(SourceMapOptions {
+            // Source text: Arc<str> shared between source map and magic string for efficiency
             source: Arc::clone(&original_code),
             ..Default::default()
           });

@@ -11,9 +11,11 @@ pub type OnLogFn = dyn Fn(LogLevel, Log) -> Pin<Box<(dyn Future<Output = anyhow:
 
 #[derive(Clone, Debug)]
 #[debug("OnLogFn::Fn(...)")]
+// Shared async logging callback for handling log messages across threads
 pub struct OnLog(Arc<OnLogFn>);
 
 impl OnLog {
+  // Create wrapper for shared logging callback
   pub fn new(f: Arc<OnLogFn>) -> Self {
     Self(f)
   }

@@ -46,13 +46,16 @@ pub struct EmittedChunkInfo {
 
 #[derive(Debug)]
 pub struct FileEmitter {
+  // Shared async channel for communicating with module loader
   tx: Arc<Mutex<Option<tokio::sync::mpsc::Sender<ModuleLoaderMsg>>>>,
   source_hash_to_reference_id: FxDashMap<ArcStr, ArcStr>,
   names: FxDashMap<ArcStr, u32>,
   files: FxDashMap<ArcStr, OutputAsset>,
+  // Shared chunk data for efficient cross-thread access
   chunks: FxDashMap<ArcStr, Arc<EmittedChunk>>,
   base_reference_id: AtomicUsize,
   #[allow(dead_code)]
+  // Shared bundler options for configuration access
   options: Arc<NormalizedBundlerOptions>,
   /// Mark the files that have been emitted to bundle.
   emitted_files: FxDashSet<ArcStr>,
@@ -61,8 +64,10 @@ pub struct FileEmitter {
 }
 
 impl FileEmitter {
+  // Accept shared bundler options for file emission configuration
   pub fn new(options: Arc<NormalizedBundlerOptions>) -> Self {
     Self {
+      // Create shared async-safe channel for module loader communication
       tx: Arc::new(Mutex::new(None)),
       source_hash_to_reference_id: DashMap::default(),
       names: DashMap::default(),
@@ -82,6 +87,7 @@ impl FileEmitter {
     }
   }
 
+  // Accept shared chunk for emission while avoiding ownership transfer
   pub async fn emit_chunk(&self, chunk: Arc<EmittedChunk>) -> anyhow::Result<ArcStr> {
     let reference_id = self.assign_reference_id(chunk.name.clone());
     self
@@ -261,4 +267,5 @@ fn sort_names(names: &mut [String]) {
   });
 }
 
+// Shared file emitter type for concurrent access across build tasks
 pub type SharedFileEmitter = Arc<FileEmitter>;

@@ -22,6 +22,7 @@ use super::JsPlugin;
 #[cfg_attr(target_family = "wasm", allow(unused))]
 pub struct ParallelJsPlugin {
   plugins: Box<[JsPlugin]>,
+  // Shared worker manager for coordinating JavaScript plugin execution across threads
   worker_manager: Arc<WorkerManager>,
 }
 
@@ -29,6 +30,7 @@ pub struct ParallelJsPlugin {
 impl ParallelJsPlugin {
   pub fn new_boxed(
     plugins: Vec<BindingPluginOptions>,
+    // Accept shared worker manager for JavaScript plugin coordination
     worker_manager: Arc<WorkerManager>,
   ) -> Box<dyn Pluginable> {
     let plugins = plugins.into_iter().map(JsPlugin::new).collect::<Vec<_>>().into_boxed_slice();
@@ -37,9 +39,11 @@ impl ParallelJsPlugin {
 
   pub fn new_shared(
     plugins: Vec<BindingPluginOptions>,
+    // Accept shared worker manager for JavaScript plugin coordination
     worker_manager: Arc<WorkerManager>,
   ) -> Arc<dyn Pluginable> {
     let plugins = plugins.into_iter().map(JsPlugin::new).collect::<Vec<_>>().into_boxed_slice();
+    // Return shared parallel plugin for cross-thread usage
     Arc::new(Self { plugins, worker_manager })
   }
 

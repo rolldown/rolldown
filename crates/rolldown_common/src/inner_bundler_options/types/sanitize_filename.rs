@@ -13,6 +13,7 @@ pub enum SanitizeFilename {
   #[debug("SanitizeFileName::Boolean({})", "{0:?}")]
   Boolean(bool),
   #[debug("SanitizeFileName::Fn(...)")]
+  // Shared async function for custom filename sanitization
   Fn(Arc<SanitizeFileNameFunction>),
 }
 

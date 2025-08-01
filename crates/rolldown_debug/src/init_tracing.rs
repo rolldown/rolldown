@@ -1,7 +1,7 @@
 use std::str::FromStr;
-use std::sync::Arc;
 use std::sync::atomic::AtomicBool;
 
+use oxc::span::CompactStr;
 use tracing_subscriber::EnvFilter;
 use tracing_subscriber::fmt;
 use tracing_subscriber::prelude::*;
@@ -31,12 +31,12 @@ pub fn init_devtool_tracing() {
 
 #[derive(Debug, Clone)]
 pub struct DebugTracer {
-  session_id: Arc<str>,
+  session_id: CompactStr,
 }
 
 impl DebugTracer {
   #[must_use]
-  pub fn init(session_id: Arc<str>) -> Self {
+  pub fn init(session_id: CompactStr) -> Self {
     let tracer = Self { session_id };
     if IS_INITIALIZED.swap(true, std::sync::atomic::Ordering::SeqCst) {
       return tracer;
@@ -55,29 +55,29 @@ impl DebugTracer {
 
 impl Drop for DebugTracer {
   fn drop(&mut self) {
-    if let Some((_session_id, files)) = OPENED_FILES_BY_SESSION.remove(self.session_id.as_ref()) {
+    if let Some((_session_id, files)) = OPENED_FILES_BY_SESSION.remove(self.session_id.as_str()) {
       for file in files {
         OPENED_FILE_HANDLES.remove(&file);
       }
     }
-    EXIST_HASH_BY_SESSION.remove(self.session_id.as_ref());
+    EXIST_HASH_BY_SESSION.remove(self.session_id.as_str());
   }
 }
 
 #[derive(Debug, Clone)]
 
 pub struct Session {
-  pub id: Arc<str>,
+  pub id: CompactStr,
   pub span: tracing::Span,
 }
 
 impl Session {
-  pub fn new(id: Arc<str>, span: tracing::Span) -> Self {
+  pub fn new(id: CompactStr, span: tracing::Span) -> Self {
     Self { id, span }
   }
 
   pub fn dummy() -> Self {
-    let session_id = Arc::from("unknown_session");
+    let session_id = CompactStr::new("unknown_session");
     Self { id: session_id, span: tracing::Span::none() }
   }
 }

@@ -15,6 +15,7 @@ doctest = false
 [dependencies]
 blake3 = { workspace = true }
 dashmap = { workspace = true }
+oxc = { workspace = true }
 rolldown_debug_action = { workspace = true }
 rustc-hash = { workspace = true }
 serde = { workspace = true, features = ["derive", "rc"] }

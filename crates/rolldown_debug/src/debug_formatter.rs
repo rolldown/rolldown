@@ -1,9 +1,10 @@
 use std::{
   fs::OpenOptions,
   io::Write,
-  sync::Arc,
   time::{SystemTime, UNIX_EPOCH},
 };
+
+use oxc::span::CompactStr;
 
 use crate::{
   debug_data_propagate_layer::ContextData,
@@ -82,26 +83,26 @@ where
         .get("action")
         .is_some_and(|v| v == "SessionMeta");
 
-      let log_filename: Arc<str> = if is_session_meta {
-        format!(".rolldown/{session_id}/meta.json").into()
+      let log_filename: CompactStr = if is_session_meta {
+        CompactStr::new(&format!(".rolldown/{session_id}/meta.json"))
       } else {
-        format!(".rolldown/{session_id}/logs.json").into()
+        CompactStr::new(&format!(".rolldown/{session_id}/logs.json"))
       };
 
       if !OPENED_FILE_HANDLES.contains_key(&log_filename) {
         let file = OpenOptions::new()
           .create(true)
           .append(true)
-          .open(log_filename.as_ref())
+          .open(log_filename.as_str())
           .map_err(|_| std::fmt::Error)?;
         // Ensure for each file, we only have one unique file handle to prevent multiple writes.
-        OPENED_FILE_HANDLES.insert(Arc::clone(&log_filename), file);
+        OPENED_FILE_HANDLES.insert(log_filename.clone(), file);
       }
 
       OPENED_FILES_BY_SESSION
         .entry(session_id.to_string())
         .or_default()
-        .insert(Arc::clone(&log_filename));
+        .insert(log_filename.clone());
 
       let mut file = OPENED_FILE_HANDLES
         .get_mut(&log_filename)

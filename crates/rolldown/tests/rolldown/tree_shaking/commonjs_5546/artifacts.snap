@@ -1,0 +1,33 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## main.js
+
+```js
+import assert from "node:assert";
+
+// HIDDEN [rolldown:runtime]
+//#region lib/cjs.js
+var require_cjs = /* @__PURE__ */ __commonJS({ "lib/cjs.js": ((exports) => {
+	let foo = "default";
+	exports.default = foo;
+	exports.foo = "foo";
+}) });
+
+//#endregion
+//#region lib/index.js
+var require_lib = /* @__PURE__ */ __commonJS({ "lib/index.js": ((exports, module) => {
+	module.exports = require_cjs();
+}) });
+
+//#endregion
+//#region main.js
+var import_lib = /* @__PURE__ */ __toESM(require_lib());
+let indirect = import_lib.default;
+assert.strictEqual(indirect.default, "default");
+assert.strictEqual(indirect.foo, "foo");
+
+//#endregion
+```

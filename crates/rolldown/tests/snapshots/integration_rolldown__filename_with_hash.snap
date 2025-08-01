@@ -5742,6 +5742,10 @@ expression: output
 
 - main-!~{000}~.js => main-DDdJExEQ.js
 
+# tests/rolldown/tree_shaking/commonjs_5546
+
+- main-!~{000}~.js => main-utp7dCKQ.js
+
 # tests/rolldown/tree_shaking/commonjs_mixed
 
 - main-!~{000}~.js => main-Bt9y0mwn.js

@@ -319,12 +319,12 @@ impl LinkStage<'_> {
       return;
     };
 
-    let cjs_reexports = module
-      .ast_usage
-      .contains(EcmaModuleAstUsage::IsCjsReexport)
-      .then(|| module.import_records.first().unwrap().resolved_module);
+    let is_cjsreexports = module.ast_usage.contains(EcmaModuleAstUsage::IsCjsReexport);
 
-    for dep_id in module.star_export_module_ids().chain(cjs_reexports) {
+    let cjs_reexport_module =
+      is_cjsreexports.then(|| module.import_records.first().unwrap().resolved_module);
+
+    for dep_id in module.star_export_module_ids().chain(cjs_reexport_module) {
       let Module::Normal(dep_module) = &normal_modules[dep_id] else {
         continue;
       };
@@ -334,7 +334,7 @@ impl LinkStage<'_> {
 
       for (exported_name, named_export) in &dep_module.named_exports {
         // ES6 export star statements ignore exports named "default"
-        if exported_name.as_str() == "default" {
+        if !named_export.came_from_commonjs && exported_name.as_str() == "default" {
           continue;
         }
         // This export star is shadowed if any file in the stack has a matching real named export

@@ -1,0 +1,20 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## main.js
+
+```js
+// HIDDEN [rolldown:runtime]
+//#region main.js
+var require_main = /* @__PURE__ */ __commonJS({ "main.js": ((exports) => {
+	Object.defineProperty(exports, "__esModule", { value: true });
+	const localeValues = { placeholder: "Selecione uma opção" };
+	if (exports.default = localeValues, typeof exports === "object" && exports.__esModule) exports.default = localeValues;
+}) });
+
+//#endregion
+export default require_main();
+
+```

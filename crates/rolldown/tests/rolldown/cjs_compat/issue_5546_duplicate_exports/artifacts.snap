@@ -1,0 +1,27 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## main.js
+
+```js
+// HIDDEN [rolldown:runtime]
+
+//#region cjs_module.js
+var require_cjs_module = /* @__PURE__ */ __commonJS({ "cjs_module.js": ((exports) => {
+	Object.defineProperty(exports, "__esModule", { value: true });
+	const localeValues = { lang: {
+		code: "pt-br",
+		name: "Portuguese (Brazil)"
+	} };
+	exports.default = localeValues;
+}) });
+
+//#endregion
+//#region main.js
+var import_cjs_module = /* @__PURE__ */ __toESM(require_cjs_module());
+console.log(import_cjs_module.default);
+
+//#endregion
+```

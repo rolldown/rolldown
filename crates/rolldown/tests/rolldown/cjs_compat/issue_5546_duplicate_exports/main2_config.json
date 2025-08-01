@@ -1,0 +1,9 @@
+{
+  "configVariants": [
+    {
+      "format": "cjs",
+      "_snapshot": true,
+      "name": "cjs-format"
+    }
+  ]
+}

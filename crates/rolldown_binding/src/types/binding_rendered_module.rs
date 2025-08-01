@@ -6,11 +6,13 @@ use std::{fmt::Debug, sync::Arc};
 #[napi]
 #[derive(Clone)]
 pub struct BindingRenderedModule {
+  // Shared read-only access to rendered module data for cross-language binding
   inner: Arc<RenderedModule>,
 }
 
 #[napi]
 impl BindingRenderedModule {
+  // Create wrapper for shared rendered module data
   pub fn new(inner: Arc<RenderedModule>) -> Self {
     Self { inner }
   }

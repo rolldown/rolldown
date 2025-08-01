@@ -20,18 +20,24 @@ use tokio::sync::Mutex;
 
 pub struct WatcherTask {
   pub emitter: SharedWatcherEmitter,
+  // Shared bundler instance for concurrent access during file watching
   bundler: Arc<Mutex<Bundler>>,
   pub invalidate_flag: AtomicBool,
+  // Shared file system watcher for monitoring changes across tasks
   notify_watcher: Arc<Mutex<RecommendedWatcher>>,
+  // Shared set of files being watched by notify system
   notify_watch_files: Arc<FxDashSet<ArcStr>>,
   pub watch_files: FxDashSet<ArcStr>,
 }
 
 impl WatcherTask {
   pub fn new(
+    // Accept shared bundler for concurrent file watching operations
     bundler: Arc<Mutex<Bundler>>,
     emitter: SharedWatcherEmitter,
+    // Accept shared file system watcher to coordinate across tasks
     notify_watcher: Arc<Mutex<RecommendedWatcher>>,
+    // Accept shared set of watched files for coordination
     notify_watched_files: Arc<FxDashSet<ArcStr>>,
   ) -> Self {
     Self {

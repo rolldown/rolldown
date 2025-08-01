@@ -9,13 +9,16 @@ use crate::{
   watch::watcher::{WatcherImpl, wait_for_change},
 };
 
+// Public wrapper around shared watcher implementation
 pub struct Watcher(Arc<WatcherImpl>);
 
 impl Watcher {
   pub fn new(
+    // Accept shared bundler instances for concurrent file watching
     bundlers: Vec<Arc<Mutex<Bundler>>>,
     notify_option: Option<NotifyOption>,
   ) -> Result<Self> {
+    // Create shared watcher implementation for cross-thread access
     let watcher = Arc::new(WatcherImpl::new(bundlers, notify_option)?);
 
     Ok(Self(watcher))

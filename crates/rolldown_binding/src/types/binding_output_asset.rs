@@ -6,11 +6,13 @@ use crate::options::plugin::types::binding_asset_source::BindingAssetSource;
 
 #[napi]
 pub struct BindingOutputAsset {
+  // Shared reference to output asset data for efficient cross-language passing
   inner: Arc<rolldown_common::OutputAsset>,
 }
 
 #[napi]
 impl BindingOutputAsset {
+  // Create binding wrapper for shared asset data
   pub fn new(inner: Arc<rolldown_common::OutputAsset>) -> Self {
     Self { inner }
   }

@@ -25,6 +25,7 @@ use super::{
 
 #[napi]
 pub struct BindingCallableBuiltinPlugin {
+  // Shared trait object for plugin functionality across multiple calls
   inner: Arc<dyn Pluginable>,
   context: SharedTransformPluginContext,
 }
@@ -33,6 +34,7 @@ pub struct BindingCallableBuiltinPlugin {
 impl BindingCallableBuiltinPlugin {
   #[napi(constructor)]
   pub fn new(plugin: BindingBuiltinPlugin) -> napi::Result<Self> {
+    // Convert plugin to shared trait object for multi-threaded access
     let inner: Arc<dyn Pluginable> = plugin.try_into()?;
 
     Ok(Self {

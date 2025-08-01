@@ -3,6 +3,7 @@ use std::sync::{Arc, Weak};
 use crate::debug::pretty_type_name;
 
 #[derive(Debug)]
+// Wrapper around Arc that ensures unique ownership while allowing weak references
 pub struct UniqueArc<T: ?Sized>(Arc<T>);
 
 impl<T> UniqueArc<T> {
@@ -25,6 +26,7 @@ impl<T> UniqueArc<T> {
 }
 
 #[derive(Debug)]
+// Weak reference that prevents storage of Arc to maintain unique ownership guarantees
 pub struct WeakRef<T: ?Sized>(Weak<T>);
 
 impl<T> WeakRef<T> {

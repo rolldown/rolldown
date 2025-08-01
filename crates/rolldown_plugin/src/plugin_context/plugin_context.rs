@@ -19,23 +19,28 @@ pub struct NapiPluginContextImpl;
 
 #[derive(Debug, Clone)]
 pub enum PluginContext {
+  // Shared NAPI plugin context implementation for JavaScript plugins
   Napi(Arc<NapiPluginContextImpl>),
+  // Shared native plugin context implementation for Rust plugins
   Native(Arc<NativePluginContextImpl>),
 }
 
 impl PluginContext {
   #[must_use]
   pub fn new_napi_context() -> Self {
+    // Create shared NAPI context for cross-language plugin interactions
     Self::Napi(Arc::new(NapiPluginContextImpl))
   }
 
   #[must_use]
   pub fn new_shared_with_skipped_resolve_calls(
     &self,
+    // Accept shared skipped resolve calls for efficient memory usage across contexts
     skipped_resolve_calls: Vec<Arc<HookResolveIdSkipped>>,
   ) -> Self {
     match self {
       PluginContext::Napi(_) => self.clone(),
+      // Create new shared native context with skipped calls
       PluginContext::Native(ctx) => Self::Native(Arc::new(NativePluginContextImpl {
         skipped_resolve_calls,
         plugin_idx: ctx.plugin_idx,
@@ -114,6 +119,7 @@ impl PluginContext {
     }
   }
 
+  // Return shared module info to avoid copying large module data
   pub fn get_module_info(&self, module_id: &str) -> Option<Arc<rolldown_common::ModuleInfo>> {
     match self {
       PluginContext::Napi(_) => {

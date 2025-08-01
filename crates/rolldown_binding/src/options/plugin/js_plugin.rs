@@ -228,6 +228,7 @@ impl Plugin for JsPlugin {
   async fn module_parsed(
     &self,
     ctx: &rolldown_plugin::PluginContext,
+    // Shared reference to module information for read-only access across plugins
     module_info: Arc<rolldown_common::ModuleInfo>,
     _normal_module: &NormalModule,
   ) -> rolldown_plugin::HookNoopReturn {
@@ -427,6 +428,7 @@ impl Plugin for JsPlugin {
   async fn augment_chunk_hash(
     &self,
     ctx: &rolldown_plugin::PluginContext,
+    // Shared read-only access to rendered chunk data for hash calculation
     chunk: Arc<rolldown_common::RollupRenderedChunk>,
   ) -> rolldown_plugin::HookAugmentChunkHashReturn {
     match &self.augment_chunk_hash {

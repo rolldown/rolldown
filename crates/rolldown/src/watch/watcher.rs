@@ -38,23 +38,30 @@ pub struct WatcherImpl {
   notify_watcher: Arc<Mutex<RecommendedWatcher>>,
   running: AtomicBool,
   watch_changes: FxDashSet<WatcherChangeData>,
+  // Shared channel sender for file system events
   tx: Arc<Sender<WatcherChannelMsg>>,
+  // Shared async-safe receiver for file system events
   rx: Arc<Mutex<Receiver<WatcherChannelMsg>>>,
+  // Shared channel sender for execution commands
   exec_tx: Arc<Sender<ExecChannelMsg>>,
+  // Shared async-safe receiver for execution commands
   exec_rx: Arc<Mutex<Receiver<ExecChannelMsg>>>,
   // debounce invalidating
   invalidating: AtomicBool,
+  // Collection of shared bundler instances across watchers
   bundlers: Vec<Arc<Mutex<Bundler>>>,
 }
 
 impl WatcherImpl {
   #[allow(clippy::needless_pass_by_value)]
   pub fn new(
+    // Accept shared bundler instances for concurrent access during watching
     bundlers: Vec<Arc<Mutex<Bundler>>>,
     notify_option: Option<NotifyOption>,
   ) -> Result<Self> {
     let (tx, rx) = channel();
     let (exec_tx, exec_rx) = channel();
+    // Wrap channel endpoints in Arc for sharing across threads
     let tx = Arc::new(tx);
     let cloned_tx = Arc::clone(&tx);
     let watch_option = {
@@ -207,6 +214,7 @@ impl WatcherImpl {
 }
 
 #[tracing::instrument(level = "debug", skip(watcher))]
+// Accept shared watcher reference for emitting file change events across threads
 pub fn emit_change_event(watcher: &Arc<WatcherImpl>, path: &str, kind: WatcherChangeKind) {
   let _ = watcher
     .emitter
@@ -215,6 +223,7 @@ pub fn emit_change_event(watcher: &Arc<WatcherImpl>, path: &str, kind: WatcherCh
 }
 
 #[tracing::instrument(level = "debug", skip_all)]
+// Accept shared watcher for monitoring file changes in background thread
 pub fn wait_for_change(watcher: Arc<WatcherImpl>) {
   let future = async move {
     let mut run = true;

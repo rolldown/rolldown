@@ -281,6 +281,7 @@ impl Bundler {
     &self.options
   }
 
+  // Return shared reference to watch files set for concurrent access by file watchers
   pub fn get_watch_files(&self) -> &Arc<FxDashSet<ArcStr>> {
     &self.plugin_driver.watch_files
   }

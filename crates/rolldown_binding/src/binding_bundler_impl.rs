@@ -37,7 +37,9 @@ pub struct BindingBundlerOptions<'env> {
 
 #[napi(custom_finalize)]
 pub struct BindingBundlerImpl {
+  // Shared thread-safe access to the native bundler for concurrent operations
   inner: Arc<Mutex<NativeBundler>>,
+  // Reference-counted atomic counter for tracking memory usage across threads
   memory_adjustment: Arc<AtomicI64>,
 }
 
@@ -96,6 +98,7 @@ impl BindingBundlerImpl {
     })
   }
 
+  // Accept shared bundler instance for reuse across multiple binding implementations
   pub fn new_with_bundler(inner: Arc<Mutex<NativeBundler>>) -> Self {
     Self { inner, memory_adjustment: Arc::new(AtomicI64::new(0)) }
   }
@@ -103,6 +106,7 @@ impl BindingBundlerImpl {
   #[napi]
   #[tracing::instrument(level = "debug", skip_all)]
   pub fn write<'env>(&self, env: &'env Env) -> napi::Result<PromiseRaw<'env, BindingOutputs>> {
+    // Clone Arc references for async task to maintain shared ownership
     let inner = Arc::clone(&self.inner);
     let memory_adjustment = Arc::clone(&self.memory_adjustment);
 
@@ -208,6 +212,7 @@ impl BindingBundlerImpl {
   }
 
   #[allow(clippy::significant_drop_tightening)]
+  // Accept shared bundler for async write operations across threads
   pub async fn write_impl(bundler: Arc<Mutex<NativeBundler>>) -> napi::Result<BindingOutputs> {
     let mut bundler_core = bundler.lock().await;
 
@@ -244,6 +249,7 @@ impl BindingBundlerImpl {
     Ok(())
   }
 
+  // Return the shared bundler instance for reuse by other components
   pub fn into_inner(self) -> Arc<Mutex<NativeBundler>> {
     self.inner
   }

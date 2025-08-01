@@ -59,6 +59,7 @@ impl Display for BundleEvent {
 pub struct BundleEndEventData {
   pub output: String,
   pub duration: u32,
+  // Shared bundler instance for reuse after successful bundle completion
   pub result: Arc<Mutex<Bundler>>,
 }
 
@@ -70,6 +71,7 @@ impl Debug for BundleEndEventData {
 
 pub struct BundleErrorEventData {
   pub error: OutputsDiagnostics,
+  // Shared bundler instance for recovery after bundle error
   pub result: Arc<Mutex<Bundler>>,
 }
 

@@ -124,6 +124,7 @@ impl Resolvers {
     &self.resolvers[additional_options.as_u8() as usize]
   }
 
+  // Return shared resolver instance for external resolution
   pub fn get_for_external(&self) -> Arc<Resolver> {
     Arc::clone(&self.external_resolver)
   }

@@ -14,11 +14,13 @@ use super::{
 
 #[napi]
 pub struct BindingOutputChunk {
+  // Shared reference to output chunk for efficient JavaScript binding without copying
   inner: Arc<rolldown_common::OutputChunk>,
 }
 
 #[napi]
 impl BindingOutputChunk {
+  // Create binding wrapper for shared chunk data
   pub fn new(inner: Arc<rolldown_common::OutputChunk>) -> Self {
     Self { inner }
   }

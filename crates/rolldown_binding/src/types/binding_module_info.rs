@@ -4,6 +4,7 @@ use napi_derive::napi;
 
 #[napi]
 pub struct BindingModuleInfo {
+  // Shared read-only reference to core module information
   inner: Arc<rolldown_common::ModuleInfo>,
   pub id: String,
   pub importers: Vec<String>,
@@ -16,6 +17,7 @@ pub struct BindingModuleInfo {
 
 #[napi]
 impl BindingModuleInfo {
+  // Create binding wrapper around shared module info for JavaScript access
   pub fn new(inner: Arc<rolldown_common::ModuleInfo>) -> Self {
     Self {
       id: inner.id.to_string(),

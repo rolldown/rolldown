@@ -26,6 +26,7 @@ pub struct RenderedModuleSource {
   pub module_idx: ModuleIdx,
   pub module_id: ModuleId,
   pub exec_order: u32,
+  // Shared collection of source map sources for efficient memory usage across modules
   pub sources: Option<Arc<[Box<dyn Source + Send + Sync>]>>,
 }
 
@@ -34,6 +35,7 @@ impl RenderedModuleSource {
     module_idx: ModuleIdx,
     module_id: ModuleId,
     exec_order: u32,
+    // Accept shared source map sources to avoid duplication across modules
     sources: Option<Arc<[Box<dyn Source + Send + Sync>]>>,
   ) -> Self {
     Self { module_idx, module_id, exec_order, sources }

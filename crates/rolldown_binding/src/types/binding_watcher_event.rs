@@ -87,6 +87,7 @@ pub struct BindingWatcherChangeData {
 pub struct BindingBundleEndEventData {
   pub output: String,
   pub duration: u32,
+  // Shared bundler instance for reuse after bundle completion
   result: Arc<Mutex<Bundler>>,
 }
 
@@ -101,6 +102,7 @@ impl BindingBundleEndEventData {
 #[napi]
 pub struct BindingBundleErrorEventData {
   error: Vec<napi::Either<napi::JsError, BindingError>>,
+  // Shared bundler instance for recovery after error
   result: Arc<Mutex<Bundler>>,
 }
 

@@ -7,11 +7,13 @@ use crate::types::binding_rendered_module::BindingRenderedModule;
 #[napi_derive::napi]
 #[derive(Debug)]
 pub struct BindingRenderedChunk {
+  // Shared immutable access to rendered chunk data for binding layer
   inner: Arc<RollupRenderedChunk>,
 }
 
 #[napi_derive::napi]
 impl BindingRenderedChunk {
+  // Wrap shared rendered chunk for cross-language binding
   pub fn new(inner: Arc<RollupRenderedChunk>) -> Self {
     Self { inner }
   }

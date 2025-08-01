@@ -59,9 +59,11 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
   pub fn canonical_name_for(&self, symbol: SymbolRef) -> &'me Rstr {
     self.ctx.symbol_db.canonical_name_for(symbol, self.ctx.canonical_names).unwrap_or_else(|| {
       panic!(
-        "canonical name not found for {symbol:?}, original_name: {:?} in module {:?}",
+        "canonical name not found for {symbol:?}, original_name: {:?} in module {:?} when finalizing module {:?} in chunk {:?}",
         symbol.name(self.ctx.symbol_db),
-        self.ctx.modules.get(symbol.owner).map_or("unknown", |module| module.id())
+        self.ctx.modules.get(symbol.owner).map_or("unknown", |module| module.stable_id()),
+        self.ctx.modules.get(self.ctx.id).map_or("unknown", |module| module.stable_id()),
+        self.ctx.chunk_graph.chunk_table[self.ctx.chunk_id].create_reasons.join(";")
       );
     })
   }

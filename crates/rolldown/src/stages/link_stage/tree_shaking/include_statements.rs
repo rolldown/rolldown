@@ -188,14 +188,6 @@ impl LinkStage<'_> {
             .set(RuntimeHelper::from_bits(1 << index as u32).unwrap(), any_included);
         }
         meta.depended_runtime_helper = normalized_runtime_helper;
-
-        // The hmr need to create module namespace object to store exports.
-        if self.options.is_hmr_enabled()
-          && module.idx != self.runtime.id()
-          && matches!(module.exports_kind, ExportsKind::Esm)
-        {
-          module.stmt_infos.get_mut(StmtInfoIdx::new(0)).is_included = true;
-        }
       });
     self.include_runtime_symbol(
       &mut is_included_vec,
@@ -493,6 +485,14 @@ fn include_module(ctx: &mut Context, module: &NormalModule) {
   ctx.metas[module.idx].included_commonjs_export_symbol.iter().for_each(|symbol_ref| {
     include_symbol(ctx, *symbol_ref, IncludeKind::Normal);
   });
+
+  // With enabling HMR, rolldown will register included esm module's namespace object to the runtime.
+  if ctx.options.is_hmr_enabled()
+    && module.idx != ctx.runtime_id
+    && matches!(module.exports_kind, ExportsKind::Esm)
+  {
+    include_statement(ctx, module, StmtInfoIdx::new(0));
+  }
 }
 
 #[track_caller]

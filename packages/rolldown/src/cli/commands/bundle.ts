@@ -72,9 +72,6 @@ async function watchInner(
   config: ConfigExport,
   cliOptions: NormalizedCliOptions,
 ) {
-  // Only if watch is true in CLI can we use watch mode.
-  // We should not make it `await`, as it never ends.
-
   let normalizedConfig = arraify(config).map((option) => {
     return {
       ...option,

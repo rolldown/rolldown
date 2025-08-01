@@ -3,6 +3,7 @@ use std::path::Path;
 use super::BuildDiagnostic;
 use super::severity::Severity;
 use arcstr::ArcStr;
+use oxc::span::CompactStr;
 use oxc::diagnostics::OxcDiagnostic;
 use oxc::{diagnostics::LabeledSpan, span::Span};
 use oxc_resolver::ResolveError;
@@ -123,14 +124,14 @@ impl BuildDiagnostic {
 
   pub fn mixed_export(
     module_id: String,
-    module_name: ArcStr,
+    module_name: CompactStr,
     entry_module: String,
-    export_keys: Vec<ArcStr>,
+    export_keys: Vec<CompactStr>,
   ) -> Self {
     Self::new_inner(MixedExport { module_id, module_name, entry_module, export_keys })
   }
 
-  pub fn missing_global_name(module_id: String, module_name: ArcStr, guessed_name: ArcStr) -> Self {
+  pub fn missing_global_name(module_id: String, module_name: CompactStr, guessed_name: CompactStr) -> Self {
     Self::new_inner(MissingGlobalName { module_id, module_name, guessed_name })
   }
 
@@ -142,19 +143,19 @@ impl BuildDiagnostic {
     Self::new_inner(MissingNameOptionForUmdExport {})
   }
 
-  pub fn illegal_identifier_as_name(identifier_name: ArcStr) -> Self {
+  pub fn illegal_identifier_as_name(identifier_name: CompactStr) -> Self {
     Self::new_inner(IllegalIdentifierAsName { identifier_name })
   }
 
   pub fn invalid_export_option(
-    export_mode: ArcStr,
-    entry_module: ArcStr,
-    export_keys: Vec<ArcStr>,
+    export_mode: CompactStr,
+    entry_module: CompactStr,
+    export_keys: Vec<CompactStr>,
   ) -> Self {
     Self::new_inner(InvalidExportOption { export_mode, export_keys, entry_module })
   }
 
-  pub fn filename_conflict(filename: ArcStr) -> Self {
+  pub fn filename_conflict(filename: CompactStr) -> Self {
     Self::new_inner(FilenameConflict { filename })
   }
 
@@ -174,17 +175,17 @@ impl BuildDiagnostic {
   }
 
   pub fn import_is_undefined(
-    filename: ArcStr,
+    filename: CompactStr,
     source: ArcStr,
     span: Span,
-    name: ArcStr,
+    name: CompactStr,
     stable_importer: String,
   ) -> Self {
     Self::new_inner(ImportIsUndefined { filename, source, span, name, stable_importer })
   }
 
   pub fn unsupported_feature(
-    filename: ArcStr,
+    filename: CompactStr,
     source: ArcStr,
     span: Span,
     error_message: String,
@@ -192,7 +193,7 @@ impl BuildDiagnostic {
     Self::new_inner(UnsupportedFeature { filename, source, span, error_message })
   }
 
-  pub fn empty_import_meta(filename: String, source: ArcStr, span: Span, format: ArcStr) -> Self {
+  pub fn empty_import_meta(filename: String, source: ArcStr, span: Span, format: CompactStr) -> Self {
     Self::new_inner(crate::events::empty_import_meta::EmptyImportMeta {
       filename,
       source,
@@ -288,17 +289,17 @@ impl BuildDiagnostic {
     Self::new_inner(ExportUndefinedVariable { filename, source, span, name })
   }
 
-  pub fn assign_to_import(filename: ArcStr, source: ArcStr, span: Span, name: ArcStr) -> Self {
+  pub fn assign_to_import(filename: CompactStr, source: ArcStr, span: Span, name: CompactStr) -> Self {
     Self::new_inner(AssignToImport { filename, source, span, name })
   }
 
   #[allow(clippy::cast_possible_truncation)]
   pub fn json_parse(
-    filename: ArcStr,
+    filename: CompactStr,
     source: ArcStr,
     line: usize,
     column: usize,
-    message: ArcStr,
+    message: CompactStr,
   ) -> Self {
     // `serde_json` Error is one-based https://docs.rs/serde_json/1.0.132/serde_json/struct.Error.html#method.column
     let start_offset = line_column_to_byte_offset(source.as_str(), line - 1, column - 1);

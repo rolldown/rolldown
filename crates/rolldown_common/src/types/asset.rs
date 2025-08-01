@@ -1,4 +1,5 @@
 use arcstr::ArcStr;
+use oxc::span::CompactStr;
 use rolldown_sourcemap::SourceMap;
 
 use crate::{ChunkIdx, InstantiationKind, StrOrBytes};
@@ -17,5 +18,5 @@ pub struct Asset {
   pub content: StrOrBytes,
   pub map: Option<SourceMap>,
   pub meta: InstantiationKind,
-  pub filename: ArcStr,
+  pub filename: CompactStr,
 }

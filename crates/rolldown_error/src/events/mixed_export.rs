@@ -1,13 +1,13 @@
 use crate::events::BuildEvent;
 use crate::{DiagnosticOptions, EventKind};
-use arcstr::ArcStr;
+use oxc::span::CompactStr;
 
 #[derive(Debug)]
 pub struct MixedExport {
   pub module_id: String,
-  pub module_name: ArcStr,
+  pub module_name: CompactStr,
   pub entry_module: String,
-  pub export_keys: Vec<ArcStr>,
+  pub export_keys: Vec<CompactStr>,
 }
 
 impl BuildEvent for MixedExport {

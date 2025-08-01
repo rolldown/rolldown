@@ -1,5 +1,5 @@
 use arcstr::ArcStr;
-use oxc::span::Span;
+use oxc::span::{CompactStr, Span};
 
 use crate::{diagnostic::Diagnostic, types::diagnostic_options::DiagnosticOptions};
 
@@ -7,10 +7,10 @@ use super::BuildEvent;
 
 #[derive(Debug)]
 pub struct JsonParse {
-  pub filename: ArcStr,
+  pub filename: CompactStr,
   pub source: ArcStr,
   pub span: Span,
-  pub message: ArcStr,
+  pub message: CompactStr,
 }
 
 impl BuildEvent for JsonParse {

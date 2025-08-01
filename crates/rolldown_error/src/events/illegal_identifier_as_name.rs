@@ -1,10 +1,10 @@
 use crate::events::BuildEvent;
 use crate::{DiagnosticOptions, EventKind};
-use arcstr::ArcStr;
+use oxc::span::CompactStr;
 
 #[derive(Debug)]
 pub struct IllegalIdentifierAsName {
-  pub(crate) identifier_name: ArcStr,
+  pub(crate) identifier_name: CompactStr,
 }
 
 impl BuildEvent for IllegalIdentifierAsName {

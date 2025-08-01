@@ -1,5 +1,5 @@
 use arcstr::ArcStr;
-use oxc::span::Span;
+use oxc::span::{CompactStr, Span};
 
 use crate::{diagnostic::Diagnostic, types::diagnostic_options::DiagnosticOptions};
 
@@ -8,7 +8,7 @@ use super::BuildEvent;
 #[derive(Debug)]
 pub struct UnsupportedFeature {
   pub(crate) source: ArcStr,
-  pub(crate) filename: ArcStr,
+  pub(crate) filename: CompactStr,
   pub(crate) span: Span,
   pub(crate) error_message: String,
 }

@@ -9,15 +9,15 @@ use super::output_chunk::Modules;
 #[derive(Debug)]
 pub struct RollupRenderedChunk {
   // PreRenderedChunk
-  pub name: ArcStr,
+  pub name: CompactStr,
   pub is_entry: bool,
   pub is_dynamic_entry: bool,
   pub facade_module_id: Option<ModuleId>,
   pub module_ids: Vec<ModuleId>,
   pub exports: Vec<CompactStr>,
   // RenderedChunk
-  pub filename: ArcStr,
+  pub filename: CompactStr,
   pub modules: Modules,
-  pub imports: Vec<ArcStr>,
-  pub dynamic_imports: Vec<ArcStr>,
+  pub imports: Vec<CompactStr>,
+  pub dynamic_imports: Vec<CompactStr>,
 }

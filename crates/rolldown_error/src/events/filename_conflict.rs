@@ -1,12 +1,12 @@
 use crate::{event_kind::EventKind, types::diagnostic_options::DiagnosticOptions};
-use arcstr::ArcStr;
+use oxc::span::CompactStr;
 use rolldown_utils::concat_string;
 
 use super::BuildEvent;
 
 #[derive(Debug)]
 pub struct FilenameConflict {
-  pub filename: ArcStr,
+  pub filename: CompactStr,
 }
 
 impl BuildEvent for FilenameConflict {

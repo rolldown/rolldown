@@ -1,13 +1,13 @@
 use crate::{event_kind::EventKind, types::diagnostic_options::DiagnosticOptions};
-use arcstr::ArcStr;
+use oxc::span::CompactStr;
 
 use super::BuildEvent;
 
 #[derive(Debug)]
 pub struct InvalidExportOption {
-  pub export_mode: ArcStr,
-  pub entry_module: ArcStr,
-  pub export_keys: Vec<ArcStr>,
+  pub export_mode: CompactStr,
+  pub entry_module: CompactStr,
+  pub export_keys: Vec<CompactStr>,
 }
 
 impl BuildEvent for InvalidExportOption {

@@ -1,12 +1,12 @@
 use crate::events::BuildEvent;
 use crate::{DiagnosticOptions, EventKind};
-use arcstr::ArcStr;
+use oxc::span::CompactStr;
 
 #[derive(Debug)]
 pub struct MissingGlobalName {
   pub module_id: String,
-  pub module_name: ArcStr,
-  pub guessed_name: ArcStr,
+  pub module_name: CompactStr,
+  pub guessed_name: CompactStr,
 }
 
 impl BuildEvent for MissingGlobalName {

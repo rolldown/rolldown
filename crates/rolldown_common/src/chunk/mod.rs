@@ -37,14 +37,14 @@ bitflags::bitflags! {
         const UserDefinedEntry = 1 << 1;
     }
 }
-#[derive(Debug, Default)]
+#[derive(Debug)]
 pub struct Chunk {
   pub exec_order: u32,
   pub kind: ChunkKind,
   pub modules: Vec<ModuleIdx>,
-  pub name: Option<ArcStr>,
+  pub name: Option<CompactStr>,
   // emitted chunk specified filename, used to generate chunk filename
-  pub file_name: Option<ArcStr>,
+  pub file_name: Option<CompactStr>,
   // emitted chunk corresponding reference_id, used to `PluginContext#getFileName` to search the emitted chunk name
   pub pre_rendered_chunk: Option<RollupPreRenderedChunk>,
   pub preliminary_filename: Option<PreliminaryFilename>,
@@ -66,7 +66,7 @@ pub struct Chunk {
   /// The module directly imported symbol actually came from external modules.
   pub import_symbol_from_external_modules: FxIndexSet<ModuleIdx>,
   pub exports_to_other_chunks: FxHashMap<SymbolRef, Vec<CompactStr>>,
-  pub input_base: ArcStr,
+  pub input_base: CompactStr,
   pub create_reasons: Vec<String>,
   pub chunk_reason_type: Box<ChunkReasonType>,
   pub preserve_entry_signature: Option<PreserveEntrySignatures>,
@@ -76,12 +76,12 @@ pub struct Chunk {
 impl Chunk {
   #[allow(clippy::too_many_arguments)]
   pub fn new(
-    name: Option<ArcStr>,
-    file_name: Option<ArcStr>,
+    name: Option<CompactStr>,
+    file_name: Option<CompactStr>,
     bits: BitSet,
     modules: Vec<ModuleIdx>,
     kind: ChunkKind,
-    input_base: ArcStr,
+    input_base: CompactStr,
     preserve_entry_signature: Option<PreserveEntrySignatures>,
   ) -> Self {
     Self {
@@ -176,7 +176,7 @@ impl Chunk {
       return Ok(PreliminaryFilename::new(basename.into(), None));
     }
     if let Some(file_name) = &self.file_name {
-      return Ok(PreliminaryFilename::new(file_name.clone(), None));
+      return Ok(PreliminaryFilename::new(ArcStr::from(file_name.as_str()), None));
     }
 
     let filename_template = self.filename_template(options, rollup_pre_rendered_chunk).await?;
@@ -307,5 +307,38 @@ impl Chunk {
 
   pub fn is_async_entry(&self) -> bool {
     matches!(&self.kind, ChunkKind::EntryPoint { meta, .. } if meta.contains(ChunkMeta::DynamicImported))
+  }
+}
+
+impl Default for Chunk {
+  fn default() -> Self {
+    Self {
+      exec_order: u32::MAX,
+      kind: ChunkKind::default(),
+      modules: Vec::default(),
+      name: None,
+      file_name: None,
+      pre_rendered_chunk: None,
+      preliminary_filename: None,
+      absolute_preliminary_filename: None,
+      css_preliminary_filename: None,
+      css_absolute_preliminary_filename: None,
+      asset_preliminary_filenames: FxIndexMap::default(),
+      asset_absolute_preliminary_filenames: FxIndexMap::default(),
+      canonical_names: FxHashMap::default(),
+      cross_chunk_imports: Vec::default(),
+      cross_chunk_dynamic_imports: Vec::default(),
+      bits: BitSet::default(),
+      imports_from_other_chunks: Vec::default(),
+      require_binding_names_for_other_chunks: FxHashMap::default(),
+      direct_imports_from_external_modules: Vec::default(),
+      import_symbol_from_external_modules: FxIndexSet::default(),
+      exports_to_other_chunks: FxHashMap::default(),
+      input_base: CompactStr::new(""),
+      create_reasons: Vec::default(),
+      chunk_reason_type: Box::default(),
+      preserve_entry_signature: None,
+      depended_runtime_helper: RuntimeHelper::default(),
+    }
   }
 }

@@ -37,8 +37,8 @@ catalogs:
       specifier: ^0.14.0
       version: 0.14.3
     tsdown:
-      specifier: 0.13.0
-      version: 0.13.0
+      specifier: 0.13.1
+      version: 0.13.1
 
 overrides:
   vitepress>vite: npm:rolldown-vite@latest
@@ -282,7 +282,7 @@ importers:
         version: 4.0.3
       tsdown:
         specifier: 'catalog:'
-        version: 0.13.0(typescript@5.8.3)
+        version: 0.13.1(typescript@5.8.3)
       vitest:
         specifier: ^3.0.1
         version: 3.2.4(@types/debug@4.1.12)(@types/node@24.1.0)(jiti@2.4.2)(lightningcss@1.30.1)(terser@5.43.1)(tsx@4.20.3)(yaml@2.8.0)
@@ -5158,14 +5158,18 @@ packages:
   tokenx@1.1.0:
     resolution: {integrity: sha512-KCjtiC2niPwTSuz4ktM82Ki5bjqBwYpssiHDsGr5BpejN/B3ksacRvrsdoxljdMIh2nCX78alnDkeemBmYUmTA==}
 
+  tree-kill@1.2.2:
+    resolution: {integrity: sha512-L0Orpi8qGpRG//Nd+H90vFB+3iHnue1zSSGmNOOCh1GLJ7rUKVwV2HvijphGQS2UmhUZewS9VgvxYIdgr+fG1A==}
+    hasBin: true
+
   trim-lines@3.0.1:
     resolution: {integrity: sha512-kRj8B+YHZCc9kQYdWfJB2/oUl9rA99qbowYYBtr4ui4mZyAQ2JpvVBd/6U2YloATfqBhBTSMhTpgBHtU0Mf3Rg==}
 
   trough@2.2.0:
     resolution: {integrity: sha512-tmMpK00BjZiUyVyvrBK7knerNgmgvcV/KLVyuma/SC+TQN167GrMRciANTz09+k3zW8L8t60jWO1GpfkZdjTaw==}
 
-  tsdown@0.13.0:
-    resolution: {integrity: sha512-+1ZqbLIYDAiNxtAvq9RsTg55PRvaMxGmtvRFBW2J+i4GfDKiyHAkxez1eB3EPvHG1Z917nsf2madsSeblJS3GA==}
+  tsdown@0.13.1:
+    resolution: {integrity: sha512-+rdxvqZvRKh+OwuupdQmJ2XAM31gLsdqcoo1O3aIlaD+MEXw5OaCRaCalg5wA+0nNk97f0GJliGZyUi0QlcCmQ==}
     engines: {node: '>=20.19.0'}
     hasBin: true
     peerDependencies:
@@ -10282,11 +10286,13 @@ snapshots:
 
   tokenx@1.1.0: {}
 
+  tree-kill@1.2.2: {}
+
   trim-lines@3.0.1: {}
 
   trough@2.2.0: {}
 
-  tsdown@0.13.0(typescript@5.8.3):
+  tsdown@0.13.1(typescript@5.8.3):
     dependencies:
       ansis: 4.1.0
       cac: 6.7.14
@@ -10300,6 +10306,7 @@ snapshots:
       semver: 7.7.2
       tinyexec: 1.0.1
       tinyglobby: 0.2.14
+      tree-kill: 1.2.2
       unconfig: 7.3.2
     optionalDependencies:
       typescript: 5.8.3

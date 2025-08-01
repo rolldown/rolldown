@@ -36,10 +36,10 @@ impl Module {
     }
   }
 
-  pub fn id_clone(&self) -> &ArcStr {
+  pub fn id_clone(&self) -> ArcStr {
     match self {
-      Module::Normal(v) => v.id.resource_id(),
-      Module::External(v) => &v.id,
+      Module::Normal(v) => v.id.resource_id().clone(),
+      Module::External(v) => ArcStr::from(v.id.as_str()),
     }
   }
 

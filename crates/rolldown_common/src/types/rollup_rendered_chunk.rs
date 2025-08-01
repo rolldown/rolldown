@@ -1,4 +1,3 @@
-use arcstr::ArcStr;
 use oxc::span::CompactStr;
 
 use crate::ModuleId;

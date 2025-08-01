@@ -1,4 +1,5 @@
 use arcstr::ArcStr;
+use oxc::span::CompactStr;
 use rolldown_sourcemap::SourceMap;
 
 use crate::{Asset, ChunkIdx, InstantiationKind, PreliminaryFilename, StrOrBytes};
@@ -22,7 +23,7 @@ impl InstantiatedChunk {
       content: self.content,
       map: self.map,
       meta: self.kind,
-      filename,
+      filename: CompactStr::from(filename.as_str()),
     }
   }
 }

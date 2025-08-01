@@ -5,6 +5,7 @@ use crate::{
 use anyhow::Context;
 use arcstr::ArcStr;
 use dashmap::{DashMap, DashSet};
+use oxc::span::CompactStr;
 use rolldown_error::BuildDiagnostic;
 use rolldown_utils::dashmap::{FxDashMap, FxDashSet};
 use rolldown_utils::make_unique_name::make_unique_name;
@@ -224,7 +225,7 @@ impl FileEmitter {
       let lowercase_filename = value.filename.as_str().to_lowercase().into();
       if !self.emitted_filenames.insert(lowercase_filename) {
         warnings
-          .push(BuildDiagnostic::filename_conflict(value.filename.clone()).with_severity_warning());
+          .push(BuildDiagnostic::filename_conflict(CompactStr::from(value.filename.as_str())).with_severity_warning());
       }
 
       let mut names = std::mem::take(&mut value.names);

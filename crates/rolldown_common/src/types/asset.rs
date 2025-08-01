@@ -1,4 +1,3 @@
-use arcstr::ArcStr;
 use oxc::span::CompactStr;
 use rolldown_sourcemap::SourceMap;
 

@@ -7,7 +7,7 @@ use rolldown_common::{
   ConstExportMeta, EcmaModuleAstUsage, EcmaViewMeta, EntryPoint, EntryPointKind, ExportsKind,
   ImportKind, ImportRecordIdx, ImportRecordMeta, IndexModules, Module, ModuleIdx, ModuleType,
   NormalModule, NormalizedBundlerOptions, RUNTIME_HELPER_NAMES, RuntimeHelper, SideEffectDetail,
-  StmtInfoIdx, SymbolOrMemberExprRef, SymbolRef, SymbolRefDb,
+  StmtInfoIdx, StmtInfos, SymbolOrMemberExprRef, SymbolRef, SymbolRefDb,
   dynamic_import_usage::DynamicImportExportsUsage, side_effects::DeterminedSideEffects,
 };
 #[cfg(not(target_family = "wasm"))]
@@ -426,36 +426,39 @@ fn include_module(ctx: &mut Context, module: &NormalModule) {
 
   let forced_no_treeshake = matches!(module.side_effects, DeterminedSideEffects::NoTreeshake);
   if ctx.tree_shaking && !forced_no_treeshake {
-    module.stmt_infos.iter_enumerated().skip(1).for_each(|(stmt_info_id, stmt_info)| {
-      // No need to handle the first statement specially, which is the namespace object, because it doesn't have side effects and will only be included if it is used.
-      let bail_eval = module.meta.has_eval()
-        && !stmt_info.declared_symbols.is_empty()
-        && stmt_info_id.index() != 0;
-      let has_side_effects = if module.meta.contains(EcmaViewMeta::SafelyTreeshakeCommonjs)
-        && ctx.options.treeshake.commonjs()
-      {
-        stmt_info.side_effect.contains(SideEffectDetail::Unknown)
-      } else {
-        stmt_info.side_effect.has_side_effect()
-      };
-      if has_side_effects || bail_eval {
-        include_statement(ctx, module, stmt_info_id);
-      }
-    });
-  } else {
-    // Skip the first statement, which is the namespace object. It should be included only if it is used no matter
-    // tree shaking is enabled or not.
-    module.stmt_infos.iter_enumerated().skip(1).for_each(|(stmt_info_id, stmt_info)| {
-      if stmt_info.force_tree_shaking {
-        if stmt_info.side_effect.has_side_effect() {
-          // If `force_tree_shaking` is true, the statement should be included either by itself having side effects
-          // or by other statements referencing it.
+    module.stmt_infos.iter_enumerated_without_namespace_stmt().for_each(
+      |(stmt_info_id, stmt_info)| {
+        // No need to handle the namespace statement specially, because it doesn't have side effects and will only be included if it is used.
+        let bail_eval = module.meta.has_eval()
+          && !stmt_info.declared_symbols.is_empty()
+          && stmt_info_id.index() != 0;
+        let has_side_effects = if module.meta.contains(EcmaViewMeta::SafelyTreeshakeCommonjs)
+          && ctx.options.treeshake.commonjs()
+        {
+          stmt_info.side_effect.contains(SideEffectDetail::Unknown)
+        } else {
+          stmt_info.side_effect.has_side_effect()
+        };
+        if has_side_effects || bail_eval {
           include_statement(ctx, module, stmt_info_id);
         }
-      } else {
-        include_statement(ctx, module, stmt_info_id);
-      }
-    });
+      },
+    );
+  } else {
+    // Skip the namespace statement. It should be included only if it is used no matter tree shaking is enabled or not.
+    module.stmt_infos.iter_enumerated_without_namespace_stmt().for_each(
+      |(stmt_info_id, stmt_info)| {
+        if stmt_info.force_tree_shaking {
+          if stmt_info.side_effect.has_side_effect() {
+            // If `force_tree_shaking` is true, the statement should be included either by itself having side effects
+            // or by other statements referencing it.
+            include_statement(ctx, module, stmt_info_id);
+          }
+        } else {
+          include_statement(ctx, module, stmt_info_id);
+        }
+      },
+    );
   }
 
   let module_meta = &ctx.metas[module.idx];
@@ -491,7 +494,7 @@ fn include_module(ctx: &mut Context, module: &NormalModule) {
     && module.idx != ctx.runtime_id
     && matches!(module.exports_kind, ExportsKind::Esm)
   {
-    include_statement(ctx, module, StmtInfoIdx::new(0));
+    include_statement(ctx, module, StmtInfos::NAMESPACE_STMT_IDX);
   }
 }
 

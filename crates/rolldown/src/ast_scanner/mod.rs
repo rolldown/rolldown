@@ -167,12 +167,7 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
     let result = ScanResult {
       named_imports: FxIndexMap::default(),
       named_exports: FxHashMap::default(),
-      stmt_infos: {
-        let mut stmt_infos = StmtInfos::default();
-        // The first `StmtInfo` is used to represent the statement that declares and constructs Module Namespace Object
-        stmt_infos.push(StmtInfo::default());
-        stmt_infos
-      },
+      stmt_infos: StmtInfos::new(),
       import_records: IndexVec::new(),
       default_export_ref,
       namespace_object_ref,

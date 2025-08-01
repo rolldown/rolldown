@@ -1,9 +1,11 @@
 use crate::{ConstExportMeta, RUNTIME_HELPER_NAMES, StmtInfoIdx};
 use arcstr::ArcStr;
 use bitflags::bitflags;
-use oxc::{semantic::SymbolId, span::Span};
+use oxc::{
+  semantic::SymbolId,
+  span::{CompactStr, Span},
+};
 use oxc_index::IndexVec;
-use rolldown_rstr::Rstr;
 use rolldown_utils::indexmap::{FxIndexMap, FxIndexSet};
 use rustc_hash::{FxHashMap, FxHashSet};
 
@@ -68,7 +70,8 @@ pub struct EcmaView {
   /// Represents [Module Namespace Object](https://tc39.es/ecma262/#sec-module-namespace-exotic-objects)
   pub namespace_object_ref: SymbolRef,
   pub named_imports: FxIndexMap<SymbolRef, NamedImport>,
-  pub named_exports: FxHashMap<Rstr, LocalExport>,
+  pub named_exports: FxHashMap<CompactStr, LocalExport>,
+  /// `stmt_infos[0]` represents the namespace binding statement
   pub stmt_infos: StmtInfos,
   pub import_records: IndexVec<ImportRecordIdx, ResolvedImportRecord>,
   /// The key is the `Span` of `ImportDeclaration`, `ImportExpression`, `ExportNamedDeclaration`, `ExportAllDeclaration`

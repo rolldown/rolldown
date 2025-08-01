@@ -109,7 +109,6 @@ rolldown_plugin_wasm_fallback = { version = "0.1.0", path = "./crates/rolldown_p
 rolldown_plugin_wasm_helper = { version = "0.1.0", path = "./crates/rolldown_plugin_wasm_helper" }
 rolldown_plugin_web_worker_post = { version = "0.1.0", path = "./crates/rolldown_plugin_web_worker_post" }
 rolldown_resolver = { version = "0.1.0", path = "./crates/rolldown_resolver" }
-rolldown_rstr = { version = "0.1.0", path = "./crates/rolldown_rstr" }
 rolldown_sourcemap = { version = "0.1.0", path = "./crates/rolldown_sourcemap" }
 rolldown_std_utils = { version = "0.1.0", path = "./crates/rolldown_std_utils" }
 rolldown_testing = { version = "0.1.0", path = "./crates/rolldown_testing" }

@@ -2635,7 +2635,6 @@ dependencies = [
  "rolldown_plugin_data_uri",
  "rolldown_plugin_hmr",
  "rolldown_resolver",
- "rolldown_rstr",
  "rolldown_sourcemap",
  "rolldown_std_utils",
  "rolldown_testing",
@@ -2735,7 +2734,6 @@ dependencies = [
  "rolldown_ecmascript",
  "rolldown_error",
  "rolldown_fs",
- "rolldown_rstr",
  "rolldown_sourcemap",
  "rolldown_std_utils",
  "rolldown_utils",
@@ -3154,13 +3152,6 @@ dependencies = [
  "rolldown_fs",
  "rolldown_utils",
  "sugar_path",
-]
-
-[[package]]
-name = "rolldown_rstr"
-version = "0.1.0"
-dependencies = [
- "oxc",
 ]
 
 [[package]]

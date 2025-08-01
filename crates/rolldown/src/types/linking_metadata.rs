@@ -1,9 +1,9 @@
+use oxc::span::CompactStr;
 use oxc_index::IndexVec;
 use rolldown_common::{
   EntryPointKind, ImportRecordIdx, MemberExprRefResolutionMap, ModuleIdx, ResolvedExport,
   RuntimeHelper, StmtInfoIdx, SymbolRef, WrapKind, dynamic_import_usage::DynamicImportExportsUsage,
 };
-use rolldown_rstr::Rstr;
 use rolldown_utils::indexmap::{FxIndexMap, FxIndexSet};
 use rustc_hash::{FxHashMap, FxHashSet};
 
@@ -37,17 +37,17 @@ pub struct LinkingMetadata {
   pub wrapper_stmt_info: Option<StmtInfoIdx>,
   pub wrap_kind: WrapKind,
   // Store the export info for each module, including export named declaration and export star declaration.
-  pub resolved_exports: FxHashMap<Rstr, ResolvedExport>,
-  // pub re_export_all_names: FxHashSet<Rstr>,
+  pub resolved_exports: FxHashMap<CompactStr, ResolvedExport>,
+  // pub re_export_all_names: FxHashSet<CompactStr>,
   /// Store the names of exclude ambiguous resolved exports.
   /// It will be used to generate chunk exports and module namespace binding.
   /// The second element means if the export is came from commonjs module.
-  pub sorted_and_non_ambiguous_resolved_exports: FxIndexMap<Rstr, bool>,
+  pub sorted_and_non_ambiguous_resolved_exports: FxIndexMap<CompactStr, bool>,
   // If a esm module has export star from commonjs, it will be marked as ESMWithDynamicFallback at linker.
   // The unknown export name will be resolved at runtime.
   // esbuild add it to `ExportKind`, but the linker shouldn't mutate the module.
   pub has_dynamic_exports: bool,
-  pub shimmed_missing_exports: FxHashMap<Rstr, SymbolRef>,
+  pub shimmed_missing_exports: FxHashMap<CompactStr, SymbolRef>,
 
   // Entry chunks need to generate code that doesn't belong to any module. This is the list of symbols are referenced by the
   // generated code. Tree-shaking will cares about these symbols to make sure they are not removed.
@@ -75,7 +75,7 @@ impl LinkingMetadata {
   pub fn canonical_exports(
     &self,
     needs_commonjs_export: bool,
-  ) -> impl Iterator<Item = (&Rstr, &ResolvedExport)> {
+  ) -> impl Iterator<Item = (&CompactStr, &ResolvedExport)> {
     self.sorted_and_non_ambiguous_resolved_exports.iter().filter_map(
       move |(name, came_from_cjs)| {
         (needs_commonjs_export || !came_from_cjs).then_some((name, &self.resolved_exports[name]))
@@ -93,7 +93,7 @@ impl LinkingMetadata {
     entry_point_kind: EntryPointKind,
     dynamic_import_exports_usage_map: &'a FxHashMap<ModuleIdx, DynamicImportExportsUsage>,
     needs_commonjs_export: bool,
-  ) -> impl Iterator<Item = (&'b Rstr, &'b ResolvedExport)> + 'b {
+  ) -> impl Iterator<Item = (&'b CompactStr, &'b ResolvedExport)> + 'b {
     let partial_used_exports = match entry_point_kind {
       rolldown_common::EntryPointKind::UserDefined
       | rolldown_common::EntryPointKind::EmittedUserDefined => None,

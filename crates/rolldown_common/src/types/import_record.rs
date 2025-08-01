@@ -3,8 +3,7 @@ use std::{
   ops::{Deref, DerefMut},
 };
 
-use oxc::span::Span;
-use rolldown_rstr::Rstr;
+use oxc::span::{CompactStr, Span};
 
 use crate::{ImportKind, ModuleIdx, ModuleType, StmtInfoIdx, SymbolRef};
 
@@ -63,7 +62,7 @@ bitflags::bitflags! {
 pub struct ImportRecord<State: Debug + Clone> {
   pub state: State,
   /// `./lib.js` in `import { foo } from './lib.js';`
-  pub module_request: Rstr,
+  pub module_request: CompactStr,
   pub kind: ImportKind,
   /// We will turn `import { foo } from './cjs.js'; console.log(foo);` to `var import_foo = require_cjs(); console.log(importcjs.foo)`;
   /// `namespace_ref` represent the potential `import_foo` in above example. It's useless if we imported n esm module.
@@ -96,7 +95,7 @@ pub type RawImportRecord = ImportRecord<ImportRecordStateInit>;
 
 impl RawImportRecord {
   pub fn new(
-    specifier: Rstr,
+    specifier: CompactStr,
     kind: ImportKind,
     namespace_ref: SymbolRef,
     span: Span,

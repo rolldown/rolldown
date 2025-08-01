@@ -36,7 +36,6 @@ use rolldown_common::{
 };
 use rolldown_ecmascript_utils::{BindingIdentifierExt, BindingPatternExt};
 use rolldown_error::{BuildDiagnostic, BuildResult, CjsExportSpan};
-use rolldown_rstr::Rstr;
 use rolldown_std_utils::PathExt;
 use rolldown_utils::concat_string;
 use rolldown_utils::ecmascript::legitimize_identifier_name;
@@ -58,7 +57,7 @@ pub struct ScanResult {
   /// Using `IndexMap` to make sure the order of the named imports always sorted by the span of the
   /// module
   pub named_imports: FxIndexMap<SymbolRef, NamedImport>,
-  pub named_exports: FxHashMap<Rstr, LocalExport>,
+  pub named_exports: FxHashMap<CompactStr, LocalExport>,
   /// Used to store all exports in commonjs module, why not reuse `named_exports`?
   /// Because It is legal to use commonjs exports syntax in a es module, here is an example:
   /// ```js
@@ -69,7 +68,7 @@ pub struct ScanResult {
   /// `named_exports`, the `foo` will be overridden by the `exports.foo` and cause a bug(Because we
   /// may not know if it is a esm at the time, a simple case would be swap the order of two export
   /// stmt).
-  pub commonjs_exports: FxHashMap<Rstr, LocalExport>,
+  pub commonjs_exports: FxHashMap<CompactStr, LocalExport>,
   pub stmt_infos: StmtInfos,
   pub import_records: IndexVec<ImportRecordIdx, RawImportRecord>,
   pub default_export_ref: SymbolRef,
@@ -133,7 +132,7 @@ pub struct AstScanner<'me, 'ast> {
   /// A flag to resolve `this` appear with propertyKey in class
   is_nested_this_inside_class: bool,
   /// Used in commonjs module it self
-  self_used_cjs_named_exports: FxHashSet<Rstr>,
+  self_used_cjs_named_exports: FxHashSet<CompactStr>,
   allocator: &'ast oxc::allocator::Allocator,
 }
 
@@ -378,7 +377,7 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
         "#"
       ));
     let mut rec = RawImportRecord::new(
-      Rstr::from(module_request),
+      CompactStr::from(module_request),
       kind,
       namespace_ref,
       span,
@@ -411,7 +410,7 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
     self.result.named_imports.insert(
       (self.idx, local).into(),
       NamedImport {
-        imported: Rstr::new(imported).into(),
+        imported: CompactStr::new(imported).into(),
         imported_as: (self.idx, local).into(),
         span_imported,
         record_id,

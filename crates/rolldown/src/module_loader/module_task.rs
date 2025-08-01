@@ -1,7 +1,7 @@
 use arcstr::ArcStr;
+use oxc::span::CompactStr;
 use oxc::span::Span;
 use oxc_index::IndexVec;
-use rolldown_rstr::Rstr;
 use rolldown_std_utils::PathExt;
 use rolldown_utils::{ecmascript::legitimize_identifier_name, indexmap::FxIndexSet};
 use std::sync::Arc;
@@ -24,12 +24,12 @@ use crate::{
 
 pub struct ModuleTaskOwner {
   source: ArcStr,
-  importer_id: Rstr,
+  importer_id: CompactStr,
   importee_span: Span,
 }
 
 impl ModuleTaskOwner {
-  pub fn new(source: ArcStr, importer_id: Rstr, importee_span: Span) -> Self {
+  pub fn new(source: ArcStr, importer_id: CompactStr, importee_span: Span) -> Self {
     ModuleTaskOwner { source, importer_id, importee_span }
   }
 }

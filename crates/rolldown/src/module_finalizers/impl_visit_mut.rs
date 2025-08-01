@@ -9,7 +9,7 @@ use oxc::{
   semantic::ScopeFlags,
   span::{SPAN, Span},
 };
-use rolldown_common::{ExportsKind, StmtInfoIdx, SymbolRef, ThisExprReplaceKind, WrapKind};
+use rolldown_common::{ExportsKind, SymbolRef, ThisExprReplaceKind, WrapKind};
 use rolldown_ecmascript_utils::{ExpressionExt, JsxExt};
 
 use crate::hmr::utils::HmrAstBuilder;
@@ -41,7 +41,7 @@ impl<'ast> VisitMut<'ast> for ScopeHoistingFinalizer<'_, 'ast> {
     // init namespace_alias_symbol_id
 
     let is_namespace_referenced = matches!(self.ctx.module.exports_kind, ExportsKind::Esm)
-      && self.ctx.module.stmt_infos[StmtInfoIdx::new(0)].is_included;
+      && self.ctx.module.stmt_infos.get_namespace_stmt_info().is_included;
 
     let last_import_stmt_idx = self.remove_unused_top_level_stmt(program);
 

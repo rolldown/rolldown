@@ -6,10 +6,7 @@ async fn test() {
   manual_integration_test!()
     .build(TestMeta::default())
     .run(BundlerOptions {
-      input: Some(vec![InputItem {
-        name: Some("main".into()),
-        import: "./main.js".into(),
-      }]),
+      input: Some(vec![InputItem { name: Some("main".into()), import: "./main.js".into() }]),
       ..Default::default()
     })
     .await;

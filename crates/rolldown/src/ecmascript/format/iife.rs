@@ -194,7 +194,7 @@ async fn render_iife_factory_arguments(
           BuildDiagnostic::missing_global_name(
             external.id.to_string(),
             external.name.clone(),
-            external.identifier_name.clone(),
+            external.identifier_name.as_str().into(),
           )
           .with_severity_warning(),
         );

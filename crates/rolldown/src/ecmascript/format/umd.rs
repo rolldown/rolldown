@@ -185,7 +185,7 @@ async fn render_iife_export(
           BuildDiagnostic::missing_global_name(
             external.id.to_string(),
             external.name.clone(),
-            external.identifier_name.clone(),
+            external.identifier_name.as_str().into(),
           )
           .with_severity_warning(),
         );

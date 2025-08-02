@@ -32,7 +32,7 @@ export interface EmittedAsset {
   type: 'asset';
   name?: string;
   fileName?: string;
-  originalFileName?: string | null;
+  originalFileName?: string;
   source: AssetSource;
 }
 
@@ -226,10 +226,12 @@ export class PluginContextImpl extends MinimalPluginContextImpl {
   private getAssetFileNames(file: EmittedAsset): string | undefined {
     if (typeof this.outputOptions.assetFileNames === 'function') {
       return this.outputOptions.assetFileNames({
+        type: 'asset',
+        name: file.name,
         names: file.name ? [file.name] : [],
+        originalFileName: file.originalFileName,
         originalFileNames: file.originalFileName ? [file.originalFileName] : [],
         source: file.source,
-        type: 'asset',
       });
     }
   }

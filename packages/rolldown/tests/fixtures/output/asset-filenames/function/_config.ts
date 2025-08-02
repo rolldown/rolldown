@@ -1,11 +1,13 @@
+import { expect } from 'vitest'
 import { defineTest } from 'rolldown-tests'
 import { getOutputAssetNames } from 'rolldown-tests/utils'
-import { expect } from 'vitest'
 
 export default defineTest({
   config: {
     output: {
       assetFileNames: (asset) => {
+        expect(asset).toHaveProperty('name')
+        expect(asset).toHaveProperty('originalFileName')
         if (
           typeof asset.source === 'string' &&
           asset.source === 'emitted' &&

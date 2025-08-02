@@ -36,6 +36,34 @@ mod generated;
 pub mod watcher;
 pub mod worker_manager;
 
+#[cfg(not(target_family = "wasm"))]
+#[napi_derive::module_init]
+pub fn init() {
+  use napi::{bindgen_prelude::create_custom_tokio_runtime, tokio};
+  let max_blocking_threads = {
+    std::env::var("ROLLDOWN_MAX_BLOCKING_THREADS")
+      .ok()
+      .and_then(|v| v.parse::<usize>().ok())
+      .unwrap_or({
+        #[cfg(target_os = "macos")]
+        {
+          4.min(num_cpus::get())
+        }
+        #[cfg(not(target_os = "macos"))]
+        {
+          // default value in tokio implementation
+          512
+        }
+      })
+  };
+  let rt = tokio::runtime::Builder::new_multi_thread()
+    .max_blocking_threads(max_blocking_threads)
+    .enable_all()
+    .build()
+    .expect("Failed to create tokio runtime");
+  create_custom_tokio_runtime(rt);
+}
+
 #[napi]
 /// Shutdown the tokio runtime manually.
 ///

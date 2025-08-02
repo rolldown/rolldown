@@ -116,7 +116,7 @@ impl BuildDiagnostic {
       stable_importer,
       stable_importee,
       importer_source,
-      imported_specifier,
+      imported_specifier: imported_specifier.into(),
       imported_specifier_span,
     })
   }
@@ -131,7 +131,7 @@ impl BuildDiagnostic {
   }
 
   pub fn missing_global_name(module_id: String, module_name: ArcStr, guessed_name: ArcStr) -> Self {
-    Self::new_inner(MissingGlobalName { module_id, module_name, guessed_name })
+    Self::new_inner(MissingGlobalName { module_id, module_name, guessed_name: guessed_name.as_str().into() })
   }
 
   pub fn missing_name_option_for_iife_export() -> Self {
@@ -143,7 +143,7 @@ impl BuildDiagnostic {
   }
 
   pub fn illegal_identifier_as_name(identifier_name: ArcStr) -> Self {
-    Self::new_inner(IllegalIdentifierAsName { identifier_name })
+    Self::new_inner(IllegalIdentifierAsName { identifier_name: identifier_name.as_str().into() })
   }
 
   pub fn invalid_export_option(
@@ -180,7 +180,7 @@ impl BuildDiagnostic {
     name: ArcStr,
     stable_importer: String,
   ) -> Self {
-    Self::new_inner(ImportIsUndefined { filename, source, span, name, stable_importer })
+    Self::new_inner(ImportIsUndefined { filename, source, span, name: name.as_str().into(), stable_importer })
   }
 
   pub fn unsupported_feature(
@@ -285,11 +285,11 @@ impl BuildDiagnostic {
     span: Span,
     name: ArcStr,
   ) -> Self {
-    Self::new_inner(ExportUndefinedVariable { filename, source, span, name })
+    Self::new_inner(ExportUndefinedVariable { filename, source, span, name: name.as_str().into() })
   }
 
   pub fn assign_to_import(filename: ArcStr, source: ArcStr, span: Span, name: ArcStr) -> Self {
-    Self::new_inner(AssignToImport { filename, source, span, name })
+    Self::new_inner(AssignToImport { filename, source, span, name: name.as_str().into() })
   }
 
   #[allow(clippy::cast_possible_truncation)]

@@ -1,5 +1,5 @@
 use arcstr::ArcStr;
-use oxc::span::Span;
+use oxc::span::{CompactStr, Span};
 
 use crate::{event_kind::EventKind, types::diagnostic_options::DiagnosticOptions};
 
@@ -11,7 +11,7 @@ pub struct MissingExport {
   pub stable_importer: String,
   pub stable_importee: String,
   pub importer_source: ArcStr,
-  pub imported_specifier: String,
+  pub imported_specifier: CompactStr,
   pub imported_specifier_span: Span,
 }
 

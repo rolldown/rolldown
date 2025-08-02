@@ -1,5 +1,5 @@
 use arcstr::ArcStr;
-use oxc::span::Span;
+use oxc::span::{CompactStr, Span};
 
 use crate::{diagnostic::Diagnostic, types::diagnostic_options::DiagnosticOptions};
 
@@ -10,7 +10,7 @@ pub struct ExportUndefinedVariable {
   pub filename: String,
   pub source: ArcStr,
   pub span: Span,
-  pub name: ArcStr,
+  pub name: CompactStr,
 }
 
 impl BuildEvent for ExportUndefinedVariable {

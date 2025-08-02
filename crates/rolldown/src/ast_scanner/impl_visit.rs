@@ -282,7 +282,7 @@ impl<'me, 'ast: 'me> Visit<'ast> for AstScanner<'me, 'ast> {
             self.id.resource_id().clone().parse().expect("should be a valid resource id"),
             self.source.clone(),
             it.span(),
-            self.options.format.to_string(),
+            self.options.format.to_string().into(),
           )
           .with_severity_warning(),
         );

@@ -439,7 +439,7 @@ impl LinkStage<'_> {
                           module.id.resource_id().clone(),
                           module.source.clone(),
                           member_expr_ref.span,
-                          name.as_str(),
+                          name.as_str().into(),
                           canonical_ref_owner.stable_id.to_string(),
                         )
                         .with_severity_warning(),

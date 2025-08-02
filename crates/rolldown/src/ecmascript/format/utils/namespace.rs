@@ -117,7 +117,7 @@ pub fn generate_identifier(
     Ok((String::new(), format!("var {name}")))
   } else {
     // This behavior is aligned with Rollup. If using `output.extend: true`, this error won't be triggered.
-    Err(vec![BuildDiagnostic::illegal_identifier_as_name(name.as_str())].into())
+    Err(vec![BuildDiagnostic::illegal_identifier_as_name(name.as_str().into())].into())
   }
 }
 

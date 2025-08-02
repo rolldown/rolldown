@@ -617,7 +617,7 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
             self.id.to_string(),
             self.source.clone(),
             spec.local.span(),
-            spec.local.name().as_str(),
+            spec.local.name().as_str().into(),
           ));
         }
       });

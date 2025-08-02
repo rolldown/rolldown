@@ -130,8 +130,8 @@ impl BuildDiagnostic {
     Self::new_inner(MixedExport { module_id, module_name, entry_module, export_keys })
   }
 
-  pub fn missing_global_name(module_id: String, module_name: ArcStr, guessed_name: impl Into<CompactStr>) -> Self {
-    Self::new_inner(MissingGlobalName { module_id, module_name, guessed_name: guessed_name.into() })
+  pub fn missing_global_name(module_id: String, module_name: ArcStr, guessed_name: CompactStr) -> Self {
+    Self::new_inner(MissingGlobalName { module_id, module_name, guessed_name })
   }
 
   pub fn missing_name_option_for_iife_export() -> Self {
@@ -142,19 +142,19 @@ impl BuildDiagnostic {
     Self::new_inner(MissingNameOptionForUmdExport {})
   }
 
-  pub fn illegal_identifier_as_name(identifier_name: impl Into<CompactStr>) -> Self {
-    Self::new_inner(IllegalIdentifierAsName { identifier_name: identifier_name.into() })
+  pub fn illegal_identifier_as_name(identifier_name: CompactStr) -> Self {
+    Self::new_inner(IllegalIdentifierAsName { identifier_name })
   }
 
   pub fn invalid_export_option(
-    export_mode: impl Into<CompactStr>,
+    export_mode: CompactStr,
     entry_module: ArcStr,
-    export_keys: Vec<impl Into<CompactStr>>,
+    export_keys: Vec<CompactStr>,
   ) -> Self {
     Self::new_inner(InvalidExportOption {
-      export_mode: export_mode.into(),
+      export_mode,
       entry_module,
-      export_keys: export_keys.into_iter().map(|k| k.into()).collect(),
+      export_keys,
     })
   }
 
@@ -181,10 +181,10 @@ impl BuildDiagnostic {
     filename: ArcStr,
     source: ArcStr,
     span: Span,
-    name: impl Into<CompactStr>,
+    name: CompactStr,
     stable_importer: String,
   ) -> Self {
-    Self::new_inner(ImportIsUndefined { filename, source, span, name: name.into(), stable_importer })
+    Self::new_inner(ImportIsUndefined { filename, source, span, name, stable_importer })
   }
 
   pub fn unsupported_feature(
@@ -196,12 +196,12 @@ impl BuildDiagnostic {
     Self::new_inner(UnsupportedFeature { filename, source, span, error_message })
   }
 
-  pub fn empty_import_meta(filename: String, source: ArcStr, span: Span, format: impl Into<CompactStr>) -> Self {
+  pub fn empty_import_meta(filename: String, source: ArcStr, span: Span, format: CompactStr) -> Self {
     Self::new_inner(crate::events::empty_import_meta::EmptyImportMeta {
       filename,
       source,
       span,
-      format: format.into(),
+      format,
     })
   }
 
@@ -287,13 +287,13 @@ impl BuildDiagnostic {
     filename: String,
     source: ArcStr,
     span: Span,
-    name: impl Into<CompactStr>,
+    name: CompactStr,
   ) -> Self {
-    Self::new_inner(ExportUndefinedVariable { filename, source, span, name: name.into() })
+    Self::new_inner(ExportUndefinedVariable { filename, source, span, name })
   }
 
-  pub fn assign_to_import(filename: ArcStr, source: ArcStr, span: Span, name: impl Into<CompactStr>) -> Self {
-    Self::new_inner(AssignToImport { filename, source, span, name: name.into() })
+  pub fn assign_to_import(filename: ArcStr, source: ArcStr, span: Span, name: CompactStr) -> Self {
+    Self::new_inner(AssignToImport { filename, source, span, name })
   }
 
   #[allow(clippy::cast_possible_truncation)]

@@ -27,7 +27,7 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
             self.id.resource_id().clone(),
             self.source.clone(),
             span,
-            name,
+            name.into(),
           ));
           return;
         }
@@ -39,7 +39,7 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
           self.id.resource_id().clone(),
           self.source.clone(),
           ident.span,
-          ident.name.as_str(),
+          ident.name.as_str().into(),
         ));
       }
     }

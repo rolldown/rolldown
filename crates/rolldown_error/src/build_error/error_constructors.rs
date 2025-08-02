@@ -151,7 +151,11 @@ impl BuildDiagnostic {
     entry_module: ArcStr,
     export_keys: Vec<ArcStr>,
   ) -> Self {
-    Self::new_inner(InvalidExportOption { export_mode, export_keys, entry_module })
+    Self::new_inner(InvalidExportOption {
+      export_mode: export_mode.as_str().into(),
+      entry_module,
+      export_keys: export_keys.into_iter().map(|k| k.as_str().into()).collect(),
+    })
   }
 
   pub fn filename_conflict(filename: ArcStr) -> Self {
@@ -197,7 +201,7 @@ impl BuildDiagnostic {
       filename,
       source,
       span,
-      format,
+      format: format.as_str().into(),
     })
   }
 

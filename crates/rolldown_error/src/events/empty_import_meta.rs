@@ -2,14 +2,14 @@ use crate::DiagnosticOptions;
 use crate::diagnostic::Diagnostic;
 use crate::events::BuildEvent;
 use arcstr::ArcStr;
-use oxc::span::Span;
+use oxc::span::{CompactStr, Span};
 
 #[derive(Debug)]
 pub struct EmptyImportMeta {
   pub filename: String,
   pub source: ArcStr,
   pub span: Span,
-  pub format: ArcStr,
+  pub format: CompactStr,
 }
 
 impl BuildEvent for EmptyImportMeta {

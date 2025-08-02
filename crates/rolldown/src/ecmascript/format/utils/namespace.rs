@@ -6,7 +6,7 @@
 //! - The `extend`: whether extends the object or not.
 use std::fmt::Write as _;
 
-use arcstr::ArcStr;
+
 use rolldown_common::OutputExports;
 use rolldown_error::{BuildDiagnostic, BuildResult};
 use rolldown_utils::{concat_string, ecmascript::is_validate_assignee_identifier_name};
@@ -117,8 +117,7 @@ pub fn generate_identifier(
     Ok((String::new(), format!("var {name}")))
   } else {
     // This behavior is aligned with Rollup. If using `output.extend: true`, this error won't be triggered.
-    let name = ArcStr::from(name);
-    Err(vec![BuildDiagnostic::illegal_identifier_as_name(name)].into())
+    Err(vec![BuildDiagnostic::illegal_identifier_as_name(name.as_str())].into())
   }
 }
 

@@ -18,9 +18,9 @@ pub fn determine_export_mode(
       if export_names.len() != 1 || export_names[0].as_str() != "default" {
         return Err(
           vec![BuildDiagnostic::invalid_export_option(
-            "default".into(),
+            "default",
             module.stable_id.as_str().into(),
-            export_names.iter().map(|name| name.as_str().into()).collect(),
+            export_names.iter().map(|name| name.as_str()).collect(),
           )]
           .into(),
         );
@@ -31,9 +31,9 @@ pub fn determine_export_mode(
       if !export_names.is_empty() {
         return Err(
           vec![BuildDiagnostic::invalid_export_option(
-            "none".into(),
+            "none",
             module.stable_id.as_str().into(),
-            export_names.iter().map(|name| name.as_str().into()).collect(),
+            export_names.iter().map(|name| name.as_str()).collect(),
           )]
           .into(),
         );

@@ -1,6 +1,6 @@
 use std::borrow::Cow;
 
-use arcstr::ArcStr;
+
 use indexmap::IndexSet;
 use oxc::span::CompactStr;
 // TODO: The current implementation for matching imports is enough so far but incomplete. It needs to be refactored
@@ -439,7 +439,7 @@ impl LinkStage<'_> {
                           module.id.resource_id().clone(),
                           module.source.clone(),
                           member_expr_ref.span,
-                          ArcStr::from(name.as_str()),
+                          name.as_str(),
                           canonical_ref_owner.stable_id.to_string(),
                         )
                         .with_severity_warning(),

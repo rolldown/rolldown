@@ -21,7 +21,7 @@ catalog:
   '@oxc-node/cli': '^0.0.30'
   '@oxc-node/core': '^0.0.30'
   'fast-glob': '^3.3.3'
-  'rolldown-plugin-dts': '^0.14.0'
+  'rolldown-plugin-dts': '^0.15.0'
   'tsdown': '0.13.1'
   # oxc
   '@oxc-project/runtime': '=0.79.0'

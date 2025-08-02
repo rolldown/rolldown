@@ -34,8 +34,8 @@ catalogs:
       specifier: '=0.79.0'
       version: 0.79.0
     rolldown-plugin-dts:
-      specifier: ^0.14.0
-      version: 0.14.3
+      specifier: ^0.15.0
+      version: 0.15.0
     tsdown:
       specifier: 0.13.1
       version: 0.13.1
@@ -282,7 +282,7 @@ importers:
         version: 4.0.3
       tsdown:
         specifier: 'catalog:'
-        version: 0.13.1(typescript@5.8.3)
+        version: 0.13.1(oxc-resolver@11.6.0)(typescript@5.8.3)
       vitest:
         specifier: ^3.0.1
         version: 3.2.4(@types/debug@4.1.12)(@types/node@24.1.0)(jiti@2.4.2)(lightningcss@1.30.1)(terser@5.43.1)(tsx@4.20.3)(yaml@2.8.0)
@@ -349,7 +349,7 @@ importers:
         version: 'link:'
       rolldown-plugin-dts:
         specifier: 'catalog:'
-        version: 0.14.3(oxc-resolver@11.6.0)(rolldown@packages+rolldown)(typescript@5.8.3)
+        version: 0.15.0(oxc-resolver@11.6.0)(rolldown@packages+rolldown)(typescript@5.8.3)
       rollup:
         specifier: ^4.18.0
         version: 4.45.1
@@ -4795,6 +4795,22 @@ packages:
 
   rolldown-plugin-dts@0.14.3:
     resolution: {integrity: sha512-LsUPsPV2XpACe5wikxQzYBD0qg4nyxwUkLos5oF8v8qVO9jPpH6GRg2S5ZUELFry04Ab58C9Tibbi7dEbVLp2w==}
+    engines: {node: '>=20.18.0'}
+    peerDependencies:
+      '@typescript/native-preview': '>=7.0.0-dev.20250601.1'
+      rolldown: ^1.0.0-beta.9
+      typescript: ^5.0.0
+      vue-tsc: ~3.0.3
+    peerDependenciesMeta:
+      '@typescript/native-preview':
+        optional: true
+      typescript:
+        optional: true
+      vue-tsc:
+        optional: true
+
+  rolldown-plugin-dts@0.15.0:
+    resolution: {integrity: sha512-c8Yc5IR38Q+o8ElKBBvaVWQRSZ582oFeTR4pixzNEMHx/RAyhJpDtWlViNbdKkjpsdpgBRIlrjaJXn/DxuOQPA==}
     engines: {node: '>=20.18.0'}
     peerDependencies:
       '@typescript/native-preview': '>=7.0.0-dev.20250601.1'
@@ -9907,24 +9923,7 @@ snapshots:
       glob: 11.0.3
       package-json-from-dist: 1.0.1
 
-  rolldown-plugin-dts@0.14.3(oxc-resolver@11.6.0)(rolldown@packages+rolldown)(typescript@5.8.3):
-    dependencies:
-      '@babel/generator': 7.28.0
-      '@babel/parser': 7.28.0
-      '@babel/types': 7.28.2
-      ast-kit: 2.1.1
-      birpc: 2.5.0
-      debug: 4.4.1(supports-color@8.1.1)
-      dts-resolver: 2.1.1(oxc-resolver@11.6.0)
-      get-tsconfig: 4.10.1
-      rolldown: link:packages/rolldown
-    optionalDependencies:
-      typescript: 5.8.3
-    transitivePeerDependencies:
-      - oxc-resolver
-      - supports-color
-
-  rolldown-plugin-dts@0.14.3(rolldown@1.0.0-beta.30)(typescript@5.8.3):
+  rolldown-plugin-dts@0.14.3(oxc-resolver@11.6.0)(rolldown@1.0.0-beta.30)(typescript@5.8.3):
     dependencies:
       '@babel/generator': 7.28.0
       '@babel/parser': 7.28.0
@@ -9935,6 +9934,23 @@ snapshots:
       dts-resolver: 2.1.1(oxc-resolver@11.6.0)
       get-tsconfig: 4.10.1
       rolldown: 1.0.0-beta.30
+    optionalDependencies:
+      typescript: 5.8.3
+    transitivePeerDependencies:
+      - oxc-resolver
+      - supports-color
+
+  rolldown-plugin-dts@0.15.0(oxc-resolver@11.6.0)(rolldown@packages+rolldown)(typescript@5.8.3):
+    dependencies:
+      '@babel/generator': 7.28.0
+      '@babel/parser': 7.28.0
+      '@babel/types': 7.28.2
+      ast-kit: 2.1.1
+      birpc: 2.5.0
+      debug: 4.4.1(supports-color@8.1.1)
+      dts-resolver: 2.1.1(oxc-resolver@11.6.0)
+      get-tsconfig: 4.10.1
+      rolldown: link:packages/rolldown
     optionalDependencies:
       typescript: 5.8.3
     transitivePeerDependencies:
@@ -10292,7 +10308,7 @@ snapshots:
 
   trough@2.2.0: {}
 
-  tsdown@0.13.1(typescript@5.8.3):
+  tsdown@0.13.1(oxc-resolver@11.6.0)(typescript@5.8.3):
     dependencies:
       ansis: 4.1.0
       cac: 6.7.14
@@ -10302,7 +10318,7 @@ snapshots:
       empathic: 2.0.0
       hookable: 5.5.3
       rolldown: 1.0.0-beta.30
-      rolldown-plugin-dts: 0.14.3(rolldown@1.0.0-beta.30)(typescript@5.8.3)
+      rolldown-plugin-dts: 0.14.3(oxc-resolver@11.6.0)(rolldown@1.0.0-beta.30)(typescript@5.8.3)
       semver: 7.7.2
       tinyexec: 1.0.1
       tinyglobby: 0.2.14

@@ -1,232 +1,38 @@
 name: Copilot Setup Steps
 
-permissions: {}
+# This workflow defines the setup steps that GitHub Copilot agents will use
+# to prepare the development environment for the oxc project.
+# It preinstalls tools and dependencies needed for Rust and Node.js development.
 
 on:
   workflow_dispatch:
-    inputs:
-      setup_type:
-        description: 'Type of copilot setup to perform'
-        required: true
-        default: 'basic'
-        type: choice
-        options:
-          - basic
-          - advanced
-          - agent-config
+  pull_request:
+    types: [opened, synchronize]
+    paths:
+      - .github/workflows/copilot-setup-steps.yml
   push:
     branches:
-      - 'copilot/**'
+      - main
     paths:
-      - 'AGENTS.md'
-      - '.github/workflows/copilot-setup-steps.yml'
+      - .github/workflows/copilot-setup-steps.yml
 
-concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: true
+permissions: {}
 
 jobs:
-  validate-agents-doc:
-    name: Validate AGENTS.md
+  copilot-setup-steps:
+    name: Setup Development Environment for Copilot
     runs-on: ubuntu-latest
     steps:
-      - uses: taiki-e/checkout-action@b13d20b7cda4e2f325ef19895128f7ff735c0b3d # v1.3.1
-
-      - name: Check AGENTS.md exists
-        run: |
-          if [ ! -f "AGENTS.md" ]; then
-            echo "❌ AGENTS.md file not found"
-            exit 1
-          fi
-          echo "✅ AGENTS.md file exists"
-
-      - name: Validate AGENTS.md format
-        run: |
-          # Check for required sections
-          if ! grep -q "# AI Agent Guidelines for Rolldown" AGENTS.md; then
-            echo "❌ Missing main heading in AGENTS.md"
-            exit 1
-          fi
-          if ! grep -q "## Project Overview" AGENTS.md; then
-            echo "❌ Missing Project Overview section in AGENTS.md"
-            exit 1
-          fi
-          if ! grep -q "## Development Guidelines" AGENTS.md; then
-            echo "❌ Missing Development Guidelines section in AGENTS.md"
-            exit 1
-          fi
-          echo "✅ AGENTS.md has required sections"
-
-      - name: Restore dprint plugin cache
-        uses: actions/cache/restore@5a3ec84eff668545956fd18022155c47e93e2684 # v4.2.3
+      # Checkout full repo for git history.
+      - uses: actions/checkout@v4
         with:
-          key: dprint-${{ hashFiles('dprint.json') }}
-          path: ~/.cache/dprint
+          persist-credentials: false
 
-      - uses: taiki-e/install-action@bbdef1c33cb8ed1fd122d68d8374ac79998d6960 # v2.57.2
+      - uses: oxc-project/setup-rust@cd82e1efec7fef815e2c23d296756f31c7cdc03d # v1.0.0
         with:
-          tool: dprint
+          cache-key: debug-build
+          save-cache: false
+          tools: just,cargo-insta,typos-cli,cargo-shear,dprint
+          components: clippy rust-docs rustfmt
 
-      - name: Check AGENTS.md formatting
-        run: |
-          if ! dprint check AGENTS.md; then
-            echo "❌ AGENTS.md formatting issues found"
-            echo "Run 'dprint fmt' to fix formatting"
-            exit 1
-          fi
-          echo "✅ AGENTS.md is properly formatted"
-
-  setup-copilot-basic:
-    name: Basic Copilot Setup
-    runs-on: ubuntu-latest
-    if: >
-      github.event.inputs.setup_type == 'basic' ||
-      github.event.inputs.setup_type == ''
-    needs: validate-agents-doc
-    steps:
-      - uses: taiki-e/checkout-action@b13d20b7cda4e2f325ef19895128f7ff735c0b3d # v1.3.1
-
-      - name: Validate project structure for AI agents
-        run: |
-          echo "🤖 Validating project structure for AI agent compatibility..."
-          
-          # Check critical files exist
-          critical_files=(
-            "package.json"
-            "Cargo.toml"
-            "justfile"
-            "README.md"
-            "CONTRIBUTING.md"
-            "AGENTS.md"
-          )
-          
-          for file in "${critical_files[@]}"; do
-            if [ ! -f "$file" ]; then
-              echo "❌ Missing critical file: $file"
-              exit 1
-            fi
-            echo "✅ Found: $file"
-          done
-
-      - name: Check build tools availability
-        run: |
-          echo "🔧 Checking build tools..."
-          
-          # Verify justfile has required commands
-          if ! grep -q "build:" justfile; then
-            echo "❌ justfile missing build command"
-            exit 1
-          fi
-          
-          if ! grep -q "test" justfile; then
-            echo "❌ justfile missing test commands"
-            exit 1
-          fi
-          
-          echo "✅ Build tools configuration valid"
-
-      - name: Setup completion
-        run: |
-          echo "✅ Basic copilot setup validation completed successfully"
-          echo "📝 AI agents can now use the guidelines in AGENTS.md"
-          echo "🚀 Ready for AI-assisted development on Rolldown"
-
-  setup-copilot-advanced:
-    name: Advanced Copilot Setup
-    runs-on: ubuntu-latest
-    if: github.event.inputs.setup_type == 'advanced'
-    needs: validate-agents-doc
-    steps:
-      - uses: taiki-e/checkout-action@b13d20b7cda4e2f325ef19895128f7ff735c0b3d # v1.3.1
-
-      - name: Setup Rust
-        uses: oxc-project/setup-rust@cd82e1efec7fef815e2c23d296756f31c7cdc03d # v1.0.0
-        with:
-          restore-cache: false
-          tools: just
-
-      - name: Setup Node For Development
-        uses: ./.github/actions/setup-node
-
-      - name: Validate build system
-        run: |
-          echo "🔧 Testing build system for AI agent compatibility..."
-          
-          # Test basic build commands that AI agents might use
-          echo "Testing cargo check..."
-          cargo check --workspace --quiet
-          
-          echo "Testing Node.js setup..."
-          node --version
-          pnpm --version
-
-      - name: Test formatting tools
-        run: |
-          echo "🎨 Testing code formatting tools..."
-          
-          # Test dprint (used for markdown and other files)
-          dprint --version
-          dprint check --dry-run
-          
-          # Test Rust formatting
-          cargo fmt --version
-          cargo fmt --check
-
-      - name: Advanced setup completion
-        run: |
-          echo "✅ Advanced copilot setup completed successfully"
-          echo "🔧 Build system validated and ready"
-          echo "🎨 Formatting tools verified"
-          echo "🤖 Environment optimized for AI development workflows"
-
-  setup-agent-config:
-    name: Agent Configuration Setup
-    runs-on: ubuntu-latest
-    if: github.event.inputs.setup_type == 'agent-config'
-    needs: validate-agents-doc
-    steps:
-      - uses: taiki-e/checkout-action@b13d20b7cda4e2f325ef19895128f7ff735c0b3d # v1.3.1
-
-      - name: Generate agent configuration summary
-        run: |
-          echo "📋 Generating AI agent configuration summary..."
-          
-          echo "## Rolldown AI Agent Configuration" > agent-config-summary.md
-          echo "" >> agent-config-summary.md
-          echo "**Generated**: $(date)" >> agent-config-summary.md
-          echo "" >> agent-config-summary.md
-          
-          echo "### Project Information" >> agent-config-summary.md
-          echo "- **Repository**: rolldown/rolldown" >> agent-config-summary.md
-          echo "- **Primary Language**: Rust" >> agent-config-summary.md
-          echo "- **Supporting Languages**: TypeScript, JavaScript" >> agent-config-summary.md
-          echo "- **Build System**: Just, Cargo, pnpm" >> agent-config-summary.md
-          echo "" >> agent-config-summary.md
-          
-          echo "### Key Files for AI Agents" >> agent-config-summary.md
-          echo "- \`AGENTS.md\` - AI agent guidelines" >> agent-config-summary.md
-          echo "- \`justfile\` - Build commands" >> agent-config-summary.md
-          echo "- \`package.json\` - Node.js configuration" >> agent-config-summary.md
-          echo "- \`Cargo.toml\` - Rust configuration" >> agent-config-summary.md
-          echo "- \`dprint.json\` - Formatting configuration" >> agent-config-summary.md
-          echo "" >> agent-config-summary.md
-          
-          echo "### Common Commands" >> agent-config-summary.md
-          echo "\`\`\`bash" >> agent-config-summary.md
-          echo "# Build" >> agent-config-summary.md
-          echo "just build" >> agent-config-summary.md
-          echo "" >> agent-config-summary.md
-          echo "# Test" >> agent-config-summary.md
-          echo "just test-node" >> agent-config-summary.md
-          echo "" >> agent-config-summary.md
-          echo "# Format" >> agent-config-summary.md
-          echo "dprint fmt" >> agent-config-summary.md
-          echo "\`\`\`" >> agent-config-summary.md
-          
-          cat agent-config-summary.md
-
-      - name: Agent configuration completion
-        run: |
-          echo "✅ Agent configuration setup completed"
-          echo "📋 Configuration summary generated"
-          echo "🤖 AI agents have all necessary project context"
+      - uses: oxc-project/setup-node@f42e3bda950c7454575e78ee4eaac880a077700c # v1.0.0

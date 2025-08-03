@@ -349,6 +349,7 @@ impl HmrManager {
           dependencies: FxIndexSet::default(),
           imports: FxHashSet::default(),
           generated_static_import_infos: FxHashMap::default(),
+          re_export_all_dependencies: FxIndexSet::default(),
         };
 
         finalizer.visit_program(fields.program);

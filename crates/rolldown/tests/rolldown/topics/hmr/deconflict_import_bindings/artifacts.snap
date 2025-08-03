@@ -164,6 +164,8 @@ var init_rolldown_hmr_3 = __rolldown_runtime__.createEsmInitializer((function() 
 			__export = import_rolldown_runtime_0.__export;
 			/** @internal */
 			__toDynamicImportESM = import_rolldown_runtime_0.__toDynamicImportESM;
+			/** @internal */
+			__reExport = import_rolldown_runtime_0.__reExport;
 		}
 		class TestDevRuntime extends DevRuntime {
 			/**
@@ -222,6 +224,7 @@ var init_rolldown_runtime_4 = __rolldown_runtime__.createEsmInitializer((functio
 			}
 			return to;
 		};
+		var __reExport = (target, mod, secondTarget) => (__copyProps(target, mod, "default"), secondTarget && __copyProps(secondTarget, mod, "default"));
 		var __toESM = (mod, isNodeMode, target) => (target = mod != null ? __create(__getProtoOf(mod)) : {}, __copyProps(isNodeMode || !mod || !mod.__esModule ? __defProp(target, "default", {
 			value: mod,
 			enumerable: true

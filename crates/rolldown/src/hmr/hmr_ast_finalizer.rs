@@ -51,6 +51,7 @@ pub struct HmrAstFinalizer<'me, 'ast> {
   /// ```
   pub import_bindings: FxHashMap<SymbolId, String>,
   pub exports: oxc::allocator::Vec<'ast, ObjectPropertyKind<'ast>>,
+  pub re_export_all_dependencies: FxIndexSet<ModuleIdx>,
   pub dependencies: FxIndexSet<ModuleIdx>,
   pub imports: FxHashSet<ModuleIdx>,
   pub generated_static_import_infos: FxHashMap<ModuleIdx, String>,
@@ -282,6 +283,11 @@ impl<'ast> HmrAstFinalizer<'_, 'ast> {
             {
               program_body.push(stmt);
             }
+            if let Some(stmt) =
+              self.create_re_export_call_stmt(importee, &binding_name, export_all_decl.span)
+            {
+              program_body.push(stmt);
+            }
           }
           ast::ModuleDeclaration::TSExportAssignment(_)
           | ast::ModuleDeclaration::TSNamespaceExportDeclaration(_) => {
@@ -309,10 +315,14 @@ impl<'ast> HmrAstFinalizer<'_, 'ast> {
     })
   }
 
+  pub fn module_namespace_object_name(&self) -> String {
+    format!("ns_{}", self.module.repr_name)
+  }
+
   pub fn generate_runtime_module_register_for_hmr(&mut self) -> Vec<ast::Statement<'ast>> {
     let mut ret = vec![];
     if self.module.exports_kind == rolldown_common::ExportsKind::Esm {
-      let binding_name_for_namespace_object_ref = format!("ns_{}", self.module.repr_name);
+      let binding_name_for_namespace_object_ref = self.module_namespace_object_name();
 
       ret.extend(
         self
@@ -447,6 +457,29 @@ impl<'ast> HmrAstFinalizer<'_, 'ast> {
       span,
     );
     Some(stmt)
+  }
+
+  fn create_re_export_call_stmt(
+    &mut self,
+    importee: &Module,
+    binding_name: &str,
+    span: Span,
+  ) -> Option<Statement<'ast>> {
+    if self.re_export_all_dependencies.contains(&importee.idx()) {
+      return None;
+    }
+    self.re_export_all_dependencies.insert(importee.idx());
+
+    let self_exports = self.module_namespace_object_name();
+
+    let call_expr = quote_expr(
+      self.alloc,
+      format!("__rolldown_runtime__.__reExport({self_exports}, {binding_name});",).as_str(),
+    );
+
+    Some(ast::Statement::ExpressionStatement(
+      self.snippet.builder.alloc_expression_statement(span, call_expr),
+    ))
   }
 
   fn generate_declaration_of_module_namespace_object(

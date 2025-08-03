@@ -2005,9 +2005,8 @@ export type FilterTokenKind =  'Id'|
 'QueryValue';
 
 export interface JsChangedOutputs {
-  chunks: Array<JsOutputChunk>
-  assets: Array<JsOutputAsset>
-  deleted: Array<string>
+  deleted: Set<string>
+  changes: Record<string, JsOutputChunk | JsOutputAsset>
 }
 
 export interface JsOutputAsset {

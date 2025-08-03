@@ -1,7 +1,7 @@
 use crate::types::{
   binding_module_info::BindingModuleInfo,
   binding_normalized_options::BindingNormalizedOptions,
-  binding_outputs::{to_js_diagnostic, update_outputs},
+  binding_outputs::{JsChangedOutputs, to_js_diagnostic},
   binding_rendered_chunk::BindingRenderedChunk,
   js_callback::MaybeAsyncJsCallbackExt,
 };
@@ -476,7 +476,7 @@ impl Plugin for JsPlugin {
     args: &mut rolldown_plugin::HookGenerateBundleArgs<'_>,
   ) -> rolldown_plugin::HookNoopReturn {
     if let Some(cb) = &self.generate_bundle {
-      let changed = cb
+      let mut changed: JsChangedOutputs = cb
         .await_call(
           (
             ctx.clone().into(),
@@ -488,7 +488,7 @@ impl Plugin for JsPlugin {
         )
         .instrument(debug_span!("generate_bundle_hook", plugin_name = self.name))
         .await?;
-      update_outputs(args.bundle, changed)?;
+      changed.apply_changes(args.bundle)?;
     }
     Ok(())
   }
@@ -503,7 +503,7 @@ impl Plugin for JsPlugin {
     args: &mut rolldown_plugin::HookWriteBundleArgs<'_>,
   ) -> rolldown_plugin::HookNoopReturn {
     if let Some(cb) = &self.write_bundle {
-      let changed = cb
+      let mut changed: JsChangedOutputs = cb
         .await_call(
           (
             ctx.clone().into(),
@@ -514,7 +514,7 @@ impl Plugin for JsPlugin {
         )
         .instrument(debug_span!("write_bundle_hook", plugin_name = self.name))
         .await?;
-      update_outputs(args.bundle, changed)?;
+      changed.apply_changes(args.bundle)?;
     }
     Ok(())
   }

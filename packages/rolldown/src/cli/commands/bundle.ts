@@ -104,11 +104,11 @@ async function watchInner(
     }
   });
 
-  const mayClearScreen = getClearScreenFunction(normalizedConfig);
+  const clearScreen = getClearScreenFunction(normalizedConfig);
   watcher.on('event', async (event) => {
     switch (event.code) {
       case 'START':
-        mayClearScreen();
+        clearScreen?.();
         break;
 
       case 'BUNDLE_START':

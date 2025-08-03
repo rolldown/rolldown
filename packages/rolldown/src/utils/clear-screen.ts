@@ -1,37 +1,19 @@
-import type { RolldownOptions } from '..';
+import type { WatchOptions } from '../options/watch-options';
 import { arraify } from './misc';
 
 const CLEAR_SCREEN = '\x1Bc';
 
-const noop = (): void => {};
-
 export function getClearScreenFunction(
-  rolldownOptions: RolldownOptions | RolldownOptions[],
-): () => void {
+  options: WatchOptions | WatchOptions[],
+): (() => void) | undefined {
   const isTTY = process.stdout.isTTY;
+  const isAnyOptionNotAllowingClearScreen = arraify(options).some(
+    ({ watch }) => watch === false || watch?.clearScreen === false,
+  );
 
-  let isAnyOptionNotAllowingClearScreen = arraify(rolldownOptions)
-    .map(
-      (config) => {
-        if (typeof config.watch === 'boolean') {
-          return config.watch ? true : false;
-        }
-
-        // Default value for `watch.clearScreen` is `true`.
-        return config.watch?.clearScreen ?? true;
-      },
-    )
-    .some(
-      (clearScreen) => clearScreen === false,
-    );
-
-  const shouldClearScreen = isTTY && !isAnyOptionNotAllowingClearScreen;
-
-  if (!shouldClearScreen) {
-    return noop;
+  if (isTTY && !isAnyOptionNotAllowingClearScreen) {
+    return () => {
+      process.stdout.write(CLEAR_SCREEN);
+    };
   }
-
-  return () => {
-    process.stdout.write(CLEAR_SCREEN);
-  };
 }

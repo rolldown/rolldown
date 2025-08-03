@@ -675,9 +675,15 @@ impl<'ast> VisitMut<'ast> for HmrAstFinalizer<'_, 'ast> {
             unreachable!("Unexpected export default declaration kind: {unhandled_kind:#?}");
           }
         },
+        ast::ModuleDeclaration::ExportAllDeclaration(_decl) => {
+          // export * from '...'
+
+          // Just remove it, We'll include dependency's exports in generating module namespace object
+          *node = ast::Statement::EmptyStatement(self.snippet.builder.alloc_empty_statement(SPAN));
+        }
         _ => {
           // TODO(hyf0): Handle other module declarations
-          // e.g. reexport, export, etc.
+          // e.g. reexport, etc.
         }
       }
     }

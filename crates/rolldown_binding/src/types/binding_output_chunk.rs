@@ -128,6 +128,7 @@ pub fn update_output_chunk(
     imports: js_chunk.imports.into_iter().map(Into::into).collect(),
     dynamic_imports: js_chunk.dynamic_imports.into_iter().map(Into::into).collect(),
     is_entry: js_chunk.is_entry, // used by nuxt
+    filename: js_chunk.filename.into(),
     ..old_chunk
   });
   Ok(())

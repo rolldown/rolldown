@@ -62,7 +62,7 @@ if (messenger_hot) {
 var main_exports = {};
 const main_hot = __rolldown_runtime__.createModuleHotContext("main.js");
 __rolldown_runtime__.registerModule("main.js", { exports: main_exports });
-setInterval(sayMessage, 1e3);
+sayMessage();
 
 //#endregion
 ```
@@ -92,7 +92,7 @@ var init_common_1 = __rolldown_runtime__.createEsmInitializer((function() {
 		__rolldown_runtime__.__export(ns_common, { prefix: () => prefix });
 		__rolldown_runtime__.registerModule("common.js", { exports: ns_common });
 		const hot_common = __rolldown_runtime__.createModuleHotContext("common.js");
-		const prefix = "prefix-new:";
+		const prefix = "prefix:";
 	} finally {}
 }));
 
@@ -106,7 +106,7 @@ var init_foo_2 = __rolldown_runtime__.createEsmInitializer((function() {
 		init_common_1();
 		const hot_foo = __rolldown_runtime__.createModuleHotContext("foo.js");
 		var import_common_0 = __rolldown_runtime__.loadExports("common.js");
-		const foo = import_common_0.prefix + "foo";
+		const foo = import_common_0.prefix + "foo-new";
 	} finally {}
 }));
 

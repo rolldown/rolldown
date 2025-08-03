@@ -36,6 +36,7 @@ pub struct HmrAstFinalizer<'me, 'ast> {
   pub exports: oxc::allocator::Vec<'ast, ObjectPropertyKind<'ast>>,
   pub dependencies: FxIndexSet<ModuleIdx>,
   pub imports: FxHashSet<ModuleIdx>,
+  pub generated_static_import_infos: FxHashMap<ModuleIdx, String>,
 }
 
 impl<'ast> HmrAstFinalizer<'_, 'ast> {
@@ -62,8 +63,8 @@ impl<'ast> HmrAstFinalizer<'_, 'ast> {
             let rec = &self.module.import_records[rec_id];
             let importee = &self.modules[rec.resolved_module];
             self.dependencies.insert(rec.resolved_module);
-
-            let binding_name = Self::create_binding_name(importee, rec_id);
+            let binding_name =
+              self.ensure_static_import_info(rec.resolved_module, rec_id).to_string();
             import_decl.specifiers.as_ref().inspect(|specifiers| {
               specifiers.iter().for_each(|spec| match spec {
                 ast::ImportDeclarationSpecifier::ImportSpecifier(import_specifier) => {
@@ -106,7 +107,8 @@ impl<'ast> HmrAstFinalizer<'_, 'ast> {
               let importee = &self.modules[rec.resolved_module];
               self.dependencies.insert(rec.resolved_module);
 
-              let binding_name = Self::create_binding_name(importee, rec_id);
+              let binding_name =
+                self.ensure_static_import_info(rec.resolved_module, rec_id).to_string();
               self.exports.extend(decl.specifiers.iter().map(|specifier| {
                 self.snippet.object_property_kind_object_property(
                   &specifier.exported.name(),
@@ -267,6 +269,18 @@ impl<'ast> HmrAstFinalizer<'_, 'ast> {
     keep_stmt
   }
 
+  pub fn ensure_static_import_info(
+    &mut self,
+    importee_idx: ModuleIdx,
+    rec_id: ImportRecordIdx,
+  ) -> &str {
+    self.generated_static_import_infos.entry(importee_idx).or_insert_with(|| {
+      let importee = &self.modules[importee_idx];
+
+      format!("import_{}_{}", importee.repr_name(), rec_id.raw())
+    })
+  }
+
   pub fn generate_runtime_module_register_for_hmr(&mut self) -> Vec<ast::Statement<'ast>> {
     let mut ret = vec![];
     if self.module.exports_kind == rolldown_common::ExportsKind::Esm {
@@ -378,10 +392,6 @@ impl<'ast> HmrAstFinalizer<'_, 'ast> {
       let hot_name = format!("hot_{}", self.module.repr_name);
       *expr = self.snippet.id_ref_expr(&hot_name, SPAN);
     }
-  }
-
-  fn create_binding_name(importee: &Module, rec_id: ImportRecordIdx) -> String {
-    format!("import_{}_{}", importee.repr_name(), rec_id.raw())
   }
 
   fn create_load_exports_call_stmt(

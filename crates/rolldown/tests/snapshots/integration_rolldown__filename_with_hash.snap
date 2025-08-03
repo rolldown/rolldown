@@ -5518,6 +5518,10 @@ expression: output
 
 - main-!~{000}~.js => main-Cm3C6mQH.js
 
+# tests/rolldown/topics/hmr/issue_5149
+
+- main-!~{000}~.js => main-C4vaaWcq.js
+
 # tests/rolldown/topics/hmr/issue_5150
 
 - main-!~{000}~.js => main-DqRBvpQT.js

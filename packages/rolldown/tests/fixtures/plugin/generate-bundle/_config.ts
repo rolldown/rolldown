@@ -75,12 +75,13 @@ export default defineTest({
           map.x_google_ignoreList = [0]
           map.debugId = 'updated-debugId'
           chunk.map = map
+          chunk.fileName = 'updated-main.js'
         },
       },
       {
         name: 'test-read-updated-sourcemap',
         generateBundle(_options, bundle) {
-          const chunk = bundle['main.js'] as RolldownOutputChunk
+          const chunk = bundle['updated-main.js'] as RolldownOutputChunk
           const map = chunk.map!
           expect(map.file).toBe('updated-main.js')
           expect(map.mappings).toMatch(/^;/)

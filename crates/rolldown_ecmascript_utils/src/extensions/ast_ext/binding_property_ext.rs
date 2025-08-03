@@ -1,5 +1,5 @@
 use oxc::{
-  allocator::{Allocator, Dummy as _, IntoIn as _, TakeIn},
+  allocator::{Allocator, Box, Dummy as _, IntoIn as _, TakeIn},
   ast::ast::{
     ArrayAssignmentTarget, AssignmentTargetMaybeDefault, AssignmentTargetProperty,
     AssignmentTargetPropertyIdentifier, AssignmentTargetPropertyProperty, AssignmentTargetRest,
@@ -103,9 +103,14 @@ impl<'ast> BindingPropertyExt<'ast> for BindingProperty<'ast> {
               ArrayAssignmentTarget {
                 elements,
                 span: arr_pat.span,
-                rest: arr_pat.rest.map(|rest| AssignmentTargetRest {
-                  span: rest.span,
-                  target: rest.unbox().argument.into_assignment_target(alloc),
+                rest: arr_pat.rest.map(|rest| {
+                  Box::new_in(
+                    AssignmentTargetRest {
+                      span: rest.span,
+                      target: rest.unbox().argument.into_assignment_target(alloc),
+                    },
+                    alloc,
+                  )
                 }),
               }
               .into_in(alloc),
@@ -130,9 +135,14 @@ impl<'ast> BindingPropertyExt<'ast> for BindingProperty<'ast> {
               ObjectAssignmentTarget {
                 properties,
                 span: obj_pat.span,
-                rest: obj_pat.rest.map(|rest| AssignmentTargetRest {
-                  span: rest.span,
-                  target: rest.unbox().argument.into_assignment_target(alloc),
+                rest: obj_pat.rest.map(|rest| {
+                  Box::new_in(
+                    AssignmentTargetRest {
+                      span: rest.span,
+                      target: rest.unbox().argument.into_assignment_target(alloc),
+                    },
+                    alloc,
+                  )
                 }),
               }
               .into_in(alloc),

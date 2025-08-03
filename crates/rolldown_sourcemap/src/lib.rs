@@ -86,9 +86,9 @@ pub fn collapse_sourcemaps(sourcemap_chain: &[&SourceMap]) -> SourceMap {
 
   SourceMap::new(
     None,
-    first_map.get_names().map(Into::into).collect::<Vec<_>>(),
+    first_map.get_names().map(Arc::clone).collect::<Vec<_>>(),
     None,
-    first_map.get_sources().map(Into::into).collect::<Vec<_>>(),
+    first_map.get_sources().map(Arc::clone).collect::<Vec<_>>(),
     first_map.get_source_contents().map(|x| x.map(Arc::clone)).collect::<Vec<_>>(),
     tokens,
     None,

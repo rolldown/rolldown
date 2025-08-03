@@ -16,8 +16,14 @@ const fn = () => {
 var Field = class {
 	@fn field;
 };
+var Method = class {
+	@fn method() {}
+};
 var StaticField = class {
 	@fn static field;
+};
+var StaticMethod = class {
+	@fn static method() {}
 };
 
 //#endregion

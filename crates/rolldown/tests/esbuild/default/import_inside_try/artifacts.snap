@@ -7,10 +7,9 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```js
 //#region entry.js
-let x;
 try {
-	x = import("nope1");
-	x = await import("nope2");
+	import("nope1");
+	await import("nope2");
 } catch {}
 
 //#endregion

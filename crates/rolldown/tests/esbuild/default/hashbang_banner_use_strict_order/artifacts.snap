@@ -8,9 +8,6 @@ source: crates/rolldown_testing/src/integration_test.rs
 ```js
 #! in file
 #! from banner
-'use strict';
-
-
 (function() {
 
 

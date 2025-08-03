@@ -13,9 +13,7 @@ foo(x ? "_keepThisProperty" : "_keepThisPropertyToo");
 x[foo("_keepThisProperty")];
 x?.[foo("_keepThisProperty")];
 foo("_keepThisProperty");
-(class {
-	[foo("_keepThisProperty")] = x;
-});
+foo("_keepThisProperty");
 var { [foo("_keepThisProperty")]: x } = y;
 foo("_keepThisProperty") in x;
 
@@ -34,9 +32,7 @@ x?.[y ? z : "_mangleThis"];
 x[y, "_mangleThis"];
 x?.[y, "_mangleThis"];
 y;
-(class {
-	[(y, "_mangleThis")] = x;
-});
+y, "_mangleThis";
 var { "_mangleThis": x } = y;
 var { ["_mangleThis"]: x } = y;
 var { [(z, "_mangleThis")]: x } = y;

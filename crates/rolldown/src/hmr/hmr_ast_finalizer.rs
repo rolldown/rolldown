@@ -19,7 +19,7 @@ use rolldown_ecmascript_utils::{
 use rolldown_utils::indexmap::FxIndexSet;
 use rustc_hash::{FxHashMap, FxHashSet};
 
-use crate::hmr::utils::HmrAstBuilder;
+use crate::hmr::utils::{HmrAstBuilder, MODULE_EXPORTS_NAME_FOR_ESM};
 
 pub struct HmrAstFinalizer<'me, 'ast> {
   // Outside input
@@ -315,18 +315,21 @@ impl<'ast> HmrAstFinalizer<'_, 'ast> {
     })
   }
 
-  pub fn module_namespace_object_name(&self) -> String {
-    format!("ns_{}", self.module.repr_name)
+  pub fn module_exports_name(&self) -> &'static str {
+    if self.module.exports_kind.is_commonjs() {
+      "module.exports"
+    } else {
+      MODULE_EXPORTS_NAME_FOR_ESM
+    }
   }
 
   pub fn generate_runtime_module_register_for_hmr(&mut self) -> Vec<ast::Statement<'ast>> {
     let mut ret = vec![];
     if self.module.exports_kind == rolldown_common::ExportsKind::Esm {
-      let binding_name_for_namespace_object_ref = self.module_namespace_object_name();
+      let binding_name_for_namespace_object_ref = self.module_exports_name();
 
       ret.extend(
-        self
-          .generate_declaration_of_module_namespace_object(&binding_name_for_namespace_object_ref),
+        self.generate_declaration_of_module_namespace_object(binding_name_for_namespace_object_ref),
       );
     }
     ret.push(self.create_register_module_stmt());
@@ -470,7 +473,7 @@ impl<'ast> HmrAstFinalizer<'_, 'ast> {
     }
     self.re_export_all_dependencies.insert(importee.idx());
 
-    let self_exports = self.module_namespace_object_name();
+    let self_exports = self.module_exports_name();
 
     let call_expr = quote_expr(
       self.alloc,

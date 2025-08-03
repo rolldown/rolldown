@@ -39,6 +39,234 @@ pub struct HmrAstFinalizer<'me, 'ast> {
 }
 
 impl<'ast> HmrAstFinalizer<'_, 'ast> {
+  #[expect(clippy::too_many_lines)]
+  pub fn handle_top_level_stmt(&mut self, mut node: &mut ast::Statement<'ast>) -> bool {
+    let (remove_stmt, keep_stmt) = (false, true);
+    match node {
+      ref mut module_decl @ ast::match_module_declaration!(Statement) => {
+        let module_decl = module_decl.to_module_declaration_mut();
+
+        match module_decl {
+          ast::ModuleDeclaration::ImportDeclaration(import_decl) => {
+            // Transform
+            // ```js
+            // import foo, { bar } from './foo.js';
+            // console.log(foo, bar);
+            // ```
+            // to
+            // ```js
+            // const import_foo = __rolldown_runtime__.loadExports('./foo.js');
+            // console.log(import_foo.default, import_foo.bar);
+            // ```
+            let rec_id = self.module.imports[&import_decl.span];
+            let rec = &self.module.import_records[rec_id];
+            let importee = &self.modules[rec.resolved_module];
+            self.dependencies.insert(rec.resolved_module);
+
+            let binding_name = Self::create_binding_name(importee, rec_id);
+            import_decl.specifiers.as_ref().inspect(|specifiers| {
+              specifiers.iter().for_each(|spec| match spec {
+                ast::ImportDeclarationSpecifier::ImportSpecifier(import_specifier) => {
+                  self.import_binding.insert(
+                    import_specifier.local.expect_symbol_id(),
+                    format!("{binding_name}.{}", import_specifier.imported.name()),
+                  );
+                }
+                ast::ImportDeclarationSpecifier::ImportDefaultSpecifier(
+                  import_default_specifier,
+                ) => {
+                  self.import_binding.insert(
+                    import_default_specifier.local.expect_symbol_id(),
+                    format!("{binding_name}.default"),
+                  );
+                }
+                ast::ImportDeclarationSpecifier::ImportNamespaceSpecifier(
+                  import_namespace_specifier,
+                ) => {
+                  self.import_binding.insert(
+                    import_namespace_specifier.local.expect_symbol_id(),
+                    binding_name.to_string(),
+                  );
+                }
+              });
+            });
+            if let Some(stmt) =
+              self.create_load_exports_call_stmt(importee, &binding_name, import_decl.span)
+            {
+              *node = stmt;
+            } else {
+              return remove_stmt;
+            }
+          }
+          ast::ModuleDeclaration::ExportNamedDeclaration(decl) => {
+            if let Some(_source) = &decl.source {
+              // export {} from '...'
+              let rec_id = self.module.imports[&decl.span];
+              let rec = &self.module.import_records[rec_id];
+              let importee = &self.modules[rec.resolved_module];
+              self.dependencies.insert(rec.resolved_module);
+
+              let binding_name = Self::create_binding_name(importee, rec_id);
+              self.exports.extend(decl.specifiers.iter().map(|specifier| {
+                self.snippet.object_property_kind_object_property(
+                  &specifier.exported.name(),
+                  match &specifier.local {
+                    ast::ModuleExportName::IdentifierName(ident) => {
+                      Expression::StaticMemberExpression(
+                        self.snippet.builder.alloc_static_member_expression(
+                          SPAN,
+                          self.snippet.id_ref_expr(&binding_name, SPAN),
+                          self.snippet.builder.identifier_name(SPAN, ident.name.as_str()),
+                          false,
+                        ),
+                      )
+                    }
+                    ast::ModuleExportName::StringLiteral(str) => {
+                      Expression::ComputedMemberExpression(
+                        self.snippet.builder.alloc_computed_member_expression(
+                          SPAN,
+                          self.snippet.id_ref_expr(&binding_name, SPAN),
+                          self.snippet.builder.expression_string_literal(
+                            SPAN, str.value.as_str(), None
+                          ),
+                          false,
+                        ),
+                      )
+                    }
+                    ast::ModuleExportName::IdentifierReference(_) => {
+                      unreachable!(
+                        "ModuleExportName IdentifierReference is invalid in ExportNamedDeclaration with source"
+                      )
+                    }
+                  },
+                  matches!(specifier.exported, ast::ModuleExportName::StringLiteral(_))
+                )
+              }));
+              if let Some(stmt) =
+                self.create_load_exports_call_stmt(importee, &binding_name, decl.span)
+              {
+                *node = stmt;
+              } else {
+                return remove_stmt;
+              }
+            } else if let Some(decl) = &mut decl.declaration {
+              match decl {
+                ast::Declaration::VariableDeclaration(var_decl) => {
+                  // export var foo = 1
+                  // export var { foo, bar } = { foo: 1, bar: 2 }
+                  self.exports.extend(var_decl.declarations.iter().filter_map(|decl| {
+                    decl.id.get_identifier_name().map(|ident| {
+                      self.snippet.object_property_kind_object_property(
+                        ident.as_str(),
+                        self.snippet.id_ref_expr(ident.as_str(), SPAN),
+                        false,
+                      )
+                    })
+                  }));
+                }
+                ast::Declaration::FunctionDeclaration(fn_decl) => {
+                  // export function foo() {}
+                  let id = fn_decl.id.as_ref().unwrap().name.as_str();
+                  self.exports.push(self.snippet.object_property_kind_object_property(
+                    id,
+                    self.snippet.id_ref_expr(id, SPAN),
+                    false,
+                  ));
+                }
+                ast::Declaration::ClassDeclaration(cls_decl) => {
+                  // export class Foo {}
+                  let id = cls_decl.id.as_ref().unwrap().name.as_str();
+                  self.exports.push(self.snippet.object_property_kind_object_property(
+                    id,
+                    self.snippet.id_ref_expr(id, SPAN),
+                    false,
+                  ));
+                }
+                _ => unreachable!("doesn't support ts now"),
+              }
+              *node = ast::Statement::from(decl.take_in(self.alloc));
+            } else {
+              // export { foo, bar as bar2 }
+              self.exports.extend(decl.specifiers.iter().map(|specifier| {
+                self.snippet.object_property_kind_object_property(
+                  &specifier.exported.name(),
+                  self.snippet.id_ref_expr(&specifier.local.name(), SPAN),
+                  matches!(specifier.exported, ast::ModuleExportName::StringLiteral(_)),
+                )
+              }));
+              return remove_stmt;
+            }
+          }
+          ast::ModuleDeclaration::ExportDefaultDeclaration(decl) => match &mut decl.declaration {
+            ast::ExportDefaultDeclarationKind::FunctionDeclaration(function) => {
+              if let Some(id) = &function.id {
+                self.exports.push(self.snippet.object_property_kind_object_property(
+                  "default",
+                  self.snippet.id_ref_expr(&id.name, SPAN),
+                  false,
+                ));
+              } else {
+                function.id = Some(self.snippet.id("__rolldown_default__", SPAN));
+                self.exports.push(self.snippet.object_property_kind_object_property(
+                  "default",
+                  self.snippet.id_ref_expr("__rolldown_default__", SPAN),
+                  false,
+                ));
+              }
+              *node = ast::Statement::FunctionDeclaration(ArenaBox::new_in(
+                function.as_mut().take_in(self.alloc),
+                self.alloc,
+              ));
+            }
+            ast::ExportDefaultDeclarationKind::ClassDeclaration(class) => {
+              if let Some(id) = &class.id {
+                self.exports.push(self.snippet.object_property_kind_object_property(
+                  "default",
+                  self.snippet.id_ref_expr(&id.name, SPAN),
+                  false,
+                ));
+              } else {
+                class.id = Some(self.snippet.id("__rolldown_default__", SPAN));
+                self.exports.push(self.snippet.object_property_kind_object_property(
+                  "default",
+                  self.snippet.id_ref_expr("__rolldown_default__", SPAN),
+                  false,
+                ));
+              }
+              *node = ast::Statement::ClassDeclaration(ArenaBox::new_in(
+                class.as_mut().take_in(self.alloc),
+                self.alloc,
+              ));
+            }
+            expr @ ast::match_expression!(ExportDefaultDeclarationKind) => {
+              let expr = expr.to_expression_mut();
+              // Transform `export default [expression]` => `var __rolldown_default__ = [expression]`
+              *node = self.snippet.var_decl_stmt("__rolldown_default__", expr.take_in(self.alloc));
+              self.exports.push(self.snippet.object_property_kind_object_property(
+                "default",
+                self.snippet.id_ref_expr("__rolldown_default__", SPAN),
+                false,
+              ));
+            }
+            unhandled_kind => {
+              unreachable!("Unexpected export default declaration kind: {unhandled_kind:#?}");
+            }
+          },
+          ast::ModuleDeclaration::ExportAllDeclaration(_decl) => {
+            // Just remove it, We'll include dependency's exports in generating module namespace object
+            return remove_stmt;
+          }
+          _ => {
+            // TODO(hyf0): Handle other module declarations
+            // e.g. reexport, etc.
+          }
+        }
+      }
+      _ => {}
+    }
+    keep_stmt
+  }
+
   pub fn generate_runtime_module_register_for_hmr(&mut self) -> Vec<ast::Statement<'ast>> {
     let mut ret = vec![];
     if self.module.exports_kind == rolldown_common::ExportsKind::Esm {
@@ -311,8 +539,20 @@ impl<'ast> HmrAstFinalizer<'_, 'ast> {
 
 impl<'ast> VisitMut<'ast> for HmrAstFinalizer<'_, 'ast> {
   #[expect(clippy::too_many_lines)]
-  fn visit_program(&mut self, it: &mut ast::Program<'ast>) {
-    walk_mut::walk_program(self, it);
+  fn visit_program(&mut self, program: &mut ast::Program<'ast>) {
+    program.body.retain_mut(|top_level_stmt| {
+      let whether_to_keep = self.handle_top_level_stmt(top_level_stmt);
+
+      if !whether_to_keep {
+        return false;
+      }
+
+      walk_mut::walk_statement(self, top_level_stmt);
+
+      true
+    });
+
+    walk_mut::walk_program(self, program);
     // Move the original program body to a try catch block to unlock the ability to be error-tolerant
     let mut try_block =
       self.snippet.builder.alloc_block_statement(SPAN, self.snippet.builder.vec());
@@ -330,12 +570,12 @@ impl<'ast> VisitMut<'ast> for HmrAstFinalizer<'_, 'ast> {
     let runtime_module_register = self.generate_runtime_module_register_for_hmr();
 
     try_block.body.reserve_exact(
-      runtime_module_register.len() + it.body.len() + dependencies_init_fn_stmts.len() + 1 /* import.meta.hot*/,
+      runtime_module_register.len() + program.body.len() + dependencies_init_fn_stmts.len() + 1 /* import.meta.hot*/,
     );
     try_block.body.extend(runtime_module_register);
     try_block.body.extend(dependencies_init_fn_stmts);
     try_block.body.push(self.create_module_hot_context_initializer_stmt());
-    try_block.body.extend(it.body.take_in(self.alloc));
+    try_block.body.extend(program.body.take_in(self.alloc));
 
     let final_block = self.snippet.builder.alloc_block_statement(SPAN, self.snippet.builder.vec());
 
@@ -462,245 +702,7 @@ impl<'ast> VisitMut<'ast> for HmrAstFinalizer<'_, 'ast> {
       false,
     );
 
-    it.body.push(ast::Statement::VariableDeclaration(var_decl));
-  }
-
-  #[expect(clippy::too_many_lines)]
-  fn visit_statement(&mut self, node: &mut ast::Statement<'ast>) {
-    if let Some(module_decl) = node.as_module_declaration_mut() {
-      match module_decl {
-        ast::ModuleDeclaration::ImportDeclaration(import_decl) => {
-          // Transform
-          // ```js
-          // import foo, { bar } from './foo.js';
-          // console.log(foo, bar);
-          // ```
-          // to
-          // ```js
-          // const import_foo = __rolldown_runtime__.loadExports('./foo.js');
-          // console.log(import_foo.default, import_foo.bar);
-          // ```
-          let rec_id = self.module.imports[&import_decl.span];
-          let rec = &self.module.import_records[rec_id];
-          let importee = &self.modules[rec.resolved_module];
-          self.dependencies.insert(rec.resolved_module);
-
-          let binding_name = Self::create_binding_name(importee, rec_id);
-          import_decl.specifiers.as_ref().inspect(|specifiers| {
-            specifiers.iter().for_each(|spec| match spec {
-              ast::ImportDeclarationSpecifier::ImportSpecifier(import_specifier) => {
-                self.import_binding.insert(
-                  import_specifier.local.expect_symbol_id(),
-                  format!("{binding_name}.{}", import_specifier.imported.name()),
-                );
-              }
-              ast::ImportDeclarationSpecifier::ImportDefaultSpecifier(import_default_specifier) => {
-                self.import_binding.insert(
-                  import_default_specifier.local.expect_symbol_id(),
-                  format!("{binding_name}.default"),
-                );
-              }
-              ast::ImportDeclarationSpecifier::ImportNamespaceSpecifier(
-                import_namespace_specifier,
-              ) => {
-                self.import_binding.insert(
-                  import_namespace_specifier.local.expect_symbol_id(),
-                  binding_name.to_string(),
-                );
-              }
-            });
-          });
-          if let Some(stmt) =
-            self.create_load_exports_call_stmt(importee, &binding_name, import_decl.span)
-          {
-            *node = stmt;
-          } else {
-            *node =
-              ast::Statement::EmptyStatement(self.snippet.builder.alloc_empty_statement(SPAN));
-          }
-        }
-        ast::ModuleDeclaration::ExportNamedDeclaration(decl) => {
-          if let Some(_source) = &decl.source {
-            // export {} from '...'
-            let rec_id = self.module.imports[&decl.span];
-            let rec = &self.module.import_records[rec_id];
-            let importee = &self.modules[rec.resolved_module];
-            self.dependencies.insert(rec.resolved_module);
-
-            let binding_name = Self::create_binding_name(importee, rec_id);
-            self.exports.extend(decl.specifiers.iter().map(|specifier| {
-              self.snippet.object_property_kind_object_property(
-                &specifier.exported.name(),
-                match &specifier.local {
-                  ast::ModuleExportName::IdentifierName(ident) => {
-                    Expression::StaticMemberExpression(
-                      self.snippet.builder.alloc_static_member_expression(
-                        SPAN,
-                        self.snippet.id_ref_expr(&binding_name, SPAN),
-                        self.snippet.builder.identifier_name(SPAN, ident.name.as_str()),
-                        false,
-                      ),
-                    )
-                  }
-                  ast::ModuleExportName::StringLiteral(str) => {
-                    Expression::ComputedMemberExpression(
-                      self.snippet.builder.alloc_computed_member_expression(
-                        SPAN,
-                        self.snippet.id_ref_expr(&binding_name, SPAN),
-                        self.snippet.builder.expression_string_literal(
-                          SPAN, str.value.as_str(), None
-                        ),
-                        false,
-                      ),
-                    )
-                  }
-                  ast::ModuleExportName::IdentifierReference(_) => {
-                    unreachable!(
-                      "ModuleExportName IdentifierReference is invalid in ExportNamedDeclaration with source"
-                    )
-                  }
-                },
-                matches!(specifier.exported, ast::ModuleExportName::StringLiteral(_))
-              )
-            }));
-            if let Some(stmt) =
-              self.create_load_exports_call_stmt(importee, &binding_name, decl.span)
-            {
-              *node = stmt;
-            } else {
-              *node =
-                ast::Statement::EmptyStatement(self.snippet.builder.alloc_empty_statement(SPAN));
-            }
-          } else if let Some(decl) = &mut decl.declaration {
-            match decl {
-              ast::Declaration::VariableDeclaration(var_decl) => {
-                // export var foo = 1
-                // export var { foo, bar } = { foo: 1, bar: 2 }
-                self.exports.extend(var_decl.declarations.iter().filter_map(|decl| {
-                  decl.id.get_identifier_name().map(|ident| {
-                    self.snippet.object_property_kind_object_property(
-                      ident.as_str(),
-                      self.snippet.id_ref_expr(ident.as_str(), SPAN),
-                      false,
-                    )
-                  })
-                }));
-              }
-              ast::Declaration::FunctionDeclaration(fn_decl) => {
-                // export function foo() {}
-                let id = fn_decl.id.as_ref().unwrap().name.as_str();
-                self.exports.push(self.snippet.object_property_kind_object_property(
-                  id,
-                  self.snippet.id_ref_expr(id, SPAN),
-                  false,
-                ));
-              }
-              ast::Declaration::ClassDeclaration(cls_decl) => {
-                // export class Foo {}
-                let id = cls_decl.id.as_ref().unwrap().name.as_str();
-                self.exports.push(self.snippet.object_property_kind_object_property(
-                  id,
-                  self.snippet.id_ref_expr(id, SPAN),
-                  false,
-                ));
-              }
-              _ => unreachable!("doesn't support ts now"),
-            }
-            *node = ast::Statement::from(decl.take_in(self.alloc));
-          } else {
-            // export { foo, bar as bar2 }
-            self.exports.extend(decl.specifiers.iter().map(|specifier| {
-              self.snippet.object_property_kind_object_property(
-                &specifier.exported.name(),
-                self.snippet.id_ref_expr(&specifier.local.name(), SPAN),
-                matches!(specifier.exported, ast::ModuleExportName::StringLiteral(_)),
-              )
-            }));
-            *node =
-              ast::Statement::EmptyStatement(self.snippet.builder.alloc_empty_statement(SPAN));
-          }
-        }
-        ast::ModuleDeclaration::ExportDefaultDeclaration(decl) => match &mut decl.declaration {
-          ast::ExportDefaultDeclarationKind::FunctionDeclaration(function) => {
-            if let Some(id) = &function.id {
-              self.exports.push(self.snippet.object_property_kind_object_property(
-                "default",
-                self.snippet.id_ref_expr(&id.name, SPAN),
-                false,
-              ));
-            } else {
-              function.id = Some(self.snippet.id("__rolldown_default__", SPAN));
-              self.exports.push(self.snippet.object_property_kind_object_property(
-                "default",
-                self.snippet.id_ref_expr("__rolldown_default__", SPAN),
-                false,
-              ));
-            }
-            *node = ast::Statement::FunctionDeclaration(ArenaBox::new_in(
-              function.as_mut().take_in(self.alloc),
-              self.alloc,
-            ));
-          }
-          ast::ExportDefaultDeclarationKind::ClassDeclaration(class) => {
-            if let Some(id) = &class.id {
-              self.exports.push(self.snippet.object_property_kind_object_property(
-                "default",
-                self.snippet.id_ref_expr(&id.name, SPAN),
-                false,
-              ));
-            } else {
-              class.id = Some(self.snippet.id("__rolldown_default__", SPAN));
-              self.exports.push(self.snippet.object_property_kind_object_property(
-                "default",
-                self.snippet.id_ref_expr("__rolldown_default__", SPAN),
-                false,
-              ));
-            }
-            *node = ast::Statement::ClassDeclaration(ArenaBox::new_in(
-              class.as_mut().take_in(self.alloc),
-              self.alloc,
-            ));
-          }
-          expr @ ast::match_expression!(ExportDefaultDeclarationKind) => {
-            let expr = expr.to_expression_mut();
-            // Transform `export default [expression]` => `var __rolldown_default__ = [expression]`
-            *node = self.snippet.var_decl_stmt("__rolldown_default__", expr.take_in(self.alloc));
-            self.exports.push(self.snippet.object_property_kind_object_property(
-              "default",
-              self.snippet.id_ref_expr("__rolldown_default__", SPAN),
-              false,
-            ));
-          }
-          unhandled_kind => {
-            unreachable!("Unexpected export default declaration kind: {unhandled_kind:#?}");
-          }
-        },
-        ast::ModuleDeclaration::ExportAllDeclaration(_decl) => {
-          // export * from '...'
-
-          // Just remove it, We'll include dependency's exports in generating module namespace object
-          *node = ast::Statement::EmptyStatement(self.snippet.builder.alloc_empty_statement(SPAN));
-        }
-        _ => {
-          // TODO(hyf0): Handle other module declarations
-          // e.g. reexport, etc.
-        }
-      }
-    }
-
-    // For `require` statements
-    // Transform
-    // ```js
-    // const foo = require('./foo.js');
-    // console.log(foo);
-    // ```
-    // to
-    // ```js
-    // const foo = __rolldown_runtime__.loadExports('./foo.js');
-    // console.log(foo);
-    // ```
-
-    walk_mut::walk_statement(self, node);
+    program.body.push(ast::Statement::VariableDeclaration(var_decl));
   }
 
   fn visit_expression(&mut self, it: &mut ast::Expression<'ast>) {

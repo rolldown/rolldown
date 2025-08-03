@@ -23,7 +23,7 @@ nodeAssert.equal(value$1, "foo");
 ```
 ---
 
-Variant: (strict_execution_order: true)
+Variant: [strict_execution_order: true]
 
 # Assets
 
@@ -83,7 +83,7 @@ init_main();
 ```
 ---
 
-Variant: (on_demand_wrapping: true, strict_execution_order: true)
+Variant: [on_demand_wrapping: true] [strict_execution_order: true]
 
 # Assets
 

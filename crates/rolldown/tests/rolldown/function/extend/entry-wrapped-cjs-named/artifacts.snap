@@ -18,7 +18,7 @@ export default require_main();
 ```
 ---
 
-Variant: (exports: Named, format: Cjs)
+Variant: [exports: Named] [format: Cjs]
 
 # Assets
 
@@ -42,7 +42,7 @@ Object.defineProperty(exports, 'default', {
 ```
 ---
 
-Variant: (exports: Named, extend: true, format: Iife, name: "module")
+Variant: [exports: Named] [extend: true] [format: Iife] [name: "module"]
 
 # Assets
 
@@ -69,7 +69,7 @@ Object.defineProperty(exports, 'default', {
 ```
 ---
 
-Variant: (exports: Named, extend: true, format: Umd, name: "module")
+Variant: [exports: Named] [extend: true] [format: Umd] [name: "module"]
 
 # Assets
 

@@ -70,7 +70,7 @@ var import_node_mode_by_cjs_extension = /* @__PURE__ */ __toESM(require_node_mod
 ```
 ---
 
-Variant: (format: Cjs)
+Variant: [format: Cjs]
 
 # Assets
 
@@ -163,7 +163,7 @@ var import_node_mode_by_cjs_extension = /* @__PURE__ */ require_chunk.__toESM(re
 ```
 ---
 
-Variant: (inline_dynamic_imports: true)
+Variant: [inline_dynamic_imports: true]
 
 # Assets
 

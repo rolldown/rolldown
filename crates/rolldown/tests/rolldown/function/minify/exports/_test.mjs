@@ -4,13 +4,7 @@ import path from 'node:path'
 import { createRequire } from 'node:module'
 const require = createRequire(import.meta.url)
 
-switch (globalThis.__testName) {
-  case undefined:
-  case 'Extended Test: (minify_internal_exports: true': {
-    const { foo } = await import('./dist/main.js')
-    assert.strictEqual(foo, 'foo')
-    break
-  }
+switch (globalThis.__configName) {
   case 'cjs': {
     const libModCjs = require('./dist/main.js')
     assert.strictEqual(libModCjs.foo, 'foo')
@@ -33,6 +27,11 @@ switch (globalThis.__testName) {
     break
   }
   default: {
-    throw new Error(`Unknown test name: ${globalThis.__testName}`)
+    if (!globalThis.__configName || globalThis.__configName.startsWith('extended')) {
+      const { foo } = await import('./dist/main.js')
+      assert.strictEqual(foo, 'foo')
+    } else {
+      throw new Error(`Unknown test name: ${globalThis.__configName}`)
+    }
   }
 }

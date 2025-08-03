@@ -36,11 +36,13 @@ pub struct IntegrationTest {
 }
 
 pub struct NamedBundlerOptions {
-  /// A meaningful name to show the purpose of the config. Will be `None` for the base config.
-  pub name: Option<String>,
+  /// To show the purpose of this config. Will be `None` for the base config.
+  pub description: Option<String>,
   pub options: BundlerOptions,
   // Whether to include the output in the snapshot for this config variant. If not specified, `TestMeta.snapshot` will be used.
   pub snapshot: Option<bool>,
+  // Will be injected into `globalThis.__configName`. If not specified, `TestMeta.config_name` will be used.
+  pub config_name: Option<String>,
 }
 
 fn default_test_input_item() -> rolldown::InputItem {
@@ -76,7 +78,10 @@ impl IntegrationTest {
   #[allow(clippy::unnecessary_debug_formatting)]
   pub async fn run_with_plugins(&self, options: BundlerOptions, plugins: Vec<SharedPluginable>) {
     self
-      .run_multiple(vec![NamedBundlerOptions { options, name: None, snapshot: None }], plugins)
+      .run_multiple(
+        vec![NamedBundlerOptions { options, description: None, snapshot: None, config_name: None }],
+        plugins,
+      )
       .await;
   }
 
@@ -120,7 +125,7 @@ impl IntegrationTest {
 
       let mut bundler = Bundler::with_plugins(named_options.options, plugins.clone());
 
-      let debug_title = named_options.name.clone().unwrap_or_else(String::new);
+      let debug_title = named_options.description.clone().unwrap_or_else(String::new);
 
       let cwd = bundler.options().cwd.clone();
 
@@ -203,7 +208,11 @@ impl IntegrationTest {
               &bundler,
               &debug_title,
               patch_chunks,
-              named_options.name.as_deref(),
+              named_options
+                .config_name
+                .as_deref()
+                .map(Some)
+                .unwrap_or(self.test_meta.config_name.as_deref()),
             );
           } else {
             // do nothing
@@ -575,7 +584,7 @@ impl IntegrationTest {
     bundler: &Bundler,
     test_title: &str,
     patch_chunks: Vec<String>,
-    name: Option<&str>,
+    config_name: Option<&str>,
   ) {
     let cwd = bundler.options().cwd.clone();
     let dist_folder = cwd.join(&bundler.options().out_dir);
@@ -606,15 +615,9 @@ impl IntegrationTest {
 
     let mut node_command = Command::new("node");
 
-    if let Some(name) = name {
+    if let Some(config_name) = config_name {
       node_command.arg("--import");
-      let normalized_name = name
-        .trim_start_matches('(')
-        .trim_start_matches("name:")
-        .trim()
-        .trim_end_matches(')')
-        .trim_matches('"');
-      let injected_script = format!("globalThis.__testName = `{normalized_name}`",);
+      let injected_script = format!("globalThis.__configName = `{config_name}`",);
       let inject_script_url =
         format!("data:text/javascript,{}", urlencoding::encode(&injected_script));
       node_command.arg(inject_script_url);

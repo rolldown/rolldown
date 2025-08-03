@@ -33,7 +33,7 @@ init_main();
 ```
 ---
 
-Variant: (on_demand_wrapping: true)
+Variant: [on_demand_wrapping: true]
 
 # Assets
 

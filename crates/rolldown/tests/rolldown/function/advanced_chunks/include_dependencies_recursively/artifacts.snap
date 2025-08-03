@@ -49,7 +49,7 @@ export { foo, init_foo };
 ```
 ---
 
-Variant: (preserve_entry_signatures: AllowExtension)
+Variant: [preserve_entry_signatures: AllowExtension]
 
 # Assets
 
@@ -101,7 +101,7 @@ export { foo, init_foo };
 ```
 ---
 
-Variant: (preserve_entry_signatures: False)
+Variant: [preserve_entry_signatures: False]
 
 # Assets
 

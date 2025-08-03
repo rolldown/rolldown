@@ -11,7 +11,7 @@ import "./external";
 ```
 ---
 
-Variant: ()
+Variant: [entry_filenames: "[name].js"]
 
 # Assets
 
@@ -23,7 +23,7 @@ import "./external";
 ```
 ---
 
-Variant: ()
+Variant: [entry_filenames: "chunk/[name].js"]
 
 # Assets
 

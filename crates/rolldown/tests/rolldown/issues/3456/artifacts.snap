@@ -12,7 +12,7 @@ export { test as "\n\"\\'" };
 ```
 ---
 
-Variant: (format: Cjs)
+Variant: [format: Cjs]
 
 # Assets
 

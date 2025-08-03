@@ -39,6 +39,9 @@ pub struct TestMeta {
   pub snapshot: bool,
   #[serde(default)]
   pub extended_tests: ExtendedTests,
+  #[serde(default)]
+  /// Value will be injected into the `globalThis.__configName`
+  pub config_name: Option<String>,
 }
 
 impl Default for TestMeta {

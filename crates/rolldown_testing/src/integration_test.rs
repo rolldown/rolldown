@@ -36,6 +36,7 @@ pub struct IntegrationTest {
 }
 
 pub struct NamedBundlerOptions {
+  /// A meaningful name to show the purpose of the config. Will be `None` for the base config.
   pub name: Option<String>,
   pub options: BundlerOptions,
   // Whether to include the output in the snapshot for this config variant. If not specified, `TestMeta.snapshot` will be used.

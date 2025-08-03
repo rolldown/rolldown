@@ -12,8 +12,8 @@ use serde::Deserialize;
 pub struct ConfigVariant {
   pub format: Option<OutputFormat>,
   pub extend: Option<bool>,
+  /// If specified, it will be set to `BundlerOptions.name` for the variant.
   pub name: Option<String>,
-  pub config_name: Option<String>,
   pub exports: Option<OutputExports>,
   pub strict_execution_order: Option<bool>,
   pub entry_filenames: Option<String>,
@@ -24,9 +24,11 @@ pub struct ConfigVariant {
   pub on_demand_wrapping: Option<bool>,
   pub profiler_names: Option<bool>,
   // --- non-bundler options are start with `_`
-  // Whether to include the output in the snapshot for this config variant.
+  /// Whether to include the output in the snapshot for this config variant.
   #[serde(rename = "_snapshot")]
   pub snapshot: Option<bool>,
+  #[serde(rename = "_configName")]
+  pub config_name: Option<String>,
 }
 
 impl ConfigVariant {

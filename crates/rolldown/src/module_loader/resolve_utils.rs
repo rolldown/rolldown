@@ -96,7 +96,7 @@ pub async fn resolve_dependencies(
           ResolveError::NotFound(..) => {
             // NOTE: IN_TRY_CATCH_BLOCK meta if it is a `require` import
             // record
-            if !dep.meta.contains(ImportRecordMeta::IN_TRY_CATCH_BLOCK) {
+            if !dep.meta.contains(ImportRecordMeta::InTryCatchBlock) {
               // https://github.com/rollup/rollup/blob/49b57c2b30d55178a7316f23cc9ccc457e1a2ee7/src/ModuleLoader.ts#L643-L646
               if ecmascript::is_path_like_specifier(&specifier) {
                 // Unlike rollup, we also emit errors for absolute path

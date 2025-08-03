@@ -64,16 +64,17 @@ impl<'ast> VisitMut<'ast> for WebWorkerPostVisitor<'ast> {
   }
 
   fn visit_expression(&mut self, it: &mut Expression<'ast>) {
-    let Expression::StaticMemberExpression(member_expr) = it else {
-      return oxc::ast_visit::walk_mut::walk_expression(self, it);
-    };
-    if member_expr.object.is_import_meta() {
-      if member_expr.property.name == "url" {
-        *it = self.create_self_location_href_expr();
-      } else {
-        self.should_inject_import_meta_object = true;
-        member_expr.object = self.ast_snippet.id_ref_expr("_vite_importMeta", SPAN);
+    match it {
+      Expression::StaticMemberExpression(member_expr) if member_expr.object.is_import_meta() => {
+        if member_expr.property.name == "url" {
+          *it = self.create_self_location_href_expr();
+        }
       }
+      Expression::MetaProperty(_) => {
+        self.should_inject_import_meta_object = true;
+        *it = self.ast_snippet.id_ref_expr("_vite_importMeta", SPAN);
+      }
+      _ => oxc::ast_visit::walk_mut::walk_expression(self, it),
     }
   }
 }

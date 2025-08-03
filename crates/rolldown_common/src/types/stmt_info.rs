@@ -6,14 +6,24 @@ use crate::{ImportRecordIdx, SideEffectDetail, SymbolOrMemberExprRef, SymbolRef}
 
 use super::symbol_or_member_expr_ref::TaggedSymbolRef;
 
-#[derive(Debug, Default, Clone)]
+#[derive(Debug, Clone)]
 pub struct StmtInfos {
+  /// The first `StmtInfo` is used to represent the statement that declares and constructs Module Namespace Object
   pub infos: IndexVec<StmtInfoIdx, StmtInfo>,
   // only for top level symbols
   symbol_ref_to_declared_stmt_idx: FxHashMap<SymbolRef, Vec<StmtInfoIdx>>,
 }
 
 impl StmtInfos {
+  pub const NAMESPACE_STMT_IDX: StmtInfoIdx = StmtInfoIdx::from_raw_unchecked(0);
+
+  pub fn new() -> Self {
+    Self {
+      infos: IndexVec::from_iter([StmtInfo::default()]),
+      symbol_ref_to_declared_stmt_idx: FxHashMap::default(),
+    }
+  }
+
   pub fn get(&self, id: StmtInfoIdx) -> &StmtInfo {
     &self.infos[id]
   }
@@ -37,21 +47,34 @@ impl StmtInfos {
     self.symbol_ref_to_declared_stmt_idx.entry(symbol_ref.inner()).or_default().push(id);
   }
 
+  pub fn get_namespace_stmt_info(&self) -> &StmtInfo {
+    &self.infos[Self::NAMESPACE_STMT_IDX]
+  }
+
   pub fn replace_namespace_stmt_info(&mut self, info: StmtInfo) -> StmtInfoIdx {
-    let idx = StmtInfoIdx::from_raw(0);
-    self.infos[idx] = info;
-    for symbol_ref in self.infos[idx]
+    self.infos[Self::NAMESPACE_STMT_IDX] = info;
+    for symbol_ref in self.infos[Self::NAMESPACE_STMT_IDX]
       .declared_symbols
       .iter()
       .filter(|item| matches!(item, TaggedSymbolRef::Normal(_)))
     {
-      self.symbol_ref_to_declared_stmt_idx.entry(symbol_ref.inner()).or_default().push(idx);
+      self
+        .symbol_ref_to_declared_stmt_idx
+        .entry(symbol_ref.inner())
+        .or_default()
+        .push(Self::NAMESPACE_STMT_IDX);
     }
-    idx
+    Self::NAMESPACE_STMT_IDX
   }
 
   pub fn declared_stmts_by_symbol(&self, symbol_ref: &SymbolRef) -> &[StmtInfoIdx] {
     self.symbol_ref_to_declared_stmt_idx.get(symbol_ref).map_or(&[], Vec::as_slice)
+  }
+
+  pub fn iter_enumerated_without_namespace_stmt(
+    &self,
+  ) -> impl Iterator<Item = (StmtInfoIdx, &StmtInfo)> {
+    self.infos.iter_enumerated().skip(1)
   }
 }
 

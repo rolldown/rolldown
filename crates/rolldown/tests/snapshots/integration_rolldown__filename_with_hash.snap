@@ -72,7 +72,7 @@ expression: output
 
 # tests/esbuild/dce/dce_of_decorators
 
-- keep-these-!~{000}~.js => keep-these-BTQt1pSZ.js
+- keep-these-!~{000}~.js => keep-these-BwHnIShJ.js
 
 # tests/esbuild/dce/dce_of_destructuring
 
@@ -80,7 +80,7 @@ expression: output
 
 # tests/esbuild/dce/dce_of_experimental_decorators
 
-- keep-these-!~{000}~.js => keep-these-BzLjhcsl.js
+- keep-these-!~{000}~.js => keep-these-BkGMHk-b.js
 
 # tests/esbuild/dce/dce_of_expr_after_keep_names_issue3195
 
@@ -93,7 +93,7 @@ expression: output
 
 # tests/esbuild/dce/dce_of_symbol_instances
 
-- class-!~{000}~.js => class-DWGoxy-2.js
+- class-!~{000}~.js => class-DtODMnQf.js
 - object-!~{001}~.js => object-c5hjUGWk.js
 
 # tests/esbuild/dce/dce_of_using_declarations
@@ -568,15 +568,15 @@ expression: output
 
 # tests/esbuild/dce/tree_shaking_lowered_class_static_field
 
-- entry-!~{000}~.js => entry-R0_l7mIp.js
+- entry-!~{000}~.js => entry-BKWHQYWZ.js
 
 # tests/esbuild/dce/tree_shaking_lowered_class_static_field_assignment
 
-- entry-!~{000}~.js => entry-DpT2y-ga.js
+- entry-!~{000}~.js => entry-hobWokOE.js
 
 # tests/esbuild/dce/tree_shaking_lowered_class_static_field_minified
 
-- entry-!~{000}~.js => entry-R0_l7mIp.js
+- entry-!~{000}~.js => entry-BKWHQYWZ.js
 
 # tests/esbuild/dce/tree_shaking_no_bundle_cjs
 
@@ -883,7 +883,7 @@ expression: output
 
 # tests/esbuild/default/hashbang_banner_use_strict_order
 
-- entry-!~{000}~.js => entry-CzOxBtMM.js
+- entry-!~{000}~.js => entry-6U8T8zUM.js
 
 # tests/esbuild/default/hashbang_bundle
 
@@ -931,7 +931,7 @@ expression: output
 
 # tests/esbuild/default/import_inside_try
 
-- entry-!~{000}~.js => entry-Q8-v3YeB.js
+- entry-!~{000}~.js => entry-CKshUZ1O.js
 
 # tests/esbuild/default/import_meta_common_js
 
@@ -1276,13 +1276,13 @@ expression: output
 
 # tests/esbuild/default/mangle_quoted_props
 
-- keep-!~{000}~.js => keep-CiXfrWY8.js
-- mangle-!~{001}~.js => mangle-Ci8hf8cj.js
+- keep-!~{000}~.js => keep-BFTfjx2d.js
+- mangle-!~{001}~.js => mangle-BHEB-c2o.js
 
 # tests/esbuild/default/mangle_quoted_props_minify_syntax
 
-- keep-!~{000}~.js => keep-CiXfrWY8.js
-- mangle-!~{001}~.js => mangle-Ci8hf8cj.js
+- keep-!~{000}~.js => keep-BFTfjx2d.js
+- mangle-!~{001}~.js => mangle-BHEB-c2o.js
 
 # tests/esbuild/default/many_entry_points
 
@@ -1750,15 +1750,15 @@ expression: output
 
 # tests/esbuild/default/use_strict_directive_bundle_cjs_issue2264
 
-- entry-!~{000}~.js => entry-wRKbsRr5.js
+- entry-!~{000}~.js => entry-Bvo4BYro.js
 
 # tests/esbuild/default/use_strict_directive_bundle_esm_issue2264
 
-- entry-!~{000}~.js => entry-hXtm27Ye.js
+- entry-!~{000}~.js => entry-DK-XPZv9.js
 
 # tests/esbuild/default/use_strict_directive_bundle_iife_issue2264
 
-- entry-!~{000}~.js => entry-OsJbWXS_.js
+- entry-!~{000}~.js => entry-BFZLtvQZ.js
 
 # tests/esbuild/default/use_strict_directive_bundle_issue1837
 
@@ -2515,21 +2515,21 @@ expression: output
 
 # tests/esbuild/lower/java_script_auto_accessor_es2021
 
-- js-define-!~{000}~.js => js-define-rulW5vLg.js
-- ts-assign_ts-assign-!~{002}~.js => ts-assign_ts-assign-KGDqwMwc.js
-- ts-define_ts-define-!~{001}~.js => ts-define_ts-define-BbdVpmn3.js
+- js-define-!~{000}~.js => js-define-rG1Qxxq0.js
+- ts-assign_ts-assign-!~{002}~.js => ts-assign_ts-assign-DIcQFw_e.js
+- ts-define_ts-define-!~{001}~.js => ts-define_ts-define-Ct5vKSQL.js
 
 # tests/esbuild/lower/java_script_auto_accessor_es2022
 
-- js-define-!~{000}~.js => js-define-rulW5vLg.js
-- ts-assign_ts-assign-!~{002}~.js => ts-assign_ts-assign-KGDqwMwc.js
-- ts-define_ts-define-!~{001}~.js => ts-define_ts-define-BbdVpmn3.js
+- js-define-!~{000}~.js => js-define-rG1Qxxq0.js
+- ts-assign_ts-assign-!~{002}~.js => ts-assign_ts-assign-DIcQFw_e.js
+- ts-define_ts-define-!~{001}~.js => ts-define_ts-define-Ct5vKSQL.js
 
 # tests/esbuild/lower/java_script_auto_accessor_es_next
 
-- js-define-!~{000}~.js => js-define-rulW5vLg.js
-- ts-assign_ts-assign-!~{002}~.js => ts-assign_ts-assign-KGDqwMwc.js
-- ts-define_ts-define-!~{001}~.js => ts-define_ts-define-BbdVpmn3.js
+- js-define-!~{000}~.js => js-define-rG1Qxxq0.js
+- ts-assign_ts-assign-!~{002}~.js => ts-assign_ts-assign-DIcQFw_e.js
+- ts-define_ts-define-!~{001}~.js => ts-define_ts-define-Ct5vKSQL.js
 
 # tests/esbuild/lower/java_script_decorators_bundle_issue3768
 
@@ -2572,19 +2572,19 @@ expression: output
 
 # tests/esbuild/lower/lower_async_generator
 
-- entry-!~{000}~.js => entry-BYJ_Kg6M.js
+- entry-!~{000}~.js => entry-g--LCELz.js
 
 # tests/esbuild/lower/lower_async_generator_no_await
 
-- entry-!~{000}~.js => entry-BYJ_Kg6M.js
+- entry-!~{000}~.js => entry-g--LCELz.js
 
 # tests/esbuild/lower/lower_async_super_es2016_no_bundle
 
-- entry-!~{000}~.js => entry-OUiITk6I.js
+- entry-!~{000}~.js => entry-BiSop-aA.js
 
 # tests/esbuild/lower/lower_async_super_es2017_no_bundle
 
-- entry-!~{000}~.js => entry-OUiITk6I.js
+- entry-!~{000}~.js => entry-BiSop-aA.js
 
 # tests/esbuild/lower/lower_async_this2016_common_js
 
@@ -2636,14 +2636,14 @@ expression: output
 - 2-!~{001}~.js => 2-B5-vDtKB.js
 - 3-!~{002}~.js => 3-CLLzrSuj.js
 - 4-!~{003}~.js => 4-BQEU1B8F.js
-- 5-!~{004}~.js => 5-COWf4txy.js
-- 6-!~{005}~.js => 6-BnBULIrm.js
-- 7-!~{006}~.js => 7-DuljJypV.js
-- 8-!~{007}~.js => 8-BUfHBQdk.js
+- 5-!~{004}~.js => 5-TxPJUhc1.js
+- 6-!~{005}~.js => 6-JwcW2KXv.js
+- 7-!~{006}~.js => 7-9wpZ-A4q.js
+- 8-!~{007}~.js => 8-my4xG5vP.js
 
 # tests/esbuild/lower/lower_nullish_coalescing_assignment_issue1493
 
-- entry-!~{000}~.js => entry-D0RdrMpN.js
+- entry-!~{000}~.js => entry-Cn_lWxiM.js
 
 # tests/esbuild/lower/lower_object_spread_no_bundle
 
@@ -2779,19 +2779,19 @@ expression: output
 
 # tests/esbuild/lower/lower_static_async_super_es2016_no_bundle
 
-- entry-!~{000}~.js => entry-CMXZovLt.js
+- entry-!~{000}~.js => entry-DKDXmOsS.js
 
 # tests/esbuild/lower/lower_static_async_super_es2021_no_bundle
 
-- entry-!~{000}~.js => entry-CMXZovLt.js
+- entry-!~{000}~.js => entry-DKDXmOsS.js
 
 # tests/esbuild/lower/lower_static_super_es2016_no_bundle
 
-- entry-!~{000}~.js => entry-CMXZovLt.js
+- entry-!~{000}~.js => entry-C2q4soOY.js
 
 # tests/esbuild/lower/lower_static_super_es2021_no_bundle
 
-- entry-!~{000}~.js => entry-CMXZovLt.js
+- entry-!~{000}~.js => entry-C2q4soOY.js
 
 # tests/esbuild/lower/lower_strict_mode_syntax
 
@@ -2827,11 +2827,11 @@ expression: output
 - hoist-export-local-indirect-!~{007}~.js => hoist-export-local-indirect-HSZBlKOb.js
 - hoist-export-star-!~{003}~.js => hoist-export-star-jYddb4P1.js
 - hoist-import-!~{002}~.js => hoist-import-BLaUL1j7.js
-- hoist-use-strict-!~{000}~.js => hoist-use-strict-pw49g_7u.js
+- hoist-use-strict-!~{000}~.js => hoist-use-strict-BpJDaqMA.js
 
 # tests/esbuild/lower/lower_using_inside_ts_namespace
 
-- entry-!~{000}~.js => entry-2iwBuLfY.js
+- entry-!~{000}~.js => entry-CsueQAgy.js
 
 # tests/esbuild/lower/lower_using_unsupported_async
 
@@ -3206,11 +3206,11 @@ expression: output
 
 # tests/esbuild/splitting/splitting_cross_chunk_assignment_dependencies_recursive
 
-- a-!~{000}~.js => a-DNmRKShH.js
-- b-!~{001}~.js => b-z3u_Fak2.js
-- c-!~{002}~.js => c-By2OI2eN.js
-- x-!~{003}~.js => x-CkvKqwKd.js
-- z-!~{005}~.js => z-KhZa7vL0.js
+- a-!~{000}~.js => a-B6CDTJan.js
+- b-!~{001}~.js => b-BeLJzcJx.js
+- c-!~{002}~.js => c-DIqLKrYX.js
+- x-!~{003}~.js => x-BhbOquNH.js
+- z-!~{005}~.js => z-BXIfo6kz.js
 
 # tests/esbuild/splitting/splitting_duplicate_chunk_collision
 
@@ -3575,7 +3575,7 @@ expression: output
 
 # tests/esbuild/ts/ts_minify_enum_property_names
 
-- entry-!~{000}~.js => entry-BUKrAnqi.js
+- entry-!~{000}~.js => entry-XMvhL2CK.js
 
 # tests/esbuild/ts/ts_minify_namespace
 
@@ -5030,7 +5030,7 @@ expression: output
 
 # tests/rolldown/misc/use_strict/esm
 
-- main-!~{000}~.js => main-m-GG56UQ.js
+- main-!~{000}~.js => main-C9hoGOiU.js
 
 # tests/rolldown/misc/use_strict/ignore_treeshaked_modules
 
@@ -5094,11 +5094,11 @@ expression: output
 
 # tests/rolldown/resolve/ts_config_merge_decorator_metadata
 
-- main-!~{000}~.js => main-MF3I2Zgo.js
+- main-!~{000}~.js => main-BHBoWkld.js
 
 # tests/rolldown/resolve/ts_config_option_merge
 
-- main-!~{000}~.js => main-BYlE1psn.js
+- main-!~{000}~.js => main-CGeWpKLm.js
 
 # tests/rolldown/resolve/wildcard_alias
 
@@ -5518,6 +5518,14 @@ expression: output
 
 - main-!~{000}~.js => main-DqRBvpQT.js
 
+# tests/rolldown/topics/hmr/issue_5159
+
+- main-!~{000}~.js => main-K2kWHB-A.js
+- bar-!~{005}~.js => bar-9GyTK8RJ.js
+- chunk-!~{001}~.js => chunk-H37MHKgK.js
+- foo-!~{007}~.js => foo-DWqUFXTX.js
+- string-!~{003}~.js => string-CVda_J7-.js
+
 # tests/rolldown/topics/hmr/mutiply_entires
 
 - entry-!~{000}~.js => entry-BPZIs1mk.js
@@ -5560,6 +5568,12 @@ expression: output
 # tests/rolldown/topics/keep_names/issue_5294
 
 - decorator-!~{000}~.js => decorator-CvurVfst.js
+
+# tests/rolldown/topics/keep_names/issue_5525
+
+- entry-!~{000}~.js => entry-BCzFFI04.js
+- entry2-!~{001}~.js => entry2-CA0mV8Xo.js
+- foo-!~{002}~.js => foo-DKOGr9By.js
 
 # tests/rolldown/topics/live_bindings/default_export_binding
 
@@ -5727,6 +5741,10 @@ expression: output
 # tests/rolldown/tree_shaking/commonjs
 
 - main-!~{000}~.js => main-DDdJExEQ.js
+
+# tests/rolldown/tree_shaking/commonjs_5546
+
+- main-!~{000}~.js => main-utp7dCKQ.js
 
 # tests/rolldown/tree_shaking/commonjs_mixed
 
@@ -5961,6 +5979,6 @@ expression: output
 
 # tests/rollup/simplify-with-destructuring
 
-- main-!~{000}~.js => main-3MCZbPq8.js
+- main-!~{000}~.js => main-Dwl1cMos.js
 
 ```

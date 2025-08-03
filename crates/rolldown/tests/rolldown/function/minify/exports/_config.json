@@ -6,16 +6,16 @@
   "snapshot": false,
   "configVariants": [
     {
-      "configName": "cjs",
+      "_configName": "cjs",
       "format": "cjs"
     },
     {
-      "configName": "umd",
+      "_configName": "umd",
       "format": "umd",
       "name": "lib"
     },
     {
-      "configName": "iife",
+      "_configName": "iife",
       "format": "iife",
       "name": "lib"
     }

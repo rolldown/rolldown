@@ -11,7 +11,6 @@ use rolldown_common::{
   SymbolOrMemberExprRef, SymbolRef, SymbolRefDb,
 };
 use rolldown_error::{AmbiguousExternalNamespaceModule, BuildDiagnostic};
-use rolldown_rstr::{Rstr, ToRstr};
 use rolldown_utils::{
   ecmascript::{is_validate_identifier_name, legitimize_identifier_name},
   index_vec_ext::{IndexVecExt, IndexVecRefExt},
@@ -74,7 +73,7 @@ pub enum MatchImportKind {
   // Both "matchImportNormal" and "matchImportNamespace"
   NormalAndNamespace {
     namespace_ref: SymbolRef,
-    alias: Rstr,
+    alias: CompactStr,
   },
   // The import could not be evaluated due to a cycle
   Cycle,
@@ -306,7 +305,7 @@ impl LinkStage<'_> {
 
   fn add_exports_for_export_star(
     normal_modules: &IndexModules,
-    resolve_exports: &mut FxHashMap<Rstr, ResolvedExport>,
+    resolve_exports: &mut FxHashMap<CompactStr, ResolvedExport>,
     module_id: ModuleIdx,
     module_stack: &mut Vec<ModuleIdx>,
   ) {
@@ -320,12 +319,12 @@ impl LinkStage<'_> {
       return;
     };
 
-    let cjs_reexports = module
-      .ast_usage
-      .contains(EcmaModuleAstUsage::IsCjsReexport)
-      .then(|| module.import_records.first().unwrap().resolved_module);
+    let is_cjsreexports = module.ast_usage.contains(EcmaModuleAstUsage::IsCjsReexport);
 
-    for dep_id in module.star_export_module_ids().chain(cjs_reexports) {
+    let cjs_reexport_module =
+      is_cjsreexports.then(|| module.import_records.first().unwrap().resolved_module);
+
+    for dep_id in module.star_export_module_ids().chain(cjs_reexport_module) {
       let Module::Normal(dep_module) = &normal_modules[dep_id] else {
         continue;
       };
@@ -335,7 +334,7 @@ impl LinkStage<'_> {
 
       for (exported_name, named_export) in &dep_module.named_exports {
         // ES6 export star statements ignore exports named "default"
-        if exported_name.as_str() == "default" {
+        if !named_export.came_from_commonjs && exported_name.as_str() == "default" {
           continue;
         }
         // This export star is shadowed if any file in the stack has a matching real named export
@@ -418,7 +417,7 @@ impl LinkStage<'_> {
                   let name = &member_expr_ref.props[cursor];
                   let meta = &self.metas[canonical_ref_owner.idx];
                   let export_symbol =
-                    meta.resolved_exports.get(&name.to_rstr()).and_then(|resolved_export| {
+                    meta.resolved_exports.get(&CompactStr::new(name)).and_then(|resolved_export| {
                       (!resolved_export.came_from_cjs).then_some(resolved_export)
                     });
                   let Some(export_symbol) = export_symbol else {
@@ -448,7 +447,10 @@ impl LinkStage<'_> {
                     }
                     break;
                   };
-                  if !meta.sorted_and_non_ambiguous_resolved_exports.contains_key(&name.to_rstr()) {
+                  if !meta
+                    .sorted_and_non_ambiguous_resolved_exports
+                    .contains_key(&CompactStr::new(name))
+                  {
                     resolved_map.insert(
                       member_expr_ref.span,
                       MemberExprRefResolution {
@@ -621,7 +623,7 @@ impl BindImportsAndExportsContext<'_> {
               .external_import_binding_merger
               .entry(rec.resolved_module)
               .or_default()
-              .entry(name.inner().clone())
+              .entry(name.clone())
               .or_default()
               .insert(*imported_as_ref);
           }

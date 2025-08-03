@@ -1853,7 +1853,9 @@ export interface BindingPluginWithIndex {
 }
 
 export interface BindingPreRenderedAsset {
+  name?: string
   names: Array<string>
+  originalFileName?: string
   originalFileNames: Array<string>
   source: BindingAssetSource
 }

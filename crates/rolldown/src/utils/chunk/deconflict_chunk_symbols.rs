@@ -1,11 +1,10 @@
-use std::borrow::Cow;
+use oxc::span::CompactStr;
 
 use crate::{stages::link_stage::LinkStageOutput, utils::renamer::Renamer};
 use arcstr::ArcStr;
 use rolldown_common::{
   Chunk, ChunkIdx, ChunkKind, GetLocalDb, ModuleScopeSymbolIdMap, OutputFormat, TaggedSymbolRef,
 };
-use rolldown_rstr::ToRstr;
 use rolldown_utils::ecmascript::legitimize_identifier_name;
 use rustc_hash::FxHashMap;
 
@@ -69,11 +68,10 @@ pub fn deconflict_chunk_symbols(
         .scoping()
         .root_unresolved_references()
         .keys()
-        .map(Cow::Borrowed)
     })
     .for_each(|name| {
       // global names should be reserved
-      renamer.reserve(name.to_rstr());
+      renamer.reserve(CompactStr::new(name));
     });
 
   // Though, those symbols in `imports_from_other_chunks` doesn't belong to this chunk, but in the final output, they still behave

@@ -100,7 +100,7 @@ impl<'me, 'ast: 'me> Visit<'ast> for AstScanner<'me, 'ast> {
     // Check if dynamic import record is a pure dynamic import
     for (rec_idx, usage) in &self.result.dynamic_import_rec_exports_usage {
       if matches!(usage, DynamicImportExportsUsage::Partial(set) if set.is_empty()) {
-        self.result.import_records[*rec_idx].meta.insert(ImportRecordMeta::PURE_DYNAMIC_IMPORT);
+        self.result.import_records[*rec_idx].meta.insert(ImportRecordMeta::PureDynamicImport);
       }
     }
 
@@ -187,8 +187,9 @@ impl<'me, 'ast: 'me> Visit<'ast> for AstScanner<'me, 'ast> {
       let import_rec_idx =
         self.add_import_record(request.as_str(), ImportKind::DynamicImport, expr.source.span(), {
           let mut meta = ImportRecordMeta::empty();
-          meta.set(ImportRecordMeta::IS_TOP_LEVEL, self.is_root_scope());
-          meta.set(ImportRecordMeta::IS_UNSPANNED_IMPORT, expr.source.span().is_empty());
+          meta.set(ImportRecordMeta::IsTopLevel, self.is_root_scope());
+          meta.set(ImportRecordMeta::IsUnspannedImport, expr.source.span().is_empty());
+          meta.set(ImportRecordMeta::InTryCatchBlock, self.in_side_try_catch_block());
           meta
         });
       self.init_dynamic_import_binding_usage_info(import_rec_idx);
@@ -474,7 +475,7 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
       _ => return false,
     };
     let mut init_meta = if span.is_empty() {
-      ImportRecordMeta::IS_UNSPANNED_IMPORT
+      ImportRecordMeta::IsUnspannedImport
     } else {
       let mut is_require_used = true;
       let mut meta = ImportRecordMeta::empty();
@@ -484,7 +485,7 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
         match ancestor {
           AstKind::ParenthesizedExpression(_) => {}
           AstKind::ExpressionStatement(_) => {
-            meta.insert(ImportRecordMeta::IS_REQUIRE_UNUSED);
+            meta.insert(ImportRecordMeta::IsRequireUnused);
             break;
           }
           AstKind::SequenceExpression(seq_expr) => {
@@ -512,7 +513,7 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
       meta
     };
     let in_side_try_catch_block = self.in_side_try_catch_block();
-    init_meta.set(ImportRecordMeta::IN_TRY_CATCH_BLOCK, in_side_try_catch_block);
+    init_meta.set(ImportRecordMeta::InTryCatchBlock, in_side_try_catch_block);
     let id = self.add_import_record(value.as_ref(), ImportKind::Require, span, init_meta);
     self.result.imports.insert(expr.span, id);
     true

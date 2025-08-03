@@ -4,7 +4,7 @@
   },
   "configVariants": [
     {
-      "configName": "enable-treeshake",
+      "_configName": "enable-treeshake",
       "treeshake": true
     }
   ],

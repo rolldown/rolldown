@@ -7,6 +7,8 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```js
 //#region entry.js
+Base;
+Base;
 for (let i = 0; i < 3; i++) objs.push({
 	__proto__: { foo() {
 		return i;

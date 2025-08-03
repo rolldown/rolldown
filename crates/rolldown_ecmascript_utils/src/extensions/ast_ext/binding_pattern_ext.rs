@@ -57,9 +57,14 @@ impl<'ast> BindingPatternExt<'ast> for BindingPattern<'ast> {
       // Turn `var { a, b = 2 } = ...` to `{a, b = 2} = ...`
       BindingPatternKind::ObjectPattern(obj_pat) => {
         let mut obj_target = ObjectAssignmentTarget {
-          rest: obj_pat.rest.take().map(|rest| AssignmentTargetRest {
-            span: rest.span,
-            target: rest.unbox().argument.into_assignment_target(alloc),
+          rest: obj_pat.rest.take().map(|rest| {
+            Box::new_in(
+              AssignmentTargetRest {
+                span: rest.span,
+                target: rest.unbox().argument.into_assignment_target(alloc),
+              },
+              alloc,
+            )
           }),
           ..ObjectAssignmentTarget::dummy(alloc)
         };
@@ -72,9 +77,14 @@ impl<'ast> BindingPatternExt<'ast> for BindingPattern<'ast> {
       BindingPatternKind::ArrayPattern(arr_pat) => {
         let mut arr_target = ArrayAssignmentTarget {
           span: arr_pat.span,
-          rest: arr_pat.rest.take().map(|rest| AssignmentTargetRest {
-            span: rest.span,
-            target: rest.unbox().argument.into_assignment_target(alloc),
+          rest: arr_pat.rest.take().map(|rest| {
+            Box::new_in(
+              AssignmentTargetRest {
+                span: rest.span,
+                target: rest.unbox().argument.into_assignment_target(alloc),
+              },
+              alloc,
+            )
           }),
           elements: oxc::allocator::Vec::with_capacity_in(arr_pat.elements.len(), alloc),
         };

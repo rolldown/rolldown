@@ -21,7 +21,7 @@
   },
   "configVariants": [
     {
-      "configName": "no-profiler-names",
+      "_configName": "no-profiler-names",
       "profilerNames": false
     }
   ]

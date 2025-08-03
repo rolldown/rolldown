@@ -1,42 +1,15 @@
 ---
 source: crates/rolldown_testing/src/integration_test.rs
 ---
-# warnings
-
-## UNRESOLVED_IMPORT
-
-```text
-[UNRESOLVED_IMPORT] Warning: Could not resolve 'nope1' in entry.js
-   ╭─[ entry.js:3:13 ]
-   │
- 3 │     x = import('nope1')
-   │                ───┬───  
-   │                   ╰───── Module not found, treating it as an external dependency
-───╯
-
-```
-## UNRESOLVED_IMPORT
-
-```text
-[UNRESOLVED_IMPORT] Warning: Could not resolve 'nope2' in entry.js
-   ╭─[ entry.js:4:19 ]
-   │
- 4 │     x = await import('nope2')
-   │                      ───┬───  
-   │                         ╰───── Module not found, treating it as an external dependency
-───╯
-
-```
 # Assets
 
 ## entry.js
 
 ```js
 //#region entry.js
-let x;
 try {
-	x = import("nope1");
-	x = await import("nope2");
+	import("nope1");
+	await import("nope2");
 } catch {}
 
 //#endregion

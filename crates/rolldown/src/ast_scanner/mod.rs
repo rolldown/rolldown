@@ -36,7 +36,6 @@ use rolldown_common::{
 };
 use rolldown_ecmascript_utils::{BindingIdentifierExt, BindingPatternExt};
 use rolldown_error::{BuildDiagnostic, BuildResult, CjsExportSpan};
-use rolldown_rstr::Rstr;
 use rolldown_std_utils::PathExt;
 use rolldown_utils::concat_string;
 use rolldown_utils::ecmascript::legitimize_identifier_name;
@@ -58,7 +57,7 @@ pub struct ScanResult {
   /// Using `IndexMap` to make sure the order of the named imports always sorted by the span of the
   /// module
   pub named_imports: FxIndexMap<SymbolRef, NamedImport>,
-  pub named_exports: FxHashMap<Rstr, LocalExport>,
+  pub named_exports: FxHashMap<CompactStr, LocalExport>,
   /// Used to store all exports in commonjs module, why not reuse `named_exports`?
   /// Because It is legal to use commonjs exports syntax in a es module, here is an example:
   /// ```js
@@ -69,7 +68,7 @@ pub struct ScanResult {
   /// `named_exports`, the `foo` will be overridden by the `exports.foo` and cause a bug(Because we
   /// may not know if it is a esm at the time, a simple case would be swap the order of two export
   /// stmt).
-  pub commonjs_exports: FxHashMap<Rstr, LocalExport>,
+  pub commonjs_exports: FxHashMap<CompactStr, LocalExport>,
   pub stmt_infos: StmtInfos,
   pub import_records: IndexVec<ImportRecordIdx, RawImportRecord>,
   pub default_export_ref: SymbolRef,
@@ -133,7 +132,7 @@ pub struct AstScanner<'me, 'ast> {
   /// A flag to resolve `this` appear with propertyKey in class
   is_nested_this_inside_class: bool,
   /// Used in commonjs module it self
-  self_used_cjs_named_exports: FxHashSet<Rstr>,
+  self_used_cjs_named_exports: FxHashSet<CompactStr>,
   allocator: &'ast oxc::allocator::Allocator,
 }
 
@@ -167,12 +166,7 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
     let result = ScanResult {
       named_imports: FxIndexMap::default(),
       named_exports: FxHashMap::default(),
-      stmt_infos: {
-        let mut stmt_infos = StmtInfos::default();
-        // The first `StmtInfo` is used to represent the statement that declares and constructs Module Namespace Object
-        stmt_infos.push(StmtInfo::default());
-        stmt_infos
-      },
+      stmt_infos: StmtInfos::new(),
       import_records: IndexVec::new(),
       default_export_ref,
       namespace_object_ref,
@@ -383,7 +377,7 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
         "#"
       ));
     let mut rec = RawImportRecord::new(
-      Rstr::from(module_request),
+      CompactStr::from(module_request),
       kind,
       namespace_ref,
       span,
@@ -398,7 +392,7 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
     if matches!(rec.kind, ImportKind::Import)
       && ENABLED_CJS_NAMESPACE_MERGING_MODULE_REQUEST.contains(&module_request)
     {
-      rec.meta.insert(ImportRecordMeta::SAFELY_MERGE_CJS_NS);
+      rec.meta.insert(ImportRecordMeta::SafelyMergeCjsNs);
     }
 
     let id = self.result.import_records.push(rec);
@@ -416,7 +410,7 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
     self.result.named_imports.insert(
       (self.idx, local).into(),
       NamedImport {
-        imported: Rstr::new(imported).into(),
+        imported: CompactStr::new(imported).into(),
         imported_as: (self.idx, local).into(),
         span_imported,
         record_id,
@@ -573,7 +567,7 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
       ImportKind::Import,
       decl.source.span(),
       if decl.source.span().is_empty() {
-        ImportRecordMeta::IS_UNSPANNED_IMPORT
+        ImportRecordMeta::IsUnspannedImport
       } else {
         ImportRecordMeta::empty()
       },
@@ -583,7 +577,7 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
       self.add_star_re_export(exported.name().as_str(), id, decl.span);
     } else {
       // export * from '...'
-      self.result.import_records[id].meta.insert(ImportRecordMeta::IS_EXPORT_STAR);
+      self.result.import_records[id].meta.insert(ImportRecordMeta::IsExportStar);
       self.result.ecma_view_meta.insert(EcmaViewMeta::HasStarExport);
     }
     self.result.imports.insert(decl.span, id);
@@ -596,7 +590,7 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
         ImportKind::Import,
         source.span(),
         if source.span().is_empty() {
-          ImportRecordMeta::IS_UNSPANNED_IMPORT
+          ImportRecordMeta::IsUnspannedImport
         } else {
           ImportRecordMeta::empty()
         },
@@ -612,7 +606,7 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
       self.result.imports.insert(decl.span, record_id);
       // `export {} from '...'`
       if decl.specifiers.is_empty() {
-        self.result.import_records[record_id].meta.insert(ImportRecordMeta::IS_PLAIN_IMPORT);
+        self.result.import_records[record_id].meta.insert(ImportRecordMeta::IsPlainImport);
       }
     } else {
       decl.specifiers.iter().for_each(|spec| {
@@ -699,7 +693,7 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
       ImportKind::Import,
       decl.source.span(),
       if decl.source.span().is_empty() {
-        ImportRecordMeta::IS_UNSPANNED_IMPORT
+        ImportRecordMeta::IsUnspannedImport
       } else {
         ImportRecordMeta::empty()
       },
@@ -707,7 +701,7 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
     self.result.imports.insert(decl.span, rec_id);
     // // `import '...'` or `import {} from '...'`
     if decl.specifiers.as_ref().is_none_or(|s| s.is_empty()) {
-      self.result.import_records[rec_id].meta.insert(ImportRecordMeta::IS_PLAIN_IMPORT);
+      self.result.import_records[rec_id].meta.insert(ImportRecordMeta::IsPlainImport);
     }
 
     let Some(specifiers) = &decl.specifiers else { return };

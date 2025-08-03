@@ -1,10 +1,10 @@
+use oxc::span::CompactStr;
 use oxc_index::IndexVec;
 use rolldown_common::{
   Chunk, ChunkIdx, InstantiatedChunk, ModuleRenderOutput, NormalizedBundlerOptions, SymbolRef,
 };
 use rolldown_error::{BuildDiagnostic, BuildResult};
 use rolldown_plugin::SharedPluginDriver;
-use rolldown_rstr::Rstr;
 use rolldown_utils::{ecmascript::property_access_str, indexmap::FxIndexMap};
 use rustc_hash::FxHashMap;
 
@@ -26,7 +26,7 @@ pub struct GenerateContext<'a> {
   /// export const a = 10000000;
   /// export {a as b}; // symbol_ref points to `a`, and alias is `b`
   /// ```
-  pub render_export_items_index_vec: &'a IndexVec<ChunkIdx, FxIndexMap<SymbolRef, Vec<Rstr>>>,
+  pub render_export_items_index_vec: &'a IndexVec<ChunkIdx, FxIndexMap<SymbolRef, Vec<CompactStr>>>,
 }
 
 impl GenerateContext<'_> {
@@ -35,7 +35,7 @@ impl GenerateContext<'_> {
     &self,
     symbol_ref: SymbolRef,
     cur_chunk_idx: ChunkIdx,
-    canonical_names: &FxHashMap<SymbolRef, Rstr>,
+    canonical_names: &FxHashMap<SymbolRef, CompactStr>,
   ) -> String {
     let symbol_db = &self.link_output.symbol_db;
     if !symbol_ref.is_declared_in_root_scope(symbol_db) {
@@ -88,9 +88,9 @@ impl GenerateContext<'_> {
 
   fn canonical_name_for<'name>(
     &self,
-    canonical_names: &'name FxHashMap<SymbolRef, Rstr>,
+    canonical_names: &'name FxHashMap<SymbolRef, CompactStr>,
     symbol: SymbolRef,
-  ) -> &'name Rstr {
+  ) -> &'name CompactStr {
     let symbol_db = &self.link_output.symbol_db;
     symbol_db.canonical_name_for(symbol, canonical_names).unwrap_or_else(|| {
       panic!(

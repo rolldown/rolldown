@@ -1401,12 +1401,7 @@
           ]
         },
         "name": {
-          "type": [
-            "string",
-            "null"
-          ]
-        },
-        "configName": {
+          "description": "If specified, it will be set to `BundlerOptions.name` for the variant.",
           "type": [
             "string",
             "null"
@@ -1479,8 +1474,15 @@
           ]
         },
         "_snapshot": {
+          "description": "Whether to include the output in the snapshot for this config variant.",
           "type": [
             "boolean",
+            "null"
+          ]
+        },
+        "_configName": {
+          "type": [
+            "string",
             "null"
           ]
         }

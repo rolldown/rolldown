@@ -1,15 +1,15 @@
 use crate::types::generator::GenerateContext;
 use arcstr::ArcStr;
+use oxc::span::CompactStr;
 use rolldown_common::{NormalModule, OutputExports};
 use rolldown_error::{BuildDiagnostic, BuildResult};
-use rolldown_rstr::Rstr;
 
 // Port from https://github.com/rollup/rollup/blob/master/src/utils/getExportMode.ts
 pub fn determine_export_mode(
   warnings: &mut Vec<BuildDiagnostic>,
   ctx: &GenerateContext<'_>,
   module: &NormalModule,
-  export_names: &[Rstr],
+  export_names: &[CompactStr],
 ) -> BuildResult<OutputExports> {
   let export_mode = &ctx.options.exports;
   match export_mode {

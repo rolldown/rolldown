@@ -1,0 +1,17 @@
+{
+  "config": {
+    "input": [
+      {
+        "name": "entry",
+        "import": "./entry.js"
+      },
+      {
+        "name": "entry2",
+        "import": "./entry2.js"
+      }
+    ],
+    "keepNames": true,
+    "format": "cjs"
+  },
+  "snapshot": false
+}

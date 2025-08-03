@@ -7,7 +7,7 @@ use rolldown_common::{
   ConstExportMeta, EcmaModuleAstUsage, EcmaViewMeta, EntryPoint, EntryPointKind, ExportsKind,
   ImportKind, ImportRecordIdx, ImportRecordMeta, IndexModules, Module, ModuleIdx, ModuleType,
   NormalModule, NormalizedBundlerOptions, RUNTIME_HELPER_NAMES, RuntimeHelper, SideEffectDetail,
-  StmtInfoIdx, SymbolOrMemberExprRef, SymbolRef, SymbolRefDb,
+  StmtInfoIdx, StmtInfos, SymbolOrMemberExprRef, SymbolRef, SymbolRefDb,
   dynamic_import_usage::DynamicImportExportsUsage, side_effects::DeterminedSideEffects,
 };
 #[cfg(not(target_family = "wasm"))]
@@ -159,7 +159,7 @@ impl LinkStage<'_> {
       let module = self.module_table[mi].as_normal_mut().expect("should be a normal module");
       for record_idx in record_idxs {
         let rec = &mut module.import_records[record_idx];
-        rec.meta.insert(ImportRecordMeta::DEAD_DYNAMIC_IMPORT);
+        rec.meta.insert(ImportRecordMeta::DeadDynamicImport);
       }
     }
 
@@ -188,14 +188,6 @@ impl LinkStage<'_> {
             .set(RuntimeHelper::from_bits(1 << index as u32).unwrap(), any_included);
         }
         meta.depended_runtime_helper = normalized_runtime_helper;
-
-        // The hmr need to create module namespace object to store exports.
-        if self.options.is_hmr_enabled()
-          && module.idx != self.runtime.id()
-          && matches!(module.exports_kind, ExportsKind::Esm)
-        {
-          module.stmt_infos.get_mut(StmtInfoIdx::new(0)).is_included = true;
-        }
       });
     self.include_runtime_symbol(
       &mut is_included_vec,
@@ -344,7 +336,7 @@ impl LinkStage<'_> {
                 self.module_table[import_record.resolved_module].side_effects().has_side_effects();
 
               let ret = !importee_side_effects
-                && import_record.meta.contains(ImportRecordMeta::TOP_LEVEL_PURE_DYNAMIC_IMPORT);
+                && import_record.meta.contains(ImportRecordMeta::TopLevelPureDynamicImport);
 
               // Only consider it is unused if it is a top level pure dynamic import and the
               // importee module has no side effects.
@@ -434,36 +426,39 @@ fn include_module(ctx: &mut Context, module: &NormalModule) {
 
   let forced_no_treeshake = matches!(module.side_effects, DeterminedSideEffects::NoTreeshake);
   if ctx.tree_shaking && !forced_no_treeshake {
-    module.stmt_infos.iter_enumerated().skip(1).for_each(|(stmt_info_id, stmt_info)| {
-      // No need to handle the first statement specially, which is the namespace object, because it doesn't have side effects and will only be included if it is used.
-      let bail_eval = module.meta.has_eval()
-        && !stmt_info.declared_symbols.is_empty()
-        && stmt_info_id.index() != 0;
-      let has_side_effects = if module.meta.contains(EcmaViewMeta::SafelyTreeshakeCommonjs)
-        && ctx.options.treeshake.commonjs()
-      {
-        stmt_info.side_effect.contains(SideEffectDetail::Unknown)
-      } else {
-        stmt_info.side_effect.has_side_effect()
-      };
-      if has_side_effects || bail_eval {
-        include_statement(ctx, module, stmt_info_id);
-      }
-    });
-  } else {
-    // Skip the first statement, which is the namespace object. It should be included only if it is used no matter
-    // tree shaking is enabled or not.
-    module.stmt_infos.iter_enumerated().skip(1).for_each(|(stmt_info_id, stmt_info)| {
-      if stmt_info.force_tree_shaking {
-        if stmt_info.side_effect.has_side_effect() {
-          // If `force_tree_shaking` is true, the statement should be included either by itself having side effects
-          // or by other statements referencing it.
+    module.stmt_infos.iter_enumerated_without_namespace_stmt().for_each(
+      |(stmt_info_id, stmt_info)| {
+        // No need to handle the namespace statement specially, because it doesn't have side effects and will only be included if it is used.
+        let bail_eval = module.meta.has_eval()
+          && !stmt_info.declared_symbols.is_empty()
+          && stmt_info_id.index() != 0;
+        let has_side_effects = if module.meta.contains(EcmaViewMeta::SafelyTreeshakeCommonjs)
+          && ctx.options.treeshake.commonjs()
+        {
+          stmt_info.side_effect.contains(SideEffectDetail::Unknown)
+        } else {
+          stmt_info.side_effect.has_side_effect()
+        };
+        if has_side_effects || bail_eval {
           include_statement(ctx, module, stmt_info_id);
         }
-      } else {
-        include_statement(ctx, module, stmt_info_id);
-      }
-    });
+      },
+    );
+  } else {
+    // Skip the namespace statement. It should be included only if it is used no matter tree shaking is enabled or not.
+    module.stmt_infos.iter_enumerated_without_namespace_stmt().for_each(
+      |(stmt_info_id, stmt_info)| {
+        if stmt_info.force_tree_shaking {
+          if stmt_info.side_effect.has_side_effect() {
+            // If `force_tree_shaking` is true, the statement should be included either by itself having side effects
+            // or by other statements referencing it.
+            include_statement(ctx, module, stmt_info_id);
+          }
+        } else {
+          include_statement(ctx, module, stmt_info_id);
+        }
+      },
+    );
   }
 
   let module_meta = &ctx.metas[module.idx];
@@ -493,6 +488,14 @@ fn include_module(ctx: &mut Context, module: &NormalModule) {
   ctx.metas[module.idx].included_commonjs_export_symbol.iter().for_each(|symbol_ref| {
     include_symbol(ctx, *symbol_ref, IncludeKind::Normal);
   });
+
+  // With enabling HMR, rolldown will register included esm module's namespace object to the runtime.
+  if ctx.options.is_hmr_enabled()
+    && module.idx != ctx.runtime_id
+    && matches!(module.exports_kind, ExportsKind::Esm)
+  {
+    include_statement(ctx, module, StmtInfos::NAMESPACE_STMT_IDX);
+  }
 }
 
 #[track_caller]

@@ -198,6 +198,17 @@ const WatchOptionsSchema = v.strictObject({
     v.optional(v.boolean()),
     v.description('Whether to clear the screen when a rebuild is triggered'),
   ),
+  onInvalidate: v.pipe(
+    v.optional(
+      v.pipe(
+        v.function(),
+        v.args(v.tuple([v.string()])),
+      ),
+    ),
+    v.description(
+      'An optional function that will be called immediately every time a module changes that is part of the build.',
+    ),
+  ),
 });
 
 const ChecksOptionsSchema = v.strictObject({

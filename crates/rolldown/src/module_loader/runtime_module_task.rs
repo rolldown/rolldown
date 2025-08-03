@@ -14,6 +14,7 @@ use rolldown_common::{
 };
 use rolldown_ecmascript::{EcmaAst, EcmaCompiler};
 use rolldown_error::BuildResult;
+use rolldown_utils::concat_string;
 use rolldown_utils::indexmap::FxIndexSet;
 use rustc_hash::{FxHashMap, FxHashSet};
 
@@ -31,20 +32,11 @@ const RUNTIME_HEAD_NODE_JS: &str = include_str!("../runtime/runtime-head-node.js
 const RUNTIME_TAIL_NODE_JS: &str = include_str!("../runtime/runtime-tail-node.js");
 
 fn get_runtime_js() -> String {
-  let mut ret = String::with_capacity(RUNTIME_BASE_JS.len() + RUNTIME_TAIL_JS.len());
-  ret.push_str(RUNTIME_BASE_JS);
-  ret.push_str(RUNTIME_TAIL_JS);
-  ret
+  concat_string!(RUNTIME_BASE_JS, RUNTIME_TAIL_JS)
 }
 
 fn get_runtime_js_with_node_platform() -> String {
-  let mut ret = String::with_capacity(
-    RUNTIME_BASE_JS.len() + RUNTIME_TAIL_NODE_JS.len() + RUNTIME_HEAD_NODE_JS.len(),
-  );
-  ret.push_str(RUNTIME_HEAD_NODE_JS);
-  ret.push_str(RUNTIME_BASE_JS);
-  ret.push_str(RUNTIME_TAIL_NODE_JS);
-  ret
+  concat_string!(RUNTIME_HEAD_NODE_JS, RUNTIME_BASE_JS, RUNTIME_TAIL_NODE_JS)
 }
 
 pub struct RuntimeModuleTask {

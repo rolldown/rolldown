@@ -1,0 +1,97 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## bar.js
+
+```js
+import { __export } from "./chunk.js";
+import { trim } from "./string.js";
+
+//#region bar.js
+var bar_exports = {};
+__export(bar_exports, { default: () => bar_default });
+const bar_hot = __rolldown_runtime__.createModuleHotContext("bar.js");
+__rolldown_runtime__.registerModule("bar.js", { exports: bar_exports });
+function bar_default() {
+	return trim("Route Bar");
+}
+
+//#endregion
+export { bar_default as default };
+```
+## chunk.js
+
+```js
+// HIDDEN [rolldown:runtime]
+export { __export, __toCommonJS, __toDynamicImportESM, __toESM };
+```
+## foo.js
+
+```js
+import { __export } from "./chunk.js";
+import { trim, unused } from "./string.js";
+
+//#region utils/index.js
+var utils_exports = {};
+__export(utils_exports, {
+	trim: () => trim,
+	unused: () => unused
+});
+const utils_hot = __rolldown_runtime__.createModuleHotContext("utils/index.js");
+__rolldown_runtime__.registerModule("utils/index.js", { exports: utils_exports });
+
+//#endregion
+//#region foo.js
+var foo_exports = {};
+__export(foo_exports, { default: () => foo_default });
+const foo_hot = __rolldown_runtime__.createModuleHotContext("foo.js");
+__rolldown_runtime__.registerModule("foo.js", { exports: foo_exports });
+function foo_default() {
+	return trim("Route Foo");
+}
+
+//#endregion
+export { foo_default as default };
+```
+## main.js
+
+```js
+import { __export, __toCommonJS, __toDynamicImportESM, __toESM } from "./chunk.js";
+
+// HIDDEN [rolldown:hmr]
+//#region main.js
+var main_exports = {};
+const main_hot = __rolldown_runtime__.createModuleHotContext("main.js");
+__rolldown_runtime__.registerModule("main.js", { exports: main_exports });
+const routes = {
+	foo: import("./foo.js"),
+	bar: import("./bar.js")
+};
+
+//#endregion
+```
+## string.js
+
+```js
+import { __export } from "./chunk.js";
+
+//#region utils/string.js
+var string_exports = {};
+__export(string_exports, {
+	trim: () => trim,
+	unused: () => unused
+});
+const string_hot = __rolldown_runtime__.createModuleHotContext("utils/string.js");
+__rolldown_runtime__.registerModule("utils/string.js", { exports: string_exports });
+function trim(s) {
+	return s.trim();
+}
+function unused() {
+	return "unused";
+}
+
+//#endregion
+export { trim, unused };
+```

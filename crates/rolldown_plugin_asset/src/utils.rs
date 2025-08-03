@@ -56,7 +56,7 @@ pub enum InvalidAsset {
 
 impl InvalidAsset {
   pub fn is(&self) -> bool {
-    matches!(self, Self::False | Self::Special)
+    matches!(self, Self::True)
   }
 }
 

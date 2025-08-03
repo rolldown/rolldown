@@ -11,9 +11,9 @@ use crate::{EcmaView, IndexModules, Interop, Module, ModuleType};
 use std::ops::{Deref, DerefMut};
 
 use itertools::Itertools;
+use oxc::span::CompactStr;
 use oxc_index::IndexVec;
 use rolldown_ecmascript::{EcmaAst, EcmaCompiler, PrintOptions};
-use rolldown_rstr::Rstr;
 use rolldown_sourcemap::collapse_sourcemaps;
 use rustc_hash::FxHashSet;
 use string_wizard::SourceMapOptions;
@@ -44,7 +44,7 @@ impl NormalModule {
           .ecma_view
           .import_records
           .iter()
-          .filter(|&rec| rec.meta.contains(ImportRecordMeta::IS_EXPORT_STAR))
+          .filter(|&rec| rec.meta.contains(ImportRecordMeta::IsExportStar))
           .map(|rec| rec.resolved_module),
       )
     } else {
@@ -95,8 +95,8 @@ impl NormalModule {
         if let Some(e) = raw_import_records {
           exports.extend(
             e.iter()
-              .filter(|&rec| rec.meta.contains(ImportRecordMeta::IS_EXPORT_STAR))
-              .map(|_| Rstr::from("*")),
+              .filter(|&rec| rec.meta.contains(ImportRecordMeta::IsExportStar))
+              .map(|_| CompactStr::new("*")),
           );
         } else {
           exports.extend(
@@ -104,8 +104,8 @@ impl NormalModule {
               .ecma_view
               .import_records
               .iter()
-              .filter(|&rec| rec.meta.contains(ImportRecordMeta::IS_EXPORT_STAR))
-              .map(|_| Rstr::from("*")),
+              .filter(|&rec| rec.meta.contains(ImportRecordMeta::IsExportStar))
+              .map(|_| CompactStr::new("*")),
           );
         }
         exports
@@ -124,7 +124,7 @@ impl NormalModule {
     export_star_set: &mut FxHashSet<ModuleIdx>,
     modules: &'modules IndexModules,
     include_default: bool,
-    ret: &mut FxHashSet<&'modules Rstr>,
+    ret: &mut FxHashSet<&'modules CompactStr>,
   ) {
     if export_star_set.contains(&self.idx) {
       return;
@@ -148,7 +148,7 @@ impl NormalModule {
     modules: &'me IndexModules,
   ) -> impl Iterator<Item = ImportRecordIdx> + 'me {
     self.ecma_view.import_records.iter_enumerated().filter_map(move |(rec_id, rec)| {
-      if !rec.meta.contains(ImportRecordMeta::IS_EXPORT_STAR) {
+      if !rec.meta.contains(ImportRecordMeta::IsExportStar) {
         return None;
       }
       match modules[rec.resolved_module] {

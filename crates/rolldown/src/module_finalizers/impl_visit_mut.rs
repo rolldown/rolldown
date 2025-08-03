@@ -9,7 +9,7 @@ use oxc::{
   semantic::ScopeFlags,
   span::{SPAN, Span},
 };
-use rolldown_common::{ExportsKind, StmtInfoIdx, SymbolRef, ThisExprReplaceKind, WrapKind};
+use rolldown_common::{ExportsKind, SymbolRef, ThisExprReplaceKind, WrapKind};
 use rolldown_ecmascript_utils::{ExpressionExt, JsxExt};
 
 use crate::hmr::utils::HmrAstBuilder;
@@ -41,7 +41,7 @@ impl<'ast> VisitMut<'ast> for ScopeHoistingFinalizer<'_, 'ast> {
     // init namespace_alias_symbol_id
 
     let is_namespace_referenced = matches!(self.ctx.module.exports_kind, ExportsKind::Esm)
-      && self.ctx.module.stmt_infos[StmtInfoIdx::new(0)].is_included;
+      && self.ctx.module.stmt_infos.get_namespace_stmt_info().is_included;
 
     let last_import_stmt_idx = self.remove_unused_top_level_stmt(program);
 
@@ -256,14 +256,15 @@ impl<'ast> VisitMut<'ast> for ScopeHoistingFinalizer<'_, 'ast> {
     // TODO: perf it
     for (stmt_index, original_name, new_name) in self.ctx.keep_name_statement_to_insert.iter().rev()
     {
-      let finalized_name = self.snippet.atom(self.canonical_name_for_runtime("__name"));
+      let name_ref = self.canonical_ref_for_runtime("__name");
+      let finalized_callee = self.finalized_expr_for_symbol_ref(name_ref, false, false);
       let target =
         self.snippet.builder.expression_identifier(SPAN, self.snippet.builder.atom(new_name));
       it.insert(
         *stmt_index,
         self.snippet.builder.statement_expression(
           SPAN,
-          self.snippet.keep_name_call_expr(original_name, target, finalized_name, false),
+          self.snippet.keep_name_call_expr(original_name, target, finalized_callee, false),
         ),
       );
     }
@@ -525,9 +526,10 @@ impl<'ast> VisitMut<'ast> for ScopeHoistingFinalizer<'_, 'ast> {
               {
                 let fn_expr = init.take_in(self.alloc);
 
-                let finalized_name = self.snippet.atom(self.canonical_name_for_runtime("__name"));
+                let name_ref = self.canonical_ref_for_runtime("__name");
+                let finalized_callee = self.finalized_expr_for_symbol_ref(name_ref, false, false);
                 *init =
-                  self.snippet.keep_name_call_expr(&original_name, fn_expr, finalized_name, true);
+                  self.snippet.keep_name_call_expr(&original_name, fn_expr, finalized_callee, true);
               }
             }
             _ => {}

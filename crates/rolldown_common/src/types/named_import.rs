@@ -1,7 +1,6 @@
 use std::fmt::Display;
 
-use oxc::span::Span;
-use rolldown_rstr::Rstr;
+use oxc::span::{CompactStr, Span};
 
 use crate::SymbolRef;
 
@@ -28,7 +27,7 @@ pub struct NamedImport {
 #[derive(Debug, Clone, Hash, PartialEq, Eq)]
 pub enum Specifier {
   Star,
-  Literal(Rstr),
+  Literal(CompactStr),
 }
 
 impl Specifier {
@@ -46,14 +45,14 @@ impl Display for Specifier {
   }
 }
 
-impl From<Rstr> for Specifier {
-  fn from(atom: Rstr) -> Self {
+impl From<CompactStr> for Specifier {
+  fn from(atom: CompactStr) -> Self {
     Self::Literal(atom)
   }
 }
 
 impl From<&str> for Specifier {
   fn from(s: &str) -> Self {
-    Self::Literal(Rstr::from(s))
+    Self::Literal(CompactStr::new(s))
   }
 }

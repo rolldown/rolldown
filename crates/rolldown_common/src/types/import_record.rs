@@ -3,8 +3,7 @@ use std::{
   ops::{Deref, DerefMut},
 };
 
-use oxc::span::Span;
-use rolldown_rstr::Rstr;
+use oxc::span::{CompactStr, Span};
 
 use crate::{ImportKind, ModuleIdx, ModuleType, StmtInfoIdx, SymbolRef};
 
@@ -28,17 +27,17 @@ bitflags::bitflags! {
   #[derive(Debug, Clone, Copy)]
   pub struct ImportRecordMeta: u16 {
     /// If it is `import {} from '...'` or `import '...'`
-    const IS_PLAIN_IMPORT = 1;
+    const IsPlainImport = 1;
     /// the import is inserted during ast transformation, can't get source slice from the original source file
-    const IS_UNSPANNED_IMPORT = 1 << 1;
+    const IsUnspannedImport = 1 << 1;
     /// `export * from 'mod'` only
-    const IS_EXPORT_STAR = 1 << 2;
+    const IsExportStar = 1 << 2;
     ///  Tell the finalizer to use the runtime "__require()" instead of "require()"
-    const CALL_RUNTIME_REQUIRE = 1 << 3;
+    const CallRuntimeRequire = 1 << 3;
     ///  `require('mod')` is used to load the module only
-    const IS_REQUIRE_UNUSED = 1 << 4;
+    const IsRequireUnused = 1 << 4;
     /// if the import record is in a try-catch block
-    const IN_TRY_CATCH_BLOCK = 1 << 5;
+    const InTryCatchBlock = 1 << 5;
     /// Whether it is a pure dynamic import, aka a dynamic import only reference a module without using
     /// its exports e.g.
     /// ```js
@@ -46,16 +45,16 @@ bitflags::bitflags! {
     /// import('mod').then(mod => {});
     /// const a = await import('mod'); // the a is never be referenced
     /// ```
-    const PURE_DYNAMIC_IMPORT = 1 << 6;
+    const PureDynamicImport = 1 << 6;
     /// Whether it is a pure dynamic import referenced a side effect free module
-    const DEAD_DYNAMIC_IMPORT = 1 << 7;
+    const DeadDynamicImport = 1 << 7;
     /// Whether the import is a top level import
-    const IS_TOP_LEVEL = 1 << 8;
+    const IsTopLevel = 1 << 8;
     /// Mark namespace of a record could be merged safely
-    const SAFELY_MERGE_CJS_NS = 1 << 9;
-    const JSON_MODULE = 1 << 10;
+    const SafelyMergeCjsNs = 1 << 9;
+    const JsonModule = 1 << 10;
 
-    const TOP_LEVEL_PURE_DYNAMIC_IMPORT = Self::IS_TOP_LEVEL.bits() | Self::PURE_DYNAMIC_IMPORT.bits();
+    const TopLevelPureDynamicImport = Self::IsTopLevel.bits() | Self::PureDynamicImport.bits();
   }
 }
 
@@ -63,7 +62,7 @@ bitflags::bitflags! {
 pub struct ImportRecord<State: Debug + Clone> {
   pub state: State,
   /// `./lib.js` in `import { foo } from './lib.js';`
-  pub module_request: Rstr,
+  pub module_request: CompactStr,
   pub kind: ImportKind,
   /// We will turn `import { foo } from './cjs.js'; console.log(foo);` to `var import_foo = require_cjs(); console.log(importcjs.foo)`;
   /// `namespace_ref` represent the potential `import_foo` in above example. It's useless if we imported n esm module.
@@ -74,7 +73,7 @@ pub struct ImportRecord<State: Debug + Clone> {
 
 impl<State: Debug + Clone> ImportRecord<State> {
   pub fn is_unspanned(&self) -> bool {
-    self.meta.contains(ImportRecordMeta::IS_UNSPANNED_IMPORT)
+    self.meta.contains(ImportRecordMeta::IsUnspannedImport)
   }
 }
 
@@ -96,7 +95,7 @@ pub type RawImportRecord = ImportRecord<ImportRecordStateInit>;
 
 impl RawImportRecord {
   pub fn new(
-    specifier: Rstr,
+    specifier: CompactStr,
     kind: ImportKind,
     namespace_ref: SymbolRef,
     span: Span,

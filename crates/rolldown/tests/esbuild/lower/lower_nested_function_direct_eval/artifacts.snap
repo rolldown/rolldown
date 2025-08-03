@@ -114,8 +114,6 @@ if (foo) eval("");
 ## 5.js
 
 ```js
-
-
 //#region 5.js
 if (foo) {}
 
@@ -124,8 +122,6 @@ if (foo) {}
 ## 6.js
 
 ```js
-
-
 //#region 6.js
 if (foo) eval("");
 
@@ -134,8 +130,6 @@ if (foo) eval("");
 ## 7.js
 
 ```js
-
-
 //#region 7.js
 if (foo) {
 	if (bar) eval("");
@@ -146,8 +140,6 @@ if (foo) {
 ## 8.js
 
 ```js
-
-
 //#region 8.js
 if (foo) eval("");
 

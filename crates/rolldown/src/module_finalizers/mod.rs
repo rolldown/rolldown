@@ -22,7 +22,7 @@ use rolldown_ecmascript_utils::{
 mod finalizer_context;
 mod impl_visit_mut;
 pub use finalizer_context::ScopeHoistingFinalizerContext;
-use rolldown_rstr::Rstr;
+use oxc::span::CompactStr;
 use rolldown_utils::ecmascript::is_validate_identifier_name;
 use rolldown_utils::indexmap::FxIndexSet;
 use rustc_hash::FxHashSet;
@@ -56,17 +56,19 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
     self.scope.is_unresolved(reference_id)
   }
 
-  pub fn canonical_name_for(&self, symbol: SymbolRef) -> &'me Rstr {
+  pub fn canonical_name_for(&self, symbol: SymbolRef) -> &'me CompactStr {
     self.ctx.symbol_db.canonical_name_for(symbol, self.ctx.canonical_names).unwrap_or_else(|| {
       panic!(
-        "canonical name not found for {symbol:?}, original_name: {:?} in module {:?}",
+        "canonical name not found for {symbol:?}, original_name: {:?} in module {:?} when finalizing module {:?} in chunk {:?}",
         symbol.name(self.ctx.symbol_db),
-        self.ctx.modules.get(symbol.owner).map_or("unknown", |module| module.id())
+        self.ctx.modules.get(symbol.owner).map_or("unknown", |module| module.stable_id()),
+        self.ctx.modules.get(self.ctx.id).map_or("unknown", |module| module.stable_id()),
+        self.ctx.chunk_graph.chunk_table[self.ctx.chunk_id].create_reasons.join(";")
       );
     })
   }
 
-  pub fn canonical_name_for_runtime(&self, name: &str) -> &Rstr {
+  pub fn canonical_name_for_runtime(&self, name: &str) -> &CompactStr {
     let sym_ref = self.ctx.runtime.resolve_symbol(name);
     self.canonical_name_for(sym_ref)
   }
@@ -100,7 +102,7 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
         // ```js
         // import React from './node_modules/react/index.js';
         // ```
-        if rec.meta.contains(ImportRecordMeta::SAFELY_MERGE_CJS_NS)
+        if rec.meta.contains(ImportRecordMeta::SafelyMergeCjsNs)
           && self.ctx.linking_infos[self.ctx.module.idx].wrap_kind.is_none()
         {
           let chunk_idx = self.ctx.chunk_id;
@@ -627,10 +629,7 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
     }
   }
 
-  fn get_conflicted_info(
-    &self,
-    id: &BindingIdentifier<'ast>,
-  ) -> Option<(&str, &rolldown_rstr::Rstr)> {
+  fn get_conflicted_info(&self, id: &BindingIdentifier<'ast>) -> Option<(&str, &CompactStr)> {
     let symbol_id = id.symbol_id.get()?;
     let symbol_ref: SymbolRef = (self.ctx.id, symbol_id).into();
     let original_name = symbol_ref.name(self.ctx.symbol_db);
@@ -694,7 +693,7 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
       if let Some(rec_id) = self.ctx.module.imports.get(&call_expr.span).copied() {
         let rec = &self.ctx.module.import_records[rec_id];
         // use `__require` instead of `require`
-        if rec.meta.contains(ImportRecordMeta::CALL_RUNTIME_REQUIRE) {
+        if rec.meta.contains(ImportRecordMeta::CallRuntimeRequire) {
           *call_expr.callee.get_inner_expression_mut() =
             self.finalized_expr_for_runtime_symbol("__require");
         }
@@ -763,7 +762,7 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
                   ));
 
                 if matches!(importee.exports_kind, ExportsKind::CommonJs)
-                  || rec.meta.contains(ImportRecordMeta::IS_REQUIRE_UNUSED)
+                  || rec.meta.contains(ImportRecordMeta::IsRequireUnused)
                 {
                   // `init_xxx()`
                   Some(wrap_ref_call_expr)
@@ -772,7 +771,7 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
                   let namespace_object_ref_expr =
                     self.finalized_expr_for_symbol_ref(importee.namespace_object_ref, false, false);
 
-                  let is_json_module = rec.meta.contains(ImportRecordMeta::JSON_MODULE);
+                  let is_json_module = rec.meta.contains(ImportRecordMeta::JsonModule);
 
                   // `__toCommonJS`
                   let to_commonjs_expr = self.finalized_expr_for_runtime_symbol("__toCommonJS");
@@ -831,7 +830,7 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
     let rec = &self.ctx.module.import_records[*rec_id];
     let importee_id = rec.resolved_module;
 
-    if rec.meta.contains(ImportRecordMeta::DEAD_DYNAMIC_IMPORT) {
+    if rec.meta.contains(ImportRecordMeta::DeadDynamicImport) {
       return Some(
         self
           .snippet
@@ -1230,13 +1229,13 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
     &self,
     symbol_binding_id: Option<&BindingIdentifier<'ast>>,
     name_binding_id: Option<&BindingIdentifier<'ast>>,
-  ) -> Option<(usize, Rstr, Rstr)> {
+  ) -> Option<(usize, CompactStr, CompactStr)> {
     if !self.ctx.options.keep_names {
       return None;
     }
     let (original_name, _) = self.get_conflicted_info(name_binding_id.as_ref()?)?;
     let (_, canonical_name) = self.get_conflicted_info(symbol_binding_id.as_ref()?)?;
-    let original_name: Rstr = original_name.into();
+    let original_name: CompactStr = CompactStr::new(original_name);
     let new_name = canonical_name.clone();
     let insert_position = self.ctx.cur_stmt_index + 1;
     Some((insert_position, original_name, new_name))
@@ -1250,9 +1249,11 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
       return None;
     }
     let (original_name, _) = self.get_conflicted_info(id.as_ref()?)?;
-    let original_name: Rstr = original_name.into();
-    let canonical_name = self.snippet.atom(self.canonical_name_for_runtime("__name"));
-    Some(self.snippet.static_block_keep_name_helper(&original_name, canonical_name.as_str()))
+    let original_name: CompactStr = CompactStr::new(original_name);
+
+    let name_ref = self.canonical_ref_for_runtime("__name");
+    let finalized_callee = self.finalized_expr_for_symbol_ref(name_ref, false, false);
+    Some(self.snippet.static_block_keep_name_helper(&original_name, finalized_callee))
   }
 
   fn try_rewrite_import_expression(&self, node: &mut ast::Expression<'ast>) -> bool {

@@ -348,7 +348,7 @@ impl<'a> ModuleLoader<'a> {
             if self.options.experimental.vite_mode.unwrap_or_default()
               && resolved_id.id.as_str().ends_with(".json")
             {
-              raw_rec.meta.insert(ImportRecordMeta::JSON_MODULE);
+              raw_rec.meta.insert(ImportRecordMeta::JsonModule);
             }
 
             let idx = if let Some(idx) = self.try_spawn_with_cache(&resolved_id) {
@@ -369,7 +369,7 @@ impl<'a> ModuleLoader<'a> {
               )
             };
 
-            if raw_rec.meta.contains(ImportRecordMeta::SAFELY_MERGE_CJS_NS) {
+            if raw_rec.meta.contains(ImportRecordMeta::SafelyMergeCjsNs) {
               safely_merge_cjs_ns_map.entry(idx).or_default().push(raw_rec.namespace_ref);
             }
             // Dynamic imported module will be considered as an entry

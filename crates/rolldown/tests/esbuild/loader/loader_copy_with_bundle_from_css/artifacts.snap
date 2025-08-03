@@ -3,13 +3,13 @@ source: crates/rolldown_testing/src/integration_test.rs
 ---
 # Assets
 
-## assets/some-ufipoOFk.file
+## assets/some-CaDfN-qA.file
 
 ## src_entry.css
 
 ```css
 body {
-	background: url(assets/some-ufipoOFk.file);
+	background: url(assets/some-CaDfN-qA.file);
 }
 
 ```
@@ -17,7 +17,7 @@ body {
 
 ```js
 //#region assets/some.file
-var some_default = "assets/some-ufipoOFk.file";
+var some_default = "assets/some-CaDfN-qA.file";
 
 //#endregion
 ```

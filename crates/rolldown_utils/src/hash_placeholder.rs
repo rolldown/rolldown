@@ -68,7 +68,7 @@ pub fn find_hash_placeholders<'a>(
   results
 }
 
-const CHARS: &[u8] = b"0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ_$";
+const CHARS: &[u8] = b"etnriaoscludfpmhg_vybxSCwTEDOkAjMNPFILRzBVHUWGKqJYXZQ$1024368579";
 const BASE: u32 = 64;
 
 pub fn to_base64(mut value: u32) -> String {
@@ -185,24 +185,24 @@ pub fn extract_hash_placeholders<'a>(
 #[test]
 fn test_facade_hash_generator() {
   let mut r#gen = HashPlaceholderGenerator::default();
-  assert_eq!(r#gen.generate(None), "!~{000}~");
-  assert_eq!(r#gen.generate(None), "!~{001}~");
+  assert_eq!(r#gen.generate(None), "!~{00e}~");
+  assert_eq!(r#gen.generate(None), "!~{00t}~");
 }
 
 #[test]
 fn test_to_base64() {
-  assert_eq!(to_base64(0), "0");
-  assert_eq!(to_base64(1), "1");
-  assert_eq!(to_base64(10), "a");
-  assert_eq!(to_base64(64), "10");
-  assert_eq!(to_base64(65), "11");
-  assert_eq!(to_base64(128), "20");
-  assert_eq!(to_base64(100_000_000), "5Zu40");
+  assert_eq!(to_base64(0), "e");
+  assert_eq!(to_base64(1), "t");
+  assert_eq!(to_base64(10), "u");
+  assert_eq!(to_base64(64), "te");
+  assert_eq!(to_base64(65), "tt");
+  assert_eq!(to_base64(128), "ne");
+  assert_eq!(to_base64(100_000_000), "a5Aie");
 }
 
 #[test]
 fn test_is_hash_placeholder() {
-  assert!(is_hash_placeholder("!~{000}~"));
+  assert!(is_hash_placeholder("!~{00e}~"));
   assert!(is_hash_placeholder("!~{abc123}~"));
   assert!(is_hash_placeholder("!~{_$ABC123}~"));
   assert!(is_hash_placeholder("!~{12345678901234567}~")); // 17 chars

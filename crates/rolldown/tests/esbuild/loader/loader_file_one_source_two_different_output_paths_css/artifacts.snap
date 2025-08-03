@@ -3,16 +3,16 @@ source: crates/rolldown_testing/src/integration_test.rs
 ---
 # Assets
 
-## assets/common-CHxUrMdU.png
+## assets/common-CbuRVm9q.png
 
 ```png
 x
 ```
-## common-DfJE1WzA.css
+## common-rd1_jc7-.css
 
 ```css
 div {
-	background: url(assets/common-CHxUrMdU.png);
+	background: url(assets/common-CbuRVm9q.png);
 }
 
 ```
@@ -20,7 +20,7 @@ div {
 
 ```js
 //#region shared/common.png
-var common_default = "assets/common-CHxUrMdU.png";
+var common_default = "assets/common-CbuRVm9q.png";
 
 //#endregion
 ```

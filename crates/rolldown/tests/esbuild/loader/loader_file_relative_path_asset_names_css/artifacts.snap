@@ -3,7 +3,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ---
 # Assets
 
-## assets/image-Dq1zDy-k.png
+## assets/image-Dg65n3Fj.png
 
 ```png
 x
@@ -12,7 +12,7 @@ x
 
 ```css
 div {
-	background: url(assets/image-Dq1zDy-k.png);
+	background: url(assets/image-Dg65n3Fj.png);
 }
 
 ```
@@ -20,7 +20,7 @@ div {
 
 ```js
 //#region images/image.png
-var image_default = "assets/image-Dq1zDy-k.png";
+var image_default = "assets/image-Dg65n3Fj.png";
 
 //#endregion
 ```

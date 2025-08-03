@@ -3,13 +3,13 @@ source: crates/rolldown_testing/src/integration_test.rs
 ---
 # Assets
 
-## assets/foo-C-m4uiP6.txt
+## assets/foo-D844S2jT.txt
 
 ## main.js
 
 ```js
 //#region foo.txt
-var foo_default = "assets/foo-C-m4uiP6.txt";
+var foo_default = "assets/foo-D844S2jT.txt";
 
 //#endregion
 //#region main.js
@@ -26,7 +26,7 @@ export { main_default as default };
 
 ```
 - ../foo.txt
-(0:0) "import.meta." --> (1:18) "\"assets/foo-C-m4uiP6.txt\""
+(0:0) "import.meta." --> (1:18) "\"assets/foo-D844S2jT.txt\""
 (0:12) "__ROLLDOWN_ASSET_FILENAME" --> (1:43) ";\n"
 - ../main.js
 (2:0) "export default " --> (5:0) "var main_default = "

@@ -1350,7 +1350,7 @@ export interface BindingAssetPluginConfig {
   decodedBase?: string
   isSkipAssets?: boolean
   assetsInclude?: Array<BindingStringOrRegex>
-  assetInlineLimit?: number
+  assetInlineLimit?: number | ((file: string, content: Buffer) => boolean | undefined)
   renderBuiltUrl?: (filename: string, type: BindingRenderBuiltUrlConfig) => MaybePromise<VoidNullable<string | BindingRenderBuiltUrlRet>>
 }
 

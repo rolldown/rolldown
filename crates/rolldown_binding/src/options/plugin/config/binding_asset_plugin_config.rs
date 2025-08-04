@@ -1,10 +1,7 @@
 use std::sync::Arc;
 
-use napi::bindgen_prelude::FnArgs;
-use std::sync::Arc;
-
 use derive_more::Debug;
-use napi::bindgen_prelude::{Either, FnArgs};
+use napi::bindgen_prelude::{Buffer, Either, FnArgs};
 use napi_derive::napi;
 use rolldown_plugin_asset::AssetPlugin;
 use rolldown_plugin_utils::UsizeOrFunction;
@@ -13,10 +10,10 @@ use rolldown_utils::dashmap::FxDashSet;
 
 use crate::types::{
   binding_string_or_regex::{BindingStringOrRegex, bindingify_string_or_regex_array},
-  js_callback::{JsCallback, JsCallbackExt},
+  js_callback::{
+    JsCallback, JsCallbackExt as _, MaybeAsyncJsCallback, MaybeAsyncJsCallbackExt as _,
+  },
 };
-use derive_more::Debug;
-type BindingUsizeOrFunction = JsCallback<FnArgs<(String, String)>, Option<u32>>;
 
 #[napi(object)]
 pub struct BindingRenderBuiltUrlConfig {
@@ -63,8 +60,8 @@ pub struct BindingAssetPluginConfig {
   pub is_skip_assets: Option<bool>,
   pub assets_include: Option<Vec<BindingStringOrRegex>>,
   #[debug(skip)]
-  #[napi(ts_type = "number |(file: string, content:String)=> VoidNullable<number>")]
-  pub asset_inline_limit: napi::Either<u32, BindingUsizeOrFunction>,
+  #[napi(ts_type = "number | ((file: string, content: Buffer) => boolean | undefined)")]
+  pub asset_inline_limit: Option<Either<u32, JsCallback<FnArgs<(String, Buffer)>, Option<bool>>>>,
   #[debug(skip)]
   #[napi(
     ts_type = "(filename: string, type: BindingRenderBuiltUrlConfig) => MaybePromise<VoidNullable<string | BindingRenderBuiltUrlRet>>"
@@ -79,25 +76,24 @@ pub struct BindingAssetPluginConfig {
 
 impl From<BindingAssetPluginConfig> for AssetPlugin {
   fn from(config: BindingAssetPluginConfig) -> Self {
-    let assert_inline_limit = match config.asset_inline_limit {
-      napi::Either::A(limit) => UsizeOrFunction::Number(limit as usize),
-      napi::Either::B(func) => {
-        UsizeOrFunction::Function(Arc::new(move |file: &str, content: &[u8]| {
-          let file = file.to_string();
-          let content = String::from_utf8_lossy(content).to_string();
-          Box::pin({
-            let value = func.clone();
-            async move {
-              match value.invoke_async((file, content).into()).await {
-                Ok(Some(value)) => Ok(Some(value as usize)),
-                Ok(None) => Ok(None),
-                Err(e) => Err(anyhow::Error::from(e)),
-              }
-            }
-          })
-        }))
-      }
-    };
+    let asset_inline_limit =
+      config.asset_inline_limit.map(|asset_inline_limit| match asset_inline_limit {
+        Either::A(value) => UsizeOrFunction::Number(value as usize),
+        Either::B(func) => {
+          UsizeOrFunction::Function(Arc::new(move |file: &str, content: &[u8]| {
+            let file = file.to_string();
+            let content = Buffer::from(content);
+            let asset_inline_limit_fn = Arc::clone(&func);
+            Box::pin(async move {
+              asset_inline_limit_fn
+                .invoke_async((file, content).into())
+                .await
+                .map_err(anyhow::Error::from)
+            })
+          }))
+        }
+      });
+
     Self {
       is_lib: config.is_lib.unwrap_or_default(),
       is_ssr: config.is_ssr.unwrap_or_default(),
@@ -110,7 +106,7 @@ impl From<BindingAssetPluginConfig> for AssetPlugin {
         .assets_include
         .map(bindingify_string_or_regex_array)
         .unwrap_or_default(),
-      asset_inline_limit: assert_inline_limit,
+      asset_inline_limit: asset_inline_limit.unwrap_or_default(),
       render_built_url: config.render_built_url.map(|render_built_url| -> Arc<RenderBuiltUrl> {
         Arc::new(move |filename: &str, config: &RenderBuiltUrlConfig| {
           let render_built_url = Arc::clone(&render_built_url);

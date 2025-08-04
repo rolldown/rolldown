@@ -8,7 +8,7 @@ type ModuleSideEffectsOption =
   | boolean
   | readonly string[]
   | ModuleSideEffectsRule[]
-  | ((id: string, isResolved: boolean) => boolean | undefined)
+  | ((id: string, external: boolean) => boolean | undefined)
   | 'no-external';
 
 export type TreeshakingOptions = {

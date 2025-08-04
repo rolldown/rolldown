@@ -22,7 +22,7 @@ pub type BindingModuleSideEffects = Either4<
 #[derive(Debug)]
 pub struct BindingTreeshake {
   #[napi(
-    ts_type = "boolean | ReadonlyArray<string> | BindingModuleSideEffectsRule[] | ((id: string, is_external: boolean) => boolean | undefined)"
+    ts_type = "boolean | ReadonlyArray<string> | BindingModuleSideEffectsRule[] | ((id: string, external: boolean) => boolean | undefined)"
   )]
   #[debug("ModuleSideEffects(...)")]
   pub module_side_effects: BindingModuleSideEffects,

@@ -4060,7 +4060,7 @@ expression: output
 
 # tests/rolldown/function/experimental/strict_execution_order/issue_4636
 
-- main-!~{000}~.js => main-Bb3AbQtA.js
+- main-!~{000}~.js => main-BCExEOOM.js
 
 # tests/rolldown/function/experimental/strict_execution_order/issue_4684
 
@@ -4731,7 +4731,7 @@ expression: output
 
 # tests/rolldown/issues/4129
 
-- main-!~{000}~.js => main-9pXZqgmo.js
+- main-!~{000}~.js => main-DyaaPSCy.js
 
 # tests/rolldown/issues/4196
 
@@ -5501,56 +5501,56 @@ expression: output
 
 # tests/rolldown/topics/hmr/deconflict_import_bindings
 
-- main-!~{000}~.js => main-Bu6m5KuF.js
+- main-!~{000}~.js => main-BbSj2Nfk.js
 
 # tests/rolldown/topics/hmr/dynamic_import
 
-- main-!~{000}~.js => main-M8OQV59d.js
-- chunk-!~{001}~.js => chunk-8OODDWbD.js
-- exist-dep-cjs-!~{003}~.js => exist-dep-cjs-i5QXDAv6.js
-- exist-dep-esm-!~{005}~.js => exist-dep-esm-CbY1ke2_.js
+- main-!~{000}~.js => main-IRg-BogZ.js
+- chunk-!~{001}~.js => chunk-EJRfyxWL.js
+- exist-dep-cjs-!~{003}~.js => exist-dep-cjs-CMMhV_IP.js
+- exist-dep-esm-!~{005}~.js => exist-dep-esm-DS9du_-x.js
 
 # tests/rolldown/topics/hmr/export_star
 
-- main-!~{000}~.js => main-CK22Dsp5.js
+- main-!~{000}~.js => main-CNc4zq-d.js
 
 # tests/rolldown/topics/hmr/generate_patch_error
 
-- main-!~{000}~.js => main-Cm3C6mQH.js
+- main-!~{000}~.js => main-a2sWK8wq.js
 
 # tests/rolldown/topics/hmr/issue_5149
 
-- main-!~{000}~.js => main-C4vaaWcq.js
+- main-!~{000}~.js => main-ChDG295G.js
 
 # tests/rolldown/topics/hmr/issue_5150
 
-- main-!~{000}~.js => main-DqRBvpQT.js
+- main-!~{000}~.js => main-DRU4Jo0i.js
 
 # tests/rolldown/topics/hmr/issue_5159
 
-- main-!~{000}~.js => main-K2kWHB-A.js
-- bar-!~{005}~.js => bar-9GyTK8RJ.js
-- chunk-!~{001}~.js => chunk-H37MHKgK.js
-- foo-!~{007}~.js => foo-DWqUFXTX.js
-- string-!~{003}~.js => string-CVda_J7-.js
+- main-!~{000}~.js => main-BHAurs1l.js
+- bar-!~{005}~.js => bar-BisjqNeR.js
+- chunk-!~{001}~.js => chunk--KgZXUQQ.js
+- foo-!~{007}~.js => foo-OmnQYi5B.js
+- string-!~{003}~.js => string-CMcoXSG2.js
 
 # tests/rolldown/topics/hmr/mutiply_entires
 
-- entry-!~{000}~.js => entry-BPZIs1mk.js
-- index-!~{001}~.js => index-BL3zgd2U.js
-- rolldown_hmr-!~{002}~.js => rolldown_hmr-gxTUiBAp.js
+- entry-!~{000}~.js => entry-DuzgHSBP.js
+- index-!~{001}~.js => index-gHbaN3vx.js
+- rolldown_hmr-!~{002}~.js => rolldown_hmr-HfwL1-NX.js
 
 # tests/rolldown/topics/hmr/non_used_export
 
-- main-!~{000}~.js => main-C2h-3mJ8.js
+- main-!~{000}~.js => main-C9O2twdF.js
 
 # tests/rolldown/topics/hmr/register_exports
 
-- main-!~{000}~.js => main-Brsmj5f_.js
+- main-!~{000}~.js => main-NuVSIYM-.js
 
 # tests/rolldown/topics/hmr/static_import
 
-- main-!~{000}~.js => main-DApPzWAG.js
+- main-!~{000}~.js => main-BBufK_wo.js
 
 # tests/rolldown/topics/import_meta_url_dirname_filename_polyfill/node_cjs
 

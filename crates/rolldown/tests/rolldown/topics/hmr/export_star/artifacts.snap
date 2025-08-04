@@ -10,25 +10,42 @@ source: crates/rolldown_testing/src/integration_test.rs
 // HIDDEN [rolldown:hmr]
 //#region sub/foo.js
 var foo_exports = {};
-__export(foo_exports, { foo: () => foo });
+__export(foo_exports, {
+	foo: () => foo,
+	named: () => named$2
+});
 const foo_hot = __rolldown_runtime__.createModuleHotContext("sub/foo.js");
 __rolldown_runtime__.registerModule("sub/foo.js", { exports: foo_exports });
 const foo = "foo";
+const named$2 = "foo";
 
 //#endregion
 //#region sub/bar.js
 var bar_exports = {};
-__export(bar_exports, { bar: () => bar });
+__export(bar_exports, {
+	bar: () => bar,
+	named: () => named$1
+});
 const bar_hot = __rolldown_runtime__.createModuleHotContext("sub/bar.js");
 __rolldown_runtime__.registerModule("sub/bar.js", { exports: bar_exports });
-const bar = "bars";
+const bar = "bar";
+const named$1 = "bar";
+
+//#endregion
+//#region sub/named.js
+var named_exports = {};
+__export(named_exports, { named: () => named });
+const named_hot = __rolldown_runtime__.createModuleHotContext("sub/named.js");
+__rolldown_runtime__.registerModule("sub/named.js", { exports: named_exports });
+const named = "named";
 
 //#endregion
 //#region sub/index.js
 var sub_exports = {};
 __export(sub_exports, {
 	bar: () => bar,
-	foo: () => foo
+	foo: () => foo,
+	named: () => named
 });
 const sub_hot = __rolldown_runtime__.createModuleHotContext("sub/index.js");
 __rolldown_runtime__.registerModule("sub/index.js", { exports: sub_exports });
@@ -77,10 +94,14 @@ var init_hmr_0 = __rolldown_runtime__.createEsmInitializer((function() {
 var init_bar_1 = __rolldown_runtime__.createEsmInitializer((function() {
 	try {
 		var ns_bar = {};
-		__rolldown_runtime__.__export(ns_bar, { bar: () => bar });
+		__rolldown_runtime__.__export(ns_bar, {
+			bar: () => bar,
+			named: () => named
+		});
 		__rolldown_runtime__.registerModule("sub/bar.js", { exports: ns_bar });
 		const hot_bar = __rolldown_runtime__.createModuleHotContext("sub/bar.js");
-		const bar = "bars";
+		const bar = "bar";
+		const named = "bar";
 	} finally {}
 }));
 
@@ -89,10 +110,14 @@ var init_bar_1 = __rolldown_runtime__.createEsmInitializer((function() {
 var init_foo_2 = __rolldown_runtime__.createEsmInitializer((function() {
 	try {
 		var ns_foo = {};
-		__rolldown_runtime__.__export(ns_foo, { foo: () => foo });
+		__rolldown_runtime__.__export(ns_foo, {
+			foo: () => foo,
+			named: () => named
+		});
 		__rolldown_runtime__.registerModule("sub/foo.js", { exports: ns_foo });
 		const hot_foo = __rolldown_runtime__.createModuleHotContext("sub/foo.js");
 		const foo = "foo";
+		const named = "foo";
 	} finally {}
 }));
 
@@ -101,13 +126,29 @@ var init_foo_2 = __rolldown_runtime__.createEsmInitializer((function() {
 var init_sub_3 = __rolldown_runtime__.createEsmInitializer((function() {
 	try {
 		var ns_sub = {};
-		__rolldown_runtime__.__export(ns_sub, {});
+		__rolldown_runtime__.__export(ns_sub, { named: () => import_named_2.named });
 		__rolldown_runtime__.registerModule("sub/index.js", { exports: ns_sub });
 		init_foo_2();
 		init_bar_1();
+		init_named_4();
 		const hot_sub = __rolldown_runtime__.createModuleHotContext("sub/index.js");
 		var import_foo_0 = __rolldown_runtime__.loadExports("sub/foo.js");
+		__rolldown_runtime__.__reExport(ns_sub, import_foo_0);
 		var import_bar_1 = __rolldown_runtime__.loadExports("sub/bar.js");
+		__rolldown_runtime__.__reExport(ns_sub, import_bar_1);
+		var import_named_2 = __rolldown_runtime__.loadExports("sub/named.js");
+	} finally {}
+}));
+
+//#endregion
+//#region sub/named.js
+var init_named_4 = __rolldown_runtime__.createEsmInitializer((function() {
+	try {
+		var ns_named = {};
+		__rolldown_runtime__.__export(ns_named, { named: () => named });
+		__rolldown_runtime__.registerModule("sub/named.js", { exports: ns_named });
+		const hot_named = __rolldown_runtime__.createModuleHotContext("sub/named.js");
+		const named = "named";
 	} finally {}
 }));
 

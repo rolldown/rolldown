@@ -7,7 +7,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```js
 // HIDDEN [rolldown:runtime]
-export { __commonJS, __export, __toCommonJS, __toDynamicImportESM, __toESM };
+export { __commonJS, __export, __reExport, __toCommonJS, __toDynamicImportESM, __toESM };
 ```
 ## exist-dep-cjs.js
 
@@ -43,7 +43,7 @@ export { value };
 ## main.js
 
 ```js
-import { __export, __toCommonJS, __toDynamicImportESM, __toESM } from "./chunk.js";
+import { __export, __reExport, __toCommonJS, __toDynamicImportESM, __toESM } from "./chunk.js";
 
 // HIDDEN [rolldown:hmr]
 //#region hmr.js

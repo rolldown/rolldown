@@ -25,7 +25,7 @@ export { bar_default as default };
 
 ```js
 // HIDDEN [rolldown:runtime]
-export { __export, __toCommonJS, __toDynamicImportESM, __toESM };
+export { __export, __reExport, __toCommonJS, __toDynamicImportESM, __toESM };
 ```
 ## foo.js
 
@@ -58,7 +58,7 @@ export { foo_default as default };
 ## main.js
 
 ```js
-import { __export, __toCommonJS, __toDynamicImportESM, __toESM } from "./chunk.js";
+import { __export, __reExport, __toCommonJS, __toDynamicImportESM, __toESM } from "./chunk.js";
 
 // HIDDEN [rolldown:hmr]
 //#region main.js

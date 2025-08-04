@@ -1,7 +1,7 @@
 
+import assert from 'node:assert';
 import { foo, bar, named } from './sub/index.js'
 
-const { assert } = globalThis.__node;
 
 assert.strictEqual(foo, 'foo')
 assert.strictEqual(bar, 'bar')

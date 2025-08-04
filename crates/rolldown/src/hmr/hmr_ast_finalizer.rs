@@ -12,11 +12,13 @@ use oxc::{
   span::{SPAN, Span},
 };
 
-use rolldown_common::{ImportRecordIdx, IndexModules, Module, ModuleIdx, NormalModule};
-use rolldown_ecmascript_utils::{
-  AstSnippet, BindingIdentifierExt, ExpressionExt, quote_expr, quote_stmts,
+use rolldown_common::{
+  ExternalModule, ImportRecordIdx, IndexModules, Module, ModuleIdx, NormalModule,
 };
-use rolldown_utils::indexmap::FxIndexSet;
+use rolldown_ecmascript_utils::{
+  AstSnippet, BindingIdentifierExt, ExpressionExt, quote_expr, quote_stmt, quote_stmts,
+};
+use rolldown_utils::indexmap::{FxIndexMap, FxIndexSet};
 use rustc_hash::{FxHashMap, FxHashSet};
 
 use crate::hmr::utils::{HmrAstBuilder, MODULE_EXPORTS_NAME_FOR_ESM};
@@ -55,6 +57,9 @@ pub struct HmrAstFinalizer<'me, 'ast> {
   pub dependencies: FxIndexSet<ModuleIdx>,
   pub imports: FxHashSet<ModuleIdx>,
   pub generated_static_import_infos: FxHashMap<ModuleIdx, String>,
+
+  // We need to store the static import statements for external separately, so we could put them outside of the `try` block.
+  pub generated_static_import_stmts_from_external: FxIndexMap<ModuleIdx, ast::Statement<'ast>>,
 }
 
 impl<'ast> HmrAstFinalizer<'_, 'ast> {
@@ -112,10 +117,21 @@ impl<'ast> HmrAstFinalizer<'_, 'ast> {
                 }
               });
             });
-            if let Some(stmt) =
-              self.create_load_exports_call_stmt(importee, &binding_name, import_decl.span)
-            {
-              program_body.push(stmt);
+            match importee {
+              Module::Normal(_) => {
+                if let Some(stmt) =
+                  self.create_load_exports_call_stmt(importee, &binding_name, import_decl.span)
+                {
+                  program_body.push(stmt);
+                }
+              }
+              Module::External(importee_ext) => {
+                self.create_static_import_stmt_from_external_module(
+                  importee_ext,
+                  &binding_name,
+                  import_decl.span,
+                );
+              }
             }
           }
           ast::ModuleDeclaration::ExportNamedDeclaration(decl) => {
@@ -462,6 +478,27 @@ impl<'ast> HmrAstFinalizer<'_, 'ast> {
     Some(stmt)
   }
 
+  fn create_static_import_stmt_from_external_module(
+    &mut self,
+    importee: &ExternalModule,
+    binding_name: &str,
+    _span: Span,
+  ) {
+    if self.generated_static_import_stmts_from_external.contains_key(&importee.idx) {
+      return;
+    }
+
+    let module_request = &importee.id;
+
+    // import * as [binding_name] from 'external';
+    let stmt = quote_stmt(
+      self.alloc,
+      format!("import * as {binding_name} from '{module_request}';",).as_str(),
+    );
+
+    self.generated_static_import_stmts_from_external.insert(importee.idx, stmt);
+  }
+
   fn create_re_export_call_stmt(
     &mut self,
     importee: &Module,
@@ -645,6 +682,10 @@ impl<'ast> VisitMut<'ast> for HmrAstFinalizer<'_, 'ast> {
     try_block.body.extend(dependencies_init_fn_stmts);
     try_block.body.push(self.create_module_hot_context_initializer_stmt());
     try_block.body.extend(program.body.take_in(self.alloc));
+
+    program
+      .body
+      .extend(std::mem::take(&mut self.generated_static_import_stmts_from_external).into_values());
 
     let final_block = self.snippet.builder.alloc_block_statement(SPAN, self.snippet.builder.vec());
 

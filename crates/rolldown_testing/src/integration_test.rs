@@ -676,19 +676,9 @@ impl IntegrationTest {
   fn generate_globals_injection_for_execute_output(
     config_name: Option<&str>,
     patch_chunks: &[String],
-    options: &NormalizedBundlerOptions,
+    _options: &NormalizedBundlerOptions,
   ) -> String {
     let mut stmts = vec![];
-    if options.experimental.hmr.is_some() {
-      stmts.push("import nodeFs from 'node:fs';".to_string());
-      stmts.push("import nodeAssert from 'node:assert';".to_string());
-      stmts.push("import nodePath from 'node:path';".to_string());
-      stmts.push("import nodeUrl from 'node:url';".to_string());
-      stmts.push(
-        "globalThis.__node = { fs: nodeFs, assert: nodeAssert, path: nodePath, url: nodeUrl };"
-          .to_string(),
-      );
-    }
 
     if let Some(config_name) = config_name {
       stmts.push(format!("globalThis.__configName = `{config_name}`;",));

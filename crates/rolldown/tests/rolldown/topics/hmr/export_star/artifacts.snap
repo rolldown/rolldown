@@ -1,0 +1,121 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## main.js
+
+```js
+// HIDDEN [rolldown:runtime]
+// HIDDEN [rolldown:hmr]
+//#region sub/foo.js
+var foo_exports = {};
+__export(foo_exports, { foo: () => foo });
+const foo_hot = __rolldown_runtime__.createModuleHotContext("sub/foo.js");
+__rolldown_runtime__.registerModule("sub/foo.js", { exports: foo_exports });
+const foo = "foo";
+
+//#endregion
+//#region sub/bar.js
+var bar_exports = {};
+__export(bar_exports, { bar: () => bar });
+const bar_hot = __rolldown_runtime__.createModuleHotContext("sub/bar.js");
+__rolldown_runtime__.registerModule("sub/bar.js", { exports: bar_exports });
+const bar = "bars";
+
+//#endregion
+//#region sub/index.js
+var sub_exports = {};
+__export(sub_exports, {
+	bar: () => bar,
+	foo: () => foo
+});
+const sub_hot = __rolldown_runtime__.createModuleHotContext("sub/index.js");
+__rolldown_runtime__.registerModule("sub/index.js", { exports: sub_exports });
+
+//#endregion
+//#region hmr.js
+var hmr_exports = {};
+const hmr_hot = __rolldown_runtime__.createModuleHotContext("hmr.js");
+__rolldown_runtime__.registerModule("hmr.js", { exports: hmr_exports });
+console.log(foo, bar);
+hmr_hot.accept();
+
+//#endregion
+//#region main.js
+var main_exports = {};
+const main_hot = __rolldown_runtime__.createModuleHotContext("main.js");
+__rolldown_runtime__.registerModule("main.js", { exports: main_exports });
+text(".app", "hello");
+function text(el, text$1) {
+	console.log(el, text$1);
+}
+
+//#endregion
+```
+# HMR Step 0
+
+## Code
+
+```js
+//#region hmr.js
+var init_hmr_0 = __rolldown_runtime__.createEsmInitializer((function() {
+	try {
+		var ns_hmr = {};
+		__rolldown_runtime__.__export(ns_hmr, {});
+		__rolldown_runtime__.registerModule("hmr.js", { exports: ns_hmr });
+		init_sub_3();
+		const hot_hmr = __rolldown_runtime__.createModuleHotContext("hmr.js");
+		var import_sub_0 = __rolldown_runtime__.loadExports("sub/index.js");
+		console.log(import_sub_0.foo, import_sub_0.bar);
+		hot_hmr.accept();
+	} finally {}
+}));
+
+//#endregion
+//#region sub/bar.js
+var init_bar_1 = __rolldown_runtime__.createEsmInitializer((function() {
+	try {
+		var ns_bar = {};
+		__rolldown_runtime__.__export(ns_bar, { bar: () => bar });
+		__rolldown_runtime__.registerModule("sub/bar.js", { exports: ns_bar });
+		const hot_bar = __rolldown_runtime__.createModuleHotContext("sub/bar.js");
+		const bar = "bars";
+	} finally {}
+}));
+
+//#endregion
+//#region sub/foo.js
+var init_foo_2 = __rolldown_runtime__.createEsmInitializer((function() {
+	try {
+		var ns_foo = {};
+		__rolldown_runtime__.__export(ns_foo, { foo: () => foo });
+		__rolldown_runtime__.registerModule("sub/foo.js", { exports: ns_foo });
+		const hot_foo = __rolldown_runtime__.createModuleHotContext("sub/foo.js");
+		const foo = "foo";
+	} finally {}
+}));
+
+//#endregion
+//#region sub/index.js
+var init_sub_3 = __rolldown_runtime__.createEsmInitializer((function() {
+	try {
+		var ns_sub = {};
+		__rolldown_runtime__.__export(ns_sub, {});
+		__rolldown_runtime__.registerModule("sub/index.js", { exports: ns_sub });
+		const hot_sub = __rolldown_runtime__.createModuleHotContext("sub/index.js");
+		;
+		;
+	} finally {}
+}));
+
+//#endregion
+init_hmr_0()
+__rolldown_runtime__.applyUpdates(['hmr.js']);
+```
+## Meta
+
+- update type: patch
+### Hmr Boundaries
+
+- boundary: hmr.js, accepted_via: hmr.js

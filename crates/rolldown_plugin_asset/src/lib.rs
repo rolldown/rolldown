@@ -7,7 +7,8 @@ use rolldown_common::{ModuleType, Output, side_effects::HookSideEffects};
 use rolldown_plugin::{HookUsage, Plugin};
 use rolldown_plugin_utils::{
   AssetCache, FileToUrlEnv, PublicAssetUrlCache, RenderAssetUrlInJsEnv,
-  RenderAssetUrlInJsEnvConfig, RenderBuiltUrl, check_public_file, find_special_query,
+  RenderAssetUrlInJsEnvConfig, RenderBuiltUrl, UsizeOrFunction, check_public_file,
+  find_special_query,
 };
 use rolldown_utils::{dashmap::FxDashSet, pattern_filter::StringOrRegex, url::clean_url};
 use serde_json::Value;
@@ -22,10 +23,11 @@ pub struct AssetPlugin {
   pub url_base: String,
   pub public_dir: String,
   pub decoded_base: String,
+  pub assets_include: Vec<StringOrRegex>,
+  #[debug(skip)]
+  pub asset_inline_limit: UsizeOrFunction,
   #[debug(skip)]
   pub render_built_url: Option<Arc<RenderBuiltUrl>>,
-  pub assets_include: Vec<StringOrRegex>,
-  pub asset_inline_limit: usize,
   pub handled_asset_ids: FxDashSet<String>,
 }
 
@@ -105,7 +107,7 @@ impl Plugin for AssetPlugin {
       root: ctx.cwd(),
       is_lib: self.is_lib,
       public_dir: &self.public_dir,
-      asset_inline_limit: self.asset_inline_limit,
+      asset_inline_limit: &self.asset_inline_limit,
     };
 
     let side_effects = if ctx.get_module_info(&id).is_some_and(|v| v.is_entry) {

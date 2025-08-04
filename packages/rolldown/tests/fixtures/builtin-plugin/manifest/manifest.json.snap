@@ -1,6 +1,9 @@
 {
   "asset.txt": {
     "file": "asset.txt",
+    "names": [
+      "asset.txt",
+    ],
     "src": "asset.txt",
   },
   "chunk.js": {

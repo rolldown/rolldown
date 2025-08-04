@@ -5548,6 +5548,10 @@ expression: output
 
 - main-!~{000}~.js => main-NuVSIYM-.js
 
+# tests/rolldown/topics/hmr/runtime_correctness
+
+- main-!~{000}~.js => main-sE6MI7vm.js
+
 # tests/rolldown/topics/hmr/static_import
 
 - main-!~{000}~.js => main-BBufK_wo.js

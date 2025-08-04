@@ -18,7 +18,7 @@ export default require_main();
 ```
 ---
 
-Variant: (format: Cjs)
+Variant: [format: Cjs]
 
 # Assets
 
@@ -38,7 +38,7 @@ module.exports = require_main();
 ```
 ---
 
-Variant: (extend: true, format: Iife, name: "module")
+Variant: [extend: true] [format: Iife] [name: "module"]
 
 # Assets
 
@@ -61,7 +61,7 @@ return require_main();
 ```
 ---
 
-Variant: (extend: true, format: Umd, name: "module")
+Variant: [extend: true] [format: Umd] [name: "module"]
 
 # Assets
 

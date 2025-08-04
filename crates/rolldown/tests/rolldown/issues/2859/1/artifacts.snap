@@ -31,7 +31,7 @@ import("./lib.js").then((exports) => assert.deepStrictEqual({ ...exports }, {
 ```
 ---
 
-Variant: (format: Cjs)
+Variant: [format: Cjs]
 
 # Assets
 

@@ -17,7 +17,7 @@ export { foo };
 ```
 ---
 
-Variant: (strict_execution_order: true)
+Variant: [strict_execution_order: true]
 
 # Assets
 

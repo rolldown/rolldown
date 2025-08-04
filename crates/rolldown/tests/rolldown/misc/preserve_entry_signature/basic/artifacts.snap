@@ -30,7 +30,7 @@ export { unused, value };
 ```
 ---
 
-Variant: (preserve_entry_signatures: Strict)
+Variant: [preserve_entry_signatures: Strict]
 
 # Assets
 
@@ -68,7 +68,7 @@ export { unused };
 ```
 ---
 
-Variant: (preserve_entry_signatures: False)
+Variant: [preserve_entry_signatures: False]
 
 # Assets
 

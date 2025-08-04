@@ -40,14 +40,19 @@ impl Fixture {
 
     Self::apply_extended_tests(&meta, &options, &mut config_variants);
 
-    let configs =
-      std::iter::once(NamedBundlerOptions { options: options.clone(), name: None, snapshot: None })
-        .chain(config_variants.into_iter().map(|variant| NamedBundlerOptions {
-          options: variant.apply(&options),
-          name: Some(variant.config_name.clone().unwrap_or(variant.to_string())),
-          snapshot: variant.snapshot,
-        }))
-        .collect::<Vec<_>>();
+    let configs = std::iter::once(NamedBundlerOptions {
+      options: options.clone(),
+      description: None,
+      snapshot: None,
+      config_name: None,
+    })
+    .chain(config_variants.into_iter().map(|variant| NamedBundlerOptions {
+      options: variant.apply(&options),
+      description: Some(variant.description()),
+      snapshot: variant.snapshot,
+      config_name: variant.config_name,
+    }))
+    .collect::<Vec<_>>();
 
     IntegrationTest::new(meta, self.fixture_path.clone()).run_multiple(configs, plugins).await;
   }
@@ -59,10 +64,7 @@ impl Fixture {
   ) {
     if meta.extended_tests.minify_internal_exports && options.minify_internal_exports.is_none() {
       config_variants.push(ConfigVariant {
-        config_name: Some(format!(
-          "Extended Test: (minify_internal_exports: {})",
-          meta.extended_tests.minify_internal_exports
-        )),
+        config_name: Some("extended-minify-internal-exports".to_string()),
         minify_internal_exports: Some(true),
         snapshot: Some(false),
         ..Default::default()

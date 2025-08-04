@@ -64,6 +64,14 @@
     },
     "extendedTests": {
       "$ref": "#/$defs/ExtendedTests"
+    },
+    "configName": {
+      "description": "Value will be injected into the `globalThis.__configName`",
+      "type": [
+        "string",
+        "null"
+      ],
+      "default": null
     }
   },
   "additionalProperties": false,

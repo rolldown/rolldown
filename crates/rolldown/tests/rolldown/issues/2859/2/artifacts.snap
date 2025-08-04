@@ -24,7 +24,7 @@ export { bar, main_default as default, foo };
 ```
 ---
 
-Variant: (format: Cjs)
+Variant: [format: Cjs]
 
 # warnings
 

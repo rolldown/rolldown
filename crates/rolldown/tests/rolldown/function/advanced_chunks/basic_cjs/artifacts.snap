@@ -46,7 +46,7 @@ export { __commonJS };
 ```
 ---
 
-Variant: no-profiler-names
+Variant: no-profiler-names: [profiler_names: false]
 
 # Assets
 

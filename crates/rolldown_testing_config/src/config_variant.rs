@@ -1,11 +1,10 @@
-use std::fmt::Display;
-
 use rolldown_common::{
   BundlerOptions, ExperimentalOptions, OutputExports, OutputFormat, PreserveEntrySignatures,
   TreeshakeOptions,
 };
 use schemars::JsonSchema;
 use serde::Deserialize;
+use std::fmt::Write;
 
 #[derive(Deserialize, JsonSchema, Default)]
 #[serde(rename_all = "camelCase", deny_unknown_fields)]
@@ -76,10 +75,8 @@ impl ConfigVariant {
     }
     config
   }
-}
 
-impl Display for ConfigVariant {
-  fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+  pub fn description(&self) -> String {
     let mut fields = vec![];
     if let Some(format) = &self.format {
       fields.push(format!("format: {format:?}"));
@@ -111,7 +108,15 @@ impl Display for ConfigVariant {
     if let Some(profiler_names) = &self.profiler_names {
       fields.push(format!("profiler_names: {profiler_names:?}"));
     }
+    if let Some(entry_filenames) = &self.entry_filenames {
+      fields.push(format!("entry_filenames: {entry_filenames:?}"));
+    }
+    let mut result = String::new();
+    self.config_name.as_ref().inspect(|config_name| {
+      write!(result, "{config_name}: ").unwrap();
+    });
     fields.sort();
-    if fields.is_empty() { write!(f, "()") } else { write!(f, "({})", fields.join(", ")) }
+    result.push_str(&fields.iter().map(|field| format!("[{field}]")).collect::<Vec<_>>().join(" "));
+    result
   }
 }

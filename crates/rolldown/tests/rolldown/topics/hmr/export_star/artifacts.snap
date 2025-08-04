@@ -84,7 +84,10 @@ var init_hmr_0 = __rolldown_runtime__.createEsmInitializer((function() {
 		init_sub_3();
 		const hot_hmr = __rolldown_runtime__.createModuleHotContext("hmr.js");
 		var import_sub_0 = __rolldown_runtime__.loadExports("sub/index.js");
-		console.log(import_sub_0.foo, import_sub_0.bar);
+		const { assert } = globalThis.__node;
+		assert.strictEqual(import_sub_0.foo, "foo");
+		assert.strictEqual(import_sub_0.bar, "bar");
+		assert.strictEqual(import_sub_0.named, "named");
 		hot_hmr.accept();
 	} finally {}
 }));

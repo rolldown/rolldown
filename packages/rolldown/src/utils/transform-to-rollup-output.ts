@@ -84,9 +84,9 @@ function transformToRollupOutputChunk(
       cache[p] = value;
       return value;
     },
-    set(target, p, newValue): boolean {
+    set(_target, p, newValue): boolean {
       cache[p] = newValue;
-      changed?.updated.add(bindingChunk.preliminaryFileName);
+      changed?.updated.add(bindingChunk.fileName);
       return true;
     },
     has(target, p): boolean {
@@ -121,7 +121,7 @@ function transformToRollupOutputAsset(
       cache[p] = value;
       return value;
     },
-    set(target, p, newValue): boolean {
+    set(_target, p, newValue): boolean {
       cache[p] = newValue;
       changed?.updated.add(bindingAsset.fileName);
       return true;
@@ -195,24 +195,22 @@ export function collectChangedBundle(
   changed: ChangedOutputs,
   bundle: OutputBundle,
 ): JsChangedOutputs {
-  const assets: Array<JsOutputAsset> = [];
-  const chunks: Array<JsOutputChunk> = [];
-
+  const changes: Record<string, JsOutputChunk | JsOutputAsset> = {};
   for (const key in bundle) {
     if (changed.deleted.has(key) || !changed.updated.has(key)) {
       continue;
     }
     const item = bundle[key];
     if (item.type === 'asset') {
-      assets.push({
+      changes[key] = {
         filename: item.fileName,
         originalFileNames: item.originalFileNames,
         source: bindingAssetSource(item.source),
         names: item.names,
-      });
+      };
     } else {
       // not all properties modifications are reflected to rust side
-      chunks.push({
+      changes[key] = {
         code: item.code,
         filename: item.fileName,
         name: item.name,
@@ -227,12 +225,11 @@ export function collectChangedBundle(
         map: bindingifySourcemap(item.map),
         sourcemapFilename: item.sourcemapFileName || undefined,
         preliminaryFilename: item.preliminaryFileName,
-      });
+      };
     }
   }
   return {
-    assets,
-    chunks,
-    deleted: Array.from(changed.deleted),
+    changes,
+    deleted: changed.deleted,
   };
 }

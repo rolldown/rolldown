@@ -4,8 +4,10 @@ use super::{
   binding_output_asset::{BindingOutputAsset, JsOutputAsset},
   binding_output_chunk::{BindingOutputChunk, JsOutputChunk, update_output_chunk},
 };
+use napi::Either;
 use napi_derive::napi;
 use rolldown_error::{BuildDiagnostic, DiagnosticOptions};
+use rustc_hash::{FxHashMap, FxHashSet};
 
 // The `BindingOutputs` take the data to js side, the rust side will not use it anymore.
 #[napi]
@@ -65,41 +67,46 @@ impl From<Vec<rolldown_common::Output>> for BindingOutputs {
 }
 
 #[napi(object)]
-
 pub struct JsChangedOutputs {
-  pub chunks: Vec<JsOutputChunk>,
-  pub assets: Vec<JsOutputAsset>,
-  pub deleted: Vec<String>,
+  #[napi(ts_type = "Set<string>")]
+  pub deleted: FxHashSet<String>,
+  #[napi(ts_type = "Record<string, JsOutputChunk | JsOutputAsset>")]
+  pub changes: FxHashMap<String, Either<JsOutputChunk, JsOutputAsset>>,
 }
 
-pub fn update_outputs(
-  outputs: &mut Vec<rolldown_common::Output>,
-  changed: JsChangedOutputs,
-) -> anyhow::Result<()> {
-  for chunk in changed.chunks {
-    if let Some(index) = outputs.iter().position(|o| match o {
-      rolldown_common::Output::Chunk(v) => v.preliminary_filename == chunk.preliminary_filename,
-      rolldown_common::Output::Asset(_) => false,
-    }) {
-      match &mut outputs[index] {
-        rolldown_common::Output::Chunk(old_chunk) => {
-          update_output_chunk(old_chunk, chunk)?;
+impl JsChangedOutputs {
+  pub fn apply_changes(
+    &mut self,
+    outputs: &mut Vec<rolldown_common::Output>,
+  ) -> anyhow::Result<()> {
+    let mut result = Ok(());
+    if !self.deleted.is_empty() || !self.changes.is_empty() {
+      outputs.retain_mut(|output| {
+        if result.is_err() {
+          return true;
         }
-        rolldown_common::Output::Asset(_) => {}
-      }
+        let filename = output.filename();
+        if self.deleted.contains(filename) {
+          return false;
+        }
+        if let Some(change) = self.changes.remove(filename) {
+          match (output, change) {
+            (rolldown_common::Output::Chunk(old_chunk), Either::A(chunk)) => {
+              if let Err(err) = update_output_chunk(old_chunk, chunk) {
+                result = Err(err);
+              }
+            }
+            (v @ rolldown_common::Output::Asset(_), Either::B(asset)) => {
+              *v = rolldown_common::Output::Asset(Arc::new(asset.into()));
+            }
+            _ => {}
+          }
+        }
+        true
+      });
     }
+    result
   }
-  for asset in changed.assets {
-    if let Some(index) = outputs.iter().position(|o| o.filename() == asset.filename) {
-      outputs[index] = rolldown_common::Output::Asset(Arc::new(asset.into()));
-    }
-  }
-  for deleted in changed.deleted {
-    if let Some(index) = outputs.iter().position(|o| o.filename() == deleted) {
-      outputs.remove(index);
-    }
-  }
-  Ok(())
 }
 
 #[napi(object)]

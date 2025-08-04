@@ -1931,7 +1931,7 @@ export interface BindingTransformPluginConfig {
 }
 
 export interface BindingTreeshake {
-  moduleSideEffects: boolean | BindingModuleSideEffectsRule[] | ((id: string, is_external: boolean) => boolean | undefined)
+  moduleSideEffects: boolean | ReadonlyArray<string> | BindingModuleSideEffectsRule[] | ((id: string, is_external: boolean) => boolean | undefined)
   annotations?: boolean
   manualPureFunctions?: ReadonlyArray<string>
   unknownGlobalSideEffects?: boolean

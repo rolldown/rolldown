@@ -6,6 +6,7 @@ interface ModuleSideEffectsRule {
 
 type ModuleSideEffectsOption =
   | boolean
+  | readonly string[]
   | ModuleSideEffectsRule[]
   | ((id: string, isResolved: boolean) => boolean | undefined)
   | 'no-external';

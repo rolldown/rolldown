@@ -127,8 +127,6 @@ var init_messenger_3 = __rolldown_runtime__.createEsmInitializer((function() {
 		var import_foo_0 = __rolldown_runtime__.loadExports("foo.js");
 		var import_bar_1 = __rolldown_runtime__.loadExports("bar.js");
 		var import_common_2 = __rolldown_runtime__.loadExports("common.js");
-		;
-		;
 		let msg = [
 			import_common_2.prefix,
 			import_foo_0.foo,

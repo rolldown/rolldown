@@ -104,8 +104,6 @@ var init_sub_3 = __rolldown_runtime__.createEsmInitializer((function() {
 		__rolldown_runtime__.__export(ns_sub, {});
 		__rolldown_runtime__.registerModule("sub/index.js", { exports: ns_sub });
 		const hot_sub = __rolldown_runtime__.createModuleHotContext("sub/index.js");
-		;
-		;
 	} finally {}
 }));
 

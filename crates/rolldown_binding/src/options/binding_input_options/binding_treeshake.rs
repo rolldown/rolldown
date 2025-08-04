@@ -26,6 +26,7 @@ pub struct BindingTreeshake {
   #[debug("ModuleSideEffects(...)")]
   pub module_side_effects: BindingModuleSideEffects,
   pub annotations: Option<bool>,
+  #[napi(ts_type = "ReadonlyArray<string>")]
   pub manual_pure_functions: Option<Vec<String>>,
   pub unknown_global_side_effects: Option<bool>,
   pub commonjs: Option<bool>,

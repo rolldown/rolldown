@@ -348,6 +348,7 @@ impl HmrManager {
           use_pife_for_module_wrappers,
           dependencies: FxIndexSet::default(),
           imports: FxHashSet::default(),
+          generated_static_import_infos: FxHashMap::default(),
         };
 
         finalizer.visit_program(fields.program);

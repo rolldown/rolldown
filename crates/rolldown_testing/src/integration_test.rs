@@ -207,7 +207,7 @@ impl IntegrationTest {
             Self::execute_output_assets(
               &bundler,
               &debug_title,
-              patch_chunks,
+              &patch_chunks,
               named_options
                 .config_name
                 .as_deref()
@@ -583,7 +583,7 @@ impl IntegrationTest {
   fn execute_output_assets(
     bundler: &Bundler,
     test_title: &str,
-    patch_chunks: Vec<String>,
+    patch_chunks: &[String],
     config_name: Option<&str>,
   ) {
     let cwd = bundler.options().cwd.clone();
@@ -615,26 +615,14 @@ impl IntegrationTest {
 
     let mut node_command = Command::new("node");
 
-    if let Some(config_name) = config_name {
-      node_command.arg("--import");
-      let injected_script = format!("globalThis.__configName = `{config_name}`",);
-      let inject_script_url =
-        format!("data:text/javascript,{}", urlencoding::encode(&injected_script));
-      node_command.arg(inject_script_url);
-    }
+    let globals_injection =
+      Self::generate_globals_injection_for_execute_output(config_name, patch_chunks);
 
-    if !patch_chunks.is_empty() {
+    if !globals_injection.is_empty() {
+      let inject_script_url =
+        format!("data:text/javascript,{}", urlencoding::encode(&globals_injection));
       node_command.arg("--import");
-      let patch_chunks_array = patch_chunks
-        .into_iter()
-        .map(|chunk| format!("\"{}\"", chunk.replace('"', "\\\"")))
-        .collect::<Vec<_>>()
-        .join(",");
-      let patch_chunks_register_script =
-        format!("globalThis.__testPatches = [{patch_chunks_array}]");
-      let patch_chunk_register_script_url =
-        format!("data:text/javascript,{}", urlencoding::encode(&patch_chunks_register_script));
-      node_command.arg(patch_chunk_register_script_url);
+      node_command.arg(inject_script_url);
     }
 
     if test_script.exists() {
@@ -679,5 +667,26 @@ impl IntegrationTest {
         "⬇️⬇️ stderr {test_title} ⬇️⬇️\n{stderr_utf8}\n⬇️⬇️ stdout ⬇️⬇️\n{stdout_utf8}\n⬆️⬆️ end  ⬆️⬆️",
       );
     }
+  }
+
+  fn generate_globals_injection_for_execute_output(
+    config_name: Option<&str>,
+    patch_chunks: &[String],
+  ) -> String {
+    let mut stmts = vec![];
+    if let Some(config_name) = config_name {
+      stmts.push(format!("globalThis.__configName = `{config_name}`;",));
+    }
+
+    if !patch_chunks.is_empty() {
+      let patch_chunks_array = patch_chunks
+        .iter()
+        .map(|chunk| format!("\"{}\"", chunk.replace('"', "\\\"")))
+        .collect::<Vec<_>>()
+        .join(",");
+      stmts.push(format!("globalThis.__testPatches = [{patch_chunks_array}];"));
+    }
+
+    stmts.join("\n")
   }
 }

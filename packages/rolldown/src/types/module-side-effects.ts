@@ -10,12 +10,10 @@ type ModuleSideEffectsOption =
   | ((id: string, isResolved: boolean) => boolean | undefined)
   | 'no-external';
 
-export type TreeshakingOptions =
-  | {
-    moduleSideEffects?: ModuleSideEffectsOption;
-    annotations?: boolean;
-    manualPureFunctions?: string[];
-    unknownGlobalSideEffects?: boolean;
-    commonjs?: boolean;
-  }
-  | boolean;
+export type TreeshakingOptions = {
+  moduleSideEffects?: ModuleSideEffectsOption;
+  annotations?: boolean;
+  manualPureFunctions?: readonly string[];
+  unknownGlobalSideEffects?: boolean;
+  commonjs?: boolean;
+};

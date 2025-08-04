@@ -341,7 +341,7 @@ impl HmrManager {
           snippet: AstSnippet::new(fields.allocator),
           builder: &oxc::ast::AstBuilder::new(fields.allocator),
           scoping: &scoping,
-          import_binding: FxHashMap::default(),
+          import_bindings: FxHashMap::default(),
           module: affected_module,
           exports: oxc::allocator::Vec::new_in(fields.allocator),
           affected_module_idx_to_init_fn_name: &module_idx_to_init_fn_name,

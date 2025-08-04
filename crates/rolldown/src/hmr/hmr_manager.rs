@@ -1,5 +1,6 @@
 use std::{
   ops::{Deref, DerefMut},
+  ptr::addr_of,
   sync::Arc,
 };
 
@@ -14,8 +15,12 @@ use rolldown_ecmascript_utils::AstSnippet;
 use rolldown_error::BuildResult;
 use rolldown_fs::OsFileSystem;
 use rolldown_plugin::SharedPluginDriver;
-use rolldown_sourcemap::{SourceJoiner, SourceMapSource};
-use rolldown_utils::{concat_string, indexmap::FxIndexSet};
+use rolldown_sourcemap::{Source, SourceJoiner, SourceMapSource};
+use rolldown_utils::{
+  concat_string,
+  indexmap::FxIndexSet,
+  rayon::{IntoParallelIterator, ParallelIterator},
+};
 use rustc_hash::{FxHashMap, FxHashSet};
 
 use crate::{
@@ -317,59 +322,90 @@ impl HmrManager {
       })
       .collect::<FxHashMap<_, _>>();
 
-    let mut source_joiner = SourceJoiner::default();
-
-    for affected_module_idx in affected_modules {
-      let affected_module = &self.input.module_db.modules[affected_module_idx];
-      let Module::Normal(affected_module) = affected_module else {
-        unreachable!("HMR only supports normal module");
-      };
-
-      let enable_sourcemap = self.options.sourcemap.is_some() && !affected_module.is_virtual();
-      let use_pife_for_module_wrappers =
-        self.options.optimization.is_pife_for_module_wrappers_enabled();
-      let modules = &self.input.module_db.modules;
-      let ast = self.input.index_ecma_ast[affected_module_idx]
-        .as_mut()
-        .expect("Normal module should have an AST");
-
-      ast.program.with_mut(|fields| {
-        let scoping = EcmaAst::make_semantic(fields.program, /*with_cfg*/ false).into_scoping();
-        let mut finalizer = HmrAstFinalizer {
-          modules,
-          alloc: fields.allocator,
-          snippet: AstSnippet::new(fields.allocator),
-          builder: &oxc::ast::AstBuilder::new(fields.allocator),
-          scoping: &scoping,
-          import_bindings: FxHashMap::default(),
-          module: affected_module,
-          exports: oxc::allocator::Vec::new_in(fields.allocator),
-          affected_module_idx_to_init_fn_name: &module_idx_to_init_fn_name,
-          use_pife_for_module_wrappers,
-          dependencies: FxIndexSet::default(),
-          imports: FxHashSet::default(),
-          generated_static_import_infos: FxHashMap::default(),
-          re_export_all_dependencies: FxIndexSet::default(),
+    let module_render_inputs = affected_modules
+      .iter()
+      .copied()
+      .map(|affected_module_idx| {
+        let affected_module = &self.input.module_db.modules[affected_module_idx];
+        let Module::Normal(affected_module) = affected_module else {
+          unreachable!("HMR only supports normal module");
         };
 
-        finalizer.visit_program(fields.program);
-      });
+        debug_assert_eq!(affected_module_idx, affected_module.idx);
+        let ast = self.input.index_ecma_ast[affected_module_idx]
+          .as_ref()
+          .expect("Normal module should have an AST");
 
-      let codegen = EcmaCompiler::print_with(
-        ast,
-        PrintOptions {
-          sourcemap: enable_sourcemap,
-          filename: affected_module.id.to_string(),
-          print_legal_comments: false, // ignore hmr chunk comments
-        },
-      );
-      source_joiner.append_source(concat_string!("//#region ", affected_module.debug_id));
-      if let Some(map) = codegen.map {
-        source_joiner.append_source(SourceMapSource::new(codegen.code, map));
-      } else {
-        source_joiner.append_source(codegen.code);
-      }
-      source_joiner.append_source("//#endregion");
+        // SAFETY: `affected_modules` is a set, so we won't have multiple mutable references to the same ast.
+        let mut_ast = unsafe { &mut *(addr_of!(*ast).cast_mut()) };
+
+        ModuleRenderInput { idx: affected_module.idx, ecma_ast: mut_ast }
+      })
+      .collect::<Vec<_>>();
+
+    let mut source_joiner = SourceJoiner::default();
+    let rendered_sources = module_render_inputs
+      .into_par_iter()
+      .flat_map(|render_input| {
+        let ModuleRenderInput { idx: affected_module_idx, ecma_ast: ast } = render_input;
+
+        let affected_module = &self.input.module_db.modules[affected_module_idx];
+        let Module::Normal(affected_module) = affected_module else {
+          unreachable!("HMR only supports normal module");
+        };
+
+        let enable_sourcemap = self.options.sourcemap.is_some() && !affected_module.is_virtual();
+        let use_pife_for_module_wrappers =
+          self.options.optimization.is_pife_for_module_wrappers_enabled();
+        let modules = &self.input.module_db.modules;
+
+        ast.program.with_mut(|fields| {
+          let scoping = EcmaAst::make_semantic(fields.program, /*with_cfg*/ false).into_scoping();
+          let mut finalizer = HmrAstFinalizer {
+            modules,
+            alloc: fields.allocator,
+            snippet: AstSnippet::new(fields.allocator),
+            builder: &oxc::ast::AstBuilder::new(fields.allocator),
+            scoping: &scoping,
+            import_bindings: FxHashMap::default(),
+            module: affected_module,
+            exports: oxc::allocator::Vec::new_in(fields.allocator),
+            affected_module_idx_to_init_fn_name: &module_idx_to_init_fn_name,
+            use_pife_for_module_wrappers,
+            dependencies: FxIndexSet::default(),
+            imports: FxHashSet::default(),
+            generated_static_import_infos: FxHashMap::default(),
+            re_export_all_dependencies: FxIndexSet::default(),
+          };
+
+          finalizer.visit_program(fields.program);
+        });
+
+        let codegen = EcmaCompiler::print_with(
+          ast,
+          PrintOptions {
+            sourcemap: enable_sourcemap,
+            filename: affected_module.id.to_string(),
+            print_legal_comments: false, // ignore hmr chunk comments
+          },
+        );
+
+        let intro_comment: Box<dyn Source + Send> =
+          Box::new(concat_string!("//#region ", affected_module.debug_id));
+        let outro_comment: Box<dyn Source + Send> = Box::new(concat_string!("//#endregion"));
+
+        let code_source: Box<dyn Source + Send> = if let Some(map) = codegen.map {
+          Box::new(SourceMapSource::new(codegen.code, map))
+        } else {
+          Box::new(codegen.code)
+        };
+
+        [intro_comment, code_source, outro_comment]
+      })
+      .collect::<Vec<_>>();
+
+    for source in rendered_sources {
+      source_joiner.append_source_dyn(source);
     }
 
     hmr_boundaries.iter().for_each(|boundary| {
@@ -595,4 +631,9 @@ impl PropagateUpdateStatus {
   pub fn is_reached_boundary(&self) -> bool {
     matches!(self, Self::ReachedBoundary)
   }
+}
+
+struct ModuleRenderInput<'me> {
+  pub idx: ModuleIdx,
+  pub ecma_ast: &'me mut EcmaAst,
 }

@@ -21,6 +21,13 @@ impl<'source> SourceJoiner<'source> {
     self.inner.push(Box::new(source));
   }
 
+  pub fn append_source_dyn(&mut self, source: Box<dyn Source + Send + 'source>) {
+    if let Some(sourcemap) = source.sourcemap() {
+      self.accumulate_sourcemap_data_size(sourcemap);
+    }
+    self.inner.push(source);
+  }
+
   pub fn prepend_source<T: Source + Send + 'source>(&mut self, source: T) {
     if let Some(sourcemap) = source.sourcemap() {
       self.accumulate_sourcemap_data_size(sourcemap);

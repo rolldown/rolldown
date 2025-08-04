@@ -6,6 +6,8 @@ use rolldown_common::NormalModule;
 
 use crate::{hmr::hmr_ast_finalizer::HmrAstFinalizer, module_finalizers::ScopeHoistingFinalizer};
 
+pub static MODULE_EXPORTS_NAME_FOR_ESM: &str = "__rolldown_exports__";
+
 pub trait HmrAstBuilder<'any, 'ast> {
   fn builder(&self) -> &oxc::ast::AstBuilder<'ast>;
 
@@ -145,7 +147,7 @@ impl<'any, 'ast> HmrAstBuilder<'any, 'ast> for HmrAstFinalizer<'any, 'ast> {
   }
 
   fn binding_name_for_namespace_object_ref_atom(&self) -> ast::Atom<'ast> {
-    self.builder().atom(&format!("ns_{}", self.module.repr_name))
+    self.builder().atom(MODULE_EXPORTS_NAME_FOR_ESM)
   }
 
   fn alias_name_for_import_meta_hot(&self) -> ast::Atom<'ast> {

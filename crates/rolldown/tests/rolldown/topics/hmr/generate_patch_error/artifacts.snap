@@ -69,9 +69,9 @@ __rolldown_runtime__.registerModule("main.js", { exports: main_exports });
 //#region hmr.js
 var init_hmr_0 = __rolldown_runtime__.createEsmInitializer((function() {
 	try {
-		var ns_hmr = {};
-		__rolldown_runtime__.__export(ns_hmr, { foo: () => foo });
-		__rolldown_runtime__.registerModule("hmr.js", { exports: ns_hmr });
+		var __rolldown_exports__ = {};
+		__rolldown_runtime__.__export(__rolldown_exports__, { foo: () => foo });
+		__rolldown_runtime__.registerModule("hmr.js", { exports: __rolldown_exports__ });
 		const hot_hmr = __rolldown_runtime__.createModuleHotContext("hmr.js");
 		const foo = "hello";
 		text(".hmr", foo);

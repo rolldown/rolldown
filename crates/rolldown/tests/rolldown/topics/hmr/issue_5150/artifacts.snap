@@ -74,9 +74,9 @@ setInterval(sayMessage, 1e3);
 //#region bar.js
 var init_bar_0 = __rolldown_runtime__.createEsmInitializer((function() {
 	try {
-		var ns_bar = {};
-		__rolldown_runtime__.__export(ns_bar, { bar: () => bar });
-		__rolldown_runtime__.registerModule("bar.js", { exports: ns_bar });
+		var __rolldown_exports__ = {};
+		__rolldown_runtime__.__export(__rolldown_exports__, { bar: () => bar });
+		__rolldown_runtime__.registerModule("bar.js", { exports: __rolldown_exports__ });
 		init_common_1();
 		const hot_bar = __rolldown_runtime__.createModuleHotContext("bar.js");
 		var import_common_0 = __rolldown_runtime__.loadExports("common.js");
@@ -88,9 +88,9 @@ var init_bar_0 = __rolldown_runtime__.createEsmInitializer((function() {
 //#region common.js
 var init_common_1 = __rolldown_runtime__.createEsmInitializer((function() {
 	try {
-		var ns_common = {};
-		__rolldown_runtime__.__export(ns_common, { prefix: () => prefix });
-		__rolldown_runtime__.registerModule("common.js", { exports: ns_common });
+		var __rolldown_exports__ = {};
+		__rolldown_runtime__.__export(__rolldown_exports__, { prefix: () => prefix });
+		__rolldown_runtime__.registerModule("common.js", { exports: __rolldown_exports__ });
 		const hot_common = __rolldown_runtime__.createModuleHotContext("common.js");
 		const prefix = "prefix-new:";
 	} finally {}
@@ -100,9 +100,9 @@ var init_common_1 = __rolldown_runtime__.createEsmInitializer((function() {
 //#region foo.js
 var init_foo_2 = __rolldown_runtime__.createEsmInitializer((function() {
 	try {
-		var ns_foo = {};
-		__rolldown_runtime__.__export(ns_foo, { foo: () => foo });
-		__rolldown_runtime__.registerModule("foo.js", { exports: ns_foo });
+		var __rolldown_exports__ = {};
+		__rolldown_runtime__.__export(__rolldown_exports__, { foo: () => foo });
+		__rolldown_runtime__.registerModule("foo.js", { exports: __rolldown_exports__ });
 		init_common_1();
 		const hot_foo = __rolldown_runtime__.createModuleHotContext("foo.js");
 		var import_common_0 = __rolldown_runtime__.loadExports("common.js");
@@ -114,12 +114,12 @@ var init_foo_2 = __rolldown_runtime__.createEsmInitializer((function() {
 //#region messenger.js
 var init_messenger_3 = __rolldown_runtime__.createEsmInitializer((function() {
 	try {
-		var ns_messenger = {};
-		__rolldown_runtime__.__export(ns_messenger, {
+		var __rolldown_exports__ = {};
+		__rolldown_runtime__.__export(__rolldown_exports__, {
 			msg: () => msg,
 			sayMessage: () => sayMessage
 		});
-		__rolldown_runtime__.registerModule("messenger.js", { exports: ns_messenger });
+		__rolldown_runtime__.registerModule("messenger.js", { exports: __rolldown_exports__ });
 		init_foo_2();
 		init_bar_0();
 		init_common_1();

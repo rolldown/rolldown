@@ -165,14 +165,13 @@ pub async fn normalize_side_effects(
       None => DeterminedSideEffects::NoTreeshake,
       Some(opt) => {
         if opt.module_side_effects.is_fn() {
-          let module_side_effects = opt
+          match opt
             .module_side_effects
             .ffi_resolve(&resolved_id.id, resolved_id.external.is_external())
-            .await?;
-          if module_side_effects.unwrap_or_default() {
-            lazy_check_side_effects(resolved_id, module_type, stmt_infos)
-          } else {
-            DeterminedSideEffects::UserDefined(false)
+            .await?
+          {
+            Some(value) => DeterminedSideEffects::UserDefined(value),
+            None => lazy_check_side_effects(resolved_id, module_type, stmt_infos),
           }
         } else {
           match opt

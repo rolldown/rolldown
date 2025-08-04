@@ -1,4 +1,85 @@
 
+## [1.0.0-beta.31] - 2025-08-04
+
+### 🚀 Features
+
+- hmr: generate initializer for `export * from ...` (#5577) by @hyf0
+- hmr: remove meaningless stmt instead of replacing with empty stmt (#5570) by @hyf0
+- option `watch.clearScreen` (#5518) by @situ2001
+- rolldown: oxc v0.80.0 (#5538) by @Boshen
+- plugin/generateBundle: add support for modifying chunk filename (#5564) by @shulaoda
+- assetFileNames: support `name` and `originalFileName` (#5555) by @shulaoda
+- add optional `onInvalidate` schema to validator (#5528) by @situ2001
+- don't throw resolve errors for dynamic import inside try block (#5537) by @shulaoda
+- rolldown: oxc v0.79.0 (#5512) by @Boshen
+- rolldown_plugin_asset: align `render_chunk` logic (#5511) by @shulaoda
+- rolldown_plugin_utls: finish `render_asset_url_in_js` (#5508) by @shulaoda
+- rolldown_plugin_utils: align replacement logic for `__VITE_ASSET__` (#5507) by @shulaoda
+- rolldown_plugin_utils: add partial `render_asset_url_in_js` support (#5504) by @shulaoda
+- expose `sourcemapBaseUrl` from NormalizedOutputOptions (#5513) by @sapphi-red
+
+### 🐛 Bug Fixes
+
+- modify output filename correctly in `generateBundle` and `writeBundle` (#5580) by @shulaoda
+- hmr: ensure correct runtime behavior for `export * from ...` (#5578) by @hyf0
+- hmr: repeated imports should point to the same binding (#5571) by @hyf0
+- hmr: handle `export * from ...` (#5566) by @hyf0
+- rolldown_plugin_web_worker_post: handle `import.meta` correctly (#5565) by @shulaoda
+- antd bundle output not correct (#5549) by @IWANABETHATGUY
+- hmr: module namespace object should be included via treeshaking mechanism normally (#5543) by @hyf0
+- plugin/vite-resolve: use `import` / `require` conditions for external modules resolution (#5540) by @sapphi-red
+- rolldown_plugin_asset: InvalidAsset#is should match InvalidAsset::True (#5529) by @AliceLanniste
+- __name lacks require('./chunk-containing-runtime') when format: 'cjs' + keepNames: true (#5526) by @IWANABETHATGUY
+- plugin/vite-resolve: resolve externalized packages with `resolve.externalConditions` (#5491) by @sapphi-red
+- optimization.inlineConst: true does not keep export names when output.minifyInternalExports: true is enabled (#5520) by @IWANABETHATGUY
+- scanner: identify `module.exports.__esModule = true` (#5503) by @overlookmotel
+- error instead of panic if `sourcemapBaseUrl` is an invalid URL (#5514) by @sapphi-red
+
+### 🚜 Refactor
+
+- tests: rename `_configName` to `_testName` in configuration files and update variant formatting in snapshots (#5569) by @hyf0
+- rolldown: remove unnecessary comments (#5552) by @situ2001
+- rolldown: Remove `rolldown_rstr` crate and use `CompactStr` directly (#5542) by @Copilot
+- hide namespace statement index knowledge inside StmtInfos (#5545) by @sapphi-red
+- use pascal case when naming bitflags field for `ImportRecordMeta` (#5539) by @IWANABETHATGUY
+- use concat_string! to simplify string concatenation (#5527) by @IWANABETHATGUY
+- use combinator function handle `sourcemap_base_url` parsing (#5517) by @IWANABETHATGUY
+- rolldown_plugin_utils: improve `to_output_file_path_in_js` (#5505) by @shulaoda
+
+### 📚 Documentation
+
+- wording nit (#5521) by @nullxone
+
+### 🧪 Testing
+
+- rust: rename `configName` to `_configName` and add comments (#5568) by @hyf0
+- rust: re-organize `rolldown_testing_config` (#5567) by @hyf0
+
+### ⚙️ Miscellaneous Tasks
+
+- deps: lock file maintenance npm packages (#5582) by @renovate[bot]
+- deps: lock file maintenance (#5581) by @renovate[bot]
+- deps: lock file maintenance rust crates (#5576) by @renovate[bot]
+- deps: lock file maintenance npm packages (#5574) by @renovate[bot]
+- deps: update github-actions (#5573) by @renovate[bot]
+- deps: update dependency rolldown-plugin-dts to v0.15.1 (#5572) by @renovate[bot]
+- deps: update dependency tsdown to v0.13.2 (#5562) by @renovate[bot]
+- deps: update dependency rolldown-plugin-dts to ^0.15.0 (#5563) by @renovate[bot]
+- ai: Add AGENTS.md and GitHub Copilot setup workflow (#5556) by @Copilot
+- deps: update dependency tsdown to v0.13.1 (#5551) by @renovate[bot]
+- deps: update dependency rolldown-plugin-dts to v0.14.3 (#5544) by @renovate[bot]
+- ensure all diagnostics in self.errors have Severity::Error (#5494) by @sapphi-red
+- vscode: remove `code-spell-checker` extension (#5530) by @shulaoda
+- deps: update dependency rolldown-plugin-dts to v0.14.2 (#5522) by @renovate[bot]
+- add link to the REPL in the reproduction field description (#5519) by @sapphi-red
+- enable some rollup tests (#5515) by @sapphi-red
+
+### ❤️ New Contributors
+
+* @Copilot made their first contribution in [#5556](https://github.com/rolldown/rolldown/pull/5556)
+* @nullxone made their first contribution in [#5521](https://github.com/rolldown/rolldown/pull/5521)
+
+
 ## [1.0.0-beta.30] - 2025-07-30
 
 ### 💥 BREAKING CHANGES

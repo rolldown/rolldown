@@ -77,10 +77,7 @@ pub fn update_outputs(
   changed: JsChangedOutputs,
 ) -> anyhow::Result<()> {
   for chunk in changed.chunks {
-    if let Some(index) = outputs.iter().position(|o| match o {
-      rolldown_common::Output::Chunk(v) => v.preliminary_filename == chunk.preliminary_filename,
-      rolldown_common::Output::Asset(_) => false,
-    }) {
+    if let Some(index) = outputs.iter().position(|o| o.filename() == chunk.filename) {
       match &mut outputs[index] {
         rolldown_common::Output::Chunk(old_chunk) => {
           update_output_chunk(old_chunk, chunk)?;

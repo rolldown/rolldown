@@ -86,7 +86,7 @@ function transformToRollupOutputChunk(
     },
     set(target, p, newValue): boolean {
       cache[p] = newValue;
-      changed?.updated.add(bindingChunk.preliminaryFileName);
+      changed?.updated.add(bindingChunk.fileName);
       return true;
     },
     has(target, p): boolean {

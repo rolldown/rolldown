@@ -68,6 +68,8 @@ impl Default for TreeshakeOptions {
 pub enum ModuleSideEffects {
   #[debug("ModuleSideEffectsRules({_0:?})")]
   ModuleSideEffectsRules(Vec<ModuleSideEffectsRule>),
+  #[debug("IdSet({_0:?})")]
+  IdSet(FxHashSet<String>),
   #[debug("Boolean({_0})")]
   Boolean(bool),
   #[debug("Function")]
@@ -114,6 +116,7 @@ impl ModuleSideEffects {
         // analyze side effects from source code
         None
       }
+      ModuleSideEffects::IdSet(set) => Some(set.contains(path)),
       ModuleSideEffects::Boolean(false) => Some(false),
       ModuleSideEffects::Boolean(true) => None,
       ModuleSideEffects::Function(_) => unreachable!(),

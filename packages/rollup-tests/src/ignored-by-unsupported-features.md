@@ -263,7 +263,6 @@
 ### The `output.treeshake.moduleSideEffect` is not compatible with rollup
  - rollup@function@module-side-effects@transform: handles setting moduleSideEffects in the transform hook
  - rollup@function@module-side-effects@load: handles setting moduleSideEffects in the load hook
- - rollup@function@module-side-effects@array: supports setting module side effects via an array
  - rollup@function@module-side-effects@resolve-id-external: does not include modules without used exports if moduleSideEffect is false
  - rollup@function@module-side-effects@resolve-id: does not include modules without used exports if moduleSideEffect is false
 

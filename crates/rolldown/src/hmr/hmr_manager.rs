@@ -18,7 +18,7 @@ use rolldown_plugin::SharedPluginDriver;
 use rolldown_sourcemap::{Source, SourceJoiner, SourceMapSource};
 use rolldown_utils::{
   concat_string,
-  indexmap::FxIndexSet,
+  indexmap::{FxIndexMap, FxIndexSet},
   rayon::{IntoParallelIterator, ParallelIterator},
 };
 use rustc_hash::{FxHashMap, FxHashSet};
@@ -376,6 +376,7 @@ impl HmrManager {
             imports: FxHashSet::default(),
             generated_static_import_infos: FxHashMap::default(),
             re_export_all_dependencies: FxIndexSet::default(),
+            generated_static_import_stmts_from_external: FxIndexMap::default(),
           };
 
           finalizer.visit_program(fields.program);

@@ -40,22 +40,10 @@ pub mod worker_manager;
 #[napi_derive::module_init]
 pub fn init() {
   use napi::{bindgen_prelude::create_custom_tokio_runtime, tokio};
-  let max_blocking_threads = {
-    std::env::var("ROLLDOWN_MAX_BLOCKING_THREADS")
-      .ok()
-      .and_then(|v| v.parse::<usize>().ok())
-      .unwrap_or({
-        #[cfg(target_os = "macos")]
-        {
-          4.min(num_cpus::get())
-        }
-        #[cfg(not(target_os = "macos"))]
-        {
-          // default value in tokio implementation
-          512
-        }
-      })
-  };
+  let max_blocking_threads = std::env::var("ROLLDOWN_MAX_BLOCKING_THREADS")
+    .ok()
+    .and_then(|v| v.parse::<usize>().ok())
+    .unwrap_or(512); // default value in tokio implementation
   let rt = tokio::runtime::Builder::new_multi_thread()
     .max_blocking_threads(max_blocking_threads)
     .enable_all()

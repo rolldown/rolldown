@@ -512,7 +512,6 @@ fn include_module(ctx: &mut Context, module: &NormalModule) {
   }
 }
 
-#[track_caller]
 fn include_symbol(ctx: &mut Context, symbol_ref: SymbolRef, include_kind: IncludeKind) {
   let mut canonical_ref = ctx.symbols.canonical_ref_for(symbol_ref);
 
@@ -588,7 +587,6 @@ fn include_symbol(ctx: &mut Context, symbol_ref: SymbolRef, include_kind: Includ
   }
 }
 
-#[track_caller]
 fn include_statement(ctx: &mut Context, module: &NormalModule, stmt_info_id: StmtInfoIdx) {
   let is_included = &mut ctx.is_included_vec[module.idx][stmt_info_id];
 

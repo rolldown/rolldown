@@ -14,6 +14,9 @@ import assert from "node:assert";
 var require_cjs_lib = /* @__PURE__ */ __commonJS({ "cases/require/cjs-lib.js": ((exports, module) => {
 	const cjs_lib_hot = __rolldown_runtime__.createModuleHotContext("cases/require/cjs-lib.js");
 	__rolldown_runtime__.registerModule("cases/require/cjs-lib.js", module);
+	module.exports = function() {
+		return "exports";
+	};
 	module.exports.foo = "foo";
 }) });
 
@@ -23,6 +26,7 @@ var require_exports = {};
 const require_hot = __rolldown_runtime__.createModuleHotContext("cases/require/index.js");
 __rolldown_runtime__.registerModule("cases/require/index.js", { exports: require_exports });
 const requiredCjsLib = require_cjs_lib();
+assert.strictEqual(requiredCjsLib(), "exports");
 assert.strictEqual(requiredCjsLib.foo, "foo");
 
 //#endregion
@@ -46,6 +50,9 @@ var require_cjs_lib_0 = __rolldown_runtime__.createCjsInitializer((function(expo
 	try {
 		__rolldown_runtime__.registerModule("cases/require/cjs-lib.js", module);
 		const hot_cjs_lib = __rolldown_runtime__.createModuleHotContext("cases/require/cjs-lib.js");
+		module.exports = function() {
+			return "exports";
+		};
 		module.exports.foo = "foo";
 	} finally {}
 }));
@@ -60,6 +67,7 @@ var init_require_1 = __rolldown_runtime__.createEsmInitializer((function() {
 		__rolldown_runtime__.registerModule("cases/require/index.js", { exports: __rolldown_exports__ });
 		const hot_require = __rolldown_runtime__.createModuleHotContext("cases/require/index.js");
 		const requiredCjsLib = (require_cjs_lib_0(), __rolldown_runtime__.loadExports("cases/require/cjs-lib.js"));
+		import_node_assert_0.default.strictEqual(requiredCjsLib(), "exports");
 		import_node_assert_0.default.strictEqual(requiredCjsLib.foo, "foo");
 	} finally {}
 }));

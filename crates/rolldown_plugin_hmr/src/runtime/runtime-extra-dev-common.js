@@ -10,9 +10,9 @@ import {
 
 class Module {
   /**
-   * @type {any}
+   * @type {{ exports: any }}
    */
-  exports = null;
+  exportsHolder = { exports: null };
   /**
    * @type {string}
    */
@@ -23,6 +23,10 @@ class Module {
    */
   constructor(id) {
     this.id = id;
+  }
+
+  get exports() {
+    return this.exportsHolder.exports;
   }
 }
 
@@ -46,11 +50,11 @@ export class DevRuntime {
   }
   /**
    * @param {string} id
-   * @param {{ exports: any }} meta
+   * @param {{ exports: any }} exportsHolder
    */
-  registerModule(id, meta) {
+  registerModule(id, exportsHolder) {
     const module = new Module(id);
-    module.exports = meta.exports;
+    module.exportsHolder = exportsHolder;
     this.modules[id] = module;
   }
   /**
@@ -59,7 +63,7 @@ export class DevRuntime {
   loadExports(id) {
     const module = this.modules[id];
     if (module) {
-      return module.exports;
+      return module.exportsHolder.exports;
     } else {
       console.warn(`Module ${id} not found`);
       return {};

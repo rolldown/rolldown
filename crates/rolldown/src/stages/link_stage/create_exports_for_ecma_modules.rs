@@ -1,5 +1,5 @@
 use rolldown_common::{
-  EntryPoint, ExportsKind, ModuleIdx, OutputFormat, PreserveEntrySignatures,
+  EntryPoint, ExportsKind, ImportRecordMeta, ModuleIdx, OutputFormat, PreserveEntrySignatures,
   SharedNormalizedBundlerOptions, StmtInfo, StmtInfoMeta, TaggedSymbolRef, WrapKind,
   dynamic_import_usage::DynamicImportExportsUsage,
 };
@@ -103,7 +103,11 @@ impl LinkStage<'_> {
             match self.options.format {
               OutputFormat::Esm => {
                 meta.star_exports_from_external_modules.iter().copied().for_each(|rec_idx| {
-                  referenced_symbols.push(ecma_module.import_records[rec_idx].namespace_ref.into());
+                  let rec = &ecma_module.import_records[rec_idx];
+                  if rec.meta.contains(ImportRecordMeta::EntryLevelExternal) {
+                    return;
+                  }
+                  referenced_symbols.push(rec.namespace_ref.into());
                   declared_symbols.push(TaggedSymbolRef::Normal(
                     ecma_module.import_records[rec_idx].namespace_ref,
                   ));

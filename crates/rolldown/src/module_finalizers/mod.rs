@@ -322,6 +322,11 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
         OutputFormat::Esm => {
           let stmts = export_all_externals_rec_ids.iter().copied().flat_map(|idx| {
             let rec = &self.ctx.module.import_records[idx];
+            if rec.meta.contains(ImportRecordMeta::EntryLevelExternal)
+              && !self.ctx.linking_info.module_namespace_real_included
+            {
+              return vec![];
+            }
             // importee_exports
             let importee_namespace_name = self.canonical_name_for(rec.namespace_ref);
             let m = self.ctx.modules.get(rec.resolved_module);

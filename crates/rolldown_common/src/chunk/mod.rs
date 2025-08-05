@@ -71,6 +71,8 @@ pub struct Chunk {
   pub chunk_reason_type: Box<ChunkReasonType>,
   pub preserve_entry_signature: Option<PreserveEntrySignatures>,
   pub depended_runtime_helper: RuntimeHelper,
+  /// related to [`crate::types::import_record::ImportRecordMeta::EntryLevelExternal`]
+  pub entry_level_external_module_idx: Vec<ModuleIdx>,
 }
 
 impl Chunk {

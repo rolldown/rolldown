@@ -2599,6 +2599,7 @@ dependencies = [
  "anyhow",
  "append-only-vec",
  "arcstr",
+ "bitflags 2.9.1",
  "commondir",
  "css-module-lexer",
  "dunce",

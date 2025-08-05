@@ -1,0 +1,39 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## main.js
+
+```js
+export * from "ext-index"
+
+export * from "ext-file"
+
+export * from "ext-folder"
+
+// HIDDEN [rolldown:runtime]
+//#region file.js
+var file_exports = {};
+__export(file_exports, { file: () => file });
+const file = {};
+
+//#endregion
+//#region folder.js
+var folder_exports = {};
+__export(folder_exports, { folder: () => folder });
+const folder = {};
+
+//#endregion
+//#region main.js
+var main_exports = {};
+__export(main_exports, {
+	file: () => file,
+	folder: () => folder,
+	index: () => index
+});
+const index = {};
+
+//#endregion
+export { file, folder, index };
+```

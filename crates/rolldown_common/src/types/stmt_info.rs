@@ -108,6 +108,7 @@ bitflags! {
         const ClassExpr = 1 << 3;
         /// If this statement needs to reference `__require` runtime
         const HasDummyRecord = 1 << 4;
+        const ReExportDynamicExports = 1 << 5;
         const KeepNamesType = StmtInfoMeta::FnDecl.bits() | StmtInfoMeta::ClassDecl.bits() | StmtInfoMeta::FnExpr.bits() | StmtInfoMeta::ClassExpr.bits();
     }
 }

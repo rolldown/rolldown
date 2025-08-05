@@ -46,7 +46,6 @@ impl LinkStage<'_> {
           unsafe { &mut *(addr_of!(importer.depended_runtime_helper).cast_mut()) };
         let importer_side_effect = unsafe { &mut *(addr_of!(importer.side_effects).cast_mut()) };
         let mut symbols_to_be_declared = vec![];
-
         stmt_infos.infos.iter_mut_enumerated().for_each(|(stmt_info_idx, stmt_info)| {
           if stmt_info.meta.contains(StmtInfoMeta::HasDummyRecord) {
             depended_runtime_helper_map[RuntimeHelper::Require.bits().trailing_zeros() as usize]
@@ -125,6 +124,7 @@ impl LinkStage<'_> {
                           if meta.has_dynamic_exports {
                             *importer_side_effect = DeterminedSideEffects::Analyzed(true);
                             stmt_info.side_effect = true.into();
+                            stmt_info.meta.insert(StmtInfoMeta::ReExportDynamicExports);
                             depended_runtime_helper_map
                               [RuntimeHelper::ReExport.bits().trailing_zeros() as usize]
                               .push(stmt_info_idx);
@@ -191,6 +191,7 @@ impl LinkStage<'_> {
                           depended_runtime_helper_map
                             [RuntimeHelper::ReExport.bits().trailing_zeros() as usize]
                             .push(stmt_info_idx);
+                          stmt_info.meta.insert(StmtInfoMeta::ReExportDynamicExports);
                           stmt_info.referenced_symbols.push(importer.namespace_object_ref.into());
                           stmt_info.referenced_symbols.push(importee.namespace_object_ref.into());
                         }

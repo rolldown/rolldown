@@ -646,6 +646,47 @@ impl<'ast> HmrAstFinalizer<'_, 'ast> {
       ));
     *it = ret_expr;
   }
+
+  // Rewrite `require(...)` to `(require_xxx(), __rolldown_runtime__.loadExports())` or keep it as is for external module importee.
+  fn try_rewrite_require(&self, it: &mut ast::Expression<'ast>) {
+    let ast::Expression::CallExpression(call_expr) = it else {
+      return;
+    };
+
+    if !call_expr.callee.as_identifier().is_some_and(|id| id.name == "require") {
+      return;
+    }
+
+    let Some(rec_idx) = self.module.imports.get(&call_expr.span) else {
+      return;
+    };
+
+    let importee_idx = &self.module.import_records[*rec_idx].resolved_module;
+
+    let Module::Normal(importee) = &self.modules[*importee_idx] else {
+      // Not a normal module, skip
+      return;
+    };
+
+    let is_importee_cjs = importee.exports_kind == rolldown_common::ExportsKind::CommonJs;
+
+    let init_fn_name = &self.affected_module_idx_to_init_fn_name[importee_idx];
+
+    if is_importee_cjs {
+      *it = quote_expr(
+        self.alloc,
+        format!("({}(), __rolldown_runtime__.loadExports('{}'))", init_fn_name, importee.stable_id)
+          .as_str(),
+      );
+    } else {
+      // hyf0 TODO: handle esm importee
+      *it = quote_expr(
+        self.alloc,
+        format!("({}(), __rolldown_runtime__.loadExports('{}'))", init_fn_name, importee.stable_id)
+          .as_str(),
+      );
+    }
+  }
 }
 
 impl<'ast> VisitMut<'ast> for HmrAstFinalizer<'_, 'ast> {
@@ -710,7 +751,7 @@ impl<'ast> VisitMut<'ast> for HmrAstFinalizer<'_, 'ast> {
               self
                 .snippet
                 .builder
-                .alloc_binding_identifier(SPAN, self.snippet.builder.atom("module")),
+                .alloc_binding_identifier(SPAN, self.snippet.builder.atom("exports")),
             ),
             NONE,
             false,
@@ -729,7 +770,7 @@ impl<'ast> VisitMut<'ast> for HmrAstFinalizer<'_, 'ast> {
               self
                 .snippet
                 .builder
-                .alloc_binding_identifier(SPAN, self.snippet.builder.atom("exports")),
+                .alloc_binding_identifier(SPAN, self.snippet.builder.atom("module")),
             ),
             NONE,
             false,
@@ -762,7 +803,7 @@ impl<'ast> VisitMut<'ast> for HmrAstFinalizer<'_, 'ast> {
     user_code_wrapper.pife = self.use_pife_for_module_wrappers;
 
     let initializer_call = if self.module.exports_kind.is_commonjs() {
-      // __rolldown__runtime.createCjsInitializer((function (module, exports) { [user code] }))
+      // __rolldown__runtime.createCjsInitializer((function (exports, module) { [user code] }))
       self.snippet.builder.alloc_call_expression(
         SPAN,
         self.snippet.id_ref_expr("__rolldown_runtime__.createCjsInitializer", SPAN),
@@ -829,6 +870,7 @@ impl<'ast> VisitMut<'ast> for HmrAstFinalizer<'_, 'ast> {
     }
 
     self.try_rewrite_dynamic_import(it);
+    self.try_rewrite_require(it);
 
     self.rewrite_import_meta_hot(it);
 

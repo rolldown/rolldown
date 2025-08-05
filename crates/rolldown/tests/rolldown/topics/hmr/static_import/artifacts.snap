@@ -49,7 +49,7 @@ __rolldown_runtime__.registerModule("main.js", { exports: main_exports });
 
 ```js
 //#region exist-dep-cjs.js
-var require_exist_dep_cjs_0 = __rolldown_runtime__.createCjsInitializer((function(module, exports) {
+var require_exist_dep_cjs_0 = __rolldown_runtime__.createCjsInitializer((function(exports, module) {
 	try {
 		__rolldown_runtime__.registerModule("exist-dep-cjs.js", module);
 		const hot_exist_dep_cjs = __rolldown_runtime__.createModuleHotContext("exist-dep-cjs.js");
@@ -95,7 +95,7 @@ var init_hmr_2 = __rolldown_runtime__.createEsmInitializer((function() {
 
 //#endregion
 //#region new-dep-cjs.js
-var require_new_dep_cjs_3 = __rolldown_runtime__.createCjsInitializer((function(module, exports) {
+var require_new_dep_cjs_3 = __rolldown_runtime__.createCjsInitializer((function(exports, module) {
 	try {
 		__rolldown_runtime__.registerModule("new-dep-cjs.js", module);
 		const hot_new_dep_cjs = __rolldown_runtime__.createModuleHotContext("new-dep-cjs.js");

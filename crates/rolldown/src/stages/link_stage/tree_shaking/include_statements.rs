@@ -512,6 +512,7 @@ fn include_module(ctx: &mut Context, module: &NormalModule) {
     && matches!(module.exports_kind, ExportsKind::Esm)
   {
     include_statement(ctx, module, StmtInfos::NAMESPACE_STMT_IDX);
+    ctx.module_namespace_included_reason[module.idx].insert(ModuleNamespaceIncludedReason::Unknown);
   }
 }
 
@@ -544,16 +545,6 @@ fn include_symbol(ctx: &mut Context, symbol_ref: SymbolRef, include_kind: Symbol
     }
   }
 
-  if canonical_ref.symbol.is_module_namespace() {
-    if include_kind.contains(SymbolIncludeReason::Normal) {
-      ctx.module_namespace_included_reason[canonical_ref.owner]
-        .insert(ModuleNamespaceIncludedReason::Unknown);
-    } else if include_kind.contains(SymbolIncludeReason::ReExportDynamicExports) {
-      ctx.module_namespace_included_reason[canonical_ref.owner]
-        .insert(ModuleNamespaceIncludedReason::ReExportExternalModule);
-    }
-  }
-
   let canonical_ref_symbol = ctx.symbols.get(canonical_ref);
   if let Some(namespace_alias) = &canonical_ref_symbol.namespace_alias {
     canonical_ref = namespace_alias.namespace_ref;
@@ -579,6 +570,16 @@ fn include_symbol(ctx: &mut Context, symbol_ref: SymbolRef, include_kind: Symbol
           }
         });
       }
+    }
+  }
+
+  if canonical_ref.symbol.is_module_namespace() {
+    if include_kind.intersects(SymbolIncludeReason::Normal | SymbolIncludeReason::EntryExport) {
+      ctx.module_namespace_included_reason[canonical_ref.owner]
+        .insert(ModuleNamespaceIncludedReason::Unknown);
+    } else if include_kind.contains(SymbolIncludeReason::ReExportDynamicExports) {
+      ctx.module_namespace_included_reason[canonical_ref.owner]
+        .insert(ModuleNamespaceIncludedReason::ReExportExternalModule);
     }
   }
 

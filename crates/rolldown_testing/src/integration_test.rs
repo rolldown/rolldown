@@ -624,6 +624,7 @@ impl IntegrationTest {
     let globals_injection = Self::generate_globals_injection_for_execute_output(
       config_name,
       patch_chunks,
+      &dist_folder,
       bundler.options(),
     );
 
@@ -660,6 +661,8 @@ impl IntegrationTest {
         node_command.arg("--eval");
         node_command.arg("\"\"");
       });
+      // workaround for https://github.com/nodejs/node/issues/59374
+      node_command.arg("--input-type=module");
     }
 
     let output = node_command.output().unwrap();
@@ -681,6 +684,7 @@ impl IntegrationTest {
   fn generate_globals_injection_for_execute_output(
     config_name: Option<&str>,
     patch_chunks: &[String],
+    dist_folder: &Path,
     _options: &NormalizedBundlerOptions,
   ) -> String {
     let mut stmts = vec![];
@@ -696,6 +700,27 @@ impl IntegrationTest {
         .collect::<Vec<_>>()
         .join(",");
       stmts.push(format!("globalThis.__testPatches = [{patch_chunks_array}];"));
+      stmts.push(format!(
+        "\
+import url from 'node:url';
+import path from 'node:path';
+
+const dir = '{}';
+setTimeout(async () => {{
+  for (const patchChunk of globalThis.__testPatches) {{
+    const file = path.join(dir, patchChunk);
+    try {{
+      await import(url.pathToFileURL(file));
+    }} catch (error) {{
+      console.error('Error executing a patch:', error);
+      process.exitCode = 1;
+      break;
+    }}
+  }}
+}}, 10);
+      ",
+        dist_folder.to_str().unwrap().replace('\\', "\\\\") // escape backslashes in Windows paths
+      ));
     }
 
     stmts.join("\n")

@@ -4060,7 +4060,7 @@ expression: output
 
 # tests/rolldown/function/experimental/strict_execution_order/issue_4636
 
-- main-!~{000}~.js => main-BCExEOOM.js
+- main-!~{000}~.js => main-D88Rcfcb.js
 
 # tests/rolldown/function/experimental/strict_execution_order/issue_4684
 
@@ -4731,7 +4731,7 @@ expression: output
 
 # tests/rolldown/issues/4129
 
-- main-!~{000}~.js => main-DyaaPSCy.js
+- main-!~{000}~.js => main-D6A9QqSZ.js
 
 # tests/rolldown/issues/4196
 
@@ -5501,34 +5501,34 @@ expression: output
 
 # tests/rolldown/topics/hmr/deconflict_import_bindings
 
-- main-!~{000}~.js => main-BbSj2Nfk.js
+- main-!~{000}~.js => main-C7IIDqPr.js
 
 # tests/rolldown/topics/hmr/dynamic_import
 
-- main-!~{000}~.js => main-IRg-BogZ.js
+- main-!~{000}~.js => main-DqkUwrMb.js
 - chunk-!~{001}~.js => chunk-EJRfyxWL.js
 - exist-dep-cjs-!~{003}~.js => exist-dep-cjs-CMMhV_IP.js
 - exist-dep-esm-!~{005}~.js => exist-dep-esm-DS9du_-x.js
 
 # tests/rolldown/topics/hmr/export_star
 
-- main-!~{000}~.js => main-CNc4zq-d.js
+- main-!~{000}~.js => main-C2TyzbBa.js
 
 # tests/rolldown/topics/hmr/generate_patch_error
 
-- main-!~{000}~.js => main-a2sWK8wq.js
+- main-!~{000}~.js => main-MyaWRVGH.js
 
 # tests/rolldown/topics/hmr/issue_5149
 
-- main-!~{000}~.js => main-ChDG295G.js
+- main-!~{000}~.js => main-vgZ7mVjd.js
 
 # tests/rolldown/topics/hmr/issue_5150
 
-- main-!~{000}~.js => main-DRU4Jo0i.js
+- main-!~{000}~.js => main-C8tAm-Je.js
 
 # tests/rolldown/topics/hmr/issue_5159
 
-- main-!~{000}~.js => main-BHAurs1l.js
+- main-!~{000}~.js => main-AY8NISyq.js
 - bar-!~{005}~.js => bar-BisjqNeR.js
 - chunk-!~{001}~.js => chunk--KgZXUQQ.js
 - foo-!~{007}~.js => foo-OmnQYi5B.js
@@ -5536,25 +5536,25 @@ expression: output
 
 # tests/rolldown/topics/hmr/mutiply_entires
 
-- entry-!~{000}~.js => entry-DuzgHSBP.js
-- index-!~{001}~.js => index-gHbaN3vx.js
-- rolldown_hmr-!~{002}~.js => rolldown_hmr-HfwL1-NX.js
+- entry-!~{000}~.js => entry-CVBhusOB.js
+- index-!~{001}~.js => index-JPoso3KY.js
+- rolldown_hmr-!~{002}~.js => rolldown_hmr-DyAhTEp4.js
 
 # tests/rolldown/topics/hmr/non_used_export
 
-- main-!~{000}~.js => main-C9O2twdF.js
+- main-!~{000}~.js => main-BwITwmtZ.js
 
 # tests/rolldown/topics/hmr/register_exports
 
-- main-!~{000}~.js => main-NuVSIYM-.js
+- main-!~{000}~.js => main-CIxrcTt5.js
 
 # tests/rolldown/topics/hmr/runtime_correctness
 
-- main-!~{000}~.js => main-sE6MI7vm.js
+- main-!~{000}~.js => main-CesFd2zf.js
 
 # tests/rolldown/topics/hmr/static_import
 
-- main-!~{000}~.js => main-BBufK_wo.js
+- main-!~{000}~.js => main-Cudi2I_4.js
 
 # tests/rolldown/topics/import_meta_url_dirname_filename_polyfill/node_cjs
 

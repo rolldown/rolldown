@@ -9,7 +9,7 @@ use itertools::Itertools;
 use oxc_index::IndexVec;
 use rolldown_common::{
   Chunk, ChunkIdx, ChunkKind, ChunkMeta, ExportsKind, ImportRecordIdx, ImportRecordMeta,
-  IndexModules, Module, ModuleIdx, PreserveEntrySignatures,
+  IndexModules, Module, ModuleIdx, ModuleNamespaceIncludedReason, PreserveEntrySignatures,
 };
 use rolldown_error::BuildResult;
 use rolldown_utils::{
@@ -341,7 +341,10 @@ impl GenerateStage<'_> {
           entry_level_external_modules.insert(rec.resolved_module);
         }
 
-        if !self.link_output.metas[module_idx].module_namespace_real_included {
+        if !self.link_output.metas[module_idx]
+          .module_namespace_included_reason
+          .contains(ModuleNamespaceIncludedReason::Unknown)
+        {
           invalidated_modules.insert(module.idx);
         }
       }

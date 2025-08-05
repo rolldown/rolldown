@@ -93,6 +93,7 @@ pub use crate::{
     },
     module_idx::ModuleIdx,
     node_builtin_modules::is_existing_node_builtin_modules,
+    symbol_id_ext::SymbolIdExt,
   },
   file_emitter::{EmittedAsset, EmittedChunk, EmittedChunkInfo, FileEmitter, SharedFileEmitter},
   hmr::{
@@ -140,6 +141,7 @@ pub use crate::{
   types::module_id::ModuleId,
   types::module_idx::LegacyModuleIdx,
   types::module_info::ModuleInfo,
+  types::module_namespace_included_reason::ModuleNamespaceIncludedReason,
   types::module_render_output::ModuleRenderOutput,
   types::module_table::{IndexExternalModules, IndexModules, ModuleTable},
   types::module_view::ModuleView,

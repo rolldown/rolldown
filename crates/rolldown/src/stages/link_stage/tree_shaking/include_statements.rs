@@ -1,14 +1,14 @@
 use std::cmp::Reverse;
 
 use itertools::Itertools;
-use oxc::semantic::SymbolId;
 use oxc_index::IndexVec;
 use petgraph::prelude::DiGraphMap;
 use rolldown_common::{
   ConstExportMeta, EcmaModuleAstUsage, EcmaViewMeta, EntryPoint, EntryPointKind, ExportsKind,
-  ImportKind, ImportRecordIdx, ImportRecordMeta, IndexModules, Module, ModuleIdx, ModuleType,
-  NormalModule, NormalizedBundlerOptions, RUNTIME_HELPER_NAMES, RuntimeHelper, SideEffectDetail,
-  StmtInfoIdx, StmtInfoMeta, StmtInfos, SymbolOrMemberExprRef, SymbolRef, SymbolRefDb,
+  ImportKind, ImportRecordIdx, ImportRecordMeta, IndexModules, Module, ModuleIdx,
+  ModuleNamespaceIncludedReason, ModuleType, NormalModule, NormalizedBundlerOptions,
+  RUNTIME_HELPER_NAMES, RuntimeHelper, SideEffectDetail, StmtInfoIdx, StmtInfoMeta, StmtInfos,
+  SymbolIdExt, SymbolOrMemberExprRef, SymbolRef, SymbolRefDb,
   dynamic_import_usage::DynamicImportExportsUsage, side_effects::DeterminedSideEffects,
 };
 #[cfg(not(target_family = "wasm"))]
@@ -23,13 +23,17 @@ use crate::{stages::link_stage::LinkStage, types::linking_metadata::LinkingMetad
 
 bitflags::bitflags! {
     #[derive(Debug, Clone, Copy)]
-    struct IncludeKind: u8 {
+    struct SymbolIncludeReason: u8 {
         const Normal = 1;
         const EntryExport = 1 << 1;
-        const ReExportDynamicImports = 1 << 2;
+        /// See `has_dynamic_exports` in [`crate::types::linking_metadata::LinkingMetadata`]
+        /// 1. https://github.com/rolldown/rolldown/blob/8bc7dca5a09047b6b494e3fa7b6b7564aa465372/crates/rolldown/src/stages/link_stage/reference_needed_symbols.rs?plain=1#L122-L134
+        /// 2. https://github.com/rolldown/rolldown/blob/8bc7dca5a09047b6b494e3fa7b6b7564aa465372/crates/rolldown/src/stages/link_stage/reference_needed_symbols.rs?plain=1#L188-L197
+        const ReExportDynamicExports = 1 << 2;
     }
 }
 
+/// [SymbolIncludeReason]
 struct Context<'a> {
   modules: &'a IndexModules,
   symbols: &'a SymbolRefDb,
@@ -46,7 +50,7 @@ struct Context<'a> {
   /// see [rolldown_common::ecmascript::ecma_view::EcmaViewMeta]
   bailout_cjs_tree_shaking_modules: FxHashSet<ModuleIdx>,
   may_partial_namespace: bool,
-  module_namespace_include_reason: &'a mut IndexVec<ModuleIdx, bool>,
+  module_namespace_included_reason: &'a mut IndexVec<ModuleIdx, ModuleNamespaceIncludedReason>,
 }
 
 impl LinkStage<'_> {
@@ -66,8 +70,8 @@ impl LinkStage<'_> {
     let mut used_symbol_refs = FxHashSet::default();
     let mut is_module_included_vec: IndexVec<ModuleIdx, bool> =
       oxc_index::index_vec![false; self.module_table.modules.len()];
-    let mut module_namespace_include_reason: IndexVec<ModuleIdx, bool> =
-      oxc_index::index_vec![false; self.module_table.len()];
+    let mut module_namespace_included_reason: IndexVec<ModuleIdx, ModuleNamespaceIncludedReason> =
+      oxc_index::index_vec![ModuleNamespaceIncludedReason::empty(); self.module_table.len()];
     let context = &mut Context {
       modules: &self.module_table.modules,
       symbols: &self.symbols,
@@ -75,7 +79,6 @@ impl LinkStage<'_> {
       is_module_included_vec: &mut is_module_included_vec,
       tree_shaking: self.options.treeshake.is_some(),
       runtime_id: self.runtime.id(),
-      // used_exports_info_vec: &mut used_exports_info_vec,
       metas: &self.metas,
       used_symbol_refs: &mut used_symbol_refs,
       constant_symbol_map: &self.constant_symbol_map,
@@ -83,7 +86,7 @@ impl LinkStage<'_> {
       normal_symbol_exports_chain_map: &self.normal_symbol_exports_chain_map,
       bailout_cjs_tree_shaking_modules: FxHashSet::default(),
       may_partial_namespace: false,
-      module_namespace_include_reason: &mut module_namespace_include_reason,
+      module_namespace_included_reason: &mut module_namespace_included_reason,
     };
 
     let (user_defined_entries, mut dynamic_entries): (Vec<_>, Vec<_>) =
@@ -106,7 +109,7 @@ impl LinkStage<'_> {
                 include_statement(context, module, stmt_info_id);
               },
             );
-            include_symbol(context, *symbol_ref, IncludeKind::EntryExport);
+            include_symbol(context, *symbol_ref, SymbolIncludeReason::EntryExport);
           }
         },
       );
@@ -139,7 +142,7 @@ impl LinkStage<'_> {
                 include_statement(context, module, stmt_info_id);
               },
             );
-            include_symbol(context, *symbol_ref, IncludeKind::EntryExport);
+            include_symbol(context, *symbol_ref, SymbolIncludeReason::EntryExport);
           }
         },
       );
@@ -157,7 +160,7 @@ impl LinkStage<'_> {
         .iter()
         .filter_map(|(_name, local)| local.came_from_cjs.then_some(local))
         .for_each(|local| {
-          include_symbol(context, local.symbol_ref, IncludeKind::Normal);
+          include_symbol(context, local.symbol_ref, SymbolIncludeReason::Normal);
         });
     }
 
@@ -196,13 +199,13 @@ impl LinkStage<'_> {
             .set(RuntimeHelper::from_bits(1 << index as u32).unwrap(), any_included);
         }
         meta.depended_runtime_helper = normalized_runtime_helper;
-        meta.module_namespace_real_included = module_namespace_include_reason[module.idx];
+        meta.module_namespace_included_reason = module_namespace_included_reason[module.idx];
       });
 
     self.include_runtime_symbol(
       &mut is_included_vec,
       &mut is_module_included_vec,
-      &mut module_namespace_include_reason,
+      &mut module_namespace_included_reason,
       &mut used_symbol_refs,
     );
     self.used_symbol_refs = used_symbol_refs;
@@ -375,7 +378,7 @@ impl LinkStage<'_> {
     &mut self,
     is_stmt_included_vec: &mut IndexVec<ModuleIdx, IndexVec<StmtInfoIdx, bool>>,
     is_module_included_vec: &mut IndexVec<ModuleIdx, bool>,
-    module_namespace_include_reason: &mut IndexVec<ModuleIdx, bool>,
+    module_namespace_included_reason: &mut IndexVec<ModuleIdx, ModuleNamespaceIncludedReason>,
     used_symbol_refs: &mut FxHashSet<SymbolRef>,
   ) {
     // Including all depended runtime symbol
@@ -405,13 +408,13 @@ impl LinkStage<'_> {
       normal_symbol_exports_chain_map: &self.normal_symbol_exports_chain_map,
       bailout_cjs_tree_shaking_modules: FxHashSet::default(),
       may_partial_namespace: false,
-      module_namespace_include_reason,
+      module_namespace_included_reason,
     };
 
     for helper in depended_runtime_helper {
       let index = helper.bits().trailing_zeros() as usize;
       let name = RUNTIME_HELPER_NAMES[index];
-      include_symbol(context, self.runtime.resolve_symbol(name), IncludeKind::Normal);
+      include_symbol(context, self.runtime.resolve_symbol(name), SymbolIncludeReason::Normal);
     }
 
     let module =
@@ -495,12 +498,12 @@ fn include_module(ctx: &mut Context, module: &NormalModule) {
   );
   if module.meta.has_eval() && matches!(module.module_type, ModuleType::Js | ModuleType::Jsx) {
     module.named_imports.keys().for_each(|symbol| {
-      include_symbol(ctx, *symbol, IncludeKind::Normal);
+      include_symbol(ctx, *symbol, SymbolIncludeReason::Normal);
     });
   }
 
   ctx.metas[module.idx].included_commonjs_export_symbol.iter().for_each(|symbol_ref| {
-    include_symbol(ctx, *symbol_ref, IncludeKind::Normal);
+    include_symbol(ctx, *symbol_ref, SymbolIncludeReason::Normal);
   });
 
   // With enabling HMR, rolldown will register included esm module's namespace object to the runtime.
@@ -512,11 +515,11 @@ fn include_module(ctx: &mut Context, module: &NormalModule) {
   }
 }
 
-fn include_symbol(ctx: &mut Context, symbol_ref: SymbolRef, include_kind: IncludeKind) {
+fn include_symbol(ctx: &mut Context, symbol_ref: SymbolRef, include_kind: SymbolIncludeReason) {
   let mut canonical_ref = ctx.symbols.canonical_ref_for(symbol_ref);
 
   if let Some(v) = ctx.constant_symbol_map.get(&canonical_ref)
-    && !include_kind.contains(IncludeKind::EntryExport)
+    && !include_kind.contains(SymbolIncludeReason::EntryExport)
     && !v.commonjs_export
   {
     // If the symbol is a constant value and it is not a commonjs module export , we don't need to include it since it would be always inline
@@ -541,10 +544,14 @@ fn include_symbol(ctx: &mut Context, symbol_ref: SymbolRef, include_kind: Includ
     }
   }
 
-  if canonical_ref.symbol == SymbolId::new(u32::MAX - 2)
-    && include_kind.contains(IncludeKind::Normal)
-  {
-    ctx.module_namespace_include_reason[canonical_ref.owner] = true;
+  if canonical_ref.symbol.is_module_namespace() {
+    if include_kind.contains(SymbolIncludeReason::Normal) {
+      ctx.module_namespace_included_reason[canonical_ref.owner]
+        .insert(ModuleNamespaceIncludedReason::Unknown);
+    } else if include_kind.contains(SymbolIncludeReason::ReExportDynamicExports) {
+      ctx.module_namespace_included_reason[canonical_ref.owner]
+        .insert(ModuleNamespaceIncludedReason::ReExportExternalModule);
+    }
   }
 
   let canonical_ref_symbol = ctx.symbols.get(canonical_ref);
@@ -568,7 +575,7 @@ fn include_symbol(ctx: &mut Context, symbol_ref: SymbolRef, include_kind: Includ
             return;
           };
           if namespace_alias.property_name.as_str() != "default" {
-            include_symbol(ctx, export_symbol.symbol_ref, IncludeKind::Normal);
+            include_symbol(ctx, export_symbol.symbol_ref, SymbolIncludeReason::Normal);
           }
         });
       }
@@ -620,9 +627,9 @@ fn include_statement(ctx: &mut Context, module: &NormalModule, stmt_info_id: Stm
     }
   });
   let include_kind = if stmt_info.meta.contains(StmtInfoMeta::ReExportDynamicExports) {
-    IncludeKind::ReExportDynamicImports
+    SymbolIncludeReason::ReExportDynamicExports
   } else {
-    IncludeKind::Normal
+    SymbolIncludeReason::Normal
   };
   stmt_info.referenced_symbols.iter().for_each(|reference_ref| {
     if let Some(member_expr_resolution) = match reference_ref {

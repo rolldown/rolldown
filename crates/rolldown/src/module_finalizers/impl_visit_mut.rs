@@ -9,7 +9,9 @@ use oxc::{
   semantic::ScopeFlags,
   span::{SPAN, Span},
 };
-use rolldown_common::{ExportsKind, SymbolRef, ThisExprReplaceKind, WrapKind};
+use rolldown_common::{
+  ExportsKind, ModuleNamespaceIncludedReason, SymbolRef, ThisExprReplaceKind, WrapKind,
+};
 use rolldown_ecmascript_utils::{ExpressionExt, JsxExt};
 
 use crate::hmr::utils::HmrAstBuilder;
@@ -39,9 +41,27 @@ impl<'ast> VisitMut<'ast> for ScopeHoistingFinalizer<'_, 'ast> {
     program.hashbang.take();
     program.directives.clear();
     // init namespace_alias_symbol_id
-
     let is_namespace_referenced = matches!(self.ctx.module.exports_kind, ExportsKind::Esm)
-      && self.ctx.module.stmt_infos.get_namespace_stmt_info().is_included;
+      && if self
+        .ctx
+        .linking_info
+        .module_namespace_included_reason
+        .contains(ModuleNamespaceIncludedReason::Unknown)
+      {
+        true
+      } else if self
+        .ctx
+        .linking_info
+        .module_namespace_included_reason
+        .contains(ModuleNamespaceIncludedReason::ReExportExternalModule)
+      {
+        // If the module namespace is only used to reexport external module,
+        // then we need to ensure if it is still has dynamic exports after flatten entry level
+        // external module, see `find_entry_level_external_module`
+        self.ctx.linking_info.has_dynamic_exports
+      } else {
+        false
+      };
 
     let last_import_stmt_idx = self.remove_unused_top_level_stmt(program);
 

@@ -5554,7 +5554,7 @@ expression: output
 
 # tests/rolldown/topics/hmr/runtime_correctness
 
-- main-!~{000}~.js => main-CXMG7Ve0.js
+- main-!~{000}~.js => main-DypcfgUZ.js
 
 # tests/rolldown/topics/hmr/static_import
 

@@ -1,4 +1,7 @@
-use std::path::{Path, PathBuf};
+use std::{
+  path::{Path, PathBuf},
+  sync::OnceLock,
+};
 
 use crate::{
   integration_test::{IntegrationTest, NamedBundlerOptions},
@@ -10,6 +13,17 @@ use rolldown_testing_config::{ConfigVariant, TestConfig, TestMeta};
 pub struct Fixture {
   config_path: PathBuf,
   fixture_path: PathBuf,
+}
+
+// Using std once lock to store env variable
+static NEEDS_EXTENDED_TESTS: OnceLock<bool> = OnceLock::new();
+/// A function to get the API key.
+///
+/// This is the idiomatic way to wrap the OnceLock, providing a clean,
+/// easy-to-use interface.
+fn needs_extended_tests() -> bool {
+  *NEEDS_EXTENDED_TESTS
+    .get_or_init(|| std::env::var("NEEDS_EXTENDED").ok().unwrap_or("true".to_owned()) == "true")
 }
 
 impl Fixture {
@@ -37,8 +51,9 @@ impl Fixture {
     }
 
     options.canonicalize_option_path();
-
-    Self::apply_extended_tests(&meta, &options, &mut config_variants);
+    if needs_extended_tests() {
+      Self::apply_extended_tests(&meta, &options, &mut config_variants);
+    }
 
     let configs = std::iter::once(NamedBundlerOptions {
       options: options.clone(),

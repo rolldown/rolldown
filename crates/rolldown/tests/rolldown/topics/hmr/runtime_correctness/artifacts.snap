@@ -30,6 +30,36 @@ assert.strictEqual(requiredCjsLib(), "exports");
 assert.strictEqual(requiredCjsLib.foo, "foo");
 
 //#endregion
+//#region cases/manual_reexport/lib.js
+var lib_exports = {};
+__export(lib_exports, {
+	Globals: () => Globals,
+	value: () => value
+});
+const lib_hot = __rolldown_runtime__.createModuleHotContext("cases/manual_reexport/lib.js");
+__rolldown_runtime__.registerModule("cases/manual_reexport/lib.js", { exports: lib_exports });
+const Globals = Object;
+const value = "lib";
+
+//#endregion
+//#region cases/manual_reexport/barrel.js
+var barrel_exports = {};
+__export(barrel_exports, {
+	Globals: () => Globals,
+	value: () => value
+});
+const barrel_hot = __rolldown_runtime__.createModuleHotContext("cases/manual_reexport/barrel.js");
+__rolldown_runtime__.registerModule("cases/manual_reexport/barrel.js", { exports: barrel_exports });
+
+//#endregion
+//#region cases/manual_reexport/index.js
+var manual_reexport_exports = {};
+const manual_reexport_hot = __rolldown_runtime__.createModuleHotContext("cases/manual_reexport/index.js");
+__rolldown_runtime__.registerModule("cases/manual_reexport/index.js", { exports: manual_reexport_exports });
+assert.strictEqual(value, "lib");
+assert.strictEqual(Globals, Object);
+
+//#endregion
 //#region main.js
 var main_exports = {};
 const main_hot = __rolldown_runtime__.createModuleHotContext("main.js");
@@ -45,8 +75,56 @@ if (main_hot) {
 ## Code
 
 ```js
+//#region cases/manual_reexport/barrel.js
+var init_barrel_0 = __rolldown_runtime__.createEsmInitializer((function() {
+	try {
+		var __rolldown_exports__ = {};
+		__rolldown_runtime__.__export(__rolldown_exports__, {
+			Globals: () => import_lib_0.Globals,
+			value: () => import_lib_0.value
+		});
+		__rolldown_runtime__.registerModule("cases/manual_reexport/barrel.js", { exports: __rolldown_exports__ });
+		init_lib_2();
+		const hot_barrel = __rolldown_runtime__.createModuleHotContext("cases/manual_reexport/barrel.js");
+		var import_lib_0 = __rolldown_runtime__.loadExports("cases/manual_reexport/lib.js");
+	} finally {}
+}));
+
+//#endregion
+//#region cases/manual_reexport/index.js
+import * as import_node_assert_1 from "node:assert";
+var init_manual_reexport_1 = __rolldown_runtime__.createEsmInitializer((function() {
+	try {
+		var __rolldown_exports__ = {};
+		__rolldown_runtime__.__export(__rolldown_exports__, {});
+		__rolldown_runtime__.registerModule("cases/manual_reexport/index.js", { exports: __rolldown_exports__ });
+		init_barrel_0();
+		const hot_manual_reexport = __rolldown_runtime__.createModuleHotContext("cases/manual_reexport/index.js");
+		var import_barrel_1 = __rolldown_runtime__.loadExports("cases/manual_reexport/barrel.js");
+		import_node_assert_1.default.strictEqual(import_barrel_1.value, "lib");
+		import_node_assert_1.default.strictEqual(import_barrel_1.Globals, Object);
+	} finally {}
+}));
+
+//#endregion
+//#region cases/manual_reexport/lib.js
+var init_lib_2 = __rolldown_runtime__.createEsmInitializer((function() {
+	try {
+		var __rolldown_exports__ = {};
+		__rolldown_runtime__.__export(__rolldown_exports__, {
+			Globals: () => Globals,
+			value: () => value
+		});
+		__rolldown_runtime__.registerModule("cases/manual_reexport/lib.js", { exports: __rolldown_exports__ });
+		const hot_lib = __rolldown_runtime__.createModuleHotContext("cases/manual_reexport/lib.js");
+		const Globals = Object;
+		const value = "lib";
+	} finally {}
+}));
+
+//#endregion
 //#region cases/require/cjs-lib.js
-var require_cjs_lib_0 = __rolldown_runtime__.createCjsInitializer((function(exports, module) {
+var require_cjs_lib_3 = __rolldown_runtime__.createCjsInitializer((function(exports, module) {
 	try {
 		__rolldown_runtime__.registerModule("cases/require/cjs-lib.js", module);
 		const hot_cjs_lib = __rolldown_runtime__.createModuleHotContext("cases/require/cjs-lib.js");
@@ -59,29 +137,31 @@ var require_cjs_lib_0 = __rolldown_runtime__.createCjsInitializer((function(expo
 
 //#endregion
 //#region cases/require/index.js
-import * as import_node_assert_0 from "node:assert";
-var init_require_1 = __rolldown_runtime__.createEsmInitializer((function() {
+import * as import_node_assert_4 from "node:assert";
+var init_require_4 = __rolldown_runtime__.createEsmInitializer((function() {
 	try {
 		var __rolldown_exports__ = {};
 		__rolldown_runtime__.__export(__rolldown_exports__, {});
 		__rolldown_runtime__.registerModule("cases/require/index.js", { exports: __rolldown_exports__ });
 		const hot_require = __rolldown_runtime__.createModuleHotContext("cases/require/index.js");
-		const requiredCjsLib = (require_cjs_lib_0(), __rolldown_runtime__.loadExports("cases/require/cjs-lib.js"));
-		import_node_assert_0.default.strictEqual(requiredCjsLib(), "exports");
-		import_node_assert_0.default.strictEqual(requiredCjsLib.foo, "foo");
+		const requiredCjsLib = (require_cjs_lib_3(), __rolldown_runtime__.loadExports("cases/require/cjs-lib.js"));
+		import_node_assert_4.default.strictEqual(requiredCjsLib(), "exports");
+		import_node_assert_4.default.strictEqual(requiredCjsLib.foo, "foo");
 	} finally {}
 }));
 
 //#endregion
 //#region main.js
-var init_main_2 = __rolldown_runtime__.createEsmInitializer((function() {
+var init_main_5 = __rolldown_runtime__.createEsmInitializer((function() {
 	try {
 		var __rolldown_exports__ = {};
 		__rolldown_runtime__.__export(__rolldown_exports__, {});
 		__rolldown_runtime__.registerModule("main.js", { exports: __rolldown_exports__ });
-		init_require_1();
+		init_require_4();
+		init_manual_reexport_1();
 		const hot_main = __rolldown_runtime__.createModuleHotContext("main.js");
-		var import_require_0 = __rolldown_runtime__.loadExports("cases/require/index.js");
+		var import_require_5 = __rolldown_runtime__.loadExports("cases/require/index.js");
+		var import_manual_reexport_5 = __rolldown_runtime__.loadExports("cases/manual_reexport/index.js");
 		if (hot_main) {
 			hot_main.accept();
 		}
@@ -91,7 +171,7 @@ var init_main_2 = __rolldown_runtime__.createEsmInitializer((function() {
 //#endregion
 // HIDDEN [rolldown:hmr]
 // HIDDEN [rolldown:runtime]
-init_main_2()
+init_main_5()
 __rolldown_runtime__.applyUpdates(['main.js']);
 ```
 ## Meta

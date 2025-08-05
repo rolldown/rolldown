@@ -84,10 +84,10 @@ var init_hmr_0 = __rolldown_runtime__.createEsmInitializer((function() {
 		__rolldown_runtime__.registerModule("hmr.js", { exports: __rolldown_exports__ });
 		init_sub_3();
 		const hot_hmr = __rolldown_runtime__.createModuleHotContext("hmr.js");
-		var import_sub_1 = __rolldown_runtime__.loadExports("sub/index.js");
-		import_node_assert_0.default.strictEqual(import_sub_1.foo, "foo");
-		import_node_assert_0.default.strictEqual(import_sub_1.bar, "bar");
-		import_node_assert_0.default.strictEqual(import_sub_1.named, "named");
+		var import_sub_0 = __rolldown_runtime__.loadExports("sub/index.js");
+		import_node_assert_0.default.strictEqual(import_sub_0.foo, "foo");
+		import_node_assert_0.default.strictEqual(import_sub_0.bar, "bar");
+		import_node_assert_0.default.strictEqual(import_sub_0.named, "named");
 		hot_hmr.accept();
 	} finally {}
 }));
@@ -129,17 +129,17 @@ var init_foo_2 = __rolldown_runtime__.createEsmInitializer((function() {
 var init_sub_3 = __rolldown_runtime__.createEsmInitializer((function() {
 	try {
 		var __rolldown_exports__ = {};
-		__rolldown_runtime__.__export(__rolldown_exports__, { named: () => import_named_2.named });
+		__rolldown_runtime__.__export(__rolldown_exports__, { named: () => import_named_3.named });
 		__rolldown_runtime__.registerModule("sub/index.js", { exports: __rolldown_exports__ });
 		init_foo_2();
 		init_bar_1();
 		init_named_4();
 		const hot_sub = __rolldown_runtime__.createModuleHotContext("sub/index.js");
-		var import_foo_0 = __rolldown_runtime__.loadExports("sub/foo.js");
-		__rolldown_runtime__.__reExport(__rolldown_exports__, import_foo_0);
-		var import_bar_1 = __rolldown_runtime__.loadExports("sub/bar.js");
-		__rolldown_runtime__.__reExport(__rolldown_exports__, import_bar_1);
-		var import_named_2 = __rolldown_runtime__.loadExports("sub/named.js");
+		var import_foo_3 = __rolldown_runtime__.loadExports("sub/foo.js");
+		__rolldown_runtime__.__reExport(__rolldown_exports__, import_foo_3);
+		var import_bar_3 = __rolldown_runtime__.loadExports("sub/bar.js");
+		__rolldown_runtime__.__reExport(__rolldown_exports__, import_bar_3);
+		var import_named_3 = __rolldown_runtime__.loadExports("sub/named.js");
 	} finally {}
 }));
 

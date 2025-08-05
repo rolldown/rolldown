@@ -81,10 +81,10 @@ var init_hmr_2 = __rolldown_runtime__.createEsmInitializer((function() {
 		require_new_dep_cjs_3();
 		init_new_dep_esm_4();
 		const hot_hmr = __rolldown_runtime__.createModuleHotContext("hmr.js");
-		var import_exist_dep_cjs_0 = __rolldown_runtime__.__toESM(__rolldown_runtime__.loadExports("exist-dep-cjs.js"));
-		var import_exist_dep_esm_1 = __rolldown_runtime__.loadExports("exist-dep-esm.js");
+		var import_exist_dep_cjs_2 = __rolldown_runtime__.__toESM(__rolldown_runtime__.loadExports("exist-dep-cjs.js"));
+		var import_exist_dep_esm_2 = __rolldown_runtime__.loadExports("exist-dep-esm.js");
 		var import_new_dep_cjs_2 = __rolldown_runtime__.__toESM(__rolldown_runtime__.loadExports("new-dep-cjs.js"));
-		var import_new_dep_esm_3 = __rolldown_runtime__.loadExports("new-dep-esm.js");
+		var import_new_dep_esm_2 = __rolldown_runtime__.loadExports("new-dep-esm.js");
 		hot_hmr.accept((mod) => {
 			if (mod) {
 				console.log(".hmr", mod.foo);

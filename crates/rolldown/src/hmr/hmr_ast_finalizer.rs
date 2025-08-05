@@ -9,7 +9,7 @@ use oxc::{
   },
   ast_visit::{VisitMut, walk_mut},
   semantic::{Scoping, SymbolId},
-  span::{SPAN, Span},
+  span::{Atom, SPAN, Span},
 };
 
 use rolldown_common::{
@@ -33,6 +33,9 @@ pub struct HmrAstFinalizer<'me, 'ast> {
   pub module: &'me NormalModule,
   pub affected_module_idx_to_init_fn_name: &'me FxHashMap<ModuleIdx, String>,
   pub use_pife_for_module_wrappers: bool,
+
+  // Each module has a unique index, which is used to generate something that needs to be unique.
+  pub unique_index: usize,
 
   // --- Internal state
   /// For
@@ -60,6 +63,7 @@ pub struct HmrAstFinalizer<'me, 'ast> {
 
   // We need to store the static import statements for external separately, so we could put them outside of the `try` block.
   pub generated_static_import_stmts_from_external: FxIndexMap<ModuleIdx, ast::Statement<'ast>>,
+  pub named_exports: FxHashMap<Atom<'ast>, NamedExport>,
 }
 
 impl<'ast> HmrAstFinalizer<'_, 'ast> {
@@ -222,13 +226,15 @@ impl<'ast> HmrAstFinalizer<'_, 'ast> {
               program_body.push(ast::Statement::from(decl.take_in(self.alloc)));
             } else {
               // export { foo, bar as bar2 }
-              self.exports.extend(decl.specifiers.iter().map(|specifier| {
-                self.snippet.object_property_kind_object_property(
-                  &specifier.exported.name(),
-                  self.snippet.id_ref_expr(&specifier.local.name(), SPAN),
-                  matches!(specifier.exported, ast::ModuleExportName::StringLiteral(_)),
-                )
-              }));
+              decl.specifiers.iter().for_each(|specifier| {
+                if let Some(symbol_id) = self.scoping.get_root_binding(&specifier.local.name()) {
+                  self
+                    .named_exports
+                    .insert(specifier.exported.name(), NamedExport { local_binding: symbol_id });
+                } else {
+                  // TODO: export undefined variable
+                }
+              });
             }
           }
           ast::ModuleDeclaration::ExportDefaultDeclaration(decl) => match &mut decl.declaration {
@@ -322,12 +328,12 @@ impl<'ast> HmrAstFinalizer<'_, 'ast> {
   pub fn ensure_static_import_info(
     &mut self,
     importee_idx: ModuleIdx,
-    rec_id: ImportRecordIdx,
+    _rec_id: ImportRecordIdx,
   ) -> &str {
     self.generated_static_import_infos.entry(importee_idx).or_insert_with(|| {
       let importee = &self.modules[importee_idx];
 
-      format!("import_{}_{}", importee.repr_name(), rec_id.raw())
+      format!("import_{}_{}", importee.repr_name(), self.unique_index)
     })
   }
 
@@ -543,6 +549,16 @@ impl<'ast> HmrAstFinalizer<'_, 'ast> {
       .builder
       .alloc_object_expression(SPAN, self.snippet.builder.vec_with_capacity(self.exports.len()));
     arg_obj_expr.properties.extend(self.exports.drain(..));
+    arg_obj_expr.properties.extend(self.named_exports.iter().map(|(exported, named_export)| {
+      let expr = if let Some(local_binding) = self.import_bindings.get(&named_export.local_binding)
+      {
+        quote_expr(self.alloc, local_binding)
+      } else {
+        let name = self.scoping.symbol_name(named_export.local_binding);
+        quote_expr(self.alloc, name)
+      };
+      self.snippet.object_property_kind_object_property(exported, expr, false)
+    }));
 
     // construct `__export(ns_name, { prop_name: () => returned, ... })`
     let export_call_expr = self.snippet.builder.expression_call(
@@ -881,4 +897,8 @@ impl<'ast> VisitMut<'ast> for HmrAstFinalizer<'_, 'ast> {
     self.rewrite_hot_accept_call_deps(call_expr);
     walk_mut::walk_call_expression(self, call_expr);
   }
+}
+
+pub struct NamedExport {
+  pub local_binding: SymbolId,
 }

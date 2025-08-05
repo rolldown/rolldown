@@ -5534,6 +5534,10 @@ expression: output
 - foo-!~{007}~.js => foo-OmnQYi5B.js
 - string-!~{003}~.js => string-CMcoXSG2.js
 
+# tests/rolldown/topics/hmr/manual_reexport
+
+- main-!~{000}~.js => main-DYgGEbjl.js
+
 # tests/rolldown/topics/hmr/mutiply_entires
 
 - entry-!~{000}~.js => entry-CVBhusOB.js

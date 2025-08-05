@@ -1,0 +1,105 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## main.js
+
+```js
+import assert from "node:assert";
+
+// HIDDEN [rolldown:runtime]
+// HIDDEN [rolldown:hmr]
+//#region shared.js
+var shared_exports = {};
+__export(shared_exports, { Globals: () => Globals });
+const shared_hot = __rolldown_runtime__.createModuleHotContext("shared.js");
+__rolldown_runtime__.registerModule("shared.js", { exports: shared_exports });
+const Globals = Object;
+
+//#endregion
+//#region foo.js
+var foo_exports = {};
+__export(foo_exports, {
+	Globals: () => Globals,
+	value: () => value
+});
+const foo_hot = __rolldown_runtime__.createModuleHotContext("foo.js");
+__rolldown_runtime__.registerModule("foo.js", { exports: foo_exports });
+const value = {};
+Globals.assign(value, { foo: "foo" });
+assert.strictEqual(Globals, Object);
+assert.strictEqual(value.foo, "foo");
+
+//#endregion
+//#region main.js
+var main_exports = {};
+const main_hot = __rolldown_runtime__.createModuleHotContext("main.js");
+__rolldown_runtime__.registerModule("main.js", { exports: main_exports });
+main_hot.accept();
+
+//#endregion
+```
+# HMR Step 0
+
+## Code
+
+```js
+//#region foo.js
+import * as import_node_assert_0 from "node:assert";
+var init_foo_0 = __rolldown_runtime__.createEsmInitializer((function() {
+	try {
+		var __rolldown_exports__ = {};
+		__rolldown_runtime__.__export(__rolldown_exports__, {
+			Globals: () => Globals,
+			value: () => value
+		});
+		__rolldown_runtime__.registerModule("foo.js", { exports: __rolldown_exports__ });
+		init_shared_2();
+		const hot_foo = __rolldown_runtime__.createModuleHotContext("foo.js");
+		var import_shared_1 = __rolldown_runtime__.loadExports("shared.js");
+		const value = {};
+		import_shared_1.Globals.assign(value, { foo: "foo" });
+		import_node_assert_0.default.strictEqual(import_shared_1.Globals, Object);
+		import_node_assert_0.default.strictEqual(value.foo, "foo");
+	} finally {}
+}));
+
+//#endregion
+//#region main.js
+var init_main_1 = __rolldown_runtime__.createEsmInitializer((function() {
+	try {
+		var __rolldown_exports__ = {};
+		__rolldown_runtime__.__export(__rolldown_exports__, {});
+		__rolldown_runtime__.registerModule("main.js", { exports: __rolldown_exports__ });
+		init_foo_0();
+		const hot_main = __rolldown_runtime__.createModuleHotContext("main.js");
+		var import_foo_0 = __rolldown_runtime__.loadExports("foo.js");
+		hot_main.accept();
+	} finally {}
+}));
+
+//#endregion
+//#region shared.js
+var init_shared_2 = __rolldown_runtime__.createEsmInitializer((function() {
+	try {
+		var __rolldown_exports__ = {};
+		__rolldown_runtime__.__export(__rolldown_exports__, { Globals: () => Globals });
+		__rolldown_runtime__.registerModule("shared.js", { exports: __rolldown_exports__ });
+		const hot_shared = __rolldown_runtime__.createModuleHotContext("shared.js");
+		const Globals = Object;
+	} finally {}
+}));
+
+//#endregion
+// HIDDEN [rolldown:hmr]
+// HIDDEN [rolldown:runtime]
+init_main_1()
+__rolldown_runtime__.applyUpdates(['main.js']);
+```
+## Meta
+
+- update type: patch
+### Hmr Boundaries
+
+- boundary: main.js, accepted_via: main.js

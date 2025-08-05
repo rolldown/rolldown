@@ -19,7 +19,7 @@ use rolldown_sourcemap::{Source, SourceJoiner, SourceMapSource};
 use rolldown_utils::{
   concat_string,
   indexmap::{FxIndexMap, FxIndexSet},
-  rayon::{IntoParallelIterator, ParallelIterator},
+  rayon::{IndexedParallelIterator, IntoParallelIterator, ParallelIterator},
 };
 use rustc_hash::{FxHashMap, FxHashSet};
 
@@ -346,7 +346,8 @@ impl HmrManager {
     let mut source_joiner = SourceJoiner::default();
     let rendered_sources = module_render_inputs
       .into_par_iter()
-      .flat_map(|render_input| {
+      .enumerate()
+      .flat_map(|(index, render_input)| {
         let ModuleRenderInput { idx: affected_module_idx, ecma_ast: ast } = render_input;
 
         let affected_module = &self.input.module_db.modules[affected_module_idx];
@@ -377,6 +378,8 @@ impl HmrManager {
             generated_static_import_infos: FxHashMap::default(),
             re_export_all_dependencies: FxIndexSet::default(),
             generated_static_import_stmts_from_external: FxIndexMap::default(),
+            unique_index: index,
+            named_exports: FxHashMap::default(),
           };
 
           finalizer.visit_program(fields.program);

@@ -71,9 +71,9 @@ var init_main_2 = __rolldown_runtime__.createEsmInitializer((function() {
 		init_foo_0();
 		init_foo_1();
 		const hot_main = __rolldown_runtime__.createModuleHotContext("main.js");
-		var import_foo_0 = __rolldown_runtime__.loadExports("foo.mjs");
-		var import_foo_1 = __rolldown_runtime__.loadExports("foo/index.mjs");
-		console.log(import_foo_0.foo, import_foo_1.foo);
+		var import_foo_2 = __rolldown_runtime__.loadExports("foo.mjs");
+		var import_foo_2 = __rolldown_runtime__.loadExports("foo/index.mjs");
+		console.log(import_foo_2.foo, import_foo_2.foo);
 		hot_main.accept(() => {});
 	} finally {}
 }));

@@ -51,13 +51,15 @@ pub fn render_esm<'code>(
 
   if let Some(entry_module) = ctx.chunk.entry_module(&ctx.link_output.module_table) {
     if matches!(entry_module.exports_kind, ExportsKind::Esm) {
-      entry_module
-        .star_export_module_ids()
+      ctx
+        .chunk
+        .entry_level_external_module_idx
+        .iter()
+        .copied()
         .filter_map(|importee| {
           let importee = &ctx.link_output.module_table[importee];
           importee.as_external().map(|m| m.get_import_path(ctx.chunk))
         })
-        .dedup()
         .for_each(|ext_name| {
           source_joiner.append_source(concat_string!("export * from \"", ext_name, "\"\n"));
         });

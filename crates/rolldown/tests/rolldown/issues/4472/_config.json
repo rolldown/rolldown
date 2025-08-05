@@ -1,0 +1,6 @@
+{
+  "config": {
+    "external": ["ext-index", "ext-file", "ext-folder"]
+  },
+  "expectExecuted": false
+}

@@ -69,6 +69,7 @@ pub struct LinkingMetadata {
   /// also need to link the exported facade symbol.
   pub included_commonjs_export_symbol: FxHashSet<SymbolRef>,
   pub depended_runtime_helper: RuntimeHelper,
+  pub module_namespace_real_included: bool,
 }
 
 impl LinkingMetadata {

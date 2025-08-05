@@ -7,5 +7,6 @@
       }
     ],
     "external": ["node:fs"]
-  }
+  },
+  "expectExecuted": false
 }

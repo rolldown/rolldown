@@ -1,13 +1,14 @@
 use std::cmp::Reverse;
 
 use itertools::Itertools;
+use oxc::semantic::SymbolId;
 use oxc_index::IndexVec;
 use petgraph::prelude::DiGraphMap;
 use rolldown_common::{
   ConstExportMeta, EcmaModuleAstUsage, EcmaViewMeta, EntryPoint, EntryPointKind, ExportsKind,
   ImportKind, ImportRecordIdx, ImportRecordMeta, IndexModules, Module, ModuleIdx, ModuleType,
   NormalModule, NormalizedBundlerOptions, RUNTIME_HELPER_NAMES, RuntimeHelper, SideEffectDetail,
-  StmtInfoIdx, StmtInfos, SymbolOrMemberExprRef, SymbolRef, SymbolRefDb,
+  StmtInfoIdx, StmtInfoMeta, StmtInfos, SymbolOrMemberExprRef, SymbolRef, SymbolRefDb,
   dynamic_import_usage::DynamicImportExportsUsage, side_effects::DeterminedSideEffects,
 };
 #[cfg(not(target_family = "wasm"))]
@@ -20,10 +21,13 @@ use rustc_hash::{FxHashMap, FxHashSet};
 
 use crate::{stages::link_stage::LinkStage, types::linking_metadata::LinkingMetadataVec};
 
-#[derive(Debug, Clone, Copy)]
-enum IncludeKind {
-  Normal,
-  EntryExport,
+bitflags::bitflags! {
+    #[derive(Debug, Clone, Copy)]
+    struct IncludeKind: u8 {
+        const Normal = 1;
+        const EntryExport = 1 << 1;
+        const ReExportDynamicImports = 1 << 2;
+    }
 }
 
 struct Context<'a> {
@@ -42,6 +46,7 @@ struct Context<'a> {
   /// see [rolldown_common::ecmascript::ecma_view::EcmaViewMeta]
   bailout_cjs_tree_shaking_modules: FxHashSet<ModuleIdx>,
   may_partial_namespace: bool,
+  module_namespace_include_reason: &'a mut IndexVec<ModuleIdx, bool>,
 }
 
 impl LinkStage<'_> {
@@ -61,6 +66,8 @@ impl LinkStage<'_> {
     let mut used_symbol_refs = FxHashSet::default();
     let mut is_module_included_vec: IndexVec<ModuleIdx, bool> =
       oxc_index::index_vec![false; self.module_table.modules.len()];
+    let mut module_namespace_include_reason: IndexVec<ModuleIdx, bool> =
+      oxc_index::index_vec![false; self.module_table.len()];
     let context = &mut Context {
       modules: &self.module_table.modules,
       symbols: &self.symbols,
@@ -76,6 +83,7 @@ impl LinkStage<'_> {
       normal_symbol_exports_chain_map: &self.normal_symbol_exports_chain_map,
       bailout_cjs_tree_shaking_modules: FxHashSet::default(),
       may_partial_namespace: false,
+      module_namespace_include_reason: &mut module_namespace_include_reason,
     };
 
     let (user_defined_entries, mut dynamic_entries): (Vec<_>, Vec<_>) =
@@ -188,13 +196,17 @@ impl LinkStage<'_> {
             .set(RuntimeHelper::from_bits(1 << index as u32).unwrap(), any_included);
         }
         meta.depended_runtime_helper = normalized_runtime_helper;
+        meta.module_namespace_real_included = module_namespace_include_reason[module.idx];
       });
+
     self.include_runtime_symbol(
       &mut is_included_vec,
       &mut is_module_included_vec,
+      &mut module_namespace_include_reason,
       &mut used_symbol_refs,
     );
     self.used_symbol_refs = used_symbol_refs;
+
     tracing::trace!(
       "included statements {:#?}",
       self
@@ -363,6 +375,7 @@ impl LinkStage<'_> {
     &mut self,
     is_stmt_included_vec: &mut IndexVec<ModuleIdx, IndexVec<StmtInfoIdx, bool>>,
     is_module_included_vec: &mut IndexVec<ModuleIdx, bool>,
+    module_namespace_include_reason: &mut IndexVec<ModuleIdx, bool>,
     used_symbol_refs: &mut FxHashSet<SymbolRef>,
   ) {
     // Including all depended runtime symbol
@@ -392,6 +405,7 @@ impl LinkStage<'_> {
       normal_symbol_exports_chain_map: &self.normal_symbol_exports_chain_map,
       bailout_cjs_tree_shaking_modules: FxHashSet::default(),
       may_partial_namespace: false,
+      module_namespace_include_reason,
     };
 
     for helper in depended_runtime_helper {
@@ -503,7 +517,7 @@ fn include_symbol(ctx: &mut Context, symbol_ref: SymbolRef, include_kind: Includ
   let mut canonical_ref = ctx.symbols.canonical_ref_for(symbol_ref);
 
   if let Some(v) = ctx.constant_symbol_map.get(&canonical_ref)
-    && !matches!(include_kind, IncludeKind::EntryExport)
+    && !include_kind.contains(IncludeKind::EntryExport)
     && !v.commonjs_export
   {
     // If the symbol is a constant value and it is not a commonjs module export , we don't need to include it since it would be always inline
@@ -526,6 +540,12 @@ fn include_symbol(ctx: &mut Context, symbol_ref: SymbolRef, include_kind: Includ
     {
       ctx.bailout_cjs_tree_shaking_modules.insert(canonical_ref.owner);
     }
+  }
+
+  if canonical_ref.symbol == SymbolId::new(u32::MAX - 2)
+    && include_kind.contains(IncludeKind::Normal)
+  {
+    ctx.module_namespace_include_reason[canonical_ref.owner] = true;
   }
 
   let canonical_ref_symbol = ctx.symbols.get(canonical_ref);
@@ -601,7 +621,11 @@ fn include_statement(ctx: &mut Context, module: &NormalModule, stmt_info_id: Stm
       ctx.bailout_cjs_tree_shaking_modules.insert(module_idx);
     }
   });
-
+  let include_kind = if stmt_info.meta.contains(StmtInfoMeta::ReExportDynamicExports) {
+    IncludeKind::ReExportDynamicImports
+  } else {
+    IncludeKind::Normal
+  };
   stmt_info.referenced_symbols.iter().for_each(|reference_ref| {
     if let Some(member_expr_resolution) = match reference_ref {
       SymbolOrMemberExprRef::Symbol(_) => None,
@@ -624,7 +648,7 @@ fn include_statement(ctx: &mut Context, module: &NormalModule, stmt_info_id: Stm
             );
           }
         });
-        include_symbol(ctx, resolved_ref, IncludeKind::Normal);
+        include_symbol(ctx, resolved_ref, include_kind);
         ctx.may_partial_namespace = pre;
       } else {
         // If it points to nothing, the expression will be rewritten as `void 0` and there's nothing we need to include
@@ -644,7 +668,7 @@ fn include_statement(ctx: &mut Context, module: &NormalModule, stmt_info_id: Stm
             );
           }
         });
-      include_symbol(ctx, *original_ref, IncludeKind::Normal);
+      include_symbol(ctx, *original_ref, include_kind);
     }
   });
 }

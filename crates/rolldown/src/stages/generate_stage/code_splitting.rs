@@ -2,16 +2,23 @@ use std::{cmp::Ordering, collections::VecDeque, path::Path};
 
 use crate::{
   chunk_graph::ChunkGraph, stages::generate_stage::chunk_ext::ChunkDebugExt,
-  utils::chunk::normalize_preserve_entry_signature,
+  types::linking_metadata::LinkingMetadataVec, utils::chunk::normalize_preserve_entry_signature,
 };
 use arcstr::ArcStr;
 use itertools::Itertools;
 use oxc_index::IndexVec;
 use rolldown_common::{
-  Chunk, ChunkIdx, ChunkKind, ChunkMeta, Module, ModuleIdx, PreserveEntrySignatures,
+  Chunk, ChunkIdx, ChunkKind, ChunkMeta, ExportsKind, ImportRecordIdx, ImportRecordMeta,
+  IndexModules, Module, ModuleIdx, PreserveEntrySignatures,
 };
 use rolldown_error::BuildResult;
-use rolldown_utils::{BitSet, commondir, indexmap::FxIndexMap, rustc_hash::FxHashMapExt};
+use rolldown_utils::{
+  BitSet, commondir,
+  index_vec_ext::IndexVecRefExt,
+  indexmap::FxIndexMap,
+  rayon::ParallelIterator,
+  rustc_hash::{FxHashMapExt, FxHashSetExt},
+};
 use rustc_hash::{FxHashMap, FxHashSet};
 
 use super::{GenerateStage, chunk_ext::ChunkCreationReason};
@@ -233,6 +240,7 @@ impl GenerateStage<'_> {
     chunk_graph.sorted_chunk_idx_vec = sorted_chunk_idx_vec;
     chunk_graph.entry_module_to_entry_chunk = entry_module_to_entry_chunk;
     self.merge_cjs_namespace(&mut chunk_graph);
+    self.find_entry_level_external_module(&mut chunk_graph);
     Ok(chunk_graph)
   }
 
@@ -269,6 +277,103 @@ impl GenerateStage<'_> {
           }
         }
       }
+    }
+  }
+
+  fn find_entry_level_external_module(&mut self, chunk_graph: &mut ChunkGraph) {
+    let module_to_entry_level_external_rec_list_maps = chunk_graph
+      .chunk_table
+      .par_iter_enumerated()
+      .filter_map(|(idx, chunk)| {
+        let ChunkKind::EntryPoint { module, .. } = &chunk.kind else {
+          return None;
+        };
+        let mut q = VecDeque::from_iter([*module]);
+        let mut visited = FxHashSet::default();
+        let mut entry_external_module_map: FxHashMap<ModuleIdx, Vec<ImportRecordIdx>> =
+          FxHashMap::default();
+        while let Some(module_idx) = q.pop_front() {
+          if !visited.insert(module_idx) {
+            continue;
+          }
+          let Module::Normal(module) = &self.link_output.module_table[module_idx] else {
+            // In theory we will not append external module to `q`.
+            continue;
+          };
+          for (idx, rec) in module.import_records.iter_enumerated() {
+            if !rec.meta.contains(ImportRecordMeta::IsExportStar) {
+              continue;
+            }
+            match &self.link_output.module_table[rec.resolved_module] {
+              Module::Normal(_) => {
+                q.push_back(rec.resolved_module);
+              }
+              Module::External(_) => {
+                entry_external_module_map.entry(module_idx).or_default().push(idx);
+              }
+            }
+          }
+        }
+        (!entry_external_module_map.is_empty()).then_some((idx, entry_external_module_map))
+      })
+      .collect::<Vec<(ChunkIdx, FxHashMap<ModuleIdx, Vec<ImportRecordIdx>>)>>();
+    let mut invalidated_modules = FxHashSet::default();
+    for (chunk_idx, entry_external_module_map) in module_to_entry_level_external_rec_list_maps {
+      let mut entry_level_external_modules = FxHashSet::default();
+      for (module_idx, rec_list) in entry_external_module_map {
+        let Some(module) = self.link_output.module_table[module_idx].as_normal_mut() else {
+          continue;
+        };
+        // If a module namespace is not included due to reexport a entry level external module, we
+        // can't do any further optimization. e.g.
+        // ```js
+        // // index.js
+        // import * as ns from './lib.js';
+        // export {ns}
+        // // lib.js
+        // export * from 'external'
+        // ```
+        // since the `ns` is exported from entry module, it(namespace object) needs to include all exported symbol
+        // from external module.
+        for rec_idx in rec_list {
+          let rec = &mut module.import_records[rec_idx];
+          rec.meta.insert(ImportRecordMeta::EntryLevelExternal);
+          entry_level_external_modules.insert(rec.resolved_module);
+        }
+
+        if !self.link_output.metas[module_idx].module_namespace_real_included {
+          invalidated_modules.insert(module.idx);
+        }
+      }
+      let mut vec = entry_level_external_modules.into_iter().collect_vec();
+      vec.sort_by_key(|idx| self.link_output.module_table[*idx].exec_order());
+      chunk_graph.chunk_table[chunk_idx].entry_level_external_module_idx = vec;
+    }
+    // re propagate `meta.has_dynamic_exports` for affect modules
+    let mut q = invalidated_modules.iter().copied().collect::<VecDeque<_>>();
+    while let Some(idx) = q.pop_front() {
+      if !invalidated_modules.insert(idx) {
+        continue;
+      }
+      let Module::Normal(module) = &self.link_output.module_table[idx] else {
+        continue;
+      };
+      q.extend(module.importers_idx.iter());
+    }
+
+    if invalidated_modules.is_empty() {
+      return;
+    }
+
+    let mut visited = FxHashSet::with_capacity(invalidated_modules.len());
+    for module_idx in invalidated_modules.clone() {
+      propagate_has_dynamic_exports(
+        module_idx,
+        &self.link_output.module_table,
+        &mut self.link_output.metas,
+        &mut visited,
+        &mut invalidated_modules,
+      );
     }
   }
 
@@ -684,4 +789,46 @@ impl GenerateStage<'_> {
       });
     }
   }
+}
+
+fn propagate_has_dynamic_exports(
+  target: ModuleIdx,
+  modules: &IndexModules,
+  linking_infos: &mut LinkingMetadataVec,
+  visited_modules: &mut FxHashSet<ModuleIdx>,
+  invalidate_modules: &mut FxHashSet<ModuleIdx>,
+) -> bool {
+  if !invalidate_modules.contains(&target) || visited_modules.contains(&target) {
+    return linking_infos[target].has_dynamic_exports;
+  }
+  visited_modules.insert(target);
+
+  let has_dynamic_exports = match &modules[target] {
+    Module::Normal(module) => {
+      if matches!(module.exports_kind, ExportsKind::CommonJs) {
+        true
+      } else {
+        module.import_records.iter().any(|rec| {
+          if rec.resolved_module == target || !rec.meta.contains(ImportRecordMeta::IsExportStar) {
+            return false;
+          }
+          if rec.meta.contains(ImportRecordMeta::EntryLevelExternal) {
+            return false;
+          }
+          propagate_has_dynamic_exports(
+            rec.resolved_module,
+            modules,
+            linking_infos,
+            visited_modules,
+            invalidate_modules,
+          )
+        })
+      }
+    }
+    Module::External(_) => true,
+  };
+
+  linking_infos[target].has_dynamic_exports = has_dynamic_exports;
+  invalidate_modules.remove(&target);
+  has_dynamic_exports
 }

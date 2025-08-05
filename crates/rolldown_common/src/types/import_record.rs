@@ -53,6 +53,9 @@ bitflags::bitflags! {
     /// Mark namespace of a record could be merged safely
     const SafelyMergeCjsNs = 1 << 9;
     const JsonModule = 1 << 10;
+    /// If a record is a re-export-all from an external module, and that re-export-all chain continues uninterrupted to the entry point,
+    /// we can reuse the original re-export-all declaration instead of generating complex interoperability code.
+    const EntryLevelExternal = 1 << 11;
 
     const TopLevelPureDynamicImport = Self::IsTopLevel.bits() | Self::PureDynamicImport.bits();
   }

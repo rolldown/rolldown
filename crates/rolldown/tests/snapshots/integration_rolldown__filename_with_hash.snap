@@ -5550,7 +5550,7 @@ expression: output
 
 # tests/rolldown/topics/hmr/runtime_correctness
 
-- main-!~{000}~.js => main-CesFd2zf.js
+- main-!~{000}~.js => main-CQ6rUmz6.js
 
 # tests/rolldown/topics/hmr/static_import
 

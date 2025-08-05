@@ -178,7 +178,7 @@ impl IntegrationTest {
               Ok(updates) => {
                 for update in updates {
                   let snapshot_content =
-                    Self::render_hmr_output_to_string(step, &update, vec![], &cwd);
+                    self.render_hmr_output_to_string(step, &update, vec![], &cwd);
                   collect_snapshot(snapshot_content);
                   match update {
                     rolldown_common::HmrUpdate::Patch(patch) => {
@@ -198,7 +198,7 @@ impl IntegrationTest {
               }
               Err(errs) => {
                 let snapshot_content =
-                  Self::render_hmr_output_to_string(step, &HmrUpdate::Noop, errs.into_vec(), &cwd);
+                  self.render_hmr_output_to_string(step, &HmrUpdate::Noop, errs.into_vec(), &cwd);
                 collect_snapshot(snapshot_content);
               }
             }
@@ -472,6 +472,7 @@ impl IntegrationTest {
 
   #[expect(clippy::if_not_else)]
   fn render_hmr_output_to_string(
+    &self,
     step: usize,
     hmr_update: &HmrUpdate,
     errs: Vec<BuildDiagnostic>,
@@ -517,7 +518,11 @@ impl IntegrationTest {
           },
         );
         writeln!(snapshot, "```{file_ext}").unwrap();
-        snapshot.push_str(&hmr_patch.code);
+        snapshot.push_str(&tweak_snapshot(
+          &hmr_patch.code,
+          self.test_meta.hidden_runtime_module,
+          true,
+        ));
         snapshot.push_str("\n```");
         snapshot
       }

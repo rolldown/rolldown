@@ -82,7 +82,7 @@ jobs:
       - name: Rustup Adds Target
         run: rustup target add ${{ matrix.target }}
 
-      - uses: goto-bus-stop/setup-zig@abea47f85e598557f500fa1fd2ab7464fcb39406 # v2.2.1
+      - uses: mlugg/setup-zig@8d6198c65fb0feaa111df26e6b467fea8345e46f # v2.0.5
         if: ${{ contains(matrix.target, 'musl') }}
         with:
           version: 0.14.1

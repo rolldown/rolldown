@@ -13,7 +13,8 @@ use oxc::{
 };
 use rolldown_common::{
   AstScopes, ExportsKind, ImportRecordIdx, ImportRecordMeta, MemberExprRefResolution, Module,
-  ModuleIdx, ModuleType, OutputFormat, Platform, SymbolRef, WrapKind,
+  ModuleIdx, ModuleNamespaceIncludedReason, ModuleType, OutputFormat, Platform, SymbolRef,
+  WrapKind,
 };
 use rolldown_ecmascript_utils::{
   AstSnippet, BindingPatternExt, CallExpressionExt, ExpressionExt, StatementExt,
@@ -323,7 +324,11 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
           let stmts = export_all_externals_rec_ids.iter().copied().flat_map(|idx| {
             let rec = &self.ctx.module.import_records[idx];
             if rec.meta.contains(ImportRecordMeta::EntryLevelExternal)
-              && !self.ctx.linking_info.module_namespace_real_included
+              && !self
+                .ctx
+                .linking_info
+                .module_namespace_included_reason
+                .contains(ModuleNamespaceIncludedReason::Unknown)
             {
               return vec![];
             }

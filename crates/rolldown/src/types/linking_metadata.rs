@@ -1,8 +1,9 @@
 use oxc::span::CompactStr;
 use oxc_index::IndexVec;
 use rolldown_common::{
-  EntryPointKind, ImportRecordIdx, MemberExprRefResolutionMap, ModuleIdx, ResolvedExport,
-  RuntimeHelper, StmtInfoIdx, SymbolRef, WrapKind, dynamic_import_usage::DynamicImportExportsUsage,
+  EntryPointKind, ImportRecordIdx, MemberExprRefResolutionMap, ModuleIdx,
+  ModuleNamespaceIncludedReason, ResolvedExport, RuntimeHelper, StmtInfoIdx, SymbolRef, WrapKind,
+  dynamic_import_usage::DynamicImportExportsUsage,
 };
 use rolldown_utils::indexmap::{FxIndexMap, FxIndexSet};
 use rustc_hash::{FxHashMap, FxHashSet};
@@ -69,7 +70,7 @@ pub struct LinkingMetadata {
   /// also need to link the exported facade symbol.
   pub included_commonjs_export_symbol: FxHashSet<SymbolRef>,
   pub depended_runtime_helper: RuntimeHelper,
-  pub module_namespace_real_included: bool,
+  pub module_namespace_included_reason: ModuleNamespaceIncludedReason,
 }
 
 impl LinkingMetadata {

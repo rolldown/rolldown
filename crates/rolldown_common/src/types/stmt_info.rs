@@ -108,6 +108,7 @@ bitflags! {
         const ClassExpr = 1 << 3;
         /// If this statement needs to reference `__require` runtime
         const HasDummyRecord = 1 << 4;
+        /// see `has_dynamic_exports` in https://github.com/rolldown/rolldown/blob/8bc7dca5a09047b6b494e3fa7b6b7564aa465372/crates/rolldown/src/types/linking_metadata.rs?plain=1#L49
         const ReExportDynamicExports = 1 << 5;
         const KeepNamesType = StmtInfoMeta::FnDecl.bits() | StmtInfoMeta::ClassDecl.bits() | StmtInfoMeta::FnExpr.bits() | StmtInfoMeta::ClassExpr.bits();
     }

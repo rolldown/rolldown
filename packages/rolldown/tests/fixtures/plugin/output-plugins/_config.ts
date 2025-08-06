@@ -27,6 +27,7 @@ export default defineTest({
     onLog(level, log) {
       expect(level).toBe('warn')
       expect(log.code).toBe('INPUT_HOOK_IN_OUTPUT_PLUGIN')
+      expect(log.plugin).toBeUndefined()
       onLogFn()
     },
   },

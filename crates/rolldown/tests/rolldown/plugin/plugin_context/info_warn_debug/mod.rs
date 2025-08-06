@@ -3,7 +3,7 @@ use std::{
   sync::{Arc, Mutex},
 };
 
-use rolldown::{BundlerOptions, InputItem, Log, LogLevel, OnLog};
+use rolldown::{BundlerOptions, InputItem, Log, LogLevel, LogWithoutPlugin, OnLog};
 use rolldown_plugin::{HookUsage, Plugin, PluginContext};
 use rolldown_testing::{manual_integration_test, test_config::TestMeta};
 
@@ -20,9 +20,14 @@ impl Plugin for TestPlugin {
     ctx: &PluginContext,
     _args: &rolldown_plugin::HookBuildStartArgs<'_>,
   ) -> rolldown_plugin::HookNoopReturn {
-    ctx.info(Log { message: "info".to_owned(), code: None, id: None, exporter: None });
-    ctx.warn(Log { message: "warn".to_owned(), code: None, id: None, exporter: None });
-    ctx.debug(Log { message: "debug".to_owned(), code: None, id: None, exporter: None });
+    ctx.info(LogWithoutPlugin { message: "info".to_owned(), code: None, id: None, exporter: None });
+    ctx.warn(LogWithoutPlugin { message: "warn".to_owned(), code: None, id: None, exporter: None });
+    ctx.debug(LogWithoutPlugin {
+      message: "debug".to_owned(),
+      code: None,
+      id: None,
+      exporter: None,
+    });
     Ok(())
   }
 
@@ -40,6 +45,9 @@ async fn allow_pass_custom_arg() {
     let temp = Arc::<std::sync::Mutex<usize>>::clone(&temp);
     Box::pin(async move {
       let mut guard = temp.lock().unwrap();
+      if log.plugin.is_none_or(|p| p != "TestPlugin") {
+        return Ok(());
+      }
       match log_level {
         LogLevel::Info if log.message == "info" => *guard ^= 1 << 0,
         LogLevel::Warn if log.message == "warn" => *guard ^= 1 << 1,

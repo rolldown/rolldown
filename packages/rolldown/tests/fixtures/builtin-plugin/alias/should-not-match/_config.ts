@@ -18,6 +18,7 @@ export default defineTest({
       expect(log.message).toContain(
         "Could not resolve 'rolldownlib.js' in main.js",
       )
+      expect(log.plugin).toBeUndefined()
       onLogFn()
     },
   },

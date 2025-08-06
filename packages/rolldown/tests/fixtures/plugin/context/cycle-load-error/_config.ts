@@ -19,6 +19,7 @@ export default defineTest({
       expect(log.message).toContain(
         'cycle loading at test-plugin-context plugin',
       )
+      expect(log.plugin).toBeUndefined()
       onLogFn()
     },
   },

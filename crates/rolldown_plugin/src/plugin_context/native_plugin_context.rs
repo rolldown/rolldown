@@ -1,4 +1,5 @@
 use std::{
+  borrow::Cow,
   path::PathBuf,
   sync::{Arc, Weak},
 };
@@ -7,7 +8,7 @@ use anyhow::Context;
 use arcstr::ArcStr;
 use derive_more::Debug;
 use rolldown_common::{
-  Log, LogLevel, ModuleInfo, ModuleLoaderMsg, ResolvedId, SharedFileEmitter,
+  LogLevel, LogWithoutPlugin, ModuleInfo, ModuleLoaderMsg, ResolvedId, SharedFileEmitter,
   SharedNormalizedBundlerOptions, side_effects::HookSideEffects,
 };
 use rolldown_resolver::{ResolveError, Resolver};
@@ -28,6 +29,7 @@ pub type SharedNativePluginContext = Arc<NativePluginContextImpl>;
 
 #[derive(Debug)]
 pub struct NativePluginContextImpl {
+  pub(crate) plugin_name: Cow<'static, str>,
   pub(crate) skipped_resolve_calls: Vec<Arc<HookResolveIdSkipped>>,
   pub(crate) plugin_idx: PluginIdx,
   pub(crate) resolver: Arc<Resolver>,
@@ -153,9 +155,10 @@ impl NativePluginContextImpl {
     self.watch_files.insert(file.into());
   }
 
-  fn log(&self, level: LogLevel, log: Log) {
+  fn log(&self, level: LogLevel, log: LogWithoutPlugin) {
     if let Some(on_log) = &self.options.on_log {
       let on_log = on_log.clone();
+      let log = log.into_log(Some(self.plugin_name.to_string()));
       rolldown_utils::futures::spawn(async move {
         let _ = on_log.call(level, log).await;
       });
@@ -163,17 +166,17 @@ impl NativePluginContextImpl {
   }
 
   #[inline]
-  pub fn info(&self, log: Log) {
+  pub fn info(&self, log: LogWithoutPlugin) {
     self.log(LogLevel::Info, log);
   }
 
   #[inline]
-  pub fn warn(&self, log: Log) {
+  pub fn warn(&self, log: LogWithoutPlugin) {
     self.log(LogLevel::Warn, log);
   }
 
   #[inline]
-  pub fn debug(&self, log: Log) {
+  pub fn debug(&self, log: LogWithoutPlugin) {
     self.log(LogLevel::Debug, log);
   }
 }

@@ -7,7 +7,7 @@ mod type_aliases;
 mod types;
 mod utils;
 
-pub use rolldown_common::Log;
+pub use rolldown_common::{Log, LogWithoutPlugin};
 pub use typedmap;
 
 /// Only for usage by the rolldown's crate. Do not use this directly.

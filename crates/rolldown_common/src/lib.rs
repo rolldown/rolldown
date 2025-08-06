@@ -46,7 +46,7 @@ pub mod bundler_options {
       minify_options::{MinifyOptions, MinifyOptionsObject, RawMinifyOptions},
       module_type::ModuleType,
       normalized_bundler_options::{NormalizedBundlerOptions, SharedNormalizedBundlerOptions},
-      on_log::{Log, OnLog},
+      on_log::{Log, LogWithoutPlugin, OnLog},
       optimization::{OptimizationOption, normalize_optimization_option},
       output_exports::OutputExports,
       output_format::OutputFormat,

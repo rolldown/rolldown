@@ -10,7 +10,6 @@ impl Plugin for WasmFallbackPlugin {
     Cow::Borrowed("builtin:wasm-fallback")
   }
 
-  #[allow(clippy::case_sensitive_file_extension_comparisons)]
   async fn load(&self, _ctx: &PluginContext, args: &HookLoadArgs<'_>) -> HookLoadReturn {
     if args.id.ends_with(".wasm") {
       // TODO: Replace the link here after rolldown's document is ready

@@ -16,7 +16,6 @@ impl Plugin for ManifestPlugin {
     Cow::Borrowed("builtin:manifest")
   }
 
-  #[allow(clippy::case_sensitive_file_extension_comparisons)]
   async fn generate_bundle(
     &self,
     ctx: &PluginContext,

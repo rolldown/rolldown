@@ -1679,6 +1679,7 @@ export type BindingMakeAbsoluteExternalsRelative =
 export interface BindingManifestPluginConfig {
   root: string
   outPath: string
+  cssEntries: () => Set<string>
 }
 
 export interface BindingMatchGroup {

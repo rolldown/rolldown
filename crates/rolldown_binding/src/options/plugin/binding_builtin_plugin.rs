@@ -124,10 +124,13 @@ impl TryFrom<BindingBuiltinPlugin<'_>> for Arc<dyn Pluginable> {
       }
       BindingBuiltinPluginName::LoadFallback => Arc::new(LoadFallbackPlugin),
       BindingBuiltinPluginName::Manifest => {
-        let plugin = if let Some(options) = plugin.options {
+        let plugin: ManifestPlugin = if let Some(options) = plugin.options {
           BindingManifestPluginConfig::from_unknown(options)?.into()
         } else {
-          ManifestPlugin::default()
+          return Err(napi::Error::new(
+            napi::Status::InvalidArg,
+            "Missing options for ManifestPlugin",
+          ));
         };
         Arc::new(plugin)
       }

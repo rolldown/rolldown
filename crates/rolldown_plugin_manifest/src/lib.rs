@@ -1,14 +1,22 @@
 mod utils;
 
-use std::{borrow::Cow, collections::BTreeMap, path::Path, sync::Arc};
+use std::{borrow::Cow, collections::BTreeMap, path::Path, pin::Pin, sync::Arc};
 
 use rolldown_common::{EmittedAsset, Output};
 use rolldown_plugin::{HookNoopReturn, HookUsage, Plugin, PluginContext};
+use rolldown_utils::rustc_hash::FxHashSetExt;
+use rustc_hash::FxHashSet;
 
-#[derive(Debug, Default)]
+pub type CssEntriesFn = dyn Fn() -> Pin<Box<(dyn Future<Output = anyhow::Result<FxHashSet<String>>> + Send)>>
+  + Send
+  + Sync;
+
+#[derive(derive_more::Debug)]
 pub struct ManifestPlugin {
   pub root: String,
   pub out_path: String,
+  #[debug(skip)]
+  pub css_entries: Arc<CssEntriesFn>,
 }
 
 impl Plugin for ManifestPlugin {
@@ -24,6 +32,7 @@ impl Plugin for ManifestPlugin {
   ) -> HookNoopReturn {
     // Use BTreeMap to make the result sorted
     let mut manifest = BTreeMap::default();
+    let mut css_entries = None;
 
     for file in args.bundle.iter() {
       match file {
@@ -34,6 +43,17 @@ impl Plugin for ManifestPlugin {
         }
         Output::Asset(asset) => {
           if !asset.names.is_empty() {
+            if css_entries.is_none() {
+              let reference_ids = (self.css_entries)().await?;
+              let mut filenames = FxHashSet::with_capacity(reference_ids.len());
+              for reference_id in reference_ids {
+                if let Ok(filename) = ctx.get_file_name(&reference_id) {
+                  filenames.insert(filename);
+                }
+              }
+              css_entries = Some(filenames);
+            }
+
             // Add every unique asset to the manifest, keyed by its original name
             let file = asset.original_file_names.first().map_or_else(
               || {
@@ -45,7 +65,12 @@ impl Plugin for ManifestPlugin {
               Cow::Borrowed,
             );
 
-            let asset_manifest = Arc::new(Self::create_asset(asset, file.to_string(), false));
+            let css_entries = unsafe { css_entries.as_ref().unwrap_unchecked() };
+            let asset_manifest = Arc::new(Self::create_asset(
+              asset,
+              file.to_string(),
+              css_entries.contains(&asset.filename),
+            ));
 
             // If JS chunk and asset chunk are both generated from the same source file,
             // prioritize JS chunk as it contains more information

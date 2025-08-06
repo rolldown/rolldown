@@ -2989,11 +2989,14 @@ dependencies = [
 name = "rolldown_plugin_manifest"
 version = "0.1.0"
 dependencies = [
+ "anyhow",
  "arcstr",
  "cow-utils",
+ "derive_more",
  "rolldown_common",
  "rolldown_plugin",
  "rolldown_utils",
+ "rustc-hash",
  "serde",
  "serde_json",
 ]

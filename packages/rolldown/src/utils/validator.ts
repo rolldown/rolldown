@@ -607,6 +607,7 @@ const GlobalsFunctionSchema = v.pipe(
 );
 
 const AdvancedChunksSchema = v.strictObject({
+  includeDependenciesRecursively: v.optional(v.boolean()),
   minSize: v.optional(v.number()),
   maxSize: v.optional(v.number()),
   minModuleSize: v.optional(v.number()),

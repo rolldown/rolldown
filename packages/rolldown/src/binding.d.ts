@@ -1324,6 +1324,7 @@ export interface AliasItem {
 }
 
 export interface BindingAdvancedChunksOptions {
+  includeDependenciesRecursively?: boolean
   minSize?: number
   minShareCount?: number
   groups?: Array<BindingMatchGroup>

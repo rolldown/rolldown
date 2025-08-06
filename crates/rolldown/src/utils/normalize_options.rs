@@ -3,7 +3,7 @@ use std::{borrow::Cow, path::Path};
 use oxc::transformer_plugins::InjectGlobalVariablesConfig;
 use rolldown_common::{
   AttachDebugInfo, GlobalsOutputOption, InjectImport, LegalComments, MinifyOptions, ModuleType,
-  NormalizedBundlerOptions, OutputFormat, Platform, PreserveEntrySignatures, TreeshakeOptions,
+  NormalizedBundlerOptions, OutputFormat, Platform, TreeshakeOptions,
   normalize_optimization_option,
 };
 use rolldown_error::{BuildDiagnostic, InvalidOptionType};
@@ -170,21 +170,6 @@ pub fn normalize_options(mut raw_options: crate::BundlerOptions) -> NormalizeOpt
 
   if experimental.attach_debug_info.is_none() {
     experimental.attach_debug_info = Some(AttachDebugInfo::Simple);
-  }
-
-  if let Some(advanced_chunks) = raw_options.advanced_chunks.as_mut() {
-    let allow_to_mangle_entry_chunk_exports = matches!(
-      preserve_entry_signatures,
-      PreserveEntrySignatures::AllowExtension | PreserveEntrySignatures::False
-    );
-
-    // If entry module's exports shape could be modified by the bundler, we don't need to include captured modules' dependencies recursively.
-    // It allows the bundler to only specific module without pulling its' dependencies.
-    if advanced_chunks.include_dependencies_recursively.is_none()
-      && allow_to_mangle_entry_chunk_exports
-    {
-      advanced_chunks.include_dependencies_recursively = Some(false);
-    }
   }
 
   let inline_dynamic_imports = match format {

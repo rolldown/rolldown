@@ -130,6 +130,19 @@ export interface OutputOptions {
    */
   advancedChunks?: {
     /**
+     * - Type: `boolean`
+     * - Default: `true`
+     *
+     * By default, each group will also include captured modules' dependencies. This reduces the chance of generating circular chunks.
+     *
+     * If you want to disable this behavior, it's recommended to both set
+     * - `preserveEntrySignatures: false`
+     * - `strictExecutionOrder: true`
+     *
+     * to avoid generating invalid chunks.
+     */
+    includeDependenciesRecursively?: boolean;
+    /**
      * - Type: `number`
      *
      * Global fallback of [`{group}.minSize`](#advancedchunks-groups-minsize), if it's not specified in the group.

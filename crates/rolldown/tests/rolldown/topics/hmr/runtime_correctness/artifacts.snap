@@ -10,10 +10,10 @@ import assert from "node:assert";
 
 // HIDDEN [rolldown:runtime]
 // HIDDEN [rolldown:hmr]
-//#region cases/require/cjs-lib.js
-var require_cjs_lib = /* @__PURE__ */ __commonJS({ "cases/require/cjs-lib.js": ((exports, module) => {
-	const cjs_lib_hot = __rolldown_runtime__.createModuleHotContext("cases/require/cjs-lib.js");
-	__rolldown_runtime__.registerModule("cases/require/cjs-lib.js", module);
+//#region cases/require/cjs-lib-reassign-module-exports.js
+var require_cjs_lib_reassign_module_exports = /* @__PURE__ */ __commonJS({ "cases/require/cjs-lib-reassign-module-exports.js": ((exports, module) => {
+	const cjs_lib_reassign_module_exports_hot = __rolldown_runtime__.createModuleHotContext("cases/require/cjs-lib-reassign-module-exports.js");
+	__rolldown_runtime__.registerModule("cases/require/cjs-lib-reassign-module-exports.js", module);
 	module.exports = function() {
 		return "exports";
 	};
@@ -21,13 +21,32 @@ var require_cjs_lib = /* @__PURE__ */ __commonJS({ "cases/require/cjs-lib.js": (
 }) });
 
 //#endregion
+//#region cases/require/cjs-lib.js
+var require_cjs_lib = /* @__PURE__ */ __commonJS({ "cases/require/cjs-lib.js": ((exports, module) => {
+	const cjs_lib_hot = __rolldown_runtime__.createModuleHotContext("cases/require/cjs-lib.js");
+	__rolldown_runtime__.registerModule("cases/require/cjs-lib.js", module);
+	exports.foo = "foo";
+	exports.bar = "bar";
+	var Noop = class {
+		static {
+			this.baz = "bar";
+		}
+	};
+	console.log(Noop);
+}) });
+
+//#endregion
 //#region cases/require/index.js
 var require_exports = {};
 const require_hot = __rolldown_runtime__.createModuleHotContext("cases/require/index.js");
 __rolldown_runtime__.registerModule("cases/require/index.js", { exports: require_exports });
-const requiredCjsLib = require_cjs_lib();
-assert.strictEqual(requiredCjsLib(), "exports");
-assert.strictEqual(requiredCjsLib.foo, "foo");
+const requiredCjsLibReassignModuleExports = require_cjs_lib_reassign_module_exports();
+assert.strictEqual(requiredCjsLibReassignModuleExports(), "exports");
+assert.strictEqual(requiredCjsLibReassignModuleExports.foo, "foo");
+const requireCjsLib = require_cjs_lib();
+assert.strictEqual(requireCjsLib.foo, "foo");
+assert.strictEqual(requireCjsLib.bar, "bar");
+assert.strictEqual(requireCjsLib.baz, undefined);
 
 //#endregion
 //#region cases/manual_reexport/lib.js
@@ -123,11 +142,11 @@ var init_lib_2 = __rolldown_runtime__.createEsmInitializer((function() {
 }));
 
 //#endregion
-//#region cases/require/cjs-lib.js
-var require_cjs_lib_3 = __rolldown_runtime__.createCjsInitializer((function(exports, module) {
+//#region cases/require/cjs-lib-reassign-module-exports.js
+var require_cjs_lib_reassign_module_exports_3 = __rolldown_runtime__.createCjsInitializer((function(exports, module) {
 	try {
-		__rolldown_runtime__.registerModule("cases/require/cjs-lib.js", module);
-		const hot_cjs_lib = __rolldown_runtime__.createModuleHotContext("cases/require/cjs-lib.js");
+		__rolldown_runtime__.registerModule("cases/require/cjs-lib-reassign-module-exports.js", module);
+		const hot_cjs_lib_reassign_module_exports = __rolldown_runtime__.createModuleHotContext("cases/require/cjs-lib-reassign-module-exports.js");
 		module.exports = function() {
 			return "exports";
 		};
@@ -136,32 +155,53 @@ var require_cjs_lib_3 = __rolldown_runtime__.createCjsInitializer((function(expo
 }));
 
 //#endregion
+//#region cases/require/cjs-lib.js
+var require_cjs_lib_4 = __rolldown_runtime__.createCjsInitializer((function(exports, module) {
+	try {
+		__rolldown_runtime__.registerModule("cases/require/cjs-lib.js", module);
+		const hot_cjs_lib = __rolldown_runtime__.createModuleHotContext("cases/require/cjs-lib.js");
+		exports.foo = "foo";
+		exports.bar = "bar";
+		class Noop {
+			static {
+				this.baz = "bar";
+			}
+		}
+		console.log(Noop);
+	} finally {}
+}));
+
+//#endregion
 //#region cases/require/index.js
-import * as import_node_assert_4 from "node:assert";
-var init_require_4 = __rolldown_runtime__.createEsmInitializer((function() {
+import * as import_node_assert_5 from "node:assert";
+var init_require_5 = __rolldown_runtime__.createEsmInitializer((function() {
 	try {
 		var __rolldown_exports__ = {};
 		__rolldown_runtime__.__export(__rolldown_exports__, {});
 		__rolldown_runtime__.registerModule("cases/require/index.js", { exports: __rolldown_exports__ });
 		const hot_require = __rolldown_runtime__.createModuleHotContext("cases/require/index.js");
-		const requiredCjsLib = (require_cjs_lib_3(), __rolldown_runtime__.loadExports("cases/require/cjs-lib.js"));
-		import_node_assert_4.default.strictEqual(requiredCjsLib(), "exports");
-		import_node_assert_4.default.strictEqual(requiredCjsLib.foo, "foo");
+		const requiredCjsLibReassignModuleExports = (require_cjs_lib_reassign_module_exports_3(), __rolldown_runtime__.loadExports("cases/require/cjs-lib-reassign-module-exports.js"));
+		import_node_assert_5.default.strictEqual(requiredCjsLibReassignModuleExports(), "exports");
+		import_node_assert_5.default.strictEqual(requiredCjsLibReassignModuleExports.foo, "foo");
+		const requireCjsLib = (require_cjs_lib_4(), __rolldown_runtime__.loadExports("cases/require/cjs-lib.js"));
+		import_node_assert_5.default.strictEqual(requireCjsLib.foo, "foo");
+		import_node_assert_5.default.strictEqual(requireCjsLib.bar, "bar");
+		import_node_assert_5.default.strictEqual(requireCjsLib.baz, undefined);
 	} finally {}
 }));
 
 //#endregion
 //#region main.js
-var init_main_5 = __rolldown_runtime__.createEsmInitializer((function() {
+var init_main_6 = __rolldown_runtime__.createEsmInitializer((function() {
 	try {
 		var __rolldown_exports__ = {};
 		__rolldown_runtime__.__export(__rolldown_exports__, {});
 		__rolldown_runtime__.registerModule("main.js", { exports: __rolldown_exports__ });
-		init_require_4();
+		init_require_5();
 		init_manual_reexport_1();
 		const hot_main = __rolldown_runtime__.createModuleHotContext("main.js");
-		var import_require_5 = __rolldown_runtime__.loadExports("cases/require/index.js");
-		var import_manual_reexport_5 = __rolldown_runtime__.loadExports("cases/manual_reexport/index.js");
+		var import_require_6 = __rolldown_runtime__.loadExports("cases/require/index.js");
+		var import_manual_reexport_6 = __rolldown_runtime__.loadExports("cases/manual_reexport/index.js");
 		if (hot_main) {
 			hot_main.accept();
 		}
@@ -171,7 +211,7 @@ var init_main_5 = __rolldown_runtime__.createEsmInitializer((function() {
 //#endregion
 // HIDDEN [rolldown:hmr]
 // HIDDEN [rolldown:runtime]
-init_main_5()
+init_main_6()
 __rolldown_runtime__.applyUpdates(['main.js']);
 ```
 ## Meta

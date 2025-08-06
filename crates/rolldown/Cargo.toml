@@ -35,6 +35,7 @@ notify = { workspace = true }
 oxc = { workspace = true }
 oxc_ecmascript = { workspace = true }
 oxc_index = { workspace = true }
+oxc_traverse = { workspace = true }
 petgraph = { workspace = true }
 rolldown_common = { workspace = true }
 rolldown_debug = { workspace = true }

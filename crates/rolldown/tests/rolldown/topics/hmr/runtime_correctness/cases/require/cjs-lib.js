@@ -1,4 +1,10 @@
-module.exports = function () {
-  return 'exports'
+exports.foo  = 'foo'
+this.bar = 'bar'
+
+class Noop {
+  static {
+    this.baz = 'bar'
+  }
 }
-module.exports.foo = 'foo'
+
+console.log(Noop)

@@ -48,7 +48,7 @@ impl LinkStage<'_> {
         let mut symbols_to_be_declared = vec![];
         stmt_infos.infos.iter_mut_enumerated().for_each(|(stmt_info_idx, stmt_info)| {
           if stmt_info.meta.contains(StmtInfoMeta::HasDummyRecord) {
-            depended_runtime_helper_map[RuntimeHelper::Require.bits().trailing_zeros() as usize]
+            depended_runtime_helper_map[RuntimeHelper::Require.bit_index()]
               .push(stmt_info_idx);
           }
           stmt_info.import_records.iter().for_each(|rec_id| {
@@ -91,7 +91,7 @@ impl LinkStage<'_> {
                       {
                         stmt_info.side_effect = true.into();
                         depended_runtime_helper_map
-                          [RuntimeHelper::ToEsm.bits().trailing_zeros() as usize]
+                          [RuntimeHelper::ToEsm.bit_index()]
                           .push(stmt_info_idx);
                       }
                     }
@@ -126,7 +126,7 @@ impl LinkStage<'_> {
                             stmt_info.side_effect = true.into();
                             stmt_info.meta.insert(StmtInfoMeta::ReExportDynamicExports);
                             depended_runtime_helper_map
-                              [RuntimeHelper::ReExport.bits().trailing_zeros() as usize]
+                              [RuntimeHelper::ReExport.bit_index()]
                               .push(stmt_info_idx);
                             stmt_info.referenced_symbols.push(importer.namespace_object_ref.into());
                             stmt_info.referenced_symbols.push(importee.namespace_object_ref.into());
@@ -143,10 +143,10 @@ impl LinkStage<'_> {
                             .referenced_symbols
                             .push(importee_linking_info.wrapper_ref.unwrap().into());
                           depended_runtime_helper_map
-                            [RuntimeHelper::ToEsm.bits().trailing_zeros() as usize]
+                            [RuntimeHelper::ToEsm.bit_index()]
                             .push(stmt_info_idx);
                           depended_runtime_helper_map
-                            [RuntimeHelper::ReExport.bits().trailing_zeros() as usize]
+                            [RuntimeHelper::ReExport.bit_index()]
                             .push(stmt_info_idx);
                           if !commonjs_treeshake {
                             stmt_info.referenced_symbols.push(importer.namespace_object_ref.into());
@@ -161,7 +161,7 @@ impl LinkStage<'_> {
                             .referenced_symbols
                             .push(importee_linking_info.wrapper_ref.unwrap().into());
                           depended_runtime_helper_map
-                            [RuntimeHelper::ToEsm.bits().trailing_zeros() as usize]
+                            [RuntimeHelper::ToEsm.bit_index()]
                             .push(stmt_info_idx);
                           symbols_to_be_declared.push((rec.namespace_ref, stmt_info_idx));
                           rec.namespace_ref.set_name(
@@ -189,7 +189,7 @@ impl LinkStage<'_> {
                           // Turn `export * from 'bar_esm'` into `init_bar_esm();__reExport(foo_exports, bar_esm_exports);`
                           // something like `__reExport(foo_exports, other_exports)`
                           depended_runtime_helper_map
-                            [RuntimeHelper::ReExport.bits().trailing_zeros() as usize]
+                            [RuntimeHelper::ReExport.bit_index()]
                             .push(stmt_info_idx);
                           stmt_info.meta.insert(StmtInfoMeta::ReExportDynamicExports);
                           stmt_info.referenced_symbols.push(importer.namespace_object_ref.into());
@@ -217,7 +217,7 @@ impl LinkStage<'_> {
 
                       if !rec.meta.contains(ImportRecordMeta::IsRequireUnused) {
                         depended_runtime_helper_map
-                          [RuntimeHelper::ToCommonJs.bits().trailing_zeros() as usize]
+                          [RuntimeHelper::ToCommonJs.bit_index()]
                           .push(stmt_info_idx);
                       }
                     }
@@ -232,7 +232,7 @@ impl LinkStage<'_> {
                             .referenced_symbols
                             .push(importee_linking_info.wrapper_ref.unwrap().into());
                           depended_runtime_helper_map
-                            [RuntimeHelper::ToEsm.bits().trailing_zeros() as usize]
+                            [RuntimeHelper::ToEsm.bit_index()]
                             .push(stmt_info_idx);
                         }
                         WrapKind::Esm => {
@@ -249,7 +249,7 @@ impl LinkStage<'_> {
                           // `import('./some-cjs-module.js')` would be converted to
                           // `import('./some-cjs-module.js').then(__toDynamicImportESM(isNodeMode))`
                           depended_runtime_helper_map
-                            [RuntimeHelper::ToDynamicImportEsm.bits().trailing_zeros() as usize]
+                            [RuntimeHelper::ToDynamicImportEsm.bit_index()]
                             .push(stmt_info_idx);
                         }
                         ExportsKind::Esm | ExportsKind::None => {}
@@ -268,7 +268,7 @@ impl LinkStage<'_> {
             }
           });
           if keep_names && stmt_info.meta.intersects(StmtInfoMeta::KeepNamesType) {
-            depended_runtime_helper_map[RuntimeHelper::Name.bits().trailing_zeros() as usize]
+            depended_runtime_helper_map[RuntimeHelper::Name.bit_index()]
               .push(stmt_info_idx);
           }
         });

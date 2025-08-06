@@ -278,7 +278,7 @@ pub fn normalize_options(mut raw_options: crate::BundlerOptions) -> NormalizeOpt
     optimization: normalize_optimization_option(raw_options.optimization, platform),
     top_level_var: raw_options.top_level_var.unwrap_or(false),
     minify_internal_exports: raw_options.minify_internal_exports.unwrap_or(false),
-    context: raw_options.context,
+    context: raw_options.context.unwrap_or("".to_string()),
   };
 
   NormalizeOptionsReturn { options: normalized, resolve_options: raw_resolve, warnings }

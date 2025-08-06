@@ -350,20 +350,14 @@ impl<'ast> VisitMut<'ast> for ScopeHoistingFinalizer<'_, 'ast> {
             ThisExprReplaceKind::Exports => {
               *expr = self.snippet.builder.expression_identifier(SPAN, "exports");
             }
+            ThisExprReplaceKind::Context if self.ctx.options.context.is_empty() => {
+              *expr = self.snippet.void_zero();
+            }
             ThisExprReplaceKind::Context => {
-              if let Some(ctx) = self.ctx.options.context.as_ref() {
-                if self.is_top_level && !ctx.is_empty() {
-                  *expr = self
-                    .snippet
-                    .builder
-                    .expression_identifier(SPAN, Atom::from_in(ctx, self.alloc));
-                } else {
-                  // If the context is not set, we replace `this` with `undefined`
-                  *expr = self.snippet.void_zero();
-                }
-              } else {
-                *expr = self.snippet.void_zero();
-              }
+              *expr = self
+                  .snippet
+                  .builder
+                  .expression_identifier(SPAN, Atom::from_in(self.ctx.options.context.as_str(), self.alloc));
             }
           }
         }

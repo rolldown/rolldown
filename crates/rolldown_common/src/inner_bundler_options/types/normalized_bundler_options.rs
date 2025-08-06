@@ -104,7 +104,7 @@ pub struct NormalizedBundlerOptions {
   pub optimization: OptimizationOption,
   pub top_level_var: bool,
   pub minify_internal_exports: bool,
-  pub context: Option<String>,
+  pub context: String,
 }
 
 // This is only used for testing

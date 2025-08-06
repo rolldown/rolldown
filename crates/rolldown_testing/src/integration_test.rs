@@ -717,7 +717,7 @@ setTimeout(async () => {{
       break;
     }}
   }}
-}}, 10);
+}}, 100);
       ",
         dist_folder.to_str().unwrap().replace('\\', "\\\\") // escape backslashes in Windows paths
       ));

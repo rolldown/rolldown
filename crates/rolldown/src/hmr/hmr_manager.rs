@@ -16,10 +16,12 @@ use rolldown_error::BuildResult;
 use rolldown_fs::OsFileSystem;
 use rolldown_plugin::SharedPluginDriver;
 use rolldown_sourcemap::{Source, SourceJoiner, SourceMapSource};
+#[cfg(not(target_family = "wasm"))]
+use rolldown_utils::rayon::IndexedParallelIterator;
 use rolldown_utils::{
   concat_string,
   indexmap::{FxIndexMap, FxIndexSet},
-  rayon::{IndexedParallelIterator, IntoParallelIterator, ParallelIterator},
+  rayon::{IntoParallelIterator, ParallelIterator},
 };
 use rustc_hash::{FxHashMap, FxHashSet};
 

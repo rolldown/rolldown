@@ -354,10 +354,10 @@ impl<'ast> VisitMut<'ast> for ScopeHoistingFinalizer<'_, 'ast> {
               *expr = self.snippet.void_zero();
             }
             ThisExprReplaceKind::Context => {
-              *expr = self
-                  .snippet
-                  .builder
-                  .expression_identifier(SPAN, Atom::from_in(self.ctx.options.context.as_str(), self.alloc));
+              *expr = self.snippet.builder.expression_identifier(
+                SPAN,
+                Atom::from_in(self.ctx.options.context.as_str(), self.alloc),
+              );
             }
           }
         }

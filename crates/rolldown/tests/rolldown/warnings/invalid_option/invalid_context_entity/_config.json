@@ -1,0 +1,7 @@
+{
+  "config": {
+    "context": "1",
+    "format": "cjs"
+  },
+  "expectExecuted": false
+}

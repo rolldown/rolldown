@@ -5937,6 +5937,10 @@ expression: output
 
 - main-!~{000}~.js => main-B7ZfmDK1.js
 
+# tests/rolldown/warnings/invalid_option/invalid_context_entity
+
+- main-!~{000}~.js => main-DJPe_EHd.js
+
 # tests/rolldown/warnings/invalid_option/invalid_output_dir_option
 
 - main.js => main.js

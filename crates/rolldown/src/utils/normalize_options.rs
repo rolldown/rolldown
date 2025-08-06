@@ -7,6 +7,7 @@ use rolldown_common::{
   normalize_optimization_option,
 };
 use rolldown_error::{BuildDiagnostic, InvalidOptionType};
+use rolldown_utils::ecmascript::is_validate_identifier_name;
 use rustc_hash::{FxHashMap, FxHashSet};
 
 pub struct NormalizeOptionsReturn {
@@ -23,6 +24,15 @@ fn verify_raw_options(raw_options: &crate::BundlerOptions) -> Vec<BuildDiagnosti
       BuildDiagnostic::invalid_option(InvalidOptionType::InvalidOutputDirOption)
         .with_severity_warning(),
     );
+  }
+
+  if let Some(entity) = raw_options.context.as_ref() {
+    if !is_validate_identifier_name(entity) {
+      warnings.push(
+        BuildDiagnostic::invalid_option(InvalidOptionType::InvalidContext(entity.to_string()))
+          .with_severity_warning(),
+      );
+    }
   }
 
   match raw_options.format {
@@ -278,7 +288,7 @@ pub fn normalize_options(mut raw_options: crate::BundlerOptions) -> NormalizeOpt
     optimization: normalize_optimization_option(raw_options.optimization, platform),
     top_level_var: raw_options.top_level_var.unwrap_or(false),
     minify_internal_exports: raw_options.minify_internal_exports.unwrap_or(false),
-    context: raw_options.context.unwrap_or(String::new()),
+    context: raw_options.context.unwrap_or_default(),
   };
 
   NormalizeOptionsReturn { options: normalized, resolve_options: raw_resolve, warnings }

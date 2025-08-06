@@ -1,6 +1,8 @@
 set windows-shell := ["powershell"]
 set shell := ["bash", "-cu"]
 
+alias dt := debug-test
+
 _default:
     just --list -u
 
@@ -172,3 +174,6 @@ check-setup-prerequisites:
 
 pnpm-install:
     pnpm install
+
+debug-test *args:
+    NEEDS_EXTENDED=false cargo run-fixture {{ args }}

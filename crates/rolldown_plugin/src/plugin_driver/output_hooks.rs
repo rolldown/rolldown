@@ -3,10 +3,10 @@ use std::sync::Arc;
 use crate::types::hook_render_error::HookRenderErrorArgs;
 use crate::{HookAddonArgs, PluginDriver};
 use crate::{HookAugmentChunkHashReturn, HookNoopReturn, HookRenderChunkArgs};
-use anyhow::{Ok, Result};
+use anyhow::{Context, Ok, Result};
 use rolldown_common::{Output, RollupRenderedChunk, SharedNormalizedBundlerOptions};
 use rolldown_debug::{action, trace_action};
-use rolldown_error::BuildDiagnostic;
+use rolldown_error::{BuildDiagnostic, CausedPlugin};
 use rolldown_sourcemap::SourceMap;
 use tracing::{Instrument, debug_span};
 
@@ -17,7 +17,8 @@ impl PluginDriver {
       plugin
         .call_render_start(ctx, &crate::HookRenderStartArgs { options: opts })
         .instrument(debug_span!("render_start_hook", plugin_name = plugin.call_name().as_ref()))
-        .await?;
+        .await
+        .with_context(|| CausedPlugin::new(plugin.call_name()))?;
     }
     Ok(())
   }
@@ -27,7 +28,8 @@ impl PluginDriver {
       if let Some(r) = plugin
         .call_banner(ctx, &args)
         .instrument(debug_span!("banner_hook", plugin_name = plugin.call_name().as_ref()))
-        .await?
+        .await
+        .with_context(|| CausedPlugin::new(plugin.call_name()))?
       {
         banner.push('\n');
         banner.push_str(r.as_str());
@@ -44,7 +46,8 @@ impl PluginDriver {
       if let Some(r) = plugin
         .call_footer(ctx, &args)
         .instrument(debug_span!("footer_hook", plugin_name = plugin.call_name().as_ref()))
-        .await?
+        .await
+        .with_context(|| CausedPlugin::new(plugin.call_name()))?
       {
         footer.push('\n');
         footer.push_str(r.as_str());
@@ -61,7 +64,8 @@ impl PluginDriver {
       if let Some(r) = plugin
         .call_intro(ctx, &args)
         .instrument(debug_span!("intro_hook", plugin_name = plugin.call_name().as_ref()))
-        .await?
+        .await
+        .with_context(|| CausedPlugin::new(plugin.call_name()))?
       {
         intro.push('\n');
         intro.push_str(r.as_str());
@@ -78,7 +82,8 @@ impl PluginDriver {
       if let Some(r) = plugin
         .call_outro(ctx, &args)
         .instrument(debug_span!("outro_hook", plugin_name = plugin.call_name().as_ref()))
-        .await?
+        .await
+        .with_context(|| CausedPlugin::new(plugin.call_name()))?
       {
         outro.push('\n');
         outro.push_str(r.as_str());
@@ -108,7 +113,8 @@ impl PluginDriver {
         if let Some(r) = plugin
           .call_render_chunk(ctx, &args)
           .instrument(debug_span!("render_chunk_hook", plugin_name = plugin.call_name().as_ref()))
-          .await?
+          .await
+          .with_context(|| CausedPlugin::new(plugin.call_name()))?
         {
           args.code = r.code;
           if let Some(map) = r.map {
@@ -147,7 +153,8 @@ impl PluginDriver {
           "augment_chunk_hash_hook",
           plugin_name = plugin.call_name().as_ref()
         ))
-        .await?
+        .await
+        .with_context(|| CausedPlugin::new(plugin.call_name()))?
       {
         hash.get_or_insert_with(String::default).push_str(&plugin_hash);
       }
@@ -161,7 +168,8 @@ impl PluginDriver {
       plugin
         .call_render_error(ctx, args)
         .instrument(debug_span!("render_error_hook", plugin_name = plugin.call_name().as_ref()))
-        .await?;
+        .await
+        .with_context(|| CausedPlugin::new(plugin.call_name()))?;
     }
     Ok(())
   }
@@ -180,7 +188,8 @@ impl PluginDriver {
       plugin
         .call_generate_bundle(ctx, &mut args)
         .instrument(debug_span!("generate_bundle_hook", plugin_name = plugin.call_name().as_ref()))
-        .await?;
+        .await
+        .with_context(|| CausedPlugin::new(plugin.call_name()))?;
       ctx.file_emitter().add_additional_files(bundle, warnings);
     }
     Ok(())
@@ -198,7 +207,8 @@ impl PluginDriver {
       plugin
         .call_write_bundle(ctx, &mut args)
         .instrument(debug_span!("write_bundle_hook", plugin_name = plugin.call_name().as_ref()))
-        .await?;
+        .await
+        .with_context(|| CausedPlugin::new(plugin.call_name()))?;
       ctx.file_emitter().add_additional_files(bundle, warnings);
     }
     Ok(())
@@ -210,7 +220,8 @@ impl PluginDriver {
       plugin
         .call_close_bundle(ctx)
         .instrument(debug_span!("close_bundle_hook", plugin_name = plugin.call_name().as_ref(),))
-        .await?;
+        .await
+        .with_context(|| CausedPlugin::new(plugin.call_name()))?;
     }
     Ok(())
   }

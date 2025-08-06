@@ -9,12 +9,13 @@ use crate::{
     plugin_idx::PluginIdx,
   },
 };
-use anyhow::Result;
+use anyhow::{Context, Result};
 use rolldown_common::{
   ModuleInfo, ModuleType, NormalModule, SharedNormalizedBundlerOptions, SourcemapHires,
   side_effects::HookSideEffects,
 };
 use rolldown_debug::{action, trace_action};
+use rolldown_error::CausedPlugin;
 use rolldown_sourcemap::SourceMap;
 use rolldown_utils::unique_arc::UniqueArc;
 use string_wizard::{MagicString, SourceMapOptions};
@@ -25,7 +26,10 @@ impl PluginDriver {
   pub async fn build_start(&self, opts: &SharedNormalizedBundlerOptions) -> HookNoopReturn {
     for (_, plugin, ctx) in self.iter_plugin_with_context_by_order(&self.order_by_build_start_meta)
     {
-      plugin.call_build_start(ctx, &crate::HookBuildStartArgs { options: opts }).await?;
+      plugin
+        .call_build_start(ctx, &crate::HookBuildStartArgs { options: opts })
+        .await
+        .with_context(|| CausedPlugin::new(plugin.call_name()))?;
     }
 
     Ok(())
@@ -118,7 +122,8 @@ impl PluginDriver {
         "HookResolveIdCall",
         CONTEXT_call_id = rolldown_utils::uuid::uuid_v4()
       ))
-      .await?;
+      .await
+      .with_context(|| CausedPlugin::new(plugin.call_name()))?;
       if ret.is_some() {
         return Ok(ret);
       }
@@ -158,7 +163,8 @@ impl PluginDriver {
           "resolve_dynamic_import_hook",
           plugin_name = plugin.call_name().as_ref()
         ))
-        .await?
+        .await
+        .with_context(|| CausedPlugin::new(plugin.call_name()))?
       {
         return Ok(Some(r));
       }
@@ -208,7 +214,8 @@ impl PluginDriver {
         "HookLoadCall",
         CONTEXT_call_id = rolldown_utils::uuid::uuid_v4()
       ))
-      .await?;
+      .await
+      .with_context(|| CausedPlugin::new(plugin.call_name()))?;
       if ret.is_some() {
         return Ok(ret);
       }
@@ -252,7 +259,8 @@ impl PluginDriver {
           &HookTransformArgs { id, code: &code, module_type: &*module_type },
         )
         .instrument(debug_span!("transform_hook", plugin_name = plugin.call_name().as_ref()))
-        .await?
+        .await
+        .with_context(|| CausedPlugin::new(plugin.call_name()))?
       {
         original_sourcemap_chain = plugin_sourcemap_chain.into_inner();
         if let Some(map) = self.normalize_transform_sourcemap(r.map, id, &code, r.code.as_ref()) {
@@ -351,7 +359,8 @@ impl PluginDriver {
           },
         )
         .instrument(debug_span!("transform_ast_hook", plugin_name = plugin.call_name().as_ref()))
-        .await?;
+        .await
+        .with_context(|| CausedPlugin::new(plugin.call_name()))?;
     }
     Ok(args.ast)
   }
@@ -367,7 +376,8 @@ impl PluginDriver {
       plugin
         .call_module_parsed(ctx, Arc::clone(&module_info), normal_module)
         .instrument(debug_span!("module_parsed_hook", plugin_name = plugin.call_name().as_ref()))
-        .await?;
+        .await
+        .with_context(|| CausedPlugin::new(plugin.call_name()))?;
     }
     Ok(())
   }
@@ -377,7 +387,8 @@ impl PluginDriver {
       plugin
         .call_build_end(ctx, args)
         .instrument(debug_span!("build_end_hook", plugin_name = plugin.call_name().as_ref()))
-        .await?;
+        .await
+        .with_context(|| CausedPlugin::new(plugin.call_name()))?;
     }
     Ok(())
   }

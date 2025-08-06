@@ -624,7 +624,6 @@ impl IntegrationTest {
     let globals_injection = Self::generate_globals_injection_for_execute_output(
       config_name,
       patch_chunks,
-      &dist_folder,
       bundler.options(),
     );
 
@@ -638,7 +637,10 @@ impl IntegrationTest {
     if test_script.exists() {
       node_command.arg(test_script);
     } else {
-      let compiled_entries = bundler
+      // make sure to set this: https://github.com/nodejs/node/issues/59374
+      node_command.arg("--input-type=module");
+
+      let mut compiled_entries = bundler
         .options()
         .input
         .iter()
@@ -648,21 +650,32 @@ impl IntegrationTest {
           format!("{name}.{ext}",)
         })
         .map(|name| dist_folder.join(name))
+        .map(|path| {
+          if cfg!(target_os = "windows") {
+            // Only URLs with a scheme in: file, data, and node are supported by the default ESM loader. On Windows, absolute paths must be valid file:// URLs.
+            format!("file://{}", path.to_str().expect("should be valid utf8").replace('\\', "/"))
+          } else {
+            path.to_str().expect("should be valid utf8").to_string()
+          }
+        })
         .collect::<Vec<_>>();
 
-      compiled_entries.iter().for_each(|entry| {
-        node_command.arg("--import");
-        if cfg!(target_os = "windows") {
-          // Only URLs with a scheme in: file, data, and node are supported by the default ESM loader. On Windows, absolute paths must be valid file:// URLs.
-          node_command.arg(format!("file://{}", entry.to_str().expect("should be valid utf8")));
-        } else {
-          node_command.arg(entry);
-        }
-        node_command.arg("--eval");
-        node_command.arg("\"\"");
-      });
-      // workaround for https://github.com/nodejs/node/issues/59374
-      node_command.arg("--input-type=module");
+      let post_globals_injection =
+        Self::generate_post_globals_injection_for_execute_output(patch_chunks, &dist_folder);
+      if !post_globals_injection.is_empty() {
+        let inject_script_url =
+          format!("data:text/javascript,{}", urlencoding::encode(&post_globals_injection));
+        compiled_entries.push(inject_script_url);
+      }
+
+      node_command.arg("--eval");
+      node_command.arg(
+        compiled_entries
+          .into_iter()
+          .map(|s| format!("import '{s}';"))
+          .collect::<Vec<_>>()
+          .join("\n"),
+      );
     }
 
     let output = node_command.output().unwrap();
@@ -684,7 +697,6 @@ impl IntegrationTest {
   fn generate_globals_injection_for_execute_output(
     config_name: Option<&str>,
     patch_chunks: &[String],
-    dist_folder: &Path,
     _options: &NormalizedBundlerOptions,
   ) -> String {
     let mut stmts = vec![];
@@ -700,8 +712,21 @@ impl IntegrationTest {
         .collect::<Vec<_>>()
         .join(",");
       stmts.push(format!("globalThis.__testPatches = [{patch_chunks_array}];"));
-      stmts.push(format!(
-        "\
+    }
+
+    stmts.join("\n")
+  }
+
+  fn generate_post_globals_injection_for_execute_output(
+    patch_chunks: &[String],
+    dist_folder: &Path,
+  ) -> String {
+    if patch_chunks.is_empty() {
+      return String::new();
+    }
+
+    format!(
+      "\
 import url from 'node:url';
 import path from 'node:path';
 
@@ -717,12 +742,9 @@ setTimeout(async () => {{
       break;
     }}
   }}
-}}, 10);
+}}, 0);
       ",
-        dist_folder.to_str().unwrap().replace('\\', "\\\\") // escape backslashes in Windows paths
-      ));
-    }
-
-    stmts.join("\n")
+      dist_folder.to_str().unwrap().replace('\\', "\\\\") // escape backslashes in Windows paths
+    )
   }
 }

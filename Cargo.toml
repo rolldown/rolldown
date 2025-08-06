@@ -33,6 +33,7 @@ unnecessary_safety_comment = "deny"
 # --- pedantic #https://doc.rust-lang.org/clippy/usage.html#clippypedantic
 # To write the best rust code, pedantic group is enabled by default.
 pedantic = { level = "deny", priority = -1 }
+case_sensitive_file_extension_comparisons = "allow"
 
 # Wizards, naming is too hard.
 module_inception = "allow"

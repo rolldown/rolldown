@@ -102,7 +102,6 @@ impl FileToUrlEnv<'_> {
     Ok(url)
   }
 
-  #[allow(clippy::case_sensitive_file_extension_comparisons)]
   async fn should_inline(
     &self,
     file: &str,

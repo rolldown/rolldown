@@ -8,7 +8,6 @@ use serde_json::Value;
 pub const THRESHOLD_SIZE: usize = 10 * 1000;
 
 /// /\.json(?:$|\?)(?!commonjs-(?:proxy|external))/
-#[allow(clippy::case_sensitive_file_extension_comparisons)]
 pub fn is_json_ext(ext: &str) -> bool {
   if ext.ends_with(".json") {
     return true;

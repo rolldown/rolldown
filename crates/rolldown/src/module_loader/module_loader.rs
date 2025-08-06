@@ -344,7 +344,6 @@ impl<'a> ModuleLoader<'a> {
           for ((rec_idx, mut raw_rec), resolved_id) in
             raw_import_records.into_iter_enumerated().zip(resolved_deps)
           {
-            #[allow(clippy::case_sensitive_file_extension_comparisons)]
             if self.options.experimental.vite_mode.unwrap_or_default()
               && resolved_id.id.as_str().ends_with(".json")
             {

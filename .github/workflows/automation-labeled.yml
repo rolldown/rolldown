@@ -53,7 +53,7 @@ jobs:
           edit-mode: replace
 
   create_issue_if_doc_labeled_on_pr:
-    if: github.event_name == 'pull_request_target' && github.event.label.name == 'doc'
+    if: github.event_name == 'pull_request_target' && github.event.label.name == 'documentation'
     runs-on: ubuntu-latest
     permissions:
       issues: write

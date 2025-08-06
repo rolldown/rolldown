@@ -72,5 +72,17 @@ pub const RUNTIME_HELPER_NAMES: [&str; {}] = [
     top_level_items.len()
   );
 
-  format!("{runtime_helper_flag}\n{runtime_helper_names_code}")
+  let runtime_helper_impl = r"
+impl RuntimeHelper {
+  /// # Use with caution
+  /// Only used when there is only one bit is set in the `RuntimeHelper`.
+  /// The function is used to get the index of the bit that is set.
+  #[inline]
+  pub fn bit_index(&self) -> usize {
+    self.bits().trailing_zeros() as usize
+  }
+}
+  ";
+
+  format!("{runtime_helper_flag}\n{runtime_helper_impl}\n{runtime_helper_names_code}")
 }

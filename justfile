@@ -175,5 +175,6 @@ check-setup-prerequisites:
 pnpm-install:
     pnpm install
 
+# Run rust tests without extended tests
 debug-test *args:
     NEEDS_EXTENDED=false cargo run-fixture {{ args }}

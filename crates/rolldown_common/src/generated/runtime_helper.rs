@@ -28,6 +28,16 @@ bitflags! {
   }
 }
 
+impl RuntimeHelper {
+  /// # Use with caution
+  /// Only used when there is only one bit is set in the `RuntimeHelper`.
+  /// The function is used to get the index of the bit that is set.
+  #[inline]
+  pub fn bit_index(&self) -> usize {
+    self.bits().trailing_zeros() as usize
+  }
+}
+
 pub const RUNTIME_HELPER_NAMES: [&str; 20] = [
   "__create",
   "__defProp",

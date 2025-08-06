@@ -6,6 +6,7 @@ use std::{
 
 use arcstr::ArcStr;
 use oxc::ast_visit::VisitMut;
+use oxc_traverse::traverse_mut;
 use rolldown_common::{
   EcmaModuleAstUsage, HmrBoundary, HmrBoundaryOutput, HmrPatch, HmrUpdate, Module, ModuleIdx,
   ModuleTable,
@@ -364,6 +365,7 @@ impl HmrManager {
 
         ast.program.with_mut(|fields| {
           let scoping = EcmaAst::make_semantic(fields.program, /*with_cfg*/ false).into_scoping();
+
           let mut finalizer = HmrAstFinalizer {
             modules,
             alloc: fields.allocator,
@@ -384,6 +386,11 @@ impl HmrManager {
             named_exports: FxHashMap::default(),
           };
 
+          let scoping = EcmaAst::make_semantic(fields.program, /*with_cfg*/ false).into_scoping();
+
+          traverse_mut(&mut finalizer, fields.allocator, fields.program, scoping, ());
+
+          // TODO: hyf0 removes `VisitMut`, uses `Traverse` instead.
           finalizer.visit_program(fields.program);
         });
 

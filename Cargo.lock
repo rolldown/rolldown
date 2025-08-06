@@ -2614,6 +2614,7 @@ dependencies = [
  "oxc",
  "oxc_ecmascript",
  "oxc_index",
+ "oxc_traverse",
  "petgraph",
  "rolldown_common",
  "rolldown_debug",

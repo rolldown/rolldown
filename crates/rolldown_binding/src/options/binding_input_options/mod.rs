@@ -1,5 +1,4 @@
 mod binding_debug_options;
-mod binding_defer_sync_scan_data;
 mod binding_experimental_options;
 mod binding_input_item;
 mod binding_make_absolute_externals_relative;
@@ -12,7 +11,6 @@ pub mod binding_inject_import;
 pub mod binding_jsx;
 
 use binding_debug_options::BindingDebugOptions;
-use binding_defer_sync_scan_data::BindingDeferSyncScanDataOption;
 use binding_make_absolute_externals_relative::BindingMakeAbsoluteExternalsRelative;
 use binding_optimization::BindingOptimization;
 use derive_more::Debug;
@@ -29,6 +27,7 @@ use binding_watch_option::BindingWatchOption;
 
 use super::plugin::BindingPluginOrParallelJsPluginPlaceholder;
 use crate::generated::binding_checks_options;
+use crate::types::defer_sync_scan_data::BindingDeferSyncScanData;
 use crate::types::preserve_entry_signatures::BindingPreserveEntrySignatures;
 use crate::types::{
   binding_log::BindingLog, binding_log_level::BindingLogLevel, js_callback::JsCallback,
@@ -99,16 +98,15 @@ pub struct BindingInputOptions<'env> {
   pub checks: Option<binding_checks_options::BindingChecksOptions>,
   #[debug(skip)]
   #[napi(ts_type = "undefined | (() => BindingDeferSyncScanData[])")]
-  pub defer_sync_scan_data: Option<BindingDeferSyncScanDataOption>,
+  pub defer_sync_scan_data: Option<JsCallback<(), Vec<BindingDeferSyncScanData>>>,
   pub make_absolute_externals_relative: Option<BindingMakeAbsoluteExternalsRelative>,
   pub debug: Option<BindingDebugOptions>,
   #[debug(skip)]
   #[napi(ts_type = "() => void")]
-  // TODO: The `FnArgs<()>` is not supported.
-  pub invalidate_js_side_cache: Option<JsCallback<FnArgs<(Option<bool>,)>, ()>>,
+  pub invalidate_js_side_cache: Option<JsCallback>,
   #[debug(skip)]
   #[napi(ts_type = "(id: string, success: boolean) => void")]
-  pub mark_module_loaded: Option<JsCallback<FnArgs<(String, bool)>, ()>>,
+  pub mark_module_loaded: Option<JsCallback<FnArgs<(String, bool)>>>,
   pub preserve_entry_signatures: Option<BindingPreserveEntrySignatures>,
   pub optimization: Option<BindingOptimization>,
 }

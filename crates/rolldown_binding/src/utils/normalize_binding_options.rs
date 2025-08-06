@@ -222,7 +222,7 @@ pub fn normalize_binding_options(
   let invalidate_js_side_cache = input_options.invalidate_js_side_cache.map(|ts_fn| {
     rolldown::InvalidateJsSideCache::new(Arc::new(move || {
       let ts_fn = Arc::clone(&ts_fn);
-      Box::pin(async move { ts_fn.invoke_async((None,).into()).await.map_err(anyhow::Error::from) })
+      Box::pin(async move { ts_fn.invoke_async(()).await.map_err(anyhow::Error::from) })
     }))
   });
 

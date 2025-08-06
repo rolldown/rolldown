@@ -16,7 +16,7 @@ pub struct BindingWatchOption {
   pub build_delay: Option<u32>,
   #[napi(ts_type = "((id: string) => void) | undefined")]
   #[debug(skip)]
-  pub on_invalidate: Option<JsCallback<FnArgs<(String,)>, ()>>,
+  pub on_invalidate: Option<JsCallback<FnArgs<(String,)>>>,
 }
 
 impl From<BindingWatchOption> for rolldown_common::WatchOption {

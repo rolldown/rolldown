@@ -8,3 +8,8 @@ class Noop {
 }
 
 console.log(Noop)
+
+{
+  const exports = {}
+  this.qux = 'qux'
+}

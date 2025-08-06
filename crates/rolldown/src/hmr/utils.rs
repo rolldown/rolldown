@@ -4,7 +4,13 @@ use oxc::{
 };
 use rolldown_common::NormalModule;
 
-use crate::{hmr::hmr_ast_finalizer::HmrAstFinalizer, module_finalizers::ScopeHoistingFinalizer};
+use crate::{
+  hmr::{
+    hmr_ast_finalizer::HmrAstFinalizer,
+    impl_traverse_for_hmr_ast_finalizer::{CJS_MODULE_NAME, CJS_ROLLDOWN_MODULE_NAME},
+  },
+  module_finalizers::ScopeHoistingFinalizer,
+};
 
 pub static MODULE_EXPORTS_NAME_FOR_ESM: &str = "__rolldown_exports__";
 
@@ -18,6 +24,8 @@ pub trait HmrAstBuilder<'any, 'ast> {
 
   // `$hot_name` in var `$hot_name = __rolldown_runtime__.createModuleHotContext($stable_id);`
   fn alias_name_for_import_meta_hot(&self) -> ast::Atom<'ast>;
+
+  fn cjs_module_name() -> &'static str;
 
   /// `__rolldown_runtime__.registerModule(moduleId, module)`
   fn create_register_module_stmt(&self) -> ast::Statement<'ast> {
@@ -48,7 +56,7 @@ pub trait HmrAstBuilder<'any, 'ast> {
       rolldown_common::ExportsKind::CommonJs => {
         // `module`
         ast::Argument::from(ast::Expression::Identifier(
-          self.builder().alloc_identifier_reference(SPAN, "module"),
+          self.builder().alloc_identifier_reference(SPAN, Self::cjs_module_name()),
         ))
       }
       rolldown_common::ExportsKind::None => {
@@ -153,6 +161,10 @@ impl<'any, 'ast> HmrAstBuilder<'any, 'ast> for HmrAstFinalizer<'any, 'ast> {
   fn alias_name_for_import_meta_hot(&self) -> ast::Atom<'ast> {
     self.builder().atom(&format!("hot_{}", self.module.repr_name))
   }
+
+  fn cjs_module_name() -> &'static str {
+    CJS_ROLLDOWN_MODULE_NAME
+  }
 }
 
 impl<'any, 'ast> HmrAstBuilder<'any, 'ast> for ScopeHoistingFinalizer<'any, 'ast> {
@@ -173,5 +185,9 @@ impl<'any, 'ast> HmrAstBuilder<'any, 'ast> for ScopeHoistingFinalizer<'any, 'ast
     let name =
       self.canonical_name_for(self.ctx.module.hmr_hot_ref.expect("HMR hot ref should be set"));
     self.builder().atom(name)
+  }
+
+  fn cjs_module_name() -> &'static str {
+    CJS_MODULE_NAME
   }
 }

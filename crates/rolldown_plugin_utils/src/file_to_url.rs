@@ -138,7 +138,7 @@ impl FileToUrlEnv<'_> {
 
   fn asset_to_data_url(&self, path: &Path, content: &[u8]) -> anyhow::Result<String> {
     if self.is_lib && content.starts_with(GIT_LFS_PREFIX) {
-      self.ctx.warn(rolldown_plugin::Log {
+      self.ctx.warn(rolldown_plugin::LogWithoutPlugin {
         message: format!("Inlined file {} was not downloaded via Git LFS", path.display()),
         ..Default::default()
       });

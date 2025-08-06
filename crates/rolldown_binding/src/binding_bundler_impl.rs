@@ -286,6 +286,7 @@ impl BindingBundlerImpl {
               message: warning
                 .to_diagnostic_with(&DiagnosticOptions { cwd: options.cwd.clone() })
                 .to_color_string(),
+              plugin: None,
             },
           )
           .await;

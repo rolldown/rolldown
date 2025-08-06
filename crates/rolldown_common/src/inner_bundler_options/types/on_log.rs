@@ -29,4 +29,25 @@ pub struct Log {
   pub id: Option<String>,
   pub code: Option<String>,
   pub exporter: Option<String>,
+  pub plugin: Option<String>,
+}
+
+#[derive(Debug, Default)]
+pub struct LogWithoutPlugin {
+  pub message: String,
+  pub id: Option<String>,
+  pub code: Option<String>,
+  pub exporter: Option<String>,
+}
+
+impl LogWithoutPlugin {
+  pub fn into_log(self, plugin_name: Option<String>) -> Log {
+    Log {
+      message: self.message,
+      id: self.id,
+      code: self.code,
+      exporter: self.exporter,
+      plugin: plugin_name,
+    }
+  }
 }

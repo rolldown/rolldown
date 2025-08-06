@@ -493,6 +493,7 @@ pub fn normalize_binding_options(
     optimization: input_options.optimization.map(OptimizationOption::from),
     top_level_var: output_options.top_level_var,
     minify_internal_exports: output_options.minify_internal_exports,
+    context: input_options.context,
   };
 
   #[cfg(not(target_family = "wasm"))]

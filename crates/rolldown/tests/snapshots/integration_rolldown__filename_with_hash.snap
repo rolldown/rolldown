@@ -3952,6 +3952,14 @@ expression: output
 - rolldown-runtime-!~{001}~.js => rolldown-runtime-BFxWfBIB.js
 - ui-!~{003}~.js => ui-BOaO4aOi.js
 
+# tests/rolldown/function/context/defined
+
+- main-!~{000}~.js => main-CRCfOHFz.js
+
+# tests/rolldown/function/context/unset
+
+- main-!~{000}~.js => main-PrJkMwuo.js
+
 # tests/rolldown/function/define/node_env
 
 - main-!~{000}~.js => main-BbIehRpk.js

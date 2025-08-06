@@ -109,4 +109,5 @@ pub struct BindingInputOptions<'env> {
   pub mark_module_loaded: Option<JsCallback<FnArgs<(String, bool)>>>,
   pub preserve_entry_signatures: Option<BindingPreserveEntrySignatures>,
   pub optimization: Option<BindingOptimization>,
+  pub context: Option<String>,
 }

@@ -500,6 +500,12 @@
             "boolean",
             "null"
           ]
+        },
+        "context": {
+          "type": [
+            "string",
+            "null"
+          ]
         }
       },
       "additionalProperties": false

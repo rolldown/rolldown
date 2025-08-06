@@ -1622,6 +1622,7 @@ export interface BindingInputOptions {
   markModuleLoaded?: (id: string, success: boolean) => void
   preserveEntrySignatures?: BindingPreserveEntrySignatures
   optimization?: BindingOptimization
+  context?: string
 }
 
 export interface BindingIsolatedDeclarationPluginConfig {

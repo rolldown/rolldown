@@ -290,7 +290,7 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
         if exports_kind.is_commonjs() {
           ThisExprReplaceKind::Exports
         } else {
-          ThisExprReplaceKind::Undefined
+          ThisExprReplaceKind::Context
         },
       );
     }

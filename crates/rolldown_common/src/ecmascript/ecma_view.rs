@@ -30,7 +30,8 @@ bitflags! {
 
 #[derive(Debug, Copy, Clone, PartialEq, Eq)]
 pub enum ThisExprReplaceKind {
-  Undefined,
+  /// It depends on `context` set by the user. If it's unset, replace it with `undefined`.
+  Context,
   Exports,
 }
 

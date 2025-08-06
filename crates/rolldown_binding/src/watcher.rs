@@ -65,7 +65,7 @@ impl BindingWatcher {
   #[napi(ts_args_type = "listener: (data: BindingWatcherEvent) => void")]
   pub async fn start(
     &self,
-    listener: MaybeAsyncJsCallback<FnArgs<(BindingWatcherEvent,)>, ()>,
+    listener: MaybeAsyncJsCallback<FnArgs<(BindingWatcherEvent,)>>,
   ) -> napi::Result<()> {
     let rx = Arc::clone(&self.inner.emitter().rx);
     let future = async move {

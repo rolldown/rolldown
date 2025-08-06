@@ -67,20 +67,11 @@ use rolldown_utils::debug::pretty_type_name;
 /// - Rust(Simplified): `MaybeAsyncJsCallback<FnArgs<(Option<String>, i32)>, Option<i32>>`
 /// - Js: `(a: string | null | undefined, b: number) => Promise<number | null | undefined | void> | number | null | undefined | void`
 /// - Js(Simplified): `(a: Nullable<string>, b: number) => MaybePromise<VoidNullable<number>>`
-pub type JsCallback<Args, Ret> =
+pub type JsCallback<Args = (), Ret = ()> =
   Arc<ThreadsafeFunction<Args, Either<Ret, UnknownReturnValue>, Args, Status, false, true>>;
 
 /// Shortcut for `JsCallback<FnArgs<..., Either<Promise<Ret>, Ret>>`, which could be simplified to `MaybeAsyncJsCallback<...>, Ret>`.
-pub type MaybeAsyncJsCallback<Args, Ret> = Arc<
-  ThreadsafeFunction<
-    Args,
-    Either<Either<Promise<Ret>, Ret>, UnknownReturnValue>,
-    Args,
-    Status,
-    false,
-    true,
-  >,
->;
+pub type MaybeAsyncJsCallback<Args = (), Ret = ()> = JsCallback<Args, Either<Promise<Ret>, Ret>>;
 
 pub trait JsCallbackExt<Args, Ret> {
   fn invoke_async(&self, args: Args) -> impl Future<Output = Result<Ret, napi::Error>> + Send;

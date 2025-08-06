@@ -706,32 +706,20 @@ import url from 'node:url';
 import path from 'node:path';
 
 const dir = '{}';
-let pollCount = 0;
-const maxPoll = 10;
-const pollInterval = 50;
-
-function tryRunPatches() {{
-  if (typeof globalThis.__rolldown_runtime__ !== 'undefined' || pollCount >= maxPoll) {{
-    clearInterval(timer);
-    (async () => {{
-      for (const patchChunk of globalThis.__testPatches) {{
-        const file = path.join(dir, patchChunk);
-        try {{
-          await import(url.pathToFileURL(file));
-        }} catch (error) {{
-          console.error('Error executing a patch:', error);
-          process.exitCode = 1;
-          break;
-        }}
-      }}
-    }})();
+setTimeout(async () => {{
+  for (const patchChunk of globalThis.__testPatches) {{
+    const file = path.join(dir, patchChunk);
+    try {{
+      await import(url.pathToFileURL(file));
+    }} catch (error) {{
+      console.error('Error executing a patch:', error);
+      process.exitCode = 1;
+      break;
+    }}
   }}
-  pollCount++;
-}}
-
-const timer = setInterval(tryRunPatches, pollInterval);
-  ",
-        dist_folder.to_str().unwrap().replace('\\', "\\\\")
+}}, 10);
+      ",
+        dist_folder.to_str().unwrap().replace('\\', "\\\\") // escape backslashes in Windows paths
       ));
     }
 

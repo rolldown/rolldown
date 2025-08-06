@@ -20,13 +20,3 @@ class TestDevRuntime extends DevRuntime {
 }
 
 (/** @type {any} */ (globalThis)).__rolldown_runtime__ ??= new TestDevRuntime();
-
-/** @type {string[]} */
-const testPatches = /** @type {any} */ (globalThis).__testPatches;
-if (testPatches) {
-  setTimeout(async () => {
-    for (const patchChunk of testPatches) {
-      await import(patchChunk);
-    }
-  }, 0);
-}

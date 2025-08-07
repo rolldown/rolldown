@@ -211,7 +211,7 @@ impl<'ast> Traverse<'ast, ()> for HmrAstFinalizer<'_, 'ast> {
     }
 
     self.try_rewrite_dynamic_import(node);
-    self.try_rewrite_require(node);
+    self.try_rewrite_require(node, ctx);
     self.rewrite_import_meta_hot(node);
   }
 

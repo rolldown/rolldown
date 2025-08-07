@@ -7,13 +7,14 @@ use oxc::{
       Statement,
     },
   },
-  semantic::{Scoping, SymbolId},
+  semantic::{IsGlobalReference, Scoping, SymbolId},
   span::{Atom, SPAN, Span},
 };
 
 use rolldown_common::{
   ExternalModule, ImportRecordIdx, IndexModules, Module, ModuleIdx, NormalModule,
 };
+use rolldown_ecmascript::CJS_REQUIRE_REF_ATOM;
 use rolldown_ecmascript_utils::{
   AstSnippet, BindingIdentifierExt, ExpressionExt, quote_expr, quote_stmt,
 };
@@ -667,13 +668,32 @@ impl<'ast> HmrAstFinalizer<'_, 'ast> {
     *it = ret_expr;
   }
 
-  // Rewrite `require(...)` to `(require_xxx(), __rolldown_runtime__.loadExports())` or keep it as is for external module importee.
-  pub fn try_rewrite_require(&self, it: &mut ast::Expression<'ast>) {
+  pub fn try_rewrite_require(
+    &self,
+    it: &mut ast::Expression<'ast>,
+    ctx: &oxc_traverse::TraverseCtx<'ast, ()>,
+  ) {
+    let scoping = ctx.scoping();
+
+    // Rewrite standalone `require` to `__rolldown_runtime__.loadExports`
+    if let Some(id_ref) = it.as_identifier()
+      && id_ref.name == CJS_REQUIRE_REF_ATOM
+      && id_ref.is_global_reference(scoping)
+      && !ctx.parent().is_call_expression()
+    {
+      *it = quote_expr(self.alloc, "__rolldown_runtime__.loadExports");
+    }
+
+    // Rewrite `require(...)` to `(require_xxx(), __rolldown_runtime__.loadExports())` or keep it as is for external module importee.
     let ast::Expression::CallExpression(call_expr) = it else {
       return;
     };
 
-    if !call_expr.callee.as_identifier().is_some_and(|id| id.name == "require") {
+    if !call_expr
+      .callee
+      .as_identifier()
+      .is_some_and(|id| id.name == CJS_REQUIRE_REF_ATOM && id.is_global_reference(scoping))
+    {
       return;
     }
 

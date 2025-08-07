@@ -40,6 +40,30 @@ var require_cjs_lib = /* @__PURE__ */ __commonJS({ "cases/require/cjs-lib.js": (
 }) });
 
 //#endregion
+//#region cases/require/umd-lib.js
+var require_umd_lib = /* @__PURE__ */ __commonJS({ "cases/require/umd-lib.js": ((exports, module) => {
+	const umd_lib_hot = __rolldown_runtime__.createModuleHotContext("cases/require/umd-lib.js");
+	__rolldown_runtime__.registerModule("cases/require/umd-lib.js", module);
+	(function(root, umdLib) {
+		if (typeof __require === "function" && typeof exports === "object" && typeof module === "object") {
+			module.exports = umdLib();
+		} else if (typeof define === "function" && define.amd) {
+			define(function() {
+				return umdLib();
+			});
+		} else {
+			root.umdLib = umdLib();
+		}
+	})(exports, function() {
+		const exports$1 = function() {
+			return "exports";
+		};
+		exports$1.foo = "foo";
+		return exports$1;
+	});
+}) });
+
+//#endregion
 //#region cases/require/index.js
 var require_exports = {};
 const require_hot = __rolldown_runtime__.createModuleHotContext("cases/require/index.js");
@@ -52,6 +76,13 @@ assert.strictEqual(requireCjsLib.foo, "foo");
 assert.strictEqual(requireCjsLib.bar, "bar");
 assert.strictEqual(requireCjsLib.baz, undefined);
 assert.strictEqual(requireCjsLib.qux, "qux");
+const requiredUmdLib = require_umd_lib();
+assert.strictEqual(requiredUmdLib(), "exports");
+assert.strictEqual(requiredUmdLib.foo, "foo");
+{
+	const require$1 = () => 1;
+	assert.strictEqual(require$1(), 1);
+}
 
 //#endregion
 //#region cases/manual_reexport/lib.js
@@ -197,12 +228,45 @@ var init_require_5 = __rolldown_runtime__.createEsmInitializer((function() {
 		import_node_assert_5.default.strictEqual(requireCjsLib.bar, "bar");
 		import_node_assert_5.default.strictEqual(requireCjsLib.baz, undefined);
 		import_node_assert_5.default.strictEqual(requireCjsLib.qux, "qux");
+		const requiredUmdLib = (require_umd_lib_6(), __rolldown_runtime__.loadExports("cases/require/umd-lib.js"));
+		import_node_assert_5.default.strictEqual(requiredUmdLib(), "exports");
+		import_node_assert_5.default.strictEqual(requiredUmdLib.foo, "foo");
+		{
+			const require = () => 1;
+			import_node_assert_5.default.strictEqual(require(), 1);
+		}
+	} finally {}
+}));
+
+//#endregion
+//#region cases/require/umd-lib.js
+var require_umd_lib_6 = __rolldown_runtime__.createCjsInitializer((function(__rolldown_exports__, __rolldown_module__) {
+	try {
+		__rolldown_runtime__.registerModule("cases/require/umd-lib.js", __rolldown_module__);
+		const hot_umd_lib = __rolldown_runtime__.createModuleHotContext("cases/require/umd-lib.js");
+		(function(root, umdLib) {
+			if (typeof __rolldown_runtime__.loadExports === "function" && typeof __rolldown_exports__ === "object" && typeof __rolldown_module__ === "object") {
+				__rolldown_module__.exports = umdLib();
+			} else if (typeof define === "function" && define.amd) {
+				define(function() {
+					return umdLib();
+				});
+			} else {
+				root.umdLib = umdLib();
+			}
+		})(__rolldown_exports__, function() {
+			const exports = function() {
+				return "exports";
+			};
+			exports.foo = "foo";
+			return exports;
+		});
 	} finally {}
 }));
 
 //#endregion
 //#region main.js
-var init_main_6 = __rolldown_runtime__.createEsmInitializer((function() {
+var init_main_7 = __rolldown_runtime__.createEsmInitializer((function() {
 	try {
 		var __rolldown_exports__ = {};
 		__rolldown_runtime__.__export(__rolldown_exports__, {});
@@ -210,8 +274,8 @@ var init_main_6 = __rolldown_runtime__.createEsmInitializer((function() {
 		init_require_5();
 		init_manual_reexport_1();
 		const hot_main = __rolldown_runtime__.createModuleHotContext("main.js");
-		var import_require_6 = __rolldown_runtime__.loadExports("cases/require/index.js");
-		var import_manual_reexport_6 = __rolldown_runtime__.loadExports("cases/manual_reexport/index.js");
+		var import_require_7 = __rolldown_runtime__.loadExports("cases/require/index.js");
+		var import_manual_reexport_7 = __rolldown_runtime__.loadExports("cases/manual_reexport/index.js");
 		if (hot_main) {
 			hot_main.accept();
 		}
@@ -221,7 +285,7 @@ var init_main_6 = __rolldown_runtime__.createEsmInitializer((function() {
 //#endregion
 // HIDDEN [rolldown:hmr]
 // HIDDEN [rolldown:runtime]
-init_main_6()
+init_main_7()
 __rolldown_runtime__.applyUpdates(['main.js']);
 ```
 ## Meta

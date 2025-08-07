@@ -5057,6 +5057,10 @@ expression: output
 - main-!~{000}~.js => main-56AOIbNp.js
 - main-56AOIbNp.js.map
 
+# tests/rolldown/optimization/const_binding
+
+- main-!~{000}~.js => main-CkFd55ml.js
+
 # tests/rolldown/optimization/inline_const/5197
 
 - main-!~{000}~.js => main-C1_Ucsch.js
@@ -5091,6 +5095,14 @@ expression: output
 - a-!~{000}~.js => a-CcaBLJp5.js
 - b-!~{001}~.js => b-aQ857t6g.js
 - common-!~{002}~.js => common-DfGFFFKe.js
+
+# tests/rolldown/optimization/reserved_names_as_props
+
+- main-!~{000}~.js => main-CtF-6SX3.js
+
+# tests/rolldown/optimization/symbols
+
+- main-!~{000}~.js => main-DcJ89g6X.js
 
 # tests/rolldown/resolve/add_module_condition_by_default
 

@@ -167,7 +167,11 @@ pub fn render_chunk_exports(
                       render_object_define_property(&exported_name, &exported_value)
                     } else {
                       concat_string!(
-                        property_access_str("exports", exported_name.as_str()),
+                        property_access_str(
+                          "exports",
+                          exported_name.as_str(),
+                          ctx.options.optimization.is_reserved_names_as_props_enabled()
+                        ),
                         " = ",
                         exported_value.as_str(),
                         ";"

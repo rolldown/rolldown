@@ -51,9 +51,11 @@ pub fn render_cjs<'code>(
       let export_mode = determine_export_mode(warnings, ctx, entry_module, &export_names)?;
       // Only `named` export can we render the namespace markers.
       if matches!(&export_mode, OutputExports::Named) && entry_module.exports_kind.is_esm() {
-        if let Some(marker) =
-          render_namespace_markers(ctx.options.es_module, has_default_export, false)
-        {
+        if let Some(marker) = render_namespace_markers(
+          ctx.options.es_module,
+          has_default_export,
+          ctx.options.optimization.is_symbols_enabled(),
+        ) {
           source_joiner.append_source(marker);
         }
       }
@@ -128,7 +130,11 @@ fn render_cjs_chunk_imports(ctx: &GenerateContext<'_>) -> String {
 
       if ctx.link_output.used_symbol_refs.contains(&importee.namespace_ref) {
         let external_module_symbol_name = &ctx.chunk.canonical_names[&importee.namespace_ref];
-        s.push_str("const ");
+        if ctx.options.optimization.is_const_bindings_enabled() {
+          s.push_str("const ");
+        } else {
+          s.push_str("var ");
+        }
         s.push_str(external_module_symbol_name);
         s.push_str(" = ");
 

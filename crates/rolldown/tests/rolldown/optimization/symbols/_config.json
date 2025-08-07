@@ -1,0 +1,11 @@
+{
+  "config": {
+    "optimization": {
+      "symbols": true
+    },
+    "format": "iife",
+    "name": "hello",
+    "esModule": "always",
+    "exports": "named"
+  }
+}

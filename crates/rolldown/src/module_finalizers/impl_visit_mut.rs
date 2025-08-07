@@ -1,3 +1,5 @@
+use oxc::allocator::FromIn;
+use oxc::span::Atom;
 use oxc::{
   allocator::{self, IntoIn, TakeIn},
   ast::{
@@ -348,8 +350,14 @@ impl<'ast> VisitMut<'ast> for ScopeHoistingFinalizer<'_, 'ast> {
             ThisExprReplaceKind::Exports => {
               *expr = self.snippet.builder.expression_identifier(SPAN, "exports");
             }
-            ThisExprReplaceKind::Undefined => {
+            ThisExprReplaceKind::Context if self.ctx.options.context.is_empty() => {
               *expr = self.snippet.void_zero();
+            }
+            ThisExprReplaceKind::Context => {
+              *expr = self.snippet.builder.expression_identifier(
+                SPAN,
+                Atom::from_in(self.ctx.options.context.as_str(), self.alloc),
+              );
             }
           }
         }

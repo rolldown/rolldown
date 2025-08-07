@@ -9,6 +9,7 @@ pub enum InvalidOptionType {
   InvalidOutputDirOption,
   NoEntryPoint,
   AdvancedChunksWithoutGroups(Vec<String>),
+  InvalidContext(String),
 }
 
 #[derive(Debug)]
@@ -35,6 +36,9 @@ impl BuildEvent for InvalidOption {
         InvalidOptionType::AdvancedChunksWithoutGroups(options) => {
           let options_list = options.join(", ");
           format!("Advanced chunks options ({options_list}) specified without groups. These options have no effect without groups - you should either add groups to use advanced chunking or remove these options.")
+        }
+        InvalidOptionType::InvalidContext(options) => {
+            format!("\"{options}\" is an illegitimate identifier for option \"context\". You may use a legitimate context identifier instead.")
         }
     }
   }

@@ -104,6 +104,7 @@ pub struct NormalizedBundlerOptions {
   pub optimization: OptimizationOption,
   pub top_level_var: bool,
   pub minify_internal_exports: bool,
+  pub context: String,
 }
 
 // This is only used for testing
@@ -173,6 +174,7 @@ impl Default for NormalizedBundlerOptions {
       optimization: OptimizationOption::default(),
       top_level_var: false,
       minify_internal_exports: Default::default(),
+      context: Default::default(),
     }
   }
 }

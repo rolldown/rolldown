@@ -536,6 +536,10 @@ const InputCliOverrideSchema = v.strictObject({
     ])),
     v.description('Avoid facade chunks for entry points'),
   ),
+  context: v.pipe(
+    v.optional(v.string()),
+    v.description('The entity top-level `this` represents.'),
+  ),
 });
 
 const InputCliOptionsSchema = v.omit(

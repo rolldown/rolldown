@@ -119,6 +119,7 @@ export function bindingifyInputOptions(
       inputOptions.preserveEntrySignatures,
     ),
     optimization: inputOptions.optimization,
+    context: inputOptions.context,
   };
 }
 

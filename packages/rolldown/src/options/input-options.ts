@@ -339,6 +339,7 @@ export interface InputOptions {
     | 'allow-extension'
     | 'exports-only';
   optimization?: OptimizationOptions;
+  context?: string;
 }
 
 interface OverwriteInputOptionsForCli {

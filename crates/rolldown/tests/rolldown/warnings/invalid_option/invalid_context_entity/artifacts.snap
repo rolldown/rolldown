@@ -6,7 +6,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## INVALID_OPTION
 
 ```text
-[INVALID_OPTION] Warning: "1" is a illegitimate identifier for option "context". You may use a legitimate context identifier instead.
+[INVALID_OPTION] Warning: "1" is an illegitimate identifier for option "context". You may use a legitimate context identifier instead.
 
 ```
 # Assets

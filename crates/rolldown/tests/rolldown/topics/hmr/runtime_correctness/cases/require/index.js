@@ -1,5 +1,7 @@
 import assert from 'node:assert'
 
+require('./cjs-lib-assign-exports')
+
 const requiredCjsLibReassignModuleExports = require('./cjs-lib-reassign-module-exports')
 assert.strictEqual(requiredCjsLibReassignModuleExports(), 'exports')
 assert.strictEqual(requiredCjsLibReassignModuleExports.foo, 'foo')

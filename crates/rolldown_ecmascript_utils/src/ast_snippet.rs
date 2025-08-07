@@ -665,7 +665,6 @@ impl<'ast> AstSnippet<'ast> {
     let ast_builder = &self.builder;
     Statement::from(ast_builder.module_declaration_export_default_declaration(
       SPAN,
-      ast_builder.module_export_name_identifier_name(SPAN, "default"),
       ast::ExportDefaultDeclarationKind::from(expr),
     ))
   }

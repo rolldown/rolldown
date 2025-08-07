@@ -568,15 +568,15 @@ expression: output
 
 # tests/esbuild/dce/tree_shaking_lowered_class_static_field
 
-- entry-!~{000}~.js => entry-BKWHQYWZ.js
+- entry-!~{000}~.js => entry-R0_l7mIp.js
 
 # tests/esbuild/dce/tree_shaking_lowered_class_static_field_assignment
 
-- entry-!~{000}~.js => entry-hobWokOE.js
+- entry-!~{000}~.js => entry-DpT2y-ga.js
 
 # tests/esbuild/dce/tree_shaking_lowered_class_static_field_minified
 
-- entry-!~{000}~.js => entry-BKWHQYWZ.js
+- entry-!~{000}~.js => entry-R0_l7mIp.js
 
 # tests/esbuild/dce/tree_shaking_no_bundle_cjs
 
@@ -2516,20 +2516,20 @@ expression: output
 # tests/esbuild/lower/java_script_auto_accessor_es2021
 
 - js-define-!~{000}~.js => js-define-rG1Qxxq0.js
-- ts-assign_ts-assign-!~{002}~.js => ts-assign_ts-assign-DIcQFw_e.js
-- ts-define_ts-define-!~{001}~.js => ts-define_ts-define-Ct5vKSQL.js
+- ts-assign_ts-assign-!~{002}~.js => ts-assign_ts-assign-CQ82SXVS.js
+- ts-define_ts-define-!~{001}~.js => ts-define_ts-define-HO61xnVg.js
 
 # tests/esbuild/lower/java_script_auto_accessor_es2022
 
 - js-define-!~{000}~.js => js-define-rG1Qxxq0.js
-- ts-assign_ts-assign-!~{002}~.js => ts-assign_ts-assign-DIcQFw_e.js
-- ts-define_ts-define-!~{001}~.js => ts-define_ts-define-Ct5vKSQL.js
+- ts-assign_ts-assign-!~{002}~.js => ts-assign_ts-assign-CQ82SXVS.js
+- ts-define_ts-define-!~{001}~.js => ts-define_ts-define-HO61xnVg.js
 
 # tests/esbuild/lower/java_script_auto_accessor_es_next
 
 - js-define-!~{000}~.js => js-define-rG1Qxxq0.js
-- ts-assign_ts-assign-!~{002}~.js => ts-assign_ts-assign-DIcQFw_e.js
-- ts-define_ts-define-!~{001}~.js => ts-define_ts-define-Ct5vKSQL.js
+- ts-assign_ts-assign-!~{002}~.js => ts-assign_ts-assign-CQ82SXVS.js
+- ts-define_ts-define-!~{001}~.js => ts-define_ts-define-HO61xnVg.js
 
 # tests/esbuild/lower/java_script_decorators_bundle_issue3768
 
@@ -2572,11 +2572,11 @@ expression: output
 
 # tests/esbuild/lower/lower_async_generator
 
-- entry-!~{000}~.js => entry-g--LCELz.js
+- entry-!~{000}~.js => entry-CZSQN-Nh.js
 
 # tests/esbuild/lower/lower_async_generator_no_await
 
-- entry-!~{000}~.js => entry-g--LCELz.js
+- entry-!~{000}~.js => entry-CZSQN-Nh.js
 
 # tests/esbuild/lower/lower_async_super_es2016_no_bundle
 
@@ -2643,7 +2643,7 @@ expression: output
 
 # tests/esbuild/lower/lower_nullish_coalescing_assignment_issue1493
 
-- entry-!~{000}~.js => entry-Cn_lWxiM.js
+- entry-!~{000}~.js => entry-QOP9dZDQ.js
 
 # tests/esbuild/lower/lower_object_spread_no_bundle
 
@@ -2831,7 +2831,7 @@ expression: output
 
 # tests/esbuild/lower/lower_using_inside_ts_namespace
 
-- entry-!~{000}~.js => entry-CsueQAgy.js
+- entry-!~{000}~.js => entry-DbIZMmDI.js
 
 # tests/esbuild/lower/lower_using_unsupported_async
 
@@ -5098,11 +5098,11 @@ expression: output
 
 # tests/rolldown/resolve/ts_config_merge_decorator_metadata
 
-- main-!~{000}~.js => main-BHBoWkld.js
+- main-!~{000}~.js => main-C1cURgQH.js
 
 # tests/rolldown/resolve/ts_config_option_merge
 
-- main-!~{000}~.js => main-CGeWpKLm.js
+- main-!~{000}~.js => main-DiyDFe_V.js
 
 # tests/rolldown/resolve/wildcard_alias
 

@@ -56,8 +56,9 @@ test-update:
     just test-rust
     just test-node all --update
 
+# TODO revert this after
 test-rust: pnpm-install
-    cargo test --workspace --exclude rolldown_binding
+    node -e "let cp=require('child_process');for(let i=0;i<10;i++){let r=cp.spawnSync('cargo',['test','--workspace','--exclude','rolldown_binding'],{stdio:'inherit'});if(r.status!==0)break;}"
 
 update-generated-code:
     cargo run --bin generator

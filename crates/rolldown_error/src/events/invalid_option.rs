@@ -38,7 +38,7 @@ impl BuildEvent for InvalidOption {
           format!("Advanced chunks options ({options_list}) specified without groups. These options have no effect without groups - you should either add groups to use advanced chunking or remove these options.")
         }
         InvalidOptionType::InvalidContext(options) => {
-            format!("\"{options}\" is a illegitimate identifier for option \"context\". You may use a legitimate context identifier instead.")
+            format!("\"{options}\" is an illegitimate identifier for option \"context\". You may use a legitimate context identifier instead.")
         }
     }
   }

@@ -220,7 +220,7 @@ impl HmrManager {
         .collect::<Vec<_>>(),
     );
 
-    let module_infos_to_be_updated = modules_to_invalidate
+    let module_infos_to_be_updated = start_points
       .iter()
       .filter_map(|module_idx| {
         let module = &self.module_db.modules[*module_idx];
@@ -244,19 +244,20 @@ impl HmrManager {
 
     let mut module_loader_output =
       module_loader.fetch_modules(vec![], &module_infos_to_be_updated).await?;
-
+    let new_added_modules_from_partial_scan =
+      std::mem::take(&mut module_loader_output.new_added_modules_from_partial_scan);
     // We manually impl `Drop` for `ModuleLoader` to avoid missing assign `importers` to
     // `self.cache`, but rustc is not smart enough to infer actually we don't touch it in `drop`
     // implementation, so we need to manually drop it.
     drop(module_loader);
-
+    self.cache.merge(module_loader_output.into());
+    let snapshot = self.cache.get_snapshot_mut();
     tracing::debug!(
       target: "hmr",
       "New added modules` {:?}",
-      module_loader_output
-        .new_added_modules_from_partial_scan
+        new_added_modules_from_partial_scan
         .iter()
-        .map(|module_idx| module_loader_output.module_table.get(*module_idx).stable_id())
+        .map(|module_idx| snapshot.module_table[*module_idx].id())
         .collect::<Vec<_>>(),
     );
 
@@ -273,19 +274,19 @@ impl HmrManager {
     );
     updated_modules.sort_by_key(|(idx, _)| *idx);
 
-    // TODO(hyf0): This is a temporary merging solution. We need to find a better way to handle this.
-    for (idx, module) in updated_modules {
-      if idx.index() >= self.module_db.modules.len() {
-        // This module is newly added, we need to insert it into the module db.
-        let generated_id = self.module_db.modules.push(module);
-        self.index_ecma_ast.push(module_loader_output.index_ecma_ast.get_mut(idx).take());
-        assert_eq!(generated_id, idx, "Module index mismatch");
-      } else {
-        // This module is already in the module db, we need to update it.
-        self.module_db.modules[idx] = module;
-        self.index_ecma_ast[idx] = module_loader_output.index_ecma_ast.get_mut(idx).take();
-      }
-    }
+    // // TODO(hyf0): This is a temporary merging solution. We need to find a better way to handle this.
+    // for (idx, module) in updated_modules {
+    //   if idx.index() >= self.module_db.modules.len() {
+    //     // This module is newly added, we need to insert it into the module db.
+    //     let generated_id = self.module_db.modules.push(module);
+    //     self.index_ecma_ast.push(module_loader_output.index_ecma_ast.get_mut(idx).take());
+    //     assert_eq!(generated_id, idx, "Module index mismatch");
+    //   } else {
+    //     // This module is already in the module db, we need to update it.
+    //     self.module_db.modules[idx] = module;
+    //     self.index_ecma_ast[idx] = module_loader_output.index_ecma_ast.get_mut(idx).take();
+    //   }
+    // }
     tracing::debug!(
       target: "hmr",
       "New added modules2` {:?}",

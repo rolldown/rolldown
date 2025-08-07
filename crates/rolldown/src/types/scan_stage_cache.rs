@@ -29,6 +29,12 @@ impl ScanStageCache {
     self.snapshot.as_mut().unwrap()
   }
 
+  /// # Panic
+  /// - if the snapshot is unset
+  pub fn get_snapshot(&mut self) -> &NormalizedScanStageOutput {
+    self.snapshot.as_ref().unwrap()
+  }
+
   pub fn merge(&mut self, mut scan_stage_output: ScanStageOutput) {
     let Some(ref mut cache) = self.snapshot else {
       self.snapshot = Some(scan_stage_output.into());

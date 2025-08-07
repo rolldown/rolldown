@@ -103,6 +103,36 @@ pub struct ScanStageOutput {
   pub entry_point_to_reference_ids: FxHashMap<EntryPoint, Vec<ArcStr>>,
 }
 
+impl From<ModuleLoaderOutput> for ScanStageOutput {
+  fn from(module_loader_output: ModuleLoaderOutput) -> Self {
+    let ModuleLoaderOutput {
+      module_table,
+      entry_points,
+      symbol_ref_db,
+      runtime,
+      warnings,
+      index_ecma_ast,
+      dynamic_import_exports_usage_map,
+      new_added_modules_from_partial_scan: _,
+      safely_merge_cjs_ns_map,
+      overrode_preserve_entry_signature_map,
+      entry_point_to_reference_ids,
+    } = module_loader_output;
+    ScanStageOutput {
+      entry_points,
+      symbol_ref_db,
+      runtime,
+      warnings,
+      index_ecma_ast,
+      dynamic_import_exports_usage_map,
+      module_table,
+      safely_merge_cjs_ns_map,
+      overrode_preserve_entry_signature_map,
+      entry_point_to_reference_ids,
+    }
+  }
+}
+
 impl ScanStage {
   pub fn new(
     options: SharedOptions,

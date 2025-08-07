@@ -1,12 +1,22 @@
 use oxc::{
   allocator::TakeIn,
   ast::{NONE, ast},
-  span::SPAN,
+  span::{Atom, SPAN},
 };
 use oxc_traverse::Traverse;
 use rolldown_ecmascript_utils::{ExpressionExt, quote_expr, quote_stmts};
 
 use crate::hmr::{hmr_ast_finalizer::HmrAstFinalizer, utils::HmrAstBuilder};
+
+pub static CJS_EXPORTS_NAME: &str = "exports";
+pub static CJS_MODULE_NAME: &str = "module";
+pub static CJS_ROLLDOWN_EXPORTS_NAME: &str = "__rolldown_exports__";
+pub static CJS_ROLLDOWN_MODULE_NAME: &str = "__rolldown_module__";
+
+static CJS_EXPORTS_ATOM: Atom<'static> = Atom::new_const(CJS_EXPORTS_NAME);
+static CJS_MODULE_ATOM: Atom<'static> = Atom::new_const(CJS_MODULE_NAME);
+static CJS_ROLLDOWN_EXPORTS_ATOM: Atom<'static> = Atom::new_const(CJS_ROLLDOWN_EXPORTS_NAME);
+static CJS_ROLLDOWN_MODULE_ATOM: Atom<'static> = Atom::new_const(CJS_ROLLDOWN_MODULE_NAME);
 
 impl<'ast> Traverse<'ast, ()> for HmrAstFinalizer<'_, 'ast> {
   fn enter_program(
@@ -68,44 +78,34 @@ impl<'ast> Traverse<'ast, ()> for HmrAstFinalizer<'_, 'ast> {
       NONE,
     );
     if self.module.exports_kind.is_commonjs() {
-      params.items.push(
-        self.snippet.builder.formal_parameter(
-          SPAN,
-          self.builder.vec(),
-          self.snippet.builder.binding_pattern(
-            ast::BindingPatternKind::BindingIdentifier(
-              self
-                .snippet
-                .builder
-                .alloc_binding_identifier(SPAN, self.snippet.builder.atom("exports")),
-            ),
-            NONE,
-            false,
+      params.items.push(self.snippet.builder.formal_parameter(
+        SPAN,
+        self.builder.vec(),
+        self.snippet.builder.binding_pattern(
+          ast::BindingPatternKind::BindingIdentifier(
+            self.snippet.builder.alloc_binding_identifier(SPAN, CJS_ROLLDOWN_EXPORTS_ATOM),
           ),
-          None,
-          false,
+          NONE,
           false,
         ),
-      );
-      params.items.push(
-        self.snippet.builder.formal_parameter(
-          SPAN,
-          self.builder.vec(),
-          self.snippet.builder.binding_pattern(
-            ast::BindingPatternKind::BindingIdentifier(
-              self
-                .snippet
-                .builder
-                .alloc_binding_identifier(SPAN, self.snippet.builder.atom("module")),
-            ),
-            NONE,
-            false,
+        None,
+        false,
+        false,
+      ));
+      params.items.push(self.snippet.builder.formal_parameter(
+        SPAN,
+        self.builder.vec(),
+        self.snippet.builder.binding_pattern(
+          ast::BindingPatternKind::BindingIdentifier(
+            self.snippet.builder.alloc_binding_identifier(SPAN, CJS_ROLLDOWN_MODULE_ATOM),
           ),
-          None,
-          false,
+          NONE,
           false,
         ),
-      );
+        None,
+        false,
+        false,
+      ));
     }
     // function () { [user code] }
     let mut user_code_wrapper = self.snippet.builder.alloc_function(
@@ -191,14 +191,14 @@ impl<'ast> Traverse<'ast, ()> for HmrAstFinalizer<'_, 'ast> {
       // Rewrite this to `undefined` or `exports`
       if self.module.exports_kind.is_commonjs() {
         // Rewrite this to `exports`
-        *node = quote_expr(self.alloc, "exports");
+        *node = quote_expr(self.alloc, &CJS_ROLLDOWN_EXPORTS_ATOM);
       } else {
         // Rewrite this to `undefined`
         *node = quote_expr(self.alloc, "void 0");
       }
     }
 
-    if let Some(ident) = node.as_identifier() {
+    if let Some(ident) = node.as_identifier_mut() {
       if let Some(reference_id) = ident.reference_id.get() {
         let reference = ctx.scoping().get_reference(reference_id);
         if let Some(symbol_id) = reference.symbol_id() {
@@ -206,6 +206,12 @@ impl<'ast> Traverse<'ast, ()> for HmrAstFinalizer<'_, 'ast> {
             *node = self.snippet.id_ref_expr(binding_name.as_str(), ident.span);
             return;
           }
+        } else if ident.name == CJS_EXPORTS_ATOM {
+          // Rewrite `exports` to `__rolldown_exports__`
+          ident.name = CJS_ROLLDOWN_EXPORTS_ATOM;
+        } else if ident.name == CJS_MODULE_ATOM {
+          // Rewrite `module` to `__rolldown_module__`
+          ident.name = CJS_ROLLDOWN_MODULE_ATOM;
         }
       }
     }

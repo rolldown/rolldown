@@ -49,11 +49,11 @@ __rolldown_runtime__.registerModule("main.js", { exports: main_exports });
 
 ```js
 //#region exist-dep-cjs.js
-var require_exist_dep_cjs_0 = __rolldown_runtime__.createCjsInitializer((function(exports, module) {
+var require_exist_dep_cjs_0 = __rolldown_runtime__.createCjsInitializer((function(__rolldown_exports__, __rolldown_module__) {
 	try {
-		__rolldown_runtime__.registerModule("exist-dep-cjs.js", module);
+		__rolldown_runtime__.registerModule("exist-dep-cjs.js", __rolldown_module__);
 		const hot_exist_dep_cjs = __rolldown_runtime__.createModuleHotContext("exist-dep-cjs.js");
-		exports.value = "exist-cjs";
+		__rolldown_exports__.value = "exist-cjs";
 	} finally {}
 }));
 
@@ -95,11 +95,11 @@ var init_hmr_2 = __rolldown_runtime__.createEsmInitializer((function() {
 
 //#endregion
 //#region new-dep-cjs.js
-var require_new_dep_cjs_3 = __rolldown_runtime__.createCjsInitializer((function(exports, module) {
+var require_new_dep_cjs_3 = __rolldown_runtime__.createCjsInitializer((function(__rolldown_exports__, __rolldown_module__) {
 	try {
-		__rolldown_runtime__.registerModule("new-dep-cjs.js", module);
+		__rolldown_runtime__.registerModule("new-dep-cjs.js", __rolldown_module__);
 		const hot_new_dep_cjs = __rolldown_runtime__.createModuleHotContext("new-dep-cjs.js");
-		exports.value = "new-cjs";
+		__rolldown_exports__.value = "new-cjs";
 	} finally {}
 }));
 

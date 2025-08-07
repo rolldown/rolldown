@@ -33,6 +33,10 @@ var require_cjs_lib = /* @__PURE__ */ __commonJS({ "cases/require/cjs-lib.js": (
 		}
 	};
 	console.log(Noop);
+	{
+		const exports$1 = {};
+		exports.qux = "qux";
+	}
 }) });
 
 //#endregion
@@ -47,6 +51,7 @@ const requireCjsLib = require_cjs_lib();
 assert.strictEqual(requireCjsLib.foo, "foo");
 assert.strictEqual(requireCjsLib.bar, "bar");
 assert.strictEqual(requireCjsLib.baz, undefined);
+assert.strictEqual(requireCjsLib.qux, "qux");
 
 //#endregion
 //#region cases/manual_reexport/lib.js
@@ -143,31 +148,35 @@ var init_lib_2 = __rolldown_runtime__.createEsmInitializer((function() {
 
 //#endregion
 //#region cases/require/cjs-lib-reassign-module-exports.js
-var require_cjs_lib_reassign_module_exports_3 = __rolldown_runtime__.createCjsInitializer((function(exports, module) {
+var require_cjs_lib_reassign_module_exports_3 = __rolldown_runtime__.createCjsInitializer((function(__rolldown_exports__, __rolldown_module__) {
 	try {
-		__rolldown_runtime__.registerModule("cases/require/cjs-lib-reassign-module-exports.js", module);
+		__rolldown_runtime__.registerModule("cases/require/cjs-lib-reassign-module-exports.js", __rolldown_module__);
 		const hot_cjs_lib_reassign_module_exports = __rolldown_runtime__.createModuleHotContext("cases/require/cjs-lib-reassign-module-exports.js");
-		module.exports = function() {
+		__rolldown_module__.exports = function() {
 			return "exports";
 		};
-		module.exports.foo = "foo";
+		__rolldown_module__.exports.foo = "foo";
 	} finally {}
 }));
 
 //#endregion
 //#region cases/require/cjs-lib.js
-var require_cjs_lib_4 = __rolldown_runtime__.createCjsInitializer((function(exports, module) {
+var require_cjs_lib_4 = __rolldown_runtime__.createCjsInitializer((function(__rolldown_exports__, __rolldown_module__) {
 	try {
-		__rolldown_runtime__.registerModule("cases/require/cjs-lib.js", module);
+		__rolldown_runtime__.registerModule("cases/require/cjs-lib.js", __rolldown_module__);
 		const hot_cjs_lib = __rolldown_runtime__.createModuleHotContext("cases/require/cjs-lib.js");
-		exports.foo = "foo";
-		exports.bar = "bar";
+		__rolldown_exports__.foo = "foo";
+		__rolldown_exports__.bar = "bar";
 		class Noop {
 			static {
 				this.baz = "bar";
 			}
 		}
 		console.log(Noop);
+		{
+			const exports = {};
+			__rolldown_exports__.qux = "qux";
+		}
 	} finally {}
 }));
 
@@ -187,6 +196,7 @@ var init_require_5 = __rolldown_runtime__.createEsmInitializer((function() {
 		import_node_assert_5.default.strictEqual(requireCjsLib.foo, "foo");
 		import_node_assert_5.default.strictEqual(requireCjsLib.bar, "bar");
 		import_node_assert_5.default.strictEqual(requireCjsLib.baz, undefined);
+		import_node_assert_5.default.strictEqual(requireCjsLib.qux, "qux");
 	} finally {}
 }));
 

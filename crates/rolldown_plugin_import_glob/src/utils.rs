@@ -1,6 +1,6 @@
 use std::borrow::Cow;
 use std::fmt::Write as _;
-use std::path::{Path, PathBuf};
+use std::path::{MAIN_SEPARATOR, Path, PathBuf};
 use std::sync::Arc;
 
 use oxc::ast::NONE;
@@ -43,6 +43,53 @@ pub struct ImportGlobOptions {
 struct ImportGlobFileData {
   file_path: Option<String>,
   import_path: String,
+}
+
+#[derive(Debug)]
+struct PathWithGlob<'a> {
+  pub path: String,
+  pub glob: &'a str,
+}
+
+impl<'a> PathWithGlob<'a> {
+  fn new(mut path: String, glob: &'a str) -> Self {
+    let j = Self::split_path_and_glob_inner(&path, glob);
+    let i = Self::find_glob_syntax(&glob[glob.len() - j..]);
+    path.truncate(path.len() - i);
+    Self { path, glob: &glob[glob.len() - i..] }
+  }
+
+  fn find_glob_syntax(path: &str) -> usize {
+    let mut last_slash = 0;
+    for (i, b) in path.as_bytes().iter().enumerate() {
+      if *b == b'/' {
+        last_slash = i;
+      } else if [b'*', b'?', b'[', b']', b'{', b'}'].contains(b) {
+        return path.len() - last_slash;
+      }
+    }
+    path.len() - last_slash
+  }
+
+  fn split_path_and_glob_inner(path: &str, glob: &str) -> usize {
+    let path = path.as_bytes();
+    let glob = glob.as_bytes();
+
+    let mut num_equal = 0;
+    let max_equal = path.len().min(glob.len());
+    while num_equal < max_equal {
+      let r_ch = path[path.len() - 1 - num_equal];
+      let g_ch = glob[glob.len() - 1 - num_equal];
+
+      if r_ch == g_ch || (g_ch == b'/' && r_ch == MAIN_SEPARATOR as u8) {
+        num_equal += 1;
+      } else {
+        break;
+      }
+    }
+
+    num_equal
+  }
 }
 
 #[derive(Clone, Copy)]
@@ -314,19 +361,18 @@ impl GlobImportVisit<'_, '_> {
     dir: &Path,
     root: &Path,
     base: Option<&str>,
-  ) -> Cow<'a, str> {
+  ) -> PathWithGlob<'a> {
     let dir = if let Some(base) = base {
       if let Some(base) = base.strip_prefix('/') { root.join(base) } else { dir.join(base) }
     } else {
       dir.to_path_buf()
     };
-
     let absolute_glob = if let Some(glob) = glob.strip_prefix('/') {
       root.join(glob)
-    } else if glob.starts_with('.') {
-      dir.join(glob)
     } else if glob.starts_with("**") {
-      return Cow::Borrowed(glob);
+      root.join(glob)
+    } else if glob.starts_with("./") || glob.starts_with("../") {
+      dir.join(glob)
     } else {
       let is_sub_imports_pattern = glob.starts_with('#') && glob.contains('*');
       let future = self.ctx.resolve(
@@ -343,17 +389,17 @@ impl GlobImportVisit<'_, '_> {
           Ok(resolved_id) => resolved_id.id.into(),
           Err(_) => Cow::Borrowed(glob),
         };
-        if Path::new(id.as_ref()).is_absolute() {
-          return id;
+        let path = Path::new(id.as_ref());
+        if path.is_absolute() && path.starts_with(root) {
+          return PathWithGlob::new(id.to_string(), glob);
         }
       }
-
       panic!(
         "Invalid glob pattern: {glob} (resolved: '{}'), it must start with '/' or './'.",
         self.id
       );
     };
-    Cow::Owned(absolute_glob.normalize().to_slash_lossy().into_owned())
+    PathWithGlob::new(absolute_glob.normalize().to_string_lossy().into_owned(), glob)
   }
 
   fn relative_path(&self, path: &Path, to: Option<&Path>) -> String {
@@ -367,19 +413,19 @@ impl GlobImportVisit<'_, '_> {
     }
   }
 
-  fn get_common_base(globs: &[Cow<str>]) -> usize {
+  fn get_common_base(&self, globs: &[PathWithGlob]) -> Cow<'_, str> {
     if globs.is_empty() {
-      return 0;
+      return self.root.to_string_lossy();
     }
 
-    let first = globs[0].as_bytes();
+    let first = globs[0].path.as_bytes();
     let mut end = first.len();
-    for s in &globs[1..] {
-      let s_bytes = s.as_bytes();
-      let max_len = end.min(s_bytes.len());
+    for PathWithGlob { path, .. } in &globs[1..] {
+      let bytes = path.as_bytes();
+      let max_len = end.min(bytes.len());
 
       let mut i = 0;
-      while i < max_len && first[i] == s_bytes[i] {
+      while i < max_len && first[i] == bytes[i] {
         i += 1;
       }
 
@@ -389,20 +435,11 @@ impl GlobImportVisit<'_, '_> {
       }
     }
 
-    let common_glob_expr = &globs[0][..end];
-    Self::split_path_and_glob(common_glob_expr).0.len()
-  }
-
-  fn split_path_and_glob(path: &str) -> (&str, Option<&str>) {
-    let mut last_slash = 0;
-    for (i, b) in path.as_bytes().iter().enumerate() {
-      if *b == b'/' {
-        last_slash = i + 1;
-      } else if [b'*', b'?', b'[', b']', b'{', b'}'].contains(b) {
-        return (&path[..last_slash], Some(&path[last_slash..]));
-      }
+    if end == 0 {
+      self.root.to_string_lossy()
+    } else {
+      Cow::Owned(globs[0].path[..end].to_string())
     }
-    (path, None)
   }
 
   #[allow(clippy::too_many_lines)]
@@ -464,70 +501,71 @@ impl GlobImportVisit<'_, '_> {
       _ => {}
     }
 
+    if negated_globs.is_empty() && positive_globs.is_empty() {
+      return;
+    }
+
     assert!(
       !(is_virtual_module && is_relative && options.base.as_ref().is_none()),
       "In virtual modules, all globs must start with '/'"
     );
 
-    let common = Self::get_common_base(&positive_globs);
+    let common = self.get_common_base(&positive_globs);
+    let entries = walkdir::WalkDir::new(common.as_ref())
+      .sort_by(|a, b| a.file_name().cmp(b.file_name()))
+      .into_iter()
+      .filter_entry(|entry| {
+        entry.depth() == 0 || entry.file_name().to_str().is_none_or(|s| s != "node_modules")
+      })
+      .filter_map(Result::ok)
+      .filter(|e| !e.file_type().is_dir());
+
     let self_path = self.relative_path(Path::new(self.id), Some(dir));
-    for glob_expr in positive_globs {
-      let (path, glob) = Self::split_path_and_glob(&glob_expr);
-      let entries = walkdir::WalkDir::new(path)
-        .sort_by(|a, b| a.file_name().cmp(b.file_name()))
-        .into_iter()
-        .filter_map(Result::ok)
-        .filter(|e| !e.file_type().is_dir());
 
-      let p = path.len();
-      for entry in entries {
-        let file = entry.path();
-        let path = file.to_string_lossy();
+    for entry in entries {
+      let file = entry.path();
+      let path = file.to_string_lossy();
 
-        if fast_glob::glob_match("**/node_modules/**", &path[common..]) {
-          continue;
-        }
-
-        if glob.as_ref().is_some_and(|glob| !fast_glob::glob_match(glob, &path[p..]))
-          || negated_globs.iter().any(|g| fast_glob::glob_match(&**g, &*path))
-        {
-          continue;
-        }
-
-        let file_path = self.relative_path(file, None);
-        if is_virtual_module {
-          let import_path =
-            if file_path.starts_with('/') { file_path } else { format!("/{file_path}") };
-          let file_path = options.base.as_ref().map(|base| {
-            self.relative_path(file, Some(&self.root.join(base.strip_prefix('/').unwrap_or(base))))
-          });
-          files.push(ImportGlobFileData { file_path, import_path });
-          continue;
-        }
-
-        let mut import_path = self.relative_path(file, Some(dir));
-        if self_path == import_path {
-          continue;
-        }
-
-        let file_path = if let Some(base) = &options.base {
-          if base.starts_with('/') {
-            import_path = self.relative_path(file, None);
-          }
-          let base_path = if let Some(base) = base.strip_prefix('/') {
-            self.root.join(base)
-          } else {
-            dir.join(base)
-          };
-          Some(self.relative_path(file, Some(&base_path)))
-        } else if is_relative {
-          None
-        } else {
-          Some(file_path)
-        };
-
-        files.push(ImportGlobFileData { file_path, import_path });
+      let matches_rule = |v: &PathWithGlob| -> bool {
+        path.strip_prefix(&v.path).map(|path| fast_glob::glob_match(v.glob, path)).unwrap_or(false)
+      };
+      if negated_globs.iter().any(matches_rule) || !positive_globs.iter().any(matches_rule) {
+        continue;
       }
+
+      let file_path = self.relative_path(file, None);
+      if is_virtual_module {
+        let import_path =
+          if file_path.starts_with('/') { file_path } else { format!("/{file_path}") };
+        let file_path = options.base.as_ref().map(|base| {
+          self.relative_path(file, Some(&self.root.join(base.strip_prefix('/').unwrap_or(base))))
+        });
+        files.push(ImportGlobFileData { file_path, import_path });
+        continue;
+      }
+
+      let mut import_path = self.relative_path(file, Some(dir));
+      if self_path == import_path {
+        continue;
+      }
+
+      let file_path = if let Some(base) = &options.base {
+        if base.starts_with('/') {
+          import_path = self.relative_path(file, None);
+        }
+        let base_path = if let Some(base) = base.strip_prefix('/') {
+          self.root.join(base)
+        } else {
+          dir.join(base)
+        };
+        Some(self.relative_path(file, Some(&base_path)))
+      } else if is_relative {
+        None
+      } else {
+        Some(file_path)
+      };
+
+      files.push(ImportGlobFileData { file_path, import_path });
     }
   }
 

@@ -64,8 +64,11 @@ OPTIONS
   --no-external-live-bindings Disable external live bindings.
   --no-preserve-entry-signatures Avoid facade chunks for entry points.
   --no-treeshake              Disable treeshaking.
+  --optimization.const-bindings Use \`const\` bindings for importing modules.
   --optimization.inline-const Enable crossmodule constant inlining.
   --optimization.pife-for-module-wrappers Use PIFE pattern for module wrappers.
+  --optimization.reserved-names-as-props Use static property names for reserved names.
+  --optimization.symbols      Use symbols for private properties.
   --outro <outro>             Code to insert the bottom of the bundled file (inside the wrapper function).
   --polyfill-require          Disable require polyfill injection.
   --preserve-modules          Preserve module structure.

@@ -48,8 +48,8 @@ pub fn legitimize_identifier_name(name: &str) -> Cow<'_, str> {
   Cow::Owned(legitimized)
 }
 
-pub fn property_access_str(obj: &str, prop: &str) -> String {
-  if is_validate_identifier_name(prop) {
+pub fn property_access_str(obj: &str, prop: &str, reserved_names_as_props: bool) -> String {
+  if is_validate_identifier_name(prop) && reserved_names_as_props {
     concat_string!(obj, ".", prop)
   } else {
     concat_string!(obj, "[", serde_json::to_string(prop).unwrap(), "]")

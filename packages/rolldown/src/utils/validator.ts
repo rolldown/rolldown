@@ -329,6 +329,33 @@ const OptimizationOptionsSchema = v.strictObject({
     v.optional(v.boolean()),
     v.description('Use PIFE pattern for module wrappers'),
   ),
+  constBindings: v.pipe(
+    v.optional(v.boolean()),
+    v.description('Use `const` bindings for importing modules'),
+  ),
+  reservedNamesAsProps: v.pipe(
+    v.optional(v.boolean()),
+    v.description('Use static property names for reserved names'),
+  ),
+  symbols: v.pipe(
+    v.optional(v.boolean()),
+    v.description('Use symbols for private properties'),
+  ),
+});
+
+const OptimizationCliOverrideSchema = v.strictObject({
+  constBindings: v.pipe(
+    v.optional(v.union([
+      v.literal(false),
+    ])),
+    v.description('Use `const` bindings for importing modules'),
+  ),
+  reservedNamesAsProps: v.pipe(
+    v.optional(v.union([
+      v.literal(false),
+    ])),
+    v.description('Use static property names for reserved names'),
+  ),
 });
 
 const OnLogSchema = v.pipe(
@@ -540,6 +567,10 @@ const InputCliOverrideSchema = v.strictObject({
     v.optional(v.string()),
     v.description('The entity top-level `this` represents.'),
   ),
+  optimization: v.optional(v.strictObject({
+    ...OptimizationOptionsSchema.entries,
+    ...OptimizationCliOverrideSchema.entries,
+  })),
 });
 
 const InputCliOptionsSchema = v.omit(

@@ -327,19 +327,19 @@ const OptimizationOptionsSchema = v.strictObject({
   ),
   pifeForModuleWrappers: v.pipe(
     v.optional(v.boolean()),
-    v.description('Use PIFE pattern for module wrappers'),
+    v.description('using PIFE pattern for module wrappers'),
   ),
   constBindings: v.pipe(
     v.optional(v.boolean()),
-    v.description('Use `const` bindings for importing modules'),
+    v.description('using `const` bindings for importing modules'),
   ),
   reservedNamesAsProps: v.pipe(
     v.optional(v.boolean()),
-    v.description('Use static property names for reserved names'),
+    v.description('using static property names for reserved names'),
   ),
   symbols: v.pipe(
     v.optional(v.boolean()),
-    v.description('Use symbols for private properties'),
+    v.description('using symbols for private properties'),
   ),
 });
 
@@ -348,13 +348,13 @@ const OptimizationCliOverrideSchema = v.strictObject({
     v.optional(v.union([
       v.literal(false),
     ])),
-    v.description('Use `const` bindings for importing modules'),
+    v.description('using `const` bindings for importing modules'),
   ),
   reservedNamesAsProps: v.pipe(
     v.optional(v.union([
       v.literal(false),
     ])),
-    v.description('Use static property names for reserved names'),
+    v.description('using static property names for reserved names'),
   ),
 });
 

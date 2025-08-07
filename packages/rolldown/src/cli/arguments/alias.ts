@@ -16,7 +16,7 @@ export interface OptionConfig {
   reverse?: boolean;
 }
 
-export const alias: Partial<Record<keyof CliOptions, OptionConfig>> = {
+export const alias: Partial<Record<keyof CliOptions | string, OptionConfig>> = {
   config: {
     abbreviation: 'c',
     hint: 'filename',
@@ -81,5 +81,13 @@ export const alias: Partial<Record<keyof CliOptions, OptionConfig>> = {
   },
   moduleTypes: {
     hint: 'types',
+  },
+  'optimization.constBindings': {
+    default: true,
+    reverse: true,
+  },
+  'optimization.reservedNamesAsProps': {
+    default: true,
+    reverse: true,
   },
 };

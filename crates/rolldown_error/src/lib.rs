@@ -17,6 +17,7 @@ pub use crate::{
   events::ambiguous_external_namespace::AmbiguousExternalNamespaceModule,
   events::commonjs_variable_in_esm::CjsExportSpan,
   events::invalid_option::InvalidOptionType,
+  events::unhandleable_error::CausedPlugin,
   events::unloadable_dependency::UnloadableDependencyContext,
   generated::event_kind_switcher::EventKindSwitcher,
   locator::line_column_to_byte_offset,

@@ -1664,6 +1664,7 @@ export interface BindingLog {
   id?: string
   code?: string
   exporter?: string
+  plugin?: string
 }
 
 export declare enum BindingLogLevel {

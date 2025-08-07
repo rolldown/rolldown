@@ -5,7 +5,7 @@ use std::{
 
 use arcstr::ArcStr;
 use derive_more::Debug;
-use rolldown_common::{Log, ResolvedId, side_effects::HookSideEffects};
+use rolldown_common::{LogWithoutPlugin, ResolvedId, side_effects::HookSideEffects};
 
 use crate::{
   PluginContextResolveOptions, plugin_context::PluginContextMeta,
@@ -37,6 +37,7 @@ impl PluginContext {
     match self {
       PluginContext::Napi(_) => self.clone(),
       PluginContext::Native(ctx) => Self::Native(Arc::new(NativePluginContextImpl {
+        plugin_name: ctx.plugin_name.clone(),
         skipped_resolve_calls,
         plugin_idx: ctx.plugin_idx,
         plugin_driver: Weak::clone(&ctx.plugin_driver),
@@ -179,7 +180,7 @@ impl PluginContext {
   }
 
   #[inline]
-  pub fn info(&self, log: Log) {
+  pub fn info(&self, log: LogWithoutPlugin) {
     match self {
       PluginContext::Napi(_) => {
         unimplemented!("Can't call `info` on PluginContext::Napi")
@@ -189,7 +190,7 @@ impl PluginContext {
   }
 
   #[inline]
-  pub fn warn(&self, log: Log) {
+  pub fn warn(&self, log: LogWithoutPlugin) {
     match self {
       PluginContext::Napi(_) => {
         unimplemented!("Can't call `warn` on PluginContext::Napi")
@@ -199,7 +200,7 @@ impl PluginContext {
   }
 
   #[inline]
-  pub fn debug(&self, log: Log) {
+  pub fn debug(&self, log: LogWithoutPlugin) {
     match self {
       PluginContext::Napi(_) => {
         unimplemented!("Can't call `debug` on PluginContext::Napi")

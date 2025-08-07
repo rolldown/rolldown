@@ -188,7 +188,7 @@ impl ViteResolvePlugin {
     if let Some(on_warn) = &self.on_warn {
       on_warn(message).await
     } else {
-      ctx.warn(rolldown_common::Log { message, id: None, code: None, exporter: None });
+      ctx.warn(rolldown_common::LogWithoutPlugin { message, id: None, code: None, exporter: None });
       Ok(())
     }
   }

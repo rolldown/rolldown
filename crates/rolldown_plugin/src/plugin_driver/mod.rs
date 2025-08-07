@@ -63,6 +63,7 @@ impl PluginDriver {
         let plugin_idx = index_plugins.push(Arc::clone(&plugin));
         plugin_usage_vec.push(plugin.call_hook_usage());
         index_contexts.push(PluginContext::Native(Arc::new(NativePluginContextImpl {
+          plugin_name: plugin.call_name(),
           skipped_resolve_calls: vec![],
           plugin_idx,
           plugin_driver: Weak::clone(plugin_driver),

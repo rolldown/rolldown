@@ -14,6 +14,7 @@ export default defineTest({
     onLog(level, log) {
       expect(level).toBe('warn')
       expect(log.code).toBe('MISSING_NAME_OPTION_FOR_IIFE_EXPORT')
+      expect(log.plugin).toBeUndefined()
       onLogFn()
     },
   },

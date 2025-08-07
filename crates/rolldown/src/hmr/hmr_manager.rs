@@ -5,7 +5,6 @@ use std::{
 };
 
 use arcstr::ArcStr;
-use oxc::ast_visit::VisitMut;
 use oxc_traverse::traverse_mut;
 use rolldown_common::{
   EcmaModuleAstUsage, HmrBoundary, HmrBoundaryOutput, HmrPatch, HmrUpdate, Module, ModuleIdx,
@@ -371,7 +370,6 @@ impl HmrManager {
             alloc: fields.allocator,
             snippet: AstSnippet::new(fields.allocator),
             builder: &oxc::ast::AstBuilder::new(fields.allocator),
-            scoping: &scoping,
             import_bindings: FxHashMap::default(),
             module: affected_module,
             exports: oxc::allocator::Vec::new_in(fields.allocator),
@@ -386,12 +384,7 @@ impl HmrManager {
             named_exports: FxHashMap::default(),
           };
 
-          let scoping = EcmaAst::make_semantic(fields.program, /*with_cfg*/ false).into_scoping();
-
           traverse_mut(&mut finalizer, fields.allocator, fields.program, scoping, ());
-
-          // TODO: hyf0 removes `VisitMut`, uses `Traverse` instead.
-          finalizer.visit_program(fields.program);
         });
 
         let codegen = EcmaCompiler::print_with(

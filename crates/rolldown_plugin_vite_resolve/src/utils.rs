@@ -39,7 +39,7 @@ pub fn is_windows_drive_path(id: &str) -> bool {
   id_bytes.len() >= 2 && id_bytes[0].is_ascii_alphabetic() && id_bytes[1] == b':'
 }
 
-pub fn normalize_path(path: &str) -> Cow<str> {
+pub fn normalize_path(path: &str) -> Cow<'_, str> {
   // this function does not do normalization by `path.posix.normalize`
   // but for this plugin, it is fine as we only handle paths that are absolute
   path.cow_replace('\\', "/")

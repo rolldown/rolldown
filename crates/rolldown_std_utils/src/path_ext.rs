@@ -5,7 +5,7 @@ pub trait PathExt {
 
   fn expect_to_slash(&self) -> String;
 
-  fn representative_file_name(&self) -> Cow<str>;
+  fn representative_file_name(&self) -> Cow<'_, str>;
 }
 
 impl PathExt for Path {
@@ -28,7 +28,7 @@ impl PathExt for Path {
   }
 
   /// It doesn't ensure the file name is a valid identifier in JS.
-  fn representative_file_name(&self) -> Cow<str> {
+  fn representative_file_name(&self) -> Cow<'_, str> {
     let file_name =
       self.file_stem().map_or_else(|| self.to_string_lossy(), |stem| stem.to_string_lossy());
 
@@ -50,7 +50,7 @@ impl PathExt for Path {
 }
 
 /// The first one is for chunk name, the second element is used for generate absolute file name
-pub fn representative_file_name_for_preserve_modules(path: &Path) -> (Cow<str>, String) {
+pub fn representative_file_name_for_preserve_modules(path: &Path) -> (Cow<'_, str>, String) {
   let file_name =
     path.file_stem().map_or_else(|| path.to_string_lossy(), |stem| stem.to_string_lossy());
   let ab_path = path.with_extension("").to_string_lossy().into_owned();

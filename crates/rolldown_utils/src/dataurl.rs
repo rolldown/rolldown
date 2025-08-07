@@ -21,7 +21,7 @@ pub struct ParsedDataUrl<'a> {
 
 #[inline]
 // Parse the data URL with a more flexible approach
-fn parse_data_url_nom(input: &str) -> IResult<&str, ParsedDataUrl> {
+fn parse_data_url_nom(input: &str) -> IResult<&str, ParsedDataUrl<'_>> {
   // Start with "data:" prefix
   let (input, _) = tag("data:")(input)?;
 
@@ -51,7 +51,7 @@ fn parse_data_url_nom(input: &str) -> IResult<&str, ParsedDataUrl> {
   Ok((remaining, ParsedDataUrl { mime: mime.trim(), is_base64, data: data.trim() }))
 }
 
-pub fn parse_data_url(dataurl: &str) -> Option<ParsedDataUrl> {
+pub fn parse_data_url(dataurl: &str) -> Option<ParsedDataUrl<'_>> {
   match parse_data_url_nom(dataurl) {
     Ok((_, parsed)) => Some(parsed),
     Err(_) => None,

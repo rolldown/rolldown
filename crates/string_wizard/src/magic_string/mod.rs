@@ -104,7 +104,7 @@ impl<'text> MagicString<'text> {
     self.intro.push_back(content.into());
   }
 
-  fn iter_chunks(&self) -> impl Iterator<Item = &Chunk> {
+  fn iter_chunks(&self) -> impl Iterator<Item = &Chunk<'_>> {
     IterChunks { next: Some(self.first_chunk_idx), chunks: &self.chunks }
   }
 

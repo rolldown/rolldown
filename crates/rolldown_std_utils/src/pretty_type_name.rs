@@ -10,7 +10,7 @@ pub fn pretty_type_name<T: ?Sized>() -> Cow<'static, str> {
   prettify_type_name(type_name)
 }
 
-fn prettify_type_name(name: &str) -> Cow<str> {
+fn prettify_type_name(name: &str) -> Cow<'_, str> {
   MODULE_MATCHER_RE.replace_all(name, "")
 }
 

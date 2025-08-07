@@ -11,7 +11,7 @@ pub fn is_validate_assignee_identifier_name(name: &str) -> bool {
   identifier::is_identifier_name(name) && !keyword::is_reserved_keyword_or_global_object(name)
 }
 
-pub fn legitimize_identifier_name(name: &str) -> Cow<str> {
+pub fn legitimize_identifier_name(name: &str) -> Cow<'_, str> {
   let mut legitimized = String::new();
   let mut chars_indices = name.char_indices();
 

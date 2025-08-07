@@ -110,7 +110,7 @@ pub fn tweak_snapshot(
   content: &str,
   hide_runtime_module: bool,
   hide_hmr_runtime: bool,
-) -> Cow<str> {
+) -> Cow<'_, str> {
   if !hide_runtime_module && !hide_hmr_runtime {
     return Cow::Borrowed(content);
   }

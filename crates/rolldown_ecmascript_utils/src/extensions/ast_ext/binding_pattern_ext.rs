@@ -14,7 +14,7 @@ use crate::AstSnippet;
 use super::binding_property_ext::BindingPropertyExt as _;
 
 pub trait BindingPatternExt<'ast> {
-  fn binding_identifiers(&self) -> smallvec::SmallVec<[&Box<BindingIdentifier<'ast>>; 1]>;
+  fn binding_identifiers(&self) -> smallvec::SmallVec<[&Box<'_, BindingIdentifier<'ast>>; 1]>;
 
   fn into_assignment_target(self, alloc: &'ast Allocator) -> AssignmentTarget<'ast>;
 
@@ -22,7 +22,7 @@ pub trait BindingPatternExt<'ast> {
 }
 
 impl<'ast> BindingPatternExt<'ast> for BindingPattern<'ast> {
-  fn binding_identifiers(&self) -> smallvec::SmallVec<[&Box<BindingIdentifier<'ast>>; 1]> {
+  fn binding_identifiers(&self) -> smallvec::SmallVec<[&Box<'_, BindingIdentifier<'ast>>; 1]> {
     let mut stack = vec![&self.kind];
     let mut ret = SmallVec::default();
     while let Some(binding_kind) = stack.pop() {

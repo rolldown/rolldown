@@ -5562,7 +5562,7 @@ expression: output
 
 # tests/rolldown/topics/hmr/runtime_correctness
 
-- main-!~{000}~.js => main-DgTF6CiG.js
+- main-!~{000}~.js => main-iVgN89Sb.js
 
 # tests/rolldown/topics/hmr/static_import
 

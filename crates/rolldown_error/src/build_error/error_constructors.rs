@@ -256,7 +256,7 @@ impl BuildDiagnostic {
 
   #[cfg(feature = "napi")]
   pub fn napi_error(err: napi::Error) -> Self {
-    let mut diagnostic = Self::new_inner(NapiError {});
+    let mut diagnostic = Self::new_inner(NapiError);
     diagnostic.napi_error = Some(err);
     diagnostic
   }

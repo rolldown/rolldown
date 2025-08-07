@@ -31,7 +31,7 @@ impl EcmaAst {
     &self.program.borrow_owner().allocator
   }
 
-  pub fn program(&self) -> &Program {
+  pub fn program(&self) -> &Program<'_> {
     &self.program.borrow_dependent().program
   }
 

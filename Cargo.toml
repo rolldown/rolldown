@@ -74,6 +74,8 @@ unused_peekable = "warn"
 # Rewriting `unwrap_or` to `map_or` requires to annotate type explicitly which is cumbersome
 map_unwrap_or = "allow"
 
+collapsible_if = "allow"
+
 [workspace.dependencies]
 criterion2 = { version = "3.0.0", default-features = false }
 css-module-lexer = "0.0.15"

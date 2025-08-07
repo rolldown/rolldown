@@ -64,9 +64,9 @@ where
 }
 
 // --- TODO(hyf0): These errors are only for compatibility with legacy code. They should be replaced with more specific errors.
-
+#[allow(dead_code)]
 #[derive(Debug)]
-pub struct NapiError {}
+pub struct NapiError;
 
 impl BuildEvent for NapiError {
   fn kind(&self) -> EventKind {

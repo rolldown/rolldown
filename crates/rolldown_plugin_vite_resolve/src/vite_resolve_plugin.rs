@@ -554,7 +554,7 @@ throw new Error(`Could not resolve \"{peer_dep}\" imported by \"{parent_dep}\".{
   )
 }
 
-fn fs_path_from_id(id: &str) -> Cow<str> {
+fn fs_path_from_id(id: &str) -> Cow<'_, str> {
   let fs_path = normalize_path(id.strip_prefix(FS_PREFIX).unwrap_or(id));
   if fs_path.starts_with('/') || is_windows_drive_path(&fs_path) {
     return fs_path;

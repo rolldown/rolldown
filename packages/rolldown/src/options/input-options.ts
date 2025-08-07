@@ -72,7 +72,7 @@ export type HmrOptions = boolean | {
 
 export type OptimizationOptions = {
   inlineConst?: boolean;
-  constBinding?: boolean;
+  constBindings?: boolean;
   reservedNamesAsProps?: boolean;
   symbols?: boolean;
 };

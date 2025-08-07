@@ -123,7 +123,7 @@ impl TransformPlugin {
 
     if source_type.is_typescript() {
       let path = Path::new(id).parent().and_then(find_tsconfig_json_for_file);
-      let tsconfig = path.and_then(|path| ctx.resolver().resolve_tsconfig(&path).ok());
+      let tsconfig = path.map(|path| ctx.resolver().resolve_tsconfig(&path)).transpose()?;
 
       if let Some(tsconfig) = tsconfig {
         // Tsconfig could be out of root, make sure it is watched

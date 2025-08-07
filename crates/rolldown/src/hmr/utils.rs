@@ -3,14 +3,9 @@ use oxc::{
   span::SPAN,
 };
 use rolldown_common::NormalModule;
+use rolldown_ecmascript::{CJS_MODULE_REF, CJS_ROLLDOWN_MODULE_REF};
 
-use crate::{
-  hmr::{
-    hmr_ast_finalizer::HmrAstFinalizer,
-    impl_traverse_for_hmr_ast_finalizer::{CJS_MODULE_NAME, CJS_ROLLDOWN_MODULE_NAME},
-  },
-  module_finalizers::ScopeHoistingFinalizer,
-};
+use crate::{hmr::hmr_ast_finalizer::HmrAstFinalizer, module_finalizers::ScopeHoistingFinalizer};
 
 pub static MODULE_EXPORTS_NAME_FOR_ESM: &str = "__rolldown_exports__";
 
@@ -163,7 +158,7 @@ impl<'any, 'ast> HmrAstBuilder<'any, 'ast> for HmrAstFinalizer<'any, 'ast> {
   }
 
   fn cjs_module_name() -> &'static str {
-    CJS_ROLLDOWN_MODULE_NAME
+    CJS_ROLLDOWN_MODULE_REF
   }
 }
 
@@ -188,6 +183,6 @@ impl<'any, 'ast> HmrAstBuilder<'any, 'ast> for ScopeHoistingFinalizer<'any, 'ast
   }
 
   fn cjs_module_name() -> &'static str {
-    CJS_MODULE_NAME
+    CJS_MODULE_REF
   }
 }

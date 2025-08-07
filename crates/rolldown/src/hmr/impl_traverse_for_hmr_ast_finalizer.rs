@@ -1,22 +1,16 @@
 use oxc::{
   allocator::TakeIn,
   ast::{NONE, ast},
-  span::{Atom, SPAN},
+  span::SPAN,
 };
 use oxc_traverse::Traverse;
+use rolldown_ecmascript::{
+  CJS_EXPORTS_REF_ATOM, CJS_MODULE_REF_ATOM, CJS_ROLLDOWN_EXPORTS_REF,
+  CJS_ROLLDOWN_EXPORTS_REF_ATOM, CJS_ROLLDOWN_MODULE_REF_ATOM,
+};
 use rolldown_ecmascript_utils::{ExpressionExt, quote_expr, quote_stmts};
 
 use crate::hmr::{hmr_ast_finalizer::HmrAstFinalizer, utils::HmrAstBuilder};
-
-pub static CJS_EXPORTS_NAME: &str = "exports";
-pub static CJS_MODULE_NAME: &str = "module";
-pub static CJS_ROLLDOWN_EXPORTS_NAME: &str = "__rolldown_exports__";
-pub static CJS_ROLLDOWN_MODULE_NAME: &str = "__rolldown_module__";
-
-static CJS_EXPORTS_ATOM: Atom<'static> = Atom::new_const(CJS_EXPORTS_NAME);
-static CJS_MODULE_ATOM: Atom<'static> = Atom::new_const(CJS_MODULE_NAME);
-static CJS_ROLLDOWN_EXPORTS_ATOM: Atom<'static> = Atom::new_const(CJS_ROLLDOWN_EXPORTS_NAME);
-static CJS_ROLLDOWN_MODULE_ATOM: Atom<'static> = Atom::new_const(CJS_ROLLDOWN_MODULE_NAME);
 
 impl<'ast> Traverse<'ast, ()> for HmrAstFinalizer<'_, 'ast> {
   fn enter_program(
@@ -83,7 +77,7 @@ impl<'ast> Traverse<'ast, ()> for HmrAstFinalizer<'_, 'ast> {
         self.builder.vec(),
         self.snippet.builder.binding_pattern(
           ast::BindingPatternKind::BindingIdentifier(
-            self.snippet.builder.alloc_binding_identifier(SPAN, CJS_ROLLDOWN_EXPORTS_ATOM),
+            self.snippet.builder.alloc_binding_identifier(SPAN, CJS_ROLLDOWN_EXPORTS_REF_ATOM),
           ),
           NONE,
           false,
@@ -97,7 +91,7 @@ impl<'ast> Traverse<'ast, ()> for HmrAstFinalizer<'_, 'ast> {
         self.builder.vec(),
         self.snippet.builder.binding_pattern(
           ast::BindingPatternKind::BindingIdentifier(
-            self.snippet.builder.alloc_binding_identifier(SPAN, CJS_ROLLDOWN_MODULE_ATOM),
+            self.snippet.builder.alloc_binding_identifier(SPAN, CJS_ROLLDOWN_MODULE_REF_ATOM),
           ),
           NONE,
           false,
@@ -191,7 +185,7 @@ impl<'ast> Traverse<'ast, ()> for HmrAstFinalizer<'_, 'ast> {
       // Rewrite this to `undefined` or `exports`
       if self.module.exports_kind.is_commonjs() {
         // Rewrite this to `exports`
-        *node = quote_expr(self.alloc, &CJS_ROLLDOWN_EXPORTS_ATOM);
+        *node = quote_expr(self.alloc, CJS_ROLLDOWN_EXPORTS_REF);
       } else {
         // Rewrite this to `undefined`
         *node = quote_expr(self.alloc, "void 0");
@@ -206,12 +200,12 @@ impl<'ast> Traverse<'ast, ()> for HmrAstFinalizer<'_, 'ast> {
             *node = self.snippet.id_ref_expr(binding_name.as_str(), ident.span);
             return;
           }
-        } else if ident.name == CJS_EXPORTS_ATOM {
+        } else if ident.name == CJS_EXPORTS_REF_ATOM {
           // Rewrite `exports` to `__rolldown_exports__`
-          ident.name = CJS_ROLLDOWN_EXPORTS_ATOM;
-        } else if ident.name == CJS_MODULE_ATOM {
+          ident.name = CJS_ROLLDOWN_EXPORTS_REF_ATOM;
+        } else if ident.name == CJS_MODULE_REF_ATOM {
           // Rewrite `module` to `__rolldown_module__`
-          ident.name = CJS_ROLLDOWN_MODULE_ATOM;
+          ident.name = CJS_ROLLDOWN_MODULE_REF_ATOM;
         }
       }
     }

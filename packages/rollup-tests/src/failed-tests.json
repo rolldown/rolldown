@@ -1,3 +1,4 @@
 [
-  "rollup@function@es5-class-called-without-new: does not swallow type errors when running constructor functions without \"new\""
+  "rollup@function@es5-class-called-without-new: does not swallow type errors when running constructor functions without \"new\"",
+  "rollup@function@options-in-renderstart: makes input and output options available in renderStart"
 ]

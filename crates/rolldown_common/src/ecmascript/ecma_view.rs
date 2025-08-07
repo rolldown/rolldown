@@ -138,3 +138,14 @@ impl SourceMutation for ImportMetaRolldownAssetReplacer {
       .replace_all("import.meta.__ROLLDOWN_ASSET_FILENAME", format!("\"{}\"", self.asset_filename));
   }
 }
+
+#[derive(Debug, Default)]
+pub struct PrependRenderedImport {
+  pub intro: String,
+}
+
+impl SourceMutation for PrependRenderedImport {
+  fn apply(&self, magic_string: &mut string_wizard::MagicString<'_>) {
+    magic_string.prepend(self.intro.clone());
+  }
+}

@@ -1,0 +1,40 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## lib.js
+
+```js
+// HIDDEN [rolldown:runtime]
+//#region leaflet.js
+var require_leaflet = /* @__PURE__ */ __commonJS({ "leaflet.js": ((exports, module) => {
+	(function(global$1, factory) {
+		typeof exports === "object" && typeof module !== "undefined" ? factory(exports) : typeof define === "function" && define.amd ? define(["exports"], factory) : (global$1 = typeof globalThis !== "undefined" ? globalThis : global$1 || self, factory(global$1.leaflet = {}));
+	})(exports, function(exports$1) {
+		exports$1.foo = "foo";
+		global.L = exports$1;
+	});
+}) });
+
+//#endregion
+//#region leaflet-toolbar.js
+var import_leaflet = /* @__PURE__ */ __toESM(require_leaflet());
+(function(t) {
+	t.L.Toolbar = L.foo;
+})(global);
+
+//#endregion
+//#region lib.js
+console.log("hello", !!L);
+
+//#endregion
+```
+## main.js
+
+```js
+//#region main.js
+import("./lib.js");
+
+//#endregion
+```

@@ -89,7 +89,7 @@ pub use crate::{
     ecma_asset_meta::EcmaAssetMeta,
     ecma_view::{
       EcmaModuleAstUsage, EcmaView, EcmaViewMeta, ImportMetaRolldownAssetReplacer,
-      ThisExprReplaceKind, generate_replace_this_expr_map,
+      PrependRenderedImport, ThisExprReplaceKind, generate_replace_this_expr_map,
     },
     module_idx::ModuleIdx,
     node_builtin_modules::is_existing_node_builtin_modules,

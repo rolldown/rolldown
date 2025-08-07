@@ -1,9 +1,10 @@
 use rolldown_common::{
-  ChunkIdx, ConstExportMeta, IndexModules, ModuleIdx, NormalModule, RuntimeModuleBrief,
-  SharedFileEmitter, SymbolRef, SymbolRefDb,
+  ChunkIdx, ConstExportMeta, ImportRecordIdx, IndexModules, ModuleIdx, NormalModule,
+  RuntimeModuleBrief, SharedFileEmitter, SymbolRef, SymbolRefDb,
 };
 
 use oxc::span::CompactStr;
+use rolldown_utils::indexmap::FxIndexMap;
 use rustc_hash::FxHashMap;
 
 use crate::{
@@ -30,4 +31,5 @@ pub struct ScopeHoistingFinalizerContext<'me> {
   pub constant_value_map: &'me FxHashMap<SymbolRef, ConstExportMeta>,
   pub needs_hosted_top_level_binding: bool,
   pub module_namespace_included: bool,
+  pub transferred_import_record: FxIndexMap<ImportRecordIdx, String>,
 }

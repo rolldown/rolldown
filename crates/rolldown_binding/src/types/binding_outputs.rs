@@ -1,4 +1,7 @@
-use std::sync::Arc;
+use std::{
+  collections::{HashMap, HashSet},
+  sync::Arc,
+};
 
 use super::{
   binding_output_asset::{BindingOutputAsset, JsOutputAsset},
@@ -7,7 +10,7 @@ use super::{
 use napi::Either;
 use napi_derive::napi;
 use rolldown_error::{BuildDiagnostic, DiagnosticOptions};
-use rustc_hash::{FxHashMap, FxHashSet};
+use rustc_hash::FxBuildHasher;
 
 // The `BindingOutputs` take the data to js side, the rust side will not use it anymore.
 #[napi]
@@ -68,10 +71,8 @@ impl From<Vec<rolldown_common::Output>> for BindingOutputs {
 
 #[napi(object)]
 pub struct JsChangedOutputs {
-  #[napi(ts_type = "Set<string>")]
-  pub deleted: FxHashSet<String>,
-  #[napi(ts_type = "Record<string, JsOutputChunk | JsOutputAsset>")]
-  pub changes: FxHashMap<String, Either<JsOutputChunk, JsOutputAsset>>,
+  pub deleted: HashSet<String, FxBuildHasher>,
+  pub changes: HashMap<String, Either<JsOutputChunk, JsOutputAsset>, FxBuildHasher>,
 }
 
 impl JsChangedOutputs {

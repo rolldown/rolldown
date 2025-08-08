@@ -275,4 +275,9 @@ impl BindingNormalizedOptions {
   pub fn minify_internal_exports(&self) -> bool {
     self.inner.minify_internal_exports
   }
+
+  #[napi(getter)]
+  pub fn context(&self) -> String {
+    self.inner.context.clone()
+  }
 }

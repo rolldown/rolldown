@@ -1,17 +1,15 @@
 pub fn find_special_query(query: &str, param: &[u8]) -> Option<usize> {
-  let param_len = param.len();
-  if query.len() < param_len + 1 {
+  if query.len() < param.len() + 1 {
     return None;
   }
-  for (index, _) in query.match_indices('?') {
-    if index + param_len >= query.len() {
-      return None;
-    }
+  if let Some(index) = memchr::memchr(b'?', query.as_bytes())
+    && index + param.len() < query.len()
+  {
     let bytes = &query.as_bytes()[index..];
     let len = bytes.len();
     let mut i = 1;
     while i < len {
-      let p = i + param_len;
+      let p = i + param.len();
       if p <= len && &bytes[i..p] == param && (p == len || bytes[p] == b'&') {
         return Some(index + i);
       }

@@ -3075,6 +3075,7 @@ dependencies = [
  "anyhow",
  "cow-utils",
  "itertools",
+ "memchr",
  "percent-encoding",
  "rolldown_common",
  "rolldown_plugin",
@@ -3087,7 +3088,13 @@ dependencies = [
 name = "rolldown_plugin_vite_css"
 version = "0.1.0"
 dependencies = [
+ "anyhow",
+ "base64-simd",
+ "memchr",
  "rolldown_plugin",
+ "rolldown_plugin_utils",
+ "rolldown_utils",
+ "serde_json",
 ]
 
 [[package]]

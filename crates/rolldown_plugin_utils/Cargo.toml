@@ -18,6 +18,7 @@ workspace = true
 anyhow = { workspace = true }
 cow-utils = { workspace = true }
 itertools = { workspace = true }
+memchr = { workspace = true }
 percent-encoding = { workspace = true }
 rolldown_common = { workspace = true }
 rolldown_plugin = { workspace = true }

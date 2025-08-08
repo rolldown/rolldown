@@ -1,6 +1,6 @@
 use derive_more::Debug;
-use rustc_hash::FxHashSet;
-use std::sync::Arc;
+use rustc_hash::{FxBuildHasher, FxHashSet};
+use std::{collections::HashSet, sync::Arc};
 
 use napi::bindgen_prelude::{Either4, FnArgs};
 use rolldown::{InnerOptions, ModuleSideEffects, ModuleSideEffectsRule};
@@ -13,7 +13,7 @@ use crate::{
 
 pub type BindingModuleSideEffects = Either4<
   bool,
-  Vec<String>,
+  HashSet<String, FxBuildHasher>,
   Vec<BindingModuleSideEffectsRule>,
   JsCallback<FnArgs<(String, bool)>, Option<bool>>,
 >;
@@ -28,7 +28,7 @@ pub struct BindingTreeshake {
   pub module_side_effects: BindingModuleSideEffects,
   pub annotations: Option<bool>,
   #[napi(ts_type = "ReadonlyArray<string>")]
-  pub manual_pure_functions: Option<Vec<String>>,
+  pub manual_pure_functions: Option<FxHashSet<String>>,
   pub unknown_global_side_effects: Option<bool>,
   pub commonjs: Option<bool>,
 }
@@ -47,7 +47,7 @@ impl TryFrom<BindingTreeshake> for rolldown::TreeshakeOptions {
   fn try_from(value: BindingTreeshake) -> anyhow::Result<Self> {
     let module_side_effects = match value.module_side_effects {
       Either4::A(value) => ModuleSideEffects::Boolean(value),
-      Either4::B(rules) => ModuleSideEffects::IdSet(rules.into_iter().collect::<FxHashSet<_>>()),
+      Either4::B(rules) => ModuleSideEffects::IdSet(rules),
       Either4::C(rules) => {
         let mut ret = Vec::with_capacity(rules.len());
         for rule in rules {
@@ -77,7 +77,7 @@ impl TryFrom<BindingTreeshake> for rolldown::TreeshakeOptions {
     Ok(Self::Option(InnerOptions {
       module_side_effects,
       annotations: value.annotations,
-      manual_pure_functions: value.manual_pure_functions.map(FxHashSet::from_iter),
+      manual_pure_functions: value.manual_pure_functions,
       unknown_global_side_effects: value.unknown_global_side_effects,
       // By default disable commonjs tree shake, since it is not stable
       commonjs: value.commonjs,

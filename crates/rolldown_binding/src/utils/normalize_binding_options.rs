@@ -107,9 +107,7 @@ fn normalize_globals_option(
   option: Option<crate::options::GlobalsOutputOption>,
 ) -> Option<rolldown_common::GlobalsOutputOption> {
   option.map(move |value| match value {
-    Either::A(hash_map) => {
-      rolldown_common::GlobalsOutputOption::FxHashMap(hash_map.into_iter().collect())
-    }
+    Either::A(hash_map) => rolldown_common::GlobalsOutputOption::FxHashMap(hash_map),
     Either::B(func) => rolldown_common::GlobalsOutputOption::Fn(Arc::new(move |name| {
       let func = Arc::clone(&func);
       let name = name.to_string();

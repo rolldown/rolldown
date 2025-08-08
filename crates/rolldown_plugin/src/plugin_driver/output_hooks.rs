@@ -8,7 +8,6 @@ use rolldown_common::{Output, RollupRenderedChunk, SharedNormalizedBundlerOption
 use rolldown_debug::{action, trace_action};
 use rolldown_error::{BuildDiagnostic, CausedPlugin};
 use rolldown_sourcemap::SourceMap;
-use tracing::{Instrument, debug_span};
 
 impl PluginDriver {
   pub async fn render_start(&self, opts: &SharedNormalizedBundlerOptions) -> HookNoopReturn {
@@ -16,7 +15,6 @@ impl PluginDriver {
     {
       plugin
         .call_render_start(ctx, &crate::HookRenderStartArgs { options: opts })
-        .instrument(debug_span!("render_start_hook", plugin_name = plugin.call_name().as_ref()))
         .await
         .with_context(|| CausedPlugin::new(plugin.call_name()))?;
     }
@@ -27,7 +25,6 @@ impl PluginDriver {
     for (_, plugin, ctx) in self.iter_plugin_with_context_by_order(&self.order_by_banner_meta) {
       if let Some(r) = plugin
         .call_banner(ctx, &args)
-        .instrument(debug_span!("banner_hook", plugin_name = plugin.call_name().as_ref()))
         .await
         .with_context(|| CausedPlugin::new(plugin.call_name()))?
       {
@@ -45,7 +42,6 @@ impl PluginDriver {
     for (_, plugin, ctx) in self.iter_plugin_with_context_by_order(&self.order_by_footer_meta) {
       if let Some(r) = plugin
         .call_footer(ctx, &args)
-        .instrument(debug_span!("footer_hook", plugin_name = plugin.call_name().as_ref()))
         .await
         .with_context(|| CausedPlugin::new(plugin.call_name()))?
       {
@@ -63,7 +59,6 @@ impl PluginDriver {
     for (_, plugin, ctx) in self.iter_plugin_with_context_by_order(&self.order_by_intro_meta) {
       if let Some(r) = plugin
         .call_intro(ctx, &args)
-        .instrument(debug_span!("intro_hook", plugin_name = plugin.call_name().as_ref()))
         .await
         .with_context(|| CausedPlugin::new(plugin.call_name()))?
       {
@@ -81,7 +76,6 @@ impl PluginDriver {
     for (_, plugin, ctx) in self.iter_plugin_with_context_by_order(&self.order_by_outro_meta) {
       if let Some(r) = plugin
         .call_outro(ctx, &args)
-        .instrument(debug_span!("outro_hook", plugin_name = plugin.call_name().as_ref()))
         .await
         .with_context(|| CausedPlugin::new(plugin.call_name()))?
       {
@@ -112,7 +106,6 @@ impl PluginDriver {
         });
         if let Some(r) = plugin
           .call_render_chunk(ctx, &args)
-          .instrument(debug_span!("render_chunk_hook", plugin_name = plugin.call_name().as_ref()))
           .await
           .with_context(|| CausedPlugin::new(plugin.call_name()))?
         {
@@ -130,10 +123,6 @@ impl PluginDriver {
 
         Ok(())
       }
-      .instrument(debug_span!(
-        "render_chunk_hook",
-        CONTEXT_call_id = rolldown_utils::uuid::uuid_v4()
-      ))
       .await?;
     }
     Ok((args.code, sourcemap_chain))
@@ -149,10 +138,6 @@ impl PluginDriver {
     {
       if let Some(plugin_hash) = plugin
         .call_augment_chunk_hash(ctx, Arc::clone(&chunk))
-        .instrument(debug_span!(
-          "augment_chunk_hash_hook",
-          plugin_name = plugin.call_name().as_ref()
-        ))
         .await
         .with_context(|| CausedPlugin::new(plugin.call_name()))?
       {
@@ -167,7 +152,6 @@ impl PluginDriver {
     {
       plugin
         .call_render_error(ctx, args)
-        .instrument(debug_span!("render_error_hook", plugin_name = plugin.call_name().as_ref()))
         .await
         .with_context(|| CausedPlugin::new(plugin.call_name()))?;
     }
@@ -187,7 +171,6 @@ impl PluginDriver {
       let mut args = crate::HookGenerateBundleArgs { is_write, bundle, options: opts };
       plugin
         .call_generate_bundle(ctx, &mut args)
-        .instrument(debug_span!("generate_bundle_hook", plugin_name = plugin.call_name().as_ref()))
         .await
         .with_context(|| CausedPlugin::new(plugin.call_name()))?;
       ctx.file_emitter().add_additional_files(bundle, warnings);
@@ -206,7 +189,6 @@ impl PluginDriver {
       let mut args = crate::HookWriteBundleArgs { bundle, options: opts };
       plugin
         .call_write_bundle(ctx, &mut args)
-        .instrument(debug_span!("write_bundle_hook", plugin_name = plugin.call_name().as_ref()))
         .await
         .with_context(|| CausedPlugin::new(plugin.call_name()))?;
       ctx.file_emitter().add_additional_files(bundle, warnings);
@@ -217,11 +199,7 @@ impl PluginDriver {
   pub async fn close_bundle(&self) -> HookNoopReturn {
     for (_, plugin, ctx) in self.iter_plugin_with_context_by_order(&self.order_by_close_bundle_meta)
     {
-      plugin
-        .call_close_bundle(ctx)
-        .instrument(debug_span!("close_bundle_hook", plugin_name = plugin.call_name().as_ref(),))
-        .await
-        .with_context(|| CausedPlugin::new(plugin.call_name()))?;
+      plugin.call_close_bundle(ctx).await.with_context(|| CausedPlugin::new(plugin.call_name()))?;
     }
     Ok(())
   }

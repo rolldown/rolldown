@@ -92,7 +92,6 @@ impl PluginDriver {
             ),
             args,
           )
-          .instrument(debug_span!("resolve_id_hook", plugin_name = plugin.call_name().as_ref()))
           .await?
         {
           trace_action!(action::HookResolveIdCallEnd {
@@ -159,10 +158,6 @@ impl PluginDriver {
           ),
           args,
         )
-        .instrument(debug_span!(
-          "resolve_dynamic_import_hook",
-          plugin_name = plugin.call_name().as_ref()
-        ))
         .await
         .with_context(|| CausedPlugin::new(plugin.call_name()))?
       {
@@ -184,11 +179,7 @@ impl PluginDriver {
           plugin_id: plugin_idx.raw(),
           call_id: "${call_id}",
         });
-        if let Some(r) = plugin
-          .call_load(ctx, args)
-          .instrument(debug_span!("load_hook", plugin_name = plugin.call_name().as_ref()))
-          .await?
-        {
+        if let Some(r) = plugin.call_load(ctx, args).await? {
           trace_action!(action::HookLoadCallEnd {
             action: "HookLoadCallEnd",
             module_id: args.id.to_string(),
@@ -258,7 +249,6 @@ impl PluginDriver {
           )),
           &HookTransformArgs { id, code: &code, module_type: &*module_type },
         )
-        .instrument(debug_span!("transform_hook", plugin_name = plugin.call_name().as_ref()))
         .await
         .with_context(|| CausedPlugin::new(plugin.call_name()))?
       {
@@ -375,7 +365,6 @@ impl PluginDriver {
     {
       plugin
         .call_module_parsed(ctx, Arc::clone(&module_info), normal_module)
-        .instrument(debug_span!("module_parsed_hook", plugin_name = plugin.call_name().as_ref()))
         .await
         .with_context(|| CausedPlugin::new(plugin.call_name()))?;
     }
@@ -386,7 +375,6 @@ impl PluginDriver {
     for (_, plugin, ctx) in self.iter_plugin_with_context_by_order(&self.order_by_build_end_meta) {
       plugin
         .call_build_end(ctx, args)
-        .instrument(debug_span!("build_end_hook", plugin_name = plugin.call_name().as_ref()))
         .await
         .with_context(|| CausedPlugin::new(plugin.call_name()))?;
     }

@@ -25,5 +25,6 @@ extend-exclude = [
 
 [default.extend-words]
 splitted = "splitted"
+styl = "styl"
 
 [default.extend-identifiers]

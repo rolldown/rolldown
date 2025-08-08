@@ -336,7 +336,7 @@ expression: output
 
 # tests/esbuild/dce/package_json_side_effects_array_keep_module_implicit_main
 
-- src_entry-!~{000}~.js => src_entry-C2peZyuC.js
+- src_entry-!~{000}~.js => src_entry-Dmc_zJYq.js
 
 # tests/esbuild/dce/package_json_side_effects_array_keep_module_implicit_module
 
@@ -3716,8 +3716,8 @@ expression: output
 
 # tests/rolldown/cjs_compat/mix-cjs-esm
 
-- main-!~{000}~.js => main-DjRkGoWy.js
-- main-DjRkGoWy.js.map
+- main-!~{000}~.js => main-BHvrdxT6.js
+- main-BHvrdxT6.js.map
 
 # tests/rolldown/cjs_compat/multiple_circle_cjs_entries
 
@@ -3741,11 +3741,11 @@ expression: output
 
 # tests/rolldown/cjs_compat/optimize_interop_default_with_none_default_ns_property_name
 
-- main-!~{000}~.js => main-wIDV8rsX.js
+- main-!~{000}~.js => main-CMeZ36WU.js
 
 # tests/rolldown/cjs_compat/partial_cjs_ns_merge
 
-- main-!~{000}~.js => main-BywzsmJB.js
+- main-!~{000}~.js => main-UzXWIcz5.js
 
 # tests/rolldown/cjs_compat/partial_cjs_ns_merge_2
 
@@ -3753,7 +3753,7 @@ expression: output
 
 # tests/rolldown/cjs_compat/partial_cjs_ns_merge_optimize
 
-- main-!~{000}~.js => main-D8jvRMNG.js
+- main-!~{000}~.js => main-ogn2r6Dl.js
 
 # tests/rolldown/cjs_compat/partial_cjs_ns_merge_optimize_chunk_split
 
@@ -4791,6 +4791,11 @@ expression: output
 
 - main-!~{000}~.js => main-D_pxn1_z.js
 
+# tests/rolldown/issues/4782
+
+- main-!~{000}~.js => main-W30fkYCW.js
+- lib-!~{001}~.js => lib-DIxPYki1.js
+
 # tests/rolldown/issues/4993
 
 - main-!~{000}~.js => main-BQQtZSou.js
@@ -5558,7 +5563,7 @@ expression: output
 
 # tests/rolldown/topics/hmr/register_exports
 
-- main-!~{000}~.js => main-CNKiZVCL.js
+- main-!~{000}~.js => main-CisBJ67Z.js
 
 # tests/rolldown/topics/hmr/runtime_correctness
 
@@ -5566,7 +5571,7 @@ expression: output
 
 # tests/rolldown/topics/hmr/static_import
 
-- main-!~{000}~.js => main-BN-YXISS.js
+- main-!~{000}~.js => main-CGlDmDpv.js
 
 # tests/rolldown/topics/import_meta_url_dirname_filename_polyfill/node_cjs
 
@@ -5764,7 +5769,7 @@ expression: output
 
 # tests/rolldown/tree_shaking/commonjs
 
-- main-!~{000}~.js => main-DDdJExEQ.js
+- main-!~{000}~.js => main-DDXCupjO.js
 
 # tests/rolldown/tree_shaking/commonjs_5546
 

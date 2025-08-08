@@ -22,8 +22,6 @@ var require_util = /* @__PURE__ */ __commonJS({ "util.js": ((exports, module) =>
 
 //#endregion
 //#region a.js
-var import_cjs = /* @__PURE__ */ __toESM(require_cjs());
-var import_util = /* @__PURE__ */ __toESM(require_util());
 function test() {
 	(0, import_util.default)();
 	return import_cjs.default;
@@ -31,6 +29,8 @@ function test() {
 
 //#endregion
 //#region b.js
+var import_util = /* @__PURE__ */ __toESM(require_util());
+var import_cjs = /* @__PURE__ */ __toESM(require_cjs());
 function test$1() {
 	return import_cjs.default;
 }

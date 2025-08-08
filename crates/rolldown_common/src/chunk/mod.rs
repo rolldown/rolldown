@@ -4,9 +4,9 @@ use std::{
 };
 
 use crate::{
-  ChunkIdx, ChunkKind, FilenameTemplate, ModuleIdx, ModuleTable, NamedImport, NormalModule,
-  NormalizedBundlerOptions, PreserveEntrySignatures, RollupPreRenderedChunk, RuntimeHelper,
-  SymbolRef, chunk::types::chunk_reason_type::ChunkReasonType,
+  ChunkIdx, ChunkKind, FilenameTemplate, ImportRecordIdx, ModuleIdx, ModuleTable, NamedImport,
+  NormalModule, NormalizedBundlerOptions, PreserveEntrySignatures, RollupPreRenderedChunk,
+  RuntimeHelper, SymbolRef, chunk::types::chunk_reason_type::ChunkReasonType,
 };
 pub mod chunk_table;
 pub mod types;
@@ -73,6 +73,9 @@ pub struct Chunk {
   pub depended_runtime_helper: RuntimeHelper,
   /// related to [`crate::types::import_record::ImportRecordMeta::EntryLevelExternal`]
   pub entry_level_external_module_idx: Vec<ModuleIdx>,
+  pub insert_map: FxHashMap<ModuleIdx, Vec<(ModuleIdx, ImportRecordIdx)>>,
+  pub remove_map: FxHashMap<ModuleIdx, Vec<ImportRecordIdx>>,
+  pub transformed_parts_rendered: FxIndexMap<(ModuleIdx, ImportRecordIdx), String>,
 }
 
 impl Chunk {

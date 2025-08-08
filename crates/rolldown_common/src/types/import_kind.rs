@@ -18,10 +18,11 @@ pub enum ImportKind {
 }
 
 impl ImportKind {
+  #[inline]
   pub fn is_static(&self) -> bool {
     matches!(self, Self::Import | Self::Require | Self::AtImport | Self::UrlImport | Self::NewUrl)
   }
-
+  #[inline]
   pub fn is_dynamic(&self) -> bool {
     matches!(self, Self::DynamicImport)
   }

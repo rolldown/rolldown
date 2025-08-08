@@ -8,8 +8,9 @@ use arcstr::ArcStr;
 use itertools::Itertools;
 use oxc_index::IndexVec;
 use rolldown_common::{
-  Chunk, ChunkIdx, ChunkKind, ChunkMeta, ExportsKind, ImportRecordIdx, ImportRecordMeta,
-  IndexModules, Module, ModuleIdx, ModuleNamespaceIncludedReason, PreserveEntrySignatures,
+  Chunk, ChunkIdx, ChunkKind, ChunkMeta, ExportsKind, ImportKind, ImportRecordIdx,
+  ImportRecordMeta, IndexModules, Module, ModuleIdx, ModuleNamespaceIncludedReason,
+  PreserveEntrySignatures, WrapKind,
 };
 use rolldown_error::BuildResult;
 use rolldown_utils::{
@@ -239,9 +240,152 @@ impl GenerateStage<'_> {
 
     chunk_graph.sorted_chunk_idx_vec = sorted_chunk_idx_vec;
     chunk_graph.entry_module_to_entry_chunk = entry_module_to_entry_chunk;
+
     self.merge_cjs_namespace(&mut chunk_graph);
     self.find_entry_level_external_module(&mut chunk_graph);
+    self.ensure_lazy_module_initialization_order(&mut chunk_graph);
+
     Ok(chunk_graph)
+  }
+
+  fn ensure_lazy_module_initialization_order(&self, chunk_graph: &mut ChunkGraph) {
+    if self.options.experimental.strict_execution_order.unwrap_or_default() {
+      // If `strict_execution_order` is enabled, the lazy module initialization order is already
+      // guaranteed.
+      return;
+    }
+    chunk_graph
+      .chunk_table
+      .iter_mut()
+      .filter(|chunk| matches!(chunk.kind, ChunkKind::EntryPoint { .. }))
+      .for_each(|chunk| {
+        let ChunkKind::EntryPoint { module: entry_module, .. } = &chunk.kind else {
+          return;
+        };
+        // After modules in chunk is sorted, it is always sorted by execution order whatever the
+        // `chunk_modules_order` is `exec_order` or `module_id`, because for `module_id` we only sort
+        // by `module_id` for side effects free leaf modules, those should always execute first and
+        // has no wrapping.
+        let mut wrapped_modules = vec![];
+        // If a none wrapped module has higher execution order than a wrapped module
+        // we called the none wrapped module depended on the wrapped module(e.g. the none wrapped
+        // module may depended on a global variable initialization in the wrapped module, however
+        // the wrapped module are usually lazy evaluate). So we need to adjust the initialization
+        // order
+        // manually.
+        let mut none_wrapped_module_depends_wrapped_modules: FxHashMap<ModuleIdx, Vec<ModuleIdx>> =
+          FxHashMap::default();
+        let chunk_module_to_exec_order = chunk
+          .modules
+          .iter()
+          .map(|idx| (*idx, self.link_output.module_table[*idx].exec_order()))
+          .collect::<FxHashMap<_, _>>();
+
+        let js_import_order = self.js_import_order(*entry_module, &chunk_module_to_exec_order);
+        for idx in js_import_order {
+          match self.link_output.metas[idx].wrap_kind {
+            WrapKind::None => {
+              if !wrapped_modules.is_empty() {
+                none_wrapped_module_depends_wrapped_modules
+                  .entry(idx)
+                  .or_default()
+                  .extend(wrapped_modules.iter().copied());
+              }
+            }
+            WrapKind::Cjs | WrapKind::Esm => {
+              wrapped_modules.push(idx);
+            }
+          }
+        }
+        // All modules that we need to ensure the initialization order.
+        let mut modules_need_to_check: FxHashSet<ModuleIdx> = FxHashSet::default();
+        for (none_wrapped, deps) in &none_wrapped_module_depends_wrapped_modules {
+          modules_need_to_check.insert(*none_wrapped);
+          modules_need_to_check.extend(deps.iter().copied());
+        }
+
+        if modules_need_to_check.is_empty() {
+          // No wrapped modules or none wrapped modules that depends on wrapped modules, so we can
+          // skip the initialization order check.
+          return;
+        }
+
+        // Record each module in `modules_need_to_check` first init position.
+        let mut module_init_position = FxIndexMap::default();
+
+        for idx in &chunk.modules {
+          let Some(module) = self.link_output.module_table[*idx].as_normal() else {
+            continue;
+          };
+
+          for (rec_idx, rec) in module.import_records.iter_enumerated().filter(|(_idx, rec)| {
+            matches!(rec.kind, ImportKind::Import)
+              && modules_need_to_check.contains(&rec.resolved_module)
+          }) {
+            module_init_position.entry(rec.resolved_module).or_insert((*idx, rec_idx));
+          }
+          if module_init_position.len() == modules_need_to_check.len() {
+            break;
+          }
+        }
+
+        let mut module_init_position = module_init_position.into_iter().collect_vec();
+        module_init_position.sort_by_cached_key(|(idx, _)| chunk_module_to_exec_order[idx]);
+
+        let mut pending_transfer = vec![];
+        let mut insert_map: FxHashMap<ModuleIdx, Vec<(ModuleIdx, ImportRecordIdx)>> =
+          FxHashMap::default();
+        let mut remove_map: FxHashMap<ModuleIdx, Vec<ImportRecordIdx>> = FxHashMap::default();
+        for (module_idx, (importer_idx, rec_idx)) in module_init_position {
+          match self.link_output.metas[module_idx].wrap_kind {
+            WrapKind::None => {
+              if let Some(deps) = none_wrapped_module_depends_wrapped_modules.get(&module_idx) {
+                let transfer_item =
+                  pending_transfer.extract_if(0.., |(midx, _, _)| deps.contains(midx));
+                for (_midx, iidx, ridx) in transfer_item {
+                  if module_idx == iidx {
+                    // If the module is the same, we can skip the transfer.
+                    continue;
+                  }
+                  insert_map.entry(module_idx).or_default().push((iidx, ridx));
+                  remove_map.entry(iidx).or_default().push(ridx);
+                }
+              }
+            }
+            WrapKind::Cjs | WrapKind::Esm => {
+              pending_transfer.push((module_idx, importer_idx, rec_idx));
+            }
+          }
+        }
+        chunk.insert_map = insert_map;
+        chunk.remove_map = remove_map;
+      });
+  }
+
+  fn js_import_order(
+    &self,
+    entry: ModuleIdx,
+    chunk_modules_map: &FxHashMap<ModuleIdx, u32>,
+  ) -> Vec<ModuleIdx> {
+    // traverse module graph with depth-first search to determine the order of JS imports
+    let mut stack = vec![entry];
+    let mut visited = FxHashSet::default();
+    let mut js_import_order = vec![];
+    while let Some(module_idx) = stack.pop() {
+      if !visited.insert(module_idx) {
+        continue;
+      }
+      let Some(normal_module) = self.link_output.module_table[module_idx].as_normal() else {
+        continue;
+      };
+      js_import_order.push(module_idx);
+      for rec in normal_module.import_records.iter().rev().filter(|rec| {
+        chunk_modules_map.contains_key(&rec.resolved_module) && rec.kind == ImportKind::Import
+      }) {
+        stack.push(rec.resolved_module);
+      }
+    }
+    js_import_order
   }
 
   fn merge_cjs_namespace(&mut self, chunk_graph: &mut ChunkGraph) {

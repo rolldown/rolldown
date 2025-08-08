@@ -22,8 +22,6 @@ const ignoreTests = [
 
   "rollup@function@generate-bundle-mutation: handles adding or deleting symbols in generateBundle", // rolldown outputs a warning when assigning to bundle[foo]
   "rollup@form@logical-expression@simplify-non-boolean: simplifies logical expressions that resolve statically to non-boolean values", // Oxc DCE is sub-optimal.
-
-  "rollup@function@options-in-renderstart: makes input and output options available in renderStart", // The test is no longer exist on Rollup side.
 ]
 
 module.exports = {

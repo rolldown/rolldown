@@ -273,23 +273,22 @@ impl GenerateStage<'_> {
         // the wrapped module are usually lazy evaluate). So we need to adjust the initialization
         // order
         // manually.
-        let mut none_wrapped_module_depends_wrapped_modules: FxHashMap<ModuleIdx, Vec<ModuleIdx>> =
-          FxHashMap::default();
         let chunk_module_to_exec_order = chunk
           .modules
           .iter()
           .map(|idx| (*idx, self.link_output.module_table[*idx].exec_order()))
           .collect::<FxHashMap<_, _>>();
 
+        // the key is the module_idx of none wrapped module
+        // the value is the how many wrapped modules did the none wrapped module depends on.
+        // when getting all depended wrapped modules, just use wrapped_modules[0..none_wrapped_module_to_wrapped_dependency_length[none_wrap_module_idx]].
+        let mut none_wrapped_module_to_wrapped_dependency_length = FxHashMap::default();
         let js_import_order = self.js_import_order(*entry_module, &chunk_module_to_exec_order);
         for idx in js_import_order {
           match self.link_output.metas[idx].wrap_kind {
             WrapKind::None => {
               if !wrapped_modules.is_empty() {
-                none_wrapped_module_depends_wrapped_modules
-                  .entry(idx)
-                  .or_default()
-                  .extend(wrapped_modules.iter().copied());
+                none_wrapped_module_to_wrapped_dependency_length.insert(idx, wrapped_modules.len());
               }
             }
             WrapKind::Cjs | WrapKind::Esm => {
@@ -299,10 +298,12 @@ impl GenerateStage<'_> {
         }
         // All modules that we need to ensure the initialization order.
         let mut modules_need_to_check: FxHashSet<ModuleIdx> = FxHashSet::default();
-        for (none_wrapped, deps) in &none_wrapped_module_depends_wrapped_modules {
+        let mut max_length = 0;
+        for (none_wrapped, dep_length) in &none_wrapped_module_to_wrapped_dependency_length {
           modules_need_to_check.insert(*none_wrapped);
-          modules_need_to_check.extend(deps.iter().copied());
+          max_length = max_length.max(*dep_length);
         }
+        modules_need_to_check.extend(&wrapped_modules[0..max_length]);
 
         if modules_need_to_check.is_empty() {
           // No wrapped modules or none wrapped modules that depends on wrapped modules, so we can
@@ -339,9 +340,11 @@ impl GenerateStage<'_> {
         for (module_idx, (importer_idx, rec_idx)) in module_init_position {
           match self.link_output.metas[module_idx].wrap_kind {
             WrapKind::None => {
-              if let Some(deps) = none_wrapped_module_depends_wrapped_modules.get(&module_idx) {
-                let transfer_item =
-                  pending_transfer.extract_if(0.., |(midx, _, _)| deps.contains(midx));
+              if let Some(deps_length) =
+                none_wrapped_module_to_wrapped_dependency_length.get(&module_idx)
+              {
+                let transfer_item = pending_transfer
+                  .extract_if(0.., |(midx, _, _)| wrapped_modules[0..*deps_length].contains(midx));
                 for (_midx, iidx, ridx) in transfer_item {
                   // Should always avoid transfer any initialization from a low execution order module to a high execution order module.
                   if chunk_module_to_exec_order[&iidx] <= chunk_module_to_exec_order[&module_idx] {

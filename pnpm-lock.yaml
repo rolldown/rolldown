@@ -7,8 +7,8 @@ settings:
 catalogs:
   default:
     '@napi-rs/cli':
-      specifier: ^3.0.0
-      version: 3.0.4
+      specifier: ^3.1.2
+      version: 3.1.2
     '@napi-rs/wasm-runtime':
       specifier: ^1.0.0
       version: 1.0.1
@@ -304,7 +304,7 @@ importers:
     devDependencies:
       '@napi-rs/cli':
         specifier: 'catalog:'
-        version: 3.0.4(@emnapi/runtime@1.4.5)(@types/node@24.1.0)(emnapi@1.4.5)
+        version: 3.1.2(@emnapi/runtime@1.4.5)(@types/node@24.1.0)(emnapi@1.4.5)
       '@napi-rs/wasm-runtime':
         specifier: ^1.0.0
         version: 1.0.1
@@ -1602,8 +1602,8 @@ packages:
   '@jridgewell/trace-mapping@0.3.29':
     resolution: {integrity: sha512-uw6guiW/gcAGPDhLmd77/6lW8QLeiV5RUTsAX46Db6oLhGaVj4lhnPwb184s1bkc8kdVg/+h988dro8GRDpmYQ==}
 
-  '@napi-rs/cli@3.0.4':
-    resolution: {integrity: sha512-ilbCI69DVDQcIUSUB504LM1+Nhvo0jKycWAzzPJ22YwUoWrru/w0+V5sfjPINgkshQ4Ykv+oZOJXk9Kg1ZBUvg==}
+  '@napi-rs/cli@3.1.2':
+    resolution: {integrity: sha512-i0HT3Ja83Bzy+OtLd2eG7MI6E83+z/iwwzrdCjJ3ZiSpT3uE/xpVrLuZPd3MT5dJ9LAxCPN+P0tAPF32pRErUg==}
     engines: {node: '>= 16'}
     hasBin: true
     peerDependencies:
@@ -6769,7 +6769,7 @@ snapshots:
       '@jridgewell/resolve-uri': 3.1.2
       '@jridgewell/sourcemap-codec': 1.5.4
 
-  '@napi-rs/cli@3.0.4(@emnapi/runtime@1.4.5)(@types/node@24.1.0)(emnapi@1.4.5)':
+  '@napi-rs/cli@3.1.2(@emnapi/runtime@1.4.5)(@types/node@24.1.0)(emnapi@1.4.5)':
     dependencies:
       '@inquirer/prompts': 7.8.0(@types/node@24.1.0)
       '@napi-rs/cross-toolchain': 1.0.0

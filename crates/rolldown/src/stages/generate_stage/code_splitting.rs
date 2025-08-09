@@ -363,7 +363,7 @@ impl GenerateStage<'_> {
       });
   }
 
-  /// Only considering module eager initlization order, both `require()` and `import()` are lazy
+  /// Only considering module eager initialization order, both `require()` and `import()` are lazy
   /// initialization.
   fn js_import_order(
     &self,

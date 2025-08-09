@@ -4,7 +4,7 @@ use super::BuildDiagnostic;
 use super::severity::Severity;
 use arcstr::ArcStr;
 use oxc::diagnostics::OxcDiagnostic;
-use oxc::{diagnostics::LabeledSpan, span::Span};
+use oxc::{diagnostics::LabeledSpan, span::{Span, CompactStr}};
 use oxc_resolver::ResolveError;
 
 use crate::events::DiagnosableArcstr;
@@ -116,7 +116,7 @@ impl BuildDiagnostic {
       stable_importer,
       stable_importee,
       importer_source,
-      imported_specifier,
+      imported_specifier: imported_specifier.into(),
       imported_specifier_span,
     })
   }
@@ -130,7 +130,7 @@ impl BuildDiagnostic {
     Self::new_inner(MixedExport { module_id, module_name, entry_module, export_keys })
   }
 
-  pub fn missing_global_name(module_id: String, module_name: ArcStr, guessed_name: ArcStr) -> Self {
+  pub fn missing_global_name(module_id: String, module_name: ArcStr, guessed_name: CompactStr) -> Self {
     Self::new_inner(MissingGlobalName { module_id, module_name, guessed_name })
   }
 
@@ -142,16 +142,20 @@ impl BuildDiagnostic {
     Self::new_inner(MissingNameOptionForUmdExport {})
   }
 
-  pub fn illegal_identifier_as_name(identifier_name: ArcStr) -> Self {
+  pub fn illegal_identifier_as_name(identifier_name: CompactStr) -> Self {
     Self::new_inner(IllegalIdentifierAsName { identifier_name })
   }
 
   pub fn invalid_export_option(
-    export_mode: ArcStr,
+    export_mode: CompactStr,
     entry_module: ArcStr,
-    export_keys: Vec<ArcStr>,
+    export_keys: Vec<CompactStr>,
   ) -> Self {
-    Self::new_inner(InvalidExportOption { export_mode, export_keys, entry_module })
+    Self::new_inner(InvalidExportOption {
+      export_mode,
+      entry_module,
+      export_keys,
+    })
   }
 
   pub fn filename_conflict(filename: ArcStr) -> Self {
@@ -177,7 +181,7 @@ impl BuildDiagnostic {
     filename: ArcStr,
     source: ArcStr,
     span: Span,
-    name: ArcStr,
+    name: CompactStr,
     stable_importer: String,
   ) -> Self {
     Self::new_inner(ImportIsUndefined { filename, source, span, name, stable_importer })
@@ -192,7 +196,7 @@ impl BuildDiagnostic {
     Self::new_inner(UnsupportedFeature { filename, source, span, error_message })
   }
 
-  pub fn empty_import_meta(filename: String, source: ArcStr, span: Span, format: ArcStr) -> Self {
+  pub fn empty_import_meta(filename: String, source: ArcStr, span: Span, format: CompactStr) -> Self {
     Self::new_inner(crate::events::empty_import_meta::EmptyImportMeta {
       filename,
       source,
@@ -283,12 +287,12 @@ impl BuildDiagnostic {
     filename: String,
     source: ArcStr,
     span: Span,
-    name: ArcStr,
+    name: CompactStr,
   ) -> Self {
     Self::new_inner(ExportUndefinedVariable { filename, source, span, name })
   }
 
-  pub fn assign_to_import(filename: ArcStr, source: ArcStr, span: Span, name: ArcStr) -> Self {
+  pub fn assign_to_import(filename: ArcStr, source: ArcStr, span: Span, name: CompactStr) -> Self {
     Self::new_inner(AssignToImport { filename, source, span, name })
   }
 

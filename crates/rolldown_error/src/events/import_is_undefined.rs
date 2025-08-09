@@ -1,5 +1,5 @@
 use arcstr::ArcStr;
-use oxc::span::Span;
+use oxc::span::{CompactStr, Span};
 
 use crate::{diagnostic::Diagnostic, types::diagnostic_options::DiagnosticOptions};
 
@@ -10,7 +10,7 @@ pub struct ImportIsUndefined {
   pub filename: ArcStr,
   pub source: ArcStr,
   pub span: Span,
-  pub name: ArcStr,
+  pub name: CompactStr,
   pub stable_importer: String,
 }
 

@@ -3,6 +3,7 @@ use std::path::Path;
 use crate::side_effects::DeterminedSideEffects;
 use crate::{Chunk, ImportRecordIdx, ModuleIdx, ResolvedImportRecord, SymbolRef};
 use arcstr::ArcStr;
+use oxc::span::CompactStr;
 use oxc_index::IndexVec;
 use rolldown_utils::concat_string;
 use sugar_path::SugarPath;
@@ -20,7 +21,7 @@ pub struct ExternalModule {
   pub id: ArcStr,
   // Similar to the rollup `ExternalChunk#get_file_name`, It could be an absolute path or a normalized relative path.
   pub name: ArcStr,
-  pub identifier_name: ArcStr,
+  pub identifier_name: CompactStr,
   pub import_records: IndexVec<ImportRecordIdx, ResolvedImportRecord>,
   pub side_effects: DeterminedSideEffects,
   pub need_renormalize_render_path: bool,
@@ -31,7 +32,7 @@ impl ExternalModule {
     idx: ModuleIdx,
     id: ArcStr,
     name: ArcStr,
-    identifier_name: ArcStr,
+    identifier_name: CompactStr,
     side_effects: DeterminedSideEffects,
     namespace_ref: SymbolRef,
     need_renormalize_render_path: bool,

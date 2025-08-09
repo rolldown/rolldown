@@ -4,6 +4,7 @@ use crate::{
 };
 use arcstr::ArcStr;
 use oxc_index::IndexVec;
+use oxc::span::CompactStr;
 use rolldown_ecmascript::EcmaAst;
 use rolldown_error::BuildDiagnostic;
 use rustc_hash::FxHashMap;
@@ -20,7 +21,7 @@ pub struct ExternalModuleTaskResult {
   pub idx: ModuleIdx,
   pub id: ArcStr,
   pub name: ArcStr,
-  pub identifier_name: ArcStr,
+  pub identifier_name: CompactStr,
   pub side_effects: DeterminedSideEffects,
   pub need_renormalize_render_path: bool,
 }

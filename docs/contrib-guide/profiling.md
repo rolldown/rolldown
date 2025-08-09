@@ -1,5 +1,37 @@
 # Profiling
 
+## CPU profiling
+
+### Setup
+
+First you need to install [`samply`](https://github.com/mstange/samply). You can install it with:
+
+```bash
+cargo binstall samply
+```
+
+### Build
+
+To build Rolldown with the information required by `samply`, you need to build it with:
+
+```shell
+just build-profile
+```
+
+### Profiling
+
+After building, you can run Rolldown with the following command to profile CPU usage:
+
+```shell
+samply record node ./path/to/script-rolldown-is-used.js
+```
+
+If you want to profile the JavaScript part as well, you can pass [the required flags](https://github.com/nodejs/node/pull/58010) to Node:
+
+```shell
+samply record node --perf-prof --perf-basic-prof --perf-prof-unwinding-info --interpreted-frames-native-stack ./path/to/script-rolldown-is-used.js
+```
+
 ## Memory profiling
 
 To profile memory usage, you can use [`heaptrack`](https://github.com/KDE/heaptrack).

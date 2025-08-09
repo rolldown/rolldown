@@ -132,6 +132,9 @@ fix-repo:
 build target="native" mode="debug": build-pluginutils
     pnpm run --filter rolldown build-{{ target }}:{{ mode }}
 
+build-profile: build-pluginutils
+    pnpm run --filter rolldown build-native:profile
+
 build-memory-profile: build-pluginutils
     pnpm run --filter rolldown build-native:memory-profile
 

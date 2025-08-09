@@ -327,7 +327,34 @@ const OptimizationOptionsSchema = v.strictObject({
   ),
   pifeForModuleWrappers: v.pipe(
     v.optional(v.boolean()),
-    v.description('Use PIFE pattern for module wrappers'),
+    v.description('using PIFE pattern for module wrappers'),
+  ),
+  constBindings: v.pipe(
+    v.optional(v.boolean()),
+    v.description('using `const` bindings for importing modules'),
+  ),
+  reservedNamesAsProps: v.pipe(
+    v.optional(v.boolean()),
+    v.description('using static property names for reserved names'),
+  ),
+  symbols: v.pipe(
+    v.optional(v.boolean()),
+    v.description('using symbols for private properties'),
+  ),
+});
+
+const OptimizationCliOverrideSchema = v.strictObject({
+  constBindings: v.pipe(
+    v.optional(v.union([
+      v.literal(false),
+    ])),
+    v.description('using `const` bindings for importing modules'),
+  ),
+  reservedNamesAsProps: v.pipe(
+    v.optional(v.union([
+      v.literal(false),
+    ])),
+    v.description('using static property names for reserved names'),
   ),
 });
 
@@ -540,6 +567,10 @@ const InputCliOverrideSchema = v.strictObject({
     v.optional(v.string()),
     v.description('The entity top-level `this` represents.'),
   ),
+  optimization: v.optional(v.strictObject({
+    ...OptimizationOptionsSchema.entries,
+    ...OptimizationCliOverrideSchema.entries,
+  })),
 });
 
 const InputCliOptionsSchema = v.omit(

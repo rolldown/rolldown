@@ -343,7 +343,8 @@ impl GenerateStage<'_> {
                 let transfer_item =
                   pending_transfer.extract_if(0.., |(midx, _, _)| deps.contains(midx));
                 for (_midx, iidx, ridx) in transfer_item {
-                  if module_idx == iidx {
+                  // Should always avoid transfer any initialization from a low execution order module to a high execution order module.
+                  if chunk_module_to_exec_order[&iidx] <= chunk_module_to_exec_order[&module_idx] {
                     // If the module is the same, we can skip the transfer.
                     continue;
                   }

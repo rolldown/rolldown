@@ -263,7 +263,7 @@ impl GenerateStage<'_> {
           return;
         };
         // After modules in chunk is sorted, it is always sorted by execution order whatever the
-        // `chunk_modules_order` is `exec_order` or `module_id`.Because for `module_id` we only sort
+        // `chunk_modules_order` is `exec_order` or `module_id`. Because for `module_id` we only sort
         // by `module_id` for side effects free leaf modules, those should always execute first and
         // has no wrapping.
         let mut wrapped_modules = vec![];

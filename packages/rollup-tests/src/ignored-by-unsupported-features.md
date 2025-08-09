@@ -123,10 +123,6 @@
  - rollup@function@adds-timings-to-bundle-when-codesplitting: Adds timing information to bundle when bundling with perf=true
  - rollup@function@adds-timings-to-bundle: Adds timing information to bundle when bundling with perf=true
 
-### The `input.context` is not fully supported
-
- - rollup@function@options-in-renderstart: makes input and output options available in renderStart
-
 ### `output.dynamicImportInCjs` is not supported
  - rollup@function@dynamic-import-this-function: uses correct "this" in dynamic imports when not using arrow functions
  - rollup@function@dynamic-import-this-arrow: uses correct "this" in dynamic imports when using arrow functions

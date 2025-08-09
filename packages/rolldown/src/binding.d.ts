@@ -1221,6 +1221,7 @@ export declare class BindingNormalizedOptions {
   get virtualDirname(): string
   get topLevelVar(): boolean
   get minifyInternalExports(): boolean
+  get context(): string
 }
 
 export declare class BindingOutputAsset {

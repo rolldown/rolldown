@@ -34,4 +34,8 @@ export class NormalizedInputOptionsImpl implements NormalizedInputOptions {
   get platform(): 'browser' | 'node' | 'neutral' {
     return this.inner.platform;
   }
+
+  get context(): string {
+    return this.inner.context;
+  }
 }

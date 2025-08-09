@@ -22,7 +22,9 @@
         "allowComputed": true
       }
     ],
-    "import/named": "error"
+    "import/named": "error",
+    "typescript/no-floating-promises": "error",
+    "typescript/no-misused-promises": "error"
   },
   "overrides": [
     {

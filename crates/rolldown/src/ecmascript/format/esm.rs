@@ -82,9 +82,7 @@ pub fn render_esm<'code>(
   }
 
   if let Some(exports) = render_chunk_exports(ctx, None) {
-    if !exports.is_empty() {
-      source_joiner.append_source(exports);
-    }
+    source_joiner.append_source(exports);
   }
 
   if let Some(outro) = outro {

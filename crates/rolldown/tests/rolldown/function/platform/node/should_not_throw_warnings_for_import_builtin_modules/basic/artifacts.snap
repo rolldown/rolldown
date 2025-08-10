@@ -15,4 +15,5 @@ import * as nodeFs from "node:fs";
 console.log(fs, nodeFs, __require("path"), __require("node:path"));
 
 //#endregion
+export {  };
 ```

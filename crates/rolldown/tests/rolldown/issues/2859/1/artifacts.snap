@@ -28,6 +28,7 @@ import("./lib.js").then((exports) => assert.deepStrictEqual({ ...exports }, {
 }));
 
 //#endregion
+export {  };
 ```
 ---
 

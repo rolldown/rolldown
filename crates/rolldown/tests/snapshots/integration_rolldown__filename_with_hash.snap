@@ -624,7 +624,7 @@ expression: output
 
 # tests/esbuild/default/auto_external_node
 
-- entry-!~{000}~.js => entry-Cbqt-Eu5.js
+- entry-!~{000}~.js => entry-Cl2lKkkd.js
 
 # tests/esbuild/default/avoid_tdz
 
@@ -927,7 +927,7 @@ expression: output
 
 # tests/esbuild/default/import_fs_node_es6
 
-- entry-!~{000}~.js => entry-DsPy1xXO.js
+- entry-!~{000}~.js => entry-D3cxCpC_.js
 
 # tests/esbuild/default/import_inside_try
 
@@ -2955,7 +2955,7 @@ expression: output
 
 # tests/esbuild/packagejson/package_json_browser_over_main_node
 
-- entry-!~{000}~.js => entry-DCgvYOBn.js
+- entry-!~{000}~.js => entry-B_QHCiRQ.js
 
 # tests/esbuild/packagejson/package_json_browser_over_module_browser
 
@@ -2967,7 +2967,7 @@ expression: output
 
 # tests/esbuild/packagejson/package_json_browser_with_main_node
 
-- entry-!~{000}~.js => entry-DCgvYOBn.js
+- entry-!~{000}~.js => entry-B_QHCiRQ.js
 
 # tests/esbuild/packagejson/package_json_browser_with_module_browser
 
@@ -3063,7 +3063,7 @@ expression: output
 
 # tests/esbuild/packagejson/package_json_exports_node
 
-- entry-!~{000}~.js => entry-rVtLYw90.js
+- entry-!~{000}~.js => entry-B7Cd6Fj9.js
 
 # tests/esbuild/packagejson/package_json_exports_not_exact_missing_extension
 
@@ -3075,7 +3075,7 @@ expression: output
 
 # tests/esbuild/packagejson/package_json_exports_order_independent
 
-- entry-!~{000}~.js => entry-DS1VN8gl.js
+- entry-!~{000}~.js => entry-D4vGuX2E.js
 
 # tests/esbuild/packagejson/package_json_exports_pattern_trailers
 
@@ -3087,7 +3087,7 @@ expression: output
 
 # tests/esbuild/packagejson/package_json_exports_wildcard
 
-- entry-!~{000}~.js => entry-rCHelORv.js
+- entry-!~{000}~.js => entry-qwI5xWgE.js
 
 # tests/esbuild/packagejson/package_json_import_self_using_import
 
@@ -3163,11 +3163,11 @@ expression: output
 
 # tests/esbuild/packagejson/package_json_reverse_package_exports_issue3377
 
-- entry-!~{000}~.js => entry-BzilO1TF.js
+- entry-!~{000}~.js => entry-ExwnYhF8.js
 
 # tests/esbuild/packagejson/package_json_subpath_import_node_builtin_issue3485
 
-- entry-!~{000}~.js => entry-CRqbv7D3.js
+- entry-!~{000}~.js => entry-DCsfX3wP.js
 
 # tests/esbuild/packagejson/package_json_type_should_be_types
 
@@ -4525,11 +4525,11 @@ expression: output
 
 # tests/rolldown/function/platform/node/should_not_throw_warnings_for_import_builtin_modules/basic
 
-- main-!~{000}~.js => main-BJ5nqhB1.js
+- main-!~{000}~.js => main-DgkEm6gV.js
 
 # tests/rolldown/function/resolve/alias_to_node_builtin_module
 
-- main-!~{000}~.js => main-DVLqSnT5.js
+- main-!~{000}~.js => main-Df0_WxE-.js
 
 # tests/rolldown/function/resolve/browser_filed_false
 
@@ -4654,7 +4654,7 @@ expression: output
 
 # tests/rolldown/issues/2859/1
 
-- main-!~{000}~.js => main-CC3QBAwG.js
+- main-!~{000}~.js => main-kqOewmfW.js
 - lib-!~{001}~.js => lib-CR_RmrFG.js
 
 # tests/rolldown/issues/2859/2
@@ -4691,7 +4691,7 @@ expression: output
 
 # tests/rolldown/issues/3437
 
-- main-!~{000}~.js => main-8AkgXppA.js
+- main-!~{000}~.js => main-DYaZ-SII.js
 - square-!~{001}~.js => square-njfS-kTw.js
 
 # tests/rolldown/issues/3438
@@ -4747,7 +4747,7 @@ expression: output
 
 # tests/rolldown/issues/4274
 
-- main-!~{000}~.js => main-BSwanBDJ.js
+- main-!~{000}~.js => main-CIbgZp8R.js
 
 # tests/rolldown/issues/4289
 
@@ -4917,7 +4917,7 @@ expression: output
 
 # tests/rolldown/misc/polyfill-require-disabled
 
-- main-!~{000}~.js => main-Cv6xMI1a.js
+- main-!~{000}~.js => main-BWcfytbs.js
 
 # tests/rolldown/misc/preserve_entry_signature/basic
 

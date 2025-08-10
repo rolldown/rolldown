@@ -19,3 +19,5 @@ assert.strictEqual(requiredUmdLib.foo, 'foo')
   const require = () => 1
   assert.strictEqual(require(), 1)
 }
+
+import 'trigger-dep'

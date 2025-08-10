@@ -15,3 +15,5 @@
   exports.foo = 'foo'
   return exports
 })
+
+import 'trigger-dep'

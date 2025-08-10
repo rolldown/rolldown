@@ -13,3 +13,5 @@ console.log(Noop)
   const exports = {}
   this.qux = 'qux'
 }
+
+import 'trigger-dep'

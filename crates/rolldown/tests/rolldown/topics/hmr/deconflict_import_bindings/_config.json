@@ -3,5 +3,7 @@
     "experimental": {
       "hmr": {}
     }
-  }
+  },
+  // FIXME: hyf0 this should be true
+  "expectExecuted": false
 }

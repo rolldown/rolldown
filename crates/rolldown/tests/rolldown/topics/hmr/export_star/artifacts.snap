@@ -82,76 +82,12 @@ var init_hmr_0 = __rolldown_runtime__.createEsmInitializer((function() {
 		var __rolldown_exports__ = {};
 		__rolldown_runtime__.__export(__rolldown_exports__, {});
 		__rolldown_runtime__.registerModule("hmr.js", { exports: __rolldown_exports__ });
-		init_sub_3();
 		const hot_hmr = __rolldown_runtime__.createModuleHotContext("hmr.js");
 		var import_sub_0 = __rolldown_runtime__.loadExports("sub/index.js");
 		import_node_assert_0.default.strictEqual(import_sub_0.foo, "foo");
 		import_node_assert_0.default.strictEqual(import_sub_0.bar, "bar");
 		import_node_assert_0.default.strictEqual(import_sub_0.named, "named");
 		hot_hmr.accept();
-	} finally {}
-}));
-
-//#endregion
-//#region sub/bar.js
-var init_bar_1 = __rolldown_runtime__.createEsmInitializer((function() {
-	try {
-		var __rolldown_exports__ = {};
-		__rolldown_runtime__.__export(__rolldown_exports__, {
-			bar: () => bar,
-			named: () => named
-		});
-		__rolldown_runtime__.registerModule("sub/bar.js", { exports: __rolldown_exports__ });
-		const hot_bar = __rolldown_runtime__.createModuleHotContext("sub/bar.js");
-		const bar = "bar";
-		const named = "bar";
-	} finally {}
-}));
-
-//#endregion
-//#region sub/foo.js
-var init_foo_2 = __rolldown_runtime__.createEsmInitializer((function() {
-	try {
-		var __rolldown_exports__ = {};
-		__rolldown_runtime__.__export(__rolldown_exports__, {
-			foo: () => foo,
-			named: () => named
-		});
-		__rolldown_runtime__.registerModule("sub/foo.js", { exports: __rolldown_exports__ });
-		const hot_foo = __rolldown_runtime__.createModuleHotContext("sub/foo.js");
-		const foo = "foo";
-		const named = "foo";
-	} finally {}
-}));
-
-//#endregion
-//#region sub/index.js
-var init_sub_3 = __rolldown_runtime__.createEsmInitializer((function() {
-	try {
-		var __rolldown_exports__ = {};
-		__rolldown_runtime__.__export(__rolldown_exports__, { named: () => import_named_3.named });
-		__rolldown_runtime__.registerModule("sub/index.js", { exports: __rolldown_exports__ });
-		init_foo_2();
-		init_bar_1();
-		init_named_4();
-		const hot_sub = __rolldown_runtime__.createModuleHotContext("sub/index.js");
-		var import_foo_3 = __rolldown_runtime__.loadExports("sub/foo.js");
-		__rolldown_runtime__.__reExport(__rolldown_exports__, import_foo_3);
-		var import_bar_3 = __rolldown_runtime__.loadExports("sub/bar.js");
-		__rolldown_runtime__.__reExport(__rolldown_exports__, import_bar_3);
-		var import_named_3 = __rolldown_runtime__.loadExports("sub/named.js");
-	} finally {}
-}));
-
-//#endregion
-//#region sub/named.js
-var init_named_4 = __rolldown_runtime__.createEsmInitializer((function() {
-	try {
-		var __rolldown_exports__ = {};
-		__rolldown_runtime__.__export(__rolldown_exports__, { named: () => named });
-		__rolldown_runtime__.registerModule("sub/named.js", { exports: __rolldown_exports__ });
-		const hot_named = __rolldown_runtime__.createModuleHotContext("sub/named.js");
-		const named = "named";
 	} finally {}
 }));
 

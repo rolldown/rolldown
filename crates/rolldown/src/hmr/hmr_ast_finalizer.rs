@@ -600,19 +600,6 @@ impl<'ast> HmrAstFinalizer<'_, 'ast> {
     // FIXME: consider about CommonJS interop
     let is_importee_cjs = importee.exports_kind == rolldown_common::ExportsKind::CommonJs;
 
-    // Turn `import('./foo.js')` into `(init_foo(), Promise.resolve().then(() => __rolldown_runtime__.loadExports('./foo.js')))`
-
-    let init_fn_name = &self.affected_module_idx_to_init_fn_name[importee_idx];
-
-    // init_foo()
-    let init_fn_call = self.snippet.builder.alloc_call_expression(
-      SPAN,
-      self.snippet.id_ref_expr(init_fn_name, SPAN),
-      NONE,
-      self.snippet.builder.vec(),
-      false,
-    );
-
     // __rolldown_runtime__.loadExports('./foo.js')
     let mut load_exports_call_expr =
       ast::Expression::CallExpression(self.snippet.builder.alloc_call_expression(
@@ -652,20 +639,39 @@ impl<'ast> HmrAstFinalizer<'_, 'ast> {
       );
     }
 
-    // Promise.resolve().then(() => __rolldown_runtime__.loadExports('./foo.js'))
-    let promise_resolve_then_load_exports =
-      self.snippet.promise_resolve_then_call_expr(load_exports_call_expr);
+    if let Some(init_fn_name) = self.affected_module_idx_to_init_fn_name.get(importee_idx) {
+      // If the importee is in the propagation chain, we need to call the init function to re-execute the module.
+      // Turn `import('./foo.js')` into `(init_foo(), Promise.resolve().then(() => __rolldown_runtime__.loadExports('./foo.js')))`
 
-    // (init_foo(), Promise.resolve().then(() => __rolldown_runtime__.loadExports('./foo.js')))
-    let ret_expr =
-      ast::Expression::SequenceExpression(self.snippet.builder.alloc_sequence_expression(
+      // init_foo()
+      let init_fn_call = self.snippet.builder.alloc_call_expression(
         SPAN,
-        self.snippet.builder.vec_from_array([
-          ast::Expression::CallExpression(init_fn_call),
-          promise_resolve_then_load_exports,
-        ]),
-      ));
-    *it = ret_expr;
+        self.snippet.id_ref_expr(init_fn_name, SPAN),
+        NONE,
+        self.snippet.builder.vec(),
+        false,
+      );
+
+      // Promise.resolve().then(() => __rolldown_runtime__.loadExports('./foo.js'))
+      let promise_resolve_then_load_exports =
+        self.snippet.promise_resolve_then_call_expr(load_exports_call_expr);
+
+      // (init_foo(), Promise.resolve().then(() => __rolldown_runtime__.loadExports('./foo.js')))
+      let ret_expr =
+        ast::Expression::SequenceExpression(self.snippet.builder.alloc_sequence_expression(
+          SPAN,
+          self.snippet.builder.vec_from_array([
+            ast::Expression::CallExpression(init_fn_call),
+            promise_resolve_then_load_exports,
+          ]),
+        ));
+      *it = ret_expr;
+    } else {
+      // Turn `import('./foo.js')` into `Promise.resolve().then(() => __rolldown_runtime__.loadExports('./foo.js'))`
+
+      // `Promise.resolve().then(() => __rolldown_runtime__.loadExports('./foo.js'))`
+      *it = self.snippet.promise_resolve_then_call_expr(load_exports_call_expr);
+    }
   }
 
   pub fn try_rewrite_require(

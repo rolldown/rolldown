@@ -73,6 +73,15 @@ function getErrorMessage(e: RollupError): string {
   if (e.stack) {
     s = joinNewLine(s, e.stack.replace(message, ''));
   }
+  if (e.cause) {
+    s = joinNewLine(s, 'Caused by:');
+    s = joinNewLine(
+      s,
+      getErrorMessage(e.cause as any).split('\n').map(line => '  ' + line).join(
+        '\n',
+      ),
+    );
+  }
   return s;
 }
 

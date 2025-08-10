@@ -76,17 +76,17 @@ function text(el, text$1) {
 
 ```js
 //#region hmr.js
-import * as import_node_assert_0 from "node:assert";
+import * as import_node_assert_00 from "node:assert";
 var init_hmr_0 = __rolldown_runtime__.createEsmInitializer((function() {
 	try {
 		var __rolldown_exports__ = {};
 		__rolldown_runtime__.__export(__rolldown_exports__, {});
 		__rolldown_runtime__.registerModule("hmr.js", { exports: __rolldown_exports__ });
 		const hot_hmr = __rolldown_runtime__.createModuleHotContext("hmr.js");
-		var import_sub_0 = __rolldown_runtime__.loadExports("sub/index.js");
-		import_node_assert_0.default.strictEqual(import_sub_0.foo, "foo");
-		import_node_assert_0.default.strictEqual(import_sub_0.bar, "bar");
-		import_node_assert_0.default.strictEqual(import_sub_0.named, "named");
+		var import_sub_01 = __rolldown_runtime__.loadExports("sub/index.js");
+		import_node_assert_00.default.strictEqual(import_sub_01.foo, "foo");
+		import_node_assert_00.default.strictEqual(import_sub_01.bar, "bar");
+		import_node_assert_00.default.strictEqual(import_sub_01.named, "named");
 		hot_hmr.accept();
 	} finally {}
 }));

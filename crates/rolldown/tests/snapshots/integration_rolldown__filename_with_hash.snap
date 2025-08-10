@@ -5520,10 +5520,6 @@ expression: output
 - main-!~{000}~.js => main-X0JfucbC.js
 - main-X0JfucbC.js.map
 
-# tests/rolldown/topics/hmr/deconflict_import_bindings
-
-- main-!~{000}~.js => main-DuKdLWhU.js
-
 # tests/rolldown/topics/hmr/dynamic_import
 
 - main-!~{000}~.js => main-BNjDcS8-.js
@@ -5571,7 +5567,7 @@ expression: output
 
 # tests/rolldown/topics/hmr/runtime_correctness
 
-- main-!~{000}~.js => main-BsHAoK71.js
+- main-!~{000}~.js => main-CzsW8v69.js
 
 # tests/rolldown/topics/hmr/static_import
 

@@ -59,7 +59,6 @@ pub struct HmrAstFinalizer<'me, 'ast> {
   pub dependencies: FxIndexSet<ModuleIdx>,
   pub imports: FxHashSet<ModuleIdx>,
   pub generated_static_import_infos: FxHashMap<ModuleIdx, String>,
-
   // We need to store the static import statements for external separately, so we could put them outside of the `try` block.
   pub generated_static_import_stmts_from_external: FxIndexMap<ModuleIdx, ast::Statement<'ast>>,
   pub named_exports: FxHashMap<Atom<'ast>, NamedExport>,
@@ -328,12 +327,12 @@ impl<'ast> HmrAstFinalizer<'_, 'ast> {
   pub fn ensure_static_import_info(
     &mut self,
     importee_idx: ModuleIdx,
-    _rec_id: ImportRecordIdx,
+    rec_id: ImportRecordIdx,
   ) -> &str {
     self.generated_static_import_infos.entry(importee_idx).or_insert_with(|| {
       let importee = &self.modules[importee_idx];
 
-      format!("import_{}_{}", importee.repr_name(), self.unique_index)
+      format!("import_{}_{}{}", importee.repr_name(), self.unique_index, rec_id.raw())
     })
   }
 

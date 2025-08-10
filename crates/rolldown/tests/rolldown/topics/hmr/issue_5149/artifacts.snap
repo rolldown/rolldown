@@ -78,8 +78,8 @@ var init_foo_0 = __rolldown_runtime__.createEsmInitializer((function() {
 		__rolldown_runtime__.__export(__rolldown_exports__, { foo: () => foo });
 		__rolldown_runtime__.registerModule("foo.js", { exports: __rolldown_exports__ });
 		const hot_foo = __rolldown_runtime__.createModuleHotContext("foo.js");
-		var import_common_0 = __rolldown_runtime__.loadExports("common.js");
-		const foo = import_common_0.prefix + "foo-new";
+		var import_common_00 = __rolldown_runtime__.loadExports("common.js");
+		const foo = import_common_00.prefix + "foo-new";
 	} finally {}
 }));
 
@@ -95,15 +95,15 @@ var init_messenger_1 = __rolldown_runtime__.createEsmInitializer((function() {
 		__rolldown_runtime__.registerModule("messenger.js", { exports: __rolldown_exports__ });
 		init_foo_0();
 		const hot_messenger = __rolldown_runtime__.createModuleHotContext("messenger.js");
-		var import_foo_1 = __rolldown_runtime__.loadExports("foo.js");
-		var import_bar_1 = __rolldown_runtime__.loadExports("bar.js");
-		var import_common_1 = __rolldown_runtime__.loadExports("common.js");
+		var import_foo_10 = __rolldown_runtime__.loadExports("foo.js");
+		var import_bar_11 = __rolldown_runtime__.loadExports("bar.js");
+		var import_common_12 = __rolldown_runtime__.loadExports("common.js");
 		let msg = [
-			import_common_1.prefix,
-			import_foo_1.foo,
-			import_bar_1.bar,
-			import_common_1.prefix,
-			import_common_1.prefix
+			import_common_12.prefix,
+			import_foo_10.foo,
+			import_bar_11.bar,
+			import_common_12.prefix,
+			import_common_12.prefix
 		].join(",");
 		function sayMessage() {
 			console.log(msg);

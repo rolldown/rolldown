@@ -5,4 +5,4 @@ import * as dir from './foo/index.mjs'
 assert.strictEqual(file.foo, 'foo')
 assert.strictEqual(dir.foo, 'foo-index')
 
-import.meta.hot.accept(() => {})
+import 'trigger-dep'

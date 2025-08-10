@@ -13,4 +13,5 @@ import defaultValue, { readFileSync } from "fs";
 console.log(fs, readFileSync, defaultValue);
 
 //#endregion
+export {  };
 ```

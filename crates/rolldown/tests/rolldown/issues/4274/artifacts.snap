@@ -16,4 +16,5 @@ var name = "lib";
 assert.strictEqual(name, "lib");
 
 //#endregion
+export {  };
 ```

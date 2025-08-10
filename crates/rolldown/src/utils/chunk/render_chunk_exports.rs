@@ -5,7 +5,7 @@ use itertools::Itertools;
 use oxc::span::CompactStr;
 use rolldown_common::{
   Chunk, ChunkKind, ExportsKind, IndexModules, ModuleIdx, NormalizedBundlerOptions, OutputExports,
-  OutputFormat, SymbolRef, SymbolRefDb, WrapKind,
+  OutputFormat, Platform, SymbolRef, SymbolRefDb, WrapKind,
 };
 use rolldown_utils::{
   concat_string,
@@ -96,7 +96,7 @@ pub fn render_chunk_exports(
 
   match options.format {
     OutputFormat::Esm => {
-      if export_items.is_empty() {
+      if export_items.is_empty() && !matches!(ctx.options.platform, Platform::Node) {
         return None;
       }
       let mut s = String::new();

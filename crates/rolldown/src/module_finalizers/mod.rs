@@ -12,9 +12,9 @@ use oxc::{
   span::{Atom, GetSpan, GetSpanMut, SPAN},
 };
 use rolldown_common::{
-  AstScopes, ExportsKind, ImportRecordIdx, ImportRecordMeta, MemberExprRefResolution, Module,
-  ModuleIdx, ModuleNamespaceIncludedReason, ModuleType, OutputFormat, Platform, SymbolRef,
-  WrapKind,
+  AstScopes, ConcatenateWrappedModuleKind, ExportsKind, ImportRecordIdx, ImportRecordMeta,
+  MemberExprRefResolution, Module, ModuleIdx, ModuleNamespaceIncludedReason, ModuleType,
+  OutputFormat, Platform, SymbolRef, WrapKind,
 };
 use rolldown_ecmascript::ToSourceString;
 use rolldown_ecmascript_utils::{
@@ -105,6 +105,7 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
         // import React from './node_modules/react/index.js';
         // ```
         if rec.meta.contains(ImportRecordMeta::SafelyMergeCjsNs)
+          // TODO: merge cjs namepspace in module group level
           && self.ctx.linking_infos[self.ctx.module.idx].wrap_kind.is_none()
         {
           let chunk_idx = self.ctx.chunk_id;
@@ -154,7 +155,11 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
       // Replace the import statement with `init_foo()` if `ImportDeclaration` is not a plain import
       // or the importee have side effects.
       WrapKind::Esm => {
-        if self.generated_init_esm_importee_ids.contains(&importee.idx) {
+        if matches!(
+          importee_linking_info.concatenated_wrapped_module_kind,
+          ConcatenateWrappedModuleKind::Inner
+        ) || self.generated_init_esm_importee_ids.contains(&importee.idx)
+        {
           return true;
         }
         self.generated_init_esm_importee_ids.insert(importee.idx);

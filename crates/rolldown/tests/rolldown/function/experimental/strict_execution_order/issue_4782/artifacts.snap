@@ -49,19 +49,18 @@ var require_dep_a = /* @__PURE__ */ __commonJS({ "dep-a.js": ((exports, module) 
 }) });
 
 //#endregion
+
+var import_dep_a;
+var init_main = __esm({"main.js": () => {
 //#region dep-b.js
-var init_dep_b = __esm({ "dep-b.js": (() => {
-	sideEffect.touched = true;
-}) });
+sideEffect.touched = true;
 
 //#endregion
 //#region main.js
-var import_dep_a;
-var init_main = __esm({ "main.js": (() => {
-	import_dep_a = /* @__PURE__ */ __toESM(require_dep_a());
-	init_dep_b();
-}) });
+import_dep_a = /* @__PURE__ */ __toESM(require_dep_a());
 
 //#endregion
+}});
+
 init_main();
 ```

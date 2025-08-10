@@ -30,31 +30,27 @@ export { __esm, __toESM, require_dynamic };
 import { __esm, __toESM, require_dynamic } from "./dynamic2.js";
 import { strictEqual } from "node:assert";
 
-//#region sideeffects.js
-var init_sideeffects = __esm({ "sideeffects.js": (() => {
-	globalThis.a = 2;
-}) });
-
-//#endregion
-//#region esm.js
-var import_dynamic, a;
-var init_esm = __esm({ "esm.js": (() => {
-	import_dynamic = /* @__PURE__ */ __toESM(require_dynamic());
-	init_sideeffects();
-	a = globalThis.a;
-	strictEqual(a, 2);
-}) });
-
-//#endregion
-//#region cjs.js
-init_esm();
 function foo() {
 	return 100;
 }
+
+var import_dynamic, a;
+var init_main = __esm({"main.js": () => {
+//#region sideeffects.js
+globalThis.a = 2;
+
+//#endregion
+//#region esm.js
+import_dynamic = /* @__PURE__ */ __toESM(require_dynamic());
+a = globalThis.a;
+strictEqual(a, 2);
 
 //#endregion
 //#region main.js
 console.log(`mod.foo: `, foo);
 
 //#endregion
+}});
+
+init_main();
 ```

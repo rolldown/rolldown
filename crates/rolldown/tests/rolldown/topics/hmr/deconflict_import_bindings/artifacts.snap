@@ -21,7 +21,7 @@ var foo_exports$1 = {};
 __export(foo_exports$1, { foo: () => foo });
 const foo_hot = __rolldown_runtime__.createModuleHotContext("foo/index.mjs");
 __rolldown_runtime__.registerModule("foo/index.mjs", { exports: foo_exports$1 });
-const foo = "foo";
+const foo = "foo-index";
 
 //#endregion
 //#region main.js
@@ -38,50 +38,24 @@ main_hot.accept(() => {});
 ## Code
 
 ```js
-//#region foo.mjs
-var init_foo_0 = __rolldown_runtime__.createEsmInitializer((function() {
-	try {
-		var __rolldown_exports__ = {};
-		__rolldown_runtime__.__export(__rolldown_exports__, { foo: () => foo });
-		__rolldown_runtime__.registerModule("foo.mjs", { exports: __rolldown_exports__ });
-		const hot_foo = __rolldown_runtime__.createModuleHotContext("foo.mjs");
-		const foo = "foo";
-	} finally {}
-}));
-
-//#endregion
-//#region foo/index.mjs
-var init_foo_1 = __rolldown_runtime__.createEsmInitializer((function() {
-	try {
-		var __rolldown_exports__ = {};
-		__rolldown_runtime__.__export(__rolldown_exports__, { foo: () => foo });
-		__rolldown_runtime__.registerModule("foo/index.mjs", { exports: __rolldown_exports__ });
-		const hot_foo = __rolldown_runtime__.createModuleHotContext("foo/index.mjs");
-		const foo = "foo";
-	} finally {}
-}));
-
-//#endregion
 //#region main.js
-var init_main_2 = __rolldown_runtime__.createEsmInitializer((function() {
+import * as import_node_assert_0 from "node:assert";
+var init_main_0 = __rolldown_runtime__.createEsmInitializer((function() {
 	try {
 		var __rolldown_exports__ = {};
 		__rolldown_runtime__.__export(__rolldown_exports__, {});
 		__rolldown_runtime__.registerModule("main.js", { exports: __rolldown_exports__ });
-		init_foo_0();
-		init_foo_1();
 		const hot_main = __rolldown_runtime__.createModuleHotContext("main.js");
-		var import_foo_2 = __rolldown_runtime__.loadExports("foo.mjs");
-		var import_foo_2 = __rolldown_runtime__.loadExports("foo/index.mjs");
-		console.log(import_foo_2.foo, import_foo_2.foo);
+		var import_foo_0 = __rolldown_runtime__.loadExports("foo.mjs");
+		var import_foo_0 = __rolldown_runtime__.loadExports("foo/index.mjs");
+		import_node_assert_0.default.strictEqual(import_foo_0.foo, "foo");
+		import_node_assert_0.default.strictEqual(import_foo_0.foo, "foo-index");
 		hot_main.accept(() => {});
 	} finally {}
 }));
 
 //#endregion
-// HIDDEN [rolldown:hmr]
-// HIDDEN [rolldown:runtime]
-init_main_2()
+init_main_0()
 __rolldown_runtime__.applyUpdates(['main.js']);
 ```
 ## Meta

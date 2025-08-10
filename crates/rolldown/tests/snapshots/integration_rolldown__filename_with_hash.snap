@@ -5522,7 +5522,7 @@ expression: output
 
 # tests/rolldown/topics/hmr/deconflict_import_bindings
 
-- main-!~{000}~.js => main-DU97UB8a.js
+- main-!~{000}~.js => main-DuKdLWhU.js
 
 # tests/rolldown/topics/hmr/dynamic_import
 
@@ -5571,7 +5571,7 @@ expression: output
 
 # tests/rolldown/topics/hmr/runtime_correctness
 
-- main-!~{000}~.js => main-iVgN89Sb.js
+- main-!~{000}~.js => main-BsHAoK71.js
 
 # tests/rolldown/topics/hmr/static_import
 

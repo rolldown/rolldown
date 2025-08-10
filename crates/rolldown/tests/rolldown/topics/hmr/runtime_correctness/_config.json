@@ -1,5 +1,8 @@
 {
   "config": {
+    "resolve": {
+      "alias": [["trigger-dep", ["../../trigger-dep.js"]]]
+    },
     "experimental": {
       "hmr": {}
     }

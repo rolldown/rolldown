@@ -1438,14 +1438,14 @@ packages:
     resolution: {integrity: sha512-7bQW+gkKa2kKZPeJf6+c6gFK9ARxQfn+FKy9ScTBppyKRWH2KzsmweXUoklqeEiHiNVWaeP5csIdsNq6w7QhzA==}
     engines: {node: '>=12.20'}
 
-  '@iconify-json/logos@1.2.6':
-    resolution: {integrity: sha512-/f6lDJvVCyQdOZ7vyh/h7Nb0lXvZz9KToaGfdsGLg0Y7Nwf6VotrByM0xKwB49GpmlaDmUHFflHrILPZtXTPUA==}
+  '@iconify-json/logos@1.2.7':
+    resolution: {integrity: sha512-UQBPCLguHok/NpOa23PRzVjw55yPS7uA3HOPZTX5UnB/bNZMsKb/pHz9aqZBGtmFVP4UQ867xqDW8BLLwkzz9A==}
 
   '@iconify-json/simple-icons@1.2.47':
     resolution: {integrity: sha512-wa/2O7G4sBmwSEWWLh5C+HeY00lVOoWYRKJOYQtk7lAbQrHUReD1ijiGOyTynV1YavxtNueL1CBA1UZmYJfOrQ==}
 
-  '@iconify-json/vscode-icons@1.2.26':
-    resolution: {integrity: sha512-jvrSkmPSgmIEHfTUH+7ptLkSYnm8OXAt8XcZATpzGjxM+V219CL24d4fdBz6VwqEd8Tm5sR8iUZAQFmNNdj79g==}
+  '@iconify-json/vscode-icons@1.2.27':
+    resolution: {integrity: sha512-LcDiDGMvqemrDY6pIYwKt6R9KGnbaPImiPZ1PN63RjN0r+16tTJOIYK9/eyxxFRhvkBSPtNXaGOsmkXsqio6ig==}
 
   '@iconify/types@2.0.0':
     resolution: {integrity: sha512-+wluvCrRhXrhyOmRDJ3q8mux9JkKy5SJ/v8ol2tu4FVjyYvtEzkc/3pK15ET6RKg4b4w4BmTk1+gsCUhf21Ykg==}
@@ -6616,7 +6616,7 @@ snapshots:
 
   '@gwhitney/detect-indent@7.0.1': {}
 
-  '@iconify-json/logos@1.2.6':
+  '@iconify-json/logos@1.2.7':
     dependencies:
       '@iconify/types': 2.0.0
 
@@ -6624,7 +6624,7 @@ snapshots:
     dependencies:
       '@iconify/types': 2.0.0
 
-  '@iconify-json/vscode-icons@1.2.26':
+  '@iconify-json/vscode-icons@1.2.27':
     dependencies:
       '@iconify/types': 2.0.0
 
@@ -10566,8 +10566,8 @@ snapshots:
 
   vitepress-plugin-group-icons@1.6.2(markdown-it@14.1.0)(rolldown-vite@7.1.0(@types/node@24.2.1)(esbuild@0.25.8)(jiti@2.5.1)(terser@5.43.1)(tsx@4.20.3)(yaml@2.8.1)):
     dependencies:
-      '@iconify-json/logos': 1.2.6
-      '@iconify-json/vscode-icons': 1.2.26
+      '@iconify-json/logos': 1.2.7
+      '@iconify-json/vscode-icons': 1.2.27
       '@iconify/utils': 3.0.0
       markdown-it: 14.1.0
       vite: rolldown-vite@7.1.0(@types/node@24.2.1)(esbuild@0.25.8)(jiti@2.5.1)(terser@5.43.1)(tsx@4.20.3)(yaml@2.8.1)

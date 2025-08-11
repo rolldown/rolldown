@@ -37,6 +37,9 @@ jobs:
 
       - run: just bump-packages ${VERSION}
 
+      - name: Regenerate binding.js after version bump
+        run: pnpm --filter rolldown build-binding
+
       - name: Generate changelog via git cliff
         id: changelog
         uses: orhun/git-cliff-action@98c93442bb05a455a77bee982867857ae748eeea # v4.5.1
@@ -55,6 +58,7 @@ jobs:
           add-paths: |
             CHANGELOG.md
             packages/**/package.json
+            packages/rolldown/src/binding.js
           commit-message: 'release: v${{ env.VERSION }}'
           body: ${{ steps.changelog.outputs.content }}
           branch: release-v${{ env.VERSION }}

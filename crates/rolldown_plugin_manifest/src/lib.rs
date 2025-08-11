@@ -7,6 +7,9 @@ use rolldown_plugin::{HookNoopReturn, HookUsage, Plugin, PluginContext};
 use rolldown_utils::rustc_hash::FxHashSetExt;
 use rustc_hash::FxHashSet;
 
+pub type IsLegacyFn =
+  dyn Fn() -> Pin<Box<(dyn Future<Output = anyhow::Result<bool>> + Send)>> + Send + Sync;
+
 pub type CssEntriesFn = dyn Fn() -> Pin<Box<(dyn Future<Output = anyhow::Result<FxHashSet<String>>> + Send)>>
   + Send
   + Sync;
@@ -15,6 +18,8 @@ pub type CssEntriesFn = dyn Fn() -> Pin<Box<(dyn Future<Output = anyhow::Result<
 pub struct ManifestPlugin {
   pub root: String,
   pub out_path: String,
+  #[debug(skip)]
+  pub is_legacy: Option<Arc<IsLegacyFn>>,
   #[debug(skip)]
   pub css_entries: Arc<CssEntriesFn>,
 }
@@ -29,6 +34,11 @@ impl Plugin for ManifestPlugin {
     ctx: &PluginContext,
     args: &mut rolldown_plugin::HookGenerateBundleArgs<'_>,
   ) -> HookNoopReturn {
+    let is_legacy = match &self.is_legacy {
+      Some(is_legacy_fn) => is_legacy_fn().await?,
+      None => false,
+    };
+
     // Use BTreeMap to make the result sorted
     let mut manifest = BTreeMap::default();
     let mut css_entries = None;
@@ -36,8 +46,8 @@ impl Plugin for ManifestPlugin {
     for file in args.bundle.iter() {
       match file {
         Output::Chunk(chunk) => {
-          let name = self.get_chunk_name(chunk);
-          let chunk_manifest = Arc::new(self.create_chunk(args.bundle, chunk, &name));
+          let name = self.get_chunk_name(chunk, is_legacy);
+          let chunk_manifest = Arc::new(self.create_chunk(args.bundle, chunk, &name, is_legacy));
           manifest.insert(name, chunk_manifest);
         }
         Output::Asset(asset) => {

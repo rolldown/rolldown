@@ -1,0 +1,32 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# warnings
+
+## UNRESOLVED_IMPORT
+
+```text
+[UNRESOLVED_IMPORT] Warning: Could not resolve 'foo' in main.js
+   ╭─[ main.js:1:19 ]
+   │
+ 1 │ import { a } from "foo";
+   │                   ──┬──  
+   │                     ╰──── Module not found, treating it as an external dependency
+   │ 
+   │ Help: The "main" field here was ignored. Main fields must be configured explicitly when using the "neutral" platform.
+───╯
+
+```
+# Assets
+
+## main.js
+
+```js
+import { a } from "foo";
+import assert from "node:assert";
+
+//#region main.js
+assert.strictEqual(a, 1e3);
+
+//#endregion
+```

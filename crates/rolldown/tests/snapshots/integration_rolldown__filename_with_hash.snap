@@ -5119,6 +5119,10 @@ expression: output
 
 - main-!~{000}~.js => main-tpAxLMZ5.js
 
+# tests/rolldown/resolve/natural_platform_without_mainfields
+
+- main-!~{000}~.js => main-1wxvB78i.js
+
 # tests/rolldown/resolve/ts_config_merge_decorator_metadata
 
 - main-!~{000}~.js => main-C1cURgQH.js

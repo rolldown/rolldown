@@ -1,3 +1,4 @@
 [
+  "rollup@function@emit-file@no-input: It is not necessary to provide an input if a dynamic entry is emitted",
   "rollup@function@es5-class-called-without-new: does not swallow type errors when running constructor functions without \"new\""
 ]

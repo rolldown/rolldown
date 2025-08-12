@@ -8,7 +8,7 @@ use oxc::{
   mangler::Mangler,
   minifier::{CompressOptions, Compressor, MinifierOptions, MinifierReturn},
   parser::{ParseOptions, Parser},
-  semantic::SemanticBuilder,
+  semantic::{SemanticBuilder, Stats},
   span::{SPAN, SourceType},
 };
 use oxc_sourcemap::SourceMap;
@@ -129,17 +129,17 @@ impl EcmaCompiler {
     allocator: &'a Allocator,
     program: &mut Program<'a>,
   ) -> MinifierReturn {
-    let compress_options = options.compress.unwrap_or_default();
-
-    let semantic = SemanticBuilder::new().build(program).semantic;
-    let stats = semantic.stats();
-
-    let scoping = semantic.into_scoping();
-    if run_compress {
+    let stats = if run_compress {
+      let compress_options = options.compress.unwrap_or_default();
+      let semantic = SemanticBuilder::new().build(program).semantic;
+      let stats = semantic.stats();
+      let scoping = semantic.into_scoping();
       Compressor::new(allocator).build_with_scoping(program, scoping, compress_options);
+      stats
     } else {
-      Compressor::new(allocator).dead_code_elimination(program, CompressOptions::safest());
-    }
+      Compressor::new(allocator).dead_code_elimination(program, CompressOptions::dce());
+      Stats::default()
+    };
     let scoping = options.mangle.map(|options| {
       let mut semantic = SemanticBuilder::new()
         .with_stats(stats)

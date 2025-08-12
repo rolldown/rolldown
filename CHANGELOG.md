@@ -1,4 +1,22 @@
 
+## [1.0.0-beta.33] - 2025-08-12
+
+### 🚀 Features
+
+- improve error message for `unresolved_import` when platform is `neutral` (#5700) by @IWANABETHATGUY
+
+### 📚 Documentation
+
+- update description for platform `neutral` (#5701) by @IWANABETHATGUY
+
+### ⚙️ Miscellaneous Tasks
+
+- prepare-release: regenerate `binding.js` after version bump (#5704) by @shulaoda
+- deps: update dependency tsdown to v0.14.1 (#5705) by @renovate[bot]
+- rollup-tests: skip occasionally failing test case (#5703) by @shulaoda
+- update binding.js (#5702) by @shulaoda
+
+
 ## [1.0.0-beta.32] - 2025-08-11
 
 ### 💥 BREAKING CHANGES

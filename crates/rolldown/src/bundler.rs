@@ -22,7 +22,7 @@ use rolldown_fs::{FileSystem, OsFileSystem};
 use rolldown_plugin::{
   __inner::SharedPluginable, HookBuildEndArgs, HookRenderErrorArgs, SharedPluginDriver,
 };
-use rolldown_utils::dashmap::FxDashSet;
+use rolldown_utils::{dashmap::FxDashSet, stabilize_id::stabilize_id};
 use std::{any::Any, sync::Arc};
 use tracing::Instrument;
 
@@ -308,7 +308,10 @@ impl Bundler {
       .hmr_manager
       .as_mut()
       .expect("HMR manager is not initialized")
-      .compute_update_for_calling_invalidate(caller, first_invalidated_by)
+      .compute_update_for_calling_invalidate(
+        stabilize_id(&caller, &self.options.cwd),
+        first_invalidated_by.map(|id| stabilize_id(&id, &self.options.cwd)),
+      )
       .await
   }
 

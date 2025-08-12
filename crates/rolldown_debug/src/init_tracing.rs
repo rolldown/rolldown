@@ -1,7 +1,6 @@
 use std::sync::Arc;
 use std::sync::atomic::AtomicBool;
 
-use tracing::Level;
 use tracing_subscriber::{filter::FilterFn, fmt, prelude::*};
 
 use crate::debug_data_propagate_layer::DebugDataPropagateLayer;
@@ -27,8 +26,12 @@ impl DebugTracer {
 
     tracing_subscriber::registry()
       .with(DebugDataPropagateLayer.with_filter(FilterFn::new(|metadata| {
-        // Corresponds to `tracing::trace!(meta = ...)` defined by `trace_action`.
-        metadata.fields().field("meta").is_some() && *metadata.level() == Level::TRACE
+        if metadata.is_event() {
+          metadata.fields().field("meta").is_some()
+        } else {
+          // Spans for devtool don't have character data so far.
+          true
+        }
       })))
       .with(fmt::layer().event_format(DebugFormatter))
       .init();

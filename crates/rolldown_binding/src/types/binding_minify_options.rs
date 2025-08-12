@@ -1,26 +1,31 @@
+use derive_more::Debug;
+use oxc_minify_napi::MinifyOptions;
 #[napi_derive::napi(object)]
 #[derive(Debug)]
 #[allow(clippy::struct_excessive_bools)]
 pub struct BindingMinifyOptions {
-  pub mangle: Option<bool>,
-  pub compress: Option<bool>,
-  pub drop_console: Option<bool>,
-  pub drop_debugger: Option<bool>,
-  pub join_vars: Option<bool>,
-  pub sequences: Option<bool>,
-  pub remove_whitespace: Option<bool>,
+  #[debug(skip)]
+  pub minify_options: MinifyOptions,
 }
 
 impl From<BindingMinifyOptions> for rolldown_common::RawMinifyOptions {
   fn from(value: BindingMinifyOptions) -> Self {
     Self::Object(rolldown_common::MinifyOptionsObject {
-      mangle: value.mangle.unwrap_or_default(),
-      compress: value.compress.unwrap_or_default(),
-      drop_console: value.drop_console.unwrap_or_default(),
-      drop_debugger: value.drop_debugger.unwrap_or_default(),
-      join_vars: value.join_vars.unwrap_or_default(),
-      sequences: value.sequences.unwrap_or_default(),
-      remove_whitespace: value.remove_whitespace.unwrap_or_default(),
+      module: value.minify_options.module,
+      mangle: match value.minify_options.mangle {
+        None | Some(napi::Either::A(false)) => false,
+        Some(_) => true,
+      },
+      compress: match value.minify_options.compress {
+        None | Some(napi::Either::A(false)) => false,
+        Some(_) => true,
+      },
+      remove_whitespace: match value.minify_options.codegen {
+        None => false,
+        Some(napi::Either::A(false)) => false,
+        Some(_) => true,
+      },
+      sourcemap: value.minify_options.sourcemap.unwrap_or_default(),
     })
   }
 }
@@ -28,13 +33,20 @@ impl From<BindingMinifyOptions> for rolldown_common::RawMinifyOptions {
 impl From<&rolldown_common::MinifyOptionsObject> for BindingMinifyOptions {
   fn from(value: &rolldown_common::MinifyOptionsObject) -> Self {
     Self {
-      mangle: Some(value.mangle),
-      compress: Some(value.compress),
-      drop_console: Some(value.drop_console),
-      drop_debugger: Some(value.drop_debugger),
-      join_vars: Some(value.join_vars),
-      sequences: Some(value.sequences),
-      remove_whitespace: Some(value.remove_whitespace),
+      minify_options: MinifyOptions {
+        module: value.module,
+        mangle: match value.mangle {
+          false => Some(napi::Either::A(false)),
+          true => Some(napi::Either::A(true)),
+        },
+        compress: match value.compress {
+          false => Some(napi::Either::A(false)),
+          true => Some(napi::Either::A(true)),
+        },
+        codegen: Some(napi::Either::A(value.remove_whitespace)),
+
+        sourcemap: Some(value.sourcemap),
+      },
     }
   }
 }

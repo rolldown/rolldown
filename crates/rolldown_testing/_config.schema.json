@@ -310,16 +310,6 @@
             }
           ]
         },
-        "minify": {
-          "anyOf": [
-            {
-              "$ref": "#/$defs/RawMinifyOptions"
-            },
-            {
-              "type": "null"
-            }
-          ]
-        },
         "define": {
           "type": [
             "object",
@@ -984,55 +974,6 @@
           ],
           "additionalProperties": false
         }
-      ]
-    },
-    "RawMinifyOptions": {
-      "anyOf": [
-        {
-          "type": "boolean"
-        },
-        {
-          "type": "null"
-        },
-        {
-          "$ref": "#/$defs/MinifyOptionsObject"
-        }
-      ]
-    },
-    "MinifyOptionsObject": {
-      "type": "object",
-      "properties": {
-        "mangle": {
-          "type": "boolean"
-        },
-        "compress": {
-          "type": "boolean"
-        },
-        "dropConsole": {
-          "type": "boolean"
-        },
-        "dropDebugger": {
-          "type": "boolean"
-        },
-        "joinVars": {
-          "type": "boolean"
-        },
-        "sequences": {
-          "type": "boolean"
-        },
-        "removeWhitespace": {
-          "type": "boolean"
-        }
-      },
-      "additionalProperties": false,
-      "required": [
-        "mangle",
-        "compress",
-        "dropConsole",
-        "dropDebugger",
-        "joinVars",
-        "sequences",
-        "removeWhitespace"
       ]
     },
     "InjectImport": {

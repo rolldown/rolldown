@@ -55,26 +55,22 @@ impl From<RawMinifyOptions> for MinifyOptions {
       RawMinifyOptions::Bool(value) => {
         if value {
           Self::Enabled(MinifyOptionsObject {
+            module: Some(true),
             mangle: true,
             compress: true,
-            drop_console: true,
-            drop_debugger: true,
-            join_vars: true,
-            sequences: true,
             remove_whitespace: true,
+            sourcemap: true,
           })
         } else {
           Self::Disabled
         }
       }
       RawMinifyOptions::DeadCodeEliminationOnly => Self::Enabled(MinifyOptionsObject {
+        module: Some(false),
         mangle: false,
         compress: false,
-        drop_console: false,
-        drop_debugger: false,
-        join_vars: false,
-        sequences: false,
         remove_whitespace: false,
+        sourcemap: false,
       }),
       RawMinifyOptions::Object(value) => Self::Enabled(value),
     }
@@ -89,13 +85,11 @@ impl From<RawMinifyOptions> for MinifyOptions {
 )]
 #[allow(clippy::struct_excessive_bools)]
 pub struct MinifyOptionsObject {
+  pub module: Option<bool>,
   pub mangle: bool,
   pub compress: bool,
-  pub drop_console: bool,
-  pub drop_debugger: bool,
-  pub join_vars: bool,
-  pub sequences: bool,
   pub remove_whitespace: bool,
+  pub sourcemap: bool,
 }
 impl MinifyOptionsObject {
   pub fn to_oxc_minifier_options(
@@ -105,19 +99,15 @@ impl MinifyOptionsObject {
     let keep_names = option.keep_names;
     oxc::minifier::MinifierOptions {
       mangle: self.mangle.then_some(MangleOptions {
-        // IIFE need to preserve top level names
         top_level: !matches!(option.format, OutputFormat::Iife),
         keep_names: MangleOptionsKeepNames { function: keep_names, class: keep_names },
         debug: false,
       }),
+
       compress: Some(CompressOptions {
         target: option.transform_options.es_target,
         keep_names: CompressOptionsKeepNames { function: keep_names, class: keep_names },
         treeshake: TreeShakeOptions::from(&option.treeshake),
-        drop_console: self.drop_console,
-        drop_debugger: self.drop_debugger,
-        join_vars: self.join_vars,
-        sequences: self.sequences,
         ..CompressOptions::smallest()
       })
       .filter(|_| self.compress),

@@ -3,7 +3,6 @@ use rolldown_utils::{js_regex::HybridRegex, pattern_filter::StringOrRegex};
 use rustc_hash::FxHashSet;
 
 const NODE_BUILTIN_NAMESPACE: &str = "node:";
-const NPM_BUILTIN_NAMESPACE: &str = "npm:";
 const BUN_BUILTIN_NAMESPACE: &str = "bun:";
 
 #[derive(Debug)]
@@ -38,8 +37,7 @@ impl BuiltinChecker {
 }
 
 pub fn is_node_like_builtin(id: &str) -> bool {
-  id.starts_with(NPM_BUILTIN_NAMESPACE)
-    || id.starts_with(BUN_BUILTIN_NAMESPACE)
+  id.starts_with(BUN_BUILTIN_NAMESPACE)
     || id.starts_with(NODE_BUILTIN_NAMESPACE)
     || NODEJS_BUILTINS.contains(&id)
 }

@@ -294,13 +294,20 @@ impl Resolver {
       return inner_resolver.resolve(directory, specifier);
     };
 
+    // this allows resolving `@pkg/pkg/foo.scss` to `@pkg/pkg/_foo.scss`, which is probably not allowed by sass's resolver
+    // but that's an edge case so we ignore it here
     let result_with_prefix = inner_resolver.resolve(directory.as_ref(), path_with_prefix);
     match result_with_prefix {
       Err(
-        oxc_resolver::ResolveError::NotFound(_)
-        | oxc_resolver::ResolveError::ExtensionAlias(_, _, _),
-      ) => inner_resolver.resolve(directory, specifier),
-      _ => result_with_prefix,
+        oxc_resolver::ResolveError::Ignored(_)
+        | oxc_resolver::ResolveError::TsconfigNotFound(_)
+        | oxc_resolver::ResolveError::TsconfigSelfReference(_)
+        | oxc_resolver::ResolveError::TsconfigCircularExtend(_)
+        | oxc_resolver::ResolveError::PathNotSupported(_)
+        | oxc_resolver::ResolveError::FailedToFindYarnPnpManifest(_),
+      ) => result_with_prefix,
+      Ok(_) => result_with_prefix,
+      Err(_) => inner_resolver.resolve(directory, specifier),
     }
   }
 

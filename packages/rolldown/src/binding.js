@@ -508,7 +508,12 @@ if (!nativeBinding) {
   throw new Error(`Failed to load native binding`)
 }
 
+<<<<<<< HEAD
 const { Severity, ParseResult, ExportExportNameKind, ExportImportNameKind, ExportLocalNameKind, ImportNameKind, parseAsync, parseSync, rawTransferSupported, ResolverFactory, EnforceExtension, ModuleType, sync, HelperMode, isolatedDeclaration, moduleRunnerTransform, transform, BindingBundleEndEventData, BindingBundleErrorEventData, BindingBundler, BindingBundlerImpl, BindingCallableBuiltinPlugin, BindingChunkingContext, BindingHmrOutput, BindingModuleInfo, BindingNormalizedOptions, BindingOutputAsset, BindingOutputChunk, BindingOutputs, BindingPluginContext, BindingRenderedChunk, BindingRenderedChunkMeta, BindingRenderedModule, BindingTransformPluginContext, BindingWatcher, BindingWatcherChangeData, BindingWatcherEvent, ParallelJsPluginRegistry, BindingAttachDebugInfo, BindingBuiltinPluginName, BindingChunkModuleOrderBy, BindingJsx, BindingLogLevel, BindingPluginOrder, FilterTokenKind, registerPlugins, shutdownAsyncRuntime, startAsyncRuntime } = nativeBinding
+=======
+const { minify, Severity, ParseResult, ExportExportNameKind, ExportImportNameKind, ExportLocalNameKind, ImportNameKind, parseAsync, parseSync, rawTransferSupported, ResolverFactory, EnforceExtension, ModuleType, sync, HelperMode, isolatedDeclaration, moduleRunnerTransform, transform, BindingBundleEndEventData, BindingBundleErrorEventData, BindingBundler, BindingBundlerImpl, BindingCallableBuiltinPlugin, BindingChunkingContext, BindingError, BindingHmrOutput, BindingModuleInfo, BindingNormalizedOptions, BindingOutputAsset, BindingOutputChunk, BindingOutputs, BindingPluginContext, BindingRenderedChunk, BindingRenderedChunkMeta, BindingRenderedModule, BindingTransformPluginContext, BindingWatcher, BindingWatcherChangeData, BindingWatcherEvent, ParallelJsPluginRegistry, BindingAttachDebugInfo, BindingBuiltinPluginName, BindingChunkModuleOrderBy, BindingJsx, BindingLogLevel, BindingPluginOrder, FilterTokenKind, registerPlugins, shutdownAsyncRuntime, startAsyncRuntime } = nativeBinding
+export { minify }
+>>>>>>> 6d80c5afd (feat: use `oxc_minify_napi`)
 export { Severity }
 export { ParseResult }
 export { ExportExportNameKind }

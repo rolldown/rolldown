@@ -24,9 +24,11 @@ dashmap = { workspace = true }
 derive_more = { workspace = true }
 fast-glob = { workspace = true }
 itertools = { workspace = true }
+napi = { workspace = true }
 oxc = { workspace = true }
 oxc_ecmascript = { workspace = true }
 oxc_index = { workspace = true }
+oxc_minify_napi = { workspace = true }
 oxc_resolver = { workspace = true }
 rolldown_ecmascript = { workspace = true }
 rolldown_error = { workspace = true }

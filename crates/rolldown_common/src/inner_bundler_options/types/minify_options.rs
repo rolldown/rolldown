@@ -55,18 +55,22 @@ impl From<RawMinifyOptions> for MinifyOptions {
       RawMinifyOptions::Bool(value) => {
         if value {
           Self::Enabled(MinifyOptionsObject {
+            module: Some(true),
             mangle: true,
             compress: true,
             remove_whitespace: true,
+            sourcemap: true,
           })
         } else {
           Self::Disabled
         }
       }
       RawMinifyOptions::DeadCodeEliminationOnly => Self::Enabled(MinifyOptionsObject {
+        module: Some(false),
         mangle: false,
         compress: false,
         remove_whitespace: false,
+        sourcemap: false,
       }),
       RawMinifyOptions::Object(value) => Self::Enabled(value),
     }
@@ -81,9 +85,11 @@ impl From<RawMinifyOptions> for MinifyOptions {
 )]
 #[allow(clippy::struct_excessive_bools)]
 pub struct MinifyOptionsObject {
+  pub module: Option<bool>,
   pub mangle: bool,
   pub compress: bool,
   pub remove_whitespace: bool,
+  pub sourcemap: bool,
 }
 impl MinifyOptionsObject {
   pub fn to_oxc_minifier_options(
@@ -93,11 +99,11 @@ impl MinifyOptionsObject {
     let keep_names = option.keep_names;
     oxc::minifier::MinifierOptions {
       mangle: self.mangle.then_some(MangleOptions {
-        // IIFE need to preserve top level names
         top_level: !matches!(option.format, OutputFormat::Iife),
         keep_names: MangleOptionsKeepNames { function: keep_names, class: keep_names },
         debug: false,
       }),
+
       compress: Some(CompressOptions {
         target: option.transform_options.es_target,
         keep_names: CompressOptionsKeepNames { function: keep_names, class: keep_names },

@@ -119,6 +119,11 @@ export interface InputOptions {
   /**
    * Expected platform where the code run.
    *
+   *  When the platform is set to neutral:
+   *    - When bundling is enabled the default output format is set to esm, which uses the export syntax introduced with ECMAScript 2015 (i.e. ES6). You can change the output format if this default is not appropriate.
+   *    - The main fields setting is empty by default. If you want to use npm-style packages, you will likely have to configure this to be something else such as main for the standard main field used by node.
+   *    - The conditions setting does not automatically include any platform-specific values.
+   *
    * @default
    * - 'node' if the format is 'cjs'
    * - 'browser' for other formats

@@ -22,4 +22,5 @@ var import_main = /* @__PURE__ */ __toESM(require_main());
 assert.equal((0, import_main.default)(), 123);
 
 //#endregion
+export {  };
 ```

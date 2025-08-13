@@ -27,11 +27,11 @@ use rustc_hash::FxHashSet;
 use super::module_finalizers::{ScopeHoistingFinalizer, ScopeHoistingFinalizerContext};
 
 #[tracing::instrument(level = "trace", skip_all)]
-pub fn finalize_normal_module(
-  ctx: ScopeHoistingFinalizerContext<'_>,
-  ast: &mut EcmaAst,
-  ast_scope: &AstScopes,
-) {
+pub fn finalize_normal_module<'me>(
+  ctx: ScopeHoistingFinalizerContext<'me>,
+  ast: &'me mut EcmaAst,
+  ast_scope: &'me AstScopes,
+) -> ScopeHoistingFinalizerContext<'me> {
   ast.program.with_mut(|fields| {
     let (oxc_program, alloc) = (fields.program, fields.allocator);
     let mut finalizer = ScopeHoistingFinalizer {
@@ -47,5 +47,6 @@ pub fn finalize_normal_module(
     };
     finalizer.visit_program(oxc_program);
     oxc_program.comments = finalizer.comments.take_in(alloc);
-  });
+    finalizer.ctx
+  })
 }

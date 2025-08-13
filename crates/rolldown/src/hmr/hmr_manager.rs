@@ -169,6 +169,7 @@ impl HmrManager {
       &mut need_to_full_reload,
       first_invalidated_by.as_deref(),
       &mut full_reload_reason,
+      &mut affected_modules,
     );
 
     tracing::debug!(
@@ -178,11 +179,6 @@ impl HmrManager {
         .map(|boundary| self.module_db.modules[boundary.boundary].stable_id())
         .collect::<Vec<_>>(),
     );
-
-    // The HMR process will execute the code starting from the HMR boundaries. The HMR process expects all dependencies
-    // of the HMR boundaries to be re-executed. We collect them here to include them in the HMR output.
-    affected_modules
-      .extend(Self::collect_affected_modules_from_boundaries(&self.module_db, &hmr_boundaries));
 
     if need_to_full_reload {
       return Ok(HmrUpdate::FullReload {
@@ -475,7 +471,10 @@ impl HmrManager {
     module_idx: ModuleIdx,
     hmr_boundaries: &mut FxIndexSet<HmrBoundary>,
     propagate_stack: &mut Vec<ModuleIdx>,
+    affected_modules: &mut FxIndexSet<ModuleIdx>,
   ) -> PropagateUpdateStatus {
+    affected_modules.insert(module_idx);
+
     let Module::Normal(module) = &self.module_db.modules[module_idx] else {
       // We consider reaching external modules as a boundary.
       return PropagateUpdateStatus::ReachedBoundary;
@@ -521,12 +520,14 @@ impl HmrManager {
       };
 
       if importer.can_accept_hmr_dependency_for(&module.id) {
+        affected_modules.insert(importer_idx);
         hmr_boundaries.insert(HmrBoundary { boundary: importer_idx, accepted_via: module_idx });
         continue;
       }
 
       propagate_stack.push(module_idx);
-      let status = self.propagate_update(importer_idx, hmr_boundaries, propagate_stack);
+      let status =
+        self.propagate_update(importer_idx, hmr_boundaries, propagate_stack, affected_modules);
       propagate_stack.pop();
       if !status.is_reached_boundary() {
         return status;
@@ -536,46 +537,13 @@ impl HmrManager {
     PropagateUpdateStatus::ReachedBoundary
   }
 
-  fn collect_affected_modules_from_boundaries(
-    modules: &ModuleTable,
-    hmr_boundaries: &FxIndexSet<HmrBoundary>,
-  ) -> impl IntoIterator<Item = ModuleIdx> {
-    fn collect_dependencies(
-      modules: &ModuleTable,
-      module_idx: ModuleIdx,
-      visited: &mut FxHashSet<ModuleIdx>,
-    ) {
-      if visited.contains(&module_idx) {
-        return;
-      }
-      visited.insert(module_idx);
-
-      let module = &modules[module_idx];
-      match module {
-        Module::Normal(normal_module) => {
-          normal_module.import_records.iter().for_each(|import_record| {
-            collect_dependencies(modules, import_record.resolved_module, visited);
-          });
-        }
-        Module::External(_external_module) => {
-          // No need to deal with external modules in HMR.
-        }
-      }
-    }
-    let mut visited = FxHashSet::default();
-    hmr_boundaries.iter().for_each(|boundary| {
-      collect_dependencies(modules, boundary.boundary, &mut visited);
-    });
-
-    visited
-  }
-
   fn compute_out_hmr_boundaries(
     &self,
     start_points: &FxIndexSet<ModuleIdx>,
     need_to_full_reload: &mut bool,
     first_invalidated_by: Option<&str>,
     reason: &mut Option<String>,
+    affected_modules: &mut FxIndexSet<ModuleIdx>,
   ) -> FxIndexSet<HmrBoundary> {
     let mut hmr_boundaries = FxIndexSet::default();
 
@@ -584,7 +552,8 @@ impl HmrManager {
         break;
       }
       let mut boundaries = FxIndexSet::default();
-      let propagate_status = self.propagate_update(start_point, &mut boundaries, &mut vec![]);
+      let propagate_status =
+        self.propagate_update(start_point, &mut boundaries, &mut vec![], affected_modules);
 
       match propagate_status {
         PropagateUpdateStatus::Circular(cycle_chain) => {

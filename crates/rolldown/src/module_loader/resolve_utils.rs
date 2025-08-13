@@ -113,6 +113,9 @@ pub async fn resolve_dependencies(
                   None,
                 ));
               } else {
+                let help = matches!(options.platform, rolldown_common::Platform::Neutral).then(|| {
+                  r#"The "main" field here was ignored. Main fields must be configured explicitly when using the "neutral" platform."#.to_string()
+                });
                 warnings.push(
                   BuildDiagnostic::resolve_error(
                     source.clone(),
@@ -124,7 +127,7 @@ pub async fn resolve_dependencies(
                     },
                     "Module not found, treating it as an external dependency".into(),
                     EventKind::UnresolvedImport,
-                    None,
+                    help,
                   )
                   .with_severity_warning(),
                 );

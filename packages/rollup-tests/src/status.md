@@ -1,7 +1,7 @@
 |  | number |
 |----| ---- |
 | failed | 0 |
-| skipFailed | 1 |
+| skipFailed | 2 |
 | ignored | 15 |
 | ignored(unsupported features) | 393 |
 | ignored(treeshaking) | 282 |

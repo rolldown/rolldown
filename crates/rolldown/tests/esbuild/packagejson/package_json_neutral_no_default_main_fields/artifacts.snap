@@ -1,6 +1,5 @@
 ---
 source: crates/rolldown_testing/src/integration_test.rs
-snapshot_kind: text
 ---
 # warnings
 
@@ -13,6 +12,8 @@ snapshot_kind: text
  1 │ import fn from 'demo-pkg'
    │                ─────┬────  
    │                     ╰────── Module not found, treating it as an external dependency
+   │ 
+   │ Help: The "main" field here was ignored. Main fields must be configured explicitly when using the "neutral" platform.
 ───╯
 
 ```

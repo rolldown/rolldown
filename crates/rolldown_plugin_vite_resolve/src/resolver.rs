@@ -276,32 +276,42 @@ impl Resolver {
       inner_resolver
     };
 
-    let Some(try_prefix) = &self.try_prefix else {
-      return inner_resolver.resolve(directory, specifier);
-    };
-
-    let mut path = Path::new(specifier).components();
-    let Some(path::Component::Normal(filename)) = path.next_back() else {
-      return inner_resolver.resolve(directory, specifier);
-    };
-
-    let mut filename_with_prefix = OsString::with_capacity(try_prefix.len() + filename.len());
-    filename_with_prefix.push(try_prefix);
-    filename_with_prefix.push(filename);
-
-    let path_with_prefix = path.as_path().join(filename_with_prefix);
-    let Some(path_with_prefix) = path_with_prefix.to_str() else {
-      return inner_resolver.resolve(directory, specifier);
-    };
-
-    let result_with_prefix = inner_resolver.resolve(directory.as_ref(), path_with_prefix);
-    match result_with_prefix {
+    let result = inner_resolver.resolve(directory.as_ref(), specifier);
+    match result {
       Err(
-        oxc_resolver::ResolveError::NotFound(_)
-        | oxc_resolver::ResolveError::ExtensionAlias(_, _, _),
-      ) => inner_resolver.resolve(directory, specifier),
-      _ => result_with_prefix,
+        oxc_resolver::ResolveError::Ignored(_)
+        | oxc_resolver::ResolveError::TsconfigNotFound(_)
+        | oxc_resolver::ResolveError::TsconfigSelfReference(_)
+        | oxc_resolver::ResolveError::TsconfigCircularExtend(_)
+        | oxc_resolver::ResolveError::PathNotSupported(_)
+        | oxc_resolver::ResolveError::FailedToFindYarnPnpManifest(_),
+      ) => return result,
+      Ok(_) => return result,
+      Err(_) => {}
     }
+
+    // try with prefix if exists
+    let Some(path_with_prefix) = self.try_prefix.as_ref().and_then(|try_prefix| {
+      let mut path = Path::new(specifier).components();
+      let filename = path.next_back()?;
+      let path::Component::Normal(filename) = filename else {
+        return None;
+      };
+      let mut filename_with_prefix = OsString::with_capacity(try_prefix.len() + filename.len());
+      filename_with_prefix.push(try_prefix);
+      filename_with_prefix.push(filename);
+
+      Some(path.as_path().join(filename_with_prefix))
+    }) else {
+      return result;
+    };
+    let Some(path_with_prefix) = path_with_prefix.to_str() else {
+      return result;
+    };
+
+    // this allows resolving `@pkg/pkg/foo.scss` to `@pkg/pkg/_foo.scss`, which is probably not allowed by sass's resolver
+    // but that's an edge case so we ignore it here
+    inner_resolver.resolve(directory.as_ref(), path_with_prefix)
   }
 
   pub fn normalize_oxc_resolver_result(

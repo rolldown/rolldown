@@ -28,6 +28,8 @@ var require_cjs$2 = /* @__PURE__ */ __commonJS({ "src/export_star_from_cjs/cjs.j
 
 //#endregion
 //#region src/export_star_from_cjs/index.js
+var import_basic_ref_with_named_default = /* @__PURE__ */ __toESM(require_basic_ref_with_named_default());
+var import_basic_ns = /* @__PURE__ */ __toESM(require_basic_ns());
 var export_star_from_cjs_exports = {};
 __reExport(export_star_from_cjs_exports, /* @__PURE__ */ __toESM(require_cjs$2()));
 
@@ -67,8 +69,6 @@ var require_indirect_common_js = /* @__PURE__ */ __commonJS({ "src/indirect_comm
 
 //#endregion
 //#region main.js
-var import_basic_ns = /* @__PURE__ */ __toESM(require_basic_ns());
-var import_basic_ref_with_named_default = /* @__PURE__ */ __toESM(require_basic_ref_with_named_default());
 var import_indirect_common_js = /* @__PURE__ */ __toESM(require_indirect_common_js());
 assert.equal(import_basic_ns.a, "basic-a");
 assert.equal(import_basic_ref_with_named_default.a, "basic-ref-with-named-default-a");

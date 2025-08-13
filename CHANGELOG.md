@@ -1,4 +1,111 @@
 
+## [1.0.0-beta.32] - 2025-08-11
+
+### 💥 BREAKING CHANGES
+
+- advanceChunks: remove interaction between `advanceChunks` and `preserveEntrySignatures` (#5629) by @hyf0
+- types: align `TreeshakingOptions` type with Rollup (#5592) by @sapphi-red
+
+### 🚀 Features
+
+- rolldown_plugin_manifest: support legacy (#5694) by @shulaoda
+- rolldown_plugin_vite_css: align load hook logic (#5667) by @shulaoda
+- rolldown_plugin_transform: throw error for invalid tsconfig (#5657) by @shulaoda
+- support `context` option (#5631) by @7086cmd
+- rolldown: oxc v0.81.0 (#5642) by @Boshen
+- include plugin name in the message of UNHANDLEABLE_ERRORs that happened in plugins (#5636) by @sapphi-red
+- pass plugin name to log (#5635) by @sapphi-red
+- rolldown_plugin_import_glob: support glob-safe paths (#5640) by @shulaoda
+- rolldown_binding: Add configurable max_blocking_threads with environment variable override (#5559) by @Copilot
+- output better error message for callable plugins (#5632) by @sapphi-red
+- rolldown_plugin_manifest: support names for asset (#5627) by @shulaoda
+- rolldown_plugin_manifest: align the logic related to css entries (#5626) by @shulaoda
+- hmr: handle `import ... from 'external-module'` in rolldown's best (#5599) by @hyf0
+- add array support for `treeshake.moduleSideEffects` option (#5593) by @sapphi-red
+
+### 🐛 Bug Fixes
+
+- ensure `./` prefix for relative imports starting with `.` (#5687) by @shulaoda
+- hmr: fix regression test `deconflict_import_bindings` (#5684) by @hyf0
+- hmr: only modules in the propagation chain need to re-execute (#5683) by @hyf0
+- preserve empty `export {}` to ensure correct ESM detection (#5686) by @shulaoda
+- vite test failed (#5675) by @IWANABETHATGUY
+- incorrect module execution order with sideeffectful CJS module (#5661) by @IWANABETHATGUY
+- rollup-tests: update ignored tests for `option.context` (#5669) by @situ2001
+- hmr: ensure correctness of `typeof require === 'function'` (#5651) by @hyf0
+- hmr: rewrite `this` to `exports` for cjs modules (#5641) by @hyf0
+- don't generate namespace reexport code for reexport external record that has been moved to entry point (#5622) by @IWANABETHATGUY
+- esm export * from 'externalized-dep' generates unnecessary code (#5612) by @IWANABETHATGUY
+- hmr: correct runtime behavior for manual reexports (#5614) by @hyf0
+- ci: resolve potential sync issue in `this.emitFile` (#5611) by @shulaoda
+- hmr: support re-assignment on `module.exports` (#5607) by @hyf0
+- hmr: rewrite `require(...)` to sensible form (#5604) by @hyf0
+- align behavior when returning `undefined` from `treeshake.moduleSideEffects` function (#5595) by @sapphi-red
+
+### 🚜 Refactor
+
+- rolldown_binding: improve the use of `FxHashSet` and `FxHashMap` (#5665) by @shulaoda
+- hmr: move constants to `constants.rs` (#5650) by @hyf0
+- hmr: rewrite `exports,module` to `__rolldown_exports__,__rolldown_module__` (#5647) by @hyf0
+- hmr: migrate `VisitMut` to `Traverse` (#5646) by @hyf0
+- use `bit_index` function to get `RuntimeHelper` bit index (#5634) by @IWANABETHATGUY
+- improve `JsCallback` and `MaybeAsyncJsCallback` (#5628) by @shulaoda
+- use bitflags instead of boolean to represent module_namespace included reason (#5621) by @IWANABETHATGUY
+- rolldown_debug,rolldown_tracing: remove `EnvFilter` (#5231) by @Boshen
+- align parameter name for `treeshake.moduleSideEffects` (#5594) by @sapphi-red
+
+### 📚 Documentation
+
+- contrib-guide: add CPU profile steps (#5677) by @sapphi-red
+- rollup-tests: update README to correct  commands (#5658) by @situ2001
+
+### ⚡ Performance
+
+- reduce memory usage when calc none wrapped modules implicit dependency (#5679) by @IWANABETHATGUY
+- hmr: do codegen in parallel (#5590) by @hyf0
+
+### 🧪 Testing
+
+- Runtime error when using rolldown to build a page using tinymce (#5678) by @IWANABETHATGUY
+- rollup: enable testing for `option.context` (#5663) by @situ2001
+- hmr: run patch exectution after the normal execution (#5645) by @sapphi-red
+- hmr: properly execute patch chunks (#5617) by @sapphi-red
+- rust/hmr: hide unnecessary rolldown runtime, hmr module (#5606) by @hyf0
+- rust/hmr: support writting assertion tests (#5598) by @hyf0
+- rust: simplify global variable injection logic (#5597) by @hyf0
+
+### ⚙️ Miscellaneous Tasks
+
+- deps: lock file maintenance (#5693) by @renovate[bot]
+- deps: lock file maintenance (#5692) by @renovate[bot]
+- deps: lock file maintenance rust crates (#5691) by @renovate[bot]
+- deps: update github-actions (#5688) by @renovate[bot]
+- deps: lock file maintenance npm packages (#5690) by @renovate[bot]
+- deps: update github-actions (major) (#5689) by @renovate[bot]
+- upgrade NAPI-RS to 3.2 (#5680) by @Brooooooklyn
+- deps: update dependency tsdown to v0.14.0 (#5681) by @renovate[bot]
+- clean up basic-vue example (#5676) by @IWANABETHATGUY
+- deps: update crate-ci/typos action to v1.35.3 (#5674) by @renovate[bot]
+- remove duplicate hook tracing (#5673) by @IWANABETHATGUY
+- deps: update dependency tsdown to v0.13.4 (#5668) by @renovate[bot]
+- deps: update dependency rolldown-plugin-dts to v0.15.6 (#5666) by @renovate[bot]
+- deps: update crate-ci/typos action to v1.35.2 (#5664) by @renovate[bot]
+- deps: update dependency rust to v1.89.0 (#5652) by @renovate[bot]
+- deps: update dependency rolldown-plugin-dts to v0.15.5 (#5649) by @renovate[bot]
+- deps: update dependency rolldown-plugin-dts to v0.15.4 (#5638) by @renovate[bot]
+- add `just debug-test` alias to run test without extended test case (#5633) by @IWANABETHATGUY
+- update lable related to auto labeled documentation ci (#5630) by @IWANABETHATGUY
+- clippy: allow `case_sensitive_file_extension_comparisons` (#5625) by @shulaoda
+- fix wasi build failed (#5624) by @sapphi-red
+- use env variable to control whether run extended tests (#5623) by @IWANABETHATGUY
+- remove redundant track_caller (#5620) by @IWANABETHATGUY
+- replace unmaintained goto-bus-stop/setup-zig with mlugg/setup-zig action (#5605) by @Copilot
+- deps: update crate-ci/typos action to v1.35.1 (#5603) by @renovate[bot]
+- deps: update crate-ci/typos action to v1.35.0 (#5601) by @renovate[bot]
+- deps: update dependency tsdown to v0.13.3 (#5602) by @renovate[bot]
+- deps: update dependency rolldown-plugin-dts to v0.15.3 (#5600) by @renovate[bot]
+
+
 ## [1.0.0-beta.31] - 2025-08-04
 
 ### 🚀 Features

@@ -232,7 +232,7 @@ strip = "symbols" # Set to `false` for debug information
 debug = true
 inherits = "release"
 
-[profile.memory-profile]
+[profile.profile]
 debug = true
 strip = false
 inherits = "release"

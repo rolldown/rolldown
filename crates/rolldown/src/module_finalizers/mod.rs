@@ -16,6 +16,7 @@ use rolldown_common::{
   ModuleIdx, ModuleNamespaceIncludedReason, ModuleType, OutputFormat, Platform, SymbolRef,
   WrapKind,
 };
+use rolldown_ecmascript::ToSourceString;
 use rolldown_ecmascript_utils::{
   AstSnippet, BindingPatternExt, CallExpressionExt, ExpressionExt, StatementExt,
 };
@@ -35,7 +36,7 @@ mod hmr;
 mod rename;
 
 /// Finalizer for emitting output code with scope hoisting.
-pub struct ScopeHoistingFinalizer<'me, 'ast> {
+pub struct ScopeHoistingFinalizer<'me, 'ast: 'me> {
   pub ctx: ScopeHoistingFinalizerContext<'me>,
   pub scope: &'me AstScopes,
   pub alloc: &'ast Allocator,
@@ -144,6 +145,10 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
             self.ctx.module.should_consider_node_esm_spec_for_static_import(),
           ),
         );
+        if self.ctx.transferred_import_record.contains_key(&rec_id) {
+          self.ctx.transferred_import_record.insert(rec_id, stmt.to_source_string());
+          return true;
+        }
         return false;
       }
       // Replace the import statement with `init_foo()` if `ImportDeclaration` is not a plain import
@@ -183,6 +188,10 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
           *stmt = self.snippet.builder.statement_expression(SPAN, init_call);
         }
 
+        if self.ctx.transferred_import_record.contains_key(&rec_id) {
+          self.ctx.transferred_import_record.insert(rec_id, stmt.to_source_string());
+          return true;
+        }
         return false;
       }
     }

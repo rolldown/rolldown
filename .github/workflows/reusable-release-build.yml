@@ -91,7 +91,7 @@ jobs:
         if: ${{ contains(matrix.target, 'ohos') }}
         uses: openharmony-rs/setup-ohos-sdk@10564ad8040178be4aa02e0d3a2c25c32779fa3f # v0.2
 
-      - uses: taiki-e/install-action@d31232495ad76f47aad66e3501e47780b49f0f3e # v2.57.5
+      - uses: taiki-e/install-action@5f6f3e0538d249cb0b47f8d5b636c120babeb082 # v2.58.6
         if: ${{ contains(matrix.target, 'musl') }}
         env:
           GITHUB_TOKEN: ${{ github.token }}
@@ -213,7 +213,7 @@ jobs:
           ROLLDOWN_VERSION: ${{ inputs.version }}
 
       - name: Download Pluginutils Artifacts
-        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        uses: actions/download-artifact@634f93cb2916e3fdff6788551b99b062d0335ce0 # v5.0.0
         with:
           path: packages/pluginutils/dist
           name: pluginutils-artifact
@@ -270,7 +270,7 @@ jobs:
           ROLLDOWN_VERSION: ${{ inputs.version }}
 
       - name: Download Pluginutils Artifacts
-        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        uses: actions/download-artifact@634f93cb2916e3fdff6788551b99b062d0335ce0 # v5.0.0
         with:
           path: packages/pluginutils/dist
           name: pluginutils-artifact

@@ -1,3 +1,5 @@
+use std::ffi::OsString;
+
 use arcstr::ArcStr;
 use cow_utils::CowUtils;
 use rolldown_common::{Output, OutputAsset, OutputChunk};
@@ -32,21 +34,22 @@ pub struct ManifestChunk {
 }
 
 impl ManifestPlugin {
-  pub fn get_chunk_name(&self, chunk: &OutputChunk) -> String {
+  pub fn get_chunk_name(&self, chunk: &OutputChunk, is_legacy: bool) -> String {
     match &chunk.facade_module_id {
       Some(module_id) => {
-        let name = module_id.relative_path(&self.root);
+        let mut name = module_id.relative_path(&self.root);
+        if is_legacy && !chunk.name.contains("-legacy") {
+          let extension = OsString::from(name.extension().unwrap_or_default());
+          if let Some(stem) = name.file_stem() {
+            let mut file_stem = OsString::with_capacity(stem.len() + 7);
+            file_stem.push(stem);
+            file_stem.push("-legacy");
+            name.set_file_name(file_stem);
+          }
+          name.set_extension(extension);
+        }
         let name = name.to_string_lossy();
         let name = normalize_path(&name);
-        // TODO: Support System format
-        // if format == 'system' && !chunk.name.as_str().contains("-legacy") {
-        //   name = if let Some(ext) = name.extension() {
-        //     let end = name.len() - ext.len() - 1;
-        //     format!("{}-legacy.{}", &name[0..end], ext.to_string_lossy())
-        //   } else {
-        //     format!("{name}-legacy")
-        //   }
-        // }
         name.cow_replace('\0', "").into_owned()
       }
       _ => rolldown_utils::concat_string!(
@@ -71,6 +74,7 @@ impl ManifestPlugin {
     bundle: &Vec<Output>,
     chunk: &OutputChunk,
     src: &str,
+    is_legacy: bool,
   ) -> ManifestChunk {
     ManifestChunk {
       file: chunk.filename.to_string(),
@@ -78,19 +82,24 @@ impl ManifestPlugin {
       src: chunk.facade_module_id.is_some().then(|| src.to_string()),
       is_entry: chunk.is_entry,
       is_dynamic_entry: chunk.is_dynamic_entry,
-      imports: self.get_internal_imports(bundle, &chunk.imports),
-      dynamic_imports: self.get_internal_imports(bundle, &chunk.dynamic_imports),
+      imports: self.get_internal_imports(bundle, &chunk.imports, is_legacy),
+      dynamic_imports: self.get_internal_imports(bundle, &chunk.dynamic_imports, is_legacy),
       ..Default::default()
     }
   }
 
-  fn get_internal_imports(&self, bundle: &Vec<Output>, imports: &Vec<ArcStr>) -> Vec<String> {
+  fn get_internal_imports(
+    &self,
+    bundle: &Vec<Output>,
+    imports: &Vec<ArcStr>,
+    is_legacy: bool,
+  ) -> Vec<String> {
     let mut filtered_imports = vec![];
     for file in imports {
       for output in bundle {
         if let Output::Chunk(chunk) = output {
           if chunk.filename == *file {
-            filtered_imports.push(self.get_chunk_name(chunk));
+            filtered_imports.push(self.get_chunk_name(chunk, is_legacy));
             break;
           }
         }

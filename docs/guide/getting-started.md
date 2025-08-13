@@ -62,7 +62,7 @@ If you are using a platform that a prebuilt binary is not distributed, you have 
          cpu:
            - wasm32
        ```
-  2. Make Rolldown to load the Wasm build.
+  2. Make Rolldown load the Wasm build.
      - If the prebuilt binary is not available, Rolldown will fallback to the Wasm binary automatically.
      - In case you need to force Rolldown to use the Wasm build, you can set `NAPI_RS_FORCE_WASI=1` environment variable.
 - Build from source

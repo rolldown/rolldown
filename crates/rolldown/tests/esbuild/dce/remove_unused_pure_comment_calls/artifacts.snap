@@ -9,30 +9,22 @@ source: crates/rolldown_testing/src/integration_test.rs
 //#region entry.js
 function bar() {}
 foo(bar);
-/* @__PURE__ */ foo(bar());
-/* @__PURE__ */ new foo(bar());
-/* @__PURE__ */ foo(bar());
-/* @__PURE__ */ new foo(bar());
-/* @__PURE__ */ foo(bar());
-/* @__PURE__ */ new foo(bar());
-/* @__PURE__ */ foo(bar());
-/* @__PURE__ */ new foo(bar());
-/* @__PURE__ */ foo(sideEffect()).dot(bar());
-/* @__PURE__ */ new foo(sideEffect()).dot(bar());
-[
-	1,
-	/* @__PURE__ */ foo(bar()),
-	2
-];
-[
-	1,
-	/* @__PURE__ */ new foo(bar()),
-	2
-];
-/* @__PURE__ */ foo(bar());
-/* @__PURE__ */ new foo(bar());
-/* @__PURE__ */ foo(bar());
-/* @__PURE__ */ new foo(bar());
+bar();
+bar();
+bar();
+bar();
+bar();
+bar();
+bar();
+bar();
+bar();
+bar();
+bar();
+bar();
+bar();
+bar();
+bar();
+bar();
 foo(bar);
 new foo(bar);
 foo(bar);

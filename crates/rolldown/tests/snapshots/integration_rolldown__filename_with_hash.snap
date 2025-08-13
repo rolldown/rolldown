@@ -37,7 +37,7 @@ expression: output
 - debugger-before-!~{007}~.js => debugger-before-CZpQhK0r.js
 - directive-before-!~{005}~.js => directive-before-n2DJ4AYZ.js
 - disabled-tdz-!~{00a}~.js => disabled-tdz-DzA5YKhx.js
-- exprs-before-!~{009}~.js => exprs-before-vfgzw76I.js
+- exprs-before-!~{009}~.js => exprs-before-DRcqUczg.js
 - issue-3125-!~{00d}~.js => issue-3125-Wuzt51eK.js
 - namespace-export-!~{003}~.js => namespace-export-CaVCPaHU.js
 - nested-block-!~{001}~.js => nested-block-CL8cSnuF.js
@@ -89,16 +89,16 @@ expression: output
 # tests/esbuild/dce/dce_of_iife
 
 - keep-these-!~{001}~.js => keep-these-DVLFLLmt.js
-- remove-these-!~{000}~.js => remove-these-DN_7KKwW.js
+- remove-these-!~{000}~.js => remove-these-QI2cnere.js
 
 # tests/esbuild/dce/dce_of_symbol_instances
 
 - class-!~{000}~.js => class-DtODMnQf.js
-- object-!~{001}~.js => object-c5hjUGWk.js
+- object-!~{001}~.js => object-DB6SQxns.js
 
 # tests/esbuild/dce/dce_of_using_declarations
 
-- entry-!~{000}~.js => entry-C01AUCva.js
+- entry-!~{000}~.js => entry-8fkt61iG.js
 
 # tests/esbuild/dce/dce_template_literal
 
@@ -110,7 +110,7 @@ expression: output
 
 # tests/esbuild/dce/dce_type_of_compare_string_guard_condition
 
-- entry-!~{000}~.js => entry-B_Ke_5TE.js
+- entry-!~{000}~.js => entry-CETSKyCT.js
 
 # tests/esbuild/dce/dce_type_of_equals_string
 
@@ -118,7 +118,7 @@ expression: output
 
 # tests/esbuild/dce/dce_type_of_equals_string_guard_condition
 
-- entry-!~{000}~.js => entry-BecXYwGx.js
+- entry-!~{000}~.js => entry-Dw3uJSTW.js
 
 # tests/esbuild/dce/dce_type_of_equals_string_mangle
 
@@ -502,7 +502,7 @@ expression: output
 
 # tests/esbuild/dce/remove_unused_pure_comment_calls
 
-- entry-!~{000}~.js => entry-CivdJoO4.js
+- entry-!~{000}~.js => entry-CFkc1Ews.js
 
 # tests/esbuild/dce/text_loader_remove_unused
 
@@ -519,11 +519,11 @@ expression: output
 
 # tests/esbuild/dce/tree_shaking_class_property
 
-- entry-!~{000}~.js => entry-DtcYPMqW.js
+- entry-!~{000}~.js => entry-Vi-YiAQn.js
 
 # tests/esbuild/dce/tree_shaking_class_static_property
 
-- entry-!~{000}~.js => entry-pBhxKqXS.js
+- entry-!~{000}~.js => entry-DjPRndiu.js
 
 # tests/esbuild/dce/tree_shaking_import_identifier
 
@@ -592,11 +592,11 @@ expression: output
 
 # tests/esbuild/dce/tree_shaking_object_property
 
-- entry-!~{000}~.js => entry-ZqDVMFk9.js
+- entry-!~{000}~.js => entry-B1fSAsx0.js
 
 # tests/esbuild/dce/tree_shaking_react_elements
 
-- entry-!~{000}~.js => entry-D1xD4Elo.js
+- entry-!~{000}~.js => entry-C6DA0J_i.js
 
 # tests/esbuild/dce/tree_shaking_unary_operators
 
@@ -612,7 +612,7 @@ expression: output
 
 # tests/esbuild/default/arguments_special_case_no_bundle
 
-- entry-!~{000}~.js => entry-CiRyr82a.js
+- entry-!~{000}~.js => entry-CMXZovLt.js
 
 # tests/esbuild/default/arrow_fn_scope
 
@@ -985,7 +985,7 @@ expression: output
 
 # tests/esbuild/default/indirect_require_message
 
-- array-!~{000}~.js => array-CQ24pE8x.js
+- array-!~{000}~.js => array-CSx0pvTG.js
 - assign-!~{001}~.js => assign-Dd64WgR8.js
 - dot-!~{002}~.js => dot-BY8H7C6Q.js
 - ident-!~{003}~.js => ident-BUKwP9uX.js
@@ -1277,12 +1277,12 @@ expression: output
 # tests/esbuild/default/mangle_quoted_props
 
 - keep-!~{000}~.js => keep-BFTfjx2d.js
-- mangle-!~{001}~.js => mangle-BHEB-c2o.js
+- mangle-!~{001}~.js => mangle-BIYA7Ino.js
 
 # tests/esbuild/default/mangle_quoted_props_minify_syntax
 
 - keep-!~{000}~.js => keep-BFTfjx2d.js
-- mangle-!~{001}~.js => mangle-BHEB-c2o.js
+- mangle-!~{001}~.js => mangle-BIYA7Ino.js
 
 # tests/esbuild/default/many_entry_points
 
@@ -1380,7 +1380,7 @@ expression: output
 
 # tests/esbuild/default/minified_jsx_preserve_with_object_spread
 
-- entry-!~{000}~.js => entry-D4uNapO7.js
+- entry-!~{000}~.js => entry-RV_jH3dU.js
 
 # tests/esbuild/default/minify_arguments
 
@@ -2268,7 +2268,7 @@ expression: output
 
 # tests/esbuild/loader/jsx_automatic_no_name_collision
 
-- entry-!~{000}~.js => entry-ByS1CJlK.js
+- entry-!~{000}~.js => entry-mZlFHYQF.js
 
 # tests/esbuild/loader/jsx_preserve_capital_letter
 
@@ -2572,11 +2572,11 @@ expression: output
 
 # tests/esbuild/lower/lower_async_generator
 
-- entry-!~{000}~.js => entry-CZSQN-Nh.js
+- entry-!~{000}~.js => entry-CgIapUd2.js
 
 # tests/esbuild/lower/lower_async_generator_no_await
 
-- entry-!~{000}~.js => entry-CZSQN-Nh.js
+- entry-!~{000}~.js => entry-CgIapUd2.js
 
 # tests/esbuild/lower/lower_async_super_es2016_no_bundle
 
@@ -2608,7 +2608,7 @@ expression: output
 
 # tests/esbuild/lower/lower_exponentiation_operator_no_bundle
 
-- entry-!~{000}~.js => entry-B0OtCyNv.js
+- entry-!~{000}~.js => entry-4tapbqiN.js
 
 # tests/esbuild/lower/lower_export_star_as_name_collision
 
@@ -2643,11 +2643,11 @@ expression: output
 
 # tests/esbuild/lower/lower_nullish_coalescing_assignment_issue1493
 
-- entry-!~{000}~.js => entry-QOP9dZDQ.js
+- entry-!~{000}~.js => entry-DoyaHOSp.js
 
 # tests/esbuild/lower/lower_object_spread_no_bundle
 
-- entry-!~{000}~.js => entry-Bfi4ikDl.js
+- entry-!~{000}~.js => entry-DL7-ATw6.js
 
 # tests/esbuild/lower/lower_optional_catch_name_collision_no_bundle
 
@@ -2824,14 +2824,14 @@ expression: output
 - hoist-export-function-direct-!~{00a}~.js => hoist-export-function-direct-qXSo6QF5.js
 - hoist-export-function-indirect-!~{00b}~.js => hoist-export-function-indirect-BZCB1Zj5.js
 - hoist-export-local-direct-!~{006}~.js => hoist-export-local-direct-CCoc-e99.js
-- hoist-export-local-indirect-!~{007}~.js => hoist-export-local-indirect-HSZBlKOb.js
+- hoist-export-local-indirect-!~{007}~.js => hoist-export-local-indirect-Y4Hdiy7o.js
 - hoist-export-star-!~{003}~.js => hoist-export-star-jYddb4P1.js
 - hoist-import-!~{002}~.js => hoist-import-BLaUL1j7.js
 - hoist-use-strict-!~{000}~.js => hoist-use-strict-BpJDaqMA.js
 
 # tests/esbuild/lower/lower_using_inside_ts_namespace
 
-- entry-!~{000}~.js => entry-DbIZMmDI.js
+- entry-!~{000}~.js => entry-DUqh-Z4a.js
 
 # tests/esbuild/lower/lower_using_unsupported_async
 
@@ -5125,11 +5125,11 @@ expression: output
 
 # tests/rolldown/resolve/ts_config_merge_decorator_metadata
 
-- main-!~{000}~.js => main-C1cURgQH.js
+- main-!~{000}~.js => main-z645nT8F.js
 
 # tests/rolldown/resolve/ts_config_option_merge
 
-- main-!~{000}~.js => main-DiyDFe_V.js
+- main-!~{000}~.js => main-CDQJbtzy.js
 
 # tests/rolldown/resolve/wildcard_alias
 
@@ -6022,6 +6022,6 @@ expression: output
 
 # tests/rollup/simplify-with-destructuring
 
-- main-!~{000}~.js => main-Dwl1cMos.js
+- main-!~{000}~.js => main-DQKq1liX.js
 
 ```

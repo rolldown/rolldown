@@ -15,15 +15,3 @@ source: crates/rolldown_testing/src/integration_test.rs
 ────╯
 
 ```
-## UNRESOLVED_IMPORT
-
-```text
-[UNRESOLVED_IMPORT] Error: Could not resolve './unresolved4' in main.js
-    ╭─[ main.js:20:15 ]
-    │
- 20 │       require('./unresolved4')
-    │               ───────┬───────  
-    │                      ╰───────── Module not found.
-────╯
-
-```

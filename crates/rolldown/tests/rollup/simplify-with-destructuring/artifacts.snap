@@ -9,7 +9,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 import assert from "assert";
 
 //#region main.js
-let foo, unused;
+let foo;
 ({foo} = { foo: "bar" });
 assert.strictEqual(foo, "bar");
 const assign = () => ({foo} = { foo: "baz" });

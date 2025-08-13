@@ -1,7 +1,11 @@
-use oxc::{ast::ast::Expression, minifier::PropertyReadSideEffects, semantic::Scoping};
+use oxc::{
+  ast::ast::Expression,
+  minifier::PropertyReadSideEffects,
+  semantic::{IsGlobalReference, Scoping},
+};
 use oxc_ecmascript::{
+  GlobalContext,
   constant_evaluation::{ConstantEvaluation, ConstantEvaluationCtx},
-  is_global_reference::IsGlobalReference,
   side_effects::MayHaveSideEffectsContext,
 };
 use rolldown_common::ConstantValue;
@@ -17,13 +21,9 @@ impl<'ast> ConstantEvaluationCtx<'ast> for ConstEvalCtx<'_, 'ast> {
   }
 }
 
-impl<'ast> IsGlobalReference<'ast> for ConstEvalCtx<'_, 'ast> {
-  fn is_global_reference(
-    &self,
-    reference: &oxc::ast::ast::IdentifierReference<'ast>,
-  ) -> Option<bool> {
-    let item = self.scope.get_reference(reference.reference_id());
-    Some(item.symbol_id().is_none())
+impl<'ast> GlobalContext<'ast> for ConstEvalCtx<'_, 'ast> {
+  fn is_global_reference(&self, reference: &oxc::ast::ast::IdentifierReference<'ast>) -> bool {
+    reference.is_global_reference(self.scope)
   }
 }
 

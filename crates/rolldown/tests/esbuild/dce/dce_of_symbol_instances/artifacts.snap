@@ -17,15 +17,9 @@ Symbol.wtf;
 
 ```js
 //#region object.js
-({
-	*[Symbol.iterator]() {},
-	[keep]: null
-});
-({
-	[keep]: null,
-	*[Symbol.iterator]() {}
-});
-({ *[Symbol.wtf]() {} });
+Symbol.iterator, keep;
+keep, Symbol.iterator;
+Symbol.wtf;
 
 //#endregion
 ```

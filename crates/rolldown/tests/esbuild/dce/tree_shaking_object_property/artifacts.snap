@@ -7,14 +7,14 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```js
 //#region entry.js
-({ x });
-({ x });
+x;
+x;
 ({ ...x });
-({ [x]: "x" });
-({ [x]() {} });
-({ get [x]() {} });
-({ set [x](_) {} });
-({ async [x]() {} });
+x;
+x;
+x;
+x;
+x;
 
 //#endregion
 ```

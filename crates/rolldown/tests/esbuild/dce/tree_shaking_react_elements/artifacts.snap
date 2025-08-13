@@ -8,9 +8,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ```js
 //#region entry.jsx
 function Foo() {}
-let a = /* @__PURE__ */ React.createElement("div", null);
-let b = /* @__PURE__ */ React.createElement(Foo, null, a);
-/* @__PURE__ */ React.createElement(React.Fragment, null, b);
+React.Fragment;
 let d = /* @__PURE__ */ React.createElement("div", null);
 let e = /* @__PURE__ */ React.createElement(Foo, null, d);
 let f = /* @__PURE__ */ React.createElement(React.Fragment, null, e);

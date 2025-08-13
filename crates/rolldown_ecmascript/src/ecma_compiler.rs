@@ -3,12 +3,10 @@ use std::path::PathBuf;
 use arcstr::ArcStr;
 use oxc::{
   allocator::Allocator,
-  ast::{AstBuilder, ast::Program},
+  ast::AstBuilder,
   codegen::{Codegen, CodegenOptions, CodegenReturn, CommentOptions, LegalComment},
-  mangler::Mangler,
-  minifier::{CompressOptions, Compressor, MinifierOptions, MinifierReturn},
+  minifier::{Minifier, MinifierOptions},
   parser::{ParseOptions, Parser},
-  semantic::{SemanticBuilder, Stats},
   span::{SPAN, SourceType},
 };
 use oxc_sourcemap::SourceMap;
@@ -111,7 +109,12 @@ impl EcmaCompiler {
   ) -> (String, Option<SourceMap>) {
     let allocator = Allocator::default();
     let mut program = Parser::new(&allocator, source_text, source_type).parse().program;
-    let ret = Self::minify_impl(minifier_options, run_compress, &allocator, &mut program);
+    let minifier = Minifier::new(minifier_options);
+    let ret = if run_compress {
+      minifier.minify(&allocator, &mut program)
+    } else {
+      minifier.dce(&allocator, &mut program)
+    };
     let ret = Codegen::new()
       .with_options(CodegenOptions {
         source_map_path: enable_sourcemap.then(|| PathBuf::from(filename)),
@@ -120,36 +123,6 @@ impl EcmaCompiler {
       .with_scoping(ret.scoping)
       .build(&program);
     (ret.code, ret.map)
-  }
-
-  /// Copy from `oxc::minifier`, aiming to support `dce-only`
-  pub fn minify_impl<'a>(
-    options: MinifierOptions,
-    run_compress: bool,
-    allocator: &'a Allocator,
-    program: &mut Program<'a>,
-  ) -> MinifierReturn {
-    let stats = if run_compress {
-      let compress_options = options.compress.unwrap_or_default();
-      let semantic = SemanticBuilder::new().build(program).semantic;
-      let stats = semantic.stats();
-      let scoping = semantic.into_scoping();
-      Compressor::new(allocator).build_with_scoping(program, scoping, compress_options);
-      stats
-    } else {
-      Compressor::new(allocator).dead_code_elimination(program, CompressOptions::dce());
-      Stats::default()
-    };
-    let scoping = options.mangle.map(|options| {
-      let mut semantic = SemanticBuilder::new()
-        .with_stats(stats)
-        .with_scope_tree_child_ids(true)
-        .build(program)
-        .semantic;
-      Mangler::default().with_options(options).build_with_semantic(&mut semantic, program);
-      semantic.into_scoping()
-    });
-    MinifierReturn { scoping }
   }
 }
 

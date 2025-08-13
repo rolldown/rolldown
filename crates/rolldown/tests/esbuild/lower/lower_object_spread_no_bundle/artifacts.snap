@@ -14,75 +14,29 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## entry.js
 
 ```js
-import { jsx } from "react/jsx-runtime";
+import "react/jsx-runtime";
 
 //#region entry.jsx
-[
-	{
-		...a,
-		...b
-	},
-	{
-		a,
-		b,
-		...c
-	},
-	{
-		...a,
-		b,
-		c
-	},
-	{
-		a,
-		...b,
-		c
-	},
-	{
-		a,
-		b,
-		...c,
-		...d,
-		e,
-		f,
-		...g,
-		...h,
-		i,
-		j
-	}
-];
-[
-	/* @__PURE__ */ jsx("div", {
-		...a,
-		...b
-	}),
-	/* @__PURE__ */ jsx("div", {
-		a: true,
-		b: true,
-		...c
-	}),
-	/* @__PURE__ */ jsx("div", {
-		...a,
-		b: true,
-		c: true
-	}),
-	/* @__PURE__ */ jsx("div", {
-		a: true,
-		...b,
-		c: true
-	}),
-	/* @__PURE__ */ jsx("div", {
-		a: true,
-		b: true,
-		...c,
-		...d,
-		e: true,
-		f: true,
-		...g,
-		...h,
-		i: true,
-		j: true
-	})
-];
+({
+	...a,
+	...b
+}), a, b, { ...c }, { ...a }, b, c, a, { ...b }, c, a, b, {
+	...c,
+	...d
+}, e, f, {
+	...g,
+	...h
+}, i, j;
+({
+	...a,
+	...b
+}), { ...c }, { ...a }, { ...b }, {
+	...c,
+	...d
+}, {
+	...g,
+	...h
+};
 
 //#endregion
 ```

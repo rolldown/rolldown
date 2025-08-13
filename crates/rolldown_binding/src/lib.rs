@@ -13,6 +13,12 @@
 // Looks redundant
 #![allow(clippy::missing_transmute_annotations)]
 
+#[cfg(all(target_family = "wasm", tokio_unstable))]
+use std::sync::{
+  LazyLock,
+  atomic::{AtomicU32, Ordering},
+};
+
 use napi_derive::napi;
 
 #[cfg(all(
@@ -52,6 +58,9 @@ pub fn init() {
   create_custom_tokio_runtime(rt);
 }
 
+#[cfg(all(target_family = "wasm", tokio_unstable))]
+pub static ACTIVE_TASK_COUNT: LazyLock<AtomicU32> = LazyLock::new(|| AtomicU32::new(1));
+
 #[napi]
 /// Shutdown the tokio runtime manually.
 ///
@@ -59,7 +68,13 @@ pub fn init() {
 /// In the wasm runtime, the `park` threads will hang there until the tokio::Runtime is shutdown.
 pub fn shutdown_async_runtime() {
   #[cfg(all(target_family = "wasm", tokio_unstable))]
-  napi::bindgen_prelude::shutdown_async_runtime();
+  {
+    if ACTIVE_TASK_COUNT.load(Ordering::Relaxed) > 0 {
+      if ACTIVE_TASK_COUNT.fetch_sub(1, Ordering::Relaxed) == 1 {
+        napi::bindgen_prelude::shutdown_async_runtime();
+      }
+    }
+  }
 }
 
 #[napi]
@@ -69,5 +84,8 @@ pub fn shutdown_async_runtime() {
 /// Usually it's used in test.
 pub fn start_async_runtime() {
   #[cfg(all(target_family = "wasm", tokio_unstable))]
-  napi::bindgen_prelude::start_async_runtime();
+  {
+    napi::bindgen_prelude::start_async_runtime();
+    ACTIVE_TASK_COUNT.fetch_add(1, Ordering::Relaxed);
+  }
 }

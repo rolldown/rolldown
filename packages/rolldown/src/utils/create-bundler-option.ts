@@ -22,7 +22,6 @@ export async function createBundlerOptions(
   inputOptions: InputOptions,
   outputOptions: OutputOptions,
   watchMode: boolean,
-  isClose?: boolean,
 ): Promise<BundlerOptionWithStopWorker> {
   const inputPlugins = await normalizePluginOption(inputOptions.plugins);
   const outputPlugins = await normalizePluginOption(outputOptions.plugins);
@@ -35,16 +34,14 @@ export async function createBundlerOptions(
     watchMode,
   );
 
-  if (!isClose) {
-    // The `outputOptions` hook is called with the input plugins and the output plugins
-    outputOptions = PluginDriver.callOutputOptionsHook(
-      [...inputPlugins, ...outputPlugins],
-      outputOptions,
-      onLog,
-      logLevel,
-      watchMode,
-    );
-  }
+  // The `outputOptions` hook is called with the input plugins and the output plugins
+  outputOptions = PluginDriver.callOutputOptionsHook(
+    [...inputPlugins, ...outputPlugins],
+    outputOptions,
+    onLog,
+    logLevel,
+    watchMode,
+  );
 
   const normalizedOutputPlugins = await normalizePluginOption(
     outputOptions.plugins,

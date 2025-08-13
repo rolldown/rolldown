@@ -1,4 +1,9 @@
 const ignoreTests = [
+  // Integrate the test suite into Rolldown
+  // https://github.com/rolldown/rolldown/pull/5715
+  "rollup@hooks@passes errors from closeBundle hook",
+  "rollup@hooks@supports closeBundle hook",
+
   'rollup@function@bundle-facade-order: respects the order of entry points when there are additional facades for chunks', // https://github.com/rolldown/rolldown/issues/1842#issuecomment-2296345255
 
   // Ignore skipIfWindows test avoid test status error

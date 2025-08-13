@@ -27,14 +27,11 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```js
 // HIDDEN [rolldown:runtime]
-const __remix_run_react = __toESM(require("@remix-run/react"));
-const react = __toESM(require("react"));
+require("@remix-run/react");
+require("react");
 
 //#region entry.jsx
-/* @__PURE__ */ (0, react.createElement)(__remix_run_react.Link, {
-	...y,
-	key: z
-});
+({ ...y }), z;
 
 //#endregion
 ```

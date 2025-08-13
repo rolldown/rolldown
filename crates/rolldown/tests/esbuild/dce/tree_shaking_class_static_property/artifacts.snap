@@ -13,21 +13,11 @@ source: crates/rolldown_testing/src/integration_test.rs
 (class {
 	static ["x"] = x;
 });
-(class {
-	static [x] = "x";
-});
-(class {
-	static [x]() {}
-});
-(class {
-	static get [x]() {}
-});
-(class {
-	static set [x](_) {}
-});
-(class {
-	static async [x]() {}
-});
+x;
+x;
+x;
+x;
+x;
 
 //#endregion
 ```

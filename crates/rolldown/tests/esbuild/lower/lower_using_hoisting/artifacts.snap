@@ -236,14 +236,14 @@ export { a1, ac1, c1, x1, y1, z1 };
 
 ```js
 //#region hoist-export-local-indirect.js
-using a = b;
+b;
 var { x: [x1] } = foo;
 let { y: [y1] } = foo;
 const { z: [z1] } = foo;
 var { x: [x2] } = foo;
 let { y: [y2] } = foo;
 const { z: [z2] } = foo;
-using c = d;
+d;
 
 //#endregion
 export { x1, y1, z1 };

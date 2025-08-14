@@ -77,6 +77,8 @@ impl<'a> GenerateStage<'a> {
 
     self.compute_cross_chunk_links(&mut chunk_graph);
 
+    self.ensure_lazy_module_initialization_order(&mut chunk_graph);
+
     self.on_demand_wrapping(&mut chunk_graph);
 
     self.trace_action_chunks_infos(&chunk_graph);

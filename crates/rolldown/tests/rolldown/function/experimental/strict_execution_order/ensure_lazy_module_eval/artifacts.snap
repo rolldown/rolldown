@@ -1,0 +1,44 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## dynamic.js
+
+```js
+import { require_dynamic } from "./dynamic2.js";
+
+export default require_dynamic();
+
+```
+## dynamic2.js
+
+```js
+// HIDDEN [rolldown:runtime]
+//#region dynamic.js
+var require_dynamic = /* @__PURE__ */ __commonJS({ "dynamic.js": ((exports, module) => {
+	module.exports = 1e3;
+	globalThis.a = 1e3;
+}) });
+
+//#endregion
+export { __toESM, require_dynamic };
+```
+## main.js
+
+```js
+import { __toESM, require_dynamic } from "./dynamic2.js";
+import { strictEqual } from "node:assert";
+
+//#region sideeffects.js
+var import_dynamic = /* @__PURE__ */ __toESM(require_dynamic());
+globalThis.a = 2;
+
+//#endregion
+//#region main.js
+const a = globalThis.a;
+strictEqual(a, 2);
+
+//#endregion
+export { a };
+```

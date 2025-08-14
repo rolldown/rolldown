@@ -104,7 +104,7 @@ test('supports closeBundle hook', async () => {
 });
 
 test('closeBundle hook is not called if closed directly', async () => {
-  await expect(async () => {
+  const task = async () => {
     const bundle = await rolldown({
       input: './main.js',
       cwd: import.meta.dirname,
@@ -118,5 +118,6 @@ test('closeBundle hook is not called if closed directly', async () => {
       ],
     });
     await bundle.close();
-  }).not.toThrow()
+  };
+  await expect(task()).resolves.not.toThrow()
 });

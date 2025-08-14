@@ -93,6 +93,7 @@ describe('Plugin closeBundle hook', async () => {
         },
       ],
     })
+    await build.generate()
     await build.close()
     expect(closeBundleFn).toHaveBeenCalledTimes(1)
   })

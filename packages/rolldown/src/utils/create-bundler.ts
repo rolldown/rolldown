@@ -14,13 +14,11 @@ export async function createBundlerImpl(
   bundler: BindingBundler,
   inputOptions: InputOptions,
   outputOptions: OutputOptions,
-  isClose?: boolean,
 ): Promise<BundlerImplWithStopWorker> {
   const option = await createBundlerOptions(
     inputOptions,
     outputOptions,
     false,
-    isClose,
   );
 
   if (asyncRuntimeShutdown) {

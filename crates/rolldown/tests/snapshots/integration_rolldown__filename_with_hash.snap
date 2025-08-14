@@ -4034,6 +4034,12 @@ expression: output
 
 - main-!~{000}~.js => main-DZgJ4wKa.js
 
+# tests/rolldown/function/experimental/strict_execution_order/ensure_lazy_module_eval
+
+- dynamic-!~{001}~.js => dynamic-BpUjAus5.js
+- main-!~{000}~.js => main-CdwVgZap.js
+- dynamic-!~{002}~.js => dynamic-CcRE_i8T.js
+
 # tests/rolldown/function/experimental/strict_execution_order/esbuild_issue_2598/non_strict
 
 - main-!~{000}~.js => main-C9tRYJu-.js

@@ -1,0 +1,2 @@
+
+globalThis.a = 2;

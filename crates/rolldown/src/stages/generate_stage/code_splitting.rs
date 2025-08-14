@@ -243,12 +243,11 @@ impl GenerateStage<'_> {
 
     self.merge_cjs_namespace(&mut chunk_graph);
     self.find_entry_level_external_module(&mut chunk_graph);
-    self.ensure_lazy_module_initialization_order(&mut chunk_graph);
 
     Ok(chunk_graph)
   }
 
-  fn ensure_lazy_module_initialization_order(&self, chunk_graph: &mut ChunkGraph) {
+  pub fn ensure_lazy_module_initialization_order(&self, chunk_graph: &mut ChunkGraph) {
     if self.options.experimental.strict_execution_order.unwrap_or_default() {
       // If `strict_execution_order` is enabled, the lazy module initialization order is already
       // guaranteed.
@@ -273,9 +272,19 @@ impl GenerateStage<'_> {
         // the wrapped module are usually lazy evaluate). So we need to adjust the initialization
         // order
         // manually.
+        let imported_symbol_owner_from_other_chunk = chunk
+          .imports_from_other_chunks
+          .iter()
+          .flat_map(|(_, import_items)| {
+            import_items
+              .iter()
+              .map(|item| self.link_output.symbol_db.canonical_ref_for(item.import_ref).owner)
+          })
+          .collect::<FxHashSet<_>>();
         let chunk_module_to_exec_order = chunk
           .modules
           .iter()
+          .chain(imported_symbol_owner_from_other_chunk.iter())
           .map(|idx| (*idx, self.link_output.module_table[*idx].exec_order()))
           .collect::<FxHashMap<_, _>>();
 

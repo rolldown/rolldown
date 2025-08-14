@@ -1,0 +1,14 @@
+{
+  "config": {
+    "input": [
+      {
+        "name": "main",
+        "import": "./main.js"
+      },
+      {
+        "name": "dynamic",
+        "import": "./dynamic.js"
+      }
+    ]
+  }
+}

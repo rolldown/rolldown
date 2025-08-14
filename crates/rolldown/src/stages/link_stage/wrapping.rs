@@ -43,13 +43,12 @@ fn wrap_module_recursively(ctx: &mut Context, target: ModuleIdx) {
   {
     return;
   }
-  if matches!(ctx.linking_infos[target].wrap_kind, WrapKind::None) {
+  if matches!(ctx.linking_infos[target].wrap_kind(), WrapKind::None) {
     let new_wrap_kind = match module.exports_kind {
       ExportsKind::Esm | ExportsKind::None => WrapKind::Esm,
       ExportsKind::CommonJs => WrapKind::Cjs,
     };
-    ctx.linking_infos[target].wrap_kind = new_wrap_kind;
-    ctx.linking_infos[target].original_wrap_kind = new_wrap_kind;
+    ctx.linking_infos[target].sync_wrap_kind(new_wrap_kind);
   }
 
   module.import_records.iter().for_each(|importee| {
@@ -123,7 +122,7 @@ impl LinkStage<'_> {
         );
       }
 
-      let is_wrap_kind_none = matches!(self.metas[module_id].wrap_kind, WrapKind::None);
+      let is_wrap_kind_none = matches!(self.metas[module_id].wrap_kind(), WrapKind::None);
 
       // When `strict_execution_order` is enabled, we need to wrap every module to lazy/control their execution.
       // However, this doesn't include runtime module. runtime module should be initialized on its own.
@@ -172,14 +171,18 @@ impl LinkStage<'_> {
         };
         if cjs_exports_kind_modules.contains(&idx) {
           // If the module is CommonJs, we need to wrap it.
-          linking_info.wrap_kind = WrapKind::Cjs;
+          linking_info.update_wrap_kind(WrapKind::Cjs);
         } else {
           // If the module is a pure esm, only exports function or expression without side
           // effects and is not execution order sensitive , we don't need to wrap it.
           let avoid_wrapping = on_demand_wrapping
             && !module.meta.contains(EcmaViewMeta::ExecutionOrderSensitive)
             && module.import_records.is_empty();
-          linking_info.wrap_kind = if avoid_wrapping { WrapKind::None } else { WrapKind::Esm };
+          linking_info.update_wrap_kind(if avoid_wrapping {
+            WrapKind::None
+          } else {
+            WrapKind::Esm
+          });
         }
       }
     }
@@ -200,7 +203,7 @@ pub fn create_wrapper(
   runtime: &RuntimeModuleBrief,
   options: &NormalizedBundlerOptions,
 ) {
-  match linking_info.wrap_kind {
+  match linking_info.wrap_kind() {
     // If this is a CommonJS file, we're going to need to generate a wrapper
     // for the CommonJS closure. That will end up looking something like this:
     //

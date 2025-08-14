@@ -77,7 +77,7 @@ impl GenerateStage<'_> {
         let Some(normal) = self.link_output.module_table[rec.resolved_module].as_normal() else {
           continue;
         };
-        if self.link_output.metas[normal.idx].wrap_kind == WrapKind::Cjs
+        if self.link_output.metas[normal.idx].wrap_kind() == WrapKind::Cjs
           && normal.meta.contains(EcmaViewMeta::ExecutionOrderSensitive)
         {
           bailout_importer = true;
@@ -95,8 +95,8 @@ impl GenerateStage<'_> {
         // If the module is a boundary module, we can't inline it.
         continue;
       }
-      if self.link_output.metas[*module_idx].wrap_kind == WrapKind::Esm {
-        self.link_output.metas[*module_idx].wrap_kind = WrapKind::None;
+      if self.link_output.metas[*module_idx].wrap_kind() == WrapKind::Esm {
+        self.link_output.metas[*module_idx].update_wrap_kind(WrapKind::None);
       }
     }
   }
@@ -139,7 +139,7 @@ impl GenerateStage<'_> {
     for module_idx in &chunk.modules {
       module_to_exec_order
         .insert(*module_idx, self.link_output.module_table[*module_idx].exec_order());
-      if matches!(self.link_output.metas[*module_idx].wrap_kind, WrapKind::Cjs | WrapKind::None) {
+      if matches!(self.link_output.metas[*module_idx].wrap_kind(), WrapKind::Cjs | WrapKind::None) {
         root_only.insert(*module_idx);
       }
     }
@@ -152,7 +152,7 @@ impl GenerateStage<'_> {
       if visited.contains(module_idx) {
         continue;
       }
-      if matches!(self.link_output.metas[*module_idx].wrap_kind, WrapKind::Cjs | WrapKind::None) {
+      if matches!(self.link_output.metas[*module_idx].wrap_kind(), WrapKind::Cjs | WrapKind::None) {
         // If the module is a cjs or none wrapped module, we can't concatenate it.
         let group = ModuleGroup::new(vec![*module_idx], *module_idx);
         module_idx_to_group_idx.insert(*module_idx, module_groups.len());

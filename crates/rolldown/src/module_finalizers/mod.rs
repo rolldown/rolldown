@@ -95,7 +95,7 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
       return true;
     };
     let importee_linking_info = &self.ctx.linking_infos[importee.idx];
-    match importee_linking_info.wrap_kind {
+    match importee_linking_info.wrap_kind() {
       WrapKind::None => {
         // Remove this statement by ignoring it
       }
@@ -106,7 +106,7 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
         // ```
         if rec.meta.contains(ImportRecordMeta::SafelyMergeCjsNs)
           // TODO: merge cjs namepspace in module group level
-          && self.ctx.linking_infos[self.ctx.module.idx].wrap_kind.is_none()
+          && self.ctx.linking_infos[self.ctx.module.idx].wrap_kind().is_none()
         {
           let chunk_idx = self.ctx.chunk_id;
           if let Some(symbol_ref_to_be_merged) =
@@ -865,7 +865,7 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
       match &self.ctx.modules[importee_id] {
         Module::Normal(importee) => {
           let importee_linking_info = &self.ctx.linking_infos[importee_id];
-          let new_expr = match importee_linking_info.wrap_kind {
+          let new_expr = match importee_linking_info.wrap_kind() {
             WrapKind::Esm => {
               // Rewrite `import('./foo.mjs')` to `(init_foo(), foo_exports)`
               let importee_linking_info = &self.ctx.linking_infos[importee_id];
@@ -1025,7 +1025,7 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
             match &self.ctx.modules[rec.resolved_module] {
               Module::Normal(importee) => {
                 let importee_linking_info = &self.ctx.linking_infos[importee.idx];
-                if matches!(importee_linking_info.wrap_kind, WrapKind::Esm) {
+                if matches!(importee_linking_info.wrap_kind(), WrapKind::Esm) {
                   let wrapper_ref_name =
                     self.canonical_name_for(importee_linking_info.wrapper_ref.unwrap());
                   program.body.push(self.snippet.call_expr_stmt(wrapper_ref_name));

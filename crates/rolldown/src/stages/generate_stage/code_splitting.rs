@@ -294,7 +294,7 @@ impl GenerateStage<'_> {
         let mut none_wrapped_module_to_wrapped_dependency_length = FxHashMap::default();
         let js_import_order = self.js_import_order(*entry_module, &chunk_module_to_exec_order);
         for idx in js_import_order {
-          match self.link_output.metas[idx].wrap_kind {
+          match self.link_output.metas[idx].original_wrap_kind() {
             WrapKind::None => {
               if !wrapped_modules.is_empty() {
                 none_wrapped_module_to_wrapped_dependency_length.insert(idx, wrapped_modules.len());
@@ -347,7 +347,7 @@ impl GenerateStage<'_> {
           FxHashMap::default();
         let mut remove_map: FxHashMap<ModuleIdx, Vec<ImportRecordIdx>> = FxHashMap::default();
         for (module_idx, (importer_idx, rec_idx)) in module_init_position {
-          match self.link_output.metas[module_idx].wrap_kind {
+          match self.link_output.metas[module_idx].original_wrap_kind() {
             WrapKind::None => {
               if let Some(deps_length) =
                 none_wrapped_module_to_wrapped_dependency_length.get(&module_idx)
@@ -409,7 +409,7 @@ impl GenerateStage<'_> {
         .iter()
         .filter(|item| {
           self.link_output.module_table[item.owner].as_normal().unwrap().is_included()
-            && self.link_output.metas[item.owner].wrap_kind.is_none()
+            && self.link_output.metas[item.owner].wrap_kind().is_none()
         })
         // Determine safely merged cjs ns binding should put in where
         // We should put it in the importRecord which first reference the cjs ns binding.

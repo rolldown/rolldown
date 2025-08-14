@@ -87,7 +87,7 @@ impl<'ast> VisitMut<'ast> for ScopeHoistingFinalizer<'_, 'ast> {
       .linking_info
       .wrapper_stmt_info
       .is_some_and(|idx| self.ctx.module.stmt_infos[idx].is_included)
-      .then_some(self.ctx.linking_info.wrap_kind);
+      .then_some(self.ctx.linking_info.wrap_kind());
 
     self.ctx.needs_hosted_top_level_binding = matches!(included_wrap_kind, Some(WrapKind::Esm));
 

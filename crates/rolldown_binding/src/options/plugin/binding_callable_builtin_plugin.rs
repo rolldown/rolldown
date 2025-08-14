@@ -1,6 +1,10 @@
 use std::sync::Arc;
 
 use arcstr::ArcStr;
+use napi::{
+  Env,
+  bindgen_prelude::{AsyncBlock, AsyncBlockBuilder},
+};
 use napi_derive::napi;
 use rolldown::ModuleType;
 use rolldown_common::WatcherChangeKind;
@@ -47,17 +51,20 @@ impl BindingCallableBuiltinPlugin {
   }
 
   #[napi]
-  pub async fn resolve_id(
+  pub fn resolve_id(
     &self,
+    env: Env,
     id: String,
     importer: Option<String>,
     options: Option<BindingHookJsResolveIdOptions>,
-  ) -> napi::Result<Option<BindingHookJsResolveIdOutput>> {
-    Ok(
-      self
-        .inner
+  ) -> napi::Result<AsyncBlock<Option<BindingHookJsResolveIdOutput>>> {
+    let plugin = Arc::clone(&self.inner);
+    let context = Arc::clone(&self.context);
+    crate::start_async_runtime();
+    AsyncBlockBuilder::with(async move {
+      plugin
         .call_resolve_id(
-          &self.context.inner,
+          &context.inner,
           &HookResolveIdArgs {
             specifier: &id,
             importer: importer.as_deref(),
@@ -67,61 +74,93 @@ impl BindingCallableBuiltinPlugin {
           },
         )
         .await
-        .map_err(AnyHowMaybeNapiError::into_napi_error)?
-        .map(Into::into),
-    )
+        .map_err(AnyHowMaybeNapiError::into_napi_error)
+        .map(|result| result.map(Into::into))
+    })
+    .with_dispose(|_| {
+      crate::shutdown_async_runtime();
+      Ok(())
+    })
+    .build(&env)
   }
 
   #[napi]
-  pub async fn load(&self, id: String) -> napi::Result<Option<BindingHookJsLoadOutput>> {
-    Ok(
-      self
-        .inner
-        .call_load(&self.context.inner, &HookLoadArgs { id: &id })
-        .await
-        .map_err(AnyHowMaybeNapiError::into_napi_error)?
-        .map(Into::into),
-    )
-  }
-
-  #[napi]
-  pub async fn transform(
+  pub fn load(
     &self,
+    env: Env,
+    id: String,
+  ) -> napi::Result<AsyncBlock<Option<BindingHookJsLoadOutput>>> {
+    let plugin = Arc::clone(&self.inner);
+    let context = Arc::clone(&self.context);
+    crate::start_async_runtime();
+    AsyncBlockBuilder::with(async move {
+      plugin
+        .call_load(&context.inner, &HookLoadArgs { id: &id })
+        .await
+        .map_err(AnyHowMaybeNapiError::into_napi_error)
+        .map(|result| result.map(Into::into))
+    })
+    .with_dispose(|_| {
+      crate::shutdown_async_runtime();
+      Ok(())
+    })
+    .build(&env)
+  }
+
+  #[napi]
+  pub fn transform(
+    &self,
+    env: Env,
     code: String,
     id: String,
     options: BindingTransformHookExtraArgs,
-  ) -> napi::Result<Option<BindingHookTransformOutput>> {
-    Ok(
-      self
-        .inner
+  ) -> napi::Result<AsyncBlock<Option<BindingHookTransformOutput>>> {
+    let module_type = ModuleType::from_known_str(&options.module_type)?;
+    let plugin = Arc::clone(&self.inner);
+    let context = Arc::clone(&self.context);
+    crate::start_async_runtime();
+    AsyncBlockBuilder::with(async move {
+      plugin
         .call_transform(
-          Arc::<TransformPluginContext>::clone(&self.context),
-          &HookTransformArgs {
-            id: &id,
-            code: &code,
-            module_type: &ModuleType::from_known_str(&options.module_type)?,
-          },
+          context,
+          &HookTransformArgs { id: &id, code: &code, module_type: &module_type },
         )
         .await
-        .map_err(AnyHowMaybeNapiError::into_napi_error)?
-        .map(Into::into),
-    )
+        .map_err(AnyHowMaybeNapiError::into_napi_error)
+        .map(|result| result.map(Into::into))
+    })
+    .with_dispose(|_| {
+      crate::shutdown_async_runtime();
+      Ok(())
+    })
+    .build(&env)
   }
 
   #[napi]
-  pub async fn watch_change(
+  pub fn watch_change(
     &self,
+    env: Env,
     path: String,
     event: BindingJsWatchChangeEvent,
-  ) -> napi::Result<()> {
-    self
-      .inner
-      .call_watch_change(&self.context.inner, &path, bindingify_watcher_change_kind(event.event)?)
-      .await
-      .map_err(AnyHowMaybeNapiError::into_napi_error)?;
-    Ok(())
+  ) -> napi::Result<AsyncBlock<()>> {
+    let kind = event.bindingify_watcher_change_kind()?;
+    let plugin = Arc::clone(&self.inner);
+    let context = Arc::clone(&self.context);
+    crate::start_async_runtime();
+    AsyncBlockBuilder::with(async move {
+      plugin
+        .call_watch_change(&context.inner, &path, kind)
+        .await
+        .map_err(AnyHowMaybeNapiError::into_napi_error)
+    })
+    .with_dispose(|_| {
+      crate::shutdown_async_runtime();
+      Ok(())
+    })
+    .build(&env)
   }
 }
+
 #[derive(Debug)]
 #[napi(object, object_to_js = false)]
 pub struct BindingHookJsResolveIdOptions {
@@ -188,12 +227,14 @@ pub struct BindingJsWatchChangeEvent {
   pub event: String,
 }
 
-fn bindingify_watcher_change_kind(value: String) -> napi::Result<WatcherChangeKind> {
-  match value.as_str() {
-    "create" => Ok(WatcherChangeKind::Create),
-    "delete" => Ok(WatcherChangeKind::Delete),
-    "update" => Ok(WatcherChangeKind::Update),
-    _ => Err(napi::Error::new(napi::Status::InvalidArg, "Invalid watcher change kind")),
+impl BindingJsWatchChangeEvent {
+  fn bindingify_watcher_change_kind(&self) -> napi::Result<WatcherChangeKind> {
+    match self.event.as_str() {
+      "create" => Ok(WatcherChangeKind::Create),
+      "delete" => Ok(WatcherChangeKind::Delete),
+      "update" => Ok(WatcherChangeKind::Update),
+      _ => Err(napi::Error::new(napi::Status::InvalidArg, "Invalid watcher change kind")),
+    }
   }
 }
 

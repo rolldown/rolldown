@@ -120,8 +120,9 @@ impl<'a> LinkStage<'a> {
         .module_table
         .modules
         .iter()
-        .map(|module| LinkingMetadata {
-          dependencies: module
+        .map(|module| {
+          let mut meta = LinkingMetadata::default();
+          meta.dependencies = module
             .import_records()
             .iter()
             .filter_map(|rec| match rec.kind {
@@ -131,13 +132,13 @@ impl<'a> LinkStage<'a> {
               ImportKind::Require => None,
               _ => Some(rec.resolved_module),
             })
-            .collect(),
-          star_exports_from_external_modules: module.as_normal().map_or(vec![], |inner| {
+            .collect();
+          meta.star_exports_from_external_modules = module.as_normal().map_or(vec![], |inner| {
             inner
               .star_exports_from_external_modules(&scan_stage_output.module_table.modules)
               .collect()
-          }),
-          ..LinkingMetadata::default()
+          });
+          meta
         })
         .collect::<IndexVec<ModuleIdx, _>>(),
       module_table: scan_stage_output.module_table,

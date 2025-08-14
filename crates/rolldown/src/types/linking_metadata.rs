@@ -39,9 +39,11 @@ pub struct LinkingMetadata {
   /// Because when `strictExecutionOrder` is enabled, all modules will be wrapped
   /// we need to store the original wrap kind that used for
   /// [rolldown::stages::generate_stage::code_splitting::GenerateStage::ensure_lazy_module_initialization_order] analysis
-  pub original_wrap_kind: WrapKind,
+  original_wrap_kind: WrapKind,
   /// The `wrap_kind` used for linking and code generation.
-  pub wrap_kind: WrapKind,
+  /// Intent to make those two fields private, so that we could ensure they are mutated in a more
+  /// safe way.
+  wrap_kind: WrapKind,
   // Store the export info for each module, including export named declaration and export star declaration.
   pub resolved_exports: FxHashMap<CompactStr, ResolvedExport>,
   // pub re_export_all_names: FxHashSet<CompactStr>,
@@ -93,6 +95,30 @@ impl LinkingMetadata {
 
   pub fn is_canonical_exports_empty(&self) -> bool {
     self.sorted_and_non_ambiguous_resolved_exports.is_empty()
+  }
+
+  #[inline]
+  pub fn wrap_kind(&self) -> WrapKind {
+    self.wrap_kind
+  }
+
+  #[inline]
+  pub fn original_wrap_kind(&self) -> WrapKind {
+    self.original_wrap_kind
+  }
+
+  /// Synchronize the `wrap_kind` with the original wrap kind.
+  #[inline]
+  pub fn sync_wrap_kind(&mut self, wrap_kind: WrapKind) {
+    self.original_wrap_kind = wrap_kind;
+    self.wrap_kind = wrap_kind;
+  }
+
+  /// Use this api with caution, ideally it should be only used for https://github.com/rolldown/rolldown/blob/76350f2b77364dbba29ba93562589a6eba6211dd/crates/rolldown/src/stages/link_stage/wrapping.rs?plain=1#L165-L185
+  /// override the wrapping kind when `strictExecutionOrder` is enabled.
+  #[inline]
+  pub fn update_wrap_kind(&mut self, wrap_kind: WrapKind) {
+    self.wrap_kind = wrap_kind;
   }
 
   pub fn referenced_canonical_exports_symbols<'b, 'a: 'b>(

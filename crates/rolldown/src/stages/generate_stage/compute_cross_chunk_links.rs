@@ -255,7 +255,7 @@ impl GenerateStage<'_> {
           let entry = &self.link_output.module_table[*entry_id].as_normal().unwrap();
           let entry_meta = &self.link_output.metas[entry.idx];
 
-          if !matches!(entry_meta.wrap_kind, WrapKind::Cjs) {
+          if !matches!(entry_meta.wrap_kind(), WrapKind::Cjs) {
             for export_ref in entry_meta
               .resolved_exports
               .values()
@@ -272,7 +272,7 @@ impl GenerateStage<'_> {
             }
           }
 
-          if !matches!(entry_meta.wrap_kind, WrapKind::None) {
+          if !matches!(entry_meta.wrap_kind(), WrapKind::None) {
             depended_symbols
               .insert(entry_meta.wrapper_ref.expect("cjs should be wrapped in esm output"));
           }

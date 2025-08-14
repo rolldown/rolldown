@@ -32,13 +32,13 @@ impl LinkStage<'_> {
           }
           ImportKind::Require => match importee.exports_kind {
             ExportsKind::Esm => {
-              self.metas[importee.idx].wrap_kind = WrapKind::Esm;
+              self.metas[importee.idx].sync_wrap_kind(WrapKind::Esm);
             }
             ExportsKind::CommonJs => {
-              self.metas[importee.idx].wrap_kind = WrapKind::Cjs;
+              self.metas[importee.idx].sync_wrap_kind(WrapKind::Cjs);
             }
             ExportsKind::None => {
-              self.metas[importee.idx].wrap_kind = WrapKind::Cjs;
+              self.metas[importee.idx].sync_wrap_kind(WrapKind::Cjs);
               // SAFETY: If `importee` and `importer` are different, so this is safe. If they are the same, then behaviors are still expected.
               // A module with `ExportsKind::None` that `require` self should be turned into `ExportsKind::CommonJs`.
               unsafe {
@@ -53,13 +53,13 @@ impl LinkStage<'_> {
               // returns a promise, so the imported file must also be wrapped
               match importee.exports_kind {
                 ExportsKind::Esm => {
-                  self.metas[importee.idx].wrap_kind = WrapKind::Esm;
+                  self.metas[importee.idx].sync_wrap_kind(WrapKind::Esm);
                 }
                 ExportsKind::CommonJs => {
-                  self.metas[importee.idx].wrap_kind = WrapKind::Cjs;
+                  self.metas[importee.idx].sync_wrap_kind(WrapKind::Cjs);
                 }
                 ExportsKind::None => {
-                  self.metas[importee.idx].wrap_kind = WrapKind::Cjs;
+                  self.metas[importee.idx].sync_wrap_kind(WrapKind::Cjs);
                   // SAFETY: If `importee` and `importer` are different, so this is safe. If they are the same, then behaviors are still expected.
                   // A module with `ExportsKind::None` that `require` self should be turned into `ExportsKind::CommonJs`.
                   unsafe {
@@ -84,7 +84,7 @@ impl LinkStage<'_> {
       if matches!(importer.exports_kind, ExportsKind::CommonJs)
         && (!is_entry || matches!(self.options.format, OutputFormat::Esm))
       {
-        self.metas[importer.idx].wrap_kind = WrapKind::Cjs;
+        self.metas[importer.idx].sync_wrap_kind(WrapKind::Cjs);
       }
     });
   }

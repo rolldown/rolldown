@@ -1,6 +1,5 @@
 use std::{
   ops::{Deref, DerefMut},
-  ptr::addr_of,
   sync::Arc,
 };
 
@@ -32,13 +31,21 @@ use crate::{
 };
 
 pub struct HmrManagerInput {
-  pub module_db: ModuleTable,
   pub options: SharedOptions,
   pub fs: OsFileSystem,
   pub resolver: SharedResolver,
   pub plugin_driver: SharedPluginDriver,
-  pub index_ecma_ast: IndexEcmaAst,
   pub cache: ScanStageCache,
+}
+
+impl HmrManagerInput {
+  pub fn module_table(&self) -> &ModuleTable {
+    &self.cache.get_snapshot().module_table
+  }
+
+  pub fn index_ecma_ast(&self) -> &IndexEcmaAst {
+    &self.cache.get_snapshot().index_ecma_ast
+  }
 }
 
 pub struct HmrManager {
@@ -63,9 +70,10 @@ impl DerefMut for HmrManager {
 
 impl HmrManager {
   pub fn new(input: HmrManagerInput) -> Self {
-    let module_idx_by_abs_path = input
-      .module_db
-      .modules
+    let build_snapshot = input.cache.get_snapshot();
+
+    let module_idx_by_abs_path = build_snapshot
+      .module_table
       .iter()
       .filter_map(|m| m.as_normal())
       .map(|m| {
@@ -74,8 +82,12 @@ impl HmrManager {
         (filename, module_idx)
       })
       .collect();
-    let module_idx_by_stable_id =
-      input.module_db.modules.iter().map(|m| (m.stable_id().to_string(), m.idx())).collect();
+    let module_idx_by_stable_id = build_snapshot
+      .module_table
+      .modules
+      .iter()
+      .map(|m| (m.stable_id().to_string(), m.idx()))
+      .collect();
     Self { input, module_idx_by_abs_path, module_idx_by_stable_id }
   }
 
@@ -91,7 +103,9 @@ impl HmrManager {
       .get(&caller)
       .copied()
       .unwrap_or_else(|| panic!("Not found modules for file: {caller}"));
-    let module = self.module_db.modules[module_idx].as_normal().unwrap();
+
+    let module =
+      self.cache.get_snapshot().module_table.get(module_idx).unwrap().as_normal().unwrap();
 
     // only self accept modules can be invalidated
     if !module.ast_usage.contains(EcmaModuleAstUsage::HmrSelfAccept) {
@@ -132,7 +146,7 @@ impl HmrManager {
       target: "hmr",
       "initial changed modules {:?}",
       changed_modules.iter()
-        .map(|module_idx| self.module_db.modules[*module_idx].stable_id())
+        .map(|module_idx| self.module_table().modules[*module_idx].stable_id())
         .collect::<Vec<_>>(),
     );
 
@@ -176,7 +190,7 @@ impl HmrManager {
       target: "hmr",
       "computed out `hmr_boundaries` {:?}",
       hmr_boundaries.iter()
-        .map(|boundary| self.module_db.modules[boundary.boundary].stable_id())
+        .map(|boundary| self.module_table().modules[boundary.boundary].stable_id())
         .collect::<Vec<_>>(),
     );
 
@@ -190,36 +204,34 @@ impl HmrManager {
       target: "hmr",
       "computed out `affected_modules` {:?}",
       affected_modules.iter()
-        .map(|module_idx| self.module_db.modules[*module_idx].stable_id())
+        .map(|module_idx| self.module_table().modules[*module_idx].stable_id())
         .collect::<Vec<_>>(),
     );
 
     let mut modules_to_invalidate = start_points.clone();
-    // FIXME(hyf0): In general, only modules got edited need to be invalidated, because we need to refetch their latest content.
-    // For those modules that are not edited but affected, we should be able to reuse their previous AST instead of going through the whole
-    // module loading process again. But currently we don't have a good way to do that due to architecture limitation.
-    modules_to_invalidate.extend(affected_modules.clone());
 
     // FIXME: It's expected that `rolldown:runtime` appears in the `affected_modules`. But the module loader can't handle it properly, it'll
     // report an error that disk doesn't exist file called `rolldown:runtime`.
-    self.module_db.iter().find_map(|m| (m.id() == "rolldown:runtime").then_some(m.idx())).inspect(
-      |runtime_idx| {
+    self
+      .module_table()
+      .iter()
+      .find_map(|m| (m.id() == "rolldown:runtime").then_some(m.idx()))
+      .inspect(|runtime_idx| {
         modules_to_invalidate.shift_remove(runtime_idx);
-      },
-    );
+      });
 
     tracing::debug!(
       target: "hmr",
       "modules_to_invalidate` {:?}",
       modules_to_invalidate.iter()
-        .map(|module_idx| self.module_db.modules[*module_idx].stable_id())
+        .map(|module_idx| self.module_table().modules[*module_idx].stable_id())
         .collect::<Vec<_>>(),
     );
 
     let module_infos_to_be_updated = modules_to_invalidate
       .iter()
       .filter_map(|module_idx| {
-        let module = &self.module_db.modules[*module_idx];
+        let module = &self.module_table().modules[*module_idx];
         if let Module::Normal(module) = module {
           Some(module.originative_resolved_id.clone())
         } else {
@@ -238,7 +250,7 @@ impl HmrManager {
       false,
     )?;
 
-    let mut module_loader_output =
+    let module_loader_output =
       module_loader.fetch_modules(vec![], &module_infos_to_be_updated).await?;
 
     // We manually impl `Drop` for `ModuleLoader` to avoid missing assign `importers` to
@@ -255,45 +267,12 @@ impl HmrManager {
         .map(|module_idx| module_loader_output.module_table.get(*module_idx).stable_id())
         .collect::<Vec<_>>(),
     );
-
-    affected_modules.extend(module_loader_output.new_added_modules_from_partial_scan);
-
-    let mut updated_modules =
-      module_loader_output.module_table.into_iter_enumerated().into_iter().collect::<Vec<_>>();
-    tracing::debug!(
-      target: "hmr",
-      "updated_modules` {:?}",
-      updated_modules
-        .iter().map(|(idx, module)| (idx, module.stable_id()))
-        .collect::<Vec<_>>(),
-    );
-    updated_modules.sort_by_key(|(idx, _)| *idx);
-
-    // TODO(hyf0): This is a temporary merging solution. We need to find a better way to handle this.
-    for (idx, module) in updated_modules {
-      if idx.index() >= self.module_db.modules.len() {
-        // This module is newly added, we need to insert it into the module db.
-        let generated_id = self.module_db.modules.push(module);
-        self.index_ecma_ast.push(module_loader_output.index_ecma_ast.get_mut(idx).take());
-        assert_eq!(generated_id, idx, "Module index mismatch");
-      } else {
-        // This module is already in the module db, we need to update it.
-        self.module_db.modules[idx] = module;
-        self.index_ecma_ast[idx] = module_loader_output.index_ecma_ast.get_mut(idx).take();
-      }
-    }
-    tracing::debug!(
-      target: "hmr",
-      "New added modules2` {:?}",
-      affected_modules
-        .iter()
-        .map(|module_idx| self.module_db.modules[*module_idx].stable_id())
-        .collect::<Vec<_>>(),
-    );
+    affected_modules.extend(module_loader_output.new_added_modules_from_partial_scan.clone());
+    self.cache.merge(module_loader_output.into());
 
     // Remove external modules from affected_modules.
     affected_modules.retain(|idx| {
-      let module = &self.module_db.modules[*idx];
+      let module = &self.module_table().modules[*idx];
       // It's possible that affected modules are external modules. New added code might contains import from external modules.
       // However, HMR doesn't need to deal with them.
       !matches!(module, Module::External(_))
@@ -301,16 +280,16 @@ impl HmrManager {
 
     // It's actually unnecessary to sort `affected_modules` here, but sorting it:
     // - Makes the snapshot less changeable when we change logic that affects the order of modules.
-    affected_modules.sort_by_cached_key(|module_idx| self.module_db.modules[*module_idx].id());
+    affected_modules.sort_by_cached_key(|module_idx| self.module_table().modules[*module_idx].id());
 
     let module_idx_to_init_fn_name = affected_modules
       .iter()
       .enumerate()
       .map(|(index, module_idx)| {
-        let Module::Normal(module) = &self.module_db.modules[*module_idx] else {
+        let Module::Normal(module) = &self.module_table().modules[*module_idx] else {
           unreachable!(
             "External modules should be removed before. But got {:?}",
-            self.module_db.modules[*module_idx].id()
+            self.module_table().modules[*module_idx].id()
           );
         };
         let prefix = if module.exports_kind.is_commonjs() { "require" } else { "init" };
@@ -320,24 +299,24 @@ impl HmrManager {
       })
       .collect::<FxHashMap<_, _>>();
 
+    let index_ecma_ast = self.index_ecma_ast();
     let module_render_inputs = affected_modules
       .iter()
       .copied()
       .map(|affected_module_idx| {
-        let affected_module = &self.input.module_db.modules[affected_module_idx];
+        let affected_module = &self.module_table().modules[affected_module_idx];
         let Module::Normal(affected_module) = affected_module else {
           unreachable!("HMR only supports normal module");
         };
 
         debug_assert_eq!(affected_module_idx, affected_module.idx);
-        let ast = self.input.index_ecma_ast[affected_module_idx]
-          .as_ref()
-          .expect("Normal module should have an AST");
+        let ecma_ast =
+          index_ecma_ast[affected_module_idx].as_ref().expect("Normal module should have an AST");
 
-        // SAFETY: `affected_modules` is a set, so we won't have multiple mutable references to the same ast.
-        let mut_ast = unsafe { &mut *(addr_of!(*ast).cast_mut()) };
-
-        ModuleRenderInput { idx: affected_module.idx, ecma_ast: mut_ast }
+        ModuleRenderInput {
+          idx: affected_module.idx,
+          ecma_ast: ecma_ast.clone_with_another_arena(),
+        }
       })
       .collect::<Vec<_>>();
 
@@ -346,9 +325,9 @@ impl HmrManager {
       .into_par_iter()
       .enumerate()
       .flat_map(|(index, render_input)| {
-        let ModuleRenderInput { idx: affected_module_idx, ecma_ast: ast } = render_input;
+        let ModuleRenderInput { idx: affected_module_idx, ecma_ast: mut ast } = render_input;
 
-        let affected_module = &self.input.module_db.modules[affected_module_idx];
+        let affected_module = &self.module_table().modules[affected_module_idx];
         let Module::Normal(affected_module) = affected_module else {
           unreachable!("HMR only supports normal module");
         };
@@ -356,7 +335,7 @@ impl HmrManager {
         let enable_sourcemap = self.options.sourcemap.is_some() && !affected_module.is_virtual();
         let use_pife_for_module_wrappers =
           self.options.optimization.is_pife_for_module_wrappers_enabled();
-        let modules = &self.input.module_db.modules;
+        let modules = &self.module_table().modules;
 
         ast.program.with_mut(|fields| {
           let scoping = EcmaAst::make_semantic(fields.program, /*with_cfg*/ false).into_scoping();
@@ -384,7 +363,7 @@ impl HmrManager {
         });
 
         let codegen = EcmaCompiler::print_with(
-          ast,
+          &ast,
           PrintOptions {
             sourcemap: enable_sourcemap,
             filename: affected_module.id.to_string(),
@@ -420,7 +399,7 @@ impl HmrManager {
       hmr_boundaries
         .iter()
         .map(|boundary| {
-          let module = &self.module_db.modules[boundary.boundary];
+          let module = &self.module_table().modules[boundary.boundary];
           format!("'{}'", module.stable_id())
         })
         .collect::<Vec<_>>()
@@ -459,8 +438,8 @@ impl HmrManager {
       hmr_boundaries: hmr_boundaries
         .into_iter()
         .map(|boundary| HmrBoundaryOutput {
-          boundary: self.module_db.modules[boundary.boundary].stable_id().into(),
-          accepted_via: self.module_db.modules[boundary.accepted_via].stable_id().into(),
+          boundary: self.module_table().modules[boundary.boundary].stable_id().into(),
+          accepted_via: self.module_table().modules[boundary.accepted_via].stable_id().into(),
         })
         .collect(),
     }))
@@ -475,7 +454,7 @@ impl HmrManager {
   ) -> PropagateUpdateStatus {
     affected_modules.insert(module_idx);
 
-    let Module::Normal(module) = &self.module_db.modules[module_idx] else {
+    let Module::Normal(module) = &self.module_table().modules[module_idx] else {
       // We consider reaching external modules as a boundary.
       return PropagateUpdateStatus::ReachedBoundary;
     };
@@ -512,10 +491,11 @@ impl HmrManager {
     let mut importers_idx = module.importers_idx.iter().copied().collect::<Vec<_>>();
     // FIXME(hyf0): In practice, the order of importers doesn't matter since we gonna traverse all of them.
     // However, non-deterministic order causes unstable snapshots.
-    importers_idx.sort_by_key(|importer_idx| self.module_db.modules[*importer_idx].stable_id());
+    importers_idx
+      .sort_by_key(|importer_idx| self.module_table().modules[*importer_idx].stable_id());
 
     for importer_idx in importers_idx {
-      let Module::Normal(importer) = &self.module_db.modules[importer_idx] else {
+      let Module::Normal(importer) = &self.module_table().modules[importer_idx] else {
         continue;
       };
 
@@ -562,7 +542,7 @@ impl HmrManager {
             "circular import chain: {}",
             cycle_chain
               .iter()
-              .map(|module_idx| self.module_db.modules[*module_idx].stable_id())
+              .map(|module_idx| self.module_table().modules[*module_idx].stable_id())
               .collect::<Vec<_>>()
               .join(" -> ")
           ));
@@ -570,7 +550,7 @@ impl HmrManager {
         }
         PropagateUpdateStatus::NoBoundary(idx) => {
           *need_to_full_reload = true;
-          let module = &self.module_db.modules[idx];
+          let module = &self.module_table().modules[idx];
           *reason = Some(format!("no hmr boundary found for module `{}`", module.stable_id()));
           break;
         }
@@ -581,7 +561,7 @@ impl HmrManager {
       // it means any importer of that module can't hot update. We should fallback to full reload.
       if let Some(first_invalidated_by) = first_invalidated_by.as_ref() {
         if boundaries.iter().any(|boundary| {
-          self.module_db.modules[boundary.accepted_via].stable_id() == *first_invalidated_by
+          self.module_table().modules[boundary.accepted_via].stable_id() == *first_invalidated_by
         }) {
           *need_to_full_reload = true;
           // full_reload_reason = Some("circular import invalidate".to_string());
@@ -608,7 +588,7 @@ impl PropagateUpdateStatus {
   }
 }
 
-struct ModuleRenderInput<'me> {
+struct ModuleRenderInput {
   pub idx: ModuleIdx,
-  pub ecma_ast: &'me mut EcmaAst,
+  pub ecma_ast: EcmaAst,
 }

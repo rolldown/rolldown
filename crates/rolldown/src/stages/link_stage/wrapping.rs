@@ -4,6 +4,7 @@ use rolldown_common::{
   NormalizedBundlerOptions, RuntimeModuleBrief, StmtInfo, StmtInfoMeta, SymbolRefDb,
   TaggedSymbolRef, WrapKind,
 };
+use rustc_hash::FxHashSet;
 
 use crate::types::linking_metadata::{LinkingMetadata, LinkingMetadataVec};
 
@@ -18,15 +19,15 @@ struct Context<'a> {
 }
 
 fn wrap_module_recursively(ctx: &mut Context, target: ModuleIdx) {
-  let Module::Normal(module) = &ctx.modules[target] else {
-    return;
-  };
-
   // Only consider `NormalModule`
   if ctx.visited_modules[target] {
     return;
   }
   ctx.visited_modules[target] = true;
+
+  let Module::Normal(module) = &ctx.modules[target] else {
+    return;
+  };
 
   if target == ctx.runtime_idx {
     // Runtime module should not be wrapped.
@@ -43,10 +44,12 @@ fn wrap_module_recursively(ctx: &mut Context, target: ModuleIdx) {
     return;
   }
   if matches!(ctx.linking_infos[target].wrap_kind, WrapKind::None) {
-    ctx.linking_infos[target].wrap_kind = match module.exports_kind {
+    let new_wrap_kind = match module.exports_kind {
       ExportsKind::Esm | ExportsKind::None => WrapKind::Esm,
       ExportsKind::CommonJs => WrapKind::Cjs,
-    }
+    };
+    ctx.linking_infos[target].wrap_kind = new_wrap_kind;
+    ctx.linking_infos[target].original_wrap_kind = new_wrap_kind;
   }
 
   module.import_records.iter().for_each(|importee| {
@@ -98,8 +101,18 @@ impl LinkStage<'_> {
     let mut visited_modules_for_dynamic_exports =
       oxc_index::index_vec![false; self.module_table.modules.len()];
 
+    let mut cjs_exports_kind_modules = FxHashSet::default();
+
+    let is_strict_execution_order_enabled =
+      self.options.experimental.is_strict_execution_order_enabled();
+    let on_demand_wrapping = self.options.experimental.is_on_demand_wrapping_enabled();
+
     for module in self.module_table.modules.iter().filter_map(Module::as_normal) {
       let module_id = module.idx;
+
+      if is_strict_execution_order_enabled && module.exports_kind == ExportsKind::CommonJs {
+        cjs_exports_kind_modules.insert(module_id);
+      }
 
       if module.has_star_export() {
         has_dynamic_exports_due_to_export_star(
@@ -110,13 +123,11 @@ impl LinkStage<'_> {
         );
       }
 
-      let is_strict_execution_order = self.options.experimental.is_strict_execution_order_enabled();
       let is_wrap_kind_none = matches!(self.metas[module_id].wrap_kind, WrapKind::None);
 
       // When `strict_execution_order` is enabled, we need to wrap every module to lazy/control their execution.
       // However, this doesn't include runtime module. runtime module should be initialized on its own.
-      let need_to_wrap =
-        !is_wrap_kind_none || (is_strict_execution_order && module_id != self.runtime.id());
+      let need_to_wrap = !is_wrap_kind_none;
 
       if need_to_wrap {
         wrap_module_recursively(
@@ -151,6 +162,28 @@ impl LinkStage<'_> {
         });
       }
     }
+    if is_strict_execution_order_enabled {
+      // Override wrap_kind if `strictExecutionOrder` is enabled.
+      for (idx, linking_info) in
+        self.metas.iter_mut_enumerated().filter(|(module_id, _)| *module_id != self.runtime.id())
+      {
+        let Some(module) = self.module_table[idx].as_normal() else {
+          continue;
+        };
+        if cjs_exports_kind_modules.contains(&idx) {
+          // If the module is CommonJs, we need to wrap it.
+          linking_info.wrap_kind = WrapKind::Cjs;
+        } else {
+          // If the module is a pure esm, only exports function or expression without side
+          // effects and is not execution order sensitive , we don't need to wrap it.
+          let avoid_wrapping = on_demand_wrapping
+            && !module.meta.contains(EcmaViewMeta::ExecutionOrderSensitive)
+            && module.import_records.is_empty();
+          linking_info.wrap_kind = if avoid_wrapping { WrapKind::None } else { WrapKind::Esm };
+        }
+      }
+    }
+
     self.module_table.modules.iter_mut().filter_map(|m| m.as_normal_mut()).for_each(
       |ecma_module| {
         let linking_info = &mut self.metas[ecma_module.idx];

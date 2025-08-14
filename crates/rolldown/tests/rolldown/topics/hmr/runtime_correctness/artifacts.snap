@@ -381,9 +381,10 @@ var init_main_10 = __rolldown_runtime__.createEsmInitializer((function() {
 		init_manual_reexport_4();
 		init_deconflict_import_bindings_2();
 		const hot_main = __rolldown_runtime__.createModuleHotContext("main.js");
-		var import_require_100 = __rolldown_runtime__.loadExports("cases/require/index.js");
-		var import_manual_reexport_101 = __rolldown_runtime__.loadExports("cases/manual_reexport/index.js");
-		var import_deconflict_import_bindings_102 = __rolldown_runtime__.loadExports("cases/deconflict_import_bindings/index.js");
+		var import_rolldown_hmr_100 = __rolldown_runtime__.loadExports("rolldown:hmr");
+		var import_require_101 = __rolldown_runtime__.loadExports("cases/require/index.js");
+		var import_manual_reexport_102 = __rolldown_runtime__.loadExports("cases/manual_reexport/index.js");
+		var import_deconflict_import_bindings_103 = __rolldown_runtime__.loadExports("cases/deconflict_import_bindings/index.js");
 		if (hot_main) {
 			hot_main.accept();
 		}

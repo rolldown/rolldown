@@ -3,7 +3,7 @@ use itertools::Itertools;
 use rolldown_common::{AddonRenderContext, ExportsKind, Specifier};
 use rolldown_sourcemap::SourceJoiner;
 use rolldown_utils::{concat_string, ecmascript::to_module_import_export_name};
-use rustc_hash::FxHashSet;
+use rustc_hash::{FxHashMap, FxHashSet};
 
 use crate::{
   ecmascript::ecma_generator::{RenderedModuleSource, RenderedModuleSources},
@@ -67,15 +67,7 @@ pub fn render_esm<'code>(
   }
 
   // chunk content
-  module_sources.iter().for_each(
-    |RenderedModuleSource { sources: module_render_output, .. }| {
-      if let Some(emitted_sources) = module_render_output {
-        for source in emitted_sources.as_ref() {
-          source_joiner.append_source(source);
-        }
-      }
-    },
-  );
+  render_chunk_content(ctx, module_sources, &mut source_joiner);
 
   if let Some(source) = render_wrapped_entry_chunk(ctx, None) {
     source_joiner.append_source(source);
@@ -94,6 +86,106 @@ pub fn render_esm<'code>(
   }
 
   source_joiner
+}
+
+fn render_chunk_content<'code>(
+  ctx: &GenerateContext<'_>,
+  module_sources: &'code [RenderedModuleSource],
+  source_joiner: &mut SourceJoiner<'code>,
+) {
+  // If there is no concatenate_wrapping_modules, just concate all modules by exec order.
+  if ctx.chunk.module_groups.is_empty() {
+    module_sources.iter().for_each(
+      |RenderedModuleSource { sources: module_render_output, .. }| {
+        if let Some(emitted_sources) = module_render_output {
+          for source in emitted_sources.as_ref() {
+            source_joiner.append_source(source);
+          }
+        }
+      },
+    );
+    return;
+  }
+  let module_idx_to_source_idx = module_sources.iter().enumerate().fold(
+    FxHashMap::default(),
+    |mut acc, (idx, module_source)| {
+      acc.insert(module_source.module_idx, idx);
+      acc
+    },
+  );
+
+  for group in &ctx.chunk.module_groups {
+    // If the group is not belong to any concatenated module, we just render it as a single module.
+    if group.modules.len() == 1 {
+      let source =
+        module_sources.get(module_idx_to_source_idx[&group.entry]).expect("should have source");
+      if let Some(emitted_sources) = source.sources.as_ref() {
+        for source in emitted_sources.as_ref() {
+          source_joiner.append_source(source);
+        }
+      }
+      continue;
+    }
+    let (hoisted_fns, hoisted_vars) = group
+      .modules
+      .iter()
+      .filter_map(|idx| {
+        let render_concatenated_module =
+          ctx.chunk.module_idx_to_render_concatenated_module.get(idx)?;
+        let hoisted_fns = render_concatenated_module.hoisted_functions_or_module_ns_decl.join("");
+        let hoisted_vars = render_concatenated_module.hoisted_vars.join(", ");
+        Some((hoisted_fns, hoisted_vars))
+      })
+      .fold(
+        (String::new(), String::new()),
+        |(mut acc_hoisted_fns, mut acc_hoisted_vars), (hoisted_fn, hoisted_vars)| {
+          acc_hoisted_fns += &hoisted_fn;
+          if !hoisted_vars.is_empty() && !acc_hoisted_vars.is_empty() {
+            acc_hoisted_vars += ", ";
+          }
+          acc_hoisted_vars += &hoisted_vars;
+          (acc_hoisted_fns, acc_hoisted_vars)
+        },
+      );
+
+    let entry_module_stable_id = ctx.link_output.module_table[group.entry].stable_id();
+    // render var init_entry = __esm("", () => {
+    let rendered_esm_runtime_expr = ctx.chunk.module_idx_to_render_concatenated_module
+      [&group.entry]
+      .rendered_esm_runtime_expr
+      .as_ref()
+      .unwrap()
+      .trim_end_matches([';', '\n']);
+    let wrap_name = ctx.chunk.module_idx_to_render_concatenated_module[&group.entry]
+      .wrap_ref_name
+      .as_ref()
+      .unwrap();
+
+    source_joiner.append_source(hoisted_fns);
+    if !hoisted_vars.is_empty() {
+      source_joiner.append_source(concat_string!("var ", hoisted_vars, ";"));
+    }
+    source_joiner.append_source(concat_string!(
+      "var ",
+      wrap_name,
+      " = ",
+      rendered_esm_runtime_expr,
+      "({\"",
+      entry_module_stable_id,
+      "\": () => {"
+    ));
+    // we render each module in the group by exec order.
+    group.modules.iter().for_each(|module_idx| {
+      if let Some(rendered) =
+        module_sources.get(module_idx_to_source_idx[module_idx]).and_then(|m| m.sources.as_ref())
+      {
+        for source in rendered.iter() {
+          source_joiner.append_source(source);
+        }
+      }
+    });
+    source_joiner.append_source("}});\n");
+  }
 }
 
 fn render_esm_chunk_imports(ctx: &GenerateContext<'_>) -> Option<String> {

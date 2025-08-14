@@ -1,9 +1,9 @@
 use oxc::span::CompactStr;
 use oxc_index::IndexVec;
 use rolldown_common::{
-  EntryPointKind, ImportRecordIdx, MemberExprRefResolutionMap, ModuleIdx,
-  ModuleNamespaceIncludedReason, ResolvedExport, RuntimeHelper, StmtInfoIdx, SymbolRef, WrapKind,
-  dynamic_import_usage::DynamicImportExportsUsage,
+  ConcatenateWrappedModuleKind, EntryPointKind, ImportRecordIdx, MemberExprRefResolutionMap,
+  ModuleIdx, ModuleNamespaceIncludedReason, ResolvedExport, RuntimeHelper, StmtInfoIdx, SymbolRef,
+  WrapKind, dynamic_import_usage::DynamicImportExportsUsage,
 };
 use rolldown_utils::indexmap::{FxIndexMap, FxIndexSet};
 use rustc_hash::{FxHashMap, FxHashSet};
@@ -61,6 +61,7 @@ pub struct LinkingMetadata {
   pub resolved_member_expr_refs: MemberExprRefResolutionMap,
   pub star_exports_from_external_modules: Vec<ImportRecordIdx>,
   pub is_tla_or_contains_tla_dependency: bool,
+  pub concatenated_wrapped_module_kind: ConcatenateWrappedModuleKind,
   /// Used to to track a facade binding referenced cjs module
   /// included reexport symbol from commonjs module
   pub named_import_to_cjs_module: FxHashMap<SymbolRef, ModuleIdx>,

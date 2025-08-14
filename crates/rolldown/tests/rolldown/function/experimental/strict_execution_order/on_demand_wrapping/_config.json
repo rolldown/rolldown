@@ -14,5 +14,6 @@
       "strictExecutionOrder": true,
       "onDemandWrapping": true
     }
-  }
+  },
+  "expectExecuted": false
 }

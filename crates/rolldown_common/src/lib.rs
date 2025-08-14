@@ -76,7 +76,8 @@ pub use crate::{
     chunk_table::ChunkTable,
     types::{
       AddonRenderContext, chunk_reason_type::ChunkReasonType,
-      cross_chunk_import_item::CrossChunkImportItem, preliminary_filename::PreliminaryFilename,
+      cross_chunk_import_item::CrossChunkImportItem, module_group::ModuleGroup,
+      preliminary_filename::PreliminaryFilename,
     },
   },
   css::{
@@ -119,6 +120,9 @@ pub use crate::{
   types::bundler_file_system::BundlerFileSystem,
   types::chunk_idx::ChunkIdx,
   types::chunk_kind::ChunkKind,
+  types::concatenate_wrapped_module::{
+    ConcatenateWrappedModuleKind, RenderedConcatenatedModuleParts,
+  },
   types::constant_value::{ConstExportMeta, ConstantValue},
   types::deconflict::ModuleScopeSymbolIdMap,
   types::defer_sync_scan_data::DeferSyncScanData,

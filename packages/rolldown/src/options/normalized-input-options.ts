@@ -7,6 +7,7 @@ export interface NormalizedInputOptions {
   cwd: string | undefined;
   platform: InputOptions['platform'];
   shimMissingExports: boolean;
+  context: string;
 }
 
 // TODO: I guess we make these getters enumerable so it act more like a plain object
@@ -33,5 +34,9 @@ export class NormalizedInputOptionsImpl implements NormalizedInputOptions {
 
   get platform(): 'browser' | 'node' | 'neutral' {
     return this.inner.platform;
+  }
+
+  get context(): string {
+    return this.inner.context;
   }
 }

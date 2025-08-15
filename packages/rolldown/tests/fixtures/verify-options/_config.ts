@@ -21,6 +21,7 @@ export default defineTest({
     input: entry,
     cwd: __dirname,
     platform: 'node',
+    context: 'window',
     output: {
       name: 'test',
       cssEntryFileNames: '[name].css',
@@ -77,6 +78,7 @@ export default defineTest({
       expect(option.cwd).toEqual(__dirname)
       expect(option.platform).toEqual('node')
       expect(option.shimMissingExports).toBe(false)
+      expect(option.context).toBe('window')
     })
 
     allOutputOptions.forEach((option) => {

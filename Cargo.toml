@@ -212,7 +212,7 @@ oxc_resolver = { version = "11.5.0", features = ["package_json_raw_json_api", "y
 oxc_resolver_napi = { version = "11.5.0", default-features = false, features = ["yarn_pnp"] }
 oxc_sourcemap = { version = "4" } # https://github.com/oxc-project/oxc-sourcemap
 oxc_transform_napi = { version = "0.78.0" }
-
+oxc_traverse = { version = "0.82.1" }
 [profile.dev]
 # Minimal debug info to speed up local and CI builds.
 debug = "line-tables-only"

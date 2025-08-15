@@ -24,6 +24,7 @@ type AssetInlineLimitFn = dyn (Fn(&str, &[u8]) -> Pin<Box<(dyn Future<Output = a
 
 const DEFAULT_ASSETS_INLINE_LIMIT: usize = 4096;
 
+#[derive(Clone)]
 pub enum UsizeOrFunction {
   Number(usize),
   Function(Arc<AssetInlineLimitFn>),

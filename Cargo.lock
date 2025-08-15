@@ -3090,6 +3090,7 @@ dependencies = [
  "rolldown_common",
  "rolldown_plugin",
  "rolldown_utils",
+ "rustc-hash",
  "serde_json",
  "sugar_path",
 ]
@@ -3100,10 +3101,13 @@ version = "0.1.0"
 dependencies = [
  "anyhow",
  "base64-simd",
+ "derive_more",
  "memchr",
  "rolldown_plugin",
  "rolldown_plugin_utils",
+ "rolldown_sourcemap",
  "rolldown_utils",
+ "rustc-hash",
  "serde_json",
 ]
 

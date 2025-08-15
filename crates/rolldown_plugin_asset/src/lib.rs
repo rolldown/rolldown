@@ -116,7 +116,7 @@ impl Plugin for AssetPlugin {
       HookSideEffects::False
     };
 
-    let url = rolldown_plugin_utils::encode_uri_path(env.file_to_url(&id).await?);
+    let url = rolldown_plugin_utils::uri::encode_uri_path(env.file_to_url(&id).await?);
     let code = arcstr::format!("export default {}", serde_json::to_string(&Value::String(url))?);
     Ok(Some(rolldown_plugin::HookLoadOutput {
       code,

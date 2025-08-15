@@ -5,9 +5,9 @@ use rolldown_utils::url::clean_url;
 use crate::{
   PublicAssetUrlCache, ToOutputFilePathInJSEnv,
   constants::ViteMetadata,
-  encode_uri_path,
   to_output_file_path_in_js::{AssetUrlResult, RenderBuiltUrl, RenderBuiltUrlConfig},
   to_relative_runtime_path::create_to_import_meta_url_based_relative_runtime,
+  uri::encode_uri_path,
 };
 
 pub struct RenderAssetUrlInJsEnvConfig<'a> {

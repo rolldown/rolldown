@@ -1,13 +1,18 @@
+use rolldown_plugin::PluginContext;
 use rolldown_utils::{dashmap::FxDashMap, xxhash::xxhash_with_base};
 
 #[derive(Default)]
 pub struct PublicAssetUrlCache(pub FxDashMap<String, String>);
 
 pub struct PublicFileToBuiltUrlEnv<'a> {
-  pub ctx: &'a rolldown_plugin::PluginContext,
+  pub ctx: &'a PluginContext,
 }
 
-impl PublicFileToBuiltUrlEnv<'_> {
+impl<'a> PublicFileToBuiltUrlEnv<'a> {
+  pub fn new(ctx: &'a PluginContext) -> Self {
+    Self { ctx }
+  }
+
   pub fn public_file_to_built_url(&self, url: &str) -> String {
     let mut hash = xxhash_with_base(url.as_bytes(), 16);
     hash.truncate(8);

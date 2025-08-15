@@ -1,4 +1,4 @@
-use std::io::{StdoutLock, Write as _};
+use std::io::{StdoutLock, Write};
 
 use flate2::{Compression, write::GzEncoder};
 use num_format::{Locale, ToFormattedString as _};
@@ -29,12 +29,27 @@ pub fn display_size(size: usize) -> String {
   format!("{}.{:02} kB", quotient.to_formatted_string(&Locale::en), remainder)
 }
 
-pub fn compute_gzip_size(bytes: &[u8]) -> Option<usize> {
-  let mut encoder = GzEncoder::new(Vec::new(), Compression::default());
-  if encoder.write_all(bytes).is_err() {
-    return None;
+struct CountingWriter {
+  pub count: usize,
+}
+
+impl Write for CountingWriter {
+  fn write(&mut self, buf: &[u8]) -> std::io::Result<usize> {
+    self.count += buf.len();
+    Ok(buf.len())
   }
-  encoder.finish().ok().map(|compressed| compressed.len())
+
+  fn flush(&mut self) -> std::io::Result<()> {
+    Ok(())
+  }
+}
+
+pub fn compute_gzip_size(bytes: &[u8]) -> Option<usize> {
+  let mut counter = CountingWriter { count: 0 };
+  let mut encoder = GzEncoder::new(&mut counter, Compression::default());
+  encoder.write_all(bytes).ok()?;
+  encoder.finish().ok()?;
+  Some(counter.count)
 }
 
 #[inline]

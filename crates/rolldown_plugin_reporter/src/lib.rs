@@ -12,6 +12,7 @@ use std::{
 };
 
 use cow_utils::CowUtils;
+use rayon::iter::{IntoParallelRefIterator, ParallelIterator};
 use rolldown_plugin::{HookUsage, Plugin, PluginContext};
 use sugar_path::SugarPath;
 
@@ -26,7 +27,6 @@ pub struct ReporterPlugin {
   chunk_count: AtomicU32,
   compressed_count: AtomicU32,
   report_compressed_size: bool,
-  has_compress_chunk: AtomicBool,
   has_rendered_chunk: AtomicBool,
   has_transformed: AtomicBool,
   transformed_count: AtomicU32,
@@ -52,7 +52,6 @@ impl ReporterPlugin {
       chunk_count: AtomicU32::new(0),
       compressed_count: AtomicU32::new(0),
       report_compressed_size,
-      has_compress_chunk: AtomicBool::new(false),
       has_rendered_chunk: AtomicBool::new(false),
       has_transformed: AtomicBool::new(false),
       transformed_count: AtomicU32::new(0),
@@ -171,42 +170,53 @@ impl Plugin for ReporterPlugin {
       let mut biggest_compress_size = 0;
 
       let mut log_entries = Vec::with_capacity(args.bundle.len());
-      let mut has_compress_chunk =
-        self.report_compressed_size && self.has_compress_chunk.load(Ordering::Relaxed);
 
-      let mut get_compressed_size = |bytes: &[u8]| -> Option<usize> {
-        if self.report_compressed_size {
-          if self.should_log_info && !has_compress_chunk {
-            if self.is_tty {
-              utils::write_line("computing gzip size (0)...");
-            } else {
-              utils::log_info("computing gzip size...");
-            }
-            has_compress_chunk = true;
-            self.has_rendered_chunk.store(true, Ordering::Release);
-          }
-          utils::compute_gzip_size(bytes).inspect(|_| {
-            let compressed_count = self.compressed_count.fetch_add(1, Ordering::SeqCst);
-            if self.should_log_info && self.is_tty {
-              utils::write_line(&format!(
-                "computing gzip size ({})...",
-                itoa::Buffer::new().format(compressed_count)
-              ));
-            }
-          })
+      if self.report_compressed_size && self.should_log_info {
+        if self.is_tty {
+          utils::write_line("computing gzip size (0)...");
         } else {
-          None
+          utils::log_info("computing gzip size...");
         }
-      };
+      }
+      let pre_compute_size = args
+        .bundle
+        .par_iter()
+        .map(|output| {
+          if !self.report_compressed_size {
+            return None;
+          }
+          match output {
+            rolldown_common::Output::Chunk(chunk) => {
+              utils::compute_gzip_size(chunk.code.as_bytes())
+            }
+            rolldown_common::Output::Asset(asset) => {
+              if asset.filename.ends_with(".map") {
+                return None;
+              }
 
-      for output in &*args.bundle {
+              let is_css = asset.filename.ends_with(".css");
+              let is_compressible =
+                is_css || utils::COMPRESSIBLE_ASSETS.iter().any(|s| asset.filename.ends_with(s));
+              if is_compressible { utils::compute_gzip_size(asset.source.as_bytes()) } else { None }
+            }
+          }
+        })
+        .collect::<Vec<_>>();
+
+      if self.report_compressed_size && self.should_log_info && self.is_tty {
+        utils::write_line(&format!(
+          "computing gzip size ({})...",
+          itoa::Buffer::new().format(pre_compute_size.iter().filter(|s| s.is_some()).count())
+        ));
+      }
+      for (idx, output) in args.bundle.iter().enumerate() {
         let log_entry = match output {
           rolldown_common::Output::Chunk(chunk) => utils::LogEntry {
             name: &chunk.filename,
             size: chunk.code.len(),
             group: utils::AssetGroup::JS,
             map_size: chunk.map.as_ref().map(|m| m.to_json_string().len()),
-            compressed_size: get_compressed_size(chunk.code.as_bytes()),
+            compressed_size: pre_compute_size[idx],
           },
           rolldown_common::Output::Asset(asset) => {
             if asset.filename.ends_with(".map") {
@@ -215,19 +225,13 @@ impl Plugin for ReporterPlugin {
 
             let is_css = asset.filename.ends_with(".css");
             let group = if is_css { utils::AssetGroup::Css } else { utils::AssetGroup::Assets };
-            let is_compressible =
-              is_css || utils::COMPRESSIBLE_ASSETS.iter().any(|s| asset.filename.ends_with(s));
 
             utils::LogEntry {
               name: &asset.filename,
               size: asset.source.as_bytes().len(),
               group,
               map_size: None,
-              compressed_size: if is_compressible {
-                get_compressed_size(asset.source.as_bytes())
-              } else {
-                None
-              },
+              compressed_size: pre_compute_size[idx],
             }
           }
         };

@@ -1,6 +1,7 @@
 use rolldown_common::{
-  AstScopes, ChunkIdx, ConstExportMeta, ImportRecordIdx, IndexModules, ModuleIdx, NormalModule,
-  RenderedConcatenatedModuleParts, RuntimeModuleBrief, SharedFileEmitter, SymbolRef, SymbolRefDb,
+  AstScopes, Chunk, ChunkIdx, ConstExportMeta, ImportRecordIdx, IndexModules, ModuleIdx,
+  NormalModule, RenderedConcatenatedModuleParts, RuntimeModuleBrief, SharedFileEmitter, SymbolRef,
+  SymbolRefDb,
 };
 
 use oxc::{allocator::TakeIn as _, ast_visit::VisitMut as _, span::CompactStr};
@@ -18,13 +19,13 @@ use crate::{
 
 pub struct ScopeHoistingFinalizerContext<'me> {
   pub id: ModuleIdx,
+  pub chunk: &'me Chunk,
   pub chunk_id: ChunkIdx,
   pub module: &'me NormalModule,
   pub modules: &'me IndexModules,
   pub linking_info: &'me LinkingMetadata,
   pub linking_infos: &'me LinkingMetadataVec,
   pub symbol_db: &'me SymbolRefDb,
-  pub canonical_names: &'me FxHashMap<SymbolRef, CompactStr>,
   pub runtime: &'me RuntimeModuleBrief,
   pub chunk_graph: &'me ChunkGraph,
   pub options: &'me SharedOptions,

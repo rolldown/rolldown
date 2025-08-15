@@ -133,8 +133,8 @@ impl<'a> GenerateStage<'a> {
         let chunk = &chunk_graph.chunk_table[chunk_id];
         let linking_info = &self.link_output.metas[module.idx];
         let ctx = ScopeHoistingFinalizerContext {
-          canonical_names: &chunk.canonical_names,
           id: idx,
+          chunk,
           chunk_id,
           symbol_db: &self.link_output.symbol_db,
           linking_info,

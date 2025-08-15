@@ -1,5 +1,4 @@
 mod check_public_file;
-mod encode_uri_path;
 mod file_to_url;
 mod find_special_query;
 mod inject_query;
@@ -11,9 +10,9 @@ mod to_output_file_path_in_js;
 mod to_relative_runtime_path;
 
 pub mod constants;
+pub mod uri;
 
 pub use check_public_file::check_public_file;
-pub use encode_uri_path::encode_uri_path;
 pub use file_to_url::{AssetCache, FileToUrlEnv, UsizeOrFunction};
 pub use find_special_query::find_special_query;
 pub use inject_query::inject_query;

@@ -1,4 +1,6 @@
-use percent_encoding::{AsciiSet, CONTROLS, utf8_percent_encode};
+use std::borrow::Cow;
+
+use percent_encoding::{AsciiSet, CONTROLS, percent_decode, utf8_percent_encode};
 use rolldown_utils::url::clean_url;
 
 const ENCODE_URI_SET: &AsciiSet = &CONTROLS
@@ -36,4 +38,8 @@ pub fn encode_uri_path(uri: String) -> String {
     }
     encoded_uri
   }
+}
+
+pub fn decode_uri(uri: &str) -> Cow<'_, str> {
+  percent_decode(uri.as_bytes()).decode_utf8_lossy()
 }

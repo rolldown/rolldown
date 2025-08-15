@@ -12,9 +12,9 @@ use oxc::{
   span::{Atom, GetSpan, GetSpanMut, SPAN},
 };
 use rolldown_common::{
-  AstScopes, ExportsKind, ImportRecordIdx, ImportRecordMeta, MemberExprRefResolution, Module,
-  ModuleIdx, ModuleNamespaceIncludedReason, ModuleType, OutputFormat, Platform, SymbolRef,
-  WrapKind,
+  AstScopes, ConcatenateWrappedModuleKind, ExportsKind, ImportRecordIdx, ImportRecordMeta,
+  MemberExprRefResolution, Module, ModuleIdx, ModuleNamespaceIncludedReason, ModuleType,
+  OutputFormat, Platform, SymbolRef, WrapKind,
 };
 use rolldown_ecmascript::ToSourceString;
 use rolldown_ecmascript_utils::{
@@ -95,7 +95,7 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
       return true;
     };
     let importee_linking_info = &self.ctx.linking_infos[importee.idx];
-    match importee_linking_info.wrap_kind {
+    match importee_linking_info.wrap_kind() {
       WrapKind::None => {
         // Remove this statement by ignoring it
       }
@@ -105,7 +105,8 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
         // import React from './node_modules/react/index.js';
         // ```
         if rec.meta.contains(ImportRecordMeta::SafelyMergeCjsNs)
-          && self.ctx.linking_infos[self.ctx.module.idx].wrap_kind.is_none()
+          // TODO: merge cjs namepspace in module group level
+          && self.ctx.linking_infos[self.ctx.module.idx].wrap_kind().is_none()
         {
           let chunk_idx = self.ctx.chunk_id;
           if let Some(symbol_ref_to_be_merged) =
@@ -154,7 +155,11 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
       // Replace the import statement with `init_foo()` if `ImportDeclaration` is not a plain import
       // or the importee have side effects.
       WrapKind::Esm => {
-        if self.generated_init_esm_importee_ids.contains(&importee.idx) {
+        if matches!(
+          importee_linking_info.concatenated_wrapped_module_kind,
+          ConcatenateWrappedModuleKind::Inner
+        ) || self.generated_init_esm_importee_ids.contains(&importee.idx)
+        {
           return true;
         }
         self.generated_init_esm_importee_ids.insert(importee.idx);
@@ -860,7 +865,7 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
       match &self.ctx.modules[importee_id] {
         Module::Normal(importee) => {
           let importee_linking_info = &self.ctx.linking_infos[importee_id];
-          let new_expr = match importee_linking_info.wrap_kind {
+          let new_expr = match importee_linking_info.wrap_kind() {
             WrapKind::Esm => {
               // Rewrite `import('./foo.mjs')` to `(init_foo(), foo_exports)`
               let importee_linking_info = &self.ctx.linking_infos[importee_id];
@@ -1020,7 +1025,7 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
             match &self.ctx.modules[rec.resolved_module] {
               Module::Normal(importee) => {
                 let importee_linking_info = &self.ctx.linking_infos[importee.idx];
-                if matches!(importee_linking_info.wrap_kind, WrapKind::Esm) {
+                if matches!(importee_linking_info.wrap_kind(), WrapKind::Esm) {
                   let wrapper_ref_name =
                     self.canonical_name_for(importee_linking_info.wrapper_ref.unwrap());
                   program.body.push(self.snippet.call_expr_stmt(wrapper_ref_name));

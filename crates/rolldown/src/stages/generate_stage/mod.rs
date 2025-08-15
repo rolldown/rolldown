@@ -11,8 +11,9 @@ use rolldown_std_utils::OptionExt;
 use rustc_hash::FxHashMap;
 
 use rolldown_common::{
-  ChunkIdx, ChunkKind, CssAssetNameReplacer, ImportMetaRolldownAssetReplacer, ImportRecordIdx,
-  Module, ModuleIdx, PreliminaryFilename, PrependRenderedImport, RollupPreRenderedAsset,
+  ChunkIdx, ChunkKind, ConcatenateWrappedModuleKind, CssAssetNameReplacer,
+  ImportMetaRolldownAssetReplacer, ImportRecordIdx, Module, ModuleIdx, PreliminaryFilename,
+  PrependRenderedImport, RenderedConcatenatedModuleParts, RollupPreRenderedAsset,
 };
 use rolldown_plugin::SharedPluginDriver;
 use rolldown_std_utils::{PathBufExt, PathExt, representative_file_name_for_preserve_modules};
@@ -64,6 +65,7 @@ impl<'a> GenerateStage<'a> {
   }
 
   #[tracing::instrument(level = "debug", skip_all)]
+  #[allow(clippy::too_many_lines)]
   pub async fn generate(&mut self) -> BuildResult<BundleOutput> {
     self.plugin_driver.render_start(self.options).await?;
 
@@ -74,6 +76,8 @@ impl<'a> GenerateStage<'a> {
     }
 
     self.compute_cross_chunk_links(&mut chunk_graph);
+
+    self.ensure_lazy_module_initialization_order(&mut chunk_graph);
 
     self.on_demand_wrapping(&mut chunk_graph);
 
@@ -160,9 +164,19 @@ impl<'a> GenerateStage<'a> {
               idxs.into_iter().map(|idx| (idx, String::new())).collect::<FxIndexMap<_, _>>()
             })
             .unwrap_or_default(),
+          rendered_concatenated_wrapped_module_parts: RenderedConcatenatedModuleParts::default(),
         };
         let ctx = finalize_normal_module(ctx, ast, ast_scope);
-        (!ctx.transferred_import_record.is_empty()).then_some((idx, ctx.transferred_import_record))
+        (!ctx.transferred_import_record.is_empty()
+          || !matches!(
+            ctx.linking_info.concatenated_wrapped_module_kind,
+            ConcatenateWrappedModuleKind::None
+          ))
+        .then_some((
+          idx,
+          ctx.transferred_import_record,
+          ctx.rendered_concatenated_wrapped_module_parts,
+        ))
       })
       .collect::<Vec<_>>();
 
@@ -173,13 +187,28 @@ impl<'a> GenerateStage<'a> {
   fn apply_transfer_parts_mutation(
     &mut self,
     chunk_graph: &mut ChunkGraph,
-    transfer_parts_rendered_maps: Vec<(ModuleIdx, FxIndexMap<ImportRecordIdx, String>)>,
+    transfer_parts_rendered_maps: Vec<(
+      ModuleIdx,
+      FxIndexMap<ImportRecordIdx, String>,
+      RenderedConcatenatedModuleParts,
+    )>,
   ) {
     let mut normalized_transfer_parts_rendered_maps = FxHashMap::default();
-    for (idx, transferred_import_record) in transfer_parts_rendered_maps {
+    for (idx, transferred_import_record, rendered_concatenated_module_parts) in
+      transfer_parts_rendered_maps
+    {
       for (rec_idx, rendered_string) in transferred_import_record {
         normalized_transfer_parts_rendered_maps.insert((idx, rec_idx), rendered_string);
       }
+      let chunk_idx = chunk_graph.module_to_chunk[idx].expect("should have chunk idx");
+      let chunk = &mut chunk_graph.chunk_table[chunk_idx];
+      chunk
+        .module_idx_to_render_concatenated_module
+        .insert(idx, rendered_concatenated_module_parts);
+    }
+
+    if normalized_transfer_parts_rendered_maps.is_empty() {
+      return;
     }
     for chunk in chunk_graph.chunk_table.iter_mut() {
       for (module_idx, recs) in &chunk.insert_map {

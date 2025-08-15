@@ -1,5 +1,6 @@
 pub mod chunk_reason_type;
 pub mod cross_chunk_import_item;
+pub mod module_group;
 pub mod preliminary_filename;
 
 pub struct AddonRenderContext<'code> {

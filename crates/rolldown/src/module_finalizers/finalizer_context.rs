@@ -1,6 +1,6 @@
 use rolldown_common::{
   ChunkIdx, ConstExportMeta, ImportRecordIdx, IndexModules, ModuleIdx, NormalModule,
-  RuntimeModuleBrief, SharedFileEmitter, SymbolRef, SymbolRefDb,
+  RenderedConcatenatedModuleParts, RuntimeModuleBrief, SharedFileEmitter, SymbolRef, SymbolRefDb,
 };
 
 use oxc::span::CompactStr;
@@ -32,4 +32,5 @@ pub struct ScopeHoistingFinalizerContext<'me> {
   pub needs_hosted_top_level_binding: bool,
   pub module_namespace_included: bool,
   pub transferred_import_record: FxIndexMap<ImportRecordIdx, String>,
+  pub rendered_concatenated_wrapped_module_parts: RenderedConcatenatedModuleParts,
 }

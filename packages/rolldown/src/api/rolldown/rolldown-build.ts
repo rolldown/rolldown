@@ -29,14 +29,12 @@ export class RolldownBuild {
   }
 
   get closed(): boolean {
-    // If the bundler has not yet been created, it is not closed.
-    return this.#bundlerImpl?.impl.closed ?? false;
+    return this.#bundlerImpl?.impl.closed ?? true;
   }
 
   // Create bundler for each `bundle.write/generate`
   async #getBundlerWithStopWorker(
     outputOptions: OutputOptions,
-    isClose?: boolean,
   ): Promise<BundlerImplWithStopWorker> {
     if (this.#bundlerImpl) {
       await this.#bundlerImpl.stopWorkers?.();
@@ -45,7 +43,6 @@ export class RolldownBuild {
       this.#bundler,
       this.#inputOptions,
       outputOptions,
-      isClose,
     ));
   }
 
@@ -64,15 +61,12 @@ export class RolldownBuild {
   }
 
   async close(): Promise<void> {
-    // Create new one bundler to run `closeBundle` hook, here using `isClose` flag to avoid call `outputOptions` hook.
-    const { impl, stopWorkers, shutdown } = await this
-      .#getBundlerWithStopWorker(
-        {},
-        true,
-      );
-    await stopWorkers?.();
-    await impl.close();
-    shutdown();
+    if (this.#bundlerImpl) {
+      await this.#bundlerImpl.stopWorkers?.();
+      await this.#bundlerImpl.impl.close();
+      this.#bundlerImpl.shutdown();
+      this.#bundlerImpl = void 0;
+    }
   }
 
   async [Symbol.asyncDispose](): Promise<void> {

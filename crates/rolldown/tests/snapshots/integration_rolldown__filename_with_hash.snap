@@ -4030,6 +4030,16 @@ expression: output
 
 - main-!~{000}~.js => main-iGXOFHWU.js
 
+# tests/rolldown/function/experimental/strict_execution_order/concatenate_wrapped_modules
+
+- main-!~{000}~.js => main-DZgJ4wKa.js
+
+# tests/rolldown/function/experimental/strict_execution_order/ensure_lazy_module_eval
+
+- dynamic-!~{001}~.js => dynamic-BpUjAus5.js
+- main-!~{000}~.js => main-CdwVgZap.js
+- dynamic-!~{002}~.js => dynamic-CcRE_i8T.js
+
 # tests/rolldown/function/experimental/strict_execution_order/esbuild_issue_2598/non_strict
 
 - main-!~{000}~.js => main-C9tRYJu-.js
@@ -4086,14 +4096,14 @@ expression: output
 
 # tests/rolldown/function/experimental/strict_execution_order/issue_5303
 
-- main-!~{000}~.js => main-DO3NAFWR.js
+- main-!~{000}~.js => main-DIm8iZ1a.js
 - rolldown-runtime-!~{001}~.js => rolldown-runtime-BjtMze0h.js
 - test-!~{003}~.js => test-DWjb2zYB.js
 
 # tests/rolldown/function/experimental/strict_execution_order/on_demand_wrapping
 
 - dynamic-!~{001}~.js => dynamic-BhqYqd04.js
-- main-!~{000}~.js => main-BiFMWJtk.js
+- main-!~{000}~.js => main-CloeuwD0.js
 - dynamic-!~{002}~.js => dynamic-DKjUd_a-.js
 
 # tests/rolldown/function/experimental/strict_execution_order/remove_unused_no_side_effect_module

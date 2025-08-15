@@ -267,7 +267,7 @@ fn json_object_expr_to_esm(link_staged: &mut LinkStage, module_idx: ModuleIdx) -
   // for a es json module it did not needs to be wrapped anyway.
   link_staged.metas[module_idx].wrapper_stmt_info = None;
   link_staged.metas[module_idx].wrapper_ref = None;
-  link_staged.metas[module_idx].wrap_kind = WrapKind::None;
+  link_staged.metas[module_idx].sync_wrap_kind(WrapKind::None);
 
   link_staged.symbols.store_local_db(module_idx, symbol_ref_db);
   true

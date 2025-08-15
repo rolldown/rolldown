@@ -22,7 +22,7 @@ pub fn render_wrapped_entry_chunk(
 ) -> Option<String> {
   if let ChunkKind::EntryPoint { module: entry_id, .. } = ctx.chunk.kind {
     let entry_meta = &ctx.link_output.metas[entry_id];
-    match entry_meta.wrap_kind {
+    match entry_meta.wrap_kind() {
       WrapKind::Esm => {
         let wrapper_ref = entry_meta.wrapper_ref.as_ref().unwrap();
         // init_xxx
@@ -296,7 +296,7 @@ pub fn get_export_items(chunk: &Chunk) -> Vec<(CompactStr, SymbolRef)> {
 pub fn get_chunk_export_names(chunk: &Chunk, graph: &LinkStageOutput) -> Vec<CompactStr> {
   if let ChunkKind::EntryPoint { module: entry_id, .. } = &chunk.kind {
     let entry_meta = &graph.metas[*entry_id];
-    if matches!(entry_meta.wrap_kind, WrapKind::Cjs) {
+    if matches!(entry_meta.wrap_kind(), WrapKind::Cjs) {
       return vec![CompactStr::new("default")];
     }
   }
@@ -308,7 +308,7 @@ pub fn get_chunk_export_names_with_ctx(ctx: &GenerateContext<'_>) -> Vec<Compact
   let GenerateContext { chunk, link_output, render_export_items_index_vec, .. } = ctx;
   if let ChunkKind::EntryPoint { module: entry_id, .. } = &chunk.kind {
     let entry_meta = &link_output.metas[*entry_id];
-    if matches!(entry_meta.wrap_kind, WrapKind::Cjs) {
+    if matches!(entry_meta.wrap_kind(), WrapKind::Cjs) {
       return vec![CompactStr::new("default")];
     }
   }

@@ -103,7 +103,7 @@ impl LinkStage<'_> {
                 match rec.kind {
                   ImportKind::Import => {
                     let is_reexport_all = rec.meta.contains(ImportRecordMeta::IsExportStar);
-                    match importee_linking_info.wrap_kind {
+                    match importee_linking_info.wrap_kind() {
                       WrapKind::None => {
                         // for case:
                         // ```js
@@ -191,7 +191,7 @@ impl LinkStage<'_> {
                       }
                     }
                   }
-                  ImportKind::Require => match importee_linking_info.wrap_kind {
+                  ImportKind::Require => match importee_linking_info.wrap_kind() {
                     WrapKind::None => {}
                     WrapKind::Cjs => {
                       // something like `require_foo()`
@@ -216,7 +216,7 @@ impl LinkStage<'_> {
                   },
                   ImportKind::DynamicImport => {
                     if self.options.inline_dynamic_imports {
-                      match importee_linking_info.wrap_kind {
+                      match importee_linking_info.wrap_kind() {
                         WrapKind::None => {}
                         WrapKind::Cjs => {
                           //  `__toESM(require_foo())`

@@ -144,7 +144,7 @@ impl BindingBundlerImpl {
   #[napi(getter)]
   #[tracing::instrument(level = "debug", skip_all)]
   pub fn get_closed(&self) -> napi::Result<bool> {
-    napi::bindgen_prelude::block_on(async { self.get_closed_impl().await })
+    Ok(napi::bindgen_prelude::block_on(async { self.inner.lock().await.closed }))
   }
 
   #[napi]
@@ -246,13 +246,6 @@ impl BindingBundlerImpl {
 
   pub fn into_inner(self) -> Arc<Mutex<NativeBundler>> {
     self.inner
-  }
-
-  #[allow(clippy::significant_drop_tightening)]
-  pub async fn get_closed_impl(&self) -> napi::Result<bool> {
-    let bundler_core = self.inner.lock().await;
-
-    Ok(bundler_core.closed)
   }
 
   fn handle_errors(

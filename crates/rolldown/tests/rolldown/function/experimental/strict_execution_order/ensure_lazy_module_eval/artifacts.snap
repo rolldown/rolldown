@@ -22,35 +22,23 @@ var require_dynamic = /* @__PURE__ */ __commonJS({ "dynamic.js": ((exports, modu
 }) });
 
 //#endregion
-export { __esm, __toESM, require_dynamic };
+export { __toESM, require_dynamic };
 ```
 ## main.js
 
 ```js
-import { __esm, __toESM, require_dynamic } from "./dynamic2.js";
+import { __toESM, require_dynamic } from "./dynamic2.js";
 import { strictEqual } from "node:assert";
 
-function foo() {
-	return 100;
-}
-
-var import_dynamic, a;
-var init_main = __esm({"main.js": () => {
 //#region sideeffects.js
+var import_dynamic = /* @__PURE__ */ __toESM(require_dynamic());
 globalThis.a = 2;
 
 //#endregion
-//#region esm.js
-import_dynamic = /* @__PURE__ */ __toESM(require_dynamic());
-a = globalThis.a;
+//#region main.js
+const a = globalThis.a;
 strictEqual(a, 2);
 
 //#endregion
-//#region main.js
-console.log(`mod.foo: `, foo);
-
-//#endregion
-}});
-
-init_main();
+export { a };
 ```

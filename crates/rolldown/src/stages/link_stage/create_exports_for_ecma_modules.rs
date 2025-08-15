@@ -22,7 +22,7 @@ fn init_entry_point_stmt_info(
   let mut referenced_symbols = vec![];
 
   // Include the wrapper if present
-  if !matches!(meta.wrap_kind, WrapKind::None) {
+  if !matches!(meta.wrap_kind(), WrapKind::None) {
     // If a commonjs module becomes an entry point while targeting esm, we need to at least add a `export default require_foo();`
     // statement as some kind of syntax sugar. So users won't need to manually create a proxy file with `export default require('./foo.cjs')` in it.
     referenced_symbols.push((meta.wrapper_ref.unwrap(), false));

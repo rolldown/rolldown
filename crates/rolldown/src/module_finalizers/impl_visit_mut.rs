@@ -1,10 +1,11 @@
+use itertools::Itertools;
 use oxc::allocator::FromIn;
-use oxc::span::Atom;
+use oxc::span::{Atom, CompactStr};
 use oxc::{
   allocator::{self, IntoIn, TakeIn},
   ast::{
     NONE,
-    ast::{self, BindingPatternKind, Expression, SimpleAssignmentTarget},
+    ast::{self, BindingPatternKind, Expression, SimpleAssignmentTarget, Statement},
     match_member_expression,
   },
   ast_visit::{VisitMut, walk_mut},
@@ -12,8 +13,10 @@ use oxc::{
   span::{SPAN, Span},
 };
 use rolldown_common::{
-  ExportsKind, ModuleNamespaceIncludedReason, SymbolRef, ThisExprReplaceKind, WrapKind,
+  ConcatenateWrappedModuleKind, ExportsKind, ModuleNamespaceIncludedReason, SymbolRef,
+  ThisExprReplaceKind, WrapKind,
 };
+use rolldown_ecmascript::ToSourceString;
 use rolldown_ecmascript_utils::{ExpressionExt, JsxExt};
 
 use crate::hmr::utils::HmrAstBuilder;
@@ -84,7 +87,7 @@ impl<'ast> VisitMut<'ast> for ScopeHoistingFinalizer<'_, 'ast> {
       .linking_info
       .wrapper_stmt_info
       .is_some_and(|idx| self.ctx.module.stmt_infos[idx].is_included)
-      .then_some(self.ctx.linking_info.wrap_kind);
+      .then_some(self.ctx.linking_info.wrap_kind());
 
     self.ctx.needs_hosted_top_level_binding = matches!(included_wrap_kind, Some(WrapKind::Esm));
 
@@ -154,14 +157,10 @@ impl<'ast> VisitMut<'ast> for ScopeHoistingFinalizer<'_, 'ast> {
         ));
       }
       Some(WrapKind::Esm) => {
-        use ast::Statement;
-        let wrap_ref_name = self.canonical_name_for(self.ctx.linking_info.wrapper_ref.unwrap());
-        let esm_ref = if self.ctx.options.profiler_names {
-          self.canonical_ref_for_runtime("__esm")
-        } else {
-          self.canonical_ref_for_runtime("__esmMin")
-        };
-        let esm_ref_expr = self.finalized_expr_for_symbol_ref(esm_ref, false, false);
+        let is_concatenated_wrapped_module = !matches!(
+          self.ctx.linking_info.concatenated_wrapped_module_kind,
+          ConcatenateWrappedModuleKind::None
+        );
         let old_body = program.body.take_in(self.alloc);
 
         let mut fn_stmts = allocator::Vec::new_in(self.alloc);
@@ -184,9 +183,25 @@ impl<'ast> VisitMut<'ast> for ScopeHoistingFinalizer<'_, 'ast> {
               stmts_inside_closure.push(stmt);
             }
           });
-        program.body.extend(declaration_of_module_namespace_object);
-        program.body.extend(fn_stmts);
-        if !self.top_level_var_bindings.is_empty() {
+
+        if is_concatenated_wrapped_module {
+          self.ctx.rendered_concatenated_wrapped_module_parts.hoisted_functions_or_module_ns_decl =
+            declaration_of_module_namespace_object
+              .iter()
+              .chain(fn_stmts.iter())
+              .map(rolldown_ecmascript::ToSourceString::to_source_string)
+              .collect_vec();
+          self.ctx.rendered_concatenated_wrapped_module_parts.hoisted_vars = self
+            .top_level_var_bindings
+            .iter()
+            .map(|var_name| CompactStr::new(var_name))
+            .collect_vec();
+        } else {
+          program.body.extend(declaration_of_module_namespace_object);
+          program.body.extend(fn_stmts);
+        }
+
+        if !is_concatenated_wrapped_module && !self.top_level_var_bindings.is_empty() {
           let builder = self.builder();
           let decorations = self.top_level_var_bindings.iter().map(|var_name| {
             builder.variable_declarator(
@@ -210,6 +225,36 @@ impl<'ast> VisitMut<'ast> for ScopeHoistingFinalizer<'_, 'ast> {
             false,
           )));
         }
+
+        // The wrapping would happen during the chunk codegen phase
+        if matches!(
+          self.ctx.linking_info.concatenated_wrapped_module_kind,
+          ConcatenateWrappedModuleKind::Inner
+        ) {
+          program.body.extend(stmts_inside_closure);
+          return;
+        }
+
+        let esm_ref = if self.ctx.options.profiler_names {
+          self.canonical_ref_for_runtime("__esm")
+        } else {
+          self.canonical_ref_for_runtime("__esmMin")
+        };
+        let esm_ref_expr = self.finalized_expr_for_symbol_ref(esm_ref, false, false);
+        let wrap_ref_name = self.canonical_name_for(self.ctx.linking_info.wrapper_ref.unwrap());
+
+        if matches!(
+          self.ctx.linking_info.concatenated_wrapped_module_kind,
+          ConcatenateWrappedModuleKind::Root
+        ) {
+          self.ctx.rendered_concatenated_wrapped_module_parts.rendered_esm_runtime_expr =
+            Some(self.builder().expression_statement(SPAN, esm_ref_expr).to_source_string());
+          self.ctx.rendered_concatenated_wrapped_module_parts.wrap_ref_name =
+            Some(wrap_ref_name.clone());
+          program.body.extend(stmts_inside_closure);
+          return;
+        }
+
         program.body.push(self.snippet.esm_wrapper_stmt(
           wrap_ref_name,
           esm_ref_expr,

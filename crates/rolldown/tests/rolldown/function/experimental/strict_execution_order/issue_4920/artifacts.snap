@@ -41,20 +41,22 @@ Variant: [on_demand_wrapping: true]
 import nodeAssert from "node:assert";
 
 // HIDDEN [rolldown:runtime]
-//#region dep.js
 function foo() {
 	globalThis.value = 1;
 }
+
 var dep_default;
-var init_dep = __esm({ "dep.js": (() => {
-	dep_default = /* @__PURE__ */ foo();
-}) });
+var init_main = __esm({"main.js": () => {
+//#region dep.js
+dep_default = /* @__PURE__ */ foo();
 
 //#endregion
 //#region main.js
-init_dep();
 nodeAssert.strictEqual(globalThis.value, 1);
 
 //#endregion
+}});
+
+init_main();
 export { dep_default as dep };
 ```

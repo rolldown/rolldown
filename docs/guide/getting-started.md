@@ -26,6 +26,53 @@ $ bun add -D rolldown
 
 :::
 
+::: details Using a minor platform (CPU architecture, OS) ?
+
+Prebuilt binaries are distributed for the following platforms (grouped by [Node.js v22 platform support tier](https://github.com/nodejs/node/blob/v22.x/BUILDING.md#platform-list)):
+
+- Tier 1
+  - Linux x64 glibc (`x86_64-unknown-linux-gnu`)
+  - Linux arm64 glibc (`aarch64-unknown-linux-gnu`)
+  - Linux armv7 (`armv7-unknown-linux-gnueabihf`)
+  - Windows x64 (`x86_64-pc-windows-msvc`)
+  - Windows x86 (`i686-pc-windows-msvc`)
+  - Apple x64 (`x86_64-apple-darwin`)
+  - Apple arm64 (`aarch64-apple-darwin`)
+- Tier 2
+  - Windows arm64 (`aarch64-pc-windows-msvc`)
+- Experimental
+  - Linux x64 musl (`x86_64-unknown-linux-musl`)
+  - FreeBSD x64 (`x86_64-unknown-freebsd`)
+  - OpenHarmony arm64 (`aarch64-unknown-linux-ohos`)
+- Other
+  - Linux arm64 musl (`aarch64-unknown-linux-musl`)
+  - Android arm64 (`aarch64-linux-android`)
+  - Wasm + Wasi (`wasm32-wasip1-threads`)
+
+If you are using a platform that a prebuilt binary is not distributed, you have the following options:
+
+- Use the Wasm build
+  1. Download the Wasm build.
+     - For npm, you can run `npm install --cpu wasm32 --os wasip1-threads`.
+     - For yarn or pnpm, you need to add the following content to your `.yarnrc.yaml` or `pnpm-workspace.yaml`:
+       ```yaml
+       supportedArchitectures:
+         os:
+           - wasip1-threads
+         cpu:
+           - wasm32
+       ```
+  2. Make Rolldown load the Wasm build.
+     - If the prebuilt binary is not available, Rolldown will fallback to the Wasm binary automatically.
+     - In case you need to force Rolldown to use the Wasm build, you can set `NAPI_RS_FORCE_WASI=1` environment variable.
+- Build from source
+  1. Clone the repository.
+  2. Setup the project by following [the setup instructions](/contrib-guide/setup-the-project).
+  3. Build the project by following [the build instructions](/contrib-guide/building-and-running).
+  4. Set the `NAPI_RS_NATIVE_LIBRARY_PATH` environment variable to the path of `packages/rolldown` in the cloned repository.
+
+:::
+
 ### Release Channels
 
 - [latest](https://www.npmjs.com/package/rolldown?activeTab=versions): currently `1.0.0-beta.*`.

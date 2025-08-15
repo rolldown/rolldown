@@ -247,6 +247,7 @@ impl GenerateStage<'_> {
     Ok(chunk_graph)
   }
 
+  #[allow(clippy::too_many_lines)]
   pub fn ensure_lazy_module_initialization_order(&self, chunk_graph: &mut ChunkGraph) {
     if self.options.experimental.strict_execution_order.unwrap_or_default() {
       // If `strict_execution_order` is enabled, the lazy module initialization order is already
@@ -279,6 +280,10 @@ impl GenerateStage<'_> {
             import_items
               .iter()
               .map(|item| self.link_output.symbol_db.canonical_ref_for(item.import_ref).owner)
+          })
+          .filter_map(|idx| {
+            let module = self.link_output.module_table[idx].as_normal()?;
+            (!self.link_output.metas[module.idx].original_wrap_kind().is_none()).then_some(idx)
           })
           .collect::<FxHashSet<_>>();
         let chunk_module_to_exec_order = chunk

@@ -5559,6 +5559,12 @@ expression: output
 
 - main-!~{000}~.js => main-DKFAVQmf.js
 
+# tests/rolldown/topics/hmr/issue5301
+
+- main-!~{000}~.js => main-DQ3GQmm5.js
+- foo-!~{003}~.js => foo-QKfXFaxB.js
+- rolldown-runtime-!~{001}~.js => rolldown-runtime-BNAizcxD.js
+
 # tests/rolldown/topics/hmr/issue_5150
 
 - main-!~{000}~.js => main-BDUFAH7R.js

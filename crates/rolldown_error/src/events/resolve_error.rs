@@ -17,11 +17,13 @@ pub struct DiagnosableResolveError {
 
 impl DiagnosableResolveError {
   fn importee_str(&self) -> &str {
-    let s = match &self.importee {
+    match &self.importee {
       DiagnosableArcstr::String(str) => str.as_str(),
-      DiagnosableArcstr::Span(span) => &self.source.as_str()[*span],
-    };
-    &s[1..s.len() - 1]
+      DiagnosableArcstr::Span(span) => {
+        let s = &self.source.as_str()[*span];
+        &s[1..s.len() - 1]
+      }
+    }
   }
 }
 

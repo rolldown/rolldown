@@ -1,0 +1,21 @@
+{
+  "config": {
+    "input": [
+      {
+        "name": "main",
+        "import": "main.jsx"
+      }
+    ],
+    "resolve": {
+      "alias": [
+        [
+          "react",
+          [
+            ""
+          ]
+        ]
+      ]
+    }
+  },
+  "expectError": true
+}

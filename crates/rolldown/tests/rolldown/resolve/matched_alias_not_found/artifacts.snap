@@ -1,0 +1,11 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Errors
+
+## RESOLVE_ERROR
+
+```text
+[RESOLVE_ERROR] Error: Could not resolve 'react/jsx-runtime' in main.jsx
+
+```

@@ -3,10 +3,7 @@ use futures::future::join_all;
 use oxc_index::IndexVec;
 use rolldown_plugin::{__inner::resolve_id_check_external, SharedPluginDriver};
 use rolldown_resolver::ResolveError;
-use rolldown_utils::{
-  concat_string,
-  ecmascript::{self},
-};
+use rolldown_utils::ecmascript::{self};
 use std::sync::Arc;
 
 use rolldown_common::{
@@ -104,7 +101,7 @@ pub async fn resolve_dependencies(
                   source.clone(),
                   self_resolved_id.id.clone(),
                   if dep.is_unspanned() || is_css_module {
-                    DiagnosableArcstr::String(concat_string!("'", specifier.as_str(), "'").into())
+                    DiagnosableArcstr::String(specifier.as_str().into())
                   } else {
                     DiagnosableArcstr::Span(dep.state.span)
                   },
@@ -121,7 +118,7 @@ pub async fn resolve_dependencies(
                     source.clone(),
                     self_resolved_id.id.clone(),
                     if dep.is_unspanned() || is_css_module {
-                      DiagnosableArcstr::String(concat_string!("'", specifier.as_str(), "'").into())
+                      DiagnosableArcstr::String(specifier.as_str().into())
                     } else {
                       DiagnosableArcstr::Span(dep.state.span)
                     },

@@ -32,12 +32,9 @@ use crate::{
   chunk_graph::ChunkGraph,
   module_finalizers::ScopeHoistingFinalizerContext,
   stages::link_stage::LinkStageOutput,
-  utils::{
-    chunk::{
-      deconflict_chunk_symbols::deconflict_chunk_symbols, generate_pre_rendered_chunk,
-      validate_options_for_multi_chunk_output::validate_options_for_multi_chunk_output,
-    },
-    finalize_normal_module,
+  utils::chunk::{
+    deconflict_chunk_symbols::deconflict_chunk_symbols, generate_pre_rendered_chunk,
+    validate_options_for_multi_chunk_output::validate_options_for_multi_chunk_output,
   },
 };
 
@@ -166,7 +163,7 @@ impl<'a> GenerateStage<'a> {
             .unwrap_or_default(),
           rendered_concatenated_wrapped_module_parts: RenderedConcatenatedModuleParts::default(),
         };
-        let ctx = finalize_normal_module(ctx, ast, ast_scope);
+        let ctx = ctx.finalize_normal_module(ast, ast_scope);
         (!ctx.transferred_import_record.is_empty()
           || !matches!(
             ctx.linking_info.concatenated_wrapped_module_kind,

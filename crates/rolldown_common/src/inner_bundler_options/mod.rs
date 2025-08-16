@@ -149,7 +149,7 @@ pub struct BundlerOptions {
   )]
   pub sourcemap_path_transform: Option<SourceMapPathTransform>,
   pub sourcemap_debug_ids: Option<bool>,
-
+  pub sourcemap_exclude_sources: Option<bool>,
   /// Key is the file extension. The extension should start with a `.`. E.g. `".txt"`.
   pub module_types: Option<FxHashMap<String, ModuleType>>,
   // --- options for resolve

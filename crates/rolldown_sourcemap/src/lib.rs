@@ -15,7 +15,10 @@ use rolldown_utils::rustc_hash::FxHashMapExt;
 
 // <https://github.com/rollup/rollup/blob/master/src/utils/collapseSourcemaps.ts>
 #[allow(clippy::cast_possible_truncation)]
-pub fn collapse_sourcemaps(sourcemap_chain: &[&SourceMap]) -> SourceMap {
+pub fn collapse_sourcemaps(
+  sourcemap_chain: &[&SourceMap],
+  sourcemap_exclude_sources: bool,
+) -> SourceMap {
   debug_assert!(sourcemap_chain.len() > 1);
   if sourcemap_chain.len() == 1 {
     // If there's only one sourcemap, return it as is.
@@ -83,13 +86,17 @@ pub fn collapse_sourcemaps(sourcemap_chain: &[&SourceMap]) -> SourceMap {
       })
     })
     .collect::<Vec<_>>();
-
+  let source_contents = if sourcemap_exclude_sources {
+    Vec::from([None])
+  } else {
+    first_map.get_source_contents().map(|content| content.map(Arc::clone)).collect::<Vec<_>>()
+  };
   SourceMap::new(
     None,
     first_map.get_names().map(Arc::clone).collect::<Vec<_>>(),
     None,
     first_map.get_sources().map(Arc::clone).collect::<Vec<_>>(),
-    first_map.get_source_contents().map(|x| x.map(Arc::clone)).collect::<Vec<_>>(),
+    source_contents,
     tokens,
     None,
   )
@@ -151,7 +158,7 @@ fn test_collapse_sourcemaps() {
     .build(&ret3.program);
   sourcemap_chain.push(map.as_ref().unwrap());
 
-  let map = collapse_sourcemaps(&sourcemap_chain);
+  let map = collapse_sourcemaps(&sourcemap_chain, false);
   assert_eq!(
     SourcemapVisualizer::new(&code, &map).into_visualizer_text(),
     r#"- foo.js

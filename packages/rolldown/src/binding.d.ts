@@ -1756,6 +1756,7 @@ export interface BindingOutputOptions {
   sourcemapBaseUrl?: string
   sourcemapIgnoreList?: (source: string, sourcemapPath: string) => boolean
   sourcemapDebugIds?: boolean
+  sourcemapExcludeSources?: boolean
   sourcemapPathTransform?: (source: string, sourcemapPath: string) => string
   minify?: boolean | 'dce-only' | BindingMinifyOptions
   advancedChunks?: BindingAdvancedChunksOptions

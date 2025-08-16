@@ -5530,6 +5530,12 @@ expression: output
 - main-!~{000}~.js => main-C3PfjjVO.js
 - main-C3PfjjVO.js.map
 
+# tests/rolldown/topics/deconflict/issue_5737
+
+- entry-!~{000}~.js => entry-BwPByaap.js
+- entry2-!~{001}~.js => entry2-TnfF1t67.js
+- foo-!~{002}~.js => foo-CNqygoys.js
+
 # tests/rolldown/topics/deconflict/wrapped_esm_default_function
 
 - main-!~{000}~.js => main-CS1VGtNM.js
@@ -5620,7 +5626,7 @@ expression: output
 
 # tests/rolldown/topics/keep_names/issue_5525
 
-- entry-!~{000}~.js => entry-BCzFFI04.js
+- entry-!~{000}~.js => entry-D8KRfvnx.js
 - entry2-!~{001}~.js => entry2-CA0mV8Xo.js
 - foo-!~{002}~.js => foo-DKOGr9By.js
 

@@ -59,13 +59,13 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
   }
 
   pub fn canonical_name_for(&self, symbol: SymbolRef) -> &'me CompactStr {
-    self.ctx.symbol_db.canonical_name_for(symbol, self.ctx.canonical_names).unwrap_or_else(|| {
+    self.ctx.symbol_db.canonical_name_for(symbol, &self.ctx.chunk.canonical_names).unwrap_or_else(|| {
       panic!(
         "canonical name not found for {symbol:?}, original_name: {:?} in module {:?} when finalizing module {:?} in chunk {:?}",
         symbol.name(self.ctx.symbol_db),
         self.ctx.modules.get(symbol.owner).map_or("unknown", |module| module.stable_id()),
         self.ctx.modules.get(self.ctx.id).map_or("unknown", |module| module.stable_id()),
-        self.ctx.chunk_graph.chunk_table[self.ctx.chunk_id].create_reasons.join(";")
+        self.ctx.chunk.create_reasons.join(";")
       );
     })
   }
@@ -352,8 +352,7 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
             let Some(Module::External(module)) = m else {
               return vec![];
             };
-            let importer_chunk = &self.ctx.chunk_graph.chunk_table[self.ctx.chunk_id];
-            let importee_name = &module.get_import_path(importer_chunk);
+            let importee_name = &module.get_import_path(self.ctx.chunk);
             vec![
               // Insert `import * as ns from 'ext'`external module in esm format
               self.snippet.import_star_stmt(importee_name, importee_namespace_name),
@@ -535,8 +534,7 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
       };
       let absolute_asset_file_name = asset_file_name
         .absolutize_with(self.ctx.options.cwd.as_path().join(&self.ctx.options.out_dir));
-      let relative_asset_path = &self.ctx.chunk_graph.chunk_table[self.ctx.chunk_id]
-        .relative_path_for(&absolute_asset_file_name);
+      let relative_asset_path = &self.ctx.chunk.relative_path_for(&absolute_asset_file_name);
 
       // new URL({relative_asset_path}, import.meta.url).href
       // TODO: needs import.meta.url polyfill for non esm
@@ -606,8 +604,7 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
     let chunk_idx = &self.ctx.chunk_graph.module_to_chunk[importee.idx]?;
     let chunk = &self.ctx.chunk_graph.chunk_table[*chunk_idx];
     let asset_filename = &chunk.asset_absolute_preliminary_filenames[&importee.idx];
-    let import_path = self.ctx.chunk_graph.chunk_table[self.ctx.chunk_id]
-      .relative_path_for(asset_filename.as_path());
+    let import_path = self.ctx.chunk.relative_path_for(asset_filename.as_path());
 
     first_arg_string_literal.value = self.snippet.atom(&import_path);
     None
@@ -830,10 +827,9 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
           Module::External(importee) => {
             let request_path =
               call_expr.arguments.get_mut(0).expect("require should have an argument");
-            let importer_chunk = &self.ctx.chunk_graph.chunk_table[self.ctx.chunk_id];
             // Rewrite `require('xxx')` to `require('fs')`, if there is an alias that maps 'xxx' to 'fs'
             *request_path = ast::Argument::StringLiteral(self.snippet.alloc_string_literal(
-              &importee.get_import_path(importer_chunk),
+              &importee.get_import_path(self.ctx.chunk),
               request_path.span(),
             ));
             None
@@ -927,10 +923,9 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
       // Convert `import('./foo.mjs')` to `Promise.resolve().then(function() { return require('foo.mjs') })`
       match &self.ctx.modules[importee_id] {
         Module::Normal(importee) => {
-          let importer_chunk = &self.ctx.chunk_graph.chunk_table[self.ctx.chunk_id];
           let importee_chunk_id = self.ctx.chunk_graph.entry_module_to_entry_chunk[&importee_id];
           let importee_chunk = &self.ctx.chunk_graph.chunk_table[importee_chunk_id];
-          let import_path = importer_chunk.import_path_for(importee_chunk);
+          let import_path = self.ctx.chunk.import_path_for(importee_chunk);
 
           // require('foo.mjs')
           let mut require_call_expr =
@@ -1289,21 +1284,20 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
           let rec_id = self.ctx.module.imports[&expr.span];
           let rec = &self.ctx.module.import_records[rec_id];
           let importee_id = rec.resolved_module;
-          let importer_chunk = &self.ctx.chunk_graph.chunk_table[self.ctx.chunk_id];
           match &self.ctx.modules[importee_id] {
             Module::Normal(importee) => {
               let importee_chunk_id =
-                self.ctx.chunk_graph.entry_module_to_entry_chunk[&importee_id];
+                self.ctx.chunk_graph.entry_module_to_entry_chunk[&rec.resolved_module];
               let importee_chunk = &self.ctx.chunk_graph.chunk_table[importee_chunk_id];
 
-              let import_path = importer_chunk.import_path_for(importee_chunk);
+              let import_path = self.ctx.chunk.import_path_for(importee_chunk);
               expr.source = Expression::StringLiteral(
                 self.snippet.alloc_string_literal(&import_path, expr.source.span()),
               );
               needs_to_esm_helper = importee.exports_kind.is_commonjs();
             }
             Module::External(importee) => {
-              let import_path = importee.get_import_path(importer_chunk);
+              let import_path = importee.get_import_path(self.ctx.chunk);
               if str != import_path {
                 expr.source = Expression::StringLiteral(
                   self.snippet.alloc_string_literal(&import_path, expr.source.span()),

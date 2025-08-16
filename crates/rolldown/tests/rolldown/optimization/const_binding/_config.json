@@ -1,0 +1,10 @@
+{
+  "config": {
+    "optimization": {
+      "constBindings": false
+    },
+    "external": ["a"],
+    "format": "cjs"
+  },
+  "expectExecuted": false
+}

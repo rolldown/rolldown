@@ -31,6 +31,13 @@ pub struct OptimizationOption {
   /// This improves the initial execution performance.
   /// See <https://v8.dev/blog/preparser#pife> for more details about the optimization.
   pub pife_for_module_wrappers: Option<bool>,
+  /// Use `const` instead of `var` for generated variable declarations, including helper functions.
+  /// See <https://rollupjs.org/configuration-options/#output-generatedcode-constbindings>
+  pub const_bindings: Option<bool>,
+  /// See <https://rollupjs.org/configuration-options/#output-generatedcode-reservednamesasprops>
+  pub reserved_names_as_props: Option<bool>,
+  /// See <https://rollupjs.org/configuration-options/#output-generatedcode-symbols>
+  pub symbols: Option<bool>,
 }
 
 impl OptimizationOption {
@@ -42,6 +49,21 @@ impl OptimizationOption {
   #[inline]
   pub fn is_pife_for_module_wrappers_enabled(&self) -> bool {
     self.pife_for_module_wrappers.unwrap_or(false)
+  }
+
+  #[inline]
+  pub fn is_const_bindings_enabled(&self) -> bool {
+    self.const_bindings.unwrap_or(true)
+  }
+
+  #[inline]
+  pub fn is_reserved_names_as_props_enabled(&self) -> bool {
+    self.reserved_names_as_props.unwrap_or(true)
+  }
+
+  #[inline]
+  pub fn is_symbols_enabled(&self) -> bool {
+    self.symbols.unwrap_or(false)
   }
 }
 
@@ -55,5 +77,6 @@ pub fn normalize_optimization_option(
     pife_for_module_wrappers: Some(
       option.pife_for_module_wrappers.unwrap_or(!matches!(platform, Platform::Neutral)),
     ),
+    ..option
   }
 }

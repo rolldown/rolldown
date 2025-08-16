@@ -1727,6 +1727,9 @@ export interface BindingNotifyOption {
 export interface BindingOptimization {
   inlineConst?: boolean
   pifeForModuleWrappers?: boolean
+  constBindings?: boolean
+  reservedNamesAsProps?: boolean
+  symbols?: boolean
 }
 
 export interface BindingOutputOptions {

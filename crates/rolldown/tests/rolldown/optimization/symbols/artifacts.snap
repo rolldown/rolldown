@@ -1,0 +1,22 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## main.js
+
+```js
+var hello = (function(exports) {
+
+Object.defineProperties(exports, { __esModule: { value: true }, [Symbol.toStringTag]: { value: 'Module' } });
+
+//#region main.js
+var main_default = 42;
+const answer = 42;
+
+//#endregion
+exports.answer = answer;
+exports.default = main_default;
+return exports;
+})({});
+```

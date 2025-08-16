@@ -1,0 +1,8 @@
+{
+  "config": {
+    "optimization": {
+      "reservedNamesAsProps": false
+    },
+    "format": "cjs"
+  }
+}

@@ -1,0 +1,34 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## entry.js
+
+```js
+import { foo as foo$1 } from "./foo.js";
+import assert from "node:assert";
+
+//#region main.js
+const foo = () => foo$1;
+assert.strictEqual(foo.name, "foo");
+
+//#endregion
+export { foo };
+```
+## entry2.js
+
+```js
+import { foo } from "./foo.js";
+
+export { foo };
+```
+## foo.js
+
+```js
+//#region foo.js
+const foo = 0;
+
+//#endregion
+export { foo };
+```

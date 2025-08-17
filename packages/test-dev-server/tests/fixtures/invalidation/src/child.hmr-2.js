@@ -12,4 +12,4 @@ if (import.meta.hot) {
   });
 }
 
-export const value = 'child';
+export const value = 'child-unhandleable';

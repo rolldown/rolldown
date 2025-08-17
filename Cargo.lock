@@ -3115,8 +3115,11 @@ dependencies = [
 name = "rolldown_plugin_vite_css_post"
 version = "0.1.0"
 dependencies = [
+ "anyhow",
+ "cow-utils",
  "rolldown_plugin",
  "rolldown_plugin_utils",
+ "rolldown_utils",
 ]
 
 [[package]]

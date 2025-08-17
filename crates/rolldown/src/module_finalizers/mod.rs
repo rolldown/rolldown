@@ -1129,14 +1129,11 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
           use ast::ExportDefaultDeclarationKind;
           let default_decl_span = default_decl.span;
           match &mut default_decl.declaration {
-            decl @ ast::match_expression!(ExportDefaultDeclarationKind) => {
-              let expr = decl.to_expression_mut();
-              // "export default foo;" => "var default = foo;"
-              let canonical_name_for_default_export_ref =
-                self.canonical_name_for(self.ctx.module.default_export_ref);
-              top_stmt = self
-                .snippet
-                .var_decl_stmt(canonical_name_for_default_export_ref, expr.take_in(self.alloc));
+            // "const foo = ..; export default foo;" => "const foo = ..;"
+            ast::ExportDefaultDeclarationKind::Identifier(id)
+              if self.scope.scoping().get_reference(id.reference_id()).symbol_id().is_some() =>
+            {
+              return;
             }
             ast::ExportDefaultDeclarationKind::FunctionDeclaration(func) => {
               // "export default function() {}" => "function default() {}"
@@ -1162,6 +1159,15 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
               let mut class = class.as_mut().take_in(self.alloc);
               class.span = default_decl_span;
               top_stmt = ast::Statement::ClassDeclaration(ArenaBox::new_in(class, self.alloc));
+            }
+            decl @ ast::match_expression!(ExportDefaultDeclarationKind) => {
+              let expr = decl.to_expression_mut();
+              // "export default foo;" => "var default = foo;"
+              let canonical_name_for_default_export_ref =
+                self.canonical_name_for(self.ctx.module.default_export_ref);
+              top_stmt = self
+                .snippet
+                .var_decl_stmt(canonical_name_for_default_export_ref, expr.take_in(self.alloc));
             }
             _ => {}
           }

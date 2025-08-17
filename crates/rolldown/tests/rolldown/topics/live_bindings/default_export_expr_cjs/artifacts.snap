@@ -16,10 +16,9 @@ function reset() {
 function inc() {
 	count += 1;
 }
-var main_default = count;
 
 //#endregion
-exports.default = main_default;
+exports.default = count;
 exports.inc = inc;
 exports.reset = reset;
 ```

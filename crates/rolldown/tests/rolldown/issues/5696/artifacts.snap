@@ -1,0 +1,18 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## main.js
+
+```js
+//#region foo.jsx
+const Foo = () => <div>Foo</div>;
+const Bar = Foo;
+
+//#endregion
+//#region main.jsx
+console.log(<><Foo /><Bar /></>);
+
+//#endregion
+```

@@ -663,9 +663,11 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
     self.result.symbol_ref_db.ast_scopes.symbol_id_for(ref_id)
   }
   fn scan_export_default_decl(&mut self, decl: &ExportDefaultDeclaration) {
-    use oxc::ast::ast::ExportDefaultDeclarationKind;
     let local_binding_for_default_export = match &decl.declaration {
-      oxc::ast::match_expression!(ExportDefaultDeclarationKind) => None,
+      ast::ExportDefaultDeclarationKind::Identifier(id) => {
+        let reference = self.result.symbol_ref_db.scoping().get_reference(id.reference_id());
+        reference.symbol_id().map(|symbol_id| (symbol_id, id.span))
+      }
       ast::ExportDefaultDeclarationKind::FunctionDeclaration(fn_decl) => fn_decl
         .id
         .as_ref()
@@ -675,6 +677,7 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
         .as_ref()
         .map(|id| (rolldown_ecmascript_utils::BindingIdentifierExt::expect_symbol_id(id), id.span)),
       ast::ExportDefaultDeclarationKind::TSInterfaceDeclaration(_) => unreachable!(),
+      _ => None,
     };
     let (reference, span) = local_binding_for_default_export
       .unwrap_or((self.result.default_export_ref.symbol, Span::default()));

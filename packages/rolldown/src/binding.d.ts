@@ -1204,6 +1204,7 @@ export declare class BindingNormalizedOptions {
   get inlineDynamicImports(): boolean
   get sourcemap(): boolean | 'inline' | 'hidden'
   get sourcemapBaseUrl(): string | null
+  get sourcemapExcludeSources(): boolean
   get banner(): string | undefined | null | undefined
   get footer(): string | undefined | null | undefined
   get intro(): string | undefined | null | undefined

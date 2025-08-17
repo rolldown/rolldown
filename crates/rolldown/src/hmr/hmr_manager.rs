@@ -176,11 +176,11 @@ impl HmrManager {
   #[expect(clippy::too_many_lines)]
   async fn compute_hmr_update(
     &mut self,
-    initial_stale_modules: FxIndexSet<ModuleIdx>,
+    stale_modules: FxIndexSet<ModuleIdx>,
     first_invalidated_by: Option<String>,
   ) -> BuildResult<HmrUpdate> {
     let hmr_prerequisites =
-      self.compute_out_hmr_prerequisites(&initial_stale_modules, first_invalidated_by.as_deref());
+      self.compute_out_hmr_prerequisites(&stale_modules, first_invalidated_by.as_deref());
 
     tracing::debug!(
       target: "hmr",
@@ -200,33 +200,13 @@ impl HmrManager {
 
     tracing::debug!(
       target: "hmr",
-      "computed out `affected_modules` {:?}",
-      hmr_prerequisites.stale_modules.iter()
+      "computed out `stale_modules` {:?}",
+      hmr_prerequisites.modules_to_be_updated.iter()
         .map(|module_idx| self.module_table().modules[*module_idx].stable_id())
         .collect::<Vec<_>>(),
     );
 
-    let mut modules_to_invalidate = initial_stale_modules.clone();
-
-    // FIXME: It's expected that `rolldown:runtime` appears in the `affected_modules`. But the module loader can't handle it properly, it'll
-    // report an error that disk doesn't exist file called `rolldown:runtime`.
-    self
-      .module_table()
-      .iter()
-      .find_map(|m| (m.id() == "rolldown:runtime").then_some(m.idx()))
-      .inspect(|runtime_idx| {
-        modules_to_invalidate.shift_remove(runtime_idx);
-      });
-
-    tracing::debug!(
-      target: "hmr",
-      "modules_to_invalidate` {:?}",
-      modules_to_invalidate.iter()
-        .map(|module_idx| self.module_table().modules[*module_idx].stable_id())
-        .collect::<Vec<_>>(),
-    );
-
-    let module_infos_to_be_updated = modules_to_invalidate
+    let modules_to_be_refetched = stale_modules
       .iter()
       .filter_map(|module_idx| {
         let module = &self.module_table().modules[*module_idx];
@@ -249,7 +229,7 @@ impl HmrManager {
     )?;
 
     let module_loader_output =
-      module_loader.fetch_modules(vec![], &module_infos_to_be_updated).await?;
+      module_loader.fetch_modules(vec![], &modules_to_be_refetched).await?;
 
     // We manually impl `Drop` for `ModuleLoader` to avoid missing assign `importers` to
     // `self.cache`, but rustc is not smart enough to infer actually we don't touch it in `drop`
@@ -265,23 +245,19 @@ impl HmrManager {
         .map(|module_idx| module_loader_output.module_table.get(*module_idx).stable_id())
         .collect::<Vec<_>>(),
     );
-    let mut stale_modules = hmr_prerequisites.stale_modules;
-    stale_modules.extend(module_loader_output.new_added_modules_from_partial_scan.clone());
+    let mut modules_to_be_updated = hmr_prerequisites.modules_to_be_updated;
+    modules_to_be_updated.extend(module_loader_output.new_added_modules_from_partial_scan.clone());
     self.cache.merge(module_loader_output.into());
 
-    // Remove external modules from affected_modules.
-    stale_modules.retain(|idx| {
-      let module = &self.module_table().modules[*idx];
-      // Affected modules may include external modules. New code might contain imports from external modules.
-      // However, HMR doesn't need to deal with them.
-      !matches!(module, Module::External(_))
-    });
+    // Note: New added modules might include external modules. There's no way to "update" them, so we need to remove them.
+    modules_to_be_updated.retain(|idx| self.module_table().modules[*idx].is_normal());
 
-    // Sorting `affected_modules` is not strictly necessary, but it:
+    // Sorting `modules_to_be_updated` is not strictly necessary, but it:
     // - Makes the snapshot more stable when we change logic that affects the order of modules.
-    stale_modules.sort_by_cached_key(|module_idx| self.module_table().modules[*module_idx].id());
+    modules_to_be_updated
+      .sort_by_cached_key(|module_idx| self.module_table().modules[*module_idx].id());
 
-    let module_idx_to_init_fn_name = stale_modules
+    let module_idx_to_init_fn_name = modules_to_be_updated
       .iter()
       .enumerate()
       .map(|(index, module_idx)| {
@@ -299,7 +275,7 @@ impl HmrManager {
       .collect::<FxHashMap<_, _>>();
 
     let index_ecma_ast = self.index_ecma_ast();
-    let module_render_inputs = stale_modules
+    let module_render_inputs = modules_to_be_updated
       .iter()
       .copied()
       .map(|affected_module_idx| {
@@ -451,9 +427,9 @@ impl HmrManager {
     module_idx: ModuleIdx,
     hmr_boundaries: &mut FxIndexSet<HmrBoundary>,
     propagate_stack: &mut Vec<ModuleIdx>,
-    stale_modules: &mut FxIndexSet<ModuleIdx>,
+    modules_to_be_updated: &mut FxIndexSet<ModuleIdx>,
   ) -> PropagateUpdateStatus {
-    stale_modules.insert(module_idx);
+    modules_to_be_updated.insert(module_idx);
 
     let Module::Normal(module) = &self.module_table().modules[module_idx] else {
       // We consider reaching external modules as a boundary.
@@ -501,14 +477,14 @@ impl HmrManager {
       };
 
       if importer.can_accept_hmr_dependency_for(&module.id) {
-        stale_modules.insert(importer_idx);
+        modules_to_be_updated.insert(importer_idx);
         hmr_boundaries.insert(HmrBoundary { boundary: importer_idx, accepted_via: module_idx });
         continue;
       }
 
       propagate_stack.push(module_idx);
       let status =
-        self.propagate_update(importer_idx, hmr_boundaries, propagate_stack, stale_modules);
+        self.propagate_update(importer_idx, hmr_boundaries, propagate_stack, modules_to_be_updated);
       propagate_stack.pop();
       if !status.is_reach_hmr_boundary() {
         return status;
@@ -520,24 +496,24 @@ impl HmrManager {
 
   fn compute_out_hmr_prerequisites(
     &self,
-    initial_stale_modules: &FxIndexSet<ModuleIdx>,
+    stale_modules: &FxIndexSet<ModuleIdx>,
     first_invalidated_by: Option<&str>,
   ) -> HmrPrerequisites {
     let mut hmr_boundaries = FxIndexSet::default();
     let mut require_full_reload = false;
     let mut full_reload_reason = None;
-    let mut stale_modules = FxIndexSet::default();
+    let mut modules_to_be_updated = FxIndexSet::default();
 
-    for initial_stale_module in initial_stale_modules.iter().copied() {
+    for stale_module in stale_modules.iter().copied() {
       if require_full_reload {
         break;
       }
       let mut boundaries = FxIndexSet::default();
       let propagate_update_status = self.propagate_update(
-        initial_stale_module,
+        stale_module,
         &mut boundaries,
         &mut vec![],
-        &mut stale_modules,
+        &mut modules_to_be_updated,
       );
 
       match propagate_update_status {
@@ -580,7 +556,7 @@ impl HmrManager {
 
     HmrPrerequisites {
       boundaries: hmr_boundaries,
-      stale_modules,
+      modules_to_be_updated,
       require_full_reload,
       full_reload_reason,
     }
@@ -589,7 +565,7 @@ impl HmrManager {
 
 struct HmrPrerequisites {
   boundaries: FxIndexSet<HmrBoundary>,
-  stale_modules: FxIndexSet<ModuleIdx>,
+  modules_to_be_updated: FxIndexSet<ModuleIdx>,
   require_full_reload: bool,
   full_reload_reason: Option<String>,
 }

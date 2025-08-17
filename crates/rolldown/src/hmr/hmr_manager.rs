@@ -129,7 +129,8 @@ impl HmrManager {
     // We can safely batch these importers into one update, because we know no file edits have occurred and the HMR boundary relationships
     // remain unchanged.
     let stale_modules = caller.importers_idx.clone();
-    let ret = self.compute_hmr_update(stale_modules, first_invalidated_by).await?;
+    let ret =
+      self.compute_hmr_update(&stale_modules, &FxIndexSet::default(), first_invalidated_by).await?;
     // ret.is_self_accepting = true; // (hyf0) TODO: what's this for?
     Ok(ret)
   }
@@ -165,8 +166,8 @@ impl HmrManager {
       //
       // We need to ensure each change can observe the possible edit behavior of the previous change. If we don't do this, we might
       // cause a successful HMR process to fail.
-      let start_points = FxIndexSet::from_iter([changed_module_idx]);
-      let update = self.compute_hmr_update(FxIndexSet::from_iter(start_points), None).await?;
+      let stale_modules = FxIndexSet::from_iter([changed_module_idx]);
+      let update = self.compute_hmr_update(&stale_modules, &changed_modules, None).await?;
       updates.push(update);
     }
 
@@ -176,11 +177,12 @@ impl HmrManager {
   #[expect(clippy::too_many_lines)]
   async fn compute_hmr_update(
     &mut self,
-    stale_modules: FxIndexSet<ModuleIdx>,
+    stale_modules: &FxIndexSet<ModuleIdx>,
+    changed_modules: &FxIndexSet<ModuleIdx>,
     first_invalidated_by: Option<String>,
   ) -> BuildResult<HmrUpdate> {
     let hmr_prerequisites =
-      self.compute_out_hmr_prerequisites(&stale_modules, first_invalidated_by.as_deref());
+      self.compute_out_hmr_prerequisites(stale_modules, first_invalidated_by.as_deref());
 
     tracing::debug!(
       target: "hmr",
@@ -206,51 +208,55 @@ impl HmrManager {
         .collect::<Vec<_>>(),
     );
 
-    let modules_to_be_refetched = stale_modules
-      .iter()
-      .filter_map(|module_idx| {
-        let module = &self.module_table().modules[*module_idx];
-        if let Module::Normal(module) = module {
-          Some(module.originative_resolved_id.clone())
-        } else {
-          // unreachable!("HMR only supports normal module. Got {:?}", module.id());
-          None
-        }
-      })
-      .collect::<Vec<_>>();
-
-    let mut module_loader = ModuleLoader::new(
-      self.fs.clone(),
-      Arc::clone(&self.options),
-      Arc::clone(&self.resolver),
-      Arc::clone(&self.plugin_driver),
-      &mut self.cache,
-      false,
-    )?;
-
-    let module_loader_output =
-      module_loader.fetch_modules(vec![], &modules_to_be_refetched).await?;
-
-    // We manually impl `Drop` for `ModuleLoader` to avoid missing assign `importers` to
-    // `self.cache`, but rustc is not smart enough to infer actually we don't touch it in `drop`
-    // implementation, so we need to manually drop it.
-    drop(module_loader);
-
-    tracing::debug!(
-      target: "hmr",
-      "New added modules` {:?}",
-      module_loader_output
-        .new_added_modules_from_partial_scan
-        .iter()
-        .map(|module_idx| module_loader_output.module_table.get(*module_idx).stable_id())
-        .collect::<Vec<_>>(),
-    );
     let mut modules_to_be_updated = hmr_prerequisites.modules_to_be_updated;
-    modules_to_be_updated.extend(module_loader_output.new_added_modules_from_partial_scan.clone());
-    self.cache.merge(module_loader_output.into());
 
-    // Note: New added modules might include external modules. There's no way to "update" them, so we need to remove them.
-    modules_to_be_updated.retain(|idx| self.module_table().modules[*idx].is_normal());
+    if !changed_modules.is_empty() {
+      let modules_to_be_refetched = changed_modules
+        .iter()
+        .filter_map(|module_idx| {
+          let module = &self.module_table().modules[*module_idx];
+          if let Module::Normal(module) = module {
+            Some(module.originative_resolved_id.clone())
+          } else {
+            // unreachable!("HMR only supports normal module. Got {:?}", module.id());
+            None
+          }
+        })
+        .collect::<Vec<_>>();
+
+      let mut module_loader = ModuleLoader::new(
+        self.fs.clone(),
+        Arc::clone(&self.options),
+        Arc::clone(&self.resolver),
+        Arc::clone(&self.plugin_driver),
+        &mut self.cache,
+        false,
+      )?;
+
+      let module_loader_output =
+        module_loader.fetch_modules(vec![], &modules_to_be_refetched).await?;
+
+      // We manually impl `Drop` for `ModuleLoader` to avoid missing assign `importers` to
+      // `self.cache`, but rustc is not smart enough to infer actually we don't touch it in `drop`
+      // implementation, so we need to manually drop it.
+      drop(module_loader);
+
+      tracing::debug!(
+        target: "hmr",
+        "New added modules` {:?}",
+        module_loader_output
+          .new_added_modules_from_partial_scan
+          .iter()
+          .map(|module_idx| module_loader_output.module_table.get(*module_idx).stable_id())
+          .collect::<Vec<_>>(),
+      );
+      modules_to_be_updated
+        .extend(module_loader_output.new_added_modules_from_partial_scan.clone());
+      self.cache.merge(module_loader_output.into());
+
+      // Note: New added modules might include external modules. There's no way to "update" them, so we need to remove them.
+      modules_to_be_updated.retain(|idx| self.module_table().modules[*idx].is_normal());
+    }
 
     // Sorting `modules_to_be_updated` is not strictly necessary, but it:
     // - Makes the snapshot more stable when we change logic that affects the order of modules.

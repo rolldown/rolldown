@@ -10,7 +10,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 
 //#region hoist-directive.js
-b;
+using a = b;
 
 //#endregion
 ```
@@ -167,8 +167,8 @@ export { foo as default };
 import { x, y } from "./foo";
 
 //#region hoist-export-from.js
-b;
-d;
+using a = b;
+using c = d;
 
 //#endregion
 export { x, y };
@@ -236,14 +236,14 @@ export { a1, ac1, c1, x1, y1, z1 };
 
 ```js
 //#region hoist-export-local-indirect.js
-b;
+using a = b;
 var { x: [x1] } = foo;
 let { y: [y1] } = foo;
 const { z: [z1] } = foo;
 var { x: [x2] } = foo;
 let { y: [y2] } = foo;
 const { z: [z2] } = foo;
-d;
+using c = d;
 
 //#endregion
 export { x1, y1, z1 };
@@ -254,8 +254,8 @@ export { x1, y1, z1 };
 export * from "./foo"
 
 //#region hoist-export-star.js
-b;
-d;
+using a = b;
+using c = d;
 
 //#endregion
 ```
@@ -265,8 +265,8 @@ d;
 import "./foo";
 
 //#region hoist-import.js
-b;
-d;
+using a = b;
+using c = d;
 
 //#endregion
 ```
@@ -274,7 +274,7 @@ d;
 
 ```js
 //#region hoist-use-strict.js
-b;
+using a = b;
 
 //#endregion
 ```

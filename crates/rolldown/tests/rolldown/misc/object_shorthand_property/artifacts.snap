@@ -30,12 +30,11 @@ assert.strictEqual(value.foo, "foo");
 (3:0) "const " --> (7:0) "const "
 (3:6) "value = " --> (7:6) "value = "
 (3:14) "{ " --> (7:14) "{ "
-(3:16) "foo }" --> (7:16) "foo: foo_default "
-(3:21) "\n" --> (7:33) "};\n"
+(3:16) "foo }" --> (7:16) "foo: foo_default }"
+(3:21) "\n" --> (7:34) ";\n"
 (5:0) "assert." --> (8:0) "assert."
 (5:7) "strictEqual(" --> (8:7) "strictEqual("
 (5:19) "value." --> (8:19) "value."
 (5:25) "foo, " --> (8:25) "foo, "
-(5:30) "'foo')" --> (8:30) "\"foo\")"
-(5:36) [invalid] --> (8:36)
+(5:30) "'foo')" --> (8:30) "\"foo\");\n"
 ```

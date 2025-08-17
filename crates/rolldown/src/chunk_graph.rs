@@ -16,8 +16,9 @@ pub struct ChunkGraph {
   /// Module to chunk that contains the module
   pub module_to_chunk: IndexVec<ModuleIdx, Option<ChunkIdx>>,
   pub entry_module_to_entry_chunk: FxHashMap<ModuleIdx, ChunkIdx>,
-  /// split original map per chunk
-  pub safely_merge_cjs_ns_map_idx_vec: IndexVec<ChunkIdx, FxHashMap<ModuleIdx, Vec<SymbolRef>>>,
+  /// If the namespace is not merged, `Key` == `Value`.
+  /// If the namespace is merged, `Key` is the original namespace symbol, and `Value` is the linked namespace symbol.
+  pub finalized_cjs_ns_map_idx_vec: IndexVec<ChunkIdx, FxHashMap<SymbolRef, SymbolRef>>,
   pub chunk_idx_to_reference_ids: FxHashMap<ChunkIdx, Vec<ArcStr>>,
 }
 
@@ -28,7 +29,7 @@ impl ChunkGraph {
       module_to_chunk: index_vec![None; modules_len],
       sorted_chunk_idx_vec: Vec::new(),
       entry_module_to_entry_chunk: FxHashMap::default(),
-      safely_merge_cjs_ns_map_idx_vec: index_vec![],
+      finalized_cjs_ns_map_idx_vec: index_vec![],
       chunk_idx_to_reference_ids: FxHashMap::default(),
     }
   }
@@ -40,7 +41,7 @@ impl ChunkGraph {
 
   pub fn add_chunk(&mut self, chunk: Chunk) -> ChunkIdx {
     let idx = self.chunk_table.push(chunk);
-    self.safely_merge_cjs_ns_map_idx_vec.push(FxHashMap::default());
+    self.finalized_cjs_ns_map_idx_vec.push(FxHashMap::default());
     idx
   }
 

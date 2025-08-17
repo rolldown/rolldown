@@ -6,11 +6,11 @@ use crate::{
 };
 use arcstr::ArcStr;
 use itertools::Itertools;
-use oxc_index::IndexVec;
+use oxc_index::{IndexVec, index_vec};
 use rolldown_common::{
   Chunk, ChunkIdx, ChunkKind, ChunkMeta, ExportsKind, ImportKind, ImportRecordIdx,
   ImportRecordMeta, IndexModules, Module, ModuleIdx, ModuleNamespaceIncludedReason,
-  PreserveEntrySignatures, WrapKind,
+  PreserveEntrySignatures, SymbolRef, WrapKind,
 };
 use rolldown_error::BuildResult;
 use rolldown_utils::{
@@ -241,7 +241,6 @@ impl GenerateStage<'_> {
     chunk_graph.sorted_chunk_idx_vec = sorted_chunk_idx_vec;
     chunk_graph.entry_module_to_entry_chunk = entry_module_to_entry_chunk;
 
-    self.merge_cjs_namespace(&mut chunk_graph);
     self.find_entry_level_external_module(&mut chunk_graph);
 
     Ok(chunk_graph)
@@ -408,13 +407,15 @@ impl GenerateStage<'_> {
     js_import_order
   }
 
-  fn merge_cjs_namespace(&mut self, chunk_graph: &mut ChunkGraph) {
+  pub fn merge_cjs_namespace(&mut self, chunk_graph: &mut ChunkGraph) {
+    let mut chunk_list: IndexVec<ChunkIdx, FxHashMap<(ModuleIdx, usize), Vec<SymbolRef>>> =
+      index_vec![FxHashMap::default(); chunk_graph.chunk_table.len()];
     for (k, v) in &self.link_output.safely_merge_cjs_ns_map {
       for symbol_ref in v
         .iter()
         .filter(|item| {
           self.link_output.module_table[item.owner].as_normal().unwrap().is_included()
-            && self.link_output.metas[item.owner].wrap_kind().is_none()
+          // && self.link_output.metas[item.owner].wrap_kind().is_none()
         })
         // Determine safely merged cjs ns binding should put in where
         // We should put it in the importRecord which first reference the cjs ns binding.
@@ -422,22 +423,30 @@ impl GenerateStage<'_> {
       {
         let owner = symbol_ref.owner;
         let chunk_idx = chunk_graph.module_to_chunk[owner].expect("Module should be in chunk");
-        chunk_graph.safely_merge_cjs_ns_map_idx_vec[chunk_idx]
-          .entry(*k)
-          .or_default()
-          .push(*symbol_ref);
+
+        let group_idx = if self.link_output.metas[owner].wrap_kind().is_none() {
+          Some(usize::MAX)
+        } else {
+          chunk_graph.chunk_table[chunk_idx].module_idx_to_group_idx.get(&owner).copied()
+        };
+
+        let Some(group_idx) = group_idx else {
+          continue;
+        };
+        chunk_list[chunk_idx].entry((*k, group_idx)).or_default().push(*symbol_ref);
       }
     }
 
-    for (_, safely_merge_cjs_ns_map) in
-      chunk_graph.safely_merge_cjs_ns_map_idx_vec.iter_mut_enumerated()
-    {
+    for (chunk_idx, mut safely_merge_cjs_ns_map) in chunk_list.into_iter_enumerated() {
+      let finalized_cjs_ns_map = &mut chunk_graph.finalized_cjs_ns_map_idx_vec[chunk_idx];
       for symbol_refs in safely_merge_cjs_ns_map.values_mut() {
         let mut iter = symbol_refs.iter();
         let first = iter.next();
         if let Some(first) = first {
+          finalized_cjs_ns_map.insert(*first, *first);
           for symbol_ref in iter {
             self.link_output.symbol_db.link(*symbol_ref, *first);
+            finalized_cjs_ns_map.insert(*symbol_ref, *first);
           }
         }
       }

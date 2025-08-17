@@ -22,19 +22,19 @@ export default defineTest({
     ],
   },
   async afterTest(output: RolldownOutput) {
-    output.output.forEach((chunk) => {
+    for (const chunk of output.output) {
       if (chunk.type === 'chunk') {
         if (chunk.name?.startsWith('index_js')) {
-          expect(chunk.code).toMatchFileSnapshot(
+          await expect(chunk.code).toMatchFileSnapshot(
             path.resolve(import.meta.dirname, 'dir/index.js.snap'),
           )
         } else if (chunk.name?.startsWith('b_js')) {
-          expect(chunk.code).toMatchFileSnapshot(
+          await expect(chunk.code).toMatchFileSnapshot(
             path.resolve(import.meta.dirname, 'dir/b.js.snap'),
           )
         }
       }
-    })
+    }
     await import('./assert.mjs')
   },
 })

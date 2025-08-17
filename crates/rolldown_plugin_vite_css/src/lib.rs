@@ -5,7 +5,9 @@ use std::{future::Future, pin::Pin, sync::Arc};
 use rolldown_plugin::{HookLoadOutput, HookTransformOutput, HookUsage, LogWithoutPlugin, Plugin};
 use rolldown_plugin_utils::{
   FileToUrlEnv, PublicFileToBuiltUrlEnv, UsizeOrFunction, check_public_file,
-  constants::CSSModuleCache, find_special_query, inject_query, remove_special_query,
+  constants::CSSModuleCache,
+  css::{is_css_request, is_special_query},
+  find_special_query, inject_query, remove_special_query,
   uri::decode_uri,
 };
 use rolldown_sourcemap::SourceMap;
@@ -75,7 +77,7 @@ impl Plugin for ViteCssPlugin {
     _ctx: &rolldown_plugin::PluginContext,
     args: &rolldown_plugin::HookLoadArgs<'_>,
   ) -> rolldown_plugin::HookLoadReturn {
-    if utils::is_css_request(args.id) && find_special_query(args.id, b"url").is_some() {
+    if is_css_request(args.id) && find_special_query(args.id, b"url").is_some() {
       if utils::is_css_module(args.id) {
         return Err(anyhow::anyhow!(
           "?url is not supported with CSS modules. (tried to import '{}')",
@@ -101,11 +103,7 @@ impl Plugin for ViteCssPlugin {
     ctx: rolldown_plugin::SharedTransformPluginContext,
     args: &rolldown_plugin::HookTransformArgs<'_>,
   ) -> rolldown_plugin::HookTransformReturn {
-    if !utils::is_css_request(args.id)
-      || ["commonjs-proxy", "worker", "sharedworker", "raw", "url"]
-        .iter()
-        .any(|query| find_special_query(args.id, query.as_bytes()).is_some())
-    {
+    if !is_css_request(args.id) || is_special_query(args.id) {
       return Ok(None);
     }
 

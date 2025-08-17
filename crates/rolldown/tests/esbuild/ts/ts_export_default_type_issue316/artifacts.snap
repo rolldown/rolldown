@@ -41,10 +41,9 @@ let bar$1 = 123;
 
 //#endregion
 //#region keep/interface-merged.ts
-var foo$3 = class foo$3 {
-	static x = new foo$3();
+var foo$1 = class foo$1 {
+	static x = new foo$1();
 };
-var interface_merged_default = foo$3;
 let bar$2 = 123;
 
 //#endregion
@@ -59,20 +58,20 @@ let bar$4 = 123;
 
 //#endregion
 //#region keep/value-namespace.ts
-let foo$2;
+let foo$5;
 (function(_foo) {
 	_foo.num = 0;
-})(foo$2 || (foo$2 = {}));
-var value_namespace_default = foo$2;
+})(foo$5 || (foo$5 = {}));
+var foo$2 = foo$5;
 let bar$5 = 123;
 
 //#endregion
 //#region keep/value-namespace-merged.ts
-let foo$1;
+let foo$4;
 (function(_foo) {
 	_foo.num = 0;
-})(foo$1 || (foo$1 = {}));
-var value_namespace_merged_default = foo$1;
+})(foo$4 || (foo$4 = {}));
+var foo$3 = foo$4;
 let bar$6 = 123;
 
 //#endregion
@@ -106,15 +105,15 @@ var entry_default = [
 	bar,
 	dl_def,
 	bar$1,
-	interface_merged_default,
+	foo$1,
 	bar$2,
 	interface_nested_default,
 	bar$3,
 	type_nested_default,
 	bar$4,
-	value_namespace_default,
+	foo$2,
 	bar$5,
-	value_namespace_merged_default,
+	foo$3,
 	bar$6,
 	bar$7,
 	bar$8,

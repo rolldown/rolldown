@@ -665,7 +665,25 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
   fn scan_export_default_decl(&mut self, decl: &ExportDefaultDeclaration) {
     use oxc::ast::ast::ExportDefaultDeclarationKind;
     let local_binding_for_default_export = match &decl.declaration {
-      oxc::ast::match_expression!(ExportDefaultDeclarationKind) => None,
+      ast::ExportDefaultDeclarationKind::Identifier(id) => {
+        if let Some(symbol_id) = self.resolve_symbol_from_reference(id) {
+          let scoping = self.result.symbol_ref_db.ast_scopes.scoping();
+          let symbol_id_span = scoping.symbol_span(symbol_id);
+          if scoping.get_resolved_references(symbol_id).any(Reference::is_write)
+            // See https://github.com/rollup/rollup/blob/061a0387/test/function/samples/default-export-before-declaration
+            || (id.span.is_unspanned() || symbol_id_span.is_unspanned() || symbol_id_span.start > id.span.start)
+          {
+            let symbol_name = scoping.symbol_name(symbol_id).to_string();
+            self
+              .result
+              .symbol_ref_db
+              .set_symbol_name(self.result.default_export_ref.symbol, &symbol_name);
+          } else {
+            self.result.default_export_ref.symbol = symbol_id;
+          }
+        }
+        None
+      }
       ast::ExportDefaultDeclarationKind::FunctionDeclaration(fn_decl) => fn_decl
         .id
         .as_ref()
@@ -675,6 +693,7 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
         .as_ref()
         .map(|id| (rolldown_ecmascript_utils::BindingIdentifierExt::expect_symbol_id(id), id.span)),
       ast::ExportDefaultDeclarationKind::TSInterfaceDeclaration(_) => unreachable!(),
+      oxc::ast::match_expression!(ExportDefaultDeclarationKind) => None,
     };
     let (reference, span) = local_binding_for_default_export
       .unwrap_or((self.result.default_export_ref.symbol, Span::default()));

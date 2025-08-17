@@ -20,17 +20,16 @@ export default defineTest({
       },
     ],
   },
-  afterTest: (output) => {
+  afterTest: async (output) => {
     for (const o of output.output) {
       if (o.type !== "chunk") {
-        expect(o.source).toMatchFileSnapshot(
+        await expect(o.source).toMatchFileSnapshot(
           path.resolve(import.meta.dirname, 'snap', `${o.fileName}.snap`),
         );
       } else {
-        expect(o.code).toMatchFileSnapshot(
+        await expect(o.code).toMatchFileSnapshot(
           path.resolve(import.meta.dirname, 'snap',`${o.fileName}.snap`),
         );
-
       }
     }
   },

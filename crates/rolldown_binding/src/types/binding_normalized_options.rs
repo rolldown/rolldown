@@ -283,6 +283,6 @@ impl BindingNormalizedOptions {
       return "undefined".into();
     }
 
-    return self.inner.context.clone();
+    self.inner.context.clone()
   }
 }

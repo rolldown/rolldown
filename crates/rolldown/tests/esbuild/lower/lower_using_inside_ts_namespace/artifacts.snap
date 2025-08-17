@@ -6,7 +6,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## entry.js
 
 ```js
-//#region ../../../../../../node_modules/.pnpm/@oxc-project+runtime@0.82.1/node_modules/@oxc-project/runtime/src/helpers/esm/usingCtx.js
+//#region ../../../../../../node_modules/.pnpm/@oxc-project+runtime@0.82.2/node_modules/@oxc-project/runtime/src/helpers/esm/usingCtx.js
 function _usingCtx() {
 	var r = "function" == typeof SuppressedError ? SuppressedError : function(r$1, e$1) {
 		var n$1 = Error();
@@ -69,7 +69,7 @@ let ns;
 	try {
 		var _usingCtx$1 = _usingCtx();
 		_ns.a = b;
-		_usingCtx$1.u(d);
+		const c = _usingCtx$1.u(d);
 		_ns.e = f;
 	} catch (_) {
 		_usingCtx$1.e = _;

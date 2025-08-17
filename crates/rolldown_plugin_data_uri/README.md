@@ -26,3 +26,25 @@ This plugin is enabled by default in `rolldown`, so no manual configuration is r
 import msg from 'data:text/javascript,export default "hello from data URI"';
 console.log(msg); // -> hello from data URI
 ```
+
+If you want to specify the type of module, you can define `'module_ext': module_type`. For example, if you want to import files with ext `.png` as dataurl module.
+
+```js
+import { defineConfig } from 'rolldown';
+
+export default defineConfig({
+  input: './index.js',
+  moduleTypes: {
+    '.png': 'dataurl',
+  },
+});
+```
+
+It will yield
+
+```js
+// #region example.png
+var example_default$12 = 'data:image/png,png';
+
+// #endregion
+```

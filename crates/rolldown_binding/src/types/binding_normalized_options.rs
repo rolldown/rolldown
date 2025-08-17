@@ -278,6 +278,11 @@ impl BindingNormalizedOptions {
 
   #[napi(getter)]
   pub fn context(&self) -> String {
-    self.inner.context.clone()
+    // https://github.com/rolldown/rolldown/issues/5671
+    if self.inner.context.is_empty() {
+      return "undefined".into();
+    }
+
+    return self.inner.context.clone();
   }
 }

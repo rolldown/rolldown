@@ -82,13 +82,7 @@ OPTIONS
   --transform.decorators.emit-decorator-metadata .
   --transform.decorators.legacy .
   --transform.helpers.mode <transform.helpers.mode>.
-  --transform.jsx.development Development specific information.
-  --transform.jsx.import-source <transform.jsx.import-source>Import the factory of element and fragment if mode is classic.
-  --transform.jsx.pragma <transform.jsx.pragma>Jsx element transformation.
-  --transform.jsx.pragma-flag <transform.jsx.pragma-flag>Jsx fragment transformation.
-  --transform.jsx.refresh     Enable react fast refresh.
-  --transform.jsx.runtime <transform.jsx.runtime>Which runtime to use.
-  --transform.jsx.throw-if-namespace <transform.jsx.throw-if-namespace>Toggles whether to throw an error when a tag name uses an XML namespace.
+  --transform.jsx <transform.jsx>.
   --transform.target <transform.target>The JavaScript target environment.
   --transform.typescript.allow-declare-fields .
   --transform.typescript.allow-namespaces .

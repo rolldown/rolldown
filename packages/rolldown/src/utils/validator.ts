@@ -158,7 +158,7 @@ const TransformOptionsSchema = v.object({
   typescript: v.optional(TypescriptSchema),
   helpers: v.optional(HelpersSchema),
   decorators: v.optional(DecoratorOptionSchema),
-  jsx: v.optional(JsxOptionsSchema),
+  jsx: v.optional(v.union([v.literal('preserve'), JsxOptionsSchema])),
   target: v.pipe(
     v.optional(v.union([v.string(), v.array(v.string())])),
     v.description('The JavaScript target environment'),

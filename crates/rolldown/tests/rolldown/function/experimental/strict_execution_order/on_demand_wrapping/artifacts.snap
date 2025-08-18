@@ -37,17 +37,17 @@ function foo() {
 var import_dynamic, a;
 var init_main = __esm({"main.js": () => {
 //#region sideeffects.js
-globalThis.a = 2;
+	globalThis.a = 2;
 
 //#endregion
 //#region esm.js
-import_dynamic = /* @__PURE__ */ __toESM(require_dynamic());
-a = globalThis.a;
-strictEqual(a, 2);
+	import_dynamic = /* @__PURE__ */ __toESM(require_dynamic());
+	a = globalThis.a;
+	strictEqual(a, 2);
 
 //#endregion
 //#region main.js
-console.log(`mod.foo: `, foo);
+	console.log(`mod.foo: `, foo);
 
 //#endregion
 }});

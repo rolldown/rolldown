@@ -101,11 +101,11 @@ const value$1 = "";
 var value;
 var init_main = __esm({"main.js": () => {
 //#region lib-foo.js
-value = "foo" + value$1;
+	value = "foo" + value$1;
 
 //#endregion
 //#region main.js
-nodeAssert.equal(value, "foo");
+	nodeAssert.equal(value, "foo");
 
 //#endregion
 }});

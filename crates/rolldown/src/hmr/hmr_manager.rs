@@ -349,6 +349,7 @@ impl HmrManager {
             sourcemap: enable_sourcemap,
             filename: affected_module.id.to_string(),
             print_legal_comments: false, // ignore hmr chunk comments
+            initial_indent: 0,
           },
         );
 

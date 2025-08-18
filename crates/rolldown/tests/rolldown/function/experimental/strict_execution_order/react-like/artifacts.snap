@@ -31,13 +31,13 @@ function test() {
 var import_commonjs;
 var init_main = __esm({"main.js": () => {
 //#region lib.js
-import_commonjs = /* @__PURE__ */ __toESM(require_commonjs());
+	import_commonjs = /* @__PURE__ */ __toESM(require_commonjs());
 
 //#endregion
 //#region main.js
-assert.equal(import_commonjs.createReactElement(), "div");
-assert.equal(import_commonjs.version.toString(), "1");
-assert.equal(test().toString(), "1");
+	assert.equal(import_commonjs.createReactElement(), "div");
+	assert.equal(import_commonjs.version.toString(), "1");
+	assert.equal(test().toString(), "1");
 
 //#endregion
 }});

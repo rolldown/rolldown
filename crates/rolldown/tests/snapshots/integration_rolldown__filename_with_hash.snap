@@ -4096,19 +4096,19 @@ expression: output
 
 # tests/rolldown/function/experimental/strict_execution_order/issue_5303
 
-- main-!~{000}~.js => main-DIm8iZ1a.js
+- main-!~{000}~.js => main-DZsNDloV.js
 - rolldown-runtime-!~{001}~.js => rolldown-runtime-BjtMze0h.js
 - test-!~{003}~.js => test-DWjb2zYB.js
 
 # tests/rolldown/function/experimental/strict_execution_order/on_demand_wrapping
 
 - dynamic-!~{001}~.js => dynamic-BhqYqd04.js
-- main-!~{000}~.js => main-CloeuwD0.js
+- main-!~{000}~.js => main-DL6yP9on.js
 - dynamic-!~{002}~.js => dynamic-DKjUd_a-.js
 
 # tests/rolldown/function/experimental/strict_execution_order/react-like
 
-- main-!~{000}~.js => main-CqWrUfOS.js
+- main-!~{000}~.js => main-DOp806Lv.js
 
 # tests/rolldown/function/experimental/strict_execution_order/remove_unused_no_side_effect_module
 

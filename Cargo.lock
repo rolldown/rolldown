@@ -3117,9 +3117,11 @@ version = "0.1.0"
 dependencies = [
  "anyhow",
  "cow-utils",
+ "rolldown_common",
  "rolldown_plugin",
  "rolldown_plugin_utils",
  "rolldown_utils",
+ "serde_json",
 ]
 
 [[package]]

@@ -6,24 +6,23 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## a.js
 
 ```js
-import b_default from "./b.js";
+import b from "./b.js";
 
-export { b_default as B };
+export { b as B };
 ```
 ## b.js
 
 ```js
 //#region b.ts
 const b = 100;
-var b_default = b;
 
 //#endregion
-export { b_default as default };
+export { b as default };
 ```
 ## main.js
 
 ```js
-import b_default from "./b.js";
+import b from "./b.js";
 
-export { b_default as B };
+export { b as B };
 ```

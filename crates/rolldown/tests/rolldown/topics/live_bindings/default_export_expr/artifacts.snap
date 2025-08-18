@@ -7,15 +7,15 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```js
 //#region main.js
-let count = 0;
+let count$1 = 0;
 function reset() {
-	count = 0;
+	count$1 = 0;
 }
 function inc() {
-	count += 1;
+	count$1 += 1;
 }
-var main_default = count;
+var count = count$1;
 
 //#endregion
-export { main_default as default, inc, reset };
+export { count as default, inc, reset };
 ```

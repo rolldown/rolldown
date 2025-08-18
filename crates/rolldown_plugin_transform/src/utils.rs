@@ -1,6 +1,7 @@
 use std::path::{Path, PathBuf};
 
 use itertools::Either;
+use memchr::memmem;
 use oxc::{span::SourceType, transformer::TransformOptions};
 use rolldown_common::ModuleType;
 use rolldown_plugin::SharedTransformPluginContext;
@@ -16,6 +17,10 @@ pub enum JsxRefreshFilter {
 
 impl TransformPlugin {
   pub fn filter(&self, id: &str, cwd: &str, module_type: &Option<ModuleType>) -> bool {
+    if memmem::find(id.as_bytes(), b"\0").is_some() {
+      return false;
+    }
+
     if self.include.is_empty() && self.exclude.is_empty() {
       return matches!(module_type, Some(ModuleType::Jsx | ModuleType::Tsx | ModuleType::Ts));
     }

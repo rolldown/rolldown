@@ -5040,8 +5040,10 @@ expression: output
 
 # tests/rolldown/misc/preserve_modules/preserve_default_export_instead_of_named_export
 
-- main-!~{000}~.js => main-CZNaThUT.js
-- default-!~{001}~.js => default-C-gOEwsN.js
+- main-!~{000}~.js => main-DM8h66dw.js
+- class-!~{001}~.js => class-f6wXflQl.js
+- default-!~{003}~.js => default-_xHg4N9P.js
+- function-!~{005}~.js => function-GN8nKCiR.js
 
 # tests/rolldown/misc/reexport_star
 

@@ -662,6 +662,7 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
     });
     self.result.symbol_ref_db.ast_scopes.symbol_id_for(ref_id)
   }
+
   fn scan_export_default_decl(&mut self, decl: &ExportDefaultDeclaration) {
     use oxc::ast::ast::ExportDefaultDeclarationKind;
     let local_binding_for_default_export = match &decl.declaration {
@@ -684,14 +685,20 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
         }
         None
       }
-      ast::ExportDefaultDeclarationKind::FunctionDeclaration(fn_decl) => fn_decl
-        .id
-        .as_ref()
-        .map(|id| (rolldown_ecmascript_utils::BindingIdentifierExt::expect_symbol_id(id), id.span)),
-      ast::ExportDefaultDeclarationKind::ClassDeclaration(cls_decl) => cls_decl
-        .id
-        .as_ref()
-        .map(|id| (rolldown_ecmascript_utils::BindingIdentifierExt::expect_symbol_id(id), id.span)),
+      ast::ExportDefaultDeclarationKind::FunctionDeclaration(fn_decl) => {
+        fn_decl.id.as_ref().map(|id| {
+          let symbol_id = rolldown_ecmascript_utils::BindingIdentifierExt::expect_symbol_id(id);
+          self.result.default_export_ref.symbol = symbol_id;
+          (symbol_id, id.span)
+        })
+      }
+      ast::ExportDefaultDeclarationKind::ClassDeclaration(cls_decl) => {
+        cls_decl.id.as_ref().map(|id| {
+          let symbol_id = rolldown_ecmascript_utils::BindingIdentifierExt::expect_symbol_id(id);
+          self.result.default_export_ref.symbol = symbol_id;
+          (symbol_id, id.span)
+        })
+      }
       ast::ExportDefaultDeclarationKind::TSInterfaceDeclaration(_) => unreachable!(),
       oxc::ast::match_expression!(ExportDefaultDeclarationKind) => None,
     };

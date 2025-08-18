@@ -4,6 +4,7 @@ use std::borrow::Cow;
 
 use rolldown_common::ModuleType;
 use rolldown_plugin::{HookTransformOutput, HookUsage, Plugin};
+use rolldown_plugin_utils::{constants, data_to_esm, is_special_query};
 use rolldown_sourcemap::SourceMap;
 use rolldown_utils::concat_string;
 use serde_json::Value;
@@ -35,16 +36,16 @@ impl Plugin for JsonPlugin {
   ) -> rolldown_plugin::HookTransformReturn {
     if *args.module_type != ModuleType::Json
       || !utils::is_json_ext(args.id)
-      || utils::is_special_query(args.id)
+      || is_special_query(args.id)
     {
       return Ok(None);
     }
 
-    let code = utils::strip_bom(args.code);
+    let code = rolldown_plugin_utils::strip_bom(args.code);
 
     let is_name_exports = self.named_exports && code.trim_start().starts_with('{');
     let is_stringify = self.stringify != JsonPluginStringify::False
-      && (self.stringify == JsonPluginStringify::True || code.len() > utils::THRESHOLD_SIZE);
+      && (self.stringify == JsonPluginStringify::True || code.len() > constants::THRESHOLD_SIZE);
     if !is_name_exports && is_stringify {
       let json = if self.minify {
         // TODO(perf): find better way than https://github.com/rolldown/vite/blob/3bf86e3f/packages/vite/src/node/plugins/json.ts#L55-L57
@@ -67,9 +68,8 @@ impl Plugin for JsonPlugin {
     }
 
     let value = serde_json::from_str(code)?;
-    let code = utils::json_to_esm(&value, self.named_exports);
     Ok(Some(HookTransformOutput {
-      code: Some(code),
+      code: Some(data_to_esm(&value, self.named_exports)),
       map: Some(SourceMap::default()),
       module_type: Some(ModuleType::Js),
       ..Default::default()

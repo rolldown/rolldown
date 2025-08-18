@@ -2988,6 +2988,7 @@ dependencies = [
  "memchr",
  "rolldown_common",
  "rolldown_plugin",
+ "rolldown_plugin_utils",
  "rolldown_sourcemap",
  "rolldown_utils",
  "serde_json",

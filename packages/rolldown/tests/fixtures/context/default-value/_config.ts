@@ -15,7 +15,7 @@ export default defineTest({
         },
         renderStart(_, inputOptions) {
           // When option is normalized, the default value of context should be string "undefined";
-          expect(inputOptions.context).toBe("undefined");
+          expect(inputOptions.context).toBe("void 0");
         }
       },
     ],

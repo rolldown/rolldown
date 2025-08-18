@@ -280,7 +280,7 @@ impl BindingNormalizedOptions {
   pub fn context(&self) -> String {
     // https://github.com/rolldown/rolldown/issues/5671
     if self.inner.context.is_empty() {
-      return "undefined".into();
+      return "void 0".into();
     }
 
     self.inner.context.clone()

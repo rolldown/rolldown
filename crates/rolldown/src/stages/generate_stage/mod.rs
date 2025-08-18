@@ -78,6 +78,8 @@ impl<'a> GenerateStage<'a> {
 
     self.on_demand_wrapping(&mut chunk_graph);
 
+    self.merge_cjs_namespace(&mut chunk_graph);
+
     self.trace_action_chunks_infos(&chunk_graph);
 
     let index_chunk_id_to_name =

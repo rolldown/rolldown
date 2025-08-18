@@ -1,0 +1,18 @@
+{
+  "config": {
+    "resolve": {
+      "alias": [
+        [
+          "this-is-only-used-for-testing",
+          [
+            "./commonjs.js"
+          ]
+        ]
+      ]
+    },
+    "experimental": {
+      "strictExecutionOrder": true,
+      "onDemandWrapping": true
+    }
+  }
+}

@@ -25,3 +25,8 @@ pub struct ViteMetadata {
 pub struct CSSModuleCache {
   pub inner: FxDashMap<String, FxHashMap<String, String>>,
 }
+
+#[derive(Debug, Default)]
+pub struct HTMLProxyResult {
+  pub inner: FxDashMap<String, String>,
+}

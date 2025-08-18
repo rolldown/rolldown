@@ -13,5 +13,8 @@ doctest = false
 workspace = true
 
 [dependencies]
+anyhow = { workspace = true }
+cow-utils = { workspace = true }
 rolldown_plugin = { workspace = true }
 rolldown_plugin_utils = { workspace = true }
+rolldown_utils = { workspace = true }

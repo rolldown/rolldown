@@ -1,4 +1,84 @@
 
+## [1.0.0-beta.33] - 2025-08-18
+
+### 💥 BREAKING CHANGES
+
+- only call `closeBundle` hook when bundling actually happens (#5715) by @shulaoda
+
+### 🚀 Features
+
+- rolldown_plugin_vite_css_post: align transform logic except minify (#5768) by @shulaoda
+- rolldown_plugin_vite_css_post: align html inline css logic (#5767) by @shulaoda
+- support merge cjs ns in module group level (#5760) by @IWANABETHATGUY
+- rolldown_plugin_vite_css_post: filter transform id (#5766) by @shulaoda
+- rolldown: oxc v0.82.2 (#5754) by @Boshen
+- rollup-test: log error when `pringStatus` (#5744) by @situ2001
+- rolldown_plugin_vite_css_post: initialize (#5743) by @shulaoda
+- rolldown_plugin_vite_css: align `transform` hook logic (#5736) by @shulaoda
+- rolldown_plugin_vite_css: align partial transform hook logic (#5733) by @shulaoda
+- add original wrap_kind (#5729) by @IWANABETHATGUY
+- concatenateWrappedModule (#5724) by @IWANABETHATGUY
+- rolldown: oxc v0.82.1 (#5717) by @Boshen
+- improve error message for `unresolved_import` when platform is `neutral` (#5700) by @IWANABETHATGUY
+
+### 🐛 Bug Fixes
+
+- rolldown_plugin_transform: merge tsconfig jsx options even when `oxc.jsx.runtime` is set (#5771) by @hi-ogawa
+- jsx preserve break component which is default export (#5764) by @shulaoda
+- rolldown_plugin_asset: should directly stringify raw content (#5749) by @situ2001
+- resolve symbol deconfliction order for cross-chunk imports by @IWANABETHATGUY
+- rolldown_error: improve resolve diagnostic message (#5740) by @shulaoda
+- vitest ci failed (#5741) by @IWANABETHATGUY
+- rolldown: options `context` should be available in renderStart (#5672) by @situ2001
+- ensure lazy module eval order when import variable from other chunk (#5727) by @IWANABETHATGUY
+- wasm build panic on stackblitz (#5723) by @shulaoda
+- plugin/vite-resolve: try non-prefixed id before prefixed id (#5711) by @sapphi-red
+- devtool: shouldn't filter out spans for devtool use case (#5713) by @hyf0
+- plugin/vite-resolve: fallback on more resolution errors that happened when trying with prefix (#5710) by @sapphi-red
+- plugin/vite-resolve: don't consider ids with `npm:` prefix as a built-in module (#5709) by @sapphi-red
+
+### 🚜 Refactor
+
+- rolldown_plugin_json: use common plugin utils (#5769) by @shulaoda
+- hmr: remove unnecessary code of handling runtime module (#5752) by @hyf0
+- hmr: enhance HMR update logic and improve clarity (#5748) by @hyf0
+- improve `ScopeHoistingFinalizerContext` (#5739) by @shulaoda
+- move `finalize_normal_module` into `ScopeHoistingFinalizerContext` (#5738) by @shulaoda
+- private fields `wrap_kind` and `original_wrap_kind` and keep them sync (#5730) by @IWANABETHATGUY
+
+### 📚 Documentation
+
+- rolldown_plugin_data_uri: update README (#5746) by @situ2001
+- install guide for minor platforms (#5716) by @sapphi-red
+- update description for platform `neutral` (#5701) by @IWANABETHATGUY
+
+### ⚡ Performance
+
+- hmr: only refetch changed modules (#5753) by @hyf0
+- rolldown_plugin_reporter: gzip size computation (#5734) by @IWANABETHATGUY
+- hmr: reuse previous ast for non-changed modules (#5725) by @hyf0
+- rolldown_ecmascript: do not run semantic twice for `dce-only` (#5707) by @Boshen
+
+### 🧪 Testing
+
+- rolldown: should await for `toMatchFileSnapshot` (#5759) by @situ2001
+- hmr: improve test of `import.meta.hot.invalidate` (#5747) by @hyf0
+
+### ⚙️ Miscellaneous Tasks
+
+- deps: lock file maintenance (#5765) by @renovate[bot]
+- deps: lock file maintenance rust crates (#5763) by @renovate[bot]
+- deps: lock file maintenance npm packages (#5762) by @renovate[bot]
+- deps: update github-actions (#5755) by @renovate[bot]
+- deps: update dependency tinybench to v5 (#5756) by @renovate[bot]
+- deps: update github-actions (major) (#5757) by @renovate[bot]
+- deps: update crate-ci/typos action to v1.35.4 (#5714) by @renovate[bot]
+- prepare-release: regenerate `binding.js` after version bump (#5704) by @shulaoda
+- deps: update dependency tsdown to v0.14.1 (#5705) by @renovate[bot]
+- rollup-tests: skip occasionally failing test case (#5703) by @shulaoda
+- update binding.js (#5702) by @shulaoda
+
+
 ## [1.0.0-beta.32] - 2025-08-11
 
 ### 💥 BREAKING CHANGES

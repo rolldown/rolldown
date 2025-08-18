@@ -5,10 +5,8 @@ use std::{future::Future, pin::Pin, sync::Arc};
 use rolldown_plugin::{HookLoadOutput, HookTransformOutput, HookUsage, LogWithoutPlugin, Plugin};
 use rolldown_plugin_utils::{
   FileToUrlEnv, PublicFileToBuiltUrlEnv, UsizeOrFunction, check_public_file,
-  constants::CSSModuleCache,
-  css::{is_css_request, is_special_query},
-  find_special_query, inject_query, remove_special_query,
-  uri::decode_uri,
+  constants::CSSModuleCache, css::is_css_request, find_special_query, inject_query,
+  is_special_query, remove_special_query, uri::decode_uri,
 };
 use rolldown_sourcemap::SourceMap;
 use rustc_hash::{FxHashMap, FxHashSet};

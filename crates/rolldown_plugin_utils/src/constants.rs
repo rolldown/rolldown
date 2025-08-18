@@ -2,6 +2,10 @@ use rolldown_plugin::typedmap::TypedMapKey;
 use rolldown_utils::dashmap::{FxDashMap, FxDashSet};
 use rustc_hash::FxHashMap;
 
+// Use `10kB` as a threshold for 'auto'
+// https://v8.dev/blog/cost-of-javascript-2019#json
+pub const THRESHOLD_SIZE: usize = 10 * 1000;
+
 #[derive(Hash, PartialEq, Eq)]
 pub struct ViteImportGlob;
 pub struct ViteImportGlobValue(pub bool);
@@ -28,5 +32,10 @@ pub struct CSSModuleCache {
 
 #[derive(Debug, Default)]
 pub struct HTMLProxyResult {
+  pub inner: FxDashMap<String, String>,
+}
+
+#[derive(Debug, Default)]
+pub struct CSSStyles {
   pub inner: FxDashMap<String, String>,
 }

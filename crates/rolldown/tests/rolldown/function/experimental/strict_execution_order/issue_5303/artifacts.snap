@@ -12,11 +12,11 @@ import { init_foo } from "./test.js";
 
 var init_main = __esm({"main.js": () => {
 //#region setup.js
-globalThis.globalValue = "foo";
+	globalThis.globalValue = "foo";
 
 //#endregion
 //#region main.js
-init_foo();
+	init_foo();
 
 //#endregion
 }});

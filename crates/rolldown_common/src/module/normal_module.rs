@@ -190,6 +190,7 @@ impl NormalModule {
     &self,
     options: &NormalizedBundlerOptions,
     args: &ModuleRenderArgs,
+    initial_indent: u32,
   ) -> Option<ModuleRenderOutput> {
     match args {
       ModuleRenderArgs::Ecma { ast } => {
@@ -206,6 +207,7 @@ impl NormalModule {
             sourcemap: enable_sourcemap,
             filename: self.id.to_string(),
             print_legal_comments,
+            initial_indent,
           },
         );
         if !self.ecma_view.mutations.is_empty() {

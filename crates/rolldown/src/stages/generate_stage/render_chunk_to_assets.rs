@@ -4,8 +4,9 @@ use futures::future::try_join_all;
 use oxc::span::CompactStr;
 use oxc_index::{IndexVec, index_vec};
 use rolldown_common::{
-  Asset, ChunkIdx, EmittedChunkInfo, InstantiationKind, ModuleRenderArgs, ModuleRenderOutput,
-  Output, OutputAsset, OutputChunk, SharedFileEmitter, SymbolRef,
+  Asset, ChunkIdx, ConcatenateWrappedModuleKind, EmittedChunkInfo, InstantiationKind,
+  ModuleRenderArgs, ModuleRenderOutput, Output, OutputAsset, OutputChunk, SharedFileEmitter,
+  SymbolRef,
 };
 use rolldown_debug::{action, trace_action, trace_action_enabled};
 use rolldown_error::{BuildDiagnostic, BuildResult};
@@ -258,7 +259,16 @@ impl GenerateStage<'_> {
           .map(|&module_idx| match self.link_output.module_table[module_idx].as_normal() {
             Some(module) => {
               let ast = self.link_output.ast_table[module.idx].as_ref().expect("should have ast");
-              module.render(self.options, &ModuleRenderArgs::Ecma { ast })
+              #[allow(clippy::bool_to_int_with_if)]
+              let initial_indent = if matches!(
+                self.link_output.metas[module_idx].concatenated_wrapped_module_kind,
+                ConcatenateWrappedModuleKind::None
+              ) {
+                0
+              } else {
+                1
+              };
+              module.render(self.options, &ModuleRenderArgs::Ecma { ast }, initial_indent)
             }
             _ => None,
           })

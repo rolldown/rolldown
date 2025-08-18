@@ -92,6 +92,7 @@ impl EcmaCompiler {
           jsdoc: true,
           annotation: true,
         },
+        initial_indent: options.initial_indent,
         source_map_path: options.sourcemap.then(|| PathBuf::from(options.filename)),
         ..CodegenOptions::default()
       })
@@ -138,4 +139,5 @@ pub struct PrintOptions {
   pub print_legal_comments: bool,
   pub filename: String,
   pub sourcemap: bool,
+  pub initial_indent: u32,
 }

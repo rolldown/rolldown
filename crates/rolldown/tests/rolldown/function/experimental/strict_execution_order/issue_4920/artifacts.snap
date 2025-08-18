@@ -48,11 +48,11 @@ function foo() {
 var dep_default;
 var init_main = __esm({"main.js": () => {
 //#region dep.js
-dep_default = /* @__PURE__ */ foo();
+	dep_default = /* @__PURE__ */ foo();
 
 //#endregion
 //#region main.js
-nodeAssert.strictEqual(globalThis.value, 1);
+	nodeAssert.strictEqual(globalThis.value, 1);
 
 //#endregion
 }});

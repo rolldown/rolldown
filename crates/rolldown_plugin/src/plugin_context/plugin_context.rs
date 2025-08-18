@@ -23,6 +23,17 @@ pub enum PluginContext {
   Native(Arc<NativePluginContextImpl>),
 }
 
+macro_rules! call_native_only {
+  ($self:expr, $method_name:literal, $ctx:ident => $native_expr:expr) => {
+    match $self {
+      PluginContext::Napi(_) => {
+        unimplemented!(concat!("Can't call `", $method_name, "` on PluginContext::Napi"))
+      }
+      PluginContext::Native($ctx) => $native_expr,
+    }
+  };
+}
+
 impl PluginContext {
   #[must_use]
   pub fn new_napi_context() -> Self {
@@ -57,10 +68,7 @@ impl PluginContext {
     specifier: &str,
     side_effects: Option<HookSideEffects>,
   ) -> anyhow::Result<()> {
-    match self {
-      PluginContext::Napi(_) => unimplemented!("Can't call `load` on PluginContext::Napi"),
-      PluginContext::Native(ctx) => ctx.load(specifier, side_effects).await,
-    }
+    call_native_only!(self, "load", ctx => ctx.load(specifier, side_effects).await)
   }
 
   pub async fn resolve(
@@ -69,17 +77,11 @@ impl PluginContext {
     importer: Option<&str>,
     extra_options: Option<PluginContextResolveOptions>,
   ) -> anyhow::Result<Result<ResolvedId, rolldown_resolver::ResolveError>> {
-    match self {
-      PluginContext::Napi(_) => unimplemented!("Can't call `resolve` on PluginContext::Napi"),
-      PluginContext::Native(ctx) => ctx.resolve(specifier, importer, extra_options).await,
-    }
+    call_native_only!(self, "resolve", ctx => ctx.resolve(specifier, importer, extra_options).await)
   }
 
   pub async fn emit_chunk(&self, chunk: rolldown_common::EmittedChunk) -> anyhow::Result<ArcStr> {
-    match self {
-      PluginContext::Napi(_) => unimplemented!("Can't call `emit_chunk` on PluginContext::Napi"),
-      PluginContext::Native(ctx) => ctx.emit_chunk(chunk).await,
-    }
+    call_native_only!(self, "emit_chunk", ctx => ctx.emit_chunk(chunk).await)
   }
 
   pub fn emit_file(
@@ -88,124 +90,64 @@ impl PluginContext {
     fn_asset_filename: Option<String>,
     fn_sanitized_file_name: Option<String>,
   ) -> ArcStr {
-    match self {
-      PluginContext::Napi(_) => unimplemented!("Can't call `emit_file` on PluginContext::Napi"),
-      PluginContext::Native(ctx) => ctx.emit_file(file, fn_asset_filename, fn_sanitized_file_name),
-    }
+    call_native_only!(self, "emit_file", ctx => ctx.emit_file(file, fn_asset_filename, fn_sanitized_file_name))
   }
 
   pub async fn emit_file_async(
     &self,
     file: rolldown_common::EmittedAsset,
   ) -> anyhow::Result<ArcStr> {
-    match self {
-      PluginContext::Napi(_) => {
-        unimplemented!("Can't call `emit_file_async` on PluginContext::Napi")
-      }
-      PluginContext::Native(ctx) => ctx.emit_file_async(file).await,
-    }
+    call_native_only!(self, "emit_file_async", ctx => ctx.emit_file_async(file).await)
   }
 
   pub fn get_file_name(&self, reference_id: &str) -> anyhow::Result<ArcStr> {
-    match self {
-      PluginContext::Napi(_) => {
-        unimplemented!("Can't call `get_file_name` on PluginContext::Napi")
-      }
-      PluginContext::Native(ctx) => ctx.get_file_name(reference_id),
-    }
+    call_native_only!(self, "get_file_name", ctx => ctx.get_file_name(reference_id))
   }
 
   pub fn get_module_info(&self, module_id: &str) -> Option<Arc<rolldown_common::ModuleInfo>> {
-    match self {
-      PluginContext::Napi(_) => {
-        unimplemented!("Can't call `get_module_info` on PluginContext::Napi")
-      }
-      PluginContext::Native(ctx) => ctx.get_module_info(module_id),
-    }
+    call_native_only!(self, "get_module_info", ctx => ctx.get_module_info(module_id))
   }
 
   pub fn get_module_ids(&self) -> Vec<String> {
-    match self {
-      PluginContext::Napi(_) => {
-        unimplemented!("Can't call `get_module_ids` on PluginContext::Napi")
-      }
-      PluginContext::Native(ctx) => ctx.get_module_ids(),
-    }
+    call_native_only!(self, "get_module_ids", ctx => ctx.get_module_ids())
   }
 
   pub fn cwd(&self) -> &PathBuf {
-    match self {
-      PluginContext::Napi(_) => unimplemented!("Can't call `cwd` on PluginContext::Napi"),
-      PluginContext::Native(ctx) => ctx.cwd(),
-    }
+    call_native_only!(self, "cwd", ctx => ctx.cwd())
   }
 
   pub fn add_watch_file(&self, file: &str) {
-    match self {
-      PluginContext::Napi(_) => {
-        unimplemented!("Can't call `add_watch_file` on PluginContext::Napi")
-      }
-      PluginContext::Native(ctx) => ctx.add_watch_file(file),
-    }
+    call_native_only!(self, "add_watch_file", ctx => ctx.add_watch_file(file));
   }
 
   pub fn meta(&self) -> &PluginContextMeta {
-    match self {
-      PluginContext::Napi(_) => unimplemented!("Can't call `meta` on PluginContext::Napi"),
-      PluginContext::Native(ctx) => &ctx.meta,
-    }
+    call_native_only!(self, "meta", ctx => &ctx.meta)
   }
 
   pub fn options(&self) -> &rolldown_common::NormalizedBundlerOptions {
-    match self {
-      PluginContext::Napi(_) => unimplemented!("Can't call `options` on PluginContext::Napi"),
-      PluginContext::Native(ctx) => &ctx.options,
-    }
+    call_native_only!(self, "options", ctx => &ctx.options)
   }
 
   pub fn resolver(&self) -> &rolldown_resolver::Resolver {
-    match self {
-      PluginContext::Napi(_) => unimplemented!("Can't call `resolver` on PluginContext::Napi"),
-      PluginContext::Native(ctx) => &ctx.resolver,
-    }
+    call_native_only!(self, "resolver", ctx => &ctx.resolver)
   }
 
   pub fn file_emitter(&self) -> &rolldown_common::SharedFileEmitter {
-    match self {
-      PluginContext::Napi(_) => {
-        unimplemented!("Can't call `file_emitter` on PluginContext::Napi")
-      }
-      PluginContext::Native(ctx) => &ctx.file_emitter,
-    }
+    call_native_only!(self, "file_emitter", ctx => &ctx.file_emitter)
   }
 
   #[inline]
   pub fn info(&self, log: LogWithoutPlugin) {
-    match self {
-      PluginContext::Napi(_) => {
-        unimplemented!("Can't call `info` on PluginContext::Napi")
-      }
-      PluginContext::Native(ctx) => ctx.info(log),
-    }
+    call_native_only!(self, "info", ctx => ctx.info(log));
   }
 
   #[inline]
   pub fn warn(&self, log: LogWithoutPlugin) {
-    match self {
-      PluginContext::Napi(_) => {
-        unimplemented!("Can't call `warn` on PluginContext::Napi")
-      }
-      PluginContext::Native(ctx) => ctx.warn(log),
-    }
+    call_native_only!(self, "warn", ctx => ctx.warn(log));
   }
 
   #[inline]
   pub fn debug(&self, log: LogWithoutPlugin) {
-    match self {
-      PluginContext::Napi(_) => {
-        unimplemented!("Can't call `debug` on PluginContext::Napi")
-      }
-      PluginContext::Native(ctx) => ctx.debug(log),
-    }
+    call_native_only!(self, "debug", ctx => ctx.debug(log));
   }
 }

@@ -27,9 +27,8 @@ if ("object" !== "undefined" && "object" === "object" && "production" === "produ
 (2:2) "process.env.NODE_ENV === " --> (1:57) "\"production\" === "
 (2:27) "'production'\n" --> (1:74) "\"production\") "
 (3:2) "{\n" --> (1:88) "{\n"
-(4:2) "console." --> (2:1) "console."
+(4:2) "console." --> (2:0) "\tconsole."
 (4:10) "log(" --> (2:9) "log("
-(4:14) "'production')" --> (2:13) "\"production\")"
-(4:27) ";\n" --> (2:26) ";\n"
+(4:14) "'production');\n" --> (2:13) "\"production\");\n"
 (5:0) "}\n" --> (3:0) "}\n"
 ```

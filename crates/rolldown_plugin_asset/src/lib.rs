@@ -84,8 +84,8 @@ impl Plugin for AssetPlugin {
 
       ctx.add_watch_file(&path);
 
-      let file = serde_json::from_str::<Value>(&std::fs::read_to_string(path.as_ref())?)?;
-      let code = arcstr::format!("export default {}", serde_json::to_string(&file)?);
+      let content = std::fs::read_to_string(path.as_ref())?;
+      let code = arcstr::format!("export default {}", serde_json::to_string(&content)?);
       return Ok(Some(rolldown_plugin::HookLoadOutput {
         code,
         module_type: Some(ModuleType::Js),

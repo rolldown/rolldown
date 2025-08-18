@@ -6,8 +6,7 @@ use std::{
 use arcstr::ArcStr;
 use oxc_traverse::traverse_mut;
 use rolldown_common::{
-  EcmaModuleAstUsage, HmrBoundary, HmrBoundaryOutput, HmrPatch, HmrUpdate, Module, ModuleIdx,
-  ModuleTable,
+  HmrBoundary, HmrBoundaryOutput, HmrPatch, HmrUpdate, Module, ModuleIdx, ModuleTable,
 };
 use rolldown_ecmascript::{EcmaAst, EcmaCompiler, PrintOptions};
 use rolldown_ecmascript_utils::AstSnippet;
@@ -95,37 +94,43 @@ impl HmrManager {
   pub async fn compute_update_for_calling_invalidate(
     &mut self,
     // The parameter is the stable id of the module that called `import.meta.hot.invalidate()`.
-    caller: String,
+    invalidate_caller: String,
     first_invalidated_by: Option<String>,
   ) -> BuildResult<HmrUpdate> {
     let module_idx = self
       .module_idx_by_stable_id
-      .get(&caller)
+      .get(&invalidate_caller)
       .copied()
-      .unwrap_or_else(|| panic!("Not found modules for file: {caller}"));
+      .unwrap_or_else(|| panic!("Not found modules for file: {invalidate_caller}"));
 
-    let module =
-      self.cache.get_snapshot().module_table.get(module_idx).unwrap().as_normal().unwrap();
+    let caller = self.module_table().modules[module_idx].as_normal().unwrap();
 
-    // only self accept modules can be invalidated
-    if !module.ast_usage.contains(EcmaModuleAstUsage::HmrSelfAccept) {
+    // Only self accepting modules are allowed to call `import.meta.hot.invalidate()`.
+    if !caller.is_hmr_self_accepting_module() {
       return Ok(HmrUpdate::FullReload {
         reason: "not self accepting for this invalidation".to_string(),
       });
     }
 
-    // Modules could be empty if a root module is invalidated via import.meta.hot.invalidate()
-    if module.importers_idx.is_empty() {
+    // Calling `import.meta.hot.invalidate()` means this module can't handle the update and wants to pass it to its importers.
+    // If there are no importers, the update can't be handled at all, which requires a full reload.
+    if caller.importers_idx.is_empty() {
       return Ok(HmrUpdate::FullReload {
-        reason: "no importers for this invalidation".to_string(),
+        reason: format!(
+          "There are no importers to handle `import.meta.hot.invalidate()` called by `{}`",
+          caller.stable_id
+        ),
       });
     }
 
-    // Notice this update is caused by `import.meta.hot.invalidate` call, not by module changes.
-    // We know that the hmr boundaries relationships are not changed, because there're no real edits happened.
-    // It's safe to just pass the whole importers as start points to compute the hmr update.
-    let start_points = module.importers_idx.clone();
-    let ret = self.compute_hmr_update(start_points, first_invalidated_by).await?;
+    // Stale modules don't include the caller itself, because the caller's latest content/code has already been executed on the client side.
+    // Since it was already executed, it was able to determine that it couldn't handle the update and needed to call `import.meta.hot.invalidate()`.
+    //
+    // We can safely batch these importers into one update, because we know no file edits have occurred and the HMR boundary relationships
+    // remain unchanged.
+    let stale_modules = caller.importers_idx.clone();
+    let ret =
+      self.compute_hmr_update(&stale_modules, &FxIndexSet::default(), first_invalidated_by).await?;
     // ret.is_self_accepting = true; // (hyf0) TODO: what's this for?
     Ok(ret)
   }
@@ -156,11 +161,13 @@ impl HmrManager {
 
     let mut updates = vec![];
     for changed_module_idx in changed_modules.iter().copied() {
-      // Notice we don't just pass the whole changed modules, because each change might contains editing `import.meta.accept`.
-      // Editing `import.meta.accept will change the hmr boundaries relationships. We need to ensure the subsequent change could observe
-      // this possible behavior of the previous change.
-      let start_points = FxIndexSet::from_iter([changed_module_idx]);
-      let update = self.compute_hmr_update(FxIndexSet::from_iter(start_points), None).await?;
+      // Note: We can't batch all changed modules into one update, because each change might contain edits to `import.meta.hot.accept()`.
+      // Editing `import.meta.hot.accept()` will change the HMR boundary relationships.
+      //
+      // We need to ensure each change can observe the possible edit behavior of the previous change. If we don't do this, we might
+      // cause a successful HMR process to fail.
+      let stale_modules = FxIndexSet::from_iter([changed_module_idx]);
+      let update = self.compute_hmr_update(&stale_modules, &changed_modules, None).await?;
       updates.push(update);
     }
 
@@ -170,119 +177,93 @@ impl HmrManager {
   #[expect(clippy::too_many_lines)]
   async fn compute_hmr_update(
     &mut self,
-    start_points: FxIndexSet<ModuleIdx>,
+    stale_modules: &FxIndexSet<ModuleIdx>,
+    changed_modules: &FxIndexSet<ModuleIdx>,
     first_invalidated_by: Option<String>,
   ) -> BuildResult<HmrUpdate> {
-    let mut affected_modules = FxIndexSet::default();
-    let mut need_to_full_reload = false;
-    let mut full_reload_reason = None;
-
-    // We're checking if this change could be handled by hmr. If so, we need to find the HMR boundaries.
-    let hmr_boundaries = self.compute_out_hmr_boundaries(
-      &start_points,
-      &mut need_to_full_reload,
-      first_invalidated_by.as_deref(),
-      &mut full_reload_reason,
-      &mut affected_modules,
-    );
+    let hmr_prerequisites =
+      self.compute_out_hmr_prerequisites(stale_modules, first_invalidated_by.as_deref());
 
     tracing::debug!(
       target: "hmr",
       "computed out `hmr_boundaries` {:?}",
-      hmr_boundaries.iter()
+      hmr_prerequisites.boundaries.iter()
         .map(|boundary| self.module_table().modules[boundary.boundary].stable_id())
         .collect::<Vec<_>>(),
     );
 
-    if need_to_full_reload {
+    if hmr_prerequisites.require_full_reload {
       return Ok(HmrUpdate::FullReload {
-        reason: full_reload_reason.unwrap_or_else(|| "Unknown reason".to_string()),
+        reason: hmr_prerequisites
+          .full_reload_reason
+          .unwrap_or_else(|| "Unknown reason".to_string()),
       });
     }
 
     tracing::debug!(
       target: "hmr",
-      "computed out `affected_modules` {:?}",
-      affected_modules.iter()
+      "computed out `stale_modules` {:?}",
+      hmr_prerequisites.modules_to_be_updated.iter()
         .map(|module_idx| self.module_table().modules[*module_idx].stable_id())
         .collect::<Vec<_>>(),
     );
 
-    let mut modules_to_invalidate = start_points.clone();
+    let mut modules_to_be_updated = hmr_prerequisites.modules_to_be_updated;
 
-    // FIXME: It's expected that `rolldown:runtime` appears in the `affected_modules`. But the module loader can't handle it properly, it'll
-    // report an error that disk doesn't exist file called `rolldown:runtime`.
-    self
-      .module_table()
-      .iter()
-      .find_map(|m| (m.id() == "rolldown:runtime").then_some(m.idx()))
-      .inspect(|runtime_idx| {
-        modules_to_invalidate.shift_remove(runtime_idx);
-      });
-
-    tracing::debug!(
-      target: "hmr",
-      "modules_to_invalidate` {:?}",
-      modules_to_invalidate.iter()
-        .map(|module_idx| self.module_table().modules[*module_idx].stable_id())
-        .collect::<Vec<_>>(),
-    );
-
-    let module_infos_to_be_updated = modules_to_invalidate
-      .iter()
-      .filter_map(|module_idx| {
-        let module = &self.module_table().modules[*module_idx];
-        if let Module::Normal(module) = module {
-          Some(module.originative_resolved_id.clone())
-        } else {
-          // unreachable!("HMR only supports normal module. Got {:?}", module.id());
-          None
-        }
-      })
-      .collect::<Vec<_>>();
-
-    let mut module_loader = ModuleLoader::new(
-      self.fs.clone(),
-      Arc::clone(&self.options),
-      Arc::clone(&self.resolver),
-      Arc::clone(&self.plugin_driver),
-      &mut self.cache,
-      false,
-    )?;
-
-    let module_loader_output =
-      module_loader.fetch_modules(vec![], &module_infos_to_be_updated).await?;
-
-    // We manually impl `Drop` for `ModuleLoader` to avoid missing assign `importers` to
-    // `self.cache`, but rustc is not smart enough to infer actually we don't touch it in `drop`
-    // implementation, so we need to manually drop it.
-    drop(module_loader);
-
-    tracing::debug!(
-      target: "hmr",
-      "New added modules` {:?}",
-      module_loader_output
-        .new_added_modules_from_partial_scan
+    if !changed_modules.is_empty() {
+      let modules_to_be_refetched = changed_modules
         .iter()
-        .map(|module_idx| module_loader_output.module_table.get(*module_idx).stable_id())
-        .collect::<Vec<_>>(),
-    );
-    affected_modules.extend(module_loader_output.new_added_modules_from_partial_scan.clone());
-    self.cache.merge(module_loader_output.into());
+        .filter_map(|module_idx| {
+          let module = &self.module_table().modules[*module_idx];
+          if let Module::Normal(module) = module {
+            Some(module.originative_resolved_id.clone())
+          } else {
+            // unreachable!("HMR only supports normal module. Got {:?}", module.id());
+            None
+          }
+        })
+        .collect::<Vec<_>>();
 
-    // Remove external modules from affected_modules.
-    affected_modules.retain(|idx| {
-      let module = &self.module_table().modules[*idx];
-      // It's possible that affected modules are external modules. New added code might contains import from external modules.
-      // However, HMR doesn't need to deal with them.
-      !matches!(module, Module::External(_))
-    });
+      let mut module_loader = ModuleLoader::new(
+        self.fs.clone(),
+        Arc::clone(&self.options),
+        Arc::clone(&self.resolver),
+        Arc::clone(&self.plugin_driver),
+        &mut self.cache,
+        false,
+      )?;
 
-    // It's actually unnecessary to sort `affected_modules` here, but sorting it:
-    // - Makes the snapshot less changeable when we change logic that affects the order of modules.
-    affected_modules.sort_by_cached_key(|module_idx| self.module_table().modules[*module_idx].id());
+      let module_loader_output =
+        module_loader.fetch_modules(vec![], &modules_to_be_refetched).await?;
 
-    let module_idx_to_init_fn_name = affected_modules
+      // We manually impl `Drop` for `ModuleLoader` to avoid missing assign `importers` to
+      // `self.cache`, but rustc is not smart enough to infer actually we don't touch it in `drop`
+      // implementation, so we need to manually drop it.
+      drop(module_loader);
+
+      tracing::debug!(
+        target: "hmr",
+        "New added modules` {:?}",
+        module_loader_output
+          .new_added_modules_from_partial_scan
+          .iter()
+          .map(|module_idx| module_loader_output.module_table.get(*module_idx).stable_id())
+          .collect::<Vec<_>>(),
+      );
+      modules_to_be_updated
+        .extend(module_loader_output.new_added_modules_from_partial_scan.clone());
+      self.cache.merge(module_loader_output.into());
+
+      // Note: New added modules might include external modules. There's no way to "update" them, so we need to remove them.
+      modules_to_be_updated.retain(|idx| self.module_table().modules[*idx].is_normal());
+    }
+
+    // Sorting `modules_to_be_updated` is not strictly necessary, but it:
+    // - Makes the snapshot more stable when we change logic that affects the order of modules.
+    modules_to_be_updated
+      .sort_by_cached_key(|module_idx| self.module_table().modules[*module_idx].id());
+
+    let module_idx_to_init_fn_name = modules_to_be_updated
       .iter()
       .enumerate()
       .map(|(index, module_idx)| {
@@ -300,7 +281,7 @@ impl HmrManager {
       .collect::<FxHashMap<_, _>>();
 
     let index_ecma_ast = self.index_ecma_ast();
-    let module_render_inputs = affected_modules
+    let module_render_inputs = modules_to_be_updated
       .iter()
       .copied()
       .map(|affected_module_idx| {
@@ -389,14 +370,15 @@ impl HmrManager {
       source_joiner.append_source_dyn(source);
     }
 
-    hmr_boundaries.iter().for_each(|boundary| {
+    hmr_prerequisites.boundaries.iter().for_each(|boundary| {
       let init_fn_name = &module_idx_to_init_fn_name[&boundary.boundary];
       source_joiner.append_source(format!("{init_fn_name}()"));
     });
 
     source_joiner.append_source(format!(
       "__rolldown_runtime__.applyUpdates([{}]);",
-      hmr_boundaries
+      hmr_prerequisites
+        .boundaries
         .iter()
         .map(|boundary| {
           let module = &self.module_table().modules[boundary.boundary];
@@ -435,7 +417,8 @@ impl HmrManager {
       filename,
       sourcemap_filename: sourcemap_asset.as_ref().map(|asset| asset.filename.to_string()),
       sourcemap: sourcemap_asset.map(|asset| asset.source.try_into_string()).transpose()?,
-      hmr_boundaries: hmr_boundaries
+      hmr_boundaries: hmr_prerequisites
+        .boundaries
         .into_iter()
         .map(|boundary| HmrBoundaryOutput {
           boundary: self.module_table().modules[boundary.boundary].stable_id().into(),
@@ -450,13 +433,13 @@ impl HmrManager {
     module_idx: ModuleIdx,
     hmr_boundaries: &mut FxIndexSet<HmrBoundary>,
     propagate_stack: &mut Vec<ModuleIdx>,
-    affected_modules: &mut FxIndexSet<ModuleIdx>,
+    modules_to_be_updated: &mut FxIndexSet<ModuleIdx>,
   ) -> PropagateUpdateStatus {
-    affected_modules.insert(module_idx);
+    modules_to_be_updated.insert(module_idx);
 
     let Module::Normal(module) = &self.module_table().modules[module_idx] else {
       // We consider reaching external modules as a boundary.
-      return PropagateUpdateStatus::ReachedBoundary;
+      return PropagateUpdateStatus::ReachHmrBoundary;
     };
 
     if let Some(circular_start_index) = propagate_stack
@@ -473,7 +456,7 @@ impl HmrManager {
         .iter()
         .copied()
         .chain(std::iter::once(module_idx))
-        // Notice, our traversal is done by reaching `importers`, so the vec order is opposite to the import order.
+        // Note: our traversal is done by reaching `importers`, so the vec order is opposite to the import order.
         .rev()
         .collect::<Vec<_>>();
 
@@ -482,14 +465,14 @@ impl HmrManager {
 
     if module.is_hmr_self_accepting_module() {
       hmr_boundaries.insert(HmrBoundary { boundary: module_idx, accepted_via: module_idx });
-      return PropagateUpdateStatus::ReachedBoundary;
+      return PropagateUpdateStatus::ReachHmrBoundary;
     } else if module.importers_idx.is_empty() {
-      // This module is not self-aceepting and don't have any potential importer that might accepts its update
+      // This module is not self-accepting and doesn't have any potential importer that might accept its update
       return PropagateUpdateStatus::NoBoundary(module_idx);
     }
 
     let mut importers_idx = module.importers_idx.iter().copied().collect::<Vec<_>>();
-    // FIXME(hyf0): In practice, the order of importers doesn't matter since we gonna traverse all of them.
+    // FIXME(hyf0): In practice, the order of importers doesn't matter since we're going to traverse all of them.
     // However, non-deterministic order causes unstable snapshots.
     importers_idx
       .sort_by_key(|importer_idx| self.module_table().modules[*importer_idx].stable_id());
@@ -500,45 +483,49 @@ impl HmrManager {
       };
 
       if importer.can_accept_hmr_dependency_for(&module.id) {
-        affected_modules.insert(importer_idx);
+        modules_to_be_updated.insert(importer_idx);
         hmr_boundaries.insert(HmrBoundary { boundary: importer_idx, accepted_via: module_idx });
         continue;
       }
 
       propagate_stack.push(module_idx);
       let status =
-        self.propagate_update(importer_idx, hmr_boundaries, propagate_stack, affected_modules);
+        self.propagate_update(importer_idx, hmr_boundaries, propagate_stack, modules_to_be_updated);
       propagate_stack.pop();
-      if !status.is_reached_boundary() {
+      if !status.is_reach_hmr_boundary() {
         return status;
       }
     }
 
-    PropagateUpdateStatus::ReachedBoundary
+    PropagateUpdateStatus::ReachHmrBoundary
   }
 
-  fn compute_out_hmr_boundaries(
+  fn compute_out_hmr_prerequisites(
     &self,
-    start_points: &FxIndexSet<ModuleIdx>,
-    need_to_full_reload: &mut bool,
+    stale_modules: &FxIndexSet<ModuleIdx>,
     first_invalidated_by: Option<&str>,
-    reason: &mut Option<String>,
-    affected_modules: &mut FxIndexSet<ModuleIdx>,
-  ) -> FxIndexSet<HmrBoundary> {
+  ) -> HmrPrerequisites {
     let mut hmr_boundaries = FxIndexSet::default();
+    let mut require_full_reload = false;
+    let mut full_reload_reason = None;
+    let mut modules_to_be_updated = FxIndexSet::default();
 
-    for start_point in start_points.iter().copied() {
-      if *need_to_full_reload {
+    for stale_module in stale_modules.iter().copied() {
+      if require_full_reload {
         break;
       }
       let mut boundaries = FxIndexSet::default();
-      let propagate_status =
-        self.propagate_update(start_point, &mut boundaries, &mut vec![], affected_modules);
+      let propagate_update_status = self.propagate_update(
+        stale_module,
+        &mut boundaries,
+        &mut vec![],
+        &mut modules_to_be_updated,
+      );
 
-      match propagate_status {
+      match propagate_update_status {
         PropagateUpdateStatus::Circular(cycle_chain) => {
-          *need_to_full_reload = true;
-          *reason = Some(format!(
+          require_full_reload = true;
+          full_reload_reason = Some(format!(
             "circular import chain: {}",
             cycle_chain
               .iter()
@@ -549,21 +536,22 @@ impl HmrManager {
           break;
         }
         PropagateUpdateStatus::NoBoundary(idx) => {
-          *need_to_full_reload = true;
+          require_full_reload = true;
           let module = &self.module_table().modules[idx];
-          *reason = Some(format!("no hmr boundary found for module `{}`", module.stable_id()));
+          full_reload_reason =
+            Some(format!("no hmr boundary found for module `{}`", module.stable_id()));
           break;
         }
-        PropagateUpdateStatus::ReachedBoundary => {}
+        PropagateUpdateStatus::ReachHmrBoundary => {}
       }
 
-      // If import.meta.hot.invalidate was called already on that module for the same update,
-      // it means any importer of that module can't hot update. We should fallback to full reload.
+      // If import.meta.hot.invalidate was already called on that module for the same update,
+      // it means any importer of that module can't hot update. We should fall back to full reload.
       if let Some(first_invalidated_by) = first_invalidated_by.as_ref() {
         if boundaries.iter().any(|boundary| {
           self.module_table().modules[boundary.accepted_via].stable_id() == *first_invalidated_by
         }) {
-          *need_to_full_reload = true;
+          require_full_reload = true;
           // full_reload_reason = Some("circular import invalidate".to_string());
           continue;
         }
@@ -572,19 +560,31 @@ impl HmrManager {
       hmr_boundaries.extend(boundaries);
     }
 
-    hmr_boundaries
+    HmrPrerequisites {
+      boundaries: hmr_boundaries,
+      modules_to_be_updated,
+      require_full_reload,
+      full_reload_reason,
+    }
   }
+}
+
+struct HmrPrerequisites {
+  boundaries: FxIndexSet<HmrBoundary>,
+  modules_to_be_updated: FxIndexSet<ModuleIdx>,
+  require_full_reload: bool,
+  full_reload_reason: Option<String>,
 }
 
 enum PropagateUpdateStatus {
   Circular(Vec<ModuleIdx>), // The circular dependency chain
-  ReachedBoundary,
+  ReachHmrBoundary,
   NoBoundary(ModuleIdx),
 }
 
 impl PropagateUpdateStatus {
-  pub fn is_reached_boundary(&self) -> bool {
-    matches!(self, Self::ReachedBoundary)
+  pub fn is_reach_hmr_boundary(&self) -> bool {
+    matches!(self, Self::ReachHmrBoundary)
   }
 }
 

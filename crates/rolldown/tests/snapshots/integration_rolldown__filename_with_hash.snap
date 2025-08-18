@@ -98,7 +98,7 @@ expression: output
 
 # tests/esbuild/dce/dce_of_using_declarations
 
-- entry-!~{000}~.js => entry-8fkt61iG.js
+- entry-!~{000}~.js => entry-CzULnWYs.js
 
 # tests/esbuild/dce/dce_template_literal
 
@@ -2572,11 +2572,11 @@ expression: output
 
 # tests/esbuild/lower/lower_async_generator
 
-- entry-!~{000}~.js => entry-CgIapUd2.js
+- entry-!~{000}~.js => entry-WHTPdUAO.js
 
 # tests/esbuild/lower/lower_async_generator_no_await
 
-- entry-!~{000}~.js => entry-CgIapUd2.js
+- entry-!~{000}~.js => entry-WHTPdUAO.js
 
 # tests/esbuild/lower/lower_async_super_es2016_no_bundle
 
@@ -2643,7 +2643,7 @@ expression: output
 
 # tests/esbuild/lower/lower_nullish_coalescing_assignment_issue1493
 
-- entry-!~{000}~.js => entry-DoyaHOSp.js
+- entry-!~{000}~.js => entry-BU34zxcs.js
 
 # tests/esbuild/lower/lower_object_spread_no_bundle
 
@@ -2803,13 +2803,13 @@ expression: output
 
 # tests/esbuild/lower/lower_using
 
-- entry-!~{000}~.js => entry-CibIp1Ap.js
+- entry-!~{000}~.js => entry-B3IANQX3.js
 - loops-!~{001}~.js => loops-jV2n8FiX.js
-- switch-!~{002}~.js => switch-CQ0ztASJ.js
+- switch-!~{002}~.js => switch-BASDpxdg.js
 
 # tests/esbuild/lower/lower_using_hoisting
 
-- hoist-directive-!~{001}~.js => hoist-directive-wGLEtVlz.js
+- hoist-directive-!~{001}~.js => hoist-directive-aLVAy9nS.js
 - hoist-export-class-direct-!~{008}~.js => hoist-export-class-direct-Z2-HxYi7.js
 - hoist-export-class-indirect-!~{009}~.js => hoist-export-class-indirect-7eZKih0X.js
 - hoist-export-clause-!~{005}~.js => hoist-export-clause-DeiYAT2f.js
@@ -2820,30 +2820,30 @@ expression: output
 - hoist-export-default-function-anonymous-!~{00h}~.js => hoist-export-default-function-anonymous-BzL7CP1D.js
 - hoist-export-default-function-name-unused-!~{00f}~.js => hoist-export-default-function-name-unused-C3W1xVsm.js
 - hoist-export-default-function-name-used-!~{00g}~.js => hoist-export-default-function-name-used-C-bDgyoZ.js
-- hoist-export-from-!~{004}~.js => hoist-export-from-D1HHDNWi.js
+- hoist-export-from-!~{004}~.js => hoist-export-from-4AQrse-8.js
 - hoist-export-function-direct-!~{00a}~.js => hoist-export-function-direct-qXSo6QF5.js
 - hoist-export-function-indirect-!~{00b}~.js => hoist-export-function-indirect-BZCB1Zj5.js
 - hoist-export-local-direct-!~{006}~.js => hoist-export-local-direct-CCoc-e99.js
-- hoist-export-local-indirect-!~{007}~.js => hoist-export-local-indirect-Y4Hdiy7o.js
-- hoist-export-star-!~{003}~.js => hoist-export-star-jYddb4P1.js
-- hoist-import-!~{002}~.js => hoist-import-BLaUL1j7.js
-- hoist-use-strict-!~{000}~.js => hoist-use-strict-BpJDaqMA.js
+- hoist-export-local-indirect-!~{007}~.js => hoist-export-local-indirect-HSZBlKOb.js
+- hoist-export-star-!~{003}~.js => hoist-export-star-DCnWupSR.js
+- hoist-import-!~{002}~.js => hoist-import-BYxW8d9R.js
+- hoist-use-strict-!~{000}~.js => hoist-use-strict-5K0QF0XB.js
 
 # tests/esbuild/lower/lower_using_inside_ts_namespace
 
-- entry-!~{000}~.js => entry-DUqh-Z4a.js
+- entry-!~{000}~.js => entry-C-GKcJ8B.js
 
 # tests/esbuild/lower/lower_using_unsupported_async
 
 - entry-!~{000}~.js => entry-CMXZovLt.js
 - loops-!~{001}~.js => loops-CgXuEPfh.js
-- switch-!~{002}~.js => switch-BhhNVw5y.js
+- switch-!~{002}~.js => switch-Co85tZ-f.js
 
 # tests/esbuild/lower/lower_using_unsupported_using_and_async
 
 - entry-!~{000}~.js => entry-CMXZovLt.js
 - loops-!~{001}~.js => loops-CgXuEPfh.js
-- switch-!~{002}~.js => switch-BhhNVw5y.js
+- switch-!~{002}~.js => switch-Co85tZ-f.js
 
 # tests/esbuild/lower/static_class_block_es2021
 
@@ -4106,6 +4106,10 @@ expression: output
 - main-!~{000}~.js => main-CloeuwD0.js
 - dynamic-!~{002}~.js => dynamic-DKjUd_a-.js
 
+# tests/rolldown/function/experimental/strict_execution_order/react-like
+
+- main-!~{000}~.js => main-CqWrUfOS.js
+
 # tests/rolldown/function/experimental/strict_execution_order/remove_unused_no_side_effect_module
 
 - main-!~{000}~.js => main-DVzdOrRP.js
@@ -5135,11 +5139,11 @@ expression: output
 
 # tests/rolldown/resolve/ts_config_merge_decorator_metadata
 
-- main-!~{000}~.js => main-z645nT8F.js
+- main-!~{000}~.js => main-CDgmalK9.js
 
 # tests/rolldown/resolve/ts_config_option_merge
 
-- main-!~{000}~.js => main-CDQJbtzy.js
+- main-!~{000}~.js => main-Crgksfje.js
 
 # tests/rolldown/resolve/wildcard_alias
 

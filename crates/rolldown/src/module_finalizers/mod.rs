@@ -104,15 +104,12 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
         // ```js
         // import React from './node_modules/react/index.js';
         // ```
-        if rec.meta.contains(ImportRecordMeta::SafelyMergeCjsNs)
-          // TODO: merge cjs namepspace in module group level
-          && self.ctx.linking_infos[self.ctx.module.idx].wrap_kind().is_none()
-        {
+        if rec.meta.contains(ImportRecordMeta::SafelyMergeCjsNs) {
           let chunk_idx = self.ctx.chunk_id;
           if let Some(symbol_ref_to_be_merged) =
-            self.ctx.chunk_graph.safely_merge_cjs_ns_map_idx_vec[chunk_idx].get(&importee.idx)
+            self.ctx.chunk_graph.finalized_cjs_ns_map_idx_vec[chunk_idx].get(&rec.namespace_ref)
           {
-            if symbol_ref_to_be_merged[0] != rec.namespace_ref {
+            if symbol_ref_to_be_merged != &rec.namespace_ref {
               return true;
             }
           }

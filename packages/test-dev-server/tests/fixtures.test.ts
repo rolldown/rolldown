@@ -84,7 +84,7 @@ function main() {
         const hmrEditFiles = await collectHmrEditFiles(tmpProjectPath);
 
         console.log('🔄 Processing HMR edit files...');
-        for (const hmrEditFile of hmrEditFiles) {
+        for (const [index, hmrEditFile] of hmrEditFiles.entries()) {
           console.log(`🔄 Processing HMR edit file: ${hmrEditFile.path}`);
           const newContent = await nodeFsPromise.readFile(
             hmrEditFile.path,
@@ -97,7 +97,10 @@ function main() {
           console.log(
             `⏳ Waiting for HMR to be triggered... ${hmrEditFile.targetPath}`,
           );
-          await ensurePathExists(nodePath.join(tmpProjectPath, 'ok-1'));
+          await ensurePathExists(
+            nodePath.join(tmpProjectPath, `ok-${index}`),
+            10 * 1000,
+          );
           console.log(
             `✅ Successfully triggered HMR ${hmrEditFile.targetPath}`,
           );

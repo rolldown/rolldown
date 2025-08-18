@@ -27,7 +27,7 @@
     "@actions/core": "^1.11.1",
     "@oxc-node/core": "catalog:",
     "@oxc-project/runtime": "catalog:",
-    "@types/node": "24.2.1",
+    "@types/node": "24.3.0",
     "cjs-module-lexer": "^2.1.0",
     "dprint": "^0.50.1",
     "husky": "^9.1.7",

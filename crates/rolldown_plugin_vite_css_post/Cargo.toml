@@ -14,3 +14,4 @@ workspace = true
 
 [dependencies]
 rolldown_plugin = { workspace = true }
+rolldown_plugin_utils = { workspace = true }

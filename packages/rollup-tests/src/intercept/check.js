@@ -3,7 +3,7 @@ const expectedStatus = require('../status.json');
 const alreadyFailedTests = new Set(loadFailedTests())
 
 /**
- * @type {Set<string>}
+ * @type {Set<{name: string, err: Error | undefined}>}
  */
 const failedTests = new Set()
 
@@ -42,15 +42,20 @@ afterEach(function updateStatus() {
   if (state === 'failed') {
     console.error(this.currentTest.err)
     status.failed += 1
-    failedTests.add(calcTestId(this.currentTest))
+    failedTests.add({ name: calcTestId(this.currentTest), err: this.currentTest.err })
   } else if (state === 'passed') {
     status.passed += 1
   }
 })
 
 after(function printStatus() {
-  const sorted = [...failedTests].sort()
-  console.log('failures', JSON.stringify(sorted, null, 2))
+  const sorted = [...failedTests].sort((a, b) => a.name.localeCompare(b.name))
+  sorted.forEach(failure => {
+    console.log(failure.name)
+    console.error(failure.err)
+    console.log("\n")
+  })
+  console.log('failures', JSON.stringify(sorted.map(v => v.name), null, 2))
   console.table(status)
   if (status.failed > 0) {
     // enforce exit process to avoid rust process is not exit.

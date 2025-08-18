@@ -201,7 +201,7 @@ return exports;
 `;
 
 exports[`cli options for bundling > should handle pass \`-s\` options 1`] = `
-"<DIR>/index.js.map  asset │ size: 0.21 kB
+"<DIR>/index.js.map  asset │ size: 0.20 kB
 <DIR>/index.js      chunk │ size: 0.19 kB
 
 "

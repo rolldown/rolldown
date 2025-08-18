@@ -19,6 +19,5 @@ console.log(replaced);
 - ../input.ts
 (1:0) "console." --> (1:0) "console."
 (1:8) "log(" --> (1:8) "log("
-(1:12) "NAME)" --> (1:12) "replaced)"
-(1:17) ";\n" --> (1:21) ";\n"
+(1:12) "NAME);\n" --> (1:12) "replaced);\n"
 ```

@@ -6,15 +6,30 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## entry.js
 
 ```js
+//#region ../../../../../../node_modules/.pnpm/@oxc-project+runtime@0.82.1/node_modules/@oxc-project/runtime/src/helpers/esm/decorate.js
+function __decorate(decorators, target, key, desc) {
+	var c = arguments.length, r = c < 3 ? target : desc === null ? desc = Object.getOwnPropertyDescriptor(target, key) : desc, d;
+	if (typeof Reflect === "object" && typeof Reflect.decorate === "function") r = Reflect.decorate(decorators, target, key, desc);
+	else for (var i = decorators.length - 1; i >= 0; i--) if (d = decorators[i]) r = (c < 3 ? d(r) : c > 3 ? d(target, key, r) : d(target, key)) || r;
+	return c > 3 && r && Object.defineProperty(target, key, r), r;
+}
+
+//#endregion
 //#region entry.ts
 var Foo = class {
-	@dec(1) prop1() {}
-	@dec(2) prop2_() {}
-	@dec(3) ["prop3"]() {}
-	@dec(4) ["prop4_"]() {}
-	@dec(5) ["prop5"]() {}
-	@dec(6) ["prop6_"]() {}
+	prop1() {}
+	prop2_() {}
+	["prop3"]() {}
+	["prop4_"]() {}
+	["prop5"]() {}
+	["prop6_"]() {}
 };
+__decorate([dec(1)], Foo.prototype, "prop1", null);
+__decorate([dec(2)], Foo.prototype, "prop2_", null);
+__decorate([dec(3)], Foo.prototype, "prop3", null);
+__decorate([dec(4)], Foo.prototype, "prop4_", null);
+__decorate([dec(5)], Foo.prototype, "prop5", null);
+__decorate([dec(6)], Foo.prototype, "prop6_", null);
 
 //#endregion
 ```

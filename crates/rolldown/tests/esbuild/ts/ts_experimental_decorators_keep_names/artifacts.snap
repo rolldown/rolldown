@@ -6,8 +6,18 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## entry.js
 
 ```js
+//#region ../../../../../../node_modules/.pnpm/@oxc-project+runtime@0.82.1/node_modules/@oxc-project/runtime/src/helpers/esm/decorate.js
+function __decorate(decorators, target, key, desc) {
+	var c = arguments.length, r = c < 3 ? target : desc === null ? desc = Object.getOwnPropertyDescriptor(target, key) : desc, d;
+	if (typeof Reflect === "object" && typeof Reflect.decorate === "function") r = Reflect.decorate(decorators, target, key, desc);
+	else for (var i = decorators.length - 1; i >= 0; i--) if (d = decorators[i]) r = (c < 3 ? d(r) : c > 3 ? d(target, key, r) : d(target, key)) || r;
+	return c > 3 && r && Object.defineProperty(target, key, r), r;
+}
+
+//#endregion
 //#region entry.ts
-var Foo = @decoratorMustComeAfterName class {};
+let Foo = class Foo$1 {};
+Foo = __decorate([decoratorMustComeAfterName], Foo);
 
 //#endregion
 export { Foo };

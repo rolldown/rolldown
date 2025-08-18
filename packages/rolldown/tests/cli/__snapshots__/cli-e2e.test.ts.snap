@@ -286,6 +286,13 @@ exports[`config > should allow multiply options 1`] = `
 "
 `;
 
+exports[`config > should allow multiply options 2`] = `
+"<DIR>/esm.js  chunk │ size: 0.14 kB
+<DIR>/cjs.js  chunk │ size: 0.14 kB
+
+"
+`;
+
 exports[`config > should allow multiply output + call options hook once  + call outputOptions hook 1`] = `
 "called options hook
 called output options hook
@@ -309,7 +316,29 @@ exports[`config > should bundle in ext-js-syntax-cjs 1`] = `
 "
 `;
 
+exports[`config > should failed to resolve rolldown.config files 1`] = `
+"called options hook
+called output options hook
+called output options hook
+<DIR>/esm.js  chunk │ size: 0.18 kB
+<DIR>/cjs.js  chunk │ size: 0.17 kB
+
+"
+`;
+
+exports[`config > should not bundle in ext-js-syntax-esm 1`] = `
+"Command failed with exit code 1: rolldown index.ts --format INCORRECT
+
+Invalid value for option format: Invalid type: Expected ("es" | "cjs" | "esm" | "module" | "commonjs" | "iife" | "umd") but received "INCORRECT". You can use \`rolldown -h\` to see the help."
+`;
+
 exports[`config > should resolve rolldown.config.cjs 1`] = `
+"<DIR>/index.js  chunk │ size: 0.13 kB
+
+"
+`;
+
+exports[`watch cli > call closeBundle 1`] = `
 "<DIR>/index.js  chunk │ size: 0.13 kB
 
 "
@@ -353,5 +382,20 @@ this.meta.watchMode true
 (test plugin) trigger onLog
 buildStart called:
 this.meta.watchMode true
+closeBundle called:"
+`;
+
+exports[`watch cli > should require both ROLLDOWN_WATCH and this.meta.watchMode to be true 2`] = `
+"process.env.ROLLUP_WATCH undefined
+process.env.ROLLDOWN_WATCH undefined
+options called:
+this.meta.watchMode false
+process.env.ROLLUP_WATCH undefined
+process.env.ROLLDOWN_WATCH undefined
+onLog called:
+this.meta.watchMode false
+(test plugin) trigger onLog
+buildStart called:
+this.meta.watchMode false
 closeBundle called:"
 `;

@@ -12,19 +12,58 @@ const fn = () => {
 };
 
 //#endregion
+//#region ../../../../../../node_modules/.pnpm/@oxc-project+runtime@0.82.1/node_modules/@oxc-project/runtime/src/helpers/esm/decorate.js
+function __decorate(decorators, target, key, desc) {
+	var c = arguments.length, r = c < 3 ? target : desc === null ? desc = Object.getOwnPropertyDescriptor(target, key) : desc, d;
+	if (typeof Reflect === "object" && typeof Reflect.decorate === "function") r = Reflect.decorate(decorators, target, key, desc);
+	else for (var i = decorators.length - 1; i >= 0; i--) if (d = decorators[i]) r = (c < 3 ? d(r) : c > 3 ? d(target, key, r) : d(target, key)) || r;
+	return c > 3 && r && Object.defineProperty(target, key, r), r;
+}
+
+//#endregion
+//#region ../../../../../../node_modules/.pnpm/@oxc-project+runtime@0.82.1/node_modules/@oxc-project/runtime/src/helpers/esm/decorateParam.js
+function __decorateParam(paramIndex, decorator) {
+	return function(target, key) {
+		decorator(target, key, paramIndex);
+	};
+}
+
+//#endregion
 //#region keep-these.ts
+let Class = class Class$1 {};
+Class = __decorate([fn], Class);
 var Field = class {
-	@fn field;
+	field;
 };
+__decorate([fn], Field.prototype, "field", void 0);
 var Method = class {
-	@fn method() {}
+	method() {}
 };
+__decorate([fn], Method.prototype, "method", null);
+var Accessor = class {
+	accessor accessor;
+};
+__decorate([fn], Accessor.prototype, "accessor", null);
+var Parameter = class {
+	foo(bar) {}
+};
+__decorate([__decorateParam(0, fn)], Parameter.prototype, "foo", null);
 var StaticField = class {
-	@fn static field;
+	static field;
 };
+__decorate([fn], StaticField, "field", void 0);
 var StaticMethod = class {
-	@fn static method() {}
+	static method() {}
 };
+__decorate([fn], StaticMethod, "method", null);
+var StaticAccessor = class {
+	static accessor accessor;
+};
+__decorate([fn], StaticAccessor, "accessor", null);
+var StaticParameter = class {
+	static foo(bar) {}
+};
+__decorate([__decorateParam(0, fn)], StaticParameter, "foo", null);
 
 //#endregion
 ```

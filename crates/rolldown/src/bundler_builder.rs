@@ -29,8 +29,15 @@ impl BundlerBuilder {
 
     let maybe_guard = rolldown_tracing::try_init_tracing();
 
-    let NormalizeOptionsReturn { mut options, resolve_options, mut warnings } =
+    let NormalizeOptionsReturn { mut options, mut resolve_options, mut warnings } =
       normalize_options(self.options);
+    if resolve_options.tsconfig_filename.is_none() {
+      let default_tsconfig = options.cwd.join("tsconfig.json");
+      if default_tsconfig.exists() {
+        resolve_options.tsconfig_filename = Some(default_tsconfig.to_string_lossy().to_string());
+      }
+    }
+
     let tsconfig_filename = resolve_options.tsconfig_filename.clone();
     let fs = OsFileSystem::new(resolve_options.yarn_pnp.is_some_and(|b| b));
     let resolver: SharedResolver =

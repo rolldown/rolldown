@@ -1,0 +1,17 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## entry.js
+
+```js
+//#region src/utils.ts
+const logger = "hello logger";
+
+//#endregion
+//#region entry.ts
+console.log(logger);
+
+//#endregion
+```

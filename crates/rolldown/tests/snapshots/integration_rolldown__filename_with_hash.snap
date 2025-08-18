@@ -80,7 +80,7 @@ expression: output
 
 # tests/esbuild/dce/dce_of_experimental_decorators
 
-- keep-these-!~{000}~.js => keep-these-BkGMHk-b.js
+- keep-these-!~{000}~.js => keep-these-BNxXLrTT.js
 
 # tests/esbuild/dce/dce_of_expr_after_keep_names_issue3195
 
@@ -3309,6 +3309,10 @@ expression: output
 - b-!~{001}~.js => b-BS0tgQsd.js
 - shared-!~{002}~.js => shared-D_ZRu1qf.js
 
+# tests/esbuild/ts/default_load_tsconfig_json
+
+- entry-!~{000}~.js => entry-BEAL4MP8.js
+
 # tests/esbuild/ts/enum_rules_from_type_script_5_0
 
 - not-supported-!~{001}~.js => not-supported-BslC2gdM.js
@@ -3348,15 +3352,15 @@ expression: output
 
 # tests/esbuild/ts/ts_computed_class_field_use_define_false
 
-- entry-!~{000}~.js => entry-CKW5b48F.js
+- entry-!~{000}~.js => entry-Dnnokn3r.js
 
 # tests/esbuild/ts/ts_computed_class_field_use_define_true
 
-- entry-!~{000}~.js => entry-CKW5b48F.js
+- entry-!~{000}~.js => entry-Dnnokn3r.js
 
 # tests/esbuild/ts/ts_computed_class_field_use_define_true_lower
 
-- entry-!~{000}~.js => entry-CKW5b48F.js
+- entry-!~{000}~.js => entry-Dnnokn3r.js
 
 # tests/esbuild/ts/ts_const_enum_comments
 
@@ -3450,35 +3454,35 @@ expression: output
 
 # tests/esbuild/ts/ts_experimental_decorator_scope_issue2147
 
-- entry-!~{000}~.js => entry-CMXZovLt.js
+- entry-!~{000}~.js => entry-hWy2aHdB.js
 
 # tests/esbuild/ts/ts_experimental_decorators_keep_names
 
-- entry-!~{000}~.js => entry-CGdtW7ci.js
+- entry-!~{000}~.js => entry-B_oxHpjU.js
 
 # tests/esbuild/ts/ts_experimental_decorators_mangle_props_assign_semantics
 
-- entry-!~{000}~.js => entry-e9MymzAS.js
+- entry-!~{000}~.js => entry-BC_SJLb3.js
 
 # tests/esbuild/ts/ts_experimental_decorators_mangle_props_define_semantics
 
-- entry-!~{000}~.js => entry-e9MymzAS.js
+- entry-!~{000}~.js => entry-BC_SJLb3.js
 
 # tests/esbuild/ts/ts_experimental_decorators_mangle_props_methods
 
-- entry-!~{000}~.js => entry-BXlavoDv.js
+- entry-!~{000}~.js => entry-BWu7hmAr.js
 
 # tests/esbuild/ts/ts_experimental_decorators_mangle_props_static_assign_semantics
 
-- entry-!~{000}~.js => entry-C__iy0VL.js
+- entry-!~{000}~.js => entry-BPoalPSd.js
 
 # tests/esbuild/ts/ts_experimental_decorators_mangle_props_static_define_semantics
 
-- entry-!~{000}~.js => entry-C__iy0VL.js
+- entry-!~{000}~.js => entry-BPoalPSd.js
 
 # tests/esbuild/ts/ts_experimental_decorators_mangle_props_static_methods
 
-- entry-!~{000}~.js => entry-D8J2QjHu.js
+- entry-!~{000}~.js => entry-BJzGN5DD.js
 
 # tests/esbuild/ts/ts_experimental_decorators_no_config
 

@@ -136,30 +136,32 @@ impl TransformPlugin {
 
         // when both the normal options and tsconfig is set,
         // we want to prioritize the normal options
-        if transform_options
-          .jsx
-          .as_ref()
-          .is_none_or(|jsx| matches!(jsx, Either::Right(right) if right.runtime.is_none()))
+        if compiler_options.jsx.as_deref() == Some("preserve")
+          && transform_options
+            .jsx
+            .as_ref()
+            .is_none_or(|jsx| matches!(jsx, Either::Right(right) if right.runtime.is_none()))
         {
-          if compiler_options.jsx.as_deref() == Some("preserve") {
-            transform_options.jsx = Some(Either::Left(String::from("preserve")));
+          transform_options.jsx = Some(Either::Left(String::from("preserve")));
+        }
+        if !matches!(&transform_options.jsx, Some(Either::Left(left)) if left == "preserve") {
+          let mut jsx = if let Some(Either::Right(jsx)) = transform_options.jsx {
+            jsx
           } else {
-            let mut jsx = if let Some(Either::Right(jsx)) = transform_options.jsx {
-              jsx
-            } else {
-              JsxOptions::default()
-            };
+            JsxOptions::default()
+          };
 
-            if compiler_options.jsx_factory.is_some() && jsx.pragma.is_none() {
-              jsx.pragma.clone_from(&compiler_options.jsx_factory);
-            }
-            if compiler_options.jsx_import_source.is_some() && jsx.import_source.is_none() {
-              jsx.import_source.clone_from(&compiler_options.jsx_import_source);
-            }
-            if compiler_options.jsx_fragment_factory.is_some() && jsx.pragma_frag.is_none() {
-              jsx.pragma_frag.clone_from(&compiler_options.jsx_fragment_factory);
-            }
+          if compiler_options.jsx_factory.is_some() && jsx.pragma.is_none() {
+            jsx.pragma.clone_from(&compiler_options.jsx_factory);
+          }
+          if compiler_options.jsx_import_source.is_some() && jsx.import_source.is_none() {
+            jsx.import_source.clone_from(&compiler_options.jsx_import_source);
+          }
+          if compiler_options.jsx_fragment_factory.is_some() && jsx.pragma_frag.is_none() {
+            jsx.pragma_frag.clone_from(&compiler_options.jsx_fragment_factory);
+          }
 
+          if jsx.runtime.is_none() {
             match compiler_options.jsx.as_deref() {
               Some("react") => {
                 jsx.runtime = Some(String::from("classic"));
@@ -175,9 +177,8 @@ impl TransformPlugin {
               Some("react-jsxdev") => jsx.development = Some(true),
               _ => {}
             }
-
-            transform_options.jsx = Some(Either::Right(jsx));
           }
+          transform_options.jsx = Some(Either::Right(jsx));
         }
 
         if transform_options.decorator.as_ref().is_none_or(|decorator| decorator.legacy.is_none()) {

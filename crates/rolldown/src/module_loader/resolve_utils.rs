@@ -1,24 +1,24 @@
+use std::sync::Arc;
+
 use arcstr::ArcStr;
 use futures::future::join_all;
 use oxc_index::IndexVec;
-use rolldown_plugin::{__inner::resolve_id_check_external, SharedPluginDriver};
-use rolldown_resolver::ResolveError;
-use rolldown_utils::ecmascript::{self};
-use std::sync::Arc;
-
 use rolldown_common::{
-  ImportKind, ImportRecordIdx, ImportRecordMeta, ModuleDefFormat, ModuleType, RUNTIME_MODULE_KEY,
-  RawImportRecord, ResolvedId,
+  ImportKind, ImportRecordIdx, ImportRecordMeta, ModuleDefFormat, ModuleType,
+  NormalizedBundlerOptions, RUNTIME_MODULE_KEY, RawImportRecord, ResolvedId,
 };
 use rolldown_error::{BuildDiagnostic, BuildResult, DiagnosableArcstr, EventKind};
+use rolldown_plugin::{__inner::resolve_id_check_external, PluginDriver, SharedPluginDriver};
+use rolldown_resolver::{ResolveError, Resolver};
+use rolldown_utils::ecmascript::{self};
 
 use crate::{SharedOptions, SharedResolver};
 
 #[tracing::instrument(skip_all, fields(CONTEXT_hook_resolve_id_trigger = "automatic"))]
 pub async fn resolve_id(
-  bundle_options: &SharedOptions,
-  resolver: &SharedResolver,
-  plugin_driver: &SharedPluginDriver,
+  bundle_options: &NormalizedBundlerOptions,
+  resolver: &Resolver,
+  plugin_driver: &PluginDriver,
   importer: &str,
   specifier: &str,
   kind: ImportKind,
@@ -58,30 +58,21 @@ pub async fn resolve_dependencies(
   warnings: &mut Vec<BuildDiagnostic>,
   module_type: &ModuleType,
 ) -> BuildResult<IndexVec<ImportRecordIdx, ResolvedId>> {
-  let jobs = dependencies.iter_enumerated().map(|(idx, item)| {
-    let specifier = item.module_request.clone();
-    let bundle_options = Arc::clone(options);
-    // FIXME(hyf0): should not use `Arc<Resolver>` here
-    let resolver = Arc::clone(resolver);
-    let plugin_driver = Arc::clone(plugin_driver);
+  let jobs = dependencies.iter_enumerated().map(async |(idx, item)| {
     let importer = &self_resolved_id.id;
-    let kind = item.kind;
-    async move {
-      // TODO: We should early return when `async closure is stable`
-      resolve_id(&bundle_options, &resolver, &plugin_driver, importer, &specifier, kind)
-        .await
-        .map(|id| (specifier, idx, id))
-    }
+    let specifier = &item.module_request;
+    resolve_id(options, resolver, plugin_driver, importer, specifier, item.kind)
+      .await
+      .map(|id| (idx, id))
   });
 
-  let resolved_ids = join_all(jobs).await;
   // FIXME: if the import records came from css view, but source from ecma view,
   // the span will not matched.
   let is_css_module = matches!(module_type, ModuleType::Css);
   let mut ret = IndexVec::with_capacity(dependencies.len());
   let mut build_errors = vec![];
-  for resolved_id in resolved_ids {
-    let (specifier, idx, resolved_id) = resolved_id?;
+  for resolved_id in join_all(jobs).await {
+    let (idx, resolved_id) = resolved_id?;
 
     match resolved_id {
       Ok(info) => {
@@ -89,13 +80,14 @@ pub async fn resolve_dependencies(
       }
       Err(e) => {
         let dep = &dependencies[idx];
+        let specifier = &dep.module_request;
         match &e {
           ResolveError::NotFound(..) => {
             // NOTE: IN_TRY_CATCH_BLOCK meta if it is a `require` import
             // record
             if !dep.meta.contains(ImportRecordMeta::InTryCatchBlock) {
               // https://github.com/rollup/rollup/blob/49b57c2b30d55178a7316f23cc9ccc457e1a2ee7/src/ModuleLoader.ts#L643-L646
-              if ecmascript::is_path_like_specifier(&specifier) {
+              if ecmascript::is_path_like_specifier(specifier) {
                 // Unlike rollup, we also emit errors for absolute path
                 build_errors.push(BuildDiagnostic::resolve_error(
                   source.clone(),

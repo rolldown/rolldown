@@ -4,8 +4,7 @@ use crate::{
 };
 use arcstr::ArcStr;
 use rolldown_common::{
-  ImportKind, MakeAbsoluteExternalsRelative, ResolvedExternal, ResolvedId,
-  SharedNormalizedBundlerOptions,
+  ImportKind, MakeAbsoluteExternalsRelative, NormalizedBundlerOptions, ResolvedExternal, ResolvedId,
 };
 use rolldown_resolver::{ResolveError, Resolver};
 use std::{path::Path, sync::Arc};
@@ -26,7 +25,7 @@ pub async fn resolve_id_check_external(
   skipped_resolve_calls: Option<Vec<Arc<HookResolveIdSkipped>>>,
   custom: Arc<CustomField>,
   is_user_defined_entry: bool,
-  bundle_options: &SharedNormalizedBundlerOptions,
+  bundle_options: &NormalizedBundlerOptions,
 ) -> anyhow::Result<Result<ResolvedId, ResolveError>> {
   // Check external with unresolved path
   if bundle_options.external.call(specifier, importer, false).await? {
@@ -95,7 +94,7 @@ pub async fn resolve_id_check_external(
 }
 
 async fn resolve_external(
-  options: &SharedNormalizedBundlerOptions,
+  options: &NormalizedBundlerOptions,
   specifier: &str,
   importer: Option<&str>,
   is_external: bool,

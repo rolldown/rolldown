@@ -1,0 +1,16 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## main.js
+
+```js
+import a, { b, c, d } from "@meojs/cfgs/package.json" with { type: "json", foo: "bar", tag: "baz" };
+import "foo" with { type: "foo" };
+
+//#region main.js
+console.log(`cfgsPackageJson: `, a, b, c, d);
+
+//#endregion
+```

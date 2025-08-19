@@ -22,7 +22,7 @@ use rustc_hash::{FxHashMap, FxHashSet};
 
 type IndexChunkDependedSymbols = IndexVec<ChunkIdx, FxIndexSet<SymbolRef>>;
 type IndexChunkImportsFromExternalModules =
-  IndexVec<ChunkIdx, FxHashMap<ModuleIdx, Vec<NamedImport>>>;
+  IndexVec<ChunkIdx, FxHashMap<ModuleIdx, Vec<(ModuleIdx, NamedImport)>>>;
 type IndexChunkAllImportsFromExternalModules = IndexVec<ChunkIdx, FxIndexSet<ModuleIdx>>;
 type IndexChunkExportedSymbols = IndexVec<ChunkIdx, FxHashMap<SymbolRef, Vec<CompactStr>>>;
 type IndexCrossChunkImports = IndexVec<ChunkIdx, FxHashSet<ChunkIdx>>;
@@ -38,8 +38,7 @@ impl GenerateStage<'_> {
       index_vec![FxIndexSet::<SymbolRef>::default(); chunk_graph.chunk_table.len()];
     let mut index_chunk_exported_symbols: IndexChunkExportedSymbols =
       index_vec![FxHashMap::<SymbolRef, Vec<CompactStr>>::default(); chunk_graph.chunk_table.len()];
-    let mut index_chunk_direct_imports_from_external_modules: IndexChunkImportsFromExternalModules =
-      index_vec![FxHashMap::<ModuleIdx, Vec<NamedImport>>::default(); chunk_graph.chunk_table.len()];
+    let mut index_chunk_direct_imports_from_external_modules: IndexChunkImportsFromExternalModules = index_vec![FxHashMap::<ModuleIdx, Vec<(ModuleIdx, NamedImport)>>::default(); chunk_graph.chunk_table.len()];
     // Used for cjs,umd,iife only
     let mut index_chunk_import_symbols_from_external_modules: IndexChunkAllImportsFromExternalModules =
       index_vec![FxIndexSet::<ModuleIdx>::default(); chunk_graph.chunk_table.len()];
@@ -208,7 +207,10 @@ impl GenerateStage<'_> {
             let rec = &module.import_records[import.record_id];
             if let Module::External(importee) = &self.link_output.module_table[rec.resolved_module]
             {
-              imports_from_external_modules.entry(importee.idx).or_default().push(import.clone());
+              imports_from_external_modules
+                .entry(importee.idx)
+                .or_default()
+                .push((module.idx, import.clone()));
             }
           });
           module.stmt_infos.iter().for_each(|stmt_info| {

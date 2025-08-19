@@ -1,0 +1,6 @@
+{
+  "config": {
+    "external": ["@meojs/cfgs/package.json", "foo"]
+  },
+  "expectExecuted": false
+}

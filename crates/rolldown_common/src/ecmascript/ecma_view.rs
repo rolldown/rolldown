@@ -1,4 +1,4 @@
-use crate::{ConstExportMeta, RUNTIME_HELPER_NAMES, StmtInfoIdx};
+use crate::{ConstExportMeta, ImportAttribute, RUNTIME_HELPER_NAMES, StmtInfoIdx};
 use arcstr::ArcStr;
 use bitflags::bitflags;
 use oxc::{
@@ -106,6 +106,7 @@ pub struct EcmaView {
   pub hmr_hot_ref: Option<SymbolRef>,
   pub hmr_info: HmrInfo,
   pub constant_export_map: FxHashMap<SymbolId, ConstExportMeta>,
+  pub import_attribute_map: FxHashMap<ImportRecordIdx, ImportAttribute>,
 }
 
 bitflags! {

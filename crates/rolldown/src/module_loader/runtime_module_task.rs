@@ -145,6 +145,7 @@ impl RuntimeModuleTask {
         dummy_record_set,
         constant_export_map: FxHashMap::default(),
         depended_runtime_helper: Box::default(),
+        import_attribute_map: FxHashMap::default(),
       },
       css_view: None,
       asset_view: None,

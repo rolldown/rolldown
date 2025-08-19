@@ -1,6 +1,9 @@
 use arcstr::ArcStr;
 use itertools::Itertools;
-use rolldown_common::{AddonRenderContext, ExportsKind, Specifier};
+use rolldown_common::{
+  AddonRenderContext, ExportsKind, ExternalModule, ImportRecordIdx, ModuleIdx, ModuleTable,
+  Specifier,
+};
 use rolldown_sourcemap::SourceJoiner;
 use rolldown_utils::{concat_string, ecmascript::to_module_import_export_name};
 use rustc_hash::{FxHashMap, FxHashSet};
@@ -215,9 +218,11 @@ fn render_esm_chunk_imports(ctx: &GenerateContext<'_>) -> Option<String> {
     specifiers.sort_unstable();
 
     s.push_str(&create_import_declaration(
+      &ctx.link_output.module_table,
       specifiers,
       &default_alias,
       &ctx.chunk.import_path_for(importee_chunk),
+      None,
     ));
   });
   let mut rendered_external_import_namespace_modules = FxHashSet::default();
@@ -227,69 +232,41 @@ fn render_esm_chunk_imports(ctx: &GenerateContext<'_>) -> Option<String> {
       .as_external()
       .expect("Should be external module here");
     let mut has_importee_imported = false;
-    let mut default_alias = vec![];
-    let specifiers = named_imports
-      .iter()
-      .filter_map(|item| {
-        let canonical_ref = &ctx.link_output.symbol_db.canonical_ref_for(item.imported_as);
-        if !ctx.link_output.used_symbol_refs.contains(canonical_ref) {
-          return None;
+    let mut import_attribute = None;
+    // TODO: Warning same import record has different import attributes. https://tinyurl.com/2ddnbbc8
+    named_imports.iter().for_each(|(idx, named_import)| {
+      let module = ctx.link_output.module_table[*idx].as_normal().unwrap();
+      if module.import_attribute_map.contains_key(&named_import.record_id) {
+        if import_attribute.is_none() {
+          import_attribute = Some((module.idx, named_import.record_id));
         }
-        let alias = &ctx.chunk.canonical_names[canonical_ref];
-        match &item.imported {
-          Specifier::Star => {
-            if rendered_external_import_namespace_modules.contains(&importee.idx) {
-              return None;
-            }
-            rendered_external_import_namespace_modules.insert(importee.idx);
-            has_importee_imported = true;
-            s.push_str("import * as ");
-            s.push_str(alias);
-            s.push_str(" from \"");
-            s.push_str(&importee.get_import_path(ctx.chunk));
-            s.push_str("\";\n");
-            None
-          }
-          Specifier::Literal(imported) => {
-            if alias == imported {
-              Some(alias.as_str().into())
-            } else {
-              if imported.as_str() == "default" {
-                default_alias.push(alias.as_str().into());
-                return None;
-              }
-              let imported = to_module_import_export_name(imported);
-              Some(concat_string!(imported, " as ", alias))
-            }
-          }
-        }
-      })
-      .sorted_unstable()
-      .dedup()
-      .collect::<Vec<_>>();
-    default_alias.sort_unstable();
-    default_alias.dedup();
-
-    if !specifiers.is_empty()
-      || !default_alias.is_empty()
-      || (importee.side_effects.has_side_effects() && !has_importee_imported)
-    {
-      s.push_str(&create_import_declaration(
-        specifiers,
-        &default_alias,
-        &importee.get_import_path(ctx.chunk),
-      ));
-    }
+      }
+    });
+    s += &render_named_imports(
+      ctx,
+      importee,
+      named_imports.iter(),
+      &mut has_importee_imported,
+      &mut rendered_external_import_namespace_modules,
+      import_attribute,
+    );
   });
   (!s.is_empty()).then_some(s)
 }
 
 fn create_import_declaration(
+  module_table: &ModuleTable,
   mut specifiers: Vec<String>,
   default_alias: &[ArcStr],
   path: &str,
+  with_clause: Option<(ModuleIdx, ImportRecordIdx)>,
 ) -> String {
   let mut ret = String::new();
+  let with_clause_string = with_clause.and_then(|(module_idx, record_idx)| {
+    let module = module_table[module_idx].as_normal()?;
+    let import_attribute = module.import_attribute_map.get(&record_idx)?;
+    Some(import_attribute.to_string())
+  });
   let first_default_alias = match &default_alias {
     [] => None,
     [first] => Some(first),
@@ -308,17 +285,93 @@ fn create_import_declaration(
     ret.push_str(&specifiers.join(", "));
     ret.push_str(" } from \"");
     ret.push_str(path);
-    ret.push_str("\";\n");
+    ret.push('"');
   } else if let Some(first_default_alias) = first_default_alias {
     ret.push_str("import ");
     ret.push_str(first_default_alias);
     ret.push_str(" from \"");
     ret.push_str(path);
-    ret.push_str("\";\n");
+    ret.push('"');
   } else {
     ret.push_str("import \"");
     ret.push_str(path);
-    ret.push_str("\";\n");
+    ret.push('"');
   }
+
+  if let Some(with_clause) = with_clause_string {
+    ret.push(' ');
+    ret.push_str(&with_clause);
+  }
+  ret.push_str(";\n");
   ret
+}
+
+fn render_named_imports<'a, I>(
+  ctx: &GenerateContext<'_>,
+  importee: &ExternalModule,
+  named_imports: I,
+  is_importee_rendered: &mut bool,
+  rendered_external_import_namespace_modules: &mut FxHashSet<ModuleIdx>,
+  with_clause: Option<(ModuleIdx, ImportRecordIdx)>,
+) -> String
+where
+  I: Iterator<Item = &'a (ModuleIdx, rolldown_common::NamedImport)>,
+{
+  let mut s = String::new();
+  let mut default_alias = vec![];
+  let specifiers = named_imports
+    .filter_map(|(_importer, named_import)| {
+      let canonical_ref = &ctx.link_output.symbol_db.canonical_ref_for(named_import.imported_as);
+      if !ctx.link_output.used_symbol_refs.contains(canonical_ref) {
+        return None;
+      }
+      let alias = &ctx.chunk.canonical_names[canonical_ref];
+      match &named_import.imported {
+        Specifier::Star => {
+          if rendered_external_import_namespace_modules.contains(&importee.idx) {
+            return None;
+          }
+          rendered_external_import_namespace_modules.insert(importee.idx);
+          *is_importee_rendered = true;
+          s.push_str("import * as ");
+          s.push_str(alias);
+          s.push_str(" from \"");
+          s.push_str(&importee.get_import_path(ctx.chunk));
+          s.push_str("\";\n");
+          None
+        }
+        Specifier::Literal(imported) => {
+          if alias == imported {
+            Some(alias.as_str().into())
+          } else {
+            if imported.as_str() == "default" {
+              default_alias.push(alias.as_str().into());
+              return None;
+            }
+            let imported = to_module_import_export_name(imported);
+            Some(concat_string!(imported, " as ", alias))
+          }
+        }
+      }
+    })
+    .sorted_unstable()
+    .dedup()
+    .collect::<Vec<_>>();
+  default_alias.sort_unstable();
+  default_alias.dedup();
+
+  if !specifiers.is_empty()
+    || !default_alias.is_empty()
+    || (importee.side_effects.has_side_effects() && !*is_importee_rendered)
+  {
+    *is_importee_rendered = true;
+    s.push_str(&create_import_declaration(
+      &ctx.link_output.module_table,
+      specifiers,
+      &default_alias,
+      &importee.get_import_path(ctx.chunk),
+      with_clause,
+    ));
+  }
+  s
 }

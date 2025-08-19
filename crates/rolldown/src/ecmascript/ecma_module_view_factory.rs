@@ -74,8 +74,8 @@ pub async fn create_ecma_view(
     directive_range,
     dummy_record_set,
     constant_export_map,
+    import_attribute_map,
   } = scanner.scan(ast.program())?;
-
   named_exports.extend(commonjs_exports);
 
   if !errors.is_empty() {
@@ -134,6 +134,7 @@ pub async fn create_ecma_view(
     dummy_record_set,
     constant_export_map,
     depended_runtime_helper: Box::default(),
+    import_attribute_map,
   };
 
   let ecma_related = EcmaRelated { ast, symbols, dynamic_import_rec_exports_usage };

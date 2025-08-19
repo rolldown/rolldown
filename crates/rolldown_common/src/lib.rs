@@ -131,6 +131,7 @@ pub use crate::{
   types::external_module_idx::ExternalModuleIdx,
   types::hmr_info::HmrInfo,
   types::hybrid_index_vec::HybridIndexVec,
+  types::import_attribute::ImportAttribute,
   types::import_kind::ImportKind,
   types::import_record::{
     ImportRecordIdx, ImportRecordMeta, RawImportRecord, ResolvedImportRecord,

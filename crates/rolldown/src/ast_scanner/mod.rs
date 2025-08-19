@@ -29,10 +29,10 @@ use oxc_index::IndexVec;
 use rolldown_common::dynamic_import_usage::{DynamicImportExportsUsage, DynamicImportUsageInfo};
 use rolldown_common::{
   ConstExportMeta, ConstantValue, EcmaModuleAstUsage, EcmaViewMeta, ExportsKind, HmrInfo,
-  ImportKind, ImportRecordIdx, ImportRecordMeta, LocalExport, MemberExprRef, ModuleDefFormat,
-  ModuleId, ModuleIdx, NamedImport, RawImportRecord, SideEffectDetail, Specifier, StmtInfo,
-  StmtInfos, SymbolRef, SymbolRefDbForModule, SymbolRefFlags, TaggedSymbolRef, ThisExprReplaceKind,
-  generate_replace_this_expr_map,
+  ImportAttribute, ImportKind, ImportRecordIdx, ImportRecordMeta, LocalExport, MemberExprRef,
+  ModuleDefFormat, ModuleId, ModuleIdx, NamedImport, RawImportRecord, SideEffectDetail, Specifier,
+  StmtInfo, StmtInfos, SymbolRef, SymbolRefDbForModule, SymbolRefFlags, TaggedSymbolRef,
+  ThisExprReplaceKind, generate_replace_this_expr_map,
 };
 use rolldown_ecmascript_utils::{BindingIdentifierExt, BindingPatternExt};
 use rolldown_error::{BuildDiagnostic, BuildResult, CjsExportSpan};
@@ -106,6 +106,7 @@ pub struct ScanResult {
   pub hmr_hot_ref: Option<SymbolRef>,
   pub directive_range: Vec<Span>,
   pub constant_export_map: FxHashMap<SymbolId, ConstExportMeta>,
+  pub import_attribute_map: FxHashMap<ImportRecordIdx, ImportAttribute>,
 }
 
 pub struct AstScanner<'me, 'ast> {
@@ -189,6 +190,7 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
       commonjs_exports: FxHashMap::default(),
       constant_export_map: FxHashMap::default(),
       ecma_view_meta: EcmaViewMeta::default(),
+      import_attribute_map: FxHashMap::default(),
     };
 
     Self {
@@ -581,6 +583,9 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
       self.result.ecma_view_meta.insert(EcmaViewMeta::HasStarExport);
     }
     self.result.imports.insert(decl.span, id);
+    if let Some(ref with_clause) = decl.with_clause {
+      self.result.import_attribute_map.insert(id, ImportAttribute::from_with_clause(with_clause));
+    }
   }
 
   fn scan_export_named_decl(&mut self, decl: &ExportNamedDeclaration) {
@@ -603,6 +608,12 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
           spec.local.span(),
         );
       });
+      if let Some(ref with_clause) = decl.with_clause {
+        self
+          .result
+          .import_attribute_map
+          .insert(record_id, ImportAttribute::from_with_clause(with_clause));
+      }
       self.result.imports.insert(decl.span, record_id);
       // `export {} from '...'`
       if decl.specifiers.is_empty() {
@@ -724,6 +735,13 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
         ImportRecordMeta::empty()
       },
     );
+
+    if let Some(ref with_clause) = decl.with_clause {
+      self
+        .result
+        .import_attribute_map
+        .insert(rec_id, ImportAttribute::from_with_clause(with_clause));
+    }
     self.result.imports.insert(decl.span, rec_id);
     // // `import '...'` or `import {} from '...'`
     if decl.specifiers.as_ref().is_none_or(|s| s.is_empty()) {

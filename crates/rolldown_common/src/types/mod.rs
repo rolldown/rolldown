@@ -14,6 +14,7 @@ pub mod exports_kind;
 pub mod external_module_idx;
 pub mod hmr_info;
 pub mod hybrid_index_vec;
+pub mod import_attribute;
 pub mod import_kind;
 pub mod import_record;
 pub mod importer_record;

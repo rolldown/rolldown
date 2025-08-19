@@ -74,6 +74,7 @@ OPTIONS
   --shim-missing-exports      Create shim variables for missing exports.
   --sourcemap-base-url <sourcemap-base-url>Base URL used to prefix sourcemap paths.
   --sourcemap-debug-ids       Inject sourcemap debug IDs.
+  --top-level-var             Rewrite top-level declarations to use \`var\`.
   --transform.assumptions.ignore-function-length .
   --transform.assumptions.no-document-all .
   --transform.assumptions.object-rest-no-symbols .

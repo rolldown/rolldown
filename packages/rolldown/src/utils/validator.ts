@@ -792,6 +792,10 @@ const OutputOptionsSchema = v.strictObject({
     v.optional(v.boolean()),
     v.description('Minify internal exports'),
   ),
+  topLevelVar: v.pipe(
+    v.optional(v.boolean()),
+    v.description('Rewrite top-level declarations to use `var`.'),
+  ),
 });
 
 const getAddonDescription = (

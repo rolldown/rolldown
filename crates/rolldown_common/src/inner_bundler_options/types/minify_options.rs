@@ -36,6 +36,7 @@ impl From<bool> for RawMinifyOptions {
 #[derive(Debug, Clone)]
 pub enum MinifyOptions {
   Disabled,
+  /// Setting all values to false in `MinifyOptionsObject` means DCE only.
   Enabled(MinifyOptionsObject),
 }
 
@@ -85,26 +86,25 @@ pub struct MinifyOptionsObject {
   pub compress: bool,
   pub remove_whitespace: bool,
 }
+
 impl MinifyOptionsObject {
-  pub fn to_oxc_minifier_options(
-    &self,
-    option: &NormalizedBundlerOptions,
-  ) -> oxc::minifier::MinifierOptions {
+  pub fn get_mangle_options(&self, option: &NormalizedBundlerOptions) -> MangleOptions {
     let keep_names = option.keep_names;
-    oxc::minifier::MinifierOptions {
-      mangle: self.mangle.then_some(MangleOptions {
-        // IIFE need to preserve top level names
-        top_level: !matches!(option.format, OutputFormat::Iife),
-        keep_names: MangleOptionsKeepNames { function: keep_names, class: keep_names },
-        debug: false,
-      }),
-      compress: Some(CompressOptions {
-        target: option.transform_options.es_target,
-        keep_names: CompressOptionsKeepNames { function: keep_names, class: keep_names },
-        treeshake: TreeShakeOptions::from(&option.treeshake),
-        ..CompressOptions::smallest()
-      })
-      .filter(|_| self.compress),
+    MangleOptions {
+      // IIFE need to preserve top level names
+      top_level: !matches!(option.format, OutputFormat::Iife),
+      keep_names: MangleOptionsKeepNames { function: keep_names, class: keep_names },
+      debug: false,
+    }
+  }
+
+  pub fn get_compress_options(&self, option: &NormalizedBundlerOptions) -> CompressOptions {
+    let keep_names = option.keep_names;
+    CompressOptions {
+      target: option.transform_options.es_target,
+      keep_names: CompressOptionsKeepNames { function: keep_names, class: keep_names },
+      treeshake: TreeShakeOptions::from(&option.treeshake),
+      ..CompressOptions::smallest()
     }
   }
 }

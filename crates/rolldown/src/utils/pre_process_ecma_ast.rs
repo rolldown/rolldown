@@ -49,7 +49,7 @@ impl PreProcessEcmaAst {
         semantic_ret.errors,
         &source,
         path,
-        &Severity::Warning,
+        &Severity::Error,
       ));
     }
 

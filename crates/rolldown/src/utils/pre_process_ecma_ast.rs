@@ -39,18 +39,18 @@ impl PreProcessEcmaAst {
     bundle_options: &NormalizedBundlerOptions,
     has_lazy_export: bool,
   ) -> BuildResult<ParseToEcmaAstResult> {
-    let mut warning = vec![];
     let source = ast.source().clone();
     // Build initial semantic data and check for semantic errors.
-    let semantic_ret =
-      ast.program.with_mut(|WithMutFields { program, .. }| SemanticBuilder::new().build(program));
+    let semantic_ret = ast.program.with_mut(|WithMutFields { program, .. }| {
+      SemanticBuilder::new().with_check_syntax_error(true).build(program)
+    });
     if !semantic_ret.errors.is_empty() {
-      warning.extend(BuildDiagnostic::from_oxc_diagnostics(
+      Err(BuildDiagnostic::from_oxc_diagnostics(
         semantic_ret.errors,
         &source,
         path,
         &Severity::Error,
-      ));
+      ))?;
     }
 
     self.stats = semantic_ret.semantic.stats();

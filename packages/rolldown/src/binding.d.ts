@@ -1393,6 +1393,7 @@ export type BindingBuiltinPluginName =  'builtin:alias'|
 'builtin:oxc-runtime'|
 'builtin:reporter'|
 'builtin:replace'|
+'builtin:esm-external-require'|
 'builtin:transform'|
 'builtin:vite-resolve'|
 'builtin:wasm-fallback'|
@@ -1464,6 +1465,10 @@ export interface BindingEmittedChunk {
 export interface BindingError {
   kind: string
   message: string
+}
+
+export interface BindingEsmExternalRequirePluginConfig {
+  external?: (source: string, importer: string | undefined, isResolved: boolean) => boolean
 }
 
 export interface BindingExperimentalHmrOptions {

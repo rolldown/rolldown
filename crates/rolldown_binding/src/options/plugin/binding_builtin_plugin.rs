@@ -11,6 +11,7 @@ use rolldown_plugin_asset::AssetPlugin;
 use rolldown_plugin_asset_import_meta_url::AssetImportMetaUrlPlugin;
 use rolldown_plugin_build_import_analysis::BuildImportAnalysisPlugin;
 use rolldown_plugin_dynamic_import_vars::DynamicImportVarsPlugin;
+use rolldown_plugin_esm_external_require::EsmExternalRequirePlugin;
 use rolldown_plugin_import_glob::ImportGlobPlugin;
 use rolldown_plugin_isolated_declaration::IsolatedDeclarationPlugin;
 use rolldown_plugin_json::JsonPlugin;
@@ -25,7 +26,8 @@ use rolldown_plugin_wasm_helper::WasmHelperPlugin;
 use rolldown_plugin_web_worker_post::WebWorkerPostPlugin;
 
 use crate::options::plugin::config::{
-  BindingModulePreloadPolyfillPluginConfig, BindingWasmHelperPluginConfig,
+  BindingEsmExternalRequirePluginConfig, BindingModulePreloadPolyfillPluginConfig,
+  BindingWasmHelperPluginConfig,
 };
 
 use super::{
@@ -168,6 +170,14 @@ impl TryFrom<BindingBuiltinPlugin<'_>> for Arc<dyn Pluginable> {
           BindingReplacePluginConfig::default()
         };
         Arc::new(ReplacePlugin::with_options(config.into()))
+      }
+      BindingBuiltinPluginName::RequireToImport => {
+        let plugin = if let Some(options) = plugin.options {
+          BindingEsmExternalRequirePluginConfig::from_unknown(options)?.into()
+        } else {
+          EsmExternalRequirePlugin::default()
+        };
+        Arc::new(plugin)
       }
       BindingBuiltinPluginName::Transform => {
         let plugin = if let Some(options) = plugin.options {

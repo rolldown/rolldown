@@ -2940,6 +2940,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "rolldown_plugin_esm_external_require"
+version = "0.1.0"
+dependencies = [
+ "rolldown_common",
+ "rolldown_plugin",
+ "rolldown_utils",
+]
+
+[[package]]
 name = "rolldown_plugin_hmr"
 version = "0.1.0"
 dependencies = [
@@ -3062,13 +3071,6 @@ dependencies = [
  "rolldown_plugin",
  "sugar_path",
  "terminal_size",
-]
-
-[[package]]
-name = "rolldown_plugin_require_to_import"
-version = "0.1.0"
-dependencies = [
- "rolldown_plugin",
 ]
 
 [[package]]

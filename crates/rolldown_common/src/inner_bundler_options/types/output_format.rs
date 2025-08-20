@@ -20,6 +20,11 @@ pub enum OutputFormat {
 
 impl OutputFormat {
   #[inline]
+  pub fn is_esm(&self) -> bool {
+    matches!(self, Self::Esm)
+  }
+
+  #[inline]
   pub fn keep_esm_import_export_syntax(&self) -> bool {
     matches!(self, Self::Esm)
   }

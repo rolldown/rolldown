@@ -8,5 +8,6 @@
     ],
     "format": "iife"
   },
+  "expectError": true,
   "expectExecuted": false
 }

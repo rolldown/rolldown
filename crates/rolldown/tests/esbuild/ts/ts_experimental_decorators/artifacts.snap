@@ -6,6 +6,18 @@ source: crates/rolldown_testing/src/integration_test.rs
 ## PARSE_ERROR
 
 ```text
+[PARSE_ERROR] Error: Abstract properties can only appear within an abstract class.
+   ╭─[ all.ts:8:17 ]
+   │
+ 8 │     @x @y abstract mAbst
+   │                    ──┬──  
+   │                      ╰──── 
+───╯
+
+```
+## PARSE_ERROR
+
+```text
 [PARSE_ERROR] Error: Expression must be enclosed in parentheses to be used as a decorator.
    ╭─[ all_computed.ts:1:2 ]
    │

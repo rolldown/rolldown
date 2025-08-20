@@ -1,34 +1,36 @@
 ---
 source: crates/rolldown_testing/src/integration_test.rs
 ---
-# Assets
+# Errors
 
-## do-not-keep.js
+## PARSE_ERROR
 
-```js
+```text
+[PARSE_ERROR] Error: Identifier `foo` has already been declared
+    ╭─[ keep.js:30:10 ]
+    │
+ 30 │ function foo([fn = function() {}]) {}
+    │          ─┬─  
+    │           ╰─── `foo` has already been declared here
+ 31 │ function foo({ fn = function() {} }) {}
+    │          ─┬─  
+    │           ╰─── It can not be redeclared here
+────╯
 
 ```
-## keep.js
+## PARSE_ERROR
 
-```js
-//#region keep.js
-function fn() {}
-var fn = function() {};
-var obj = { "f n": function() {} };
-fn = function() {};
-fn ||= function() {};
-fn &&= function() {};
-fn ??= function() {};
-var [fn = function() {}] = [];
-var { fn = function() {} } = {};
-for (var [fn = function() {}] = [];;);
-for (var { fn = function() {} } = {};;);
-for (var [fn = function() {}] in obj);
-for (var { fn = function() {} } in obj);
-for (var [fn = function() {}] of obj);
-for (var { fn = function() {} } of obj);
-[fn = function() {}] = [];
-({fn = function() {}} = {});
+```text
+[PARSE_ERROR] Error: Identifier `foo` has already been declared
+    ╭─[ keep.js:3:10 ]
+    │
+  3 │ function foo(fn = function() {}) {}
+    │          ─┬─  
+    │           ╰─── `foo` has already been declared here
+    │ 
+ 30 │ function foo([fn = function() {}]) {}
+    │          ─┬─  
+    │           ╰─── It can not be redeclared here
+────╯
 
-//#endregion
 ```

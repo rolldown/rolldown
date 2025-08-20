@@ -8,5 +8,6 @@
     ],
     "treeshake": false
   },
+  "expectError": true,
   "expectExecuted": false
 }

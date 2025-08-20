@@ -44,14 +44,14 @@ impl PreProcessEcmaAst {
     let semantic_ret = ast.program.with_mut(|WithMutFields { program, .. }| {
       SemanticBuilder::new().with_check_syntax_error(true).build(program)
     });
-    if !semantic_ret.errors.is_empty() {
-      Err(BuildDiagnostic::from_oxc_diagnostics(
-        semantic_ret.errors,
-        &source,
-        path,
-        &Severity::Error,
-      ))?;
-    }
+
+    let (errors, warnings): (Vec<_>, Vec<_>) =
+      semantic_ret.errors.into_iter().partition(|w| w.severity == OxcSeverity::Error);
+    let warnings = if errors.is_empty() {
+      BuildDiagnostic::from_oxc_diagnostics(warnings, &source, path, &Severity::Warning)
+    } else {
+      return Err(BuildDiagnostic::from_oxc_diagnostics(errors, &source, path, &Severity::Error))?;
+    };
 
     self.stats = semantic_ret.semantic.stats();
     let scoping = semantic_ret.semantic.into_scoping();
@@ -152,6 +152,6 @@ impl PreProcessEcmaAst {
         .into_scoping()
     });
 
-    Ok(ParseToEcmaAstResult { ast, scoping, has_lazy_export, warning })
+    Ok(ParseToEcmaAstResult { ast, scoping, has_lazy_export, warnings })
   }
 }

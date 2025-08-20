@@ -1,264 +1,35 @@
 ---
 source: crates/rolldown_testing/src/integration_test.rs
 ---
-# Assets
+# Errors
 
-## identity-async.js
+## PARSE_ERROR
 
-```js
-//#region identity-async.js
-async function keep(x) {
-	return x;
-}
-console.log(keep(1));
-keep(foo());
-keep(1);
+```text
+[PARSE_ERROR] Error: Identifier `DROP` has already been declared
+   ╭─[ identity-last.js:1:10 ]
+   │
+ 1 │ function DROP(x) { return [x] }
+   │          ──┬─  
+   │            ╰─── `DROP` has already been declared here
+ 2 │ function DROP(x) { return x }
+   │          ──┬─  
+   │            ╰─── It can not be redeclared here
+───╯
 
-//#endregion
 ```
-## identity-cross-module.js
+## PARSE_ERROR
 
-```js
-//#region identity-cross-module-def.js
-function DROP(x) {
-	return x;
-}
+```text
+[PARSE_ERROR] Error: Identifier `keep` has already been declared
+   ╭─[ identity-first.js:1:10 ]
+   │
+ 1 │ function keep(x) { return x }
+   │          ──┬─  
+   │            ╰─── `keep` has already been declared here
+ 2 │ function keep(x) { return [x] }
+   │          ──┬─  
+   │            ╰─── It can not be redeclared here
+───╯
 
-//#endregion
-//#region identity-cross-module.js
-console.log(DROP(1));
-DROP(foo());
-DROP(1);
-
-//#endregion
-```
-## identity-first.js
-
-```js
-//#region identity-first.js
-function keep(x) {
-	return x;
-}
-function keep(x) {
-	return [x];
-}
-console.log(keep(1));
-keep(foo());
-keep(1);
-
-//#endregion
-```
-## identity-generator.js
-
-```js
-//#region identity-generator.js
-function* keep(x) {
-	return x;
-}
-console.log(keep(1));
-keep(foo());
-keep(1);
-
-//#endregion
-```
-## identity-last.js
-
-```js
-//#region identity-last.js
-function DROP(x) {
-	return [x];
-}
-function DROP(x) {
-	return x;
-}
-console.log(DROP(1));
-DROP(foo());
-DROP(1);
-
-//#endregion
-```
-## identity-no-args.js
-
-```js
-//#region identity-no-args.js
-function keep(x) {
-	return x;
-}
-console.log(keep());
-keep();
-
-//#endregion
-```
-## identity-two-args.js
-
-```js
-//#region identity-two-args.js
-function keep(x) {
-	return x;
-}
-console.log(keep(1, 2));
-keep(1, 2);
-
-//#endregion
-```
-## identity.js
-
-```js
-//#region identity.js
-function DROP(x) {
-	return x;
-}
-console.log(DROP(1));
-DROP(foo());
-DROP(1);
-
-//#endregion
-```
-## not-identity-array.js
-
-```js
-//#region not-identity-array.js
-function keep([x]) {
-	return x;
-}
-console.log(keep(1));
-keep(foo());
-keep(1);
-
-//#endregion
-```
-## not-identity-default.js
-
-```js
-//#region not-identity-default.js
-function keep(x = foo()) {
-	return x;
-}
-console.log(keep(1));
-keep(foo());
-keep(1);
-
-//#endregion
-```
-## not-identity-object.js
-
-```js
-//#region not-identity-object.js
-function keep({ x }) {
-	return x;
-}
-console.log(keep(1));
-keep(foo());
-keep(1);
-
-//#endregion
-```
-## not-identity-rest.js
-
-```js
-//#region not-identity-rest.js
-function keep(...x) {
-	return x;
-}
-console.log(keep(1));
-keep(foo());
-keep(1);
-
-//#endregion
-```
-## not-identity-return.js
-
-```js
-//#region not-identity-return.js
-function keep(x) {
-	return [x];
-}
-console.log(keep(1));
-keep(foo());
-keep(1);
-
-//#endregion
-```
-## not-identity-two-args.js
-
-```js
-//#region not-identity-two-args.js
-function keep(x, y) {
-	return x;
-}
-console.log(keep(1));
-keep(foo());
-keep(1);
-
-//#endregion
-```
-## reassign-array.js
-
-```js
-//#region reassign-array.js
-function keep(x) {
-	return x;
-}
-[keep] = reassigned;
-console.log(keep(1));
-keep(foo());
-keep(1);
-
-//#endregion
-```
-## reassign-div.js
-
-```js
-//#region reassign-div.js
-function keep(x) {
-	return x;
-}
-keep /= reassigned;
-console.log(keep(1));
-keep(foo());
-keep(1);
-
-//#endregion
-```
-## reassign-inc.js
-
-```js
-//#region reassign-inc.js
-function keep(x) {
-	return x;
-}
-keep++;
-console.log(keep(1));
-keep(foo());
-keep(1);
-
-//#endregion
-```
-## reassign-object.js
-
-```js
-//#region reassign-object.js
-function keep(x) {
-	return x;
-}
-({keep} = reassigned);
-console.log(keep(1));
-keep(foo());
-keep(1);
-
-//#endregion
-```
-## reassign.js
-
-```js
-//#region reassign.js
-function keep(x) {
-	return x;
-}
-keep = reassigned;
-console.log(keep(1));
-keep(foo());
-keep(1);
-
-//#endregion
 ```

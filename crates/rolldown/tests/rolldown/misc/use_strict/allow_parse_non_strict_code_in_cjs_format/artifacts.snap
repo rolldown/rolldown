@@ -1,23 +1,17 @@
 ---
 source: crates/rolldown_testing/src/integration_test.rs
 ---
-# Assets
+# Errors
 
-## main.js
+## PARSE_ERROR
 
-```js
-// HIDDEN [rolldown:runtime]
-const node_assert = __toESM(require("node:assert"));
+```text
+[PARSE_ERROR] Error: Cannot assign to 'arguments' in strict mode
+   ╭─[ cjs.js:2:31 ]
+   │
+ 2 │ module.exports = function foo(arguments) {}
+   │                               ────┬────  
+   │                                   ╰────── 
+───╯
 
-//#region cjs.js
-var require_cjs = /* @__PURE__ */ __commonJS({ "cjs.js": ((exports, module) => {
-	module.exports = function foo$1(arguments$1) {};
-}) });
-
-//#endregion
-//#region main.js
-var import_cjs = /* @__PURE__ */ __toESM(require_cjs());
-(0, node_assert.default)(typeof import_cjs.default === "function");
-
-//#endregion
 ```

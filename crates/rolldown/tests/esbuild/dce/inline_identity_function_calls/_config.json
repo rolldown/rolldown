@@ -79,5 +79,6 @@
       }
     ]
   },
+  "expectError": true,
   "expectExecuted": false
 }

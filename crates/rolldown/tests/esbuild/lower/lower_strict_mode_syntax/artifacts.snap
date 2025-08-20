@@ -1,14 +1,29 @@
 ---
 source: crates/rolldown_testing/src/integration_test.rs
 ---
-# Assets
+# Errors
 
-## entry.js
+## PARSE_ERROR
 
-```js
-//#region for-in.js
-if (test) for (var a = b in {});
-for (var x = y in {});
+```text
+[PARSE_ERROR] Error: for-in loop variable declaration may not have an initializer
+   ╭─[ for-in.js:2:7 ]
+   │
+ 2 │     for (var a = b in {}) ;
+   │          ────┬────  
+   │              ╰────── 
+───╯
 
-//#endregion
+```
+## PARSE_ERROR
+
+```text
+[PARSE_ERROR] Error: for-in loop variable declaration may not have an initializer
+   ╭─[ for-in.js:3:6 ]
+   │
+ 3 │ for (var x = y in {}) ;
+   │      ────┬────  
+   │          ╰────── 
+───╯
+
 ```

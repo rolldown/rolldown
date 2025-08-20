@@ -1,7 +1,7 @@
 ---
 source: crates/rolldown_testing/src/integration_test.rs
 ---
-# warnings
+# Errors
 
 ## PARSE_ERROR
 
@@ -17,14 +17,4 @@ source: crates/rolldown_testing/src/integration_test.rs
    │      ╰─── It can not be redeclared here
 ───╯
 
-```
-# Assets
-
-## entry.js
-
-```js
-//#region entry.ts
-bar();
-
-//#endregion
 ```

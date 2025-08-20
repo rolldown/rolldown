@@ -201,6 +201,7 @@ napi-derive = { version = "3.0.0", default-features = false, features = ["type-d
 # oxc crates with the same version
 oxc = { version = "0.82.2", features = ["ast_visit", "transformer", "minifier", "mangler", "semantic", "codegen", "serialize", "isolated_declarations", "regular_expression", "cfg"] }
 oxc_ecmascript = { version = "0.82.2" }
+oxc_minify_napi = { version = "0.82.2" }
 oxc_parser_napi = { version = "0.82.2" }
 oxc_transform_napi = { version = "0.82.2" }
 oxc_traverse = { version = "0.82.2" }

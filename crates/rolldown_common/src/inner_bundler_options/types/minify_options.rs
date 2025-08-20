@@ -10,15 +10,54 @@ use serde::Deserialize;
 use crate::{NormalizedBundlerOptions, OutputFormat};
 
 #[derive(Debug, Clone)]
-#[cfg_attr(
-  feature = "deserialize_bundler_options",
-  derive(Deserialize, JsonSchema),
-  serde(untagged)
-)]
 pub enum RawMinifyOptions {
   Bool(bool),
   DeadCodeEliminationOnly,
-  Object(MinifyOptionsObject),
+  Object(oxc::minifier::MinifierOptions),
+}
+
+impl RawMinifyOptions {
+  /// Returns `true` if the minify options is [`Enabled`].
+  ///
+  /// [`Enabled`]: RawMinifyOptions::Object
+  #[must_use]
+  pub fn is_enabled(&self) -> bool {
+    !matches!(self, Self::Bool(false))
+  }
+}
+
+impl RawMinifyOptions {
+  pub fn normalize(self, options: &NormalizedBundlerOptions) -> MinifyOptions {
+    match self {
+      RawMinifyOptions::Bool(value) => {
+        if value {
+          let keep_names = options.keep_names;
+          let mangle = MangleOptions {
+            // IIFE need to preserve top level names
+            top_level: !matches!(options.format, OutputFormat::Iife),
+            keep_names: MangleOptionsKeepNames { function: keep_names, class: keep_names },
+            debug: false,
+          };
+
+          let compress = CompressOptions {
+            target: options.transform_options.es_target,
+            keep_names: CompressOptionsKeepNames { function: keep_names, class: keep_names },
+            treeshake: TreeShakeOptions::from(&options.treeshake),
+            ..CompressOptions::smallest()
+          };
+          MinifyOptions::Enabled(oxc::minifier::MinifierOptions {
+            mangle: Some(mangle),
+            compress: Some(compress),
+          })
+        } else {
+          MinifyOptions::Disabled
+        }
+      }
+      RawMinifyOptions::DeadCodeEliminationOnly => MinifyOptions::DeadCodeEliminationOnly,
+      RawMinifyOptions::Object(value) => MinifyOptions::Enabled(value),
+    }
+    //
+  }
 }
 
 impl Default for RawMinifyOptions {
@@ -36,8 +75,9 @@ impl From<bool> for RawMinifyOptions {
 #[derive(Debug, Clone)]
 pub enum MinifyOptions {
   Disabled,
+  DeadCodeEliminationOnly,
   /// Setting all values to false in `MinifyOptionsObject` means DCE only.
-  Enabled(MinifyOptionsObject),
+  Enabled(oxc::minifier::MinifierOptions),
 }
 
 impl MinifyOptions {
@@ -46,31 +86,7 @@ impl MinifyOptions {
   /// [`Enabled`]: MinifyOptions::Enabled
   #[must_use]
   pub fn is_enabled(&self) -> bool {
-    matches!(self, Self::Enabled(..))
-  }
-}
-
-impl From<RawMinifyOptions> for MinifyOptions {
-  fn from(value: RawMinifyOptions) -> Self {
-    match value {
-      RawMinifyOptions::Bool(value) => {
-        if value {
-          Self::Enabled(MinifyOptionsObject {
-            mangle: true,
-            compress: true,
-            remove_whitespace: true,
-          })
-        } else {
-          Self::Disabled
-        }
-      }
-      RawMinifyOptions::DeadCodeEliminationOnly => Self::Enabled(MinifyOptionsObject {
-        mangle: false,
-        compress: false,
-        remove_whitespace: false,
-      }),
-      RawMinifyOptions::Object(value) => Self::Enabled(value),
-    }
+    !matches!(self, Self::Disabled)
   }
 }
 
@@ -85,26 +101,4 @@ pub struct MinifyOptionsObject {
   pub mangle: bool,
   pub compress: bool,
   pub remove_whitespace: bool,
-}
-
-impl MinifyOptionsObject {
-  pub fn get_mangle_options(&self, option: &NormalizedBundlerOptions) -> MangleOptions {
-    let keep_names = option.keep_names;
-    MangleOptions {
-      // IIFE need to preserve top level names
-      top_level: !matches!(option.format, OutputFormat::Iife),
-      keep_names: MangleOptionsKeepNames { function: keep_names, class: keep_names },
-      debug: false,
-    }
-  }
-
-  pub fn get_compress_options(&self, option: &NormalizedBundlerOptions) -> CompressOptions {
-    let keep_names = option.keep_names;
-    CompressOptions {
-      target: option.transform_options.es_target,
-      keep_names: CompressOptionsKeepNames { function: keep_names, class: keep_names },
-      treeshake: TreeShakeOptions::from(&option.treeshake),
-      ..CompressOptions::smallest()
-    }
-  }
 }

@@ -1,11 +1,12 @@
 use std::collections::HashMap;
 
-use napi::{Either, bindgen_prelude::Undefined};
+use napi::{
+  Either,
+  bindgen_prelude::{Either3, Undefined},
+};
 use napi_derive::napi;
 use rolldown::{MinifyOptions, SharedNormalizedBundlerOptions};
 use rustc_hash::FxBuildHasher;
-
-use super::binding_minify_options::BindingMinifyOptions;
 
 #[napi]
 pub struct BindingNormalizedOptions {
@@ -233,17 +234,23 @@ impl BindingNormalizedOptions {
     self.inner.sourcemap_debug_ids
   }
 
-  #[napi(getter, ts_return_type = "false | BindingMinifyOptions")]
-  pub fn minify(&self) -> Either<bool, BindingMinifyOptions> {
-    match &self.inner.minify {
-      MinifyOptions::Disabled => Either::A(false),
-      MinifyOptions::Enabled(minify_options) => Either::B(minify_options.into()),
-    }
-  }
-
   #[napi(getter)]
   pub fn polyfill_require(&self) -> bool {
     self.inner.polyfill_require
+  }
+
+  #[napi(getter, ts_return_type = "false | 'dce-only' | BindingMinifyOptions")]
+  pub fn minify(&self) -> Either3<bool, String, oxc_minify_napi::MinifyOptions> {
+    match &self.inner.minify {
+      MinifyOptions::Disabled => Either3::A(false),
+      MinifyOptions::DeadCodeEliminationOnly => Either3::B("dce-only".to_string()),
+      MinifyOptions::Enabled(_minify_options) => {
+        // TODO: this required we convert `oxc::minify::MinifyOptions` back to `oxc_minify_napi::MinifyOptions`
+        let ret = oxc_minify_napi::MinifyOptions::default();
+
+        Either3::C(ret)
+      }
+    }
   }
 
   #[napi(getter, ts_return_type = "'none' | 'inline'")]

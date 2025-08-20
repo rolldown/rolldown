@@ -1,8 +1,5 @@
 import type { RolldownPlugin } from '..';
-import type {
-  BindingMinifyOptions,
-  BindingNormalizedOptions,
-} from '../binding';
+import type { BindingNormalizedOptions } from '../binding';
 import type {
   SourcemapIgnoreListOption,
   SourcemapPathTransformOption,
@@ -13,6 +10,7 @@ import type {
   AssetFileNamesFunction,
   ChunkFileNamesFunction,
   GlobalsFunction,
+  MinifyOptions,
   OutputOptions,
 } from './output-options';
 
@@ -44,7 +42,7 @@ export interface NormalizedOutputOptions {
   sourcemapDebugIds: boolean;
   sourcemapIgnoreList: SourcemapIgnoreListOption;
   sourcemapPathTransform: SourcemapPathTransformOption | undefined;
-  minify: false | BindingMinifyOptions;
+  minify: false | MinifyOptions | 'dce-only';
   legalComments: 'none' | 'inline';
   polyfillRequire: boolean;
   plugins: RolldownPlugin[];
@@ -171,7 +169,7 @@ export class NormalizedOutputOptionsImpl implements NormalizedOutputOptions {
     return this.outputOptions.sourcemapPathTransform;
   }
 
-  get minify(): false | BindingMinifyOptions {
+  get minify(): false | MinifyOptions | 'dce-only' {
     return this.inner.minify;
   }
 

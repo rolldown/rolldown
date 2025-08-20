@@ -1,7 +1,6 @@
 pub mod binding_hmr_output;
 pub mod binding_log;
 pub mod binding_log_level;
-pub mod binding_minify_options;
 pub mod binding_module_info;
 pub mod binding_normalized_options;
 pub mod binding_output_asset;

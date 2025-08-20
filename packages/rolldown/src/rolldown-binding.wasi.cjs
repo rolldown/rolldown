@@ -108,6 +108,7 @@ const { instance: __napiInstance, module: __wasiModule, napiModule: __napiModule
   },
 })
 module.exports = __napiModule.exports
+module.exports.minify = __napiModule.exports.minify
 module.exports.Severity = __napiModule.exports.Severity
 module.exports.ParseResult = __napiModule.exports.ParseResult
 module.exports.ExportExportNameKind = __napiModule.exports.ExportExportNameKind

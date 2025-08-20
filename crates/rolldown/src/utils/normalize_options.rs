@@ -99,11 +99,11 @@ pub fn normalize_options(mut raw_options: crate::BundlerOptions) -> NormalizeOpt
     OutputFormat::Esm | OutputFormat::Iife | OutputFormat::Umd => Platform::Browser,
   });
 
-  let minify: MinifyOptions = raw_options.minify.unwrap_or_default().into();
+  let raw_minify = raw_options.minify.unwrap_or_default();
 
   let mut raw_define = raw_options.define.unwrap_or_default();
   if matches!(platform, Platform::Browser) && !raw_define.contains_key("process.env.NODE_ENV") {
-    if minify.is_enabled() {
+    if raw_minify.is_enabled() {
       raw_define.insert("process.env.NODE_ENV".to_string(), "'production'".to_string());
     } else {
       raw_define.insert("process.env.NODE_ENV".to_string(), "'development'".to_string());
@@ -207,7 +207,7 @@ pub fn normalize_options(mut raw_options: crate::BundlerOptions) -> NormalizeOpt
     raw_treeshake = TreeshakeOptions::Boolean(false);
   }
 
-  let normalized = NormalizedBundlerOptions {
+  let mut normalized = NormalizedBundlerOptions {
     input: raw_options.input.unwrap_or_default(),
     external: raw_options.external.unwrap_or_default(),
     treeshake: raw_treeshake.into_normalized_options(),
@@ -248,8 +248,9 @@ pub fn normalize_options(mut raw_options: crate::BundlerOptions) -> NormalizeOpt
     module_types,
     experimental,
     // https://github.com/evanw/esbuild/blob/d34e79e2a998c21bb71d57b92b0017ca11756912/internal/bundler/bundler.go#L2767
-    profiler_names: raw_options.profiler_names.unwrap_or(!minify.is_enabled()),
-    minify,
+    profiler_names: raw_options.profiler_names.unwrap_or(!raw_minify.is_enabled()),
+    // Use placeholder for minify options at first
+    minify: MinifyOptions::Disabled,
     define,
     inject: raw_options.inject.unwrap_or_default(),
     oxc_inject_global_variables_config,
@@ -290,6 +291,8 @@ pub fn normalize_options(mut raw_options: crate::BundlerOptions) -> NormalizeOpt
     minify_internal_exports: raw_options.minify_internal_exports.unwrap_or(false),
     context: raw_options.context.unwrap_or_default(),
   };
+
+  normalized.minify = raw_minify.normalize(&normalized);
 
   NormalizeOptionsReturn { options: normalized, resolve_options: raw_resolve, warnings }
 }

@@ -1,4 +1,7 @@
-use oxc::codegen::{self, CodegenOptions, CommentOptions};
+use oxc::{
+  codegen::{self, CodegenOptions, CommentOptions},
+  minifier::MinifierOptions,
+};
 use rolldown_common::{LegalComments, MinifyOptions, NormalizedBundlerOptions};
 use rolldown_ecmascript::EcmaCompiler;
 use rolldown_error::BuildResult;
@@ -14,59 +17,61 @@ impl GenerateStage<'_> {
     options: &NormalizedBundlerOptions,
     assets: &mut AssetVec,
   ) -> BuildResult<()> {
-    if let MinifyOptions::Enabled(minify_options) = &options.minify {
-      assets.par_iter_mut().try_for_each(|asset| -> anyhow::Result<()> {
-        if test_d_ts_pattern(&asset.filename) {
-          return Ok(());
-        }
-        match asset.meta {
-          rolldown_common::InstantiationKind::Ecma(_) => {
-            let codegen_options = CodegenOptions {
-              minify: minify_options.remove_whitespace,
-              comments: CommentOptions {
-                normal: false,
-                jsdoc: false,
-                annotation: !minify_options.remove_whitespace,
-                legal: if matches!(options.legal_comments, LegalComments::Inline)
-                  || !minify_options.remove_whitespace
-                {
-                  codegen::LegalComment::Inline
-                } else {
-                  codegen::LegalComment::None
-                },
+    let (compress, minify_option) = match &options.minify {
+      MinifyOptions::Disabled => return Ok(()),
+      MinifyOptions::DeadCodeEliminationOnly => (false, &MinifierOptions::default()),
+      MinifyOptions::Enabled(options) => (true, options),
+    };
+    let remove_whitespace = compress;
+    assets.par_iter_mut().try_for_each(|asset| -> anyhow::Result<()> {
+      if test_d_ts_pattern(&asset.filename) {
+        return Ok(());
+      }
+      match asset.meta {
+        rolldown_common::InstantiationKind::Ecma(_) => {
+          let codegen_options = CodegenOptions {
+            minify: remove_whitespace,
+            comments: CommentOptions {
+              normal: false,
+              jsdoc: false,
+              annotation: !remove_whitespace,
+              legal: if matches!(options.legal_comments, LegalComments::Inline)
+                || !remove_whitespace
+              {
+                codegen::LegalComment::Inline
+              } else {
+                codegen::LegalComment::None
               },
-              ..CodegenOptions::default()
-            };
+            },
+            ..CodegenOptions::default()
+          };
 
-            // TODO: Do we need to ensure `asset.filename` to be absolute path?
-            let (minified_content, new_map) = EcmaCompiler::dce_or_minify(
-              asset.content.try_as_inner_str()?,
-              options.format.source_type().with_jsx(true),
-              asset.map.is_some(),
-              &asset.filename,
-              minify_options.mangle,
-              minify_options.compress,
-              minify_options.get_mangle_options(options),
-              minify_options.get_compress_options(options),
-              codegen_options,
-            );
-            asset.content = minified_content.into();
-            match (&asset.map, &new_map) {
-              (Some(origin_map), Some(new_map)) => {
-                asset.map = Some(collapse_sourcemaps(&[origin_map, new_map]));
-              }
-              _ => {
-                // TODO: Map is dirty. Should we reset the `asset.map` to `None`?
-              }
+          // TODO: Do we need to ensure `asset.filename` to be absolute path?
+          let (minified_content, new_map) = EcmaCompiler::dce_or_minify(
+            asset.content.try_as_inner_str()?,
+            options.format.source_type().with_jsx(true),
+            asset.map.is_some(),
+            &asset.filename,
+            compress,
+            minify_option.clone(),
+            codegen_options,
+          );
+          asset.content = minified_content.into();
+          match (&asset.map, &new_map) {
+            (Some(origin_map), Some(new_map)) => {
+              asset.map = Some(collapse_sourcemaps(&[origin_map, new_map]));
+            }
+            _ => {
+              // TODO: Map is dirty. Should we reset the `asset.map` to `None`?
             }
           }
-          rolldown_common::InstantiationKind::Css(_)
-          | rolldown_common::InstantiationKind::None
-          | rolldown_common::InstantiationKind::Sourcemap(_) => {}
         }
-        Ok(())
-      })?;
-    }
+        rolldown_common::InstantiationKind::Css(_)
+        | rolldown_common::InstantiationKind::None
+        | rolldown_common::InstantiationKind::Sourcemap(_) => {}
+      }
+      Ok(())
+    })?;
 
     Ok(())
   }

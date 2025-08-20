@@ -2013,6 +2013,26 @@ dependencies = [
 ]
 
 [[package]]
+name = "oxc_minify_napi"
+version = "0.82.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "30fd7ff251b977250c44087e1e0b689443e6f781238125d61eb552e88ae0a2cc"
+dependencies = [
+ "napi",
+ "napi-build",
+ "napi-derive",
+ "oxc_allocator",
+ "oxc_codegen",
+ "oxc_diagnostics",
+ "oxc_minifier",
+ "oxc_napi",
+ "oxc_parser",
+ "oxc_sourcemap",
+ "oxc_span",
+ "oxc_syntax",
+]
+
+[[package]]
 name = "oxc_napi"
 version = "0.82.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2686,6 +2706,7 @@ dependencies = [
  "napi-build",
  "napi-derive",
  "oxc",
+ "oxc_minify_napi",
  "oxc_parser_napi",
  "oxc_resolver_napi",
  "oxc_transform_napi",

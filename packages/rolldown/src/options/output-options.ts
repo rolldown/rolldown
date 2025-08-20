@@ -1,4 +1,7 @@
-import type { BindingMinifyOptions, PreRenderedChunk } from '../binding';
+import type {
+  MinifyOptions as BindingMinifyOptions,
+  PreRenderedChunk,
+} from '../binding';
 import type { RolldownOutputPluginOption } from '../plugin';
 import type {
   SourcemapIgnoreListOption,
@@ -34,7 +37,10 @@ export type AssetFileNamesFunction = (chunkInfo: PreRenderedAsset) => string;
 
 export type GlobalsFunction = (name: string) => string;
 
-export type MinifyOptions = BindingMinifyOptions;
+export type MinifyOptions = Omit<
+  BindingMinifyOptions,
+  'module' | 'codegen' | 'sorucemap'
+>;
 
 export interface ChunkingContext {
   getModuleInfo(moduleId: string): ModuleInfo | null;

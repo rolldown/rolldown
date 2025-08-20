@@ -63,6 +63,7 @@ const {
   },
 })
 export default __napiModule.exports
+export const minify = __napiModule.exports.minify
 export const Severity = __napiModule.exports.Severity
 export const ParseResult = __napiModule.exports.ParseResult
 export const ExportExportNameKind = __napiModule.exports.ExportExportNameKind

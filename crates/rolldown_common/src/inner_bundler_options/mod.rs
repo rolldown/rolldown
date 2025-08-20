@@ -160,6 +160,11 @@ pub struct BundlerOptions {
   )]
   pub treeshake: TreeshakeOptions,
   pub experimental: Option<ExperimentalOptions>,
+  #[cfg_attr(
+    feature = "deserialize_bundler_options",
+    serde(deserialize_with = "deserialize_minify", default),
+    schemars(with = "Option<bool>")
+  )]
   pub minify: Option<RawMinifyOptions>,
   #[cfg_attr(
     feature = "deserialize_bundler_options",
@@ -292,6 +297,15 @@ where
   D: Deserializer<'de>,
 {
   let deserialized = Option::<FxHashMap<String, String>>::deserialize(deserializer)?;
+  Ok(deserialized.map(From::from))
+}
+
+#[cfg(feature = "deserialize_bundler_options")]
+fn deserialize_minify<'de, D>(deserializer: D) -> Result<Option<RawMinifyOptions>, D::Error>
+where
+  D: Deserializer<'de>,
+{
+  let deserialized = Option::<bool>::deserialize(deserializer)?;
   Ok(deserialized.map(From::from))
 }
 

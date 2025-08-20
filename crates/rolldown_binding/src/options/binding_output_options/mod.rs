@@ -12,7 +12,6 @@ use binding_advanced_chunks_options::BindingAdvancedChunksOptions;
 use binding_pre_rendered_chunk::PreRenderedChunk;
 
 use super::plugin::BindingPluginOrParallelJsPluginPlaceholder;
-use crate::types::binding_minify_options::BindingMinifyOptions;
 use crate::types::{
   binding_rendered_chunk::BindingRenderedChunk,
   js_callback::{JsCallback, MaybeAsyncJsCallback},
@@ -113,8 +112,9 @@ pub struct BindingOutputOptions<'env> {
   // validate: boolean;
 
   // --- Enhanced options
+  #[debug(skip)]
   #[napi(ts_type = "boolean | 'dce-only' | BindingMinifyOptions")]
-  pub minify: Option<Either3<bool, String, BindingMinifyOptions>>,
+  pub minify: Option<Either3<bool, String, oxc_minify_napi::MinifyOptions>>,
   pub advanced_chunks: Option<BindingAdvancedChunksOptions>,
   #[napi(ts_type = "'none' | 'inline'")]
   pub legal_comments: Option<String>,

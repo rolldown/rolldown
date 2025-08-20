@@ -25,6 +25,7 @@ itertools = { workspace = true }
 napi = { workspace = true }
 napi-derive = { workspace = true }
 oxc = { workspace = true }
+oxc_minify_napi = { workspace = true }
 oxc_parser_napi = { workspace = true }
 oxc_resolver_napi = { workspace = true }
 oxc_transform_napi = { workspace = true }

@@ -44,6 +44,7 @@ export interface NormalizedOutputOptions {
   sourcemapDebugIds: boolean;
   sourcemapIgnoreList: SourcemapIgnoreListOption;
   sourcemapPathTransform: SourcemapPathTransformOption | undefined;
+  sourcemapExcludeSources: boolean | undefined;
   minify: false | BindingMinifyOptions;
   legalComments: 'none' | 'inline';
   polyfillRequire: boolean;
@@ -169,6 +170,10 @@ export class NormalizedOutputOptionsImpl implements NormalizedOutputOptions {
 
   get sourcemapPathTransform(): SourcemapPathTransformOption | undefined {
     return this.outputOptions.sourcemapPathTransform;
+  }
+
+  get sourcemapExcludeSources(): boolean | undefined {
+    return this.outputOptions.sourcemapExcludeSources;
   }
 
   get minify(): false | BindingMinifyOptions {

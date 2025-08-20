@@ -170,6 +170,11 @@ impl BindingNormalizedOptions {
   }
 
   #[napi(getter)]
+  pub fn sourcemap_exclude_sources(&self) -> bool {
+    self.inner.sourcemap_exclude_sources
+  }
+
+  #[napi(getter)]
   pub fn banner(&self) -> Either<Option<String>, Undefined> {
     match &self.inner.banner {
       Some(rolldown::AddonOutputOption::String(inner)) => Either::A(inner.clone()),

@@ -1204,6 +1204,7 @@ export declare class BindingNormalizedOptions {
   get inlineDynamicImports(): boolean
   get sourcemap(): boolean | 'inline' | 'hidden'
   get sourcemapBaseUrl(): string | null
+  get sourcemapExcludeSources(): boolean
   get banner(): string | undefined | null | undefined
   get footer(): string | undefined | null | undefined
   get intro(): string | undefined | null | undefined
@@ -1756,6 +1757,7 @@ export interface BindingOutputOptions {
   sourcemapBaseUrl?: string
   sourcemapIgnoreList?: (source: string, sourcemapPath: string) => boolean
   sourcemapDebugIds?: boolean
+  sourcemapExcludeSources?: boolean
   sourcemapPathTransform?: (source: string, sourcemapPath: string) => string
   minify?: boolean | 'dce-only' | BindingMinifyOptions
   advancedChunks?: BindingAdvancedChunksOptions

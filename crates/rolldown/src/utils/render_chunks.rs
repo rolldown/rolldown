@@ -61,7 +61,7 @@ pub async fn render_chunks(
         let mut sourcemap_chain = Vec::with_capacity(sourcemaps.len() + 1);
         sourcemap_chain.push(asset_map);
         sourcemap_chain.extend(sourcemaps.iter());
-        asset.map = Some(collapse_sourcemaps(&sourcemap_chain));
+        asset.map = Some(collapse_sourcemaps(&sourcemap_chain, options.sourcemap_exclude_sources));
       }
     }
   }

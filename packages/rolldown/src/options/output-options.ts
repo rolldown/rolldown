@@ -60,6 +60,7 @@ export interface OutputOptions {
   sourcemapDebugIds?: boolean;
   sourcemapIgnoreList?: boolean | SourcemapIgnoreListOption;
   sourcemapPathTransform?: SourcemapPathTransformOption;
+  sourcemapExcludeSources?: boolean;
   banner?: string | AddonFunction;
   footer?: string | AddonFunction;
   intro?: string | AddonFunction;

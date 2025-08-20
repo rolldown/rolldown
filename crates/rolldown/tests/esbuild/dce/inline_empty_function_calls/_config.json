@@ -55,5 +55,6 @@
       }
     ]
   },
+  "expectError": true,
   "expectExecuted": false
 }

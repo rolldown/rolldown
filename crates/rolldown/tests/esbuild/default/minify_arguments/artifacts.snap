@@ -1,22 +1,41 @@
 ---
 source: crates/rolldown_testing/src/integration_test.rs
 ---
-# Assets
+# Errors
 
-## entry.js
+## PARSE_ERROR
 
-```js
-(function() {
+```text
+[PARSE_ERROR] Error: Cannot assign to 'arguments' in strict mode
+   ╭─[ entry.js:2:6 ]
+   │
+ 2 │     let arguments
+   │         ────┬────  
+   │             ╰────── 
+───╯
 
+```
+## PARSE_ERROR
 
-//#region entry.js
-function a(x = arguments) {}
-function b(x = arguments) {}
-function c(x = arguments) {}
-a();
-b();
-c();
+```text
+[PARSE_ERROR] Error: Cannot assign to 'arguments' in strict mode
+   ╭─[ entry.js:5:6 ]
+   │
+ 5 │     let arguments
+   │         ────┬────  
+   │             ╰────── 
+───╯
 
-//#endregion
-})();
+```
+## PARSE_ERROR
+
+```text
+[PARSE_ERROR] Error: Cannot assign to 'arguments' in strict mode
+   ╭─[ entry.js:8:6 ]
+   │
+ 8 │     let arguments
+   │         ────┬────  
+   │             ╰────── 
+───╯
+
 ```

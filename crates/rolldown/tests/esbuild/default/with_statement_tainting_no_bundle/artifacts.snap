@@ -1,31 +1,17 @@
 ---
 source: crates/rolldown_testing/src/integration_test.rs
 ---
-# Assets
+# Errors
 
-## entry.js
+## PARSE_ERROR
 
-```js
-//#region entry.js
-(() => {
-	let local = 1;
-	let outer = 2;
-	let outerDead = 3;
-	with({}) {
-		var hoisted = 4;
-		let local$1 = 5;
-		hoisted++;
-		local$1++;
-		if (1) outer++;
-		if (0) outerDead++;
-	}
-	if (1) {
-		hoisted++;
-		local++;
-		outer++;
-		outerDead++;
-	}
-})();
+```text
+[PARSE_ERROR] Error: 'with' statements are not allowed
+   ╭─[ entry.js:5:2 ]
+   │
+ 5 │     with ({}) {
+   │     ──┬─  
+   │       ╰─── 
+───╯
 
-//#endregion
 ```

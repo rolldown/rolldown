@@ -1,12 +1,12 @@
 ---
 source: crates/rolldown_testing/src/integration_test.rs
 ---
-# warnings
+# Errors
 
 ## PARSE_ERROR
 
 ```text
-[PARSE_ERROR] Warning: Identifier `foo` has already been declared
+[PARSE_ERROR] Error: Identifier `foo` has already been declared
    ╭─[ entry.ts:5:15 ]
    │
  5 │ declare const foo: any
@@ -17,14 +17,4 @@ source: crates/rolldown_testing/src/integration_test.rs
    │      ╰─── It can not be redeclared here
 ───╯
 
-```
-# Assets
-
-## entry.js
-
-```js
-//#region entry.ts
-bar();
-
-//#endregion
 ```

@@ -1,13 +1,12 @@
 ---
 source: crates/rolldown_testing/src/integration_test.rs
-snapshot_kind: text
 ---
 # Errors
 
-## EXPORT_UNDEFINED_VARIABLE
+## PARSE_ERROR
 
 ```text
-[EXPORT_UNDEFINED_VARIABLE] Error: `bar` is not declared in this file
+[PARSE_ERROR] Error: Export 'bar' is not defined
    ╭─[ main.js:4:3 ]
    │
  4 │   bar

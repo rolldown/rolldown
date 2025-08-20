@@ -30,7 +30,7 @@ pub struct ParseToEcmaAstResult {
   pub ast: EcmaAst,
   pub scoping: Scoping,
   pub has_lazy_export: bool,
-  pub warning: Vec<BuildDiagnostic>,
+  pub warnings: Vec<BuildDiagnostic>,
 }
 
 pub async fn parse_to_ecma_ast(

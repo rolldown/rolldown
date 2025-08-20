@@ -39,19 +39,19 @@ impl PreProcessEcmaAst {
     bundle_options: &NormalizedBundlerOptions,
     has_lazy_export: bool,
   ) -> BuildResult<ParseToEcmaAstResult> {
-    let mut warning = vec![];
     let source = ast.source().clone();
     // Build initial semantic data and check for semantic errors.
-    let semantic_ret =
-      ast.program.with_mut(|WithMutFields { program, .. }| SemanticBuilder::new().build(program));
-    if !semantic_ret.errors.is_empty() {
-      warning.extend(BuildDiagnostic::from_oxc_diagnostics(
-        semantic_ret.errors,
-        &source,
-        path,
-        &Severity::Warning,
-      ));
-    }
+    let semantic_ret = ast.program.with_mut(|WithMutFields { program, .. }| {
+      SemanticBuilder::new().with_check_syntax_error(true).build(program)
+    });
+
+    let (errors, warnings): (Vec<_>, Vec<_>) =
+      semantic_ret.errors.into_iter().partition(|w| w.severity == OxcSeverity::Error);
+    let warnings = if errors.is_empty() {
+      BuildDiagnostic::from_oxc_diagnostics(warnings, &source, path, &Severity::Warning)
+    } else {
+      return Err(BuildDiagnostic::from_oxc_diagnostics(errors, &source, path, &Severity::Error))?;
+    };
 
     self.stats = semantic_ret.semantic.stats();
     let scoping = semantic_ret.semantic.into_scoping();
@@ -152,6 +152,6 @@ impl PreProcessEcmaAst {
         .into_scoping()
     });
 
-    Ok(ParseToEcmaAstResult { ast, scoping, has_lazy_export, warning })
+    Ok(ParseToEcmaAstResult { ast, scoping, has_lazy_export, warnings })
   }
 }

@@ -1,25 +1,41 @@
 ---
 source: crates/rolldown_testing/src/integration_test.rs
 ---
-# Assets
+# Errors
 
-## entry.js
+## PARSE_ERROR
 
-```js
-//#region with.js
-with(x) y;
+```text
+[PARSE_ERROR] Error: 'with' statements are not allowed
+   ╭─[ with.js:1:1 ]
+   │
+ 1 │ with (x) y
+   │ ──┬─  
+   │   ╰─── 
+───╯
 
-//#endregion
-//#region delete-1.js
-delete x;
+```
+## PARSE_ERROR
 
-//#endregion
-//#region delete-2.js
-delete y;
+```text
+[PARSE_ERROR] Error: Delete of an unqualified identifier in strict mode.
+   ╭─[ delete-1.js:1:8 ]
+   │
+ 1 │ delete x
+   │        ┬  
+   │        ╰── 
+───╯
 
-//#endregion
-//#region delete-3.js
-delete (0, z);
+```
+## PARSE_ERROR
 
-//#endregion
+```text
+[PARSE_ERROR] Error: Delete of an unqualified identifier in strict mode.
+   ╭─[ delete-2.js:1:9 ]
+   │
+ 1 │ delete (y)
+   │         ┬  
+   │         ╰── 
+───╯
+
 ```

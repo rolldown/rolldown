@@ -23,5 +23,6 @@
       }
     ]
   },
+  "expectError": true,
   "expectExecuted": false
 }

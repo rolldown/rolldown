@@ -27,10 +27,10 @@ pub async fn create_ecma_view(
   args: CreateModuleViewArgs,
 ) -> BuildResult<CreateEcmaViewReturn> {
   let CreateModuleViewArgs { source, sourcemap_chain, hook_side_effects } = args;
-  let ParseToEcmaAstResult { ast, scoping, has_lazy_export, warning } =
+  let ParseToEcmaAstResult { ast, scoping, has_lazy_export, warnings } =
     parse_to_ecma_ast(ctx, source).await?;
 
-  ctx.warnings.extend(warning);
+  ctx.warnings.extend(warnings);
 
   let module_id = ModuleId::new(&ctx.resolved_id.id);
 

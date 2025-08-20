@@ -1,173 +1,35 @@
 ---
 source: crates/rolldown_testing/src/integration_test.rs
 ---
-# Assets
+# Errors
 
-## empty-async.js
+## PARSE_ERROR
 
-```js
-//#region empty-async.js
-async function keep() {}
-console.log(keep());
-keep(foo());
-keep(1);
+```text
+[PARSE_ERROR] Error: Identifier `DROP` has already been declared
+   ╭─[ empty-last.js:1:10 ]
+   │
+ 1 │ function DROP() { return x }
+   │          ──┬─  
+   │            ╰─── `DROP` has already been declared here
+ 2 │ function DROP() { return }
+   │          ──┬─  
+   │            ╰─── It can not be redeclared here
+───╯
 
-//#endregion
 ```
-## empty-comma.js
+## PARSE_ERROR
 
-```js
-//#region empty-comma.js
-function DROP() {}
-console.log((DROP(), DROP(), foo()));
-console.log((DROP(), foo(), DROP()));
-console.log((foo(), DROP(), DROP()));
-for (DROP(); DROP(); DROP()) DROP();
-DROP(), DROP(), foo();
-DROP(), foo(), DROP();
-foo(), DROP(), DROP();
+```text
+[PARSE_ERROR] Error: Identifier `keep` has already been declared
+   ╭─[ empty-first.js:1:10 ]
+   │
+ 1 │ function keep() { return }
+   │          ──┬─  
+   │            ╰─── `keep` has already been declared here
+ 2 │ function keep() { return x }
+   │          ──┬─  
+   │            ╰─── It can not be redeclared here
+───╯
 
-//#endregion
-```
-## empty-cross-module.js
-
-```js
-//#region empty-cross-module-def.js
-function DROP() {}
-
-//#endregion
-//#region empty-cross-module.js
-console.log(DROP());
-DROP();
-
-//#endregion
-```
-## empty-first.js
-
-```js
-//#region empty-first.js
-function keep() {}
-function keep() {
-	return x;
-}
-console.log(keep());
-keep(foo());
-keep(1);
-
-//#endregion
-```
-## empty-generator.js
-
-```js
-//#region empty-generator.js
-function* keep() {}
-console.log(keep());
-keep(foo());
-keep(1);
-
-//#endregion
-```
-## empty-if-else.js
-
-```js
-//#region empty-if-else.js
-function DROP() {}
-if (foo) {
-	let bar = baz();
-	bar();
-	bar();
-} else DROP();
-
-//#endregion
-```
-## empty-last.js
-
-```js
-//#region empty-last.js
-function DROP() {
-	return x;
-}
-function DROP() {}
-console.log(DROP());
-DROP();
-
-//#endregion
-```
-## empty.js
-
-```js
-//#region empty.js
-function DROP() {}
-console.log(DROP(foo(), bar()));
-console.log(DROP(foo(), 1));
-console.log(DROP(1, foo()));
-console.log(DROP(1));
-console.log(DROP());
-DROP(foo(), bar());
-DROP(foo(), 1);
-DROP(1, foo());
-DROP(1);
-DROP();
-
-//#endregion
-```
-## reassign-array.js
-
-```js
-//#region reassign-array.js
-function keep() {}
-[keep] = reassigned;
-console.log(keep(1));
-keep(foo());
-keep(1);
-
-//#endregion
-```
-## reassign-div.js
-
-```js
-//#region reassign-div.js
-function keep() {}
-keep /= reassigned;
-console.log(keep(1));
-keep(foo());
-keep(1);
-
-//#endregion
-```
-## reassign-inc.js
-
-```js
-//#region reassign-inc.js
-function keep() {}
-keep++;
-console.log(keep(1));
-keep(foo());
-keep(1);
-
-//#endregion
-```
-## reassign-object.js
-
-```js
-//#region reassign-object.js
-function keep() {}
-({keep} = reassigned);
-console.log(keep(1));
-keep(foo());
-keep(1);
-
-//#endregion
-```
-## reassign.js
-
-```js
-//#region reassign.js
-function keep() {}
-keep = reassigned;
-console.log(keep());
-keep(foo());
-keep(1);
-
-//#endregion
 ```

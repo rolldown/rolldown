@@ -2,5 +2,6 @@
   "config": {
     "format": "cjs"
   },
+  "expectError": true,
   "expectExecuted": false
 }

@@ -1,59 +1,53 @@
 ---
 source: crates/rolldown_testing/src/integration_test.rs
 ---
-# Assets
+# Errors
 
-## function2.js
+## PARSE_ERROR
 
-```js
-//#region function2.js
-function x() {
-	return 1;
-}
-console.log(x());
-function x() {
-	return 2;
-}
+```text
+[PARSE_ERROR] Error: Identifier `x` has already been declared
+   ╭─[ function2.js:1:10 ]
+   │
+ 1 │ function x() { return 1 }
+   │          ┬  
+   │          ╰── `x` has already been declared here
+   │ 
+ 3 │ function x() { return 2 }
+   │          ┬  
+   │          ╰── It can not be redeclared here
+───╯
 
-//#endregion
 ```
-## function3.js
+## PARSE_ERROR
 
-```js
-//#region function3.js
-function x() {
-	return 1;
-}
-console.log(x());
-function x() {
-	return 2;
-}
-console.log(x());
-function x() {
-	return 3;
-}
+```text
+[PARSE_ERROR] Error: Identifier `x` has already been declared
+   ╭─[ function3.js:1:10 ]
+   │
+ 1 │ function x() { return 1 }
+   │          ┬  
+   │          ╰── `x` has already been declared here
+   │ 
+ 3 │ function x() { return 2 }
+   │          ┬  
+   │          ╰── It can not be redeclared here
+───╯
 
-//#endregion
 ```
-## var2.js
+## PARSE_ERROR
 
-```js
-//#region var2.js
-var x = 1;
-console.log(x);
-var x = 2;
+```text
+[PARSE_ERROR] Error: Identifier `x` has already been declared
+   ╭─[ function3.js:3:10 ]
+   │
+ 3 │ function x() { return 2 }
+   │          ┬  
+   │          ╰── `x` has already been declared here
+   │ 
+ 5 │ function x() { return 3 }
+   │          ┬  
+   │          ╰── It can not be redeclared here
+───╯
 
-//#endregion
-```
-## var3.js
-
-```js
-//#region var3.js
-var x = 1;
-console.log(x);
-var x = 2;
-console.log(x);
-var x = 3;
-
-//#endregion
 ```

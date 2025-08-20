@@ -1,10 +1,17 @@
 ---
 source: crates/rolldown_testing/src/integration_test.rs
 ---
-# Assets
+# Errors
 
-## entry.js
+## PARSE_ERROR
 
-```js
+```text
+[PARSE_ERROR] Error: Cannot assign to 'eval' in strict mode
+    ╭─[ entry.js:21:16 ]
+    │
+ 21 │ function test4(eval) {
+    │                ──┬─  
+    │                  ╰─── 
+────╯
 
 ```

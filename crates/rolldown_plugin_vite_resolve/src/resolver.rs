@@ -166,7 +166,7 @@ fn get_resolve_options(
     main_files: if !base_options.try_index {
       vec![]
     } else if let Some(try_prefix) = &base_options.try_prefix {
-      vec![format!("{try_prefix}index"), "index".to_string()]
+      vec!["index".to_string(), format!("{try_prefix}index")]
     } else {
       vec!["index".to_string()]
     },

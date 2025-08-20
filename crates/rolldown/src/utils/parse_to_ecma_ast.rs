@@ -4,7 +4,7 @@ use arcstr::ArcStr;
 use oxc::{semantic::Scoping, span::SourceType as OxcSourceType};
 use rolldown_common::{ModuleType, NormalizedBundlerOptions, RUNTIME_MODULE_KEY, StrOrBytes};
 use rolldown_ecmascript::{EcmaAst, EcmaCompiler};
-use rolldown_error::{BuildDiagnostic, BuildResult};
+use rolldown_error::BuildResult;
 use rolldown_plugin::HookTransformAstArgs;
 use rolldown_utils::mime::guess_mime;
 use sugar_path::SugarPath;
@@ -30,7 +30,6 @@ pub struct ParseToEcmaAstResult {
   pub ast: EcmaAst,
   pub scoping: Scoping,
   pub has_lazy_export: bool,
-  pub warning: Vec<BuildDiagnostic>,
 }
 
 pub async fn parse_to_ecma_ast(

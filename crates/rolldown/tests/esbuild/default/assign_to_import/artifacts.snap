@@ -1,6 +1,5 @@
 ---
 source: crates/rolldown_testing/src/integration_test.rs
-snapshot_kind: text
 ---
 # Errors
 
@@ -145,6 +144,30 @@ snapshot_kind: text
  1 │ import * as x from "foo"; x['y'] = 1
    │                             ─┬─  
    │                              ╰─── Imports are immutable in JavaScript. To modify the value of this import, you must export a setter function in the imported file (e.g. 'setY') and then import and call that function here instead.
+───╯
+
+```
+## PARSE_ERROR
+
+```text
+[PARSE_ERROR] Error: Delete of an unqualified identifier in strict mode.
+   ╭─[ bad11.js:1:29 ]
+   │
+ 1 │ import x from "foo"; delete x
+   │                             ┬  
+   │                             ╰── 
+───╯
+
+```
+## PARSE_ERROR
+
+```text
+[PARSE_ERROR] Error: Delete of an unqualified identifier in strict mode.
+   ╭─[ bad12.js:1:31 ]
+   │
+ 1 │ import {x} from "foo"; delete x
+   │                               ┬  
+   │                               ╰── 
 ───╯
 
 ```

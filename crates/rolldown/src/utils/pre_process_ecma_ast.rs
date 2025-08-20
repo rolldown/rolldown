@@ -152,6 +152,6 @@ impl PreProcessEcmaAst {
         .into_scoping()
     });
 
-    Ok(ParseToEcmaAstResult { ast, scoping, has_lazy_export, warning })
+    Ok(ParseToEcmaAstResult { ast, scoping, has_lazy_export })
   }
 }

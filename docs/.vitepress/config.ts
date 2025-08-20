@@ -15,10 +15,6 @@ const sharedSidebar = [
       { text: 'Getting Started', link: '/guide/getting-started.md' },
       { text: 'Notable Features', link: '/guide/features.md' },
       {
-        text: 'Plugin Development',
-        link: '/guide/plugin-development.md',
-      },
-      {
         text: 'Troubleshooting',
         link: '/guide/troubleshooting.md',
       },
@@ -95,6 +91,7 @@ export default defineConfig({
     nav: [
       { text: 'User Guide', link: '/guide/' },
       { text: 'Reference', link: '/reference/config-options.md' },
+      { text: 'Plugins', link: '/plugins/' },
       { text: 'Contribute', link: '/contrib-guide/' },
       { text: 'REPL', link: 'https://repl.rolldown.rs/' },
       {
@@ -131,6 +128,21 @@ export default defineConfig({
     sidebar: {
       '/guide/': sharedSidebar,
       '/reference/': sharedSidebar,
+      '/plugins/': [
+        {
+          text: 'Plugins Guide',
+          items: [
+            {
+              text: 'Introduction',
+              link: '/plugins/index.md',
+            },
+            {
+              text: 'Hook Filters',
+              link: '/plugins/hook-filters.md',
+            },
+          ],
+        },
+      ],
       '/contrib-guide/': [
         {
           text: 'Contribution Guide',

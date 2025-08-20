@@ -38,7 +38,7 @@ However, Rolldown's feature scope is more similar to esbuild, offering these [ad
 Rolldown also has a few concepts that have close equivalents in esbuild, but do not exist in Rollup:
 
 - [Module Types](./features#module-types) (Experimental)
-- [Plugin hook filters](./plugin-development#plugin-hook-filters)
+- [Plugin hook filters](/plugins/hook-filters.md)
 
 Finally, Rolldown provides some features that esbuild and Rollup do not (and may not intend to) implement:
 

@@ -34,22 +34,15 @@ impl<'text> MagicString<'text> {
     options: ReplaceOptions,
   ) -> &mut Self {
     let to: CowStr<'text> = to.into();
-    // PERF(hyf0): Unnecessary `collect` due to borrow checker limitation.
-    let matches = self
-      .source
-      .match_indices(from)
-      .take(options.count)
-      .map(|(match_start, part)| (match_start, match_start + part.len()))
-      .collect::<Box<[_]>>();
-
-    matches.iter().for_each(|(start, end)| {
+    for (match_start, part) in self.source.match_indices(from).take(options.count) {
+      let end = match_start + part.len();
       self.update_with(
-        *start,
-        *end,
+        match_start,
+        end,
         to.clone(),
         UpdateOptions { overwrite: true, keep_original: options.store_original_in_sourcemap },
       );
-    });
+    }
 
     self
   }

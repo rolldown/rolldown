@@ -1,4 +1,4 @@
-use crate::{CowStr, MagicString};
+use crate::MagicString;
 
 pub struct JoinerOptions {
   pub separator: Option<String>,
@@ -25,7 +25,7 @@ impl<'s> Joiner<'s> {
     self
   }
 
-  pub fn append_raw(&mut self, raw: impl Into<CowStr<'s>>) -> &mut Self {
+  pub fn append_raw(&mut self, raw: &'s str) -> &mut Self {
     self.sources.push(MagicString::new(raw));
     self
   }

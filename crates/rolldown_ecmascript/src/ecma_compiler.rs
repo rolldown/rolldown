@@ -5,7 +5,7 @@ use oxc::{
   allocator::Allocator,
   ast::AstBuilder,
   codegen::{Codegen, CodegenOptions, CodegenReturn, CommentOptions, LegalComment},
-  minifier::{Minifier, MinifierOptions},
+  minifier::{CompressOptions, MangleOptions, Minifier, MinifierOptions},
   parser::{ParseOptions, Parser},
   span::{SPAN, SourceType},
 };
@@ -99,19 +99,25 @@ impl EcmaCompiler {
       .build(ast.program())
   }
 
-  pub fn minify(
+  #[expect(clippy::too_many_arguments)]
+  pub fn dce_or_minify(
     source_text: &str,
     source_type: SourceType,
     enable_sourcemap: bool,
     filename: &str,
-    minifier_options: MinifierOptions,
-    run_compress: bool,
+    mangle: bool,
+    compress: bool,
+    mangle_options: MangleOptions,
+    compress_options: CompressOptions,
     codegen_options: CodegenOptions,
   ) -> (String, Option<SourceMap>) {
     let allocator = Allocator::default();
     let mut program = Parser::new(&allocator, source_text, source_type).parse().program;
-    let minifier = Minifier::new(minifier_options);
-    let ret = if run_compress {
+    let minifier = Minifier::new(MinifierOptions {
+      mangle: mangle.then_some(mangle_options),
+      compress: Some(compress_options),
+    });
+    let ret = if compress {
       minifier.minify(&allocator, &mut program)
     } else {
       minifier.dce(&allocator, &mut program)

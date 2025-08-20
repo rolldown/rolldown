@@ -39,13 +39,15 @@ impl GenerateStage<'_> {
             };
 
             // TODO: Do we need to ensure `asset.filename` to be absolute path?
-            let (minified_content, new_map) = EcmaCompiler::minify(
+            let (minified_content, new_map) = EcmaCompiler::dce_or_minify(
               asset.content.try_as_inner_str()?,
               options.format.source_type().with_jsx(true),
               asset.map.is_some(),
               &asset.filename,
-              minify_options.to_oxc_minifier_options(options),
+              minify_options.mangle,
               minify_options.compress,
+              minify_options.get_mangle_options(options),
+              minify_options.get_compress_options(options),
               codegen_options,
             );
             asset.content = minified_content.into();

@@ -3,12 +3,13 @@
   "type": "module",
   "private": true,
   "scripts": {
-    "dev": "ROLLDOWN_OPTIONS_VALIDATION=loose vitepress dev",
-    "build": "ROLLDOWN_OPTIONS_VALIDATION=loose vitepress build",
-    "preview": "ROLLDOWN_OPTIONS_VALIDATION=loose vitepress preview"
+    "dev": "vitepress dev",
+    "build": "vitepress build",
+    "preview": "vitepress preview"
   },
   "devDependencies": {
-    "vitepress": "^1.5.0",
+    "oxc-minify": "^0.82.3",
+    "vitepress": "^2.0.0-alpha.12",
     "vitepress-plugin-group-icons": "^1.0.0",
     "vitepress-plugin-llms": "^1.1.0",
     "zx": "^8.1.2"

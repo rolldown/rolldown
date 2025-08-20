@@ -1,0 +1,17 @@
+{
+  "name": "@example/styled-components-native",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "rolldown --config ./rolldown.config.js",
+    "dev": "rolldown --config ./rolldown.config.js --watch"
+  },
+  "devDependencies": {
+    "rolldown": "workspace:*"
+  },
+  "dependencies": {
+    "react": "19.1.1",
+    "react-dom": "19.1.1",
+    "styled-components": "^6.1.8"
+  }
+}

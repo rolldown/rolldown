@@ -120,7 +120,7 @@ console.log(foo);
 "
   );
   assert_eq!(
-    SourcemapVisualizer::new(&content, &map.unwrap()).into_visualizer_text(),
+    SourcemapVisualizer::new(&content, &map.unwrap()).get_text(),
     r#"- foo.js
 (0:0) "const " --> (3:0) "const "
 (0:6) "foo = " --> (3:6) "foo = "

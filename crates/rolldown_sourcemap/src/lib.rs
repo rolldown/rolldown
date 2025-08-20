@@ -153,7 +153,7 @@ fn test_collapse_sourcemaps() {
 
   let map = collapse_sourcemaps(&sourcemap_chain);
   assert_eq!(
-    SourcemapVisualizer::new(&code, &map).into_visualizer_text(),
+    SourcemapVisualizer::new(&code, &map).get_text(),
     r#"- foo.js
 (0:0) "const " --> (0:0) "const "
 (0:6) "foo = " --> (0:6) "foo = "

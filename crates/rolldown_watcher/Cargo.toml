@@ -1,0 +1,15 @@
+[package]
+name = "rolldown_watcher"
+version = "0.1.0"
+edition.workspace = true
+homepage.workspace = true
+license.workspace = true
+repository.workspace = true
+
+[dependencies]
+notify = { workspace = true }
+notify-debouncer-full = { workspace = true }
+rolldown_error = { workspace = true }
+
+[lints]
+workspace = true

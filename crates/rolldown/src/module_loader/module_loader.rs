@@ -706,6 +706,7 @@ impl<'a> ModuleLoader<'a> {
       // if it is in incremental mode, we skip the runtime module, since it is always there
       // so use a dummy runtime_brief as a placeholder
       runtime: if self.is_full_scan {
+        tracing::debug!("changed_resolved_ids: {changed_resolved_ids:#?}");
         runtime_brief.expect("Failed to find runtime module. This should not happen")
       } else {
         RuntimeModuleBrief::dummy()

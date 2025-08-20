@@ -52,6 +52,7 @@ rolldown_sourcemap = { workspace = true }
 rolldown_std_utils = { workspace = true }
 rolldown_tracing = { workspace = true }
 rolldown_utils = { workspace = true }
+rolldown_watcher = { workspace = true }
 rustc-hash = { workspace = true }
 serde = { workspace = true, optional = true }
 serde_json = { workspace = true }

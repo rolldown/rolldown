@@ -1,0 +1,13 @@
+//#region foo.txt
+var foo_default = "data:text/plain;charset=utf-8,Hello world";
+
+//#endregion
+//#region foo.txt?raw
+var foo_default$1 = "Hello world";
+
+//#endregion
+//#region main.js
+console.log(foo_default);
+console.log(foo_default$1);
+
+//#endregion

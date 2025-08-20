@@ -35,7 +35,7 @@ impl Generator for CssGenerator {
 
     for module in &ordered_css_modules {
       let css_view = module.css_view.as_ref().unwrap();
-      let mut magic_string = string_wizard::MagicString::new(&css_view.source);
+      let mut magic_string = string_wizard::MagicString::new(css_view.source.as_str());
       for mutation in &css_view.mutations {
         mutation.apply(&mut magic_string);
       }

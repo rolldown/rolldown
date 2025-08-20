@@ -84,10 +84,7 @@ impl<'str> Chunk<'str> {
     new_chunk
   }
 
-  pub fn fragments(
-    &'str self,
-    original_source: &'str CowStr<'str>,
-  ) -> impl Iterator<Item = &'str str> {
+  pub fn fragments(&'str self, original_source: &'str str) -> impl Iterator<Item = &'str str> {
     let intro_iter = self.intro.iter().map(|frag| frag.as_ref());
     let source_frag = self
       .edited_content

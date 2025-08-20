@@ -34,8 +34,7 @@ impl<'text> MagicString<'text> {
     options: ReplaceOptions,
   ) -> &mut Self {
     let to: CowStr<'text> = to.into();
-    let source = self.source.clone();
-    for (match_start, part) in source.match_indices(from).take(options.count) {
+    for (match_start, part) in self.source.match_indices(from).take(options.count) {
       let end = match_start + part.len();
       self.update_with(
         match_start,

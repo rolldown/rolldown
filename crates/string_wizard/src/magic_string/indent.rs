@@ -63,7 +63,7 @@ impl MagicString<'_> {
   fn guessed_indentor(&mut self) -> &str {
     let guessed_indentor = self
       .guessed_indentor
-      .get_or_init(|| guess_indentor(&self.source).unwrap_or_else(|| "\t".to_string()));
+      .get_or_init(|| guess_indentor(self.source).unwrap_or_else(|| "\t".to_string()));
     guessed_indentor
   }
 
@@ -120,7 +120,7 @@ impl MagicString<'_> {
         let mut line_starts = vec![];
         char_index = chunk.start();
         let chunk_end = chunk.end();
-        for char in chunk.span.text(&self.source).chars() {
+        for char in chunk.span.text(self.source).chars() {
           debug_assert!(self.source.is_char_boundary(char_index));
           if !exclude_set.contains(char_index) {
             if char == '\n' {

@@ -28,7 +28,7 @@ pub struct MagicString<'s> {
   filename: Option<String>,
   intro: VecDeque<CowStr<'s>>,
   outro: VecDeque<CowStr<'s>>,
-  source: CowStr<'s>,
+  source: &'s str,
   chunks: IndexChunks<'s>,
   first_chunk_idx: ChunkIdx,
   last_chunk_idx: ChunkIdx,
@@ -41,12 +41,11 @@ pub struct MagicString<'s> {
 }
 
 impl<'text> MagicString<'text> {
-  pub fn new(source: impl Into<CowStr<'text>>) -> Self {
+  pub fn new(source: &'text str) -> Self {
     Self::with_options(source, Default::default())
   }
 
-  pub fn with_options(source: impl Into<CowStr<'text>>, options: MagicStringOptions) -> Self {
-    let source: CowStr = source.into();
+  pub fn with_options(source: &'text str, options: MagicStringOptions) -> Self {
     let source_len = source.len();
     let initial_chunk = Chunk::new(Span(0, source_len));
     let mut chunks = IndexChunks::with_capacity(1);
@@ -111,7 +110,7 @@ impl<'text> MagicString<'text> {
   pub(crate) fn fragments(&'text self) -> impl Iterator<Item = &'text str> {
     let intro = self.intro.iter().map(|s| s.as_ref());
     let outro = self.outro.iter().map(|s| s.as_ref());
-    let chunks = self.iter_chunks().flat_map(|c| c.fragments(&self.source));
+    let chunks = self.iter_chunks().flat_map(|c| c.fragments(self.source));
     intro.chain(chunks).chain(outro)
   }
 

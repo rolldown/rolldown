@@ -3065,6 +3065,13 @@ dependencies = [
 ]
 
 [[package]]
+name = "rolldown_plugin_require_to_import"
+version = "0.1.0"
+dependencies = [
+ "rolldown_plugin",
+]
+
+[[package]]
 name = "rolldown_plugin_transform"
 version = "0.1.0"
 dependencies = [

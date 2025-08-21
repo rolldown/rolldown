@@ -9,6 +9,7 @@ export default defineTest({
   },
   afterTest: (output) => {
     const code = output.output[0].code;
+    expect(code).toContain('varNameIsNotMangled')
     expect(code).toContain('legal comment is kept');
     expect(code).toContain('annotation comment is kept');
   },

@@ -91,6 +91,7 @@ pub fn render_esm<'code>(
   source_joiner
 }
 
+#[allow(clippy::too_many_lines)]
 fn render_chunk_content<'code>(
   ctx: &GenerateContext<'_>,
   module_sources: &'code [RenderedModuleSource],
@@ -116,7 +117,9 @@ fn render_chunk_content<'code>(
       acc
     },
   );
-
+  let profiler_names = ctx.options.profiler_names;
+  let is_pife_for_module_wrappers_enabled =
+    ctx.options.optimization.is_pife_for_module_wrappers_enabled();
   for group in &ctx.chunk.module_groups {
     // If the group is not belong to any concatenated module, we just render it as a single module.
     if group.modules.len() == 1 {
@@ -168,14 +171,20 @@ fn render_chunk_content<'code>(
     if !hoisted_vars.is_empty() {
       source_joiner.append_source(concat_string!("var ", hoisted_vars, ";"));
     }
+
     source_joiner.append_source(concat_string!(
       "var ",
       wrap_name,
       " = ",
       rendered_esm_runtime_expr,
-      "({\"",
-      entry_module_stable_id,
-      "\": () => {"
+      "(",
+      if profiler_names {
+        concat_string!("{\"", entry_module_stable_id, "\": ")
+      } else {
+        String::new()
+      },
+      if is_pife_for_module_wrappers_enabled { "(" } else { "" },
+      "() => {"
     ));
     // we render each module in the group by exec order.
     group.modules.iter().for_each(|module_idx| {
@@ -187,7 +196,15 @@ fn render_chunk_content<'code>(
         }
       }
     });
-    source_joiner.append_source("}});\n");
+    let mut postfix = "}".to_string();
+    if is_pife_for_module_wrappers_enabled {
+      postfix += ")";
+    }
+    if profiler_names {
+      postfix += "}";
+    }
+    postfix += ");\n";
+    source_joiner.append_source(postfix);
   }
 }
 

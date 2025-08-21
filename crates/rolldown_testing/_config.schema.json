@@ -1458,6 +1458,12 @@
             "null"
           ]
         },
+        "pifeForModuleWrappers": {
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
         "_snapshot": {
           "description": "Whether to include the output in the snapshot for this config variant.",
           "type": [

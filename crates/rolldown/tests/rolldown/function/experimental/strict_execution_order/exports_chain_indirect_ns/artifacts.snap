@@ -99,7 +99,7 @@ const value$1 = "";
 //#endregion
 
 var value;
-var init_main = __esm({"main.js": () => {
+var init_main = __esm({"main.js": (() => {
 //#region lib-foo.js
 	value = "foo" + value$1;
 
@@ -108,7 +108,7 @@ var init_main = __esm({"main.js": () => {
 	nodeAssert.equal(value, "foo");
 
 //#endregion
-}});
+})});
 
 init_main();
 ```

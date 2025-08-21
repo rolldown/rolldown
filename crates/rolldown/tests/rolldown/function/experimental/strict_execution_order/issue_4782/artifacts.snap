@@ -51,7 +51,7 @@ var require_dep_a = /* @__PURE__ */ __commonJS({ "dep-a.js": ((exports, module) 
 //#endregion
 
 var import_dep_a;
-var init_main = __esm({"main.js": () => {
+var init_main = __esm({"main.js": (() => {
 //#region dep-b.js
 	sideEffect.touched = true;
 
@@ -60,7 +60,7 @@ var init_main = __esm({"main.js": () => {
 	import_dep_a = /* @__PURE__ */ __toESM(require_dep_a());
 
 //#endregion
-}});
+})});
 
 init_main();
 ```

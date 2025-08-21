@@ -3905,6 +3905,10 @@ expression: output
 
 - main-!~{000}~.js => main-iGXOFHWU.js
 
+# tests/rolldown/function/experimental/strict_execution_order/concatenate_basic
+
+- main-!~{000}~.js => main-Cnc8a_GM.js
+
 # tests/rolldown/function/experimental/strict_execution_order/concatenate_wrapped_modules
 
 - main-!~{000}~.js => main-DZgJ4wKa.js
@@ -3971,19 +3975,19 @@ expression: output
 
 # tests/rolldown/function/experimental/strict_execution_order/issue_5303
 
-- main-!~{000}~.js => main-DZsNDloV.js
+- main-!~{000}~.js => main-C3O574d7.js
 - rolldown-runtime-!~{001}~.js => rolldown-runtime-BjtMze0h.js
 - test-!~{003}~.js => test-DWjb2zYB.js
 
 # tests/rolldown/function/experimental/strict_execution_order/on_demand_wrapping
 
 - dynamic-!~{001}~.js => dynamic-BhqYqd04.js
-- main-!~{000}~.js => main-DL6yP9on.js
+- main-!~{000}~.js => main-CJX4hrCK.js
 - dynamic-!~{002}~.js => dynamic-DKjUd_a-.js
 
 # tests/rolldown/function/experimental/strict_execution_order/react-like
 
-- main-!~{000}~.js => main-DOp806Lv.js
+- main-!~{000}~.js => main-Cf31eCin.js
 
 # tests/rolldown/function/experimental/strict_execution_order/remove_unused_no_side_effect_module
 

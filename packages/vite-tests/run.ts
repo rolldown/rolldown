@@ -63,11 +63,11 @@ await runCmdAndPipe(
   ['pnpm', ['run', 'test'], { nodeOptions: { cwd: REPO_PATH } }],
 );
 await runCmdAndPipe(
-  '# Running `_VITE_TEST_NATIVE_PLUGIN=1 pnpm test`...',
+  '# Running `_VITE_TEST_JS_PLUGIN=1 pnpm test`...',
   ['pnpm', ['run', 'test'], {
     nodeOptions: {
       cwd: REPO_PATH,
-      env: { _VITE_TEST_NATIVE_PLUGIN: '1' },
+      env: { _VITE_TEST_JS_PLUGIN: '1' },
     },
   }],
 );

@@ -71,6 +71,32 @@ export type HmrOptions = boolean | {
 };
 
 export type OptimizationOptions = {
+  /**
+   * Inline imported constant values during bundling instead of preserving variable references.
+   *
+   * When enabled, constant values from imported modules will be inlined at their usage sites,
+   * potentially reducing bundle size and improving runtime performance by eliminating variable lookups.
+   *
+   * @example
+   * ```js
+   * // Input files:
+   * // constants.js
+   * export const API_URL = 'https://api.example.com';
+   *
+   * // main.js
+   * import { API_URL } from './constants.js';
+   * console.log(API_URL);
+   *
+   * // With inlineConst: true, the bundled output becomes:
+   * console.log('https://api.example.com');
+   *
+   * // Instead of:
+   * const API_URL = 'https://api.example.com';
+   * console.log(API_URL);
+   * ```
+   *
+   * @default false
+   */
   inlineConst?: boolean;
 };
 

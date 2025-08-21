@@ -910,6 +910,7 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
     ConstEvalCtx {
       ast: oxc::ast::AstBuilder::new(self.allocator),
       scope: self.result.symbol_ref_db.scoping(),
+      constant_map: &self.result.constant_export_map,
     }
   }
 

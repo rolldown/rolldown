@@ -4990,6 +4990,10 @@ expression: output
 
 - main-!~{000}~.js => main-Brb9u1JP.js
 
+# tests/rolldown/optimization/inline_const/propagation
+
+- main-!~{000}~.js => main-B8_4kzog.js
+
 # tests/rolldown/optimization/pife_for_module_wrappers/basic
 
 - a-!~{000}~.js => a-CcaBLJp5.js

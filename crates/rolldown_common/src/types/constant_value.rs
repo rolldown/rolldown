@@ -1,3 +1,5 @@
+use std::borrow::Cow;
+
 use num_bigint::BigInt;
 use oxc::{ast::ast::Expression, span::SPAN};
 use oxc_ecmascript::constant_evaluation;
@@ -36,6 +38,19 @@ impl From<constant_evaluation::ConstantValue<'_>> for ConstantValue {
       constant_evaluation::ConstantValue::Boolean(b) => ConstantValue::Boolean(b),
       constant_evaluation::ConstantValue::Undefined => ConstantValue::Undefined,
       constant_evaluation::ConstantValue::Null => ConstantValue::Null,
+    }
+  }
+}
+
+impl From<&ConstantValue> for constant_evaluation::ConstantValue<'_> {
+  fn from(value: &ConstantValue) -> Self {
+    match value {
+      ConstantValue::Number(n) => constant_evaluation::ConstantValue::Number(*n),
+      ConstantValue::BigInt(b) => constant_evaluation::ConstantValue::BigInt(b.clone()),
+      ConstantValue::String(s) => constant_evaluation::ConstantValue::String(Cow::Owned(s.clone())),
+      ConstantValue::Boolean(b) => constant_evaluation::ConstantValue::Boolean(*b),
+      ConstantValue::Undefined => constant_evaluation::ConstantValue::Undefined,
+      ConstantValue::Null => constant_evaluation::ConstantValue::Null,
     }
   }
 }

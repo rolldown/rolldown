@@ -176,6 +176,14 @@ impl<'ast> Traverse<'ast, ()> for HmrAstFinalizer<'_, 'ast> {
     node.body.push(ast::Statement::VariableDeclaration(var_decl));
   }
 
+  fn enter_call_expression(
+    &mut self,
+    node: &mut ast::CallExpression<'ast>,
+    _ctx: &mut oxc_traverse::TraverseCtx<'ast, ()>,
+  ) {
+    self.rewrite_hot_accept_call_deps(node);
+  }
+
   fn exit_expression(
     &mut self,
     node: &mut oxc::ast::ast::Expression<'ast>,
@@ -213,14 +221,6 @@ impl<'ast> Traverse<'ast, ()> for HmrAstFinalizer<'_, 'ast> {
     self.try_rewrite_dynamic_import(node);
     self.try_rewrite_require(node, ctx);
     self.rewrite_import_meta_hot(node);
-  }
-
-  fn exit_call_expression(
-    &mut self,
-    node: &mut ast::CallExpression<'ast>,
-    _ctx: &mut oxc_traverse::TraverseCtx<'ast, ()>,
-  ) {
-    self.rewrite_hot_accept_call_deps(node);
   }
 }
 

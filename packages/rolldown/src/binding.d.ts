@@ -1581,7 +1581,7 @@ export interface BindingError {
 }
 
 export interface BindingEsmExternalRequirePluginConfig {
-  external?: (source: string, importer: string | undefined, isResolved: boolean) => boolean
+  external: Array<BindingStringOrRegex>
 }
 
 export interface BindingExperimentalHmrOptions {

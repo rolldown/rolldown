@@ -1,0 +1,350 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## main.js
+
+```js
+import assert from "node:assert";
+
+// HIDDEN [rolldown:runtime]
+// HIDDEN [rolldown:hmr]
+//#region self_accept.js
+var self_accept_exports = {};
+__export(self_accept_exports, { foo: () => foo });
+const self_accept_hot = __rolldown_runtime__.createModuleHotContext("self_accept.js");
+__rolldown_runtime__.registerModule("self_accept.js", { exports: self_accept_exports });
+const foo = "foo";
+self_accept_hot.accept((mod) => {
+	assert.strictEqual(mod.foo, "foo");
+});
+
+//#endregion
+//#region single_accept/child.js
+var child_exports$1 = {};
+__export(child_exports$1, { count: () => count$2 });
+const child_hot$1 = __rolldown_runtime__.createModuleHotContext("single_accept/child.js");
+__rolldown_runtime__.registerModule("single_accept/child.js", { exports: child_exports$1 });
+const count$2 = 0;
+
+//#endregion
+//#region single_accept/parent.js
+var parent_exports$1 = {};
+const parent_hot$1 = __rolldown_runtime__.createModuleHotContext("single_accept/parent.js");
+__rolldown_runtime__.registerModule("single_accept/parent.js", { exports: parent_exports$1 });
+globalThis.singleAcceptAcceptCount ??= 0;
+globalThis.singleAcceptParentExecuteCount ??= 0;
+globalThis.singleAcceptParentExecuteCount++;
+let count$3 = count$2;
+parent_hot$1.accept("single_accept/child.js", (mod) => {
+	count$3 = mod.count;
+	globalThis.singleAcceptAcceptCount++;
+	assert.strictEqual(globalThis.singleAcceptAcceptCount, count$3);
+});
+process.on("beforeExit", (code) => {
+	if (code !== 0) return;
+});
+
+//#endregion
+//#region array_accept/child.js
+var child_exports = {};
+__export(child_exports, { count: () => count });
+const child_hot = __rolldown_runtime__.createModuleHotContext("array_accept/child.js");
+__rolldown_runtime__.registerModule("array_accept/child.js", { exports: child_exports });
+const count = 0;
+
+//#endregion
+//#region array_accept/parent.js
+var parent_exports = {};
+const parent_hot = __rolldown_runtime__.createModuleHotContext("array_accept/parent.js");
+__rolldown_runtime__.registerModule("array_accept/parent.js", { exports: parent_exports });
+globalThis.arrayAcceptAcceptCount ??= 0;
+globalThis.arrayAcceptParentExecuteCount ??= 0;
+globalThis.arrayAcceptParentExecuteCount++;
+let count$1 = count;
+parent_hot.accept(["array_accept/child.js"], ([mod]) => {
+	count$1 = mod.count;
+	globalThis.arrayAcceptAcceptCount++;
+	assert.strictEqual(globalThis.arrayAcceptAcceptCount, count$1);
+});
+process.on("beforeExit", (code) => {
+	if (code !== 0) return;
+});
+
+//#endregion
+//#region main.js
+var main_exports = {};
+const main_hot = __rolldown_runtime__.createModuleHotContext("main.js");
+__rolldown_runtime__.registerModule("main.js", { exports: main_exports });
+
+//#endregion
+```
+# HMR Step 0
+
+## Code
+
+```js
+//#region self_accept.js
+import * as import_node_assert_00 from "node:assert";
+var init_self_accept_0 = __rolldown_runtime__.createEsmInitializer((function() {
+	try {
+		var __rolldown_exports__ = {};
+		__rolldown_runtime__.__export(__rolldown_exports__, { foo: () => foo });
+		__rolldown_runtime__.registerModule("self_accept.js", { exports: __rolldown_exports__ });
+		const hot_self_accept = __rolldown_runtime__.createModuleHotContext("self_accept.js");
+		const foo = "foo2";
+		hot_self_accept.accept((mod) => {
+			import_node_assert_00.default.strictEqual(mod.foo, "foo2");
+		});
+	} finally {}
+}));
+
+//#endregion
+init_self_accept_0()
+__rolldown_runtime__.applyUpdates(['self_accept.js']);
+```
+## Meta
+
+- update type: patch
+### Hmr Boundaries
+
+- boundary: self_accept.js, accepted_via: self_accept.js
+# HMR Step 1
+
+## Code
+
+```js
+//#region self_accept.js
+import * as import_node_assert_00 from "node:assert";
+var init_self_accept_0 = __rolldown_runtime__.createEsmInitializer((function() {
+	try {
+		var __rolldown_exports__ = {};
+		__rolldown_runtime__.__export(__rolldown_exports__, { foo: () => foo });
+		__rolldown_runtime__.registerModule("self_accept.js", { exports: __rolldown_exports__ });
+		const hot_self_accept = __rolldown_runtime__.createModuleHotContext("self_accept.js");
+		const foo = "foo3";
+		hot_self_accept.accept((mod) => {
+			import_node_assert_00.default.strictEqual(mod.foo, "foo3");
+		});
+	} finally {}
+}));
+
+//#endregion
+init_self_accept_0()
+__rolldown_runtime__.applyUpdates(['self_accept.js']);
+```
+## Meta
+
+- update type: patch
+### Hmr Boundaries
+
+- boundary: self_accept.js, accepted_via: self_accept.js
+# HMR Step 2
+
+## Code
+
+```js
+//#region single_accept/child.js
+var init_child_0 = __rolldown_runtime__.createEsmInitializer((function() {
+	try {
+		var __rolldown_exports__ = {};
+		__rolldown_runtime__.__export(__rolldown_exports__, { count: () => count });
+		__rolldown_runtime__.registerModule("single_accept/child.js", { exports: __rolldown_exports__ });
+		const hot_child = __rolldown_runtime__.createModuleHotContext("single_accept/child.js");
+		const count = 1;
+	} finally {}
+}));
+
+//#endregion
+//#region single_accept/parent.js
+import * as import_node_assert_10 from "node:assert";
+var init_parent_1 = __rolldown_runtime__.createEsmInitializer((function() {
+	try {
+		var __rolldown_exports__ = {};
+		__rolldown_runtime__.__export(__rolldown_exports__, {});
+		__rolldown_runtime__.registerModule("single_accept/parent.js", { exports: __rolldown_exports__ });
+		init_child_0();
+		const hot_parent = __rolldown_runtime__.createModuleHotContext("single_accept/parent.js");
+		var import_child_11 = __rolldown_runtime__.loadExports("single_accept/child.js");
+		globalThis.singleAcceptAcceptCount ??= 0;
+		globalThis.singleAcceptParentExecuteCount ??= 0;
+		globalThis.singleAcceptParentExecuteCount++;
+		let count = import_child_11.count;
+		hot_parent.accept("./child.js", (mod) => {
+			count = mod.count;
+			globalThis.singleAcceptAcceptCount++;
+			import_node_assert_10.default.strictEqual(globalThis.singleAcceptAcceptCount, count);
+		});
+		process.on("beforeExit", (code) => {
+			if (code !== 0) return;
+		});
+	} finally {}
+}));
+
+//#endregion
+init_parent_1()
+__rolldown_runtime__.applyUpdates(['single_accept/parent.js']);
+```
+## Meta
+
+- update type: patch
+### Hmr Boundaries
+
+- boundary: single_accept/parent.js, accepted_via: single_accept/child.js
+# HMR Step 3
+
+## Code
+
+```js
+//#region single_accept/child.js
+var init_child_0 = __rolldown_runtime__.createEsmInitializer((function() {
+	try {
+		var __rolldown_exports__ = {};
+		__rolldown_runtime__.__export(__rolldown_exports__, { count: () => count });
+		__rolldown_runtime__.registerModule("single_accept/child.js", { exports: __rolldown_exports__ });
+		const hot_child = __rolldown_runtime__.createModuleHotContext("single_accept/child.js");
+		const count = 2;
+	} finally {}
+}));
+
+//#endregion
+//#region single_accept/parent.js
+import * as import_node_assert_10 from "node:assert";
+var init_parent_1 = __rolldown_runtime__.createEsmInitializer((function() {
+	try {
+		var __rolldown_exports__ = {};
+		__rolldown_runtime__.__export(__rolldown_exports__, {});
+		__rolldown_runtime__.registerModule("single_accept/parent.js", { exports: __rolldown_exports__ });
+		init_child_0();
+		const hot_parent = __rolldown_runtime__.createModuleHotContext("single_accept/parent.js");
+		var import_child_11 = __rolldown_runtime__.loadExports("single_accept/child.js");
+		globalThis.singleAcceptAcceptCount ??= 0;
+		globalThis.singleAcceptParentExecuteCount ??= 0;
+		globalThis.singleAcceptParentExecuteCount++;
+		let count = import_child_11.count;
+		hot_parent.accept("./child.js", (mod) => {
+			count = mod.count;
+			globalThis.singleAcceptAcceptCount++;
+			import_node_assert_10.default.strictEqual(globalThis.singleAcceptAcceptCount, count);
+		});
+		process.on("beforeExit", (code) => {
+			if (code !== 0) return;
+		});
+	} finally {}
+}));
+
+//#endregion
+init_parent_1()
+__rolldown_runtime__.applyUpdates(['single_accept/parent.js']);
+```
+## Meta
+
+- update type: patch
+### Hmr Boundaries
+
+- boundary: single_accept/parent.js, accepted_via: single_accept/child.js
+# HMR Step 4
+
+## Code
+
+```js
+//#region array_accept/child.js
+var init_child_0 = __rolldown_runtime__.createEsmInitializer((function() {
+	try {
+		var __rolldown_exports__ = {};
+		__rolldown_runtime__.__export(__rolldown_exports__, { count: () => count });
+		__rolldown_runtime__.registerModule("array_accept/child.js", { exports: __rolldown_exports__ });
+		const hot_child = __rolldown_runtime__.createModuleHotContext("array_accept/child.js");
+		const count = 1;
+	} finally {}
+}));
+
+//#endregion
+//#region array_accept/parent.js
+import * as import_node_assert_10 from "node:assert";
+var init_parent_1 = __rolldown_runtime__.createEsmInitializer((function() {
+	try {
+		var __rolldown_exports__ = {};
+		__rolldown_runtime__.__export(__rolldown_exports__, {});
+		__rolldown_runtime__.registerModule("array_accept/parent.js", { exports: __rolldown_exports__ });
+		init_child_0();
+		const hot_parent = __rolldown_runtime__.createModuleHotContext("array_accept/parent.js");
+		var import_child_11 = __rolldown_runtime__.loadExports("array_accept/child.js");
+		globalThis.arrayAcceptAcceptCount ??= 0;
+		globalThis.arrayAcceptParentExecuteCount ??= 0;
+		globalThis.arrayAcceptParentExecuteCount++;
+		let count = import_child_11.count;
+		hot_parent.accept(["./child.js"], ([mod]) => {
+			count = mod.count;
+			globalThis.arrayAcceptAcceptCount++;
+			import_node_assert_10.default.strictEqual(globalThis.arrayAcceptAcceptCount, count);
+		});
+		process.on("beforeExit", (code) => {
+			if (code !== 0) return;
+		});
+	} finally {}
+}));
+
+//#endregion
+init_parent_1()
+__rolldown_runtime__.applyUpdates(['array_accept/parent.js']);
+```
+## Meta
+
+- update type: patch
+### Hmr Boundaries
+
+- boundary: array_accept/parent.js, accepted_via: array_accept/child.js
+# HMR Step 5
+
+## Code
+
+```js
+//#region array_accept/child.js
+var init_child_0 = __rolldown_runtime__.createEsmInitializer((function() {
+	try {
+		var __rolldown_exports__ = {};
+		__rolldown_runtime__.__export(__rolldown_exports__, { count: () => count });
+		__rolldown_runtime__.registerModule("array_accept/child.js", { exports: __rolldown_exports__ });
+		const hot_child = __rolldown_runtime__.createModuleHotContext("array_accept/child.js");
+		const count = 2;
+	} finally {}
+}));
+
+//#endregion
+//#region array_accept/parent.js
+import * as import_node_assert_10 from "node:assert";
+var init_parent_1 = __rolldown_runtime__.createEsmInitializer((function() {
+	try {
+		var __rolldown_exports__ = {};
+		__rolldown_runtime__.__export(__rolldown_exports__, {});
+		__rolldown_runtime__.registerModule("array_accept/parent.js", { exports: __rolldown_exports__ });
+		init_child_0();
+		const hot_parent = __rolldown_runtime__.createModuleHotContext("array_accept/parent.js");
+		var import_child_11 = __rolldown_runtime__.loadExports("array_accept/child.js");
+		globalThis.arrayAcceptAcceptCount ??= 0;
+		globalThis.arrayAcceptParentExecuteCount ??= 0;
+		globalThis.arrayAcceptParentExecuteCount++;
+		let count = import_child_11.count;
+		hot_parent.accept(["./child.js"], ([mod]) => {
+			count = mod.count;
+			globalThis.arrayAcceptAcceptCount++;
+			import_node_assert_10.default.strictEqual(globalThis.arrayAcceptAcceptCount, count);
+		});
+		process.on("beforeExit", (code) => {
+			if (code !== 0) return;
+		});
+	} finally {}
+}));
+
+//#endregion
+init_parent_1()
+__rolldown_runtime__.applyUpdates(['array_accept/parent.js']);
+```
+## Meta
+
+- update type: patch
+### Hmr Boundaries
+
+- boundary: array_accept/parent.js, accepted_via: array_accept/child.js

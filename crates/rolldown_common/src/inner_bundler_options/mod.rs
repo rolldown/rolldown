@@ -9,7 +9,7 @@ use types::legal_comments::LegalComments;
 use types::log_level::LogLevel;
 use types::make_absolute_externals_relative::MakeAbsoluteExternalsRelative;
 use types::mark_module_loaded::MarkModuleLoaded;
-use types::minify_options::RawMinifyOptions;
+use types::minify_options::{RawMinifyOptions, SimpleMinifyOptions};
 use types::on_log::OnLog;
 use types::optimization::OptimizationOption;
 use types::output_option::{
@@ -163,7 +163,7 @@ pub struct BundlerOptions {
   #[cfg_attr(
     feature = "deserialize_bundler_options",
     serde(deserialize_with = "deserialize_minify", default),
-    schemars(with = "Option<bool>")
+    schemars(with = "SimpleMinifyOptions")
   )]
   pub minify: Option<RawMinifyOptions>,
   #[cfg_attr(
@@ -305,8 +305,15 @@ fn deserialize_minify<'de, D>(deserializer: D) -> Result<Option<RawMinifyOptions
 where
   D: Deserializer<'de>,
 {
-  let deserialized = Option::<bool>::deserialize(deserializer)?;
-  Ok(deserialized.map(From::from))
+  let deserialized = Option::<SimpleMinifyOptions>::deserialize(deserializer)?;
+  match deserialized {
+    Some(SimpleMinifyOptions::Boolean(false)) => Ok(Some(RawMinifyOptions::Bool(false))),
+    Some(SimpleMinifyOptions::Boolean(true)) => Ok(Some(RawMinifyOptions::Bool(true))),
+    Some(SimpleMinifyOptions::String(value)) if value == "dceOnly" => {
+      Ok(Some(RawMinifyOptions::DeadCodeEliminationOnly))
+    }
+    _ => Ok(None),
+  }
 }
 
 #[cfg(feature = "deserialize_bundler_options")]

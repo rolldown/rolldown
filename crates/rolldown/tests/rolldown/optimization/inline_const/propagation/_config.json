@@ -2,6 +2,7 @@
   "config": {
     "optimization": {
       "inlineConst": true
-    }
+    },
+    "minify": "dceOnly"
   }
 }

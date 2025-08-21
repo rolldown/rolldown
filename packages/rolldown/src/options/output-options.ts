@@ -78,6 +78,16 @@ export interface OutputOptions {
   cssEntryFileNames?: string | ChunkFileNamesFunction;
   cssChunkFileNames?: string | ChunkFileNamesFunction;
   sanitizeFileName?: boolean | ((name: string) => string);
+  /**
+   * Control code minification.
+   *
+   * - `true`: Enable full minification including code compression and dead code elimination
+   * - `false`: Disable minification (default)
+   * - `'dce-only'`: Only perform dead code elimination without code compression
+   * - `MinifyOptions`: Fine-grained control over minification settings
+   *
+   * @default false
+   */
   minify?: boolean | 'dce-only' | MinifyOptions;
   name?: string;
   globals?: Record<string, string> | GlobalsFunction;

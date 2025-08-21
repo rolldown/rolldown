@@ -72,11 +72,11 @@ const CHARS: &[u8] = b"0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTU
 const FREQUENT_CHARS: &[u8] = b"etnriaoscludfpmhg_vybxSCwTEDOkAjMNPFILRzBVHUWGKqJYXZQ$1024368579";
 const BASE: u32 = 64;
 
-pub fn to_base64(mut value: u32) -> String {
+pub fn to_base64(value: u32) -> String {
   to_base64_common(value, CHARS)
 }
 
-pub fn to_base64_on_frequent_chars(mut value: u32) -> String {
+pub fn to_base64_on_frequent_chars(value: u32) -> String {
   to_base64_common(value, FREQUENT_CHARS)
 }
 pub fn to_base64_common(mut value: u32, chars: &[u8]) -> String {

@@ -1,0 +1,25 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# Assets
+
+## main.js
+
+```js
+// HIDDEN [rolldown:runtime]
+// HIDDEN [rolldown:hmr]
+//#region main.js
+var main_exports = {};
+const main_hot = __rolldown_runtime__.createModuleHotContext("main.js");
+__rolldown_runtime__.registerModule("main.js", { exports: main_exports });
+console.log(1);
+
+//#endregion
+```
+# HMR Step 0
+
+
+## Meta
+
+- update type: full-reload
+- reason: no hmr boundary found for module `main.js`

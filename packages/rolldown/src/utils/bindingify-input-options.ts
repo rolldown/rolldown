@@ -149,7 +149,7 @@ function bindingifyAttachDebugInfo(
   }
 }
 
-export function bindingifyExternal(
+function bindingifyExternal(
   external: InputOptions['external'],
 ): BindingInputOptions['external'] {
   if (external) {

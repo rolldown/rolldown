@@ -2,6 +2,7 @@ import type {
   BindingAssetPluginConfig,
   BindingBuildImportAnalysisPluginConfig,
   BindingDynamicImportVarsPluginConfig,
+  BindingEsmExternalRequirePluginConfig,
   BindingImportGlobPluginConfig,
   BindingIsolatedDeclarationPluginConfig,
   BindingJsonPluginConfig,
@@ -12,9 +13,7 @@ import type {
   BindingViteResolvePluginConfig,
   BindingWasmHelperPluginConfig,
 } from '../binding';
-import type { ExternalOption } from '../options/input-options';
 import type { StringOrRegExp } from '../types/utils';
-import { bindingifyExternal } from '../utils/bindingify-input-options';
 import { normalizedStringOrRegex } from '../utils/normalize-string-or-regex';
 import { BuiltinPlugin, makeBuiltinPluginCallable } from './utils';
 
@@ -117,17 +116,8 @@ export function oxcRuntimePlugin(
   return new BuiltinPlugin('builtin:oxc-runtime', config);
 }
 
-type RequireToImportPluginConfig = {
-  external: ExternalOption;
-};
-
 export function esmExternalRequirePlugin(
-  config?: RequireToImportPluginConfig,
+  config?: BindingEsmExternalRequirePluginConfig,
 ): BuiltinPlugin {
-  return new BuiltinPlugin(
-    'builtin:esm-external-require',
-    config && {
-      external: bindingifyExternal(config.external),
-    },
-  );
+  return new BuiltinPlugin('builtin:esm-external-require', config);
 }

@@ -5472,6 +5472,10 @@ expression: output
 - index-!~{001}~.js => index-B6HT4hD4.js
 - rolldown_hmr-!~{002}~.js => rolldown_hmr-DvE-shCr.js
 
+# tests/rolldown/topics/hmr/no_boundary_reload
+
+- main-!~{000}~.js => main-CUnFYEjc.js
+
 # tests/rolldown/topics/hmr/non_used_export
 
 - main-!~{000}~.js => main-D8wBu5BV.js

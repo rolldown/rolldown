@@ -51,6 +51,7 @@ pub struct HmrManager {
   input: HmrManagerInput,
   module_idx_by_abs_path: FxHashMap<ArcStr, ModuleIdx>,
   module_idx_by_stable_id: FxHashMap<String, ModuleIdx>,
+  next_hmr_patch_id: u32,
 }
 
 impl Deref for HmrManager {
@@ -87,7 +88,7 @@ impl HmrManager {
       .iter()
       .map(|m| (m.stable_id().to_string(), m.idx()))
       .collect();
-    Self { input, module_idx_by_abs_path, module_idx_by_stable_id }
+    Self { input, module_idx_by_abs_path, module_idx_by_stable_id, next_hmr_patch_id: 0 }
   }
 
   /// Compute hmr update caused by `import.meta.hot.invalidate()`.
@@ -391,10 +392,8 @@ impl HmrManager {
 
     let (mut code, mut map) = source_joiner.join();
 
-    let filename = format!(
-      "{}.js",
-      std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap().as_millis()
-    );
+    let filename = format!("hmr_patch_{}.js", self.next_hmr_patch_id,);
+    self.next_hmr_patch_id += 1;
 
     let file_dir = self.options.cwd.as_path().join(&self.options.out_dir);
 

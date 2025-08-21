@@ -13,7 +13,7 @@ function printTitle(title: string) {
   console.info(colors.cyan(colors.bold(title)));
 }
 
-async function runCmdAndPipe(title: string, cmdOptions: Parameters<typeof x>) {
+async function runCmdAndPipe(title: string, cmdOptions: Parameters<typeof x>): Promise<boolean> {
   printTitle(title);
   console.info('------------------------');
   const proc = x(...cmdOptions);
@@ -29,14 +29,21 @@ async function runCmdAndPipe(title: string, cmdOptions: Parameters<typeof x>) {
         }`,
       ),
     );
+    return true;
+  }
+  return false;
+}
+
+async function runCmdAndPipeOrExit(title: string, cmdOptions: Parameters<typeof x>): Promise<void> {
+  const failed = await runCmdAndPipe(title, cmdOptions);
+  if (failed) {
     process.exit(1);
   }
-  return result;
 }
 
 fs.rmSync(REPO_PATH, { recursive: true, force: true });
 
-await runCmdAndPipe(
+await runCmdAndPipeOrExit(
   '# Cloning rolldown-vite repo...',
   ['git', ['clone', 'https://github.com/vitejs/rolldown-vite.git', REPO_PATH]],
 );
@@ -50,24 +57,62 @@ const newPnpmWorkspaceYaml = pnpmWorkspaceYaml.replace(
 );
 fs.writeFileSync(pnpmWorkspace, newPnpmWorkspaceYaml, 'utf-8');
 
-await runCmdAndPipe(
+await runCmdAndPipeOrExit(
   '# Running `pnpm install`...',
   ['pnpm', ['install', '--no-frozen-lockfile'], { nodeOptions: { cwd: REPO_PATH } }],
 );
-await runCmdAndPipe(
+await runCmdAndPipeOrExit(
   '# Running `pnpm run build`...',
   ['pnpm', ['run', 'build'], { nodeOptions: { cwd: REPO_PATH } }],
 );
-await runCmdAndPipe(
-  '# Running `pnpm test`...',
-  ['pnpm', ['run', 'test'], { nodeOptions: { cwd: REPO_PATH } }],
+
+const failed = []
+
+const failedNormalTestUnit = await runCmdAndPipe(
+  '# Running `pnpm test-unit`...',
+  ['pnpm', ['run', 'test-unit'], { nodeOptions: { cwd: REPO_PATH } }],
 );
-await runCmdAndPipe(
-  '# Running `_VITE_TEST_JS_PLUGIN=1 pnpm test`...',
-  ['pnpm', ['run', 'test'], {
-    nodeOptions: {
-      cwd: REPO_PATH,
-      env: { _VITE_TEST_JS_PLUGIN: '1' },
-    },
-  }],
+if (failedNormalTestUnit) failed.push('test-unit');
+
+const failedNormalTestServe = await runCmdAndPipe(
+  '# Running `pnpm test-serve`...',
+  ['pnpm', ['run', 'test-serve'], { nodeOptions: { cwd: REPO_PATH } }],
 );
+if (failedNormalTestServe) failed.push('test-serve');
+
+const failedNormalTestBuild = await runCmdAndPipe(
+  '# Running `pnpm test-build`...',
+  ['pnpm', ['run', 'test-build'], { nodeOptions: { cwd: REPO_PATH } }],
+);
+if (failedNormalTestBuild) failed.push('test-build');
+
+const failedJsTestUnit = await runCmdAndPipe(
+  '# Running `_VITE_TEST_JS_PLUGIN=1 pnpm test-unit`...',
+  ['pnpm', ['run', 'test-unit'], { nodeOptions: {
+    cwd: REPO_PATH,
+    env: { _VITE_TEST_JS_PLUGIN: '1' },
+  } }],
+);
+if (failedJsTestUnit) failed.push('[JS] test-unit');
+const failedJsTestServe = await runCmdAndPipe(
+  '# Running `_VITE_TEST_JS_PLUGIN=1 pnpm test-serve`...',
+  ['pnpm', ['run', 'test-serve'], { nodeOptions: {
+    cwd: REPO_PATH,
+    env: { _VITE_TEST_JS_PLUGIN: '1' },
+  } }],
+);
+if (failedJsTestServe) failed.push('[JS] test-serve');
+const failedJsTestBuild = await runCmdAndPipe(
+  '# Running `_VITE_TEST_JS_PLUGIN=1 pnpm test-build`...',
+  ['pnpm', ['run', 'test-build'], { nodeOptions: {
+    cwd: REPO_PATH,
+    env: { _VITE_TEST_JS_PLUGIN: '1' },
+  } }],
+);
+if (failedJsTestBuild) failed.push('[JS] test-build');
+
+if (failed.length > 0) {
+  console.error(colors.red(colors.bold('The following test suites failed:')));
+  failed.forEach(test => console.error(colors.red(` - ${test}`)));
+  process.exit(1);
+}

@@ -1,6 +1,6 @@
 ---
 source: crates/string_wizard/tests/magic_string_replace.rs
-expression: visualizer.into_visualizer_text()
+expression: visualizer.get_text()
 snapshot_kind: text
 ---
 - 测 2 测 4

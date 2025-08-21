@@ -51,7 +51,7 @@ function test() {
   fn visualize(s: &MagicString, hires: Hires, output: &str) -> String {
     let sourcemap = s.source_map(SourceMapOptions { hires, ..Default::default() });
     let visualizer = SourcemapVisualizer::new(output, &sourcemap);
-    visualizer.into_visualizer_text()
+    visualizer.get_text()
   }
 
   insta::assert_snapshot!("hires_false", visualize(&s, Hires::False, &output));

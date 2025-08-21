@@ -445,9 +445,10 @@ impl IntegrationTest {
       let visualizer_result = assets
         .iter()
         .filter_map(|asset| match asset {
-          Output::Chunk(chunk) => chunk.map.as_ref().map(|sourcemap| {
-            SourcemapVisualizer::new(&chunk.code, sourcemap).into_visualizer_text()
-          }),
+          Output::Chunk(chunk) => chunk
+            .map
+            .as_ref()
+            .map(|sourcemap| SourcemapVisualizer::new(&chunk.code, sourcemap).get_text()),
           Output::Asset(_) => None,
         })
         .collect::<Vec<_>>()

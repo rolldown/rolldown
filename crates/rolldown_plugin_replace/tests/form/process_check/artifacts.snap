@@ -30,5 +30,4 @@ if ("object" !== "undefined" && "object" === "object" && "production" === "produ
 (4:2) "console." --> (2:0) "\tconsole."
 (4:10) "log(" --> (2:9) "log("
 (4:14) "'production');\n" --> (2:13) "\"production\");\n"
-(5:0) "}\n" --> (3:0) "}\n"
 ```

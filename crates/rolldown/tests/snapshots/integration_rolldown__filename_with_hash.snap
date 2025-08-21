@@ -2483,11 +2483,11 @@ expression: output
 
 # tests/esbuild/lower/lower_async_generator
 
-- entry-!~{000}~.js => entry-WHTPdUAO.js
+- entry-!~{000}~.js => entry-CJqY68aU.js
 
 # tests/esbuild/lower/lower_async_generator_no_await
 
-- entry-!~{000}~.js => entry-WHTPdUAO.js
+- entry-!~{000}~.js => entry-CJqY68aU.js
 
 # tests/esbuild/lower/lower_async_super_es2016_no_bundle
 
@@ -2550,7 +2550,7 @@ expression: output
 
 # tests/esbuild/lower/lower_nullish_coalescing_assignment_issue1493
 
-- entry-!~{000}~.js => entry-BU34zxcs.js
+- entry-!~{000}~.js => entry-D3qWIylD.js
 
 # tests/esbuild/lower/lower_object_spread_no_bundle
 
@@ -2734,7 +2734,7 @@ expression: output
 
 # tests/esbuild/lower/lower_using_inside_ts_namespace
 
-- entry-!~{000}~.js => entry-C-GKcJ8B.js
+- entry-!~{000}~.js => entry-DLGOivj8.js
 
 # tests/esbuild/lower/lower_using_unsupported_async
 
@@ -5020,11 +5020,11 @@ expression: output
 
 # tests/rolldown/resolve/ts_config_merge_decorator_metadata
 
-- main-!~{000}~.js => main-CDgmalK9.js
+- main-!~{000}~.js => main-UuSbAhLN.js
 
 # tests/rolldown/resolve/ts_config_option_merge
 
-- main-!~{000}~.js => main-Crgksfje.js
+- main-!~{000}~.js => main-Dm8_aZ2_.js
 
 # tests/rolldown/resolve/wildcard_alias
 

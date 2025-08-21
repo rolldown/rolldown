@@ -51,7 +51,6 @@ Object.defineProperty(exports, 'shared', {
 (2:9) "main() " --> (3:9) "main() "
 (2:16) "{\n" --> (3:16) "{\n"
 (3:2) "shared();\n" --> (4:0) "\trequire_shared.shared();\n"
-(4:1) "\n" --> (5:0) "}\n"
 (6:0) "main()\n" --> (6:0) "main();\n"
 
 - ../shared.js
@@ -61,5 +60,4 @@ Object.defineProperty(exports, 'shared', {
 (1:2) "console." --> (3:0) "\tconsole."
 (1:10) "trace(" --> (3:9) "trace("
 (1:16) "\"shared\")\n" --> (3:15) "\"shared\");\n"
-(2:1) "\n" --> (4:0) "}\n"
 ```

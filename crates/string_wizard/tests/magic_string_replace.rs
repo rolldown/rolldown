@@ -66,7 +66,7 @@ fn replace_sourcemap_with_chinese() {
   let visualizer = SourcemapVisualizer::new(&output, &sourcemap);
   assert_eq!(s.to_string(), "试 2 试 4");
   insta::assert_snapshot!("output", output);
-  insta::assert_snapshot!("sourcemap_with_chinese", visualizer.into_visualizer_text());
+  insta::assert_snapshot!("sourcemap_with_chinese", visualizer.get_text());
 }
 
 #[test]
@@ -85,5 +85,5 @@ fn replace_sourcemap() {
   println!("sourcemap {sourcemap:#?}");
   let visualizer = SourcemapVisualizer::new(&output, &sourcemap);
   assert_eq!(s.to_string(), "# 2 # 4");
-  insta::assert_snapshot!("sourcemap", visualizer.into_visualizer_text());
+  insta::assert_snapshot!("sourcemap", visualizer.get_text());
 }

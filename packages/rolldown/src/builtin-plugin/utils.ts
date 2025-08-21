@@ -1,14 +1,21 @@
 import {
   type BindingBuiltinPlugin,
+  type BindingBuiltinPluginName,
   BindingCallableBuiltinPlugin,
 } from '../binding';
 import { error, logPluginError } from '../log/logs';
 
-import { BuiltinPlugin } from './constructors';
-
 type BindingCallableBuiltinPluginLike = {
   [K in keyof BindingCallableBuiltinPlugin]: BindingCallableBuiltinPlugin[K];
 };
+
+export class BuiltinPlugin {
+  constructor(
+    public name: BindingBuiltinPluginName,
+    // NOTE: has `_` to avoid conflict with `options` hook
+    public _options?: unknown,
+  ) {}
+}
 
 export function makeBuiltinPluginCallable(
   plugin: BuiltinPlugin,

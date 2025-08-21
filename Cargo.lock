@@ -2720,6 +2720,7 @@ dependencies = [
  "rolldown_plugin_asset_import_meta_url",
  "rolldown_plugin_build_import_analysis",
  "rolldown_plugin_dynamic_import_vars",
+ "rolldown_plugin_esm_external_require",
  "rolldown_plugin_import_glob",
  "rolldown_plugin_isolated_declaration",
  "rolldown_plugin_json",

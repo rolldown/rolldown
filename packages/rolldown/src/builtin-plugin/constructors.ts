@@ -1,7 +1,6 @@
 import type {
   BindingAssetPluginConfig,
   BindingBuildImportAnalysisPluginConfig,
-  BindingBuiltinPluginName,
   BindingDynamicImportVarsPluginConfig,
   BindingImportGlobPluginConfig,
   BindingIsolatedDeclarationPluginConfig,
@@ -13,17 +12,11 @@ import type {
   BindingViteResolvePluginConfig,
   BindingWasmHelperPluginConfig,
 } from '../binding';
+import type { ExternalOption } from '../options/input-options';
 import type { StringOrRegExp } from '../types/utils';
+import { bindingifyExternal } from '../utils/bindingify-input-options';
 import { normalizedStringOrRegex } from '../utils/normalize-string-or-regex';
-import { makeBuiltinPluginCallable } from './utils';
-
-export class BuiltinPlugin {
-  constructor(
-    public name: BindingBuiltinPluginName,
-    // NOTE: has `_` to avoid conflict with `options` hook
-    public _options?: unknown,
-  ) {}
-}
+import { BuiltinPlugin, makeBuiltinPluginCallable } from './utils';
 
 export function modulePreloadPolyfillPlugin(
   config?: BindingModulePreloadPolyfillPluginConfig,
@@ -122,4 +115,19 @@ export function oxcRuntimePlugin(
   config?: BindingOxcRuntimePluginConfig,
 ): BuiltinPlugin {
   return new BuiltinPlugin('builtin:oxc-runtime', config);
+}
+
+type RequireToImportPluginConfig = {
+  external: ExternalOption;
+};
+
+export function esmExternalRequirePlugin(
+  config?: RequireToImportPluginConfig,
+): BuiltinPlugin {
+  return new BuiltinPlugin(
+    'builtin:esm-external-require',
+    config && {
+      external: bindingifyExternal(config.external),
+    },
+  );
 }

@@ -11,7 +11,7 @@ import type {
   BindingInjectImportNamespace,
   BindingInputOptions,
 } from '../binding';
-import { BuiltinPlugin } from '../builtin-plugin/constructors';
+import { BuiltinPlugin } from '../builtin-plugin/utils';
 import { bindingifyBuiltInPlugin } from '../builtin-plugin/utils';
 import type { LogHandler } from '../log/log-handler';
 import { LOG_LEVEL_WARN, type LogLevelOption } from '../log/logging';
@@ -149,7 +149,7 @@ function bindingifyAttachDebugInfo(
   }
 }
 
-function bindingifyExternal(
+export function bindingifyExternal(
   external: InputOptions['external'],
 ): BindingInputOptions['external'] {
   if (external) {

@@ -1,4 +1,4 @@
-import { BuiltinPlugin } from './constructors';
+import { BuiltinPlugin } from './utils';
 
 import type { BindingTransformPluginConfig } from '../binding';
 import { normalizedStringOrRegex } from '../utils/normalize-string-or-regex';

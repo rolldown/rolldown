@@ -17,6 +17,7 @@ export {
   assetPlugin,
   buildImportAnalysisPlugin,
   dynamicImportVarsPlugin,
+  esmExternalRequirePlugin,
   importGlobPlugin,
   isolatedDeclarationPlugin,
   jsonPlugin,

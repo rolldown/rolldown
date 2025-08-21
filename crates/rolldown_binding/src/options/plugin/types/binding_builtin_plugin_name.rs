@@ -31,6 +31,8 @@ pub enum BindingBuiltinPluginName {
   Report,
   #[napi(value = "builtin:replace")]
   Replace,
+  #[napi(value = "builtin:esm-external-require")]
+  RequireToImport,
   #[napi(value = "builtin:transform")]
   Transform,
   #[napi(value = "builtin:vite-resolve")]

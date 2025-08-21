@@ -1,8 +1,6 @@
 import { fileURLToPath } from 'node:url';
-import {
-  BuiltinPlugin,
-  oxcRuntimePlugin,
-} from '../builtin-plugin/constructors';
+import { oxcRuntimePlugin } from '../builtin-plugin/constructors';
+import { BuiltinPlugin } from '../builtin-plugin/utils';
 import { ENUMERATED_INPUT_PLUGIN_HOOK_NAMES } from '../constants/plugin';
 import type { LogHandler } from '../log/log-handler';
 import { LOG_LEVEL_WARN } from '../log/logging';

@@ -39,6 +39,7 @@ rolldown_plugin_asset = { workspace = true }
 rolldown_plugin_asset_import_meta_url = { workspace = true }
 rolldown_plugin_build_import_analysis = { workspace = true }
 rolldown_plugin_dynamic_import_vars = { workspace = true }
+rolldown_plugin_esm_external_require = { workspace = true }
 rolldown_plugin_import_glob = { workspace = true }
 rolldown_plugin_isolated_declaration = { workspace = true }
 rolldown_plugin_json = { workspace = true }

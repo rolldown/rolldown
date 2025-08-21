@@ -1,5 +1,5 @@
 import type { InputOptions, OutputOptions, RolldownPlugin } from '..';
-import { BuiltinPlugin } from '../builtin-plugin/constructors';
+import { BuiltinPlugin } from '../builtin-plugin/utils';
 import type { LogHandler } from '../log/log-handler';
 import { getLogger, getOnLog } from '../log/logger';
 import { LOG_LEVEL_INFO, type LogLevelOption } from '../log/logging';

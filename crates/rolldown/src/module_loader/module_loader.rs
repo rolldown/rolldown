@@ -184,6 +184,8 @@ impl<'a> ModuleLoader<'a> {
       1
     };
 
+    let symbol_ref_db = SymbolRefDb::new(options.transform_options.is_jsx_preserve());
+
     Ok(Self {
       tx,
       rx,
@@ -192,7 +194,7 @@ impl<'a> ModuleLoader<'a> {
       remaining,
       shared_context,
       intermediate_normal_modules,
-      symbol_ref_db: SymbolRefDb::default(),
+      symbol_ref_db,
       is_full_scan,
       new_added_modules_from_partial_scan: FxIndexSet::default(),
       cache,

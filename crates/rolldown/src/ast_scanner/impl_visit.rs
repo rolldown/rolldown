@@ -9,7 +9,7 @@ use oxc::{
 };
 use rolldown_common::{
   ConstExportMeta, EcmaModuleAstUsage, EcmaViewMeta, ImportKind, ImportRecordMeta, LocalExport,
-  RUNTIME_MODULE_KEY, SideEffectDetail, StmtInfoMeta,
+  RUNTIME_MODULE_KEY, SideEffectDetail, StmtInfoMeta, SymbolRefFlags,
   dynamic_import_usage::DynamicImportExportsUsage,
 };
 #[cfg(debug_assertions)]
@@ -466,6 +466,15 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
             self.result.self_referenced_class_decl_symbol_ids.insert(cur_class_decl);
           }
           _ => {}
+        }
+
+        if self.options.transform_options.is_jsx_preserve()
+          && self.visit_path.last().is_some_and(|ast_kind| {
+            matches!(ast_kind, AstKind::JSXOpeningElement(_) | AstKind::JSXClosingElement(_))
+          })
+        {
+          let symbol_ref_flags = root_symbol_id.flags_mut(&mut self.result.symbol_ref_db);
+          *symbol_ref_flags |= SymbolRefFlags::MustStartWithCapitalLetterForJSX;
         }
       }
       super::IdentifierReferenceKind::Other => {}

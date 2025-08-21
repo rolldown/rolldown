@@ -3,6 +3,7 @@ use oxc::span::CompactStr;
 use oxc::syntax::keyword::{GLOBAL_OBJECTS, RESERVED_KEYWORDS};
 use rolldown_common::{
   AstScopes, ModuleIdx, ModuleScopeSymbolIdMap, NormalModule, OutputFormat, SymbolRef, SymbolRefDb,
+  SymbolRefFlags,
 };
 use rolldown_utils::rustc_hash::FxHashMapExt;
 use rolldown_utils::{
@@ -67,7 +68,22 @@ impl<'name> Renamer<'name> {
 
   pub fn add_symbol_in_root_scope(&mut self, symbol_ref: SymbolRef) {
     let canonical_ref = symbol_ref.canonical_ref(self.symbol_db);
-    let original_name = CompactStr::new(canonical_ref.name(self.symbol_db));
+    let canonical_name = canonical_ref.name(self.symbol_db);
+
+    let original_name = if self.symbol_db.is_jsx_preserve
+      && canonical_ref
+        .flags(self.symbol_db)
+        .is_some_and(|flags| flags.contains(SymbolRefFlags::MustStartWithCapitalLetterForJSX))
+      && canonical_name.as_bytes()[0].is_ascii_lowercase()
+    {
+      let mut s = String::with_capacity(canonical_name.len());
+      s.push(canonical_name.as_bytes()[0].to_ascii_uppercase() as char);
+      s.push_str(&canonical_name[1..]);
+      CompactStr::from(s)
+    } else {
+      CompactStr::new(canonical_name)
+    };
+
     match self.canonical_names.entry(canonical_ref) {
       Entry::Vacant(vacant) => {
         let mut candidate_name = original_name.clone();

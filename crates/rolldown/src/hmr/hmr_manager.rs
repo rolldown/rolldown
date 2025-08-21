@@ -484,8 +484,8 @@ impl HmrManager {
       };
 
       if importer.can_accept_hmr_dependency_for(&module.id) {
-        modules_to_be_updated.insert(importer_idx);
-        hmr_boundaries.insert(HmrBoundary { boundary: importer_idx, accepted_via: module_idx });
+        modules_to_be_updated.insert(module_idx);
+        hmr_boundaries.insert(HmrBoundary { boundary: module_idx, accepted_via: importer_idx });
         continue;
       }
 

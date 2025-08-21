@@ -29,7 +29,7 @@ function test() {
 }
 
 var import_commonjs;
-var init_main = __esm({"main.js": () => {
+var init_main = __esm({"main.js": (() => {
 //#region lib.js
 	import_commonjs = /* @__PURE__ */ __toESM(require_commonjs());
 
@@ -40,7 +40,7 @@ var init_main = __esm({"main.js": () => {
 	assert.equal(test().toString(), "1");
 
 //#endregion
-}});
+})});
 
 init_main();
 ```

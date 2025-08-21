@@ -1,6 +1,6 @@
 use rolldown_common::{
-  BundlerOptions, ExperimentalOptions, OutputExports, OutputFormat, PreserveEntrySignatures,
-  TreeshakeOptions,
+  BundlerOptions, ExperimentalOptions, OptimizationOption, OutputExports, OutputFormat,
+  PreserveEntrySignatures, TreeshakeOptions,
 };
 use schemars::JsonSchema;
 use serde::Deserialize;
@@ -22,6 +22,7 @@ pub struct ConfigVariant {
   pub minify_internal_exports: Option<bool>,
   pub on_demand_wrapping: Option<bool>,
   pub profiler_names: Option<bool>,
+  pub pife_for_module_wrappers: Option<bool>,
   // --- non-bundler options are start with `_`
   /// Whether to include the output in the snapshot for this config variant.
   #[serde(rename = "_snapshot")]
@@ -73,6 +74,12 @@ impl ConfigVariant {
     if let Some(profiler_names) = &self.profiler_names {
       config.profiler_names = Some(*profiler_names);
     }
+    if let Some(pife_for_module_wrappers) = &self.pife_for_module_wrappers {
+      config.optimization = Some(OptimizationOption {
+        pife_for_module_wrappers: Some(*pife_for_module_wrappers),
+        ..config.optimization.unwrap_or_default()
+      });
+    }
     config
   }
 
@@ -104,6 +111,9 @@ impl ConfigVariant {
     }
     if let Some(on_demand_wrapping) = &self.on_demand_wrapping {
       fields.push(format!("on_demand_wrapping: {on_demand_wrapping:?}"));
+    }
+    if let Some(pife_for_module_wrappers) = &self.pife_for_module_wrappers {
+      fields.push(format!("pife_for_module_wrappers: {pife_for_module_wrappers:?}"));
     }
     if let Some(profiler_names) = &self.profiler_names {
       fields.push(format!("profiler_names: {profiler_names:?}"));

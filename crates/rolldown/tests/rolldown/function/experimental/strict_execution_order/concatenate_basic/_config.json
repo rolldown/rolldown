@@ -1,0 +1,16 @@
+{
+  "config": {
+    "experimental": {
+      "strictExecutionOrder": true,
+      "onDemandWrapping": true
+    }
+  },
+  "configVariants": [
+    {
+      "profilerNames": false
+    },
+    {
+      "pifeForModuleWrappers": false
+    }
+  ]
+}

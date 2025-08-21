@@ -324,7 +324,8 @@ impl<'me, 'ast: 'me> Visit<'ast> for AstScanner<'me, 'ast> {
   fn visit_variable_declaration(&mut self, decl: &ast::VariableDeclaration<'ast>) {
     match decl.declarations.as_slice() {
       [decl] => {
-        if let (BindingPatternKind::BindingIdentifier(_), Some(init)) = (&decl.id.kind, &decl.init)
+        if let (BindingPatternKind::BindingIdentifier(binding), Some(init)) =
+          (&decl.id.kind, &decl.init)
         {
           match init {
             ast::Expression::ClassExpression(_) => {
@@ -335,9 +336,35 @@ impl<'me, 'ast: 'me> Visit<'ast> for AstScanner<'me, 'ast> {
             }
             _ => {}
           }
+
+          // Extract constant value for top-level variable declarations
+          if self.is_root_symbol(binding.symbol_id()) {
+            if let Some(value) = self.extract_constant_value_from_expr(Some(init)) {
+              self
+                .result
+                .constant_export_map
+                .insert(binding.symbol_id(), ConstExportMeta::new(value, false));
+            }
+          }
         }
       }
-      _ => {}
+      _ => {
+        if self.options.optimization.is_inline_const_enabled() && self.is_root_scope() {
+          for var_decl in &decl.declarations {
+            if let BindingPatternKind::BindingIdentifier(binding) = &var_decl.id.kind {
+              if let Some(init) = &var_decl.init {
+                if let Some(value) = self.extract_constant_value_from_expr(Some(init)) {
+                  self
+                    .result
+                    .constant_export_map
+                    .insert(binding.symbol_id(), ConstExportMeta::new(value, false));
+                }
+              }
+            }
+          }
+        }
+        // Handle multiple declarations in a single statement
+      }
     }
     walk::walk_variable_declaration(self, decl);
   }

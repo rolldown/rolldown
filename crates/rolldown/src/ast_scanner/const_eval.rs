@@ -1,18 +1,20 @@
 use oxc::{
   ast::ast::Expression,
   minifier::PropertyReadSideEffects,
-  semantic::{IsGlobalReference, Scoping},
+  semantic::{IsGlobalReference, Scoping, SymbolId},
 };
 use oxc_ecmascript::{
   GlobalContext,
   constant_evaluation::{ConstantEvaluation, ConstantEvaluationCtx},
   side_effects::MayHaveSideEffectsContext,
 };
-use rolldown_common::ConstantValue;
+use rolldown_common::{ConstExportMeta, ConstantValue};
+use rustc_hash::FxHashMap;
 
 pub struct ConstEvalCtx<'me, 'ast: 'me> {
   pub ast: oxc::ast::AstBuilder<'ast>,
   pub scope: &'me Scoping,
+  pub constant_map: &'me FxHashMap<SymbolId, ConstExportMeta>,
 }
 
 impl<'ast> ConstantEvaluationCtx<'ast> for ConstEvalCtx<'_, 'ast> {
@@ -24,6 +26,16 @@ impl<'ast> ConstantEvaluationCtx<'ast> for ConstEvalCtx<'_, 'ast> {
 impl<'ast> GlobalContext<'ast> for ConstEvalCtx<'_, 'ast> {
   fn is_global_reference(&self, reference: &oxc::ast::ast::IdentifierReference<'ast>) -> bool {
     reference.is_global_reference(self.scope)
+  }
+
+  fn get_constant_value_for_reference_id(
+    &self,
+    reference_id: oxc::semantic::ReferenceId,
+  ) -> Option<oxc_ecmascript::constant_evaluation::ConstantValue<'ast>> {
+    let reference = self.scope.get_reference(reference_id);
+    let symbol_id = reference.symbol_id()?;
+    let v = self.constant_map.get(&symbol_id)?;
+    Some(oxc_ecmascript::constant_evaluation::ConstantValue::from(&v.value))
   }
 }
 

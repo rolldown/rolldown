@@ -1,6 +1,6 @@
 use oxc::{
   codegen::{self, CodegenOptions, CommentOptions},
-  minifier::MinifierOptions,
+  minifier::{CompressOptions, MinifierOptions},
 };
 use rolldown_common::{LegalComments, MinifyOptions, NormalizedBundlerOptions};
 use rolldown_ecmascript::EcmaCompiler;
@@ -19,7 +19,9 @@ impl GenerateStage<'_> {
   ) -> BuildResult<()> {
     let (compress, minify_option) = match &options.minify {
       MinifyOptions::Disabled => return Ok(()),
-      MinifyOptions::DeadCodeEliminationOnly => (false, &MinifierOptions::default()),
+      MinifyOptions::DeadCodeEliminationOnly => {
+        (false, &MinifierOptions { mangle: None, compress: Some(CompressOptions::default()) })
+      }
       MinifyOptions::Enabled(options) => (true, options),
     };
     let remove_whitespace = compress;

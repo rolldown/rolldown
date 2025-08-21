@@ -28,6 +28,7 @@ bitflags::bitflags! {
     const IsNotReassigned = 1;
     /// If this symbol is declared by `const`. Eg. `const a = 1;`
     const IsConst = 1 << 1;
+    const MustStartWithCapitalLetterForJSX = 1 << 2;
   }
 }
 
@@ -132,10 +133,15 @@ impl DerefMut for SymbolRefDbForModule {
 // Information about symbols for all modules
 #[derive(Debug, Default)]
 pub struct SymbolRefDb {
+  pub is_jsx_preserve: bool,
   inner: IndexVec<ModuleIdx, Option<SymbolRefDbForModule>>,
 }
 
 impl SymbolRefDb {
+  pub fn new(is_jsx_preserve: bool) -> Self {
+    Self { inner: IndexVec::default(), is_jsx_preserve }
+  }
+
   #[must_use]
   pub fn clone_without_scoping(&self) -> SymbolRefDb {
     let mut vec = IndexVec::with_capacity(self.inner.len());
@@ -150,7 +156,7 @@ impl SymbolRefDb {
         create_reason: inner.create_reason.clone(),
       }));
     }
-    Self { inner: vec }
+    Self { inner: vec, is_jsx_preserve: self.is_jsx_preserve }
   }
 }
 
@@ -204,6 +210,13 @@ impl SymbolRefDb {
       return;
     }
     self.get_mut(base_root).link = Some(target_root);
+    if self.is_jsx_preserve
+      && base_root
+        .flags(self)
+        .is_some_and(|flags| flags.contains(SymbolRefFlags::MustStartWithCapitalLetterForJSX))
+    {
+      *target_root.flags_mut(self) |= SymbolRefFlags::MustStartWithCapitalLetterForJSX;
+    }
   }
 
   pub fn canonical_name_for<'name>(

@@ -1,3 +1,2 @@
-const Foo = () => <div>Foo</div>;
-export const Bar = Foo
-export default Foo
+export const Foo = () => <div>Foo</div>;
+export default () => Foo();

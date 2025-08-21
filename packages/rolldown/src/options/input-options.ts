@@ -77,7 +77,7 @@ export type OptimizationOptions = {
    * When enabled, constant values from imported modules will be inlined at their usage sites,
    * potentially reducing bundle size and improving runtime performance by eliminating variable lookups.
    *
-   * @example
+   * **example**
    * ```js
    * // Input files:
    * // constants.js

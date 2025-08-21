@@ -23,7 +23,7 @@ impl Plugin for ViteCssPostPlugin {
   }
 
   fn register_hook_usage(&self) -> HookUsage {
-    HookUsage::Transform
+    HookUsage::Transform | HookUsage::RenderChunk
   }
 
   async fn transform(
@@ -90,5 +90,45 @@ impl Plugin for ViteCssPostPlugin {
       module_type: Some(ModuleType::Js),
       ..Default::default()
     }))
+  }
+
+  #[allow(unused_assignments, unused_variables)]
+  async fn render_chunk(
+    &self,
+    ctx: &rolldown_plugin::PluginContext,
+    args: &rolldown_plugin::HookRenderChunkArgs<'_>,
+  ) -> rolldown_plugin::HookRenderChunkReturn {
+    // Empty if it's a dynamic chunk with only a CSS import
+    // Example -> `import('./style.css')` with no other code
+    let is_js_chunk_empty = args.code.is_empty() && !args.chunk.is_entry;
+    let styles = ctx.meta().get::<CSSStyles>().expect("CSSStyles missing");
+    let mut is_pure_css_chunk = args.chunk.exports.is_empty();
+    let mut css_chunk = String::new();
+    for module_id in &args.chunk.module_ids {
+      let id = module_id.resource_id().as_str();
+      if let Some(css) = styles.inner.get(id) {
+        // `?transform-only` is used for ?url and shouldn't be included in normal CSS chunks
+        if find_special_query(id, b"transform-only").is_some() {
+          continue;
+        }
+
+        // TODO: implement cssScopeTo
+        // https://github.com/vitejs/rolldown-vite/blob/c35ec68d/packages/vite/src/node/plugins/css.ts#L661-L667
+        // const cssScopeTo = this.getModuleInfo(id)?.meta?.vite?.cssScopeTo
+        // if (cssScopeTo && !isCssScopeToRendered(cssScopeTo, renderedModules)) {
+        //   continue
+        // }
+
+        if rolldown_plugin_utils::css::is_css_module(id) {
+          is_pure_css_chunk = false;
+        }
+
+        css_chunk.push_str(css.as_str());
+      } else if !is_js_chunk_empty {
+        // If the chunk has other JS code, it is not a pure CSS chunk
+        is_pure_css_chunk = false;
+      }
+    }
+    Ok(None)
   }
 }

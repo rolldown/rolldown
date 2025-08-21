@@ -113,7 +113,7 @@ pub struct BindingOutputOptions<'env> {
 
   // --- Enhanced options
   #[debug(skip)]
-  #[napi(ts_type = "boolean | 'dce-only' | BindingMinifyOptions")]
+  #[napi(ts_type = "boolean | 'dce-only' | MinifyOptions")]
   pub minify: Option<Either3<bool, String, oxc_minify_napi::MinifyOptions>>,
   pub advanced_chunks: Option<BindingAdvancedChunksOptions>,
   #[napi(ts_type = "'none' | 'inline'")]

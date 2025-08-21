@@ -8,6 +8,10 @@ use napi_derive::napi;
 use rolldown::{MinifyOptions, SharedNormalizedBundlerOptions};
 use rustc_hash::FxBuildHasher;
 
+use crate::utils::minify_options_conversion::{
+  compress_options_to_napi_compress_options, mangle_options_to_napi_mangle_options,
+};
+
 #[napi]
 pub struct BindingNormalizedOptions {
   inner: SharedNormalizedBundlerOptions,
@@ -239,17 +243,22 @@ impl BindingNormalizedOptions {
     self.inner.polyfill_require
   }
 
-  #[napi(getter, ts_return_type = "false | 'dce-only' | BindingMinifyOptions")]
+  #[napi(getter, ts_return_type = "false | 'dce-only' | MinifyOptions")]
   pub fn minify(&self) -> Either3<bool, String, oxc_minify_napi::MinifyOptions> {
     match &self.inner.minify {
       MinifyOptions::Disabled => Either3::A(false),
       MinifyOptions::DeadCodeEliminationOnly => Either3::B("dce-only".to_string()),
-      MinifyOptions::Enabled(_minify_options) => {
-        // TODO: this required we convert `oxc::minify::MinifyOptions` back to `oxc_minify_napi::MinifyOptions`
-        let ret = oxc_minify_napi::MinifyOptions::default();
-
-        Either3::C(ret)
-      }
+      MinifyOptions::Enabled(minify_options) => Either3::C(oxc_minify_napi::MinifyOptions {
+        compress: minify_options
+          .compress
+          .as_ref()
+          .map(|compress| Either::B(compress_options_to_napi_compress_options(compress))),
+        mangle: minify_options
+          .mangle
+          .as_ref()
+          .map(|mangle| Either::B(mangle_options_to_napi_mangle_options(mangle))),
+        ..Default::default()
+      }),
     }
   }
 

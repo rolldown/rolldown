@@ -1327,7 +1327,7 @@ export declare class BindingNormalizedOptions {
   get hashCharacters(): 'base64' | 'base36' | 'hex'
   get sourcemapDebugIds(): boolean
   get polyfillRequire(): boolean
-  get minify(): false | 'dce-only' | BindingMinifyOptions
+  get minify(): false | 'dce-only' | MinifyOptions
   get legalComments(): 'none' | 'inline'
   get preserveModules(): boolean
   get preserveModulesRoot(): string | undefined
@@ -1869,7 +1869,7 @@ export interface BindingOutputOptions {
   sourcemapIgnoreList?: (source: string, sourcemapPath: string) => boolean
   sourcemapDebugIds?: boolean
   sourcemapPathTransform?: (source: string, sourcemapPath: string) => string
-  minify?: boolean | 'dce-only' | BindingMinifyOptions
+  minify?: boolean | 'dce-only' | MinifyOptions
   advancedChunks?: BindingAdvancedChunksOptions
   legalComments?: 'none' | 'inline'
   polyfillRequire?: boolean

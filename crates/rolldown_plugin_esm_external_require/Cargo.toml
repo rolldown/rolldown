@@ -1,5 +1,5 @@
 [package]
-name = "rolldown_plugin_require_to_import"
+name = "rolldown_plugin_esm_external_require"
 version = "0.1.0"
 edition.workspace = true
 homepage.workspace = true
@@ -15,4 +15,6 @@ doctest = false
 workspace = true
 
 [dependencies]
+rolldown_common = { workspace = true }
 rolldown_plugin = { workspace = true }
+rolldown_utils = { workspace = true }

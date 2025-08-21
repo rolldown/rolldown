@@ -1,3 +1,4 @@
+use crate::{NormalizedBundlerOptions, OutputFormat};
 use oxc::{
   mangler::{MangleOptions, MangleOptionsKeepNames},
   minifier::{CompressOptions, CompressOptionsKeepNames, TreeShakeOptions},
@@ -6,8 +7,6 @@ use oxc::{
 use schemars::JsonSchema;
 #[cfg(feature = "deserialize_bundler_options")]
 use serde::Deserialize;
-
-use crate::{NormalizedBundlerOptions, OutputFormat};
 
 #[derive(Debug, Clone)]
 pub enum RawMinifyOptions {
@@ -90,15 +89,14 @@ impl MinifyOptions {
   }
 }
 
-#[derive(Debug, Clone)]
+/// A simple minify option that can be either a boolean or a string, used for rolldown rust testing.
 #[cfg_attr(
   feature = "deserialize_bundler_options",
   derive(Deserialize, JsonSchema),
-  serde(rename_all = "camelCase", deny_unknown_fields)
+  serde(rename_all = "camelCase", deny_unknown_fields, untagged)
 )]
-#[allow(clippy::struct_excessive_bools)]
-pub struct MinifyOptionsObject {
-  pub mangle: bool,
-  pub compress: bool,
-  pub remove_whitespace: bool,
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum SimpleMinifyOptions {
+  Boolean(bool),
+  String(String),
 }

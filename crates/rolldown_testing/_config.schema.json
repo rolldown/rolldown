@@ -311,10 +311,7 @@
           ]
         },
         "minify": {
-          "type": [
-            "boolean",
-            "null"
-          ]
+          "$ref": "#/$defs/SimpleMinifyOptions"
         },
         "define": {
           "type": [
@@ -979,6 +976,17 @@
             "boolean"
           ],
           "additionalProperties": false
+        }
+      ]
+    },
+    "SimpleMinifyOptions": {
+      "description": "A simple minify option that can be either a boolean or a string, used for rolldown rust testing.",
+      "anyOf": [
+        {
+          "type": "boolean"
+        },
+        {
+          "type": "string"
         }
       ]
     },

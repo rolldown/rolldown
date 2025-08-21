@@ -170,7 +170,14 @@ export class NormalizedOutputOptionsImpl implements NormalizedOutputOptions {
   }
 
   get minify(): false | MinifyOptions | 'dce-only' {
-    return this.inner.minify;
+    let ret = this.inner.minify;
+    if (typeof ret === 'object' && ret !== null) {
+      // Omit some properties that are not needed in the output
+      delete ret['codegen'];
+      delete ret['module'];
+      delete ret['sourcemap'];
+    }
+    return ret;
   }
 
   get legalComments(): 'none' | 'inline' {

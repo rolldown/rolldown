@@ -1,0 +1,1 @@
+exports.named = 'cjs-named'

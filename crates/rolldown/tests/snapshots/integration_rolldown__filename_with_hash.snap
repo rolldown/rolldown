@@ -5486,7 +5486,7 @@ expression: output
 
 # tests/rolldown/topics/hmr/static_import
 
-- main-!~{000}~.js => main-CGlDmDpv.js
+- main-!~{000}~.js => main-Cos229sr.js
 
 # tests/rolldown/topics/import_meta_url_dirname_filename_polyfill/node_cjs
 

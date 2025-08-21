@@ -36,6 +36,7 @@ __rolldown_runtime__.registerModule("single_accept/parent.js", { exports: parent
 globalThis.singleAcceptAcceptCount ??= 0;
 globalThis.singleAcceptParentExecuteCount ??= 0;
 globalThis.singleAcceptParentExecuteCount++;
+assert.strictEqual(globalThis.singleAcceptParentExecuteCount, 1);
 let count$3 = count$2;
 parent_hot$1.accept("single_accept/child.js", (mod) => {
 	count$3 = mod.count;
@@ -44,6 +45,7 @@ parent_hot$1.accept("single_accept/child.js", (mod) => {
 });
 process.on("beforeExit", (code) => {
 	if (code !== 0) return;
+	assert.strictEqual(globalThis.singleAcceptAcceptCount, 2);
 });
 
 //#endregion
@@ -62,6 +64,7 @@ __rolldown_runtime__.registerModule("array_accept/parent.js", { exports: parent_
 globalThis.arrayAcceptAcceptCount ??= 0;
 globalThis.arrayAcceptParentExecuteCount ??= 0;
 globalThis.arrayAcceptParentExecuteCount++;
+assert.strictEqual(globalThis.arrayAcceptParentExecuteCount, 1);
 let count$1 = count;
 parent_hot.accept(["array_accept/child.js"], ([mod]) => {
 	count$1 = mod.count;
@@ -70,6 +73,7 @@ parent_hot.accept(["array_accept/child.js"], ([mod]) => {
 });
 process.on("beforeExit", (code) => {
 	if (code !== 0) return;
+	assert.strictEqual(globalThis.arrayAcceptAcceptCount, 2);
 });
 
 //#endregion
@@ -157,41 +161,15 @@ var init_child_0 = __rolldown_runtime__.createEsmInitializer((function() {
 }));
 
 //#endregion
-//#region single_accept/parent.js
-import * as import_node_assert_10 from "node:assert";
-var init_parent_1 = __rolldown_runtime__.createEsmInitializer((function() {
-	try {
-		var __rolldown_exports__ = {};
-		__rolldown_runtime__.__export(__rolldown_exports__, {});
-		__rolldown_runtime__.registerModule("single_accept/parent.js", { exports: __rolldown_exports__ });
-		init_child_0();
-		const hot_parent = __rolldown_runtime__.createModuleHotContext("single_accept/parent.js");
-		var import_child_11 = __rolldown_runtime__.loadExports("single_accept/child.js");
-		globalThis.singleAcceptAcceptCount ??= 0;
-		globalThis.singleAcceptParentExecuteCount ??= 0;
-		globalThis.singleAcceptParentExecuteCount++;
-		let count = import_child_11.count;
-		hot_parent.accept("./child.js", (mod) => {
-			count = mod.count;
-			globalThis.singleAcceptAcceptCount++;
-			import_node_assert_10.default.strictEqual(globalThis.singleAcceptAcceptCount, count);
-		});
-		process.on("beforeExit", (code) => {
-			if (code !== 0) return;
-		});
-	} finally {}
-}));
-
-//#endregion
-init_parent_1()
-__rolldown_runtime__.applyUpdates(['single_accept/parent.js']);
+init_child_0()
+__rolldown_runtime__.applyUpdates(['single_accept/child.js']);
 ```
 ## Meta
 
 - update type: patch
 ### Hmr Boundaries
 
-- boundary: single_accept/parent.js, accepted_via: single_accept/child.js
+- boundary: single_accept/child.js, accepted_via: single_accept/parent.js
 # HMR Step 3
 
 ## Code
@@ -209,41 +187,15 @@ var init_child_0 = __rolldown_runtime__.createEsmInitializer((function() {
 }));
 
 //#endregion
-//#region single_accept/parent.js
-import * as import_node_assert_10 from "node:assert";
-var init_parent_1 = __rolldown_runtime__.createEsmInitializer((function() {
-	try {
-		var __rolldown_exports__ = {};
-		__rolldown_runtime__.__export(__rolldown_exports__, {});
-		__rolldown_runtime__.registerModule("single_accept/parent.js", { exports: __rolldown_exports__ });
-		init_child_0();
-		const hot_parent = __rolldown_runtime__.createModuleHotContext("single_accept/parent.js");
-		var import_child_11 = __rolldown_runtime__.loadExports("single_accept/child.js");
-		globalThis.singleAcceptAcceptCount ??= 0;
-		globalThis.singleAcceptParentExecuteCount ??= 0;
-		globalThis.singleAcceptParentExecuteCount++;
-		let count = import_child_11.count;
-		hot_parent.accept("./child.js", (mod) => {
-			count = mod.count;
-			globalThis.singleAcceptAcceptCount++;
-			import_node_assert_10.default.strictEqual(globalThis.singleAcceptAcceptCount, count);
-		});
-		process.on("beforeExit", (code) => {
-			if (code !== 0) return;
-		});
-	} finally {}
-}));
-
-//#endregion
-init_parent_1()
-__rolldown_runtime__.applyUpdates(['single_accept/parent.js']);
+init_child_0()
+__rolldown_runtime__.applyUpdates(['single_accept/child.js']);
 ```
 ## Meta
 
 - update type: patch
 ### Hmr Boundaries
 
-- boundary: single_accept/parent.js, accepted_via: single_accept/child.js
+- boundary: single_accept/child.js, accepted_via: single_accept/parent.js
 # HMR Step 4
 
 ## Code
@@ -261,41 +213,15 @@ var init_child_0 = __rolldown_runtime__.createEsmInitializer((function() {
 }));
 
 //#endregion
-//#region array_accept/parent.js
-import * as import_node_assert_10 from "node:assert";
-var init_parent_1 = __rolldown_runtime__.createEsmInitializer((function() {
-	try {
-		var __rolldown_exports__ = {};
-		__rolldown_runtime__.__export(__rolldown_exports__, {});
-		__rolldown_runtime__.registerModule("array_accept/parent.js", { exports: __rolldown_exports__ });
-		init_child_0();
-		const hot_parent = __rolldown_runtime__.createModuleHotContext("array_accept/parent.js");
-		var import_child_11 = __rolldown_runtime__.loadExports("array_accept/child.js");
-		globalThis.arrayAcceptAcceptCount ??= 0;
-		globalThis.arrayAcceptParentExecuteCount ??= 0;
-		globalThis.arrayAcceptParentExecuteCount++;
-		let count = import_child_11.count;
-		hot_parent.accept(["./child.js"], ([mod]) => {
-			count = mod.count;
-			globalThis.arrayAcceptAcceptCount++;
-			import_node_assert_10.default.strictEqual(globalThis.arrayAcceptAcceptCount, count);
-		});
-		process.on("beforeExit", (code) => {
-			if (code !== 0) return;
-		});
-	} finally {}
-}));
-
-//#endregion
-init_parent_1()
-__rolldown_runtime__.applyUpdates(['array_accept/parent.js']);
+init_child_0()
+__rolldown_runtime__.applyUpdates(['array_accept/child.js']);
 ```
 ## Meta
 
 - update type: patch
 ### Hmr Boundaries
 
-- boundary: array_accept/parent.js, accepted_via: array_accept/child.js
+- boundary: array_accept/child.js, accepted_via: array_accept/parent.js
 # HMR Step 5
 
 ## Code
@@ -313,38 +239,12 @@ var init_child_0 = __rolldown_runtime__.createEsmInitializer((function() {
 }));
 
 //#endregion
-//#region array_accept/parent.js
-import * as import_node_assert_10 from "node:assert";
-var init_parent_1 = __rolldown_runtime__.createEsmInitializer((function() {
-	try {
-		var __rolldown_exports__ = {};
-		__rolldown_runtime__.__export(__rolldown_exports__, {});
-		__rolldown_runtime__.registerModule("array_accept/parent.js", { exports: __rolldown_exports__ });
-		init_child_0();
-		const hot_parent = __rolldown_runtime__.createModuleHotContext("array_accept/parent.js");
-		var import_child_11 = __rolldown_runtime__.loadExports("array_accept/child.js");
-		globalThis.arrayAcceptAcceptCount ??= 0;
-		globalThis.arrayAcceptParentExecuteCount ??= 0;
-		globalThis.arrayAcceptParentExecuteCount++;
-		let count = import_child_11.count;
-		hot_parent.accept(["./child.js"], ([mod]) => {
-			count = mod.count;
-			globalThis.arrayAcceptAcceptCount++;
-			import_node_assert_10.default.strictEqual(globalThis.arrayAcceptAcceptCount, count);
-		});
-		process.on("beforeExit", (code) => {
-			if (code !== 0) return;
-		});
-	} finally {}
-}));
-
-//#endregion
-init_parent_1()
-__rolldown_runtime__.applyUpdates(['array_accept/parent.js']);
+init_child_0()
+__rolldown_runtime__.applyUpdates(['array_accept/child.js']);
 ```
 ## Meta
 
 - update type: patch
 ### Hmr Boundaries
 
-- boundary: array_accept/parent.js, accepted_via: array_accept/child.js
+- boundary: array_accept/child.js, accepted_via: array_accept/parent.js

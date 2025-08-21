@@ -5,8 +5,7 @@ globalThis.arrayAcceptAcceptCount ??= 0
 globalThis.arrayAcceptParentExecuteCount ??= 0
 globalThis.arrayAcceptParentExecuteCount++
 
-// FIXME
-// assert.strictEqual(globalThis.arrayAcceptParentExecuteCount, 1)
+assert.strictEqual(globalThis.arrayAcceptParentExecuteCount, 1)
 
 let count = originalCount
 
@@ -18,6 +17,5 @@ import.meta.hot.accept(['./child.js'], ([mod]) => {
 
 process.on('beforeExit', (code) => {
   if (code !== 0) return
-  // FIXME
-  // assert.strictEqual(globalThis.arrayAcceptAcceptCount, 2)
+  assert.strictEqual(globalThis.arrayAcceptAcceptCount, 2)
 })

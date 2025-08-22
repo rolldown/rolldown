@@ -12,7 +12,7 @@ async fn main() {
     experimental: Some(ExperimentalOptions { incremental_build: Some(true), ..Default::default() }),
     ..Default::default()
   });
-  let mut dev_engine = DevEngine::<rolldown_watcher::NotifyWatcher>::new(bundler_builder).unwrap();
+  let dev_engine = DevEngine::<rolldown_watcher::NotifyWatcher>::new(bundler_builder).unwrap();
   dev_engine.run().await;
   dev_engine.wait_for_close().await;
 }

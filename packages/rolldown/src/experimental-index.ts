@@ -1,3 +1,5 @@
+export { dev } from './api/dev';
+export { DevEngine } from './api/dev/dev-engine';
 export { experimental_scan as scan } from './api/experimental';
 export {
   isolatedDeclaration,

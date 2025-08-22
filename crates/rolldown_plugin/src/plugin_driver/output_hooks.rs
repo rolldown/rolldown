@@ -199,7 +199,10 @@ impl PluginDriver {
   pub async fn close_bundle(&self, args: Option<&HookCloseBundleArgs<'_>>) -> HookNoopReturn {
     for (_, plugin, ctx) in self.iter_plugin_with_context_by_order(&self.order_by_close_bundle_meta)
     {
-      plugin.call_close_bundle(ctx, args).await.with_context(|| CausedPlugin::new(plugin.call_name()))?;
+      plugin
+        .call_close_bundle(ctx, args)
+        .await
+        .with_context(|| CausedPlugin::new(plugin.call_name()))?;
     }
     Ok(())
   }

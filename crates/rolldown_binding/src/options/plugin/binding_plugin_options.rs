@@ -166,7 +166,9 @@ pub struct BindingPluginOptions {
   >,
   pub write_bundle_meta: Option<BindingPluginHookMeta>,
 
-  #[napi(ts_type = "(ctx: BindingPluginContext, error?: (Error | BindingError)[]) => MaybePromise<VoidNullable>")]
+  #[napi(
+    ts_type = "(ctx: BindingPluginContext, error?: (Error | BindingError)[]) => MaybePromise<VoidNullable>"
+  )]
   pub close_bundle: Option<
     MaybeAsyncJsCallback<
       FnArgs<(BindingPluginContext, Option<Vec<napi::Either<napi::JsError, BindingError>>>)>,

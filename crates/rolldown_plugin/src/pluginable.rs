@@ -184,7 +184,11 @@ pub trait Pluginable: Any + Debug + Send + Sync + 'static {
 
   fn call_write_bundle_meta(&self) -> Option<PluginHookMeta>;
 
-  async fn call_close_bundle(&self, _ctx: &PluginContext, _args: Option<&HookCloseBundleArgs>) -> HookNoopReturn;
+  async fn call_close_bundle(
+    &self,
+    _ctx: &PluginContext,
+    _args: Option<&HookCloseBundleArgs>,
+  ) -> HookNoopReturn;
 
   fn call_close_bundle_meta(&self) -> Option<PluginHookMeta>;
 
@@ -420,7 +424,11 @@ impl<T: Plugin> Pluginable for T {
     Plugin::write_bundle_meta(self)
   }
 
-  async fn call_close_bundle(&self, ctx: &PluginContext, args: Option<&HookCloseBundleArgs>) -> HookNoopReturn {
+  async fn call_close_bundle(
+    &self,
+    ctx: &PluginContext,
+    args: Option<&HookCloseBundleArgs>,
+  ) -> HookNoopReturn {
     Plugin::close_bundle(self, ctx, args).await
   }
 

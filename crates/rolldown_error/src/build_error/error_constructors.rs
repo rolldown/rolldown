@@ -22,6 +22,7 @@ use crate::events::json_parse::JsonParse;
 use crate::events::missing_global_name::MissingGlobalName;
 use crate::events::missing_name_option_for_iife_export::MissingNameOptionForIifeExport;
 use crate::events::missing_name_option_for_umd_export::MissingNameOptionForUmdExport;
+use crate::events::prefer_builtin_feature::PreferBuiltinFeature;
 use crate::events::resolve_error::DiagnosableResolveError;
 use crate::events::unhandleable_error::UnhandleableError;
 use crate::events::unloadable_dependency::{UnloadableDependency, UnloadableDependencyContext};
@@ -290,6 +291,10 @@ impl BuildDiagnostic {
 
   pub fn assign_to_import(filename: ArcStr, source: ArcStr, span: Span, name: ArcStr) -> Self {
     Self::new_inner(AssignToImport { filename, source, span, name })
+  }
+
+  pub fn prefer_builtin_feature(builtin_feature: Option<String>, plugin_name: String) -> Self {
+    Self::new_inner(PreferBuiltinFeature { builtin_feature, plugin_name })
   }
 
   #[allow(clippy::cast_possible_truncation)]

@@ -284,6 +284,12 @@ const ChecksOptionsSchema = v.strictObject({
       'Whether to emit warning when detecting configuration field conflict',
     ),
   ),
+  preferBuiltinFeature: v.pipe(
+    v.optional(v.boolean()),
+    v.description(
+      'Whether to emit warning when detecting prefer builtin feature',
+    ),
+  ),
 });
 
 const MinifyOptionsSchema = v.strictObject({

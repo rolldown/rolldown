@@ -1238,6 +1238,12 @@
             "boolean",
             "null"
           ]
+        },
+        "preferBuiltinFeature": {
+          "type": [
+            "boolean",
+            "null"
+          ]
         }
       },
       "additionalProperties": false

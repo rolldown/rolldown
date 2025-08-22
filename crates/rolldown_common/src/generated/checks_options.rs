@@ -24,6 +24,7 @@ pub struct ChecksOptions {
   pub import_is_undefined: Option<bool>,
   pub empty_import_meta: Option<bool>,
   pub configuration_field_conflict: Option<bool>,
+  pub prefer_builtin_feature: Option<bool>,
 }
 impl From<ChecksOptions> for rolldown_error::EventKindSwitcher {
   fn from(value: ChecksOptions) -> Self {
@@ -69,6 +70,10 @@ impl From<ChecksOptions> for rolldown_error::EventKindSwitcher {
     flag.set(
       rolldown_error::EventKindSwitcher::ConfigurationFieldConflict,
       value.configuration_field_conflict.unwrap_or(true),
+    );
+    flag.set(
+      rolldown_error::EventKindSwitcher::PreferBuiltinFeature,
+      value.prefer_builtin_feature.unwrap_or(true),
     );
     flag
   }

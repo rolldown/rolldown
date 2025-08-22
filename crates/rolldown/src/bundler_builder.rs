@@ -1,10 +1,11 @@
 use std::sync::Arc;
 
 use rolldown_common::{FileEmitter, NormalizedBundlerOptions};
-use rolldown_error::BuildDiagnostic;
+use rolldown_error::{BuildDiagnostic, EventKindSwitcher};
 use rolldown_fs::{OsFileSystem, OxcResolverFileSystem};
 use rolldown_plugin::{__inner::SharedPluginable, PluginDriver};
 use rolldown_resolver::{ResolveError, Resolver};
+use rustc_hash::FxHashMap;
 
 use crate::{
   Bundler, BundlerOptions, SharedResolver,
@@ -31,6 +32,9 @@ impl BundlerBuilder {
 
     let NormalizeOptionsReturn { mut options, resolve_options, mut warnings } =
       normalize_options(self.options);
+
+    Self::check_prefer_builtin_feature(self.plugins.as_slice(), &options, &mut warnings);
+
     let tsconfig_filename = resolve_options.tsconfig_filename.clone();
     let fs = OsFileSystem::new(resolve_options.yarn_pnp.is_some_and(|b| b));
     let resolver: SharedResolver =
@@ -63,6 +67,38 @@ impl BundlerBuilder {
       hmr_manager: None,
       session,
       build_count: self.build_count,
+    }
+  }
+
+  fn check_prefer_builtin_feature(
+    plugins: &[SharedPluginable],
+    options: &NormalizedBundlerOptions,
+    warning: &mut Vec<BuildDiagnostic>,
+  ) {
+    if !options.checks.contains(EventKindSwitcher::PreferBuiltinFeature) {
+      return;
+    }
+    let map = FxHashMap::from_iter([
+      // key is the name property of the plugin
+      // the first element of value is the npm package name of the plugin
+      // the second element of value is the preferred builtin feature, `None` if the feature is not configured
+      ("inject", ("@rollup/plugin-inject", Some("inject"))),
+      ("node-resolve", (" @rollup/plugin-node-resolve", None)),
+      ("commonjs", ("@rollup/plugin-commonjs", None)),
+      ("json", ("@rollup/plugin-json", None)),
+    ]);
+    for plugin in plugins {
+      let name = plugin.call_name();
+      let Some((package_name, feature)) = map.get(name.as_ref()) else {
+        continue;
+      };
+      warning.push(
+        BuildDiagnostic::prefer_builtin_feature(
+          feature.map(String::from),
+          (*package_name).to_string(),
+        )
+        .with_severity_warning(),
+      );
     }
   }
 

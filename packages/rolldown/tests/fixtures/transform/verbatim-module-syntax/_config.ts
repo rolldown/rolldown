@@ -5,9 +5,7 @@ import { getOutputChunk } from 'rolldown-tests/utils'
 export default defineTest({
   config: {
     input: 'main.ts',
-    resolve: {
-      tsconfigFilename: 'tsconfig.json',
-    },
+    tsconfig: 'tsconfig.json'
   },
   afterTest: (output) => {
     const chunk = getOutputChunk(output)[0]

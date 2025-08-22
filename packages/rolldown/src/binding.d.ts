@@ -1748,6 +1748,7 @@ export interface BindingInputOptions {
   preserveEntrySignatures?: BindingPreserveEntrySignatures
   optimization?: BindingOptimization
   context?: string
+  tsconfig?: string
 }
 
 export interface BindingIsolatedDeclarationPluginConfig {
@@ -2032,7 +2033,6 @@ export interface BindingResolveOptions {
   mainFiles?: Array<string>
   modules?: Array<string>
   symlinks?: boolean
-  tsconfigFilename?: string
   yarnPnp?: boolean
 }
 

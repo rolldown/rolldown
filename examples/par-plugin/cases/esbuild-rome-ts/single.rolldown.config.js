@@ -16,9 +16,9 @@ export default defineConfig({
   plugins: [plugin()],
   resolve: {
     extensions: ['.ts'],
-    tsconfigFilename: nodePath.join(
-      REPO_ROOT,
-      './tmp/bench/rome/src/tsconfig.json',
-    ),
   },
+  tsconfig: nodePath.join(
+    REPO_ROOT,
+    './tmp/bench/rome/src/tsconfig.json',
+  ),
 });

@@ -24,11 +24,11 @@ const rolldownOptionsForParallelism: BenchSuite['rolldownOptions'] = [
       plugins: [babelPlugin()],
       resolve: {
         extensions: ['.ts'],
-        tsconfigFilename: nodePath.join(
-          REPO_ROOT,
-          './tmp/bench/rome/src/tsconfig.json',
-        ),
       },
+      tsconfig: nodePath.join(
+        REPO_ROOT,
+        './tmp/bench/rome/src/tsconfig.json',
+      ),
     },
   },
   {
@@ -41,11 +41,11 @@ const rolldownOptionsForParallelism: BenchSuite['rolldownOptions'] = [
       plugins: [parallelBabelPlugin({})],
       resolve: {
         extensions: ['.ts'],
-        tsconfigFilename: nodePath.join(
-          REPO_ROOT,
-          './tmp/bench/rome/src/tsconfig.json',
-        ),
       },
+      tsconfig: nodePath.join(
+        REPO_ROOT,
+        './tmp/bench/rome/src/tsconfig.json',
+      ),
     },
   },
 ];
@@ -66,12 +66,10 @@ export const suiteRomeTs = defineSuite({
     external: builtinModules as ExternalOption,
     // Need this due rome is not written with `isolatedModules: true`
     shimMissingExports: true,
-    resolve: {
-      tsconfigFilename: nodePath.join(
-        REPO_ROOT,
-        './tmp/bench/rome/src/tsconfig.json',
-      ),
-    },
+    tsconfig: nodePath.join(
+      REPO_ROOT,
+      './tmp/bench/rome/src/tsconfig.json',
+    ),
   },
   disableBundler: ['rollup'],
   derived: {

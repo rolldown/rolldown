@@ -495,6 +495,7 @@ pub fn normalize_binding_options(
     top_level_var: output_options.top_level_var,
     minify_internal_exports: output_options.minify_internal_exports,
     context: input_options.context,
+    tsconfig: input_options.tsconfig,
   };
 
   #[cfg(not(target_family = "wasm"))]

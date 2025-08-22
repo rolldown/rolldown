@@ -119,6 +119,7 @@ rolldown_testing = { version = "0.1.0", path = "./crates/rolldown_testing" }
 rolldown_testing_config = { version = "0.1.0", path = "./crates/rolldown_testing_config" }
 rolldown_tracing = { version = "0.1.0", path = "./crates/rolldown_tracing" }
 rolldown_utils = { version = "0.1.0", path = "./crates/rolldown_utils" }
+rolldown_watcher = { version = "0.1.0", path = "./crates/rolldown_watcher" }
 rolldown_workspace = { version = "0.1.0", path = "./crates/rolldown_workspace" }
 
 anyhow = "1.0.98"
@@ -155,6 +156,7 @@ mimalloc-safe = "0.1.52"
 mime = "0.3.17"
 nom = "8.0.0"
 notify = "8.1.0"
+notify-debouncer-full = "0.6.0"
 num-bigint = "0.4.6"
 num-format = "0.4"
 owo-colors = "4.2.2"

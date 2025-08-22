@@ -20,7 +20,7 @@ use rolldown_debug::{action, trace_action, trace_action_enabled};
 use rolldown_error::{BuildDiagnostic, BuildResult, Severity};
 use rolldown_fs::{FileSystem, OsFileSystem};
 use rolldown_plugin::{
-  __inner::SharedPluginable, HookBuildEndArgs, HookRenderErrorArgs, SharedPluginDriver,
+  __inner::SharedPluginable, HookBuildEndArgs, HookCloseBundleArgs, HookRenderErrorArgs, SharedPluginDriver,
 };
 use rolldown_utils::dashmap::FxDashSet;
 use std::{any::Any, sync::Arc};
@@ -100,7 +100,7 @@ impl Bundler {
     }
 
     self.closed = true;
-    self.plugin_driver.close_bundle().await?;
+    self.plugin_driver.close_bundle(None).await?;
 
     Ok(())
   }
@@ -140,11 +140,21 @@ impl Bundler {
       Ok(v) => v,
       Err(errs) => {
         debug_assert!(errs.iter().all(|e| e.severity() == Severity::Error));
-        self
+        let build_end_result = self
           .plugin_driver
           .build_end(Some(&HookBuildEndArgs { errors: &errs, cwd: &self.options.cwd }))
-          .await?;
-        self.plugin_driver.close_bundle().await?;
+          .await;
+        
+        match build_end_result {
+          Ok(_) => {
+            self.plugin_driver.close_bundle(Some(&HookCloseBundleArgs { errors: &errs, cwd: &self.options.cwd })).await?;
+          }
+          Err(build_end_error) => {
+            // Build failed and buildEnd also failed, pass original errors to closeBundle
+            self.plugin_driver.close_bundle(Some(&HookCloseBundleArgs { errors: &errs, cwd: &self.options.cwd })).await?;
+            return Err(build_end_error.into());
+          }
+        }
         return Err(errs);
       }
     };
@@ -156,7 +166,26 @@ impl Bundler {
       self.normalize_scan_stage_output_and_update_cache(scan_stage_output, is_full_scan_mode);
 
     Self::trace_action_module_graph_ready(&scan_stage_output);
-    self.plugin_driver.build_end(None).await?;
+    let build_end_result = self.plugin_driver.build_end(None).await;
+    
+    match build_end_result {
+      Ok(_) => {
+        // No error, close_bundle gets None
+        // Note: close_bundle call will be done by the bundler.close() method later
+      }
+      Err(build_end_error) => {
+        // Build succeeded but buildEnd failed, pass buildEnd error to closeBundle
+        // For now, we'll create a minimal error args structure
+        // TODO: Convert build_end_error to BuildDiagnostic properly
+        let error_args = HookCloseBundleArgs { 
+          errors: &vec![], // Empty for now, as we don't have the build_end_error as BuildDiagnostic
+          cwd: &self.options.cwd 
+        };
+        self.plugin_driver.close_bundle(Some(&error_args)).await?;
+        return Err(build_end_error.into());
+      }
+    }
+    
     trace_action!(action::BuildEnd { action: "BuildEnd" });
     Ok(scan_stage_output)
   }

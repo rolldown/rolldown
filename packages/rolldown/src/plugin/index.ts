@@ -193,7 +193,7 @@ export interface FunctionPluginHooks {
     bundle: OutputBundle,
   ) => void;
 
-  [DEFINED_HOOK_NAMES.closeBundle]: (this: PluginContext) => void;
+  [DEFINED_HOOK_NAMES.closeBundle]: (this: PluginContext, error?: Error) => void;
 
   // --- watch hooks ---
   [DEFINED_HOOK_NAMES.watchChange]: (

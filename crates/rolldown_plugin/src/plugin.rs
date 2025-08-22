@@ -2,7 +2,7 @@ use std::{any::Any, borrow::Cow, fmt::Debug, sync::Arc};
 
 use super::plugin_context::PluginContext;
 use crate::{
-  HookAddonArgs, HookBuildEndArgs, HookGenerateBundleArgs, HookLoadArgs, HookLoadOutput,
+  HookAddonArgs, HookBuildEndArgs, HookCloseBundleArgs, HookGenerateBundleArgs, HookLoadArgs, HookLoadOutput,
   HookRenderChunkArgs, HookRenderChunkOutput, HookResolveIdArgs, HookResolveIdOutput,
   HookTransformArgs, HookUsage, HookWriteBundleArgs, PluginHookMeta, SharedTransformPluginContext,
   types::{
@@ -244,6 +244,7 @@ pub trait Plugin: Any + Debug + Send + Sync + 'static {
   fn close_bundle(
     &self,
     _ctx: &PluginContext,
+    _args: Option<&HookCloseBundleArgs>,
   ) -> impl std::future::Future<Output = HookNoopReturn> + Send {
     async { Ok(()) }
   }

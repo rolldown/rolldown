@@ -1945,7 +1945,7 @@ export interface BindingPluginOptions {
   generateBundleMeta?: BindingPluginHookMeta
   writeBundle?: (ctx: BindingPluginContext, bundle: BindingOutputs, opts: BindingNormalizedOptions) => MaybePromise<VoidNullable<JsChangedOutputs>>
   writeBundleMeta?: BindingPluginHookMeta
-  closeBundle?: (ctx: BindingPluginContext) => MaybePromise<VoidNullable>
+  closeBundle?: (ctx: BindingPluginContext, error?: (Error | BindingError)[]) => MaybePromise<VoidNullable>
   closeBundleMeta?: BindingPluginHookMeta
   watchChange?: (ctx: BindingPluginContext, path: string, event: string) => MaybePromise<VoidNullable>
   watchChangeMeta?: BindingPluginHookMeta

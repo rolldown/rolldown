@@ -16,7 +16,6 @@ workspace = true
 anyhow = { workspace = true }
 base64-simd = { workspace = true }
 derive_more = { workspace = true }
-memchr = { workspace = true }
 rolldown_plugin = { workspace = true }
 rolldown_plugin_utils = { workspace = true }
 rolldown_sourcemap = { workspace = true }

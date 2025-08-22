@@ -8,3 +8,8 @@ pub fn is_css_request(id: &str) -> bool {
   let cleaned_id = clean_url(id);
   CSS_LANGS.iter().any(|ext| cleaned_id.ends_with(ext))
 }
+
+#[inline]
+pub fn is_css_module(id: &str) -> bool {
+  memchr::memrchr(b'.', clean_url(id).as_bytes()).is_some_and(|i| id[..i].ends_with(".module"))
+}

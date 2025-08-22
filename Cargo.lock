@@ -3134,7 +3134,6 @@ dependencies = [
  "anyhow",
  "base64-simd",
  "derive_more",
- "memchr",
  "rolldown_plugin",
  "rolldown_plugin_utils",
  "rolldown_sourcemap",

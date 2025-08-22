@@ -1,6 +1,6 @@
 mod utils;
 
-use std::borrow::Cow;
+use std::{borrow::Cow, path::PathBuf};
 
 use cow_utils::CowUtils;
 use rolldown_common::{ModuleType, side_effects::HookSideEffects};
@@ -129,6 +129,43 @@ impl Plugin for ViteCssPostPlugin {
         is_pure_css_chunk = false;
       }
     }
+
+    let tasks = args.code.match_indices("__VITE_CSS_URL__").map(async |(index, _)| {
+      let start = index + "__VITE_CSS_URL__".len();
+      let Some(pos) = args.code[start..].find("__") else {
+        return Err(anyhow::anyhow!(
+          "Invalid __VITE_CSS_URL__ in '{}', expected '__VITE_CSS_URL__<base64>__'",
+          args.chunk.name
+        ));
+      };
+
+      let id = unsafe {
+        String::from_utf8_unchecked(
+          base64_simd::STANDARD
+            .decode_to_vec(&args.code[start..start + pos])
+            .map_err(|_| anyhow::anyhow!("Invalid base64 in '__VITE_CSS_URL__'"))?,
+        )
+      };
+
+      let Some(style) = styles.inner.get(&id) else {
+        return Err(anyhow::anyhow!("CSS content for  '{}' was not found", id));
+      };
+
+      let content = self.resolve_asset_urls_in_css().await;
+      let content = self.finalize_css(content).await;
+
+      let original_file_name = clean_url(&id).to_string();
+      let css_asset_path = PathBuf::from(&original_file_name).with_extension("css");
+      let css_asset_name = css_asset_path.file_name().map(|v| v.to_string_lossy().into_owned());
+
+      Ok(utils::UrlEmitTasks {
+        range: (index, index + pos + 2),
+        content,
+        css_asset_name,
+        original_file_name,
+      })
+    });
+
     Ok(None)
   }
 }

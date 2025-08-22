@@ -1532,6 +1532,7 @@ export interface BindingChecksOptions {
   importIsUndefined?: boolean
   emptyImportMeta?: boolean
   configurationFieldConflict?: boolean
+  preferBuiltinFeature?: boolean
 }
 
 export interface BindingChunkImportMap {

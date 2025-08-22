@@ -16,6 +16,7 @@ pub struct BindingChecksOptions {
   pub import_is_undefined: Option<bool>,
   pub empty_import_meta: Option<bool>,
   pub configuration_field_conflict: Option<bool>,
+  pub prefer_builtin_feature: Option<bool>,
 }
 impl From<BindingChecksOptions> for rolldown_common::ChecksOptions {
   fn from(value: BindingChecksOptions) -> Self {
@@ -32,6 +33,7 @@ impl From<BindingChecksOptions> for rolldown_common::ChecksOptions {
       import_is_undefined: value.import_is_undefined,
       empty_import_meta: value.empty_import_meta,
       configuration_field_conflict: value.configuration_field_conflict,
+      prefer_builtin_feature: value.prefer_builtin_feature,
     }
   }
 }

@@ -58,6 +58,7 @@ export interface ModuleOptions {
   // flag used to check if user directly modified the `ModuleInfo`
   // this is used to sync state between rust and js
   invalidate?: boolean;
+  packageJsonPath?: string;
 }
 
 export interface ResolvedId extends ModuleOptions {

@@ -11,6 +11,10 @@ pub struct BindingHookResolveIdOutput {
   pub normalize_external_id: Option<bool>,
   #[napi(ts_type = "boolean | 'no-treeshake'")]
   pub module_side_effects: Option<BindingHookSideEffects>,
+  /// @internal Used to store package json path resolved by oxc resolver,
+  /// we could get the related package json object via the path string.
+  #[napi(ts_type = "string | null")]
+  pub package_json_path: Option<String>,
 }
 
 impl TryFrom<BindingHookResolveIdOutput> for rolldown_plugin::HookResolveIdOutput {
@@ -22,6 +26,7 @@ impl TryFrom<BindingHookResolveIdOutput> for rolldown_plugin::HookResolveIdOutpu
       external: value.external.map(TryInto::try_into).transpose()?,
       normalize_external_id: value.normalize_external_id,
       side_effects: value.module_side_effects.map(TryInto::try_into).transpose()?,
+      package_json_path: value.package_json_path,
     })
   }
 }

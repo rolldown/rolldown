@@ -1678,6 +1678,11 @@ export interface BindingHookResolveIdOutput {
   external?: BindingResolvedExternal
   normalizeExternalId?: boolean
   moduleSideEffects?: boolean | 'no-treeshake'
+  /**
+   * @internal Used to store package json path resolved by oxc resolver,
+   * we could get the related package json object via the path string.
+   */
+  packageJsonPath?: string | null
 }
 
 export type BindingHookSideEffects =
@@ -1887,6 +1892,7 @@ export interface BindingOxcRuntimePluginConfig {
 
 export interface BindingPluginContextResolvedId {
   id: string
+  packageJsonPath?: string
   external: boolean | 'absolute' | 'relative'
   moduleSideEffects?: boolean | 'no-treeshake'
 }

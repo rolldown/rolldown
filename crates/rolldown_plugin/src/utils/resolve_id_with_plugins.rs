@@ -4,7 +4,10 @@ use crate::{
 };
 use rolldown_common::{ImportKind, ModuleDefFormat, ResolvedId, is_existing_node_builtin_modules};
 use rolldown_resolver::{ResolveError, Resolver};
-use std::{path::Path, sync::Arc};
+use std::{
+  path::{Path, PathBuf},
+  sync::Arc,
+};
 
 fn is_http_url(s: &str) -> bool {
   s.starts_with("http://") || s.starts_with("https://") || s.starts_with("//")
@@ -64,12 +67,18 @@ pub async fn resolve_id_with_plugins(
     )
     .await?
   {
+    let package_json = r.package_json_path.as_ref().and_then(|p| {
+      let v = resolver.package_json_cache().get(&PathBuf::from(&p))?;
+      let package_json = v.clone();
+      Some(package_json)
+    });
     return Ok(Ok(ResolvedId {
       module_def_format: ModuleDefFormat::from_path(r.id.as_str()),
       id: r.id,
       external: r.external.unwrap_or_default(),
       normalize_external_id: r.normalize_external_id,
       side_effects: r.side_effects,
+      package_json,
       ..Default::default()
     }));
   }

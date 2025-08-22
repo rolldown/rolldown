@@ -48,10 +48,12 @@ impl BindingPluginContext {
       .await
       .map_err(|program_err| napi_error::resolve_error(&specifier, program_err))?
       .ok();
+
     Ok(ret.map(|info| BindingPluginContextResolvedId {
       id: info.id.to_string(),
       external: info.external.into(),
       module_side_effects: info.side_effects.map(Into::into),
+      package_json_path: info.package_json.map(|item| item.realpath.to_string_lossy().to_string()),
     }))
   }
 
@@ -103,6 +105,7 @@ impl From<PluginContext> for BindingPluginContext {
 #[napi(object)]
 pub struct BindingPluginContextResolvedId {
   pub id: String,
+  pub package_json_path: Option<String>,
   #[napi(ts_type = "boolean | 'absolute' | 'relative'")]
   pub external: BindingResolvedExternal,
   #[napi(ts_type = "boolean | 'no-treeshake'")]

@@ -79,6 +79,60 @@ describe('Plugin closeBundle hook', async () => {
     expect(closeBundleFn).toHaveBeenCalledTimes(1)
   })
 
+  test('call closeBundle hook with error parameter when build fails', async () => {
+    const closeBundleFn = vi.fn()
+    const error = await buildWithPlugin({
+      name: 'test',
+      load() {
+        throw new Error('load error')
+      },
+      closeBundle: (error) => {
+        closeBundleFn()
+        expect(error).toBeDefined()
+        expect(error!.message).toContain('load error')
+      },
+    })
+    expect(error!.message).toContain('load error')
+    expect(closeBundleFn).toHaveBeenCalledTimes(1)
+  })
+
+  test('call closeBundle hook with error parameter when buildEnd fails', async () => {
+    const closeBundleFn = vi.fn()
+    const error = await buildWithPlugin({
+      name: 'test',
+      buildEnd() {
+        throw new Error('buildEnd error')
+      },
+      closeBundle: (error) => {
+        closeBundleFn()
+        expect(error).toBeDefined()
+        expect(error!.message).toContain('buildEnd error')
+      },
+    })
+    expect(error!.message).toContain('buildEnd error')
+    expect(closeBundleFn).toHaveBeenCalledTimes(1)
+  })
+
+  test('call closeBundle hook without error parameter when no error occurs', async () => {
+    const closeBundleFn = vi.fn()
+    const build = await rolldown({
+      input: './main.js',
+      cwd: import.meta.dirname,
+      plugins: [
+        {
+          name: 'test',
+          closeBundle: (error) => {
+            closeBundleFn()
+            expect(error).toBeUndefined()
+          },
+        },
+      ],
+    })
+    await build.generate()
+    await build.close()
+    expect(closeBundleFn).toHaveBeenCalledTimes(1)
+  })
+
   test('call closeBundle with bundle close', async () => {
     const closeBundleFn = vi.fn()
     const build = await rolldown({

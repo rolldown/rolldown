@@ -50,7 +50,6 @@ impl Fixture {
       options.cwd = Some(self.fixture_path.clone());
     }
 
-    options.canonicalize_option_path();
     if needs_extended_tests() {
       Self::apply_extended_tests(&meta, &options, &mut config_variants);
     }

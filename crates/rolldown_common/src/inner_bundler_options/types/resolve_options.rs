@@ -1,3 +1,5 @@
+pub use oxc_resolver::{TsconfigOptions, TsconfigReferences};
+
 #[cfg(feature = "deserialize_bundler_options")]
 use schemars::JsonSchema;
 #[cfg(feature = "deserialize_bundler_options")]
@@ -21,6 +23,22 @@ pub struct ResolveOptions {
   pub main_fields: Option<Vec<String>>,
   pub main_files: Option<Vec<String>>,
   pub symlinks: Option<bool>,
-  pub tsconfig_filename: Option<String>,
+  #[cfg_attr(
+    feature = "deserialize_bundler_options",
+    serde(default, deserialize_with = "deserialize_tsconfig"),
+    schemars(with = "Option<String>")
+  )]
+  pub tsconfig: Option<TsconfigOptions>,
   pub yarn_pnp: Option<bool>,
+}
+
+#[cfg(feature = "deserialize_bundler_options")]
+fn deserialize_tsconfig<'de, D>(deserializer: D) -> Result<Option<TsconfigOptions>, D::Error>
+where
+  D: serde::Deserializer<'de>,
+{
+  Ok(Option::<String>::deserialize(deserializer)?.map(|v| TsconfigOptions {
+    config_file: std::path::PathBuf::from(v),
+    references: TsconfigReferences::Disabled,
+  }))
 }

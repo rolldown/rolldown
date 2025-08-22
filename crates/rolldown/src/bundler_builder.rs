@@ -35,7 +35,10 @@ impl BundlerBuilder {
 
     Self::check_prefer_builtin_feature(self.plugins.as_slice(), &options, &mut warnings);
 
-    let tsconfig_filename = resolve_options.tsconfig_filename.clone();
+    let tsconfig_filename = resolve_options
+      .tsconfig
+      .clone()
+      .map(|v| options.cwd.join(v.config_file).to_string_lossy().into_owned());
     let fs = OsFileSystem::new(resolve_options.yarn_pnp.is_some_and(|b| b));
     let resolver: SharedResolver =
       Resolver::new(resolve_options, options.platform, options.cwd.clone(), fs.clone()).into();

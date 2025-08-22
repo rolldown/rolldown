@@ -139,7 +139,10 @@ export interface InputOptions {
     mainFiles?: string[];
     modules?: string[];
     symlinks?: boolean;
-    tsconfigFilename?: string;
+    tsconfig?: {
+      configFile: string;
+      references?: 'auto' | string[];
+    };
   };
   cwd?: string;
   /**

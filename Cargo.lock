@@ -2708,6 +2708,7 @@ dependencies = [
  "oxc",
  "oxc_minify_napi",
  "oxc_parser_napi",
+ "oxc_resolver",
  "oxc_resolver_napi",
  "oxc_transform_napi",
  "rolldown",

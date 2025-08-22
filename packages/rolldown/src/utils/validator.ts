@@ -311,7 +311,12 @@ const ResolveOptionsSchema = v.strictObject({
   mainFiles: v.optional(v.array(v.string())),
   modules: v.optional(v.array(v.string())),
   symlinks: v.optional(v.boolean()),
-  tsconfigFilename: v.optional(v.string()),
+  tsconfig: v.optional(v.object({
+    configFile: v.string(),
+    references: v.optional(
+      v.union([v.literal('auto'), v.array(v.string())]),
+    ),
+  })),
   yarnPnp: v.optional(v.boolean()),
 });
 

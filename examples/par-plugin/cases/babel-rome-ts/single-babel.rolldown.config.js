@@ -16,9 +16,11 @@ export default defineConfig({
   plugins: [babelPlugin()],
   resolve: {
     extensions: ['.ts'],
-    tsconfigFilename: nodePath.join(
-      REPO_ROOT,
-      './tmp/bench/rome/src/tsconfig.json',
-    ),
+    tsconfig: {
+      configFile: nodePath.join(
+        REPO_ROOT,
+        './tmp/bench/rome/src/tsconfig.json',
+      ),
+    },
   },
 });

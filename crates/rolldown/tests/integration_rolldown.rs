@@ -44,8 +44,6 @@ async fn filename_with_hash() {
       options.cwd = Some(fixture_path.to_path_buf());
     }
 
-    options.canonicalize_option_path();
-
     let integration_test = IntegrationTest::new(
       TestMeta { write_to_disk: false, hash_in_filename: true, ..meta },
       fixture_path.to_path_buf(),

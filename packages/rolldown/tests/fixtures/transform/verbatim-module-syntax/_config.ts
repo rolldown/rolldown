@@ -6,7 +6,9 @@ export default defineTest({
   config: {
     input: 'main.ts',
     resolve: {
-      tsconfigFilename: 'tsconfig.json',
+      tsconfig: {
+        configFile: 'tsconfig.json'
+      },
     },
   },
   afterTest: (output) => {

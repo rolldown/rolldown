@@ -55,7 +55,7 @@ pub mod bundler_options {
         GlobalsOutputOption, PreserveEntrySignatures,
       },
       platform::Platform,
-      resolve_options::ResolveOptions,
+      resolve_options::{ResolveOptions, TsconfigOptions, TsconfigReferences},
       sanitize_filename::SanitizeFilename,
       source_map_type::SourceMapType,
       sourcemap_ignore_list::SourceMapIgnoreList,

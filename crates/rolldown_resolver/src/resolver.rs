@@ -14,7 +14,7 @@ use sugar_path::SugarPath;
 
 use oxc_resolver::{
   EnforceExtension, ModuleType, PackageJson as OxcPackageJson, PackageType, Resolution,
-  ResolveError, ResolveOptions as OxcResolverOptions, ResolverGeneric, TsConfig, TsconfigOptions,
+  ResolveError, ResolveOptions as OxcResolverOptions, ResolverGeneric, TsConfig,
 };
 
 #[derive(Debug)]
@@ -35,7 +35,7 @@ pub struct Resolver<T: FileSystem = OsFileSystem> {
 
 impl<F: FileSystem> Resolver<F> {
   #[allow(clippy::too_many_lines)]
-  pub fn new(raw_resolve: ResolveOptions, platform: Platform, cwd: PathBuf, fs: F) -> Self {
+  pub fn new(mut raw_resolve: ResolveOptions, platform: Platform, cwd: PathBuf, fs: F) -> Self {
     let mut default_conditions = vec!["default".to_string()];
     let mut import_conditions = vec!["import".to_string()];
     let mut require_conditions = vec!["require".to_string()];
@@ -77,15 +77,13 @@ impl<F: FileSystem> Resolver<F> {
     let mut extension_alias = raw_resolve.extension_alias.clone().unwrap_or_default();
     impl_rewritten_file_extensions_via_extension_alias(&mut extension_alias);
 
+    if let Some(tsconfig) = &mut raw_resolve.tsconfig {
+      tsconfig.config_file = cwd.join(&tsconfig.config_file);
+    }
+
     let resolve_options_with_default_conditions = OxcResolverOptions {
       cwd: Some(cwd.clone()),
-      tsconfig: raw_resolve.tsconfig_filename.map(|p| {
-        let path = PathBuf::from(&p);
-        TsconfigOptions {
-          config_file: if path.is_relative() { cwd.join(path) } else { path },
-          references: oxc_resolver::TsconfigReferences::Disabled,
-        }
-      }),
+      tsconfig: raw_resolve.tsconfig,
       alias: raw_resolve
         .alias
         .map(|alias| {

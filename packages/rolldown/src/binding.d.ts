@@ -2026,8 +2026,13 @@ export interface BindingResolveOptions {
   mainFiles?: Array<string>
   modules?: Array<string>
   symlinks?: boolean
-  tsconfigFilename?: string
+  tsconfig?: BindingResolveTsconfigOptions
   yarnPnp?: boolean
+}
+
+export interface BindingResolveTsconfigOptions {
+  configFile: string
+  references?: 'auto' | string[]
 }
 
 export interface BindingSourcemap {

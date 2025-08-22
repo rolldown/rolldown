@@ -737,7 +737,7 @@
             "null"
           ]
         },
-        "tsconfigFilename": {
+        "tsconfig": {
           "type": [
             "string",
             "null"

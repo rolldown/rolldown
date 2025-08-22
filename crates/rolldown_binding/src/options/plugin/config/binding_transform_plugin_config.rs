@@ -82,6 +82,8 @@ impl From<BindingTransformPluginConfig> for TransformPlugin {
           only_remove_type_imports: typescript.only_remove_type_imports,
           allow_namespaces: typescript.allow_namespaces,
           allow_declare_fields: typescript.allow_declare_fields,
+          remove_class_fields_without_initializer: typescript
+            .remove_class_fields_without_initializer,
           rewrite_import_extensions,
         }
       });

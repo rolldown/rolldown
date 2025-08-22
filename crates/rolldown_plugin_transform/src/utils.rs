@@ -233,7 +233,6 @@ impl TransformPlugin {
         } else {
           Some(false)
         };
-        transform_options.typescript = Some(typescript);
 
         let disable_use_define_for_class_fields = !compiler_options
           .use_define_for_class_fields
@@ -241,6 +240,10 @@ impl TransformPlugin {
 
         let mut assumptions = transform_options.assumptions.unwrap_or_default();
         assumptions.set_public_class_fields = Some(disable_use_define_for_class_fields);
+        typescript.remove_class_fields_without_initializer =
+          Some(disable_use_define_for_class_fields);
+
+        transform_options.typescript = Some(typescript);
         transform_options.assumptions = Some(assumptions);
 
         // set target to es2021 or lower to enable class property transforms

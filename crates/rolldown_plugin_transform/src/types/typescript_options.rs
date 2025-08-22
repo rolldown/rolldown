@@ -7,6 +7,7 @@ pub struct TypeScriptOptions {
   pub only_remove_type_imports: Option<bool>,
   pub allow_namespaces: Option<bool>,
   pub allow_declare_fields: Option<bool>,
+  pub remove_class_fields_without_initializer: Option<bool>,
   /// Also generate a `.d.ts` declaration file for TypeScript files.
   ///
   /// The source file must be compliant with all
@@ -50,7 +51,9 @@ impl From<TypeScriptOptions> for oxc::transformer::TypeScriptOptions {
         .unwrap_or(ops.only_remove_type_imports),
       allow_namespaces: options.allow_namespaces.unwrap_or(ops.allow_namespaces),
       allow_declare_fields: options.allow_declare_fields.unwrap_or(ops.allow_declare_fields),
-      remove_class_fields_without_initializer: true,
+      remove_class_fields_without_initializer: options
+        .remove_class_fields_without_initializer
+        .unwrap_or(ops.remove_class_fields_without_initializer),
       optimize_const_enums: false,
       rewrite_import_extensions: options.rewrite_import_extensions.and_then(|value| match value {
         Either::Left(v) => {

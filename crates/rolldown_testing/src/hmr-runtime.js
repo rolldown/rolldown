@@ -34,23 +34,24 @@ class TestDevRuntime extends DevRuntime {
   }
   /**
    * @override
-   * @param {string[]} boundaries
+   * @param {[string, string][]} boundaries
    */
   applyUpdates(boundaries) {
-    for (const moduleId of boundaries) {
-      for (const ctx of this.contexts.values()) {
-        for (const { deps, cb } of ctx.callbacks) {
-          if (Array.isArray(deps)) {
-            if (deps.includes(moduleId)) {
-              const mods = deps.map((id) =>
-                id === moduleId ? this.loadExports(moduleId) : undefined
-              );
-              cb(mods);
-            }
-          } else {
-            if (deps === moduleId) {
-              cb(this.loadExports(moduleId));
-            }
+    for (const [boundary, acceptedVia] of boundaries) {
+      const ctx = this.contexts.get(boundary);
+      if (!ctx) continue;
+
+      for (const { deps, cb } of ctx.callbacks) {
+        if (Array.isArray(deps)) {
+          if (deps.includes(acceptedVia)) {
+            const mods = deps.map((id) =>
+              id === acceptedVia ? this.loadExports(acceptedVia) : undefined
+            );
+            cb(mods);
+          }
+        } else {
+          if (deps === acceptedVia) {
+            cb(this.loadExports(acceptedVia));
           }
         }
       }

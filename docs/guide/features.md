@@ -37,7 +37,7 @@ Rolldown handles mixed ESM / CJS module graphs out of the box, without the need 
 
 - Powered by [oxc-resolver](https://github.com/oxc-project/oxc-resolver), aligned with webpack's [enhanced-resolve](https://github.com/webpack/enhanced-resolve)
 - `node_modules` resolution is enabled by default (equivalent of `@rollup/plugin-node-resolve`)
-- tsconfig paths supported via `resolve.tsconfigFilename`.
+- tsconfig paths supported via `resolve.tsconfig.configFile`.
 - Configurable via the `resolve` option:
 
   ```ts
@@ -53,12 +53,15 @@ Rolldown handles mixed ESM / CJS module graphs out of the box, without the need 
       mainFiles?: string[];
       modules?: string[];
       symlinks?: boolean;
-      tsconfigFilename?: string;
+      tsconfig?: {
+        configFile: string;
+        references?: 'auto' | string[];
+      };
     };
   }
   ```
 
-  When `tsconfigFilename` is provided, the resolver will respect `compilerOptions.paths` in the specified `tsconfig.json`.
+  When `tsconfig.configFile` is provided, the resolver will respect `compilerOptions.paths` in the specified `tsconfig.json`.
 
 ## Define
 

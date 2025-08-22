@@ -139,8 +139,27 @@ export interface InputOptions {
     mainFiles?: string[];
     modules?: string[];
     symlinks?: boolean;
+    /**
+     * - Type: `string | object | undefined`
+     * - Default: `undefined`
+     *
+     * This is derived from [tsconfig-paths-webpack-plugin](https://github.com/dividab/tsconfig-paths-webpack-plugin#options) by oxc-resolver.
+     */
     tsconfig?: {
+      /**
+       * Allows you to specify where to find the TypeScript configuration file.
+       *
+       * You may provide:
+       * - a relative path to the configuration file. It will be resolved relative to cwd.
+       * - an absolute path to the configuration file.
+       */
       configFile: string;
+      /**
+       * Support for Typescript Project References.
+       *
+       * - `'auto'`: use the `references` field from tsconfig of `configFile`.
+       * - `string[]`: manually provided relative or absolute path.
+       */
       references?: 'auto' | string[];
     };
   };

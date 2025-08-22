@@ -88,7 +88,7 @@ var init_hmr_0 = __rolldown_runtime__.createEsmInitializer((function() {
 
 //#endregion
 init_hmr_0()
-__rolldown_runtime__.applyUpdates(['hmr.js']);
+__rolldown_runtime__.applyUpdates([['hmr.js', 'hmr.js']]);
 ```
 ## Meta
 

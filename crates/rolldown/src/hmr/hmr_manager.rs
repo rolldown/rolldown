@@ -373,7 +373,7 @@ impl HmrManager {
     }
 
     hmr_prerequisites.boundaries.iter().for_each(|boundary| {
-      let init_fn_name = &module_idx_to_init_fn_name[&boundary.boundary];
+      let init_fn_name = &module_idx_to_init_fn_name[&boundary.accepted_via];
       source_joiner.append_source(format!("{init_fn_name}()"));
     });
 
@@ -383,8 +383,9 @@ impl HmrManager {
         .boundaries
         .iter()
         .map(|boundary| {
-          let module = &self.module_table().modules[boundary.boundary];
-          format!("'{}'", module.stable_id())
+          let boundary_mod = &self.module_table().modules[boundary.boundary];
+          let accepted_via = &self.module_table().modules[boundary.accepted_via];
+          format!("['{}', '{}']", boundary_mod.stable_id(), accepted_via.stable_id())
         })
         .collect::<Vec<_>>()
         .join(",")
@@ -484,7 +485,7 @@ impl HmrManager {
 
       if importer.can_accept_hmr_dependency_for(&module.id) {
         modules_to_be_updated.insert(module_idx);
-        hmr_boundaries.insert(HmrBoundary { boundary: module_idx, accepted_via: importer_idx });
+        hmr_boundaries.insert(HmrBoundary { boundary: importer_idx, accepted_via: module_idx });
         continue;
       }
 

@@ -69,11 +69,11 @@ class DefaultDevRuntime extends DevRuntime {
   }
   /**
    * @override
-   * @param {string[]} boundaries
+   * @param {[string, string][]} boundaries
    */
   applyUpdates(boundaries) {
     // trigger callbacks of accept() correctly
-    for (let moduleId of boundaries) {
+    for (let [moduleId, acceptedVia] of boundaries) {
       const hotContext = this.moduleHotContexts.get(moduleId);
       if (hotContext) {
         const acceptCallbacks = hotContext.acceptCallbacks;

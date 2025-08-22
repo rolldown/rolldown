@@ -106,7 +106,7 @@ var init_self_accept_0 = __rolldown_runtime__.createEsmInitializer((function() {
 
 //#endregion
 init_self_accept_0()
-__rolldown_runtime__.applyUpdates(['self_accept.js']);
+__rolldown_runtime__.applyUpdates([['self_accept.js', 'self_accept.js']]);
 ```
 ## Meta
 
@@ -136,7 +136,7 @@ var init_self_accept_0 = __rolldown_runtime__.createEsmInitializer((function() {
 
 //#endregion
 init_self_accept_0()
-__rolldown_runtime__.applyUpdates(['self_accept.js']);
+__rolldown_runtime__.applyUpdates([['self_accept.js', 'self_accept.js']]);
 ```
 ## Meta
 
@@ -162,14 +162,14 @@ var init_child_0 = __rolldown_runtime__.createEsmInitializer((function() {
 
 //#endregion
 init_child_0()
-__rolldown_runtime__.applyUpdates(['single_accept/child.js']);
+__rolldown_runtime__.applyUpdates([['single_accept/parent.js', 'single_accept/child.js']]);
 ```
 ## Meta
 
 - update type: patch
 ### Hmr Boundaries
 
-- boundary: single_accept/child.js, accepted_via: single_accept/parent.js
+- boundary: single_accept/parent.js, accepted_via: single_accept/child.js
 # HMR Step 3
 
 ## Code
@@ -188,14 +188,14 @@ var init_child_0 = __rolldown_runtime__.createEsmInitializer((function() {
 
 //#endregion
 init_child_0()
-__rolldown_runtime__.applyUpdates(['single_accept/child.js']);
+__rolldown_runtime__.applyUpdates([['single_accept/parent.js', 'single_accept/child.js']]);
 ```
 ## Meta
 
 - update type: patch
 ### Hmr Boundaries
 
-- boundary: single_accept/child.js, accepted_via: single_accept/parent.js
+- boundary: single_accept/parent.js, accepted_via: single_accept/child.js
 # HMR Step 4
 
 ## Code
@@ -214,14 +214,14 @@ var init_child_0 = __rolldown_runtime__.createEsmInitializer((function() {
 
 //#endregion
 init_child_0()
-__rolldown_runtime__.applyUpdates(['array_accept/child.js']);
+__rolldown_runtime__.applyUpdates([['array_accept/parent.js', 'array_accept/child.js']]);
 ```
 ## Meta
 
 - update type: patch
 ### Hmr Boundaries
 
-- boundary: array_accept/child.js, accepted_via: array_accept/parent.js
+- boundary: array_accept/parent.js, accepted_via: array_accept/child.js
 # HMR Step 5
 
 ## Code
@@ -240,11 +240,11 @@ var init_child_0 = __rolldown_runtime__.createEsmInitializer((function() {
 
 //#endregion
 init_child_0()
-__rolldown_runtime__.applyUpdates(['array_accept/child.js']);
+__rolldown_runtime__.applyUpdates([['array_accept/parent.js', 'array_accept/child.js']]);
 ```
 ## Meta
 
 - update type: patch
 ### Hmr Boundaries
 
-- boundary: array_accept/child.js, accepted_via: array_accept/parent.js
+- boundary: array_accept/parent.js, accepted_via: array_accept/child.js

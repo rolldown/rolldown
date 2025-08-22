@@ -9,7 +9,7 @@ use types::legal_comments::LegalComments;
 use types::log_level::LogLevel;
 use types::make_absolute_externals_relative::MakeAbsoluteExternalsRelative;
 use types::mark_module_loaded::MarkModuleLoaded;
-use types::minify_options::{RawMinifyOptions, SimpleMinifyOptions};
+use types::minify_options::RawMinifyOptions;
 use types::on_log::OnLog;
 use types::optimization::OptimizationOption;
 use types::output_option::{
@@ -25,6 +25,8 @@ use serde::{Deserialize, Deserializer};
 #[cfg(feature = "deserialize_bundler_options")]
 use serde_json::Value;
 use types::experimental_options::ExperimentalOptions;
+#[cfg(feature = "deserialize_bundler_options")]
+use types::minify_options::SimpleMinifyOptions;
 
 use self::types::treeshake::TreeshakeOptions;
 use self::types::{

@@ -191,6 +191,7 @@ export class PluginContextImpl extends MinimalPluginContextImpl {
       ...info,
       moduleSideEffects: info.moduleSideEffects ?? res.moduleSideEffects ??
         null,
+      packageJsonPath: res.packageJsonPath,
     };
   }
 

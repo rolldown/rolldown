@@ -31,12 +31,7 @@ impl Plugin for OxcRuntimePlugin {
         )
         .await??;
 
-      return Ok(Some(rolldown_plugin::HookResolveIdOutput {
-        id: resolved_id.id,
-        external: Some(resolved_id.external),
-        side_effects: resolved_id.side_effects,
-        normalize_external_id: resolved_id.normalize_external_id,
-      }));
+      return Ok(Some(rolldown_plugin::HookResolveIdOutput::from_resolved_id(resolved_id)));
     }
 
     Ok(None)

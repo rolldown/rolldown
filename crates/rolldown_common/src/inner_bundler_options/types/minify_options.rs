@@ -95,6 +95,7 @@ impl MinifyOptions {
   derive(Deserialize, JsonSchema),
   serde(rename_all = "camelCase", deny_unknown_fields, untagged)
 )]
+#[allow(dead_code)]
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum SimpleMinifyOptions {
   Boolean(bool),

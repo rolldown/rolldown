@@ -148,6 +148,7 @@ export function bindingifyResolveId(
         external: ret.external,
         normalizeExternalId: false,
         moduleSideEffects: exist.moduleSideEffects ?? undefined,
+        packageJsonPath: ret.packageJsonPath,
       };
     },
     meta: bindingifyPluginHookMeta(meta),

@@ -34,6 +34,13 @@ pub struct Resolver<T: FileSystem = OsFileSystem> {
 }
 
 impl<F: FileSystem> Resolver<F> {
+  #[inline]
+  pub fn package_json_cache(&self) -> &FxDashMap<PathBuf, Arc<PackageJson>> {
+    &self.package_json_cache
+  }
+}
+
+impl<F: FileSystem> Resolver<F> {
   #[allow(clippy::too_many_lines)]
   pub fn new(raw_resolve: ResolveOptions, platform: Platform, cwd: PathBuf, fs: F) -> Self {
     let mut default_conditions = vec!["default".to_string()];

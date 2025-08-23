@@ -3173,11 +3173,13 @@ dependencies = [
  "anyhow",
  "base64-simd",
  "cow-utils",
+ "derive_more",
  "rolldown_common",
  "rolldown_plugin",
  "rolldown_plugin_utils",
  "rolldown_utils",
  "serde_json",
+ "string_wizard",
 ]
 
 [[package]]

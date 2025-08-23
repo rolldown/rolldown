@@ -28,6 +28,6 @@ pub use remove_special_query::remove_special_query;
 pub use render_asset_url_in_js::{RenderAssetUrlInJsEnv, RenderAssetUrlInJsEnvConfig};
 pub use strip_bom::strip_bom;
 pub use to_output_file_path_in_js::{
-  RenderBuiltUrl, RenderBuiltUrlConfig, RenderBuiltUrlRet, ToOutputFilePathInJSEnv,
+  AssetUrlResult, RenderBuiltUrl, RenderBuiltUrlConfig, RenderBuiltUrlRet, ToOutputFilePathInJSEnv,
 };
 pub use to_relative_runtime_path::create_to_import_meta_url_based_relative_runtime;

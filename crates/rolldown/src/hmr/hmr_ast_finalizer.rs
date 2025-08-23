@@ -15,9 +15,7 @@ use rolldown_common::{
   ExternalModule, ImportRecordIdx, IndexModules, Module, ModuleIdx, NormalModule,
 };
 use rolldown_ecmascript::CJS_REQUIRE_REF_ATOM;
-use rolldown_ecmascript_utils::{
-  AstSnippet, BindingIdentifierExt, ExpressionExt,
-};
+use rolldown_ecmascript_utils::{AstSnippet, BindingIdentifierExt, ExpressionExt};
 use rolldown_utils::indexmap::{FxIndexMap, FxIndexSet};
 use rustc_hash::{FxHashMap, FxHashSet};
 
@@ -479,7 +477,7 @@ impl<'ast> HmrAstFinalizer<'_, 'ast> {
     let call_expr = self.snippet.call_expr_with_arg_expr(
       self.snippet.literal_prop_access_member_expr_expr("__rolldown_runtime__", "loadExports"),
       self.snippet.string_literal_expr(id, SPAN),
-      false
+      false,
     );
 
     let stmt = self.snippet.variable_declarator_require_call_stmt(
@@ -524,7 +522,7 @@ impl<'ast> HmrAstFinalizer<'_, 'ast> {
     let call_expr = self.snippet.call_expr_with_2arg_expr(
       self.snippet.literal_prop_access_member_expr_expr("__rolldown_runtime__", "__reExport"),
       self.snippet.id_ref_expr(self_exports, SPAN),
-      self.snippet.id_ref_expr(binding_name, SPAN)
+      self.snippet.id_ref_expr(binding_name, SPAN),
     );
 
     Some(ast::Statement::ExpressionStatement(
@@ -687,7 +685,8 @@ impl<'ast> HmrAstFinalizer<'_, 'ast> {
       && id_ref.is_global_reference(scoping)
       && !ctx.parent().is_call_expression()
     {
-      *it = self.snippet.literal_prop_access_member_expr_expr("__rolldown_runtime__", "loadExports");
+      *it =
+        self.snippet.literal_prop_access_member_expr_expr("__rolldown_runtime__", "loadExports");
     }
 
     // Rewrite `require(...)` to `(require_xxx(), __rolldown_runtime__.loadExports())` or keep it as is for external module importee.
@@ -724,8 +723,8 @@ impl<'ast> HmrAstFinalizer<'_, 'ast> {
         self.snippet.call_expr_with_arg_expr(
           self.snippet.literal_prop_access_member_expr_expr("__rolldown_runtime__", "loadExports"),
           self.snippet.string_literal_expr(&importee.stable_id, SPAN),
-          false
-        )
+          false,
+        ),
       );
     } else {
       // hyf0 TODO: handle esm importee
@@ -734,8 +733,8 @@ impl<'ast> HmrAstFinalizer<'_, 'ast> {
         self.snippet.call_expr_with_arg_expr(
           self.snippet.literal_prop_access_member_expr_expr("__rolldown_runtime__", "loadExports"),
           self.snippet.string_literal_expr(&importee.stable_id, SPAN),
-          false
-        )
+          false,
+        ),
       );
     }
   }

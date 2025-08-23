@@ -36,8 +36,8 @@ impl WatcherEventService {
           Ok(batched_events) => {
             let changed_files = batched_events
               .into_iter()
-              .flat_map(|batched_event| match &batched_event.kind {
-                notify::EventKind::Modify(_modify_kind) => batched_event.event.paths,
+              .flat_map(|batched_event| match &batched_event.detail.kind {
+                notify::EventKind::Modify(_modify_kind) => batched_event.detail.paths,
                 _ => {
                   vec![]
                 }

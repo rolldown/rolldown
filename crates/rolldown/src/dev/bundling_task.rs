@@ -32,8 +32,8 @@ impl BundlingTask {
     };
 
     tracing::trace!("`BuildStatus` is in building with changed files: {:#?}", self.changed_files);
-    build_status.is_in_building = true;
-    build_status.is_in_debouncing = false;
+    build_status.is_building = true;
+    build_status.is_debouncing = false;
 
     drop(build_status);
 
@@ -47,7 +47,7 @@ impl BundlingTask {
       Ok(()) => {}
       Err(_) => {
         let mut build_status = self.dev_data.status.lock().await;
-        build_status.is_in_building = false;
+        build_status.is_building = false;
       }
     }
   }
@@ -61,7 +61,7 @@ impl BundlingTask {
     let mut build_status = loop {
       let mut build_status = self.dev_data.status.lock().await;
       if !self.ensure_latest_build || build_status.changed_files.is_empty() {
-        build_status.is_in_building = false;
+        build_status.is_building = false;
         break build_status;
       }
       let changed_files = mem::take(&mut build_status.changed_files);
@@ -74,7 +74,7 @@ impl BundlingTask {
       "`BuildStatus` finished building with changed files: {:#?}",
       self.changed_files
     );
-    build_status.is_in_building = false;
+    build_status.is_building = false;
     Ok(())
   }
 }

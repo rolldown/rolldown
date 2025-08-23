@@ -3,7 +3,8 @@
   "version": "0.0.0",
   "private": true,
   "scripts": {
-    "dev": "serve"
+    "dev": "serve",
+    "dev:new": "USE_NEW_DEV_SERVER=1 serve"
   },
   "dependencies": {
     "react": "^19.0.0",

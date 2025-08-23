@@ -5,7 +5,7 @@ use futures::FutureExt;
 use tokio::sync::Mutex;
 
 use crate::{
-  Bundler, BundlerBuilder,
+  Bundler,
   dev::{
     bundling_task::BundlingTask,
     dev_context::{BuildProcessFuture, DevContext, PinBoxSendStaticFuture, SharedDevContext},
@@ -20,8 +20,7 @@ pub struct BuildDriver {
 }
 
 impl BuildDriver {
-  pub fn new(bundler_builder: BundlerBuilder) -> Self {
-    let bundler = Arc::new(Mutex::new(bundler_builder.build()));
+  pub fn new(bundler: Arc<Mutex<Bundler>>) -> Self {
     let ctx = Arc::new(DevContext::default());
 
     Self { bundler, ctx }
@@ -29,11 +28,11 @@ impl BuildDriver {
 
   pub async fn schedule_build(&self, changed_paths: Vec<PathBuf>) -> Option<BuildProcessFuture> {
     let mut build_status = self.ctx.status.lock().await;
-    if build_status.is_in_building || build_status.is_in_debouncing {
+    if build_status.is_building || build_status.is_debouncing {
       tracing::trace!(
         "Bailout due to is_in_building({}) or is_in_debouncing({}) with changed files: {:#?}",
-        build_status.is_in_building,
-        build_status.is_in_debouncing,
+        build_status.is_building,
+        build_status.is_debouncing,
         build_status.changed_files,
       );
       build_status.changed_files.extend(changed_paths);
@@ -54,7 +53,7 @@ impl BuildDriver {
     tokio::spawn(bundling_future.clone());
 
     tracing::trace!("BuildStatus is in debouncing");
-    build_status.is_in_debouncing = true;
+    build_status.is_debouncing = true;
     build_status.future = bundling_future.clone();
     drop(build_status);
 

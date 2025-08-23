@@ -13,14 +13,14 @@ pub type PinBoxSendStaticFuture<T = ()> = Pin<Box<dyn Future<Output = T> + Send 
 pub type BuildProcessFuture = Shared<PinBoxSendStaticFuture<()>>;
 
 pub struct BuildStatus {
-  pub is_in_building: bool,
-  pub is_in_debouncing: bool,
+  pub is_building: bool,
+  pub is_debouncing: bool,
   pub changed_files: IndexSet<PathBuf>,
   pub future: BuildProcessFuture,
 }
 impl BuildStatus {
-  pub fn is_in_process(&self) -> bool {
-    self.is_in_building || self.is_in_debouncing
+  pub fn is_busy(&self) -> bool {
+    self.is_building || self.is_debouncing
   }
 }
 
@@ -29,9 +29,9 @@ pub struct DevContext {
 }
 
 impl DevContext {
-  pub async fn wait_for_current_build_finish(&self) -> () {
+  pub async fn ensure_current_build_finish(&self) -> () {
     let build_status = self.status.lock().await;
-    if !build_status.is_in_process() {
+    if !build_status.is_busy() {
       return;
     }
     let build_process_future = build_status.future.clone();
@@ -47,8 +47,8 @@ impl Default for DevContext {
     let future = Box::pin(future::ready(())) as PinBoxSendStaticFuture;
     Self {
       status: Mutex::new(BuildStatus {
-        is_in_building: false,
-        is_in_debouncing: false,
+        is_building: false,
+        is_debouncing: false,
         future: future.shared(),
         changed_files: IndexSet::new(),
       }),

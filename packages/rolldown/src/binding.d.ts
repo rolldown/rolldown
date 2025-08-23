@@ -1282,6 +1282,12 @@ export declare class BindingChunkingContext {
   getModuleInfo(moduleId: string): BindingModuleInfo | null
 }
 
+export declare class BindingDevEngine {
+  constructor(options: BindingBundlerOptions)
+  run(): Promise<void>
+  ensureCurrentBuildFinish(): Promise<void>
+}
+
 export declare class BindingHmrOutput {
   get patch(): BindingHmrUpdate | null
   get errors(): Array<Error | BindingError>

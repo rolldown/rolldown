@@ -12,6 +12,9 @@ source: crates/rolldown_testing/src/integration_test.rs
  1 │ import dc_def, { bar as dc } from './keep/declare-class'
    │        ───┬──  
    │           ╰──── Missing export
+   │ 
+   │ Help: This diagnostic might be a false positive when importing from TypeScript files. TypeScript type-only exports and imports are stripped during transformation, which may cause actual
+   │         exports to appear missing.
 ───╯
 
 ```
@@ -24,6 +27,9 @@ source: crates/rolldown_testing/src/integration_test.rs
  2 │ import dl_def, { bar as dl } from './keep/declare-let'
    │        ───┬──  
    │           ╰──── Missing export
+   │ 
+   │ Help: This diagnostic might be a false positive when importing from TypeScript files. TypeScript type-only exports and imports are stripped during transformation, which may cause actual
+   │         exports to appear missing.
 ───╯
 
 ```

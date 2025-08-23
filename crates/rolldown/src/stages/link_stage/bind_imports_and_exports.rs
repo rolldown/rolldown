@@ -705,6 +705,10 @@ impl BindImportsAndExportsContext<'_> {
         }
         MatchImportKind::NoMatch => {
           let importee = &self.index_modules[rec.resolved_module];
+          let is_ts_like = matches!(
+            importee.as_normal().map(|m| &m.module_type),
+            Some(ModuleType::Ts | ModuleType::Tsx)
+          );
           let mut diagnostic = BuildDiagnostic::missing_export(
             module.id.to_string(),
             module.stable_id.to_string(),
@@ -712,10 +716,10 @@ impl BindImportsAndExportsContext<'_> {
             module.source.clone(),
             named_import.imported.to_string(),
             named_import.span_imported,
+            is_ts_like.then(|| "This diagnostic might be a false positive when importing from TypeScript files. TypeScript type-only exports and imports are stripped during transformation, which may cause actual
+  exports to appear missing.".to_string())
           );
-          if let Some(importee) = importee.as_normal()
-            && matches!(importee.module_type, ModuleType::Ts | ModuleType::Tsx)
-          {
+          if is_ts_like {
             diagnostic = diagnostic.with_severity_warning();
             self.warnings.push(diagnostic);
           } else {

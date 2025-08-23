@@ -10,9 +10,7 @@ pub fn extract_index(id: &str) -> Option<&str> {
 #[derive(Debug, Default)]
 pub struct UrlEmitTasks {
   pub range: (usize, usize),
-  pub content: String,
-  pub css_asset_name: Option<String>,
-  pub original_file_name: String,
+  pub replacement: String,
 }
 
 impl ViteCssPostPlugin {

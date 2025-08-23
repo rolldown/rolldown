@@ -67,7 +67,7 @@ impl Plugin for DynamicImportVarsPlugin {
 
   async fn transform_ast(
     &self,
-    _ctx: &PluginContext,
+    ctx: &PluginContext,
     mut args: HookTransformAstArgs<'_>,
   ) -> HookTransformAstReturn {
     if !self.filter(args.id, args.cwd) {
@@ -77,6 +77,7 @@ impl Plugin for DynamicImportVarsPlugin {
       let source_text = fields.source.as_str();
       let ast_builder = AstBuilder::new(fields.allocator);
       let mut visitor = ast_visit::DynamicImportVarsVisit {
+        ctx,
         source_text,
         ast_builder,
         root: args.cwd,

@@ -9,21 +9,22 @@ source: crates/rolldown_testing/src/integration_test.rs
 // HIDDEN [rolldown:runtime]
 //#region c.js
 var c_exports = {};
-__export(c_exports, { default: () => _default });
-var _default;
+__export(c_exports, { default: () => c_default });
+var _default, c_default;
 var init_c = __esm({ "c.js": (() => {
 	_default = { aaa: { bbb: [
 		"/demo/",
 		"b",
 		"c"
 	] } };
+	c_default = _default;
 }) });
 
 //#endregion
 //#region b.js
 async function getEnv() {
 	console.log(111, ccc);
-	return _default.aaa.bbb[0];
+	return c_default.aaa.bbb[0];
 }
 var ccc;
 var init_b = __esm({ "b.js": (async () => {

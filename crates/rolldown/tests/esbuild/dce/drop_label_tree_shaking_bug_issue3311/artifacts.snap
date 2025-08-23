@@ -11,7 +11,8 @@ const myFunc = () => {
 	;
 	console.log("keep");
 };
+var entry_default = myFunc;
 
 //#endregion
-export { myFunc as default };
+export { entry_default as default };
 ```

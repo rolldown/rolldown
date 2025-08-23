@@ -54,7 +54,11 @@ export default defineTest({
       //#endregion
       node_path = __toESM(node_path);
 
-      exports.default = node_path.join;
+      //#region main.js
+      var main_default = node_path.join;
+
+      //#endregion
+      exports.default = main_default;
       return exports;
       })({}, node_path);"
     `)

@@ -36,10 +36,14 @@ var Bar = class {};
 */
 var Baz = "baz";
 /**
+* default export expr
+*/
+var main_default = Baz;
+/**
 * stmt
 */
 console.log(666);
 
 //#endregion
-export { Bar, Baz, Baz as default, foo };
+export { Bar, Baz, main_default as default, foo };
 ```

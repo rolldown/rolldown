@@ -7,5 +7,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 ```text
 [RESOLVE_ERROR] Error: Could not resolve 'react/jsx-runtime' in main.jsx
+  │ 
+  │ Help: May be you expected `resolve.alias` to call other plugins resolveId hook? see the docs https://rolldown.rs/reference/config-options#resolve-alias for more details
 
 ```

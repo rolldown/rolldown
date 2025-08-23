@@ -67,6 +67,7 @@ impl BundlerBuilder {
       hmr_manager: None,
       session,
       build_count: self.build_count,
+      last_error: None,
     }
   }
 

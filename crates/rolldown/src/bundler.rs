@@ -40,6 +40,7 @@ pub struct Bundler {
   pub(crate) hmr_manager: Option<HmrManager>,
   pub(crate) session: rolldown_debug::Session,
   pub(crate) build_count: u32,
+  pub(crate) last_error: Option<String>,
 }
 
 impl Bundler {
@@ -55,6 +56,7 @@ impl Bundler {
 impl Bundler {
   #[tracing::instrument(level = "debug", skip_all, parent = &self.session.span)]
   pub async fn write(&mut self) -> BuildResult<BundleOutput> {
+    self.last_error = None; // Clear last error at the start of build
     let build_count = self.build_count;
     async {
       self.trace_action_session_meta();
@@ -74,6 +76,7 @@ impl Bundler {
 
   #[tracing::instrument(level = "debug", skip_all, parent = &self.session.span)]
   pub async fn generate(&mut self) -> BuildResult<BundleOutput> {
+    self.last_error = None; // Clear last error at the start of build
     let build_count = self.build_count;
     async {
       self.trace_action_session_meta();
@@ -101,7 +104,13 @@ impl Bundler {
     }
 
     self.closed = true;
-    self.plugin_driver.close_bundle(None).await?;
+    
+    if let Some(error_msg) = &self.last_error {
+      let errors = vec![BuildDiagnostic::unhandleable_error(anyhow::anyhow!("{}", error_msg))];
+      self.plugin_driver.close_bundle(Some(&HookCloseBundleArgs { errors: &errors, cwd: &self.options.cwd })).await?;
+    } else {
+      self.plugin_driver.close_bundle(None).await?;
+    }
 
     Ok(())
   }
@@ -141,27 +150,11 @@ impl Bundler {
       Ok(v) => v,
       Err(errs) => {
         debug_assert!(errs.iter().all(|e| e.severity() == Severity::Error));
-        let build_end_result = self
+        self
           .plugin_driver
           .build_end(Some(&HookBuildEndArgs { errors: &errs, cwd: &self.options.cwd }))
-          .await;
-
-        match build_end_result {
-          Ok(_) => {
-            self
-              .plugin_driver
-              .close_bundle(Some(&HookCloseBundleArgs { errors: &errs, cwd: &self.options.cwd }))
-              .await?;
-          }
-          Err(build_end_error) => {
-            // Build failed and buildEnd also failed, pass original errors to closeBundle
-            self
-              .plugin_driver
-              .close_bundle(Some(&HookCloseBundleArgs { errors: &errs, cwd: &self.options.cwd }))
-              .await?;
-            return Err(build_end_error.into());
-          }
-        }
+          .await?;
+        self.plugin_driver.close_bundle(None).await?;
         return Err(errs);
       }
     };
@@ -173,25 +166,7 @@ impl Bundler {
       self.normalize_scan_stage_output_and_update_cache(scan_stage_output, is_full_scan_mode);
 
     Self::trace_action_module_graph_ready(&scan_stage_output);
-    let build_end_result = self.plugin_driver.build_end(None).await;
-
-    match build_end_result {
-      Ok(_) => {
-        // No error, close_bundle gets None
-        // Note: close_bundle call will be done by the bundler.close() method later
-      }
-      Err(build_end_error) => {
-        // Build succeeded but buildEnd failed, pass buildEnd error to closeBundle
-        // For now, we'll create a minimal error args structure
-        // TODO: Convert build_end_error to BuildDiagnostic properly
-        let error_args = HookCloseBundleArgs {
-          errors: &vec![], // Empty for now, as we don't have the build_end_error as BuildDiagnostic
-          cwd: &self.options.cwd,
-        };
-        self.plugin_driver.close_bundle(Some(&error_args)).await?;
-        return Err(build_end_error.into());
-      }
-    }
+    self.plugin_driver.build_end(None).await?;
 
     trace_action!(action::BuildEnd { action: "BuildEnd" });
     Ok(scan_stage_output)
@@ -225,7 +200,9 @@ impl Bundler {
     let dist_dir = self.options.cwd.join(&self.options.out_dir);
 
     self.fs.create_dir_all(&dist_dir).map_err(|err| {
-      anyhow::anyhow!("Could not create directory for output chunks: {:?}", dist_dir).context(err)
+      let error = anyhow::anyhow!("Could not create directory for output chunks: {:?}", dist_dir).context(err);
+      self.last_error = Some(error.to_string());
+      error
     })?;
 
     for chunk in &output.assets {
@@ -238,13 +215,21 @@ impl Bundler {
       self
         .fs
         .write(&dest, chunk.content_as_bytes())
-        .map_err(|err| anyhow::anyhow!("Failed to write file in {:?}", dest).context(err))?;
+        .map_err(|err| {
+          let error = anyhow::anyhow!("Failed to write file in {:?}", dest).context(err);
+          self.last_error = Some(error.to_string());
+          error
+        })?;
     }
 
     self
       .plugin_driver
       .write_bundle(&mut output.assets, &self.options, &mut output.warnings)
-      .await?;
+      .await
+      .map_err(|e| {
+        self.last_error = Some(e.to_string());
+        e
+      })?;
 
     output.warnings.append(&mut self.warnings);
 
@@ -289,7 +274,11 @@ impl Bundler {
     self
       .plugin_driver
       .generate_bundle(&mut output.assets, is_write, &self.options, &mut output.warnings)
-      .await?;
+      .await
+      .map_err(|e| {
+        self.last_error = Some(e.to_string());
+        e
+      })?;
 
     if let Some(invalidate_js_side_cache) = &self.options.invalidate_js_side_cache {
       invalidate_js_side_cache.call().await?;

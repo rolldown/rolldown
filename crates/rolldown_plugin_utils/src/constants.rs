@@ -1,3 +1,5 @@
+use arcstr::ArcStr;
+
 use rolldown_plugin::typedmap::TypedMapKey;
 use rolldown_utils::dashmap::{FxDashMap, FxDashSet};
 use rustc_hash::FxHashMap;
@@ -39,3 +41,16 @@ pub struct HTMLProxyResult {
 pub struct CSSStyles {
   pub inner: FxDashMap<String, String>,
 }
+
+#[derive(Debug, Default)]
+pub struct PureCSSChunks {
+  pub inner: FxDashSet<ArcStr>,
+}
+
+#[derive(Debug, Default)]
+pub struct CSSChunks {
+  pub inner: FxDashMap<ArcStr, String>,
+}
+
+#[derive(Debug, Default)]
+pub struct CSSBundleName(pub String);

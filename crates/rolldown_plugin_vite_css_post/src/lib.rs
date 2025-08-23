@@ -7,19 +7,23 @@ use rolldown_common::{ModuleType, side_effects::HookSideEffects};
 use rolldown_plugin::{HookTransformOutput, HookUsage, Plugin};
 use rolldown_plugin_utils::{
   RenderBuiltUrl,
-  constants::{CSSModuleCache, CSSStyles, HTMLProxyResult},
+  constants::{CSSChunks, CSSModuleCache, CSSStyles, HTMLProxyResult, PureCSSChunks},
   css::is_css_request,
   data_to_esm, find_special_query, is_special_query,
 };
 use rolldown_utils::{url::clean_url, xxhash::xxhash_with_base};
 
+#[allow(clippy::struct_excessive_bools)]
 #[derive(derive_more::Debug)]
 pub struct ViteCssPostPlugin {
+  pub is_lib: bool,
   pub is_ssr: bool,
   pub is_worker: bool,
   pub css_minify: bool,
+  pub css_code_split: bool,
   pub url_base: String,
   pub decoded_base: String,
+  pub lib_css_filename: Option<String>,
   #[debug(skip)]
   pub render_built_url: Option<Arc<RenderBuiltUrl>>,
 }
@@ -31,6 +35,16 @@ impl Plugin for ViteCssPostPlugin {
 
   fn register_hook_usage(&self) -> HookUsage {
     HookUsage::Transform | HookUsage::RenderChunk
+  }
+
+  async fn build_start(
+    &self,
+    ctx: &rolldown_plugin::PluginContext,
+    _args: &rolldown_plugin::HookBuildStartArgs<'_>,
+  ) -> rolldown_plugin::HookNoopReturn {
+    ctx.meta().insert(Arc::new(CSSChunks::default()));
+    ctx.meta().insert(Arc::new(PureCSSChunks::default()));
+    Ok(())
   }
 
   async fn transform(
@@ -140,6 +154,24 @@ impl Plugin for ViteCssPostPlugin {
     let mut magic_string = None;
 
     self.finalize_vite_css_urls(ctx, args, &styles, &mut magic_string).await?;
+
+    if !css_chunk.is_empty() {
+      if is_pure_css_chunk && ctx.options().format.is_esm_or_cjs() {
+        ctx
+          .meta()
+          .get::<PureCSSChunks>()
+          .expect("PureCSSChunks missing")
+          .inner
+          .insert(args.chunk.filename.clone());
+      }
+
+      if self.css_code_split {
+        todo!()
+      } else {
+        let css_asset_name = self.get_css_bundle_name(ctx)?;
+        todo!()
+      }
+    }
 
     Ok(None)
   }

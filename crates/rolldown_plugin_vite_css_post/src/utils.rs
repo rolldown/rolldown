@@ -1,10 +1,10 @@
-use std::path::PathBuf;
+use std::{path::PathBuf, sync::Arc};
 
 use rolldown_common::EmittedAsset;
 use rolldown_plugin::{HookRenderChunkArgs, PluginContext};
 use rolldown_plugin_utils::{
   AssetUrlResult, RenderBuiltUrlConfig, ToOutputFilePathInJSEnv,
-  constants::{CSSStyles, ViteMetadata},
+  constants::{CSSBundleName, CSSStyles, ViteMetadata},
   create_to_import_meta_url_based_relative_runtime,
   uri::encode_uri_path,
 };
@@ -12,6 +12,8 @@ use rolldown_utils::{futures::block_on_spawn_all, url::clean_url};
 use string_wizard::MagicString;
 
 use crate::ViteCssPostPlugin;
+
+pub const DEFAULT_CSS_BUNDLE_NAME: &str = "style.css";
 
 pub fn extract_index(id: &str) -> Option<&str> {
   let s = id.split_once("&index=")?.1;
@@ -124,5 +126,46 @@ impl ViteCssPostPlugin {
   #[allow(clippy::unused_async)]
   pub async fn finalize_css(&self, _content: String) -> String {
     todo!()
+  }
+
+  pub fn get_css_bundle_name(&self, ctx: &PluginContext) -> anyhow::Result<String> {
+    Ok(if let Some(css_asset_name) = ctx.meta().get::<CSSBundleName>() {
+      css_asset_name.0.clone()
+    } else {
+      let css_bundle_name = if self.is_lib {
+        if let Some(lib_css_filename) = &self.lib_css_filename {
+          lib_css_filename.to_owned()
+        } else {
+          let mut base_dir = ctx.cwd().to_owned();
+          loop {
+            let pkg_path = base_dir.join("package.json");
+            if pkg_path.is_file() {
+              let json = std::fs::read_to_string(&pkg_path)?;
+              let json = json.trim_start_matches("\u{feff}");
+              let raw_json = serde_json::from_str::<serde_json::Value>(json)?;
+              if let Some(json_object) = raw_json.as_object() {
+                break json_object
+                  .get("name")
+                  .and_then(|field| field.as_str())
+                  .map(ToString::to_string)
+                  .ok_or_else(|| anyhow::anyhow!("Name in package.json is required if option 'build.lib.cssFileName' is not provided."))?;
+              }
+            }
+            base_dir = match base_dir.parent() {
+              Some(next) => next.to_path_buf(),
+              None => {
+                return Err(anyhow::anyhow!(
+                  "Didn't find the nearest package.json when determining the library CSS bundle name.",
+                ));
+              }
+            };
+          }
+        }
+      } else {
+        DEFAULT_CSS_BUNDLE_NAME.to_owned()
+      };
+      ctx.meta().insert(Arc::new(CSSBundleName(css_bundle_name.clone())));
+      css_bundle_name
+    })
   }
 }

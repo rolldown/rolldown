@@ -1,10 +1,11 @@
 use notify::RecursiveMode;
-use notify_debouncer_full::DebounceEventHandler;
 use rolldown_error::BuildResult;
 use std::path::Path;
 
+use crate::EventHandler;
+
 pub trait Watcher {
-  fn new<F: DebounceEventHandler>(event_handler: F) -> BuildResult<Self>
+  fn new<F: EventHandler>(event_handler: F) -> BuildResult<Self>
   where
     Self: Sized;
 

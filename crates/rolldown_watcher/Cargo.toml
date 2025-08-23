@@ -8,8 +8,10 @@ repository.workspace = true
 
 [dependencies]
 notify = { workspace = true }
-notify-debouncer-full = { workspace = true }
 rolldown_error = { workspace = true }
+
+[target.'cfg(not(target_family = "wasm"))'.dependencies]
+notify-debouncer-full = { workspace = true }
 
 [lints]
 workspace = true

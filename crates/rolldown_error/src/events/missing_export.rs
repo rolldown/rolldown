@@ -13,7 +13,7 @@ pub struct MissingExport {
   pub importer_source: ArcStr,
   pub imported_specifier: String,
   pub imported_specifier_span: Span,
-  pub help: Option<String>,
+  pub note: Option<String>,
 }
 
 impl BuildEvent for MissingExport {
@@ -42,8 +42,8 @@ impl BuildEvent for MissingExport {
     diagnostic.title =
       format!(r#""{}" is not exported by "{}"."#, self.imported_specifier, &self.stable_importee);
 
-    if let Some(help) = &self.help {
-      diagnostic.help = Some(help.clone());
+    if let Some(note) = &self.note {
+      diagnostic.add_note(note.clone());
     }
 
     diagnostic.add_label(

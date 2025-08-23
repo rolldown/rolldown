@@ -13,7 +13,7 @@ source: crates/rolldown_testing/src/integration_test.rs
    │        ───┬──  
    │           ╰──── Missing export
    │ 
-   │ Help: This diagnostic might be a false positive when importing from TypeScript files. TypeScript type-only exports and imports are stripped during transformation, which may cause actual
+   │ Note: This diagnostic might be a false positive when importing from TypeScript files. TypeScript type-only exports and imports are stripped during transformation, which may cause actual
    │         exports to appear missing.
 ───╯
 
@@ -28,7 +28,7 @@ source: crates/rolldown_testing/src/integration_test.rs
    │        ───┬──  
    │           ╰──── Missing export
    │ 
-   │ Help: This diagnostic might be a false positive when importing from TypeScript files. TypeScript type-only exports and imports are stripped during transformation, which may cause actual
+   │ Note: This diagnostic might be a false positive when importing from TypeScript files. TypeScript type-only exports and imports are stripped during transformation, which may cause actual
    │         exports to appear missing.
 ───╯
 

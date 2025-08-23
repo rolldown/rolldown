@@ -111,7 +111,7 @@ impl BuildDiagnostic {
     importer_source: ArcStr,
     imported_specifier: String,
     imported_specifier_span: Span,
-    help: Option<String>,
+    note: Option<String>,
   ) -> Self {
     Self::new_inner(MissingExport {
       importer,
@@ -120,7 +120,7 @@ impl BuildDiagnostic {
       importer_source,
       imported_specifier,
       imported_specifier_span,
-      help,
+      note,
     })
   }
 

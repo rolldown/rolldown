@@ -53,6 +53,7 @@ pub struct Diagnostic {
   pub(crate) files: FxHashMap</* filename */ DiagnosticFileId, /* file content */ ArcStr>,
   pub(crate) labels: Vec<Label<RolldownLabelSpan>>,
   pub(crate) help: Option<String>,
+  pub(crate) note: Option<String>,
   pub(crate) severity: Severity,
 }
 
@@ -67,6 +68,7 @@ impl Diagnostic {
       files: FxHashMap::default(),
       labels: Vec::default(),
       help: None,
+      note: None,
       severity,
     }
   }
@@ -83,8 +85,15 @@ impl Diagnostic {
     filename
   }
 
+  #[inline]
   pub(crate) fn add_help(&mut self, message: String) -> &mut Self {
     self.help = Some(message);
+    self
+  }
+
+  #[inline]
+  pub(crate) fn add_note(&mut self, message: String) -> &mut Self {
+    self.note = Some(message);
     self
   }
 
@@ -131,6 +140,10 @@ impl Diagnostic {
 
     if let Some(help) = &self.help {
       builder = builder.with_help(help);
+    }
+
+    if let Some(note) = &self.note {
+      builder = builder.with_note(note);
     }
 
     builder = builder.with_message(message);

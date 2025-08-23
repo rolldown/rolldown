@@ -3735,6 +3735,10 @@ expression: output
 
 - main-!~{000}~.js => main-B-6QqlpX.js
 
+# tests/rolldown/errors/missing_export_ts
+
+- main-!~{000}~.js => main-BJyCdokI.js
+
 # tests/rolldown/function/advanced_chunks/basic
 
 - a-!~{000}~.js => a-CcaBLJp5.js

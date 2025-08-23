@@ -80,6 +80,7 @@ collapsible_if = "allow"
 criterion2 = { version = "3.0.0", default-features = false }
 css-module-lexer = "0.0.15"
 rolldown = { version = "0.1.0", path = "./crates/rolldown" }
+rolldown_binding_watcher = { version = "0.1.0", path = "./crates/rolldown_binding_watcher" }
 rolldown_common = { version = "0.1.0", path = "./crates/rolldown_common" }
 rolldown_debug = { version = "0.1.0", path = "./crates/rolldown_debug" }
 rolldown_debug_action = { version = "0.1.0", path = "./crates/rolldown_debug_action" }

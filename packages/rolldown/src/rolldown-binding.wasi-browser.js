@@ -113,3 +113,4 @@ export const FilterTokenKind = __napiModule.exports.FilterTokenKind
 export const registerPlugins = __napiModule.exports.registerPlugins
 export const shutdownAsyncRuntime = __napiModule.exports.shutdownAsyncRuntime
 export const startAsyncRuntime = __napiModule.exports.startAsyncRuntime
+export const JsWatcher = __napiModule.exports.JsWatcher

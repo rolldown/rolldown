@@ -29,19 +29,22 @@ use napi_derive::napi;
 #[global_allocator]
 static ALLOC: mimalloc_safe::MiMalloc = mimalloc_safe::MiMalloc;
 
+pub mod binding_bundler;
 pub mod binding_bundler_impl;
+pub mod binding_dev_engine;
+mod generated;
 pub mod options;
 pub mod parallel_js_plugin_registry;
 pub mod types;
 pub mod utils;
+pub mod watcher;
+pub mod worker_manager;
+
+// --- External NAPI-RS dependencies ---
 pub use oxc_parser_napi;
 pub use oxc_resolver_napi;
 pub use oxc_transform_napi;
-pub mod binding_bundler;
-pub mod binding_dev_engine;
-mod generated;
-pub mod watcher;
-pub mod worker_manager;
+pub use rolldown_binding_watcher;
 
 #[cfg(not(target_family = "wasm"))]
 #[napi_derive::module_init]

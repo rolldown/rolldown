@@ -7,4 +7,5 @@ mod notify_watcher;
 mod watcher;
 
 pub use crate::{event::EventResult as FileChangeResult, event_handler::EventHandler};
+pub use notify::RecursiveMode;
 pub use {notify_watcher::NotifyWatcher, watcher::Watcher};

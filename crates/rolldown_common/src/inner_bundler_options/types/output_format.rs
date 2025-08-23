@@ -25,6 +25,11 @@ impl OutputFormat {
   }
 
   #[inline]
+  pub fn is_esm_or_cjs(&self) -> bool {
+    matches!(self, Self::Esm | Self::Cjs)
+  }
+
+  #[inline]
   pub fn keep_esm_import_export_syntax(&self) -> bool {
     matches!(self, Self::Esm)
   }

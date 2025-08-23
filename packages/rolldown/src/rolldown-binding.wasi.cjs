@@ -158,3 +158,4 @@ module.exports.FilterTokenKind = __napiModule.exports.FilterTokenKind
 module.exports.registerPlugins = __napiModule.exports.registerPlugins
 module.exports.shutdownAsyncRuntime = __napiModule.exports.shutdownAsyncRuntime
 module.exports.startAsyncRuntime = __napiModule.exports.startAsyncRuntime
+module.exports.JsWatcher = __napiModule.exports.JsWatcher

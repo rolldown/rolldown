@@ -2734,6 +2734,7 @@ dependencies = [
  "oxc_resolver_napi",
  "oxc_transform_napi",
  "rolldown",
+ "rolldown_binding_watcher",
  "rolldown_common",
  "rolldown_debug",
  "rolldown_error",
@@ -2766,6 +2767,17 @@ dependencies = [
  "rustc-hash",
  "tracing",
  "url",
+]
+
+[[package]]
+name = "rolldown_binding_watcher"
+version = "0.1.0"
+dependencies = [
+ "napi",
+ "napi-build",
+ "napi-derive",
+ "rolldown_error",
+ "rolldown_watcher",
 ]
 
 [[package]]

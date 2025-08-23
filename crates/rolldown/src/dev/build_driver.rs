@@ -1,4 +1,4 @@
-use std::{mem, ops::Deref, path::PathBuf, sync::Arc};
+use std::{mem, path::PathBuf, sync::Arc};
 
 use futures::FutureExt;
 
@@ -8,7 +8,7 @@ use crate::{
   Bundler,
   dev::{
     bundling_task::BundlingTask,
-    dev_context::{BuildProcessFuture, DevContext, PinBoxSendStaticFuture, SharedDevContext},
+    dev_context::{BuildProcessFuture, PinBoxSendStaticFuture, SharedDevContext},
   },
 };
 
@@ -20,9 +20,7 @@ pub struct BuildDriver {
 }
 
 impl BuildDriver {
-  pub fn new(bundler: Arc<Mutex<Bundler>>) -> Self {
-    let ctx = Arc::new(DevContext::default());
-
+  pub fn new(bundler: Arc<Mutex<Bundler>>, ctx: SharedDevContext) -> Self {
     Self { bundler, ctx }
   }
 
@@ -58,13 +56,5 @@ impl BuildDriver {
     drop(build_status);
 
     Some(bundling_future)
-  }
-}
-
-impl Deref for BuildDriver {
-  type Target = DevContext;
-
-  fn deref(&self) -> &Self::Target {
-    &self.ctx
   }
 }

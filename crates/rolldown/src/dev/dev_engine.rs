@@ -12,7 +12,7 @@ use crate::{
   Bundler, BundlerBuilder,
   dev::{
     build_driver::{BuildDriver, SharedBuildDriver},
-    dev_context::PinBoxSendStaticFuture,
+    dev_context::{DevContext, PinBoxSendStaticFuture, SharedDevContext},
     watcher_event_service::WatcherEventService,
   },
 };
@@ -27,6 +27,7 @@ pub struct DevEngine<W> {
   watcher: Mutex<W>,
   watched_files: FxDashSet<ArcStr>,
   watch_service_state: Mutex<WatchServiceState>,
+  ctx: SharedDevContext,
 }
 
 impl<W: Watcher + Send + 'static> DevEngine<W> {
@@ -35,7 +36,8 @@ impl<W: Watcher + Send + 'static> DevEngine<W> {
   }
 
   pub fn with_bundler(bundler: Arc<Mutex<Bundler>>) -> BuildResult<Self> {
-    let build_driver = Arc::new(BuildDriver::new(bundler));
+    let ctx = Arc::new(DevContext::default());
+    let build_driver = Arc::new(BuildDriver::new(bundler, Arc::clone(&ctx)));
 
     let watcher_event_service = WatcherEventService::new(Arc::clone(&build_driver));
     let watcher = W::new(watcher_event_service.create_event_handler())?;
@@ -48,6 +50,7 @@ impl<W: Watcher + Send + 'static> DevEngine<W> {
         service: Some(watcher_event_service),
         handle: None,
       }),
+      ctx,
     })
   }
 
@@ -62,7 +65,7 @@ impl<W: Watcher + Send + 'static> DevEngine<W> {
     if let Some(build_process_future) = self.build_driver.schedule_build(vec![]).await {
       build_process_future.await;
     } else {
-      self.build_driver.ensure_current_build_finish().await;
+      self.ctx.ensure_current_build_finish().await;
     }
 
     if let Some(watcher_service) = watch_service_state.service.take() {
@@ -103,7 +106,7 @@ impl<W: Watcher + Send + 'static> DevEngine<W> {
   }
 
   pub async fn ensure_current_build_finish(&self) {
-    self.build_driver.ensure_current_build_finish().await;
+    self.ctx.ensure_current_build_finish().await;
   }
 }
 

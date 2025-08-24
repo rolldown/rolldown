@@ -1,4 +1,10 @@
 {
   "config": {
-  }
+  },
+  "configVariants": [
+    {
+      "strictExecutionOrder": true,
+      "onDemandWrapping": true
+    }
+  ]
 }

@@ -139,7 +139,9 @@ impl GenerateStage<'_> {
     for module_idx in &chunk.modules {
       module_to_exec_order
         .insert(*module_idx, self.link_output.module_table[*module_idx].exec_order());
-      if matches!(self.link_output.metas[*module_idx].wrap_kind(), WrapKind::Cjs | WrapKind::None) {
+      let meta = &self.link_output.metas[*module_idx];
+      if matches!(meta.wrap_kind(), WrapKind::Cjs | WrapKind::None) || meta.required_by_other_module
+      {
         root_only.insert(*module_idx);
       }
     }

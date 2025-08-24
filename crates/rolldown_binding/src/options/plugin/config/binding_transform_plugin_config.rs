@@ -97,7 +97,6 @@ impl From<BindingTransformPluginConfig> for TransformPlugin {
       });
 
       rolldown_plugin_transform::TransformOptions {
-        lang: v.lang,
         jsx,
         target,
         decorator,

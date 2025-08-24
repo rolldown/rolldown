@@ -920,60 +920,66 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
       // Convert `import('./foo.mjs')` to `Promise.resolve().then(function() { return require('foo.mjs') })`
       match &self.ctx.modules[importee_id] {
         Module::Normal(importee) => {
-          let importee_chunk_id = self.ctx.chunk_graph.entry_module_to_entry_chunk[&importee_id];
-          let importee_chunk = &self.ctx.chunk_graph.chunk_table[importee_chunk_id];
-          let import_path = self.ctx.chunk.import_path_for(importee_chunk);
+          if let Some(importee_chunk_id) = self.ctx.chunk_graph.module_to_chunk[importee_id] {
+            let importee_chunk = &self.ctx.chunk_graph.chunk_table[importee_chunk_id];
+            let import_path = self.ctx.chunk.import_path_for(importee_chunk);
 
-          // require('foo.mjs')
-          let mut require_call_expr =
-            ast::Expression::CallExpression(self.snippet.builder.alloc_call_expression(
-              SPAN,
-              self.snippet.builder.expression_identifier(SPAN, "require"),
-              NONE,
-              self.snippet.builder.vec1(ast::Argument::StringLiteral(
-                self.snippet.alloc_string_literal(&import_path, import_expr.span),
-              )),
-              false,
-            ));
-
-          if importee.exports_kind.is_commonjs() {
-            // __toDynamicImportESM
-            let to_dynamic_import_esm_fn_name =
-              self.finalized_expr_for_runtime_symbol("__toDynamicImportESM");
-
-            let mut arguments = self.snippet.builder.vec();
-            if self.ctx.module.should_consider_node_esm_spec_for_dynamic_import() {
-              arguments.push(ast::Argument::from(self.snippet.builder.expression_numeric_literal(
+            // require('foo.mjs')
+            let mut require_call_expr =
+              ast::Expression::CallExpression(self.snippet.builder.alloc_call_expression(
                 SPAN,
-                1.0,
-                None,
-                NumberBase::Decimal,
-              )));
+                self.snippet.builder.expression_identifier(SPAN, "require"),
+                NONE,
+                self.snippet.builder.vec1(ast::Argument::StringLiteral(
+                  self.snippet.alloc_string_literal(&import_path, import_expr.span),
+                )),
+                false,
+              ));
+
+            if importee.exports_kind.is_commonjs() {
+              // __toDynamicImportESM
+              let to_dynamic_import_esm_fn_name =
+                self.finalized_expr_for_runtime_symbol("__toDynamicImportESM");
+
+              let mut arguments = self.snippet.builder.vec();
+              if self.ctx.module.should_consider_node_esm_spec_for_dynamic_import() {
+                arguments.push(ast::Argument::from(
+                  self.snippet.builder.expression_numeric_literal(
+                    SPAN,
+                    1.0,
+                    None,
+                    NumberBase::Decimal,
+                  ),
+                ));
+              }
+              // __toDynamicImportESM(isNodeMode)
+              let to_dynamic_import_esm_fn_call =
+                ast::Expression::CallExpression(self.snippet.builder.alloc_call_expression(
+                  SPAN,
+                  to_dynamic_import_esm_fn_name,
+                  NONE,
+                  arguments,
+                  false,
+                ));
+
+              // __toDynamicImportESM(isNodeMode)(require('foo.mjs'))
+              require_call_expr =
+                ast::Expression::CallExpression(self.snippet.builder.alloc_call_expression(
+                  SPAN,
+                  to_dynamic_import_esm_fn_call,
+                  NONE,
+                  self.snippet.builder.vec1(ast::Argument::from(require_call_expr)),
+                  false,
+                ));
             }
-            // __toDynamicImportESM(isNodeMode)
-            let to_dynamic_import_esm_fn_call =
-              ast::Expression::CallExpression(self.snippet.builder.alloc_call_expression(
-                SPAN,
-                to_dynamic_import_esm_fn_name,
-                NONE,
-                arguments,
-                false,
-              ));
 
-            // __toDynamicImportESM(isNodeMode)(require('foo.mjs'))
-            require_call_expr =
-              ast::Expression::CallExpression(self.snippet.builder.alloc_call_expression(
-                SPAN,
-                to_dynamic_import_esm_fn_call,
-                NONE,
-                self.snippet.builder.vec1(ast::Argument::from(require_call_expr)),
-                false,
-              ));
+            let new_expr = self.snippet.promise_resolve_then_call_expr(require_call_expr);
+
+            return Some(new_expr);
+          } else {
+            // No chunk mapping for importee; skip transform and keep original import() expression.
+            return None;
           }
-
-          let new_expr = self.snippet.promise_resolve_then_call_expr(require_call_expr);
-
-          return Some(new_expr);
         }
         Module::External(_) => {
           // For `import('external')`, we just keep it as it is to preserve user's intention
@@ -1283,15 +1289,19 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
           let importee_id = rec.resolved_module;
           match &self.ctx.modules[importee_id] {
             Module::Normal(importee) => {
-              let importee_chunk_id =
-                self.ctx.chunk_graph.entry_module_to_entry_chunk[&rec.resolved_module];
-              let importee_chunk = &self.ctx.chunk_graph.chunk_table[importee_chunk_id];
+              if let Some(importee_chunk_id) =
+                self.ctx.chunk_graph.module_to_chunk[rec.resolved_module]
+              {
+                let importee_chunk = &self.ctx.chunk_graph.chunk_table[importee_chunk_id];
 
-              let import_path = self.ctx.chunk.import_path_for(importee_chunk);
-              expr.source = Expression::StringLiteral(
-                self.snippet.alloc_string_literal(&import_path, expr.source.span()),
-              );
-              needs_to_esm_helper = importee.exports_kind.is_commonjs();
+                let import_path = self.ctx.chunk.import_path_for(importee_chunk);
+                expr.source = Expression::StringLiteral(
+                  self.snippet.alloc_string_literal(&import_path, expr.source.span()),
+                );
+                needs_to_esm_helper = importee.exports_kind.is_commonjs();
+              } else {
+                // No chunk mapping for importee; keep original specifier unchanged.
+              }
             }
             Module::External(importee) => {
               let import_path = importee.get_import_path(self.ctx.chunk);

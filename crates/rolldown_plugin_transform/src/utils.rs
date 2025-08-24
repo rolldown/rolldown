@@ -74,22 +74,12 @@ impl TransformPlugin {
     let source_type = if is_jsx_refresh_lang {
       SourceType::mjs()
     } else {
-      match self.transform_options.lang.as_deref().or(ext) {
+      match ext {
         Some("js" | "cjs" | "mjs") => SourceType::mjs(),
         Some("jsx") => SourceType::jsx(),
         Some("ts" | "cts" | "mts") => SourceType::ts(),
         Some("tsx") => SourceType::tsx(),
-        None | Some(_) => {
-          let message = if let Some(lang) = &self.transform_options.lang {
-            anyhow::anyhow!("Invalid value for `transformOptions.lang`: `{lang}`.")
-          } else {
-            anyhow::anyhow!(
-              "Failed to detect the lang of {id}. Please specify `transformOptions.lang`."
-            )
-          };
-
-          return Err(message);
-        }
+        None | Some(_) => Err(anyhow::anyhow!("Failed to detect the lang of {id}."))?,
       }
     };
 

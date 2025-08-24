@@ -8,9 +8,8 @@ export default defineTest({
   config: {
     plugins: [
       transformPlugin({
-        include: [/.abc$/],
+        jsxRefreshInclude: [/.abc$/],
         transformOptions: {
-          lang: 'jsx',
           jsx: {
             throwIfNamespace: true,
           },

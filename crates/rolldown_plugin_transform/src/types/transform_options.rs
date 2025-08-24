@@ -8,8 +8,6 @@ use super::{
 
 #[derive(Debug, Default, Clone)]
 pub struct TransformOptions {
-  pub lang: Option<String>,
-
   pub jsx: Option<Either<String, JsxOptions>>,
 
   pub target: Option<Either<String, Vec<String>>>,

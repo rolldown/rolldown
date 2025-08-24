@@ -1,3 +1,3 @@
-import { a } from "./jsx.abc"
+import { a } from "./abc.jsx"
 
 console.log(a);

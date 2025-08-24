@@ -3,11 +3,11 @@ use std::path::{Path, PathBuf};
 use itertools::Either;
 use memchr::memmem;
 use oxc::{span::SourceType, transformer::TransformOptions};
-use rolldown_common::ModuleType;
+use rolldown_common::{JsxOptions, ModuleType};
 use rolldown_plugin::SharedTransformPluginContext;
 use rolldown_utils::{pattern_filter::filter as pattern_filter, url::clean_url};
 
-use crate::{JsxOptions, TransformPlugin};
+use super::TransformPlugin;
 
 pub enum JsxRefreshFilter {
   None,

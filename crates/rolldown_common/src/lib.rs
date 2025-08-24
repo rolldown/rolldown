@@ -61,6 +61,11 @@ pub mod bundler_options {
       sourcemap_ignore_list::SourceMapIgnoreList,
       sourcemap_path_transform::SourceMapPathTransform,
       target::ESTarget,
+      transform_option::{
+        CompilerAssumptions, DecoratorOptions, Either, IsolatedDeclarationsOptions, JsxOptions,
+        PluginsOptions, ReactRefreshOptions, StyledComponentsOptions,
+        TransformOptions as TransformOption, TypeScriptOptions,
+      },
       transform_options::{JsxPreset, TransformOptions},
       treeshake::{InnerOptions, ModuleSideEffects, ModuleSideEffectsRule, TreeshakeOptions},
       watch_option::{NotifyOption, OnInvalidate, WatchOption},

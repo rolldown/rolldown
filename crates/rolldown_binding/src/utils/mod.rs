@@ -3,6 +3,7 @@ use rolldown_tracing::try_init_tracing;
 pub mod minify_options_conversion;
 pub mod napi_error;
 pub mod normalize_binding_options;
+pub mod normalize_transform_options;
 
 pub fn try_init_custom_trace_subscriber(napi_env: Env) {
   let maybe_guard = try_init_tracing();

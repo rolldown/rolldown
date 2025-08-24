@@ -1,21 +1,23 @@
 use oxc_transform_napi::TransformOptions;
-use rolldown_common::bundler_options;
+use rolldown_common::{
+  BundlerTransformOptions, CompilerAssumptions, DecoratorOptions, Either,
+  IsolatedDeclarationsOptions, JsxOptions, PluginsOptions, ReactRefreshOptions,
+  StyledComponentsOptions, TypeScriptOptions,
+};
 
-pub fn normalize_binding_options(options: TransformOptions) -> bundler_options::TransformOption {
+pub fn normalize_binding_transform_options(options: TransformOptions) -> BundlerTransformOptions {
   let jsx = options.jsx.map(|jsx| match jsx {
-    napi::Either::A(jsx) => bundler_options::Either::Left(jsx),
+    napi::Either::A(jsx) => Either::Left(jsx),
     napi::Either::B(jsx) => {
       let refresh = jsx.refresh.map(|refresh| match refresh {
-        napi::Either::A(refresh) => bundler_options::Either::Left(refresh),
-        napi::Either::B(refresh) => {
-          bundler_options::Either::Right(bundler_options::ReactRefreshOptions {
-            refresh_reg: refresh.refresh_reg,
-            refresh_sig: refresh.refresh_sig,
-            emit_full_signatures: refresh.emit_full_signatures,
-          })
-        }
+        napi::Either::A(refresh) => Either::Left(refresh),
+        napi::Either::B(refresh) => Either::Right(ReactRefreshOptions {
+          refresh_reg: refresh.refresh_reg,
+          refresh_sig: refresh.refresh_sig,
+          emit_full_signatures: refresh.emit_full_signatures,
+        }),
       });
-      bundler_options::Either::Right(bundler_options::JsxOptions {
+      Either::Right(JsxOptions {
         runtime: jsx.runtime,
         development: jsx.development,
         throw_if_namespace: jsx.throw_if_namespace,
@@ -31,27 +33,26 @@ pub fn normalize_binding_options(options: TransformOptions) -> bundler_options::
   });
 
   let target = options.target.map(|target| match target {
-    napi::Either::A(v) => bundler_options::Either::Left(v),
-    napi::Either::B(v) => bundler_options::Either::Right(v),
+    napi::Either::A(v) => Either::Left(v),
+    napi::Either::B(v) => Either::Right(v),
   });
 
-  let decorator = options.decorator.map(|decorator| bundler_options::DecoratorOptions {
+  let decorator = options.decorator.map(|decorator| DecoratorOptions {
     legacy: decorator.legacy,
     emit_decorator_metadata: decorator.emit_decorator_metadata,
   });
 
   let typescript = options.typescript.map(|typescript| {
-    let declaration =
-      typescript.declaration.map(|declaration| bundler_options::IsolatedDeclarationsOptions {
-        strip_internal: declaration.strip_internal,
-        sourcemap: declaration.sourcemap,
-      });
+    let declaration = typescript.declaration.map(|declaration| IsolatedDeclarationsOptions {
+      strip_internal: declaration.strip_internal,
+      sourcemap: declaration.sourcemap,
+    });
     let rewrite_import_extensions = typescript.rewrite_import_extensions.map(|v| match v {
-      napi::Either::A(v) => bundler_options::Either::Left(v),
-      napi::Either::B(v) => bundler_options::Either::Right(v),
+      napi::Either::A(v) => Either::Left(v),
+      napi::Either::B(v) => Either::Right(v),
     });
 
-    bundler_options::TypeScriptOptions {
+    TypeScriptOptions {
       declaration,
       jsx_pragma: typescript.jsx_pragma,
       jsx_pragma_frag: typescript.jsx_pragma_frag,
@@ -63,7 +64,7 @@ pub fn normalize_binding_options(options: TransformOptions) -> bundler_options::
     }
   });
 
-  let assumptions = options.assumptions.map(|v| bundler_options::CompilerAssumptions {
+  let assumptions = options.assumptions.map(|v| CompilerAssumptions {
     ignore_function_length: v.ignore_function_length,
     no_document_all: v.no_document_all,
     object_rest_no_symbols: v.object_rest_no_symbols,
@@ -71,8 +72,8 @@ pub fn normalize_binding_options(options: TransformOptions) -> bundler_options::
     set_public_class_fields: v.set_public_class_fields,
   });
 
-  let plugins = options.plugins.map(|v| bundler_options::PluginsOptions {
-    styled_components: v.styled_components.map(|s| bundler_options::StyledComponentsOptions {
+  let plugins = options.plugins.map(|v| PluginsOptions {
+    styled_components: v.styled_components.map(|s| StyledComponentsOptions {
       display_name: s.display_name,
       file_name: s.file_name,
       ssr: s.ssr,
@@ -86,5 +87,5 @@ pub fn normalize_binding_options(options: TransformOptions) -> bundler_options::
     }),
   });
 
-  bundler_options::TransformOption { jsx, target, decorator, typescript, assumptions, plugins }
+  BundlerTransformOptions { jsx, target, decorator, typescript, assumptions, plugins }
 }

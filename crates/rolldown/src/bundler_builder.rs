@@ -2,17 +2,15 @@ use std::sync::Arc;
 
 use rolldown_common::{FileEmitter, NormalizedBundlerOptions};
 use rolldown_error::{BuildDiagnostic, EventKindSwitcher};
-use rolldown_fs::{OsFileSystem, OxcResolverFileSystem};
 use rolldown_plugin::{__inner::SharedPluginable, PluginDriver};
-use rolldown_resolver::{ResolveError, Resolver};
 use rustc_hash::FxHashMap;
 
 use crate::{
-  Bundler, BundlerOptions, SharedResolver,
+  Bundler, BundlerOptions,
   types::scan_stage_cache::ScanStageCache,
   utils::{
     apply_inner_plugins::apply_inner_plugins,
-    normalize_options::{NormalizeOptionsReturn, normalize_options},
+    prepare_build_context::{PrepareBuildContext, prepare_build_context},
   },
 };
 
@@ -30,35 +28,14 @@ impl BundlerBuilder {
 
     let maybe_guard = rolldown_tracing::try_init_tracing();
 
-    let NormalizeOptionsReturn { mut options, resolve_options, mut warnings } =
-      normalize_options(self.options);
+    let PrepareBuildContext { fs, resolver, options, mut warnings } =
+      prepare_build_context(self.options);
 
     Self::check_prefer_builtin_feature(self.plugins.as_slice(), &options, &mut warnings);
 
-    let tsconfig_filename = options.tsconfig.clone().map(|v| v.to_string_lossy().into_owned());
-    let fs = OsFileSystem::new(resolve_options.yarn_pnp.is_some_and(|b| b));
-    let resolver = Resolver::new(
-      fs.clone(),
-      options.cwd.clone(),
-      options.platform,
-      options.tsconfig.clone(),
-      resolve_options,
-    )
-    .into();
-
-    // TODO: error handling
-    Self::merge_transform_config_from_ts_config(
-      &mut options,
-      tsconfig_filename,
-      &resolver,
-      &mut warnings,
-    )
-    .unwrap();
-    let options = Arc::new(options);
+    apply_inner_plugins(&options, &mut self.plugins);
 
     let file_emitter = Arc::new(FileEmitter::new(Arc::clone(&options)));
-
-    apply_inner_plugins(&options, &mut self.plugins);
 
     Bundler {
       closed: false,
@@ -106,84 +83,6 @@ impl BundlerBuilder {
         .with_severity_warning(),
       );
     }
-  }
-
-  fn merge_transform_config_from_ts_config(
-    options: &mut NormalizedBundlerOptions,
-    tsconfig_filename: Option<String>,
-    resolver: &SharedResolver,
-    warning: &mut Vec<BuildDiagnostic>,
-  ) -> Result<(), ResolveError> {
-    let Some(tsconfig_filename) = tsconfig_filename else {
-      return Ok(());
-    };
-    let ts_config = resolver.resolve_tsconfig(&options.cwd.join(&tsconfig_filename))?;
-    if let Some(ref jsx_factory) = ts_config.compiler_options.jsx_factory {
-      if options.transform_options.jsx.pragma.is_none() {
-        options.transform_options.jsx.pragma = Some(jsx_factory.clone());
-      } else {
-        warning.push(
-          BuildDiagnostic::configuration_field_conflict(
-            "rolldown.config.js",
-            "jsx.factory",
-            &tsconfig_filename,
-            "compilerOptions.jsxFactory",
-          )
-          .with_severity_warning(),
-        );
-      }
-    }
-
-    if let Some(ref jsx_fragment_factory) = ts_config.compiler_options.jsx_fragment_factory {
-      if options.transform_options.jsx.pragma_frag.is_none() {
-        options.transform_options.jsx.pragma_frag = Some(jsx_fragment_factory.clone());
-      } else {
-        warning.push(
-          BuildDiagnostic::configuration_field_conflict(
-            "rolldown.config.js",
-            "jsx.fragment",
-            &tsconfig_filename,
-            "compilerOptions.jsxFragmentFactory",
-          )
-          .with_severity_warning(),
-        );
-      }
-    }
-
-    if let Some(ref jsx_import_source) = ts_config.compiler_options.jsx_import_source {
-      if options.transform_options.jsx.import_source.is_none() {
-        options.transform_options.jsx.import_source = Some(jsx_import_source.clone());
-      } else {
-        warning.push(
-          BuildDiagnostic::configuration_field_conflict(
-            "rolldown.config.js",
-            "jsx.jsxImportSource",
-            &tsconfig_filename,
-            "compilerOptions.jsxImportSource",
-          )
-          .with_severity_warning(),
-        );
-      }
-    }
-
-    if let Some(ref experimental_decorator) = ts_config.compiler_options.experimental_decorators {
-      options.transform_options.decorator.legacy = *experimental_decorator;
-    }
-
-    if let Some(ref experimental_decorator) = ts_config.compiler_options.emit_decorator_metadata {
-      options.transform_options.decorator.emit_decorator_metadata = *experimental_decorator;
-    }
-
-    // FIXME:
-    // if user set `transform.typescript.only_remove_type_imports` to false in `rolldown.config.js`, but also set `verbatim_module_syntax` to true in `tsconfig.json`
-    // We will override the value either, but actually `rolldown.config.js` should have higher priority.
-    // This due to the type of `only_remove_type_imports` is `bool` we don't know if the `false` is set
-    // by user or by default value.
-    if let Some(ref verbatim_module_syntax) = ts_config.compiler_options.verbatim_module_syntax {
-      options.transform_options.typescript.only_remove_type_imports = *verbatim_module_syntax;
-    }
-
-    Ok(())
   }
 
   #[must_use]

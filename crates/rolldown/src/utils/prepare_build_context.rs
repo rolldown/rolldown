@@ -1,4 +1,4 @@
-use std::{borrow::Cow, path::Path};
+use std::{borrow::Cow, path::Path, sync::Arc};
 
 use oxc::transformer_plugins::InjectGlobalVariablesConfig;
 use rolldown_common::{
@@ -7,12 +7,19 @@ use rolldown_common::{
   normalize_optimization_option,
 };
 use rolldown_error::{BuildDiagnostic, InvalidOptionType};
+use rolldown_fs::{OsFileSystem, OxcResolverFileSystem as _};
+use rolldown_resolver::Resolver;
 use rolldown_utils::ecmascript::is_validate_identifier_name;
 use rustc_hash::{FxHashMap, FxHashSet};
 
-pub struct NormalizeOptionsReturn {
-  pub options: NormalizedBundlerOptions,
-  pub resolve_options: rolldown_resolver::ResolveOptions,
+use crate::{
+  SharedResolver, utils::normalize_transform_options::normalize_transform_options_with_tsconfig,
+};
+
+pub struct PrepareBuildContext {
+  pub fs: OsFileSystem,
+  pub resolver: SharedResolver,
+  pub options: Arc<NormalizedBundlerOptions>,
   pub warnings: Vec<BuildDiagnostic>,
 }
 
@@ -88,7 +95,7 @@ fn verify_raw_options(raw_options: &crate::BundlerOptions) -> Vec<BuildDiagnosti
 }
 
 #[allow(clippy::too_many_lines)] // This function is long, but it's mostly just mapping values
-pub fn normalize_options(mut raw_options: crate::BundlerOptions) -> NormalizeOptionsReturn {
+pub fn prepare_build_context(mut raw_options: crate::BundlerOptions) -> PrepareBuildContext {
   let warnings = verify_raw_options(&raw_options);
 
   let format = raw_options.format.unwrap_or(crate::OutputFormat::Esm);
@@ -208,6 +215,19 @@ pub fn normalize_options(mut raw_options: crate::BundlerOptions) -> NormalizeOpt
     raw_treeshake = TreeshakeOptions::Boolean(false);
   }
 
+  let fs = OsFileSystem::new(raw_resolve.yarn_pnp.is_some_and(|b| b));
+  let resolver =
+    Arc::new(Resolver::new(fs.clone(), cwd.clone(), platform, tsconfig.clone(), raw_resolve));
+
+  // TODO: Handle below errors
+  let transform_options = Box::new(
+    normalize_transform_options_with_tsconfig(
+      raw_options.transform.unwrap_or_default(),
+      tsconfig.as_ref().map(|path| resolver.resolve_tsconfig(&path)).transpose().unwrap(),
+    )
+    .unwrap(),
+  );
+
   let mut normalized = NormalizedBundlerOptions {
     input: raw_options.input.unwrap_or_default(),
     external: raw_options.external.unwrap_or_default(),
@@ -266,7 +286,7 @@ pub fn normalize_options(mut raw_options: crate::BundlerOptions) -> NormalizeOpt
     keep_names: raw_options.keep_names.unwrap_or_default(),
     polyfill_require: raw_options.polyfill_require.unwrap_or(true),
     defer_sync_scan_data: raw_options.defer_sync_scan_data,
-    transform_options: Box::new(raw_options.transform.unwrap_or_default()),
+    transform_options,
     make_absolute_externals_relative: raw_options
       .make_absolute_externals_relative
       .unwrap_or_default(),
@@ -296,5 +316,5 @@ pub fn normalize_options(mut raw_options: crate::BundlerOptions) -> NormalizeOpt
 
   normalized.minify = raw_minify.normalize(&normalized);
 
-  NormalizeOptionsReturn { options: normalized, resolve_options: raw_resolve, warnings }
+  PrepareBuildContext { fs, resolver, options: Arc::new(normalized), warnings }
 }

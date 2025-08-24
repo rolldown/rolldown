@@ -1,3 +1,4 @@
+use super::normalize_binding_transform_options;
 use crate::options::binding_advanced_chunks_options::BindingChunkingContext;
 use crate::options::binding_jsx::BindingJsx;
 use crate::options::{AssetFileNamesOutputOption, ChunkFileNamesOutputOption, SanitizeFileName};
@@ -11,14 +12,13 @@ use crate::{
   types::{binding_rendered_chunk::BindingRenderedChunk, js_callback::MaybeAsyncJsCallbackExt},
 };
 use napi::bindgen_prelude::{Either, FnArgs};
-use oxc::transformer::ESTarget;
 use rolldown::{
   AddonOutputOption, AdvancedChunksOptions, AssetFilenamesOutputOption, BundlerOptions,
-  ChunkFilenamesOutputOption, DeferSyncScanDataOption, HashCharacters, IsExternal, JsxPreset,
-  MatchGroup, MatchGroupName, ModuleType, OptimizationOption, OutputExports, OutputFormat,
-  Platform, RawMinifyOptions, SanitizeFilename, TransformOptions,
+  ChunkFilenamesOutputOption, DeferSyncScanDataOption, HashCharacters, IsExternal, MatchGroup,
+  MatchGroupName, ModuleType, OptimizationOption, OutputExports, OutputFormat, Platform,
+  RawMinifyOptions, SanitizeFilename,
 };
-use rolldown_common::DeferSyncScanData;
+use rolldown_common::{DeferSyncScanData, bundler_options};
 use rolldown_plugin::__inner::SharedPluginable;
 use rolldown_utils::indexmap::FxIndexMap;
 use rolldown_utils::rustc_hash::FxHashMapExt;
@@ -113,45 +113,6 @@ fn normalize_globals_option(
       let name = name.to_string();
       Box::pin(async move { func.invoke_async((name,).into()).await.map_err(anyhow::Error::from) })
     })),
-  })
-}
-
-fn normalize_es_target(target: Option<&Either<String, Vec<String>>>) -> ESTarget {
-  target.map_or(ESTarget::ESNext, |target| {
-    let targets = match target {
-      Either::A(target) => {
-        if target.contains(',') {
-          target.split(',').collect::<Vec<&str>>()
-        } else {
-          vec![target.as_str()]
-        }
-      }
-      Either::B(target) => target.iter().map(std::string::String::as_str).collect::<Vec<&str>>(),
-    };
-    for target in targets {
-      if target.len() <= 2 || !target[..2].eq_ignore_ascii_case("es") {
-        continue;
-      }
-      if target[2..].eq_ignore_ascii_case("next") {
-        return ESTarget::ESNext;
-      }
-      if let Ok(n) = target[2..].parse::<usize>() {
-        return match n {
-          6 | 2015 => ESTarget::ES2015,
-          2016 => ESTarget::ES2016,
-          2017 => ESTarget::ES2017,
-          2018 => ESTarget::ES2018,
-          2019 => ESTarget::ES2019,
-          2020 => ESTarget::ES2020,
-          2021 => ESTarget::ES2021,
-          2022 => ESTarget::ES2022,
-          2023 => ESTarget::ES2023,
-          2024 => ESTarget::ES2024,
-          _ => continue,
-        };
-      }
-    }
-    ESTarget::ES2015
   })
 }
 
@@ -259,43 +220,20 @@ pub fn normalize_binding_options(
     module_types = Some(tmp);
   }
 
-  let without_jsx = input_options.transform.as_ref().is_none_or(|v| v.jsx.is_none());
-  let mut transform = if let Some(options) = input_options.transform {
-    let es_target = normalize_es_target(options.target.as_ref());
-    let is_preserve = matches!(&options.jsx, Some(Either::A(preset)) if preset == "preserve");
-    let transform_options = oxc::transformer::TransformOptions::try_from(options)
-      .map_err(|err| napi::Error::new(napi::Status::GenericFailure, err))?;
-
-    let jsx_preset = if is_preserve {
-      JsxPreset::Preserve
-    } else if transform_options.jsx.jsx_plugin {
-      JsxPreset::Enable
-    } else {
-      JsxPreset::Disable
-    };
-
-    TransformOptions::new(transform_options, es_target, jsx_preset)
-  } else {
-    TransformOptions::default()
-  };
-
-  if without_jsx {
-    if let Some(jsx) = input_options.jsx {
-      transform.jsx_preset = JsxPreset::Enable;
-      match jsx {
-        BindingJsx::Disable => {
-          transform.jsx_preset = JsxPreset::Disable;
-          transform.jsx.jsx_plugin = false;
-        }
-        BindingJsx::Preserve => {
-          transform.jsx_preset = JsxPreset::Preserve;
-          transform.jsx = oxc::transformer::JsxOptions::disable();
-        }
-        BindingJsx::React => {
-          transform.jsx.runtime = oxc::transformer::JsxRuntime::Classic;
-        }
-        BindingJsx::ReactJsx => {}
-      }
+  let mut transform_options = input_options.transform.map(normalize_binding_transform_options);
+  if transform_options.as_ref().is_none_or(|options| options.jsx.is_none()) {
+    if let Some(jsx) = input_options.jsx
+      && !matches!(jsx, BindingJsx::ReactJsx)
+    {
+      transform_options.get_or_insert_default().jsx = match jsx {
+        BindingJsx::Disable => Some(bundler_options::Either::Left("disable".to_owned())),
+        BindingJsx::Preserve => Some(bundler_options::Either::Left("preserve".to_owned())),
+        BindingJsx::React => Some(bundler_options::Either::Right(bundler_options::JsxOptions {
+          runtime: Some("classic".to_owned()),
+          ..Default::default()
+        })),
+        BindingJsx::ReactJsx => unreachable!(),
+      };
     }
   }
 
@@ -475,7 +413,7 @@ pub fn normalize_binding_options(
     keep_names: input_options.keep_names,
     polyfill_require: output_options.polyfill_require,
     defer_sync_scan_data: get_defer_sync_scan_data,
-    transform: Some(transform),
+    transform: transform_options,
     make_absolute_externals_relative: input_options
       .make_absolute_externals_relative
       .map(Into::into),

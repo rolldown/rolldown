@@ -3,7 +3,7 @@ use rolldown_plugin_transform::TransformPlugin;
 
 use crate::{
   types::binding_string_or_regex::{BindingStringOrRegex, bindingify_string_or_regex_array},
-  utils::normalize_transform_options::normalize_binding_options,
+  utils::normalize_binding_transform_options,
 };
 
 #[napi_derive::napi(object, object_to_js = false)]
@@ -37,7 +37,10 @@ impl From<BindingTransformPluginConfig> for TransformPlugin {
       jsx_inject: value.jsx_inject,
       is_server_consumer: value.is_server_consumer.unwrap_or(true),
       sourcemap: value.transform_options.as_ref().and_then(|v| v.sourcemap).unwrap_or(true),
-      transform_options: value.transform_options.map(normalize_binding_options).unwrap_or_default(),
+      transform_options: value
+        .transform_options
+        .map(normalize_binding_transform_options)
+        .unwrap_or_default(),
     }
   }
 }

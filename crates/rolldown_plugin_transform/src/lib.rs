@@ -9,7 +9,7 @@ use oxc::codegen::{Codegen, CodegenOptions, CodegenReturn, CommentOptions};
 use oxc::parser::Parser;
 use oxc::semantic::SemanticBuilder;
 use oxc::transformer::Transformer;
-use rolldown_common::{ModuleType, TransformOption as TransformOptions};
+use rolldown_common::{BundlerTransformOptions, ModuleType};
 use rolldown_error::{BuildDiagnostic, Severity};
 use rolldown_plugin::{HookUsage, Plugin, SharedTransformPluginContext};
 use rolldown_utils::{
@@ -25,7 +25,7 @@ pub struct TransformPlugin {
   pub jsx_inject: Option<String>,
   pub is_server_consumer: bool,
   pub sourcemap: bool,
-  pub transform_options: TransformOptions,
+  pub transform_options: BundlerTransformOptions,
 }
 
 /// only handle ecma like syntax, `jsx`,`tsx`,`ts`

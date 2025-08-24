@@ -499,6 +499,12 @@
             "string",
             "null"
           ]
+        },
+        "tsconfig": {
+          "type": [
+            "string",
+            "null"
+          ]
         }
       },
       "additionalProperties": false
@@ -734,12 +740,6 @@
         "symlinks": {
           "type": [
             "boolean",
-            "null"
-          ]
-        },
-        "tsconfigFilename": {
-          "type": [
-            "string",
             "null"
           ]
         },

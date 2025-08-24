@@ -139,7 +139,6 @@ export interface InputOptions {
     mainFiles?: string[];
     modules?: string[];
     symlinks?: boolean;
-    tsconfigFilename?: string;
   };
   cwd?: string;
   /**
@@ -376,6 +375,17 @@ export interface InputOptions {
     | 'exports-only';
   optimization?: OptimizationOptions;
   context?: string;
+  /**
+   * Allows you to specify where to find the TypeScript configuration file.
+   *
+   * You may provide:
+   * - a relative path to the configuration file. It will be resolved relative to cwd.
+   * - an absolute path to the configuration file.
+   *
+   * When a tsconfig path is specified, the module resolver will respect `compilerOptions.paths` from the specified `tsconfig.json`,
+   * and the tsconfig options will be merged with the top-level `transform` options, with the `transform` options taking precedence.
+   */
+  tsconfig?: string;
 }
 
 interface OverwriteInputOptionsForCli {

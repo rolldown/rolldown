@@ -200,6 +200,7 @@ pub fn normalize_options(mut raw_options: crate::BundlerOptions) -> NormalizeOpt
   );
   let cwd =
     raw_options.cwd.unwrap_or_else(|| std::env::current_dir().expect("Failed to get current dir"));
+  let tsconfig = raw_options.tsconfig.map(|tsconfig| cwd.join(tsconfig));
 
   let mut raw_treeshake = raw_options.treeshake;
   if experimental.hmr.is_some() {
@@ -290,6 +291,7 @@ pub fn normalize_options(mut raw_options: crate::BundlerOptions) -> NormalizeOpt
     top_level_var: raw_options.top_level_var.unwrap_or(false),
     minify_internal_exports: raw_options.minify_internal_exports.unwrap_or(false),
     context: raw_options.context.unwrap_or_default(),
+    tsconfig,
   };
 
   normalized.minify = raw_minify.normalize(&normalized);

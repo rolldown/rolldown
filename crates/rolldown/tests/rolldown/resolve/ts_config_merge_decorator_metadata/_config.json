@@ -1,8 +1,6 @@
 {
   "config": {
-    "resolve": {
-      "tsconfigFilename": "tsconfig.json"
-    },
+    "tsconfig": "tsconfig.json",
     "external": ["preact/jsx-runtime", "@babel/runtime/helpers/decorateParam", "@babel/runtime/helpers/decorate"]
   },
   "expectExecuted": false

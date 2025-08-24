@@ -105,6 +105,7 @@ pub struct NormalizedBundlerOptions {
   pub top_level_var: bool,
   pub minify_internal_exports: bool,
   pub context: String,
+  pub tsconfig: Option<PathBuf>,
 }
 
 // This is only used for testing
@@ -175,6 +176,7 @@ impl Default for NormalizedBundlerOptions {
       top_level_var: false,
       minify_internal_exports: Default::default(),
       context: Default::default(),
+      tsconfig: Default::default(),
     }
   }
 }

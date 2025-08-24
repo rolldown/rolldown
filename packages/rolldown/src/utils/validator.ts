@@ -311,7 +311,6 @@ const ResolveOptionsSchema = v.strictObject({
   mainFiles: v.optional(v.array(v.string())),
   modules: v.optional(v.array(v.string())),
   symlinks: v.optional(v.boolean()),
-  tsconfigFilename: v.optional(v.string()),
   yarnPnp: v.optional(v.boolean()),
 });
 
@@ -499,6 +498,10 @@ const InputOptionsSchema = v.strictObject({
       v.literal('exports-only'),
       v.literal(false),
     ])),
+  ),
+  tsconfig: v.pipe(
+    v.optional(v.string()),
+    v.description('Path to the tsconfig.json file.'),
   ),
 });
 

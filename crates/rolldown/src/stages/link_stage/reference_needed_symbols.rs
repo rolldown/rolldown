@@ -120,7 +120,14 @@ impl LinkStage<'_> {
                         if is_reexport_all {
                           let meta = &self.metas[importee.idx];
                           if meta.has_dynamic_exports {
-                            *importer_side_effect = DeterminedSideEffects::Analyzed(true);
+                            unsafe {
+                              // Avoid rustc false positive dead store optimization, https://cran.r-project.org/web/packages/rco/vignettes/opt-dead-store.html
+                              // same below
+                              std::ptr::write_volatile(
+                                importer_side_effect,
+                                DeterminedSideEffects::Analyzed(true),
+                              );
+                            }
                             stmt_info.side_effect = true.into();
                             stmt_info.meta.insert(StmtInfoMeta::ReExportDynamicExports);
                             depended_runtime_helper_map[RuntimeHelper::ReExport.bit_index()]
@@ -132,7 +139,12 @@ impl LinkStage<'_> {
                       }
                       WrapKind::Cjs => {
                         if is_reexport_all {
-                          *importer_side_effect = DeterminedSideEffects::Analyzed(true);
+                          unsafe {
+                            std::ptr::write_volatile(
+                              importer_side_effect,
+                              DeterminedSideEffects::Analyzed(true),
+                            );
+                          }
                           stmt_info.side_effect = true.into();
                           // Turn `export * from 'bar_cjs'` into `__reExport(foo_exports, __toESM(require_bar_cjs()))`
                           // Reference to `require_bar_cjs`
@@ -177,7 +189,13 @@ impl LinkStage<'_> {
                           // This branch means this module contains code like `export * from './some-wrapped-module.js'`.
                           // We need to mark this module as having side effects, so it could be included forcefully and
                           // responsible for generating `init_xxx_dep` calls to ensure deps got initialized correctly.
-                          *importer_side_effect = DeterminedSideEffects::Analyzed(true);
+
+                          unsafe {
+                            std::ptr::write_volatile(
+                              importer_side_effect,
+                              DeterminedSideEffects::Analyzed(true),
+                            );
+                          }
                         }
                         if is_reexport_all && importee_linking_info.has_dynamic_exports {
                           // Turn `export * from 'bar_esm'` into `init_bar_esm();__reExport(foo_exports, bar_esm_exports);`

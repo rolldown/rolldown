@@ -39,7 +39,7 @@ export type GlobalsFunction = (name: string) => string;
 
 export type MinifyOptions = Omit<
   BindingMinifyOptions,
-  'module' | 'codegen' | 'sorucemap'
+  'module' | 'codegen' | 'sourcemap'
 >;
 
 export interface ChunkingContext {

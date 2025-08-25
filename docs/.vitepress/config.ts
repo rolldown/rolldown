@@ -142,6 +142,15 @@ export default defineConfig({
             },
           ],
         },
+        {
+          text: 'Builtin Plugins',
+          items: [
+            {
+              text: 'builtin:esm-external-require',
+              link: '/plugins/esm-external-require.md',
+            },
+          ],
+        },
       ],
       '/contrib-guide/': [
         {

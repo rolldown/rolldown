@@ -13,7 +13,7 @@ use rolldown_common::{
   RUNTIME_HELPER_NAMES, SymbolRef, WrapKind,
 };
 use rolldown_utils::concat_string;
-use rolldown_utils::hash_placeholder::to_base64;
+use rolldown_utils::hash_placeholder::to_base64_on_frequent_chars;
 use rolldown_utils::indexmap::FxIndexSet;
 use rolldown_utils::rayon::IntoParallelIterator;
 use rolldown_utils::rayon::{ParallelBridge, ParallelIterator};
@@ -520,7 +520,7 @@ impl GenerateStage<'_> {
           let mut export_name: CompactStr;
           loop {
             named_index += 1;
-            export_name = CompactStr::new(&to_base64(named_index));
+            export_name = to_base64_on_frequent_chars(named_index).into();
             if export_name.starts_with('1') {
               named_index += 9 * 64u32.pow(u32::try_from(export_name.len() - 1).unwrap());
               continue;

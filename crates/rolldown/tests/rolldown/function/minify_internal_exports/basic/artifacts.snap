@@ -10,12 +10,12 @@ source: crates/rolldown_testing/src/integration_test.rs
 const internal = "internal";
 
 //#endregion
-export { internal as b };
+export { internal as t };
 ```
 ## main.js
 
 ```js
-import { b as internal } from "./internal.js";
+import { t as internal } from "./internal.js";
 
 //#region main.js
 const main = internal;
@@ -26,7 +26,7 @@ export { main };
 ## main2.js
 
 ```js
-import { b as internal } from "./internal.js";
+import { t as internal } from "./internal.js";
 
 //#region main2.js
 const main2 = internal;

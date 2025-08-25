@@ -39,7 +39,7 @@ jobs:
         with:
           issue-number: ${{ github.event.issue.number }}
           comment-author: 'github-actions[bot]'
-          body-includes: 'Thanks for reporting this issue!'
+          body-includes: 'Issues marked with `needs-reproduction`'
 
       - name: Write a new comment
         uses: peter-evans/create-or-update-comment@71345be0265236311c031f5c7866368bd1eff043 # v4.0.0
@@ -48,7 +48,7 @@ jobs:
           token: ${{ secrets.GITHUB_TOKEN }}
           comment-id: ${{ steps.find-comment.outputs.comment-id }}
           issue-number: ${{ github.event.issue.number }}
-          body: 'Thanks for reporting this issue! To help us investigate and resolve it more efficiently, could you provide a minimal reproduction? You can either create a [StackBlitz project](https://stackblitz.com/fork/github/rolldown/rolldown-starter-stackblitz?file=README.md) or a GitHub repository demonstrating the problem. This will make it easier for us to debug and find a solution. Thanks!'
+          body: 'Hello @${{ github.event.issue.user.login }}. Please provide a [minimal reproduction](https://stackoverflow.com/help/minimal-reproducible-example) using a GitHub repository or [StackBlitz](https://stackblitz.com/fork/github/rolldown/rolldown-starter-stackblitz?file=README.md). Issues marked with `needs-reproduction` will be closed if they have no activity within 14 days. Thanks!'
           reactions-edit-mode: 'replace'
           edit-mode: replace
 

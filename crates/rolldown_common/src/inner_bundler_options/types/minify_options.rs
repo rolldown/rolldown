@@ -12,7 +12,7 @@ use serde::Deserialize;
 pub enum RawMinifyOptions {
   Bool(bool),
   DeadCodeEliminationOnly,
-  Object(oxc::minifier::MinifierOptions),
+  Object((oxc::minifier::MinifierOptions, bool)),
 }
 
 impl RawMinifyOptions {
@@ -44,10 +44,10 @@ impl RawMinifyOptions {
             treeshake: TreeShakeOptions::from(&options.treeshake),
             ..CompressOptions::smallest()
           };
-          MinifyOptions::Enabled(oxc::minifier::MinifierOptions {
-            mangle: Some(mangle),
-            compress: Some(compress),
-          })
+          MinifyOptions::Enabled((
+            oxc::minifier::MinifierOptions { mangle: Some(mangle), compress: Some(compress) },
+            true,
+          ))
         } else {
           MinifyOptions::Disabled
         }
@@ -76,7 +76,7 @@ pub enum MinifyOptions {
   Disabled,
   DeadCodeEliminationOnly,
   /// Setting all values to false in `MinifyOptionsObject` means DCE only.
-  Enabled(oxc::minifier::MinifierOptions),
+  Enabled((oxc::minifier::MinifierOptions, bool)),
 }
 
 impl MinifyOptions {

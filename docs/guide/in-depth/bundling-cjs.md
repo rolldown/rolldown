@@ -121,6 +121,8 @@ export default (id) => {
 
 :::
 
+You can also use [the built-in `esmExternalRequirePlugin`](/plugins/esm-external-require.md) to convert `require()` calls to `import` statements.
+
 ## Future Plans
 
 Rolldown's first-class support for CommonJS modules enables several potential optimizations:

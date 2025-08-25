@@ -1,4 +1,117 @@
 
+## [1.0.0-beta.34] - 2025-08-25
+
+### 💥 BREAKING CHANGES
+
+- improve merging of top-level `transform` option with `tsconfig` (#5882) by @shulaoda
+- support top-level `tsconfig` (#5842) by @shulaoda
+
+### 🚀 Features
+
+- rolldown_plugin_esm_external_require: export namespace directly for Node builtin modules (#5885) by @shulaoda
+- rolldown_plugin_dynamic_import_vars: warn by default when errors occur (#5866) by @shulaoda
+- support adding note for diagnostic (#5864) by @IWANABETHATGUY
+- rolldown_plugin_vite_css_post: align partial css chunk logic (#5861) by @shulaoda
+- setup `rolldown_binding_watcher` (#5859) by @hyf0
+- rolldown_plugin_vite_css_post: align css url replace logic (#5857) by @shulaoda
+- node/dev: binding for `DevEngine` (#5852) by @hyf0
+- dev: introduce `DevEngine` to support build for devlopement scenario (#5808) by @hyf0
+- Show a information log to tell built-in features if a plugin covered by built-in features are used (#5845) by @IWANABETHATGUY
+- rolldown_plugin_vite_css_post: align partial css url replace logic (#5837) by @shulaoda
+- rolldown_plugin_vite_css_post: align CSS chunk concatenation logic (#5836) by @shulaoda
+- rolldown_plugin_transform: support `useDefineForClassFields=false` with `target>=es2022` (#5841) by @sapphi-red
+- expose `esmExternalRequirePlugin` (#5810) by @shulaoda
+- rolldown_plugin_esm_external_require: basic implementation (#5809) by @shulaoda
+- rolldown: oxc v0.82.3 (#5807) by @Boshen
+- expose `oxc_minifier` options (#5804) by @IWANABETHATGUY
+- rolldown_plugin_require_to_import: initialize (#5797) by @shulaoda
+- adjust codegen `initial_indent` for concatenateWrappedModule (#5779) by @IWANABETHATGUY
+- rolldown: align default value of `option.context` (#5745) by @situ2001
+
+### 🐛 Bug Fixes
+
+- topLevelVar option removes class name, causing a TypeError in static block (#5888) by @IWANABETHATGUY
+- a esm module required by other module can't be a inner module of concatenateModuleGroup (#5875) by @IWANABETHATGUY
+- rolldown_plugin_transform: align `lang` logic correctly (#5874) by @shulaoda
+- Runtime error occurs depending on the lazy import order. (#5873) by @IWANABETHATGUY
+- when importee is ts or tsx adding potential false positive note for `missing_export` diagnostic (#5862) by @IWANABETHATGUY
+- hmr: boundary and accept_via was reversed (#5843) by @sapphi-red
+- returning result of this.resolve in resolveId hook impacts bundle size (#5851) by @IWANABETHATGUY
+- rolldown_plugin_transform: set `typescript.removeClassFieldsWithoutInitializer` for `useDefineForClassFields=false` (#5840) by @sapphi-red
+- hmr: `import.meta.hot.accept` in patch file should work (#5823) by @sapphi-red
+- proper handle pife and profiler_names for concatenate_wrapped_modules (#5835) by @IWANABETHATGUY
+- jsx preserve break component which is default export (#5751) by @shulaoda
+- hmr: ensure patch file name to be unique (#5825) by @sapphi-red
+- hmr: re-execute the boundary module rather than the accepted module (#5822) by @sapphi-red
+- Rolldown cannot treeshake unused branch (#5829) by @IWANABETHATGUY
+- `inlineConst` with constant propagation (#5826) by @IWANABETHATGUY
+- don't mangle variable names when `minify: 'dce-only'` is used (#5830) by @sapphi-red
+- return actual normalized minify options (#5818) by @IWANABETHATGUY
+- plugin/vite-resolve: try non-prefixed index before prefixed index (#5801) by @sapphi-red
+- throw a semantic error message instead of panic (#5796) by @AliceLanniste
+- rolldown: run DCE on chunk when `minify: dce-only` (#5792) by @Boshen
+- the import attribute has been removed. (#5794) by @IWANABETHATGUY
+- don't match CRLF for `/./` (#5790) by @IWANABETHATGUY
+- node: allow `output.topLevelVar` by options validator (#5789) by @sapphi-red
+- node: allow `transform.jsx: 'preserve'` by options validator (#5781) by @sapphi-red
+- preserve default export for `preserveModules` (#5780) by @shulaoda
+- browser: sync exports (#5776) by @sxzz
+- rolldown_plugin_transform: skip builtin transform for module id with null byte (#5775) by @hi-ogawa
+
+### 🚜 Refactor
+
+- move common transform types into rolldown_common (#5876) by @shulaoda
+- rolldown_plugin_vite_css_post: extract `finalize_vite_css_urls` (#5860) by @shulaoda
+- rust: make `NotifyWatcher` WASM-compatible (#5855) by @hyf0
+- rust/dev: remove improper deref for `BuildDriver` (#5854) by @hyf0
+- incremental: use `clone_in_with_semantic_ids` for program cloning (#5853) by @shulaoda
+- rolldown_plugin_esm_external_require: tweak code (#5824) by @shulaoda
+- improve `resolve_dependencies` (#5795) by @shulaoda
+- simplify method calls in `PluginContext` (#5785) by @situ2001
+
+### 📚 Documentation
+
+- builtin-plugins: clarify behavior of `esmExternalRequirePlugin` (#5886) by @sapphi-red
+- builtin-plugins: add documentation for `esmExternalRequirePlugin` (#5813) by @shulaoda
+- support extracting doc for reference type (#5834) by @IWANABETHATGUY
+- optimization.inlineConst (#5831) by @IWANABETHATGUY
+- update description for output.minify (#5816) by @IWANABETHATGUY
+- plugins: extract plugins into a separate section (#5812) by @shulaoda
+
+### ⚡ Performance
+
+- string_wizard: reduce allocation (#5793) by @Brooooooklyn
+
+### 🧪 Testing
+
+- hmr: import.meta.hot.accept cases (#5821) by @sapphi-red
+- hmr: static import cases (#5820) by @sapphi-red
+- hmr: no boundary full reload case (#5819) by @sapphi-red
+
+### ⚙️ Miscellaneous Tasks
+
+- deps: update `oxc-resolver` to v11.7.0 (#5889) by @shulaoda
+- deps: lock file maintenance (#5880) by @renovate[bot]
+- deps: lock file maintenance rust crates (#5881) by @renovate[bot]
+- deps: update github-actions (#5877) by @renovate[bot]
+- deps: lock file maintenance rust crates (#5879) by @renovate[bot]
+- deps: lock file maintenance npm packages (#5878) by @renovate[bot]
+- bump rolldown-ariadne (#5863) by @IWANABETHATGUY
+- remove usage of `quote_expr`, `quote_stmt` (#5858) by @IWANABETHATGUY
+- vite-tests: run all test suites even if some test suites failed (#5828) by @sapphi-red
+- vite-tests: set `_VITE_TEST_JS_PLUGIN` instead of `_VITE_TEST_NATIVE_PLUGIN` (#5827) by @sapphi-red
+- deps: use `vitepress@^2.0.0-alpha.12` instead (#5811) by @shulaoda
+- deps: update dependency rolldown-plugin-dts to v0.15.7 (#5814) by @renovate[bot]
+- add example with oxc transform styled components plugin (#5800) by @IWANABETHATGUY
+- deprecate top-level `jsx` option in favor of `transform.jsx` (#5783) by @shulaoda
+- deps: update crate-ci/typos action to v1.35.5 (#5786) by @renovate[bot]
+- update default value of options.context (#5777) by @IWANABETHATGUY
+
+### ◀️ Revert
+
+- "fix: jsx preserve break component which is default export (#5764)" (#5856) by @shulaoda
+
+
 ## [1.0.0-beta.33] - 2025-08-18
 
 ### 💥 BREAKING CHANGES

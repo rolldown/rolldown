@@ -1,6 +1,6 @@
 use oxc_index::IndexVec;
 use rolldown_common::{
-  EcmaViewMeta, ExportsKind, IndexModules, Module, ModuleIdx, NormalModule,
+  EcmaViewMeta, ExportsKind, ImportKind, IndexModules, Module, ModuleIdx, NormalModule,
   NormalizedBundlerOptions, RuntimeModuleBrief, StmtInfo, StmtInfoMeta, SymbolRefDb,
   TaggedSymbolRef, WrapKind,
 };
@@ -51,8 +51,11 @@ fn wrap_module_recursively(ctx: &mut Context, target: ModuleIdx) {
     ctx.linking_infos[target].sync_wrap_kind(new_wrap_kind);
   }
 
-  module.import_records.iter().for_each(|importee| {
-    wrap_module_recursively(ctx, importee.resolved_module);
+  module.import_records.iter().for_each(|rec| {
+    if matches!(rec.kind, ImportKind::Require) {
+      ctx.linking_infos[rec.resolved_module].required_by_other_module = true;
+    }
+    wrap_module_recursively(ctx, rec.resolved_module);
   });
 }
 
@@ -122,11 +125,7 @@ impl LinkStage<'_> {
         );
       }
 
-      let is_wrap_kind_none = matches!(self.metas[module_id].wrap_kind(), WrapKind::None);
-
-      // When `strict_execution_order` is enabled, we need to wrap every module to lazy/control their execution.
-      // However, this doesn't include runtime module. runtime module should be initialized on its own.
-      let need_to_wrap = !is_wrap_kind_none;
+      let need_to_wrap = !self.metas[module_id].wrap_kind().is_none();
 
       if need_to_wrap {
         wrap_module_recursively(
@@ -145,6 +144,10 @@ impl LinkStage<'_> {
           let Module::Normal(importee) = &self.module_table[rec.resolved_module] else {
             return;
           };
+
+          if matches!(rec.kind, ImportKind::Require) {
+            self.metas[rec.resolved_module].required_by_other_module = true;
+          }
           // Commonjs as a dependency must be wrapped. The wrapper is like a commonjs runtime to help initialize the commonjs module correctly.
           if matches!(importee.exports_kind, ExportsKind::CommonJs) {
             wrap_module_recursively(
@@ -177,7 +180,8 @@ impl LinkStage<'_> {
           // effects and is not execution order sensitive , we don't need to wrap it.
           let avoid_wrapping = on_demand_wrapping
             && !module.meta.contains(EcmaViewMeta::ExecutionOrderSensitive)
-            && module.import_records.is_empty();
+            && module.import_records.is_empty()
+            && !linking_info.required_by_other_module;
           linking_info.update_wrap_kind(if avoid_wrapping {
             WrapKind::None
           } else {

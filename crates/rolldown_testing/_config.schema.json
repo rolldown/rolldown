@@ -1368,6 +1368,27 @@
             "boolean",
             "null"
           ]
+        },
+        "constBindings": {
+          "description": "Use `const` instead of `var` for generated variable declarations, including helper functions.\nSee <https://rollupjs.org/configuration-options/#output-generatedcode-constbindings>",
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
+        "reservedNamesAsProps": {
+          "description": "See <https://rollupjs.org/configuration-options/#output-generatedcode-reservednamesasprops>",
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
+        "symbols": {
+          "description": "See <https://rollupjs.org/configuration-options/#output-generatedcode-symbols>",
+          "type": [
+            "boolean",
+            "null"
+          ]
         }
       },
       "additionalProperties": false

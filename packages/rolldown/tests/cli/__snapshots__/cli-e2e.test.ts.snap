@@ -63,10 +63,13 @@ OPTIONS
   --minify-internal-exports   Minify internal exports.
   --module-types <types>      Module types for customized extensions.
   --no-external-live-bindings Disable external live bindings.
+  --no-optimization.const-bindings Disable using \`const\` bindings for importing modules.
+  --no-optimization.reserved-names-as-props Disable using static property names for reserved names.
   --no-preserve-entry-signatures Avoid facade chunks for entry points.
   --no-treeshake              Disable treeshaking.
   --optimization.inline-const Enable crossmodule constant inlining.
-  --optimization.pife-for-module-wrappers Use PIFE pattern for module wrappers.
+  --optimization.pife-for-module-wrappers Using PIFE pattern for module wrappers.
+  --optimization.symbols      Using symbols for private properties.
   --outro <outro>             Code to insert the bottom of the bundled file (inside the wrapper function).
   --polyfill-require          Disable require polyfill injection.
   --preserve-modules          Preserve module structure.

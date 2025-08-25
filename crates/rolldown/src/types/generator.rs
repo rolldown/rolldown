@@ -49,7 +49,11 @@ impl GenerateContext<'_> {
     if let Some(ns_alias) = namespace_alias {
       let canonical_ns_name = &canonical_names[&ns_alias.namespace_ref];
       let property_name = &ns_alias.property_name;
-      return property_access_str(canonical_ns_name, property_name);
+      return property_access_str(
+        canonical_ns_name,
+        property_name,
+        self.options.optimization.is_reserved_names_as_props_enabled(),
+      );
     }
 
     if self.link_output.module_table[canonical_ref.owner].is_external() {
@@ -77,7 +81,11 @@ impl GenerateContext<'_> {
 
           let require_binding = &self.chunk_graph.chunk_table[cur_chunk_idx]
             .require_binding_names_for_other_chunks[&chunk_idx_of_canonical_symbol];
-          rolldown_utils::ecmascript::property_access_str(require_binding, exported_name)
+          property_access_str(
+            require_binding,
+            exported_name,
+            self.options.optimization.is_reserved_names_as_props_enabled(),
+          )
         } else {
           self.canonical_name_for(canonical_names, canonical_ref).to_string()
         }

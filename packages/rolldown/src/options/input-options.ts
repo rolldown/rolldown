@@ -98,6 +98,9 @@ export type OptimizationOptions = {
    * @default false
    */
   inlineConst?: boolean;
+  constBindings?: boolean;
+  reservedNamesAsProps?: boolean;
+  symbols?: boolean;
 };
 
 export type AttachDebugOptions = 'none' | 'simple' | 'full';

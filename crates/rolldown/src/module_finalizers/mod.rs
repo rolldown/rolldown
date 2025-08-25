@@ -1,3 +1,4 @@
+use bitflags::bitflags;
 use oxc::semantic::ScopeFlags;
 use oxc::{
   allocator::{self, Allocator, Box as ArenaBox, CloneIn, Dummy, IntoIn, TakeIn},
@@ -34,6 +35,19 @@ use crate::hmr::utils::HmrAstBuilder;
 mod hmr;
 mod rename;
 
+bitflags! {
+    #[derive(Clone, Copy, Debug, PartialEq, Eq)]
+    pub struct TraverseState: u8 {
+        const IsTopLevel = 1;
+        /// - `if (test) {} else {}`
+        /// - test ? a : b
+        /// - test1 ?? test2
+        /// - test1 ?? test2
+        /// - test1 || test2
+        const SafeInlineConst = 1 << 1;
+    }
+}
+
 /// Finalizer for emitting output code with scope hoisting.
 pub struct ScopeHoistingFinalizer<'me, 'ast: 'me> {
   pub ctx: ScopeHoistingFinalizerContext<'me>,
@@ -43,7 +57,7 @@ pub struct ScopeHoistingFinalizer<'me, 'ast: 'me> {
   pub comments: oxc::allocator::Vec<'ast, Comment>,
   pub generated_init_esm_importee_ids: FxHashSet<ModuleIdx>,
   pub scope_stack: Vec<ScopeFlags>,
-  pub is_top_level: bool,
+  pub state: TraverseState,
   pub top_level_var_bindings: FxIndexSet<Atom<'ast>>,
 }
 
@@ -221,7 +235,11 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
       canonical_symbol = self.ctx.symbol_db.get(canonical_ref);
     }
     if let Some(meta) = self.ctx.constant_value_map.get(&canonical_ref) {
-      return meta.value.to_expression(AstBuilder::new(self.alloc));
+      if !self.ctx.options.optimization.is_inline_const_safe_mode()
+        || self.state.contains(TraverseState::SafeInlineConst)
+      {
+        return meta.value.to_expression(AstBuilder::new(self.alloc));
+      }
     }
 
     let mut expr = if self.ctx.modules[canonical_ref.owner].is_external() {

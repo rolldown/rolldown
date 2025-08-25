@@ -19,6 +19,10 @@ pub mod bundler_options {
     checks_options::ChecksOptions,
     runtime_helper::{RUNTIME_HELPER_NAMES, RuntimeHelper},
   };
+
+  #[cfg(feature = "deserialize_bundler_options")]
+  pub use crate::inner_bundler_options::types::optimization::deserialize_inline_const;
+
   pub use crate::inner_bundler_options::{
     BundlerOptions,
     types::{
@@ -47,7 +51,7 @@ pub mod bundler_options {
       module_type::ModuleType,
       normalized_bundler_options::{NormalizedBundlerOptions, SharedNormalizedBundlerOptions},
       on_log::{Log, LogWithoutPlugin, OnLog},
-      optimization::{OptimizationOption, normalize_optimization_option},
+      optimization::{InlineConstOption, OptimizationOption, normalize_optimization_option},
       output_exports::OutputExports,
       output_format::OutputFormat,
       output_option::{

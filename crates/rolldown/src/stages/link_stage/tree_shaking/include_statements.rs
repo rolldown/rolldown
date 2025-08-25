@@ -40,6 +40,7 @@ struct Context<'a> {
   is_included_vec: &'a mut IndexVec<ModuleIdx, IndexVec<StmtInfoIdx, bool>>,
   is_module_included_vec: &'a mut IndexVec<ModuleIdx, bool>,
   tree_shaking: bool,
+  safe_inline_const: bool,
   runtime_id: ModuleIdx,
   metas: &'a LinkingMetadataVec,
   used_symbol_refs: &'a mut FxHashSet<SymbolRef>,
@@ -87,6 +88,7 @@ impl LinkStage<'_> {
       bailout_cjs_tree_shaking_modules: FxHashSet::default(),
       may_partial_namespace: false,
       module_namespace_included_reason: &mut module_namespace_included_reason,
+      safe_inline_const: self.options.optimization.is_inline_const_safe_mode(),
     };
 
     let (user_defined_entries, mut dynamic_entries): (Vec<_>, Vec<_>) =
@@ -409,6 +411,7 @@ impl LinkStage<'_> {
       bailout_cjs_tree_shaking_modules: FxHashSet::default(),
       may_partial_namespace: false,
       module_namespace_included_reason,
+      safe_inline_const: self.options.optimization.is_inline_const_safe_mode(),
     };
 
     for helper in depended_runtime_helper {
@@ -521,6 +524,7 @@ fn include_symbol(ctx: &mut Context, symbol_ref: SymbolRef, include_kind: Symbol
 
   if let Some(v) = ctx.constant_symbol_map.get(&canonical_ref)
     && !include_kind.contains(SymbolIncludeReason::EntryExport)
+    && !ctx.safe_inline_const
     && !v.commonjs_export
   {
     // If the symbol is a constant value and it is not a commonjs module export , we don't need to include it since it would be always inline

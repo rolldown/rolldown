@@ -5014,6 +5014,10 @@ expression: output
 
 - main-!~{000}~.js => main-B8_4kzog.js
 
+# tests/rolldown/optimization/inline_const/safe_mode
+
+- main-!~{000}~.js => main-DY_in-SM.js
+
 # tests/rolldown/optimization/pife_for_module_wrappers/basic
 
 - a-!~{000}~.js => a-CcaBLJp5.js

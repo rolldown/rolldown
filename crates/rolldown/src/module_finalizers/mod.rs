@@ -1,4 +1,3 @@
-use oxc::ast::ast::{BindingPatternKind, ClassType};
 use oxc::semantic::ScopeFlags;
 use oxc::{
   allocator::{self, Allocator, Box as ArenaBox, CloneIn, Dummy, IntoIn, TakeIn},
@@ -1197,39 +1196,9 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
             }
           }
           if let Statement::ClassDeclaration(class_decl) = &mut top_stmt {
-            // If it's a class declaration, we need to transform it to a variable declaration whose rhs is a `class {}`
-            let class_name = class_decl.id.take().expect("Class declaration should have an id");
-            let class_id = self.snippet.builder.binding_pattern(
-              BindingPatternKind::BindingIdentifier(self.snippet.builder.alloc(class_name)),
-              NONE,
-              false,
-            );
-            let expr = self.snippet.builder.expression_class(
-              SPAN,
-              ClassType::ClassExpression,
-              class_decl.decorators.take_in(self.alloc),
-              None,
-              class_decl.type_parameters.take(),
-              class_decl.super_class.take(),
-              class_decl.super_type_arguments.take(),
-              class_decl.implements.take_in(self.alloc),
-              class_decl.body.take_in(self.alloc),
-              class_decl.r#abstract,
-              class_decl.declare,
-            );
-            let decl = self.snippet.builder.alloc_variable_declaration(
-              SPAN,
-              VariableDeclarationKind::Var,
-              self.snippet.builder.vec1(self.snippet.builder.variable_declarator(
-                SPAN,
-                VariableDeclarationKind::Var,
-                class_id,
-                Some(expr),
-                false,
-              )),
-              false,
-            );
-            top_stmt = Statement::VariableDeclaration(decl);
+            if let Some(mut decl) = self.get_transformed_class_decl(class_decl) {
+              top_stmt = Statement::from(decl.take_in(self.alloc));
+            }
           }
         }
         program.body.push(top_stmt);

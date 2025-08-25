@@ -9,12 +9,32 @@ type BindingCallableBuiltinPluginLike = {
   [K in keyof BindingCallableBuiltinPlugin]: BindingCallableBuiltinPlugin[K];
 };
 
+const CLASS_SYMBOL = Symbol.for('BuiltinPlugin');
+
+// Our cli use `.mjs`, but the configuration maybe use `.cjs` entry(if use require to load builtin plugins or use cts configuration).
+// Use this pattern to ensure the whole process use same `BuiltinPlugin` class.
 export class BuiltinPlugin {
-  constructor(
+  // Make constructor private to enforce singleton pattern
+  //
+  private constructor(
     public name: BindingBuiltinPluginName,
     // NOTE: has `_` to avoid conflict with `options` hook
     public _options?: unknown,
-  ) {}
+  ) {
+  }
+
+  static getInstance(
+    name: BindingBuiltinPluginName,
+    _options?: unknown,
+  ): BuiltinPlugin {
+    // @ts-ignore
+    if (!globalThis[CLASS_SYMBOL]) {
+      // @ts-ignore
+      globalThis[CLASS_SYMBOL] = BuiltinPlugin;
+    }
+    // @ts-ignore
+    return new globalThis[CLASS_SYMBOL](name, _options);
+  }
 }
 
 export function makeBuiltinPluginCallable(

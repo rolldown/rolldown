@@ -28,5 +28,5 @@ export function transformPlugin(config?: TransformPluginConfig): BuiltinPlugin {
       jsxRefreshExclude: normalizedStringOrRegex(config.jsxRefreshExclude),
     };
   }
-  return new BuiltinPlugin('builtin:transform', config);
+  return BuiltinPlugin.getInstance('builtin:transform', config);
 }

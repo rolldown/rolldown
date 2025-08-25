@@ -64,7 +64,7 @@ pub mod bundler_options {
       transform_option::{
         CompilerAssumptions, DecoratorOptions, Either, IsolatedDeclarationsOptions, JsxOptions,
         PluginsOptions, ReactRefreshOptions, StyledComponentsOptions,
-        TransformOptions as TransformOption, TypeScriptOptions,
+        TransformOptions as BundlerTransformOptions, TypeScriptOptions,
       },
       transform_options::{JsxPreset, TransformOptions},
       treeshake::{InnerOptions, ModuleSideEffects, ModuleSideEffectsRule, TreeshakeOptions},

@@ -38,7 +38,8 @@ use self::types::{
 };
 
 use crate::{
-  ChecksOptions, ChunkFilenamesOutputOption, ModuleType, SourceMapIgnoreList, TransformOptions,
+  BundlerTransformOptions, ChecksOptions, ChunkFilenamesOutputOption, ModuleType,
+  SourceMapIgnoreList,
 };
 
 pub mod types;
@@ -186,7 +187,7 @@ pub struct BundlerOptions {
     serde(deserialize_with = "deserialize_transform_options", default),
     schemars(with = "Option<FxHashMap<String, Value>>")
   )]
-  pub transform: Option<TransformOptions>,
+  pub transform: Option<BundlerTransformOptions>,
   pub watch: Option<WatchOption>,
   pub legal_comments: Option<LegalComments>,
   pub polyfill_require: Option<bool>,
@@ -382,40 +383,30 @@ where
 #[cfg(feature = "deserialize_bundler_options")]
 fn deserialize_transform_options<'de, D>(
   deserializer: D,
-) -> Result<Option<TransformOptions>, D::Error>
+) -> Result<Option<BundlerTransformOptions>, D::Error>
 where
   D: Deserializer<'de>,
 {
-  use std::str::FromStr;
-
-  use oxc::transformer::{ESTarget, EnvOptions, JsxOptions, JsxRuntime};
+  use itertools::Either;
   use serde_json::Value;
 
-  use crate::JsxPreset;
+  use crate::bundler_options::JsxOptions;
 
   let value = Option::<Value>::deserialize(deserializer)?;
   match value {
     Some(Value::Object(obj)) => {
-      let mut transform_options = TransformOptions::default();
+      let mut transform_options = BundlerTransformOptions::default();
       for (k, v) in obj {
         match k.as_str() {
           "target" => {
             let target = v
               .as_str()
               .ok_or_else(|| serde::de::Error::custom("transform.target should be a string"))?;
-            transform_options.es_target = ESTarget::from_str(target).map_err(|err| {
-              serde::de::Error::custom(format!(
-                "transform.target should be a valid es target. {err}"
-              ))
-            })?;
-            transform_options.env = EnvOptions::from_target(target).unwrap();
+            transform_options.target = Some(Either::Left(target.to_string()));
           }
           "jsx" => {
-            let jsx = match v {
-              Value::String(str) if str == "preserve" => {
-                transform_options.jsx_preset = JsxPreset::Preserve;
-                JsxOptions::disable()
-              }
+            transform_options.jsx = match v {
+              Value::String(str) if str == "preserve" => Some(Either::Left(str)),
               Value::Object(obj) => {
                 let mut default_jsx_option = JsxOptions::default();
                 for (k, v) in obj {
@@ -425,8 +416,9 @@ where
                         serde::de::Error::custom("jsx.runtime should be a string")
                       })?;
                       match runtime {
-                        "classic" => default_jsx_option.runtime = JsxRuntime::Classic,
-                        "automatic" => default_jsx_option.runtime = JsxRuntime::Automatic,
+                        "classic" | "automatic" => {
+                          default_jsx_option.runtime = Some(runtime.to_owned());
+                        }
                         _ => {
                           return Err(serde::de::Error::custom(format!(
                             "unknown jsx runtime: {runtime}",
@@ -438,30 +430,30 @@ where
                       let import_source = v.as_str().ok_or_else(|| {
                         serde::de::Error::custom("jsx.importSource should be a string")
                       })?;
-                      default_jsx_option.import_source = Some(import_source.to_string());
+                      default_jsx_option.import_source = Some(import_source.to_owned());
                     }
                     "development" => {
                       let development = v.as_bool().ok_or_else(|| {
                         serde::de::Error::custom("jsx.development should be a boolean")
                       })?;
-                      default_jsx_option.development = development;
+                      default_jsx_option.development = Some(development);
                     }
                     "pragma" => {
                       let pragma = v
                         .as_str()
                         .ok_or_else(|| serde::de::Error::custom("jsx.pragma should be a string"))?;
-                      default_jsx_option.pragma = Some(pragma.to_string());
+                      default_jsx_option.pragma = Some(pragma.to_owned());
                     }
                     "pragmaFrag" => {
                       let pragma_frag = v.as_str().ok_or_else(|| {
                         serde::de::Error::custom("jsx.pragmaFrag should be a string")
                       })?;
-                      default_jsx_option.pragma_frag = Some(pragma_frag.to_string());
+                      default_jsx_option.pragma_frag = Some(pragma_frag.to_owned());
                     }
                     _ => return Err(serde::de::Error::custom(format!("unknown jsx option: {k}",))),
                   }
                 }
-                default_jsx_option
+                Some(Either::Right(default_jsx_option))
               }
               _ => {
                 return Err(serde::de::Error::custom(
@@ -469,7 +461,6 @@ where
                 ));
               }
             };
-            transform_options.jsx = jsx;
           }
           _ => return Err(serde::de::Error::custom(format!("unknown transform option: {k}",))),
         }

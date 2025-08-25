@@ -23,6 +23,7 @@ pub struct ConfigVariant {
   pub on_demand_wrapping: Option<bool>,
   pub profiler_names: Option<bool>,
   pub pife_for_module_wrappers: Option<bool>,
+  pub top_level_var: Option<bool>,
   // --- non-bundler options are start with `_`
   /// Whether to include the output in the snapshot for this config variant.
   #[serde(rename = "_snapshot")]
@@ -74,6 +75,9 @@ impl ConfigVariant {
     if let Some(profiler_names) = &self.profiler_names {
       config.profiler_names = Some(*profiler_names);
     }
+    if let Some(top_level_var) = &self.top_level_var {
+      config.top_level_var = Some(*top_level_var);
+    }
     if let Some(pife_for_module_wrappers) = &self.pife_for_module_wrappers {
       config.optimization = Some(OptimizationOption {
         pife_for_module_wrappers: Some(*pife_for_module_wrappers),
@@ -120,6 +124,9 @@ impl ConfigVariant {
     }
     if let Some(entry_filenames) = &self.entry_filenames {
       fields.push(format!("entry_filenames: {entry_filenames:?}"));
+    }
+    if let Some(top_level_var) = &self.top_level_var {
+      fields.push(format!("top_level_var: {top_level_var:?}"));
     }
     let mut result = String::new();
     self.config_name.as_ref().inspect(|config_name| {

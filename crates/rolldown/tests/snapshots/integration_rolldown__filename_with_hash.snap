@@ -4954,6 +4954,10 @@ expression: output
 
 - main-!~{000}~.js => main-VI4jzbWN.js
 
+# tests/rolldown/misc/top_level_var/issue_5884
+
+- main-!~{000}~.js => main-DKngZ6kI.js
+
 # tests/rolldown/misc/use_strict/emit_use_strict_with_strict_cjs_in_cjs_format
 
 - main-!~{000}~.js => main-Cnui6OE6.js

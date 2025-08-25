@@ -301,8 +301,8 @@ where
     Some(SimpleMinifyOptions::String(value)) if value == "dceOnly" => {
       Ok(Some(RawMinifyOptions::DeadCodeEliminationOnly))
     }
-    // TODO: Throw new Error
-    _ => Ok(None),
+    None => Ok(None),
+    _ => unreachable!("Unexpected value for minify {:?}", deserialized),
   }
 }
 

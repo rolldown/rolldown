@@ -221,9 +221,7 @@ impl<'me, 'ast: 'me> Visit<'ast> for AstScanner<'me, 'ast> {
 
                 if let Some(value) = self.extract_constant_value_from_expr(Some(&node.right)) {
                   self
-                    .result
-                    .constant_export_map
-                    .insert(exported_symbol.symbol, ConstExportMeta::new(value, true));
+                    .add_constant_symbol(exported_symbol.symbol, ConstExportMeta::new(value, true));
                 }
 
                 self.result.commonjs_exports.insert(
@@ -340,10 +338,7 @@ impl<'me, 'ast: 'me> Visit<'ast> for AstScanner<'me, 'ast> {
           // Extract constant value for top-level variable declarations
           if self.is_root_symbol(binding.symbol_id()) {
             if let Some(value) = self.extract_constant_value_from_expr(Some(init)) {
-              self
-                .result
-                .constant_export_map
-                .insert(binding.symbol_id(), ConstExportMeta::new(value, false));
+              self.add_constant_symbol(binding.symbol_id(), ConstExportMeta::new(value, false));
             }
           }
         }
@@ -354,10 +349,7 @@ impl<'me, 'ast: 'me> Visit<'ast> for AstScanner<'me, 'ast> {
             if let BindingPatternKind::BindingIdentifier(binding) = &var_decl.id.kind {
               if let Some(init) = &var_decl.init {
                 if let Some(value) = self.extract_constant_value_from_expr(Some(init)) {
-                  self
-                    .result
-                    .constant_export_map
-                    .insert(binding.symbol_id(), ConstExportMeta::new(value, false));
+                  self.add_constant_symbol(binding.symbol_id(), ConstExportMeta::new(value, false));
                 }
               }
             }

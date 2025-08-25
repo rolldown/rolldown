@@ -642,10 +642,7 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
               if let BindingPatternKind::BindingIdentifier(ref binding) = decl.id.kind
                 && let Some(value) = self.extract_constant_value_from_expr(decl.init.as_ref())
               {
-                self
-                  .result
-                  .constant_export_map
-                  .insert(binding.symbol_id(), ConstExportMeta::new(value, false));
+                self.add_constant_symbol(binding.symbol_id(), ConstExportMeta::new(value, false));
               }
             });
           }
@@ -698,7 +695,7 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
       .unwrap_or((self.result.default_export_ref.symbol, Span::default()));
 
     if let Some(v) = self.extract_constant_value_from_expr(decl.declaration.as_expression()) {
-      self.result.constant_export_map.insert(reference, ConstExportMeta::new(v, false));
+      self.add_constant_symbol(reference, ConstExportMeta::new(v, false));
     }
 
     self.declare_normal_symbol_ref(reference);
@@ -903,6 +900,15 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
       return None;
     }
     expr.and_then(|expr| try_extract_const_literal(&self.create_constant_eval_ctx(), expr))
+  }
+
+  pub fn add_constant_symbol(&mut self, symbol_id: SymbolId, value: ConstExportMeta) {
+    let is_mutated = !self.result.symbol_ref_db.ast_scopes.is_facade_symbol(symbol_id)
+      && self.result.symbol_ref_db.scoping().symbol_is_mutated(symbol_id);
+    if is_mutated {
+      return;
+    }
+    self.result.constant_export_map.insert(symbol_id, value);
   }
 }
 

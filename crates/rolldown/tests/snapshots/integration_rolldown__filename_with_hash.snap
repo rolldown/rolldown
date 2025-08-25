@@ -5002,6 +5002,10 @@ expression: output
 
 - main-!~{000}~.js => main-CbeGViBB.js
 
+# tests/rolldown/optimization/inline_const/issue_5902
+
+- main-!~{000}~.js => main-RyfaQvKc.js
+
 # tests/rolldown/optimization/inline_const/ns_chain
 
 - main-!~{000}~.js => main-Brb9u1JP.js

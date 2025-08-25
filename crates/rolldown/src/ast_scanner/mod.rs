@@ -11,7 +11,7 @@ use arcstr::ArcStr;
 use const_eval::{ConstEvalCtx, try_extract_const_literal};
 use oxc::ast::ast::{BindingPatternKind, Expression};
 use oxc::ast::{AstKind, ast};
-use oxc::semantic::{Reference, ScopeFlags, Scoping};
+use oxc::semantic::{ScopeFlags, Scoping};
 use oxc::span::SPAN;
 use oxc::{
   ast::{
@@ -435,18 +435,12 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
   fn add_local_export(&mut self, export_name: &str, local: SymbolId, span: Span) {
     let symbol_ref: SymbolRef = (self.idx, local).into();
 
-    let is_const = self.result.symbol_ref_db.scoping().symbol_flags(local).is_const_variable();
-
     // If there is any write reference to the local variable, it is reassigned.
-    let is_reassigned =
-      self.result.symbol_ref_db.get_resolved_references(local).any(Reference::is_write);
+    let is_mutated = self.result.symbol_ref_db.scoping().symbol_is_mutated(local);
 
     let ref_flags = symbol_ref.flags_mut(&mut self.result.symbol_ref_db);
-    if is_const {
-      ref_flags.insert(SymbolRefFlags::IsConst);
-    }
-    if !is_reassigned {
-      ref_flags.insert(SymbolRefFlags::IsNotReassigned);
+    if is_mutated {
+      ref_flags.insert(SymbolRefFlags::IsMutated);
     }
 
     self.result.named_exports.insert(
@@ -458,7 +452,6 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
   fn add_local_default_export(&mut self, local: SymbolId, span: Span) {
     // The default symbol ref never get reassigned.
     let symbol_ref: SymbolRef = (self.idx, local).into();
-    symbol_ref.flags_mut(&mut self.result.symbol_ref_db).insert(SymbolRefFlags::IsNotReassigned);
 
     self.result.named_exports.insert(
       "default".into(),

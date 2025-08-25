@@ -18,10 +18,5 @@ var require_foo = /* @__PURE__ */ __commonJS({ "foo.js": ((exports) => {
 var import_foo = /* @__PURE__ */ __toESM(require_foo());
 
 //#endregion
-Object.defineProperty(exports, 'y', {
-  enumerable: true,
-  get: function () {
-    return import_foo.x;
-  }
-});
+exports.y = import_foo.x;
 ```

@@ -25,22 +25,7 @@ var test_default = {
 };
 
 //#endregion
-Object.defineProperty(exports, 'default', {
-  enumerable: true,
-  get: function () {
-    return test_default;
-  }
-});
-Object.defineProperty(exports, 'invalid-identifier', {
-  enumerable: true,
-  get: function () {
-    return invalid_identifier;
-  }
-});
-Object.defineProperty(exports, 'test', {
-  enumerable: true,
-  get: function () {
-    return test;
-  }
-});
+exports.default = test_default;
+exports["invalid-identifier"] = invalid_identifier;
+exports.test = test;
 ```

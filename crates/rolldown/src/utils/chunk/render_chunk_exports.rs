@@ -327,12 +327,7 @@ fn must_keep_live_binding(
 
   let canonical_ref = symbol_db.canonical_ref_for(export_ref);
 
-  if canonical_ref.is_declared_by_const(symbol_db).unwrap_or(false) {
-    // For unknown case, we consider it as not declared by `const`.
-    return false;
-  }
-
-  if canonical_ref.is_not_reassigned(symbol_db).unwrap_or(false) {
+  if !canonical_ref.is_mutated(symbol_db).unwrap_or(false) {
     // For unknown case, we consider it as reassigned.
     return false;
   }

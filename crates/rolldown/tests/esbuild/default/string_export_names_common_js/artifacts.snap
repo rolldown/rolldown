@@ -9,11 +9,6 @@ source: crates/rolldown_testing/src/integration_test.rs
 // HIDDEN [rolldown:runtime]
 const foo = __toESM(require("./foo"));
 
-Object.defineProperty(exports, 'all the stuff', {
-  enumerable: true,
-  get: function () {
-    return foo;
-  }
-});
+exports["all the stuff"] = foo;
 exports["some export"] = foo["some import"];
 ```

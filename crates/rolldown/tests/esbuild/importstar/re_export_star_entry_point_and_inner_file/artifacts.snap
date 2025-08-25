@@ -13,12 +13,7 @@ var inner_exports = {};
 __reExport(inner_exports, require("b"));
 
 //#endregion
-Object.defineProperty(exports, 'inner', {
-  enumerable: true,
-  get: function () {
-    return inner_exports;
-  }
-});
+exports.inner = inner_exports;
 var a = require("a");
 Object.keys(a).forEach(function (k) {
   if (k !== 'default' && !Object.prototype.hasOwnProperty.call(exports, k)) Object.defineProperty(exports, k, {

@@ -31,12 +31,7 @@ var mod = (function(exports, foo) {
 // HIDDEN [rolldown:runtime]
 foo = __toESM(foo);
 
-Object.defineProperty(exports, 'out', {
-  enumerable: true,
-  get: function () {
-    return foo;
-  }
-});
+exports.out = foo;
 return exports;
 })({}, foo);
 ```

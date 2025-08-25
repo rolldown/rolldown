@@ -42,12 +42,7 @@ exports.C = Class;
 exports.Class = Class;
 exports.Fn = Fn;
 exports.abc = abc;
-Object.defineProperty(exports, 'b', {
-  enumerable: true,
-  get: function () {
-    return b_exports;
-  }
-});
+exports.b = b_exports;
 exports.c = c;
 exports.default = entry_default;
 exports.l = l;

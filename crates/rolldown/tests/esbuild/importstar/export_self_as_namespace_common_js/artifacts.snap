@@ -18,10 +18,5 @@ const foo = 123;
 
 //#endregion
 exports.foo = foo;
-Object.defineProperty(exports, 'ns', {
-  enumerable: true,
-  get: function () {
-    return entry_exports;
-  }
-});
+exports.ns = entry_exports;
 ```

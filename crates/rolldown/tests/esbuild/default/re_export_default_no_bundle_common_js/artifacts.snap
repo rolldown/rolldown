@@ -10,16 +10,6 @@ source: crates/rolldown_testing/src/integration_test.rs
 const foo = __toESM(require("./foo"));
 const bar = __toESM(require("./bar"));
 
-Object.defineProperty(exports, 'bar', {
-  enumerable: true,
-  get: function () {
-    return bar.default;
-  }
-});
-Object.defineProperty(exports, 'foo', {
-  enumerable: true,
-  get: function () {
-    return foo.default;
-  }
-});
+exports.bar = bar.default;
+exports.foo = foo.default;
 ```

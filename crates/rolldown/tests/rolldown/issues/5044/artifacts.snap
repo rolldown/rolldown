@@ -32,10 +32,5 @@ const require_rolldown_runtime = require('./_virtual/rolldown_runtime.js');
 require('./lib.js');
 const preact = require_rolldown_runtime.__toESM(require("preact"));
 
-Object.defineProperty(exports, 'createContext', {
-  enumerable: true,
-  get: function () {
-    return preact.createContext;
-  }
-});
+exports.createContext = preact.createContext;
 ```

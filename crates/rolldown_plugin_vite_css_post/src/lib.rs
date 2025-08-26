@@ -1,18 +1,15 @@
 mod utils;
 
-use std::{borrow::Cow, path::PathBuf, sync::Arc};
+use std::{borrow::Cow, sync::Arc};
 
 use cow_utils::CowUtils;
-use rolldown_common::{EmittedAsset, ModuleType, OutputFormat, side_effects::HookSideEffects};
+use rolldown_common::{ModuleType, side_effects::HookSideEffects};
 use rolldown_plugin::{HookRenderChunkOutput, HookTransformOutput, HookUsage, Plugin};
 use rolldown_plugin_utils::{
-  RenderAssetUrlInJsEnv, RenderAssetUrlInJsEnvConfig, RenderBuiltUrl,
-  constants::{
-    CSSChunkCache, CSSEntriesCache, CSSModuleCache, CSSStyles, HTMLProxyResult, PureCSSChunks,
-    ViteMetadata,
-  },
+  RenderBuiltUrl,
+  constants::{CSSChunkCache, CSSModuleCache, CSSStyles, HTMLProxyResult, PureCSSChunks},
   css::is_css_request,
-  data_to_esm, find_special_query, get_chunk_original_name, is_special_query,
+  data_to_esm, find_special_query, is_special_query,
 };
 use rolldown_utils::{url::clean_url, xxhash::xxhash_with_base};
 use string_wizard::SourceMapOptions;
@@ -161,130 +158,7 @@ impl Plugin for ViteCssPostPlugin {
     let mut magic_string = None;
 
     self.finalize_vite_css_urls(ctx, args, &styles, &mut magic_string).await?;
-
-    if !css_chunk.is_empty() {
-      if is_pure_css_chunk && args.options.format.is_esm_or_cjs() {
-        ctx
-          .meta()
-          .get::<PureCSSChunks>()
-          .expect("PureCSSChunks missing")
-          .inner
-          .insert(args.chunk.filename.clone());
-      }
-
-      if self.css_code_split {
-        if args.options.format.is_esm_or_cjs() && !args.chunk.filename.contains("-legacy") {
-          let css_asset_path = PathBuf::from(args.chunk.name.as_str()).with_extension("css");
-          // if facadeModuleId doesn't exist or doesn't have a CSS extension,
-          // that means a JS entry file imports a CSS file.
-          // in this case, only use the filename for the CSS chunk name like JS chunks.
-          let css_asset_name = if args.chunk.is_entry
-            && args
-              .chunk
-              .facade_module_id
-              .as_ref()
-              .is_none_or(|id| !is_css_request(id.resource_id().as_str()))
-          {
-            css_asset_path.file_name().map(|v| v.to_string_lossy().into_owned())
-          } else {
-            Some(css_asset_path.to_string_lossy().into_owned())
-          };
-
-          let original_file_name = get_chunk_original_name(
-            ctx.cwd(),
-            self.is_legacy,
-            &args.chunk.name,
-            args.chunk.facade_module_id.as_ref(),
-          );
-
-          let content = self.resolve_asset_urls_in_css(&css_chunk).await;
-          let content = self.finalize_css(content).await;
-
-          let reference_id = ctx
-            .emit_file_async(EmittedAsset {
-              name: css_asset_name,
-              source: content.into(),
-              original_file_name,
-              ..Default::default()
-            })
-            .await?;
-
-          ctx
-            .meta()
-            .get::<ViteMetadata>()
-            .expect("ViteMetadata missing")
-            .imported_assets
-            .insert(ctx.get_file_name(&reference_id)?);
-
-          if args.chunk.is_entry && is_pure_css_chunk {
-            ctx
-              .meta()
-              .get::<CSSEntriesCache>()
-              .expect("CSSEntriesCache missing")
-              .inner
-              .insert(reference_id);
-          }
-        } else if self.is_client {
-          let injection_point = match args.options.format {
-            OutputFormat::Esm => {
-              if args.code.starts_with("#!") {
-                args.code.find('\n').unwrap_or(0)
-              } else {
-                0
-              }
-            }
-            OutputFormat::Iife | OutputFormat::Umd => {
-              let regex = if matches!(args.options.format, OutputFormat::Iife) {
-                &utils::RE_IIFE
-              } else {
-                &utils::RE_UMD
-              };
-              let Some(m) = regex.find(&args.code) else {
-                return Err(anyhow::anyhow!("Injection point for inlined CSS not found"));
-              };
-              m.end()
-            }
-            OutputFormat::Cjs => {
-              return Err(anyhow::anyhow!("CJS format is not supported for CSS injection"));
-            }
-          };
-
-          let content = serde_json::to_string(&self.finalize_css(css_chunk).await)?;
-          let env = RenderAssetUrlInJsEnv {
-            ctx,
-            code: &content,
-            chunk_filename: &args.chunk.filename,
-            config: RenderAssetUrlInJsEnvConfig {
-              is_ssr: self.is_ssr,
-              is_worker: self.is_worker,
-              url_base: &self.url_base,
-              decoded_base: &self.decoded_base,
-              render_built_url: self.render_built_url.as_deref(),
-            },
-          };
-
-          let css_string = env.render_asset_url_in_js().await?.unwrap_or(content);
-          let inject_code = rolldown_utils::concat_string!(
-            "var __vite_style__ = document.createElement('style');__vite_style__.textContent = ",
-            css_string,
-            ";document.head.appendChild(__vite_style__);"
-          );
-
-          magic_string
-            .get_or_insert_with(|| string_wizard::MagicString::new(&args.code))
-            .append_right(injection_point, inject_code);
-        }
-      } else {
-        let css_asset_name = self.get_css_bundle_name(ctx)?;
-        let css_chunk = self.resolve_asset_urls_in_css(&css_chunk).await;
-        ctx
-          .meta()
-          .get::<CSSChunkCache>()
-          .expect("CSSChunkCache missing")
-          .inner
-          .insert(args.chunk.filename.clone(), css_chunk);
-      }
-    }
+    self.finalize_css_chunk(ctx, args, css_chunk, is_pure_css_chunk, &mut magic_string).await?;
 
     Ok(magic_string.map(|magic_string| HookRenderChunkOutput {
       code: magic_string.to_string(),

@@ -7,8 +7,8 @@
   },
   "configVariants": [
     {
-      "_configName": "safe-inline-const",
-      "inlineConst": "safe"
+      "_configName": "smart-inline-const",
+      "inlineConst": "smart"
     }
   ]
 }

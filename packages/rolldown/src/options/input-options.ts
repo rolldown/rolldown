@@ -79,7 +79,7 @@ export type OptimizationOptions = {
    *
    * - `true`: Inline constants everywhere
    * - `false`: Disable constant inlining
-   * - `'safe'`: Only inline constants when it's safe to do so (avoids potential bundle size increases from duplicating large values)
+   * - `'smart'`: Only inline constants when it's smart to do so (avoids potential bundle size increases from duplicating large values)
    *
    * **example**
    * ```js
@@ -101,7 +101,7 @@ export type OptimizationOptions = {
    *
    * @default false
    */
-  inlineConst?: boolean | 'safe';
+  inlineConst?: boolean | 'smart';
 };
 
 export type AttachDebugOptions = 'none' | 'simple' | 'full';

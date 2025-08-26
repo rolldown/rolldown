@@ -168,7 +168,7 @@ impl NormalizedOptimizationConfig {
   }
 
   #[inline]
-  pub fn get_inline_const_pass(&self) -> u32 {
+  pub fn inline_const_pass(&self) -> u32 {
     self.inline_const.map(|item| item.pass).unwrap_or(1)
   }
 

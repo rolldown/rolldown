@@ -12,10 +12,7 @@ use crate::{
     binding_hmr_output::{BindingGenerateHmrPatchReturn, BindingHmrOutput},
     binding_outputs::BindingOutputs,
   },
-  utils::{
-    handle_result, normalize_binding_options::normalize_binding_options,
-    try_init_custom_trace_subscriber,
-  },
+  utils::{handle_result, normalize_binding_options::normalize_binding_options},
 };
 use napi::{
   Env,
@@ -55,13 +52,10 @@ impl ObjectFinalize for BindingBundlerImpl {
 impl BindingBundlerImpl {
   #[cfg_attr(target_family = "wasm", allow(unused))]
   pub fn new(
-    env: Env,
     option: BindingBundlerOptions,
     session: rolldown_debug::Session,
     build_count: u32,
   ) -> napi::Result<Self> {
-    try_init_custom_trace_subscriber(env);
-
     let BindingBundlerOptions { input_options, output_options, parallel_plugins_registry } = option;
 
     #[cfg(not(target_family = "wasm"))]
@@ -88,7 +82,8 @@ impl BindingBundlerImpl {
       .with_options(ret.bundler_options)
       .with_plugins(ret.plugins)
       .with_build_count(build_count)
-      .with_session(session);
+      .with_session(session)
+      .with_disable_tracing_setup(true);
 
     Ok(Self {
       inner: Arc::new(Mutex::new(bundler_builder.build())),

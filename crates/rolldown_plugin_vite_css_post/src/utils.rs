@@ -1,5 +1,9 @@
-use std::{path::PathBuf, sync::Arc};
+use std::{
+  path::PathBuf,
+  sync::{Arc, LazyLock},
+};
 
+use regex::Regex;
 use rolldown_common::EmittedAsset;
 use rolldown_plugin::{HookRenderChunkArgs, PluginContext};
 use rolldown_plugin_utils::{
@@ -14,6 +18,17 @@ use string_wizard::MagicString;
 use crate::ViteCssPostPlugin;
 
 pub const DEFAULT_CSS_BUNDLE_NAME: &str = "style.css";
+
+// TODO: improve below logic
+pub static RE_UMD: LazyLock<Regex> = std::sync::LazyLock::new(|| {
+  Regex::new(r#"\}\)\((?:this,\s*)?function\([^()]*\)\s*\{(?:\s*"use strict";)?"#).unwrap()
+});
+pub static RE_IIFE: LazyLock<Regex> = std::sync::LazyLock::new(|| {
+  Regex::new(
+    r#"(?:(?:const|var)\s+\S+\s*=\s*|^|\n)\(?function\([^()]*\)\s*\{(?:\s*"use strict";)?"#,
+  )
+  .unwrap()
+});
 
 pub fn extract_index(id: &str) -> Option<&str> {
   let s = id.split_once("&index=")?.1;

@@ -79,7 +79,13 @@ export type OptimizationOptions = {
    *
    * - `true`: Inline constants everywhere
    * - `false`: Disable constant inlining
-   * - `'safe'`: Only inline constants when it's safe to do so (avoids potential bundle size increases from duplicating large values)
+   * - `'smart'`: Only inline constants when the output is speculated to be smaller (avoids potential bundle size increases from duplicating large values).
+   *   Smart mode inlines constants in these specific scenarios:
+   *   - `if (test) {} else {}` - condition expressions in if statements
+   *   - `test ? a : b` - condition expressions in ternary operators
+   *   - `test1 || test2` - logical OR expressions
+   *   - `test1 && test2` - logical AND expressions
+   *   - `test1 ?? test2` - nullish coalescing expressions
    *
    * **example**
    * ```js
@@ -101,7 +107,7 @@ export type OptimizationOptions = {
    *
    * @default false
    */
-  inlineConst?: boolean | 'safe';
+  inlineConst?: boolean | 'smart';
 };
 
 export type AttachDebugOptions = 'none' | 'simple' | 'full';

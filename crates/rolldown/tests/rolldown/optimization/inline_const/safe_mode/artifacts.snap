@@ -21,7 +21,7 @@ export { five, four, mode_ident, o, three, two };
 ```
 ---
 
-Variant: safe-inline-const: [inline_const: Safe]
+Variant: smart-inline-const: [inline_const: Smart]
 
 # Assets
 

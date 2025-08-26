@@ -1356,7 +1356,7 @@
       "type": "object",
       "properties": {
         "inlineConst": {
-          "description": "Inline constant everywhere not always generate smaller bundle, e.g.\n```js\n// index.js\nimport {long_string} from './foo.js'\nconsole.log(long_string);\nconsole.log(long_string);\nconsole.log(long_string);\nconsole.log(long_string);\nconsole.log(long_string);\n// foo.js\nexport const long_string = 'this is a very long string that will be inlined everywhere';\n```\n\nOptions:\n- `None`: Use default behavior (false)\n- `Some(InlineConstOption::Bool(false))`: Disable inlining\n- `Some(InlineConstOption::Bool(true))`: Inline everywhere\n- `Some(InlineConstOption::Safe(\"safe\"))`: Only inline when safe",
+          "description": "Inline constant everywhere not always generate smaller bundle, e.g.\n```js\n// index.js\nimport {long_string} from './foo.js'\nconsole.log(long_string);\nconsole.log(long_string);\nconsole.log(long_string);\nconsole.log(long_string);\nconsole.log(long_string);\n// foo.js\nexport const long_string = 'this is a very long string that will be inlined everywhere';\n```\n\nOptions:\n- `None`: Use default behavior (false)\n- `Some(InlineConstOption::Bool(false))`: Disable inlining\n- `Some(InlineConstOption::Bool(true))`: Inline everywhere\n- `Some(InlineConstOption::Smart(\"smart\"))`: Only inline when the output is speculated to be smaller",
           "anyOf": [
             {
               "$ref": "#/$defs/InlineConstOption"

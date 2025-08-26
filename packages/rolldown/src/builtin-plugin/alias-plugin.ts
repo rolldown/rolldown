@@ -11,5 +11,5 @@ type AliasPluginConfig = {
 };
 
 export function aliasPlugin(config: AliasPluginConfig): BuiltinPlugin {
-  return new BuiltinPlugin('builtin:alias', config);
+  return BuiltinPlugin.getInstance('builtin:alias', config);
 }

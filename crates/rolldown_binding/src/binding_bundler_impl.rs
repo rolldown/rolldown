@@ -12,9 +12,7 @@ use crate::{
     binding_hmr_output::{BindingGenerateHmrPatchReturn, BindingHmrOutput},
     binding_outputs::BindingOutputs,
   },
-  utils::{
-    handle_result, normalize_binding_options::normalize_binding_options,
-  },
+  utils::{handle_result, normalize_binding_options::normalize_binding_options},
 };
 use napi::{
   Env,

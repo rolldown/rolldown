@@ -28,5 +28,10 @@ export function replacePlugin(
   values: BindingReplacePluginConfig['values'] = {},
   options: Omit<BindingReplacePluginConfig, 'values'> = {},
 ): BuiltinPlugin {
+  // Convert all values to string during runtime
+  Object.keys(values).forEach(key => {
+    values[key] = values[key].toString();
+  });
+
   return new BuiltinPlugin('builtin:replace', { ...options, values });
 }

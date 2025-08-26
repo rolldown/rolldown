@@ -32,6 +32,7 @@ pub struct BaseOptions<'a> {
   pub root: &'a str,
   pub preserve_symlinks: bool,
   pub tsconfig_paths: bool,
+  pub yarn_pnp: bool,
 }
 
 const ADDITIONAL_OPTIONS_FIELD_COUNT: u8 = 2;
@@ -173,6 +174,7 @@ fn get_resolve_options(
     prefer_relative: additional_options.prefer_relative,
     roots: if base_options.as_src { vec![base_options.root.into()] } else { vec![] },
     symlinks: !base_options.preserve_symlinks,
+    yarn_pnp: base_options.yarn_pnp,
     // This is not part of the spec, but required to align with rollup based vite.
     allow_package_exports_in_directory_resolve: true,
     ..Default::default()

@@ -1,0 +1,14 @@
+{
+  "config": {
+    "minify": "dceOnly",
+    "define": {
+      "process.env.NODE_ENV": "\"production\""
+    }
+  },
+  "configVariants": [
+    {
+      "_configName": "safe-inline-const",
+      "inlineConst": "safe"
+    }
+  ]
+}

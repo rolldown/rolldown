@@ -429,7 +429,7 @@ pub fn normalize_binding_options(
       .preserve_entry_signatures
       .map(std::convert::TryInto::try_into)
       .transpose()?,
-    optimization: input_options.optimization.map(OptimizationOption::from),
+    optimization: input_options.optimization.map(OptimizationOption::try_from).transpose()?,
     top_level_var: output_options.top_level_var,
     minify_internal_exports: output_options.minify_internal_exports,
     context: input_options.context,

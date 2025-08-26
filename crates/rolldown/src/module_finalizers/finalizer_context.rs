@@ -13,7 +13,7 @@ use rustc_hash::{FxHashMap, FxHashSet};
 use crate::{
   SharedOptions,
   chunk_graph::ChunkGraph,
-  module_finalizers::ScopeHoistingFinalizer,
+  module_finalizers::{ScopeHoistingFinalizer, TraverseState},
   types::linking_metadata::{LinkingMetadata, LinkingMetadataVec},
 };
 
@@ -53,7 +53,7 @@ impl<'me> ScopeHoistingFinalizerContext<'me> {
         generated_init_esm_importee_ids: FxHashSet::default(),
         scope_stack: vec![],
         top_level_var_bindings: FxIndexSet::default(),
-        is_top_level: false,
+        state: TraverseState::empty(),
       };
       finalizer.visit_program(oxc_program);
       oxc_program.comments = finalizer.comments.take_in(alloc);

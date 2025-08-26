@@ -1,9 +1,28 @@
 #[cfg(feature = "deserialize_bundler_options")]
 use schemars::JsonSchema;
 #[cfg(feature = "deserialize_bundler_options")]
-use serde::Deserialize;
+use serde::{Deserialize, Deserializer};
 
 use crate::Platform;
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+#[cfg_attr(
+  feature = "deserialize_bundler_options",
+  derive(Deserialize, JsonSchema),
+  serde(rename_all = "camelCase", deny_unknown_fields),
+  serde(untagged)
+)]
+pub enum InlineConstOption {
+  Bool(bool),
+  #[cfg_attr(feature = "deserialize_bundler_options", schemars(with = "String"))]
+  Safe,
+}
+
+impl Default for InlineConstOption {
+  fn default() -> Self {
+    InlineConstOption::Bool(false)
+  }
+}
 
 #[derive(Debug, Default, Clone)]
 #[cfg_attr(
@@ -12,8 +31,6 @@ use crate::Platform;
   serde(rename_all = "camelCase", deny_unknown_fields)
 )]
 pub struct OptimizationOption {
-  /// TODO: make the inline_const option more fine grained, e.g. `inline_const: false | true |
-  /// "on-demand"`.
   /// Inline constant everywhere not always generate smaller bundle, e.g.
   /// ```js
   /// // index.js
@@ -26,7 +43,18 @@ pub struct OptimizationOption {
   /// // foo.js
   /// export const long_string = 'this is a very long string that will be inlined everywhere';
   /// ```
-  pub inline_const: Option<bool>,
+  ///
+  /// Options:
+  /// - `None`: Use default behavior (false)
+  /// - `Some(InlineConstOption::Bool(false))`: Disable inlining
+  /// - `Some(InlineConstOption::Bool(true))`: Inline everywhere
+  /// - `Some(InlineConstOption::Safe("safe"))`: Only inline when safe
+  ///
+  #[cfg_attr(
+    feature = "deserialize_bundler_options",
+    serde(deserialize_with = "deserialize_inline_const", default)
+  )]
+  pub inline_const: Option<InlineConstOption>,
   /// Use PIFE patterns for module wrappers so that JS engines can compile the functions eagerly.
   /// This improves the initial execution performance.
   /// See <https://v8.dev/blog/preparser#pife> for more details about the optimization.
@@ -36,7 +64,12 @@ pub struct OptimizationOption {
 impl OptimizationOption {
   #[inline]
   pub fn is_inline_const_enabled(&self) -> bool {
-    self.inline_const.unwrap_or(false)
+    matches!(&self.inline_const, Some(InlineConstOption::Bool(true) | InlineConstOption::Safe))
+  }
+
+  #[inline]
+  pub fn is_inline_const_safe_mode(&self) -> bool {
+    matches!(&self.inline_const, Some(InlineConstOption::Safe))
   }
 
   #[inline]
@@ -55,5 +88,23 @@ pub fn normalize_optimization_option(
     pife_for_module_wrappers: Some(
       option.pife_for_module_wrappers.unwrap_or(!matches!(platform, Platform::Neutral)),
     ),
+  }
+}
+
+#[cfg(feature = "deserialize_bundler_options")]
+pub fn deserialize_inline_const<'de, D>(
+  deserializer: D,
+) -> Result<Option<InlineConstOption>, D::Error>
+where
+  D: Deserializer<'de>,
+{
+  use serde_json::Value;
+
+  let deserialized = Option::<Value>::deserialize(deserializer)?;
+  match deserialized {
+    Some(Value::Bool(v)) => Ok(Some(InlineConstOption::Bool(v))),
+    Some(Value::String(s)) if s == "safe" => Ok(Some(InlineConstOption::Safe)),
+    None => Ok(None),
+    _ => unreachable!(),
   }
 }

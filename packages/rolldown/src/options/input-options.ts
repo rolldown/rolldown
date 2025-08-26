@@ -77,6 +77,10 @@ export type OptimizationOptions = {
    * When enabled, constant values from imported modules will be inlined at their usage sites,
    * potentially reducing bundle size and improving runtime performance by eliminating variable lookups.
    *
+   * - `true`: Inline constants everywhere
+   * - `false`: Disable constant inlining
+   * - `'safe'`: Only inline constants when it's safe to do so (avoids potential bundle size increases from duplicating large values)
+   *
    * **example**
    * ```js
    * // Input files:
@@ -97,7 +101,7 @@ export type OptimizationOptions = {
    *
    * @default false
    */
-  inlineConst?: boolean;
+  inlineConst?: boolean | 'safe';
 };
 
 export type AttachDebugOptions = 'none' | 'simple' | 'full';

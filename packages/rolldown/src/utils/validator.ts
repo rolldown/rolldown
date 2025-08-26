@@ -979,6 +979,12 @@ export function validateOption<T>(key: 'input' | 'output', options: T): void {
         if (helper && helper.ignored) {
           return '';
         }
+        if (stringPath === 'resolve.tsconfigFilename') {
+          console.warn(
+            '\x1b[33m%s\x1b[0m',
+            'Warning: `resolve.tsconfigFilename` is deprecated. Please use the top-level `tsconfig` option instead.',
+          );
+        }
         return `- For the "${stringPath}". ${issueMsg}. ${
           helper ? helper.msg : ''
         }`;

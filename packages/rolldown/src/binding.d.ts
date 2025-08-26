@@ -1850,7 +1850,7 @@ export interface BindingNotifyOption {
 }
 
 export interface BindingOptimization {
-  inlineConst?: boolean | 'safe'
+  inlineConst?: boolean | 'smart'
   pifeForModuleWrappers?: boolean
 }
 

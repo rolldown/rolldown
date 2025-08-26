@@ -48,7 +48,7 @@ pub struct OptimizationOption {
   /// - `None`: Use default behavior (false)
   /// - `Some(InlineConstOption::Bool(false))`: Disable inlining
   /// - `Some(InlineConstOption::Bool(true))`: Inline everywhere
-  /// - `Some(InlineConstOption::Safe("safe"))`: Only inline when safe
+  /// - `Some(InlineConstOption::Safe("smart"))`: Only inline when smart
   ///
   #[cfg_attr(
     feature = "deserialize_bundler_options",
@@ -103,7 +103,7 @@ where
   let deserialized = Option::<Value>::deserialize(deserializer)?;
   match deserialized {
     Some(Value::Bool(v)) => Ok(Some(InlineConstOption::Bool(v))),
-    Some(Value::String(s)) if s == "safe" => Ok(Some(InlineConstOption::Safe)),
+    Some(Value::String(s)) if s == "smart" => Ok(Some(InlineConstOption::Safe)),
     None => Ok(None),
     _ => unreachable!(),
   }

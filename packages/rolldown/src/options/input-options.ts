@@ -143,6 +143,10 @@ export interface InputOptions {
     mainFiles?: string[];
     modules?: string[];
     symlinks?: boolean;
+    /**
+     * @deprecated Use the top-level `tsconfig` option instead.
+     */
+    tsconfigFilename?: string;
   };
   cwd?: string;
   /**

@@ -120,7 +120,7 @@ export function bindingifyInputOptions(
     ),
     optimization: inputOptions.optimization,
     context: inputOptions.context,
-    tsconfig: inputOptions.tsconfig,
+    tsconfig: inputOptions.resolve?.tsconfigFilename ?? inputOptions.tsconfig,
   };
 }
 

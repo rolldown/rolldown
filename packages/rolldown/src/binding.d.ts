@@ -1438,6 +1438,10 @@ export declare class ParallelJsPluginRegistry {
   constructor(workerCount: number)
 }
 
+export declare class TraceSubscriberGuard {
+  close(): void
+}
+
 export interface AliasItem {
   find: string
   replacements: Array<string>
@@ -2134,6 +2138,8 @@ export type FilterTokenKind =  'Id'|
 'CleanUrl'|
 'QueryKey'|
 'QueryValue';
+
+export declare function initTraceSubscriber(): TraceSubscriberGuard | null
 
 export interface JsChangedOutputs {
   deleted: Set<string>

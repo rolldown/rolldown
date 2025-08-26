@@ -7,8 +7,6 @@ use napi_derive::napi;
 use crate::binding_bundler_impl::{BindingBundlerImpl, BindingBundlerOptions};
 use crate::types::binding_watcher_event::BindingWatcherEvent;
 
-use napi::Env;
-
 use crate::utils::handle_result;
 
 use crate::types::js_callback::{MaybeAsyncJsCallback, MaybeAsyncJsCallbackExt};
@@ -39,7 +37,6 @@ pub struct BindingWatcher {
 impl BindingWatcher {
   #[napi(constructor)]
   pub fn new(
-    env: Env,
     options: Vec<BindingBundlerOptions>,
     notify_option: Option<BindingNotifyOption>,
   ) -> napi::Result<Self> {
@@ -47,7 +44,7 @@ impl BindingWatcher {
       .into_iter()
       .map(|option| {
         // TODO(hyf0): support emit debug data for builtin watch
-        BindingBundlerImpl::new(env, option, rolldown_debug::Session::dummy(), 0)
+        BindingBundlerImpl::new(option, rolldown_debug::Session::dummy(), 0)
           .map(BindingBundlerImpl::into_inner)
       })
       .collect::<Result<Vec<_>, _>>()?;

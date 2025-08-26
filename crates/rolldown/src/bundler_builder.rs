@@ -19,6 +19,7 @@ pub struct BundlerBuilder {
   options: BundlerOptions,
   plugins: Vec<SharedPluginable>,
   session: Option<rolldown_debug::Session>,
+  disable_tracing_setup: bool,
   build_count: u32,
 }
 
@@ -26,7 +27,8 @@ impl BundlerBuilder {
   pub fn build(mut self) -> Bundler {
     let session = self.session.unwrap_or_else(rolldown_debug::Session::dummy);
 
-    let maybe_guard = rolldown_tracing::try_init_tracing();
+    let maybe_guard =
+      if self.disable_tracing_setup { None } else { rolldown_tracing::try_init_tracing() };
 
     let PrepareBuildContext { fs, resolver, options, mut warnings } =
       prepare_build_context(self.options);
@@ -106,6 +108,12 @@ impl BundlerBuilder {
   #[must_use]
   pub fn with_session(mut self, session: rolldown_debug::Session) -> Self {
     self.session = Some(session);
+    self
+  }
+
+  #[must_use]
+  pub fn with_disable_tracing_setup(mut self, disable: bool) -> Self {
+    self.disable_tracing_setup = disable;
     self
   }
 }

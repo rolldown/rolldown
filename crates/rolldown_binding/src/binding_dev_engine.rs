@@ -1,7 +1,6 @@
 use napi_derive::napi;
 use std::sync::Arc;
 
-use napi::Env;
 use rolldown_watcher::NotifyWatcher;
 
 use crate::binding_bundler_impl::{BindingBundlerImpl, BindingBundlerOptions};
@@ -17,9 +16,9 @@ pub struct BindingDevEngine {
 #[napi]
 impl BindingDevEngine {
   #[napi(constructor)]
-  pub fn new(env: Env, options: BindingBundlerOptions) -> napi::Result<Self> {
+  pub fn new(options: BindingBundlerOptions) -> napi::Result<Self> {
     let bundler =
-      BindingBundlerImpl::new(env, options, rolldown_debug::Session::dummy(), 0)?.into_inner();
+      BindingBundlerImpl::new(options, rolldown_debug::Session::dummy(), 0)?.into_inner();
 
     let session_id = rolldown_debug::generate_session_id();
     let session = rolldown_debug::Session::dummy();

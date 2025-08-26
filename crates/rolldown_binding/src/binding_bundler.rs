@@ -1,6 +1,5 @@
 use std::sync::Arc;
 
-use napi::Env;
 use napi_derive::napi;
 
 use crate::binding_bundler_impl::{BindingBundlerImpl, BindingBundlerOptions};
@@ -31,7 +30,6 @@ impl BindingBundler {
   #[cfg_attr(target_family = "wasm", allow(unused))]
   pub fn create_impl(
     &mut self,
-    env: Env,
     options: BindingBundlerOptions,
   ) -> napi::Result<BindingBundlerImpl> {
     if self.debug_tracer.is_none() && options.input_options.debug.is_some() {
@@ -44,6 +42,6 @@ impl BindingBundler {
     }
 
     self.build_count += 1;
-    BindingBundlerImpl::new(env, options, self.session.clone(), self.build_count)
+    BindingBundlerImpl::new(options, self.session.clone(), self.build_count)
   }
 }

@@ -1,5 +1,5 @@
 mod cjs_ast_analyzer;
-mod const_eval;
+pub mod const_eval;
 pub mod dynamic_import;
 mod hmr;
 pub mod impl_visit;
@@ -889,6 +889,7 @@ impl<'me, 'ast: 'me> AstScanner<'me, 'ast> {
       ast: oxc::ast::AstBuilder::new(self.allocator),
       scope: self.result.symbol_ref_db.scoping(),
       constant_map: &self.result.constant_export_map,
+      overrode_get_constant_value_from_reference_id: None,
     }
   }
 

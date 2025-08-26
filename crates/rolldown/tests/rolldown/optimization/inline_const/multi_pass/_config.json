@@ -1,0 +1,28 @@
+{
+  "config": {
+    "input": [
+      {
+        "name": "pagea",
+        "import": "./pagea.js"
+      },
+      {
+        "name": "pageb",
+        "import": "./pageb.js"
+      }
+    ],
+    "minify": "dceOnly",
+    "optimization": {
+      "inlineConst": {
+        "pass": 1
+      }
+    }
+  },
+  "configVariants": [
+    {
+      "_configName": "inlineConstPass2",
+      "inlineConst": {
+        "pass": 2
+      }
+    }
+  ]
+}

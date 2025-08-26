@@ -88,7 +88,7 @@ impl ViteCssPostPlugin {
           .await?;
 
         let filename = ctx.get_file_name(&reference_id)?;
-        vite_metadata.imported_assets.insert(clean_url(&reference_id).to_string());
+        vite_metadata.imported_assets.insert(clean_url(&reference_id).into());
 
         let url = env
           .to_output_file_path_in_js(

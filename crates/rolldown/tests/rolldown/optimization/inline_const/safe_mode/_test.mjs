@@ -4,7 +4,7 @@ import path from 'node:path'
 // read dist/main.js into string 
 const content = fs.readFileSync(path.resolve(import.meta.dirname, 'dist/main.js'), 'utf-8');
 
-if (globalThis.__configName === 'safe-inline-const') {
+if (globalThis.__configName === 'smart-inline-const') {
   assert(!content.includes('unused two'));
   assert(!content.includes('unused three'));
   assert(!content.includes('Production mode code'));

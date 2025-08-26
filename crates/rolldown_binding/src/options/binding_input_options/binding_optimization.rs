@@ -4,7 +4,7 @@ use rolldown_common::InlineConstOption;
 #[napi_derive::napi(object, object_to_js = false)]
 #[derive(Debug, Default)]
 pub struct BindingOptimization {
-  #[napi(ts_type = "boolean | 'safe'")]
+  #[napi(ts_type = "boolean | 'smart'")]
   pub inline_const: Option<Either<bool, String>>,
   pub pife_for_module_wrappers: Option<bool>,
 }
@@ -19,11 +19,11 @@ impl TryFrom<BindingOptimization> for rolldown_common::OptimizationOption {
         .map(|either| match either {
           Either::A(bool_val) => Ok(InlineConstOption::Bool(bool_val)),
           Either::B(string_val) => {
-            if string_val.as_str() == "safe" {
-              Ok(InlineConstOption::Safe)
+            if string_val.as_str() == "smart" {
+              Ok(InlineConstOption::Smart)
             } else {
               Err(napi::Error::from_reason(
-                "Invalid value for inline_const: expected `'safe'` or `boolean`".to_string(),
+                "Invalid value for inline_const: expected `'smart'` or `boolean`".to_string(),
               ))
             }
           }

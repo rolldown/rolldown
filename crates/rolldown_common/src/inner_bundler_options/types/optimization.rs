@@ -15,7 +15,7 @@ use crate::Platform;
 pub enum InlineConstOption {
   Bool(bool),
   #[cfg_attr(feature = "deserialize_bundler_options", schemars(with = "String"))]
-  Safe,
+  Smart,
 }
 
 impl Default for InlineConstOption {
@@ -48,7 +48,7 @@ pub struct OptimizationOption {
   /// - `None`: Use default behavior (false)
   /// - `Some(InlineConstOption::Bool(false))`: Disable inlining
   /// - `Some(InlineConstOption::Bool(true))`: Inline everywhere
-  /// - `Some(InlineConstOption::Safe("safe"))`: Only inline when safe
+  /// - `Some(InlineConstOption::Smart("smart"))`: Only inline when the output is speculated to be smaller
   ///
   #[cfg_attr(
     feature = "deserialize_bundler_options",
@@ -64,12 +64,12 @@ pub struct OptimizationOption {
 impl OptimizationOption {
   #[inline]
   pub fn is_inline_const_enabled(&self) -> bool {
-    matches!(&self.inline_const, Some(InlineConstOption::Bool(true) | InlineConstOption::Safe))
+    matches!(&self.inline_const, Some(InlineConstOption::Bool(true) | InlineConstOption::Smart))
   }
 
   #[inline]
-  pub fn is_inline_const_safe_mode(&self) -> bool {
-    matches!(&self.inline_const, Some(InlineConstOption::Safe))
+  pub fn is_inline_const_smart_mode(&self) -> bool {
+    matches!(&self.inline_const, Some(InlineConstOption::Smart))
   }
 
   #[inline]
@@ -103,7 +103,7 @@ where
   let deserialized = Option::<Value>::deserialize(deserializer)?;
   match deserialized {
     Some(Value::Bool(v)) => Ok(Some(InlineConstOption::Bool(v))),
-    Some(Value::String(s)) if s == "safe" => Ok(Some(InlineConstOption::Safe)),
+    Some(Value::String(s)) if s == "smart" => Ok(Some(InlineConstOption::Smart)),
     None => Ok(None),
     _ => unreachable!(),
   }

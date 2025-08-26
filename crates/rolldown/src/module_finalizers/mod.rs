@@ -44,7 +44,7 @@ bitflags! {
         /// - test1 || test2
         /// - test1 && test2
         /// - test1 ?? test2
-        const SafeInlineConst = 1 << 1;
+        const SmartInlineConst = 1 << 1;
     }
 }
 
@@ -235,8 +235,8 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
       canonical_symbol = self.ctx.symbol_db.get(canonical_ref);
     }
     if let Some(meta) = self.ctx.constant_value_map.get(&canonical_ref) {
-      if !self.ctx.options.optimization.is_inline_const_safe_mode()
-        || self.state.contains(TraverseState::SafeInlineConst)
+      if !self.ctx.options.optimization.is_inline_const_smart_mode()
+        || self.state.contains(TraverseState::SmartInlineConst)
       {
         return meta.value.to_expression(AstBuilder::new(self.alloc));
       }

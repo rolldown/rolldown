@@ -51,7 +51,7 @@ impl<'ast> VisitMut<'ast> for ScopeHoistingFinalizer<'_, 'ast> {
     self.enter_node(kind);
     self.visit_span(&mut it.span);
     let pre = self.state;
-    self.state.insert(TraverseState::SafeInlineConst);
+    self.state.insert(TraverseState::SmartInlineConst);
     self.visit_expression(&mut it.test);
     self.state = pre;
     self.visit_statement(&mut it.consequent);
@@ -66,7 +66,7 @@ impl<'ast> VisitMut<'ast> for ScopeHoistingFinalizer<'_, 'ast> {
     self.enter_node(kind);
     self.visit_span(&mut it.span);
     let pre = self.state;
-    self.state.insert(TraverseState::SafeInlineConst);
+    self.state.insert(TraverseState::SmartInlineConst);
     self.visit_expression(&mut it.test);
     self.state = pre;
     self.visit_expression(&mut it.consequent);
@@ -76,7 +76,7 @@ impl<'ast> VisitMut<'ast> for ScopeHoistingFinalizer<'_, 'ast> {
 
   fn visit_logical_expression(&mut self, it: &mut ast::LogicalExpression<'ast>) {
     let pre = self.state;
-    self.state.insert(TraverseState::SafeInlineConst);
+    self.state.insert(TraverseState::SmartInlineConst);
     walk_mut::walk_logical_expression(self, it);
     self.state = pre;
   }

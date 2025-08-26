@@ -21,7 +21,7 @@ export { five, four, mode_ident, o, three, two };
 ```
 ---
 
-Variant: smart-inline-const: [inline_const: Smart]
+Variant: smart-inline-const: [inline_const: Config(InlineConstConfig { mode: Some(Smart), pass: 1 })]
 
 # Assets
 

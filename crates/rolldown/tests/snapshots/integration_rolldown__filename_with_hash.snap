@@ -5014,7 +5014,7 @@ expression: output
 
 - main-!~{000}~.js => main-B8_4kzog.js
 
-# tests/rolldown/optimization/inline_const/safe_mode
+# tests/rolldown/optimization/inline_const/smart_mode
 
 - main-!~{000}~.js => main-DY_in-SM.js
 

@@ -327,7 +327,14 @@ const TreeshakingOptionsSchema = v.union([
 
 const OptimizationOptionsSchema = v.strictObject({
   inlineConst: v.pipe(
-    v.optional(v.union([v.boolean(), v.literal('smart')])),
+    v.optional(v.union([
+      v.boolean(),
+      v.literal('smart'),
+      v.strictObject({
+        mode: v.optional(v.union([v.literal('all'), v.literal('smart')])),
+        pass: v.optional(v.number()),
+      }),
+    ])),
     v.description('Enable crossmodule constant inlining'),
   ),
   pifeForModuleWrappers: v.pipe(

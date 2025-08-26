@@ -8,7 +8,9 @@
   "configVariants": [
     {
       "_configName": "smart-inline-const",
-      "inlineConst": "smart"
+      "inlineConst": {
+        "mode": "smart"
+      }
     }
   ]
 }

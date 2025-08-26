@@ -1719,6 +1719,11 @@ export interface BindingInjectImportNamespace {
   from: string
 }
 
+export interface BindingInlineConstConfig {
+  mode?: string
+  pass?: number
+}
+
 export interface BindingInputItem {
   name?: string
   import: string
@@ -1850,7 +1855,7 @@ export interface BindingNotifyOption {
 }
 
 export interface BindingOptimization {
-  inlineConst?: boolean | 'smart'
+  inlineConst?: boolean | BindingInlineConstConfig
   pifeForModuleWrappers?: boolean
 }
 

@@ -41,9 +41,9 @@ bitflags! {
         const IsTopLevel = 1;
         /// - `if (test) {} else {}`
         /// - test ? a : b
-        /// - test1 ?? test2
-        /// - test1 ?? test2
         /// - test1 || test2
+        /// - test1 && test2
+        /// - test1 ?? test2
         const SafeInlineConst = 1 << 1;
     }
 }

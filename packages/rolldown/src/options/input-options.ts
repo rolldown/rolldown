@@ -76,16 +76,19 @@ export type OptimizationOptions = {
    *
    * When enabled, constant values from imported modules will be inlined at their usage sites,
    * potentially reducing bundle size and improving runtime performance by eliminating variable lookups.
-   *
-   * - `true`: Inline constants everywhere
+   * **options**:
+   * - `true`: equivalent to `{ mode: 'all', pass: 1 }`, enabling constant inlining for all eligible constants with a single pass.
    * - `false`: Disable constant inlining
-   * - `'smart'`: Only inline constants when the output is speculated to be smaller (avoids potential bundle size increases from duplicating large values).
-   *   Smart mode inlines constants in these specific scenarios:
-   *   - `if (test) {} else {}` - condition expressions in if statements
-   *   - `test ? a : b` - condition expressions in ternary operators
-   *   - `test1 || test2` - logical OR expressions
-   *   - `test1 && test2` - logical AND expressions
-   *   - `test1 ?? test2` - nullish coalescing expressions
+   * - `{ mode: 'smart' | 'all', pass?: number }`:
+   *   - `mode: 'smart'`: Only inline constants in specific scenarios where it is likely to reduce bundle size and improve performance.
+   *     Smart mode inlines constants in these specific scenarios:
+   *     1. `if (test) {} else {}` - condition expressions in if statements
+   *     2. `test ? a : b` - condition expressions in ternary operators
+   *     3. `test1 || test2` - logical OR expressions
+   *     4. `test1 && test2` - logical AND expressions
+   *     5. `test1 ?? test2` - nullish coalescing expressions
+   *  - `mode: 'all'`: Inline all imported constants wherever they are used.
+   *  - `pass`: Number of passes to perform for inlining constants.
    *
    * **example**
    * ```js
@@ -107,7 +110,7 @@ export type OptimizationOptions = {
    *
    * @default false
    */
-  inlineConst?: boolean | 'smart';
+  inlineConst?: boolean | { mode?: 'all' | 'smart'; pass?: number };
 };
 
 export type AttachDebugOptions = 'none' | 'simple' | 'full';

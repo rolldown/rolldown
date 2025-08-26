@@ -3,10 +3,10 @@ mod utils;
 use std::{borrow::Cow, path::PathBuf, sync::Arc};
 
 use cow_utils::CowUtils;
-use rolldown_common::{EmittedAsset, ModuleType, side_effects::HookSideEffects};
-use rolldown_plugin::{HookTransformOutput, HookUsage, Plugin};
+use rolldown_common::{EmittedAsset, ModuleType, OutputFormat, side_effects::HookSideEffects};
+use rolldown_plugin::{HookRenderChunkOutput, HookTransformOutput, HookUsage, Plugin};
 use rolldown_plugin_utils::{
-  RenderBuiltUrl,
+  RenderAssetUrlInJsEnv, RenderAssetUrlInJsEnvConfig, RenderBuiltUrl,
   constants::{
     CSSChunkCache, CSSEntriesCache, CSSModuleCache, CSSStyles, HTMLProxyResult, PureCSSChunks,
     ViteMetadata,
@@ -15,6 +15,7 @@ use rolldown_plugin_utils::{
   data_to_esm, find_special_query, get_chunk_original_name, is_special_query,
 };
 use rolldown_utils::{url::clean_url, xxhash::xxhash_with_base};
+use string_wizard::SourceMapOptions;
 
 #[allow(clippy::struct_excessive_bools)]
 #[derive(derive_more::Debug)]
@@ -26,6 +27,7 @@ pub struct ViteCssPostPlugin {
   pub is_client: bool,
   pub css_minify: bool,
   pub css_code_split: bool,
+  pub sourcemap: bool,
   pub url_base: String,
   pub decoded_base: String,
   pub lib_css_filename: Option<String>,
@@ -118,7 +120,7 @@ impl Plugin for ViteCssPostPlugin {
     }))
   }
 
-  #[allow(unused_assignments, unused_variables)]
+  #[allow(unused_assignments, unused_variables, clippy::too_many_lines)]
   async fn render_chunk(
     &self,
     ctx: &rolldown_plugin::PluginContext,
@@ -223,7 +225,54 @@ impl Plugin for ViteCssPostPlugin {
               .insert(reference_id);
           }
         } else if self.is_client {
-          todo!()
+          let injection_point = match args.options.format {
+            OutputFormat::Esm => {
+              if args.code.starts_with("#!") {
+                args.code.find('\n').unwrap_or(0)
+              } else {
+                0
+              }
+            }
+            OutputFormat::Iife | OutputFormat::Umd => {
+              let regex = if matches!(args.options.format, OutputFormat::Iife) {
+                &utils::RE_IIFE
+              } else {
+                &utils::RE_UMD
+              };
+              let Some(m) = regex.find(&args.code) else {
+                return Err(anyhow::anyhow!("Injection point for inlined CSS not found"));
+              };
+              m.end()
+            }
+            OutputFormat::Cjs => {
+              return Err(anyhow::anyhow!("CJS format is not supported for CSS injection"));
+            }
+          };
+
+          let content = serde_json::to_string(&self.finalize_css(css_chunk).await)?;
+          let env = RenderAssetUrlInJsEnv {
+            ctx,
+            code: &content,
+            chunk_filename: &args.chunk.filename,
+            config: RenderAssetUrlInJsEnvConfig {
+              is_ssr: self.is_ssr,
+              is_worker: self.is_worker,
+              url_base: &self.url_base,
+              decoded_base: &self.decoded_base,
+              render_built_url: self.render_built_url.as_deref(),
+            },
+          };
+
+          let css_string = env.render_asset_url_in_js().await?.unwrap_or(content);
+          let inject_code = rolldown_utils::concat_string!(
+            "var __vite_style__ = document.createElement('style');__vite_style__.textContent = ",
+            css_string,
+            ";document.head.appendChild(__vite_style__);"
+          );
+
+          magic_string
+            .get_or_insert_with(|| string_wizard::MagicString::new(&args.code))
+            .append_right(injection_point, inject_code);
         }
       } else {
         let css_asset_name = self.get_css_bundle_name(ctx)?;
@@ -237,6 +286,14 @@ impl Plugin for ViteCssPostPlugin {
       }
     }
 
-    Ok(None)
+    Ok(magic_string.map(|magic_string| HookRenderChunkOutput {
+      code: magic_string.to_string(),
+      map: self.sourcemap.then(|| {
+        magic_string.source_map(SourceMapOptions {
+          hires: string_wizard::Hires::Boundary,
+          ..Default::default()
+        })
+      }),
+    }))
   }
 }

@@ -3230,6 +3230,7 @@ dependencies = [
  "base64-simd",
  "cow-utils",
  "derive_more",
+ "regex",
  "rolldown_common",
  "rolldown_plugin",
  "rolldown_plugin_utils",

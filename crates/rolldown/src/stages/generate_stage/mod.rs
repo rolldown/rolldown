@@ -26,6 +26,7 @@ use rolldown_utils::{
   rayon::{IntoParallelRefMutIterator, ParallelIterator},
 };
 use sugar_path::SugarPath;
+use tracing::debug_span;
 
 use crate::{
   BundleOutput, SharedOptions,
@@ -87,102 +88,107 @@ impl<'a> GenerateStage<'a> {
     self.patch_asset_modules(&chunk_graph);
     set_emitted_chunk_preliminary_filenames(&self.plugin_driver.file_emitter, &chunk_graph);
 
-    let module_scope_symbol_id_map = self
-      .link_output
-      .symbol_db
-      .inner()
-      .par_iter_enumerated()
-      .filter_map(|(idx, db)| {
-        let Some(db) = db else {
-          return None;
-        };
-        let root_scope_id = db.ast_scopes.scoping().root_scope_id();
-        let mut vec: IndexVec<ScopeId, Vec<(SymbolId, &str)>> =
-          IndexVec::from_vec(vec![vec![]; db.ast_scopes.scoping().scopes_len()]);
-        for symbol_id in db.scoping().symbol_ids() {
-          let scope_id = db.scoping().symbol_scope_id(symbol_id);
-          if scope_id == root_scope_id {
-            continue;
+    debug_span!("deconflict_chunk_symbols").in_scope(|| {
+      let module_scope_symbol_id_map = self
+        .link_output
+        .symbol_db
+        .inner()
+        .par_iter_enumerated()
+        .filter_map(|(idx, db)| {
+          let Some(db) = db else {
+            return None;
+          };
+          let root_scope_id = db.ast_scopes.scoping().root_scope_id();
+          let mut vec: IndexVec<ScopeId, Vec<(SymbolId, &str)>> =
+            IndexVec::from_vec(vec![vec![]; db.ast_scopes.scoping().scopes_len()]);
+          for symbol_id in db.scoping().symbol_ids() {
+            let scope_id = db.scoping().symbol_scope_id(symbol_id);
+            if scope_id == root_scope_id {
+              continue;
+            }
+            vec[scope_id].push((symbol_id, db.scoping().symbol_name(symbol_id)));
           }
-          vec[scope_id].push((symbol_id, db.scoping().symbol_name(symbol_id)));
-        }
-        Some((idx, vec))
-      })
-      .collect::<FxHashMap<ModuleIdx, IndexVec<ScopeId, Vec<(SymbolId, &str)>>>>();
+          Some((idx, vec))
+        })
+        .collect::<FxHashMap<ModuleIdx, IndexVec<ScopeId, Vec<(SymbolId, &str)>>>>();
 
-    chunk_graph.chunk_table.par_iter_mut().for_each(|chunk| {
-      deconflict_chunk_symbols(
-        chunk,
-        self.link_output,
-        self.options.format,
-        &index_chunk_id_to_name,
-        &module_scope_symbol_id_map,
-      );
+      chunk_graph.chunk_table.par_iter_mut().for_each(|chunk| {
+        deconflict_chunk_symbols(
+          chunk,
+          self.link_output,
+          self.options.format,
+          &index_chunk_id_to_name,
+          &module_scope_symbol_id_map,
+        );
+      });
     });
 
-    let ast_table_iter = self.link_output.ast_table.par_iter_mut_enumerated();
-    let transfer_parts_rendered_maps = ast_table_iter
-      .filter(|(idx, _ast)| {
-        self.link_output.module_table[*idx].as_normal().is_some_and(|m| m.meta.is_included())
-      })
-      .filter_map(|(idx, ast)| {
-        let Some(ast) = ast else {
-          return None;
-        };
-        let module = self.link_output.module_table[idx].as_normal().unwrap();
-        let ast_scope = &self.link_output.symbol_db[idx].as_ref().unwrap().ast_scopes;
-        let chunk_id = chunk_graph.module_to_chunk[idx].unwrap();
-        let chunk = &chunk_graph.chunk_table[chunk_id];
-        let linking_info = &self.link_output.metas[module.idx];
-        let ctx = ScopeHoistingFinalizerContext {
-          id: idx,
-          chunk,
-          chunk_id,
-          symbol_db: &self.link_output.symbol_db,
-          linking_info,
-          module,
-          modules: &self.link_output.module_table.modules,
-          linking_infos: &self.link_output.metas,
-          runtime: &self.link_output.runtime,
-          chunk_graph: &chunk_graph,
-          options: self.options,
-          cur_stmt_index: 0,
-          keep_name_statement_to_insert: Vec::new(),
-          file_emitter: &self.plugin_driver.file_emitter,
-          constant_value_map: &self.link_output.constant_symbol_map,
-          needs_hosted_top_level_binding: false,
-          module_namespace_included: self
-            .link_output
-            .used_symbol_refs
-            .contains(&module.namespace_object_ref),
-          transferred_import_record: chunk
-            .remove_map
-            .get(&module.idx)
-            .cloned()
-            .map(|idxs| {
-              idxs.into_iter().map(|idx| (idx, String::new())).collect::<FxIndexMap<_, _>>()
-            })
-            .unwrap_or_default(),
-          rendered_concatenated_wrapped_module_parts: RenderedConcatenatedModuleParts::default(),
-        };
-        let ctx = ctx.finalize_normal_module(ast, ast_scope);
-        (!ctx.transferred_import_record.is_empty()
-          || !matches!(
-            ctx.linking_info.concatenated_wrapped_module_kind,
-            ConcatenateWrappedModuleKind::None
+    let transfer_parts_rendered_maps = debug_span!("finalize_modules").in_scope(|| {
+      let ast_table_iter = self.link_output.ast_table.par_iter_mut_enumerated();
+      ast_table_iter
+        .filter(|(idx, _ast)| {
+          self.link_output.module_table[*idx].as_normal().is_some_and(|m| m.meta.is_included())
+        })
+        .filter_map(|(idx, ast)| {
+          let Some(ast) = ast else {
+            return None;
+          };
+          let module = self.link_output.module_table[idx].as_normal().unwrap();
+          let ast_scope = &self.link_output.symbol_db[idx].as_ref().unwrap().ast_scopes;
+          let chunk_id = chunk_graph.module_to_chunk[idx].unwrap();
+          let chunk = &chunk_graph.chunk_table[chunk_id];
+          let linking_info = &self.link_output.metas[module.idx];
+          let ctx = ScopeHoistingFinalizerContext {
+            id: idx,
+            chunk,
+            chunk_id,
+            symbol_db: &self.link_output.symbol_db,
+            linking_info,
+            module,
+            modules: &self.link_output.module_table.modules,
+            linking_infos: &self.link_output.metas,
+            runtime: &self.link_output.runtime,
+            chunk_graph: &chunk_graph,
+            options: self.options,
+            cur_stmt_index: 0,
+            keep_name_statement_to_insert: Vec::new(),
+            file_emitter: &self.plugin_driver.file_emitter,
+            constant_value_map: &self.link_output.constant_symbol_map,
+            needs_hosted_top_level_binding: false,
+            module_namespace_included: self
+              .link_output
+              .used_symbol_refs
+              .contains(&module.namespace_object_ref),
+            transferred_import_record: chunk
+              .remove_map
+              .get(&module.idx)
+              .cloned()
+              .map(|idxs| {
+                idxs.into_iter().map(|idx| (idx, String::new())).collect::<FxIndexMap<_, _>>()
+              })
+              .unwrap_or_default(),
+            rendered_concatenated_wrapped_module_parts: RenderedConcatenatedModuleParts::default(),
+          };
+          let ctx = ctx.finalize_normal_module(ast, ast_scope);
+          (!ctx.transferred_import_record.is_empty()
+            || !matches!(
+              ctx.linking_info.concatenated_wrapped_module_kind,
+              ConcatenateWrappedModuleKind::None
+            ))
+          .then_some((
+            idx,
+            ctx.transferred_import_record,
+            ctx.rendered_concatenated_wrapped_module_parts,
           ))
-        .then_some((
-          idx,
-          ctx.transferred_import_record,
-          ctx.rendered_concatenated_wrapped_module_parts,
-        ))
-      })
-      .collect::<Vec<_>>();
+        })
+        .collect::<Vec<_>>()
+    });
 
     self.apply_transfer_parts_mutation(&mut chunk_graph, transfer_parts_rendered_maps);
     self.render_chunk_to_assets(&chunk_graph).await
   }
 
+  #[tracing::instrument(level = "debug", skip_all)]
   fn apply_transfer_parts_mutation(
     &mut self,
     chunk_graph: &mut ChunkGraph,

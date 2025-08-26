@@ -1,15 +1,18 @@
 mod utils;
 
-use std::{borrow::Cow, sync::Arc};
+use std::{borrow::Cow, path::PathBuf, sync::Arc};
 
 use cow_utils::CowUtils;
-use rolldown_common::{ModuleType, side_effects::HookSideEffects};
+use rolldown_common::{EmittedAsset, ModuleType, side_effects::HookSideEffects};
 use rolldown_plugin::{HookTransformOutput, HookUsage, Plugin};
 use rolldown_plugin_utils::{
   RenderBuiltUrl,
-  constants::{CSSChunks, CSSModuleCache, CSSStyles, HTMLProxyResult, PureCSSChunks},
+  constants::{
+    CSSChunkCache, CSSEntriesCache, CSSModuleCache, CSSStyles, HTMLProxyResult, PureCSSChunks,
+    ViteMetadata,
+  },
   css::is_css_request,
-  data_to_esm, find_special_query, is_special_query,
+  data_to_esm, find_special_query, get_chunk_original_name, is_special_query,
 };
 use rolldown_utils::{url::clean_url, xxhash::xxhash_with_base};
 
@@ -19,6 +22,8 @@ pub struct ViteCssPostPlugin {
   pub is_lib: bool,
   pub is_ssr: bool,
   pub is_worker: bool,
+  pub is_legacy: bool,
+  pub is_client: bool,
   pub css_minify: bool,
   pub css_code_split: bool,
   pub url_base: String,
@@ -42,7 +47,7 @@ impl Plugin for ViteCssPostPlugin {
     ctx: &rolldown_plugin::PluginContext,
     _args: &rolldown_plugin::HookBuildStartArgs<'_>,
   ) -> rolldown_plugin::HookNoopReturn {
-    ctx.meta().insert(Arc::new(CSSChunks::default()));
+    ctx.meta().insert(Arc::new(CSSChunkCache::default()));
     ctx.meta().insert(Arc::new(PureCSSChunks::default()));
     Ok(())
   }
@@ -156,7 +161,7 @@ impl Plugin for ViteCssPostPlugin {
     self.finalize_vite_css_urls(ctx, args, &styles, &mut magic_string).await?;
 
     if !css_chunk.is_empty() {
-      if is_pure_css_chunk && ctx.options().format.is_esm_or_cjs() {
+      if is_pure_css_chunk && args.options.format.is_esm_or_cjs() {
         ctx
           .meta()
           .get::<PureCSSChunks>()
@@ -166,10 +171,69 @@ impl Plugin for ViteCssPostPlugin {
       }
 
       if self.css_code_split {
-        todo!()
+        if args.options.format.is_esm_or_cjs() && !args.chunk.filename.contains("-legacy") {
+          let css_asset_path = PathBuf::from(args.chunk.name.as_str()).with_extension("css");
+          // if facadeModuleId doesn't exist or doesn't have a CSS extension,
+          // that means a JS entry file imports a CSS file.
+          // in this case, only use the filename for the CSS chunk name like JS chunks.
+          let css_asset_name = if args.chunk.is_entry
+            && args
+              .chunk
+              .facade_module_id
+              .as_ref()
+              .is_none_or(|id| !is_css_request(id.resource_id().as_str()))
+          {
+            css_asset_path.file_name().map(|v| v.to_string_lossy().into_owned())
+          } else {
+            Some(css_asset_path.to_string_lossy().into_owned())
+          };
+
+          let original_file_name = get_chunk_original_name(
+            ctx.cwd(),
+            self.is_legacy,
+            &args.chunk.name,
+            args.chunk.facade_module_id.as_ref(),
+          );
+
+          let content = self.resolve_asset_urls_in_css(&css_chunk).await;
+          let content = self.finalize_css(content).await;
+
+          let reference_id = ctx
+            .emit_file_async(EmittedAsset {
+              name: css_asset_name,
+              source: content.into(),
+              original_file_name,
+              ..Default::default()
+            })
+            .await?;
+
+          ctx
+            .meta()
+            .get::<ViteMetadata>()
+            .expect("ViteMetadata missing")
+            .imported_assets
+            .insert(ctx.get_file_name(&reference_id)?);
+
+          if args.chunk.is_entry && is_pure_css_chunk {
+            ctx
+              .meta()
+              .get::<CSSEntriesCache>()
+              .expect("CSSEntriesCache missing")
+              .inner
+              .insert(reference_id);
+          }
+        } else if self.is_client {
+          todo!()
+        }
       } else {
         let css_asset_name = self.get_css_bundle_name(ctx)?;
-        todo!()
+        let css_chunk = self.resolve_asset_urls_in_css(&css_chunk).await;
+        ctx
+          .meta()
+          .get::<CSSChunkCache>()
+          .expect("CSSChunkCache missing")
+          .inner
+          .insert(args.chunk.filename.clone(), css_chunk);
       }
     }
 

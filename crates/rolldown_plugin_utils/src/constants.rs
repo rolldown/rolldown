@@ -24,7 +24,12 @@ impl TypedMapKey for ViteImportGlob {
 
 #[derive(Debug, Default)]
 pub struct ViteMetadata {
-  pub imported_assets: FxDashSet<String>,
+  pub imported_assets: FxDashSet<ArcStr>,
+}
+
+#[derive(Debug, Default)]
+pub struct CSSEntriesCache {
+  pub inner: FxDashSet<ArcStr>,
 }
 
 #[derive(Debug, Default)]
@@ -48,7 +53,7 @@ pub struct PureCSSChunks {
 }
 
 #[derive(Debug, Default)]
-pub struct CSSChunks {
+pub struct CSSChunkCache {
   pub inner: FxDashMap<ArcStr, String>,
 }
 

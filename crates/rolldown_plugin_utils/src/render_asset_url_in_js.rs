@@ -58,7 +58,7 @@ impl RenderAssetUrlInJsEnv<'_> {
           value
         });
 
-        vite_meta_data.imported_assets.insert(clean_url(&file).to_string());
+        vite_meta_data.imported_assets.insert(clean_url(&file).into());
 
         let postfix = self.code[end..].starts_with("$_").then(|| {
           self.code[end + 2..].find("__").map_or("", |i| {

@@ -1,4 +1,4 @@
-use crate::analyzer::AnalysisResultV2;
+use crate::analyzer::AnalysisResult;
 use crate::symbol_graph::UnusedSymbol;
 use anyhow::Result;
 use colored::*;
@@ -38,7 +38,7 @@ struct UnusedSymbolInfo {
 }
 
 pub fn generate_report(
-    result: &AnalysisResultV2,
+    result: &AnalysisResult,
     format: &str,
     only_unused: bool,
 ) -> Result<String> {
@@ -50,7 +50,7 @@ pub fn generate_report(
     }
 }
 
-fn generate_json_report(result: &AnalysisResultV2) -> Result<String> {
+fn generate_json_report(result: &AnalysisResult) -> Result<String> {
     let stats = &result.statistics;
     let usage_percentage = if stats.total_symbols > 0 {
         (stats.used_symbols as f64 / stats.total_symbols as f64) * 100.0
@@ -90,7 +90,7 @@ fn generate_json_report(result: &AnalysisResultV2) -> Result<String> {
     Ok(serde_json::to_string_pretty(&report)?)
 }
 
-fn generate_markdown_report(result: &AnalysisResultV2, _only_unused: bool) -> Result<String> {
+fn generate_markdown_report(result: &AnalysisResult, _only_unused: bool) -> Result<String> {
     let mut output = String::new();
     let stats = &result.statistics;
 
@@ -165,7 +165,7 @@ fn generate_markdown_report(result: &AnalysisResultV2, _only_unused: bool) -> Re
     Ok(output)
 }
 
-fn generate_html_report(result: &AnalysisResultV2, _only_unused: bool) -> Result<String> {
+fn generate_html_report(result: &AnalysisResult, _only_unused: bool) -> Result<String> {
     let mut output = String::new();
     let stats = &result.statistics;
 
@@ -289,7 +289,7 @@ fn generate_html_report(result: &AnalysisResultV2, _only_unused: bool) -> Result
     Ok(output)
 }
 
-fn generate_text_report(result: &AnalysisResultV2, _only_unused: bool) -> Result<String> {
+fn generate_text_report(result: &AnalysisResult, _only_unused: bool) -> Result<String> {
     let mut output = String::new();
     let stats = &result.statistics;
 

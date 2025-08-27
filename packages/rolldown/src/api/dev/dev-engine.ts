@@ -3,6 +3,7 @@ import type { InputOptions } from '../../options/input-options';
 import type { OutputOptions } from '../../options/output-options';
 import { PluginDriver } from '../../plugin/plugin-driver';
 import { createBundlerOptions } from '../../utils/create-bundler-option';
+import type { DevOptions } from './dev-options';
 
 export class DevEngine {
   #inner: BindingDevEngine;
@@ -10,7 +11,8 @@ export class DevEngine {
 
   static async create(
     inputOptions: InputOptions,
-    outputOptions: OutputOptions,
+    outputOptions: OutputOptions = {},
+    devOptions: DevOptions = {},
   ): Promise<DevEngine> {
     inputOptions = await PluginDriver.callOptionsHook(inputOptions);
     const options = await createBundlerOptions(
@@ -19,7 +21,14 @@ export class DevEngine {
       false,
     );
 
-    const inner = new BindingDevEngine(options.bundlerOptions);
+    const bindingDevOptions = {
+      onHmrUpdates: devOptions.onHmrUpdates,
+    };
+
+    const inner = new BindingDevEngine(
+      options.bundlerOptions,
+      bindingDevOptions,
+    );
 
     return new DevEngine(inner);
   }

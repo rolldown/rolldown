@@ -32,6 +32,7 @@ static ALLOC: mimalloc_safe::MiMalloc = mimalloc_safe::MiMalloc;
 pub mod binding_bundler;
 pub mod binding_bundler_impl;
 pub mod binding_dev_engine;
+pub mod binding_dev_options;
 mod generated;
 pub mod options;
 pub mod parallel_js_plugin_registry;

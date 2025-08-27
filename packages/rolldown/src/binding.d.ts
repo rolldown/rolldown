@@ -1283,7 +1283,7 @@ export declare class BindingChunkingContext {
 }
 
 export declare class BindingDevEngine {
-  constructor(options: BindingBundlerOptions)
+  constructor(options: BindingBundlerOptions, devOptions?: BindingDevOptions | undefined | null)
   run(): Promise<void>
   ensureCurrentBuildFinish(): Promise<void>
 }
@@ -1563,6 +1563,10 @@ export interface BindingDeferSyncScanData {
   /** ModuleId */
   id: string
   sideEffects?: boolean | 'no-treeshake'
+}
+
+export interface BindingDevOptions {
+  onHmrUpdates?: undefined | ((updates: BindingHmrUpdate[]) => void | Promise<void>)
 }
 
 export interface BindingDynamicImportVarsPluginConfig {

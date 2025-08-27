@@ -13,6 +13,7 @@ use crate::{
   dev::{
     build_driver::{BuildDriver, SharedBuildDriver},
     dev_context::{DevContext, PinBoxSendStaticFuture, SharedDevContext},
+    dev_options::{DevOptions, NormalizedDevOptions, normalize_dev_options},
     watcher_event_service::WatcherEventService,
   },
 };
@@ -28,19 +29,23 @@ pub struct DevEngine<W> {
   watched_files: FxDashSet<ArcStr>,
   watch_service_state: Mutex<WatchServiceState>,
   ctx: SharedDevContext,
+  #[allow(dead_code)]
+  options: NormalizedDevOptions,
 }
 
 impl<W: Watcher + Send + 'static> DevEngine<W> {
-  pub fn new(bundler_builder: BundlerBuilder) -> BuildResult<Self> {
-    Self::with_bundler(Arc::new(Mutex::new(bundler_builder.build())))
+  pub fn new(bundler_builder: BundlerBuilder, options: DevOptions) -> BuildResult<Self> {
+    Self::with_bundler(Arc::new(Mutex::new(bundler_builder.build())), options)
   }
 
-  pub fn with_bundler(bundler: Arc<Mutex<Bundler>>) -> BuildResult<Self> {
+  pub fn with_bundler(bundler: Arc<Mutex<Bundler>>, options: DevOptions) -> BuildResult<Self> {
     let ctx = Arc::new(DevContext::default());
     let build_driver = Arc::new(BuildDriver::new(bundler, Arc::clone(&ctx)));
 
     let watcher_event_service = WatcherEventService::new(Arc::clone(&build_driver));
     let watcher = W::new(watcher_event_service.create_event_handler())?;
+
+    let normalized_options = normalize_dev_options(options);
 
     Ok(Self {
       build_driver,
@@ -51,6 +56,7 @@ impl<W: Watcher + Send + 'static> DevEngine<W> {
         handle: None,
       }),
       ctx,
+      options: normalized_options,
     })
   }
 

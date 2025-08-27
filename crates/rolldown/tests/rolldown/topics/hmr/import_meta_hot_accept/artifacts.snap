@@ -12,10 +12,10 @@ import assert from "node:assert";
 // HIDDEN [rolldown:hmr]
 //#region self_accept.js
 var self_accept_exports = {};
-__export(self_accept_exports, { foo: () => foo });
+__export(self_accept_exports, { foo: () => foo$1 });
 const self_accept_hot = __rolldown_runtime__.createModuleHotContext("self_accept.js");
 __rolldown_runtime__.registerModule("self_accept.js", { exports: self_accept_exports });
-const foo = "foo";
+const foo$1 = "foo";
 self_accept_hot.accept((mod) => {
 	assert.strictEqual(mod.foo, "foo");
 });
@@ -74,6 +74,17 @@ parent_hot.accept(["array_accept/child.js"], ([mod]) => {
 process.on("beforeExit", (code) => {
 	if (code !== 0) return;
 	assert.strictEqual(globalThis.arrayAcceptAcceptCount, 2);
+});
+
+//#endregion
+//#region optional_chaining.js
+var optional_chaining_exports = {};
+__export(optional_chaining_exports, { foo: () => foo });
+const optional_chaining_hot = __rolldown_runtime__.createModuleHotContext("optional_chaining.js");
+__rolldown_runtime__.registerModule("optional_chaining.js", { exports: optional_chaining_exports });
+const foo = "foo";
+optional_chaining_hot?.accept((mod) => {
+	assert.strictEqual(mod.foo, "foo");
 });
 
 //#endregion
@@ -248,3 +259,33 @@ __rolldown_runtime__.applyUpdates([['array_accept/parent.js', 'array_accept/chil
 ### Hmr Boundaries
 
 - boundary: array_accept/parent.js, accepted_via: array_accept/child.js
+# HMR Step 6
+
+## Code
+
+```js
+//#region optional_chaining.js
+import * as import_node_assert_00 from "node:assert";
+var init_optional_chaining_0 = __rolldown_runtime__.createEsmInitializer((function() {
+	try {
+		var __rolldown_exports__ = {};
+		__rolldown_runtime__.__export(__rolldown_exports__, { foo: () => foo });
+		__rolldown_runtime__.registerModule("optional_chaining.js", { exports: __rolldown_exports__ });
+		const hot_optional_chaining = __rolldown_runtime__.createModuleHotContext("optional_chaining.js");
+		const foo = "foo2";
+		hot_optional_chaining?.accept((mod) => {
+			import_node_assert_00.default.strictEqual(mod.foo, "foo2");
+		});
+	} finally {}
+}));
+
+//#endregion
+init_optional_chaining_0()
+__rolldown_runtime__.applyUpdates([['optional_chaining.js', 'optional_chaining.js']]);
+```
+## Meta
+
+- update type: patch
+### Hmr Boundaries
+
+- boundary: optional_chaining.js, accepted_via: optional_chaining.js

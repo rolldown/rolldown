@@ -13,7 +13,7 @@ const foo = 1;
 //#endregion
 //#region export-star.js
 var export_star_exports = {};
-__export(export_star_exports, { foo: () => foo });
+/* @__PURE__ */ __export(export_star_exports, { foo: () => foo });
 
 //#endregion
 //#region main.js

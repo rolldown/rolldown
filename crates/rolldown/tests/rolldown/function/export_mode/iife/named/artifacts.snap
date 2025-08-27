@@ -13,7 +13,7 @@ Object.defineProperty(exports, '__esModule', { value: true });
 
 //#region mod.js
 var named_exports = {};
-__export(named_exports, {
+/* @__PURE__ */ __export(named_exports, {
 	add: () => add,
 	subtract: () => subtract
 });

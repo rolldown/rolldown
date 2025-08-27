@@ -21,7 +21,7 @@ var require_dep_cjs = /* @__PURE__ */ __commonJS({ "modules/dep-cjs.js": ((expor
 //#region modules/dep-esm.js
 var import_dep_cjs = /* @__PURE__ */ __toESM(require_dep_cjs());
 var dep_esm_exports = {};
-__export(dep_esm_exports, { value: () => value$1 });
+/* @__PURE__ */ __export(dep_esm_exports, { value: () => value$1 });
 const dep_esm_hot = __rolldown_runtime__.createModuleHotContext("modules/dep-esm.js");
 __rolldown_runtime__.registerModule("modules/dep-esm.js", { exports: dep_esm_exports });
 const value$1 = "esm";
@@ -38,7 +38,7 @@ var require_dep_cjs_default = /* @__PURE__ */ __commonJS({ "modules/dep-cjs-defa
 //#region modules/dep-esm-default.js
 var import_dep_cjs_default = /* @__PURE__ */ __toESM(require_dep_cjs_default());
 var dep_esm_default_exports = {};
-__export(dep_esm_default_exports, { default: () => dep_esm_default_default });
+/* @__PURE__ */ __export(dep_esm_default_exports, { default: () => dep_esm_default_default });
 const dep_esm_default_hot = __rolldown_runtime__.createModuleHotContext("modules/dep-esm-default.js");
 __rolldown_runtime__.registerModule("modules/dep-esm-default.js", { exports: dep_esm_default_exports });
 var dep_esm_default_default = "esm-default";
@@ -55,7 +55,7 @@ var require_dep_cjs_named = /* @__PURE__ */ __commonJS({ "modules/dep-cjs-named.
 //#region modules/dep-esm-named.js
 var import_dep_cjs_named = /* @__PURE__ */ __toESM(require_dep_cjs_named());
 var dep_esm_named_exports = {};
-__export(dep_esm_named_exports, { named: () => named });
+/* @__PURE__ */ __export(dep_esm_named_exports, { named: () => named });
 const dep_esm_named_hot = __rolldown_runtime__.createModuleHotContext("modules/dep-esm-named.js");
 __rolldown_runtime__.registerModule("modules/dep-esm-named.js", { exports: dep_esm_named_exports });
 const named = "esm-named";
@@ -72,7 +72,7 @@ var require_dep_cjs_namespace = /* @__PURE__ */ __commonJS({ "modules/dep-cjs-na
 //#region modules/dep-esm-namespace.js
 var import_dep_cjs_namespace = /* @__PURE__ */ __toESM(require_dep_cjs_namespace());
 var dep_esm_namespace_exports = {};
-__export(dep_esm_namespace_exports, { value: () => value });
+/* @__PURE__ */ __export(dep_esm_namespace_exports, { value: () => value });
 const dep_esm_namespace_hot = __rolldown_runtime__.createModuleHotContext("modules/dep-esm-namespace.js");
 __rolldown_runtime__.registerModule("modules/dep-esm-namespace.js", { exports: dep_esm_namespace_exports });
 const value = "esm-namespace";

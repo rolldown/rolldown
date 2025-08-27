@@ -25,7 +25,7 @@ export { main_default as default, foo };
 // HIDDEN [rolldown:runtime]
 //#region main.js
 var main_exports = {};
-__export(main_exports, {
+/* @__PURE__ */ __export(main_exports, {
 	default: () => main_default,
 	foo: () => foo
 });

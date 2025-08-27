@@ -11,7 +11,7 @@ import assert from "node:assert";
 // HIDDEN [rolldown:runtime]
 //#region lib.js
 var lib_exports = {};
-__export(lib_exports, { constant: () => constant });
+/* @__PURE__ */ __export(lib_exports, { constant: () => constant });
 var constant;
 var init_lib = __esm({ "lib.js": (() => {
 	constant = 1;
@@ -51,7 +51,7 @@ import assert from "node:assert";
 // HIDDEN [rolldown:runtime]
 //#region lib.js
 var lib_exports = {};
-__export(lib_exports, { constant: () => constant });
+/* @__PURE__ */ __export(lib_exports, { constant: () => constant });
 var constant;
 var init_lib = __esm({ "lib.js": (() => {
 	constant = 1;

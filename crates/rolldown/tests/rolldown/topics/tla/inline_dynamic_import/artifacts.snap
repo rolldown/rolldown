@@ -9,7 +9,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 // HIDDEN [rolldown:runtime]
 //#region c.js
 var c_exports = {};
-__export(c_exports, { default: () => c_default });
+/* @__PURE__ */ __export(c_exports, { default: () => c_default });
 var _default, c_default;
 var init_c = __esm({ "c.js": (() => {
 	_default = { aaa: { bbb: [
@@ -35,7 +35,7 @@ var init_b = __esm({ "b.js": (async () => {
 //#endregion
 //#region a.js
 var a_exports = {};
-__export(a_exports, { buildDevConfig: () => buildDevConfig });
+/* @__PURE__ */ __export(a_exports, { buildDevConfig: () => buildDevConfig });
 var buildDevConfig;
 var init_a = __esm({ "a.js": (async () => {
 	await init_b();

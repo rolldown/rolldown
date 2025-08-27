@@ -12,7 +12,7 @@ var module = (function() {
 
 //#region mod.js
 var default_exports = {};
-__export(default_exports, {
+/* @__PURE__ */ __export(default_exports, {
 	add: () => add,
 	subtract: () => subtract
 });

@@ -11,7 +11,7 @@ import assert from "node:assert";
 // HIDDEN [rolldown:runtime]
 //#region foo.js
 var foo_exports = {};
-__export(foo_exports, { foo: () => foo });
+/* @__PURE__ */ __export(foo_exports, { foo: () => foo });
 var foo;
 var init_foo = __esm({ "foo.js": (() => {
 	foo = 123;

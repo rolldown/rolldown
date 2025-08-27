@@ -1,5 +1,4 @@
 use anyhow::{Context, Result};
-use rustc_hash::{FxHashMap, FxHashSet};
 use std::path::{Path, PathBuf};
 use syn::visit::{self, Visit};
 use syn::{Item, ItemUse, Visibility};
@@ -7,337 +6,221 @@ use walkdir::WalkDir;
 
 #[derive(Debug, Clone)]
 pub struct ExportedSymbol {
-    pub name: String,
-    pub kind: SymbolKind,
-    pub file_path: PathBuf,
-    pub line: usize,
-    pub column: usize,
-    pub is_public: bool,
-    pub module_path: Vec<String>,
-    pub crate_name: String,
+  pub name: String,
+  pub kind: SymbolKind,
+  pub file_path: PathBuf,
+  pub line: usize,
+  pub column: usize,
+  pub is_public: bool,
 }
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum SymbolKind {
-    Function,
-    Struct,
-    Enum,
-    Trait,
-    Type,
-    Const,
-    Static,
-    Macro,
-    Module,
-    Method,
+  Function,
+  Struct,
+  Enum,
+  Trait,
+  Type,
+  Const,
+  Static,
 }
 
 pub struct CrateSymbols {
-    pub crate_name: String,
-    pub exports: Vec<ExportedSymbol>,
-    pub re_exports: FxHashMap<String, String>,
-    pub uses: FxHashSet<String>,
+  pub exports: Vec<ExportedSymbol>,
 }
 
 pub struct AstParser {
-    include_private: bool,
+  include_private: bool,
 }
 
 impl AstParser {
-    pub fn new(include_private: bool) -> Self {
-        Self { include_private }
+  pub fn new(include_private: bool) -> Self {
+    Self { include_private }
+  }
+
+  pub fn parse_crate(&self, crate_path: &Path, _crate_name: &str) -> Result<CrateSymbols> {
+    let mut exports = Vec::new();
+
+    for entry in WalkDir::new(crate_path)
+      .into_iter()
+      .filter_map(|e| e.ok())
+      .filter(|e| e.path().extension().map_or(false, |ext| ext == "rs"))
+    {
+      let file_path = entry.path();
+      let _relative_path = file_path.strip_prefix(crate_path).unwrap_or(file_path);
+
+      let content = std::fs::read_to_string(file_path)
+        .with_context(|| format!("Failed to read file: {:?}", file_path))?;
+
+      let ast = syn::parse_file(&content)
+        .with_context(|| format!("Failed to parse file: {:?}", file_path))?;
+
+      let mut visitor = SymbolExtractor {
+        exports: &mut exports,
+        file_path: file_path.to_path_buf(),
+        include_private: self.include_private,
+        source_code: content.clone(),
+      };
+
+      visitor.visit_file(&ast);
     }
 
-    pub fn parse_crate(&self, crate_path: &Path, crate_name: &str) -> Result<CrateSymbols> {
-        let mut exports = Vec::new();
-        let mut re_exports = FxHashMap::default();
-        let mut uses = FxHashSet::default();
-
-        for entry in WalkDir::new(crate_path)
-            .into_iter()
-            .filter_map(|e| e.ok())
-            .filter(|e| e.path().extension().map_or(false, |ext| ext == "rs"))
-        {
-            let file_path = entry.path();
-            let relative_path = file_path.strip_prefix(crate_path).unwrap_or(file_path);
-
-            let module_path = self.get_module_path(relative_path);
-
-            let content = std::fs::read_to_string(file_path)
-                .with_context(|| format!("Failed to read file: {:?}", file_path))?;
-
-            let ast = syn::parse_file(&content)
-                .with_context(|| format!("Failed to parse file: {:?}", file_path))?;
-
-            let mut visitor = SymbolExtractor {
-                exports: &mut exports,
-                re_exports: &mut re_exports,
-                uses: &mut uses,
-                file_path: file_path.to_path_buf(),
-                module_path: module_path.clone(),
-                include_private: self.include_private,
-                crate_name: crate_name.to_string(),
-                source_code: content.clone(),
-            };
-
-            visitor.visit_file(&ast);
-        }
-
-        Ok(CrateSymbols {
-            crate_name: crate_name.to_string(),
-            exports,
-            re_exports,
-            uses,
-        })
-    }
-
-    fn get_module_path(&self, relative_path: &Path) -> Vec<String> {
-        let mut components = Vec::new();
-
-        for component in relative_path.components() {
-            if let std::path::Component::Normal(name) = component {
-                let name_str = name.to_string_lossy();
-                if name_str == "mod.rs" || name_str == "lib.rs" || name_str == "main.rs" {
-                    continue;
-                }
-                if name_str.ends_with(".rs") {
-                    components.push(name_str.trim_end_matches(".rs").to_string());
-                } else {
-                    components.push(name_str.to_string());
-                }
-            }
-        }
-
-        components
-    }
+    Ok(CrateSymbols { exports })
+  }
 }
 
 struct SymbolExtractor<'a> {
-    exports: &'a mut Vec<ExportedSymbol>,
-    re_exports: &'a mut FxHashMap<String, String>,
-    uses: &'a mut FxHashSet<String>,
-    file_path: PathBuf,
-    module_path: Vec<String>,
-    include_private: bool,
-    crate_name: String,
-    source_code: String,
+  exports: &'a mut Vec<ExportedSymbol>,
+  file_path: PathBuf,
+  include_private: bool,
+  source_code: String,
 }
 
 impl<'a> SymbolExtractor<'a> {
-    fn find_symbol_location(&self, symbol_name: &str, kind: &SymbolKind) -> (usize, usize) {
-        // 根据符号类型构建搜索模式
-        let patterns = match kind {
-            SymbolKind::Function => vec![
-                format!("fn {}", symbol_name),
-                format!("pub fn {}", symbol_name),
-                format!("pub(crate) fn {}", symbol_name),
-                format!("pub(super) fn {}", symbol_name),
-                format!("async fn {}", symbol_name),
-                format!("pub async fn {}", symbol_name),
-                format!("const fn {}", symbol_name),
-                format!("pub const fn {}", symbol_name),
-                format!("unsafe fn {}", symbol_name),
-                format!("pub unsafe fn {}", symbol_name),
-            ],
-            SymbolKind::Struct => vec![
-                format!("struct {}", symbol_name),
-                format!("pub struct {}", symbol_name),
-                format!("pub(crate) struct {}", symbol_name),
-                format!("pub(super) struct {}", symbol_name),
-            ],
-            SymbolKind::Enum => vec![
-                format!("enum {}", symbol_name),
-                format!("pub enum {}", symbol_name),
-                format!("pub(crate) enum {}", symbol_name),
-                format!("pub(super) enum {}", symbol_name),
-            ],
-            SymbolKind::Trait => vec![
-                format!("trait {}", symbol_name),
-                format!("pub trait {}", symbol_name),
-                format!("pub(crate) trait {}", symbol_name),
-                format!("pub(super) trait {}", symbol_name),
-            ],
-            SymbolKind::Type => vec![
-                format!("type {}", symbol_name),
-                format!("pub type {}", symbol_name),
-                format!("pub(crate) type {}", symbol_name),
-                format!("pub(super) type {}", symbol_name),
-            ],
-            SymbolKind::Const => vec![
-                format!("const {}", symbol_name),
-                format!("pub const {}", symbol_name),
-                format!("pub(crate) const {}", symbol_name),
-                format!("pub(super) const {}", symbol_name),
-            ],
-            SymbolKind::Static => vec![
-                format!("static {}", symbol_name),
-                format!("pub static {}", symbol_name),
-                format!("pub(crate) static {}", symbol_name),
-                format!("pub(super) static {}", symbol_name),
-            ],
-            _ => vec![symbol_name.to_string()],
-        };
+  fn find_symbol_location(&self, symbol_name: &str, kind: &SymbolKind) -> (usize, usize) {
+    // 根据符号类型构建搜索模式
+    let patterns = match kind {
+      SymbolKind::Function => vec![
+        format!("fn {}", symbol_name),
+        format!("pub fn {}", symbol_name),
+        format!("pub(crate) fn {}", symbol_name),
+        format!("pub(super) fn {}", symbol_name),
+        format!("async fn {}", symbol_name),
+        format!("pub async fn {}", symbol_name),
+        format!("const fn {}", symbol_name),
+        format!("pub const fn {}", symbol_name),
+        format!("unsafe fn {}", symbol_name),
+        format!("pub unsafe fn {}", symbol_name),
+      ],
+      SymbolKind::Struct => vec![
+        format!("struct {}", symbol_name),
+        format!("pub struct {}", symbol_name),
+        format!("pub(crate) struct {}", symbol_name),
+        format!("pub(super) struct {}", symbol_name),
+      ],
+      SymbolKind::Enum => vec![
+        format!("enum {}", symbol_name),
+        format!("pub enum {}", symbol_name),
+        format!("pub(crate) enum {}", symbol_name),
+        format!("pub(super) enum {}", symbol_name),
+      ],
+      SymbolKind::Trait => vec![
+        format!("trait {}", symbol_name),
+        format!("pub trait {}", symbol_name),
+        format!("pub(crate) trait {}", symbol_name),
+        format!("pub(super) trait {}", symbol_name),
+      ],
+      SymbolKind::Type => vec![
+        format!("type {}", symbol_name),
+        format!("pub type {}", symbol_name),
+        format!("pub(crate) type {}", symbol_name),
+        format!("pub(super) type {}", symbol_name),
+      ],
+      SymbolKind::Const => vec![
+        format!("const {}", symbol_name),
+        format!("pub const {}", symbol_name),
+        format!("pub(crate) const {}", symbol_name),
+        format!("pub(super) const {}", symbol_name),
+      ],
+      SymbolKind::Static => vec![
+        format!("static {}", symbol_name),
+        format!("pub static {}", symbol_name),
+        format!("pub(crate) static {}", symbol_name),
+        format!("pub(super) static {}", symbol_name),
+      ],
+    };
 
-        // 在源代码中搜索这些模式
-        for pattern in &patterns {
-            if let Some(pos) = self.source_code.find(pattern) {
-                return self.byte_offset_to_line_column(pos);
-            }
-        }
-
-        // 如果找不到，尝试只搜索符号名（作为后备）
-        if let Some(pos) = self.source_code.find(symbol_name) {
-            return self.byte_offset_to_line_column(pos);
-        }
-
-        // 默认返回 1:1
-        (1, 1)
+    // 在源代码中搜索这些模式
+    for pattern in &patterns {
+      if let Some(pos) = self.source_code.find(pattern) {
+        return self.byte_offset_to_line_column(pos);
+      }
     }
 
-    fn byte_offset_to_line_column(&self, byte_offset: usize) -> (usize, usize) {
-        let mut line = 1;
-        let mut last_newline = 0;
-
-        for (i, ch) in self.source_code.char_indices() {
-            if i >= byte_offset {
-                break;
-            }
-            if ch == '\n' {
-                line += 1;
-                last_newline = i + 1;
-            }
-        }
-
-        let column = byte_offset - last_newline + 1;
-        (line, column)
+    // 如果找不到，尝试只搜索符号名（作为后备）
+    if let Some(pos) = self.source_code.find(symbol_name) {
+      return self.byte_offset_to_line_column(pos);
     }
 
-    fn create_symbol(&self, name: String, kind: SymbolKind, is_public: bool) -> ExportedSymbol {
-        let (line, column) = self.find_symbol_location(&name, &kind);
-        ExportedSymbol {
-            name,
-            kind,
-            file_path: self.file_path.clone(),
-            line,
-            column,
-            is_public,
-            module_path: self.module_path.clone(),
-            crate_name: self.crate_name.clone(),
-        }
+    // 默认返回 1:1
+    (1, 1)
+  }
+
+  fn byte_offset_to_line_column(&self, byte_offset: usize) -> (usize, usize) {
+    let mut line = 1;
+    let mut last_newline = 0;
+
+    for (i, ch) in self.source_code.char_indices() {
+      if i >= byte_offset {
+        break;
+      }
+      if ch == '\n' {
+        line += 1;
+        last_newline = i + 1;
+      }
     }
+
+    let column = byte_offset - last_newline + 1;
+    (line, column)
+  }
+
+  fn create_symbol(&self, name: String, kind: SymbolKind, is_public: bool) -> ExportedSymbol {
+    let (line, column) = self.find_symbol_location(&name, &kind);
+    ExportedSymbol { name, kind, file_path: self.file_path.clone(), line, column, is_public }
+  }
 }
 
 impl<'a> Visit<'_> for SymbolExtractor<'a> {
-    fn visit_item(&mut self, item: &Item) {
-        let is_public = matches!(&item, Item::Mod(m) if matches!(m.vis, Visibility::Public(_)))
-            || matches!(&item, Item::Struct(s) if matches!(s.vis, Visibility::Public(_)))
-            || matches!(&item, Item::Enum(e) if matches!(e.vis, Visibility::Public(_)))
-            || matches!(&item, Item::Fn(f) if matches!(f.vis, Visibility::Public(_)))
-            || matches!(&item, Item::Trait(t) if matches!(t.vis, Visibility::Public(_)))
-            || matches!(&item, Item::Type(t) if matches!(t.vis, Visibility::Public(_)))
-            || matches!(&item, Item::Const(c) if matches!(c.vis, Visibility::Public(_)))
-            || matches!(&item, Item::Static(s) if matches!(s.vis, Visibility::Public(_)))
-            || matches!(&item, Item::Macro(m) if m.mac.path.segments.first().map_or(false, |s| s.ident == "macro_rules"));
+  fn visit_item(&mut self, item: &Item) {
+    let is_public = matches!(&item, Item::Mod(m) if matches!(m.vis, Visibility::Public(_)))
+      || matches!(&item, Item::Struct(s) if matches!(s.vis, Visibility::Public(_)))
+      || matches!(&item, Item::Enum(e) if matches!(e.vis, Visibility::Public(_)))
+      || matches!(&item, Item::Fn(f) if matches!(f.vis, Visibility::Public(_)))
+      || matches!(&item, Item::Trait(t) if matches!(t.vis, Visibility::Public(_)))
+      || matches!(&item, Item::Type(t) if matches!(t.vis, Visibility::Public(_)))
+      || matches!(&item, Item::Const(c) if matches!(c.vis, Visibility::Public(_)))
+      || matches!(&item, Item::Static(s) if matches!(s.vis, Visibility::Public(_)))
+      || matches!(&item, Item::Macro(m) if m.mac.path.segments.first().map_or(false, |s| s.ident == "macro_rules"));
 
-        if !is_public && !self.include_private {
-            visit::visit_item(self, item);
-            return;
-        }
-
-        match item {
-            Item::Fn(func) => {
-                self.exports.push(self.create_symbol(
-                    func.sig.ident.to_string(),
-                    SymbolKind::Function,
-                    is_public,
-                ));
-            }
-            Item::Struct(s) => {
-                self.exports.push(self.create_symbol(
-                    s.ident.to_string(),
-                    SymbolKind::Struct,
-                    is_public,
-                ));
-            }
-            Item::Enum(e) => {
-                self.exports.push(self.create_symbol(
-                    e.ident.to_string(),
-                    SymbolKind::Enum,
-                    is_public,
-                ));
-            }
-            Item::Trait(t) => {
-                self.exports.push(self.create_symbol(
-                    t.ident.to_string(),
-                    SymbolKind::Trait,
-                    is_public,
-                ));
-            }
-            Item::Type(t) => {
-                self.exports.push(self.create_symbol(
-                    t.ident.to_string(),
-                    SymbolKind::Type,
-                    is_public,
-                ));
-            }
-            Item::Const(c) => {
-                self.exports.push(self.create_symbol(
-                    c.ident.to_string(),
-                    SymbolKind::Const,
-                    is_public,
-                ));
-            }
-            Item::Static(s) => {
-                self.exports.push(self.create_symbol(
-                    s.ident.to_string(),
-                    SymbolKind::Static,
-                    is_public,
-                ));
-            }
-            Item::Use(u) => {
-                self.process_use_item(u);
-            }
-            _ => {}
-        }
-
-        visit::visit_item(self, item);
+    if !is_public && !self.include_private {
+      visit::visit_item(self, item);
+      return;
     }
 
-    fn visit_item_use(&mut self, node: &ItemUse) {
-        self.process_use_item(node);
-        visit::visit_item_use(self, node);
+    match item {
+      Item::Fn(func) => {
+        self.exports.push(self.create_symbol(
+          func.sig.ident.to_string(),
+          SymbolKind::Function,
+          is_public,
+        ));
+      }
+      Item::Struct(s) => {
+        self.exports.push(self.create_symbol(s.ident.to_string(), SymbolKind::Struct, is_public));
+      }
+      Item::Enum(e) => {
+        self.exports.push(self.create_symbol(e.ident.to_string(), SymbolKind::Enum, is_public));
+      }
+      Item::Trait(t) => {
+        self.exports.push(self.create_symbol(t.ident.to_string(), SymbolKind::Trait, is_public));
+      }
+      Item::Type(t) => {
+        self.exports.push(self.create_symbol(t.ident.to_string(), SymbolKind::Type, is_public));
+      }
+      Item::Const(c) => {
+        self.exports.push(self.create_symbol(c.ident.to_string(), SymbolKind::Const, is_public));
+      }
+      Item::Static(s) => {
+        self.exports.push(self.create_symbol(s.ident.to_string(), SymbolKind::Static, is_public));
+      }
+      Item::Use(_) => {}
+      _ => {}
     }
-}
 
-impl<'a> SymbolExtractor<'a> {
-    fn process_use_item(&mut self, use_item: &ItemUse) {
-        self.process_use_tree(&use_item.tree, Vec::new());
-    }
+    visit::visit_item(self, item);
+  }
 
-    fn process_use_tree(&mut self, tree: &syn::UseTree, mut path: Vec<String>) {
-        match tree {
-            syn::UseTree::Path(p) => {
-                path.push(p.ident.to_string());
-                self.process_use_tree(&p.tree, path);
-            }
-            syn::UseTree::Name(n) => {
-                path.push(n.ident.to_string());
-                let full_path = path.join("::");
-                self.uses.insert(full_path);
-            }
-            syn::UseTree::Group(g) => {
-                for item in &g.items {
-                    self.process_use_tree(item, path.clone());
-                }
-            }
-            syn::UseTree::Glob(_) => {
-                let full_path = format!("{}::*", path.join("::"));
-                self.uses.insert(full_path);
-            }
-            syn::UseTree::Rename(r) => {
-                path.push(r.ident.to_string());
-                let full_path = path.join("::");
-                self.uses.insert(full_path);
-            }
-        }
-    }
+  fn visit_item_use(&mut self, node: &ItemUse) {
+    visit::visit_item_use(self, node);
+  }
 }

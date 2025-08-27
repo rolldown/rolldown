@@ -1,7 +1,9 @@
 use super::Bundler;
 use crate::hmr::hmr_stage::{HmrStage, HmrStageInput};
+use rolldown_common::WatcherChangeKind;
 use rolldown_common::{ClientHmrInput, ClientHmrUpdate, HmrUpdate};
 use rolldown_error::BuildResult;
+use rolldown_utils::indexmap::FxIndexMap;
 use rustc_hash::FxHashSet;
 use std::sync::{Arc, atomic::AtomicU32};
 
@@ -9,7 +11,7 @@ impl Bundler {
   #[cfg(feature = "experimental")]
   pub async fn compute_hmr_update_for_file_changes(
     &mut self,
-    changed_file_paths: &[String],
+    changed_file_paths: &FxIndexMap<String, WatcherChangeKind>,
     clients: &[ClientHmrInput<'_>],
     next_hmr_patch_id: Arc<AtomicU32>,
   ) -> BuildResult<Vec<ClientHmrUpdate>> {

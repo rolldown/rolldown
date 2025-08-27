@@ -22,7 +22,6 @@ pub use crate::plugin::HookResolveIdReturn;
 pub use crate::plugin::HookTransformAstReturn;
 pub use crate::plugin::HookTransformReturn;
 
-pub type BoxPluginable = Box<dyn Pluginable>;
 pub type SharedPluginable = Arc<dyn Pluginable>;
 
 /// `Pluginable` is under the hood trait that rolldown to run. It's not recommended to use this trait directly.

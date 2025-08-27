@@ -1,9 +1,7 @@
-use std::{borrow::Cow, path::Path, sync::LazyLock};
+use std::{borrow::Cow, sync::LazyLock};
 
 use regex::Regex;
-use rolldown::BundleOutput;
-use rolldown_common::{BundlerOptions, Output};
-use rolldown_error::DiagnosticOptions;
+use rolldown_common::BundlerOptions;
 
 pub fn assert_bundled(options: BundlerOptions) {
   let result = tokio::runtime::Builder::new_multi_thread()
@@ -15,68 +13,6 @@ pub fn assert_bundled(options: BundlerOptions) {
       bundler.generate().await
     });
   assert!(result.is_ok(), "Failed to bundle.");
-}
-
-pub fn assert_bundled_write(options: BundlerOptions) {
-  let result = tokio::runtime::Builder::new_multi_thread()
-    .enable_all()
-    .build()
-    .expect("Failed building the Runtime")
-    .block_on(async move {
-      let mut bundler = rolldown::Bundler::new(options);
-      bundler.write().await
-    });
-  assert!(result.is_ok(), "Failed to bundle.");
-}
-
-pub fn stringify_bundle_output(output: BundleOutput, cwd: &Path) -> String {
-  let hidden_runtime_module = true;
-
-  let mut ret = String::new();
-  let mut assets = output.assets;
-  // Make the snapshot consistent
-  let mut warnings = output.warnings;
-  warnings.sort_by(|a, b| {
-    let a = a.to_string();
-    let b = b.to_string();
-    a.cmp(&b)
-  });
-  if !warnings.is_empty() {
-    ret.push_str("# warnings\n\n");
-    let diagnostics = warnings
-      .into_iter()
-      .map(|e| (e.kind(), e.to_diagnostic_with(&DiagnosticOptions { cwd: cwd.to_path_buf() })));
-    let rendered = diagnostics
-      .flat_map(|(code, diagnostic)| {
-        [
-          Cow::Owned(format!("## {code}\n")),
-          "```text".into(),
-          Cow::Owned(diagnostic.to_string()),
-          "```".into(),
-        ]
-      })
-      .collect::<Vec<_>>()
-      .join("\n");
-    ret.push_str(&rendered);
-    ret.push('\n');
-  }
-
-  ret.push_str("# Assets\n\n");
-  assets.sort_by_key(|c| c.filename().to_string());
-  let artifacts = assets
-    .iter()
-    .filter(|asset| !asset.filename().contains("$runtime$") && matches!(asset, Output::Chunk(_)))
-    .flat_map(|asset| {
-      let content = std::str::from_utf8(asset.content_as_bytes()).unwrap();
-      let content = tweak_snapshot(content, hidden_runtime_module, true);
-
-      [Cow::Owned(format!("## {}\n", asset.filename())), "```js".into(), content, "```".into()]
-    })
-    .collect::<Vec<_>>()
-    .join("\n");
-  ret.push_str(&artifacts);
-
-  ret
 }
 
 #[macro_export]

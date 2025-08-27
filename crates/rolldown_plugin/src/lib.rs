@@ -15,7 +15,7 @@ pub use typedmap;
 pub mod __inner {
   pub use super::utils::resolve_id_check_external::resolve_id_check_external;
   pub use super::utils::resolve_id_with_plugins::resolve_id_with_plugins;
-  pub use crate::pluginable::{BoxPluginable, Pluginable, SharedPluginable};
+  pub use crate::pluginable::{Pluginable, SharedPluginable};
 }
 
 pub use crate::{

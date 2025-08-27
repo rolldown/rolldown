@@ -1,0 +1,257 @@
+{
+  "summary": {
+    "total_crates": 22,
+    "total_symbols": 675,
+    "used_symbols": 653,
+    "unused_symbols": 22,
+    "usage_percentage": 96.74074074074073,
+    "internal_only_usage": 401,
+    "external_only_usage": 62,
+    "re_exported": 7,
+    "pub_from_entry": 171
+  },
+  "unused_symbols": [
+    {
+      "symbol_key": "rolldown_watcher::EventHandler",
+      "crate_name": "rolldown_watcher",
+      "symbol_name": "EventHandler",
+      "symbol_kind": "Trait",
+      "file_path": "/Users/shulaoda/workspace/rolldown/crates/rolldown_watcher/src/event_handler.rs",
+      "line": 3,
+      "column": 5,
+      "is_public": true,
+      "reason": "Public symbol not used by any dependent crate"
+    },
+    {
+      "symbol_key": "rolldown_common::IndexExternalModules",
+      "crate_name": "rolldown_common",
+      "symbol_name": "IndexExternalModules",
+      "symbol_kind": "Type",
+      "file_path": "/Users/shulaoda/workspace/rolldown/crates/rolldown_common/src/types/module_table.rs",
+      "line": 7,
+      "column": 5,
+      "is_public": true,
+      "reason": "Public symbol not used by any dependent crate"
+    },
+    {
+      "symbol_key": "rolldown_common::ModuleView",
+      "crate_name": "rolldown_common",
+      "symbol_name": "ModuleView",
+      "symbol_kind": "Enum",
+      "file_path": "/Users/shulaoda/workspace/rolldown/crates/rolldown_common/src/types/module_view.rs",
+      "line": 3,
+      "column": 5,
+      "is_public": true,
+      "reason": "Public symbol not used by any dependent crate"
+    },
+    {
+      "symbol_key": "rolldown_plugin::SharedNativePluginContext",
+      "crate_name": "rolldown_plugin",
+      "symbol_name": "SharedNativePluginContext",
+      "symbol_kind": "Type",
+      "file_path": "/Users/shulaoda/workspace/rolldown/crates/rolldown_plugin/src/plugin_context/native_plugin_context.rs",
+      "line": 28,
+      "column": 5,
+      "is_public": true,
+      "reason": "Public symbol not used by any dependent crate"
+    },
+    {
+      "symbol_key": "rolldown_utils::filter_exprs_interpreter",
+      "crate_name": "rolldown_utils",
+      "symbol_name": "filter_exprs_interpreter",
+      "symbol_kind": "Function",
+      "file_path": "/Users/shulaoda/workspace/rolldown/crates/rolldown_utils/src/filter_expression.rs",
+      "line": 98,
+      "column": 5,
+      "is_public": true,
+      "reason": "Public symbol not used by any dependent crate"
+    },
+    {
+      "symbol_key": "rolldown_debug::generate_build_id",
+      "crate_name": "rolldown_debug",
+      "symbol_name": "generate_build_id",
+      "symbol_kind": "Function",
+      "file_path": "/Users/shulaoda/workspace/rolldown/crates/rolldown_debug/src/utils.rs",
+      "line": 6,
+      "column": 5,
+      "is_public": true,
+      "reason": "Public symbol not used by any dependent crate"
+    },
+    {
+      "symbol_key": "rolldown_fs::test_memory_file_system",
+      "crate_name": "rolldown_fs",
+      "symbol_name": "test_memory_file_system",
+      "symbol_kind": "Function",
+      "file_path": "/Users/shulaoda/workspace/rolldown/crates/rolldown_fs/src/memory.rs",
+      "line": 133,
+      "column": 7,
+      "is_public": true,
+      "reason": "Public symbol not used by any dependent crate"
+    },
+    {
+      "symbol_key": "rolldown_plugin::Plugin",
+      "crate_name": "rolldown_plugin",
+      "symbol_name": "Plugin",
+      "symbol_kind": "Trait",
+      "file_path": "/Users/shulaoda/workspace/rolldown/crates/rolldown_plugin/src/plugin.rs",
+      "line": 27,
+      "column": 5,
+      "is_public": true,
+      "reason": "Public symbol not used by any dependent crate"
+    },
+    {
+      "symbol_key": "rolldown_common::ModuleRenderType",
+      "crate_name": "rolldown_common",
+      "symbol_name": "ModuleRenderType",
+      "symbol_kind": "Enum",
+      "file_path": "/Users/shulaoda/workspace/rolldown/crates/rolldown_common/src/types/module_render_type.rs",
+      "line": 3,
+      "column": 5,
+      "is_public": true,
+      "reason": "Public symbol not used by any dependent crate"
+    },
+    {
+      "symbol_key": "rolldown_testing::stringify_bundle_output",
+      "crate_name": "rolldown_testing",
+      "symbol_name": "stringify_bundle_output",
+      "symbol_kind": "Function",
+      "file_path": "/Users/shulaoda/workspace/rolldown/crates/rolldown_testing/src/utils.rs",
+      "line": 32,
+      "column": 5,
+      "is_public": true,
+      "reason": "Public symbol not used by any dependent crate"
+    },
+    {
+      "symbol_key": "rolldown_common::BundlerFileSystem",
+      "crate_name": "rolldown_common",
+      "symbol_name": "BundlerFileSystem",
+      "symbol_kind": "Trait",
+      "file_path": "/Users/shulaoda/workspace/rolldown/crates/rolldown_common/src/types/bundler_file_system.rs",
+      "line": 11,
+      "column": 5,
+      "is_public": true,
+      "reason": "Public symbol not used by any dependent crate"
+    },
+    {
+      "symbol_key": "rolldown_debug::generate_session_id",
+      "crate_name": "rolldown_debug",
+      "symbol_name": "generate_session_id",
+      "symbol_kind": "Function",
+      "file_path": "/Users/shulaoda/workspace/rolldown/crates/rolldown_debug/src/utils.rs",
+      "line": 12,
+      "column": 5,
+      "is_public": true,
+      "reason": "Public symbol not used by any dependent crate"
+    },
+    {
+      "symbol_key": "rolldown_testing::rome_ts",
+      "crate_name": "rolldown_testing",
+      "symbol_name": "rome_ts",
+      "symbol_kind": "Function",
+      "file_path": "/Users/shulaoda/workspace/rolldown/crates/rolldown_testing/src/bundler_options_presets/rome_ts.rs",
+      "line": 4,
+      "column": 5,
+      "is_public": true,
+      "reason": "Public symbol not used by any dependent crate"
+    },
+    {
+      "symbol_key": "rolldown_error::filter_out_disabled_diagnostics",
+      "crate_name": "rolldown_error",
+      "symbol_name": "filter_out_disabled_diagnostics",
+      "symbol_kind": "Function",
+      "file_path": "/Users/shulaoda/workspace/rolldown/crates/rolldown_error/src/utils.rs",
+      "line": 64,
+      "column": 5,
+      "is_public": true,
+      "reason": "Public symbol not used by any dependent crate"
+    },
+    {
+      "symbol_key": "rolldown_testing::threejs10x",
+      "crate_name": "rolldown_testing",
+      "symbol_name": "threejs10x",
+      "symbol_kind": "Function",
+      "file_path": "/Users/shulaoda/workspace/rolldown/crates/rolldown_testing/src/bundler_options_presets/threejs.rs",
+      "line": 16,
+      "column": 5,
+      "is_public": true,
+      "reason": "Public symbol not used by any dependent crate"
+    },
+    {
+      "symbol_key": "rolldown_testing::assert_bundled_write",
+      "crate_name": "rolldown_testing",
+      "symbol_name": "assert_bundled_write",
+      "symbol_kind": "Function",
+      "file_path": "/Users/shulaoda/workspace/rolldown/crates/rolldown_testing/src/utils.rs",
+      "line": 20,
+      "column": 5,
+      "is_public": true,
+      "reason": "Public symbol not used by any dependent crate"
+    },
+    {
+      "symbol_key": "rolldown_testing::multi_duplicated_symbol",
+      "crate_name": "rolldown_testing",
+      "symbol_name": "multi_duplicated_symbol",
+      "symbol_kind": "Function",
+      "file_path": "/Users/shulaoda/workspace/rolldown/crates/rolldown_testing/src/bundler_options_presets/multi_duplicated_symbol.rs",
+      "line": 7,
+      "column": 5,
+      "is_public": true,
+      "reason": "Public symbol not used by any dependent crate"
+    },
+    {
+      "symbol_key": "rolldown_plugin::BoxPluginable",
+      "crate_name": "rolldown_plugin",
+      "symbol_name": "BoxPluginable",
+      "symbol_kind": "Type",
+      "file_path": "/Users/shulaoda/workspace/rolldown/crates/rolldown_plugin/src/pluginable.rs",
+      "line": 25,
+      "column": 5,
+      "is_public": true,
+      "reason": "Public symbol not used by any dependent crate"
+    },
+    {
+      "symbol_key": "rolldown_debug_action::Meta",
+      "crate_name": "rolldown_debug_action",
+      "symbol_name": "Meta",
+      "symbol_kind": "Enum",
+      "file_path": "/Users/shulaoda/workspace/rolldown/crates/rolldown_debug_action/src/definitions/mod.rs",
+      "line": 19,
+      "column": 5,
+      "is_public": true,
+      "reason": "Public symbol not used by any dependent crate"
+    },
+    {
+      "symbol_key": "rolldown_testing_config::true_by_default",
+      "crate_name": "rolldown_testing_config",
+      "symbol_name": "true_by_default",
+      "symbol_kind": "Function",
+      "file_path": "/Users/shulaoda/workspace/rolldown/crates/rolldown_testing_config/src/utils.rs",
+      "line": 1,
+      "column": 5,
+      "is_public": true,
+      "reason": "Public symbol not used by any dependent crate"
+    },
+    {
+      "symbol_key": "rolldown_testing::assert_bundled",
+      "crate_name": "rolldown_testing",
+      "symbol_name": "assert_bundled",
+      "symbol_kind": "Function",
+      "file_path": "/Users/shulaoda/workspace/rolldown/crates/rolldown_testing/src/utils.rs",
+      "line": 8,
+      "column": 5,
+      "is_public": true,
+      "reason": "Public symbol not used by any dependent crate"
+    },
+    {
+      "symbol_key": "rolldown_testing::threejs",
+      "crate_name": "rolldown_testing",
+      "symbol_name": "threejs",
+      "symbol_kind": "Function",
+      "file_path": "/Users/shulaoda/workspace/rolldown/crates/rolldown_testing/src/bundler_options_presets/threejs.rs",
+      "line": 5,
+      "column": 5,
+      "is_public": true,
+      "reason": "Public symbol not used by any dependent crate"
+    }
+  ]
+}

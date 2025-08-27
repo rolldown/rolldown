@@ -62,7 +62,9 @@ impl<W: Watcher + Send + 'static> DevEngine<W> {
       return;
     }
 
-    if let Some(build_process_future) = self.build_driver.schedule_build(vec![]).await {
+    if let Some(build_process_future) =
+      self.build_driver.schedule_build(vec![]).await.expect("FIXME: Handle the error")
+    {
       build_process_future.await;
     } else {
       self.ctx.ensure_current_build_finish().await;

@@ -5717,6 +5717,10 @@ expression: output
 
 - main-!~{000}~.js => main-DmFSGZpJ.js
 
+# tests/rolldown/topics/hmr/delete_file_used
+
+- main-!~{000}~.js => main-DDGgGYgU.js
+
 # tests/rolldown/topics/hmr/dynamic_import
 
 - main-!~{000}~.js => main-BO9UU8iZ.js

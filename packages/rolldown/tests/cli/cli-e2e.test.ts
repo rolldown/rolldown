@@ -129,6 +129,14 @@ describe('config', () => {
     expect(status.exitCode).toBe(0)
     expect(cleanStdout(status.stdout)).toMatchSnapshot()
   })
+  it('should bundle in cjs-config-with-replace-plugin', async () => {
+    const cwd = cliFixturesDir('cjs-config-with-replace-plugin')
+    const status = await $({ cwd })`rolldown -c rolldown.config.cjs`
+    expect(status.exitCode).toBe(0)
+    const file = path.resolve(cwd, 'dist/index.js')
+    const content = fs.readFileSync(file, 'utf-8')
+    expect(content).toContain("console.log(1)")
+  })
   it('should not bundle in ext-js-syntax-esm', async () => {
     const cwd = cliFixturesDir('ext-js-syntax-esm')
     try {

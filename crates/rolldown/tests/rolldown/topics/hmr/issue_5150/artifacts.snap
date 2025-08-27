@@ -10,7 +10,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 // HIDDEN [rolldown:hmr]
 //#region common.js
 var common_exports = {};
-/* @__PURE__ */ __export(common_exports, { prefix: () => prefix });
+__export(common_exports, { prefix: () => prefix });
 const common_hot = __rolldown_runtime__.createModuleHotContext("common.js");
 __rolldown_runtime__.registerModule("common.js", { exports: common_exports });
 const prefix = "prefix:";
@@ -18,7 +18,7 @@ const prefix = "prefix:";
 //#endregion
 //#region foo.js
 var foo_exports = {};
-/* @__PURE__ */ __export(foo_exports, { foo: () => foo });
+__export(foo_exports, { foo: () => foo });
 const foo_hot = __rolldown_runtime__.createModuleHotContext("foo.js");
 __rolldown_runtime__.registerModule("foo.js", { exports: foo_exports });
 const foo = prefix + "foo";
@@ -26,7 +26,7 @@ const foo = prefix + "foo";
 //#endregion
 //#region bar.js
 var bar_exports = {};
-/* @__PURE__ */ __export(bar_exports, { bar: () => bar });
+__export(bar_exports, { bar: () => bar });
 const bar_hot = __rolldown_runtime__.createModuleHotContext("bar.js");
 __rolldown_runtime__.registerModule("bar.js", { exports: bar_exports });
 const bar = prefix + "bar";
@@ -34,7 +34,7 @@ const bar = prefix + "bar";
 //#endregion
 //#region messenger.js
 var messenger_exports = {};
-/* @__PURE__ */ __export(messenger_exports, {
+__export(messenger_exports, {
 	msg: () => msg,
 	sayMessage: () => sayMessage
 });

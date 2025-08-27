@@ -25,7 +25,7 @@ const abc = void 0;
 //#endregion
 //#region b.js
 var b_exports = {};
-/* @__PURE__ */ __export(b_exports, { xyz: () => xyz });
+__export(b_exports, { xyz: () => xyz });
 const xyz = null;
 
 //#endregion

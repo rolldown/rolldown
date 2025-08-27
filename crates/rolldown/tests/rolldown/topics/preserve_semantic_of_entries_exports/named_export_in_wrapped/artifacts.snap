@@ -9,7 +9,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 // HIDDEN [rolldown:runtime]
 //#region main.js
 var main_exports = {};
-/* @__PURE__ */ __export(main_exports, {
+__export(main_exports, {
 	default: () => main_default,
 	foo: () => foo
 });

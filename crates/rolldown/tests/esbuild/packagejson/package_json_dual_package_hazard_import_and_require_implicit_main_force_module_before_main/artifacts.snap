@@ -11,7 +11,7 @@ import assert from "node:assert";
 // HIDDEN [rolldown:runtime]
 //#region node_modules/demo-pkg/module.js
 var module_exports = {};
-/* @__PURE__ */ __export(module_exports, { default: () => module_default });
+__export(module_exports, { default: () => module_default });
 var module_default;
 var init_module = __esm({ "node_modules/demo-pkg/module.js": (() => {
 	module_default = "module";

@@ -13,7 +13,7 @@ var nope = void 0;
 //#endregion
 //#region foo.ts
 var foo_exports = {};
-/* @__PURE__ */ __export(foo_exports, { nope: () => nope });
+__export(foo_exports, { nope: () => nope });
 
 //#endregion
 //#region entry.js

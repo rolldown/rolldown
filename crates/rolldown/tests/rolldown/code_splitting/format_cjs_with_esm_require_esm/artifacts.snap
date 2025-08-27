@@ -41,7 +41,7 @@ const require_chunk = require('./chunk.js');
 
 //#region esm.js
 var esm_exports = {};
-/* @__PURE__ */ require_chunk.__export(esm_exports, { share: () => share });
+require_chunk.__export(esm_exports, { share: () => share });
 function share() {
 	return 1;
 }

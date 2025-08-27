@@ -101,7 +101,7 @@ assert.strictEqual(requiredUmdLib.foo, "foo");
 //#endregion
 //#region cases/manual_reexport/lib.js
 var lib_exports = {};
-/* @__PURE__ */ __export(lib_exports, {
+__export(lib_exports, {
 	Globals: () => Globals,
 	value: () => value
 });
@@ -114,7 +114,7 @@ const value = "lib";
 //#endregion
 //#region cases/manual_reexport/barrel.js
 var barrel_exports = {};
-/* @__PURE__ */ __export(barrel_exports, {
+__export(barrel_exports, {
 	Globals: () => Globals,
 	value: () => value
 });
@@ -134,7 +134,7 @@ assert.strictEqual(Globals, Object);
 //#endregion
 //#region cases/deconflict_import_bindings/foo.mjs
 var foo_exports = {};
-/* @__PURE__ */ __export(foo_exports, { foo: () => foo$1 });
+__export(foo_exports, { foo: () => foo$1 });
 init_trigger_dep();
 const foo_hot$1 = __rolldown_runtime__.createModuleHotContext("cases/deconflict_import_bindings/foo.mjs");
 __rolldown_runtime__.registerModule("cases/deconflict_import_bindings/foo.mjs", { exports: foo_exports });
@@ -143,7 +143,7 @@ const foo$1 = "foo";
 //#endregion
 //#region cases/deconflict_import_bindings/foo/index.mjs
 var foo_exports$1 = {};
-/* @__PURE__ */ __export(foo_exports$1, { foo: () => foo });
+__export(foo_exports$1, { foo: () => foo });
 init_trigger_dep();
 const foo_hot = __rolldown_runtime__.createModuleHotContext("cases/deconflict_import_bindings/foo/index.mjs");
 __rolldown_runtime__.registerModule("cases/deconflict_import_bindings/foo/index.mjs", { exports: foo_exports$1 });

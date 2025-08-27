@@ -29,7 +29,7 @@ const x = 123;
 //#endregion
 //#region foo.js
 var foo_exports = {};
-/* @__PURE__ */ __export(foo_exports, { x: () => x });
+__export(foo_exports, { x: () => x });
 
 //#endregion
 //#region entry.js

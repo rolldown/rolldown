@@ -10,7 +10,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 //#region main.js
 var main_exports = {};
-/* @__PURE__ */ __export(main_exports, { main: () => main });
+__export(main_exports, { main: () => main });
 __reExport(main_exports, require("node:fs"));
 var main;
 var init_main = __esm({ "main.js": (() => {

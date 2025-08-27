@@ -12,7 +12,7 @@ import assert from "node:assert";
 // HIDDEN [rolldown:hmr]
 //#region self_accept.js
 var self_accept_exports = {};
-/* @__PURE__ */ __export(self_accept_exports, { foo: () => foo });
+__export(self_accept_exports, { foo: () => foo });
 const self_accept_hot = __rolldown_runtime__.createModuleHotContext("self_accept.js");
 __rolldown_runtime__.registerModule("self_accept.js", { exports: self_accept_exports });
 const foo = "foo";
@@ -23,7 +23,7 @@ self_accept_hot.accept((mod) => {
 //#endregion
 //#region single_accept/child.js
 var child_exports$1 = {};
-/* @__PURE__ */ __export(child_exports$1, { count: () => count$2 });
+__export(child_exports$1, { count: () => count$2 });
 const child_hot$1 = __rolldown_runtime__.createModuleHotContext("single_accept/child.js");
 __rolldown_runtime__.registerModule("single_accept/child.js", { exports: child_exports$1 });
 const count$2 = 0;
@@ -51,7 +51,7 @@ process.on("beforeExit", (code) => {
 //#endregion
 //#region array_accept/child.js
 var child_exports = {};
-/* @__PURE__ */ __export(child_exports, { count: () => count });
+__export(child_exports, { count: () => count });
 const child_hot = __rolldown_runtime__.createModuleHotContext("array_accept/child.js");
 __rolldown_runtime__.registerModule("array_accept/child.js", { exports: child_exports });
 const count = 0;

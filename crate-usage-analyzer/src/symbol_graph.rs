@@ -300,10 +300,17 @@ impl SymbolGraph {
             }
         }
         
+        let usage_percentage = if total_symbols > 0 {
+            (used_symbols as f64 / total_symbols as f64) * 100.0
+        } else {
+            0.0
+        };
+        
         GraphStatistics {
             total_symbols,
             used_symbols,
             unused_symbols: total_symbols - used_symbols,
+            usage_percentage,
             internal_only,
             external_only,
             re_exported,
@@ -325,6 +332,7 @@ pub struct GraphStatistics {
     pub total_symbols: usize,
     pub used_symbols: usize,
     pub unused_symbols: usize,
+    pub usage_percentage: f64,
     pub internal_only: usize,
     pub external_only: usize,
     pub re_exported: usize,

@@ -3,6 +3,7 @@ use syn::{ImplItem, ItemImpl, Path, Type, TypePath, visit::Visit};
 use std::path::PathBuf;
 
 /// Tracks trait implementations and their methods
+#[derive(Clone, Debug)]
 pub struct TraitImplTracker {
     /// Maps (trait_name, type_name) -> methods
     /// e.g., ("BindingPatternExt", "BindingPattern") -> ["binding_identifiers", "into_assignment_target", ...]
@@ -51,6 +52,28 @@ impl TraitImplTracker {
     /// Get all traits that provide a specific method
     pub fn get_traits_for_method(&self, method_name: &str) -> Option<&FxHashSet<String>> {
         self.method_to_traits.get(method_name)
+    }
+    
+    /// Merge another tracker into this one
+    pub fn merge(&mut self, other: TraitImplTracker) {
+        // Merge trait_impls
+        for ((trait_name, type_name), methods) in other.trait_impls {
+            self.trait_impls
+                .entry((trait_name, type_name))
+                .or_default()
+                .extend(methods);
+        }
+        
+        // Merge method_to_traits
+        for (method_name, traits) in other.method_to_traits {
+            self.method_to_traits
+                .entry(method_name)
+                .or_default()
+                .extend(traits);
+        }
+        
+        // Merge extension_traits
+        self.extension_traits.extend(other.extension_traits);
     }
 }
 

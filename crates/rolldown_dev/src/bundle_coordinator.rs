@@ -7,9 +7,10 @@ use std::{
 use arcstr::ArcStr;
 use futures::FutureExt;
 use notify::EventKind;
+use rolldown_common::WatcherChangeKind;
 use rolldown_error::BuildResult;
 use rolldown_fs_watcher::{DynFsWatcher, FsEventResult, RecursiveMode};
-use rolldown_utils::{dashmap::FxDashSet, indexmap::FxIndexSet};
+use rolldown_utils::{dashmap::FxDashSet, indexmap::FxIndexMap};
 use sugar_path::SugarPath;
 use tokio::sync::Mutex;
 
@@ -39,7 +40,7 @@ pub struct BundleCoordinator {
   /// Tracks the state of the initial build
   state: CoordinatorState,
   /// File changes that arrived during initial build
-  queued_file_changes_waited_for_full_build: FxIndexSet<PathBuf>,
+  queued_file_changes_waited_for_full_build: FxIndexMap<PathBuf, WatcherChangeKind>,
   /// Build state - managed directly by coordinator
   queued_tasks: VecDeque<TaskInput>,
   has_stale_bundle_output: bool,
@@ -61,7 +62,7 @@ impl BundleCoordinator {
       watcher: Mutex::new(watcher),
       watched_files: FxDashSet::default(),
       state: CoordinatorState::Initialized,
-      queued_file_changes_waited_for_full_build: FxIndexSet::default(),
+      queued_file_changes_waited_for_full_build: FxIndexMap::default(),
       // Initialize build state with initial build task
       queued_tasks: VecDeque::from([]),
       has_stale_bundle_output: true,
@@ -129,20 +130,35 @@ impl BundleCoordinator {
   async fn handle_watch_event(&mut self, watch_event: FsEventResult) {
     match watch_event {
       Ok(batched_events) => {
-        let mut changed_files = FxIndexSet::default();
-        batched_events.into_iter().for_each(|batched_event| match &batched_event.detail.kind {
-          #[cfg(target_os = "macos")]
-          EventKind::Modify(notify::event::ModifyKind::Metadata(_))
-            if !self.ctx.options.use_polling =>
-          {
-            // When using kqueue on mac, ignore metadata changes as it happens frequently and doesn't affect the build in most cases
-            // Note that when using polling, we shouldn't ignore metadata changes as the polling watcher prefer to emit them over
-            // content change events
+        let mut changed_files = FxIndexMap::default();
+        batched_events.into_iter().for_each(|batched_event| {
+          match &batched_event.detail.kind {
+            EventKind::Create(_create_kind) => {
+              for path in batched_event.detail.paths {
+                changed_files.insert(path, WatcherChangeKind::Create);
+              }
+            }
+            #[cfg(target_os = "macos")]
+            EventKind::Modify(notify::event::ModifyKind::Metadata(_))
+              if !self.ctx.options.use_polling =>
+            {
+              // When using kqueue on mac, ignore metadata changes as it happens frequently and doesn't affect the build in most cases
+              // Note that when using polling, we shouldn't ignore metadata changes as the polling watcher prefer to emit them over
+              // content change events
+            }
+            EventKind::Modify(notify::event::ModifyKind::Name(notify::event::RenameMode::From))
+            | EventKind::Remove(_) => {
+              for path in batched_event.detail.paths {
+                changed_files.insert(path, WatcherChangeKind::Delete);
+              }
+            }
+            EventKind::Modify(_modify_kind) => {
+              for path in batched_event.detail.paths {
+                changed_files.insert(path, WatcherChangeKind::Update);
+              }
+            }
+            _ => {}
           }
-          EventKind::Modify(_modify_kind) => {
-            changed_files.extend(batched_event.detail.paths);
-          }
-          _ => {}
         });
 
         self.handle_file_changes(changed_files).await;
@@ -154,7 +170,7 @@ impl BundleCoordinator {
   }
 
   /// Handle file changes based on initial build state
-  async fn handle_file_changes(&mut self, changed_files: FxIndexSet<PathBuf>) {
+  async fn handle_file_changes(&mut self, changed_files: FxIndexMap<PathBuf, WatcherChangeKind>) {
     if changed_files.is_empty() {
       return;
     }
@@ -347,7 +363,7 @@ impl BundleCoordinator {
             );
             self
               .queued_tasks
-              .push_back(TaskInput::Rebuild { changed_files: FxIndexSet::default() });
+              .push_back(TaskInput::Rebuild { changed_files: FxIndexMap::default() });
             let schedule_result = self.schedule_build_if_stale().await;
             schedule_result.map(|ret| EnsureLatestBundleOutputReturn {
               future: ret.future,

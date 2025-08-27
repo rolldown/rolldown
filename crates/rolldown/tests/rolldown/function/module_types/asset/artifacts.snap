@@ -13,10 +13,10 @@ var foo_default = "assets/foo-C-m4uiP6.txt";
 
 //#endregion
 //#region main.js
-var main_default = foo_default;
+var filePath = foo_default;
 
 //#endregion
-export { main_default as default };
+export { filePath as default };
 //# sourceMappingURL=main.js.map
 ```
 ## Output Stats
@@ -29,6 +29,6 @@ export { main_default as default };
 (0:0) "import.meta." --> (1:18) "\"assets/foo-C-m4uiP6.txt\""
 (0:12) "__ROLLDOWN_ASSET_FILENAME" --> (1:43) ";\n"
 - ../main.js
-(2:0) "export default " --> (5:0) "var main_default = "
-(2:15) "filePath" --> (5:19) "foo_default;\n"
+(2:0) "export default " --> (5:0) "var filePath = "
+(2:15) "filePath" --> (5:15) "foo_default;\n"
 ```

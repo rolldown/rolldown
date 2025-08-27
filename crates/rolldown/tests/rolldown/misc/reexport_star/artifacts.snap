@@ -9,7 +9,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 // HIDDEN [rolldown:runtime]
 //#region a.js
 var a_exports = {};
-__export(a_exports, { abc: () => abc });
+/* @__PURE__ */ __export(a_exports, { abc: () => abc });
 const abc = void 0;
 
 //#endregion

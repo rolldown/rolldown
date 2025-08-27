@@ -20,7 +20,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 
 //#region lib.js
 var lib_exports = {};
-__export(lib_exports, { default: () => lib_default });
+/* @__PURE__ */ __export(lib_exports, { default: () => lib_default });
 var lib_default;
 var init_lib = __esm({ "lib.js": (() => {
 	lib_default = 2;

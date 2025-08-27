@@ -11,7 +11,7 @@ import assert from "node:assert";
 // HIDDEN [rolldown:runtime]
 //#region a.js
 var a_exports = {};
-__export(a_exports, {
+/* @__PURE__ */ __export(a_exports, {
 	a: () => a,
 	b: () => b,
 	c: () => c

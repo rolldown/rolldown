@@ -17,7 +17,7 @@ export { foo };
 // HIDDEN [rolldown:runtime]
 //#region a.js
 var a_exports = {};
-__export(a_exports, { foo: () => foo });
+/* @__PURE__ */ __export(a_exports, { foo: () => foo });
 var foo;
 var init_a = __esm({ "a.js": (() => {
 	;

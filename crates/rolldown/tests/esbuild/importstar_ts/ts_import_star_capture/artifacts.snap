@@ -9,7 +9,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 // HIDDEN [rolldown:runtime]
 //#region foo.ts
 var foo_exports = {};
-__export(foo_exports, { foo: () => foo$1 });
+/* @__PURE__ */ __export(foo_exports, { foo: () => foo$1 });
 const foo$1 = 123;
 
 //#endregion

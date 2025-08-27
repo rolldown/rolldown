@@ -25,7 +25,7 @@ import assert from "node:assert";
 // HIDDEN [rolldown:runtime]
 //#region bar.js
 var bar_exports = {};
-__export(bar_exports, { x: () => x });
+/* @__PURE__ */ __export(bar_exports, { x: () => x });
 const x = 123;
 
 //#endregion

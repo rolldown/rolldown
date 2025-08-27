@@ -1,0 +1,8 @@
+{
+  "config": {
+    "treeshake": {
+      "propertyReadSideEffects": "false"
+    }
+  },
+  "expectExecuted": false
+}

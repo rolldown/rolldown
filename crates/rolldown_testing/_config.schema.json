@@ -798,9 +798,26 @@
             "boolean",
             "null"
           ]
+        },
+        "propertyReadSideEffects": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/PropertyReadSideEffects"
+            },
+            {
+              "type": "null"
+            }
+          ]
         }
       },
       "additionalProperties": false
+    },
+    "PropertyReadSideEffects": {
+      "type": "string",
+      "enum": [
+        "always",
+        "false"
+      ]
     },
     "ExperimentalOptions": {
       "type": "object",

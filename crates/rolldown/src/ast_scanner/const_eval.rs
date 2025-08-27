@@ -1,6 +1,5 @@
 use oxc::{
   ast::ast::Expression,
-  minifier::PropertyReadSideEffects,
   semantic::{IsGlobalReference, ReferenceId, Scoping, SymbolId},
 };
 use oxc_ecmascript::{
@@ -57,7 +56,7 @@ impl<'ast> MayHaveSideEffectsContext<'ast> for ConstEvalCtx<'_, 'ast> {
   }
 
   fn property_read_side_effects(&self) -> oxc::minifier::PropertyReadSideEffects {
-    PropertyReadSideEffects::All
+    oxc::minifier::PropertyReadSideEffects::All
   }
 
   fn unknown_global_side_effects(&self) -> bool {

@@ -110,6 +110,7 @@ export const BindingChunkModuleOrderBy = __napiModule.exports.BindingChunkModule
 export const BindingJsx = __napiModule.exports.BindingJsx
 export const BindingLogLevel = __napiModule.exports.BindingLogLevel
 export const BindingPluginOrder = __napiModule.exports.BindingPluginOrder
+export const BindingPropertyReadSideEffects = __napiModule.exports.BindingPropertyReadSideEffects
 export const FilterTokenKind = __napiModule.exports.FilterTokenKind
 export const initTraceSubscriber = __napiModule.exports.initTraceSubscriber
 export const registerPlugins = __napiModule.exports.registerPlugins

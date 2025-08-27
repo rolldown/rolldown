@@ -3,6 +3,7 @@ use rustc_hash::{FxBuildHasher, FxHashSet};
 use std::{collections::HashSet, sync::Arc};
 
 use napi::bindgen_prelude::{Either4, FnArgs};
+use napi_derive::napi;
 use rolldown::{InnerOptions, ModuleSideEffects, ModuleSideEffectsRule};
 use rolldown_utils::js_regex::HybridRegex;
 
@@ -10,6 +11,13 @@ use crate::{
   types::js_callback::{JsCallback, JsCallbackExt},
   types::js_regex::JsRegExp,
 };
+
+#[napi]
+#[derive(Debug)]
+pub enum BindingPropertyReadSideEffects {
+  Always,
+  False,
+}
 
 pub type BindingModuleSideEffects = Either4<
   bool,
@@ -31,6 +39,8 @@ pub struct BindingTreeshake {
   pub manual_pure_functions: Option<FxHashSet<String>>,
   pub unknown_global_side_effects: Option<bool>,
   pub commonjs: Option<bool>,
+  #[napi(ts_type = "false | 'always'")]
+  pub property_read_side_effects: Option<BindingPropertyReadSideEffects>,
 }
 
 #[napi_derive::napi(object, object_to_js = false)]
@@ -74,6 +84,11 @@ impl TryFrom<BindingTreeshake> for rolldown::TreeshakeOptions {
       }
     };
 
+    let property_read_side_effects = value.property_read_side_effects.map(|v| match v {
+      BindingPropertyReadSideEffects::Always => rolldown::PropertyReadSideEffects::Always,
+      BindingPropertyReadSideEffects::False => rolldown::PropertyReadSideEffects::False,
+    });
+
     Ok(Self::Option(InnerOptions {
       module_side_effects,
       annotations: value.annotations,
@@ -81,6 +96,7 @@ impl TryFrom<BindingTreeshake> for rolldown::TreeshakeOptions {
       unknown_global_side_effects: value.unknown_global_side_effects,
       // By default disable commonjs tree shake, since it is not stable
       commonjs: value.commonjs,
+      property_read_side_effects,
     }))
   }
 

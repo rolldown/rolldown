@@ -2009,6 +2009,11 @@ export type BindingPreserveEntrySignatures =
   | { type: 'Bool', field0: boolean }
   | { type: 'String', field0: string }
 
+export declare enum BindingPropertyReadSideEffects {
+  Always = 0,
+  False = 1
+}
+
 export interface BindingRenderBuiltUrlConfig {
   ssr: boolean
   type: 'asset' | 'public'
@@ -2080,6 +2085,7 @@ export interface BindingTreeshake {
   manualPureFunctions?: ReadonlyArray<string>
   unknownGlobalSideEffects?: boolean
   commonjs?: boolean
+  propertyReadSideEffects?: false | 'always'
 }
 
 export interface BindingVitePluginCustom {

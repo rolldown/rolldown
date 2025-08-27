@@ -2,6 +2,7 @@ use std::{mem, path::PathBuf, sync::Arc};
 
 use futures::FutureExt;
 
+use rolldown_error::BuildResult;
 use tokio::sync::Mutex;
 
 use crate::{
@@ -24,20 +25,23 @@ impl BuildDriver {
     Self { bundler, ctx }
   }
 
-  pub async fn schedule_build(&self, changed_paths: Vec<PathBuf>) -> Option<BuildProcessFuture> {
-    let mut build_status = self.ctx.status.lock().await;
-    if build_status.is_building || build_status.is_debouncing {
+  pub async fn schedule_build(
+    &self,
+    changed_paths: Vec<PathBuf>,
+  ) -> BuildResult<Option<BuildProcessFuture>> {
+    let mut build_state = self.ctx.status.lock().await;
+    if build_state.is_busy() {
       tracing::trace!(
-        "Bailout due to is_in_building({}) or is_in_debouncing({}) with changed files: {:#?}",
-        build_status.is_building,
-        build_status.is_debouncing,
-        build_status.changed_files,
+        "Bailout due to building({}) or delaying({}) with changed files: {:#?}",
+        build_state.is_building(),
+        build_state.is_delaying(),
+        build_state.changed_files,
       );
-      build_status.changed_files.extend(changed_paths);
-      return None;
+      build_state.changed_files.extend(changed_paths);
+      return Ok(None);
     }
 
-    let mut batched_changed_files = mem::take(&mut build_status.changed_files);
+    let mut batched_changed_files = mem::take(&mut build_state.changed_files);
     batched_changed_files.extend(changed_paths);
 
     let bundling_task = BundlingTask {
@@ -51,10 +55,9 @@ impl BuildDriver {
     tokio::spawn(bundling_future.clone());
 
     tracing::trace!("BuildStatus is in debouncing");
-    build_status.is_debouncing = true;
-    build_status.future = bundling_future.clone();
-    drop(build_status);
+    build_state.try_to_delaying(bundling_future.clone())?;
+    drop(build_state);
 
-    Some(bundling_future)
+    Ok(Some(bundling_future))
   }
 }

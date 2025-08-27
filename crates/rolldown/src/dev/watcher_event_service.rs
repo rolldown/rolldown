@@ -11,7 +11,7 @@ pub type WatcherEventServiceTx = UnboundedSender<WatcherEventServiceMsg>;
 pub type WatcherEventServiceRx = UnboundedReceiver<WatcherEventServiceMsg>;
 
 pub struct WatcherEventService {
-  pub ctx: SharedBuildDriver,
+  pub build_driver: SharedBuildDriver,
   pub rx: WatcherEventServiceRx,
   pub tx: WatcherEventServiceTx,
 }
@@ -19,7 +19,7 @@ pub struct WatcherEventService {
 impl WatcherEventService {
   pub fn new(ctx: SharedBuildDriver) -> Self {
     let (tx, rx) = unbounded_channel::<WatcherEventServiceMsg>();
-    Self { ctx, rx, tx }
+    Self { build_driver: ctx, rx, tx }
   }
 
   pub fn create_event_handler(&self) -> WatcherEventHandler {
@@ -44,7 +44,7 @@ impl WatcherEventService {
               })
               .collect::<Vec<_>>();
 
-            self.ctx.schedule_build(changed_files).await;
+            self.build_driver.schedule_build(changed_files).await.expect("FIXME: Handle the error");
           }
           Err(e) => {
             eprintln!("notify error: {e:?}");

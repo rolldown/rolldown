@@ -5465,6 +5465,10 @@ expression: output
 - main-!~{000}~.js => main-X0JfucbC.js
 - main-X0JfucbC.js.map
 
+# tests/rolldown/topics/hmr/accept-outside-circular
+
+- main-!~{000}~.js => main-Cg5h6ch6.js
+
 # tests/rolldown/topics/hmr/change_accept
 
 - main-!~{000}~.js => main-CjLhLu5f.js

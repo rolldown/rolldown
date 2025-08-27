@@ -11,7 +11,7 @@ export * from "node:fs"
 // HIDDEN [rolldown:runtime]
 //#region main.js
 var main_exports = {};
-/* @__PURE__ */ __export(main_exports, { main: () => main });
+__export(main_exports, { main: () => main });
 import * as import_node_fs from "node:fs";
 __reExport(main_exports, import_node_fs);
 var main;

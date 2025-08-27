@@ -444,7 +444,7 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
     ));
 
     // construct `__export(ns_name, { prop_name: () => returned, ... })`
-    let export_call_expr = self.snippet.builder.expression_call_with_pure(
+    let export_call_expr = self.snippet.builder.expression_call(
       SPAN,
       self.finalized_expr_for_runtime_symbol("__export"),
       NONE,
@@ -453,7 +453,6 @@ impl<'me, 'ast> ScopeHoistingFinalizer<'me, 'ast> {
         ast::Argument::ObjectExpression(arg_obj_expr.into_in(self.alloc)),
       ]),
       false,
-      true,
     );
     let export_call_stmt = self.snippet.builder.statement_expression(SPAN, export_call_expr);
     let mut ret = vec![decl_stmt, export_call_stmt];

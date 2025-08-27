@@ -9,7 +9,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 // HIDDEN [rolldown:runtime]
 //#region lib.prod.js
 var lib_prod_exports = {};
-/* @__PURE__ */ __export(lib_prod_exports, { default: () => lib_prod_default });
+__export(lib_prod_exports, { default: () => lib_prod_default });
 var lib_prod_default;
 var init_lib_prod = __esm({ "lib.prod.js": (() => {
 	lib_prod_default = "prod";

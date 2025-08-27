@@ -34,7 +34,7 @@ export { b_default as default };
 // HIDDEN [rolldown:runtime]
 //#region b.js
 var b_exports = {};
-/* @__PURE__ */ __export(b_exports, { default: () => b_default });
+__export(b_exports, { default: () => b_default });
 function b_default() {}
 
 //#endregion

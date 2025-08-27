@@ -32,7 +32,7 @@ import { __export } from "./chunk.js";
 
 //#region exist-dep-esm.js
 var exist_dep_esm_exports = {};
-/* @__PURE__ */ __export(exist_dep_esm_exports, { value: () => value });
+__export(exist_dep_esm_exports, { value: () => value });
 const exist_dep_esm_hot = __rolldown_runtime__.createModuleHotContext("exist-dep-esm.js");
 __rolldown_runtime__.registerModule("exist-dep-esm.js", { exports: exist_dep_esm_exports });
 const value = "exist-esm";
@@ -48,7 +48,7 @@ import { __export, __reExport, __toCommonJS, __toDynamicImportESM, __toESM } fro
 // HIDDEN [rolldown:hmr]
 //#region hmr.js
 var hmr_exports = {};
-/* @__PURE__ */ __export(hmr_exports, { foo: () => foo });
+__export(hmr_exports, { foo: () => foo });
 const hmr_hot = __rolldown_runtime__.createModuleHotContext("hmr.js");
 __rolldown_runtime__.registerModule("hmr.js", { exports: hmr_exports });
 async function foo() {

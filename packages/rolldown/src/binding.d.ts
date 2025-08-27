@@ -1741,7 +1741,7 @@ export interface BindingInputOptions {
   shimMissingExports?: boolean
   platform?: 'node' | 'browser' | 'neutral'
   logLevel: BindingLogLevel
-  onLog: (logLevel: 'debug' | 'warn' | 'info', log: BindingLog) => void
+  onLog: (logLevel: 'debug' | 'warn' | 'info', log: BindingLog) => Promise<void>
   cwd: string
   treeshake?: BindingTreeshake
   moduleTypes?: Record<string, string>

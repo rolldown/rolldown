@@ -192,7 +192,9 @@ impl BindingBundlerImpl {
 
     match output {
       Ok(output) => {
-        Self::handle_warnings(output.warnings, bundler_core.options()).await;
+        if let Err(err) = Self::handle_warnings(output.warnings, bundler_core.options()).await {
+          return Ok(Self::handle_errors(vec![err.into()], bundler_core.options()));
+        }
       }
       Err(outputs) => {
         return Ok(outputs);
@@ -211,7 +213,9 @@ impl BindingBundlerImpl {
       Err(errs) => return Ok(Self::handle_errors(errs.into_vec(), bundler_core.options())),
     };
 
-    Self::handle_warnings(outputs.warnings, bundler_core.options()).await;
+    if let Err(err) = Self::handle_warnings(outputs.warnings, bundler_core.options()).await {
+      return Ok(Self::handle_errors(vec![err.into()], bundler_core.options()));
+    }
 
     Ok(outputs.assets.into())
   }
@@ -225,7 +229,9 @@ impl BindingBundlerImpl {
       Err(errs) => return Ok(Self::handle_errors(errs.into_vec(), bundler_core.options())),
     };
 
-    Self::handle_warnings(bundle_output.warnings, bundler_core.options()).await;
+    if let Err(err) = Self::handle_warnings(bundle_output.warnings, bundler_core.options()).await {
+      return Ok(Self::handle_errors(vec![err.into()], bundler_core.options()));
+    }
 
     Ok(bundle_output.assets.into())
   }
@@ -257,10 +263,12 @@ impl BindingBundlerImpl {
     result.map_err(|e| Self::handle_errors(e.into_vec(), options))
   }
 
-  #[allow(clippy::print_stdout, unused_must_use)]
-  async fn handle_warnings(warnings: Vec<BuildDiagnostic>, options: &NormalizedBundlerOptions) {
+  async fn handle_warnings(
+    warnings: Vec<BuildDiagnostic>,
+    options: &NormalizedBundlerOptions,
+  ) -> anyhow::Result<()> {
     if options.log_level == Some(LogLevel::Silent) {
-      return;
+      return Ok(());
     }
     if let Some(on_log) = options.on_log.as_ref() {
       for warning in filter_out_disabled_diagnostics(warnings, &options.checks) {
@@ -277,8 +285,9 @@ impl BindingBundlerImpl {
               plugin: None,
             },
           )
-          .await;
+          .await?;
       }
     }
+    Ok(())
   }
 }

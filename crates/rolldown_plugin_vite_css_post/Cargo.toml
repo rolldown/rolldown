@@ -24,3 +24,4 @@ rolldown_plugin_utils = { workspace = true }
 rolldown_utils = { workspace = true }
 serde_json = { workspace = true }
 string_wizard = { workspace = true }
+sugar_path = { workspace = true }

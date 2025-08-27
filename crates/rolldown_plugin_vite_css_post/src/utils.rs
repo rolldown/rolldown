@@ -1,10 +1,12 @@
 use std::{
-  path::PathBuf,
+  path::{Path, PathBuf},
   sync::{Arc, LazyLock},
 };
 
 use regex::Regex;
-use rolldown_common::{EmittedAsset, OutputFormat};
+use rolldown_common::{
+  AssetFilenamesOutputOption, EmittedAsset, OutputFormat, RollupPreRenderedAsset,
+};
 use rolldown_plugin::{HookRenderChunkArgs, PluginContext};
 use rolldown_plugin_utils::{
   AssetUrlResult, RenderAssetUrlInJsEnv, RenderAssetUrlInJsEnvConfig, RenderBuiltUrlConfig,
@@ -19,6 +21,7 @@ use rolldown_plugin_utils::{
 };
 use rolldown_utils::{futures::block_on_spawn_all, url::clean_url};
 use string_wizard::MagicString;
+use sugar_path::SugarPath;
 
 use crate::ViteCssPostPlugin;
 
@@ -96,7 +99,13 @@ impl ViteCssPostPlugin {
         let css_asset_name =
           css_asset_path.file_name().map(|v| v.to_string_lossy().into_owned()).unwrap();
 
-        let content = self.resolve_asset_urls_in_css(&style, &css_asset_name).await;
+        let content = self
+          .resolve_asset_urls_in_css(
+            style.to_owned(),
+            &css_asset_name,
+            &args.options.asset_filenames,
+          )
+          .await?;
         let content = self.finalize_css(content).await;
 
         let reference_id = ctx
@@ -186,7 +195,9 @@ impl ViteCssPostPlugin {
           args.chunk.facade_module_id.as_ref(),
         );
 
-        let content = self.resolve_asset_urls_in_css(&css_chunk, &css_asset_name).await;
+        let content = self
+          .resolve_asset_urls_in_css(css_chunk, &css_asset_name, &args.options.asset_filenames)
+          .await?;
         let content = self.finalize_css(content).await;
 
         let reference_id = ctx
@@ -263,21 +274,70 @@ impl ViteCssPostPlugin {
     } else {
       ctx.meta().get::<CSSChunkCache>().expect("CSSChunkCache missing").inner.insert(
         args.chunk.filename.clone(),
-        self.resolve_asset_urls_in_css(&css_chunk, &self.get_css_bundle_name(ctx)?).await,
+        self
+          .resolve_asset_urls_in_css(
+            css_chunk,
+            &self.get_css_bundle_name(ctx)?,
+            &args.options.asset_filenames,
+          )
+          .await?,
       );
     }
 
     Ok(())
   }
 
-  #[allow(clippy::unused_async)]
-  pub async fn resolve_asset_urls_in_css(&self, _content: &str, _css_asset_name: &str) -> String {
-    todo!()
+  #[allow(clippy::unused_async, unused_variables)]
+  pub async fn resolve_asset_urls_in_css(
+    &self,
+    css_chunk: String,
+    css_asset_name: &str,
+    css_file_names: &AssetFilenamesOutputOption,
+  ) -> anyhow::Result<String> {
+    let css_asset_dirname = if self.url_base.is_empty() || self.url_base == "./" {
+      Some(self.get_css_asset_dir_name(css_asset_name, css_file_names).await?)
+    } else {
+      None
+    };
+
+    // TODO: replace asset url and public url
+
+    Ok(css_chunk)
   }
 
   #[allow(clippy::unused_async)]
   pub async fn finalize_css(&self, _content: String) -> String {
     todo!()
+  }
+
+  pub async fn get_css_asset_dir_name(
+    &self,
+    css_asset_name: &str,
+    css_file_names: &AssetFilenamesOutputOption,
+  ) -> anyhow::Result<String> {
+    match css_file_names {
+      AssetFilenamesOutputOption::String(css_file_names) => {
+        let assets_dir = if css_file_names.is_empty() {
+          Path::new(&self.assets_dir)
+        } else {
+          Path::new(&css_file_names).parent().unwrap()
+        };
+        Ok(
+          assets_dir
+            .join(Path::new(css_asset_name).parent().unwrap())
+            .to_slash_lossy()
+            .into_owned(),
+        )
+      }
+      AssetFilenamesOutputOption::Fn(css_file_names_fn) => {
+        (css_file_names_fn)(&RollupPreRenderedAsset {
+          names: vec![css_asset_name.into()],
+          original_file_names: Vec::new(),
+          source: "/* vite internal call, ignore */".to_owned().into(),
+        })
+        .await
+      }
+    }
   }
 
   pub fn get_css_bundle_name(&self, ctx: &PluginContext) -> anyhow::Result<String> {

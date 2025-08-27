@@ -3237,6 +3237,7 @@ dependencies = [
  "rolldown_utils",
  "serde_json",
  "string_wizard",
+ "sugar_path",
 ]
 
 [[package]]

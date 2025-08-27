@@ -25,6 +25,7 @@ pub struct ViteCssPostPlugin {
   pub css_minify: bool,
   pub css_code_split: bool,
   pub sourcemap: bool,
+  pub assets_dir: String,
   pub url_base: String,
   pub decoded_base: String,
   pub lib_css_filename: Option<String>,

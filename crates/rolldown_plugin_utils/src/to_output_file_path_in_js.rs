@@ -43,7 +43,7 @@ impl ToOutputFilePathInJSEnv<'_> {
     filename: &str,
     to_relative: impl Fn(&Path, &Path) -> AssetUrlResult,
   ) -> anyhow::Result<AssetUrlResult> {
-    let mut relative = self.url_base.is_empty() || self.url_base.starts_with("./");
+    let mut relative = self.url_base.is_empty() || self.url_base == "./";
     if let Some(render_built_url) = self.render_built_url {
       if let Some(result) = render_built_url(filename, &self.render_built_url_config).await? {
         match result {

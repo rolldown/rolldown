@@ -9,8 +9,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 // HIDDEN [rolldown:runtime]
 // HIDDEN [rolldown:hmr]
 //#region sub/foo.js
-var foo_exports = {};
-__export(foo_exports, {
+var foo_exports = __export({}, {
 	foo: () => foo,
 	named: () => named$2
 });
@@ -21,8 +20,7 @@ const named$2 = "foo";
 
 //#endregion
 //#region sub/bar.js
-var bar_exports = {};
-__export(bar_exports, {
+var bar_exports = __export({}, {
 	bar: () => bar,
 	named: () => named$1
 });
@@ -33,16 +31,14 @@ const named$1 = "bar";
 
 //#endregion
 //#region sub/named.js
-var named_exports = {};
-__export(named_exports, { named: () => named });
+var named_exports = __export({}, { named: () => named });
 const named_hot = __rolldown_runtime__.createModuleHotContext("sub/named.js");
 __rolldown_runtime__.registerModule("sub/named.js", { exports: named_exports });
 const named = "named";
 
 //#endregion
 //#region sub/index.js
-var sub_exports = {};
-__export(sub_exports, {
+var sub_exports = __export({}, {
 	bar: () => bar,
 	foo: () => foo,
 	named: () => named

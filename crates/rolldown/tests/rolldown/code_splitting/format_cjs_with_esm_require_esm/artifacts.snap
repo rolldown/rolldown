@@ -40,8 +40,7 @@ require("node:assert");
 const require_chunk = require('./chunk.js');
 
 //#region esm.js
-var esm_exports = {};
-require_chunk.__export(esm_exports, { share: () => share });
+var esm_exports = require_chunk.__export({}, { share: () => share });
 function share() {
 	return 1;
 }

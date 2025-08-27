@@ -8,8 +8,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 ```js
 // HIDDEN [rolldown:runtime]
 //#region esm.js
-var esm_exports = {};
-__export(esm_exports, {
+var esm_exports = __export({}, {
 	default: () => esm_default_fn,
 	esm_named_class: () => esm_named_class,
 	esm_named_fn: () => esm_named_fn,

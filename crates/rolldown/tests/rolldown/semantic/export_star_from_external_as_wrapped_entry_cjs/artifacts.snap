@@ -9,8 +9,7 @@ source: crates/rolldown_testing/src/integration_test.rs
 // HIDDEN [rolldown:runtime]
 
 //#region main.js
-var main_exports = {};
-__export(main_exports, { main: () => main });
+var main_exports = __export({}, { main: () => main });
 __reExport(main_exports, require("node:fs"));
 var main;
 var init_main = __esm({ "main.js": (() => {

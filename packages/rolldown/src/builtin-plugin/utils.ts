@@ -16,6 +16,34 @@ export class BuiltinPlugin {
     public _options?: unknown,
   ) {}
 }
+const CLASS_KEY = Symbol.for('BuiltinPlugin');
+
+// @ts-ignore
+if (!globalThis[CLASS_KEY]) {
+  // @ts-ignore
+  globalThis[CLASS_KEY] = BuiltinPlugin;
+}
+
+// We need to disable global class cache in some scenarios
+// - When we run tests, we need to ensure the globalThis is not polluted between tests or the test will fail(Since the test)
+// - User run rolldown in different worker that may pollute the globalThis just like test scenario
+const disableGlobalClassCache = process.env.ROLLDOWN_TEST === '1' ||
+  process.env.DISABLE_GLOBAL_CLASS_CACHE === '1';
+
+// Our cli use `cli.mjs` as entry, but the configuration maybe use `cli.cjs` entry(use `require` to load builtin plugins or use `cts` configuration).
+// Use this pattern to ensure the whole process use same `BuiltinPlugin` class.
+// See https://github.com/rolldown/rolldown/blob/1c4a37c1e98f44b0fe5700be5df9e7a871d9df05/packages/rolldown/src/utils/normalize-plugin-option.ts?plain=1#L44.
+export function createBuiltinPlugin(
+  name: BindingBuiltinPluginName,
+  options?: unknown,
+): BuiltinPlugin {
+  if (disableGlobalClassCache) {
+    return new BuiltinPlugin(name, options);
+  }
+  // @ts-ignore
+  const Cls = globalThis[CLASS_KEY] as typeof BuiltinPlugin;
+  return new Cls(name, options);
+}
 
 export function makeBuiltinPluginCallable(
   plugin: BuiltinPlugin,

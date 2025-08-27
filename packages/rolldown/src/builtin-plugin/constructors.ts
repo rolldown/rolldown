@@ -15,12 +15,16 @@ import type {
 } from '../binding';
 import type { StringOrRegExp } from '../types/utils';
 import { normalizedStringOrRegex } from '../utils/normalize-string-or-regex';
-import { BuiltinPlugin, makeBuiltinPluginCallable } from './utils';
+import {
+  BuiltinPlugin,
+  createBuiltinPlugin,
+  makeBuiltinPluginCallable,
+} from './utils';
 
 export function modulePreloadPolyfillPlugin(
   config?: BindingModulePreloadPolyfillPluginConfig,
 ): BuiltinPlugin {
-  return new BuiltinPlugin('builtin:module-preload-polyfill', config);
+  return createBuiltinPlugin('builtin:module-preload-polyfill', config);
 }
 
 type DynamicImportVarsPluginConfig =
@@ -40,84 +44,84 @@ export function dynamicImportVarsPlugin(
     config.include = normalizedStringOrRegex(config.include);
     config.exclude = normalizedStringOrRegex(config.exclude);
   }
-  return new BuiltinPlugin('builtin:dynamic-import-vars', config);
+  return createBuiltinPlugin('builtin:dynamic-import-vars', config);
 }
 
 export function importGlobPlugin(
   config?: BindingImportGlobPluginConfig,
 ): BuiltinPlugin {
-  return new BuiltinPlugin('builtin:import-glob', config);
+  return createBuiltinPlugin('builtin:import-glob', config);
 }
 
 export function reporterPlugin(
   config?: BindingReporterPluginConfig,
 ): BuiltinPlugin {
-  return new BuiltinPlugin('builtin:reporter', config);
+  return createBuiltinPlugin('builtin:reporter', config);
 }
 
 export function manifestPlugin(
   config?: BindingManifestPluginConfig,
 ): BuiltinPlugin {
-  return new BuiltinPlugin('builtin:manifest', config);
+  return createBuiltinPlugin('builtin:manifest', config);
 }
 
 export function wasmHelperPlugin(
   config?: BindingWasmHelperPluginConfig,
 ): BuiltinPlugin {
-  return new BuiltinPlugin('builtin:wasm-helper', config);
+  return createBuiltinPlugin('builtin:wasm-helper', config);
 }
 
 export function wasmFallbackPlugin(): BuiltinPlugin {
-  const builtinPlugin = new BuiltinPlugin('builtin:wasm-fallback');
+  const builtinPlugin = createBuiltinPlugin('builtin:wasm-fallback');
   return makeBuiltinPluginCallable(builtinPlugin);
 }
 
 export function loadFallbackPlugin(): BuiltinPlugin {
-  return new BuiltinPlugin('builtin:load-fallback');
+  return createBuiltinPlugin('builtin:load-fallback');
 }
 
 export function jsonPlugin(config?: BindingJsonPluginConfig): BuiltinPlugin {
-  const builtinPlugin = new BuiltinPlugin('builtin:json', config);
+  const builtinPlugin = createBuiltinPlugin('builtin:json', config);
   return makeBuiltinPluginCallable(builtinPlugin);
 }
 
 export function buildImportAnalysisPlugin(
   config: BindingBuildImportAnalysisPluginConfig,
 ): BuiltinPlugin {
-  return new BuiltinPlugin('builtin:build-import-analysis', config);
+  return createBuiltinPlugin('builtin:build-import-analysis', config);
 }
 
 export function viteResolvePlugin(
   config: BindingViteResolvePluginConfig,
 ): BuiltinPlugin {
-  const builtinPlugin = new BuiltinPlugin('builtin:vite-resolve', config);
+  const builtinPlugin = createBuiltinPlugin('builtin:vite-resolve', config);
   return makeBuiltinPluginCallable(builtinPlugin);
 }
 
 export function isolatedDeclarationPlugin(
   config?: BindingIsolatedDeclarationPluginConfig,
 ): BuiltinPlugin {
-  return new BuiltinPlugin('builtin:isolated-declaration', config);
+  return createBuiltinPlugin('builtin:isolated-declaration', config);
 }
 
 export function assetPlugin(
   config?: BindingAssetPluginConfig,
 ): BuiltinPlugin {
-  return new BuiltinPlugin('builtin:asset', config);
+  return createBuiltinPlugin('builtin:asset', config);
 }
 
 export function webWorkerPostPlugin(): BuiltinPlugin {
-  return new BuiltinPlugin('builtin:web-worker-post');
+  return createBuiltinPlugin('builtin:web-worker-post');
 }
 
 export function oxcRuntimePlugin(
   config?: BindingOxcRuntimePluginConfig,
 ): BuiltinPlugin {
-  return new BuiltinPlugin('builtin:oxc-runtime', config);
+  return createBuiltinPlugin('builtin:oxc-runtime', config);
 }
 
 export function esmExternalRequirePlugin(
   config?: BindingEsmExternalRequirePluginConfig,
 ): BuiltinPlugin {
-  return new BuiltinPlugin('builtin:esm-external-require', config);
+  return createBuiltinPlugin('builtin:esm-external-require', config);
 }

@@ -4,7 +4,7 @@ API_ENDPOINTS.USERS // Should be tree-shaken when propertyReadSideEffects: false
 API_ENDPOINTS['POSTS'] // Should be tree-shaken when propertyReadSideEffects: false
 
 function test() {}
-API_ENDPOINTS[unknown] // Should be tree-shaken when propertyReadSideEffects: false
+API_ENDPOINTS[unknown] // Should not be tree-shaken when propertyReadSideEffects: false
 API_ENDPOINTS[test] // Should be tree-shaken when propertyReadSideEffects: false
 
 // Object destructuring tests

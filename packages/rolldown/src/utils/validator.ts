@@ -322,6 +322,9 @@ const TreeshakingOptionsSchema = v.union([
     manualPureFunctions: v.optional(v.array(v.string())),
     unknownGlobalSideEffects: v.optional(v.boolean()),
     commonjs: v.optional(v.boolean()),
+    propertyReadSideEffects: v.optional(
+      v.union([v.literal(false), v.literal('always')]),
+    ),
   }),
 ]);
 

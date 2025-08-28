@@ -17,5 +17,5 @@ export type TreeshakingOptions = {
   manualPureFunctions?: readonly string[];
   unknownGlobalSideEffects?: boolean;
   commonjs?: boolean;
-  propertyReadSideEffects?: boolean | 'always';
+  propertyReadSideEffects?: false | 'always';
 };
